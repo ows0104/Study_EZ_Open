@@ -4,10 +4,27 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.models import Asset, Lecture, PreItem, Preview
 from app.naming import nfc
+from app.storage import ObjectStorage, StorageNotConfigured
 
 LectureKey = tuple[str, str]
+
+
+def storage_or_503() -> ObjectStorage:
+    """R2를 쓰는 경로에서만 부른다.
+
+    아직 안 붙었으면 503으로 답한다. 500으로 터뜨리면 "서버가 고장났다"로
+    읽히지만 실제로는 아직 안 켠 기능이고, 캘린더는 멀쩡히 돌고 있다.
+    """
+    try:
+        return ObjectStorage()
+    except StorageNotConfigured as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "storage_unconfigured", "message": "파일 저장소가 아직 연결되지 않았습니다."},
+        ) from exc
 
 
 def lecture_or_404(db: Session, subject: str, run_id: str) -> Lecture:

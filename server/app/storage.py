@@ -19,9 +19,15 @@ from botocore.exceptions import ClientError
 from app.config import get_settings
 
 
+class StorageNotConfigured(RuntimeError):
+    """R2가 아직 없다. 파일 경로만 잠기고 나머지 화면은 그대로 돈다."""
+
+
 class ObjectStorage:
     def __init__(self) -> None:
         settings = get_settings()
+        if not settings.storage_configured:
+            raise StorageNotConfigured("R2가 아직 설정되지 않았습니다.")
         self.bucket = settings.r2_bucket_name
         self.local_root = Path(settings.local_storage_dir).resolve() if settings.local_test_mode else None
         if self.local_root is not None:

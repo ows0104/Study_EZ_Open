@@ -239,7 +239,39 @@ def main() -> None:
     approved = CurrentUser(id="u2", email="ok@snu.ac.kr", is_admin=False, is_approved=True)
     check("승인되면 통과한다", require_approved_user(approved) is approved)
 
-    print("\n[12] /me는 승인 게이트를 지나지 않는다")
+    print("\n[12] R2가 없어도 서버는 돈다 — 파일 경로만 잠긴다")
+    # 첫 배포는 R2 없이 나간다. 캘린더가 시간표만으로 완성되는 화면이라
+    # 저장소를 필수로 걸면 쓸 수 있는 것까지 못 올리게 된다.
+    from app.config import get_settings as _settings
+    from app.routes.common import storage_or_503
+    from fastapi import HTTPException as _HTTPException
+
+    _settings.cache_clear()
+    saved = os.environ["ENVIRONMENT"]
+    # production에서는 SUPABASE_URL이 필수라 같이 채워 준다. 여기서 보려는 것은
+    # R2가 비었을 때의 동작이지 그쪽이 아니다.
+    os.environ["ENVIRONMENT"] = "production"
+    os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
+    try:
+        check("R2 없으면 storage_configured가 False", _settings().storage_configured is False)
+        try:
+            storage_or_503()
+            check("파일 경로가 막힌다", False, "통과해 버렸다")
+        except _HTTPException as exc:
+            check("503으로 답한다", exc.status_code == 503, exc.status_code)
+            check(
+                "storage_unconfigured 코드",
+                exc.detail.get("code") == "storage_unconfigured",
+                exc.detail,
+            )
+    finally:
+        os.environ["ENVIRONMENT"] = saved
+        _settings.cache_clear()
+
+    # 캘린더는 그대로 돌아야 한다.
+    check("시간표는 여전히 나온다", client.get("/api/timetable", headers=USER).status_code == 200)
+
+    print("\n[13] /me는 승인 게이트를 지나지 않는다")
     # 승인 대기 중인 사람도 자기 상태는 알아야 안내 화면을 볼 수 있다.
     me = client.get("/api/me", headers=USER)
     check("200", me.status_code == 200, me.text)

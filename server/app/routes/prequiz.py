@@ -22,7 +22,7 @@ from app.database import get_db
 from app.models import Asset, PreItem, QuizAttempt
 from app.naming import normalize_stem
 from app.routes.common import lecture_or_404
-from app.storage import ObjectStorage
+from app.storage import ObjectStorage, StorageNotConfigured
 
 router = APIRouter()
 
@@ -111,7 +111,11 @@ def slide_url(db: Session, subject: str, run_id: str, slide_no: int | None) -> s
     )
     if asset is None:
         return None
-    return ObjectStorage().presign_download(asset.object_key)
+    try:
+        return ObjectStorage().presign_download(asset.object_key)
+    except StorageNotConfigured:
+        # 오답 해설은 그림 없이도 읽힌다. 채점 전체를 막을 이유가 없다.
+        return None
 
 
 def missed_items(db: Session, user_id: str, subject: str, run_id: str, limit: int = 3) -> list[dict[str, Any]]:

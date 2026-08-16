@@ -35,8 +35,7 @@ from app.models import (
     TimetableEvent,
 )
 from app.naming import nfc, object_key, slide_no_from_filename
-from app.routes.common import lecture_or_404
-from app.storage import ObjectStorage
+from app.routes.common import lecture_or_404, storage_or_503
 
 router = APIRouter()
 
@@ -132,7 +131,7 @@ def presign_uploads(
 ) -> dict[str, Any]:
     lecture = lecture_or_404(db, subject, run_id)
     _validate(files)
-    storage = ObjectStorage()
+    storage = storage_or_503()
     return {
         "files": [
             {
@@ -157,7 +156,7 @@ def complete_uploads(
 ) -> dict[str, Any]:
     lecture = lecture_or_404(db, subject, run_id)
     _validate(files)
-    storage = ObjectStorage()
+    storage = storage_or_503()
     stored: list[str] = []
     missing: list[str] = []
 

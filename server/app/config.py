@@ -44,6 +44,22 @@ class Settings:
     max_upload_mb: int
 
     @property
+    def storage_configured(self) -> bool:
+        """R2가 준비되었는가.
+
+        **없어도 서버는 뜬다.** 캘린더·로그인·승인·강의 목록은 파일이 하나도
+        없어도 돌고, 파이프라인 산출물은 나중에 올라온다. R2를 필수로 걸어 두면
+        시간표만으로 쓸 수 있는 화면까지 배포를 못 하게 된다.
+
+        준비되기 전에는 파일을 내보내는 경로만 503으로 답한다.
+        """
+        if self.local_test_mode:
+            return True
+        return all(
+            (self.r2_endpoint_url, self.r2_access_key_id, self.r2_secret_access_key, self.r2_bucket_name)
+        )
+
+    @property
     def supabase_issuer(self) -> str:
         return f"{self.supabase_url.rstrip('/')}/auth/v1"
 
@@ -58,9 +74,9 @@ def get_settings() -> Settings:
     local_test_mode = environment == "local-test"
 
     def _storage(name: str) -> str:
-        # In local-test mode R2 is replaced by a directory on disk, so demanding
-        # real credentials would make the first run impossible.
-        return os.getenv(name, "").strip() if local_test_mode else _required(name)
+        # R2는 없어도 서버가 뜬다. local-test에서는 디스크가 대신하고, 배포에서는
+        # 파일 경로만 잠긴 채 나머지가 돈다. `storage_configured`를 보라.
+        return os.getenv(name, "").strip()
 
     return Settings(
         environment=environment,

@@ -16,9 +16,8 @@ from app.auth import CurrentUser, require_approved_user
 from app.config import get_settings
 from app.database import get_db
 from app.models import Asset, PreItem, Preview, QuizAttempt, RunMeta, TimetableEvent
-from app.routes.common import lecture_or_404
+from app.routes.common import lecture_or_404, storage_or_503
 from app.routes.prequiz import missed_items
-from app.storage import ObjectStorage
 
 router = APIRouter()
 
@@ -160,7 +159,7 @@ def sign_file(
     if asset is None or (asset.subject, asset.run_id) != (lecture.subject, lecture.run_id):
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
     return {
-        "url": ObjectStorage().presign_download(asset.object_key, filename=asset.filename),
+        "url": storage_or_503().presign_download(asset.object_key, filename=asset.filename),
         "expiresIn": get_settings().signed_url_ttl,
         "filename": asset.filename,
     }

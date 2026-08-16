@@ -41,7 +41,13 @@ foreach ($line in [IO.File]::ReadAllLines($ENV_PATH)) {
 # SUPABASE_JWT_SECRET을 비우면 JWKS로 RS256을 검증한다. 요즘 Supabase는
 # 비대칭 키가 기본이라 그 편이 정석이고 비밀값을 하나 덜 다루게 된다.
 # CORS는 프론트를 같은 도메인에 두면 필요 없다.
-$OPTIONAL = @("SUPABASE_JWT_SECRET", "CORS_ALLOWED_ORIGINS")
+#
+# R2도 없어도 뜬다. 캘린더·로그인·승인·강의 목록은 파일이 하나도 없어도 돌고,
+# 파이프라인 산출물은 나중에 올라온다. 붙기 전까지 파일 경로만 503으로 답한다.
+$OPTIONAL = @(
+  "SUPABASE_JWT_SECRET", "CORS_ALLOWED_ORIGINS",
+  "R2_ENDPOINT_URL", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET_NAME"
+)
 
 # 안 채운 자리를 먼저 잡는다. 반쯤 설정된 채로 배포되면 500이 나고서야 안다.
 $blank = $env_values.GetEnumerator() |
