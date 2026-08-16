@@ -1,0 +1,82 @@
+{
+  "lecture_id": "260812_01",
+  "lecture_title": "병리학 소개",
+  "deck_name": "병리학::[260812_01] 병리학 소개",
+  "verified": {
+    "collection": "collection.anki2",
+    "notes": 80,
+    "cards": 80,
+    "media": 24
+  },
+  "built_at": "2026-08-16T12:23:30",
+  "apkg": "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\runs\\260812_01\\[260812_01]_병리학_소개.apkg",
+  "item_count": 80,
+  "format": {
+    "basic": 76,
+    "cloze": 4,
+    "jokbo": 16,
+    "occlusion": 0
+  },
+  "occlusion": 0,
+  "trap_notes": 24,
+  "slides_used": [
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    20,
+    23,
+    25,
+    27,
+    31,
+    32,
+    33,
+    34,
+    35
+  ],
+  "slides_unused": [
+    1,
+    2,
+    3,
+    19,
+    21,
+    22,
+    24,
+    26,
+    28,
+    29,
+    30
+  ],
+  "media_count": 24,
+  "importance": {
+    "core": 40,
+    "detail": 40
+  },
+  "exam_hit": 28,
+  "stamped": 39,
+  "sources": {
+    "lecture": 64,
+    "jokbo": 16
+  },
+  "review_flagged": 2,
+  "card_types": {
+    "fact": 38,
+    "comparison": 2,
+    "mechanism": 1,
+    "trap": 14,
+    "list": 21,
+    "sequence": 0,
+    "cloze": 4
+  }
+}
