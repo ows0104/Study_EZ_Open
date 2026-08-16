@@ -24,7 +24,7 @@ for _stream in (sys.stdout, sys.stderr):
     except Exception:
         pass
 
-from studyez import filenames, jokbo, matching, watch  # noqa: E402
+from studyez import filenames, jokbo, matching, preview, watch  # noqa: E402
 
 DEFAULT_ROOT = Path.home() / "SynologyDrive"
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -155,6 +155,27 @@ def report_watch(args) -> int:
     return 0
 
 
+def run_preview(args) -> int:
+    """공유된 예습 대화를 내려받아 runs/<run_id>/preview.md로 만든다."""
+    run_id = args.subject
+    if not run_id or not args.url:
+        print("쓰는 법: python -m studyez preview <run_id> --url https://chatgpt.com/share/...")
+        return 2
+
+    run_dir = Path(args.runs) / run_id
+    if not (run_dir / "prep.json").exists():
+        print(f"[preview] {run_dir}에 prep.json이 없다. 0단계를 먼저 돌려라.")
+        return 2
+
+    result = preview.fetch(args.url)
+    path = preview.save(result, run_dir)
+    print(f"[preview] {run_id} ← {args.url}")
+    print(f"  발화 {len(result.turns)}개 · {result.chars:,}자 · 추출 {result.strategy}")
+    print(f"  → {path}")
+    print("  이제 /prequiz를 돌리면 1·2단계가 이걸 함께 읽는다")
+    return 0
+
+
 def run_done(args) -> int:
     """빌드를 확인한 뒤 부른다. 이 표시가 있어야 다음 스캔에서 빠진다."""
     runs_dir = Path(args.runs)
@@ -233,7 +254,7 @@ def run_jokbo(args) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Study_EZ 로컬 러너")
-    parser.add_argument("command", choices=["match", "watch", "done", "jokbo"])
+    parser.add_argument("command", choices=["match", "watch", "done", "jokbo", "preview"])
     parser.add_argument("subject", nargs="?", help="과목 폴더명. --all이면 생략")
     parser.add_argument("--all", action="store_true", help="필기/올해 폴더가 있는 과목 전부")
     parser.add_argument("--this", default="2026", help="올해 폴더명")
@@ -247,6 +268,8 @@ def main() -> int:
                         help="watch: 하루 처리 상한")
     parser.add_argument("--now", action="store_true",
                         help="watch: 방금 올라온 파일도 포함 (동기화 대기 생략)")
+    parser.add_argument("--url", default=None,
+                        help="preview: 공유된 예습 대화 주소")
     parser.add_argument("--body-start", type=int, default=4,
                         help="jokbo: 목차 다음, 본문이 시작하는 쪽 (기본 4)")
     args = parser.parse_args()
@@ -266,6 +289,8 @@ def main() -> int:
         return run_done(args)
     if args.command == "jokbo":
         return run_jokbo(args)
+    if args.command == "preview":
+        return run_preview(args)
 
     root = Path(args.root)
     if args.all:

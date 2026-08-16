@@ -37,6 +37,7 @@ runs/        산출물. 원본 PDF에서 언제든 재생성된다 (저장소에
 
 ```bash
 python -m studyez jokbo 병리학         # 과목 족보를 강의별로 자른다 (학기당 1회)
+python -m studyez preview <run_id> --url <공유 링크>   # 예습 대화 → preview.md
 python -m studyez match 병리학         # 올해 강의를 작년 강의에 붙인다
 python -m studyez match --all
 python -m studyez watch                # 새로 올라온 필기를 찾아 큐를 세운다

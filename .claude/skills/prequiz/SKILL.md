@@ -123,6 +123,9 @@ python quiz/structure.py runs/<lecture_id>
 나뉜 주제이므로 다시 나누지 말고 그 위에 `check_point`를 얹어라.
 
 > `runs/<lecture_id>/structure.json`을 먼저 읽어 구간과 주제를 확인하라.
+> **`preview.md`가 있으면 그다음으로 읽어라. 있으면 그것이 이 퀴즈의 본체다**
+> (`preview-rules.md` §0.1). 학생이 강의 직전에 읽을 예습 대화이고, 무엇을 물을지는
+> 거기서 고른다. 없으면 이 줄은 무시한다.
 > `model_pages/clean_sNNN.png`를 **강의록 범위만큼 전부** 읽어라.
 > `outline.json`과 `annotations.json`도 읽어라.
 > 그다음 `jokbo_pages/`의 족보 이미지를 읽어라. 족보의 첫 쓰임은 **우선순위 판단**이다.
@@ -151,10 +154,14 @@ python quiz/structure.py runs/<lecture_id>
 
 > `pre_blueprint.json`을 읽고, 근거가 필요한 슬라이드는 강의록이면 `model_pages/`,
 > 족보면 `jokbo_pages/`에서 읽어라.
+> **`preview.md`가 있으면 함께 읽어라** — 학생이 읽고 올 예습 대화다. 문항은 그
+> 대화를 이해했는지 찌른다 (`preview-rules.md` §0.1).
 > `.claude/skills/prequiz/references/preview-rules.md`를 **전부** 읽고 그 규칙대로 만든다.
 > 결과를 `runs/<lecture_id>/pre_items.raw.json`에. 스키마는 `references/item.schema.json`.
 >
 > - **12~20문항.** 객관식 8~12 / 단답 3~5 / OX 2~4 (§3)
+> - 예습 대화에서 착안한 문항도 `slide_no`는 그 내용이 실린 **강의록 슬라이드**를
+>   가리키고 `source_type`은 `lecture`다. 대화에만 있고 강의록에 없는 내용은 내지 마라
 > - 모든 문항은 청사진의 `objective_id`와 `check_point`에 묶인다
 > - `slide_no`는 페이지를 세지 말고 **각인된 노란 `Slide N` 라벨을 읽어서** 적는다.
 >   `source_type`은 그 번호가 강의록 구간이면 `lecture`, 족보 구간이면 `jokbo`
