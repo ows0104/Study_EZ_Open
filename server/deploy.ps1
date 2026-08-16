@@ -8,8 +8,15 @@
 #
 # 컨테이너는 Cloud Build가 만든다. 로컬에 Docker가 없어도 된다.
 
-$ErrorActionPreference = "Stop"
+# PowerShell 5.1은 네이티브 명령이 stderr에 쓴 줄을 오류 레코드로 감싼다.
+# gcloud는 경고도 빌드 로그도 전부 stderr로 내보내므로, "Stop"으로 두면 멀쩡한
+# 배포가 첫 경고에서 멈춘다. 대신 중요한 호출마다 종료 코드를 직접 본다.
+$ErrorActionPreference = "Continue"
 Set-Location $PSScriptRoot
+
+function Assert-Ok([string]$what) {
+  if ($LASTEXITCODE -ne 0) { throw "$what 실패 (종료 코드 $LASTEXITCODE)" }
+}
 
 $PROJECT = "meddeck-503318"
 $REGION  = "asia-northeast3"
@@ -60,33 +67,44 @@ if ($blank) {
 # ── 비밀값을 Secret Manager로 ────────────────────────────────────────
 # 값은 임시 파일로만 건넨다. 파이프로 넘기면 PowerShell이 끝에 줄바꿈을 붙여
 # 토큰이 한 글자 길어지고, 그러면 인증이 조용히 실패한다.
+# 있는 비밀을 한 번에 가져온다. `--filter`를 걸면 결과가 비었을 때 gcloud가
+# "filter keys were not present" 경고를 stderr로 뱉는다. 거르는 일은 여기서 한다.
+$existing = @(gcloud secrets list --project $PROJECT --format "value(name)")
+Assert-Ok "비밀 목록 조회"
+
 function Sync-Secret([string]$name, [string]$value) {
-  # `describe`로 존재를 확인하지 않는다. 없을 때 stderr로 뱉는데, PowerShell
-  # 5.1은 네이티브 명령의 stderr를 오류 레코드로 감싸서 멀쩡한 흐름을 끊는다.
-  $found = gcloud secrets list --project $PROJECT --filter "name:$name" --format "value(name)"
-  if (-not ($found -contains $name)) {
+  if (-not ($existing -contains $name)) {
     gcloud secrets create $name --project $PROJECT --replication-policy=automatic | Out-Null
+    Assert-Ok "비밀 $name 생성"
   }
   $tmp = [IO.Path]::GetTempFileName()
   try {
     [IO.File]::WriteAllText($tmp, $value, (New-Object Text.UTF8Encoding $false))
     gcloud secrets versions add $name --project $PROJECT --data-file=$tmp | Out-Null
+    Assert-Ok "비밀 $name 저장"
   } finally {
     Remove-Item $tmp -Force -ErrorAction SilentlyContinue
   }
 }
 
+# 비어 있는 것은 아예 올리지 않는다. Secret Manager가 빈 payload를 거부하기도
+# 하지만, 그보다 참조하지 않는 편이 맞다 — JWT Secret을 안 주면 JWKS로,
+# R2를 안 주면 파일 경로만 잠긴 채로 도는 것이 의도한 동작이다.
+$active = @($SECRET_KEYS | Where-Object { $env_values[$_] })
+
 Write-Host "비밀값을 Secret Manager에 올립니다..."
-foreach ($key in $SECRET_KEYS) {
-  if (-not $env_values.ContainsKey($key)) { throw ".env에 $key 가 없습니다." }
+foreach ($key in $active) {
   Sync-Secret "studyez-$($key.ToLower().Replace('_','-'))" $env_values[$key]
   Write-Host "  $key"
 }
+$skipped = @($SECRET_KEYS | Where-Object { -not $env_values[$_] })
+if ($skipped) { Write-Host "  건너뜀(비어 있음): $($skipped -join ', ')" -ForegroundColor DarkGray }
 
 # Cloud Run 기본 서비스 계정이 비밀을 읽을 수 있어야 한다.
 $PROJECT_NUMBER = (gcloud projects describe $PROJECT --format="value(projectNumber)")
+Assert-Ok "프로젝트 번호 조회"
 $RUNTIME_SA = "$PROJECT_NUMBER-compute@developer.gserviceaccount.com"
-foreach ($key in $SECRET_KEYS) {
+foreach ($key in $active) {
   gcloud secrets add-iam-policy-binding "studyez-$($key.ToLower().Replace('_','-'))" `
     --project $PROJECT --member "serviceAccount:$RUNTIME_SA" `
     --role roles/secretmanager.secretAccessor 2>$null | Out-Null
@@ -105,7 +123,7 @@ $plain = @(
   "CORS_ALLOWED_ORIGINS=$($env_values['CORS_ALLOWED_ORIGINS'])"
 ) -join "|"
 
-$secrets = ($SECRET_KEYS | ForEach-Object {
+$secrets = ($active | ForEach-Object {
   "$_=studyez-$($_.ToLower().Replace('_','-')):latest"
 }) -join ","
 
@@ -123,9 +141,9 @@ gcloud run deploy $SERVICE `
   --cpu 1 --memory 512Mi `
   --min-instances 0 --max-instances 4 `
   --timeout 120
-
-if ($LASTEXITCODE -ne 0) { throw "배포 실패" }
+Assert-Ok "Cloud Run 배포"
 
 $url = gcloud run services describe $SERVICE --project $PROJECT --region $REGION --format="value(status.url)"
+Assert-Ok "서비스 주소 조회"
 Write-Host "`n배포 완료: $url"
 Write-Host "확인: curl $url/api/health"
