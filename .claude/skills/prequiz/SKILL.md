@@ -154,8 +154,9 @@ python quiz/structure.py runs/<lecture_id>
 
 > `pre_blueprint.json`을 읽고, 근거가 필요한 슬라이드는 강의록이면 `model_pages/`,
 > 족보면 `jokbo_pages/`에서 읽어라.
-> **`preview.md`가 있으면 함께 읽어라** — 학생이 읽고 올 예습 대화다. 문항은 그
-> 대화를 이해했는지 찌른다 (`preview-rules.md` §0.1).
+> **`preview.md`가 있으면 함께 읽어라** — 학생이 읽고 올 예습 대화다.
+> **대화가 정리해 준 것을 그대로 물어도 된다.** 수업 전에 외우고 들어가야 하는
+> 것이 이 퀴즈의 본체다 (`preview-rules.md` §0.1).
 > `.claude/skills/prequiz/references/preview-rules.md`를 **전부** 읽고 그 규칙대로 만든다.
 > 결과를 `runs/<lecture_id>/pre_items.raw.json`에. 스키마는 `references/item.schema.json`.
 >
