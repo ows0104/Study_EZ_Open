@@ -145,15 +145,20 @@ def _is_jokbo_page(feature: PageFeature) -> bool:
             or feature.clipboard_stamps >= 1)
 
 
-def suggest_jokbo_start(features: list[PageFeature]) -> int | None:
-    """족보가 시작되는 쪽을 짐작한다. **뒤에서부터** 거슬러 올라간다.
+def scan_jokbo_start(features: list[PageFeature]) -> int | None:
+    """기출 근거가 이어지는 구간의 시작을 **뒤에서부터** 세어 찾는다.
 
     족보는 문서 꼬리에 붙은 연속 블록이다. 그러니 앞에서 훑으며 "여기서부터
     족보인가"를 묻는 것보다, 마지막 쪽에서 "여기까지 족보인가"를 묻는 편이
-    경계의 정의에 맞다. 앞에서 훑는 방식은 본문의 숫자·낱말에 걸려 번번이
-    엉뚱한 데서 멈췄다.
+    경계의 정의에 맞다.
 
-    어디까지나 힌트다. 경계를 정하는 건 0.5단계의 모델이다.
+    **이 값을 모델에게 보여주지 않는다.** 힌트로 넘겼더니 네 강의 연속으로
+    모델이 뒤집었고(한 장 늦음·한 장 이름·세 장 이름), 방향이 일정하지 않아
+    보정할 수도 없었다. 게다가 힌트에 맞춰 라벨 추출 범위를 좁히는 바람에
+    오클루전 후보를 조용히 잃었다.
+
+    지금은 **검증에만** 쓴다 - 모델이 정한 경계가 이 수치와 크게 다르면
+    사람이 볼 일이라고 알린다. 판정은 모델이 하고, 코드는 따진다.
     """
     if len(features) < 6:
         return None
@@ -305,6 +310,15 @@ def verify(structure: Structure, features: list[PageFeature]) -> list[str]:
             problems.append(
                 f"강의록 구간에 답안 나열이 있는 페이지가 있다: {pages}. "
                 "경계를 앞으로 당겨야 한다")
+
+        # 기계가 뒤에서부터 센 값과 견준다. 모델의 판정이 주인이지만, 크게
+        # 어긋나면 둘 중 하나는 틀렸다. 실측에서 차이는 늘 3장 이내였다.
+        scanned = scan_jokbo_start(features)
+        if scanned is not None and abs(scanned - jstart) > 3:
+            problems.append(
+                f"기계는 기출 근거가 {scanned}부터 이어진다고 센다. "
+                f"네 판정 {jstart}과 {abs(scanned - jstart)}장 차이다. "
+                "어느 쪽이 맞는지 원본으로 가려라")
     else:
         # 족보가 없다고 했는데 답안표가 있으면 놓친 것이다.
         tail = [f for f in features if f.slide_no >= total * 0.6]
