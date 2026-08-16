@@ -253,11 +253,11 @@ def main() -> int:
 
     # 이름을 직접 대도 막는다. 실수로 한 번 돌리면 재고에 섞여 들어가고,
     # 그 뒤로는 왜 거기 있는지 아무도 모른다.
-    if args.subject in filenames.EXCLUDED_SUBJECTS:
-        print(f"[{args.subject}] 선택교과는 학생마다 듣는 과목이 다르고 시험과 무관해서 "
-              "파이프라인에서 뺀다.\n"
+    if args.subject and filenames.is_excluded(args.subject):
+        print(f"[{args.subject}] 학생마다 듣는 것이 달라 파이프라인에서 뺀 과목이다.\n"
               "  강의록 연결·예습·복습 어느 것도 만들지 않는다.\n"
-              "  정말 필요하면 studyez/filenames.py의 EXCLUDED_SUBJECTS를 고쳐라.")
+              "  정말 필요하면 studyez/filenames.py의 EXCLUDED_SUBJECTS·"
+              "EXCLUDED_PREFIXES를 고쳐라.")
         return 0
 
     if args.command == "watch":

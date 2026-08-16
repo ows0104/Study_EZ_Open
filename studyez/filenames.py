@@ -240,6 +240,15 @@ def parse(path: str | Path) -> LectureFile | None:
 # 적어 둔다.
 EXCLUDED_SUBJECTS = frozenset({"선택교과"})
 
+# 이름이 이걸로 시작하면 전부 제외. 인간사회의료는 한 교시에 강의가 셋씩 열려
+# 학생마다 듣는 것이 다르다 - 선택교과와 성격이 같다. `1`, `2`처럼 번호가 붙어
+# 해마다 늘어나므로 이름을 하나하나 적지 않고 앞부분으로 가린다.
+EXCLUDED_PREFIXES = ("인간사회의료",)
+
+
+def is_excluded(subject: str) -> bool:
+    return subject in EXCLUDED_SUBJECTS or subject.startswith(EXCLUDED_PREFIXES)
+
 
 def discover_subjects(root: str | Path, year: str) -> list[str]:
     """그 연도의 필기가 있는 과목. 제외 대상은 빼고 돌려준다.
@@ -253,7 +262,7 @@ def discover_subjects(root: str | Path, year: str) -> list[str]:
     return sorted(
         d.name for d in root.iterdir()
         if d.is_dir()
-        and d.name not in EXCLUDED_SUBJECTS
+        and not is_excluded(d.name)
         and not d.name.startswith(("#", "_", "."))
         and (d / "필기" / year).is_dir()
     )

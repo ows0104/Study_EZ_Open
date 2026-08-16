@@ -5,7 +5,8 @@ description: 강의 PDF에서 강의 직전에 푸는 예습확인퀴즈(객관�
 
 # 강의 PDF → 예습확인퀴즈 덱
 
-강의 한 편을 받아 **Opus 5 호출 3회**와 코드 2패스로 예습확인퀴즈를 만든다.
+강의 한 편을 받아 **Opus 5 호출 4회**(0.5·1·2·4단계)와 코드 3패스로
+예습확인퀴즈를 만든다. 실측 약 34분.
 학생이 강의 직전 5~10분에 풀고, **틀린 문항이 그 강의의 청취 목표가 된다.**
 
 출제 규칙은 [references/preview-rules.md](references/preview-rules.md)에 있다.
@@ -55,25 +56,65 @@ python quiz/prep.py "<pdf>"
 
 `runs/<lecture_id>/`에 생기는 것:
 
-- `model_pages/clean_sNNN.png` — **강의록 구간.** 필기 제거 + `Slide N` 각인. 출제의 본체
-- `jokbo_pages/jokbo_sNNN.png` — **족보 구간.** 우선순위 판단용이자, 중심 흐름일 때는 출제 대상
+- `model_pages/clean_sNNN.png` — **전 페이지.** 필기 제거 + `Slide N` 각인. 출제의 본체
+- `jokbo_pages/jokbo_sNNN.png` — **뒤 절반.** 우선순위 판단용이자, 중심 흐름일 때는 출제 대상
+- `page_features.json` — 페이지별 글자수·annotation·답안 나열·족보 낱말·**붙여넣은 이미지 수**. 0.5단계 입력
+- `jokbo_text.md` — `--jokbo-pdf`를 줬을 때만. 원본 족보의 원문 텍스트
 - `outline.json` / `annotations.json` — 슬라이드별 본문 요약, 필기·형광펜·**도장(stamp)** 신호
 - `media/` — Anki 카드 뒷면용 슬라이드 PNG
-- `prep.json` — `lecture_range`, `jokbo_range`, `slide_image_map` 등 계약 파일
+- `prep.json` — `jokbo_hint`, `slide_image_map` 등 계약 파일
 
-출력에서 **`lecture_range`, `jokbo_range`, 족보 탐지 근거**를 확인한다.
-경계가 틀렸으면 `--jokbo-start N`으로 다시 돌린다. 여기서 잘못되면 두 채널의 렌더 방식이
-어긋나(강의록은 필기 제거, 족보는 필기 포함) 뒤 단계가 잘못된 이미지를 읽는다.
+**두 채널이 겹쳐서 렌더된다.** clean은 전 페이지, annotated는 뒤 절반이다. 경계가
+어디로 정해지든 다시 렌더하지 않게 하려는 것이다. `prep.json`의 `jokbo_hint`는
+**힌트일 뿐이고 경계의 주인은 0.5단계다.**
+
+색은 나오지 않는다. 필기자마다 규약이 달라 같은 색이 정반대를 뜻하기 때문이다.
+뜻은 색이 아니라 `annotations.json`의 `notes`에 적힌 **말**에 있다.
+`signals`의 `stamp`는 출제 이력 도장, `pasted_image`는 붙여넣은 캡처다. 섞지 마라.
 
 **서브에이전트에게 채널을 명시하라.** 이 환경에는 poppler가 없어 Read 툴이 PDF 페이지를
 렌더하지 못한다. 채널을 지정하지 않으면 에이전트가 필기가 살아 있는 `media/`로 우회한다.
+
+### 0.5단계 — 구조 판별 (Opus 5 호출 ⓪)
+
+`quiz` 스킬과 **같은 단계, 같은 산출물**이다. 이미 `structure.json`이 있고 같은 PDF에서
+나온 것이면 다시 돌리지 않는다.
+
+족보 경계는 문구 정규식으로 못 잡는다. 표지가 "정답"이면 낱말 목록에 없어 놓치고,
+문항이 annotation 이미지뿐이면 빈 페이지 폴백도 안 걸린다. 실제로 세 강의 연속으로
+**모델이 힌트를 뒤집었다** — 한 번은 한 장 늦었고, 한 번은 한 장 일렀다.
+
+> `runs/<lecture_id>/page_features.json`과 `outline.json`을 읽어라. 그다음
+> `jokbo_pages/jokbo_sNNN.png`를 **전부** 읽어라. 강의록 뒷부분과 족보가 섞여 있고,
+> 어디서 갈리는지를 네가 정한다.
+>
+> 판정을 `runs/<lecture_id>/structure.json`에 쓴다.
+>
+> - `lecture_range` `[1, N]` · `jokbo_range` `[N+1, 끝]` 또는 `null` — 겹치지도
+>   비지도 않게
+> - `jokbo_evidence` — 왜 거기서 갈리는지 한 줄. 슬라이드 번호를 대라
+> - `chunks` — 강의록의 주제 덩어리. `lecture_range`를 빠짐없이·겹침없이 덮는다
+>
+> 슬라이드 번호는 세지 말고 **각인된 노란 `Slide N` 라벨을 읽어서** 적어라.
+> 헷갈리면 `jokbo_range`를 넓게 잡지 말고 좁게 잡아라 — 강의록을 족보로 오인하면
+> 필기 없는 clean 채널을 잃는다.
+
+```bash
+python quiz/structure.py runs/<lecture_id>
+```
+
+**불평이 하나라도 나오면 그 단계를 다시 시킨다.** 손으로 JSON을 고쳐 넘기지 마라.
 
 ### 1단계 — 예습 청사진 (Opus 5 호출 ①)
 
 `general-purpose` 서브에이전트. **문항은 만들지 않는다.** 무엇을 확인할지만 정한다.
 
-> `runs/<lecture_id>/model_pages/clean_sNNN.png`를 **강의록 범위(`lecture_range`)만큼 전부**
-> 읽어라. `outline.json`과 `annotations.json`도 읽어라.
+`structure.json`의 `lecture_range`·`jokbo_range`가 이 단계의 범위다. `chunks`는 이미
+나뉜 주제이므로 다시 나누지 말고 그 위에 `check_point`를 얹어라.
+
+> `runs/<lecture_id>/structure.json`을 먼저 읽어 구간과 주제를 확인하라.
+> `model_pages/clean_sNNN.png`를 **강의록 범위만큼 전부** 읽어라.
+> `outline.json`과 `annotations.json`도 읽어라.
 > 그다음 `jokbo_pages/`의 족보 이미지를 읽어라. 족보의 첫 쓰임은 **우선순위 판단**이다.
 > 그 위에, 족보가 §1의 다섯 우선순위를 강의록보다 선명하게 보여주는 지점이 있으면
 > 그것도 `check_point`로 삼을 수 있다 (§2). **족보에 나왔다는 사실만으로는 근거가 안 된다.**
@@ -125,8 +166,9 @@ python prequiz/validate.py runs/<lecture_id>
 `pre_items.checked.json`(빌드 가능)과 `pre_suspects.json`(감사 대상)이 나온다.
 출력의 문항 수·유형 분포·focus 분포·출처 분포·정답 번호 편중을 사용자에게 한 줄로 보고한다.
 
-`source_type_range_mismatch`가 대량으로 나오면 문항이 아니라 **0단계의 족보 경계가 틀린
-것**이다. `quiz/prep.py --jokbo-start N`부터 다시 잡는다.
+`source_type_range_mismatch`가 대량으로 나오면 문항이 아니라 **0.5단계의 족보 경계가
+틀린 것**이다. `structure.json`을 다시 판정시켜라 — 다시 렌더할 필요는 없다.
+경계는 포인터일 뿐이라 `structure.json`만 고치면 검증·빌드가 그걸 따른다.
 
 ### 4단계 — 감사 (Opus 5 호출 ③)
 
@@ -174,7 +216,7 @@ python prequiz/build.py runs/<lecture_id>
 - 서브에이전트가 스키마를 어긴 JSON을 쓰면 그 단계만 다시 시킨다. 손으로 JSON을 고쳐 넘기지 않는다
 - 문항이 30개 넘게 나오면 2단계 지시가 아니라 1단계 청사진이 비대한 것이다. §1의 제외 사유를
   강조해 1단계부터 다시 돌린다
-- `source_type_range_mismatch`가 대량이면 `quiz/prep.py --jokbo-start N`부터 다시
+- `source_type_range_mismatch`가 대량이면 0.5단계부터 다시. 렌더는 그대로 두면 된다
 - 족보 문항이 지엽적 기출로 채워지면 §2의 '중심 흐름' 조건이 1단계에서 무시된 것이다.
   2단계가 아니라 1단계부터 다시 돌린다
 - 사용자가 문항 품질을 지적하면 `references/preview-rules.md`의 해당 절을 직접 고친다.

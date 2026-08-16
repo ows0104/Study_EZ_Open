@@ -5,7 +5,9 @@ description: 강의 PDF와 그 안의 족보(기출)에서 의대 시험 대비 
 
 # 강의 PDF → 시험 대비 Anki 덱
 
-강의 한 편을 받아 **Opus 5 호출 3회**와 코드 2패스로 Anki 덱을 만든다.
+강의 한 편을 받아 **Opus 5 호출 3+N회**와 코드 4패스로 Anki 덱을 만든다.
+0.5·1·4단계가 각 1회이고, 2단계는 주제 조각 수만큼(보통 4~6) 동시에 돈다.
+실측: 강의록 25쪽·75장 기준 조각당 5~8분, 전체 40분 안팎.
 모델은 카드와 **슬라이드 번호**까지만 책임진다. 이미지 첨부와 패키징은 코드가 한다.
 
 목적과 출제 규칙은 [references/item-rules.md](references/item-rules.md)에 있다.
@@ -199,10 +201,26 @@ python quiz/validate.py runs/<lecture_id>
 
 새 `general-purpose` 서브에이전트. **카드를 쓴 에이전트를 재사용하지 마라.**
 
+**최종 배열을 통째로 쓰게 하지 마라.** 74장을 다시 출력하면 2단계가 죽었던 그
+자리에 또 걸린다. 감사가 실제로 손대는 것은 보통 2~3할이니 **바뀐 것만** 쓰게 한다.
+
+조각을 나눠 돌렸으면 **조각 경계에서 중복이 났는지 반드시 확인시켜라.**
+`merge_items.py`가 같은 슬라이드를 나눠 가진 곳을 짚어 준다. 기계는 회상 목적이
+같은지까지는 못 본다.
+
 > `suspects.json`과 `items.checked.json`을 읽어라. 원본 확인이 필요하면 강의록은
-> `model_pages/`, 족보는 `jokbo_pages/`에서 해당 슬라이드만 읽어라.
+> `model_pages/`, 족보는 `jokbo_pages/`(또는 `jokbo_text.md`)에서 해당 슬라이드만 읽어라.
 > `references/item-rules.md`의 **§16 감사 기준**을 따른다.
-> 최종 배열을 `runs/<lecture_id>/items.final.json`에, 판정 근거를 `audit.md`에 쓴다.
+> **패치만** `runs/<lecture_id>/audit_patch.json`에, 판정 근거를 `audit.md`에 쓴다.
+>
+> ```json
+> { "edit": [ { "id": "q012", "a": "고친 답" } ],
+>   "drop": [ { "id": "q034", "reason": "q031과 회상 목적이 같다" } ],
+>   "add":  [ { ...스키마를 갖춘 새 카드... } ] }
+> ```
+>
+> `edit`은 **바꿀 필드만** 적는다. 언급하지 않은 카드는 자동으로 유지된다.
+> `id`는 못 바꾼다 — 틀렸으면 `drop`하고 새로 `add`하라.
 >
 > - `flagged` — 수정 / 유지 / 삭제 중 하나
 > - `answer_too_long`·`compound_question` — 부연을 `explanation`으로 옮기거나 카드를 쪼개면 대부분 해결된다
@@ -219,8 +237,13 @@ python quiz/validate.py runs/<lecture_id>
 ### 5단계 — 빌드 (코드)
 
 ```bash
-python quiz/build.py runs/<lecture_id>
+python quiz/apply_audit.py runs/<lecture_id>          # 패치 → items.final.json
+python quiz/validate.py runs/<lecture_id> --items items.final.json   # 다시 통과하는지
+python quiz/build.py runs/<lecture_id> --items items.final.json --project <과목>
 ```
+
+감사 패치를 반영한 뒤 **검증을 한 번 더 돌린다.** 고친 것이 정말 고쳐졌는지는
+기계가 세어야 안다 — 실측에서 soft 22건이 1건으로 떨어지는 것을 여기서 확인했다.
 
 `slide_no`가 범위를 벗어나거나 이미지가 없으면 **빌드가 중단된다.** 임의로 번호를 바꾸지 말고
 4단계로 되돌려 원본에서 확인시켜라. 오클루전 좌표가 풀리지 않을 때도 마찬가지다.
