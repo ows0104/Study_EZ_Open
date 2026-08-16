@@ -16,8 +16,9 @@ description: 강의 PDF에서 강의 직전에 푸는 예습확인퀴즈(객관�
 
 | | `quiz` | `prequiz` (여기) |
 |---|---|---|
+| 목적 함수 | 시험 점수 | 그날 강의를 따라가기 |
 | 언제 | 강의 후, 시험 대비 반복 | 강의 직전 1회 점검 |
-| 분량 | 슬라이드당 여러 장 | 강의당 **12~20문항** |
+| 분량 | 슬라이드당 여러 장 | 정보량대로. **30문항 이하** |
 | 형식 | 앞·뒤 회상 카드, cloze | 객관식 5지선다 / 단답 / OX |
 | 족보 | 문항으로 출제 | 우선순위 판단에 쓰고, **강의의 중심 흐름 위에 있을 때만** 출제 |
 | 산출 | `<강의>.apkg` | `<강의>_예습.apkg` (하위 덱 `::예습확인`) |
@@ -29,7 +30,7 @@ description: 강의 PDF에서 강의 직전에 푸는 예습확인퀴즈(객관�
 | | 코드 (`quiz/prep.py`, `prequiz/`) | 모델 (이 스킬) |
 |---|---|---|
 | 하는 일 | PDF 자르기·각인·렌더, 족보 구간 분리, 선지 번호 부여, 스키마·범위·중복·선지 검사, 덱 패키징 | 무엇을 물을지, 어떻게 물을지, 무엇을 버릴지 |
-| 안 하는 일 | 의미 판단 일절 | 파일명·이미지·ID·선지 번호 조작 일절 |
+| 안 하는 일 | 의미 판정 (세어서 표시만 한다) | 파일명·이미지·ID·선지 번호 조작 |
 
 선지 번호 ①②③④⑤는 **코드가 붙인다.** 모델은 선지 본문과 정답 인덱스까지만 적는다.
 
@@ -141,8 +142,8 @@ python quiz/structure.py runs/<lecture_id>
 >   그 내용이 중심 흐름이라는 근거를 `objective`에서 읽을 수 있어야 한다
 > - 목표는 4~7개. 각 `check_point`에 `focus`(must_know / core / context)를 붙여라
 > - **강의를 들어야만 알 수 있는 내용(`needs_lecture`)과 지엽적 수치(`too_detailed`)는
->   반드시 `skipped`로 뺀다.** 이게 예습 퀴즈의 가장 흔한 실패다
-> - `check_point` 총합이 25를 넘지 않게 하라. 문항은 12~20개다
+>   `skipped`로 뺀다.** 전자는 좌절이 되고 후자는 시험 덱 몫이다
+> - 문항은 정보량대로 내되 **30개를 넘지 않는다.** `check_point` 총합도 그에 맞춘다
 
 받은 뒤 직접 `pre_blueprint.json`을 열어 세 `focus`가 모두 나타나는지, `skipped`가 비어
 있지 않은지 확인한다. `slides`에 족보 구간 번호가 있으면 그 `objective`가 중심 흐름을
@@ -160,7 +161,7 @@ python quiz/structure.py runs/<lecture_id>
 > `.claude/skills/prequiz/references/preview-rules.md`를 **전부** 읽고 그 규칙대로 만든다.
 > 결과를 `runs/<lecture_id>/pre_items.raw.json`에. 스키마는 `references/item.schema.json`.
 >
-> - **12~20문항.** 객관식 8~12 / 단답 3~5 / OX 2~4 (§3)
+> - **정보량대로 내되 30문항을 넘지 마라.** 객관식이 절반 이상, 나머지를 단답과 OX가 나눈다 (§3)
 > - 예습 대화에서 착안한 문항도 `slide_no`는 그 내용이 실린 **강의록 슬라이드**를
 >   가리키고 `source_type`은 `lecture`다. 대화에만 있고 강의록에 없는 내용은 내지 마라
 > - 모든 문항은 청사진의 `objective_id`와 `check_point`에 묶인다
@@ -190,7 +191,8 @@ python prequiz/validate.py runs/<lecture_id>
 
 ### 4단계 — 감사 (Opus 5 호출 ③)
 
-새 `general-purpose` 서브에이전트. **문항을 쓴 에이전트를 재사용하지 마라.**
+새 `general-purpose` 서브에이전트로 돌린다. 자기가 쓴 걸 자기가 의심하기는 어렵다고
+보고 나눈 것인데 **아직 실측하지 않았다** ([docs/pipeline.md](../../../docs/pipeline.md) 4단계).
 
 > `pre_suspects.json`과 `pre_items.checked.json`을 읽어라. 원본 확인이 필요하면
 > 강의록은 `model_pages/`, 족보는 `jokbo_pages/`에서 해당 슬라이드만 읽어라.
@@ -202,7 +204,7 @@ python prequiz/validate.py runs/<lecture_id>
 > - `thin_explanation` — §8의 세 요소, 특히 ③을 채운다
 > - `answer_position_bias` — 정답 위치를 옮기고 선지 순서를 재배치한다.
 >   **`answer` 인덱스도 함께 바꿔야 한다**
-> - `near_duplicate_groups` — 문항이 12~20개뿐이다. 의심되면 지운다
+> - `near_duplicate_groups` — 예습은 자리가 좁다. 의심되면 지운다
 > - `hot_slides` — 한 슬라이드 3문항 초과분은 가장 지엽적인 것부터 버린다
 > - `coverage_gaps` — `must_know` 지점이 비어 있으면 반드시 채운다
 > - `jokbo_item_is_context` — 그 족보 문항이 정말 중심 흐름인지 다시 보라. `focus`를 올릴
@@ -210,7 +212,7 @@ python prequiz/validate.py runs/<lecture_id>
 > - `source_type_range_mismatch` — `slide_no`와 `source_type` 중 어느 쪽이 틀렸는지
 >   원본 라벨로 가려라
 > - `untouched_slides` — **대부분 정상이다.** §1의 다섯 우선순위에 해당하는지만 확인하라
-> - 최종 문항 수가 20을 넘으면 `context`부터 잘라 20 이하로 맞춘다
+> - 최종 문항 수가 30을 넘으면 `context`부터 잘라 30 이하로 맞춘다
 
 ### 5단계 — 빌드 (코드)
 
@@ -232,7 +234,7 @@ python prequiz/build.py runs/<lecture_id>
 ## 실패 시
 
 - 서브에이전트가 스키마를 어긴 JSON을 쓰면 그 단계만 다시 시킨다. 손으로 JSON을 고쳐 넘기지 않는다
-- 문항이 30개 넘게 나오면 2단계 지시가 아니라 1단계 청사진이 비대한 것이다. §1의 제외 사유를
+- 문항이 30을 넘어 나오면 2단계 지시가 아니라 1단계 청사진이 비대한 것이다. §1의 제외 사유를
   강조해 1단계부터 다시 돌린다
 - `source_type_range_mismatch`가 대량이면 0.5단계부터 다시. 렌더는 그대로 두면 된다
 - 족보 문항이 지엽적 기출로 채워지면 §2의 '중심 흐름' 조건이 1단계에서 무시된 것이다.

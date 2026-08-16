@@ -74,7 +74,7 @@ def _explanation_field(item: dict) -> str:
     explanation = normalize_display_newlines(item.get("explanation", ""))
     if explanation:
         parts.append(explanation)
-    # 족보의 오답 선지는 다음 시험에서 정답으로 돌아온다(item-rules §4.2).
+    # 교수가 선지를 돌려 쓰는 경향이 있어 오답 선지가 좋은 함정 재료다(item-rules §4.2).
     # 해설에 묻어두면 눈에 안 들어오므로 한 줄로 따로 세운다.
     trap = normalize_display_newlines(item.get("trap_note", ""))
     if trap:
