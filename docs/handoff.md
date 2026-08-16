@@ -24,13 +24,16 @@ GET /api/timetable + 가짜토큰 → 401
 
 ## 1. Cloudflare Pages 올리기
 
-저장소는 `ows0104/Study_EZ_Open`, 브랜치는 `server`.
+저장소는 `ows0104/Study_EZ_Open`, 브랜치는 **`master`**.
+
+`server` 브랜치는 PR #7로 master에 병합되었고 그 뒤로 뒤처져 있다. `server/`와
+`web/`는 master에 다 들어 있으므로 Pages는 master를 보면 된다.
 
 Workers & Pages → Create → Pages → **Connect to Git**
 
 | 설정 | 값 |
 |---|---|
-| Production branch | `server` |
+| Production branch | `master` |
 | Framework preset | None |
 | Build command | `npm run build` |
 | Build output directory | `dist` |
