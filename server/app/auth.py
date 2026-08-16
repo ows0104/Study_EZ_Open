@@ -32,6 +32,7 @@ class CurrentUser:
     id: str
     email: str
     is_admin: bool
+    is_approved: bool = True
 
 
 @lru_cache(maxsize=1)
@@ -60,7 +61,9 @@ def get_current_user(
     if settings.local_test_mode:
         if credentials is None or credentials.credentials != "local-test-token":
             raise HTTPException(status_code=401, detail="로컬 테스트 토큰이 필요합니다.")
-        return CurrentUser(id=LOCAL_TEST_USER_ID, email=LOCAL_TEST_EMAIL, is_admin=True)
+        return CurrentUser(
+            id=LOCAL_TEST_USER_ID, email=LOCAL_TEST_EMAIL, is_admin=True, is_approved=True
+        )
 
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
@@ -77,11 +80,15 @@ def get_current_user(
 
     profile = db.get(Profile, user_id)
     if profile is None:
+        # 첫 로그인에서만 환경 변수를 본다. 그 뒤로는 DB의 값이 사실이다.
+        is_admin = bool(email) and email.lower() in settings.admin_emails
         profile = Profile(
             id=user_id,
             email=email,
-            # 첫 로그인에서만 환경 변수를 본다. 그 뒤로는 DB의 값이 사실이다.
-            is_admin=bool(email) and email.lower() in settings.admin_emails,
+            is_admin=is_admin,
+            # 관리자는 스스로를 승인할 사람이 없으므로 자동으로 통과시킨다.
+            # 안 그러면 첫 배포에서 아무도 /admin에 못 들어간다.
+            is_approved=is_admin,
         )
         db.add(profile)
         db.commit()
@@ -89,7 +96,23 @@ def get_current_user(
         profile.email = email
         db.commit()
 
-    return CurrentUser(id=user_id, email=email, is_admin=profile.is_admin)
+    return CurrentUser(
+        id=user_id, email=email, is_admin=profile.is_admin, is_approved=profile.is_approved
+    )
+
+
+def require_approved_user(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    """볼 수 있는 사람인가. 자료를 내보내는 모든 경로가 여기를 지난다.
+
+    가입은 누구나 하지만 승인은 사람이 한다. 로그인만으로 열리면 Supabase에
+    메일 주소를 넣은 누구에게나 강의 자료가 열리는 것과 같다.
+    """
+    if not user.is_approved:
+        raise HTTPException(
+            status_code=403,
+            detail={"code": "pending_approval", "message": "승인 대기 중입니다."},
+        )
+    return user
 
 
 def require_admin(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:

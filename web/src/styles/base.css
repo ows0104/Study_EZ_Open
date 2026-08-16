@@ -233,11 +233,35 @@ a:focus-visible {
   font-size: 12px;
 }
 
+.gate-switch {
+  display: flex;
+  margin-top: 14px;
+  gap: 4px;
+  justify-content: center;
+}
+
+.gate-switch button {
+  font-size: 12px;
+}
+
 .gate-fineprint {
   margin-top: 32px;
   color: var(--ink-3);
   font-size: 11px;
   line-height: 1.6;
+}
+
+.admin-users {
+  margin-top: 36px;
+}
+
+.admin-users h2 {
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.admin-users table {
+  max-width: 620px;
 }
 
 /* ------------------------------------------------------------------ 강의 상세 */

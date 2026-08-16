@@ -1,3 +1,19 @@
+/** 로그인 직후 무엇을 그릴지 정하는 값. 승인 게이트를 지나지 않는 응답이다. */
+export type Me = {
+  id: string;
+  email: string;
+  isAdmin: boolean;
+  isApproved: boolean;
+};
+
+export type AppUser = {
+  id: string;
+  email: string;
+  isAdmin: boolean;
+  isApproved: boolean;
+  createdAt: string | null;
+};
+
 export type EventCategory = "lecture" | "practice" | "exam" | "holiday" | "elective" | "study";
 
 /** 강의 칩에 찍히는 점. 있다/없다만 안다. */

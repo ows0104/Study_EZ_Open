@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.auth import CurrentUser, get_current_user
+from app.auth import CurrentUser, require_approved_user
 from app.database import get_db
 from app.models import Asset, PreItem, QuizAttempt
 from app.naming import normalize_stem
@@ -151,7 +151,7 @@ def missed_items(db: Session, user_id: str, subject: str, run_id: str, limit: in
 def read_prequiz(
     subject: str,
     run_id: str,
-    user: CurrentUser = Depends(get_current_user),
+    user: CurrentUser = Depends(require_approved_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     lecture = lecture_or_404(db, subject, run_id)
@@ -206,7 +206,7 @@ def grade_answer(
     subject: str,
     run_id: str,
     payload: GradeRequest,
-    user: CurrentUser = Depends(get_current_user),
+    user: CurrentUser = Depends(require_approved_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     lecture = lecture_or_404(db, subject, run_id)
@@ -240,7 +240,7 @@ def grade_answer(
 def reset_attempts(
     subject: str,
     run_id: str,
-    user: CurrentUser = Depends(get_current_user),
+    user: CurrentUser = Depends(require_approved_user),
     db: Session = Depends(get_db),
 ) -> None:
     lecture = lecture_or_404(db, subject, run_id)

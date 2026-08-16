@@ -46,10 +46,14 @@ ASSET_KINDS = frozenset(
 
 
 class Profile(Base):
-    """계정. 관리자냐 아니냐, 불리언 하나다.
+    """계정. 불리언 둘이다.
 
-    콘텐츠가 모두에게 동일하므로 소유권 검사가 없다. 승인 대기도 없다 —
-    Supabase가 로그인시킨 사람은 곧 볼 수 있는 사람이다.
+    `is_admin`은 올릴 수 있는 사람인가, `is_approved`는 볼 수 있는 사람인가.
+    소유권 검사는 없다 — 콘텐츠가 모두에게 동일하므로 "볼 수 있는가"까지만
+    가르면 된다.
+
+    가입은 누구나 하지만 승인 전에는 아무것도 안 보인다. Supabase에 가입한
+    사람과 이 학년 학생이 같지 않기 때문이고, 그 판단은 사람이 한다.
     """
 
     __tablename__ = "profile"
@@ -57,6 +61,7 @@ class Profile(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)  # Supabase auth.users.id
     email: Mapped[str] = mapped_column(String(320), nullable=False, default="")
     is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_approved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 

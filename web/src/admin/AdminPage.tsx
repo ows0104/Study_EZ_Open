@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
-import type { AdminOverview, AdminRow } from "../types";
+import type { AdminOverview, AdminRow, AppUser } from "../types";
 import { lectureHref } from "../calendar/EventChip";
 
 type Candidate = {
@@ -91,7 +91,75 @@ export function AdminPage() {
       {!rows.length ? <p className="notice">해당하는 강의가 없습니다.</p> : null}
 
       <CourseAliases overview={overview} onChanged={load} />
+      <Users />
     </div>
+  );
+}
+
+/**
+ * 계정 승인.
+ *
+ * 가입은 누구나 하지만 승인 전에는 아무것도 안 보인다. Supabase에 메일 주소를
+ * 넣은 사람과 이 학년 학생이 같지 않기 때문이고, 그 판단은 사람이 한다.
+ */
+function Users() {
+  const [users, setUsers] = useState<AppUser[] | null>(null);
+  const [busy, setBusy] = useState("");
+
+  const load = useCallback(() => {
+    api<AppUser[]>("/api/admin/users").then(setUsers);
+  }, []);
+
+  useEffect(load, [load]);
+
+  if (!users) return null;
+  const waiting = users.filter((row) => !row.isApproved).length;
+
+  async function setApproval(row: AppUser, isApproved: boolean) {
+    setBusy(row.id);
+    try {
+      await api(`/api/admin/users/${row.id}/approval`, {
+        method: "PUT",
+        body: JSON.stringify({ isApproved }),
+      });
+      load();
+    } finally {
+      setBusy("");
+    }
+  }
+
+  return (
+    <section className="admin-users">
+      <h2>계정 {waiting ? `— 승인 대기 ${waiting}명` : ""}</h2>
+      <table className="admin-table">
+        <thead>
+          <tr>
+            <th>이메일</th>
+            <th>상태</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {users.map((row) => (
+            <tr key={row.id} className={row.isApproved ? "" : "is-unmatched"}>
+              <td>
+                {row.email || row.id}
+                {row.isAdmin ? <span className="tag is-ok">관리자</span> : null}
+              </td>
+              <td>{row.isApproved ? "승인됨" : "대기"}</td>
+              <td>
+                <button
+                  disabled={busy === row.id}
+                  onClick={() => setApproval(row, !row.isApproved)}
+                >
+                  {row.isApproved ? "승인 취소" : "승인"}
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
   );
 }
 

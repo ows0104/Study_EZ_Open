@@ -30,6 +30,7 @@ from app.models import (
     Lecture,
     PreItem,
     Preview,
+    Profile,
     RunMeta,
     TimetableEvent,
 )
@@ -509,6 +510,54 @@ def timetable_courses(events) -> list[dict[str, Any]]:
         if sum(spellings.values()) >= MIN_COURSE_SESSIONS
     ]
     return sorted(courses, key=lambda item: -item["sessions"])
+
+
+# ---------------------------------------------------------------- 계정 승인
+
+
+@router.get("/users")
+def list_users(
+    user: CurrentUser = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[dict[str, Any]]:
+    """가입한 사람 전부. 승인 안 된 사람이 먼저 온다 — 할 일이 위에 있어야 한다."""
+    profiles = db.scalars(select(Profile)).all()
+    profiles.sort(key=lambda row: (row.is_approved, row.email.lower()))
+    return [
+        {
+            "id": row.id,
+            "email": row.email,
+            "isAdmin": row.is_admin,
+            "isApproved": row.is_approved,
+            "createdAt": row.created_at.isoformat() if row.created_at else None,
+        }
+        for row in profiles
+    ]
+
+
+class ApprovalIn(BaseModel):
+    is_approved: bool = Field(alias="isApproved")
+
+    model_config = {"populate_by_name": True}
+
+
+@router.put("/users/{user_id}/approval")
+def set_approval(
+    user_id: str,
+    payload: ApprovalIn,
+    user: CurrentUser = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    profile = db.get(Profile, user_id)
+    if profile is None:
+        raise HTTPException(status_code=404, detail="계정을 찾을 수 없습니다.")
+    # 관리자가 자기 승인을 내리면 그 길로 /admin에서 잠긴다. 되돌릴 사람이
+    # 자기뿐일 수 있으므로 아예 막는다.
+    if profile.id == user.id and not payload.is_approved:
+        raise HTTPException(status_code=400, detail="자기 승인은 내릴 수 없습니다.")
+    profile.is_approved = payload.is_approved
+    db.commit()
+    return {"id": profile.id, "isApproved": profile.is_approved}
 
 
 @router.get("/timetable-events")

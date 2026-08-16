@@ -219,9 +219,32 @@ def main() -> None:
     marks = linked[0]["lectures"][0]["marks"]
     check("자료·퀴즈·예습 점이 켜졌다", all(marks[key] for key in ("notes", "prequiz", "preview")), marks)
 
-    print("\n[10] 로그인 없이는 아무것도 안 나간다 — 관문은 이것 하나다")
+    print("\n[10] 로그인 없이는 아무것도 안 나간다")
     check("401", client.get("/api/timetable").status_code == 401)
     check("러너 토큰 없이 등록 불가", client.post("/api/admin/lectures", json=[]).status_code in (401, 403))
+
+    print("\n[11] 승인 게이트 — 가입만으로는 자료가 안 보인다")
+    from app.auth import CurrentUser, require_approved_user
+    from fastapi import HTTPException
+
+    pending = CurrentUser(id="u1", email="new@snu.ac.kr", is_admin=False, is_approved=False)
+    try:
+        require_approved_user(pending)
+        check("승인 전에는 막힌다", False, "통과해 버렸다")
+    except HTTPException as exc:
+        check("403으로 막힌다", exc.status_code == 403, exc.status_code)
+        # 프론트가 "승인 대기 중" 화면과 진짜 권한 오류를 갈라야 한다.
+        check("pending_approval 코드가 실린다", exc.detail.get("code") == "pending_approval", exc.detail)
+
+    approved = CurrentUser(id="u2", email="ok@snu.ac.kr", is_admin=False, is_approved=True)
+    check("승인되면 통과한다", require_approved_user(approved) is approved)
+
+    print("\n[12] /me는 승인 게이트를 지나지 않는다")
+    # 승인 대기 중인 사람도 자기 상태는 알아야 안내 화면을 볼 수 있다.
+    me = client.get("/api/me", headers=USER)
+    check("200", me.status_code == 200, me.text)
+    check("승인 여부가 실린다", me.json().get("isApproved") is True, me.json())
+    check("로그인 없이는 401", client.get("/api/me").status_code == 401)
 
     print()
     if failures:

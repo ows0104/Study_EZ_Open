@@ -1,7 +1,7 @@
 """강의 상세. 작년 강의록 · 예습 열기 · Pre-Quiz · 올해 강의록 · Main-Quiz.
 
-파일은 목록에만 나오고, 실제 URL은 누를 때 따로 받는다. 서명 URL의 수명이
-분 단위라 미리 실어 보내면 화면을 열어 둔 사이에 죽는다.
+파일은 목록에만 나오고, 실제 URL은 누를 때 따로 받는다. 서명 URL에는 수명이
+있어서 미리 실어 보내면 화면을 열어 둔 사이에 죽는다.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.auth import CurrentUser, get_current_user
+from app.auth import CurrentUser, require_approved_user
 from app.config import get_settings
 from app.database import get_db
 from app.models import Asset, PreItem, Preview, QuizAttempt, RunMeta, TimetableEvent
@@ -53,7 +53,7 @@ def _preview_payload(preview: Preview | None, *, is_admin: bool) -> dict[str, An
 def read_lecture(
     subject: str,
     run_id: str,
-    user: CurrentUser = Depends(get_current_user),
+    user: CurrentUser = Depends(require_approved_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     lecture = lecture_or_404(db, subject, run_id)
@@ -151,10 +151,10 @@ def sign_file(
     subject: str,
     run_id: str,
     asset_id: str,
-    user: CurrentUser = Depends(get_current_user),
+    user: CurrentUser = Depends(require_approved_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    """누를 때 발급하는 짧은 수명의 서명 URL. 제3자 저작물이라 다른 경로는 없다."""
+    """누를 때 발급하는 서명 URL. 버킷이 비공개라 이 경로로만 파일이 열린다."""
     lecture = lecture_or_404(db, subject, run_id)
     asset = db.get(Asset, asset_id)
     if asset is None or (asset.subject, asset.run_id) != (lecture.subject, lecture.run_id):

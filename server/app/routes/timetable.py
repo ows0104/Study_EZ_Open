@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth import CurrentUser, get_current_user
+from app.auth import CurrentUser, require_approved_user
 from app.database import get_db
 from app.models import Lecture, TimetableEvent
 from app.routes.common import material_marks
@@ -25,7 +25,7 @@ router = APIRouter()
 def read_timetable(
     start: Date | None = Query(None, description="이 날짜부터 (없으면 전체)"),
     end: Date | None = Query(None, description="이 날짜까지"),
-    user: CurrentUser = Depends(get_current_user),
+    user: CurrentUser = Depends(require_approved_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     query = select(TimetableEvent)

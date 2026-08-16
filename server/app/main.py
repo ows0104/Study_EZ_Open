@@ -5,7 +5,7 @@ from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routes import admin, lectures, local_storage, prequiz, timetable
+from app.routes import admin, lectures, local_storage, me, prequiz, timetable
 
 
 settings = get_settings()
@@ -37,6 +37,7 @@ def health() -> dict[str, str]:
     return {"status": "ok", "environment": settings.environment}
 
 
+app.include_router(me.router, prefix="/api")
 app.include_router(timetable.router, prefix="/api")
 app.include_router(lectures.router, prefix="/api")
 app.include_router(prequiz.router, prefix="/api")
