@@ -1,0 +1,596 @@
+/* 흰 배경, 무채색, 강조색 하나.
+ *
+ * 강조색은 "네가 열어 볼 것이 있다"는 뜻으로만 쓴다. 다른 뜻을 하나 더 얹는
+ * 순간 아무 뜻도 없어지므로, 나머지는 전부 회색 계열이다. 필기의 색을 읽지
+ * 않기로 한 것과 같은 이유다 — 색이 여럿을 뜻하면 근거로 못 쓴다. */
+
+:root {
+  --ink: #16181c;
+  --ink-2: #4a5058;
+  --ink-3: #7c838d;
+  --line: #e3e6ea;
+  --line-soft: #eef0f3;
+  --surface: #ffffff;
+  --surface-2: #fafbfc;
+  --accent: #2563eb;
+  --accent-soft: #eef4ff;
+  --warn: #9a3412;
+  --warn-soft: #fff5ed;
+  --ok: #14683f;
+
+  color-scheme: light;
+  font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", system-ui, sans-serif;
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--surface);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--surface);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--ink-3);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.is-quiet {
+  border-color: transparent;
+  color: var(--ink-3);
+}
+
+button.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+input {
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+input:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ------------------------------------------------------------------ 껍데기 */
+
+.app-bar {
+  display: grid;
+  padding: 12px 20px;
+  grid-template-columns: auto 1fr auto;
+  gap: 16px;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+}
+
+.app-brand {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.app-bar nav a {
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.app-user {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.app-main {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.app-main.is-bare {
+  max-width: 720px;
+}
+
+.notice {
+  margin: 16px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink-2);
+  background: var(--surface-2);
+  font-size: 13px;
+}
+
+.notice.is-error {
+  border-color: #f0d3c6;
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+
+.notice.is-warning {
+  border-color: #f0d3c6;
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+
+.badge,
+.tag {
+  display: inline-block;
+  margin: 2px 4px 2px 0;
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tag.is-ok {
+  border-color: #c6e3d3;
+  color: var(--ok);
+}
+
+.tag.is-warn {
+  border-color: #f0d3c6;
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+
+/* ------------------------------------------------------------------ 로그인 */
+
+.gate {
+  max-width: 340px;
+  margin: 18vh auto;
+  padding: 0 20px;
+  text-align: center;
+}
+
+.gate h1 {
+  margin-bottom: 24px;
+  font-size: 22px;
+}
+
+.gate form {
+  display: grid;
+  gap: 8px;
+  text-align: left;
+}
+
+.gate label {
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.gate button[type="submit"] {
+  border-color: var(--accent);
+  color: white;
+  background: var(--accent);
+}
+
+.gate-note {
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.gate-error {
+  color: var(--warn);
+  font-size: 12px;
+}
+
+.gate-fineprint {
+  margin-top: 32px;
+  color: var(--ink-3);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------------ 강의 상세 */
+
+.lecture-head {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lecture-crumb {
+  margin: 0 0 6px;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.lecture-head h1 {
+  font-size: 21px;
+  line-height: 1.35;
+  word-break: keep-all;
+}
+
+.lecture-meta {
+  margin: 6px 0 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.lecture-section {
+  margin-top: 28px;
+}
+
+.lecture-section h2 {
+  margin-bottom: 10px;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.resource,
+.resource-group {
+  display: grid;
+  width: 100%;
+  margin-bottom: 8px;
+  gap: 2px;
+  text-align: left;
+}
+
+.resource {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.resource strong {
+  font-size: 14px;
+}
+
+.resource small {
+  color: var(--ink-3);
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
+}
+
+.resource.is-primary {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.resource.is-primary strong {
+  color: var(--accent);
+}
+
+.resource.is-empty {
+  border-style: dashed;
+  color: var(--ink-3);
+  background: var(--surface-2);
+  font-size: 13px;
+}
+
+.resource-group {
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+/* 오늘 놓친 것 — 이 목록이 웹 풀이의 존재 이유다. */
+.missed {
+  margin-top: 28px;
+  padding: 16px 18px;
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+
+.missed h2 {
+  margin-bottom: 10px;
+  color: var(--accent);
+  font-size: 14px;
+}
+
+.missed ol {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.missed li {
+  margin-bottom: 12px;
+}
+
+.missed-stem {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.missed-target {
+  margin: 4px 0 0;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+/* ------------------------------------------------------------------ 퀴즈 */
+
+.quiz {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.quiz-progress {
+  margin: 0 0 10px;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.quiz-stem {
+  margin: 0 0 16px;
+  font-size: 15.5px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+.quiz-choices {
+  display: grid;
+  margin: 0 0 14px;
+  padding: 0;
+  gap: 6px;
+  list-style: none;
+}
+
+.quiz-choices label {
+  display: grid;
+  padding: 10px 12px;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.quiz-choices label:hover {
+  border-color: var(--ink-3);
+}
+
+.quiz-choices label:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* 채점 뒤 정답 자리. 무엇을 골랐든 정답은 표시된다. */
+.quiz-choices label.is-answer {
+  border-color: var(--ok);
+  background: #f1f8f4;
+}
+
+.quiz-ox {
+  display: flex;
+  margin-bottom: 14px;
+  gap: 8px;
+}
+
+.quiz-ox button {
+  width: 68px;
+  height: 52px;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.quiz-short {
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+.quiz-submit {
+  border-color: var(--accent);
+  color: white;
+  background: var(--accent);
+}
+
+.quiz-result {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.quiz-verdict {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.quiz-result.is-correct .quiz-verdict {
+  color: var(--ok);
+}
+
+.quiz-result.is-wrong .quiz-verdict {
+  color: var(--warn);
+}
+
+.quiz-explanation,
+.quiz-anchor {
+  margin: 0 0 8px;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: keep-all;
+}
+
+.quiz-anchor {
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+.quiz-slide {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.quiz-done {
+  padding: 24px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------ 관리 */
+
+.admin-summary {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.admin-filters {
+  display: flex;
+  margin-bottom: 12px;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.admin-table th {
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-3);
+  font-size: 11px;
+  text-align: left;
+}
+
+.admin-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+
+.admin-table tr.is-unmatched {
+  background: var(--warn-soft);
+}
+
+.admin-table td small {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+.admin-table input {
+  width: 100%;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.uploads {
+  display: flex;
+  margin: 0 0 4px;
+  padding: 0;
+  gap: 4px;
+  flex-wrap: wrap;
+  list-style: none;
+}
+
+.uploads li {
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--ink-3);
+  font-size: 10.5px;
+}
+
+.uploads li.is-on {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.candidates {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.candidates button {
+  width: 100%;
+  margin-bottom: 3px;
+  font-size: 11.5px;
+  text-align: left;
+}
+
+.admin-aliases {
+  margin-top: 36px;
+}
+
+.admin-aliases h2 {
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.admin-aliases table {
+  max-width: 520px;
+  margin-bottom: 10px;
+}

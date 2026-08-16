@@ -14,3 +14,12 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+
+# 서버 — local-test 모드가 R2 대신 쓰는 디렉터리. 강의 자료가 들어간다.
+server/local_test_data/
+
+# 웹
+node_modules/
+web/dist/
+.env.local
+*.tsbuildinfo

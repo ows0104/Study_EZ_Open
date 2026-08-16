@@ -1,0 +1,90 @@
+# Study_EZ 서버
+
+**아무것도 만들지 않는다.** 로컬 러너가 만든 것을 받아 배급한다. 워커도, 작업
+큐도, 과금도 없다.
+
+```
+app/
+  config.py     환경 변수 하나로 모인다
+  database.py   SQLAlchemy 엔진
+  models.py     표 9개. 사용자가 쓰는 것은 quiz_attempt 하나뿐이다
+  auth.py       Supabase JWT 검증 + is_admin 불리언
+  storage.py    R2 서명 URL
+  naming.py     NFC·정규화. studyez/filenames.py와 같은 규칙이다
+  matching.py   시간표 칸 ↔ 필기에서 읽어 낸 강의
+  cli.py        init-db · seed-timetable
+  routes/       timetable · lectures · prequiz · admin · local_storage
+tests/          test_smoke.py · test_matching.py
+```
+
+## 띄우기
+
+```bash
+python -m venv .venv && .venv/Scripts/pip install -r requirements.txt
+cp .env.example .env          # 값을 채운다
+python -m app.cli init-db
+python -m app.cli seed-timetable "…/2026_본1_2학기_시간표.json"
+python -m uvicorn app.main:app --reload
+```
+
+`ENVIRONMENT=local-test`면 R2 대신 디스크를 쓰고 Supabase 검증을 건너뛴다.
+그때 통하는 토큰은 `local-test-token` 하나이며, **배포된 서버에서는 통하지
+않는다** — 로그인 필수라는 규칙에 구멍이 없다는 뜻이다.
+
+## 검사
+
+```bash
+.venv/Scripts/python.exe -m tests.test_smoke      # 강의 한 편이 통과하는 전 과정
+.venv/Scripts/python.exe -m tests.test_matching   # 한 교시에 여러 강의가 열릴 때
+```
+
+SQLite로 돈다. Postgres 고유 기능을 쓰지 않는다는 것도 같이 확인된다.
+
+## 로컬 러너가 부르는 것
+
+전부 `Authorization: Bearer $RUNNER_TOKEN`이다. 러너는 사람이 아니라
+스크립트라서 Supabase 세션이 없다.
+
+| | |
+|---|---|
+| `POST /api/admin/lectures` | 강의 목록 upsert. 시간표 칸에 자동으로 붙는다 |
+| `POST /api/admin/lectures/{과목}/{run_id}/uploads` | 서명 URL 발급 (배열) |
+| `POST …/uploads/complete` | 올라온 것을 확인하고 `asset`에 남긴다 |
+| `PUT …/run-meta/{main\|pre}` | `run.meta.json` 통째로 |
+| `PUT …/pre-items` | `pre_items.final.json` 통째로. 부분 갱신이 아니라 교체 |
+| `PUT …/preview` | 예습 링크 |
+
+**파일은 서버를 거치지 않는다.** Cloud Run의 요청 본문 상한(32MB)이 강의록
+PDF보다 작아서, 서버는 키를 정하고 올라온 것을 확인만 한다.
+
+```
+1. POST …/uploads           [{kind, filename, sizeBytes, contentType}, …]
+                            → [{objectKey, uploadUrl}, …]
+2. PUT  uploadUrl           파일 본문. 헤더 없음
+3. POST …/uploads/complete  같은 목록 → {stored, missing}
+```
+
+키가 `(subject, run_id, kind, filename)`으로 결정되므로 중간에 끊기면 처음부터
+다시 돌리면 된다. `missing`이 비어 있지 않으면 그 파일은 세지 않는다.
+
+`kind`는 산출물 계약의 다섯 가지뿐이다 — `notes_current`, `notes_prev`,
+`main_apkg`, `pre_apkg`, `media`. 다른 값은 422로 막힌다. **계약에 없는 파일이
+필요하면 추측해서 맞추지 말고 `docs/artifact-contract.md`를 먼저 고쳐라.**
+
+## 틀리면 안 되는 것 넷이 어디에 있나
+
+| | |
+|---|---|
+| 저작권 — 로그인·짧은 서명 URL·색인 차단 | `storage.py`, `main.py`의 `block_indexing`, `web/index.html` |
+| `/c/` 대화 URL을 일반 사용자에게 안 준다 | `routes/lectures.py`의 `_preview_payload` |
+| 키는 `(subject, run_id)` 복합 | `models.py` 전부, `routes/common.py`의 `lecture_or_404` |
+| Pre-Quiz 응답이 유일한 사용자별 데이터 | `models.py`의 `QuizAttempt`, `routes/prequiz.py` |
+
+정답은 문항과 함께 나가지 않는다. `GET …/prequiz`에 `answer`도 `explanation`도
+없고, 채점은 `POST …/prequiz/grade`가 서버에서 한다. 정답이 클라이언트에 있으면
+`quiz_attempt`에 남는 기록이 아무것도 뜻하지 않는다.
+
+## 마이그레이션 도구가 없는 이유
+
+표가 아홉이고 고치는 사람이 한 명이다. Alembic이 얹는 무게가 그것으로 막는
+사고보다 크다. 스키마가 바뀌면 `init-db`로 다시 만든다.
