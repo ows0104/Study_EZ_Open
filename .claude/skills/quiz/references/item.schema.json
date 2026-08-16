@@ -44,8 +44,8 @@
           },
           "evidence_type": {
             "type": "string",
-            "enum": ["lecture_text", "table", "figure", "question_text"],
-            "description": "question_text는 source_type이 jokbo일 때만 쓴다"
+            "enum": ["lecture_text", "table", "figure", "question_text", "annotation"],
+            "description": "question_text는 source_type이 jokbo일 때만. annotation은 필기가 유일한 근거일 때 쓰되 §5.1에 따라 족보가 그 지점을 물었어야 하며, exam_hit을 함께 true로 둔다"
           },
           "source_anchor": {
             "type": "string",

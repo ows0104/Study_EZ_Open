@@ -45,8 +45,14 @@ VALID_IMPORTANCE = {"core", "detail"}
 VALID_SOURCE_TYPES = {"lecture", "jokbo"}
 VALID_REVIEW_FLAGS = {"answer_mismatch", "question_error", "uncertain"}
 # 족보 문항은 question_text를, 강의록은 나머지를 쓴다.
+# `annotation`은 필기가 유일한 근거일 때 쓴다. item-rules §5.1이 그걸 허용하는
+# 조건은 하나 - **족보가 그 지점을 실제로 물었을 때**다. 교수가 말로만 강조한 것이
+# 필기에 남기 때문이다.
+#
+# 그래서 `annotation`은 `exam_hit`을 함께 요구한다(아래 check_item). 조건 없이
+# 열어 두면 필기 사담이 전부 근거로 둔갑한다.
 VALID_EVIDENCE_TYPES = {
-    "lecture": {"lecture_text", "table", "figure"},
+    "lecture": {"lecture_text", "table", "figure", "annotation"},
     "jokbo": {"question_text", "table", "figure"},
 }
 
@@ -209,6 +215,11 @@ def check_item(item: dict, num_pages: int, jokbo_range: list | None = None,
     evidence_type = _text(item.get("evidence_type")).lower()
     if evidence_type and evidence_type not in VALID_EVIDENCE_TYPES[source_type]:
         soft.append(f"evidence_type_mismatch({evidence_type}/{source_type})")
+
+    # 필기 단독 근거는 족보의 뒷받침이 있을 때만이다 (§5.1). 없으면 그냥
+    # 필기 사담이므로 감사로 보낸다.
+    if evidence_type == "annotation" and not item.get("exam_hit"):
+        soft.append("annotation_without_exam_hit")
 
     # exam_hit은 '강의록 내용인데 족보가 물었다'는 표시다. 족보 구간 카드는
     # source_type으로 이미 구분되므로 붙이지 않는다.
