@@ -22,4 +22,5 @@ server/local_test_data/
 node_modules/
 web/dist/
 .env.local
+.env.production
 *.tsbuildinfo
