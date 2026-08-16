@@ -44,8 +44,12 @@ USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
 # 이보다 짧으면 대화를 못 읽은 것으로 본다. 예습 대화는 보통 수천 자다.
 MIN_CHARS = 400
 
-# 한 발화가 이보다 길면 잘라 싣는다. 예습 대화에 긴 코드나 표가 붙는 경우가 있다.
-MAX_TURN_CHARS = 12000
+# 한 발화가 이보다 길면 잘라 싣는다.
+#
+# 12,000자로 뒀다가 실물에서 **핵심 예습 설명이 잘렸다.** 그 대화의 두 번째 발화가
+# 14,170자였고, 잘린 뒷부분에 Rett syndrome 같은 항목이 통째로 들어 있었다.
+# 예습 대화는 한 발화에 강의 전체를 설명하는 것이 정상이므로 넉넉히 둔다.
+MAX_TURN_CHARS = 40000
 
 _SHARE_HOSTS = ("chatgpt.com", "chat.openai.com", "claude.ai", "gemini.google.com")
 
@@ -121,7 +125,7 @@ def _walk(node, out: list[Turn]) -> None:
                     if text.strip():
                         break
             if text.strip():
-                out.append(Turn(role, text.strip()[:MAX_TURN_CHARS]))
+                out.append(Turn(role, _clean_text(text)[:MAX_TURN_CHARS]))
                 return          # 한 턴 안을 더 파고들지 않는다 - 중복이 생긴다
         for value in node.values():
             _walk(value, out)
@@ -147,17 +151,179 @@ def _json_blobs(html: str):
     return found
 
 
+def _js_string_literals_after(text: str, marker: str) -> list[str]:
+    """`marker` 뒤에 오는 JS 문자열 리터럴을 이스케이프를 지켜 가며 뽑는다.
+
+    정규식 `".*?"`로는 안 된다 - 본문에 `\\"`가 잔뜩 들어 있어 첫 이스케이프에서
+    잘린다. 실제로 그렇게 잘라 놓고 JSON 파싱에 실패했다.
+    """
+    quote = '"'
+    escape = "\\"
+    found: list[str] = []
+    for match in re.finditer(re.escape(marker), text):
+        index = match.end()
+        while index < len(text) and text[index] in " \t(":
+            index += 1
+        if index >= len(text) or text[index] != quote:
+            continue
+        index += 1
+        buffer: list[str] = []
+        while index < len(text):
+            char = text[index]
+            if char == escape:
+                buffer.append(text[index:index + 2])
+                index += 2
+                continue
+            if char == quote:
+                break
+            buffer.append(char)
+            index += 1
+        found.append(quote + "".join(buffer) + quote)
+    return found
+
+
+def _hydrate(flat: list, index, depth: int = 0):
+    """평평한 배열의 한 자리를 실제 값으로 되살린다.
+
+    ChatGPT 공유 페이지는 React Router의 스트림 형식을 쓴다. 문자열을 한 번씩만
+    담아 두고 객체는 `{"_<키인덱스>": <값인덱스>}`로 번호만 들고 있다. 그래서 통
+    HTML에 `"role"`이 **한 번밖에** 안 나온다 - 대화가 없어서가 아니라 한 번만
+    적혀 있고 나머지는 그 번호를 가리키기 때문이다.
+    """
+    if depth > 24 or not isinstance(index, int) or not (0 <= index < len(flat)):
+        return None
+    node = flat[index]
+    if isinstance(node, dict):
+        out = {}
+        for key, value in node.items():
+            if not key.startswith("_"):
+                continue
+            try:
+                name = flat[int(key[1:])]
+            except (ValueError, IndexError):
+                continue
+            if isinstance(name, str):
+                out[name] = _hydrate(flat, value, depth + 1)
+        return out
+    if isinstance(node, list):
+        return [_hydrate(flat, item, depth + 1) for item in node]
+    return node
+
+
+# 사람이 읽는 발화만 싣는다. 도구 호출(python 실행 등)과 시스템 지시는 뺀다 -
+# 학생이 읽을 대화가 아니고, 실행 로그가 섞이면 문항이 그쪽으로 샌다.
+_VISIBLE_CONTENT_TYPES = {"text", "multimodal_text"}
+
+# 내용 대신 들어오는 자리표시자. 그대로 실으면 문항이 이걸 근거로 삼는다.
+_PLACEHOLDER_RE = re.compile(
+    r"^(the output of this plugin was redacted|"
+    r"\[?(image|이미지|파일)\]?|"
+    r"\(?redacted\)?)\.?$", re.IGNORECASE)
+
+# ChatGPT가 첨부 파일을 인용할 때 본문에 심는 표식.
+#
+#     U+E200  filecite  U+E202  turn0file0  U+E202  L6-L13  U+E201
+#
+# 사용자 영역(U+E000~U+F8FF) 문자로 열고 닫는다. 실물 한 대화에서 26개 104자가
+# 나왔다. 그대로 두면 출제 에이전트가 이걸 본문으로 읽고 근거로 삼는다 -
+# 사람이 볼 화면에서는 각주로 렌더되지만 우리에겐 그냥 잡음이다.
+_CITATION_RE = re.compile("\ue200.*?\ue201", re.S)
+
+# 짝이 안 맞아 남은 것들. 남겨 두면 글 한가운데 보이지 않는 문자가 낀다.
+_PUA_RE = re.compile("[\ue000-\uf8ff]")
+
+
+def _clean_text(text: str) -> str:
+    """사람이 읽을 글만 남긴다. 인용 표식과 사용자 영역 문자를 걷어낸다."""
+    text = _CITATION_RE.sub("", text)
+    text = _PUA_RE.sub("", text)
+    return re.sub(r"[ \t]+\n", "\n", text).strip()
+
+
+def _from_stream(html: str) -> list[Turn]:
+    """React Router 스트림에서 대화를 뽑는다.
+
+    메시지 한 개는 이렇게 생겼다.
+
+        {id, author: {role, ...}, content: {content_type, parts: [...]},
+         create_time, recipient, channel, ...}
+
+    `role`이 든 객체는 `author`이지 메시지가 아니다. 그래서 `author` 키를 가진
+    객체를 찾아야 한다 - 여기서 한 번 헤맸다.
+    """
+    for chunk in _js_string_literals_after(html, "streamController.enqueue"):
+        try:
+            flat = json.loads(json.loads(chunk))
+        except (ValueError, TypeError):
+            continue
+        if not isinstance(flat, list) or len(flat) < 50:
+            continue
+
+        author_slot = next((i for i, value in enumerate(flat) if value == "author"), None)
+        if author_slot is None:
+            continue
+        marker = f"_{author_slot}"
+
+        collected: list[tuple[float, Turn]] = []
+        seen_ids: set[str] = set()
+        for index, node in enumerate(flat):
+            if not isinstance(node, dict) or marker not in node:
+                continue
+            message = _hydrate(flat, index)
+            if not isinstance(message, dict):
+                continue
+
+            # 같은 메시지가 여러 자리에서 참조된다(대화 트리와 선형 목록 양쪽).
+            # id로 한 번만 싣는다 - 안 그러면 발화가 두 배로 부풀고, 그 상태로
+            # 퀴즈를 만들면 같은 내용을 두 번 읽은 것처럼 보인다.
+            message_id = str(message.get("id") or "")
+            if message_id:
+                if message_id in seen_ids:
+                    continue
+                seen_ids.add(message_id)
+
+            role = _normalize_role((message.get("author") or {}).get("role")
+                                   if isinstance(message.get("author"), dict) else None)
+            if not role:
+                continue                        # tool·system 발화는 여기서 빠진다
+
+            content = message.get("content")
+            if isinstance(content, dict):
+                if content.get("content_type") not in _VISIBLE_CONTENT_TYPES:
+                    continue                    # 코드 실행 출력 등
+                text = _flatten_text(content.get("parts"))
+            else:
+                text = _flatten_text(content)
+            text = text.strip()
+            if not text or _PLACEHOLDER_RE.match(text):
+                continue
+
+            when = message.get("create_time")
+            collected.append((float(when) if isinstance(when, (int, float)) else float(index),
+                              Turn(role, _clean_text(text)[:MAX_TURN_CHARS])))
+
+        if len(collected) >= 2:
+            # 평평한 배열의 순서는 대화 순서가 아니다. 시각으로 세운다.
+            collected.sort(key=lambda pair: pair[0])
+            return [turn for _, turn in collected]
+    return []
+
+
 def _extract(html: str) -> tuple[list[Turn], str]:
+    turns = _from_stream(html)
+    if len(turns) >= 2:
+        return turns, "reactRouter stream"
+
     for index, blob in enumerate(_json_blobs(html)):
         for candidate in (blob, blob.rstrip(";")):
             try:
                 data = json.loads(candidate)
             except ValueError:
                 continue
-            turns: list[Turn] = []
-            _walk(data, turns)
-            if len(turns) >= 2:
-                return turns, f"script[{index}] JSON"
+            found: list[Turn] = []
+            _walk(data, found)
+            if len(found) >= 2:
+                return found, f"script[{index}] JSON"
     return [], "실패"
 
 
