@@ -76,9 +76,9 @@ lecture
 | 작년 필기 PDF | 학기 초 | Pre-Quiz와 예습용. R2 |
 | `<강의>.apkg` | Main-Quiz 빌드 후 | Anki 덱. R2 |
 | `<강의>_예습.apkg` | Pre-Quiz 빌드 후 | R2 |
-| `media/*.png` | 빌드 후 | 슬라이드 이미지. 웹 풀이의 오답 해설이 쓴다 |
+| `media/*.png` | 빌드 후 | 슬라이드 이미지. 카드 뒷면 근거 |
 
-**전부 로그인 뒤 짧은 수명의 서명 URL로만 내보낸다.** 제3자 저작물이다.
+**전부 로그인 뒤에만 내보낸다.** 제3자 저작물이다.
 
 ## `run.meta.json` — 덱 하나의 요약
 
@@ -102,7 +102,10 @@ lecture
 
 `lecture_id` 필드 이름은 역사적인 것이고 값은 `run_id`다.
 
-## `pre_items.final.json` — 웹 풀이 화면이 읽는 것
+## `pre_items.final.json` — 지금은 저장만 한다
+
+퀴즈는 `.apkg`로 준다. 이 JSON은 나중에 웹에서 풀 수 있게 할 때 쓸 재료라
+**받아서 저장만** 하면 된다. 그때가 오면 화면이 이 모양을 읽는다.
 
 ```json
 { "lecture_id": "250820_02",
@@ -143,19 +146,21 @@ lecture
 preview
   run_id
   provider       "chatgpt"
-  share_url      "https://chatgpt.com/share/..."   ← 모두에게 보인다
-  conversation_url                                  ← 관리자만. API 응답에서 뺀다
+  share_url      "https://chatgpt.com/share/..."   ← 모두에게 보인다. 퀴즈의 기본 링크
+  conversation_url                                  ← 당분간 관리자만
 ```
 
-## 사용자별 데이터 — 이 사이트에서 유일하다
+`conversation_url`(`/c/`)을 지금 학생에게 안 내보내는 것은 **원칙이 아니라 그
+링크가 아직 불안정하기 때문**이다. 최종적으로는 학생에게도 준다 — 대화를 열어
+이어서 질문할 수 있는 게 예습의 값어치다. 그러니 스키마에서 빼지 말고 담아 두되,
+지금은 일반 사용자 응답에서만 가린다.
 
-```
-quiz_attempt
-  user_id  run_id  item_id  answered  correct  answered_at
-```
+## 사용자별 데이터 — 아직 없다
 
-Pre-Quiz 웹 풀이의 채점 결과. 강의 상세가 **"오늘 놓친 것 3개"**를 보여주는 데
-쓴다. 이것 말고는 전부 읽기 전용이다.
+지금 사이트는 **읽기 전용**이다. 퀴즈는 `.apkg`로 내려받아 Anki에서 풀고, 채점
+결과는 서버에 남지 않는다.
+
+나중에 웹 풀이를 붙이면 응답을 저장할 자리가 필요해진다. 그때 설계한다.
 
 ## 무엇이 아직 움직이는가
 

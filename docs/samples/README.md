@@ -5,10 +5,10 @@
 
 | 파일 | 무엇 | 어디서 나왔나 |
 |---|---|---|
-| `pre_items.sample.json` | **Pre-Quiz 웹 풀이 화면이 읽는 것.** 17문항 | 병리학 `250820_02` 멘델법칙을 따르지 않는 유전자 질환 |
+| `pre_items.sample.json` | Pre-Quiz 문항 17개. 지금은 저장만 하고, 웹 풀이를 붙일 때 이 모양을 읽는다 | 병리학 `250820_02` 멘델법칙을 따르지 않는 유전자 질환 |
 | `run.meta.sample.json` | 덱 하나의 요약. 관리자 화면이 "배포해도 되는가"를 판단하는 값 | 병리학 `260812_01` 병리학 소개 (80장) |
 
-## `pre_items.sample.json`에서 놓치기 쉬운 것
+## `pre_items.sample.json`에서 놓치기 쉬운 것 (웹 풀이를 붙일 때)
 
 - `qtype`이 셋이다 — `mcq`(`choices` 5개, `answer`는 1-based 인덱스 문자열),
   `short`(`choices` null, `answer`는 텍스트), `ox`(`answer`는 `"O"`/`"X"`)
