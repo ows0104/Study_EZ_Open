@@ -1,9 +1,10 @@
 """Pre-Quiz 웹 풀이.
 
-**정답은 채점 응답에만 실린다.** 문항을 내려보낼 때 `answer`와 `explanation`을
-같이 보내면 개발자 도구로 정답이 보이고, 그러면 `quiz_attempt`에 남는 기록이
-아무것도 뜻하지 않게 된다. 채점 결과가 남는 것이 웹 풀이의 존재 이유이므로
-채점은 서버에서만 한다.
+배급의 기본은 apkg다. 이 화면은 그 옆에 있는 갈래이고, 사용자별 기록을 본격적으로
+쓰는 것은 나중 일이다.
+
+그래도 **정답은 채점 응답에만 싣는다.** 문항과 함께 내려보내면 개발자 도구로
+정답이 보이고, 그러면 풀이 자체가 뜻을 잃는다. 채점은 서버에서만 한다.
 """
 
 from __future__ import annotations
@@ -114,10 +115,10 @@ def slide_url(db: Session, subject: str, run_id: str, slide_no: int | None) -> s
 
 
 def missed_items(db: Session, user_id: str, subject: str, run_id: str, limit: int = 3) -> list[dict[str, Any]]:
-    """"오늘 놓친 것 N개".
+    """"오늘 놓친 것 N개". 웹에서 다 푼 사람에게만 나온다.
 
-    스킬의 설계 의도가 "틀린 문항이 그 강의의 청취 목표"다. 그래서 순서는
-    `must_know` → `core` → `context`이고, 그 안에서는 출제 순서다.
+    틀린 문항이 그 강의에서 특히 귀 기울일 곳이라는 생각으로 고른다. 그래서
+    순서는 `must_know` → `core` → `context`이고, 그 안에서는 출제 순서다.
     """
     rows = db.execute(
         select(PreItem, QuizAttempt)

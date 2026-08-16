@@ -119,7 +119,7 @@ def main() -> None:
     )
     check("422로 막힌다", rejected.status_code == 422, rejected.text)
 
-    print("\n[5] 예습 링크 — /c/ 대화 URL이 일반 응답에서 빠지는가")
+    print("\n[5] 예습 링크 — share가 기본, /c/는 설정으로 열고 닫는다")
     client.put(
         "/api/admin/lectures/병리학/260813_03/preview",
         headers=RUNNER,
@@ -130,22 +130,29 @@ def main() -> None:
         },
     )
     detail = client.get("/api/lectures/병리학/260813_03", headers=USER).json()
-    check("share_url은 보인다", detail["preview"]["shareUrl"].endswith("/share/abc"), detail["preview"])
-    # local-test 사용자는 관리자라서 conversationUrl이 실린다. 일반 사용자에게서
-    # 빠지는지는 페이로드를 만드는 함수를 직접 불러 확인한다.
+    check("share_url은 언제나 보인다", detail["preview"]["shareUrl"].endswith("/share/abc"), detail["preview"])
+
+    from app.config import get_settings
     from app.models import Preview
     from app.routes.lectures import _preview_payload
 
     sample = Preview(
         subject="병리학", run_id="260813_03", provider="chatgpt",
-        share_url="https://chatgpt.com/share/abc", conversation_url="https://chatgpt.com/c/secret",
+        share_url="https://chatgpt.com/share/abc", conversation_url="https://chatgpt.com/c/link",
     )
-    plain = _preview_payload(sample, is_admin=False)
-    check("일반 사용자 응답에 /c/가 없다", "conversationUrl" not in plain, plain)
-    check(
-        "관리자 응답에는 있다",
-        _preview_payload(sample, is_admin=True).get("conversationUrl", "").endswith("/c/secret"),
-    )
+    check("관리자에게는 지금도 /c/가 간다", "conversationUrl" in _preview_payload(sample, is_admin=True))
+    check("일반 사용자에게는 아직 안 간다", "conversationUrl" not in _preview_payload(sample, is_admin=False))
+
+    # `/c/`가 안정되면 설정 하나로 모두에게 연다. 코드를 고치는 일이 아니라는
+    # 것이 요점이므로, 그 스위치가 실제로 통하는지 확인해 둔다.
+    get_settings.cache_clear()
+    os.environ["STUDYEZ_SHOW_CONVERSATION_URL"] = "true"
+    try:
+        opened = _preview_payload(sample, is_admin=False)
+        check("설정을 켜면 모두에게 간다", opened.get("conversationUrl", "").endswith("/c/link"), opened)
+    finally:
+        os.environ.pop("STUDYEZ_SHOW_CONVERSATION_URL")
+        get_settings.cache_clear()
 
     print("\n[6] Pre-Quiz — 정답이 문제와 함께 나가지 않는가")
     client.put(
@@ -212,13 +219,7 @@ def main() -> None:
     marks = linked[0]["lectures"][0]["marks"]
     check("자료·퀴즈·예습 점이 켜졌다", all(marks[key] for key in ("notes", "prequiz", "preview")), marks)
 
-    print("\n[10] 색인 차단 헤더")
-    check(
-        "X-Robots-Tag: noindex",
-        "noindex" in client.get("/api/health").headers.get("x-robots-tag", ""),
-    )
-
-    print("\n[11] 로그인 없이는 아무것도 안 나간다")
+    print("\n[10] 로그인 없이는 아무것도 안 나간다 — 관문은 이것 하나다")
     check("401", client.get("/api/timetable").status_code == 401)
     check("러너 토큰 없이 등록 불가", client.post("/api/admin/lectures", json=[]).status_code in (401, 403))
 

@@ -35,13 +35,16 @@ DOWNLOADABLE = {
 def _preview_payload(preview: Preview | None, *, is_admin: bool) -> dict[str, Any] | None:
     """예습 링크.
 
-    `conversation_url`은 만든 계정에서만 열리는 값이다. 일반 사용자에게는
-    **응답 자체에서 빠진다** — 열리지 않는다는 것과 내보내도 된다는 것은 다르다.
+    `share_url`이 기본이다. 퀴즈를 만들 때 쓰는 링크가 이것이고 모두에게 보인다.
+
+    `conversation_url`(`/c/`)은 **결국 모두에게 줄 것이다.** 지금 관리자에게만
+    나가는 것은 그 링크가 아직 불안정하기 때문이지 감춰야 할 값이라서가 아니다.
+    안정되면 `STUDYEZ_SHOW_CONVERSATION_URL`을 켜면 되고 코드는 그대로다.
     """
     if preview is None or not (preview.share_url or preview.conversation_url):
         return None
     payload: dict[str, Any] = {"provider": preview.provider, "shareUrl": preview.share_url}
-    if is_admin:
+    if preview.conversation_url and (is_admin or get_settings().show_conversation_url):
         payload["conversationUrl"] = preview.conversation_url
     return payload
 

@@ -81,6 +81,19 @@ export function LecturePage() {
           <div className="resource is-empty">예습 링크 — 아직 없습니다</div>
         )}
 
+        {/* Pre-Quiz의 기본은 apkg다. Anki에서 풀고, 웹 풀이는 그 아래 갈래로 둔다. */}
+        {preApkg ? (
+          <button className="resource is-primary" onClick={() => open(preApkg)}>
+            <strong>Pre-Quiz 덱</strong>
+            <small>
+              {preApkg.filename}
+              {quiz ? ` · ${quiz.itemCount}문항` : ""}
+            </small>
+          </button>
+        ) : (
+          <div className="resource is-empty">Pre-Quiz 덱 — 아직 없습니다</div>
+        )}
+
         {quiz ? (
           solving ? (
             <PreQuiz
@@ -92,32 +105,22 @@ export function LecturePage() {
               }}
             />
           ) : (
-            <div className="resource-group">
-              <button className="resource is-primary" onClick={() => setSolving(true)}>
-                <strong>Pre-Quiz 풀기</strong>
-                <small>
-                  {quiz.itemCount}문항
-                  {quiz.answered ? ` · ${quiz.answered}개 풀었고 ${quiz.correct}개 맞았습니다` : ""}
-                </small>
-              </button>
-              {preApkg ? (
-                <button className="resource is-quiet" onClick={() => open(preApkg)}>
-                  <strong>Pre-Quiz 덱 내려받기</strong>
-                  <small>{preApkg.filename}</small>
-                </button>
-              ) : null}
-            </div>
+            <button className="resource is-quiet" onClick={() => setSolving(true)}>
+              <strong>웹에서 풀기</strong>
+              <small>
+                {quiz.itemCount}문항
+                {quiz.answered ? ` · ${quiz.answered}개 풀었고 ${quiz.correct}개 맞았습니다` : ""}
+              </small>
+            </button>
           )
-        ) : (
-          <div className="resource is-empty">Pre-Quiz — 아직 없습니다</div>
-        )}
+        ) : null}
       </section>
 
       {quiz && quiz.missed.length ? (
         <section className="missed">
           <h2>오늘 놓친 것 {quiz.missed.length}개</h2>
-          {/* 틀린 문항이 그 강의의 청취 목표다. 이 목록이 있으라고 웹에서 푸는
-              것이지, 채점 결과가 남지 않으면 apkg로 충분했다. */}
+          {/* 웹에서 끝까지 푼 사람에게만 나온다. 틀린 문항이 그 강의에서 특히
+              귀 기울일 곳이라는 생각으로 고른다. */}
           <ol>
             {quiz.missed.map((entry) => (
               <li key={entry.itemId}>

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -25,21 +25,11 @@ app.add_middleware(
 )
 
 
-@app.middleware("http")
-async def block_indexing(request: Request, call_next):
-    """색인 차단은 옵션이 아니다.
-
-    작년 필기와 족보는 제3자 저작물이다. 파일 자체는 서명 URL 뒤에 있지만 강의
-    제목과 문항 본문도 남의 것이므로, API가 내보내는 모든 응답에 붙인다.
-    """
-    response = await call_next(request)
-    response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive, nosnippet"
-    return response
-
-
 @app.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
 def robots() -> str:
-    return "User-agent: *\nDisallow: /\n"
+    # API에는 크롤러가 가져갈 것이 없다. 로그인 없이는 어느 경로도 열리지 않으므로
+    # 색인을 막는 헤더를 따로 두지 않는다 — 관문은 로그인 하나다.
+    return "User-agent: *\nDisallow: /api/\n"
 
 
 @app.get("/api/health")

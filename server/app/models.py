@@ -189,8 +189,9 @@ class RunMeta(Base):
 class Preview(Base):
     """예습 대화 링크.
 
-    `conversation_url`은 만든 계정에서만 열린다. **일반 사용자 응답에서 빠져야
-    한다** — 값이 새어도 쓸모없다는 것과 내보내도 된다는 것은 다르다.
+    `share_url`이 기본이다 — 퀴즈를 만들 때 쓰는 링크이고 모두에게 보인다.
+    `conversation_url`(`/c/`)도 결국 모두에게 줄 것이며, 지금 관리자에게만
+    나가는 것은 그 링크가 아직 불안정해서다(`STUDYEZ_SHOW_CONVERSATION_URL`).
     """
 
     __tablename__ = "preview"
@@ -246,10 +247,11 @@ class PreItem(Base):
 
 
 class QuizAttempt(Base):
-    """이 사이트에서 유일한 사용자별 데이터.
+    """Pre-Quiz 웹 풀이의 채점 결과. 사용자별로 쓰이는 유일한 표다.
 
-    강의 상세의 "오늘 놓친 것 3개"가 이것으로 만들어진다. 채점 결과가 남지
-    않으면 apkg로 충분했을 것이므로, 이 표가 웹 풀이의 존재 이유다.
+    지금 Pre-Quiz는 apkg로 배급하는 것이 먼저이고 웹 풀이는 그 뒤에 있다.
+    이 표는 그대로 두되 화면에서 앞에 나서지 않는다 — 나중에 사용자별 기능을
+    붙일 때 "오늘 놓친 것"이 여기서 나온다.
     """
 
     __tablename__ = "quiz_attempt"

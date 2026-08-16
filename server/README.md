@@ -71,18 +71,26 @@ PDF보다 작아서, 서버는 키를 정하고 올라온 것을 확인만 한�
 `main_apkg`, `pre_apkg`, `media`. 다른 값은 422로 막힌다. **계약에 없는 파일이
 필요하면 추측해서 맞추지 말고 `docs/artifact-contract.md`를 먼저 고쳐라.**
 
-## 틀리면 안 되는 것 넷이 어디에 있나
+## 지켜야 할 것이 어디에 있나
 
 | | |
 |---|---|
-| 저작권 — 로그인·짧은 서명 URL·색인 차단 | `storage.py`, `main.py`의 `block_indexing`, `web/index.html` |
-| `/c/` 대화 URL을 일반 사용자에게 안 준다 | `routes/lectures.py`의 `_preview_payload` |
+| **로그인 필수** — 관문은 이것 하나다 | `auth.py`. 모든 읽기 경로가 `get_current_user`를 지난다 |
 | 키는 `(subject, run_id)` 복합 | `models.py` 전부, `routes/common.py`의 `lecture_or_404` |
-| Pre-Quiz 응답이 유일한 사용자별 데이터 | `models.py`의 `QuizAttempt`, `routes/prequiz.py` |
+| `/c/`는 설정으로 열고 닫는다 | `routes/lectures.py`의 `_preview_payload` |
 
-정답은 문항과 함께 나가지 않는다. `GET …/prequiz`에 `answer`도 `explanation`도
-없고, 채점은 `POST …/prequiz/grade`가 서버에서 한다. 정답이 클라이언트에 있으면
-`quiz_attempt`에 남는 기록이 아무것도 뜻하지 않는다.
+파일이 서명 URL로 나가는 것은 저작권 규정이 아니라 **R2 버킷이 비공개이기
+때문이다.** 공개 버킷으로 바꾸면 로그인을 지나지 않고도 파일이 열려서 "로그인
+필수"가 화면에만 걸린 말이 된다. 수명은 `STUDYEZ_SIGNED_URL_TTL`(기본 한 시간).
+
+`/c/` 대화 링크는 **결국 모두에게 줄 것이다.** 지금 관리자에게만 나가는 것은
+그 링크가 아직 불안정해서이고, 안정되면 `STUDYEZ_SHOW_CONVERSATION_URL=true`
+하나면 된다. 퀴즈를 만들 때 쓰는 기본 링크는 `share_url` 쪽이다.
+
+Pre-Quiz는 **apkg 배급이 먼저다.** 웹 풀이(`routes/prequiz.py`, `quiz_attempt`)는
+그 옆의 갈래로 남아 있고 화면에서도 뒤에 있다. 사용자별 기능을 본격적으로 붙일
+때 여기서 이어 가면 된다. 그때까지도 정답은 문항과 함께 내려보내지 않는다 —
+`GET …/prequiz`에 `answer`도 `explanation`도 없고 채점은 서버가 한다.
 
 ## 마이그레이션 도구가 없는 이유
 

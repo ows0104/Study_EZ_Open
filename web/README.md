@@ -26,6 +26,22 @@ Supabase 없이 화면만 보려면 `.env.local`에 `VITE_LOCAL_TEST_TOKEN=local
 두고 서버를 `ENVIRONMENT=local-test`로 띄운다. 이 토큰은 배포된 서버에서는
 통하지 않는다.
 
+## 배포 — Cloudflare Pages
+
+```
+빌드 명령   npm run build
+출력 폴더   dist
+```
+
+`public/_redirects`가 어느 주소로 들어와도 `index.html`을 주게 한다. **이게
+없으면 `/lectures/병리학/260813_03`을 새 창으로 여는 순간 404다** — 라우팅을
+브라우저가 하기 때문이고, 강의 상세가 새 창으로 열리는 화면이라 반드시 필요하다.
+
+R2를 이미 쓰므로 벤더가 늘지 않는다. API를 같은 도메인의 `/api/*`로 붙이면
+(Pages 커스텀 도메인 + Cloud Run으로 가는 Worker 라우트) `CORS_ALLOWED_ORIGINS`도
+`VITE_API_BASE_URL`도 비워 둘 수 있다. 다른 도메인(`api.studyez.kr`)에 두면 둘 다
+채우면 된다.
+
 ## 강조색이 하나인 이유
 
 색은 **"네가 열어 볼 것이 있다"** 하나만 뜻한다. 자료가 붙은 강의 칸에만

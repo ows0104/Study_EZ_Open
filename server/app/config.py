@@ -37,6 +37,7 @@ class Settings:
     r2_bucket_name: str
     runner_token: str
     admin_emails: tuple[str, ...]
+    show_conversation_url: bool
     cors_allowed_origins: tuple[str, ...]
     public_api_base_url: str
     signed_url_ttl: int
@@ -79,13 +80,20 @@ def get_settings() -> Settings:
         # Bootstrap: these addresses get is_admin on first sign-in. After that the
         # flag lives in the database and this list can shrink.
         admin_emails=tuple(email.lower() for email in _csv("STUDYEZ_ADMIN_EMAILS")),
+        # `/c/` 대화 링크를 일반 사용자에게도 줄 것인가.
+        #
+        # **목표는 준다는 쪽이다.** 지금 꺼 둔 것은 저작권 때문이 아니라 `/c/`가
+        # 아직 불안정해서다. 안정되면 이 값만 켜면 되고, 코드는 그대로다.
+        show_conversation_url=os.getenv("STUDYEZ_SHOW_CONVERSATION_URL", "false").strip().lower()
+        in ("1", "true", "yes"),
         cors_allowed_origins=_csv(
             "CORS_ALLOWED_ORIGINS",
             "http://localhost:5173,http://127.0.0.1:5173",
         ),
         public_api_base_url=os.getenv("PUBLIC_API_BASE_URL", "").strip().rstrip("/"),
-        # Third-party material. Long-lived links are the thing we are avoiding, so
-        # this stays in minutes rather than hours.
-        signed_url_ttl=max(60, int(os.getenv("STUDYEZ_SIGNED_URL_TTL", "300"))),
+        # R2 버킷이 비공개라 링크는 서명해서 내보낸다. 로그인이 관문이라는 말이
+        # 파일에도 성립하려면 이 방법뿐이다. 수명은 넉넉히 준다 — 강의록을 한
+        # 시간쯤 열어 두는 것은 흔한 일이고, 짧으면 읽는 중에 끊긴다.
+        signed_url_ttl=max(60, int(os.getenv("STUDYEZ_SIGNED_URL_TTL", "3600"))),
         max_upload_mb=max(1, int(os.getenv("STUDYEZ_MAX_UPLOAD_MB", "200"))),
     )
