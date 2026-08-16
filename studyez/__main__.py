@@ -97,12 +97,8 @@ def report_subject(root: Path, subject: str, this_year: str, prev_year: str) -> 
 
 
 def subjects_with_notes(root: Path, year: str) -> list[str]:
-    if not root.is_dir():
-        return []
-    return sorted(
-        d.name for d in root.iterdir()
-        if d.is_dir() and notes_dir(root, d.name, year).is_dir()
-    )
+    """제외 대상(선택교과 등)은 여기서 이미 빠져 나온다."""
+    return filenames.discover_subjects(root, year)
 
 
 def report_watch(args) -> int:
@@ -255,6 +251,15 @@ def main() -> int:
                         help="jokbo: 목차 다음, 본문이 시작하는 쪽 (기본 4)")
     args = parser.parse_args()
 
+    # 이름을 직접 대도 막는다. 실수로 한 번 돌리면 재고에 섞여 들어가고,
+    # 그 뒤로는 왜 거기 있는지 아무도 모른다.
+    if args.subject in filenames.EXCLUDED_SUBJECTS:
+        print(f"[{args.subject}] 선택교과는 학생마다 듣는 과목이 다르고 시험과 무관해서 "
+              "파이프라인에서 뺀다.\n"
+              "  강의록 연결·예습·복습 어느 것도 만들지 않는다.\n"
+              "  정말 필요하면 studyez/filenames.py의 EXCLUDED_SUBJECTS를 고쳐라.")
+        return 0
+
     if args.command == "watch":
         return report_watch(args)
     if args.command == "done":
@@ -264,10 +269,7 @@ def main() -> int:
 
     root = Path(args.root)
     if args.all:
-        subjects = sorted(
-            d.name for d in root.iterdir()
-            if d.is_dir() and notes_dir(root, d.name, args.this).is_dir()
-        )
+        subjects = subjects_with_notes(root, args.this)
     elif args.subject:
         subjects = [args.subject]
     else:

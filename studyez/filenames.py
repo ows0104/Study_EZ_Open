@@ -229,6 +229,36 @@ def parse(path: str | Path) -> LectureFile | None:
     )
 
 
+# 파이프라인이 손대지 않는 과목.
+#
+# 선택교과는 **학생마다 듣는 과목이 다르고 시험과 무관하다.** 강의록 연결도,
+# 예습도, 복습 덱도 만들지 않는다. 만들어 봐야 대부분의 학생에게 소음이고,
+# 캘린더에 띄우면 남의 시간표가 내 화면에 섞인다.
+#
+# 폴더 구조도 다르다 - `{과목}/필기/{연도}/`가 아니라 `선택교과/{연도}/{과목}/`라
+# 지금 스캐너에는 어차피 안 잡히지만, 구조가 바뀌어도 안 딸려 들어오게 여기
+# 적어 둔다.
+EXCLUDED_SUBJECTS = frozenset({"선택교과"})
+
+
+def discover_subjects(root: str | Path, year: str) -> list[str]:
+    """그 연도의 필기가 있는 과목. 제외 대상은 빼고 돌려준다.
+
+    `#`이나 `_`로 시작하는 폴더도 뺀다 - "# 교과서", "# 족보 오류토의"처럼
+    과목이 아닌 것들이다.
+    """
+    root = Path(root)
+    if not root.is_dir():
+        return []
+    return sorted(
+        d.name for d in root.iterdir()
+        if d.is_dir()
+        and d.name not in EXCLUDED_SUBJECTS
+        and not d.name.startswith(("#", "_", "."))
+        and (d / "필기" / year).is_dir()
+    )
+
+
 @dataclass
 class Scan:
     """폴더 하나를 읽은 결과. 빠진 파일은 반드시 이유와 함께 남긴다."""

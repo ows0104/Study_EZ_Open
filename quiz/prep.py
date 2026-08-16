@@ -177,10 +177,30 @@ def prep_external_jokbo(jokbo_pdf: Path, run_dir: Path, media_dir: Path, prefix:
     if not jokbo_pdf.exists():
         raise FileNotFoundError(f"족보 PDF를 찾을 수 없습니다: {jokbo_pdf}")
 
+    # 원본 족보의 진짜 값어치는 **텍스트 레이어**다. 필기에 붙은 캡처본은 문항이
+    # 이미지뿐이라 모델이 그림을 읽어야 했지만, 교실이 공개한 원본은 평균
+    # 1,600자/쪽의 텍스트를 들고 있다. 문항·선지·정답을 글로 읽으면 훨씬 싸고
+    # 정확하다.
+    #
+    # 이미지도 함께 남긴다 - "아래 왼쪽은 정상 전립선 사진이고" 같은 그림 문항이
+    # 있어서 텍스트만으로는 죽는다. 글이 주고 그림이 보조다.
+    lines: list[str] = []
     with fitz.open(str(jokbo_pdf)) as doc:
         pages = len(doc)
+        for index, page in enumerate(doc):
+            text = (page.get_text() or "").strip()
+            lines.append(f"## Slide {first_slide + index}\n")
+            lines.append(text if text else "(텍스트 없음 — jokbo_pages 이미지를 읽어라)")
+            lines.append("")
     if pages < 1:
         raise ValueError(f"족보 PDF가 비어 있습니다: {jokbo_pdf}")
+
+    text_path = run_dir / "jokbo_text.md"
+    text_path.write_text(
+        f"# 족보 원문 — {jokbo_pdf.name}\n\n"
+        "슬라이드 번호는 필기 뒤에 이어 붙인 가상 번호다. 그림이 필요한 문항은\n"
+        "`jokbo_pages/jokbo_sNNN.png`를 함께 보라.\n\n" + "\n".join(lines),
+        encoding="utf-8")
 
     last_slide = first_slide + pages - 1
     jokbo_pages_dir = run_dir / "jokbo_pages"
@@ -197,6 +217,8 @@ def prep_external_jokbo(jokbo_pdf: Path, run_dir: Path, media_dir: Path, prefix:
         "page_map": page_map,
         "media_files": media_files,
         "image_map": image_map,
+        "text_path": text_path,
+        "chars": sum(len(line) for line in lines),
     }
 
 
@@ -257,39 +279,40 @@ def prep(pdf_path: Path, out_root: Path, scale: float, jokbo_start_override: int
     # 훑으며 "여기서부터 족보인가"를 묻던 방식은 본문의 숫자·낱말에 걸려 번번이
     # 늦게 멈췄다 - 정답을 아는 두 건에서 둘 다 한 쪽씩 밀렸다.
     features = page_features(pdf_path)
+
+    # 외부 족보를 쓰더라도 **필기 자신의 족보 꼬리는 그대로 있다.** 필기자가
+    # 기출을 캡처해 뒤에 붙여 두기 때문이다. 실측(260812_02)에서 필기 26-33의
+    # 캡처와 외부 족보의 문항이 상당수 겹쳤다. 필기를 통째로 강의록으로 치면
+    # 기출 8쪽이 강의록 근거로 둔갑한다.
+    if jokbo_start_override:
+        jokbo_hint, jokbo_reason = int(jokbo_start_override), "수동 지정"
+    else:
+        jokbo_hint = suggest_jokbo_start(features)
+        jokbo_reason = (f"뒤에서부터 훑어 슬라이드 {jokbo_hint}까지 기출 근거가 이어짐"
+                        if jokbo_hint else "기출 근거를 찾지 못함")
+
+    # 뒤 절반은 힌트와 무관하게 항상 렌더한다. 그래야 모델이 경계를 옮겨도 다시
+    # 렌더하지 않는다 - model_pages는 이미 전 페이지를 덮고 있으므로, 이걸로
+    # 경계가 순수한 포인터가 된다.
+    render_from = max(2, min(jokbo_hint or num_pages, (num_pages // 2) + 1))
+    jokbo_pages_dir = run_dir / "jokbo_pages"
+    jokbo_page_map: dict[int, str] = {}
+    if num_pages >= 6:
+        tmp_pdf = run_dir / "_jokbo_tmp.pdf"
+        # 원본에서 잘라낸다. annotated.pdf를 쓰면 각인이 두 번 들어간다.
+        make_page_range_pdf(pdf_path, tmp_pdf, render_from, num_pages)
+        # 평탄화 후 각인. 그러지 않으면 라벨이 족보 이미지 annotation에 가려진다.
+        jokbo_page_map = render_flattened_labeled_pngs(
+            tmp_pdf, jokbo_pages_dir, "jokbo", slide_start=render_from, scale=MODEL_PAGE_SCALE)
+        tmp_pdf.unlink(missing_ok=True)
+
     external = None
     if jokbo_pdf:
-        # 외부 족보를 쓰면 경계를 판정할 일이 없다. 필기는 통째로 강의록이고
-        # 족보는 별도 파일이다. 0.5단계는 주제 chunk만 정하면 된다.
         external = prep_external_jokbo(
             jokbo_pdf, run_dir, media_dir, safe_media_prefix(pdf_path.stem),
             first_slide=num_pages + 1, scale=scale)
-        jokbo_hint, jokbo_reason = None, f"외부 족보 사용: {Path(jokbo_pdf).name}"
-        render_from = None
-        jokbo_pages_dir = external["pages_dir"]
-        jokbo_page_map = external["page_map"]
-    else:
-        if jokbo_start_override:
-            jokbo_hint, jokbo_reason = int(jokbo_start_override), "수동 지정"
-        else:
-            jokbo_hint = suggest_jokbo_start(features)
-            jokbo_reason = (f"뒤에서부터 훑어 슬라이드 {jokbo_hint}까지 기출 근거가 이어짐"
-                            if jokbo_hint else "기출 근거를 찾지 못함")
-
-        # 뒤 절반은 힌트와 무관하게 항상 렌더한다. 그래야 모델이 경계를 옮겨도 다시
-        # 렌더하지 않는다 - model_pages는 이미 전 페이지를 덮고 있으므로, 이걸로
-        # 경계가 순수한 포인터가 된다.
-        render_from = max(2, min(jokbo_hint or num_pages, (num_pages // 2) + 1))
-        jokbo_pages_dir = run_dir / "jokbo_pages"
-        jokbo_page_map = {}
-        if num_pages >= 6:
-            tmp_pdf = run_dir / "_jokbo_tmp.pdf"
-            # 원본에서 잘라낸다. annotated.pdf를 쓰면 각인이 두 번 들어간다.
-            make_page_range_pdf(pdf_path, tmp_pdf, render_from, num_pages)
-            # 평탄화 후 각인. 그러지 않으면 라벨이 족보 이미지 annotation에 가려진다.
-            jokbo_page_map = render_flattened_labeled_pngs(
-                tmp_pdf, jokbo_pages_dir, "jokbo", slide_start=render_from, scale=MODEL_PAGE_SCALE)
-            tmp_pdf.unlink(missing_ok=True)
+        jokbo_reason += f" · 외부 족보 덧붙임: {Path(jokbo_pdf).name}"
+        jokbo_page_map = {**jokbo_page_map, **external["page_map"]}
 
     # Anki 미디어는 원본(필기 포함)에서 렌더한다. 복습 카드 뒷면에서 교수 강조가
     # 보이는 편이 낫고, 이 이미지는 모델 입력이 아니라 사람이 보는 확인용이다.
@@ -303,17 +326,16 @@ def prep(pdf_path: Path, out_root: Path, scale: float, jokbo_start_override: int
     labels = extract_labels(pdf_path, tuple(
         [1, (jokbo_hint - 1) if jokbo_hint else num_pages]))
 
+    lecture_range = [1, (jokbo_hint - 1) if jokbo_hint else num_pages]
     if external:
-        # 족보가 별도 파일이면 필기는 통째로 강의록이고, 족보는 그 뒤에 이어지는
-        # 가상 번호를 받는다. 슬라이드 번호 하나로 두 채널을 다 가리킬 수 있어서
-        # 검증·빌드는 손댈 것이 없다.
-        lecture_range = [1, num_pages]
-        jokbo_range = external["range"]
+        # 필기의 족보 꼬리와 외부 족보는 가상 번호에서 맞닿는다(꼬리가 N에서
+        # 끝나고 외부가 N+1에서 시작). 그래서 둘을 한 구간으로 이어 붙일 수 있고,
+        # 검증·빌드의 단일 범위 검사가 그대로 돈다.
+        jokbo_range = [jokbo_hint or (num_pages + 1), external["range"][1]]
         total_slides = external["range"][1]
         media_files = media_files + external["media_files"]
         slide_image_map = {**slide_image_map, **external["image_map"]}
     else:
-        lecture_range = [1, (jokbo_hint - 1) if jokbo_hint else num_pages]
         jokbo_range = [jokbo_hint, num_pages] if jokbo_hint else None
         total_slides = num_pages
 
@@ -335,6 +357,8 @@ def prep(pdf_path: Path, out_root: Path, scale: float, jokbo_start_override: int
         # 어느 쪽이든 최종 주인은 structure.json이다.
         "jokbo_source": "external" if external else "embedded",
         "jokbo_pdf": external["source"] if external else None,
+        # 원본 족보의 원문. 글이 주고 이미지가 보조다.
+        "jokbo_text_path": str(external["text_path"]) if external else None,
         "jokbo_hint": jokbo_hint,
         "jokbo_detection": jokbo_reason,
         "lecture_range": lecture_range,
@@ -397,9 +421,13 @@ def main() -> int:
               f"({len(manifest['jokbo_pages'])}장)")
     if manifest["jokbo_source"] == "external":
         lo, hi = manifest["jokbo_range"]
-        print(f"  족보: 원본 PDF — {Path(manifest['jokbo_pdf']).name}")
-        print(f"        슬라이드 {lo}-{hi}로 필기 뒤에 이어 붙임 (경계 판정 불필요)")
-        print("  ※ 0.5단계는 주제 chunk만 정하면 된다")
+        pages = manifest["num_pages"]
+        print(f"  족보: 필기 꼬리 {lo}-{pages} + 원본 {pages + 1}-{hi}"
+              f" ({Path(manifest['jokbo_pdf']).name})")
+        text_path = Path(manifest["jokbo_text_path"])
+        print(f"        원본 원문 {len(text_path.read_text(encoding='utf-8')):,}자 → {text_path.name}")
+        print(f"  ※ 필기 꼬리의 시작({lo})은 여전히 힌트다 — 필기자가 기출을 캡처해 "
+              "붙여 두므로 0.5단계가 확정해야 한다")
     else:
         hint = manifest["jokbo_hint"]
         print(f"  족보 힌트: {hint if hint else '없음'} — {manifest['jokbo_detection']}")

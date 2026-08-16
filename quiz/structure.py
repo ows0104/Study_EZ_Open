@@ -236,19 +236,24 @@ def verify(structure: Structure, features: list[PageFeature]) -> list[str]:
     if structure.jokbo_range:
         jstart, jend = structure.jokbo_range
 
-        # 외부 족보: 별도 PDF라 필기의 페이지 특징에 잡히지 않는다. 경계가 파일
-        # 경계이므로 따질 것이 없다 - 강의록이 필기 전체를 덮는지만 본다.
+        # 외부 족보를 덧붙이면 구간이 필기 밖으로 이어진다. 필기 안쪽(꼬리에 붙은
+        # 캡처본)만 특징으로 따지고, 바깥쪽은 별도 파일이라 따질 것이 없다.
+        external_tail = jend > total
+        jend_checked = min(jend, total)
+
         if jstart > total:
+            # 필기에는 족보 꼬리가 없고 외부 족보만 있는 경우.
             if end != total:
                 problems.append(
-                    f"외부 족보를 쓰는데 강의록이 {start}-{end}뿐이다. "
+                    f"필기에 족보 꼬리가 없는데 강의록이 {start}-{end}뿐이다. "
                     f"필기 {total}장 전체여야 한다")
             problems.extend(_verify_chunks(structure, start, end))
             return problems
 
-        if not (1 <= jstart <= jend <= total):
+        if not (1 <= jstart <= jend_checked <= total):
             problems.append(f"jokbo_range {structure.jokbo_range}가 1~{total} 밖이다")
             return problems
+        jend = jend_checked
         if jstart <= end:
             problems.append(
                 f"강의록({start}-{end})과 족보({jstart}-{jend})가 겹친다")
