@@ -41,7 +41,10 @@ python quiz/prep.py "<pdf>"
 
 - `model_pages/clean_sNNN.png` — **전 페이지.** 필기 제거 + `Slide N` 각인. 사실을 읽는 채널
 - `jokbo_pages/jokbo_sNNN.png` — **뒤 절반.** 필기 포함(문항이 annotation에만 있을 수 있음) + `Slide N` 각인
-- `page_features.json` — 페이지별 글자수·annotation 수·답안 나열·족보 낱말·이미지 비율. 0.5단계 입력
+- `page_features.json` — 페이지별 글자수·annotation 수·답안 나열·족보 낱말·이미지 비율·**붙여넣은 이미지 수**. 0.5단계 입력
+- `jokbo_text.md` — `--jokbo-pdf`를 줬을 때만. **원본 족보의 원문 텍스트.**
+  선지를 한 글자도 흘리지 않고 옮길 수 있어 이쪽을 먼저 읽는다. 다만 정답표와
+  사진 문항은 이미지에만 있으므로 `jokbo_pages/`를 함께 봐야 한다
 - `outline.json` / `annotations.json` — 슬라이드별 본문 요약, 필기·형광펜·**도장(stamp)** 신호
 - `labels.json` — 슬라이드별 라벨 후보와 정확한 bbox. 이미지 오클루전 카드가 여기서 좌표를 가져온다
 - `media/` — Anki 카드 뒷면용 슬라이드 PNG
@@ -134,13 +137,44 @@ python -m studyez prep-prev <lecture_id>
 받은 뒤 직접 `blueprint.json`을 열어 세 태그가 모두 나타나는지, 강의록 슬라이드가
 빠짐없이 다뤄졌는지 확인한다.
 
-### 2단계 — 카드 작성 (Opus 5 호출 ②)
+### 2단계 — 카드 작성 (Opus 5 호출 ②, **조각별 동시 실행**)
 
-새 `general-purpose` 서브에이전트.
+**한 번에 다 쓰게 하지 마라.** 76장을 한 호출에 맡겼더니 `260812_02`에서 **68분을
+돌다 API 오류로 죽었고 아무것도 남기지 못했다.** 기준 강의의 19분과 견주면 3.5배다.
 
-> `blueprint.json`을 읽고, 강의록은 `model_pages/`를, 족보는 `jokbo_pages/`를 읽어라.
+`structure.json`의 `chunks`가 이미 주제 경계를 들고 있다. 청사진의 objective를
+그 경계로 나눠 **조각마다 서브에이전트를 하나씩, 동시에** 돌린다. 족보는 별도
+조각이다.
+
+    c1     obj_1~3     슬라이드 1-6      →  items.raw.c1.json
+    c2     obj_4~6     슬라이드 7-11     →  items.raw.c2.json
+    ...
+    jokbo  obj_14~19   슬라이드 26-39    →  items.raw.jokbo.json
+
+조각 하나는 5분 안팎이고 서로 독립이라 **하나가 죽어도 나머지는 남는다.**
+objective를 조각에 배분할 때는 `slides`의 최솟값이 어느 chunk 범위에 드는지로
+가린다.
+
+각 조각에 **그 대목의 급소를 따로 일러줘라.** 청사진의 `exam_focus`와
+`trap_patterns`에서 해당 슬라이드에 걸리는 것을 뽑아 넘기면 카드가 눈에 띄게
+날카로워진다.
+
+```bash
+python quiz/merge_items.py runs/<lecture_id>
+```
+
+조각을 `items.raw.json` 하나로 합치고 `id`를 다시 매긴다 — 조각들은 서로를 몰라
+그대로 두면 `q001`이 여러 개 생긴다. 조각이 같은 슬라이드를 나눠 가졌으면
+중복 의심으로 알리고, 판단은 4단계에 맡긴다.
+
+각 조각에 주는 지시는 아래와 같다. `<조각>`과 objective 목록만 갈아 끼운다.
+
+> `blueprint.json`의 **`obj_N`~`obj_M`만** 만든다. 다른 objective는 다른
+> 에이전트 몫이니 손대지 마라.
+> 강의록은 `model_pages/`를, 족보는 `jokbo_pages/`와 `jokbo_text.md`를 읽어라.
 > `references/item-rules.md`를 **전부** 읽고 그 규칙대로 카드를 만든다.
-> 결과를 `runs/<lecture_id>/items.raw.json`에. 스키마는 `references/item.schema.json`.
+> 결과를 `runs/<lecture_id>/items.raw.<조각>.json`에.
+> 스키마는 `references/item.schema.json`. `id`는 `<조각>_001`처럼 매긴다.
 >
 > - 모든 카드는 청사진의 `objective_id`와 `retrieval_target`에 묶인다
 > - `slide_no`는 페이지를 세지 말고 **각인된 노란 `Slide N` 라벨을 읽어서** 적는다
