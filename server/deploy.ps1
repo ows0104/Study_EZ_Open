@@ -36,9 +36,16 @@ foreach ($line in [IO.File]::ReadAllLines($ENV_PATH)) {
   $env_values[$pair[0].Trim()] = $pair[1].Trim()
 }
 
+# 비어도 되는 것. 나머지는 비어 있으면 안 된다.
+#
+# SUPABASE_JWT_SECRET을 비우면 JWKS로 RS256을 검증한다. 요즘 Supabase는
+# 비대칭 키가 기본이라 그 편이 정석이고 비밀값을 하나 덜 다루게 된다.
+# CORS는 프론트를 같은 도메인에 두면 필요 없다.
+$OPTIONAL = @("SUPABASE_JWT_SECRET", "CORS_ALLOWED_ORIGINS")
+
 # 안 채운 자리를 먼저 잡는다. 반쯤 설정된 채로 배포되면 500이 나고서야 안다.
 $blank = $env_values.GetEnumerator() |
-  Where-Object { $_.Value -match '^<.*>$' -or $_.Value -eq '' } |
+  Where-Object { $_.Value -match '^<.*>$' -or ($_.Value -eq '' -and $OPTIONAL -notcontains $_.Key) } |
   ForEach-Object { $_.Key }
 if ($blank) {
   throw "`.env`에서 아직 안 채운 값이 있습니다:`n  " + ($blank -join "`n  ")

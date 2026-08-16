@@ -48,11 +48,38 @@ Redirect URLs  https://<pages 주소>/**
 
 API 토큰은 **Object Read & Write**, 대상은 `studyez` 버킷만으로 좁힌다.
 
-### 3. `server/.env` 채우기
+### 3. 값 채우기
 
-`<>`로 감싼 여섯 자리다. `deploy.ps1`이 안 채운 곳을 찾아 배포 전에 멈춘다.
+```bash
+cd server
+./setup-env.ps1
+```
+
+물어보는 대로 붙여넣으면 `server/.env`와 `web/.env.production`을 함께 쓴다.
+어디서 가져오는 값인지 매번 알려 주고, 형식이 어긋나면 그 자리에서 되묻는다.
+비밀값은 입력할 때 화면에 찍히지 않는다. 이미 채운 값은 건너뛰므로 한 곳만
+고칠 때 다시 돌려도 된다.
+
+채울 것은 **다섯 개**다.
+
+| | 어디서 |
+|---|---|
+| `SUPABASE_URL` | Project Settings → Data API → Project URL |
+| `DATABASE_URL` | Project Settings → Database → Connection string → URI |
+| `R2_ENDPOINT_URL` | R2 → 버킷 → Settings → S3 API (끝의 `/버킷이름`은 뗀다) |
+| `R2_ACCESS_KEY_ID` | R2 → API → Manage API tokens |
+| `R2_SECRET_ACCESS_KEY` | 같은 화면. 한 번만 보인다 |
+
+`SUPABASE_JWT_SECRET`은 **비워 둔다.** 비우면 Supabase의 공개 키(JWKS)로
+RS256 검증을 하고, 요즘 Supabase는 비대칭 키가 기본이라 그 편이 정석이다.
+비밀값을 하나 덜 다루게 되는 것은 덤이다.
+
 `DATABASE_URL`은 **Transaction pooler(6543)**를 쓴다 — Cloud Run은 컨테이너가
-수시로 뜨고 져서 연결을 오래 붙들지 않는다.
+수시로 뜨고 져서 연결을 오래 붙들지 않는다. `[YOUR-PASSWORD]` 자리를 안 바꾸면
+스크립트가 잡아 준다.
+
+손으로 고치고 싶으면 `.env`를 직접 열어도 된다. `deploy.ps1`이 안 채운 곳을
+찾아 배포 전에 멈춘다.
 
 ### 4. 스키마와 시간표
 
