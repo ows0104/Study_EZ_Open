@@ -120,6 +120,9 @@ python -m studyez done <run_id>        # 빌드를 확인한 뒤. 다음 스캔�
 `links.json`에 남긴다. 머리글은 정규식이 아니라 **서식**으로 잡는다 — 본문은 9pt,
 강의 머리글 번호는 13.8~15pt다. 정규식으로는 30개 중 10개만 잡혔다.
 
+단계마다 무엇을 하고 왜 있는지는 [docs/pipeline.md](docs/pipeline.md)에 있다.
+절차는 `SKILL.md`, 출제 규칙은 `.claude/skills/*/references/`다.
+
 ### 필기에서 족보를 가져올 때
 
 원본 족보가 없는 과목·연도에서는 필기 뒤에 붙은 캡처본을 쓴다. 이때 경계는
