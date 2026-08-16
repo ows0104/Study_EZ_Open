@@ -1,0 +1,16 @@
+# 파이프라인 산출물 — 슬라이드 PNG, 오클루전 이미지, .apkg, 중간 JSON.
+# 전부 원본 PDF에서 재생성되고, 강의 내용을 그대로 담고 있다.
+runs/
+
+# 강의 자료는 SynologyDrive에 있고 여기로 들어오지 않는다. 제3자 저작물이다.
+필기/
+*.pdf
+
+# 로컬 환경에 묶인 설정. 절대경로가 들어 있어 다른 기계에서 의미가 없다.
+.claude/settings.local.json
+.env
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/

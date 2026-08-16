@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "시험 대비 카드",
+  "type": "object",
+  "required": ["items"],
+  "properties": {
+    "lecture_id": { "type": "string" },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "objective_id", "retrieval_target", "q", "a", "explanation",
+          "slide_no", "source_type", "evidence_type", "source_anchor",
+          "card_type", "importance"
+        ],
+        "properties": {
+          "id": { "type": "string", "description": "생략하면 코드가 q001부터 부여" },
+          "objective_id": { "type": "string", "pattern": "^obj_[0-9]+$" },
+          "retrieval_target": {
+            "type": "string",
+            "description": "청사진의 어떤 target을 회수하는가"
+          },
+          "q": {
+            "type": "string",
+            "description": "앞면. 원본 없이 자족적이어야 한다. 최소 문맥만. cloze는 여기에만 {{c1::...}}"
+          },
+          "a": {
+            "type": "string",
+            "description": "뒷면 정답. 핵심만. 부연은 explanation으로 내린다"
+          },
+          "explanation": {
+            "type": "string",
+            "description": "왜 그 답인지 + 무엇과 헷갈리는지. 족보 카드는 왜 다른 선지가 아닌지"
+          },
+          "slide_no": {
+            "type": "integer",
+            "description": "각인된 Slide N 라벨에서 읽은 번호. 이 슬라이드 이미지가 카드 뒷면에 붙는다"
+          },
+          "source_type": {
+            "type": "string",
+            "enum": ["lecture", "jokbo"],
+            "description": "강의록 구간에서 나왔는지, 족보 구간에서 나왔는지"
+          },
+          "evidence_type": {
+            "type": "string",
+            "enum": ["lecture_text", "table", "figure", "question_text"],
+            "description": "question_text는 source_type이 jokbo일 때만 쓴다"
+          },
+          "source_anchor": {
+            "type": "string",
+            "description": "슬라이드 안 어디인지 구체적으로. 족보는 '2020년 8번 문항의 선지 ③'처럼"
+          },
+          "card_type": {
+            "type": "string",
+            "enum": ["fact", "comparison", "mechanism", "trap", "list", "sequence", "cloze"]
+          },
+          "importance": {
+            "type": "string",
+            "enum": ["core", "detail"],
+            "description": "core=강의 흐름상 중요하게 다룬 내용, detail=지엽적인 내용"
+          },
+          "exam_hit": {
+            "type": "boolean",
+            "description": "족보가 이 지점을 물었는가. 강의록 카드(source_type=lecture)에만 붙인다. stamp 태그는 코드가 annotations.json에서 자동으로 붙이므로 여기 적지 않는다"
+          },
+          "exam_year": {
+            "type": "string",
+            "description": "족보 카드일 때 출제 연도. 확인되면 적는다"
+          },
+          "review_flags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["answer_mismatch", "question_error", "uncertain"]
+            },
+            "description": "족보의 정답이 검토 결과와 다를 때. 강의록 카드에는 쓰지 않는다"
+          },
+          "review_note": {
+            "type": "string",
+            "description": "review_flags가 있을 때 족보의 주장과 검토 결론. 카드에 경고 박스로 표시된다"
+          },
+          "trap_note": {
+            "type": "string",
+            "description": "무엇과 헷갈리는지 한 줄. 족보 오답 선지가 최고의 재료다. 카드 뒷면에 '함정:'으로 붙는다. card_type이 trap이면 필수",
+            "maxLength": 200
+          },
+          "occlusion": {
+            "type": "object",
+            "description": "이미지 오클루전 카드. 지정한 영역을 가린 슬라이드가 앞면에, 드러낸 슬라이드가 뒷면에 붙는다. 위치와 이름의 대응이 시험 대상일 때만 쓴다",
+            "properties": {
+              "label_ids": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^s[0-9]{3}_l[0-9]{2}$" },
+                "description": "labels.json의 라벨 id. 해당 슬라이드에 실재하는 id여야 한다. 좌표는 코드가 채운다"
+              },
+              "rects": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": { "type": "number", "minimum": 0, "maximum": 1 },
+                  "minItems": 4,
+                  "maxItems": 4
+                },
+                "description": "[x0,y0,x1,y1] 페이지 대비 0~1 비율. 라벨이 그림에 구워져 있어 labels.json에 없을 때만 쓴다"
+              }
+            }
+          }
+        }
+      }
+    },
+    "skipped": {
+      "type": "array",
+      "description": "청사진에 있었지만 카드를 만들지 않은 target. 비워두지 말 것",
+      "items": {
+        "type": "object",
+        "required": ["retrieval_target", "reason"],
+        "properties": {
+          "retrieval_target": { "type": "string" },
+          "reason": {
+            "type": "string",
+            "enum": ["obvious", "decorative", "reference_only", "marked_not_tested", "redundant", "unsupported"]
+          }
+        }
+      }
+    }
+  }
+}
