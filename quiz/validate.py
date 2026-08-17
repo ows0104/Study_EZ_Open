@@ -239,6 +239,11 @@ def check_item(item: dict, max_slide: int, jokbo_range: list | None = None,
     flags = item.get("review_flags") or []
     if flags and source_type != "jokbo":
         # 정오 검토는 족보에만 해당한다. 강의록에 붙었다면 외부 지식이 새어든 신호다.
+        #
+        # **`review_note` 단독은 막지 않는다.** 그건 정오 분류가 아니라 "이 카드에서
+        # 조심할 자료 쪽 사정"이고, 강의록 카드도 쓴다 - 뒷면에 붙는 그림 자체에
+        # 오기가 있는 경우가 있다(`260814_05` s20의 `IL-14`). build가 그때도 빨간
+        # 박스를 낸다.
         soft.append("review_flag_on_lecture")
     if any(f not in VALID_REVIEW_FLAGS for f in flags):
         soft.append("unknown_review_flag")

@@ -59,14 +59,30 @@ REVIEW_FLAG_LABELS = {
 
 
 def _review_field(item: dict) -> str:
-    """족보 정오 검토 결과. 카드 뒷면에 빨간 경고 박스로 뜬다."""
+    """뒷면의 빨간 경고 박스. 두 가지가 들어온다.
+
+    - `review_flags` — 족보 문항의 정오 분류. 족보 카드에만 붙는다
+    - `review_note` — 이 카드에서 조심할 **자료 쪽 사정**. 강의록 카드도 쓴다
+
+    `review_note`만 있어도 박스를 낸다. 자료 자체에 결함이 있는 카드가 그 자리다 -
+    `260814_05` s20이 M2 유도 자극을 `IL-13, IL-14`로 인쇄했는데 IL-14는 IL-4의
+    오기이고(같은 강의 s19가 IL-4·IL-13을 적어 교차 확인된다), s31은 표의 줄 순서를
+    일대일 인과로 읽으면 표준 지식과 어긋난다.
+
+    **경고가 그림 바로 위에 서야 값을 한다.** 템플릿에서 이 박스가 `SlideImage`
+    직전이다. 뒷면에 그 그림이 붙으므로 해설의 회색 글씨로는 늦는다.
+    """
     flags = [f for f in (item.get("review_flags") or []) if f in REVIEW_FLAG_LABELS]
-    if not flags:
+    note = normalize_display_newlines(str(item.get("review_note") or "").strip())
+    if not flags and not note:
         return ""
-    parts = ["족보 검토: " + ", ".join(REVIEW_FLAG_LABELS[f] for f in flags)]
-    note = str(item.get("review_note") or "").strip()
-    if note:
-        parts.append("검토 근거: " + normalize_display_newlines(note))
+    parts = []
+    if flags:
+        parts.append("족보 검토: " + ", ".join(REVIEW_FLAG_LABELS[f] for f in flags))
+        if note:
+            parts.append("검토 근거: " + note)
+    else:
+        parts.append("자료 주의: " + note)
     return normalize_display_newlines("\n".join(parts))[:800]
 
 
@@ -318,6 +334,13 @@ def build_run(run_dir: Path, items_name: str, project: str, output: Path | None)
             for key in ("lecture", "jokbo")
         },
         "review_flagged": sum(1 for i in items if i.get("review_flags")),
+        # 종류별로도 남긴다. 신호는 개수가 아니라 종류에 있다 — `answer_mismatch`만
+        # "정답이 틀렸다"는 뜻이고 나머지 둘은 실측에서 스스로 풀렸다(CLAUDE.md
+        # "계수기는 아직 사람을 부를 줄 모른다"). `studyez.gate`가 이걸로 배포를 막는다.
+        "review_flags": {
+            key: sum(1 for i in items if key in (i.get("review_flags") or []))
+            for key in REVIEW_FLAG_LABELS
+        },
         "card_types": {
             key: sum(1 for i in items if str(i.get("card_type", "fact")).lower() == key)
             for key in ("fact", "comparison", "mechanism", "trap", "list", "sequence", "cloze")
@@ -341,8 +364,9 @@ def main() -> int:
         meta = build_run(Path(args.run_dir), args.items, args.project, args.out)
     print(f"[build] {meta['deck_name']}")
     print(f"  {meta['item_count']}장 (basic {meta['format']['basic']} / cloze {meta['format']['cloze']})")
+    flags = " · ".join(f"{k} {v}" for k, v in meta["review_flags"].items() if v) or "없음"
     print(f"  출처: 강의록 {meta['sources']['lecture']} / 족보 {meta['sources']['jokbo']}"
-          f" (정오 검토 플래그 {meta['review_flagged']})")
+          f" (정오 검토 플래그 {meta['review_flagged']}장 — {flags})")
     print(f"  중요도: core {meta['importance']['core']} / detail {meta['importance']['detail']}")
     print(f"  출제 이력: exam_hit {meta['exam_hit']} / stamp {meta['stamped']}")
     print(f"  유형: { {k: v for k, v in meta['card_types'].items() if v} }")
