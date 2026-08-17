@@ -154,7 +154,7 @@ function PreviewResource({ detail }: { detail: LectureDetail }) {
     return (
       <a className="resource" href={detail.preview.shareUrl} target="_blank" rel="noreferrer">
         <strong>기본 링크</strong>
-        <small>반 공통 예습 대화</small>
+        <small>공통 예습 대화</small>
       </a>
     );
   }

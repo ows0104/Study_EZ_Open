@@ -273,6 +273,7 @@ function PreviewAction({
   onError: (message: string) => void;
 }) {
   const [busy, setBusy] = useState<"shared" | "personal" | "">("");
+  const [askingRemake, setAskingRemake] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const promptStore = usePreviewPrompt();
   const isAdmin = Boolean(useMe()?.isAdmin);
@@ -339,9 +340,25 @@ function PreviewAction({
           누가 만들었든 같은 것을 물은 대화다. 만드는 것은 관리자뿐이다. */}
       {detail.preview?.shareUrl ? (
         <>
-          <SharedOpen url={detail.preview.shareUrl} lectureId={lectureId} />
-          {isAdmin && canMake ? (
-            <RemakeShared onConfirm={() => start("shared")} busy={busy === "shared"} disabled={Boolean(busy)} />
+          <div className="panel-row">
+            <SharedOpen url={detail.preview.shareUrl} lectureId={lectureId} />
+            {isAdmin && canMake ? (
+              <Remake
+                label="기본 링크 다시 만들기"
+                busy={busy === "shared"}
+                disabled={Boolean(busy)}
+                onClick={() => setAskingRemake(true)}
+              />
+            ) : null}
+          </div>
+          {askingRemake ? (
+            <RemakeConfirm
+              onConfirm={() => {
+                setAskingRemake(false);
+                void start("shared");
+              }}
+              onCancel={() => setAskingRemake(false)}
+            />
           ) : null}
         </>
       ) : !canMake ? (
@@ -349,7 +366,7 @@ function PreviewAction({
       ) : isAdmin ? (
         <button className="panel-action is-key" onClick={() => start("shared")} disabled={Boolean(busy)}>
           <strong>{busy === "shared" ? "여는 중…" : "기본 링크 만들기"}</strong>
-          <small>고정 프롬프트로 묻고, 만들어진 공유 링크를 반 전체에 냅니다</small>
+          <small>고정 프롬프트로 묻고, 만들어진 공유 링크를 모두에게 냅니다</small>
         </button>
       ) : (
         <span className="panel-action is-key is-empty">기본 링크 — 아직 없습니다</span>
@@ -357,19 +374,33 @@ function PreviewAction({
 
       {/* 개인 링크 — 사람마다 하나. 프롬프트도 자기 것으로 묻는다. */}
       {detail.myPreview?.conversationUrl ? (
-        <>
-          <a className="panel-action" href={detail.myPreview.conversationUrl} target="_blank" rel="noreferrer">
+        <div className="panel-row">
+          {/* 저장되면 이 자리가 회색 버튼("개인 예습 시작")에서 이 파란 줄로
+              바뀐다. 색이 곧 "내 대화가 저장돼 있다"는 표시다.
+
+              주소는 title에 그대로 둔다 — 빈 ChatGPT가 뜰 때 무엇이 저장돼
+              있는지 볼 데가 여기밖에 없다. */}
+          <a
+            className="panel-action is-key"
+            href={detail.myPreview.conversationUrl}
+            title={detail.myPreview.conversationUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
             <strong>개인 링크</strong>
             <small>내 예습 대화 이어서 열기</small>
           </a>
           {canMake ? (
             // 자기 것이라 묻지 않는다. 옛 대화는 ChatGPT에 그대로 남아 있고
             // 여기서 가리키는 주소만 새것으로 바뀐다.
-            <button className="panel-subaction" onClick={() => start("personal")} disabled={Boolean(busy)}>
-              {busy === "personal" ? "여는 중…" : "새 대화로 다시 시작"}
-            </button>
+            <Remake
+              label="새 대화로 다시 시작"
+              busy={busy === "personal"}
+              disabled={Boolean(busy)}
+              onClick={() => void start("personal")}
+            />
           ) : null}
-        </>
+        </div>
       ) : canMake ? (
         <button className="panel-action" onClick={() => start("personal")} disabled={Boolean(busy)}>
           <strong>{busy === "personal" ? "여는 중…" : "개인 예습 시작"}</strong>
@@ -382,48 +413,55 @@ function PreviewAction({
 }
 
 /**
- * 기본 링크 다시 만들기.
+ * 다시 만들기.
  *
- * **한 번 묻는다.** 개인 링크와 달리 이것은 반 전체가 보는 값이고, 이미 그
- * 링크로 Pre-Quiz가 만들어졌을 수도 있다. 되돌리려면 다시 만드는 수밖에 없다.
+ * 링크를 여는 것에 견주면 드물게 하는 일이라 아이콘 하나로 줄여 링크 옆에
+ * 붙인다. 아래에 한 줄로 두면 그 줄이 링크만큼 눈에 걸린다.
+ *
+ * 이름이 화면에 안 나오므로 `aria-label`과 `title`이 그것을 대신한다 — 아이콘
+ * 하나만으로는 무엇이 다시 만들어지는지 알 수 없다.
+ */
+function Remake({
+  label,
+  busy,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  busy: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={busy ? "panel-remake is-busy" : "panel-remake"}
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={busy ? "여는 중…" : label}
+      aria-busy={busy}
+      title={label}
+    >
+      <span aria-hidden="true">⟳</span>
+    </button>
+  );
+}
+
+/**
+ * 기본 링크를 다시 만들기 전에 한 번 묻는다.
+ *
+ * 개인 링크와 달리 이것은 반 전체가 보는 값이고, 이미 그 링크로 Pre-Quiz가
+ * 만들어졌을 수도 있다. 되돌리려면 다시 만드는 수밖에 없다.
  *
  * `window.confirm` 대신 자리에서 묻는다 — 새 탭을 여는 흐름이라 모달이 팝업
  * 차단과 얽히고, 무엇을 바꾸는지 문장으로 적을 자리도 없다.
  */
-function RemakeShared({
-  onConfirm,
-  busy,
-  disabled,
-}: {
-  onConfirm: () => void;
-  busy: boolean;
-  disabled: boolean;
-}) {
-  const [asking, setAsking] = useState(false);
-
-  if (busy) return <span className="panel-subaction is-quiet">여는 중…</span>;
-  if (!asking) {
-    return (
-      <button className="panel-subaction" onClick={() => setAsking(true)} disabled={disabled}>
-        기본 링크 다시 만들기
-      </button>
-    );
-  }
+function RemakeConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
     <div className="panel-confirm">
-      <p>
-        반 전체가 보는 링크가 새 대화로 바뀝니다. 옛 링크는 ChatGPT에 그대로 남지만 여기서는 안 보입니다.
-      </p>
+      <p>모두가 보는 링크가 새 대화로 바뀝니다. 옛 링크는 ChatGPT에 그대로 남지만 여기서는 안 보입니다.</p>
       <div className="panel-confirm-actions">
-        <button
-          onClick={() => {
-            setAsking(false);
-            onConfirm();
-          }}
-        >
-          바꾸기
-        </button>
-        <button className="is-quiet" onClick={() => setAsking(false)}>
+        <button onClick={onConfirm}>바꾸기</button>
+        <button className="is-quiet" onClick={onCancel}>
           취소
         </button>
       </div>
@@ -447,7 +485,7 @@ function SharedOpen({ url, lectureId }: { url: string; lectureId: string }) {
       onClick={() => watchSharedLink(lectureId, url)}
     >
       <strong>기본 링크</strong>
-      <small>반 공통 예습 대화 열기</small>
+      <small>공통 예습 대화 열기</small>
     </a>
   );
 }
