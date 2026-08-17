@@ -106,7 +106,7 @@ def item_text(item: dict) -> str:
                      _text(item.get("answer"))])
 
 
-def check_item(item: dict, num_pages: int, jokbo_range: list | None = None) -> tuple[list[str], list[str]]:
+def check_item(item: dict, max_slide: int, jokbo_range: list | None = None) -> tuple[list[str], list[str]]:
     """한 문항의 (hard, soft) 문제 목록. hard가 있으면 빌드 불가."""
     hard: list[str] = []
     soft: list[str] = []
@@ -130,8 +130,13 @@ def check_item(item: dict, num_pages: int, jokbo_range: list | None = None) -> t
     except (TypeError, ValueError):
         hard.append("slide_no_missing")
         slide_no = None
-    if slide_no is not None and not (1 <= slide_no <= num_pages):
-        hard.append(f"slide_no_out_of_range({slide_no}/1-{num_pages})")
+    # 경계는 **자료의 범위**(`total_slides`)다. `num_pages`(강의록 PDF 쪽수)로 자르면
+    # 외부 족보를 붙인 편에서 정상 카드가 hard 제거된다. quiz 쪽에서 실제로 났다 -
+    # `260814_05`는 `num_pages` 49에 외부 족보가 슬라이드 50-51이라 카드 4장이 걸렸다.
+    # prequiz는 자기 prep이 없고 `quiz/prep.py`가 만든 `prep.json`을 읽으므로 같은 조건을
+    # 그대로 만난다.
+    if slide_no is not None and not (1 <= slide_no <= max_slide):
+        hard.append(f"slide_no_out_of_range({slide_no}/1-{max_slide})")
     # 족보 구간에서도 출제한다. 다만 '강의의 중심 흐름에 있는가'는 의미 판단이라
     # 코드가 못 한다 (§2). 여기서는 출처가 실제 구간과 맞는지만 보고, 중심 흐름
     # 여부는 감사로 넘긴다.
@@ -139,7 +144,7 @@ def check_item(item: dict, num_pages: int, jokbo_range: list | None = None) -> t
     if source_type not in VALID_SOURCE_TYPES:
         soft.append(f"unknown_source_type({source_type})")
         source_type = "lecture"
-    if jokbo_range and slide_no is not None and 1 <= slide_no <= num_pages:
+    if jokbo_range and slide_no is not None and 1 <= slide_no <= max_slide:
         in_jokbo = int(jokbo_range[0]) <= slide_no <= int(jokbo_range[1])
         if in_jokbo and source_type != "jokbo":
             soft.append(f"source_type_range_mismatch(slide {slide_no}는 족보 구간)")
@@ -341,7 +346,7 @@ def answer_position_bias(items: list[dict]) -> dict | None:
             "dominant": top, "share": round(count / total, 2)}
 
 
-def validate_items(items: list[dict], num_pages: int,
+def validate_items(items: list[dict], max_slide: int,
                    jokbo_range: list | None = None) -> tuple[list[dict], list[dict]]:
     """(빌드 가능한 문항, 제거된 문항). 제거된 문항은 원문을 통째로 보존한다."""
     kept: list[dict] = []
@@ -351,7 +356,7 @@ def validate_items(items: list[dict], num_pages: int,
         item.setdefault("id", f"p{idx + 1:03d}")
         if item.get("answer") is not None:
             item["answer"] = str(item["answer"]).strip()
-        hard, soft = check_item(item, num_pages, jokbo_range)
+        hard, soft = check_item(item, max_slide, jokbo_range)
         item["flags"] = soft
         if hard:
             removed.append({"reason": hard, "item": item})
@@ -369,6 +374,9 @@ def validate_run(run_dir: Path, items_name: str = "pre_items.raw.json") -> dict:
     run_dir = Path(run_dir)
     prep = json.loads((run_dir / "prep.json").read_text(encoding="utf-8"))
     num_pages = int(prep["num_pages"])
+    # 자료의 범위와 강의록 PDF 쪽수는 다르다. 외부 족보를 붙이면 슬라이드 번호가
+    # 필기 뒤로 이어져 `total_slides`가 커진다.
+    max_slide = int(prep.get("total_slides") or num_pages)
     # 구간의 주인은 structure.json(모델)이고 prep.json은 힌트다. 이걸 안 지키면
     # 멀쩡한 족보 문항이 source_type_range_mismatch로 걸린다.
     lecture_range, jokbo_range, range_source = authoritative_ranges(run_dir, prep)
@@ -379,7 +387,7 @@ def validate_run(run_dir: Path, items_name: str = "pre_items.raw.json") -> dict:
     blueprint_path = run_dir / "pre_blueprint.json"
     blueprint = json.loads(blueprint_path.read_text(encoding="utf-8")) if blueprint_path.exists() else None
 
-    kept, removed = validate_items(items, num_pages, jokbo_range)
+    kept, removed = validate_items(items, max_slide, jokbo_range)
 
     slide_counts: dict[int, int] = {}
     for item in kept:

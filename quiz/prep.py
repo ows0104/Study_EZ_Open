@@ -121,16 +121,30 @@ _ZONE = ("좌", "중", "우")
 _BAND = ("상", "중", "하")
 
 
-def _zone_label(rect, page_rect) -> str:
-    """표시가 놓인 자리를 3x3로 거칠게 부른다 (`우상`, `중중` 같은 꼴).
-
-    정규화 좌표를 주지 않는 이유: 모델이 읽는 `model_input.pdf`는 각인용 하단 띠
-    때문에 원본보다 높이가 크다. 원본 기준 분모로 낸 좌표를 그 위에 얹으면 어긋난다
-    (오클루전에서 겪은 것과 같은 함정). 자리 이름은 분모와 무관하다.
-    """
-    cx = (rect.x0 + rect.x1) / 2 / max(float(page_rect.width), 1.0)
-    cy = (rect.y0 + rect.y1) / 2 / max(float(page_rect.height), 1.0)
+def _zone_label(cx: float, cy: float) -> str:
+    """자리를 3x3로 거칠게 부른다 (`우상`, `중중` 같은 꼴). 사람이 읽는 용이다."""
     return _ZONE[min(2, int(cx * 3))] + _BAND[min(2, int(cy * 3))]
+
+
+def _norm_rect(rect, page_rect) -> list[float]:
+    """**내용 영역** 기준 정규화 좌표. 띠는 분모에서 뺀다.
+
+    `annotations.json`은 원본 PDF에서 뽑는데 모델이 읽는 `model_input.pdf`·
+    `annotated.pdf`는 각인용 하단 띠 때문에 더 높다. 그래서 페이지 높이로 나누면
+    채널마다 분모가 갈린다 - 오클루전에서 겪은 그 함정이다.
+
+    **내용 영역은 세 채널이 모두 같다.** 원본에서 뽑는 이 단계에서는 페이지가 곧
+    내용 영역이므로 그대로 나누면 되고, 띠가 붙은 판본에서 볼 때는 위에서부터
+    `height - band`가 같은 영역이다. `media/`는 띠가 없어 그대로 맞는다.
+
+    자리 이름(`where`)만으로는 부족해서 넣었다. `260814_05`에서 상자 7개가 전부
+    `좌중`으로 뭉쳐 구분이 안 됐고(s10), s33은 12개가 여섯 칸에 뭉쳤다. 조각 다섯이
+    같은 지적을 했다.
+    """
+    w = max(float(page_rect.width), 1.0)
+    h = max(float(page_rect.height), 1.0)
+    return [round(max(0.0, rect.x0 / w), 3), round(max(0.0, rect.y0 / h), 3),
+            round(min(1.0, rect.x1 / w), 3), round(min(1.0, rect.y1 / h), 3)]
 
 
 def _mark_targets(page, annots) -> list[dict]:
@@ -192,10 +206,13 @@ def _mark_targets(page, annots) -> list[dict]:
             if abs(inter.get_area()) >= _MARK_MIN_OVERLAP * denom:
                 covers.append(text[:80])
         on = "text" if covers else ("figure" if any(not (rect & ir).is_empty for ir in images) else "none")
+        norm = _norm_rect(rect, page.rect)
         marks.append({
             "signal": signal,
             "on": on,
-            "where": _zone_label(rect, page.rect),
+            "where": _zone_label((norm[0] + norm[2]) / 2, (norm[1] + norm[3]) / 2),
+            # 내용 영역 기준 [x0, y0, x1, y1]. `covers`가 빈 그림 상자에서 이게 전부다.
+            "rect": norm,
             "covers": covers[:12],
         })
     return marks[:_MARKS_PER_SLIDE]

@@ -154,6 +154,9 @@ def build_run(run_dir: Path, items_name: str, project: str, output: Path | None)
     run_dir = Path(run_dir)
     prep = json.loads((run_dir / "prep.json").read_text(encoding="utf-8"))
     num_pages = int(prep["num_pages"])
+    # 경계는 자료의 범위다. `num_pages`로 자르면 외부 족보를 붙인 편에서 정상 문항이
+    # 막힌다. 아래 `slide_image_map` 검사가 진짜 빌드 가능성이다.
+    max_slide = int(prep.get("total_slides") or num_pages)
     # 구간의 주인은 structure.json이다. prep.json은 힌트다.
     lecture_range, jokbo_range, _ = authoritative_ranges(run_dir, prep)
     slide_image_map = {int(k): v for k, v in prep["slide_image_map"].items()}
@@ -166,7 +169,7 @@ def build_run(run_dir: Path, items_name: str, project: str, output: Path | None)
     # "모델이 무언가 반환했다"를 "문제가 해결됐다"로 간주하지 않는다.
     blocked = []
     for item in items:
-        hard, _ = check_item(item, num_pages, jokbo_range)
+        hard, _ = check_item(item, max_slide, jokbo_range)
         if int(item.get("slide_no") or 0) not in slide_image_map:
             hard.append("slide_image_missing")
         if hard:

@@ -179,14 +179,19 @@
   ```json
   "marks": [
     { "signal": "red_box", "on": "text",   "where": "우중",
-      "covers": ["Helicobacter pylori"] },
-    { "signal": "red_box", "on": "figure", "where": "좌상", "covers": [] }
+      "rect": [0.566, 0.342, 0.776, 0.387], "covers": ["Helicobacter pylori"] },
+    { "signal": "red_box", "on": "figure", "where": "좌상",
+      "rect": [0.103, 0.406, 0.201, 0.448], "covers": [] }
   ]
   ```
 
-  `where`는 3x3 자리 이름(`우중`·`좌상`…)이다. 정규화 좌표를 안 주는 이유는
-  `model_input.pdf`가 각인용 하단 띠 때문에 원본보다 높기 때문이다 — 원본 분모로
-  낸 좌표를 그 위에 얹으면 어긋난다.
+  `where`는 3x3 자리 이름(`우중`·`좌상`…)이고 눈으로 읽는 용이다. **여러 개가 한 칸에
+  뭉치면 `rect`를 보라** — `260814_05` s10은 상자 넷이 전부 `좌중`인데 `rect`의 y가
+  0.309 / 0.406 / 0.510 / 0.626으로 갈린다.
+
+  `rect`는 `[x0, y0, x1, y1]`이고 분모는 **내용 영역**이다(각인용 하단 띠를 뺀 부분).
+  띠는 `model_input.pdf`·`annotated.pdf`에만 있고 `media/`에는 없는데, **내용 영역은
+  세 채널이 같으므로** 어느 쪽을 보든 이 좌표가 맞는다.
 
 - **`on`이 무엇에 닿았는지 말해 준다.** 실측 6편 612개:
 

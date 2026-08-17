@@ -39,6 +39,8 @@ from quiz.cloze import (  # noqa: E402
 )
 from quiz.occlusion import build_label_index, resolve_rects  # noqa: E402
 from quiz.textutil import norm_for_compare, tokens  # noqa: E402
+from quiz import timings  # noqa: E402
+
 
 VALID_CARD_TYPES = {"fact", "comparison", "mechanism", "trap", "list", "sequence", "cloze"}
 VALID_IMPORTANCE = {"core", "detail"}
@@ -70,6 +72,10 @@ CLOZE_MAX_BLANKS = 2
 # 정보량이 많은 슬라이드는 5~6장, 그 이상도 내는 것이 맞다(§2). 몰림 자체는 문제가
 # 아니므로 한도를 넉넉히 두고, 넘을 때만 쪼개기가 잘못됐는지 감사에게 알린다.
 SLIDE_CONCENTRATION_MAX = 8
+
+# 3단계가 정식으로 받는 입력. 병합본과 감사 후 확정본 둘뿐이다.
+# 조각 파일(`items.raw.c2.json`)에 대고 돌리는 것은 진단이지 단계가 아니다.
+CANONICAL_ITEMS = {"items.raw.json", "items.final.json"}
 
 # 원본을 눈앞에 두고 있어야만 풀리는 카드. Anki에서는 앞면만 보인다 (§6 자족성).
 _SOURCE_REFERENCE_RE = re.compile(
@@ -483,12 +489,17 @@ def validate_run(run_dir: Path, items_name: str = "items.raw.json") -> dict:
         "trap_notes": sum(1 for i in kept if str(i.get("trap_note") or "").strip()),
     }
 
-    (run_dir / "items.checked.json").write_text(
+    # 조각 파일에 대고 돌리면 출력도 조각 이름으로 낸다. 정식 이름으로 쓰면 병합본이
+    # 조용히 덮인다 - `260814_05`에서 조각 에이전트가 자기 카드 14장을 검증하다가
+    # `items.checked.json`·`suspects.json`을 그 14장으로 덮었다. 진단 용도 자체는
+    # 막지 않되 사고만 없앤다.
+    suffix = "" if items_name in CANONICAL_ITEMS else "." + Path(items_name).stem.replace("items.raw.", "")
+    (run_dir / f"items.checked{suffix}.json").write_text(
         json.dumps({"lecture_id": prep["lecture_id"], "items": kept}, ensure_ascii=False, indent=2),
         encoding="utf-8")
-    (run_dir / "suspects.json").write_text(
+    (run_dir / f"suspects{suffix}.json").write_text(
         json.dumps(suspects, ensure_ascii=False, indent=2), encoding="utf-8")
-    return {"kept": len(kept), "suspects": suspects}
+    return {"kept": len(kept), "suspects": suspects, "suffix": suffix}
 
 
 def main() -> int:
@@ -497,7 +508,15 @@ def main() -> int:
     parser.add_argument("--items", default="items.raw.json", help="검증할 파일명")
     args = parser.parse_args()
 
-    result = validate_run(Path(args.run_dir), args.items)
+    # 3단계가 정식으로 도는 입력은 병합본과 감사 후 확정본 둘뿐이다. 조각 파일에
+    # 대고 돌리는 것은 진단이지 단계가 아니므로 **계측에 넣지 않는다.**
+    # 넣으면 벽시계가 호출 간격이 되어 버린다 - `260814_05`에서 조각 에이전트의
+    # 진단 호출 둘이 섞여 `3-validate`가 4회 25.4분으로 잡혔다(실제는 네 번 다 1초 미만).
+    if args.items in CANONICAL_ITEMS:
+        with timings.stage(Path(args.run_dir), "3-validate", label=args.items):
+            result = validate_run(Path(args.run_dir), args.items)
+    else:
+        result = validate_run(Path(args.run_dir), args.items)
     s = result["suspects"]
     print(f"[validate] 통과 {result['kept']}장 "
           f"(강의록 {s['sources']['lecture']} / 족보 {s['sources']['jokbo']})")
