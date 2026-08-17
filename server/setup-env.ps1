@@ -61,7 +61,9 @@ if (Test-Path $SERVER_ENV) {
   }
 }
 function Is-Blank($key) {
-  return (-not $current.ContainsKey($key)) -or ($current[$key] -match '^<.*>$')
+  return (-not $current.ContainsKey($key)) -or `
+    ([string]::IsNullOrWhiteSpace($current[$key])) -or `
+    ($current[$key] -match '^<.*>$')
 }
 
 Write-Host ""

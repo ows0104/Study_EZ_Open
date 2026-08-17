@@ -1,18 +1,21 @@
-# 남은 일
+# 배포 상태와 남은 일
 
-배포는 절반 끝났다. **API는 살아 있고 DB도 채워져 있다.** 남은 것은 프론트를
-올리는 일과, 파일 기능을 켜는 일이다.
+2026-08-17 기준으로 **API·DB·프론트 배포와 인증 URL/CORS 연결까지 끝났다.**
+실제 작업 순서와 복구 절차는
+[Cloudflare Pages 배포 실행서](cloudflare-pages-runbook.md)와
+[R2 설정·키 교체 실행서](r2-runbook.md)에 기록했다. 남은 큰 일은 로컬 러너
+연결과 노출된 DB 비밀번호 교체다.
 
 ## 지금 상태
 
 | | |
 |---|---|
-| Cloud Run | `studyez-api` · `asia-northeast3` · 살아 있음 |
+| Cloud Run | `studyez-api` · `asia-northeast3` · 리비전 `studyez-api-00003-krf` |
 | API 주소 | `https://studyez-api-97999573571.asia-northeast3.run.app` |
 | Supabase | 프로젝트 `dlvruugdigpbtgiwpdgs` · Seoul · 표 9개 · 시간표 369칸 |
 | 로그인 | 이메일+비밀번호. JWKS(ES256)로 검증. Confirm email 켜짐 |
-| R2 | **아직 없음.** 파일 경로만 503이고 나머지는 다 돈다 |
-| 프론트 | 빌드는 되지만 아직 어디에도 안 올라감 |
+| R2 | 비공개 버킷 `studyez` · 전용 `studyez-service` 토큰 · 연결 검증 완료 |
+| 프론트 | `https://study-ez-open.pages.dev` · 배포 및 로그인 화면 확인 완료 |
 
 확인된 것:
 
@@ -20,9 +23,14 @@
 GET /api/health              → {"status":"ok","environment":"production"}
 GET /api/timetable           → 401 (로그인 없이)
 GET /api/timetable + 가짜토큰 → 401
+GET https://study-ez-open.pages.dev → Study_EZ 로그인 화면
+GET /api/health + Pages Origin → 200 + 정확한 CORS 허용 헤더
+R2 없는 객체 HEAD              → 인증 성공 뒤 404 (`R2_AUTH_OK`)
 ```
 
-## 1. Cloudflare Pages 올리기
+## 1. Cloudflare Pages 올리기 — 완료
+
+프로젝트 `study-ez-open`, 운영 브랜치 `master`로 배포했다.
 
 저장소는 `ows0104/Study_EZ_Open`, 브랜치는 **`master`**.
 
@@ -54,7 +62,10 @@ VITE_API_BASE_URL        https://studyez-api-97999573571.asia-northeast3.run.app
 publishable 키는 브라우저 번들에 실리는 공개값이다. 실제 권한은 서버의 JWT
 검증과 승인 게이트가 정한다.
 
-## 2. 주소 두 곳 이어 주기
+## 2. 주소 두 곳 이어 주기 — 완료
+
+Supabase Site URL·redirect URL과 서버 CORS를
+`https://study-ez-open.pages.dev`로 연결했다.
 
 Pages 주소가 나온 뒤에 해야 로그인이 된다.
 
@@ -74,12 +85,21 @@ Redirect URLs  https://<pages 주소>/**
 cd server; ./deploy.ps1
 ```
 
-지금은 `http://localhost:5173`이라 Pages에서 API를 부르면 브라우저가 막는다.
+현재 `https://study-ez-open.pages.dev`로 설정해 Cloud Run 리비전
+`studyez-api-00003-krf`에 배포했고, 응답 헤더까지 확인했다.
 
 ## 3. 첫 로그인과 승인
 
 `STUDYEZ_ADMIN_EMAILS`에 `developer@studyez.kr`, `ows0104@gmail.com`이 들어 있다.
 이 주소로 가입하면 **관리자이자 자동 승인**이다.
+
+2026-08-17 운영 DB 확인 결과:
+
+- `ows0104@gmail.com` — 관리자, 승인 완료
+- `ows0104@snu.ac.kr` — 일반 사용자, 승인 완료
+
+따라서 현재 사용할 관리자 계정은 `ows0104@gmail.com`이다. 비밀번호는 문서나
+대화에 남기지 않고 계정 소유자만 관리한다.
 
 1. Pages 주소에서 가입 → 확인 메일의 링크를 누른다
 2. 로그인하면 캘린더가 보여야 한다 (369칸, 강의 자료는 아직 없으니 점은 없다)
@@ -92,20 +112,16 @@ cd server; ./deploy.ps1
 한계다. 학년 전체를 한꺼번에 받을 생각이면 Authentication → Emails → SMTP
 Settings에 외부 발송(Resend 등)을 붙여야 한다.
 
-## 4. R2 켜기 (파일이 필요해질 때)
+## 4. R2 켜기 — 완료
 
-지금은 없어도 된다. 강의록·apkg를 배급할 때가 되면 켠다.
+비공개 버킷 `studyez`와 버킷 전용 Account API token `studyez-service`를 만들었다.
+권한은 **Object Read & Write**, 대상은 `studyez` 하나뿐이다. `meddeck-service`와
+공유하지 않는다. 각 서비스가 자기 버킷과 토큰을 따로 가진다.
 
-1. R2 버킷 `studyez` 생성. **공개로 열지 않는다** — 버킷이 비공개라는 것이
-   "로그인 필수"를 파일에도 성립시키는 유일한 수단이다
-2. R2 → API → Create API token (Object Read & Write, `studyez` 버킷만)
-3. ```bash
-   cd server; ./setup-env.ps1   # R2 값 3개를 물어본다
-   ./deploy.ps1
-   ```
-
-`storage_configured`가 참이 되는 순간 파일 경로가 503에서 풀린다. 코드는 이미
-다 있다.
+키는 `server/.env`와 Secret Manager의
+`studyez-r2-access-key-id`·`studyez-r2-secret-access-key`에 반영했다. 실제 R2에
+없는 객체를 HEAD해 인증 성공 뒤 404가 오는 것까지 확인했다. 생성·교체·노출 시
+복구 방법은 [R2 설정·키 교체 실행서](r2-runbook.md)를 그대로 따른다.
 
 ## 5. 로컬 러너 붙이기
 

@@ -47,6 +47,8 @@ Redirect URLs  https://<pages 주소>/**
 필수"를 파일에도 성립시키는 유일한 수단이다.
 
 API 토큰은 **Object Read & Write**, 대상은 `studyez` 버킷만으로 좁힌다.
+실제 대시보드 순서, 비밀키를 로그에 남기지 않는 방법, 키 노출 시 교체 절차는
+[r2-runbook.md](r2-runbook.md)에 있다.
 
 ### 3. 값 채우기
 
@@ -81,6 +83,15 @@ RS256 검증을 하고, 요즘 Supabase는 비대칭 키가 기본이라 그 편
 손으로 고치고 싶으면 `.env`를 직접 열어도 된다. `deploy.ps1`이 안 채운 곳을
 찾아 배포 전에 멈춘다.
 
+자동화 작업자가 브라우저에서 R2 키를 복사하는 경우에는 일반 PowerShell
+프롬프트에 붙여넣지 않는다. 다음 보조 스크립트가 클립보드 값을 화면에 출력하지
+않고 한 필드만 저장한 뒤 클립보드를 지운다.
+
+```powershell
+./set-r2-key-from-clipboard.ps1 -Field AccessKeyId
+./set-r2-key-from-clipboard.ps1 -Field SecretAccessKey
+```
+
 ### 4. 스키마와 시간표
 
 ```bash
@@ -103,11 +114,14 @@ cd server
 
 ### 6. Cloudflare Pages (GitHub 연동)
 
+실제 화면을 따라 하는 상세 실행서는
+[cloudflare-pages-runbook.md](cloudflare-pages-runbook.md)에 있다.
+
 Workers & Pages → Create → Pages → **Connect to Git** → `ows0104/Study_EZ_Open`
 
 | | |
 |---|---|
-| Production branch | `server` |
+| Production branch | `master` |
 | Framework preset | None |
 | Build command | `npm run build` |
 | Build output directory | `dist` |
@@ -134,7 +148,7 @@ Pages 주소가 나온 뒤 두 곳을 고친다.
 
 ```bash
 # server/.env 의 CORS_ALLOWED_ORIGINS 를 Pages 주소로 바꾸고
-cd server && ./deploy.ps1
+cd server; ./deploy.ps1
 ```
 
 그리고 Supabase의 Site URL·Redirect URLs에 같은 주소를 넣는다.
@@ -151,8 +165,8 @@ cd server && ./deploy.ps1
 
 | 무엇이 바뀌었나 | 할 일 |
 |---|---|
-| `server/` 코드 | `cd server && ./deploy.ps1` |
-| `web/` 코드 | `server` 브랜치에 push. Pages가 알아서 빌드한다 |
+| `server/` 코드 | `cd server; ./deploy.ps1` |
+| `web/` 코드 | `master` 브랜치에 push. Pages가 알아서 빌드한다 |
 | 스키마 | `init-db`. 표를 지우지는 않으므로 컬럼을 뺄 때는 손으로 |
 | 시간표 | `seed-timetable`. 없어진 칸은 지우고 매칭을 다시 계산한다 |
 
