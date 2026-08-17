@@ -18,6 +18,8 @@ export const MESSAGES = {
   linkReady: "STUDYEZ_PREVIEW_LINK_READY",
   linkSaved: "STUDYEZ_PREVIEW_LINK_SAVED",
   checkPending: "STUDYEZ_CHECK_PENDING_LINKS",
+  /** 기본 링크를 여는 중이니 그 뒤에 갈라져 나올 대화를 지켜봐 달라. */
+  watchShare: "STUDYEZ_WATCH_SHARE",
 } as const;
 
 /**

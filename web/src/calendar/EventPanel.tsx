@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { api, downloadSignedFile } from "../api";
 import type { LectureDetail, LectureFile, LectureRef } from "../types";
-import { absoluteUrl, extensionInstalled, requestPreview } from "../bridge/previewBridge";
+import { absoluteUrl, extensionInstalled, requestPreview, watchSharedLink } from "../bridge/previewBridge";
 import { EXTENSION_DOWNLOAD_URL } from "../bridge/protocol";
-import { PROMPT_TOKENS, renderPreviewPrompt } from "../lecture/previewPrompt";
+import { PROMPT_TOKENS, renderPreviewPrompt, SHARED_PREVIEW_PROMPT } from "../lecture/previewPrompt";
 import { usePreviewPrompt } from "../lecture/usePreviewPrompt";
+import { useMe } from "../useMe";
 import { categoryLabel, type CalendarEntry } from "./entries";
 import { lectureHref } from "./EventChip";
 
@@ -253,54 +254,45 @@ function PreviewAction({
   base: string;
   onError: (message: string) => void;
 }) {
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<"shared" | "personal" | "">("");
   const [showPrompt, setShowPrompt] = useState(false);
   const promptStore = usePreviewPrompt();
+  const isAdmin = Boolean(useMe()?.isAdmin);
+  const lectureId = `${lecture.subject}/${lecture.runId}`;
   const notesPrev = detail.files.find((file) => file.kind === "notes_prev");
-  const prompt = renderPreviewPrompt(promptStore.template, detail);
   const editor = (
     <PromptEditor store={promptStore} detail={detail} open={showPrompt} onToggle={() => setShowPrompt((o) => !o)} />
   );
 
-  if (detail.preview?.shareUrl) {
-    return (
-      <a className="panel-action is-key" href={detail.preview.shareUrl} target="_blank" rel="noreferrer">
-        <strong>예습 링크</strong>
-        <small>{detail.preview.provider} 대화 열기</small>
-      </a>
-    );
-  }
-
-  if (!notesPrev) {
-    return <span className="panel-action is-key is-empty">예습 — 작년 필기가 올라오면 열립니다</span>;
-  }
-
   /**
-   * 확장이 자료를 첨부하고 프롬프트를 채운다. 여기서는 어느 자료를 어느 강의로
-   * 여는지만 넘긴다 — 서명 URL은 수명이 짧아 누른 순간에 받는다.
+   * 확장이 자료를 첨부하고 프롬프트를 채운다. 여기서는 어느 자료를 어느 강의로,
+   * 어느 몫으로 여는지만 넘긴다 — 서명 URL은 수명이 짧아 누른 순간에 받는다.
    */
-  async function start() {
+  async function start(mode: "shared" | "personal") {
     if (!notesPrev) return;
-    setBusy(true);
+    setBusy(mode);
     try {
       const { url } = await api<{ url: string }>(`${base}/files/${notesPrev.id}`);
       await requestPreview({
         requestId: `${lecture.runId}-${performance.now()}`,
-        lectureId: `${lecture.subject}/${lecture.runId}`,
-        prompt,
+        lectureId,
+        mode,
+        prompt: renderPreviewPrompt(mode === "shared" ? SHARED_PREVIEW_PROMPT : promptStore.template, detail),
         files: [{ id: notesPrev.id, filename: notesPrev.filename, downloadUrl: absoluteUrl(url) }],
       });
     } catch (cause) {
       onError((cause as Error).message);
     } finally {
-      setBusy(false);
+      setBusy("");
     }
   }
 
-  // 확장이 없으면 자동으로 열 수 없다. 조용히 실패하는 대신 받는 곳을 준다.
+  // 확장이 없으면 자동으로 열 수 없다. 기본 링크가 이미 있으면 그건 그냥 주소라
+  // 확장 없이도 열린다 — 그 경우만 먼저 보여 준다.
   if (!extensionInstalled()) {
     return (
       <>
+        {detail.preview?.shareUrl ? <SharedOpen url={detail.preview.shareUrl} lectureId={lectureId} /> : null}
         <a className="panel-action is-key is-download" href={EXTENSION_DOWNLOAD_URL} download>
           <strong>예습 브리지 내려받기</strong>
           <small>설치하면 필기와 프롬프트가 ChatGPT에 자동으로 들어갑니다</small>
@@ -315,19 +307,130 @@ function PreviewAction({
           </li>
           <li>이 탭을 새로고침합니다.</li>
         </ol>
-        {editor}
       </>
     );
   }
 
+  // 작년 필기가 없으면 새로 만들 수는 없다. 다만 이미 만들어진 링크는 그대로
+  // 열려야 하므로 여기서 통째로 돌려보내지 않는다.
+  const canMake = Boolean(notesPrev);
+
   return (
     <>
-      <button className="panel-action is-key" onClick={start} disabled={busy}>
-        <strong>{busy ? "여는 중…" : "예습 시작하기"}</strong>
-        <small>ChatGPT 새 대화에 작년 필기와 프롬프트를 넣습니다</small>
-      </button>
+      {/* 기본 링크 — 강의당 하나, 반 전체가 같은 것을 읽는다. 문구가 고정이라
+          누가 만들었든 같은 것을 물은 대화다. 만드는 것은 관리자뿐이다. */}
+      {detail.preview?.shareUrl ? (
+        <>
+          <SharedOpen url={detail.preview.shareUrl} lectureId={lectureId} />
+          {isAdmin && canMake ? (
+            <RemakeShared onConfirm={() => start("shared")} busy={busy === "shared"} disabled={Boolean(busy)} />
+          ) : null}
+        </>
+      ) : !canMake ? (
+        <span className="panel-action is-key is-empty">기본 링크 — 작년 필기가 올라오면 만들 수 있습니다</span>
+      ) : isAdmin ? (
+        <button className="panel-action is-key" onClick={() => start("shared")} disabled={Boolean(busy)}>
+          <strong>{busy === "shared" ? "여는 중…" : "기본 링크 만들기"}</strong>
+          <small>고정 프롬프트로 묻고, 만들어진 공유 링크를 반 전체에 냅니다</small>
+        </button>
+      ) : (
+        <span className="panel-action is-key is-empty">기본 링크 — 아직 없습니다</span>
+      )}
+
+      {/* 개인 링크 — 사람마다 하나. 프롬프트도 자기 것으로 묻는다. */}
+      {detail.myPreview?.conversationUrl ? (
+        <>
+          <a className="panel-action" href={detail.myPreview.conversationUrl} target="_blank" rel="noreferrer">
+            <strong>개인 링크</strong>
+            <small>내 예습 대화 이어서 열기</small>
+          </a>
+          {canMake ? (
+            // 자기 것이라 묻지 않는다. 옛 대화는 ChatGPT에 그대로 남아 있고
+            // 여기서 가리키는 주소만 새것으로 바뀐다.
+            <button className="panel-subaction" onClick={() => start("personal")} disabled={Boolean(busy)}>
+              {busy === "personal" ? "여는 중…" : "새 대화로 다시 시작"}
+            </button>
+          ) : null}
+        </>
+      ) : canMake ? (
+        <button className="panel-action" onClick={() => start("personal")} disabled={Boolean(busy)}>
+          <strong>{busy === "personal" ? "여는 중…" : "개인 예습 시작"}</strong>
+          <small>내 프롬프트로 새 대화를 엽니다</small>
+        </button>
+      ) : null}
       {editor}
     </>
+  );
+}
+
+/**
+ * 기본 링크 다시 만들기.
+ *
+ * **한 번 묻는다.** 개인 링크와 달리 이것은 반 전체가 보는 값이고, 이미 그
+ * 링크로 Pre-Quiz가 만들어졌을 수도 있다. 되돌리려면 다시 만드는 수밖에 없다.
+ *
+ * `window.confirm` 대신 자리에서 묻는다 — 새 탭을 여는 흐름이라 모달이 팝업
+ * 차단과 얽히고, 무엇을 바꾸는지 문장으로 적을 자리도 없다.
+ */
+function RemakeShared({
+  onConfirm,
+  busy,
+  disabled,
+}: {
+  onConfirm: () => void;
+  busy: boolean;
+  disabled: boolean;
+}) {
+  const [asking, setAsking] = useState(false);
+
+  if (busy) return <span className="panel-subaction is-quiet">여는 중…</span>;
+  if (!asking) {
+    return (
+      <button className="panel-subaction" onClick={() => setAsking(true)} disabled={disabled}>
+        기본 링크 다시 만들기
+      </button>
+    );
+  }
+  return (
+    <div className="panel-confirm">
+      <p>
+        반 전체가 보는 링크가 새 대화로 바뀝니다. 옛 링크는 ChatGPT에 그대로 남지만 여기서는 안 보입니다.
+      </p>
+      <div className="panel-confirm-actions">
+        <button
+          onClick={() => {
+            setAsking(false);
+            onConfirm();
+          }}
+        >
+          바꾸기
+        </button>
+        <button className="is-quiet" onClick={() => setAsking(false)}>
+          취소
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 기본 링크 열기. `/share/`라 로그인도 확장도 없이 열린다.
+ *
+ * 여는 김에 확장에 어느 강의인지 일러 둔다. 공유 페이지에서 이어 물으면 새
+ * 대화가 갈라져 나오는데, 그것이 그 사람의 개인 링크가 된다.
+ */
+function SharedOpen({ url, lectureId }: { url: string; lectureId: string }) {
+  return (
+    <a
+      className="panel-action is-key"
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      onClick={() => watchSharedLink(lectureId, url)}
+    >
+      <strong>기본 링크</strong>
+      <small>반 공통 예습 대화 열기</small>
+    </a>
   );
 }
 

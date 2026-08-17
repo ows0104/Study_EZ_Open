@@ -9,13 +9,14 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth import CurrentUser, require_approved_user
 from app.config import get_settings
 from app.database import get_db
-from app.models import Asset, PreItem, Preview, QuizAttempt, RunMeta, TimetableEvent
+from app.models import Asset, PreItem, Preview, QuizAttempt, RunMeta, TimetableEvent, UserPreview
 from app.routes.common import lecture_or_404, storage_or_503
 from app.routes.prequiz import missed_items
 
@@ -32,13 +33,14 @@ DOWNLOADABLE = {
 
 
 def _preview_payload(preview: Preview | None, *, is_admin: bool) -> dict[str, Any] | None:
-    """예습 링크.
+    """기본 링크. 강의당 하나이고 반 전체가 같은 것을 읽는다.
 
-    `share_url`이 기본이다. 퀴즈를 만들 때 쓰는 링크가 이것이고 모두에게 보인다.
+    `share_url`이 그것이다 — `/share/` 주소라 링크를 가진 누구나 열 수 있고,
+    Pre-Quiz를 만들 때 읽는 것도 이쪽이다.
 
-    `conversation_url`(`/c/`)은 **결국 모두에게 줄 것이다.** 지금 관리자에게만
-    나가는 것은 그 링크가 아직 불안정하기 때문이지 감춰야 할 값이라서가 아니다.
-    안정되면 `STUDYEZ_SHOW_CONVERSATION_URL`을 켜면 되고 코드는 그대로다.
+    `conversation_url`(`/c/`)은 만든 사람 계정에서만 열린다. 개인 링크가 생긴
+    뒤로 이 칸은 "기본 링크를 누가 만들었나"의 흔적으로만 남는다 — 사람이 자기
+    대화를 여는 자리는 `user_preview`다.
     """
     if preview is None or not (preview.share_url or preview.conversation_url):
         return None
@@ -63,6 +65,7 @@ def read_lecture(
         .order_by(Asset.kind, Asset.filename)
     ).all()
     preview = db.get(Preview, (lecture.subject, lecture.run_id))
+    my_preview = db.get(UserPreview, (user.id, lecture.subject, lecture.run_id))
     item_count = db.scalar(
         select(func.count()).select_from(PreItem).where(
             PreItem.subject == lecture.subject, PreItem.run_id == lecture.run_id
@@ -109,6 +112,13 @@ def read_lecture(
             for asset in assets
         ],
         "preview": _preview_payload(preview, is_admin=user.is_admin),
+        # 내 개인 대화. 남의 것은 절대 안 나간다 — `/c/`는 만든 계정에서만
+        # 열리므로 남에게 주면 죽은 링크이고, 무엇을 물었는지만 새어 나간다.
+        "myPreview": (
+            {"conversationUrl": my_preview.conversation_url}
+            if my_preview and my_preview.conversation_url
+            else None
+        ),
         "prequiz": (
             {
                 "itemCount": int(item_count or 0),
@@ -163,3 +173,35 @@ def sign_file(
         "expiresIn": get_settings().signed_url_ttl,
         "filename": asset.filename,
     }
+
+
+class MyPreviewIn(BaseModel):
+    conversation_url: str = Field(default="", alias="conversationUrl")
+
+    model_config = {"populate_by_name": True}
+
+
+@router.put("/lectures/{subject}/{run_id}/my-preview")
+def put_my_preview(
+    subject: str,
+    run_id: str,
+    payload: MyPreviewIn,
+    user: CurrentUser = Depends(require_approved_user),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    """내 개인 예습 대화를 저장한다.
+
+    **관리자 게이트가 없다.** 기본 링크(`PUT /api/admin/…/preview`)는 반 전체가
+    읽는 값이라 관리자만 쓰지만, 이것은 자기 것이다. 주인은 토큰이 정하고
+    경로에는 안 들어간다 — 들어가면 남의 자리에 쓸 수 있게 된다.
+
+    빈 문자열을 주는 것이 곧 지우기다.
+    """
+    lecture = lecture_or_404(db, subject, run_id)
+    mine = db.get(UserPreview, (user.id, lecture.subject, lecture.run_id))
+    if mine is None:
+        mine = UserPreview(user_id=user.id, subject=lecture.subject, run_id=lecture.run_id)
+        db.add(mine)
+    mine.conversation_url = payload.conversation_url.strip()
+    db.commit()
+    return {"conversationUrl": mine.conversation_url}

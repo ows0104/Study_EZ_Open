@@ -24,6 +24,14 @@ globalThis.STUDYEZ_PROTOCOL = {
     linkSaved: "STUDYEZ_PREVIEW_LINK_SAVED",
     /** 웹앱 → 확장: 이 탭으로 갈 링크가 남아 있으면 달라. */
     checkPending: "STUDYEZ_CHECK_PENDING_LINKS",
+    /**
+     * 웹앱 → 확장: 기본 링크를 지금 연다. 어느 강의인지 기억해 둬라.
+     *
+     * 공유 페이지에서 이어 물으면 ChatGPT가 그 시점까지를 복사해 **내 계정에 새
+     * 대화를 만든다.** 그것이 사실상 그 사람의 개인 예습인데, 확장이 연 탭이
+     * 아니라서 지금까지는 놓쳤다.
+     */
+    watchShare: "STUDYEZ_WATCH_SHARE",
   },
 
   /**

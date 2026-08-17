@@ -6,6 +6,8 @@ const TAB_PAYLOAD = "studyez-tab:";
 const TAB_TRACKING = "studyez-tracking:";
 const PENDING_LINK = "studyez-pending:";
 const SHARE_WATCH = "studyez-share-watch:";
+/** 기본 링크의 share id → 어느 강의였나. 갈라져 나온 대화를 그 강의로 돌리는 데 쓴다. */
+const SHARE_ORIGIN = "studyez-share-origin:";
 
 const CHATGPT_ORIGIN = "https://chatgpt.com";
 const CHATGPT_START = "https://chatgpt.com/";
@@ -57,6 +59,18 @@ function isConversationUrl(value) {
   }
 }
 
+/** 공유 주소의 id. 같은 링크를 어디서 열든 이 값으로 알아본다. */
+function shareIdOf(value) {
+  try {
+    const url = new URL(value);
+    if (url.origin !== CHATGPT_ORIGIN) return "";
+    const match = /^\/share\/([A-Za-z0-9_-]+)/.exec(url.pathname);
+    return match ? match[1] : "";
+  } catch {
+    return "";
+  }
+}
+
 function bytesToBase64(bytes) {
   let binary = "";
   const step = 0x8000;
@@ -93,6 +107,29 @@ async function deliverPending(webappTabId) {
 }
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  // 기본 링크를 연 탭인가. 맞으면 그 탭을 추적 대상으로 올려 둔다 — 여기서
+  // 이어 물으면 ChatGPT가 새 `/c/` 대화를 만들고, 아래 분기가 그것을 잡는다.
+  //
+  // `mode`는 personal이다. 갈라져 나온 것은 그 사람 것이지 반의 것이 아니므로
+  // 공유를 다시 발행하면 안 된다.
+  if (changeInfo.url && shareIdOf(changeInfo.url)) {
+    const originKey = `${SHARE_ORIGIN}${shareIdOf(changeInfo.url)}`;
+    void chrome.storage.session
+      .get(originKey)
+      .then((stored) => {
+        const origin = stored[originKey];
+        if (!origin) return;
+        return chrome.storage.session.set({
+          [`${TAB_TRACKING}${tabId}`]: {
+            lectureId: origin.lectureId,
+            mode: "personal",
+            webappTabId: origin.webappTabId,
+          },
+        });
+      })
+      .catch(() => undefined);
+  }
+
   if (changeInfo.url) {
     const key = `${TAB_TRACKING}${tabId}`;
     void chrome.storage.session
@@ -106,14 +143,21 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
             kind: "chatgpt",
             url: changeInfo.url,
           },
-          // 공유 링크는 대화가 끝난 뒤에 만들어진다. 감시 기록은 따로 남긴다 —
-          // 추적 기록은 여기서 소비되지만 공유는 그 뒤로도 계속 갱신된다.
-          [`${SHARE_WATCH}${tabId}`]: { webappTabId: tracking.webappTabId, lectureId: tracking.lectureId },
         });
-        try {
-          await chrome.tabs.sendMessage(tabId, { type: "STUDYEZ_SHARE_WATCH_READY", lectureId: tracking.lectureId });
-        } catch {
-          // 콘텐츠 스크립트가 아직 안 붙었다. 스스로 세션 저장소에서 집어 간다.
+        // 공유 링크는 기본 링크를 만들 때만 만든다.
+        //
+        // 개인 예습까지 공개 `/share/`를 발행하면 두 가지가 잘못된다 — 남이
+        // 물은 것이 링크만 있으면 열리게 되고, 관리자가 개인 예습을 하는 순간
+        // 그 공유가 반 전체의 기본 링크를 덮는다.
+        if (tracking.mode === "shared") {
+          await chrome.storage.session.set({
+            [`${SHARE_WATCH}${tabId}`]: { webappTabId: tracking.webappTabId, lectureId: tracking.lectureId },
+          });
+          try {
+            await chrome.tabs.sendMessage(tabId, { type: "STUDYEZ_SHARE_WATCH_READY", lectureId: tracking.lectureId });
+          } catch {
+            // 콘텐츠 스크립트가 아직 안 붙었다. 스스로 세션 저장소에서 집어 간다.
+          }
         }
         await chrome.storage.session.remove(key);
         await deliverPending(tracking.webappTabId);
@@ -144,6 +188,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === MESSAGES.checkPending) {
     if (!fromWebapp(sender) || !sender.tab?.id) return false;
     void deliverPending(sender.tab.id).catch(() => undefined);
+    return false;
+  }
+
+  if (message?.type === MESSAGES.watchShare) {
+    if (!fromWebapp(sender) || !sender.tab?.id) return false;
+    const shareId = shareIdOf(message.shareUrl || "");
+    if (!shareId || typeof message.lectureId !== "string" || !message.lectureId) return false;
+    void chrome.storage.session.set({
+      [`${SHARE_ORIGIN}${shareId}`]: { lectureId: message.lectureId, webappTabId: sender.tab.id },
+    });
     return false;
   }
 
@@ -216,6 +270,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ ok: false, error: "전달된 예습 자료 형식이 올바르지 않습니다." });
     return false;
   }
+  // 안 주면 개인으로 본다. 공유는 명시적으로 시킬 때만 만든다.
+  const mode = payload.mode === "shared" ? "shared" : "personal";
   if (!payload.files.length || !payload.files.every((file) => file?.filename && allowedDownload(file.downloadUrl))) {
     sendResponse({ ok: false, error: "허용되지 않은 자료 주소가 포함되어 있습니다." });
     return false;
@@ -228,7 +284,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (!sender.tab?.id) throw new Error("Study_EZ 탭을 확인하지 못했습니다.");
       return chrome.storage.session.set({
         [`${TAB_PAYLOAD}${tab.id}`]: payload,
-        [`${TAB_TRACKING}${tab.id}`]: { lectureId: payload.lectureId, webappTabId: sender.tab.id },
+        [`${TAB_TRACKING}${tab.id}`]: { lectureId: payload.lectureId, mode, webappTabId: sender.tab.id },
       });
     })
     .then(() => sendResponse({ ok: true }))

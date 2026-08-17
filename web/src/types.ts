@@ -84,6 +84,8 @@ export type LectureDetail = {
    * 서버가 일반 사용자 응답에서 아예 빼고 내려보낸다.
    */
   preview: { provider: string; shareUrl: string; conversationUrl?: string } | null;
+  /** 내 개인 예습 대화(`/c/`). 만든 계정에서만 열리므로 남의 것은 안 내려온다. */
+  myPreview: { conversationUrl: string } | null;
   prequiz: { itemCount: number; answered: number; correct: number; missed: MissedItem[] } | null;
   runMeta?: Record<string, { reviewFlagged: number; slidesUnused: number; itemCount: number; builtAt: string | null }>;
 };

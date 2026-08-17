@@ -32,6 +32,16 @@ window.addEventListener("message", (event) => {
   if (message.type === MESSAGES.linkSaved) {
     if (typeof message.lectureId !== "string" || typeof message.kind !== "string") return;
     chrome.runtime.sendMessage({ type: MESSAGES.linkSaved, lectureId: message.lectureId, kind: message.kind });
+    return;
+  }
+
+  if (message.type === MESSAGES.watchShare) {
+    if (typeof message.lectureId !== "string" || typeof message.shareUrl !== "string") return;
+    chrome.runtime.sendMessage({
+      type: MESSAGES.watchShare,
+      lectureId: message.lectureId,
+      shareUrl: message.shareUrl,
+    });
   }
 });
 

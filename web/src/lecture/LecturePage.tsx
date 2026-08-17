@@ -153,8 +153,8 @@ function PreviewResource({ detail }: { detail: LectureDetail }) {
   if (detail.preview?.shareUrl) {
     return (
       <a className="resource" href={detail.preview.shareUrl} target="_blank" rel="noreferrer">
-        <strong>예습 열기</strong>
-        <small>{detail.preview.provider} 대화</small>
+        <strong>기본 링크</strong>
+        <small>반 공통 예습 대화</small>
       </a>
     );
   }

@@ -28,22 +28,32 @@ export function CalendarPage() {
   const [opened, setOpened] = useState<CalendarEntry | null>(null);
 
   /**
-   * 확장이 만들어 준 예습 링크를 받아 저장한다.
+   * 확장이 만들어 준 예습 링크를 받아 저장한다. 종류에 따라 주인이 다르다.
    *
-   * **관리자만 성공한다.** `PUT …/preview`가 러너·관리자 게이트 뒤에 있고, 그것이
-   * 곧 "관리자가 만든 대화라야 Pre-Quiz의 재료가 된다"는 규칙이다. 일반 사용자는
-   * 403을 받고 조용히 지나간다 — 예습 대화 자체는 이미 열렸으므로 그 사람에게는
-   * 아무것도 실패하지 않았다.
+   *   chatgpt(`/c/`)       → 내 개인 링크. 누구나 저장된다
+   *   chatgpt_share(`/share/`) → 반 공통 기본 링크. **관리자만** 성공한다
+   *
+   * 공유는 기본 링크를 만들 때만 생기므로(확장이 개인 모드에서는 감시를 안 건다)
+   * 두 번째 갈래가 개인 예습으로 도는 일은 없다. 그래도 일반 사용자가 어쩌다
+   * 보내게 되면 403을 받고 조용히 지나간다 — 대화 자체는 이미 열렸으므로 그
+   * 사람에게는 아무것도 실패하지 않았다.
    */
   usePreviewLink(
     useCallback(async ({ lectureId, kind, url }) => {
       const [subject, runId] = lectureId.split("/");
       if (!subject || !runId) return;
-      const field = kind === "chatgpt_share" ? "shareUrl" : "conversationUrl";
-      await api(`/api/admin/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}/preview`, {
-        method: "PUT",
-        body: JSON.stringify({ provider: "chatgpt", [field]: url }),
-      });
+      const path = `${encodeURIComponent(subject)}/${encodeURIComponent(runId)}`;
+      if (kind === "chatgpt_share") {
+        await api(`/api/admin/lectures/${path}/preview`, {
+          method: "PUT",
+          body: JSON.stringify({ provider: "chatgpt", shareUrl: url }),
+        });
+      } else {
+        await api(`/api/lectures/${path}/my-preview`, {
+          method: "PUT",
+          body: JSON.stringify({ conversationUrl: url }),
+        });
+      }
       // 저장된 링크가 패널에 바로 보이도록 다시 불러 온다.
       const payload = await api<{ events: TimetableEvent[] }>("/api/timetable");
       setEvents(payload.events);

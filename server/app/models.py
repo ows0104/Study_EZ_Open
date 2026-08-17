@@ -219,6 +219,35 @@ class Preview(Base):
     )
 
 
+class UserPreview(Base):
+    """사람마다 따로 가진 예습 대화.
+
+    `preview`와 나눠 둔 이유는 **주인이 다르기 때문이다.** 그쪽은 강의당 하나이고
+    반 전체가 같은 것을 읽는다(`share_url`). 이것은 사람당 하나이고 만든 사람만
+    연다 — `/c/` 주소는 원래 만든 계정에서만 열리므로 남에게 주어도 죽은 링크다.
+
+    프롬프트도 갈린다. 기본 링크는 문구가 고정이고, 개인 대화는 각자
+    `profile.preview_prompt`로 묻는다.
+
+    **관리자가 기본 링크를 만들면 그 `/c/`는 여기에도 함께 남는다.** 같은 대화가
+    반에게는 `share_url`로, 만든 사람에게는 이어서 대화할 수 있는 자리로 쓰인다.
+    """
+
+    __tablename__ = "user_preview"
+
+    user_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    subject: Mapped[str] = mapped_column(Text, primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    conversation_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["subject", "run_id"], ["lecture.subject", "lecture.run_id"], ondelete="CASCADE"
+        ),
+    )
+
+
 class PreItem(Base):
     """`pre_items.final.json`의 문항 하나.
 

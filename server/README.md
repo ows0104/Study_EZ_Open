@@ -105,9 +105,13 @@ Pre-Quiz는 **apkg 배급이 먼저다.** 웹 풀이(`routes/prequiz.py`, `quiz_
 열을 하나 더한 경우, 이미 있는 DB에는 손으로 넣어야 한다. 안 넣으면 그 열을 읽는
 경로만 500으로 죽는다.
 
-| 언제 | 무엇 |
-|---|---|
-| 2026-08-17 | `profile.preview_prompt` — 사용자별 예습 프롬프트 |
+| 언제 | 무엇 | 어떻게 |
+|---|---|---|
+| 2026-08-17 | `profile.preview_prompt` — 사용자별 예습 프롬프트 | 아래 SQL |
+| 2026-08-18 | `user_preview` 표 — 사람마다 가진 개인 예습 대화 | `init-db` |
+
+**표가 새로 생긴 것은 `init-db`로 된다.** `create_all`이 없는 표는 만든다 —
+못 고치는 것은 이미 있는 표의 열뿐이다.
 
 ```sql
 ALTER TABLE profile ADD COLUMN preview_prompt TEXT NOT NULL DEFAULT '';
