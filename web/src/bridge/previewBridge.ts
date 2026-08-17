@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   EXTENSION_SOURCE,
   LINK_KINDS,
@@ -85,6 +85,31 @@ export function watchSharedLink(lectureId: string, shareUrl: string) {
     { source: WEBAPP_SOURCE, type: MESSAGES.watchShare, lectureId, shareUrl },
     window.location.origin,
   );
+}
+
+/**
+ * 예습 링크가 저장됐다는 신호.
+ *
+ * 링크는 **화면 밖에서** 온다 — 다른 탭에서 대화가 끝나면 확장이 밀어 준다.
+ * 그때 열려 있는 패널은 자기가 부른 강의 상세를 그대로 들고 있어서, 저장은
+ * 됐는데 버튼은 계속 "개인 예습 시작"으로 남아 있었다. 칸을 다시 눌러도
+ * 같은 강의면 패널이 다시 붙지 않아 새로고침 전까지 안 바뀌었다.
+ */
+let previewVersion = 0;
+const versionListeners = new Set<(value: number) => void>();
+
+export function bumpPreviewVersion() {
+  previewVersion += 1;
+  versionListeners.forEach((notify) => notify(previewVersion));
+}
+
+export function usePreviewVersion() {
+  const [value, setValue] = useState(previewVersion);
+  useEffect(() => {
+    versionListeners.add(setValue);
+    return () => void versionListeners.delete(setValue);
+  }, []);
+  return value;
 }
 
 /**

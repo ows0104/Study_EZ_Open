@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { api, downloadSignedFile } from "../api";
 import type { LectureDetail, LectureFile, LectureRef } from "../types";
-import { absoluteUrl, extensionInstalled, requestPreview, watchSharedLink } from "../bridge/previewBridge";
+import {
+  absoluteUrl,
+  extensionInstalled,
+  requestPreview,
+  usePreviewVersion,
+  watchSharedLink,
+} from "../bridge/previewBridge";
 import { EXTENSION_DOWNLOAD_URL } from "../bridge/protocol";
 import { PROMPT_TOKENS, renderPreviewPrompt, SHARED_PREVIEW_PROMPT } from "../lecture/previewPrompt";
 import { usePreviewPrompt } from "../lecture/usePreviewPrompt";
@@ -119,16 +125,23 @@ export function EventPanel({ entry, onClose }: { entry: CalendarEntry; onClose: 
   );
 }
 
-/** 강의 상세를 불러온다. 고른 강의가 바뀌면 다시 부른다. */
+/**
+ * 강의 상세를 불러온다. 고른 강의가 바뀔 때, 그리고 예습 링크가 저장될 때.
+ *
+ * 링크는 화면 밖에서 온다 — 다른 탭에서 대화가 끝나면 확장이 밀어 준다. 그래서
+ * 강의만 보고 있으면 저장된 것을 영영 못 본다.
+ */
 function useLectureDetail(lecture: LectureRef | undefined) {
   const [detail, setDetail] = useState<LectureDetail | null>(null);
   const [error, setError] = useState("");
   const key = lecture ? `${lecture.subject}/${lecture.runId}` : "";
+  const version = usePreviewVersion();
 
   useEffect(() => {
     if (!lecture) return;
     let live = true;
-    setDetail(null);
+    // 링크가 저장돼 다시 부르는 경우에는 비우지 않는다. 화면이 깜빡이고, 그
+    // 사이에 버튼이 사라졌다 나타난다.
     setError("");
     api<LectureDetail>(`/api/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`)
       .then((next) => live && setDetail(next))
@@ -137,6 +150,11 @@ function useLectureDetail(lecture: LectureRef | undefined) {
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, version]);
+
+  // 강의가 바뀌면 앞 강의의 값을 잠깐이라도 보여 주지 않는다.
+  useEffect(() => {
+    setDetail(null);
   }, [key]);
 
   return { detail, error };

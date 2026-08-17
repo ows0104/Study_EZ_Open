@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
-import { usePreviewLink } from "../bridge/previewBridge";
+import { bumpPreviewVersion, usePreviewLink } from "../bridge/previewBridge";
 import type { TimetableEvent } from "../types";
 import { CalendarGrid } from "./CalendarGrid";
 import { EventChip } from "./EventChip";
@@ -54,7 +54,9 @@ export function CalendarPage() {
           body: JSON.stringify({ conversationUrl: url }),
         });
       }
-      // 저장된 링크가 패널에 바로 보이도록 다시 불러 온다.
+      // 칸의 점(marks)과 열려 있는 패널을 둘 다 갱신한다. 시간표만 다시 부르면
+      // 패널은 자기가 부른 강의 상세를 그대로 들고 있어서 안 바뀐다.
+      bumpPreviewVersion();
       const payload = await api<{ events: TimetableEvent[] }>("/api/timetable");
       setEvents(payload.events);
     }, []),
