@@ -56,6 +56,10 @@ python quiz/prep.py "<pdf>"
 - `media/` — Anki 카드 뒷면용 슬라이드 PNG. **모델 입력이 아니다**
 - `prep.json` — `slide_image_map`, `total_slides` 등 계약 파일. **경계는 여기 없다**
 
+`prep.json`의 **`poppler_available`이 `false`면 `pages` 읽기가 안 된다.** prep은 그래도
+성공하므로(실측: 종료 코드 0) 조각 에이전트에 가서야 터진다. 0단계 출력의 경고를 보고,
+뜨면 앱을 완전히 종료했다 켜라 — PATH는 프로세스가 시작할 때 한 번 잡힌다.
+
 **두 채널이 겹쳐서 나온다.** 둘 다 전 페이지이고 쪽 번호도 같다. 경계가 어디로 정해지든
 다시 만들지 않게 하려는 것이다.
 

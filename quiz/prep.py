@@ -30,6 +30,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 import sys
 from dataclasses import asdict
 from datetime import datetime
@@ -150,6 +151,19 @@ def extract_annotations(doc) -> list[dict]:
                 "notes": notes[:12],
             })
     return result
+
+
+def poppler_available() -> bool:
+    """Read의 `pages` 경로가 쓸 수 있는 상태인가.
+
+    2·4단계는 PDF의 쪽 범위를 `pages`로 읽고, 그 경로는 `pdftoppm`(poppler)으로
+    래스터화한다. **prep 자체는 PyMuPDF만 쓰므로 poppler가 없어도 성공한다** -
+    그래서 없다는 사실이 한참 뒤 조각 에이전트에서야 드러난다. 여기서 표시해 둔다.
+
+    **막지는 않는다.** `pages`를 생략한 통째 읽기는 poppler가 필요 없어서 0.5·1단계는
+    그대로 돌고, 무엇을 포기할지는 사람이 정할 일이다. 코드는 세어서 표시만 한다.
+    """
+    return shutil.which("pdftoppm") is not None
 
 
 def read_windows(num_pages: int, total_slides: int, size: int = READ_WINDOW) -> list[str]:
@@ -360,6 +374,8 @@ def prep(pdf_path: Path, out_root: Path, scale: float,
         "media_files": media_files,
         "slide_image_map": {str(k): v for k, v in slide_image_map.items()},
         "read_windows": read_windows(num_pages, total_slides),
+        # false면 `pages` 읽기가 안 된다. 통째 읽기는 되므로 0.5·1단계는 산다.
+        "poppler_available": poppler_available(),
         "outline_path": str(run_dir / "outline.json"),
         "annotations_path": str(run_dir / "annotations.json"),
         "labels_path": str(run_dir / "labels.json"),
@@ -412,6 +428,12 @@ def main() -> int:
         print(f"        원문 {len(text_path.read_text(encoding='utf-8')):,}자 → {text_path.name}")
     print("  ※ 경계는 짐작하지 않는다. 0.5단계가 structure.json으로 정하고 "
           "quiz/structure.py가 뒤에서부터 세어 따진다")
+    if not manifest["poppler_available"]:
+        print("  ⚠ pdftoppm(poppler)이 PATH에 없다. prep은 끝났지만 **2·4단계가 못 읽는다** -")
+        print("    그 단계는 Read의 `pages`로 쪽 범위를 받고, 그 경로가 poppler를 쓴다.")
+        print("    `pages`를 생략한 통째 읽기는 되므로 0.5·1단계는 돈다.")
+        print("    깔려 있는데 이 경고가 뜨면 **앱을 완전히 종료했다 켜라** - PATH는")
+        print("    프로세스가 시작할 때 한 번 잡힌다 (새 세션이나 새 창만으로는 안 된다).")
     labels = json.loads(Path(manifest["labels_path"]).read_text(encoding="utf-8"))
     figure_slides = sorted(
         int(s) for s, v in labels["slides"].items()

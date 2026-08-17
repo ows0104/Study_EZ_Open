@@ -67,6 +67,9 @@ python quiz/prep.py "<pdf>"
 - `media/` — Anki 카드 뒷면용 슬라이드 PNG. **모델 입력이 아니다**
 - `prep.json` — `jokbo_hint`, `slide_image_map` 등 계약 파일
 
+`prep.json`의 **`poppler_available`이 `false`면 `pages` 읽기가 안 된다.** prep은 그래도
+성공하므로 2단계에 가서야 터진다. 0단계 출력의 경고를 보고, 뜨면 앱을 완전히 종료했다 켜라.
+
 **두 채널이 겹쳐서 나온다.** 둘 다 전 페이지이고 쪽 번호도 같다. 경계가 어디로
 정해지든 다시 만들지 않게 하려는 것이다. `prep.json`의 `jokbo_hint`는
 **힌트일 뿐이고 경계의 주인은 0.5단계다.**
