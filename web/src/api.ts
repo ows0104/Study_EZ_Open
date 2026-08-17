@@ -44,6 +44,27 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
  * `window.open`을 먼저 부르고 나중에 주소를 채우는 이유는, await 뒤에 부르면
  * 사용자 제스처와 끊겨 팝업 차단에 걸리기 때문이다.
  */
+/**
+ * 파일을 바로 받는다.
+ *
+ * `openSignedFile`과 달리 탭을 열지 않는다. 덱은 보는 것이 아니라 받는 것이라
+ * 빈 탭이 하나 남는 것이 방해가 된다.
+ *
+ * 서버가 자산 URL에 `Content-Disposition: attachment`를 실어 보내므로 링크를
+ * 누르는 것만으로 내려받는다. `download` 속성은 같은 출처일 때만 듣지만,
+ * 다른 출처(R2)에서는 그 헤더가 대신 일을 한다.
+ */
+export async function downloadSignedFile(path: string, filename: string): Promise<void> {
+  const { url } = await api<{ url: string }>(path);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.rel = "noreferrer";
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+}
+
 export async function openSignedFile(path: string): Promise<void> {
   const tab = window.open("", "_blank", "noopener,noreferrer");
   try {

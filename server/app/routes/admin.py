@@ -299,9 +299,16 @@ def put_pre_items(
 
 
 class PreviewIn(BaseModel):
+    """준 것만 바꾼다.
+
+    확장이 두 링크를 따로 들고 온다 — 대화 주소는 전송 직후에, 공유 주소는 답이
+    끝난 뒤에 생긴다. 안 준 칸까지 빈 문자열로 덮으면 나중에 온 쪽이 먼저 온 쪽을
+    지운다. 러너는 둘을 같이 보내므로 그쪽 동작은 그대로다.
+    """
+
     provider: str = "chatgpt"
-    share_url: str = Field(default="", alias="shareUrl")
-    conversation_url: str = Field(default="", alias="conversationUrl")
+    share_url: str | None = Field(default=None, alias="shareUrl")
+    conversation_url: str | None = Field(default=None, alias="conversationUrl")
 
     model_config = {"populate_by_name": True}
 
@@ -320,8 +327,10 @@ def put_preview(
         preview = Preview(subject=lecture.subject, run_id=lecture.run_id)
         db.add(preview)
     preview.provider = payload.provider
-    preview.share_url = payload.share_url.strip()
-    preview.conversation_url = payload.conversation_url.strip()
+    if payload.share_url is not None:
+        preview.share_url = payload.share_url.strip()
+    if payload.conversation_url is not None:
+        preview.conversation_url = payload.conversation_url.strip()
     db.commit()
     return {"shareUrl": preview.share_url, "hasConversationUrl": bool(preview.conversation_url)}
 

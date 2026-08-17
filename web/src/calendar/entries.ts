@@ -20,6 +20,42 @@ export type CalendarEntry = {
 export const weekDayLabels = ["월", "화", "수", "목", "금"];
 export const defaultHourSlots = [9, 10, 11, 13, 14, 15, 16];
 
+const categoryLabels: Record<TimetableEvent["category"], string> = {
+  lecture: "강의",
+  practice: "실습",
+  exam: "시험",
+  holiday: "휴일",
+  elective: "선택",
+  study: "자율학습",
+};
+
+/** 패널 머리에 붙는 이름. 칸에서는 테두리로만 갈리던 것을 여기서는 말로 적는다. */
+export function categoryLabel(category: TimetableEvent["category"]) {
+  return categoryLabels[category] ?? category;
+}
+
+/**
+ * 칸의 진하기.
+ *
+ * 색상(계열)은 범주가 정하고, 그 계열 안에서 몇 단을 쓸지는 이것이 정한다.
+ * 같은 파랑이라도 할 일이 있으면 진하고 없으면 옅다.
+ *
+ * **아직 "풀었다"를 모른다.** `/api/timetable`이 내려주는 것은 자료가 있느냐
+ * 없느냐(`marks`)까지이고, 얼마나 풀었는지는 강의 상세에만 있다. 그래서
+ * `todo`는 "풀 것이 생겼다"이지 "아직 안 풀었다"가 아니다. 끝낸 것을 옅게
+ * 내리려면 서버가 시도 기록을 같이 세어 줘야 한다.
+ */
+export type ChipState = "blank" | "ready" | "todo";
+
+export function chipState(entry: CalendarEntry): ChipState {
+  // 시험은 붙는 자료가 없어도 그 자체가 할 일이다. 자료로 판정하면 학기에서
+  // 가장 중요한 칸이 가장 옅게 나온다.
+  if (entry.category === "exam") return "todo";
+  if (entry.lectures.some((lecture) => lecture.marks.quiz)) return "todo";
+  if (entry.lectures.some((lecture) => lecture.marks.notes || lecture.marks.preview)) return "ready";
+  return "blank";
+}
+
 export function startOfDay(value: Date) {
   return new Date(value.getFullYear(), value.getMonth(), value.getDate());
 }

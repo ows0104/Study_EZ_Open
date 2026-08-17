@@ -1,110 +1,229 @@
-/* 캘린더 격자. meddeck의 calendar.css에서 격자 부분만 가져와 무채색으로 눕혔다.
+/* 캘린더 격자.
  *
- * 원본은 범주마다 색이 달랐다. 여기서는 범주를 테두리 굵기와 회색조로만 가르고
- * 강조색은 "열어 볼 것이 있다"는 점에만 남긴다. */
+ * 칸의 색 규칙은 base.css 머리에 적어 두었다 — 색상은 범주, 짙기는 학습 상태,
+ * 둘 다 왼쪽 띠에 실린다. 여기서는 그 두 값을 `--cat`·`--rail`로 받아 칠한다.
+ *
+ * 격자 자체의 층은 밝기로 만든다. 바닥(--bg) 위에 격자 카드(--surface)가 뜨고,
+ * 그 위 칸이 계열색을 옅게 얹는다. 선을 굵게 하는 대신 밝기를 쓰면 조밀해도
+ * 시끄럽지 않다. */
 
+/* 패널이 열리면 캘린더가 왼쪽으로 좁아진다. 덮는 것이 아니라 미는 것이라
+ * 패널을 연 채로 다른 칸을 눌러 갈아탈 수 있다.
+ *
+ * 닫힌 상태에서도 두 번째 칸을 0px로 두는 이유는, `none`에서 시작하면 폭이
+ * 보간되지 않아 캘린더가 툭 끊겨 줄기 때문이다. */
 .calendar-page {
+  --panel-w: 340px;
+
   display: grid;
   min-width: 0;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) 0;
+  column-gap: 0;
+  row-gap: 12px;
+  align-items: start;
+  /* 줄어드는 동안 패널이 제 칸 밖으로 삐져나온다. 가로만 자른다 — 세로까지
+     자르면 격자의 그림자가 잘린다. */
+  overflow-x: clip;
+  overflow-y: visible;
+  transition: grid-template-columns 0.26s cubic-bezier(0.32, 0.72, 0, 1),
+    column-gap 0.26s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
+.calendar-page.is-split {
+  grid-template-columns: minmax(0, 1fr) var(--panel-w);
+  column-gap: 14px;
+}
+
+/* 한 화면에 다 들어가게 한다.
+ *
+ * 110px = 상단 바 52 + `.app-main`의 위아래 여백 18+40. 이 높이를 못 박아 두면
+ * 툴바와 범례가 제 높이를 가져가고 남는 것을 격자가 받는다 — 범례가 두 줄로
+ * 접히는 좁은 화면에서도 따로 계산할 것이 없다는 뜻이다. */
+.calendar-main {
+  display: flex;
+  min-width: 0;
+  height: calc(100dvh - 110px);
+  gap: 12px;
+  flex-direction: column;
+}
+
+/* 좁아진 캘린더. 요일 칸의 최소 폭을 같이 줄이지 않으면 격자가 곧바로 가로
+ * 스크롤로 떨어져 "줄어든" 것이 아니라 "잘린" 것이 된다. */
+.calendar-page.is-split .week-calendar {
+  grid-template-columns: 50px repeat(5, minmax(96px, 1fr));
+}
+
+.calendar-page.is-split .month-calendar {
+  grid-template-columns: repeat(5, minmax(92px, 1fr));
+}
+
+/* ------------------------------------------------------------------ 툴바 */
+
+/* 좌·우를 1fr로 같이 잡아 두면 가운데 칸이 정확히 화면 가운데에 온다.
+ * `space-between`으로는 양쪽 버튼 폭이 달라 제목이 한쪽으로 밀린다. */
 .calendar-toolbar {
   display: grid;
-  padding: 4px 2px 10px;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 16px;
+  padding: 2px 2px 6px;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.calendar-heading {
+  display: flex;
+  min-width: 0;
+  gap: 10px;
+  justify-content: center;
   align-items: center;
 }
 
 .calendar-toolbar h1 {
+  min-width: 0;
   overflow: hidden;
-  font-size: clamp(15px, 1.8vw, 19px);
+  font-size: clamp(17px, 2vw, 21px);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* 주를 넘기는 버튼이라 자주 눌린다. 눌러도 되는 것으로 보이게 테두리를 주고
+ * 손가락이 닿을 만큼 키운다. */
+.calendar-step {
+  width: 34px;
+  min-height: 34px;
+  flex: none;
+  padding: 0;
+  border-radius: var(--r-3);
+  color: var(--ink-2);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.calendar-step:hover:not(:disabled) {
+  border-color: var(--accent-line);
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+
+.calendar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.calendar-actions.is-right {
+  justify-content: flex-end;
+}
+
+/* 두 갈래 토글. 고른 쪽이 흰 알약으로 떠오른다 — 눌린 자리를 색이 아니라
+ * 높이로 말한다. */
 .calendar-mode {
   display: flex;
   padding: 2px;
   gap: 2px;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: var(--r-3);
   background: var(--surface-2);
 }
 
 .calendar-mode button {
-  min-width: 42px;
-  padding: 4px 0;
-  border: 0;
-  border-radius: 7px;
+  min-width: 38px;
+  min-height: 26px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--r-1);
   color: var(--ink-3);
   background: transparent;
-  font-size: 12px;
+  font-size: 12.5px;
 }
 
-.calendar-mode button.is-active {
-  color: var(--surface);
-  background: var(--ink);
+.calendar-mode button:hover:not(:disabled) {
+  border-color: transparent;
+  color: var(--ink-2);
+  background: transparent;
 }
 
-.calendar-actions {
-  display: flex;
-  gap: 4px;
+.calendar-mode button.is-selected {
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
 }
+
+/* ------------------------------------------------------------------ 격자 */
 
 .week-calendar,
 .month-calendar {
-  overflow: hidden;
+  /* 줄이 이 높이 아래로는 안 줄어든다. 화면이 너무 낮으면 그때는 스크롤한다 —
+     읽을 수 없을 만큼 납작해지는 것보다 낫다. */
+  --row-min: 46px;
+
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--r-4);
   background: var(--surface);
+  box-shadow: var(--shadow-1);
+  overscroll-behavior: contain;
 }
 
 .week-calendar {
   display: grid;
-  grid-template-columns: 54px repeat(5, minmax(128px, 1fr));
-  grid-template-rows: 42px;
-  grid-auto-rows: 76px;
-  overflow-x: auto;
+  grid-template-columns: 56px repeat(5, minmax(140px, 1fr));
+  grid-template-rows: 46px;
+  /* 남는 높이를 교시 수로 나눠 갖는다. 시간표가 09:40 같은 줄을 더 만들어도
+     스스로 맞춰진다. */
+  grid-auto-rows: minmax(var(--row-min), 1fr);
 }
 
 .week-head {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   display: grid;
-  min-height: 42px;
+  min-height: 46px;
+  gap: 1px;
   place-content: center;
-  gap: 2px;
-  border-left: 1px solid var(--line-soft);
   border-bottom: 1px solid var(--line);
-  background: var(--surface-2);
+  background: var(--surface);
   text-align: center;
 }
 
 .week-head.is-spacer {
-  border-left: 0;
+  left: 0;
+  z-index: 7;
+  border-right: 1px solid var(--line-soft);
 }
 
 .week-head span {
   color: var(--ink-3);
-  font-size: 9.5px;
-  font-weight: 800;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
 }
 
 .week-head strong {
-  font-size: 12px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.week-head.is-today span {
+  color: var(--accent);
 }
 
 .week-head.is-today strong,
 .month-day.is-today .month-date {
   display: grid;
-  min-width: 26px;
-  height: 26px;
+  min-width: 24px;
+  height: 24px;
   padding-inline: 5px;
   place-items: center;
   justify-self: center;
-  border-radius: 8px;
-  color: var(--surface);
-  background: var(--ink);
+  border-radius: 999px;
+  color: var(--on-accent);
+  background: var(--accent);
 }
 
 .week-row {
@@ -112,24 +231,42 @@
 }
 
 .calendar-time {
+  position: sticky;
+  left: 0;
+  z-index: 3;
   display: grid;
-  padding: 6px;
-  align-content: center;
-  border-bottom: 1px solid var(--line-soft);
-  background: var(--surface-2);
-  text-align: right;
+  padding: 0 8px;
+  align-content: start;
+  justify-items: end;
+  border-right: 1px solid var(--line-soft);
+  background: var(--surface);
 }
 
+/* 시각은 줄 사이에 걸린다. 칸 가운데가 아니라 경계에 붙어야 "여기부터"로 읽힌다. */
 .calendar-time strong {
+  transform: translateY(-6px);
   color: var(--ink-3);
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 550;
+}
+
+.calendar-time.is-first {
+  padding-top: 5px;
+}
+
+.calendar-time.is-first strong {
+  transform: none;
 }
 
 .week-cell {
   min-width: 0;
+  border-top: 1px solid var(--line-soft);
   border-left: 1px solid var(--line-soft);
-  border-bottom: 1px solid var(--line-soft);
+}
+
+.week-cell.is-today {
+  background: color-mix(in srgb, var(--accent) 3%, transparent);
 }
 
 /* 점심. 04교시가 비는 자리라 선 하나로 아침과 오후를 가른다. */
@@ -137,14 +274,48 @@
   z-index: 4;
   height: 0;
   align-self: start;
-  border-top: 2px solid var(--line);
+  border-top: 1px dashed var(--line-strong);
   pointer-events: none;
+}
+
+/* 지금. --at은 그 시각 줄 안에서의 분(0~1)이다.
+ *
+ * 줄 높이가 화면에 따라 달라지므로 px으로 밀지 않고 줄 높이만큼 늘어난 뒤
+ * 그 안에서 백분율로 잡는다 — 퍼센트가 부모 높이를 기준으로 풀리는 것이
+ * 여기서는 곧 줄 높이다. */
+.calendar-now {
+  position: relative;
+  z-index: 6;
+  align-self: stretch;
+  pointer-events: none;
+}
+
+.calendar-now::before,
+.calendar-now::after {
+  position: absolute;
+  top: calc(var(--at) * 100%);
+  content: "";
+}
+
+.calendar-now::after {
+  right: 0;
+  left: 0;
+  border-top: 1.5px solid #ef4444;
+}
+
+.calendar-now::before {
+  left: 50px;
+  width: 7px;
+  height: 7px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: #ef4444;
 }
 
 .week-event-span {
   z-index: 2;
   min-width: 0;
-  margin: 3px;
+  padding: 3px;
 }
 
 .week-event-span .calendar-event {
@@ -154,31 +325,34 @@
 
 .month-calendar {
   display: grid;
-  grid-template-columns: repeat(5, minmax(112px, 1fr));
-  grid-auto-rows: minmax(108px, auto);
-  overflow-x: auto;
+  grid-template-columns: repeat(5, minmax(124px, 1fr));
+  grid-auto-rows: minmax(112px, auto);
 }
 
 .month-weekday {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   display: grid;
-  min-height: 34px;
+  min-height: 36px;
   place-items: center;
   border-bottom: 1px solid var(--line);
   color: var(--ink-3);
-  background: var(--surface-2);
+  background: var(--surface);
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 650;
+  letter-spacing: 0.04em;
 }
 
 .month-day {
   display: grid;
-  min-width: 88px;
-  padding: 6px;
-  grid-template-rows: 22px auto;
-  gap: 3px;
+  min-width: 96px;
+  padding: 7px 6px;
+  grid-template-rows: 24px auto;
+  gap: 4px;
   align-content: start;
-  border-right: 1px solid var(--line-soft);
-  border-bottom: 1px solid var(--line-soft);
+  border-top: 1px solid var(--line-soft);
+  border-left: 1px solid var(--line-soft);
 }
 
 .month-day.is-outside {
@@ -186,9 +360,16 @@
   background: var(--surface-2);
 }
 
+.month-day.is-outside .month-date {
+  opacity: 0.6;
+}
+
 .month-date {
-  font-size: 11px;
-  font-weight: 800;
+  justify-self: start;
+  padding-left: 3px;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
 }
 
 .month-events {
@@ -198,35 +379,135 @@
 
 /* ------------------------------------------------------------------ 칸 */
 
+/* 두 축이 겹치지 않게 실린다. 둘 다 왼쪽 띠에서 만난다.
+ *
+ *   --cat   계열 = 범주 (강의·실습·시험)     → 띠의 색상
+ *   --rail  진하기 = 학습 상태               → 띠의 짙기
+ *
+ * 칸 안은 안 채운다. 채우면 한 주에 스물이 동시에 물들고, 어디까지 했는지는
+ * 아래 점이 더 정확히 말한다. 채워지는 것은 마우스가 올라간 칸과 열어 둔 칸뿐이다.
+ *
+ * 옅은 값을 따로 적어 두지 않고 표면에 섞어서 만든다. 다크 모드에서 표면이
+ * 바뀌면 섞인 결과도 같이 바뀌므로 값을 두 벌 관리하지 않아도 된다. */
 .calendar-event {
+  --cat: var(--ink-3);
+  --rail: 28%;
+
   position: relative;
   display: grid;
   width: 100%;
+  min-height: 0;
   min-width: 0;
-  padding: 6px 8px;
+  padding: 7px 9px 7px 12px;
+  /* 칸 폭을 통째로 쓰는 한 줄짜리 칸. 이걸 안 적으면 열 폭이 글 길이를 따라
+     잡히고, button이 물려주는 `justify-content: center`가 그 열을 가운데로
+     밀어 제목마다 왼쪽 끝이 달라진다. minmax의 0은 글이 길 때 열이 칸보다
+     넓어지지 않게 해 말줄임이 걸리게 한다. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 1px;
-  align-content: center;
+  align-content: start;
+  align-items: start;
+  justify-items: stretch;
   overflow: hidden;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--ink-3);
-  border-radius: 6px;
-  background: var(--surface-2);
+  border: 1px solid color-mix(in srgb, var(--cat) 16%, var(--line));
+  border-radius: var(--r-2);
+  color: var(--ink);
+  /* 쉬고 있을 때는 안 채운다. 어디까지 했는지는 아래 점이 말한다. */
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+/* 왼쪽 띠.
+ *
+ * **테두리가 아니라 가짜 요소다.** 테두리로 뒀더니 세 군데서 덮였다 — 이 칸의
+ * `:hover`, `button.is-active`, 그리고 base.css의 `button:hover`가 저마다
+ * `border-color` 단축 속성을 걸어서, 마우스만 올려도 띠가 회색이 됐다. 색을
+ * 지고 있는 것을 테두리에 실으면 남의 규칙에 계속 진다. */
+.calendar-event::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: color-mix(in srgb, var(--cat) var(--rail), var(--line-strong));
+  content: "";
+}
+
+/* 채워지는 것은 둘뿐이다 — 마우스가 올라간 것과, 지금 열어 둔 것. */
+.calendar-event:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--cat) 34%, var(--line));
+  background: color-mix(in srgb, var(--cat) 7%, var(--surface));
+  box-shadow: var(--shadow-1);
+}
+
+/* ── 색상: 범주 ── */
+
+.calendar-event.is-lecture {
+  --cat: var(--cat-lecture);
+}
+
+.calendar-event.is-practice {
+  --cat: var(--cat-practice);
+}
+
+.calendar-event.is-exam {
+  --cat: var(--cat-exam);
+}
+
+/* ── 명도: 학습 상태 ── */
+
+/* 띠에만 싣는다. 칸을 채우면 한 주에 스물이 동시에 물들어 시끄럽고, 어디까지
+ * 했는지는 아래 점이 더 정확히 말한다. */
+
+/* 자료가 아직 없다. */
+.calendar-event.state-blank {
+  --rail: 30%;
+}
+
+/* 필기나 예습 링크는 있고 풀 것은 아직 없다. */
+.calendar-event.state-ready {
+  --rail: 64%;
+}
+
+/* 풀 것이 있다. 띠가 계열색 그대로다. */
+.calendar-event.state-todo {
+  --rail: 100%;
+}
+
+.calendar-event.state-todo .calendar-event-primary {
+  font-weight: 650;
+}
+
+/* 지금 패널에 떠 있는 칸.
+ *
+ * "선택됨"은 두른 테가 말한다. 칸 자체의 색은 건드리지 않는다 — `border-color`
+ * 단축 속성으로 네 변을 다 칠하면 왼쪽 띠까지 계열색으로 꽉 차서, 옅음·중간·진함
+ * 세 단계가 눌리는 순간 전부 같은 색이 된다. 강의 칸이 클릭하면 통째로 파래지던
+ * 것이 그것이었다. */
+.calendar-event.is-open,
+.calendar-event.is-open:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--cat) 55%, var(--line));
+  background: color-mix(in srgb, var(--cat) 15%, var(--surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cat) 26%, transparent), var(--shadow-1);
 }
 
 .calendar-event-primary {
   display: -webkit-box;
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.3;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.32;
   overflow: hidden;
   word-break: keep-all;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
 }
 
 .calendar-event-professor,
 .calendar-event-series {
+  max-width: 100%;
   overflow: hidden;
   color: var(--ink-3);
   text-overflow: ellipsis;
@@ -234,46 +515,42 @@
 }
 
 .calendar-event-professor {
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 10.5px;
+  font-weight: 500;
 }
 
 .calendar-event-series {
-  font-size: 9px;
+  font-size: 9.5px;
 }
 
-/* 열 수 있는 칸만 강조색을 받는다. 색이 곧 "여기 네 것이 있다"는 뜻이다. */
-.calendar-event.has-lecture {
-  border-left-color: var(--accent);
-  background: var(--surface);
-  cursor: pointer;
+/* 실습은 띠 모양을 강의와 같이 둔다. 계열색(틸)만으로 가른다는 뜻이고,
+ * 그래서 이 화면에서 선 모양이 뜻을 갖는 곳은 점선(수업 없는 날) 하나뿐이다. */
+
+.calendar-event.is-exam .calendar-event-primary {
+  font-weight: 700;
 }
 
-.calendar-event.has-lecture:hover {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
-
-.calendar-event.is-practice {
-  border-left-style: double;
-  border-left-width: 4px;
-}
-
-.calendar-event.is-exam {
-  border-left-color: var(--ink);
-  background: #f3f4f6;
-}
-
+/* 색을 주지 않기로 한 범주. 수업이 없는 날이라 할 일도 따라오지 않는다. */
 .calendar-event.is-holiday,
 .calendar-event.is-study,
 .calendar-event.is-elective {
-  border-left-color: var(--line);
+  --cat: var(--ink-3);
+  --rail: 0%;
+
+  border-style: dashed;
   color: var(--ink-3);
 }
 
+.calendar-event.is-holiday .calendar-event-primary,
+.calendar-event.is-study .calendar-event-primary,
+.calendar-event.is-elective .calendar-event-primary {
+  font-weight: 550;
+}
+
 .calendar-event.is-compact {
-  min-height: 20px;
-  padding: 3px 6px;
+  min-height: 22px;
+  padding: 3px 7px;
+  border-radius: var(--r-1);
 }
 
 .calendar-event.is-compact .calendar-event-primary {
@@ -281,79 +558,803 @@
   -webkit-line-clamp: 1;
 }
 
-.calendar-event-choices {
-  display: grid;
-  margin-top: 3px;
-  gap: 2px;
-}
-
-.calendar-event-choices a {
-  display: flex;
-  padding: 2px 4px;
-  gap: 4px;
-  justify-content: space-between;
-  align-items: center;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--surface);
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.calendar-event-choices a:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
 /* ------------------------------------------------------------------ 점 */
 
+/* 오른쪽 아래 구석에 띄운다.
+ *
+ * 위 구석에 두면 제목이 두세 줄로 접힐 때 글자와 겹쳤다. 그렇다고 글 아래
+ * 흐름에 넣으면 행을 하나 차지해서 제목이 밀려 올라간다. 띄우되 아래로 내리는
+ * 것이 둘 다 피하는 자리다 — 제목은 위에서부터 차고 점은 바닥에 남는다. */
 .chip-marks {
   position: absolute;
-  top: 5px;
-  right: 5px;
+  right: 7px;
+  bottom: 6px;
   display: flex;
-  gap: 2px;
+  gap: 3px;
+  align-items: center;
 }
 
-.calendar-event-choices .chip-marks {
-  position: static;
+/* 월간 칸은 한 줄짜리다. 바닥이 곧 가운데다. */
+.calendar-event.is-compact .chip-marks {
+  top: 50%;
+  bottom: auto;
+  right: 6px;
+  transform: translateY(-50%);
 }
 
+/* 점은 칸의 계열색을 따라간다. 칸 밖(범례·패널)에서는 계열이 없으므로
+ * 강조색으로 떨어진다. */
 .chip-dot {
   width: 5px;
   height: 5px;
+  flex: none;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--cat, var(--accent));
 }
 
-/* 세 점을 색이 아니라 채움으로 가른다. 강조색은 하나뿐이다. */
+/* 세 점을 색이 아니라 채움으로 가른다. 계열색은 이미 범주가 쓰고 있다. */
 .chip-dot.is-quiz {
-  border: 1px solid var(--accent);
-  background: var(--surface);
+  border: 1px solid var(--cat, var(--accent));
+  background: transparent;
 }
 
 .chip-dot.is-preview {
-  border: 1px solid var(--accent);
+  border: 1px solid var(--cat, var(--accent));
   border-radius: 1px;
-  background: var(--surface);
+  background: transparent;
+}
+
+/* 패널에서는 자리가 있으니 점에 이름을 붙인다. */
+.chip-marks.is-labelled {
+  position: static;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.chip-mark {
+  display: inline-flex;
+  height: 19px;
+  padding: 0 7px 0 6px;
+  gap: 5px;
+  align-items: center;
+  border: 1px solid var(--accent-line);
+  border-radius: 999px;
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+/* 한 교시에 여러 강의가 열릴 때(선택형 과목)의 개수. */
+.chip-count {
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
+  display: grid;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  place-items: center;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--cat, var(--accent));
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.calendar-event.is-compact .chip-count {
+  top: 50%;
+  bottom: auto;
+  right: 5px;
+  transform: translateY(-50%);
 }
 
 .calendar-legend {
   display: flex;
-  padding: 2px;
-  gap: 14px;
+  margin: 0;
+  padding: 0 4px;
+  gap: 8px 18px;
   flex-wrap: wrap;
   align-items: center;
   color: var(--ink-3);
-  font-size: 11px;
+  font-size: 11.5px;
 }
 
-.calendar-legend span {
+.legend-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.legend-group span {
   display: flex;
   gap: 5px;
   align-items: center;
 }
 
-.calendar-legend small {
+/* 계열 견본. 칸의 왼쪽 띠를 그대로 축소한 모양이다. */
+.legend-swatch {
+  width: 11px;
+  height: 11px;
+  border: 1px solid color-mix(in srgb, var(--cat) 16%, var(--line));
+  border-left: 3px solid var(--cat);
+  border-radius: 3px;
+  background: var(--surface);
+}
+
+.legend-swatch.is-lecture {
+  --cat: var(--cat-lecture);
+}
+
+.legend-swatch.is-practice {
+  --cat: var(--cat-practice);
+}
+
+.legend-swatch.is-exam {
+  --cat: var(--cat-exam);
+}
+
+.legend-swatch.is-off {
+  --cat: var(--ink-3);
+
+  border-style: dashed;
+  border-left-width: 1px;
+  background: transparent;
+}
+
+/* 진하기 사다리. 왼쪽이 자료 없음, 오른쪽이 할 일 있음. */
+.legend-ramp {
+  --cat: var(--cat-lecture);
+
+  display: flex;
+  gap: 2px;
+}
+
+.legend-ramp i {
+  width: 11px;
+  height: 11px;
+  border: 1px solid color-mix(in srgb, var(--cat) 16%, var(--line));
+  border-radius: 3px;
+  background: var(--surface);
+}
+
+/* 칸과 같은 세 단계 — 30% · 64% · 100%. */
+.legend-ramp i:nth-child(1) {
+  border-left: 3px solid color-mix(in srgb, var(--cat) 30%, var(--line-strong));
+}
+
+.legend-ramp i:nth-child(2) {
+  border-left: 3px solid color-mix(in srgb, var(--cat) 64%, var(--line-strong));
+}
+
+.legend-ramp i:nth-child(3) {
+  border-left: 3px solid var(--cat);
+}
+
+.calendar-legend .legend-note {
   margin-left: auto;
+}
+
+/* ------------------------------------------------------------------ 패널 */
+
+/* 넓은 화면에서는 가릴 것이 없다. 좁은 화면에서만 시트 뒤에 깔린다. */
+.panel-scrim {
+  display: none;
+}
+
+.event-panel {
+  /* 칸 폭이 애니메이션으로 줄었다 늘었다 하는 동안 안쪽 글이 다시 흐르면
+     어지럽다. 폭을 못 박아 두고 넘치는 부분은 바깥에서 자른다. */
+  position: sticky;
+  /* 상단 바(52px) 아래에 붙는다. 월간 뷰처럼 페이지가 길어져도 따라 내려가지
+     않아야 자료 버튼이 손에서 안 벗어난다. */
+  top: 66px;
+  width: var(--panel-w);
+  /* 캘린더와 같은 높이 예산을 쓴다. 더 길면 패널 때문에 페이지가 스크롤된다. */
+  max-height: calc(100dvh - 110px);
+  padding: 16px 18px 22px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-4);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  animation: panel-in 0.26s cubic-bezier(0.32, 0.72, 0, 1);
+  overscroll-behavior: contain;
+}
+
+.event-panel:focus {
+  outline: none;
+}
+
+.event-panel-head {
+  display: flex;
+  margin-bottom: 14px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 패널 머리의 범주 배지도 계열색을 쓴다. 어느 칸에서 왔는지 색으로 이어진다. */
+.event-panel-kind {
+  --cat: var(--ink-3);
+
+  display: inline-flex;
+  align-items: center;
+  height: 21px;
+  padding: 0 9px;
+  border: 1px solid color-mix(in srgb, var(--cat) 30%, var(--line));
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--cat) 72%, var(--ink));
+  background: color-mix(in srgb, var(--cat) 13%, var(--surface));
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.event-panel-kind.is-lecture {
+  --cat: var(--cat-lecture);
+}
+
+.event-panel-kind.is-practice {
+  --cat: var(--cat-practice);
+}
+
+.event-panel-kind.is-exam {
+  --cat: var(--cat-exam);
+}
+
+.event-panel-close {
+  width: 28px;
+  min-height: 28px;
+  padding: 0;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.event-panel-title {
+  margin-bottom: 18px;
+  font-size: 20px;
+  line-height: 1.34;
+  word-break: keep-all;
+}
+
+/* 강의 정보. 열어 볼 일이 드물어 할 일 아래로 내렸다. */
+.event-panel-facts {
+  display: grid;
+  margin: 0;
+  gap: 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.event-panel-fact {
+  display: grid;
+  padding: 9px 0;
+  grid-template-columns: 62px 1fr;
+  gap: 12px;
+  align-items: baseline;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.event-panel-fact dt {
+  color: var(--ink-3);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.event-panel-fact dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.event-panel-section h3 {
+  margin-bottom: 10px;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* 한 교시에 여러 강의가 열릴 때 고르는 줄. */
+.event-panel-switch {
+  display: flex;
+  margin-bottom: 16px;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  background: var(--surface-2);
+}
+
+.event-panel-switch button {
+  min-width: 0;
+  min-height: 26px;
+  flex: 1;
+  padding: 0 8px;
+  overflow: hidden;
+  border-color: transparent;
+  border-radius: var(--r-1);
+  color: var(--ink-3);
+  background: transparent;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-panel-switch button.is-selected {
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.event-panel-byline {
+  margin: 0 0 16px;
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+
+.event-panel-actions {
+  margin-bottom: 22px;
+}
+
+/* 자료 버튼. 강의 화면의 카드를 좁은 폭에 맞게 눕힌 것이다. */
+.panel-action {
+  display: grid;
+  width: 100%;
+  margin-bottom: 5px;
+  padding: 9px 11px;
+  grid-template-columns: 1fr auto;
+  gap: 1px 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  /* 있는 것은 한 칸 떠 있고 없는 것은 바닥에 눕는다. 패널과 같은 색이면
+     둘이 안 갈린다. */
+  background: var(--surface-2);
+  text-align: left;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.panel-action > * {
+  grid-column: 1;
+}
+
+.panel-action strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.panel-action small {
+  overflow: hidden;
+  color: var(--ink-3);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 열리는 것에만 화살표가 붙는다. 빈 자리와 눈으로 갈리는 지점이다. */
+a.panel-action::after,
+button.panel-action::after {
+  grid-column: 2;
+  grid-row: 1 / -1;
+  color: var(--ink-3);
+  font-size: 14px;
+  content: "→";
+  transition: transform 0.14s ease;
+}
+
+a.panel-action:hover,
+button.panel-action:hover:not(:disabled) {
+  border-color: var(--accent-line);
+  color: var(--ink);
+  background: var(--accent-soft);
+}
+
+a.panel-action:hover::after,
+button.panel-action:hover:not(:disabled)::after {
+  color: var(--accent);
+  transform: translateX(3px);
+}
+
+/* 강조하는 셋. 이 패널이 있는 이유라서 눈에 먼저 걸려야 한다. */
+.panel-action.is-key {
+  margin-bottom: 7px;
+  padding: 12px 14px;
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.panel-action.is-key strong {
+  font-size: 14px;
+}
+
+.panel-action.is-key::after {
+  color: var(--accent);
+  font-size: 15px;
+}
+
+a.panel-action.is-key:hover,
+button.panel-action.is-key:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: var(--shadow-2);
+}
+
+/* 받는 것이지 여는 것이 아니다. 화살표 방향이 그 차이를 말한다. */
+.panel-action.is-download::after {
+  content: "↓";
+}
+
+button.panel-action.is-download:hover:not(:disabled)::after {
+  transform: translateY(3px);
+}
+
+.panel-action.is-empty {
+  display: block;
+  padding: 12px 14px;
+  border-style: dashed;
+  border-color: var(--line);
+  color: var(--ink-3);
+  background: transparent;
+  box-shadow: none;
+  font-size: 12.5px;
+}
+
+/* 덱이 기본이고 웹 풀이는 그 아래 갈래다. 줄 하나로 눕힌다. */
+.panel-subaction {
+  display: block;
+  margin: -2px 0 9px;
+  padding: 0 14px;
+  color: var(--ink-3);
+  font-size: 11.5px;
+  font-weight: 550;
+}
+
+.panel-subaction:hover {
+  color: var(--accent-ink);
+  text-decoration: underline;
+}
+
+.panel-subaction.is-toggle {
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+/* 무엇을 해야 하는지 한 줄. 눌린 뒤에만 나온다. */
+.panel-hint {
+  margin: -2px 0 9px;
+  padding: 9px 12px;
+  border-radius: var(--r-2);
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.panel-hint b {
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+/* 설치 절차. 눌러야 할 것이 아니라 따라 할 것이라 번호를 붙인다. */
+.panel-steps {
+  margin: 0 0 10px;
+  padding: 0 0 0 20px;
+  color: var(--ink-2);
+  font-size: 11.5px;
+  line-height: 1.75;
+}
+
+.panel-steps li::marker {
+  color: var(--ink-3);
+  font-weight: 700;
+}
+
+.panel-steps code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface-3);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+}
+
+/* 고쳐 쓴 사람에게만 붙는다. 기본값을 쓰는 사람에게는 아무 표시도 없다. */
+.panel-badge {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.prompt-editor {
+  display: grid;
+  margin: 4px 0 10px;
+  gap: 7px;
+}
+
+.prompt-editor-text {
+  min-height: 220px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  color: var(--ink);
+  background: var(--surface-2);
+  font-family: inherit;
+  font-size: 11.5px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.prompt-editor-text:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* 자리표시자. 지우면 강의 이름이 안 채워지므로 다시 넣을 길을 열어 둔다. */
+.prompt-editor-tokens {
+  display: flex;
+  margin: 0;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.prompt-editor-tokens button {
+  min-height: 22px;
+  padding: 0 7px;
+  border-radius: var(--r-1);
+  color: var(--ink-2);
+  background: var(--surface-2);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.prompt-editor-tokens span {
+  color: var(--ink-3);
+  font-size: 10.5px;
+}
+
+.prompt-editor-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.prompt-editor-actions button {
+  min-height: 28px;
+  font-size: 12px;
+}
+
+.prompt-editor-error {
+  margin: 0;
+  color: var(--warn);
+  font-size: 11.5px;
+}
+
+.prompt-editor-preview summary {
+  color: var(--ink-3);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.prompt-editor-preview pre {
+  max-height: 200px;
+  margin: 6px 0 0;
+  padding: 10px 11px;
+  overflow: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-2);
+  color: var(--ink-2);
+  background: var(--surface-2);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: keep-all;
+}
+
+.panel-prompt {
+  max-height: 220px;
+  margin: 4px 0 10px;
+  padding: 11px 12px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  color: var(--ink-2);
+  background: var(--surface-2);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: keep-all;
+}
+
+/* 필기 목록. 예습 때 붙일 파일이라 이름이 보여야 한다. */
+.event-panel-notes {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  gap: 3px;
+  list-style: none;
+}
+
+.event-panel-notes li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: baseline;
+}
+
+.event-panel-notes li span {
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.event-panel-notes li b {
+  overflow: hidden;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-panel-notes li small {
+  color: var(--ink-3);
+  font-size: 10.5px;
+}
+
+.event-panel-notes li.is-empty b {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.event-panel-author {
+  display: block;
+  margin-top: 5px;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+.event-panel-more {
+  display: block;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.event-panel-loading {
+  margin: 0;
+  padding: 20px 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+.event-panel-empty {
+  display: grid;
+  margin: 0;
+  padding: 18px 16px;
+  gap: 5px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-3);
+  color: var(--ink-2);
+  font-size: 13px;
+  text-align: center;
+}
+
+.event-panel-empty small {
+  color: var(--ink-3);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* 칸이 벌어지는 것과 같은 시간에 들어온다. 캘린더가 밀려난 자리를 패널이
+ * 그대로 이어받는 것처럼 보이게 하려는 것이다. */
+@keyframes panel-in {
+  from {
+    transform: translateX(14px);
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------------ 좁은 화면 */
+
+/* 옆에 설 자리가 없다. 캘린더를 더 좁히면 격자가 못 읽히므로, 이 폭부터는
+ * 미는 대신 아래에서 올라와 덮는다. */
+@media (max-width: 900px) {
+  .calendar-page,
+  .calendar-page.is-split {
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: 0;
+    overflow-x: visible;
+  }
+
+  .calendar-page.is-split .week-calendar {
+    grid-template-columns: 56px repeat(5, minmax(140px, 1fr));
+  }
+
+  .calendar-page.is-split .month-calendar {
+    grid-template-columns: repeat(5, minmax(124px, 1fr));
+  }
+
+  .panel-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: block;
+    background: rgb(12 14 20 / 32%);
+    animation: fade-in 0.14s ease;
+  }
+
+  /* 손이 닿는 자리가 아래쪽이다. */
+  .event-panel {
+    position: fixed;
+    /* 넓은 화면에서 붙이려고 준 top을 풀어야 한다. top·bottom이 같이 걸리면
+       시트가 아래에서 올라오는 대신 화면 높이만큼 늘어난다. */
+    top: auto;
+    bottom: 0;
+    left: 0;
+    z-index: 51;
+    width: 100%;
+    max-height: 82dvh;
+    padding: 18px 20px 26px;
+    border-bottom: 0;
+    border-radius: var(--r-4) var(--r-4) 0 0;
+    box-shadow: var(--shadow-3);
+    animation-name: slide-up;
+  }
+
+  .calendar-legend small {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+
+/* 한 줄에 셋을 놓으면 날짜가 잘린다("2026년 8월 1…"). 날짜에 한 줄을 통째로
+ * 주고 나머지를 아래로 내린다. */
+@media (max-width: 640px) {
+  .calendar-toolbar {
+    grid-template-columns: 1fr auto;
+    row-gap: 10px;
+  }
+
+  .calendar-heading {
+    grid-row: 1;
+    grid-column: 1 / -1;
+  }
+
+  .calendar-actions.is-left {
+    grid-row: 2;
+    grid-column: 1;
+  }
+
+  .calendar-actions.is-right {
+    grid-row: 2;
+    grid-column: 2;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
 }

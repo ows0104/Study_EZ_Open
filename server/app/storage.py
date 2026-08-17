@@ -56,7 +56,11 @@ class ObjectStorage:
         settings = get_settings()
         expires_in = expires_in or settings.signed_url_ttl
         if self.local_root is not None:
-            return f"{settings.public_api_base_url}/api/local-storage/{quote(key, safe='/')}"
+            url = f"{settings.public_api_base_url}/api/local-storage/{quote(key, safe='/')}"
+            # 배포에서는 `filename`이 붙은 것만 첨부(attachment)로 나간다. 로컬도
+            # 같아야 한다 — 안 그러면 .apkg가 text/plain으로 화면에 펼쳐진다.
+            # 슬라이드 이미지는 filename 없이 부르므로 그대로 인라인이다.
+            return f"{url}?download={quote(filename, safe='')}" if filename else url
         params: dict[str, Any] = {"Bucket": self.bucket, "Key": key}
         if filename:
             # 한글 파일명은 헤더에 그대로 못 들어간다. ASCII 사본과 RFC 5987

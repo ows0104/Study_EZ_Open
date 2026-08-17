@@ -60,9 +60,13 @@ PDF보다 작아서, 서버는 키를 정하고 올라온 것을 확인만 한�
 ```
 1. POST …/uploads           [{kind, filename, sizeBytes, contentType}, …]
                             → [{objectKey, uploadUrl}, …]
-2. PUT  uploadUrl           파일 본문. 헤더 없음
+2. PUT  uploadUrl           파일 본문. Content-Type은 1에서 보낸 값 그대로
 3. POST …/uploads/complete  같은 목록 → {stored, missing}
 ```
+
+2의 헤더는 선택이 아니다. 서명이 `content-type;host`를 덮으므로 값이 다르거나
+빠지면 R2가 `SignatureDoesNotMatch`로 막는다. 길이도 직접 실어야 한다 — 파일
+객체를 그대로 주면 클라이언트가 chunked로 보내고 그건 서명과 맞지 않는다.
 
 키가 `(subject, run_id, kind, filename)`으로 결정되므로 중간에 끊기면 처음부터
 다시 돌리면 된다. `missing`이 비어 있지 않으면 그 파일은 세지 않는다.
@@ -96,3 +100,15 @@ Pre-Quiz는 **apkg 배급이 먼저다.** 웹 풀이(`routes/prequiz.py`, `quiz_
 
 표가 아홉이고 고치는 사람이 한 명이다. Alembic이 얹는 무게가 그것으로 막는
 사고보다 크다. 스키마가 바뀌면 `init-db`로 다시 만든다.
+
+**다만 `init-db`는 없는 표만 만들고 있는 표는 안 고친다.** `create_all`이 그렇다.
+열을 하나 더한 경우, 이미 있는 DB에는 손으로 넣어야 한다. 안 넣으면 그 열을 읽는
+경로만 500으로 죽는다.
+
+| 언제 | 무엇 |
+|---|---|
+| 2026-08-17 | `profile.preview_prompt` — 사용자별 예습 프롬프트 |
+
+```sql
+ALTER TABLE profile ADD COLUMN preview_prompt TEXT NOT NULL DEFAULT '';
+```

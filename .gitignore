@@ -21,6 +21,9 @@ server/local_test_data/
 # 웹
 node_modules/
 web/dist/
+
+# 확장 zip은 빌드마다 chrome-extension/에서 다시 묶인다. 소스가 원본이다.
+web/public/studyez-extension.zip
 .env.local
 .env.production
 *.tsbuildinfo

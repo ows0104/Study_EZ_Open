@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import {
   addDays,
   defaultHourSlots,
@@ -9,6 +9,16 @@ import {
   type CalendarEntry,
   type CalendarMode,
 } from "./entries";
+
+/** 지금 몇 시인가. 1분마다 다시 그린다 — 현재 시각 선이 멈춰 있으면 거짓말이 된다. */
+function useNow() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return now;
+}
 
 /**
  * 주간·월간 격자.
@@ -28,7 +38,8 @@ export function CalendarGrid({
   entries: CalendarEntry[];
   renderEntry: (entry: CalendarEntry, compact: boolean) => ReactNode;
 }) {
-  const todayKey = toDateKey(new Date());
+  const now = useNow();
+  const todayKey = toDateKey(now);
 
   if (mode === "week") {
     const weekStart = startOfWeek(anchorDate);
@@ -40,6 +51,10 @@ export function CalendarGrid({
     // 강의가 통째로 사라지지 않는다.
     const activeHours = weekEntries.map((entry) => Number(entry.startTime.slice(0, 2))).filter(Number.isFinite);
     const hourSlots = [...new Set([...defaultHourSlots, ...activeHours])].sort((left, right) => left - right);
+
+    // 현재 시각 선. 보고 있는 주에 오늘이 없거나, 지금 시각에 해당하는 줄이
+    // 없으면(점심시간처럼) 긋지 않는다.
+    const nowRow = todayKey >= weekStartKey && todayKey <= weekEndKey ? hourSlots.indexOf(now.getHours()) : -1;
 
     return (
       <section className="week-calendar" aria-label="주간 캘린더">
@@ -53,20 +68,23 @@ export function CalendarGrid({
               style={{ gridColumn: index + 2, gridRow: 1 }}
             >
               <span>{weekDayLabels[index]}</span>
-              <strong>
-                {day.getMonth() + 1}/{day.getDate()}
-              </strong>
+              <strong>{day.getDate()}</strong>
             </div>
           );
         })}
         {hourSlots.map((hour, rowIndex) => (
           <div className="week-row" key={hour}>
-            <div className="calendar-time" style={{ gridColumn: 1, gridRow: rowIndex + 2 }}>
+            {/* 첫 줄만 라벨을 안 올린다. 위에 그을 경계선이 없어서 올려 봐야
+                머리줄 뒤로 숨는다. */}
+            <div
+              className={`calendar-time ${rowIndex === 0 ? "is-first" : ""}`}
+              style={{ gridColumn: 1, gridRow: rowIndex + 2 }}
+            >
               <strong>{String(hour).padStart(2, "0")}:00</strong>
             </div>
             {weekDates.map((day, dayIndex) => (
               <div
-                className="week-cell"
+                className={`week-cell ${toDateKey(day) === todayKey ? "is-today" : ""}`}
                 key={`${toDateKey(day)}-${hour}`}
                 style={{ gridColumn: dayIndex + 2, gridRow: rowIndex + 2 }}
               />
@@ -77,6 +95,19 @@ export function CalendarGrid({
           <div
             className="calendar-lunch-divider"
             style={{ gridColumn: "1 / -1", gridRow: hourSlots.indexOf(13) + 2 }}
+            aria-hidden="true"
+          />
+        ) : null}
+        {nowRow >= 0 ? (
+          <div
+            className="calendar-now"
+            style={
+              {
+                gridColumn: "1 / -1",
+                gridRow: nowRow + 2,
+                "--at": now.getMinutes() / 60,
+              } as CSSProperties
+            }
             aria-hidden="true"
           />
         ) : null}

@@ -63,6 +63,10 @@ class Profile(Base):
     is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_approved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    # 예습을 시작할 때 AI에 보내는 프롬프트. 사람마다 예습하는 방식이 달라서
+    # 각자 고쳐 쓴다. **비어 있으면 화면의 기본값을 쓴다** — 여기에 기본 문구를
+    # 복사해 두면 기본이 바뀌어도 옛 문구를 든 사람만 남는다.
+    preview_prompt: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
 
 class TimetableEvent(Base):

@@ -34,6 +34,9 @@ function Shell() {
   // 강의 상세는 새 창으로 열린다. 그 창에는 네비게이션이 없는 편이 낫다 —
   // 자료를 보러 온 창이고, 돌아갈 캘린더는 원래 창에 그대로 있다.
   const bare = location.pathname.startsWith("/lectures/");
+  // 캘린더는 격자다. 읽기 좋은 폭으로 가둘 이유가 없고, 패널이 340px을 가져가는
+  // 만큼 가로가 곧 요일 칸의 폭이 된다. 글을 읽는 화면들만 좁게 둔다.
+  const wide = location.pathname === "/";
 
   return (
     <>
@@ -51,7 +54,7 @@ function Shell() {
           </span>
         </header>
       )}
-      <main className={bare ? "app-main is-bare" : "app-main"}>
+      <main className={`app-main${bare ? " is-bare" : ""}${wide ? " is-wide" : ""}`}>
         <Routes>
           <Route path="/" element={<CalendarPage />} />
           <Route path="/lectures/:subject/:runId" element={<LecturePage />} />

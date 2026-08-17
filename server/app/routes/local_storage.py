@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 
 from app.config import get_settings
@@ -31,9 +31,14 @@ async def local_storage_upload(object_key: str, request: Request) -> dict[str, b
 
 
 @router.get("/local-storage/{object_key:path}")
-def local_storage_download(object_key: str) -> FileResponse:
+def local_storage_download(
+    object_key: str,
+    download: str | None = Query(None, description="주면 첨부로 내보낸다. R2의 ResponseContentDisposition 자리다."),
+) -> FileResponse:
     _guard(object_key)
     path = ObjectStorage().local_path(object_key)
     if not path.is_file():
         raise HTTPException(status_code=404, detail="Not found")
-    return FileResponse(path)
+    # 이름을 주면 Starlette가 Content-Disposition: attachment를 붙인다. 안 주면
+    # 인라인이고, 슬라이드 이미지가 그 쪽이다.
+    return FileResponse(path, filename=download) if download else FileResponse(path)

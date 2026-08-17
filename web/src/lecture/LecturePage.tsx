@@ -8,7 +8,7 @@ import { Stem } from "./Stem";
 /**
  * 강의 상세. 순서가 공부 순서다.
  *
- *   작년 강의록 → 예습 열기 → Pre-Quiz → 올해 강의록 → Main-Quiz
+ *   작년 필기 → 예습 열기 → Pre-Quiz → 올해 필기 → Main-Quiz
  *
  * 강의 전에 작년 것으로 예습하고, 예습한 것을 확인하고, 강의를 듣고, 시험
  * 대비를 한다. 화면이 그 순서대로 놓여 있어야 무엇을 먼저 할지 묻지 않는다.
@@ -58,7 +58,13 @@ export function LecturePage() {
     <article className="lecture">
       <header className="lecture-head">
         <p className="lecture-crumb">
-          {detail.course || detail.subject} · {detail.date} · {detail.slot}교시 {detail.startTime}
+          <span>{detail.course || detail.subject}</span>
+          <i aria-hidden="true" />
+          <time>{detail.date}</time>
+          <i aria-hidden="true" />
+          <span>
+            {detail.slot}교시 <time>{detail.startTime}</time>
+          </span>
         </p>
         <h1>{detail.title}</h1>
         <p className="lecture-meta">
@@ -71,15 +77,8 @@ export function LecturePage() {
 
       <section className="lecture-section">
         <h2>강의 전</h2>
-        {fileButton("notes_prev", "작년 강의록")}
-        {detail.preview?.shareUrl ? (
-          <a className="resource" href={detail.preview.shareUrl} target="_blank" rel="noreferrer">
-            <strong>예습 열기</strong>
-            <small>{detail.preview.provider} 대화</small>
-          </a>
-        ) : (
-          <div className="resource is-empty">예습 링크 — 아직 없습니다</div>
-        )}
+        {fileButton("notes_prev", "작년 필기")}
+        <PreviewResource detail={detail} />
 
         {/* Pre-Quiz의 기본은 apkg다. Anki에서 풀고, 웹 풀이는 그 아래 갈래로 둔다. */}
         {preApkg ? (
@@ -105,7 +104,7 @@ export function LecturePage() {
               }}
             />
           ) : (
-            <button className="resource is-quiet" onClick={() => setSolving(true)}>
+            <button className="resource is-secondary" onClick={() => setSolving(true)}>
               <strong>웹에서 풀기</strong>
               <small>
                 {quiz.itemCount}문항
@@ -137,10 +136,38 @@ export function LecturePage() {
 
       <section className="lecture-section">
         <h2>강의 후</h2>
-        {fileButton("notes_current", "올해 강의록")}
+        {fileButton("notes_current", "올해 필기")}
         {fileButton("main_apkg", "Main-Quiz 덱")}
       </section>
     </article>
+  );
+}
+
+/**
+ * 예습. 캘린더 패널과 같은 규칙이다 — 관리자가 공유한 대화가 있으면 그것을
+ * 읽고, 없어도 작년 필기만 있으면 직접 시작할 수 있다.
+ */
+function PreviewResource({ detail }: { detail: LectureDetail }) {
+  const notesPrev = detail.files.find((file) => file.kind === "notes_prev");
+
+  if (detail.preview?.shareUrl) {
+    return (
+      <a className="resource" href={detail.preview.shareUrl} target="_blank" rel="noreferrer">
+        <strong>예습 열기</strong>
+        <small>{detail.preview.provider} 대화</small>
+      </a>
+    );
+  }
+
+  if (!notesPrev) return <div className="resource is-empty">예습 — 작년 필기가 올라오면 열립니다</div>;
+
+  // 예습을 시작하는 자리는 캘린더 패널이다. 여기는 강의를 펼쳐 보는 창이라
+  // 확장을 부르지 않고, 무엇을 눌러야 하는지만 말한다.
+  return (
+    <div className="resource is-empty">
+      예습 — 캘린더에서 이 강의를 눌러 시작하세요
+      <small>확장 프로그램이 작년 필기와 프롬프트를 ChatGPT에 넣어 줍니다</small>
+    </div>
   );
 }
 
