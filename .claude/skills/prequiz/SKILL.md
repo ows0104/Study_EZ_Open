@@ -81,8 +81,12 @@ Read( runs/<lecture_id>/model_input.pdf , pages: "8-12" )
 ```
 
 **한 번에 20쪽까지**이고, 돌아온 이미지에는 **쪽 번호가 없다** — 세지 말고 각 쪽 코너의
-노란 `Slide N` 각인을 읽어라. `pages`를 생략하면 통째로 첨부되고 텍스트 레이어까지
-오지만, 전부 볼 때만 그렇게 한다.
+노란 `Slide N` 각인을 읽어라. `prep.json`의 `read_windows`가 창을 미리 계산해 두고
+파일 경계에서 끊어 준다.
+
+`pages`를 생략하면 통째로 첨부되고 텍스트 레이어까지 오는데, **쪽이 많으면 거부된다** —
+49쪽에서 `Maximum 20 pages per request`로 막혔고 33쪽은 됐다. 문턱을 모르니 통째 읽기를
+기대하지 말고 창으로 나눠 읽는 것을 기본으로 삼아라.
 
 색은 나오지 않는다. 필기자마다 규약이 달라 같은 색이 정반대를 뜻하기 때문이다.
 뜻은 색이 아니라 `annotations.json`의 `notes`에 적힌 **말**에 있다.
@@ -112,9 +116,9 @@ Read( runs/<lecture_id>/model_input.pdf , pages: "8-12" )
 가려라.
 
 > `runs/<lecture_id>/page_features.json`과 `outline.json`을 읽어라. 그다음
-> `annotated.pdf`를 **`pages` 없이 통째로** 읽어라 — 경계를 찾는 자리라 전 페이지를
-> 봐야 하고, 통째 읽기는 텍스트 레이어까지 준다. 강의록 뒷부분과 족보가 섞여 있고,
-> 어디서 갈리는지를 네가 정한다.
+> `annotated.pdf`를 **전 페이지** 읽어라 — 경계를 찾는 자리이므로 뒤쪽만 봐서는 안 된다.
+> `read_windows`대로 `pages`를 나눠 부른다(20쪽이 넘으면 통째 읽기가 거부된다).
+> 강의록 뒷부분과 족보가 섞여 있고, 어디서 갈리는지를 네가 정한다.
 >
 > 판정을 `runs/<lecture_id>/structure.json`에 쓴다.
 >
