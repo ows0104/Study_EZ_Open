@@ -47,17 +47,108 @@ def make_annotation_clean_pdf(src_pdf_path, out_pdf_path) -> int:
     return removed
 
 
-def stamp_slide_labels(doc, slide_start: int = 1) -> None:
-    """모든 페이지 좌상단에 'Slide N'을 노란 박스로 태워 넣는다.
+STAMP_H = 24
+STAMP_MARGIN = 6
+
+
+def _content_rects(page) -> list:
+    """글자·이미지·annotation이 실제로 놓인 자리."""
+    rects = []
+    for block in page.get_text("dict")["blocks"]:
+        if block.get("type") == 1:
+            rects.append(fitz.Rect(block["bbox"]))
+            continue
+        for line in block.get("lines", []):
+            for span in line["spans"]:
+                if span["text"].strip():
+                    rects.append(fitz.Rect(span["bbox"]))
+    try:
+        for annot in page.annots():
+            rects.append(fitz.Rect(annot.rect))
+    except Exception:
+        pass
+    return rects
+
+
+def _corner_origins(width: float, height: float, box_w: float, box_h: float):
+    """좌상 → 우상 → 우하 → 좌하."""
+    m = STAMP_MARGIN
+    return ((m, m),
+            (width - box_w - m, m),
+            (width - box_w - m, height - box_h - m),
+            (m, height - box_h - m))
+
+
+# 우상 → 좌상 → 우하 → 좌하. 실측 434장(10편)의 점유율 순이다
+# (우상 10.4% · 좌상 11.3% · 좌하 10.4% · 우하 15.0%). 좌하는 우상과 점유율이
+# 같지만 **편 전체가 비는** 경우가 적어(2편 대 4편) 뒤로 뒀다.
+CORNER_ORDER = (1, 0, 2, 3)
+
+
+def _free_corners(page, box_w: float, box_h: float = STAMP_H) -> list[bool]:
+    rects = _content_rects(page)
+    return [
+        not any(fitz.Rect(x, y, x + box_w, y + box_h).intersects(r) for r in rects)
+        for x, y in _corner_origins(page.rect.width, page.rect.height, box_w, box_h)
+    ]
+
+
+def choose_stamp_corners(pages, slide_start: int = 1) -> list[int]:
+    """편 전체를 보고 주력 코너를 하나 정하고, 그 자리가 찬 쪽만 따로 뺀다.
+
+    좌상단 고정이던 시절 각인이 **제목을 먹었다.** `260812_02`는 33장 중 17장에서
+    제목 글자가 상자 밑에 깔렸고, s8·s12는 제목이 `Cell death` 한 마디뿐이라
+    **100% 사라졌다.** 그런데 model_pages는 모델이 사실을 읽는 채널이다.
+
+    자리를 쪽마다 따로 고르면 안 덮이기는 하지만 각인이 튄다. 각인의 존재 이유가
+    "세지 말고 읽어라"이므로 **한 편 안에서 안 움직이는 것**이 값을 한다. 그래서
+    편 단위로 가장 많이 비는 코너를 주력으로 잡고 예외만 옮긴다 - 실측에서 자리를
+    옮기는 쪽이 41장에서 **17장으로** 줄었고(434장 중), 10편 중 4편은 예외가 0장이다.
+
+    어느 코너가 비는지는 필기자의 템플릿마다 뒤집힌다. `260812_02`는 좌상단이
+    52% 차 있고 우상단이 0%인데 `250820_01`은 정확히 그 반대다(4% / 41%).
+    그래서 고정 위치로는 못 푼다.
+
+    캔버스를 늘려 빈 띠를 만드는 방법은 쓰지 않는다. `labels.json`은 원본 PDF에서,
+    오클루전 렌더는 `model_input.pdf`에서 좌표를 잡는데 **둘의 기하가 같아야
+    맞물린다.** 한쪽만 늘리면 정규화 분모가 갈려 라벨 상자가 통째로 어긋나고,
+    양쪽을 늘리면 이미 만든 run의 저장된 좌표가 무효가 된다. 코너만 옮기면
+    기하는 그대로다.
+
+    네 코너가 모두 찬 쪽은 434장 중 4장뿐이고, 그때는 주력으로 되돌아가 예전처럼
+    덮는다. 덮지 않을 자리가 아예 없기 때문이다.
+    """
+    free = []
+    for index, page in enumerate(pages):
+        label = f"Slide {int(slide_start) + index}"
+        free.append(_free_corners(page, 11 * len(label) + 10))
+    if not free:
+        return []
+    primary = max(CORNER_ORDER,
+                  key=lambda c: (sum(1 for f in free if f[c]), -CORNER_ORDER.index(c)))
+    return [primary if f[primary] else next((c for c in CORNER_ORDER if f[c]), primary)
+            for f in free]
+
+
+def stamp_slide_labels(doc, slide_start: int = 1, corners=None) -> None:
+    """모든 페이지에 'Slide N'을 노란 박스로 태워 넣는다. 자리는 비어 있는 코너.
 
     이게 없으면 모델은 첨부 PDF에서 페이지를 '세어' slide_no를 추정해야 하고,
     한 페이지만 잘못 세면 그 뒤 모든 문항에 엉뚱한 슬라이드 이미지가 붙는다.
     번호를 페이지에 구워 넣으면 추론이 읽기로 바뀐다.
+
+    `corners`를 주면 그 판정을 그대로 쓴다. 평탄화한 페이지처럼 **자리를 고를
+    근거가 페이지 안에 없을 때** 원본에서 골라 넘기는 용도다.
     """
-    for index, page in enumerate(doc):
+    pages = list(doc)
+    if corners is None:
+        corners = choose_stamp_corners(pages, slide_start)
+    for index, page in enumerate(pages):
         slide_no = int(slide_start) + index
         label = f"Slide {slide_no}"
-        rect = fitz.Rect(6, 6, 6 + 11 * len(label) + 10, 30)
+        box_w = 11 * len(label) + 10
+        x, y = _corner_origins(page.rect.width, page.rect.height, box_w, STAMP_H)[corners[index]]
+        rect = fitz.Rect(x, y, x + box_w, y + STAMP_H)
         page.draw_rect(rect, color=(0, 0, 0), fill=(1, 1, 0.4), overlay=True)
         page.insert_textbox(rect, label, fontsize=13, color=(0, 0, 0), align=1, overlay=True)
 
@@ -129,6 +220,12 @@ def render_flattened_labeled_pngs(
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     page_map: dict[int, str] = {}
+
+    # 평탄화한 페이지는 전면 이미지 한 장뿐이라 어느 코너가 비었는지 알 수 없다.
+    # 원본을 통째로 보고 미리 정해 둔다 - 주력 코너는 편 단위로 정해지므로
+    # 한 쪽씩 물어서는 나오지 않는다.
+    corners = choose_stamp_corners([src.load_page(i) for i in range(len(src))], slide_start)
+
     for index in range(len(src)):
         slide_no = int(slide_start) + index
         pix = src.load_page(index).get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
@@ -136,7 +233,7 @@ def render_flattened_labeled_pngs(
         flat = fitz.open()
         page = flat.new_page(width=pix.width, height=pix.height)
         page.insert_image(fitz.Rect(0, 0, pix.width, pix.height), pixmap=pix)
-        stamp_slide_labels(flat, slide_no)
+        stamp_slide_labels(flat, slide_no, corners=[corners[index]])
 
         img_name = f"{prefix}_s{slide_no:03d}.png"
         page.get_pixmap(alpha=False).save(str(out_dir / img_name))
