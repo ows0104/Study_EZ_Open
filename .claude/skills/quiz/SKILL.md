@@ -53,7 +53,9 @@ python quiz/prep.py "<pdf>"
   사진 문항은 이미지에만 있으므로 `jokbo_input.pdf`를 함께 봐야 한다
 - `outline.json` / `annotations.json` — 슬라이드별 본문 요약, 필기·형광펜·**도장(stamp)** 신호
 - `labels.json` — 슬라이드별 라벨 후보와 정확한 bbox. 이미지 오클루전 카드가 여기서 좌표를 가져온다
-- `media/` — Anki 카드 뒷면용 슬라이드 PNG. **모델 입력이 아니다**
+- `media/` — Anki 카드 뒷면용 슬라이드 PNG. 모델 입력이 아니지만 **각인이 없다.**
+  각인이 봐야 할 것을 덮었을 때 여는 곳이다 — `260814_05`에서 각인이 s48·s49의 족보
+  정답표를 덮었고 조각 둘이 여기서 값을 회수했다. 족보 페이지는 처음부터 이쪽이 낫다
 - `prep.json` — `slide_image_map`, `total_slides` 등 계약 파일. **경계는 여기 없다**
 
 `prep.json`의 **`poppler_available`이 `false`면 `pages` 읽기가 안 된다.** prep은 그래도
@@ -179,14 +181,16 @@ python quiz/structure.py runs/<lecture_id>
 > 청사진을 `runs/<lecture_id>/blueprint.json`에 쓴다. 스키마는 `references/blueprint.schema.json`.
 >
 > - 족보에서 읽어낸 출제 성향을 `exam_focus`에 남겨라
-> - 각 `retrieval_target`에 `study_tags`(important / frequent / detail)를 붙여라
+> - 각 `retrieval_target`에 `importance`(`core` / `detail`)와 `exam_hit`(참/거짓)을 붙여라.
+>   **둘은 독립이다** — `detail`이면서 `exam_hit`인 것이 §0·§3이 말하는 가장 값진 카드다
 > - 제외는 §1의 여섯 사유 중 하나에 해당할 때만이다
-> - `annotations.json`의 `stamp`는 기출 출제 이력이므로 `frequent`의 근거가 된다
+> - `annotations.json`의 `stamp`는 기출 출제 이력이므로 `exam_hit`의 근거가 된다.
+>   **도장이 0장인 편도 있다** — 필기자가 안 쓴 것이다. 그때는 족보 문항 자체에서 읽어라
 > - 족보가 그림으로 묻거나, 위치와 이름의 대응이 시험 대상인 슬라이드는 §15를 읽고
 >   이미지 오클루전 대상으로 표시하라
 
-받은 뒤 직접 `blueprint.json`을 열어 세 태그가 모두 나타나는지, 강의록 슬라이드가
-빠짐없이 다뤄졌는지 확인한다.
+받은 뒤 직접 `blueprint.json`을 열어 `core`와 `detail`이 둘 다 나타나는지, `exam_hit`이
+붙은 target이 있는지, 강의록 슬라이드가 빠짐없이 다뤄졌는지 확인한다.
 
 ### 2단계 — 카드 작성 (Opus 5 호출 ②, **조각별 동시 실행**)
 
@@ -278,11 +282,10 @@ python quiz/validate.py runs/<lecture_id>
 > - `flagged` — 수정 / 유지 / 삭제 중 하나
 > - `answer_too_long`·`compound_question` — 부연을 `explanation`으로 옮기거나 카드를 쪼개면 대부분 해결된다
 > - `near_duplicate_groups` — 회상 목적이 같은 것만 줄인다. 족보 카드와 강의록 카드가 같은 것을 물어도 목적이 달라 둘 다 남긴다
-> - `detail_not_exclusive` — `detail`은 단독으로만 붙는다. 실제로 중요하거나 출제되는 내용이면 `detail`을 떼라
 > - `removed` — `slide_no`만 틀린 것은 원본에서 번호를 확인한 뒤 되살려라
 > - `coverage_gaps` — 해당 슬라이드를 다시 읽고 만들 수 있으면 만든다
-> - `untouched_slides` — 통째로 빠진 슬라이드가 §1의 제외 사유에 해당하는지 직접 확인하라
-> - `study_tags` — 세 태그 중 어느 것도 비어 있으면 안 된다
+> - `untouched_slides` — 통째로 빠진 슬라이드가 §1의 제외 사유에 해당하는지 직접 확인하라.
+>   **`num_pages`까지만 돈다** — 외부 족보를 붙인 편은 그 구간이 점검 범위 밖이다
 > - `occlusion`이 붙은 카드는 그 슬라이드를 직접 열어 **무엇이 가려졌는지** 확인하라.
 >   기계는 라벨 id가 실재하는지까지만 본다 (§16)
 > - `no_trap_note` — `trap` 유형인데 함정이 비었다. 채우거나 유형을 바꿔라

@@ -112,7 +112,7 @@ def _jaccard(left: set[str], right: set[str]) -> float:
     return len(left & right) / len(left | right)
 
 
-def check_item(item: dict, num_pages: int, jokbo_range: list | None = None,
+def check_item(item: dict, max_slide: int, jokbo_range: list | None = None,
                label_index: dict | None = None) -> tuple[list[str], list[str]]:
     """한 카드의 (hard, soft) 문제 목록. hard가 있으면 빌드 불가.
 
@@ -142,12 +142,16 @@ def check_item(item: dict, num_pages: int, jokbo_range: list | None = None,
     except (TypeError, ValueError):
         hard.append("slide_no_missing")
         slide_no = None
-    if slide_no is not None and not (1 <= slide_no <= num_pages):
-        hard.append(f"slide_no_out_of_range({slide_no}/1-{num_pages})")
+    # 경계는 **자료의 범위**(`total_slides`)다. `num_pages`(강의록 PDF 쪽수)로 자르면
+    # 외부 족보를 붙인 편에서 정상 카드가 hard 제거된다 - `260814_05`에서 실제로 났다.
+    # `num_pages`가 49, 외부 족보가 슬라이드 50-51인데 `slide_image_map`에는 51까지
+    # 이미지가 있고 각인도 `Slide 50`이었다. 카드 4장이 걸렸다.
+    if slide_no is not None and not (1 <= slide_no <= max_slide):
+        hard.append(f"slide_no_out_of_range({slide_no}/1-{max_slide})")
 
     # 족보 구간 슬라이드를 근거로 삼았는데 lecture라고 적혔거나 그 반대인 경우.
     # 구간을 잘못 읽었다는 뜻이고, 그러면 grounding 채널 자체가 어긋난다.
-    if jokbo_range and slide_no is not None and 1 <= slide_no <= num_pages:
+    if jokbo_range and slide_no is not None and 1 <= slide_no <= max_slide:
         in_jokbo = int(jokbo_range[0]) <= slide_no <= int(jokbo_range[1])
         if in_jokbo and source_type != "jokbo":
             soft.append(f"source_type_range_mismatch(slide {slide_no}는 족보 구간)")
@@ -361,7 +365,7 @@ def coverage_gaps(blueprint: dict | None, items: list[dict], threshold: float = 
     return gaps
 
 
-def validate_items(items: list[dict], num_pages: int, jokbo_range: list | None = None,
+def validate_items(items: list[dict], max_slide: int, jokbo_range: list | None = None,
                    label_index: dict | None = None) -> tuple[list[dict], list[dict]]:
     """(빌드 가능한 카드, 제거된 카드). 제거된 카드는 원문을 통째로 보존한다.
 
@@ -375,7 +379,7 @@ def validate_items(items: list[dict], num_pages: int, jokbo_range: list | None =
         item.setdefault("id", f"q{idx + 1:03d}")
         if item.get("q"):
             item["q"] = normalize_cloze_to_c1(str(item["q"]))
-        hard, soft = check_item(item, num_pages, jokbo_range, label_index)
+        hard, soft = check_item(item, max_slide, jokbo_range, label_index)
         item["flags"] = soft
         if hard:
             removed.append({"reason": hard, "item": item})
@@ -409,6 +413,9 @@ def validate_run(run_dir: Path, items_name: str = "items.raw.json") -> dict:
     run_dir = Path(run_dir)
     prep = json.loads((run_dir / "prep.json").read_text(encoding="utf-8"))
     num_pages = int(prep["num_pages"])
+    # 자료의 범위와 강의록 PDF의 쪽수는 다르다. 외부 족보를 붙이면 슬라이드 번호가
+    # 필기 뒤로 이어져 `total_slides`가 커진다. 경계는 자료의 범위를 따라야 한다.
+    max_slide = int(prep.get("total_slides") or num_pages)
     lecture_range, jokbo_range, range_source = authoritative_ranges(run_dir, prep)
 
     payload = json.loads((run_dir / items_name).read_text(encoding="utf-8"))
@@ -421,7 +428,7 @@ def validate_run(run_dir: Path, items_name: str = "items.raw.json") -> dict:
     labels = json.loads(labels_path.read_text(encoding="utf-8")) if labels_path.exists() else None
     label_index = build_label_index(labels)
 
-    kept, removed = validate_items(items, num_pages, jokbo_range, label_index)
+    kept, removed = validate_items(items, max_slide, jokbo_range, label_index)
 
     slide_counts: dict[int, int] = {}
     for item in kept:
@@ -433,7 +440,9 @@ def validate_run(run_dir: Path, items_name: str = "items.raw.json") -> dict:
         for s, c in sorted(slide_counts.items()) if c > SLIDE_CONCENTRATION_MAX
     ]
     skip = set(blueprint.get("skip_slides", []) if blueprint else [])
-    untouched = [s for s in range(1, num_pages + 1) if s not in slide_counts and s not in skip]
+    # 여기도 `total_slides`까지 돈다. `num_pages`로 돌면 외부 족보 구간을 애초에
+    # 세지 않아, 그 쪽에 카드가 없어도 조용히 지나간다.
+    untouched = [s for s in range(1, max_slide + 1) if s not in slide_counts and s not in skip]
 
     importance_counts = {
         key: sum(1 for i in kept if str(i.get("importance", "")).lower() == key)

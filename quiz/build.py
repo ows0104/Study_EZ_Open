@@ -227,6 +227,9 @@ def build_run(run_dir: Path, items_name: str, project: str, output: Path | None)
     run_dir = Path(run_dir)
     prep = json.loads((run_dir / "prep.json").read_text(encoding="utf-8"))
     num_pages = int(prep["num_pages"])
+    # 경계는 자료의 범위다. `num_pages`(강의록 PDF 쪽수)로 자르면 외부 족보를 붙인
+    # 편에서 정상 카드가 막힌다. 아래 `slide_image_map` 검사가 진짜 빌드 가능성이다.
+    max_slide = int(prep.get("total_slides") or num_pages)
     # 구간의 주인은 structure.json이다. prep.json은 힌트라 여기서 쓰면
     # 빌드가 잘못된 범위로 커버리지를 보고하고, 족보 문항을 범위 밖으로 친다.
     lecture_range, jokbo_range, _ = authoritative_ranges(run_dir, prep)
@@ -240,7 +243,7 @@ def build_run(run_dir: Path, items_name: str, project: str, output: Path | None)
     # "모델이 무언가 반환했다"를 "문제가 해결됐다"로 간주하지 않는다.
     blocked = []
     for item in items:
-        hard, _ = check_item(item, num_pages, jokbo_range)
+        hard, _ = check_item(item, max_slide, jokbo_range)
         if int(item.get("slide_no") or 0) not in slide_image_map:
             hard.append("slide_image_missing")
         if hard:
@@ -297,7 +300,7 @@ def build_run(run_dir: Path, items_name: str, project: str, output: Path | None)
         # 오클루전 카드는 원본 슬라이드 미디어를 쓰지 않지만 그 슬라이드는 분명히
         # 다뤄졌다. 커버리지는 미디어가 아니라 문항 기준으로 센다.
         "slides_used": sorted(covered_slides),
-        "slides_unused": [s for s in range(1, num_pages + 1) if s not in covered_slides],
+        "slides_unused": [s for s in range(1, max_slide + 1) if s not in covered_slides],
         "media_count": len(media_files),
         "importance": {
             key: sum(1 for i in items if str(i.get("importance", "detail")).lower() == key)
