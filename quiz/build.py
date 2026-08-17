@@ -341,6 +341,12 @@ def build_run(run_dir: Path, items_name: str, project: str, output: Path | None)
             key: sum(1 for i in items if key in (i.get("review_flags") or []))
             for key in REVIEW_FLAG_LABELS
         },
+        # `review_note`만 있고 플래그가 없는 카드 — 자료 자체가 의심스러운 자리다
+        # (item-rules §4.5). 위 `review_flagged`가 플래그만 세므로 따로 센다. 안 세던
+        # 동안 `260814_05`의 빨간 박스 두 장이 요약에 "없음"으로 나왔다.
+        "source_warned": sum(1 for i in items
+                             if str(i.get("review_note") or "").strip()
+                             and not i.get("review_flags")),
         "card_types": {
             key: sum(1 for i in items if str(i.get("card_type", "fact")).lower() == key)
             for key in ("fact", "comparison", "mechanism", "trap", "list", "sequence", "cloze")
@@ -367,6 +373,8 @@ def main() -> int:
     flags = " · ".join(f"{k} {v}" for k, v in meta["review_flags"].items() if v) or "없음"
     print(f"  출처: 강의록 {meta['sources']['lecture']} / 족보 {meta['sources']['jokbo']}"
           f" (정오 검토 플래그 {meta['review_flagged']}장 — {flags})")
+    if meta.get("source_warned"):
+        print(f"  자료 주의 경고 {meta['source_warned']}장 — 뒷면 그림 위에 빨간 박스가 뜬다")
     print(f"  중요도: core {meta['importance']['core']} / detail {meta['importance']['detail']}")
     print(f"  출제 이력: exam_hit {meta['exam_hit']} / stamp {meta['stamped']}")
     print(f"  유형: { {k: v for k, v in meta['card_types'].items() if v} }")

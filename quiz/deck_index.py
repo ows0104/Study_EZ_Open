@@ -27,7 +27,10 @@ _COLUMNS = [
     ("item_count", "카드"),
     ("sources", "강의록/족보"),
     ("occlusion", "오클루전"),
+    # 족보 정오 플래그 / 자료 주의 경고. 둘은 다른 것이다 - 앞은 족보 문항의 정답을
+    # 의심한 것이고 뒤는 자료 자체가 의심스러운 것이다(item-rules §4.5).
     ("review_flagged", "검토"),
+    ("source_warned", "자료주의"),
     ("uncovered", "빈 슬라이드"),
     ("built_at", "빌드"),
 ]
@@ -43,6 +46,7 @@ def _row_values(entry: dict) -> list[str]:
         f"{sources.get('lecture', 0)}/{sources.get('jokbo', 0)}",
         str(entry.get("occlusion", 0)) or "0",
         str(entry.get("review_flagged", 0)),
+        str(entry.get("source_warned", 0)),
         str(len(unused)),
         str(entry.get("built_at", ""))[:16].replace("T", " "),
     ]
@@ -99,7 +103,8 @@ def update_index(runs_root, meta: dict) -> Path:
 
     entry = {key: meta.get(key) for key in (
         "lecture_id", "lecture_title", "deck_name", "apkg", "built_at",
-        "item_count", "sources", "review_flagged", "slides_unused", "occlusion",
+        "item_count", "sources", "review_flagged", "source_warned",
+        "slides_unused", "occlusion",
     )}
     entries = [e for e in entries if e.get("lecture_id") != entry["lecture_id"]]
     entries.append(entry)
