@@ -11,7 +11,9 @@ globalThis.STUDYEZ_PROTOCOL = {
   EXTENSION_SOURCE: "studyez-ai-extension",
   /** 확장이 설치되면 `<html>`에 붙는 표시. 설치 여부 판정에 쓴다. */
   READY_ATTRIBUTE: "data-studyez-ai-extension",
-  VERSION: "0.1.0",
+  // `<html>`에 그대로 붙는다. 어느 빌드가 실려 있는지 개발자 도구에서 보인다 —
+  // 소스를 고쳐도 `chrome://extensions`에서 새로고침하지 않으면 옛것이 돈다.
+  VERSION: "0.2.0",
 
   MESSAGES: {
     /** 웹앱 → 확장: 이 자료로 예습 대화를 열어 달라. */

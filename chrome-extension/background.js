@@ -3,9 +3,14 @@ importScripts("protocol.js");
 const { WEBAPP_SOURCE, MESSAGES, LINK_KINDS } = globalThis.STUDYEZ_PROTOCOL;
 
 const TAB_PAYLOAD = "studyez-tab:";
-const TAB_TRACKING = "studyez-tracking:";
 const PENDING_LINK = "studyez-pending:";
-const SHARE_WATCH = "studyez-share-watch:";
+/**
+ * ChatGPT 탭 → `{ lectureId, mode, webappTabId }`.
+ *
+ * 이 기록이 있는 탭에서 나온 링크만 강의에 붙는다. 강의 id는 페이지가 보내는
+ * 메시지가 아니라 여기서 읽는다 — 페이지가 아무 강의에나 링크를 달 수 없다.
+ */
+const TAB_WATCH = "studyez-watch:";
 /** 기본 링크의 share id → 어느 강의였나. 갈라져 나온 대화를 그 강의로 돌리는 데 쓴다. */
 const SHARE_ORIGIN = "studyez-share-origin:";
 
@@ -106,9 +111,24 @@ async function deliverPending(webappTabId) {
   }
 }
 
+/**
+ * 이 탭에서 나오는 예습 링크를 받겠다고 적어 둔다.
+ *
+ * 콘텐츠 스크립트에 알려도 주고, 실패해도 그만이다 — 아직 안 붙었으면 스스로
+ * 세션 저장소에서 집어 간다.
+ */
+async function watchTab(tabId, watch) {
+  await chrome.storage.session.set({ [`${TAB_WATCH}${tabId}`]: watch });
+  // 기다리지 않는다. 갓 연 탭에는 아직 콘텐츠 스크립트가 없어 반드시 실패하는데,
+  // 그 실패를 기다리면 웹앱의 "열기" 응답이 그만큼 늦는다.
+  void chrome.tabs
+    .sendMessage(tabId, { type: "STUDYEZ_WATCH_READY", lectureId: watch.lectureId, mode: watch.mode })
+    .catch(() => undefined);
+}
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-  // 기본 링크를 연 탭인가. 맞으면 그 탭을 추적 대상으로 올려 둔다 — 여기서
-  // 이어 물으면 ChatGPT가 새 `/c/` 대화를 만들고, 아래 분기가 그것을 잡는다.
+  // 기본 링크를 연 탭인가. 맞으면 그 탭도 감시 대상으로 올린다 — 여기서 이어
+  // 물으면 ChatGPT가 그 시점까지를 복사해 새 `/c/` 대화를 만든다.
   //
   // `mode`는 personal이다. 갈라져 나온 것은 그 사람 것이지 반의 것이 아니므로
   // 공유를 다시 발행하면 안 된다.
@@ -119,51 +139,11 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
       .then((stored) => {
         const origin = stored[originKey];
         if (!origin) return;
-        return chrome.storage.session.set({
-          [`${TAB_TRACKING}${tabId}`]: {
-            lectureId: origin.lectureId,
-            mode: "personal",
-            webappTabId: origin.webappTabId,
-          },
-        });
+        return watchTab(tabId, { lectureId: origin.lectureId, mode: "personal", webappTabId: origin.webappTabId });
       })
       .catch(() => undefined);
   }
 
-  if (changeInfo.url) {
-    const key = `${TAB_TRACKING}${tabId}`;
-    void chrome.storage.session
-      .get(key)
-      .then(async (stored) => {
-        const tracking = stored[key];
-        if (!tracking || !isConversationUrl(changeInfo.url)) return;
-        await chrome.storage.session.set({
-          [pendingKey(tracking.webappTabId, tracking.lectureId, "chatgpt")]: {
-            lectureId: tracking.lectureId,
-            kind: "chatgpt",
-            url: changeInfo.url,
-          },
-        });
-        // 공유 링크는 기본 링크를 만들 때만 만든다.
-        //
-        // 개인 예습까지 공개 `/share/`를 발행하면 두 가지가 잘못된다 — 남이
-        // 물은 것이 링크만 있으면 열리게 되고, 관리자가 개인 예습을 하는 순간
-        // 그 공유가 반 전체의 기본 링크를 덮는다.
-        if (tracking.mode === "shared") {
-          await chrome.storage.session.set({
-            [`${SHARE_WATCH}${tabId}`]: { webappTabId: tracking.webappTabId, lectureId: tracking.lectureId },
-          });
-          try {
-            await chrome.tabs.sendMessage(tabId, { type: "STUDYEZ_SHARE_WATCH_READY", lectureId: tracking.lectureId });
-          } catch {
-            // 콘텐츠 스크립트가 아직 안 붙었다. 스스로 세션 저장소에서 집어 간다.
-          }
-        }
-        await chrome.storage.session.remove(key);
-        await deliverPending(tracking.webappTabId);
-      })
-      .catch(() => undefined);
-  }
   if (changeInfo.status === "complete") void deliverPending(tabId).catch(() => undefined);
 });
 
@@ -174,12 +154,7 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     .get(null)
     .then((stored) => {
       const stale = Object.keys(stored).filter((key) => key.startsWith(`${PENDING_LINK}${tabId}:`));
-      return chrome.storage.session.remove([
-        `${TAB_PAYLOAD}${tabId}`,
-        `${TAB_TRACKING}${tabId}`,
-        `${SHARE_WATCH}${tabId}`,
-        ...stale,
-      ]);
+      return chrome.storage.session.remove([`${TAB_PAYLOAD}${tabId}`, `${TAB_WATCH}${tabId}`, ...stale]);
     })
     .catch(() => undefined);
 });
@@ -207,24 +182,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  // 공유 링크를 만들 대화인지 콘텐츠 스크립트가 물어본다.
-  if (message?.type === "STUDYEZ_GET_SHARE_WATCH") {
+  // 이 탭이 어느 강의의 무슨 몫인지 콘텐츠 스크립트가 물어본다.
+  if (message?.type === "STUDYEZ_GET_WATCH") {
     if (!fromChatgpt(sender) || !sender.tab?.id) {
       sendResponse({ ok: false });
       return false;
     }
-    const key = `${SHARE_WATCH}${sender.tab.id}`;
+    const key = `${TAB_WATCH}${sender.tab.id}`;
     void chrome.storage.session
       .get(key)
-      .then((stored) => sendResponse(stored[key] ? { ok: true, lectureId: stored[key].lectureId } : { ok: false }))
+      .then((stored) =>
+        sendResponse(stored[key] ? { ok: true, lectureId: stored[key].lectureId, mode: stored[key].mode } : { ok: false }),
+      )
       .catch(() => sendResponse({ ok: false }));
     return true;
   }
 
-  if (message?.type === "STUDYEZ_SHARE_LINK") {
+  if (message?.type === "STUDYEZ_SHARE_LINK" || message?.type === "STUDYEZ_CONVERSATION_LINK") {
     if (!fromChatgpt(sender) || !sender.tab?.id) return false;
-    if (typeof message.url !== "string" || !/^https:\/\/chatgpt\.com\/share\//.test(message.url)) return false;
-    const key = `${SHARE_WATCH}${sender.tab.id}`;
+    const share = message.type === "STUDYEZ_SHARE_LINK";
+    const url = typeof message.url === "string" ? message.url : "";
+    if (share ? !shareIdOf(url) : !isConversationUrl(url)) return false;
+    const key = `${TAB_WATCH}${sender.tab.id}`;
     // 강의 id는 메시지가 아니라 감시 기록에서 가져온다. 페이지가 아무 강의에나
     // 링크를 붙일 수 없다는 뜻이다.
     void chrome.storage.session
@@ -232,12 +211,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .then(async (stored) => {
         const watch = stored[key];
         if (!watch) return;
+        // 공유는 기본 링크를 만들 때만 낸다.
+        //
+        // 개인 예습까지 공개 `/share/`를 발행하면 두 가지가 잘못된다 — 남이
+        // 물은 것이 링크만 있으면 열리게 되고, 관리자가 개인 예습을 하는 순간
+        // 그 공유가 반 전체의 기본 링크를 덮는다.
+        if (share && watch.mode !== "shared") return;
+        const kind = share ? "chatgpt_share" : "chatgpt";
         await chrome.storage.session.set({
-          [pendingKey(watch.webappTabId, watch.lectureId, "chatgpt_share")]: {
-            lectureId: watch.lectureId,
-            kind: "chatgpt_share",
-            url: message.url,
-          },
+          [pendingKey(watch.webappTabId, watch.lectureId, kind)]: { lectureId: watch.lectureId, kind, url },
         });
         await deliverPending(watch.webappTabId);
       })
@@ -279,13 +261,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   void chrome.tabs
     .create({ url: CHATGPT_START })
-    .then((tab) => {
+    .then(async (tab) => {
       if (!tab.id) throw new Error("새 ChatGPT 탭을 열지 못했습니다.");
       if (!sender.tab?.id) throw new Error("Study_EZ 탭을 확인하지 못했습니다.");
-      return chrome.storage.session.set({
-        [`${TAB_PAYLOAD}${tab.id}`]: payload,
-        [`${TAB_TRACKING}${tab.id}`]: { lectureId: payload.lectureId, mode, webappTabId: sender.tab.id },
-      });
+      await chrome.storage.session.set({ [`${TAB_PAYLOAD}${tab.id}`]: payload });
+      await watchTab(tab.id, { lectureId: payload.lectureId, mode, webappTabId: sender.tab.id });
     })
     .then(() => sendResponse({ ok: true }))
     .catch((error) => sendResponse({ ok: false, error: String(error) }));
