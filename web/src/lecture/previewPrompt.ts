@@ -37,7 +37,7 @@ export const DEFAULT_PREVIEW_PROMPT = [
  * 다르게 물은 결과를 공통 링크로 돌리면 그 링크가 무엇인지 아무도 모른다.
  * 고쳐 쓰는 것은 개인 링크 쪽이다.
  */
-export const SHARED_PREVIEW_PROMPT = ["[{날짜}]{과목}_{강의}_{교수}", "수업 전 예습용으로 설명해줘."].join("\n");
+export const SHARED_PREVIEW_PROMPT = ["{파일명}", "수업 전 예습용으로 설명해줘."].join("\n");
 
 /**
  * 자리표시자.
@@ -46,6 +46,7 @@ export const SHARED_PREVIEW_PROMPT = ["[{날짜}]{과목}_{강의}_{교수}", "�
  * 이 토큰을 남겨 둔다. 편집 화면이 이 목록을 그대로 보여 준다.
  */
 export const PROMPT_TOKENS = [
+  { token: "{파일명}", label: "붙이는 작년 필기 파일명", sample: "[250818_01]급성 염증의 병태 생리(고재문)_고명재 v2.pdf" },
   { token: "{강의}", label: "강의 제목", sample: "급성 염증의 병태 생리" },
   { token: "{과목}", label: "과목", sample: "질병의 병리학적 이해" },
   { token: "{교수}", label: "담당 교수", sample: "고재문" },
@@ -57,16 +58,24 @@ function cleanTitle(title: string) {
   return title.replace(/\s*\([^()]*\)\s*$/, "").trim() || title;
 }
 
-/** 템플릿에 이 강의의 값을 채운다. 채울 것이 없는 토큰은 지운다. */
+/**
+ * 템플릿에 이 강의의 값을 채운다. 채울 것이 없는 토큰은 지운다.
+ *
+ * `{파일명}`은 붙여 보내는 작년 필기의 이름 그대로다. 쪼갠 값들(`{강의}`·`{교수}`)로
+ * 다시 조립하면 정보가 샌다 — 파일명에는 원래 run id와 필기자·판수까지 들어
+ * 있는데 파싱하면 거기서 떨어져 나간다. 파일이 없을 때만 조립한 이름으로 떨어진다.
+ */
 export function renderPreviewPrompt(template: string, detail: LectureDetail) {
+  const notesPrev = detail.files.find((file) => file.kind === "notes_prev");
   const values: Record<string, string> = {
+    "{파일명}": notesPrev?.filename || `[${detail.date}] ${detail.title}`,
     "{강의}": cleanTitle(detail.title),
     "{과목}": detail.course || detail.subject,
     "{교수}": detail.professors.join(", "),
     "{날짜}": detail.date,
   };
   return template
-    .replace(/\{강의\}|\{과목\}|\{교수\}|\{날짜\}/g, (token) => values[token] ?? "")
+    .replace(/\{파일명\}|\{강의\}|\{과목\}|\{교수\}|\{날짜\}/g, (token) => values[token] ?? "")
     .replace(/[ \t]+\n/g, "\n")
     .trim();
 }
