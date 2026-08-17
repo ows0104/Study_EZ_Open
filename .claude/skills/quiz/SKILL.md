@@ -43,19 +43,35 @@ python quiz/prep.py "<pdf>"
 
 `runs/<lecture_id>/`에 생기는 것:
 
-- `model_pages/clean_sNNN.png` — **전 페이지.** 필기 제거 + `Slide N` 각인. 사실을 읽는 채널
-- `jokbo_pages/jokbo_sNNN.png` — **뒤 절반.** 필기 포함(문항이 annotation에만 있을 수 있음) + `Slide N` 각인
+- `model_input.pdf` — **사실 채널.** 필기 제거 + `Slide N` 각인. 슬라이드 N = **N쪽**
+- `annotated.pdf` — **족보 채널.** 원본 그대로(문항이 annotation에만 있을 수 있음) + 각인. 슬라이드 N = **N쪽**
+- `jokbo_input.pdf` — `--jokbo-pdf`를 줬을 때만. 원본 족보 + 각인.
+  **여기만 offset이 붙는다** — 슬라이드 N = (N − `prep.json`의 `jokbo_slide_offset`)쪽
 - `page_features.json` — 페이지별 글자수·annotation 수·답안 나열·족보 낱말·이미지 비율·**붙여넣은 이미지 수**. 0.5단계 입력
 - `jokbo_text.md` — `--jokbo-pdf`를 줬을 때만. **원본 족보의 원문 텍스트.**
   선지를 한 글자도 흘리지 않고 옮길 수 있어 이쪽을 먼저 읽는다. 다만 정답표와
-  사진 문항은 이미지에만 있으므로 `jokbo_pages/`를 함께 봐야 한다
+  사진 문항은 이미지에만 있으므로 `jokbo_input.pdf`를 함께 봐야 한다
 - `outline.json` / `annotations.json` — 슬라이드별 본문 요약, 필기·형광펜·**도장(stamp)** 신호
 - `labels.json` — 슬라이드별 라벨 후보와 정확한 bbox. 이미지 오클루전 카드가 여기서 좌표를 가져온다
-- `media/` — Anki 카드 뒷면용 슬라이드 PNG
+- `media/` — Anki 카드 뒷면용 슬라이드 PNG. **모델 입력이 아니다**
 - `prep.json` — `slide_image_map`, `total_slides` 등 계약 파일. **경계는 여기 없다**
 
-**두 채널이 겹쳐서 렌더된다.** clean은 전 페이지, annotated는 뒤 절반이다. 경계가 어디로
-정해지든 다시 렌더하지 않게 하려는 것이다.
+**두 채널이 겹쳐서 나온다.** 둘 다 전 페이지이고 쪽 번호도 같다. 경계가 어디로 정해지든
+다시 만들지 않게 하려는 것이다.
+
+#### PDF를 읽는 법
+
+```
+Read( runs/<lecture_id>/model_input.pdf , pages: "8-12" )
+```
+
+- **한 번에 20쪽까지.** 더 필요하면 나눠 부른다. `prep.json`의 `read_windows`가 창을
+  미리 계산해 두고, **파일 경계에서 끊어 준다** — 외부 족보는 별도 파일이라 `21-39`를
+  통째로 요청하면 33쪽짜리 `annotated.pdf`에 39쪽을 달라는 셈이 된다
+- **돌아온 이미지에 쪽 번호가 없다.** 헤더는 `N page(s)`뿐이고 요청한 범위도 되돌려주지
+  않는다. 그러니 **세지 말고 각인을 읽어라** — 각 쪽 코너의 노란 `Slide N`이 슬라이드 번호다
+- `pages`를 **생략**하면 PDF가 통째로 첨부되고 텍스트 레이어까지 온다. 전부 볼 때만 쓴다
+  (0.5·1단계). 조각 단위에서 통째로 읽으면 같은 강의록을 여섯 번 받는다
 
 **0단계는 경계를 짐작하지 않는다.** 예전엔 힌트를 냈지만 네 강의 연속으로 모델이
 뒤집었고(한 장 늦음·한 장 이름·세 장 이름) 방향이 일정하지 않았다. 게다가 힌트에 맞춰
@@ -70,9 +86,9 @@ python quiz/prep.py "<pdf>"
 때도 있다. 뜻은 색이 아니라 **글에 있다** — `annotations.json`의 `notes`를 읽어라.
 거기에 필기자가 적어 둔 말이 그대로 있고, 그게 어떤 색보다 확실한 신호다.
 
-**서브에이전트에게 채널을 명시하라.** 이 환경에는 poppler가 없어 Read 툴이 PDF 페이지를
-렌더하지 못한다. 채널을 지정하지 않으면 에이전트가 필기가 살아 있는 `media/`로 우회하고,
-강의록 구간의 사실/신호 분리가 조용히 무너진다.
+**서브에이전트에게 채널을 명시하라.** 지정하지 않으면 에이전트가 필기가 살아 있는
+`media/`로 우회하고, 강의록 구간의 사실/신호 분리가 조용히 무너진다. 강의록은
+`model_input.pdf`, 족보는 `annotated.pdf`(또는 `jokbo_input.pdf`)라고 파일명으로 적어라.
 
 ### 0.5단계 — 구조 판별 (Opus 5 호출 ⓪)
 
@@ -95,7 +111,8 @@ python quiz/prep.py "<pdf>"
 직접 열어 문항 번호·5지선다·정답표가 어디서 시작하는지로 가려라.**
 
 > `runs/<lecture_id>/page_features.json`과 `outline.json`을 읽어라. 그다음
-> `jokbo_pages/jokbo_sNNN.png`를 **전부** 읽어라. 강의록 뒷부분과 족보가 섞여 있고,
+> `annotated.pdf`를 **`pages` 없이 통째로** 읽어라 — 경계를 찾는 자리라 전 페이지를
+> 봐야 하고, 통째 읽기는 텍스트 레이어까지 준다. 강의록 뒷부분과 족보가 섞여 있고,
 > 어디서 갈리는지를 네가 정한다.
 >
 > 판정을 `runs/<lecture_id>/structure.json`에 쓴다.
@@ -139,9 +156,10 @@ python quiz/structure.py runs/<lecture_id>
 나뉜 주제이므로 다시 나누지 말고 그 위에 목표를 얹어라.
 
 > `runs/<lecture_id>/structure.json`을 먼저 읽어 구간과 주제를 확인하라.
-> `jokbo_range`가 있으면 `jokbo_pages/`의 그 범위를 **먼저** 전부 읽어라. 교수가 무엇을
-> 어떻게 묻는지가 거기 있다. 그다음 `model_pages/clean_sNNN.png`를 강의록 범위만큼 전부 읽고,
-> `outline.json`과 `annotations.json`도 읽어라.
+> `jokbo_range`가 있으면 `annotated.pdf`의 그 범위를 `pages`로 **먼저** 전부 읽어라
+> (`jokbo_input.pdf`가 있으면 그쪽도 — offset 주의). 교수가 무엇을 어떻게 묻는지가
+> 거기 있다. 그다음 `model_input.pdf`를 강의록 범위만큼 전부 읽고, `outline.json`과
+> `annotations.json`도 읽어라. 20쪽을 넘으면 `read_windows`대로 나눠 부른다.
 >
 > `.claude/skills/quiz/references/item-rules.md`를 **전부** 읽어라. 특히 §1(무엇을
 > 카드로 만드는가), §3(중요도와 출제 이력), §4(족보).
@@ -191,7 +209,9 @@ python quiz/merge_items.py runs/<lecture_id>
 
 > `blueprint.json`의 **`obj_N`~`obj_M`만** 만든다. 다른 objective는 다른
 > 에이전트 몫이니 손대지 마라.
-> 강의록은 `model_pages/`를, 족보는 `jokbo_pages/`와 `jokbo_text.md`를 읽어라.
+> 강의록은 `model_input.pdf`를, 족보는 `annotated.pdf`와 `jokbo_text.md`를 읽어라.
+> **`pages`로 자기 조각 구간만** 읽는다 — 통째로 읽으면 여섯 조각이 같은 강의록을
+> 여섯 번 받는다.
 > `references/item-rules.md`를 **전부** 읽고 그 규칙대로 카드를 만든다.
 > 결과를 `runs/<lecture_id>/items.raw.<조각>.json`에.
 > 스키마는 `references/item.schema.json`. `id`는 `<조각>_001`처럼 매긴다.
@@ -228,7 +248,8 @@ python quiz/validate.py runs/<lecture_id>
 같은지까지는 못 본다.
 
 > `suspects.json`과 `items.checked.json`을 읽어라. 원본 확인이 필요하면 강의록은
-> `model_pages/`, 족보는 `jokbo_pages/`(또는 `jokbo_text.md`)에서 해당 슬라이드만 읽어라.
+> `model_input.pdf`, 족보는 `annotated.pdf`(또는 `jokbo_text.md`)에서 `pages`로
+> **지목된 슬라이드만** 읽어라.
 > `references/item-rules.md`의 **§16 감사 기준**을 따른다.
 > **패치만** `runs/<lecture_id>/audit_patch.json`에, 판정 근거를 `audit.md`에 쓴다.
 >

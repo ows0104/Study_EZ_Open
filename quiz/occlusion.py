@@ -203,9 +203,10 @@ def render_occlusion_pair(pdf_path, slide_no: int, rects: list[list[float]],
                           scale: float = OCCLUSION_RENDER_SCALE) -> tuple[str, str]:
     """가린 앞면 / 드러낸 뒷면 PNG 두 장. 반환은 파일명 두 개.
 
-    페이지를 먼저 픽스맵으로 평탄화한 뒤 그 위에 그린다. render.py의
-    render_flattened_labeled_pngs와 같은 이유다 - annotation은 페이지 내용보다
-    위에 그려지므로, 평탄화하지 않으면 필기가 가림 상자를 뚫고 올라온다.
+    페이지를 먼저 픽스맵으로 평탄화한 뒤 그 위에 그린다. annotation은 페이지
+    내용보다 위에 그려지므로, 평탄화하지 않으면 필기가 가림 상자를 뚫고 올라온다.
+    render.py의 `stamp_slide_labels`는 같은 사실을 반대로 이용한다 - 각인을
+    annotation으로 붙여 필기 위에 올린다.
     """
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

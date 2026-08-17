@@ -3,10 +3,10 @@
     python quiz/prep.py "2025 필기/[250813_02]세포의 손상 및 적응(1)(고지원)_장원영v1.pdf"
 
 만들어지는 것 (runs/<lecture_id>/):
-    model_pages/*.png 강의록 구간. annotation 제거 + Slide N 각인. 사실을 읽는 채널
-    jokbo_pages/*.png 족보 구간. annotation 포함 + Slide N 각인
-    model_input.pdf   강의록 clean 판본의 PDF (PDF 페이지 렌더가 되는 환경용)
-    annotated.pdf     원본 그대로 + Slide N 각인
+    model_input.pdf   필기를 지운 판본 + Slide N 각인. **사실을 읽는 채널**
+    annotated.pdf     원본 그대로 + Slide N 각인. **족보를 읽는 채널**
+    jokbo_input.pdf   외부 족보 PDF + 각인(번호는 필기 뒤에 이어서). 줬을 때만
+    jokbo_text.md     외부 족보의 원문 텍스트. 줬을 때만
     media/*.png       원본(필기 포함) 슬라이드 렌더. Anki 카드 뒷면에 들어간다
     outline.json      슬라이드별 제목·본문 앞부분·글자 수
     annotations.json  슬라이드별 필기/형광펜/도장 신호 (중요도 힌트, 근거 아님)
@@ -14,8 +14,13 @@
     prep.json         위 전부의 인덱스. 이후 단계가 읽는 계약 파일
 
 족보 문항은 PDF annotation(이미지)으로만 존재하는 경우가 있다. 그 구간을 clean
-채널로 읽으면 백지가 되어 기출이 통째로 사라진다. 그래서 족보 구간은 annotated
-렌더를 따로 만든다.
+채널로 읽으면 백지가 되어 기출이 통째로 사라진다. 그래서 원본 그대로인
+`annotated.pdf`를 함께 낸다. 두 판본은 쪽 수가 같고 offset도 없다 - 슬라이드 N이
+양쪽에서 N쪽이다.
+
+**모델은 이 PDF들을 Read의 `pages`로 직접 읽는다.** 예전에는 슬라이드마다 PNG를
+미리 뽑아 뒀는데(`model_pages/`·`jokbo_pages/`, 편당 19MB) 그럴 필요가 없어졌다.
+`pages` 경로는 쪽 번호를 돌려주지 않으므로 슬라이드 번호는 각인이 나른다.
 
 LLM 호출 없음.
 """
@@ -46,8 +51,6 @@ from quiz.structure import page_features  # noqa: E402
 from quiz.render import (  # noqa: E402
     make_annotation_clean_pdf,
     make_labeled_pdf,
-    make_page_range_pdf,
-    render_flattened_labeled_pngs,
     render_slide_pngs,
     validate_slide_image_map,
 )
@@ -60,10 +63,6 @@ from quiz.textutil import (  # noqa: E402
 # Read 툴이 PDF에서 한 번에 가져올 수 있는 최대 페이지 수. 모델 입력을 이 크기로
 # 나눠 읽도록 prep.json에 창(window)을 미리 계산해 둔다.
 READ_WINDOW = 20
-
-# 모델이 읽을 clean 슬라이드 PNG 배율. Anki 미디어(2.0)보다 낮게 잡는다 - 모델은
-# 본문·표·그림 라벨을 읽기만 하면 되고, 인쇄 품질은 카드에 들어가는 쪽만 필요하다.
-MODEL_PAGE_SCALE = 1.6
 
 # annotation 종류 → 우선순위 신호. 원본 파이프라인의 분류를 따른다.
 # 이건 '무엇이 중요한가'의 힌트일 뿐, 절대 정답의 근거가 아니다.
@@ -153,8 +152,19 @@ def extract_annotations(doc) -> list[dict]:
     return result
 
 
-def read_windows(num_pages: int, size: int = READ_WINDOW) -> list[str]:
-    return [f"{s}-{min(s + size - 1, num_pages)}" for s in range(1, num_pages + 1, size)]
+def read_windows(num_pages: int, total_slides: int, size: int = READ_WINDOW) -> list[str]:
+    """`pages`로 나눠 읽을 창. **파일 경계를 넘지 않는다.**
+
+    슬라이드 번호로 적지만 읽는 대상은 PDF다. 외부 족보는 별도 파일이라
+    `num_pages`에서 끊어야 한다 - 안 끊으면 `21-39` 같은 창이 나오고, 33쪽짜리
+    `annotated.pdf`에 39쪽을 요청하게 된다.
+    """
+    total = int(total_slides)
+    windows = [f"{s}-{min(s + size - 1, num_pages)}"
+               for s in range(1, num_pages + 1, size)]
+    windows += [f"{s}-{min(s + size - 1, total)}"
+                for s in range(num_pages + 1, total + 1, size)]
+    return windows
 
 
 # 경계를 짐작하던 코드는 전부 지웠다.
@@ -194,22 +204,27 @@ def prep_external_jokbo(jokbo_pdf: Path, run_dir: Path, media_dir: Path, prefix:
         for index, page in enumerate(doc):
             text = (page.get_text() or "").strip()
             lines.append(f"## Slide {first_slide + index}\n")
-            lines.append(text if text else "(텍스트 없음 — jokbo_pages 이미지를 읽어라)")
+            lines.append(text if text else "(텍스트 없음 — jokbo_input.pdf에서 이 쪽을 읽어라)")
             lines.append("")
     if pages < 1:
         raise ValueError(f"족보 PDF가 비어 있습니다: {jokbo_pdf}")
 
+    last_slide = first_slide + pages - 1
     text_path = run_dir / "jokbo_text.md"
     text_path.write_text(
         f"# 족보 원문 — {jokbo_pdf.name}\n\n"
         "슬라이드 번호는 필기 뒤에 이어 붙인 가상 번호다. 그림이 필요한 문항은\n"
-        "`jokbo_pages/jokbo_sNNN.png`를 함께 보라.\n\n" + "\n".join(lines),
+        f"`jokbo_input.pdf`를 함께 보라 - 슬라이드 N은 그 PDF의 N-{first_slide - 1}쪽이다.\n\n"
+        + "\n".join(lines),
         encoding="utf-8")
 
-    last_slide = first_slide + pages - 1
-    jokbo_pages_dir = run_dir / "jokbo_pages"
-    page_map = render_flattened_labeled_pngs(
-        jokbo_pdf, jokbo_pages_dir, "jokbo", slide_start=first_slide, scale=MODEL_PAGE_SCALE)
+    # 여기만 offset이 붙는다. 외부 족보는 별도 파일이라 1쪽부터 시작하는데 슬라이드
+    # 번호는 필기 뒤에 이어지므로, 슬라이드 N = (N - first_slide + 1)쪽이다.
+    # 각인에는 슬라이드 번호가 찍히니 **읽고 나면** 헷갈릴 일이 없다. 헷갈리는 건
+    # 요청할 때뿐이라, offset을 prep.json이 나른다.
+    jokbo_input = run_dir / "jokbo_input.pdf"
+    make_labeled_pdf(jokbo_pdf, jokbo_input, slide_start=first_slide)
+
     media_files, image_map = render_slide_pngs(
         jokbo_pdf, media_dir, f"{prefix}_jokbo", scale=scale, slide_start=first_slide)
 
@@ -217,8 +232,8 @@ def prep_external_jokbo(jokbo_pdf: Path, run_dir: Path, media_dir: Path, prefix:
         "source": str(jokbo_pdf),
         "pages": pages,
         "range": [first_slide, last_slide],
-        "pages_dir": jokbo_pages_dir,
-        "page_map": page_map,
+        "input_pdf": jokbo_input,
+        "slide_offset": first_slide - 1,
         "media_files": media_files,
         "image_map": image_map,
         "text_path": text_path,
@@ -260,21 +275,14 @@ def prep(pdf_path: Path, out_root: Path, scale: float,
     make_labeled_pdf(clean_tmp, model_input, slide_start=1)
     clean_tmp.unlink(missing_ok=True)
 
-    # PDF를 페이지 이미지로 렌더하지 못하는 환경(poppler 미설치 등)에서는 모델이
-    # model_input.pdf를 못 읽고 필기가 살아 있는 media/를 대신 읽어버린다. 그러면
-    # 이 파이프라인의 핵심인 사실/신호 채널 분리가 조용히 무너진다. clean PNG를
-    # 미리 뽑아두어 그 우회로를 없앤다.
-    model_pages_dir = run_dir / "model_pages"
-    _, model_page_map = render_slide_pngs(
-        model_input, model_pages_dir, "clean", scale=MODEL_PAGE_SCALE)
-    validate_slide_image_map(model_page_map, model_pages_dir, num_pages)
-
-    # 신호 채널: 원본 그대로 + 각인.
+    # 신호 채널: 원본 그대로 + 각인. 족보 구간을 읽는 곳이기도 하다.
     annotated = run_dir / "annotated.pdf"
     make_labeled_pdf(pdf_path, annotated, slide_start=1)
 
-    # 족보 구간: 문항이 annotation 안에만 있을 수 있으므로 annotated 렌더를 쓴다.
-    # clean 채널만 쓰면 이 페이지들이 백지가 되어 기출이 통째로 사라진다.
+    # 족보 구간을 따로 렌더하지 않는다. 문항이 annotation 안에만 있을 수 있어서
+    # clean 채널로 읽으면 백지가 되는데, `annotated.pdf`가 원본 그대로이고 쪽 번호도
+    # 같으므로 그 구간만 `pages`로 읽으면 된다. 각인이 annotation이라 필기 위에
+    # 남는다 - 예전에 평탄화 PNG를 굽던 이유가 그것이었다.
     #
     # 여기서 나오는 값은 **힌트**다. 경계를 실제로 정하는 건 structure.json(모델)이고,
     # 코드는 quiz/structure.py의 verify()로 그 판정을 따진다.
@@ -296,24 +304,11 @@ def prep(pdf_path: Path, out_root: Path, scale: float,
     #
     # 그러니 코드는 재기만 하고(`page_features.json`), 판정은 0.5단계가 한다.
     # 뒤에서부터 세는 논리는 버리지 않고 `structure.py`의 검증으로 옮겼다.
-    render_from = max(2, (num_pages // 2) + 1)
-    jokbo_pages_dir = run_dir / "jokbo_pages"
-    jokbo_page_map: dict[int, str] = {}
-    if num_pages >= 6:
-        tmp_pdf = run_dir / "_jokbo_tmp.pdf"
-        # 원본에서 잘라낸다. annotated.pdf를 쓰면 각인이 두 번 들어간다.
-        make_page_range_pdf(pdf_path, tmp_pdf, render_from, num_pages)
-        # 평탄화 후 각인. 그러지 않으면 라벨이 족보 이미지 annotation에 가려진다.
-        jokbo_page_map = render_flattened_labeled_pngs(
-            tmp_pdf, jokbo_pages_dir, "jokbo", slide_start=render_from, scale=MODEL_PAGE_SCALE)
-        tmp_pdf.unlink(missing_ok=True)
-
     external = None
     if jokbo_pdf:
         external = prep_external_jokbo(
             jokbo_pdf, run_dir, media_dir, safe_media_prefix(pdf_path.stem),
             first_slide=num_pages + 1, scale=scale)
-        jokbo_page_map = {**jokbo_page_map, **external["page_map"]}
 
     # Anki 미디어는 원본(필기 포함)에서 렌더한다. 복습 카드 뒷면에서 교수 강조가
     # 보이는 편이 낫고, 이 이미지는 모델 입력이 아니라 사람이 보는 확인용이다.
@@ -345,12 +340,14 @@ def prep(pdf_path: Path, out_root: Path, scale: float,
         "num_pages": num_pages,
         "prepared_at": datetime.now().isoformat(timespec="seconds"),
         "annotations_removed": removed,
+        # 모델이 Read의 `pages`로 직접 읽는 두 채널. 슬라이드 N = 양쪽 다 N쪽이다.
         "model_input_pdf": str(model_input),
-        "model_pages_dir": str(model_pages_dir),
-        "model_pages": [str(model_pages_dir / model_page_map[s]) for s in sorted(model_page_map)],
         "annotated_pdf": str(annotated),
         "jokbo_source": "external" if external else "embedded",
         "jokbo_pdf": external["source"] if external else None,
+        # 외부 족보만 별도 파일이라 offset이 붙는다. 슬라이드 N = (N - offset)쪽.
+        "jokbo_input_pdf": str(external["input_pdf"]) if external else None,
+        "jokbo_slide_offset": external["slide_offset"] if external else None,
         # 원본 족보의 원문. 글이 주고 이미지가 보조다.
         "jokbo_text_path": str(external["text_path"]) if external else None,
         # 외부 족보를 붙였으면 그 구간만은 파일 경계라 확실하다. 필기 안의 경계는
@@ -358,15 +355,11 @@ def prep(pdf_path: Path, out_root: Path, scale: float,
         "external_jokbo_range": external["range"] if external else None,
         "num_lecture_pdf_pages": num_pages,
         "total_slides": total_slides,
-        "jokbo_pages_dir": str(jokbo_pages_dir) if jokbo_page_map else None,
-        "jokbo_rendered_from": render_from if jokbo_page_map else None,
-        # 경계는 여기 없다. structure.json이 주인이다.
-        "jokbo_pages": [str(jokbo_pages_dir / jokbo_page_map[s]) for s in sorted(jokbo_page_map)],
         "page_features_path": str(run_dir / "page_features.json"),
         "media_dir": str(media_dir),
         "media_files": media_files,
         "slide_image_map": {str(k): v for k, v in slide_image_map.items()},
-        "read_windows": read_windows(total_slides),
+        "read_windows": read_windows(num_pages, total_slides),
         "outline_path": str(run_dir / "outline.json"),
         "annotations_path": str(run_dir / "annotations.json"),
         "labels_path": str(run_dir / "labels.json"),
@@ -405,14 +398,17 @@ def main() -> int:
     print(f"[prep] {manifest['lecture_id']} : {manifest['lecture_title']}")
     print(f"  슬라이드 {manifest['num_pages']}장, annotation {manifest['annotations_removed']}개 제거")
     print(f"  필기 신호 {len(annots)}장 / 족보 도장(stamp) {len(stamped)}장: {stamped}")
-    print(f"  전 페이지 clean → {manifest['model_pages_dir']} ({len(manifest['model_pages'])}장)")
-    if manifest["jokbo_pages"]:
-        print(f"  뒤쪽 annotated → {manifest['jokbo_pages_dir']} "
-              f"({manifest['jokbo_rendered_from']}쪽부터 {len(manifest['jokbo_pages'])}장)")
+    print(f"  사실 채널 → {Path(manifest['model_input_pdf']).name} "
+          f"(필기 제거, {manifest['num_pages']}쪽, 슬라이드 N = N쪽)")
+    print(f"  족보 채널 → {Path(manifest['annotated_pdf']).name} "
+          f"(원본 그대로, {manifest['num_pages']}쪽, 슬라이드 N = N쪽)")
     if manifest["jokbo_source"] == "external":
         lo, hi = manifest["external_jokbo_range"]
         text_path = Path(manifest["jokbo_text_path"])
+        offset = manifest["jokbo_slide_offset"]
         print(f"  원본 족보 {lo}-{hi} ({Path(manifest['jokbo_pdf']).name})")
+        print(f"        → {Path(manifest['jokbo_input_pdf']).name} "
+              f"(슬라이드 N = N-{offset}쪽)")
         print(f"        원문 {len(text_path.read_text(encoding='utf-8')):,}자 → {text_path.name}")
     print("  ※ 경계는 짐작하지 않는다. 0.5단계가 structure.json으로 정하고 "
           "quiz/structure.py가 뒤에서부터 세어 따진다")

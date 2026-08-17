@@ -57,24 +57,37 @@ python quiz/prep.py "<pdf>"
 
 `runs/<lecture_id>/`에 생기는 것:
 
-- `model_pages/clean_sNNN.png` — **전 페이지.** 필기 제거 + `Slide N` 각인. 출제의 본체
-- `jokbo_pages/jokbo_sNNN.png` — **뒤 절반.** 우선순위 판단용이자, 중심 흐름일 때는 출제 대상
+- `model_input.pdf` — **출제의 본체.** 필기 제거 + `Slide N` 각인. 슬라이드 N = **N쪽**
+- `annotated.pdf` — **족보 채널.** 원본 그대로 + 각인. 우선순위 판단용이자, 중심 흐름일 때는 출제 대상. 슬라이드 N = **N쪽**
+- `jokbo_input.pdf` — `--jokbo-pdf`를 줬을 때만. 원본 족보 + 각인.
+  **여기만 offset이 붙는다** — 슬라이드 N = (N − `prep.json`의 `jokbo_slide_offset`)쪽
 - `page_features.json` — 페이지별 글자수·annotation·답안 나열·족보 낱말·**붙여넣은 이미지 수**. 0.5단계 입력
 - `jokbo_text.md` — `--jokbo-pdf`를 줬을 때만. 원본 족보의 원문 텍스트
 - `outline.json` / `annotations.json` — 슬라이드별 본문 요약, 필기·형광펜·**도장(stamp)** 신호
-- `media/` — Anki 카드 뒷면용 슬라이드 PNG
+- `media/` — Anki 카드 뒷면용 슬라이드 PNG. **모델 입력이 아니다**
 - `prep.json` — `jokbo_hint`, `slide_image_map` 등 계약 파일
 
-**두 채널이 겹쳐서 렌더된다.** clean은 전 페이지, annotated는 뒤 절반이다. 경계가
-어디로 정해지든 다시 렌더하지 않게 하려는 것이다. `prep.json`의 `jokbo_hint`는
+**두 채널이 겹쳐서 나온다.** 둘 다 전 페이지이고 쪽 번호도 같다. 경계가 어디로
+정해지든 다시 만들지 않게 하려는 것이다. `prep.json`의 `jokbo_hint`는
 **힌트일 뿐이고 경계의 주인은 0.5단계다.**
+
+#### PDF를 읽는 법
+
+```
+Read( runs/<lecture_id>/model_input.pdf , pages: "8-12" )
+```
+
+**한 번에 20쪽까지**이고, 돌아온 이미지에는 **쪽 번호가 없다** — 세지 말고 각 쪽 코너의
+노란 `Slide N` 각인을 읽어라. `pages`를 생략하면 통째로 첨부되고 텍스트 레이어까지
+오지만, 전부 볼 때만 그렇게 한다.
 
 색은 나오지 않는다. 필기자마다 규약이 달라 같은 색이 정반대를 뜻하기 때문이다.
 뜻은 색이 아니라 `annotations.json`의 `notes`에 적힌 **말**에 있다.
 `signals`의 `stamp`는 출제 이력 도장, `pasted_image`는 붙여넣은 캡처다. 섞지 마라.
 
-**서브에이전트에게 채널을 명시하라.** 이 환경에는 poppler가 없어 Read 툴이 PDF 페이지를
-렌더하지 못한다. 채널을 지정하지 않으면 에이전트가 필기가 살아 있는 `media/`로 우회한다.
+**서브에이전트에게 채널을 명시하라.** 지정하지 않으면 에이전트가 필기가 살아 있는
+`media/`로 우회한다. 강의록은 `model_input.pdf`, 족보는 `annotated.pdf`라고
+파일명으로 적어라.
 
 ### 0.5단계 — 구조 판별 (Opus 5 호출 ⓪)
 
@@ -96,7 +109,8 @@ python quiz/prep.py "<pdf>"
 가려라.
 
 > `runs/<lecture_id>/page_features.json`과 `outline.json`을 읽어라. 그다음
-> `jokbo_pages/jokbo_sNNN.png`를 **전부** 읽어라. 강의록 뒷부분과 족보가 섞여 있고,
+> `annotated.pdf`를 **`pages` 없이 통째로** 읽어라 — 경계를 찾는 자리라 전 페이지를
+> 봐야 하고, 통째 읽기는 텍스트 레이어까지 준다. 강의록 뒷부분과 족보가 섞여 있고,
 > 어디서 갈리는지를 네가 정한다.
 >
 > 판정을 `runs/<lecture_id>/structure.json`에 쓴다.
@@ -127,9 +141,10 @@ python quiz/structure.py runs/<lecture_id>
 > **`preview.md`가 있으면 그다음으로 읽어라. 있으면 그것이 이 퀴즈의 본체다**
 > (`preview-rules.md` §0.1). 학생이 강의 직전에 읽을 예습 대화이고, 무엇을 물을지는
 > 거기서 고른다. 없으면 이 줄은 무시한다.
-> `model_pages/clean_sNNN.png`를 **강의록 범위만큼 전부** 읽어라.
+> `model_input.pdf`를 **강의록 범위만큼 전부** 읽어라 (20쪽을 넘으면 나눠 부른다).
 > `outline.json`과 `annotations.json`도 읽어라.
-> 그다음 `jokbo_pages/`의 족보 이미지를 읽어라. 족보의 첫 쓰임은 **우선순위 판단**이다.
+> 그다음 `annotated.pdf`의 족보 구간을 읽어라 (`jokbo_input.pdf`가 있으면 그쪽도 —
+> offset 주의). 족보의 첫 쓰임은 **우선순위 판단**이다.
 > 그 위에, 족보가 §1의 다섯 우선순위를 강의록보다 선명하게 보여주는 지점이 있으면
 > 그것도 `check_point`로 삼을 수 있다 (§2). **족보에 나왔다는 사실만으로는 근거가 안 된다.**
 >
@@ -153,8 +168,8 @@ python quiz/structure.py runs/<lecture_id>
 
 새 `general-purpose` 서브에이전트.
 
-> `pre_blueprint.json`을 읽고, 근거가 필요한 슬라이드는 강의록이면 `model_pages/`,
-> 족보면 `jokbo_pages/`에서 읽어라.
+> `pre_blueprint.json`을 읽고, 근거가 필요한 슬라이드는 강의록이면 `model_input.pdf`,
+> 족보면 `annotated.pdf`에서 `pages`로 그 슬라이드만 읽어라.
 > **`preview.md`가 있으면 함께 읽어라** — 학생이 읽고 올 예습 대화다.
 > **대화가 정리해 준 것을 그대로 물어도 된다.** 수업 전에 외우고 들어가야 하는
 > 것이 이 퀴즈의 본체다 (`preview-rules.md` §0.1).
@@ -195,7 +210,7 @@ python prequiz/validate.py runs/<lecture_id>
 보고 나눈 것인데 **아직 실측하지 않았다** ([docs/pipeline.md](../../../docs/pipeline.md) 4단계).
 
 > `pre_suspects.json`과 `pre_items.checked.json`을 읽어라. 원본 확인이 필요하면
-> 강의록은 `model_pages/`, 족보는 `jokbo_pages/`에서 해당 슬라이드만 읽어라.
+> 강의록은 `model_input.pdf`, 족보는 `annotated.pdf`에서 `pages`로 지목된 슬라이드만 읽어라.
 > `.claude/skills/prequiz/references/preview-rules.md`의 **§12 감사 기준**을 따른다.
 > 최종 배열을 `runs/<lecture_id>/pre_items.final.json`에, 판정 근거를 `pre_audit.md`에 쓴다.
 >

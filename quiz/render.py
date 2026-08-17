@@ -98,7 +98,7 @@ def choose_stamp_corners(pages, slide_start: int = 1) -> list[int]:
 
     좌상단 고정이던 시절 각인이 **제목을 먹었다.** `260812_02`는 33장 중 17장에서
     제목 글자가 상자 밑에 깔렸고, s8·s12는 제목이 `Cell death` 한 마디뿐이라
-    **100% 사라졌다.** 그런데 model_pages는 모델이 사실을 읽는 채널이다.
+    **100% 사라졌다.** 그런데 `model_input.pdf`는 모델이 사실을 읽는 채널이다.
 
     자리를 쪽마다 따로 고르면 안 덮이기는 하지만 각인이 튄다. 각인의 존재 이유가
     "세지 말고 읽어라"이므로 **한 편 안에서 안 움직이는 것**이 값을 한다. 그래서
@@ -139,6 +139,14 @@ def stamp_slide_labels(doc, slide_start: int = 1, corners=None) -> None:
 
     `corners`를 주면 그 판정을 그대로 쓴다. 평탄화한 페이지처럼 **자리를 고를
     근거가 페이지 안에 없을 때** 원본에서 골라 넘기는 용도다.
+
+    각인은 **annotation으로** 붙인다. 페이지 내용으로 그리면 필기가 살아 있는
+    판본에서 각인이 가려진다 - annotation이 페이지 내용보다 위에 그려지기
+    때문이다. `260812_02`의 족보 구간에서 s26은 아래가 잘리고 s27은 `lide 27`만
+    남았다. annotation은 배열 순서로 그려지므로 맨 뒤에 붙으면 필기 위에 온다.
+
+    덕분에 필기 판본을 평탄화해 PNG로 굽는 우회로가 필요 없어졌다. 예전에는
+    `render_flattened_labeled_pngs`가 그 일을 했다.
     """
     pages = list(doc)
     if corners is None:
@@ -149,8 +157,10 @@ def stamp_slide_labels(doc, slide_start: int = 1, corners=None) -> None:
         box_w = 11 * len(label) + 10
         x, y = _corner_origins(page.rect.width, page.rect.height, box_w, STAMP_H)[corners[index]]
         rect = fitz.Rect(x, y, x + box_w, y + STAMP_H)
-        page.draw_rect(rect, color=(0, 0, 0), fill=(1, 1, 0.4), overlay=True)
-        page.insert_textbox(rect, label, fontsize=13, color=(0, 0, 0), align=1, overlay=True)
+        annot = page.add_freetext_annot(
+            rect, label, fontsize=13, fontname="helv",
+            text_color=(0, 0, 0), fill_color=(1, 1, 0.4), align=1)
+        annot.update()
 
 
 def make_labeled_pdf(src_pdf_path, out_pdf_path, slide_start: int = 1) -> int:
@@ -160,20 +170,6 @@ def make_labeled_pdf(src_pdf_path, out_pdf_path, slide_start: int = 1) -> int:
     n = len(doc)
     doc.close()
     return n
-
-
-def make_page_range_pdf(src_pdf_path, out_pdf_path, slide_start: int, slide_end: int) -> int:
-    """원본의 1-indexed slide_start~slide_end를 새 PDF로 저장한다."""
-    src = fitz.open(str(src_pdf_path))
-    total = len(src)
-    start = min(max(1, int(slide_start)), total)
-    end = min(max(start, int(slide_end)), total)
-    out = fitz.open()
-    out.insert_pdf(src, from_page=start - 1, to_page=end - 1)
-    out.save(str(out_pdf_path))
-    out.close()
-    src.close()
-    return end - start + 1
 
 
 def render_slide_pngs(pdf_path, media_dir: Path, prefix: str, scale: float = MEDIA_RENDER_SCALE,
@@ -203,44 +199,6 @@ def render_slide_pngs(pdf_path, media_dir: Path, prefix: str, scale: float = MED
         slide_image_map[slide_no] = img_name
     doc.close()
     return media_files, slide_image_map
-
-
-def render_flattened_labeled_pngs(
-    pdf_path, out_dir: Path, prefix: str, slide_start: int = 1, scale: float = MEDIA_RENDER_SCALE
-):
-    """annotation을 먼저 래스터로 굽고 그 위에 'Slide N'을 각인해 PNG로 저장한다.
-
-    족보 페이지에는 문항이 이미지 annotation으로 붙어 있는데, annotation은 페이지
-    내용보다 위에 그려진다. 그래서 PDF에 각인한 라벨이 족보 이미지에 가려져 보이지
-    않는다. 페이지를 먼저 픽스맵으로 평탄화한 뒤 라벨을 얹으면 항상 맨 위에 남는다.
-
-    반환: {원본 슬라이드 번호: 파일명}
-    """
-    src = fitz.open(str(pdf_path))
-    out_dir = Path(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    page_map: dict[int, str] = {}
-
-    # 평탄화한 페이지는 전면 이미지 한 장뿐이라 어느 코너가 비었는지 알 수 없다.
-    # 원본을 통째로 보고 미리 정해 둔다 - 주력 코너는 편 단위로 정해지므로
-    # 한 쪽씩 물어서는 나오지 않는다.
-    corners = choose_stamp_corners([src.load_page(i) for i in range(len(src))], slide_start)
-
-    for index in range(len(src)):
-        slide_no = int(slide_start) + index
-        pix = src.load_page(index).get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
-
-        flat = fitz.open()
-        page = flat.new_page(width=pix.width, height=pix.height)
-        page.insert_image(fitz.Rect(0, 0, pix.width, pix.height), pixmap=pix)
-        stamp_slide_labels(flat, slide_no, corners=[corners[index]])
-
-        img_name = f"{prefix}_s{slide_no:03d}.png"
-        page.get_pixmap(alpha=False).save(str(out_dir / img_name))
-        flat.close()
-        page_map[slide_no] = img_name
-    src.close()
-    return page_map
 
 
 def validate_slide_image_map(slide_image_map: dict, media_dir: Path, num_pages: int) -> None:

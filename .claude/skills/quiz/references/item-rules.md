@@ -93,7 +93,9 @@
 ### 4.1 채널
 
 족보 문항은 PDF annotation(이미지)으로만 존재하는 경우가 있어, 필기를 제거한 clean
-채널에서는 백지로 보인다. 족보 슬라이드는 `jokbo_pages/`(annotated)로 읽는다.
+채널에서는 백지로 보인다. 족보 슬라이드는 `annotated.pdf`(원본 그대로)로 읽는다 —
+쪽 번호는 `model_input.pdf`와 같아서 슬라이드 N이 N쪽이다. 외부 족보 PDF를 붙였으면
+그 구간은 `jokbo_input.pdf`이고, 거기만 `prep.json`의 `jokbo_slide_offset`을 뺀다.
 
 ### 4.2 족보 문항을 카드로
 
