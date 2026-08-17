@@ -66,6 +66,26 @@ async function existingShareUrl(conversation, token) {
   return match.share_url || (match.id ? `https://chatgpt.com/share/${match.id}` : "");
 }
 
+/**
+ * 정말 남이 열 수 있는가.
+ *
+ * `/share/create`는 **비공개 초안**을 만든다. 공개로 바꾸는 것은 그다음 PATCH인데,
+ * 그게 안 먹어도 주소는 멀쩡히 생긴다 — 만든 사람은 자기 초안이라 열리고 남은
+ * 404를 본다. 실제로 그렇게 나갔다.
+ *
+ * 그래서 주소가 생긴 것으로 끝내지 않고 쿠키 없이 한 번 받아 본다. 같은 출처라
+ * 요청은 나가고, 공개가 아니면 404가 돌아온다.
+ */
+async function isPubliclyReadable(url) {
+  try {
+    const response = await fetch(url, { credentials: "omit", redirect: "follow" });
+    return response.ok;
+  } catch (error) {
+    console.warn(LOG, "공개 여부를 확인하지 못했습니다:", error);
+    return false;
+  }
+}
+
 async function publishViaApi(conversation, token, state) {
   const created = await api("/share/create", token, {
     method: "POST",
@@ -85,21 +105,32 @@ async function publishViaApi(conversation, token, state) {
   //
   // current_node_id를 여기서 다시 보내는 이유: 이미 공유된 대화면 create가 기존
   // 공유를 그대로 돌려주므로, 스냅숏을 새 턴까지 미는 것은 이 호출뿐이다.
-  const published = await api(`/share/${shareId}`, token, {
-    method: "PATCH",
-    body: JSON.stringify({
-      share_id: shareId,
-      current_node_id: state.currentNode,
-      highlighted_message_id: draft?.highlighted_message_id ?? null,
-      title: draft?.title ?? null,
-      is_public: true,
-      is_visible: true,
-      is_anonymous: true,
-      is_discoverable: false,
-    }),
-  });
-  if (!published.ok) throw new Error(`공유 공개에 실패했습니다 (HTTP ${published.status}).`);
-  return draft?.share_url || `https://chatgpt.com/share/${shareId}`;
+  const url = draft?.share_url || `https://chatgpt.com/share/${shareId}`;
+
+  // 한 번 실패하면 다시 시도한다. PATCH가 안 먹는 이유가 일시적일 수 있고,
+  // 여기서 포기하면 반 전체가 열지 못하는 링크가 나간다.
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const published = await api(`/share/${shareId}`, token, {
+      method: "PATCH",
+      body: JSON.stringify({
+        share_id: shareId,
+        current_node_id: state.currentNode,
+        highlighted_message_id: draft?.highlighted_message_id ?? null,
+        title: draft?.title ?? null,
+        is_public: true,
+        is_visible: true,
+        is_anonymous: true,
+        is_discoverable: false,
+      }),
+    });
+    if (!published.ok) {
+      console.warn(LOG, `공개 전환 ${attempt}차 실패 (HTTP ${published.status})`);
+      continue;
+    }
+    if (await isPubliclyReadable(url)) return url;
+    console.warn(LOG, `공개 전환은 200인데 ${attempt}차 확인에서 아직 안 열립니다:`, url);
+  }
+  throw new Error("공유를 공개로 바꾸지 못했습니다. 만든 계정에서만 열리는 주소입니다.");
 }
 
 function visible(element) {
@@ -158,7 +189,18 @@ async function publish() {
     } catch (error) {
       console.info(LOG, "백엔드 공유 실패, 대화상자로 재시도합니다:", error);
       url = await publishViaDialog();
+      lastSharedNode = "";
     }
+
+    // **확인 안 된 주소는 내보내지 않는다.** 화면에서 긁어 온 주소가 아직
+    // 비공개 초안일 수 있고, 그것이 반의 기본 링크로 저장되면 만든 사람 말고는
+    // 아무도 못 연다.
+    if (url && !(await isPubliclyReadable(url))) {
+      console.error(LOG, "공개되지 않은 주소라 저장하지 않습니다:", url);
+      lastSharedNode = "";
+      return "settled";
+    }
+
     // share id는 다시 내도 그대로다. 웹앱에 알릴 것은 처음 하나뿐이고 이후 턴은
     // 같은 주소가 보여 주는 내용만 갱신된다.
     if (url && url !== lastPublished) {
