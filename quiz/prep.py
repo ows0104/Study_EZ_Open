@@ -237,15 +237,25 @@ def extract_annotations(doc) -> list[dict]:
             except Exception:
                 content = ""
             if content:
-                notes.append(content[:200])
+                notes.append(content)
         marks = _mark_targets(page, typed) if typed else []
         if signals or notes:
             entry = {
                 "slide_no": i + 1,
                 "signals": signals,
-                # 필기자의 말은 그대로 싣는다. "이 부분은 시험에 안 낸다고 하셨습니다"
+                # 필기자의 말은 **그대로** 싣는다. "이 부분은 시험에 안 낸다고 하셨습니다"
                 # 같은 문장이 여기 있고, 그건 어떤 색보다 확실한 신호다.
-                "notes": notes[:12],
+                #
+                # 한때 한 줄을 200자로, 슬라이드당 12줄로 잘랐다. 주석은 "그대로
+                # 싣는다"고 적혀 있었지만 코드는 자르고 있었고, 그 차이가 카드를 깎았다 -
+                # `260814_05`에서 s22 필기의 잘린 23자가 `(cerebral infarct)`였고, 조각
+                # 에이전트가 "노트에 없다"며 뇌경색을 뺐다. 청사진은 PDF를 직접 읽어
+                # 그걸 봤으므로 두 단계가 서로 다른 것을 보고 있었다.
+                #
+                # 14편 실측: 필기 1,608줄 중 74줄이 꼬리를 잃었고(14,439자) 3줄은 통째로
+                # 빠졌다. 상한을 없앤 비용은 편당 +2KB(전체 171K→198K)이고 가장 긴 필기
+                # 한 줄이 938자다. 아낄 이유가 없다.
+                "notes": notes,
             }
             # 위치가 뜻인 표시가 무엇에 닿았는지. 없으면 키 자체를 안 만든다.
             if marks:
