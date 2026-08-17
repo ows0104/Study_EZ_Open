@@ -7,9 +7,14 @@ description: 강의 PDF와 그 안의 족보(기출)에서 의대 시험 대비 
 
 강의 한 편을 받아 **Opus 5 호출 3+N회**와 코드 4패스로 Anki 덱을 만든다.
 0.5·1·4단계가 각 1회이고, 2단계는 주제 조각 수만큼(보통 4~6) 동시에 돈다.
-실측(강의록 25쪽·75장): 0.5단계 3분 · 1단계 14분 · 2단계 8분(조각 6개 병렬) ·
-4단계 21분 · 코드 2분 = **약 48분.** 조각을 병렬로 돌려도 1·4단계가 길어 전체는
-크게 안 줄어든다 - 조각화가 줄이는 것은 시간이 아니라 **한 번에 죽을 위험**이다.
+한 편을 손으로 잰 분해(강의록 25쪽·75장): 0.5단계 3분 · 1단계 14분 ·
+2단계 8분(조각 6개 병렬) · 4단계 21분 · 코드 2분 = **약 48분.** 조각을 병렬로 돌려도
+1·4단계가 길어 전체는 크게 안 줄어든다 - 조각화가 줄이는 것은 시간이 아니라
+**한 번에 죽을 위험**이다.
+
+다만 `prepared_at`→`built_at`으로 잰 **실제 총 소요는 53~85분**이다(`260814_03` 53분 ·
+`260812_01` 61분 · `260814_05` 85분). 위 분해는 편 하나짜리이고 그 사이가 통짜였다.
+그래서 `timings.jsonl`을 넣었다 — 아래 「단계마다 시각을 찍는다」.
 모델은 카드와 **슬라이드 번호**까지만 책임진다. 이미지 첨부와 패키징은 코드가 한다.
 
 목적과 출제 규칙은 [references/item-rules.md](references/item-rules.md)에 있다.
@@ -35,6 +40,40 @@ Main-Quiz는 **올해** 필기가 대상이다. 어느 강의의 작년 판인�
 `PYTHONIOENCODING=utf-8 "C:/Users/ows01/anaconda3/python.exe"` 로 부르고,
 작업 디렉터리는 이 저장소 루트다.
 
+### 단계마다 시각을 찍는다
+
+**코드 단계는 스스로 찍는다.** 아무것도 안 해도 된다.
+
+**모델 단계는 네가 찍는다.** 서브에이전트를 띄우기 **직전**과 결과를 받은 **직후**:
+
+```bash
+python quiz/timings.py runs/<lecture_id> start 1-blueprint
+python quiz/timings.py runs/<lecture_id> end   1-blueprint
+```
+
+2단계처럼 여러 개가 동시에 도는 자리는 `--label`로 조각을 가른다. 그래야 **벽시계와
+작업시간 합**이 갈린다 — 조각화가 줄이는 것은 합이 아니라 벽시계이므로, 하나만 보면
+조각화의 값을 잘못 읽는다.
+
+```bash
+python quiz/timings.py runs/<lecture_id> start 2-write --label c1
+python quiz/timings.py runs/<lecture_id> end   2-write --label c1
+```
+
+단계 이름은 아래로 고정한다. 바꾸면 편끼리 비교가 안 된다.
+
+    0.5-model   1-blueprint   2-write(--label 조각)   4-audit
+
+**왜 찍나.** 편당 48분을 어디서 줄일지 정하려면 단계별 소요가 있어야 하는데, 여태
+남는 시각이 `prepared_at`과 `built_at` 둘뿐이라 그 사이가 통짜였다. 실제 총 소요는
+53~85분인데(`260814_03` 53분 · `260812_01` 61분 · `260814_05` 85분) 그 안에서 1단계와
+4단계가 각각 몇 분인지는 **아무도 모른다.** 위의 3/14/8/21/2는 한 편을 손으로 잰 값
+하나다.
+
+**한 번에 한 편만 돌려라.** 여러 편을 동시에 돌리면 에이전트끼리 밀려서 벽시계가
+파이프라인의 비용이 아니라 그날 몇 개를 같이 돌렸는지를 재는 값이 된다 — 실측에서
+여덟을 함께 돌렸더니 일곱은 10~16분인데 하나가 4시간을 넘겼다.
+
 ### 0단계 — 준비 (코드)
 
 ```bash
@@ -51,12 +90,15 @@ python quiz/prep.py "<pdf>"
 - `jokbo_text.md` — `--jokbo-pdf`를 줬을 때만. **원본 족보의 원문 텍스트.**
   선지를 한 글자도 흘리지 않고 옮길 수 있어 이쪽을 먼저 읽는다. 다만 정답표와
   사진 문항은 이미지에만 있으므로 `jokbo_input.pdf`를 함께 봐야 한다
-- `outline.json` / `annotations.json` — 슬라이드별 본문 요약, 필기·형광펜·**도장(stamp)** 신호
+- `outline.json` / `annotations.json` — 슬라이드별 본문 요약, 필기·형광펜·**도장(stamp)** 신호.
+  `annotations.json`의 `marks`가 **표시가 무엇에 닿았는지**를 들고 있다
+  (`covers`·`on`·`where`). `signals`는 개수뿐이다
 - `labels.json` — 슬라이드별 라벨 후보와 정확한 bbox. 이미지 오클루전 카드가 여기서 좌표를 가져온다
 - `media/` — Anki 카드 뒷면용 슬라이드 PNG. 모델 입력이 아니지만 **각인이 없다.**
   각인이 봐야 할 것을 덮었을 때 여는 곳이다 — `260814_05`에서 각인이 s48·s49의 족보
   정답표를 덮었고 조각 둘이 여기서 값을 회수했다. 족보 페이지는 처음부터 이쪽이 낫다
 - `prep.json` — `slide_image_map`, `total_slides` 등 계약 파일. **경계는 여기 없다**
+- `timings.jsonl` — 단계별 시작·종료. 코드 단계는 스스로 찍고 모델 단계는 네가 찍는다
 
 `prep.json`의 **`poppler_available`이 `false`면 `pages` 읽기가 안 된다.** prep은 그래도
 성공하므로(실측: 종료 코드 0) 조각 에이전트에 가서야 터진다. 0단계 출력의 경고를 보고,
@@ -107,6 +149,8 @@ Read( runs/<lecture_id>/model_input.pdf , pages: "8-12" )
 ### 0.5단계 — 구조 판별 (Opus 5 호출 ⓪)
 
 `general-purpose` 서브에이전트. **문항도 카드도 만들지 않는다.** 경계와 주제만 정한다.
+
+띄우기 직전에 `timings.py ... start 0.5-model`, 받은 직후에 `end 0.5-model`.
 
 족보 경계는 문구 정규식으로 못 잡는다. 실물에서 이렇게 깨졌다 — 표지가 "정답"이면
 낱말 목록에 없어서 놓치고, 문항 본문이 annotation 이미지뿐이면 "빈 페이지" 폴백도 안
@@ -167,6 +211,8 @@ python quiz/structure.py runs/<lecture_id>
 
 `general-purpose` 서브에이전트. **카드는 만들지 않는다.** 무엇을 물을지만 정한다.
 
+띄우기 직전에 `timings.py ... start 1-blueprint`, 받은 직후에 `end 1-blueprint`.
+
 `structure.json`의 `lecture_range`·`jokbo_range`가 이 단계의 범위다. `chunks`는 이미
 나뉜 주제이므로 다시 나누지 말고 그 위에 목표를 얹어라.
 
@@ -205,6 +251,9 @@ python quiz/structure.py runs/<lecture_id>
     c2     obj_4~6     슬라이드 7-11     →  items.raw.c2.json
     ...
     jokbo  obj_14~19   슬라이드 26-39    →  items.raw.jokbo.json
+
+**조각마다 따로 찍어라** — `start 2-write --label c1` … `end 2-write --label c1`.
+라벨이 없으면 벽시계와 작업시간 합이 안 갈리고, 그 둘의 차이가 조각화의 값이다.
 
 조각 하나는 5분 안팎이고 서로 독립이라 **하나가 죽어도 나머지는 남는다.**
 objective를 조각에 배분할 때는 `slides`의 최솟값이 어느 chunk 범위에 드는지로
@@ -254,8 +303,12 @@ python quiz/validate.py runs/<lecture_id>
 
 ### 4단계 — 감사 (Opus 5 호출 ③)
 
-새 `general-purpose` 서브에이전트로 돌린다. 자기가 쓴 걸 자기가 의심하기는 어렵다고
-보고 나눈 것인데 **아직 실측하지 않았다** ([docs/pipeline.md](../../../docs/pipeline.md) 4단계).
+새 `general-purpose` 서브에이전트로 돌린다. **실측했다**
+([docs/pipeline.md](../../../docs/pipeline.md) 4단계) — 값을 하는 것은 감사자가 다른
+에이전트라는 게 아니라 **덱 전체를 한 번에 본다는 것**이다. 조각 경계 중복·회상 중복·
+과출제 집중은 거기서만 잡힌다. 카드 한 장 단위의 시각 확인은 오히려 2단계가 더 잘했다.
+
+띄우기 직전에 `timings.py ... start 4-audit`, 받은 직후에 `end 4-audit`.
 
 **최종 배열을 통째로 쓰게 하지 마라.** 74장을 다시 출력하면 2단계가 죽었던 그
 자리에 또 걸린다. 감사가 실제로 손대는 것은 보통 2~3할이니 **바뀐 것만** 쓰게 한다.
@@ -310,12 +363,13 @@ python quiz/build.py runs/<lecture_id> --items items.final.json --project <과�
 
 ## 사용자 보고
 
-- 덱 이름, 카드 수, 학습 단계(important/frequent/detail)·출처(강의록/족보) 분포
+- 덱 이름, 카드 수, 중요도(core/detail)·기출 여부(exam_hit)·출처(강의록/족보) 분포
 - 이미지 오클루전 카드 수
 - 족보 정오 검토 플래그가 붙은 카드 수
 - 감사에서 삭제/수정/보충한 수
 - **카드가 하나도 없는 슬라이드 번호** — 사용자가 직접 확인해야 할 항목
 - `.apkg` 경로. Anki에서 수동 import한다 (자동 투입하지 않는다)
+- **단계별 소요** — `python quiz/timings.py runs/<lecture_id> report`의 표를 그대로 붙인다
 
 ## 실패 시
 

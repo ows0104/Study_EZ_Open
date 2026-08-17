@@ -109,8 +109,100 @@ def extract_outline(doc) -> list[dict]:
     return outline
 
 
+# 위치가 곧 뜻인 표시. 개수만으로는 아무것도 못 하고 **무엇에 닿았는지**가 신호다.
+_POSITIONAL = {"red_box", "highlight", "underline"}
+# span이 이만큼 표시 안에 들어와야 "닿았다"고 본다.
+_MARK_MIN_OVERLAP = 0.6
+# 밑줄은 글자 **아래**에 앉아서 글자 상자와 거의 안 겹친다. 실측 234개 중 52개가
+# 이 보정 없이는 "안 닿음"으로 나왔다. 위로 늘려 다시 본다.
+_UNDERLINE_LIFT = 12.0
+_MARKS_PER_SLIDE = 20
+_ZONE = ("좌", "중", "우")
+_BAND = ("상", "중", "하")
+
+
+def _zone_label(rect, page_rect) -> str:
+    """표시가 놓인 자리를 3x3로 거칠게 부른다 (`우상`, `중중` 같은 꼴).
+
+    정규화 좌표를 주지 않는 이유: 모델이 읽는 `model_input.pdf`는 각인용 하단 띠
+    때문에 원본보다 높이가 크다. 원본 기준 분모로 낸 좌표를 그 위에 얹으면 어긋난다
+    (오클루전에서 겪은 것과 같은 함정). 자리 이름은 분모와 무관하다.
+    """
+    cx = (rect.x0 + rect.x1) / 2 / max(float(page_rect.width), 1.0)
+    cy = (rect.y0 + rect.y1) / 2 / max(float(page_rect.height), 1.0)
+    return _ZONE[min(2, int(cx * 3))] + _BAND[min(2, int(cy * 3))]
+
+
+def _mark_targets(page, annots) -> list[dict]:
+    """표시마다 **무엇에 닿았는지**를 적는다. 판정은 하지 않는다.
+
+    `item-rules.md` §5가 "표시가 닿은 본문·표·그림을 재검토하라"고 요구하는데
+    예전에는 `{"red_box": 4}`처럼 개수만 나가서 **규칙이 가리키는 대상이 데이터에
+    없었다.** 4편 465개를 재보니 표시마다 닿는 것이 다르다.
+
+        red_box   153개 :: 그림 124 · 글자 19
+        underline 234개 :: 글자 179 (52는 위 보정으로 잡힌다)
+        highlight  78개 :: 글자 56
+
+    **`red_box`는 대개 그림에 쳐진다.** 그래서 `covers`가 비는 것이 정상이고,
+    그때는 `on: "figure"`와 자리 이름으로 "여기를 보라"고만 알린다. 그림 안의
+    이름표는 붙여넣은 이미지의 픽셀에 구워져 텍스트로 안 잡히기 때문이다.
+    """
+    spans, images = [], []
+    for block in page.get_text("dict")["blocks"]:
+        if block.get("type") == 1:
+            images.append(fitz.Rect(block["bbox"]))
+            continue
+        for line in block.get("lines", []):
+            for span in line["spans"]:
+                if span["text"].strip():
+                    spans.append((fitz.Rect(span["bbox"]), span["text"].strip()))
+
+    # 필기가 **스스로 쓴 글자**는 대상이 아니다. FreeText는 자기 본문을 자기가
+    # 두르고 있어서, 빼지 않으면 모든 메모가 "자기 자신에 닿았다"고 나온다.
+    note_rects = [fitz.Rect(a.rect) for a, sig in annots if sig == "student_note"]
+
+    def is_note_text(span_rect) -> bool:
+        for nr in note_rects:
+            inter = span_rect & nr
+            if not inter.is_empty and abs(inter.get_area()) >= _MARK_MIN_OVERLAP * abs(span_rect.get_area()):
+                return True
+        return False
+
+    marks: list[dict] = []
+    for annot, signal in annots:
+        if signal not in _POSITIONAL:
+            continue
+        rect = fitz.Rect(annot.rect)
+        probe = rect
+        if signal == "underline":
+            probe = fitz.Rect(rect.x0, rect.y0 - _UNDERLINE_LIFT, rect.x1, rect.y1 + 2)
+        covers = []
+        for span_rect, text in spans:
+            if is_note_text(span_rect):
+                continue
+            inter = span_rect & probe
+            if inter.is_empty:
+                continue
+            # 분모는 **둘 중 작은 쪽**이다. 한쪽만 쓰면 방향에 따라 놓친다 -
+            # 형광펜은 긴 줄의 몇 낱말만 덮어서 span 기준으로는 비율이 낮고,
+            # 큰 상자는 작은 글자를 통째로 삼켜서 상자 기준으로는 비율이 낮다.
+            # span 기준만 쓰던 때 이 편의 형광펜 15개 중 11개가 "안 닿음"으로 나왔다.
+            denom = min(abs(span_rect.get_area()), abs(probe.get_area())) or 1.0
+            if abs(inter.get_area()) >= _MARK_MIN_OVERLAP * denom:
+                covers.append(text[:80])
+        on = "text" if covers else ("figure" if any(not (rect & ir).is_empty for ir in images) else "none")
+        marks.append({
+            "signal": signal,
+            "on": on,
+            "where": _zone_label(rect, page.rect),
+            "covers": covers[:12],
+        })
+    return marks[:_MARKS_PER_SLIDE]
+
+
 def extract_annotations(doc) -> list[dict]:
-    """슬라이드별 필기 신호. 종류와 본문(FreeText)을 수집한다.
+    """슬라이드별 필기 신호. 종류·본문(FreeText)·**표시가 닿은 대상**을 수집한다.
 
     색은 싣지 않는다 - 위의 주석을 보라. 뜻은 색이 아니라 `notes`의 글에 있다.
     """
@@ -119,6 +211,7 @@ def extract_annotations(doc) -> list[dict]:
         page = doc.load_page(i)
         signals: dict[str, int] = {}
         notes: list[str] = []
+        typed: list[tuple] = []
         try:
             annots = list(page.annots() or [])
         except Exception:
@@ -138,20 +231,26 @@ def extract_annotations(doc) -> list[dict]:
                 if name.startswith("clipboard.image"):
                     signal = "pasted_image"
             signals[signal] = signals.get(signal, 0) + 1
+            typed.append((annot, signal))
             try:
                 content = (annot.info or {}).get("content", "").strip()
             except Exception:
                 content = ""
             if content:
                 notes.append(content[:200])
+        marks = _mark_targets(page, typed) if typed else []
         if signals or notes:
-            result.append({
+            entry = {
                 "slide_no": i + 1,
                 "signals": signals,
                 # 필기자의 말은 그대로 싣는다. "이 부분은 시험에 안 낸다고 하셨습니다"
                 # 같은 문장이 여기 있고, 그건 어떤 색보다 확실한 신호다.
                 "notes": notes[:12],
-            })
+            }
+            # 위치가 뜻인 표시가 무엇에 닿았는지. 없으면 키 자체를 안 만든다.
+            if marks:
+                entry["marks"] = marks
+            result.append(entry)
     return result
 
 
