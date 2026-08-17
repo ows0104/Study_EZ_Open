@@ -37,16 +37,107 @@ runs/        산출물. 원본 PDF에서 언제든 재생성된다 (저장소에
 
 ```bash
 python -m studyez jokbo 병리학         # 과목 족보를 강의별로 자른다 (학기당 1회)
-python -m studyez preview <run_id> --url <공유 링크>   # 예습 대화 → preview.md
+python -m studyez prequeue             # 관리자가 저장한 예습 링크 → Pre-Quiz 자리
+python -m studyez preview <run_id> --url <공유 링크>   # 예습 대화 하나만 손으로
 python -m studyez match 병리학         # 올해 강의를 작년 강의에 붙인다
 python -m studyez match --all
-python -m studyez watch                # 새로 올라온 필기를 찾아 큐를 세운다
+python -m studyez watch                # 이번 블럭에 새로 올라온 필기로 큐를 세운다
 python -m studyez watch --prep         # 스캔 + prep까지 (21:30 자동 실행용)
+python -m studyez watch --all-dates    # 블럭으로 안 좁힌다 (밀린 것을 몰아 만들 때)
 python -m studyez prep-prev <run_id>   # 올해 필기에 족보가 없을 때만 작년을 끌어온다
-python -m studyez done <run_id>        # 빌드를 확인한 뒤. 다음 스캔에서 빠진다
+python -m studyez done <run_id>        # 빌드를 확인한 뒤. 표시하고 그 편을 올린다
+python -m studyez publish --all        # 아직 안 올라간 것을 전부 훑는다
 ```
 
 `watch --prep`이 `runs/queue.json`을 남기면, 세션이 한 편씩 `/quiz`를 돌린다.
+
+### 예습만 방향이 반대다
+
+Main-Quiz는 **필기가 올라오는 것**에서 시작한다(`watch`). Pre-Quiz는 **사람이
+예습하는 것**에서 시작한다 — 관리자가 작년 강의록으로 AI와 예습하고 그 대화를
+`/admin`에 저장하면, 거기서부터 자동이다.
+
+```
+관리자가 /admin에 예습 링크 저장
+  → studyez prequeue    작년 짝 고르기 · prep · preview.md · runs/prequeue.json
+  → /prequiz            문항을 만드는 것은 여기뿐이다 (모델)
+  → studyez done <작년 run_id>    덱·문항·링크가 함께 올라간다
+```
+
+`prequeue`는 멱등이다. `preview.md`에 적힌 출처가 서버의 링크와 같으면 그대로 두고,
+`pre_items.final.json`까지 있으면 `done`으로 적어 건너뛴다. 링크가 바뀌었는데 덱이
+이미 있으면 `stale`로 적는다 — 그 덱은 다른 대화로 만든 것이라 다시 만들어야 한다.
+
+가운데의 `/prequiz`는 모델이 도는 자리라 코드가 부를 수 없다. 그래서
+`scripts/nightly-prequiz.ps1`이 `claude -p "/prequiz <경로>"`로 **세션을 대신
+띄운다.** 그 스크립트가 하는 판단은 셋뿐이다 — 무엇을 몇 편까지 만들지, 언제
+끊을지, 만들어졌는지. 나머지는 전부 스킬 안에 있다.
+
+### 업로드는 손을 기다리지 않는다
+
+세 자리에서 걸린다.
+
+| 언제 | 무엇이 | 무엇을 |
+|---|---|---|
+| 편이 끝날 때 | `studyez done <run_id>` (스킬 5단계 다음) | 그 한 편 |
+| 매일 04:00 | `scripts/nightly-prequiz.ps1` | 예습 링크가 저장된 편의 Pre-Quiz |
+| 매일 06:00 | `scripts/nightly-publish.ps1` → `prequeue` → `publish` | 그 과목에서 놓친 것 |
+
+**04:00이 06:00보다 먼저인 것은 뜻이 있다.** 예습 빌드가 스스로 올리지만
+중간에 끊긴 편은 두 시간 뒤 쓸기가 받는다.
+
+**야간은 지금 병리학만 본다.** 과목을 안 주면 `--all`이라 필기가 있는 과목 전부를
+훑는데, 다른 과목은 아직 강의록이 한 번도 안 올라가 첫 회차가 3GB가 된다. 과목을
+늘리려면 `-Subject`에 이름을 더 주고 다시 걸면 된다.
+
+야간 쪽이 받는 것은 **`done`이 못 받은 자리**다 — 세션이 `done`을 안 부르고 끝난
+편, 업로드 중간에 끊긴 파일, 진도보다 앞서 만들어 둔 Pre-Quiz(올해 필기가 그
+사이 올라왔다), 필기가 새 판으로 갈린 편.
+
+겹쳐 돌아도 되는 이유는 `publish`가 멱등이기 때문이다. `runs/published.json`의
+(크기, mtime) 표시와 **서버가 실제로 R2를 HEAD해 본 결과** 둘을 보고, 바뀐 것과
+정말 없는 것만 민다. 표시가 거짓말을 해도 그 자리에서 드러난다.
+
+한 번 걸면 둘 다 선다.
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts\install-scheduled-task.ps1 -Subject 병리학
+powershell -ExecutionPolicy Bypass -File scripts\install-scheduled-task.ps1 -Subject 병리학 -PrequizMax 3 -PrequizWithinDays 7
+powershell -ExecutionPolicy Bypass -File scripts\install-scheduled-task.ps1 -Only publish   # 쓸기만
+powershell -ExecutionPolicy Bypass -File scripts\install-scheduled-task.ps1 -Remove
+```
+
+로그는 `runs/publish.log`와 `runs/prequiz.log`. 노트북이 그 시각에 자고 있으면
+깨어난 뒤 밀린 회차를 한 번 돈다(`-StartWhenAvailable`). 로그온해 있어야 돈다.
+
+### 무인 빌드가 스스로 지키는 것
+
+`nightly-prequiz.ps1`은 사람이 안 보는 동안 도는 유일한 **모델** 실행이다.
+그래서 넷을 지킨다.
+
+- **상한을 둔다.** 편당 실측 약 34분에 Opus 호출 4회다. `-Max`(기본 2)로 막고,
+  **자른 편은 로그에 이름을 적는다** — 조용히 자르면 다 만든 줄로 읽힌다
+- **급한 것부터.** 강의 날짜가 이른 순서로 고른다. 내일 강의가 다음 주보다 급하다
+- **성공을 종료 코드로 안 본다.** `claude -p`는 모델이 "못 하겠다"고 답해도 0으로
+  끝난다. `pre_items.final.json`이 **그 실행 뒤에 새로 쓰였는지**로 가른다
+- **멈추면 끊는다.** `-TimeoutMinutes`(기본 75)를 넘기면 그 편을 버리고 다음으로
+  간다. 한 편이 밤을 통째로 먹지 않게
+
+권한은 `--allowedTools`로 그 실행에만 준다. 프로젝트 설정에 넣으면 사람이 여는
+세션까지 같이 넓어진다. 거부가 하나라도 나면 로그에 적는데, 그건 대개 이 스크립트의
+목록이 모자라다는 뜻이다.
+
+### 왜 블럭으로 좁히나
+
+`필기/<올해>` 폴더는 학기가 바뀌어도 그대로 남는다. 좁히지 않으면 스캔이 그 폴더를
+전부 훑고 **날짜 오름차순으로** 자르기 때문에 지난 학기 필기가 먼저 걸린다 —
+2026-08-17 밤 자동 실행이 조직학 3월 6편을 prep까지 끌고 갔고, 그날 올라온 병리학은
+한 편도 안 잡혔다.
+
+그래서 `studyez/blocks.py`가 **오늘 날짜로 시간표에 물어** 이번 블럭의 구간을 정하고,
+그 안에 든 강의만 큐에 세운다. 시간표를 못 읽거나 오늘이 어느 블럭에도 안
+들어가면 **큐를 세우지 않고 2로 끝난다.** 열어 두는 쪽이 훨씬 비싸다.
+사람이 `--since`/`--until`로 구간을 주거나 `--all-dates`로 푼다.
 
 ## 다루지 않는 과목
 
@@ -143,14 +234,25 @@ python -m studyez done <run_id>        # 빌드를 확인한 뒤. 다음 스캔�
 **뜻은 색이 아니라 글에 있다.** 그래서 FreeText 본문(`annotations.json`의 `notes`)은
 그대로 싣고 색은 버린다. 남겨 두면 쓰이고, 쓰이면 근거로 둔갑한다.
 
-## 배포는 **당분간** 사람이 본 뒤다
+## 배포는 검문을 통과한 것만 자동으로 나간다
 
-`/quiz`는 Opus 5를 3+N회 부르고, 족보 경계가 틀리면 뒤가 전부 어긋난다.
-`run.meta.json`에 `review_flagged`·`slides_unused`가 남는다.
-**지금은 생성까지 자동, 배포는 사람이 본 뒤다.**
+`/quiz`는 Opus 5를 3+N회 부르고, 족보 경계가 틀리면 뒤가 전부 어긋난다. 그래서
+`publish`가 편마다 [studyez/gate.py](studyez/gate.py)에 물어보고, 막힌 편은
+**강의록만 내보내고 덱·run-meta·예습은 미룬다.** 통째로 멈추지 않는 이유는
+강의록이 그 검토와 무관한 자료이고, 먼저 나가야 캘린더 칸이 열리기 때문이다.
 
-목표는 배포까지 자동이고, 사람이 보는 것은 이상 징후가 있을 때로 좁히는 것이다.
-그 문턱을 아직 정하지 않았다 — [docs/architecture.md](docs/architecture.md)를 보라.
+막는 것은 **개수가 아니라 종류이거나, 산출물이 스스로 주장하는 것과 다른
+경우**뿐이다 — apkg의 실제 내용물이 `item_count`와 다를 때, `answer_mismatch`가
+있을 때, 확정본 검증에서 hard 제거가 났을 때, 덱을 무엇으로 만들었는지 모를 때,
+그리고 덱의 판이 필기의 판보다 낡았을 때.
+
+`slides_unused`·`untouched_slides`·`review_flagged` 총계로는 **막지 않는다.**
+CLAUDE.md "계수기는 아직 사람을 부를 줄 모른다"가 그 후보들을 이미 떨어뜨렸다.
+적어서 보고에 올릴 뿐이다.
+
+문턱이 아직 실측된 것은 아니다. `answer_mismatch`는 지금껏 한 번도 안 나왔으므로,
+처음 걸리는 편이 나오면 그것이 첫 실측이다. 사람이 걸린 이유를 읽고 괜찮다고
+판단하면 `--no-gate`로 민다.
 
 ## 저장소에 없는 것
 

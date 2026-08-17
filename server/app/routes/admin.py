@@ -335,6 +335,58 @@ def put_preview(
     return {"shareUrl": preview.share_url, "hasConversationUrl": bool(preview.conversation_url)}
 
 
+@router.get("/previews")
+def list_previews(
+    user: CurrentUser = Depends(require_runner),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """저장된 예습 링크 전부. **여기만 방향이 반대다.**
+
+    다른 모든 것은 로컬이 만들어 서버로 민다. 예습 링크만 서버에서 로컬로
+    가는데, 예습을 하는 것은 사람이고 사람은 `/admin` 화면에서 저장하기
+    때문이다. 로컬은 이 목록을 보고 그 강의의 Pre-Quiz를 만든다.
+
+    `/overview`로 갈음할 수 없다 — 그쪽은 `require_admin`이라 Supabase 세션이
+    있어야 하고, 러너는 사람이 아니라 토큰이다.
+
+    `conversation_url`은 내보내지 않는다. 퀴즈를 만들 때 쓰는 것은 `share_url`
+    뿐이고, `/c/` 주소는 관리자 화면 밖으로 나갈 이유가 없다.
+    """
+    counts = {
+        (subject, run_id): count
+        for subject, run_id, count in db.execute(
+            select(PreItem.subject, PreItem.run_id, func.count()).group_by(
+                PreItem.subject, PreItem.run_id
+            )
+        )
+    }
+    joined = db.execute(
+        select(Preview, Lecture)
+        .join(
+            Lecture,
+            (Lecture.subject == Preview.subject) & (Lecture.run_id == Preview.run_id),
+        )
+        .where(Preview.share_url != "")
+    )
+    rows = [
+        {
+            "subject": preview.subject,
+            "runId": preview.run_id,
+            "date": lecture.date.isoformat(),
+            "title": lecture.title,
+            "provider": preview.provider,
+            "shareUrl": preview.share_url,
+            "updatedAt": preview.updated_at.isoformat() if preview.updated_at else "",
+            # 이미 올라간 Pre-Quiz 문항 수. 러너가 사람에게 적어 주는 값이고,
+            # 만들지 말지의 판정은 로컬 산출물이 한다.
+            "preItemCount": counts.get((preview.subject, preview.run_id), 0),
+        }
+        for preview, lecture in joined
+    ]
+    rows.sort(key=lambda row: (row["date"], row["runId"]))
+    return {"previews": rows}
+
+
 # ---------------------------------------------------------------- 매칭
 
 

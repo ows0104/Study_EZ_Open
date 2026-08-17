@@ -53,6 +53,12 @@ SQLite로 돈다. Postgres 고유 기능을 쓰지 않는다는 것도 같이 �
 | `PUT …/run-meta/{main\|pre}` | `run.meta.json` 통째로 |
 | `PUT …/pre-items` | `pre_items.final.json` 통째로. 부분 갱신이 아니라 교체 |
 | `PUT …/preview` | 예습 링크 |
+| `GET /api/admin/previews` | 저장된 예습 링크 전부. **여기만 읽는 쪽이다** |
+
+`GET …/previews`만 방향이 반대다. 예습을 하는 것은 사람이고 사람은 `/admin`
+화면에서 링크를 저장하므로, 그것을 로컬이 되읽어 Pre-Quiz를 만든다
+(`python -m studyez prequeue`). `/api/admin/overview`로 갈음할 수 없다 —
+그쪽은 `require_admin`이라 Supabase 세션이 있어야 한다.
 
 **파일은 서버를 거치지 않는다.** Cloud Run의 요청 본문 상한(32MB)이 강의록
 PDF보다 작아서, 서버는 키를 정하고 올라온 것을 확인만 한다.

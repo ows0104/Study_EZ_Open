@@ -392,6 +392,25 @@ def render(preview: Preview) -> str:
     return "\n".join(lines)
 
 
+def read_url(path: Path) -> str:
+    """이미 있는 `preview.md`가 **어느 대화에서 왔는지.** 없으면 빈 문자열.
+
+    `render`가 쓴 머리글을 되읽는 것이라 여기 붙여 둔다. 머리글 모양을 바꾸면
+    이 함수도 같이 바뀌어야 하는데, 떨어져 있으면 그 사실이 안 보인다.
+
+    읽는 곳이 둘이다 — `publish`는 서버에 올릴 링크를 여기서 얻고, `prequeue`는
+    관리자가 저장한 링크와 **같은 대화인지**를 여기서 가른다.
+    """
+    try:
+        head = Path(path).read_text(encoding="utf-8").splitlines()[:12]
+    except OSError:
+        return ""
+    for line in head:
+        if line.startswith("- 출처:"):
+            return line.split(":", 1)[1].strip()
+    return ""
+
+
 def save(preview: Preview, run_dir: Path) -> Path:
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)

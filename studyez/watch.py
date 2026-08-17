@@ -14,15 +14,21 @@
 
 ## 업로드는 여기서 하지 않는다
 
-`/quiz`는 족보 경계가 틀리면 뒤가 전부 어긋나고, `run.meta.json`에
-`review_flagged`·`slides_unused`가 남는다. 생성까지 자동, 배포는 사람이 본 뒤다.
-무인으로 두면 틀린 덱이 조용히 배포된다.
+`publish`가 따로 한다. 두 자리에서 걸린다 — 편이 끝날 때 `studyez done`이 그
+편을, 하루 한 번 `scripts/nightly-publish.ps1`이 `publish --all`로 놓친 것을.
+무엇이 나갈지는 `studyez.gate`가 편마다 본다 — 막힌 편은 강의록만 나가고 덱은
+미뤄진다. 무엇을 막고 무엇을 적기만 하는지는 그쪽 첫머리에 있다.
 
 ## 이미 만든 것을 다시 만들지 않는 방법
 
 `runs/<run_id>/source.json`에 어느 파일의 몇 판으로 만들었는지 적어 둔다.
 `runs/index.json`은 `lecture_id`로만 관리해서 v1으로 만든 뒤 v3이 올라온 경우를
 구분하지 못한다 - 실제로 `260812_02`가 v1과 v3으로 두 번 올라왔다.
+
+**그 표시를 찍는 길이 큐 밖에도 있어야 한다.** `queue.json`은 `watch`가 돌 때마다
+통째로 다시 쓰이는데 `/quiz` 한 편이 48~85분이라, 편이 끝났을 때 그 항목이 이미
+큐에서 사라져 있는 일이 생긴다. 실제로 만든 13편 중 표시가 남은 것이 한 편뿐이었다.
+그래서 `stamp_run()`이 `prep.json`이 적어 둔 원본으로 직접 찍는다.
 """
 
 from __future__ import annotations
@@ -123,7 +129,17 @@ def assign_run_ids(files: list[LectureFile]) -> dict[str, str]:
     """강의마다 겹치지 않는 run 디렉터리 이름을 준다.
 
     보통은 `260813_03`이면 되지만, 한 교시에 여러 강의가 열리면 그것만으로는
-    서로를 덮어쓴다. 겹칠 때만 어간 해시를 붙여 사람이 읽을 수 있는 이름을 지킨다.
+    서로를 덮어쓴다. 겹칠 때만 해시를 붙여 사람이 읽을 수 있는 이름을 지킨다.
+
+    **해시는 `uid`로 뜬다.** 한동안 `stem`으로 떴는데, `stem`은 괄호를 떼고
+    정규화한 값이라 조직학 2026의 두 강의가 통째로 겹쳤다.
+
+        [260331_05] 조직학총론 실습 3(연골과 뼈)_심준선v1     stem 조직학총론실습3
+        [260331_05]조직학총론 실습 3(근육)_신유빈v1           stem 조직학총론실습3
+
+    둘 다 `260331_05-07f9`가 되어 run 디렉터리를 나눠 갖고, 서버는 (과목, run_id)로
+    강의를 세므로 한 편이 다른 편을 덮는다. `LectureFile.uid`가 정확히 이 두 파일을
+    예로 들며 괄호를 남겨 두는데, 여기서 그걸 안 쓰고 있었다.
     """
     by_key: dict[str, list[LectureFile]] = {}
     for item in files:
@@ -135,7 +151,7 @@ def assign_run_ids(files: list[LectureFile]) -> dict[str, str]:
             run_ids[group[0].uid] = key
             continue
         for item in group:
-            digest = hashlib.md5(item.stem.encode("utf-8")).hexdigest()[:4]
+            digest = hashlib.md5(item.uid.encode("utf-8")).hexdigest()[:4]
             run_ids[item.uid] = f"{key}-{digest}"
     return run_ids
 
@@ -148,11 +164,19 @@ def build_queue(
     max_items: int = DEFAULT_MAX_ITEMS,
     min_age_seconds: int = MIN_AGE_SECONDS,
     now: float | None = None,
+    since: str | None = None,
+    until: str | None = None,
 ) -> Queue:
+    """`since`~`until`은 이번 블럭의 구간이다(`studyez.blocks`).
+
+    이게 없으면 `필기/<올해>` 폴더가 있는 과목을 전부 훑고 날짜 오름차순으로
+    자르기 때문에, 학기가 바뀌어도 지난 학기 필기가 먼저 걸린다.
+    """
     now = time.time() if now is None else now
     items: list[WorkItem] = []
     skipped: list[str] = []
     warnings: list[str] = []
+    outside: dict[str, int] = {}
 
     for subject in subjects:
         this_dir = root / subject / "필기" / this_year
@@ -176,6 +200,11 @@ def build_queue(
         for item in this_files:
             run_id = run_ids[item.uid]
             pdf = item.path
+
+            # 블럭 밖은 세기만 한다. 한 줄씩 적으면 지난 학기 수십 편이 보고를 덮는다.
+            if (since and item.date < since) or (until and item.date > until):
+                outside[subject] = outside.get(subject, 0) + 1
+                continue
 
             done = _already_built(runs_dir, run_id, item)
             if done:
@@ -212,6 +241,9 @@ def build_queue(
                 reason=reason, jokbo_pdf=jokbo_pdf, jokbo_label=jokbo_label,
                 jokbo_score=link.get("score", 0.0), notes=notes,
             ))
+
+    for subject, count in sorted(outside.items()):
+        skipped.append(f"{subject} {count}편 — 이번 블럭({since}~{until}) 밖")
 
     items.sort(key=lambda w: (w.date, w.run_id))
     if len(items) > max_items:
@@ -284,18 +316,29 @@ def prepare(queue: Queue, runs_dir: Path, repo_root: Path, workers: int = 0) -> 
     return queue
 
 
+def stamp_run(runs_dir: Path, run_id: str, pdf: Path) -> bool:
+    """한 편을 표시한다. 찍었으면 True.
+
+    큐를 거치지 않는 길이 필요하다. `queue.json`은 `watch`가 돌 때마다 통째로
+    다시 쓰이는데 `/quiz` 한 편이 48~85분이라, 편이 끝났을 때 그 항목이 이미
+    큐에서 사라져 있는 일이 생긴다. 실제로 13편 중 표시가 남은 것이 한 편뿐이었다.
+    """
+    if not pdf.exists():
+        return False
+    parsed = filenames.parse(pdf)
+    if parsed is None:
+        return False
+    (runs_dir / run_id).mkdir(parents=True, exist_ok=True)
+    (runs_dir / run_id / "source.json").write_text(
+        json.dumps(_source_record(pdf, parsed), ensure_ascii=False, indent=2),
+        encoding="utf-8")
+    return True
+
+
 def stamp_sources(queue: Queue, runs_dir: Path) -> None:
     """빌드가 끝난 뒤 호출한다. 이 표시가 있어야 다음 스캔에서 빠진다."""
     for item in queue.items:
-        pdf = Path(item.this_pdf)
-        if not pdf.exists():
-            continue
-        parsed = filenames.parse(pdf)
-        if parsed is None:
-            continue
-        (runs_dir / item.run_id / "source.json").write_text(
-            json.dumps(_source_record(pdf, parsed), ensure_ascii=False, indent=2),
-            encoding="utf-8")
+        stamp_run(runs_dir, item.run_id, Path(item.this_pdf))
 
 
 def save(queue: Queue, path: Path) -> None:

@@ -154,6 +154,20 @@ def main() -> None:
         os.environ.pop("STUDYEZ_SHOW_CONVERSATION_URL")
         get_settings.cache_clear()
 
+    # 러너가 저장된 링크를 **되읽는** 길. 여기만 방향이 반대다 — 관리자가
+    # 저장한 링크를 보고 로컬이 Pre-Quiz를 만든다(`studyez.prequeue`).
+    listed = client.get("/api/admin/previews", headers=RUNNER)
+    check("러너 토큰으로 목록을 읽는다", listed.status_code == 200, listed.text)
+    rows = listed.json()["previews"]
+    check("저장한 링크가 그대로 나온다",
+          [row["shareUrl"] for row in rows] == ["https://chatgpt.com/share/abc"], rows)
+    check("강의 정보가 함께 온다 — 로컬이 작년 짝을 찾는 데 쓴다",
+          rows[0]["subject"] == "병리학" and rows[0]["runId"] == "260813_03" and rows[0]["date"],
+          rows[0])
+    check("/c/는 이 목록으로 안 나간다", "conversationUrl" not in rows[0], rows[0])
+    check("로그인 없이는 못 읽는다",
+          client.get("/api/admin/previews").status_code in (401, 403))
+
     print("\n[6] Pre-Quiz — 정답이 문제와 함께 나가지 않는가")
     client.put(
         "/api/admin/lectures/병리학/260813_03/pre-items",

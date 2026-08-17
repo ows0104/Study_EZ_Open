@@ -43,6 +43,19 @@ description: 강의 PDF에서 강의 직전에 푸는 예습확인퀴즈(객관�
 Pre-Quiz는 **작년** 필기가 대상이다. 족보가 정리돼 붙어 있는 쪽이 작년이다.
 올해 강의에 대응하는 작년 파일은 `python -m studyez match {과목}`이 알려준다.
 
+#### 인자가 없을 때 먼저 보는 곳
+
+```bash
+python -m studyez prequeue
+```
+
+관리자가 `/admin`에서 저장한 예습 링크를 받아 **작년 짝을 고르고, 0단계를 돌리고,
+공유 대화를 `runs/<작년 run_id>/preview.md`로 앉힌 뒤** `runs/prequeue.json`에 적는다.
+`state`가 `ready`(아직 안 만듦)나 `stale`(다른 대화로 만든 덱이 있음)인 것이 할 일이고,
+각 항목의 `prev_pdf`가 이 스킬의 `<pdf>`다. `state`가 `done`이면 이미 만든 편이다.
+
+이미 `preview.md`가 앉아 있으므로 **0단계를 다시 돌리지 않는다.** 0.5단계부터 간다.
+
 아래 `python`은 이 환경에서 PATH에 없다. 실제로는 `PYTHONIOENCODING=utf-8
 "C:/Users/ows01/anaconda3/python.exe"` 로 부르고, 작업 디렉터리는 이 저장소 루트다.
 
@@ -244,6 +257,25 @@ python prequiz/build.py runs/<lecture_id>
 
 `slide_no`가 범위를 벗어나거나 이미지가 없으면 **빌드가 중단된다.**
 임의로 번호를 바꾸지 말고 4단계로 되돌려 원본에서 확인시켜라.
+
+### 6단계 — 올린다 (코드)
+
+```bash
+python -m studyez done <lecture_id>
+```
+
+`<lecture_id>`는 방금 돌린 **작년** run이다. 서버에서 이 예습이 붙는 자리는
+**올해 강의**이므로 `studyez.matching`이 그 짝을 찾아 올린다. 짝이 확정이 아니면
+올리지 않고 그렇게 적는다 — 어긋난 짝을 붙이면 남의 강의 예습이 올라간다.
+
+올해 그 강의가 아직 안 올라왔으면 "붙일 자리가 없다"고 적고 끝난다. **정상이다.**
+산출물은 그대로 두면 되고, 올해 필기가 올라온 뒤 야간 쓸어담기가 같이 민다.
+
+작년 run에는 표시(`source.json`)를 찍지 않는다 — 표시는 올해 필기를 다시 안
+만들려는 장치라 작년 run에 찍으면 아무 데도 안 쓰인다.
+
+슬라이드 이미지(`media/*.png`, 편당 12~27MB)는 **Pre-Quiz가 있는 편에만** 따라
+올라간다. 웹 오답 해설이 `slide_no`로 그것을 찾는 유일한 소비자다.
 
 ## 사용자 보고
 
