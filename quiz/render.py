@@ -47,125 +47,76 @@ def make_annotation_clean_pdf(src_pdf_path, out_pdf_path) -> int:
     return removed
 
 
+# 각인을 놓을 하단 띠. 페이지 아래에 이만큼 빈 자리를 붙이고 **거기에만** 찍는다.
+STAMP_BAND_PT = 30
 STAMP_H = 24
 STAMP_MARGIN = 6
 
 
-def _content_rects(page) -> list:
-    """글자·이미지·annotation이 실제로 놓인 자리."""
-    rects = []
-    for block in page.get_text("dict")["blocks"]:
-        if block.get("type") == 1:
-            rects.append(fitz.Rect(block["bbox"]))
-            continue
-        for line in block.get("lines", []):
-            for span in line["spans"]:
-                if span["text"].strip():
-                    rects.append(fitz.Rect(span["bbox"]))
-    try:
-        for annot in page.annots():
-            rects.append(fitz.Rect(annot.rect))
-    except Exception:
-        pass
-    return rects
+def extend_bottom(doc, band: float = STAMP_BAND_PT) -> None:
+    """모든 페이지 아래에 빈 띠를 붙인다. **내용은 움직이지 않는다.**
 
+    mediabox의 아래 모서리(`y0`)를 내린다. PDF 좌표계는 y가 위로 증가하므로
+    `y0`를 내리면 캔버스가 아래로 자라고 이미 그려진 것의 절대 좌표는 그대로다.
 
-def _corner_origins(width: float, height: float, box_w: float, box_h: float):
-    """좌상 → 우상 → 우하 → 좌하."""
-    m = STAMP_MARGIN
-    return ((m, m),
-            (width - box_w - m, m),
-            (width - box_w - m, height - box_h - m),
-            (m, height - box_h - m))
+    `show_pdf_page`로 큰 페이지에 옮겨 붙이는 방법도 있지만 그건 **annotation을
+    떨어뜨린다.** 족보 문항이 annotation으로만 있는 편에서 기출이 통째로 사라진다.
 
-
-# 우상 → 좌상 → 우하 → 좌하. 실측 434장(10편)의 점유율 순이다
-# (우상 10.4% · 좌상 11.3% · 좌하 10.4% · 우하 15.0%). 좌하는 우상과 점유율이
-# 같지만 **편 전체가 비는** 경우가 적어(2편 대 4편) 뒤로 뒀다.
-CORNER_ORDER = (1, 0, 2, 3)
-
-
-def _free_corners(page, box_w: float, box_h: float = STAMP_H) -> list[bool]:
-    rects = _content_rects(page)
-    return [
-        not any(fitz.Rect(x, y, x + box_w, y + box_h).intersects(r) for r in rects)
-        for x, y in _corner_origins(page.rect.width, page.rect.height, box_w, box_h)
-    ]
-
-
-def choose_stamp_corners(pages, slide_start: int = 1) -> list[int]:
-    """편 전체를 보고 주력 코너를 하나 정하고, 그 자리가 찬 쪽만 따로 뺀다.
-
-    좌상단 고정이던 시절 각인이 **제목을 먹었다.** `260812_02`는 33장 중 17장에서
-    제목 글자가 상자 밑에 깔렸고, s8·s12는 제목이 `Cell death` 한 마디뿐이라
-    **100% 사라졌다.** 그런데 `model_input.pdf`는 모델이 사실을 읽는 채널이다.
-
-    자리를 쪽마다 따로 고르면 안 덮이기는 하지만 각인이 튄다. 각인의 존재 이유가
-    "세지 말고 읽어라"이므로 **한 편 안에서 안 움직이는 것**이 값을 한다. 그래서
-    편 단위로 가장 많이 비는 코너를 주력으로 잡고 예외만 옮긴다 - 실측에서 자리를
-    옮기는 쪽이 41장에서 **17장으로** 줄었고(434장 중), 10편 중 4편은 예외가 0장이다.
-
-    어느 코너가 비는지는 필기자의 템플릿마다 뒤집힌다. `260812_02`는 좌상단이
-    52% 차 있고 우상단이 0%인데 `250820_01`은 정확히 그 반대다(4% / 41%).
-    그래서 고정 위치로는 못 푼다.
-
-    캔버스를 늘려 빈 띠를 만드는 방법은 쓰지 않는다. `labels.json`은 원본 PDF에서,
-    오클루전 렌더는 `model_input.pdf`에서 좌표를 잡는데 **둘의 기하가 같아야
-    맞물린다.** 한쪽만 늘리면 정규화 분모가 갈려 라벨 상자가 통째로 어긋나고,
-    양쪽을 늘리면 이미 만든 run의 저장된 좌표가 무효가 된다. 코너만 옮기면
-    기하는 그대로다.
-
-    네 코너가 모두 찬 쪽은 434장 중 4장뿐이고, 그때는 주력으로 되돌아가 예전처럼
-    덮는다. 덮지 않을 자리가 아예 없기 때문이다.
+    실측(`260814_05` 49쪽, 띠 30pt): 텍스트 레이어 동일(667자), annotation 보존,
+    첫 블록 bbox 불변, 확장본에서 다시 뽑은 라벨이 같은 절대 위치로 풀림
+    (0.20115 x 540 = 0.19056 x 570 = 108.6pt).
     """
-    free = []
-    for index, page in enumerate(pages):
-        label = f"Slide {int(slide_start) + index}"
-        free.append(_free_corners(page, 11 * len(label) + 10))
-    if not free:
-        return []
-    primary = max(CORNER_ORDER,
-                  key=lambda c: (sum(1 for f in free if f[c]), -CORNER_ORDER.index(c)))
-    return [primary if f[primary] else next((c for c in CORNER_ORDER if f[c]), primary)
-            for f in free]
+    band = float(band)
+    for page in doc:
+        mb = page.mediabox
+        page.set_mediabox(fitz.Rect(mb.x0, mb.y0 - band, mb.x1, mb.y1))
 
 
-def stamp_slide_labels(doc, slide_start: int = 1, corners=None) -> None:
-    """모든 페이지에 'Slide N'을 노란 박스로 태워 넣는다. 자리는 비어 있는 코너.
+def stamp_slide_labels(doc, slide_start: int = 1, band: float = STAMP_BAND_PT) -> None:
+    """하단 띠에 'Slide N'을 찍는다. **내용을 덮지 않는다.**
 
     이게 없으면 모델은 첨부 PDF에서 페이지를 '세어' slide_no를 추정해야 하고,
     한 페이지만 잘못 세면 그 뒤 모든 문항에 엉뚱한 슬라이드 이미지가 붙는다.
-    번호를 페이지에 구워 넣으면 추론이 읽기로 바뀐다.
+    Read의 `pages` 경로는 쪽 번호를 돌려주지 않으므로 각인이 유일한 번호 신호다.
 
-    `corners`를 주면 그 판정을 그대로 쓴다. 평탄화한 페이지처럼 **자리를 고를
-    근거가 페이지 안에 없을 때** 원본에서 골라 넘기는 용도다.
+    **자리를 고르지 않는다.** 예전에는 빈 코너를 찾아 찍었는데(`choose_stamp_corners`)
+    네 코너가 다 찬 쪽에서는 주력 코너로 되돌아가 덮었고, 그 쪽이 하필 **족보
+    페이지**였다. 페이지 전체가 붙여넣은 스크린샷이라 코너가 다 차기 때문이다.
+    `260814_05`에서 s48·s49의 **정답표**가 덮여 2019-94·2018-22·2018-23의 정답이
+    사라졌다. 게다가 정답표 글자는 이미지 픽셀 안에 있어 PDF 구조로는 안 보이므로,
+    "겹치는 면적이 가장 작은 코너"로도 못 피한다 - s48은 네 코너의 겹침이
+    182.6%로 **똑같았고** s49는 최소값이 바로 그 덮은 자리였다.
 
-    각인은 **annotation으로** 붙인다. 페이지 내용으로 그리면 필기가 살아 있는
-    판본에서 각인이 가려진다 - annotation이 페이지 내용보다 위에 그려지기
-    때문이다. `260812_02`의 족보 구간에서 s26은 아래가 잘리고 s27은 `lide 27`만
-    남았다. annotation은 배열 순서로 그려지므로 맨 뒤에 붙으면 필기 위에 온다.
+    그래서 자리를 고르는 대신 **빈 자리를 만든다.** 띠는 항상 비어 있으므로
+    제목도 정답표도 덮을 수 없고, 각인이 편 안에서 움직이지도 않는다.
 
-    덕분에 필기 판본을 평탄화해 PNG로 굽는 우회로가 필요 없어졌다. 예전에는
-    `render_flattened_labeled_pngs`가 그 일을 했다.
+    각인은 **annotation으로** 붙인다. 두 가지를 얻는다 - 필기가 살아 있는 판본에서
+    각인이 필기 밑에 깔리지 않고(annotation은 배열 순서로 그려져 맨 뒤가 위에 온다),
+    `get_text()`가 annotation을 안 읽으므로 **텍스트 레이어가 안 더러워진다**.
+    페이지 내용으로 그리던 시절에는 s2가 `2026 Slide 2 년1학년 2학기`로 나왔다.
     """
-    pages = list(doc)
-    if corners is None:
-        corners = choose_stamp_corners(pages, slide_start)
-    for index, page in enumerate(pages):
-        slide_no = int(slide_start) + index
-        label = f"Slide {slide_no}"
+    for index, page in enumerate(doc):
+        label = f"Slide {int(slide_start) + index}"
         box_w = 11 * len(label) + 10
-        x, y = _corner_origins(page.rect.width, page.rect.height, box_w, STAMP_H)[corners[index]]
-        rect = fitz.Rect(x, y, x + box_w, y + STAMP_H)
+        bottom = page.rect.height - (float(band) - STAMP_H) / 2
+        rect = fitz.Rect(STAMP_MARGIN, bottom - STAMP_H, STAMP_MARGIN + box_w, bottom)
         annot = page.add_freetext_annot(
             rect, label, fontsize=13, fontname="helv",
             text_color=(0, 0, 0), fill_color=(1, 1, 0.4), align=1)
         annot.update()
 
 
-def make_labeled_pdf(src_pdf_path, out_pdf_path, slide_start: int = 1) -> int:
+def make_labeled_pdf(src_pdf_path, out_pdf_path, slide_start: int = 1,
+                     band: float = STAMP_BAND_PT) -> int:
+    """하단에 띠를 붙이고 그 띠에 각인을 찍은 판본을 낸다.
+
+    **`labels.json`은 이 결과물에서 뽑아야 한다.** 오클루전 렌더가 이 PDF를 쓰는데
+    좌표가 정규화되어 있어서, 분모(페이지 높이)가 갈리면 상자가 통째로 어긋난다.
+    띠 30pt면 페이지 중간의 상자가 13pt 아래로 밀려 라벨을 벗어난다.
+    """
     doc = fitz.open(str(src_pdf_path))
-    stamp_slide_labels(doc, slide_start)
+    extend_bottom(doc, band)
+    stamp_slide_labels(doc, slide_start, band)
     doc.save(str(out_pdf_path))
     n = len(doc)
     doc.close()

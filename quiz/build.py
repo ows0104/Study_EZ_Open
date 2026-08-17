@@ -45,7 +45,9 @@ from quiz.textutil import (  # noqa: E402
     stable_int_id,
 )
 from quiz.validate import authoritative_ranges, check_item  # noqa: E402
+from quiz import timings  # noqa: E402
 from quiz.verify import verify_apkg  # noqa: E402
+
 
 DEFAULT_PROJECT = "병리학"
 
@@ -128,8 +130,10 @@ def render_occlusion_media(items: list[dict], prep: dict, out_dir: Path) -> dict
         # 옆에 적혀 있어 카드가 무의미해진다 - 실제로 260812_01 슬라이드 8에서
         # 6개 분야 설명이 격자와 같은 순서로 적혀 있어 오클루전 3장이 전멸했다.
         source = prep.get("model_input_pdf") or prep["source_pdf"]
+        # 각인용 하단 띠는 카드 이미지에서 잘라낸다. 예전 run은 이 값이 없어 0이 된다.
         media[str(item["id"])] = render_occlusion_pair(
-            source, slide_no, rects, out_dir, basename)
+            source, slide_no, rects, out_dir, basename,
+            band_pt=float(prep.get("stamp_band_pt") or 0.0))
 
     if failures:
         raise SystemExit(
@@ -333,7 +337,8 @@ def main() -> int:
     parser.add_argument("--out", default=None, help="출력 apkg 경로")
     args = parser.parse_args()
 
-    meta = build_run(Path(args.run_dir), args.items, args.project, args.out)
+    with timings.stage(Path(args.run_dir), "5-build"):
+        meta = build_run(Path(args.run_dir), args.items, args.project, args.out)
     print(f"[build] {meta['deck_name']}")
     print(f"  {meta['item_count']}장 (basic {meta['format']['basic']} / cloze {meta['format']['cloze']})")
     print(f"  출처: 강의록 {meta['sources']['lecture']} / 족보 {meta['sources']['jokbo']}"

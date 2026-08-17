@@ -200,13 +200,19 @@ def _draw_marker(page, rect: fitz.Rect, text: str, fontsize: float, filled: bool
 
 def render_occlusion_pair(pdf_path, slide_no: int, rects: list[list[float]],
                           out_dir: Path, basename: str,
-                          scale: float = OCCLUSION_RENDER_SCALE) -> tuple[str, str]:
+                          scale: float = OCCLUSION_RENDER_SCALE,
+                          band_pt: float = 0.0) -> tuple[str, str]:
     """가린 앞면 / 드러낸 뒷면 PNG 두 장. 반환은 파일명 두 개.
 
     페이지를 먼저 픽스맵으로 평탄화한 뒤 그 위에 그린다. annotation은 페이지
     내용보다 위에 그려지므로, 평탄화하지 않으면 필기가 가림 상자를 뚫고 올라온다.
     render.py의 `stamp_slide_labels`는 같은 사실을 반대로 이용한다 - 각인을
     annotation으로 붙여 필기 위에 올린다.
+
+    `band_pt`는 각인을 놓으려고 페이지 아래에 붙인 빈 띠다(`prep.json`의
+    `stamp_band_pt`). **상자는 띠를 포함한 높이로 계산하고, 자르는 것은 맨 마지막에
+    한다** - `labels.json`의 정규화 분모가 띠를 포함한 높이이기 때문이다. 먼저
+    잘라내고 그리면 분모가 갈려 상자가 위로 밀린다.
     """
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -241,7 +247,9 @@ def render_occlusion_pair(pdf_path, slide_no: int, rects: list[list[float]],
                     _draw_marker(page, rect, marker, 8.0 * scale, filled=False)
 
         name = f"{basename}_{'q' if hide else 'a'}.png"
-        page.get_pixmap(alpha=False).save(str(out_dir / name))
+        keep_h = pix.height - float(band_pt) * scale
+        clip = fitz.Rect(0, 0, pix.width, keep_h) if band_pt else None
+        page.get_pixmap(alpha=False, clip=clip).save(str(out_dir / name))
         doc.close()
         names.append(name)
 

@@ -47,9 +47,11 @@ for _stream in (sys.stdout, sys.stderr):
     except Exception:
         pass
 
+from quiz import timings  # noqa: E402
 from quiz.occlusion import extract_labels  # noqa: E402
 from quiz.structure import page_features  # noqa: E402
 from quiz.render import (  # noqa: E402
+    STAMP_BAND_PT,
     make_annotation_clean_pdf,
     make_labeled_pdf,
     render_slide_pngs,
@@ -331,10 +333,23 @@ def prep(pdf_path: Path, out_root: Path, scale: float,
     # 여기서는 아직 검증하지 않는다. 외부 족보를 붙이면 번호가 필기 뒤로
     # 이어져서, 합친 뒤에 한 번만 본다(아래).
 
-    # 이미지 오클루전용 라벨 후보. 원본 PDF에서 뽑아야 미디어 렌더와 좌표가 맞는다.
+    # 이미지 오클루전용 라벨 후보. **`model_input.pdf`에서 뽑는다.**
+    #
+    # 예전에는 원본에서 뽑으며 "미디어 렌더와 좌표가 맞아야 한다"고 적어 뒀는데,
+    # `labels.json`을 `media/`에 대고 쓰는 곳이 없다. 경로는 하나뿐이다 -
+    # `build_label_index` → `resolve_rects` → `render_occlusion_pair(model_input_pdf)`.
+    # 그러니 진짜 불변식은 **오클루전 렌더 대상과 기하가 같아야 한다**이고,
+    # 하단 띠를 붙인 지금은 원본과 `model_input.pdf`의 높이가 다르다. 좌표가
+    # 정규화되어 있어서 분모가 갈리면 상자가 통째로 어긋난다.
+    #
+    # 덤이 하나 붙는다. `model_input.pdf`는 필기를 지운 판본이라 **필기 텍스트
+    # 박스가 후보에서 빠진다.** 그게 맞다 - 오클루전은 이 채널에 그려지므로 필기
+    # 라벨은 애초에 가릴 수가 없는데, 후보로 잡혀 있던 탓에 `260814_05`의 청사진이
+    # s13에 "필기 주석까지 함께 가려라"라고 지시했다(조각과 감사가 걸러냈다).
+    #
     # **전 페이지에서 뽑는다.** 경계를 모르는 상태이므로 범위를 좁히면 강의록
     # 슬라이드의 라벨을 잃는다. 족보 구간의 라벨은 어차피 아무도 안 쓴다.
-    labels = extract_labels(pdf_path, (1, num_pages))
+    labels = extract_labels(model_input, (1, num_pages))
 
     # 구간은 비워 둔다. 0.5단계가 `structure.json`에 쓰기 전까지는 **모르는 게 맞다.**
     # 여기에 짐작을 적어 두면 검증기가 그걸 근거로 삼아 멀쩡한 카드에 유령 불평을
@@ -376,6 +391,10 @@ def prep(pdf_path: Path, out_root: Path, scale: float,
         "read_windows": read_windows(num_pages, total_slides),
         # false면 `pages` 읽기가 안 된다. 통째 읽기는 되므로 0.5·1단계는 산다.
         "poppler_available": poppler_available(),
+        # 각인을 놓으려고 페이지 아래에 붙인 빈 띠(pt). 오클루전 렌더가 결과 이미지에서
+        # 이만큼 잘라낸다 - 카드에 흰 띠가 딸려 가지 않게. `labels.json`의 정규화
+        # 분모는 띠를 **포함한** 높이이므로 좌표 계산에서 빼면 안 된다.
+        "stamp_band_pt": STAMP_BAND_PT,
         "outline_path": str(run_dir / "outline.json"),
         "annotations_path": str(run_dir / "annotations.json"),
         "labels_path": str(run_dir / "labels.json"),
@@ -407,8 +426,13 @@ def main() -> int:
                              "이걸 족보 채널로 쓰고, 경계 판정이 필요 없어진다")
     args = parser.parse_args()
 
+    # run_dir이 아직 없으므로 시작 시각만 들고 있다가 끝나고 함께 적는다.
+    started = timings.now()
     manifest = prep(Path(args.pdf), Path(args.out), args.scale, args.run_id,
                     Path(args.jokbo_pdf) if args.jokbo_pdf else None)
+    run_dir = Path(args.out) / manifest["lecture_id"]
+    timings.record(run_dir, "0-prep", "start", at=started)
+    timings.record(run_dir, "0-prep", "end")
     annots = json.loads(Path(manifest["annotations_path"]).read_text(encoding="utf-8"))
     stamped = [a["slide_no"] for a in annots if "stamp" in a["signals"]]
     print(f"[prep] {manifest['lecture_id']} : {manifest['lecture_title']}")
