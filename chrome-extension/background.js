@@ -10,8 +10,14 @@ const SHARE_WATCH = "studyez-share-watch:";
 const CHATGPT_ORIGIN = "https://chatgpt.com";
 const CHATGPT_START = "https://chatgpt.com/";
 
-/** 배포 주소가 정해지면 여기와 manifest의 두 자리에 같이 넣는다. */
-const WEBAPP_ORIGINS = new Set(["http://localhost:5173"]);
+/**
+ * 여기서 온 요청만 받는다. 확장은 웹앱이 시키는 대로 남의 사이트에 파일을
+ * 넣으므로, 시킬 수 있는 쪽을 좁히는 것이 첫 관문이다.
+ *
+ * manifest의 `content_scripts[0].matches`와 **같이** 고친다. 한쪽만 고치면
+ * 스크립트는 붙는데 배경이 안 받거나, 그 반대가 된다.
+ */
+const WEBAPP_ORIGINS = new Set(["https://study-ez-open.pages.dev", "http://localhost:5173"]);
 
 function originOf(sender) {
   try {

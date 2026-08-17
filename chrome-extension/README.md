@@ -68,9 +68,15 @@ Study_EZ 패널에서 "예습 시작하기"
 - 검색 노출(`is_discoverable`)은 끕니다. 링크 밖으로 새지 않습니다.
 - **전송 버튼은 사람이 직접 누릅니다.**
 
-## 배포 주소를 넣을 때
+## 어느 주소에서 도는가
 
-두 곳을 같이 고칩니다.
+```
+https://study-ez-open.pages.dev    배포
+http://localhost:5173              로컬 개발
+```
+
+주소가 늘면 **두 곳을 같이** 고칩니다. 한쪽만 고치면 콘텐츠 스크립트는 붙는데
+배경이 요청을 안 받거나, 그 반대가 됩니다.
 
 - `manifest.json`의 `content_scripts[0].matches`
 - `background.js`의 `WEBAPP_ORIGINS`
