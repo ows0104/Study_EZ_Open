@@ -1108,6 +1108,39 @@ button.panel-action.is-download:hover:not(:disabled)::after {
   gap: 7px;
 }
 
+/* 고칠 수 없는 것. 편집칸과 다르게 생겨야 눌러 보지 않는다. */
+.prompt-fixed {
+  display: grid;
+  gap: 5px;
+  padding: 10px 11px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-2);
+  background: transparent;
+}
+
+.prompt-fixed pre {
+  margin: 0;
+  color: var(--ink-2);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.prompt-fixed h4,
+.prompt-editor-label {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.prompt-editor-label {
+  margin-top: 3px;
+}
+
 .prompt-editor-text {
   min-height: 220px;
   padding: 11px 12px;

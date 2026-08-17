@@ -531,6 +531,13 @@ function PromptEditor({
       </button>
       {open ? (
         <div className="prompt-editor">
+          {/* 기본 링크의 문구는 고칠 수 없다. 반이 하나의 대화를 읽으니 무엇을
+              물었는지도 하나여야 한다. 다만 보이지도 않으면 확인할 길이 없다. */}
+          <div className="prompt-fixed">
+            <h4>기본 링크 — 고정</h4>
+            <pre>{SHARED_PREVIEW_PROMPT}</pre>
+          </div>
+          <h4 className="prompt-editor-label">개인 링크 — 내가 고쳐 쓰는 것</h4>
           <textarea
             className="prompt-editor-text"
             value={text}
