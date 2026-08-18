@@ -39,7 +39,7 @@ function createOverlay(payload) {
       확인하려고 현재 ChatGPT 로그인 토큰을 메모리에서 잠깐 사용하지만, 토큰을 저장하거나 Study EZ로
       보내지 않습니다.
       ${shared ? "이 모드는 링크를 가진 누구나 볼 수 있는 공개 공유 링크를 만들고 Study EZ 강의에 저장합니다." : "이 모드는 내 계정에서만 열리는 대화 주소를 Study EZ 강의에 저장합니다."}
-      <a href="https://study-ez-open.pages.dev/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a>
+      <a href="https://studyez.kr/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a>
     </p>
     <ul>${payload.files
       .map((file) => `<li title="${escapeHtml(file.filename)}">${escapeHtml(file.filename)}</li>`)

@@ -1,6 +1,6 @@
 # Study EZ 예습 브리지 — Chrome Web Store 등록표
 
-기준 버전: 1.0.0
+기준 버전: 1.0.1
 작성일: 2026-08-18
 
 ## 새 항목
@@ -10,8 +10,8 @@
 - 카테고리: 교육
 - 언어: 한국어
 - 공개 범위: 미등록(링크가 있는 사용자만) 권장
-- 홈페이지: `https://study-ez-open.pages.dev/`
-- 개인정보처리방침: `https://study-ez-open.pages.dev/privacy`
+- 홈페이지: `https://studyez.kr/`
+- 개인정보처리방침: `https://studyez.kr/privacy`
 - 지원 이메일: `ows0104+studyez-cws@gmail.com`
 
 ## 자세한 설명
@@ -48,7 +48,7 @@ ChatGPT의 새 대화에 준비합니다. 확인 화면에서 자료와 데이�
 
 ### 호스트 권한
 
-`study-ez-open.pages.dev`에서 사용자가 선택한 강의·파일 요청을 받고 완성된 링크를
+`studyez.kr`에서 사용자가 선택한 강의·파일 요청을 받고 완성된 링크를
 돌려줍니다. `chatgpt.com`에서 사용자가 동의한 PDF와 프롬프트를 준비하고 대화
 완료 및 링크를 확인합니다. 지정된 Cloudflare R2 origin에서는 사용자가 선택한
 PDF를 임시 서명 URL로 내려받습니다. 다른 웹사이트를 읽거나 추적하지 않습니다.
@@ -100,7 +100,7 @@ PowerShell에서:
 .\chrome-extension\build-store-package.ps1
 ```
 
-결과: `chrome-extension/release/studyez-preview-bridge-1.0.0-web-store.zip`
+결과: `chrome-extension/release/studyez-preview-bridge-1.0.1-web-store.zip`
 
 스토어 항목이 게시된 뒤 Cloudflare Pages 빌드 변수
 `VITE_EXTENSION_STORE_URL`에 실제 스토어 URL을 넣으면 웹앱의 개발자 모드 설치

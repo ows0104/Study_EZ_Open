@@ -25,7 +25,7 @@ const R2_ORIGIN = "https://d0ec59549fea0c13f1b7fe9f724df93b.r2.cloudflarestorage
  * manifest의 `content_scripts[0].matches`와 **같이** 고친다. 한쪽만 고치면
  * 스크립트는 붙는데 배경이 안 받거나, 그 반대가 된다.
  */
-const WEBAPP_ORIGINS = new Set(["https://study-ez-open.pages.dev", "http://localhost:5173"]);
+const WEBAPP_ORIGINS = new Set(["https://studyez.kr", "http://localhost:5173"]);
 
 function originOf(sender) {
   try {

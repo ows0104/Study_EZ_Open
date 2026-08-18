@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Study EZ 예습 브리지",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Study EZ의 작년 필기와 예습 프롬프트를 ChatGPT 새 대화에 채우고, 만들어진 공유 링크를 강의에 되돌려 줍니다.",
   "permissions": ["storage"],
   "host_permissions": [
@@ -22,7 +22,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://study-ez-open.pages.dev/*", "http://localhost:5173/*"],
+      "matches": ["https://studyez.kr/*", "http://localhost:5173/*"],
       "js": ["protocol.js", "studyez-bridge.js"],
       "run_at": "document_start"
     },

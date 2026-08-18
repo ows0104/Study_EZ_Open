@@ -2,7 +2,7 @@
 
 최종 수정: 2026-08-18
 
-공개 정책 URL: <https://study-ez-open.pages.dev/privacy>
+공개 정책 URL: <https://studyez.kr/privacy>
 
 Study EZ 예습 브리지는 사용자가 선택한 강의 PDF와 예습 프롬프트를 ChatGPT에
 준비하고, 완성된 대화 링크를 해당 Study EZ 강의에 연결하는 단일 목적으로

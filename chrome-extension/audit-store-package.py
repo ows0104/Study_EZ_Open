@@ -53,7 +53,7 @@ with zipfile.ZipFile(io.BytesIO(raw)) as archive:
         ],
         "호스트 권한이 최소 허용 목록과 다릅니다.",
     )
-    require(manifest["content_scripts"][0]["matches"] == ["https://study-ez-open.pages.dev/*"], "Study EZ match가 다릅니다.")
+    require(manifest["content_scripts"][0]["matches"] == ["https://studyez.kr/*"], "Study EZ match가 다릅니다.")
     require(manifest["content_scripts"][1]["matches"] == ["https://chatgpt.com/*"], "ChatGPT match가 다릅니다.")
     require("localhost" not in manifest_text and "127.0.0.1" not in manifest_text, "manifest에 로컬 주소가 있습니다.")
 

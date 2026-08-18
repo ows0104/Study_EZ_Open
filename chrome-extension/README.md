@@ -126,7 +126,7 @@ ChatGPT 계정이나 워크스페이스를 갈아탔으면 자기 대화도 안 
 ## 어느 주소에서 도는가
 
 ```
-https://study-ez-open.pages.dev    배포
+https://studyez.kr                 배포
 http://localhost:5173              로컬 개발
 ```
 
