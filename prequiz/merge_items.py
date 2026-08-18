@@ -7,7 +7,7 @@
 `quiz/merge_items.py`는 `structure.json`의 `chunks`로 쪼갠다. 여기서는
 **청사진의 `objective`로 쪼갠다.** 이유는 배분이다.
 
-Pre-Quiz는 **20문항 상한**이 있어서 조각들이 서로를 모르는 채로 "정보량대로"
+Pre-Quiz는 **30문항 상한**이 있어서 조각들이 서로를 모르는 채로 "정보량대로"
 쓰면 합이 상한을 넘는다. quiz에는 그 상한이 없어서 이 문제가 없고, 대신 조각
 크기를 `plan_chunks.py`가 회귀로 맞춘다.
 
@@ -65,7 +65,7 @@ for _stream in (sys.stdout, sys.stderr):
 from quiz import timings  # noqa: E402
 
 # preview-rules가 정한 상한. 넘으면 세어서 표시한다 — 자르는 것은 4단계 몫이다.
-MAX_ITEMS = 20
+MAX_ITEMS = 30
 
 
 def _items(payload) -> list[dict]:

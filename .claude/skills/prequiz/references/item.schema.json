@@ -7,7 +7,7 @@
     "lecture_id": { "type": "string" },
     "items": {
       "type": "array",
-      "description": "정보량대로. 20문항을 넘지 않는다 (rules §3)",
+      "description": "정보량대로. 30문항을 넘지 않는다 (rules §3)",
       "items": {
         "type": "object",
         "required": [
