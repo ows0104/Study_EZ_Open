@@ -168,15 +168,24 @@ export function CalendarPage() {
               띠가 진할수록 할 일이 있습니다
             </span>
           </span>
-          <span className="legend-group">
+          {/* 점은 시점에 따라 갈린다. 규칙이 둘이 됐으니 둘 다 적는다 —
+              범례가 한 줄 늘어나는 값으로 칸의 점 하나가 줄었다. */}
+          <span className="legend-group is-phase">
+            <b>강의 전</b>
+            <span>
+              <i className="chip-dot is-preview" /> 예습
+            </span>
+            <span>
+              <i className="chip-dot is-prequiz" style={{ ["--fill" as string]: "60%" }} /> 예습퀴즈 (채운 만큼 풀었음)
+            </span>
+          </span>
+          <span className="legend-group is-phase">
+            <b>강의 후</b>
             <span>
               <i className="chip-dot is-notes" /> 필기
             </span>
             <span>
-              <i className="chip-dot is-quiz" /> 퀴즈
-            </span>
-            <span>
-              <i className="chip-dot is-preview" /> 예습
+              <i className="chip-dot is-quiz" /> 본퀴즈
             </span>
           </span>
           <small className="legend-note">어느 칸이든 누르면 자세히 볼 수 있습니다.</small>

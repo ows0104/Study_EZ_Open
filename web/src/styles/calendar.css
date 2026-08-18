@@ -548,17 +548,21 @@
   transform: translateY(-50%);
 }
 
-/* 점은 칸의 계열색을 따라간다. 칸 밖(범례·패널)에서는 계열이 없으므로
- * 강조색으로 떨어진다. */
+/* 점은 칸의 계열색을 따라간다. 칸 밖(범례)에서는 계열이 없으므로 강조색으로
+ * 떨어진다. */
 .chip-dot {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   flex: none;
   border-radius: 50%;
   background: var(--cat, var(--accent));
 }
 
-/* 세 점을 색이 아니라 채움으로 가른다. 계열색은 이미 범주가 쓰고 있다. */
+/* 점들을 색이 아니라 채움과 모양으로 가른다. 계열색은 이미 범주가 쓰고 있다.
+ *
+ * 강의 전(예습·예습퀴즈)과 후(필기·본퀴즈)가 한 칸에 같이 서지 않으므로 네
+ * 점이 모양을 나눠 쓴다. 빈 원은 어느 쪽에서든 "받을 것이 있는데 얼마나 했는지
+ * 잴 수는 없다"는 뜻이다 — 덱은 Anki에서 풀린다. */
 .chip-dot.is-quiz {
   border: 1px solid var(--cat, var(--accent));
   background: transparent;
@@ -570,25 +574,20 @@
   background: transparent;
 }
 
-/* 패널에서는 자리가 있으니 점에 이름을 붙인다. */
-.chip-marks.is-labelled {
-  position: static;
-  gap: 5px;
-  flex-wrap: wrap;
+/* 웹 예습퀴즈만 얼마나 했는지까지 말한다. 채운 만큼이 푼 비율이다.
+ *
+ * `--fill`이 안 붙으면 0%다 — 덱만 있고 웹에서 풀 문항이 없는 강의이며,
+ * 그때는 본퀴즈와 같은 빈 원으로 떨어진다. */
+.chip-dot.is-prequiz {
+  border: 1px solid var(--cat, var(--accent));
+  background: conic-gradient(var(--cat, var(--accent)) var(--fill, 0%), transparent 0);
 }
 
-.chip-mark {
-  display: inline-flex;
-  height: 19px;
-  padding: 0 7px 0 6px;
-  gap: 5px;
-  align-items: center;
-  border: 1px solid var(--accent-line);
-  border-radius: 999px;
-  color: var(--accent-ink);
-  background: var(--accent-soft);
-  font-size: 10.5px;
-  font-weight: 600;
+/* 다 푼 것은 강조색을 놓는다. 이 화면에서 색은 "열어 볼 것이 있다"는 뜻으로만
+ * 쓰기로 했고, 끝낸 퀴즈는 더 이상 열 것이 아니다. */
+.chip-dot.is-prequiz.is-done {
+  border-color: var(--ink-3);
+  background: var(--ink-3);
 }
 
 /* 한 교시에 여러 강의가 열릴 때(선택형 과목)의 개수. */
@@ -636,6 +635,17 @@
   display: flex;
   gap: 5px;
   align-items: center;
+}
+
+/* 시점 딱지. 뒤따르는 점들이 언제 그려지는지를 가른다. */
+.legend-group.is-phase {
+  gap: 8px;
+}
+
+.legend-group.is-phase b {
+  color: var(--ink-2);
+  font-size: 10.5px;
+  font-weight: 650;
 }
 
 /* 계열 견본. 칸의 왼쪽 띠를 그대로 축소한 모양이다. */

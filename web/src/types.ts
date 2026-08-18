@@ -16,12 +16,28 @@ export type AppUser = {
 
 export type EventCategory = "lecture" | "practice" | "exam" | "holiday" | "elective" | "study";
 
-/** 강의 칩에 찍히는 점. 있다/없다만 안다. */
+/**
+ * 강의 칩에 찍히는 점. 있다/없다만 안다.
+ *
+ * `quiz`는 본덱(`main_apkg`)만이다. 예습덱은 `prequiz`가 따로 든다 — 둘은
+ * 쓰는 시점이 달라서 같은 점으로 그리면 어느 쪽도 안 뜻한다.
+ */
 export type Marks = {
   notes: boolean;
   quiz: boolean;
   prequiz: boolean;
   preview: boolean;
+};
+
+/**
+ * 웹 예습퀴즈를 몇 개까지 풀었는가.
+ *
+ * **이 사람의 값이다.** 그리고 잴 수 있는 유일한 "했다"이기도 하다 — 덱은
+ * apkg로 나가 Anki에서 풀리므로 서버에 기록이 없다.
+ */
+export type PrequizProgress = {
+  total: number;
+  answered: number;
 };
 
 export type LectureRef = {
@@ -30,6 +46,8 @@ export type LectureRef = {
   title: string;
   professors: string[];
   marks: Marks;
+  /** 웹에서 풀 문항이 없으면 없다. "안 풀었다"와 "잴 것이 없다"는 다르다. */
+  prequizProgress: PrequizProgress | null;
 };
 
 export type TimetableEvent = {

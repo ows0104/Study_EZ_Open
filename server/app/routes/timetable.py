@@ -2,6 +2,9 @@
 
 시간표만으로 그려진다. 파이프라인 산출물이 하나도 없어도 화면은 완성된 모습이고,
 자료가 올라오면 칸에 점이 붙는다.
+
+**이 응답은 사람마다 다르다.** `prequizProgress`가 그 사람이 푼 수를 싣기
+때문이다. 캐시를 붙이려거든 사용자별로 갈라야 한다.
 """
 
 from __future__ import annotations
@@ -16,7 +19,7 @@ from sqlalchemy.orm import Session
 from app.auth import CurrentUser, require_approved_user
 from app.database import get_db
 from app.models import Lecture, TimetableEvent
-from app.routes.common import material_marks
+from app.routes.common import material_marks, prequiz_progress
 
 router = APIRouter()
 
@@ -41,17 +44,23 @@ def read_timetable(
         if event_ids
         else []
     )
-    marks = material_marks(db, [(lecture.subject, lecture.run_id) for lecture in lectures])
+    keys = [(lecture.subject, lecture.run_id) for lecture in lectures]
+    marks = material_marks(db, keys)
+    progress = prequiz_progress(db, user.id, keys)
 
     by_event: dict[str, list[dict[str, Any]]] = {}
     for lecture in lectures:
+        key = (lecture.subject, lecture.run_id)
         by_event.setdefault(lecture.timetable_event_id, []).append(
             {
                 "subject": lecture.subject,
                 "runId": lecture.run_id,
                 "title": lecture.title,
                 "professors": lecture.professors,
-                "marks": marks.get((lecture.subject, lecture.run_id), {}),
+                "marks": marks.get(key, {}),
+                # 웹에서 풀 문항이 없는 강의는 null이다. "안 풀었다"와 "잴 것이
+                # 없다"는 화면에서 다르게 그려야 한다.
+                "prequizProgress": progress.get(key),
             }
         )
 

@@ -34,25 +34,60 @@ export function categoryLabel(category: TimetableEvent["category"]) {
   return categoryLabels[category] ?? category;
 }
 
+/** 예습은 강의 전에만, 필기와 본덱은 강의 후에만 할 일이다. */
+export type LecturePhase = "before" | "after";
+
+/**
+ * 강의가 지났는가.
+ *
+ * 3주 뒤 강의에 작년 필기가 붙어 있다고 오늘 할 일이 되는 것은 아니다.
+ *
+ * **끝 시각까지 본다.** 당일을 통째로 한쪽에 넣으면 오전 강의가 저녁까지
+ * "아직 예습할 것"으로 남거나, 오후 강의가 아침부터 "복습할 것"이 된다.
+ */
+export function entryPhase(entry: CalendarEntry, now: Date): LecturePhase {
+  const [hour, minute] = entry.endTime.split(":").map(Number);
+  const [year, month, day] = entry.date.split("-").map(Number);
+  const ended = new Date(year, month - 1, day, hour || 0, minute || 0);
+  return now >= ended ? "after" : "before";
+}
+
+/** 웹 예습퀴즈를 끝까지 풀었는가. 잴 것이 없으면 "끝냈다"고 하지 않는다. */
+export function prequizDone(lecture: LectureRef) {
+  const progress = lecture.prequizProgress;
+  return Boolean(progress && progress.total > 0 && progress.answered >= progress.total);
+}
+
 /**
  * 칸의 진하기.
  *
  * 색상(계열)은 범주가 정하고, 그 계열 안에서 몇 단을 쓸지는 이것이 정한다.
  * 같은 파랑이라도 할 일이 있으면 진하고 없으면 옅다.
  *
- * **아직 "풀었다"를 모른다.** `/api/timetable`이 내려주는 것은 자료가 있느냐
- * 없느냐(`marks`)까지이고, 얼마나 풀었는지는 강의 상세에만 있다. 그래서
- * `todo`는 "풀 것이 생겼다"이지 "아직 안 풀었다"가 아니다. 끝낸 것을 옅게
- * 내리려면 서버가 시도 기록을 같이 세어 줘야 한다.
+ * **점과 같은 축의 거친 눈금이다.** 전에는 둘이 같은 불리언에서 나와서
+ * (`todo` ⟺ 퀴즈 점) 점이 칸의 진하기를 한 번 더 말하는 꼴이었다. 지금은
+ * 칸이 "남았는가"를, 점이 "무엇이 남았는가"를 말한다.
+ *
+ * **"풀었다"를 아는 것은 웹 예습퀴즈뿐이다.** 덱은 apkg로 나가 Anki에서
+ * 풀리므로 서버에 기록이 없다. 그래서 강의 후의 `todo`는 여전히 "받을 것이
+ * 있다"이지 "아직 안 풀었다"가 아니다.
  */
 export type ChipState = "blank" | "ready" | "todo";
 
-export function chipState(entry: CalendarEntry): ChipState {
+export function chipState(entry: CalendarEntry, phase: LecturePhase): ChipState {
   // 시험은 붙는 자료가 없어도 그 자체가 할 일이다. 자료로 판정하면 학기에서
   // 가장 중요한 칸이 가장 옅게 나온다.
   if (entry.category === "exam") return "todo";
+
+  if (phase === "before") {
+    // 잰 것이 있으면 그것이 정한다. 다 푼 예습퀴즈는 더 이상 할 일이 아니다.
+    if (entry.lectures.some((lecture) => lecture.marks.prequiz && !prequizDone(lecture))) return "todo";
+    if (entry.lectures.some((lecture) => lecture.marks.preview || lecture.marks.prequiz)) return "ready";
+    return "blank";
+  }
+
   if (entry.lectures.some((lecture) => lecture.marks.quiz)) return "todo";
-  if (entry.lectures.some((lecture) => lecture.marks.notes || lecture.marks.preview)) return "ready";
+  if (entry.lectures.some((lecture) => lecture.marks.notes)) return "ready";
   return "blank";
 }
 

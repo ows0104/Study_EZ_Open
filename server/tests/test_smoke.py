@@ -230,8 +230,26 @@ def main() -> None:
     timetable = client.get("/api/timetable", headers=USER).json()["events"]
     linked = [event for event in timetable if event["lectures"]]
     check("칸 하나에 강의가 붙었다", len(linked) == 1, timetable)
-    marks = linked[0]["lectures"][0]["marks"]
-    check("자료·퀴즈·예습 점이 켜졌다", all(marks[key] for key in ("notes", "prequiz", "preview")), marks)
+    lecture_ref = linked[0]["lectures"][0]
+    marks = lecture_ref["marks"]
+    check("필기·예습퀴즈·예습 점이 켜졌다",
+          all(marks[key] for key in ("notes", "prequiz", "preview")), marks)
+    # 이 강의에는 `main_apkg`가 안 올라왔다. 전에는 `pre_item`이 있다는 이유로
+    # 본덱 점까지 켜져서, 점만 보고는 시험 대비 덱이 있는지 알 수 없었다.
+    check("본덱이 없으면 본퀴즈 점은 꺼져 있다", marks["quiz"] is False, marks)
+    # [7]에서 세 문항을 모두 채점받았다.
+    check("내가 푼 수가 함께 온다",
+          lecture_ref["prequizProgress"] == {"total": 3, "answered": 3},
+          lecture_ref["prequizProgress"])
+
+    # 로컬 테스트 모드는 사용자가 하나뿐이라 HTTP로는 못 가른다. 집계 함수를
+    # 직접 부른다 — 사람이 갈리는 자리가 거기다.
+    from app.database import SessionLocal
+    from app.routes.common import prequiz_progress
+    with SessionLocal() as db:
+        theirs = prequiz_progress(db, "someone-else", [("병리학", "260813_03")])
+    check("남의 시도는 내 진도에 안 실린다",
+          theirs == {("병리학", "260813_03"): {"total": 3, "answered": 0}}, theirs)
 
     print("\n[10] 로그인 없이는 아무것도 안 나간다")
     check("401", client.get("/api/timetable").status_code == 401)
