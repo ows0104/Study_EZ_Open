@@ -30,7 +30,13 @@ for _stream in (sys.stdout, sys.stderr):
     except Exception:
         pass
 
+from quiz import timings  # noqa: E402
 from quiz.textutil import norm_for_compare, tokens  # noqa: E402
+
+# 3단계가 정식으로 도는 입력. 다른 파일에 대고 돌리는 것은 진단이지 단계가
+# 아니므로 계측에 넣지 않는다 — 넣으면 벽시계가 호출 간격이 되어 버린다
+# (`quiz/validate.py`가 그 사고를 한 번 겪었다).
+CANONICAL_ITEMS = {"pre_items.raw.json", "pre_items.final.json"}
 
 VALID_QTYPES = {"mcq", "short", "ox"}
 VALID_FOCUS = {"must_know", "core", "context"}
@@ -449,7 +455,11 @@ def main() -> int:
     parser.add_argument("--items", default="pre_items.raw.json", help="검증할 파일명")
     args = parser.parse_args()
 
-    result = validate_run(Path(args.run_dir), args.items)
+    if args.items in CANONICAL_ITEMS:
+        with timings.stage(Path(args.run_dir), "3-validate", label=args.items):
+            result = validate_run(Path(args.run_dir), args.items)
+    else:
+        result = validate_run(Path(args.run_dir), args.items)
     s = result["suspects"]
     q, f, src = s["qtypes"], s["focus"], s["sources"]
     print(f"[pre-validate] 통과 {result['kept']}문항 "

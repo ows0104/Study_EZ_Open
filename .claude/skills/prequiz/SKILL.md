@@ -59,6 +59,31 @@ python -m studyez prequeue
 아래 `python`은 이 환경에서 PATH에 없다. 실제로는 `PYTHONIOENCODING=utf-8
 "C:/Users/ows01/anaconda3/python.exe"` 로 부르고, 작업 디렉터리는 이 저장소 루트다.
 
+### 단계마다 시각을 찍는다
+
+```bash
+python quiz/timings.py runs/<lecture_id> start 1-blueprint
+python quiz/timings.py runs/<lecture_id> end   1-blueprint
+python quiz/timings.py runs/<lecture_id> report
+```
+
+**코드 단계는 스스로 찍는다** — `prep.py`·`structure.py`·`prequiz/validate.py`·
+`prequiz/build.py`가 자기 구간을 남긴다. 아무것도 안 해도 된다.
+
+**모델 단계는 네가 찍는다.** 서브에이전트를 띄우기 직전에 `start`, 받은 직후에 `end`.
+`0.5-model` · `1-blueprint` · `2-write` · `4-audit` 넷이다.
+
+**왜 찍나.** 편당 34분을 어디서 줄일지 정하려면 단계별 소요가 있어야 하는데,
+Pre-Quiz에는 그 값이 **아직 하나도 없다.** 2026-08-18 무인 실행에서 총 37.4분이
+나왔지만 그 안이 통짜였고, 2단계가 병목이라는 것도 토큰으로 추정한 것이지
+(캐시 읽기 9.5M) 시간을 잰 것이 아니다.
+
+`quiz` 쪽에서는 이 계측이 실제로 코드를 바꿨다 — `plan_chunks.py`의 회귀 계수가
+전부 여기 구간에서 나왔고 편당 6.8분을 줄였다. 그쪽도 완전 분해가 둘뿐이다.
+**한 편은 분포가 아니다. 쌓일 때까지 계속 찍어라.**
+
+재기만 한다. 느리다/빠르다는 판정은 사람이 한다.
+
 ### 0단계 — 준비 (코드)
 
 ```bash
@@ -111,6 +136,8 @@ Read( runs/<lecture_id>/model_input.pdf , pages: "8-12" )
 
 ### 0.5단계 — 구조 판별 (Opus 5 호출 ⓪)
 
+띄우기 직전에 `timings.py ... start 0.5-model`, 받은 직후에 `end 0.5-model`.
+
 `quiz` 스킬과 **같은 단계, 같은 산출물**이다. 이미 `structure.json`이 있고 같은 PDF에서
 나온 것이면 다시 돌리지 않는다.
 
@@ -152,6 +179,8 @@ python quiz/structure.py runs/<lecture_id>
 
 ### 1단계 — 예습 청사진 (Opus 5 호출 ①)
 
+띄우기 직전에 `timings.py ... start 1-blueprint`, 받은 직후에 `end 1-blueprint`.
+
 `general-purpose` 서브에이전트. **문항은 만들지 않는다.** 무엇을 확인할지만 정한다.
 
 `structure.json`의 `lecture_range`·`jokbo_range`가 이 단계의 범위다. `chunks`는 이미
@@ -185,6 +214,8 @@ python quiz/structure.py runs/<lecture_id>
 가리키는지 직접 읽어라.
 
 ### 2단계 — 문항 작성 (Opus 5 호출 ②)
+
+띄우기 직전에 `timings.py ... start 2-write`, 받은 직후에 `end 2-write`.
 
 새 `general-purpose` 서브에이전트.
 
@@ -225,6 +256,8 @@ python prequiz/validate.py runs/<lecture_id>
 경계는 포인터일 뿐이라 `structure.json`만 고치면 검증·빌드가 그걸 따른다.
 
 ### 4단계 — 감사 (Opus 5 호출 ③)
+
+띄우기 직전에 `timings.py ... start 4-audit`, 받은 직후에 `end 4-audit`.
 
 새 `general-purpose` 서브에이전트로 돌린다. 자기가 쓴 걸 자기가 의심하기는 어렵다고
 보고 나눈 것인데 **아직 실측하지 않았다** ([docs/pipeline.md](../../../docs/pipeline.md) 4단계).
@@ -283,6 +316,7 @@ python -m studyez done <lecture_id>
 - 출처 분포(강의록/족보)와 족보가 물었던 지점을 다룬 문항 수(`exam_hit`)
 - 감사에서 삭제/수정/보충한 수
 - 청사진에서 `needs_lecture`·`too_detailed`로 뺀 내용 중 **학생이 알아둘 만한 것 한두 개**
+- **단계별 소요** — `python quiz/timings.py runs/<lecture_id> report`의 표를 그대로 붙인다
 - `.apkg` 경로. Anki에서 수동 import한다 (자동 투입하지 않는다)
 
 ## 실패 시

@@ -35,6 +35,7 @@ for _stream in (sys.stdout, sys.stderr):
 
 from prequiz.notetype import get_anki_model  # noqa: E402
 from prequiz.validate import check_item  # noqa: E402
+from quiz import timings  # noqa: E402
 from quiz.notetype import deck_component  # noqa: E402
 from quiz.textutil import (  # noqa: E402
     escape_field,
@@ -247,7 +248,8 @@ def main() -> int:
     parser.add_argument("--out", default=None, help="출력 apkg 경로")
     args = parser.parse_args()
 
-    meta = build_run(Path(args.run_dir), args.items, args.project, args.out)
+    with timings.stage(Path(args.run_dir), "5-build"):
+        meta = build_run(Path(args.run_dir), args.items, args.project, args.out)
     q, f, src = meta["qtypes"], meta["focus"], meta["sources"]
     print(f"[pre-build] {meta['deck_name']}")
     print(f"  {meta['item_count']}문항 (객관식 {q.get('mcq', 0)} / 단답 {q.get('short', 0)}"
