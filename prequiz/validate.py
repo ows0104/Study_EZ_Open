@@ -352,6 +352,46 @@ def answer_position_bias(items: list[dict]) -> dict | None:
             "dominant": top, "share": round(count / total, 2)}
 
 
+def ox_balance(items: list[dict]) -> dict | None:
+    """OX의 참·거짓이 한쪽으로 몰렸는가.
+
+    `answer_position_bias`의 형제다. 저쪽이 "다 ③으로 찍으면 몇 개 맞나"를 재고
+    이쪽은 "다 X로 찍으면 몇 개 맞나"를 잰다. 몰려 있으면 내용을 몰라도 찍히므로
+    예습 점검으로서 무의미해진다 (§5.4가 "참·거짓을 반반 가깝게"라고 적은 자리다).
+
+    **세 편에서 재현돼서 넣었다.** 감사가 매번 손으로 맞추고 있었는데 기계가
+    가리켜 주지 않아 감사의 눈에 걸리는지에 달려 있었다.
+
+        250820_02   X 6 : O 2 (75%)  → 감사가 4:4로
+        250820_03   X 4 : O 1 (80%)  → 감사가 3:2로
+        250820_05   쏠림           → 감사가 4:4로
+
+    문턱은 `answer_position_bias`와 다르다. 선지가 다섯인 객관식은 0.40이 기준이
+    되지만 OX는 둘뿐이라 0.50이 우연의 자리다. **0.70을 넘을 때만 부른다** —
+    4문항에서 3:1(0.75)이면 부르고 2:1(0.67)이면 안 부른다.
+
+    최소 개수도 다르다. 객관식은 8개를 요구하는데 OX는 한 편에 4~8개라 그 문턱을
+    쓰면 영영 안 울린다. **4개부터 본다.**
+    """
+    counts: dict[str, int] = {}
+    for item in items:
+        if _text(item.get("qtype")).lower() != "ox":
+            continue
+        answer = _text(item.get("answer")).strip().upper()
+        # O/X 말고 다른 표기로 적혀 온 것은 세지 않는다. 그건 스키마 문제라
+        # 다른 검사가 잡는다 — 여기서 같이 세면 쏠림이 흐려진다.
+        if answer in ("O", "X"):
+            counts[answer] = counts.get(answer, 0) + 1
+    total = sum(counts.values())
+    if total < 4:
+        return None
+    top, count = max(counts.items(), key=lambda kv: kv[1])
+    if count / total <= 0.70:
+        return None
+    return {"total_ox": total, "distribution": {"O": counts.get("O", 0), "X": counts.get("X", 0)},
+            "dominant": top, "share": round(count / total, 2)}
+
+
 def validate_items(items: list[dict], max_slide: int,
                    jokbo_range: list | None = None) -> tuple[list[dict], list[dict]]:
     """(빌드 가능한 문항, 제거된 문항). 제거된 문항은 원문을 통째로 보존한다."""
@@ -437,6 +477,7 @@ def validate_run(run_dir: Path, items_name: str = "pre_items.raw.json") -> dict:
         "near_duplicate_groups": find_near_duplicate_groups(kept),
         "coverage_gaps": coverage_gaps(blueprint, kept),
         "answer_position_bias": answer_position_bias(kept),
+        "ox_balance": ox_balance(kept),
         "hot_slides": hot_slides,
         "untouched_slides": untouched,
     }
@@ -489,6 +530,11 @@ def main() -> int:
     if s["answer_position_bias"]:
         b = s["answer_position_bias"]
         print(f"  ! 정답 번호 편중: {b['dominant']}번이 {int(b['share'] * 100)}% ({b['distribution']})")
+    if s["ox_balance"]:
+        b = s["ox_balance"]
+        print(f"  ! OX 쏠림: {b['dominant']}가 {int(b['share'] * 100)}% "
+              f"(O {b['distribution']['O']} : X {b['distribution']['X']}) — "
+              f"다 {b['dominant']}로 찍으면 {b['distribution'][b['dominant']]}개를 맞는다")
     if s["hot_slides"]:
         print(f"  과출제 의심 슬라이드: {[h['slide_no'] for h in s['hot_slides']]}")
     print(f"  문항이 없는 강의록 슬라이드 {len(s['untouched_slides'])}장: {s['untouched_slides']}")
