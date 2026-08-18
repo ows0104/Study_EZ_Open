@@ -213,21 +213,40 @@ python quiz/structure.py runs/<lecture_id>
 있지 않은지 확인한다. `slides`에 족보 구간 번호가 있으면 그 `objective`가 중심 흐름을
 가리키는지 직접 읽어라.
 
-### 2단계 — 문항 작성 (Opus 5 호출 ②)
+### 2단계 — 문항 작성 (Opus 5 호출 ②, **objective별 동시 실행**)
 
-띄우기 직전에 `timings.py ... start 2-write`, 받은 직후에 `end 2-write`.
+`pre_blueprint.json`의 **objective 하나에 서브에이전트 하나**를 붙여 동시에 돌린다.
+조각마다 `timings.py ... start 2-write --label <obj_id>`, 받은 직후에 `end`.
+**라벨을 빠뜨리지 마라** — 없으면 벽시계와 작업시간 합이 안 갈리고, 그 둘의 차가
+조각화의 값이다.
 
-새 `general-purpose` 서브에이전트.
+**왜 objective인가.** quiz는 `structure.json`의 `chunks`로 쪼개는데 여기서는
+청사진의 objective로 쪼갠다. Pre-Quiz에는 **30문항 상한**이 있어서 조각들이
+서로를 모르는 채로 "정보량대로" 쓰면 합이 넘는데, **청사진이 이미 배분을 들고
+있다** — 그 objective의 `check_point` 수가 그 조각의 몫이다. `250820_01`에서
+check_point 총합 30에 문항 29였고 objective별로도 거의 1:1이었다.
 
-> `pre_blueprint.json`을 읽고, 근거가 필요한 슬라이드는 강의록이면 `model_input.pdf`,
+**왜 쪼개나.** 통짜 2단계가 12.5분이고 그 안에서 죽으면 그때까지의 32분이 통째로
+날아간다. 얻는 것은 시간보다 **한 번에 죽지 않는 것**이다 — 조각 하나가 죽어도
+나머지는 남고, `merge_items.py`가 없는 조각을 이름으로 적어 준다.
+
+각 조각에 이렇게 준다. `<obj_id>`와 그 objective의 `check_points`·`slides`를 박아라.
+
+> 너는 `pre_blueprint.json`의 **`<obj_id>` 하나만** 맡는다. 그 objective의
+> `check_points`를 문항으로 만들어라. **다른 objective는 건드리지 마라** — 다른
+> 에이전트가 맡고 있고, 겹치면 `merge_items.py`가 경계 겹침으로 표시한다.
+> 근거가 필요한 슬라이드는 강의록이면 `model_input.pdf`,
 > 족보면 `annotated.pdf`에서 `pages`로 그 슬라이드만 읽어라.
 > **`preview.md`가 있으면 함께 읽어라** — 학생이 읽고 올 예습 대화다.
 > **대화가 정리해 준 것을 그대로 물어도 된다.** 수업 전에 외우고 들어가야 하는
 > 것이 이 퀴즈의 본체다 (`preview-rules.md` §0.1).
 > `.claude/skills/prequiz/references/preview-rules.md`를 **전부** 읽고 그 규칙대로 만든다.
-> 결과를 `runs/<lecture_id>/pre_items.raw.json`에. 스키마는 `references/item.schema.json`.
+> 결과를 `runs/<lecture_id>/pre_items.raw.<obj_id>.json`에.
+> 스키마는 `references/item.schema.json`.
 >
-> - **정보량대로 내되 30문항을 넘지 마라.** 객관식이 절반 이상, 나머지를 단답과 OX가 나눈다 (§3)
+> - **네 몫은 이 objective의 `check_point` 수만큼이다.** 전체 30문항 상한은 조각들의
+>   합으로 지켜지므로 네가 다른 조각의 몫을 당겨쓰면 안 된다 (§3)
+> - **`id`는 적지 마라.** 조각들은 서로를 몰라 저마다 `p001`을 만든다. 번호는 3단계가 매긴다
 > - 예습 대화에서 착안한 문항도 `slide_no`는 그 내용이 실린 **강의록 슬라이드**를
 >   가리키고 `source_type`은 `lecture`다. 대화에만 있고 강의록에 없는 내용은 내지 마라
 > - 모든 문항은 청사진의 `objective_id`와 `check_point`에 묶인다
@@ -241,6 +260,21 @@ python quiz/structure.py runs/<lecture_id>
 > - OX는 진술문. 참·거짓을 반반 가깝게 (§5.4)
 > - `explanation`에 §8의 세 요소를 전부 담아라. 특히 **③ 강의에서 무엇을 들을 것인가**
 > - 청사진의 check_point 중 문항을 만들지 않은 것은 `skipped`에 사유와 함께 남긴다
+
+조각이 다 돌아오면 합친다.
+
+```bash
+python prequiz/merge_items.py runs/<lecture_id>
+```
+
+objective 순서대로 이어 붙인다. **정렬하지 않는다** — Pre-Quiz는 슬라이드 순이
+아니라 작성 순서가 곧 푸는 순서다(`PreItem.ord`).
+
+`✗ 조각이 없다`가 뜨면 그 objective의 문항이 통째로 빠진 것이다. **그 조각만**
+다시 돌리면 된다 — 나머지는 그대로 쓴다. 그러라고 쪼갠 것이다.
+
+`두 조각이 같이 다룬 슬라이드`와 `check_point N개와 다르다`는 **표시일 뿐이다.**
+지울지 채울지는 4단계가 정한다.
 
 ### 3단계 — 기계 검증 (코드)
 

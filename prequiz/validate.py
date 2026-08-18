@@ -441,9 +441,18 @@ def validate_run(run_dir: Path, items_name: str = "pre_items.raw.json") -> dict:
         "untouched_slides": untouched,
     }
 
-    (run_dir / "pre_items.checked.json").write_text(
-        json.dumps({"lecture_id": prep["lecture_id"], "items": kept}, ensure_ascii=False, indent=2),
-        encoding="utf-8")
+    # `pre_items.checked.json`은 **2단계 결과를 거른 것**이다. 확정본을 검증할 때는
+    # 쓰지 않는다 — 그러면 `prequiz/apply_audit.py`가 패치를 얹을 base가 감사
+    # **이후** 내용으로 덮인다. 실제로 그렇게 덮인 파일을 한 번 봤고, 그 상태로
+    # apply를 다시 부르면 `add`가 두 번 들어간다.
+    #
+    # `pre_suspects.json`은 반대로 **언제나 갱신한다.** `studyez.gate`가 "확정본
+    # 검증에서 hard 제거가 났나"를 그 파일로 보기 때문이다.
+    if items_name != "pre_items.final.json":
+        (run_dir / "pre_items.checked.json").write_text(
+            json.dumps({"lecture_id": prep["lecture_id"], "items": kept},
+                       ensure_ascii=False, indent=2),
+            encoding="utf-8")
     (run_dir / "pre_suspects.json").write_text(
         json.dumps(suspects, ensure_ascii=False, indent=2), encoding="utf-8")
     return {"kept": len(kept), "suspects": suspects}
