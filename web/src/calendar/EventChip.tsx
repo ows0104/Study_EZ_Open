@@ -1,5 +1,5 @@
 import type { LectureRef } from "../types";
-import { chipState, entryPhase, prequizDone, type CalendarEntry, type LecturePhase } from "./entries";
+import { entryPhase, hasTodo, prequizDone, type CalendarEntry, type LecturePhase } from "./entries";
 
 /** 강의 상세는 새 창이다. 캘린더를 잃지 않고 자료를 여닫으라는 뜻이다. */
 export function lectureHref(lecture: Pick<LectureRef, "subject" | "runId">) {
@@ -91,12 +91,12 @@ export function EventChip({
   // 그릴 때마다 다시 읽는다. 강의가 끝나는 순간 점이 예습에서 복습으로 넘어가야
   // 하는데, 한 번 잡아 두면 자정까지 안 넘어간다.
   const phase = entryPhase(entry, new Date());
-  // 계열은 범주가, 진하기는 학습 상태가 정한다. 두 축을 색상 하나에 겹치지
-  // 않고 색상과 명도로 나눠 실었다는 뜻이다.
+  // 왼쪽 띠는 범주만 진다. 할 일이 남았는지는 제목의 무게로만 말하고,
+  // 무엇이 얼마나 남았는지는 아래 점이 말한다.
   const className = [
     "calendar-event",
     `is-${entry.category}`,
-    `state-${chipState(entry, phase)}`,
+    hasTodo(entry, phase) ? "state-todo" : "",
     compact ? "is-compact" : "",
     // `is-active`가 아니다 — base.css의 `button.is-active`가 토글 버튼용으로 그
     // 이름을 이미 쓰고 있어서, 칸에 붙이면 계열과 무관하게 강조색 배경·글자색이

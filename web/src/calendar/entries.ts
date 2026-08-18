@@ -59,36 +59,28 @@ export function prequizDone(lecture: LectureRef) {
 }
 
 /**
- * 칸의 진하기.
+ * 아직 할 일이 남은 칸인가. 제목의 무게가 이것으로 갈린다.
  *
- * 색상(계열)은 범주가 정하고, 그 계열 안에서 몇 단을 쓸지는 이것이 정한다.
- * 같은 파랑이라도 할 일이 있으면 진하고 없으면 옅다.
- *
- * **점과 같은 축의 거친 눈금이다.** 전에는 둘이 같은 불리언에서 나와서
- * (`todo` ⟺ 퀴즈 점) 점이 칸의 진하기를 한 번 더 말하는 꼴이었다. 지금은
- * 칸이 "남았는가"를, 점이 "무엇이 남았는가"를 말한다.
+ * **하나뿐이다.** 전에는 "자료 없음 / 자료 있음 / 할 일 있음" 세 단이 왼쪽
+ * 띠의 짙기로 나갔는데, 그 축을 걷어냈다 — 띠로도 말하고 점으로도 말하면 같은
+ * 것을 두 번 말하는 것이고, 무엇이 얼마나 남았는지는 점이 훨씬 정확하다.
+ * 그래서 "자료는 있는데 풀 것은 없다"는 이제 안 그린다.
  *
  * **"풀었다"를 아는 것은 웹 예습퀴즈뿐이다.** 덱은 apkg로 나가 Anki에서
- * 풀리므로 서버에 기록이 없다. 그래서 강의 후의 `todo`는 여전히 "받을 것이
+ * 풀리므로 서버에 기록이 없다. 그래서 강의 후의 참은 여전히 "받을 것이
  * 있다"이지 "아직 안 풀었다"가 아니다.
  */
-export type ChipState = "blank" | "ready" | "todo";
-
-export function chipState(entry: CalendarEntry, phase: LecturePhase): ChipState {
+export function hasTodo(entry: CalendarEntry, phase: LecturePhase) {
   // 시험은 붙는 자료가 없어도 그 자체가 할 일이다. 자료로 판정하면 학기에서
-  // 가장 중요한 칸이 가장 옅게 나온다.
-  if (entry.category === "exam") return "todo";
+  // 가장 중요한 칸이 가장 흐리게 나온다.
+  if (entry.category === "exam") return true;
 
+  // 강의 전에는 잰 것이 정한다. 다 푼 예습퀴즈는 더 이상 할 일이 아니다.
   if (phase === "before") {
-    // 잰 것이 있으면 그것이 정한다. 다 푼 예습퀴즈는 더 이상 할 일이 아니다.
-    if (entry.lectures.some((lecture) => lecture.marks.prequiz && !prequizDone(lecture))) return "todo";
-    if (entry.lectures.some((lecture) => lecture.marks.preview || lecture.marks.prequiz)) return "ready";
-    return "blank";
+    return entry.lectures.some((lecture) => lecture.marks.prequiz && !prequizDone(lecture));
   }
 
-  if (entry.lectures.some((lecture) => lecture.marks.quiz)) return "todo";
-  if (entry.lectures.some((lecture) => lecture.marks.notes)) return "ready";
-  return "blank";
+  return entry.lectures.some((lecture) => lecture.marks.quiz);
 }
 
 export function startOfDay(value: Date) {

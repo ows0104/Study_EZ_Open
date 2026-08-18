@@ -1,7 +1,8 @@
 /* 캘린더 격자.
  *
- * 칸의 색 규칙은 base.css 머리에 적어 두었다 — 색상은 범주, 짙기는 학습 상태,
- * 둘 다 왼쪽 띠에 실린다. 여기서는 그 두 값을 `--cat`·`--rail`로 받아 칠한다.
+ * 칸의 색 규칙은 base.css 머리에 적어 두었다 — 왼쪽 띠의 색상이 범주다.
+ * 여기서는 그 값을 `--cat`으로 받아 칠한다. 학습 상태는 띠가 아니라 칸 아래
+ * 점이 말한다.
  *
  * 격자 자체의 층은 밝기로 만든다. 바닥(--bg) 위에 격자 카드(--surface)가 뜨고,
  * 그 위 칸이 계열색을 옅게 얹는다. 선을 굵게 하는 대신 밝기를 쓰면 조밀해도
@@ -345,19 +346,23 @@
 
 /* ------------------------------------------------------------------ 칸 */
 
-/* 두 축이 겹치지 않게 실린다. 둘 다 왼쪽 띠에서 만난다.
+/* 왼쪽 띠는 범주 하나만 싣는다.
  *
  *   --cat   계열 = 범주 (강의·실습·시험)     → 띠의 색상
- *   --rail  진하기 = 학습 상태               → 띠의 짙기
+ *   --rail  짙기. 범주가 없는 칸만 낮춘다
  *
- * 칸 안은 안 채운다. 채우면 한 주에 스물이 동시에 물들고, 어디까지 했는지는
- * 아래 점이 더 정확히 말한다. 채워지는 것은 마우스가 올라간 칸과 열어 둔 칸뿐이다.
+ * **학습 상태는 여기 안 싣는다.** 띠의 짙기로도 말하고 점으로도 말하면 같은
+ * 것을 두 번 말하는 것이고, 어디까지 했는지는 점이 훨씬 정확하다 — 무엇이
+ * 얼마나 남았는지까지 말한다.
+ *
+ * 칸 안은 안 채운다. 채우면 한 주에 스물이 동시에 물든다. 채워지는 것은
+ * 마우스가 올라간 칸과 열어 둔 칸뿐이다.
  *
  * 옅은 값을 따로 적어 두지 않고 표면에 섞어서 만든다. 다크 모드에서 표면이
  * 바뀌면 섞인 결과도 같이 바뀌므로 값을 두 벌 관리하지 않아도 된다. */
 .calendar-event {
   --cat: var(--ink-3);
-  --rail: 28%;
+  --rail: 100%;
 
   position: relative;
   display: grid;
@@ -422,26 +427,10 @@
   --cat: var(--cat-exam);
 }
 
-/* ── 명도: 학습 상태 ── */
+/* ── 할 일이 남은 칸 ── */
 
-/* 띠에만 싣는다. 칸을 채우면 한 주에 스물이 동시에 물들어 시끄럽고, 어디까지
- * 했는지는 아래 점이 더 정확히 말한다. */
-
-/* 자료가 아직 없다. */
-.calendar-event.state-blank {
-  --rail: 30%;
-}
-
-/* 필기나 예습 링크는 있고 풀 것은 아직 없다. */
-.calendar-event.state-ready {
-  --rail: 64%;
-}
-
-/* 풀 것이 있다. 띠가 계열색 그대로다. */
-.calendar-event.state-todo {
-  --rail: 100%;
-}
-
+/* 띠는 안 건드린다. 제목의 무게만 올린다 — 띠까지 상태로 흔들면 계열색이
+ * 칸마다 다른 짙기로 나와서 범주가 안 읽힌다. */
 .calendar-event.state-todo .calendar-event-primary {
   font-weight: 650;
 }
@@ -676,35 +665,6 @@
   border-style: dashed;
   border-left-width: 1px;
   background: transparent;
-}
-
-/* 진하기 사다리. 왼쪽이 자료 없음, 오른쪽이 할 일 있음. */
-.legend-ramp {
-  --cat: var(--cat-lecture);
-
-  display: flex;
-  gap: 2px;
-}
-
-.legend-ramp i {
-  width: 11px;
-  height: 11px;
-  border: 1px solid color-mix(in srgb, var(--cat) 16%, var(--line));
-  border-radius: 3px;
-  background: var(--surface);
-}
-
-/* 칸과 같은 세 단계 — 30% · 64% · 100%. */
-.legend-ramp i:nth-child(1) {
-  border-left: 3px solid color-mix(in srgb, var(--cat) 30%, var(--line-strong));
-}
-
-.legend-ramp i:nth-child(2) {
-  border-left: 3px solid color-mix(in srgb, var(--cat) 64%, var(--line-strong));
-}
-
-.legend-ramp i:nth-child(3) {
-  border-left: 3px solid var(--cat);
 }
 
 .calendar-legend .legend-note {

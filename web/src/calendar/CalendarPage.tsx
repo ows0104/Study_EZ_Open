@@ -141,8 +141,8 @@ export function CalendarPage() {
           )}
         />
 
-        {/* 색이 두 가지를 뜻하게 됐으니 둘 다 적는다 — 색상은 범주, 진하기는
-            학습 상태. 규칙이 어디에도 안 적혀 있으면 아무도 못 읽는다. */}
+        {/* 왼쪽 띠는 범주만 뜻한다. 학습 상태는 점이 말한다 — 띠까지 상태로
+            흔들면 같은 것을 두 번 말하는 것이고, 점 쪽이 훨씬 정확하다. */}
         <div className="calendar-legend">
           <span className="legend-group">
             <span>
@@ -156,16 +156,6 @@ export function CalendarPage() {
             </span>
             <span>
               <i className="legend-swatch is-off" /> 휴일·자율
-            </span>
-          </span>
-          <span className="legend-group">
-            <span>
-              <i className="legend-ramp" aria-hidden="true">
-                <i />
-                <i />
-                <i />
-              </i>
-              띠가 진할수록 할 일이 있습니다
             </span>
           </span>
           {/* 점은 시점에 따라 갈린다. 규칙이 둘이 됐으니 둘 다 적는다 —
