@@ -204,6 +204,10 @@ python quiz/structure.py runs/<lecture_id>
 > - 이 강의가 무엇에 관한 것인지 `lecture_summary`에 3~4문장
 > - 족보에서 읽어낸 성향은 `exam_focus`에. 족보 슬라이드 번호를 `slides`에 넣을 때는
 >   그 내용이 중심 흐름이라는 근거를 `objective`에서 읽을 수 있어야 한다
+> - **`exam_focus`에 "어느 지점을 몇 해가 물었는지"를 연도·번호와 함께 적어라.**
+>   2단계가 짤족(두 해 이상 반복된 지점)을 가릴 때 여기만 보고 판단한다 —
+>   `exam_hit`은 불리언이라 횟수를 모른다 (`preview-rules` §3.1).
+>   **꼴이 갈려도 같은 지점이면 같이 센다.** 족보는 흔히 O/X를 뒤집어 낸다
 > - 목표는 4~7개. 각 `check_point`에 `focus`(must_know / core / context)를 붙여라
 > - **강의를 들어야만 알 수 있는 내용(`needs_lecture`)과 지엽적 수치(`too_detailed`)는
 >   `skipped`로 뺀다.** 전자는 좌절이 되고 후자는 시험 덱 몫이다
