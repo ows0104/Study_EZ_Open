@@ -7,7 +7,7 @@ $ReleaseDirectory = Join-Path $SourceDirectory "release"
 $PackageDirectory = Join-Path $ReleaseDirectory "package"
 $ManifestPath = Join-Path $SourceDirectory "manifest.json"
 
-$Manifest = Get-Content -Raw -LiteralPath $ManifestPath | ConvertFrom-Json
+$Manifest = Get-Content -Raw -Encoding UTF8 -LiteralPath $ManifestPath | ConvertFrom-Json
 $Version = [string]$Manifest.version
 $ZipPath = Join-Path $ReleaseDirectory "studyez-preview-bridge-$Version-web-store.zip"
 
@@ -45,7 +45,9 @@ foreach ($Size in 16, 32, 48, 128) {
 }
 
 $StoreManifestPath = Join-Path $PackageDirectory "manifest.json"
-$Manifest | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $StoreManifestPath -Encoding utf8
+$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+$StoreManifestJson = $Manifest | ConvertTo-Json -Depth 20
+[System.IO.File]::WriteAllText($StoreManifestPath, $StoreManifestJson, $Utf8NoBom)
 
 $StoreManifestText = Get-Content -Raw -LiteralPath $StoreManifestPath
 if ($StoreManifestText -match 'localhost|127\.0\.0\.1') {
@@ -55,7 +57,7 @@ if ($Manifest.permissions -contains "tabs") {
   throw "스토어 manifest에 불필요한 tabs 권한이 남았습니다."
 }
 if ($Manifest.host_permissions -notcontains "https://d0ec59549fea0c13f1b7fe9f724df93b.r2.cloudflarestorage.com/*") {
-  throw "정확한 StudyEZ R2 origin이 없습니다."
+  throw "정확한 Study EZ R2 origin이 없습니다."
 }
 
 if (Test-Path -LiteralPath $ZipPath) {

@@ -32,12 +32,12 @@ function createOverlay(payload) {
       #studyez-bridge .studyez-status { min-height: 18px; margin-top: 9px; color: #3a5bc7; font-size: 11px; }
       #studyez-bridge .studyez-status.is-error { color: #9a3412; }
     </style>
-    <h2>Study_EZ 예습 자료</h2>
+    <h2>Study EZ 예습 자료</h2>
     <p>ChatGPT에 넣을 필기와 프롬프트입니다. 전송은 직접 눌러야 합니다.</p>
     <p class="studyez-disclosure">
       동의하면 선택한 PDF와 프롬프트를 ChatGPT에 넣습니다. 확장은 대화 완성과 링크를 확인하려고 현재
-      ChatGPT 로그인 토큰을 메모리에서 잠깐 사용하지만, 토큰을 저장하거나 StudyEZ로 보내지 않습니다.
-      ${shared ? "이 모드는 링크를 가진 누구나 볼 수 있는 공개 공유 링크를 만들고 StudyEZ 강의에 저장합니다." : "이 모드는 내 계정에서만 열리는 대화 주소를 StudyEZ 강의에 저장합니다."}
+      ChatGPT 로그인 토큰을 메모리에서 잠깐 사용하지만, 토큰을 저장하거나 Study EZ로 보내지 않습니다.
+      ${shared ? "이 모드는 링크를 가진 누구나 볼 수 있는 공개 공유 링크를 만들고 Study EZ 강의에 저장합니다." : "이 모드는 내 계정에서만 열리는 대화 주소를 Study EZ 강의에 저장합니다."}
       <a href="https://study-ez-open.pages.dev/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a>
     </p>
     <ul>${payload.files
