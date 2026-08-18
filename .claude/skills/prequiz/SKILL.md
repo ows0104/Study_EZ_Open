@@ -265,7 +265,10 @@ python prequiz/validate.py runs/<lecture_id>
 > `pre_suspects.json`과 `pre_items.checked.json`을 읽어라. 원본 확인이 필요하면
 > 강의록은 `model_input.pdf`, 족보는 `annotated.pdf`에서 `pages`로 지목된 슬라이드만 읽어라.
 > `.claude/skills/prequiz/references/preview-rules.md`의 **§12 감사 기준**을 따른다.
-> 최종 배열을 `runs/<lecture_id>/pre_items.final.json`에, 판정 근거를 `pre_audit.md`에 쓴다.
+> **패치만** `runs/<lecture_id>/pre_audit_patch.json`에, 판정 근거를 `pre_audit.md`에 쓴다.
+> 최종 배열을 통째로 쓰지 마라 — 형식은 `prequiz/apply_audit.py` 첫머리에 있다.
+> `edit`은 바꿀 필드만, `drop`은 id와 사유, `add`는 새 문항. **언급하지 않은 문항은
+> 전부 유지다.** 합치는 일은 코드가 한다.
 >
 > - `flagged` — 수정 / 유지 / 삭제 중 하나
 > - `longest_choice_is_answer`·`lazy_distractor` — 선지를 §7.2의 출처로 다시 만든다
@@ -281,6 +284,23 @@ python prequiz/validate.py runs/<lecture_id>
 >   원본 라벨로 가려라
 > - `untouched_slides` — **대부분 정상이다.** §1의 다섯 우선순위에 해당하는지만 확인하라
 > - 최종 문항 수가 30을 넘으면 `context`부터 잘라 30 이하로 맞춘다
+
+받은 뒤 패치를 반영하고 **검증을 한 번 더 돌린다.**
+
+```bash
+python prequiz/apply_audit.py runs/<lecture_id>                              # 패치 → pre_items.final.json
+python prequiz/validate.py runs/<lecture_id> --items pre_items.final.json    # 다시 통과하는지
+```
+
+고친 것이 정말 고쳐졌는지는 확정본을 검증해 봐야 안다. `hard 제거`가 하나라도 나오면
+빌드 불가 문항이 섞인 것이므로 4단계로 되돌린다 — `studyez.gate`가 그 자리를
+배포 검문으로 쓴다.
+
+`add`한 문항은 **맨 뒤에 붙는다.** Pre-Quiz는 슬라이드 순이 아니라 작성 순서가
+곧 푸는 순서라(`PreItem.ord`), 코드가 임의로 끼워 넣지 않는다.
+
+`없는 id를 가리켰다`가 뜨면 감사가 존재하지 않는 문항을 고치려 한 것이다. 그
+문항이 정말 필요하면 4단계를 다시 시켜라 — 패치를 손으로 고치지 마라.
 
 ### 5단계 — 빌드 (코드)
 
