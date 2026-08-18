@@ -278,40 +278,6 @@
   pointer-events: none;
 }
 
-/* 지금. --at은 그 시각 줄 안에서의 분(0~1)이다.
- *
- * 줄 높이가 화면에 따라 달라지므로 px으로 밀지 않고 줄 높이만큼 늘어난 뒤
- * 그 안에서 백분율로 잡는다 — 퍼센트가 부모 높이를 기준으로 풀리는 것이
- * 여기서는 곧 줄 높이다. */
-.calendar-now {
-  position: relative;
-  z-index: 6;
-  align-self: stretch;
-  pointer-events: none;
-}
-
-.calendar-now::before,
-.calendar-now::after {
-  position: absolute;
-  top: calc(var(--at) * 100%);
-  content: "";
-}
-
-.calendar-now::after {
-  right: 0;
-  left: 0;
-  border-top: 1.5px solid #ef4444;
-}
-
-.calendar-now::before {
-  left: 50px;
-  width: 7px;
-  height: 7px;
-  margin-top: -4px;
-  border-radius: 50%;
-  background: #ef4444;
-}
-
 .week-event-span {
   z-index: 2;
   min-width: 0;

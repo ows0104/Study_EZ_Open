@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   addDays,
   defaultHourSlots,
@@ -10,7 +10,7 @@ import {
   type CalendarMode,
 } from "./entries";
 
-/** 지금 몇 시인가. 1분마다 다시 그린다 — 현재 시각 선이 멈춰 있으면 거짓말이 된다. */
+/** 오늘이 며칠인가. 자정을 넘겨도 "오늘" 표시가 어제 칸에 남지 않도록 1분마다 다시 본다. */
 function useNow() {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -52,10 +52,6 @@ export function CalendarGrid({
     const activeHours = weekEntries.map((entry) => Number(entry.startTime.slice(0, 2))).filter(Number.isFinite);
     const hourSlots = [...new Set([...defaultHourSlots, ...activeHours])].sort((left, right) => left - right);
 
-    // 현재 시각 선. 보고 있는 주에 오늘이 없거나, 지금 시각에 해당하는 줄이
-    // 없으면(점심시간처럼) 긋지 않는다.
-    const nowRow = todayKey >= weekStartKey && todayKey <= weekEndKey ? hourSlots.indexOf(now.getHours()) : -1;
-
     return (
       <section className="week-calendar" aria-label="주간 캘린더">
         <div className="week-head is-spacer" style={{ gridColumn: 1, gridRow: 1 }} />
@@ -95,19 +91,6 @@ export function CalendarGrid({
           <div
             className="calendar-lunch-divider"
             style={{ gridColumn: "1 / -1", gridRow: hourSlots.indexOf(13) + 2 }}
-            aria-hidden="true"
-          />
-        ) : null}
-        {nowRow >= 0 ? (
-          <div
-            className="calendar-now"
-            style={
-              {
-                gridColumn: "1 / -1",
-                gridRow: nowRow + 2,
-                "--at": now.getMinutes() / 60,
-              } as CSSProperties
-            }
             aria-hidden="true"
           />
         ) : null}
