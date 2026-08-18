@@ -7,12 +7,15 @@
 `quiz/merge_items.py`는 `structure.json`의 `chunks`로 쪼갠다. 여기서는
 **청사진의 `objective`로 쪼갠다.** 이유는 배분이다.
 
-Pre-Quiz는 **30문항 상한**이 있어서 조각들이 서로를 모르는 채로 "정보량대로"
+Pre-Quiz는 **20문항 상한**이 있어서 조각들이 서로를 모르는 채로 "정보량대로"
 쓰면 합이 상한을 넘는다. quiz에는 그 상한이 없어서 이 문제가 없고, 대신 조각
 크기를 `plan_chunks.py`가 회귀로 맞춘다.
 
 그런데 Pre-Quiz는 **청사진이 이미 배분을 들고 있다.** 실측한 편(`250820_01`)에서
 `check_point` 총합이 30이고 나온 문항이 29였다. objective별로도 거의 1:1이었다.
+(그 편은 상한이 30이던 때 돌았다. 지금은 20이고, 1단계가 `check_point` 총합을
+거기 맞춘다 — 아래 표는 배분이 청사진에서 나온다는 것을 보이는 자리이지
+숫자 자체가 기준은 아니다.)
 
     obj_1  cp 3 → 문항 3      obj_4  cp 7 → 문항 7
     obj_2  cp 4 → 문항 4      obj_5  cp 5 → 문항 4
@@ -62,7 +65,7 @@ for _stream in (sys.stdout, sys.stderr):
 from quiz import timings  # noqa: E402
 
 # preview-rules가 정한 상한. 넘으면 세어서 표시한다 — 자르는 것은 4단계 몫이다.
-MAX_ITEMS = 30
+MAX_ITEMS = 20
 
 
 def _items(payload) -> list[dict]:
@@ -165,7 +168,7 @@ def main() -> int:
               "그 objective의 문항이 통째로 빠졌다. 그 조각만 다시 돌려라")
     if result["total"] > MAX_ITEMS:
         print(f"  ! {result['total']}문항으로 상한 {MAX_ITEMS}을 넘었다 — "
-              "4단계가 context부터 잘라야 한다")
+              "4단계가 잘라야 한다 (무엇을 남기는지는 preview-rules §3.2)")
     if result["overlaps"]:
         print(f"  ! 두 조각이 같이 다룬 슬라이드: {result['overlaps']} — "
               "회상 목적이 겹치는지는 4단계가 본다")
