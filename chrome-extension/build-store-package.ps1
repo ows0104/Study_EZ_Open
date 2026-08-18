@@ -10,6 +10,7 @@ $ManifestPath = Join-Path $SourceDirectory "manifest.json"
 $Manifest = Get-Content -Raw -Encoding UTF8 -LiteralPath $ManifestPath | ConvertFrom-Json
 $Version = [string]$Manifest.version
 $ZipPath = Join-Path $ReleaseDirectory "studyez-preview-bridge-$Version-web-store.zip"
+$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
 if (Test-Path -LiteralPath $PackageDirectory) {
   Remove-Item -LiteralPath $PackageDirectory -Recurse -Force
@@ -37,6 +38,17 @@ foreach ($RelativePath in $RuntimeFiles) {
   Copy-Item -LiteralPath (Join-Path $SourceDirectory $RelativePath) -Destination $PackageDirectory
 }
 
+# 배경 스크립트에도 개발 편의용 localhost 허용 분기가 있다. manifest 권한이 없어
+# 스토어에서는 실행될 수 없지만 심사본에는 불필요한 코드까지 남기지 않는다.
+$StoreBackgroundPath = Join-Path $PackageDirectory "background.js"
+$StoreBackground = Get-Content -Raw -Encoding UTF8 -LiteralPath $StoreBackgroundPath
+$StoreBackground = $StoreBackground -replace ', "http://localhost:5173"', ''
+$StoreBackground = $StoreBackground -replace '(?m)^    const localOrigins = .*?\r?\n    return localOrigins.*?;\r?$', '    return false;'
+if ($StoreBackground -match 'localhost|127\.0\.0\.1') {
+  throw "스토어 background.js에 로컬 개발 주소가 남았습니다."
+}
+[System.IO.File]::WriteAllText($StoreBackgroundPath, $StoreBackground, $Utf8NoBom)
+
 $IconDirectory = Join-Path $PackageDirectory "icons"
 New-Item -ItemType Directory -Path $IconDirectory -Force | Out-Null
 foreach ($Size in 16, 32, 48, 128) {
@@ -45,7 +57,6 @@ foreach ($Size in 16, 32, 48, 128) {
 }
 
 $StoreManifestPath = Join-Path $PackageDirectory "manifest.json"
-$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 $StoreManifestJson = $Manifest | ConvertTo-Json -Depth 20
 [System.IO.File]::WriteAllText($StoreManifestPath, $StoreManifestJson, $Utf8NoBom)
 
