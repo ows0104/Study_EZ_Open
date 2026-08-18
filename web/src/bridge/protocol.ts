@@ -42,3 +42,9 @@ export const PREVIEW_TIMEOUT_MS = 5000;
  * "폴더를 고르세요"라고 말할 수 없다.
  */
 export const EXTENSION_DOWNLOAD_URL = "/studyez-extension.zip";
+
+/**
+ * 스토어 공개 뒤 Cloudflare Pages 빌드 변수에 항목 URL을 넣는다.
+ * 값이 없으면 로컬·검수 중에 쓰는 개발용 ZIP 설치 안내를 그대로 보여 준다.
+ */
+export const EXTENSION_STORE_URL = (import.meta.env.VITE_EXTENSION_STORE_URL as string | undefined)?.trim() ?? "";

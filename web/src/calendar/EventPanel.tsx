@@ -8,7 +8,7 @@ import {
   usePreviewVersion,
   watchSharedLink,
 } from "../bridge/previewBridge";
-import { EXTENSION_DOWNLOAD_URL } from "../bridge/protocol";
+import { EXTENSION_DOWNLOAD_URL, EXTENSION_STORE_URL } from "../bridge/protocol";
 import { PROMPT_TOKENS, renderPreviewPrompt, SHARED_PREVIEW_PROMPT } from "../lecture/previewPrompt";
 import { usePreviewPrompt } from "../lecture/usePreviewPrompt";
 import { useMe } from "../useMe";
@@ -309,23 +309,34 @@ function PreviewAction({
   // 확장이 없으면 자동으로 열 수 없다. 기본 링크가 이미 있으면 그건 그냥 주소라
   // 확장 없이도 열린다 — 그 경우만 먼저 보여 준다.
   if (!extensionInstalled()) {
+    const storeReady = Boolean(EXTENSION_STORE_URL);
     return (
       <>
         {detail.preview?.shareUrl ? <SharedOpen url={detail.preview.shareUrl} lectureId={lectureId} /> : null}
-        <a className="panel-action is-key is-download" href={EXTENSION_DOWNLOAD_URL} download>
-          <strong>예습 브리지 내려받기</strong>
+        <a
+          className="panel-action is-key is-download"
+          href={storeReady ? EXTENSION_STORE_URL : EXTENSION_DOWNLOAD_URL}
+          download={storeReady ? undefined : true}
+          target={storeReady ? "_blank" : undefined}
+          rel={storeReady ? "noreferrer" : undefined}
+        >
+          <strong>{storeReady ? "Chrome 웹스토어에서 설치" : "예습 브리지 내려받기"}</strong>
           <small>설치하면 필기와 프롬프트가 ChatGPT에 자동으로 들어갑니다</small>
         </a>
-        <ol className="panel-steps">
-          <li>받은 zip을 압축 해제합니다.</li>
-          <li>
-            <code>chrome://extensions</code> → 오른쪽 위 <b>개발자 모드</b>
-          </li>
-          <li>
-            <b>압축해제된 확장 프로그램을 로드</b> → 압축 푼 폴더
-          </li>
-          <li>이 탭을 새로고침합니다.</li>
-        </ol>
+        {storeReady ? (
+          <p className="panel-steps">설치한 뒤 이 탭을 새로고침해 주세요.</p>
+        ) : (
+          <ol className="panel-steps">
+            <li>받은 zip을 압축 해제합니다.</li>
+            <li>
+              <code>chrome://extensions</code> → 오른쪽 위 <b>개발자 모드</b>
+            </li>
+            <li>
+              <b>압축해제된 확장 프로그램을 로드</b> → 압축 푼 폴더
+            </li>
+            <li>이 탭을 새로고침합니다.</li>
+          </ol>
+        )}
       </>
     );
   }

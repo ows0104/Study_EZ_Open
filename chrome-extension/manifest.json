@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "Study_EZ 예습 브리지",
-  "version": "0.2.0",
+  "name": "StudyEZ 예습 브리지",
+  "version": "1.0.0",
   "description": "Study_EZ의 작년 필기와 예습 프롬프트를 ChatGPT 새 대화에 채우고, 만들어진 공유 링크를 강의에 되돌려 줍니다.",
-  "permissions": ["storage", "tabs"],
+  "permissions": ["storage"],
   "host_permissions": [
-    "https://*.r2.cloudflarestorage.com/*",
+    "https://d0ec59549fea0c13f1b7fe9f724df93b.r2.cloudflarestorage.com/*",
     "https://chatgpt.com/*",
     "http://localhost:5173/*",
     "http://localhost:8000/*",
@@ -13,6 +13,12 @@
   ],
   "background": {
     "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
   },
   "content_scripts": [
     {

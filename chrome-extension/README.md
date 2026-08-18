@@ -1,4 +1,4 @@
-# Study_EZ 예습 브리지
+# StudyEZ 예습 브리지
 
 작년 필기와 예습 프롬프트를 **ChatGPT 새 대화에 직접 채우고**, 만들어진 공유
 링크를 강의에 되돌려 주는 크롬 확장입니다.
@@ -22,6 +22,13 @@ MedDeck AI Bridge에서 갈라져 나왔습니다. 거기는 Claude·Gemini·Cha
 소스를 고친 뒤에는 `chrome://extensions`의 카드에서 새로고침을 누르고 Study_EZ
 탭도 새로고침해야 합니다.
 
+Chrome Web Store 등록용 ZIP은 개발용 ZIP과 분리합니다. 로컬 주소를 제거하고
+manifest가 ZIP 루트에 있는지 검증하는 `build-store-package.ps1`을 실행하세요.
+
+```powershell
+.\chrome-extension\build-store-package.ps1
+```
+
 ## 어떻게 도는가
 
 ```
@@ -31,6 +38,7 @@ Study_EZ 패널에서 "예습 시작하기"
           ├ 자료 주소를 허용 목록으로 검사 (R2 또는 로컬 산출물 경로만)
           └ ChatGPT 새 탭을 열고 자료를 세션 저장소에 넣음
               └ chatgpt-bridge.js가 확인 카드를 띄움
+                  ├ 데이터 처리 설명을 읽고 동의 확인란을 선택
                   ├ 배경이 PDF를 받아 조각으로 넘김
                   ├ input[type=file]에 DataTransfer로 첨부
                   └ 입력창에 프롬프트 삽입 — **전송은 사람이 누름**
@@ -112,6 +120,8 @@ ChatGPT 계정이나 워크스페이스를 갈아탔으면 자기 대화도 안 
   달 수 없습니다.
 - 검색 노출(`is_discoverable`)은 끕니다. 링크 밖으로 새지 않습니다.
 - **전송 버튼은 사람이 직접 누릅니다.**
+- ChatGPT 액세스 토큰은 대화·공유 요청에 메모리에서만 쓰고 저장하거나 StudyEZ로
+  보내지 않습니다.
 
 ## 어느 주소에서 도는가
 

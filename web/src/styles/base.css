@@ -913,6 +913,80 @@ button.resource:hover:not(:disabled) {
   margin-bottom: 10px;
 }
 
+/* ------------------------------------------------ 개인정보처리방침 (공개 경로) */
+
+.policy-page {
+  min-height: 100vh;
+  padding: 28px 20px 72px;
+  background: var(--canvas);
+}
+
+.policy-page > header,
+.policy-page > article {
+  width: min(720px, 100%);
+  margin-inline: auto;
+}
+
+.policy-page > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 42px;
+  gap: 18px;
+}
+
+.policy-page > header p,
+.policy-page footer {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.policy-page article {
+  padding: clamp(24px, 5vw, 52px);
+  border: 1px solid var(--line);
+  border-radius: var(--r-4);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.policy-page h1 {
+  margin: 0 0 18px;
+  font-size: clamp(28px, 5vw, 40px);
+  letter-spacing: -.04em;
+}
+
+.policy-page h2 {
+  margin: 32px 0 10px;
+  font-size: 17px;
+}
+
+.policy-page p,
+.policy-page li {
+  color: var(--ink-2);
+  line-height: 1.75;
+}
+
+.policy-page .policy-lead {
+  color: var(--ink-1);
+  font-size: 16px;
+}
+
+.policy-page ul {
+  padding-left: 21px;
+}
+
+.policy-page footer {
+  margin-top: 42px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-soft);
+}
+
+@media (max-width: 560px) {
+  .policy-page > header {
+    display: block;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;

@@ -5,6 +5,7 @@ import { AuthProvider, LoginPage, PendingApproval, useAuth } from "./auth";
 import { CalendarPage } from "./calendar/CalendarPage";
 import { LecturePage } from "./lecture/LecturePage";
 import { AdminPage } from "./admin/AdminPage";
+import { PrivacyPage } from "./PrivacyPage";
 import type { Me } from "./types";
 
 function Shell() {
@@ -23,8 +24,12 @@ function Shell() {
       .catch((cause: Error) => setMeError(cause.message));
   }, [session]);
 
+  // 개인정보처리방침은 로그인이나 관리자 승인 없이 심사팀과 사용자 모두가
+  // 항상 열 수 있어야 한다. Hook 호출 뒤에 갈라야 경로 전환 때 호출 순서도 같다.
+  if (location.pathname === "/privacy") return <PrivacyPage />;
+
   if (loading) return <p className="notice">불러오는 중…</p>;
-  // 로그인 없이 열리는 화면은 없다.
+  // 개인정보처리방침을 제외한 자료 화면은 로그인 뒤에만 열린다.
   if (!session) return <LoginPage />;
   if (meError) return <p className="notice is-error">{meError}</p>;
   if (!me) return <p className="notice">불러오는 중…</p>;

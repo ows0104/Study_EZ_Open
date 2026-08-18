@@ -11,6 +11,7 @@ function escapeHtml(value) {
 }
 
 function createOverlay(payload) {
+  const shared = payload.mode === "shared";
   const root = document.createElement("aside");
   root.id = "studyez-bridge";
   root.innerHTML = `
@@ -18,23 +19,37 @@ function createOverlay(payload) {
       #studyez-bridge { position: fixed; right: 20px; bottom: 20px; z-index: 2147483647; width: min(360px, calc(100vw - 40px)); padding: 16px; border: 1px solid #e4e6ea; border-radius: 14px; color: #16181d; background: #fff; box-shadow: 0 18px 50px rgba(16, 18, 29, .22); font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif; }
       #studyez-bridge h2 { margin: 0 0 5px; font-size: 15px; font-weight: 650; }
       #studyez-bridge p { margin: 0 0 10px; color: #878d97; font-size: 12px; }
+      #studyez-bridge .studyez-disclosure { padding: 10px; border: 1px solid #dfe4f5; border-radius: 9px; color: #414754; background: #f5f7ff; }
+      #studyez-bridge .studyez-consent { display: flex; align-items: flex-start; margin: 0 0 12px; gap: 8px; color: #30343b; font-size: 12px; cursor: pointer; }
+      #studyez-bridge .studyez-consent input { width: 16px; height: 16px; margin: 1px 0 0; accent-color: #3e63dd; }
+      #studyez-bridge a { color: #3155c6; }
       #studyez-bridge ul { max-height: 120px; margin: 0 0 12px; padding: 9px 9px 9px 26px; overflow: auto; border-radius: 9px; background: #f6f7f9; }
       #studyez-bridge li { margin: 3px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       #studyez-bridge .studyez-actions { display: flex; justify-content: flex-end; gap: 7px; }
       #studyez-bridge button { min-height: 34px; padding: 0 12px; border: 1px solid #e4e6ea; border-radius: 8px; color: #565b64; background: #fff; font: inherit; font-weight: 650; cursor: pointer; }
       #studyez-bridge button[data-action="confirm"] { border-color: #3e63dd; color: #fff; background: #3e63dd; }
-      #studyez-bridge button:disabled { opacity: .55; cursor: wait; }
+      #studyez-bridge button:disabled { opacity: .55; cursor: not-allowed; }
       #studyez-bridge .studyez-status { min-height: 18px; margin-top: 9px; color: #3a5bc7; font-size: 11px; }
       #studyez-bridge .studyez-status.is-error { color: #9a3412; }
     </style>
     <h2>Study_EZ 예습 자료</h2>
     <p>ChatGPT에 넣을 필기와 프롬프트입니다. 전송은 직접 눌러야 합니다.</p>
+    <p class="studyez-disclosure">
+      동의하면 선택한 PDF와 프롬프트를 ChatGPT에 넣습니다. 확장은 대화 완성과 링크를 확인하려고 현재
+      ChatGPT 로그인 토큰을 메모리에서 잠깐 사용하지만, 토큰을 저장하거나 StudyEZ로 보내지 않습니다.
+      ${shared ? "이 모드는 링크를 가진 누구나 볼 수 있는 공개 공유 링크를 만들고 StudyEZ 강의에 저장합니다." : "이 모드는 내 계정에서만 열리는 대화 주소를 StudyEZ 강의에 저장합니다."}
+      <a href="https://study-ez-open.pages.dev/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a>
+    </p>
     <ul>${payload.files
       .map((file) => `<li title="${escapeHtml(file.filename)}">${escapeHtml(file.filename)}</li>`)
       .join("")}</ul>
+    <label class="studyez-consent">
+      <input type="checkbox" data-action="consent">
+      <span>위의 데이터 처리와 ${shared ? "공개 공유 링크 생성" : "개인 대화 주소 저장"}에 동의합니다.</span>
+    </label>
     <div class="studyez-actions">
       <button type="button" data-action="cancel">취소</button>
-      <button type="button" data-action="confirm">자료 ${payload.files.length}개와 프롬프트 넣기</button>
+      <button type="button" data-action="confirm" disabled>동의하고 자료 ${payload.files.length}개 넣기</button>
     </div>
     <div class="studyez-status" role="status"></div>
   `;
@@ -145,10 +160,15 @@ async function initialize() {
   const overlay = createOverlay(payload);
   const status = overlay.querySelector(".studyez-status");
   const confirm = overlay.querySelector('[data-action="confirm"]');
+  const consent = overlay.querySelector('[data-action="consent"]');
   overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => overlay.remove());
+  consent.addEventListener("change", () => {
+    confirm.disabled = !consent.checked;
+  });
 
   confirm.addEventListener("click", async () => {
     confirm.disabled = true;
+    consent.disabled = true;
     status.classList.remove("is-error");
     try {
       const files = [];
@@ -161,7 +181,8 @@ async function initialize() {
     } catch (error) {
       status.classList.add("is-error");
       status.textContent = error instanceof Error ? error.message : String(error);
-      confirm.disabled = false;
+      consent.disabled = false;
+      confirm.disabled = !consent.checked;
     }
   });
 }

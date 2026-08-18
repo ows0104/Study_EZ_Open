@@ -16,6 +16,7 @@ const SHARE_ORIGIN = "studyez-share-origin:";
 
 const CHATGPT_ORIGIN = "https://chatgpt.com";
 const CHATGPT_START = "https://chatgpt.com/";
+const R2_ORIGIN = "https://d0ec59549fea0c13f1b7fe9f724df93b.r2.cloudflarestorage.com";
 
 /**
  * 여기서 온 요청만 받는다. 확장은 웹앱이 시키는 대로 남의 사이트에 파일을
@@ -46,7 +47,7 @@ const fromChatgpt = (sender) => originOf(sender) === CHATGPT_ORIGIN;
 function allowedDownload(value) {
   try {
     const url = new URL(value);
-    if (url.protocol === "https:" && url.hostname.endsWith(".r2.cloudflarestorage.com")) return true;
+    if (url.origin === R2_ORIGIN) return true;
     const localOrigins = ["http://localhost:5173", "http://localhost:8000", "http://127.0.0.1:8000"];
     return localOrigins.includes(url.origin) && url.pathname.startsWith("/api/local-storage/lectures/");
   } catch {

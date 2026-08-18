@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import type { Session } from "@supabase/supabase-js";
 import { LOCAL_TEST_TOKEN } from "./localTest";
 import { supabase } from "./supabase";
+import { Link } from "react-router-dom";
 
 type AuthState = {
   session: Session | null;
@@ -185,7 +186,7 @@ export function LoginPage() {
       </div>
 
       <p className="gate-fineprint">
-        강의 자료는 로그인하고 승인받은 사람에게만 열립니다.
+        강의 자료는 로그인하고 승인받은 사람에게만 열립니다. <Link to="/privacy">개인정보처리방침</Link>
       </p>
     </main>
   );
