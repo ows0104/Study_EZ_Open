@@ -103,6 +103,21 @@
                   "maxItems": 4
                 },
                 "description": "[x0,y0,x1,y1] 페이지 대비 0~1 비율. 라벨이 그림에 구워져 있어 labels.json에 없을 때만 쓴다"
+              },
+              "mask_label_ids": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^s[0-9]{3}_l[0-9]{2}$" },
+                "description": "표식 없이 앞면에서만 덮을 라벨. 답이 슬라이드 다른 자리에 글자 그대로 적혀 있을 때 그 자리를 가린다. 회수 대상이 아니라 A·B·C가 안 붙고 상자 수 상한에도 안 센다"
+              },
+              "mask_rects": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": { "type": "number", "minimum": 0, "maximum": 1 },
+                  "minItems": 4,
+                  "maxItems": 4
+                },
+                "description": "마스크를 좌표로 직접 찍을 때. 누출원이 붙여넣은 그림 안에 픽셀로 구워져 있으면 labels.json에 안 잡히므로 이쪽을 쓴다"
               }
             }
           }

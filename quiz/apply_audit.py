@@ -35,7 +35,9 @@ import json
 import sys
 from pathlib import Path
 
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from quiz import timings  # noqa: E402
 
 for _stream in (sys.stdout, sys.stderr):
     try:
@@ -119,7 +121,8 @@ def main() -> int:
     parser.add_argument("--out", default="items.final.json")
     args = parser.parse_args()
 
-    result = apply_patch(Path(args.run_dir), args.base, args.patch, args.out)
+    with timings.stage(Path(args.run_dir), "5-apply"):
+        result = apply_patch(Path(args.run_dir), args.base, args.patch, args.out)
     print(f"[audit] {result['before']}장 → {result['after']}장")
     print(f"  수정 {len(result['edited'])} · 삭제 {len(result['dropped'])} · 보충 {len(result['added'])}")
     for key, reason in result["dropped"]:

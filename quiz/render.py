@@ -19,29 +19,37 @@ def make_annotation_clean_pdf(src_pdf_path, out_pdf_path) -> int:
 
     모델이 '사실'을 읽는 채널은 반드시 이쪽이어야 한다. 필기가 섞인 자료를 근거로
     쓰면 강조 표시를 사실로 착각한 문항이 나온다.
+
+    다음 표시는 **`delete_annot`이 돌려주는 것**을 받는다. 지우기 전에 집어 둔
+    `annot.next`를 쓰면 안 된다 — 앞엣것을 지울 때 뒤엣것이 페이지에서 풀리는
+    자리가 있다. `250821_01`의 첫 쪽이 그랬고(FreeText를 지우자 바로 뒤 Text가
+    죽었다), 그 한 편이 통째로 prep에서 막혀 있었다.
+
+    그래도 남는 것이 있으면 그 쪽의 `/Annots`를 통째로 버린다. 이 파일이 사실
+    채널이라 **덜 지운 채로 나가느니 다 버리는 편이 낫다.** 남기고 넘어가면
+    강조 표시가 사실로 읽힌다.
     """
     doc = fitz.open(str(src_pdf_path))
     removed = 0
     for page in doc:
         annot = page.first_annot
         while annot:
-            nxt = annot.next
             try:
-                page.delete_annot(annot)
+                annot = page.delete_annot(annot)
                 removed += 1
             except Exception:
-                pass
-            annot = nxt
-        try:
-            widgets = list(page.widgets() or [])
-        except Exception:
-            widgets = []
-        for widget in widgets:
+                # 다음으로 넘어갈 손잡이가 없다. 아래 backstop에 맡긴다.
+                break
+        for widget in list(page.widgets() or []):
             try:
                 page.delete_widget(widget)
                 removed += 1
             except Exception:
                 pass
+        if page.first_annot is not None:
+            print(f"[prep] 경고: {page.number + 1}쪽의 표시를 하나씩 못 지웠다 — "
+                  f"그 쪽의 annotation을 통째로 버린다")
+            doc.xref_set_key(page.xref, "Annots", "null")
     doc.save(str(out_pdf_path), garbage=4, deflate=True, clean=True)
     doc.close()
     return removed

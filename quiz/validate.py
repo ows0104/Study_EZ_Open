@@ -264,7 +264,7 @@ def check_item(item: dict, max_slide: int, jokbo_range: list | None = None,
         if not isinstance(occlusion, dict):
             hard.append("occlusion_not_object")
         else:
-            _, problems = resolve_rects(occlusion, slide_no or 0, label_index or {})
+            _, _masks, problems = resolve_rects(occlusion, slide_no or 0, label_index or {})
             if label_index is None:
                 # 라벨 목록 없이 부를 때(build의 재검사 등)는 id 실재 여부를 알 수
                 # 없으므로 좌표 형식만 본다. 실제 확인은 render_occlusion_media가 한다.
@@ -272,6 +272,8 @@ def check_item(item: dict, max_slide: int, jokbo_range: list | None = None,
                 if occlusion.get("label_ids"):
                     problems = [p for p in problems if p != "occlusion_empty"]
             hard.extend(problems)
+            # **마스크는 세지 않는다.** 회수 대상이 아니라 답이 딴 데 적힌 자리를
+            # 덮는 상자여서 학습자가 그만큼 더 회상하지 않는다.
             if len(occlusion.get("label_ids") or []) + len(occlusion.get("rects") or []) > 6:
                 # 상자가 일곱 개면 한 카드에서 일곱 개를 회상해야 한다(§7 위반).
                 soft.append("occlusion_too_many_boxes")

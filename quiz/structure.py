@@ -38,6 +38,11 @@ from pathlib import Path
 
 import fitz
 
+import sys  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from quiz import timings  # noqa: E402
+
+
 # "10.2", "23. 5" - 문항번호와 정답번호를 죽 늘어놓은 답안표.
 #
 # 줄 전체가 그것뿐이어야 하고 정답은 1~5여야 한다. 느슨하게 잡으면 강의록의
@@ -202,6 +207,10 @@ class Structure:
     jokbo_range: list[int] | None
     jokbo_evidence: str
     chunks: list[Chunk] = field(default_factory=list)
+    # 교수의 출제 성향. **0.5단계가 낸다** - 경계를 찾느라 족보 구간을 어차피 전부
+    # 읽는 자리여서, 그 읽기를 버리고 1단계가 같은 쪽을 또 읽던 것을 여기로 옮겼다.
+    # 이 파일은 세지 않는다(모양이 자유롭다). 1단계 조각들이 읽어 쓴다.
+    exam_focus: dict | None = None
 
     @classmethod
     def load(cls, path: str | Path) -> "Structure":
@@ -211,6 +220,7 @@ class Structure:
             jokbo_range=list(raw["jokbo_range"]) if raw.get("jokbo_range") else None,
             jokbo_evidence=raw.get("jokbo_evidence", ""),
             chunks=[Chunk(**c) for c in raw.get("chunks", [])],
+            exam_focus=raw.get("exam_focus"),
         )
 
     def save(self, path: str | Path) -> None:
@@ -376,6 +386,11 @@ def main() -> int:
     args = parser.parse_args()
 
     run_dir = Path(args.run_dir)
+    with timings.stage(run_dir, "0.5-check"):
+        return _verify_cli(run_dir)
+
+
+def _verify_cli(run_dir: Path) -> int:
     structure_path = run_dir / "structure.json"
     if not structure_path.exists():
         print(f"[structure] {structure_path}가 없다. 0.5단계를 먼저 돌려라")
@@ -401,6 +416,14 @@ def main() -> int:
         print(f"  근거: {structure.jokbo_evidence}")
     for chunk in structure.chunks:
         print(f"    {chunk.id} [{chunk.slides[0]:>3}-{chunk.slides[1]:>3}] {chunk.title}")
+
+    # 세지는 않는다 - 있는지 없는지만 알린다. 1단계 조각들이 이걸 읽고 쓰므로
+    # 비어 있으면 조각마다 족보를 다시 읽게 되고 그만큼 느려진다.
+    if structure.exam_focus:
+        print(f"  exam_focus 있음 ({len(json.dumps(structure.exam_focus, ensure_ascii=False))}자)")
+    elif structure.jokbo_range:
+        print("  ⚠ 족보 구간이 있는데 exam_focus가 비었다 — 1단계 조각들이 족보를 "
+              "각자 다시 읽게 된다")
 
     if problems:
         print(f"\n  검증 실패 {len(problems)}건 — 0.5단계를 다시 시켜라")

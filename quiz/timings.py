@@ -44,11 +44,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
 FILENAME = "timings.jsonl"
+
+# 이 구간을 누가 돌렸나. `quiz/tokens.py`가 이걸로 트랜스크립트를 찾아 토큰을
+# 센다. 세션 ID가 없으면 창(시각)만 남고, 같은 시각에 두 편이 돌면 안 갈린다.
+SESSION_ENV = "CLAUDE_CODE_SESSION_ID"
 
 
 def now() -> str:
@@ -71,6 +76,9 @@ def record(run_dir, stage: str, event: str, label: str | None = None,
     row = {"stage": stage, "event": event, "at": at or now()}
     if label:
         row["label"] = label
+    session = os.environ.get(SESSION_ENV)
+    if session:
+        row["session"] = session
     row.update(extra)
     try:
         with (run_dir / FILENAME).open("a", encoding="utf-8") as fh:
@@ -137,6 +145,9 @@ def _spans(rows: list[dict]) -> list[dict]:
                 "start": t0, "end": t1,
                 "seconds": (t1 - t0).total_seconds(),
                 "ok": row.get("ok", True),
+                # 시작을 찍은 세션. 끝이 다른 세션이면(재개) 시작 쪽을 쓴다 —
+                # 그 구간의 토큰은 시작한 쪽에서 나갔다.
+                "session": start.get("session") or row.get("session"),
             })
     dangling = sum(len(v) for v in open_.values())
     for span in spans:

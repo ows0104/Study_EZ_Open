@@ -25,7 +25,19 @@ ANKI_CARD_CSS = """
 .answer-box { margin-top: 18px; font-size: 20px; color: #222; line-height: 1.6; font-weight: bold; white-space: pre-line; text-align: left; display: inline-block; max-width: 100%; }
 .explanation-box { display: block; margin-top: 16px; font-size: 14px; color: #555; line-height: 1.5; text-align: left; white-space: pre-line; }
 .review-box { display: block; margin-top: 16px; padding: 10px 14px; border: 2px solid #c0392b; border-radius: 8px; background: #fdecea; color: #922b21; font-size: 15px; font-weight: bold; line-height: 1.5; text-align: left; white-space: pre-line; }
-.meta-box { margin-top: 16px; font-size: 12px; color: #777; }
+.meta-box { margin-top: 12px; font-size: 12px; color: #777; }
+/* 해설·출처는 접어 둔다. 뒷면에서 먼저 봐야 하는 것은 정답과 슬라이드이고,
+   해설은 "왜 그런지" 되짚을 때만 필요하다. 펼치는 데 한 번의 탭이 들지만
+   매 카드마다 눈이 걸리는 비용보다 싸다.
+   칩은 슬라이드 그림 **아래**에 선다. 그림 위에 두면 펼칠 때 해설이 그림을
+   화면 밖으로 밀어낸다. */
+.detail-box { display: block; margin-top: 16px; text-align: center; }
+.detail-box > summary { display: inline-block; cursor: pointer; list-style: none; padding: 3px 12px; border-radius: 999px; background: #eef3f7; color: #567; font-size: 13px; -webkit-user-select: none; user-select: none; }
+.detail-box > summary::-webkit-details-marker { display: none; }
+.detail-box > summary::after { content: " ▾"; }
+.detail-box[open] > summary::after { content: " ▴"; }
+.detail-box .explanation-box { margin-top: 10px; }
+.nightMode .detail-box > summary { background: #3a3a3a; color: #b8c4cc; }
 .source-pill { display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 8px; background: #eef3f7; color: #456; }
 .slide-box { margin-top: 12px; border: 1px solid #ddd; padding: 0; background: #f9f9f9; display: inline-block; max-width: 100%; line-height: 0; }
 .slide-box img { display: block; }
@@ -48,14 +60,26 @@ img { max-width: 100%; height: auto; }
 .nightMode .slide-box { background: #ffffff; border-color: #444; }
 """
 
+# 순서가 이 템플릿의 내용이다.
+#   정답 → 경고 → 슬라이드 그림 → 접힌 해설·출처
+# 해설을 그림 위에 두면 접혀 있는 칩이 정답과 그림 사이를 밀고 들어서,
+# 펼치는 순간 그림이 화면 밖으로 쓸려난다. 그림을 먼저 세우면 펼쳐도 그림이
+# 제자리에 있고 해설이 그 아래로 자란다.
+#
+# `Answer`를 조건부로 감싸는 것은 오클루전 때문이다 - 그 카드는 **드러난
+# 슬라이드 그림 자체가 정답**이라 빌드가 이 필드를 비워서 보낸다(build.py 참조).
+# 빈 필드를 그대로 그리면 빈 answer-box가 자리를 차지해 그림이 밀린다.
 _ANSWER_TEMPLATE = """
 <div class="question-box">{{Question}}</div>
 <hr id="answer">
-<div class="answer-box">{{Answer}}</div>
+{{#Answer}}<div class="answer-box">{{Answer}}</div>{{/Answer}}
 {{#ReviewNote}}<div class="review-box">⚠ {{ReviewNote}}</div>{{/ReviewNote}}
+{{#SlideImage}}<div class="slide-box">{{SlideImage}}</div>{{/SlideImage}}
+<details class="detail-box">
+<summary>해설 · 출처</summary>
 {{#Explanation}}<div class="explanation-box">{{Explanation}}</div>{{/Explanation}}
 <div class="meta-box">출처: Slide {{SlideNo}} <span class="source-pill">{{SourceType}}</span> <span class="source-pill">{{CardType}}</span></div>
-{{#SlideImage}}<div class="slide-box">{{SlideImage}}</div>{{/SlideImage}}
+</details>
 """
 
 

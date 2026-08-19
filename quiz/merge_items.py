@@ -26,7 +26,9 @@ import json
 import sys
 from pathlib import Path
 
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from quiz import timings  # noqa: E402
 
 for _stream in (sys.stdout, sys.stderr):
     try:
@@ -102,7 +104,8 @@ def main() -> int:
     parser.add_argument("--out", default="items.raw.json")
     args = parser.parse_args()
 
-    result = merge(Path(args.run_dir), args.out)
+    with timings.stage(Path(args.run_dir), "2-merge"):
+        result = merge(Path(args.run_dir), args.out)
     print(f"[merge] 조각 {len(result['parts'])}개 → {result['count']}장")
     for name, count, skips in result["parts"]:
         print(f"    {name:<28} {count:>3}장" + (f" · skipped {skips}" if skips else ""))

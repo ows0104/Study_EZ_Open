@@ -57,6 +57,10 @@ REVIEW_FLAG_LABELS = {
     "uncertain": "검토 필요",
 }
 
+# 하위 덱 이름. `source_type` → 잎 이름이고, 순서가 Anki에서 보이는 순서다.
+# PreQuiz가 같은 강의 아래 `::예습확인`으로 붙으므로 한 강의 밑에 셋이 나란히 선다.
+DECK_LEAVES = {"lecture": "강의록", "jokbo": "족보"}
+
 
 def _review_field(item: dict) -> str:
     """뒷면의 빨간 경고 박스. 두 가지가 들어온다.
@@ -86,9 +90,17 @@ def _review_field(item: dict) -> str:
     return normalize_display_newlines("\n".join(parts))[:800]
 
 
-def _explanation_field(item: dict) -> str:
-    """해설 + 함정 + 근거. 근거는 나중에 원본을 다시 찾아갈 때의 좌표다."""
+def _explanation_field(item: dict, lead: str = "") -> str:
+    """해설 + 함정 + 근거. 근거는 나중에 원본을 다시 찾아갈 때의 좌표다.
+
+    `lead`는 맨 앞에 세울 한 덩이다. 오클루전 카드의 정답 텍스트가 이리로 온다 -
+    그 카드는 드러난 슬라이드가 정답이라 뒷면 큰 글씨 자리를 비우지만, 텍스트를
+    버리지는 않는다. 상자가 라벨을 덜 덮었거나 그림이 작아 안 읽힐 때 확인할
+    자리가 필요하다.
+    """
     parts = []
+    if lead:
+        parts.append(normalize_display_newlines(lead))
     explanation = normalize_display_newlines(item.get("explanation", ""))
     if explanation:
         parts.append(explanation)
@@ -137,7 +149,7 @@ def render_occlusion_media(items: list[dict], prep: dict, out_dir: Path) -> dict
     failures: list[str] = []
     for item in targets:
         slide_no = int(item["slide_no"])
-        rects, problems = resolve_rects(item["occlusion"], slide_no, label_index)
+        rects, masks, problems = resolve_rects(item["occlusion"], slide_no, label_index)
         if problems:
             failures.append(f"  - {item.get('id')} (slide {slide_no}): {', '.join(problems)}")
             continue
@@ -149,7 +161,7 @@ def render_occlusion_media(items: list[dict], prep: dict, out_dir: Path) -> dict
         # 각인용 하단 띠는 카드 이미지에서 잘라낸다. 예전 run은 이 값이 없어 0이 된다.
         media[str(item["id"])] = render_occlusion_pair(
             source, slide_no, rects, out_dir, basename,
-            band_pt=float(prep.get("stamp_band_pt") or 0.0))
+            band_pt=float(prep.get("stamp_band_pt") or 0.0), masks=masks)
 
     if failures:
         raise SystemExit(
@@ -198,6 +210,16 @@ def build_notes(items: list[dict], slide_image_map: dict[int, str], lecture_id: 
             # 오클루전은 앞면에 그림이 있어야 성립하는 유일한 예외다(item-rules §16).
             anki_question = (
                 f'<div class="occlusion-box"><img src="{front_img}"></div>' + anki_question)
+            # 뒷면의 정답도 그림이다. 가려진 자리를 보고 답하는 카드이므로, 그 자리에
+            # 무엇이 있었는지는 **제자리에서 드러난 그림**이 옮겨 적은 텍스트보다
+            # 읽기 쉽다. 큰 글씨 자리를 비우면(템플릿이 빈 Answer를 지운다) 뒷면에서
+            # 눈이 바로 그림으로 간다. 텍스트는 접힌 해설 맨 앞에 남긴다 - 상자가
+            # 라벨을 덜 덮었거나 글자가 작아 안 읽히는 카드에서 확인할 자리가 필요하다.
+            answer_field = ""
+            explanation = _explanation_field(item, lead=f"정답: {answer}" if answer else "")
+        else:
+            answer_field = answer
+            explanation = _explanation_field(item)
 
         source_type = str(item.get("source_type") or "lecture").strip().lower()
         # 중요도·출제 이력 태그는 나중에 붙일 풀이 시스템이 학습 순서를 짜는 데 쓴다.
@@ -230,8 +252,8 @@ def build_notes(items: list[dict], slide_image_map: dict[int, str], lecture_id: 
             model=model,
             fields=[
                 anki_question,
-                escape_field(answer),
-                escape_field(_explanation_field(item)),
+                escape_field(answer_field),
+                escape_field(explanation),
                 str(slide_no),
                 f'<img src="{img_name}">',
                 escape_field(source_type),
@@ -279,15 +301,31 @@ def build_run(run_dir: Path, items_name: str, project: str, output: Path | None)
     lecture_id = prep["lecture_id"]
     deck_title = f"[{lecture_id}] {prep['lecture_title']}"
     deck_name = hierarchical_deck_name(project, deck_title)
-    deck = genanki.Deck(stable_int_id(f"deck:quiz:{project}:{lecture_id}"), deck_name)
 
     stamps = stamped_slides(run_dir)
     occlusion_dir = run_dir / "media_occlusion"
     occlusion_media = render_occlusion_media(items, prep, occlusion_dir)
     notes, used_slides, stats = build_notes(
         items, slide_image_map, lecture_id, stamps, occlusion_media)
-    for note in notes:
-        deck.add_note(note)
+
+    # 강의록과 족보를 하위 덱으로 가른다 - `과목::강의::강의록` / `::족보`.
+    # PreQuiz가 이미 같은 강의 아래 `::예습확인`으로 붙고 있어 셋이 한 강의 밑에
+    # 나란히 선다. 학습 스케줄을 따로 잡을 수 있게 하려는 것이다 - 족보는 시험 직전에
+    # 몰아 보고 강의록은 꾸준히 도는 식으로 쓸 수 있다.
+    # `build_notes`는 `items` 순서대로 append하므로 인덱스가 그대로 짝이 된다.
+    decks: list = []
+    for key, leaf in DECK_LEAVES.items():
+        picked = [n for n, item in zip(notes, items)
+                  if str(item.get("source_type", "lecture")).lower() == key]
+        if not picked:
+            continue
+        sub = genanki.Deck(stable_int_id(f"deck:quiz:{project}:{lecture_id}:{key}"),
+                           f"{deck_name}::{leaf}")
+        for note in picked:
+            sub.add_note(note)
+        decks.append(sub)
+    if not decks:
+        raise SystemExit("빌드 중단: 덱에 넣을 카드가 없습니다.")
 
     # 미디어는 실제로 쓰인 슬라이드만 넣는다. 33장 전체를 넣으면 안 쓰는 이미지가
     # collection.media에 쌓인다.
@@ -297,7 +335,7 @@ def build_run(run_dir: Path, items_name: str, project: str, output: Path | None)
         media_files.append(str((occlusion_dir / back).resolve()))
 
     output = Path(output) if output else run_dir / f"{safe_filename(deck_title)}.apkg"
-    package = genanki.Package([deck])
+    package = genanki.Package(decks)
     package.media_files = media_files
     package.write_to_file(str(output))
 
@@ -309,7 +347,9 @@ def build_run(run_dir: Path, items_name: str, project: str, output: Path | None)
     meta = {
         "lecture_id": lecture_id,
         "lecture_title": prep.get("lecture_title", ""),
+        # `deck_name`은 강의 덱(부모)이다. 실제 카드는 그 아래 하위 덱에 들어간다.
         "deck_name": deck_name,
+        "decks": {d.name: len(d.notes) for d in decks},
         "verified": verified,
         "built_at": datetime.now().isoformat(timespec="seconds"),
         "apkg": str(output.resolve()),
@@ -369,6 +409,8 @@ def main() -> int:
     with timings.stage(Path(args.run_dir), "5-build"):
         meta = build_run(Path(args.run_dir), args.items, args.project, args.out)
     print(f"[build] {meta['deck_name']}")
+    for name, count in meta.get("decks", {}).items():
+        print(f"    └ {name.split('::')[-1]:<8} {count}장")
     print(f"  {meta['item_count']}장 (basic {meta['format']['basic']} / cloze {meta['format']['cloze']})")
     flags = " · ".join(f"{k} {v}" for k, v in meta["review_flags"].items() if v) or "없음"
     print(f"  출처: 강의록 {meta['sources']['lecture']} / 족보 {meta['sources']['jokbo']}"

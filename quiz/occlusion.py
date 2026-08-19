@@ -155,28 +155,49 @@ def valid_rect(value) -> bool:
 
 
 def resolve_rects(occlusion: dict, slide_no: int,
-                  label_index: dict[int, dict[str, list[float]]]) -> tuple[list[list[float]], list[str]]:
-    """카드의 occlusion 지정 → 실제 좌표 목록. (좌표, 문제 목록)."""
+                  label_index: dict[int, dict[str, list[float]]]
+                  ) -> tuple[list[list[float]], list[list[float]], list[str]]:
+    """카드의 occlusion 지정 → 좌표. (답 상자, 마스크 상자, 문제 목록).
+
+    **답 상자와 마스크 상자는 다른 것이다.** 답 상자에는 `A`·`B`·`C` 표식이 붙고
+    학습자가 그 수만큼 회수해야 한다. 마스크 상자는 표식이 없고 회수 대상도 아니다 -
+    **답이 슬라이드 다른 자리에 글자 그대로 적혀 있을 때 그 자리를 덮는 것**이다.
+
+    왜 갈랐나 - 예전엔 상자가 하나뿐이라 누출을 덮으려면 그 상자도 답 슬롯이 됐다.
+    `260813_01`의 s13에서 `Disuse atrophy` 캡션을 가렸더니 바로 아래 출처 URL
+    (`.../disuse-atrophy`)이 답을 그대로 읽혔는데, URL까지 가리면 상자 다섯에 답이
+    셋이라 표식이 어긋난다. 조각은 **멀쩡한 회수 자리를 통째로 버렸다.** 같은 일이
+    s18에서 한 번 더 났고, `260812_03`의 s7에서는 단서가 남은 채로 나갔다.
+
+    쪼개진 캡션도 이걸로 푼다 - 두 줄짜리 캡션은 첫 줄만 답 상자로 두고 둘째 줄을
+    마스크로 덮으면 표식이 하나만 붙는다.
+    """
     rects: list[list[float]] = []
+    masks: list[list[float]] = []
     problems: list[str] = []
     known = label_index.get(int(slide_no), {})
 
-    for lid in occlusion.get("label_ids") or []:
-        rect = known.get(str(lid))
-        if rect is None:
-            problems.append(f"unknown_label_id({lid})")
-        else:
-            rects.append(list(rect))
+    for key, bucket, tag in (("label_ids", rects, "unknown_label_id"),
+                             ("mask_label_ids", masks, "unknown_mask_label_id")):
+        for lid in occlusion.get(key) or []:
+            rect = known.get(str(lid))
+            if rect is None:
+                problems.append(f"{tag}({lid})")
+            else:
+                bucket.append(list(rect))
 
-    for raw in occlusion.get("rects") or []:
-        if valid_rect(raw):
-            rects.append([float(v) for v in raw])
-        else:
-            problems.append(f"invalid_rect({raw})")
+    for key, bucket, tag in (("rects", rects, "invalid_rect"),
+                             ("mask_rects", masks, "invalid_mask_rect")):
+        for raw in occlusion.get(key) or []:
+            if valid_rect(raw):
+                bucket.append([float(v) for v in raw])
+            else:
+                problems.append(f"{tag}({raw})")
 
+    # 마스크만 있고 답 상자가 없으면 물을 것이 없다.
     if not rects and not problems:
         problems.append("occlusion_empty")
-    return rects, problems
+    return rects, masks, problems
 
 
 def _draw_marker(page, rect: fitz.Rect, text: str, fontsize: float, filled: bool) -> None:
@@ -201,8 +222,13 @@ def _draw_marker(page, rect: fitz.Rect, text: str, fontsize: float, filled: bool
 def render_occlusion_pair(pdf_path, slide_no: int, rects: list[list[float]],
                           out_dir: Path, basename: str,
                           scale: float = OCCLUSION_RENDER_SCALE,
-                          band_pt: float = 0.0) -> tuple[str, str]:
+                          band_pt: float = 0.0,
+                          masks: list[list[float]] | None = None) -> tuple[str, str]:
     """가린 앞면 / 드러낸 뒷면 PNG 두 장. 반환은 파일명 두 개.
+
+    `masks`는 표식 없이 앞면에서만 덮는 상자다 - 답이 슬라이드 다른 자리에 적혀
+    있을 때 그 자리를 가린다. **뒷면에서는 그리지 않는다** - 정답을 확인하는 자리이므로
+    원래 슬라이드가 그대로 보이는 편이 낫다.
 
     페이지를 먼저 픽스맵으로 평탄화한 뒤 그 위에 그린다. annotation은 페이지
     내용보다 위에 그려지므로, 평탄화하지 않으면 필기가 가림 상자를 뚫고 올라온다.
@@ -228,13 +254,22 @@ def render_occlusion_pair(pdf_path, slide_no: int, rects: list[list[float]],
         page = doc.new_page(width=pix.width, height=pix.height)
         page.insert_image(fitz.Rect(0, 0, pix.width, pix.height), pixmap=pix)
 
-        for index, raw in enumerate(rects):
-            rect = fitz.Rect(
+        def _box(raw):
+            return fitz.Rect(
                 raw[0] * pix.width - BOX_MARGIN_PT * scale,
                 raw[1] * pix.height - BOX_MARGIN_PT * scale,
                 raw[2] * pix.width + BOX_MARGIN_PT * scale,
                 raw[3] * pix.height + BOX_MARGIN_PT * scale,
             )
+
+        # 마스크는 앞면에서만, 표식 없이. 답 상자보다 먼저 그려 겹치면 표식이 위로 온다.
+        if hide:
+            for raw in (masks or []):
+                page.draw_rect(_box(raw), color=ACCENT, fill=(1, 1, 1),
+                               width=1.6 * scale, overlay=True)
+
+        for index, raw in enumerate(rects):
+            rect = _box(raw)
             marker = MARKERS[index] if len(rects) > 1 and index < len(MARKERS) else "?"
             if hide:
                 page.draw_rect(rect, color=ACCENT, fill=(1, 1, 1),
