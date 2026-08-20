@@ -206,6 +206,13 @@ def stamped_slides(run_dir: Path) -> set[int]:
     return {a["slide_no"] for a in data if "stamp" in (a.get("signals") or {})}
 
 
+def load_label_index(prep: dict) -> dict[int, dict[str, list[float]]]:
+    """`labels.json` → {슬라이드: {label_id: rect}}. 검사와 렌더가 같은 것을 쓴다."""
+    labels_path = Path(prep.get("labels_path") or "")
+    labels = json.loads(labels_path.read_text(encoding="utf-8")) if labels_path.exists() else None
+    return build_label_index(labels)
+
+
 def render_occlusion_media(items: list[dict], prep: dict, out_dir: Path) -> dict[str, tuple[str, str]]:
     """오클루전 카드마다 (가린 앞면, 드러낸 뒷면) PNG 두 장.
 
@@ -216,9 +223,7 @@ def render_occlusion_media(items: list[dict], prep: dict, out_dir: Path) -> dict
     if not targets:
         return {}
 
-    labels_path = Path(prep.get("labels_path") or "")
-    labels = json.loads(labels_path.read_text(encoding="utf-8")) if labels_path.exists() else None
-    label_index = build_label_index(labels)
+    label_index = load_label_index(prep)
     prefix = safe_media_prefix(prep["source_stem"])
 
     # 오려내는 카드는 **clean**에서 뽑는다 — 답이 그림의 이름이라 필기가 답을
@@ -391,9 +396,14 @@ def build_run(run_dir: Path, items_name: str, project: str, output: Path | None,
 
     # 감사가 문항을 고쳤을 수 있으므로 같은 규칙으로 한 번 더 본다. "모델이 무언가
     # 반환했다"를 "문제가 해결됐다"로 간주하지 않는다.
+    # **색인을 주고 검사한다.** 안 주면 `check_item`이 라벨 id를 하나도 못 풀고,
+    # 그쪽 보정이 `unknown_label_id`만 걸러내서 마스크를 id로 지정한 카드만 죽는다
+    # (`260819_03`의 q109·q111). 렌더도 같은 색인을 쓴다.
+    label_index = load_label_index(prep)
+
     blocked = []
     for item in items:
-        hard, _ = check_item(item, max_slide, jokbo_range)
+        hard, _ = check_item(item, max_slide, jokbo_range, label_index=label_index)
         if int(item.get("slide_no") or 0) not in slide_image_map:
             hard.append("slide_image_missing")
         if hard:
