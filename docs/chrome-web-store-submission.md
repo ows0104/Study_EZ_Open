@@ -1,7 +1,7 @@
 # Study EZ 예습 브리지 — Chrome Web Store 등록표
 
-기준 버전: 1.0.1
-작성일: 2026-08-18
+기준 버전: 1.0.2
+작성일: 2026-08-20
 
 ## 새 항목
 
@@ -12,6 +12,7 @@
 - 공개 범위: 미등록(링크가 있는 사용자만) 권장
 - 홈페이지: `https://studyez.kr/`
 - 개인정보처리방침: `https://studyez.kr/privacy`
+- 설치 페이지: `https://chromewebstore.google.com/detail/elblkdejfejkopjlcfpmmmimpjnhkebd`
 - 지원 이메일: `ows0104+studyez-cws@gmail.com`
 
 ## 자세한 설명
@@ -44,7 +45,8 @@ ChatGPT의 새 대화에 준비합니다. 확인 화면에서 자료와 데이�
 
 진행 중인 강의 요청과 아직 Study EZ에 저장되지 않은 대화 링크를 해당 브라우저
 세션 동안 임시 보관합니다. 저장 확인을 받으면 삭제되며 장기 추적에 사용하지
-않습니다.
+않습니다. 개인·공개 공유 모드별 동의 여부는 로컬 저장소에 보관하며 확인 카드의
+“동의 해제”를 누르면 삭제합니다.
 
 ### 호스트 권한
 
@@ -68,7 +70,8 @@ PDF와 서비스 API 응답만 받아오며 JavaScript 또는 WebAssembly를 내
 - 웹 기록
 - 웹사이트 콘텐츠
 
-그 밖의 카테고리는 선택하지 않음. 위 데이터는 핵심 기능 제공에만 사용하고 판매,
+**금융 및 결제 정보는 선택하지 않음.** 그 밖의 카테고리도 선택하지 않음. 위
+데이터는 핵심 기능 제공에만 사용하고 판매,
 광고, 신용평가, 사용자 추적에 사용하지 않는다는 Limited Use 확인란에 동의합니다.
 
 구체적으로 PDF 파일 내용과 예습 프롬프트를 사용자의 동의 뒤 ChatGPT에 입력하고,
@@ -81,7 +84,9 @@ PDF와 서비스 API 응답만 받아오며 JavaScript 또는 WebAssembly를 내
 1. 제공된 Study EZ 심사용 계정으로 로그인합니다.
 2. 승인된 캘린더에서 필기가 연결된 강의를 누릅니다.
 3. “개인 예습 시작”을 누르면 ChatGPT 새 탭과 확장 확인 카드가 열립니다.
-4. 데이터 처리 설명을 읽고 동의 확인란을 선택한 뒤 자료 넣기 버튼을 누릅니다.
+4. 해당 링크 모드를 처음 사용하는 경우 데이터 처리 설명을 읽고 동의 확인란을
+   선택한 뒤 자료 넣기 버튼을 누릅니다. 이후에는 같은 모드의 동의를 기억하며,
+   확인 카드의 “동의 해제”로 되돌릴 수 있습니다.
 5. PDF와 프롬프트가 준비되는 것을 확인합니다. 확장은 전송 버튼을 누르지 않습니다.
 6. 메시지를 직접 보내 답변이 끝나면 대화 링크가 Study EZ 강의에 연결됩니다.
 
@@ -100,7 +105,7 @@ PowerShell에서:
 .\chrome-extension\build-store-package.ps1
 ```
 
-결과: `chrome-extension/release/studyez-preview-bridge-1.0.1-web-store.zip`
+결과: `chrome-extension/release/studyez-preview-bridge-1.0.2-web-store.zip`
 
 스토어 항목이 게시된 뒤 Cloudflare Pages 빌드 변수
 `VITE_EXTENSION_STORE_URL`에 실제 스토어 URL을 넣으면 웹앱의 개발자 모드 설치

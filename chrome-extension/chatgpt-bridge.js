@@ -10,7 +10,7 @@ function escapeHtml(value) {
   );
 }
 
-function createOverlay(payload) {
+function createOverlay(payload, remembered) {
   const shared = payload.mode === "shared";
   const root = document.createElement("aside");
   root.id = "studyez-bridge";
@@ -22,6 +22,8 @@ function createOverlay(payload) {
       #studyez-bridge .studyez-disclosure { padding: 10px; border: 1px solid #dfe4f5; border-radius: 9px; color: #414754; background: #f5f7ff; }
       #studyez-bridge .studyez-consent { display: flex; align-items: flex-start; margin: 0 0 12px; gap: 8px; color: #30343b; font-size: 12px; cursor: pointer; }
       #studyez-bridge .studyez-consent input { width: 16px; height: 16px; margin: 1px 0 0; accent-color: #3e63dd; }
+      #studyez-bridge .studyez-remembered { margin: 0 0 12px; color: #30343b; font-size: 12px; }
+      #studyez-bridge .studyez-remembered button { min-height: 0; padding: 0; border: 0; color: #3155c6; background: none; font: inherit; font-weight: 400; text-decoration: underline; cursor: pointer; }
       #studyez-bridge a { color: #3155c6; }
       #studyez-bridge ul { max-height: 120px; margin: 0 0 12px; padding: 9px 9px 9px 26px; overflow: auto; border-radius: 9px; background: #f6f7f9; }
       #studyez-bridge li { margin: 3px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -44,13 +46,20 @@ function createOverlay(payload) {
     <ul>${payload.files
       .map((file) => `<li title="${escapeHtml(file.filename)}">${escapeHtml(file.filename)}</li>`)
       .join("")}</ul>
-    <label class="studyez-consent">
+    ${
+      remembered
+        ? `<p class="studyez-remembered">${
+            shared ? "공개 공유 링크 생성" : "개인 대화 주소 저장"
+          }에 이미 동의했습니다. 넣기 전에 위 목록을 확인하세요.
+          <button type="button" data-action="revoke">동의 해제</button></p>`
+        : `<label class="studyez-consent">
       <input type="checkbox" data-action="consent">
       <span>위의 데이터 처리와 ${shared ? "공개 공유 링크 생성" : "개인 대화 주소 저장"}에 동의합니다.</span>
-    </label>
+    </label>`
+    }
     <div class="studyez-actions">
       <button type="button" data-action="cancel">취소</button>
-      <button type="button" data-action="confirm" disabled>동의하고 자료 ${payload.files.length}개 넣기</button>
+      <button type="button" data-action="confirm"${remembered ? "" : " disabled"}>${remembered ? "" : "동의하고 "}자료 ${payload.files.length}개 넣기</button>
     </div>
     <div class="studyez-status" role="status"></div>
   `;
@@ -149,6 +158,21 @@ function requestPayload() {
   });
 }
 
+/**
+ * 동의는 모드별로 한 번만 받는다. 두 모드가 내놓는 것이 다르기 때문이다 —
+ * `shared`는 링크를 가진 누구나 볼 수 있는 공개 링크를 만든다. 개인 모드에
+ * 동의한 것으로 그것까지 동의한 셈 칠 수 없다.
+ */
+const CONSENT_KEY = "studyez-consent:";
+
+function readConsent(mode) {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(`${CONSENT_KEY}${mode}`, (stored) => {
+      resolve(!chrome.runtime.lastError && stored?.[`${CONSENT_KEY}${mode}`] === true);
+    });
+  });
+}
+
 async function initialize() {
   // 새 탭이 뜨는 것과 배경이 자료를 넣어 두는 것에 순서 보장이 없다. 잠깐 기다린다.
   let payload = null;
@@ -158,34 +182,53 @@ async function initialize() {
   }
   if (!payload) return;
 
-  const overlay = createOverlay(payload);
-  const status = overlay.querySelector(".studyez-status");
-  const confirm = overlay.querySelector('[data-action="confirm"]');
-  const consent = overlay.querySelector('[data-action="consent"]');
-  overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => overlay.remove());
-  consent.addEventListener("change", () => {
-    confirm.disabled = !consent.checked;
-  });
+  const mode = payload.mode === "shared" ? "shared" : "personal";
 
-  confirm.addEventListener("click", async () => {
-    confirm.disabled = true;
-    consent.disabled = true;
-    status.classList.remove("is-error");
-    try {
-      const files = [];
-      for (const file of payload.files) files.push(await fetchFile(file, status));
-      status.textContent = "자료를 첨부하고 프롬프트를 넣는 중…";
-      await attachFiles(files);
-      fillPrompt(payload.prompt);
-      status.textContent = "넣었습니다. 확인한 뒤 전송 버튼을 눌러 주세요.";
-      setTimeout(() => overlay.remove(), 5000);
-    } catch (error) {
-      status.classList.add("is-error");
-      status.textContent = error instanceof Error ? error.message : String(error);
-      consent.disabled = false;
+  function mount(remembered) {
+    const overlay = createOverlay(payload, remembered);
+    const status = overlay.querySelector(".studyez-status");
+    const confirm = overlay.querySelector('[data-action="confirm"]');
+    const consent = overlay.querySelector('[data-action="consent"]');
+    overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => overlay.remove());
+    consent?.addEventListener("change", () => {
       confirm.disabled = !consent.checked;
-    }
-  });
+    });
+    // 기억한 동의를 되돌릴 자리. 이것이 없으면 확장 저장소를 통째로 지우는 수밖에 없다.
+    overlay.querySelector('[data-action="revoke"]')?.addEventListener("click", async () => {
+      try {
+        await chrome.storage.local.remove(`${CONSENT_KEY}${mode}`);
+      } catch {
+        // 저장소 오류가 나도 현재 카드에서는 다시 동의를 받는 상태로 돌아간다.
+      }
+      overlay.remove();
+      mount(false);
+    });
+
+    confirm.addEventListener("click", async () => {
+      confirm.disabled = true;
+      // 동의는 누른 그 순간에 남긴다. 첨부가 실패해도 사람이 동의한 것은 사실이다.
+      // 못 남기는 것은 다음에 한 번 더 묻는다는 뜻일 뿐이라 전송을 막지 않는다.
+      await chrome.storage.local.set({ [`${CONSENT_KEY}${mode}`]: true }).catch(() => {});
+      if (consent) consent.disabled = true;
+      status.classList.remove("is-error");
+      try {
+        const files = [];
+        for (const file of payload.files) files.push(await fetchFile(file, status));
+        status.textContent = "자료를 첨부하고 프롬프트를 넣는 중…";
+        await attachFiles(files);
+        fillPrompt(payload.prompt);
+        status.textContent = "넣었습니다. 확인한 뒤 전송 버튼을 눌러 주세요.";
+        setTimeout(() => overlay.remove(), 5000);
+      } catch (error) {
+        status.classList.add("is-error");
+        status.textContent = error instanceof Error ? error.message : String(error);
+        if (consent) consent.disabled = false;
+        confirm.disabled = consent ? !consent.checked : false;
+      }
+    });
+  }
+
+  mount(await readConsent(mode));
 }
 
 void initialize();

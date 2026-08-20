@@ -62,6 +62,20 @@ with zipfile.ZipFile(io.BytesIO(raw)) as archive:
     require(not any(value in script_text for value in ("eval(", "new Function", "WebAssembly.instantiate", "WebAssembly.compile")), "동적 코드 실행이 있습니다.")
     require("import(" not in script_text, "동적 import가 있습니다.")
     require("localhost" not in script_text and "127.0.0.1" not in script_text, "실행 코드에 로컬 개발 주소가 있습니다.")
+    bridge_text = archive.read("chatgpt-bridge.js").decode("utf-8")
+    require(
+        all(
+            marker in bridge_text
+            for marker in (
+                'const CONSENT_KEY = "studyez-consent:"',
+                "chrome.storage.local.get",
+                "chrome.storage.local.set",
+                "chrome.storage.local.remove",
+                'data-action="revoke"',
+            )
+        ),
+        "모드별 동의 기억 또는 해제 코드가 ZIP에 빠졌습니다.",
+    )
     expected_background = (ROOT / "background.js").read_text(encoding="utf-8")
     expected_background = expected_background.replace(', "http://localhost:5173"', "")
     expected_background = re.sub(
@@ -88,5 +102,6 @@ print(f"OK: {ZIP}")
 print(f"SHA256: {hashlib.sha256(raw).hexdigest()}")
 print(f"entries: {len(EXPECTED)}")
 print("permissions: storage")
+print("consent: remembered per mode with local revoke")
 print("host permissions: exact R2 origin, chatgpt.com")
 print(f"runtime URLs: {urls}")
