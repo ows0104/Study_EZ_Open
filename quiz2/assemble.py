@@ -138,10 +138,18 @@ def spawn_prompt(
     """이 조각을 맡을 서브에이전트에게 통째로 건넬 문구.
 
     `exam_focus`는 족보에서 읽어낸 출제 성향 요약이고, `jokbo_text`는 족보 원문
-    전문이다. **둘 중 하나를 고르는 것이 아직 안 정해졌다** — 요약은 싸지만
-    "어느 선지가 어떻게 뒤집혔는지"가 뭉개지고, 원문은 조각당 4천 토큰쯤 든다.
-    v1에서 요약만 준 탓에 조각 셋이 맞는 인용 20건을 지운 사고가 있었다.
-    지금은 둘 다 받고, 주는 쪽이 정한다.
+    전문이다. **관리자 결정(2026-08-21): 요약만 준다.** `--jokbo-text`로 되돌린다.
+
+    한동안 둘 다 줬고 그게 비쌌다 — `260819_03`의 조각 스폰 44,863자 중 요약이
+    15,261자, 원문이 22,000자로 **83%가 족보**였고 그것이 조각 6개에 그대로 복사됐다.
+    조각 단계 비용의 10%쯤 된다.
+
+    **아는 위험을 적어 둔다.** v1에서 요약만 준 탓에 조각 셋이 맞는 인용 20건을
+    지운 사고가 있었다. 요약은 "어느 선지가 어떻게 뒤집혔는지"를 뭉갠다.
+    다음 편에서 볼 것 둘 —
+
+        exam_hit 비율                     3회차 45/121 (37%)에서 크게 내려가면 신호다
+        rejected_candidates의 족보 기각    맞는 기출을 "근거 없음"으로 버리는지
 
     필기가 없는 조각(`mark_count == 0`)에는 필기본을 안 붙인다 — 볼 게 없는
     쪽 이미지를 배로 보내는 값이 아깝다.
@@ -214,7 +222,7 @@ def spawn_prompt(
 
 
 def build_all(run_dir: str | Path, *, give_card_types: bool = True,
-              with_jokbo_text: bool = True) -> list[dict]:
+              with_jokbo_text: bool = False) -> list[dict]:
     """편 하나의 조각 전부에 대해 스폰 문구를 만들어 파일로 남긴다.
 
     오케스트레이터는 이 목록을 받아 조각마다 서브에이전트를 하나씩 띄우면 된다.
@@ -270,14 +278,15 @@ def main() -> int:
     parser.add_argument("run_dir")
     parser.add_argument("--no-card-types", action="store_true",
                         help="⑨′ A/B 스위치. card_type 목록을 안 준다")
-    parser.add_argument("--no-jokbo-text", action="store_true",
-                        help="족보 원문을 조각에 안 붙인다 (요약만 간다)")
+    parser.add_argument("--jokbo-text", action="store_true",
+                        help="족보 원문까지 붙인다. 기본은 요약만이다 "
+                             "(2026-08-21 관리자). 되돌리는 스위치이자 A/B 스위치")
     args = parser.parse_args()
     run_dir = Path(args.run_dir)
 
     with timings.stage(run_dir, "1-assemble"):
         rows = build_all(run_dir, give_card_types=not args.no_card_types,
-                         with_jokbo_text=not args.no_jokbo_text)
+                         with_jokbo_text=args.jokbo_text)
 
     profile = profile_mod.load(run_dir)
     print(f"[assemble] 조각 {len(rows)}개 → {run_dir / 'spawn'}")
