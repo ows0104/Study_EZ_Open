@@ -63,6 +63,7 @@ from quiz.occlusion import (  # noqa: E402
     resolve_rects,
 )
 from quiz.textutil import safe_filename, safe_media_prefix  # noqa: E402
+import fitz  # noqa: E402
 from quiz import timings  # noqa: E402
 from quiz2 import prompt as prompt_mod  # noqa: E402
 
@@ -340,8 +341,44 @@ def _label_table(row: dict) -> str:
     return "\n".join(lines)
 
 
+def coord_note(prep: dict) -> str:
+    """직접 적는 좌표의 **분모가 슬라이드가 아니라 페이지**라는 것.
+
+    각인을 놓으려고 페이지 아래에 빈 띠를 붙여 뒀다(`prep.json`의 `stamp_band_pt`).
+    `labels.json`의 정규화 분모가 그 띠를 포함한 높이이고, 직접 적는 좌표도 같은
+    분모를 써야 라벨과 섞일 수 있다.
+
+    **안 적어 뒀더니 첫 실행에서 바로 걸렸다** — `260819_02`에서 어떤 실행이 슬라이드
+    기준으로 y를 적어 상자 셋이 한 행 아래를 덮었고, 렌더를 두 번 더 돌려 눈으로
+    잡아냈다. 그때 실측으로 찾은 배율 1.0503이 아래 계산과 같다.
+    """
+    source = prep.get("annotated_pdf") or prep.get("source_pdf")
+    band = float(prep.get("stamp_band_pt") or 0.0)
+    if not source or not band:
+        return ""
+    try:
+        doc = fitz.open(str(source))
+        height = float(doc.load_page(0).rect.height)
+        doc.close()
+    except Exception:
+        return ""
+    if height <= band:
+        return ""
+    factor = height / (height - band)
+    return (
+        "## 직접 좌표를 적을 때 — **분모가 슬라이드가 아니라 페이지다**\n\n"
+        f"각인을 놓으려고 페이지 아래에 빈 띠가 {band:.0f}pt 붙어 있다. 페이지는 "
+        f"{height:.0f}pt이고 슬라이드는 {height - band:.0f}pt다. 위 표의 라벨 좌표도 "
+        "**띠를 포함한 높이**로 정규화돼 있고, 네가 적는 `rects`/`mask_rects`도 같은 "
+        "분모를 써야 한다.\n\n"
+        f"    슬라이드 기준으로 잰 y  /  {factor:.4f}  =  여기 적을 y\n\n"
+        "x는 그대로다. **y만 그렇다.** 안 나누면 상자가 아래로 밀린다 — 표에서 한 행 "
+        "어긋나 엉뚱한 칸을 덮게 된다. 렌더해서 눈으로 보면 바로 보인다."
+    )
+
+
 def spawn_prompt(run_dir: Path, rows: list[dict], batch: str, out_path: Path,
-                 nearby: list[dict]) -> str:
+                 nearby: list[dict], prep: dict | None = None) -> str:
     parts = [
         f"# 오클루전 패스 `{batch}` — 슬라이드 "
         + ", ".join(str(r["slide_no"]) for r in rows),
@@ -355,6 +392,10 @@ def spawn_prompt(run_dir: Path, rows: list[dict], batch: str, out_path: Path,
         "그림은 정규화 좌표(0~1)로 직접 적어도 된다.\n\n"
         + "\n\n".join(_label_table(r) for r in rows),
     ]
+
+    note = coord_note(prep or {})
+    if note:
+        parts.append(note)
 
     if nearby:
         lines = ["## 이미 나온 카드 (겹치지 마라)", "",
@@ -389,7 +430,16 @@ def spawn_prompt(run_dir: Path, rows: list[dict], batch: str, out_path: Path,
 
 **세어 주는 것은 여기까지다.** 필기가 답을 **바꿔 말하거나**(`같은 유전자의
 결과이다`) 글자가 아니라 **그림으로** 그려져 있으면 코드가 못 본다.
-그건 3번에서 네 눈이 유일한 장치다.""")
+그건 3번에서 네 눈이 유일한 장치다.
+
+**상자는 필기도 덮는다.** 렌더가 페이지를 먼저 평탄화한 뒤 그리므로 인쇄 글자든
+필기든 상자 아래는 다 가려진다. `label_ids`·`rects`·`mask_rects`가 전부 같다 —
+그리는 코드가 하나다. 그러니 **필기가 답을 적어 놨다는 이유로 카드를 버리지 마라.**
+그 자리를 `mask_rects`로 덮으면 된다 (㉝).
+
+한 번 틀린 자리라 적어 둔다 — `260819_02`에서 어떤 실행이 "마스크는 필기를 못
+가린다"고 판단해 멀쩡한 카드를 버렸다. 재 보니 덮였다. 의심되면 덮어서 렌더하고
+**눈으로 확인해라.**""")
 
     parts.append(DO_NOT)
     parts.append(f"""\
@@ -411,6 +461,11 @@ def spawn_prompt(run_dir: Path, rows: list[dict], batch: str, out_path: Path,
 }}
 ```
 
+- `card_type`은 `fact` `comparison` `mechanism` `trap` `list` `sequence` 여섯 중 하나,
+  `importance`는 **`core` / `detail` 둘뿐**, `card_format`은 `basic` `cloze` `ox`,
+  `evidence_type`은 `figure` `table` `lecture_text` `annotation`, `source_type`은
+  `lecture`. **여기 없는 값을 지어내지 마라** — `260819_02`에서 `importance`에
+  `support`가 나왔고, 그건 이 문구가 허용값을 안 적어 둬서였다
 - `label_ids`가 **답 상자**다. 앞면에 `A`·`B`… 표식이 붙고 학습자가 그 수만큼 회수한다
 - `mask_label_ids`는 **표식이 안 붙는 덮개**다. 답이 딴 데 적힌 자리를 덮는 데 쓴다.
   회수 대상이 아니므로 개수에 안 센다 (㉝)
@@ -423,6 +478,7 @@ def plan(run_dir: str | Path, batch_size: int = BATCH_SIZE) -> dict:
     run_dir = Path(run_dir)
     rows = candidates(run_dir)
     items = existing_items(run_dir)
+    prep = json.loads((run_dir / "prep.json").read_text(encoding="utf-8"))
     out_dir = run_dir / "spawn"
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -434,7 +490,7 @@ def plan(run_dir: str | Path, batch_size: int = BATCH_SIZE) -> dict:
         slides = {r["slide_no"] for r in group}
         nearby = [i for i in items
                   if _text(i.get("slide_no")) and int(i["slide_no"]) in slides]
-        text = spawn_prompt(run_dir, group, batch, out_path, nearby)
+        text = spawn_prompt(run_dir, group, batch, out_path, nearby, prep)
         spawn_file = out_dir / f"occl.{batch}.md"
         spawn_file.write_text(text, encoding="utf-8")
         made.append({

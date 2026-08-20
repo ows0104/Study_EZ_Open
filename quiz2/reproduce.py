@@ -163,11 +163,25 @@ def answer_prompt(asked_path: Path, out_path: Path, count: int) -> str:
 
 def split(run_dir: str | Path, items_name: str = "items.checked.json",
           size: int = BATCH_SIZE) -> dict:
-    """푸는 쪽에게 줄 배치와 스폰 문구를 만든다. **`a`는 안 나간다.**"""
+    """푸는 쪽에게 줄 배치와 스폰 문구를 만든다. **`a`는 안 나간다.**
+
+    **오클루전 카드는 뺀다.** 이 검사는 `q`만 주고 자족성을 재는데, 오클루전 카드는
+    앞면에 그림이 뜨는 것이 성립 조건이라 글자만으로는 원래 안 선다. `validate.py`도
+    같은 이유로 오클루전을 `source_reference` 검사에서 뺀다.
+
+    안 뺐더니 `260819_02`에서 바로 나왔다 — `q073`이 "앞면에 그림이 없어 A~D 자리를
+    특정할 수 없다"며 `answerable: false`로 왔고, 그 말이 **멀쩡한 카드의 뒷면 빨간
+    박스에 `재현 주의:`로 떴다.** 표시 채널에 거짓말이 실린 것이라 제일 나쁘다.
+
+    **더 나은 고침이 남아 있다** — 가린 앞면 PNG를 함께 주면 학습자가 보는 것과
+    같아져서 제대로 잴 수 있다. 그건 검사의 설계를 바꾸는 일이라 관리자에게 묻는다.
+    """
     run_dir = Path(run_dir)
     verify_dir = run_dir / "verify"
     spawn_dir = verify_dir / "spawn"
     items = _load_items(run_dir, items_name)
+    skipped = [_text(it.get("id")) for it in items if it.get("occlusion")]
+    items = [it for it in items if not it.get("occlusion")]
 
     made = []
     for n, batch in enumerate(_batches(items, size), start=1):
@@ -187,7 +201,8 @@ def split(run_dir: str | Path, items_name: str = "items.checked.json",
         made.append({"batch": tag, "count": len(batch), "asked": str(asked_path),
                      "spawn": str(spawn_path), "out": str(out_path)})
     masked = sum(1 for it in items if front_text(it.get("q")) != _text(it.get("q")))
-    return {"items": len(items), "masked": masked, "batches": made}
+    return {"items": len(items), "masked": masked, "batches": made,
+            "skipped_occlusion": skipped}
 
 
 # ── 2단계: 채점 쪽 ─────────────────────────────────────────────────────
@@ -334,6 +349,10 @@ def score(run_dir: str | Path, items_name: str = "items.checked.json",
         for item in items:
             item = dict(item)
             record = index.get(_text(item.get("id")))
+            # 오클루전은 split에서 뺀다. 예전 채점 결과가 남아 있어도 안 붙인다 —
+            # 붙으면 그 판정이 카드 뒷면 빨간 박스로 그대로 나간다.
+            if item.get("occlusion"):
+                record = None
             if record:
                 # `review_note`를 건드리지 않는다. 그 필드의 주인은 ⑳‴ 자료 주의와
                 # ㉓ 족보 검토 근거이고, 이 객체를 뒷면 박스로 옮기는 것은 build다.
@@ -367,6 +386,10 @@ def main() -> int:
         print(f"[reproduce/split] 카드 {result['items']}장 → 배치 "
               f"{len(result['batches'])}개. **`a`는 안 나갔다** "
               f"(cloze {result['masked']}장은 빈칸을 가려서 냈다)")
+        if result["skipped_occlusion"]:
+            print(f"  오클루전 {len(result['skipped_occlusion'])}장은 뺐다 — 앞면에 "
+                  f"그림이 떠야 서는 카드라 글자만으로는 못 잰다: "
+                  f"{', '.join(result['skipped_occlusion'])}")
         for b in result["batches"]:
             print(f"  {b['batch']}  {b['count']:>3}장  {b['spawn']}")
         print("\n스폰 문구마다 서브에이전트를 하나씩, 동시에 돌린다.")

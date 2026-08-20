@@ -422,7 +422,12 @@ def build_run(run_dir: Path, items_name: str, project: str, output: Path | None,
 
     reproduce_counts = {key: sum(1 for i in items if _verdict(i) == key)
                         for key in ("same", "partial", "different")}
-    reproduce_counts["unscored"] = sum(1 for i in items if not _verdict(i))
+    # 오클루전은 `reproduce.py split`이 일부러 뺀다 — 앞면에 그림이 떠야 서는
+    # 카드라 글자만으로는 못 잰다. 안 거친 것과 못 거친 것을 갈라 센다.
+    reproduce_counts["occlusion_exempt"] = sum(
+        1 for i in items if i.get("occlusion") and not _verdict(i))
+    reproduce_counts["unscored"] = sum(
+        1 for i in items if not _verdict(i) and not i.get("occlusion"))
     reproduce_counts["unanswerable"] = sum(
         1 for i in items if (i.get("reproduce") or {}).get("answerable") is False)
 
@@ -504,6 +509,9 @@ def main() -> int:
           f"(일부 {rep['partial']} · 다름 {rep['different']} · "
           f"자족성 실패 {rep['unanswerable']})")
     print(f"    자료 주의  {meta['source_warned']:>3}장")
+    if rep.get("occlusion_exempt"):
+        print(f"    (오클루전 {rep['occlusion_exempt']}장은 재현 검사에서 뺐다 — "
+              f"앞면에 그림이 떠야 서는 카드다)")
     if rep["unscored"]:
         print(f"    ! 재현 검사를 안 거친 카드 {rep['unscored']}장 — "
               f"reproduce score --apply 를 먼저 돌렸는지 보라")

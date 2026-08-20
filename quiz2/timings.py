@@ -164,7 +164,10 @@ def report(run_dir) -> int:
         if s["runs"] > 1:
             note = f"재실행 {s['runs']}회 — 사이의 빈 시간은 안 센다"
         elif s["count"] > 1:
-            note = f"동시 {s['count']}개 ({', '.join(s['labels'][:4])})"
+            # 겹쳤거나 90초 안에 연달아 돌았다. 둘을 여기서 갈라 말하지 않는다 —
+            # 갈라 말하려면 구간을 다시 봐야 하는데 그럴 값이 없다.
+            labels = ", ".join(s["labels"][:4])
+            note = f"{s['count']}회 (겹치거나 연달아)" + (f" — {labels}" if labels else "")
         if s["failed"]:
             note = (note + "  ") if note else ""
             note += f"✗ 실패 {s['failed']}"
