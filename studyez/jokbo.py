@@ -9,12 +9,39 @@
 과목 족보 폴더의 원본은 다르다. 병리학 2026을 열어 보면:
 
     122쪽 · 텍스트 레이어 살아 있음 (평균 1,646자/쪽) · OCR 불필요
-    p2   연도별 강의↔교수 매트릭스
-    p4~  "1  병리학 소개 – 과거, 현재, 미래" 처럼 **강의별로 이미 분류됨**
-    p78~ 실습 시험 블록 (같은 강의 번호를 다시 훑는다)
+    p2      연도별 강의↔교수 매트릭스
+    p4-77   필기 문항   "1  병리학 소개 – 과거, 현재, 미래" 처럼 **강의별로 이미 분류됨**
+    p78-98  필기 정답표 (같은 강의 순서를 다시 훑는다) + 이의제기 Q&A
+    p99-118 실습 문항   (강의 구분 없음)
+    p119-122 실습 정답표
 
 여기서 잘라 오면 족보 채널이 이미지가 아니라 원본 PDF가 되고, 경계 판정이
 필요 없어진다.
+
+## p78부터가 "실습"인 줄 알았다 — 정답표였다
+
+이 docstring이 한동안 *"p78~ 실습 시험 블록"*이라고 적고 있었고 코드도 그렇게
+분류했다. 실제로 열어 보니 정답표다.
+
+    79쪽:  2-3 세포의 손상 및 적응(1)~(2)
+           2025   50.5  66.4  69.1  89.2  95.2  100.1
+           2022   8. 4 (액화괴사 소견)          ← 짧은 해설이 붙기도 한다
+                  9. 4, necroptosis: caspase 8-independent…
+           1번 이의제기  Q1. …                  ← 학생 이의제기와 답변
+
+**대가가 컸다.** 정답표가 `L02-03_실습_….pdf`로 저장되는 바람에 아무도 붙이지
+않았고(7편 전부 `_필기_`만 붙었다), 정오 검토가 대조할 정본 없이 돌았다.
+그리고 `link_lectures`가 실습 필기를 `block == "실습"`으로 찾으므로 **실습 강의는
+정답표에 연결될 뻔했다.**
+
+이제 밀도로 가른다. 정답표 쪽은 `12. 3` 꼴의 줄이 빽빽하다.
+
+    필기 문항    쪽당 그런 줄 1.0개   (전체 줄의 1%)
+    필기 정답표  쪽당       18.0개   (32%)
+    실습 문항    쪽당        1.5개   (4%)
+    실습 정답표  쪽당       22.0개   (38%)
+
+문구("실습")는 블록 전환의 힌트로만 쓰고 **무엇인지는 밀도가 정한다.**
 
 ## 머리글은 정규식이 아니라 서식으로 잡는다
 
@@ -49,8 +76,16 @@ _YEAR_RE = re.compile(r"^(20\d{2})$")
 # 번호 머리글의 최소 크기. 병리학 2026에서 11-12가 13.8pt로 나와 14로 두면 놓친다.
 HEADING_MIN_SIZE = 13.5
 
-# 블록 전환 표시. 필기 시험 족보가 끝나고 실습 시험 블록이 시작된다.
+# 블록 전환 표시. 이 문구는 "여기서 갈린다"는 힌트일 뿐이고, 갈린 뒤가 무엇인지는
+# 아래 밀도가 정한다 (docstring 참조).
 _BLOCK_RE = re.compile(r"실습")
+
+# 정답표 한 줄. "50. 5", "8. 4 (액화괴사 소견)", "30.3" 을 받는다.
+_ANSWER_LINE_RE = re.compile(r"^\s*(?:R)?\d{1,3}\s*\.\s*\d", re.M)
+
+# 이 비율을 넘으면 정답표로 본다. 실측에서 문항 쪽은 0.01~0.04, 정답표 쪽은
+# 0.32~0.38이라 사이가 넓다. 한쪽으로 치우쳐도 오분류가 잘 안 나는 자리다.
+ANSWER_DENSITY_MIN = 0.15
 
 
 @dataclass
@@ -59,11 +94,14 @@ class Section:
 
     lectures: list[int]
     title: str
-    block: str            # '필기' | '실습'
+    block: str            # '필기' | '실습' | '정답'
     start_page: int       # 1-based, 이 페이지부터
     end_page: int         # 이 페이지까지 (포함)
     years: list[int] = field(default_factory=list)
     pdf: str = ""
+    # 이 문항 구간의 정답표가 있는 쪽. `split`이 잘라낸 PDF 뒤에 이어 붙인다.
+    # 정답표 자체인 구간(block='정답')에서는 비어 있다.
+    answer_pages: list[int] = field(default_factory=list)
 
     @property
     def label(self) -> str:
@@ -151,6 +189,51 @@ def _expand(low: int, high: int | None) -> list[int]:
     return list(range(low, high + 1))
 
 
+def _answer_density(page) -> float:
+    """이 쪽이 정답표처럼 생겼는가. 0~1."""
+    text = page.get_text()
+    lines = [line for line in text.splitlines() if line.strip()]
+    if not lines:
+        return 0.0
+    return len(_ANSWER_LINE_RE.findall(text)) / len(lines)
+
+
+def _classify_answers(doc, sections: list[Section]) -> None:
+    """정답표 구간을 찾아 `block='정답'`으로 고치고, 문항 구간에 짝지어 준다.
+
+    문구가 아니라 밀도로 가른다 - 문구로 갈랐다가 정답표를 21쪽 통째로 '실습'이라
+    부른 적이 있다 (docstring 참조).
+    """
+    for section in sections:
+        pages = range(section.start_page - 1, section.end_page)
+        scores = [_answer_density(doc[i]) for i in pages]
+        if scores and sum(scores) / len(scores) >= ANSWER_DENSITY_MIN:
+            section.block = "정답"
+
+    # 밀도만으로는 이의제기 구간을 놓친다. `260812` 원본의 85쪽은 정답 아홉 줄에
+    # 이의제기 산문이 예순 줄이라 0.12로 떨어지고, 87쪽은 0.02다. 그런데 정답표는
+    # **한 덩어리로 이어져 있으므로** 잡힌 것들의 바깥 테두리 안은 전부 정답이다.
+    # 둘 이상 잡혔을 때만 편다 - 하나짜리 오탐이 구간을 통째로 삼키지 않게.
+    marked = [s for s in sections if s.block == "정답"]
+    if len(marked) >= 2:
+        low = min(s.start_page for s in marked)
+        high = max(s.end_page for s in marked)
+        for section in sections:
+            if (section.block != "정답"
+                    and low <= section.start_page and section.end_page <= high):
+                section.block = "정답"
+
+    # 정답 구간을 같은 강의 묶음의 문항 구간에 붙인다. 정답표가 문항과 같은
+    # 순서로 나오므로 label이 같으면 짝이다.
+    answers = {s.label: s for s in sections if s.block == "정답"}
+    for section in sections:
+        if section.block == "정답":
+            continue
+        mate = answers.get(section.label)
+        if mate:
+            section.answer_pages = list(range(mate.start_page, mate.end_page + 1))
+
+
 def scan_sections(pdf_path: str | Path, body_start: int = 4) -> list[Section]:
     """족보 PDF를 훑어 강의별 구간을 찾는다. `body_start`는 목차 다음 쪽."""
     found: list[Section] = []
@@ -217,6 +300,8 @@ def scan_sections(pdf_path: str | Path, body_start: int = 4) -> list[Section]:
                         if year and span["size"] >= 14:
                             years.add(int(year.group(1)))
                 section.years = sorted(years, reverse=True)
+
+            _classify_answers(doc2, found)
 
     return found
 
@@ -285,6 +370,11 @@ def split(pdf_path: str | Path, out_dir: str | Path, body_start: int = 4) -> dic
             piece = fitz.open()
             piece.insert_pdf(doc, from_page=section.start_page - 1,
                              to_page=section.end_page - 1)
+            # 정답표를 문항 뒤에 이어 붙인다. 따로 두면 아무도 안 붙인다 -
+            # 실제로 7편 전부 문항만 붙은 채 돌았다 (docstring 참조).
+            # 여기서 합치면 prep도 jokbo_text.md도 손댈 필요가 없다.
+            for page_no in section.answer_pages:
+                piece.insert_pdf(doc, from_page=page_no - 1, to_page=page_no - 1)
             # 조각마다 리소스 트리가 통째로 복제돼 합계가 원본보다 커진다
             # (실측 109MB → 112MB). 안 쓰는 객체를 걷어내고 압축한다.
             piece.save(str(target), garbage=4, deflate=True, clean=True)
@@ -362,6 +452,9 @@ def link_lectures(index: dict, lectures) -> list[dict]:
     for lecture in lectures:
         is_practical = "실습" in lecture.title
         want = "실습" if is_practical else "필기"
+        # `정답` 구간은 후보가 아니다. 정답표는 짝이 되는 문항 PDF 뒤에 이미
+        # 이어 붙었다(`split`). 여기 두면 실습 강의가 정답표에 연결된다 -
+        # 정답표를 '실습'이라 부르던 시절에 실제로 그럴 뻔했다.
         candidates = [
             s for s in sections
             if s["block"] == want and s["lectures"] and s["title"]
