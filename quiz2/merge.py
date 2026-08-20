@@ -21,6 +21,10 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from quiz import timings  # noqa: E402
+
 
 def merge(run_dir: str | Path, out_name: str = "items.raw.json") -> dict:
     run_dir = Path(run_dir)
@@ -70,7 +74,8 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("run_dir")
     args = parser.parse_args()
-    result = merge(args.run_dir)
+    with timings.stage(Path(args.run_dir), "2-merge"):
+        result = merge(args.run_dir)
     items = result["items"]
 
     print(f"[merge] {len(items)}장 → items.raw.json")

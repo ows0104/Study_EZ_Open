@@ -53,6 +53,7 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 from quiz.structure import PageFeature, scan_jokbo_start  # noqa: E402
+from quiz import timings  # noqa: E402
 
 
 # 제목은 통째로, 머리글은 잘라서. 머리글은 경계를 가리키는 데만 쓰므로 앞부분이면
@@ -324,12 +325,16 @@ def main() -> int:
     args = parser.parse_args()
 
     run_dir = Path(args.run_dir)
-    row = build(run_dir, with_jokbo_text=not args.no_jokbo_text)
+    with timings.stage(run_dir, "0.5-plan"):
+        row = build(run_dir, with_jokbo_text=not args.no_jokbo_text)
     print(f"[structure] {row['spawn_prompt']}")
     print(f"  {row['chars']:,}자 (대략 {row['approx_tokens']:,}토큰)"
           + ("  · 족보 원문 붙임" if row["jokbo_text_attached"] else ""))
     print(f"\n  서브에이전트 하나에게 그 파일을 읽고 그대로 따르라고만 시킨다.")
     print(f"  → {row['result']}")
+    print(f"\n  띄우기 직전·받은 직후에 찍어라 — 안 찍으면 그 시간이 사라진다:")
+    print(f"      python -m quiz2.timings {run_dir} start 0.5-write")
+    print(f"      python -m quiz2.timings {run_dir} end   0.5-write")
     print(f"\n  쓴 뒤 검증:  python quiz/structure.py {run_dir}")
     return 0
 

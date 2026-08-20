@@ -28,8 +28,20 @@ v1 조각 하나를 뜯어보니 도구 호출 47회 중 **26회가 입력을 �
 
 from __future__ import annotations
 
+import argparse
 import json
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
+from quiz import timings  # noqa: E402
 
 from . import chunks as chunks_mod
 from . import prompt as prompt_mod
@@ -234,3 +246,39 @@ def build_all(run_dir: str | Path, *, give_card_types: bool = True,
     (out_dir / "index.json").write_text(
         json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
     return rows
+
+
+def main() -> int:
+    """`python -c "from quiz2 import assemble; ..."`를 대신한다.
+
+    명령이 되어야 스스로 계측을 찍는다 — 코드 단계는 자기가 찍는다는 규칙
+    (`quiz2/timings.py`의 `STAGES`)을 이 단계만 못 지키고 있었다.
+    """
+    parser = argparse.ArgumentParser(description="1단계: 조각 PDF와 스폰 문구")
+    parser.add_argument("run_dir")
+    parser.add_argument("--no-card-types", action="store_true",
+                        help="⑨′ A/B 스위치. card_type 목록을 안 준다")
+    parser.add_argument("--no-jokbo-text", action="store_true",
+                        help="족보 원문을 조각에 안 붙인다 (요약만 간다)")
+    args = parser.parse_args()
+    run_dir = Path(args.run_dir)
+
+    with timings.stage(run_dir, "1-assemble"):
+        rows = build_all(run_dir, give_card_types=not args.no_card_types,
+                         with_jokbo_text=not args.no_jokbo_text)
+
+    print(f"[assemble] 조각 {len(rows)}개 → {run_dir / 'spawn'}")
+    for row in rows:
+        print(f"  {row['chunk_id']:<6} 슬라이드 {row['slides'][0]:>3}-{row['slides'][1]:<3}"
+              f"  {row['approx_tokens']:>6,}토큰"
+              + ("  필기본 붙임" if row["annot_attached"] else "")
+              + ("  범위 제한" if row.get("scoped") else ""))
+    print("\n조각마다 서브에이전트를 하나씩, 동시에 돌린다.")
+    print("띄우기 직전·받은 직후에 찍어라 — 편 시간의 대부분이 여기다:")
+    print(f"    python -m quiz2.timings {run_dir} start 2-write --label c01")
+    print(f"    python -m quiz2.timings {run_dir} end   2-write --label c01")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

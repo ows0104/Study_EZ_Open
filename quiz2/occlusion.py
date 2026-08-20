@@ -63,6 +63,7 @@ from quiz.occlusion import (  # noqa: E402
     resolve_rects,
 )
 from quiz.textutil import safe_filename, safe_media_prefix  # noqa: E402
+from quiz import timings  # noqa: E402
 from quiz2 import prompt as prompt_mod  # noqa: E402
 
 
@@ -287,12 +288,14 @@ def render(run_dir: str | Path, items_name: str) -> dict:
     prefix = safe_media_prefix(prep["source_stem"])
 
     rows: list[dict] = []
-    for item in targets:
+    for index, item in enumerate(targets):
         slide_no = int(item.get("slide_no") or 0)
         rects, masks, problems = resolve_rects(
             item.get("occlusion") or {}, slide_no, label_index)
+        # merge가 붙이기 전이라 `id`가 없다. 파일 이름이 질문 앞머리가 되면
+        # 길고 편마다 달라지므로 자리 번호로 대신한다.
         row = {
-            "id": item.get("id") or item.get("q", "")[:24],
+            "id": _text(item.get("id")) or f"n{index + 1:02d}",
             "slide_no": slide_no,
             "boxes": len(rects),
             "masks": len(masks),
@@ -456,7 +459,8 @@ def main() -> int:
     run_dir = Path(args.run_dir)
 
     if args.stage == "plan":
-        result = plan(run_dir, args.batch_size)
+        with timings.stage(run_dir, "3.5-occl-plan"):
+            result = plan(run_dir, args.batch_size)
         if not result["candidates"]:
             print("[occlusion/plan] 후보 슬라이드가 없다. "
                   "라벨이 잡힌 그림 슬라이드가 없거나 1단계가 아직 안 돌았다")
@@ -467,6 +471,9 @@ def main() -> int:
             print(f"  {b['batch']}  슬라이드 {b['slides']}  라벨 {b['labels']}개  "
                   f"{b['spawn']}")
         print("\n배치마다 서브에이전트를 하나씩. 각자 render를 돌려 가며 고친다.")
+        print("띄우기 직전·받은 직후에 찍어라 — 렌더 반복이 여기 다 들어간다:")
+        print(f"    python -m quiz2.timings {run_dir} start 3.5-occlusion --label b01")
+        print(f"    python -m quiz2.timings {run_dir} end   3.5-occlusion --label b01")
         return 0
 
     if not args.items:

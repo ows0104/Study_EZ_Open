@@ -66,6 +66,7 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 from quiz.cloze import blank_cloze_markup  # noqa: E402
+from quiz import timings  # noqa: E402
 
 # `blank_cloze_markup`이 내는 HTML을 평문으로 되돌린다. 마스킹 자체는 그 함수에
 # 맡긴다 - **Anki 앞면이 가리는 것과 한 글자도 달라지면 안 되기 때문이다.**
@@ -361,7 +362,8 @@ def main() -> int:
     run_dir = Path(args.run_dir)
 
     if args.stage == "split":
-        result = split(run_dir, args.items, args.batch_size)
+        with timings.stage(run_dir, "4.5-repro-split"):
+            result = split(run_dir, args.items, args.batch_size)
         print(f"[reproduce/split] 카드 {result['items']}장 → 배치 "
               f"{len(result['batches'])}개. **`a`는 안 나갔다** "
               f"(cloze {result['masked']}장은 빈칸을 가려서 냈다)")
@@ -371,7 +373,8 @@ def main() -> int:
         return 0
 
     if args.stage == "grade":
-        result = grade(run_dir, args.items, args.batch_size)
+        with timings.stage(run_dir, "4.5-repro-grade"):
+            result = grade(run_dir, args.items, args.batch_size)
         print(f"[reproduce/grade] 짝지은 것 {result['paired']}장 → 배치 "
               f"{len(result['batches'])}개")
         for b in result["batches"]:
@@ -381,7 +384,8 @@ def main() -> int:
                   f"{result['missing'][:10]}")
         return 0
 
-    report = score(run_dir, args.items, args.apply)
+    with timings.stage(run_dir, "4.5-repro-score", label=args.items):
+        report = score(run_dir, args.items, args.apply)
     total = report["scored"]
     print(f"[reproduce/score] 채점 {total}장 / 카드 {report['items']}장")
     for verdict in VERDICTS:
