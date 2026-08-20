@@ -35,14 +35,18 @@
 
 그래서 **채점 쪽은 원본 답과 재현 답을 둘 다 보고** 판정한다. 코드는 세기만 한다.
 
-## 아직 안 한 것 — 표시가 카드 뒷면까지 안 간다
+## 표시를 뒷면으로 보내는 것은 여기가 아니다
 
 ③⃝의 결론은 *"표시는 카드 뒷면에 떠야 한다"*였다. `suspects.json`에만 있으면
-관리자가 볼 일이 없다.
+관리자가 볼 일이 없다. 그 일은 `quiz2/build.py`가 한다 — `--apply`가 카드에 박아
+두는 `reproduce` 객체를 읽어 `재현 주의:` 줄을 제 머리글로 세운다.
 
-지금 `--to-card-back`은 `review_note`에 덧붙여 v1 `build.py`의 빨간 박스를 빌려
-쓴다. 박스 머리글이 `자료 주의:`라 이름이 안 맞는다. **제 자리는 v2 build가
-생길 때다** — `quiz/`는 비교 기준선이라 고치지 않는다.
+**여기서 `review_note`에 문자열로 이어붙이지 않는다.** 한동안 그렇게 해서 v1
+`build.py`의 빨간 박스를 빌려 썼는데, 그 필드는 이미 두 뜻을 겸하고 있었다 —
+⑳‴ 자료 주의와 ㉓ 족보 검토 근거다. 겹쳐 담으면 둘이 깨진다. 코드는 부분 문자열
+(`'재현 검사:' in note`)로만 셋을 갈라낼 수 있고, 화면에서는 플래그가 붙은 카드에서
+재현 줄이 `검토 근거:` 블록에 머리글 없이 딸려 붙어 **누구를 의심하는 말인지가
+사라진다.**
 """
 
 from __future__ import annotations
@@ -74,9 +78,6 @@ _CLOZE_SPAN = '<span class="cloze-blank">[...]</span>'
 BATCH_SIZE = 40
 
 VERDICTS = ("same", "partial", "different")
-
-# 카드 뒷면에 덧붙일 때의 상한. build.py의 박스가 800자에서 자른다.
-CARD_BACK_MAX = 240
 
 
 def _text(value) -> str:
@@ -272,23 +273,8 @@ def grade(run_dir: str | Path, items_name: str = "items.checked.json",
 
 # ── 3단계: 세기 ────────────────────────────────────────────────────────
 
-def _card_back_note(record: dict) -> str:
-    """뒷면 박스에 덧붙일 한 줄. **판정이 아니라 사실을 적는다.**"""
-    reproduced = _text(record.get("reproduced"))
-    why = _text(record.get("why"))
-    head = ("질문만 주고 다시 풀었을 때 다른 답이 나왔다"
-            if record.get("verdict") == "different"
-            else "질문만 주고 다시 풀었을 때 일부만 나왔다")
-    body = f"재현 검사: {head}"
-    if why:
-        body += f" — {why}"
-    if reproduced:
-        body += f" (재현 답: {reproduced})"
-    return body[:CARD_BACK_MAX]
-
-
 def score(run_dir: str | Path, items_name: str = "items.checked.json",
-          apply_to: str | None = None, to_card_back: bool = False) -> dict:
+          apply_to: str | None = None) -> dict:
     """채점 결과를 합쳐 센다. `apply_to`를 주면 카드에 붙여 새 파일로 쓴다."""
     run_dir = Path(run_dir)
     verify_dir = run_dir / "verify"
@@ -348,15 +334,12 @@ def score(run_dir: str | Path, items_name: str = "items.checked.json",
             item = dict(item)
             record = index.get(_text(item.get("id")))
             if record:
+                # `review_note`를 건드리지 않는다. 그 필드의 주인은 ⑳‴ 자료 주의와
+                # ㉓ 족보 검토 근거이고, 이 객체를 뒷면 박스로 옮기는 것은 build다.
                 item["reproduce"] = {"verdict": record["verdict"],
                                      "answerable": record["answerable"],
                                      "why": record["why"],
                                      "reproduced": record["reproduced"]}
-                if to_card_back and record["verdict"] in ("partial", "different"):
-                    # **덮어쓰지 않는다.** 자료 주의(⑳‴)가 이미 적혀 있을 수 있다.
-                    existing = _text(item.get("review_note"))
-                    note = _card_back_note(record)
-                    item["review_note"] = f"{existing}\n{note}" if existing else note
             out_items.append(item)
         _write_json(run_dir / apply_to, {"items": out_items})
         report["applied"] = apply_to
@@ -374,8 +357,6 @@ def main() -> int:
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
     parser.add_argument("--apply", default=None,
                         help="score: 결과를 붙여 쓸 파일명 (예: items.reproduced.json)")
-    parser.add_argument("--to-card-back", action="store_true",
-                        help="score: 실패를 review_note에 덧붙여 뒷면 박스로 보낸다")
     args = parser.parse_args()
     run_dir = Path(args.run_dir)
 
@@ -400,7 +381,7 @@ def main() -> int:
                   f"{result['missing'][:10]}")
         return 0
 
-    report = score(run_dir, args.items, args.apply, args.to_card_back)
+    report = score(run_dir, args.items, args.apply)
     total = report["scored"]
     print(f"[reproduce/score] 채점 {total}장 / 카드 {report['items']}장")
     for verdict in VERDICTS:
@@ -416,8 +397,8 @@ def main() -> int:
     if report["unscored"]:
         print(f"  채점이 안 된 카드 {len(report['unscored'])}장: {report['unscored'][:10]}")
     if report.get("applied"):
-        print(f"  → {report['applied']}에 붙였다"
-              + (" (실패는 뒷면 박스로도)" if args.to_card_back else ""))
+        print(f"  → {report['applied']}에 붙였다. 뒷면 빨간 박스는 "
+              f"quiz2/build.py가 여기서 읽는다")
     return 0
 
 

@@ -1,7 +1,7 @@
 # quiz2 — 단발 호출 파이프라인 (작업 중)
 
 `quiz/`(v1)를 대체하려고 짓는 중이다. **아직 완성이 아니다.** 앞단(조각 → 카드)과
-검증·재현 검사는 한 편을 돌려 봤고, 코드 필터·오클루전·v2 build가 비어 있다.
+검증·재현 검사·빌드는 한 편을 돌려 봤고, 코드 필터와 오클루전 패스가 비어 있다.
 
 v1은 `pre-rewrite-agentic` 태그로 보존돼 있다. 같은 강의록으로 나란히 돌려 견주려고
 남긴 것이니 **`quiz/`를 고치지 마라.**
@@ -23,6 +23,7 @@ v1 조각 하나를 뜯어보니 도구 호출 47회 중 **26회가 입력을 �
     merge.py       조각 결과를 v1 뒷단이 읽을 꼴로 합침
     validate.py    기계 검증. 판정하지 않고 세어서 표시한다
     reproduce.py   재현 검사. q만 주고 a가 다시 나오는지 본다 (⓹)
+    build.py       .apkg. 뒷면 빨간 박스에 신호 셋을 각자 머리글로 세운다 (③⃝)
 
     INTERVIEW.md   **무엇을 정했나, 왜, 무엇을 일부러 안 넣었나**
     RUNS.md        돌려 보니 어땠나, 무엇이 깨졌나
@@ -57,8 +58,9 @@ v1 조각 하나를 뜯어보니 도구 호출 47회 중 **26회가 입력을 �
     python -m quiz2.reproduce grade runs/<id>   # → verify/spawn/grade.*.md
     python -m quiz2.reproduce score runs/<id> --apply items.reproduced.json
 
-    # 5. 빌드 (v1 코드 그대로)
-    python quiz/build.py runs/<id> --items items.final.json --project <과목>
+    # 5. 빌드 — **v1 build를 쓰지 마라** (cloze·근거 줄이 조용히 사라진다)
+    python -m quiz2.build runs/<id> --items items.reproduced.json --project <과목>
+    #    v1 덱과 한 Anki에서 견주려면 --project를 갈라라 (예: 병리학-v2)
 
 ## 1회차 결과 (`260819_01`)
 
@@ -94,14 +96,21 @@ v1은 이걸 잃고 soft 플래그로만 표시했고, 그 결과 조각이 `Edi
 단발 호출로 안 되는 유일한 작업이라 별도 패스가 필요하고, 채널은 **필기본**으로
 정해져 있다(㉞ — v1은 clean이었다).
 
-### 4. v2 build — 표시가 제 자리에 떠야 한다
+### ~~4. v2 build~~ — 2026-08-20에 지었다 (`build.py`)
 
-③⃝의 결론은 *"표시는 카드 뒷면에 떠야 한다"*였다. `suspects.json`이나 빌드 요약에만
-있으면 관리자가 볼 일이 없다.
+빨간 박스에 신호 셋이 각자 머리글로 선다. **셋이 의심하는 대상이 다르다.**
 
-지금 `reproduce score --to-card-back`은 `review_note`에 덧붙여 v1 `build.py`의 빨간
-박스를 **빌려 쓴다.** 머리글이 `자료 주의:`라 이름이 안 맞는다. `quiz/`는 비교
-기준선이라 고치지 않으므로, 제 자리는 v2 build가 생길 때다.
+    족보 검토: …  ㉓ 족보 문항의 정답을 의심한다   (+ `검토 근거:`)
+    재현 주의: …  ⓹ 이 카드가 안 선다
+    자료 주의: …  ⑳‴ 자료 자체가 이상하다
+
+전에는 `reproduce score --to-card-back`이 셋째를 `review_note`에 문자열로 이어붙여
+v1의 박스를 빌려 썼다. **그 필드는 이미 두 뜻을 겸하고 있었다** — ⑳‴ 자료 주의와,
+㉓ 플래그가 붙었을 때 요구되는 검토 근거(`prompt.py`)다. 그래서 `--to-card-back`을
+없앴고, build가 `--apply`가 박아 둔 `reproduce` 객체를 직접 읽는다.
+
+1회차에 안 터진 것은 `review_flags`가 0/145였기 때문이다 — 족보 카드 26장에서 한
+번도 안 나왔다. 설계가 막은 게 아니다.
 
 ## 안 풀린 것
 
@@ -129,6 +138,14 @@ v1은 이걸 잃고 soft 플래그로만 표시했고, 그 결과 조각이 `Edi
 - **`quiz/`를 고치지 마라.** 비교 기준선이다
 - **`quiz/validate.py`를 v2 산출물에 대지 마라.** 없앤 필드를 찾아 가짜 플래그가
   308건 나온다. `quiz2/validate.py`를 써라
+- **`quiz/build.py`도 v2 산출물에 대지 마라.** 이쪽은 더 나쁘다 — **에러가 아니라
+  손실**이라 성공한 것처럼 끝난다. v1은 cloze를 `card_type`에서 찾는데 v2는
+  `card_format`이라 빈칸 카드 6장이 통째로 basic이 되어 **답이 앞면에 그대로 나가고**,
+  `source_anchor`가 없어 `근거:` 줄이 145장 전부에서 사라진다
+- **v2 build는 `runs/INDEX.md`를 기본으로 안 쓴다.** `update_index`가 같은
+  `lecture_id`의 줄을 덮어쓰기 때문이다. 견주려면 같은 강의를 두 번 빌드해야 하는데
+  그때 v1 기준선 줄이 지워진다. 켜려면 `--index`. 덱 이름도 같은 이유로 겹치니
+  `--project`를 갈라라
 - **`prompt.py`에 사건을 적지 마라.** 규칙만. 사건은 `RUNS.md`
 - **인터뷰에 없는 규칙을 넣지 마라.** 넣어야겠으면 관리자에게 먼저 물어라.
   이 저장소가 앓았던 병이 정확히 그거다 (`CLAUDE.md`의 「규칙 문서를 쓰는 법」)
