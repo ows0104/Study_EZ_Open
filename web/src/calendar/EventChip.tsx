@@ -109,9 +109,14 @@ export function EventChip({
   return (
     <button type="button" className={className} title={primary} onClick={() => onOpen(entry)}>
       <strong className="calendar-event-primary">{primary}</strong>
-      {!compact && entry.professor ? <small className="calendar-event-professor">{entry.professor}</small> : null}
-      {!compact && entry.detail && entry.course ? (
-        <small className="calendar-event-series">{entry.course}</small>
+      {/* 교수와 과목은 한 겹으로 싼다. 칸이 낮으면 CSS가 이 겹을 한 줄로 눕히고
+          넉넉하면 `display: contents`로 풀어 예전처럼 두 줄로 편다. 합치면 줄
+          하나(13px)가 예산에서 빠져서, 같은 칸 높이에서 과목이 더 오래 산다. */}
+      {!compact && (entry.professor || (entry.detail && entry.course)) ? (
+        <small className="calendar-event-meta">
+          {entry.professor ? <span className="calendar-event-professor">{entry.professor}</span> : null}
+          {entry.detail && entry.course ? <span className="calendar-event-series">{entry.course}</span> : null}
+        </small>
       ) : null}
       {/* 한 교시에 여러 강의가 열릴 때(선택형 과목)는 몇 개인지만 찍는다.
           어느 것을 열지는 패널에서 고른다 — 칸이 그것을 담기에는 좁다. */}
