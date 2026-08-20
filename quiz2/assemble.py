@@ -44,6 +44,7 @@ for _stream in (sys.stdout, sys.stderr):
 from quiz import timings  # noqa: E402
 
 from . import chunks as chunks_mod
+from . import profile as profile_mod
 from . import prompt as prompt_mod
 
 
@@ -130,6 +131,7 @@ def spawn_prompt(
     jokbo_text: str = "",
     scope_note: str = "",
     give_card_types: bool = True,
+    profile: profile_mod.Profile | None = None,
 ) -> str:
     """이 조각을 맡을 서브에이전트에게 통째로 건넬 문구.
 
@@ -142,8 +144,13 @@ def spawn_prompt(
     필기가 없는 조각(`mark_count == 0`)에는 필기본을 안 붙인다 — 볼 게 없는
     쪽 이미지를 배로 보내는 값이 아깝다.
     """
+    profile = profile or profile_mod.Profile()
     is_jokbo = chunk.chunk_id == "jokbo"
-    include_annot = bool(chunk.annot_path) and chunk.mark_count > 0
+    # 필기가 근거로 승격된 편에서는 표시 수를 안 따진다. `mark_count`는 도장·형광펜
+    # 같은 **표시**만 세는데, 승격이 근거로 삼는 것은 필기자가 적은 **말**이라
+    # 표시가 0이어도 볼 것이 있을 수 있다.
+    include_annot = bool(chunk.annot_path) and (
+        profile.annotation_as_evidence or chunk.mark_count > 0)
 
     parts = [
         f"# 조각 `{chunk.chunk_id}` — 슬라이드 {chunk.slides[0]}~{chunk.slides[1]}",
@@ -160,6 +167,8 @@ def spawn_prompt(
         slide_start=chunk.slides[0], slide_end=chunk.slides[1],
         source_type="jokbo" if is_jokbo else "lecture",
         exam_focus=exam_focus, give_card_types=give_card_types,
+        density=profile.density, style_note=profile.style_note,
+        annotation_as_evidence=profile.annotation_as_evidence,
     ))
 
     if is_jokbo and scope_note.strip():
@@ -209,6 +218,7 @@ def build_all(run_dir: str | Path, *, give_card_types: bool = True,
     오케스트레이터는 이 목록을 받아 조각마다 서브에이전트를 하나씩 띄우면 된다.
     """
     run_dir = Path(run_dir)
+    profile = profile_mod.load(run_dir)
     made = chunks_mod.write_chunk_pdfs(run_dir)
     structure = json.loads((run_dir / "structure.json").read_text(encoding="utf-8"))
     prep = json.loads((run_dir / "prep.json").read_text(encoding="utf-8"))
@@ -230,7 +240,7 @@ def build_all(run_dir: str | Path, *, give_card_types: bool = True,
         result_path = run_dir / f"items.raw.{chunk.chunk_id}.json"
         text = spawn_prompt(chunk, out_path=result_path, exam_focus=exam_focus,
                             jokbo_text=jokbo_text, scope_note=scope_note,
-                            give_card_types=give_card_types)
+                            give_card_types=give_card_types, profile=profile)
         spawn_file = out_dir / f"{chunk.chunk_id}.md"
         spawn_file.write_text(text, encoding="utf-8")
         rows.append({
@@ -267,7 +277,10 @@ def main() -> int:
         rows = build_all(run_dir, give_card_types=not args.no_card_types,
                          with_jokbo_text=not args.no_jokbo_text)
 
+    profile = profile_mod.load(run_dir)
     print(f"[assemble] 조각 {len(rows)}개 → {run_dir / 'spawn'}")
+    print(f"  프로필: {profile.describe()}"
+          + ("" if not profile.is_default else "  (기본값 — 지금까지와 같은 문구다)"))
     for row in rows:
         print(f"  {row['chunk_id']:<6} 슬라이드 {row['slides'][0]:>3}-{row['slides'][1]:<3}"
               f"  {row['approx_tokens']:>6,}토큰"

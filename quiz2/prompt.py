@@ -28,6 +28,45 @@ from __future__ import annotations
 # ⑴ 숫자를 모델에 주지 않는다. validate가 사후에만 센다.
 DECK_BUDGET_PER_SLIDE = 2
 
+# 밀도. meddeck의 `density_instruction()`이 기준이고 셋도 거기서 왔다.
+#
+# **⑴을 안 어긴다** — meddeck의 셋도 숫자를 안 준다. 모델에 가는 것은 서술뿐이고,
+# 숫자는 `validate`가 사후에 곱하는 배수 하나다.
+#
+# ⚠ **배수 중 확정된 것은 `normal`의 2뿐이다** (⓻, 2026-08-20). 1.5와 3은 아직
+# 아무도 안 재 봤다. 얇은 편에서 크게 갈리므로 몇 편 돌려 보고 고칠 자리다.
+DENSITY_DEFAULT = "normal"
+DENSITIES = {
+    "concise": {
+        "label": "핵심만",
+        "budget_per_slide": 1.5,
+        "text": "압축해서 낸다. 그래도 각 슬라이드의 핵심 본문은 가능하면 빠뜨리지"
+                " 않는다. 단순 제목과 중복 설명은 빼고 정의·분류·비교·기전·경로를"
+                " 먼저 카드화한다.",
+    },
+    "normal": {
+        "label": "균형 있게",
+        # 값을 두 번 적지 않는다. 여기와 위가 갈라지면 기준선이 조용히 움직인다.
+        "budget_per_slide": DECK_BUDGET_PER_SLIDE,
+        "text": "본문에 있는 시험 가능한 내용을 대부분 담는다. 강조 표시가 없어도"
+                " 핵심 개념·정의·비교·기전, 그리고 표와 그림을 읽는 법은 카드화한다.",
+    },
+    "exhaustive": {
+        "label": "빠짐없이",
+        "budget_per_slide": 3,
+        # meddeck 원문의 마지막 문장("중복 카드는 만들지 마세요")은 뺐다.
+        # `RECALL_UNIT`이 이미 같은 말을 한다 — 두 번 적으면 둘 다 약해진다.
+        "text": "시험 가능한 내용을 거의 전부 회수 가능하게 만든다. 단순 목차·장식·"
+                "반복 문장만 빼고 세부 정의·분류·기전 단계·예외, 표와 그림의"
+                " 포인트까지 넓게 카드화한다.",
+    },
+}
+
+
+def budget_per_slide(density: str = DENSITY_DEFAULT) -> float:
+    """`validate`가 예산을 잴 때 곱하는 수. 모델은 이 값을 못 본다."""
+    return DENSITIES.get(density, DENSITIES[DENSITY_DEFAULT])["budget_per_slide"]
+
 # ⑰ 2티어. 3티어는 meddeck(high_yield 37%)·v1(core 80%) 둘 다 "아껴 쓰라"가 안 지켜졌다.
 IMPORTANCE_TIERS = ("core", "detail")
 
@@ -124,27 +163,67 @@ TABLES_FIGURES = """\
   가르치려는 **공통 구조와 대표 항목**을 회수시킨다
 """
 
-# ⑤ ⑥ ③ ⑦ ⑧ — 필기
-ANNOTATION = """\
-## 필기·형광펜·도장
-
+# ⑤ ⑥ — 필기의 지위. **여기만 프로필이 가른다.**
+_ANNOTATION_SIGNAL = """\
 **정답 근거가 아니라 중요도·누락 점검 신호다.** 표시가 닿은 본문·표·그림을 다시
-보라는 뜻이지, 표시 자체를 카드로 만들라는 뜻이 아니다.
+보라는 뜻이지, 표시 자체를 카드로 만들라는 뜻이 아니다."""
 
+_ANNOTATION_EXCEPTION = """\
+**예외 하나** — 본문·표·그림 어디에도 없고 필기에만 있는 내용이라도, 족보가 그
+지점을 실제로 물었다면 근거로 인정한다. 교수가 말로만 강조한 것이 필기에 남기
+때문이다. 이때 `evidence_type`은 `annotation`으로 적는다. 족보와 이어지지 않는
+순수 필기 사담은 `unsupported`다."""
+
+# 2026-08-20 관리자 승인. ⑤를 **이 편에 한해** 푼다.
+#
+# 마지막 문단이 없으면 승격이 필기자의 사담까지 연다. 새 규칙이 아니라 위
+# `_ANNOTATION_SIGNAL` 쪽의 마지막 문장(*"순수 필기 사담은 `unsupported`"*)을
+# 옮겨 온 것이다 — 다만 가르는 잣대가 족보가 아니라 내용 관련성으로 바뀐다.
+_ANNOTATION_EVIDENCE = """\
+**필기도 근거다.** 이 편에서는 필기·형광펜·도장이 본문·표·그림과 **같은 자격의
+근거**다. 인쇄된 자료 어디에도 없고 필기에만 있는 내용도 카드로 낸다. 이때
+`evidence_type`은 `annotation`으로 적는다.
+
+승격은 신호를 없애는 것이 아니다. 표시가 닿은 본문·표·그림을 다시 보라는 뜻으로도
+그대로 쓴다.
+
+**다만 필기자의 사담은 근거가 아니다.** 수업 내용과 무관한 메모·일정·잡담은
+`unsupported`다. 가르는 잣대는 그 필기가 **이 슬라이드가 가르치는 것에 대해**
+무언가를 말하는가이다."""
+
+# ③ ⑦ — 지위와 무관하게 늘 붙는다. **예외 절이 이 뒤에 끼므로 둘로 갈라 둔다.**
+_ANNOTATION_MID = """\
 **"외울 필요 없다", "참고", "시험에 안 낸다" 같은 문구는 신호가 없다.** 반어적으로
 써 놓고 실제로 출제하는 경우가 있다. 그 문구가 없는 것처럼 내용 자체의 중심성으로
 판단하고, 포함 쪽으로도 제외 쪽으로도 밀지 마라.
 
 **필기 색은 계열로 주어진다.** 대개 빨강이 가장 강하고 파랑·초록 순으로 약해지는
-경향이 있다. 다만 필기자마다 규약이 다를 수 있다.
+경향이 있다. 다만 필기자마다 규약이 다를 수 있다."""
 
-**예외 하나** — 본문·표·그림 어디에도 없고 필기에만 있는 내용이라도, 족보가 그
-지점을 실제로 물었다면 근거로 인정한다. 교수가 말로만 강조한 것이 필기에 남기
-때문이다. 이때 `evidence_type`은 `annotation`으로 적는다. 족보와 이어지지 않는
-순수 필기 사담은 `unsupported`다.
+# ⑧
+_ANNOTATION_END = """\
+q/a에 "필기", "스탬프", "강조됨" 같은 출처 표현을 넣지 않는다."""
 
-q/a에 "필기", "스탬프", "강조됨" 같은 출처 표현을 넣지 않는다.
-"""
+
+def annotation_section(as_evidence: bool = False) -> str:
+    """필기 절. `as_evidence`면 ⑤를 풀고 필기를 강의록과 동급 근거로 올린다.
+
+    **기본값에서는 조각이 받는 문구가 글자 하나까지 예전과 같다.** 문단 순서까지
+    같아야 한다 — 승격을 넣으면서 예외 절을 앞으로 옮겼더니 기본 실행의 문구가
+    달라졌고, `260819_02`의 spawn 문구와 대 보고 나서야 알았다. 기준선이 흔들리면
+    A/B가 성립하지 않는다.
+
+    **끄고 켠 것을 사후에 잴 수 있다.** 승격이 새로 만드는 카드는 정확히
+    `evidence_type == "annotation" and not exam_hit`에 쌓이고, `validate`가
+    그 수를 따로 센다. 실측 1,096장에서 그 값은 **1**이었다(annotation 106장 중
+    105장이 exam_hit이었다) — 밑값이 0에 붙어 있어 눈금 노릇을 한다.
+    """
+    if as_evidence:
+        parts = [_ANNOTATION_EVIDENCE, _ANNOTATION_MID, _ANNOTATION_END]
+    else:
+        parts = [_ANNOTATION_SIGNAL, _ANNOTATION_MID,
+                 _ANNOTATION_EXCEPTION, _ANNOTATION_END]
+    return "## 필기·형광펜·도장\n\n" + "\n\n".join(parts)
 
 # ⑨ ⑩ — 회상 단위
 RECALL_UNIT = """\
@@ -365,18 +444,37 @@ def make_prompt(
     annotation_context: str = "",
     exam_focus: str = "",
     give_card_types: bool = GIVE_CARD_TYPES,
+    density: str = DENSITY_DEFAULT,
+    style_note: str = "",
+    annotation_as_evidence: bool = False,
 ) -> str:
     """한 chunk에 보낼 프롬프트 전체를 조립한다.
 
     모델이 파일을 읽으러 갈 일이 없도록 필요한 것을 전부 여기 담는다.
     `give_card_types`는 ⑨′의 A/B 스위치다.
+
+    뒤의 셋이 프로필이다 (`quiz2/profile.py`가 읽어서 넘긴다).
+
+        density                 닫힌 셋. **숫자는 안 간다** — 서술만 간다
+        style_note              자유 텍스트. 관리자가 쓴 그대로 간다
+        annotation_as_evidence  ⑤를 푼다
+
+    셋 다 기본값이면 프로필을 안 쓰던 때와 **글자 하나까지 같은 문구**가 나온다.
     """
-    parts = [PURPOSE, PLAN, GROUNDING, TABLES_FIGURES, ANNOTATION, RECALL_UNIT]
+    parts = [PURPOSE, PLAN, GROUNDING, TABLES_FIGURES,
+             annotation_section(annotation_as_evidence), RECALL_UNIT]
 
     if give_card_types:
         parts.append(CARD_TYPES)
 
     parts += [FORMATS, QA, TERMS, METADATA, VOLUME]
+
+    # **`normal`은 아무것도 안 붙인다.** meddeck은 셋 다 붙였지만, 여기서 붙이면
+    # 기본 실행의 문구가 달라져 `260819_02`(75장·재현 96%)가 기준선 노릇을 못 한다.
+    # 밀도의 효과는 같은 편을 두 프로필로 돌려 재는 것이라, 한쪽이 「지금 그대로」여야
+    # 한다. `VOLUME`이 이미 normal이 말하는 것을 대체로 말하고 있기도 하다.
+    if density != DENSITY_DEFAULT and density in DENSITIES:
+        parts.append(f"## 밀도\n\n{DENSITIES[density]['text']}")
 
     if source_type == "jokbo":
         parts.append(JOKBO)
@@ -396,10 +494,27 @@ def make_prompt(
     if exam_focus.strip():
         parts.append(f"## 교수의 출제 성향\n\n{exam_focus.strip()}")
 
-    if annotation_context.strip():
+    # 관리자가 손으로 쓴 지침. **그대로 간다** — 코드가 해석하지 않는다.
+    # 꼬리 두 줄이 meddeck의 방어다(`pdf_to_anki/prompt.py`의 `custom_rule`).
+    # 없으면 자유 텍스트가 ④ grounding을 뚫는다.
+    if style_note.strip():
         parts.append(
-            f"## 이 구간의 필기 신호\n\n근거가 아니라 중요도·누락 점검 신호로 쓴다.\n\n"
-            f"{annotation_context.strip()}"
+            f"## 교수님 맞춤 지침\n\n{style_note.strip()}\n\n"
+            f"이 지침은 카드의 **선택과 구성 방향**에만 적용한다. 근거 범위·자료"
+            f" 유형별 규칙·출력 형식과 충돌하는 내용이 있으면 그쪽이 우선한다."
+        )
+
+    # ⚠ **오늘 이 인자를 넘기는 자리가 없다.** assemble은 필기를 `chunks.HIERARCHY`와
+    # 필기 메모 파일로 붙이지 이 인자로 안 넘긴다. 오클루전 규칙이 「규칙만 있고
+    # 부르는 자리가 없던」 것과 같은 꼴이니, 되살릴 때 여기부터 보라.
+    if annotation_context.strip():
+        # 지위가 위에서 갈렸으므로 여기 머리글도 따라가야 한다. 안 따라가면
+        # 프롬프트가 스스로를 반박한다.
+        role = ("근거로도 쓰고 중요도·누락 점검 신호로도 쓴다"
+                if annotation_as_evidence else
+                "근거가 아니라 중요도·누락 점검 신호로 쓴다")
+        parts.append(
+            f"## 이 구간의 필기 신호\n\n{role}.\n\n{annotation_context.strip()}"
         )
 
     return "\n\n".join(p.strip() for p in parts)
