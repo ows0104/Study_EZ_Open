@@ -200,16 +200,28 @@ def existing_items(run_dir: Path) -> list[dict]:
 def candidates(run_dir: str | Path) -> list[dict]:
     """오클루전을 시도해 볼 만한 슬라이드. **추림이지 한도가 아니다.**
 
-    조건 둘을 `or`로 묶는다.
+    올리는 길이 둘이다.
 
-    - 1단계가 그 슬라이드의 **그림이나 표를 근거로 카드를 냈다** (`evidence_type`).
-      회수 목표가 이미 확인된 자리다
-    - 페이지에서 그림이 차지하는 비율이 높다
+    - **래스터 그림이 넓다** (`raster >= MIN_FIGURE_AREA`). 자를 좌표도 함께 나온다
+    - **벡터가 넓게 덮었고**(`cover >= MIN_VECTOR_COVER`) **1단계가 그 슬라이드의
+      그림·표를 근거로 카드를 냈다**(`figure_card`). 둘 다여야 한다
 
-    `or`인 이유가 실측에 있다 — `260819_01`에서 `image_ratio`가 0인 슬라이드가
-    67장 중 45장인데, 그중에도 `figure` 근거 카드가 있는 슬라이드가 있었다(s9의
-    Mutation 도식). 벡터로 그린 도식은 래스터 이미지가 아니라 비율이 0으로 잡힌다.
-    비율만 보면 그런 그림을 통째로 놓친다.
+    벡터 팔이 필요한 이유가 실측에 있다 — `260819_01`에서 `image_ratio`가 0인
+    슬라이드가 67장 중 45장인데, 그중에도 `figure` 근거 카드가 있는 슬라이드가
+    있었다(s9의 Mutation 도식). 벡터로 그린 도식은 래스터가 아니라 비율이 0이다.
+
+    **`figure_card`를 곱하는 이유도 실측에 있다** (2026-08-21). 그 전에는 벡터
+    덮임만으로 올렸는데, 표 괘선·밑줄·글상자가 전부 벡터 경로라 **그림이 없는
+    텍스트 슬라이드가 그대로 통과**했다.
+
+        260819_03  후보 29장 → 벡터만으로 올라온 13장 중 카드가 된 것 1장 (8%)
+                              래스터로 올라온 16장 중            14장 (88%)
+
+    벡터 팔에 `figure_card`를 곱하면 세 편 모두 **채택된 슬라이드를 하나도 안
+    잃고** 후보가 준다 — `260819_03` 29→19, `260819_02` 14→10, `260819_01` 31→26.
+    벡터로만 올라와 채택된 유일한 장(`260819_03` s26)이 `figure_card`가 참이다.
+
+    배치는 후보 5장씩 끊으므로 이 관문이 곧 배치 수다(29장이면 6, 19장이면 4).
     """
     run_dir = Path(run_dir)
     prep = json.loads((run_dir / "prep.json").read_text(encoding="utf-8"))
@@ -229,14 +241,15 @@ def candidates(run_dir: str | Path) -> list[dict]:
     rows: list[dict] = []
     for slide_no in range(lo, hi + 1):
         raster, cover, figures = page_shapes(source, slide_no)
-        if raster < MIN_FIGURE_AREA and cover < MIN_VECTOR_COVER:
+        figure_card = slide_no in figure_slides
+        if raster < MIN_FIGURE_AREA and not (cover >= MIN_VECTOR_COVER and figure_card):
             continue
         rows.append({
             "slide_no": slide_no,
             "raster": raster,
             "vector_cover": cover,
             "figures": figures,
-            "figure_card": slide_no in figure_slides,
+            "figure_card": figure_card,
             "carded": slide_no in carded,
             "labels": slide_labels(labels, slide_no),
         })
@@ -251,6 +264,14 @@ def candidates(run_dir: str | Path) -> list[dict]:
 LABELMAP_SCALE = 2.0
 SHEET_GAP = 12
 
+# 지도에 그리는 눈금. **페이지 기준으로 매긴다** — 지도는 각인 띠를 잘라낸 슬라이드
+# 비율인데 좌표는 페이지 분모를 쓰므로, 눈금이 없으면 모델이 `y/1.0556`을 손으로
+# 곱해야 한다. `260819_03`에서 배치 하나가 그 계산을 하느라 Bash 19회 중 13회를
+# 즉석 PIL 스크립트에 썼다. 눈금을 그리면 읽어서 그대로 적으면 된다.
+GRID_STEP = 0.05            # 선 간격 (페이지 정규화)
+GRID_LABEL_EVERY = 2        # 이 선마다 숫자를 적는다 (0.1마다)
+GRID_COLOR = (0.55, 0.55, 0.58)
+
 
 def render_label_map(source, slide_no: int, entries: list[dict], out_dir: Path,
                      basename: str, band_pt: float = 0.0,
@@ -261,6 +282,11 @@ def render_label_map(source, slide_no: int, entries: list[dict], out_dir: Path,
     `label_ids`만 쓰면 되고, 그러면 분모 문제도 `rect_clips_label`도 안 생긴다.
 
     상자는 **테두리만** 그린다 — 안이 보여야 무엇을 가릴지 고를 수 있다.
+
+    **눈금도 함께 그린다**(2026-08-21). 라벨로 안 잡히는 자리를 가리거나 오릴 때는
+    좌표를 직접 적어야 하는데, 지도는 각인 띠를 잘라낸 슬라이드 비율이고 좌표는
+    페이지 분모라 그 값이 어긋난다. 눈금을 **페이지 기준**으로 매겨 두면 읽은 값을
+    그대로 적으면 된다.
     """
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -272,6 +298,34 @@ def render_label_map(source, slide_no: int, entries: list[dict], out_dir: Path,
     doc = fitz.open()
     page = doc.new_page(width=pix.width, height=pix.height)
     page.insert_image(fitz.Rect(0, 0, pix.width, pix.height), pixmap=pix)
+
+    # 눈금 먼저. 라벨 상자보다 아래에 깔려야 상자가 안 가려진다.
+    keep_h = pix.height - float(band_pt) * LABELMAP_SCALE if band_pt else pix.height
+    ticks = int(round(1.0 / GRID_STEP))
+    tick_size = 7.0 * LABELMAP_SCALE
+    for i in range(1, ticks):
+        value = i * GRID_STEP
+        labelled = (i % GRID_LABEL_EVERY == 0)
+        x = value * pix.width
+        page.draw_line(fitz.Point(x, 0), fitz.Point(x, keep_h), color=GRID_COLOR,
+                       width=(0.9 if labelled else 0.4), dashes="[3 6] 0", overlay=True)
+        y = value * pix.height          # ← 페이지 분모. 지도가 잘려도 값은 그대로다
+        if y < keep_h:
+            page.draw_line(fitz.Point(0, y), fitz.Point(pix.width, y), color=GRID_COLOR,
+                           width=(0.9 if labelled else 0.4), dashes="[3 6] 0", overlay=True)
+        if not labelled:
+            continue
+        text = f"{value:.1f}"
+        chip = fitz.Rect(x + 1, 1, x + tick_size * 2.4, tick_size + 4)
+        page.draw_rect(chip, color=None, fill=(1, 1, 1), overlay=True)
+        page.insert_text((chip.x0 + 1, chip.y1 - 3), text, fontsize=tick_size,
+                         color=GRID_COLOR, fontname="helv")
+        if y < keep_h:
+            chip = fitz.Rect(1, y + 1, tick_size * 2.4, y + tick_size + 4)
+            page.draw_rect(chip, color=None, fill=(1, 1, 1), overlay=True)
+            page.insert_text((chip.x0 + 1, chip.y1 - 3), text, fontsize=tick_size,
+                             color=GRID_COLOR, fontname="helv")
+
     for entry in entries:
         raw = entry.get("rect")
         if not raw:
@@ -305,7 +359,6 @@ def render_label_map(source, slide_no: int, entries: list[dict], out_dir: Path,
                          color=(0.0, 0.35, 0.9), fontname="helv")
 
     name = f"{basename}_map.png"
-    keep_h = pix.height - float(band_pt) * LABELMAP_SCALE
     clip = fitz.Rect(0, 0, pix.width, keep_h) if band_pt else None
     page.get_pixmap(alpha=False, clip=clip).save(str(out_dir / name))
     doc.close()
@@ -610,14 +663,16 @@ def coord_note(prep: dict) -> str:
         return ""
     factor = height / (height - band)
     return (
-        "## 직접 좌표를 적을 때 — **분모가 슬라이드가 아니라 페이지다**\n\n"
-        f"각인을 놓으려고 페이지 아래에 빈 띠가 {band:.0f}pt 붙어 있다. 페이지는 "
-        f"{height:.0f}pt이고 슬라이드는 {height - band:.0f}pt다. 위 표의 라벨 좌표도 "
-        "**띠를 포함한 높이**로 정규화돼 있고, 네가 적는 `rects`/`mask_rects`도 같은 "
-        "분모를 써야 한다.\n\n"
-        f"    슬라이드 기준으로 잰 y  /  {factor:.4f}  =  여기 적을 y\n\n"
-        "x는 그대로다. **y만 그렇다.** 안 나누면 상자가 아래로 밀린다 — 표에서 한 행 "
-        "어긋나 엉뚱한 칸을 덮게 된다. 렌더해서 눈으로 보면 바로 보인다."
+        "## 직접 좌표를 적을 때 — **지도의 눈금을 읽어라**\n\n"
+        "지도에 점선 눈금이 0.05마다 그어져 있고 위·왼쪽 가장자리에 0.1마다 숫자가"
+        " 찍혀 있다. **그 숫자가 곧 여기 적을 값이다.** 계산하지 마라.\n\n"
+        "    x0, y0 = 상자 왼쪽 위 눈금        x1, y1 = 오른쪽 아래 눈금\n\n"
+        f"눈금은 **페이지 기준**으로 매겨져 있다. 각인을 놓으려고 페이지 아래에 빈"
+        f" 띠가 {band:.0f}pt 붙어 있어서(페이지 {height:.0f}pt · 슬라이드"
+        f" {height - band:.0f}pt) 지도 이미지의 픽셀로 재면 y가 어긋나는데, 눈금이"
+        f" 그 어긋남을 이미 먹었다 — 예전에는 잰 y를 {factor:.4f}로 나눠 적어야"
+        f" 했다.\n\n"
+        "**픽셀을 재는 스크립트를 쓰지 마라.** 위 표의 라벨 좌표와 눈금이 같은 자다."
     )
 
 

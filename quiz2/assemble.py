@@ -108,14 +108,16 @@ def jokbo_scope(prep: dict) -> str:
 
 def _file_list(chunk: chunks_mod.ChunkPdf, *, include_annot: bool) -> str:
     """읽을 파일을 이름으로 찍는다. 여기 없는 것은 열 이유가 없다."""
+    # `pages`를 반드시 준다. "통째로 읽어라"라고 적어 뒀더니 Read가 쪽수를 요구해
+    # **조각마다 헛호출이 하나씩** 났다 (260819_03, c01이 보고). 한 번에 20쪽까지다.
     lines = [f"1. **`{chunk.path}`** — clean 채널. **사실 근거는 여기서만 나온다.**",
-             f"   `pages` 없이 통째로 읽어라 ({chunk.pages}쪽이라 상한에 안 걸리고,"
-             f" 그래야 텍스트 레이어까지 온다)"]
+             f"   `pages: \"1-{chunk.pages}\"`로 읽어라 (이 파일은 {chunk.pages}쪽이다)."
+             f" 쪽수를 안 주면 Read가 거부한다"]
     n = 2
     if include_annot and chunk.annot_path:
         lines.append(f"{n}. **`{chunk.annot_path}`** — 필기본. 같은 슬라이드에 "
                      f"필기가 얹힌 것. 표시 {chunk.mark_count}개, 필기자의 말 "
-                     f"{chunk.note_count}개")
+                     f"{chunk.note_count}개. 여기도 `pages: \"1-{chunk.pages}\"`")
         n += 1
     if chunk.notes_path:
         lines.append(f"{n}. **`{chunk.notes_path}`** — 필기자의 말과 "

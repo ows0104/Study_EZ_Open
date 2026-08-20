@@ -33,6 +33,7 @@ v1 조각 하나를 뜯어보니 도구 호출 47회 중 **26회가 입력을 �
     structure.py   0.5단계. 스폰 문구를 내고, 쓴 것을 검증한다
     occlusion.py   오클루전 패스. 후보 추림 + 렌더 + 누출 검사 (㉙~㉟)
     timings.py     단계 계측. **모델 단계는 오케스트레이터가 찍어야 한다**
+    tokens.py      단계별 토큰. `quiz/`가 한 호출을 2~3번 세던 것을 접어서 센다
     reproduce.py   재현 검사. q만 주고 a가 다시 나오는지 본다 (⓹)
     build.py       .apkg. 뒷면 빨간 박스에 신호 셋을 각자 머리글로 세운다 (③⃝)
 
@@ -53,13 +54,15 @@ v1 조각 하나를 뜯어보니 도구 호출 47회 중 **26회가 입력을 �
     python -m quiz2.structure plan runs/<id>    # → spawn/structure.md
     python -m quiz2.timings runs/<id> start 0.5-write     # ← 띄우기 직전
     #    서브에이전트 하나에게 그 파일을 읽고 그대로 따르라고만 시킨다
+    #    **띄울 때 subagent_type은 `quiz-worker`다** (.claude/agents/quiz-worker.md).
+    #    도구 넷만 지고 뜨므로 부팅 문맥이 작다 — 그 값은 아직 안 쟀다
     python -m quiz2.timings runs/<id> end   0.5-write     # ← 받은 직후
     python -m quiz2.structure check runs/<id>   # 쓴 뒤 검증
 
     # 1. 조각 자르기 + 스폰 문구 조립
     python -m quiz2.assemble runs/<id>
 
-    # 2. runs/<id>/spawn/*.md 마다 서브에이전트를 하나씩, 동시에
+    # 2. runs/<id>/spawn/*.md 마다 `quiz-worker`를 하나씩, 동시에
     #    각 에이전트에게는 "그 파일을 읽고 그대로 따르라"만 시킨다
     #    **조각마다 라벨을 붙여 찍어라. 안 찍으면 편 시간이 사라진다**
     python -m quiz2.timings runs/<id> start 2-write --label c01
