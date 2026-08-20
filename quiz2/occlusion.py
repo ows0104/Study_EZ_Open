@@ -58,6 +58,7 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 from quiz.occlusion import (  # noqa: E402
+    ACCENT,
     build_label_index,
     render_occlusion_pair,
     resolve_rects,
@@ -183,6 +184,82 @@ def candidates(run_dir: str | Path) -> list[dict]:
             "labels": entries,
         })
     return rows
+
+
+# ── 그림으로 주는 것 두 가지 ────────────────────────────────────────────
+#
+# 도구 호출을 줄이려고 넣었다. `260819_02` 1회차가 29회였고, 그중 상당수가
+# **좌표를 지어내고 틀린 것을 렌더로 확인하는 데** 들었다.
+
+LABELMAP_SCALE = 2.0
+SHEET_GAP = 12
+
+
+def render_label_map(source, slide_no: int, entries: list[dict], out_dir: Path,
+                     basename: str, band_pt: float = 0.0) -> str:
+    """라벨 상자를 다 그리고 id를 찍은 한 장. **좌표를 지어낼 일을 없앤다.**
+
+    `labels.json`에 좌표가 이미 다 있으므로 코드가 공짜로 만든다. 이걸 주면 고를 때
+    `label_ids`만 쓰면 되고, 그러면 분모 문제도 `rect_clips_label`도 안 생긴다.
+
+    상자는 **테두리만** 그린다 — 안이 보여야 무엇을 가릴지 고를 수 있다.
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    src = fitz.open(str(source))
+    pix = src.load_page(int(slide_no) - 1).get_pixmap(
+        matrix=fitz.Matrix(LABELMAP_SCALE, LABELMAP_SCALE), alpha=False)
+    src.close()
+
+    doc = fitz.open()
+    page = doc.new_page(width=pix.width, height=pix.height)
+    page.insert_image(fitz.Rect(0, 0, pix.width, pix.height), pixmap=pix)
+    for entry in entries:
+        raw = entry.get("rect")
+        if not raw:
+            continue
+        rect = fitz.Rect(raw[0] * pix.width, raw[1] * pix.height,
+                         raw[2] * pix.width, raw[3] * pix.height)
+        page.draw_rect(rect, color=ACCENT, width=1.2 * LABELMAP_SCALE, overlay=True)
+        # id는 상자 **왼쪽 위 바깥**에 흰 칩으로. 안에 찍으면 라벨을 가린다.
+        tag = str(entry.get("id", ""))[-3:]
+        size = 8.0 * LABELMAP_SCALE
+        chip = fitz.Rect(rect.x0 - 1, max(0, rect.y0 - size - 3),
+                         rect.x0 + size * 2.2, max(size, rect.y0 - 1))
+        page.draw_rect(chip, color=ACCENT, fill=(1, 1, 1), width=0.8, overlay=True)
+        page.insert_text((chip.x0 + 2, chip.y1 - 3), tag, fontsize=size,
+                         color=ACCENT, fontname="helv")
+
+    name = f"{basename}_map.png"
+    keep_h = pix.height - float(band_pt) * LABELMAP_SCALE
+    clip = fitz.Rect(0, 0, pix.width, keep_h) if band_pt else None
+    page.get_pixmap(alpha=False, clip=clip).save(str(out_dir / name))
+    doc.close()
+    return name
+
+
+def render_contact_sheet(paths: list[Path], out_path: Path) -> str:
+    """앞면들을 한 장으로 이어 붙인다. **한 바퀴에 한 번만 읽으면 된다.**
+
+    카드마다 따로 읽으면 바퀴마다 카드 수만큼 호출이 든다.
+    """
+    pixmaps = [fitz.Pixmap(str(path)) for path in paths if Path(path).exists()]
+    if not pixmaps:
+        return ""
+    width = max(p.width for p in pixmaps)
+    height = sum(p.height for p in pixmaps) + SHEET_GAP * (len(pixmaps) - 1)
+    doc = fitz.open()
+    page = doc.new_page(width=width, height=height)
+    page.draw_rect(fitz.Rect(0, 0, width, height), fill=(1, 1, 1), width=0)
+    y = 0.0
+    for pix in pixmaps:
+        page.insert_image(fitz.Rect(0, y, pix.width, y + pix.height), pixmap=pix)
+        y += pix.height + SHEET_GAP
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    page.get_pixmap(alpha=False).save(str(out_path))
+    doc.close()
+    return str(out_path)
 
 
 # ── 코드가 잡아 주는 결함 ──────────────────────────────────────────────
@@ -311,8 +388,14 @@ def render(run_dir: str | Path, items_name: str) -> dict:
             row["back"] = str(out_dir / back)
         rows.append(row)
 
+    sheet = ""
+    fronts = [Path(r["front"]) for r in rows if r.get("front")]
+    if len(fronts) > 1:
+        sheet = render_contact_sheet(
+            fronts, out_dir / f"{Path(items_name).stem}_sheet.png")
+
     return {"items": len(items), "occlusion": len(targets), "out_dir": str(out_dir),
-            "source": str(source), "cards": rows,
+            "source": str(source), "cards": rows, "sheet": sheet,
             "flagged": sum(1 for r in rows if r["problems"])}
 
 
@@ -330,6 +413,14 @@ DO_NOT = """\
 
 
 def _label_table(row: dict) -> str:
+    if row.get("map"):
+        lines = [f"### 슬라이드 {row['slide_no']} — 지도: `{row['map']}`", "",
+                 "**이 지도를 읽어라.** 라벨마다 상자와 끝 세 글자(`l02` 꼴)가 찍혀 "
+                 "있다. 무엇을 가릴지는 그림을 봐야 정해진다.", "",
+                 "| label_id | 글자 |", "|---|---|"]
+        for e in row["labels"]:
+            lines.append(f"| `{e['id']}` | {_text(e.get('text')).replace('|', '/')} |")
+        return "\n".join(lines)
     lines = [f"### 슬라이드 {row['slide_no']}"
              f"  (그림 비율 {row['image_ratio']}"
              + (", 1단계가 그림·표를 근거로 카드를 냈다" if row["figure_card"] else "")
@@ -388,8 +479,10 @@ def spawn_prompt(run_dir: Path, rows: list[dict], batch: str, out_path: Path,
         prompt_mod.OCCLUSION,
         "## 네가 맡은 후보\n\n"
         "1단계가 그림·표를 근거로 카드를 냈거나 그림 비율이 높은 슬라이드다. "
-        "**추림이지 한도가 아니다** — 회수 목표가 없으면 넘기고, 라벨이 안 잡힌 "
-        "그림은 정규화 좌표(0~1)로 직접 적어도 된다.\n\n"
+        "**추림이지 한도가 아니다** — 회수 목표가 없으면 넘기고 된다.\n\n"
+        "**고르는 것은 `label_ids`다.** 슬라이드마다 라벨 지도 PNG가 있으니 그것만 "
+        "읽고 id를 고르면 된다. **좌표를 손으로 지어내지 마라** — 지도에 없는 자리를 "
+        "꼭 가려야 할 때만 아래 「직접 좌표」로 간다.\n\n"
         + "\n\n".join(_label_table(r) for r in rows),
     ]
 
@@ -414,7 +507,8 @@ def spawn_prompt(run_dir: Path, rows: list[dict], batch: str, out_path: Path,
 
        python -m quiz2.occlusion render {run_dir} --items {out_path.name}
 
-3. 나온 앞면 PNG를 `Read`로 **직접 본다.** 확인할 것은 셋이다
+3. 나온 **접촉 시트 한 장**을 `Read`로 본다 (카드가 둘 이상이면 렌더가 앞면을
+   한 장으로 이어 붙여 준다). 확인할 것은 셋이다
    - 가려야 할 글자가 상자 밖으로 삐져나오지 않았나
    - 가리지 말아야 할 것까지 덮지 않았나
    - 답이 슬라이드 다른 자리에 그대로 보이지 않나 (필기도 포함이다)
@@ -479,6 +573,17 @@ def plan(run_dir: str | Path, batch_size: int = BATCH_SIZE) -> dict:
     rows = candidates(run_dir)
     items = existing_items(run_dir)
     prep = json.loads((run_dir / "prep.json").read_text(encoding="utf-8"))
+
+    # 후보마다 라벨 지도 한 장. 코드가 공짜로 만들 수 있는 것을 모델이 좌표를
+    # 지어내며 대신하고 있었다 (`260819_02` 1회차 도구 29회).
+    source = prep.get("annotated_pdf") or prep.get("source_pdf")
+    band = float(prep.get("stamp_band_pt") or 0.0)
+    prefix = safe_media_prefix(prep["source_stem"])
+    map_dir = run_dir / "occl_labelmap"
+    for row in rows:
+        name = render_label_map(source, row["slide_no"], row["labels"], map_dir,
+                                f"{prefix}_s{row['slide_no']:03d}", band_pt=band)
+        row["map"] = str(map_dir / name)
     out_dir = run_dir / "spawn"
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -495,6 +600,7 @@ def plan(run_dir: str | Path, batch_size: int = BATCH_SIZE) -> dict:
         spawn_file.write_text(text, encoding="utf-8")
         made.append({
             "batch": batch,
+            "maps": sum(1 for r in group if r.get("map")),
             "slides": sorted(slides),
             "labels": sum(len(r["labels"]) for r in group),
             "spawn": str(spawn_file),
@@ -526,6 +632,7 @@ def main() -> int:
         for b in result["batches"]:
             print(f"  {b['batch']}  슬라이드 {b['slides']}  라벨 {b['labels']}개  "
                   f"{b['spawn']}")
+            print(f"        라벨 지도 {b['maps']}장 → {run_dir / 'occl_labelmap'}")
         print("\n배치마다 서브에이전트를 하나씩. 각자 render를 돌려 가며 고친다.")
         print("띄우기 직전·받은 직후에 찍어라 — 렌더 반복이 여기 다 들어간다:")
         print(f"    python -m quiz2.timings {run_dir} start 3.5-occlusion --label b01")
@@ -546,6 +653,9 @@ def main() -> int:
             print(f"    뒷면 {row['back']}")
         for problem in row["problems"]:
             print(f"    ✗ {problem}")
+    if result.get("sheet"):
+        print("\n  앞면을 한 장으로 이어 붙였다 — **이것만 읽으면 된다**")
+        print(f"    {result['sheet']}")
     if result["occlusion"]:
         print(f"\n  표시된 카드 {result['flagged']}장 / {result['occlusion']}장")
         print("  **앞면 PNG를 직접 열어 봐라.** 필기가 답을 바꿔 말하거나 "
