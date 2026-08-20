@@ -283,6 +283,10 @@
   z-index: 2;
   min-width: 0;
   padding: 3px;
+  /* 칸이 제 크기를 재는 자리다. 아래 `@container cell`이 이 폭·높이를 보고
+     칸 안의 줄을 뺀다 — 창 폭이 아니라 **칸 폭**이어야 패널을 연 것과 화면이
+     좁은 것과 화면을 나눈 것이 한 규칙으로 처리된다. */
+  container: cell / size;
 }
 
 .week-event-span .calendar-event {
@@ -375,6 +379,12 @@
      밀어 제목마다 왼쪽 끝이 달라진다. minmax의 0은 글이 길 때 열이 칸보다
      넓어지지 않게 해 말줄임이 걸리게 한다. */
   grid-template-columns: minmax(0, 1fr);
+  /* **줄이 저마다 제 높이를 갖는다.** 이걸 안 적으면 칸보다 글이 길 때 줄
+     세 개가 서로 겹쳐 찍힌다 — 자동 줄은 칸 높이에 맞춰 줄어들 수 있는데,
+     세 줄 모두 `overflow: hidden`이라 최소 크기가 0으로 잡혀서 브라우저가
+     40px 칸에 7px짜리 줄 세 개를 만들어 놓고 글은 제 높이로 그린다.
+     min-content로 못 박으면 줄은 안 줄고, 넘치는 것은 위의 hidden이 자른다. */
+  grid-auto-rows: min-content;
   gap: 1px;
   align-content: start;
   align-items: start;
@@ -478,6 +488,62 @@
   font-size: 9.5px;
 }
 
+/* 점은 오른쪽 아래에 떠 있다. 아래 두 줄만 그만큼 비켜 준다 — 제목은 위에서
+ * 차므로 점과 만나지 않고, 그래서 폭을 뺏기지 않는다. 점이 없는 칸에는 물릴
+ * 것이 없으니 걸지 않는다. */
+.calendar-event:has(.chip-marks, .chip-count) .calendar-event-professor,
+.calendar-event:has(.chip-marks, .chip-count) .calendar-event-series {
+  padding-right: 18px;
+}
+
+/* ── 칸에 다 안 들어갈 때 무엇을 버리는가 ──
+ *
+ * 모바일도, 화면을 나눈 것도, 패널을 연 것도 전부 여기로 들어온다. 창이
+ * 아니라 **칸**을 재기 때문이다(`.week-event-span`이 `container: cell / size`).
+ *
+ * 순서가 중요하다. **제목의 높이를 먼저 묶고 나면 그 뒤로는 높이만 봐도 된다** —
+ * 좁아질수록 제목이 여러 줄로 접혀서 넘치는 것이므로, 접히는 줄 수에 상한을
+ * 두면 폭은 더 볼 것이 없어진다. 폭 문턱을 따로 두지 않는 이유가 이것이다.
+ *
+ * 잰 값: 위아래 여백 14, 제목 한 줄 15.8, 교수 14, 과목 12, 줄새 1. 그래서
+ * 필요한 높이는
+ *
+ *   제목3+교수+과목 = 89.5   제목2+교수+과목 = 73.7
+ *   제목2+교수      = 60.7   제목2          = 45.7 (여백을 3px로 낮추면 37.7)
+ *
+ * 버리는 순서는 과목 → 교수다. 그 주의 강의는 대개 같은 과목이라 과목 줄이
+ * 가장 덜 말하고, 강의명은 끝까지 남는다. */
+@container cell (max-height: 89px) {
+  .calendar-event-primary {
+    -webkit-line-clamp: 2;
+  }
+}
+
+@container cell (max-height: 76px) {
+  .calendar-event-series {
+    display: none;
+  }
+}
+
+@container cell (max-height: 60px) {
+  .calendar-event-professor {
+    display: none;
+  }
+
+  /* 위아래 여백이 14px이라 46px짜리 최소 줄에서는 제목 두 줄(31.7)이 안 들어가
+     둘째 줄이 반쯤 잘린다. 여백을 낮춰 그 줄을 산다 — 남은 것이 제목뿐이라
+     숨 쉴 자리를 뺏기는 것도 제목 하나뿐이다. */
+  .calendar-event {
+    padding-block: 3px;
+  }
+
+  /* 남은 것이 제목뿐이면 제목이 바닥 줄이 된다. 점을 비켜설 차례가 여기로
+     넘어온다. */
+  .calendar-event-primary {
+    padding-right: 18px;
+  }
+}
+
 /* 실습은 띠 모양을 강의와 같이 둔다. 계열색(틸)만으로 가른다는 뜻이고,
  * 그래서 이 화면에서 선 모양이 뜻을 갖는 곳은 점선(수업 없는 날) 하나뿐이다. */
 
@@ -511,6 +577,12 @@
 .calendar-event.is-compact .calendar-event-primary {
   font-size: 10.5px;
   -webkit-line-clamp: 1;
+}
+
+/* 월간 칸은 한 줄이라 점이 제목의 오른쪽 끝에 그대로 얹힌다. 점이 있는 칸만
+ * 자리를 낸다 — 없는 칸까지 비워 두면 짧은 달력에서 제목이 먼저 잘린다. */
+.calendar-event.is-compact:has(.chip-marks, .chip-count) .calendar-event-primary {
+  padding-right: 14px;
 }
 
 /* ------------------------------------------------------------------ 점 */
