@@ -59,6 +59,7 @@ for _stream in (sys.stdout, sys.stderr):
 
 from quiz.occlusion import (  # noqa: E402
     ACCENT,
+    valid_rect,
     build_label_index,
     render_occlusion_pair,
     resolve_rects,
@@ -69,10 +70,25 @@ from quiz import timings  # noqa: E402
 from quiz2 import prompt as prompt_mod  # noqa: E402
 
 
-# 후보를 좁히는 조건. **한도가 아니라 추림이다** — 목록에 있어도 안 만들어도 되고,
-# 라벨이 안 잡힌 그림은 정규화 좌표로 직접 적으면 된다(㉚ "회수 목표가 있는 것만").
-MIN_LABELS = 2
-MIN_IMAGE_RATIO = 0.2
+# 후보를 좁히는 조건. **한도가 아니라 추림이다** — 목록에 있어도 안 만들어도 된다
+# (㉚ "회수 목표가 있는 것만").
+#
+# **그림이 있는 슬라이드만 본다.** 목표가 "텍스트로 표현할 수 없는 것을 내는 것"이라
+# 그림이 없으면 이 패스의 일이 아니다(2026-08-20 관리자). 라벨 수는 안 본다 —
+# 제목만 달린 조직학 사진이 그 관문에서 탈락하고 있었다.
+#
+# 둘 중 하나면 후보다. **벡터를 따로 세는 이유가 실측에 있다** — 도형으로 그린
+# 도식은 래스터 블록이 없다. `260819_02` s12(유전자 구조도)가 래스터 3%인데
+# 벡터 경로 29개였고, 그림이 진짜 없는 s13은 1개였다.
+MIN_FIGURE_AREA = 0.10      # 가장 큰 래스터 그림이 쪽 면적에서 차지하는 비율
+MIN_VECTOR_COVER = 0.25     # 벡터 경로들이 덮는 넓이. **개수보다 이게 깨끗하다**
+#
+# 개수로 재면 안 갈린다 — 문턱 5로 잡으니 `260819_01`이 67장 중 48장을 통과시켰다.
+# 넓이로 재면 `260819_02`가 `0.37 → 0.00`으로 낭떠러지가 생긴다(19장이 정확히 0).
+# **다만 두 편으로 잡은 값이다.** 넉넉히 통과시키고 모델이 넘기는 쪽을 골랐다.
+
+# 오려낼 후보로 목록에 올릴 그림의 최소 면적. 마스코트·배지 따위를 뺀다.
+FIGURE_LIST_MIN_AREA = 0.03
 
 # 배치 하나가 맡는 후보 슬라이드 수. 렌더-확인-수정을 슬라이드마다 도는 자리라
 # 한 배치를 크게 잡으면 문맥이 길어진다. `reproduce.py`와 같은 이유의 값이다.
@@ -115,6 +131,48 @@ def load_labels(run_dir: Path, prep: dict) -> dict[str, list[dict]]:
     if not path.exists():
         raise SystemExit(f"labels.json이 없다: {run_dir}. prep.py를 먼저 돌려라")
     return json.loads(path.read_text(encoding="utf-8")).get("slides") or {}
+
+
+def page_shapes(source, slide_no: int) -> tuple[float, float, list[dict]]:
+    """한 쪽의 (가장 큰 래스터 그림 면적, 벡터가 덮는 넓이, 오려낼 만한 그림들).
+
+    **래스터만 자를 좌표를 준다.** 벡터 도식은 경로 bbox의 합집합이 본문까지
+    삼킨다 — `260819_02` s12에서 67%, s7에서 76%였다. 그래서 벡터는 **후보인지
+    가르는 데만** 쓰고, 자를 자리는 모델이 지도를 보고 정한다.
+    """
+    doc = fitz.open(str(source))
+    page = doc.load_page(int(slide_no) - 1)
+    width, height = page.rect.width, page.rect.height
+    area = (width * height) or 1.0
+
+    figures: list[dict] = []
+    for block in page.get_text("dict")["blocks"]:
+        if block.get("type") != 1:
+            continue
+        x0, y0, x1, y1 = block["bbox"]
+        size = ((x1 - x0) * (y1 - y0)) / area
+        if size < FIGURE_LIST_MIN_AREA:
+            continue
+        figures.append({"rect": [round(x0 / width, 5), round(y0 / height, 5),
+                                 round(x1 / width, 5), round(y1 / height, 5)],
+                        "area": round(size, 3)})
+    figures.sort(key=lambda f: -f["area"])
+    for index, figure in enumerate(figures, start=1):
+        figure["id"] = f"s{int(slide_no):03d}_f{index:02d}"
+
+    union = None
+    for path in page.get_drawings():
+        rect = path.get("rect")
+        if not rect:
+            continue
+        # 배경 사각형(거의 전면)은 빼고 나머지를 다 합친다.
+        if (rect.width * rect.height) / area > 0.6:
+            continue
+        union = rect if union is None else (union | rect)
+    cover = ((union.width * union.height) / area) if union else 0.0
+    doc.close()
+    biggest = figures[0]["area"] if figures else 0.0
+    return biggest, round(cover, 3), figures
 
 
 def slide_labels(labels: dict, slide_no: int) -> list[dict]:
@@ -166,22 +224,21 @@ def candidates(run_dir: str | Path) -> list[dict]:
                      and _text(i.get("slide_no"))}
     carded = {int(i["slide_no"]) for i in items if _text(i.get("slide_no"))}
 
+    source = prep.get("annotated_pdf") or prep.get("source_pdf")
     lo, hi = (int(structure["lecture_range"][0]), int(structure["lecture_range"][1]))
     rows: list[dict] = []
     for slide_no in range(lo, hi + 1):
-        entries = slide_labels(labels, slide_no)
-        if len(entries) < MIN_LABELS:
-            continue
-        ratio = float(features.get(slide_no, {}).get("image_ratio") or 0.0)
-        has_figure = slide_no in figure_slides
-        if not has_figure and ratio < MIN_IMAGE_RATIO:
+        raster, cover, figures = page_shapes(source, slide_no)
+        if raster < MIN_FIGURE_AREA and cover < MIN_VECTOR_COVER:
             continue
         rows.append({
             "slide_no": slide_no,
-            "image_ratio": round(ratio, 2),
-            "figure_card": has_figure,
+            "raster": raster,
+            "vector_cover": cover,
+            "figures": figures,
+            "figure_card": slide_no in figure_slides,
             "carded": slide_no in carded,
-            "labels": entries,
+            "labels": slide_labels(labels, slide_no),
         })
     return rows
 
@@ -196,7 +253,8 @@ SHEET_GAP = 12
 
 
 def render_label_map(source, slide_no: int, entries: list[dict], out_dir: Path,
-                     basename: str, band_pt: float = 0.0) -> str:
+                     basename: str, band_pt: float = 0.0,
+                     figures: list[dict] | None = None) -> str:
     """라벨 상자를 다 그리고 id를 찍은 한 장. **좌표를 지어낼 일을 없앤다.**
 
     `labels.json`에 좌표가 이미 다 있으므로 코드가 공짜로 만든다. 이걸 주면 고를 때
@@ -230,10 +288,50 @@ def render_label_map(source, slide_no: int, entries: list[dict], out_dir: Path,
         page.insert_text((chip.x0 + 2, chip.y1 - 3), tag, fontsize=size,
                          color=ACCENT, fontname="helv")
 
+    # 오려낼 그림은 굵은 파란 테두리로. 라벨(마젠타)과 눈으로 갈리게 한다.
+    for figure in (figures or []):
+        raw = figure["rect"]
+        rect = fitz.Rect(raw[0] * pix.width, raw[1] * pix.height,
+                         raw[2] * pix.width, raw[3] * pix.height)
+        page.draw_rect(rect, color=(0.0, 0.35, 0.9), width=2.4 * LABELMAP_SCALE,
+                       overlay=True)
+        tag = str(figure.get("id", ""))[-3:]
+        size = 10.0 * LABELMAP_SCALE
+        chip = fitz.Rect(rect.x0 - 1, rect.y0 - 1, rect.x0 + size * 2.6,
+                         rect.y0 + size + 3)
+        page.draw_rect(chip, color=(0.0, 0.35, 0.9), fill=(1, 1, 1), width=0.8,
+                       overlay=True)
+        page.insert_text((chip.x0 + 3, chip.y1 - 4), tag, fontsize=size,
+                         color=(0.0, 0.35, 0.9), fontname="helv")
+
     name = f"{basename}_map.png"
     keep_h = pix.height - float(band_pt) * LABELMAP_SCALE
     clip = fitz.Rect(0, 0, pix.width, keep_h) if band_pt else None
     page.get_pixmap(alpha=False, clip=clip).save(str(out_dir / name))
+    doc.close()
+    return name
+
+
+def render_figure_crop(source, slide_no: int, rect: list[float], out_dir: Path,
+                       basename: str, band_pt: float = 0.0) -> str:
+    """그림만 오려낸 한 장. **앞면에 이것만 선다.**
+
+    채널은 **clean**이다(㉞의 예외). 마스킹 카드는 필기본에 그리지만, 오려내는
+    카드는 답이 그림의 이름이라 **필기가 답을 적어 두면 그대로 샌다** — 관리자가
+    든 예시 슬라이드에서도 사진 옆 필기가 `심하면 kernicterus`라고 적고 있었다.
+    오려내면 그 필기는 사각형 밖이라 안 들어오지만, 채널까지 clean으로 두면
+    사진 위에 얹힌 필기도 안 들어온다.
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    doc = fitz.open(str(source))
+    page = doc.load_page(int(slide_no) - 1)
+    width, height = page.rect.width, page.rect.height
+    clip = fitz.Rect(rect[0] * width, rect[1] * height,
+                     rect[2] * width, rect[3] * height)
+    name = f"{basename}_crop.png"
+    page.get_pixmap(matrix=fitz.Matrix(LABELMAP_SCALE, LABELMAP_SCALE),
+                    alpha=False, clip=clip).save(str(out_dir / name))
     doc.close()
     return name
 
@@ -260,6 +358,31 @@ def render_contact_sheet(paths: list[Path], out_path: Path) -> str:
     page.get_pixmap(alpha=False).save(str(out_path))
     doc.close()
     return str(out_path)
+
+
+def resolve_crop(item: dict, source) -> tuple[list[float] | None, str]:
+    """카드의 `crop`/`crop_rect` → 정규화 좌표. (좌표, 문제)를 낸다.
+
+    `crop`은 지도에 찍힌 그림 id(`s013_f01`)다. 벡터 도식은 그 id가 없으므로
+    `crop_rect`로 직접 적는다.
+    """
+    occlusion = item.get("occlusion") or {}
+    raw = occlusion.get("crop_rect")
+    if raw:
+        if valid_rect(raw):
+            return [float(v) for v in raw], ""
+        return None, f"invalid_crop_rect({raw})"
+
+    crop_id = _text(occlusion.get("crop"))
+    if not crop_id:
+        return None, ""
+    slide_no = int(item.get("slide_no") or 0)
+    _, _, figures = page_shapes(source, slide_no)
+    for figure in figures:
+        if figure["id"] == crop_id:
+            return figure["rect"], ""
+    known = ", ".join(f["id"] for f in figures) or "없음"
+    return None, f"unknown_crop_id({crop_id}; 이 슬라이드의 그림: {known})"
 
 
 # ── 코드가 잡아 주는 결함 ──────────────────────────────────────────────
@@ -365,9 +488,27 @@ def render(run_dir: str | Path, items_name: str) -> dict:
     out_dir = run_dir / "occl_preview"
     prefix = safe_media_prefix(prep["source_stem"])
 
+    # 오려내는 카드는 **clean**에서 뽑는다 — 답이 그림의 이름이라 필기가 답을
+    # 적어 두면 그대로 샌다.
+    clean = prep.get("model_input_pdf") or prep.get("source_pdf")
+
     rows: list[dict] = []
     for index, item in enumerate(targets):
         slide_no = int(item.get("slide_no") or 0)
+        crop_rect, crop_problem = resolve_crop(item, clean)
+        if crop_rect or crop_problem:
+            row = {"id": _text(item.get("id")) or f"n{index + 1:02d}",
+                   "slide_no": slide_no, "boxes": 0, "masks": 0, "kind": "crop",
+                   "problems": [crop_problem] if crop_problem else []}
+            if crop_rect:
+                basename = f"{prefix}_occl_s{slide_no:03d}_{safe_filename(str(row['id']))}"
+                name = render_figure_crop(clean, slide_no, crop_rect, out_dir,
+                                          basename,
+                                          band_pt=float(prep.get("stamp_band_pt") or 0.0))
+                row["front"] = str(out_dir / name)
+            rows.append(row)
+            continue
+
         rects, masks, problems = resolve_rects(
             item.get("occlusion") or {}, slide_no, label_index)
         # merge가 붙이기 전이라 `id`가 없다. 파일 이름이 질문 앞머리가 되면
@@ -375,6 +516,7 @@ def render(run_dir: str | Path, items_name: str) -> dict:
         row = {
             "id": _text(item.get("id")) or f"n{index + 1:02d}",
             "slide_no": slide_no,
+            "kind": "mask",
             "boxes": len(rects),
             "masks": len(masks),
             "problems": problems + check_card(item, labels, notes),
@@ -414,7 +556,18 @@ DO_NOT = """\
 
 def _label_table(row: dict) -> str:
     if row.get("map"):
-        lines = [f"### 슬라이드 {row['slide_no']} — 지도: `{row['map']}`", "",
+        lines = [f"### 슬라이드 {row['slide_no']} — 지도: `{row['map']}`", ""]
+        if row.get("figures"):
+            lines.append("**오려낼 수 있는 그림** (지도의 파란 상자)")
+            lines.append("")
+            for f in row["figures"]:
+                lines.append(f"- `{f['id']}` — 쪽 면적의 {f['area']:.0%}")
+            lines.append("")
+        else:
+            lines.append("이 슬라이드는 **벡터로 그린 도식**이라 오려낼 그림이 "
+                         "자동으로 안 잡힌다. 오리려면 `crop_rect`로 직접 적어라.")
+            lines.append("")
+        lines += [
                  "**이 지도를 읽어라.** 라벨마다 상자와 끝 세 글자(`l02` 꼴)가 찍혀 "
                  "있다. 무엇을 가릴지는 그림을 봐야 정해진다.", "",
                  "| label_id | 글자 |", "|---|---|"]
@@ -477,6 +630,7 @@ def spawn_prompt(run_dir: Path, rows: list[dict], batch: str, out_path: Path,
          "**이 작업만 한 번에 안 끝난다.** 상자를 고르고, 렌더해서, 라벨을 덜 덮었는지 "
          "눈으로 보고, 고친다. 아래 「돌리는 법」이 그 고리다."),
         prompt_mod.OCCLUSION,
+        '## 카드 두 꼴\n\n**목표는 "라벨을 가리는 것"이 아니라 텍스트로 표현할 수 없는 것을 내는 것이다.**\n사진·조직학 슬라이드·그래프·모식도가 그렇다. 꼴이 둘이고, 그림에 맞는 쪽을 고른다.\n\n### ⓐ 오려서 묻는다 — **이 그림이 무엇인가**\n\n그림만 오려 앞면에 세우고, 답은 그 그림의 이름이다. 뒷면은 슬라이드 전체라 제목과\n본문으로 답을 확인한다.\n\n    "occlusion": {"crop": "s013_f01"}\n\n지도에서 **파란 상자**가 오려낼 수 있는 그림이고 `f01` 꼴로 찍혀 있다. 벡터로 그린\n도식은 파란 상자가 없다 — 그때만 `"crop_rect": [x0, y0, x1, y1]`로 직접 적는다.\n\n    ○ 이 조직 소견의 진단명은?              → 조직학 사진\n    ○ 이 육안 소견에서 노랗게 착색된 부위가 뜻하는 병태는?\n    ✗ Kernicterus는 무엇 때문에 생기는가?    ← 그림이 없어도 되는 질문이다\n\n**앞면에 이름이 남으면 안 된다.** 오려낸 사각형 안에 제목이나 캡션이 들어오면\n`crop_rect`로 그 부분을 잘라 내라.\n\n### ⓑ 라벨을 가린다 — **어느 부분이 무엇인가**\n\n위치와 이름의 대응이 지식일 때다. 지도에서 **마젠타 상자**(`l02` 꼴)를 고른다.\n\n    "occlusion": {"label_ids": ["s013_l01", "s013_l04"],\n                  "mask_label_ids": ["s013_l07"]}\n\n    ○ A~C로 표시된 세 성분의 이름은?         → Stromal / Blastemal / Epithelial\n    ○ A~E로 표시된 다섯 곡선이 각각 뜻하는 것은?\n\n',
         "## 네가 맡은 후보\n\n"
         "1단계가 그림·표를 근거로 카드를 냈거나 그림 비율이 높은 슬라이드다. "
         "**추림이지 한도가 아니다** — 회수 목표가 없으면 넘기고 된다.\n\n"
@@ -582,7 +736,8 @@ def plan(run_dir: str | Path, batch_size: int = BATCH_SIZE) -> dict:
     map_dir = run_dir / "occl_labelmap"
     for row in rows:
         name = render_label_map(source, row["slide_no"], row["labels"], map_dir,
-                                f"{prefix}_s{row['slide_no']:03d}", band_pt=band)
+                                f"{prefix}_s{row['slide_no']:03d}", band_pt=band,
+                                figures=row.get("figures"))
         row["map"] = str(map_dir / name)
     out_dir = run_dir / "spawn"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -646,10 +801,14 @@ def main() -> int:
     print(f"[occlusion/render] 카드 {result['items']}장 중 오클루전 "
           f"{result['occlusion']}장  (채널: {result['source']})")
     for row in result["cards"]:
-        print(f"\n  {row['id']}  s{row['slide_no']}  "
-              f"상자 {row['boxes']} · 마스크 {row['masks']}")
+        if row.get("kind") == "crop":
+            print(f"\n  {row['id']}  s{row['slide_no']}  그림을 오려냈다")
+        else:
+            print(f"\n  {row['id']}  s{row['slide_no']}  "
+                  f"상자 {row['boxes']} · 마스크 {row['masks']}")
         if row.get("front"):
             print(f"    앞면 {row['front']}")
+        if row.get("back"):
             print(f"    뒷면 {row['back']}")
         for problem in row["problems"]:
             print(f"    ✗ {problem}")

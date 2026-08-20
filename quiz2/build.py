@@ -63,6 +63,7 @@ from quiz.cloze import (  # noqa: E402
 from quiz.deck_index import update_index  # noqa: E402
 from quiz.notetype import get_anki_model, hierarchical_deck_name  # noqa: E402
 from quiz.occlusion import build_label_index, render_occlusion_pair, resolve_rects  # noqa: E402
+from quiz2.occlusion import render_figure_crop, resolve_crop  # noqa: E402
 from quiz.textutil import (  # noqa: E402
     escape_field,
     normalize_display_newlines,
@@ -220,10 +221,29 @@ def render_occlusion_media(items: list[dict], prep: dict, out_dir: Path) -> dict
     label_index = build_label_index(labels)
     prefix = safe_media_prefix(prep["source_stem"])
 
-    media: dict[str, tuple[str, str]] = {}
+    # 오려내는 카드는 **clean**에서 뽑는다 — 답이 그림의 이름이라 필기가 답을
+    # 적어 두면 그대로 샌다 (`quiz2/occlusion.render_figure_crop`).
+    clean = prep.get("model_input_pdf") or prep["source_pdf"]
+
+    media: dict[str, tuple[str, str | None]] = {}
     failures: list[str] = []
     for item in targets:
         slide_no = int(item["slide_no"])
+
+        crop_rect, crop_problem = resolve_crop(item, clean)
+        if crop_problem:
+            failures.append(f"  - {item.get('id')} (slide {slide_no}): {crop_problem}")
+            continue
+        if crop_rect:
+            basename = f"{prefix}_occl_s{slide_no:03d}_{safe_filename(item.get('id') or 'x')}"
+            name = render_figure_crop(
+                clean, slide_no, crop_rect, out_dir, basename,
+                band_pt=float(prep.get("stamp_band_pt") or 0.0))
+            # 뒷면이 없다 = **슬라이드 전체를 쓴다.** 오려낸 카드의 답은 그림의
+            # 이름이므로 뒷면에서 제목과 본문을 읽을 수 있어야 한다.
+            media[str(item["id"])] = (name, None)
+            continue
+
         rects, masks, problems = resolve_rects(item["occlusion"], slide_no, label_index)
         if problems:
             failures.append(f"  - {item.get('id')} (slide {slide_no}): {', '.join(problems)}")
@@ -254,11 +274,18 @@ def build_notes(items: list[dict], slide_image_map: dict[int, str], lecture_id: 
     for item in items:
         slide_no = int(item["slide_no"])
         pair = occlusion_media.get(str(item.get("id")))
+        cropped = False
         if pair:
-            # 뒷면 이미지는 가림 상자만 걷어낸 같은 슬라이드다. 원본을 따로 붙이면
-            # 같은 그림이 두 번 나와 답이 두 번 보인다.
-            front_img, img_name = pair
+            front_img, back_img = pair
             stats["occlusion"] += 1
+            if back_img is None:
+                # 오려낸 카드. 뒷면은 슬라이드 전체이고 **답 텍스트를 살린다.**
+                cropped = True
+                img_name = slide_image_map[slide_no]
+                used_slides.add(slide_no)
+            else:
+                # 마스킹 카드. 뒷면은 가림 상자만 걷어낸 같은 슬라이드다.
+                img_name = back_img
         else:
             front_img, img_name = None, slide_image_map[slide_no]
             used_slides.add(slide_no)
@@ -290,8 +317,13 @@ def build_notes(items: list[dict], slide_image_map: dict[int, str], lecture_id: 
             # 뒷면의 정답도 그림이다. 큰 글씨 자리를 비우면 눈이 바로 그림으로 간다.
             # 텍스트는 접힌 해설 맨 앞에 남긴다 — 상자가 라벨을 덜 덮었을 때 확인할
             # 자리가 필요하다.
-            answer_field = ""
-            explanation = _explanation_field(item, lead=f"정답: {answer}" if answer else "")
+            if cropped:
+                # 답이 그림의 이름이다. 큰 글씨 자리를 비우면 안 된다.
+                answer_field = answer
+                explanation = _explanation_field(item)
+            else:
+                answer_field = ""
+                explanation = _explanation_field(item, lead=f"정답: {answer}" if answer else "")
         else:
             answer_field = answer
             explanation = _explanation_field(item)
@@ -405,7 +437,8 @@ def build_run(run_dir: Path, items_name: str, project: str, output: Path | None,
     media_files = [str((media_dir / slide_image_map[s]).resolve()) for s in sorted(used_slides)]
     for front, back in occlusion_media.values():
         media_files.append(str((occlusion_dir / front).resolve()))
-        media_files.append(str((occlusion_dir / back).resolve()))
+        if back:
+            media_files.append(str((occlusion_dir / back).resolve()))
 
     output = Path(output) if output else run_dir / f"{safe_filename(deck_title)}.apkg"
     package = genanki.Package(decks)

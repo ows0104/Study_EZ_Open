@@ -58,10 +58,11 @@ from quiz.cloze import (  # noqa: E402
     normalize_cloze_to_c1,
     valid_cloze_text,
 )
-from quiz.occlusion import build_label_index, resolve_rects  # noqa: E402
+from quiz.occlusion import build_label_index, resolve_rects, valid_rect  # noqa: E402
 from quiz.textutil import norm_for_compare, tokens  # noqa: E402
 from quiz import timings  # noqa: E402
-from quiz2.prompt import CARD_FORMATS, DECK_BUDGET_PER_SLIDE, IMPORTANCE_TIERS  # noqa: E402
+from quiz2 import profile as profile_mod  # noqa: E402
+from quiz2.prompt import CARD_FORMATS, IMPORTANCE_TIERS  # noqa: E402
 
 
 # prompt.CARD_TYPES의 여섯. 거기 산문과 여기 집합이 어긋나면 프롬프트가 주인이다.
@@ -325,6 +326,14 @@ def check_item(item: dict, max_slide: int, jokbo_range: list | None = None,
     if occlusion is not None:
         if not isinstance(occlusion, dict):
             hard.append("occlusion_not_object")
+        elif occlusion.get("crop") or occlusion.get("crop_rect"):
+            # 오려내는 카드(2026-08-20). 좌표는 build가 PDF에서 풀므로 여기서는
+            # 꼴만 본다 — `crop`은 지도의 그림 id, `crop_rect`는 정규화 좌표다.
+            raw = occlusion.get("crop_rect")
+            if raw is not None and not valid_rect(raw):
+                hard.append(f"invalid_crop_rect({raw})")
+            if occlusion.get("label_ids") or occlusion.get("rects"):
+                soft.append("crop_with_mask_boxes")
         else:
             _, _masks, problems = resolve_rects(occlusion, slide_no or 0, label_index or {})
             if label_index is None:
@@ -519,6 +528,7 @@ def load_structure(run_dir: Path, prep: dict) -> dict:
 
 def validate_run(run_dir: Path, items_name: str = "items.raw.json") -> dict:
     run_dir = Path(run_dir)
+    profile = profile_mod.load(run_dir)
     prep = json.loads((run_dir / "prep.json").read_text(encoding="utf-8"))
     # 자료의 범위와 강의록 PDF 쪽수는 다르다. 외부 족보를 붙이면 슬라이드 번호가
     # 필기 뒤로 이어져 `total_slides`가 커진다. 경계는 자료의 범위를 따른다.
@@ -557,6 +567,27 @@ def validate_run(run_dir: Path, items_name: str = "items.raw.json") -> dict:
         return {v: sum(1 for i in kept if str(i.get(key, "")).lower() == v) for v in values}
 
     importance_counts = counts("importance", IMPORTANCE_TIERS)
+    # ⑲ 근거가 어디서 나왔나. 자료 유형마다 허용 값이 달라 따로 센다.
+    #
+    # **편차가 크다.** v1 10편 + v2 2편 = 강의록 카드 1,096장을 세어 보니
+    # lecture_text 59% · figure 24% · annotation 10% · table 7%인데,
+    # annotation은 편마다 0%~49%로 갈렸다(`260813_05`가 68장으로 49%,
+    # 여섯 편이 0~4%). **전역 평균과 한 편을 견주지 마라** — 같은 편을 두 번
+    # 돌려 견주는 것 말고는 이 값이 움직였는지 알 방법이 없다.
+    evidence_counts = {
+        src: {v: sum(1 for i in kept
+                     if str(i.get("source_type", "lecture")).lower() == src
+                     and str(i.get("evidence_type", "")).lower() == v)
+              for v in sorted(allowed)}
+        for src, allowed in VALID_EVIDENCE_TYPES.items()
+    }
+    # ⑥이 지켜지고 있으면 이 값은 0에 붙는다. 실측 1,096장 중 **1장**이었다
+    # (annotation 106장 중 105장이 exam_hit). 그래서 이건 잡음이 아니라 눈금이다 —
+    # 필기를 근거로 승격하면 승격이 새로 만든 카드만 정확히 여기 쌓인다.
+    evidence_counts["annotation_without_exam_hit"] = sum(
+        1 for i in kept
+        if str(i.get("evidence_type", "")).lower() == "annotation" and not i.get("exam_hit"))
+
     # build.py와 같은 기준으로 센다. 족보 카드의 exam_hit은 태그로 안 나간다.
     importance_counts["exam_hit"] = sum(
         1 for i in kept
@@ -567,7 +598,9 @@ def validate_run(run_dir: Path, items_name: str = "items.raw.json") -> dict:
     # 강의 내용이 얇은 편에서도 통과해 버린다.
     budget_slides = (int(lecture_range[1]) - int(lecture_range[0]) + 1
                      if lecture_range else max_slide)
-    budget = budget_slides * DECK_BUDGET_PER_SLIDE
+    # 배수는 프로필의 밀도가 정한다. 프로필이 없으면 DECK_BUDGET_PER_SLIDE와 같은 2다.
+    per_slide = profile.budget_per_slide
+    budget = round(budget_slides * per_slide)
 
     suspects = {
         "lecture_id": prep["lecture_id"],
@@ -576,10 +609,14 @@ def validate_run(run_dir: Path, items_name: str = "items.raw.json") -> dict:
         "jokbo_range": jokbo_range,
         "range_source": structure.get("_source"),
         "item_count": len(kept),
-        "budget": {"slides": budget_slides, "per_slide": DECK_BUDGET_PER_SLIDE,
+        "profile": {"density": profile.density,
+                    "style_note": profile.style_note,
+                    "annotation_as_evidence": profile.annotation_as_evidence},
+        "budget": {"slides": budget_slides, "per_slide": per_slide,
                    "target": budget, "actual": len(kept),
                    "ratio": round(len(kept) / budget, 2) if budget else None},
         "importance": importance_counts,
+        "evidence": evidence_counts,
         "sources": counts("source_type", VALID_SOURCE_TYPES),
         "card_types": counts("card_type", VALID_CARD_TYPES),
         "card_formats": counts("card_format", VALID_CARD_FORMATS),
@@ -638,10 +675,18 @@ def main() -> int:
 
     print(f"[validate2] 통과 {result['kept']}장 "
           f"(강의록 {s['sources']['lecture']} / 족보 {s['sources']['jokbo']})")
+    p = s["profile"]
+    if p["density"] != "normal" or p["style_note"] or p["annotation_as_evidence"]:
+        print(f"  프로필: 밀도 {p['density']}"
+              + (f" / 지침 {len(p['style_note'])}자" if p["style_note"] else "")
+              + (" / 필기 승격" if p["annotation_as_evidence"] else ""))
     print(f"  예산: 슬라이드 {b['slides']}×{b['per_slide']} = {b['target']}장 "
           f"→ 실제 {b['actual']}장 ({b['ratio']}배)")
     print(f"  중요도: core {s['importance']['core']} / detail {s['importance']['detail']}"
           f"  |  exam_hit {s['importance']['exam_hit']}")
+    ev = s["evidence"]
+    print("  근거(강의록): " + ", ".join(f"{k}={v}" for k, v in ev["lecture"].items() if v)
+          + f"  |  필기만(exam_hit 없음) {ev['annotation_without_exam_hit']}")
     print("  형식: " + ", ".join(f"{k}={v}" for k, v in s["card_formats"].items() if v))
     print(f"  hard 제거: {len(s['removed'])}  (사유: "
           f"{', '.join(sorted({r for x in s['removed'] for r in x['reason']})) or '없음'})")
