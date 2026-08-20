@@ -22,6 +22,7 @@ v1 조각 하나를 뜯어보니 도구 호출 47회 중 **26회가 입력을 �
     assemble.py    조각에게 줄 스폰 프롬프트 조립
     merge.py       조각 결과를 v1 뒷단이 읽을 꼴로 합침
     validate.py    기계 검증. 판정하지 않고 세어서 표시한다
+    reproduce.py   재현 검사. q만 주고 a가 다시 나오는지 본다 (⓹)
 
     INTERVIEW.md   **무엇을 정했나, 왜, 무엇을 일부러 안 넣었나**
     RUNS.md        돌려 보니 어땠나, 무엇이 깨졌나
@@ -50,6 +51,12 @@ v1 조각 하나를 뜯어보니 도구 호출 47회 중 **26회가 입력을 �
     python -m quiz2.merge runs/<id>
     python -m quiz2.validate runs/<id>          # v1의 quiz/validate.py를 쓰지 마라
 
+    # 4.5 재현 검사 — 에이전트가 두 바퀴 돈다 (푸는 쪽 · 채점 쪽)
+    python -m quiz2.reproduce split runs/<id>   # → verify/spawn/answer.*.md
+    #    푸는 쪽 에이전트에게는 그 파일만 읽히고 **다른 것을 열지 말라**고 못박는다
+    python -m quiz2.reproduce grade runs/<id>   # → verify/spawn/grade.*.md
+    python -m quiz2.reproduce score runs/<id> --apply items.reproduced.json
+
     # 5. 빌드 (v1 코드 그대로)
     python quiz/build.py runs/<id> --items items.final.json --project <과목>
 
@@ -64,13 +71,10 @@ v1 조각 하나를 뜯어보니 도구 호출 47회 중 **26회가 입력을 �
 
 우선순위 순이다.
 
-### 1. 재현 검사 (`verify.py`)
+### 1. 재현 검사를 한 편 돌리기
 
-관리자가 좋은 카드의 기준을 이렇게 말했다 — *"그냥 AI가 풀었을때 제시된 답과 같은
-답이 나올 정도면 만족."* 이건 문장이 아니라 **검사**로 만들 수 있다.
-
-`q`만 주고 `a`가 재현되는지 본다. **`a`를 숨겨야 성립한다** — 코드가 두 파일로
-갈라 주고, 채점하는 쪽이 원본 답을 못 보게 한다. 전수 검사로 정했다(인터뷰 ⓹).
+`reproduce.py`는 섰지만 **아직 한 편도 안 돌렸다.** 에이전트 여덟(푸는 쪽 넷 ·
+채점 쪽 넷)이 붙는다. 돌리기 전에는 아무 수치도 없다.
 
 ### 2. 코드 필터 (`filter.py`)
 
@@ -90,6 +94,15 @@ v1은 이걸 잃고 soft 플래그로만 표시했고, 그 결과 조각이 `Edi
 단발 호출로 안 되는 유일한 작업이라 별도 패스가 필요하고, 채널은 **필기본**으로
 정해져 있다(㉞ — v1은 clean이었다).
 
+### 5. v2 build — 표시가 제 자리에 떠야 한다
+
+③⃝의 결론은 *"표시는 카드 뒷면에 떠야 한다"*였다. `suspects.json`이나 빌드 요약에만
+있으면 관리자가 볼 일이 없다.
+
+지금 `reproduce score --to-card-back`은 `review_note`에 덧붙여 v1 `build.py`의 빨간
+박스를 **빌려 쓴다.** 머리글이 `자료 주의:`라 이름이 안 맞는다. `quiz/`는 비교
+기준선이라 고치지 않으므로, 제 자리는 v2 build가 생길 때다.
+
 ## 안 풀린 것
 
 - **`importance`가 `core` 92%.** 2티어(인터뷰 ⑰)가 필터 구실을 못 한다.
@@ -103,7 +116,7 @@ v1은 이걸 잃고 soft 플래그로만 표시했고, 그 결과 조각이 `Edi
   있었다 — 다만 **셋으로 서른일곱을 말할 수는 없다.** 문턱을 만지려면 세어야 한다
 - **길이 한도의 근거가 없다.** `question_too_long` 110자, `answer_too_long` 110/50자는
   v1에서 그대로 넘어온 숫자다. 인터뷰는 *"길이는 코드가 센다"*(⑵)까지만 정했다.
-  이 자리를 제대로 대신할 것은 위 1번(재현 검사)이다
+  이 자리를 제대로 대신할 것이 `reproduce.py`인데 아직 한 편도 안 돌았다
 
 ## 조심할 것
 
