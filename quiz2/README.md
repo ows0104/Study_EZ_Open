@@ -29,7 +29,8 @@ v1 조각 하나를 뜯어보니 도구 호출 47회 중 **26회가 입력을 �
     assemble.py    조각에게 줄 스폰 프롬프트 조립
     merge.py       조각 결과를 v1 뒷단이 읽을 꼴로 합침
     validate.py    기계 검증. 판정하지 않고 세어서 표시한다
-    structure.py   0.5단계. 경계와 주제 덩어리를 정할 스폰 문구를 조립한다
+    prep.py        0단계. PDF → 채널 둘 + 슬라이드 이미지 + 근거 파일들
+    structure.py   0.5단계. 스폰 문구를 내고, 쓴 것을 검증한다
     occlusion.py   오클루전 패스. 후보 추림 + 렌더 + 누출 검사 (㉙~㉟)
     timings.py     단계 계측. **모델 단계는 오케스트레이터가 찍어야 한다**
     reproduce.py   재현 검사. q만 주고 a가 다시 나오는지 본다 (⓹)
@@ -45,15 +46,15 @@ v1 조각 하나를 뜯어보니 도구 호출 47회 중 **26회가 입력을 �
 
 ## 한 편 돌리는 법
 
-    # 0. 준비 (v1 코드 그대로)
-    python quiz/prep.py "<강의록.pdf>" --jokbo-pdf "runs/_jokbo/<과목>/<연도>/L__.pdf"
+    # 0. 준비
+    python -m quiz2.prep "<강의록.pdf>" --jokbo-pdf "runs/_jokbo/<과목>/<연도>/L__.pdf"
 
     # 0.5 경계와 주제 덩어리 → runs/<id>/structure.json
-    python -m quiz2.structure runs/<id>         # → spawn/structure.md
+    python -m quiz2.structure plan runs/<id>    # → spawn/structure.md
     python -m quiz2.timings runs/<id> start 0.5-write     # ← 띄우기 직전
     #    서브에이전트 하나에게 그 파일을 읽고 그대로 따르라고만 시킨다
     python -m quiz2.timings runs/<id> end   0.5-write     # ← 받은 직후
-    python quiz/structure.py runs/<id>          # 쓴 뒤 검증 (v1 코드 그대로)
+    python -m quiz2.structure check runs/<id>   # 쓴 뒤 검증
 
     # 1. 조각 자르기 + 스폰 문구 조립
     python -m quiz2.assemble runs/<id>
@@ -237,6 +238,23 @@ v1의 박스를 빌려 썼다. **그 필드는 이미 두 뜻을 겸하고 있�
   *"강의록이 고른 특정 예시·숫자·표 값"*에 몰렸지만 실패 19장 중 8장이 `exam_hit`이고
   실패율이 exam_hit 12% vs 아닌 것 14%로 거의 같다. 표·그림 카드를 거르지 않는다.
   **표시하고 남긴다**
+
+## `quiz/`에서 무엇을 빌리고 무엇을 옮겼나
+
+2026-08-20에 갈랐다. **단계는 quiz2가 다 가졌고, 유틸만 빌린다.**
+
+    옮긴 것   prep(0단계) · structure의 검증기(0.5단계)
+              → `quiz/`의 원본은 **얼어붙은 기준선**이라 안 고친다. 두 벌이 갈라지는
+                것이 목적이다. 첫 갈림이 아래 답안표 예외다
+    빌리는 것 cloze · textutil · occlusion(렌더) · notetype · verify · deck_index ·
+              timings(기록). 출제 규칙을 담은 것은 안 빌린다
+
+**첫 갈림** — `verify`가 족보 구간의 글자수를 따질 때 **답안 나열이 있는 장은 뺀다.**
+`260819_02` s38이 제목 `2017`·답안 2줄인 명백한 족보 장인데 필기자가 출제경향을
+타이핑해 581자가 되어 걸렸다(`RUNS.md` 2회차 ①). 반대쪽은 이미 같은 신호를 쓰고
+있었다 — 강의록 구간에 답안표가 있으면 족보로 본다. 양쪽을 맞춘 것이다.
+
+기준선은 그대로 걸린다. 그게 정상이다.
 
 ## 조심할 것
 
