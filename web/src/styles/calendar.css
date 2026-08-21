@@ -15,6 +15,10 @@
  * 보간되지 않아 캘린더가 툭 끊겨 줄기 때문이다. */
 .calendar-page {
   --panel-w: 340px;
+  /* 시각 칸. 요일 칸에는 바닥이 없으므로 여기서 아낀 폭이 그대로 다섯 칸에
+     나눠진다. 좁은 화면에서 줄이는 곳도 여기 한 군데다. */
+  --time-col: 56px;
+  --time-col-split: 50px;
 
   display: grid;
   min-width: 0;
@@ -48,14 +52,9 @@
   flex-direction: column;
 }
 
-/* 좁아진 캘린더. 요일 칸의 최소 폭을 같이 줄이지 않으면 격자가 곧바로 가로
- * 스크롤로 떨어져 "줄어든" 것이 아니라 "잘린" 것이 된다. */
+/* 좁아진 캘린더. 시각 칸만 줄인다 — 요일 칸은 아래에서 이미 바닥이 없다. */
 .calendar-page.is-split .week-calendar {
-  grid-template-columns: 50px repeat(5, minmax(96px, 1fr));
-}
-
-.calendar-page.is-split .month-calendar {
-  grid-template-columns: repeat(5, minmax(92px, 1fr));
+  grid-template-columns: var(--time-col-split) repeat(5, minmax(0, 1fr));
 }
 
 /* ------------------------------------------------------------------ 툴바 */
@@ -171,7 +170,11 @@
 
 .week-calendar {
   display: grid;
-  grid-template-columns: 56px repeat(5, minmax(140px, 1fr));
+  /* **요일 칸에 바닥을 두지 않는다.** 최소 폭을 주면 화면을 반으로 줄인
+     순간 다섯 칸이 안 들어가 가로 스크롤로 떨어지고, 그러면 한 주가 한눈에
+     안 보인다 — 이 화면이 하는 일이 그건데. 좁아지면 좁아진 대로 다섯 칸을
+     다 세우고, 칸 안에서 무엇을 버릴지는 `@container cell`이 정한다. */
+  grid-template-columns: var(--time-col) repeat(5, minmax(0, 1fr));
   grid-template-rows: 46px;
   /* 남는 높이를 교시 수로 나눠 갖는다. 시간표가 09:40 같은 줄을 더 만들어도
      스스로 맞춰진다. */
@@ -296,7 +299,7 @@
 
 .month-calendar {
   display: grid;
-  grid-template-columns: repeat(5, minmax(124px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   grid-auto-rows: minmax(112px, auto);
 }
 
@@ -317,7 +320,7 @@
 
 .month-day {
   display: grid;
-  min-width: 96px;
+  min-width: 0;
   padding: 7px 6px;
   grid-template-rows: 24px auto;
   gap: 4px;
@@ -472,41 +475,28 @@
 
 /* 교수·과목 겹.
  *
- * **기본은 한 줄이다.** 둘을 나란히 눕히면 줄 하나(13px)가 예산에서 빠져서,
- * 같은 칸 높이에서 과목이 훨씬 오래 산다.
+ * **기본은 한 줄이고, 그 한 줄에는 교수만 싣는다.** 관리자 판정이다 — 과목은
+ * 그렇게 중요하지 않으니 자리가 모자라면 교수를 남기고 과목을 빼라. 둘을
+ * 눕혀서 줄 하나(13px)가 예산에서 빠지는 것은 그대로 얻는다.
  *
- * 처음에는 이걸 안 하고 "칸이 77px보다 낮으면 과목을 지운다"로 뒀는데,
- * 뷰포트 715px 이하가 전부 거기 걸렸다. 넓은 창에서도 과목이 사라진 것이
- * 그것이다. 제목이 **두 줄일 때**를 기준으로 예산을 잡고 그걸 한 줄짜리
- * 제목에까지 적용한 탓이다.
- *
- * **모자랄 때 과목은 줄지 않고 사라진다.** 관리자 판정이다 — 과목은 그렇게
- * 중요하지 않으니 자리가 없으면 교수를 남기고 과목을 빼라. 그래서 `질병의
- * 병…`처럼 잘려 남는 꼴을 안 만든다. */
+ * 여기까지 오는 데 두 번 틀렸다. 처음에는 "칸이 77px보다 낮으면 과목을
+ * 지운다"로 뒀는데 뷰포트 715px 이하가 전부 걸려서 넓은 창에서도 과목이
+ * 사라졌다. 다음에는 줄바꿈으로 밀어내 칸마다 갈리게 했는데, 같은 주에서도
+ * 점이 붙은 칸만 과목이 빠져 들쭉날쭉했다. 지금은 안 갈린다 — 두 줄로 펴는
+ * 칸은 다 보이고 한 줄로 눕는 칸은 다 교수만이다. */
 .calendar-event-meta {
-  display: flex;
+  display: block;
   min-width: 0;
-  /* 한 줄만 보인다. 다 못 실은 것은 둘째 줄로 밀려나고 그 줄은 잘린다.
-   *
-   * **이게 "다 들어가면 보이고 아니면 사라진다"를 만드는 장치다.** 플렉스는
-   * 줄을 나눌 때 먼저 각 항목의 제 폭으로 나누고 그다음에 줄인다. 그래서
-   * 교수+과목이 한 줄에 안 들어가면 과목이 통째로 둘째 줄로 가고, 교수는
-   * 첫 줄에 혼자 남아 안 줄어든다. CSS로는 "들어가는지"를 물을 수 없는데
-   * 줄바꿈이 그걸 대신 재 준다. */
-  max-height: 14px;
-  column-gap: 4px;
-  row-gap: 0;
-  flex-wrap: wrap;
-  align-items: baseline;
   overflow: hidden;
-  /* 글자 크기가 서로 다른 둘을 한 줄에 세운다. 못 박아 두어야 위의 14px과
-     어긋나지 않는다. */
-  line-height: 14px;
 }
 
 .calendar-event-professor,
 .calendar-event-series {
-  min-width: 0;
+  /* **span은 인라인이라 이걸 안 적으면 `overflow`도 `max-width`도 안 먹는다.**
+     겹이 flex였을 때는 항목이 저절로 블록이 돼서 안 드러났는데, 겹을 block으로
+     바꾸자마자 교수 이름이 말줄임 없이 오른쪽 여백까지 밀고 나가 점 배지 위에
+     얹혔다. */
+  display: block;
   max-width: 100%;
   overflow: hidden;
   color: var(--ink-3);
@@ -514,24 +504,15 @@
   white-space: nowrap;
 }
 
-/* 교수는 안 사라진다. 혼자서도 넘칠 때(실습은 교수가 서른 명이다) 그때만
- * 말줄임으로 준다. */
 .calendar-event-professor {
-  flex: 0 1 auto;
   font-size: 10.5px;
   font-weight: 500;
 }
 
-/* 과목은 안 줄인다. 다 못 실으면 줄바꿈으로 밀려나 사라진다. */
 .calendar-event-series {
-  flex: 0 0 auto;
+  /* 한 줄로 누웠을 때는 안 낸다. 아래 `min-height: 77px`에서 되살아난다. */
+  display: none;
   font-size: 9.5px;
-}
-
-/* 한 줄로 누웠을 때만 가른다. 두 줄로 펴면 줄바꿈이 이미 가르고 있다. */
-.calendar-event-professor + .calendar-event-series::before {
-  margin-right: 4px;
-  content: "·";
 }
 
 /* 점은 오른쪽 아래에 떠 있다. 바닥 줄만 그만큼 비켜 준다 — 제목은 위에서
@@ -539,6 +520,22 @@
  * 것이 없으니 걸지 않는다. */
 .calendar-event:has(.chip-marks, .chip-count) .calendar-event-meta {
   padding-right: 18px;
+}
+
+/* 칸이 좁으면 여백이 글자보다 많아진다. 375px에서 다섯 칸을 세우면 칸이
+ * 55px인데 좌우 여백만 21px이라 제목에 남는 것이 26px(두 글자)이었다. */
+@container cell (max-width: 120px) {
+  .calendar-event {
+    padding-inline: 8px 7px;
+  }
+
+  .chip-marks {
+    right: 4px;
+  }
+
+  .chip-count {
+    right: 3px;
+  }
 }
 
 /* ── 칸에 다 안 들어갈 때 무엇을 버리는가 ──
@@ -571,8 +568,9 @@
     display: contents;
   }
 
-  .calendar-event-professor + .calendar-event-series::before {
-    content: none;
+  /* 과목은 여기서만 나온다. */
+  .calendar-event-series {
+    display: block;
   }
 
   .calendar-event:has(.chip-marks, .chip-count) .calendar-event-professor,
@@ -1459,12 +1457,9 @@ button.panel-action.is-download:hover:not(:disabled)::after {
     overflow-x: visible;
   }
 
+  /* 패널이 덮으므로 캘린더는 다시 창 전체를 쓴다. 시각 칸도 원래대로. */
   .calendar-page.is-split .week-calendar {
-    grid-template-columns: 56px repeat(5, minmax(140px, 1fr));
-  }
-
-  .calendar-page.is-split .month-calendar {
-    grid-template-columns: repeat(5, minmax(124px, 1fr));
+    grid-template-columns: var(--time-col) repeat(5, minmax(0, 1fr));
   }
 
   .panel-scrim {
@@ -1500,6 +1495,27 @@ button.panel-action.is-download:hover:not(:disabled)::after {
   }
 }
 
+
+/* 좁아지면 요일 칸이 아니라 **그 바깥**을 줄인다.
+ *
+ * 요일 칸에는 바닥이 없어서 남는 폭을 다섯이 나눠 갖는다. 그러니 시각 칸과
+ * 페이지 여백에서 아낀 것이 그대로 요일 칸의 폭이 된다. "09:00"은 26px이라
+ * 38px 칸에 여백까지 들어간다. */
+@media (max-width: 720px) {
+  .calendar-page {
+    --time-col: 38px;
+    --time-col-split: 38px;
+  }
+
+  .calendar-time {
+    padding: 0 5px;
+  }
+
+  /* `is-wide`는 캘린더뿐이다. 글을 읽는 화면들의 여백은 안 건드린다. */
+  .app-main.is-wide {
+    padding-inline: 10px;
+  }
+}
 
 /* 한 줄에 셋을 놓으면 날짜가 잘린다("2026년 8월 1…"). 날짜에 한 줄을 통째로
  * 주고 나머지를 아래로 내린다. */
