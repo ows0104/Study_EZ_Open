@@ -574,6 +574,12 @@ def main() -> int:
     timings.record(run_dir, "0-prep", "end")
     annots = json.loads(Path(manifest["annotations_path"]).read_text(encoding="utf-8"))
     stamped = [a["slide_no"] for a in annots if "stamp" in a["signals"]]
+    # 편 비용의 3분의 2가 오케스트레이터 문맥에서 나간다 (`README.md` 「먼저」).
+    # 여기가 무를 수 있는 마지막 자리다 — 아직 코드 몇 초밖에 안 썼다.
+    print("[prep] ※ 코드를 고치던 세션에서 이어 돌고 있다면 **여기서 멈추고 새"
+          " 세션에서 시작해라.**")
+    print("        호출 하나가 오케스트레이터 문맥 전체를 다시 읽는다 —"
+          " 갓 뜬 세션 51k, 12시간 산 세션 376k (`260819_03` 실측).")
     print(f"[prep] {manifest['lecture_id']} : {manifest['lecture_title']}")
     print(f"  슬라이드 {manifest['num_pages']}장, annotation {manifest['annotations_removed']}개 제거")
     print(f"  필기 신호 {len(annots)}장 / 족보 도장(stamp) {len(stamped)}장: {stamped}")

@@ -43,6 +43,8 @@ for _stream in (sys.stdout, sys.stderr):
 
 from quiz import timings  # noqa: E402
 
+from . import timings as timings2
+
 from . import chunks as chunks_mod
 from . import profile as profile_mod
 from . import prompt as prompt_mod
@@ -218,6 +220,10 @@ def spawn_prompt(
         '}\n'
         "```"
     )
+    # **일꾼이 제 끝을 찍는다.** 오케스트레이터가 찍으면 같은 한 줄이 16만 토큰이다
+    # (`quiz2/timings.py` ③). run_dir은 결과 파일이 놓일 자리에서 되짚는다.
+    parts.append(timings2.stamp_note(Path(out_path).parent, "2-write",
+                                     chunk.chunk_id))
     return "\n\n".join(p.strip() for p in parts)
 
 
@@ -297,10 +303,8 @@ def main() -> int:
               f"  {row['approx_tokens']:>6,}토큰"
               + ("  필기본 붙임" if row["annot_attached"] else "")
               + ("  범위 제한" if row.get("scoped") else ""))
-    print("\n조각마다 서브에이전트를 하나씩, 동시에 돌린다.")
-    print("띄우기 직전·받은 직후에 찍어라 — 편 시간의 대부분이 여기다:")
-    print(f"    python -m quiz2.timings {run_dir} start 2-write --label c01")
-    print(f"    python -m quiz2.timings {run_dir} end   2-write --label c01")
+    print(timings2.spawn_note(run_dir, "2-write",
+                              [r["chunk_id"] for r in rows], what="조각 일꾼"))
     return 0
 
 

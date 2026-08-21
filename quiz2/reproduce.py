@@ -68,6 +68,8 @@ for _stream in (sys.stdout, sys.stderr):
 from quiz.cloze import blank_cloze_markup  # noqa: E402
 from quiz import timings  # noqa: E402
 
+from . import timings as timings2
+
 # `blank_cloze_markup`이 내는 HTML을 평문으로 되돌린다. 마스킹 자체는 그 함수에
 # 맡긴다 - **Anki 앞면이 가리는 것과 한 글자도 달라지면 안 되기 때문이다.**
 _CLOZE_SPAN = '<span class="cloze-blank">[...]</span>'
@@ -143,8 +145,11 @@ ANSWER_RULES = """\
 """
 
 
-def answer_prompt(asked_path: Path, out_path: Path, count: int) -> str:
-    return "\n\n".join([
+def answer_prompt(asked_path: Path, out_path: Path, count: int,
+                  label: str = "") -> str:
+    # out_path는 `<run>/verify/answered.bNN.json`이라 run_dir은 두 단 위다.
+    run_dir = out_path.parent.parent
+    return "\n\n".join([p for p in [
         f"# 재현 검사 — 카드 {count}장을 푼다",
         "너는 이 강의를 들은 의대생이다. Anki 카드의 **앞면만** 받아서 답한다.\n"
         "이건 카드가 혼자 서는지 재는 검사다. 잘 보이려고 애쓰지 말고 "
@@ -158,7 +163,9 @@ def answer_prompt(asked_path: Path, out_path: Path, count: int) -> str:
         "]}\n"
         "```\n\n"
         f"받은 {count}장 **전부**에 대해 한 줄씩 낸다. 빠뜨리지 마라.",
-    ])
+        timings2.stamp_note(run_dir, "4.5-reproduce", f"answer-{label}")
+        if label else "",
+    ] if p])
 
 
 def split(run_dir: str | Path, items_name: str = "items.checked.json",
@@ -196,8 +203,9 @@ def split(run_dir: str | Path, items_name: str = "items.checked.json",
         ]})
         spawn_path = spawn_dir / f"answer.{tag}.md"
         spawn_path.parent.mkdir(parents=True, exist_ok=True)
-        spawn_path.write_text(answer_prompt(asked_path, out_path, len(batch)),
-                              encoding="utf-8")
+        spawn_path.write_text(
+            answer_prompt(asked_path, out_path, len(batch), tag),
+            encoding="utf-8")
         made.append({"batch": tag, "count": len(batch), "asked": str(asked_path),
                      "spawn": str(spawn_path), "out": str(out_path)})
     masked = sum(1 for it in items if front_text(it.get("q")) != _text(it.get("q")))
@@ -234,8 +242,10 @@ GRADE_RULES = """\
 """
 
 
-def grade_prompt(pairs_path: Path, out_path: Path, count: int) -> str:
-    return "\n\n".join([
+def grade_prompt(pairs_path: Path, out_path: Path, count: int,
+                 label: str = "") -> str:
+    run_dir = out_path.parent.parent
+    return "\n\n".join([p for p in [
         f"# 재현 검사 채점 — {count}장",
         "카드 앞면(`q`), 카드에 적힌 원본 답(`a`), 그리고 앞면만 보고 다시 푼 답"
         "(`reproduced`)이 온다. 둘이 같은 답인지 판정한다.",
@@ -248,7 +258,9 @@ def grade_prompt(pairs_path: Path, out_path: Path, count: int) -> str:
         "]}\n"
         "```\n\n"
         f"`why`는 한 줄이다. `same`이면 비워도 된다. 받은 {count}장 **전부** 낸다.",
-    ])
+        timings2.stamp_note(run_dir, "4.5-reproduce", f"grade-{label}")
+        if label else "",
+    ] if p])
 
 
 def grade(run_dir: str | Path, items_name: str = "items.checked.json",
@@ -280,8 +292,9 @@ def grade(run_dir: str | Path, items_name: str = "items.checked.json",
         _write_json(pairs_path, {"batch": tag, "items": batch})
         spawn_path = spawn_dir / f"grade.{tag}.md"
         spawn_path.parent.mkdir(parents=True, exist_ok=True)
-        spawn_path.write_text(grade_prompt(pairs_path, out_path, len(batch)),
-                              encoding="utf-8")
+        spawn_path.write_text(
+            grade_prompt(pairs_path, out_path, len(batch), tag),
+            encoding="utf-8")
         made.append({"batch": tag, "count": len(batch), "pairs": str(pairs_path),
                      "spawn": str(spawn_path), "out": str(out_path)})
     return {"paired": len(paired), "missing": missing, "batches": made}
@@ -392,7 +405,10 @@ def main() -> int:
                   f"{', '.join(result['skipped_occlusion'])}")
         for b in result["batches"]:
             print(f"  {b['batch']}  {b['count']:>3}장  {b['spawn']}")
-        print("\n스폰 문구마다 서브에이전트를 하나씩, 동시에 돌린다.")
+        print(timings2.spawn_note(
+            run_dir, "4.5-reproduce",
+            [f"answer-{b['batch']}" for b in result["batches"]],
+            what="푸는 쪽 일꾼"))
         return 0
 
     if args.stage == "grade":
@@ -405,6 +421,10 @@ def main() -> int:
         if result["missing"]:
             print(f"  푼 답이 없는 카드 {len(result['missing'])}장: "
                   f"{result['missing'][:10]}")
+        print(timings2.spawn_note(
+            run_dir, "4.5-reproduce",
+            [f"grade-{b['batch']}" for b in result["batches"]],
+            what="채점 일꾼"))
         return 0
 
     with timings.stage(run_dir, "4.5-repro-score", label=args.items):

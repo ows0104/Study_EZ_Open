@@ -53,6 +53,8 @@ for _stream in (sys.stdout, sys.stderr):
 
 from quiz import timings  # noqa: E402
 
+from . import timings as timings2
+
 
 # "10.2", "23. 5" - 문항번호와 정답번호를 죽 늘어놓은 답안표.
 #
@@ -633,6 +635,8 @@ def spawn_prompt(run_dir: str | Path, *, with_jokbo_text: bool = True) -> str:
 
     parts.append(DO_NOT)
     parts.append(output_section(run_dir))
+    # 일꾼이 제 끝을 찍는다 (`quiz2/timings.py` ③). 0.5는 하나뿐이라 라벨이 없다.
+    parts.append(timings2.stamp_note(run_dir, "0.5-write", ""))
     return "\n\n".join(p.strip() for p in parts if p and p.strip())
 
 
@@ -711,10 +715,7 @@ def main() -> int:
     print(f"[structure/plan] {row['spawn_prompt']}")
     print(f"  {row['chars']:,}자 (대략 {row['approx_tokens']:,}토큰)"
           + ("  · 족보 원문 붙임" if row["jokbo_text_attached"] else ""))
-    print("\n  서브에이전트 하나에게 그 파일을 읽고 그대로 따르라고만 시킨다.")
-    print("  띄우기 직전·받은 직후에 찍어라 — 안 찍으면 그 시간이 사라진다:")
-    print(f"      python -m quiz2.timings {run_dir} start 0.5-write")
-    print(f"      python -m quiz2.timings {run_dir} end   0.5-write")
+    print(timings2.spawn_note(run_dir, "0.5-write", [], what="구조 일꾼"))
     print(f"\n  → {row['result']}")
     print(f"  쓴 뒤 검증:  python -m quiz2.structure check {run_dir}")
     return 0

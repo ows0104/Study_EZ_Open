@@ -32,8 +32,10 @@ v1 조각 하나를 뜯어보니 도구 호출 47회 중 **26회가 입력을 �
     prep.py        0단계. PDF → 채널 둘 + 슬라이드 이미지 + 근거 파일들
     structure.py   0.5단계. 스폰 문구를 내고, 쓴 것을 검증한다
     occlusion.py   오클루전 패스. 후보 추림 + 렌더 + 누출 검사 (㉙~㉟)
-    timings.py     단계 계측. **모델 단계는 오케스트레이터가 찍어야 한다**
-    tokens.py      단계별 토큰. `quiz/`가 한 호출을 2~3번 세던 것을 접어서 센다
+    timings.py     단계 계측. **`start`는 오케스트레이터가 스폰과 같은 메시지에,
+                   `end`는 일꾼이** 찍는다. 스폰 문구에 붙일 절도 여기서 낸다
+    tokens.py      단계별 토큰 + **창 전체**. 오케스트레이터와 일꾼을 갈라 세고
+                   호출당 문맥을 낸다 — 줄일 자리를 고르는 값이 그것이다
     reproduce.py   재현 검사. q만 주고 a가 다시 나오는지 본다 (⓹)
     build.py       .apkg. 뒷면 빨간 박스에 신호 셋을 각자 머리글로 세운다 (③⃝)
 
@@ -47,46 +49,99 @@ v1 조각 하나를 뜯어보니 도구 호출 47회 중 **26회가 입력을 �
 
 ## 한 편 돌리는 법
 
-    # 0. 준비
-    python -m quiz2.prep "<강의록.pdf>" --jokbo-pdf "runs/_jokbo/<과목>/<연도>/L__.pdf"
+### 먼저 — **새 세션에서 시작해라** (2026-08-21)
 
-    # 0.5 경계와 주제 덩어리 → runs/<id>/structure.json
-    python -m quiz2.structure plan runs/<id>    # → spawn/structure.md
-    python -m quiz2.timings runs/<id> start 0.5-write     # ← 띄우기 직전
-    #    서브에이전트 하나에게 그 파일을 읽고 그대로 따르라고만 시킨다
-    #    **띄울 때 subagent_type은 `quiz-worker`다** (.claude/agents/quiz-worker.md).
-    #    도구 넷만 지고 뜨므로 부팅 문맥이 작다 — 그 값은 아직 안 쟀다
-    python -m quiz2.timings runs/<id> end   0.5-write     # ← 받은 직후
-    python -m quiz2.structure check runs/<id>   # 쓴 뒤 검증
+편 비용의 3분의 2가 파이프라인이 아니라 **오케스트레이터**에서 나간다.
+`260819_03`을 창(2시간 5분) 전체로 다시 세면 이렇다.
 
-    # 1. 조각 자르기 + 스폰 문구 조립
-    python -m quiz2.assemble runs/<id>
+| | 호출 | 캐시읽기 | 호출당 문맥 |
+|---|---:|---:|---:|
+| 오케스트레이터(메인 세션) | 135 | **27.7M (65%)** | **207k** |
+| 서브에이전트 27개 전부 | 220 | 14.6M (35%) | 74k |
 
-    # 2. runs/<id>/spawn/*.md 마다 `quiz-worker`를 하나씩, 동시에
-    #    각 에이전트에게는 "그 파일을 읽고 그대로 따르라"만 시킨다
-    #    **조각마다 라벨을 붙여 찍어라. 안 찍으면 편 시간이 사라진다**
-    python -m quiz2.timings runs/<id> start 2-write --label c01
-    python -m quiz2.timings runs/<id> end   2-write --label c01
+`python -m quiz2.timings ... start` 한 줄이 **16만 토큰**이다. 명령이 길어서가
+아니라 **부르는 쪽이 무겁기 때문**이다. 12시간을 산 세션의 마지막 호출은 376k였고,
+같은 세션의 첫 호출은 51k였다.
 
-    # 3.5 오클루전 패스 — 렌더-확인-수정을 도는 유일한 자리 (㉙~㉟)
-    python -m quiz2.occlusion plan runs/<id>    # → spawn/occl.bNN.md
-    #    배치마다 서브에이전트 하나. 각자 render를 돌려 가며 고친다
-    #      python -m quiz2.occlusion render runs/<id> --items items.raw.occl_b01.json
-    #    여기도 --label b01 로 찍는다 (3.5-occlusion)
+그러니 **코드를 고치던 세션에서 이어 돌리지 마라.** 그것만으로 파이프라인 명령
+30개가 10.8M에서 1.5M이 된다. 규칙도 코드도 안 건드리는 가장 큰 레버다.
 
-    # 4. 합치기 + 검증
-    python -m quiz2.merge runs/<id>
-    python -m quiz2.validate runs/<id>          # v1의 quiz/validate.py를 쓰지 마라
+`prep`이 이 줄을 다시 인쇄한다. 그때가 무를 수 있는 마지막 자리다 — 아직 코드
+16초밖에 안 썼다.
 
-    # 4.5 재현 검사 — 에이전트가 두 바퀴 돈다 (푸는 쪽 · 채점 쪽)
-    python -m quiz2.reproduce split runs/<id>   # → verify/spawn/answer.*.md
-    #    푸는 쪽 에이전트에게는 그 파일만 읽히고 **다른 것을 열지 말라**고 못박는다
-    python -m quiz2.reproduce grade runs/<id>   # → verify/spawn/grade.*.md
-    python -m quiz2.reproduce score runs/<id> --apply items.reproduced.json
+### 그리고 — **덩어리 하나가 Bash 한 번이다**
 
-    # 5. 빌드 — **v1 build를 쓰지 마라** (cloze·근거 줄이 조용히 사라진다)
-    python -m quiz2.build runs/<id> --items items.reproduced.json --project <과목>
-    #    v1 덱과 한 Anki에서 견주려면 --project를 갈라라 (예: 병리학-v2)
+호출 하나가 문맥 전체를 다시 읽으므로, **모델이 사이에서 볼 것이 없는 코드 단계는
+붙여서 한 번에 돌린다.** 아래 A~F가 그 덩어리다. 쪼개면 쪼갠 수만큼 문맥값을 문다
+(`260819_03`에서 파이프라인 명령 58회 = 12.8M).
+
+`<id>`는 `prep`이 인쇄하는 강의 코드다. `python`은 이 환경에서
+`PYTHONIOENCODING=utf-8 "C:/Users/ows01/anaconda3/python.exe"`다.
+
+    # ── A. 준비 + 0.5 스폰 문구 ────────────────────────── Bash 1회
+    python -m quiz2.prep "<강의록.pdf>" --jokbo-pdf "runs/_jokbo/<과목>/<연도>/L__.pdf" &&
+      python -m quiz2.structure plan runs/<id>
+
+    # ── 0.5단계 ────────────────────── 메시지 1개 (Bash 1 + Agent 1)
+    #   A가 인쇄한 `timings ... start 0.5-write` 한 줄을 **스폰과 같은 메시지에** 넣는다
+    #   subagent_type: quiz-worker
+    #   end는 안 찍는다 — 일꾼이 제 것을 찍는다
+
+    # ── B. 구조 검증 + 조각 자르기 ─────────────────────── Bash 1회
+    python -m quiz2.structure check runs/<id> && python -m quiz2.assemble runs/<id>
+    #   check가 걸리면 assemble이 안 돈다. `&&`가 그 문지기다
+
+    # ── 2단계 ───────────────────────── 메시지 1개 (Bash 1 + Agent N)
+    #   `timings ... start 2-write --label c01 c02 …` 한 줄 + 조각 수만큼 quiz-worker
+
+    # ── C. 오클루전 계획 ───────────────────────────────── Bash 1회
+    python -m quiz2.occlusion plan runs/<id>
+
+    # ── 3.5단계 ─────────────────────── 메시지 1개 (Bash 1 + Agent N)
+    #   렌더-확인-수정을 도는 유일한 자리다 (㉙~㉟). 일꾼이 각자
+    #     python -m quiz2.occlusion render runs/<id> --items items.raw.occl_b01.json
+
+    # ── D. 합치기 + 검증 + 재현 배치 ───────────────────── Bash 1회
+    python -m quiz2.merge runs/<id> && python -m quiz2.validate runs/<id> &&
+      python -m quiz2.reproduce split runs/<id>
+    #   v1의 quiz/validate.py를 쓰지 마라
+
+    # ── 4.5단계 푸는 쪽 ─────────────── 메시지 1개 (Bash 1 + Agent N)
+
+    # ── E. 채점 배치 ───────────────────────────────────── Bash 1회
+    python -m quiz2.reproduce grade runs/<id>
+
+    # ── 4.5단계 채점 쪽 ─────────────── 메시지 1개 (Bash 1 + Agent N)
+
+    # ── F. 점수 + 빌드 + 계측 ──────────────────────────── Bash 1회
+    python -m quiz2.reproduce score runs/<id> --apply items.reproduced.json &&
+      python -m quiz2.build runs/<id> --items items.reproduced.json --project <과목> &&
+      python -m quiz2.timings runs/<id> report && python -m quiz2.tokens runs/<id> --save
+    #   v1 build를 쓰지 마라 (cloze·근거 줄이 조용히 사라진다)
+    #   v1 덱과 한 Anki에서 견주려면 --project를 갈라라 (예: 병리학-v2)
+
+**깨끗한 길은 오케스트레이터 호출 11번이다** — 코드 6 + 스폰 5. `260819_03`은
+135번이었다.
+
+### 계측을 누가 찍나 (2026-08-21에 바뀌었다)
+
+    start   오케스트레이터. **스폰들과 같은 메시지에 넣는다.** 같은 메시지의 도구
+            호출은 문맥을 한 번만 읽으므로 값이 0이다. 따로 보내면 16만 토큰이다
+    end     **일꾼.** 스폰 문서 마지막 절이 명령을 준다 (`timings.stamp_note`)
+
+각 코드 단계가 붙일 `start` 한 줄을 **그대로 인쇄해 준다.** 지어내지 말고 그걸 써라.
+
+**잃는 것.** 일꾼이 죽거나 그 줄을 빠뜨리면 `end`가 없다. `timings report`의
+「끝을 못 찍은 구간」이 그걸 센다 — **0이 아니면 벽시계를 믿지 마라.**
+
+### 일꾼은 넷 다 `quiz-worker`다
+
+    부팅 문맥   general-purpose 43.0k  →  quiz-worker 11.9k
+
+`260819_03`은 0.5·2·3.5·4.5를 전부 `general-purpose`로 띄웠고, 오클루전 배치
+하나가 **브라우저 스크린샷을 찍은 것**이 트랜스크립트에 남아 있다. 도구가 넷뿐인
+일꾼에는 그 도구가 없다. `3.5-occlusion` 하나가 서브에이전트 몫의 68%(10.0M)라
+여기서 빠지는 값이 제일 크다.
 
 ## 1회차 결과 (`260819_01`)
 
@@ -254,6 +309,12 @@ v1의 박스를 빌려 썼다. **그 필드는 이미 두 뜻을 겸하고 있�
 
 ## 안 풀린 것
 
+- **넷을 고쳤는데 아직 한 편도 안 돌았다** (2026-08-21). 새 세션·명령 덩어리·
+  계측 이관·`quiz-worker` 넷이 들어갔고 계수기도 창 전체를 보게 고쳤지만, **효과는
+  전부 「호출당 문맥 × 호출 수」로 계산한 값이지 잰 값이 아니다.** 풀리는 조건:
+  새 세션에서 한 편을 A~F로 돌리고 `python -m quiz2.tokens runs/<id>`의 「창 전체」
+  표를 보는 것. 볼 숫자는 셋이다 — 오케스트레이터 호출 수(135 → 11이 목표),
+  호출당 문맥(207k → 부팅값 근처), 「끝을 못 찍은 구간」(0이어야 한다)
 - **`importance`가 `core` 92%.** 2티어(인터뷰 ⑰)가 필터 구실을 못 한다.
   v1의 80%보다 오히려 더 쏠렸다
 - **어투 체언 종결 43%.** v1 69.7%에서 내려왔지만 절반이다. 인터뷰 ⑤⃝에서 규칙을

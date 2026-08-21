@@ -67,6 +67,8 @@ from quiz.occlusion import (  # noqa: E402
 from quiz.textutil import safe_filename, safe_media_prefix  # noqa: E402
 import fitz  # noqa: E402
 from quiz import timings  # noqa: E402
+
+from . import timings as timings2
 from quiz2 import prompt as prompt_mod  # noqa: E402
 
 
@@ -774,6 +776,8 @@ def spawn_prompt(run_dir: Path, rows: list[dict], batch: str, out_path: Path,
   회수 대상이 아니므로 개수에 안 센다 (㉝)
 - 라벨이 안 잡힌 그림은 `rects`/`mask_rects`에 `[x0, y0, x1, y1]`을 0~1로 적는다
 - 답 상자가 하나도 없으면 물을 것이 없다. 그런 카드는 쓰지 마라""")
+    # 렌더-확인-수정 고리가 통째로 이 구간에 들어간다. 일꾼이 제 끝을 찍는다.
+    parts.append(timings2.stamp_note(run_dir, "3.5-occlusion", batch))
     return "\n\n".join(p.strip() for p in parts if p and p.strip())
 
 
@@ -843,10 +847,10 @@ def main() -> int:
             print(f"  {b['batch']}  슬라이드 {b['slides']}  라벨 {b['labels']}개  "
                   f"{b['spawn']}")
             print(f"        라벨 지도 {b['maps']}장 → {run_dir / 'occl_labelmap'}")
-        print("\n배치마다 서브에이전트를 하나씩. 각자 render를 돌려 가며 고친다.")
-        print("띄우기 직전·받은 직후에 찍어라 — 렌더 반복이 여기 다 들어간다:")
-        print(f"    python -m quiz2.timings {run_dir} start 3.5-occlusion --label b01")
-        print(f"    python -m quiz2.timings {run_dir} end   3.5-occlusion --label b01")
+        print(timings2.spawn_note(
+            run_dir, "3.5-occlusion", [b["batch"] for b in result["batches"]],
+            what="오클루전 일꾼"))
+        print("  각자 render를 돌려 가며 고친다 — 렌더 반복이 이 구간에 다 들어간다.")
         return 0
 
     if not args.items:
