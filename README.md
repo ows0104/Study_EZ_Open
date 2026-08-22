@@ -69,6 +69,8 @@ python -m studyez preview <run_id> --url <공유 링크>   # 예습 대화 하�
 
 python -m studyez import --from ../PDF2ANKI/out   # 다른 곳에서 만든 덱을 옮긴다
 python -m studyez release <run_id>     # 옮겨 온 덱의 보류를 푼다
+python -m studyez rebuild              # 이미 만든 카드로 덱만 다시 굽는다
+python -m studyez rebuild --reflag     # 검사 규칙이 늘었으면 표시도 다시 센다
 
 python -m studyez done <run_id>        # 빌드를 확인한 뒤. 표시하고 그 편을 올린다
 python -m studyez publish --all        # 아직 안 올라간 것을 전부 훑는다

@@ -23,9 +23,45 @@
 
 ## cloze
 
+**빈칸 하나가 카드 하나다.** 번호를 다섯 개로 가르면 Anki 는 카드를 다섯 장 만들고,
+그 각각은 **나머지 넷을 앞면에 인쇄한 채** 자기 것 하나만 가린다. 이걸 모르고 뚫으면
+답의 대부분이 앞면에 적힌 카드가 나온다.
+
+```
+q   Inflammation is a complex reaction to {{c1::injurious agents}} such as microbes
+    and damaged, usually {{c2::necrotic}}, cells that consists of
+    {{c3::vascular responses}}, {{c4::migration and activation of leukocytes}},
+    and {{c5::systemic reactions}}.
+
+c1 카드의 앞면 →
+    Inflammation is a complex reaction to [...] such as microbes and damaged,
+    usually necrotic, cells that consists of vascular responses, migration and
+    activation of leukocytes, and systemic reactions.
+```
+
+물어 놓은 것이 `injurious agents` 하나이고 나머지는 다 적혀 있다. 실제로 나온 카드이고
+관리자가 **못 쓴다고 판정했다.**
+
+**한 축에 나란히 놓인 항목은 같은 번호로 함께 가려라.** 한 번호는 함께 열리고 함께
+닫히므로 한 장이 그 축 전체를 묻는다. 번호를 가르는 것은 **축이 서로 다를 때**뿐이다.
+
+```
+좋음  ... consists of {{c1::vascular responses}}, {{c1::migration and activation
+      of leukocytes}}, and {{c1::systemic reactions}}
+      → 「염증이 무엇으로 이루어지는가」 를 한 장으로 묻는다
+```
+
+**빈칸마다 왜 그 자리를 가렸는지 말할 수 있어야 한다.** 못 하겠으면 그 빈칸을 지우거나
+카드를 `basic` 으로 바꿔라 — 문장이 흐르는 대로 적당히 뚫는 것이 아니다. 위 예에서
+`injurious agents` 가 그 자리였다.
+
+**정의문을 통째로 옮겨 놓고 여기저기 뚫지 마라.** 정의를 묻고 싶으면 `basic` 이다.
+빈칸 문장이 길면 검사기가 `cloze_sentence_too_long` 으로 표시한다 — 못 쓴다는 뜻은
+아니지만, 길어야 할 이유가 그 문장에 있어야 한다.
+
 **가린 말이 같은 문장 다른 자리에 맨몸으로 또 나오면 안 된다.** 앞면에서 그 자리만
 가려지므로 나머지 한 자리가 답을 그대로 읽어 준다. 같은 말이 두 번 필요하면
-**두 자리 모두 같은 번호로 가린다** — 한 번호는 함께 열리고 함께 닫힌다.
+**두 자리 모두 같은 번호로 가린다.**
 
 ```
 나쁨  ... {{c1::EGFR}} 변이이고, {{c3::Iressa}}는 EGFR tyrosine kinase inhibitor다

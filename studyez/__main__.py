@@ -11,6 +11,7 @@
     python -m studyez jokbo 병리학           과목 족보를 강의별로 자른다 (학기당 1회)
     python -m studyez import --from <폴더>   다른 곳에서 만든 덱을 옮긴다 (보류로 들어온다)
     python -m studyez release <run_id>       보류를 푼다
+    python -m studyez rebuild                이미 만든 카드로 덱만 다시 굽는다
     python -m studyez done <run_id>          빌드 끝. 표시하고 그 편을 올린다
     python -m studyez publish 병리학 --dry-run   무엇이 올라갈지 본다
     python -m studyez publish 병리학             서버로 밀어 넣는다
@@ -381,6 +382,17 @@ def run_jokbo(args) -> int:
     if not index.is_file():
         print("  index.json이 안 나왔다 — 다음 빌드가 이 조각을 못 찾는다")
         return 1
+
+    # 원본 족보가 어디 있는지 적어 둔다. 빌드가 기출 카드 뒷면에 **지면 이미지**를
+    # 붙이려면 원본 PDF가 필요한데, 그건 SynologyDrive에 있어 저장소 안을 훑어서는
+    # 못 찾는다. 안 적어 두면 카드는 멀쩡히 나오고 뒷면만 비어서 티가 안 난다.
+    try:
+        recorded = json.loads(index.read_text(encoding="utf-8"))
+        recorded["source_path"] = str(pdfs[0].resolve())
+        index.write_text(json.dumps(recorded, ensure_ascii=False, indent=1), encoding="utf-8")
+    except (OSError, ValueError) as cause:
+        print(f"  ⚠ index.json에 원본 경로를 못 적었다 ({cause}) — 지면 이미지가 빠진다")
+
     print(f"\n  → {index}")
     print("  이제 `python -m studyez watch --build`가 이 조각을 스스로 물린다")
     return 0
@@ -500,6 +512,67 @@ def run_import(args) -> int:
         print(f"\n  옮긴 것 {moved}편. 전부 보류 상태다 — `publish`가 덱을 안 내보낸다.")
         print("  확인한 편마다: python -m studyez release <run_id>")
     return 0
+
+
+def run_rebuild(args) -> int:
+    """이미 만든 카드로 덱만 다시 굽는다. **모델을 부르지 않는다.**
+
+    카드는 `items.reproduced.json`에 그대로 있고 여기서 하는 것은 그걸 `.apkg`로
+    다시 싸는 것뿐이다 — 뒷면 배치나 CSS를 고쳤을 때 쓰는 자리다. 편당 몇 초이고
+    돈이 들지 않는다.
+
+    **guid는 안 바뀐다.** 씨앗이 `(강의 ID, 질문)`이고 둘 다 그대로이므로, 다시
+    임포트하면 Anki가 같은 노트의 갱신으로 받아 복습 이력이 살아 있다.
+
+    `--reflag`면 굽기 전에 소프트 표시를 다시 계산해 덧붙인다 — 검사 규칙이 늘었을 때
+    이미 만든 덱에도 그 표시가 카드 뒷면 경고 박스로 뜨게 하는 길이다.
+    """
+    runs_dir = Path(args.runs)
+    targets = []
+    for entry in sorted(runs_dir.iterdir() if runs_dir.is_dir() else []):
+        if not entry.is_dir() or (args.run_id and entry.name != args.run_id):
+            continue
+        for kind in (deck.MAIN, deck.PRE):
+            cfg = deck.config_of(entry, kind)
+            if cfg and cfg.get("deck") and (entry / "items.reproduced.json").is_file():
+                targets.append((entry, kind, cfg))
+    if not targets:
+        print("[rebuild] 다시 구울 것이 없다 (카드가 남아 있는 자리가 없다)")
+        return 1
+
+    print(f"[rebuild] {len(targets)}편")
+    done, failed = 0, 0
+    for run_dir, kind, cfg in targets:
+        module = "pdf2anki.prequiz.build" if kind == deck.PRE else "pdf2anki.build"
+        subject = cfg["deck"].split("::")[0]
+        argv = [sys.executable, "-m", module, str(run_dir),
+                "--deck", cfg["deck"], "--id", cfg.get("id") or deck.deck_id(run_dir.name),
+                "--jokbo-dir", str(deck.jokbo_dir(runs_dir, subject))]
+        if args.dry_run:
+            print(f"  → {run_dir.name} {kind}  {cfg['deck']}")
+            continue
+        marks = deck.reflag(run_dir) if args.reflag else {}
+        result = subprocess.run(argv, cwd=str(REPO_ROOT), capture_output=True, text=True,
+                                encoding="utf-8", errors="replace",
+                                env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+        if result.returncode != 0:
+            tail = (result.stderr or result.stdout or "").strip().splitlines()
+            print(f"  ✗ {run_dir.name} {kind} — {tail[-1] if tail else result.returncode}")
+            failed += 1
+            continue
+        title = filenames.parse(deck.source_pdf(run_dir))
+        meta = deck.contract(run_dir, run_dir.name,
+                             title.title if title else run_dir.name, kind)
+        done += 1
+        added = (" · 새 표시 " + " ".join(f"{k} {v}장" for k, v in sorted(marks.items()))
+                 if marks else "")
+        print(f"  ✓ {run_dir.name} {kind} — {meta['item_count']}장 · "
+              f"미디어 {meta['verified']['media']}개{added}")
+
+    if not args.dry_run:
+        print(f"\n  다시 구운 것 {done}편" + (f" · 실패 {failed}편" if failed else ""))
+        print("  Anki에서 다시 임포트하면 같은 노트의 갱신으로 받는다 (guid가 그대로다).")
+    return 1 if failed else 0
 
 
 def run_release(args) -> int:
@@ -792,7 +865,7 @@ def report_publish(args) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Study_EZ 로컬 러너")
     parser.add_argument("command", choices=["match", "watch", "done", "jokbo", "preview",
-                                            "prequeue", "publish", "import", "release"])
+                                            "prequeue", "publish", "import", "release", "rebuild"])
     parser.add_argument("subject", nargs="?", help="과목 폴더명. --all이면 생략")
     parser.add_argument("--all", action="store_true", help="필기/올해 폴더가 있는 과목 전부")
     parser.add_argument("--this", default="2026", help="올해 폴더명")
@@ -844,6 +917,8 @@ def main() -> int:
                              "(예습용 작년 강의록도 안 붙는다)")
     parser.add_argument("--no-publish", action="store_true",
                         help="done: 표시만 하고 올리지 않는다")
+    parser.add_argument("--reflag", action="store_true",
+                        help="rebuild: 검사 규칙이 늘었을 때 소프트 표시를 다시 계산해 덧붙인다")
     parser.add_argument("--from", dest="source_dir", default=None,
                         help="import: 덱을 옮겨 올 pdf2anki 작업 폴더 (예: ../PDF2ANKI/out)")
     args = parser.parse_args()
@@ -871,6 +946,8 @@ def main() -> int:
         return run_import(args)
     if args.command == "release":
         return run_release(args)
+    if args.command == "rebuild":
+        return run_rebuild(args)
     if args.command == "publish":
         if not args.subject and not args.all and not args.run_id:
             parser.error("과목명을 주거나 --all 또는 --run-id를 쓰세요")

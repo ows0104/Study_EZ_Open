@@ -406,8 +406,14 @@ class Runner:
                 return
 
     def build(self):
+        # `--jokbo-dir` 을 넘기지 않으면 build 가 자기 기본값(`out/jokbo`)을 본다.
+        # 조각을 다른 곳에 두고 돌리면 **기출 카드의 원문과 지면이 통째로 빠진 채**
+        # 덱이 나온다 — 카드는 멀쩡해 보이고 뒷면만 비어서 티가 안 난다.
+        # 예습 쪽(`prequiz/run.py`)은 처음부터 넘기고 있었다.
         argv = ["pdf2anki.build", str(self.out), "--deck", self.args.deck,
-                "--id", self.args.id]
+                "--id", self.args.id, "--jokbo-dir", self.args.jokbo_dir]
+        if self.args.jokbo:
+            argv += ["--jokbo", self.args.jokbo]
         if self.defects():
             print(f"⚠ 재현 불가 {len(self.defects())}장이 남았다. 그대로 덱에 넣는다.", flush=True)
             argv += ["--allow-defects"]

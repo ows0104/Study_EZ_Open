@@ -87,30 +87,37 @@ hr { border: none; border-top: 1px solid #d8d8d8; margin: 14px 0; }
 .fold[open] > summary::before { content: "▾ "; }
 .nightMode .fold > summary { color: #9a9a9a; border-top-color: #3a3a3a; }
 .origin { margin-top: 12px; }
-.exam { font-size: 15px; color: #555; text-align: center; margin: 10px auto 0;
-        white-space: pre-line; }
+/* 기출 원문은 왼쪽으로 세운다. 선지가 줄줄이 붙는 덩어리라 가운데 정렬하면
+   줄마다 시작점이 달라져 읽는 눈이 매번 처음을 다시 찾는다. */
+.exam { font-size: 15px; color: #555; margin: 12px auto 0; white-space: pre-line;
+        display: inline-block; text-align: left; max-width: 100%; }
 .exam .h { font-weight: 700; color: #0b5cad; }
 .nightMode .exam { color: #b0b0b0; }
 .nightMode .exam .h { color: #7ab8f5; }
 """
 
-# 뒷면 공통 꼬리.
+# 뒷면 공통 꼬리. **순서가 기원에 따라 다르다.**
 #
-# 답 바로 아래에 **원본 이미지**가 온다 — 출처 슬라이드, 기출이면 족보 지면. 접지 않는다.
-# 답이 맞았는지 확인하는 동작과 원본 맥락을 보는 동작은 사실상 같은 동작이라
-# 한 번 더 누르게 만들 이유가 없다.
+#     기출     정답 · 족보 검토 · 해설 · 기출 원문 · 출처(접힘) · 참고 슬라이드
+#     강의록   정답 · 해설 · 참고 슬라이드 · 출처(접힘)
 #
-# 글로 된 출처와 해설은 그 아래로 내려 **한 덩어리로** 접는다. 따로 접으면 두 번 눌러야 한다.
-# 경고는 접지 않는다 — 자료가 미덥지 않다는 사실은 답과 같이 보여야 한다.
+# 기출 카드에서 원본은 족보 문항 자체다. 그래서 원문이 해설 바로 뒤에 서고, 그 문항이
+# 실린 지면은 맨 끝으로 간다 — 글로 읽어 확인이 끝나는데 지면 사진이 그 사이를 막고
+# 있을 이유가 없다. 강의록 카드는 반대다. 원본이 슬라이드라서 답 다음으로 볼 것이 그것이다.
 #
-# SlideImage 는 원본 이미지, Source 는 출처 한 줄 + 기출 원문 텍스트를 담는다.
-# 필드 구성을 바꾸면 이미 임포트한 덱과 어긋나므로 이름은 그대로 두고 내용만 나눴다.
-FOLD = ('<details class="fold"><summary>출처 · 해설</summary>'
-        '<div class="src">{{Source}}</div>'
+# 해설은 접지 않는다. 접어 두면 답만 보고 넘기게 되는데, 왜 그런가가 답과 같은 무게라는
+# 것이 이 덱의 전제다(CLAUDE.md 「암기와 이해는 동등하다」). 접는 것은 출처 한 줄뿐이다.
+# 경고도 접지 않는다 — 자료가 미덥지 않다는 사실은 답과 같이 보여야 한다.
+#
+# **순서를 템플릿이 정하지 않는다.** Anki 템플릿은 필드가 비었나만 볼 수 있어서 한 벌로
+# 두 순서를 낼 수 없고, 갈라내려고 필드를 늘리면 이미 임포트한 덱의 노트 타입이 흔들린다.
+# 그래서 `Source` 에 **해설 뒤에 올 것을 순서대로 조립해** 담는다(`tail_of`).
+# `SlideImage` 는 강의록 카드의 슬라이드만 든다 — 기출 카드에서는 비어 있고, 그 이미지는
+# `Source` 꼬리의 맨 끝에 들어간다.
+TAIL = ('{{#Warning}}<div class="warn">{{Warning}}</div>{{/Warning}}'
         '{{#Explanation}}<div class="exp">{{Explanation}}</div>{{/Explanation}}'
-        '</details>')
-TAIL = ('{{#SlideImage}}<div class="origin">{{SlideImage}}</div>{{/SlideImage}}'
-        '{{#Warning}}<div class="warn">{{Warning}}</div>{{/Warning}}' + FOLD)
+        '{{#SlideImage}}<div class="origin">{{SlideImage}}</div>{{/SlideImage}}'
+        '{{Source}}')
 
 
 def _mid(name: str) -> int:
@@ -166,14 +173,13 @@ CLOZE_MODEL = genanki.Model(
             {"name": "Source"}, {"name": "SlideImage"}],
     templates=[{"name": "Cloze",
                 "qfmt": '<div class="q">{{cloze:Text}}</div>',
+                # 빈칸 카드의 해설은 `Extra` 에 든다. 나머지 순서는 TAIL 과 같다.
                 "afmt": '<div class="q">{{cloze:Text}}</div>'
                         '{{#Warning}}<div class="warn">{{Warning}}</div>{{/Warning}}'
+                        '{{#Extra}}<div class="exp">{{Extra}}</div>{{/Extra}}'
                         '{{#SlideImage}}<div class="origin">{{SlideImage}}</div>'
                         '{{/SlideImage}}'
-                        '<details class="fold"><summary>출처 · 해설</summary>'
-                        '<div class="src">{{Source}}</div>'
-                        '{{#Extra}}<div class="exp">{{Extra}}</div>{{/Extra}}'
-                        '</details>'}],
+                        '{{Source}}'}],
     css=CSS, model_type=genanki.Model.CLOZE)
 
 FLAG_LABEL = {
@@ -182,6 +188,7 @@ FLAG_LABEL = {
     "similar_duplicate": "다른 카드와 회수 방향이 겹칠 수 있다",
     "too_many_items": "한 번에 회수할 항목이 많다",
     "question_too_long": "질문이 길다 — 축을 여럿 물고 있지 않은지 볼 것",
+    "cloze_sentence_too_long": "빈칸 문장이 길다 — 정의문을 통째로 옮겨 놓지 않았는지 볼 것",
     "too_many_clozes": "가린 곳이 많다",
     "annotation_evidence_without_exam_hit": "필기에만 있는 내용이다 — 강의록으로 확인할 것",
     "ox_is_question_not_statement": "O/X 카드인데 진술문이 아니다",
@@ -443,6 +450,27 @@ def source_of(c: dict, title: str) -> str:
     return html.escape(" · ".join(bits))
 
 
+def tail_of(c: dict, srctxt: str, exam_text: str, images: str) -> tuple[str, str]:
+    """해설 뒤에 올 것을 순서대로 조립한다. `(SlideImage, Source)` 를 돌려준다.
+
+    두 기원의 순서가 다르고 Anki 템플릿은 그 갈래를 그릴 수 없다 — 필드가 비었나만
+    볼 수 있기 때문이다. 갈라내려고 필드를 늘리면 이미 임포트한 덱의 노트 타입이
+    흔들리므로, **여기서 조립해서 한 필드에 담는다.**
+
+        기출     기출 원문 → 출처(접힘) → 참고 이미지
+        강의록   참고 이미지 → 출처(접힘)
+
+    `images` 는 강의록이면 출처 슬라이드, 기출이면 슬라이드 + 족보 지면이다.
+    돌려주는 첫 값이 `SlideImage` 필드이고 강의록에서만 차 있다.
+    """
+    fold = (f'<details class="fold"><summary>출처</summary>'
+            f'<div class="src">{srctxt}</div></details>')
+    if c["source_type"] == "jokbo":
+        origin = f'<div class="origin">{images}</div>' if images else ""
+        return "", exam_text + fold + origin
+    return images, exam_text + fold
+
+
 def pick_input(prep_dir: Path, skip_reproduce: bool) -> tuple[Path, str]:
     """어느 카드 파일로 빌드할지 정한다. 재현 검사를 건너뛴 경우를 조용히 넘기지 않는다."""
     done = prep_dir / "items.reproduced.json"
@@ -567,14 +595,15 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str,
         guid = guid_of(lecture_id, norm_key(c["q"]), c)
         warn, srctxt, tags = warning_of(c), source_of(c, title), tags_of(c, lecture_id)
         exp = html.escape(c.get("explanation") or "").replace("\n", "<br>")
-        # 원본 이미지는 답 바로 아래 보이고, 기출 원문 텍스트는 출처와 함께 접힌다.
-        origin = (f'<div class="slide"><img src="{media.slide(c["slide_no"])}"></div>'
+        images = (f'<div class="slide"><img src="{media.slide(c["slide_no"])}"></div>'
                   if c.get("slide_no") else "")
+        exam_text = ""
         if c.get("jokbo_ref"):
             exam_text, exam_imgs = jokbo.block(c["jokbo_ref"])
-            origin += exam_imgs
-            srctxt += exam_text
+            images += exam_imgs
             stats["기출원문:" + ("붙임" if exam_text else "못찾음")] += 1
+        # 순서는 기원이 정한다. 무엇이 어디로 가는지는 `tail_of` 첫머리에 있다.
+        origin, srctxt = tail_of(c, srctxt, exam_text, images)
         m = c.get("media") or {}
         crop = m.get("crop")
 
@@ -715,9 +744,14 @@ def find_jokbo_source(prep_dir: Path, jokbo_dir: Path, slice_arg: str | None,
 
     pdf_path = Path(pdf_arg) if pdf_arg else None
     if pdf_path is None and (jokbo_dir / "index.json").exists():
-        name = json.loads((jokbo_dir / "index.json").read_text(encoding="utf-8")).get("source")
-        if name:
-            hits = [q for q in Path(".").rglob(name) if q.is_file()]
+        index = json.loads((jokbo_dir / "index.json").read_text(encoding="utf-8"))
+        # `source_path` 는 자른 쪽이 적어 두는 절대 경로다. 원본 족보가 저장소 밖에
+        # 있으면 rglob 이 못 찾고, 그러면 **지면 이미지가 조용히 빠진다.**
+        recorded = index.get("source_path")
+        if recorded and Path(recorded).is_file():
+            pdf_path = Path(recorded)
+        elif index.get("source"):
+            hits = [q for q in Path(".").rglob(index["source"]) if q.is_file()]
             pdf_path = hits[0] if hits else None
     return slice_path, (pdf_path if pdf_path and pdf_path.exists() else None)
 

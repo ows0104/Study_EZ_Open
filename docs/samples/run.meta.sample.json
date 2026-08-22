@@ -1,10 +1,10 @@
 {
   "lecture_id": "260820_03",
-  "lecture_title": "소아질환의 병태생리(2)",
+  "lecture_title": "소아질환의 병태생리(2) 소아기 특이 질환 1(김은나)",
   "deck_id": "p260820_03",
   "deck_name": "병리학::소아질환의 병태생리(2) 소아기 특이 질환 1",
   "deck_file": "p260820_03.apkg",
-  "built_at": "2026-08-23T00:39:38",
+  "built_at": "2026-08-23T02:50:08",
   "pipeline": "pdf2anki",
   "source_pdf": "C:/Users/ows01/SynologyDrive/병리학/필기/2026/[260820_03]소아질환의 병태생리(2) 소아기 특이 질환 1(김은나)_황준하v1.pdf",
   "verified": {
@@ -31,11 +31,13 @@
     "detail": 25
   },
   "exam_hit": 4,
-  "review_flagged": 13,
+  "review_flagged": 15,
   "review_flags": {
+    "cloze_sentence_too_long": 1,
+    "missing_explanation": 9,
     "points_at_source": 2,
-    "too_many_items": 2,
-    "missing_explanation": 9
+    "question_too_long": 1,
+    "too_many_items": 2
   },
   "reproduce": {
     "same": 75,
@@ -43,6 +45,7 @@
     "없음": 5,
     "partial": 4
   },
+  "reproduce_defects": [],
   "dropped": 0,
   "similar_pairs": 0,
   "slides_total": 46,

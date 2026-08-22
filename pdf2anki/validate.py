@@ -22,7 +22,7 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
-from .schema import (CARD_SCHEMA, IMAGE_FORMATS, MAX_RECALL_ITEMS)
+from .schema import (CARD_SCHEMA, IMAGE_FORMATS, MAX_Q_CHARS, MAX_RECALL_ITEMS)
 from .textutil import char_ngrams, containment, jaccard, norm_key
 
 RE_CLOZE = re.compile(r"\{\{c(\d+)::(.*?)(?:::(.*?))?\}\}")
@@ -35,16 +35,8 @@ OX_FALSE = {"x", "×", "틀리다", "false", "아니오", "거짓"}
 SPLIT_ITEMS = re.compile(r"[,;·/\n]|\s→\s|\s-\s")
 RE_BULLET_LINE = re.compile(r"^\s*[-•*]\s+\S", re.M)
 
-# 질문 길이 상한. 임상 시나리오(나이·경과·수치)를 주는 질문까지 담을 여유를 둔다.
-# cloze 는 제외한다 — 빈칸을 품은 문장이라 긴 것이 정상이다.
-#
-# **축이 여럿인지를 문장 형태로 잡으려던 시도는 접었다.** `무엇이며`·`이며,` 를 신호로
-# 넣었더니 세 덱에서 22장이 걸렸는데 사용자 판정으로 진짜 결함은 **한 장**이었다.
-# 한국어에서 그 연결은 정의와 그 즉각적 귀결을 잇는 가장 흔한 형태이고,
-# 이미지 카드는 철학이 오히려 "장기·진단·소견을 한 장에서" 물으라고 시킨다.
-# 5% 정밀도의 깃발은 아무도 보지 않으므로 없느니만 못하다.
-# 축을 나누는 판단은 저작 시점의 철학이 맡고, 여기서는 길이만 잰다.
-MAX_Q_CHARS = 120
+# 질문 길이 상한(`MAX_Q_CHARS`)은 `schema.py` 에 있다 — 계약에 실려야 모델이 안다.
+# 여기서 이름을 다시 내보내는 것은 `prequiz/schema.py` 가 그렇게 가져다 쓰기 때문이다.
 
 
 def count_items(a: str) -> int:
@@ -227,6 +219,19 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
         # 나누는 판단은 모델이 해야 하고, 여기서는 사람이 볼 수 있게 표시만 한다.
         if fmt != "cloze" and len(q) > MAX_Q_CHARS:
             flags[i].append("question_too_long")
+        # 빈칸 카드는 한동안 이 검사에서 면제였다. 문장이 길어야 여러 항목을 나란히
+        # 물을 수 있다는 이유였는데, **면제가 정의문 통째로 싣기를 열어 줬다.**
+        #
+        #   Inflammation is a complex reaction to {{c1::injurious agents}} such as
+        #   microbes and damaged, usually {{c2::necrotic}}, cells that consists of
+        #   … (249자, 빈칸 5개, 플래그 0개)
+        #
+        # 관리자 판정 — *"저 문장이 그렇게 중요한지 모르겠어. 길이도 긴데."* 29편
+        # 2,396장 실측에서 빈칸 카드 75장 중 35장이 이 상한을 넘고 있었다.
+        # 개수는 안 건드린다. 같은 관리자가 c2~c5 는 *"이런거면 몰라도"* 라고 했다 —
+        # 걸리는 것은 빈칸이 몇 개냐가 아니라 문장을 통째로 옮겼느냐다.
+        if fmt == "cloze" and len(q) > MAX_Q_CHARS:
+            flags[i].append("cloze_sentence_too_long")
         if fmt == "ox" and q.rstrip().endswith("?"):
             flags[i].append("ox_is_question_not_statement")
 

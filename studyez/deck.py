@@ -322,10 +322,79 @@ def _reproduce_mix(cards: list[dict]) -> dict[str, int]:
     return mix
 
 
+def _flag_counts(cards: list[dict]) -> dict[str, int]:
+    """검토 표시를 종류별로. 사람을 부르는 신호는 개수가 아니라 종류에 있다."""
+    counted: dict[str, int] = {}
+    for card in cards:
+        for flag in card.get("review_flags") or []:
+            counted[str(flag)] = counted.get(str(flag), 0) + 1
+    return dict(sorted(counted.items()))
+
+
 def _reproduce_defects(cards: list[dict]) -> list[str]:
     """덱에 들어와서는 안 될 카드. 여기 뭔가 있으면 빌드가 자기 규칙을 어긴 것이다."""
     return [str(c.get("id") or "?") for c in cards
             if (c.get("reproduce") or {}).get("reason") in pdf2anki_build.DEFECT_REASONS]
+
+
+def reflag(run_dir: Path) -> dict[str, int]:
+    """이미 만들어 둔 카드에 **소프트 플래그만 다시 계산해 덧붙인다.**
+
+    검사 규칙이 늘었을 때 쓰는 자리다. 카드를 다시 쓰지 않고 표시만 붙이므로 모델을
+    부르지 않고, 그다음 `studyez rebuild` 가 그 표시를 카드 뒷면 경고 박스로 내보낸다.
+    관리자가 계수기를 따로 안 보고 **카드 뒷면에서 걸러낸다**고 했기 때문에, 표시가
+    가야 할 자리는 `suspects.json` 이 아니라 거기다(CLAUDE.md).
+
+    **더하기만 한다.** 이미 붙어 있던 플래그는 지우지 않는다 — 옛 규칙으로 붙은 것을
+    새 규칙이 조용히 떼어 가면, 사람이 이미 보고 넘긴 표시가 근거 없이 사라진다.
+    hard 제거도 하지 않는다. 이 카드들은 이미 한 번 통과한 것이고, 여기서 떨어뜨리면
+    재현 검사까지 지난 카드가 표시 하나 때문에 사라진다.
+    """
+    from pdf2anki import validate as pdf2anki_validate
+
+    cards = cards_of(run_dir)
+    prep = _load(run_dir / "prep.json")
+    if not cards or not isinstance(prep, dict):
+        return {}
+
+    # **처음 검증할 때 쓴 설정을 그대로 다시 준다.** 안 주면 교수가 바뀌어 필기를
+    # 근거로 인정한 편에서 `annotation_evidence_without_exam_hit` 이 무더기로 붙는다
+    # (실측: 6편 90장). 근거 없는 표시는 진짜 표시를 묻어 버린다.
+    cfg = config_of(run_dir, MAIN) or config_of(run_dir, PRE) or {}
+    annotation_evidence = bool(cfg.get("annotation_evidence"))
+
+    # 계약에 없는 키를 떼고 넘긴다. `CARD_SCHEMA` 는 `additionalProperties: False` 라서
+    # 뒤 단계가 붙인 `reproduce`·`review_flags` 가 그대로 들어가면 **전 카드가 스키마
+    # 위반으로 떨어지고**, 그러면 조용히 아무 표시도 안 붙는다.
+    allowed = set(pdf2anki_validate.CARD_SCHEMA["properties"])
+    clean = [{k: v for k, v in c.items() if k in allowed} for c in cards]
+
+    fresh, _ = pdf2anki_validate.validate({"cards": clean}, prep, None,
+                                          annotation_evidence)
+    by_id = {c.get("id"): set(c.get("review_flags") or []) for c in fresh if c.get("id")}
+
+    added: dict[str, int] = {}
+    for card in cards:
+        was = set(card.get("review_flags") or [])
+        now = by_id.get(card.get("id"))
+        if now is None:
+            continue
+        # 규칙이 **철회**된 것은 뗀다. 이 자리가 한 번 잘못 붙인 적이 있는데
+        # (설정을 안 넘겨 90장), 더하기만 하면 그런 실수가 영영 안 지워진다.
+        # 사람이 보고 넘긴 표시가 근거 없이 사라지는 일은 없다 — 규칙이 그대로면
+        # 같은 표시가 다시 계산되기 때문이다.
+        if was == now:
+            continue
+        card["review_flags"] = sorted(now)
+        for flag in now - was:
+            added[flag] = added.get(flag, 0) + 1
+        for flag in was - now:
+            added["-" + flag] = added.get("-" + flag, 0) + 1
+
+    if added:
+        (run_dir / "items.reproduced.json").write_text(
+            json.dumps({"cards": cards}, ensure_ascii=False, indent=2), encoding="utf-8")
+    return added
 
 
 def contract(run_dir: Path, run_id: str, title: str, kind: str) -> dict:
@@ -371,7 +440,10 @@ def contract(run_dir: Path, run_id: str, title: str, kind: str) -> dict:
         "importance": suspects.get("importance_mix") or {},
         "exam_hit": suspects.get("exam_hit") or 0,
         "review_flagged": sum(1 for c in cards if c.get("review_flags")),
-        "review_flags": suspects.get("flag_counts") or {},
+        # 장수와 종류를 **같은 곳에서** 센다. 종류를 `suspects.json` 에서 읽던 때가
+        # 있었는데, 그건 검증 단계가 쓰고 그대로 굳는 파일이라 `reflag` 로 표시가
+        # 늘거나 줄면 둘이 어긋났다. 어긋난 채로도 아무 데서도 안 터진다.
+        "review_flags": _flag_counts(cards),
         "reproduce": _reproduce_mix(cards),
         "reproduce_defects": _reproduce_defects(cards),
         "dropped": len(suspects.get("dropped") or []),

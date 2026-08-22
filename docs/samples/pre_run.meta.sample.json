@@ -1,37 +1,36 @@
 {
   "lecture_id": "250825_01",
-  "lecture_title": "종양의 분자생물학(1)",
+  "lecture_title": "종양의 병태생리(2) 종양의 분자생물학(1)(전윤경)",
   "deck_id": "p250825_01",
   "deck_name": "병리학::종양의 병태생리(2) 종양의 분자생물학(1)::예습",
   "deck_file": "p250825_01_pre.apkg",
-  "built_at": "2026-08-23T00:39:38",
+  "built_at": "2026-08-23T02:48:21",
   "pipeline": "pdf2anki",
   "source_pdf": "C:/Users/ows01/SynologyDrive/병리학/필기/2025/[250825_01] 종양의 병태생리(2) 종양의 분자생물학(1)(전윤경)_박주항v3.pdf",
   "verified": {
-    "notes": 28,
+    "notes": 30,
     "cards": 32,
-    "media": 22,
+    "media": 21,
     "decks": 1,
     "missing_media": []
   },
-  "item_count": 28,
+  "item_count": 30,
   "format": {
-    "basic": 25,
-    "cloze": 3
+    "basic": 29,
+    "cloze": 1
   },
   "sources": {
-    "lecture": 28
+    "lecture": 30
   },
   "importance": {},
   "exam_hit": 0,
-  "review_flagged": 1,
-  "review_flags": {
-    "points_at_source": 1
-  },
+  "review_flagged": 0,
+  "review_flags": {},
   "reproduce": {
-    "same": 26,
-    "partial": 2
+    "same": 29,
+    "partial": 1
   },
+  "reproduce_defects": [],
   "dropped": 0,
   "similar_pairs": 0,
   "slides_total": 47,
@@ -40,15 +39,14 @@
     9,
     12,
     14,
-    15,
     17,
-    18,
     19,
     21,
     22,
     23,
     24,
     26,
+    27,
     28,
     33,
     34,
@@ -68,10 +66,11 @@
     10,
     11,
     13,
+    15,
     16,
+    18,
     20,
     25,
-    27,
     29,
     30,
     31,
@@ -88,7 +87,7 @@
   ],
   "untouched_slides": [],
   "objectives_without_card": [],
-  "web_items": 28,
+  "web_items": 30,
   "web_excluded": 0,
-  "slides_exported": 40
+  "slides_exported": 19
 }
