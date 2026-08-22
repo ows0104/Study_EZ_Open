@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Study EZ 예습 브리지",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Study EZ의 작년 필기와 예습 프롬프트를 ChatGPT 새 대화에 채우고, 만들어진 공유 링크를 강의에 되돌려 줍니다.",
   "permissions": ["storage"],
   "host_permissions": [

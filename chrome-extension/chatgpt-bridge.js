@@ -12,11 +12,23 @@ function escapeHtml(value) {
 
 function createOverlay(payload, remembered) {
   const shared = payload.mode === "shared";
+  const modeLabel = shared ? "공개 공유 링크" : "개인 대화 링크";
+  const fileList = payload.files
+    .map((file) => `<li title="${escapeHtml(file.filename)}">${escapeHtml(file.filename)}</li>`)
+    .join("");
+  const disclosure = `
+    <p class="studyez-disclosure">
+      동의하면 선택한 PDF 내용과 프롬프트를 ChatGPT에 넣습니다. 확장은 답변 내용·완료 상태와 링크를
+      확인하려고 현재 ChatGPT 로그인 토큰을 메모리에서 잠깐 사용하지만, 토큰을 저장하거나 Study EZ로
+      보내지 않습니다.
+      ${shared ? "이 모드는 링크를 가진 누구나 볼 수 있는 공개 공유 링크를 만들고 Study EZ 강의에 저장합니다." : "이 모드는 내 계정에서만 열리는 대화 주소를 Study EZ 강의에 저장합니다."}
+      <a href="https://studyez.kr/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a>
+    </p>`;
   const root = document.createElement("aside");
   root.id = "studyez-bridge";
   root.innerHTML = `
     <style>
-      #studyez-bridge { position: fixed; right: 20px; bottom: 20px; z-index: 2147483647; width: min(360px, calc(100vw - 40px)); padding: 16px; border: 1px solid #e4e6ea; border-radius: 14px; color: #16181d; background: #fff; box-shadow: 0 18px 50px rgba(16, 18, 29, .22); font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif; }
+      #studyez-bridge { position: fixed; right: 20px; bottom: 20px; z-index: 2147483647; box-sizing: border-box; width: min(360px, calc(100vw - 40px)); max-height: calc(100vh - 40px); padding: 16px; overflow: auto; border: 1px solid #e4e6ea; border-radius: 14px; color: #16181d; background: #fff; box-shadow: 0 18px 50px rgba(16, 18, 29, .22); font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif; }
       #studyez-bridge h2 { margin: 0 0 5px; font-size: 15px; font-weight: 650; }
       #studyez-bridge p { margin: 0 0 10px; color: #878d97; font-size: 12px; }
       #studyez-bridge .studyez-disclosure { padding: 10px; border: 1px solid #dfe4f5; border-radius: 9px; color: #414754; background: #f5f7ff; }
@@ -24,6 +36,12 @@ function createOverlay(payload, remembered) {
       #studyez-bridge .studyez-consent input { width: 16px; height: 16px; margin: 1px 0 0; accent-color: #3e63dd; }
       #studyez-bridge .studyez-remembered { margin: 0 0 12px; color: #30343b; font-size: 12px; }
       #studyez-bridge .studyez-remembered button { min-height: 0; padding: 0; border: 0; color: #3155c6; background: none; font: inherit; font-weight: 400; text-decoration: underline; cursor: pointer; }
+      #studyez-bridge .studyez-compact { margin-bottom: 12px; }
+      #studyez-bridge .studyez-file-line { margin: 0; overflow: hidden; color: #30343b; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+      #studyez-bridge details { margin-top: 8px; color: #5d6470; font-size: 12px; }
+      #studyez-bridge summary { width: max-content; color: #3155c6; cursor: pointer; }
+      #studyez-bridge details .studyez-disclosure { margin-top: 8px; }
+      #studyez-bridge details ul { margin-bottom: 8px; }
       #studyez-bridge a { color: #3155c6; }
       #studyez-bridge ul { max-height: 120px; margin: 0 0 12px; padding: 9px 9px 9px 26px; overflow: auto; border-radius: 9px; background: #f6f7f9; }
       #studyez-bridge li { margin: 3px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -34,25 +52,23 @@ function createOverlay(payload, remembered) {
       #studyez-bridge .studyez-status { min-height: 18px; margin-top: 9px; color: #3a5bc7; font-size: 11px; }
       #studyez-bridge .studyez-status.is-error { color: #9a3412; }
     </style>
-    <h2>Study EZ 예습 자료</h2>
-    <p>ChatGPT에 넣을 필기와 프롬프트입니다. 전송은 직접 눌러야 합니다.</p>
-    <p class="studyez-disclosure">
-      동의하면 선택한 PDF 내용과 프롬프트를 ChatGPT에 넣습니다. 확장은 답변 내용·완료 상태와 링크를
-      확인하려고 현재 ChatGPT 로그인 토큰을 메모리에서 잠깐 사용하지만, 토큰을 저장하거나 Study EZ로
-      보내지 않습니다.
-      ${shared ? "이 모드는 링크를 가진 누구나 볼 수 있는 공개 공유 링크를 만들고 Study EZ 강의에 저장합니다." : "이 모드는 내 계정에서만 열리는 대화 주소를 Study EZ 강의에 저장합니다."}
-      <a href="https://studyez.kr/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a>
-    </p>
-    <ul>${payload.files
-      .map((file) => `<li title="${escapeHtml(file.filename)}">${escapeHtml(file.filename)}</li>`)
-      .join("")}</ul>
     ${
       remembered
-        ? `<p class="studyez-remembered">${
-            shared ? "공개 공유 링크 생성" : "개인 대화 주소 저장"
-          }에 이미 동의했습니다. 넣기 전에 위 목록을 확인하세요.
-          <button type="button" data-action="revoke">동의 해제</button></p>`
-        : `<label class="studyez-consent">
+        ? `<h2>Study EZ 예습 자료</h2>
+    <div class="studyez-compact">
+      <p class="studyez-file-line" title="${escapeHtml(payload.files.map((file) => file.filename).join(", "))}">PDF ${payload.files.length}개 · ${modeLabel} · ${escapeHtml(payload.files[0]?.filename || "자료")}</p>
+      <details>
+        <summary>첨부 자료와 개인정보 처리 자세히</summary>
+        ${disclosure}
+        <ul>${fileList}</ul>
+        <p class="studyez-remembered">이 모드에 이미 동의했습니다. <button type="button" data-action="revoke">동의 해제</button></p>
+      </details>
+    </div>`
+        : `<h2>Study EZ 예습 자료</h2>
+    <p>ChatGPT에 넣을 필기와 프롬프트입니다. 전송은 직접 눌러야 합니다.</p>
+    ${disclosure}
+    <ul>${fileList}</ul>
+    <label class="studyez-consent">
       <input type="checkbox" data-action="consent">
       <span>위의 데이터 처리와 ${shared ? "공개 공유 링크 생성" : "개인 대화 주소 저장"}에 동의합니다.</span>
     </label>`

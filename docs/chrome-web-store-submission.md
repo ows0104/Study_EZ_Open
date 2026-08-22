@@ -1,6 +1,6 @@
 # Study EZ 예습 브리지 — Chrome Web Store 등록표
 
-기준 버전: 1.0.2
+기준 버전: 1.0.3
 작성일: 2026-08-20
 
 ## 새 항목
@@ -105,7 +105,7 @@ PowerShell에서:
 .\chrome-extension\build-store-package.ps1
 ```
 
-결과: `chrome-extension/release/studyez-preview-bridge-1.0.2-web-store.zip`
+결과: `chrome-extension/release/studyez-preview-bridge-1.0.3-web-store.zip`
 
 스토어 항목이 게시된 뒤 Cloudflare Pages 빌드 변수
 `VITE_EXTENSION_STORE_URL`에 실제 스토어 URL을 넣으면 웹앱의 개발자 모드 설치
