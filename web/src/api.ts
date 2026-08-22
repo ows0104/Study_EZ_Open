@@ -1,5 +1,5 @@
 import { LOCAL_TEST_TOKEN } from "./localTest";
-import { supabase } from "./supabase";
+import { auth } from "./supabase";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
 
@@ -11,7 +11,7 @@ export class ApiError extends Error {
 
 async function authHeader(): Promise<Record<string, string>> {
   if (LOCAL_TEST_TOKEN) return { Authorization: `Bearer ${LOCAL_TEST_TOKEN}` };
-  const { data } = (await supabase?.auth.getSession()) ?? { data: { session: null } };
+  const { data } = (await auth?.getSession()) ?? { data: { session: null } };
   const token = data.session?.access_token;
   return token ? { Authorization: `Bearer ${token}` } : {};
 }

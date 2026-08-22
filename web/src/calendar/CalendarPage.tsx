@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { bumpPreviewVersion, usePreviewLink } from "../bridge/previewBridge";
+import { takeTimetable } from "../firstScreen";
 import type { TimetableEvent } from "../types";
 import { CalendarGrid } from "./CalendarGrid";
 import { EventChip } from "./EventChip";
@@ -63,9 +64,20 @@ export function CalendarPage() {
   );
 
   useEffect(() => {
-    api<{ events: TimetableEvent[] }>("/api/timetable")
+    takeTimetable()
       .then((payload) => setEvents(payload.events))
       .catch((cause: Error) => setError(cause.message));
+  }, []);
+
+  /**
+   * 강의 상세 조각을 미리 받아 둔다.
+   *
+   * 강의 상세는 **새 창**에서 열린다. 그 창은 문서가 따로라 이 창의 메모리를
+   * 물려받지 않지만 HTTP 캐시는 같이 쓴다. 여기서 한 번 받아 두면 새 창은
+   * 디스크에서 꺼내 쓴다 — 쪼갠 대가인 왕복 한 번이 칸을 누르기 전에 끝나 있다.
+   */
+  useEffect(() => {
+    void import("../lecture/LecturePage");
   }, []);
 
   const entries = useMemo(() => toCalendarEntries(events ?? []), [events]);

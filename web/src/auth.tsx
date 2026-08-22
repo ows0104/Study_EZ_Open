@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { Session } from "@supabase/supabase-js";
+import type { Session } from "@supabase/auth-js";
 import { LOCAL_TEST_TOKEN } from "./localTest";
-import { supabase } from "./supabase";
+import { auth } from "./supabase";
 import { Link } from "react-router-dom";
 
 type AuthState = {
@@ -29,15 +29,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
-    if (!supabase) {
+    if (!auth) {
       setLoading(false);
       return;
     }
-    supabase.auth.getSession().then(({ data }) => {
+    auth.getSession().then(({ data }) => {
       setSession(data.session);
       setLoading(false);
     });
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
+    const { data } = auth.onAuthStateChange((_event, next) => setSession(next));
     return () => data.subscription.unsubscribe();
   }, []);
 
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       email: session?.user.email ?? "",
       signOut: async () => {
-        await supabase?.auth.signOut();
+        await auth?.signOut();
       },
     }),
     [session, loading],
@@ -86,7 +86,7 @@ export function LoginPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  if (!supabase) {
+  if (!auth) {
     return (
       <main className="gate">
         <h1>Study_EZ</h1>
@@ -105,16 +105,16 @@ export function LoginPage() {
     setMessage("");
     try {
       if (mode === "reset") {
-        const { error: failed } = await supabase!.auth.resetPasswordForEmail(email, {
+        const { error: failed } = await auth!.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/`,
         });
         if (failed) throw failed;
         setMessage("재설정 메일을 보냈습니다. 메일의 링크로 새 비밀번호를 정해 주세요.");
       } else if (mode === "signin") {
-        const { error: failed } = await supabase!.auth.signInWithPassword({ email, password });
+        const { error: failed } = await auth!.signInWithPassword({ email, password });
         if (failed) throw failed;
       } else {
-        const { data, error: failed } = await supabase!.auth.signUp({ email, password });
+        const { data, error: failed } = await auth!.signUp({ email, password });
         if (failed) throw failed;
         // 확인 메일이 켜져 있으면 세션이 바로 나오지 않는다.
         setMessage(
