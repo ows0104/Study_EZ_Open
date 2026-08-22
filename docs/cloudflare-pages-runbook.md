@@ -112,8 +112,12 @@ Site URL은 **Save changes**, Redirect URLs는 **Save URLs**로 각각 저장한
 `server/.env`에서 이 한 줄만 바꾼다. 다른 비밀값은 출력하거나 수정하지 않는다.
 
 ```
-CORS_ALLOWED_ORIGINS=https://study-ez-open.pages.dev
+CORS_ALLOWED_ORIGINS=https://study-ez-open.pages.dev,https://studyez.kr
 ```
+
+커스텀 도메인 `studyez.kr`를 붙이면서 origin이 둘이 됐다. 쉼표로 나열하면 되고
+`deploy.ps1`이 `^|^` 구분자로 넘기므로 값이 쉼표에서 잘리지 않는다. 도메인 연결
+전체 순서는 [domain-runbook.md](domain-runbook.md)에 있다.
 
 그 뒤 PowerShell에서:
 
