@@ -111,6 +111,25 @@ def main() -> None:
     ).json()
     check("두 파일 다 확인됨", completed == {"stored": 2, "missing": []}, completed)
 
+    # 필기는 받는 것이 아니라 보는 것이다. `inline=1`을 주면 첨부가 아니라
+    # 인라인으로 서명돼야 새 탭이 내려받기로 바뀌지 않는다.
+    notes = next(
+        item
+        for item in client.get("/api/lectures/병리학/260813_03", headers=USER).json()["files"]
+        if item["kind"] == "notes_current"
+    )
+    signed = f"/api/lectures/병리학/260813_03/files/{notes['id']}"
+    attached = httpx.URL(client.get(signed, headers=USER).json()["url"])
+    opened = httpx.URL(client.get(f"{signed}?inline=1", headers=USER).json()["url"])
+    check("기본은 첨부다", "download" in attached.params, str(attached))
+    check("inline=1이면 인라인으로 서명된다", "inline" in opened.params, str(opened))
+    served = client.get(opened.path, params=dict(opened.params))
+    check(
+        "받은 응답도 인라인이다",
+        served.headers["content-disposition"].startswith("inline"),
+        served.headers.get("content-disposition"),
+    )
+
     print("\n[4] 계약에 없는 종류는 거절한다")
     rejected = client.post(
         "/api/admin/lectures/병리학/260813_03/uploads",
@@ -232,11 +251,19 @@ def main() -> None:
     check("칸 하나에 강의가 붙었다", len(linked) == 1, timetable)
     lecture_ref = linked[0]["lectures"][0]
     marks = lecture_ref["marks"]
-    check("필기·예습퀴즈·예습 점이 켜졌다",
-          all(marks[key] for key in ("notes", "prequiz", "preview")), marks)
+    check("올해 필기·예습퀴즈·예습 링크가 켜졌다",
+          all(marks[key] for key in ("notesCurrent", "prequiz", "preview")), marks)
+    # 작년 필기와 올해 필기는 쓰이는 자리가 다르다 — 앞의 것은 강의 전에 읽는
+    # 예습 자리로, 뒤의 것은 강의 후에 받는 복습 자리로 간다. 한 칸으로 묶어
+    # 세면 [3]에서 올린 올해 필기 하나가 예습 자리까지 켜 버린다.
+    check("작년 필기는 안 올라왔으므로 꺼져 있다", marks["notesPrev"] is False, marks)
     # 이 강의에는 `main_apkg`가 안 올라왔다. 전에는 `pre_item`이 있다는 이유로
     # 본덱 점까지 켜져서, 점만 보고는 시험 대비 덱이 있는지 알 수 없었다.
     check("본덱이 없으면 본퀴즈 점은 꺼져 있다", marks["quiz"] is False, marks)
+    # [3]에서 올해 필기의 서명을 받아 갔다. 덱이 "했다"를 말하는 유일한 길이
+    # 이것이고, 예습 자리 쪽은 아무것도 안 받았으니 아직 거짓이어야 한다.
+    check("받아 간 자리만 참이다", lecture_ref["grabbed"] == {"pre": False, "main": True},
+          lecture_ref["grabbed"])
     # [7]에서 세 문항을 모두 채점받았다.
     check("내가 푼 수가 함께 온다",
           lecture_ref["prequizProgress"] == {"total": 3, "answered": 3},
@@ -254,6 +281,29 @@ def main() -> None:
     print("\n[10] 로그인 없이는 아무것도 안 나간다")
     check("401", client.get("/api/timetable").status_code == 401)
     check("러너 토큰 없이 등록 불가", client.post("/api/admin/lectures", json=[]).status_code in (401, 403))
+
+    print("\n[10.5] 관리자 체크리스트 — 안 올라온 칸과 닫아 둔 칸")
+    overview = "/api/admin/overview"
+    waive = "/api/admin/lectures/병리학/260813_03/waive"
+
+    def _checklist():
+        rows = client.get(overview, headers=USER).json()["lectures"]
+        return next(row for row in rows if row["runId"] == "260813_03")["checklist"]
+
+    check("올린 것은 done", _checklist()["notes_current"] == "done", _checklist())
+    check("안 올린 것은 todo", _checklist()["notes_prev"] == "todo", _checklist())
+    # 신설 강의에는 작년 필기가 없다. 닫을 길이 없으면 그런 칸이 영영 미완으로
+    # 남아 화면이 미완으로 가득 차고, 그러면 정말 밀린 강의가 안 보인다.
+    client.put(waive, headers=USER, json={"item": "notes_prev", "waived": True})
+    check("닫으면 waived", _checklist()["notes_prev"] == "waived", _checklist())
+    # 올라온 것이 닫아 둔 것을 이긴다 — 자료가 있는데 "해당 없음"으로 보이면
+    # 화면이 거짓말을 하는 것이다.
+    client.put(waive, headers=USER, json={"item": "notes_current", "waived": True})
+    check("올라온 칸은 닫아도 done", _checklist()["notes_current"] == "done", _checklist())
+    check("모르는 항목은 400",
+          client.put(waive, headers=USER, json={"item": "nope"}).status_code == 400)
+    client.put(waive, headers=USER, json={"item": "notes_prev", "waived": False})
+    check("되돌리면 todo", _checklist()["notes_prev"] == "todo", _checklist())
 
     print("\n[11] 승인 게이트 — 가입만으로는 자료가 안 보인다")
     from app.auth import CurrentUser, require_approved_user

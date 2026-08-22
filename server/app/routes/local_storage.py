@@ -34,11 +34,16 @@ async def local_storage_upload(object_key: str, request: Request) -> dict[str, b
 def local_storage_download(
     object_key: str,
     download: str | None = Query(None, description="주면 첨부로 내보낸다. R2의 ResponseContentDisposition 자리다."),
+    inline: str | None = Query(None, description="주면 이름을 달되 첨부가 아니라 인라인으로 내보낸다."),
 ) -> FileResponse:
     _guard(object_key)
     path = ObjectStorage().local_path(object_key)
     if not path.is_file():
         raise HTTPException(status_code=404, detail="Not found")
-    # 이름을 주면 Starlette가 Content-Disposition: attachment를 붙인다. 안 주면
-    # 인라인이고, 슬라이드 이미지가 그 쪽이다.
+    # 이름을 주면 Starlette가 Content-Disposition을 붙이고, 그 이름으로 media
+    # type도 고른다. `inline`은 이름은 달되 받지 말고 열라는 쪽이다 — 필기를
+    # 새 탭에서 읽는 자리가 그것이다. 둘 다 없으면 그냥 인라인이고, 슬라이드
+    # 이미지가 그 쪽이다.
+    if inline:
+        return FileResponse(path, filename=inline, content_disposition_type="inline")
     return FileResponse(path, filename=download) if download else FileResponse(path)

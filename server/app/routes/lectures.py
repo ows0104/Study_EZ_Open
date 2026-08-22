@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -16,7 +16,17 @@ from sqlalchemy.orm import Session
 from app.auth import CurrentUser, require_approved_user
 from app.config import get_settings
 from app.database import get_db
-from app.models import Asset, PreItem, Preview, QuizAttempt, RunMeta, TimetableEvent, UserPreview
+from app.models import (
+    GRABBABLE_KINDS,
+    Asset,
+    AssetGrab,
+    PreItem,
+    Preview,
+    QuizAttempt,
+    RunMeta,
+    TimetableEvent,
+    UserPreview,
+)
 from app.routes.common import lecture_or_404, storage_or_503
 from app.routes.prequiz import missed_items
 
@@ -160,19 +170,59 @@ def sign_file(
     subject: str,
     run_id: str,
     asset_id: str,
+    inline: bool = Query(False, description="참이면 내려받지 않고 브라우저에서 연다."),
     user: CurrentUser = Depends(require_approved_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    """누를 때 발급하는 서명 URL. 버킷이 비공개라 이 경로로만 파일이 열린다."""
+    """누를 때 발급하는 서명 URL. 버킷이 비공개라 이 경로로만 파일이 열린다.
+
+    `inline`은 필기를 읽으려고 누른 경우다. 덱(.apkg)은 받아야 쓰는 것이라
+    그대로 첨부로 나간다 — 기본값을 첨부로 둔 이유다.
+    """
     lecture = lecture_or_404(db, subject, run_id)
     asset = db.get(Asset, asset_id)
     if asset is None or (asset.subject, asset.run_id) != (lecture.subject, lecture.run_id):
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
+    url = storage_or_503().presign_download(
+        asset.object_key,
+        filename=asset.filename,
+        inline=inline,
+        content_type=asset.content_type,
+    )
+    _record_grab(db, user.id, asset)
     return {
-        "url": storage_or_503().presign_download(asset.object_key, filename=asset.filename),
+        "url": url,
         "expiresIn": get_settings().signed_url_ttl,
         "filename": asset.filename,
     }
+
+
+def _record_grab(db: Session, user_id: str, asset: Asset) -> None:
+    """받아 갔다고 적는다. 캘린더의 채운 점이 이 줄에서 나온다.
+
+    **서명을 낸 뒤에만 적는다.** 저장소가 아직 안 붙었으면 위에서 503으로 끝나고,
+    그때는 사용자가 아무것도 못 받았으므로 기록도 남으면 안 된다.
+
+    **여기서 실패해도 파일은 나가야 한다.** 점 하나 때문에 내려받기를 막는 것은
+    바꿔치기가 나쁜 쪽이다. 그래서 예외를 삼키고 롤백만 한다.
+    """
+    if asset.kind not in GRABBABLE_KINDS:
+        return
+    key = (user_id, asset.subject, asset.run_id, asset.kind)
+    try:
+        grab = db.get(AssetGrab, key)
+        if grab is None:
+            grab = AssetGrab(
+                user_id=user_id, subject=asset.subject, run_id=asset.run_id, kind=asset.kind
+            )
+            db.add(grab)
+        # 서명 URL은 TTL 동안 재사용되므로 이 수는 내려받은 횟수가 아니라
+        # 버튼을 누른 횟수다. 화면은 안 쓰고, 나중에 "다시 받으러 온 강의"를
+        # 볼 때를 위해 센다.
+        grab.count = (grab.count or 0) + 1
+        db.commit()
+    except Exception:
+        db.rollback()
 
 
 class MyPreviewIn(BaseModel):

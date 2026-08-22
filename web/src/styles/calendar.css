@@ -518,7 +518,7 @@
 /* 점은 오른쪽 아래에 떠 있다. 바닥 줄만 그만큼 비켜 준다 — 제목은 위에서
  * 차므로 점과 만나지 않고, 그래서 폭을 뺏기지 않는다. 점이 없는 칸에는 물릴
  * 것이 없으니 걸지 않는다. */
-.calendar-event:has(.chip-marks, .chip-count) .calendar-event-meta {
+.calendar-event:has(.chip-slots, .chip-count) .calendar-event-meta {
   padding-right: 18px;
 }
 
@@ -529,7 +529,7 @@
     padding-inline: 8px 7px;
   }
 
-  .chip-marks {
+  .chip-slots {
     right: 4px;
   }
 
@@ -573,8 +573,8 @@
     display: block;
   }
 
-  .calendar-event:has(.chip-marks, .chip-count) .calendar-event-professor,
-  .calendar-event:has(.chip-marks, .chip-count) .calendar-event-series {
+  .calendar-event:has(.chip-slots, .chip-count) .calendar-event-professor,
+  .calendar-event:has(.chip-slots, .chip-count) .calendar-event-series {
     padding-right: 18px;
   }
 }
@@ -639,18 +639,22 @@
 
 /* 월간 칸은 한 줄이라 점이 제목의 오른쪽 끝에 그대로 얹힌다. 점이 있는 칸만
  * 자리를 낸다 — 없는 칸까지 비워 두면 짧은 달력에서 제목이 먼저 잘린다. */
-.calendar-event.is-compact:has(.chip-marks, .chip-count) .calendar-event-primary {
+.calendar-event.is-compact:has(.chip-slots, .chip-count) .calendar-event-primary {
   padding-right: 14px;
 }
 
-/* ------------------------------------------------------------------ 점 */
+/* --------------------------------------------------------------- 자리 둘 */
 
 /* 오른쪽 아래 구석에 띄운다.
  *
  * 위 구석에 두면 제목이 두세 줄로 접힐 때 글자와 겹쳤다. 그렇다고 글 아래
  * 흐름에 넣으면 행을 하나 차지해서 제목이 밀려 올라간다. 띄우되 아래로 내리는
- * 것이 둘 다 피하는 자리다 — 제목은 위에서부터 차고 점은 바닥에 남는다. */
-.chip-marks {
+ * 것이 둘 다 피하는 자리다 — 제목은 위에서부터 차고 자리는 바닥에 남는다.
+ *
+ * **폭이 상수다.** 자리 둘이 늘 서 있으므로 강의 칸마다 같은 x에 같은 것이
+ * 온다 — 왼쪽이 예습, 오른쪽이 복습. 여러 칸을 훑을 때 자리로 뜻을 읽으려면
+ * 이것이 안 흔들려야 한다. */
+.chip-slots {
   position: absolute;
   right: 7px;
   bottom: 6px;
@@ -660,51 +664,60 @@
 }
 
 /* 월간 칸은 한 줄짜리다. 바닥이 곧 가운데다. */
-.calendar-event.is-compact .chip-marks {
+.calendar-event.is-compact .chip-slots {
   top: 50%;
   bottom: auto;
   right: 6px;
   transform: translateY(-50%);
 }
 
-/* 점은 칸의 계열색을 따라간다. 칸 밖(범례)에서는 계열이 없으므로 강조색으로
- * 떨어진다. */
-.chip-dot {
-  width: 6px;
-  height: 6px;
+/* 자리 하나. 세 단계가 다 이 상자 안에서 그려진다 — 크기가 상수라 점이
+ * 도형이 되어도 이웃이 안 밀린다. */
+.chip-slot {
+  width: 7px;
+  height: 7px;
   flex: none;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+}
+
+/* ① 아직 아무것도 안 올라왔다. 자리만 잡는 작은 점이다.
+ *
+ * **크기가 아니라 밝기로 가른다.** 이 점과 채운 도형은 둘 다 꽉 찬 모양이라,
+ * 7px과 3px 차이만 두면 월간 칸에서 헷갈린다. 배경에 거의 붙는 회색으로 두어
+ * "여기 자리가 있다"까지만 말하게 한다. */
+.chip-slot.is-none {
+  background: radial-gradient(circle at 50% 50%, var(--line-strong) 0 1.5px, transparent 1.6px);
+}
+
+/* ② 올라왔다 — 네가 열어 볼 것이 있다. 이 화면에서 색은 이 뜻으로만 쓴다.
+ *
+ * 모양이 여기서 처음 생긴다. 예습이 원, 복습이 네모다. */
+.chip-slot.is-pre.is-ready,
+.chip-slot.is-pre.is-done {
   border-radius: 50%;
-  background: var(--cat, var(--accent));
 }
 
-/* 점들을 색이 아니라 채움과 모양으로 가른다. 계열색은 이미 범주가 쓰고 있다.
- *
- * 강의 전(예습·예습퀴즈)과 후(필기·본퀴즈)가 한 칸에 같이 서지 않으므로 네
- * 점이 모양을 나눠 쓴다. 빈 원은 어느 쪽에서든 "받을 것이 있는데 얼마나 했는지
- * 잴 수는 없다"는 뜻이다 — 덱은 Anki에서 풀린다. */
-.chip-dot.is-quiz {
-  border: 1px solid var(--cat, var(--accent));
-  background: transparent;
-}
-
-.chip-dot.is-preview {
-  border: 1px solid var(--cat, var(--accent));
+.chip-slot.is-main.is-ready,
+.chip-slot.is-main.is-done {
   border-radius: 1px;
-  background: transparent;
 }
 
-/* 웹 예습퀴즈만 얼마나 했는지까지 말한다. 채운 만큼이 푼 비율이다.
+.chip-slot.is-ready {
+  border-color: var(--cat, var(--accent));
+}
+
+/* 예습 자리만 얼마나 했는지까지 말한다. 채운 만큼이 웹 예습퀴즈를 푼 비율이다.
  *
- * `--fill`이 안 붙으면 0%다 — 덱만 있고 웹에서 풀 문항이 없는 강의이며,
- * 그때는 본퀴즈와 같은 빈 원으로 떨어진다. */
-.chip-dot.is-prequiz {
-  border: 1px solid var(--cat, var(--accent));
+ * `--fill`이 안 붙으면 0%다 — 웹에서 풀 문항이 없는 강의이고, 그때는 그냥
+ * 빈 원으로 떨어진다. */
+.chip-slot.is-pre.is-ready {
   background: conic-gradient(var(--cat, var(--accent)) var(--fill, 0%), transparent 0);
 }
 
-/* 다 푼 것은 강조색을 놓는다. 이 화면에서 색은 "열어 볼 것이 있다"는 뜻으로만
- * 쓰기로 했고, 끝낸 퀴즈는 더 이상 열 것이 아니다. */
-.chip-dot.is-prequiz.is-done {
+/* ③ 했다. 무채색으로 가라앉힌다 — 색은 "지금 네 차례"라는 뜻이고, 끝낸 것은
+ * 더 이상 열 것이 아니다. 다 한 칸이 제일 시끄러우면 남은 할 일이 묻힌다. */
+.chip-slot.is-done {
   border-color: var(--ink-3);
   background: var(--ink-3);
 }
@@ -1056,6 +1069,29 @@ button.panel-action.is-download:hover:not(:disabled)::after {
   transform: translateY(3px);
 }
 
+/* 필기. 받지 않고 새 탭에서 열리므로 화살표가 밖을 가리킨다. */
+.panel-action.is-note::after {
+  content: "↗";
+}
+
+button.panel-action.is-note:hover:not(:disabled)::after {
+  transform: translate(2px, -2px);
+}
+
+/* 파일 이름은 자르지 않는다. 끝에 붙은 필기자·판수가 잘리면 두 판이 같은
+   이름으로 보인다. 예습에 붙일 파일을 고르는 것도 이 이름으로 한다. */
+.panel-action.is-note .panel-note-name {
+  margin-top: 1px;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.panel-action.is-note small {
+  margin-top: 2px;
+}
+
 .panel-action.is-empty {
   display: block;
   padding: 12px 14px;
@@ -1217,37 +1253,12 @@ button.panel-action.is-download:hover:not(:disabled)::after {
   gap: 7px;
 }
 
-/* 고칠 수 없는 것. 편집칸과 다르게 생겨야 눌러 보지 않는다. */
-.prompt-fixed {
-  display: grid;
-  gap: 5px;
-  padding: 10px 11px;
-  border: 1px dashed var(--line);
-  border-radius: var(--r-2);
-  background: transparent;
-}
-
-.prompt-fixed pre {
-  margin: 0;
-  color: var(--ink-2);
-  font-family: inherit;
-  font-size: 11px;
-  line-height: 1.55;
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
-.prompt-fixed h4,
 .prompt-editor-label {
-  margin: 0;
+  margin: 3px 0 0;
   color: var(--ink-3);
   font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.03em;
-}
-
-.prompt-editor-label {
-  margin-top: 3px;
 }
 
 .prompt-editor-text {
@@ -1345,53 +1356,6 @@ button.panel-action.is-download:hover:not(:disabled)::after {
   line-height: 1.55;
   white-space: pre-wrap;
   word-break: keep-all;
-}
-
-/* 필기 목록. 예습 때 붙일 파일이라 이름이 보여야 한다. */
-.event-panel-notes {
-  display: grid;
-  margin: 0;
-  padding: 0;
-  gap: 3px;
-  list-style: none;
-}
-
-.event-panel-notes li {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
-  gap: 7px;
-  align-items: baseline;
-}
-
-.event-panel-notes li span {
-  color: var(--ink-3);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.event-panel-notes li b {
-  overflow: hidden;
-  font-size: 12.5px;
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.event-panel-notes li small {
-  color: var(--ink-3);
-  font-size: 10.5px;
-}
-
-.event-panel-notes li.is-empty b {
-  color: var(--ink-3);
-  font-size: 12px;
-}
-
-.event-panel-author {
-  display: block;
-  margin-top: 5px;
-  color: var(--ink-3);
-  font-size: 11px;
 }
 
 .event-panel-more {

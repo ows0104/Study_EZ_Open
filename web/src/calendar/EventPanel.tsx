@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { api, downloadSignedFile } from "../api";
+import { api, downloadSignedFile, openSignedFile } from "../api";
 import type { LectureDetail, LectureFile, LectureRef } from "../types";
 import {
   absoluteUrl,
@@ -112,7 +112,13 @@ export function EventPanel({ entry, onClose }: { entry: CalendarEntry; onClose: 
           {entry.professor ? <Fact label="담당">{entry.professor}</Fact> : null}
           {entry.course ? <Fact label="과목">{entry.course}</Fact> : null}
           {hasSeries ? <Fact label="교시명">{entry.title}</Fact> : null}
-          {detail ? <NotesFact detail={detail} /> : null}
+          {/* 필기 파일 자체는 위로 올라갔다. 여기 남는 것은 누가 썼는가뿐이다. */}
+          {detail?.author ? (
+            <Fact label="필기자">
+              {detail.author}
+              {detail.version ? ` v${detail.version}` : ""}
+            </Fact>
+          ) : null}
         </dl>
 
         {lecture ? (
@@ -160,42 +166,6 @@ function useLectureDetail(lecture: LectureRef | undefined) {
   return { detail, error };
 }
 
-/**
- * 필기는 누를 것이 아니라 무엇이 붙어 있는지만 알면 되는 정보다. 다만 파일
- * 이름까지는 보여 준다 — 예습할 때 ChatGPT에 붙일 파일이 이것이라서, 이름을
- * 모르면 내려받은 것 중 어느 것인지 못 고른다.
- */
-function NotesFact({ detail }: { detail: LectureDetail }) {
-  const rows: [string, LectureFile | undefined][] = [
-    ["작년", detail.files.find((file) => file.kind === "notes_prev")],
-    ["올해", detail.files.find((file) => file.kind === "notes_current")],
-  ];
-  const author = detail.author ? `${detail.author}${detail.version ? `v${detail.version}` : ""}` : "";
-  return (
-    <div className="event-panel-fact">
-      <dt>필기</dt>
-      <dd>
-        <ul className="event-panel-notes">
-          {rows.map(([label, file]) => (
-            <li key={label} className={file ? "" : "is-empty"}>
-              <span>{label}</span>
-              {file ? (
-                <>
-                  <b>{file.filename}</b>
-                  <small>{fileSize(file.sizeBytes)}</small>
-                </>
-              ) : (
-                <b>아직 없음</b>
-              )}
-            </li>
-          ))}
-        </ul>
-        {author ? <small className="event-panel-author">필기 {author}</small> : null}
-      </dd>
-    </div>
-  );
-}
-
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="event-panel-fact">
@@ -206,10 +176,12 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 }
 
 /**
- * 강조하는 셋. 예습 링크 · Pre-Quiz 덱 · Main-Quiz 덱.
+ * 할 일 전부. 순서가 공부 순서다 — 강의 화면과 같게 둔다.
  *
- * 링크는 누르면 바로 열리고 덱은 누르면 바로 받는다. 중간에 확인할 화면을
- * 두지 않는다 — 그 셋이 이 패널의 존재 이유다.
+ *   작년 필기 → 예습 링크 → Pre-Quiz → 올해 필기 → Main-Quiz
+ *
+ * 필기는 누르면 열리고(내려받지 않는다), 링크는 누르면 바로 열리고, 덱은
+ * 누르면 바로 받는다. 중간에 확인할 화면을 두지 않는다.
  */
 function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureDetail }) {
   const base = `/api/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
@@ -225,8 +197,20 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
     }
   }
 
+  // `inline=1`이 없으면 서버가 첨부로 서명해 준다. 그러면 새 탭이 뜨자마자
+  // 내려받기로 바뀌고 빈 탭만 남는다.
+  async function open(file: LectureFile) {
+    try {
+      await openSignedFile(`${base}/files/${file.id}?inline=1`);
+    } catch (cause) {
+      setError((cause as Error).message);
+    }
+  }
+
   return (
     <div className="event-panel-actions">
+      <NoteAction file={fileOf("notes_prev")} label="작년 필기" onOpen={open} />
+
       <PreviewAction lecture={lecture} detail={detail} base={base} onError={setError} />
 
       <DeckAction file={fileOf("pre_apkg")} label="Pre-Quiz 덱" count={quiz?.itemCount} onDownload={download} />
@@ -239,10 +223,43 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
         </a>
       ) : null}
 
+      <NoteAction file={fileOf("notes_current")} label="올해 필기" onOpen={open} />
+
       <DeckAction file={fileOf("main_apkg")} label="Main-Quiz 덱" onDownload={download} />
 
       {error ? <p className="notice is-error">{error}</p> : null}
     </div>
+  );
+}
+
+/**
+ * 필기 한 편.
+ *
+ * **누르면 새 탭에서 열린다. 받지 않는다.** PDF라 브라우저가 그대로 보여 줄 수
+ * 있는데, 전까지는 이 패널에서 필기를 열 방법이 아예 없었다 — 맨 아래 정보
+ * 목록에 이름만 한 줄로 적혀 있었다.
+ *
+ * 이름을 줄임표로 자르지 않는다. 파일명 끝에 필기자와 판수가 붙어 있어서
+ * 잘리는 자리가 하필 두 판을 가르는 자리이고, ChatGPT에 붙일 파일을 고르는
+ * 것도 이 이름으로 한다.
+ */
+function NoteAction({
+  file,
+  label,
+  onOpen,
+}: {
+  file: LectureFile | undefined;
+  label: string;
+  onOpen: (file: LectureFile) => void;
+}) {
+  // 덱과 같다. 빠지면 "아직 없다"와 "이 강의에는 원래 없다"가 안 갈린다.
+  if (!file) return <span className="panel-action is-empty">{label} — 아직 없습니다</span>;
+  return (
+    <button className="panel-action is-note" onClick={() => onOpen(file)}>
+      <strong>{label}</strong>
+      <span className="panel-note-name">{file.filename}</span>
+      <small>{fileSize(file.sizeBytes)} · 새 탭에서 열기</small>
+    </button>
   );
 }
 
@@ -580,12 +597,8 @@ function PromptEditor({
       </button>
       {open ? (
         <div className="prompt-editor">
-          {/* 기본 링크의 문구는 고칠 수 없다. 반이 하나의 대화를 읽으니 무엇을
-              물었는지도 하나여야 한다. 다만 보이지도 않으면 확인할 길이 없다. */}
-          <div className="prompt-fixed">
-            <h4>기본 링크 — 고정</h4>
-            <pre>{SHARED_PREVIEW_PROMPT}</pre>
-          </div>
+          {/* 기본 링크의 문구는 여기 안 나온다. 고칠 수 없는 것을 편집칸 위에
+              펼쳐 두면 무엇을 고치는 화면인지 흐려진다(2026-08-22 관리자 지시). */}
           <h4 className="prompt-editor-label">개인 링크 — 내가 고쳐 쓰는 것</h4>
           <textarea
             className="prompt-editor-text"

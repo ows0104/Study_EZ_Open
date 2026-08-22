@@ -36,15 +36,6 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 /**
- * 파일을 새 탭에서 연다.
- *
- * 서명 URL은 수명이 분 단위라 화면을 그릴 때 미리 받아 둘 수 없다. 누른
- * 순간에 받아서 바로 연다.
- *
- * `window.open`을 먼저 부르고 나중에 주소를 채우는 이유는, await 뒤에 부르면
- * 사용자 제스처와 끊겨 팝업 차단에 걸리기 때문이다.
- */
-/**
  * 파일을 바로 받는다.
  *
  * `openSignedFile`과 달리 탭을 열지 않는다. 덱은 보는 것이 아니라 받는 것이라
@@ -65,6 +56,18 @@ export async function downloadSignedFile(path: string, filename: string): Promis
   anchor.remove();
 }
 
+/**
+ * 파일을 새 탭에서 연다.
+ *
+ * 서명 URL은 수명이 분 단위라 화면을 그릴 때 미리 받아 둘 수 없다. 누른
+ * 순간에 받아서 바로 연다.
+ *
+ * `window.open`을 먼저 부르고 나중에 주소를 채우는 이유는, await 뒤에 부르면
+ * 사용자 제스처와 끊겨 팝업 차단에 걸리기 때문이다.
+ *
+ * **주소에 `?inline=1`을 붙여야 정말 열린다.** 안 붙이면 서버가 첨부로
+ * 서명해 주고, 그러면 탭이 뜨자마자 내려받기로 바뀌며 빈 탭만 남는다.
+ */
 export async function openSignedFile(path: string): Promise<void> {
   const tab = window.open("", "_blank", "noopener,noreferrer");
   try {

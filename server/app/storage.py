@@ -52,7 +52,22 @@ class ObjectStorage:
             ExpiresIn=expires_in,
         )
 
-    def presign_download(self, key: str, *, filename: str | None = None, expires_in: int | None = None) -> str:
+    def presign_download(
+        self,
+        key: str,
+        *,
+        filename: str | None = None,
+        inline: bool = False,
+        content_type: str | None = None,
+        expires_in: int | None = None,
+    ) -> str:
+        """서명된 GET URL.
+
+        `inline`은 브라우저에게 받지 말고 열라는 뜻이다. 필기 PDF를 내려받지
+        않고 새 탭에서 바로 읽으려고 있다. 이때는 저장된 content type도 같이
+        덮어쓴다 — 올릴 때 `application/octet-stream`으로 들어간 것이 있으면
+        `inline`을 줘도 브라우저가 뷰어 대신 저장 창을 연다.
+        """
         settings = get_settings()
         expires_in = expires_in or settings.signed_url_ttl
         if self.local_root is not None:
@@ -60,16 +75,21 @@ class ObjectStorage:
             # 배포에서는 `filename`이 붙은 것만 첨부(attachment)로 나간다. 로컬도
             # 같아야 한다 — 안 그러면 .apkg가 text/plain으로 화면에 펼쳐진다.
             # 슬라이드 이미지는 filename 없이 부르므로 그대로 인라인이다.
-            return f"{url}?download={quote(filename, safe='')}" if filename else url
+            if not filename:
+                return url
+            key_name = "inline" if inline else "download"
+            return f"{url}?{key_name}={quote(filename, safe='')}"
         params: dict[str, Any] = {"Bucket": self.bucket, "Key": key}
         if filename:
             # 한글 파일명은 헤더에 그대로 못 들어간다. ASCII 사본과 RFC 5987
             # 형식을 함께 실어야 브라우저마다 다르게 깨지는 것을 막는다.
             ascii_name = filename.encode("ascii", "ignore").decode("ascii").strip().replace('"', "")
             params["ResponseContentDisposition"] = (
-                f'attachment; filename="{ascii_name or "studyez"}"; '
+                f'{"inline" if inline else "attachment"}; filename="{ascii_name or "studyez"}"; '
                 f"filename*=UTF-8''{quote(filename, safe='')}"
             )
+        if inline and content_type:
+            params["ResponseContentType"] = content_type
         return self.client.generate_presigned_url("get_object", Params=params, ExpiresIn=expires_in)
 
     def head(self, key: str) -> dict[str, Any] | None:

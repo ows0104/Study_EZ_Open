@@ -41,9 +41,14 @@ export function LecturePage() {
   const quiz = detail.prequiz;
 
   async function open(file: LectureFile) {
+    // 필기는 PDF라 브라우저가 그대로 보여 줄 수 있다. `inline=1`이 없으면
+    // 서버가 첨부로 서명해 줘서 탭이 뜨자마자 내려받기로 바뀐다. 덱(.apkg)은
+    // 받아야 쓰는 것이라 그대로 둔다.
+    const inline = file.kind === "notes_prev" || file.kind === "notes_current";
     try {
       await openSignedFile(
-        `/api/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}/files/${file.id}`,
+        `/api/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}/files/${file.id}` +
+          (inline ? "?inline=1" : ""),
       );
     } catch (cause) {
       setError((cause as Error).message);
