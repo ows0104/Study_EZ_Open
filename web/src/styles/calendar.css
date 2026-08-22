@@ -300,7 +300,25 @@
 .month-calendar {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  grid-auto-rows: minmax(112px, auto);
+  /* 머리줄을 못 박아 둔다. 안 적으면 아래 `grid-auto-rows`가 이 줄까지 잡아서
+     요일 다섯 글자가 112px짜리 띠 한가운데에 뜬다. 주간 격자도 같은 꼴로
+     `grid-template-rows: 46px`을 따로 적고 있다.
+     `auto`가 아니라 `min-content`인 이유는, `auto`면 강의가 없는 달에서
+     머리줄까지 남는 높이를 나눠 가져 36px이 50px이 되기 때문이다. */
+  grid-template-rows: min-content;
+  /* **바닥은 칸이 들고, 줄은 내용을 따른다.**
+   *
+   * `minmax(112px, auto)`로 적었더니 강의가 여섯인 날에서 칸이 넘쳐 **아랫줄
+   * 강의 위에 겹쳐 찍혔다**(칸 116px에 목록 147px). 격자의 높이가 정해져
+   * 있으면 `auto` 최대값은 **남는 자리 안에서만** 늘어나는데, 바닥값 112px
+   * 일곱 줄이 이미 그 높이를 거의 채워서 늘어날 자리가 없었다. 줄은 안 늘고
+   * 칸 안의 목록만 제 높이로 그려지니 다음 줄로 흘러넘친다.
+   *
+   * 바닥값을 내용에서 받아야 한다. `min-content`가 그것이고, 칸의
+   * `min-height: 112px`이 그 값의 아래를 받친다 — 둘을 곱하면 "내용만큼,
+   * 최소 112px"이 된다. 최대값은 `auto`로 남겨서 강의가 적은 달에는 줄이
+   * 남는 높이를 나눠 갖는다. */
+  grid-auto-rows: minmax(min-content, auto);
 }
 
 .month-weekday {
@@ -320,6 +338,8 @@
 
 .month-day {
   display: grid;
+  /* 줄 높이의 바닥이 여기 있다. 위 `grid-auto-rows` 주석을 보라. */
+  min-height: 112px;
   min-width: 0;
   padding: 7px 6px;
   grid-template-rows: 24px auto;
@@ -1069,29 +1089,6 @@ button.panel-action.is-download:hover:not(:disabled)::after {
   transform: translateY(3px);
 }
 
-/* 필기. 받지 않고 새 탭에서 열리므로 화살표가 밖을 가리킨다. */
-.panel-action.is-note::after {
-  content: "↗";
-}
-
-button.panel-action.is-note:hover:not(:disabled)::after {
-  transform: translate(2px, -2px);
-}
-
-/* 파일 이름은 자르지 않는다. 끝에 붙은 필기자·판수가 잘리면 두 판이 같은
-   이름으로 보인다. 예습에 붙일 파일을 고르는 것도 이 이름으로 한다. */
-.panel-action.is-note .panel-note-name {
-  margin-top: 1px;
-  color: var(--ink-2);
-  font-size: 12px;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-}
-
-.panel-action.is-note small {
-  margin-top: 2px;
-}
-
 .panel-action.is-empty {
   display: block;
   padding: 12px 14px;
@@ -1135,6 +1132,34 @@ button.panel-action.is-note:hover:not(:disabled)::after {
   background: var(--accent-soft);
 }
 
+/* 프롬프트 고치기. 다시 만들기와 같은 자리·같은 크기다 — 둘 다 개인 링크
+   줄에 붙는 드문 일이고, 크기가 다르면 줄이 들쭉날쭉해진다. */
+.panel-prompt.is-open {
+  border-color: var(--accent-line);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* 고쳐 쓴 사람에게만 붙는 표시. 기본값을 쓰는 사람에게는 아무것도 없다. */
+.panel-prompt.is-custom {
+  color: var(--accent-ink);
+}
+
+.panel-prompt.is-custom::after {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  content: "";
+}
+
+.panel-prompt {
+  position: relative;
+}
+
 /* 도는 동안은 눌러도 안 되는 상태다. 도는 것이 그 말을 대신한다. */
 .panel-remake.is-busy span {
   animation: remake-spin 0.9s linear infinite;
@@ -1159,13 +1184,6 @@ button.panel-action.is-note:hover:not(:disabled)::after {
 .panel-subaction:hover {
   color: var(--accent-ink);
   text-decoration: underline;
-}
-
-.panel-subaction.is-toggle {
-  min-height: 0;
-  border: 0;
-  background: transparent;
-  text-align: left;
 }
 
 /* 무엇을 해야 하는지 한 줄. 눌린 뒤에만 나온다. */
@@ -1235,22 +1253,73 @@ button.panel-action.is-note:hover:not(:disabled)::after {
   font-size: 10.5px;
 }
 
-/* 고쳐 쓴 사람에게만 붙는다. 기본값을 쓰는 사람에게는 아무 표시도 없다. */
-.panel-badge {
-  margin-left: 6px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  color: var(--accent-ink);
-  background: var(--accent-soft);
-  font-size: 10px;
-  font-style: normal;
-  font-weight: 700;
-}
-
 .prompt-editor {
   display: grid;
   margin: 4px 0 10px;
   gap: 7px;
+}
+
+/* 필기 둘. 강조하는 셋 아래, 강의 정보 위에 눕는다.
+ *
+ * 누르면 열리지만 **주요 버튼만큼 눈에 걸리면 안 된다.** 한동안 큰 버튼으로
+ * 세워 뒀다가 되돌린 자리다. 테두리도 배경도 없고, 눌린다는 것은 hover에서만
+ * 말한다. */
+.event-panel-notes {
+  display: grid;
+  margin: 14px 0 0;
+  padding: 0;
+  gap: 1px;
+  list-style: none;
+}
+
+.event-panel-note {
+  display: grid;
+  width: calc(100% + 12px);
+  min-height: 0;
+  margin-left: -6px;
+  padding: 4px 6px;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: baseline;
+  border: 0;
+  border-radius: var(--r-2);
+  background: transparent;
+  text-align: left;
+}
+
+button.event-panel-note:hover {
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+
+.event-panel-note span {
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* 이름은 한 줄로 자른다. 전체는 `title`에 있고, 어차피 열어 보면 보인다. */
+.event-panel-note b {
+  overflow: hidden;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-panel-note small {
+  color: var(--ink-3);
+  font-size: 10.5px;
+}
+
+.event-panel-note.is-empty {
+  color: var(--ink-3);
+}
+
+.event-panel-note.is-empty b {
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .prompt-editor-label {

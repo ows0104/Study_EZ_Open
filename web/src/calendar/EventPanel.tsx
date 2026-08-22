@@ -176,12 +176,13 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 }
 
 /**
- * 할 일 전부. 순서가 공부 순서다 — 강의 화면과 같게 둔다.
+ * 강조하는 셋. 예습 링크 · Pre-Quiz 덱 · Main-Quiz 덱.
  *
- *   작년 필기 → 예습 링크 → Pre-Quiz → 올해 필기 → Main-Quiz
+ * 링크는 누르면 바로 열리고 덱은 누르면 바로 받는다. 중간에 확인할 화면을
+ * 두지 않는다 — 그 셋이 이 패널의 존재 이유다.
  *
- * 필기는 누르면 열리고(내려받지 않는다), 링크는 누르면 바로 열리고, 덱은
- * 누르면 바로 받는다. 중간에 확인할 화면을 두지 않는다.
+ * **필기는 그 셋이 아니다.** 한동안 여기 큰 버튼으로 세워 뒀는데 주요 버튼만큼
+ * 눈에 걸렸다. 아래 조용한 줄로 돌려보내되, 누르면 열리는 것은 그대로 둔다.
  */
 function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureDetail }) {
   const base = `/api/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
@@ -209,8 +210,6 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
 
   return (
     <div className="event-panel-actions">
-      <NoteAction file={fileOf("notes_prev")} label="작년 필기" onOpen={open} />
-
       <PreviewAction lecture={lecture} detail={detail} base={base} onError={setError} />
 
       <DeckAction file={fileOf("pre_apkg")} label="Pre-Quiz 덱" count={quiz?.itemCount} onDownload={download} />
@@ -223,9 +222,10 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
         </a>
       ) : null}
 
-      <NoteAction file={fileOf("notes_current")} label="올해 필기" onOpen={open} />
-
       <DeckAction file={fileOf("main_apkg")} label="Main-Quiz 덱" onDownload={download} />
+
+      {/* 강의 정보(일시·담당·과목) 바로 위. 읽는 것에 가깝지만 누르면 열린다. */}
+      <Notes detail={detail} onOpen={open} />
 
       {error ? <p className="notice is-error">{error}</p> : null}
     </div>
@@ -233,33 +233,40 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
 }
 
 /**
- * 필기 한 편.
+ * 필기 둘. 작년 것과 올해 것.
  *
  * **누르면 새 탭에서 열린다. 받지 않는다.** PDF라 브라우저가 그대로 보여 줄 수
- * 있는데, 전까지는 이 패널에서 필기를 열 방법이 아예 없었다 — 맨 아래 정보
- * 목록에 이름만 한 줄로 적혀 있었다.
+ * 있다.
  *
- * 이름을 줄임표로 자르지 않는다. 파일명 끝에 필기자와 판수가 붙어 있어서
- * 잘리는 자리가 하필 두 판을 가르는 자리이고, ChatGPT에 붙일 파일을 고르는
- * 것도 이 이름으로 한다.
+ * 생김새는 정보 줄에 가깝다 — 예습 링크·덱과 같은 무게로 세우면 이 패널이
+ * 무엇을 하라는 화면인지 흐려진다. 이름은 한 줄로 자르고 전체는 `title`에
+ * 남긴다. 어차피 열어 보면 무엇인지 보인다.
  */
-function NoteAction({
-  file,
-  label,
-  onOpen,
-}: {
-  file: LectureFile | undefined;
-  label: string;
-  onOpen: (file: LectureFile) => void;
-}) {
-  // 덱과 같다. 빠지면 "아직 없다"와 "이 강의에는 원래 없다"가 안 갈린다.
-  if (!file) return <span className="panel-action is-empty">{label} — 아직 없습니다</span>;
+function Notes({ detail, onOpen }: { detail: LectureDetail; onOpen: (file: LectureFile) => void }) {
+  const rows: [string, LectureFile | undefined][] = [
+    ["작년", detail.files.find((file) => file.kind === "notes_prev")],
+    ["올해", detail.files.find((file) => file.kind === "notes_current")],
+  ];
   return (
-    <button className="panel-action is-note" onClick={() => onOpen(file)}>
-      <strong>{label}</strong>
-      <span className="panel-note-name">{file.filename}</span>
-      <small>{fileSize(file.sizeBytes)} · 새 탭에서 열기</small>
-    </button>
+    <ul className="event-panel-notes">
+      {rows.map(([label, file]) => (
+        <li key={label}>
+          {file ? (
+            <button className="event-panel-note" onClick={() => onOpen(file)} title={`${file.filename} — 새 탭에서 열기`}>
+              <span>{label}</span>
+              <b>{file.filename}</b>
+              <small>{fileSize(file.sizeBytes)}</small>
+            </button>
+          ) : (
+            // 빠지면 "아직 없다"와 "이 강의에는 원래 없다"가 안 갈린다.
+            <span className="event-panel-note is-empty">
+              <span>{label}</span>
+              <b>아직 없음</b>
+            </span>
+          )}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -296,8 +303,9 @@ function PreviewAction({
   const isAdmin = Boolean(useMe()?.isAdmin);
   const lectureId = `${lecture.subject}/${lecture.runId}`;
   const notesPrev = detail.files.find((file) => file.kind === "notes_prev");
-  const editor = (
-    <PromptEditor store={promptStore} detail={detail} open={showPrompt} onToggle={() => setShowPrompt((o) => !o)} />
+  // 토글은 개인 링크 줄 안에 들어가고, 편집칸은 그 줄 아래에 펼쳐진다.
+  const promptToggle = (
+    <PromptToggle open={showPrompt} custom={promptStore.isCustom} onClick={() => setShowPrompt((o) => !o)} />
   );
 
   /**
@@ -400,7 +408,8 @@ function PreviewAction({
         <span className="panel-action is-key is-empty">기본 링크 — 아직 없습니다</span>
       )}
 
-      {/* 개인 링크 — 사람마다 하나. 프롬프트도 자기 것으로 묻는다. */}
+      {/* 개인 링크 — 사람마다 하나. 프롬프트도 자기 것으로 묻는다. 그래서
+          프롬프트 고치기가 이 줄 안에 붙어 있다 — 기본 링크에는 안 듣는다. */}
       {detail.myPreview?.conversationUrl ? (
         <div className="panel-row">
           {/* 저장되면 이 자리가 회색 버튼("개인 예습 시작")에서 이 파란 줄로
@@ -418,6 +427,7 @@ function PreviewAction({
             <strong>개인 링크</strong>
             <small>내 예습 대화 이어서 열기</small>
           </a>
+          {promptToggle}
           {canMake ? (
             // 자기 것이라 묻지 않는다. 옛 대화는 ChatGPT에 그대로 남아 있고
             // 여기서 가리키는 주소만 새것으로 바뀐다.
@@ -430,13 +440,40 @@ function PreviewAction({
           ) : null}
         </div>
       ) : canMake ? (
-        <button className="panel-action" onClick={() => start("personal")} disabled={Boolean(busy)}>
-          <strong>{busy === "personal" ? "여는 중…" : "개인 예습 시작"}</strong>
-          <small>내 프롬프트로 새 대화를 엽니다</small>
-        </button>
+        <div className="panel-row">
+          <button className="panel-action" onClick={() => start("personal")} disabled={Boolean(busy)}>
+            <strong>{busy === "personal" ? "여는 중…" : "개인 예습 시작"}</strong>
+            <small>내 프롬프트로 새 대화를 엽니다</small>
+          </button>
+          {promptToggle}
+        </div>
       ) : null}
-      {editor}
+      {showPrompt ? <PromptEditor store={promptStore} detail={detail} /> : null}
     </>
+  );
+}
+
+/**
+ * 프롬프트 고치기. 개인 링크 줄 안에 붙는 아이콘 하나다.
+ *
+ * 전에는 링크 아래 한 줄을 통째로 쓰고 있었는데, 그러면 기본 링크에도 걸리는
+ * 말처럼 보인다. 고쳐 쓰는 것은 개인 링크뿐이다.
+ *
+ * 이름이 화면에 안 나오므로 `aria-label`과 `title`이 그것을 대신한다.
+ * 고쳐 쓴 사람에게는 색으로 표시한다 — 안 고친 사람에게는 아무 표시도 없다.
+ */
+function PromptToggle({ open, custom, onClick }: { open: boolean; custom: boolean; onClick: () => void }) {
+  const label = `내 프롬프트 ${open ? "접기" : "고치기"}${custom ? " (고쳐 쓴 것이 있습니다)" : ""}`;
+  return (
+    <button
+      className={`panel-remake panel-prompt${custom ? " is-custom" : ""}${open ? " is-open" : ""}`}
+      onClick={onClick}
+      aria-label={label}
+      aria-expanded={open}
+      title={label}
+    >
+      <span aria-hidden="true">✎</span>
+    </button>
   );
 }
 
@@ -556,13 +593,9 @@ function DeckAction({
 function PromptEditor({
   store,
   detail,
-  open,
-  onToggle,
 }: {
   store: ReturnType<typeof usePreviewPrompt>;
   detail: LectureDetail;
-  open: boolean;
-  onToggle: () => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -590,57 +623,49 @@ function PromptEditor({
   }
 
   return (
-    <>
-      <button className="panel-subaction is-toggle" onClick={onToggle}>
-        프롬프트 {open ? "접기" : "고치기"}
-        {store.isCustom ? <em className="panel-badge">내 것</em> : null}
-      </button>
-      {open ? (
-        <div className="prompt-editor">
-          {/* 기본 링크의 문구는 여기 안 나온다. 고칠 수 없는 것을 편집칸 위에
-              펼쳐 두면 무엇을 고치는 화면인지 흐려진다(2026-08-22 관리자 지시). */}
-          <h4 className="prompt-editor-label">개인 링크 — 내가 고쳐 쓰는 것</h4>
-          <textarea
-            className="prompt-editor-text"
-            value={text}
-            spellCheck={false}
-            onChange={(event) => setDraft(event.target.value)}
-            aria-label="예습 프롬프트"
-          />
-          <p className="prompt-editor-tokens">
-            {PROMPT_TOKENS.map(({ token, label }) => (
-              <button
-                key={token}
-                type="button"
-                title={`${label} 넣기`}
-                onClick={() => setDraft(`${text}${text.endsWith("\n") ? "" : " "}${token}`)}
-              >
-                {token}
-              </button>
-            ))}
-            <span>누르면 끝에 붙습니다</span>
-          </p>
-          <div className="prompt-editor-actions">
-            <button className="is-primary" onClick={save} disabled={!dirty || store.saving}>
-              {store.saving ? "저장 중…" : "저장"}
-            </button>
-            <button className="is-quiet" onClick={reset} disabled={!store.isCustom || store.saving}>
-              기본값으로
-            </button>
-            {draft !== null ? (
-              <button className="is-quiet" onClick={() => setDraft(null)} disabled={store.saving}>
-                되돌리기
-              </button>
-            ) : null}
-          </div>
-          {error ? <p className="prompt-editor-error">{error}</p> : null}
-          <details className="prompt-editor-preview">
-            <summary>이 강의로 채워 보기</summary>
-            <pre>{renderPreviewPrompt(text, detail)}</pre>
-          </details>
-        </div>
-      ) : null}
-    </>
+    <div className="prompt-editor">
+      {/* 기본 링크의 문구는 여기 안 나온다. 고칠 수 없는 것을 편집칸 위에
+          펼쳐 두면 무엇을 고치는 화면인지 흐려진다(2026-08-22 관리자 지시). */}
+      <h4 className="prompt-editor-label">개인 링크 — 내가 고쳐 쓰는 것</h4>
+      <textarea
+        className="prompt-editor-text"
+        value={text}
+        spellCheck={false}
+        onChange={(event) => setDraft(event.target.value)}
+        aria-label="예습 프롬프트"
+      />
+      <p className="prompt-editor-tokens">
+        {PROMPT_TOKENS.map(({ token, label }) => (
+          <button
+            key={token}
+            type="button"
+            title={`${label} 넣기`}
+            onClick={() => setDraft(`${text}${text.endsWith("\n") ? "" : " "}${token}`)}
+          >
+            {token}
+          </button>
+        ))}
+        <span>누르면 끝에 붙습니다</span>
+      </p>
+      <div className="prompt-editor-actions">
+        <button className="is-primary" onClick={save} disabled={!dirty || store.saving}>
+          {store.saving ? "저장 중…" : "저장"}
+        </button>
+        <button className="is-quiet" onClick={reset} disabled={!store.isCustom || store.saving}>
+          기본값으로
+        </button>
+        {draft !== null ? (
+          <button className="is-quiet" onClick={() => setDraft(null)} disabled={store.saving}>
+            되돌리기
+          </button>
+        ) : null}
+      </div>
+      {error ? <p className="prompt-editor-error">{error}</p> : null}
+      <details className="prompt-editor-preview">
+        <summary>이 강의로 채워 보기</summary>
+        <pre>{renderPreviewPrompt(text, detail)}</pre>
+      </details>
+    </div>
   );
 }
 

@@ -65,15 +65,40 @@ export async function downloadSignedFile(path: string, filename: string): Promis
  * `window.open`을 먼저 부르고 나중에 주소를 채우는 이유는, await 뒤에 부르면
  * 사용자 제스처와 끊겨 팝업 차단에 걸리기 때문이다.
  *
+ * **`noopener`를 features에 주면 안 된다.** 그러면 `window.open`이 핸들이 아니라
+ * `null`을 돌려준다(명세다). 그 `null`을 "팝업이 막혔다"로 읽고 있어서, 누를
+ * 때마다 빈 탭이 하나 열리고 **보던 탭이 파일로 바뀌었다** — 캘린더가 사라지는
+ * 것이 실제 증상이었다. 핸들을 받아 두고 `opener`는 직접 끊는다.
+ *
  * **주소에 `?inline=1`을 붙여야 정말 열린다.** 안 붙이면 서버가 첨부로
  * 서명해 주고, 그러면 탭이 뜨자마자 내려받기로 바뀌며 빈 탭만 남는다.
  */
 export async function openSignedFile(path: string): Promise<void> {
-  const tab = window.open("", "_blank", "noopener,noreferrer");
+  const tab = window.open("", "_blank");
+  if (tab) {
+    // 새 탭이 우리 window를 되짚지 못하게 한다. `noopener`가 하던 일이다.
+    try {
+      tab.opener = null;
+    } catch {
+      // 막혀도 그만이다. 곧 다른 출처로 넘어가면 어차피 끊긴다.
+    }
+  }
   try {
     const { url } = await api<{ url: string }>(path);
-    if (tab) tab.location.href = url;
-    else window.location.href = url;
+    if (tab) {
+      // `replace`라서 빈 about:blank가 그 탭의 뒤로 가기에 남지 않는다.
+      tab.location.replace(url);
+      return;
+    }
+    // 팝업이 정말 막힌 경우. 그래도 보던 탭은 건드리지 않는다 — 파일 하나
+    // 열자고 캘린더를 잃는 것이 더 나쁘다.
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
   } catch (error) {
     tab?.close();
     throw error;
