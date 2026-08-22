@@ -34,23 +34,30 @@ export function categoryLabel(category: TimetableEvent["category"]) {
   return categoryLabels[category] ?? category;
 }
 
-/** 예습은 강의 전에만, 필기와 본덱은 강의 후에만 할 일이다. */
-export type LecturePhase = "before" | "after";
+/**
+ * 자리 하나의 세 단계.
+ *
+ * `none`은 아직 아무것도 안 올라온 것이고, 자리는 그래도 잡는다 — 도형이 생기고
+ * 사라지는 대로 점이 좌우로 흔들리면 강의끼리 위치가 안 맞는다.
+ */
+export type SlotState = "none" | "ready" | "done";
 
 /**
- * 강의가 지났는가.
+ * 칸에 서는 자리 둘. 왼쪽이 예습, 오른쪽이 복습이고 순서는 절대 안 바뀐다.
  *
- * 3주 뒤 강의에 작년 필기가 붙어 있다고 오늘 할 일이 되는 것은 아니다.
- *
- * **끝 시각까지 본다.** 당일을 통째로 한쪽에 넣으면 오전 강의가 저녁까지
- * "아직 예습할 것"으로 남거나, 오후 강의가 아침부터 "복습할 것"이 된다.
+ * **시점으로 가르지 않는다.** 전에는 강의 전에 예습 점을, 후에 복습 점을 그려서
+ * 한 번에 최대 둘이었는데, 그러면 강의가 끝나는 순간 다 푼 예습의 흔적이
+ * 사라졌다. 채운 점은 "할 일"이 아니라 "한 일"이라 지울 이유가 없다.
  */
-export function entryPhase(entry: CalendarEntry, now: Date): LecturePhase {
-  const [hour, minute] = entry.endTime.split(":").map(Number);
-  const [year, month, day] = entry.date.split("-").map(Number);
-  const ended = new Date(year, month - 1, day, hour || 0, minute || 0);
-  return now >= ended ? "after" : "before";
-}
+export type Slots = {
+  pre: SlotState;
+  /**
+   * 웹 예습퀴즈를 푼 비율(0~1). 잴 것이 없으면 `null`이고, 그때는 채움을 아예
+   * 안 그린다 — 0%로 그리면 "안 풀었다"로 읽히는데 실은 풀 자리가 없는 것이다.
+   */
+  preFill: number | null;
+  main: SlotState;
+};
 
 /** 웹 예습퀴즈를 끝까지 풀었는가. 잴 것이 없으면 "끝냈다"고 하지 않는다. */
 export function prequizDone(lecture: LectureRef) {
@@ -59,28 +66,48 @@ export function prequizDone(lecture: LectureRef) {
 }
 
 /**
+ * 강의 하나 → 자리 둘.
+ *
+ * **준비는 OR다.** 예습 셋(작년 필기·예습 링크·Pre-Quiz) 중 하나만 올라와도 자리가
+ * 켜진다. 셋을 다 요구하면 필기만 올라온 흔한 상태에서 사용자 화면에 아무 일도
+ * 없던 것이 되는데, 덜 채운 것은 관리자의 미완이지 사용자의 할 일이 아니다.
+ * 무엇이 있는지는 눌러서 연 패널이 말한다.
+ *
+ * **끝냄은 잴 수 있는 것만 본다.** 웹 예습퀴즈를 다 풀었거나, 그 자리의 파일을
+ * 받아 갔거나다. 받아 간 것은 엄밀히 "풀었다"가 아니지만 서버가 볼 수 있는
+ * 가장 가까운 신호이고, 이것이 없으면 덱만 쓰는 사람은 영영 못 채운다.
+ */
+export function lectureSlots(lecture: LectureRef): Slots {
+  const { marks, grabbed, prequizProgress: progress } = lecture;
+
+  const preReady = marks.notesPrev || marks.preview || marks.prequiz;
+  const preDone = grabbed.pre || prequizDone(lecture);
+  const mainReady = marks.notesCurrent || marks.quiz;
+
+  return {
+    pre: preDone ? "done" : preReady ? "ready" : "none",
+    // 받아 간 사람은 Anki 쪽이라 서버가 진행을 못 본다. 그때는 비율을 안 그리고
+    // 꽉 채운다 — 반쯤 찬 점으로 남겨 두면 영영 안 끝나는 자리가 된다.
+    preFill: grabbed.pre || !progress ? null : progress.answered / progress.total,
+    main: grabbed.main ? "done" : mainReady ? "ready" : "none",
+  };
+}
+
+/**
  * 아직 할 일이 남은 칸인가. 제목의 무게가 이것으로 갈린다.
  *
- * **하나뿐이다.** 전에는 "자료 없음 / 자료 있음 / 할 일 있음" 세 단이 왼쪽
- * 띠의 짙기로 나갔는데, 그 축을 걷어냈다 — 띠로도 말하고 점으로도 말하면 같은
- * 것을 두 번 말하는 것이고, 무엇이 얼마나 남았는지는 점이 훨씬 정확하다.
- * 그래서 "자료는 있는데 풀 것은 없다"는 이제 안 그린다.
- *
- * **"풀었다"를 아는 것은 웹 예습퀴즈뿐이다.** 덱은 apkg로 나가 Anki에서
- * 풀리므로 서버에 기록이 없다. 그래서 강의 후의 참은 여전히 "받을 것이
- * 있다"이지 "아직 안 풀었다"가 아니다.
+ * **`ready`만 참이다.** `none`은 관리자가 안 올린 것이고 `done`은 이미 한 것이다.
+ * 둘 다 사용자가 지금 할 수 있는 일이 아니다.
  */
-export function hasTodo(entry: CalendarEntry, phase: LecturePhase) {
+export function hasTodo(entry: CalendarEntry) {
   // 시험은 붙는 자료가 없어도 그 자체가 할 일이다. 자료로 판정하면 학기에서
   // 가장 중요한 칸이 가장 흐리게 나온다.
   if (entry.category === "exam") return true;
 
-  // 강의 전에는 잰 것이 정한다. 다 푼 예습퀴즈는 더 이상 할 일이 아니다.
-  if (phase === "before") {
-    return entry.lectures.some((lecture) => lecture.marks.prequiz && !prequizDone(lecture));
-  }
-
-  return entry.lectures.some((lecture) => lecture.marks.quiz);
+  return entry.lectures.some((lecture) => {
+    const slots = lectureSlots(lecture);
+    return slots.pre === "ready" || slots.main === "ready";
+  });
 }
 
 export function startOfDay(value: Date) {
@@ -173,4 +200,16 @@ export function toCalendarEntries(events: TimetableEvent[]): CalendarEntry[] {
 /** 열어 볼 것이 있는 칸인가. 시험과 휴일에는 붙일 자료가 없다. */
 export function canOpen(entry: CalendarEntry) {
   return entry.lectures.length > 0;
+}
+
+/**
+ * 자리 둘을 세울 칸인가.
+ *
+ * 강의 하나가 붙은 칸만이다. 시험·휴일·자율학습에는 붙을 자료가 없고, 한 교시에
+ * 여럿이 열리는 선택형 과목도 같이 뺀다 — 셋을 한 자리로 접으면 "둘 중 하나만
+ * 했다"가 사라지고, 셋을 다 세우면 자리가 여섯이 되어 칸에 안 들어간다. 그 칸은
+ * 개수만 찍고 나머지는 패널로 넘긴다.
+ */
+export function hasSlots(entry: CalendarEntry) {
+  return entry.lectures.length === 1;
 }

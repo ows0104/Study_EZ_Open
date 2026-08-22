@@ -3,8 +3,8 @@
 시간표만으로 그려진다. 파이프라인 산출물이 하나도 없어도 화면은 완성된 모습이고,
 자료가 올라오면 칸에 점이 붙는다.
 
-**이 응답은 사람마다 다르다.** `prequizProgress`가 그 사람이 푼 수를 싣기
-때문이다. 캐시를 붙이려거든 사용자별로 갈라야 한다.
+**이 응답은 사람마다 다르다.** `prequizProgress`와 `grabbed`가 그 사람이 푼 수와
+받아 간 것을 싣기 때문이다. 캐시를 붙이려거든 사용자별로 갈라야 한다.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from app.auth import CurrentUser, require_approved_user
 from app.database import get_db
 from app.models import Lecture, TimetableEvent
-from app.routes.common import material_marks, prequiz_progress
+from app.routes.common import asset_grabs, grab_tracks, material_marks, prequiz_progress
 
 router = APIRouter()
 
@@ -47,6 +47,7 @@ def read_timetable(
     keys = [(lecture.subject, lecture.run_id) for lecture in lectures]
     marks = material_marks(db, keys)
     progress = prequiz_progress(db, user.id, keys)
+    grabs = asset_grabs(db, user.id, keys)
 
     by_event: dict[str, list[dict[str, Any]]] = {}
     for lecture in lectures:
@@ -61,6 +62,10 @@ def read_timetable(
                 # 웹에서 풀 문항이 없는 강의는 null이다. "안 풀었다"와 "잴 것이
                 # 없다"는 화면에서 다르게 그려야 한다.
                 "prequizProgress": progress.get(key),
+                # 덱을 받아 갔는가. 자리 둘(예습·복습)로 묶어서 내려보낸다 —
+                # 화면이 아는 것은 "이 자리를 손댔다"까지이고, Anki 안에서
+                # 얼마나 풀었는지는 여기서도 저기서도 볼 수 없다.
+                "grabbed": grab_tracks(grabs.get(key, set())),
             }
         )
 

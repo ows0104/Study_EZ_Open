@@ -1,7 +1,7 @@
 """서버가 들고 있는 전부.
 
-읽기 전용이 원칙이다. 로컬 러너가 채우고 웹이 읽는다. 사용자가 쓰는 테이블은
-`quiz_attempt` 하나뿐이다 — Pre-Quiz 웹 풀이의 채점 결과.
+읽기 전용이 원칙이다. 로컬 러너가 채우고 웹이 읽는다. 사용자가 쓰는 표는 둘뿐이다 —
+`quiz_attempt`(Pre-Quiz 웹 풀이의 채점 결과)와 `asset_grab`(파일을 받아 갔다).
 
 **키는 언제나 `(subject, run_id)` 복합이다.** `run_id`는 `260813_03` 같은
 날짜_교시라서 과목을 포함하지 않는다. 같은 교시에 여러 과목이 열리므로
@@ -43,6 +43,14 @@ ASSET_KINDS = frozenset(
         "media",  # media/*.png — 슬라이드 렌더
     }
 )
+
+# 관리자가 강의마다 채우는 다섯 칸. 사용자 화면의 점 둘이 이것을 두 갈래로 묶는다 —
+# 앞 셋이 예습, 뒤 둘이 복습이다.
+CHECKLIST_ITEMS = ("notes_prev", "preview", "pre_apkg", "notes_current", "main_apkg")
+
+# "받아 갔다"로 셀 종류. `media`는 뺀다 — 오답 해설이 근거 슬라이드를 띄울 때
+# 서명이 자동으로 나가므로, 세면 사용자가 받은 것이 아니라 해설을 본 것이 된다.
+GRABBABLE_KINDS = frozenset({"notes_prev", "notes_current", "pre_apkg", "main_apkg"})
 
 
 class Profile(Base):
@@ -303,3 +311,58 @@ class QuizAttempt(Base):
     answered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
     __table_args__ = (Index("ix_quiz_attempt_user_lecture", "user_id", "subject", "run_id"),)
+
+
+class AssetGrab(Base):
+    """이 사람이 이 강의의 이 종류를 받아 갔다.
+
+    **덱이 "했다"를 처음으로 말하게 하는 표다.** apkg는 Anki에서 풀리므로 서버가
+    풀이를 볼 방법이 없지만, 파일이 나가려면 `sign_file`에서 서명을 받아 가야
+    하고 그 서명은 사용자가 버튼을 눌러야 나간다. 그래서 여기 있는 것은 정확히는
+    *받아 갔다*지 *풀었다*가 아니다 — 화면에서 그 이상으로 읽히게 그리지 않는다.
+
+    **파일이 아니라 종류로 센다.** 같은 종류가 여러 파일일 수 있고(필기가 두
+    권으로 갈린 강의), 점은 "이 갈래를 손댔나"만 알면 된다.
+
+    서명 URL은 TTL 동안 재사용되므로 `count`는 내려받은 횟수가 아니라 **버튼을
+    누른 횟수**에 가깝다. 지금 화면은 안 쓰고, 나중에 "다시 받으러 온 강의"를
+    볼 때를 위해 남긴다.
+    """
+
+    __tablename__ = "asset_grab"
+
+    user_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    subject: Mapped[str] = mapped_column(Text, primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(24), primary_key=True)  # GRABBABLE_KINDS
+    count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    first_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    last_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    __table_args__ = (Index("ix_asset_grab_user_lecture", "user_id", "subject", "run_id"),)
+
+
+class LectureWaive(Base):
+    """관리자가 "이 강의엔 해당 없음"으로 닫은 체크 칸.
+
+    신설 강의에는 작년 필기가 없다. 그런 칸을 영영 미완으로 두면 관리자 화면이
+    빨간 배경이 되고, 배경이 된 경고는 아무것도 못 막는다.
+
+    **자료가 나중에 올라와도 지우지 않는다.** 올라온 것은 `asset`이 이미 알고
+    있고, 체크 칸은 "올라왔거나, 닫혔거나"로 판정한다. 관리자가 직접 되돌리기
+    전까지 이 줄은 그대로 남는다.
+    """
+
+    __tablename__ = "lecture_waive"
+
+    subject: Mapped[str] = mapped_column(Text, primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    item: Mapped[str] = mapped_column(String(24), primary_key=True)  # CHECKLIST_ITEMS
+    note: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["subject", "run_id"], ["lecture.subject", "lecture.run_id"], ondelete="CASCADE"
+        ),
+    )

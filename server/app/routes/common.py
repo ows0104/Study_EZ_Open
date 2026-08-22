@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.models import Asset, Lecture, PreItem, Preview, QuizAttempt
+from app.models import Asset, AssetGrab, Lecture, PreItem, Preview, QuizAttempt
 from app.naming import nfc
 from app.storage import ObjectStorage, StorageNotConfigured
 
@@ -36,17 +36,25 @@ def lecture_or_404(db: Session, subject: str, run_id: str) -> Lecture:
 
 
 def material_marks(db: Session, keys: list[LectureKey]) -> dict[LectureKey, dict[str, bool]]:
-    """강의 칩에 찍을 점. 캘린더 한 화면치를 한 번에 센다.
+    """강의마다 무엇이 올라와 있는가. 캘린더 한 화면치를 한 번에 센다.
+
+    **다섯 칸이 `CHECKLIST_ITEMS`와 하나씩 짝이다.** 관리자가 채우는 칸과 사용자가
+    보는 점이 같은 어휘를 쓴다는 뜻이다 — 앞 셋(`notesPrev`·`preview`·`prequiz`)이
+    예습 자리로, 뒤 둘(`notesCurrent`·`quiz`)이 복습 자리로 묶인다.
+
+    **작년 필기와 올해 필기를 갈라 센다.** 전에는 둘을 `notes` 하나로 묶었는데,
+    작년 필기는 강의 전에 예습으로 읽는 것이고 올해 필기는 강의 후에 복습으로
+    받는 것이라 쓰이는 자리가 아예 다르다.
+
+    **`quiz`는 본덱(`main_apkg`)만이다.** 두 덱은 목적 함수도 쓰는 시점도 달라서
+    한 점에 겹치면 어느 쪽도 안 뜻하게 된다.
 
     파일이 실제로 무엇인지는 상세 화면이 보여 준다. 여기서는 "있다/없다"만
     알면 되므로 종류별 개수를 세고 버린다.
-
-    **`quiz`는 본덱(`main_apkg`)만이다.** 전에는 `pre_apkg`와 `pre_item`도 같은
-    점을 켜서, 점만 보고는 시험 대비 덱이 올라왔는지 알 수 없었다. 두 덱은
-    목적 함수도 쓰는 시점도 달라서 한 점에 겹치면 어느 쪽도 안 뜻하게 된다.
     """
+    fields = ("notesPrev", "preview", "prequiz", "notesCurrent", "quiz")
     marks: dict[LectureKey, dict[str, bool]] = {
-        key: {"notes": False, "quiz": False, "prequiz": False, "preview": False} for key in keys
+        key: {field: False for field in fields} for key in keys
     }
     if not keys:
         return marks
@@ -60,18 +68,21 @@ def material_marks(db: Session, keys: list[LectureKey]) -> dict[LectureKey, dict
         if key in marks:
             marks[key][field] = True
 
+    by_kind = {
+        "notes_prev": "notesPrev",
+        "notes_current": "notesCurrent",
+        "pre_apkg": "prequiz",
+        "main_apkg": "quiz",
+    }
     asset_rows = db.execute(
         select(Asset.subject, Asset.run_id, Asset.kind)
         .where(Asset.subject.in_(subjects), Asset.run_id.in_(run_ids))
         .group_by(Asset.subject, Asset.run_id, Asset.kind)
     ).all()
     for subject, run_id, kind in asset_rows:
-        if kind in ("notes_current", "notes_prev"):
-            _touch((subject, run_id), "notes")
-        elif kind == "main_apkg":
-            _touch((subject, run_id), "quiz")
-        elif kind == "pre_apkg":
-            _touch((subject, run_id), "prequiz")
+        field = by_kind.get(kind)
+        if field:
+            _touch((subject, run_id), field)
 
     item_rows = db.execute(
         select(PreItem.subject, PreItem.run_id, func.count())
@@ -92,6 +103,43 @@ def material_marks(db: Session, keys: list[LectureKey]) -> dict[LectureKey, dict
             _touch((subject, run_id), "preview")
 
     return marks
+
+
+# 받아 간 종류를 사용자 화면의 자리 둘로 묶는 표. 한 자리에 여러 종류가 붙으므로
+# **하나만 받아도 그 자리는 채워진다** — 예습덱만 받고 작년 필기는 안 읽는 사람이
+# 미완으로 남으면 안 된다.
+GRAB_TRACKS = {"pre": ("notes_prev", "pre_apkg"), "main": ("notes_current", "main_apkg")}
+
+
+def asset_grabs(db: Session, user_id: str, keys: list[LectureKey]) -> dict[LectureKey, set[str]]:
+    """이 사람이 강의마다 어떤 종류를 받아 갔는가.
+
+    **덱에서 "했다"를 아는 유일한 길이다.** apkg는 Anki에서 풀리므로 풀이 기록이
+    서버에 없지만, 파일이 나가려면 서명을 받아 가야 하고 그 서명은 사용자가
+    버튼을 눌러야 나간다. 그래서 이것은 *받아 갔다*지 *풀었다*가 아니다.
+    """
+    grabs: dict[LectureKey, set[str]] = {}
+    if not keys:
+        return grabs
+
+    wanted = set(keys)
+    rows = db.execute(
+        select(AssetGrab.subject, AssetGrab.run_id, AssetGrab.kind).where(
+            AssetGrab.user_id == user_id,
+            AssetGrab.subject.in_({subject for subject, _ in keys}),
+            AssetGrab.run_id.in_({run_id for _, run_id in keys}),
+        )
+    ).all()
+    for subject, run_id, kind in rows:
+        # 과목·run_id를 각각 IN으로 좁히면 교차곱이 섞여 들어온다.
+        if (subject, run_id) in wanted:
+            grabs.setdefault((subject, run_id), set()).add(kind)
+    return grabs
+
+
+def grab_tracks(kinds: set[str]) -> dict[str, bool]:
+    """받아 간 종류 집합 → 자리 둘의 참/거짓."""
+    return {track: any(kind in kinds for kind in members) for track, members in GRAB_TRACKS.items()}
 
 
 def prequiz_progress(

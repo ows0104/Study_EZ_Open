@@ -862,6 +862,52 @@ button.resource:hover:not(:disabled) {
   font-size: 12px;
 }
 
+/* 관리자 체크리스트 다섯 칸.
+ *
+ * **색은 남은 칸이 가져간다.** 끝낸 칸을 칠하면 다 한 강의가 화면에서 제일
+ * 시끄러워지고, 정작 밀린 강의가 묻힌다. 그래서 `todo`만 경고색을 쓰고 `done`은
+ * 가라앉는다 — 목록이 조용해지는 것이 다 했다는 신호다. */
+.checklist {
+  display: flex;
+  margin: 0 0 4px;
+  padding: 0;
+  gap: 4px;
+  flex-wrap: wrap;
+  list-style: none;
+}
+
+.checklist button {
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--ink-3);
+  background: none;
+  font-size: 10.5px;
+}
+
+/* 올라왔다. 눌러도 할 일이 없어서 버튼이 죽어 있다. */
+.checklist li.is-done button {
+  border-color: var(--line);
+  color: var(--ink-2);
+  background: var(--surface-2);
+  opacity: 1;
+}
+
+/* 아직 안 올라왔다. 이 화면에서 눈에 띄어야 할 유일한 것이다. */
+.checklist li.is-todo button {
+  border-color: var(--warn-line);
+  color: var(--warn);
+  background: var(--warn-soft);
+  font-weight: 600;
+}
+
+/* 해당 없음으로 닫았다. 흔적은 남기되 셈에서 빠진다. */
+.checklist li.is-waived button {
+  border-style: dashed;
+  color: var(--ink-3);
+  text-decoration: line-through;
+}
+
 .uploads {
   display: flex;
   margin: 0 0 4px;

@@ -1,7 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
-import type { AdminOverview, AdminRow, AppUser } from "../types";
+import { checklistItems, type AdminOverview, type AdminRow, type AppUser, type ChecklistItem } from "../types";
 import { lectureHref } from "../calendar/EventChip";
+
+/** 관리자가 채우는 다섯 칸. 순서가 곧 하는 순서다 — 앞 셋이 예습, 뒤 둘이 복습. */
+const checklistLabels: Record<ChecklistItem, string> = {
+  notes_prev: "25필기",
+  preview: "예습링크",
+  pre_apkg: "Pre덱",
+  notes_current: "26강의록",
+  main_apkg: "Main덱",
+};
+
+/** 아직 관리자 몫으로 남은 칸. `waived`는 닫은 것이므로 남은 것이 아니다. */
+function pending(row: AdminRow) {
+  return checklistItems.filter((item) => row.checklist[item] === "todo");
+}
 
 type Candidate = {
   id: string;
@@ -22,7 +36,7 @@ type Candidate = {
 export function AdminPage() {
   const [overview, setOverview] = useState<AdminOverview | null>(null);
   const [error, setError] = useState("");
-  const [filter, setFilter] = useState<"all" | "unmatched" | "flagged" | "no-preview">("all");
+  const [filter, setFilter] = useState<"all" | "pending" | "unmatched" | "flagged" | "no-preview">("all");
 
   const load = useCallback(() => {
     api<AdminOverview>("/api/admin/overview")
@@ -34,6 +48,8 @@ export function AdminPage() {
 
   const rows = useMemo(() => {
     const all = overview?.lectures ?? [];
+    // 밀린 것만 보는 갈래. 여기가 비면 그 주는 끝난 것이다.
+    if (filter === "pending") return all.filter((row) => pending(row).length > 0);
     if (filter === "unmatched") return all.filter((row) => !row.match.timetableEventId || !row.match.confirmed);
     if (filter === "flagged")
       return all.filter((row) => Object.values(row.runMeta).some((meta) => meta.reviewFlagged > 0));
@@ -49,19 +65,22 @@ export function AdminPage() {
   const flagged = overview.lectures.filter((row) =>
     Object.values(row.runMeta).some((meta) => meta.reviewFlagged > 0),
   ).length;
+  const incomplete = overview.lectures.filter((row) => pending(row).length > 0).length;
 
   return (
     <div className="admin">
       <h1>관리</h1>
       <p className="admin-summary">
-        강의 {overview.lectures.length}편 · 시간표에 못 붙은 것 <strong>{unmatched}</strong> · 확인 안 한 매칭{" "}
-        <strong>{unconfirmed}</strong> · 검토 표시 있는 덱 <strong>{flagged}</strong>
+        강의 {overview.lectures.length}편 · 체크 남은 것 <strong>{incomplete}</strong> · 시간표에 못 붙은 것{" "}
+        <strong>{unmatched}</strong> · 확인 안 한 매칭 <strong>{unconfirmed}</strong> · 검토 표시 있는 덱{" "}
+        <strong>{flagged}</strong>
       </p>
 
       <div className="admin-filters" role="group" aria-label="거르기">
         {(
           [
             ["all", "전체"],
+            ["pending", "체크 남음"],
             ["unmatched", "매칭 확인 필요"],
             ["flagged", "검토 표시"],
             ["no-preview", "예습 링크 없음"],
@@ -78,7 +97,7 @@ export function AdminPage() {
           <tr>
             <th>강의</th>
             <th>시간표 매칭</th>
-            <th>업로드</th>
+            <th>체크리스트</th>
             <th>예습 링크</th>
           </tr>
         </thead>
@@ -169,8 +188,19 @@ function AdminLectureRow({ row, onChanged }: { row: AdminRow; onChanged: () => v
   const [share, setShare] = useState(row.preview?.shareUrl ?? "");
   const [conversation, setConversation] = useState(row.preview?.conversationUrl ?? "");
   const [saving, setSaving] = useState(false);
+  const [waiving, setWaiving] = useState<ChecklistItem | null>(null);
 
   const flagged = Object.entries(row.runMeta).filter(([, meta]) => meta.reviewFlagged > 0);
+
+  async function setWaived(item: ChecklistItem, waived: boolean) {
+    setWaiving(item);
+    try {
+      await api(`${base}/waive`, { method: "PUT", body: JSON.stringify({ item, waived }) });
+      onChanged();
+    } finally {
+      setWaiving(null);
+    }
+  }
 
   async function setMatch(timetableEventId: string | null) {
     await api(`${base}/match`, {
@@ -249,20 +279,37 @@ function AdminLectureRow({ row, onChanged }: { row: AdminRow; onChanged: () => v
       </td>
 
       <td>
+        {/* 다섯 칸을 하는 순서대로 세운다. 안 한 것이 눈에 띄어야 하므로 색은
+            남은 칸이 가져간다 — 끝낸 칸을 칠하면 다 한 강의가 제일 시끄러워지고
+            정작 밀린 강의가 묻힌다.
+
+            누르면 "해당 없음"으로 닫거나 되돌린다. 신설 강의에는 작년 필기가
+            없고, 그런 칸을 영영 미완으로 두면 화면 전체가 미완이 된다. */}
+        <ul className="checklist">
+          {checklistItems.map((item) => {
+            const state = row.checklist[item];
+            return (
+              <li key={item} className={`is-${state}`}>
+                <button
+                  type="button"
+                  disabled={state === "done" || waiving !== null}
+                  title={
+                    state === "done"
+                      ? "올라와 있음"
+                      : state === "waived"
+                        ? "해당 없음으로 닫음 — 눌러서 되돌리기"
+                        : "눌러서 해당 없음으로 닫기"
+                  }
+                  onClick={() => setWaived(item, state !== "waived")}
+                >
+                  {checklistLabels[item]}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
         <ul className="uploads">
-          {(
-            [
-              ["notes_prev", "작년"],
-              ["notes_current", "올해"],
-              ["pre_apkg", "Pre덱"],
-              ["main_apkg", "Main덱"],
-              ["media", "슬라이드"],
-            ] as const
-          ).map(([kind, label]) => (
-            <li key={kind} className={row.has[kind] ? "is-on" : ""}>
-              {label}
-            </li>
-          ))}
+          <li className={row.has.media ? "is-on" : ""}>슬라이드</li>
           <li className={row.preItemCount ? "is-on" : ""}>문항 {row.preItemCount}</li>
         </ul>
         {/* 검토 표시가 남은 덱은 사람이 카드 뒷면 경고 박스를 보기 전까지

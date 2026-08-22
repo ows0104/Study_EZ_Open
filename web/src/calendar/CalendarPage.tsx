@@ -170,24 +170,31 @@ export function CalendarPage() {
               <i className="legend-swatch is-off" /> 휴일·자율
             </span>
           </span>
-          {/* 점은 시점에 따라 갈린다. 규칙이 둘이 됐으니 둘 다 적는다 —
-              범례가 한 줄 늘어나는 값으로 칸의 점 하나가 줄었다. */}
+          {/* 자리 둘의 세 단계를 그대로 적는다. 왼쪽이 예습, 오른쪽이 복습이고
+              칸에서도 순서가 같다 — 범례가 위치를 가르쳐 주는 것이 절반이다. */}
           <span className="legend-group is-phase">
-            <b>강의 전</b>
+            <b>왼쪽 · 예습</b>
             <span>
-              <i className="chip-dot is-preview" /> 예습
+              <i className="chip-slot is-pre is-none" /> 아직
             </span>
             <span>
-              <i className="chip-dot is-prequiz" style={{ ["--fill" as string]: "60%" }} /> 예습퀴즈 (채운 만큼 풀었음)
+              <i className="chip-slot is-pre is-ready" style={{ ["--fill" as string]: "60%" }} /> 올라옴
+              (채운 만큼 풀었음)
+            </span>
+            <span>
+              <i className="chip-slot is-pre is-done" /> 함
             </span>
           </span>
           <span className="legend-group is-phase">
-            <b>강의 후</b>
+            <b>오른쪽 · 복습</b>
             <span>
-              <i className="chip-dot is-notes" /> 필기
+              <i className="chip-slot is-main is-none" /> 아직
             </span>
             <span>
-              <i className="chip-dot is-quiz" /> 본퀴즈
+              <i className="chip-slot is-main is-ready" /> 올라옴
+            </span>
+            <span>
+              <i className="chip-slot is-main is-done" /> 받음
             </span>
           </span>
           <small className="legend-note">어느 칸이든 누르면 자세히 볼 수 있습니다.</small>

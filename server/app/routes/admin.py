@@ -25,9 +25,11 @@ from app.database import get_db
 from app.matching import relink
 from app.models import (
     ASSET_KINDS,
+    CHECKLIST_ITEMS,
     Asset,
     CourseAlias,
     Lecture,
+    LectureWaive,
     PreItem,
     Preview,
     Profile,
@@ -414,6 +416,44 @@ def set_match(
     return {"timetableEventId": lecture.timetable_event_id, "confirmed": lecture.match_confirmed}
 
 
+# ---------------------------------------------------------------- 체크리스트
+
+
+class WaiveIn(BaseModel):
+    item: str
+    waived: bool = True
+    note: str = ""
+
+
+@router.put("/lectures/{subject}/{run_id}/waive")
+def set_waive(
+    subject: str,
+    run_id: str,
+    payload: WaiveIn,
+    user: CurrentUser = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """체크 칸 하나를 "해당 없음"으로 닫거나 되돌린다.
+
+    신설 강의에는 작년 필기가 없다. 그런 칸을 영영 미완으로 두면 화면이 미완으로
+    가득 차고, 그러면 정말 밀린 강의가 안 보인다.
+    """
+    if payload.item not in CHECKLIST_ITEMS:
+        raise HTTPException(status_code=400, detail=f"모르는 체크 항목입니다: {payload.item}")
+    lecture = lecture_or_404(db, subject, run_id)
+    key = (lecture.subject, lecture.run_id, payload.item)
+    row = db.get(LectureWaive, key)
+    if payload.waived:
+        if row is None:
+            row = LectureWaive(subject=lecture.subject, run_id=lecture.run_id, item=payload.item)
+            db.add(row)
+        row.note = payload.note
+    elif row is not None:
+        db.delete(row)
+    db.commit()
+    return {"item": payload.item, "waived": payload.waived}
+
+
 class CourseAliasIn(BaseModel):
     course_key: str = Field(alias="courseKey")
     course: str = ""
@@ -453,6 +493,26 @@ def put_course_aliases(
 # ---------------------------------------------------------------- /admin 화면
 
 
+def _checklist(kinds: set[str], preview: Preview | None, waived: set[str]) -> dict[str, str]:
+    """다섯 칸의 상태. 올라온 것이 닫아 둔 것을 이긴다.
+
+    닫아 둔 칸에 나중에 자료가 올라오면 `done`으로 돌아온다 — 자료가 있는데
+    "해당 없음"으로 보이면 화면이 거짓말을 하는 것이다. `lecture_waive` 줄은
+    그대로 두고 표시만 양보한다.
+    """
+    done = {
+        "notes_prev": "notes_prev" in kinds,
+        "preview": bool(preview and preview.share_url),
+        "pre_apkg": "pre_apkg" in kinds,
+        "notes_current": "notes_current" in kinds,
+        "main_apkg": "main_apkg" in kinds,
+    }
+    return {
+        item: "done" if done[item] else "waived" if item in waived else "todo"
+        for item in CHECKLIST_ITEMS
+    }
+
+
 @router.get("/overview")
 def overview(
     user: CurrentUser = Depends(require_admin),
@@ -479,6 +539,9 @@ def overview(
         )
     }
     previews = {(row.subject, row.run_id): row for row in db.scalars(select(Preview))}
+    waived: dict[tuple[str, str], set[str]] = {}
+    for row in db.scalars(select(LectureWaive)):
+        waived.setdefault((row.subject, row.run_id), set()).add(row.item)
     metas: dict[tuple[str, str], dict[str, RunMeta]] = {}
     for meta in db.scalars(select(RunMeta)):
         metas.setdefault((meta.subject, meta.run_id), {})[meta.quiz_kind] = meta
@@ -506,6 +569,11 @@ def overview(
                     "eventDetails": event.details if event else None,
                 },
                 "has": {kind: kind in kinds.get(key, set()) for kind in sorted(ASSET_KINDS)},
+                # 관리자가 채우는 다섯 칸. `done`은 올라왔다, `waived`는 이 강의엔
+                # 해당 없다고 닫았다, `todo`는 아직 관리자 몫으로 남았다.
+                "checklist": _checklist(
+                    kinds.get(key, set()), previews.get(key), waived.get(key, set())
+                ),
                 "preItemCount": item_counts.get(key, 0),
                 "preview": (
                     {

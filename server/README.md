@@ -7,7 +7,7 @@
 app/
   config.py     환경 변수 하나로 모인다
   database.py   SQLAlchemy 엔진
-  models.py     표 9개. 사용자가 쓰는 것은 quiz_attempt 하나뿐이다
+  models.py     표 12개. 사용자가 쓰는 것은 quiz_attempt·asset_grab 둘뿐이다
   auth.py       Supabase JWT 검증 + is_admin 불리언
   storage.py    R2 서명 URL
   naming.py     NFC·정규화. studyez/filenames.py와 같은 규칙이다

@@ -17,16 +17,33 @@ export type AppUser = {
 export type EventCategory = "lecture" | "practice" | "exam" | "holiday" | "elective" | "study";
 
 /**
- * 강의 칩에 찍히는 점. 있다/없다만 안다.
+ * 강의에 무엇이 올라와 있는가. 있다/없다만 안다.
+ *
+ * **다섯 칸이 관리자 체크리스트와 하나씩 짝이다.** 앞 셋이 예습 자리로, 뒤 둘이
+ * 복습 자리로 묶여 칸의 점 둘이 된다.
  *
  * `quiz`는 본덱(`main_apkg`)만이다. 예습덱은 `prequiz`가 따로 든다 — 둘은
  * 쓰는 시점이 달라서 같은 점으로 그리면 어느 쪽도 안 뜻한다.
  */
 export type Marks = {
-  notes: boolean;
-  quiz: boolean;
-  prequiz: boolean;
+  /** 작년 필기. 예습으로 읽는 것이라 올해 것과 다른 자리에 선다. */
+  notesPrev: boolean;
   preview: boolean;
+  prequiz: boolean;
+  notesCurrent: boolean;
+  quiz: boolean;
+};
+
+/**
+ * 이 사람이 받아 갔는가. 자리 둘로 묶여 온다.
+ *
+ * **덱에서 "했다"를 아는 유일한 길이다.** apkg는 Anki에서 풀리므로 풀이 기록이
+ * 서버에 없지만, 파일이 나가려면 서명을 받아 가야 하고 그 서명은 사용자가
+ * 버튼을 눌러야 나간다. 그래서 이것은 *받아 갔다*지 *풀었다*가 아니다.
+ */
+export type Grabbed = {
+  pre: boolean;
+  main: boolean;
 };
 
 /**
@@ -48,6 +65,7 @@ export type LectureRef = {
   marks: Marks;
   /** 웹에서 풀 문항이 없으면 없다. "안 풀었다"와 "잴 것이 없다"는 다르다. */
   prequizProgress: PrequizProgress | null;
+  grabbed: Grabbed;
 };
 
 export type TimetableEvent = {
@@ -136,6 +154,20 @@ export type GradeResult = {
   slideUrl: string | null;
 };
 
+/** 관리자가 강의마다 채우는 다섯 칸. 서버의 `CHECKLIST_ITEMS`와 순서까지 같다. */
+export const checklistItems = [
+  "notes_prev",
+  "preview",
+  "pre_apkg",
+  "notes_current",
+  "main_apkg",
+] as const;
+
+export type ChecklistItem = (typeof checklistItems)[number];
+
+/** `waived`는 "이 강의엔 해당 없음"으로 관리자가 닫은 칸이다. */
+export type ChecklistState = "done" | "waived" | "todo";
+
 export type AdminRow = {
   subject: string;
   runId: string;
@@ -152,6 +184,8 @@ export type AdminRow = {
     eventDetails: string | null;
   };
   has: Record<string, boolean>;
+  /** 관리자가 채우는 다섯 칸. `done` | `waived` | `todo`. */
+  checklist: Record<ChecklistItem, ChecklistState>;
   preItemCount: number;
   preview: { shareUrl: string; conversationUrl: string; provider: string } | null;
   runMeta: Record<string, { reviewFlagged: number; slidesUnused: number; itemCount: number; builtAt: string | null }>;
