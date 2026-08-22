@@ -327,6 +327,9 @@ def _extract(html: str) -> tuple[list[Turn], str]:
     return [], "실패"
 
 
+PREVIEW_NAME = "preview.md"
+
+
 def fetch(url: str, timeout: int = 30) -> Preview:
     """공유 페이지를 내려받아 대화를 뽑는다. 못 뽑으면 예외로 멈춘다."""
     if not any(host in url for host in _SHARE_HOSTS):
@@ -414,6 +417,6 @@ def read_url(path: Path) -> str:
 def save(preview: Preview, run_dir: Path) -> Path:
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
-    path = run_dir / "preview.md"
+    path = run_dir / PREVIEW_NAME
     path.write_text(render(preview), encoding="utf-8")
     return path

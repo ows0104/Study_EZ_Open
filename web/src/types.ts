@@ -94,8 +94,10 @@ export type LectureFile = {
 export type MissedItem = {
   itemId: string;
   stem: string;
+  answer: string;
+  /** 왜 이것이 「꼭 반드시」인가 — spine·vocabulary·mechanism·clinical·repeated. */
   focus: string;
-  retrievalTarget: string;
+  cardType: string;
   explanation: string;
   slideNo: number | null;
   examHit: boolean;
@@ -126,13 +128,21 @@ export type LectureDetail = {
   runMeta?: Record<string, { reviewFlagged: number; slidesUnused: number; itemCount: number; builtAt: string | null }>;
 };
 
+/**
+ * 예습 카드 한 장. **보기가 없다** — 자유회상이고 채점은 본인이 한다.
+ *
+ * `answer`도 `explanation`도 여기 없다. 답을 편 사람만 `reveal`로 받아 가고,
+ * 그래야 「맞았다」가 무언가를 뜻한다.
+ */
 export type QuizItem = {
   itemId: string;
-  qtype: "mcq" | "short" | "ox";
-  /** 마크다운 `**강조**`가 들어 있다. 부정형 발문을 놓치지 말라고 넣은 것이다. */
+  /** 푸는 방식은 셋 다 같다. 화면이 꼴만 달리 그린다. */
+  qtype: "basic" | "cloze" | "ox";
   stem: string;
-  choices: string[] | null;
-  attempt: { answered: string; correct: boolean } | null;
+  focus: string;
+  cardType: string;
+  examHit: boolean;
+  attempt: { correct: boolean } | null;
 };
 
 export type QuizPayload = {
@@ -144,9 +154,9 @@ export type QuizPayload = {
   correct: number;
 };
 
-export type GradeResult = {
+/** `reveal`이 주는 것. 펴 보기만으로는 아무것도 기록되지 않는다. */
+export type RevealResult = {
   itemId: string;
-  correct: boolean;
   answer: string;
   explanation: string;
   sourceAnchor: string;

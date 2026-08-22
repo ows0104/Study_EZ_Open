@@ -1,16 +1,26 @@
-"""매일 21:30, 새로 올라온 올해 필기를 찾아 퀴즈 만들 거리를 세운다.
+"""매일 21:30, 새로 올라온 올해 필기를 찾아 덱을 만든다.
 
-## 워처가 하는 일과 하지 않는 일
+## 가운데가 더 이상 뚫려 있지 않다
 
-`/quiz`는 Opus 5를 세 번 부른다. 그건 Claude Code 세션 안에서만 되는 일이라
-워처가 대신할 수 없다. 그래서 여기서는 **결정적인 부분만** 한다.
+한동안 워처는 prep까지만 하고 `runs/queue.json`을 남겼다. 문항을 만드는 것은
+사람이 연 Claude Code 세션의 `/quiz`였고, 그 한 편이 53~72분 동안 세션의 컨텍스트를
+통째로 먹었다.
 
-    워처(코드)          스캔 · 최신 판 고르기 · 작년 짝 붙이기 · prep 실행 · 큐 쓰기
-    세션(모델)          0.5단계 구조 판별 · 1·2단계 · 4단계 감사
-    워처(코드)          validate · build
+지금은 `pdf2anki`가 모델이 필요한 자리마다 **빈 세션을 스스로 띄운다**
+(`pdf2anki/session.py`). 그래서 워처가 한 편을 끝까지 만든다.
 
-세션은 `runs/queue.json`을 읽어 한 편씩 처리한다. 워처가 에이전트 흉내를 내려
-들면 둘 다 망가진다.
+    스캔 · 최신 판 고르기 · 큐 쓰기        watch
+    prep → ①② → 검증 → 재현 → 빌드        pdf2anki.run (하위 프로세스)
+    계약 모양으로 옮기기                    studyez.deck.contract
+
+큐는 없어지지 않았다. `--build` 없이 부르면 **무엇을 만들지 보여 주기만** 한다 —
+한 편이 수십 분이라 밤에 무엇이 돌지 먼저 보는 자리가 있어야 한다.
+
+## 한 번에 한 편씩 만든다
+
+pdf2anki 한 편이 이미 `--jobs 4`로 빈 세션 넷을 동시에 띄운다. 편을 겹쳐 돌리면
+그 배수가 되어 노트북이 먼저 무릎을 꿇는다. prep만 돌리던 시절에는 편끼리 겹쳐
+돌렸는데, 그때는 CPU 렌더가 전부였기 때문이다.
 
 ## 업로드는 여기서 하지 않는다
 
@@ -25,25 +35,21 @@
 `runs/index.json`은 `lecture_id`로만 관리해서 v1으로 만든 뒤 v3이 올라온 경우를
 구분하지 못한다 - 실제로 `260812_02`가 v1과 v3으로 두 번 올라왔다.
 
-**그 표시를 찍는 길이 큐 밖에도 있어야 한다.** `queue.json`은 `watch`가 돌 때마다
-통째로 다시 쓰이는데 `/quiz` 한 편이 48~85분이라, 편이 끝났을 때 그 항목이 이미
-큐에서 사라져 있는 일이 생긴다. 실제로 만든 13편 중 표시가 남은 것이 한 편뿐이었다.
-그래서 `stamp_run()`이 `prep.json`이 적어 둔 원본으로 직접 찍는다.
+**그 표시를 찍는 길이 큐 밖에도 있어야 한다.** 예전에는 편이 끝날 무렵 `queue.json`이
+이미 다시 쓰여 그 항목이 사라져 있는 일이 잦았고, 만든 13편 중 표시가 남은 것이 한
+편뿐이었다. 지금은 `build_one()`이 끝나는 자리에서 바로 찍지만, `studyez done`이
+부르는 길도 남겨 둔다 — 손으로 만든 편과 옆 저장소에서 옮겨 온 편이 그리로 온다.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
-import os
-import subprocess
-import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from . import filenames
+from . import deck, filenames
 from .filenames import LectureFile
 
 DEFAULT_ROOT = Path.home() / "SynologyDrive"
@@ -52,9 +58,16 @@ DEFAULT_ROOT = Path.home() / "SynologyDrive"
 # 지난 것만 건드린다. 21:30 기준으로 그날 올라온 필기는 대부분 이미 안정돼 있다.
 MIN_AGE_SECONDS = 10 * 60
 
-# 하루 처리 상한. 병리학은 하루 3~5편이 올라오고 편당 Opus 5 호출이 3회다.
+# 하루 처리 상한. 병리학은 하루 3~5편이 올라온다.
 # 넘치는 분량은 다음 날 자동으로 다시 잡힌다 - source.json 기준이기 때문이다.
-DEFAULT_MAX_ITEMS = 6
+#
+# 당분간 2다. 2026-08-19에 관리자가 토큰이 모자라 내렸다(6 → 3 → 2, 같은 날).
+# 그날 큐는 6편을 잡고 7편을 상한으로 밀어냈는데, 그 6편을 다 돌릴 토큰이 없었다.
+#
+# **그 사정이 pdf2anki로 갈아탄 뒤 어떻게 바뀌었는지는 아직 안 쟀다.** 편당 비용은
+# 이제 `runs/<run_id>/run.report.json`에 실제 값이 남으므로, 몇 편이 쌓이면 거기서
+# 읽어 정하면 된다. 그 전까지 짐작으로 올리지 않는다.
+DEFAULT_MAX_ITEMS = 2
 
 
 @dataclass
@@ -74,9 +87,9 @@ class WorkItem:
     this_pdf: str
     this_version: int
     reason: str                      # 'new' | 'newer_version'
-    jokbo_pdf: str | None = None     # 과목 족보에서 잘라온 원본. 있으면 이쪽이 낫다
-    jokbo_label: str | None = None
-    jokbo_score: float = 0.0
+    # 덱 나무의 가운데 마디. `title`과 달리 교수 괄호를 뗐다 — 그대로 쓰면
+    # 교수가 바뀌는 해에 같은 강의가 두 노드로 갈린다.
+    lecture: str = ""
     notes: list[str] = field(default_factory=list)
 
 
@@ -88,16 +101,14 @@ class Queue:
     warnings: list[str]
 
 
-def _jokbo_links(runs_dir: Path, subject: str, year: str) -> dict[str, dict]:
-    """`studyez jokbo <과목>`이 남긴 필기↔족보 연결. 없으면 빈 사전."""
-    path = runs_dir / "_jokbo" / subject / year / "links.json"
-    if not path.exists():
-        return {}
-    try:
-        rows = json.loads(path.read_text(encoding="utf-8"))
-    except (ValueError, OSError):
-        return {}
-    return {row["key"]: row for row in rows if row.get("key")}
+def jokbo_ready(runs_dir: Path, subject: str) -> bool:
+    """과목 족보가 잘려 있는가.
+
+    어느 조각을 어느 강의에 물릴지는 **여기서 정하지 않는다.** pdf2anki가 목차
+    제목으로 대조한다 — 카드를 만들 때 본 조각과 뒷면에 붙이는 조각이 갈리면 안
+    되므로 그 판단은 한 곳에만 있어야 한다. 여기서는 자리가 섰는지만 본다.
+    """
+    return (deck.jokbo_dir(runs_dir, subject) / "index.json").is_file()
 
 
 def _source_record(pdf: Path, item: LectureFile) -> dict:
@@ -184,9 +195,6 @@ def build_queue(
         if not this_scan.files:
             continue
 
-        # 과목 족보를 이미 잘라 뒀으면 그 연결을 쓴다(`studyez jokbo <과목>`).
-        links = _jokbo_links(runs_dir, subject, this_year)
-
         for path in this_scan.conflicts:
             warnings.append(f"{subject}: 충돌 사본 제외 — {path.name}")
         for stray in this_scan.misfiled:
@@ -196,6 +204,7 @@ def build_queue(
 
         this_files = filenames.latest_versions(this_scan.files)
         run_ids = assign_run_ids(this_files)
+        has_jokbo = jokbo_ready(runs_dir, subject)
 
         for item in this_files:
             run_id = run_ids[item.uid]
@@ -219,27 +228,15 @@ def build_queue(
 
             reason = "newer_version" if (runs_dir / run_id / "source.json").exists() else "new"
             notes: list[str] = []
-            link = links.get(item.key) or {}
-            jokbo_pdf = link.get("jokbo_pdf") if link.get("confident") else None
-            jokbo_label = link.get("jokbo_label") if link.get("confident") else None
-
-            if not links:
-                notes.append("과목 족보가 아직 안 잘려 있다. 필기에 붙은 캡처본을 쓴다 "
-                             f"(`studyez jokbo {subject}`로 원본을 쓸 수 있다)")
-            elif jokbo_pdf and not Path(jokbo_pdf).exists():
-                notes.append(f"족보 조각이 사라졌다: {jokbo_pdf}. 필기 캡처본으로 진행")
-                jokbo_pdf = jokbo_label = None
-            elif not jokbo_pdf:
-                hint = link.get("jokbo_label")
-                notes.append(
-                    f"족보 연결이 확실하지 않다 ({link.get('score', 0)}, 후보 {hint or '없음'}). "
-                    "필기에 붙은 캡처본을 쓴다")
+            if not has_jokbo:
+                notes.append("과목 족보가 아직 안 잘려 있다 — 기출 카드 없이 만들어진다 "
+                             f"(`python -m studyez jokbo {subject}`)")
 
             items.append(WorkItem(
                 subject=subject, run_id=run_id, key=item.key, date=item.date,
                 title=item.title, this_pdf=str(pdf), this_version=item.version,
-                reason=reason, jokbo_pdf=jokbo_pdf, jokbo_label=jokbo_label,
-                jokbo_score=link.get("score", 0.0), notes=notes,
+                reason=reason, lecture=deck.lecture_name(item.title, item.professors),
+                notes=notes,
             ))
 
     for subject, count in sorted(outside.items()):
@@ -259,59 +256,60 @@ def build_queue(
     )
 
 
-def run_prep(pdf: str, run_id: str, runs_dir: Path, repo_root: Path,
-             jokbo_pdf: str | None = None) -> tuple[bool, str]:
-    """prep.py를 따로 띄운다. 한 편이 죽어도 나머지가 계속 가야 한다."""
-    command = [
-        sys.executable, str(repo_root / "quiz" / "prep.py"), pdf,
-        "--out", str(runs_dir), "--run-id", run_id,
-    ]
-    if jokbo_pdf:
-        command += ["--jokbo-pdf", jokbo_pdf]
-    try:
-        done = subprocess.run(
-            command, capture_output=True, text=True, encoding="utf-8",
-            errors="replace", timeout=1800, cwd=str(repo_root))
-    except subprocess.TimeoutExpired:
-        return False, "prep 30분 초과"
-    if done.returncode != 0:
-        tail = (done.stderr or done.stdout or "").strip().splitlines()
-        return False, (tail[-1] if tail else f"prep 실패 (코드 {done.returncode})")
-    return True, ""
+def build_one(item: WorkItem, runs_dir: Path, repo_root: Path, *,
+              model: str = "", timeout: int = deck.DEFAULT_TIMEOUT,
+              extra: list[str] | None = None) -> tuple[bool, str]:
+    """한 편을 끝까지 만든다. (됐나, 사람이 볼 말)
 
+    족보 조각을 손으로 물려 주지 않는다. `studyez jokbo <과목>`이 잘라 둔
+    `runs/_jokbo/`를 pdf2anki가 목차 제목으로 스스로 대조한다 — 카드를 만들 때 본
+    조각과 뒷면에 붙이는 조각이 갈리면 안 되기 때문에 그 판단이 한 곳에 있어야 한다.
 
-def prepare(queue: Queue, runs_dir: Path, repo_root: Path, workers: int = 0) -> Queue:
-    """큐의 각 편에 prep을 돌린다. 강의끼리 완전히 독립이라 동시에 돌린다.
-
-    prep은 40~60쪽을 세 배율로 렌더하느라 편당 1~2분이 걸리고 전부 CPU 작업이다.
-    별도 프로세스로 띄우므로 GIL과 무관하게 코어를 쓴다.
-
-    한 편이 죽어도 나머지는 계속 간다 - 하룻밤 분량이 한 편 때문에 통째로
+    한 편이 죽어도 나머지는 계속 간다. 하룻밤 분량이 한 편 때문에 통째로
     날아가면 안 된다.
     """
-    if not queue.items:
-        return queue
+    result = deck.run_main(
+        pdf=item.this_pdf, run_id=item.run_id, subject=item.subject,
+        lecture=item.lecture or item.title, runs_dir=runs_dir, repo_root=repo_root,
+        model=model, timeout=timeout, extra=extra)
+    if not result.ok:
+        return False, f"{result.error} (로그: {result.log})"
 
-    workers = workers or min(len(queue.items), max(1, (os.cpu_count() or 4) - 1))
+    try:
+        meta = deck.contract(result.run_dir, item.run_id, item.title, deck.MAIN)
+    except (FileNotFoundError, OSError, ValueError) as cause:
+        return False, f"산출물을 계약 모양으로 옮기지 못했다: {cause}"
+
+    stamp_run(runs_dir, item.run_id, Path(item.this_pdf))
+    return True, (f"{meta['item_count']}장 "
+                  f"(강의록 {meta['sources'].get('lecture', 0)} · "
+                  f"기출 {meta['sources'].get('jokbo', 0)})")
+
+
+def build(queue: Queue, runs_dir: Path, repo_root: Path, *, model: str = "",
+          timeout: int = deck.DEFAULT_TIMEOUT, extra: list[str] | None = None,
+          announce=print) -> Queue:
+    """큐대로 한 편씩 만든다. **겹쳐 돌리지 않는다.**
+
+    pdf2anki 한 편이 이미 빈 세션 넷을 동시에 띄우므로, 편을 겹치면 그 배수가 된다.
+    끝난 편만 `queue.items`에 남기고 실패한 편은 사유와 함께 `skipped`로 내린다.
+    """
     survivors: list[WorkItem] = []
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = {
-            pool.submit(run_prep, item.this_pdf, item.run_id, runs_dir, repo_root,
-                        item.jokbo_pdf): item
-            for item in queue.items
-        }
-        for future in as_completed(futures):
-            item = futures[future]
-            try:
-                ok, error = future.result()
-            except Exception as exc:                    # noqa: BLE001
-                ok, error = False, f"{type(exc).__name__}: {exc}"
-            if ok:
-                survivors.append(item)
-            else:
-                queue.skipped.append(f"{item.subject}/{item.run_id} — prep 실패: {error}")
+    for index, item in enumerate(queue.items, 1):
+        announce(f"[{index}/{len(queue.items)}] {item.subject}/{item.run_id} "
+                 f"{item.title[:34]} — 만드는 중")
+        try:
+            ok, note = build_one(item, runs_dir, repo_root,
+                                 model=model, timeout=timeout, extra=extra)
+        except Exception as exc:                        # noqa: BLE001
+            ok, note = False, f"{type(exc).__name__}: {exc}"
+        if ok:
+            survivors.append(item)
+            announce(f"    끝났다 — {note}")
+        else:
+            queue.skipped.append(f"{item.subject}/{item.run_id} — 빌드 실패: {note}")
+            announce(f"    실패 — {note}")
 
-    survivors.sort(key=lambda w: (w.date, w.run_id))
     queue.items = survivors
     return queue
 
@@ -319,9 +317,8 @@ def prepare(queue: Queue, runs_dir: Path, repo_root: Path, workers: int = 0) -> 
 def stamp_run(runs_dir: Path, run_id: str, pdf: Path) -> bool:
     """한 편을 표시한다. 찍었으면 True.
 
-    큐를 거치지 않는 길이 필요하다. `queue.json`은 `watch`가 돌 때마다 통째로
-    다시 쓰이는데 `/quiz` 한 편이 48~85분이라, 편이 끝났을 때 그 항목이 이미
-    큐에서 사라져 있는 일이 생긴다. 실제로 13편 중 표시가 남은 것이 한 편뿐이었다.
+    큐를 거치지 않는 길이 필요하다. 손으로 만든 편, 옆 저장소에서 옮겨 온 편,
+    빌드가 끝난 뒤 사람이 확인하고 부르는 `studyez done`이 전부 여기로 온다.
     """
     if not pdf.exists():
         return False

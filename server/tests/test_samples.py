@@ -65,114 +65,102 @@ def main() -> None:
 
     pre_items = json.loads((SAMPLES / "pre_items.sample.json").read_text(encoding="utf-8"))
     run_meta = json.loads((SAMPLES / "run.meta.sample.json").read_text(encoding="utf-8"))
+    pre_meta = json.loads((SAMPLES / "pre_run.meta.sample.json").read_text(encoding="utf-8"))
 
-    print("\n[1] pre_items.sample.json — 17문항이 그대로 들어가는가")
-    register(client, pre_items["lecture_id"], "멘델법칙을 따르지 않는 유전자 질환")
-    base = f"/api/admin/lectures/병리학/{pre_items['lecture_id']}"
+    run_id = pre_items["lecture_id"]
+    base = f"/api/admin/lectures/병리학/{run_id}"
+    quiz_base = f"/api/lectures/병리학/{run_id}/prequiz"
+
+    print(f"\n[1] pre_items.sample.json — {len(pre_items['items'])}장이 그대로 들어가는가")
+    register(client, run_id, "종양의 분자생물학(1)")
     stored = client.put(f"{base}/pre-items", headers=RUNNER, json=pre_items)
     check("200", stored.status_code == 200, stored.text)
-    check(
-        "문항 수가 같다",
-        stored.json().get("itemCount") == len(pre_items["items"]),
-        (stored.json(), len(pre_items["items"])),
-    )
+    check("장수가 같다", stored.json().get("itemCount") == len(pre_items["items"]),
+          (stored.json(), len(pre_items["items"])))
 
-    print("\n[2] 세 가지 qtype이 다 있고, mcq는 보기가 5개다")
+    print("\n[2] qtype이 계약의 셋 안에 드는가")
     kinds = {item["qtype"] for item in pre_items["items"]}
-    check("mcq·short·ox가 다 있다", kinds == {"mcq", "short", "ox"}, kinds)
+    check("basic·cloze·ox 밖이 없다", kinds <= {"basic", "cloze", "ox"}, kinds)
+    check("보기가 실려 오지 않는다", not any("choices" in item for item in pre_items["items"]))
 
-    print("\n[3] 정답이 문항과 함께 나가지 않는가 — 실물로")
-    quiz = client.get(f"/api/lectures/병리학/{pre_items['lecture_id']}/prequiz", headers=USER).json()
-    check("문항 수가 같다", len(quiz["items"]) == len(pre_items["items"]), len(quiz["items"]))
+    print("\n[3] 답이 문항과 함께 나가지 않는가 — 실물로")
+    quiz = client.get(quiz_base, headers=USER).json()
+    check("장수가 같다", len(quiz["items"]) == len(pre_items["items"]), len(quiz["items"]))
     leaked = sorted({"answer", "explanation"} & {key for item in quiz["items"] for key in item})
     check("answer·explanation 필드가 없다", not leaked, leaked)
     body = json.dumps(quiz, ensure_ascii=False)
-    # 해설 본문이 통째로 새면 정답도 같이 샌다. 실제 해설 문장으로 확인한다.
-    escaped = [item for item in pre_items["items"] if item["explanation"][:40] in body]
-    check("해설 본문이 어디에도 없다", not escaped, [item["id"] for item in escaped])
+    # 답이나 해설 본문이 통째로 새면 펴 보기 전에 정답이 보인다. 실물 문장으로 확인한다.
+    escaped = [item for item in pre_items["items"]
+               if item["answer"][:30] in body or item["explanation"][:40] in body]
+    check("답·해설 본문이 어디에도 없다", not escaped, [item["id"] for item in escaped])
 
-    print("\n[4] `**강조**`가 살아 있는가")
-    emphasised = [item for item in pre_items["items"] if "**" in item["stem"]]
-    check("표본에 강조 발문이 있다", bool(emphasised), len(emphasised))
-    served = {item["itemId"]: item["stem"] for item in quiz["items"]}
-    check(
-        "서버가 별표를 지우지 않았다",
-        all(served[item["id"]] == item["stem"] for item in emphasised),
-    )
+    print("\n[4] 빈칸 카드가 Anki 문법인 채로 나가지 않는가")
+    clozes = [item for item in pre_items["items"] if item["qtype"] == "cloze"]
+    check("표본에 빈칸 카드가 있다", bool(clozes), len(clozes))
+    check("`{{c1::`이 앞면에 없다", not any("{{c" in item["stem"] for item in clozes),
+          [item["id"] for item in clozes if "{{c" in item["stem"]])
+    check("빈칸이 그려져 있다", all("[" in item["stem"] for item in clozes),
+          [item["id"] for item in clozes if "[" not in item["stem"]])
 
-    print("\n[5] 실물 정답으로 채점이 되는가 — 전 문항")
-    graded_wrong = []
+    print("\n[5] 펴야 답이 오는가 — 전 문항")
+    missing = []
     for item in pre_items["items"]:
-        response = client.post(
-            f"/api/lectures/병리학/{pre_items['lecture_id']}/prequiz/grade",
-            headers=USER,
-            json={"itemId": item["id"], "answered": item["answer"]},
-        ).json()
-        if not response.get("correct"):
-            graded_wrong.append((item["id"], item["qtype"], item["answer"]))
-    check("선언된 정답이 전부 정답 처리된다", not graded_wrong, graded_wrong)
+        opened = client.post(f"{quiz_base}/reveal", headers=USER,
+                             json={"itemId": item["id"]}).json()
+        if opened.get("answer") != item["answer"]:
+            missing.append(item["id"])
+    check("펴면 선언된 답이 그대로 온다", not missing, missing)
 
-    print("\n[6] 단답의 허용 표기가 실제로 읽히는가")
-    from app.models import PreItem
-    from app.database import SessionLocal
-    from app.routes.prequiz import accepted_answers
+    print("\n[6] 펴 보기만 해서는 기록이 안 남는가")
+    after_reveal = client.get(quiz_base, headers=USER).json()
+    check("전부 폈는데 푼 것은 0", after_reveal["answered"] == 0, after_reveal["answered"])
 
-    # 표본의 단답 셋은 전부 "…어느 표기든 정답이다"로 허용 표기를 밝힌다.
-    # 하나라도 안 늘어나면 규칙을 못 읽고 있다는 뜻이므로 개수로 넘기지 않는다.
-    with SessionLocal() as db:
-        shorts = db.query(PreItem).filter(PreItem.qtype == "short").all()
-        widened = {item.item_id: accepted_answers(item) for item in shorts}
-    check("단답 3문항", len(shorts) == 3, len(shorts))
-    check("셋 다 허용 표기가 늘었다", all(len(value) > 1 for value in widened.values()), widened)
+    print("\n[7] 본인이 찍은 것이 그대로 남는가")
+    first, second = pre_items["items"][0], pre_items["items"][1]
+    client.post(f"{quiz_base}/grade", headers=USER, json={"itemId": first["id"], "correct": True})
+    client.post(f"{quiz_base}/grade", headers=USER, json={"itemId": second["id"], "correct": False})
+    graded = client.get(quiz_base, headers=USER).json()
+    check("푼 것 2 · 맞은 것 1", (graded["answered"], graded["correct"]) == (2, 1),
+          (graded["answered"], graded["correct"]))
 
-    # 실물에서 골라낸 표기들. 학생이 이렇게 써도 정답이어야 한다.
-    for item_id, typed in [
-        ("p012", "LHON"),
-        ("p012", "Leber 유전성 시신경병증"),
-        ("p013", "모성 각인"),          # answer는 "Maternal imprinting(모성 각인)"이다
-        ("p013", "maternal imprinting"),
-        ("p016", "안젤만 증후군"),
-    ]:
-        graded = client.post(
-            f"/api/lectures/병리학/{pre_items['lecture_id']}/prequiz/grade",
-            headers=USER,
-            json={"itemId": item_id, "answered": typed},
-        ).json()
-        check(f"{item_id} ← {typed!r}", graded.get("correct") is True, graded.get("answer"))
+    print("\n[8] 틀렸다고 찍은 것이 「놓친 것」으로 오는가")
+    detail = client.get(f"/api/lectures/병리학/{run_id}", headers=USER).json()
+    missed = [entry["itemId"] for entry in (detail["prequiz"] or {}).get("missed", [])]
+    # 다 풀어야 나온다. 두 장만 찍었으므로 아직 비어 있는 것이 맞다.
+    check("아직 안 나온다 (다 풀지 않았다)", not missed, missed)
+    for item in pre_items["items"][2:]:
+        client.post(f"{quiz_base}/grade", headers=USER, json={"itemId": item["id"], "correct": True})
+    detail = client.get(f"/api/lectures/병리학/{run_id}", headers=USER).json()
+    missed = [entry["itemId"] for entry in (detail["prequiz"] or {}).get("missed", [])]
+    check("틀렸다고 찍은 그 장이 온다", missed == [second["id"]], missed)
 
-    print("\n[6-2] 해설 문장을 별칭으로 오해하지 않는가")
-    # "/"가 들어 있어도 "정답이다" 표시가 없으면 별칭 목록이 아니다.
-    from app.models import PreItem as _PreItem
+    print("\n[9] 다시 풀기가 기록을 지우는가")
+    client.delete(f"{quiz_base}/attempts", headers=USER)
+    check("0으로 돌아온다", client.get(quiz_base, headers=USER).json()["answered"] == 0)
 
-    decoy = _PreItem(
-        subject="병리학", run_id="x", item_id="x", qtype="short", answer="상염색체 우성",
-        explanation="AD/AR 구분은 가계도에서 먼저 본다. 부모 중 한쪽만 이환되면 우성을 의심한다.",
-    )
-    check("별칭이 늘지 않는다", len(accepted_answers(decoy)) == 1, accepted_answers(decoy))
-
-    print("\n[7] run.meta.sample.json — 관리자 판단에 쓰는 값이 뽑히는가")
+    print("\n[10] run.meta — 관리자 판단에 쓰는 값이 뽑히는가")
     register(client, run_meta["lecture_id"], run_meta["lecture_title"])
     meta_response = client.put(
         f"/api/admin/lectures/병리학/{run_meta['lecture_id']}/run-meta/main",
-        headers=RUNNER,
-        json=run_meta,
-    )
+        headers=RUNNER, json=run_meta)
     check("200", meta_response.status_code == 200, meta_response.text)
     check(
-        "review_flagged 2 · slides_unused 11",
-        meta_response.json() == {"reviewFlagged": 2, "slidesUnused": 11},
-        meta_response.json(),
-    )
+        f"review_flagged {run_meta['review_flagged']} · slides_unused {len(run_meta['slides_unused'])}",
+        meta_response.json() == {"reviewFlagged": run_meta["review_flagged"],
+                                 "slidesUnused": len(run_meta["slides_unused"])},
+        meta_response.json())
+
+    stored_pre = client.put(f"{base}/run-meta/pre", headers=RUNNER, json=pre_meta)
+    check("예습 run.meta도 받는다", stored_pre.status_code == 200, stored_pre.text)
 
     overview = client.get("/api/admin/overview", headers=USER).json()
     row = next(item for item in overview["lectures"] if item["runId"] == run_meta["lecture_id"])
-    check("관리자 목록이 경고를 든다", row["runMeta"]["main"]["reviewFlagged"] == 2, row["runMeta"])
-    check("item_count 80", row["runMeta"]["main"]["itemCount"] == 80, row["runMeta"])
-    check(
-        "built_at을 읽었다",
-        row["runMeta"]["main"]["builtAt"] is not None and row["runMeta"]["main"]["builtAt"].startswith("2026-08-16"),
-        row["runMeta"]["main"]["builtAt"],
-    )
+    check("관리자 목록이 경고를 든다",
+          row["runMeta"]["main"]["reviewFlagged"] == run_meta["review_flagged"], row["runMeta"])
+    check(f"item_count {run_meta['item_count']}",
+          row["runMeta"]["main"]["itemCount"] == run_meta["item_count"], row["runMeta"])
+    check("built_at을 읽었다", row["runMeta"]["main"]["builtAt"] is not None,
+          row["runMeta"]["main"]["builtAt"])
 
     print()
     if failures:

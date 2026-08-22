@@ -2,11 +2,15 @@
 
     python -m studyez match 병리학          작년 짝 붙이기 리포트
     python -m studyez match --all
-    python -m studyez watch                 새 필기 스캔 (큐만 세움)
-    python -m studyez watch --prep          스캔 + prep까지 (21:30 자동 실행용)
+    python -m studyez watch                 새 필기 스캔 (무엇을 만들지 보여준다)
+    python -m studyez watch --build         스캔 + 덱까지 (21:30 자동 실행용)
     python -m studyez watch --all-dates     블럭으로 안 좁힌다 (밀린 것 몰아 만들 때)
-    python -m studyez prequeue              관리자가 저장한 예습 링크 → Pre-Quiz 자리
+    python -m studyez prequeue              예습 링크 → 자리 세우기
+    python -m studyez prequeue --build      자리 세우고 예습 덱까지 (04:00 자동 실행용)
     python -m studyez prequeue --dry-run    무엇이 준비될지만 본다
+    python -m studyez jokbo 병리학           과목 족보를 강의별로 자른다 (학기당 1회)
+    python -m studyez import --from <폴더>   다른 곳에서 만든 덱을 옮긴다 (보류로 들어온다)
+    python -m studyez release <run_id>       보류를 푼다
     python -m studyez done <run_id>          빌드 끝. 표시하고 그 편을 올린다
     python -m studyez publish 병리학 --dry-run   무엇이 올라갈지 본다
     python -m studyez publish 병리학             서버로 밀어 넣는다
@@ -23,9 +27,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
+import shutil
+import subprocess
 import sys
 import time
-from datetime import date as Date
+from datetime import date as Date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -38,7 +45,7 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 from studyez import (  # noqa: E402
-    blocks, filenames, jokbo, matching, prequeue, preview, publish, watch,
+    blocks, deck, filenames, gate, matching, prequeue, preview, publish, watch,
 )
 
 DEFAULT_ROOT = Path.home() / "SynologyDrive"
@@ -180,35 +187,33 @@ def report_watch(args) -> int:
         for item in queue.items:
             mark = "새로" if item.reason == "new" else f"v{item.this_version} 갱신"
             print(f"    {item.date}  {item.subject}/{item.run_id}  [{mark}]  {item.title[:38]}")
-            if item.jokbo_pdf:
-                print(f"        족보 ← 원본 {item.jokbo_label} (유사도 {item.jokbo_score})")
             for note in item.notes:
                 print(f"        ⚠ {note}")
 
     for line in queue.skipped:
         print(f"  · 건너뜀 — {line}")
 
-    if args.prep and queue.items:
+    if args.build and queue.items:
         planned = len(queue.items)
-        workers = args.workers or min(planned, max(1, (os.cpu_count() or 4) - 1))
         started = time.monotonic()
-        print(f"\n  prep 실행 {planned}편 · 동시 {workers}개…")
-        queue = watch.prepare(queue, runs_dir, REPO_ROOT, workers=workers)
+        print(f"\n  덱 만드는 중 {planned}편 — 한 편씩 돈다\n")
+        queue = watch.build(queue, runs_dir, REPO_ROOT,
+                            model=args.model, timeout=args.timeout)
         failed = planned - len(queue.items)
-        elapsed = time.monotonic() - started
-        print(f"  prep 완료 {len(queue.items)}편"
+        print(f"\n  완료 {len(queue.items)}편"
               + (f" · 실패 {failed}편" if failed else "")
-              + f" · {elapsed / 60:.1f}분")
+              + f" · {(time.monotonic() - started) / 60:.1f}분")
         for line in queue.skipped:
-            if "prep 실패" in line:
+            if "빌드 실패" in line:
                 print(f"    ✗ {line}")
 
     queue_path = runs_dir / "queue.json"
     watch.save(queue, queue_path)
     print(f"\n  큐: {queue_path}")
-    if queue.items:
-        print("  이제 세션이 각 편마다 /quiz 를 돌린다 — 0.5단계부터 5단계까지.")
-        print("  빌드가 끝나면 `python -m studyez done <run_id>` — 표시하고 그 편을 올린다.")
+    if queue.items and not args.build:
+        print("  `python -m studyez watch --build` — 이대로 덱까지 만든다.")
+    elif queue.items:
+        print("  `python -m studyez publish --all` — 검문을 지난 편이 나간다.")
     return 0
 
 
@@ -219,34 +224,26 @@ def run_preview(args) -> int:
         print("쓰는 법: python -m studyez preview <run_id> --url https://chatgpt.com/share/...")
         return 2
 
+    # 자리가 비어 있어도 받는다. 대화가 먼저 오고 덱이 나중에 오는 순서라,
+    # 여기서 prep을 요구하면 예습이 정작 필요한 편에서 막힌다.
     run_dir = Path(args.runs) / run_id
-    if not (run_dir / "prep.json").exists():
-        print(f"[preview] {run_dir}에 prep.json이 없다. 0단계를 먼저 돌려라.")
-        return 2
-
     result = preview.fetch(args.url)
     path = preview.save(result, run_dir)
     print(f"[preview] {run_id} ← {args.url}")
     print(f"  발화 {len(result.turns)}개 · {result.chars:,}자 · 추출 {result.strategy}")
     print(f"  → {path}")
-    print("  이제 /prequiz를 돌리면 1·2단계가 이걸 함께 읽는다")
+    print("  이제 `python -m studyez prequeue --build`가 이걸 예습 설명본으로 읽는다")
     return 0
 
 
 def run_source_pdf(runs_dir: Path, run_id: str) -> Path | None:
-    """이 run이 실제로 무엇으로 만들어졌는지. `prep.json`이 답을 들고 있다.
+    """이 run이 실제로 무엇으로 만들어졌는지.
 
-    큐가 아니라 여기를 보는 이유는 **큐가 그 사이 다시 서기 때문**이다.
-    그리고 이쪽이 더 참이다 — 큐는 지금 무엇을 만들 차례인지를 적고,
-    `prep.json`은 이 run이 무엇으로 만들어졌는지를 적는다.
+    큐가 아니라 여기를 보는 이유는 **큐가 그 사이 다시 서기 때문**이다. 그리고
+    이쪽이 더 참이다 — 큐는 지금 무엇을 만들 차례인지를 적고, 파이프라인의
+    `run.config.json`은 이 run이 무엇으로 만들어졌는지를 적는다.
     """
-    prep = runs_dir / run_id / "prep.json"
-    if not prep.is_file():
-        return None
-    try:
-        source = str(json.loads(prep.read_text(encoding="utf-8")).get("source_pdf", ""))
-    except (OSError, ValueError):
-        return None
+    source = deck.source_pdf(runs_dir / run_id)
     return Path(source) if source else None
 
 
@@ -291,6 +288,30 @@ def stamp_source(runs_dir: Path, run_id: str, this_year: str, dry_run: bool = Fa
     return subject
 
 
+def report_cost(run_dir: Path) -> None:
+    """이 편이 얼마나 들었는지 적는다. 세는 것은 파이프라인이 한다.
+
+    예전에는 여기서 세션 트랜스크립트를 뒤져 토큰을 셈했다. 지금은 pdf2anki가
+    `claude -p --output-format json` 봉투에 이미 실려 오는 값을 단계마다
+    `usage.jsonl`에 적고 `run.report.json`으로 모으므로, 읽어 보여 주기만 한다.
+
+    **`watch.DEFAULT_MAX_ITEMS`를 정할 근거가 여기서 쌓인다.**
+    """
+    report = run_dir / "run.report.json"
+    if not report.is_file():
+        return
+    try:
+        got = json.loads(report.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    total = got.get("cumulative") or {}
+    if not total:
+        return
+    print(f"  [비용] 누적 ${total.get('cost_usd', 0):.2f} · "
+          f"{total.get('seconds', 0) / 60:.1f}분 · 세션 {total.get('sessions', 0)}개 · "
+          f"토큰 {total.get('tokens_total', 0):,}")
+
+
 def run_done(args) -> int:
     """빌드를 확인한 뒤 부른다. 표시하고, 이어서 그 편을 올린다.
 
@@ -307,6 +328,9 @@ def run_done(args) -> int:
 
     subject = stamp_source(runs_dir, run_id, args.this, dry_run=args.dry_run)
 
+    if not args.dry_run:
+        report_cost(runs_dir / run_id)
+
     if args.no_publish:
         return 0
 
@@ -319,7 +343,15 @@ def run_done(args) -> int:
 
 
 def run_jokbo(args) -> int:
-    """과목 족보 PDF를 강의별로 자른다. 학기당 과목당 한 번이면 된다."""
+    """과목 족보 PDF를 강의별 조각으로 자른다. 학기당 과목당 한 번이면 된다.
+
+    자르는 것은 `pdf2anki.jokbo`다. 여기서 하는 것은 **어느 PDF를 줄지 고르는
+    것**뿐 — 과목 폴더에서 원본을 찾아 하위 프로세스에 넘긴다.
+
+    강의와 조각을 짝지어 `links.json`을 쓰던 자리가 여기 있었는데 없앴다.
+    지금은 어느 조각을 물릴지 pdf2anki가 카드를 만들 때 목차 제목으로 대조한다.
+    두 곳에서 각각 짝지으면 **카드가 본 조각과 뒷면에 붙는 조각이 갈릴 수 있다.**
+    """
     subject = args.subject
     if not subject:
         print("과목명을 주세요: python -m studyez jokbo 병리학")
@@ -332,46 +364,156 @@ def run_jokbo(args) -> int:
         return 1
     if len(pdfs) > 1:
         print(f"[jokbo] PDF가 {len(pdfs)}개입니다. 가장 큰 것을 씁니다:")
-        for p in pdfs:
-            print(f"    {p.name} ({p.stat().st_size / 1024 / 1024:.1f}MB)")
-        pdfs.sort(key=lambda p: p.stat().st_size, reverse=True)
+        for candidate in pdfs:
+            print(f"    {candidate.name} ({candidate.stat().st_size / 1024 / 1024:.1f}MB)")
+        pdfs.sort(key=lambda candidate: candidate.stat().st_size, reverse=True)
 
-    out_dir = Path(args.runs) / "_jokbo" / subject / args.this
-    index = jokbo.split(pdfs[0], out_dir, body_start=args.body_start)
+    out_dir = deck.jokbo_dir(Path(args.runs), subject)
+    print(f"[jokbo] {pdfs[0].name} → {out_dir}")
+    done = subprocess.run(
+        [sys.executable, "-m", "pdf2anki.jokbo", str(pdfs[0]), "-o", str(out_dir)],
+        cwd=str(REPO_ROOT), env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+    if done.returncode != 0:
+        print(f"  자르지 못했다 (코드 {done.returncode})")
+        return 1
 
-    sections = index["sections"]
-    print(f"[jokbo] {pdfs[0].name} → {len(sections)}개 구간")
-    for section in sections:
-        pages = section["end_page"] - section["start_page"] + 1
-        years = ",".join(str(y) for y in section["years"][:6]) or "-"
-        print(f"  {section['block']:<3} {section['label']:<8} "
-              f"p{section['start_page']:>3}-{section['end_page']:<3} ({pages:>2}쪽)  "
-              f"{years:<26} {section['title'][:34]}")
+    index = out_dir / "index.json"
+    if not index.is_file():
+        print("  index.json이 안 나왔다 — 다음 빌드가 이 조각을 못 찾는다")
+        return 1
+    print(f"\n  → {index}")
+    print("  이제 `python -m studyez watch --build`가 이 조각을 스스로 물린다")
+    return 0
 
-    covered = sorted({int(n) for n in index["by_lecture"]})
-    if covered:
-        gaps = [n for n in range(covered[0], covered[-1] + 1) if n not in covered]
-        print(f"\n  강의 {covered[0]}~{covered[-1]} 덮음"
-              + (f" · 빈 번호 {gaps}" if gaps else " · 빠짐없음"))
-    rows = index["professor_reference"]["rows"]
-    print(f"  교수 매트릭스 {len(rows)}행 — 참고용. 담당이 바뀌면 틀리므로 단독 근거로 쓰지 마라")
 
-    notes = filenames.scan(notes_dir(Path(args.root), subject, args.this),
-                           expect_year=args.this)
-    lectures = filenames.latest_versions(notes.files)
-    if lectures:
-        links = jokbo.link_lectures(index, lectures)
-        ok = sum(1 for link in links if link["confident"])
-        print(f"\n  올해 필기 {len(lectures)}편 ↔ 족보 연결 (확정 {ok})")
-        for link in links:
-            mark = "확정" if link["confident"] else ("확인" if link["jokbo_label"] else "없음")
-            print(f"    {link['key']:<10} {mark:<4} {link['score']:>4}  "
-                  f"{link['title'][:30]:<30} → {link['jokbo_label'] or '-'} "
-                  f"{link['jokbo_title'] or ''}")
-        (out_dir / "links.json").write_text(
-            json.dumps(links, ensure_ascii=False, indent=2), encoding="utf-8")
+# pdf2anki 작업 폴더 이름. `pre_`가 예습, 뒤에 붙는 꼬리는 사람이 시험 삼아
+# 갈라 둔 변형이다(`pre_p250825_01_note`). 꼬리가 달라도 같은 강의다.
+RE_WORK_DIR = re.compile(r"^(?P<pre>pre_)?p(?P<run_id>\d{6}_\d{2}(?:-[0-9a-f]{4})?)(?P<variant>.*)$")
 
-    print(f"  → {out_dir}")
+# 덮어쓸 때도 안 지우는 것. **사람이 만든 것과 남의 서비스에서 받아 온 것**이다 —
+# 파이프라인은 이 둘을 다시 만들 수 없다.
+KEEP_ON_IMPORT = {"preview.md", "pre_target.json"}
+
+
+def import_dirs(source: Path) -> dict[str, list[tuple[str, Path]]]:
+    """pdf2anki 작업 폴더를 훑어 `run_id`별로 모은다. `{run_id: [(kind, 폴더)]}`.
+
+    폴더 이름이 곧 무엇인지 말한다 — `p260812_01`이 복습, `pre_p250825_01`이 예습이다.
+    `_`로 시작하는 것(`_bundle`·`_image_check`)과 `jokbo`는 강의가 아니다.
+
+    **꼬리가 붙은 변형을 같은 강의로 모은다.** 안 모으면 `pre_p250825_01_note`가
+    `250825_01_note`라는 없는 강의가 되어 아무 데도 안 붙는 자리를 하나 만든다.
+    """
+    found: dict[str, list[tuple[str, Path]]] = {}
+    for entry in sorted(source.iterdir() if source.is_dir() else []):
+        if not entry.is_dir() or entry.name.startswith("_"):
+            continue
+        match = RE_WORK_DIR.match(entry.name)
+        if match is None:
+            continue
+        kind = deck.PRE if match.group("pre") else deck.MAIN
+        if deck.apkg_of(entry, kind) is None:
+            continue
+        found.setdefault(match.group("run_id"), []).append((kind, entry))
+    return found
+
+
+def run_import(args) -> int:
+    """다른 곳에서 만든 pdf2anki 덱을 `runs/`로 옮긴다. **올리지는 않는다.**
+
+    옮긴 자리마다 `HOLD`를 놓는다. 이 사이트의 눈(계약·검문)으로 한 번도 본 적이
+    없는 산출물이라, 사람이 보고 `python -m studyez release <run_id>`로 풀기 전에는
+    `publish`가 덱을 내보내지 않는다. 강의록 PDF는 그대로 나간다 — 그건 이 검토와
+    무관한 자료다.
+    """
+    if not args.source_dir:
+        print("쓰는 법: python -m studyez import --from \"../PDF2ANKI/out\"")
+        return 2
+    source, runs_dir = Path(args.source_dir), Path(args.runs)
+    if not source.is_dir():
+        print(f"[import] {source} 가 없다")
+        return 2
+
+    found = import_dirs(source)
+    if args.run_id:
+        found = {k: v for k, v in found.items() if k == args.run_id}
+    if not found:
+        print(f"[import] {source} 에서 옮길 덱을 못 찾았다")
+        return 1
+
+    print(f"[import] {source} → {runs_dir}  ({len(found)}편)")
+    moved = 0
+    for run_id, entries in sorted(found.items()):
+        # 한 강의에 같은 갈래가 여럿이면 (변형 폴더) 가장 새 것을 쓰되 **말은 한다.**
+        chosen: list[tuple[str, Path]] = []
+        for kind in (deck.MAIN, deck.PRE):
+            same = sorted((pair for pair in entries if pair[0] == kind),
+                          key=lambda pair: deck.apkg_of(pair[1], pair[0]).stat().st_mtime)
+            if len(same) > 1:
+                print(f"  ⚠ {run_id} {kind} — 후보가 {len(same)}개다. 가장 새 것을 쓴다: "
+                      + " · ".join(folder.name for _, folder in same))
+            chosen += same[-1:]
+
+        target = runs_dir / run_id
+        for kind, folder in chosen:
+            source_name = Path(deck.source_pdf(folder)).name
+            parsed = filenames.parse(source_name) if source_name else None
+            label = f"{run_id} ← {folder.name}"
+            if parsed is None:
+                print(f"  ✗ {label} — 원본 파일명을 읽지 못했다")
+                continue
+            if target.exists() and not args.force:
+                print(f"  · {label} — {target.name}이 이미 있다 (--force로 덮어쓴다)")
+                continue
+            if args.dry_run:
+                print(f"  → {label} ({kind}, {parsed.title[:34]})")
+                continue
+
+            # 덮어쓰기는 **비우고 나서** 한다. 겹쳐 부으면 앞 파이프라인이 남긴
+            # `.apkg`가 옆에 그대로 남고, `apkg_of`가 이름순으로 그걸 집을 수 있다.
+            # 남기는 것은 사람이 만든 것뿐이다 — 예습 대화는 여기서 다시 못 만든다.
+            if target.exists():
+                for entry in target.iterdir():
+                    if entry.name in KEEP_ON_IMPORT:
+                        continue
+                    shutil.rmtree(entry) if entry.is_dir() else entry.unlink()
+            shutil.copytree(folder, target, dirs_exist_ok=True)
+            try:
+                meta = deck.contract(target, run_id, parsed.title, kind)
+            except (FileNotFoundError, OSError, ValueError) as cause:
+                print(f"  ✗ {label} — 계약 모양으로 못 옮겼다: {cause}")
+                continue
+            (target / gate.HOLD_FILE).write_text(
+                f"{source} 에서 옮겨 왔다. 이 사이트의 눈으로 본 적이 없다.\n"
+                f"확인한 뒤 `python -m studyez release {run_id}` 로 푼다.\n",
+                encoding="utf-8")
+            # 표시를 찍어 둔다. 안 찍으면 오늘 밤 워처가 옮겨 온 편을 처음부터
+            # 다시 만들고, 사람이 보려던 그 덱이 그 자리에서 덮인다.
+            stamped = ""
+            source_path = Path(deck.source_pdf(target))
+            if kind == deck.MAIN and parsed.date[:4] == args.this and source_path.exists():
+                stamped = " · 표시함" if watch.stamp_run(runs_dir, run_id, source_path) else ""
+            moved += 1
+            print(f"  ✓ {label} — {meta['item_count']}장 · 보류 표시를 놓았다{stamped}")
+
+    if not args.dry_run:
+        print(f"\n  옮긴 것 {moved}편. 전부 보류 상태다 — `publish`가 덱을 안 내보낸다.")
+        print("  확인한 편마다: python -m studyez release <run_id>")
+    return 0
+
+
+def run_release(args) -> int:
+    """보류를 푼다. 사람이 그 편을 보고 괜찮다고 판단했을 때."""
+    run_id = args.subject or args.run_id
+    if not run_id:
+        print("쓰는 법: python -m studyez release 260812_01")
+        return 2
+    hold = Path(args.runs) / run_id / gate.HOLD_FILE
+    if not hold.is_file():
+        print(f"[release] {run_id}은 보류돼 있지 않다")
+        return 0
+    hold.unlink()
+    print(f"[release] {run_id} 보류를 풀었다 — 다음 publish에서 덱이 나간다")
     return 0
 
 
@@ -394,12 +536,23 @@ def runner_token(explicit: str | None) -> str:
     return ""
 
 
+def within_days_until(args) -> str:
+    """`--within-days N` → 그날까지의 날짜. 0이면 빈 문자열(제한 없음).
+
+    예습은 **강의 전날**에 값이 있는 것이라, 밀린 링크가 스무 개일 때 먼 강의까지
+    밤새 만들 이유가 없다. 미룬 편은 다음 실행에서 다시 잡힌다.
+    """
+    if not args.within_days:
+        return ""
+    today = Date.fromisoformat(args.today) if args.today else Date.today()
+    return (today + timedelta(days=args.within_days)).isoformat()
+
+
 def report_prequeue(args) -> int:
     """관리자가 저장한 예습 링크를 받아 Pre-Quiz를 만들 자리까지 세운다.
 
-    문항은 여기서 안 만든다. 만드는 것은 `/prequiz`이고 그건 모델이 하는
-    일이다 — 여기서 하는 것은 그 앞의 결정적인 부분(짝 고르기·prep·대화
-    내려받기)이고, 무엇이 남았는지를 `runs/prequeue.json`에 적어 넘긴다.
+    `--build` 없이 부르면 자리만 세운다 — 짝 고르기와 예습 대화 내려받기까지다.
+    `--build`면 이어서 `pdf2anki.prequiz`가 덱을 만든다.
     """
     root, runs_dir = Path(args.root), Path(args.runs)
     api = (args.api or os.getenv("STUDYEZ_API_BASE_URL") or publish.DEFAULT_API_BASE).rstrip("/")
@@ -435,22 +588,25 @@ def report_prequeue(args) -> int:
 
     if args.dry_run:
         # 아직 아무것도 안 세웠으므로 state는 "막혔나 아닌가"까지만 참이다.
-        print("\n  --dry-run — prep도 대화 내려받기도 하지 않았다\n")
+        print("\n  --dry-run — 대화 내려받기도 빌드도 하지 않았다\n")
         for target in targets:
             link = target.link
+            # 서버에 저장된 제목이 아니라 **덱에 붙을 제목**을 보여 준다. 시간표
+            # 칸에서 세운 강의는 그 사이 이름이 펴졌을 수 있다.
+            title = target.this_title or link.title
             if target.state == prequeue.BLOCKED:
-                print(f"  {link.date} ✋ {link.run_id:<12} {link.title[:30]:<30}")
+                print(f"  {link.date} ✋ {link.run_id:<12} {title[:30]:<30}")
                 print(f"      {target.reason}")
             else:
-                print(f"  {link.date}    {link.run_id:<12} {link.title[:30]:<30} "
+                print(f"  {link.date}    {link.run_id:<12} {title[:30]:<30} "
                       f"→ 작년 {target.prev_run_id}")
         return 0
 
-    planned = [t for t in targets if t.state != prequeue.BLOCKED]
+    planned = [target for target in targets if target.state != prequeue.BLOCKED]
     if planned:
         started = time.monotonic()
-        print(f"\n  자리 세우는 중 {len(planned)}편 (prep + 예습 대화)…")
-        targets = prequeue.prepare(targets, runs_dir, REPO_ROOT, workers=args.workers)
+        print(f"\n  자리 세우는 중 {len(planned)}편 (예습 대화 내려받기)…")
+        targets = prequeue.prepare(targets, runs_dir)
         print(f"  {(time.monotonic() - started) / 60:.1f}분")
 
     print()
@@ -459,7 +615,8 @@ def report_prequeue(args) -> int:
         link = target.link
         mark = {prequeue.READY: "▶", prequeue.DONE: "✓",
                 prequeue.STALE: "↻", prequeue.BLOCKED: "✋"}[target.state]
-        print(f"  {link.date} {mark} {link.run_id:<12} {link.title[:30]:<30} "
+        print(f"  {link.date} {mark} {link.run_id:<12} "
+              f"{(target.this_title or link.title)[:30]:<30} "
               + (f"→ 작년 {target.prev_run_id}" if target.prev_run_id else ""))
         if target.reason:
             print(f"      {target.reason}")
@@ -477,14 +634,23 @@ def report_prequeue(args) -> int:
           f" · 이미 있는 것 {counts[prequeue.DONE]}편"
           f" · 막힌 것 {counts[prequeue.BLOCKED]}편")
 
+    if args.build and ready:
+        print(f"\n  예습 덱 만드는 중 {len(ready)}편 — 한 편씩, 강의 날짜가 이른 것부터\n")
+        started = time.monotonic()
+        targets = prequeue.build(targets, runs_dir, REPO_ROOT, model=args.model,
+                                 timeout=args.timeout, limit=args.max,
+                                 until=within_days_until(args))
+        print(f"\n  {(time.monotonic() - started) / 60:.1f}분")
+
     queue_path = runs_dir / prequeue.QUEUE_NAME
     prequeue.save(targets, queue_path)
     print(f"  큐: {queue_path}")
-    if ready:
-        print("\n  이제 세션이 각 편마다 /prequiz 를 돌린다 — 작년 run에서 만든다:")
+    if ready and not args.build:
+        print("\n  `python -m studyez prequeue --build` — 이대로 예습 덱까지 만든다:")
         for target in ready:
-            print(f"    /prequiz {target.prev_pdf}")
-        print("  빌드가 끝나면 `python -m studyez done <작년 run_id>` — 덱·문항·링크가 함께 올라간다.")
+            print(f"    {target.prev_run_id}  {Path(target.prev_pdf).name[:52]}")
+    elif args.build:
+        print("  `python -m studyez publish --all` — 덱·문항·링크가 함께 올라간다.")
     return 0
 
 
@@ -626,18 +792,23 @@ def report_publish(args) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Study_EZ 로컬 러너")
     parser.add_argument("command", choices=["match", "watch", "done", "jokbo", "preview",
-                                            "prequeue", "publish"])
+                                            "prequeue", "publish", "import", "release"])
     parser.add_argument("subject", nargs="?", help="과목 폴더명. --all이면 생략")
     parser.add_argument("--all", action="store_true", help="필기/올해 폴더가 있는 과목 전부")
     parser.add_argument("--this", default="2026", help="올해 폴더명")
     parser.add_argument("--prev", default="2025", help="작년 폴더명")
     parser.add_argument("--root", default=str(DEFAULT_ROOT), help="자료 최상위 폴더")
     parser.add_argument("--runs", default=str(REPO_ROOT / "runs"), help="산출물 루트")
-    parser.add_argument("--prep", action="store_true", help="watch: prep까지 실행")
-    parser.add_argument("--workers", type=int, default=0,
-                        help="watch·prequeue: 동시에 돌릴 prep 수 (기본: CPU-1)")
+    parser.add_argument("--build", action="store_true",
+                        help="watch·prequeue: 자리만 세우지 말고 덱까지 만든다")
+    parser.add_argument("--model", default="",
+                        help="watch·prequeue: 빈 세션에 쓸 모델 (기본: CLI 기본값)")
+    parser.add_argument("--timeout", type=int, default=deck.DEFAULT_TIMEOUT,
+                        help=f"watch·prequeue: 한 편의 제한 시간(초). 기본 {deck.DEFAULT_TIMEOUT}")
     parser.add_argument("--max", type=int, default=watch.DEFAULT_MAX_ITEMS,
-                        help="watch: 하루 처리 상한")
+                        help="watch·prequeue: 한 번에 만들 상한")
+    parser.add_argument("--within-days", type=int, default=0,
+                        help="prequeue: 강의가 오늘부터 이 날짜 안에 있는 것만 만든다")
     parser.add_argument("--now", action="store_true",
                         help="watch: 방금 올라온 파일도 포함 (동기화 대기 생략)")
     parser.add_argument("--since", default=None,
@@ -651,15 +822,14 @@ def main() -> int:
                         help=f"watch: 시간표 (기본 {blocks.DEFAULT_SOURCE})")
     parser.add_argument("--url", default=None,
                         help="preview: 공유된 예습 대화 주소")
-    parser.add_argument("--body-start", type=int, default=4,
-                        help="jokbo: 목차 다음, 본문이 시작하는 쪽 (기본 4)")
     parser.add_argument("--api", default=None,
                         help=f"publish: API 주소 (기본 {publish.DEFAULT_API_BASE})")
     parser.add_argument("--token", default=None,
                         help="publish: 러너 토큰 (기본 server/.env의 RUNNER_TOKEN)")
     parser.add_argument("--dry-run", action="store_true",
                         help="publish: 무엇이 올라갈지만 적고 올리지 않는다. "
-                             "prequeue: 어느 자리에 설지만 적고 prep·내려받기를 안 한다")
+                             "prequeue: 어느 자리에 설지만 적고 내려받기·빌드를 안 한다. "
+                             "import: 무엇을 옮길지만 본다")
     parser.add_argument("--force", action="store_true",
                         help="publish: 이미 올린 표시를 무시하고 다시 올린다")
     parser.add_argument("--notes-only", action="store_true",
@@ -674,6 +844,8 @@ def main() -> int:
                              "(예습용 작년 강의록도 안 붙는다)")
     parser.add_argument("--no-publish", action="store_true",
                         help="done: 표시만 하고 올리지 않는다")
+    parser.add_argument("--from", dest="source_dir", default=None,
+                        help="import: 덱을 옮겨 올 pdf2anki 작업 폴더 (예: ../PDF2ANKI/out)")
     args = parser.parse_args()
 
     # 이름을 직접 대도 막는다. 실수로 한 번 돌리면 재고에 섞여 들어가고,
@@ -695,6 +867,10 @@ def main() -> int:
         return run_preview(args)
     if args.command == "prequeue":
         return report_prequeue(args)
+    if args.command == "import":
+        return run_import(args)
+    if args.command == "release":
+        return run_release(args)
     if args.command == "publish":
         if not args.subject and not args.all and not args.run_id:
             parser.error("과목명을 주거나 --all 또는 --run-id를 쓰세요")

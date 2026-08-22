@@ -231,19 +231,19 @@ def put_run_meta(
 
 
 class PreItemIn(BaseModel):
+    """예습 카드 한 장. 자유회상이라 보기가 없다 — 채점은 본인이 한다."""
+
     id: str
-    qtype: Literal["mcq", "short", "ox"]
+    qtype: Literal["basic", "cloze", "ox"]
     stem: str
-    choices: list[str] | None = None
     answer: str
-    focus: str = "core"
+    focus: str = ""
+    card_type: str = ""
     exam_hit: bool = False
     slide_no: int | None = None
     source_type: str = "lecture"
     source_anchor: str = ""
     explanation: str = ""
-    objective_id: str = ""
-    retrieval_target: str = ""
     flags: list[str] = Field(default_factory=list)
 
 
@@ -263,11 +263,9 @@ def put_pre_items(
     """`pre_items.final.json` 통째로. 부분 갱신이 아니라 교체다."""
     lecture = lecture_or_404(db, subject, run_id)
     for item in payload.items:
-        if item.qtype == "mcq" and len(item.choices or []) != 5:
-            raise HTTPException(
-                status_code=422,
-                detail=f"{item.id}: mcq의 보기는 정확히 5개여야 합니다.",
-            )
+        if not item.answer.strip():
+            # 답이 없는 카드는 펴 봐야 빈 칸이 뜬다. 그 자리에서 막는다.
+            raise HTTPException(status_code=422, detail=f"{item.id}: 답이 비어 있습니다.")
     db.execute(
         delete(PreItem).where(PreItem.subject == lecture.subject, PreItem.run_id == lecture.run_id)
     )
@@ -280,16 +278,14 @@ def put_pre_items(
                 ord=order,
                 qtype=item.qtype,
                 stem=item.stem,
-                choices=item.choices,
                 answer=item.answer,
                 focus=item.focus,
+                card_type=item.card_type,
                 exam_hit=item.exam_hit,
                 slide_no=item.slide_no,
                 source_type=item.source_type,
                 source_anchor=item.source_anchor,
                 explanation=item.explanation,
-                objective_id=item.objective_id,
-                retrieval_target=item.retrieval_target,
                 flags=item.flags,
             )
         )

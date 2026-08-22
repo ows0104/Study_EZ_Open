@@ -257,31 +257,35 @@ class UserPreview(Base):
 
 
 class PreItem(Base):
-    """`pre_items.final.json`의 문항 하나.
+    """`pre_items.final.json`의 예습 카드 하나.
 
-    `answer`와 `explanation`은 **채점 응답에만 실린다.** 문제를 내려보낼 때
-    같이 보내면 개발자 도구로 정답이 보이고, 그러면 `quiz_attempt`가 아무것도
-    뜻하지 않게 된다.
+    **자유회상 플래시카드다.** 한동안 5지선다·단답이었고 서버가 문자열로 채점했는데,
+    파이프라인이 pdf2anki로 갈리면서 카드가 Anki와 같은 앞면/뒷면이 되었다. 긴 산문
+    답을 문자열로 맞히라고 하면 전원이 틀리므로, 채점은 **읽어 보고 본인이** 한다.
+
+    `answer`와 `explanation`은 그래도 문항과 함께 안 내려보낸다. 답을 편 사람만
+    `reveal`로 받아 가고, 그래야 `quiz_attempt`의 「맞았다」가 뜻을 갖는다.
     """
 
     __tablename__ = "pre_item"
 
     subject: Mapped[str] = mapped_column(Text, primary_key=True)
     run_id: Mapped[str] = mapped_column(String(32), primary_key=True)
-    item_id: Mapped[str] = mapped_column(String(32), primary_key=True)  # "p001"
+    item_id: Mapped[str] = mapped_column(String(32), primary_key=True)  # "c001"
     ord: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    qtype: Mapped[str] = mapped_column(String(8), nullable=False)  # mcq|short|ox
-    stem: Mapped[str] = mapped_column(Text, nullable=False)  # 마크다운 **강조**가 들어 있다
-    choices: Mapped[list | None] = mapped_column(JSON, nullable=True)  # mcq는 5개, 그 외 null
+    # basic | cloze | ox. 푸는 방식은 셋 다 같고 화면이 꼴만 달리 그린다.
+    qtype: Mapped[str] = mapped_column(String(16), nullable=False)
+    stem: Mapped[str] = mapped_column(Text, nullable=False)
     answer: Mapped[str] = mapped_column(Text, nullable=False)
-    focus: Mapped[str] = mapped_column(String(16), nullable=False, default="core")
+    # 왜 이것이 「꼭 반드시」인가. spine·vocabulary·mechanism·clinical·repeated.
+    focus: Mapped[str] = mapped_column(String(16), nullable=False, default="")
+    # 무엇을 막는 카드인가. term·abbrev·mechanism·taxonomy·clinical·number 등.
+    card_type: Mapped[str] = mapped_column(String(16), nullable=False, default="")
     exam_hit: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     slide_no: Mapped[int | None] = mapped_column(Integer, nullable=True)
     source_type: Mapped[str] = mapped_column(String(16), nullable=False, default="lecture")
     source_anchor: Mapped[str] = mapped_column(Text, nullable=False, default="")
     explanation: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    objective_id: Mapped[str] = mapped_column(String(32), nullable=False, default="")
-    retrieval_target: Mapped[str] = mapped_column(Text, nullable=False, default="")
     flags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
 
     __table_args__ = (
@@ -293,11 +297,14 @@ class PreItem(Base):
 
 
 class QuizAttempt(Base):
-    """Pre-Quiz 웹 풀이의 채점 결과. 사용자별로 쓰이는 유일한 표다.
+    """Pre-Quiz 웹 풀이의 결과. 사용자별로 쓰이는 유일한 표다.
+
+    **`correct`는 본인이 찍은 것이다.** 서버가 판정한 것이 아니다. 자유회상
+    카드라 대조할 문자열이 없고, 그래서 「답을 펴 보고 맞았다고 했다」가 여기
+    남는 전부다. 화면이 이 값을 서버 판정처럼 그리면 안 된다.
 
     지금 Pre-Quiz는 apkg로 배급하는 것이 먼저이고 웹 풀이는 그 뒤에 있다.
-    이 표는 그대로 두되 화면에서 앞에 나서지 않는다 — 나중에 사용자별 기능을
-    붙일 때 "오늘 놓친 것"이 여기서 나온다.
+    "오늘 놓친 것"이 여기서 나온다.
     """
 
     __tablename__ = "quiz_attempt"
@@ -306,7 +313,6 @@ class QuizAttempt(Base):
     subject: Mapped[str] = mapped_column(Text, primary_key=True)
     run_id: Mapped[str] = mapped_column(String(32), primary_key=True)
     item_id: Mapped[str] = mapped_column(String(32), primary_key=True)
-    answered: Mapped[str] = mapped_column(Text, nullable=False, default="")
     correct: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     answered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 

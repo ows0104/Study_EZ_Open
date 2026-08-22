@@ -1,29 +1,55 @@
 {
-  "lecture_id": "260812_01",
-  "lecture_title": "병리학 소개",
-  "deck_name": "병리학::[260812_01] 병리학 소개",
+  "lecture_id": "260820_03",
+  "lecture_title": "소아질환의 병태생리(2)",
+  "deck_id": "p260820_03",
+  "deck_name": "병리학::소아질환의 병태생리(2) 소아기 특이 질환 1",
+  "deck_file": "p260820_03.apkg",
+  "built_at": "2026-08-23T00:39:38",
+  "pipeline": "pdf2anki",
+  "source_pdf": "C:/Users/ows01/SynologyDrive/병리학/필기/2026/[260820_03]소아질환의 병태생리(2) 소아기 특이 질환 1(김은나)_황준하v1.pdf",
   "verified": {
-    "collection": "collection.anki2",
-    "notes": 80,
-    "cards": 80,
-    "media": 24
+    "notes": 88,
+    "cards": 92,
+    "media": 46,
+    "decks": 2,
+    "missing_media": []
   },
-  "built_at": "2026-08-16T12:23:30",
-  "apkg": "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\runs\\260812_01\\[260812_01]_병리학_소개.apkg",
-  "item_count": 80,
+  "item_count": 88,
   "format": {
-    "basic": 76,
-    "cloze": 4,
-    "jokbo": 16,
-    "occlusion": 0
+    "basic": 75,
+    "cloze": 2,
+    "ox": 6,
+    "image_occlusion": 3,
+    "image_basic": 2
   },
-  "occlusion": 0,
-  "trap_notes": 24,
+  "sources": {
+    "lecture": 79,
+    "jokbo": 9
+  },
+  "importance": {
+    "core": 63,
+    "detail": 25
+  },
+  "exam_hit": 4,
+  "review_flagged": 13,
+  "review_flags": {
+    "points_at_source": 2,
+    "too_many_items": 2,
+    "missing_explanation": 9
+  },
+  "reproduce": {
+    "same": 75,
+    "different": 4,
+    "없음": 5,
+    "partial": 4
+  },
+  "dropped": 0,
+  "similar_pairs": 0,
+  "slides_total": 46,
   "slides_used": [
+    3,
     4,
-    5,
     6,
-    7,
     8,
     9,
     10,
@@ -35,48 +61,43 @@
     16,
     17,
     18,
+    19,
     20,
+    21,
     23,
     25,
+    26,
     27,
+    28,
+    29,
+    30,
     31,
     32,
     33,
     34,
-    35
+    35,
+    36,
+    37,
+    39,
+    40,
+    41,
+    42
   ],
   "slides_unused": [
     1,
     2,
-    3,
-    19,
-    21,
+    5,
+    7,
     22,
     24,
-    26,
-    28,
-    29,
-    30
+    38,
+    43,
+    44,
+    45,
+    46
   ],
-  "media_count": 24,
-  "importance": {
-    "core": 40,
-    "detail": 40
-  },
-  "exam_hit": 28,
-  "stamped": 39,
-  "sources": {
-    "lecture": 64,
-    "jokbo": 16
-  },
-  "review_flagged": 2,
-  "card_types": {
-    "fact": 38,
-    "comparison": 2,
-    "mechanism": 1,
-    "trap": 14,
-    "list": 21,
-    "sequence": 0,
-    "cloze": 4
-  }
+  "untouched_slides": [],
+  "objectives_without_card": [],
+  "strategy": "annotation",
+  "strategy_why": "교수 교체(김은나) → 필기 중심"
 }

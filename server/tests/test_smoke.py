@@ -187,7 +187,7 @@ def main() -> None:
     check("로그인 없이는 못 읽는다",
           client.get("/api/admin/previews").status_code in (401, 403))
 
-    print("\n[6] Pre-Quiz — 정답이 문제와 함께 나가지 않는가")
+    print("\n[6] Pre-Quiz — 답이 문제와 함께 나가지 않는가")
     client.put(
         "/api/admin/lectures/병리학/260813_03/pre-items",
         headers=RUNNER,
@@ -195,54 +195,56 @@ def main() -> None:
             "lecture_id": "260813_03",
             "items": [
                 {
-                    "id": "p001", "qtype": "mcq",
-                    "stem": "다음 중 해당하지 **않는 것은**?",
-                    "choices": ["가", "나", "다", "라", "마"],
-                    "answer": "3", "focus": "must_know", "slide_no": 6,
+                    "id": "c001", "qtype": "basic",
+                    "stem": "Proto-oncogene 과 oncogene 은 어떻게 다른가?",
+                    "answer": "변이로 자율 작동하게 된 것이 oncogene 이다",
+                    "focus": "spine", "card_type": "term", "slide_no": 6,
+                    "explanation": "정상 유전자가 켜진 채로 남는다는 틀이다.",
                 },
                 {
-                    "id": "p002", "qtype": "short",
-                    "stem": "약어로 무엇인가?", "answer": "LHON", "focus": "core",
-                    "explanation": "Leber hereditary optic neuropathy / LHON / "
-                                   "Leber 유전성 시신경병증 어느 표기든 정답이다.\n뒤이은 해설.",
+                    "id": "c002", "qtype": "cloze",
+                    "stem": "재태 28주 미만에서 RDS 위험은 [____]다.",
+                    "answer": "60%", "focus": "mechanism", "card_type": "number",
                 },
-                {"id": "p003", "qtype": "ox", "stem": "맞는가?", "answer": "O", "focus": "context"},
+                {
+                    "id": "c003", "qtype": "ox",
+                    "stem": "저체중 자체가 RDS의 가장 중요한 위험인자다.",
+                    "answer": "X", "focus": "clinical", "card_type": "trap",
+                },
             ],
         },
     )
     quiz = client.get("/api/lectures/병리학/260813_03/prequiz", headers=USER).json()
-    check("문항 3개", len(quiz["items"]) == 3, quiz)
-    check("**강조**가 살아 있다", "**않는 것은**" in quiz["items"][0]["stem"], quiz["items"][0]["stem"])
+    check("카드 3장", len(quiz["items"]) == 3, quiz)
     leaked = sorted({"answer", "explanation"} & {key for item in quiz["items"] for key in item})
     check("answer·explanation 필드가 없다", not leaked, leaked)
     # 필드 이름을 지웠어도 값이 다른 자리에 실리면 마찬가지다.
-    check("정답 문자열이 어디에도 없다", "LHON" not in str(quiz), quiz)
+    check("답 문자열이 어디에도 없다", "oncogene 이다" not in str(quiz), quiz)
 
-    print("\n[7] 채점 — 허용 표기와 근거 슬라이드")
-    graded = client.post(
-        "/api/lectures/병리학/260813_03/prequiz/grade",
-        headers=USER, json={"itemId": "p002", "answered": "leber 유전성 시신경병증"},
+    print("\n[7] 펴 보기와 자기채점")
+    opened = client.post(
+        "/api/lectures/병리학/260813_03/prequiz/reveal",
+        headers=USER, json={"itemId": "c001"},
     ).json()
-    check("별칭 표기도 정답", graded["correct"] is True, graded)
+    check("펴면 답이 온다", opened["answer"].startswith("변이로"), opened)
+    check("근거 슬라이드가 붙는다", bool(opened["slideUrl"]), opened)
+    # 펴 보기만으로 「풀었다」로 세면 답을 보고 넘긴 카드까지 기록에 섞인다.
+    check("펴는 것만으로는 안 남는다",
+          client.get("/api/lectures/병리학/260813_03/prequiz", headers=USER).json()["answered"] == 0)
 
-    wrong = client.post(
-        "/api/lectures/병리학/260813_03/prequiz/grade",
-        headers=USER, json={"itemId": "p001", "answered": "1"},
-    ).json()
-    check("틀린 답은 오답", wrong["correct"] is False, wrong)
-    check("근거 슬라이드가 붙는다", bool(wrong["slideUrl"]), wrong)
+    for item_id, correct in (("c001", False), ("c002", True), ("c003", False)):
+        client.post("/api/lectures/병리학/260813_03/prequiz/grade",
+                    headers=USER, json={"itemId": item_id, "correct": correct})
+    scored = client.get("/api/lectures/병리학/260813_03/prequiz", headers=USER).json()
+    check("푼 것 3 · 맞았다고 찍은 것 1",
+          (scored["answered"], scored["correct"]) == (3, 1), scored)
 
-    ox = client.post(
-        "/api/lectures/병리학/260813_03/prequiz/grade",
-        headers=USER, json={"itemId": "p003", "answered": "x"},
-    ).json()
-    check("OX 오답", ox["correct"] is False, ox)
-
-    print("\n[8] 놓친 것 — must_know가 먼저 오는가")
+    print("\n[8] 놓친 것 — 뼈대가 먼저 오는가")
     detail = client.get("/api/lectures/병리학/260813_03", headers=USER).json()
     missed = detail["prequiz"]["missed"]
-    check("두 개를 놓쳤다", len(missed) == 2, missed)
-    check("must_know가 맨 앞", missed and missed[0]["itemId"] == "p001", missed)
+    check("두 장을 놓쳤다", len(missed) == 2, missed)
+    # `spine`(뼈대)이 `clinical`보다 앞이다. 모르면 그 뒤가 통째로 안 붙는다.
+    check("spine이 맨 앞", missed and missed[0]["itemId"] == "c001", missed)
     check("점수가 남았다", detail["prequiz"]["correct"] == 1, detail["prequiz"])
 
     print("\n[9] 캘린더 — 시간표 칸에 점이 붙는가")

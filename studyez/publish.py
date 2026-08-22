@@ -28,7 +28,7 @@ Pre-Quiz는 **작년 필기로 만든다**(족보가 정리돼 붙은 쪽이 작
 
 ## 슬라이드 이미지는 Pre-Quiz가 있을 때만 올린다
 
-`media/*.png`를 읽는 곳은 서버에 한 군데뿐이다. 웹 Pre-Quiz의 오답 해설이
+`slides/*.png`를 읽는 곳은 서버에 한 군데뿐이다. 웹 Pre-Quiz의 해설이
 `slide_no`로 찾는다(`server/app/routes/prequiz.py`의 `slide_url`). 그 자리는
 `(과목, run_id, slide_no)`로만 찾으므로 올해 슬라이드와 작년 슬라이드를 한
 강의에 같이 올리면 같은 번호가 둘이 되어 어느 쪽이 뜰지 알 수 없다. 그래서
@@ -58,7 +58,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-from . import ahead, filenames, gate, matching
+from . import ahead, deck, filenames, gate, matching
 from . import preview as preview_mod
 from .filenames import LectureFile
 from .watch import assign_run_ids
@@ -188,20 +188,16 @@ def _owns(run_dir: Path, item: LectureFile) -> tuple[bool, str]:
     """이 디렉터리가 정말 이 강의의 것인가. (맞나, 사람이 봐야 할 말)
 
     `run_id`는 날짜_교시라서 **과목을 포함하지 않는다**(계약 §run_id). 다른 과목이
-    같은 교시에 돌면 `runs/260813_03`을 두 강의가 나눠 갖게 되므로, prep.json이
+    같은 교시에 돌면 `runs/260813_03`을 두 강의가 나눠 갖게 되므로, 파이프라인이
     적어 둔 원본 PDF로 확인한다. 이 확인이 없으면 남의 덱을 올릴 수 있다.
     """
-    prep = run_dir / "prep.json"
-    if not prep.is_file():
+    source = deck.source_pdf(run_dir)
+    if not source:
         return False, ""
-    try:
-        source = str(json.loads(prep.read_text(encoding="utf-8")).get("source_pdf", ""))
-    except (OSError, ValueError):
-        return False, f"{run_dir.name}/prep.json을 읽지 못했다 — 산출물을 올리지 않는다"
 
-    parsed = filenames.parse(source) if source else None
+    parsed = filenames.parse(source)
     if parsed is None:
-        return False, f"{run_dir.name}/prep.json의 원본을 읽지 못했다 — 산출물을 올리지 않는다"
+        return False, f"{run_dir.name}의 원본 파일명을 읽지 못했다 — 산출물을 올리지 않는다"
     if parsed.uid != item.uid:
         which = "같은 교시의 다른 강의가 쓴 자리다" if parsed.key == item.key else "다른 강의의 것이다"
         return False, f"{run_dir.name}은 {which} ({Path(source).name[:44]}) — 산출물을 올리지 않는다"
@@ -212,25 +208,22 @@ def _owns(run_dir: Path, item: LectureFile) -> tuple[bool, str]:
 
 
 def _main_apkg(run_dir: Path) -> Path | None:
-    """Main-Quiz 덱. `_예습`으로 끝나는 것은 Pre-Quiz 덱이라 뺀다."""
-    decks = [p for p in sorted(run_dir.glob("*.apkg")) if not p.stem.endswith("_예습")]
-    return decks[0] if decks else None
+    return deck.apkg_of(run_dir, deck.MAIN)
 
 
 def _pre_apkg(run_dir: Path) -> Path | None:
-    decks = [p for p in sorted(run_dir.glob("*.apkg")) if p.stem.endswith("_예습")]
-    return decks[0] if decks else None
+    return deck.apkg_of(run_dir, deck.PRE)
 
 
 def _add_this_year(plan: LecturePlan, run_dir: Path) -> None:
     """올해 run 디렉터리에서 나오는 것 — Main-Quiz."""
-    deck = _main_apkg(run_dir)
-    if deck:
-        plan.uploads.append(Upload("main_apkg", deck))
+    apkg = _main_apkg(run_dir)
+    if apkg:
+        plan.uploads.append(Upload("main_apkg", apkg))
     meta = run_dir / "run.meta.json"
     if meta.is_file():
         plan.run_meta["main"] = meta
-    verdict = gate.inspect(run_dir, deck, meta if meta.is_file() else None, "Main-Quiz")
+    verdict = gate.inspect(run_dir, apkg, meta if meta.is_file() else None, "Main-Quiz")
     plan.notes += verdict.notes
     plan.blocking += verdict.blocking
 
@@ -241,20 +234,23 @@ def _add_prev_year(plan: LecturePlan, run_dir: Path) -> None:
     슬라이드 이미지는 `pre_items`가 있을 때만 따라 올린다. 오답 해설이 그
     번호로 찾는 유일한 소비자이고, 없으면 아무도 읽지 않는다.
     """
-    deck = _pre_apkg(run_dir)
-    if deck:
-        plan.uploads.append(Upload("pre_apkg", deck))
+    apkg = _pre_apkg(run_dir)
+    if apkg:
+        plan.uploads.append(Upload("pre_apkg", apkg))
     meta = run_dir / "pre_run.meta.json"
     if meta.is_file():
         plan.run_meta["pre"] = meta
-    verdict = gate.inspect(run_dir, deck, meta if meta.is_file() else None, "Pre-Quiz", "pre_")
+    verdict = gate.inspect(run_dir, apkg, meta if meta.is_file() else None, "Pre-Quiz", "pre_")
     plan.notes += verdict.notes
     plan.blocking += verdict.blocking
 
     items = run_dir / "pre_items.final.json"
     if items.is_file():
         plan.pre_items = items
-        for image in sorted((run_dir / "media").glob("*.png")):
+        # `media/`가 아니라 `slides/`다. 파이프라인의 media에는 그림 크롭도 섞여
+        # 있는데 웹이 읽는 것은 「이 카드의 근거가 몇 번 슬라이드인가」뿐이라,
+        # `studyez.deck.contract`가 슬라이드만 골라 서버가 아는 이름으로 옮겨 둔다.
+        for image in sorted((run_dir / "slides").glob("*.png")):
             plan.uploads.append(Upload("media", image))
 
     preview = run_dir / "preview.md"
@@ -375,8 +371,10 @@ def plan_subject(
         seats, ahead_warnings = ahead.plan(subject, this_files, prev_files, timetable, runs_dir)
         warnings += ahead_warnings
         for seat in seats:
+            # 짝을 넘기는 이유는 제목 때문이다. 시간표 칸은 제목이 접혀 와서
+            # 첫 줄만 읽으면 문장 중간에서 끊긴다 (`ahead.unfold_title`).
             plan = LecturePlan(subject=subject, run_id=seat.cell.key,
-                               item=seat.cell.as_lecture(), ahead=True)
+                               item=seat.cell.as_lecture(seat.prev), ahead=True)
             if seat.prev is not None:
                 plan.uploads.append(Upload("notes_prev", seat.prev.path))
                 plan.prev_run_id = prev_run_ids.get(seat.prev.uid, "")

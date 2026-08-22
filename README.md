@@ -13,7 +13,7 @@
                        ▼
             로컬 러너 (이 저장소)
             · 강의 인덱싱 · 작년 짝 붙이기
-            · /quiz · /prequiz 스킬 실행
+            · pdf2anki 실행 (덱을 만드는 자리)
             · 산출물 업로드
                        │
                        ▼
@@ -22,110 +22,131 @@
 
 ## 이 저장소만으로 돌아간다
 
-파이프라인 코드(`quiz/`, `prequiz/`)와 스킬(`.claude/skills/`)이 전부 안에 있다.
-바깥 의존은 `PyMuPDF`와 `genanki` 둘뿐이다.
-
 ```
-studyez/     로컬 러너 — 파일명 파싱, 연도 매칭, 워처
-quiz/        Main-Quiz 파이프라인 (시험 대비 Anki 덱)
-prequiz/     Pre-Quiz 파이프라인 (강의 직전 예습확인 퀴즈)
-.claude/skills/{quiz,prequiz}/   절차와 출제 규칙
+studyez/     로컬 러너 — 파일명 파싱, 연도 매칭, 워처, 업로드
+studyez/deck.py   그 러너와 파이프라인의 유일한 접점
+pdf2anki/    덱을 만드는 파이프라인. 명령 하나가 PDF에서 .apkg까지 간다
 runs/        산출물. 원본 PDF에서 언제든 재생성된다 (저장소에 안 들어감)
+server/      읽기 API + 관리자 업로드 (FastAPI, Cloud Run)
+web/         정적 프론트 (Vite + React)
 ```
+
+바깥 의존은 `PyMuPDF`·`genanki`·`jsonschema` 셋과, 이미 로그인된 `claude` CLI다.
+
+## 만드는 자리에 사람이 안 들어간다
+
+한동안 파이프라인의 가운데가 뚫려 있었다. 코드가 prep까지 하고 `runs/queue.json`을
+남기면, **사람이 연 Claude Code 세션**이 `/quiz` 스킬을 돌려 문항을 만들고, 다시
+코드가 빌드했다. 편당 53~72분이었고 그 시간이 세션의 컨텍스트를 통째로 먹었다.
+
+`pdf2anki`는 모델이 필요한 자리마다 `claude -p`로 **빈 세션을 스스로 띄운다**
+([pdf2anki/session.py](pdf2anki/session.py)). 이력도 설정도 도구도 없는 세션이라
+이 저장소의 `CLAUDE.md`도 메모리도 딸려가지 않는다. 그래서 명령 하나로 끝난다.
+
+```bash
+python -m pdf2anki.run "<올해 필기 PDF>"
+```
+
+로컬 러너가 그 명령을 강의 단위로 부르고, 나온 것을 서버 계약의 모양으로 옮긴다
+([studyez/deck.py](studyez/deck.py)). 파이프라인 자체의 사용법은
+[pdf2anki/README.md](pdf2anki/README.md), 설계와 실패 기록은
+[docs/pdf2anki.md](docs/pdf2anki.md)에 있다.
 
 ## 쓰는 법
 
 ```bash
 python -m studyez jokbo 병리학         # 과목 족보를 강의별로 자른다 (학기당 1회)
-python -m studyez prequeue             # 관리자가 저장한 예습 링크 → Pre-Quiz 자리
-python -m studyez preview <run_id> --url <공유 링크>   # 예습 대화 하나만 손으로
 python -m studyez match 병리학         # 올해 강의를 작년 강의에 붙인다
 python -m studyez match --all
-python -m studyez watch                # 이번 블럭에 새로 올라온 필기로 큐를 세운다
-python -m studyez watch --prep         # 스캔 + prep까지 (21:30 자동 실행용)
+
+python -m studyez watch                # 새 필기를 훑고 무엇을 만들지 보여준다
+python -m studyez watch --build        # 이대로 복습 덱까지 만든다
 python -m studyez watch --all-dates    # 블럭으로 안 좁힌다 (밀린 것을 몰아 만들 때)
-python -m studyez prep-prev <run_id>   # 올해 필기에 족보가 없을 때만 작년을 끌어온다
+
+python -m studyez prequeue             # 관리자가 저장한 예습 링크 → 자리 세우기
+python -m studyez prequeue --build     # 이대로 예습 덱까지 만든다
+python -m studyez preview <run_id> --url <공유 링크>   # 예습 대화 하나만 손으로
+
+python -m studyez import --from ../PDF2ANKI/out   # 다른 곳에서 만든 덱을 옮긴다
+python -m studyez release <run_id>     # 옮겨 온 덱의 보류를 푼다
+
 python -m studyez done <run_id>        # 빌드를 확인한 뒤. 표시하고 그 편을 올린다
 python -m studyez publish --all        # 아직 안 올라간 것을 전부 훑는다
 ```
 
-`watch --prep`이 `runs/queue.json`을 남기면, 세션이 한 편씩 `/quiz`를 돌린다.
+Python은 PATH에 없다. Anaconda를 직접 부르고 한글 출력이 깨지므로
+`PYTHONIOENCODING=utf-8`을 붙인다.
 
-### 예습만 방향이 반대다
+```bash
+PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m studyez watch
+```
 
-Main-Quiz는 **필기가 올라오는 것**에서 시작한다(`watch`). Pre-Quiz는 **사람이
-예습하는 것**에서 시작한다 — 관리자가 작년 강의록으로 AI와 예습하고 그 대화를
-`/admin`에 저장하면, 거기서부터 자동이다.
+### 두 덱은 방향이 반대다
+
+복습 덱(Main-Quiz)은 **필기가 올라오는 것**에서 시작한다. 예습 덱(Pre-Quiz)은
+**사람이 예습하는 것**에서 시작한다 — 관리자가 작년 강의록으로 AI와 예습하고 그
+대화를 `/admin`에 저장하면, 거기서부터 자동이다.
 
 ```
 관리자가 /admin에 예습 링크 저장
-  → studyez prequeue    작년 짝 고르기 · prep · preview.md · runs/prequeue.json
-  → /prequiz            문항을 만드는 것은 여기뿐이다 (모델)
-  → studyez done <작년 run_id>    덱·문항·링크가 함께 올라간다
+  → studyez prequeue           작년 짝 고르기 · preview.md
+  → studyez prequeue --build   pdf2anki.prequiz가 덱을 만든다
+  → studyez publish            덱·문항·링크가 함께 올라간다
 ```
 
 `prequeue`는 멱등이다. `preview.md`에 적힌 출처가 서버의 링크와 같으면 그대로 두고,
 `pre_items.final.json`까지 있으면 `done`으로 적어 건너뛴다. 링크가 바뀌었는데 덱이
 이미 있으면 `stale`로 적는다 — 그 덱은 다른 대화로 만든 것이라 다시 만들어야 한다.
 
-가운데의 `/prequiz`는 모델이 도는 자리라 코드가 부를 수 없다. 그래서
-`scripts/nightly-prequiz.ps1`이 `claude -p "/prequiz <경로>"`로 **세션을 대신
-띄운다.** 그 스크립트가 하는 판단은 셋뿐이다 — 무엇을 몇 편까지 만들지, 언제
-끊을지, 만들어졌는지. 나머지는 전부 스킬 안에 있다.
+**예습 덱의 강의명은 올해 강의로 선다.** 작년 필기로 만들지만 학생은 올해 시간표를
+보고 예습을 하기 때문이다. `studyez.deck.lecture_name`이 교수 괄호를 떼고 세워서,
+예습과 복습이 Anki에서 한 노드 아래 모인다.
+
+```
+병리학
+└ 종양의 분자생물학(1)
+   ├ 예습     ← 작년 필기 + 예습 대화
+   ├ 강의록   ← 올해 필기
+   └ 기출     ← 족보
+```
 
 ### 업로드는 손을 기다리지 않는다
 
-세 자리에서 걸린다.
-
 | 언제 | 무엇이 | 무엇을 |
 |---|---|---|
-| 편이 끝날 때 | `studyez done <run_id>` (스킬 5단계 다음) | 그 한 편 |
-| 매일 04:00 | `scripts/nightly-prequiz.ps1` | 예습 링크가 저장된 편의 Pre-Quiz |
+| 편이 끝날 때 | `studyez done <run_id>` | 그 한 편 |
+| 매일 21:30 | `scripts/nightly-quiz.ps1` | 새 필기의 복습 덱 (**기본으로 안 걸린다**) |
+| 매일 04:00 | `scripts/nightly-prequiz.ps1` | 예습 링크가 저장된 편의 예습 덱 |
 | 매일 06:00 | `scripts/nightly-publish.ps1` → `prequeue` → `publish` | 그 과목에서 놓친 것 |
 
-**04:00이 06:00보다 먼저인 것은 뜻이 있다.** 예습 빌드가 스스로 올리지만
-중간에 끊긴 편은 두 시간 뒤 쓸기가 받는다.
+**만드는 것이 올리는 것보다 먼저인 것은 뜻이 있다.** 중간에 끊긴 편은 다음 회차의
+쓸기가 받는다.
+
+**복습 빌드는 기본으로 안 걸린다.** 편당 Opus 호출이 여러 번이고 그 비용이 사람이
+안 보는 동안 나간다. 편당 실제 비용은 `runs/<run_id>/run.report.json`의
+`cumulative.cost_usd`에 남으므로, 몇 편 손으로 돌려 보고 정하면 된다.
 
 **야간은 지금 병리학만 본다.** 과목을 안 주면 `--all`이라 필기가 있는 과목 전부를
-훑는데, 다른 과목은 아직 강의록이 한 번도 안 올라가 첫 회차가 3GB가 된다. 과목을
-늘리려면 `-Subject`에 이름을 더 주고 다시 걸면 된다.
-
-야간 쪽이 받는 것은 **`done`이 못 받은 자리**다 — 세션이 `done`을 안 부르고 끝난
-편, 업로드 중간에 끊긴 파일, 진도보다 앞서 만들어 둔 Pre-Quiz(올해 필기가 그
-사이 올라왔다), 필기가 새 판으로 갈린 편.
-
-겹쳐 돌아도 되는 이유는 `publish`가 멱등이기 때문이다. `runs/published.json`의
-(크기, mtime) 표시와 **서버가 실제로 R2를 HEAD해 본 결과** 둘을 보고, 바뀐 것과
-정말 없는 것만 민다. 표시가 거짓말을 해도 그 자리에서 드러난다.
-
-한 번 걸면 둘 다 선다.
+훑는데, 다른 과목은 아직 강의록이 한 번도 안 올라가 첫 회차가 3GB가 된다.
 
 ```bash
 powershell -ExecutionPolicy Bypass -File scripts\install-scheduled-task.ps1 -Subject 병리학
-powershell -ExecutionPolicy Bypass -File scripts\install-scheduled-task.ps1 -Subject 병리학 -PrequizMax 3 -PrequizWithinDays 7
-powershell -ExecutionPolicy Bypass -File scripts\install-scheduled-task.ps1 -Only publish   # 쓸기만
+powershell -ExecutionPolicy Bypass -File scripts\install-scheduled-task.ps1 -Subject 병리학 -WithQuiz
+powershell -ExecutionPolicy Bypass -File scripts\install-scheduled-task.ps1 -Only publish
 powershell -ExecutionPolicy Bypass -File scripts\install-scheduled-task.ps1 -Remove
 ```
 
-로그는 `runs/publish.log`와 `runs/prequiz.log`. 노트북이 그 시각에 자고 있으면
-깨어난 뒤 밀린 회차를 한 번 돈다(`-StartWhenAvailable`). 로그온해 있어야 돈다.
+로그는 `runs/quiz.log`·`runs/prequiz.log`·`runs/publish.log`. 노트북이 그 시각에
+자고 있으면 깨어난 뒤 밀린 회차를 한 번 돈다(`-StartWhenAvailable`). 로그온해
+있어야 돈다.
 
 ### 무인 빌드가 스스로 지키는 것
 
-`nightly-prequiz.ps1`은 사람이 안 보는 동안 도는 유일한 **모델** 실행이다.
-그래서 넷을 지킨다.
-
-- **상한을 둔다.** 편당 실측 약 34분에 Opus 호출 4회다. `-Max`(기본 2)로 막고,
-  **자른 편은 로그에 이름을 적는다** — 조용히 자르면 다 만든 줄로 읽힌다
-- **급한 것부터.** 강의 날짜가 이른 순서로 고른다. 내일 강의가 다음 주보다 급하다
-- **성공을 종료 코드로 안 본다.** `claude -p`는 모델이 "못 하겠다"고 답해도 0으로
-  끝난다. `pre_items.final.json`이 **그 실행 뒤에 새로 쓰였는지**로 가른다
-- **멈추면 끊는다.** `-TimeoutMinutes`(기본 75)를 넘기면 그 편을 버리고 다음으로
-  간다. 한 편이 밤을 통째로 먹지 않게
-
-권한은 `--allowedTools`로 그 실행에만 준다. 프로젝트 설정에 넣으면 사람이 여는
-세션까지 같이 넓어진다. 거부가 하나라도 나면 로그에 적는데, 그건 대개 이 스크립트의
-목록이 모자라다는 뜻이다.
+- **상한을 둔다.** `-Max`(기본 2)로 막고, **미룬 편은 로그에 이름을 적는다** —
+  조용히 자르면 다 만든 줄로 읽힌다
+- **급한 것부터.** 예습은 강의 날짜가 이른 순서로 고른다. 내일 강의가 다음 주보다 급하다
+- **성공을 종료 코드로 안 본다.** 덱과 `run.meta.json`이 실제로 나왔는지로 가른다
+- **멈추면 끊는다.** `-TimeoutMinutes`를 넘기면 그 편을 버리고 다음으로 간다
 
 ### 왜 블럭으로 좁히나
 
@@ -183,21 +204,6 @@ powershell -ExecutionPolicy Bypass -File scripts\install-scheduled-task.ps1 -Rem
 
 ## 족보
 
-**올해 필기에도 족보가 붙어 있고, 그게 작년 필기의 족보를 포함한다.** 필기자가
-작년 것을 그대로 옮겨 오기 때문이다(`260812_01` 실측: 작년 18문항이 올해 족보에
-100% 포함).
-
-그래서 **Main-Quiz는 올해 필기만 쓴다.** 작년 자료를 끌어올 일은 사실상 Pre-Quiz
-뿐이다 — 강의 전에 푸는 퀴즈라 아직 올해 필기가 없다. 작년 짝을 붙이는
-`studyez match`는 Pre-Quiz와 캘린더를 위한 것이지 Main-Quiz의 전제가 아니다.
-
-족보는 **문서 꼬리에 붙은 연속 블록**이다. 그러니 경계를 찾을 때는 앞에서 훑으며
-"여기서부터 족보인가"를 묻지 말고, **마지막 쪽에서 거슬러 올라가며 "여기까지
-족보인가"를 물어야 한다.** 그게 경계의 정의에 맞고, 강의록 중간의 그림 슬라이드에
-속지 않는다.
-
-### 원본 족보가 더 낫다
-
 `{과목}/족보/{연도}/`에 교실이 공개한 원본 족보 PDF가 있다. 필기에 붙은 캡처본과
 비교가 안 된다.
 
@@ -207,23 +213,18 @@ powershell -ExecutionPolicy Bypass -File scripts\install-scheduled-task.ps1 -Rem
                  p78~ 실습 시험 블록 (같은 강의 번호를 다시 훑는다)
 ```
 
-`studyez jokbo <과목>`이 이걸 강의별 PDF로 자르고, 올해 필기와 짝지어
-`links.json`에 남긴다. 머리글은 정규식이 아니라 **서식**으로 잡는다 — 본문은 9pt,
-강의 머리글 번호는 13.8~15pt다. 정규식으로는 30개 중 10개만 잡혔다.
+`studyez jokbo <과목>`이 `pdf2anki.jokbo`를 불러 이걸 강의별 조각으로 자르고
+`runs/_jokbo/<과목>/`에 둔다. 문항·정답·이의제기를 짝지어 붙이고 연도별 반복률과
+교수 교체 여부까지 계산해 두므로, 그 판정이 복습 덱의 전략(필기 중심이냐 족보
+중심이냐)을 가른다.
 
-단계마다 무엇을 하고 왜 있는지는 [docs/pipeline.md](docs/pipeline.md)에 있다.
-절차는 `SKILL.md`, 출제 규칙은 `.claude/skills/*/references/`다.
+**어느 조각을 어느 강의에 물릴지는 로컬 러너가 정하지 않는다.** pdf2anki가 카드를
+만들 때 목차 제목으로 대조한다. 두 곳에서 각각 짝지으면 카드가 본 조각과 뒷면에
+붙는 조각이 갈릴 수 있다.
 
-### 필기에서 족보를 가져올 때
-
-원본 족보가 없는 과목·연도에서는 필기 뒤에 붙은 캡처본을 쓴다. 이때 경계는
-**모델이 정하고 코드가 검증한다**(0.5단계). 문구 정규식으로는 안 된다 — 표지가
-"정답"이면 낱말 목록에 없어 놓치고, 문항 본문이 annotation 이미지뿐이면 빈 페이지
-폴백도 안 걸린다. `quiz/structure.py`가 글자수·답안표·족보 낱말로 경계를 양방향으로
-따지고, 어긋나면 멈춘다.
-
-**필기 경로에서는 클립보드 이미지 스탬프 수를 반드시 센다.** 필기자는 족보를
-캡처해 붙이므로 그게 가장 곧은 신호다.
+**올해 필기에도 족보가 붙어 있고, 그게 작년 필기의 족보를 포함한다**(`260812_01`
+실측: 작년 18문항이 올해 족보에 100% 포함). 그래서 복습 덱은 올해 필기만 쓴다.
+작년 자료를 끌어올 일은 예습 덱뿐이다.
 
 ## 색
 
@@ -231,28 +232,26 @@ powershell -ExecutionPolicy Bypass -File scripts\install-scheduled-task.ps1 -Rem
 필기자마다 도구도 규약도 달라 같은 색이 정반대를 뜻한다. 회색이 사담일 때도 있고
 "이 부분은 시험에 안 낸다고 하셨습니다" 같은 결정적인 말일 때도 있다.
 
-**뜻은 색이 아니라 글에 있다.** 그래서 FreeText 본문(`annotations.json`의 `notes`)은
-그대로 싣고 색은 버린다. 남겨 두면 쓰이고, 쓰이면 근거로 둔갑한다.
+**뜻은 색이 아니라 글에 있다.** 그래서 필기 본문은 그대로 싣고 색은 버린다.
+남겨 두면 쓰이고, 쓰이면 근거로 둔갑한다.
 
 ## 배포는 검문을 통과한 것만 자동으로 나간다
 
-`/quiz`는 Opus 5를 3+N회 부르고, 족보 경계가 틀리면 뒤가 전부 어긋난다. 그래서
 `publish`가 편마다 [studyez/gate.py](studyez/gate.py)에 물어보고, 막힌 편은
 **강의록만 내보내고 덱·run-meta·예습은 미룬다.** 통째로 멈추지 않는 이유는
 강의록이 그 검토와 무관한 자료이고, 먼저 나가야 캘린더 칸이 열리기 때문이다.
 
-막는 것은 **개수가 아니라 종류이거나, 산출물이 스스로 주장하는 것과 다른
-경우**뿐이다 — apkg의 실제 내용물이 `item_count`와 다를 때, `answer_mismatch`가
-있을 때, 확정본 검증에서 hard 제거가 났을 때, 덱을 무엇으로 만들었는지 모를 때,
-그리고 덱의 판이 필기의 판보다 낡았을 때.
+**파이프라인이 이미 막는 것은 여기서 다시 막지 않는다.** pdf2anki는 질문만 보고
+다시 푼 답이 원래 답과 갈리고 그 사유가 문항 결함이면 그 카드를 다시 쓰게 하고,
+그래도 안 되면 빌드를 거부한다. `.apkg`가 있다는 것 자체가 그 검사를 지났다는 뜻이다.
 
-`slides_unused`·`untouched_slides`·`review_flagged` 총계로는 **막지 않는다.**
+그래서 검문은 **산출물이 스스로 주장하는 것과 다른 경우**로 좁혀 있다 — apkg를
+다시 열어 센 노트 수가 `item_count`와 다를 때, 카드가 부르는 이미지가 패키지에
+없을 때, `run.meta.json`이 없을 때, 그리고 사람이 `HOLD`를 놓아 두었을 때.
+
+`slides_unused`·`untouched_slides`·검토 표시 총계로는 **막지 않는다.**
 CLAUDE.md "계수기는 아직 사람을 부를 줄 모른다"가 그 후보들을 이미 떨어뜨렸다.
 적어서 보고에 올릴 뿐이다.
-
-문턱이 아직 실측된 것은 아니다. `answer_mismatch`는 지금껏 한 번도 안 나왔으므로,
-처음 걸리는 편이 나오면 그것이 첫 실측이다. 사람이 걸린 이유를 읽고 괜찮다고
-판단하면 `--no-gate`로 민다.
 
 ## 저장소에 없는 것
 
@@ -261,4 +260,4 @@ CLAUDE.md "계수기는 아직 사람을 부를 줄 모른다"가 그 후보들�
 
 ## 의존성
 
-Python 3.13, `PyMuPDF`, `genanki`.
+Python 3.13, `PyMuPDF`, `genanki`, `jsonschema`, 그리고 로그인된 `claude` CLI.

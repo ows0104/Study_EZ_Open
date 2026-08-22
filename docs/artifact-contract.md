@@ -1,7 +1,7 @@
 # 산출물 계약
 
 로컬 러너가 만들고 서버가 받는 것. **이 문서가 두 갈래의 유일한 접점이다.**
-파이프라인 안쪽(`structure.json`, `blueprint.json`, `suspects.json` 등)은 서버가
+파이프라인 안쪽(`run.config.json`, `items.reproduced.json`, `suspects.json` 등)은 서버가
 보지 않으므로 자유롭게 바뀐다.
 
 ## 강의 식별자
@@ -74,71 +74,111 @@ lecture
 |---|---|---|
 | 올해 필기 PDF | 매일 | 원본. R2 |
 | 작년 필기 PDF | 학기 초 | Pre-Quiz와 예습용. R2 |
-| `<강의>.apkg` | Main-Quiz 빌드 후 | Anki 덱. R2 |
-| `<강의>_예습.apkg` | Pre-Quiz 빌드 후 | R2 |
-| `media/*.png` | 빌드 후 | 슬라이드 이미지. 카드 뒷면 근거 |
+| `p<run_id>.apkg` | Main-Quiz 빌드 후 | Anki 덱. R2 |
+| `p<run_id>_pre.apkg` | Pre-Quiz 빌드 후 | R2 |
+| `slides/<run_id>_s042.png` | 예습 빌드 후 | 근거 슬라이드. 웹 훑기가 읽는다 |
+
+덱 파일명이 `_pre`로 끝나는가가 두 갈래를 가른다. **한 디렉터리에 둘이 같이 있을
+수 있다** — 올해 필기로 복습 덱을 만든 강의가 내년에는 「작년 필기」가 되어 같은
+자리에서 예습 덱을 낳는다.
+
+슬라이드는 **예습 쪽만** 올린다. 그 이미지를 읽는 곳이 서버에 한 군데뿐이고
+(웹 훑기의 근거 그림) 편당 12~27MB이기 때문이다. 파일명 끝의 `_s042`에서 서버가
+슬라이드 번호를 읽으므로(`server/app/naming.py`) 그 꼴을 깨면 안 된다.
 
 **전부 로그인 뒤에만 내보낸다.** 제3자 저작물이다.
 
 ## `run.meta.json` — 덱 하나의 요약
 
+`pdf2anki`는 이 파일을 만들지 않는다. 파이프라인 안쪽(`run.config.json`·
+`items.reproduced.json`·`suspects.json`)을 읽어 이 모양으로 옮기는 것은
+[studyez/deck.py](../studyez/deck.py)의 `contract()`다. 실물은
+[samples/run.meta.sample.json](samples/run.meta.sample.json)에 있다.
+
 ```json
-{ "lecture_id": "260812_01", "lecture_title": "병리학 소개",
-  "deck_name": "병리학::[260812_01] 병리학 소개",
-  "built_at": "2026-08-16T12:23:30",
-  "verified": { "notes": 80, "cards": 80, "media": 24 },
-  "item_count": 80,
-  "format": { "basic": 76, "cloze": 4, "jokbo": 16, "occlusion": 0 },
-  "importance": { "core": 40, "detail": 40 },
-  "sources": { "lecture": 64, "jokbo": 16 },
-  "exam_hit": 28, "stamped": 39, "trap_notes": 24,
-  "review_flagged": 2,
-  "slides_used": [...], "slides_unused": [...] }
+{ "lecture_id": "260820_03", "lecture_title": "소아질환의 병태생리(2) …",
+  "deck_id": "p260820_03",
+  "deck_name": "병리학::소아질환의 병태생리(2) 소아기 특이 질환 1",
+  "deck_file": "p260820_03.apkg",
+  "built_at": "2026-08-23T00:39:38",
+  "pipeline": "pdf2anki",
+  "verified": { "notes": 88, "cards": 92, "media": 46, "decks": 2,
+                "missing_media": [] },
+  "item_count": 88,
+  "format": { "basic": 75, "cloze": 2, "ox": 6,
+              "image_occlusion": 3, "image_basic": 2 },
+  "sources": { "lecture": 79, "jokbo": 9 },
+  "importance": { "core": 63, "detail": 25 },
+  "exam_hit": 4,
+  "review_flagged": 13,
+  "review_flags": { "missing_explanation": 9, "points_at_source": 2 },
+  "reproduce": { "same": 75, "partial": 4, "different": 4, "없음": 5 },
+  "reproduce_defects": [],
+  "slides_total": 46, "slides_used": [...], "slides_unused": [...],
+  "untouched_slides": [], "objectives_without_card": [],
+  "strategy": "annotation", "strategy_why": "교수 교체(김은나) → 필기 중심" }
 ```
 
-관리자 화면이 이걸로 "배포해도 되는가"를 판단한다. **`review_flagged`가 0이
-아니면 사람이 카드 뒷면 경고 박스를 확인해야 한다.** `slides_unused`는 카드가
-하나도 없는 슬라이드다.
+관리자 화면과 `studyez.gate`가 이걸로 "배포해도 되는가"를 판단한다.
 
-`lecture_id` 필드 이름은 역사적인 것이고 값은 `run_id`다.
+- **`verified`는 apkg를 다시 열어 센 값이다.** `item_count`와 어긋나면 덱이 내용과
+  다른 것을 담고 있다는 뜻이고, 검문이 막는 몇 안 되는 것 중 하나다
+- **`reproduce`가 `same`이 아니어도 나쁜 카드는 아니다.** 질문만 보고 다시 푼
+  결과이고, 눈가리개 세션이 그 지식을 몰랐을 수 있다. 문항 자체의 결함으로 갈린
+  것은 빌드가 이미 뺐고, 그래도 남아 있으면 `reproduce_defects`에 뜬다
+- **`review_flagged`는 개수, `review_flags`가 종류다.** 사람을 부르는 신호는 종류에 있다
+- `slides_unused`는 카드가 없는 슬라이드 전부(표지·학습목표가 여기 든다).
+  진짜 누락 신호는 선언된 건너뜀을 이미 뺀 `untouched_slides` 쪽이다
+- 예습 덱(`pre_run.meta.json`)에는 `strategy` 대신 `web_items`·`web_excluded`·
+  `slides_exported`가 붙는다
 
-## `pre_items.final.json` — 지금은 저장만 한다
+`lecture_id` 필드 이름은 역사적인 것이고 값은 `run_id`다. `deck_id`는 pdf2anki의
+ID(`p260820_03`)이고 **그쪽이 guid의 씨앗이다** — 바꾸면 Anki가 이미 받아 간
+카드를 전부 새 노트로 본다.
 
-퀴즈는 `.apkg`로 준다. 이 JSON은 나중에 웹에서 풀 수 있게 할 때 쓸 재료라
-**받아서 저장만** 하면 된다. 그때가 오면 화면이 이 모양을 읽는다.
+## `pre_items.final.json` — 웹에서 훑는 예습 카드
+
+배급의 기본은 `.apkg`다. 이 JSON은 그 옆의 갈래 — Anki를 안 깐 자리에서 훑어보는
+화면이 읽는다. **자유회상 카드라 보기가 없고, 채점은 서버가 아니라 본인이 한다.**
 
 ```json
-{ "lecture_id": "250820_02",
+{ "lecture_id": "250825_01",
+  "deck_id": "p250825_01",
+  "generated_by": "pdf2anki.prequiz",
   "items": [
-    { "id": "p001",
-      "qtype": "mcq",                       // mcq | short | ox
-      "stem": "...해당하지 **않는 것은**?",   // 마크다운 강조가 들어간다
-      "choices": ["...", "...", "...", "...", "..."],   // mcq는 정확히 5개, 그 외 null
-      "answer": "3",                        // mcq: 1-based 인덱스 문자열
-                                            // short: 정답 텍스트
-                                            // ox: "O" | "X"
-      "focus": "must_know",                 // must_know | core | context
-      "exam_hit": true,
-      "slide_no": 6,
-      "source_type": "lecture",             // lecture | jokbo
-      "source_anchor": "본문 '4가지 카테고리' 목록의 1)~4)항",
+    { "id": "c001",
+      "qtype": "basic",                     // basic | cloze | ox
+      "stem": "Proto-oncogene 과 oncogene 은 어떻게 다른가?",
+      "answer": "- proto-oncogene: …
+- oncogene: …",
       "explanation": "...",
-      "objective_id": "obj_1",
-      "retrieval_target": "...",
+      "focus": "spine",                     // spine|vocabulary|mechanism|clinical|repeated
+      "card_type": "term",                  // term|abbrev|mechanism|taxonomy|clinical|number|…
+      "exam_hit": false,
+      "slide_no": 34,
+      "source_type": "lecture",             // lecture | annotation | note | jokbo
+      "source_anchor": "lecture_text",      // 어느 채널을 근거로 삼았나
       "flags": [] } ] }
 ```
 
 지켜야 할 것:
 
-- **`stem`의 `**강조**`를 렌더링하라.** 부정형 발문을 놓치지 말라고 넣은 것이라
-  지우면 안 된다
-- `short`의 채점은 문자열 완전일치가 아니다. `explanation` 첫 줄에 허용 표기가
-  적혀 있다(예: "Leber hereditary optic neuropathy / LHON / Leber 유전성 시신경병증
-  어느 표기든 정답이다")
-- `slide_no`로 근거 슬라이드를 띄우려면 `media/`도 함께 올라가야 한다
+- **`answer`·`explanation`을 문항과 함께 내려보내지 마라.** 답을 편 사람만
+  `POST .../prequiz/reveal`로 받아 간다. 같이 보내면 펴 보기 전에 정답이 보이고,
+  그러면 `quiz_attempt`의 「알고 있었다」가 아무것도 뜻하지 않는다
+- **채점하지 마라.** `POST .../prequiz/grade`는 `correct` 불리언을 받아 적을 뿐이다.
+  답이 여러 줄 산문일 때가 많아 문자열로 재면 전원이 틀린다
+- **`focus`는 등급이 아니라 이유다.** 예습 카드는 전부 「꼭 반드시」이고, 등급을
+  두면 그 축이 흐려진다. 「왜 이것이 꼭 반드시인가」를 담는다
+- `cloze`의 `stem`은 이미 빈칸으로 펴져 있다. `{{c1::…}}`은 Anki 문법이라
+  `studyez.deck.contract`가 `[____]`(힌트가 있으면 `[힌트]`)로 바꾼다
+- **그림 카드는 여기 없다.** 앞면이 이미지라 텍스트만으로는 물음이 성립하지 않는다.
+  apkg에는 그대로 있고, 몇 장이 빠졌는지는 `pre_run.meta.json`의 `web_excluded`가 든다
+- `slide_no`로 근거 슬라이드를 띄우려면 `slides/`도 함께 올라가야 한다
+  (`<run_id>_s042.png`. 서버가 파일명 끝에서 번호를 읽는다)
 
-`items.final.json`(Main-Quiz)은 같은 뼈대에 Anki 전용 필드가 더 붙는다. 웹에서
-풀지 않으므로 서버는 저장만 하면 된다.
+복습 덱은 이 JSON을 안 만든다. 웹에서 훑지 않고, 파이프라인 안쪽의
+`items.reproduced.json`이 그 자리를 대신한다 — **서버는 그걸 보지 않는다.**
 
 ## 예습 링크
 
@@ -155,12 +195,14 @@ preview
 이어서 질문할 수 있는 게 예습의 값어치다. 그러니 스키마에서 빼지 말고 담아 두되,
 지금은 일반 사용자 응답에서만 가린다.
 
-## 사용자별 데이터 — 아직 없다
+## 사용자별 데이터 — 하나뿐이다
 
-지금 사이트는 **읽기 전용**이다. 퀴즈는 `.apkg`로 내려받아 Anki에서 풀고, 채점
+`quiz_attempt` 한 표다. 웹에서 예습 카드를 훑은 사람이 카드마다 「알고 있었다 /
+몰랐다」를 찍은 기록이고, **그 값은 본인의 판정이지 서버의 판정이 아니다.**
+화면이 그것을 서버 판정처럼 그리면 안 된다.
+
+나머지는 전부 읽기 전용이다. 복습 덱은 `.apkg`로 내려받아 Anki에서 풀고, 그
 결과는 서버에 남지 않는다.
-
-나중에 웹 풀이를 붙이면 응답을 저장할 자리가 필요해진다. 그때 설계한다.
 
 ## 무엇이 아직 움직이는가
 
@@ -168,8 +210,8 @@ preview
 |---|---|
 | `uid` · `run_id` 규칙 | **고정.** 이 문서가 계약이다 |
 | `run.meta.json` | 고정 |
-| `pre_items.final.json` | 고정 (`.claude/skills/prequiz/references/item.schema.json`) |
-| `.apkg` · PDF · `media/` | 고정 |
-| `structure.json`·`blueprint.json`·`suspects.json` | **서버가 보지 않는다.** 자유롭게 바뀐다 |
+| `pre_items.final.json` | 고정. 실물은 [samples/](samples/) |
+| `.apkg` · PDF · `slides/` | 고정 |
+| `run.config.json`·`prep.json`·`items.reproduced.json`·`suspects.json` | **서버가 보지 않는다.** pdf2anki 안쪽이라 자유롭게 바뀐다 |
 
 서버 쪽에서 파이프라인 내부 파일을 읽고 싶어지면 먼저 이 문서에 올려라.

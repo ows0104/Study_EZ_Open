@@ -678,62 +678,16 @@ button.resource:hover:not(:disabled) {
   word-break: keep-all;
 }
 
-.quiz-choices {
-  display: grid;
-  margin: 0 0 16px;
-  padding: 0;
-  gap: 6px;
-  list-style: none;
+/* 이 카드가 왜 「꼭 반드시」인가. 진행 표시 옆에 조용히 붙는다. */
+.quiz-focus {
+  margin-left: 8px;
+  color: var(--ink-3);
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
-.quiz-choices label {
-  display: grid;
-  padding: 11px 13px;
-  grid-template-columns: auto 1fr;
-  gap: 10px;
-  align-items: start;
-  border: 1px solid var(--line);
-  border-radius: var(--r-3);
-  background: var(--surface);
-  font-size: 13.5px;
-  line-height: 1.5;
-  cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease;
-}
-
-.quiz-choices label:hover {
-  border-color: var(--line-strong);
-  background: var(--surface-2);
-}
-
-.quiz-choices label:has(input:checked) {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
-
-/* 채점 뒤 정답 자리. 무엇을 골랐든 정답은 표시된다. */
-.quiz-choices label.is-answer {
-  border-color: var(--ok-line);
-  background: var(--ok-soft);
-}
-
-.quiz-ox {
-  display: flex;
-  margin-bottom: 16px;
-  gap: 8px;
-}
-
-.quiz-ox button {
-  width: 72px;
-  height: 56px;
-  font-size: 19px;
-  font-weight: 700;
-}
-
-.quiz-short {
-  width: 100%;
-  min-height: 40px;
-  margin-bottom: 16px;
+.quiz-focus .badge {
+  margin-left: 6px;
 }
 
 .quiz-submit {
@@ -748,6 +702,8 @@ button.resource:hover:not(:disabled) {
   background: var(--accent-ink);
 }
 
+/* 편 뒤에 나오는 자리. **맞았다/틀렸다로 색을 칠하지 않는다** — 판정하는 것은
+   서버가 아니라 사람이고, 펴는 순간에는 아직 아무도 판정하지 않았다. */
 .quiz-result {
   padding: 15px;
   border: 1px solid var(--line);
@@ -755,43 +711,22 @@ button.resource:hover:not(:disabled) {
   background: var(--surface-2);
 }
 
-.quiz-verdict {
-  margin: 0 0 8px;
-  font-size: 14px;
-  font-weight: 700;
+.quiz-answer {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.62;
+  white-space: pre-wrap;
+  word-break: keep-all;
 }
 
-.quiz-result.is-correct {
-  border-color: var(--ok-line);
-  background: var(--ok-soft);
-}
-
-.quiz-result.is-correct .quiz-verdict {
-  color: var(--ok);
-}
-
-.quiz-result.is-wrong {
-  border-color: var(--warn-line);
-  background: var(--warn-soft);
-}
-
-.quiz-result.is-wrong .quiz-verdict {
-  color: var(--warn);
-}
-
-.quiz-explanation,
-.quiz-anchor {
+.quiz-explanation {
   margin: 0 0 8px;
   color: var(--ink-2);
   font-size: 13px;
   line-height: 1.62;
   white-space: pre-wrap;
   word-break: keep-all;
-}
-
-.quiz-anchor {
-  color: var(--ink-3);
-  font-size: 11.5px;
 }
 
 .quiz-slide {

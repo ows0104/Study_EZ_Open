@@ -85,13 +85,14 @@ export function LecturePage() {
         {fileButton("notes_prev", "작년 필기")}
         <PreviewResource detail={detail} />
 
-        {/* Pre-Quiz의 기본은 apkg다. Anki에서 풀고, 웹 풀이는 그 아래 갈래로 둔다. */}
+        {/* Pre-Quiz의 기본은 apkg다. Anki에서 풀고, 웹 훑기는 그 아래 갈래로 둔다 —
+            그림 카드는 웹에 안 실리므로 덱이 언제나 더 크다. */}
         {preApkg ? (
           <button className="resource is-primary" onClick={() => open(preApkg)}>
             <strong>Pre-Quiz 덱</strong>
             <small>
               {preApkg.filename}
-              {quiz ? ` · ${quiz.itemCount}문항` : ""}
+              {quiz ? ` · 웹에서 훑을 수 있는 카드 ${quiz.itemCount}장` : ""}
             </small>
           </button>
         ) : (
@@ -110,10 +111,10 @@ export function LecturePage() {
             />
           ) : (
             <button className="resource is-secondary" onClick={() => setSolving(true)}>
-              <strong>웹에서 풀기</strong>
+              <strong>웹에서 훑기</strong>
               <small>
-                {quiz.itemCount}문항
-                {quiz.answered ? ` · ${quiz.answered}개 풀었고 ${quiz.correct}개 맞았습니다` : ""}
+                {quiz.itemCount}장 · 답을 펴 보고 본인이 찍습니다
+                {quiz.answered ? ` · ${quiz.answered}장 봤고 ${quiz.correct}장은 알고 있었습니다` : ""}
               </small>
             </button>
           )
@@ -123,15 +124,15 @@ export function LecturePage() {
       {quiz && quiz.missed.length ? (
         <section className="missed">
           <h2>오늘 놓친 것 {quiz.missed.length}개</h2>
-          {/* 웹에서 끝까지 푼 사람에게만 나온다. 틀린 문항이 그 강의에서 특히
-              귀 기울일 곳이라는 생각으로 고른다. */}
+          {/* 웹에서 끝까지 훑은 사람에게만 나온다. 몰랐다고 찍은 카드가 그 강의에서
+              특히 귀 기울일 곳이라는 생각으로 고른다. */}
           <ol>
             {quiz.missed.map((entry) => (
               <li key={entry.itemId}>
                 <p className="missed-stem">
                   <Stem text={entry.stem} />
                 </p>
-                {entry.retrievalTarget ? <p className="missed-target">{entry.retrievalTarget}</p> : null}
+                <p className="missed-target">{entry.answer}</p>
                 {entry.examHit ? <span className="badge">기출</span> : null}
               </li>
             ))}

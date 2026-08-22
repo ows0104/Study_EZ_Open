@@ -10,7 +10,7 @@
 
     관리자가 /admin에 예습 링크 저장
       → GET /api/admin/previews          여기
-      → 작년 짝을 찾아 prep + preview.md
+      → 작년 짝을 찾아 prep + preview.md + pre_target.json
       → runs/prequeue.json
       → 세션이 편마다 /prequiz
       → python -m studyez done <작년 run_id>   덱·문항·링크가 함께 올라간다
@@ -29,6 +29,11 @@
 같은 눈으로 골라야 여기서 만든 편이 나중에 그대로 올라간다 — 다른 규칙으로
 고르면 만들어 놓고 못 올리는 편이 생긴다. **확정이 아닌 짝은 세우지 않는다.**
 어긋난 짝을 세우면 남의 강의 예습 문항이 만들어진다.
+
+갈아탄 자리를 `runs/<작년 run_id>/pre_target.json`에 적어 둔다. 덱 이름은
+**올해 강의**로 서야 하는데(학생은 올해 시간표를 보고 예습을 한다) 작년 자리에서
+빌드하는 `prequiz/build.py`가 볼 수 있는 것은 작년 PDF의 파일명뿐이라, 여기서
+적어 주지 않으면 작년 제목이 붙는다.
 
 ## 예습이 필요한 강의에는 올해 필기가 없다
 
@@ -50,14 +55,12 @@
 from __future__ import annotations
 
 import json
-import os
 import time
 import unicodedata
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from . import filenames, publish, watch
+from . import deck, filenames, publish
 from . import preview as preview_mod
 
 QUEUE_NAME = "prequeue.json"
@@ -89,7 +92,14 @@ class Target:
     link: Link
     prev_run_id: str = ""
     prev_pdf: str = ""
+    # 덱 이름에 쓸 **올해** 강의 제목. `link.title`이 아니라 계획이 든 것을 쓴다 —
+    # 서버에 올라간 제목은 계획이 밀어 넣은 것이라 여기서 다시 읽으면 한 번 더
+    # 왕복할 뿐이고, 그 사이에 필기가 올라와 제목이 바뀌었으면 오히려 낡았다.
+    this_title: str = ""
+    # 덱 나무의 가운데 마디. 교수 괄호를 뗀 것이라 `this_title`과 다르다.
+    this_lecture: str = ""
     state: str = READY
+    occupancy: str = ""                                # 이 자리를 무엇이 쓰고 있나
     reason: str = ""                                   # BLOCKED일 때 왜인지
     turns: int = 0                                     # 받아 온 대화의 크기
     chars: int = 0
@@ -184,7 +194,10 @@ def resolve(
                 targets.append(Target(link=link, state=BLOCKED, reason=why))
                 continue
 
-            targets.append(Target(link=link, prev_run_id=plan.prev_run_id, prev_pdf=str(pdf)))
+            targets.append(Target(
+                link=link, prev_run_id=plan.prev_run_id, prev_pdf=str(pdf),
+                this_title=plan.item.title,
+                this_lecture=deck.lecture_name(plan.item.title, plan.item.professors)))
 
     targets.sort(key=lambda target: (target.link.date, target.link.run_id))
     return targets, warnings
@@ -193,69 +206,82 @@ def resolve(
 # ------------------------------------------------------------------ 자리 세우기
 
 
-def _prep_source(run_dir: Path) -> str:
-    prep = run_dir / "prep.json"
-    if not prep.is_file():
-        return ""
-    try:
-        return str(json.loads(prep.read_text(encoding="utf-8")).get("source_pdf", ""))
-    except (OSError, ValueError):
-        return ""
+TARGET_NAME = "pre_target.json"
 
 
-def needs_prep(run_dir: Path, pdf: str) -> bool:
-    """이 자리에 prep을 (다시) 돌려야 하는가.
+def write_target(run_dir: Path, target: Target) -> None:
+    """이 작년 자리가 **어느 올해 강의를 위해** 도는지 적는다.
+
+    `prequiz/build.py`가 덱 이름을 여기서 읽는다. 안 적어 두면 build가 볼 것은
+    작년 PDF의 파일명뿐이라 덱이 작년 제목으로 선다 — 학생은 올해 시간표를 보고
+    예습을 하므로 그 이름으로는 어느 강의의 것인지 안 보인다.
+
+    돌 때마다 다시 쓴다. 짝이 바뀌면 이 파일도 따라 바뀌어야 하고, 낡은 짝이
+    남아 있으면 남의 강의 제목이 덱에 붙는다.
+    """
+    (run_dir / TARGET_NAME).write_text(json.dumps({
+        "subject": target.link.subject,
+        "run_id": target.link.run_id,
+        "date": target.link.date,
+        "title": target.this_title or target.link.title,
+        # build가 "이 자리가 정말 이 짝의 것인가"를 보는 값. 같은 교시에 다른
+        # 과목이 돌면 한 디렉터리를 나눠 쓴다.
+        "prev_run_id": target.prev_run_id,
+        "prev_pdf": target.prev_pdf,
+        "written_at": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime()),
+    }, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+# 이 자리가 누구 것인가. `occupancy()`가 돌려주는 셋.
+EMPTY = "empty"        # 아직 아무것도 없다
+SAME = "same"          # 같은 강의, 같은 판. 이어서 돌리면 된다
+NEWER = "newer"        # 같은 강의인데 필기 판이 올라갔다. 통째로 다시 만든다
+FOREIGN = "foreign"    # 남의 강의가 쓰고 있다. 사람이 봐야 한다
+
+
+def occupancy(run_dir: Path, pdf: str) -> str:
+    """이 디렉터리를 무엇이 쓰고 있는가.
 
     `run_id`는 날짜_교시라서 과목을 포함하지 않는다. 다른 과목이 같은 교시에
-    돌면 한 디렉터리를 두 강의가 나눠 갖게 되므로, 있는 것으로 넘기기 전에
-    **정말 이 강의의 것인지** 확인한다. 판이 다르면 다시 돌린다.
+    돌면 한 디렉터리를 두 강의가 나눠 갖게 되므로, 돌리기 전에 **정말 이 강의의
+    것인지** 확인한다. 확인 없이 돌리면 pdf2anki가 남의 prep을 그대로 이어받는다.
+
+    남의 것이면 **지우지 않고 멈춘다.** 산출물 디렉터리를 코드가 조용히 비우면
+    무엇이 사라졌는지 아무도 모른다.
     """
-    source = _prep_source(run_dir)
+    source = deck.source_pdf(run_dir)
     if not source:
-        return True
+        return EMPTY
     made, wanted = filenames.parse(source), filenames.parse(pdf)
     if made is None or wanted is None:
-        return True
-    return made.uid != wanted.uid or made.version != wanted.version
+        return FOREIGN
+    if made.uid != wanted.uid:
+        return FOREIGN
+    return SAME if made.version == wanted.version else NEWER
 
 
-def prepare(
-    targets: list[Target],
-    runs_dir: Path,
-    repo_root: Path,
-    workers: int = 0,
-) -> list[Target]:
-    """prep을 돌리고 예습 대화를 앉힌다. 각 편의 `state`가 여기서 정해진다.
+def prepare(targets: list[Target], runs_dir: Path) -> list[Target]:
+    """예습 대화를 앉히고 각 편의 `state`를 정한다. **덱은 여기서 안 만든다.**
 
-    prep은 40~60쪽을 세 배율로 렌더하느라 편당 1~2분이고 전부 CPU 작업이라
-    따로 띄워 동시에 돌린다. 대화 내려받기는 그다음에 하나씩 한다 — 남의
-    서비스를 두들기는 일이라 서두를 이유가 없다.
+    한동안 이 자리가 prep도 돌렸다. 지금은 pdf2anki가 prep부터 빌드까지 한 명령으로
+    하므로, 남는 것은 그 앞의 결정적인 부분 둘뿐이다 — 자리를 확인하고, 남의
+    서비스에 있는 예습 대화를 `preview.md`로 받아 오는 것.
 
-    한 편이 죽어도 나머지는 계속 간다.
+    대화 내려받기는 하나씩 한다. 남의 서비스를 두들기는 일이라 서두를 이유가 없다.
     """
-    live = [target for target in targets if target.state != BLOCKED]
-
-    todo = [t for t in live if needs_prep(runs_dir / t.prev_run_id, t.prev_pdf)]
-    if todo:
-        workers = workers or min(len(todo), max(1, (os.cpu_count() or 4) - 1))
-        with ThreadPoolExecutor(max_workers=workers) as pool:
-            futures = {
-                pool.submit(watch.run_prep, t.prev_pdf, t.prev_run_id, runs_dir, repo_root): t
-                for t in todo
-            }
-            for future in as_completed(futures):
-                target = futures[future]
-                try:
-                    ok, error = future.result()
-                except Exception as exc:                        # noqa: BLE001
-                    ok, error = False, f"{type(exc).__name__}: {exc}"
-                if ok:
-                    target.notes.append("prep 새로 돌림")
-                else:
-                    target.state, target.reason = BLOCKED, f"prep 실패: {error}"
-
-    for target in [t for t in live if t.state != BLOCKED]:
+    for target in [t for t in targets if t.state != BLOCKED]:
         run_dir = runs_dir / target.prev_run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+
+        target.occupancy = occupancy(run_dir, target.prev_pdf)
+        if target.occupancy == FOREIGN:
+            target.state = BLOCKED
+            target.reason = (
+                f"{run_dir.name}을 다른 강의가 쓰고 있다 ({Path(deck.source_pdf(run_dir)).name[:44]}) "
+                "— 그 자리를 사람이 정리해야 한다")
+            continue
+
+        write_target(run_dir, target)
         # 지금 앉아 있는 대화가 어느 것인지. 받아 오기 **전에** 읽어야 한다 —
         # 덮어쓰고 나면 링크가 바뀌었다는 사실이 사라진다.
         standing = preview_mod.read_url(run_dir / "preview.md")
@@ -285,11 +311,90 @@ def prepare(
             target.notes.append("preview.md 새로 받음"
                                 + (" — 링크가 바뀌었다" if standing else ""))
 
-        if built:
+        if built and target.occupancy == NEWER:
+            target.state = STALE
+            target.notes.append("작년 필기가 새 판으로 갈렸다 — 다시 만든다")
+        elif built:
             target.state = DONE if standing == target.link.share_url else STALE
         else:
             target.state = READY
 
+    return targets
+
+
+def build_one(target: Target, runs_dir: Path, repo_root: Path, *, model: str = "",
+              timeout: int = deck.DEFAULT_TIMEOUT,
+              extra: list[str] | None = None) -> tuple[bool, str]:
+    """한 편의 예습 덱을 끝까지 만든다. (됐나, 사람이 볼 말)
+
+    `--lecture`에 **올해** 강의 제목을 준다. 안 주면 덱의 가운데 마디가 작년
+    파일제목이 되어 복습 덱과 다른 노드에 서고, 학생은 올해 시간표를 보고 예습을
+    하므로 그 이름으로는 어느 강의의 것인지 안 보인다.
+
+    새 판으로 갈린 자리는 `--force`로 통째로 다시 만든다. 이어 돌리면 pdf2anki가
+    낡은 판의 prep을 그대로 이어받는다.
+    """
+    run_dir = runs_dir / target.prev_run_id
+    note = run_dir / preview_mod.PREVIEW_NAME
+    if not note.is_file():
+        return False, "preview.md가 없다 — 예습 대화를 먼저 받아야 한다"
+
+    result = deck.run_pre(
+        pdf=target.prev_pdf, run_id=target.prev_run_id, subject=target.link.subject,
+        lecture=target.this_lecture or target.this_title or target.link.title, note=str(note),
+        runs_dir=runs_dir, repo_root=repo_root, model=model, timeout=timeout,
+        extra=(extra or []) + (["--force"] if target.occupancy == NEWER else []))
+    if not result.ok:
+        return False, f"{result.error} (로그: {result.log})"
+
+    try:
+        meta = deck.contract(result.run_dir, target.prev_run_id,
+                             target.this_title or target.link.title, deck.PRE)
+    except (FileNotFoundError, OSError, ValueError) as cause:
+        return False, f"산출물을 계약 모양으로 옮기지 못했다: {cause}"
+    return True, f"{meta['item_count']}장 (웹 풀이 {meta['web_items']}장)"
+
+
+def build(targets: list[Target], runs_dir: Path, repo_root: Path, *, model: str = "",
+          timeout: int = deck.DEFAULT_TIMEOUT, extra: list[str] | None = None,
+          limit: int = 0, until: str = "", announce=print) -> list[Target]:
+    """`READY`·`STALE`인 편을 한 편씩 만든다. 급한 것(강의 날짜가 이른 것)부터.
+
+    겹쳐 돌리지 않는 이유는 `studyez.watch.build`와 같다 — 한 편이 이미 빈 세션
+    넷을 띄운다.
+
+    **미룬 편은 이름을 적어 알린다.** `limit`으로 자르든 `until`(이 날짜까지만)로
+    거르든 마찬가지다 — 조용히 자르면 다 만든 줄로 읽힌다.
+    """
+    todo = [t for t in targets if t.state in (READY, STALE)]
+    if until:
+        far = [t for t in todo if t.link.date > until]
+        for target in far:
+            announce(f"  {until} 밖이라 미룬다 — {target.link.run_id} "
+                     f"{target.link.title[:30]} ({target.link.date})")
+        todo = [t for t in todo if t.link.date <= until]
+    if limit and len(todo) > limit:
+        for extra_target in todo[limit:]:
+            announce(f"  상한 {limit}편을 넘겨 미룬다 — "
+                     f"{extra_target.link.subject}/{extra_target.link.run_id} "
+                     f"{extra_target.link.title[:30]}")
+        todo = todo[:limit]
+
+    for index, target in enumerate(todo, 1):
+        announce(f"[{index}/{len(todo)}] {target.link.subject}/{target.link.run_id} "
+                 f"{(target.this_title or target.link.title)[:34]} — 만드는 중")
+        try:
+            ok, note = build_one(target, runs_dir, repo_root,
+                                 model=model, timeout=timeout, extra=extra)
+        except Exception as exc:                        # noqa: BLE001
+            ok, note = False, f"{type(exc).__name__}: {exc}"
+        if ok:
+            target.state = DONE
+            target.notes.append(f"덱을 만들었다 — {note}")
+            announce(f"    끝났다 — {note}")
+        else:
+            target.state, target.reason = BLOCKED, f"빌드 실패: {note}"
+            announce(f"    실패 — {note}")
     return targets
 
 

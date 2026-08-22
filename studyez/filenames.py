@@ -268,6 +268,26 @@ def discover_subjects(root: str | Path, year: str) -> list[str]:
     )
 
 
+# 같은 파일을 한 번 더 받았을 때 꼬리에 붙는 `(1)`·`(2)`.
+_COPY_SUFFIX_RE = re.compile(r"^(?P<origin>.+?)\s*\(\d+\)$")
+
+
+def _duplicate_of(stem: str, stems: set[str]) -> bool:
+    """이 이름이 **같은 폴더에 있는 다른 파일의 사본**인가.
+
+    실물에서 나왔다. `[260819_03]…_한태희v3.pdf` 옆에 `…_한태희v3 (1).pdf`가
+    같이 있었는데, `(1)`이 제목어간에 섞여 들어가 `uid`가 갈리고 **한 강의가 두
+    편으로 서 버렸다**. 그러면 `assign_run_ids`가 둘 다 해시를 붙여 `260819_03`이
+    아무 데도 없게 되고, 그 강의의 덱은 만들어져도 붙을 자리를 못 찾는다.
+
+    **원본이 실제로 옆에 있을 때만 사본으로 본다.** 꼬리의 `(N)`만 보고 자르면
+    `실습 3(연골과 뼈)`처럼 괄호가 뜻인 이름을 잘못 접는다 — 그 둘은 서로 다른
+    강의이고, 한 편으로 뭉개는 것이 이 함수가 막으려는 바로 그 사고다.
+    """
+    match = _COPY_SUFFIX_RE.match(stem)
+    return bool(match) and match.group("origin") in stems
+
+
 @dataclass
 class Scan:
     """폴더 하나를 읽은 결과. 빠진 파일은 반드시 이유와 함께 남긴다."""
@@ -290,8 +310,13 @@ def scan(folder: str | Path, expect_year: str | None = None) -> Scan:
     if not folder.is_dir():
         return result
 
-    for path in sorted(folder.glob("*.pdf")):
+    paths = sorted(folder.glob("*.pdf"))
+    stems = {path.stem for path in paths}
+    for path in paths:
         if _CONFLICT_RE.search(path.stem):
+            result.conflicts.append(path)
+            continue
+        if _duplicate_of(path.stem, stems):
             result.conflicts.append(path)
             continue
         item = parse(path)

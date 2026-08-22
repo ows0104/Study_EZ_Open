@@ -1,0 +1,270 @@
+{
+  "_note": "손으로 쓴 검증용 표본. 앞의 5장은 정상, 나머지는 일부러 결함을 넣었다.",
+  "learning_plan": {
+    "objectives": [
+      {
+        "objective": "신생아 RDS의 위험인자를 재태주수별 위험도와 함께 재구성한다",
+        "retrieval_targets": ["<28주 60%", "28-34주 30%", ">34주 <5%", "남아·모체 당뇨·제왕절개"],
+        "slides": [4],
+        "importance": "core",
+        "jokbo_refs": ["2025-78"]
+      },
+      {
+        "objective": "surfactant 합성을 조절하는 호르몬을 열거하고 방향을 구분한다",
+        "retrieval_targets": ["cortisol", "insulin", "prolactin", "thyroxine", "TGF-β"],
+        "slides": [19],
+        "importance": "core"
+      },
+      {
+        "objective": "type II 폐포세포의 기능을 그림에서 식별한다",
+        "retrieval_targets": ["surfactant 생성", "표면장력 감소"],
+        "slides": [9],
+        "importance": "core"
+      },
+      {
+        "objective": "prematurity의 정의 기준을 체중 기준과 구분한다",
+        "retrieval_targets": ["재태주수 37주 미만"],
+        "slides": [4],
+        "importance": "core",
+        "jokbo_refs": ["2025-72"]
+      }
+    ],
+    "rejected_candidates": [
+      {"candidate": "필기자의 잡담 (힘들게 자라면 훌륭한 사람이 된다)", "reason": "decorative", "slides": [19]},
+      {"candidate": "슬라이드 표지와 목차", "reason": "decorative", "slides": [1, 2]}
+    ]
+  },
+  "cards": [
+    {
+      "q": "Surfactant 합성을 조절하는 호르몬·성장인자 다섯 가지는?",
+      "a": "cortisol, insulin, prolactin, thyroxine, TGF-β",
+      "explanation": "이 중 glucocorticoid의 역할이 특히 중요하며, insulin은 반대로 합성을 억제한다.",
+      "slide_no": 19,
+      "card_format": "basic",
+      "card_type": "list",
+      "importance": "core",
+      "source_type": "lecture",
+      "evidence_type": "lecture_text",
+      "exam_hit": false
+    },
+    {
+      "q": "신생아 RDS 위험도는 재태주수 28주 미만에서 {{c1::60}}%, 28~34주에서 {{c2::30}}%, 34주 초과에서 {{c3::5}}% 미만이다.",
+      "a": "60 / 30 / 5",
+      "explanation": "재태주수가 낮을수록 surfactant 생산이 부족하다.",
+      "slide_no": 4,
+      "card_format": "cloze",
+      "card_type": "fact",
+      "importance": "core",
+      "source_type": "lecture",
+      "evidence_type": "lecture_text",
+      "exam_hit": true,
+      "jokbo_ref": {"year": "2025", "no": "78", "role": "exam_hit_evidence"}
+    },
+    {
+      "q": "제왕절개는 신생아 RDS의 위험을 낮춘다.",
+      "a": "X",
+      "explanation": "진통이 surfactant 합성을 증가시키므로, 진통 전 제왕절개는 오히려 RDS 위험을 높인다.",
+      "slide_no": 19,
+      "card_format": "ox",
+      "card_type": "trap",
+      "importance": "core",
+      "source_type": "lecture",
+      "evidence_type": "lecture_text",
+      "exam_hit": false
+    },
+    {
+      "q": "가려진 위치의 세포가 수행하는 기능은?",
+      "a": "surfactant 생성",
+      "explanation": "type II alveolar cell이 lamellar body에 저장한 surfactant를 폐포강으로 분비한다.",
+      "slide_no": 9,
+      "card_format": "image_occlusion",
+      "card_type": "fact",
+      "importance": "core",
+      "source_type": "lecture",
+      "evidence_type": "lecture_figure",
+      "exam_hit": false,
+      "media": {"figure_id": "fig_p09_01", "occlusion_ids": ["occ_p09_01"], "reveal_all": false}
+    },
+    {
+      "q": "Prematurity(조산)의 정의 기준은?",
+      "a": "재태주수 37주 미만",
+      "explanation": "출생 체중이 아니라 재태주수가 기준이다. 오답 선지는 모두 체중 기준(2500g, 2000g)이나 백분위수를 제시해 이 혼동을 노렸다.",
+      "slide_no": null,
+      "card_format": "basic",
+      "card_type": "trap",
+      "importance": "core",
+      "source_type": "jokbo",
+      "evidence_type": "jokbo_question",
+      "exam_hit": false,
+      "jokbo_ref": {"year": "2025", "no": "72", "role": "source"}
+    },
+
+    {
+      "q": "Hyaline membrane의 주된 구성 성분은?",
+      "a": "   ",
+      "slide_no": 17,
+      "card_format": "basic",
+      "card_type": "fact",
+      "importance": "detail",
+      "source_type": "lecture",
+      "evidence_type": "lecture_text",
+      "exam_hit": false
+    },
+    {
+      "q": "Bronchopulmonary dysplasia의 진단 기준 시점은?",
+      "a": "생후 28일",
+      "slide_no": 99,
+      "card_format": "basic",
+      "card_type": "fact",
+      "importance": "detail",
+      "source_type": "lecture",
+      "evidence_type": "lecture_text",
+      "exam_hit": false
+    },
+    {
+      "q": "RDS의 근본 원인은 surfactant 결핍이다.",
+      "a": "surfactant 결핍",
+      "slide_no": 4,
+      "card_format": "cloze",
+      "card_type": "fact",
+      "importance": "core",
+      "source_type": "lecture",
+      "evidence_type": "lecture_text",
+      "exam_hit": false
+    },
+    {
+      "q": "이 조직 사진의 진단명은?",
+      "a": "Hyaline membrane disease",
+      "slide_no": 23,
+      "card_format": "image_basic",
+      "card_type": "fact",
+      "importance": "core",
+      "source_type": "lecture",
+      "evidence_type": "lecture_figure",
+      "exam_hit": false,
+      "media": {"figure_id": "fig_p23_01"}
+    },
+    {
+      "q": "Surfactant 합성을 조절하는 호르몬·성장인자 다섯 가지는?",
+      "a": "cortisol, insulin, prolactin, thyroxine, TGF-β",
+      "explanation": "중복 카드",
+      "slide_no": 19,
+      "card_format": "basic",
+      "card_type": "list",
+      "importance": "core",
+      "source_type": "lecture",
+      "evidence_type": "lecture_text",
+      "exam_hit": false
+    },
+    {
+      "q": "TORCH infection에 속하지 않는 것은?",
+      "a": "Mucormycosis",
+      "slide_no": null,
+      "card_format": "basic",
+      "card_type": "fact",
+      "importance": "detail",
+      "source_type": "jokbo",
+      "evidence_type": "jokbo_question",
+      "exam_hit": false,
+      "jokbo_ref": {"year": "2025", "no": "999", "role": "source"}
+    },
+    {
+      "q": "Surfactant는 표면장력을 증가시킨다.",
+      "a": "표면장력을 감소시킨다",
+      "slide_no": 9,
+      "card_format": "ox",
+      "card_type": "trap",
+      "importance": "core",
+      "source_type": "lecture",
+      "evidence_type": "lecture_figure",
+      "exam_hit": false
+    },
+
+    {
+      "q": "위 그림에서 화살표가 가리키는 구조의 이름은?",
+      "a": "Lamellar body",
+      "explanation": "type II 세포 내 surfactant 저장 소기관.",
+      "slide_no": 9,
+      "card_format": "basic",
+      "card_type": "fact",
+      "importance": "detail",
+      "source_type": "lecture",
+      "evidence_type": "lecture_figure",
+      "exam_hit": false
+    },
+    {
+      "q": "임신성 당뇨에서 태아 고인슐린혈증이 surfactant 합성을 억제하는데, 이때 억제되는 것은?",
+      "a": "surfactant 합성",
+      "explanation": "인슐린이 스테로이드 효과를 상쇄한다.",
+      "slide_no": 19,
+      "card_format": "basic",
+      "card_type": "mechanism",
+      "importance": "core",
+      "source_type": "lecture",
+      "evidence_type": "lecture_text",
+      "exam_hit": false
+    },
+    {
+      "q": "교수가 강조한 NEC의 임상 특징은?",
+      "a": "장벽 내 gas 축적",
+      "explanation": "필기에만 있는 내용.",
+      "slide_no": 33,
+      "card_format": "basic",
+      "card_type": "fact",
+      "importance": "detail",
+      "source_type": "lecture",
+      "evidence_type": "annotation",
+      "exam_hit": false
+    },
+    {
+      "q": "TORCH infection에 포함되는 병원체를 순서대로 나열하면?",
+      "a": "Toxoplasma, Other, Rubella, CMV, HSV, Syphilis, Parvovirus B19, Varicella",
+      "explanation": "확장된 TORCH.",
+      "slide_no": 40,
+      "card_format": "basic",
+      "card_type": "sequence",
+      "importance": "detail",
+      "source_type": "lecture",
+      "evidence_type": "lecture_text",
+      "exam_hit": false
+    },
+    {
+      "q": "Surfactant 합성에 관여하는 호르몬과 성장인자를 다섯 개 대시오.",
+      "a": "cortisol, insulin, prolactin, thyroxine, TGF-beta",
+      "explanation": "1번과 같은 회수 방향.",
+      "slide_no": 19,
+      "card_format": "basic",
+      "card_type": "list",
+      "importance": "core",
+      "source_type": "lecture",
+      "evidence_type": "lecture_text",
+      "exam_hit": false
+    },
+    {
+      "q": "임신중독증 산모에서 28주에 태어난 신생아의 호흡곤란, 표면활성제 투여 후 호전. 가장 중요한 위험인자는?",
+      "a": "미숙아(prematurity)",
+      "explanation": "감염이나 저체중 자체가 아니라 재태주수가 핵심이다.",
+      "slide_no": null,
+      "card_format": "basic",
+      "card_type": "fact",
+      "importance": "core",
+      "source_type": "jokbo",
+      "evidence_type": "jokbo_question",
+      "exam_hit": true,
+      "jokbo_ref": {"year": "2025", "no": "78", "role": "source"}
+    },
+    {
+      "q": "RDS에서 폐 유순도(compliance)는 어떻게 변하는가?",
+      "a": "감소한다",
+      "explanation": "무기폐가 진행하며 compliance가 떨어진다.",
+      "slide_no": 17,
+      "card_format": "basic",
+      "card_type": "mechanism",
+      "importance": "core",
+      "source_type": "lecture",
+      "evidence_type": "lecture_text",
+      "exam_hit": false,
+      "media": {"figure_id": "fig_p09_01"}
+    }
+  ]
+}

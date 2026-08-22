@@ -1,0 +1,77 @@
+{
+  "learning_plan": {
+    "objectives": [
+      {
+        "objective": "신생아 RDS의 위험인자를 재태주수별 위험도와 함께 재구성한다",
+        "retrieval_targets": [
+          "<28주 60%",
+          "28-34주 30%",
+          ">34주 <5%",
+          "남아·모체 당뇨·제왕절개"
+        ],
+        "slides": [
+          4
+        ],
+        "importance": "core",
+        "jokbo_refs": [
+          "2025-78"
+        ]
+      },
+      {
+        "objective": "surfactant 합성을 조절하는 호르몬을 열거하고 방향을 구분한다",
+        "retrieval_targets": [
+          "cortisol",
+          "insulin",
+          "prolactin",
+          "thyroxine",
+          "TGF-β"
+        ],
+        "slides": [
+          19
+        ],
+        "importance": "core"
+      },
+      {
+        "objective": "type II 폐포세포의 기능을 그림에서 식별한다",
+        "retrieval_targets": [
+          "surfactant 생성",
+          "표면장력 감소"
+        ],
+        "slides": [
+          9
+        ],
+        "importance": "core"
+      },
+      {
+        "objective": "prematurity의 정의 기준을 체중 기준과 구분한다",
+        "retrieval_targets": [
+          "재태주수 37주 미만"
+        ],
+        "slides": [
+          4
+        ],
+        "importance": "core",
+        "jokbo_refs": [
+          "2025-72"
+        ]
+      }
+    ],
+    "rejected_candidates": [
+      {
+        "candidate": "필기자의 잡담 (힘들게 자라면 훌륭한 사람이 된다)",
+        "reason": "decorative",
+        "slides": [
+          19
+        ]
+      },
+      {
+        "candidate": "슬라이드 표지와 목차",
+        "reason": "decorative",
+        "slides": [
+          1,
+          2
+        ]
+      }
+    ]
+  }
+}
