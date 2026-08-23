@@ -1,11 +1,6 @@
 import type { LectureRef } from "../types";
 import { hasSlots, hasTodo, lectureSlots, type CalendarEntry, type SlotState } from "./entries";
 
-/** 강의 상세는 새 창이다. 캘린더를 잃지 않고 자료를 여닫으라는 뜻이다. */
-export function lectureHref(lecture: Pick<LectureRef, "subject" | "runId">) {
-  return `/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
-}
-
 const stateLabels: Record<SlotState, string> = {
   none: "아직 없음",
   ready: "받을 것 있음",

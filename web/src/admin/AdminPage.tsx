@@ -9,7 +9,7 @@ import {
   type PrequizJob,
   type RunnerBeat,
 } from "../types";
-import { lectureHref } from "../calendar/EventChip";
+import { lectureHref } from "../links";
 
 /** 관리자가 채우는 다섯 칸. 순서가 곧 하는 순서다 — 앞 셋이 예습, 뒤 둘이 복습. */
 const checklistLabels: Record<ChecklistItem, string> = {

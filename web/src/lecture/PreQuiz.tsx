@@ -14,8 +14,20 @@ import { Stem } from "./Stem";
  *
  * 그래도 답은 문항과 함께 안 받는다. 편 사람만 `reveal`로 받아 가고, 그래야
  * `quiz_attempt`에 남는 「알았다」가 무언가를 뜻한다.
+ *
+ * **카드만 그린다.** 강의가 무엇인지, 다 풀고 나서 무엇을 할지는 이 컴포넌트를
+ * 세운 화면(`PreQuizPage`)이 말한다.
  */
-export function PreQuiz({ subject, runId, onFinished }: { subject: string; runId: string; onFinished: () => void }) {
+export function PreQuiz({
+  subject,
+  runId,
+  onDone,
+}: {
+  subject: string;
+  runId: string;
+  /** 다 찍었는지를 화면 밖에 알린다. 놓친 것 목록이 그 신호로 붙는다. */
+  onDone: (done: boolean) => void;
+}) {
   const base = `/api/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}/prequiz`;
   const [payload, setPayload] = useState<QuizPayload | null>(null);
   const [index, setIndex] = useState(0);
@@ -34,6 +46,13 @@ export function PreQuiz({ subject, runId, onFinished }: { subject: string; runId
       .catch((cause: Error) => setError(cause.message));
   }, [base]);
 
+  // 다 찍었는가. 화면이 이 신호를 받아 놓친 것을 부른다 — 그 목록은 서버가
+  // 고르는 것이라 마지막 카드를 찍기 전에는 채워지지 않는다.
+  const finished = payload !== null && index >= payload.items.length;
+  useEffect(() => {
+    onDone(finished);
+  }, [finished, onDone]);
+
   if (error) return <p className="notice is-error">{error}</p>;
   if (!payload) return <p className="notice">카드를 불러오는 중…</p>;
 
@@ -50,7 +69,6 @@ export function PreQuiz({ subject, runId, onFinished }: { subject: string; runId
           </strong>
         </p>
         <div className="row">
-          <button onClick={onFinished}>결과 보기</button>
           <button
             className="is-quiet"
             onClick={async () => {

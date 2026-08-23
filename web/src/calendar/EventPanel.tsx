@@ -11,9 +11,9 @@ import {
 import { EXTENSION_DOWNLOAD_URL, EXTENSION_STORE_URL } from "../bridge/protocol";
 import { PROMPT_TOKENS, renderPreviewPrompt, SHARED_PREVIEW_PROMPT } from "../lecture/previewPrompt";
 import { usePreviewPrompt } from "../lecture/usePreviewPrompt";
+import { lectureHref, prequizHref, prequizWindow } from "../links";
 import { useMe } from "../useMe";
 import { categoryLabel, type CalendarEntry } from "./entries";
-import { lectureHref } from "./EventChip";
 
 /**
  * 칸 하나를 눌렀을 때 옆에 서는 패널.
@@ -176,7 +176,7 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 }
 
 /**
- * 강조하는 셋. 예습 링크 · Pre-Quiz 덱 · Main-Quiz 덱.
+ * 강조하는 셋. 예습 링크 · Pre-Quiz · Main-Quiz 덱.
  *
  * 링크는 누르면 바로 열리고 덱은 누르면 바로 받는다. 중간에 확인할 화면을
  * 두지 않는다 — 그 셋이 이 패널의 존재 이유다.
@@ -212,15 +212,25 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
     <div className="event-panel-actions">
       <PreviewAction lecture={lecture} detail={detail} base={base} onError={setError} />
 
-      <DeckAction file={fileOf("pre_apkg")} label="Pre-Quiz 덱" count={quiz?.itemCount} onDownload={download} />
-      {/* 웹 풀이는 좁은 패널에 담기지 않는다. 문항과 해설이 있어야 할 자리라
-          강의 화면으로 보낸다. 덱이 기본이므로 눈에 덜 걸리게 둔다. */}
+      {/* 누르면 Pre-Quiz 전용 창이 열린다 — 캘린더도 이 패널도 그대로 남는다.
+          전에는 강의 화면으로 보내 놓고 거기서 다시 누르게 했다.
+
+          **덱이 기본이던 것을 뒤집었다(2026-08-23 관리자 지시).** 덱은 그 아래
+          줄에서 받는다 — Anki를 깐 자리에서 반복할 사람의 것이다. */}
       {quiz ? (
-        <a className="panel-subaction" href={lectureHref(lecture)} target="_blank" rel="noreferrer">
-          웹에서 풀기
-          {quiz.answered ? ` · ${quiz.answered}/${quiz.itemCount}개 풀었습니다` : ""}
+        <a className="panel-action is-key" href={prequizHref(lecture)} target={prequizWindow(lecture)}>
+          <strong>Pre-Quiz</strong>
+          <small>
+            {quiz.itemCount}장
+            {quiz.answered ? ` · ${quiz.answered}장 풀었습니다` : " · 웹에서 풉니다"}
+          </small>
         </a>
       ) : null}
+      {/* 웹 풀이가 있으면 덱은 한 단 낮게 눕는다. 없으면 이 줄이 그 자리를 진다 —
+          아직 안 올라온 강의에서 "아직 없습니다"를 말하는 것도 이 줄이다. */}
+      {/* 문항 수는 위 줄이 말한다. 여기서 되풀이하면 덱의 장수처럼 읽히는데,
+          덱에는 그림 카드까지 들어 있어 언제나 더 많다. */}
+      <DeckAction file={fileOf("pre_apkg")} label="Pre-Quiz 덱" onDownload={download} quiet={Boolean(quiz)} />
 
       <DeckAction file={fileOf("main_apkg")} label="Main-Quiz 덱" onDownload={download} />
 
@@ -558,24 +568,23 @@ function SharedOpen({ url, lectureId }: { url: string; lectureId: string }) {
 function DeckAction({
   file,
   label,
-  count,
   onDownload,
+  quiet = false,
 }: {
   file: LectureFile | undefined;
   label: string;
-  count?: number;
   onDownload: (file: LectureFile) => void;
+  /** 위에 그 덱의 웹 풀이가 서 있는가. 그러면 이 줄은 한 단 낮게 눕는다. */
+  quiet?: boolean;
 }) {
+  const key = quiet ? "" : " is-key";
   // 아직 없는 것도 자리를 남긴다. 목록에서 빠지면 "없다"와 "이 강의에는 원래
   // 해당 없다"를 구분할 수 없다.
-  if (!file) return <span className="panel-action is-key is-empty">{label} — 아직 없습니다</span>;
+  if (!file) return <span className={`panel-action${key} is-empty`}>{label} — 아직 없습니다</span>;
   return (
-    <button className="panel-action is-key is-download" onClick={() => onDownload(file)}>
+    <button className={`panel-action${key} is-download`} onClick={() => onDownload(file)}>
       <strong>{label}</strong>
-      <small>
-        {fileSize(file.sizeBytes)}
-        {count ? ` · ${count}문항` : ""} · 내려받기
-      </small>
+      <small>{fileSize(file.sizeBytes)} · 내려받기</small>
     </button>
   );
 }

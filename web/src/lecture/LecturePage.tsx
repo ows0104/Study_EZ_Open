@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { api, openSignedFile } from "../api";
+import { api, downloadSignedFile, openSignedFile } from "../api";
+import { prequizHref, prequizWindow } from "../links";
 import type { LectureDetail, LectureFile } from "../types";
-import { PreQuiz } from "./PreQuiz";
-import { Stem } from "./Stem";
+import { Missed } from "./Missed";
 
 /**
  * 강의 상세. 순서가 공부 순서다.
@@ -19,7 +19,6 @@ export function LecturePage() {
   const runId = params.runId ?? "";
   const [detail, setDetail] = useState<LectureDetail | null>(null);
   const [error, setError] = useState("");
-  const [solving, setSolving] = useState(false);
 
   const load = useCallback(() => {
     api<LectureDetail>(`/api/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}`)
@@ -37,27 +36,44 @@ export function LecturePage() {
   if (!detail) return <p className="notice">불러오는 중…</p>;
 
   const fileOf = (kind: LectureFile["kind"]) => detail.files.find((file) => file.kind === kind);
-  const preApkg = fileOf("pre_apkg");
   const quiz = detail.prequiz;
 
+  const fileUrl = (file: LectureFile) =>
+    `/api/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}/files/${file.id}`;
+
+  // 필기는 PDF라 브라우저가 그대로 보여 줄 수 있다. `inline=1`이 없으면 서버가
+  // 첨부로 서명해 줘서 탭이 뜨자마자 내려받기로 바뀐다.
   async function open(file: LectureFile) {
-    // 필기는 PDF라 브라우저가 그대로 보여 줄 수 있다. `inline=1`이 없으면
-    // 서버가 첨부로 서명해 줘서 탭이 뜨자마자 내려받기로 바뀐다. 덱(.apkg)은
-    // 받아야 쓰는 것이라 그대로 둔다.
-    const inline = file.kind === "notes_prev" || file.kind === "notes_current";
     try {
-      await openSignedFile(
-        `/api/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}/files/${file.id}` +
-          (inline ? "?inline=1" : ""),
-      );
+      await openSignedFile(`${fileUrl(file)}?inline=1`);
     } catch (cause) {
       setError((cause as Error).message);
     }
   }
 
-  const fileButton = (kind: LectureFile["kind"], label: string) => (
-    <FileButton key={kind} file={fileOf(kind)} label={label} onOpen={open} />
-  );
+  // 덱은 보는 것이 아니라 받는 것이다. 새 탭으로 열면 그 탭이 곧바로 내려받기로
+  // 바뀌면서 빈 탭만 남는다.
+  async function download(file: LectureFile) {
+    try {
+      await downloadSignedFile(fileUrl(file), file.filename);
+    } catch (cause) {
+      setError((cause as Error).message);
+    }
+  }
+
+  const fileButton = (kind: LectureFile["kind"], label: string, extra = "") => {
+    const deck = kind === "pre_apkg" || kind === "main_apkg";
+    return (
+      <FileButton
+        key={kind}
+        file={fileOf(kind)}
+        label={label}
+        onPick={deck ? download : open}
+        hint={deck ? "내려받기" : ""}
+        className={`${deck ? "is-download" : ""} ${extra}`.trim()}
+      />
+    );
+  };
 
   return (
     <article className="lecture">
@@ -85,60 +101,30 @@ export function LecturePage() {
         {fileButton("notes_prev", "작년 필기")}
         <PreviewResource detail={detail} />
 
-        {/* Pre-Quiz의 기본은 apkg다. Anki에서 풀고, 웹 훑기는 그 아래 갈래로 둔다 —
-            그림 카드는 웹에 안 실리므로 덱이 언제나 더 크다. */}
-        {preApkg ? (
-          <button className="resource is-primary" onClick={() => open(preApkg)}>
-            <strong>Pre-Quiz 덱</strong>
-            <small>
-              {preApkg.filename}
-              {quiz ? ` · 웹에서 훑을 수 있는 카드 ${quiz.itemCount}장` : ""}
-            </small>
-          </button>
-        ) : (
-          <div className="resource is-empty">Pre-Quiz 덱 — 아직 없습니다</div>
-        )}
+        {/* 누르면 웹에서 푼다. 전용 창이 열리므로 이 화면은 그대로 남는다.
 
+            **덱이 기본이던 것을 뒤집었다(2026-08-23 관리자 지시).** 덱은 Anki를
+            깐 자리에서 반복하는 것이고 그 자리는 여기가 아니다. 받을 사람은 아래
+            줄에서 받는다 — 그림 카드까지 들어 있어 덱이 언제나 더 크다. */}
         {quiz ? (
-          solving ? (
-            <PreQuiz
-              subject={subject}
-              runId={runId}
-              onFinished={() => {
-                setSolving(false);
-                load();
-              }}
-            />
-          ) : (
-            <button className="resource is-secondary" onClick={() => setSolving(true)}>
-              <strong>웹에서 훑기</strong>
-              <small>
-                {quiz.itemCount}장 · 답을 펴 보고 본인이 찍습니다
-                {quiz.answered ? ` · ${quiz.answered}장 봤고 ${quiz.correct}장은 알고 있었습니다` : ""}
-              </small>
-            </button>
-          )
+          <a
+            className="resource is-primary"
+            href={prequizHref({ subject, runId })}
+            target={prequizWindow({ subject, runId })}
+          >
+            <strong>Pre-Quiz 풀기</strong>
+            <small>
+              {quiz.itemCount}장 · 답을 펴 보고 본인이 찍습니다
+              {quiz.answered ? ` · ${quiz.answered}장 봤고 ${quiz.correct}장은 알고 있었습니다` : ""}
+            </small>
+          </a>
         ) : null}
+        {fileButton("pre_apkg", "Pre-Quiz 덱", quiz ? "is-secondary" : "")}
       </section>
 
-      {quiz && quiz.missed.length ? (
-        <section className="missed">
-          <h2>오늘 놓친 것 {quiz.missed.length}개</h2>
-          {/* 웹에서 끝까지 훑은 사람에게만 나온다. 몰랐다고 찍은 카드가 그 강의에서
-              특히 귀 기울일 곳이라는 생각으로 고른다. */}
-          <ol>
-            {quiz.missed.map((entry) => (
-              <li key={entry.itemId}>
-                <p className="missed-stem">
-                  <Stem text={entry.stem} />
-                </p>
-                <p className="missed-target">{entry.answer}</p>
-                {entry.examHit ? <span className="badge">기출</span> : null}
-              </li>
-            ))}
-          </ol>
-        </section>
-      ) : null}
+      {/* 다 푼 직후에는 Pre-Quiz 창에도 같은 목록이 뜬다. 여기 남겨 두는 것은
+          나중에 이 화면을 다시 열었을 때를 위해서다. */}
+      <Missed items={quiz?.missed ?? []} />
 
       <section className="lecture-section">
         <h2>강의 후</h2>
@@ -180,20 +166,26 @@ function PreviewResource({ detail }: { detail: LectureDetail }) {
 function FileButton({
   file,
   label,
-  onOpen,
+  onPick,
+  hint = "",
+  className = "",
 }: {
   file: LectureFile | undefined;
   label: string;
-  onOpen: (file: LectureFile) => void;
+  onPick: (file: LectureFile) => void;
+  /** 파일 이름 뒤에 붙는 한 마디. 여는 것과 받는 것을 이 자리에서 가른다. */
+  hint?: string;
+  className?: string;
 }) {
   // 아직 없는 것도 자리를 남긴다. 목록에서 빠지면 "없다"와 "이 강의에는 원래
   // 해당 없다"를 구분할 수 없다.
   if (!file) return <div className="resource is-empty">{label} — 아직 없습니다</div>;
   return (
-    <button className="resource" onClick={() => onOpen(file)}>
+    <button className={`resource ${className}`.trim()} onClick={() => onPick(file)}>
       <strong>{label}</strong>
       <small>
         {file.filename} · {(file.sizeBytes / 1024 / 1024).toFixed(1)}MB
+        {hint ? ` · ${hint}` : ""}
       </small>
     </button>
   );

@@ -7,7 +7,7 @@ src/
   auth.tsx              Supabase 매직 링크. 로그인 없이 열리는 화면은 없다
   api.ts                토큰을 붙이는 fetch + 서명 URL 열기
   calendar/             / — 캘린더가 홈
-  lecture/              /lectures/{과목}/{run_id} — 새 창
+  lecture/              /lectures/{과목}/{run_id} · /prequiz/{과목}/{run_id} — 둘 다 새 창
   admin/                /admin — 매칭 확인 · 업로드 현황 · 예습 링크
   styles/               흰 배경, 무채색, 강조색 하나
 ```
@@ -35,7 +35,8 @@ Supabase 없이 화면만 보려면 `.env.local`에 `VITE_LOCAL_TEST_TOKEN=local
 
 `public/_redirects`가 어느 주소로 들어와도 `index.html`을 주게 한다. **이게
 없으면 `/lectures/병리학/260813_03`을 새 창으로 여는 순간 404다** — 라우팅을
-브라우저가 하기 때문이고, 강의 상세가 새 창으로 열리는 화면이라 반드시 필요하다.
+브라우저가 하기 때문이고, 강의 상세와 Pre-Quiz가 새 창으로 열리는 화면이라
+반드시 필요하다.
 
 R2를 이미 쓰므로 벤더가 늘지 않는다. API를 같은 도메인의 `/api/*`로 붙이면
 (Pages 커스텀 도메인 + Cloud Run으로 가는 Worker 라우트) `CORS_ALLOWED_ORIGINS`도
@@ -55,6 +56,7 @@ R2를 이미 쓰므로 벤더가 늘지 않는다. API를 같은 도메인의 `/
 
 ```
 /lectures/{과목}/{run_id}
+/prequiz/{과목}/{run_id}
 ```
 
 설계 문서는 `/lectures/{run_id}`라 적었지만 `run_id`는 `260813_03` 같은

@@ -599,10 +599,19 @@ button.resource:hover:not(:disabled) {
   font-size: 13px;
 }
 
-/* apkg가 기본이고 웹 풀이는 그 아래 갈래다. 한 단 낮게 보이도록 눕힌다. */
+/* 웹 풀이가 기본이고 덱은 그 아래 갈래다. 한 단 낮게 보이도록 눕힌다. */
 .resource.is-secondary {
   background: transparent;
   box-shadow: none;
+}
+
+/* 받는 것이지 여는 것이 아니다. 화살표 방향이 그 차이를 말한다. */
+.resource.is-download::after {
+  content: "↓";
+}
+
+button.resource.is-download:hover:not(:disabled)::after {
+  transform: translateY(3px);
 }
 
 .resource-group {

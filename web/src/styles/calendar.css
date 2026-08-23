@@ -1100,6 +1100,12 @@ button.panel-action.is-download:hover:not(:disabled)::after {
   font-size: 12.5px;
 }
 
+/* 한 단 낮은 자리(웹 풀이 아래의 덱)는 빈 것도 낮게 눕는다. */
+.panel-action.is-empty:not(.is-key) {
+  padding: 9px 11px;
+  font-size: 11.5px;
+}
+
 /* 링크 하나와 그 옆에 붙는 것. 바깥 여백은 줄이 들고 안쪽은 0으로 맞춘다 —
    안 그러면 링크와 옆 버튼이 서로 다른 높이에서 끝난다. */
 .panel-row {
@@ -1169,21 +1175,6 @@ button.panel-action.is-download:hover:not(:disabled)::after {
   to {
     transform: rotate(360deg);
   }
-}
-
-/* 덱이 기본이고 웹 풀이는 그 아래 갈래다. 줄 하나로 눕힌다. */
-.panel-subaction {
-  display: block;
-  margin: -2px 0 9px;
-  padding: 0 14px;
-  color: var(--ink-3);
-  font-size: 11.5px;
-  font-weight: 550;
-}
-
-.panel-subaction:hover {
-  color: var(--accent-ink);
-  text-decoration: underline;
 }
 
 /* 무엇을 해야 하는지 한 줄. 눌린 뒤에만 나온다. */
