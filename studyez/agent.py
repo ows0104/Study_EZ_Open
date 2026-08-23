@@ -56,6 +56,10 @@ BUILD_TIMEOUT = 3 * 3600  # 이 시간을 넘기면 그 편을 버린다
 
 CLAIM = "/api/admin/prequiz-jobs/claim"
 
+# 러너가 둘 돌지 않게 잡는 표시. 도는 동안 계속 만져서 살아 있다고 알린다.
+LOCK_NAME = "agent.lock"
+LOCK_STALE = 90          # 이 시간 넘게 안 만져진 표시는 죽은 것이다
+
 # 하위 프로세스가 단계를 알리는 모양. pdf2anki가 `── ① 반드시 알아야 할 것`처럼
 # 찍는다. 사람이 그대로 읽을 수 있어서 다시 쓰지 않고 옮기기만 한다.
 RE_STAGE = re.compile(r"^── (.+)$")
@@ -259,7 +263,42 @@ class Agent:
             self.sweep()
         return False
 
+    # ── 하나만 돈다 ──────────────────────────────────────────────────
+    def lock_path(self) -> Path:
+        return self.runs_dir / LOCK_NAME
+
+    def take_lock(self) -> bool:
+        """이미 도는 러너가 있으면 False.
+
+        **개수가 아니라 비용의 문제다.** 둘이 붙으면 서버가 같은 `running` 일감을
+        둘 다에게 주고, 같은 편을 두 번 만든다. 편당 빈 세션 넷이다.
+
+        pid 대신 **시각**을 본다. pid는 재사용되고, 그러면 죽은 러너 때문에 새
+        러너가 영영 안 뜬다. 도는 동안 계속 만지므로 오래된 표시는 죽은 것이다.
+        """
+        path = self.lock_path()
+        try:
+            age = time.time() - path.stat().st_mtime
+        except OSError:
+            age = None
+        if age is not None and age < LOCK_STALE:
+            holder = path.read_text(encoding="utf-8", errors="replace").strip()
+            self.say(f"러너가 이미 돌고 있다 ({holder}, {age:.0f}초 전). 둘이 붙으면 "
+                     f"같은 편을 두 번 만든다 — 이 실행은 그만둔다")
+            return False
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"pid {os.getpid()}", encoding="utf-8")
+        return True
+
+    def touch_lock(self) -> None:
+        try:
+            self.lock_path().write_text(f"pid {os.getpid()}", encoding="utf-8")
+        except OSError:
+            pass
+
     def loop(self, poll: int = POLL_SECONDS) -> int:
+        if not self.take_lock():
+            return 3
         self.say(f"[{stamp()}] 러너가 붙었다 — {self.client.base}"
                  + (f" · 쓸기 {self.subject}" if self.subject else " · 쓸기 전 과목")
                  + f" · {poll}초마다 물어본다")
@@ -267,12 +306,15 @@ class Agent:
         self.last_sweep = time.monotonic()
         try:
             while True:
+                self.touch_lock()
                 if not self.tick():
                     time.sleep(poll)
         except KeyboardInterrupt:
             self.say(f"\n[{stamp()}] 멈춘다. 도는 중이던 편은 서버에 running으로 남아 있다 — "
                      "다시 붙으면 그것부터 집는다")
             return 0
+        finally:
+            self.lock_path().unlink(missing_ok=True)
 
 
 # ── 로그에서 줍는 것들 ────────────────────────────────────────────────

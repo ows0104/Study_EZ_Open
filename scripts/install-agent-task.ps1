@@ -43,7 +43,11 @@ if ($Remove) {
     exit 0
 }
 
-$arguments = @("-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+# **창을 숨긴다.** 안 숨기면 로그온할 때마다 검은 콘솔이 하나 떠서 종일 남는다.
+# 종일 도는 물건이라 그 창은 사람이 닫고 싶어지고, 닫으면 러너가 죽는다.
+# 볼 것은 runs\agent.log 에 있다.
+$arguments = @("-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden",
+               "-ExecutionPolicy", "Bypass",
                "-File", "`"$repo\scripts\agent.ps1`"")
 if ($Subject) { $arguments += @("-Subject", $Subject) }
 
@@ -73,4 +77,5 @@ Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger `
 
 Write-Host "걸었다: $TaskName (로그온 $($DelayMinutes)분 뒤 시작)"
 Write-Host "  로그: $repo\runs\agent.log"
+Write-Host "  창은 안 뜬다. 도는지 보려면: Get-ScheduledTask -TaskName '$TaskName'"
 Write-Host "  지금 바로 띄우려면: Start-ScheduledTask -TaskName '$TaskName'"

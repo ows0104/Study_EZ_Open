@@ -172,6 +172,10 @@ powershell -ExecutionPolicy Bypass -File scripts\install-agent-task.ps1 -Subject
 powershell -ExecutionPolicy Bypass -File scripts\install-agent-task.ps1 -Remove
 ```
 
+**창은 안 뜬다**(`-WindowStyle Hidden`). 종일 도는 물건이라 검은 콘솔이 하나 남으면
+사람이 닫고 싶어지고, 닫으면 러너가 죽는다. 도는지 보려면
+`Get-ScheduledTask -TaskName 'StudyEZ Agent'`, 무엇을 하는지는 `runs/agent.log`.
+
 로그온 5분 뒤에 뜬다. **깨어난 직후를 피하는 것이 뜻이 있다** — 실패한 넷이 전부
 그 시각이었고, 한 회차에서는 2초 사이에 자료 폴더가 보였다 안 보였다 했다. 러너는
 계속 떠 있으므로 5분 늦는 것으로 잃는 것이 없다. 로그는 `runs/agent.log`이고
@@ -185,6 +189,10 @@ powershell -ExecutionPolicy Bypass -File scripts\install-agent-task.ps1 -Remove
 
 - **한 번에 한 편.** 한 편이 이미 빈 세션 넷을 띄운다. 서버도 `running`이 있으면
   새 일감을 안 준다
+- **러너도 하나만 돈다.** `runs/agent.lock`을 잡는다. 둘이 붙으면 서버가 같은
+  `running` 일감을 둘 다에게 주고 같은 편을 두 번 만든다 — 실제로 한 번 그랬다.
+  pid가 아니라 **시각**을 본다(pid는 재사용되고, 그러면 죽은 러너 때문에 새 러너가
+  영영 안 뜬다)
 - **성공을 종료 코드로 안 본다.** `prequeue`는 만들 자리가 없어도 0으로 끝난다 —
   배선 시험에서 아무것도 안 만들고 「덱을 만들었다」가 찍혔다. 지금은
   `pre_items.final.json`이 **이번 실행에서** 나왔는지로 가른다
