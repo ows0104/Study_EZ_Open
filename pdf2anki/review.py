@@ -21,6 +21,10 @@ from pathlib import Path
 def render(plan: dict, prep: dict) -> tuple[str, dict]:
     objs = sorted(plan.get("objectives", []),
                   key=lambda o: (min(o.get("slides") or [10 ** 6]), o["objective"]))
+    # 기출 목표는 슬라이드가 아니라 연도 순으로 읽는다 — 강의 진행 순서가 없다.
+    jobjs = sorted(plan.get("jokbo_objectives", []),
+                   key=lambda o: (sorted(o.get("jokbo_refs") or [], reverse=True),
+                                  o["objective"]))
     rejected = plan.get("rejected_candidates", [])
     n_slides = prep["slides"]
 
@@ -49,11 +53,34 @@ def render(plan: dict, prep: dict) -> tuple[str, dict]:
         L.append(f"{i:3d}. {mark} `{tag:<8}` {o['objective']}{jk}")
         L.append(f"        └ {' · '.join(o.get('retrieval_targets', []))}")
     L.append("")
-    if rejected:
+    if jobjs:
+        L += [f"## 기출 파트 — 목표 {len(jobjs)}개", "",
+              "강의록 파트와 겹쳐도 된다. **같은 것을 같은 방향으로** 묻고 있지 않은지만 봐라.", ""]
+        for i, o in enumerate(jobjs, 1):
+            mark = "★" if o.get("importance") == "core" else " "
+            ax = f"  [{o['axis']}]" if o.get("axis") else ""
+            n = len(o.get("jokbo_refs") or [])
+            yrs = f"{n}해 반복" if n > 1 else (o.get("jokbo_refs") or ["?"])[0]
+            L.append(f"{i:3d}. {mark} `{yrs:<10}` {o['objective']}{ax}")
+            L.append(f"        └ {' · '.join(o.get('retrieval_targets', []))}")
+            L.append(f"        └ 기출 {', '.join(o.get('jokbo_refs') or [])}")
+        L.append("")
+    # 족보 부록은 "뺐다" 가 아니라 "기출로 다룬다" 이므로 같은 목록에 두지 않는다.
+    appendix = [r for r in rejected if r.get("reason") == "jokbo_appendix"]
+    dropped = [r for r in rejected if r.get("reason") != "jokbo_appendix"]
+    if dropped:
         L += ["## 일부러 뺀 것", ""]
-        for r in rejected:
+        for r in dropped:
             sl = ",".join(str(x) for x in r.get("slides", [])) or "-"
             L.append(f"- `S{sl}` {r['candidate']}  ({r['reason']})")
+        L.append("")
+    if appendix:
+        L += ["## 기출 파트로 넘긴 구간", "",
+              "강의록 목표로 안 삼았을 뿐 버린 것이 아니다. "
+              "여기에 **강의록 내용까지** 섞여 있지 않은지만 봐라.", ""]
+        for r in appendix:
+            sl = ",".join(str(x) for x in r.get("slides", [])) or "-"
+            L.append(f"- `S{sl}` {r['candidate']}")
         L.append("")
     if untouched:
         L += ["## ⚠ 목표에도 제외 기록에도 없는 슬라이드", "",
@@ -64,7 +91,8 @@ def render(plan: dict, prep: dict) -> tuple[str, dict]:
     return "\n".join(L), {"objectives": len(objs), "rejected": len(rejected),
                           "untouched": untouched, "core": sum(
                               1 for o in objs if o.get("importance") == "core"),
-                          "with_jokbo": sum(1 for o in objs if o.get("jokbo_refs"))}
+                          "with_jokbo": sum(1 for o in objs if o.get("jokbo_refs")),
+                          "jokbo_objectives": len(jobjs)}
 
 
 def main(argv=None) -> int:
@@ -92,8 +120,9 @@ def main(argv=None) -> int:
         print(f"이제 prompt.cards.md 를 실행하면 된다.")
         return 0
 
-    print(f"목표 {stats['objectives']}개 (core {stats['core']}) · "
-          f"기출 연결 {stats['with_jokbo']}개 · 제외 기록 {stats['rejected']}건")
+    print(f"강의록 목표 {stats['objectives']}개 (core {stats['core']}, "
+          f"기출 연결 {stats['with_jokbo']}개) · "
+          f"기출 목표 {stats['jokbo_objectives']}개 · 제외 기록 {stats['rejected']}건")
     if stats["untouched"]:
         print(f"⚠ 목표에도 제외 기록에도 없는 슬라이드 {len(stats['untouched'])}장: "
               f"{stats['untouched'][:20]}{' …' if len(stats['untouched']) > 20 else ''}")

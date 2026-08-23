@@ -69,8 +69,102 @@ def slice_for(prep: dict, jokbo_dir: Path, explicit: str | None = None
     return path, jk.get("stats", {}), top[0][2] is not None
 
 
+MAX_REPEAT_CLUSTERS = 12       # 프롬프트에 실을 묶음 수. 실측 최대가 13개다(LPRAC)
+
+
+def repeat_clusters(stats: dict, questions: list | None = None) -> list[dict]:
+    """반복 쌍을 묶음으로 잇는다. 쌍 목록보다 묶음이 읽기 쉽다.
+
+    `2020-68 ↔ 2022-55`, `2022-55 ↔ 2023-61`, `2023-61 ↔ 2025-103` 을 쌍으로 늘어놓으면
+    같은 것이 세 번 보인다. 이어 붙이면 **한 주제가 다섯 해 반복됐다** 가 한 줄로 선다.
+
+    돌려주는 각 묶음은 `{"members": [최근 연도부터], "stem": 대표 문항의 본문}` 이다.
+    """
+    parent: dict[str, str] = {}
+
+    def find(x: str) -> str:
+        parent.setdefault(x, x)
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for pair in stats.get("repeat_pairs") or []:
+        ra, rb = find(pair["a"]), find(pair["b"])
+        if ra != rb:
+            parent[ra] = rb
+
+    groups: dict[str, list[str]] = {}
+    for k in parent:
+        groups.setdefault(find(k), []).append(k)
+
+    stems = {f"{q['year']}-{q['no']}": (q.get("stem") or "") for q in (questions or [])}
+    out = []
+    for members in groups.values():
+        # 연도 내림차순. 대표는 가장 최근 것이다 — 그 해의 문구가 지금 출제자에 가깝다.
+        members.sort(key=lambda m: (m.split("-")[0], m), reverse=True)
+        stem = next((stems[m] for m in members if stems.get(m)), "")
+        out.append({"members": members, "stem": " ".join(stem.split())[:70]})
+    out.sort(key=lambda c: (-len(c["members"]), c["members"][0]))
+    return out
+
+
+def topic_count(stats: dict, questions: list | None = None) -> tuple[int, int, int]:
+    """(실질 주제 수, 반복 묶음 수, 묶음에 안 든 문항 수).
+
+    기출 파트의 목표 수는 문항 수가 아니라 **이 수**를 상한으로 잡는다. 문항 수로
+    잡으면 같은 주제를 다섯 해치 따로 세우게 된다 — 병리학 533문항 중 182개(34%)가
+    어떤 묶음에 들어 있고, 묶어서 세면 실질 주제는 420개다.
+    """
+    clusters = repeat_clusters(stats, questions)
+    clustered = sum(len(c["members"]) for c in clusters)
+    n = stats.get("n_questions", 0)
+    singles = max(n - clustered, 0)
+    return len(clusters) + singles, len(clusters), singles
+
+
+def repeat_block(stats: dict, questions: list | None, stayed: bool) -> str:
+    """반복 묶음을 프롬프트에 싣는다.
+
+    **이 블록이 복습 쪽에는 없었다.** `jokbo.py` 가 `repeat_pairs` 를 계산해 두는데
+    복습 지침은 `repeat_rate` 숫자 한 줄만 쓰고 쌍 목록을 버렸고, 정작 예습 쪽
+    (`prequiz/assemble.py`) 만 그것을 모델에게 보여 주고 있었다. 복습이 예습보다
+    기출을 덜 보고 있었던 셈이다.
+
+    관리자가 막아 달라고 명시한 것이 여기 걸린다 — *"겹치는 문제를 너무 반복해서
+    풀지 않도록(어 이거 아까 봤던 거네, 선지만 바뀐듯 방지)"*. 병리학 533문항 중
+    **182개(34%)가 어떤 묶음에 들어 있다.** 묶어서 세면 실질 주제는 420개다.
+    """
+    clusters = repeat_clusters(stats, questions)
+    if not clusters:
+        return ""
+    shown = clusters[:MAX_REPEAT_CLUSTERS]
+    rows = "".join(f"- {' · '.join(c['members'])}\n"
+                   + (f"  「{c['stem']}」\n" if c["stem"] else "")
+                   for c in shown)
+    more = ("" if len(clusters) == len(shown) else
+            f"\n> 묶음 {len(clusters)}개 중 큰 것 {len(shown)}개만 실었다.\n")
+    # 쌍 목록 자체가 `jokbo.py` 에서 40개로 잘린다. 잘린 채로 묶으면 묶음이 덜 이어진
+    # 것일 수 있으므로, 상한에 닿았을 때만 그렇다고 적는다. 조용히 자르지 않는다.
+    cut = ("\n> ⚠ 쌍 목록이 상한(40개)에 닿았다. 위 묶음이 덜 이어졌을 수 있으니\n"
+           "> 여기 없는 문항끼리도 겹치는지 직접 보아라.\n"
+           if len(stats.get("repeat_pairs") or []) >= 40 else "")
+    tail = (
+        "**한 묶음은 한 주제다. 각 해의 문항을 따로 카드화하지 마라.** 푸는 사람에게는 "
+        "「아까 봤던 건데 선지만 바뀐」 카드로 온다.\n"
+        "묶음이 요구한 지식의 **축을 나눠** 3~5장을 내고, `jokbo_ref` 에는 묶음에서 "
+        "가장 최근 연도의 문항을 단다. 묶음에 안 든 문항은 1~2장으로 족하다.\n"
+        if stayed else
+        "**교수가 바뀌었으므로 이 반복은 중요도의 근거가 아니다.** 그래도 묶음은 묶음이다 — "
+        "겹치는 문항을 여러 장으로 내면 같은 카드를 두 번 푸는 것이 된다. 한 주제로 묶어라.\n")
+    return ("\n### 여러 해 반복된 문항 묶음\n\n"
+            "문항 본문의 어휘 겹침으로 코드가 묶었다. 한 줄이 한 주제다.\n\n"
+            + rows + more + cut + "\n" + tail)
+
+
 def jokbo_guidance(stats: dict, title: str, mixed: list | None = None,
-                   strategy: str | None = None, shared_bank: bool = False) -> str:
+                   strategy: str | None = None, shared_bank: bool = False,
+                   questions: list | None = None) -> str:
     """전략에 맞는 족보 가중치 지침을 만든다. 전략을 안 주면 통계에서 판정한다."""
     yr = stats.get("professors_by_year") or {}
     rate = stats.get("repeat_rate", 0.0)
@@ -127,12 +221,16 @@ def jokbo_guidance(stats: dict, title: str, mixed: list | None = None,
                "> 문항이 이 섹션으로 흘러들어왔다. **이번 강의 소관 문항을 직접 골라내라.**\n>\n"
                + "".join(f"> - {m['lecture_key']} {m['title']}\n" for m in mixed)
                + ">\n> 위의 담당 교수·반복률은 **주 섹션 기준**이다. 이번 강의에 그대로 적용하지 마라.\n")
+    repeats = repeat_block(stats, questions, strategy != "annotation")
+    topics, n_cl, n_sg = topic_count(stats, questions)
     return (f"## 이 강의의 전략: `{STRATEGIES[strategy]}`\n\n"
             f"- 조각의 주 섹션: {title}\n"
             f"- 담당 교수: {prof_line or '미상'}\n"
             f"- 연도간 문항 반복률: {rate:.0%} (문항 {stats.get('n_questions', 0)}개)\n"
+            f"- 실질 주제 수: **{topics}개** (반복 묶음 {n_cl}개 + 낱개 {n_sg}개)"
+            f" — 기출 파트 목표 수의 상한이다\n"
             f"- 족보 가중치 권고: `{stats.get('jokbo_weight_hint', 'normal')}`\n"
-            f"{mix}\n{body}\n")
+            f"{mix}\n{body}\n{repeats}")
 
 
 def assemble(prep_dir: Path, jokbo_file: Path | None, schema_dir: Path,
@@ -148,7 +246,8 @@ def assemble(prep_dir: Path, jokbo_file: Path | None, schema_dir: Path,
         jokbo_md = jokbo_file.with_suffix(".md").read_text(encoding="utf-8")
         guidance = jokbo_guidance(jk["stats"], f"{jk['lecture_key']} {jk['title']}",
                                   jk.get("may_contain"), strategy,
-                                  shared_bank=jk["lecture_key"] == "PRAC")
+                                  shared_bank=jk["lecture_key"] == "PRAC",
+                                  questions=jk.get("questions"))
         jokbo_block = (f"# 기출 조각 — {jk['lecture_key']} {jk['title']}\n\n"
                        "이 단원의 과거 기출 전량이다. 정답과 이의제기 답변이 결합돼 있다.\n\n"
                        + jokbo_md.split("\n", 1)[1].lstrip())

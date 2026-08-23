@@ -26,7 +26,8 @@ from jsonschema import Draft202012Validator
 from ..textutil import char_ngrams, containment, jaccard, norm_key
 from ..validate import (LEAK_THRESHOLD, MAX_Q_CHARS, OX_FALSE, OX_TRUE,
                         RE_BULLET_LINE, RE_CLOZE, RE_POINTS_AT_SOURCE,
-                        SIMILAR_CROSS_SLIDE, SIMILAR_SAME_SLIDE, count_items)
+                        SIMILAR_CROSS_SLIDE, SIMILAR_SAME_SLIDE, _ref_status,
+                        count_items)
 from .schema import (CARD_SCHEMA, IMAGE_FORMATS, MAX_CARDS, MAX_RECALL_ITEMS,
                      MIN_CARDS, OX_SHARE_MAX)
 
@@ -51,7 +52,9 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
     must = raw.get("must_know") or {}
     n_slides = prep["slides"]
     figs, occs = _figure_index(prep)
-    jokbo_keys = {(q["year"], q["no"]) for q in (jokbo or {}).get("questions", [])}
+    jokbo_qs = (jokbo or {}).get("questions", [])
+    jokbo_keys = {(q["year"], q["no"]) for q in jokbo_qs}
+    jokbo_years = {q["year"] for q in jokbo_qs}
     must_reason = {norm_key(i["item"]): i["reason"] for i in must.get("items", [])}
 
     schema_check = Draft202012Validator(CARD_SCHEMA)
@@ -87,14 +90,25 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
                 dropped.append(_fail(c, "slide_out_of_range",
                                      f"slide_no={c['slide_no']} / 1..{n_slides}"))
                 continue
+            ref = c.get("jokbo_ref")
+            if ref:
+                st = _ref_status(ref, jokbo_keys, jokbo_years)
+                if st != "ok":
+                    flags[idx].append("jokbo_ref_outside_slice" if st == "outside"
+                                      else "jokbo_ref_not_found")
         elif src == "jokbo":
             ref = c.get("jokbo_ref")
             if not ref:
                 dropped.append(_fail(c, "missing_jokbo_ref"))
                 continue
-            if jokbo_keys and (ref["year"], ref["no"]) not in jokbo_keys:
+            # 갈래의 뜻은 `pdf2anki.validate._ref_status` 에 있다. 측정은 복습 쪽에서
+            # 나왔고(28편 · 삭제 17장), 여기는 같은 검사라 같이 고친다.
+            st = _ref_status(ref, jokbo_keys, jokbo_years)
+            if st == "missing":
                 dropped.append(_fail(c, "jokbo_ref_not_found", f"{ref['year']}-{ref['no']}"))
                 continue
+            if st == "outside":
+                flags[idx].append("jokbo_ref_outside_slice")
 
         # 교수가 바뀌었으면 과거 반복은 이 단원의 중심이 아니다. 이유를 강등한다.
         if c["reason"] == "repeated" and not professor_stayed:

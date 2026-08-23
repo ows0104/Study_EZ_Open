@@ -115,6 +115,8 @@ FLAG_LABEL = {
     "occlusion_answer_leaked_in_question": "가린 라벨이 질문에 그대로 나온다",
     "repeated_without_jokbo_ref": "반복 출제를 이유로 들었는데 근거 문항이 없다",
     "media_on_text_card": "그림이 붙지 않는 형식인데 media 가 있었다 (제거됨)",
+    "jokbo_ref_outside_slice": "족보 조각에 없는 연도의 기출이다",
+    "jokbo_ref_not_found": "인용한 기출 문항을 족보에서 찾지 못했다",
 }
 
 REASON_TAG = {

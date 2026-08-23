@@ -72,6 +72,30 @@ def _figure_index(prep: dict) -> tuple[dict, dict]:
     return figs, occs
 
 
+def _ref_status(ref: dict, keys: set, years: set) -> str:
+    """기출 ref 를 조각과 맞춰 본다. `ok` / `missing` / `outside`.
+
+    갈래가 둘인 이유는 **모르는 것과 틀린 것이 다르기 때문**이다.
+
+        missing   조각이 그 연도를 들고 있는데 그 번호가 없다 → 지어낸 것에 가깝다
+        outside   조각이 그 연도를 아예 안 들고 있다 → 조각으로는 판정할 수 없다
+
+    `outside` 가 실제로 나온다. 필기자가 강의록 뒤에 조각보다 오래된 기출을 직접
+    붙여 놓는 일이 있고(260821_02 Slide 41: *"2019년 이전 족보 문제들은 … 정리를
+    하지 않고 추가로 첨부하였습니다"*), 모델은 그것을 읽고 카드를 만든다.
+
+    이 갈래를 두기 전까지 `jokbo_ref_not_found` 는 하드 삭제 하나뿐이었다. 28편
+    실측에서 삭제된 기출 카드 17장이 **전부** `outside` 였다 — 인용 연도는 2017·
+    2018·2019 인데 조각은 2020·21·22·23·25 만 든다. 그중에는 교수 이의제기 답변을
+    근거로 삼은 카드도 있었다. 조각이 못 보는 자리를 근거 없음으로 셌던 것이다.
+    """
+    if not keys:
+        return "ok"                              # 조각이 없으면 맞출 것도 없다
+    if (ref["year"], ref["no"]) in keys:
+        return "ok"
+    return "missing" if ref["year"] in years else "outside"
+
+
 def validate(raw: dict, prep: dict, jokbo: dict | None,
              annotation_evidence: bool = False) -> tuple[list, dict]:
     """annotation_evidence: 올해 필기를 질문·정답의 근거로 인정한다.
@@ -85,7 +109,9 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
     plan = raw.get("learning_plan") or {}
     n_slides = prep["slides"]
     figs, occs = _figure_index(prep)
-    jokbo_keys = {(q["year"], q["no"]) for q in (jokbo or {}).get("questions", [])}
+    jokbo_qs = (jokbo or {}).get("questions", [])
+    jokbo_keys = {(q["year"], q["no"]) for q in jokbo_qs}
+    jokbo_years = {q["year"] for q in jokbo_qs}
 
     schema_check = Draft202012Validator(CARD_SCHEMA)
     kept, dropped, flags = [], [], defaultdict(list)
@@ -118,14 +144,32 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
                 dropped.append(_fail(c, "slide_out_of_range",
                                      f"slide_no={c['slide_no']} / 1..{n_slides}"))
                 continue
+            # `exam_hit` 의 근거 ref 는 오래 검사 밖에 있었다. 28편 실측에서 강의록
+            # 카드에 달린 ref 649개 중 52개가 조각에 없었고 아무도 몰랐다. 이 카드의
+            # 근거는 슬라이드이지 기출이 아니므로 **떨어뜨리지 않는다** — 표시만 한다.
+            ref = c.get("jokbo_ref")
+            if ref:
+                st = _ref_status(ref, jokbo_keys, jokbo_years)
+                if st != "ok":
+                    flags[idx].append("jokbo_ref_outside_slice" if st == "outside"
+                                      else "jokbo_ref_not_found")
+            # 외부 의학지식은 기출 파트에만 열려 있다. 강의록은 정본이라
+            # 밖에서 메울 것이 없고, 메우기 시작하면 근거 위계가 무너진다.
+            if c.get("evidence_type") == "medical_knowledge":
+                dropped.append(_fail(c, "medical_knowledge_on_lecture"))
+                continue
         else:
             ref = c.get("jokbo_ref")
             if not ref:
                 dropped.append(_fail(c, "missing_jokbo_ref"))
                 continue
-            if jokbo_keys and (ref["year"], ref["no"]) not in jokbo_keys:
+            st = _ref_status(ref, jokbo_keys, jokbo_years)
+            if st == "missing":
                 dropped.append(_fail(c, "jokbo_ref_not_found", f"{ref['year']}-{ref['no']}"))
                 continue
+            if st == "outside":
+                # 원문을 붙일 수 없다는 것은 카드 뒷면에 뜬다(`FLAG_LABEL`).
+                flags[idx].append("jokbo_ref_outside_slice")
 
         # 형식별 계약
         clozes = RE_CLOZE.findall(q)
@@ -203,6 +247,11 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
         if (c.get("evidence_type") == "annotation" and not c.get("exam_hit")
                 and not annotation_evidence):
             flags[i].append("annotation_evidence_without_exam_hit")
+        # 고친 것을 적어 두지 않으면 사람이 그것을 볼 길이 없다. 카드는 살린다 —
+        # 무엇이 고쳐졌는지는 기계가 모르고, 판정은 뒷면을 보는 사람 몫이다.
+        if (c.get("evidence_type") == "medical_knowledge"
+                and not (c.get("review_note") or "").strip()):
+            flags[i].append("corrected_without_note")
 
         # cloze 는 정답이 질문 안에 있는 것이 정의이므로 노출 검사 대상이 아니다
         if fmt != "cloze" and containment(char_ngrams(a), char_ngrams(q)) >= LEAK_THRESHOLD:
@@ -269,6 +318,11 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
     # ── 커버리지 ─────────────────────────────────────────────────────
     carded = {c["slide_no"] for c in kept if c.get("slide_no")}
     declared = {s for r in plan.get("rejected_candidates", []) for s in r.get("slides", [])}
+    # 족보 부록은 "안 낸 것" 이 아니라 "기출 파트 소관" 이다. 따로 세어 둔다 —
+    # 기출 계획이 재료로 쓸 구간이고, 제외 기록에 섞어 두면 그 자리를 잃는다.
+    appendix = sorted({s for r in plan.get("rejected_candidates", [])
+                       if r.get("reason") == "jokbo_appendix"
+                       for s in r.get("slides", [])})
     planned = {s for o in plan.get("objectives", []) for s in o.get("slides", [])}
     untouched = sorted(set(range(1, n_slides + 1)) - carded - declared - planned)
 
@@ -278,6 +332,18 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
         hit = any(jaccard(tok, char_ngrams(c["q"] + " " + c["a"])) >= 0.2
                   or c.get("slide_no") in set(o.get("slides", [])) for c in kept)
         (obj_hit if hit else obj_miss).append(o["objective"])
+
+    # 기출 목표는 슬라이드로 못 맞춘다. 인용 문항이 겹치는지로 본다.
+    jobj_miss = []
+    for o in plan.get("jokbo_objectives", []):
+        refs = set(o.get("jokbo_refs") or [])
+        tok = char_ngrams(o["objective"] + " " + " ".join(o.get("retrieval_targets", [])))
+        hit = any(jaccard(tok, char_ngrams(c["q"] + " " + c["a"])) >= 0.2
+                  or (c.get("jokbo_ref")
+                      and f"{c['jokbo_ref']['year']}-{c['jokbo_ref']['no']}" in refs)
+                  for c in kept)
+        if not hit:
+            jobj_miss.append(o["objective"])
 
     for c in kept:
         c["review_flags"] = sorted(set(flags[c.pop("_idx")]))
@@ -294,7 +360,10 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
             "untouched_undeclared": untouched,
             "objectives_total": len(plan.get("objectives", [])),
             "objectives_without_card": obj_miss,
+            "jokbo_objectives_total": len(plan.get("jokbo_objectives", [])),
+            "jokbo_objectives_without_card": jobj_miss,
             "rejected_candidates": len(plan.get("rejected_candidates", [])),
+            "jokbo_appendix_slides": appendix,
         },
         "format_mix": dict(Counter(c["card_format"] for c in kept)),
         "source_mix": dict(Counter(c["source_type"] for c in kept)),

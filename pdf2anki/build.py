@@ -195,6 +195,9 @@ FLAG_LABEL = {
     "occlusion_answer_leaked_in_question": "가린 라벨이 질문에 그대로 나온다",
     "media_on_text_card": "그림이 붙지 않는 형식인데 media 가 있었다 (제거됨)",
     "exam_hit_on_jokbo": "기출 카드에 exam_hit 이 잘못 붙어 있었다 (제거됨)",
+    "jokbo_ref_outside_slice": "족보 조각에 없는 연도의 기출이다 — 원문을 붙이지 못했다",
+    "jokbo_ref_not_found": "인용한 기출 문항을 족보에서 찾지 못했다",
+    "corrected_without_note": "기출 복원을 외부 지식으로 고쳤는데 무엇을 고쳤는지 적혀 있지 않다",
 }
 
 

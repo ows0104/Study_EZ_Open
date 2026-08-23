@@ -26,10 +26,26 @@ EVIDENCE_TYPES = (
     "annotation",        # 필기. 기본은 근거 불가, 기출이 그 지점을 물었을 때만 허용
     "jokbo_question",    # 기출 문항 원문
     "jokbo_objection",   # 이의제기에 대한 교수 답변
+    # 기출 파트에서만 쓴다. 강의록 카드에 붙으면 `validate` 가 떨어뜨린다.
+    #
+    # 강의록은 정본이라 밖에서 메울 것이 없지만, **기출은 복원된 것**이다 — 족보 PDF
+    # 에서 잘라 온 문항이고, 필기 부록에서 온 것은 이미지에서 읽어 낸 것이다. 문항
+    # 본문도 정답도 복원 과정에서 어긋날 수 있다. 관리자 판정으로 이 자리에서는
+    # 모델의 의학 지식을 근거로 쓸 수 있다.
+    #
+    # 다만 **웹은 아니다.** 저작 세션의 도구는 `session.AUTHOR_TOOLS` 뿐이고
+    # 검색이 없다. 여기서 말하는 외부 지식은 모델 자신의 것이다.
+    "medical_knowledge",
 )
 IMAGE_FORMATS = ("image_basic", "image_occlusion")
+# `jokbo_appendix` 만 성격이 다르다. 나머지 여섯은 "안 낸다"이고 이것은
+# **"여기서는 안 낸다 — 기출 파트 소관이다"** 이다. 필기자가 강의록 뒤에 붙여 놓는
+# 족보 정리 구간이 그 자리다(28편 중 27편에 있었고, 합계 116슬라이드).
+# 모델은 이미 그 구간을 정확히 짚고 "필기자가 붙인 기출 문항 이미지" 라고 적고
+# 있었다(꼬리 거절 48건 중 42건). 사유가 없어서 `out_of_scope` 로 흘렀을 뿐이다.
 REJECT_REASONS = (
     "decorative", "obvious", "out_of_scope", "duplicate", "unsupported", "low_yield",
+    "jokbo_appendix",
 )
 DROP_REASONS = (
     "exact_duplicate", "semantic_duplicate", "unsupported", "out_of_scope",
@@ -110,6 +126,15 @@ CARD_SCHEMA = {
     },
 }
 
+# 계획이 두 묶음인 이유는 **기출의 예산이 하나뿐이었기 때문**이다.
+#
+# 260821_03 을 세 번 돌려 보면 기출직결 카드가 33 → 26 → 27 로 거의 안 움직이는데,
+# 그 안의 배분만 (기출카드 2 / 태그 31) → (12 / 14) → (4 / 23) 로 뒤집힌다.
+# 프롬프트로 한쪽을 밀면 다른 쪽이 그만큼 빠졌다. 강의록 목표만 있고 기출은 그
+# 목표의 각주(`jokbo_refs`)였으니, 둘이 같은 주머니를 나눠 쓴 것이다.
+#
+# `jokbo_objectives` 는 그 주머니를 하나 더 만든다. 슬라이드가 아니라 **기출 문항**을
+# 근거로 서는 목표이고, 그래서 `slides` 가 아니라 `jokbo_refs` 가 필수다.
 PLAN_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "LearningPlan",
@@ -117,6 +142,31 @@ PLAN_SCHEMA = {
     "additionalProperties": False,
     "required": ["objectives"],
     "properties": {
+        "jokbo_objectives": {
+            "type": "array",
+            "description": "기출 파트의 회수 목표. 강의록이 아니라 기출 문항에서 선다.",
+            "items": {
+                "type": "object", "additionalProperties": False,
+                "required": ["objective", "retrieval_targets", "jokbo_refs"],
+                "properties": {
+                    "objective": {"type": "string",
+                                  "description": "강의록 목표와 같은 규칙으로 쓴다. "
+                                                 "검증 가능한 동사, '이해한다' 는 안 된다."},
+                    "retrieval_targets": {"type": "array", "items": {"type": "string"},
+                                          "minItems": 1},
+                    "jokbo_refs": {"type": "array", "items": {"type": "string"},
+                                   "minItems": 1,
+                                   "description": "이 목표가 선 근거 문항. 반복 묶음이면 "
+                                                  "묶음의 문항을 전부 적는다."},
+                    "slides": {"type": "array", "items": {"type": "integer", "minimum": 1},
+                               "description": "그 지식이 강의록에도 있으면 적는다. 없으면 비운다."},
+                    "importance": {"enum": list(IMPORTANCE)},
+                    "axis": {"type": "string",
+                             "description": "이 목표가 그 문항의 어느 축을 무는지 한 마디. "
+                                            "예: '오답 선지', '정의', '감별', '이의제기'"},
+                },
+            },
+        },
         "objectives": {
             "type": "array",
             "items": {
@@ -198,6 +248,8 @@ def dump(outdir: Path) -> None:
               "`—` 는 쓰지 않는다. 두 칸 들여쓰기로 한 단계까지 중첩할 수 있다. "
               "한 마디짜리 답에는 불릿을 붙이지 않는다.",
               "- `evidence_type=annotation` 은 기출이 그 지점을 실제로 물었을 때만 쓸 수 있다.",
+              "- `evidence_type=medical_knowledge` 는 `source_type=jokbo` 에서만 쓸 수 있다. "
+              "무엇을 고쳤는지 `review_note` 에 적는다.",
               "- `source_type=jokbo` 카드에 `exam_hit` 을 중복 부여하지 않는다."]
     (outdir / "contract.md").write_text("\n".join(lines), encoding="utf-8")
 
