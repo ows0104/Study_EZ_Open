@@ -65,6 +65,11 @@ function Shell() {
   // 캘린더는 격자다. 읽기 좋은 폭으로 가둘 이유가 없고, 패널이 340px을 가져가는
   // 만큼 가로가 곧 요일 칸의 폭이 된다. 글을 읽는 화면들만 좁게 둔다.
   const wide = location.pathname === "/";
+  // **푸는 창은 글 읽는 폭이 아니다.** 안키의 복습 화면처럼 창 전체를 카드로
+  // 쓴다 — 문항·답·슬라이드가 다 이 폭을 쓰고, 답 버튼은 아래에 못 박힌다.
+  // 문항 중앙값 43자·답 63자라 넓혀도 대개 한두 줄이고, 슬라이드는 원본이
+  // 1152~1536px이라 700px 안에서는 절반으로 누웠다.
+  const solving = location.pathname.startsWith("/prequiz/");
 
   return (
     <>
@@ -82,7 +87,11 @@ function Shell() {
           </span>
         </header>
       )}
-      <main className={`app-main${bare ? " is-bare" : ""}${wide ? " is-wide" : ""}`}>
+      <main
+        className={`app-main${bare ? " is-bare" : ""}${wide ? " is-wide" : ""}${
+          solving ? " is-solving" : ""
+        }`}
+      >
         <Suspense fallback={Loading}>
           <Routes>
             <Route path="/" element={<CalendarPage />} />

@@ -317,6 +317,30 @@ input:focus-visible {
   padding-top: 40px;
 }
 
+/* 푸는 창은 넓게 쓴다(`quiz`). 아래 여백은 못 박아 둔 답 버튼 줄이 가리는
+ * 만큼이다 — 없으면 마지막 줄이 버튼 뒤에 숨는다. */
+.app-main.is-bare.is-solving {
+  max-width: 1200px;
+  padding-bottom: 96px;
+}
+
+/* 그래도 머리글과 다 찍은 뒤의 목록은 글이다. 이것들만 원래 폭에 남는다. */
+.prequiz-narrow {
+  max-width: 700px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+/* 머리글도 가운데로. 카드가 가운데 서 있는데 제목만 왼쪽에서 시작하면 어긋나
+ * 보인다. 안키의 복습 화면에 제목 줄이 없는 것과 같은 이유로 조용히 둔다. */
+.is-solving .lecture-head {
+  text-align: center;
+}
+
+.is-solving .lecture-crumb {
+  justify-content: center;
+}
+
 .notice {
   margin: 16px 0;
   padding: 11px 14px;
@@ -664,12 +688,13 @@ button.resource.is-download:hover:not(:disabled)::after {
 
 /* ------------------------------------------------------------------ 퀴즈 */
 
+/* 푸는 창은 안키의 복습 화면이다. **창 전체가 카드다** — 상자를 그리지 않고,
+ * 문항도 답도 창 폭을 그대로 쓴다. 답 버튼만 아래에 못 박혀 있다.
+ *
+ * 폭을 아끼지 않는 이유는 잰 값에서 나온다. 문항 중앙값 43자·답 63자라, 넓혀도
+ * 대개 한두 줄이다. 좁혀 봐야 남는 것은 여백뿐이고 슬라이드만 작아진다. */
 .quiz {
-  padding: 20px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-4);
-  background: var(--surface);
-  box-shadow: var(--shadow-1);
+  text-align: center;
 }
 
 .quiz-progress {
@@ -680,11 +705,22 @@ button.resource.is-download:hover:not(:disabled)::after {
   letter-spacing: 0.04em;
 }
 
+/* 안키 기본 카드가 20px이다. 창을 넓게 쓰기로 한 이상 글자도 같이 커야 한다 —
+ * 안 그러면 넓어진 만큼 여백만 늘어난다. */
 .quiz-stem {
-  margin: 0 0 18px;
-  font-size: 16px;
-  line-height: 1.62;
+  margin: 0 0 4px;
+  font-size: 20px;
+  line-height: 1.6;
   word-break: keep-all;
+}
+
+/* 앞면과 답 사이의 가로줄. 안키의 `hr id=answer` 자리다. */
+.quiz-line {
+  width: 100%;
+  height: 1px;
+  margin: 18px 0;
+  border: 0;
+  background: var(--line);
 }
 
 /* 이 카드가 왜 「꼭 반드시」인가. 진행 표시 옆에 조용히 붙는다. */
@@ -711,42 +747,104 @@ button.resource.is-download:hover:not(:disabled)::after {
   background: var(--accent-ink);
 }
 
-/* 편 뒤에 나오는 자리. **맞았다/틀렸다로 색을 칠하지 않는다** — 판정하는 것은
-   서버가 아니라 사람이고, 펴는 순간에는 아직 아무도 판정하지 않았다. */
-.quiz-result {
-  padding: 15px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-3);
-  background: var(--surface-2);
-}
-
+/* 편 뒤에도 **맞았다/틀렸다로 색을 칠하지 않는다.** 판정하는 것은 서버가 아니라
+ * 사람이고, 펴는 순간에는 아직 아무도 판정하지 않았다.
+ *
+ * 한 줄짜리 답은 가운데로, 여러 줄짜리(대개 「- 」 목록)는 왼쪽 맞춤으로 서야
+ * 한다. `fit-content`가 그 둘을 한 번에 해결한다 — 상자는 글 길이만큼만 넓어져
+ * 가운데 서고, 상자 안의 줄은 왼쪽에 맞는다.
+ *
+ * **`inline-block`으로 하면 안 된다.** 답과 해설이 둘 다 인라인이라 한 줄에
+ * 나란히 서 버린다(재 보고 알았다 — 답 368px 옆에 해설 508px이 붙었다). */
 .quiz-answer {
-  margin: 0 0 10px;
-  font-size: 15px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 10px;
+  font-size: 18px;
   font-weight: 600;
   line-height: 1.62;
   white-space: pre-wrap;
+  text-align: left;
   word-break: keep-all;
 }
 
 .quiz-explanation {
-  margin: 0 0 8px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 8px;
   color: var(--ink-2);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.62;
   white-space: pre-wrap;
+  text-align: left;
   word-break: keep-all;
 }
 
+/* 근거 슬라이드.
+ *
+ * **가두는 것은 세로다.** 원본이 1152×900 또는 1536×900이라 가로만 보고 늘리면
+ * 세로가 900px을 넘어 화면 밖으로 나간다. `75vh`는 원본만큼 커져도 좋다는 뜻에
+ * 가깝다 — `max-*`는 줄이기만 하므로 원본보다 커지는 일은 없다.
+ *
+ * 한 화면에 우겨넣지 않는다. 넘치면 스크롤하면 되고, **찍는 버튼은 스크롤과
+ * 무관하게 아래에 못 박혀 있다**(`quiz-bar`). */
 .quiz-slide {
   display: block;
-  width: 100%;
-  margin-bottom: 10px;
+  max-width: 100%;
+  max-height: 75vh;
+  margin: 14px auto 0;
   border: 1px solid var(--line);
   border-radius: var(--r-2);
 }
 
+/* 안키의 답 버튼 줄. 화면 아래에 못 박아 두는 것이 요점이다 — 카드가 길어져도
+ * 찍는 자리는 안 움직인다. 가려지는 만큼은 `is-solving`이 아래 여백으로 낸다. */
+.quiz-bar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  padding: 12px 20px;
+  gap: 10px;
+  justify-content: center;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+/* 넓으면 190px씩, 좁으면 나란히 줄어든다. 못 박아 두면 폰에서 두 개가 380px을
+ * 요구해 줄이 넘친다. */
+.quiz-bar button {
+  min-width: 0;
+  min-height: 46px;
+  flex: 0 1 190px;
+  font-size: 14px;
+}
+
+/* 눌러야 할 자판을 버튼에 적어 둔다. 안키에서 하던 손이 그대로 통한다. */
+.quiz-bar kbd {
+  margin-left: 7px;
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  opacity: 0.7;
+  font-family: inherit;
+  font-size: 11px;
+}
+
+/* 폰에는 누를 자판이 없다. 힌트를 지우면 버튼 이름이 그만큼 넓게 앉는다. */
+@media (max-width: 560px) {
+  .quiz-bar kbd {
+    display: none;
+  }
+}
+
 .quiz-done {
+  /* 가운데로. 다 푼 화면의 나머지(`prequiz-narrow`)가 가운데 서 있어서, 이것만
+     왼쪽에 붙으면 두 덩이가 어긋난 채로 보인다 — 재 보니 중심이 570과 800이었다. */
+  max-width: 700px;
+  margin: 0 auto;
   padding: 28px 20px;
   border: 1px solid var(--line);
   border-radius: var(--r-4);
