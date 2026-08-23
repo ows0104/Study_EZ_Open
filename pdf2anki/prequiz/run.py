@@ -411,6 +411,8 @@ class Runner:
     def build(self):
         argv = ["pdf2anki.prequiz.build", str(self.out), "--deck", self.args.deck,
                 "--id", self.args.id, "--jokbo-dir", self.args.jokbo_dir]
+        if self.args.apkg_name:
+            argv += ["--apkg-name", self.args.apkg_name]
         # 수선을 다 쓰고도 장수가 안 맞으면 **덱은 낸다.** 빈손으로 끝내는 것보다
         # 계약을 어긴 덱과 그 사실을 함께 주는 편이 낫다 — 판단은 사람이 한다.
         if self.args.allow_size or self.violations():
@@ -494,6 +496,7 @@ def main(argv=None) -> int:
     ap.add_argument("--resume", help="이 폴더에서 이어서 돌린다")
     ap.add_argument("--jokbo-dir", default="out/jokbo")
     ap.add_argument("--jokbo", help="족보 조각 json. 생략하면 제목으로 자동 대조")
+    ap.add_argument("--apkg-name", help="덱 파일 이름 (확장자 없이). 기본은 <강의 ID>_pre")
     ap.add_argument("--schema-dir", default="out/prequiz_schema")
     ap.add_argument("--model", help="빈 세션에 쓸 모델")
     ap.add_argument("--timeout", type=int, default=3600)
@@ -556,7 +559,8 @@ def main(argv=None) -> int:
         return 1
 
     chk = r.collect_check()
-    print(f"\n끝났다.  덱: {out.as_posix()}/{args.id}_pre.apkg", flush=True)
+    print(f"\n끝났다.  덱: {out.as_posix()}/"
+          f"{args.apkg_name or args.id + '_pre'}.apkg", flush=True)
     if chk:
         print(f"\n⚠ 눈으로 볼 것 — 이미지 카드 접촉 시트\n   {chk}", flush=True)
         print("   앞면 크롭 안에 정답이 인쇄돼 있는지만 본다.", flush=True)

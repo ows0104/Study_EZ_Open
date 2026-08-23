@@ -574,7 +574,7 @@ def reproduce_gate(cards: list[dict]) -> tuple[Counter, list[dict]]:
 
 def build(prep_dir: Path, deck_name: str, lecture_id: str,
           src: Path | None = None, jokbo_slice: Path | None = None,
-          jokbo_pdf: Path | None = None) -> dict:
+          jokbo_pdf: Path | None = None, apkg_name: str | None = None) -> dict:
     prep = json.loads((prep_dir / "prep.json").read_text(encoding="utf-8"))
     src = src or (prep_dir / "items.checked.json")
     cards = json.loads(src.read_text(encoding="utf-8"))["cards"]
@@ -626,7 +626,9 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str,
         stats["layer:" + layer_of(c)] += 1
 
     contact = contact_sheet(prep_dir, cards, media, lecture_id)
-    apkg = prep_dir / f"{lecture_id}.apkg"
+    # 파일 이름은 부르는 쪽이 정할 수 있다. `lecture_id` 는 guid 의 씨앗이라
+    # 바꿀 수 없지만 (`p260820_03`), 사람이 받아 여는 파일까지 그 이름일 이유는 없다.
+    apkg = prep_dir / f"{apkg_name or lecture_id}.apkg"
     pkg = genanki.Package([d for d in decks.values() if d.notes])
     pkg.media_files = [str(p) for p in media.files.values()] +                       [str(p) for p in jokbo.files.values()]
     pkg.write_to_file(apkg)
@@ -768,6 +770,7 @@ def main(argv=None) -> int:
     ap.add_argument("--jokbo", help="족보 조각 json. 생략하면 assemble 과 같은 규칙으로 찾는다")
     ap.add_argument("--jokbo-dir", default="out/jokbo")
     ap.add_argument("--jokbo-pdf", help="족보 원본 PDF. 생략하면 index.json 의 이름으로 찾는다")
+    ap.add_argument("--apkg-name", help="덱 파일 이름 (확장자 없이). 기본은 강의 ID")
     args = ap.parse_args(argv)
 
     prep_dir = Path(args.prep_dir)
@@ -803,7 +806,7 @@ def main(argv=None) -> int:
 
     try:
         res = build(prep_dir, args.deck, lecture_id, src=src,
-                    jokbo_slice=jslice, jokbo_pdf=jpdf)
+                    jokbo_slice=jslice, jokbo_pdf=jpdf, apkg_name=args.apkg_name)
     except GuidClash as e:
         print(f"\n{e}")
         return 1

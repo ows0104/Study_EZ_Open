@@ -48,6 +48,7 @@ import shutil
 import subprocess
 import sys
 import time
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -99,6 +100,63 @@ def lecture_name(title: str, professors: tuple[str, ...] | list[str] = ()) -> st
     return " ".join(name.replace("::", "-").split()) or title
 
 
+# 예습 자리가 **어느 올해 강의를 위해** 도는지. `prequeue`가 적고 여기가 읽는다.
+TARGET_NAME = "pre_target.json"
+
+# Windows가 파일명에 못 쓰는 글자. 강의 제목에 들어온 적은 아직 없지만, 하나
+# 들어오면 그 편만 조용히 빌드가 깨진다.
+RE_FS_UNSAFE = re.compile(r'[\\/:*?"<>|]')
+
+
+def apkg_name(run_id: str, title: str, kind: str,
+              professors: tuple[str, ...] | list[str] = ()) -> str:
+    """덱 파일 이름. **자료 파일명과 같은 꼴로 세운다.**
+
+        [260820_03] 소아질환의 병태생리(2) 소아기 특이 질환 1(김은나).apkg
+        [260825_01] 종양의 분자생물학(1)(전윤경) 예습.apkg
+
+    받아 보는 사람이 그 자리에서 어느 강의인지 알아야 한다. `p260820_03.apkg`는
+    파이프라인의 이름이지 사람의 이름이 아니다.
+
+    **`deck_id`는 안 바꾼다.** 그쪽이 guid의 씨앗이라 바꾸면 Anki가 이미 받아 간
+    카드를 전부 새 노트로 본다. 파일 이름은 guid에 안 들어간다.
+
+    괄호 안 교수는 필기에서 온 제목이면 이미 들어 있다(`LectureFile.title`은 파일명에서
+    뽑은 표시용 원문이다). **시간표에서 온 제목에는 없다** — 캘린더는 제목과 교수를 따로
+    들고 있어서, 그때만 여기서 붙인다.
+
+    덱 나무의 가운데 마디로 쓸 때는 `lecture_name`이 오히려 교수를 뗀다. 거기서는
+    교수가 바뀌는 해에 노드가 갈리기 때문이고, 파일 이름은 그 반대로 **누구 강의였는지가
+    남아야** 한다.
+    """
+    clean = RE_FS_UNSAFE.sub("", unicodedata.normalize("NFC", title))
+    clean = " ".join(clean.split()).rstrip(". ")
+    here = [p for p in professors if p and p not in clean]
+    if here:
+        clean += f"({', '.join(here)})"
+    name = f"[{run_id}] {clean}".strip() if clean else f"[{run_id}]"
+    if kind == PRE:
+        name += " 예습"
+    return name[:120]
+
+
+def calendar_name(run_dir: Path, run_id: str, title: str, kind: str,
+                  professors: tuple[str, ...] | list[str] = ()) -> str:
+    """이 자리에서 나올 덱의 파일 이름.
+
+    **예습은 작년 필기로 만들지만 이름은 올해 강의로 선다.** 학생은 캘린더를 보고
+    예습하므로 작년 날짜와 작년 제목이 붙은 파일은 어느 강의의 것인지 안 보인다.
+    그 올해 강의가 무엇인지는 `prequeue`가 `pre_target.json`에 적어 두었다.
+    """
+    if kind == PRE:
+        target = _load(run_dir / TARGET_NAME)
+        if isinstance(target, dict):
+            run_id = str(target.get("run_id") or run_id)
+            title = str(target.get("title") or title)
+            professors = target.get("professors") or professors
+    return apkg_name(run_id, title, kind, professors)
+
+
 def jokbo_dir(runs_dir: Path, subject: str) -> Path:
     """과목마다 따로 둔다. pdf2anki는 조각을 **강의 제목으로** 대조하는데, 제목만
     보면 과목이 다른 두 강의가 서로의 족보를 물어 갈 수 있다."""
@@ -144,7 +202,7 @@ def _spawn(argv: list[str], run_dir: Path, repo_root: Path, timeout: int,
     return Result(True, run_dir, log, tail=tail)
 
 
-def run_main(*, pdf: str | Path, run_id: str, subject: str, lecture: str,
+def run_main(*, pdf: str | Path, run_id: str, subject: str, lecture: str, title: str = "",
              runs_dir: Path, repo_root: Path, note: str = "", model: str = "",
              timeout: int = DEFAULT_TIMEOUT, extra: list[str] | None = None) -> Result:
     """복습 덱 한 편. `python -m pdf2anki.run`을 그대로 부른다.
@@ -158,7 +216,8 @@ def run_main(*, pdf: str | Path, run_id: str, subject: str, lecture: str,
             "--out", str(run_dir), "--id", deck_id(run_id),
             "--subject", subject, "--lecture", lecture,
             "--jokbo-dir", str(jokbo_dir(runs_dir, subject)),
-            "--check-dir", str(runs_dir / "_image_check")]
+            "--check-dir", str(runs_dir / "_image_check"),
+            "--apkg-name", apkg_name(run_id, title or lecture, MAIN)]
     if note:
         argv += ["--note", note]
     if model:
@@ -181,7 +240,9 @@ def run_pre(*, pdf: str | Path, run_id: str, subject: str, lecture: str, note: s
             "--subject", subject, "--lecture", lecture, "--note", note,
             "--jokbo-dir", str(jokbo_dir(runs_dir, subject)),
             "--schema-dir", str(runs_dir / "_prequiz_schema"),
-            "--check-dir", str(runs_dir / "_image_check")]
+            "--check-dir", str(runs_dir / "_image_check"),
+            # 이름은 **올해 강의**로 선다. 그게 무엇인지는 `pre_target.json`이 안다.
+            "--apkg-name", calendar_name(run_dir, run_id, lecture, PRE)]
     if hint:
         argv += ["--hint", hint]
     if model:
@@ -200,16 +261,26 @@ def _load(path: Path):
         return None
 
 
+# 예습 덱임을 알리는 꼬리. ` 예습`이 지금 쓰는 것이고 나머지는 옛 이름이다 —
+# 이미 만들어 둔 덱이 섞여 있는 자리에서 갈래를 잘못 읽으면 남의 덱을 올린다.
+PRE_SUFFIXES = (" 예습", "_pre", "_예습")
+
+
+def is_pre(apkg: Path) -> bool:
+    return any(apkg.stem.endswith(s) for s in PRE_SUFFIXES)
+
+
 def apkg_of(run_dir: Path, kind: str) -> Path | None:
-    """`<id>.apkg`가 복습, `<id>_pre.apkg`가 예습이다.
+    """그 자리의 덱 하나. 꼬리가 두 갈래를 가른다.
 
     한 디렉터리에 둘이 같이 있을 수 있다 — 올해 필기로 복습 덱을 만든 강의가
     내년에는 「작년 필기」가 되어 같은 자리에서 예습 덱을 낳는다.
+
+    **가장 새 것을 고른다.** 이름 규칙이 바뀌면 옛 이름의 덱이 옆에 남는데,
+    이름순으로 집으면 낡은 쪽을 올릴 수 있다.
     """
-    decks = sorted(run_dir.glob("*.apkg"))
-    pre = [p for p in decks if p.stem.endswith("_pre")]
-    return (pre[0] if pre else None) if kind == PRE else next(
-        (p for p in decks if not p.stem.endswith("_pre")), None)
+    decks = [p for p in run_dir.glob("*.apkg") if is_pre(p) == (kind == PRE)]
+    return max(decks, key=lambda p: p.stat().st_mtime) if decks else None
 
 
 def config_of(run_dir: Path, kind: str) -> dict | None:

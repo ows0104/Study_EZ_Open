@@ -98,6 +98,7 @@ class Target:
     this_title: str = ""
     # 덱 나무의 가운데 마디. 교수 괄호를 뗀 것이라 `this_title`과 다르다.
     this_lecture: str = ""
+    professors: tuple[str, ...] = ()
     state: str = READY
     occupancy: str = ""                                # 이 자리를 무엇이 쓰고 있나
     reason: str = ""                                   # BLOCKED일 때 왜인지
@@ -196,7 +197,7 @@ def resolve(
 
             targets.append(Target(
                 link=link, prev_run_id=plan.prev_run_id, prev_pdf=str(pdf),
-                this_title=plan.item.title,
+                this_title=plan.item.title, professors=tuple(plan.item.professors),
                 this_lecture=deck.lecture_name(plan.item.title, plan.item.professors)))
 
     targets.sort(key=lambda target: (target.link.date, target.link.run_id))
@@ -206,7 +207,7 @@ def resolve(
 # ------------------------------------------------------------------ 자리 세우기
 
 
-TARGET_NAME = "pre_target.json"
+TARGET_NAME = deck.TARGET_NAME   # 읽는 쪽(`deck.calendar_name`)이 이름을 갖는다
 
 
 def write_target(run_dir: Path, target: Target) -> None:
@@ -224,6 +225,9 @@ def write_target(run_dir: Path, target: Target) -> None:
         "run_id": target.link.run_id,
         "date": target.link.date,
         "title": target.this_title or target.link.title,
+        # 시간표에서 세운 자리는 제목에 교수가 없다. 덱 파일 이름이 그걸 붙이려면
+        # 여기 적어 두는 수밖에 없다 — 나중에 그 칸을 다시 찾을 길이 없다.
+        "professors": list(target.professors),
         # build가 "이 자리가 정말 이 짝의 것인가"를 보는 값. 같은 교시에 다른
         # 과목이 돌면 한 디렉터리를 나눠 쓴다.
         "prev_run_id": target.prev_run_id,

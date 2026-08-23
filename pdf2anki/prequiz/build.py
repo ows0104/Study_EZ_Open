@@ -171,6 +171,7 @@ def source_of(c: dict, title: str) -> str:
 
 
 def build(prep_dir: Path, deck_name: str, lecture_id: str, src: Path | None = None,
+          apkg_name: str | None = None,
           jokbo_slice: Path | None = None, jokbo_pdf: Path | None = None) -> dict:
     prep = json.loads((prep_dir / "prep.json").read_text(encoding="utf-8"))
     src = src or (prep_dir / "items.checked.json")
@@ -220,7 +221,7 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str, src: Path | None = No
         stats["이유:" + c["reason"]] += 1
 
     contact = contact_sheet(prep_dir, cards, media, lecture_id)
-    apkg = prep_dir / f"{lecture_id}_pre.apkg"
+    apkg = prep_dir / f"{apkg_name or lecture_id + '_pre'}.apkg"
     pkg = genanki.Package([deck])
     pkg.media_files = ([str(p) for p in media.files.values()]
                        + [str(p) for p in jokbo.files.values()])
@@ -238,6 +239,7 @@ def main(argv=None) -> int:
     ap.add_argument("--jokbo-dir", default="out/jokbo")
     ap.add_argument("--jokbo-slice")
     ap.add_argument("--jokbo-pdf")
+    ap.add_argument("--apkg-name", help="덱 파일 이름 (확장자 없이). 기본은 <강의 ID>_pre")
     ap.add_argument("--require-reproduce", action="store_true",
                     help="재현 검사 결과가 없으면 덱을 만들지 않는다")
     ap.add_argument("--allow-size", action="store_true",
@@ -276,7 +278,8 @@ def main(argv=None) -> int:
         print(f"기출 원본: {slice_path.name} · {pdf_path.name if pdf_path else '(지면 없음)'}")
 
     try:
-        res = build(prep_dir, args.deck, lecture_id, src, slice_path, pdf_path)
+        res = build(prep_dir, args.deck, lecture_id, src, args.apkg_name,
+                    slice_path, pdf_path)
     except GuidClash as e:
         print(f"\n{e}")
         return 1

@@ -270,7 +270,8 @@ def build_one(item: WorkItem, runs_dir: Path, repo_root: Path, *,
     """
     result = deck.run_main(
         pdf=item.this_pdf, run_id=item.run_id, subject=item.subject,
-        lecture=item.lecture or item.title, runs_dir=runs_dir, repo_root=repo_root,
+        lecture=item.lecture or item.title, title=item.title,
+        runs_dir=runs_dir, repo_root=repo_root,
         model=model, timeout=timeout, extra=extra)
     if not result.ok:
         return False, f"{result.error} (로그: {result.log})"

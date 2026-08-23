@@ -412,6 +412,8 @@ class Runner:
         # 예습 쪽(`prequiz/run.py`)은 처음부터 넘기고 있었다.
         argv = ["pdf2anki.build", str(self.out), "--deck", self.args.deck,
                 "--id", self.args.id, "--jokbo-dir", self.args.jokbo_dir]
+        if self.args.apkg_name:
+            argv += ["--apkg-name", self.args.apkg_name]
         if self.args.jokbo:
             argv += ["--jokbo", self.args.jokbo]
         if self.defects():
@@ -493,6 +495,7 @@ def main(argv=None) -> int:
     ap.add_argument("--resume", help="이 폴더에서 이어서 돌린다 (pdf·덱 이름 생략 가능)")
     ap.add_argument("--jokbo-dir", default="out/jokbo")
     ap.add_argument("--jokbo", help="족보 조각 json. 생략하면 목차 제목으로 자동 대조")
+    ap.add_argument("--apkg-name", help="덱 파일 이름 (확장자 없이). 기본은 강의 ID")
     ap.add_argument("--strategy", default="auto", choices=sorted(STRATEGY_ALIAS),
                     help="필기/족보/기본 중 무엇을 축으로 삼을지. "
                          "auto(기본)면 교수 교체·반복률에서 판정한다")
@@ -565,7 +568,7 @@ def main(argv=None) -> int:
         return 1
 
     chk = r.collect_check()
-    print(f"\n끝났다.  덱: {out.as_posix()}/{args.id}.apkg", flush=True)
+    print(f"\n끝났다.  덱: {out.as_posix()}/{args.apkg_name or args.id}.apkg", flush=True)
     if chk:
         print(f"\n⚠ 눈으로 볼 것 — 이미지 카드 접촉 시트", flush=True)
         print(f"   {chk}", flush=True)

@@ -545,13 +545,22 @@ def run_rebuild(args) -> int:
     for run_dir, kind, cfg in targets:
         module = "pdf2anki.prequiz.build" if kind == deck.PRE else "pdf2anki.build"
         subject = cfg["deck"].split("::")[0]
+        parsed = filenames.parse(deck.source_pdf(run_dir))
+        title = parsed.title if parsed else run_dir.name
+        name = deck.calendar_name(run_dir, run_dir.name, title, kind)
         argv = [sys.executable, "-m", module, str(run_dir),
                 "--deck", cfg["deck"], "--id", cfg.get("id") or deck.deck_id(run_dir.name),
-                "--jokbo-dir", str(deck.jokbo_dir(runs_dir, subject))]
+                "--jokbo-dir", str(deck.jokbo_dir(runs_dir, subject)),
+                "--apkg-name", name]
         if args.dry_run:
-            print(f"  → {run_dir.name} {kind}  {cfg['deck']}")
+            print(f"  → {run_dir.name} {kind}  {name}.apkg")
             continue
         marks = deck.reflag(run_dir) if args.reflag else {}
+        # 이름 규칙이 바뀌면 옛 이름의 덱이 옆에 남는다. 같은 갈래의 낡은 것은
+        # 지우고 간다 — 남겨 두면 어느 것이 참인지 파일만 봐서는 모른다.
+        for stale in run_dir.glob("*.apkg"):
+            if deck.is_pre(stale) == (kind == deck.PRE) and stale.stem != name:
+                stale.unlink()
         result = subprocess.run(argv, cwd=str(REPO_ROOT), capture_output=True, text=True,
                                 encoding="utf-8", errors="replace",
                                 env=dict(os.environ, PYTHONIOENCODING="utf-8"))
@@ -560,9 +569,7 @@ def run_rebuild(args) -> int:
             print(f"  ✗ {run_dir.name} {kind} — {tail[-1] if tail else result.returncode}")
             failed += 1
             continue
-        title = filenames.parse(deck.source_pdf(run_dir))
-        meta = deck.contract(run_dir, run_dir.name,
-                             title.title if title else run_dir.name, kind)
+        meta = deck.contract(run_dir, run_dir.name, title, kind)
         done += 1
         added = (" · 새 표시 " + " ".join(f"{k} {v}장" for k, v in sorted(marks.items()))
                  if marks else "")
