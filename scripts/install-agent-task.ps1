@@ -50,7 +50,10 @@ if ($Subject) { $arguments += @("-Subject", $Subject) }
 $action = New-ScheduledTaskAction -Execute "powershell.exe" `
     -Argument ($arguments -join " ") -WorkingDirectory $repo
 
-$trigger = New-ScheduledTaskTrigger -AtLogOn
+# **로그온 트리거에 사용자를 박는다.** 안 박으면 "누가 로그온하든"이 되고, 그건
+# 관리자 권한이 있어야 등록된다 (0x80070005). 우리는 이 계정에서만 돌면 된다.
+$me = "$env:USERDOMAIN\$env:USERNAME"
+$trigger = New-ScheduledTaskTrigger -AtLogOn -User $me
 $trigger.Delay = "PT$($DelayMinutes)M"
 
 # **시간 제한을 없앤다.** 예전 작업은 4시간에서 잘렸고, 실제로 그렇게 죽었다
@@ -61,10 +64,13 @@ $settings = New-ScheduledTaskSettingsSet `
     -MultipleInstances IgnoreNew `
     -RestartInterval (New-TimeSpan -Minutes 5) -RestartCount 100
 
+$principal = New-ScheduledTaskPrincipal -UserId $me -LogonType Interactive -RunLevel Limited
+
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger `
-    -Settings $settings -Description "Study_EZ 러너 — /admin의 Pre-Quiz 일감을 집어 만들고 올린다" `
+    -Settings $settings -Principal $principal `
+    -Description "Study_EZ 러너 — /admin의 Pre-Quiz 일감을 집어 만들고 올린다" `
     -Force | Out-Null
 
-Write-Host "걸었다: $TaskName (로그온 $DelayMinutes분 뒤 시작)"
+Write-Host "걸었다: $TaskName (로그온 $($DelayMinutes)분 뒤 시작)"
 Write-Host "  로그: $repo\runs\agent.log"
 Write-Host "  지금 바로 띄우려면: Start-ScheduledTask -TaskName '$TaskName'"

@@ -54,18 +54,30 @@ if ($Api) { $arguments += @("--api", $Api) }
     Out-File $logPath -Append -Encoding utf8
 
 $env:PYTHONIOENCODING = "utf-8"
+# **자식의 UTF-8을 UTF-8로 읽는다.** 이걸 안 걸면 PowerShell이 ANSI 코드페이지로
+# 디코딩해서 로그가 통째로 깨진다 — `runs/prequiz.log`가 몇 달째 그 꼴이었다.
+$priorOut = [Console]::OutputEncoding
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
 # **버퍼를 끈다**(-u). 안 그러면 종일 도는 프로세스의 로그가 블록 단위로 늦게 나와,
 # 지금 무엇을 하는지 보려고 로그를 열었을 때 비어 있다.
 Push-Location $repo
 try {
     $prior = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
-    & $Python -u @arguments 2>&1 | ForEach-Object { $_.ToString() } |
-        Tee-Object -FilePath $logPath -Append
+    # `Tee-Object`는 5.1에서 UTF-16으로 쓴다 — 한글 로그가 깨진 채로 남는다.
+    # 줄마다 UTF-8로 붙이고 화면에도 그대로 흘린다.
+    & $Python -u @arguments 2>&1 | ForEach-Object {
+        $line = $_.ToString()
+        $line | Out-File -FilePath $logPath -Append -Encoding utf8
+        Write-Host $line
+    }
     $exit = $LASTEXITCODE
     $ErrorActionPreference = $prior
 }
-finally { Pop-Location }
+finally {
+    Pop-Location
+    [Console]::OutputEncoding = $priorOut
+}
 
 "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] 러너가 멈췄다 — 종료 코드 $exit" |
     Out-File $logPath -Append -Encoding utf8
