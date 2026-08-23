@@ -28,6 +28,11 @@
     두 번 들지 않는다. 실패해도 쓸기는 계속 간다 — 서버가 잠깐 안 뜬 것 때문에
     올릴 것이 밀리면 안 된다.
 
+    **순서를 지키는 일 자체는 이제 `publish`가 스스로 한다.** 올리기 전에 링크를
+    서버에서 당겨 오지 않으면 `preview.md`의 옛 주소를 덮어쓰는데, 그것을 이
+    스크립트에만 맡기면 손으로 `publish`·`done`을 부르는 길이 열려 있었다.
+    여기 남은 `prequeue`가 하는 일은 `runs/prequeue.json` — 사람이 읽는 표다.
+
     쓰는 법:
         powershell -File scripts\nightly-publish.ps1
         powershell -File scripts\nightly-publish.ps1 -DryRun

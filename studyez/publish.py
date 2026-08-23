@@ -295,6 +295,37 @@ def hold_artifacts(plan: LecturePlan, why: str = "--notes-only") -> None:
         plan.notes.append(f"미룬 것 ({why}): {' · '.join(held)}")
 
 
+# Pre-Quiz 산출물의 upload kind. `media`는 `pre_items`가 있을 때만 붙으므로
+# (`_add_prev_year`) 여기 넣어도 복습 쪽 이미지를 건드리지 않는다.
+PRE_KINDS = ("pre_apkg", "media")
+
+
+def hold_pre(plan: LecturePlan, why: str) -> None:
+    """Pre-Quiz 산출물만 미룬다. **예습 링크는 그대로 내보낸다.**
+
+    링크가 바뀌었는데 덱은 아직 옛 대화로 만든 것일 때 쓴다. 여기서 링크까지
+    붙들면 `publish`가 관리자가 방금 저장한 링크를 옛 것으로 되돌린다 — 막으려던
+    바로 그 일이다. 그래서 **나가는 것이 링크고 남는 것이 덱이다.**
+
+    강의록과 Main-Quiz는 이 어긋남과 무관하니 그대로 간다.
+    """
+    counts: dict[str, int] = {}
+    for upload in plan.uploads:
+        if upload.kind in PRE_KINDS:
+            counts[upload.kind] = counts.get(upload.kind, 0) + 1
+    held = [kind if n == 1 else f"{kind}×{n}" for kind, n in counts.items()]
+    if "pre" in plan.run_meta:
+        held.append("run-meta pre")
+    if plan.pre_items:
+        held.append("pre-items")
+
+    plan.uploads = [upload for upload in plan.uploads if upload.kind not in PRE_KINDS]
+    plan.run_meta.pop("pre", None)
+    plan.pre_items = None
+    if held:
+        plan.notes.append(f"미룬 것 ({why}): {' · '.join(held)}")
+
+
 def plan_subject(
     root: Path,
     subject: str,

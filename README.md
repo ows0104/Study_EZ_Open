@@ -96,6 +96,15 @@ PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m studyez watch
   → studyez publish            덱·문항·링크가 함께 올라간다
 ```
 
+**`publish`는 올리기 전에 링크를 서버에서 먼저 당겨 온다.** 이 저장소에서 방향이
+반대인 것은 예습 링크 하나뿐이라(사람이 `/admin`에 저장하므로 서버가 원본이다),
+당겨 오지 않으면 `preview.md`에 적힌 **옛 주소를 서버에 덮어쓴다** — 관리자가 방금
+바꾼 링크가 조용히 되돌아간다. `--no-prequeue`로 끄고, `--dry-run`이면 안 한다.
+
+맞춘 뒤에도 덱은 옛 대화로 만든 것일 수 있다. 그런 편은 **링크만 내보내고 Pre-Quiz는
+미룬다**(`publish.hold_pre`). 반대로 하면 학생이 읽고 온 대화와 문항이 어긋난다.
+미룬 편은 다음 `prequeue --build`가 다시 만든다.
+
 `prequeue`는 멱등이다. `preview.md`에 적힌 출처가 서버의 링크와 같으면 그대로 두고,
 `pre_items.final.json`까지 있으면 `done`으로 적어 건너뛴다. 링크가 바뀌었는데 덱이
 이미 있으면 `stale`로 적는다 — 그 덱은 다른 대화로 만든 것이라 다시 만들어야 한다.

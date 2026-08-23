@@ -776,11 +776,65 @@ def explain_missing_run(runs_dir: Path, run_id: str, prev_year: str) -> int:
     return 1
 
 
+def sync_previews(args, subjects: list[str], runs_dir: Path, api: str) -> set[tuple[str, str]]:
+    """올리기 전에 예습 링크를 서버와 맞춘다. 돌려주는 것은 **어긋난 편**이다.
+
+    이 저장소에서 방향이 반대인 것은 예습 링크 하나뿐이다 — 사람이 `/admin`에
+    저장하므로 서버가 원본이다. `publish`는 `preview.md` 머리의 주소를 그대로
+    다시 밀기 때문에, 당겨 오지 않으면 **관리자가 그 사이 바꾼 링크를 옛 것으로
+    되돌린다.** 야간은 스크립트가 `prequeue`를 앞에 세워 막고 있었는데, 그러면
+    손으로 `publish`·`done`을 부르는 길이 그대로 열려 있다. 그래서 여기로 옮겼다.
+
+    맞춘 뒤에도 **덱은 옛 대화로 만든 것일 수 있다.** 그 편의 이름을 돌려주면
+    `publish`가 Pre-Quiz만 미룬다(`publish.hold_pre`). 안 그러면 새 링크와 옛
+    문항이 함께 나가서, 학생이 읽고 온 대화와 문항이 어긋난다.
+
+    실패해도 올리기는 계속 간다 — 예습 링크 하나 때문에 강의록이 밀리면 안 된다.
+    """
+    token = runner_token(args.token)
+    if not token:
+        # 토큰이 없으면 어차피 아무것도 못 올린다. 그 말은 publish가 한다.
+        return set()
+
+    try:
+        targets, warnings = prequeue.refresh(
+            publish.Client(api, token), Path(args.root), args.this, args.prev, runs_dir,
+            subjects=tuple(subjects),
+            timetable=None if args.no_ahead else Path(args.timetable or blocks.DEFAULT_SOURCE))
+    except publish.PublishError as cause:
+        print(f"  ⚠ 예습 링크를 못 읽었다 — {cause}. 맞추지 못한 채로 올린다")
+        return set()
+    for warning in warnings:
+        print(f"  ⚠ {warning}")
+
+    fetched = [t for t in targets if any("새로 받음" in note for note in t.notes)]
+    stale = {(t.link.subject, t.prev_run_id)
+             for t in targets if t.state == prequeue.STALE and t.prev_run_id}
+    print(f"  예습 링크 {len(targets)}개 · 새로 받은 대화 {len(fetched)}개"
+          + (f" · 덱이 옛 대화로 만들어진 편 {len(stale)}개" if stale else ""))
+    return stale
+
+
 def report_publish(args) -> int:
-    """산출물을 서버로. 무엇이 올라갈지 먼저 다 적고 나서 민다."""
+    """산출물을 서버로. 무엇이 올라갈지 먼저 다 적고 나서 민다.
+
+    **예습 링크를 먼저 서버에서 당겨 온다**(`sync_previews`). 순서가 반대면
+    관리자가 방금 저장한 링크를 옛 것으로 덮어쓴다. `--no-prequeue`로 끈다.
+    """
     root, runs_dir = Path(args.root), Path(args.runs)
     subjects = [args.subject] if args.subject else subjects_with_notes(root, args.this)
     api = (args.api or os.getenv("STUDYEZ_API_BASE_URL") or publish.DEFAULT_API_BASE).rstrip("/")
+
+    print(f"[publish] {api}")
+    # 계획을 세우기 **전에** 맞춘다. 계획이 `preview.md`를 읽어 올릴 주소를 정하므로,
+    # 뒤에 맞추면 이번 실행은 옛 주소를 그대로 민다.
+    stale: set[tuple[str, str]] = set()
+    if args.no_prequeue:
+        print("  ⚠ --no-prequeue — 예습 링크를 안 맞춘다. 그 사이 바뀌었으면 옛 주소로 덮어쓴다")
+    elif args.dry_run:
+        print("  --dry-run — 예습 링크도 안 맞춘다 (남의 서비스를 두들기는 일이다)")
+    else:
+        stale = sync_previews(args, subjects, runs_dir, api)
 
     plans: list[publish.LecturePlan] = []
     warnings: list[str] = []
@@ -806,8 +860,11 @@ def report_publish(args) -> int:
         warnings = [w for w in warnings if w.split(":", 1)[0] in kept]
         plans = wanted
 
+    for plan in plans:
+        if plan.prev_run_id and (plan.subject, plan.prev_run_id) in stale:
+            publish.hold_pre(plan, "예습 링크가 바뀌었다 — 덱은 옛 대화로 만든 것이다")
+
     held = [p for p in plans if p.blocking]
-    print(f"[publish] {api}")
     print(f"  과목 {len(subjects)}개 · 강의 {len(plans)}편"
           + (f" · 검문에 걸린 {len(held)}편" if held else ""))
     if args.no_gate:
@@ -937,6 +994,9 @@ def main() -> int:
                              "(예습용 작년 강의록도 안 붙는다)")
     parser.add_argument("--no-publish", action="store_true",
                         help="done: 표시만 하고 올리지 않는다")
+    parser.add_argument("--no-prequeue", action="store_true",
+                        help="publish·done: 올리기 전에 예습 링크를 서버와 맞추는 단계를 "
+                             "건너뛴다 (그 사이 링크가 바뀌었으면 옛 주소로 덮어쓴다)")
     parser.add_argument("--reflag", action="store_true",
                         help="rebuild: 검사 규칙이 늘었을 때 소프트 표시를 다시 계산해 덧붙인다")
     parser.add_argument("--from", dest="source_dir", default=None,

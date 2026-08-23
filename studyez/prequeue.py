@@ -327,6 +327,34 @@ def prepare(targets: list[Target], runs_dir: Path) -> list[Target]:
     return targets
 
 
+def refresh(
+    client: publish.Client,
+    root: Path,
+    this_year: str,
+    prev_year: str,
+    runs_dir: Path,
+    *,
+    subjects: tuple[str, ...] = (),
+    timetable: Path | None = None,
+) -> tuple[list[Target], list[str]]:
+    """서버의 예습 링크를 다시 훑어 `preview.md`를 서버와 맞춘다. **덱은 안 만든다.**
+
+    `publish`가 올리기 전에 부른다. 방향이 여기만 반대라(서버 → 로컬) 당겨 오지
+    않으면, `publish`는 `preview.md`에 적힌 **옛 주소**를 서버에 덮어쓴다 —
+    관리자가 방금 저장한 링크가 조용히 되돌아간다.
+
+    큐 파일은 여기서 안 쓴다. `subjects`로 좁혀 부를 수 있어서, 그대로 쓰면
+    `prequeue`가 과목 전체를 보고 적어 둔 표가 한 과목짜리로 잘린다.
+    """
+    links = fetch_links(client)
+    if subjects:
+        wanted = set(subjects)
+        links = [link for link in links if link.subject in wanted]
+    targets, warnings = resolve(links, root, this_year, prev_year, runs_dir,
+                                timetable=timetable)
+    return prepare(targets, runs_dir), warnings
+
+
 def build_one(target: Target, runs_dir: Path, repo_root: Path, *, model: str = "",
               timeout: int = deck.DEFAULT_TIMEOUT,
               extra: list[str] | None = None) -> tuple[bool, str]:
