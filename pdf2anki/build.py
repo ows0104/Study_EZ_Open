@@ -61,6 +61,12 @@ CSS = """
 .a { font-size: 24px; font-weight: 700; color: #0b5cad; margin: 12px auto;
      display: inline-block; text-align: left; max-width: 100%; white-space: pre-line; }
 .nightMode .a { color: #7ab8f5; }
+/* 빈칸 카드는 `a` 필드를 안 쓰고 뒷면이 문장을 통째로 다시 그린다. Anki 가 드러난
+   답을 `.cloze` 로 감싸 주는데 규칙이 없어서, 뒷면이 앞면과 똑같아 보였다 —
+   무엇을 회수해야 했는지 눈으로 못 찾는다. `.a` 와 같은 색·굵기를 준다.
+   앞면의 `[...]` 도 같은 규칙을 타서 어디가 빈칸인지 함께 드러난다. */
+.cloze { font-weight: 700; color: #0b5cad; }
+.nightMode .cloze { color: #7ab8f5; }
 .a ul { text-align: left; margin: 4px 0; padding-left: 1.15em; }
 .a li { margin: 3px 0; }
 .a ul ul { margin: 2px 0 2px 0; padding-left: 1.0em; font-size: 0.94em; font-weight: 600; }
