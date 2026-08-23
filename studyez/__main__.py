@@ -562,11 +562,6 @@ def run_rebuild(args) -> int:
             print(f"  → {run_dir.name} {kind}  {name}.apkg{moved}")
             continue
         marks = deck.reflag(run_dir) if args.reflag else {}
-        # 이름 규칙이 바뀌면 옛 이름의 덱이 옆에 남는다. 같은 갈래의 낡은 것은
-        # 지우고 간다 — 남겨 두면 어느 것이 참인지 파일만 봐서는 모른다.
-        for stale in run_dir.glob("*.apkg"):
-            if deck.is_pre(stale) == (kind == deck.PRE) and stale.stem != name:
-                stale.unlink()
         result = subprocess.run(argv, cwd=str(REPO_ROOT), capture_output=True, text=True,
                                 encoding="utf-8", errors="replace",
                                 env=dict(os.environ, PYTHONIOENCODING="utf-8"))
@@ -575,6 +570,15 @@ def run_rebuild(args) -> int:
             print(f"  ✗ {run_dir.name} {kind} — {tail[-1] if tail else result.returncode}")
             failed += 1
             continue
+        # 이름 규칙이 바뀌면 옛 이름의 덱이 옆에 남는다. 같은 갈래의 낡은 것은
+        # 지우고 간다 — 남겨 두면 어느 것이 참인지 파일만 봐서는 모른다.
+        #
+        # **굽기가 성공한 뒤에 지운다.** 먼저 지우던 때가 있었는데, 빌드가 결함을
+        # 이유로 거부하면 그 편에 덱이 하나도 안 남았다. `runs/` 는 gitignore 라
+        # 되돌릴 데가 없다 — 2026-08-23 에 `260821_05` 가 실제로 그렇게 날아갔다.
+        for stale in run_dir.glob("*.apkg"):
+            if deck.is_pre(stale) == (kind == deck.PRE) and stale.stem != name:
+                stale.unlink()
         # 폴더가 기억하는 이름도 새것으로 바꾼다. 안 바꾸면 `--resume`이나 다음
         # rebuild가 옛 이름으로 되돌린다 — 그 자리가 정본이기 때문이다.
         if deck_name != cfg["deck"]:

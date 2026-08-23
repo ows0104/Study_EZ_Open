@@ -4,18 +4,28 @@
 예습은 미룬다.** 통째로 멈추지 않는 이유는 강의록이 그 검토와 무관한 자료이고,
 먼저 나가야 캘린더 칸이 열리기 때문이다.
 
-## 파이프라인이 이미 막는 것은 여기서 다시 막지 않는다
+## `.apkg`가 있다고 검사를 지난 것은 아니다
 
-pdf2anki는 **재현 검사를 통과하지 못한 카드가 남으면 덱을 만들지 않는다.** 질문만
-보고 다시 푼 답이 원래 답과 갈리고 그 사유가 문항 결함(`question_ambiguous`·
-`needs_options`·`answer_underspecified`)이면 그 카드를 다시 쓰게 하고, 그래도 안
-되면 빌드를 거부한다. 그러니 `.apkg`가 있다는 것 자체가 그 검사를 지났다는 뜻이다.
+`pdf2anki.build`는 문항 결함(`question_ambiguous`·`needs_options`·
+`answer_underspecified`)이 남은 카드가 있으면 덱 만들기를 **거부한다.** 그런데
+**러너가 그 거부를 넘긴다** — `pdf2anki.run` 은 수선을 두 번 시도해 결함이 줄지
+않으면 `--allow-defects` 를 붙여 그대로 굽는다([run.py](../pdf2anki/run.py) 참조).
 
-여기서 막는 것은 그래서 **산출물이 스스로 주장하는 것과 다른 경우**로 좁는다.
+이 문서가 한동안 *"그러니 `.apkg`가 있다는 것 자체가 그 검사를 지났다는 뜻이다"*
+라고 적고 있었는데 **사실이 아니었다.** 2026-08-23에 `260821_05` 가 `needs_options`
+카드 한 장을 안고 그대로 구워진 채 나왔다. 아래 `reproduce_defects` 검사가 그것을
+잡는 자리이고, 그 줄에 붙은 "빌드가 거부했어야 한다"는 말도 같은 오해에서 나온 것이다.
+거부는 했고, 넘긴 것은 러너다.
+
+**막는 자리는 여기다.** 러너가 결함을 안고 구우면 `run.meta.json` 의
+`reproduce_defects` 에 그 id 가 남고, 그러면 이 문지기가 그 편을 미룬다. 사람이
+보고 괜찮으면 `--no-gate` 로 민다.
+
+나머지는 **산출물이 스스로 주장하는 것과 다른 경우**로 좁는다.
 
     막는다    apkg를 다시 열어 센 노트 수가 `item_count`와 다르다
     막는다    본문이 참조하는데 패키지에 없는 이미지가 있다
-    막는다    덱에 문항 결함으로 갈린 카드가 남아 있다 (빌드가 자기 규칙을 어겼다)
+    막는다    덱에 문항 결함으로 갈린 카드가 남아 있다 (러너가 --allow-defects 로 넘겼다)
     막는다    덱은 있는데 `run.meta.json`이 없다 (무엇으로 만들었는지 모른다)
     막는다    사람이 `HOLD`를 놓아 두었다
 
@@ -113,7 +123,8 @@ def inspect(run_dir: Path, deck: Path | None, meta_path: Path | None,
     if defects:
         verdict.blocking.append(
             f"{label} 문항 결함으로 갈린 카드가 덱에 {len(defects)}장 남아 있다 "
-            f"({', '.join(defects[:5])}) — 빌드가 거부했어야 한다")
+            f"({', '.join(defects[:5])}) — 러너가 --allow-defects 로 넘긴 것이다. "
+            "그 카드를 고쳐 다시 굽거나, 사람이 보고 괜찮으면 --no-gate 로 민다")
 
     flags = meta.get("review_flags") or {}
     if flags:
