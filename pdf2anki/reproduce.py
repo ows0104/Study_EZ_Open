@@ -222,10 +222,16 @@ def grade_rows(d: Path) -> list[tuple[str, str]]:
         rep = a.get("answer", "").strip() if answerable else ""
         note = "" if answerable else f" (풀 수 없음: {a.get('why_not', '')})"
         # 출처를 실어 보낸다 — 기출은 복원본이라 채점자가 의학적 정오까지 본다.
+        # 해설도 같이 준다. 채점자에게는 강의록도 족보 원문도 없어서, 이것이 없으면
+        # 「의학적으로 틀려 보인다」가 사실상 「교과서와 다르다」를 뜻하게 된다.
+        # 해설이 대개 근거를 들고 있다 — 어느 해 정답 선지였는지, 교수가 무엇을
+        # 인정했는지. 채점은 원래 답을 보고 하는 단계라 답이 새지도 않는다.
+        expl = (c.get("explanation") or "").strip()
         rows.append((a["id"],
                      f"### {a['id']}\n- 출처: {c['source_type']}\n"
                      f"- 질문: {front_of(c)}\n- 원래 답: {c['a']}\n"
-                     f"- 재현 답: {rep or '(없음)'}{note}"))
+                     + (f"- 카드의 해설: {expl}\n" if expl else "")
+                     + f"- 재현 답: {rep or '(없음)'}{note}"))
     return rows
 
 
