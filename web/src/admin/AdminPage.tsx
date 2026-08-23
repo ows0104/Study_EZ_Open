@@ -414,7 +414,7 @@ function AdminLectureRow({ row, onChanged }: { row: AdminRow; onChanged: () => v
         {/* 링크가 없으면 만들 수 없다 — Pre-Quiz 는 그 대화를 들고 들어가는지 묻는
             것이라, 링크 없이 만들면 다른 물건이 된다. 서버도 400 으로 막는다. */}
         <button disabled={asking || running || !row.preview?.shareUrl} onClick={askPrequiz}>
-          {running ? "만드는 중…" : row.preItemCount > 0 ? "다시 만들기" : "만들기"}
+          {running ? "만드는 중…" : row.preItemCount > 0 ? "Pre-Quiz 다시 만들기" : "Pre-Quiz 만들기"}
         </button>
         {!row.preview?.shareUrl ? <small>예습 링크를 먼저 저장하세요</small> : null}
         {job ? <JobStatus job={job} /> : null}
