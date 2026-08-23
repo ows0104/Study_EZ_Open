@@ -63,6 +63,9 @@ python -m studyez watch                # 새 필기를 훑고 무엇을 만들�
 python -m studyez watch --build        # 이대로 복습 덱까지 만든다
 python -m studyez watch --all-dates    # 블럭으로 안 좁힌다 (밀린 것을 몰아 만들 때)
 
+python -m studyez agent                # 러너. /admin의 「Pre-Quiz 만들기」를 기다린다
+python -m studyez agent --once         # 한 바퀴만 — 붙는지 볼 때
+
 python -m studyez prequeue             # 관리자가 저장한 예습 링크 → 자리 세우기
 python -m studyez prequeue --build     # 이대로 예습 덱까지 만든다
 python -m studyez preview <run_id> --url <공유 링크>   # 예습 대화 하나만 손으로
@@ -124,43 +127,66 @@ PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m studyez watch
 **덱 이름과 파일 이름은 같은 꼴이다**(`studyez.deck.deck_node`). 둘이 다르면
 Anki에서 본 것과 받아 둔 파일을 맞춰 보는 일이 사람 몫이 된다.
 
-### 업로드는 손을 기다리지 않는다
+### 만드는 것은 버튼이 시작한다
+
+> **2026-08-23에 야간 크론을 걷어냈다.** `21:30 · 04:00 · 06:00`으로 돌던 작업 셋을
+> 지웠고, 그 자리에 **관리자가 누르는 버튼과 종일 떠 있는 러너**를 놓았다. 지워진
+> 스케줄 배선은 `scripts/install-scheduled-task.ps1`에 그대로 있다 — 등록만 안 되어 있다.
+
+```
+관리자가 /admin에서 예습 링크 저장 → [Pre-Quiz 만들기]
+  → POST …/prequiz-job              일감 한 줄 (서버)
+  → 러너가 15초마다 집어 간다        POST …/prequiz-jobs/claim (노트북)
+  → prequeue --build → publish
+  → PUT …/prequiz-jobs/<id>         queued → running → done|failed
+  → /admin이 단계를 그대로 보여 준다
+```
 
 | 언제 | 무엇이 | 무엇을 |
 |---|---|---|
+| 사람이 누를 때 | `/admin`의 「Pre-Quiz 만들기」 | 그 한 편을 만들고 올린다 |
 | 편이 끝날 때 | `studyez done <run_id>` | 그 한 편 |
-| 매일 21:30 | `scripts/nightly-quiz.ps1` | 새 필기의 복습 덱 (**기본으로 안 걸린다**) |
-| 매일 04:00 | `scripts/nightly-prequiz.ps1` | 예습 링크가 저장된 편의 예습 덱 |
-| 매일 06:00 | `scripts/nightly-publish.ps1` → `prequeue` → `publish` | 그 과목에서 놓친 것 |
+| 10분마다 | 러너가 스스로 | 놓친 것을 쓸어 올린다 (`publish`) |
 
-**만드는 것이 올리는 것보다 먼저인 것은 뜻이 있다.** 중간에 끊긴 편은 다음 회차의
-쓸기가 받는다.
+**왜 크론을 걷어냈나.** 빌드가 아니라 **실패를 알리는 일**을 못 했다. 06:00 쓸기는
+2026-08-18부터 나흘 연속 「강의 0편 · 올릴 것이 없다」로 끝나면서 종료 코드 0을 냈고,
+아무도 몰랐다. 같은 날 예습 빌드는 `0xC000013A`(강제 종료)로 죽었는데 로그에는
+머리글만 남았다 — 그 스크립트가 **자식이 끝난 뒤에야** 로그를 쓰기 때문이다.
 
-**복습 빌드는 기본으로 안 걸린다.** 편당 Opus 호출이 여러 번이고 그 비용이 사람이
-안 보는 동안 나간다. 편당 실제 비용은 `runs/<run_id>/run.report.json`의
-`cumulative.cost_usd`에 남으므로, 몇 편 손으로 돌려 보고 정하면 된다.
+넷 다 04:00·06:00이 아니라 **깨어난 직후 따라잡기 회차**(09:15 · 06:48 · 07:15 · 06:56)
+였다. 노트북이 그 시각에 자고 있었고, 깨어나면 밀린 둘이 같은 초에 동시에 쐈다 —
+"만드는 것이 먼저"라는 순서가 깨어나는 날마다 깨졌다.
 
-**야간은 지금 병리학만 본다.** 과목을 안 주면 `--all`이라 필기가 있는 과목 전부를
-훑는데, 다른 과목은 아직 강의록이 한 번도 안 올라가 첫 회차가 3GB가 된다.
+**사람이 누른 일감은 다르다.** 화면에 줄이 남고, 끝나지 않으면 끝나지 않은 채로
+보인다. 러너가 안 떠 있으면 `/admin`이 그렇게 말한다.
 
 ```bash
-powershell -ExecutionPolicy Bypass -File scripts\install-scheduled-task.ps1 -Subject 병리학
-powershell -ExecutionPolicy Bypass -File scripts\install-scheduled-task.ps1 -Subject 병리학 -WithQuiz
-powershell -ExecutionPolicy Bypass -File scripts\install-scheduled-task.ps1 -Only publish
-powershell -ExecutionPolicy Bypass -File scripts\install-scheduled-task.ps1 -Remove
+powershell -ExecutionPolicy Bypass -File scripts\install-agent-task.ps1
+powershell -ExecutionPolicy Bypass -File scripts\install-agent-task.ps1 -Subject 병리학
+powershell -ExecutionPolicy Bypass -File scripts\install-agent-task.ps1 -Remove
 ```
 
-로그는 `runs/quiz.log`·`runs/prequiz.log`·`runs/publish.log`. 노트북이 그 시각에
-자고 있으면 깨어난 뒤 밀린 회차를 한 번 돈다(`-StartWhenAvailable`). 로그온해
-있어야 돈다.
+로그온 5분 뒤에 뜬다. **깨어난 직후를 피하는 것이 뜻이 있다** — 실패한 넷이 전부
+그 시각이었고, 한 회차에서는 2초 사이에 자료 폴더가 보였다 안 보였다 했다. 러너는
+계속 떠 있으므로 5분 늦는 것으로 잃는 것이 없다. 로그는 `runs/agent.log`이고
+흘려 쓴다. 로그온해 있어야 돈다.
 
-### 무인 빌드가 스스로 지키는 것
+**복습 덱은 아직 버튼이 없다.** 편당 Opus 호출이 여러 번이라 비용을 먼저 재기로
+했다(`runs/<run_id>/run.report.json`의 `cumulative.cost_usd`). 그때까지는
+`studyez watch --build`를 손으로 부른다.
 
-- **상한을 둔다.** `-Max`(기본 2)로 막고, **미룬 편은 로그에 이름을 적는다** —
-  조용히 자르면 다 만든 줄로 읽힌다
-- **급한 것부터.** 예습은 강의 날짜가 이른 순서로 고른다. 내일 강의가 다음 주보다 급하다
-- **성공을 종료 코드로 안 본다.** 덱과 `run.meta.json`이 실제로 나왔는지로 가른다
-- **멈추면 끊는다.** `-TimeoutMinutes`를 넘기면 그 편을 버리고 다음으로 간다
+### 러너가 스스로 지키는 것
+
+- **한 번에 한 편.** 한 편이 이미 빈 세션 넷을 띄운다. 서버도 `running`이 있으면
+  새 일감을 안 준다
+- **성공을 종료 코드로 안 본다.** `prequeue`는 만들 자리가 없어도 0으로 끝난다 —
+  배선 시험에서 아무것도 안 만들고 「덱을 만들었다」가 찍혔다. 지금은
+  `pre_items.final.json`이 **이번 실행에서** 나왔는지로 가른다
+- **검문에 걸린 것은 성공으로 적되 이유를 남긴다.** 강의록만 나가는데 화면이
+  「올라갔다」고만 말하면 학생에게는 아무것도 안 간 것을 모른다
+- **멈추면 끊는다.** `--timeout`(기본 3시간)을 넘기면 그 편을 버리고 실패로 적는다
+- **못 적어도 하던 일은 계속한다.** 서버가 잠깐 안 뜬 것 때문에 다 만든 덱을
+  버릴 이유가 없다
 
 ### 왜 블럭으로 좁히나
 

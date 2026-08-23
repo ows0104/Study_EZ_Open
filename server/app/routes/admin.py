@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date as Date, datetime
+from datetime import date as Date, datetime, timezone
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -26,14 +26,21 @@ from app.matching import relink
 from app.models import (
     ASSET_KINDS,
     CHECKLIST_ITEMS,
+    JOB_DONE,
+    JOB_FAILED,
+    JOB_OPEN,
+    JOB_QUEUED,
+    JOB_RUNNING,
     Asset,
     CourseAlias,
     Lecture,
     LectureWaive,
     PreItem,
+    PrequizJob,
     Preview,
     Profile,
     RunMeta,
+    RunnerBeat,
     TimetableEvent,
 )
 from app.naming import nfc, object_key, slide_no_from_filename
@@ -535,6 +542,11 @@ def overview(
         )
     }
     previews = {(row.subject, row.run_id): row for row in db.scalars(select(Preview))}
+    # 편마다 **가장 최근** 일감 하나. 끝난 것도 보여 준다 — 실패한 채로 사라지면
+    # 화면이 "아직 아무도 안 눌렀다"와 같은 모양이 된다.
+    jobs: dict[tuple[str, str], PrequizJob] = {}
+    for job in db.scalars(select(PrequizJob).order_by(PrequizJob.created_at)):
+        jobs[(job.subject, job.run_id)] = job
     waived: dict[tuple[str, str], set[str]] = {}
     for row in db.scalars(select(LectureWaive)):
         waived.setdefault((row.subject, row.run_id), set()).add(row.item)
@@ -571,6 +583,7 @@ def overview(
                     kinds.get(key, set()), previews.get(key), waived.get(key, set())
                 ),
                 "preItemCount": item_counts.get(key, 0),
+                "prequizJob": _job_row(jobs.get(key)),
                 "preview": (
                     {
                         "shareUrl": preview.share_url,
@@ -601,6 +614,7 @@ def overview(
         ],
         "timetableCourses": timetable_courses(events.values()),
         "subjects": sorted({lecture.subject for lecture in lectures}),
+        "runner": _runner_row(db.get(RunnerBeat, RUNNER_NAME)),
     }
 
 
@@ -708,3 +722,172 @@ def timetable_events(
         }
         for event in events
     ]
+
+
+# ---------------------------------------------------------------- 예습 일감
+
+# 러너는 지금 한 대뿐이다. 여러 대가 되면 이름을 나눠야 하는데, 그때는 일감을
+# 집어 가는 쪽도 같이 고쳐야 하므로 상수 하나로 묶어 둔다.
+RUNNER_NAME = "local"
+
+
+def _job_row(job: PrequizJob | None) -> dict[str, Any] | None:
+    if job is None:
+        return None
+    return {
+        "id": job.id,
+        "subject": job.subject,
+        "runId": job.run_id,
+        "state": job.state,
+        "stage": job.stage,
+        "message": job.message,
+        "requestedBy": job.requested_by,
+        "createdAt": job.created_at.isoformat() if job.created_at else "",
+        "updatedAt": job.updated_at.isoformat() if job.updated_at else "",
+    }
+
+
+def _runner_row(beat: RunnerBeat | None) -> dict[str, Any] | None:
+    if beat is None:
+        return None
+    return {
+        "lastSeen": beat.last_seen.isoformat() if beat.last_seen else "",
+        "busy": beat.busy,
+        "note": beat.note,
+    }
+
+
+def _touch_runner(db: Session, *, busy: bool, note: str) -> None:
+    """러너가 살아 있다고 적는다. 일감을 물어볼 때마다 지나가는 자리다."""
+    beat = db.get(RunnerBeat, RUNNER_NAME)
+    if beat is None:
+        beat = RunnerBeat(name=RUNNER_NAME)
+        db.add(beat)
+    beat.busy = busy
+    beat.note = note[:500]
+    beat.last_seen = datetime.now(timezone.utc)
+
+
+@router.post("/lectures/{subject}/{run_id}/prequiz-job")
+def request_prequiz(
+    subject: str,
+    run_id: str,
+    user: CurrentUser = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """「Pre-Quiz 만들기」. 일감 한 줄을 적고, 만드는 것은 러너가 한다.
+
+    **두 번 눌러도 두 번 만들지 않는다.** 열려 있는 일감이 있으면 그것을 그대로
+    돌려준다 — 15분짜리 일이라 사람이 반응이 없다고 다시 누르는 일이 잦다.
+
+    예습 링크가 없으면 거절한다. Pre-Quiz는 그 대화를 들고 들어가는지 묻는
+    것이므로, 링크 없이 만들면 다른 물건이 된다.
+    """
+    lecture = lecture_or_404(db, subject, run_id)
+    preview = db.get(Preview, (lecture.subject, lecture.run_id))
+    if preview is None or not preview.share_url:
+        raise HTTPException(400, "예습 링크를 먼저 저장하세요. Pre-Quiz는 그 대화로 만듭니다.")
+
+    open_job = db.scalars(
+        select(PrequizJob)
+        .where(
+            PrequizJob.subject == lecture.subject,
+            PrequizJob.run_id == lecture.run_id,
+            PrequizJob.state.in_(tuple(JOB_OPEN)),
+        )
+        .order_by(PrequizJob.created_at.desc())
+    ).first()
+    if open_job is not None:
+        return {"job": _job_row(open_job), "created": False}
+
+    job = PrequizJob(
+        subject=lecture.subject,
+        run_id=lecture.run_id,
+        state=JOB_QUEUED,
+        stage="러너를 기다리는 중",
+        requested_by=user.email,
+    )
+    db.add(job)
+    db.commit()
+    return {"job": _job_row(job), "created": True}
+
+
+@router.post("/prequiz-jobs/claim")
+def claim_prequiz_job(
+    user: CurrentUser = Depends(require_runner),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """러너가 일감 하나를 집어 간다. 없으면 `null`. **박동도 여기서 찍는다.**
+
+    한 번에 하나만 준다. 한 편이 이미 빈 세션 넷을 띄우므로 겹쳐 돌릴 자리가
+    아니다(`studyez.watch.build`와 같은 이유).
+
+    이미 `running`인 것이 있으면 새 일감을 주지 않고 그것을 돌려준다 — 러너가
+    끊겼다 붙었을 때 하던 일을 이어 잡으라는 뜻이다.
+    """
+    running = db.scalars(
+        select(PrequizJob).where(PrequizJob.state == JOB_RUNNING).order_by(PrequizJob.created_at)
+    ).first()
+    job = running or db.scalars(
+        select(PrequizJob).where(PrequizJob.state == JOB_QUEUED).order_by(PrequizJob.created_at)
+    ).first()
+
+    if job is not None and job.state == JOB_QUEUED:
+        job.state = JOB_RUNNING
+        job.stage = "시작"
+        job.started_at = datetime.now(timezone.utc)
+
+    _touch_runner(db, busy=job is not None,
+                  note=f"{job.subject}/{job.run_id}" if job is not None else "")
+    db.commit()
+    return {"job": _job_row(job)}
+
+
+class JobUpdate(BaseModel):
+    state: Literal["running", "done", "failed"] | None = None
+    stage: str | None = None
+    message: str | None = None
+
+    model_config = {"populate_by_name": True}
+
+
+@router.put("/prequiz-jobs/{job_id}")
+def update_prequiz_job(
+    job_id: int,
+    payload: JobUpdate,
+    user: CurrentUser = Depends(require_runner),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """러너가 진행을 적는다. 끝난 일감은 다시 열지 않는다."""
+    job = db.get(PrequizJob, job_id)
+    if job is None:
+        raise HTTPException(404, "그런 일감이 없습니다.")
+    if job.state in (JOB_DONE, JOB_FAILED):
+        # 끝난 뒤에 늦게 도착한 갱신. 조용히 무시하는 편이 안전하다 —
+        # 다시 열면 화면이 끝난 편을 도는 중으로 보여 준다.
+        return {"job": _job_row(job), "applied": False}
+
+    if payload.stage is not None:
+        job.stage = payload.stage[:500]
+    if payload.message is not None:
+        job.message = payload.message[:2000]
+    if payload.state is not None:
+        job.state = payload.state
+        if payload.state in (JOB_DONE, JOB_FAILED):
+            job.finished_at = datetime.now(timezone.utc)
+            _touch_runner(db, busy=False, note="")
+    db.commit()
+    return {"job": _job_row(job), "applied": True}
+
+
+@router.get("/prequiz-jobs")
+def list_prequiz_jobs(
+    user: CurrentUser = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """최근 일감. `/overview`가 편마다 하나씩 들고 있지만, 흐름을 보려면 여기다."""
+    jobs = db.scalars(select(PrequizJob).order_by(PrequizJob.created_at.desc()).limit(50)).all()
+    return {
+        "jobs": [_job_row(job) for job in jobs],
+        "runner": _runner_row(db.get(RunnerBeat, RUNNER_NAME)),
+    }

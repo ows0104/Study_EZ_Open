@@ -178,6 +178,30 @@ export type ChecklistItem = (typeof checklistItems)[number];
 /** `waived`는 "이 강의엔 해당 없음"으로 관리자가 닫은 칸이다. */
 export type ChecklistState = "done" | "waived" | "todo";
 
+/** 러너가 아직 안 집었거나(`queued`), 만드는 중이거나(`running`), 끝났거나. */
+export type PrequizJobState = "queued" | "running" | "done" | "failed";
+
+/**
+ * 「Pre-Quiz 만들기」를 누른 것. 만드는 곳은 노트북이라 여기서는 상태만 본다.
+ *
+ * `stage`는 러너가 하위 프로세스의 `── ` 줄을 그대로 올려 준 것이다. 한 편에
+ * 15분이 걸려서, 「도는 중」만으로는 멈춘 것과 구별이 안 된다.
+ */
+export type PrequizJob = {
+  id: number;
+  subject: string;
+  runId: string;
+  state: PrequizJobState;
+  stage: string;
+  message: string;
+  requestedBy: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** 노트북이 마지막으로 살아 있다고 알린 시각. 없으면 한 번도 안 붙은 것이다. */
+export type RunnerBeat = { lastSeen: string; busy: boolean; note: string };
+
 export type AdminRow = {
   subject: string;
   runId: string;
@@ -197,6 +221,8 @@ export type AdminRow = {
   /** 관리자가 채우는 다섯 칸. `done` | `waived` | `todo`. */
   checklist: Record<ChecklistItem, ChecklistState>;
   preItemCount: number;
+  /** 이 편의 가장 최근 일감. 끝난 것도 남는다 — 실패가 조용히 사라지면 안 된다. */
+  prequizJob: PrequizJob | null;
   preview: { shareUrl: string; conversationUrl: string; provider: string } | null;
   runMeta: Record<string, { reviewFlagged: number; slidesUnused: number; itemCount: number; builtAt: string | null }>;
 };
@@ -207,4 +233,5 @@ export type AdminOverview = {
   /** 과목으로 볼 만큼 자주 열리는 것만. 한 번짜리 특강·행사는 빠져 있다. */
   timetableCourses: { courseKey: string; course: string; sessions: number }[];
   subjects: string[];
+  runner: RunnerBeat | null;
 };

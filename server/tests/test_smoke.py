@@ -362,6 +362,63 @@ def main() -> None:
     check("승인 여부가 실린다", me.json().get("isApproved") is True, me.json())
     check("로그인 없이는 401", client.get("/api/me").status_code == 401)
 
+    print("\n[14] Pre-Quiz 일감 — 버튼 한 번이 러너까지 간다")
+    # 야간 스케줄러를 걷어내고 이 길로 바꿨다. 관리자가 누르면 줄이 하나 생기고,
+    # 노트북이 집어 가고, 진행이 화면으로 돌아온다.
+    base14 = "/api/admin/lectures/병리학/260813_03"
+
+    empty = client.post("/api/admin/prequiz-jobs/claim", headers=RUNNER)
+    check("집어 갈 일감이 없으면 null", empty.status_code == 200 and empty.json()["job"] is None, empty.text)
+
+    made = client.post(f"{base14}/prequiz-job", headers=USER)
+    check("관리자가 누르면 만들어진다", made.status_code == 200 and made.json()["created"] is True, made.text)
+    job_id = made.json()["job"]["id"]
+    check("queued 로 선다", made.json()["job"]["state"] == "queued", made.json())
+
+    again = client.post(f"{base14}/prequiz-job", headers=USER)
+    check("두 번 눌러도 두 번 만들지 않는다",
+          again.json()["created"] is False and again.json()["job"]["id"] == job_id, again.text)
+
+    check("러너 토큰으로는 못 누른다 — 사람이 누르는 자리다",
+          client.post(f"{base14}/prequiz-job", headers=RUNNER).status_code in (401, 403))
+
+    claimed = client.post("/api/admin/prequiz-jobs/claim", headers=RUNNER)
+    check("러너가 집어 간다", claimed.json()["job"]["id"] == job_id, claimed.text)
+    check("running 으로 바뀐다", claimed.json()["job"]["state"] == "running", claimed.json())
+
+    twice = client.post("/api/admin/prequiz-jobs/claim", headers=RUNNER)
+    check("도는 것이 있으면 새 일감을 안 준다 — 그것을 다시 준다",
+          twice.json()["job"]["id"] == job_id, twice.text)
+
+    client.put(f"/api/admin/prequiz-jobs/{job_id}", headers=RUNNER,
+               json={"stage": "① 반드시 알아야 할 것"})
+    overview14 = client.get("/api/admin/overview", headers=USER).json()
+    row14 = next(r for r in overview14["lectures"] if r["runId"] == "260813_03")
+    check("진행이 화면까지 온다", row14["prequizJob"]["stage"] == "① 반드시 알아야 할 것", row14["prequizJob"])
+    check("러너가 살아 있다고 적힌다", bool(overview14["runner"]["lastSeen"]), overview14["runner"])
+
+    client.put(f"/api/admin/prequiz-jobs/{job_id}", headers=RUNNER,
+               json={"state": "done", "message": "28장"})
+    late = client.put(f"/api/admin/prequiz-jobs/{job_id}", headers=RUNNER,
+                      json={"state": "running", "stage": "늦게 온 갱신"})
+    check("끝난 일감은 다시 열리지 않는다",
+          late.json()["applied"] is False and late.json()["job"]["state"] == "done", late.text)
+
+    after = client.post(f"{base14}/prequiz-job", headers=USER)
+    check("끝난 뒤에는 다시 누를 수 있다",
+          after.json()["created"] is True and after.json()["job"]["id"] != job_id, after.text)
+
+    # 링크가 없는 강의는 거절한다. Pre-Quiz 는 그 대화를 들고 들어가는지 묻는 것이다.
+    client.post("/api/admin/lectures", headers=RUNNER, json=[{
+        "subject": "병리학", "runId": "260813_01", "uid": "260813_01#링크없음#김혜령",
+        "date": "2026-08-13", "slot": 1, "slotEnd": 1, "startTime": "09:00",
+        "title": "예습 링크가 아직 없는 강의", "professors": ["김혜령"], "author": "", "version": None,
+    }])
+    nolink = client.post("/api/admin/lectures/병리학/260813_01/prequiz-job", headers=USER)
+    check("예습 링크가 없으면 거절한다", nolink.status_code == 400, nolink.text)
+    check("없는 강의는 404", client.post(
+        "/api/admin/lectures/병리학/999999_09/prequiz-job", headers=USER).status_code == 404)
+
     print()
     if failures:
         raise SystemExit(f"{len(failures)}개 실패: {failures}")

@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
-import { checklistItems, type AdminOverview, type AdminRow, type AppUser, type ChecklistItem } from "../types";
+import {
+  checklistItems,
+  type AdminOverview,
+  type AdminRow,
+  type AppUser,
+  type ChecklistItem,
+  type PrequizJob,
+  type RunnerBeat,
+} from "../types";
 import { lectureHref } from "../calendar/EventChip";
 
 /** 관리자가 채우는 다섯 칸. 순서가 곧 하는 순서다 — 앞 셋이 예습, 뒤 둘이 복습. */
@@ -11,6 +19,25 @@ const checklistLabels: Record<ChecklistItem, string> = {
   notes_current: "26강의록",
   main_apkg: "Main덱",
 };
+
+/**
+ * 러너가 이 시간 안에 안 보이면 안 붙은 것으로 친다.
+ *
+ * 러너는 15초마다 서버에 물어보므로 2분은 넉넉하다. 넉넉하게 잡는 이유는 —
+ * 짧게 잡으면 노트북이 잠깐 버벅인 것을 "꺼졌다"고 말하고, 그런 경고는 곧
+ * 아무도 안 본다.
+ */
+const RUNNER_STALE_MS = 120_000;
+
+function runnerAlive(runner: RunnerBeat | null | undefined): boolean {
+  if (!runner?.lastSeen) return false;
+  return Date.now() - new Date(runner.lastSeen).getTime() < RUNNER_STALE_MS;
+}
+
+/** 일감이 아직 안 끝났는가. 끝나지 않은 것만 화면에서 계속 새로 읽는다. */
+function jobOpen(job: PrequizJob | null | undefined): boolean {
+  return job?.state === "queued" || job?.state === "running";
+}
 
 /** 아직 관리자 몫으로 남은 칸. `waived`는 닫은 것이므로 남은 것이 아니다. */
 function pending(row: AdminRow) {
@@ -46,6 +73,15 @@ export function AdminPage() {
 
   useEffect(load, [load]);
 
+  // 도는 일감이 있는 동안만 다시 읽는다. 한 편에 15분이 걸리는데 사람이 새로고침을
+  // 눌러야 진행이 보이면, 그 진행은 없는 것과 같다. 끝나면 폴링도 멈춘다.
+  const working = (overview?.lectures ?? []).some((row) => jobOpen(row.prequizJob));
+  useEffect(() => {
+    if (!working) return;
+    const timer = window.setInterval(load, 10_000);
+    return () => window.clearInterval(timer);
+  }, [working, load]);
+
   const rows = useMemo(() => {
     const all = overview?.lectures ?? [];
     // 밀린 것만 보는 갈래. 여기가 비면 그 주는 끝난 것이다.
@@ -66,6 +102,7 @@ export function AdminPage() {
     Object.values(row.runMeta).some((meta) => meta.reviewFlagged > 0),
   ).length;
   const incomplete = overview.lectures.filter((row) => pending(row).length > 0).length;
+  const queued = overview.lectures.filter((row) => jobOpen(row.prequizJob)).length;
 
   return (
     <div className="admin">
@@ -74,7 +111,17 @@ export function AdminPage() {
         강의 {overview.lectures.length}편 · 체크 남은 것 <strong>{incomplete}</strong> · 시간표에 못 붙은 것{" "}
         <strong>{unmatched}</strong> · 확인 안 한 매칭 <strong>{unconfirmed}</strong> · 검토 표시 있는 덱{" "}
         <strong>{flagged}</strong>
+        {" · "}
+        러너{" "}
+        <strong>{runnerAlive(overview.runner) ? (overview.runner?.busy ? "만드는 중" : "대기") : "안 붙음"}</strong>
       </p>
+
+      {queued > 0 && !runnerAlive(overview.runner) ? (
+        <p className="notice is-error">
+          Pre-Quiz 일감 {queued}개가 기다리는데 <strong>러너가 안 붙어 있습니다.</strong> 만드는 것은
+          노트북이 합니다 — 거기서 <code>python -m studyez agent</code>를 띄우면 이어서 집어 갑니다.
+        </p>
+      ) : null}
 
       <div className="admin-filters" role="group" aria-label="거르기">
         {(
@@ -99,6 +146,7 @@ export function AdminPage() {
             <th>시간표 매칭</th>
             <th>체크리스트</th>
             <th>예습 링크</th>
+            <th>Pre-Quiz</th>
           </tr>
         </thead>
         <tbody>
@@ -188,7 +236,31 @@ function AdminLectureRow({ row, onChanged }: { row: AdminRow; onChanged: () => v
   const [share, setShare] = useState(row.preview?.shareUrl ?? "");
   const [conversation, setConversation] = useState(row.preview?.conversationUrl ?? "");
   const [saving, setSaving] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const [askError, setAskError] = useState("");
   const [waiving, setWaiving] = useState<ChecklistItem | null>(null);
+
+  const job = row.prequizJob;
+  const running = jobOpen(job);
+
+  /**
+   * 「만들기」. 서버에는 일감 한 줄만 적히고, 실제로 만드는 것은 노트북이다.
+   *
+   * 답을 기다리지 않는다 — 한 편에 15분이라 요청/응답으로 묶을 수 없다.
+   * 진행은 `prequizJob.stage`로 돌아온다.
+   */
+  async function askPrequiz() {
+    setAsking(true);
+    setAskError("");
+    try {
+      await api(`${base}/prequiz-job`, { method: "POST" });
+      onChanged();
+    } catch (cause) {
+      setAskError((cause as Error).message);
+    } finally {
+      setAsking(false);
+    }
+  }
 
   const flagged = Object.entries(row.runMeta).filter(([, meta]) => meta.reviewFlagged > 0);
 
@@ -337,7 +409,39 @@ function AdminLectureRow({ row, onChanged }: { row: AdminRow; onChanged: () => v
           {saving ? "저장 중…" : "저장"}
         </button>
       </td>
+
+      <td>
+        {/* 링크가 없으면 만들 수 없다 — Pre-Quiz 는 그 대화를 들고 들어가는지 묻는
+            것이라, 링크 없이 만들면 다른 물건이 된다. 서버도 400 으로 막는다. */}
+        <button disabled={asking || running || !row.preview?.shareUrl} onClick={askPrequiz}>
+          {running ? "만드는 중…" : row.preItemCount > 0 ? "다시 만들기" : "만들기"}
+        </button>
+        {!row.preview?.shareUrl ? <small>예습 링크를 먼저 저장하세요</small> : null}
+        {job ? <JobStatus job={job} /> : null}
+        {askError ? <small className="is-error">{askError}</small> : null}
+      </td>
     </tr>
+  );
+}
+
+/** 일감 한 줄의 지금. 끝난 것도 보여 준다 — 실패가 조용히 사라지면 안 된다. */
+function JobStatus({ job }: { job: PrequizJob }) {
+  const tone =
+    job.state === "failed" ? "tag is-warn" : job.state === "done" ? "tag is-ok" : "tag";
+  const label =
+    job.state === "queued"
+      ? "기다리는 중"
+      : job.state === "running"
+        ? "만드는 중"
+        : job.state === "done"
+          ? "끝남"
+          : "실패";
+  return (
+    <>
+      <span className={tone}>{label}</span>
+      {job.stage ? <small>{job.stage}</small> : null}
+      {job.message ? <small>{job.message}</small> : null}
+    </>
   );
 }
 

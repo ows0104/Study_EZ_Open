@@ -1,4 +1,10 @@
 ﻿<#
+    ※ 2026-08-23부터 이 작업은 스케줄러에 등록되어 있지 않다.
+      만드는 것은 `/admin`의 「Pre-Quiz 만들기」와 `python -m studyez agent`가 한다
+      (README §만드는 것은 버튼이 시작한다). 배선을 남겨 두는 것은 되돌릴 자리가
+      필요할 때를 위해서다 — `install-scheduled-task.ps1`로 다시 걸 수 있다.
+#>
+<#
     야간 작업을 Windows 작업 스케줄러에 건다.
 
         21:30  StudyEZ Quiz Build      새 필기 → 복습 덱      (-WithQuiz 를 줘야 걸린다)

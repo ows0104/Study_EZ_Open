@@ -372,3 +372,66 @@ class LectureWaive(Base):
             ["subject", "run_id"], ["lecture.subject", "lecture.run_id"], ondelete="CASCADE"
         ),
     )
+
+
+# 일감의 상태. `queued`·`running`이 열린 것이고, 나머지는 끝난 것이다.
+JOB_QUEUED = "queued"
+JOB_RUNNING = "running"
+JOB_DONE = "done"
+JOB_FAILED = "failed"
+JOB_OPEN = frozenset({JOB_QUEUED, JOB_RUNNING})
+
+
+class PrequizJob(Base):
+    """관리자가 「Pre-Quiz 만들기」를 누른 것. **여기도 방향이 반대다.**
+
+    `preview`와 같은 이유다 — 누르는 것은 사람이고 사람은 `/admin` 화면에 있다.
+    그런데 만드는 것은 노트북이다(`claude -p` 빈 세션 넷과 SynologyDrive의 PDF가
+    거기 있다). 그래서 이 표가 둘 사이의 우편함이 된다.
+
+    한동안 이 자리를 야간 스케줄러가 대신했는데, 조용히 실패하는 것이 문제였다 —
+    쓸기가 2026-08-18부터 닷새 동안 「올릴 것이 없다」로 끝나면서 종료 코드 0을
+    냈고, 아무도 몰랐다. **사람이 누른 일감은 끝나지 않으면 화면에 남는다.**
+
+    `stage`는 사람이 읽는 한 줄이다. 러너가 하위 프로세스의 `── ` 줄을 그대로
+    올려 준다 — 15분이 걸리는 일이라 "도는 중"만으로는 멈춘 것과 구별이 안 된다.
+    """
+
+    __tablename__ = "prequiz_job"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    subject: Mapped[str] = mapped_column(Text, nullable=False)
+    # **올해** run_id다. 만드는 것은 작년 필기로 하지만 누르는 자리는 올해 강의다.
+    run_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    state: Mapped[str] = mapped_column(String(16), nullable=False, default=JOB_QUEUED)
+    stage: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    message: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    requested_by: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["subject", "run_id"], ["lecture.subject", "lecture.run_id"], ondelete="CASCADE"
+        ),
+        Index("ix_prequiz_job_state", "state", "created_at"),
+        Index("ix_prequiz_job_lecture", "subject", "run_id"),
+    )
+
+
+class RunnerBeat(Base):
+    """러너가 살아 있다고 알린 시각. 줄 하나짜리 표다.
+
+    **일감이 `queued`인 채 안 움직이는 이유가 둘이라 가른다** — 러너가 안 떠
+    있거나, 떠 있는데 앞의 편을 만드는 중이거나. 화면이 둘을 같은 모양으로
+    보여 주면 사람이 노트북을 열어 봐야 한다.
+    """
+
+    __tablename__ = "runner_beat"
+
+    name: Mapped[str] = mapped_column(String(32), primary_key=True)
+    busy: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    note: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)

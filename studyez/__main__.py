@@ -46,7 +46,7 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 from studyez import (  # noqa: E402
-    blocks, deck, filenames, gate, matching, prequeue, preview, publish, watch,
+    agent, blocks, deck, filenames, gate, matching, prequeue, preview, publish, watch,
 )
 
 DEFAULT_ROOT = Path.home() / "SynologyDrive"
@@ -776,6 +776,32 @@ def explain_missing_run(runs_dir: Path, run_id: str, prev_year: str) -> int:
     return 1
 
 
+def run_agent(args) -> int:
+    """서버의 일감을 집어 와 만들고 올린다. **야간 스케줄러 자리에 선 것이다.**
+
+    왜 크론을 걷어냈는지는 `studyez/agent.py` 첫머리에 있다. 요약하면 크론은
+    닷새 동안 아무것도 안 올리면서 종료 코드 0을 냈고, 아무도 몰랐다.
+    """
+    api = (args.api or os.getenv("STUDYEZ_API_BASE_URL") or publish.DEFAULT_API_BASE).rstrip("/")
+    token = runner_token(args.token)
+    if not token:
+        print("러너 토큰이 없다. server/.env의 RUNNER_TOKEN이나 "
+              "STUDYEZ_RUNNER_TOKEN 환경 변수, 또는 --token으로 준다")
+        return 2
+
+    worker = agent.Agent(
+        publish.Client(api, token), Path(args.runs), REPO_ROOT,
+        subject=args.subject or "",
+        sweep_seconds=0 if args.no_sweep else args.sweep_minutes * 60,
+        timeout=args.timeout)
+    if args.once:
+        # 붙는지 보는 용도. 일감이 없으면 쓸기도 한 번 돌려 준다.
+        worker.last_sweep = 0.0
+        worker.tick()
+        return 0
+    return worker.loop(poll=args.poll)
+
+
 def sync_previews(args, subjects: list[str], runs_dir: Path, api: str) -> set[tuple[str, str]]:
     """올리기 전에 예습 링크를 서버와 맞춘다. 돌려주는 것은 **어긋난 편**이다.
 
@@ -941,7 +967,7 @@ def report_publish(args) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Study_EZ 로컬 러너")
-    parser.add_argument("command", choices=["match", "watch", "done", "jokbo", "preview",
+    parser.add_argument("command", choices=["match", "watch", "done", "jokbo", "preview", "agent",
                                             "prequeue", "publish", "import", "release", "rebuild"])
     parser.add_argument("subject", nargs="?", help="과목 폴더명. --all이면 생략")
     parser.add_argument("--all", action="store_true", help="필기/올해 폴더가 있는 과목 전부")
@@ -994,6 +1020,15 @@ def main() -> int:
                              "(예습용 작년 강의록도 안 붙는다)")
     parser.add_argument("--no-publish", action="store_true",
                         help="done: 표시만 하고 올리지 않는다")
+    parser.add_argument("--once", action="store_true",
+                        help="agent: 한 바퀴만 돌고 끝낸다 (붙는지 볼 때)")
+    parser.add_argument("--poll", type=int, default=agent.POLL_SECONDS,
+                        help=f"agent: 일감을 물어보는 간격(초). 기본 {agent.POLL_SECONDS}")
+    parser.add_argument("--sweep-minutes", type=int, default=agent.SWEEP_SECONDS // 60,
+                        help=f"agent: 일감이 없을 때 남은 것을 쓸어 올리는 간격(분). "
+                             f"기본 {agent.SWEEP_SECONDS // 60}")
+    parser.add_argument("--no-sweep", action="store_true",
+                        help="agent: 쓸기를 하지 않는다. 일감만 받는다")
     parser.add_argument("--no-prequeue", action="store_true",
                         help="publish·done: 올리기 전에 예습 링크를 서버와 맞추는 단계를 "
                              "건너뛴다 (그 사이 링크가 바뀌었으면 옛 주소로 덮어쓴다)")
@@ -1022,6 +1057,8 @@ def main() -> int:
         return run_preview(args)
     if args.command == "prequeue":
         return report_prequeue(args)
+    if args.command == "agent":
+        return run_agent(args)
     if args.command == "import":
         return run_import(args)
     if args.command == "release":
