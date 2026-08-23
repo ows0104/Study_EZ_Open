@@ -36,14 +36,33 @@ CONFIG = "run.config.json"          # 복습 덱 작업 폴더의 표식 (예습
 MODEL_BY_ID = {m.model_id: m for m in list(MODELS.values()) + [CLOZE_MODEL]}
 
 
+# 예습 덱임을 알리는 꼬리. ` 예습` 이 지금 쓰는 것이고 나머지는 옛 이름이다.
+PRE_SUFFIXES = (" 예습", "_pre", "_예습")
+
+
+def main_apkg(work_dir: Path) -> Path | None:
+    """그 작업 폴더의 복습 덱 하나. 없으면 None.
+
+    **폴더 이름으로 짐작하지 않는다.** 한동안 `<폴더명>.apkg` 를 찾았는데 덱 파일은
+    강의 ID(`p260812_01.apkg`)나 사람이 읽는 이름(`[260812_01] …apkg`)으로 서므로
+    그 짐작은 맞은 적이 없다 — 폴더를 통째로 건너뛰고 **아무 말도 안 했다.**
+
+    한 폴더에 복습과 예습이 같이 있을 수 있다(올해 필기가 내년에는 「작년 필기」다).
+    꼬리로 가르고, 그래도 여럿이면 가장 새 것을 쓴다.
+    """
+    decks = [p for p in work_dir.glob("*.apkg")
+             if not any(p.stem.endswith(s) for s in PRE_SUFFIXES)]
+    return max(decks, key=lambda p: p.stat().st_mtime) if decks else None
+
+
 def find_decks(root: Path) -> list[Path]:
     """복습 덱 작업 폴더에서 .apkg 를 찾는다. 예습 폴더와 `_` 로 시작하는 곳은 뺀다."""
     out = []
     for d in sorted(root.iterdir()):
         if not d.is_dir() or d.name.startswith("_") or not (d / CONFIG).exists():
             continue
-        apkg = d / f"{d.name}.apkg"
-        if apkg.exists():
+        apkg = main_apkg(d)
+        if apkg:
             out.append(apkg)
     return out
 
@@ -146,12 +165,11 @@ def main(argv=None) -> int:
         for d in args.dirs:
             p = Path(d)
             if p.is_dir():
-                hit = p / f"{p.name}.apkg"
-                if not hit.exists():
-                    hits = sorted(p.glob("*.apkg"))
-                    hit = hits[0] if hits else None
+                # 폴더를 대면 복습 덱을 고른다. 예습 덱은 경로를 직접 대야 담긴다 —
+                # 목적도 푸는 시점도 다른 덱이라 자동으로 섞지 않는다.
+                hit = main_apkg(p)
                 if hit is None:
-                    print(f"{p} 에 .apkg 가 없다 — 건너뛴다")
+                    print(f"{p} 에 복습 .apkg 가 없다 — 건너뛴다")
                     continue
                 apkgs.append(hit)
             elif p.exists():
