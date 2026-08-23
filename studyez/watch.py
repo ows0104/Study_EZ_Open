@@ -235,7 +235,8 @@ def build_queue(
             items.append(WorkItem(
                 subject=subject, run_id=run_id, key=item.key, date=item.date,
                 title=item.title, this_pdf=str(pdf), this_version=item.version,
-                reason=reason, lecture=deck.lecture_name(item.title, item.professors),
+                reason=reason,
+                lecture=deck.deck_node(run_id, item.title, item.professors),
                 notes=notes,
             ))
 

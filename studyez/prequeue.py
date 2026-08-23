@@ -198,7 +198,8 @@ def resolve(
             targets.append(Target(
                 link=link, prev_run_id=plan.prev_run_id, prev_pdf=str(pdf),
                 this_title=plan.item.title, professors=tuple(plan.item.professors),
-                this_lecture=deck.lecture_name(plan.item.title, plan.item.professors)))
+                this_lecture=deck.deck_node(link.run_id, plan.item.title,
+                                           plan.item.professors)))
 
     targets.sort(key=lambda target: (target.link.date, target.link.run_id))
     return targets, warnings

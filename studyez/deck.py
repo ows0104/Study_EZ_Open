@@ -77,27 +77,30 @@ def deck_id(run_id: str) -> str:
     return f"p{run_id}"
 
 
-def lecture_name(title: str, professors: tuple[str, ...] | list[str] = ()) -> str:
-    """덱 나무의 가운데 마디. 교수 괄호를 뗀 강의 제목이다.
+def deck_node(run_id: str, title: str,
+              professors: tuple[str, ...] | list[str] = ()) -> str:
+    """덱 나무의 가운데 마디. **파일 이름과 같은 꼴이다.**
 
-    `LectureFile.title`은 파일명에서 뽑은 표시용 원문이라 `소아질환의 병태생리(2)
-    소아기 특이 질환 1(김은나)`처럼 교수가 붙어 있다. 그대로 쓰면 **교수가 바뀌는
-    해에 같은 강의가 두 노드로 갈린다.**
+        병리학::[260814_01] 급성 염증의 병태 생리(고재문)::강의록
 
-    순번 괄호는 남긴다. `조직 재생 및 수복(1)`과 `(2)`는 다른 강의이고, 같이
-    떼면 한 노드로 뭉개진다.
+    Anki 안에서 보는 이름과 받아 둔 파일 이름이 다르면, 둘을 맞춰 보는 일이 사람
+    몫이 된다. 그래서 한 함수가 둘 다 짓는다(`apkg_name`이 여기에 꼬리만 단다).
 
-    `::`는 Anki의 하위덱 구분자라 치환한다. pdf2anki의 `pack.lecture_of`가 같은
-    자리에서 같은 일을 한다.
+    **한동안 교수를 일부러 뗐다.** 교수가 바뀌는 해에 노드가 갈린다는 이유였는데,
+    `run_id`가 들어온 지금은 어차피 해마다 갈린다 — 그리고 갈리는 편이 맞다.
+    번호가 없어 `260820_01`과 `260820_02`(같은 제목의 연강)가 한 노드로 뭉개지고
+    있었다.
+
+    예습·강의록·기출이 한 노드 아래 모이는 것은 그대로다. 예습 덱의 이름도 **올해
+    강의**에서 나오기 때문이다(`calendar_name`). 실측으로 짝이 선 15쌍 중 올해
+    필기가 이미 있는 12쌍이 전부 같은 노드에 섰다.
     """
-    name = title
-    for professor in professors:
-        name = name.replace(f"({professor})", "")
-    # `(김옥주, 이규원)`처럼 여럿이 한 괄호에 든 경우. 위에서 안 떨어진다.
-    if professors:
-        joined = ", ".join(professors)
-        name = name.replace(f"({joined})", "").replace(f"({joined.replace(', ', ',')})", "")
-    return " ".join(name.replace("::", "-").split()) or title
+    clean = RE_FS_UNSAFE.sub("", unicodedata.normalize("NFC", title))
+    clean = " ".join(clean.split()).rstrip(". ")
+    here = [p for p in professors if p and p not in clean]
+    if here:
+        clean += f"({', '.join(here)})"
+    return (f"[{run_id}] {clean}".strip() if clean else f"[{run_id}]")[:120]
 
 
 # 예습 자리가 **어느 올해 강의를 위해** 도는지. `prequeue`가 적고 여기가 읽는다.
@@ -125,28 +128,24 @@ def apkg_name(run_id: str, title: str, kind: str,
     뽑은 표시용 원문이다). **시간표에서 온 제목에는 없다** — 캘린더는 제목과 교수를 따로
     들고 있어서, 그때만 여기서 붙인다.
 
-    덱 나무의 가운데 마디로 쓸 때는 `lecture_name`이 오히려 교수를 뗀다. 거기서는
-    교수가 바뀌는 해에 노드가 갈리기 때문이고, 파일 이름은 그 반대로 **누구 강의였는지가
-    남아야** 한다.
+    덱 나무의 가운데 마디도 같은 이름을 쓴다(`deck_node`). Anki 안에서 보는 이름과
+    받아 둔 파일 이름이 다르면 둘을 맞춰 보는 일이 사람 몫이 된다.
     """
-    clean = RE_FS_UNSAFE.sub("", unicodedata.normalize("NFC", title))
-    clean = " ".join(clean.split()).rstrip(". ")
-    here = [p for p in professors if p and p not in clean]
-    if here:
-        clean += f"({', '.join(here)})"
-    name = f"[{run_id}] {clean}".strip() if clean else f"[{run_id}]"
-    if kind == PRE:
-        name += " 예습"
-    return name[:120]
+    name = deck_node(run_id, title, professors)
+    # 예습 덱은 파일에서만 꼬리를 단다. 덱 나무에서는 마지막 마디가 이미 `::예습`이다.
+    return f"{name} 예습" if kind == PRE else name
 
 
-def calendar_name(run_dir: Path, run_id: str, title: str, kind: str,
-                  professors: tuple[str, ...] | list[str] = ()) -> str:
-    """이 자리에서 나올 덱의 파일 이름.
+def calendar_of(run_dir: Path, run_id: str, title: str, kind: str,
+                professors: tuple[str, ...] | list[str] = ()) -> tuple:
+    """이 자리가 이름을 어디서 가져오는가. `(run_id, 제목, 교수)`.
 
     **예습은 작년 필기로 만들지만 이름은 올해 강의로 선다.** 학생은 캘린더를 보고
-    예습하므로 작년 날짜와 작년 제목이 붙은 파일은 어느 강의의 것인지 안 보인다.
+    예습하므로 작년 날짜와 작년 제목이 붙은 이름은 어느 강의의 것인지 안 보인다.
     그 올해 강의가 무엇인지는 `prequeue`가 `pre_target.json`에 적어 두었다.
+
+    이 조회를 이름 짓는 함수마다 따로 두지 않는다 — 한동안 파일 이름만 올해로 서고
+    **덱 이름은 작년으로 서 있었다.** 둘이 같은 자리에서 갈라져 나가야 안 어긋난다.
     """
     if kind == PRE:
         target = _load(run_dir / TARGET_NAME)
@@ -154,7 +153,27 @@ def calendar_name(run_dir: Path, run_id: str, title: str, kind: str,
             run_id = str(target.get("run_id") or run_id)
             title = str(target.get("title") or title)
             professors = target.get("professors") or professors
-    return apkg_name(run_id, title, kind, professors)
+    return run_id, title, professors
+
+
+def calendar_name(run_dir: Path, run_id: str, title: str, kind: str,
+                  professors: tuple[str, ...] | list[str] = ()) -> str:
+    """이 자리에서 나올 덱의 파일 이름."""
+    rid, name, profs = calendar_of(run_dir, run_id, title, kind, professors)
+    return apkg_name(rid, name, kind, profs)
+
+
+def calendar_deck(run_dir: Path, run_id: str, title: str, kind: str, subject: str,
+                  professors: tuple[str, ...] | list[str] = ()) -> str:
+    """이 자리에서 나올 덱의 **전체 이름**. `<과목>::<가운데 마디>[::예습]`.
+
+    마지막 마디(`::강의록`·`::기출`)는 복습 빌드가 카드의 기원을 보고 스스로 단다.
+    예습은 덱이 하나뿐이라 여기서 붙인다.
+    """
+    rid, title, profs = calendar_of(run_dir, run_id, title, kind, professors)
+    node = deck_node(rid, title, profs)
+    name = f"{subject}::{node}" if subject else node
+    return f"{name}::예습" if kind == PRE else name
 
 
 def jokbo_dir(runs_dir: Path, subject: str) -> Path:

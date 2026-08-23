@@ -547,13 +547,19 @@ def run_rebuild(args) -> int:
         subject = cfg["deck"].split("::")[0]
         parsed = filenames.parse(deck.source_pdf(run_dir))
         title = parsed.title if parsed else run_dir.name
-        name = deck.calendar_name(run_dir, run_dir.name, title, kind)
+        professors = parsed.professors if parsed else ()
+        name = deck.calendar_name(run_dir, run_dir.name, title, kind, professors)
+        # **덱 이름도 다시 세운다.** `run.config.json`의 것을 그대로 쓰면 이름 규칙이
+        # 바뀌어도 Anki 안에서 보이는 이름만 옛것으로 남는다 — 파일만 바뀌고 덱은
+        # 그대로였던 것이 실제로 그 이유였다.
+        deck_name = deck.calendar_deck(run_dir, run_dir.name, title, kind, subject, professors)
         argv = [sys.executable, "-m", module, str(run_dir),
-                "--deck", cfg["deck"], "--id", cfg.get("id") or deck.deck_id(run_dir.name),
+                "--deck", deck_name, "--id", cfg.get("id") or deck.deck_id(run_dir.name),
                 "--jokbo-dir", str(deck.jokbo_dir(runs_dir, subject)),
                 "--apkg-name", name]
         if args.dry_run:
-            print(f"  → {run_dir.name} {kind}  {name}.apkg")
+            moved = "" if deck_name == cfg["deck"] else f"\n      덱 {cfg['deck']} → {deck_name}"
+            print(f"  → {run_dir.name} {kind}  {name}.apkg{moved}")
             continue
         marks = deck.reflag(run_dir) if args.reflag else {}
         # 이름 규칙이 바뀌면 옛 이름의 덱이 옆에 남는다. 같은 갈래의 낡은 것은
@@ -569,6 +575,13 @@ def run_rebuild(args) -> int:
             print(f"  ✗ {run_dir.name} {kind} — {tail[-1] if tail else result.returncode}")
             failed += 1
             continue
+        # 폴더가 기억하는 이름도 새것으로 바꾼다. 안 바꾸면 `--resume`이나 다음
+        # rebuild가 옛 이름으로 되돌린다 — 그 자리가 정본이기 때문이다.
+        if deck_name != cfg["deck"]:
+            cfg["deck"] = deck_name
+            (run_dir / ("prequiz.config.json" if kind == deck.PRE else "run.config.json")
+             ).write_text(json.dumps(cfg, ensure_ascii=False, indent=1), encoding="utf-8")
+
         meta = deck.contract(run_dir, run_dir.name, title, kind)
         done += 1
         added = (" · 새 표시 " + " ".join(f"{k} {v}장" for k, v in sorted(marks.items()))
