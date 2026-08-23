@@ -146,7 +146,6 @@ export function AdminPage() {
             <th>시간표 매칭</th>
             <th>체크리스트</th>
             <th>예습 링크</th>
-            <th>Pre-Quiz</th>
           </tr>
         </thead>
         <tbody>
@@ -236,31 +235,7 @@ function AdminLectureRow({ row, onChanged }: { row: AdminRow; onChanged: () => v
   const [share, setShare] = useState(row.preview?.shareUrl ?? "");
   const [conversation, setConversation] = useState(row.preview?.conversationUrl ?? "");
   const [saving, setSaving] = useState(false);
-  const [asking, setAsking] = useState(false);
-  const [askError, setAskError] = useState("");
   const [waiving, setWaiving] = useState<ChecklistItem | null>(null);
-
-  const job = row.prequizJob;
-  const running = jobOpen(job);
-
-  /**
-   * 「만들기」. 서버에는 일감 한 줄만 적히고, 실제로 만드는 것은 노트북이다.
-   *
-   * 답을 기다리지 않는다 — 한 편에 15분이라 요청/응답으로 묶을 수 없다.
-   * 진행은 `prequizJob.stage`로 돌아온다.
-   */
-  async function askPrequiz() {
-    setAsking(true);
-    setAskError("");
-    try {
-      await api(`${base}/prequiz-job`, { method: "POST" });
-      onChanged();
-    } catch (cause) {
-      setAskError((cause as Error).message);
-    } finally {
-      setAsking(false);
-    }
-  }
 
   const flagged = Object.entries(row.runMeta).filter(([, meta]) => meta.reviewFlagged > 0);
 
@@ -409,39 +384,7 @@ function AdminLectureRow({ row, onChanged }: { row: AdminRow; onChanged: () => v
           {saving ? "저장 중…" : "저장"}
         </button>
       </td>
-
-      <td>
-        {/* 링크가 없으면 만들 수 없다 — Pre-Quiz 는 그 대화를 들고 들어가는지 묻는
-            것이라, 링크 없이 만들면 다른 물건이 된다. 서버도 400 으로 막는다. */}
-        <button disabled={asking || running || !row.preview?.shareUrl} onClick={askPrequiz}>
-          {running ? "만드는 중…" : row.preItemCount > 0 ? "Pre-Quiz 다시 만들기" : "Pre-Quiz 만들기"}
-        </button>
-        {!row.preview?.shareUrl ? <small>예습 링크를 먼저 저장하세요</small> : null}
-        {job ? <JobStatus job={job} /> : null}
-        {askError ? <small className="is-error">{askError}</small> : null}
-      </td>
     </tr>
-  );
-}
-
-/** 일감 한 줄의 지금. 끝난 것도 보여 준다 — 실패가 조용히 사라지면 안 된다. */
-function JobStatus({ job }: { job: PrequizJob }) {
-  const tone =
-    job.state === "failed" ? "tag is-warn" : job.state === "done" ? "tag is-ok" : "tag";
-  const label =
-    job.state === "queued"
-      ? "기다리는 중"
-      : job.state === "running"
-        ? "만드는 중"
-        : job.state === "done"
-          ? "끝남"
-          : "실패";
-  return (
-    <>
-      <span className={tone}>{label}</span>
-      {job.stage ? <small>{job.stage}</small> : null}
-      {job.message ? <small>{job.message}</small> : null}
-    </>
   );
 }
 

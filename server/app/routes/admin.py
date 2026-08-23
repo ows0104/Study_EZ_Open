@@ -812,6 +812,31 @@ def request_prequiz(
     return {"job": _job_row(job), "created": True}
 
 
+@router.get("/lectures/{subject}/{run_id}/prequiz-job")
+def lecture_prequiz_job(
+    subject: str,
+    run_id: str,
+    user: CurrentUser = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """이 강의의 가장 최근 일감. 없으면 `null`.
+
+    캘린더 패널이 「Pre-Quiz 덱 — 아직 없습니다」 자리에서 부른다. `/overview`로
+    갈음할 수 있지만 그쪽은 학기 전체를 그리는 응답이라, 패널 하나 여는 값으로는
+    비싸다.
+
+    러너 상태를 같이 준다. **일감이 안 움직이는 이유가 둘이라 가른다** — 러너가
+    안 떠 있거나, 떠 있는데 앞의 편을 만드는 중이거나.
+    """
+    lecture = lecture_or_404(db, subject, run_id)
+    job = db.scalars(
+        select(PrequizJob)
+        .where(PrequizJob.subject == lecture.subject, PrequizJob.run_id == lecture.run_id)
+        .order_by(PrequizJob.created_at.desc())
+    ).first()
+    return {"job": _job_row(job), "runner": _runner_row(db.get(RunnerBeat, RUNNER_NAME))}
+
+
 @router.post("/prequiz-jobs/claim")
 def claim_prequiz_job(
     user: CurrentUser = Depends(require_runner),

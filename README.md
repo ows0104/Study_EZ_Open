@@ -134,17 +134,23 @@ Anki에서 본 것과 받아 둔 파일을 맞춰 보는 일이 사람 몫이 �
 > 스케줄 배선은 `scripts/install-scheduled-task.ps1`에 그대로 있다 — 등록만 안 되어 있다.
 
 ```
-관리자가 /admin에서 예습 링크 저장 → [Pre-Quiz 만들기]
+관리자가 /admin에서 예습 링크 저장
+캘린더에서 강의를 눌러 → [Pre-Quiz 덱 만들기]
   → POST …/prequiz-job              일감 한 줄 (서버)
   → 러너가 15초마다 집어 간다        POST …/prequiz-jobs/claim (노트북)
   → prequeue --build → publish
   → PUT …/prequiz-jobs/<id>         queued → running → done|failed
-  → /admin이 단계를 그대로 보여 준다
+  → 그 자리가 단계를 그대로 보여 준다
 ```
+
+**버튼은 `/admin` 표가 아니라 캘린더 패널에 있다.** 덱이 없다는 것을 알아차리는
+자리가 거기이기 때문이다 — 강의를 눌러 「Pre-Quiz 덱 — 아직 없습니다」를 본 순간.
+관리자에게만 그 줄이 버튼으로 바뀐다. `/admin`은 러너가 붙어 있는지와 기다리는
+일감이 몇 개인지를 맨 위에 적는다.
 
 | 언제 | 무엇이 | 무엇을 |
 |---|---|---|
-| 사람이 누를 때 | `/admin`의 「Pre-Quiz 만들기」 | 그 한 편을 만들고 올린다 |
+| 사람이 누를 때 | 캘린더 패널의 「Pre-Quiz 덱 만들기」 | 그 한 편을 만들고 올린다 |
 | 편이 끝날 때 | `studyez done <run_id>` | 그 한 편 |
 | 10분마다 | 러너가 스스로 | 놓친 것을 쓸어 올린다 (`publish`) |
 

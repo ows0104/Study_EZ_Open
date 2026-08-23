@@ -382,6 +382,13 @@ def main() -> None:
     check("러너 토큰으로는 못 누른다 — 사람이 누르는 자리다",
           client.post(f"{base14}/prequiz-job", headers=RUNNER).status_code in (401, 403))
 
+    # 캘린더 패널이 「Pre-Quiz 덱 — 아직 없습니다」 자리에서 읽는 곳.
+    one = client.get(f"{base14}/prequiz-job", headers=USER)
+    check("편 하나만 따로 읽는다", one.json()["job"]["id"] == job_id, one.text)
+    check("러너 상태를 같이 준다", "runner" in one.json(), one.json())
+    check("학생은 못 읽는다 — 만드는 것은 관리자 몫이다",
+          client.get(f"{base14}/prequiz-job").status_code in (401, 403))
+
     claimed = client.post("/api/admin/prequiz-jobs/claim", headers=RUNNER)
     check("러너가 집어 간다", claimed.json()["job"]["id"] == job_id, claimed.text)
     check("running 으로 바뀐다", claimed.json()["job"]["state"] == "running", claimed.json())

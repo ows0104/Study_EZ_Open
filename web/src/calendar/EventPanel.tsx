@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, downloadSignedFile, openSignedFile } from "../api";
-import type { LectureDetail, LectureFile, LectureRef } from "../types";
+import type { LectureDetail, LectureFile, LectureRef, PrequizJob, RunnerBeat } from "../types";
 import {
   absoluteUrl,
   extensionInstalled,
@@ -230,7 +230,7 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
           아직 안 올라온 강의에서 "아직 없습니다"를 말하는 것도 이 줄이다. */}
       {/* 문항 수는 위 줄이 말한다. 여기서 되풀이하면 덱의 장수처럼 읽히는데,
           덱에는 그림 카드까지 들어 있어 언제나 더 많다. */}
-      <DeckAction file={fileOf("pre_apkg")} label="Pre-Quiz 덱" onDownload={download} quiet={Boolean(quiz)} />
+      <PreDeck file={fileOf("pre_apkg")} lecture={lecture} onDownload={download} quiet={Boolean(quiz)} />
 
       <DeckAction file={fileOf("main_apkg")} label="Main-Quiz 덱" onDownload={download} />
 
@@ -562,6 +562,104 @@ function SharedOpen({ url, lectureId }: { url: string; lectureId: string }) {
       <strong>기본 링크</strong>
       <small>공통 예습 대화 열기</small>
     </a>
+  );
+}
+
+/** 러너가 이 시간 안에 안 보이면 안 붙은 것으로 친다(`AdminPage`와 같은 값). */
+const RUNNER_STALE_MS = 120_000;
+
+/**
+ * Pre-Quiz 덱 자리. 학생에게는 받는 줄이고, **관리자에게는 만드는 자리다.**
+ *
+ * 덱이 없다는 것을 알아차리는 곳이 여기다 — 캘린더에서 강의를 눌러 「아직
+ * 없습니다」를 본 순간. 그때 `/admin` 표까지 걸어가게 하면 대개 안 간다.
+ *
+ * 만드는 것은 노트북이므로 여기서 하는 일은 일감 한 줄을 적는 것까지다. 한 편에
+ * 15분이 걸려서 누른 자리에서 기다릴 수 없고, 그래서 **진행이 이 줄로 돌아온다.**
+ */
+function PreDeck({
+  file,
+  lecture,
+  onDownload,
+  quiet,
+}: {
+  file: LectureFile | undefined;
+  lecture: LectureRef;
+  onDownload: (file: LectureFile) => void;
+  quiet?: boolean;
+}) {
+  const isAdmin = Boolean(useMe()?.isAdmin);
+  if (file || !isAdmin) {
+    return <DeckAction file={file} label="Pre-Quiz 덱" onDownload={onDownload} quiet={quiet} />;
+  }
+  return <PreDeckMake lecture={lecture} quiet={quiet} />;
+}
+
+function PreDeckMake({ lecture, quiet }: { lecture: LectureRef; quiet?: boolean }) {
+  const base = `/api/admin/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
+  const [job, setJob] = useState<PrequizJob | null>(null);
+  const [runner, setRunner] = useState<RunnerBeat | null>(null);
+  const [asking, setAsking] = useState(false);
+  const [error, setError] = useState("");
+
+  const load = useCallback(() => {
+    api<{ job: PrequizJob | null; runner: RunnerBeat | null }>(`${base}/prequiz-job`)
+      .then((answer) => {
+        setJob(answer.job);
+        setRunner(answer.runner);
+      })
+      .catch(() => {});
+  }, [base]);
+
+  useEffect(load, [load]);
+
+  const open = job?.state === "queued" || job?.state === "running";
+  useEffect(() => {
+    // 도는 동안만 다시 읽는다. 한 편에 15분이라 사람이 패널을 닫았다 열어야
+    // 진행이 보이면, 그 진행은 없는 것과 같다.
+    if (!open) return;
+    const timer = window.setInterval(load, 10_000);
+    return () => window.clearInterval(timer);
+  }, [open, load]);
+
+  async function ask() {
+    setAsking(true);
+    setError("");
+    try {
+      const answer = await api<{ job: PrequizJob }>(`${base}/prequiz-job`, { method: "POST" });
+      setJob(answer.job);
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setAsking(false);
+    }
+  }
+
+  const key = quiet ? "" : " is-key";
+  if (open) {
+    const alive = runner?.lastSeen && Date.now() - new Date(runner.lastSeen).getTime() < RUNNER_STALE_MS;
+    // `is-empty`는 한 줄짜리 자리다(`display: block`). 옆의 「아직 없습니다」와
+    // 같은 꼴로 적는다 — strong·small을 넣으면 저 혼자 두 줄로 서서 눈에 걸린다.
+    const stage = job?.stage || (job?.state === "queued" ? "러너를 기다립니다" : "시작");
+    return (
+      <span className={`panel-action${key} is-empty`}>
+        {/* 안 움직이는 이유가 둘이다 — 러너가 없거나, 앞의 편을 만드는 중이거나. */}
+        Pre-Quiz 덱 — 만드는 중 · {stage}
+        {!alive ? " · 러너가 안 붙어 있습니다" : ""}
+      </span>
+    );
+  }
+
+  return (
+    <>
+      <button className={`panel-action${key}`} disabled={asking} onClick={ask}>
+        <strong>Pre-Quiz 덱 만들기</strong>
+        <small>{asking ? "맡기는 중…" : "아직 없습니다 · 눌러서 만듭니다"}</small>
+      </button>
+      {/* 실패는 남긴다. 조용히 지우면 「눌렀는데 아무 일도 없었다」가 된다. */}
+      {job?.state === "failed" ? <p className="notice is-error">{job.message}</p> : null}
+      {error ? <p className="notice is-error">{error}</p> : null}
+    </>
   );
 }
 
