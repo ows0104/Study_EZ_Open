@@ -221,8 +221,10 @@ def grade_rows(d: Path) -> list[tuple[str, str]]:
         answerable = a.get("answerable", True)
         rep = a.get("answer", "").strip() if answerable else ""
         note = "" if answerable else f" (풀 수 없음: {a.get('why_not', '')})"
+        # 출처를 실어 보낸다 — 기출은 복원본이라 채점자가 의학적 정오까지 본다.
         rows.append((a["id"],
-                     f"### {a['id']}\n- 질문: {front_of(c)}\n- 원래 답: {c['a']}\n"
+                     f"### {a['id']}\n- 출처: {c['source_type']}\n"
+                     f"- 질문: {front_of(c)}\n- 원래 답: {c['a']}\n"
                      f"- 재현 답: {rep or '(없음)'}{note}"))
     return rows
 
@@ -464,6 +466,15 @@ def cmd_apply(d: Path, **_) -> int:  # apply 는 항상 전체를 훑는다 (--o
         print(f"갈린 이유  {reasons}")
         print("   question_ambiguous · needs_options · answer_underspecified → 카드 결함")
         print("   lecture_specific · genuinely_wrong                        → 카드 결함 아님")
+        print("   answer_suspect  → 기출 정답 쪽을 의심한 것. 막지 않고 카드 뒷면에 띄운다")
+    n_sus = sum(1 for c in cards if (c.get("reproduce") or {}).get("reason") == "answer_suspect")
+    if n_sus:
+        print(f"\n정답 의심 {n_sus}장 (기출 복원본의 정답을 의학 지식으로 되짚은 것):")
+        for c in cards:
+            r = c.get("reproduce") or {}
+            if r.get("reason") == "answer_suspect":
+                print(f"   {c['q'][:60]}")
+                print(f"      원래 {c['a'][:36]!r} · {(r.get('note') or '')[:60]}")
     bad = [c for c in cards
            if (c.get("reproduce") or {}).get("reason")
            in ("question_ambiguous", "needs_options", "answer_underspecified")]

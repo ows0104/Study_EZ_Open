@@ -368,6 +368,12 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
         "format_mix": dict(Counter(c["card_format"] for c in kept)),
         "source_mix": dict(Counter(c["source_type"] for c in kept)),
         "importance_mix": dict(Counter(c["importance"] for c in kept)),
+        # O/X 정답 쏠림. 오답 선지만 캐면 답이 죄 X 가 되고, 그러면 푸는 사람이
+        # 문항 대신 「O/X 면 X」를 배운다. 세어서 보이기만 한다 — 판정은 사람 몫이다.
+        "ox_mix": {st: dict(Counter(c["a"].strip() for c in kept
+                                    if c["card_format"] == "ox" and c["source_type"] == st))
+                   for st in sorted({c["source_type"] for c in kept
+                                     if c["card_format"] == "ox"})},
         "exam_hit": sum(1 for c in kept if c.get("exam_hit")),
     }
     return kept, suspects
@@ -419,6 +425,12 @@ def main(argv=None) -> int:
     c = s["coverage"]
     print(f"\n형식 {s['format_mix']} · 출처 {s['source_mix']} · 중요도 {s['importance_mix']} "
           f"· exam_hit {s['exam_hit']}장")
+    # 여덟 장 밑에서는 쏠림이라 부를 것이 없다. 8 과 3/4 는 12편 실측(O/X 119장 중
+    # X 113장)을 보고 잠정으로 세운 값이다 — 편이 쌓이면 실제 분포를 보고 다시 정한다.
+    for st, mix in s["ox_mix"].items():
+        o, x = mix.get("O", 0), mix.get("X", 0)
+        note = "  ← 한쪽이 3/4를 넘는다" if o + x >= 8 and max(o, x) / (o + x) > 0.75 else ""
+        print(f"O/X 정답 ({st}): O {o} · X {x}{note}")
     print(f"커버리지: 카드 있는 슬라이드 {c['slides_with_cards']}/{c['slides_total']} · "
           f"학습목표 {c['objectives_total']}개 중 카드 없는 것 {len(c['objectives_without_card'])}개 · "
           f"제외 기록 {c['rejected_candidates']}건")

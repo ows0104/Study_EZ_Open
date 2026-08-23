@@ -39,7 +39,10 @@ import genanki
 
 from .textutil import norm_key
 
-# 재현 검사에서 '카드 결함' 으로 갈린 이유. lecture_specific · genuinely_wrong 은 결함이 아니다.
+# 재현 검사에서 '카드 결함' 으로 갈린 이유 — 이것만 덱을 막는다.
+# lecture_specific · genuinely_wrong 은 결함이 아니다.
+# answer_suspect 도 막지 않는다. 기출 정답 쪽을 의심한 것이라 판정은 사람 몫이고,
+# 표시는 warning_of() 가 카드 뒷면에 띄운다.
 DEFECT_REASONS = ("question_ambiguous", "needs_options", "answer_underspecified")
 
 RENDER_ZOOM = 2.0          # 크롭 렌더 배율
@@ -425,6 +428,8 @@ def tags_of(c: dict, lecture_id: str) -> list[str]:
     if c.get("review_flags"):
         t.append("검토필요")
     r = c.get("reproduce") or {}
+    if r.get("reason") == "answer_suspect":
+        t.append("정답의심")
     if r.get("verdict"):
         t.append(f"재현::{r['verdict']}")
     elif r.get("status") == "skipped":
@@ -436,6 +441,13 @@ def warning_of(c: dict) -> str:
     parts = []
     if c.get("review_note"):
         parts.append(f'<span class="h">족보 검토</span><br>{html.escape(c["review_note"])}')
+    # 재현 채점이 기출의 정답 쪽을 의심했다. 버리지 않고 푸는 사람에게 띄운다 —
+    # 족보는 복원본이라 정답 표기가 어긋날 수 있고, 판정은 사람 몫이다.
+    r = c.get("reproduce") or {}
+    if r.get("reason") == "answer_suspect":
+        tail = f'<br>{html.escape(r["note"])}' if r.get("note") else ""
+        parts.append('<span class="h">정답 의심</span><br>'
+                     '이 답이 의학적으로 맞는지 원 족보로 확인해 볼 것.' + tail)
     flags = [FLAG_LABEL[f] for f in c.get("review_flags", []) if f in FLAG_LABEL]
     if flags:
         parts.append('<span class="h">자료 주의</span><br>' + " · ".join(flags))
