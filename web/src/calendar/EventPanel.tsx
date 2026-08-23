@@ -569,6 +569,39 @@ function SharedOpen({ url, lectureId }: { url: string; lectureId: string }) {
 const RUNNER_STALE_MS = 120_000;
 
 /**
+ * 열려 있는 일감 한 줄을 사람 말로. **「만드는 중」은 러너가 집어 갔을 때만 쓴다.**
+ *
+ * 이 자리가 한동안 상태를 안 가리고 「만드는 중」을 먼저 적은 뒤 사정을 뒤에
+ * 붙였다. 그래서 아무도 안 만들고 있을 때 이렇게 나왔다 —
+ *
+ *     Pre-Quiz 덱 — 만드는 중 · 러너를 기다리는 중 · 러너가 안 붙어 있습니다
+ *
+ * 세 토막이 서로 다른 말을 하고, 그중 첫 토막이 거짓이다. 읽는 사람은 기다리면
+ * 되는 줄 알고 기다린다 — 노트북을 켜야 시작되는데. 서버가 일감과 러너 상태를
+ * 같이 주는 까닭이 이걸 가르라는 것이므로(`GET …/prequiz-job`), 갈라서 **한 가지만**
+ * 말한다.
+ *
+ * `stage`는 러너가 올린 것이라 `running`일 때만 쓸모가 있다. 대기 중인 일감의
+ * `stage`는 서버가 줄을 세우며 넣어 둔 말이라, 여기서 다시 적으면 겹친다.
+ */
+function jobLine(job: PrequizJob, runner: RunnerBeat | null): string {
+  const alive = runner?.lastSeen
+    ? Date.now() - new Date(runner.lastSeen).getTime() < RUNNER_STALE_MS
+    : false;
+  if (!alive) {
+    // 러너가 없으면 이 일감은 안 움직인다. 만들다 만 것과 아직 시작도 못 한 것을
+    // 가른다 — 앞의 것은 다시 붙으면 이어 잡고(`claim`이 running부터 준다),
+    // 뒤의 것은 띄우기만 하면 된다.
+    return job.state === "running"
+      ? `러너가 안 붙어 있습니다 · ${job.stage || "시작"}에서 멈췄습니다`
+      : "러너가 안 붙어 있습니다 · 노트북에서 띄우면 집어 갑니다";
+  }
+  if (job.state === "running") return `만드는 중 · ${job.stage || "시작"}`;
+  // 줄은 섰고 러너도 있다. 그런데 한 번에 한 편만 만든다 — 앞 편이 있으면 그것부터다.
+  return runner?.busy ? "차례를 기다립니다 · 러너가 앞 편을 만드는 중입니다" : "러너가 곧 집어 갑니다";
+}
+
+/**
  * Pre-Quiz 덱 자리. 학생에게는 받는 줄이고, **관리자에게는 만드는 자리다.**
  *
  * 덱이 없다는 것을 알아차리는 곳이 여기다 — 캘린더에서 강의를 눌러 「아직
@@ -636,18 +669,10 @@ function PreDeckMake({ lecture, quiet }: { lecture: LectureRef; quiet?: boolean 
   }
 
   const key = quiet ? "" : " is-key";
-  if (open) {
-    const alive = runner?.lastSeen && Date.now() - new Date(runner.lastSeen).getTime() < RUNNER_STALE_MS;
+  if (open && job) {
     // `is-empty`는 한 줄짜리 자리다(`display: block`). 옆의 「아직 없습니다」와
     // 같은 꼴로 적는다 — strong·small을 넣으면 저 혼자 두 줄로 서서 눈에 걸린다.
-    const stage = job?.stage || (job?.state === "queued" ? "러너를 기다립니다" : "시작");
-    return (
-      <span className={`panel-action${key} is-empty`}>
-        {/* 안 움직이는 이유가 둘이다 — 러너가 없거나, 앞의 편을 만드는 중이거나. */}
-        Pre-Quiz 덱 — 만드는 중 · {stage}
-        {!alive ? " · 러너가 안 붙어 있습니다" : ""}
-      </span>
-    );
+    return <span className={`panel-action${key} is-empty`}>Pre-Quiz 덱 — {jobLine(job, runner)}</span>;
   }
 
   return (

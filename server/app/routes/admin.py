@@ -758,7 +758,13 @@ def _runner_row(beat: RunnerBeat | None) -> dict[str, Any] | None:
 
 
 def _touch_runner(db: Session, *, busy: bool, note: str) -> None:
-    """러너가 살아 있다고 적는다. 일감을 물어볼 때마다 지나가는 자리다."""
+    """러너가 살아 있다고 적는다. **러너가 말을 걸 때마다 지나가는 자리다.**
+
+    물어보는 것(`claim`)만으로는 모자란다. 한 편을 집어 가면 러너는 15분 동안
+    `claim`을 안 부르므로(`agent.tick`이 `handle` 안에 머문다), 진행을 적는
+    `PUT`도 여기를 지나야 한다. 안 그러면 2분 뒤부터 화면이 멀쩡히 만드는 중인
+    러너를 「안 붙어 있습니다」라고 말한다.
+    """
     beat = db.get(RunnerBeat, RUNNER_NAME)
     if beat is None:
         beat = RunnerBeat(name=RUNNER_NAME)
@@ -883,7 +889,11 @@ def update_prequiz_job(
     user: CurrentUser = Depends(require_runner),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    """러너가 진행을 적는다. 끝난 일감은 다시 열지 않는다."""
+    """러너가 진행을 적는다. 끝난 일감은 다시 열지 않는다.
+
+    **몸이 비어 있어도 된다.** 그때는 아무것도 안 바꾸고 박동만 찍는다 — 한
+    단계가 2분 넘게 이어지는 동안 러너가 죽은 것으로 보이지 않게.
+    """
     job = db.get(PrequizJob, job_id)
     if job is None:
         raise HTTPException(404, "그런 일감이 없습니다.")
@@ -900,7 +910,12 @@ def update_prequiz_job(
         job.state = payload.state
         if payload.state in (JOB_DONE, JOB_FAILED):
             job.finished_at = datetime.now(timezone.utc)
-            _touch_runner(db, busy=False, note="")
+
+    # 이 호출 자체가 박동이다(`_touch_runner`). 빈 몸으로 와도 마찬가지 —
+    # 러너는 단계가 안 바뀌어도 여기를 두드려 살아 있다고 알린다.
+    finished = job.state in (JOB_DONE, JOB_FAILED)
+    _touch_runner(db, busy=not finished,
+                  note="" if finished else f"{job.subject}/{job.run_id}")
     db.commit()
     return {"job": _job_row(job), "applied": True}
 

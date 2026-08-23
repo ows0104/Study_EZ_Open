@@ -34,6 +34,16 @@
 
 **한 번에 한 편이다.** 한 편이 이미 빈 세션 넷을 띄운다(`studyez.watch.build`와
 같은 이유). 서버도 `running`이 있으면 새 일감을 안 준다.
+
+## 박동은 두 자리에서 찍는다
+
+`claim`만으로는 모자란다. **한 편을 잡으면 15분 동안 `claim`을 안 부른다** —
+`tick`이 `handle` 안에 머물기 때문이다. 그동안 박동이 멎으면 화면은 2분 뒤부터
+멀쩡히 만드는 중인 러너를 「안 붙어 있습니다」라고 말한다.
+
+그래서 도는 동안에는 진행을 적는 `PUT`이 박동을 겸한다(`_run`). 단계가 바뀌면
+그 단계를, 안 바뀌면 빈 몸으로 두드린다 — 서버는 빈 몸을 받으면 아무것도 안
+바꾸고 살아 있다는 것만 적는다.
 """
 
 from __future__ import annotations
@@ -148,6 +158,12 @@ class Agent:
                 if stage and stage != posted:
                     posted = stage
                     self.report(job, stage=stage_prefix + stage)
+                else:
+                    # 단계가 그대로여도 한 번은 말을 건다. **이것이 박동이다** —
+                    # 한 편을 잡으면 15분 동안 `claim`을 안 부르므로, 여기서 안
+                    # 두드리면 화면이 도는 중인 러너를 죽었다고 말한다. 빈 몸이라
+                    # 서버는 아무것도 안 바꾸고 살아 있다는 것만 적는다.
+                    self.report(job)
 
         return proc.returncode, tail(log)
 

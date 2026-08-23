@@ -403,6 +403,12 @@ def main() -> None:
     row14 = next(r for r in overview14["lectures"] if r["runId"] == "260813_03")
     check("진행이 화면까지 온다", row14["prequizJob"]["stage"] == "① 반드시 알아야 할 것", row14["prequizJob"])
     check("러너가 살아 있다고 적힌다", bool(overview14["runner"]["lastSeen"]), overview14["runner"])
+    # 한 편을 잡으면 15분 동안 claim 을 안 부른다. 진행을 적는 이 호출이 박동을
+    # 겸하지 않으면, 화면이 멀쩡히 만드는 중인 러너를 「안 붙어 있습니다」로 본다.
+    check("진행을 적는 것도 박동이다", overview14["runner"]["busy"] is True, overview14["runner"])
+    beat = client.put(f"/api/admin/prequiz-jobs/{job_id}", headers=RUNNER, json={})
+    check("빈 몸으로도 두드릴 수 있다 — 단계가 그대로인 동안의 박동",
+          beat.status_code == 200 and beat.json()["job"]["stage"] == "① 반드시 알아야 할 것", beat.text)
 
     client.put(f"/api/admin/prequiz-jobs/{job_id}", headers=RUNNER,
                json={"state": "done", "message": "28장"})
