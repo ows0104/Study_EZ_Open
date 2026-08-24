@@ -135,6 +135,7 @@ POST /api/admin/lectures/{과목}/{run_id}/uploads/complete 확인
 PUT  /api/admin/lectures/{과목}/{run_id}/run-meta/{main|pre}
 PUT  /api/admin/lectures/{과목}/{run_id}/pre-items
 PUT  /api/admin/lectures/{과목}/{run_id}/preview
+PUT  /api/admin/prequiz-jobs/{id}             진행 적기 + 박동 (몸이 비면 박동만)
 ```
 
 전부 `Authorization: Bearer $RUNNER_TOKEN`. 토큰은 `server/.env`에 있고 Secret
