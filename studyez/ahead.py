@@ -38,6 +38,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 import unicodedata
 from dataclasses import dataclass
@@ -62,6 +63,8 @@ class Cell:
     start_time: str
     title: str            # 시간표 제목 ("질병의 병리학적 이해 7")
     heading: str          # details의 첫 줄 — 진짜 강의 이름
+    # `details`에서 교수 이름을 뺀 줄들. 제목이 접혀 있으면 여기 나뉘어 있다.
+    body: tuple[str, ...]
     professors: tuple[str, ...]
     course: str
 
@@ -69,8 +72,14 @@ class Cell:
     def key(self) -> str:
         return f"{self.date[2:4]}{self.date[5:7]}{self.date[8:10]}_{self.slot:02d}"
 
-    def as_lecture(self) -> LectureFile:
-        """파일명에서 읽은 강의와 같은 모양으로. 점수기가 이 꼴만 받는다."""
+    def as_lecture(self, prev: LectureFile | None = None) -> LectureFile:
+        """파일명에서 읽은 강의와 같은 모양으로. 점수기가 이 꼴만 받는다.
+
+        `prev`(작년 짝)를 주면 접힌 제목을 펴서 담는다. **짝을 고르는 값들은
+        그대로 둔다** — `stem`·`seq`는 `heading`에서 나오므로 여기에 무엇을
+        주든 점수가 흔들리지 않는다. 짝을 고를 때는 아직 짝이 없으니 줄 수도
+        없고, 준 뒤에 다시 부르면 이름만 길어진다.
+        """
         stripped, seq, _ = filenames._split_parens(filenames.canonical(self.heading))
         if seq is None:
             trailing = filenames._TRAILING_SEQ_RE.search(stripped)
@@ -78,8 +87,50 @@ class Cell:
         return LectureFile(
             path=Path(self.heading), key=self.key, date=self.date,
             slot=self.slot, slot_end=self.slot, start_time=self.start_time,
-            title=self.heading, stem=filenames._JUNK_RE.sub("", stripped), seq=seq,
+            title=unfold_title(self.body, prev) or self.heading,
+            stem=filenames._JUNK_RE.sub("", stripped), seq=seq,
             professors=self.professors, author="", version=1)
+
+
+_WORD_RE = re.compile(r"[^0-9A-Za-z가-힣]+")
+
+
+def _words(text: str) -> set[str]:
+    return {w for w in _WORD_RE.split(filenames.canonical(text).lower()) if w}
+
+
+def unfold_title(body: tuple[str, ...] | list[str], prev: LectureFile | None) -> str:
+    """칸 폭에 맞춰 접힌 제목을 편다. **지어내지 않고 고르기만 한다.**
+
+    시간표 `details`는 칸에 맞춰 접혀 온다. 그런데 접힌 줄과 별개 소제목이
+    글자수로도 폭으로도 안 갈린다 — 2026 시간표 336칸을 다 펴 보고 얻은 것이다.
+
+        세포의 손상 및 적응(1) ⏎ 세포의 손상(1)        둘째 줄은 소제목 (14자)
+        유전질환/멘델법칙을 따르지 ⏎ 않는 유전자 질환   둘째 줄은 이어지는 말 (14자)
+
+    앞줄의 끝소리로 가르는 안도 안 됐다. `따르지`·`미생물학)`처럼 끝이 멀쩡해
+    보이는데 이어지는 줄이 있다.
+
+    그래서 규칙을 짜지 않고 **작년 필기 제목에 물어본다.** 후보는 첫 줄부터 한
+    줄씩 이어 붙인 것들이고, 작년 제목과 겹치는 낱말이 가장 많은 것을 고른다.
+    비기면 짧은 쪽이다 — 접힌 게 아니라면 뒷줄이 새 낱말을 들고 오지 않는다.
+
+    작년 짝이 없으면 첫 줄 그대로다. 물어볼 데가 없으면 짐작하지 않는다.
+    """
+    lines = [line for line in body if line]
+    if not lines:
+        return ""
+    if prev is None or len(lines) == 1:
+        return lines[0]
+
+    wanted = _words(prev.title)
+    best, best_score = lines[0], -1
+    for count in range(1, len(lines) + 1):
+        candidate = " ".join(lines[:count])
+        score = len(_words(candidate) & wanted)
+        if score > best_score:
+            best, best_score = candidate, score
+    return best
 
 
 def _slot_from_time(start_time: str) -> int | None:
@@ -138,12 +189,22 @@ def read_cells(source: Path) -> list[Cell]:
         if category not in TEACHING or not date or slot is None:
             continue
         lines = [line.strip() for line in (details or "").split("\n") if line.strip()]
-        flat = (professor or "").replace(" ", "")
+        flat = re.sub(r"\s+", "", professor or "")
         lines = [line for line in lines if line.replace(" ", "") != flat]
+        # 교수 이름이 나오는 줄부터는 제목이 아니다. 실습 칸은 담당이 서른 명이라
+        # 이름도 여러 줄로 접혀 오는데(`최기영, 강경훈, 정두현,` / `정경천, ...`),
+        # 그 조각이 교수 명단 안에 그대로 들어 있는지로 가른다.
+        body: list[str] = []
+        for line in lines:
+            squeezed = re.sub(r"\s+", "", line).strip(",")
+            if flat and squeezed and squeezed in flat:
+                break
+            body.append(unicodedata.normalize("NFC", line))
         cells.append(Cell(
             date=date, slot=int(slot), start_time=start_time,
             title=unicodedata.normalize("NFC", title or ""),
             heading=unicodedata.normalize("NFC", lines[0] if lines else (title or "")),
+            body=tuple(body) or (unicodedata.normalize("NFC", title or ""),),
             professors=_professors(professor), course=course or title or ""))
     return sorted(cells, key=lambda cell: (cell.date, cell.slot))
 
