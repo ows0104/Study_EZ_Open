@@ -134,12 +134,13 @@ Anki에서 본 것과 받아 둔 파일을 맞춰 보는 일이 사람 몫이 �
 > 스케줄 배선은 `scripts/install-scheduled-task.ps1`에 그대로 있다 — 등록만 안 되어 있다.
 
 ```
-관리자가 /admin에서 예습 링크 저장
-캘린더에서 강의를 눌러 → [Pre-Quiz 덱 만들기]
-  → POST …/prequiz-job              일감 한 줄 (서버)
-  → 러너가 15초마다 집어 간다        POST …/prequiz-jobs/claim (노트북)
-  → prequeue --build → publish
-  → PUT …/prequiz-jobs/<id>         queued → running → done|failed
+관리자가 /admin에서 예습 링크 저장 (예습만)
+캘린더에서 강의를 눌러 → [Pre-Quiz 덱 만들기] · [Main-Quiz 덱 만들기] · 덱 옆의 ⟳
+  → POST …/prequiz-job?kind=pre|main   일감 한 줄 (서버) · ⟳는 {"force": true}
+  → 러너가 15초마다 집어 간다           POST …/prequiz-jobs/claim (노트북)
+  → 예습 prequeue --build [--force]  ┐
+    복습 watch --run-id [--force]    ┘ → publish
+  → PUT …/prequiz-jobs/<id>            queued → running → done|failed
   → 그 자리가 단계를 그대로 보여 준다
 ```
 
@@ -150,7 +151,8 @@ Anki에서 본 것과 받아 둔 파일을 맞춰 보는 일이 사람 몫이 �
 
 | 언제 | 무엇이 | 무엇을 |
 |---|---|---|
-| 사람이 누를 때 | 캘린더 패널의 「Pre-Quiz 덱 만들기」 | 그 한 편을 만들고 올린다 |
+| 사람이 누를 때 | 캘린더 패널의 「… 덱 만들기」 (예습·복습) | 그 한 편을 만들고 올린다 |
+| 덱이 이상할 때 | 그 덱 줄 옆의 ⟳ (관리자만) | 이미 있는 것을 버리고 다시 만든다 |
 | 편이 끝날 때 | `studyez done <run_id>` | 그 한 편 |
 | 10분마다 | 러너가 스스로 | 놓친 것을 쓸어 올린다 (`publish`) |
 
@@ -181,9 +183,31 @@ powershell -ExecutionPolicy Bypass -File scripts\install-agent-task.ps1 -Remove
 계속 떠 있으므로 5분 늦는 것으로 잃는 것이 없다. 로그는 `runs/agent.log`이고
 흘려 쓴다. 로그온해 있어야 돈다.
 
-**복습 덱은 아직 버튼이 없다.** 편당 Opus 호출이 여러 번이라 비용을 먼저 재기로
-했다(`runs/<run_id>/run.report.json`의 `cumulative.cost_usd`). 그때까지는
-`studyez watch --build`를 손으로 부른다.
+**다시 만들기는 덱 옆에 붙는다.** 덱이 이상하다는 것을 아는 사람은 그것을 받아 본
+사람이고, 그 사람이 서 있는 자리가 그 줄이기 때문이다. 누르면 한 번 묻는다 — 한 편에
+15분과 빈 세션 넷이 든다.
+
+**「다시 만들라고 눌렀다」는 사실은 서버가 들고 러너에게 간다**(`prequiz_job.force` →
+`prequeue --force`). 노트북이 판정할 수 없어서다 — 거기 산출물이 남아 있는 것과 사람이
+다시 만들라고 한 것은 다른 사실이고, 안 넘기면 `prequeue`가 그 편을 「이미 있는 것」으로
+세어 아무것도 안 만든 채 돌아온다. 그러면 화면에는 「덱을 못 만들었다」가 적힌다.
+
+이미 러너가 집어 간 편에는 안 걸린다. 그 프로세스는 이미 돌고 있고 표를 다시 안 본다 —
+끝난 뒤에 다시 누르면 된다. 화면이 그 사실을 그 자리에서 말한다.
+
+**복습 덱에도 버튼이 붙었다**(2026-08-24). 한동안 없던 이유는 편당 Opus 호출이 여러
+번이라 비용을 먼저 재기로 한 것이었는데, **재기 전에 붙였다**(관리자 지시). 밤새 도는
+쓸기와 다른 점이 여기 있다 — 누르는 것은 사람이고 한 번에 한 편이다. 편당 값은 여전히
+안 재 봤다(`runs/<run_id>/run.report.json`의 `cumulative.cost_usd`).
+
+**예습과 다른 것은 재료뿐이다.** 복습은 올해 필기로 만들므로 러너가 `prequeue`가 아니라
+`watch <과목> --run-id <올해> --build`를 부른다. 무엇으로 가르는지는 일감에 실려 온다
+(`prequiz_job.kind`). 그 명령은 쓸기와 달리 블럭 창·하루 상한·이미 만들었다는 표시를
+지난다 — 사람이 그 편을 지목했기 때문이다.
+
+**덱이 이미 있으면 안 만들고 넘긴다.** 그때 없는 것은 덱이 아니라 업로드이고(검문에
+걸렸거나 올리다 끊겼다), 그건 이어지는 `publish`가 한다. 15분과 빈 세션 넷을 다시 쓸
+이유가 없다. 정말 다시 만들 때는 ⟳다.
 
 ### 러너가 스스로 지키는 것
 

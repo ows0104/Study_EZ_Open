@@ -25,9 +25,17 @@
 ## 도는 모양
 
     POST /api/admin/prequiz-jobs/claim     일감 하나 (없으면 null). 박동도 여기서
-      → studyez prequeue <과목> --run-id <올해> --build --max 1
+      → 예습: studyez prequeue <과목> --run-id <올해> --build --max 1
+        복습: studyez watch    <과목> --run-id <올해> --build
       → studyez publish  <과목> --run-id <올해>
       → PUT /api/admin/prequiz-jobs/<id>   queued → running → done|failed
+
+**갈래는 일감에 실려 온다**(`kind`). 재료가 다르므로 명령이 다르다 — 예습은 관리자가
+만든 예습 대화와 작년 필기로, 복습은 올해 필기로 만든다. 그 뒤(올리기·보고)는 같다.
+
+**「다시 만들기」는 일감에 실려 온다**(`force`). 그러면 `prequeue`에 `--force`가
+붙는다. 이 값이 서버에서 오는 이유는 노트북이 판정할 수 없기 때문이다 — 여기에
+산출물이 남아 있는 것과 사람이 다시 만들라고 한 것은 다른 사실이다.
 
 일감이 없으면 `SWEEP_SECONDS`마다 `publish`를 한 번 돌린다. 06:00 쓸기가 받던 것들이
 그대로 여기로 온다 — 강의록, 복습 덱, 끊긴 업로드, `release`로 풀린 편.
@@ -57,7 +65,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import publish
+from . import deck, publish
 
 POLL_SECONDS = 15         # 일감을 물어보는 간격
 STAGE_SECONDS = 20        # 하위 로그를 훑어 단계를 올리는 간격
@@ -84,10 +92,20 @@ class Job:
     id: int
     subject: str
     run_id: str
+    # `pre` | `main`. 무엇을 만드는 일감인가 — 재료도 명령도 갈린다(`make_argv`).
+    kind: str = deck.PRE
+    # 사람이 「다시 만들기」를 눌렀는가. **서버만 아는 값이다** — 노트북에 산출물이
+    # 남아 있으면 `prequeue`는 그 편을 이미 만든 것으로 보고 건너뛴다.
+    force: bool = False
 
     @property
     def label(self) -> str:
         return f"{self.subject}/{self.run_id}"
+
+    @property
+    def what(self) -> str:
+        """사람이 읽는 갈래 이름. 화면에도 로그에도 같은 말이 서야 한다."""
+        return "Main-Quiz" if self.kind == deck.MAIN else "Pre-Quiz"
 
 
 class Agent:
@@ -110,7 +128,8 @@ class Agent:
         row = answer.get("job")
         if not row:
             return None
-        return Job(id=int(row["id"]), subject=str(row["subject"]), run_id=str(row["runId"]))
+        return Job(id=int(row["id"]), subject=str(row["subject"]), run_id=str(row["runId"]),
+                   kind=str(row.get("kind") or deck.PRE), force=bool(row.get("force")))
 
     def report(self, job: Job, **fields) -> None:
         """진행을 적는다. **실패해도 하던 일은 계속한다.**
@@ -170,10 +189,18 @@ class Agent:
     def stage_of(self, wrapper_log: Path, job: Job) -> str:
         """지금 어느 단계인가. 두 곳을 본다 — 감싼 명령의 로그와 빌드의 로그.
 
-        빌드는 자기 출력을 `runs/<작년 run_id>/prequiz.log`로만 흘리므로
-        (`studyez.deck._spawn`), 감싼 쪽만 보면 15분 동안 빈손이다. 작년 짝은
+        빌드는 자기 출력을 로그 파일로만 흘리므로(`studyez.deck._spawn`), 감싼
+        쪽만 보면 15분 동안 빈손이다. **어느 파일인지가 갈래마다 다르다** — 복습은
+        올해 자리의 `pipeline.log`, 예습은 작년 자리의 `prequiz.log`다. 작년 짝은
         `prepare`가 적어 둔 `pre_target.json`에서 찾는다.
+
+        **갈래를 안 가르면 복습을 만드는 중에 예습 로그를 읽는다.** 예습을 이미
+        만들어 둔 편이 그렇다 — `pre_target.json`이 그대로 남아 있어서, 지난번
+        예습의 마지막 단계가 지금 하는 일인 것처럼 화면에 뜬다.
         """
+        if job.kind == deck.MAIN:
+            return last_stage(self.runs_dir / job.run_id / "pipeline.log") or last_stage(wrapper_log)
+
         prev = self.prev_run_of(job) or prev_from(wrapper_log)
         if prev:
             stage = last_stage(self.runs_dir / prev / "prequiz.log")
@@ -193,23 +220,38 @@ class Agent:
         return ""
 
     # ── 한 편 ────────────────────────────────────────────────────────
+    def make_argv(self, job: Job) -> list[str]:
+        """이 일감을 만드는 명령. **갈래가 여기서 갈린다.**
+
+        재료가 다르므로 명령이 다르다 — 예습은 관리자가 만든 예습 대화와 작년
+        필기로(`prequeue`), 복습은 올해 필기로(`watch`) 만든다.
+
+        **`--force`가 붙는 자리도 여기다.** 안 붙이면 다시 만들라고 누른 편이
+        「이미 있는 것」으로 세어지고, 아무것도 안 만든 채 돌아온다. 그러면 화면에는
+        「덱을 못 만들었다」가 적힌다 — 사람은 다시 만들라고 눌렀을 뿐인데 실패로 보인다.
+        """
+        if job.kind == deck.MAIN:
+            argv = [sys.executable, "-m", "studyez", "watch", job.subject,
+                    "--run-id", job.run_id, "--build"]
+        else:
+            argv = [sys.executable, "-m", "studyez", "prequeue", job.subject,
+                    "--run-id", job.run_id, "--build", "--max", "1"]
+        if job.force:
+            argv.append("--force")
+        return argv
+
     def handle(self, job: Job) -> None:
         """일감 하나를 끝까지. 만들고, 올리고, 무엇이 됐는지 적는다."""
-        self.say(f"[{stamp()}] {job.label} — 만드는 중")
-        self.report(job, state="running", stage="자리 세우는 중")
+        again = "다시 " if job.force else ""
+        self.say(f"[{stamp()}] {job.label} {job.what} — {again}만드는 중")
+        self.report(job, state="running", stage=f"{again}만들 자리 세우는 중")
 
         started = time.time()
         log = self.runs_dir / f"agent.{job.run_id}.log"
-        code, lines = self._run(
-            [sys.executable, "-m", "studyez", "prequeue", job.subject,
-             "--run-id", job.run_id, "--build", "--max", "1"],
-            log, job)
+        code, lines = self._run(self.make_argv(job), log, job)
 
-        # **성공을 종료 코드로 보지 않는다.** `prequeue`는 만들 자리가 없어도 0으로
-        # 끝난다 — 배선 시험에서 아무것도 안 만들고 "덱을 만들었다"가 찍혔다.
-        # 산출물이 이번 실행에서 실제로 나왔는지로 가른다.
-        made = first_match(lines, r"끝났다 — (.+)$")
-        if code != 0 or not made or not self.made_deck(job, started):
+        made = self.outcome(job, lines, code, started)
+        if not made:
             why = blocked_reason(lines) or summary(lines) or f"종료 코드 {code}"
             self.say(f"    실패 — {why}")
             self.report(job, state="failed", stage="", message=f"덱을 못 만들었다: {why} (로그: {log})")
@@ -231,20 +273,43 @@ class Agent:
         # 검문에 걸리면 강의록만 나간다. 성공으로 적되 **왜 덱이 안 갔는지 남긴다** —
         # 조용히 넘기면 화면이 "올라갔다"고 말하는데 학생에게는 아무것도 안 간다.
         held = [line.strip() for line in lines if "✋" in line]
-        note = first_match(lines, r"(pre-items \d+문항.*)$") or "올렸다"
+        # 예습은 문항 수가 그 편의 값이고, 복습은 올린 파일이 그렇다. 갈래에 없는
+        # 줄을 찾으면 둘 다 "올렸다"로 뭉개진다.
+        note = (first_match(lines, r"(pre-items \d+문항.*)$") if job.kind != deck.MAIN else "")             or first_match(lines, r"(올린 파일 .+)$") or "올렸다"
         message = f"{made} · {note}"
         if held:
             message += " · 검문에 걸려 덱은 미뤘다 — " + held[0].lstrip("✋ ")
         self.say(f"    끝났다 — {message}")
         self.report(job, state="done", stage="", message=message)
 
-    def made_deck(self, job: Job, since: float) -> bool:
-        """이번 실행에서 문항이 실제로 나왔는가.
+    def outcome(self, job: Job, lines: list[str], code: int, since: float) -> str:
+        """이번 실행에서 무엇이 나왔나. 빈 문자열이면 못 만든 것이다.
 
-        **이미 있던 것으로 속지 않으려고 시각을 본다.** 다시 만들기를 눌렀는데
-        빌드가 조용히 건너뛰면, 지난번 `pre_items.final.json`이 그대로 있어서
-        「됐다」로 읽힌다.
+        **성공을 종료 코드로만 보지 않는다.** `prequeue`는 만들 자리가 없어도 0으로
+        끝난다 — 배선 시험에서 아무것도 안 만들고 "덱을 만들었다"가 찍혔다.
+
+        갈래마다 무엇을 보는지가 다르다.
+
+        예습은 **산출물의 시각**을 본다. 다시 만들기를 눌렀는데 빌드가 조용히
+        건너뛰면 지난번 `pre_items.final.json`이 그대로 있어서 「됐다」로 읽힌다.
+
+        복습은 **덱 파일이 있는지**만 본다. 시각을 안 보는 까닭은 이미 만들어 둔
+        덱을 그대로 올리는 길이 정상이기 때문이다 — 만들다 만 것이 아니라 올리다
+        만 편이 있고(검문에 걸렸거나 업로드가 끊겼거나), 그 편에서 사람이 누르는
+        것도 이 버튼이다. `watch --run-id`가 그때 안 만들고 넘긴다. 대신 그쪽은
+        **실패를 종료 코드로 말한다** — 여기서 0이 아니면 만들다 죽은 것이다.
         """
+        made = first_match(lines, r"끝났다 — (.+)$")
+        if code != 0:
+            return ""
+        if job.kind == deck.MAIN:
+            if made:
+                return made
+            return "이미 있던 덱" if deck.apkg_of(self.runs_dir / job.run_id, deck.MAIN) else ""
+        return made if made and self.made_deck(job, since) else ""
+
+    def made_deck(self, job: Job, since: float) -> bool:
+        """이번 실행에서 예습 문항이 실제로 나왔는가. `outcome`이 부른다."""
         prev = self.prev_run_of(job)
         if not prev:
             return False

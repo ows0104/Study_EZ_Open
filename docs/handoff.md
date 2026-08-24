@@ -3,8 +3,8 @@
 2026-08-17 기준으로 **API·DB·프론트 배포와 인증 URL/CORS 연결까지 끝났다.**
 실제 작업 순서와 복구 절차는
 [Cloudflare Pages 배포 실행서](cloudflare-pages-runbook.md)와
-[R2 설정·키 교체 실행서](r2-runbook.md)에 기록했다. 남은 큰 일은 로컬 러너
-연결과 노출된 DB 비밀번호 교체다.
+[R2 설정·키 교체 실행서](r2-runbook.md)에 기록했다. 로컬 러너도 붙었다(§5).
+남은 큰 일은 노출된 DB 비밀번호 교체다.
 
 ## 지금 상태
 
@@ -123,10 +123,35 @@ Settings에 외부 발송(Resend 등)을 붙여야 한다.
 없는 객체를 HEAD해 인증 성공 뒤 404가 오는 것까지 확인했다. 생성·교체·노출 시
 복구 방법은 [R2 설정·키 교체 실행서](r2-runbook.md)를 그대로 따른다.
 
-## 5. 로컬 러너 붙이기
+## 5. 로컬 러너 붙이기 — 완료
 
-파이프라인이 산출물을 밀어 넣는 부분은 아직 안 짜여 있다. 계약과 엔드포인트는
-[server/README.md](../server/README.md)에 있다.
+`studyez/publish.py`가 산출물을 밀어 넣는다.
+
+```bash
+python -m studyez publish 병리학 --dry-run    무엇이 올라갈지만 적는다
+python -m studyez publish 병리학
+python -m studyez publish 병리학 --notes-only  강의록만, 덱은 다음으로
+```
+
+무엇을 어디서 모으는지는 그 파일의 머리글에 있다. 요약하면 **한 강의의 자료가
+두 군데서 온다** — 올해 필기와 Main-Quiz는 `runs/<올해 run_id>/`, 작년 필기와
+Pre-Quiz·예습 대화는 `runs/<작년 run_id>/`다. Pre-Quiz를 작년 필기로 만들기
+때문이고, 작년 짝은 `studyez.matching`이 확정한 것만 쓴다.
+
+**아직 필기가 없는 강의도 세운다**(`studyez/ahead.py`). 계획이 올해 필기에서만
+나오면 예습이 필요한 쪽 — 안 지나간 강의 — 이 통째로 빠진다. 병리학 2026에서
+24칸이 그랬다. 그 자리는 시간표에서 찾아오고 붙는 것은 작년 강의록뿐이다.
+`--no-ahead`로 끈다. 시간표는 `blocks.DEFAULT_SOURCE`(로컬 테스트 DB)를 보므로
+학기 시간표를 갈면 `seed-timetable`을 다시 돌려야 한다.
+
+점수기가 확신 못 한 짝은 붙이지 않고 후보와 함께 보고한다. 사람이 눈으로 확인한
+것은 `runs/_pairs/<과목>.json`에 `{올해 run_id: 작년 run_id}`로 적어 두면 다음부터
+그대로 쓴다. 병리학 24칸 실측은 확정 16 · 확인 필요 8이었고, 확인 필요 8은 전부
+실습이거나 순번이 한쪽에만 있는 자리였다(시간표 `종양의 병리 실습(1)` ↔ 파일
+`질병의 병리학적 이해 실습 7-종양의 병리 실습(1)`).
+
+부르는 곳은 아래 아홉이고 전부 `Authorization: Bearer $RUNNER_TOKEN`이다. 토큰은
+`server/.env`에 있고 Secret Manager의 `studyez-runner-token`에도 올라가 있다.
 
 ```
 POST /api/admin/lectures                      강의 목록 upsert
@@ -135,14 +160,62 @@ POST /api/admin/lectures/{과목}/{run_id}/uploads/complete 확인
 PUT  /api/admin/lectures/{과목}/{run_id}/run-meta/{main|pre}
 PUT  /api/admin/lectures/{과목}/{run_id}/pre-items
 PUT  /api/admin/lectures/{과목}/{run_id}/preview
+GET  /api/admin/previews                      저장된 예습 링크 (서버 → 로컬)
+POST /api/admin/prequiz-jobs/claim            일감 하나 집어 오기 + 박동
 PUT  /api/admin/prequiz-jobs/{id}             진행 적기 + 박동 (몸이 비면 박동만)
 ```
 
-전부 `Authorization: Bearer $RUNNER_TOKEN`. 토큰은 `server/.env`에 있고 Secret
-Manager의 `studyez-runner-token`에도 올라가 있다.
+**뒤의 셋은 방향이 반대다.** 사람이 `/admin`에서 저장하고 누르는 것을 로컬이
+당겨 온다. 누르는 쪽(`POST …/prequiz-job`)은 관리자 세션이라 러너 토큰으로는
+막혀 있다 — 비용이 나가는 일이라 사람이 눌러야 한다.
+
+**일감에는 갈래가 있다**(`?kind=pre|main`, 기본 `pre`). 재료가 다르므로 만드는
+명령이 다르다 — 예습은 예습 대화와 작년 필기로(`studyez prequeue`), 복습은 올해
+필기로(`studyez watch --run-id`) 만든다. 러너가 `kind`를 보고 가른다. 한 갈래가
+다른 갈래를 막지 않으므로 같은 편의 예습과 복습이 나란히 줄을 설 수 있다 — 다만
+러너는 한 번에 하나씩 집어 간다.
 
 파일은 서버를 거치지 않는다. Cloud Run의 요청 본문 상한(32MB)이 강의록 PDF보다
 작아서, 서버는 키를 정하고 올라온 것을 확인만 한다.
+
+**과목 이름을 이어 줄 필요는 아직 없었다.** 시간표는 "질병의 병리학적 이해"이고
+폴더는 "병리학"이라 `course_alias`가 필요해 보이지만, 병리학은 한 교시에 강의가
+하나뿐이라 날짜·교시만으로 칸이 정해진다(38/38 자동 연결). 한 교시에 여러 강의가
+열리는 과목을 올릴 때 `/admin`에서 이어 주면 된다 — 러너 토큰으로는 못 하는
+일이고 관리자 세션이 필요하다.
+
+`ahead.py`도 그 표를 안 쓴다. 시간표에서 이 과목의 이름을 **이미 붙은 것에서
+읽는다** — 올해 필기가 앉은 칸의 블럭 이름이 곧 그 과목이다. 그래서 올해 필기가
+한 편도 없는 과목은 예습 자리를 못 세운다. 그건 막다른 길이 아니라 순서다:
+한 편이 올라오면 나머지 칸이 다 따라 선다.
+
+## 새로 배포할 때
+
+`prequiz_job`·`runner_beat` 두 표는 2026-08-23에 생겼다. 마이그레이션 도구가
+없으므로(`server/app/cli.py` 첫머리) 운영에 한 번 만들어야 한다.
+
+```bash
+cd server; .venv/Scripts/python.exe -m app.cli init-db   # 있는 표는 안 건드린다
+./deploy.ps1
+```
+
+`create_all`은 **없는 표만 만든다.** 이미 서 있는 표에 칼럼이 느는 것은
+`app.cli`의 `ADDED_COLUMNS`가 맡는다 — `init-db`가 지나며 붙인다. 칼럼의 **형이
+바뀌거나 이름이 바뀌는 것**은 여전히 손으로 해야 한다.
+
+### 2026-08-24에 붙은 칼럼 둘 — `prequiz_job.kind`·`prequiz_job.force`
+
+`kind`는 복습 덱도 같은 우편함을 쓰게 되면서, `force`는 「다시 만들기」가 러너까지
+가야 해서 붙었다. **배포보다 먼저 붙여야 한다** — 새 코드의 조회에 두 칼럼이 들어
+있어서, 없으면 덱 일감 경로가 통째로 500을 낸다(버튼·캘린더 패널·`/admin` 배너).
+
+```bash
+cd server; .venv/Scripts/python.exe -m app.cli init-db   # 붙은 칼럼을 적어 준다
+./deploy.ps1
+```
+
+로컬 테스트 DB(`server/local_test_data/studyez.db`)에는 아직 이 표가 없다 —
+`blocks.py`가 시간표만 읽는 사본이라 그렇다. 넣을 필요가 없다.
 
 ## 손대야 할 것 두 가지
 

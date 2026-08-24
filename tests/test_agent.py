@@ -8,7 +8,7 @@
 import time
 from pathlib import Path
 
-from studyez import agent
+from studyez import agent, deck
 
 
 def test_마지막_단계를_줍는다(tmp_path):
@@ -86,6 +86,18 @@ def test_작년_짝을_pre_target에서_찾는다(tmp_path):
     assert worker.prev_run_of(job) == "250825_02"
 
 
+def test_다시_만들기는_force로_간다(tmp_path):
+    """안 붙이면 `prequeue`가 이미 만든 편으로 보고 건너뛴다 — 그러면 화면에는
+    아무것도 안 만든 채 「덱을 못 만들었다」가 적힌다."""
+    worker = _agent_with(tmp_path)
+    plain = agent.Job(id=1, subject="병리학", run_id="260824_02")
+    again = agent.Job(id=2, subject="병리학", run_id="260824_02", force=True)
+    assert "--force" not in worker.make_argv(plain)
+    assert "--force" in worker.make_argv(again)
+    # 어느 편인지는 그대로다. 다시 만드는 것도 한 편이다.
+    assert worker.make_argv(again)[worker.make_argv(again).index("--run-id") + 1] == "260824_02"
+
+
 def test_자리가_없으면_만든_것도_없다(tmp_path):
     worker = _agent_with(tmp_path)
     job = agent.Job(id=1, subject="병리학", run_id="260824_02")
@@ -106,3 +118,74 @@ def test_지난번_산출물로_속지_않는다(tmp_path):
     assert worker.made_deck(job, time.time()) is False
     # 이번 실행에서 나온 것이면 참이다.
     assert worker.made_deck(job, old - 10) is True
+
+
+# ── 갈래 ──────────────────────────────────────────────────────────────
+# 예습과 복습은 재료가 다르므로 만드는 명령이 다르다. 러너가 그것을 일감의
+# `kind`로 받는다.
+
+
+def test_갈래가_명령을_가른다(tmp_path):
+    worker = _agent_with(tmp_path)
+    pre = worker.make_argv(agent.Job(id=1, subject="병리학", run_id="260824_02"))
+    main = worker.make_argv(
+        agent.Job(id=2, subject="병리학", run_id="260824_02", kind=deck.MAIN))
+    assert "prequeue" in pre and "watch" not in pre
+    assert "watch" in main and "prequeue" not in main
+    # 둘 다 그 강의 하나만 만든다.
+    assert main[main.index("--run-id") + 1] == "260824_02"
+
+
+def test_다시_만들기는_두_갈래_모두에_붙는다(tmp_path):
+    worker = _agent_with(tmp_path)
+    for kind in (deck.PRE, deck.MAIN):
+        job = agent.Job(id=1, subject="병리학", run_id="260824_02", kind=kind, force=True)
+        assert "--force" in worker.make_argv(job)
+
+
+def _main_deck(tmp_path: Path, run_id: str) -> Path:
+    run_dir = tmp_path / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    apkg = run_dir / "병리학.apkg"
+    apkg.write_bytes(b"apkg")
+    return apkg
+
+
+def test_복습은_이미_있던_덱도_성공이다(tmp_path):
+    """만들다 만 편이 아니라 **올리다 만 편**이 있다. 그 편에서 누르는 것도 이 버튼이다."""
+    _main_deck(tmp_path, "260824_02")
+    worker = _agent_with(tmp_path)
+    job = agent.Job(id=1, subject="병리학", run_id="260824_02", kind=deck.MAIN)
+    # `watch --run-id`가 안 만들고 넘긴 자리 — 「끝났다」 줄이 없다.
+    assert worker.outcome(job, ["  이미 덱이 있다"], 0, time.time()) == "이미 있던 덱"
+
+
+def test_복습은_종료_코드로_실패를_안다(tmp_path):
+    """덱이 남아 있어도 만들다 죽었으면 실패다. `watch --run-id`가 0이 아닌 값을 낸다."""
+    _main_deck(tmp_path, "260824_02")
+    worker = _agent_with(tmp_path)
+    job = agent.Job(id=1, subject="병리학", run_id="260824_02", kind=deck.MAIN)
+    assert worker.outcome(job, ["실패 — 어쩌고"], 1, time.time()) == ""
+
+
+def test_덱이_없으면_복습도_못_만든_것이다(tmp_path):
+    worker = _agent_with(tmp_path)
+    job = agent.Job(id=1, subject="병리학", run_id="260824_02", kind=deck.MAIN)
+    assert worker.outcome(job, ["  만들 자리를 못 찾았다"], 0, time.time()) == ""
+
+
+def test_복습을_만드는_중에_예습_로그를_읽지_않는다(tmp_path):
+    """같은 강의에 예습을 이미 만들어 둔 편. `pre_target.json`이 그대로 남아 있다."""
+    prev = _seat(tmp_path, "250825_02", "260824_02")
+    (prev / "prequiz.log").write_text("── 지난번 예습의 마지막 단계\n", encoding="utf-8")
+    run_dir = tmp_path / "260824_02"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "pipeline.log").write_text("── ② 시험에 나올 것\n", encoding="utf-8")
+
+    worker = _agent_with(tmp_path)
+    wrapper = tmp_path / "agent.260824_02.log"
+    wrapper.write_text("", encoding="utf-8")
+    main = agent.Job(id=1, subject="병리학", run_id="260824_02", kind=deck.MAIN)
+    pre = agent.Job(id=2, subject="병리학", run_id="260824_02")
+    assert worker.stage_of(wrapper, main) == "② 시험에 나올 것"
+    assert worker.stage_of(wrapper, pre) == "지난번 예습의 마지막 단계"

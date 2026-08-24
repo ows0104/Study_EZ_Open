@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, downloadSignedFile, openSignedFile } from "../api";
-import type { LectureDetail, LectureFile, LectureRef, PrequizJob, RunnerBeat } from "../types";
+import type { DeckKind, LectureDetail, LectureFile, LectureRef, PrequizJob, RunnerBeat } from "../types";
 import {
   absoluteUrl,
+  bumpPreviewVersion,
   extensionInstalled,
   requestPreview,
   usePreviewVersion,
@@ -230,9 +231,22 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
           아직 안 올라온 강의에서 "아직 없습니다"를 말하는 것도 이 줄이다. */}
       {/* 문항 수는 위 줄이 말한다. 여기서 되풀이하면 덱의 장수처럼 읽히는데,
           덱에는 그림 카드까지 들어 있어 언제나 더 많다. */}
-      <PreDeck file={fileOf("pre_apkg")} lecture={lecture} onDownload={download} quiet={Boolean(quiz)} />
+      <DeckSlot
+        kind="pre"
+        label="Pre-Quiz 덱"
+        file={fileOf("pre_apkg")}
+        lecture={lecture}
+        onDownload={download}
+        quiet={Boolean(quiz)}
+      />
 
-      <DeckAction file={fileOf("main_apkg")} label="Main-Quiz 덱" onDownload={download} />
+      <DeckSlot
+        kind="main"
+        label="Main-Quiz 덱"
+        file={fileOf("main_apkg")}
+        lecture={lecture}
+        onDownload={download}
+      />
 
       {/* 강의 정보(일시·담당·과목) 바로 위. 읽는 것에 가깝지만 누르면 열린다. */}
       <Notes detail={detail} onOpen={open} />
@@ -399,6 +413,7 @@ function PreviewAction({
           </div>
           {askingRemake ? (
             <RemakeConfirm
+              message="모두가 보는 링크가 새 대화로 바뀝니다. 옛 링크는 ChatGPT에 그대로 남지만 여기서는 안 보입니다."
               onConfirm={() => {
                 setAskingRemake(false);
                 void start("shared");
@@ -499,11 +514,14 @@ function PromptToggle({ open, custom, onClick }: { open: boolean; custom: boolea
 function Remake({
   label,
   busy,
+  busyLabel = "여는 중…",
   disabled,
   onClick,
 }: {
   label: string;
   busy: boolean;
+  /** 도는 동안 읽어 주는 말. 링크는 「여는 중」이고 덱은 「만드는 중」이다. */
+  busyLabel?: string;
   disabled: boolean;
   onClick: () => void;
 }) {
@@ -512,7 +530,7 @@ function Remake({
       className={busy ? "panel-remake is-busy" : "panel-remake"}
       onClick={onClick}
       disabled={disabled}
-      aria-label={busy ? "여는 중…" : label}
+      aria-label={busy ? busyLabel : label}
       aria-busy={busy}
       title={label}
     >
@@ -522,20 +540,30 @@ function Remake({
 }
 
 /**
- * 기본 링크를 다시 만들기 전에 한 번 묻는다.
+ * 되돌리기 어려운 것을 다시 만들기 전에 한 번 묻는다.
  *
- * 개인 링크와 달리 이것은 반 전체가 보는 값이고, 이미 그 링크로 Pre-Quiz가
- * 만들어졌을 수도 있다. 되돌리려면 다시 만드는 수밖에 없다.
+ * 기본 링크는 반 전체가 보는 값이고, Pre-Quiz 덱은 한 편에 15분과 빈 세션 넷이
+ * 든다. 둘 다 눌러 버린 뒤에 무르는 길이 없다.
  *
  * `window.confirm` 대신 자리에서 묻는다 — 새 탭을 여는 흐름이라 모달이 팝업
  * 차단과 얽히고, 무엇을 바꾸는지 문장으로 적을 자리도 없다.
  */
-function RemakeConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+function RemakeConfirm({
+  message,
+  confirm = "바꾸기",
+  onConfirm,
+  onCancel,
+}: {
+  message: string;
+  confirm?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
   return (
     <div className="panel-confirm">
-      <p>모두가 보는 링크가 새 대화로 바뀝니다. 옛 링크는 ChatGPT에 그대로 남지만 여기서는 안 보입니다.</p>
+      <p>{message}</p>
       <div className="panel-confirm-actions">
-        <button onClick={onConfirm}>바꾸기</button>
+        <button onClick={onConfirm}>{confirm}</button>
         <button className="is-quiet" onClick={onCancel}>
           취소
         </button>
@@ -596,53 +624,95 @@ function jobLine(job: PrequizJob, runner: RunnerBeat | null): string {
       ? `러너가 안 붙어 있습니다 · ${job.stage || "시작"}에서 멈췄습니다`
       : "러너가 안 붙어 있습니다 · 노트북에서 띄우면 집어 갑니다";
   }
-  if (job.state === "running") return `만드는 중 · ${job.stage || "시작"}`;
+  if (job.state === "running") return `${job.force ? "다시 " : ""}만드는 중 · ${job.stage || "시작"}`;
   // 줄은 섰고 러너도 있다. 그런데 한 번에 한 편만 만든다 — 앞 편이 있으면 그것부터다.
-  return runner?.busy ? "차례를 기다립니다 · 러너가 앞 편을 만드는 중입니다" : "러너가 곧 집어 갑니다";
+  const soon = runner?.busy ? "차례를 기다립니다 · 러너가 앞 편을 만드는 중입니다" : "러너가 곧 집어 갑니다";
+  return job.force ? `다시 만듭니다 · ${soon}` : soon;
 }
 
 /**
- * Pre-Quiz 덱 자리. 학생에게는 받는 줄이고, **관리자에게는 만드는 자리다.**
+ * 덱 한 줄. 학생에게는 받는 줄이고, **관리자에게는 만드는 자리다.**
  *
  * 덱이 없다는 것을 알아차리는 곳이 여기다 — 캘린더에서 강의를 눌러 「아직
  * 없습니다」를 본 순간. 그때 `/admin` 표까지 걸어가게 하면 대개 안 간다.
  *
  * 만드는 것은 노트북이므로 여기서 하는 일은 일감 한 줄을 적는 것까지다. 한 편에
  * 15분이 걸려서 누른 자리에서 기다릴 수 없고, 그래서 **진행이 이 줄로 돌아온다.**
+ *
+ * **두 갈래가 같은 부품을 쓴다**(`kind`). 예습과 복습은 재료도 만드는 명령도
+ * 다르지만(그 갈래는 러너가 안다), 여기서 사람이 하는 일은 한 가지다 — 없는 것을
+ * 보고 누르고, 진행을 같은 자리에서 읽는다. 갈라 두면 한쪽에 붙인 손질이 다른
+ * 쪽에 안 붙는다.
  */
-function PreDeck({
+function DeckSlot({
+  kind,
+  label,
   file,
   lecture,
   onDownload,
   quiet,
 }: {
+  kind: DeckKind;
+  label: string;
   file: LectureFile | undefined;
   lecture: LectureRef;
   onDownload: (file: LectureFile) => void;
   quiet?: boolean;
 }) {
   const isAdmin = Boolean(useMe()?.isAdmin);
-  if (file || !isAdmin) {
-    return <DeckAction file={file} label="Pre-Quiz 덱" onDownload={onDownload} quiet={quiet} />;
+  if (!isAdmin) {
+    return <DeckAction file={file} label={label} onDownload={onDownload} quiet={quiet} />;
   }
-  return <PreDeckMake lecture={lecture} quiet={quiet} />;
+  return (
+    <DeckMake kind={kind} label={label} file={file} lecture={lecture} onDownload={onDownload} quiet={quiet} />
+  );
 }
 
-function PreDeckMake({ lecture, quiet }: { lecture: LectureRef; quiet?: boolean }) {
+/** 「다시 만들기」를 누르면 무엇이 일어나는지. **갈래마다 재료가 다르다.** */
+const REMAKE_MESSAGE: Record<DeckKind, string> = {
+  pre: "지금 있는 문항을 버리고, 저장된 예습 링크로 처음부터 다시 만듭니다. 15분쯤 걸리고 다 되면 이 자리의 덱이 새것으로 바뀝니다. 이미 받아 간 사람의 덱은 그대로 남습니다.",
+  main: "지금 있는 문항을 버리고, 올해 강의록으로 처음부터 다시 만듭니다. 15분쯤 걸리고 다 되면 이 자리의 덱이 새것으로 바뀝니다. 이미 받아 간 사람의 덱은 그대로 남습니다.",
+};
+
+/**
+ * 관리자가 보는 덱 줄. 없으면 만들고, 있으면 **다시 만들 수 있다.**
+ *
+ * 둘을 한 부품으로 두는 이유는 일감이 하나이기 때문이다. 만드는 중이라는 말도,
+ * 실패했다는 말도, 덱이 있든 없든 같은 자리에서 같은 모양으로 돌아와야 한다.
+ *
+ * **일감을 갈래로 물어본다**(`?kind=`). 안 가르면 복습을 만드는 중이라는 말이
+ * 예습 자리에도 떠서, 사람이 누르지 않은 것을 기다리게 된다.
+ */
+function DeckMake({
+  kind,
+  label,
+  file,
+  lecture,
+  onDownload,
+  quiet,
+}: {
+  kind: DeckKind;
+  label: string;
+  file: LectureFile | undefined;
+  lecture: LectureRef;
+  onDownload: (file: LectureFile) => void;
+  quiet?: boolean;
+}) {
   const base = `/api/admin/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
   const [job, setJob] = useState<PrequizJob | null>(null);
   const [runner, setRunner] = useState<RunnerBeat | null>(null);
   const [asking, setAsking] = useState(false);
+  const [askingRemake, setAskingRemake] = useState(false);
   const [error, setError] = useState("");
 
   const load = useCallback(() => {
-    api<{ job: PrequizJob | null; runner: RunnerBeat | null }>(`${base}/prequiz-job`)
+    api<{ job: PrequizJob | null; runner: RunnerBeat | null }>(`${base}/prequiz-job?kind=${kind}`)
       .then((answer) => {
         setJob(answer.job);
         setRunner(answer.runner);
       })
       .catch(() => {});
-  }, [base]);
+  }, [base, kind]);
 
   useEffect(load, [load]);
 
@@ -655,12 +725,29 @@ function PreDeckMake({ lecture, quiet }: { lecture: LectureRef; quiet?: boolean 
     return () => window.clearInterval(timer);
   }, [open, load]);
 
-  async function ask() {
+  // 끝나면 강의 상세를 다시 읽는다. **덱이 바뀌었는데 이 줄은 옛 크기를 들고
+  // 있다** — 다 됐다는 말과 눈앞의 것이 어긋나면 사람은 새로고침을 배워야 한다.
+  // 예습 링크가 밖에서 저장될 때 쓰는 신호를 그대로 쓴다(상세를 다시 읽는 일이다).
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (wasOpen.current && !open && job?.state === "done") bumpPreviewVersion();
+    wasOpen.current = open;
+  }, [open, job?.state]);
+
+  async function ask(force: boolean) {
     setAsking(true);
     setError("");
     try {
-      const answer = await api<{ job: PrequizJob }>(`${base}/prequiz-job`, { method: "POST" });
+      const answer = await api<{ job: PrequizJob }>(`${base}/prequiz-job?kind=${kind}`, {
+        method: "POST",
+        body: force ? JSON.stringify({ force: true }) : undefined,
+      });
       setJob(answer.job);
+      // 이미 러너가 집어 간 편에는 「다시」가 안 걸린다. 조용히 넘기면 15분을
+      // 기다린 끝에 옛 덱이 그대로 있는 것을 보게 된다.
+      if (force && !answer.job.force) {
+        setError("이미 만드는 중이라 이번 판에는 안 걸립니다. 끝난 뒤에 다시 눌러 주세요.");
+      }
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -669,21 +756,61 @@ function PreDeckMake({ lecture, quiet }: { lecture: LectureRef; quiet?: boolean 
   }
 
   const key = quiet ? "" : " is-key";
+  // 실패는 남긴다. 조용히 지우면 「눌렀는데 아무 일도 없었다」가 된다.
+  const failure = (
+    <>
+      {job?.state === "failed" ? <p className="notice is-error">{job.message}</p> : null}
+      {error ? <p className="notice is-error">{error}</p> : null}
+    </>
+  );
+
+  if (file) {
+    return (
+      <>
+        <div className="panel-row">
+          <DeckAction file={file} label={label} onDownload={onDownload} quiet={quiet} />
+          {/* 덱이 이상하다는 것을 아는 사람은 그것을 받아 본 사람이다. 그 사람이
+              서 있는 자리가 이 줄이라 여기에 붙인다. 링크 다시 만들기와 같은
+              크기·같은 모양이다 — 드물게 하는 일이라는 뜻이 크기에 들어 있다. */}
+          <Remake
+            label={`${label} 다시 만들기`}
+            busy={job?.state === "running"}
+            busyLabel="다시 만드는 중…"
+            disabled={open || asking}
+            onClick={() => setAskingRemake(true)}
+          />
+        </div>
+        {askingRemake ? (
+          <RemakeConfirm
+            message={REMAKE_MESSAGE[kind]}
+            confirm="다시 만들기"
+            onConfirm={() => {
+              setAskingRemake(false);
+              void ask(true);
+            }}
+            onCancel={() => setAskingRemake(false)}
+          />
+        ) : null}
+        {/* 덱이 있으므로 이 줄은 자리를 뺏지 않고 아래에 붙는다. */}
+        {open && job ? <p className="panel-hint">{label} — {jobLine(job, runner)}</p> : null}
+        {failure}
+      </>
+    );
+  }
+
   if (open && job) {
     // `is-empty`는 한 줄짜리 자리다(`display: block`). 옆의 「아직 없습니다」와
     // 같은 꼴로 적는다 — strong·small을 넣으면 저 혼자 두 줄로 서서 눈에 걸린다.
-    return <span className={`panel-action${key} is-empty`}>Pre-Quiz 덱 — {jobLine(job, runner)}</span>;
+    return <span className={`panel-action${key} is-empty`}>{label} — {jobLine(job, runner)}</span>;
   }
 
   return (
     <>
-      <button className={`panel-action${key}`} disabled={asking} onClick={ask}>
-        <strong>Pre-Quiz 덱 만들기</strong>
+      <button className={`panel-action${key}`} disabled={asking} onClick={() => void ask(false)}>
+        <strong>{label} 만들기</strong>
         <small>{asking ? "맡기는 중…" : "아직 없습니다 · 눌러서 만듭니다"}</small>
       </button>
-      {/* 실패는 남긴다. 조용히 지우면 「눌렀는데 아무 일도 없었다」가 된다. */}
-      {job?.state === "failed" ? <p className="notice is-error">{job.message}</p> : null}
-      {error ? <p className="notice is-error">{error}</p> : null}
+      {failure}
     </>
   );
 }

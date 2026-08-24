@@ -1,6 +1,6 @@
 """운영용 잡일. 학기 초에 한 번씩, 그리고 파이프라인을 갈아엎을 때 한 번.
 
-    python -m app.cli init-db
+    python -m app.cli init-db                    표를 세우고 빠진 칼럼을 붙인다
     python -m app.cli seed-timetable "…/2026_본1_2학기_시간표.json"
     python -m app.cli purge-artifacts            무엇이 지워질지만 본다
     python -m app.cli purge-artifacts --apply    정말 지운다
@@ -8,6 +8,10 @@
 마이그레이션 도구를 두지 않았다. 표가 열둘이고 고치는 사람이 한 명이라
 Alembic이 얹는 무게가 그것으로 막는 사고보다 크다. 스키마가 바뀌면 여기서
 다시 만든다.
+
+**칼럼 하나가 느는 것은 그 「다시 만든다」로 못 한다.** `create_all`은 없는 표만
+세우고 이미 서 있는 표는 손대지 않는다. 그래서 `ADDED_COLUMNS`에 한 줄로 적고
+`init-db`가 지나며 붙인다.
 """
 
 from __future__ import annotations
@@ -18,7 +22,7 @@ import unicodedata
 from datetime import date as Date
 from pathlib import Path
 
-from sqlalchemy import select, text
+from sqlalchemy import inspect, select, text
 
 from app.database import Base, SessionLocal, engine
 from app.matching import relink
@@ -27,8 +31,37 @@ from app.naming import course_from_title, nfc, normalize_stem, slot_from_time
 from app.storage import ObjectStorage, StorageNotConfigured
 
 
+# 표가 선 뒤에 붙은 칼럼. **`create_all`은 없는 표는 세우지만 없는 칼럼은 안 붙인다** —
+# 이미 서 있는 운영 DB는 여기를 지나야 새 칼럼을 갖는다. 이미 있으면 건너뛴다.
+#
+# 마이그레이션 도구를 두지 않은 사정은 이 파일 첫머리에 있다. 그 대신 **붙인 칼럼을
+# 여기 한 줄로 남긴다** — 다음 사람이 운영 DB와 모델이 어디서 갈라졌는지 볼 자리다.
+ADDED_COLUMNS = (
+    # 2026-08-24 복습 덱도 같은 우편함을 쓰게 되면서.
+    ("prequiz_job", "kind", "VARCHAR(8) NOT NULL DEFAULT 'pre'"),
+    # 2026-08-24 「다시 만들기」가 러너까지 가려면 이 값이 표에 남아야 한다.
+    ("prequiz_job", "force", "BOOLEAN NOT NULL DEFAULT FALSE"),
+)
+
+
+def ensure_columns() -> None:
+    inspector = inspect(engine)
+    added = []
+    with engine.begin() as connection:
+        for table, column, ddl in ADDED_COLUMNS:
+            if table not in inspector.get_table_names():
+                continue
+            if column in {row["name"] for row in inspector.get_columns(table)}:
+                continue
+            connection.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}"))
+            added.append(f"{table}.{column}")
+    if added:
+        print(f"칼럼을 붙였습니다: {', '.join(added)}")
+
+
 def init_db() -> None:
     Base.metadata.create_all(engine)
+    ensure_columns()
     print(f"{len(Base.metadata.tables)}개 표를 준비했습니다.")
 
 
@@ -172,6 +205,7 @@ def purge_artifacts(apply: bool = False) -> None:
         db.commit()
 
     Base.metadata.create_all(engine)
+    ensure_columns()
     print(f"R2에서 {removed}개를 지웠습니다. "
           f"DB 행 {sum(counts.values())}개를 지우고 {len(RESHAPED_TABLES)}개 표를 새 모양으로 세웠습니다.")
     if failed:

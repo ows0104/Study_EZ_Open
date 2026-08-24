@@ -5,9 +5,13 @@
     python -m studyez watch                 새 필기 스캔 (무엇을 만들지 보여준다)
     python -m studyez watch --build         스캔 + 덱까지 (21:30 자동 실행용)
     python -m studyez watch --all-dates     블럭으로 안 좁힌다 (밀린 것 몰아 만들 때)
+    python -m studyez watch <과목> --run-id <올해> --build
+                                            그 강의 하나만 만든다 (캘린더 버튼이 이리로 온다)
     python -m studyez prequeue              예습 링크 → 자리 세우기
     python -m studyez prequeue --build      자리 세우고 예습 덱까지 (04:00 자동 실행용)
     python -m studyez prequeue --dry-run    무엇이 준비될지만 본다
+    python -m studyez prequeue <과목> --run-id <올해> --build --force
+                                            이미 만든 편도 버리고 다시 만든다
     python -m studyez jokbo 병리학           과목 족보를 강의별로 자른다 (학기당 1회)
     python -m studyez import --from <폴더>   다른 곳에서 만든 덱을 옮긴다 (보류로 들어온다)
     python -m studyez release <run_id>       보류를 푼다
@@ -161,7 +165,88 @@ def resolve_window(args) -> tuple[str | None, str | None, int]:
     return block.start.isoformat(), block.end.isoformat(), 0
 
 
+def run_watch_one(args) -> int:
+    """`watch --run-id` — 이 강의 하나만. 캘린더의 「Main-Quiz 덱 만들기」가 여기로 온다.
+
+    쓸기와 다른 것이 셋이다. 셋 다 **사람이 그 편을 지목했다**는 한 가지에서 나온다 —
+    블럭 창을 안 보고, 하루 상한을 안 보고, 이미 만들었다는 표시로 거르지 않는다
+    (`watch.build_queue`의 `only_run_id`).
+
+    **덱 파일이 있으면 안 만든다.** 그때 없는 것은 덱이 아니라 업로드이고, 그건
+    이어서 `publish`가 한다. 15분과 빈 세션 넷을 다시 쓸 이유가 없다.
+    `--force`면 그것도 버리고 다시 만든다.
+
+    **큐 파일을 안 쓴다.** `runs/queue.json`은 밤에 무엇이 돌지 보는 자리인데,
+    지목해서 만든 한 편으로 덮으면 그 자리가 없어진다.
+
+    **실패하면 종료 코드로 말한다.** 쓸기는 한 편이 죽어도 0으로 끝난다(하룻밤
+    분량이 한 편 때문에 날아가면 안 되므로). 여기서는 그 한 편이 전부다 —
+    러너가 이 값으로 화면에 실패를 적는다.
+    """
+    runs_dir = Path(args.runs)
+    run_dir = runs_dir / args.run_id
+    made = deck.apkg_of(run_dir, deck.MAIN)
+    if made and not args.force:
+        print(f"[watch] {args.run_id} — 이미 덱이 있다: {made.name}\n"
+              f"  안 올라간 것뿐이면 `python -m studyez publish --run-id {args.run_id}`가 민다.\n"
+              "  덱 자체를 다시 만들려면 --force.")
+        return 0
+
+    root = Path(args.root)
+    subjects = [args.subject] if args.subject else subjects_with_notes(root, args.this)
+    queue = watch.build_queue(
+        root=root, subjects=subjects, this_year=args.this, runs_dir=runs_dir,
+        min_age_seconds=0 if args.now else watch.MIN_AGE_SECONDS,
+        only_run_id=args.run_id,
+    )
+    for warning in queue.warnings:
+        print(f"  ⚠ {warning}")
+
+    if not queue.items:
+        print(f"[watch] {args.run_id} — 만들 자리를 못 찾았다.")
+        for line in queue.skipped:
+            print(f"  · {line}")
+        if not queue.skipped:
+            # 걸러진 것도 없이 비었다면 그 run_id를 쓰는 올해 필기가 아예 없는 것이다.
+            where = f"{args.subject} " if args.subject else ""
+            print(f"  {where}필기/{args.this}에 이 run_id로 서는 강의가 없다 — "
+                  "아직 안 올라왔거나 파일명이 바뀌었다.")
+        return 1
+
+    item = queue.items[0]
+    for note in item.notes:
+        print(f"  ⚠ {note}")
+    if not args.build:
+        print(f"[watch] {item.subject}/{item.run_id} {item.title[:38]}\n"
+              f"  {Path(item.this_pdf).name}\n"
+              "  `--build`를 붙이면 이대로 만든다.")
+        return 0
+
+    print(f"[watch] {item.subject}/{item.run_id} {item.title[:38]} — 만드는 중")
+    started = time.monotonic()
+    # **`--force`는 pdf2anki까지 내려가야 한다.** 여기서 「덱이 있어도 만든다」까지만
+    # 하고 넘기면 pdf2anki가 이미 만든 단계를 건너뛰고 그 산출물로 덱만 다시 굽는다 —
+    # 다시 만들라고 누른 사람은 「다시 만들었는데 그대로다」를 본다(`prequeue`도 같다).
+    ok, note = watch.build_one(item, runs_dir, REPO_ROOT, model=args.model, timeout=args.timeout,
+                               extra=["--force"] if args.force else None)
+    minutes = (time.monotonic() - started) / 60
+    if not ok:
+        print(f"    실패 — {note} · {minutes:.1f}분")
+        return 1
+    print(f"    끝났다 — {note} · {minutes:.1f}분")
+    print(f"  `python -m studyez publish --run-id {item.run_id}` — 검문을 지나면 나간다.")
+    return 0
+
+
 def report_watch(args) -> int:
+    if args.run_id:
+        return run_watch_one(args)
+    if args.force:
+        # 한 편이 빈 세션 넷이다. 좁히지 않은 --force는 이번 블럭을 통째로 다시
+        # 만들라는 말이 되는데, 그걸 지나가듯 받으면 안 된다(`prequeue`와 같다).
+        print("--force는 --run-id와 같이 준다 — 어느 편을 다시 만들지 정해야 한다.")
+        return 2
+
     root = Path(args.root)
     runs_dir = Path(args.runs)
     subjects = [args.subject] if args.subject else subjects_with_notes(root, args.this)
@@ -660,6 +745,13 @@ def report_prequeue(args) -> int:
               "STUDYEZ_RUNNER_TOKEN 환경 변수, 또는 --token으로 준다")
         return 2
 
+    if args.force and not args.run_id:
+        # 한 편이 빈 세션 넷이다. 좁히지 않은 --force는 저장된 링크 전부를 다시
+        # 만들라는 뜻이 되는데, 그것을 누르려는 사람은 없다.
+        print("--force는 --run-id와 같이 준다 — 어느 편을 다시 만들지 정해야 한다.")
+        print("  안 그러면 저장된 예습 링크 전부를 다시 만든다 (한 편에 빈 세션 넷)")
+        return 2
+
     print(f"[prequeue] {api}")
     try:
         links = prequeue.fetch_links(publish.Client(api, token))
@@ -702,8 +794,8 @@ def report_prequeue(args) -> int:
     planned = [target for target in targets if target.state != prequeue.BLOCKED]
     if planned:
         started = time.monotonic()
-        print(f"\n  자리 세우는 중 {len(planned)}편 (예습 대화 내려받기)…")
-        targets = prequeue.prepare(targets, runs_dir)
+        print(f"\n  {'다시 만들 ' if args.force else ''}자리 세우는 중 {len(planned)}편 (예습 대화 내려받기)…")
+        targets = prequeue.prepare(targets, runs_dir, force=args.force)
         print(f"  {(time.monotonic() - started) / 60:.1f}분")
 
     print()
@@ -1011,14 +1103,17 @@ def main() -> int:
                              "prequeue: 어느 자리에 설지만 적고 내려받기·빌드를 안 한다. "
                              "import: 무엇을 옮길지만 본다")
     parser.add_argument("--force", action="store_true",
-                        help="publish: 이미 올린 표시를 무시하고 다시 올린다")
+                        help="publish: 이미 올린 표시를 무시하고 다시 올린다. "
+                             "prequeue·watch: 이미 만든 편도 버리고 다시 만든다 (--run-id 필요)")
     parser.add_argument("--notes-only", action="store_true",
                         help="publish: 강의록만 올리고 덱·run-meta·예습 링크는 미룬다")
     parser.add_argument("--no-gate", action="store_true",
                         help="publish: 검문을 끄고 막힌 편도 민다 (사람이 보고 판단했을 때)")
     parser.add_argument("--run-id", default=None,
                         help="publish: 이 run을 쓰는 강의 한 편만 민다 (작년 run이면 그 짝). "
-                             "prequeue: 이 강의의 예습 링크 하나만 (올해 run_id)")
+                             "prequeue: 이 강의의 예습 링크 하나만 (올해 run_id). "
+                             "watch: 이 강의 하나만 만든다 — 블럭 창·하루 상한·이미 만든 "
+                             "표시를 지난다 (올해 run_id)")
     parser.add_argument("--no-ahead", action="store_true",
                         help="publish·prequeue: 아직 필기가 없는 강의는 세우지 않는다 "
                              "(예습용 작년 강의록도 안 붙는다)")

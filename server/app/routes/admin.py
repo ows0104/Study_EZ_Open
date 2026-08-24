@@ -28,7 +28,10 @@ from app.models import (
     CHECKLIST_ITEMS,
     JOB_DONE,
     JOB_FAILED,
+    JOB_KINDS,
+    JOB_MAIN,
     JOB_OPEN,
+    JOB_PRE,
     JOB_QUEUED,
     JOB_RUNNING,
     Asset,
@@ -544,6 +547,10 @@ def overview(
     previews = {(row.subject, row.run_id): row for row in db.scalars(select(Preview))}
     # 편마다 **가장 최근** 일감 하나. 끝난 것도 보여 준다 — 실패한 채로 사라지면
     # 화면이 "아직 아무도 안 눌렀다"와 같은 모양이 된다.
+    #
+    # **갈래를 안 가른다.** 이 값을 보는 화면이 세는 것은 「러너가 안 붙었는데
+    # 기다리는 일감」 하나뿐이고, 그건 예습이든 복습이든 같은 사실이다. 갈래별로
+    # 봐야 할 자리는 캘린더 패널이고, 그쪽은 `?kind=`로 따로 묻는다.
     jobs: dict[tuple[str, str], PrequizJob] = {}
     for job in db.scalars(select(PrequizJob).order_by(PrequizJob.created_at)):
         jobs[(job.subject, job.run_id)] = job
@@ -724,7 +731,7 @@ def timetable_events(
     ]
 
 
-# ---------------------------------------------------------------- 예습 일감
+# ---------------------------------------------------------------- 덱 일감
 
 # 러너는 지금 한 대뿐이다. 여러 대가 되면 이름을 나눠야 하는데, 그때는 일감을
 # 집어 가는 쪽도 같이 고쳐야 하므로 상수 하나로 묶어 둔다.
@@ -738,10 +745,14 @@ def _job_row(job: PrequizJob | None) -> dict[str, Any] | None:
         "id": job.id,
         "subject": job.subject,
         "runId": job.run_id,
+        "kind": job.kind,
         "state": job.state,
         "stage": job.stage,
         "message": job.message,
         "requestedBy": job.requested_by,
+        # 러너가 이것을 보고 이미 만든 편도 버리고 다시 만든다. 화면도 같은 값으로
+        # 「만드는 중」과 「다시 만드는 중」을 가른다.
+        "force": bool(job.force),
         "createdAt": job.created_at.isoformat() if job.created_at else "",
         "updatedAt": job.updated_at.isoformat() if job.updated_at else "",
     }
@@ -774,44 +785,111 @@ def _touch_runner(db: Session, *, busy: bool, note: str) -> None:
     beat.last_seen = datetime.now(timezone.utc)
 
 
+class JobRequest(BaseModel):
+    """「다시 만들기」인가. 몸이 없으면 처음 만드는 것이다."""
+
+    force: bool = False
+
+
+def _job_kind(kind: str) -> str:
+    if kind not in JOB_KINDS:
+        raise HTTPException(400, f"모르는 일감 종류입니다: {kind}")
+    return kind
+
+
+def _no_material(db: Session, lecture: Lecture, kind: str) -> str:
+    """재료가 없어서 지금 못 만드는 이유. 만들 수 있으면 빈 문자열.
+
+    **여기서 가르지 않으면 러너가 15분 뒤에 가른다.** 그때는 사람이 화면을 이미
+    닫았고, 노트북만 헛돈 뒤 「만들 자리를 못 찾았다」가 남는다.
+
+    재료가 갈래마다 다르다 — 예습은 관리자가 만든 예습 대화로 만들고(그 대화가
+    Pre-Quiz의 본체다), 복습은 **올해 필기**로 만든다. 올해 필기는 러너가 쓸기마다
+    올리므로 서버에 없으면 노트북에도 아직 없다.
+    """
+    if kind == JOB_MAIN:
+        notes = db.scalars(
+            select(Asset.id).where(
+                Asset.subject == lecture.subject,
+                Asset.run_id == lecture.run_id,
+                Asset.kind == "notes_current",
+            )
+        ).first()
+        return "" if notes else "올해 강의록이 아직 없습니다. Main-Quiz는 올해 필기로 만듭니다."
+
+    preview = db.get(Preview, (lecture.subject, lecture.run_id))
+    if preview is None or not preview.share_url:
+        return "예습 링크를 먼저 저장하세요. Pre-Quiz는 그 대화로 만듭니다."
+    return ""
+
+
 @router.post("/lectures/{subject}/{run_id}/prequiz-job")
 def request_prequiz(
     subject: str,
     run_id: str,
+    kind: str = JOB_PRE,
+    payload: JobRequest | None = None,
     user: CurrentUser = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    """「Pre-Quiz 만들기」. 일감 한 줄을 적고, 만드는 것은 러너가 한다.
+    """「덱 만들기」·「다시 만들기」. 일감 한 줄을 적고, 만드는 것은 러너가 한다.
 
     **두 번 눌러도 두 번 만들지 않는다.** 열려 있는 일감이 있으면 그것을 그대로
     돌려준다 — 15분짜리 일이라 사람이 반응이 없다고 다시 누르는 일이 잦다.
 
-    예습 링크가 없으면 거절한다. Pre-Quiz는 그 대화를 들고 들어가는지 묻는
-    것이므로, 링크 없이 만들면 다른 물건이 된다.
+    `kind`가 두 갈래를 가른다(`pre` 기본, `main`). **한 갈래가 다른 갈래를 막지
+    않는다** — 열린 일감을 셀 때도 같은 갈래만 본다. 같은 편의 예습을 만드는 중에
+    복습을 눌러도 줄이 따로 선다. 러너가 한 번에 하나씩 집어 갈 뿐이다.
+
+    `force`는 **덱이 이미 있는데도 다시 만들라**는 뜻이다. 이것을 표에 적어 두는
+    까닭은 러너가 판정할 수 없기 때문이다 — 노트북에 산출물이 남아 있으면
+    `prequeue`는 그 편을 `done`으로 보고 건너뛴다. 사람이 누른 것을 러너가 알
+    길은 이 값뿐이다.
+
+    **덱이 있는지는 여기서 안 본다.** 서버에 파일이 없어도(검문에 걸려 덱만
+    미뤄진 편이 그렇다) 사람은 다시 만들라고 할 수 있고, 그때 다시 만들어야 하는
+    것은 노트북에 있는 그 산출물이다.
+
+    **재료가 없으면 거절한다.** 그 재료가 무엇인지는 갈래마다 다르다(`_no_material`).
     """
+    kind = _job_kind(kind)
+    force = bool(payload and payload.force)
     lecture = lecture_or_404(db, subject, run_id)
-    preview = db.get(Preview, (lecture.subject, lecture.run_id))
-    if preview is None or not preview.share_url:
-        raise HTTPException(400, "예습 링크를 먼저 저장하세요. Pre-Quiz는 그 대화로 만듭니다.")
+    blocked = _no_material(db, lecture, kind)
+    if blocked:
+        raise HTTPException(400, blocked)
 
     open_job = db.scalars(
         select(PrequizJob)
         .where(
             PrequizJob.subject == lecture.subject,
             PrequizJob.run_id == lecture.run_id,
+            PrequizJob.kind == kind,
             PrequizJob.state.in_(tuple(JOB_OPEN)),
         )
         .order_by(PrequizJob.created_at.desc())
     ).first()
     if open_job is not None:
+        # **누른 뜻은 덧붙는다.** 아직 안 집어 간 일감에 「다시 만들기」가 겹치면
+        # 그 일감이 다시 만드는 일이 된다 — 새 줄을 세우면 같은 편을 두 번 만든다.
+        #
+        # 이미 집어 간 뒤라면 늦었다. 러너는 그 편을 이어 만들고 있고, 여기서
+        # 값만 바꿔도 그 프로세스는 안 본다. 그래서 **바꾸지 않는다** — 돌려주는
+        # 일감의 `force`가 거짓이면 누른 사람이 그 사실을 본다.
+        if force and not open_job.force and open_job.state == JOB_QUEUED:
+            open_job.force = True
+            open_job.stage = "다시 만들려고 러너를 기다리는 중"
+            db.commit()
         return {"job": _job_row(open_job), "created": False}
 
     job = PrequizJob(
         subject=lecture.subject,
         run_id=lecture.run_id,
+        kind=kind,
         state=JOB_QUEUED,
-        stage="러너를 기다리는 중",
+        stage="다시 만들려고 러너를 기다리는 중" if force else "러너를 기다리는 중",
         requested_by=user.email,
+        force=force,
     )
     db.add(job)
     db.commit()
@@ -822,22 +900,31 @@ def request_prequiz(
 def lecture_prequiz_job(
     subject: str,
     run_id: str,
+    kind: str = JOB_PRE,
     user: CurrentUser = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    """이 강의의 가장 최근 일감. 없으면 `null`.
+    """이 강의에서 그 갈래의 가장 최근 일감. 없으면 `null`.
 
-    캘린더 패널이 「Pre-Quiz 덱 — 아직 없습니다」 자리에서 부른다. `/overview`로
+    캘린더 패널이 「… 덱 — 아직 없습니다」 자리에서 부른다. `/overview`로
     갈음할 수 있지만 그쪽은 학기 전체를 그리는 응답이라, 패널 하나 여는 값으로는
     비싸다.
+
+    **갈래를 섞어 주지 않는다.** 한 자리가 두 갈래를 같이 말하면, 복습을 만드는
+    중이라는 말이 예습 자리에 떠서 사람이 누르지 않은 것을 기다리게 된다.
 
     러너 상태를 같이 준다. **일감이 안 움직이는 이유가 둘이라 가른다** — 러너가
     안 떠 있거나, 떠 있는데 앞의 편을 만드는 중이거나.
     """
+    kind = _job_kind(kind)
     lecture = lecture_or_404(db, subject, run_id)
     job = db.scalars(
         select(PrequizJob)
-        .where(PrequizJob.subject == lecture.subject, PrequizJob.run_id == lecture.run_id)
+        .where(
+            PrequizJob.subject == lecture.subject,
+            PrequizJob.run_id == lecture.run_id,
+            PrequizJob.kind == kind,
+        )
         .order_by(PrequizJob.created_at.desc())
     ).first()
     return {"job": _job_row(job), "runner": _runner_row(db.get(RunnerBeat, RUNNER_NAME))}

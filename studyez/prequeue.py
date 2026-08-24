@@ -100,6 +100,8 @@ class Target:
     this_lecture: str = ""
     professors: tuple[str, ...] = ()
     state: str = READY
+    # 사람이 「다시 만들기」를 눌렀는가. 이어 돌리지 않고 통째로 다시 만든다.
+    force: bool = False
     occupancy: str = ""                                # 이 자리를 무엇이 쓰고 있나
     reason: str = ""                                   # BLOCKED일 때 왜인지
     turns: int = 0                                     # 받아 온 대화의 크기
@@ -265,8 +267,13 @@ def occupancy(run_dir: Path, pdf: str) -> str:
     return SAME if made.version == wanted.version else NEWER
 
 
-def prepare(targets: list[Target], runs_dir: Path) -> list[Target]:
+def prepare(targets: list[Target], runs_dir: Path, *, force: bool = False) -> list[Target]:
     """예습 대화를 앉히고 각 편의 `state`를 정한다. **덱은 여기서 안 만든다.**
+
+    `force`는 사람이 「다시 만들기」를 누른 것이다. 이미 만든 편도 `STALE`로 세워
+    다시 만든다 — 안 그러면 `DONE`으로 건너뛰고, 누른 사람은 아무 일도 안 일어난
+    것을 본다. 한 편에 빈 세션 넷이라 **부르는 쪽이 한 편으로 좁혀** 준다
+    (`__main__`이 `--run-id` 없는 `--force`를 막는다).
 
     한동안 이 자리가 prep도 돌렸다. 지금은 pdf2anki가 prep부터 빌드까지 한 명령으로
     하므로, 남는 것은 그 앞의 결정적인 부분 둘뿐이다 — 자리를 확인하고, 남의
@@ -316,7 +323,14 @@ def prepare(targets: list[Target], runs_dir: Path) -> list[Target]:
             target.notes.append("preview.md 새로 받음"
                                 + (" — 링크가 바뀌었다" if standing else ""))
 
-        if built and target.occupancy == NEWER:
+        if force:
+            # 사람이 눌렀다. 이미 있는 것을 버리고 처음부터 만든다 — 중간 산출물을
+            # 이어받으면 「다시 만들었는데 그대로다」가 된다.
+            target.force = True
+            target.state = STALE if built else READY
+            target.notes.append("다시 만들라고 눌렀다 — 중간 산출물을 버리고 처음부터 만든다"
+                                if built else "다시 만들라고 눌렀다 — 아직 만든 것은 없다")
+        elif built and target.occupancy == NEWER:
             target.state = STALE
             target.notes.append("작년 필기가 새 판으로 갈렸다 — 다시 만든다")
         elif built:
@@ -364,8 +378,8 @@ def build_one(target: Target, runs_dir: Path, repo_root: Path, *, model: str = "
     파일제목이 되어 복습 덱과 다른 노드에 서고, 학생은 올해 시간표를 보고 예습을
     하므로 그 이름으로는 어느 강의의 것인지 안 보인다.
 
-    새 판으로 갈린 자리는 `--force`로 통째로 다시 만든다. 이어 돌리면 pdf2anki가
-    낡은 판의 prep을 그대로 이어받는다.
+    새 판으로 갈린 자리와 **사람이 다시 만들라고 누른 자리**는 `--force`로 통째로
+    다시 만든다. 이어 돌리면 pdf2anki가 이미 만든 단계를 건너뛴다.
     """
     run_dir = runs_dir / target.prev_run_id
     note = run_dir / preview_mod.PREVIEW_NAME
@@ -376,7 +390,7 @@ def build_one(target: Target, runs_dir: Path, repo_root: Path, *, model: str = "
         pdf=target.prev_pdf, run_id=target.prev_run_id, subject=target.link.subject,
         lecture=target.this_lecture or target.this_title or target.link.title, note=str(note),
         runs_dir=runs_dir, repo_root=repo_root, model=model, timeout=timeout,
-        extra=(extra or []) + (["--force"] if target.occupancy == NEWER else []))
+        extra=(extra or []) + (["--force"] if target.occupancy == NEWER or target.force else []))
     if not result.ok:
         return False, f"{result.error} (로그: {result.log})"
 

@@ -382,9 +382,14 @@ JOB_DONE = "done"
 JOB_FAILED = "failed"
 JOB_OPEN = frozenset({JOB_QUEUED, JOB_RUNNING})
 
+# 무엇을 만드는 일감인가. 예습(작년 필기 + 예습 대화)과 복습(올해 필기).
+JOB_PRE = "pre"
+JOB_MAIN = "main"
+JOB_KINDS = frozenset({JOB_PRE, JOB_MAIN})
+
 
 class PrequizJob(Base):
-    """관리자가 「Pre-Quiz 만들기」를 누른 것. **여기도 방향이 반대다.**
+    """관리자가 「덱 만들기」를 누른 것. **여기도 방향이 반대다.**
 
     `preview`와 같은 이유다 — 누르는 것은 사람이고 사람은 `/admin` 화면에 있다.
     그런데 만드는 것은 노트북이다(`claude -p` 빈 세션 넷과 SynologyDrive의 PDF가
@@ -396,18 +401,31 @@ class PrequizJob(Base):
 
     `stage`는 사람이 읽는 한 줄이다. 러너가 하위 프로세스의 `── ` 줄을 그대로
     올려 준다 — 15분이 걸리는 일이라 "도는 중"만으로는 멈춘 것과 구별이 안 된다.
+
+    **표 이름은 예습밖에 없던 때의 것이다.** 2026-08-24에 복습 덱도 같은 우편함을
+    쓰게 되면서 `kind`가 붙었다. 이름을 안 바꾼 이유는 마이그레이션 도구가 없어서다
+    (`app.cli` 첫머리) — 표를 갈아 끼우는 값이 이름 하나보다 크다.
     """
 
     __tablename__ = "prequiz_job"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     subject: Mapped[str] = mapped_column(Text, nullable=False)
-    # **올해** run_id다. 만드는 것은 작년 필기로 하지만 누르는 자리는 올해 강의다.
+    # **올해** run_id다. 예습은 작년 필기로 만들지만 누르는 자리는 올해 강의다.
     run_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    # `pre` | `main`. 나중에 붙은 칼럼이라 서버 기본값을 같이 준다 — 이미 서 있는
+    # DB에 `app.cli`가 이 값으로 채워 넣는다.
+    kind: Mapped[str] = mapped_column(
+        String(8), nullable=False, default=JOB_PRE, server_default=JOB_PRE
+    )
     state: Mapped[str] = mapped_column(String(16), nullable=False, default=JOB_QUEUED)
     stage: Mapped[str] = mapped_column(Text, nullable=False, default="")
     message: Mapped[str] = mapped_column(Text, nullable=False, default="")
     requested_by: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # 사람이 「다시 만들기」를 누른 것인가. **러너가 이걸 봐야 한다** — 안 넘기면
+    # `studyez.prequeue`가 이미 만든 편을 `done`으로 보고 건너뛰고, 그러면 화면에는
+    # 「덱을 못 만들었다」가 적힌다. 만든 것이 있는데 안 만든 것처럼 보이는 자리다.
+    force: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

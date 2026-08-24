@@ -420,6 +420,38 @@ def main() -> None:
     after = client.post(f"{base14}/prequiz-job", headers=USER)
     check("끝난 뒤에는 다시 누를 수 있다",
           after.json()["created"] is True and after.json()["job"]["id"] != job_id, after.text)
+    again_id = after.json()["job"]["id"]
+    check("그냥 누른 것은 다시 만드는 일감이 아니다", after.json()["job"]["force"] is False, after.json())
+
+    # 「다시 만들기」. **러너가 이 값을 봐야 한다** — 노트북에 산출물이 남아 있으면
+    # `prequeue`가 그 편을 이미 만든 것으로 보고 건너뛴다. 사람이 누른 것을
+    # 러너가 알 길은 이 값뿐이다.
+    forced = client.post(f"{base14}/prequiz-job", headers=USER, json={"force": True})
+    check("줄 서 있는 일감에 「다시 만들기」가 덧붙는다",
+          forced.json()["created"] is False
+          and forced.json()["job"]["id"] == again_id
+          and forced.json()["job"]["force"] is True, forced.text)
+
+    taken = client.post("/api/admin/prequiz-jobs/claim", headers=RUNNER)
+    check("러너가 그 값을 받아 간다", taken.json()["job"]["force"] is True, taken.text)
+
+    # 이미 집어 간 뒤에는 늦었다. 러너는 그 편을 이어 만들고 있고 여기서 값만
+    # 바꿔도 그 프로세스는 안 본다. 돌려받은 일감의 force 로 화면이 그것을 안다.
+    client.put(f"/api/admin/prequiz-jobs/{again_id}", headers=RUNNER, json={"state": "done"})
+    plain = client.post(f"{base14}/prequiz-job", headers=USER)
+    plain_id = plain.json()["job"]["id"]
+    client.post("/api/admin/prequiz-jobs/claim", headers=RUNNER)
+    late_force = client.post(f"{base14}/prequiz-job", headers=USER, json={"force": True})
+    check("집어 간 뒤에 누른 「다시 만들기」는 안 걸린다 — 화면이 그것을 본다",
+          late_force.json()["job"]["id"] == plain_id
+          and late_force.json()["job"]["force"] is False, late_force.text)
+    client.put(f"/api/admin/prequiz-jobs/{plain_id}", headers=RUNNER, json={"state": "done"})
+
+    fresh = client.post(f"{base14}/prequiz-job", headers=USER, json={"force": True})
+    check("끝난 뒤에 누르면 다시 만드는 일감이 새로 선다",
+          fresh.json()["created"] is True and fresh.json()["job"]["force"] is True, fresh.text)
+    client.put(f"/api/admin/prequiz-jobs/{fresh.json()['job']['id']}", headers=RUNNER,
+               json={"state": "done"})
 
     # 링크가 없는 강의는 거절한다. Pre-Quiz 는 그 대화를 들고 들어가는지 묻는 것이다.
     client.post("/api/admin/lectures", headers=RUNNER, json=[{
@@ -431,6 +463,40 @@ def main() -> None:
     check("예습 링크가 없으면 거절한다", nolink.status_code == 400, nolink.text)
     check("없는 강의는 404", client.post(
         "/api/admin/lectures/병리학/999999_09/prequiz-job", headers=USER).status_code == 404)
+
+    print()
+    print("[14-1] 복습 일감 — 같은 우편함, 다른 갈래")
+    # 재료가 다르므로 갈래가 있다. 예습은 예습 대화로, 복습은 올해 필기로 만든다.
+    # 260813_03에는 [3]에서 올해 필기를 올려 두었다.
+    pre_open = client.get(f"{base14}/prequiz-job", headers=USER).json()["job"]
+    main = client.post(f"{base14}/prequiz-job?kind=main", headers=USER)
+    check("복습도 누르면 만들어진다",
+          main.status_code == 200 and main.json()["created"] is True, main.text)
+    check("갈래가 실려 온다", main.json()["job"]["kind"] == "main", main.json())
+    # 예습 일감이 열려 있어도 복습은 따로 선다. 한 갈래가 다른 갈래를 막지 않는다.
+    check("예습 일감이 열려 있어도 새로 선다",
+          main.json()["job"]["id"] != pre_open["id"], (main.json(), pre_open))
+
+    check("두 번 눌러도 두 번 만들지 않는다 — 갈래 안에서",
+          client.post(f"{base14}/prequiz-job?kind=main", headers=USER).json()["created"] is False)
+
+    # 캘린더 패널이 갈래로 묻는다. 섞어 주면 복습을 만드는 중이라는 말이 예습
+    # 자리에 떠서, 사람이 누르지 않은 것을 기다리게 된다.
+    read_main = client.get(f"{base14}/prequiz-job?kind=main", headers=USER).json()["job"]
+    read_pre = client.get(f"{base14}/prequiz-job?kind=pre", headers=USER).json()["job"]
+    check("갈래를 섞어 주지 않는다",
+          read_main["id"] == main.json()["job"]["id"] and read_pre["id"] == pre_open["id"],
+          (read_main, read_pre))
+    check("갈래를 안 주면 예습이다", client.get(
+        f"{base14}/prequiz-job", headers=USER).json()["job"]["id"] == pre_open["id"])
+
+    # 올해 필기가 없는 강의(260813_01)는 만들 재료가 없다. 여기서 안 가르면
+    # 러너가 15분 뒤에 「만들 자리를 못 찾았다」로 실패한다.
+    nonotes = client.post(
+        "/api/admin/lectures/병리학/260813_01/prequiz-job?kind=main", headers=USER)
+    check("올해 강의록이 없으면 거절한다", nonotes.status_code == 400, nonotes.text)
+    check("모르는 갈래는 거절한다", client.post(
+        f"{base14}/prequiz-job?kind=quiz", headers=USER).status_code == 400)
 
     print()
     if failures:

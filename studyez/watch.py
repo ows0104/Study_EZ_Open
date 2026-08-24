@@ -177,11 +177,22 @@ def build_queue(
     now: float | None = None,
     since: str | None = None,
     until: str | None = None,
+    only_run_id: str = "",
 ) -> Queue:
     """`since`~`until`은 이번 블럭의 구간이다(`studyez.blocks`).
 
     이게 없으면 `필기/<올해>` 폴더가 있는 과목을 전부 훑고 날짜 오름차순으로
     자르기 때문에, 학기가 바뀌어도 지난 학기 필기가 먼저 걸린다.
+
+    `only_run_id`는 **사람이 그 편을 지목한 것이다**(캘린더의 「Main-Quiz 덱
+    만들기」). 그래서 쓸기의 체 셋을 지난다 — 블럭 창, 하루 상한, 그리고 이미
+    만들었다는 표시(`source.json`). 마지막 것을 지나는 이유는 **표시는 있는데
+    덱이 없는 자리가 실제로 있기 때문이다**(빌드가 중간에 죽은 편). 사람이 다시
+    누르는 편이 바로 그 편이다. 덱이 이미 있는지는 부르는 쪽이 본다
+    (`studyez.__main__.run_watch_one`).
+
+    동기화 대기(`min_age_seconds`)는 지나지 않는다. 반쯤 올라온 PDF로 만든 덱은
+    지목해서 만들었든 쓸어서 만들었든 똑같이 잘려 있다.
     """
     now = time.time() if now is None else now
     items: list[WorkItem] = []
@@ -210,14 +221,17 @@ def build_queue(
             run_id = run_ids[item.uid]
             pdf = item.path
 
-            # 블럭 밖은 세기만 한다. 한 줄씩 적으면 지난 학기 수십 편이 보고를 덮는다.
-            if (since and item.date < since) or (until and item.date > until):
-                outside[subject] = outside.get(subject, 0) + 1
-                continue
+            if only_run_id:
+                if run_id != only_run_id:
+                    continue
+            else:
+                # 블럭 밖은 세기만 한다. 한 줄씩 적으면 지난 학기 수십 편이 보고를 덮는다.
+                if (since and item.date < since) or (until and item.date > until):
+                    outside[subject] = outside.get(subject, 0) + 1
+                    continue
 
-            done = _already_built(runs_dir, run_id, item)
-            if done:
-                continue
+                if _already_built(runs_dir, run_id, item):
+                    continue
 
             age = now - pdf.stat().st_mtime
             if age < min_age_seconds:
@@ -244,7 +258,7 @@ def build_queue(
         skipped.append(f"{subject} {count}편 — 이번 블럭({since}~{until}) 밖")
 
     items.sort(key=lambda w: (w.date, w.run_id))
-    if len(items) > max_items:
+    if not only_run_id and len(items) > max_items:
         for extra in items[max_items:]:
             skipped.append(
                 f"{extra.subject}/{extra.run_id} {extra.title[:26]} — "

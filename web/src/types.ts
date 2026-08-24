@@ -181,8 +181,12 @@ export type ChecklistState = "done" | "waived" | "todo";
 /** 러너가 아직 안 집었거나(`queued`), 만드는 중이거나(`running`), 끝났거나. */
 export type PrequizJobState = "queued" | "running" | "done" | "failed";
 
+/** 무엇을 만드는 일감인가. 재료도 명령도 갈린다 — 예습은 예습 대화와 작년 필기로,
+ *  복습은 올해 필기로 만든다. */
+export type DeckKind = "pre" | "main";
+
 /**
- * 「Pre-Quiz 만들기」를 누른 것. 만드는 곳은 노트북이라 여기서는 상태만 본다.
+ * 「덱 만들기」를 누른 것. 만드는 곳은 노트북이라 여기서는 상태만 본다.
  *
  * `stage`는 러너가 하위 프로세스의 `── ` 줄을 그대로 올려 준 것이다. 한 편에
  * 15분이 걸려서, 「도는 중」만으로는 멈춘 것과 구별이 안 된다.
@@ -191,10 +195,13 @@ export type PrequizJob = {
   id: number;
   subject: string;
   runId: string;
+  kind: DeckKind;
   state: PrequizJobState;
   stage: string;
   message: string;
   requestedBy: string;
+  /** 「다시 만들기」로 선 일감인가. 러너가 이미 만든 것을 버리고 처음부터 만든다. */
+  force: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -221,7 +228,9 @@ export type AdminRow = {
   /** 관리자가 채우는 다섯 칸. `done` | `waived` | `todo`. */
   checklist: Record<ChecklistItem, ChecklistState>;
   preItemCount: number;
-  /** 이 편의 가장 최근 일감. 끝난 것도 남는다 — 실패가 조용히 사라지면 안 된다. */
+  /** 이 편의 가장 최근 일감. **갈래를 안 가린다** — 관리 화면은 「러너가 안 붙었는데
+   *  기다리는 일감이 있다」만 세므로, 그 수에는 예습도 복습도 같이 들어간다.
+   *  끝난 것도 남는다 — 실패가 조용히 사라지면 안 된다. */
   prequizJob: PrequizJob | null;
   preview: { shareUrl: string; conversationUrl: string; provider: string } | null;
   runMeta: Record<string, { reviewFlagged: number; slidesUnused: number; itemCount: number; builtAt: string | null }>;
