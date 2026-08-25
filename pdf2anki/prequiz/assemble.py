@@ -21,6 +21,7 @@ from pathlib import Path
 
 from ..pack import (READ_TOKEN_CAP, estimate_pdf_tokens, find_jokbo, needs_clean,
                     read_instructions, write_parts)
+from ..prompting import DEFAULT_DOMAIN, DOMAINS, lecture_adapters, read_modules
 
 PROMPTS = Path(__file__).parent / "prompts"
 
@@ -99,11 +100,10 @@ def jokbo_guidance(stats: dict, title: str, mixed: list | None = None,
 
 
 def assemble(prep_dir: Path, jokbo_file: Path | None, schema_dir: Path,
-             note_file: Path | None = None) -> dict:
+             note_file: Path | None = None, domain: str = DEFAULT_DOMAIN) -> dict:
     prep = json.loads((prep_dir / "prep.json").read_text(encoding="utf-8"))
     prep_md = (prep_dir / "prep.md").read_text(encoding="utf-8")
     contract = (schema_dir / "contract.md").read_text(encoding="utf-8")
-    philosophy = (PROMPTS / "philosophy.md").read_text(encoding="utf-8")
     pdf = (prep_dir / prep["annotated_pdf"]).resolve()
 
     if jokbo_file:
@@ -123,6 +123,9 @@ def assemble(prep_dir: Path, jokbo_file: Path | None, schema_dir: Path,
         jokbo_block = ""
 
     sidecar = "# 슬라이드 사이드카 (작년 필기본)\n\n" + prep_md.split("\n", 1)[1]
+    adapters = lecture_adapters(has_past_exam=bool(jokbo_file), domain=domain)
+    shared_prompt = read_modules(profile="prelecture", adapters=adapters,
+                                 domain=domain)
 
     note_block = ""
     if note_file and note_file.exists():
@@ -157,7 +160,7 @@ def assemble(prep_dir: Path, jokbo_file: Path | None, schema_dir: Path,
             task = task.replace("{" + k + "}", v)
         # **②는 ①의 세션을 이어받는다.** 머리말·철학·계약은 이미 컨텍스트에 있으므로
         # 다시 실으면 그 15k 가 남은 턴마다 따라다닌다. ②에는 할 일만 준다.
-        sections = ([head, philosophy, task, contract] if stage == "must"
+        sections = ([head, *shared_prompt, task, contract] if stage == "must"
                     else [CARRY_OVER, task])
         out[stage] = write_parts(prep_dir, f"prompt.{stage}", sections, manifest=True)
 
@@ -173,6 +176,8 @@ def main(argv=None) -> int:
     ap.add_argument("--jokbo-dir", default="out/jokbo")
     ap.add_argument("--schema-dir", default="out/prequiz_schema")
     ap.add_argument("--note", help="예습 설명본 (굳혀 둔 note.md). 기본은 폴더 안의 note.md")
+    ap.add_argument("--domain", default=DEFAULT_DOMAIN, choices=sorted(DOMAINS),
+                    help=f"퀴즈 도메인 정책 (기본 {DEFAULT_DOMAIN})")
     args = ap.parse_args(argv)
 
     prep_dir = Path(args.prep_dir)
@@ -206,7 +211,7 @@ def main(argv=None) -> int:
               f"반복률 {stats.get('repeat_rate', 0):.0%} → "
               f"reason=repeated {'사용 가능' if stayed else '금지'}")
 
-    res = assemble(prep_dir, jokbo_file, Path(args.schema_dir), note)
+    res = assemble(prep_dir, jokbo_file, Path(args.schema_dir), note, args.domain)
 
     print()
     for stage in ("context", "must", "cards"):

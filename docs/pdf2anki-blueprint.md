@@ -672,7 +672,10 @@ pdf_to_anki/
     disposition.py
     build.py
   prompts/
-    philosophy.md
+    core/                    범용 품질·근거·미디어·문체 원칙
+    profiles/                시험 복습·수업 전 예습 목적
+    adapters/                강의 PDF·주석·과거 평가 조건부 규칙
+    domains/                 명시적으로 선택하는 도메인 관습
     structure.md
     cards.md
     occlusion.md

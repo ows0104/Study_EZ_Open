@@ -140,11 +140,14 @@ PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m pdf2anki.<모듈>
 예습의 목적은 수업 중에 「저 단어·약어가 뭐지? 저 기전이 뭐지? 외워야 될 게 너무 많은데?」
 로 막히지 않게 하고 「오 이거 어제 외웠던 거다」를 만드는 것이다. 흥미를 유발하고
 학습에 장애물이 없게 하는 것이 목표이며, **강의를 따라가는 것은 그 수단이다.**
-전문은 `pdf2anki/prequiz/prompts/philosophy.md` 에 사용자 원문 그대로 박아 두었다.
+이 목적은 공유 범용 원칙과 분리된 `pdf2anki/prompts/profiles/prelecture.md`에 둔다.
 
 ```bash
 python -m pdf2anki.prequiz.run "<작년 필기 PDF>" --note <URL 또는 .md>
 ```
+
+기본 도메인은 한국어 의학 강의용 `medical_ko`다. 다른 분야에서 범용 정책만 쓰려면
+`--domain generic`을 준다.
 
 입력은 **작년** 필기본 + 예습 설명본 + 족보다. 예습 시점에 올해 필기는 없다.
 출력은 `<과목>::<강의>::예습` 덱 하나. 복습의 `::강의록`·`::기출` 과 형제로 선다.
@@ -307,6 +310,8 @@ ChatGPT 공유 링크는 본문이 DOM 에 없다. `<script>` 안 RSC 페이로�
 ```bash
 python -m pdf2anki.run "<필기 PDF>"
 ```
+
+기본 도메인은 `medical_ko`이며, 범용 실행은 `--domain generic`으로 선택한다.
 
 끊겼으면 폴더만 대면 이어진다 (덱 이름·전략은 `run.config.json` 이 기억한다):
 
@@ -698,8 +703,9 @@ annotated/clean PDF 를 `insert_pdf` 로 잇고 B 의 쪽번호·그림 ID 를 A
 
 ## 카드 품질 — 사용자가 지적한 것
 
-사용자가 실제 카드를 짚어 지적한 것들이고, 전부 철학에 조항으로 박아 넣었다.
-([pdf2anki/prompts/philosophy.md](pdf2anki/prompts/philosophy.md))
+사용자가 실제 카드를 짚어 지적한 사례다. 아래 사례 자체는 설계 기록으로만 남기고,
+런타임에는 다른 과목에도 적용되는 원칙만 `pdf2anki/prompts/core/`와 조건부 어댑터에 둔다.
+현재 구성 기준은 [prompt-architecture.md](prompt-architecture.md)를 따른다.
 
 **1. 기출은 형태가 아니라 지식을 옮긴다.**
 "~이 아닌 것은?" 같은 부정형은 **선지가 있어야만** 답이 하나로 정해진다.

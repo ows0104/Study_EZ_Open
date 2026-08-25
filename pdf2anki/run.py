@@ -55,6 +55,7 @@ from . import ledger
 from .assemble import STRATEGIES, STRATEGY_ALIAS, decide_strategy, slice_for
 from .pack import lecture_of
 from .build import DEFECT_REASONS
+from .prompting import DEFAULT_DOMAIN, DOMAINS
 from .session import SessionError, run_agent
 
 PROMPTS = Path(__file__).parent / "prompts"
@@ -120,6 +121,7 @@ def deck_siblings(out: Path, deck: str, lecture_id: str) -> list[str]:
 class Runner:
     def __init__(self, out: Path, args):
         self.out, self.args = out, args
+        self.args.domain = getattr(args, "domain", None) or DEFAULT_DOMAIN
         self.cost = 0.0
         self.t0 = time.time()
         self.sid: str | None = None      # ① 세션. ②·수선이 이어받아 자료를 다시 안 읽는다
@@ -263,7 +265,7 @@ class Runner:
 
     def assemble(self):
         argv = ["pdf2anki.assemble", str(self.out), "--jokbo-dir", self.args.jokbo_dir,
-                "--strategy", self.strategy]
+                "--strategy", self.strategy, "--domain", self.args.domain]
         if self.args.jokbo:
             argv += ["--jokbo", self.args.jokbo]
         self.sh(*argv)
@@ -322,6 +324,7 @@ class Runner:
                       "items.reproduced.json"):
                 (self.out / f).unlink(missing_ok=True)
         argv = ["pdf2anki.reproduce", "check", str(self.out), "--jobs", str(self.args.jobs)]
+        argv += ["--domain", self.args.domain]
         if only:
             argv += ["--only", ",".join(only)]
         if self.args.model:
@@ -450,7 +453,8 @@ class Runner:
             {"deck": self.args.deck, "id": self.args.id, "pdf": str(self.args.pdf or ""),
              "pdf_name": self.args.pdf_name, "subject": self.args.subject,
              "lecture": self.args.lecture, "strategy": self.strategy,
-             "strategy_why": self.strategy_why, "annotation_evidence": self.annotation},
+             "strategy_why": self.strategy_why, "annotation_evidence": self.annotation,
+             "domain": self.args.domain},
             ensure_ascii=False, indent=2), encoding="utf-8")
 
     def report(self, check: Path | None):
@@ -458,6 +462,7 @@ class Runner:
         rep.update({"deck": self.args.deck, "id": self.args.id,
                     "pdf": self.args.pdf_name, "strategy": self.strategy,
                     "strategy_why": self.strategy_why,
+                    "domain": self.args.domain,
                     "annotation_evidence": self.annotation,
                     "wall_seconds": round(time.time() - self.t0, 1),
                     "image_check": str(check) if check else None})
@@ -506,6 +511,8 @@ def main(argv=None) -> int:
     ap.add_argument("--strategy", default="auto", choices=sorted(STRATEGY_ALIAS),
                     help="필기/족보/기본 중 무엇을 축으로 삼을지. "
                          "auto(기본)면 교수 교체·반복률에서 판정한다")
+    ap.add_argument("--domain", choices=sorted(DOMAINS),
+                    help=f"퀴즈 도메인 정책 (기본 {DEFAULT_DOMAIN}; 범용은 generic)")
     ap.add_argument("--model", help="빈 세션에 쓸 모델. 생략하면 CLI 기본값")
     ap.add_argument("--timeout", type=int, default=3600, help="세션 하나의 제한 시간(초)")
     ap.add_argument("--jobs", type=int, default=4,
@@ -533,6 +540,7 @@ def main(argv=None) -> int:
         if cfg.exists():
             saved = json.loads(cfg.read_text(encoding="utf-8"))
         args.pdf = args.pdf or saved.get("pdf") or None
+        args.domain = args.domain or saved.get("domain") or None
 
     if not args.resume and not args.pdf:
         print("필기 PDF 경로가 필요하다 (또는 --resume <폴더>).", flush=True)
@@ -548,12 +556,14 @@ def main(argv=None) -> int:
     args.lecture = args.lecture or saved.get("lecture") or lecture_of(Path(args.pdf_name))
     args.deck = args.deck or saved.get("deck") or deck_of(args.lecture, args.subject)
     args.id = args.id or saved.get("id") or lecture_id_of(Path(args.pdf_name))
+    args.domain = args.domain or DEFAULT_DOMAIN
 
     out = Path(args.resume or args.out or f"out/{args.id}")
     out.mkdir(parents=True, exist_ok=True)
 
     print(f"덱   : {args.deck}")
     print(f"ID   : {args.id}")
+    print(f"도메인: {args.domain}")
     print(f"폴더 : {out.as_posix()}")
 
     kin = deck_siblings(out, args.deck, args.id)

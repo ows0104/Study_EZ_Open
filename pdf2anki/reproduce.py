@@ -4,7 +4,8 @@
 실제로 다시 풀어 봐야 한다. 두 단계로 나눈다.
 
   1. blind answer   앞면 텍스트만 주고 푼다. 답·해설·슬라이드 번호·원본을 주지 않는다.
-  2. semantic grade 원래 답과 재현 답이 의미상 같은지만 채점한다. 의학적 정오는 보지 않는다.
+  2. semantic grade 원래 답과 재현 답이 의미상 같은지 채점한다. 다만 의학 도메인의
+        복원 과거시험은 명백한 원답 오류를 사람 검토 경고로 표시할 수 있다.
 
 **두 단계는 반드시 서로 다른 세션에서 돌린다.** 카드를 만든 세션이 그대로 풀면
 이미 답을 아는 상태라 검사가 성립하지 않는다.
@@ -44,6 +45,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from . import ledger
+from .prompting import DEFAULT_DOMAIN, DOMAINS
 from .schema import IMAGE_FORMATS
 from .session import SessionError, run_blind, verify_blind
 from .textutil import char_ngrams, containment, norm_key
@@ -55,6 +57,25 @@ WRITE_TO_STDOUT = "아래 형태의 JSON 만 출력한다. 파일에 쓰려 하�
 RE_CLOZE = re.compile(r"\{\{c\d+::(.*?)(?:::(.*?))?\}\}")
 # 답이 앞면에 있는 것이 정상이라 누출 검사에서 빼는 형식
 LEAK_EXEMPT = {"cloze", "ox"}
+
+
+def resolved_domain(d: Path, explicit: str | None = None) -> str:
+    """Resolve a reproduction domain from CLI, saved run config, or default."""
+    if explicit:
+        if explicit not in DOMAINS:
+            raise ValueError(f"unknown prompt domain: {explicit}")
+        return explicit
+    for name in ("run.config.json", "prequiz.config.json"):
+        path = d / name
+        if not path.is_file():
+            continue
+        try:
+            domain = json.loads(path.read_text(encoding="utf-8")).get("domain")
+        except (OSError, ValueError):
+            continue
+        if domain in DOMAINS:
+            return domain
+    return DEFAULT_DOMAIN
 
 
 def front_of(card: dict) -> str:
@@ -164,10 +185,15 @@ def task_text(name: str, out_path: Path | None) -> str:
     return task.replace("{out}", "").rstrip() + "\n"
 
 
-def build_blind(d: Path, cards: list[dict], out_path: Path | None) -> str:
+def build_blind(d: Path, cards: list[dict], out_path: Path | None,
+                domain: str | None = None) -> str:
     lines = [f"| {c['id']} | {front_of(c)} |" for c in cards]
     table = "\n".join(["| id | 앞면 |", "|---|---|"] + lines)
     task = task_text("reproduce_answer.md", out_path)
+    domain = resolved_domain(d, domain)
+    knowledge = ("일반적인 의학 지식" if domain == "medical_ko"
+                 else "일반적인 해당 분야 지식")
+    task = task.replace("{domain_knowledge}", knowledge)
     return f"{task}\n\n---\n\n# 카드 {len(cards)}장\n\n{table}\n"
 
 
@@ -179,10 +205,10 @@ def load_cards(d: Path) -> list[dict]:
     return cards
 
 
-def cmd_prepare(d: Path, **_) -> int:
+def cmd_prepare(d: Path, *, domain=None, **_) -> int:
     cards = load_cards(d)
     ok, skipped = testable(cards)
-    text = build_blind(d, ok, d / "reproduce.answers.json")
+    text = build_blind(d, ok, d / "reproduce.answers.json", domain)
 
     hard, soft = check_no_leak(text, ok)
     out = d / "reproduce.blind.md"
@@ -221,11 +247,10 @@ def grade_rows(d: Path) -> list[tuple[str, str]]:
         answerable = a.get("answerable", True)
         rep = a.get("answer", "").strip() if answerable else ""
         note = "" if answerable else f" (풀 수 없음: {a.get('why_not', '')})"
-        # 출처를 실어 보낸다 — 기출은 복원본이라 채점자가 의학적 정오까지 본다.
-        # 해설도 같이 준다. 채점자에게는 강의록도 족보 원문도 없어서, 이것이 없으면
-        # 「의학적으로 틀려 보인다」가 사실상 「교과서와 다르다」를 뜻하게 된다.
-        # 해설이 대개 근거를 들고 있다 — 어느 해 정답 선지였는지, 교수가 무엇을
-        # 인정했는지. 채점은 원래 답을 보고 하는 단계라 답이 새지도 않는다.
+        # 출처를 실어 보낸다. 기본 채점은 의미 비교만 하지만, 도메인과 출처가 허용하면
+        # 복원 정답을 사람 검토 경고로 표시할 수 있다. 해설은 어느 해 정답인지, 교수가
+        # 무엇을 인정했는지 같은 근거를 제공해 단순한 교과서 차이를 오판하지 않게 한다.
+        # 채점은 원래 답을 보고 하는 단계라 답이 새지도 않는다.
         expl = (c.get("explanation") or "").strip()
         rows.append((a["id"],
                      f"### {a['id']}\n- 출처: {c['source_type']}\n"
@@ -235,20 +260,25 @@ def grade_rows(d: Path) -> list[tuple[str, str]]:
     return rows
 
 
-def build_grade(rows: list[tuple[str, str]], out_path: Path | None) -> str:
+def build_grade(rows: list[tuple[str, str]], out_path: Path | None,
+                domain: str = DEFAULT_DOMAIN) -> str:
     task = task_text("reproduce_grade.md", out_path)
+    if domain == "medical_ko" and any("- 출처: jokbo\n" in row for _, row in rows):
+        task += "\n\n" + (PROMPTS / "adapters" / "medical_past_exam_grade.md").read_text(
+            encoding="utf-8").strip()
     body = "\n\n".join(r for _, r in rows)
     return f"{task}\n\n---\n\n# 채점 대상 {len(rows)}장\n\n{body}\n"
 
 
-def cmd_grade(d: Path, **_) -> int:
+def cmd_grade(d: Path, *, domain=None, **_) -> int:
     try:
         rows = grade_rows(d)
     except FileNotFoundError as e:
         print(f"{e} 가 없다. solve 를 돌리거나 reproduce.blind.md 를 새 세션에서 먼저 풀어라.")
         return 1
     out = d / "reproduce.grade.md"
-    out.write_text(build_grade(rows, d / "reproduce.grades.json"), encoding="utf-8")
+    out.write_text(build_grade(rows, d / "reproduce.grades.json",
+                               resolved_domain(d, domain)), encoding="utf-8")
     print(f"채점 대상 {len(rows)}장 → {out}")
     print("   이것도 새 세션에서 돌리는 편이 낫다 (푼 세션은 자기 답을 옹호하기 쉽다).")
     return 0
@@ -339,7 +369,8 @@ def merge_by_id(path: Path, key: str, rows: list[dict]) -> list[dict]:
 
 
 def cmd_solve(d: Path, *, model=None, chunk=25, timeout=1800, retries=1, force=False,
-              skip_canary=False, canary_done=False, only=None, jobs=4, **_) -> int:
+              skip_canary=False, canary_done=False, only=None, jobs=4,
+              domain=None, **_) -> int:
     out = d / "reproduce.answers.json"
     if out.exists() and not force and not only:
         print(f"{out} 가 이미 있다. 다시 풀려면 --force 를 줘라.")
@@ -353,7 +384,8 @@ def cmd_solve(d: Path, *, model=None, chunk=25, timeout=1800, retries=1, force=F
             return 1
 
     # 자동이라고 누출 검사를 건너뛰지 않는다. 새는 프롬프트로는 뭘 재도 의미가 없다.
-    hard, soft = check_no_leak(build_blind(d, ok, None), ok)
+    domain = resolved_domain(d, domain)
+    hard, soft = check_no_leak(build_blind(d, ok, None, domain), ok)
     if hard:
         print("누출 검사 실패 — 자기 앞면에 정답이 있다:")
         for p in hard:
@@ -366,7 +398,7 @@ def cmd_solve(d: Path, *, model=None, chunk=25, timeout=1800, retries=1, force=F
     batches = chunks(ok, chunk)
     print(f"검사 대상 {len(ok)}장 · 그림 카드라 제외 {len(skipped)}장 · 세션 {len(batches)}개")
     print("누출 검사 통과. 각 세션은 이력·프로젝트 파일·도구 없이 앞면 텍스트만 본다.")
-    answers = run_chunks(batches, lambda b: build_blind(d, b, None), "answers",
+    answers = run_chunks(batches, lambda b: build_blind(d, b, None, domain), "answers",
                          lambda c: c["id"], model=model, timeout=timeout,
                          retries=retries, label="풀이", jobs=jobs, out=d)
 
@@ -388,7 +420,7 @@ def cmd_solve(d: Path, *, model=None, chunk=25, timeout=1800, retries=1, force=F
 
 def cmd_judge(d: Path, *, model=None, judge_model="sonnet", chunk=25, timeout=1800,
               retries=1, force=False, skip_canary=False, canary_done=False,
-              only=None, jobs=4, **_) -> int:
+              only=None, jobs=4, domain=None, **_) -> int:
     out = d / "reproduce.grades.json"
     if out.exists() and not force and not only:
         print(f"{out} 가 이미 있다. 다시 채점하려면 --force 를 줘라.")
@@ -403,9 +435,9 @@ def cmd_judge(d: Path, *, model=None, judge_model="sonnet", chunk=25, timeout=18
         if not rows:
             print(f"--only 에 해당하는 채점 대상이 없다: {sorted(only)}")
             return 1
-    # 채점은 "두 답이 같은 것을 가리키나"만 본다. 의학 판단이 아니라 의미 비교라
-    # 작은 모델로 충분하다. **푸는 쪽은 그렇지 않다** — 거기서 모델을 낮추면
-    # 검사가 엄해지는 게 아니라 부정확해진다.
+    domain = resolved_domain(d, domain)
+    # 기본 과제는 의미 비교다. 의학+족보 항목의 answer_suspect도 자동 판정이 아니라
+    # 명백한 경우에만 남기는 검토 경고이므로 별도 수정 권한을 주지 않는다.
     model = model or judge_model
 
     if not canary(d, model, skip_canary or canary_done, quiet=canary_done):
@@ -413,7 +445,7 @@ def cmd_judge(d: Path, *, model=None, judge_model="sonnet", chunk=25, timeout=18
 
     batches = chunks(rows, chunk)
     print(f"채점 대상 {len(rows)}장 · 세션 {len(batches)}개")
-    grades = run_chunks(batches, lambda b: build_grade(b, None), "grades",
+    grades = run_chunks(batches, lambda b: build_grade(b, None, domain), "grades",
                         lambda r: r[0], model=model, timeout=timeout,
                         retries=retries, label="채점", jobs=jobs, out=d)
     if not grades:
@@ -528,6 +560,8 @@ def main(argv=None) -> int:
                                    "결과는 기존 파일에 덮어써 합쳐진다")
     ap.add_argument("--skip-canary", action="store_true",
                     help="빈 세션이 정말 파일을 못 읽는지 미리 재 보는 검사를 건너뛴다")
+    ap.add_argument("--domain", choices=sorted(DOMAINS),
+                    help=f"퀴즈 도메인 정책 (기본: 실행 설정 또는 {DEFAULT_DOMAIN})")
     args = ap.parse_args(argv)
     d = Path(args.prep_dir)
     if not d.is_dir():
@@ -536,9 +570,10 @@ def main(argv=None) -> int:
     fn = {"check": cmd_check, "solve": cmd_solve, "judge": cmd_judge, "apply": cmd_apply,
           "prepare": cmd_prepare, "grade": cmd_grade}[args.step]
     only = {x.strip() for x in args.only.split(",") if x.strip()} if args.only else None
+    domain = resolved_domain(d, args.domain)
     return fn(d, model=args.model, judge_model=args.judge_model, chunk=args.chunk,
               timeout=args.timeout, retries=args.retries, force=args.force,
-              skip_canary=args.skip_canary, only=only, jobs=args.jobs)
+              skip_canary=args.skip_canary, only=only, jobs=args.jobs, domain=domain)
 
 
 if __name__ == "__main__":

@@ -20,6 +20,7 @@ from pathlib import Path
 
 from .pack import (READ_TOKEN_CAP, estimate_pdf_tokens, find_jokbo,
                    needs_clean, read_instructions, write_parts)
+from .prompting import DEFAULT_DOMAIN, DOMAINS, lecture_adapters, read_modules
 
 PROMPTS = Path(__file__).parent / "prompts"
 # ── 전략 ──────────────────────────────────────────────────────────
@@ -234,11 +235,10 @@ def jokbo_guidance(stats: dict, title: str, mixed: list | None = None,
 
 
 def assemble(prep_dir: Path, jokbo_file: Path | None, schema_dir: Path,
-             strategy: str | None = None) -> dict:
+             strategy: str | None = None, domain: str = DEFAULT_DOMAIN) -> dict:
     prep = json.loads((prep_dir / "prep.json").read_text(encoding="utf-8"))
     prep_md = (prep_dir / "prep.md").read_text(encoding="utf-8")
     contract = (schema_dir / "contract.md").read_text(encoding="utf-8")
-    philosophy = (PROMPTS / "philosophy.md").read_text(encoding="utf-8")
     pdf = (prep_dir / prep["annotated_pdf"]).resolve()
 
     if jokbo_file:
@@ -256,6 +256,10 @@ def assemble(prep_dir: Path, jokbo_file: Path | None, schema_dir: Path,
         jokbo_block = ""
 
     sidecar = "# 슬라이드 사이드카\n\n" + prep_md.split("\n", 1)[1]
+    adapters = lecture_adapters(has_past_exam=bool(jokbo_file), domain=domain,
+                                allow_medical_exam_repair=True)
+    shared_prompt = read_modules(profile="exam_review", adapters=adapters,
+                                 domain=domain)
 
     # 단계와 무관한 자료(사이드카·기출)는 따로 낸다. 두 단계가 같은 파일을 다시 읽지 않게 한다.
     ctx_sections = [sidecar] + ([jokbo_block] if jokbo_block else [])
@@ -279,7 +283,7 @@ def assemble(prep_dir: Path, jokbo_file: Path | None, schema_dir: Path,
         task = (PROMPTS / task_file).read_text(encoding="utf-8")
         for k, v in subs.items():
             task = task.replace("{" + k + "}", v)
-        sections = [head, philosophy, task]
+        sections = [head, *shared_prompt, task]
         if stage == "cards":
             sections.append(contract)
 
@@ -298,6 +302,8 @@ def main(argv=None) -> int:
     ap.add_argument("--schema-dir", default="out/schema")
     ap.add_argument("--strategy", default="auto", choices=sorted(STRATEGY_ALIAS),
                     help="족보/필기/기본 중 무엇을 축으로 삼을지. auto 면 통계에서 판정한다")
+    ap.add_argument("--domain", default=DEFAULT_DOMAIN, choices=sorted(DOMAINS),
+                    help=f"퀴즈 도메인 정책 (기본 {DEFAULT_DOMAIN})")
     args = ap.parse_args(argv)
 
     prep_dir = Path(args.prep_dir)
@@ -328,7 +334,7 @@ def main(argv=None) -> int:
     else:
         why = "사람이 --strategy 로 지정했다"
 
-    res = assemble(prep_dir, jokbo_file, Path(args.schema_dir), strategy)
+    res = assemble(prep_dir, jokbo_file, Path(args.schema_dir), strategy, args.domain)
 
     print(f"\n전략: {STRATEGIES[strategy]}  — {why}")
     if res["_jokbo"]:

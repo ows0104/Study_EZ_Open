@@ -36,6 +36,7 @@ from pathlib import Path
 from .. import ledger
 from ..build import DEFECT_REASONS
 from ..pack import find_jokbo, lecture_of
+from ..prompting import DEFAULT_DOMAIN, DOMAINS
 from ..run import Failed, lecture_id_of
 from ..session import SessionError, run_agent
 from .assemble import professor_line
@@ -201,6 +202,7 @@ def render_must(must: dict) -> str:
 class Runner:
     def __init__(self, out: Path, args):
         self.out, self.args = out, args
+        self.args.domain = getattr(args, "domain", None) or DEFAULT_DOMAIN
         self.cost, self.t0 = 0.0, time.time()
         self.sid: str | None = None
         self.run = ledger.run_id()
@@ -308,7 +310,8 @@ class Runner:
 
     def assemble(self):
         argv = ["pdf2anki.prequiz.assemble", str(self.out),
-                "--jokbo-dir", self.args.jokbo_dir, "--schema-dir", self.args.schema_dir]
+                "--jokbo-dir", self.args.jokbo_dir, "--schema-dir", self.args.schema_dir,
+                "--domain", self.args.domain]
         if self.args.jokbo:
             argv += ["--jokbo", self.args.jokbo]
         self.sh(*argv)
@@ -352,6 +355,7 @@ class Runner:
                       "items.reproduced.json"):
                 (self.out / f).unlink(missing_ok=True)
         argv = ["pdf2anki.reproduce", "check", str(self.out), "--jobs", str(self.args.jobs)]
+        argv += ["--domain", self.args.domain]
         if only:
             argv += ["--only", ",".join(only)]
         if self.args.model:
@@ -437,6 +441,7 @@ class Runner:
         rep = ledger.summarize(self.out, self.run)
         rep.update({"deck": self.args.deck, "id": self.args.id,
                     "pdf": self.args.pdf_name, "note": self.args.note or "",
+                    "domain": self.args.domain,
                     "professor_stayed": self.stayed, "professors": self.prof,
                     "contract_violations": self.violations(),
                     "defects_left": len(self.defects()),
@@ -456,6 +461,7 @@ class Runner:
             {"deck": self.args.deck, "id": self.args.id, "pdf": str(self.args.pdf or ""),
              "pdf_name": self.args.pdf_name, "note": self.args.note or "",
              "subject": self.args.subject, "lecture": self.args.lecture,
+             "domain": self.args.domain,
              "professor_stayed": self.stayed, "professors": self.prof},
             ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -498,6 +504,8 @@ def main(argv=None) -> int:
     ap.add_argument("--jokbo", help="족보 조각 json. 생략하면 제목으로 자동 대조")
     ap.add_argument("--apkg-name", help="덱 파일 이름 (확장자 없이). 기본은 <강의 ID>_pre")
     ap.add_argument("--schema-dir", default="out/prequiz_schema")
+    ap.add_argument("--domain", choices=sorted(DOMAINS),
+                    help=f"퀴즈 도메인 정책 (기본 {DEFAULT_DOMAIN}; 범용은 generic)")
     ap.add_argument("--model", help="빈 세션에 쓸 모델")
     ap.add_argument("--timeout", type=int, default=3600)
     ap.add_argument("--jobs", type=int, default=4)
@@ -522,6 +530,7 @@ def main(argv=None) -> int:
             saved = json.loads(cfg.read_text(encoding="utf-8"))
         args.pdf = args.pdf or saved.get("pdf") or None
         args.note = args.note or saved.get("note") or None
+        args.domain = args.domain or saved.get("domain") or None
 
     if not args.resume and not args.pdf:
         print("작년 필기 PDF 경로가 필요하다 (또는 --resume <폴더>).")
@@ -537,12 +546,14 @@ def main(argv=None) -> int:
     args.lecture = args.lecture or saved.get("lecture") or lecture_of(Path(args.pdf_name))
     args.deck = args.deck or saved.get("deck") or deck_of(args.lecture, args.subject)
     args.id = args.id or saved.get("id") or lecture_id_of(Path(args.pdf_name))
+    args.domain = args.domain or DEFAULT_DOMAIN
 
     out = Path(args.resume or args.out or f"out/pre_{args.id}")
     out.mkdir(parents=True, exist_ok=True)
 
     print(f"덱   : {args.deck}")
     print(f"ID   : {args.id}   (guid 씨앗 {args.id}::pre — 복습 덱과 겹치지 않는다)")
+    print(f"도메인: {args.domain}")
     print(f"폴더 : {out.as_posix()}")
     if not named:
         print(f"\n작년 파일제목을 덱 노드로 썼다: 「{args.lecture}」")
