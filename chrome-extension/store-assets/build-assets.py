@@ -7,6 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 HERE = Path(__file__).resolve().parent
 EXTENSION = HERE.parent
+WEB_PUBLIC = EXTENSION.parent / "web" / "public"
 SOURCE = HERE / "icon-source.png"
 
 
@@ -45,6 +46,19 @@ def build_icons(icon: Image.Image) -> None:
     target.mkdir(parents=True, exist_ok=True)
     for size in (16, 32, 48, 128):
         icon.resize((size, size), Image.Resampling.LANCZOS).save(target / f"icon-{size}.png", optimize=True)
+
+
+def build_web_icons(icon: Image.Image) -> None:
+    """같은 원본으로 웹 탭·바로가기·설치 아이콘을 만든다."""
+    WEB_PUBLIC.mkdir(parents=True, exist_ok=True)
+    targets = {
+        "favicon-32.png": 32,
+        "apple-touch-icon.png": 180,
+        "icon-192.png": 192,
+        "icon-512.png": 512,
+    }
+    for filename, size in targets.items():
+        icon.resize((size, size), Image.Resampling.LANCZOS).save(WEB_PUBLIC / filename, optimize=True)
 
 
 def font(size: int, *, bold: bool = False) -> ImageFont.FreeTypeFont:
@@ -97,6 +111,7 @@ def update_existing_screenshot_brand() -> None:
 if __name__ == "__main__":
     selected = build_icon()
     build_icons(selected)
+    build_web_icons(selected)
     build_promo(selected)
     build_store_screenshot()
     update_existing_screenshot_brand()
