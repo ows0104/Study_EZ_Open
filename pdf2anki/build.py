@@ -37,7 +37,7 @@ from pathlib import Path
 import fitz
 import genanki
 
-from .textutil import norm_key
+from .textutil import answer_runs, norm_key
 
 # 재현 검사에서 '카드 결함' 으로 갈린 이유 — 이것만 덱을 막는다.
 # lecture_specific · genuinely_wrong 은 결함이 아니다.
@@ -61,6 +61,13 @@ CSS = """
 .a { font-size: 24px; font-weight: 700; color: #0b5cad; margin: 12px auto;
      display: inline-block; text-align: left; max-width: 100%; white-space: pre-line; }
 .nightMode .a { color: #7ab8f5; }
+/* 답이 통째로 파라면 그 안에서 강조가 서지 않는다. 강조할 자리를 찾은 답만 본문 색을
+   내리고(`.body`) 회수 핵심에만 파랑을 남긴다. 자리를 못 찾은 답 — 대개 한 덩어리가
+   그대로 회수 대상인 짧은 답 — 은 `.body` 가 없어 예전처럼 통째로 파랗다. */
+.a .body { color: #1a1a1a; font-weight: 600; }
+.nightMode .a .body { color: #e8e8e8; }
+.a .key { color: #0b5cad; font-weight: 700; }
+.nightMode .a .key { color: #7ab8f5; }
 /* 빈칸 카드는 `a` 필드를 안 쓰고 뒷면이 문장을 통째로 다시 그린다. Anki 가 드러난
    답을 `.cloze` 로 감싸 주는데 규칙이 없어서, 뒷면이 앞면과 똑같아 보였다 —
    무엇을 회수해야 했는지 눈으로 못 찾는다. `.a` 와 같은 색·굵기를 준다.
@@ -205,6 +212,7 @@ FLAG_LABEL = {
     "media_on_text_card": "그림이 붙지 않는 형식인데 media 가 있었다 (제거됨)",
     "exam_hit_on_jokbo": "기출 카드에 exam_hit 이 잘못 붙어 있었다 (제거됨)",
     "jokbo_ref_outside_slice": "족보 조각에 없는 연도의 기출이다 — 원문을 붙이지 못했다",
+    "jokbo_figure_dropped": "원문은 그림을 보고 푸는 문항인데 앞면에 그림이 없다",
     "jokbo_ref_not_found": "인용한 기출 문항을 족보에서 찾지 못했다",
     "corrected_without_note": "기출 복원을 외부 지식으로 고쳤는데 무엇을 고쳤는지 적혀 있지 않다",
 }
@@ -332,12 +340,37 @@ class Media:
             raise RuntimeError(f"{name}: 가림 상자 {len(masks)}개 중 {painted}개만 그려졌다")
         return self._save(pix, name)
 
-    def figure(self, fid: str, crop: list | None = None) -> str:
-        """image_basic 앞면. **clean 에서 뜬다** — 필기가 그림을 가리거나 답을 흘린다."""
+    def answer_masks(self, slide: int, rect: fitz.Rect, answer: str) -> list[list[float]]:
+        """크롭 안에 인쇄된 정답 글자의 자리. 무엇을 가릴지는 **그 카드의 정답**이 정한다.
+
+        강의록이 사진 옆에 진단명을 캡션으로 달아 두는 일이 잦고, 그러면 앞면이 답을
+        인쇄한 채 나간다. 지금까지 이것은 `image_check` PDF 를 사람이 눈으로 보는 것으로만
+        걸렀다. 낱말 자리는 `clean` 에서 뜬다 — 앞면을 그 판으로 뜨기 때문이다.
+        """
+        if not answer:
+            return []
+        words = self.clean[slide - 1].get_text("words", clip=rect)
+        out = []
+        for s, e in answer_runs([w[4] for w in words], answer):
+            box = fitz.Rect(words[s][:4])
+            for w in words[s + 1:e]:
+                box |= fitz.Rect(w[:4])
+            out.append([box.x0, box.y0, box.x1, box.y1])
+        return out
+
+    def figure(self, fid: str, crop: list | None = None, answer: str = "") -> str:
+        """image_basic 앞면. **clean 에서 뜬다** — 필기가 그림을 가리거나 답을 흘린다.
+
+        정답이 그림 안에 인쇄돼 있으면 그 자리를 가린다. 가린 판과 안 가린 판은 파일
+        이름이 달라야 한다 — 같으면 먼저 만든 쪽이 남아 조용히 섞인다.
+        """
         slide, bbox = self.figs[fid]
+        rect = self._crop_rect(bbox, crop)
         tag = "" if not crop else "_c" + "-".join(str(round(v, 2)) for v in crop)
-        return self._render(slide, self._crop_rect(bbox, crop), f"{fid}{tag}",
-                            doc=self.clean)
+        masks = self.answer_masks(slide, rect, answer)
+        if masks:
+            tag += f"_m{len(masks)}"
+        return self._render(slide, rect, f"{fid}{tag}", masks=masks, doc=self.clean)
 
     def _with_annotations(self, slide: int, rect: fitz.Rect) -> fitz.Rect:
         """그림에 걸친 필기·마커를 **온전히** 품도록 넓힌다.
@@ -371,6 +404,26 @@ class Media:
 
 
 RE_BULLET = re.compile(r"^(\s*)[-•*]\s+(.*)$")
+RE_EMPH = re.compile(r"\*\*(.+?)\*\*", re.S)
+
+
+def _emph(text: str) -> tuple[str, bool]:
+    """모델이 `**` 로 씌운 것을 강조로 바꾼다. 표시가 없으면 원문 그대로 돌려준다.
+
+    **무엇이 회수 대상인지는 여기서 추측하지 않는다.** 문장 생김새로 고르려던 것을
+    버렸다 — `핵심어: 설명` 꼴의 콜론 앞은 회수 대상일 때도 있고 질문의 축일 때도 있어서
+    반은 틀린 데를 칠했고, 걸러 낼 낱말 목록은 수식어 하나에 새고 한 언어에서만 돌았다.
+    **틀린 강조는 강조 없음보다 나쁘다** — 눈이 틀린 데로 간다.
+
+    무엇이 회수 대상인지 아는 것은 카드를 쓴 쪽뿐이다. 코드는 그 표시를 보여 주기만 한다.
+    """
+    out, last, hit = [], 0, False
+    for m in RE_EMPH.finditer(text):
+        out.append(html.escape(text[last:m.start()]))
+        out.append(f'<b class="key">{html.escape(m.group(1))}</b>')
+        last, hit = m.end(), True
+    out.append(html.escape(text[last:]))
+    return "".join(out), hit
 
 
 def render_answer(a: str) -> str:
@@ -381,14 +434,19 @@ def render_answer(a: str) -> str:
     걸린 들여쓰기가 유지돼 긴 항목도 한눈에 갈린다.
 
     한 단계 중첩까지 본다. 목록 앞뒤에 붙은 머리말·꼬리말은 그대로 문단으로 둔다.
+
+    **강조가 하나라도 서면 본문을 `.body` 로 감싼다.** `.a` 는 통째로 파랗다. 표시가
+    있는 답만 본문 색을 내려 강조가 도드라지게 하고, 표시가 없는 답은 예전처럼 통째로
+    파랗게 둔다 — 한 덩어리가 그대로 회수 대상인 짧은 답이 그 자리에 있다.
     """
     lines = a.strip().splitlines()
     marks = [RE_BULLET.match(ln) for ln in lines]
     if sum(1 for m in marks if m) < 2:
-        return html.escape(a)
+        body, hit = _emph(a)
+        return f'<span class="body">{body}</span>' if hit else html.escape(a)
 
     base = min(len(m.group(1)) for m in marks if m)
-    out, in_list, in_sub = [], False, False
+    out, in_list, in_sub, hit = [], False, False, False
     for ln, m in zip(lines, marks):
         if not m:
             text = ln.strip()
@@ -400,7 +458,9 @@ def render_answer(a: str) -> str:
             if in_list:
                 out.append("</ul>")
                 in_list = False
-            out.append(f'<div class="lead">{html.escape(text)}</div>')
+            lead, lead_hit = _emph(text)
+            hit = hit or lead_hit
+            out.append(f'<div class="lead">{lead}</div>')
             continue
         if not in_list:
             out.append("<ul>")
@@ -411,9 +471,12 @@ def render_answer(a: str) -> str:
         elif len(m.group(1)) <= base and in_sub:
             out.append("</ul>")
             in_sub = False
-        out.append(f"<li>{html.escape(m.group(2).strip())}</li>")
+        body, item_hit = _emph(m.group(2).strip())
+        hit = hit or item_hit
+        out.append(f"<li>{body}</li>")
     out += ["</ul>"] * (in_sub + in_list)
-    return "".join(out)
+    joined = "".join(out)
+    return f'<div class="body">{joined}</div>' if hit else joined
 
 
 def layer_of(c: dict) -> str:
@@ -634,7 +697,7 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str,
         else:
             img, answer = "", render_answer(c["a"])
             if fmt == "image_basic":
-                img = f'<img src="{media.figure(m["figure_id"], crop)}">'
+                img = f'<img src="{media.figure(m["figure_id"], crop, c["a"])}">'
             elif fmt == "image_occlusion":
                 front, back = media.occlusion(m["figure_id"], m["occlusion_ids"], crop)
                 img, answer = f'<img src="{front}">', f'<img src="{back}">'

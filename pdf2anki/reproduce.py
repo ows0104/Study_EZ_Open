@@ -48,7 +48,7 @@ from . import ledger
 from .prompting import DEFAULT_DOMAIN, DOMAINS
 from .schema import IMAGE_FORMATS
 from .session import SessionError, run_blind, verify_blind
-from .textutil import char_ngrams, containment, norm_key
+from .textutil import answer_runs, char_ngrams, containment, norm_key
 
 PROMPTS = Path(__file__).parent / "prompts"
 # 프롬프트 파일은 "파일에 써라"라고 지시한다. 자동 모드는 도구가 없으니 stdout 으로 돌린다.
@@ -121,16 +121,58 @@ LEAK_FIX = {
 }
 
 
-def leaks(prompt: str, cards: list[dict]) -> list[dict]:
+def crop_texts(d: Path, cards: list[dict]) -> dict[str, str]:
+    """그림 카드 앞면의 **그림 안에 인쇄된 글자**. 카드 id → 글자.
+
+    앞면의 정의가 글자에서 멈춰 있었다. 사진 옆에 진단명이 캡션으로 박혀 있으면 앞면이
+    답을 인쇄한 채 나가는데, `front_of` 는 `q` 만 보므로 그것을 못 봤다.
+
+    **빌드가 가릴 자리는 빼고 돌려준다.** 가린 것을 또 누출로 세면 수선 고리가 고칠 수
+    없는 것을 계속 고치라고 시킨다. 무엇을 가리는지는 `answer_runs` 하나가 정한다 —
+    빌드도 같은 함수를 본다.
+
+    `clean.pdf` 나 `prep.json` 이 없으면 빈 값이다. 검사가 없는 것과 통과가 다르므로
+    이 경우를 조용히 통과로 만들지 않는다 — 부르는 쪽이 그것을 안다.
+    """
+    try:
+        import fitz
+        prep = json.loads((d / "prep.json").read_text(encoding="utf-8"))
+        doc = fitz.open(d / "clean.pdf")
+    except Exception:
+        return {}
+    figs = {f["id"]: (p["slide"], f["bbox"])
+            for p in (prep.get("pages") or [])
+            for f in (p.get("lecture_figures") or [])}
+    out: dict[str, str] = {}
+    try:
+        for c in cards:
+            m = c.get("media") or {}
+            hit = figs.get(m.get("figure_id"))
+            if not hit:
+                continue
+            slide, bbox = hit
+            words = [w[4] for w in doc[slide - 1].get_text("words", clip=fitz.Rect(*bbox))]
+            hidden = {i for s, e in answer_runs(words, c.get("a") or "") for i in range(s, e)}
+            out[c["id"]] = " ".join(w for i, w in enumerate(words) if i not in hidden)
+    finally:
+        doc.close()
+    return out
+
+
+def leaks(prompt: str, cards: list[dict],
+          crops: dict[str, str] | None = None) -> list[dict]:
     """앞면 묶음에 답·해설이 샜는지 코드가 확인한다. 판정 하나가 레코드 하나다.
 
     `hard=True` 만 실패다 — **자기 앞면에 자기 답이 있는 경우**.
     한 강의의 카드끼리 용어가 겹치는 것은 당연하므로(A의 정답 용어가 B의 질문에 나오는 등)
     그건 실패가 아니라 참고 사항으로만 센다.
+
+    `crops` 는 그림 안에 인쇄된 글자다. 있으면 그것도 앞면으로 친다.
     """
     out, body = [], norm_key(prompt)
+    crops = crops or {}
     for c in cards:
-        front = norm_key(front_of(c))
+        front = norm_key(front_of(c) + " " + crops.get(c["id"], ""))
         if c["card_format"] not in LEAK_EXEMPT:
             a = norm_key(c["a"])
             if len(a) >= 5 and a in front:
@@ -169,8 +211,12 @@ def hard_leaks(d: Path) -> list[dict]:
     누출 검사는 풀이 **전**에 도는 결정론적 검사라 세션도 돈도 들지 않는다.
     그래서 수선 고리를 앞에 놓을 수 있다.
     """
-    ok, _ = testable(load_cards(d))
-    return [x for x in leaks(build_blind(d, ok, None), ok) if x["hard"]]
+    cards = load_cards(d)
+    ok, _ = testable(cards)
+    # 앞면 묶음(`body`)은 텍스트 카드로 만든다 — 풀이자가 실제로 받는 것이 그것이다.
+    # 그러나 **누출은 그림 카드에서도 난다.** 형식으로 제외하던 것을 여기서 되돌린다.
+    return [x for x in leaks(build_blind(d, ok, None), cards, crop_texts(d, cards))
+            if x["hard"]]
 
 
 def task_text(name: str, out_path: Path | None) -> str:

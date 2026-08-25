@@ -32,6 +32,52 @@ def norm_key(s: str) -> str:
     return re.sub(r"[\s\*★·:()~\-–—]", "", s)
 
 
+# 정답 글자가 그림 안에 인쇄돼 있을 때, 그것을 이루는 낱말 구간. 앞면을 가리는 쪽과
+# 누출을 세는 쪽이 **같은 함수를 본다** — 둘이 갈리면 가린 것을 또 누출로 세거나
+# 그 반대가 된다.
+ANSWER_RUN_MIN = 5
+
+
+def answer_runs(words: list[str], answer: str, min_len: int = ANSWER_RUN_MIN) -> list[tuple[int, int]]:
+    """정답이 그대로 인쇄된 낱말 구간 `[start, end)` 들.
+
+    이어 붙인 낱말과 정답을 **양방향으로** 견준다 — 낱말이 정답의 일부이거나, 낱말이
+    정답을 통째로 품거나(`Neurofibroma` 에 대한 `Neurofibromas`). 한쪽만 보면 가리는
+    쪽과 누출을 세는 쪽이 어긋나, 가리지 못한 것을 계속 누출로 세게 된다.
+    **낱말 목록을 쓰지 않는다** — 무엇을 가릴지는 그 카드의 정답이 정한다.
+
+    길이 문턱을 두는 이유는 `cell` 처럼 짧은 조각이 정답의 일부이면서 그림 안 여기저기에
+    우연히 있기 때문이다. 문턱 아래는 가리지 않는다 — **덜 가리는 쪽이 잘못 가리는 쪽보다 낫다.**
+    """
+    # `norm_key` 는 대소문자를 남긴다(오클루전 라벨 대조가 그 상태를 쓴다). 그림에 인쇄된
+    # 캡션은 대문자로 시작하는 일이 잦으므로 여기서만 내려서 견준다.
+    def key_of(s: str) -> str:
+        return norm_key(s).lower()
+
+    key = key_of(answer)
+    if not key or not words:
+        return []
+    runs, i = [], 0
+    while i < len(words):
+        best, joined = 0, ""
+        for j in range(i, len(words)):
+            joined += key_of(words[j])
+            if key in joined:
+                best = j + 1          # 정답을 다 품었다. **여기서 끊는다** — 더 이으면
+                break                 # 뒤따르는 낱말까지 덮어 그림을 갉아먹는다
+            if joined and joined in key:
+                best = j + 1          # 아직 정답의 일부다. 더 이어 볼 수 있다
+                continue
+            break                     # 더 이어도 정답에서 멀어지기만 한다
+        matched = key_of("".join(words[i:best])) if best > i else ""
+        if matched and min(len(matched), len(key)) >= min_len:
+            runs.append((i, best))
+            i = best
+        else:
+            i += 1
+    return runs
+
+
 def _strip(s: str) -> str:
     # 자모가 풀린(NFD) 한글은 `[가-힣]` 에 걸리지 않아 통째로 사라진다. Synology 를
     # 거친 파일명 일부가 실제로 NFD 였고, 그 강의만 조각 대조가 조용히 0점이 됐다.

@@ -89,6 +89,20 @@ def occlusion_answer_matches(labels: list[str], answer: str) -> bool:
     return True
 
 
+def _needs_figure(ref: dict, questions: list[dict]) -> bool:
+    """그 기출이 그림을 보고 푸는 문항인가. `jokbo.py` 가 조각에 적어 둔 값을 읽는다.
+
+    은행은 이걸 알고 있었는데 아무도 안 봤다. 조각에 `needs_figure` 가 없으면(옛 조각)
+    모른다는 뜻이므로 `False` 로 둔다 — 모르는 것을 실패로 세지 않는다.
+    """
+    if not isinstance(ref, dict):
+        return False
+    for q in questions:
+        if str(q.get("year")) == str(ref.get("year")) and str(q.get("no")) == str(ref.get("no")):
+            return bool(q.get("needs_figure"))
+    return False
+
+
 def _ref_status(ref: dict, keys: set, years: set) -> str:
     """기출 ref 를 조각과 맞춰 본다. `ok` / `missing` / `outside`.
 
@@ -187,6 +201,12 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
             if st == "outside":
                 # 원문을 붙일 수 없다는 것은 카드 뒷면에 뜬다(`FLAG_LABEL`).
                 flags[idx].append("jokbo_ref_outside_slice")
+            # 원문이 그림을 보고 판독하라는 문항인데 카드에 그림이 없다. 그러면 푸는
+            # 사람에게는 자극 없는 문제만 남는다. **떨어뜨리지 않고 센다** — 지금은
+            # 기출 그림을 앞면에 붙이는 길이 없어서, 하드로 두면 이 갈래가 통째로
+            # 사라진다. 붙이는 길이 서면 그때 문턱을 옮긴다.
+            if not c.get("media") and _needs_figure(ref, jokbo_qs):
+                flags[idx].append("jokbo_figure_dropped")
 
         # 형식별 계약
         clozes = RE_CLOZE.findall(q)
