@@ -33,6 +33,9 @@ def test_medical_domain_is_default_and_generic_is_available():
     medical = "\n".join(read_modules(profile="exam_review", domain="medical_ko"))
     assert "한국어 의학 강의" not in generic
     assert "한국어 의학 강의" in medical
+    assert "강의 자료의 원문 표기를 반드시 보존" in medical
+    assert "자료가 같은 개념의 한국어·영어 표기를 모두 제공했을 때만" in medical
+    assert "Down syndrome`, `다운증후군`, `Down 증후군`처럼 섞지 않는다" in medical
 
 
 def test_reproduction_uses_domain_and_only_medical_jokbo_gets_answer_review():

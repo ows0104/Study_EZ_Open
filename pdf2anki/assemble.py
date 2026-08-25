@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -24,34 +25,167 @@ from .prompting import DEFAULT_DOMAIN, DOMAINS, lecture_adapters, read_modules
 
 PROMPTS = Path(__file__).parent / "prompts"
 # ── 전략 ──────────────────────────────────────────────────────────
-# 세 갈래뿐이다. 축은 하나 — **이번 시험의 출제자가 누구의 강조점을 물을 것인가.**
-#   annotation(필기 중심)  교수가 바뀌었다. 강의록은 작년 것이고 기출은 이전 교수의 출제다.
-#                          올해 필기만이 지금 교수가 실제로 말한 기록이다.
-#   jokbo(족보 중심)       교수가 유임이고 기출을 재활용한다. 기출이 물은 것을 먼저 덮는다.
-#   base(기본)             교수는 유임이나 반복률이 낮다. 강의록을 훑고 기출은 신호로만 쓴다.
-STRATEGIES = {"annotation": "필기 중심", "jokbo": "족보 중심", "base": "기본"}
-STRATEGY_ALIAS = {"필기": "annotation", "족보": "jokbo", "기본": "base",
-                  "annotation": "annotation", "jokbo": "jokbo", "base": "base",
+# 자동 판정은 아래 순서를 지킨다. 앞 조건이 뒤 조건보다 항상 우선한다.
+# 축은 하나 — **이번 시험의 출제자가 무엇을 보고 판별하게 할 것인가.**
+#   image(사진 중심)       실습이고 사진이 많다. 사진·조직·육안·영상 판독을 중심에 둔다.
+#   jokbo(족보 중심)       교수 유임이고 반복률이 높다. 기출이 물은 것을 먼저 덮는다.
+#   annotation(필기 중심)  교수 교체 또는 낮은 반복률. 사용자 확인 뒤 올해 필기를 우선한다.
+#   base(기본)             위 조건 어디에도 들지 않는다.
+STRATEGIES = {"annotation": "필기 중심", "jokbo": "족보 중심", "image": "사진 중심",
+              "base": "기본"}
+STRATEGY_ALIAS = {"필기": "annotation", "필기 중심": "annotation",
+                  "족보": "jokbo", "족보 중심": "jokbo",
+                  "사진": "image", "사진 중심": "image", "기본": "base",
+                  "annotation": "annotation", "jokbo": "jokbo", "image": "image",
+                  "photo": "image", "base": "base",
                   "auto": "auto"}
 
+HIGH_REPEAT_RATE = 0.35
+LOW_REPEAT_RATE = 0.20
+MIN_PHOTO_FIGURE_SLIDES = 10
+MIN_PHOTO_FIGURE_SHARE = 0.30
+ASK_ANNOTATION = "ask_annotation"
 
-def decide_strategy(stats: dict | None, mixed_owner: bool = False) -> tuple[str, str]:
-    """(전략, 고른 이유 한 줄). 교수 교체를 반복률보다 먼저 본다.
+# 사용자가 이미 답한 `ASK_ANNOTATION`만 저장한다. 목록에 없는 미래 강의는 다시 묻는다.
+CONFIRMED_STRATEGY_OVERRIDES = {
+    "260812_01": "base",
+    "260813_02": "base",
+    "260813_03": "base",
+    "260819_01": "base",
+    "260819_02": "base",
+    "260819_03": "base",
+    "260820_01": "annotation",
+    "260820_02": "annotation",
+    "260820_03": "annotation",
+    "260820_05": "annotation",
+    "260824_01": "base",
+    "260824_02": "base",
+}
 
-    교수가 바뀌면 반복률이 아무리 높아도 그 반복은 **이전 교수의 습관**이다.
-    순서를 뒤집으면 16-18강(반복률 72% · 교수 교체)에서 정확히 틀린 답이 나온다.
+
+class StrategyConfirmationRequired(RuntimeError):
+    """자동 판정이 사용자 선택을 필요로 하지만 stdin이 대화형이 아닐 때."""
+
+
+def photo_profile(prep: dict, lecture_title: str = "") -> dict:
+    """실습 여부와 사진 밀도를 결정론적으로 계산한다.
+
+    사진 수 자체는 한 슬라이드의 작은 도형 여러 개에 부풀 수 있어, 사진이 하나라도 있는
+    *슬라이드 수*와 그 비율을 함께 쓴다.
     """
+    pages = prep.get("pages") or []
+    total_slides = int(prep.get("slides") or len(pages) or 0)
+    figure_slides = sum(bool(p.get("lecture_figures")) for p in pages)
+    figure_count = sum(len(p.get("lecture_figures") or []) for p in pages)
+    share = figure_slides / total_slides if total_slides else 0.0
+    identity = f"{prep.get('source', '')} {lecture_title}"
+    practical = bool(re.search(r"실습|practical|practice", identity, re.IGNORECASE))
+    image_rich = (figure_slides >= MIN_PHOTO_FIGURE_SLIDES
+                  and share >= MIN_PHOTO_FIGURE_SHARE)
+    return {"practical": practical, "image_rich": image_rich,
+            "total_slides": total_slides, "figure_slides": figure_slides,
+            "figure_count": figure_count, "figure_slide_share": share}
+
+
+def apply_confirmed_strategy(strategy: str, why: str, prep: dict,
+                             lecture_title: str = "") -> tuple[str, str]:
+    """확인 필요 판정에 대해 사용자가 이미 답한 강의만 확정한다."""
+    if strategy != ASK_ANNOTATION:
+        return strategy, why
+    identity = f"{prep.get('source', '')} {lecture_title}"
+    match = re.search(r"\[(\d{6}_\d{2})\]", identity)
+    run_id = match.group(1) if match else ""
+    confirmed = CONFIRMED_STRATEGY_OVERRIDES.get(run_id)
+    if not confirmed:
+        return strategy, why
+    return confirmed, f"{why} → 저장된 사용자 선택: {STRATEGIES[confirmed]}"
+
+
+def image_strategy_body(has_jokbo: bool) -> str:
+    """실습 사진을 실제로 판독하게 하는 전략 지침."""
+    exam = (
+        "기출에서는 이번 실습의 사진·조직·육안·영상 판독 문항을 먼저 골라 목표에 연결한다. "
+        "텍스트 기출은 사진을 구분하는 진단 기준을 보강할 때만 우선한다.\n"
+        if has_jokbo else
+        "기출 조각이 없으므로 강의록 사진과 그 캡션·본문이 제시한 판독 기준을 근거로 삼는다.\n"
+    )
+    return (
+        "**이 강의는 사진 중심 실습으로 만든다.** 사진·조직·육안 표본·방사선/검사 영상에서 "
+        "장기, 진단, 병변, 대표 소견과 감별점을 알아보는 능력이 최우선 회수 목표다.\n"
+        + exam +
+        "\n**학습 목표를 어디에 몰 것인가.** `lecture_figures`가 있는 슬라이드를 먼저 직접 보고, "
+        "시험에서 다시 제시될 만한 대표 사진과 서로 헷갈리는 사진을 우선한다. 목표의 "
+        "`retrieval_targets`에는 단순한 사진 제목이 아니라 실제 판독 단서와 그 단서가 가리키는 "
+        "진단·구조를 적는다.\n\n"
+        "**카드 형식.** 사용할 만한 사진이 충분하면 강의록 카드의 절반 이상을 이미지 카드로 "
+        "구성한다. 진단·장기·병변·형태 판독은 `image_basic`을 기본으로 하고, 앞면에는 반드시 "
+        "판독할 그림이 보이게 한다. `image_occlusion`은 이름 있는 핵심 라벨 회수에만 쓰며 사진의 "
+        "진단 단서나 병변 전체를 상자로 덮지 않는다.\n\n"
+        "한 사진에서 같은 진단을 말만 바꿔 여러 번 묻지 않는다. 질문은 판독 하나를 요구하고, "
+        "정답에는 진단·구조의 이름을, explanation에는 그것을 가르는 시각 단서를 둔다. crop은 "
+        "정답 캡션을 덜어낼 때만 쓰고 주변 조직·배율·방향처럼 판독에 필요한 맥락은 남긴다. "
+        "사진만으로 성립하지 않는 기전·정의와 사진을 읽기 위한 최소 선행지식만 텍스트 카드로 만든다.\n\n"
+        "사진이 장식이거나 해상도가 낮거나 정답이 픽셀 안에 그대로 인쇄돼 안전하게 자를 수 없으면 "
+        "이미지 카드 수를 채우려고 쓰지 말고 제외 근거를 남긴다."
+    )
+
+
+def guidance_without_jokbo(strategy: str) -> str:
+    """기출 조각이 없어도 사람이 고른 전략을 프롬프트까지 보존한다."""
+    if strategy == "image":
+        body = image_strategy_body(False)
+    elif strategy == "annotation":
+        body = ("기출 조각이 없다. 강의록의 구조와 올해 필기의 강조점을 우선하고, "
+                "올해 필기가 몰린 슬라이드부터 목표를 세운다.")
+    elif strategy == "jokbo":
+        body = ("기출 조각이 없어 족보 중심 우선순위를 적용할 근거가 없다. "
+                "강의록 구조를 축으로 만들고 이 실행의 근거 부족을 숨기지 않는다.")
+    else:
+        body = "기출 조각이 없다. 강의록 구조를 축으로 만들고 필기는 중요도 신호로만 쓴다."
+    return f"## 이 강의의 전략: `{STRATEGIES[strategy]}`\n\n{body}\n"
+
+
+def decide_strategy(stats: dict | None, mixed_owner: bool = False, *,
+                    practical: bool = False, image_rich: bool = False) -> tuple[str, str]:
+    """(전략, 고른 이유 한 줄). practical/photo → high → ask annotation → base.
+
+    `ASK_ANNOTATION`은 최종 전략이 아니라 사용자 확인이 필요한 중간 판정이다.
+    다른 강의 소유의 조각은 반복률·교수 정보를 어느 조건에도 사용하지 않는다.
+    """
+    usable_stats = bool(stats) and not mixed_owner
+    rate = float((stats or {}).get("repeat_rate") or 0.0)
+
+    if practical and image_rich:
+        return "image", "실습이며 사진 포함 슬라이드가 충분히 많다"
+    professor_changed = usable_stats and bool(stats.get("professor_changed_2026"))
+    if usable_stats and not professor_changed and rate >= HIGH_REPEAT_RATE:
+        return "jokbo", f"연도간 반복률 {rate:.0%}로 높다 (기준 {HIGH_REPEAT_RATE:.0%} 이상)"
+    if professor_changed:
+        return ASK_ANNOTATION, f"올해 담당 교수가 바뀌었다 (기출 반복률 {rate:.0%})"
+    if usable_stats and rate < LOW_REPEAT_RATE:
+        return ASK_ANNOTATION, f"연도간 반복률 {rate:.0%}로 낮다 (기준 {LOW_REPEAT_RATE:.0%} 미만)"
+    if mixed_owner:
+        return "base", "이 조각의 주인이 다른 강의라 통계를 이 강의에 적용할 수 없다"
     if not stats:
         return "base", "기출 조각이 없다 — 강의록만으로 만든다"
-    if mixed_owner:
-        # 이 조각의 통계는 다른 강의의 것이다. 남의 반복률로 전략을 정할 수 없다.
-        return "base", "이 조각의 주인이 다른 강의라 통계를 이 강의에 적용할 수 없다"
-    rate = stats.get("repeat_rate", 0.0)
-    if stats.get("professor_changed_2026"):
-        return "annotation", f"올해 담당 교수가 바뀌었다 (기출 반복률 {rate:.0%}는 이전 교수의 것)"
-    if stats.get("jokbo_weight_hint") == "high":
-        return "jokbo", f"교수 유임 · 연도간 반복률 {rate:.0%}"
-    return "base", f"교수 유임 · 반복률 {rate:.0%} (높지 않다)"
+    return "base", f"반복률 {rate:.0%}로 중간 구간이다"
+
+
+def resolve_auto_strategy(strategy: str, why: str, *, interactive: bool | None = None,
+                          input_fn=input) -> tuple[str, str]:
+    """확인이 필요한 자동 판정을 필기 중심 또는 기본으로 확정한다."""
+    if strategy != ASK_ANNOTATION:
+        return strategy, why
+    if interactive is None:
+        interactive = sys.stdin.isatty()
+    prompt = f"{why}. 필기 중심으로 만들까요? [Y/n] "
+    if not interactive:
+        raise StrategyConfirmationRequired(
+            f"{why}. 사용자 확인이 필요하다. --strategy 필기 또는 --strategy 기본을 지정해 다시 실행해라")
+    answer = input_fn(prompt).strip().lower()
+    if answer in {"", "y", "yes", "예", "네"}:
+        return "annotation", f"{why} → 사용자 확인: 필기 중심"
+    return "base", f"{why} → 사용자 확인: 기본"
 
 
 def slice_for(prep: dict, jokbo_dir: Path, explicit: str | None = None
@@ -171,8 +305,14 @@ def jokbo_guidance(stats: dict, title: str, mixed: list | None = None,
     rate = stats.get("repeat_rate", 0.0)
     prof_line = " · ".join(f"20{y} {'/'.join(v)}" for y, v in sorted(yr.items(), reverse=True))
     strategy = strategy or decide_strategy(stats, bool(mixed))[0]
+    # 이 함수는 프롬프트 문자열만 만드는 저수준 API라 사용자에게 물을 수 없다.
+    # 실제 CLI/runner는 이 지점 전에 resolve_auto_strategy로 확정한다.
+    if strategy == ASK_ANNOTATION:
+        strategy = "annotation"
 
-    if strategy == "annotation":
+    if strategy == "image":
+        body = image_strategy_body(True)
+    elif strategy == "annotation":
         body = (
             "**올해 담당 교수가 바뀌었다.** 과거 기출은 이전 교수의 출제이며, "
             "같은 문항이 다시 나올 것으로 가정하지 마라.\n"
@@ -184,11 +324,18 @@ def jokbo_guidance(stats: dict, title: str, mixed: list | None = None,
             "기출과 겹치는 내용이면 그것대로 좋지만, 기출을 덮는 것 자체를 목표로 삼지 않는다."
         )
     elif strategy == "jokbo":
-        # 교수를 모르는 조각(실습)에서 "교수가 그대로"라고 단언하지 않는다. 아는 만큼만 말한다.
-        head = ("**담당 교수가 그대로이고 연도간 문항 반복률이 %.0f%%로 높다.** "
-                "이 교수는 기출을 재활용한다.\n" % (rate * 100) if prof_line else
-                "**연도간 문항 반복률이 %.0f%%로 높다.** 이 과목은 기출이 재활용된다.\n"
-                % (rate * 100))
+        # 자동 전략에서는 교수 유임일 때만 들어온다. 명시적 --strategy 족보도 지원하므로
+        # 교수 교체 상태의 문구는 거짓 단언 없이 따로 둔다.
+        if stats.get("professor_changed_2026"):
+            head = ("**연도간 문항 반복률이 %.0f%%로 높다.** 올해 담당 교수는 바뀌었지만, "
+                    "정한 우선순위에 따라 높은 반복률을 먼저 적용한다.\n" % (rate * 100))
+        elif prof_line:
+            head = ("**담당 교수가 그대로이고 연도간 문항 반복률이 %.0f%%로 높다.** "
+                    "이 교수는 기출을 재활용한다.\n" % (rate * 100))
+        else:
+            # 교수를 모르는 조각(실습)에서 "교수가 그대로"라고 단언하지 않는다.
+            head = ("**연도간 문항 반복률이 %.0f%%로 높다.** 이 과목은 기출이 재활용된다.\n"
+                    % (rate * 100))
         body = (
             head +
             "기출이 물은 회수 목표를 **먼저 덮은 뒤** 나머지를 채워라. "
@@ -252,7 +399,8 @@ def assemble(prep_dir: Path, jokbo_file: Path | None, schema_dir: Path,
                        "이 단원의 과거 기출 전량이다. 정답과 이의제기 답변이 결합돼 있다.\n\n"
                        + jokbo_md.split("\n", 1)[1].lstrip())
     else:
-        jk, guidance = None, "## 이 강의의 전략: `기본`\n\n기출 조각이 없다. 강의록과 필기만으로 만든다.\n"
+        jk = None
+        guidance = guidance_without_jokbo(strategy or "base")
         jokbo_block = ""
 
     sidecar = "# 슬라이드 사이드카\n\n" + prep_md.split("\n", 1)[1]
@@ -301,7 +449,8 @@ def main(argv=None) -> int:
     ap.add_argument("--jokbo-dir", default="out/jokbo")
     ap.add_argument("--schema-dir", default="out/schema")
     ap.add_argument("--strategy", default="auto", choices=sorted(STRATEGY_ALIAS),
-                    help="족보/필기/기본 중 무엇을 축으로 삼을지. auto 면 통계에서 판정한다")
+                    help="기본/필기/족보/사진 중 무엇을 축으로 삼을지. "
+                         "auto 면 실습 사진·반복률·교수 교체 순으로 판정한다")
     ap.add_argument("--domain", default=DEFAULT_DOMAIN, choices=sorted(DOMAINS),
                     help=f"퀴즈 도메인 정책 (기본 {DEFAULT_DOMAIN})")
     args = ap.parse_args(argv)
@@ -330,7 +479,16 @@ def main(argv=None) -> int:
         stats = json.loads(jokbo_file.read_text(encoding="utf-8")).get("stats", {})
     strategy = STRATEGY_ALIAS[args.strategy]
     if strategy == "auto":
-        strategy, why = decide_strategy(stats, mixed_owner)
+        profile = photo_profile(prep)
+        strategy, why = decide_strategy(stats, mixed_owner,
+                                        practical=profile["practical"],
+                                        image_rich=profile["image_rich"])
+        strategy, why = apply_confirmed_strategy(strategy, why, prep)
+        try:
+            strategy, why = resolve_auto_strategy(strategy, why)
+        except StrategyConfirmationRequired as e:
+            print(f"\n⚠ {e}", file=sys.stderr)
+            return 2
     else:
         why = "사람이 --strategy 로 지정했다"
 

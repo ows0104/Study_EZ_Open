@@ -27,7 +27,7 @@ from ..textutil import char_ngrams, containment, jaccard, norm_key
 from ..validate import (LEAK_THRESHOLD, MAX_Q_CHARS, OX_FALSE, OX_TRUE,
                         RE_BULLET_LINE, RE_CLOZE, RE_POINTS_AT_SOURCE,
                         SIMILAR_CROSS_SLIDE, SIMILAR_SAME_SLIDE, _ref_status,
-                        count_items)
+                        count_items, occlusion_answer_matches)
 from .schema import (CARD_SCHEMA, IMAGE_FORMATS, MAX_CARDS, MAX_RECALL_ITEMS,
                      MIN_CARDS, OX_SHARE_MAX)
 
@@ -161,6 +161,15 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
                 wrong = [i for i in ids if occs[i][1] != fid]
                 if wrong:
                     dropped.append(_fail(c, "occlusion_figure_mismatch", ", ".join(wrong)))
+                    continue
+                unlabeled = [i for i in ids if not (occs[i][2] or "").strip()]
+                if unlabeled:
+                    dropped.append(_fail(c, "occlusion_unlabeled_region", ", ".join(unlabeled)))
+                    continue
+                labels = [occs[i][2] for i in ids]
+                if not occlusion_answer_matches(labels, a):
+                    dropped.append(_fail(c, "occlusion_answer_mismatch",
+                                         f"가린 라벨: {', '.join(labels)} / a: {a}"))
                     continue
         elif media:
             c["media"] = None

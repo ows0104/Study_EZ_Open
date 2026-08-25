@@ -31,6 +31,10 @@ MIN_FIGURE_PT = 150
 # 18자였을 때 `type II 폐포세포 재생` 같은 **핵심 용어**가 후보에서 빠졌다.
 # 가릴 만한 것은 대개 짧지만, 영문 용어가 섞이면 금세 18자를 넘는다.
 MAX_LABEL_CHARS = 24
+# 오클루전은 라벨처럼 작은 대상을 가리는 형식이다. FreeText 상자가 그림의 큰 부분을
+# 차지하면 실제 텍스트보다 넓은 기본 입력 상자이거나 설명 메모인 경우가 많다.
+MAX_LABEL_AREA_RATIO = 0.18
+MAX_LABEL_HEIGHT_RATIO = 0.35
 # 반복 스탬프를 '마커 어휘'로 볼 최소 등장 횟수
 MARKER_MIN_COUNT = 3
 # 슬라이드 번호 배지 크기 (pt)
@@ -38,6 +42,31 @@ BADGE_W, BADGE_H = 78, 22
 
 EMPHASIS_TYPES = {"Square", "Highlight", "Underline", "Line", "Polygon", "Ink", "StrikeOut"}
 GENERIC_SUBJECTS = {"stamp", "스탬프", "도장", ""}
+
+
+def usable_occlusion_label(text: str, label_rect: list, figure_bbox: list) -> bool:
+    """필기 FreeText가 실제로 가릴 만한 작은 라벨인지 기계적으로 거른다.
+
+    중요도 자체는 모델이 승인된 학습 목표와 대조해야 한다. 여기서는 그보다 앞단의
+    명백한 잡음(문자 없는 표시, 그림 대부분을 덮는 설명 상자)을 후보에서 없앤다.
+    """
+    text = text.strip()
+    if not text or len(text) > MAX_LABEL_CHARS:
+        return False
+    if not re.search(r"[0-9A-Za-z가-힣]", text):
+        return False
+
+    nr, fr = fitz.Rect(label_rect), fitz.Rect(figure_bbox)
+    if not nr.is_valid or not fr.is_valid or fr.get_area() <= 0:
+        return False
+    inter = nr & fr
+    if not inter.is_valid or inter.get_area() <= 0.6 * max(nr.get_area(), 1):
+        return False
+    if nr.get_area() / fr.get_area() > MAX_LABEL_AREA_RATIO:
+        return False
+    if nr.height / fr.height > MAX_LABEL_HEIGHT_RATIO:
+        return False
+    return True
 
 
 def annot_year(a: fitz.Annot) -> str:
@@ -190,33 +219,19 @@ def build(src: Path, outdir: Path) -> dict:
         if covered:
             covered_report.append(i + 1)
 
-        # 오클루전 후보: 그림 위에 얹힌 짧은 필기 라벨
+        # 오클루전 후보: 그림 위에 얹힌 짧고 작은 필기 라벨.
+        # Square는 강조 신호일 뿐 "상자 안 무엇이 답인지"가 정해져 있지 않다. 예전에는
+        # label=None 후보로 넘겼고, 모델이 엉뚱한 구조나 중요하지 않은 영역을 고르는 가장
+        # 큰 통로가 됐다. markers에는 그대로 남기되 자동 오클루전 후보로 만들지 않는다.
         occl = []
         for n in notes:
-            if len(n["text"]) > MAX_LABEL_CHARS:
-                continue
-            nr = fitz.Rect(n["rect"])
             for f in lecture_figs:
-                fr = fitz.Rect(f["bbox"])
-                inter = nr & fr
-                if inter.is_valid and inter.get_area() > 0.6 * max(nr.get_area(), 1):
+                if usable_occlusion_label(n["text"], n["rect"], f["bbox"]):
                     occl.append({"id": f"occ_p{i + 1:02d}_{len(occl) + 1:02d}",
                                  "label": n["text"], "label_rect": n["rect"],
+                                 "kind": "annotation_label",
                                  "figure_id": f["id"], "figure_bbox": f["bbox"],
                                  "year": n["year"]})
-                    break
-        # 영역 강조 상자도 후보다 (가리는 대상이 상자 안, 이름은 모델이 정한다)
-        for m in markers:
-            if m["kind"] != "square":
-                continue
-            mr = fitz.Rect(m["rect"])
-            for f in lecture_figs:
-                if (mr & fitz.Rect(f["bbox"])).is_valid and \
-                        (mr & fitz.Rect(f["bbox"])).get_area() > 0.6 * max(mr.get_area(), 1):
-                    occl.append({"id": f"occ_p{i + 1:02d}_{len(occl) + 1:02d}",
-                                 "label": None, "label_rect": m["rect"],
-                                 "figure_id": f["id"], "figure_bbox": f["bbox"],
-                                 "year": m["year"]})
                     break
 
         slides.append({"slide": i + 1, "size": [round(ap.rect.width), round(ap.rect.height)],

@@ -55,6 +55,7 @@ def count_items(a: str) -> int:
 SIMILAR_SAME_SLIDE = 0.35
 SIMILAR_CROSS_SLIDE = 0.60
 LEAK_THRESHOLD = 0.80
+PHOTO_FOCUS_MIN_SHARE = 0.50
 
 
 def _fail(card, code, detail=""):
@@ -70,6 +71,22 @@ def _figure_index(prep: dict) -> tuple[dict, dict]:
         for o in s["occlusion_candidates"]:
             occs[o["id"]] = (s["slide"], o["figure_id"], o.get("label"))
     return figs, occs
+
+
+def occlusion_answer_matches(labels: list[str], answer: str) -> bool:
+    """가린 라벨마다 카드 정답에 그 이름이 실제로 들어 있는지 확인한다.
+
+    긴 필기 라벨을 핵심 이름으로 줄여 답하는 경우도 받기 위해 양방향 포함을 허용한다.
+    의미가 전혀 다른 기능·기전을 답으로 둔 카드는 여기서 막힌다.
+    """
+    a = norm_key(answer)
+    if not a:
+        return False
+    for label in labels:
+        key = norm_key(label)
+        if not key or (key not in a and a not in key):
+            return False
+    return True
 
 
 def _ref_status(ref: dict, keys: set, years: set) -> str:
@@ -97,7 +114,7 @@ def _ref_status(ref: dict, keys: set, years: set) -> str:
 
 
 def validate(raw: dict, prep: dict, jokbo: dict | None,
-             annotation_evidence: bool = False) -> tuple[list, dict]:
+             annotation_evidence: bool = False, strategy: str = "base") -> tuple[list, dict]:
     """annotation_evidence: 올해 필기를 질문·정답의 근거로 인정한다.
 
     기본은 불가다 — 필기에는 교수 잡담과 필기자 사담이 섞여 있고, 강의록이 정본이기
@@ -215,6 +232,15 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
                 wrong = [i for i in ids if occs[i][1] != fid]
                 if wrong:
                     dropped.append(_fail(c, "occlusion_figure_mismatch", ", ".join(wrong)))
+                    continue
+                unlabeled = [i for i in ids if not (occs[i][2] or "").strip()]
+                if unlabeled:
+                    dropped.append(_fail(c, "occlusion_unlabeled_region", ", ".join(unlabeled)))
+                    continue
+                labels = [occs[i][2] for i in ids]
+                if not occlusion_answer_matches(labels, a):
+                    dropped.append(_fail(c, "occlusion_answer_mismatch",
+                                         f"가린 라벨: {', '.join(labels)} / a: {a}"))
                     continue
         elif media:
             c["media"] = None                      # 기계적 교정
@@ -348,6 +374,16 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
     for c in kept:
         c["review_flags"] = sorted(set(flags[c.pop("_idx")]))
 
+    lecture_cards = [c for c in kept if c["source_type"] == "lecture"]
+    image_cards = [c for c in lecture_cards if c["card_format"] in IMAGE_FORMATS]
+    image_share = len(image_cards) / max(len(lecture_cards), 1)
+    strategy_warnings = []
+    if strategy == "image":
+        if not figs:
+            strategy_warnings.append("photo_focus_without_lecture_figures")
+        elif not lecture_cards or image_share < PHOTO_FOCUS_MIN_SHARE:
+            strategy_warnings.append("photo_focus_below_half")
+
     suspects = {
         "n_input": len(cards), "n_kept": len(kept), "n_dropped": len(dropped),
         "dropped": dropped,
@@ -368,6 +404,15 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
         "format_mix": dict(Counter(c["card_format"] for c in kept)),
         "source_mix": dict(Counter(c["source_type"] for c in kept)),
         "importance_mix": dict(Counter(c["importance"] for c in kept)),
+        "strategy": strategy,
+        "strategy_warnings": strategy_warnings,
+        "photo_focus": {
+            "lecture_figures": len(figs),
+            "lecture_cards": len(lecture_cards),
+            "image_cards": len(image_cards),
+            "image_share": round(image_share, 3),
+            "minimum_share": PHOTO_FOCUS_MIN_SHARE,
+        },
         # O/X 정답 쏠림. 오답 선지만 캐면 답이 죄 X 가 되고, 그러면 푸는 사람이
         # 문항 대신 「O/X 면 X」를 배운다. 세어서 보이기만 한다 — 판정은 사람 몫이다.
         "ox_mix": {st: dict(Counter(c["a"].strip() for c in kept
@@ -388,6 +433,8 @@ def main(argv=None) -> int:
     ap.add_argument("-o", "--out")
     ap.add_argument("--annotation-evidence", action="store_true",
                     help="올해 필기를 질문·정답의 근거로 인정한다 (담당 교수가 바뀐 강의)")
+    ap.add_argument("--strategy", choices=("base", "annotation", "jokbo", "image"),
+                    help="실행 전략. 생략하면 run.config.json 또는 base")
     args = ap.parse_args(argv)
 
     raw = json.loads(Path(args.raw).read_text(encoding="utf-8"))
@@ -398,7 +445,13 @@ def main(argv=None) -> int:
         pl = json.loads(plan_path.read_text(encoding="utf-8"))
         raw["learning_plan"] = pl.get("learning_plan", pl)
 
-    kept, suspects = validate(raw, prep, jokbo, args.annotation_evidence)
+    strategy = args.strategy
+    if not strategy:
+        cfg_path = Path(args.raw).parent / "run.config.json"
+        if cfg_path.exists():
+            strategy = json.loads(cfg_path.read_text(encoding="utf-8")).get("strategy")
+    strategy = strategy if strategy in ("base", "annotation", "jokbo", "image") else "base"
+    kept, suspects = validate(raw, prep, jokbo, args.annotation_evidence, strategy)
     outdir = Path(args.out or Path(args.raw).parent)
     outdir.mkdir(parents=True, exist_ok=True)
     (outdir / "items.checked.json").write_text(
@@ -425,6 +478,12 @@ def main(argv=None) -> int:
     c = s["coverage"]
     print(f"\n형식 {s['format_mix']} · 출처 {s['source_mix']} · 중요도 {s['importance_mix']} "
           f"· exam_hit {s['exam_hit']}장")
+    if s["strategy"] == "image":
+        pf = s["photo_focus"]
+        print(f"사진 중심: 강의록 이미지 카드 {pf['image_cards']}/{pf['lecture_cards']}장 "
+              f"({pf['image_share']:.0%}) · 사용 가능 그림 {pf['lecture_figures']}개")
+        if s["strategy_warnings"]:
+            print("⚠ 사진 중심 전략 불충족: " + ", ".join(s["strategy_warnings"]))
     # 여덟 장 밑에서는 쏠림이라 부를 것이 없다. 8 과 3/4 는 12편 실측(O/X 119장 중
     # X 113장)을 보고 잠정으로 세운 값이다 — 편이 쌓이면 실제 분포를 보고 다시 정한다.
     for st, mix in s["ox_mix"].items():

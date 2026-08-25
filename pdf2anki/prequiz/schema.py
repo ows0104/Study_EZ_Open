@@ -212,8 +212,9 @@ FORMAT_RULES = {
              "같은 말이 두 번 필요하면 두 자리를 같은 번호로 가린다.",
     "ox": "q 는 진술문, a 는 'O' 또는 'X'. 틀린 진술이면 explanation 에 왜 틀렸는지 적는다.",
     "image_basic": "media.figure_id 필수. 앞면에 그림을 붙이고 무엇인지 묻는다.",
-    "image_occlusion": "media.figure_id 와 media.occlusion_ids 필수. "
-                       "가린 라벨이 답이며, 답을 q 에 노출하지 않는다.",
+    "image_occlusion": "media.figure_id 와 media.occlusion_ids 필수. 이름 있는 must-know 라벨만 "
+                       "선택하며 가린 원문 라벨이 a 에 들어 있어야 한다. 자료가 제공한 한국어·영어 "
+                       "대응 표기는 고정된 병기로 함께 쓸 수 있으나 q 에 노출하지 않는다.",
 }
 
 

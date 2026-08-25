@@ -227,8 +227,11 @@ def run_watch_one(args) -> int:
     # **`--force`는 pdf2anki까지 내려가야 한다.** 여기서 「덱이 있어도 만든다」까지만
     # 하고 넘기면 pdf2anki가 이미 만든 단계를 건너뛰고 그 산출물로 덱만 다시 굽는다 —
     # 다시 만들라고 누른 사람은 「다시 만들었는데 그대로다」를 본다(`prequeue`도 같다).
+    extra = (["--force"] if args.force else [])
+    if args.strategy != "auto":
+        extra += ["--strategy", args.strategy]
     ok, note = watch.build_one(item, runs_dir, REPO_ROOT, model=args.model, timeout=args.timeout,
-                               extra=["--force"] if args.force else None)
+                               extra=extra or None)
     minutes = (time.monotonic() - started) / 60
     if not ok:
         print(f"    실패 — {note} · {minutes:.1f}분")
@@ -241,6 +244,10 @@ def run_watch_one(args) -> int:
 def report_watch(args) -> int:
     if args.run_id:
         return run_watch_one(args)
+    if args.strategy != "auto":
+        print("[watch] --strategy는 --run-id로 한 강의를 지정할 때만 쓸 수 있다. "
+              "사진 중심을 전체 강의에 실수로 적용하지 않게 막았다.")
+        return 2
     if args.force:
         # 한 편이 빈 세션 넷이다. 좁히지 않은 --force는 이번 블럭을 통째로 다시
         # 만들라는 말이 되는데, 그걸 지나가듯 받으면 안 된다(`prequeue`와 같다).
@@ -1075,6 +1082,11 @@ def main() -> int:
                         help="watch·prequeue: 자리만 세우지 말고 덱까지 만든다")
     parser.add_argument("--model", default="",
                         help="watch·prequeue: 빈 세션에 쓸 모델 (기본: CLI 기본값)")
+    parser.add_argument("--strategy", default="auto",
+                        choices=("auto", "기본", "필기", "필기 중심", "족보", "족보 중심",
+                                 "사진", "사진 중심",
+                                 "base", "annotation", "jokbo", "image", "photo"),
+                        help="watch --run-id: 복습 덱 전략. 실습 사진 중심은 '사진'")
     parser.add_argument("--timeout", type=int, default=deck.DEFAULT_TIMEOUT,
                         help=f"watch·prequeue: 한 편의 제한 시간(초). 기본 {deck.DEFAULT_TIMEOUT}")
     parser.add_argument("--max", type=int, default=watch.DEFAULT_MAX_ITEMS,

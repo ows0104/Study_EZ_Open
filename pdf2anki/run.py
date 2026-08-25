@@ -10,8 +10,9 @@
 `[260820_03]` 에서 딴다. 사람이 강의 번호와 제목을 손으로 옮겨 적을 일이 없다 —
 29강을 돌리는 동안 그 손이 틀리는 것이 실제 위험이다.
 
-**전략은 코드가 정한다.** 족보 조각의 교수 교체 여부와 연도간 반복률을 보고
-필기 중심 / 족보 중심 / 기본 중 하나를 고른다. 교수가 바뀌었으면 `--annotation-evidence`
+**전략은 코드가 정한다.** 사진이 많은 실습 → 높은 족보 반복률 → 교수 교체·낮은 반복률
+확인 → 기본 순서로 고른다. 교수가 바뀌었거나 반복률이 낮으면 사용자에게 필기 중심 여부를
+묻는다. 필기 중심이면 `--annotation-evidence`
 도 자동으로 켠다 — 사람이 매번 index.json 을 열어 확인하던 일이다. `--strategy` 로 덮는다.
 
 **재개할 수 있다.** 각 단계는 자기 산출물이 이미 있으면 건너뛴다. 중간에 끊겨도
@@ -52,7 +53,9 @@ import unicodedata
 from pathlib import Path
 
 from . import ledger
-from .assemble import STRATEGIES, STRATEGY_ALIAS, decide_strategy, slice_for
+from .assemble import (STRATEGIES, STRATEGY_ALIAS, StrategyConfirmationRequired,
+                       apply_confirmed_strategy, decide_strategy, photo_profile,
+                       resolve_auto_strategy, slice_for)
 from .pack import lecture_of
 from .build import DEFECT_REASONS
 from .prompting import DEFAULT_DOMAIN, DOMAINS
@@ -231,19 +234,24 @@ class Runner:
     def plan_strategy(self):
         """족보 조각의 통계에서 이번 강의의 전략을 정한다.
 
-        축은 하나다 — 이번 시험의 출제자가 누구의 강조점을 물을 것인가.
-        교수 교체를 반복률보다 **먼저** 본다. 16-18강(반복률 72%·교수 교체)에서
-        순서를 뒤집으면 이전 교수의 기출을 쫓는, 정확히 틀린 덱이 나온다.
+        사진이 많은 실습 → 높은 반복률 → 교수 교체·낮은 반복률 확인 → 기본 순서다.
         """
         prep = json.loads((self.out / "prep.json").read_text(encoding="utf-8"))
         path, stats, mixed = slice_for(prep, Path(self.args.jokbo_dir), self.args.jokbo)
-        auto, why = decide_strategy(stats, mixed)
+        profile = photo_profile(prep, self.args.lecture or "")
+        auto, why = decide_strategy(stats, mixed, practical=profile["practical"],
+                                    image_rich=profile["image_rich"])
+        auto, why = apply_confirmed_strategy(auto, why, prep, self.args.lecture or "")
         chosen = STRATEGY_ALIAS[self.args.strategy]
         if chosen == "auto":
-            self.strategy, self.strategy_why = auto, why
+            try:
+                self.strategy, self.strategy_why = resolve_auto_strategy(auto, why)
+            except StrategyConfirmationRequired as e:
+                raise Failed(str(e)) from e
         else:
             self.strategy = chosen
-            self.strategy_why = f"사람이 --strategy 로 지정했다 (자동 판정은 {STRATEGIES[auto]})"
+            auto_name = "사용자 확인 필요" if auto not in STRATEGIES else STRATEGIES[auto]
+            self.strategy_why = f"사람이 --strategy 로 지정했다 (자동 판정은 {auto_name})"
 
         # 필기 중심이면 올해 필기를 근거로 인정한다. 그것이 이 전략의 실체다.
         self.annotation = self.strategy == "annotation"
@@ -258,6 +266,9 @@ class Runner:
             print(f"   반복률 {stats.get('repeat_rate', 0):.0%} · 가중치 "
                   f"{stats.get('jokbo_weight_hint', '?')}"
                   f"{' · 교수 교체' if stats.get('professor_changed_2026') else ' · 교수 유임'}")
+        if profile["practical"]:
+            print(f"   실습 사진 : {profile['figure_slides']}/{profile['total_slides']} 슬라이드 "
+                  f"({profile['figure_slide_share']:.0%})")
         print(f"   전략   : {STRATEGIES[self.strategy]} — {self.strategy_why}")
         print("   필기 근거 인정: " + ("예 (--annotation-evidence 상당)"
                                  if self.annotation else "아니오"))
@@ -295,7 +306,7 @@ class Runner:
 
     def validate(self):
         argv = ["pdf2anki.validate", str(self.out / "items.raw.json"),
-                "--prep", str(self.out / "prep.json")]
+                "--prep", str(self.out / "prep.json"), "--strategy", self.strategy]
         if self.annotation:
             argv += ["--annotation-evidence"]
         jk = self.jokbo_slice()
@@ -508,9 +519,9 @@ def main(argv=None) -> int:
     ap.add_argument("--jokbo-dir", default="out/jokbo")
     ap.add_argument("--jokbo", help="족보 조각 json. 생략하면 목차 제목으로 자동 대조")
     ap.add_argument("--apkg-name", help="덱 파일 이름 (확장자 없이). 기본은 강의 ID")
-    ap.add_argument("--strategy", default="auto", choices=sorted(STRATEGY_ALIAS),
-                    help="필기/족보/기본 중 무엇을 축으로 삼을지. "
-                         "auto(기본)면 교수 교체·반복률에서 판정한다")
+    ap.add_argument("--strategy", choices=sorted(STRATEGY_ALIAS),
+                    help="기본/필기/족보/사진 중 무엇을 축으로 삼을지. "
+                         "auto(기본)면 실습 사진·반복률·교수 교체 순으로 판정한다")
     ap.add_argument("--domain", choices=sorted(DOMAINS),
                     help=f"퀴즈 도메인 정책 (기본 {DEFAULT_DOMAIN}; 범용은 generic)")
     ap.add_argument("--model", help="빈 세션에 쓸 모델. 생략하면 CLI 기본값")
@@ -541,6 +552,7 @@ def main(argv=None) -> int:
             saved = json.loads(cfg.read_text(encoding="utf-8"))
         args.pdf = args.pdf or saved.get("pdf") or None
         args.domain = args.domain or saved.get("domain") or None
+        args.strategy = args.strategy or saved.get("strategy") or None
 
     if not args.resume and not args.pdf:
         print("필기 PDF 경로가 필요하다 (또는 --resume <폴더>).", flush=True)
@@ -557,6 +569,7 @@ def main(argv=None) -> int:
     args.deck = args.deck or saved.get("deck") or deck_of(args.lecture, args.subject)
     args.id = args.id or saved.get("id") or lecture_id_of(Path(args.pdf_name))
     args.domain = args.domain or DEFAULT_DOMAIN
+    args.strategy = args.strategy or "auto"
 
     out = Path(args.resume or args.out or f"out/{args.id}")
     out.mkdir(parents=True, exist_ok=True)
