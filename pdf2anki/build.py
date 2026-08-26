@@ -673,6 +673,9 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str,
     decks = {k: genanki.Deck(_mid(f"{deck_name}::{v}"), f"{deck_name}::{v}")
              for k, v in (("lecture", "강의록"), ("jokbo", "기출"))}
     stats = Counter()
+    # 카드마다 **실제로 만들어진** 그림 파일 이름. 검수 PDF 가 이름을 다시 유추하지
+    # 않게 하려고 든다 — 유추하면 가림 꼬리(`_m1`)를 몰라서 없는 파일을 찾는다.
+    rendered: dict[int, tuple[str, ...]] = {}
 
     for c in cards:
         fmt, src = c["card_format"], c["source_type"]
@@ -697,9 +700,12 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str,
         else:
             img, answer = "", render_answer(c["a"])
             if fmt == "image_basic":
-                img = f'<img src="{media.figure(m["figure_id"], crop, c["a"])}">'
+                name = media.figure(m["figure_id"], crop, c["a"])
+                rendered[id(c)] = (name,)
+                img = f'<img src="{name}">'
             elif fmt == "image_occlusion":
                 front, back = media.occlusion(m["figure_id"], m["occlusion_ids"], crop)
+                rendered[id(c)] = (front, back)
                 img, answer = f'<img src="{front}">', f'<img src="{back}">'
             note = genanki.Note(model=MODELS[fmt], guid=guid, tags=tags,
                                 fields=[html.escape(c["q"]), answer, exp, warn,
@@ -709,7 +715,7 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str,
         stats["deck:" + src] += 1
         stats["layer:" + layer_of(c)] += 1
 
-    contact = contact_sheet(prep_dir, cards, media, lecture_id)
+    contact = contact_sheet(prep_dir, cards, media, lecture_id, rendered)
     # 파일 이름은 부르는 쪽이 정할 수 있다. `lecture_id` 는 guid 의 씨앗이라
     # 바꿀 수 없지만 (`p260820_03`), 사람이 받아 여는 파일까지 그 이름일 이유는 없다.
     apkg = prep_dir / f"{apkg_name or lecture_id}.apkg"
@@ -721,11 +727,18 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str,
             "stats": dict(stats), "contact": contact}
 
 
-def contact_sheet(prep_dir: Path, cards: list, media: Media, lecture_id: str) -> Path | None:
+def contact_sheet(prep_dir: Path, cards: list, media: Media, lecture_id: str,
+                  rendered: dict[int, tuple[str, ...]]) -> Path | None:
     """이미지 카드의 앞·뒤를 나란히 놓은 검수용 PDF.
 
     가장 중요한 확인은 **앞면 크롭 안에 정답이 인쇄돼 있는지**다.
     필기자가 슬라이드를 통째로 붙였다면 캡션이 곧 정답이며, 픽셀이라 코드로는 못 잡는다.
+
+    **이름은 받아서 쓴다. 다시 유추하지 않는다.** 예전에는 `figure_id` 와 crop 으로
+    파일명을 여기서 다시 만들었는데, 정답이 그림에 인쇄돼 가림이 붙으면 실제 파일은
+    `..._m1.png` 가 되고 여기서 찾는 이름은 그대로라 빌드가 통째로 죽었다
+    (`260818_01` 재저작, 2026-08-26). 그림을 만드는 자리와 여는 자리가 같은 이름을
+    봐야 한다.
     """
     img_cards = [c for c in cards if c["card_format"] in ("image_basic", "image_occlusion")]
     if not img_cards:
@@ -735,14 +748,9 @@ def contact_sheet(prep_dir: Path, cards: list, media: Media, lecture_id: str) ->
     for i, c in enumerate(img_cards, 1):
         m = c["media"]
         crop = m.get("crop")
-        if c["card_format"] == "image_occlusion":
-            key = "-".join(o.replace("occ_", "") for o in m["occlusion_ids"])
-            names = [f"{m['figure_id']}_{key}_front", f"{m['figure_id']}_{key}_back"]
-            caps = ("앞면 (가림)", "뒷면 (공개)")
-        else:
-            tag = "" if not crop else "_c" + "-".join(str(round(v, 2)) for v in crop)
-            names = [f"{m['figure_id']}{tag}"]
-            caps = ("앞면 (크롭)",)
+        names = list(rendered.get(id(c)) or ())
+        if not names:
+            continue
         page = doc.new_page(width=W, height=H)
         page.insert_textbox(
             fitz.Rect(PAD, 8, W - PAD, TOP - 6),
@@ -753,8 +761,7 @@ def contact_sheet(prep_dir: Path, cards: list, media: Media, lecture_id: str) ->
         for j, nm in enumerate(names):
             box = fitz.Rect(PAD + j * (span + PAD), TOP,
                             PAD + j * (span + PAD) + span, H - PAD)
-            page.insert_image(box, filename=str(media.dir / f"{lecture_id}_{nm}.png"),
-                              keep_proportion=True)
+            page.insert_image(box, filename=str(media.dir / nm), keep_proportion=True)
             page.draw_rect(box, color=(0.7, 0.7, 0.7), width=0.5)
     out = prep_dir / f"{lecture_id}_image_check.pdf"
     doc.save(out)
