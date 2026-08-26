@@ -842,6 +842,22 @@ def find_jokbo_source(prep_dir: Path, jokbo_dir: Path, slice_arg: str | None,
     return slice_path, (pdf_path if pdf_path and pdf_path.exists() else None)
 
 
+def jokbo_dir_candidates(root: Path = Path(".")) -> list[Path]:
+    """`index.json` 을 든 족보 폴더를 찾아 준다. 고르지는 않는다.
+
+    `--jokbo-dir` 의 기본값(`out/jokbo`)은 이 저장소의 배치(`runs/_jokbo/<과목>`)와
+    다르다. 기본값을 바꾸지 않는 이유는 **어느 쪽이 옳은지 build 가 모르기 때문**이다 —
+    과목을 모르고, 폴더가 여럿일 수 있다. 대신 틀렸을 때 어디를 보라고 알려 준다.
+    """
+    seen = []
+    for pat in ("out/jokbo/index.json", "out/jokbo/*/index.json",
+                "runs/_jokbo/index.json", "runs/_jokbo/*/index.json"):
+        for hit in sorted(root.glob(pat)):
+            if hit.parent not in seen:
+                seen.append(hit.parent)
+    return seen
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="검증된 카드를 .apkg 로 만든다")
     ap.add_argument("prep_dir")
@@ -852,7 +868,10 @@ def main(argv=None) -> int:
     ap.add_argument("--allow-defects", action="store_true",
                     help="재현 불가로 갈린 카드를 그대로 덱에 넣는다")
     ap.add_argument("--jokbo", help="족보 조각 json. 생략하면 assemble 과 같은 규칙으로 찾는다")
-    ap.add_argument("--jokbo-dir", default="out/jokbo")
+    ap.add_argument("--jokbo-dir", default="out/jokbo",
+                    help="족보 조각 폴더. 이 저장소는 runs/_jokbo/<과목> 을 쓴다")
+    ap.add_argument("--no-jokbo-images", action="store_true",
+                    help="기출 원본을 못 찾아도 그대로 굽는다 (뒷면 지면 이미지가 빠진다)")
     ap.add_argument("--jokbo-pdf", help="족보 원본 PDF. 생략하면 index.json 의 이름으로 찾는다")
     ap.add_argument("--apkg-name", help="덱 파일 이름 (확장자 없이). 기본은 강의 ID")
     args = ap.parse_args(argv)
@@ -887,6 +906,28 @@ def main(argv=None) -> int:
                                      args.jokbo, args.jokbo_pdf)
     print(f"기출 원본: {jslice.name if jslice else '조각 없음'}"
           f" · {jpdf.name if jpdf else 'PDF 없음 (지면 이미지 생략)'}")
+
+    # **기출 카드가 있는데 원본을 못 찾으면 멈춘다.** 예전에는 한 줄 찍고 그냥
+    # 구웠고, 그 결과 26편을 다시 구우면서 기출 뒷면의 지면 이미지가 통째로
+    # 빠졌다(260819_01 은 미디어가 66 → 57). 카드 수도 노트 수도 그대로라
+    # 문지기도 못 잡는다 — 사라진 것이 미디어뿐이기 때문이다.
+    n_jokbo = sum(1 for c in cards if c.get("source_type") == "jokbo")
+    if n_jokbo and not (jslice and jpdf):
+        missing = "조각" if not jslice else "원본 PDF"
+        print(f"\n기출 카드가 {n_jokbo}장인데 {missing}을 못 찾았다. 이대로 구우면 "
+              "뒷면의 문항 원문·지면 이미지가 빠진 채 나간다.")
+        print(f"  지금 본 곳: {Path(args.jokbo_dir).as_posix()}")
+        found = jokbo_dir_candidates()
+        if found:
+            print("  index.json 이 있는 곳:")
+            for cand in found:
+                print(f"    --jokbo-dir {cand.as_posix()}")
+        else:
+            print("  index.json 을 어디서도 못 찾았다 — `python -m studyez jokbo <과목>` 부터.")
+        if not args.no_jokbo_images:
+            print("  일부러 빼려면 --no-jokbo-images 를 붙여라.")
+            return 1
+        print("  --no-jokbo-images 로 강행한다.")
 
     try:
         res = build(prep_dir, args.deck, lecture_id, src=src,
