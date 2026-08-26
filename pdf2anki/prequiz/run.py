@@ -208,6 +208,7 @@ class Runner:
         self.run = ledger.run_id()
         os.environ[ledger.ENV_RUN] = self.run
         self.pend_cost, self.pend_usage, self.pend_sessions = 0.0, {}, 0
+        self.pend_models = {}
         self.stayed, self.prof = True, "미상"
         self.slice_path = None
         self.contract_broken = False
@@ -236,10 +237,12 @@ class Runner:
         n0 = len(ledger.read(self.out))
         t = time.time()
         self.pend_cost, self.pend_usage, self.pend_sessions = 0.0, {}, 0
+        self.pend_models = {}
         fn()
         if len(ledger.read(self.out)) == n0:
             ledger.append(self.out, name, seconds=time.time() - t, cost=self.pend_cost,
-                          usage=self.pend_usage, sessions=self.pend_sessions)
+                          usage=self.pend_usage, sessions=self.pend_sessions,
+                          models=self.pend_models)
         if produces and not self.made(produces):
             raise Failed(f"{name}: {produces} 가 생기지 않았다")
 
@@ -268,6 +271,7 @@ class Runner:
         self.pend_cost += res.get("cost_usd") or 0.0
         self.pend_sessions += 1
         ledger.add(self.pend_usage, res.get("usage"))
+        ledger.add_models(self.pend_models, res.get("models"))
         if res.get("session_id"):
             self.sid = res["session_id"]
         for line in (res.get("text") or "").strip().splitlines()[-6:]:
@@ -388,6 +392,7 @@ class Runner:
                   f"(결함 {len(bad)}장 · 계약 위반 {len(viol)}건)", flush=True)
             t = time.time()
             self.pend_cost, self.pend_usage, self.pend_sessions = 0.0, {}, 0
+            self.pend_models = {}
             raw = (self.out / "items.raw.json").resolve().as_posix()
             body = []
             for v in viol:
@@ -403,7 +408,8 @@ class Runner:
             self.agent(task + "\n\n" + "\n\n".join(body), f"수선{rnd}",
                        resume=bool(self.sid))
             ledger.append(self.out, "수선", seconds=time.time() - t, cost=self.pend_cost,
-                          usage=self.pend_usage, sessions=self.pend_sessions)
+                          usage=self.pend_usage, sessions=self.pend_sessions,
+                          models=self.pend_models)
 
             ids = [c["id"] for c in bad if c.get("id")]
             self.validate()

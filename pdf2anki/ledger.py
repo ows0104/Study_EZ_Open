@@ -37,9 +37,33 @@ def usage_of(env: dict | None) -> dict:
     return {k: int(u.get(k) or 0) for k in TOKEN_KEYS}
 
 
+def models_of(env: dict | None) -> dict[str, int]:
+    """어느 모델이 얼마나 냈는지. 봉투의 `modelUsage` 가 이미 들고 있다.
+
+    **이 줄이 없어서 오늘 하루가 갔다.** 2026-08-26에 `260821_03` 을 8-23과 같은
+    커밋·같은 자료로 다시 돌렸더니 카드가 78장에서 23장이 됐다. 코드도 입력도
+    같다는 것까지는 실험으로 좁혔는데, 남은 변수인 **모델을 어디에도 안 적어 둬서**
+    거기서 멈췄다. 값이 흔들렸을 때 무엇이 흔들렸는지 물을 수 있어야 한다.
+    """
+    mu = (env or {}).get("modelUsage") or {}
+    if not isinstance(mu, dict):
+        return {}
+    out = {}
+    for name, v in mu.items():
+        if isinstance(v, dict):
+            out[str(name)] = int(v.get("outputTokens") or 0)
+    return out
+
+
 def add(dst: dict, src: dict | None) -> dict:
     for k in TOKEN_KEYS:
         dst[k] = int(dst.get(k, 0)) + int((src or {}).get(k) or 0)
+    return dst
+
+
+def add_models(dst: dict, src: dict | None) -> dict:
+    for name, n in (src or {}).items():
+        dst[name] = int(dst.get(name, 0)) + int(n or 0)
     return dst
 
 
@@ -53,11 +77,14 @@ def run_id() -> str:
 
 
 def append(out: Path, step: str, *, seconds: float, cost: float | None,
-           usage: dict | None = None, sessions: int = 1, note: str = "") -> None:
+           usage: dict | None = None, sessions: int = 1, note: str = "",
+           models: dict[str, int] | None = None) -> None:
     row = {"run": run_id(), "t": round(time.time()), "step": step,
            "seconds": round(float(seconds), 1), "cost_usd": round(float(cost or 0.0), 4),
            "sessions": int(sessions),
            **{k: int((usage or {}).get(k) or 0) for k in TOKEN_KEYS}}
+    if models:
+        row["models"] = models
     if note:
         row["note"] = note
     with (Path(out) / LOG).open("a", encoding="utf-8") as f:
@@ -148,6 +175,9 @@ def table(rows: list[dict], title: str = "") -> str:
             tot[k] += r[k]
         add(tot, r)
     out += [RULE, _row(_cells(tot, "합계"))]
+    used = models_used(rows)
+    if used:
+        out.append("모델  " + " · ".join(f"{k} ({_n(v)})" for k, v in used.items()))
     return "\n".join(out)
 
 
@@ -169,4 +199,14 @@ def summarize(out: Path, run: str | None = None) -> dict:
         return t
 
     return {"run": run, "this_run": agg(mine), "cumulative": agg(rows),
+            "models": models_used(mine), "models_cumulative": models_used(rows),
             "steps": fold(mine), "rows": mine}
+
+
+def models_used(rows: list[dict]) -> dict[str, int]:
+    """이 실행에 실제로 답을 낸 모델들. 출력 토큰이 많은 쪽이 주 모델이다."""
+    out: dict[str, int] = {}
+    for r in rows:
+        for name, n in (r.get("models") or {}).items():
+            out[name] = out.get(name, 0) + int(n or 0)
+    return dict(sorted(out.items(), key=lambda kv: -kv[1]))

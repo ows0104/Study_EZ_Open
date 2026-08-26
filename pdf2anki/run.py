@@ -133,6 +133,7 @@ class Runner:
         self.run = ledger.run_id()
         os.environ[ledger.ENV_RUN] = self.run
         self.pend_cost, self.pend_usage, self.pend_sessions = 0.0, {}, 0
+        self.pend_models = {}
         self.strategy: str = "base"
         self.strategy_why: str = ""
         # 전략 판정 전까지의 잠정값. 사람이 깃발로 켰으면 그대로 산다.
@@ -172,11 +173,13 @@ class Runner:
         n0 = len(ledger.read(self.out))
         t = time.time()
         self.pend_cost, self.pend_usage, self.pend_sessions = 0.0, {}, 0
+        self.pend_models = {}
         fn()
         # 하위 프로세스가 스스로 적었으면(재현 검사) 여기서 또 적지 않는다. 시간이 겹친다.
         if len(ledger.read(self.out)) == n0:
             ledger.append(self.out, name, seconds=time.time() - t, cost=self.pend_cost,
-                          usage=self.pend_usage, sessions=self.pend_sessions)
+                          usage=self.pend_usage, sessions=self.pend_sessions,
+                          models=self.pend_models)
         if produces and not self.made(produces):
             raise Failed(f"{name}: {produces} 가 생기지 않았다")
 
@@ -218,6 +221,7 @@ class Runner:
         self.pend_cost += res.get("cost_usd") or 0.0
         self.pend_sessions += 1
         ledger.add(self.pend_usage, res.get("usage"))
+        ledger.add_models(self.pend_models, res.get("models"))
         if res.get("session_id"):
             self.sid = res["session_id"]
         tail = (res.get("text") or "").strip().splitlines()
@@ -363,6 +367,7 @@ class Runner:
                 print(f"   [{x['kind']}] {x['id']}: {x['card']['q'][:60]}", flush=True)
             t = time.time()
             self.pend_cost, self.pend_usage, self.pend_sessions = 0.0, {}, 0
+            self.pend_models = {}
             body = [f"### [{x['kind']}] {x['card']['q']}\n"
                     f"- 새어 나간 것: {x['detail']!r} — {LEAK_SAYS[x['kind']]}\n"
                     f"- 원래 답: {x['card']['a']}\n"
@@ -372,7 +377,8 @@ class Runner:
             self.agent(task + "\n\n" + "\n\n".join(body), f"누출수선{rnd}",
                        resume=bool(self.sid))
             ledger.append(self.out, "누출 수선", seconds=time.time() - t, cost=self.pend_cost,
-                          usage=self.pend_usage, sessions=self.pend_sessions)
+                          usage=self.pend_usage, sessions=self.pend_sessions,
+                          models=self.pend_models)
 
             # **고치는 대상은 items.raw.json 이다.** checked 만 고치면 다음 `validate()` 가
             # raw 에서 다시 만들면서 조용히 되돌린다 — 24강 실행에서 손으로 고친 세 장이
@@ -398,6 +404,7 @@ class Runner:
             print(f"\n── 수선 {rnd}/{self.args.repair_rounds}  (결함 {len(bad)}장)", flush=True)
             t = time.time()
             self.pend_cost, self.pend_usage, self.pend_sessions = 0.0, {}, 0
+            self.pend_models = {}
             raw = (self.out / "items.raw.json").resolve().as_posix()
             body = []
             for c in bad:
@@ -410,7 +417,8 @@ class Runner:
             self.agent(task + "\n\n" + "\n\n".join(body), f"수선{rnd}",
                        resume=bool(self.sid))
             ledger.append(self.out, "수선", seconds=time.time() - t, cost=self.pend_cost,
-                          usage=self.pend_usage, sessions=self.pend_sessions)
+                          usage=self.pend_usage, sessions=self.pend_sessions,
+                          models=self.pend_models)
 
             ids = [c["id"] for c in bad if c.get("id")]
             self.validate()

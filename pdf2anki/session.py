@@ -118,7 +118,8 @@ def run_blind(prompt: str, *, model: str | None = None, timeout: int = 1800,
             "turns": (meta or {}).get("num_turns"),
             "session_id": (meta or {}).get("session_id"),
             "duration_ms": (meta or {}).get("duration_ms"),
-            "usage": ledger.usage_of(meta)}
+            "usage": ledger.usage_of(meta),
+            "models": ledger.models_of(meta)}
     return extract_json(body), info
 
 
@@ -156,12 +157,14 @@ def run_agent(prompt: str, *, cwd: Path, model: str | None = None,
     try:
         env = json.loads(proc.stdout)
     except json.JSONDecodeError:
-        return {"text": proc.stdout, "cost_usd": None, "usage": ledger.usage_of(None)}
+        return {"text": proc.stdout, "cost_usd": None,
+                "usage": ledger.usage_of(None), "models": {}}
     if env.get("is_error"):
         raise SessionError(f"{label or '세션'}: {str(env.get('result'))[:400]}")
     return {"text": env.get("result", ""), "cost_usd": env.get("total_cost_usd"),
             "turns": env.get("num_turns"), "session_id": env.get("session_id"),
-            "duration_ms": env.get("duration_ms"), "usage": ledger.usage_of(env)}
+            "duration_ms": env.get("duration_ms"), "usage": ledger.usage_of(env),
+            "models": ledger.models_of(env)}
 
 
 def verify_blind(target: Path, *, model: str | None = None) -> tuple[bool, str]:
