@@ -56,7 +56,8 @@ for p in sorted(glob.glob(os.path.join(repo, "runs/2608*/items.reproduced.json")
     run = os.path.basename(d)
     if not os.path.exists(os.path.join(d, "regen.log")):
         continue
-    doc = json.load(open(p, encoding="utf-8"))["cards"]
+    with open(p, encoding="utf-8") as fh:
+        doc = json.load(fh)["cards"]
     jok = [c for c in doc if c.get("source_type") == "jokbo"]
     runs.append({"run": run, "cards": len(doc), "jokbo": len(jok),
                  "hit": sum(1 for c in doc if c.get("exam_hit"))})
@@ -428,5 +429,6 @@ render();
 </script>
 """
 
-open(out, "w", encoding="utf-8").write(HTML.replace("__DATA__", data))
+with open(out, "w", encoding="utf-8") as fh:
+    fh.write(HTML.replace("__DATA__", data))
 print("wrote", out, os.path.getsize(out) // 1024, "KB ·", len(cards), "cards ·", len(runs), "runs")

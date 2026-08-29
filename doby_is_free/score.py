@@ -72,8 +72,8 @@ def run_with_eyes(prompt: str, cwd: Path, *, model: str | None = None,
         proc = subprocess.run(argv, input=prompt, cwd=str(cwd), timeout=timeout,
                               capture_output=True, text=True,
                               encoding="utf-8", errors="replace")
-    except subprocess.TimeoutExpired:
-        raise session.SessionError(f"{label}: {timeout}초 안에 끝나지 않았다")
+    except subprocess.TimeoutExpired as cause:
+        raise session.SessionError(f"{label}: {timeout}초 안에 끝나지 않았다") from cause
     if proc.returncode != 0:
         raise session.SessionError(
             f"{label}: claude 가 {proc.returncode} 로 끝났다\n"

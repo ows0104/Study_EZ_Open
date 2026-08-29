@@ -19,7 +19,7 @@ for run in runs:
         [sys.executable, "-m", "pdf2anki.build", str(d),
          "--deck", cfg["deck"], "--id", cfg["id"], "--jokbo-dir", str(JOKBO)],
         cwd=str(REPO), env=env, capture_output=True, text=True, encoding="utf-8", errors="replace")
-    tail = [l for l in (r.stdout or "").splitlines() if l.strip()][-1:] or [(r.stderr or "")[-160:]]
+    tail = [line for line in (r.stdout or "").splitlines() if line.strip()][-1:] or [(r.stderr or "")[-160:]]
     print(f"[{'OK ' if r.returncode == 0 else '실패'}] {run}  {tail[0][:100]}", flush=True)
     if r.returncode:
         fail.append(run)

@@ -150,9 +150,9 @@ def fetch_note(src: str, dst: Path) -> Path:
             raw = r.read()
             charset = r.headers.get_content_charset() or "utf-8"
         body = raw.decode(charset, errors="replace")
-    except (urllib.error.URLError, OSError, ValueError) as e:
-        raise Failed(f"예습 설명본을 받지 못했다 ({e}). "
-                     f"내용을 .md 로 저장해 --note <경로> 로 줘라")
+    except (urllib.error.URLError, OSError, ValueError) as cause:
+        raise Failed(f"예습 설명본을 받지 못했다 ({cause}). "
+                     f"내용을 .md 로 저장해 --note <경로> 로 줘라") from cause
     p = _Text()
     p.feed(body)
     text = re.sub(r"\n{3,}", "\n\n", "\n".join(p.out)).strip()

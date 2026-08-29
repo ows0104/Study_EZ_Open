@@ -98,8 +98,8 @@ def run_blind(prompt: str, *, model: str | None = None, timeout: int = 1800,
             proc = subprocess.run(argv, input=prompt, cwd=cwd, timeout=timeout,
                                   capture_output=True, text=True,
                                   encoding="utf-8", errors="replace")
-        except subprocess.TimeoutExpired:
-            raise SessionError(f"{label or '세션'}: {timeout}초 안에 끝나지 않았다")
+        except subprocess.TimeoutExpired as cause:
+            raise SessionError(f"{label or '세션'}: {timeout}초 안에 끝나지 않았다") from cause
 
     if proc.returncode != 0:
         tail = (proc.stderr or proc.stdout or "").strip()[-400:]
@@ -149,8 +149,8 @@ def run_agent(prompt: str, *, cwd: Path, model: str | None = None,
         proc = subprocess.run(argv, input=prompt, cwd=str(cwd), timeout=timeout,
                               capture_output=True, text=True,
                               encoding="utf-8", errors="replace")
-    except subprocess.TimeoutExpired:
-        raise SessionError(f"{label or '세션'}: {timeout}초 안에 끝나지 않았다")
+    except subprocess.TimeoutExpired as cause:
+        raise SessionError(f"{label or '세션'}: {timeout}초 안에 끝나지 않았다") from cause
     if proc.returncode != 0:
         tail = (proc.stderr or proc.stdout or "").strip()[-400:]
         raise SessionError(f"{label or '세션'}: claude 가 {proc.returncode} 로 끝났다\n{tail}")

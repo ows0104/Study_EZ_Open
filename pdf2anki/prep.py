@@ -77,7 +77,7 @@ def annot_year(a: fitz.Annot) -> str:
 def figures_of(page: fitz.Page) -> list[dict]:
     """근거가 될 만한 크기의 래스터 그림."""
     out = []
-    for n, blk in enumerate(page.get_text("dict")["blocks"]):
+    for blk in page.get_text("dict")["blocks"]:
         if blk["type"] != 1:
             continue
         x0, y0, x1, y1 = blk["bbox"]
@@ -206,9 +206,9 @@ def build(src: Path, outdir: Path) -> dict:
 
         # 필기가 강의록을 덮었는가 (덮었으면 그 슬라이드만 clean 렌더가 따로 필요하다)
         covered = []
-        for kind, rect in ([("text", fitz.Rect(l["bbox"]))
+        for kind, rect in ([("text", fitz.Rect(line["bbox"]))
                             for b in cp.get_text("dict")["blocks"] if b["type"] == 0
-                            for l in b["lines"]]
+                            for line in b["lines"]]
                            + [("figure", fitz.Rect(f["bbox"])) for f in lecture_figs]):
             if rect.get_area() < 60:
                 continue
