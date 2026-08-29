@@ -475,13 +475,12 @@ def explain_missing_run(runs_dir: Path, run_id: str, prev_year: str) -> int:
     필기가 아직 없어 붙일 자리가 없다. 산출물은 그대로 남고, 올해 필기가 올라온
     뒤 야간 `publish --all`이 그때 같이 민다. 그래서 이 경우만 0으로 끝낸다.
     """
-    prep = runs_dir / run_id / "prep.json"
-    source = ""
-    if prep.is_file():
-        try:
-            source = str(json.loads(prep.read_text(encoding="utf-8")).get("source_pdf", ""))
-        except (OSError, ValueError):
-            source = ""
+    # **`prep.json` 을 직접 읽지 않는다.** 한동안 여기서 `source_pdf` 키를 찾았는데
+    # `374071a`(pdf2anki 이관)에서 `prep.py` 가 `source` 로 이름을 바꿨다. 그래서 이
+    # 함수가 원본을 영영 못 읽었고, 아래 「작년 run 이라 정상」 분기가 통째로 죽어
+    # 있었다 — 작년 run 인데도 「필기가 지워졌다」고 찍고 1 로 끝냈다.
+    # `run_source_pdf` 가 `run.config.json` 까지 보고 두 키를 다 안다.
+    source = run_source_pdf(runs_dir, run_id)
     parsed = filenames.parse(source) if source else None
 
     if parsed is not None and parsed.date[:4] == prev_year:
