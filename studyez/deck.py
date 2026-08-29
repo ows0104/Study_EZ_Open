@@ -270,6 +270,42 @@ def run_pre(*, pdf: str | Path, run_id: str, subject: str, lecture: str, note: s
     return _spawn(argv, run_dir, repo_root, timeout, "prequiz.log")
 
 
+def cut_jokbo(pdf: Path, out_dir: Path, repo_root: Path) -> int:
+    """과목 족보 PDF를 강의별 조각으로 자른다. `pdf2anki.jokbo` 를 그대로 부른다.
+
+    학기당 과목당 한 번이라 사람이 지켜보는 명령이다. 그래서 `_spawn` 과 달리
+    출력을 로그로 삼키지 않고 화면으로 흘린다. 돌려주는 것은 종료 코드뿐이고,
+    산출물이 제대로 나왔는지는 부르는 쪽이 본다.
+    """
+    argv = [sys.executable, "-m", "pdf2anki.jokbo", str(pdf), "-o", str(out_dir)]
+    done = subprocess.run(argv, cwd=str(repo_root),
+                          env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+    return done.returncode
+
+
+def rebuild(*, run_dir: Path, kind: str, deck_name: str, id: str, jokbo_dir: Path,
+            apkg_name: str, repo_root: Path) -> tuple[bool, list[str]]:
+    """이미 만든 카드로 덱만 다시 굽는다. **모델을 부르지 않는다.**
+
+    `run_main`·`run_pre` 가 부르는 `pdf2anki.run` 은 prep부터 빌드까지 하는
+    오케스트레이터다. 여기는 그 마지막 단계인 `pdf2anki.build` 만 직접 부른다 —
+    **`build` 의 인자 모양을 아는 유일한 자리다.**
+
+    편당 몇 초라 로그 파일을 열지 않고 받아서 실패했을 때만 꼬리를 돌려준다.
+    """
+    module = "pdf2anki.prequiz.build" if kind == PRE else "pdf2anki.build"
+    argv = [sys.executable, "-m", module, str(run_dir),
+            "--deck", deck_name, "--id", id,
+            "--jokbo-dir", str(jokbo_dir), "--apkg-name", apkg_name]
+    done = subprocess.run(argv, cwd=str(repo_root), capture_output=True, text=True,
+                          encoding="utf-8", errors="replace",
+                          env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+    if done.returncode != 0:
+        tail = (done.stderr or done.stdout or "").strip().splitlines()
+        return False, tail or [str(done.returncode)]
+    return True, []
+
+
 # ------------------------------------------------------------------ 산출물 옮기기
 
 

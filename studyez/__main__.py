@@ -34,7 +34,6 @@ import json
 import os
 import re
 import shutil
-import subprocess
 import sys
 import time
 from datetime import date as Date, timedelta
@@ -439,7 +438,7 @@ def run_jokbo(args) -> int:
     """과목 족보 PDF를 강의별 조각으로 자른다. 학기당 과목당 한 번이면 된다.
 
     자르는 것은 `pdf2anki.jokbo`다. 여기서 하는 것은 **어느 PDF를 줄지 고르는
-    것**뿐 — 과목 폴더에서 원본을 찾아 하위 프로세스에 넘긴다.
+    것**뿐 — 과목 폴더에서 원본을 찾아 `deck.cut_jokbo`에 넘긴다.
 
     강의와 조각을 짝지어 `links.json`을 쓰던 자리가 여기 있었는데 없앴다.
     지금은 어느 조각을 물릴지 pdf2anki가 카드를 만들 때 목차 제목으로 대조한다.
@@ -463,11 +462,9 @@ def run_jokbo(args) -> int:
 
     out_dir = deck.jokbo_dir(Path(args.runs), subject)
     print(f"[jokbo] {pdfs[0].name} → {out_dir}")
-    done = subprocess.run(
-        [sys.executable, "-m", "pdf2anki.jokbo", str(pdfs[0]), "-o", str(out_dir)],
-        cwd=str(REPO_ROOT), env=dict(os.environ, PYTHONIOENCODING="utf-8"))
-    if done.returncode != 0:
-        print(f"  자르지 못했다 (코드 {done.returncode})")
+    code = deck.cut_jokbo(pdfs[0], out_dir, REPO_ROOT)
+    if code != 0:
+        print(f"  자르지 못했다 (코드 {code})")
         return 1
 
     index = out_dir / "index.json"
@@ -635,7 +632,6 @@ def run_rebuild(args) -> int:
     print(f"[rebuild] {len(targets)}편")
     done, failed = 0, 0
     for run_dir, kind, cfg in targets:
-        module = "pdf2anki.prequiz.build" if kind == deck.PRE else "pdf2anki.build"
         subject = cfg["deck"].split("::")[0]
         parsed = filenames.parse(deck.source_pdf(run_dir))
         title = parsed.title if parsed else run_dir.name
@@ -645,21 +641,18 @@ def run_rebuild(args) -> int:
         # 바뀌어도 Anki 안에서 보이는 이름만 옛것으로 남는다 — 파일만 바뀌고 덱은
         # 그대로였던 것이 실제로 그 이유였다.
         deck_name = deck.calendar_deck(run_dir, run_dir.name, title, kind, subject, professors)
-        argv = [sys.executable, "-m", module, str(run_dir),
-                "--deck", deck_name, "--id", cfg.get("id") or deck.deck_id(run_dir.name),
-                "--jokbo-dir", str(deck.jokbo_dir(runs_dir, subject)),
-                "--apkg-name", name]
         if args.dry_run:
             moved = "" if deck_name == cfg["deck"] else f"\n      덱 {cfg['deck']} → {deck_name}"
             print(f"  → {run_dir.name} {kind}  {name}.apkg{moved}")
             continue
         marks = deck.reflag(run_dir) if args.reflag else {}
-        result = subprocess.run(argv, cwd=str(REPO_ROOT), capture_output=True, text=True,
-                                encoding="utf-8", errors="replace",
-                                env=dict(os.environ, PYTHONIOENCODING="utf-8"))
-        if result.returncode != 0:
-            tail = (result.stderr or result.stdout or "").strip().splitlines()
-            print(f"  ✗ {run_dir.name} {kind} — {tail[-1] if tail else result.returncode}")
+        ok, tail = deck.rebuild(
+            run_dir=run_dir, kind=kind, deck_name=deck_name,
+            id=cfg.get("id") or deck.deck_id(run_dir.name),
+            jokbo_dir=deck.jokbo_dir(runs_dir, subject), apkg_name=name,
+            repo_root=REPO_ROOT)
+        if not ok:
+            print(f"  ✗ {run_dir.name} {kind} — {tail[-1] if tail else '실패'}")
             failed += 1
             continue
         # 이름 규칙이 바뀌면 옛 이름의 덱이 옆에 남는다. 같은 갈래의 낡은 것은
