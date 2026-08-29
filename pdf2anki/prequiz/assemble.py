@@ -19,8 +19,14 @@ import json
 import sys
 from pathlib import Path
 
-from ..pack import (READ_TOKEN_CAP, estimate_pdf_tokens, find_jokbo, needs_clean,
-                    read_instructions, write_parts)
+from ..pack import (
+    READ_TOKEN_CAP,
+    estimate_pdf_tokens,
+    find_jokbo,
+    needs_clean,
+    read_instructions,
+    write_parts,
+)
 from ..prompting import DEFAULT_DOMAIN, DOMAINS, lecture_adapters, read_modules
 
 PROMPTS = Path(__file__).parent / "prompts"

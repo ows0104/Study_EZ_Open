@@ -20,7 +20,6 @@ from app.config import get_settings
 from app.database import get_db
 from app.models import Profile
 
-
 bearer_scheme = HTTPBearer(auto_error=False)
 
 LOCAL_TEST_USER_ID = "00000000-0000-0000-0000-000000000001"

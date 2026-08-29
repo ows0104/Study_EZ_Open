@@ -117,7 +117,7 @@ def main(argv=None) -> int:
     if args.approve:
         shutil.copyfile(plan_path, d / "plan.approved.json")
         print(f"승인 확정 → {d}/plan.approved.json")
-        print(f"이제 prompt.cards.md 를 실행하면 된다.")
+        print("이제 prompt.cards.md 를 실행하면 된다.")
         return 0
 
     print(f"강의록 목표 {stats['objectives']}개 (core {stats['core']}, "

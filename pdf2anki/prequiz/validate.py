@@ -24,12 +24,21 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 
 from ..textutil import char_ngrams, containment, jaccard, norm_key
-from ..validate import (LEAK_THRESHOLD, MAX_Q_CHARS, OX_FALSE, OX_TRUE,
-                        RE_BULLET_LINE, RE_CLOZE, RE_POINTS_AT_SOURCE,
-                        SIMILAR_CROSS_SLIDE, SIMILAR_SAME_SLIDE, _ref_status,
-                        count_items, occlusion_answer_matches)
-from .schema import (CARD_SCHEMA, IMAGE_FORMATS, MAX_CARDS, MAX_RECALL_ITEMS,
-                     MIN_CARDS, OX_SHARE_MAX)
+from ..validate import (
+    LEAK_THRESHOLD,
+    MAX_Q_CHARS,
+    OX_FALSE,
+    OX_TRUE,
+    RE_BULLET_LINE,
+    RE_CLOZE,
+    RE_POINTS_AT_SOURCE,
+    SIMILAR_CROSS_SLIDE,
+    SIMILAR_SAME_SLIDE,
+    _ref_status,
+    count_items,
+    occlusion_answer_matches,
+)
+from .schema import CARD_SCHEMA, IMAGE_FORMATS, MAX_CARDS, MAX_RECALL_ITEMS, MIN_CARDS, OX_SHARE_MAX
 
 
 def _fail(card, code, detail=""):

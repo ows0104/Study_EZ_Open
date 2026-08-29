@@ -46,7 +46,16 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 from studyez import (  # noqa: E402
-    agent, blocks, deck, filenames, gate, matching, preview, publish, runner, watch,
+    agent,
+    blocks,
+    deck,
+    filenames,
+    gate,
+    matching,
+    preview,
+    publish,
+    runner,
+    watch,
 )
 
 DEFAULT_ROOT = Path.home() / "SynologyDrive"

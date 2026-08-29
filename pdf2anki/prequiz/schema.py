@@ -27,8 +27,7 @@ from pathlib import Path
 
 # 기계 검사의 임계값. **계약에 실려야 하는 값이다** —
 # 싣지 않으면 모델이 `validate.py` 소스를 뒤져서 알아낸다 (실제로 그랬다).
-from ..validate import (LEAK_THRESHOLD, MAX_Q_CHARS, SIMILAR_CROSS_SLIDE,
-                        SIMILAR_SAME_SLIDE)
+from ..validate import LEAK_THRESHOLD, MAX_Q_CHARS, SIMILAR_CROSS_SLIDE, SIMILAR_SAME_SLIDE
 
 # ─────────────────────────────────────────────────────────────── enum
 

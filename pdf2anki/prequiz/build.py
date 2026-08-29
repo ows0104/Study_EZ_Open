@@ -29,9 +29,22 @@ from pathlib import Path
 
 import genanki
 
-from ..build import (ANCHOR, CSS, DEFECT_REASONS, FIELDS, Jokbo, Media, _mid,
-                     GuidClash, check_guids, contact_sheet, find_jokbo_source,
-                     guid_of, render_answer, verify)
+from ..build import (
+    ANCHOR,
+    CSS,
+    DEFECT_REASONS,
+    FIELDS,
+    GuidClash,
+    Jokbo,
+    Media,
+    _mid,
+    check_guids,
+    contact_sheet,
+    find_jokbo_source,
+    guid_of,
+    render_answer,
+    verify,
+)
 from .schema import MAX_CARDS, MIN_CARDS
 
 # ── 노트 모델 — 복습과 뒷면 구조가 다르다 ─────────────────────────

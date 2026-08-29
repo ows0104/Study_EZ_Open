@@ -115,7 +115,7 @@ def load(apkg: Path, work: Path | None = None) -> Deck:
         model = by_mid[mid]
         names = [f["name"] for f in model["flds"]]
         parts = flds.split("\x1f")
-        values = dict(zip(names, parts + [""] * len(names)))
+        values = dict(zip(names, parts + [""] * len(names), strict=False))
         front = render_front(model["tmpls"][0]["qfmt"], values)
         notes.append(Note(i, model["name"], front,
                           values.get(names[1], "") if len(names) > 1 else "",

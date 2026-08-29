@@ -54,9 +54,10 @@ import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from . import ahead, deck, filenames, gate, matching
 from . import preview as preview_mod

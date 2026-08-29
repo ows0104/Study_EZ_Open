@@ -22,7 +22,8 @@ from __future__ import annotations
 import json
 import os
 import time
-from datetime import date as Date, timedelta
+from datetime import date as Date
+from datetime import timedelta
 from pathlib import Path
 
 from studyez import agent, blocks, deck, filenames, prequeue, publish, watch

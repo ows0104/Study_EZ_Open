@@ -447,7 +447,7 @@ def render_answer(a: str) -> str:
 
     base = min(len(m.group(1)) for m in marks if m)
     out, in_list, in_sub, hit = [], False, False, False
-    for ln, m in zip(lines, marks):
+    for ln, m in zip(lines, marks, strict=False):
         if not m:
             text = ln.strip()
             if not text:

@@ -10,19 +10,22 @@
 
 from __future__ import annotations
 
-from datetime import date as Date, datetime, timezone
+from datetime import UTC, datetime
+from datetime import date as Date
 
 from sqlalchemy import (
+    JSON,
     Boolean,
-    Date as SADate,
     DateTime,
     ForeignKeyConstraint,
     Index,
     Integer,
-    JSON,
     String,
     Text,
     UniqueConstraint,
+)
+from sqlalchemy import (
+    Date as SADate,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -30,7 +33,7 @@ from app.database import Base
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # 산출물 계약이 정한 다섯 가지. 여기 없는 종류가 필요해지면 계약을 먼저 고친다.

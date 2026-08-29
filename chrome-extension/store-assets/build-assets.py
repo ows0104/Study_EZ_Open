@@ -4,7 +4,6 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-
 HERE = Path(__file__).resolve().parent
 EXTENSION = HERE.parent
 WEB_PUBLIC = EXTENSION.parent / "web" / "public"
@@ -19,7 +18,7 @@ def centered_tracking_text(draw: ImageDraw.ImageDraw, text: str, y: int, font: I
     widths = [draw.textlength(letter, font=font) for letter in text]
     total = sum(widths) + tracking * (len(text) - 1)
     x = (1024 - total) / 2
-    for letter, width in zip(text, widths):
+    for letter, width in zip(text, widths, strict=False):
         draw.text((round(x), y), letter, font=font, fill="#172554", stroke_width=0)
         x += width + tracking
 

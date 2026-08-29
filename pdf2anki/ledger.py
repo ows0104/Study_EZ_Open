@@ -115,7 +115,7 @@ def fold(rows: list[dict]) -> list[dict]:
         if name not in byname:
             order.append(name)
             byname[name] = {"step": name, "seconds": 0.0, "cost_usd": 0.0, "sessions": 0,
-                            **{k: 0 for k in TOKEN_KEYS}}
+                            **dict.fromkeys(TOKEN_KEYS, 0)}
         acc = byname[name]
         acc["seconds"] += float(r.get("seconds") or 0)
         acc["cost_usd"] += float(r.get("cost_usd") or 0)
@@ -147,7 +147,7 @@ RULE = "─" * sum(c[1] for c in COLS)
 
 
 def _row(cells: list[str]) -> str:
-    return "".join(fn(c, w) for c, (_, w, fn) in zip(cells, COLS))
+    return "".join(fn(c, w) for c, (_, w, fn) in zip(cells, COLS, strict=False))
 
 
 def _dur(s: float) -> str:
@@ -168,7 +168,7 @@ def table(rows: list[dict], title: str = "") -> str:
     if not folded:
         return ""
     out = ([title] if title else []) + [_row([c[0] for c in COLS]), RULE]
-    tot = {"seconds": 0.0, "cost_usd": 0.0, "sessions": 0, **{k: 0 for k in TOKEN_KEYS}}
+    tot = {"seconds": 0.0, "cost_usd": 0.0, "sessions": 0, **dict.fromkeys(TOKEN_KEYS, 0)}
     for r in folded:
         out.append(_row(_cells(r, r["step"])))
         for k in ("seconds", "cost_usd", "sessions"):
@@ -187,7 +187,7 @@ def summarize(out: Path, run: str | None = None) -> dict:
     mine = [r for r in rows if run is None or r.get("run") == run]
 
     def agg(rs: list[dict]) -> dict:
-        t = {"seconds": 0.0, "cost_usd": 0.0, "sessions": 0, **{k: 0 for k in TOKEN_KEYS}}
+        t = {"seconds": 0.0, "cost_usd": 0.0, "sessions": 0, **dict.fromkeys(TOKEN_KEYS, 0)}
         for r in rs:
             t["seconds"] += float(r.get("seconds") or 0)
             t["cost_usd"] += float(r.get("cost_usd") or 0)

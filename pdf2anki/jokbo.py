@@ -17,12 +17,13 @@ import argparse
 import json
 import re
 import sys
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 import fitz
 
-from .textutil import norm_key as norm, word_tokens
+from .textutil import norm_key as norm
+from .textutil import word_tokens
 
 # ─────────────────────────────────────────────────────────────── 정규식/상수
 
@@ -346,7 +347,7 @@ class Bank:
     head: list[str] = field(default_factory=list)   # 머리글 줄들 (범위가 줄바꿈을 탄다)
 
     @classmethod
-    def start(cls, line: str, last_no: int | None) -> "Bank | None":
+    def start(cls, line: str, last_no: int | None) -> Bank | None:
         mh = RE_BANK_HEAD.match(line)
         if not mh:
             return None

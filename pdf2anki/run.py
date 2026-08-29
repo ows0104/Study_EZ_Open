@@ -53,11 +53,18 @@ import unicodedata
 from pathlib import Path
 
 from . import ledger
-from .assemble import (STRATEGIES, STRATEGY_ALIAS, StrategyConfirmationRequired,
-                       apply_confirmed_strategy, decide_strategy, photo_profile,
-                       resolve_auto_strategy, slice_for)
-from .pack import lecture_of
+from .assemble import (
+    STRATEGIES,
+    STRATEGY_ALIAS,
+    StrategyConfirmationRequired,
+    apply_confirmed_strategy,
+    decide_strategy,
+    photo_profile,
+    resolve_auto_strategy,
+    slice_for,
+)
 from .build import DEFECT_REASONS
+from .pack import lecture_of
 from .prompting import DEFAULT_DOMAIN, DOMAINS
 from .session import SessionError, run_agent
 
@@ -608,7 +615,7 @@ def main(argv=None) -> int:
     chk = r.collect_check()
     print(f"\n끝났다.  덱: {out.as_posix()}/{args.apkg_name or args.id}.apkg", flush=True)
     if chk:
-        print(f"\n⚠ 눈으로 볼 것 — 이미지 카드 접촉 시트", flush=True)
+        print("\n⚠ 눈으로 볼 것 — 이미지 카드 접촉 시트", flush=True)
         print(f"   {chk}", flush=True)
         print("   앞면 크롭 안에 정답(진단명·캡션)이 인쇄돼 있는지만 본다.", flush=True)
     elif not args.no_image_check:

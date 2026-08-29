@@ -53,7 +53,7 @@ def material_marks(db: Session, keys: list[LectureKey]) -> dict[LectureKey, dict
     """
     fields = ("notesPrev", "preview", "prequiz", "notesCurrent", "quiz")
     marks: dict[LectureKey, dict[str, bool]] = {
-        key: {field: False for field in fields} for key in keys
+        key: dict.fromkeys(fields, False) for key in keys
     }
     if not keys:
         return marks

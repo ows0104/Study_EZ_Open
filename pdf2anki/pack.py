@@ -82,7 +82,7 @@ def write_parts(outdir: Path, stem: str, sections: list[str], *,
                             for nm in names) + "\n")
         bodies[0] = head + "\n" + bodies[0]
     files = []
-    for i, (nm, body) in enumerate(zip(names, bodies)):
+    for i, (nm, body) in enumerate(zip(names, bodies, strict=False)):
         text = body if n == 1 else f"<!-- {label} {i + 1}/{n} -->\n\n{body}"
         (outdir / nm).write_text(text.rstrip() + "\n", encoding="utf-8")
         files.append({"name": nm, "chars": len(text), "tokens": estimate_tokens(text)})

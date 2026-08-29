@@ -30,7 +30,6 @@ from app.models import Lecture, TimetableEvent
 from app.naming import course_from_title, nfc, normalize_stem, slot_from_time
 from app.storage import ObjectStorage, StorageNotConfigured
 
-
 # 표가 선 뒤에 붙은 칼럼. **`create_all`은 없는 표는 세우지만 없는 칼럼은 안 붙인다** —
 # 이미 서 있는 운영 DB는 여기를 지나야 새 칼럼을 갖는다. 이미 있으면 건너뛴다.
 #

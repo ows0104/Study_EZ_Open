@@ -28,7 +28,6 @@ from app.database import Base, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import TimetableEvent  # noqa: E402
 
-
 USER = {"Authorization": "Bearer local-test-token"}
 RUNNER = {"Authorization": "Bearer runner-token"}
 
@@ -330,8 +329,9 @@ def main() -> None:
     check("되돌리면 todo", _checklist()["notes_prev"] == "todo", _checklist())
 
     print("\n[11] 승인 게이트 — 가입만으로는 자료가 안 보인다")
-    from app.auth import CurrentUser, require_approved_user
     from fastapi import HTTPException
+
+    from app.auth import CurrentUser, require_approved_user
 
     pending = CurrentUser(id="u1", email="new@snu.ac.kr", is_admin=False, is_approved=False)
     try:
@@ -348,9 +348,10 @@ def main() -> None:
     print("\n[12] R2가 없어도 서버는 돈다 — 파일 경로만 잠긴다")
     # 첫 배포는 R2 없이 나간다. 캘린더가 시간표만으로 완성되는 화면이라
     # 저장소를 필수로 걸면 쓸 수 있는 것까지 못 올리게 된다.
+    from fastapi import HTTPException as _HTTPException
+
     from app.config import get_settings as _settings
     from app.routes.common import storage_or_503
-    from fastapi import HTTPException as _HTTPException
 
     _settings.cache_clear()
     saved = os.environ["ENVIRONMENT"]

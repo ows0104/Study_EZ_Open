@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 PROMPT_ROOT = Path(__file__).parent / "prompts"
 DEFAULT_DOMAIN = "medical_ko"
 

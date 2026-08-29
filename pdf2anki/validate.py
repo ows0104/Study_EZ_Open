@@ -22,7 +22,7 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
-from .schema import (CARD_SCHEMA, IMAGE_FORMATS, MAX_Q_CHARS, MAX_RECALL_ITEMS)
+from .schema import CARD_SCHEMA, IMAGE_FORMATS, MAX_Q_CHARS, MAX_RECALL_ITEMS
 from .textutil import char_ngrams, containment, jaccard, norm_key
 
 RE_CLOZE = re.compile(r"\{\{c(\d+)::(.*?)(?:::(.*?))?\}\}")

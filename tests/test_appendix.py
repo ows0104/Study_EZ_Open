@@ -9,11 +9,11 @@
 커버리지에서도 따로 센다.
 """
 
+from jsonschema import Draft202012Validator
+
 from pdf2anki.review import render
 from pdf2anki.schema import PLAN_SCHEMA, REJECT_REASONS
 from pdf2anki.validate import validate
-
-from jsonschema import Draft202012Validator
 
 
 def _prep(n_slides=10):

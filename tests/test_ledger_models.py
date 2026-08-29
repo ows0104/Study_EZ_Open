@@ -14,7 +14,6 @@ import json
 
 from pdf2anki import ledger
 
-
 ENV = {
     "modelUsage": {
         "claude-opus-5": {"outputTokens": 45318, "inputTokens": 42},

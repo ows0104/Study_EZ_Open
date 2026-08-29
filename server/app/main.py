@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from fastapi import FastAPI
-from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 
 from app.config import get_settings
 from app.routes import admin, lectures, local_storage, me, prequiz, prequiz_jobs, timetable
-
 
 settings = get_settings()
 app = FastAPI(

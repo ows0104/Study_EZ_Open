@@ -6,7 +6,6 @@ from functools import lru_cache
 
 from dotenv import load_dotenv
 
-
 if not os.getenv("DATABASE_URL"):
     load_dotenv()
 

@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 """재생성이 끝난 편의 기출 카드를 한 장짜리 검토 페이지로 모은다.
 
     python build_review.py <repo> <out.html>
 
 `regen.log` 가 있는 편만 담는다. 새 편이 구워지면 다시 부르면 된다.
 """
-import json
 import glob
+import json
 import os
 import sys
 

@@ -19,8 +19,14 @@ import re
 import sys
 from pathlib import Path
 
-from .pack import (READ_TOKEN_CAP, estimate_pdf_tokens, find_jokbo,
-                   needs_clean, read_instructions, write_parts)
+from .pack import (
+    READ_TOKEN_CAP,
+    estimate_pdf_tokens,
+    find_jokbo,
+    needs_clean,
+    read_instructions,
+    write_parts,
+)
 from .prompting import DEFAULT_DOMAIN, DOMAINS, lecture_adapters, read_modules
 
 PROMPTS = Path(__file__).parent / "prompts"
@@ -588,7 +594,7 @@ def main(argv=None) -> int:
     plan_tok = sum(f["tokens"] for f in res["plan"])
     cards_tok = sum(f["tokens"] for f in res["cards"])
     pdf = res["_pdf_tokens"]
-    print(f"\n한 세션에서 ①②를 이어 하면 PDF와 자료는 한 번만 읽는다:")
+    print("\n한 세션에서 ①②를 이어 하면 PDF와 자료는 한 번만 읽는다:")
     print(f"   PDF {pdf:,} + 자료 {ctx_tok:,} + ① {plan_tok:,} + ② {cards_tok:,} "
           f"= 약 {pdf + ctx_tok + plan_tok + cards_tok:,}토큰")
     first = res["plan"][0]["name"]

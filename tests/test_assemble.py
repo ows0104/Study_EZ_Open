@@ -7,10 +7,19 @@
 
 import pytest
 
-from pdf2anki.assemble import (ASK_ANNOTATION, STRATEGY_ALIAS,
-                              StrategyConfirmationRequired, apply_confirmed_strategy, decide_strategy,
-                              guidance_without_jokbo, jokbo_guidance, photo_profile,
-                              repeat_block, repeat_clusters, resolve_auto_strategy)
+from pdf2anki.assemble import (
+    ASK_ANNOTATION,
+    STRATEGY_ALIAS,
+    StrategyConfirmationRequired,
+    apply_confirmed_strategy,
+    decide_strategy,
+    guidance_without_jokbo,
+    jokbo_guidance,
+    photo_profile,
+    repeat_block,
+    repeat_clusters,
+    resolve_auto_strategy,
+)
 
 
 def _stats(pairs, **kw):

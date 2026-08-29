@@ -1,7 +1,12 @@
 from pathlib import Path
 
-from pdf2anki.prompting import (CORE_MODULES, DEFAULT_DOMAIN, lecture_adapters,
-                                module_names, read_modules)
+from pdf2anki.prompting import (
+    CORE_MODULES,
+    DEFAULT_DOMAIN,
+    lecture_adapters,
+    module_names,
+    read_modules,
+)
 from pdf2anki.reproduce import build_blind, build_grade
 
 

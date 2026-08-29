@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 
-
 PREVIEW_PROVIDERS = frozenset({"chatgpt", "gemini", "claude"})
 
 _CONVERSATION_PATTERNS = {

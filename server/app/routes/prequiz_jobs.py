@@ -12,7 +12,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -91,7 +91,7 @@ def _touch_runner(db: Session, *, busy: bool, note: str) -> None:
         db.add(beat)
     beat.busy = busy
     beat.note = note[:500]
-    beat.last_seen = datetime.now(timezone.utc)
+    beat.last_seen = datetime.now(UTC)
 
 
 class JobRequest(BaseModel):
@@ -262,7 +262,7 @@ def claim_prequiz_job(
     if job is not None and job.state == JOB_QUEUED:
         job.state = JOB_RUNNING
         job.stage = "시작"
-        job.started_at = datetime.now(timezone.utc)
+        job.started_at = datetime.now(UTC)
 
     _touch_runner(db, busy=job is not None,
                   note=f"{job.subject}/{job.run_id}" if job is not None else "")
@@ -305,7 +305,7 @@ def update_prequiz_job(
     if payload.state is not None:
         job.state = payload.state
         if payload.state in (JOB_DONE, JOB_FAILED):
-            job.finished_at = datetime.now(timezone.utc)
+            job.finished_at = datetime.now(UTC)
 
     # 이 호출 자체가 박동이다(`_touch_runner`). 빈 몸으로 와도 마찬가지 —
     # 러너는 단계가 안 바뀌어도 여기를 두드려 살아 있다고 알린다.

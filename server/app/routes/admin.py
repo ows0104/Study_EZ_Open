@@ -11,7 +11,8 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date as Date, datetime
+from datetime import date as Date
+from datetime import datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -23,9 +24,6 @@ from app.auth import CurrentUser, require_admin, require_runner
 from app.config import get_settings
 from app.database import get_db
 from app.matching import relink
-from app.preview_links import conversation_url as valid_conversation_url
-from app.preview_links import provider as valid_provider
-from app.preview_links import share_url as valid_share_url
 from app.models import (
     ASSET_KINDS,
     CHECKLIST_ITEMS,
@@ -42,8 +40,11 @@ from app.models import (
     TimetableEvent,
 )
 from app.naming import nfc, object_key, slide_no_from_filename
-from app.routes.prequiz_jobs import RUNNER_NAME, job_row, runner_row
+from app.preview_links import conversation_url as valid_conversation_url
+from app.preview_links import provider as valid_provider
+from app.preview_links import share_url as valid_share_url
 from app.routes.common import lecture_or_404, storage_or_503
+from app.routes.prequiz_jobs import RUNNER_NAME, job_row, runner_row
 
 router = APIRouter()
 

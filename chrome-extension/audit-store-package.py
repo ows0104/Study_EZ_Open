@@ -10,7 +10,6 @@ import struct
 import zipfile
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parent
 SOURCE_MANIFEST = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
 ZIP = ROOT / "release" / f"studyez-preview-bridge-{SOURCE_MANIFEST['version']}-web-store.zip"
