@@ -29,11 +29,22 @@ studyez/runner.py    스케줄러가 돌리는 한 사이클 (watch·prequeue·p
 studyez/deck.py      그 러너와 파이프라인의 유일한 접점
 pdf2anki/    덱을 만드는 파이프라인. 명령 하나가 PDF에서 .apkg까지 간다
 runs/        산출물. 원본 PDF에서 언제든 재생성된다 (저장소에 안 들어감)
+out/         pdf2anki 작업 폴더. 같은 성격이고 **수명은 한 학기(180일)**다
 server/      읽기 API + 관리자 업로드 (FastAPI, Cloud Run)
 web/         정적 프론트 (Vite + React)
 ```
 
 바깥 의존은 `PyMuPDF`·`genanki`·`jsonschema` 셋과, 이미 로그인된 `claude` CLI다.
+
+`out/`은 아무도 자동으로 치우지 않는다. 한 학기가 지난 것은 손으로 버린다 —
+원본 PDF에서 언제든 다시 만들 수 있는 것들이다.
+
+```powershell
+Get-ChildItem out -Directory | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-180) } | Remove-Item -Recurse -Force
+```
+
+**`runs/`에는 쓰지 마라.** 저기에는 다시 만들 수 없는 것이 섞여 있다
+(`runs/_pairs/`의 사람이 고른 짝, `HOLD`, 사람이 적어 넣은 `preview.md`).
 
 ## 만드는 자리에 사람이 안 들어간다
 
