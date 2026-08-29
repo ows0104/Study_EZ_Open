@@ -13,8 +13,16 @@ app/
   naming.py     NFC·정규화. studyez/filenames.py와 같은 규칙이다
   matching.py   시간표 칸 ↔ 필기에서 읽어 낸 강의
   cli.py        init-db · seed-timetable
-  routes/       timetable · lectures · prequiz · admin · local_storage
-tests/          test_smoke.py · test_matching.py
+  preview_links.py  예습 제공자와 링크 형식의 단일 검증점
+  routes/       me · timetable · lectures · prequiz · admin · prequiz_jobs · local_storage
+                prequiz.py 는 학생이 푸는 문항, prequiz_jobs.py 는 러너가 집어 가는 일감이다
+tests/          test_smoke.py · test_matching.py · test_samples.py
+```
+
+테스트는 pytest 가 아니라 스크립트다. 하나씩 돌린다.
+
+```bash
+.venv/Scripts/python.exe -m tests.test_smoke
 ```
 
 ## 띄우기
