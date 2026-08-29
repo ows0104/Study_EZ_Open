@@ -30,6 +30,8 @@ studyez/deck.py      그 러너와 파이프라인의 유일한 접점
 pdf2anki/    덱을 만드는 파이프라인. 명령 하나가 PDF에서 .apkg까지 간다
 runs/        산출물. 원본 PDF에서 언제든 재생성된다 (저장소에 안 들어감)
 out/         pdf2anki 작업 폴더. 같은 성격이고 **수명은 한 학기(180일)**다
+             (한 강의를 여러 번 돌린 시도가 여기 쌓인다. 재배치 설계는
+              [docs/runs-layout.md](docs/runs-layout.md))
 server/      읽기 API + 관리자 업로드 (FastAPI, Cloud Run)
 web/         정적 프론트 (Vite + React)
 ```
@@ -61,9 +63,8 @@ python -m pdf2anki.run "<올해 필기 PDF>"
 ```
 
 로컬 러너가 그 명령을 강의 단위로 부르고, 나온 것을 서버 계약의 모양으로 옮긴다
-([studyez/deck.py](studyez/deck.py)). 파이프라인 자체의 사용법은
-[pdf2anki/README.md](pdf2anki/README.md), 설계와 실패 기록은
-[docs/pdf2anki.md](docs/pdf2anki.md)에 있다.
+([studyez/deck.py](studyez/deck.py)). 파이프라인의 사용법과 설계·실패 기록은
+[docs/pdf2anki.md](docs/pdf2anki.md) 한 곳에 있다.
 
 ## 쓰는 법
 
