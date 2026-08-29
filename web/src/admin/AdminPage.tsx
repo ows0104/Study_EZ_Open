@@ -2,11 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import {
   checklistItems,
+  previewProviderLabels,
+  previewProviders,
   type AdminOverview,
   type AdminRow,
   type AppUser,
   type ChecklistItem,
   type PrequizJob,
+  type PreviewProvider,
   type RunnerBeat,
 } from "../types";
 import { lectureHref } from "../links";
@@ -234,6 +237,7 @@ function AdminLectureRow({ row, onChanged }: { row: AdminRow; onChanged: () => v
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
   const [share, setShare] = useState(row.preview?.shareUrl ?? "");
   const [conversation, setConversation] = useState(row.preview?.conversationUrl ?? "");
+  const [previewProvider, setPreviewProvider] = useState<PreviewProvider>(row.preview?.provider ?? "chatgpt");
   const [saving, setSaving] = useState(false);
   const [waiving, setWaiving] = useState<ChecklistItem | null>(null);
 
@@ -262,7 +266,7 @@ function AdminLectureRow({ row, onChanged }: { row: AdminRow; onChanged: () => v
     try {
       await api(`${base}/preview`, {
         method: "PUT",
-        body: JSON.stringify({ provider: "chatgpt", shareUrl: share, conversationUrl: conversation }),
+        body: JSON.stringify({ provider: previewProvider, shareUrl: share, conversationUrl: conversation }),
       });
       onChanged();
     } finally {
@@ -370,14 +374,17 @@ function AdminLectureRow({ row, onChanged }: { row: AdminRow; onChanged: () => v
       </td>
 
       <td>
+        <select value={previewProvider} onChange={(event) => setPreviewProvider(event.target.value as PreviewProvider)}>
+          {previewProviders.map((item) => <option value={item} key={item}>{previewProviderLabels[item]}</option>)}
+        </select>
         <input
           value={share}
-          placeholder="https://chatgpt.com/share/…"
+          placeholder="공개 공유 링크"
           onChange={(event) => setShare(event.target.value)}
         />
         <input
           value={conversation}
-          placeholder="https://chatgpt.com/c/… (관리자만)"
+          placeholder="개인 대화 링크 (관리자만)"
           onChange={(event) => setConversation(event.target.value)}
         />
         <button disabled={saving} onClick={savePreview}>

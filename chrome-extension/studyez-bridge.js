@@ -36,10 +36,15 @@ window.addEventListener("message", (event) => {
   }
 
   if (message.type === MESSAGES.watchShare) {
-    if (typeof message.lectureId !== "string" || typeof message.shareUrl !== "string") return;
+    if (
+      typeof message.lectureId !== "string" ||
+      typeof message.provider !== "string" ||
+      typeof message.shareUrl !== "string"
+    ) return;
     chrome.runtime.sendMessage({
       type: MESSAGES.watchShare,
       lectureId: message.lectureId,
+      provider: message.provider,
       shareUrl: message.shareUrl,
     });
   }

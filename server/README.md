@@ -119,6 +119,7 @@ Pre-Quiz는 **웹 풀이가 먼저다**(2026-08-23 관리자 지시). 화면에�
 |---|---|---|
 | 2026-08-17 | `profile.preview_prompt` — 사용자별 예습 프롬프트 | 아래 SQL |
 | 2026-08-18 | `user_preview` 표 — 사람마다 가진 개인 예습 대화 | `init-db` |
+| 2026-08-25 | `user_preview.provider` — 개인 링크의 ChatGPT·Gemini·Claude 구분 | `init-db` (`ADDED_COLUMNS`) |
 
 **표가 새로 생긴 것은 `init-db`로 된다.** `create_all`이 없는 표는 만든다 —
 못 고치는 것은 이미 있는 표의 열뿐이다.

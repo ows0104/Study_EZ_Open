@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { bumpPreviewVersion, usePreviewLink } from "../bridge/previewBridge";
 import { takeTimetable } from "../firstScreen";
-import type { TimetableEvent } from "../types";
+import { previewProviders, type PreviewProvider, type TimetableEvent } from "../types";
 import { CalendarGrid } from "./CalendarGrid";
 import { EventChip } from "./EventChip";
 import { EventPanel } from "./EventPanel";
@@ -44,15 +44,18 @@ export function CalendarPage() {
       const [subject, runId] = lectureId.split("/");
       if (!subject || !runId) return;
       const path = `${encodeURIComponent(subject)}/${encodeURIComponent(runId)}`;
-      if (kind === "chatgpt_share") {
+      const shared = kind.endsWith("_share");
+      const provider = (shared ? kind.slice(0, -6) : kind) as PreviewProvider;
+      if (!previewProviders.includes(provider)) return;
+      if (shared) {
         await api(`/api/admin/lectures/${path}/preview`, {
           method: "PUT",
-          body: JSON.stringify({ provider: "chatgpt", shareUrl: url }),
+          body: JSON.stringify({ provider, shareUrl: url }),
         });
       } else {
         await api(`/api/lectures/${path}/my-preview`, {
           method: "PUT",
-          body: JSON.stringify({ conversationUrl: url }),
+          body: JSON.stringify({ provider, conversationUrl: url }),
         });
       }
       // 칸의 점(marks)과 열려 있는 패널을 둘 다 갱신한다. 시간표만 다시 부르면

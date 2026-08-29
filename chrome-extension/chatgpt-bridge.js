@@ -1,4 +1,4 @@
-// ChatGPT 새 대화에 작년 필기를 붙이고 프롬프트를 채운다.
+// 선택한 AI 새 대화에 작년 필기를 붙이고 프롬프트를 채운다.
 //
 // **전송은 누르지 않는다.** 무엇이 들어갔는지 사람이 보고 직접 보낸다 — 남의
 // 계정으로 대화를 만드는 일이라 마지막 한 번은 사람의 손이어야 한다.
@@ -12,15 +12,16 @@ function escapeHtml(value) {
 
 function createOverlay(payload, remembered) {
   const shared = payload.mode === "shared";
+  const providerLabel = { chatgpt: "ChatGPT", gemini: "Gemini", claude: "Claude" }[payload.provider] || "AI";
   const modeLabel = shared ? "공개 공유 링크" : "개인 대화 링크";
   const fileList = payload.files
     .map((file) => `<li title="${escapeHtml(file.filename)}">${escapeHtml(file.filename)}</li>`)
     .join("");
   const disclosure = `
     <p class="studyez-disclosure">
-      동의하면 선택한 PDF 내용과 프롬프트를 ChatGPT에 넣습니다. 확장은 답변 내용·완료 상태와 링크를
-      확인하려고 현재 ChatGPT 로그인 토큰을 메모리에서 잠깐 사용하지만, 토큰을 저장하거나 Study EZ로
-      보내지 않습니다.
+      동의하면 선택한 PDF 내용과 프롬프트를 ${providerLabel}에 넣습니다. 확장은 답변 완료 상태와 링크를
+      확인합니다. ChatGPT 기본 링크 모드에서는 로그인 토큰을 메모리에서 잠깐 사용하지만, 토큰을 저장하거나
+      Study EZ로 보내지 않습니다.
       ${shared ? "이 모드는 링크를 가진 누구나 볼 수 있는 공개 공유 링크를 만들고 Study EZ 강의에 저장합니다." : "이 모드는 내 계정에서만 열리는 대화 주소를 Study EZ 강의에 저장합니다."}
       <a href="https://studyez.kr/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a>
     </p>`;
@@ -65,7 +66,7 @@ function createOverlay(payload, remembered) {
       </details>
     </div>`
         : `<h2>Study EZ 예습 자료</h2>
-    <p>ChatGPT에 넣을 필기와 프롬프트입니다. 전송은 직접 눌러야 합니다.</p>
+    <p>${providerLabel}에 넣을 필기와 프롬프트입니다. 전송은 직접 눌러야 합니다.</p>
     ${disclosure}
     <ul>${fileList}</ul>
     <label class="studyez-consent">
@@ -118,6 +119,34 @@ function visible(element) {
   return rect.width > 0 && rect.height > 0;
 }
 
+function requestGeminiFileCapture() {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage({ type: "STUDYEZ_PREPARE_GEMINI_FILE_INPUT" }, (response) => {
+      const error = chrome.runtime.lastError?.message || response?.error;
+      if (error || !response?.ok) reject(new Error(error || "Gemini 파일 입력을 준비하지 못했습니다."));
+      else resolve();
+    });
+  });
+}
+
+async function prepareGeminiFileInput() {
+  await requestGeminiFileCapture();
+  const toolsButton = document.querySelector('button[aria-label="업로드 및 도구"]')
+    || [...document.querySelectorAll("button")].find((button) => visible(button) && /(add files|upload and tools)/i.test(button.getAttribute("aria-label") || ""));
+  if (!toolsButton) throw new Error("Gemini의 파일 추가 버튼을 찾지 못했습니다. 화면이 바뀌었을 수 있습니다.");
+  toolsButton.click();
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const uploadButton = document.querySelector('[data-test-id="local-images-files-uploader-button"]')
+      || [...document.querySelectorAll('[role="menuitem"]')].find((item) => /(파일 업로드|upload files)/i.test(`${item.getAttribute("aria-label") || ""} ${item.textContent || ""}`));
+    if (uploadButton) {
+      uploadButton.click();
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error("Gemini의 파일 업로드 메뉴를 찾지 못했습니다. 화면이 바뀌었을 수 있습니다.");
+}
+
 /** 첨부 입력이 메뉴 안에 숨어 있을 때 그 메뉴를 연다. */
 function revealFileInput() {
   const pattern = /(upload|attach|file|첨부|업로드|파일)/i;
@@ -128,7 +157,8 @@ function revealFileInput() {
   candidate?.click();
 }
 
-async function findFileInput() {
+async function findFileInput(provider) {
+  if (provider === "gemini") await prepareGeminiFileInput();
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const inputs = [...document.querySelectorAll('input[type="file"]')];
     const input =
@@ -138,11 +168,11 @@ async function findFileInput() {
     if (attempt === 4 || attempt === 10) revealFileInput();
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
-  throw new Error("ChatGPT의 파일 첨부 입력창을 찾지 못했습니다. 화면이 바뀌었을 수 있습니다.");
+  throw new Error("AI 서비스의 파일 첨부 입력창을 찾지 못했습니다. 화면이 바뀌었을 수 있습니다.");
 }
 
-async function attachFiles(files) {
-  const input = await findFileInput();
+async function attachFiles(files, provider) {
+  const input = await findFileInput(provider);
   const transfer = new DataTransfer();
   files.forEach((file) => transfer.items.add(file));
   input.files = transfer.files;
@@ -159,7 +189,7 @@ function fillPrompt(prompt) {
     return;
   }
   const editor = [...document.querySelectorAll('[contenteditable="true"]')].find(visible);
-  if (!editor) throw new Error("ChatGPT의 프롬프트 입력창을 찾지 못했습니다. 화면이 바뀌었을 수 있습니다.");
+  if (!editor) throw new Error("AI 서비스의 프롬프트 입력창을 찾지 못했습니다. 화면이 바뀌었을 수 있습니다.");
   editor.focus();
   document.execCommand("selectAll", false);
   document.execCommand("insertText", false, prompt);
@@ -199,6 +229,8 @@ async function initialize() {
   if (!payload) return;
 
   const mode = payload.mode === "shared" ? "shared" : "personal";
+  const provider = ["chatgpt", "gemini", "claude"].includes(payload.provider) ? payload.provider : "chatgpt";
+  const consentKey = `${CONSENT_KEY}${provider}:${mode}`;
 
   function mount(remembered) {
     const overlay = createOverlay(payload, remembered);
@@ -212,7 +244,7 @@ async function initialize() {
     // 기억한 동의를 되돌릴 자리. 이것이 없으면 확장 저장소를 통째로 지우는 수밖에 없다.
     overlay.querySelector('[data-action="revoke"]')?.addEventListener("click", async () => {
       try {
-        await chrome.storage.local.remove(`${CONSENT_KEY}${mode}`);
+        await chrome.storage.local.remove(consentKey);
       } catch {
         // 저장소 오류가 나도 현재 카드에서는 다시 동의를 받는 상태로 돌아간다.
       }
@@ -224,14 +256,14 @@ async function initialize() {
       confirm.disabled = true;
       // 동의는 누른 그 순간에 남긴다. 첨부가 실패해도 사람이 동의한 것은 사실이다.
       // 못 남기는 것은 다음에 한 번 더 묻는다는 뜻일 뿐이라 전송을 막지 않는다.
-      await chrome.storage.local.set({ [`${CONSENT_KEY}${mode}`]: true }).catch(() => {});
+      await chrome.storage.local.set({ [consentKey]: true }).catch(() => {});
       if (consent) consent.disabled = true;
       status.classList.remove("is-error");
       try {
         const files = [];
         for (const file of payload.files) files.push(await fetchFile(file, status));
         status.textContent = "자료를 첨부하고 프롬프트를 넣는 중…";
-        await attachFiles(files);
+        await attachFiles(files, provider);
         fillPrompt(payload.prompt);
         status.textContent = "넣었습니다. 확인한 뒤 전송 버튼을 눌러 주세요.";
         setTimeout(() => overlay.remove(), 5000);
@@ -244,7 +276,7 @@ async function initialize() {
     });
   }
 
-  mount(await readConsent(mode));
+  mount(await readConsent(`${provider}:${mode}`));
 }
 
 void initialize();

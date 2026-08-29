@@ -188,6 +188,10 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str, src: Path | None = No
     deck = genanki.Deck(_mid(deck_name), deck_name)
     seed = guid_seed(lecture_id)
     stats = Counter()
+    # **그림을 만든 자리가 이름을 넘긴다.** 검수 PDF 가 `figure_id` 와 crop 으로 이름을
+    # 다시 유추하면 가림이 붙은 판을 못 찾아 빌드가 통째로 죽는다 (복습 쪽은 d6ae3e3
+    # 에서 고쳤는데 이 호출부만 옛 시그니처로 남아 예습 덱이 전부 죽고 있었다).
+    rendered: dict[int, tuple[str, ...]] = {}
 
     for c in cards:
         fmt = c["card_format"]
@@ -211,9 +215,12 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str, src: Path | None = No
         else:
             img, answer = "", render_answer(c["a"])
             if fmt == "image_basic":
-                img = f'<img src="{media.figure(m["figure_id"], crop)}">'
+                name = media.figure(m["figure_id"], crop)
+                rendered[id(c)] = (name,)
+                img = f'<img src="{name}">'
             elif fmt == "image_occlusion":
                 front, back = media.occlusion(m["figure_id"], m["occlusion_ids"], crop)
+                rendered[id(c)] = (front, back)
                 img, answer = f'<img src="{front}">', f'<img src="{back}">'
             note = genanki.Note(model=MODELS[fmt], guid=guid, tags=tags,
                                 fields=[html.escape(c["q"]), answer, exp, warn,
@@ -222,7 +229,7 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str, src: Path | None = No
         stats[fmt] += 1
         stats["이유:" + c["reason"]] += 1
 
-    contact = contact_sheet(prep_dir, cards, media, lecture_id)
+    contact = contact_sheet(prep_dir, cards, media, lecture_id, rendered)
     apkg = prep_dir / f"{apkg_name or lecture_id + '_pre'}.apkg"
     pkg = genanki.Package([deck])
     pkg.media_files = ([str(p) for p in media.files.values()]

@@ -83,7 +83,8 @@ CARD_SCHEMA = {
         "q": {"type": "string", "minLength": 1,
               "description": "질문. cloze 는 {{c1::...}} 를 포함한 문장."},
         "a": {"type": "string", "minLength": 1,
-              "description": "핵심 정답만. 이유와 부연은 explanation 으로."},
+              "description": "핵심 정답만. 이유와 부연은 explanation 으로. "
+                             "전략이 한 카드에서 여러 가지를 함께 회수하라고 지정했다면 그것들이 함께 핵심 정답이다."},
         "explanation": {"type": ["string", "null"],
                         "description": "왜 이 답인지. q/a 의 근거가 되어서는 안 된다."},
         "slide_no": {"type": ["integer", "null"], "minimum": 1,
@@ -237,7 +238,8 @@ def dump(outdir: Path) -> None:
              "## 형식별 추가 규칙", ""]
     lines += [f"- `{k}` — {v}" for k, v in FORMAT_RULES.items()]
     lines += ["", f"- 목록·순서·선지 묶음은 한 카드에 {MAX_RECALL_ITEMS}개를 넘기지 않는다.",
-              "- 축(회수 방향)이 다르면 카드가 다르다. 한 카드에 여러 축을 몰지 않는다.",
+              "- 축(회수 방향)이 다르면 카드가 다르다. 한 카드에 여러 축을 몰지 않는다. "
+              "전략이 한 사진·한 카드에 함께 회수하라고 지정한 것은 예외다.",
               # 빈칸 번호가 곧 카드 수라는 것을 모르면 「나머지가 앞면에 인쇄된 카드」가
               # 나온다. 임계값과 마찬가지로 **계약에 실려야 모델이 안다.**
               "- **cloze 의 번호 하나가 카드 하나다.** 한 축에 나란히 놓인 항목은 같은 번호로 "

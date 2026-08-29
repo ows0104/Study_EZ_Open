@@ -37,6 +37,8 @@ from app.storage import ObjectStorage, StorageNotConfigured
 # 마이그레이션 도구를 두지 않은 사정은 이 파일 첫머리에 있다. 그 대신 **붙인 칼럼을
 # 여기 한 줄로 남긴다** — 다음 사람이 운영 DB와 모델이 어디서 갈라졌는지 볼 자리다.
 ADDED_COLUMNS = (
+    # 2026-08-25 개인 예습도 ChatGPT·Gemini·Claude 중 어디에서 만든 것인지 남긴다.
+    ("user_preview", "provider", "VARCHAR(32) NOT NULL DEFAULT 'chatgpt'"),
     # 2026-08-24 복습 덱도 같은 우편함을 쓰게 되면서.
     ("prequiz_job", "kind", "VARCHAR(8) NOT NULL DEFAULT 'pre'"),
     # 2026-08-24 「다시 만들기」가 러너까지 가려면 이 값이 표에 남아야 한다.

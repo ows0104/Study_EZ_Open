@@ -656,7 +656,7 @@ def _provider(url: str) -> str:
     host = urllib.parse.urlparse(url).netloc.lower()
     if "claude" in host:
         return "claude"
-    if "gemini" in host or "google" in host:
+    if "gemini" in host or "google" in host or host == "g.co":
         return "gemini"
     return "chatgpt"
 

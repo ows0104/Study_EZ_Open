@@ -23,6 +23,9 @@ from app.auth import CurrentUser, require_admin, require_runner
 from app.config import get_settings
 from app.database import get_db
 from app.matching import relink
+from app.preview_links import conversation_url as valid_conversation_url
+from app.preview_links import provider as valid_provider
+from app.preview_links import share_url as valid_share_url
 from app.models import (
     ASSET_KINDS,
     CHECKLIST_ITEMS,
@@ -330,11 +333,25 @@ def put_preview(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     lecture = lecture_or_404(db, subject, run_id)
+    try:
+        selected_provider = valid_provider(payload.provider)
+    except ValueError as cause:
+        raise HTTPException(status_code=422, detail=str(cause)) from cause
+    if payload.share_url is not None and not valid_share_url(payload.share_url, selected_provider):
+        raise HTTPException(status_code=422, detail="선택한 AI의 공개 공유 주소가 아닙니다.")
+    if payload.conversation_url is not None and not valid_conversation_url(payload.conversation_url, selected_provider):
+        raise HTTPException(status_code=422, detail="선택한 AI의 개인 대화 주소가 아닙니다.")
     preview = db.get(Preview, (lecture.subject, lecture.run_id))
     if preview is None:
         preview = Preview(subject=lecture.subject, run_id=lecture.run_id)
         db.add(preview)
-    preview.provider = payload.provider
+    elif preview.provider != selected_provider:
+        # 제공자가 바뀌면 안 준 옛 링크를 새 제공자의 것으로 가장하지 않는다.
+        if payload.share_url is None:
+            preview.share_url = ""
+        if payload.conversation_url is None:
+            preview.conversation_url = ""
+    preview.provider = selected_provider
     if payload.share_url is not None:
         preview.share_url = payload.share_url.strip()
     if payload.conversation_url is not None:

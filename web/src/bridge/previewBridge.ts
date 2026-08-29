@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { PreviewProvider } from "../types";
 import {
   EXTENSION_SOURCE,
   LINK_KINDS,
@@ -39,6 +40,7 @@ export function absoluteUrl(url: string) {
 export function requestPreview(input: {
   requestId: string;
   lectureId: string;
+  provider: PreviewProvider;
   /**
    * `shared`일 때만 확장이 공개 `/share/` 링크를 만든다. 개인 예습에 공유가
    * 붙으면 남이 물은 것이 링크만으로 열리고, 관리자가 개인 예습을 하는 순간
@@ -73,16 +75,16 @@ export function requestPreview(input: {
 /**
  * 기본 링크를 여는 참이라고 확장에 알린다.
  *
- * 공유 페이지에서 이어 물으면 ChatGPT가 그 시점까지를 복사해 **내 계정에 새
+ * 공유 페이지에서 이어 물으면 AI 서비스가 그 시점까지를 복사해 **내 계정에 새
  * 대화를 만든다.** 원본은 안 바뀌므로 반의 기본 링크는 안전하지만, 그 사람에게는
  * 사실상 개인 예습이 하나 생긴 것이다. 확장이 연 탭이 아니라 지금까지는 놓쳤다.
  *
  * 확장이 없으면 아무 일도 안 일어난다 — 링크는 그냥 열린다.
  */
-export function watchSharedLink(lectureId: string, shareUrl: string) {
+export function watchSharedLink(lectureId: string, provider: PreviewProvider, shareUrl: string) {
   if (!extensionInstalled()) return;
   window.postMessage(
-    { source: WEBAPP_SOURCE, type: MESSAGES.watchShare, lectureId, shareUrl },
+    { source: WEBAPP_SOURCE, type: MESSAGES.watchShare, lectureId, provider, shareUrl },
     window.location.origin,
   );
 }

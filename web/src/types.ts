@@ -6,6 +6,17 @@ export type Me = {
   isApproved: boolean;
 };
 
+/** 예습 대화를 열 수 있는 AI 서비스. 확장과 서버가 같은 세 값을 쓴다. */
+export type PreviewProvider = "chatgpt" | "gemini" | "claude";
+
+export const previewProviders: PreviewProvider[] = ["chatgpt", "gemini", "claude"];
+
+export const previewProviderLabels: Record<PreviewProvider, string> = {
+  chatgpt: "ChatGPT",
+  gemini: "Gemini",
+  claude: "Claude",
+};
+
 export type AppUser = {
   id: string;
   email: string;
@@ -121,9 +132,9 @@ export type LectureDetail = {
    * `conversationUrl`은 관리자 응답에만 있다. 만든 계정에서만 열리는 값이라
    * 서버가 일반 사용자 응답에서 아예 빼고 내려보낸다.
    */
-  preview: { provider: string; shareUrl: string; conversationUrl?: string } | null;
-  /** 내 개인 예습 대화(`/c/`). 만든 계정에서만 열리므로 남의 것은 안 내려온다. */
-  myPreview: { conversationUrl: string } | null;
+  preview: { provider: PreviewProvider; shareUrl: string; conversationUrl?: string } | null;
+  /** 내 개인 예습 대화. 만든 AI 계정에서만 열리므로 남의 것은 안 내려온다. */
+  myPreview: { provider: PreviewProvider; conversationUrl: string } | null;
   prequiz: { itemCount: number; answered: number; correct: number; missed: MissedItem[] } | null;
   runMeta?: Record<string, { reviewFlagged: number; slidesUnused: number; itemCount: number; builtAt: string | null }>;
 };
@@ -232,7 +243,7 @@ export type AdminRow = {
    *  기다리는 일감이 있다」만 세므로, 그 수에는 예습도 복습도 같이 들어간다.
    *  끝난 것도 남는다 — 실패가 조용히 사라지면 안 된다. */
   prequizJob: PrequizJob | null;
-  preview: { shareUrl: string; conversationUrl: string; provider: string } | null;
+  preview: { shareUrl: string; conversationUrl: string; provider: PreviewProvider } | null;
   runMeta: Record<string, { reviewFlagged: number; slidesUnused: number; itemCount: number; builtAt: string | null }>;
 };
 

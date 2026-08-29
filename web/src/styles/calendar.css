@@ -997,6 +997,26 @@
   margin-bottom: 22px;
 }
 
+.preview-provider-select {
+  display: flex;
+  margin: 0 0 8px;
+  gap: 8px;
+  align-items: center;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.preview-provider-select select {
+  min-height: 30px;
+  padding: 0 28px 0 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-1);
+  color: var(--ink-2);
+  background: var(--surface);
+  font: inherit;
+}
+
 /* 자료 버튼. 강의 화면의 카드를 좁은 폭에 맞게 눕힌 것이다. */
 .panel-action {
   display: grid;

@@ -173,6 +173,28 @@ def main() -> None:
         os.environ.pop("STUDYEZ_SHOW_CONVERSATION_URL")
         get_settings.cache_clear()
 
+    mine = client.put(
+        "/api/lectures/병리학/260813_03/my-preview",
+        headers=USER,
+        json={"provider": "gemini", "conversationUrl": "https://gemini.google.com/app/personal123"},
+    )
+    check("Gemini 개인 링크를 저장한다", mine.status_code == 200, mine.text)
+    detail = client.get("/api/lectures/병리학/260813_03", headers=USER).json()
+    check(
+        "개인 링크에 제공자가 함께 남는다",
+        detail["myPreview"] == {
+            "provider": "gemini",
+            "conversationUrl": "https://gemini.google.com/app/personal123",
+        },
+        detail["myPreview"],
+    )
+    mismatch = client.put(
+        "/api/lectures/병리학/260813_03/my-preview",
+        headers=USER,
+        json={"provider": "claude", "conversationUrl": "https://gemini.google.com/app/wrong"},
+    )
+    check("제공자와 다른 개인 링크는 거절한다", mismatch.status_code == 422, mismatch.text)
+
     # 러너가 저장된 링크를 **되읽는** 길. 여기만 방향이 반대다 — 관리자가
     # 저장한 링크를 보고 로컬이 Pre-Quiz를 만든다(`studyez.prequeue`).
     listed = client.get("/api/admin/previews", headers=RUNNER)

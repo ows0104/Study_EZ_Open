@@ -27,6 +27,8 @@ from app.models import (
     TimetableEvent,
     UserPreview,
 )
+from app.preview_links import conversation_url as valid_conversation_url
+from app.preview_links import provider as valid_provider
 from app.routes.common import lecture_or_404, storage_or_503
 from app.routes.prequiz import missed_items
 
@@ -122,10 +124,10 @@ def read_lecture(
             for asset in assets
         ],
         "preview": _preview_payload(preview, is_admin=user.is_admin),
-        # 내 개인 대화. 남의 것은 절대 안 나간다 — `/c/`는 만든 계정에서만
+        # 내 개인 대화. 남의 것은 절대 안 나간다 — 개인 대화 URL은 만든 계정에서만
         # 열리므로 남에게 주면 죽은 링크이고, 무엇을 물었는지만 새어 나간다.
         "myPreview": (
-            {"conversationUrl": my_preview.conversation_url}
+            {"provider": my_preview.provider, "conversationUrl": my_preview.conversation_url}
             if my_preview and my_preview.conversation_url
             else None
         ),
@@ -226,6 +228,7 @@ def _record_grab(db: Session, user_id: str, asset: Asset) -> None:
 
 
 class MyPreviewIn(BaseModel):
+    provider: str = "chatgpt"
     conversation_url: str = Field(default="", alias="conversationUrl")
 
     model_config = {"populate_by_name": True}
@@ -248,10 +251,17 @@ def put_my_preview(
     빈 문자열을 주는 것이 곧 지우기다.
     """
     lecture = lecture_or_404(db, subject, run_id)
+    try:
+        selected_provider = valid_provider(payload.provider)
+    except ValueError as cause:
+        raise HTTPException(status_code=422, detail=str(cause)) from cause
+    if not valid_conversation_url(payload.conversation_url, selected_provider):
+        raise HTTPException(status_code=422, detail="선택한 AI의 개인 대화 주소가 아닙니다.")
     mine = db.get(UserPreview, (user.id, lecture.subject, lecture.run_id))
     if mine is None:
         mine = UserPreview(user_id=user.id, subject=lecture.subject, run_id=lecture.run_id)
         db.add(mine)
+    mine.provider = selected_provider
     mine.conversation_url = payload.conversation_url.strip()
     db.commit()
-    return {"conversationUrl": mine.conversation_url}
+    return {"provider": mine.provider, "conversationUrl": mine.conversation_url}

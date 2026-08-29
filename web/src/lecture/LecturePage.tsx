@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, downloadSignedFile, openSignedFile } from "../api";
+import { bumpPreviewVersion, usePreviewLink, watchSharedLink } from "../bridge/previewBridge";
 import { prequizHref, prequizWindow } from "../links";
-import type { LectureDetail, LectureFile } from "../types";
+import {
+  previewProviderLabels,
+  previewProviders,
+  type LectureDetail,
+  type LectureFile,
+  type PreviewProvider,
+} from "../types";
 import { Missed } from "./Missed";
 
 /**
@@ -27,6 +34,23 @@ export function LecturePage() {
   }, [subject, runId]);
 
   useEffect(load, [load]);
+
+  usePreviewLink(
+    useCallback(async ({ lectureId, kind, url }) => {
+      const [linkSubject, linkRunId] = lectureId.split("/");
+      if (!linkSubject || !linkRunId) return;
+      const shared = kind.endsWith("_share");
+      const provider = (shared ? kind.slice(0, -6) : kind) as PreviewProvider;
+      if (!previewProviders.includes(provider)) return;
+      const path = `${encodeURIComponent(linkSubject)}/${encodeURIComponent(linkRunId)}`;
+      await api(shared ? `/api/admin/lectures/${path}/preview` : `/api/lectures/${path}/my-preview`, {
+        method: "PUT",
+        body: JSON.stringify(shared ? { provider, shareUrl: url } : { provider, conversationUrl: url }),
+      });
+      bumpPreviewVersion();
+      load();
+    }, [load]),
+  );
 
   useEffect(() => {
     if (detail) document.title = `${detail.title} · Study_EZ`;
@@ -144,8 +168,18 @@ function PreviewResource({ detail }: { detail: LectureDetail }) {
 
   if (detail.preview?.shareUrl) {
     return (
-      <a className="resource" href={detail.preview.shareUrl} target="_blank" rel="noreferrer">
-        <strong>기본 링크</strong>
+      <a
+        className="resource"
+        href={detail.preview.shareUrl}
+        target="_blank"
+        rel="noreferrer"
+        onClick={() => watchSharedLink(
+          `${detail.subject}/${detail.runId}`,
+          detail.preview!.provider,
+          detail.preview!.shareUrl,
+        )}
+      >
+        <strong>기본 링크 · {previewProviderLabels[detail.preview.provider]}</strong>
         <small>공통 예습 대화</small>
       </a>
     );
@@ -158,7 +192,7 @@ function PreviewResource({ detail }: { detail: LectureDetail }) {
   return (
     <div className="resource is-empty">
       예습 — 캘린더에서 이 강의를 눌러 시작하세요
-      <small>확장 프로그램이 작년 필기와 프롬프트를 ChatGPT에 넣어 줍니다</small>
+      <small>확장 프로그램이 작년 필기와 프롬프트를 선택한 AI에 넣어 줍니다</small>
     </div>
   );
 }

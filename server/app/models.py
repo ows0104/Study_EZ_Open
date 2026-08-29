@@ -232,7 +232,7 @@ class UserPreview(Base):
 
     `preview`와 나눠 둔 이유는 **주인이 다르기 때문이다.** 그쪽은 강의당 하나이고
     반 전체가 같은 것을 읽는다(`share_url`). 이것은 사람당 하나이고 만든 사람만
-    연다 — `/c/` 주소는 원래 만든 계정에서만 열리므로 남에게 주어도 죽은 링크다.
+    연다 — AI의 개인 대화 주소는 원래 만든 계정에서만 열리므로 남에게 주어도 죽은 링크다.
 
     프롬프트도 갈린다. 기본 링크는 문구가 고정이고, 개인 대화는 각자
     `profile.preview_prompt`로 묻는다.
@@ -246,6 +246,7 @@ class UserPreview(Base):
     user_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     subject: Mapped[str] = mapped_column(Text, primary_key=True)
     run_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    provider: Mapped[str] = mapped_column(String(32), nullable=False, default="chatgpt")
     conversation_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 

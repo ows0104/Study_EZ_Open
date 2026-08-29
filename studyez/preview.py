@@ -51,7 +51,7 @@ MIN_CHARS = 400
 # 예습 대화는 한 발화에 강의 전체를 설명하는 것이 정상이므로 넉넉히 둔다.
 MAX_TURN_CHARS = 40000
 
-_SHARE_HOSTS = ("chatgpt.com", "chat.openai.com", "claude.ai", "gemini.google.com")
+_SHARE_HOSTS = ("chatgpt.com", "chat.openai.com", "claude.ai", "gemini.google.com", "g.co/gemini/share")
 
 # JSON 안에서 대화 한 턴을 찾을 때 쓰는 열쇠. 서비스마다 이름이 다르다.
 _ROLE_KEYS = ("role", "author", "sender")

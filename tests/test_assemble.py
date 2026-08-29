@@ -87,12 +87,18 @@ def test_사진_중심은_명시적으로_고를_수_있다():
     assert STRATEGY_ALIAS["photo"] == "image"
 
 
-def test_사진_중심은_image_basic을_주형식으로_지시한다():
+def test_사진_중심은_image_basic만_쓰라고_지시한다():
+    """2026-08-27 관리자 지시로 오클루전이 **금지**로 뒤집혔다.
+
+    앞면이 필기 걷힌 사진 한 장이어야 하는데 오클루전 앞면만 `annotated` 에서
+    뜬다(`build.MediaMaker.occlusion`). 그래서 「라벨 회수에는 오클루전」이던
+    이전 규칙이 여기서는 성립하지 않는다.
+    """
     g = jokbo_guidance(_stats([]), "PRAC 실습", strategy="image")
-    assert "사진 중심 실습" in g
-    assert "절반 이상을 이미지 카드" in g
-    assert "`image_basic`을 기본" in g
-    assert "`image_occlusion`은 이름 있는 핵심 라벨" in g
+    assert "사진 판독 덱" in g
+    assert "쓸 만한 사진 하나가 카드 하나다" in g
+    assert "전부 `image_basic` 으로 만든다" in g
+    assert "`image_occlusion` 은 이 실습에서 쓰지 않는다" in g
 
 
 def test_기출이_없어도_사진_중심_선택이_사라지지_않는다():

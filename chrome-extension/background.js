@@ -5,7 +5,7 @@ const { WEBAPP_SOURCE, MESSAGES, LINK_KINDS } = globalThis.STUDYEZ_PROTOCOL;
 const TAB_PAYLOAD = "studyez-tab:";
 const PENDING_LINK = "studyez-pending:";
 /**
- * ChatGPT 탭 → `{ lectureId, mode, webappTabId }`.
+ * AI 서비스 탭 → `{ lectureId, provider, mode, webappTabId }`.
  *
  * 이 기록이 있는 탭에서 나온 링크만 강의에 붙는다. 강의 id는 페이지가 보내는
  * 메시지가 아니라 여기서 읽는다 — 페이지가 아무 강의에나 링크를 달 수 없다.
@@ -14,8 +14,11 @@ const TAB_WATCH = "studyez-watch:";
 /** 기본 링크의 share id → 어느 강의였나. 갈라져 나온 대화를 그 강의로 돌리는 데 쓴다. */
 const SHARE_ORIGIN = "studyez-share-origin:";
 
-const CHATGPT_ORIGIN = "https://chatgpt.com";
-const CHATGPT_START = "https://chatgpt.com/";
+const AI_PROVIDERS = {
+  chatgpt: { origin: "https://chatgpt.com", startUrl: "https://chatgpt.com/" },
+  gemini: { origin: "https://gemini.google.com", startUrl: "https://gemini.google.com/app" },
+  claude: { origin: "https://claude.ai", startUrl: "https://claude.ai/new" },
+};
 const R2_ORIGIN = "https://d0ec59549fea0c13f1b7fe9f724df93b.r2.cloudflarestorage.com";
 
 /**
@@ -36,7 +39,16 @@ function originOf(sender) {
 }
 
 const fromWebapp = (sender) => WEBAPP_ORIGINS.has(originOf(sender));
-const fromChatgpt = (sender) => originOf(sender) === CHATGPT_ORIGIN;
+function providerForUrl(value) {
+  try {
+    const origin = new URL(value).origin;
+    return Object.keys(AI_PROVIDERS).find((provider) => AI_PROVIDERS[provider].origin === origin) || "";
+  } catch {
+    return "";
+  }
+}
+
+const providerForSender = (sender) => providerForUrl(sender.tab?.url || sender.url || "");
 
 /**
  * 자료를 어디서 받아도 되는가.
@@ -55,26 +67,46 @@ function allowedDownload(value) {
   }
 }
 
-/** ChatGPT의 대화 주소인가. `/c/<id>`, GPTs는 `/g/<gpt>/c/<id>`. */
-function isConversationUrl(value) {
+/** 제공자 계정에 귀속되는 개인 대화 주소인가. */
+function isConversationUrl(provider, value) {
   try {
     const url = new URL(value);
-    return url.origin === CHATGPT_ORIGIN && /^\/(?:g\/[^/]+\/)?c\/[A-Za-z0-9_:-]+/.test(url.pathname);
+    if (url.origin !== AI_PROVIDERS[provider]?.origin) return false;
+    if (provider === "chatgpt") return /^\/(?:g\/[^/]+\/)?c\/[A-Za-z0-9_:-]+/.test(url.pathname);
+    if (provider === "gemini") return /^\/app\/[A-Za-z0-9_-]+/.test(url.pathname);
+    if (provider === "claude") return /^\/chat\/[A-Za-z0-9-]+/.test(url.pathname);
+    return false;
   } catch {
     return false;
   }
 }
 
-/** 공유 주소의 id. 같은 링크를 어디서 열든 이 값으로 알아본다. */
-function shareIdOf(value) {
+/** 공개 공유 주소의 제공자와 id. 같은 링크를 어디서 열든 이 값으로 알아본다. */
+function shareIdentity(provider, value) {
   try {
     const url = new URL(value);
-    if (url.origin !== CHATGPT_ORIGIN) return "";
-    const match = /^\/share\/([A-Za-z0-9_-]+)/.exec(url.pathname);
-    return match ? match[1] : "";
+    if (provider === "chatgpt" && url.origin === AI_PROVIDERS.chatgpt.origin) {
+      const match = /^\/share\/(?:e\/)?([A-Za-z0-9_-]+)/.exec(url.pathname);
+      return match ? { provider, id: match[1] } : null;
+    }
+    if (provider === "claude" && url.origin === AI_PROVIDERS.claude.origin) {
+      const match = /^\/share\/([A-Za-z0-9-]+)/.exec(url.pathname);
+      return match ? { provider, id: match[1] } : null;
+    }
+    if (provider === "gemini") {
+      const direct = url.origin === AI_PROVIDERS.gemini.origin && /^\/share\/([A-Za-z0-9_-]+)/.exec(url.pathname);
+      const short = url.origin === "https://g.co" && /^\/gemini\/share\/([A-Za-z0-9_-]+)/.exec(url.pathname);
+      const match = direct || short;
+      return match ? { provider, id: match[1] } : null;
+    }
+    return null;
   } catch {
-    return "";
+    return null;
   }
+}
+
+function shareIdentityForUrl(value) {
+  return Object.keys(AI_PROVIDERS).map((provider) => shareIdentity(provider, value)).find(Boolean) || null;
 }
 
 function bytesToBase64(bytes) {
@@ -123,24 +155,35 @@ async function watchTab(tabId, watch) {
   // 기다리지 않는다. 갓 연 탭에는 아직 콘텐츠 스크립트가 없어 반드시 실패하는데,
   // 그 실패를 기다리면 웹앱의 "열기" 응답이 그만큼 늦는다.
   void chrome.tabs
-    .sendMessage(tabId, { type: "STUDYEZ_WATCH_READY", lectureId: watch.lectureId, mode: watch.mode })
+    .sendMessage(tabId, {
+      type: "STUDYEZ_WATCH_READY",
+      lectureId: watch.lectureId,
+      provider: watch.provider,
+      mode: watch.mode,
+    })
     .catch(() => undefined);
 }
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   // 기본 링크를 연 탭인가. 맞으면 그 탭도 감시 대상으로 올린다 — 여기서 이어
-  // 물으면 ChatGPT가 그 시점까지를 복사해 새 `/c/` 대화를 만든다.
+  // 물으면 AI 서비스가 그 시점까지를 복사해 새 개인 대화를 만든다.
   //
   // `mode`는 personal이다. 갈라져 나온 것은 그 사람 것이지 반의 것이 아니므로
   // 공유를 다시 발행하면 안 된다.
-  if (changeInfo.url && shareIdOf(changeInfo.url)) {
-    const originKey = `${SHARE_ORIGIN}${shareIdOf(changeInfo.url)}`;
+  const shared = changeInfo.url ? shareIdentityForUrl(changeInfo.url) : null;
+  if (shared) {
+    const originKey = `${SHARE_ORIGIN}${shared.provider}:${shared.id}`;
     void chrome.storage.session
       .get(originKey)
       .then((stored) => {
         const origin = stored[originKey];
         if (!origin) return;
-        return watchTab(tabId, { lectureId: origin.lectureId, mode: "personal", webappTabId: origin.webappTabId });
+        return watchTab(tabId, {
+          lectureId: origin.lectureId,
+          provider: shared.provider,
+          mode: "personal",
+          webappTabId: origin.webappTabId,
+        });
       })
       .catch(() => undefined);
   }
@@ -169,10 +212,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message?.type === MESSAGES.watchShare) {
     if (!fromWebapp(sender) || !sender.tab?.id) return false;
-    const shareId = shareIdOf(message.shareUrl || "");
-    if (!shareId || typeof message.lectureId !== "string" || !message.lectureId) return false;
+    const shared = shareIdentity(message.provider, message.shareUrl || "");
+    if (!shared || typeof message.lectureId !== "string" || !message.lectureId) return false;
     void chrome.storage.session.set({
-      [`${SHARE_ORIGIN}${shareId}`]: { lectureId: message.lectureId, webappTabId: sender.tab.id },
+      [`${SHARE_ORIGIN}${shared.provider}:${shared.id}`]: {
+        lectureId: message.lectureId,
+        webappTabId: sender.tab.id,
+      },
     });
     return false;
   }
@@ -185,7 +231,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // 이 탭이 어느 강의의 무슨 몫인지 콘텐츠 스크립트가 물어본다.
   if (message?.type === "STUDYEZ_GET_WATCH") {
-    if (!fromChatgpt(sender) || !sender.tab?.id) {
+    if (!providerForSender(sender) || !sender.tab?.id) {
       sendResponse({ ok: false });
       return false;
     }
@@ -193,17 +239,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     void chrome.storage.session
       .get(key)
       .then((stored) =>
-        sendResponse(stored[key] ? { ok: true, lectureId: stored[key].lectureId, mode: stored[key].mode } : { ok: false }),
+        sendResponse(stored[key] ? {
+          ok: true,
+          lectureId: stored[key].lectureId,
+          provider: stored[key].provider,
+          mode: stored[key].mode,
+        } : { ok: false }),
       )
       .catch(() => sendResponse({ ok: false }));
     return true;
   }
 
   if (message?.type === "STUDYEZ_SHARE_LINK" || message?.type === "STUDYEZ_CONVERSATION_LINK") {
-    if (!fromChatgpt(sender) || !sender.tab?.id) return false;
+    const provider = providerForSender(sender);
+    if (!provider || !sender.tab?.id) return false;
     const share = message.type === "STUDYEZ_SHARE_LINK";
     const url = typeof message.url === "string" ? message.url : "";
-    if (share ? !shareIdOf(url) : !isConversationUrl(url)) return false;
+    if (share ? !shareIdentity(provider, url) : !isConversationUrl(provider, url)) return false;
     const key = `${TAB_WATCH}${sender.tab.id}`;
     // 강의 id는 메시지가 아니라 감시 기록에서 가져온다. 페이지가 아무 강의에나
     // 링크를 붙일 수 없다는 뜻이다.
@@ -211,14 +263,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .get(key)
       .then(async (stored) => {
         const watch = stored[key];
-        if (!watch) return;
+        if (!watch || watch.provider !== provider) return;
         // 공유는 기본 링크를 만들 때만 낸다.
         //
         // 개인 예습까지 공개 `/share/`를 발행하면 두 가지가 잘못된다 — 남이
         // 물은 것이 링크만 있으면 열리게 되고, 관리자가 개인 예습을 하는 순간
         // 그 공유가 반 전체의 기본 링크를 덮는다.
         if (share && watch.mode !== "shared") return;
-        const kind = share ? "chatgpt_share" : "chatgpt";
+        const kind = share ? `${provider}_share` : provider;
         await chrome.storage.session.set({
           [pendingKey(watch.webappTabId, watch.lectureId, kind)]: { lectureId: watch.lectureId, kind, url },
         });
@@ -228,10 +280,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  // ChatGPT 탭이 자기 몫의 자료를 가져간다. 한 번 주고 지운다.
+  // AI 서비스 탭이 자기 몫의 자료를 가져간다. 한 번 주고 지운다.
   if (message?.type === "STUDYEZ_GET_PAYLOAD") {
-    if (!fromChatgpt(sender) || !sender.tab?.id) {
-      sendResponse({ ok: false, error: "ChatGPT 탭을 확인하지 못했습니다." });
+    if (!providerForSender(sender) || !sender.tab?.id) {
+      sendResponse({ ok: false, error: "AI 탭을 확인하지 못했습니다." });
       return false;
     }
     const key = `${TAB_PAYLOAD}${sender.tab.id}`;
@@ -246,10 +298,65 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message?.type === "STUDYEZ_PREPARE_GEMINI_FILE_INPUT") {
+    if (providerForSender(sender) !== "gemini" || !sender.tab?.id) {
+      sendResponse({ ok: false, error: "Gemini 탭을 확인하지 못했습니다." });
+      return false;
+    }
+    void chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id },
+      world: "MAIN",
+      func: () => {
+        if (window.__studyezGeminiFileCaptureActive) return;
+        window.__studyezGeminiFileCaptureActive = true;
+        const originalClick = HTMLInputElement.prototype.click;
+        const restore = () => {
+          if (HTMLInputElement.prototype.click === patchedClick) HTMLInputElement.prototype.click = originalClick;
+          window.__studyezGeminiFileCaptureActive = false;
+        };
+        function patchedClick(...args) {
+          if (this.type === "file") {
+            this.setAttribute("data-studyez-gemini-file-input", "ready");
+            this.style.display = "none";
+            if (!this.isConnected) document.documentElement.appendChild(this);
+            restore();
+            return;
+          }
+          return originalClick.apply(this, args);
+        }
+        HTMLInputElement.prototype.click = patchedClick;
+        window.setTimeout(restore, 10_000);
+      },
+    }).then(() => sendResponse({ ok: true }))
+      .catch((error) => sendResponse({ ok: false, error: String(error) }));
+    return true;
+  }
+
+  if (message?.type === "STUDYEZ_VERIFY_SHARE_LINK") {
+    const provider = providerForSender(sender);
+    const shared = shareIdentity(provider, message.url || "");
+    if (!provider || !shared) {
+      sendResponse({ ok: false });
+      return false;
+    }
+    void fetch(message.url, { credentials: "omit", redirect: "follow" })
+      .then((response) => {
+        const finalUrl = response.url || message.url;
+        const finalIdentity = shareIdentity(provider, finalUrl) || shared;
+        sendResponse({
+          ok: response.ok && Boolean(finalIdentity),
+          url: finalIdentity && shareIdentity(provider, finalUrl) ? finalUrl : message.url,
+        });
+      })
+      .catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+
   if (message?.type !== MESSAGES.openPreview || !fromWebapp(sender)) return false;
 
   const payload = message.payload;
-  if (!payload?.requestId || !payload.lectureId || typeof payload.prompt !== "string" || !Array.isArray(payload.files)) {
+  const providerConfig = AI_PROVIDERS[payload?.provider];
+  if (!payload?.requestId || !payload.lectureId || !providerConfig || typeof payload.prompt !== "string" || !Array.isArray(payload.files)) {
     sendResponse({ ok: false, error: "전달된 예습 자료 형식이 올바르지 않습니다." });
     return false;
   }
@@ -261,12 +368,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   void chrome.tabs
-    .create({ url: CHATGPT_START })
+    .create({ url: providerConfig.startUrl })
     .then(async (tab) => {
-      if (!tab.id) throw new Error("새 ChatGPT 탭을 열지 못했습니다.");
+      if (!tab.id) throw new Error("새 AI 서비스 탭을 열지 못했습니다.");
       if (!sender.tab?.id) throw new Error("Study_EZ 탭을 확인하지 못했습니다.");
       await chrome.storage.session.set({ [`${TAB_PAYLOAD}${tab.id}`]: payload });
-      await watchTab(tab.id, { lectureId: payload.lectureId, mode, webappTabId: sender.tab.id });
+      await watchTab(tab.id, {
+        lectureId: payload.lectureId,
+        provider: payload.provider,
+        mode,
+        webappTabId: sender.tab.id,
+      });
     })
     .then(() => sendResponse({ ok: true }))
     .catch((error) => sendResponse({ ok: false, error: String(error) }));

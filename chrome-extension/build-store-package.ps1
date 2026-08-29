@@ -31,6 +31,7 @@ $RuntimeFiles = @(
   "background.js",
   "chatgpt-bridge.js",
   "chatgpt-share.js",
+  "provider-share.js",
   "protocol.js",
   "studyez-bridge.js"
 )

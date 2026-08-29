@@ -6,10 +6,9 @@ import hashlib
 import io
 import json
 import re
+import struct
 import zipfile
 from pathlib import Path
-
-from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parent
@@ -22,6 +21,7 @@ EXPECTED = {
     "studyez-bridge.js",
     "chatgpt-bridge.js",
     "chatgpt-share.js",
+    "provider-share.js",
     "icons/icon-16.png",
     "icons/icon-32.png",
     "icons/icon-48.png",
@@ -44,17 +44,29 @@ with zipfile.ZipFile(io.BytesIO(raw)) as archive:
     require(manifest["manifest_version"] == 3, "Manifest V3가 아닙니다.")
     require(manifest["name"] == "Study EZ 예습 브리지", "확장 이름이 다르거나 UTF-8이 깨졌습니다.")
     require(manifest["version"] == SOURCE_MANIFEST["version"], "스토어 버전이 소스 manifest와 다릅니다.")
-    require(manifest["permissions"] == ["storage"], "storage 외 권한이 있습니다.")
+    require(manifest["permissions"] == ["storage", "scripting"], "storage·scripting 외 권한이 있습니다.")
     require(
         manifest["host_permissions"]
         == [
             "https://d0ec59549fea0c13f1b7fe9f724df93b.r2.cloudflarestorage.com/*",
             "https://chatgpt.com/*",
+            "https://gemini.google.com/*",
+            "https://claude.ai/*",
+            "https://g.co/gemini/share/*",
         ],
         "호스트 권한이 최소 허용 목록과 다릅니다.",
     )
     require(manifest["content_scripts"][0]["matches"] == ["https://studyez.kr/*"], "Study EZ match가 다릅니다.")
-    require(manifest["content_scripts"][1]["matches"] == ["https://chatgpt.com/*"], "ChatGPT match가 다릅니다.")
+    require(
+        manifest["content_scripts"][1]["matches"]
+        == ["https://chatgpt.com/*", "https://gemini.google.com/*", "https://claude.ai/*"],
+        "AI 입력 브리지 match가 다릅니다.",
+    )
+    require(manifest["content_scripts"][2]["matches"] == ["https://chatgpt.com/*"], "ChatGPT match가 다릅니다.")
+    require(
+        manifest["content_scripts"][3]["matches"] == ["https://gemini.google.com/*", "https://claude.ai/*"],
+        "Gemini·Claude 링크 감시 match가 다릅니다.",
+    )
     require("localhost" not in manifest_text and "127.0.0.1" not in manifest_text, "manifest에 로컬 주소가 있습니다.")
 
     scripts = [name for name in names if name.endswith(".js")]
@@ -93,15 +105,18 @@ with zipfile.ZipFile(io.BytesIO(raw)) as archive:
     )
 
     for size in (16, 32, 48, 128):
-        with Image.open(io.BytesIO(archive.read(f"icons/icon-{size}.png"))) as icon:
-            require(icon.mode == "RGBA" and icon.size == (size, size), f"icon-{size}.png 형식이 잘못됐습니다.")
+        icon = archive.read(f"icons/icon-{size}.png")
+        require(icon.startswith(b"\x89PNG\r\n\x1a\n") and len(icon) >= 26, f"icon-{size}.png가 PNG가 아닙니다.")
+        width, height = struct.unpack(">II", icon[16:24])
+        color_type = icon[25]
+        require((width, height) == (size, size) and color_type == 6, f"icon-{size}.png 형식이 잘못됐습니다.")
 
     urls = sorted(set(re.findall(r"https?://[^\"'\s)]+", script_text)))
 
 print(f"OK: {ZIP}")
 print(f"SHA256: {hashlib.sha256(raw).hexdigest()}")
 print(f"entries: {len(EXPECTED)}")
-print("permissions: storage")
+print("permissions: storage, scripting")
 print("consent: remembered per mode with local revoke")
-print("host permissions: exact R2 origin, chatgpt.com")
+print("host permissions: exact R2 origin, ChatGPT, Gemini, Claude, Gemini short links")
 print(f"runtime URLs: {urls}")

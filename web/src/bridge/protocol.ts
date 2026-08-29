@@ -28,7 +28,14 @@ export const MESSAGES = {
  *   chatgpt        → conversation_url  (만든 계정에서만 열린다)
  *   chatgpt_share  → share_url         (링크를 가진 누구나. Pre-Quiz의 재료)
  */
-export const LINK_KINDS = ["chatgpt", "chatgpt_share"] as const;
+export const LINK_KINDS = [
+  "chatgpt",
+  "chatgpt_share",
+  "gemini",
+  "gemini_share",
+  "claude",
+  "claude_share",
+] as const;
 export type LinkKind = (typeof LINK_KINDS)[number];
 
 /** 확장이 이 시간 안에 답하지 않으면 응답 없음으로 본다. */

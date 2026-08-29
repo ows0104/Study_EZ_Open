@@ -13,7 +13,7 @@ globalThis.STUDYEZ_PROTOCOL = {
   READY_ATTRIBUTE: "data-studyez-ai-extension",
   // `<html>`에 그대로 붙는다. 어느 빌드가 실려 있는지 개발자 도구에서 보인다 —
   // 소스를 고쳐도 `chrome://extensions`에서 새로고침하지 않으면 옛것이 돈다.
-  VERSION: "1.0.0",
+  VERSION: "1.1.0",
 
   MESSAGES: {
     /** 웹앱 → 확장: 이 자료로 예습 대화를 열어 달라. */
@@ -29,7 +29,7 @@ globalThis.STUDYEZ_PROTOCOL = {
     /**
      * 웹앱 → 확장: 기본 링크를 지금 연다. 어느 강의인지 기억해 둬라.
      *
-     * 공유 페이지에서 이어 물으면 ChatGPT가 그 시점까지를 복사해 **내 계정에 새
+     * 공유 페이지에서 이어 물으면 AI 서비스가 그 시점까지를 복사해 **내 계정에 새
      * 대화를 만든다.** 그것이 사실상 그 사람의 개인 예습인데, 확장이 연 탭이
      * 아니라서 지금까지는 놓쳤다.
      */
@@ -40,8 +40,8 @@ globalThis.STUDYEZ_PROTOCOL = {
    * 저장할 수 있는 링크 종류. Study_EZ의 `preview` 표가 두 칸을 따로 들고 있는
    * 것과 1:1로 맞는다.
    *
-   *   chatgpt        → conversation_url  (만든 계정에서만 열린다)
-   *   chatgpt_share  → share_url         (링크를 가진 누구나. Pre-Quiz의 재료)
+   *   <provider>        → conversation_url  (만든 계정에서만 열린다)
+   *   <provider>_share  → share_url         (서비스 정책에 따라 공유되는 기본 링크)
    */
-  LINK_KINDS: ["chatgpt", "chatgpt_share"],
+  LINK_KINDS: ["chatgpt", "chatgpt_share", "gemini", "gemini_share", "claude", "claude_share"],
 };
