@@ -43,10 +43,8 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import shutil
-import subprocess
 import sys
 import time
 import unicodedata
@@ -63,18 +61,13 @@ from .assemble import (
     resolve_auto_strategy,
     slice_for,
 )
-from .build import DEFECT_REASONS
 from .pack import lecture_of
 from .prompting import DEFAULT_DOMAIN, DOMAINS
-from .session import SessionError, run_agent
+from .runbase import BaseRunner, Failed
+from .session import SessionError
 
 PROMPTS = Path(__file__).parent / "prompts"
-PY = sys.executable
 CONFIG = "run.config.json"       # 덱 이름·전략을 폴더가 기억한다 (--resume 이 한 줄이 되게)
-
-
-class Failed(RuntimeError):
-    pass
 
 
 # ── 이름 짓기 ──────────────────────────────────────────────────────
@@ -128,32 +121,22 @@ def deck_siblings(out: Path, deck: str, lecture_id: str) -> list[str]:
     return found
 
 
-class Runner:
+class Runner(BaseRunner):
+    # ── 하위 명령 ──────────────────────────────────────────────
     def __init__(self, out: Path, args):
-        self.out, self.args = out, args
-        self.args.domain = getattr(args, "domain", None) or DEFAULT_DOMAIN
-        self.cost = 0.0
-        self.t0 = time.time()
-        self.sid: str | None = None      # ① 세션. ②·수선이 이어받아 자료를 다시 안 읽는다
-        # 이번 실행의 표를 한 번만 정하고 환경에 박는다. 이 프로세스가 적는 줄도,
-        # 하위 프로세스(reproduce)가 적는 줄도 같은 표를 달아야 '이번 실행'이 묶인다.
-        self.run = ledger.run_id()
-        os.environ[ledger.ENV_RUN] = self.run
-        self.pend_cost, self.pend_usage, self.pend_sessions = 0.0, {}, 0
-        self.pend_models = {}
+        super().__init__(out, args)
         self.strategy: str = "base"
         self.strategy_why: str = ""
         # 전략 판정 전까지의 잠정값. 사람이 깃발로 켰으면 그대로 산다.
         self.annotation: bool = bool(getattr(args, "annotation_evidence", False))
 
-    # ── 하위 명령 ──────────────────────────────────────────────
-    def made(self, produces: str | None) -> bool:
-        """산출물이 있는가. `*` 를 쓸 수 있다 — 프롬프트는 커지면 파트로 갈린다."""
-        if not produces:
-            return False
-        if "*" in produces:
-            return any(self.out.glob(produces))
-        return (self.out / produces).exists()
+    def prompt_extra(self) -> str:
+        """채널 위계 변경과 `--note`. 예습은 `--hint` 하나라 얹는 것이 다르다."""
+        extra = self.ANNOTATION_POLICY if self.annotation else ""
+        if self.args.note:
+            extra += ("\n\n## 이 강의에 대한 사용자 지시 (프롬프트보다 우선한다)\n\n"
+                      + self.args.note + "\n")
+        return extra
 
     def prompt_path(self, stage: str) -> Path:
         """모델에게 읽힐 프롬프트의 첫 파일.
@@ -171,32 +154,6 @@ class Runner:
             return parts[0]
         raise Failed(f"prompt.{stage}.md 도 prompt.{stage}.1ofN.md 도 없다")
 
-    def step(self, name: str, produces: str | None, fn):
-        """산출물이 있으면 건너뛴다. 재개가 공짜가 되는 지점이다."""
-        if produces and self.made(produces) and not self.args.force:
-            print(f"[건너뜀] {name}  ({produces} 이미 있음)", flush=True)
-            return
-        print(f"\n── {name}", flush=True)
-        n0 = len(ledger.read(self.out))
-        t = time.time()
-        self.pend_cost, self.pend_usage, self.pend_sessions = 0.0, {}, 0
-        self.pend_models = {}
-        fn()
-        # 하위 프로세스가 스스로 적었으면(재현 검사) 여기서 또 적지 않는다. 시간이 겹친다.
-        if len(ledger.read(self.out)) == n0:
-            ledger.append(self.out, name, seconds=time.time() - t, cost=self.pend_cost,
-                          usage=self.pend_usage, sessions=self.pend_sessions,
-                          models=self.pend_models)
-        if produces and not self.made(produces):
-            raise Failed(f"{name}: {produces} 가 생기지 않았다")
-
-    def sh(self, *argv: str):
-        r = subprocess.run([PY, "-m", *argv], cwd=Path.cwd(),
-                           env={**os.environ, "PYTHONIOENCODING": "utf-8",
-                                ledger.ENV_RUN: self.run})
-        if r.returncode:
-            raise Failed(f"명령 실패: {' '.join(argv)}")
-
     ANNOTATION_POLICY = """
 
 ## 채널 위계 변경 — 올해 필기는 근거다
@@ -213,28 +170,6 @@ class Runner:
   인사말은 여전히 근거가 아니고 카드도 아니다. 그 구분은 네가 한다.
 - 작년 이전 필기는 이전 교수의 강의다. 올해 필기와 어긋나면 올해 것을 쓴다.
 """
-
-    def agent(self, prompt: str, label: str, resume: bool = False):
-        if self.annotation:
-            prompt += self.ANNOTATION_POLICY
-        if self.args.note:
-            # 사람이 이 강의에만 걸어 두는 지시. 프롬프트 파일을 고치지 않고 얹는다.
-            prompt += ("\n\n## 이 강의에 대한 사용자 지시 (프롬프트보다 우선한다)\n\n"
-                       + self.args.note + "\n")
-        res = run_agent(prompt, cwd=Path.cwd(), model=self.args.model,
-                        timeout=self.args.timeout, label=label,
-                        resume=self.sid if resume else None)
-        self.cost += res.get("cost_usd") or 0.0
-        self.pend_cost += res.get("cost_usd") or 0.0
-        self.pend_sessions += 1
-        ledger.add(self.pend_usage, res.get("usage"))
-        ledger.add_models(self.pend_models, res.get("models"))
-        if res.get("session_id"):
-            self.sid = res["session_id"]
-        tail = (res.get("text") or "").strip().splitlines()
-        for line in tail[-6:]:
-            print(f"   {line[:110]}", flush=True)
-        return res
 
     # ── 단계 ──────────────────────────────────────────────────
     def prep(self):
@@ -331,14 +266,6 @@ class Runner:
         return path
 
     # ── 재현 검사와 수선 ───────────────────────────────────────
-    def defects(self) -> list[dict]:
-        f = self.out / "items.reproduced.json"
-        if not f.exists():
-            return []
-        cards = json.loads(f.read_text(encoding="utf-8"))["cards"]
-        return [c for c in cards
-                if (c.get("reproduce") or {}).get("reason") in DEFECT_REASONS]
-
     def reproduce(self, only: list[str] | None = None):
         """only 를 주면 그 카드만 다시 풀고 채점한다. 나머지 결과는 그대로 살아 있다."""
         if not only:

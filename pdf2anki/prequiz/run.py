@@ -22,10 +22,8 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import shutil
-import subprocess
 import sys
 import time
 import urllib.error
@@ -34,15 +32,14 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 from .. import ledger
-from ..build import DEFECT_REASONS
 from ..pack import find_jokbo, lecture_of
 from ..prompting import DEFAULT_DOMAIN, DOMAINS
-from ..run import Failed, lecture_id_of
-from ..session import SessionError, run_agent
+from ..run import lecture_id_of
+from ..runbase import BaseRunner, Failed
+from ..session import SessionError
 from .assemble import professor_line
 from .schema import MAX_CARDS, MIN_CARDS
 
-PY = sys.executable
 CONFIG = "prequiz.config.json"
 PROMPTS = Path(__file__).parent / "prompts"
 
@@ -199,26 +196,19 @@ def render_must(must: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-class Runner:
+class Runner(BaseRunner):
     def __init__(self, out: Path, args):
-        self.out, self.args = out, args
-        self.args.domain = getattr(args, "domain", None) or DEFAULT_DOMAIN
-        self.cost, self.t0 = 0.0, time.time()
-        self.sid: str | None = None
-        self.run = ledger.run_id()
-        os.environ[ledger.ENV_RUN] = self.run
-        self.pend_cost, self.pend_usage, self.pend_sessions = 0.0, {}, 0
-        self.pend_models = {}
+        super().__init__(out, args)
         self.stayed, self.prof = True, "미상"
         self.slice_path = None
         self.contract_broken = False
 
-    def made(self, produces: str | None) -> bool:
-        if not produces:
-            return False
-        if "*" in produces:
-            return any(self.out.glob(produces))
-        return (self.out / produces).exists()
+    def prompt_extra(self) -> str:
+        """`--hint` 하나다. 복습은 채널 위계 변경도 얹어서 얹는 것이 다르다."""
+        if not self.args.hint:
+            return ""
+        return ("\n\n## 이 강의에 대한 사용자 지시 (프롬프트보다 우선한다)\n\n"
+                + self.args.hint + "\n")
 
     def prompt_path(self, stage: str) -> Path:
         one = self.out / f"prompt.{stage}.md"
@@ -228,55 +218,6 @@ class Runner:
         if parts:
             return parts[0]
         raise Failed(f"prompt.{stage}.md 가 없다")
-
-    def step(self, name: str, produces: str | None, fn):
-        if produces and self.made(produces) and not self.args.force:
-            print(f"[건너뜀] {name}  ({produces} 이미 있음)", flush=True)
-            return
-        print(f"\n── {name}", flush=True)
-        n0 = len(ledger.read(self.out))
-        t = time.time()
-        self.pend_cost, self.pend_usage, self.pend_sessions = 0.0, {}, 0
-        self.pend_models = {}
-        fn()
-        if len(ledger.read(self.out)) == n0:
-            ledger.append(self.out, name, seconds=time.time() - t, cost=self.pend_cost,
-                          usage=self.pend_usage, sessions=self.pend_sessions,
-                          models=self.pend_models)
-        if produces and not self.made(produces):
-            raise Failed(f"{name}: {produces} 가 생기지 않았다")
-
-    def sh(self, *argv: str, ok: tuple = (0,)) -> int:
-        """`ok` 에 없는 종료코드면 멈춘다.
-
-        `validate` 는 계약 위반에 2 를 낸다. 그것까지 죽으면 **한 줄 실행이 깨진다** —
-        사람이 `--allow-size` 를 붙여 다시 불러야 하기 때문이다. 2 는 받아 두고
-        수선 루프가 처리한다.
-        """
-        r = subprocess.run([PY, "-m", *argv], cwd=Path.cwd(),
-                           env={**os.environ, "PYTHONIOENCODING": "utf-8",
-                                ledger.ENV_RUN: self.run})
-        if r.returncode not in ok:
-            raise Failed(f"명령 실패: {' '.join(argv)}")
-        return r.returncode
-
-    def agent(self, prompt: str, label: str, resume: bool = False):
-        if self.args.hint:
-            prompt += ("\n\n## 이 강의에 대한 사용자 지시 (프롬프트보다 우선한다)\n\n"
-                       + self.args.hint + "\n")
-        res = run_agent(prompt, cwd=Path.cwd(), model=self.args.model,
-                        timeout=self.args.timeout, label=label,
-                        resume=self.sid if resume else None)
-        self.cost += res.get("cost_usd") or 0.0
-        self.pend_cost += res.get("cost_usd") or 0.0
-        self.pend_sessions += 1
-        ledger.add(self.pend_usage, res.get("usage"))
-        ledger.add_models(self.pend_models, res.get("models"))
-        if res.get("session_id"):
-            self.sid = res["session_id"]
-        for line in (res.get("text") or "").strip().splitlines()[-6:]:
-            print(f"   {line[:110]}", flush=True)
-        return res
 
     # ── 단계 ──────────────────────────────────────────────────
     def prep(self):
@@ -367,15 +308,6 @@ class Runner:
         self.sh(*argv)
 
     # ── 수선 ───────────────────────────────────────────────────
-    def defects(self) -> list[dict]:
-        """재현 검사가 **카드 결함**으로 가른 것만. lecture_specific·genuinely_wrong 은 아니다."""
-        f = self.out / "items.reproduced.json"
-        if not f.exists():
-            return []
-        cards = json.loads(f.read_text(encoding="utf-8"))["cards"]
-        return [c for c in cards
-                if (c.get("reproduce") or {}).get("reason") in DEFECT_REASONS]
-
     def violations(self) -> list[str]:
         f = self.out / "suspects.json"
         if not f.exists():
