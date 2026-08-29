@@ -1,0 +1,16 @@
+# 줄끝 선언. 이 파일이 없는 동안 `core.autocrlf=true` 만 걸려 있어서, git 명령
+# 하나에 28개 파일이 "LF will be replaced by CRLF" 를 찍었다. 실제 diff 가 경고에
+# 파묻혔다.
+#
+# 저장소에는 이미 전부 LF 로 들어가 있다(2026-08-29 확인). 작업본도 LF 로 받게
+# 하면 변환할 것이 없어져 경고가 사라진다. 저장소 내용은 바뀌지 않는다.
+* text=auto eol=lf
+
+# 바이너리는 손대지 않는다.
+*.png binary
+*.jpg binary
+*.pdf binary
+*.zip binary
+*.apkg binary
+*.anki2 binary
+*.ico binary

@@ -348,12 +348,6 @@ def stamp_run(runs_dir: Path, run_id: str, pdf: Path) -> bool:
     return True
 
 
-def stamp_sources(queue: Queue, runs_dir: Path) -> None:
-    """빌드가 끝난 뒤 호출한다. 이 표시가 있어야 다음 스캔에서 빠진다."""
-    for item in queue.items:
-        stamp_run(runs_dir, item.run_id, Path(item.this_pdf))
-
-
 def save(queue: Queue, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({

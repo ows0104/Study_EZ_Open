@@ -9,8 +9,6 @@
 커버리지에서도 따로 센다.
 """
 
-import json
-
 from pdf2anki.review import render
 from pdf2anki.schema import PLAN_SCHEMA, REJECT_REASONS
 from pdf2anki.validate import validate

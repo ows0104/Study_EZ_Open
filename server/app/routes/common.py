@@ -4,7 +4,6 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.config import get_settings
 from app.models import Asset, AssetGrab, Lecture, PreItem, Preview, QuizAttempt
 from app.naming import nfc
 from app.storage import ObjectStorage, StorageNotConfigured

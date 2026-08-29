@@ -4,7 +4,7 @@
 **코드는 정규화·스키마·기계적 오류를, 모델은 학습 목표·문항 선택·의미 판단을 책임진다.**
 이 분업이 설계의 고정축이다.
 
-설계 근거는 [PDF_TO_ANKI_PORTING_BLUEPRINT.md](PDF_TO_ANKI_PORTING_BLUEPRINT.md).
+설계 근거는 [pdf2anki-blueprint.md](pdf2anki-blueprint.md).
 이식하면서 바꾼 것과 그 이유는 아래 "설계에서 바뀐 것"에 적었다.
 
 ---

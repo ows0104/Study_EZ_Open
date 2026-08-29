@@ -48,7 +48,7 @@ from . import ledger
 from .prompting import DEFAULT_DOMAIN, DOMAINS
 from .schema import IMAGE_FORMATS
 from .session import SessionError, run_blind, verify_blind
-from .textutil import answer_runs, char_ngrams, containment, norm_key
+from .textutil import answer_runs, norm_key
 
 PROMPTS = Path(__file__).parent / "prompts"
 # 프롬프트 파일은 "파일에 써라"라고 지시한다. 자동 모드는 도구가 없으니 stdout 으로 돌린다.

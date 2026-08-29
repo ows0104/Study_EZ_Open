@@ -8,6 +8,11 @@ runs/
 !runs/_pairs/
 !runs/_pairs/*.json
 
+# `out/` 도 같은 파이프라인 산출물이다 — `pdf2anki.run --resume out/<id>` 가 쓰는
+# 작업 디렉터리라 clean/annotated PDF·media·중간 JSON 이 그대로 들어 있다.
+# 2026-08-29 기준 7.8GB 였고, 등록돼 있지 않아 `grep -r` 이 여기로 걸어 들어가 죽었다.
+out/
+
 # 강의 자료는 SynologyDrive에 있고 여기로 들어오지 않는다. 제3자 저작물이다.
 필기/
 *.pdf
@@ -30,6 +35,11 @@ web/dist/
 
 # 확장 zip은 빌드마다 chrome-extension/에서 다시 묶인다. 소스가 원본이다.
 web/public/studyez-extension.zip
+# 스토어 제출 zip 도 `build-store-package.ps1` 이 버전마다 다시 묶는다.
+chrome-extension/release/
 .env.local
 .env.production
 *.tsbuildinfo
+
+# .apkg 를 풀어 눈으로 보려고 만드는 임시 자리. 덱에서 언제든 다시 푼다.
+.tmp_card_review/

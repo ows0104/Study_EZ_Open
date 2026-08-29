@@ -1,0 +1,39 @@
+# 이 파일은 패키지 빌드용이 아니다. 린터 설정 한 곳으로만 쓴다.
+# (`[build-system]` 이 없으므로 빌드 도구가 이 저장소를 패키지로 보지 않는다.)
+
+[tool.ruff]
+line-length = 100          # 실측 p99.5 가 100자였다. 코드가 이미 그렇게 쓰여 있다.
+target-version = "py311"
+
+# `server/` 는 자기 루트다 — `from app.config import ...` 로 임포트한다.
+# 이걸 적어 주지 않으면 isort 가 `app` 을 서드파티로 오해해 순서를 뒤집는다.
+src = [".", "server"]
+
+exclude = [
+    "out", "runs", "필기",
+    ".tmp_uv_cache", ".tmp_card_review", ".pytest_cache",
+    "node_modules", "web",
+]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B", "SIM", "C4"]
+
+# E501(줄 길이)은 켜지 않는다. ruff 는 한글을 폭 2로 세는데 이 저장소는 주석이
+# 한글 산문이라, 100자로 걸면 181줄이 울리고 그 대부분이 "왜 그런가"를 적어 둔
+# 문장이다. CLAUDE.md 가 세워 둔 서술 방식과 싸우는 규칙이라 뺀다.
+# 길이는 line-length 로 포매터에만 알려 준다.
+ignore = ["E501"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI 의 의존성 주입은 기본 인자에서 호출하는 것이 정상 관용이다.
+# 이걸 적지 않으면 B008 이 67건 울리는데 전부 라우트 시그니처다.
+extend-immutable-calls = [
+    "fastapi.Depends", "fastapi.Query", "fastapi.Path", "fastapi.Header",
+    "fastapi.Cookie", "fastapi.Body", "fastapi.Form", "fastapi.File",
+    "fastapi.Security",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# 테스트는 픽스처를 재정의하거나 임포트만 해 두는 일이 있다.
+"tests/**" = ["F811"]
+"server/tests/**" = ["F811"]
