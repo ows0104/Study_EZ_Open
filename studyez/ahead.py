@@ -50,6 +50,17 @@ from .filenames import LectureFile
 # 사람이 확인해 준 짝. `runs/_pairs/<과목>.json`에 `{run_id: 작년 파일 어간}`.
 PAIRS_DIR = "_pairs"
 
+# 같은 파일에 사람이 적어 두는 시간표 이름. **블럭 첫날에만 쓰인다.**
+# 과목 이름은 원래 올해 필기가 앉은 칸에서 읽는데(`block_names`), 블럭 첫날
+# 아침에는 올해 필기가 0편이라 기준점이 없다. 2026-08-30에 기생충학이 그랬고
+# (`publish 기생충학` → "올릴 것이 없다"), 그 상태로는 작년 강의록을 캘린더에
+# 못 올려 예습이 통째로 하루 늦는다.
+#
+# 서버의 `course_alias` 표가 같은 일을 하지만 PK가 `course_key` 하나라
+# `감염의 기초`를 기생충학과 미생물학에 동시에 못 준다. 여기는 과목마다 파일이
+# 갈려 있어 둘 다 적힌다.
+BLOCK_KEY = "_block"
+
 # 수업이 서는 칸만. 시험·휴일·자율학습에는 붙일 자료가 없다.
 TEACHING = ("lecture", "practice")
 
@@ -258,10 +269,21 @@ def plan(
         return [], [f"{subject}: 시간표를 읽지 못했다 ({cause}) — 예습 자리를 세우지 않는다. "
                     f"`python -m app.cli seed-timetable`을 먼저 돌리거나 --timetable으로 준다"]
 
+    confirmed = load_pairs(runs_dir, subject)
+
     names = block_names(cells, this_files)
     if not names:
-        return [], [f"{subject}: 올해 필기가 앉은 칸이 없어 시간표에서 이 과목을 못 찾는다 — "
-                    f"예습 자리를 세우지 않는다"]
+        # 블럭 첫날. 올해 필기가 아직 없으니 사람이 적어 둔 이름으로 찾는다.
+        # **적어 둔 것이 이기지는 않는다** — 필기가 한 편이라도 앉으면 그쪽이
+        # 사실이고, 이 줄은 그때부터 안 쓰인다.
+        declared = confirmed.get(BLOCK_KEY, "")
+        if not declared:
+            return [], [f"{subject}: 올해 필기가 앉은 칸이 없어 시간표에서 이 과목을 못 찾는다 — "
+                        f"예습 자리를 세우지 않는다. 블럭 첫날이면 "
+                        f"`runs/{PAIRS_DIR}/{subject}.json`에 "
+                        f'`"{BLOCK_KEY}": "<시간표 이름>"`을 적어 준다']
+        names = {blocks.base_name(declared)}
+        warnings.append(f"{subject}: 올해 필기가 없어 적어 둔 시간표 이름 「{declared}」으로 칸을 찾는다")
     if len(names) > 1:
         # 실습이 별도 블럭 이름을 갖는 등 여럿일 수 있다. 전부 쓰되 적어 둔다.
         warnings.append(f"{subject}: 시간표 이름이 {len(names)}개다 — {', '.join(sorted(names))}")
@@ -276,7 +298,6 @@ def plan(
     claimed = {m.prev_year.uid for m in matching.match_years(this_files, prev_files) if m.prev_year}
     free = [item for item in prev_files if item.uid not in claimed]
 
-    confirmed = load_pairs(runs_dir, subject)
     by_stem = {item.path.stem: item for item in free}
     by_key: dict[str, LectureFile | None] = {}
     for item in free:
