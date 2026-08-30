@@ -766,10 +766,18 @@ def main(argv=None) -> int:
     (outdir / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # 콘솔 요약
-    print(f"구역: 필기문항 p{regions['written_q'][0]+1}-{regions['written_q'][-1]+1} · "
-          f"필기정답 p{regions['written_a'][0]+1}-{regions['written_a'][-1]+1} · "
-          f"실습문항 p{regions['practical_q'][0]+1}-{regions['practical_q'][-1]+1} · "
-          f"실습정답 p{regions['practical_a'][0]+1}-{regions['practical_a'][-1]+1}")
+    # **네 구역이 다 있다고 보면 안 된다.** 2026 기생충학 족보는 실습이 통째로
+    # 없어서(예전 해들은 「실습 족보」가 별도 PDF였다) 이 줄이 IndexError로 죽었고,
+    # 그 바람에 다 잘라 놓고도 `run_jokbo`가 실패로 받아 `index.json`에
+    # `source_path`를 못 적었다 — 기출 카드 뒷면의 지면 이미지가 조용히 빠지는 자리다.
+    # 없으면 없다고 찍는다. 그것이 사람이 봐야 할 신호다.
+    def _span(pages: list[int]) -> str:
+        return f"p{pages[0] + 1}-{pages[-1] + 1}" if pages else "없음"
+
+    print(f"구역: 필기문항 {_span(regions['written_q'])} · "
+          f"필기정답 {_span(regions['written_a'])} · "
+          f"실습문항 {_span(regions['practical_q'])} · "
+          f"실습정답 {_span(regions['practical_a'])}")
     if warn:
         print(f"경고: {warn}")
     print(f"목차 강의 {len(lectures)}개 / 본문에서 잡힌 섹션 {len(sections)}개\n")
