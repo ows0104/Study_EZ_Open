@@ -307,8 +307,14 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
 
         if fmt not in IMAGE_FORMATS and RE_POINTS_AT_SOURCE.search(q):
             flags[i].append("points_at_source")
-        if not (c.get("explanation") or "").strip():
-            flags[i].append("missing_explanation")
+        # **복습에서는 해설 없음을 표시하지 않는다**(2026-08-30 관리자 판정).
+        # "헷갈리지 않은 이상 해설을 잘 안 보게 된다" — 있으면 좋은 것이지 결함이 아니다.
+        # 표시하던 동안 복습 카드 3,762장 중 1,657장(44%)에 붙어서, 실제로 봐야 할
+        # 신호(`off_plan` 109장·`similar_duplicate` 55장 …)를 통째로 덮고 있었다.
+        #
+        # 예습은 그대로 둔다. 거기서는 해설이 「수업에서 어디에 쓰이는지」를 잇는
+        # 다리라 목적의 절반이고, `prequiz/validate.py` 가 `missing_bridge_to_lecture`
+        # 라는 제 이름으로 따로 본다.
         if (c.get("evidence_type") == "annotation" and not c.get("exam_hit")
                 and not annotation_evidence):
             flags[i].append("annotation_evidence_without_exam_hit")

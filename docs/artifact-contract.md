@@ -127,7 +127,7 @@ lecture
   "importance": { "core": 63, "detail": 25 },
   "exam_hit": 4,
   "review_flagged": 13,
-  "review_flags": { "missing_explanation": 9, "points_at_source": 2 },
+  "review_flags": { "off_plan": 3, "points_at_source": 2 },
   "reproduce": { "same": 75, "partial": 4, "different": 4, "없음": 5 },
   "reproduce_defects": [],
   "slides_total": 46, "slides_used": [...], "slides_unused": [...],
