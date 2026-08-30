@@ -19,6 +19,7 @@ import json
 import sys
 from pathlib import Path
 
+from ..assemble import NO_JOKBO_DIR, NO_JOKBO_MATCH
 from ..pack import (
     READ_TOKEN_CAP,
     estimate_pdf_tokens,
@@ -190,7 +191,13 @@ def main(argv=None) -> int:
     prep = json.loads((prep_dir / "prep.json").read_text(encoding="utf-8"))
 
     jokbo_file = Path(args.jokbo) if args.jokbo else None
-    if jokbo_file is None and Path(args.jokbo_dir).exists():
+    # **폴더가 없을 때 아무 말도 안 하던 자리다.** 복습 쪽이 그 침묵으로 7편을 기출
+    # 0장으로 내보냈고(`assemble.slice_for`), 여기도 같은 모양이었다. 예습에서 잃는
+    # 것은 기출 카드가 아니라 **중심성의 증거**다 — `reason=repeated` 를 쓸 근거가
+    # 통째로 없어지는데 화면에는 한 줄도 안 떴다.
+    if jokbo_file is None and not (Path(args.jokbo_dir) / "index.json").exists():
+        print(NO_JOKBO_DIR.format(index=Path(args.jokbo_dir) / "index.json"), flush=True)
+    elif jokbo_file is None:
         jokbo_file, score, top = find_jokbo(prep, Path(args.jokbo_dir))
         print("족보 조각 자동 대조:")
         for sc, e, via in top:
@@ -199,8 +206,8 @@ def main(argv=None) -> int:
                      else f"{via['lecture_key']} {via['title']}  "
                           f"(조각은 {e['lecture_key']} 안에 섞여 있음)")
             print(f"   {sc:.2f}  {label}{mark}")
-        if score < 0.25:
-            print(f"⚠ 일치도가 낮다({score:.2f}). --jokbo 로 직접 지정하는 편이 낫다.")
+        if not jokbo_file or score < 0.25:
+            print(NO_JOKBO_MATCH.format(score=score), flush=True)
             jokbo_file = None
 
     note = Path(args.note) if args.note else (prep_dir / "note.md")

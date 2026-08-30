@@ -13,6 +13,8 @@
 항목 수와 배정 카드 수는 `must_know.schema.json`의 출력 계약을 따른다. 숫자를 맞추려고
 저가치 항목을 넣지 않는다.
 
-아래 파일에 스키마를 지킨 JSON만 쓴다.
+아래 파일에 `must_know.schema.json`을 그대로 지킨 JSON만 쓴다. **최상위가 `items`와
+`rejected_candidates`인 객체다** — `{"must_know": ...}`로 감싸지 마라. 감싸면 승인 단계가
+항목을 0개로 읽고, 검토 문서가 「항목 0개」인 채로 다음 단계가 그대로 흘러간다.
 
     {must_out}

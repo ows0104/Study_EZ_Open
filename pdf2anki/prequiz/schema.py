@@ -145,6 +145,13 @@ CARD_SCHEMA = {
         },
         "review_note": {"type": ["string", "null"],
                         "description": "사용자에게 보일 경고. 없으면 null."},
+        # **이 카드가 어느 must-know 항목을 위한 것인가.** 승인본의 `items[].id` 를 적는다.
+        # 이 끈이 없으면 「승인한 항목에 카드가 갔는가」도 「항목에 배정한 수를 지켰는가」도
+        # 글자 유사도로 추측해야 한다 — 실측에서 문턱 0.05~0.20 사이에 미달 항목이
+        # 8%~72% 로 흔들렸다. 2026-08-30 이전에 만든 편에는 없으므로 필수가 아니다.
+        "must_id": {"type": ["string", "null"],
+                    "description": "이 카드가 옮긴 must-know 항목의 id (예: 'm03'). "
+                                   "승인본에 있는 것만 쓰고 지어내지 않는다."},
     },
 }
 
@@ -161,6 +168,9 @@ MUST_KNOW_SCHEMA = {
                 "type": "object", "additionalProperties": False,
                 "required": ["item", "reason", "why", "slides"],
                 "properties": {
+                    # 승인할 때 `run.py` 가 코드로 찍는다. 모델이 짓지 않는다 — 편마다
+                    # 정확히 한 번 도는 자리라야 이미 나간 카드의 `must_id` 가 안 어긋난다.
+                    "id": {"type": ["string", "null"]},
                     "item": {"type": "string",
                              "description": "반드시 알아야 할 것 하나. 명사구로 쓴다."},
                     "reason": {"enum": list(REASONS)},
@@ -240,6 +250,9 @@ def dump(outdir: Path) -> None:
               "예습 카드는 하루 만에 외워져야 한다.",
               "- **`a` 의 항목이 둘 이상이면 줄바꿈과 `- ` 로 나눈다.** 범주와 내용은 `:` 로 "
               "가르고 `—` 는 쓰지 않는다.",
+              "- **`must_id` 에 이 카드가 옮긴 항목의 `id` 를 적는다.** 승인본 "
+              "`must_know.approved.json` 의 `items[].id`(`m03` 꼴)를 그대로 쓴다. "
+              "지어내지 않는다. 어느 항목에도 안 붙는 카드라면 그 카드는 만들지 않는다.",
               "- `reason=repeated` 는 **담당 교수가 유임일 때만** 쓸 수 있다. "
               "교수가 바뀐 강의에서는 과거 반복이 이 강의의 중심을 뜻하지 않는다.",
               "- 카드 앞면에 선지·연도·문항 번호가 나와서는 안 된다."]
@@ -260,6 +273,8 @@ def dump(outdir: Path) -> None:
               "`jokbo` 면 `jokbo_ref` 필수",
               "- `ox` 의 답은 `O` 또는 `X` 하나",
               "- 질문과 답이 완전히 같은 카드, 앞뒤가 똑같은 카드는 버려진다",
+              "- `must_id` 가 승인본에 없는 id 이거나 비어 있으면 표시가 붙는다 "
+              "(카드는 남는다). 항목별 배정 카드 수를 지켰는지도 이 끈으로 센다",
               "", "**해설(`explanation`)이 비면 깃발이 선다.** 예습 카드에서 그것은 "
               "수업으로 잇는 다리이고 이 덱의 목적 절반이다."]
     (outdir / "contract.md").write_text("\n".join(lines), encoding="utf-8")

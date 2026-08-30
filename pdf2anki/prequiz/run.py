@@ -31,14 +31,17 @@ import urllib.request
 from html.parser import HTMLParser
 from pathlib import Path
 
+from jsonschema import Draft202012Validator
+
 from .. import ledger
+from ..assemble import NO_JOKBO_DIR, NO_JOKBO_MATCH
 from ..pack import find_jokbo, lecture_of
-from ..prompting import DEFAULT_DOMAIN, DOMAINS
+from ..prompting import DEFAULT_DOMAIN, DOMAINS, PROMPT_ROOT
 from ..run import lecture_id_of
 from ..runbase import BaseRunner, Failed
 from ..session import SessionError
 from .assemble import professor_line
-from .schema import MAX_CARDS, MIN_CARDS
+from .schema import MAX_CARDS, MIN_CARDS, MUST_KNOW_SCHEMA
 
 CONFIG = "prequiz.config.json"
 PROMPTS = Path(__file__).parent / "prompts"
@@ -167,6 +170,45 @@ def fetch_note(src: str, dst: Path) -> Path:
 
 
 # ── must_know 검토 ────────────────────────────────────────────────
+def load_must(path: Path) -> dict:
+    """① 단계의 산출물을 읽고 **스키마에 맞는지 확인한다.**
+
+    2026-08-27 에 한 편(`250827_03`)이 `{"must_know": {...}}` 로 감싸여 나왔다.
+    출력 계약이 싣는 `generate.schema.json` 에 그 키가 있어서 모델이 거기 맞춘 것이다.
+    아무도 안 봤고, 승인 단계가 항목을 0개로 읽어 검토 문서가 이렇게 나갔다.
+
+        — 항목 0개 · 카드 합계 **0장** (계약 20~30)
+
+    그러고도 24장 덱이 그대로 구워졌다. **감싼 것은 풀어 주고, 그래도 스키마에 안 맞으면
+    거기서 멈춘다** — 이 단계가 통과했다는 말이 항목이 실제로 있다는 뜻이어야 한다.
+    """
+    obj = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(obj, dict) and "must_know" in obj and "items" not in obj:
+        print(f"⚠ {path.name} 이 must_know 로 한 겹 감싸여 있다 — 풀어서 읽는다.", flush=True)
+        obj = obj["must_know"]
+    errs = sorted(Draft202012Validator(MUST_KNOW_SCHEMA).iter_errors(obj),
+                  key=lambda e: list(e.path))
+    if errs:
+        detail = "; ".join(f"{'/'.join(str(x) for x in e.path) or '(root)'}: {e.message}"
+                           for e in errs[:3])
+        raise Failed(f"{path.name} 이 must_know.schema.json 을 어긴다 — {detail}. "
+                     f"파일을 고치고 같은 명령으로 이어서 돌려라")
+    return obj
+
+
+def stamp_must_ids(must: dict) -> dict:
+    """항목에 `m01` 을 찍는다. 이미 있으면 건드리지 않는다.
+
+    카드는 이 id 를 그대로 적어(`must_id`) 승인된 목록과 이어진다. 순서로 매기므로
+    **승인 뒤에 항목을 지우거나 순서를 바꾸면 끈이 어긋난다** — 고칠 것이 있으면
+    `must_know.json` 을 고치고 다시 승인해라. 복습 쪽 `review.stamp_ids` 와 같은 규칙이다.
+    """
+    for n, it in enumerate(must.get("items") or [], 1):
+        if not it.get("id"):
+            it["id"] = f"m{n:02d}"
+    return must
+
+
 def render_must(must: dict) -> str:
     from .schema import REASON_WHY
     lines = ["# 반드시 알아야 할 것", ""]
@@ -174,7 +216,8 @@ def render_must(must: dict) -> str:
     for i, it in enumerate(must.get("items", []), 1):
         n = it.get("cards", 1)
         total += n
-        lines.append(f"**{i}. {it['item']}**  ·  `{it['reason']}` · 카드 {n}장"
+        lines.append(f"**{i}. {it['item']}**  ·  `{it.get('id') or '-'}`"
+                     f" · `{it['reason']}` · 카드 {n}장"
                      + (f" · Slide {', '.join(str(s) for s in it['slides'])}"
                         if it.get("slides") else ""))
         lines.append(f"   └ {it['why']}")
@@ -233,20 +276,37 @@ class Runner(BaseRunner):
         print(f"   예습 설명본 {dst.stat().st_size:,}바이트 → {dst.name}")
 
     def read_professor(self):
+        """족보 조각을 찾고 교수 유임 여부를 읽는다.
+
+        **못 찾았으면 조용히 넘어가지 않는다.** 복습 쪽이 2026-08-27 배치에서 7편을
+        기출 0장으로 내보내고 나서 `assemble.slice_for` 에 붙인 말을 여기서도 쓴다.
+
+        그리고 못 찾았을 때 **「유임」이라고 찍지 않는다.** 기본값이 `True, "미상"` 이라
+        이 자리가 여태 「담당 교수 유임 (미상) → reason=repeated 사용 가능」 을 찍고
+        있었다 — 근거가 될 문항이 한 장도 없는데 허용을 말한 것이다. 모르는 것은
+        모른다고 적는다. 실제로 거르는 일은 검증기의 `repeated_without_jokbo_ref`
+        표시에 맡긴다 — 카드는 살리고 뒷면에 뜬다.
+        """
         prep = json.loads((self.out / "prep.json").read_text(encoding="utf-8"))
         jd = Path(self.args.jokbo_dir)
         if self.args.jokbo:
             slice_path = Path(self.args.jokbo)
-        elif (jd / "index.json").exists():
-            slice_path, score, _ = find_jokbo(prep, jd)
-            if score < 0.25:
-                slice_path = None
-        else:
+        elif not (jd / "index.json").exists():
+            print(NO_JOKBO_DIR.format(index=jd / "index.json"), flush=True)
             slice_path = None
+        else:
+            slice_path, score, _ = find_jokbo(prep, jd)
+            if not slice_path or score < 0.25:
+                print(NO_JOKBO_MATCH.format(score=score), flush=True)
+                slice_path = None
         self.slice_path = slice_path
-        if slice_path:
-            stats = json.loads(slice_path.read_text(encoding="utf-8")).get("stats", {})
-            self.stayed, self.prof = professor_line(stats)
+        if not slice_path:
+            self.prof = "미상 (족보를 못 물렸다)"
+            print(f"   담당 교수 {self.prof} → "
+                  f"reason=repeated 의 근거가 될 문항이 없다", flush=True)
+            return
+        stats = json.loads(slice_path.read_text(encoding="utf-8")).get("stats", {})
+        self.stayed, self.prof = professor_line(stats)
         print(f"   담당 교수 {'유임' if self.stayed else '교체'} ({self.prof}) → "
               f"reason=repeated {'사용 가능' if self.stayed else '금지'}")
 
@@ -266,7 +326,15 @@ class Runner(BaseRunner):
                    "① 반드시 알아야 할 것")
 
     def approve(self):
-        must = json.loads((self.out / "must_know.json").read_text(encoding="utf-8"))
+        """항목에 id 를 찍고, 사람이 훑을 문서를 쓰고, 승인본을 굳힌다.
+
+        id 를 모델에게 짓게 하지 않는 이유는 흔들리기 때문이다. 승인은 편마다 정확히
+        한 번 도는 자리라 거기서 코드가 찍는다. 이미 있으면 안 건드린다 — 다시 승인해도
+        이미 나간 카드의 `must_id` 가 안 어긋난다.
+        """
+        src = self.out / "must_know.json"
+        must = stamp_must_ids(load_must(src))
+        src.write_text(json.dumps(must, ensure_ascii=False, indent=2), encoding="utf-8")
         md = render_must(must)
         (self.out / "must_know.review.md").write_text(md, encoding="utf-8")
         print(md)
@@ -274,7 +342,9 @@ class Runner(BaseRunner):
             print("\n검토하고 이어서 돌려라:", flush=True)
             print(f"   python -m pdf2anki.prequiz.run --resume {self.out.as_posix()}")
             raise SystemExit(0)
-        shutil.copy2(self.out / "must_know.json", self.out / "must_know.approved.json")
+        # `copy2` 가 아니라 다시 쓴다 — 사람이 손으로 고친 뒤에도 id 가 찍힌 판이 나간다.
+        (self.out / "must_know.approved.json").write_text(
+            json.dumps(must, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def cards(self):
         self.agent(f'Read("{self.prompt_path("cards").resolve().as_posix()}") 부터 시작해라.',
@@ -308,6 +378,55 @@ class Runner(BaseRunner):
         self.sh(*argv)
 
     # ── 수선 ───────────────────────────────────────────────────
+    def leak_repair(self):
+        """앞면이 답을 흘리는 카드를 수선 고리로 흘려보낸다.
+
+        누출 검사는 풀이 **전**에 돌고, 걸리면 `reproduce check` 가 거기서 1 을 내며
+        멈춘다. 예습에는 그것을 받을 고리가 없어서 **그 편은 덱 없이 끝난다** — 예습은
+        강의 전날 밤에 도는 일이 잦아 사람이 다음 날 아침에야 안다. 복습 쪽은 24강을
+        일괄로 돌려 보고 「멈춘 7건 중 4건이 이것」이라 고리를 붙였다. 같은 고리를 놓는다.
+
+        예습 10편에서는 아직 한 번도 안 났다(누출 검사 통과 14회). **빈도로 넣은 것이
+        아니라 멈추는 값이 커서 넣는다** — 검사 자체는 결정론적이고 세션도 돈도 안 들어서
+        누출이 없으면 이 단계는 공짜다.
+        """
+        from ..reproduce import LEAK_FIX, LEAK_SAYS, hard_leaks
+        for rnd in range(1, self.args.repair_rounds + 1):
+            bad = hard_leaks(self.out)
+            if not bad:
+                return
+            print(f"\n── 누출 수선 {rnd}/{self.args.repair_rounds}  "
+                  f"(앞면이 답을 흘리는 카드 {len(bad)}장)", flush=True)
+            for x in bad:
+                print(f"   [{x['kind']}] {x['id']}: {x['card']['q'][:60]}", flush=True)
+            t = time.time()
+            self.pend_cost, self.pend_usage, self.pend_sessions = 0.0, {}, 0
+            self.pend_models = {}
+            body = [f"### [{x['kind']}] {x['card']['q']}\n"
+                    f"- 새어 나간 것: {x['detail']!r} — {LEAK_SAYS[x['kind']]}\n"
+                    f"- 원래 답: {x['card']['a']}\n"
+                    f"- 고치는 방향: {LEAK_FIX[x['kind']]}" for x in bad]
+            raw = (self.out / "items.raw.json").resolve().as_posix()
+            # 누출 수선 프롬프트는 복습과 함께 쓴다 — 고치는 대상이 예습·복습에서 같다.
+            task = (PROMPT_ROOT / "repair_leak.md").read_text(
+                encoding="utf-8").replace("{raw}", raw)
+            self.agent(task + "\n\n" + "\n\n".join(body), f"누출수선{rnd}",
+                       resume=bool(self.sid))
+            ledger.append(self.out, "누출 수선", seconds=time.time() - t, cost=self.pend_cost,
+                          usage=self.pend_usage, sessions=self.pend_sessions,
+                          models=self.pend_models)
+
+            # **고치는 대상은 items.raw.json 이다.** checked 만 고치면 다음 `validate()` 가
+            # raw 에서 다시 만들면서 조용히 되돌린다.
+            self.validate()
+            ids = sorted({x["id"] for x in bad})
+            if (self.out / "items.reproduced.json").exists():
+                self.reproduce(only=ids)
+            if len(hard_leaks(self.out)) >= len(bad):
+                print("   누출이 줄지 않았다. 수선을 멈춘다 — "
+                      "재현 검사가 여기서 다시 막을 것이다.", flush=True)
+                return
+
     def violations(self) -> list[str]:
         f = self.out / "suspects.json"
         if not f.exists():
@@ -416,11 +535,15 @@ class Runner(BaseRunner):
         self.step("검토·승인", "must_know.approved.json", self.approve)
         self.step("② 카드", "items.raw.json", self.cards)
         self.step("기계 검증", "items.checked.json", self.validate)
+        # 누출은 풀이 전에 걸린다. 여기서 고쳐 두지 않으면 재현 검사가 통째로 멈춘다.
+        self.step("누출 수선", None, self.leak_repair)
         # --skip-reproduce 면 산출물이 안 생긴다. 그걸 요구하면 실행이 죽는다.
         self.step("재현 검사",
                   None if self.args.skip_reproduce else "items.reproduced.json",
                   self.reproduce)
         self.repair()
+        # 수선이 카드를 다시 썼다면 누출이 새로 생겼을 수 있다. 덱 앞의 마지막 관문.
+        self.step("누출 재확인", None, self.leak_repair)
         self.save_config()          # 교수 판정이 채워진 뒤 한 번 더
         self.step("덱 빌드", None, self.build)
 

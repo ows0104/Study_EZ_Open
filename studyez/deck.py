@@ -585,6 +585,9 @@ def contract(run_dir: Path, run_id: str, title: str, kind: str) -> dict:
         # 자료의 생김새를 재는 값(표지·학습목표 슬라이드가 여기 들어온다).
         "slides_unused": [n for n in range(1, total + 1) if n not in set(used)],
         # 이쪽이 진짜 누락 신호다 — 건너뛰겠다고 선언한 것을 이미 뺀 값이다.
+        # **예습 덱에서는 늘 빈다.** 예습은 슬라이드를 다 훑는 덱이 아니라 중요한 것만
+        # 가져가는 덱이라 `prequiz/validate.py` 가 이 값을 아예 안 잰다 — 여기가 비어
+        # 있는 것은 「빠진 슬라이드가 없다」가 아니라 「그것을 재지 않는다」는 뜻이다.
         "untouched_slides": coverage.get("untouched_undeclared") or [],
         "objectives_without_card": coverage.get("objectives_without_card") or [],
     }

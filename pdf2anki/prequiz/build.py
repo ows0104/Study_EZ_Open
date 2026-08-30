@@ -124,6 +124,7 @@ FLAG_LABEL = {
     "too_many_clozes": "가린 곳이 많다",
     "question_too_long": "질문이 길다",
     "missing_bridge_to_lecture": "수업으로 잇는 해설이 없다",
+    "off_must": "승인된 must-know 항목 어디에도 안 붙는 카드다",
     "ox_is_question_not_statement": "O/X 카드인데 진술문이 아니다",
     "occlusion_answer_leaked_in_question": "가린 라벨이 질문에 그대로 나온다",
     "repeated_without_jokbo_ref": "반복 출제를 이유로 들었는데 근거 문항이 없다",

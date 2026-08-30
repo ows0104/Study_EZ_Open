@@ -8,6 +8,11 @@
   · **`reason=repeated` 는 교수 유임일 때만.** 바뀌었으면 과거 반복은 이전 교수의 습관이다.
   · **`ox` 는 1/5 이하.** 예습은 알게 하는 것이 목적이라 O/X 는 회수량이 적다.
 
+그리고 **커버리지의 뜻이 복습과 다르다.** 예습은 슬라이드를 다 훑는 덱이 아니다 —
+중요한 것만 가져간다. 그래서 여기서는 슬라이드를 세지 않고, 사람이 승인한 must-know
+항목만 센다. 승인한 항목에 카드가 안 갔으면 그것은 빠뜨린 것이지만,
+카드가 안 닿은 슬라이드가 있는 것은 이 덱에서 결함이 아니다.
+
 사용:
     python -m pdf2anki.prequiz.validate out/pre_xxx/items.raw.json \\
         --prep out/pre_xxx/prep.json --jokbo out/jokbo/<조각>.json
@@ -256,13 +261,71 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
     if n and ox / n > OX_SHARE_MAX:
         contract.append(f"O/X 가 {ox}/{n} ({ox / n:.0%}) 이다. 상한 {OX_SHARE_MAX:.0%}")
 
-    # must_know 와 카드의 reason 이 어긋나는지 (항목 이름이 카드에 남아 있을 때만 볼 수 있다)
+    # ── 승인된 목록과 카드를 잇는 끈 ────────────────────────────────
+    #
+    # 카드가 `must_id` 를 적어 왔으면 그것으로 잇는다 — 추측할 것이 없다.
+    # **없으면 아무 값도 내지 않는다.** 글자 유사도로 대신 재 봤더니 문턱 0.05~0.20
+    # 사이에서 안 닿은 항목이 8%~72% 로 흔들렸다(예습 10편 · must 항목 185개).
+    # 그 폭이면 문턱을 고르는 것이 곧 답을 고르는 것이라, 재지 않고 **안 쟀다고 적는다.**
+    #
+    # 갈래가 셋이다. **가운데 것을 따로 두는 이유**는 그것이 조용한 실패이기 때문이다 —
+    # 승인본에 id 가 있는데 카드가 하나도 안 적었으면 계약을 어긴 것이지, 잴 것이 없는
+    # 것이 아니다. 하나로 뭉치면 「안 쟀다」로 읽히고 그대로 지나간다.
+    items = must.get("items") or []
+    by_id = {it["id"]: it for it in items if it.get("id")}
+    linked = Counter(c.get("must_id") for c in kept if c.get("must_id"))
+    if by_id and linked:
+        method = "must_id"          # 끈이 있다. 사실로 센다
+    elif by_id:
+        method = "not_written"      # 승인본에는 id 가 있는데 카드가 아무도 안 적었다
+    else:
+        method = "unlinked"         # 2026-08-30 이전에 만든 편이다. 잴 것이 없다
+
+    orphan_objectives, card_budget = [], []
+    if method == "must_id":
+        for c in kept:
+            mid = c.get("must_id")
+            if not mid or mid not in by_id:
+                flags[c["_idx"]].append("off_must")
+        for mid, it in by_id.items():
+            if not linked.get(mid):
+                orphan_objectives.append(it["item"])
+            elif it.get("cards") and linked[mid] != it["cards"]:
+                card_budget.append({"id": mid, "item": it["item"][:40],
+                                    "assigned": it["cards"], "made": linked[mid]})
+
+    if method == "not_written":
+        contract.append(f"카드 {len(kept)}장 중 `must_id` 를 적은 것이 하나도 없다. "
+                        f"승인된 항목 {len(by_id)}개와 이을 길이 없다")
+
+    coverage = {
+        # 이 이름으로 `studyez/deck.py` 가 읽어 간다 (복습과 같은 칸).
+        "objectives_without_card": orphan_objectives,
+        "cards_per_item_mismatch": card_budget,
+        # **슬라이드 커버리지는 내지 않는다.** 예습은 그것을 목표로 하지 않는다.
+        # 그래서 `untouched_undeclared` 가 여기 없다 — 0 이 아니라 아예 안 잰 것이다.
+        "method": method,
+        "must_items": len(items),
+    }
+
+    # must_know 와 카드의 `reason` 이 어긋나는지.
+    #
+    # **끈이 있으면 끈으로 본다.** 예전에는 항목 이름이 카드 글자에 그대로 남아 있을
+    # 때만 볼 수 있었고, 그래서 예습 10편 · must 항목 185개에서 **한 건도 안 걸렸다.**
+    # 0 이 「어긋난 것이 없다」는 뜻이 아니라 「볼 수 있는 것이 없었다」는 뜻이었다.
     reason_mismatch = []
-    for c in kept:
-        for item, r in must_reason.items():
-            if item and item in norm_key(c["q"] + " " + c["a"]) and c["reason"] != r:
-                reason_mismatch.append({"q": c["q"][:40], "card": c["reason"], "must": r})
-                break
+    if method == "must_id":
+        for c in kept:
+            it = by_id.get(c.get("must_id") or "")
+            if it and c["reason"] != it["reason"]:
+                reason_mismatch.append({"q": c["q"][:40], "must_id": c["must_id"],
+                                        "card": c["reason"], "must": it["reason"]})
+    else:
+        for c in kept:
+            for item, r in must_reason.items():
+                if item and item in norm_key(c["q"] + " " + c["a"]) and c["reason"] != r:
+                    reason_mismatch.append({"q": c["q"][:40], "card": c["reason"], "must": r})
+                    break
 
     for c in kept:
         c["review_flags"] = sorted(set(flags[c.pop("_idx")]))
@@ -273,6 +336,7 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
         "autofixed": dict(autofix),
         "flag_counts": dict(Counter(f for c in kept for f in c["review_flags"])),
         "similar_pairs": similar,
+        "coverage": coverage,
         "contract_violations": contract,
         "reason_mismatch": reason_mismatch,
         "format_mix": dict(Counter(c["card_format"] for c in kept)),
@@ -322,6 +386,22 @@ def main(argv=None) -> int:
         print(f"깃발 {suspects['flag_counts']}")
     if suspects["reason_mismatch"]:
         print(f"⚠ must_know 와 이유가 어긋난 카드 {len(suspects['reason_mismatch'])}장")
+    cov = suspects["coverage"]
+    if cov["method"] == "must_id":
+        print(f"승인 항목 {cov['must_items']}개 중 카드가 안 간 것 "
+              f"{len(cov['objectives_without_card'])}개"
+              + (f" · 배정 수와 다른 항목 {len(cov['cards_per_item_mismatch'])}개"
+                 if cov["cards_per_item_mismatch"] else ""))
+        for o in cov["objectives_without_card"][:5]:
+            print(f"   [카드 없음] {o[:60]}")
+        for b in cov["cards_per_item_mismatch"][:5]:
+            print(f"   [배정 {b['assigned']} → {b['made']}] {b['item']}")
+    elif cov["method"] == "not_written":
+        print(f"⚠ 카드가 must_id 를 하나도 안 적었다 — 승인 항목 {cov['must_items']}개와 "
+              f"이을 길이 없다")
+    else:
+        print("커버리지: 카드에 must_id 가 없어 **재지 않았다** "
+              "(0 이 아니라 잰 적이 없다는 뜻이다)")
     if suspects["contract_violations"]:
         print()
         for v in suspects["contract_violations"]:
