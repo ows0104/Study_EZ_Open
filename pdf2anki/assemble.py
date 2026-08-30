@@ -272,17 +272,38 @@ def resolve_auto_strategy(strategy: str, why: str, *, interactive: bool | None =
     return "base", f"{why} → 사용자 확인: 기본"
 
 
+# 족보를 못 찾았을 때 무슨 말을 하는가. 돌려주는 값은 예전과 같다 — 말만 는다.
+NO_JOKBO_DIR = ("⚠ 족보를 물리지 않았다 — {index} 가 없다.\n"
+                "   이대로 만들면 **기출 카드가 한 장도 안 나온다.**\n"
+                "   과목 족보를 자르려면: python -m studyez jokbo <과목>\n"
+                "   이미 잘라 뒀으면 --jokbo-dir 로 그 폴더를 지정해라.")
+NO_JOKBO_MATCH = ("⚠ 이 강의에 맞는 족보 조각을 못 찾았다 (최고 일치도 {score:.2f} < 0.25).\n"
+                  "   기출 카드가 안 나온다. --jokbo 로 조각을 직접 지정할 수 있다.")
+
+
 def slice_for(prep: dict, jokbo_dir: Path, explicit: str | None = None
               ) -> tuple[Path | None, dict, bool]:
-    """이 강의의 족보 조각과 그 통계를 찾는다. (조각, stats, 주인이-다른-강의인가)"""
+    """이 강의의 족보 조각과 그 통계를 찾는다. (조각, stats, 주인이-다른-강의인가)
+
+    **없으면 조용히 넘어가지 않는다.** 2026-08-27 배치에서 7편이 기출 0장으로 나왔는데
+    아무도 몰랐다. `--jokbo-dir` 기본값이 `out/jokbo` 인데 그 폴더가 없었고, 여기가
+    아무 말 없이 `None` 을 돌려줬다. 기출 카드는 **지워진 것이 아니라 계획 단계부터
+    안 세워졌다** — 그 편들의 `plan.json` 은 기출 목표가 0개다.
+
+    야간 러너도 같은 구멍에 빠진다. `deck.py` 가 `--jokbo-dir` 을 늘 넘기지만 그 과목의
+    족보를 아직 안 잘랐으면 없는 경로를 넘기게 된다.
+    """
     if explicit:
         p = Path(explicit)
         jk = json.loads(p.read_text(encoding="utf-8"))
         return p, jk.get("stats", {}), bool(jk.get("may_contain"))
-    if not (Path(jokbo_dir) / "index.json").exists():
+    index = Path(jokbo_dir) / "index.json"
+    if not index.exists():
+        print(NO_JOKBO_DIR.format(index=index), flush=True)
         return None, {}, False
     path, score, top = find_jokbo(prep, Path(jokbo_dir))
     if not path or score < 0.25:
+        print(NO_JOKBO_MATCH.format(score=score), flush=True)
         return None, {}, False
     jk = json.loads(path.read_text(encoding="utf-8"))
     return path, jk.get("stats", {}), top[0][2] is not None
