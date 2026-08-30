@@ -42,6 +42,7 @@ import re
 import sqlite3
 import unicodedata
 from dataclasses import dataclass
+from datetime import date as Date
 from pathlib import Path
 
 from . import blocks, filenames, matching
@@ -343,3 +344,40 @@ def plan(
             warnings.append(f"{subject}/{cell.key} {cell.heading[:22]} — 작년 짝을 못 찾았다")
 
     return [planned[key] for key in sorted(planned)], warnings
+
+
+def subjects_in_block(root: Path, this_year: str, runs_dir: Path, today: Date,
+                      timetable: Path | None = None) -> tuple[list[str], str]:
+    """오늘의 블럭에 걸린 과목 폴더들. `(과목, 사람이 읽는 말)`.
+
+    러너의 쓸기가 이걸로 좁힌다. 예전에는 예약 작업에 `-Subject 병리학` 이 **박혀
+    있었고**, 블럭이 바뀌어도 아무도 안 바꿔서 2026-08-30 에 기생충학이 쓸기 대상
+    밖에 있었다. 사람이 매 블럭 손으로 바꾸는 자리는 언젠가 잊힌다.
+
+    **한 블럭에 과목이 둘일 수 있다.** 시간표는 08-31~09-28 을 `감염의 기초` 하나로
+    세우지만 실제로는 기생충학(~09-10 시험)과 미생물학(09-11~)이다. 둘 다 돌려준다 —
+    날짜로 가르지 않는 이유는 가를 필요가 없기 때문이다. 아직 자료가 없는 쪽은
+    「그대로 둔 것」으로 끝나고, 시험이 끝난 쪽도 마찬가지다. 09-11 에 미생물학이
+    저절로 들어오고, 블럭이 끝나면 다음 블럭의 과목으로 통째로 넘어간다.
+
+    과목을 알아보는 길은 둘이다 — 올해 필기가 앉은 칸에서 읽거나(`block_names`),
+    아직 필기가 없으면 사람이 적어 둔 `_block` 에서 읽는다(`BLOCK_KEY`).
+    """
+    found = blocks.find(today, timetable)
+    if found.block is None:
+        return [], (f"{today} — 시간표에서 오늘의 블럭을 못 찾았다")
+
+    name = found.block.name
+    cells = read_cells(found.source)
+    picked: list[str] = []
+    for subject in filenames.discover_subjects(root, this_year):
+        if blocks.base_name(load_pairs(runs_dir, subject).get(BLOCK_KEY, "")) == name:
+            picked.append(subject)
+            continue
+        notes = root / subject / "필기" / this_year
+        if notes.is_dir() and name in block_names(cells, list(filenames.scan(notes).files)):
+            picked.append(subject)
+
+    picked.sort()
+    where = "직전 블럭" if found.ended else "이번 블럭"
+    return picked, (f"{where} {found.block.label()} → 과목 {', '.join(picked) or '없다'}")

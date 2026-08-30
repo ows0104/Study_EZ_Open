@@ -59,13 +59,15 @@ from __future__ import annotations
 import json
 import os
 import re
+import sqlite3
 import subprocess
 import sys
 import time
 from dataclasses import dataclass
+from datetime import date as Date
 from pathlib import Path
 
-from . import deck, publish
+from . import ahead, deck, publish, watch
 
 POLL_SECONDS = 15         # 일감을 물어보는 간격
 STAGE_SECONDS = 20        # 하위 로그를 훑어 단계를 올리는 간격
@@ -319,15 +321,42 @@ class Agent:
         except OSError:
             return False
 
+    def sweep_subjects(self) -> tuple[list[str], str]:
+        """이번 쓸기가 볼 과목. **매 회차 시간표에 다시 물어본다.**
+
+        `--subject`를 손으로 줬으면 그것이 이긴다. 안 줬으면 오늘의 블럭에 걸린
+        과목을 푼다 — 그래서 시험이 끝나고 다음 블럭이 서면 **아무도 안 건드려도
+        바뀐다.** 예약 작업에 `-Subject 병리학` 이 박힌 채 남아 2026-08-30 에
+        기생충학이 쓸기 밖에 있었던 것이 이 자리를 만든 이유다.
+
+        못 풀면 `--all`로 물러난다. 쓸기는 만드는 일이 아니라 올리는 일이라,
+        넓게 여는 값이 놓치는 값보다 싸다.
+        """
+        if self.subject:
+            return [self.subject], ""
+        today = Date.today()
+        try:
+            picked, note = ahead.subjects_in_block(
+                watch.DEFAULT_ROOT, str(today.year), self.runs_dir, today)
+        except (OSError, ValueError, sqlite3.Error) as cause:
+            return [], f"시간표를 못 읽었다 ({cause}) — 과목 전부를 쓴다"
+        return picked, note
+
     def sweep(self) -> None:
         """남은 것을 쓸어 올린다. 06:00 크론이 받던 자리다."""
         self.last_sweep = time.monotonic()
-        argv = [sys.executable, "-m", "studyez", "publish"]
-        argv += [self.subject] if self.subject else ["--all"]
-        log = self.runs_dir / "agent.sweep.log"
-        code, lines = self._run(argv, log)
-        line = first_match(lines, r"(올린 파일 .+)$") or f"종료 코드 {code}"
-        self.say(f"[{stamp()}] 쓸기 — {line}")
+        subjects, note = self.sweep_subjects()
+        if note:
+            self.say(f"[{stamp()}] 쓸기 — {note}")
+        for subject in subjects or [""]:
+            argv = [sys.executable, "-m", "studyez", "publish"]
+            argv += [subject] if subject else ["--all"]
+            # **과목마다 로그를 따로 쓴다.** `_run`이 파일을 덮어쓰기로 열어서,
+            # 한 파일에 몰면 마지막 과목 것만 남는다.
+            log = self.runs_dir / f"agent.sweep.{subject or 'all'}.log"
+            code, lines = self._run(argv, log)
+            line = first_match(lines, r"(올린 파일 .+)$") or f"종료 코드 {code}"
+            self.say(f"[{stamp()}] 쓸기 {subject or '전부'} — {line}")
 
     # ── 루프 ─────────────────────────────────────────────────────────
     def tick(self) -> bool:
@@ -381,7 +410,8 @@ class Agent:
         if not self.take_lock():
             return 3
         self.say(f"[{stamp()}] 러너가 붙었다 — {self.client.base}"
-                 + (f" · 쓸기 {self.subject}" if self.subject else " · 쓸기 전 과목")
+                 + (f" · 쓸기 {self.subject}" if self.subject
+                    else " · 쓸기는 매 회차 시간표에서 이번 블럭의 과목을 푼다")
                  + f" · {poll}초마다 물어본다")
         # 첫 바퀴에 쓸기까지 돌면 붙자마자 몇 분을 잡아먹는다. 한 주기 뒤로 민다.
         self.last_sweep = time.monotonic()
