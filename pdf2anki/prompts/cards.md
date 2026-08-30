@@ -44,6 +44,9 @@ Image Occlusion은 승인된 목표의 `retrieval_targets`에 직접 포함되�
 
 ## 출처 필드
 
+- **`objective_id`에 이 카드가 옮긴 목표의 `id`를 적는다.** 계획의 `objectives[].id`
+  (`o03` 꼴) 또는 `jokbo_objectives[].id`(`j01` 꼴)를 그대로 쓴다. 지어내지 않는다.
+  어느 목표에도 안 붙는 카드라면 그 카드는 만들지 않는다 — 계획에 없는 것이다.
 - 강의 자료 목표는 `source_type=lecture`이며 `slide_no`가 필요하다.
 - 과거 평가 목표는 해당 어댑터와 출력 계약이 지정한 `source_type`, `jokbo_ref` 규칙을 따른다.
 - 강의 카드의 `exam_hit`은 같은 회수 목표를 과거 문항이 실제로 물었을 때만 사용한다.

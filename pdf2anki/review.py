@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import shutil
 import sys
 from pathlib import Path
 
@@ -95,6 +94,20 @@ def render(plan: dict, prep: dict) -> tuple[str, dict]:
                           "jokbo_objectives": len(jobjs)}
 
 
+def stamp_ids(plan: dict) -> dict:
+    """목표에 `o01`·기출 목표에 `j01` 을 찍는다. 이미 있으면 건드리지 않는다.
+
+    카드는 이 id 를 그대로 적어(`objective_id`) 계획과 이어진다. 순서로 매기므로
+    **승인 뒤에 목표를 지우거나 순서를 바꾸면 끈이 어긋난다** — 고칠 것이 있으면
+    `plan.json` 을 고치고 다시 승인해라.
+    """
+    for prefix, key in (("o", "objectives"), ("j", "jokbo_objectives")):
+        for n, o in enumerate(plan.get(key) or [], 1):
+            if not o.get("id"):
+                o["id"] = f"{prefix}{n:02d}"
+    return plan
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="학습 목표를 사람이 훑도록 펼친다")
     ap.add_argument("prep_dir")
@@ -115,7 +128,14 @@ def main(argv=None) -> int:
     (d / "plan.review.md").write_text(text, encoding="utf-8")
 
     if args.approve:
-        shutil.copyfile(plan_path, d / "plan.approved.json")
+        # **여기서 목표에 id 를 찍는다.** 모델에게 짓게 하면 흔들리고, 카드 단계가
+        # 그것을 그대로 받아 적어야 계획과 카드가 끈으로 이어진다. 승인은 편마다
+        # 정확히 한 번이라 여기가 유일하게 안전한 자리다.
+        # `plan` 은 `raw` 자신이거나 그 안의 `learning_plan` 이라 어느 쪽이든 제자리에서
+        # 찍힌다. 그래서 통째로 `raw` 를 쓴다 — 감싸개가 있는 파일의 형제 키를 잃지 않는다.
+        stamp_ids(plan)
+        (d / "plan.approved.json").write_text(
+            json.dumps(raw, ensure_ascii=False, indent=1), encoding="utf-8")
         print(f"승인 확정 → {d}/plan.approved.json")
         print("이제 prompt.cards.md 를 실행하면 된다.")
         return 0

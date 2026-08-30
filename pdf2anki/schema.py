@@ -124,6 +124,12 @@ CARD_SCHEMA = {
         },
         "review_note": {"type": ["string", "null"],
                         "description": "기출 정답 의심 등 사용자에게 보일 경고. 없으면 null."},
+        # **이 카드가 어느 목표를 위한 것인가.** 계획의 `objectives[].id` 를 그대로 적는다.
+        # 이 끈이 없으면 「목표에 카드가 갔는가」와 「계획에 없는 것을 물었는가」를 둘 다
+        # 글자 유사도로 추측해야 한다. 2026-08-30 이전에 만든 편에는 없으므로 필수가 아니다.
+        "objective_id": {"type": ["string", "null"],
+                         "description": "이 카드가 옮긴 목표의 id (예: 'o03'). "
+                                        "기출 카드는 'j01' 처럼 기출 목표의 id 를 쓴다."},
     },
 }
 
@@ -150,6 +156,7 @@ PLAN_SCHEMA = {
                 "type": "object", "additionalProperties": False,
                 "required": ["objective", "retrieval_targets", "jokbo_refs"],
                 "properties": {
+                    "id": {"type": ["string", "null"]},
                     "objective": {"type": "string",
                                   "description": "강의록 목표와 같은 규칙으로 쓴다. "
                                                  "검증 가능한 동사, '이해한다' 는 안 된다."},
@@ -174,6 +181,8 @@ PLAN_SCHEMA = {
                 "type": "object", "additionalProperties": False,
                 "required": ["objective", "retrieval_targets", "slides"],
                 "properties": {
+                    # 승인할 때 `review.py` 가 코드로 찍는다. 모델이 짓지 않는다.
+                    "id": {"type": ["string", "null"]},
                     "objective": {"type": "string",
                                   "description": "'식별한다/구분한다/설명한다/적용한다/재구성한다' 처럼 "
                                                  "검증 가능한 회수 목표로 쓴다. '이해한다' 는 안 된다."},

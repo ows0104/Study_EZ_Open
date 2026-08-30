@@ -71,6 +71,10 @@ SIMILAR_SAME_SLIDE = 0.35
 SIMILAR_CROSS_SLIDE = 0.60
 LEAK_THRESHOLD = 0.80
 PHOTO_FOCUS_MIN_SHARE = 0.50
+# 계획과의 최고 유사도가 이보다 낮으면 「계획 밖」으로 표시한다. 글자로만 볼 수 있는
+# 형식은 둘뿐이다 — 나머지는 질문이 짧아 유사도가 낮게 나온다.
+OFF_PLAN_MIN = 0.08
+OFF_PLAN_TEXT_FORMATS = ("basic", "cloze")
 
 
 def _fail(card, code, detail=""):
@@ -387,12 +391,45 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
     planned = {s for o in plan.get("objectives", []) for s in o.get("slides", [])}
     untouched = sorted(set(range(1, n_slides + 1)) - carded - declared - planned)
 
+    # 카드가 `objective_id` 를 적어 왔으면 그것으로 잇는다 — 추측할 것이 없다.
+    # 2026-08-30 이전에 만든 편에는 그 칸이 없으므로, 하나도 없으면 글자로 물러난다.
+    linked = {c["objective_id"] for c in kept if c.get("objective_id")}
+
+    # **슬라이드로 맞추던 절을 뺐다.** `or c.slide_no in o.slides` 가 있던 동안 이
+    # 계수기는 39편 전부에서 0을 찍었다 — 그 슬라이드에 카드가 하나라도 있으면
+    # 「목표를 맞혔다」로 세기 때문이다. 위치가 아니라 내용으로 봐야 한다.
+    # 그 절을 빼면 실측으로 목표 1,283개 중 274개(21.4%)가 미달로 뜬다.
+    # 막지는 않는다 — `gate.py` 가 적기만 한다(커버리지는 순위가 내려갔다).
     obj_hit, obj_miss = [], []
     for o in plan.get("objectives", []):
-        tok = char_ngrams(o["objective"] + " " + " ".join(o.get("retrieval_targets", [])))
-        hit = any(jaccard(tok, char_ngrams(c["q"] + " " + c["a"])) >= 0.2
-                  or c.get("slide_no") in set(o.get("slides", [])) for c in kept)
+        if linked:
+            hit = bool(o.get("id")) and o["id"] in linked
+        else:
+            tok = char_ngrams(o["objective"] + " " + " ".join(o.get("retrieval_targets", [])))
+            hit = any(jaccard(tok, char_ngrams(c["q"] + " " + c["a"])) >= 0.2 for c in kept)
         (obj_hit if hit else obj_miss).append(o["objective"])
+
+    # ② 반대 방향 — **카드가 어느 목표에도 안 닿는가.** `cards.md` 가 이미 "계획에 없는
+    # 내용을 분량을 채우기 위해 추가하지 않는다"고 적고 있는데 검사가 없었다.
+    #
+    # 글자로 볼 때는 `basic`·`cloze` 만 본다. O/X 와 이미지 카드는 질문이 짧아
+    # 유사도가 무조건 낮다 — 실측으로 그 셋은 25~34%가 문턱 아래인데 대부분 정상
+    # 카드다(`basic` 은 4.6%). **문턱 0.08 은 눈으로 고른 값이고 아직 보정하지 않았다.**
+    obj_toks = [char_ngrams(o["objective"] + " " + " ".join(o.get("retrieval_targets", [])))
+                for o in plan.get("objectives", [])]
+    if obj_toks:
+        for c in kept:
+            if c["source_type"] != "lecture":
+                continue
+            if c.get("objective_id"):
+                if not any(o.get("id") == c["objective_id"] for o in plan.get("objectives", [])):
+                    flags[c["_idx"]].append("off_plan")
+                continue
+            if c["card_format"] not in OFF_PLAN_TEXT_FORMATS:
+                continue
+            ct = char_ngrams(c["q"] + " " + c["a"])
+            if max((jaccard(t, ct) for t in obj_toks), default=0.0) < OFF_PLAN_MIN:
+                flags[c["_idx"]].append("off_plan")
 
     # 기출 목표는 슬라이드로 못 맞춘다. 인용 문항이 겹치는지로 본다.
     jobj_miss = []
