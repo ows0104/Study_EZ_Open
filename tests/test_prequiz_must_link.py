@@ -210,6 +210,47 @@ def test_족보를_못_물리면_시끄럽고_유임이라_찍지_않는다(tmp_
     assert r.slice_path is None
 
 
+# ── ①과 ② 사이에서 끊겼을 때 ─────────────────────────────────────
+#
+# `prompt.cards.md` 는 ①의 세션이 살아 있다고 보고 "앞에서 읽은 것이 전부 그대로
+# 있다"로 시작한다. 실행이 그 사이에서 끊기면 다음 프로세스의 `sid` 가 비어서
+# **자료가 하나도 없는 새 세션**이 그 말을 받는다. 2026-08-31 에 `250916_03` 이
+# 그렇게 돌아 카드를 한 장도 안 만들고 저장소 소스를 고치러 갔다($2.98).
+
+def _asked(r, monkeypatch):
+    seen = []
+    monkeypatch.setattr(r, "agent", lambda prompt, label, **kw: seen.append(prompt))
+    return seen
+
+
+def test_세션이_살아_있으면_이어받는_프롬프트를_쓴다(tmp_path, monkeypatch):
+    (tmp_path / "prompt.cards.md").write_text("이어받기", encoding="utf-8")
+    (tmp_path / "prompt.cards_full.md").write_text("자족", encoding="utf-8")
+    r = _runner(tmp_path)
+    r.sid = "sess-1"
+    seen = _asked(r, monkeypatch)
+    r.cards()
+    assert "prompt.cards.md" in seen[0] and "cards_full" not in seen[0]
+
+
+def test_세션이_없으면_자료를_다시_싣는_프롬프트를_쓴다(tmp_path, monkeypatch):
+    (tmp_path / "prompt.cards.md").write_text("이어받기", encoding="utf-8")
+    (tmp_path / "prompt.cards_full.md").write_text("자족", encoding="utf-8")
+    r = _runner(tmp_path)
+    seen = _asked(r, monkeypatch)
+    r.cards()
+    assert "prompt.cards_full.md" in seen[0]
+
+
+def test_자족적인_프롬프트가_없으면_세션을_열지_않는다(tmp_path, monkeypatch):
+    """옛 폴더다. 빈 세션에 「이미 다 있다」고 말하느니 멈춘다."""
+    (tmp_path / "prompt.cards.md").write_text("이어받기", encoding="utf-8")
+    r = _runner(tmp_path)
+    monkeypatch.setattr(r, "agent", lambda *a, **k: pytest.fail("세션을 열면 안 된다"))
+    with pytest.raises(Failed):
+        r.cards()
+
+
 # ── 누출 수선 고리 ────────────────────────────────────────────────
 
 def test_누출이_없으면_세션을_안_연다(tmp_path, monkeypatch):

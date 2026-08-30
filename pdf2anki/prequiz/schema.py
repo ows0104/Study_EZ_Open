@@ -237,10 +237,23 @@ def dump(outdir: Path) -> None:
     lines = ["# 출력 계약 (예습)", "",
              "아래 JSON Schema 를 그대로 지킨다. 모르는 키를 추가하지 않는다.", "",
              "```json", json.dumps(GENERATE_SCHEMA, ensure_ascii=False, indent=2), "```", "",
-             "## 카드 유형 — 각 유형이 수업 중에 막는 것", ""]
+             "## `card_type` — **카드에만 있는 축.** 각 유형이 수업 중에 막는 것", ""]
     lines += [f"- `{k}` — {v}" for k, v in CARD_TYPE_WHY.items()]
-    lines += ["", "## `reason` — 왜 이것이 '꼭 반드시'인가", ""]
+    lines += ["", "## `reason` — 왜 이것이 '꼭 반드시'인가. 카드와 must_know 항목이 같이 쓴다", ""]
     lines += [f"- `{k}` — {v}" for k, v in REASON_WHY.items()]
+    # 두 목록이 이 문서에서 나란히 서 있고 값이 둘 겹친다. 겹치는 자리에서는 스키마가
+    # 못 잡으니 여기서 가른다 — 아래 두 실패는 겹치지 않는 값이라 잡힌 것뿐이다.
+    lines += ["",
+              f"**두 축은 값을 섞어 쓰지 않는다.** `card_type` 전용 값"
+              f"(`{'`·`'.join(k for k in CARD_TYPES if k not in REASONS)}`)을 `reason` 에 적지 "
+              f"마라. 약어 항목이라도 `reason` 은 `abbrev` 가 아니라 `vocabulary` 이고, 분류 축이 "
+              f"강의의 뼈대면 `taxonomy` 가 아니라 `spine` 이다.",
+              f"**`{'`·`'.join(sorted(set(CARD_TYPES) & set(REASONS)))}` 는 두 축에 다 있다.** "
+              f"이 둘은 값만 보고는 어느 축에서 온 것인지 알 수 없어 코드가 잡아 주지 못한다. "
+              f"카드의 생김새가 아니라 **왜 이것이 '꼭 반드시'인가**를 보고 골라라.",
+              "(실측 — 병리학 `250825_03` 에서 카드 한 장이 `reason` 에 `taxonomy` 를 적어 "
+              "스키마에서 버려졌고, 2026-08-31 에 기생충학 두 편이 `abbrev`·`taxonomy` 로 "
+              "① 에서 멈췄다.)"]
     lines += ["", "## 형식별 추가 규칙", ""]
     lines += [f"- `{k}` — {v}" for k, v in FORMAT_RULES.items()]
     lines += ["",

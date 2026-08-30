@@ -347,7 +347,21 @@ class Runner(BaseRunner):
             json.dumps(must, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def cards(self):
-        self.agent(f'Read("{self.prompt_path("cards").resolve().as_posix()}") 부터 시작해라.',
+        """②. **이어받을 세션이 있을 때와 없을 때 쓰는 프롬프트가 다르다.**
+
+        `prompt.cards.md` 는 ①의 세션이 살아 있다고 보고 "앞에서 읽은 것이 다 있다"로
+        시작한다. 그런데 ①과 ② 사이에서 실행이 끊기면 다음 프로세스의 `self.sid` 가
+        비어서 **자료가 하나도 없는 새 세션**이 그 말을 받는다. 2026-08-31 에
+        `250916_03` 이 그렇게 돌아 카드를 한 장도 안 만들고 저장소 소스를 고치러 갔다.
+        """
+        stage = "cards" if self.sid else "cards_full"
+        if not self.sid and not self.made("prompt.cards_full*.md"):
+            raise Failed("① 세션을 이어받지 못하는데 자족적인 ② 프롬프트가 없다 "
+                         "(2026-08-30 이전에 조립한 폴더다). "
+                         "prompt.* 를 지우고 같은 명령으로 다시 돌리면 새로 조립한다")
+        if not self.sid:
+            print("   ① 세션이 없다 — 자료를 다시 싣는 ② 프롬프트로 간다", flush=True)
+        self.agent(f'Read("{self.prompt_path(stage).resolve().as_posix()}") 부터 시작해라.',
                    "② 카드", resume=True)
 
     def validate(self):

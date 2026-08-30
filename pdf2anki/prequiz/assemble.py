@@ -157,6 +157,7 @@ def assemble(prep_dir: Path, jokbo_file: Path | None, schema_dir: Path,
             + "\n" + guidance)
 
     out = {"context": ctx_files}
+    tasks = {}
     for stage, task_file, subs in (
         ("must", "must.md", {"must_out": (prep_dir / "must_know.json").as_posix()}),
         ("cards", "cards.md", {"must_in": (prep_dir / "must_know.approved.json").as_posix(),
@@ -165,11 +166,22 @@ def assemble(prep_dir: Path, jokbo_file: Path | None, schema_dir: Path,
         task = (PROMPTS / task_file).read_text(encoding="utf-8")
         for k, v in subs.items():
             task = task.replace("{" + k + "}", v)
+        tasks[stage] = task
         # **②는 ①의 세션을 이어받는다.** 머리말·철학·계약은 이미 컨텍스트에 있으므로
         # 다시 실으면 그 15k 가 남은 턴마다 따라다닌다. ②에는 할 일만 준다.
         sections = ([head, *shared_prompt, task, contract] if stage == "must"
                     else [CARRY_OVER, task])
         out[stage] = write_parts(prep_dir, f"prompt.{stage}", sections, manifest=True)
+
+    # **이어받을 세션이 없을 때 쓸 ② 프롬프트.** 실행이 ①과 ② 사이에서 끊기면
+    # (스키마 검사에 걸리거나 사람이 멈추면) 다음 프로세스의 `self.sid` 는 비어 있는데,
+    # 위의 `CARRY_OVER` 는 "앞 단계에서 읽은 것이 전부 그대로 있다"고 말한다.
+    # 2026-08-31 에 `250916_03` 이 그 상태로 돌아 **카드를 한 장도 안 만들고 저장소
+    # 소스를 고치러 갔다** — 자료가 하나도 없는 세션에 "이미 다 있다"고 한 결과다.
+    # 여기서 미리 자족적인 판을 써 두면 재개가 그것을 집는다.
+    out["cards_full"] = write_parts(prep_dir, "prompt.cards_full",
+                                    [head, *shared_prompt, tasks["cards"], contract],
+                                    manifest=True)
 
     out["_pdf_tokens"] = estimate_pdf_tokens(prep)
     out["_jokbo"] = jk
@@ -227,7 +239,7 @@ def main(argv=None) -> int:
     res = assemble(prep_dir, jokbo_file, Path(args.schema_dir), note, args.domain)
 
     print()
-    for stage in ("context", "must", "cards"):
+    for stage in ("context", "must", "cards", "cards_full"):
         for f in res[stage]:
             warn = "  ⚠ Read 상한 초과" if f["tokens"] > READ_TOKEN_CAP else ""
             print(f"[{stage:7}] {f['name']:26} {f['chars']:>7,}자  {f['tokens']:>7,}토큰{warn}")
