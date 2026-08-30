@@ -13,6 +13,11 @@
 항목 수와 배정 카드 수는 `must_know.schema.json`의 출력 계약을 따른다. 숫자를 맞추려고
 저가치 항목을 넣지 않는다.
 
+**`reason`은 카드 유형과 다른 축이다.** 다섯 중 하나만 쓴다 — `spine`·`vocabulary`·
+`mechanism`·`clinical`·`repeated`. 카드 유형 값(`term`·`abbrev`·`taxonomy`·`number` 등)을
+여기에 적지 마라. 약어 항목이라도 `reason`은 `abbrev`가 아니라 `vocabulary`이고, 분류 축이
+강의의 뼈대면 `taxonomy`가 아니라 `spine`이다 (2026-08-31에 두 편이 이 자리에서 멈췄다).
+
 아래 파일에 `must_know.schema.json`을 그대로 지킨 JSON만 쓴다. **최상위가 `items`와
 `rejected_candidates`인 객체다** — `{"must_know": ...}`로 감싸지 마라. 감싸면 승인 단계가
 항목을 0개로 읽고, 검토 문서가 「항목 0개」인 채로 다음 단계가 그대로 흘러간다.
