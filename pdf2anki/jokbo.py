@@ -137,12 +137,31 @@ def page_images(page: fitz.Page) -> list[dict]:
 # ─────────────────────────────────────────────────────────────── 구역 분리
 
 
+# 실습 구역이 시작하는 본문 표제. `2025 기생충학 실습시험` 같은 짧은 줄이다.
+# **`★` 로 시작하는 것은 아니다** — 그건 필기 구역 안의 자리표시이고(기생충학 p48
+# `★ 기생충학 실습시험` + "실습시험은 드라이브를 참고 바랍니다"), 거기서 자르면
+# 필기 문항 절반이 실습으로 넘어간다.
+RE_PRACTICAL_HEAD = re.compile(r"^(?!★).{0,14}실습\s*시험$")
+
+
 def split_regions(doc: fitz.Document) -> dict[str, list[int]]:
     """페이지 머리글과 정답행 밀도로 네 구역을 가른다. 값은 0-based 페이지 목록."""
     practical, written = [], []
     for i in range(doc.page_count):
         head = (doc[i].get_text().split("\n") or [""])[0]
         (practical if "실습" in head else written).append(i)
+
+    # **머리글이 안 갈라 주는 족보가 있다.** 병리학은 실습 쪽 머리글이 통째로
+    # 다르지만(`질병의 병리학적 이해 실습 2026 족보`), 기생충학 2026 은 70쪽 전부가
+    # 같은 머리글이고 실습은 본문 표제로만 시작한다(p60). 그대로 두면 실습 문항
+    # 9쪽·정답 2쪽이 「필기정답」으로 삼켜져 실습 카드가 한 장도 안 나온다 —
+    # 2026-08-30 에 실제로 "실습문항 없음" 으로 찍고 넘어갔다.
+    if not practical:
+        for i in written:
+            if any(RE_PRACTICAL_HEAD.match(d["text"].strip()) for d in page_lines(doc[i])):
+                practical = [p for p in written if p >= i]
+                written = [p for p in written if p < i]
+                break
 
     def cut(pages: list[int]) -> tuple[list[int], list[int]]:
         """문항 구역과 정답 구역의 경계를 찾는다. 정답 구역은 끝까지 이어진다."""
@@ -395,6 +414,23 @@ class Bank:
         return f"R{no}" if self.restart else no
 
 
+def running_header(doc, pages: list[int]) -> str:
+    """쪽마다 되풀이되는 머리글. 절반 넘는 쪽의 첫 줄이 같으면 그것이다.
+
+    이 자리가 `"질병의 병리학적 이해"` 로 박혀 있었다. 다른 과목 족보에서는
+    머리글이 안 걸러져 헤더 대조용 `tail` 에 매 쪽 섞였다.
+    """
+    heads: dict[str, int] = {}
+    for pno in pages:
+        lines = [d["text"].strip() for d in page_lines(doc[pno])]
+        if lines and lines[0]:
+            heads[lines[0]] = heads.get(lines[0], 0) + 1
+    if not heads:
+        return ""
+    top, n = max(heads.items(), key=lambda kv: kv[1])
+    return top if n * 2 > len(pages) else ""
+
+
 def parse_question_region(doc, pages, title_index) -> list[Section]:
     """문항 구역을 섹션/연도/문항으로 가른다. title_index: {정규화제목: (key, 원제목)}
 
@@ -427,12 +463,20 @@ def parse_question_region(doc, pages, title_index) -> list[Section]:
             sections.append(sec)
         cur_sec, cur_year = sec, "unknown"
 
+    # **실습 구역은 강의별 헤더가 없다.** 하나의 풀로 미리 열어 둔다 — 이 키가
+    # 넘어오는데도 아무 데서도 안 쓰이고 있었고, 그래서 헤더가 우연히 목차 제목과
+    # 맞는 족보(병리학 p99 `병리학 실습`)에서만 실습이 잡혔다. 기생충학 2026 은
+    # 표제가 `2025 기생충학 실습시험` 이라 안 맞아 9쪽이 통째로 사라졌다.
+    if "__practical__" in title_index:
+        open_section(*title_index["__practical__"])
+
+    header = running_header(doc, pages)
     for pno in pages:
         page = doc[pno]
         img_index[pno + 1] = page_images(page)
         for ln in page_lines(page):
             t = ln["text"].strip()
-            if not t or t.startswith("질병의 병리학적 이해"):
+            if not t or (header and t == header):
                 continue
             if re.fullmatch(r"\d{1,3}", t) and ln["y0"] > page.rect.height - 60:
                 continue  # 쪽번호
@@ -726,12 +770,15 @@ def main(argv=None) -> int:
             if rec:
                 q.answer, q.objection = rec["answer"], rec["objection"]
 
-    # 실습은 강의별 헤더가 없어 연도 블록만으로 하나의 풀로 둔다
-    prac_index = {"__practical__": ("PRAC", "병리학 실습")}
+    # 실습은 강의별 헤더가 없어 연도 블록만으로 하나의 풀로 둔다.
+    # **과목 이름은 폴더에서 읽는다.** 여기에 "병리학"이 박혀 있었는데, 그러면
+    # 기생충학 실습 조각이 「병리학 실습」이라는 이름으로 나온다.
+    prac_name = f"{outdir.name} 실습"
+    prac_keys = {norm(f"{outdir.name}실습"): ("PRAC", prac_name),
+                 norm(f"{outdir.name}실습시험"): ("PRAC", prac_name)}
     prac = parse_question_region(
-        doc, regions["practical_q"],
-        {**prac_index, norm("병리학실습"): ("PRAC", "병리학 실습")})
-    prac_ans = parse_answer_region(doc, regions["practical_a"], {norm("병리학실습"): ("PRAC", "병리학 실습")})
+        doc, regions["practical_q"], {"__practical__": ("PRAC", prac_name), **prac_keys})
+    prac_ans = parse_answer_region(doc, regions["practical_a"], prac_keys)
     for sec in prac:
         for q in sec.questions:
             rec = join_answer(prac_ans, q)
