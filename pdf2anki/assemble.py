@@ -93,15 +93,25 @@ def photo_profile(prep: dict, lecture_title: str = "") -> dict:
             "figure_count": figure_count, "figure_slide_share": share}
 
 
+def confirmed_strategy(prep: dict, lecture_title: str = "") -> str | None:
+    """이 강의에 대해 사람이 이미 답해 둔 전략. 없으면 None.
+
+    `run.py` 도 이것을 본다 — **폴더에 기억된 전략보다 이쪽이 세다.** 기억은 재개를
+    한 줄로 만들려는 장치이지 사람의 판단이 아니다. 2026-08-25에 관리자가
+    `260819_01·02·03` 을 「기본」으로 답해 뒀는데, 그 폴더들에 08-23의 「필기 중심」이
+    저장돼 있어서 그 답이 08-30까지 한 번도 안 먹었다.
+    """
+    identity = f"{prep.get('source', '')} {lecture_title}"
+    match = re.search(r"\[(\d{6}_\d{2})\]", identity)
+    return CONFIRMED_STRATEGY_OVERRIDES.get(match.group(1)) if match else None
+
+
 def apply_confirmed_strategy(strategy: str, why: str, prep: dict,
                              lecture_title: str = "") -> tuple[str, str]:
     """확인 필요 판정에 대해 사용자가 이미 답한 강의만 확정한다."""
     if strategy != ASK_ANNOTATION:
         return strategy, why
-    identity = f"{prep.get('source', '')} {lecture_title}"
-    match = re.search(r"\[(\d{6}_\d{2})\]", identity)
-    run_id = match.group(1) if match else ""
-    confirmed = CONFIRMED_STRATEGY_OVERRIDES.get(run_id)
+    confirmed = confirmed_strategy(prep, lecture_title)
     if not confirmed:
         return strategy, why
     return confirmed, f"{why} → 저장된 사용자 선택: {STRATEGIES[confirmed]}"
@@ -595,7 +605,10 @@ def main(argv=None) -> int:
             print(f"\n⚠ {e}", file=sys.stderr)
             return 2
     else:
-        why = "사람이 --strategy 로 지정했다"
+        # 부른 쪽이 이미 정해서 넘겼다. **누가 정했는지는 여기서 알 수 없다** —
+        # `run.py` 는 자동 판정한 값도 `--strategy` 로 넘긴다. 그래서 「사람이
+        # 지정했다」고 단언하지 않는다.
+        why = "전략을 인자로 받았다 (부른 쪽이 정했다)"
 
     res = assemble(prep_dir, jokbo_file, Path(args.schema_dir), strategy, args.domain)
 

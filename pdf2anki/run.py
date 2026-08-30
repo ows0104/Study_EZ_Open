@@ -56,6 +56,7 @@ from .assemble import (
     STRATEGY_ALIAS,
     StrategyConfirmationRequired,
     apply_confirmed_strategy,
+    confirmed_strategy,
     decide_strategy,
     photo_profile,
     resolve_auto_strategy,
@@ -195,9 +196,26 @@ class Runner(BaseRunner):
             except StrategyConfirmationRequired as e:
                 raise Failed(str(e)) from e
         else:
-            self.strategy = chosen
             auto_name = "사용자 확인 필요" if auto not in STRATEGIES else STRATEGIES[auto]
-            self.strategy_why = f"사람이 --strategy 로 지정했다 (자동 판정은 {auto_name})"
+            confirmed = confirmed_strategy(prep, self.args.lecture or "")
+            source = getattr(self.args, "strategy_from", "cli")
+            if source == "cli":
+                self.strategy = chosen
+                self.strategy_why = f"사람이 --strategy 로 지정했다 (자동 판정은 {auto_name})"
+            elif confirmed and confirmed != chosen:
+                # 사람이 답해 둔 것이 폴더의 기억을 이긴다.
+                self.strategy = confirmed
+                self.strategy_why = (f"사람이 답해 둔 {STRATEGIES[confirmed]} 로 간다 "
+                                     f"(폴더가 기억한 {STRATEGIES[chosen]} 를 덮었다)")
+                print(f"   ⚠ 폴더가 기억한 전략({STRATEGIES[chosen]})을 덮었다 — "
+                      f"사람이 답해 둔 것은 {STRATEGIES[confirmed]} 다.", flush=True)
+            else:
+                self.strategy = chosen
+                self.strategy_why = f"폴더가 기억한 값을 이어 쓴다 (자동 판정은 {auto_name})"
+                if chosen != auto:
+                    print(f"   ⚠ 폴더가 기억한 전략({STRATEGIES[chosen]})이 지금 판정"
+                          f"({auto_name})과 다르다. 기억이 이긴다 — 바꾸려면 "
+                          f"--strategy 를 주거나 {CONFIG} 의 strategy 를 지워라.", flush=True)
 
         # 필기 중심이면 올해 필기를 근거로 인정한다. 그것이 이 전략의 실체다.
         self.annotation = self.strategy == "annotation"
@@ -488,6 +506,7 @@ def main(argv=None) -> int:
 
     # ── 이어 돌리기: 폴더가 기억한 이름을 되찾는다 ──
     saved, given = {}, args.pdf          # 명령줄에서 준 PDF 가 기억보다 우선한다
+    cli_strategy = args.strategy         # 이번에 사람이 준 것만. 기억과 구별한다
     if args.resume:
         cfg = Path(args.resume) / CONFIG
         if cfg.exists():
@@ -511,6 +530,10 @@ def main(argv=None) -> int:
     args.deck = args.deck or saved.get("deck") or deck_of(args.lecture, args.subject)
     args.id = args.id or saved.get("id") or lecture_id_of(Path(args.pdf_name))
     args.domain = args.domain or DEFAULT_DOMAIN
+    # **전략은 출처가 셋이라 그것을 같이 들고 간다.** 예전에는 구별이 없어서 폴더가
+    # 기억한 값을 「사람이 --strategy 로 지정했다」고 적었고, 그 거짓 문구 때문에
+    # 08-25 의 확정이 무시된 것을 08-30까지 아무도 몰랐다.
+    args.strategy_from = ("cli" if cli_strategy else "saved" if args.strategy else "auto")
     args.strategy = args.strategy or "auto"
 
     out = Path(args.resume or args.out or f"out/{args.id}")
