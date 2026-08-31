@@ -88,6 +88,17 @@ function jobLine(job: PrequizJob, runner: RunnerBeat | null): string {
  * 「다시 만들기」가 안 들어가고, 관리자 지시도 그것을 앞칸(웹에서 풀기) 아래에
  * 두라는 것이었다. 도구는 여기서만 만들 수 있으니(일감 상태를 든다) 넘겨준다.
  */
+/**
+ * 재료가 없어 지금은 못 만드는 사정. **서버의 `_no_material`과 같은 규칙이다** —
+ * 거기서 400으로 거절하는 것을 여기서는 눌리지 않게 한다.
+ */
+export type DeckBlocked = {
+  /** 좁은 칸에 드는 말. 「아직 없습니다」가 서던 자리다. */
+  short: string;
+  /** 무엇을 먼저 해야 하는지. 서버가 거절할 때 하는 말을 그대로 쓴다. */
+  why: string;
+};
+
 export function DeckSlot({
   kind,
   label,
@@ -95,6 +106,7 @@ export function DeckSlot({
   lecture,
   onDownload,
   before,
+  blocked,
 }: {
   kind: DeckKind;
   label: string;
@@ -103,6 +115,8 @@ export function DeckSlot({
   onDownload: (file: LectureFile) => void;
   /** 같은 덩어리 안에서 이 덱보다 앞에 서는 것(Pre-Quiz 웹 풀이). */
   before?: (tools: ReactNode) => ReactNode;
+  /** 재료가 없어 못 만드는가. **관리자에게만 뜻이 있다** — 학생은 받기만 한다. */
+  blocked?: DeckBlocked;
 }) {
   const isAdmin = Boolean(useMe()?.isAdmin);
   if (!isAdmin) {
@@ -112,7 +126,17 @@ export function DeckSlot({
       </Combo>
     );
   }
-  return <DeckMake kind={kind} label={label} file={file} lecture={lecture} onDownload={onDownload} before={before} />;
+  return (
+    <DeckMake
+      kind={kind}
+      label={label}
+      file={file}
+      lecture={lecture}
+      onDownload={onDownload}
+      before={before}
+      blocked={blocked}
+    />
+  );
 }
 
 /**
@@ -151,6 +175,7 @@ function DeckMake({
   lecture,
   onDownload,
   before,
+  blocked,
 }: {
   kind: DeckKind;
   label: string;
@@ -158,6 +183,7 @@ function DeckMake({
   lecture: LectureRef;
   onDownload: (file: LectureFile) => void;
   before?: (tools: ReactNode) => ReactNode;
+  blocked?: DeckBlocked;
 }) {
   const base = `/api/admin/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
   const [job, setJob] = useState<PrequizJob | null>(null);
@@ -217,10 +243,18 @@ function DeckMake({
     }
   }
 
-  // 실패는 남긴다. 조용히 지우면 「눌렀는데 아무 일도 없었다」가 된다.
+  /* 실패는 남긴다. 조용히 지우면 「눌렀는데 아무 일도 없었다」가 된다.
+   *
+   * **다만 그 말이 아직 참일 때까지다(2026-08-31 관리자 지시 — 덱이 생겼는데
+   * 로그가 남아 있다).** 덱을 만드는 길은 이 버튼 하나가 아니다 — 야간 쓸기도
+   * 올린다. 「만들기」가 실패했다는 말은 그렇게 덱이 도착한 순간 거짓이 된다.
+   *
+   * 「다시 만들기」는 다르다. 그 말은 **눈앞의 덱이 옛것**이라는 뜻이라, 덱이
+   * 있어도 그대로 참이다. 그래서 `force`가 아닌 실패만 접는다. */
+  const moot = Boolean(file) && !job?.force;
   const failure = (
     <>
-      {job?.state === "failed" ? <p className="notice is-error">{job.message}</p> : null}
+      {job?.state === "failed" && !moot ? <p className="notice is-error">{job.message}</p> : null}
       {error ? <p className="notice is-error">{error}</p> : null}
     </>
   );
@@ -233,10 +267,10 @@ function DeckMake({
     const tools = (
       <Remake
         label="다시 만들기"
-        hint={`${label} 다시 만들기`}
+        hint={blocked ? blocked.why : `${label} 다시 만들기`}
         busy={job?.state === "running"}
         busyLabel="다시 만드는 중…"
-        disabled={open || asking}
+        disabled={open || asking || Boolean(blocked)}
         onClick={() => setAskingRemake(true)}
       />
     );
@@ -282,6 +316,29 @@ function DeckMake({
           </span>
         </Combo>
         {merged ? <p className="panel-hint">{label} — {jobLine(job, runner)}</p> : null}
+        {failure}
+      </>
+    );
+  }
+
+  /* 재료가 없으면 누를 자리를 안 준다(2026-08-31 관리자 지시 — 올해 필기가 안
+     들어왔는데 버튼이 켜져 있다). 서버는 이미 400으로 거절하고 있었는데
+     (`_no_material`), 그 말은 **누른 뒤에야** 보였다. 여기서 같은 규칙을 눈으로
+     먼저 말한다 — 「아직 없습니다」와 같은 꼴이라 무엇을 기다리는지만 다르다. */
+  if (blocked) {
+    return (
+      <>
+        <Combo before={before?.(null)}>
+          <ActionCard
+            shape={`is-empty ${merged ? "is-compact" : "is-key"}`}
+            hit={
+              <span className="panel-action-hit" title={blocked.why}>
+                <strong>{label}</strong>
+                <small>{blocked.short}</small>
+              </span>
+            }
+          />
+        </Combo>
         {failure}
       </>
     );

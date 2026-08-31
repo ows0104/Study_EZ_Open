@@ -67,7 +67,7 @@ from dataclasses import dataclass
 from datetime import date as Date
 from pathlib import Path
 
-from . import ahead, deck, publish, watch
+from . import ahead, deck, prequeue, publish, watch
 
 POLL_SECONDS = 15         # 일감을 물어보는 간격
 STAGE_SECONDS = 20        # 하위 로그를 훑어 단계를 올리는 간격
@@ -254,7 +254,7 @@ class Agent:
 
         made = self.outcome(job, lines, code, started)
         if not made:
-            why = blocked_reason(lines) or summary(lines) or f"종료 코드 {code}"
+            why = blocked_reason(lines, job.run_id) or summary(lines) or f"종료 코드 {code}"
             self.say(f"    실패 — {why}")
             self.report(job, state="failed", stage="", message=f"덱을 못 만들었다: {why} (로그: {log})")
             return
@@ -300,6 +300,13 @@ class Agent:
         만 편이 있고(검문에 걸렸거나 업로드가 끊겼거나), 그 편에서 사람이 누르는
         것도 이 버튼이다. `watch --run-id`가 그때 안 만들고 넘긴다. 대신 그쪽은
         **실패를 종료 코드로 말한다** — 여기서 0이 아니면 만들다 죽은 것이다.
+
+        **예습에도 올리다 만 편이 있다.** 2026-08-31 에 `260831_01`을 눌렀더니
+        `prequeue`가 「이미 있는 것 1편」으로 끝냈고(같은 대화로 만든 문항이 이미
+        노트북에 있었다), 여기서 그것을 실패로 적었다. 화면에는 「덱을 못 만들었다」가
+        남고 덱은 그날 밤 쓸기가 올려 주었다 — 누른 사람은 실패를 보고 덱을 받았다.
+        복습과 같은 자리이므로 같이 판정한다: 새로 만든 것이 없어도 **이 대화로
+        만든 문항이 이미 있으면 올릴 것이 있는 것**이라 성공이다.
         """
         made = first_match(lines, r"끝났다 — (.+)$")
         if code != 0:
@@ -308,7 +315,30 @@ class Agent:
             if made:
                 return made
             return "이미 있던 덱" if deck.apkg_of(self.runs_dir / job.run_id, deck.MAIN) else ""
-        return made if made and self.made_deck(job, since) else ""
+        if made and self.made_deck(job, since):
+            return made
+        return "이미 있던 문항" if self.already_made(job) else ""
+
+    def already_made(self, job: Job) -> bool:
+        """이 대화로 만든 예습 문항이 이미 노트북에 있는가. `outcome`이 부른다.
+
+        로그를 긁지 않고 **`prequeue`가 적어 둔 큐**를 읽는다 — 같은 실행이 남긴
+        구조화된 판정이라(`prequeue.DONE`) 줄 모양이 바뀌어도 안 흔들린다.
+
+        **「다시 만들기」에는 안 쓴다.** 그때 아무것도 안 나왔다는 것은 `--force`가
+        안 먹었다는 뜻이고, 그것을 성공으로 적으면 옛 덱을 새것으로 올린다.
+        """
+        if job.force:
+            return False
+        try:
+            queue = json.loads((self.runs_dir / prequeue.QUEUE_NAME).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return False
+        for row in queue.get("items", []) if isinstance(queue, dict) else []:
+            link = row.get("link") or {}
+            if link.get("run_id") == job.run_id and link.get("subject") == job.subject:
+                return row.get("state") == prequeue.DONE
+        return False
 
     def made_deck(self, job: Job, since: float) -> bool:
         """이번 실행에서 예습 문항이 실제로 나왔는가. `outcome`이 부른다."""
@@ -461,18 +491,32 @@ def first_match(lines: list[str], pattern: str) -> str:
     return ""
 
 
-def blocked_reason(lines: list[str]) -> str:
+def blocked_reason(lines: list[str], run_id: str = "") -> str:
     """`prequeue`가 막힌 이유. 표시 줄 다음에 사람이 읽을 말이 온다.
 
         2026-08-20 ✋ 260820_02    소아질환의 병태생리(2) …
             작년 짝이 없다 — 작년 강의록·예습 자리는 비워 둔다
+
+    **다른 편의 줄을 이유로 삼지 않는다(`run_id`).** 한 과목의 로그에는 블럭
+    전체의 경고가 같이 실린다 — `prequeue`는 편 하나만 만들어도 계획은 과목
+    전부를 세우기 때문이다. 2026-08-31 에 `260831_01`을 누른 사람이 이런 말을
+    받았다.
+
+        덱을 못 만들었다: ⚠ 기생충학/260911_01 미생물학의 역사 — 작년 짝을 못 찾았다
+
+    누른 적도 없는 강의고, 그 강의는 미생물학이라 기생충학에 작년 짝이 없는 것이
+    당연하다. 편을 못 대면 **아무 줄이나 대느니 안 대는 편이 낫다** — 그 자리는
+    `summary`가 받는다.
     """
+    def mine(line: str) -> bool:
+        return not run_id or run_id in line
+
     for index, line in enumerate(lines):
-        if "✋" in line:
+        if "✋" in line and mine(line):
             after = lines[index + 1].strip() if index + 1 < len(lines) else ""
             return (after or line.strip())[:300]
     if any("만들 것 0편" in line or "로컬에서 이 강의를 못 찾았다" in line for line in lines):
-        return next((line.strip() for line in lines if "못 찾았다" in line),
+        return next((line.strip()[:300] for line in lines if "못 찾았다" in line and mine(line)),
                     "만들 자리를 못 찾았다")
     return ""
 

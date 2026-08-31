@@ -189,3 +189,73 @@ def test_복습을_만드는_중에_예습_로그를_읽지_않는다(tmp_path):
     pre = agent.Job(id=2, subject="병리학", run_id="260824_02")
     assert worker.stage_of(wrapper, main) == "② 시험에 나올 것"
     assert worker.stage_of(wrapper, pre) == "지난번 예습의 마지막 단계"
+
+
+# ── 다른 편의 줄을 이유로 삼지 않는다 ─────────────────────────────────
+# `prequeue`는 편 하나만 만들어도 계획은 과목 전부를 세운다. 그 경고가 로그에
+# 같이 실려서, 2026-08-31 에 260831_01 을 누른 사람이 260911_01 의 경고를
+# 실패 사유로 받았다.
+
+
+def test_다른_편의_경고는_이유가_아니다():
+    lines = [
+        "  ⚠ 기생충학/260911_01 미생물학의 역사 — 작년 짝을 못 찾았다",
+        "  ⚠ 기생충학/260917_01 바이러스의 증식 및 배양 — 작년 짝을 못 찾았다",
+        "  만들 것 0편 · 다시 만들 것 0편 · 이미 있는 것 1편 · 막힌 것 0편",
+    ]
+    assert agent.blocked_reason(lines, "260831_01") == "만들 자리를 못 찾았다"
+    # 그 편의 줄이면 그대로 쓴다.
+    assert "260831_01" in agent.blocked_reason(
+        lines + ["  ⚠ 기생충학/260831_01 총론 — 작년 짝을 못 찾았다"], "260831_01")
+
+
+def test_막힌_편이_여럿이면_누른_편의_것을_읽는다():
+    lines = [
+        "  2026-09-11 ✋ 260911_01    미생물학의 역사",
+        "      로컬에서 이 강의를 못 찾았다 — 올해 필기도 시간표 칸도 없다",
+        "  2026-08-31 ✋ 260831_01    기생충학 총론 (1)",
+        "      작년 짝이 없다 — 작년 강의록·예습 자리는 비워 둔다",
+    ]
+    assert agent.blocked_reason(lines, "260831_01") == "작년 짝이 없다 — 작년 강의록·예습 자리는 비워 둔다"
+
+
+# ── 예습도 「이미 있던 것」이 성공이다 ─────────────────────────────────
+
+
+def _queue(tmp_path: Path, run_id: str, state: str, subject: str = "병리학") -> None:
+    (tmp_path / "prequeue.json").write_text(
+        '{"generated_at": "2026-08-31T08:27:20", "items": [{"link": '
+        '{"subject": "%s", "run_id": "%s"}, "state": "%s"}]}' % (subject, run_id, state),
+        encoding="utf-8")
+
+
+def test_예습도_이미_있던_문항이_성공이다(tmp_path):
+    """올리다 만 편. `prequeue`가 「이미 있는 것 1편」으로 끝내고 아무것도 안 만든다 —
+    그것을 실패로 적으면 화면에 「덱을 못 만들었다」가 남고 덱은 밤에 도착한다."""
+    _queue(tmp_path, "260831_01", "done")
+    worker = _agent_with(tmp_path)
+    job = agent.Job(id=1, subject="병리학", run_id="260831_01")
+    assert worker.outcome(job, ["  만들 것 0편 · 이미 있는 것 1편"], 0, time.time()) == "이미 있던 문항"
+
+
+def test_다시_만들기에는_안_쓴다(tmp_path):
+    """`--force`가 붙었는데 아무것도 안 나왔으면 그것이 문제다. 성공으로 적으면
+    옛 덱이 새것으로 올라간다."""
+    _queue(tmp_path, "260831_01", "done")
+    worker = _agent_with(tmp_path)
+    job = agent.Job(id=1, subject="병리학", run_id="260831_01", force=True)
+    assert worker.outcome(job, ["  만들 것 0편 · 이미 있는 것 1편"], 0, time.time()) == ""
+
+
+def test_막힌_편은_이미_있던_것이_아니다(tmp_path):
+    _queue(tmp_path, "260831_01", "blocked")
+    worker = _agent_with(tmp_path)
+    job = agent.Job(id=1, subject="병리학", run_id="260831_01")
+    assert worker.outcome(job, ["  막힌 것 1편"], 0, time.time()) == ""
+
+
+def test_큐에_없는_편은_이미_있던_것이_아니다(tmp_path):
+    _queue(tmp_path, "260831_05", "done")
+    worker = _agent_with(tmp_path)
+    job = agent.Job(id=1, subject="병리학", run_id="260831_01")
+    assert worker.already_made(job) is False

@@ -248,6 +248,11 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
           lecture={lecture}
           onDownload={download}
           before={webSolve("pre", detail.prequiz)}
+          blocked={
+            detail.preview?.shareUrl
+              ? undefined
+              : { short: "예습 링크 대기", why: "예습 링크를 먼저 저장하세요. Pre-Quiz는 그 대화로 만듭니다." }
+          }
         />
       </PanelGroup>
 
@@ -262,6 +267,11 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
           lecture={lecture}
           onDownload={download}
           before={webSolve("main", detail.mainquiz)}
+          blocked={
+            fileOf("notes_current")
+              ? undefined
+              : { short: "올해 필기 대기", why: "올해 강의록이 아직 없습니다. Main-Quiz는 올해 필기로 만듭니다." }
+          }
         />
       </PanelGroup>
 
