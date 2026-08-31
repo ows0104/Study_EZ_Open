@@ -80,6 +80,96 @@ def course_from_title(title: str) -> str:
     return _TRAILING_NUMBER_RE.sub("", nfc(title)).strip()
 
 
+# 「(분반) A: 김태민」 꼴. 사람 이름이 붙는 자리라 소제목으로 오해하면 안 된다.
+_SECTION_RE = re.compile(r"^\(?[^)]*분반[^)]*\)?\s*[A-Za-z]\s*:")
+
+# 여러 줄로 접힌 `details`를 한 줄로 붙일 때 쓰는 사이 공백.
+_SPACES_RE = re.compile(r"\s+")
+
+
+def _flat(text: str) -> str:
+    return _SPACES_RE.sub(" ", nfc(text))
+
+
+def _detail_lines(details: str) -> list[str]:
+    return [line for line in (_flat(raw) for raw in (details or "").split("\n")) if line]
+
+
+def professor_names(rows: list[tuple[str, str]]) -> frozenset[str]:
+    """시간표 전체에서 사람 이름을 모은다. `(details, professor)` 쌍을 받는다.
+
+    `strip_lead_topic`이 「이 줄은 사람 이름인가」를 물어볼 데다. 규칙으로 가를 수
+    없어서 **시간표 자신에게 물어본다** — `unfold_title`이 작년 제목에 물어보는 것과
+    같은 수법이다. 소제목과 이름이 글자로는 안 갈리기 때문이다: `연충란`·`천식`·
+    `선충류`는 `고정민`·`문장섭`과 길이도 꼴도 같다.
+
+    이름이라고 볼 수 있는 자리는 셋이다.
+
+        담당이 쉼표 목록이면 **앞 토큰 말고** 나머지    오염은 맨 앞에만 붙는다
+        담당이 `details`의 한 줄과 통째로 같으면 그 줄  접히지 않은 깨끗한 칸
+        앞 토큰이 두 낱말이면 그 **끝 낱말**            `혈관염 박진균`의 `박진균`
+
+    셋째가 없으면 2026 시간표에서 두 칸을 못 고친다(`감염과 면역 41`·`57`). 그
+    칸에만 나오는 교수는 다른 데서 이름을 배울 데가 없다.
+    """
+    names: set[str] = set()
+    for details, professor in rows:
+        flat = _flat(professor)
+        if not flat:
+            continue
+        tokens = [token for token in (t.strip() for t in flat.split(",")) if token]
+        if not tokens:
+            continue
+        names.update(tokens[1:])
+        if len(tokens) == 1 and flat in _detail_lines(details):
+            names.add(flat)
+        words = tokens[0].split(" ")
+        if len(words) > 1:
+            names.add(words[-1])
+    return frozenset(names)
+
+
+def strip_lead_topic(details: str, professor: str, names: frozenset[str]) -> str:
+    """담당 칸 앞에 붙어 온 소제목을 떼어 낸다.
+
+    시간표 JSON은 강의 PDF에서 사람 손을 거쳐 나오는데, `details`의 어디까지가
+    제목이고 어디부터가 담당인지가 칸마다 흔들린다. 2026 시간표 369칸 중 **14칸**이
+    소제목을 담당 칸에 끌고 들어왔다.
+
+        details   "(MDL)⏎연충란⏎최민호, 신은희, 여선주,⏎송현범, 김주현"
+        professor "연충란 최민호, 신은희, 여선주, 송현범, 김주현"   ← `연충란`이 넘어왔다
+
+    그러면 캘린더에서 그 칸의 제목이 사라진다. 화면은 담당에 든 줄을 제목에서
+    빼는데(`web/src/calendar/entries.ts`), 소제목이 담당에 들어 있으니 같이 빠진다.
+    2026-08-31 실습이 그렇게 제목 없이 「담당: 연충란 최민호, …」로 떴다.
+
+    떼는 조건은 셋 다 맞을 때다 — **의심스러우면 그냥 둔다.**
+
+        ① 담당이 `details`의 뒷줄들을 그대로 이어 붙인 것이고, 그 앞에 줄이 더 있다
+        ② 그 첫 줄이 쉼표도 `(분반)`도 없고 `names`에 없다
+        ③ 남는 쪽의 첫 토큰은 `names`에 있거나 `(분반)` 꼴이다
+
+    ②가 없으면 이름 여러 줄을 접어 놓은 칸(`고정민⏎문장섭⏎김만진`)의 첫 교수를
+    지운다. ③이 없으면 이름을 하나도 못 배운 칸에서 담당이 통째로 빈다. 2026
+    시간표에 이 규칙을 돌리면 **고칠 14칸을 고치고 나머지 355칸은 안 건드린다.**
+    """
+    lines = _detail_lines(details)
+    flat = _flat(professor)
+    if not flat or len(lines) < 2:
+        return flat
+    for index in range(len(lines) - 1):
+        if " ".join(lines[index:]) != flat:
+            continue
+        lead = lines[index]
+        if "," in lead or _SECTION_RE.match(lead) or lead in names:
+            return flat
+        rest = " ".join(lines[index + 1:])
+        if _SECTION_RE.match(rest) or rest.split(",")[0].strip() in names:
+            return rest
+        return flat
+    return flat
+
+
 def slide_no_from_filename(filename: str) -> int | None:
     match = _SLIDE_NO_RE.search(filename or "")
     return int(match.group(1)) if match else None

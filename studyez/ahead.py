@@ -106,6 +106,9 @@ class Cell:
 
 _WORD_RE = re.compile(r"[^0-9A-Za-z가-힣]+")
 
+# 괄호만 든 줄. `(MDL)`(강의실)·`(09:10~11:50)`(시각)이고 강의 이름이 아니다.
+_BRACKETED_RE = re.compile(r"^\([^)]*\)$")
+
 
 def _words(text: str) -> set[str]:
     return {w for w in _WORD_RE.split(filenames.canonical(text).lower()) if w}
@@ -203,6 +206,12 @@ def read_cells(source: Path) -> list[Cell]:
         lines = [line.strip() for line in (details or "").split("\n") if line.strip()]
         flat = re.sub(r"\s+", "", professor or "")
         lines = [line for line in lines if line.replace(" ", "") != flat]
+        # 괄호만 든 줄은 강의 이름이 아니라 강의실이거나 시각이다. 감염의 기초 실습
+        # 6칸이 `(MDL)`로 시작하는데, 그것을 heading으로 읽으면 stem이 `mdl`이 되어
+        # 작년 짝이 전부 0.00으로 떨어진다 — `runs/_pairs/기생충학.json`이 그래서
+        # 손으로 물려 두었다. 화면도 같은 줄을 같은 이유로 뺀다
+        # (`web/src/calendar/entries.ts`).
+        lines = [line for line in lines if not _BRACKETED_RE.match(line)]
         # 교수 이름이 나오는 줄부터는 제목이 아니다. 실습 칸은 담당이 서른 명이라
         # 이름도 여러 줄로 접혀 오는데(`최기영, 강경훈, 정두현,` / `정경천, ...`),
         # 그 조각이 교수 명단 안에 그대로 들어 있는지로 가른다.

@@ -27,7 +27,14 @@ from sqlalchemy import inspect, select, text
 from app.database import Base, SessionLocal, engine
 from app.matching import relink
 from app.models import Lecture, TimetableEvent
-from app.naming import course_from_title, nfc, normalize_stem, slot_from_time
+from app.naming import (
+    course_from_title,
+    nfc,
+    normalize_stem,
+    professor_names,
+    slot_from_time,
+    strip_lead_topic,
+)
 from app.storage import ObjectStorage, StorageNotConfigured
 
 # 표가 선 뒤에 붙은 칼럼. **`create_all`은 없는 표는 세우지만 없는 칼럼은 안 붙인다** —
@@ -75,9 +82,16 @@ def seed_timetable(path: Path) -> None:
     if not isinstance(events, list):
         raise SystemExit("시간표 JSON은 배열이어야 합니다.")
 
+    # 담당 칸 앞에 소제목이 끌려 들어온 칸을 되돌린다. 이름 사전이 시간표 전체에서
+    # 나오므로 한 칸씩 볼 수 없고 여기서 먼저 모은다(`naming.strip_lead_topic`).
+    names = professor_names([
+        (str(raw.get("details", "")), str(raw.get("professor", ""))) for raw in events
+    ])
+
     with SessionLocal() as db:
         seen: set[str] = set()
         skipped: list[str] = []
+        mended: list[str] = []
         for raw in events:
             event_id = str(raw.get("id", "")).strip()
             date_text = str(raw.get("date", "")).strip()
@@ -98,7 +112,10 @@ def seed_timetable(path: Path) -> None:
             # 이름이 두 갈래로 갈라져 매칭이 통째로 빗나간다.
             event.title = nfc(str(raw.get("title", "")))
             event.details = unicodedata.normalize("NFC", str(raw.get("details", "")))
-            event.professor = nfc(str(raw.get("professor", "")))
+            given = nfc(str(raw.get("professor", "")))
+            event.professor = strip_lead_topic(event.details, given, names)
+            if event.professor != given:
+                mended.append(f"{date_text} {start_time} {event.title}: {given} → {event.professor}")
             event.category = str(raw.get("category", "lecture")).strip() or "lecture"
             event.course = course_from_title(event.title)
             event.course_key = normalize_stem(event.course)
@@ -123,6 +140,12 @@ def seed_timetable(path: Path) -> None:
         db.commit()
 
     print(f"시간표 {len(seen)}칸을 넣었습니다. 지운 칸 {len(stale)}, 다시 붙인 강의 {relinked}.")
+    if mended:
+        # 손댄 자리는 전부 찍는다. 규칙이 오탐을 내면 여기서만 보인다 — 화면에서는
+        # 「제목이 있는 칸」과 구별되지 않는다.
+        print(f"담당 칸에서 소제목을 뗀 칸 {len(mended)}개:")
+        for line in mended:
+            print(f"  {line}")
     if skipped:
         # 읽지 못한 줄은 반드시 이유와 함께 보고한다. 조용히 넘어가면 캘린더에
         # 구멍이 뚫린 것을 아무도 모른다.
