@@ -220,7 +220,7 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
 
           「다시 만들기」는 덱의 것이지만 넓은 왼쪽 칸이 든다 — 덱 칸은 이름과
           용량으로 한 줄이 찬다(관리자 지시도 그 자리였다). */}
-      <PanelGroup tone="pre" title="Pre-Quiz" note="강의 직전 1회">
+      <PanelGroup tone="pre" title="Pre-Quiz" note="강의 전 예습">
         <DeckSlot
           kind="pre"
           label="덱"

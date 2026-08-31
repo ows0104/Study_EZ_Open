@@ -1075,17 +1075,20 @@
   font-weight: 500;
 }
 
-.panel-group-head .preview-provider-select {
-  margin-left: auto;
-}
-
-.preview-provider-select {
+/* 어느 AI로 물을까. 갈래 머리에 늘 떠 있던 것을 편집칸 안으로 옮겼다
+   (2026-08-31 관리자 지시) — 한 번 정하면 바꿀 일이 드물어 자리만 차지했다. */
+.prompt-editor-model {
   display: flex;
-  margin: 0;
+  margin: 0 0 2px;
+  gap: 10px;
+  justify-content: space-between;
   align-items: center;
+  color: var(--ink-2);
+  font-size: 11.5px;
+  font-weight: 600;
 }
 
-.preview-provider-select select {
+.prompt-editor-model select {
   min-height: 26px;
   padding: 0 24px 0 8px;
   border: 1px solid var(--line);

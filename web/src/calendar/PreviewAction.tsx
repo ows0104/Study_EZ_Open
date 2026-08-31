@@ -244,21 +244,7 @@ export function PreviewAction({
   );
 
   return (
-    <PanelGroup
-      tone="preview"
-      title="예습"
-      aside={
-        <label className="preview-provider-select">
-          <select
-            aria-label="예습에 쓸 AI"
-            value={provider}
-            onChange={(event) => setProvider(event.target.value as PreviewProvider)}
-          >
-            {previewProviders.map((item) => <option value={item} key={item}>{previewProviderLabels[item]}</option>)}
-          </select>
-        </label>
-      }
-    >
+    <PanelGroup tone="preview" title="예습">
       <div className="panel-pair">
         {shared}
         {personal}
@@ -274,7 +260,9 @@ export function PreviewAction({
           onCancel={() => setAskingRemake(false)}
         />
       ) : null}
-      {showPrompt ? <PromptEditor store={promptStore} detail={detail} /> : null}
+      {showPrompt ? (
+        <PromptEditor store={promptStore} detail={detail} provider={provider} onProvider={setProvider} />
+      ) : null}
     </PanelGroup>
   );
 }
@@ -345,9 +333,13 @@ function Body({ name, note }: { name: string; note?: string }) {
 function PromptEditor({
   store,
   detail,
+  provider,
+  onProvider,
 }: {
   store: ReturnType<typeof usePreviewPrompt>;
   detail: LectureDetail;
+  provider: PreviewProvider;
+  onProvider: (next: PreviewProvider) => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -376,6 +368,22 @@ function PromptEditor({
 
   return (
     <div className="prompt-editor">
+      {/* **어느 AI로 물을지도 여기서 고른다(2026-08-31 관리자 지시).** 갈래 머리에
+          늘 떠 있던 고르개인데, 한 번 정하면 바꿀 일이 드물어서 자리만 차지했다.
+
+          **이것만은 기본 링크에도 듣는다** — 아래 프롬프트는 개인 링크의 것이다.
+          그 갈림을 적어 두지 않으면 여기 있는 것이 다 개인 것으로 읽힌다. */}
+      <label className="prompt-editor-model">
+        <span>어느 AI로 물을까</span>
+        <select
+          aria-label="예습에 쓸 AI"
+          value={provider}
+          onChange={(event) => onProvider(event.target.value as PreviewProvider)}
+        >
+          {previewProviders.map((item) => <option value={item} key={item}>{previewProviderLabels[item]}</option>)}
+        </select>
+      </label>
+
       {/* 기본 링크의 문구는 여기 안 나온다. 고칠 수 없는 것을 편집칸 위에
           펼쳐 두면 무엇을 고치는 화면인지 흐려진다(2026-08-22 관리자 지시). */}
       <h4 className="prompt-editor-label">개인 링크 — 내가 고쳐 쓰는 것</h4>

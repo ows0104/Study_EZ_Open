@@ -13,21 +13,17 @@ import type { ReactNode } from "react";
  * **머리에 이름과 색을 단다.** 전에는 셋이 같은 파랑 버튼으로 이어져 있어서
  * 어디까지가 예습이고 어디부터가 Pre-Quiz인지 글자를 읽어야 알았다. 색은 갈래만
  * 진다 — 있다/없다/만드는 중은 여전히 테두리 꼴과 글이 말한다.
- *
- * `aside`는 머리 오른쪽에 눕는 것이다(예습의 AI 고르기).
  */
 export function PanelGroup({
   tone,
   title,
   note,
-  aside,
   children,
 }: {
   /** `is-preview` · `is-pre` · `is-main`. 색은 CSS 가 고른다. */
   tone: "preview" | "pre" | "main";
   title: string;
   note?: string;
-  aside?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -35,7 +31,6 @@ export function PanelGroup({
       <h3 className="panel-group-head">
         <span>{title}</span>
         {note ? <small>{note}</small> : null}
-        {aside}
       </h3>
       {children}
     </section>
