@@ -156,10 +156,26 @@ export function PreviewAction({
       />
     ) : null;
 
-  /* 개인 링크 카드에 드는 둘. **프롬프트 고치기가 여기 있는 이유는 그것이
-     개인 링크에만 듣기 때문이다** — 기본 링크는 문구가 고정이다. */
-  const personalTools = (
-    <>
+  /* 개인 링크 카드에 드는 것. 카드가 무엇을 다시 만드는지를 자리로 말한다. */
+  const personalTools =
+    hasPersonal && canMake ? (
+      // 자기 것이라 묻지 않는다. 옛 대화는 해당 AI 서비스에 그대로 남아 있고
+      // 여기서 가리키는 주소만 새것으로 바뀐다.
+      <Remake
+        label="다시 만들기"
+        hint="개인 링크를 새 대화로 다시 만들기"
+        busy={busy === "personal"}
+        disabled={Boolean(busy)}
+        onClick={() => void start("personal")}
+      />
+    ) : null;
+
+  /* **프롬프트 고치기는 카드 밖, 갈래의 오른쪽 아래에 선다(2026-08-31 관리자
+     지시).** 개인 링크에만 듣는 것이라 그 카드 안에 넣어 두었는데, 카드 안은
+     그 카드를 여는 자리라 「고치기」가 「열기」와 같은 무게로 붙어 있었다.
+     펼쳐지는 편집칸이 바로 아래에 오므로 그 문이 편집칸 옆에 서는 것이 맞다. */
+  const promptTool = (
+    <div className="panel-aside">
       <PanelTool
         icon="✎"
         label={showPrompt ? "프롬프트 접기" : "프롬프트 수정"}
@@ -169,18 +185,7 @@ export function PreviewAction({
         expanded={showPrompt}
         onClick={() => setShowPrompt((open) => !open)}
       />
-      {hasPersonal && canMake ? (
-        // 자기 것이라 묻지 않는다. 옛 대화는 해당 AI 서비스에 그대로 남아 있고
-        // 여기서 가리키는 주소만 새것으로 바뀐다.
-        <Remake
-          label="다시 만들기"
-          hint="개인 링크를 새 대화로 다시 만들기"
-          busy={busy === "personal"}
-          disabled={Boolean(busy)}
-          onClick={() => void start("personal")}
-        />
-      ) : null}
-    </>
+    </div>
   );
 
   /* 기본 링크 — 강의당 하나, 반 전체가 같은 것을 읽는다. 문구가 고정이라
@@ -249,6 +254,7 @@ export function PreviewAction({
         {shared}
         {personal}
       </div>
+      {promptTool}
 
       {askingRemake ? (
         <RemakeConfirm

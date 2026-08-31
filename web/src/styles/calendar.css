@@ -14,7 +14,7 @@
  * 닫힌 상태에서도 두 번째 칸을 0px로 두는 이유는, `none`에서 시작하면 폭이
  * 보간되지 않아 캘린더가 툭 끊겨 줄기 때문이다. */
 .calendar-page {
-  --panel-w: 340px;
+  --panel-w: 374px;
   /* 시각 칸. 요일 칸에는 바닥이 없으므로 여기서 아낀 폭이 그대로 다섯 칸에
      나눠진다. 좁은 화면에서 줄이는 곳도 여기 한 군데다. */
   --time-col: 56px;
@@ -1220,6 +1220,16 @@ button.panel-action-hit:hover:not(:disabled)::after {
   transform: translateX(3px);
 }
 
+/* **과녁이 `button`으로 올 때 자기 바닥을 얹지 않는다.** base.css 의 기본
+   `button:hover`가 회색(`--surface-2`)을 까는데, 과녁은 카드 안쪽 한 줄이라
+   그 회색이 카드가 아니라 **글씨 둘레에만** 판처럼 깔렸다. 물드는 것은 카드
+   하나뿐이고(위 `:has()`), 여기는 비워 둔다. */
+button.panel-action-hit:hover:not(:disabled),
+button.panel-action-hit:active:not(:disabled) {
+  border-color: transparent;
+  background: transparent;
+}
+
 /* 갈래의 주된 것. 이 패널이 있는 이유라서 눈에 먼저 걸려야 한다. */
 .panel-action.is-key {
   margin-bottom: 7px;
@@ -1302,6 +1312,16 @@ button.panel-action-hit:hover:not(:disabled)::after {
   margin-bottom: 0;
 }
 
+/* 카드 밖에 서는 작은 문. 갈래의 오른쪽 아래다 — 바로 아래에 편집칸이 펼쳐지고,
+   오른쪽 끝이면 카드의 이름·값이 흐르는 왼쪽 줄을 안 건드린다
+   (2026-08-31 관리자 지시). */
+.panel-aside {
+  display: flex;
+  margin: 7px 0 2px;
+  gap: 14px;
+  justify-content: flex-end;
+}
+
 /* 한 가지를 하는 두 길은 한 테두리 안에 넣는다 — Pre-Quiz를 여기서 풀 것이냐
    Anki로 가져갈 것이냐(2026-08-31 관리자 지시). 두 줄로 세워 두니 서로 다른
    것으로 읽혔다. 테두리는 덩어리가 들고 가운데를 선으로 가른다. */
@@ -1380,7 +1400,8 @@ button.panel-action-hit:hover:not(:disabled)::after {
   text-underline-offset: 3px;
 }
 
-.panel-tool:hover:not(:disabled) {
+.panel-tool:hover:not(:disabled),
+.panel-tool:active:not(:disabled) {
   border: 0;
   color: var(--fam-ink);
   background: transparent;
