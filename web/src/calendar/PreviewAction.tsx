@@ -21,7 +21,7 @@ import {
   type PreviewProvider,
 } from "../types";
 import { useMe } from "../useMe";
-import { Remake, RemakeConfirm } from "./panelShared";
+import { PanelGroup, PanelTool, PanelTools, Remake, RemakeConfirm } from "./panelShared";
 
 /**
  * 예습 링크 한 칸. 확장이 대화를 열고, 공유 링크가 돌아오면 그것을 붙든다.
@@ -42,6 +42,10 @@ import { Remake, RemakeConfirm } from "./panelShared";
  *
  * 관리자가 이 길로 만든 대화를 `/admin`에 공유 링크로 넣으면 Pre-Quiz의 재료가
  * 된다. 화면은 같고 그 뒷일만 다르다.
+ *
+ * **둘은 한 행에 나란히 선다(2026-08-31 관리자 지시).** 위아래로 쌓아 두면 앞의
+ * 것이 먼저고 뒤의 것이 딸린 것으로 보이는데, 사실은 고르는 것이다 — 반이 같이
+ * 읽는 대화냐, 내 대화냐.
  */
 export function PreviewAction({
   lecture,
@@ -64,10 +68,6 @@ export function PreviewAction({
   const isAdmin = Boolean(useMe()?.isAdmin);
   const lectureId = `${lecture.subject}/${lecture.runId}`;
   const notesPrev = detail.files.find((file) => file.kind === "notes_prev");
-  // 토글은 개인 링크 줄 안에 들어가고, 편집칸은 그 줄 아래에 펼쳐진다.
-  const promptToggle = (
-    <PromptToggle open={showPrompt} custom={promptStore.isCustom} onClick={() => setShowPrompt((o) => !o)} />
-  );
 
   /**
    * 확장이 자료를 첨부하고 프롬프트를 채운다. 여기서는 어느 자료를 어느 강의로,
@@ -98,7 +98,7 @@ export function PreviewAction({
   if (!extensionInstalled()) {
     const storeReady = Boolean(EXTENSION_STORE_URL);
     return (
-      <>
+      <PanelGroup tone="preview" title="예습" note="강의 전에 읽는 대화">
         {detail.preview?.shareUrl ? (
           <SharedOpen url={detail.preview.shareUrl} lectureId={lectureId} provider={detail.preview.provider} />
         ) : null}
@@ -126,125 +126,130 @@ export function PreviewAction({
             <li>이 탭을 새로고침합니다.</li>
           </ol>
         )}
-      </>
+      </PanelGroup>
     );
   }
 
   // 작년 필기가 없으면 새로 만들 수는 없다. 다만 이미 만들어진 링크는 그대로
   // 열려야 하므로 여기서 통째로 돌려보내지 않는다.
   const canMake = Boolean(notesPrev);
+  const hasPersonal = Boolean(detail.myPreview?.conversationUrl);
+
+  /* 기본 링크 — 강의당 하나, 반 전체가 같은 것을 읽는다. 문구가 고정이라
+     누가 만들었든 같은 것을 물은 대화다. 만드는 것은 관리자뿐이다. */
+  const shared = detail.preview?.shareUrl ? (
+    <SharedOpen url={detail.preview.shareUrl} lectureId={lectureId} provider={detail.preview.provider} />
+  ) : !canMake ? (
+    <span className="panel-action is-key is-empty">
+      <strong>기본 링크</strong>
+      <small>작년 필기 대기</small>
+    </span>
+  ) : isAdmin ? (
+    <button className="panel-action is-key" onClick={() => start("shared")} disabled={Boolean(busy)}>
+      <strong>기본 링크</strong>
+      <small>{busy === "shared" ? "여는 중…" : `만들기 · ${previewProviderLabels[provider]}`}</small>
+    </button>
+  ) : (
+    <span className="panel-action is-key is-empty">
+      <strong>기본 링크</strong>
+      <small>아직 없습니다</small>
+    </span>
+  );
+
+  /* 개인 링크 — 사람마다 하나. 프롬프트도 자기 것으로 묻는다. 그래서 프롬프트
+     고치기가 이 갈래의 조용한 줄에 붙어 있다 — 기본 링크에는 안 듣는다. */
+  const personal = detail.myPreview?.conversationUrl ? (
+    /* 저장되면 이 자리가 회색 버튼("개인 예습 시작")에서 색이 든 줄로 바뀐다.
+       색이 곧 "내 대화가 저장돼 있다"는 표시다.
+
+       주소는 title에 그대로 둔다 — 빈 AI 창이 뜰 때 무엇이 저장돼 있는지
+       볼 데가 여기밖에 없다. */
+    <a
+      className="panel-action is-key"
+      href={detail.myPreview.conversationUrl}
+      title={detail.myPreview.conversationUrl}
+      target="_blank"
+      rel="noreferrer"
+    >
+      <strong>개인 링크</strong>
+      <small>{previewProviderLabels[detail.myPreview.provider]} · 내 대화</small>
+    </a>
+  ) : canMake ? (
+    <button className="panel-action is-key is-faint" onClick={() => start("personal")} disabled={Boolean(busy)}>
+      <strong>개인 링크</strong>
+      <small>{busy === "personal" ? "여는 중…" : `만들기 · ${previewProviderLabels[provider]}`}</small>
+    </button>
+  ) : (
+    <span className="panel-action is-key is-empty">
+      <strong>개인 링크</strong>
+      <small>작년 필기 대기</small>
+    </span>
+  );
 
   return (
-    <>
-      <label className="preview-provider-select">
-        <span>예습 AI</span>
-        <select value={provider} onChange={(event) => setProvider(event.target.value as PreviewProvider)}>
-          {previewProviders.map((item) => <option value={item} key={item}>{previewProviderLabels[item]}</option>)}
-        </select>
-      </label>
-      {/* 기본 링크 — 강의당 하나, 반 전체가 같은 것을 읽는다. 문구가 고정이라
-          누가 만들었든 같은 것을 물은 대화다. 만드는 것은 관리자뿐이다. */}
-      {detail.preview?.shareUrl ? (
-        <>
-          <div className="panel-row">
-            <SharedOpen url={detail.preview.shareUrl} lectureId={lectureId} provider={detail.preview.provider} />
-            {isAdmin && canMake ? (
-              <Remake
-                label="기본 링크 다시 만들기"
-                busy={busy === "shared"}
-                disabled={Boolean(busy)}
-                onClick={() => setAskingRemake(true)}
-              />
-            ) : null}
-          </div>
-          {askingRemake ? (
-            <RemakeConfirm
-              message={`모두가 보는 링크가 새 대화로 바뀝니다. 옛 링크는 기존 AI 서비스에 그대로 남지만 여기서는 안 보입니다.`}
-              onConfirm={() => {
-                setAskingRemake(false);
-                void start("shared");
-              }}
-              onCancel={() => setAskingRemake(false)}
-            />
-          ) : null}
-        </>
-      ) : !canMake ? (
-        <span className="panel-action is-key is-empty">기본 링크 — 작년 필기가 올라오면 만들 수 있습니다</span>
-      ) : isAdmin ? (
-        <button className="panel-action is-key" onClick={() => start("shared")} disabled={Boolean(busy)}>
-          <strong>{busy === "shared" ? "여는 중…" : "기본 링크 만들기"}</strong>
-          <small>{previewProviderLabels[provider]}에서 묻고, 만들어진 공유 링크를 모두에게 냅니다</small>
-        </button>
-      ) : (
-        <span className="panel-action is-key is-empty">기본 링크 — 아직 없습니다</span>
-      )}
-
-      {/* 개인 링크 — 사람마다 하나. 프롬프트도 자기 것으로 묻는다. 그래서
-          프롬프트 고치기가 이 줄 안에 붙어 있다 — 기본 링크에는 안 듣는다. */}
-      {detail.myPreview?.conversationUrl ? (
-        <div className="panel-row">
-          {/* 저장되면 이 자리가 회색 버튼("개인 예습 시작")에서 이 파란 줄로
-              바뀐다. 색이 곧 "내 대화가 저장돼 있다"는 표시다.
-
-              주소는 title에 그대로 둔다 — 빈 AI 창이 뜰 때 무엇이 저장돼
-              있는지 볼 데가 여기밖에 없다. */}
-          <a
-            className="panel-action is-key"
-            href={detail.myPreview.conversationUrl}
-            title={detail.myPreview.conversationUrl}
-            target="_blank"
-            rel="noreferrer"
+    <PanelGroup
+      tone="preview"
+      title="예습"
+      aside={
+        <label className="preview-provider-select">
+          <select
+            aria-label="예습에 쓸 AI"
+            value={provider}
+            onChange={(event) => setProvider(event.target.value as PreviewProvider)}
           >
-            <strong>개인 링크 · {previewProviderLabels[detail.myPreview.provider]}</strong>
-            <small>내 예습 대화 이어서 열기</small>
-          </a>
-          {promptToggle}
-          {canMake ? (
-            // 자기 것이라 묻지 않는다. 옛 대화는 해당 AI 서비스에 그대로 남아 있고
-            // 여기서 가리키는 주소만 새것으로 바뀐다.
-            <Remake
-              label="새 대화로 다시 시작"
-              busy={busy === "personal"}
-              disabled={Boolean(busy)}
-              onClick={() => void start("personal")}
-            />
-          ) : null}
-        </div>
-      ) : canMake ? (
-        <div className="panel-row">
-          <button className="panel-action" onClick={() => start("personal")} disabled={Boolean(busy)}>
-            <strong>{busy === "personal" ? "여는 중…" : "개인 예습 시작"}</strong>
-            <small>{previewProviderLabels[provider]}에서 내 프롬프트로 새 대화를 엽니다</small>
-          </button>
-          {promptToggle}
-        </div>
+            {previewProviders.map((item) => <option value={item} key={item}>{previewProviderLabels[item]}</option>)}
+          </select>
+        </label>
+      }
+    >
+      <div className="panel-pair">
+        {shared}
+        {personal}
+      </div>
+
+      {/* 드물게 하는 일. 이름을 버튼 안에 적는다 — 아이콘만 있을 때는 마우스를
+          올려 봐야 무엇이 고쳐지는지 알았다(2026-08-31 관리자 지시). */}
+      <PanelTools>
+        <PanelTool
+          icon="✎"
+          label={showPrompt ? "프롬프트 접기" : "프롬프트 수정"}
+          active={showPrompt}
+          dot={promptStore.isCustom}
+          expanded={showPrompt}
+          onClick={() => setShowPrompt((open) => !open)}
+        />
+        {isAdmin && canMake ? (
+          <Remake
+            label="기본 링크 다시 만들기"
+            busy={busy === "shared"}
+            disabled={Boolean(busy)}
+            onClick={() => setAskingRemake(true)}
+          />
+        ) : null}
+        {hasPersonal && canMake ? (
+          // 자기 것이라 묻지 않는다. 옛 대화는 해당 AI 서비스에 그대로 남아 있고
+          // 여기서 가리키는 주소만 새것으로 바뀐다.
+          <Remake
+            label="개인 링크 새 대화"
+            busy={busy === "personal"}
+            disabled={Boolean(busy)}
+            onClick={() => void start("personal")}
+          />
+        ) : null}
+      </PanelTools>
+
+      {askingRemake ? (
+        <RemakeConfirm
+          message="모두가 보는 링크가 새 대화로 바뀝니다. 옛 링크는 기존 AI 서비스에 그대로 남지만 여기서는 안 보입니다."
+          onConfirm={() => {
+            setAskingRemake(false);
+            void start("shared");
+          }}
+          onCancel={() => setAskingRemake(false)}
+        />
       ) : null}
       {showPrompt ? <PromptEditor store={promptStore} detail={detail} /> : null}
-    </>
-  );
-}
-
-/**
- * 프롬프트 고치기. 개인 링크 줄 안에 붙는 아이콘 하나다.
- *
- * 전에는 링크 아래 한 줄을 통째로 쓰고 있었는데, 그러면 기본 링크에도 걸리는
- * 말처럼 보인다. 고쳐 쓰는 것은 개인 링크뿐이다.
- *
- * 이름이 화면에 안 나오므로 `aria-label`과 `title`이 그것을 대신한다.
- * 고쳐 쓴 사람에게는 색으로 표시한다 — 안 고친 사람에게는 아무 표시도 없다.
- */
-function PromptToggle({ open, custom, onClick }: { open: boolean; custom: boolean; onClick: () => void }) {
-  const label = `내 프롬프트 ${open ? "접기" : "고치기"}${custom ? " (고쳐 쓴 것이 있습니다)" : ""}`;
-  return (
-    <button
-      className={`panel-remake panel-prompt${custom ? " is-custom" : ""}${open ? " is-open" : ""}`}
-      onClick={onClick}
-      aria-label={label}
-      aria-expanded={open}
-      title={label}
-    >
-      <span aria-hidden="true">✎</span>
-    </button>
+    </PanelGroup>
   );
 }
 
@@ -271,8 +276,8 @@ function SharedOpen({
       rel="noreferrer"
       onClick={() => watchSharedLink(lectureId, provider, url)}
     >
-      <strong>기본 링크 · {previewProviderLabels[provider]}</strong>
-      <small>공통 예습 대화 열기</small>
+      <strong>기본 링크</strong>
+      <small>{previewProviderLabels[provider]} · 공통</small>
     </a>
   );
 }

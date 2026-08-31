@@ -5,7 +5,7 @@ import { lectureHref, prequizHref, prequizWindow } from "../links";
 import { type LectureDetail, type LectureFile, type LectureRef } from "../types";
 import { categoryLabel, type CalendarEntry } from "./entries";
 import { DeckSlot } from "./DeckSlot";
-import { fileSize } from "./panelShared";
+import { fileSize, PanelGroup } from "./panelShared";
 import { PreviewAction } from "./PreviewAction";
 
 /**
@@ -169,10 +169,14 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 }
 
 /**
- * 강조하는 셋. 예습 링크 · Pre-Quiz · Main-Quiz 덱.
+ * 강조하는 셋. 예습 · Pre-Quiz · Main-Quiz.
  *
  * 링크는 누르면 바로 열리고 덱은 누르면 바로 받는다. 중간에 확인할 화면을
  * 두지 않는다 — 그 셋이 이 패널의 존재 이유다.
+ *
+ * **셋을 갈래로 묶고 색을 나눴다(2026-08-31 관리자 지시).** 전에는 버튼 예닐곱이
+ * 같은 파랑으로 이어져 서 있어서 어디까지가 예습이고 어디부터가 Pre-Quiz인지
+ * 글자를 읽어야 알았다. 머리에 이름·색·때(언제 하는 것인가)를 달아 둔다.
  *
  * **필기는 그 셋이 아니다.** 한동안 여기 큰 버튼으로 세워 뒀는데 주요 버튼만큼
  * 눈에 걸렸다. 아래 조용한 줄로 돌려보내되, 누르면 열리는 것은 그대로 둔다.
@@ -205,40 +209,42 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
     <div className="event-panel-actions">
       <PreviewAction lecture={lecture} detail={detail} base={base} onError={setError} />
 
-      {/* 누르면 Pre-Quiz 전용 창이 열린다 — 캘린더도 이 패널도 그대로 남는다.
-          전에는 강의 화면으로 보내 놓고 거기서 다시 누르게 했다.
+      {/* **웹 풀이와 덱을 한 덩어리로 붙였다(2026-08-31 관리자 지시).** 둘은 한
+          가지를 하는 두 길인데 — 여기서 풀 것이냐, Anki로 가져갈 것이냐 —
+          위아래 두 줄로 세워 두니 서로 다른 것으로 읽혔다.
 
-          **덱이 기본이던 것을 뒤집었다(2026-08-23 관리자 지시).** 덱은 그 아래
-          줄에서 받는다 — Anki를 깐 자리에서 반복할 사람의 것이다. */}
-      {quiz ? (
-        <a className="panel-action is-key" href={prequizHref(lecture)} target={prequizWindow(lecture)}>
-          <strong>Pre-Quiz</strong>
-          <small>
-            {quiz.itemCount}장
-            {quiz.answered ? ` · ${quiz.answered}장 풀었습니다` : " · 웹에서 풉니다"}
-          </small>
-        </a>
-      ) : null}
-      {/* 웹 풀이가 있으면 덱은 한 단 낮게 눕는다. 없으면 이 줄이 그 자리를 진다 —
-          아직 안 올라온 강의에서 "아직 없습니다"를 말하는 것도 이 줄이다. */}
-      {/* 문항 수는 위 줄이 말한다. 여기서 되풀이하면 덱의 장수처럼 읽히는데,
+          누르면 Pre-Quiz 전용 창이 열린다. 캘린더도 이 패널도 그대로 남는다.
+
+          문항 수는 왼쪽 칸이 말한다. 덱 칸에서 되풀이하면 덱의 장수처럼 읽히는데,
           덱에는 그림 카드까지 들어 있어 언제나 더 많다. */}
-      <DeckSlot
-        kind="pre"
-        label="Pre-Quiz 덱"
-        file={fileOf("pre_apkg")}
-        lecture={lecture}
-        onDownload={download}
-        quiet={Boolean(quiz)}
-      />
+      <PanelGroup tone="pre" title="Pre-Quiz" note="강의 직전 1회">
+        <DeckSlot
+          kind="pre"
+          label="덱"
+          file={fileOf("pre_apkg")}
+          lecture={lecture}
+          onDownload={download}
+          before={
+            quiz ? (
+              <a
+                className="panel-action is-lead"
+                href={prequizHref(lecture)}
+                target={prequizWindow(lecture)}
+              >
+                <strong>웹에서 풀기</strong>
+                <small>
+                  {quiz.itemCount}장
+                  {quiz.answered ? ` · ${quiz.answered}장 풀었습니다` : ""}
+                </small>
+              </a>
+            ) : null
+          }
+        />
+      </PanelGroup>
 
-      <DeckSlot
-        kind="main"
-        label="Main-Quiz 덱"
-        file={fileOf("main_apkg")}
-        lecture={lecture}
-        onDownload={download}
-      />
+      <PanelGroup tone="main" title="Main-Quiz" note="강의 후 반복">
+        <DeckSlot kind="main" label="덱" file={fileOf("main_apkg")} lecture={lecture} onDownload={download} />
+      </PanelGroup>
 
       {/* 강의 정보(일시·담당·과목) 바로 위. 읽는 것에 가깝지만 누르면 열린다. */}
       <Notes detail={detail} onOpen={open} />

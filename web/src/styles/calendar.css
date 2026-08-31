@@ -997,24 +997,89 @@
   margin-bottom: 22px;
 }
 
-.preview-provider-select {
+/* ── 갈래 셋 ────────────────────────────────────────────────────────────
+ *
+ * 예습 · Pre-Quiz · Main-Quiz. 전에는 버튼 예닐곱이 같은 파랑으로 이어져 서
+ * 있어서 어디까지가 무엇인지 글자를 읽어야 알았다(2026-08-31 관리자 문의).
+ *
+ * **색은 갈래만 진다.** 있다/없다/만드는 중은 여전히 테두리 꼴(실선·파선)과
+ * 글이 말한다 — 색에 두 가지를 실으면 둘 다 안 읽힌다. 범주 칩에서 짙기로
+ * 학습 상태를 말하려다 걷어낸 것과 같은 이유다.
+ *
+ * 옅은 배경과 테두리는 표면에 섞어서 만든다(`color-mix`). 다크 모드가 따로 손
+ * 안 대도 따라온다.
+ */
+.panel-group {
+  --fam: var(--accent);
+  --fam-ink: color-mix(in srgb, var(--fam) 72%, var(--ink));
+  --fam-soft: color-mix(in srgb, var(--fam) 9%, var(--surface));
+  --fam-hover: color-mix(in srgb, var(--fam) 16%, var(--surface));
+  --fam-line: color-mix(in srgb, var(--fam) 30%, var(--line));
+
+  margin-bottom: 15px;
+}
+
+.panel-group.is-preview {
+  --fam: var(--fam-preview);
+}
+
+.panel-group.is-pre {
+  --fam: var(--fam-pre);
+}
+
+.panel-group.is-main {
+  --fam: var(--fam-main);
+}
+
+/* 갈래의 이름. 점 하나가 색을 들고 있어서 아래 버튼들이 어느 갈래의 것인지
+   이어진다. 오른쪽에 눕는 것은 예습의 AI 고르기뿐이다. */
+.panel-group-head {
   display: flex;
-  margin: 0 0 8px;
-  gap: 8px;
+  margin: 0 0 6px;
+  padding: 0 2px;
+  gap: 7px;
   align-items: center;
-  color: var(--ink-3);
-  font-size: 11px;
+  color: var(--fam-ink);
+  font-size: 12px;
   font-weight: 700;
 }
 
+.panel-group-head::before {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--fam);
+  content: "";
+}
+
+/* 언제 하는 것인가. 이름만으로는 예습과 Pre-Quiz가 안 갈린다. */
+.panel-group-head small {
+  color: var(--ink-3);
+  font-size: 10.5px;
+  font-weight: 500;
+}
+
+.panel-group-head .preview-provider-select {
+  margin-left: auto;
+}
+
+.preview-provider-select {
+  display: flex;
+  margin: 0;
+  align-items: center;
+}
+
 .preview-provider-select select {
-  min-height: 30px;
-  padding: 0 28px 0 9px;
+  min-height: 26px;
+  padding: 0 24px 0 8px;
   border: 1px solid var(--line);
   border-radius: var(--r-1);
   color: var(--ink-2);
   background: var(--surface);
   font: inherit;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 /* 자료 버튼. 강의 화면의 카드를 좁은 폭에 맞게 눕힌 것이다. */
@@ -1065,23 +1130,23 @@ button.panel-action::after {
 
 a.panel-action:hover,
 button.panel-action:hover:not(:disabled) {
-  border-color: var(--accent-line);
+  border-color: var(--fam-line);
   color: var(--ink);
-  background: var(--accent-soft);
+  background: var(--fam-hover);
 }
 
 a.panel-action:hover::after,
 button.panel-action:hover:not(:disabled)::after {
-  color: var(--accent);
+  color: var(--fam);
   transform: translateX(3px);
 }
 
-/* 강조하는 셋. 이 패널이 있는 이유라서 눈에 먼저 걸려야 한다. */
+/* 갈래의 주된 것. 이 패널이 있는 이유라서 눈에 먼저 걸려야 한다. */
 .panel-action.is-key {
   margin-bottom: 7px;
   padding: 12px 14px;
-  border-color: var(--accent-line);
-  background: var(--accent-soft);
+  border-color: var(--fam-line);
+  background: var(--fam-soft);
 }
 
 .panel-action.is-key strong {
@@ -1089,15 +1154,22 @@ button.panel-action:hover:not(:disabled)::after {
 }
 
 .panel-action.is-key::after {
-  color: var(--accent);
+  color: var(--fam);
   font-size: 15px;
 }
 
 a.panel-action.is-key:hover,
 button.panel-action.is-key:hover:not(:disabled) {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+  border-color: var(--fam);
+  background: var(--fam-hover);
   box-shadow: var(--shadow-2);
+}
+
+/* 아직 안 만든 것. 같은 크기·같은 자리지만 색이 안 들어 있다 — 저장된 것과
+   앞으로 만들 것을 나란히 세워야 고를 수 있다. */
+.panel-action.is-key.is-faint {
+  border-color: var(--line);
+  background: var(--surface-2);
 }
 
 /* 받는 것이지 여는 것이 아니다. 화살표 방향이 그 차이를 말한다. */
@@ -1110,84 +1182,152 @@ button.panel-action.is-download:hover:not(:disabled)::after {
 }
 
 .panel-action.is-empty {
-  display: block;
-  padding: 12px 14px;
   border-style: dashed;
   border-color: var(--line);
-  color: var(--ink-3);
   background: transparent;
   box-shadow: none;
+}
+
+.panel-action.is-empty strong {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+/* 한 줄로만 적는 자리(일감의 진행). strong·small을 안 쓰므로 격자가 아니다. */
+.panel-action.is-line {
+  display: block;
+  color: var(--ink-3);
   font-size: 12.5px;
 }
 
-/* 한 단 낮은 자리(웹 풀이 아래의 덱)는 빈 것도 낮게 눕는다. */
-.panel-action.is-empty:not(.is-key) {
-  padding: 9px 11px;
-  font-size: 11.5px;
-}
-
-/* 링크 하나와 그 옆에 붙는 것. 바깥 여백은 줄이 들고 안쪽은 0으로 맞춘다 —
-   안 그러면 링크와 옆 버튼이 서로 다른 높이에서 끝난다. */
-.panel-row {
-  display: flex;
-  margin-bottom: 7px;
+/* 기본 링크와 개인 링크는 같은 것의 두 갈래다 — 위아래로 쌓으면 앞의 것이
+   먼저고 뒤의 것이 딸린 것으로 보인다. 나란히 세워 고르게 한다
+   (2026-08-31 관리자 지시). */
+.panel-pair {
+  display: grid;
   gap: 6px;
-  align-items: stretch;
+  grid-template-columns: 1fr 1fr;
 }
 
-.panel-row > .panel-action {
-  flex: 1;
-  min-width: 0;
+.panel-pair > .panel-action {
   margin-bottom: 0;
 }
 
-/* 다시 만들기. 링크를 여는 것에 견주면 드물게 하는 일이라 아이콘 하나로 줄여
-   옆에 붙인다 — 아래에 한 줄로 두면 그 줄이 링크만큼 눈에 걸린다. */
-.panel-remake {
+/* 칸이 절반이라 이름이 두 줄로 접힌다 — 그러면 둘의 키가 달라져
+   나란히 서 있다는 뜻이 깨진다. 이름은 짧게 적고 하는 일은 아랫줄이 말한다. */
+.panel-pair > .panel-action strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 한 가지를 하는 두 길은 한 테두리 안에 넣는다 — Pre-Quiz를 여기서 풀 것이냐
+   Anki로 가져갈 것이냐(2026-08-31 관리자 지시). 두 줄로 세워 두니 서로 다른
+   것으로 읽혔다. 테두리는 덩어리가 들고 가운데를 선으로 가른다. */
+.panel-combo {
+  display: flex;
+  overflow: hidden;
+  margin-bottom: 7px;
+  align-items: stretch;
+  border: 1px solid var(--fam-line);
+  border-radius: var(--r-2);
+  background: var(--fam-soft);
+}
+
+.panel-combo > .panel-action {
+  margin: 0;
+  padding: 12px 13px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+/* 가운데를 가르는 선. `.panel-combo > .panel-action`이 테두리를 0으로 지우므로
+   그보다 무거운 자리에 적어야 한다 — `* + *`로 적었더니 선이 안 났다. */
+.panel-combo > .panel-action + .panel-action {
+  border-left: 1px solid var(--fam-line);
+}
+
+.panel-combo > a.panel-action:hover,
+.panel-combo > button.panel-action:hover:not(:disabled) {
+  background: var(--fam-hover);
+  box-shadow: none;
+}
+
+.panel-combo > .panel-action.is-lead {
+  flex: 1;
+  min-width: 0;
+}
+
+.panel-combo > .panel-action.is-lead strong {
+  font-size: 14px;
+}
+
+/* 덩어리 안의 뒷칸. 앞칸이 주된 길이라 이쪽은 폭을 못 박아 좁게 눕힌다. */
+.panel-combo > .panel-action.is-compact {
   flex: 0 0 auto;
-  width: 40px;
-  padding: 0;
+  width: 112px;
+}
+
+/* 덩어리 안에서는 파선을 안 쓴다(바깥 테두리가 이미 실선이다).
+   없다는 말은 글이 한다. */
+.panel-combo > .panel-action.is-empty {
   color: var(--ink-3);
+}
+
+/* 드물게 하는 일이 모이는 조용한 줄. 갈래마다 그 아래에 한 줄씩 선다. */
+.panel-tools {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  gap: 5px;
+}
+
+/* **이름을 버튼 안에 적는다(2026-08-31 관리자 지시).** 전에는 `✎`·`⟳` 아이콘만
+   링크 옆에 붙어 있었고, 무엇이 고쳐지고 무엇이 다시 만들어지는지는 마우스를
+   올려 `title`을 띄워 봐야 알았다 — 손가락으로 누르는 화면에는 그 방법이 없다. */
+.panel-tool {
+  position: relative;
+  min-height: 28px;
+  padding: 0 10px;
+  gap: 5px;
+  border-radius: var(--r-1);
   background: var(--surface-2);
-  font-size: 15px;
+  font-size: 11.5px;
+  font-weight: 600;
 }
 
-.panel-remake:hover:not(:disabled) {
-  border-color: var(--accent-line);
-  color: var(--accent);
-  background: var(--accent-soft);
+.panel-tool:hover:not(:disabled) {
+  border-color: var(--fam-line);
+  color: var(--fam-ink);
+  background: var(--fam-hover);
 }
 
-/* 프롬프트 고치기. 다시 만들기와 같은 자리·같은 크기다 — 둘 다 개인 링크
-   줄에 붙는 드문 일이고, 크기가 다르면 줄이 들쭉날쭉해진다. */
-.panel-prompt.is-open {
-  border-color: var(--accent-line);
-  color: var(--accent);
-  background: var(--accent-soft);
+/* 지금 펼쳐져 있다(프롬프트 편집칸). */
+.panel-tool.is-active {
+  border-color: var(--fam-line);
+  color: var(--fam-ink);
+  background: var(--fam-soft);
+}
+
+.panel-tool-icon {
+  font-size: 13px;
 }
 
 /* 고쳐 쓴 사람에게만 붙는 표시. 기본값을 쓰는 사람에게는 아무것도 없다. */
-.panel-prompt.is-custom {
-  color: var(--accent-ink);
-}
-
-.panel-prompt.is-custom::after {
+.panel-tool.is-dot::after {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 4px;
+  right: 4px;
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--fam);
   content: "";
 }
 
-.panel-prompt {
-  position: relative;
-}
-
 /* 도는 동안은 눌러도 안 되는 상태다. 도는 것이 그 말을 대신한다. */
-.panel-remake.is-busy span {
+.panel-tool.is-busy .panel-tool-icon {
   animation: remake-spin 0.9s linear infinite;
 }
 
@@ -1202,8 +1342,9 @@ button.panel-action.is-download:hover:not(:disabled)::after {
   margin: -2px 0 9px;
   padding: 9px 12px;
   border-radius: var(--r-2);
-  color: var(--accent-ink);
-  background: var(--accent-soft);
+  /* 갈래 안에 서면 그 색을 따른다. 밖에 서면 강조색이다. */
+  color: var(--fam-ink, var(--accent-ink));
+  background: var(--fam-soft, var(--accent-soft));
   font-size: 11.5px;
   line-height: 1.5;
 }
@@ -1422,21 +1563,6 @@ button.event-panel-note:hover {
   word-break: keep-all;
 }
 
-.panel-prompt {
-  max-height: 220px;
-  margin: 4px 0 10px;
-  padding: 11px 12px;
-  overflow: auto;
-  border: 1px solid var(--line);
-  border-radius: var(--r-2);
-  color: var(--ink-2);
-  background: var(--surface-2);
-  font-family: inherit;
-  font-size: 11px;
-  line-height: 1.55;
-  white-space: pre-wrap;
-  word-break: keep-all;
-}
 
 .event-panel-more {
   display: block;

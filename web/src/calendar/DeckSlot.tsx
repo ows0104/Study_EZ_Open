@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "../api";
 import { bumpPreviewVersion } from "../bridge/previewBridge";
 import {
@@ -9,7 +9,7 @@ import {
   type RunnerBeat,
 } from "../types";
 import { useMe } from "../useMe";
-import { fileSize, Remake, RemakeConfirm } from "./panelShared";
+import { fileSize, PanelTools, Remake, RemakeConfirm } from "./panelShared";
 
 /**
  * 덱 한 칸. 만들어졌으면 내려받고, 아니면 러너에게 일감을 건다.
@@ -19,6 +19,20 @@ import { fileSize, Remake, RemakeConfirm } from "./panelShared";
  */
 /** 러너가 이 시간 안에 안 보이면 안 붙은 것으로 친다(`AdminPage`와 같은 값). */
 const RUNNER_STALE_MS = 120_000;
+
+function runnerAlive(runner: RunnerBeat | null): boolean {
+  return runner?.lastSeen ? Date.now() - new Date(runner.lastSeen).getTime() < RUNNER_STALE_MS : false;
+}
+
+/**
+ * 좁은 칸에 들어가는 한 마디. **긴 줄은 안 줄이고 아래에 그대로 둔다** — 여기서
+ * 자르면 「러너가 안 붙어 있습니다」가 「만드는 중」으로 바뀐다. 그 거짓말을
+ * 막으려고 아래 `jobLine`을 갈랐던 것이라 같은 함정을 여기서 다시 판다.
+ */
+function jobShort(job: PrequizJob, runner: RunnerBeat | null): string {
+  if (!runnerAlive(runner)) return "멈춤";
+  return job.state === "running" ? "만드는 중" : "대기";
+}
 
 /**
  * 열려 있는 일감 한 줄을 사람 말로. **「만드는 중」은 러너가 집어 갔을 때만 쓴다.**
@@ -37,9 +51,7 @@ const RUNNER_STALE_MS = 120_000;
  * `stage`는 서버가 줄을 세우며 넣어 둔 말이라, 여기서 다시 적으면 겹친다.
  */
 function jobLine(job: PrequizJob, runner: RunnerBeat | null): string {
-  const alive = runner?.lastSeen
-    ? Date.now() - new Date(runner.lastSeen).getTime() < RUNNER_STALE_MS
-    : false;
+  const alive = runnerAlive(runner);
   if (!alive) {
     // 러너가 없으면 이 일감은 안 움직인다. 만들다 만 것과 아직 시작도 못 한 것을
     // 가른다 — 앞의 것은 다시 붙으면 이어 잡고(`claim`이 running부터 준다),
@@ -67,6 +79,10 @@ function jobLine(job: PrequizJob, runner: RunnerBeat | null): string {
  * 다르지만(그 갈래는 러너가 안다), 여기서 사람이 하는 일은 한 가지다 — 없는 것을
  * 보고 누르고, 진행을 같은 자리에서 읽는다. 갈라 두면 한쪽에 붙인 손질이 다른
  * 쪽에 안 붙는다.
+ *
+ * **`before`가 있으면 그것과 한 덩어리로 붙는다.** Pre-Quiz가 그렇다 — 웹에서
+ * 푸는 것과 덱으로 받는 것은 한 가지를 하는 두 길인데, 두 줄로 세워 두니 서로
+ * 다른 것으로 읽혔다(2026-08-31 관리자 지시 — 하나로 합쳐라).
  */
 export function DeckSlot({
   kind,
@@ -74,21 +90,38 @@ export function DeckSlot({
   file,
   lecture,
   onDownload,
-  quiet,
+  before,
 }: {
   kind: DeckKind;
   label: string;
   file: LectureFile | undefined;
   lecture: LectureRef;
   onDownload: (file: LectureFile) => void;
-  quiet?: boolean;
+  /** 같은 덩어리 안에서 이 덱보다 앞에 서는 것(Pre-Quiz 웹 풀이). */
+  before?: ReactNode;
 }) {
   const isAdmin = Boolean(useMe()?.isAdmin);
   if (!isAdmin) {
-    return <DeckAction file={file} label={label} onDownload={onDownload} quiet={quiet} />;
+    return (
+      <Combo before={before}>
+        <DeckAction file={file} label={label} onDownload={onDownload} merged={Boolean(before)} />
+      </Combo>
+    );
   }
+  return <DeckMake kind={kind} label={label} file={file} lecture={lecture} onDownload={onDownload} before={before} />;
+}
+
+/**
+ * 덱 하나를 담는 자리. `before`가 있으면 테두리 하나 안에 둘을 넣고 가운데를
+ * 선으로 가른다 — 두 길이지 두 가지가 아니라는 뜻이다.
+ */
+function Combo({ before, children }: { before?: ReactNode; children: ReactNode }) {
+  if (!before) return <>{children}</>;
   return (
-    <DeckMake kind={kind} label={label} file={file} lecture={lecture} onDownload={onDownload} quiet={quiet} />
+    <div className="panel-combo">
+      {before}
+      {children}
+    </div>
   );
 }
 
@@ -113,14 +146,14 @@ function DeckMake({
   file,
   lecture,
   onDownload,
-  quiet,
+  before,
 }: {
   kind: DeckKind;
   label: string;
   file: LectureFile | undefined;
   lecture: LectureRef;
   onDownload: (file: LectureFile) => void;
-  quiet?: boolean;
+  before?: ReactNode;
 }) {
   const base = `/api/admin/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
   const [job, setJob] = useState<PrequizJob | null>(null);
@@ -128,6 +161,7 @@ function DeckMake({
   const [asking, setAsking] = useState(false);
   const [askingRemake, setAskingRemake] = useState(false);
   const [error, setError] = useState("");
+  const merged = Boolean(before);
 
   const load = useCallback(() => {
     api<{ job: PrequizJob | null; runner: RunnerBeat | null }>(`${base}/prequiz-job?kind=${kind}`)
@@ -179,7 +213,6 @@ function DeckMake({
     }
   }
 
-  const key = quiet ? "" : " is-key";
   // 실패는 남긴다. 조용히 지우면 「눌렀는데 아무 일도 없었다」가 된다.
   const failure = (
     <>
@@ -191,11 +224,13 @@ function DeckMake({
   if (file) {
     return (
       <>
-        <div className="panel-row">
-          <DeckAction file={file} label={label} onDownload={onDownload} quiet={quiet} />
-          {/* 덱이 이상하다는 것을 아는 사람은 그것을 받아 본 사람이다. 그 사람이
-              서 있는 자리가 이 줄이라 여기에 붙인다. 링크 다시 만들기와 같은
-              크기·같은 모양이다 — 드물게 하는 일이라는 뜻이 크기에 들어 있다. */}
+        <Combo before={before}>
+          <DeckAction file={file} label={label} onDownload={onDownload} merged={merged} />
+        </Combo>
+        {/* 덱이 이상하다는 것을 아는 사람은 그것을 받아 본 사람이다. 그 사람이
+            서 있는 자리가 이 갈래라 여기 조용한 줄에 붙인다 — 드물게 하는
+            일이라는 뜻이 자리와 크기에 들어 있다. */}
+        <PanelTools>
           <Remake
             label={`${label} 다시 만들기`}
             busy={job?.state === "running"}
@@ -203,7 +238,7 @@ function DeckMake({
             disabled={open || asking}
             onClick={() => setAskingRemake(true)}
           />
-        </div>
+        </PanelTools>
         {askingRemake ? (
           <RemakeConfirm
             message={REMAKE_MESSAGE[kind]}
@@ -223,17 +258,35 @@ function DeckMake({
   }
 
   if (open && job) {
-    // `is-empty`는 한 줄짜리 자리다(`display: block`). 옆의 「아직 없습니다」와
-    // 같은 꼴로 적는다 — strong·small을 넣으면 저 혼자 두 줄로 서서 눈에 걸린다.
-    return <span className={`panel-action${key} is-empty`}>{label} — {jobLine(job, runner)}</span>;
+    // `is-line`은 한 줄짜리 자리다. 옆의 「아직 없습니다」와 같은 꼴로 적는다 —
+    // strong·small을 넣으면 저 혼자 두 줄로 서서 눈에 걸린다.
+    //
+    // 좁은 칸(`merged`)에는 한 마디만 들어간다. 사정은 아래 줄이 통째로 말한다.
+    return (
+      <>
+        <Combo before={before}>
+          <span className={`panel-action is-line is-empty${merged ? " is-compact" : " is-key"}`}>
+            {merged ? jobShort(job, runner) : `${label} — ${jobLine(job, runner)}`}
+          </span>
+        </Combo>
+        {merged ? <p className="panel-hint">{label} — {jobLine(job, runner)}</p> : null}
+        {failure}
+      </>
+    );
   }
 
   return (
     <>
-      <button className={`panel-action${key}`} disabled={asking} onClick={() => void ask(false)}>
-        <strong>{label} 만들기</strong>
-        <small>{asking ? "맡기는 중…" : "아직 없습니다 · 눌러서 만듭니다"}</small>
-      </button>
+      <Combo before={before}>
+        <button
+          className={`panel-action${merged ? " is-compact" : " is-key"}`}
+          disabled={asking}
+          onClick={() => void ask(false)}
+        >
+          <strong>{label} 만들기</strong>
+          <small>{asking ? "맡기는 중…" : merged ? "없습니다" : "아직 없습니다 · 눌러서 만듭니다"}</small>
+        </button>
+      </Combo>
       {failure}
     </>
   );
@@ -243,22 +296,29 @@ function DeckAction({
   file,
   label,
   onDownload,
-  quiet = false,
+  merged = false,
 }: {
   file: LectureFile | undefined;
   label: string;
   onDownload: (file: LectureFile) => void;
-  /** 위에 그 덱의 웹 풀이가 서 있는가. 그러면 이 줄은 한 단 낮게 눕는다. */
-  quiet?: boolean;
+  /** 앞의 것과 한 테두리 안에 들어가는가. 그러면 좁은 칸으로 눕는다. */
+  merged?: boolean;
 }) {
-  const key = quiet ? "" : " is-key";
+  const shape = merged ? " is-compact" : " is-key";
   // 아직 없는 것도 자리를 남긴다. 목록에서 빠지면 "없다"와 "이 강의에는 원래
   // 해당 없다"를 구분할 수 없다.
-  if (!file) return <span className={`panel-action${key} is-empty`}>{label} — 아직 없습니다</span>;
+  if (!file) {
+    return (
+      <span className={`panel-action is-empty${shape}`}>
+        <strong>{label}</strong>
+        <small>{merged ? "없습니다" : "아직 없습니다"}</small>
+      </span>
+    );
+  }
   return (
-    <button className={`panel-action${key} is-download`} onClick={() => onDownload(file)}>
+    <button className={`panel-action is-download${shape}`} onClick={() => onDownload(file)}>
       <strong>{label}</strong>
-      <small>{fileSize(file.sizeBytes)} · 내려받기</small>
+      <small>{merged ? fileSize(file.sizeBytes) : `${fileSize(file.sizeBytes)} · 내려받기`}</small>
     </button>
   );
 }
