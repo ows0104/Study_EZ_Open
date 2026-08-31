@@ -69,10 +69,6 @@ CONFIRMED_STRATEGY_OVERRIDES = {
 }
 
 
-class StrategyConfirmationRequired(RuntimeError):
-    """자동 판정이 사용자 선택을 필요로 하지만 stdin이 대화형이 아닐 때."""
-
-
 def photo_profile(prep: dict, lecture_title: str = "") -> dict:
     """실습 여부와 사진 밀도를 결정론적으로 계산한다.
 
@@ -267,16 +263,35 @@ def decide_strategy(stats: dict | None, mixed_owner: bool = False, *,
 
 def resolve_auto_strategy(strategy: str, why: str, *, interactive: bool | None = None,
                           input_fn=input) -> tuple[str, str]:
-    """확인이 필요한 자동 판정을 필기 중심 또는 기본으로 확정한다."""
+    """확인이 필요한 자동 판정을 필기 중심 또는 기본으로 확정한다.
+
+    **물을 자리가 없으면 기본으로 간다(2026-09-01 관리자 지시 — 명시하지 않으면
+    기본으로 돌려라).** 전에는 여기서 `StrategyConfirmationRequired`를 올렸는데,
+    그 길로 실제로 간 실행이 한 번도 없다. 러너가 자식의 stdin을 안 막아서
+    `isatty()`가 참으로 나왔고, 그래서 물음이 화면도 사람도 없는 자리에 떠서
+    `input()`이 180분 동안 잠들었다(2026-08-25 병리학/260825_03 · 2026-08-31
+    기생충학/260831_01). stdin은 러너 쪽에서 막았고(`studyez.agent._run`), 이제
+    이 갈래가 실제로 쓰인다 — **그때 실패가 아니라 기본으로 만든다.**
+
+    사람이 고르고 싶으면 `--strategy 필기`처럼 명시한다. 고른 값은 폴더에
+    남아(`apply_confirmed_strategy`) 다음 실행이 그것을 따른다.
+    """
     if strategy != ASK_ANNOTATION:
         return strategy, why
     if interactive is None:
         interactive = sys.stdin.isatty()
+    unattended = ("base", f"{why} → 물을 자리가 없어 기본으로 간다 (--strategy 로 지정할 수 있다)")
     prompt = f"{why}. 필기 중심으로 만들까요? [Y/n] "
     if not interactive:
-        raise StrategyConfirmationRequired(
-            f"{why}. 사용자 확인이 필요하다. --strategy 필기 또는 --strategy 기본을 지정해 다시 실행해라")
-    answer = input_fn(prompt).strip().lower()
+        return unattended
+    try:
+        answer = input_fn(prompt).strip().lower()
+    except EOFError:
+        # **`isatty()` 만으로는 못 가른다.** 윈도우의 `NUL` 은 문자 장치라 러너가
+        # `stdin=DEVNULL` 로 막아도 참으로 나온다(2026-09-01 실측 — 그래서 물음이
+        # 그대로 떴고 `EOFError` 가 났다). 읽을 것이 없다는 것이 곧 물을 자리가
+        # 없다는 뜻이므로 같은 자리로 보낸다.
+        return unattended
     if answer in {"", "y", "yes", "예", "네"}:
         return "annotation", f"{why} → 사용자 확인: 필기 중심"
     return "base", f"{why} → 사용자 확인: 기본"
@@ -599,11 +614,7 @@ def main(argv=None) -> int:
                                         practical=profile["practical"],
                                         image_rich=profile["image_rich"])
         strategy, why = apply_confirmed_strategy(strategy, why, prep)
-        try:
-            strategy, why = resolve_auto_strategy(strategy, why)
-        except StrategyConfirmationRequired as e:
-            print(f"\n⚠ {e}", file=sys.stderr)
-            return 2
+        strategy, why = resolve_auto_strategy(strategy, why)
     else:
         # 부른 쪽이 이미 정해서 넘겼다. **누가 정했는지는 여기서 알 수 없다** —
         # `run.py` 는 자동 판정한 값도 `--strategy` 로 넘긴다. 그래서 「사람이

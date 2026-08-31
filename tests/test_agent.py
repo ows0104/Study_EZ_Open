@@ -5,6 +5,7 @@
 끝나기 때문이다. 그 뒤로 성공 판정을 종료 코드가 아니라 산출물로 옮겼다.
 """
 
+import sys
 import time
 from pathlib import Path
 
@@ -259,3 +260,36 @@ def test_큐에_없는_편은_이미_있던_것이_아니다(tmp_path):
     worker = _agent_with(tmp_path)
     job = agent.Job(id=1, subject="병리학", run_id="260831_01")
     assert worker.already_made(job) is False
+
+
+# ── 자식은 물을 자리가 없다 ────────────────────────────────────────────
+# 2026-08-31 기생충학/260831_01 이 「필기 중심으로 만들까요? [Y/n]」에서 45분을
+# 잠들어 있었다(CPU 0.2초). 러너의 stdin 을 물려받아 `isatty()` 가 참으로 나왔고,
+# 답할 사람이 없으니 180분 뒤 timeout 까지 아무 일도 안 한다. 같은 일이
+# 2026-08-25 병리학/260825_03 에서도 났다(그때는 실제로 끊겼다).
+
+
+def test_하위_명령의_stdin을_막는다(tmp_path, monkeypatch):
+    seen = {}
+
+    class FakeProc:
+        returncode = 0
+
+        def poll(self):
+            return 0
+
+    def fake_popen(argv, **kwargs):
+        seen.update(kwargs)
+        return FakeProc()
+
+    monkeypatch.setattr(agent.subprocess, "Popen", fake_popen)
+    worker = _agent_with(tmp_path)
+
+    class FakeClient:
+        base = "https://example.test"
+        token = "t"
+
+    worker.client = FakeClient()
+    worker._run([sys.executable, "-c", "pass"], tmp_path / "run.log")
+
+    assert seen["stdin"] is agent.subprocess.DEVNULL

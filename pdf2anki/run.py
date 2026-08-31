@@ -54,7 +54,6 @@ from . import ledger
 from .assemble import (
     STRATEGIES,
     STRATEGY_ALIAS,
-    StrategyConfirmationRequired,
     apply_confirmed_strategy,
     confirmed_strategy,
     decide_strategy,
@@ -191,10 +190,7 @@ class Runner(BaseRunner):
         auto, why = apply_confirmed_strategy(auto, why, prep, self.args.lecture or "")
         chosen = STRATEGY_ALIAS[self.args.strategy]
         if chosen == "auto":
-            try:
-                self.strategy, self.strategy_why = resolve_auto_strategy(auto, why)
-            except StrategyConfirmationRequired as e:
-                raise Failed(str(e)) from e
+            self.strategy, self.strategy_why = resolve_auto_strategy(auto, why)
         else:
             auto_name = "사용자 확인 필요" if auto not in STRATEGIES else STRATEGIES[auto]
             confirmed = confirmed_strategy(prep, self.args.lecture or "")

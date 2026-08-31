@@ -165,7 +165,16 @@ class Agent:
         deadline = time.time() + self.timeout
 
         with log.open("w", encoding="utf-8") as sink:
+            # **자식은 물을 자리가 없다**(`stdin`). 안 막으면 러너의 stdin을 그대로
+            # 물려받는데, 예약 작업으로 뜬 러너의 그것이 `isatty()`에 참으로 나온다.
+            # 그러면 `pdf2anki`가 「필기 중심으로 만들까요? [Y/n]」에서 `input()`으로
+            # 잠들고, 답할 사람이 없으니 `BUILD_TIMEOUT`(180분)까지 아무 일도 안 한다.
+            # 2026-08-25 병리학/260825_03이 그렇게 죽었고 2026-08-31 기생충학/260831_01이
+            # 45분을 그러고 있었다 — CPU 0.2초, 그동안 만들어진 파일 0개.
+            #
+            # 막아 두면 `sys.stdin.isatty()`가 거짓이라 자식이 스스로 갈래를 정한다.
             proc = subprocess.Popen(argv, stdout=sink, stderr=subprocess.STDOUT,
+                                    stdin=subprocess.DEVNULL,
                                     cwd=str(self.repo_root), env=env)
             while proc.poll() is None:
                 time.sleep(STAGE_SECONDS)
