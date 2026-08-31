@@ -217,7 +217,19 @@ def _pre_apkg(run_dir: Path) -> Path | None:
 
 
 def _add_this_year(plan: LecturePlan, run_dir: Path) -> None:
-    """올해 run 디렉터리에서 나오는 것 — Main-Quiz."""
+    """올해 run 디렉터리에서 나오는 것 — Main-Quiz.
+
+    **`main_items.final.json`과 `slides/`는 여기서 안 올린다.** 2026-08-31부터
+    `deck.contract`가 복습에도 그 둘을 내지만 받을 자리가 서버에 없다. 다음 두
+    가지를 같이 짓기 전에는 올리지 마라.
+
+    1. 복습 문항을 받는 경로. `PUT …/pre-items`는 `pre_item` 표에 넣는다
+    2. **슬라이드를 갈래로 가르는 길.** `prequiz.slide_url`이 `(subject, run_id,
+       kind='media', slide_no)`로 하나를 집는데, 예습 슬라이드는 **작년** run에서
+       와 놓고 올해 강의의 이름으로 올라가 있다. 복습 슬라이드를 그대로 얹으면
+       같은 번호가 둘이 되고, `db.scalar`가 아무거나 집는다 — 예습 오답 해설이
+       조용히 엉뚱한 슬라이드를 띄우기 시작한다
+    """
     apkg = _main_apkg(run_dir)
     if apkg:
         plan.uploads.append(Upload("main_apkg", apkg))

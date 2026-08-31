@@ -404,10 +404,14 @@ def _slides(run_dir: Path, run_id: str) -> int:
 
 
 def _web_items(cards: list[dict]) -> list[dict]:
-    """웹 예습 풀이가 읽는 모양. 자기채점 플래시카드라 선택지가 없다.
+    """웹 풀이가 읽는 모양. 자기채점 플래시카드라 선택지가 없다.
 
     그림 카드는 뺀다. 앞면이 이미지인데 웹에는 그 이미지가 없으므로, 실으면
     「이 조직은 어느 장기인가」가 그림 없이 뜬다. 그 카드들은 apkg에 그대로 있다.
+
+    **두 갈래가 같은 모양을 쓴다.** `focus` 자리만 갈리는데, 예습 카드는 전부
+    「꼭 반드시」라 등급 대신 **왜 그런가**(`reason`)가 들어가고 복습 카드는
+    등급(`importance`)이 들어간다. 아래 `or`가 그 갈림이다.
     """
     items = []
     for card in cards:
@@ -419,8 +423,8 @@ def _web_items(cards: list[dict]) -> list[dict]:
             "stem": plain_stem(card),
             "answer": card.get("a") or "",
             "explanation": card.get("explanation") or "",
-            # 예습 카드는 전부 「꼭 반드시」다. 등급 대신 **왜 그런가**를 싣는다
-            # (`reason`: spine·vocabulary·mechanism·clinical·repeated).
+            # 예습은 `reason`(spine·vocabulary·mechanism·clinical·repeated),
+            # 복습은 `importance`. 위 설명을 보라.
             "focus": card.get("reason") or card.get("importance") or "",
             "card_type": card.get("card_type") or "",
             "exam_hit": bool(card.get("exam_hit")),
@@ -595,15 +599,33 @@ def contract(run_dir: Path, run_id: str, title: str, kind: str) -> dict:
     if kind == MAIN:
         meta["strategy"] = cfg.get("strategy") or ""
         meta["strategy_why"] = cfg.get("strategy_why") or ""
-    else:
-        items = _web_items(cards)
-        meta["web_items"] = len(items)
-        meta["web_excluded"] = len(cards) - len(items)
-        meta["slides_exported"] = _slides(run_dir, run_id)
-        (run_dir / "pre_items.final.json").write_text(json.dumps(
-            {"lecture_id": run_id, "deck_id": meta["deck_id"],
-             "generated_by": "pdf2anki.prequiz", "items": items},
-            ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # 웹에서 푸는 문항과 그 근거 슬라이드. **복습도 낸다(2026-08-31 관리자 지시).**
+    #
+    # 복습 카드의 90%가 이 잣대를 지난다 — 39편 3,762장 중 3,384장이고 편별
+    # 중앙값이 94장이다(예습은 28장). 빠지는 것은 전부 그림 카드이고, 비율이
+    # 낮은 편 넷은 모두 실습이다.
+    #
+    # **아직 이것을 읽는 화면이 없다.** 서버에 복습 문항을 받는 자리가 없어서
+    # `publish`도 안 올린다. 여기서 먼저 내는 이유는 재료가 쌓이는 데 시간이
+    # 걸려서다 — 이 줄이 붙기 전에 구운 39편에는 이 파일도 `slides/`도 없다.
+    items = _web_items(cards)
+    meta["web_items"] = len(items)
+    meta["web_excluded"] = len(cards) - len(items)
+    # 웹 풀이는 틀렸을 때 해설을 보여 준다. **복습은 그 자리가 절반이 빈다**
+    # (실측 54%) — Anki는 앞뒤만 보므로 지금까지 아쉬울 일이 없었다. 세어만 둔다.
+    meta["web_without_explanation"] = sum(
+        1 for item in items if not str(item.get("explanation") or "").strip())
+    meta["slides_exported"] = _slides(run_dir, run_id)
+    # 이름은 갈래마다 못 박는다. `prefix`로 만들면 복습이 `items.final.json`이
+    # 되는데, 복습 폴더에는 이미 `items.raw/checked/reproduced.json`이 있고 그것들은
+    # **모양이 다른 것**(카드 그대로)이라 한 가족처럼 읽히면 안 된다.
+    name = "pre_items.final.json" if kind == PRE else "main_items.final.json"
+    (run_dir / name).write_text(json.dumps(
+        {"lecture_id": run_id, "deck_id": meta["deck_id"],
+         "generated_by": "pdf2anki.prequiz" if kind == PRE else "pdf2anki.main",
+         "items": items},
+        ensure_ascii=False, indent=2), encoding="utf-8")
 
     (run_dir / f"{prefix}run.meta.json").write_text(
         json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")

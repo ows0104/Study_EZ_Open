@@ -145,8 +145,9 @@ lecture
 - **`review_flagged`는 개수, `review_flags`가 종류다.** 사람을 부르는 신호는 종류에 있다
 - `slides_unused`는 카드가 없는 슬라이드 전부(표지·학습목표가 여기 든다).
   진짜 누락 신호는 선언된 건너뜀을 이미 뺀 `untouched_slides` 쪽이다
-- 예습 덱(`pre_run.meta.json`)에는 `strategy` 대신 `web_items`·`web_excluded`·
-  `slides_exported`가 붙는다
+- `strategy`·`strategy_why`는 복습에만 붙는다
+- `web_items`·`web_excluded`·`slides_exported`·`web_without_explanation`은
+  **두 갈래 다** 붙는다(2026-08-31부터. 그 전 편에는 복습 쪽이 없다)
 
 `lecture_id` 필드 이름은 역사적인 것이고 값은 `run_id`다. `deck_id`는 pdf2anki의
 ID(`p260820_03`)이고 **그쪽이 guid의 씨앗이다** — 바꾸면 Anki가 이미 받아 간
@@ -193,8 +194,33 @@ ID(`p260820_03`)이고 **그쪽이 guid의 씨앗이다** — 바꾸면 Anki가 
 - `slide_no`로 근거 슬라이드를 띄우려면 `slides/`도 함께 올라가야 한다
   (`<run_id>_s042.png`. 서버가 파일명 끝에서 번호를 읽는다)
 
-복습 덱은 이 JSON을 안 만든다. 웹에서 훑지 않고, 파이프라인 안쪽의
-`items.reproduced.json`이 그 자리를 대신한다 — **서버는 그걸 보지 않는다.**
+### 복습도 같은 모양을 낸다 — 다만 아직 아무도 안 읽는다
+
+2026-08-31부터 복습 run 도 `main_items.final.json`을 낸다(`generated_by`가
+`pdf2anki.main`). 모양은 위와 같고 `focus` 자리만 갈린다 — 예습은 이유(`reason`),
+복습은 등급(`importance`)이다.
+
+**`publish`는 이것을 안 올리고 서버에는 받을 자리가 없다.** 먼저 낸 이유는 재료가
+쌓이는 데 시간이 걸려서다. 이 줄이 붙기 전에 구운 복습 39편에는 이 파일도
+`slides/`도 없고, 쓰려면 그 편들을 다시 돌려야 한다.
+
+무엇이 나오는지는 그 39편으로 미리 쟀다(2026-08-31):
+
+    웹으로 갈 수 있는 카드   3,762장 중 3,384장 (90%)
+    편별                     중앙값 94장 · 범위 27~143장  (예습은 28장)
+    빠지는 것                전부 그림 카드. 비율이 낮은 편 넷은 모두 실습이다
+    해설이 있는 것           54%  (예습은 100%)
+
+마지막 줄이 지을 때 걸리는 자리다 — 웹 풀이는 틀렸을 때 해설을 보여 주는 화면인데
+복습은 그 자리가 절반이 빈다. Anki는 앞뒤만 보므로 지금까지 아쉬울 일이 없었다.
+`web_without_explanation`이 편마다 그 수를 든다.
+
+**올리기 전에 슬라이드를 갈래로 가르는 길이 있어야 한다.** 예습 슬라이드는 작년
+run에서 와 놓고 올해 강의의 이름으로 올라가 있어서, 복습 슬라이드를 그대로 얹으면
+같은 `slide_no`가 둘이 된다(`studyez/publish.py`의 `_add_this_year` 참고).
+
+파이프라인 안쪽의 `items.reproduced.json`은 이것과 **다른 모양**이다(카드 그대로).
+서버는 그걸 보지 않는다.
 
 ## 예습 링크
 

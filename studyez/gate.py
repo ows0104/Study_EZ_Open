@@ -149,7 +149,10 @@ def inspect(run_dir: Path, deck: Path | None, meta_path: Path | None,
         verdict.notes.append(f"{label} 카드가 안 붙은 학습목표 {len(orphan)}개")
     if meta.get("similar_pairs"):
         verdict.notes.append(f"{label} 비슷한 카드 쌍 {meta['similar_pairs']}건")
-    if meta.get("web_excluded"):
+    # **예습에만 적는다.** 2026-08-31부터 복습도 `web_items`를 내지만 그것을 읽는
+    # 화면이 아직 없다 — 여기서 「웹 풀이에서 빠진다」고 적으면 있지도 않은 화면을
+    # 있다고 말하는 것이 된다. 복습 웹 풀이가 서면 이 조건을 지워라.
+    if meta.get("web_excluded") and prefix == "pre_":
         verdict.notes.append(
             f"{label} 그림 카드 {meta['web_excluded']}장은 웹 풀이에서 빠진다 (덱에는 있다)")
     return verdict
