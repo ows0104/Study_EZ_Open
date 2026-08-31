@@ -43,14 +43,38 @@ export function PanelGroup({
 }
 
 /**
- * 드물게 하는 일이 모이는 조용한 줄. 갈래마다 그 아래에 한 줄씩 선다.
+ * 자료 버튼 한 장.
+ *
+ * **카드 전체가 하나의 큰 과녁이고, 그 안에 작은 버튼이 든다**(2026-08-31 관리자
+ * 지시 — 따로 아래 줄에 두지 말고 버튼 안에 넣어라).
+ *
+ * `<button>` 안에 `<button>`은 HTML이 허용하지 않는다 — 브라우저가 DOM을 다시
+ * 짜서 작은 버튼이 카드 밖으로 튀어나온다. 그래서 카드는 틀(`div`)이고, 큰
+ * 과녁은 그 안에서 `::before`로 카드를 통째로 덮는 `panel-action-hit`이다.
+ * 작은 버튼은 그 위에 얹힌다. 둘 다 진짜 컨트롤이라 Tab 순서도 그대로 산다.
  */
-export function PanelTools({ children }: { children: ReactNode }) {
-  return <div className="panel-tools">{children}</div>;
+export function ActionCard({
+  shape = "",
+  hit,
+  tools,
+}: {
+  /** `is-key` · `is-lead` · `is-compact` · `is-empty` · `is-download` 같은 꼴 표시. */
+  shape?: string;
+  /** 카드를 통째로 쓰는 것. `panel-action-hit`을 달고 온다. */
+  hit: ReactNode;
+  /** 카드 안에 드는 작은 버튼들. 없으면 줄 자체가 안 선다. */
+  tools?: ReactNode;
+}) {
+  return (
+    <div className={`panel-action ${shape}`.trimEnd()}>
+      {hit}
+      {tools ? <div className="panel-nested">{tools}</div> : null}
+    </div>
+  );
 }
 
 /**
- * 조용한 줄에 서는 버튼 하나.
+ * 카드 안에 드는 작은 버튼 하나.
  *
  * **이름을 버튼 안에 적는다(2026-08-31 관리자 지시).** 전에는 `✎`·`⟳` 아이콘만
  * 링크 옆에 붙어 있었고, 무엇이 고쳐지고 무엇이 다시 만들어지는지는 마우스를
@@ -59,6 +83,7 @@ export function PanelTools({ children }: { children: ReactNode }) {
 export function PanelTool({
   icon,
   label,
+  hint,
   busy = false,
   busyLabel,
   disabled = false,
@@ -69,6 +94,11 @@ export function PanelTool({
 }: {
   icon: string;
   label: string;
+  /**
+   * 읽어 주는 말. 카드 안은 좁아서 글씨를 줄이는데, 그때 무엇이 다시
+   * 만들어지는지는 여기가 온전히 말한다. 안 주면 `label`이 그 자리다.
+   */
+  hint?: string;
   busy?: boolean;
   /** 도는 동안 대신 읽는 말. 링크는 「여는 중」이고 덱은 「만드는 중」이다. */
   busyLabel?: string;
@@ -81,6 +111,7 @@ export function PanelTool({
   onClick: () => void;
 }) {
   const text = busy ? busyLabel || "여는 중…" : label;
+  const full = busy ? text : hint || label;
   return (
     <button
       className={`panel-tool${active ? " is-active" : ""}${dot ? " is-dot" : ""}${busy ? " is-busy" : ""}`}
@@ -88,7 +119,8 @@ export function PanelTool({
       disabled={disabled}
       aria-busy={busy}
       aria-expanded={expanded}
-      title={text}
+      aria-label={full}
+      title={full}
     >
       <span className="panel-tool-icon" aria-hidden="true">
         {icon}
@@ -99,26 +131,37 @@ export function PanelTool({
 }
 
 /**
- * 다시 만들기. 조용한 줄에 서는 `PanelTool` 한 종류다.
+ * 다시 만들기. 카드 안에 드는 `PanelTool` 한 종류다.
  *
- * 아이콘 하나로 줄여 링크 옆에 붙여 두었던 것을 글씨가 있는 버튼으로 폈다 —
- * 자리는 갈래 아래 조용한 줄이라 여전히 링크만큼 눈에 걸리지는 않는다.
+ * 아이콘 하나로 줄여 링크 옆에 붙여 두었던 것을 글씨가 있는 버튼으로 폈고, 그
+ * 버튼을 자기가 다시 만드는 카드 안으로 넣었다 — 무엇이 다시 만들어지는지를
+ * 자리가 먼저 말한다.
  */
 export function Remake({
   label,
+  hint,
   busy,
   busyLabel = "여는 중…",
   disabled,
   onClick,
 }: {
   label: string;
+  hint?: string;
   busy: boolean;
   busyLabel?: string;
   disabled: boolean;
   onClick: () => void;
 }) {
   return (
-    <PanelTool icon="⟳" label={label} busy={busy} busyLabel={busyLabel} disabled={disabled} onClick={onClick} />
+    <PanelTool
+      icon="⟳"
+      label={label}
+      hint={hint}
+      busy={busy}
+      busyLabel={busyLabel}
+      disabled={disabled}
+      onClick={onClick}
+    />
   );
 }
 

@@ -9,7 +9,7 @@ import {
   type RunnerBeat,
 } from "../types";
 import { useMe } from "../useMe";
-import { fileSize, PanelTools, Remake, RemakeConfirm } from "./panelShared";
+import { ActionCard, fileSize, Remake, RemakeConfirm } from "./panelShared";
 
 /**
  * 덱 한 칸. 만들어졌으면 내려받고, 아니면 러너에게 일감을 건다.
@@ -225,20 +225,27 @@ function DeckMake({
     return (
       <>
         <Combo before={before}>
-          <DeckAction file={file} label={label} onDownload={onDownload} merged={merged} />
-        </Combo>
-        {/* 덱이 이상하다는 것을 아는 사람은 그것을 받아 본 사람이다. 그 사람이
-            서 있는 자리가 이 갈래라 여기 조용한 줄에 붙인다 — 드물게 하는
-            일이라는 뜻이 자리와 크기에 들어 있다. */}
-        <PanelTools>
-          <Remake
-            label={`${label} 다시 만들기`}
-            busy={job?.state === "running"}
-            busyLabel="다시 만드는 중…"
-            disabled={open || asking}
-            onClick={() => setAskingRemake(true)}
+          {/* 덱이 이상하다는 것을 아는 사람은 그것을 받아 본 사람이다. 그 사람이
+              서 있는 자리가 이 카드라 **버튼도 이 카드 안에 넣는다**(2026-08-31
+              관리자 지시). 아래 따로 줄을 세우면 무엇이 다시 만들어지는지
+              글씨로만 알 수 있었다. */}
+          <DeckAction
+            file={file}
+            label={label}
+            onDownload={onDownload}
+            merged={merged}
+            tools={
+              <Remake
+                label="다시 만들기"
+                hint={`${label} 다시 만들기`}
+                busy={job?.state === "running"}
+                busyLabel="다시 만드는 중…"
+                disabled={open || asking}
+                onClick={() => setAskingRemake(true)}
+              />
+            }
           />
-        </PanelTools>
+        </Combo>
         {askingRemake ? (
           <RemakeConfirm
             message={REMAKE_MESSAGE[kind]}
@@ -278,14 +285,15 @@ function DeckMake({
   return (
     <>
       <Combo before={before}>
-        <button
-          className={`panel-action${merged ? " is-compact" : " is-key"}`}
-          disabled={asking}
-          onClick={() => void ask(false)}
-        >
-          <strong>{label} 만들기</strong>
-          <small>{asking ? "맡기는 중…" : merged ? "없습니다" : "아직 없습니다 · 눌러서 만듭니다"}</small>
-        </button>
+        <ActionCard
+          shape={merged ? "is-compact" : "is-key"}
+          hit={
+            <button className="panel-action-hit" disabled={asking} onClick={() => void ask(false)}>
+              <strong>{label} 만들기</strong>
+              <small>{asking ? "맡기는 중…" : merged ? "없습니다" : "아직 없습니다 · 눌러서 만듭니다"}</small>
+            </button>
+          }
+        />
       </Combo>
       {failure}
     </>
@@ -297,28 +305,42 @@ function DeckAction({
   label,
   onDownload,
   merged = false,
+  tools,
 }: {
   file: LectureFile | undefined;
   label: string;
   onDownload: (file: LectureFile) => void;
   /** 앞의 것과 한 테두리 안에 들어가는가. 그러면 좁은 칸으로 눕는다. */
   merged?: boolean;
+  /** 카드 안에 드는 작은 버튼(관리자의 「다시 만들기」). */
+  tools?: ReactNode;
 }) {
-  const shape = merged ? " is-compact" : " is-key";
+  const shape = merged ? "is-compact" : "is-key";
   // 아직 없는 것도 자리를 남긴다. 목록에서 빠지면 "없다"와 "이 강의에는 원래
   // 해당 없다"를 구분할 수 없다.
   if (!file) {
     return (
-      <span className={`panel-action is-empty${shape}`}>
-        <strong>{label}</strong>
-        <small>{merged ? "없습니다" : "아직 없습니다"}</small>
-      </span>
+      <ActionCard
+        shape={`is-empty ${shape}`}
+        hit={
+          <span className="panel-action-hit">
+            <strong>{label}</strong>
+            <small>{merged ? "없습니다" : "아직 없습니다"}</small>
+          </span>
+        }
+      />
     );
   }
   return (
-    <button className={`panel-action is-download${shape}`} onClick={() => onDownload(file)}>
-      <strong>{label}</strong>
-      <small>{merged ? fileSize(file.sizeBytes) : `${fileSize(file.sizeBytes)} · 내려받기`}</small>
-    </button>
+    <ActionCard
+      shape={`is-download ${shape}`}
+      hit={
+        <button className="panel-action-hit" onClick={() => onDownload(file)}>
+          <strong>{label}</strong>
+          <small>{merged ? fileSize(file.sizeBytes) : `${fileSize(file.sizeBytes)} · 내려받기`}</small>
+        </button>
+      }
+      tools={tools}
+    />
   );
 }

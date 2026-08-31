@@ -21,7 +21,7 @@ import {
   type PreviewProvider,
 } from "../types";
 import { useMe } from "../useMe";
-import { PanelGroup, PanelTool, PanelTools, Remake, RemakeConfirm } from "./panelShared";
+import { ActionCard, PanelGroup, PanelTool, Remake, RemakeConfirm } from "./panelShared";
 
 /**
  * 예습 링크 한 칸. 확장이 대화를 열고, 공유 링크가 돌아오면 그것을 붙든다.
@@ -102,16 +102,23 @@ export function PreviewAction({
         {detail.preview?.shareUrl ? (
           <SharedOpen url={detail.preview.shareUrl} lectureId={lectureId} provider={detail.preview.provider} />
         ) : null}
-        <a
-          className="panel-action is-key is-download"
-          href={storeReady ? EXTENSION_STORE_URL : EXTENSION_DOWNLOAD_URL}
-          download={storeReady ? undefined : true}
-          target={storeReady ? "_blank" : undefined}
-          rel={storeReady ? "noreferrer" : undefined}
-        >
-          <strong>{storeReady ? "Chrome 웹스토어에서 설치" : "예습 브리지 내려받기"}</strong>
-          <small>설치하면 필기와 프롬프트가 선택한 AI에 자동으로 들어갑니다</small>
-        </a>
+        <ActionCard
+          shape="is-key is-download"
+          hit={
+            <a
+              className="panel-action-hit"
+              href={storeReady ? EXTENSION_STORE_URL : EXTENSION_DOWNLOAD_URL}
+              download={storeReady ? undefined : true}
+              target={storeReady ? "_blank" : undefined}
+              rel={storeReady ? "noreferrer" : undefined}
+            >
+              <Body
+                name={storeReady ? "Chrome 웹스토어에서 설치" : "예습 브리지 내려받기"}
+                note="설치하면 필기와 프롬프트가 자동으로 들어갑니다"
+              />
+            </a>
+          }
+        />
         {storeReady ? (
           <p className="panel-steps">설치한 뒤 이 탭을 새로고침해 주세요.</p>
         ) : (
@@ -135,55 +142,111 @@ export function PreviewAction({
   const canMake = Boolean(notesPrev);
   const hasPersonal = Boolean(detail.myPreview?.conversationUrl);
 
+  /* 기본 링크를 다시 만드는 것은 관리자뿐이다. **그 버튼은 기본 링크 카드
+     안에 든다** — 아래 따로 줄을 세우면 무엇이 다시 만들어지는지 글씨로만
+     알 수 있었다(2026-08-31 관리자 지시). */
+  const sharedTools =
+    isAdmin && canMake && detail.preview?.shareUrl ? (
+      <Remake
+        label="다시 만들기"
+        hint="기본 링크 다시 만들기"
+        busy={busy === "shared"}
+        disabled={Boolean(busy)}
+        onClick={() => setAskingRemake(true)}
+      />
+    ) : null;
+
+  /* 개인 링크 카드에 드는 둘. **프롬프트 고치기가 여기 있는 이유는 그것이
+     개인 링크에만 듣기 때문이다** — 기본 링크는 문구가 고정이다. */
+  const personalTools = (
+    <>
+      <PanelTool
+        icon="✎"
+        label={showPrompt ? "프롬프트 접기" : "프롬프트 수정"}
+        hint={`내 예습 프롬프트 ${showPrompt ? "접기" : "고치기"}`}
+        active={showPrompt}
+        dot={promptStore.isCustom}
+        expanded={showPrompt}
+        onClick={() => setShowPrompt((open) => !open)}
+      />
+      {hasPersonal && canMake ? (
+        // 자기 것이라 묻지 않는다. 옛 대화는 해당 AI 서비스에 그대로 남아 있고
+        // 여기서 가리키는 주소만 새것으로 바뀐다.
+        <Remake
+          label="새 대화"
+          hint="개인 링크를 새 대화로 다시 시작"
+          busy={busy === "personal"}
+          disabled={Boolean(busy)}
+          onClick={() => void start("personal")}
+        />
+      ) : null}
+    </>
+  );
+
   /* 기본 링크 — 강의당 하나, 반 전체가 같은 것을 읽는다. 문구가 고정이라
      누가 만들었든 같은 것을 물은 대화다. 만드는 것은 관리자뿐이다. */
   const shared = detail.preview?.shareUrl ? (
-    <SharedOpen url={detail.preview.shareUrl} lectureId={lectureId} provider={detail.preview.provider} />
+    <SharedOpen
+      url={detail.preview.shareUrl}
+      lectureId={lectureId}
+      provider={detail.preview.provider}
+      tools={sharedTools}
+    />
   ) : !canMake ? (
-    <span className="panel-action is-key is-empty">
-      <strong>기본 링크</strong>
-      <small>작년 필기 대기</small>
-    </span>
+    <ActionCard shape="is-key is-empty" hit={<span className="panel-action-hit"><Body name="기본 링크" note="작년 필기 대기" /></span>} />
   ) : isAdmin ? (
-    <button className="panel-action is-key" onClick={() => start("shared")} disabled={Boolean(busy)}>
-      <strong>기본 링크</strong>
-      <small>{busy === "shared" ? "여는 중…" : `만들기 · ${previewProviderLabels[provider]}`}</small>
-    </button>
+    <ActionCard
+      shape="is-key"
+      hit={
+        <button className="panel-action-hit" onClick={() => start("shared")} disabled={Boolean(busy)}>
+          <Body
+            name="기본 링크"
+            note={busy === "shared" ? "여는 중…" : `만들기 · ${previewProviderLabels[provider]}`}
+          />
+        </button>
+      }
+    />
   ) : (
-    <span className="panel-action is-key is-empty">
-      <strong>기본 링크</strong>
-      <small>아직 없습니다</small>
-    </span>
+    <ActionCard shape="is-key is-empty" hit={<span className="panel-action-hit"><Body name="기본 링크" note="아직 없습니다" /></span>} />
   );
 
-  /* 개인 링크 — 사람마다 하나. 프롬프트도 자기 것으로 묻는다. 그래서 프롬프트
-     고치기가 이 갈래의 조용한 줄에 붙어 있다 — 기본 링크에는 안 듣는다. */
+  /* 개인 링크 — 사람마다 하나. 프롬프트도 자기 것으로 묻는다. */
   const personal = detail.myPreview?.conversationUrl ? (
-    /* 저장되면 이 자리가 회색 버튼("개인 예습 시작")에서 색이 든 줄로 바뀐다.
-       색이 곧 "내 대화가 저장돼 있다"는 표시다.
+    <ActionCard
+      shape="is-key"
+      hit={
+        /* 저장되면 이 자리가 회색 버튼("개인 링크 만들기")에서 색이 든 카드로
+           바뀐다. 색이 곧 "내 대화가 저장돼 있다"는 표시다.
 
-       주소는 title에 그대로 둔다 — 빈 AI 창이 뜰 때 무엇이 저장돼 있는지
-       볼 데가 여기밖에 없다. */
-    <a
-      className="panel-action is-key"
-      href={detail.myPreview.conversationUrl}
-      title={detail.myPreview.conversationUrl}
-      target="_blank"
-      rel="noreferrer"
-    >
-      <strong>개인 링크</strong>
-      <small>{previewProviderLabels[detail.myPreview.provider]} · 내 대화</small>
-    </a>
+           주소는 title에 그대로 둔다 — 빈 AI 창이 뜰 때 무엇이 저장돼 있는지
+           볼 데가 여기밖에 없다. */
+        <a
+          className="panel-action-hit"
+          href={detail.myPreview.conversationUrl}
+          title={detail.myPreview.conversationUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Body name="개인 링크" note={`${previewProviderLabels[detail.myPreview.provider]} · 내 대화`} />
+        </a>
+      }
+      tools={personalTools}
+    />
   ) : canMake ? (
-    <button className="panel-action is-key is-faint" onClick={() => start("personal")} disabled={Boolean(busy)}>
-      <strong>개인 링크</strong>
-      <small>{busy === "personal" ? "여는 중…" : `만들기 · ${previewProviderLabels[provider]}`}</small>
-    </button>
+    <ActionCard
+      shape="is-key is-faint"
+      hit={
+        <button className="panel-action-hit" onClick={() => start("personal")} disabled={Boolean(busy)}>
+          <Body
+            name="개인 링크"
+            note={busy === "personal" ? "여는 중…" : `만들기 · ${previewProviderLabels[provider]}`}
+          />
+        </button>
+      }
+      tools={personalTools}
+    />
   ) : (
-    <span className="panel-action is-key is-empty">
-      <strong>개인 링크</strong>
-      <small>작년 필기 대기</small>
-    </span>
+    <ActionCard shape="is-key is-empty" hit={<span className="panel-action-hit"><Body name="개인 링크" note="작년 필기 대기" /></span>} />
   );
 
   return (
@@ -206,37 +269,6 @@ export function PreviewAction({
         {shared}
         {personal}
       </div>
-
-      {/* 드물게 하는 일. 이름을 버튼 안에 적는다 — 아이콘만 있을 때는 마우스를
-          올려 봐야 무엇이 고쳐지는지 알았다(2026-08-31 관리자 지시). */}
-      <PanelTools>
-        <PanelTool
-          icon="✎"
-          label={showPrompt ? "프롬프트 접기" : "프롬프트 수정"}
-          active={showPrompt}
-          dot={promptStore.isCustom}
-          expanded={showPrompt}
-          onClick={() => setShowPrompt((open) => !open)}
-        />
-        {isAdmin && canMake ? (
-          <Remake
-            label="기본 링크 다시 만들기"
-            busy={busy === "shared"}
-            disabled={Boolean(busy)}
-            onClick={() => setAskingRemake(true)}
-          />
-        ) : null}
-        {hasPersonal && canMake ? (
-          // 자기 것이라 묻지 않는다. 옛 대화는 해당 AI 서비스에 그대로 남아 있고
-          // 여기서 가리키는 주소만 새것으로 바뀐다.
-          <Remake
-            label="개인 링크 새 대화"
-            busy={busy === "personal"}
-            disabled={Boolean(busy)}
-            onClick={() => void start("personal")}
-          />
-        ) : null}
-      </PanelTools>
 
       {askingRemake ? (
         <RemakeConfirm
@@ -263,22 +295,39 @@ function SharedOpen({
   url,
   lectureId,
   provider,
+  tools,
 }: {
   url: string;
   lectureId: string;
   provider: PreviewProvider;
+  tools?: React.ReactNode;
 }) {
   return (
-    <a
-      className="panel-action is-key"
-      href={url}
-      target="_blank"
-      rel="noreferrer"
-      onClick={() => watchSharedLink(lectureId, provider, url)}
-    >
-      <strong>기본 링크</strong>
-      <small>{previewProviderLabels[provider]} · 공통</small>
-    </a>
+    <ActionCard
+      shape="is-key"
+      hit={
+        <a
+          className="panel-action-hit"
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          onClick={() => watchSharedLink(lectureId, provider, url)}
+        >
+          <Body name="기본 링크" note={`${previewProviderLabels[provider]} · 공통`} />
+        </a>
+      }
+      tools={tools}
+    />
+  );
+}
+
+/** 카드 안의 글 두 줄. 이름과 하는 일. */
+function Body({ name, note }: { name: string; note: string }) {
+  return (
+    <>
+      <strong>{name}</strong>
+      <small>{note}</small>
+    </>
   );
 }
 

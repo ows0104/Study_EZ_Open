@@ -5,7 +5,7 @@ import { lectureHref, prequizHref, prequizWindow } from "../links";
 import { type LectureDetail, type LectureFile, type LectureRef } from "../types";
 import { categoryLabel, type CalendarEntry } from "./entries";
 import { DeckSlot } from "./DeckSlot";
-import { fileSize, PanelGroup } from "./panelShared";
+import { ActionCard, fileSize, PanelGroup } from "./panelShared";
 import { PreviewAction } from "./PreviewAction";
 
 /**
@@ -226,17 +226,22 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
           onDownload={download}
           before={
             quiz ? (
-              <a
-                className="panel-action is-lead"
-                href={prequizHref(lecture)}
-                target={prequizWindow(lecture)}
-              >
-                <strong>웹에서 풀기</strong>
-                <small>
-                  {quiz.itemCount}장
-                  {quiz.answered ? ` · ${quiz.answered}장 풀었습니다` : ""}
-                </small>
-              </a>
+              <ActionCard
+                shape="is-lead"
+                hit={
+                  <a
+                    className="panel-action-hit"
+                    href={prequizHref(lecture)}
+                    target={prequizWindow(lecture)}
+                  >
+                    <strong>웹에서 풀기</strong>
+                    <small>
+                      {quiz.itemCount}장
+                      {quiz.answered ? ` · ${quiz.answered}장 풀었습니다` : ""}
+                    </small>
+                  </a>
+                }
+              />
             ) : null
           }
         />
