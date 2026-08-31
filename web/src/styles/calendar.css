@@ -1023,6 +1023,17 @@
   margin-bottom: 15px;
 }
 
+/* **어두운 쪽은 같은 비율로 묻힌다.** 밝은 표면 위의 9%는 눈에 띄는데
+   어두운 표면 위에서는 회색과 안 갈렸다 — 갈래를 색으로 가른다는 것 자체가
+   거기서 없어졌다. 비율만 올린다(값은 9단이라 라이트·다크가 같다). */
+@media (prefers-color-scheme: dark) {
+  .panel-group {
+    --fam-soft: color-mix(in srgb, var(--fam) 18%, var(--surface));
+    --fam-hover: color-mix(in srgb, var(--fam) 28%, var(--surface));
+    --fam-line: color-mix(in srgb, var(--fam) 42%, var(--line));
+  }
+}
+
 .panel-group.is-preview {
   --fam: var(--fam-preview);
 }
