@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import type { QuizItem, QuizPayload, RevealResult } from "../types";
+import { quizPath } from "../links";
+import type { QuizItem, QuizKind, QuizPayload, RevealResult } from "../types";
 import { Stem } from "./Stem";
 
 /**
- * Pre-Quiz 웹 풀이 — 자기채점 플래시카드.
+ * 웹 풀이 — 자기채점 플래시카드. **예습과 복습이 이 하나를 쓴다.**
  *
  *   질문을 본다 → 「답 보기」 → 답과 해설이 펴진다 → 「Again / Pass」를 찍는다
  *
@@ -13,22 +14,27 @@ import { Stem } from "./Stem";
  * 실제로 쓰이는 방식도 이것이다.
  *
  * 그래도 답은 문항과 함께 안 받는다. 편 사람만 `reveal`로 받아 가고, 그래야
- * `quiz_attempt`에 남는 「알았다」가 무언가를 뜻한다.
+ * 시도 기록에 남는 「알았다」가 무언가를 뜻한다.
+ *
+ * **갈래는 주소만 가른다.** 카드가 같은 모양이라 그리는 법도 같고, 서버도 표만
+ * 갈라 두었다. 화면을 갈라 두면 한쪽에 붙인 손질이 다른 쪽에 안 붙는다.
  *
  * **카드만 그린다.** 강의가 무엇인지, 다 풀고 나서 무엇을 할지는 이 컴포넌트를
- * 세운 화면(`PreQuizPage`)이 말한다.
+ * 세운 화면(`QuizPage`)이 말한다.
  */
-export function PreQuiz({
+export function Quiz({
+  kind,
   subject,
   runId,
   onDone,
 }: {
+  kind: QuizKind;
   subject: string;
   runId: string;
   /** 다 찍었는지를 화면 밖에 알린다. 놓친 것 목록이 그 신호로 붙는다. */
   onDone: (done: boolean) => void;
 }) {
-  const base = `/api/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}/prequiz`;
+  const base = `/api/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}/${quizPath(kind)}`;
   const [payload, setPayload] = useState<QuizPayload | null>(null);
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState<RevealResult | null>(null);

@@ -7,7 +7,7 @@
 app/
   config.py     환경 변수 하나로 모인다
   database.py   SQLAlchemy 엔진
-  models.py     표 12개. 사용자가 쓰는 것은 quiz_attempt·asset_grab 둘뿐이다
+  models.py     표 14개. 사용자가 쓰는 것은 quiz_attempt·main_attempt·asset_grab 셋뿐이다
   auth.py       Supabase JWT 검증 + is_admin 불리언
   storage.py    R2 서명 URL
   naming.py     NFC·정규화. studyez/filenames.py와 같은 규칙이다
@@ -15,8 +15,9 @@ app/
   cli.py        init-db · seed-timetable (data/timetable/) · purge-artifacts
   preview_links.py  예습 제공자와 링크 형식의 단일 검증점
   routes/       me · timetable · lectures · prequiz · admin · prequiz_jobs · local_storage
-                prequiz.py 는 학생이 푸는 문항, prequiz_jobs.py 는 러너가 집어 가는 일감이다
-tests/          test_smoke.py · test_matching.py · test_samples.py
+                prequiz.py 는 학생이 푸는 문항 — **예습·복습 두 갈래가 이 한 파일이다**.
+                prequiz_jobs.py 는 러너가 집어 가는 일감이다
+tests/          test_smoke.py · test_matching.py · test_samples.py · test_quiz_kinds.py
 ```
 
 테스트는 pytest 가 아니라 스크립트다. 하나씩 돌린다.
@@ -44,6 +45,7 @@ python -m uvicorn app.main:app --reload
 ```bash
 .venv/Scripts/python.exe -m tests.test_smoke      # 강의 한 편이 통과하는 전 과정
 .venv/Scripts/python.exe -m tests.test_matching   # 한 교시에 여러 강의가 열릴 때
+.venv/Scripts/python.exe -m tests.test_quiz_kinds # 예습·복습이 서로를 안 덮는가
 ```
 
 SQLite로 돈다. Postgres 고유 기능을 쓰지 않는다는 것도 같이 확인된다.
@@ -60,6 +62,7 @@ SQLite로 돈다. Postgres 고유 기능을 쓰지 않는다는 것도 같이 �
 | `POST …/uploads/complete` | 올라온 것을 확인하고 `asset`에 남긴다 |
 | `PUT …/run-meta/{main\|pre}` | `run.meta.json` 통째로 |
 | `PUT …/pre-items` | `pre_items.final.json` 통째로. 부분 갱신이 아니라 교체 |
+| `PUT …/main-items` | `main_items.final.json` 통째로. 같은 규칙, 표만 다르다 |
 | `PUT …/preview` | 예습 링크 |
 | `GET /api/admin/previews` | 저장된 예습 링크 전부. **여기만 읽는 쪽이다** |
 

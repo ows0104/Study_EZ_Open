@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, downloadSignedFile, openSignedFile } from "../api";
 import { bumpPreviewVersion, usePreviewLink, watchSharedLink } from "../bridge/previewBridge";
-import { prequizHref, prequizWindow } from "../links";
+import { quizHref, quizWindow } from "../links";
 import {
   previewProviderLabels,
   previewProviders,
@@ -133,8 +133,8 @@ export function LecturePage() {
         {quiz ? (
           <a
             className="resource is-primary"
-            href={prequizHref({ subject, runId })}
-            target={prequizWindow({ subject, runId })}
+            href={quizHref("pre", { subject, runId })}
+            target={quizWindow("pre", { subject, runId })}
           >
             <strong>Pre-Quiz 풀기</strong>
             <small>

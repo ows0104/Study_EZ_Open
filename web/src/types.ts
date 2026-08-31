@@ -114,6 +114,16 @@ export type MissedItem = {
   examHit: boolean;
 };
 
+/** 웹 풀이의 갈래. 서버 경로도 이 이름을 그대로 쓴다(`prequiz` / `mainquiz`). */
+export type QuizKind = "pre" | "main";
+
+export interface QuizProgress {
+  itemCount: number;
+  answered: number;
+  correct: number;
+  missed: MissedItem[];
+}
+
 export type LectureDetail = {
   subject: string;
   runId: string;
@@ -135,7 +145,12 @@ export type LectureDetail = {
   preview: { provider: PreviewProvider; shareUrl: string; conversationUrl?: string } | null;
   /** 내 개인 예습 대화. 만든 AI 계정에서만 열리므로 남의 것은 안 내려온다. */
   myPreview: { provider: PreviewProvider; conversationUrl: string } | null;
-  prequiz: { itemCount: number; answered: number; correct: number; missed: MissedItem[] } | null;
+  prequiz: QuizProgress | null;
+  /**
+   * 복습 웹 풀이. **2026-08-31에 생겼고 그 전에 구운 편에는 없다.**
+   * `null`이면 화면이 그 자리를 아예 안 그린다 — 덱만 있는 편과 같다.
+   */
+  mainquiz: QuizProgress | null;
   runMeta?: Record<string, { reviewFlagged: number; slidesUnused: number; itemCount: number; builtAt: string | null }>;
 };
 

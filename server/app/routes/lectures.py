@@ -20,9 +20,8 @@ from app.models import (
     GRABBABLE_KINDS,
     Asset,
     AssetGrab,
-    PreItem,
+    Lecture,
     Preview,
-    QuizAttempt,
     RunMeta,
     TimetableEvent,
     UserPreview,
@@ -30,6 +29,7 @@ from app.models import (
 from app.preview_links import conversation_url as valid_conversation_url
 from app.preview_links import provider as valid_provider
 from app.routes.common import lecture_or_404, storage_or_503
+from app.routes import prequiz
 from app.routes.prequiz import missed_items
 
 router = APIRouter()
@@ -62,6 +62,49 @@ def _preview_payload(preview: Preview | None, *, is_admin: bool) -> dict[str, An
     return payload
 
 
+def _quiz_payload(
+    db: Session, user_id: str, lecture: Lecture, quiz: prequiz.Quiz
+) -> dict[str, Any] | None:
+    """웹 풀이 한 갈래의 진행. 문항이 없으면 `None` — 화면이 그 자리를 안 그린다.
+
+    **예습과 복습이 같은 모양이다.** 갈래는 표만 다르고(`prequiz.Quiz`) 세는 법도
+    보여 주는 법도 같다. 갈라 적으면 한쪽에 붙인 손질이 다른 쪽에 안 붙는다.
+    """
+    item, attempt = quiz.item, quiz.attempt
+    item_count = int(
+        db.scalar(
+            select(func.count()).select_from(item).where(
+                item.subject == lecture.subject, item.run_id == lecture.run_id
+            )
+        )
+        or 0
+    )
+    if not item_count:
+        return None
+    mine = (
+        attempt.user_id == user_id,
+        attempt.subject == lecture.subject,
+        attempt.run_id == lecture.run_id,
+    )
+    answered = int(db.scalar(select(func.count()).select_from(attempt).where(*mine)) or 0)
+    correct = int(
+        db.scalar(select(func.count()).select_from(attempt).where(*mine, attempt.correct.is_(True)))
+        or 0
+    )
+    return {
+        "itemCount": item_count,
+        "answered": answered,
+        "correct": correct,
+        # 다 풀었을 때만 보여 준다. 두 문제 풀고 나온 "놓친 것"은
+        # 청취 목표가 아니라 진행 상황일 뿐이다.
+        "missed": (
+            missed_items(db, user_id, lecture.subject, lecture.run_id, quiz=quiz)
+            if answered >= item_count
+            else []
+        ),
+    }
+
+
 @router.get("/lectures/{subject}/{run_id}")
 def read_lecture(
     subject: str,
@@ -78,23 +121,8 @@ def read_lecture(
     ).all()
     preview = db.get(Preview, (lecture.subject, lecture.run_id))
     my_preview = db.get(UserPreview, (user.id, lecture.subject, lecture.run_id))
-    item_count = db.scalar(
-        select(func.count()).select_from(PreItem).where(
-            PreItem.subject == lecture.subject, PreItem.run_id == lecture.run_id
-        )
-    )
-    mine = (
-        QuizAttempt.user_id == user.id,
-        QuizAttempt.subject == lecture.subject,
-        QuizAttempt.run_id == lecture.run_id,
-    )
-    answered = int(db.scalar(select(func.count()).select_from(QuizAttempt).where(*mine)) or 0)
-    correct = int(
-        db.scalar(
-            select(func.count()).select_from(QuizAttempt).where(*mine, QuizAttempt.correct.is_(True))
-        )
-        or 0
-    )
+    pre_quiz = _quiz_payload(db, user.id, lecture, prequiz.PRE)
+    main_quiz = _quiz_payload(db, user.id, lecture, prequiz.MAIN)
 
     event = (
         db.get(TimetableEvent, lecture.timetable_event_id) if lecture.timetable_event_id else None
@@ -131,22 +159,10 @@ def read_lecture(
             if my_preview and my_preview.conversation_url
             else None
         ),
-        "prequiz": (
-            {
-                "itemCount": int(item_count or 0),
-                "answered": answered,
-                "correct": correct,
-                # 다 풀었을 때만 보여 준다. 두 문제 풀고 나온 "놓친 것"은
-                # 청취 목표가 아니라 진행 상황일 뿐이다.
-                "missed": (
-                    missed_items(db, user.id, lecture.subject, lecture.run_id)
-                    if item_count and answered >= int(item_count)
-                    else []
-                ),
-            }
-            if item_count
-            else None
-        ),
+        "prequiz": pre_quiz,
+        # **2026-08-31에 생겼고 그 전에 구운 편에는 없다.** 문항이 없으면 `null`이라
+        # 화면이 웹 풀이를 아예 안 그린다 — 덱만 있는 편과 같은 자리다.
+        "mainquiz": main_quiz,
     }
 
     if user.is_admin:

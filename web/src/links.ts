@@ -1,3 +1,5 @@
+import type { QuizKind } from "./types";
+
 /**
  * 새 창으로 여는 화면들의 주소.
  *
@@ -11,24 +13,32 @@ export function lectureHref(lecture: { subject: string; runId: string }) {
 }
 
 /**
- * Pre-Quiz도 전용 창이다.
+ * 웹 풀이도 전용 창이다. **예습·복습 둘 다.**
  *
  * 강의 화면 안에서 풀던 것을 밖으로 냈다. 푸는 동안 화면에 있어야 하는 것은
  * 문항과 답과 슬라이드뿐인데, 강의 화면에는 그 위아래로 필기·덱·링크가 서 있다.
  * 캘린더에서 곧장 열 수 있게 되는 것은 덤이다 — 전에는 강의 화면을 거쳐야 했다.
+ *
+ * 주소의 낱말이 서버 경로와 같다(`prequiz` / `mainquiz`). 둘을 따로 적으면
+ * 언젠가 한쪽만 바뀐다.
  */
-export function prequizHref(lecture: { subject: string; runId: string }) {
-  return `/prequiz/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
+export function quizPath(kind: QuizKind) {
+  return kind === "pre" ? "prequiz" : "mainquiz";
+}
+
+export function quizHref(kind: QuizKind, lecture: { subject: string; runId: string }) {
+  return `/${quizPath(kind)}/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
 }
 
 /**
- * 창 이름. 같은 강의의 Pre-Quiz를 다시 누르면 새 창이 아니라 열려 있던 창이
+ * 창 이름. 같은 강의의 같은 갈래를 다시 누르면 새 창이 아니라 열려 있던 창이
  * 다시 뜬다 — 캘린더와 강의 화면 양쪽에 버튼이 있어서 누르는 자리가 둘이다.
+ * **갈래가 이름에 들어가야 예습 창과 복습 창이 서로를 밀어내지 않는다.**
  *
  * **`rel="noreferrer"`를 같이 주면 안 된다.** `noopener`가 딸려 오고, 명세상
  * `noopener`는 창 이름을 무시하고 늘 새 창을 연다. 같은 출처의 우리 화면이라
  * `opener`가 이어져 있어도 잃는 것이 없다.
  */
-export function prequizWindow(lecture: { subject: string; runId: string }) {
-  return `prequiz:${lecture.subject}/${lecture.runId}`;
+export function quizWindow(kind: QuizKind, lecture: { subject: string; runId: string }) {
+  return `${quizPath(kind)}:${lecture.subject}/${lecture.runId}`;
 }

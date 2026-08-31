@@ -26,14 +26,18 @@ Pre-Quiz는 **작년 필기로 만든다**(족보가 정리돼 붙은 쪽이 작
 작년 짝은 `studyez.matching`이 정하고 **확정인 것만 쓴다** — 어긋난 짝을 붙이면
 남의 강의 예습이 올라간다.
 
-## 슬라이드 이미지는 Pre-Quiz가 있을 때만 올린다
+## 슬라이드 이미지는 갈래를 갈라서 올린다
 
-`slides/*.png`를 읽는 곳은 서버에 한 군데뿐이다. 웹 Pre-Quiz의 해설이
-`slide_no`로 찾는다(`server/app/routes/prequiz.py`의 `slide_url`). 그 자리는
-`(과목, run_id, slide_no)`로만 찾으므로 올해 슬라이드와 작년 슬라이드를 한
-강의에 같이 올리면 같은 번호가 둘이 되어 어느 쪽이 뜰지 알 수 없다. 그래서
-**`pre_items`가 가리키는 쪽(작년)의 이미지만** 올린다. Pre-Quiz가 없는 강의는
-아직 아무도 읽지 않으므로 올리지 않는다 — 편당 12~27MB다.
+`slides/*.png`를 읽는 곳은 서버에 한 군데뿐이다. 웹 풀이의 해설이 `slide_no`로
+찾는다(`server/app/routes/prequiz.py`의 `slide_url`).
+
+**예습 슬라이드는 작년 run 에서 오고 복습 슬라이드는 올해 run 에서 오는데, 붙는
+자리는 같은 강의다.** 한 kind 에 몰면 한 강의에 같은 번호가 둘이 되고 `db.scalar`
+가 아무거나 집는다 — 아무 데서도 안 터지고 예습 해설이 조용히 엉뚱한 슬라이드를
+띄운다. 그래서 kind 로 가른다: 예습이 `media`, 복습이 `main_media`
+(`server/app/models.py`의 `SLIDE_KINDS`).
+
+**문항이 없는 갈래의 슬라이드는 안 올린다.** 읽을 사람이 없고 편당 12~27MB다.
 
 ## 같은 것을 다시 밀지 않는다
 
@@ -140,6 +144,7 @@ class LecturePlan:
     uploads: list[Upload] = field(default_factory=list)
     run_meta: dict[str, Path] = field(default_factory=dict)   # {"main"|"pre": 경로}
     pre_items: Path | None = None
+    main_items: Path | None = None
     preview_url: str = ""
     notes: list[str] = field(default_factory=list)            # 사람이 봐야 할 것
     blocking: list[str] = field(default_factory=list)         # 사람 없이 올리면 안 될 이유
@@ -219,16 +224,14 @@ def _pre_apkg(run_dir: Path) -> Path | None:
 def _add_this_year(plan: LecturePlan, run_dir: Path) -> None:
     """올해 run 디렉터리에서 나오는 것 — Main-Quiz.
 
-    **`main_items.final.json`과 `slides/`는 여기서 안 올린다.** 2026-08-31부터
-    `deck.contract`가 복습에도 그 둘을 내지만 받을 자리가 서버에 없다. 다음 두
-    가지를 같이 짓기 전에는 올리지 마라.
+    슬라이드는 **`main_media`로 올린다.** 예습 슬라이드는 작년 run에서 와 놓고
+    올해 강의의 이름으로 올라가 있어서, 같은 `media`로 얹으면 한 강의에 같은
+    `slide_no`가 둘이 된다 — `prequiz.slide_url`의 `db.scalar`가 아무거나 집어
+    예습 오답 해설이 조용히 엉뚱한 슬라이드를 띄운다. 갈래를 kind로 가르는 것이
+    그것을 막는 자리다(`server/app/models.py`의 `SLIDE_KINDS`).
 
-    1. 복습 문항을 받는 경로. `PUT …/pre-items`는 `pre_item` 표에 넣는다
-    2. **슬라이드를 갈래로 가르는 길.** `prequiz.slide_url`이 `(subject, run_id,
-       kind='media', slide_no)`로 하나를 집는데, 예습 슬라이드는 **작년** run에서
-       와 놓고 올해 강의의 이름으로 올라가 있다. 복습 슬라이드를 그대로 얹으면
-       같은 번호가 둘이 되고, `db.scalar`가 아무거나 집는다 — 예습 오답 해설이
-       조용히 엉뚱한 슬라이드를 띄우기 시작한다
+    문항은 `pre_items`와 같은 이유로 있을 때만 올린다 — 2026-08-31 이전에 구운
+    편에는 이 파일이 없고, 없으면 화면이 웹 풀이를 아예 안 그린다.
     """
     apkg = _main_apkg(run_dir)
     if apkg:
@@ -239,6 +242,12 @@ def _add_this_year(plan: LecturePlan, run_dir: Path) -> None:
     verdict = gate.inspect(run_dir, apkg, meta if meta.is_file() else None, "Main-Quiz")
     plan.notes += verdict.notes
     plan.blocking += verdict.blocking
+
+    items = run_dir / "main_items.final.json"
+    if items.is_file():
+        plan.main_items = items
+        for image in sorted((run_dir / "slides").glob("*.png")):
+            plan.uploads.append(Upload("main_media", image))
 
 
 def _add_prev_year(plan: LecturePlan, run_dir: Path) -> None:
@@ -297,19 +306,22 @@ def hold_artifacts(plan: LecturePlan, why: str = "--notes-only") -> None:
     held += [f"run-meta {kind}" for kind in sorted(plan.run_meta)]
     if plan.pre_items:
         held.append("pre-items")
+    if plan.main_items:
+        held.append("main-items")
     if plan.preview_url:
         held.append("예습 링크")
 
     plan.uploads = [upload for upload in plan.uploads if upload.kind in NOTES_KINDS]
     plan.run_meta.clear()
     plan.pre_items = None
+    plan.main_items = None
     plan.preview_url = ""
     if held:
         plan.notes.append(f"미룬 것 ({why}): {' · '.join(held)}")
 
 
-# Pre-Quiz 산출물의 upload kind. `media`는 `pre_items`가 있을 때만 붙으므로
-# (`_add_prev_year`) 여기 넣어도 복습 쪽 이미지를 건드리지 않는다.
+# Pre-Quiz 산출물의 upload kind. **복습 슬라이드는 `main_media`라 안 걸린다** —
+# 갈래를 kind로 가른 뒤로는 이 목록이 저절로 예습만 집는다.
 PRE_KINDS = ("pre_apkg", "media")
 
 
@@ -653,10 +665,12 @@ def _publish_one(
                     json.loads(path.read_text(encoding="utf-8")))
         report.run_meta += 1
 
-    if plan.pre_items is not None:
-        raw = json.loads(plan.pre_items.read_text(encoding="utf-8"))
+    for path, route in ((plan.pre_items, "pre-items"), (plan.main_items, "main-items")):
+        if path is None:
+            continue
+        raw = json.loads(path.read_text(encoding="utf-8"))
         payload = raw if isinstance(raw, dict) else {"items": raw}
-        answer = client.call("PUT", f"{base}/pre-items", payload)
+        answer = client.call("PUT", f"{base}/{route}", payload)
         report.pre_items += int(answer.get("itemCount", 0))
 
     if plan.preview_url:

@@ -2,12 +2,29 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, downloadSignedFile } from "../api";
 import { lectureHref } from "../links";
-import type { LectureDetail, LectureFile } from "../types";
+import type { LectureDetail, LectureFile, QuizKind } from "../types";
 import { Missed } from "./Missed";
-import { PreQuiz } from "./PreQuiz";
+import { Quiz } from "./Quiz";
+
+/** 갈래마다 다른 것은 이름과 덱과 「다음」의 문구뿐이다. */
+const LOOK: Record<QuizKind, { title: string; deck: LectureFile["kind"]; deckNote: string; next: string }> = {
+  pre: {
+    title: "Pre-Quiz",
+    deck: "pre_apkg",
+    // 웹은 한 번 훑는 자리다. 반복은 Anki가 한다 — 3패스가 그 덱에서 돈다.
+    deckNote: "그림 카드까지 들어 있습니다",
+    next: "필기와 Main-Quiz 덱",
+  },
+  main: {
+    title: "Main-Quiz",
+    deck: "main_apkg",
+    deckNote: "그림 카드까지 들어 있습니다",
+    next: "필기와 예습 링크",
+  },
+};
 
 /**
- * Pre-Quiz 전용 창.
+ * 웹 풀이 전용 창. **예습·복습 둘 다 이 화면이다.**
  *
  * 강의 화면 안에서 풀던 것을 밖으로 냈다. 푸는 동안 화면에 있어야 하는 것은
  * 문항과 답과 슬라이드뿐인데, 강의 화면에는 그 위아래로 필기·덱·예습 링크가
@@ -15,8 +32,11 @@ import { PreQuiz } from "./PreQuiz";
  *
  * 다 찍고 나서야 아래가 붙는다 — 놓친 것, 그리고 다음에 할 것(덱·강의 화면).
  * 푸는 동안 그것들이 보이면 답을 펴기 전에 다른 데를 누르게 된다.
+ *
+ * **복습에서 여기 쌓이는 것은 웹에서 푼 몫뿐이다.** 그 덱의 진행은 Anki가 든다.
  */
-export function PreQuizPage() {
+export function QuizPage({ kind }: { kind: QuizKind }) {
+  const look = LOOK[kind];
   const params = useParams<{ subject: string; runId: string }>();
   const subject = params.subject ?? "";
   const runId = params.runId ?? "";
@@ -33,8 +53,8 @@ export function PreQuizPage() {
   useEffect(load, [load]);
 
   useEffect(() => {
-    if (detail) document.title = `Pre-Quiz · ${detail.title}`;
-  }, [detail]);
+    if (detail) document.title = `${look.title} · ${detail.title}`;
+  }, [detail, look.title]);
 
   // 놓친 것은 서버가 고른다. 마지막 카드를 찍은 뒤에 다시 불러야 채워져 온다.
   const onDone = useCallback(
@@ -56,8 +76,8 @@ export function PreQuizPage() {
     }
   }
 
-  const preApkg = detail?.files.find((file) => file.kind === "pre_apkg");
-  const quiz = detail?.prequiz;
+  const apkg = detail?.files.find((file) => file.kind === look.deck);
+  const quiz = kind === "pre" ? detail?.prequiz : detail?.mainquiz;
 
   return (
     <article className="lecture">
@@ -69,7 +89,7 @@ export function PreQuizPage() {
             <i aria-hidden="true" />
             <time>{detail.date}</time>
             <i aria-hidden="true" />
-            <span>Pre-Quiz</span>
+            <span>{look.title}</span>
           </p>
           <h1>{detail.title}</h1>
         </header>
@@ -79,7 +99,7 @@ export function PreQuizPage() {
 
       {/* 강의 상세를 기다리지 않는다. 카드는 자기 요청으로 따로 온다. */}
       <section className="lecture-section">
-        <PreQuiz subject={subject} runId={runId} onDone={onDone} />
+        <Quiz kind={kind} subject={subject} runId={runId} onDone={onDone} />
       </section>
 
       {/* 다 찍은 뒤에 붙는 것들은 읽는 글이다. 푸는 창이 넓어졌다고 이것까지
@@ -91,17 +111,17 @@ export function PreQuizPage() {
           <section className="lecture-section">
             <h2>다음</h2>
             {/* 웹은 한 번 훑는 자리다. 반복은 Anki가 한다 — 3패스가 그 덱에서 돈다. */}
-            {preApkg ? (
-              <button className="resource is-download" onClick={() => download(preApkg)}>
-                <strong>Pre-Quiz 덱 내려받기</strong>
+            {apkg ? (
+              <button className="resource is-download" onClick={() => download(apkg)}>
+                <strong>{look.title} 덱 내려받기</strong>
                 <small>
-                  {preApkg.filename} · {(preApkg.sizeBytes / 1024 / 1024).toFixed(1)}MB · 그림 카드까지 들어 있습니다
+                  {apkg.filename} · {(apkg.sizeBytes / 1024 / 1024).toFixed(1)}MB · {look.deckNote}
                 </small>
               </button>
             ) : null}
             <a className="resource" href={lectureHref({ subject, runId })} target="_blank" rel="noreferrer">
               <strong>강의 화면 열기</strong>
-              <small>필기와 Main-Quiz 덱</small>
+              <small>{look.next}</small>
             </a>
           </section>
         </div>

@@ -27,7 +27,7 @@ from sqlalchemy import (
 from sqlalchemy import (
     Date as SADate,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, declared_attr, mapped_column
 
 from app.database import Base
 
@@ -43,9 +43,22 @@ ASSET_KINDS = frozenset(
         "notes_prev",  # 작년 필기 PDF (Pre-Quiz·예습용)
         "main_apkg",  # <강의>.apkg
         "pre_apkg",  # <강의>_예습.apkg
-        "media",  # media/*.png — 슬라이드 렌더
+        "media",  # 예습 슬라이드 렌더. 이름이 갈래를 안 말하는 것은 역사다
+        "main_media",  # 복습 슬라이드 렌더
     }
 )
+
+# 근거 슬라이드. **갈래를 갈라 둔다(2026-08-31).**
+#
+# 예습 슬라이드는 **작년** run 에서 와 놓고 올해 강의의 이름으로 올라간다. 복습
+# 슬라이드를 같은 `media` 로 얹으면 `(subject, run_id, media, slide_no)` 가 둘이
+# 되고, `prequiz.slide_url` 의 `db.scalar` 가 아무거나 집는다 — 예습 오답 해설이
+# 조용히 엉뚱한 슬라이드를 띄운다. 아무 데서도 안 터지는 종류의 고장이다.
+#
+# 예습 쪽 이름을 `pre_media` 로 못 바꾼 것은 운영 DB 에 이미 `media` 로 쌓여
+# 있어서다. 이 저장소의 마이그레이션은 칼럼을 붙일 뿐 값을 옮기지 않는다
+# (`app/cli.py`). 이름이 갈래를 안 말하는 자리가 여기 하나 남는다.
+SLIDE_KINDS = {"pre": "media", "main": "main_media"}
 
 # 관리자가 강의마다 채우는 다섯 칸. 사용자 화면의 점 둘이 이것을 두 갈래로 묶는다 —
 # 앞 셋이 예습, 뒤 둘이 복습이다.
@@ -260,18 +273,21 @@ class UserPreview(Base):
     )
 
 
-class PreItem(Base):
-    """`pre_items.final.json`의 예습 카드 하나.
+class _QuizItem:
+    """웹에서 푸는 문항 한 장. **예습과 복습이 같은 모양이다.**
 
     **자유회상 플래시카드다.** 한동안 5지선다·단답이었고 서버가 문자열로 채점했는데,
     파이프라인이 pdf2anki로 갈리면서 카드가 Anki와 같은 앞면/뒷면이 되었다. 긴 산문
     답을 문자열로 맞히라고 하면 전원이 틀리므로, 채점은 **읽어 보고 본인이** 한다.
 
     `answer`와 `explanation`은 그래도 문항과 함께 안 내려보낸다. 답을 편 사람만
-    `reveal`로 받아 가고, 그래야 `quiz_attempt`의 「맞았다」가 뜻을 갖는다.
-    """
+    `reveal`로 받아 가고, 그래야 시도 기록의 「맞았다」가 뜻을 갖는다.
 
-    __tablename__ = "pre_item"
+    **표를 둘로 나눈 이유는 모양이 달라서가 아니다.** `item_id`가 겹친다 — 두
+    갈래 다 `c001`부터 센다. 한 표에 담으려면 갈래를 기본키에 넣어야 하는데, 이
+    저장소의 마이그레이션은 칼럼을 붙일 뿐 기본키를 못 바꾼다(`app/cli.py`).
+    칼럼은 그래서 여기 한 번만 적는다 — 두 곳에 적으면 한쪽에만 붙는 날이 온다.
+    """
 
     subject: Mapped[str] = mapped_column(Text, primary_key=True)
     run_id: Mapped[str] = mapped_column(String(32), primary_key=True)
@@ -281,7 +297,8 @@ class PreItem(Base):
     qtype: Mapped[str] = mapped_column(String(16), nullable=False)
     stem: Mapped[str] = mapped_column(Text, nullable=False)
     answer: Mapped[str] = mapped_column(Text, nullable=False)
-    # 왜 이것이 「꼭 반드시」인가. spine·vocabulary·mechanism·clinical·repeated.
+    # 예습은 **왜 이것이 「꼭 반드시」인가**(spine·vocabulary·mechanism·clinical·
+    # repeated), 복습은 등급(`importance`)이 온다. 파이프라인이 그 갈림을 안다.
     focus: Mapped[str] = mapped_column(String(16), nullable=False, default="")
     # 무엇을 막는 카드인가. term·abbrev·mechanism·taxonomy·clinical·number 등.
     card_type: Mapped[str] = mapped_column(String(16), nullable=False, default="")
@@ -292,27 +309,42 @@ class PreItem(Base):
     explanation: Mapped[str] = mapped_column(Text, nullable=False, default="")
     flags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
 
-    __table_args__ = (
-        ForeignKeyConstraint(
-            ["subject", "run_id"], ["lecture.subject", "lecture.run_id"], ondelete="CASCADE"
-        ),
-        Index("ix_pre_item_lecture", "subject", "run_id"),
-    )
+    @declared_attr.directive
+    def __table_args__(cls) -> tuple:
+        return (
+            ForeignKeyConstraint(
+                ["subject", "run_id"], ["lecture.subject", "lecture.run_id"], ondelete="CASCADE"
+            ),
+            Index(f"ix_{cls.__tablename__}_lecture", "subject", "run_id"),
+        )
 
 
-class QuizAttempt(Base):
-    """Pre-Quiz 웹 풀이의 결과. 사용자별로 쓰이는 유일한 표다.
+class PreItem(_QuizItem, Base):
+    """`pre_items.final.json`의 예습 카드 하나."""
 
-    **`correct`는 본인이 찍은 것이다.** 서버가 판정한 것이 아니다. 자유회상
-    카드라 대조할 문자열이 없고, 그래서 「답을 펴 보고 맞았다고 했다」가 여기
-    남는 전부다. 화면이 이 값을 서버 판정처럼 그리면 안 된다.
+    __tablename__ = "pre_item"
 
-    2026-08-23부터 화면에서는 **웹 풀이가 먼저다** — Pre-Quiz를 누르면 전용 창이
-    열리고 덱은 그 옆에서 받는다. 그래서 이 표는 전보다 더 차게 된다.
-    "오늘 놓친 것"이 여기서 나온다.
+
+class MainItem(_QuizItem, Base):
+    """`main_items.final.json`의 복습 카드 하나.
+
+    **2026-08-31에 생겼고, 그 전에 구운 편에는 없다.** 파이프라인이 이 파일을 내기
+    시작한 것이 그날이라 기존 39편은 다시 돌려야 채워진다. 비어 있는 강의에서는
+    화면이 웹 풀이를 아예 안 그린다 — 덱만 있는 편과 같은 자리다.
     """
 
-    __tablename__ = "quiz_attempt"
+    __tablename__ = "main_item"
+
+
+class _Attempt:
+    """웹 풀이의 결과 한 줄. **`correct`는 본인이 찍은 것이다.**
+
+    서버가 판정한 것이 아니다. 자유회상 카드라 대조할 문자열이 없고, 그래서
+    「답을 펴 보고 맞았다고 했다」가 여기 남는 전부다. 화면이 이 값을 서버
+    판정처럼 그리면 안 된다.
+
+    문항 표와 같은 이유로 갈래마다 표가 따로다 — `item_id`가 겹친다.
+    """
 
     user_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     subject: Mapped[str] = mapped_column(Text, primary_key=True)
@@ -321,7 +353,33 @@ class QuizAttempt(Base):
     correct: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     answered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
-    __table_args__ = (Index("ix_quiz_attempt_user_lecture", "user_id", "subject", "run_id"),)
+    @declared_attr.directive
+    def __table_args__(cls) -> tuple:
+        return (Index(f"ix_{cls.__tablename__}_user_lecture", "user_id", "subject", "run_id"),)
+
+
+class QuizAttempt(_Attempt, Base):
+    """Pre-Quiz 웹 풀이의 결과. 사용자가 쓰는 몇 안 되는 표 중 하나다.
+
+    2026-08-23부터 화면에서는 **웹 풀이가 먼저다** — Pre-Quiz를 누르면 전용 창이
+    열리고 덱은 그 옆에서 받는다. 그래서 이 표는 전보다 더 차게 된다.
+    "오늘 놓친 것"이 여기서 나온다.
+
+    이름에 갈래가 안 붙어 있는 것은 역사다. 운영 DB에 이미 이 이름으로 쌓여 있다.
+    """
+
+    __tablename__ = "quiz_attempt"
+
+
+class MainAttempt(_Attempt, Base):
+    """Main-Quiz 웹 풀이의 결과.
+
+    **덱과 진행이 갈린다.** 복습 덱은 Anki에서 3패스로 돌고 그 진행은 Anki가
+    든다. 여기 쌓이는 것은 웹에서 푼 몫뿐이라, 둘을 더해 「몇 번 봤다」로 읽으면
+    안 된다.
+    """
+
+    __tablename__ = "main_attempt"
 
 
 class AssetGrab(Base):

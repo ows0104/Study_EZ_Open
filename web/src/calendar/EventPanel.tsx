@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, downloadSignedFile, openSignedFile } from "../api";
 import { usePreviewVersion } from "../bridge/previewBridge";
-import { lectureHref, prequizHref, prequizWindow } from "../links";
+import { lectureHref, quizHref, quizWindow } from "../links";
 import { type LectureDetail, type LectureFile, type LectureRef } from "../types";
 import { categoryLabel, type CalendarEntry } from "./entries";
 import { DeckSlot } from "./DeckSlot";
@@ -185,7 +185,6 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
   const base = `/api/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
   const [error, setError] = useState("");
   const fileOf = (kind: LectureFile["kind"]) => detail.files.find((file) => file.kind === kind);
-  const quiz = detail.prequiz;
 
   async function download(file: LectureFile) {
     try {
@@ -205,6 +204,32 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
     }
   }
 
+  /**
+   * 덩어리의 앞칸 — 「웹에서 풀기」. 문항이 없으면 아예 안 세운다(덱만 남는다).
+   *
+   * 누르면 그 갈래의 전용 창이 열린다. 캘린더도 이 패널도 그대로 남는다.
+   * 문항 수는 이름 옆이 말한다 — 덱 칸에서 되풀이하면 덱의 장수처럼 읽히는데,
+   * 덱에는 그림 카드까지 들어 있어 언제나 더 많다.
+   */
+  function webSolve(kind: "pre" | "main", progress: LectureDetail["prequiz"]) {
+    if (!progress) return undefined;
+    return (tools: React.ReactNode) => (
+      <ActionCard
+        shape="is-lead"
+        hit={
+          <a className="panel-action-hit" href={quizHref(kind, lecture)} target={quizWindow(kind, lecture)}>
+            <strong>웹에서 풀기</strong>
+            <small>
+              {progress.itemCount}장
+              {progress.answered ? ` · ${progress.answered}장 풀었습니다` : ""}
+            </small>
+          </a>
+        }
+        tools={tools}
+      />
+    );
+  }
+
   return (
     <div className="event-panel-actions">
       <PreviewAction lecture={lecture} detail={detail} base={base} onError={setError} />
@@ -212,11 +237,6 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
       {/* **웹 풀이와 덱을 한 덩어리로 붙였다(2026-08-31 관리자 지시).** 둘은 한
           가지를 하는 두 길인데 — 여기서 풀 것이냐, Anki로 가져갈 것이냐 —
           위아래 두 줄로 세워 두니 서로 다른 것으로 읽혔다.
-
-          누르면 Pre-Quiz 전용 창이 열린다. 캘린더도 이 패널도 그대로 남는다.
-
-          문항 수는 왼쪽 칸이 이름 옆에서 말한다. 덱 칸에서 되풀이하면 덱의
-          장수처럼 읽히는데, 덱에는 그림 카드까지 들어 있어 언제나 더 많다.
 
           「다시 만들기」는 덱의 것이지만 넓은 왼쪽 칸이 든다 — 덱 칸은 이름과
           용량으로 한 줄이 찬다(관리자 지시도 그 자리였다). */}
@@ -227,34 +247,22 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
           file={fileOf("pre_apkg")}
           lecture={lecture}
           onDownload={download}
-          before={
-            quiz
-              ? (tools) => (
-                  <ActionCard
-                    shape="is-lead"
-                    hit={
-                      <a
-                        className="panel-action-hit"
-                        href={prequizHref(lecture)}
-                        target={prequizWindow(lecture)}
-                      >
-                        <strong>웹에서 풀기</strong>
-                        <small>
-                          {quiz.itemCount}장
-                          {quiz.answered ? ` · ${quiz.answered}장 풀었습니다` : ""}
-                        </small>
-                      </a>
-                    }
-                    tools={tools}
-                  />
-                )
-              : undefined
-          }
+          before={webSolve("pre", detail.prequiz)}
         />
       </PanelGroup>
 
+      {/* **복습도 같은 자리를 얻었다(2026-08-31 관리자 지시).** 문항은
+          2026-08-31 이후에 구운 편에만 있어서, 그 전 편에서는 `mainquiz`가
+          `null`이고 이 줄이 예전처럼 덱 하나로만 선다. */}
       <PanelGroup tone="main" title="Main-Quiz" note="강의 후 반복">
-        <DeckSlot kind="main" label="덱" file={fileOf("main_apkg")} lecture={lecture} onDownload={download} />
+        <DeckSlot
+          kind="main"
+          label="덱"
+          file={fileOf("main_apkg")}
+          lecture={lecture}
+          onDownload={download}
+          before={webSolve("main", detail.mainquiz)}
+        />
       </PanelGroup>
 
       {/* 강의 정보(일시·담당·과목) 바로 위. 읽는 것에 가깝지만 누르면 열린다. */}

@@ -15,7 +15,7 @@ import type { Me } from "./types";
  * 않다 — PoP가 제자리로 오면 그대로 이득만 남는다.
  */
 const LecturePage = lazy(() => import("./lecture/LecturePage").then((m) => ({ default: m.LecturePage })));
-const PreQuizPage = lazy(() => import("./lecture/PreQuizPage").then((m) => ({ default: m.PreQuizPage })));
+const QuizPage = lazy(() => import("./lecture/QuizPage").then((m) => ({ default: m.QuizPage })));
 const AdminPage = lazy(() => import("./admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 const PrivacyPage = lazy(() => import("./PrivacyPage").then((m) => ({ default: m.PrivacyPage })));
 
@@ -96,7 +96,10 @@ function Shell() {
           <Routes>
             <Route path="/" element={<CalendarPage />} />
             <Route path="/lectures/:subject/:runId" element={<LecturePage />} />
-            <Route path="/prequiz/:subject/:runId" element={<PreQuizPage />} />
+            {/* 갈래마다 주소가 따로다. 창 이름도 갈래를 물고 있어서
+                (`links.quizWindow`) 예습 창과 복습 창이 서로를 안 밀어낸다. */}
+            <Route path="/prequiz/:subject/:runId" element={<QuizPage kind="pre" />} />
+            <Route path="/mainquiz/:subject/:runId" element={<QuizPage kind="main" />} />
             <Route
               path="/admin"
               element={me.isAdmin ? <AdminPage /> : <p className="notice">관리자만 쓸 수 있습니다.</p>}
