@@ -18,6 +18,16 @@
 올해 필기가 한 편도 없는 과목은 기준점이 없어서 못 찾는다. 그때는 아무것도 하지
 않고 그 사실을 말한다. 추측해서 남의 과목 칸을 가져오면 캘린더가 조용히 틀린다.
 
+## 한 이름을 두 과목이 나눠 쓰기도 한다
+
+2026-2 `감염의 기초`가 그렇다 — 08-31~09-09 이 기생충학이고 09-11~09-23 이
+미생물학인데 시간표 이름은 하나다. 이름만으로 고르면 **둘 다 블럭 전체를 자기
+것으로 센다.** 짝이 없어 자리가 서지는 않지만 경고가 쌓이고(쓸기 한 번에 93줄),
+그 경고가 엉뚱한 자리에서 사유로 쓰인 적이 있다(`agent.blocked_reason`).
+
+가르는 날은 `_pairs/<과목>.json`에 사람이 적는다(`FROM_KEY`·`UNTIL_KEY`).
+시간표가 둘을 가르는 표시를 안 들고 있어서 코드가 알아낼 자리가 아니다.
+
 ## 확정만 붙인다
 
 작년 짝은 `studyez.matching`이 고르는데, 시간표 제목과 파일명이 같은 강의를 다르게
@@ -61,6 +71,23 @@ PAIRS_DIR = "_pairs"
 # `감염의 기초`를 기생충학과 미생물학에 동시에 못 준다. 여기는 과목마다 파일이
 # 갈려 있어 둘 다 적힌다.
 BLOCK_KEY = "_block"
+
+# **한 블럭을 두 과목이 나눠 쓸 때, 이 과목이 서는 날.** 같은 파일에 사람이 적는다.
+#
+#     "_block_until": "2026-09-10"     이 날까지가 내 것이다
+#     "_block_from":  "2026-09-11"     이 날부터가 내 것이다
+#
+# 2026-2 「감염의 기초」가 그렇다 — 08-31~09-09 이 기생충학이고 09-11~09-23 이
+# 미생물학인데, 시간표는 둘을 한 이름으로 부른다. 둘 다 `_block`에 그 이름을
+# 적어 두므로 **각자 상대 과목의 칸까지 자기 것으로 세었다.** 짝이 없으니 자리가
+# 서지는 않았지만 경고가 쌓였고(2026-08-31 쓸기 한 번에 93줄), 그중 한 줄이
+# 「덱을 못 만들었다」의 사유로 새어 나갔다 — 누른 적도 없는 강의 이름으로.
+#
+# **날짜는 사람이 적는다.** 시간표가 둘을 가르는 표시를 안 들고 있어서
+# (`감염의 기초` ↔ `감염의 기초 1`처럼 뒤 번호로만 갈리는데 그건 회차라 뗀다)
+# 코드가 알아낼 자리가 아니다. 안 적으면 예전처럼 블럭 전체를 본다.
+FROM_KEY = "_block_from"
+UNTIL_KEY = "_block_until"
 
 # 수업이 서는 칸만. 시험·휴일·자율학습에는 붙일 자료가 없다.
 TEACHING = ("lecture", "practice")
@@ -230,6 +257,35 @@ def read_cells(source: Path) -> list[Cell]:
     return sorted(cells, key=lambda cell: (cell.date, cell.slot))
 
 
+def block_window(pairs: dict[str, str], subject: str) -> tuple[str, str, list[str]]:
+    """이 과목이 블럭의 어느 구간을 쓰는가. `(시작, 끝, 사람이 볼 말)`.
+
+    빈 문자열은 그쪽이 열려 있다는 뜻이다 — 안 적은 과목은 예전처럼 블럭 전체를
+    본다. 날짜는 `YYYY-MM-DD`로 적는다(`Cell.date`와 같은 꼴이라 글자로 견준다).
+
+    **못 읽는 값은 버리고 말한다.** 조용히 무시하면 사람은 적어 둔 대로 도는 줄
+    알고, 조용히 죽으면 블럭 첫날 아침에 예습이 통째로 안 선다.
+    """
+    window: list[str] = []
+    warnings: list[str] = []
+    for key in (FROM_KEY, UNTIL_KEY):
+        value = pairs.get(key, "").strip()
+        if value:
+            try:
+                Date.fromisoformat(value)
+            except ValueError:
+                warnings.append(f"{subject}: {key}를 못 읽었다 — 「{value[:20]}」. "
+                                f"`YYYY-MM-DD`로 적어라. 이번에는 블럭 전체를 본다")
+                value = ""
+        window.append(value)
+    since, until = window
+    if since and until and since > until:
+        warnings.append(f"{subject}: {FROM_KEY}({since})가 {UNTIL_KEY}({until})보다 뒤다 — "
+                        f"이대로면 아무 칸도 안 남는다. 블럭 전체를 본다")
+        return "", "", warnings
+    return since, until, warnings
+
+
 def block_names(cells: list[Cell], this_files: list[LectureFile]) -> set[str]:
     """올해 필기가 앉은 칸의 블럭 이름. 이것이 이 과목의 시간표 이름이다."""
     seats = {(f.date, f.slot) for f in this_files}
@@ -301,6 +357,20 @@ def plan(
     seats = {(f.date, f.slot) for f in this_files}
     empty = [cell for cell in cells
              if blocks.base_name(cell.course) in names and (cell.date, cell.slot) not in seats]
+
+    # 블럭을 두 과목이 나눠 쓰면, 이름만으로는 상대 과목의 칸까지 딸려 온다.
+    # 사람이 적어 둔 구간이 있으면 거기서 자른다(`FROM_KEY`·`UNTIL_KEY`).
+    since, until, window_warnings = block_window(confirmed, subject)
+    warnings += window_warnings
+    if since or until:
+        inside = [cell for cell in empty
+                  if not ((since and cell.date < since) or (until and cell.date > until))]
+        if len(inside) != len(empty):
+            warnings.append(
+                f"{subject}: 블럭을 나눠 쓴다 — {since or '처음'}~{until or '끝'}만 본다"
+                f"(밖의 {len(empty) - len(inside)}칸은 다른 과목의 것이다)")
+        empty = inside
+
     if not empty:
         return [], warnings
 
