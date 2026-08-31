@@ -173,8 +173,8 @@ export function PreviewAction({
         // 자기 것이라 묻지 않는다. 옛 대화는 해당 AI 서비스에 그대로 남아 있고
         // 여기서 가리키는 주소만 새것으로 바뀐다.
         <Remake
-          label="새 대화"
-          hint="개인 링크를 새 대화로 다시 시작"
+          label="다시 만들기"
+          hint="개인 링크를 새 대화로 다시 만들기"
           busy={busy === "personal"}
           disabled={Boolean(busy)}
           onClick={() => void start("personal")}
@@ -199,10 +199,7 @@ export function PreviewAction({
       shape="is-key"
       hit={
         <button className="panel-action-hit" onClick={() => start("shared")} disabled={Boolean(busy)}>
-          <Body
-            name="기본 링크"
-            note={busy === "shared" ? "여는 중…" : `만들기 · ${previewProviderLabels[provider]}`}
-          />
+          <Body name="기본 링크" note={busy === "shared" ? "여는 중…" : "만들기"} />
         </button>
       }
     />
@@ -227,7 +224,7 @@ export function PreviewAction({
           target="_blank"
           rel="noreferrer"
         >
-          <Body name="개인 링크" note={`${previewProviderLabels[detail.myPreview.provider]} · 내 대화`} />
+          <Body name="개인 링크" />
         </a>
       }
       tools={personalTools}
@@ -237,10 +234,7 @@ export function PreviewAction({
       shape="is-key is-faint"
       hit={
         <button className="panel-action-hit" onClick={() => start("personal")} disabled={Boolean(busy)}>
-          <Body
-            name="개인 링크"
-            note={busy === "personal" ? "여는 중…" : `만들기 · ${previewProviderLabels[provider]}`}
-          />
+          <Body name="개인 링크" note={busy === "personal" ? "여는 중…" : "만들기"} />
         </button>
       }
       tools={personalTools}
@@ -313,7 +307,7 @@ function SharedOpen({
           rel="noreferrer"
           onClick={() => watchSharedLink(lectureId, provider, url)}
         >
-          <Body name="기본 링크" note={`${previewProviderLabels[provider]} · 공통`} />
+          <Body name="기본 링크" />
         </a>
       }
       tools={tools}
@@ -321,12 +315,19 @@ function SharedOpen({
   );
 }
 
-/** 카드 안의 글 두 줄. 이름과 하는 일. */
-function Body({ name, note }: { name: string; note: string }) {
+/**
+ * 카드 안의 한 줄. 이름과, 있으면 그 옆의 값.
+ *
+ * **부제는 걷어냈다(2026-08-31 관리자 지시 — 「ChatGPT · 공통」 같은 것).** 어느
+ * AI인지는 갈래 머리의 고르개가 이미 말하고, 「공통」·「내 대화」는 이름이
+ * 「기본」·「개인」으로 이미 말한 것을 되풀이한 것이었다. 남는 것은 값이거나
+ * 상태다 — 「만들기」·「아직 없습니다」·「여는 중…」.
+ */
+function Body({ name, note }: { name: string; note?: string }) {
   return (
     <>
       <strong>{name}</strong>
-      <small>{note}</small>
+      {note ? <small>{note}</small> : null}
     </>
   );
 }

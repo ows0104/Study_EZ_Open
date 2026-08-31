@@ -1121,15 +1121,18 @@
   transition: background 0.12s ease, border-color 0.12s ease;
 }
 
-/* 카드를 통째로 쓰는 과녁. `button`으로 올 수도 있어서 기본 꼴을 지운다. */
+/* 카드를 통째로 쓰는 과녁. `button`으로 올 수도 있어서 기본 꼴을 지운다.
+ *
+ * **이름과 값이 한 줄에 선다**(2026-08-31 관리자 지시 — 28장·용량을 올려라).
+ * 두 줄로 쌓으면 이름 아래에 딸린 설명처럼 보이는데, 「28장」도 「3.3MB」도
+ * 설명이 아니라 그 카드가 지금 들고 있는 값이다. */
 .panel-action-hit {
-  display: grid;
+  display: flex;
   width: 100%;
   min-height: 0;
   padding: 0;
-  grid-template-columns: 1fr auto;
-  gap: 1px 10px;
-  align-items: center;
+  gap: 8px;
+  align-items: baseline;
   border: 0;
   border-radius: 0;
   color: inherit;
@@ -1145,17 +1148,19 @@
   content: "";
 }
 
-.panel-action-hit > * {
-  grid-column: 1;
-}
-
 .panel-action strong {
+  overflow: hidden;
+  flex: 0 1 auto;
   font-size: 13px;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+/* 값. 남는 폭을 받아 화살표를 끝으로 민다. */
 .panel-action small {
   overflow: hidden;
+  flex: 1 1 auto;
   color: var(--ink-3);
   font-size: 11px;
   text-overflow: ellipsis;
@@ -1165,8 +1170,9 @@
 /* 열리는 것에만 화살표가 붙는다. 빈 자리와 눈으로 갈리는 지점이다. */
 a.panel-action-hit::after,
 button.panel-action-hit::after {
-  grid-column: 2;
-  grid-row: 1 / -1;
+  flex: 0 0 auto;
+  /* 값이 없는 카드에서도 화살표는 끝에 선다. */
+  margin-left: auto;
   color: var(--ink-3);
   font-size: 14px;
   content: "→";
@@ -1253,8 +1259,8 @@ button.panel-action-hit:hover:not(:disabled)::after {
   z-index: 1;
   display: flex;
   flex-wrap: wrap;
-  margin-top: 7px;
-  gap: 4px;
+  margin-top: 8px;
+  gap: 4px 14px;
 }
 
 /* 기본 링크와 개인 링크는 같은 것의 두 갈래다 — 위아래로 쌓으면 앞의 것이
@@ -1268,14 +1274,6 @@ button.panel-action-hit:hover:not(:disabled)::after {
 
 .panel-pair > .panel-action {
   margin-bottom: 0;
-}
-
-/* 칸이 절반이라 이름이 두 줄로 접힌다 — 그러면 둘의 키가 달라져
-   나란히 서 있다는 뜻이 깨진다. 이름은 짧게 적고 하는 일은 아랫줄이 말한다. */
-.panel-pair > .panel-action strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* 한 가지를 하는 두 길은 한 테두리 안에 넣는다 — Pre-Quiz를 여기서 풀 것이냐
@@ -1320,10 +1318,11 @@ button.panel-action-hit:hover:not(:disabled)::after {
   font-size: 14px;
 }
 
-/* 덩어리 안의 뒷칸. 앞칸이 주된 길이라 이쪽은 폭을 못 박아 좁게 눕힌다. */
+/* 덩어리 안의 뒷칸. 앞칸이 주된 길이라 이쪽은 폭을 못 박아 좁게 눕힌다.
+   이름과 용량 한 줄이면 되므로 「다시 만들기」를 앞칸에 넘기고 더 좁혔다. */
 .panel-combo > .panel-action.is-compact {
   flex: 0 0 auto;
-  width: 132px;
+  width: 116px;
 }
 
 /* 덩어리 안에서는 파선을 안 쓴다(바깥 테두리가 이미 실선이다).
@@ -1332,47 +1331,54 @@ button.panel-action-hit:hover:not(:disabled)::after {
   color: var(--ink-3);
 }
 
-/* **이름을 버튼 안에 적는다(2026-08-31 관리자 지시).** 전에는 `✎`·`⟳` 아이콘만
-   링크 옆에 붙어 있었고, 무엇이 고쳐지고 무엇이 다시 만들어지는지는 마우스를
-   올려 `title`을 띄워 봐야 알았다 — 손가락으로 누르는 화면에는 그 방법이 없다.
+/* **이름을 적되 강조하지 않는다(2026-08-31 관리자 지시 — 링크 글씨처럼).**
+   전에는 `✎`·`⟳` 아이콘만 링크 옆에 붙어 있어서 마우스를 올려 `title`을 띄워
+   봐야 뜻이 나왔고, 그 다음엔 알약 버튼이 되어 카드의 주된 것과 무게가 비슷해졌다.
+   테두리·배경을 걷고 밑줄만 남긴다 — 누를 수 있다는 것은 밑줄이 말한다.
 
-   카드 안에 들어가므로 작다. 글씨는 짧게 적고(「다시 만들기」) 무엇을 다시
-   만드는지는 **그 카드가 이미 말하고 있다.** 온전한 말은 `aria-label`에 있다. */
+   카드 안에 들어가므로 글씨는 짧게 적고(「다시 만들기」) 무엇을 다시 만드는지는
+   **그 카드가 이미 말하고 있다.** 온전한 말은 `aria-label`에 있다. */
 .panel-tool {
   position: relative;
-  min-height: 25px;
-  padding: 0 8px;
+  min-height: 0;
+  padding: 0;
   gap: 4px;
-  border-radius: var(--r-1);
-  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  border: 0;
+  border-radius: 0;
+  color: var(--ink-3);
+  background: transparent;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--ink-3) 45%, transparent);
+  text-underline-offset: 3px;
 }
 
 .panel-tool:hover:not(:disabled) {
-  border-color: var(--fam-line);
+  border: 0;
   color: var(--fam-ink);
-  background: var(--fam-hover);
+  background: transparent;
+  text-decoration-color: currentcolor;
 }
 
 /* 지금 펼쳐져 있다(프롬프트 편집칸). */
 .panel-tool.is-active {
-  border-color: var(--fam-line);
   color: var(--fam-ink);
-  background: var(--fam-soft);
+  background: transparent;
+  text-decoration-color: currentcolor;
 }
 
+/* 아이콘은 도는 동안에만 나온다. 쉬는 자리에서는 글씨 하나가 전부다. */
 .panel-tool-icon {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 /* 고쳐 쓴 사람에게만 붙는 표시. 기본값을 쓰는 사람에게는 아무것도 없다. */
 .panel-tool.is-dot::after {
-  position: absolute;
-  top: 4px;
-  right: 4px;
   width: 4px;
   height: 4px;
+  margin-left: 1px;
+  align-self: center;
   border-radius: 50%;
   background: var(--fam);
   content: "";

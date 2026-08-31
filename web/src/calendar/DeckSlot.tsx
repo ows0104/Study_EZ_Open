@@ -83,6 +83,10 @@ function jobLine(job: PrequizJob, runner: RunnerBeat | null): string {
  * **`before`가 있으면 그것과 한 덩어리로 붙는다.** Pre-Quiz가 그렇다 — 웹에서
  * 푸는 것과 덱으로 받는 것은 한 가지를 하는 두 길인데, 두 줄로 세워 두니 서로
  * 다른 것으로 읽혔다(2026-08-31 관리자 지시 — 하나로 합쳐라).
+ *
+ * **`before`는 노드가 아니라 「도구를 받아 그리는 것」이다.** 덱 칸은 좁아서
+ * 「다시 만들기」가 안 들어가고, 관리자 지시도 그것을 앞칸(웹에서 풀기) 아래에
+ * 두라는 것이었다. 도구는 여기서만 만들 수 있으니(일감 상태를 든다) 넘겨준다.
  */
 export function DeckSlot({
   kind,
@@ -98,12 +102,12 @@ export function DeckSlot({
   lecture: LectureRef;
   onDownload: (file: LectureFile) => void;
   /** 같은 덩어리 안에서 이 덱보다 앞에 서는 것(Pre-Quiz 웹 풀이). */
-  before?: ReactNode;
+  before?: (tools: ReactNode) => ReactNode;
 }) {
   const isAdmin = Boolean(useMe()?.isAdmin);
   if (!isAdmin) {
     return (
-      <Combo before={before}>
+      <Combo before={before?.(null)}>
         <DeckAction file={file} label={label} onDownload={onDownload} merged={Boolean(before)} />
       </Combo>
     );
@@ -153,7 +157,7 @@ function DeckMake({
   file: LectureFile | undefined;
   lecture: LectureRef;
   onDownload: (file: LectureFile) => void;
-  before?: ReactNode;
+  before?: (tools: ReactNode) => ReactNode;
 }) {
   const base = `/api/admin/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
   const [job, setJob] = useState<PrequizJob | null>(null);
@@ -222,28 +226,29 @@ function DeckMake({
   );
 
   if (file) {
+    /* 덱이 이상하다는 것을 아는 사람은 그것을 받아 본 사람이다. 그 사람이 서
+       있는 자리가 이 덩어리라 **버튼도 그 안에 넣는다**(2026-08-31 관리자 지시).
+       덩어리가 둘로 갈려 있으면 넓은 앞칸이 든다 — 덱 칸은 이름과 용량으로
+       이미 한 줄이 찬다. */
+    const tools = (
+      <Remake
+        label="다시 만들기"
+        hint={`${label} 다시 만들기`}
+        busy={job?.state === "running"}
+        busyLabel="다시 만드는 중…"
+        disabled={open || asking}
+        onClick={() => setAskingRemake(true)}
+      />
+    );
     return (
       <>
-        <Combo before={before}>
-          {/* 덱이 이상하다는 것을 아는 사람은 그것을 받아 본 사람이다. 그 사람이
-              서 있는 자리가 이 카드라 **버튼도 이 카드 안에 넣는다**(2026-08-31
-              관리자 지시). 아래 따로 줄을 세우면 무엇이 다시 만들어지는지
-              글씨로만 알 수 있었다. */}
+        <Combo before={before?.(tools)}>
           <DeckAction
             file={file}
             label={label}
             onDownload={onDownload}
             merged={merged}
-            tools={
-              <Remake
-                label="다시 만들기"
-                hint={`${label} 다시 만들기`}
-                busy={job?.state === "running"}
-                busyLabel="다시 만드는 중…"
-                disabled={open || asking}
-                onClick={() => setAskingRemake(true)}
-              />
-            }
+            tools={merged ? undefined : tools}
           />
         </Combo>
         {askingRemake ? (
@@ -271,7 +276,7 @@ function DeckMake({
     // 좁은 칸(`merged`)에는 한 마디만 들어간다. 사정은 아래 줄이 통째로 말한다.
     return (
       <>
-        <Combo before={before}>
+        <Combo before={before?.(null)}>
           <span className={`panel-action is-line is-empty${merged ? " is-compact" : " is-key"}`}>
             {merged ? jobShort(job, runner) : `${label} — ${jobLine(job, runner)}`}
           </span>
@@ -284,13 +289,13 @@ function DeckMake({
 
   return (
     <>
-      <Combo before={before}>
+      <Combo before={before?.(null)}>
         <ActionCard
           shape={merged ? "is-compact" : "is-key"}
           hit={
             <button className="panel-action-hit" disabled={asking} onClick={() => void ask(false)}>
-              <strong>{label} 만들기</strong>
-              <small>{asking ? "맡기는 중…" : merged ? "없습니다" : "아직 없습니다 · 눌러서 만듭니다"}</small>
+              <strong>{label}</strong>
+              <small>{asking ? "맡기는 중…" : "만들기"}</small>
             </button>
           }
         />
@@ -337,7 +342,7 @@ function DeckAction({
       hit={
         <button className="panel-action-hit" onClick={() => onDownload(file)}>
           <strong>{label}</strong>
-          <small>{merged ? fileSize(file.sizeBytes) : `${fileSize(file.sizeBytes)} · 내려받기`}</small>
+          <small>{fileSize(file.sizeBytes)}</small>
         </button>
       }
       tools={tools}

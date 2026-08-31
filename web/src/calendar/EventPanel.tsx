@@ -215,8 +215,11 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
 
           누르면 Pre-Quiz 전용 창이 열린다. 캘린더도 이 패널도 그대로 남는다.
 
-          문항 수는 왼쪽 칸이 말한다. 덱 칸에서 되풀이하면 덱의 장수처럼 읽히는데,
-          덱에는 그림 카드까지 들어 있어 언제나 더 많다. */}
+          문항 수는 왼쪽 칸이 이름 옆에서 말한다. 덱 칸에서 되풀이하면 덱의
+          장수처럼 읽히는데, 덱에는 그림 카드까지 들어 있어 언제나 더 많다.
+
+          「다시 만들기」는 덱의 것이지만 넓은 왼쪽 칸이 든다 — 덱 칸은 이름과
+          용량으로 한 줄이 찬다(관리자 지시도 그 자리였다). */}
       <PanelGroup tone="pre" title="Pre-Quiz" note="강의 직전 1회">
         <DeckSlot
           kind="pre"
@@ -225,24 +228,27 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
           lecture={lecture}
           onDownload={download}
           before={
-            quiz ? (
-              <ActionCard
-                shape="is-lead"
-                hit={
-                  <a
-                    className="panel-action-hit"
-                    href={prequizHref(lecture)}
-                    target={prequizWindow(lecture)}
-                  >
-                    <strong>웹에서 풀기</strong>
-                    <small>
-                      {quiz.itemCount}장
-                      {quiz.answered ? ` · ${quiz.answered}장 풀었습니다` : ""}
-                    </small>
-                  </a>
-                }
-              />
-            ) : null
+            quiz
+              ? (tools) => (
+                  <ActionCard
+                    shape="is-lead"
+                    hit={
+                      <a
+                        className="panel-action-hit"
+                        href={prequizHref(lecture)}
+                        target={prequizWindow(lecture)}
+                      >
+                        <strong>웹에서 풀기</strong>
+                        <small>
+                          {quiz.itemCount}장
+                          {quiz.answered ? ` · ${quiz.answered}장 풀었습니다` : ""}
+                        </small>
+                      </a>
+                    }
+                    tools={tools}
+                  />
+                )
+              : undefined
           }
         />
       </PanelGroup>

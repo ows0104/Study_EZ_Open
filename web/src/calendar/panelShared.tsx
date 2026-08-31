@@ -122,9 +122,13 @@ export function PanelTool({
       aria-label={full}
       title={full}
     >
-      <span className="panel-tool-icon" aria-hidden="true">
-        {icon}
-      </span>
+      {/* 쉬는 자리에서는 글씨 하나가 전부다. 아이콘이 도는 것은 그것 자체가
+          「지금 돌고 있다」는 말이라 그때만 나온다. */}
+      {busy ? (
+        <span className="panel-tool-icon" aria-hidden="true">
+          {icon}
+        </span>
+      ) : null}
       {text}
     </button>
   );
