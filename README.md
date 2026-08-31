@@ -28,6 +28,8 @@ studyez/__main__.py  CLI 껍데기 + 사람이 한 번씩 치는 명령 (import�
 studyez/runner.py    스케줄러가 돌리는 한 사이클 (watch·prequeue·publish·done·agent)
 studyez/deck.py      그 러너와 파이프라인의 유일한 접점
 pdf2anki/    덱을 만드는 파이프라인. 명령 하나가 PDF에서 .apkg까지 간다
+data/timetable/  학기 시간표 JSON. 캘린더가 이것만으로 그려지고, 만드는 코드는
+             없다 — 요람을 사람이 옮겨 적는다 ([README](data/timetable/README.md))
 runs/        산출물. 원본 PDF에서 언제든 재생성된다 (저장소에 안 들어감)
 out/         pdf2anki 작업 폴더. 같은 성격이고 **수명은 한 학기(180일)**다
              (한 강의를 여러 번 돌린 시도가 여기 쌓인다. 재배치 설계는

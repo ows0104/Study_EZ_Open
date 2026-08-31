@@ -1,7 +1,8 @@
 """운영용 잡일. 학기 초에 한 번씩, 그리고 파이프라인을 갈아엎을 때 한 번.
 
     python -m app.cli init-db                    표를 세우고 빠진 칼럼을 붙인다
-    python -m app.cli seed-timetable "…/2026_본1_2학기_시간표.json"
+    python -m app.cli seed-timetable             data/timetable/의 최신 학기 파일
+    python -m app.cli seed-timetable <경로>       다른 것을 먹일 때
     python -m app.cli purge-artifacts            무엇이 지워질지만 본다
     python -m app.cli purge-artifacts --apply    정말 지운다
 
@@ -71,6 +72,23 @@ def init_db() -> None:
     Base.metadata.create_all(engine)
     ensure_columns()
     print(f"{len(Base.metadata.tables)}개 표를 준비했습니다.")
+
+
+# 학기 시간표가 사는 자리. `server/`는 따로 배포되지만 이 명령은 로컬에서만 돈다
+# (운영 DB를 향해 사람이 손으로 부른다) — 저장소 안을 봐도 된다.
+TIMETABLE_DIR = Path(__file__).resolve().parents[2] / "data" / "timetable"
+
+
+def latest_timetable() -> Path:
+    """경로를 안 주면 먹일 파일. **이름순 마지막이 최신 학기다**(`2026_본1_2학기_…`).
+
+    2026-08-31까지 이 파일은 옛 파이프라인 저장소에 혼자 있었고, 그래서 부르는 자리마다
+    절대경로를 손으로 적었다. 적는 자리가 많으면 하나는 낡은 사본을 가리키게 된다.
+    """
+    found = sorted(TIMETABLE_DIR.glob("*.json"))
+    if not found:
+        raise SystemExit(f"{TIMETABLE_DIR}에 시간표 JSON이 없습니다. 경로를 주세요.")
+    return found[-1]
 
 
 def seed_timetable(path: Path) -> None:
@@ -245,9 +263,7 @@ def main() -> None:
     if command == "init-db":
         init_db()
     elif command == "seed-timetable":
-        if len(sys.argv) < 3:
-            raise SystemExit("시간표 JSON 경로가 필요합니다.")
-        seed_timetable(Path(sys.argv[2]))
+        seed_timetable(Path(sys.argv[2]) if len(sys.argv) > 2 else latest_timetable())
     elif command == "purge-artifacts":
         purge_artifacts(apply="--apply" in sys.argv[2:])
     else:

@@ -55,7 +55,7 @@ def resolve_window(args) -> tuple[str | None, str | None, int]:
         found = blocks.find(today, Path(args.timetable) if args.timetable else None)
     except FileNotFoundError as missing:
         print(f"[block] 시간표를 찾지 못했다: {missing}\n"
-              "  `python -m app.cli seed-timetable <시간표.json>`으로 넣거나 "
+              "  `python -m app.cli seed-timetable`으로 넣거나 "
               "--timetable으로 준다. 큐를 세우지 않는다.")
         return None, None, 2
 

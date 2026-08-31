@@ -97,14 +97,15 @@ RS256 검증을 하고, 요즘 Supabase는 비대칭 키가 기본이라 그 편
 ```bash
 cd server
 .venv/Scripts/python.exe -m app.cli init-db
-.venv/Scripts/python.exe -m app.cli seed-timetable "…/2026_본1_2학기_시간표.json"
+.venv/Scripts/python.exe -m app.cli seed-timetable
 ```
 
-로컬에서 실 DB를 향해 돌린다. 학기 초에 한 번이다.
+로컬에서 실 DB를 향해 돌린다. 학기 초에 한 번이다. 경로를 안 주면
+[data/timetable/](../data/timetable/)의 최신 학기 파일을 먹는다.
 
 **그 JSON을 만드는 코드는 이 저장소에 없다.** 학사 요람의 주별 시간표(이미지 PDF)를
-사람이 옮겨 적은 것이고, 지금 쓰는 것은 `Study_EZ_Claude/TimeTable/`에 있다. 손으로
-나온 것이라 **칸마다 `details`의 어디까지가 제목이고 어디부터가 담당인지가 흔들린다.**
+사람이 옮겨 적은 것이다. 손으로 나온 것이라 **칸마다 `details`의 어디까지가 제목이고
+어디부터가 담당인지가 흔들린다.**
 
     details    "(MDL)⏎연충란⏎최민호, 신은희, 여선주,⏎송현범, 김주현"
     professor  "연충란 최민호, 신은희, 여선주, 송현범, 김주현"   ← 소제목이 넘어왔다

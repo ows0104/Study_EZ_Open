@@ -12,7 +12,7 @@ app/
   storage.py    R2 서명 URL
   naming.py     NFC·정규화. studyez/filenames.py와 같은 규칙이다
   matching.py   시간표 칸 ↔ 필기에서 읽어 낸 강의
-  cli.py        init-db · seed-timetable
+  cli.py        init-db · seed-timetable (data/timetable/) · purge-artifacts
   preview_links.py  예습 제공자와 링크 형식의 단일 검증점
   routes/       me · timetable · lectures · prequiz · admin · prequiz_jobs · local_storage
                 prequiz.py 는 학생이 푸는 문항, prequiz_jobs.py 는 러너가 집어 가는 일감이다
@@ -31,7 +31,7 @@ tests/          test_smoke.py · test_matching.py · test_samples.py
 python -m venv .venv && .venv/Scripts/pip install -r requirements.txt
 cp .env.example .env          # 값을 채운다
 python -m app.cli init-db
-python -m app.cli seed-timetable "…/2026_본1_2학기_시간표.json"
+python -m app.cli seed-timetable          # data/timetable/의 최신 학기 파일
 python -m uvicorn app.main:app --reload
 ```
 
