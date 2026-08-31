@@ -68,10 +68,19 @@ export function prequizDone(lecture: LectureRef) {
 /**
  * 강의 하나 → 자리 둘.
  *
- * **준비는 OR다.** 예습 셋(작년 필기·예습 링크·Pre-Quiz) 중 하나만 올라와도 자리가
- * 켜진다. 셋을 다 요구하면 필기만 올라온 흔한 상태에서 사용자 화면에 아무 일도
- * 없던 것이 되는데, 덜 채운 것은 관리자의 미완이지 사용자의 할 일이 아니다.
- * 무엇이 있는지는 눌러서 연 패널이 말한다.
+ * **예습 자리는 기본 예습 링크가 문이다**(2026-08-31 관리자 지시). 관리자 계정이
+ * 공유 링크를 실제로 저장해야(`marks.preview` — `preview.share_url`이 비어 있지
+ * 않다) 자리가 산다.
+ *
+ * 전에는 예습 셋(작년 필기·예습 링크·Pre-Quiz) 중 하나만 올라와도 켰는데, 그러면
+ * **92편 전부가 켜져 있었고 그중 53편이 작년 필기뿐이었다**(2026-08-31 실측).
+ * 예습으로 읽을 대화가 아직 없는데 준비된 것으로 보이던 자리다.
+ *
+ * **Pre-Quiz가 링크 없이 서 있는 강의는 0편이었다.** 그래서 이 문을 세워도 덱이
+ * 가려지지 않는다. 그런 강의가 생기면 그때 다시 본다 — 세는 자리는 `preview`와
+ * `pre_apkg`·`pre_item`이다.
+ *
+ * **복습은 그대로 OR다.** 올해 필기와 본덱은 서로를 안 기다린다.
  *
  * **끝냄은 잴 수 있는 것만 본다.** 웹 예습퀴즈를 다 풀었거나, 그 자리의 파일을
  * 받아 갔거나다. 받아 간 것은 엄밀히 "풀었다"가 아니지만 서버가 볼 수 있는
@@ -80,15 +89,17 @@ export function prequizDone(lecture: LectureRef) {
 export function lectureSlots(lecture: LectureRef): Slots {
   const { marks, grabbed, prequizProgress: progress } = lecture;
 
-  const preReady = marks.notesPrev || marks.preview || marks.prequiz;
-  const preDone = grabbed.pre || prequizDone(lecture);
+  // 문이 닫혀 있으면 「했다」도 안 그린다. 링크 없이 작년 필기만 받아 간 것이
+  // 채운 동그라미로 서면, 관리자가 아직 안 만든 강의가 다 한 강의로 보인다.
+  const preOpen = marks.preview;
+  const preDone = preOpen && (grabbed.pre || prequizDone(lecture));
   const mainReady = marks.notesCurrent || marks.quiz;
 
   return {
-    pre: preDone ? "done" : preReady ? "ready" : "none",
+    pre: preDone ? "done" : preOpen ? "ready" : "none",
     // 받아 간 사람은 Anki 쪽이라 서버가 진행을 못 본다. 그때는 비율을 안 그리고
     // 꽉 채운다 — 반쯤 찬 점으로 남겨 두면 영영 안 끝나는 자리가 된다.
-    preFill: grabbed.pre || !progress ? null : progress.answered / progress.total,
+    preFill: !preOpen || grabbed.pre || !progress ? null : progress.answered / progress.total,
     main: grabbed.main ? "done" : mainReady ? "ready" : "none",
   };
 }
@@ -120,10 +131,16 @@ export function addDays(value: Date, amount: number) {
   return next;
 }
 
-/** 주는 월요일에 시작한다. 일요일(0)은 지난 주로 돌린다. */
+/**
+ * 그 주의 월요일. 격자에 평일만 서므로 주의 시작은 곧 월요일이다.
+ *
+ * **일요일(0)은 다음 주로 보낸다.** 주는 일요일에 시작하고, 일요일에 하는 일은
+ * 월요일 예습이다 — 지난 주로 돌리면 일요일에 캘린더를 열었을 때 정작 준비할
+ * 주가 안 보인다.
+ */
 export function startOfWeek(value: Date) {
   const day = value.getDay();
-  return addDays(value, day === 0 ? -6 : 1 - day);
+  return addDays(value, day === 0 ? 1 : 1 - day);
 }
 
 export function toDateKey(value: Date) {

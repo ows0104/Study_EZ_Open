@@ -789,15 +789,42 @@
   align-items: center;
 }
 
-/* 시점 딱지. 뒤따르는 점들이 언제 그려지는지를 가른다. */
+/* 모양 딱지. 뒤따르는 세 단계가 어느 자리의 것인지를 모양으로 말한다. */
 .legend-group.is-phase {
   gap: 8px;
 }
 
 .legend-group.is-phase b {
+  display: flex;
+  gap: 8px;
+  align-items: center;
   color: var(--ink-2);
   font-size: 10.5px;
   font-weight: 650;
+}
+
+/* 예습이 동그라미, 복습이 네모.
+ *
+ * **글자표(○·□)로 적지 않는다.** 글꼴마다 둘의 크기와 밑선이 안 맞아서 나란히
+ * 놓으면 한쪽이 작고 내려앉는다. 칸에 실제로 서는 것과 같은 상자로 그려야
+ * 둘이 정확히 같은 크기가 된다.
+ *
+ * **세 단계 중 어느 것도 아닌 회색이다.** 색은 「올라옴」이, 채움은 「함」이
+ * 이미 쓰고 있다 — 딱지가 그중 하나를 빌리면 네 번째 단계로 읽힌다. */
+.legend-shape {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  box-sizing: border-box;
+  border: 1px solid var(--ink-3);
+}
+
+.legend-shape.is-pre {
+  border-radius: 50%;
+}
+
+.legend-shape.is-main {
+  border-radius: 1px;
 }
 
 /* 계열 견본. 칸의 왼쪽 띠를 그대로 축소한 모양이다. */
@@ -828,10 +855,6 @@
   border-style: dashed;
   border-left-width: 1px;
   background: transparent;
-}
-
-.calendar-legend .legend-note {
-  margin-left: auto;
 }
 
 /* ------------------------------------------------------------------ 패널 */
