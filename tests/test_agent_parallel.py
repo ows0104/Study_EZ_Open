@@ -225,3 +225,28 @@ def test_자리가_없는_편은_적을_곳이_없다(tmp_path):
                            title="총론", share_url=""),
         state=prequeue.BLOCKED, reason="작년 짝이 없다")
     assert prequeue.save_state(target, tmp_path) is None
+
+
+def test_복습은_작년_자리를_안_건드린다(tmp_path):
+    """복습은 올해 자리에만 쓴다. 작년 자리까지 찍으면 **지울 때가 위험하다** —
+    같은 교시에 다른 과목이 돌면 한 작년 자리를 두 강의가 나눠 쓰고, 거기서 예습이
+    도는 중에 복습이 끝나면서 남의 표시를 지운다."""
+    prev = tmp_path / "250916_01"
+    prev.mkdir()
+    (prev / "pre_target.json").write_text(
+        json.dumps({"subject": "기생충학", "run_id": "260901_01"}), encoding="utf-8")
+
+    worker = _agent(tmp_path, FakeClient([]))
+    main = agent.Job(id=1, subject="기생충학", run_id="260901_01", kind=deck.MAIN)
+    worker.mark_building(main)
+    assert (tmp_path / "260901_01" / gate.BUILDING_FILE).is_file()
+    assert not (prev / gate.BUILDING_FILE).exists()
+
+    # 예습은 그 자리에 쌓이므로 거기도 막는다.
+    pre = agent.Job(id=2, subject="기생충학", run_id="260901_01", kind=deck.PRE)
+    worker.mark_building(pre)
+    assert (prev / gate.BUILDING_FILE).is_file()
+
+    # 복습이 끝나도 예습의 표시는 남는다.
+    worker.clear_building(main)
+    assert (prev / gate.BUILDING_FILE).is_file()

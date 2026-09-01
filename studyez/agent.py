@@ -118,6 +118,13 @@ RE_STAGE = re.compile(r"^── (.+)$")
 # 괄호 앞까지가 단계 이름 — 첫 공백에서 자르면 「프롬프트」만 남는다.
 RE_SKIP = re.compile(r"^\[건너뜀\] (.+?)(?:\s{2,}\(.*\))?$")
 RE_PREV = re.compile(r"작년 (\d{6}_\d{2})")
+# 「만들 것이 하나도 없다」는 줄. 줄 머리에서 재지 않으면 옆의 `다시 만들 것 0편`에
+# 걸린다(2026-09-02).
+RE_NOTHING = re.compile(r"^\s*만들 것 0편")
+# 모델 쪽 한도에 걸린 자리. `claude -p`가 이 말을 그대로 싣고 429로 끝난다.
+RE_LIMIT = re.compile(r"(?:session|usage) limit\s*(?:·\s*)?([^\"\\]*)", re.IGNORECASE)
+# 하위 로그가 어디 있는지. 실패 줄이 경로를 달고 온다.
+RE_CHILD_LOG = re.compile(r"\(로그: (.+?\.log)\)")
 
 
 @dataclass
@@ -336,15 +343,31 @@ class Agent:
             argv.append("--force")
         return argv
 
+    def building_seats(self, job: Job) -> set[Path]:
+        """이 일감이 쓰는 자리. 표시를 놓고 지우는 곳이 여기다.
+
+        **갈래마다 다르다.** 복습은 올해 자리에만 쓴다. 예습은 산출물이 작년 run에
+        쌓이므로 거기도 막아야 한다 — 안 막으면 쓸기가 만드는 중인 예습 덱을 올린다.
+
+        복습이 작년 자리까지 찍고 있었다(2026-09-02에 좁혔다). 손해는 없었지만
+        지울 때가 위험하다 — **같은 교시에 다른 과목이 돌면 한 작년 자리를 두 강의가
+        나눠 쓴다.** 그 자리에서 예습이 도는 중에 복습이 끝나면서 남의 표시를 지우면,
+        쓸기가 반쯤 쓰인 예습 덱을 올린다.
+        """
+        seats = {self.runs_dir / job.run_id}
+        if job.kind != deck.MAIN:
+            prev = self.prev_run_of(job)
+            if prev:
+                seats.add(self.runs_dir / prev)
+        return seats
+
     def mark_building(self, job: Job) -> None:
         """「이 자리는 지금 만드는 중」 표시를 만진다. 쓸기가 이것을 본다.
 
         **프로세스 밖으로 나가는 표시라 파일이다.** 쓸기는 하위 프로세스
         (`studyez publish`)라 러너의 메모리를 볼 수 없다.
         """
-        run_dir = self.runs_dir / job.run_id
-        prev = self.prev_run_of(job)
-        for target in {run_dir, self.runs_dir / prev} if prev else {run_dir}:
+        for target in self.building_seats(job):
             try:
                 target.mkdir(parents=True, exist_ok=True)
                 (target / gate.BUILDING_FILE).write_text(
@@ -353,9 +376,7 @@ class Agent:
                 pass
 
     def clear_building(self, job: Job) -> None:
-        prev = self.prev_run_of(job)
-        for target in {self.runs_dir / job.run_id, self.runs_dir / prev} if prev else {
-                self.runs_dir / job.run_id}:
+        for target in self.building_seats(job):
             (target / gate.BUILDING_FILE).unlink(missing_ok=True)
 
     def handle(self, job: Job) -> None:
@@ -376,7 +397,10 @@ class Agent:
 
         made = self.outcome(job, lines, code, started)
         if not made:
-            why = blocked_reason(lines, job.run_id) or summary(lines) or f"종료 코드 {code}"
+            # 한도가 먼저다. 기다리면 풀리는 일을 다른 말로 적으면 사람이
+            # 고칠 것이 없는 곳을 고치러 간다.
+            why = (limit_reason(lines) or blocked_reason(lines, job.run_id)
+                   or summary(lines) or f"종료 코드 {code}")
             self.say(f"    실패 — {why}")
             self.report(job, state="failed", stage="", message=f"덱을 못 만들었다: {why} (로그: {log})")
             return
@@ -705,9 +729,47 @@ def blocked_reason(lines: list[str], run_id: str = "") -> str:
         if "✋" in line and mine(line):
             after = lines[index + 1].strip() if index + 1 < len(lines) else ""
             return (after or line.strip())[:300]
-    if any("만들 것 0편" in line or "로컬에서 이 강의를 못 찾았다" in line for line in lines):
+    # **줄 머리에서 잰다.** `"만들 것 0편" in line`으로 재던 자리다 — 그 글자가
+    # 바로 옆의 `다시 만들 것 0편` 안에 그대로 들어 있어서, 만들 것이 있는 회차도
+    # 참이 됐다. 2026-09-02에 예습 세 편이 세션 한도로 죽었는데 화면에는
+    # 「만들 자리를 못 찾았다」가 떴다 — 사람이 짝을 고치러 갈 문구다.
+    if any(RE_NOTHING.match(line) or "로컬에서 이 강의를 못 찾았다" in line for line in lines):
         return next((line.strip()[:300] for line in lines if "못 찾았다" in line and mine(line)),
                     "만들 자리를 못 찾았다")
+    return ""
+
+
+def limit_reason(lines: list[str]) -> str:
+    """모델 한도에 걸렸나. 걸렸으면 사람이 읽을 한 줄, 아니면 빈 문자열.
+
+    **이유가 하위 로그에만 있다.** 러너가 보는 것은 감싼 명령의 출력이라
+    「pdf2anki가 1로 끝났다」까지만 온다. 그래서 그 줄이 달고 오는 경로를 따라가
+    읽는다.
+
+    2026-09-02 01:22에 복습 셋과 예습 셋이 이것으로 죽었는데, 화면에는 종료 코드와
+    「만들 자리를 못 찾았다」만 남았다. **기다리면 풀리는 일과 사람이 고쳐야 하는
+    일은 화면에서 갈려야 한다** — 앞의 것에 짝을 고치러 가면 고칠 것이 없다.
+    """
+    def said(text: str) -> str:
+        hit = RE_LIMIT.search(text)
+        if not hit:
+            return ""
+        when = (hit.group(1) or "").strip(" ·\t")
+        return f"세션 한도에 걸렸다 — {when}" if when else "세션 한도에 걸렸다"
+
+    for line in lines:
+        if found := said(line):
+            return found
+    for line in lines:
+        child = RE_CHILD_LOG.search(line)
+        if not child:
+            continue
+        try:
+            text = Path(child.group(1)).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if found := said(text):
+            return found
     return ""
 
 

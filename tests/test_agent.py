@@ -293,3 +293,37 @@ def test_하위_명령의_stdin을_막는다(tmp_path, monkeypatch):
     worker._run([sys.executable, "-c", "pass"], tmp_path / "run.log")
 
     assert seen["stdin"] is agent.subprocess.DEVNULL
+
+
+# ── 기다리면 풀리는 일과 고쳐야 하는 일은 화면에서 갈린다 ──────────────
+# 2026-09-02 01:22에 복습 셋·예습 셋이 세션 한도로 죽었는데, 화면에는 종료 코드와
+# 「만들 자리를 못 찾았다」만 남았다. 둘 다 사람을 엉뚱한 곳으로 보낸다.
+
+
+def test_다시_만들_것_0편에_안_걸린다():
+    """`"만들 것 0편" in line`으로 재던 자리. 그 글자가 바로 옆 `다시 만들 것 0편`
+    안에 그대로 있어서 정상 회차마다 참이 됐다."""
+    lines = ["  만들 것 1편 · 다시 만들 것 0편 · 이미 있는 것 0편 · 막힌 것 0편"]
+    assert agent.blocked_reason(lines, "260902_01") == ""
+
+
+def test_정말_만들_것이_없으면_그대로_말한다():
+    lines = ["  만들 것 0편 · 다시 만들 것 0편 · 이미 있는 것 3편 · 막힌 것 0편"]
+    assert agent.blocked_reason(lines, "260902_01") == "만들 자리를 못 찾았다"
+
+
+def test_한도는_하위_로그에서_읽어_온다(tmp_path):
+    """러너가 보는 것은 「pdf2anki가 1로 끝났다」까지다. 이유는 그 줄이 달고 오는
+    로그 안에 있다."""
+    child = tmp_path / "pipeline.log"
+    child.write_text(
+        '{"api_error_status":429,"result":"You\'ve hit your session limit '
+        '· resets 5:40am (Asia/Seoul)","type":"result"}', encoding="utf-8")
+    lines = [f"    실패 — pdf2anki가 1로 끝났다 (로그: {child}) · 0.1분"]
+    assert agent.limit_reason(lines) == "세션 한도에 걸렸다 — resets 5:40am (Asia/Seoul)"
+
+
+def test_한도가_아니면_아무_말도_안_한다(tmp_path):
+    child = tmp_path / "pipeline.log"
+    child.write_text("멈췄다 — ②카드: 스키마가 안 맞는다", encoding="utf-8")
+    assert agent.limit_reason([f"실패 — (로그: {child})"]) == ""
