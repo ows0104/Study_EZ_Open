@@ -205,7 +205,15 @@ export type ChecklistItem = (typeof checklistItems)[number];
 export type ChecklistState = "done" | "waived" | "todo";
 
 /** 러너가 아직 안 집었거나(`queued`), 만드는 중이거나(`running`), 끝났거나. */
-export type PrequizJobState = "queued" | "running" | "done" | "failed";
+/**
+ * `held`는 **자동으로 섰지만 그날 상한을 넘어 사람을 기다리는 줄**이다(2026-09-01).
+ * 만들지는 않지만 화면에는 남는다 — 안 세우면 「자동이 안 걸린 편」과 「상한에
+ * 걸린 편」이 같은 모양이 된다.
+ */
+export type PrequizJobState = "queued" | "running" | "done" | "failed" | "held";
+
+/** 누가 세운 줄인가. 버튼은 이제 안전장치고, 재료가 도착하면 저절로 선다. */
+export type JobOrigin = "button" | "auto";
 
 /** 무엇을 만드는 일감인가. 재료도 명령도 갈린다 — 예습은 예습 대화와 작년 필기로,
  *  복습은 올해 필기로 만든다. */
@@ -228,12 +236,48 @@ export type PrequizJob = {
   requestedBy: string;
   /** 「다시 만들기」로 선 일감인가. 러너가 이미 만든 것을 버리고 처음부터 만든다. */
   force: boolean;
+  origin: JobOrigin;
+  /** 어느 일꾼이 잡고 있나(`w1`·`w2`). 겹쳐 도는 편을 가려 보는 값이다. */
+  worker: string;
+  /** **서버가 셈해서 준다.** 화면마다 시계를 맞추면 시차만큼 어긋난다. */
+  elapsedSeconds: number;
+  stageSeconds: number;
+  stageIndex: number;
+  stageTotal: number;
+  /**
+   * 러너가 지난 편들의 실측으로 셈한 남은 시간. **0이면 모른다는 뜻**이고,
+   * 그때 화면은 그 자리를 비운다 — 지어낸 숫자를 적으면 그 뒤로 아무도 그
+   * 값을 안 믿는다.
+   *
+   * 러너가 20초마다 다시 셈해 올리므로 **그대로 쓰면 된다** — 마지막으로 적힌
+   * 순간 기준의 남은 시간이다.
+   */
+  etaSeconds: number;
   createdAt: string;
   updatedAt: string;
 };
 
 /** 노트북이 마지막으로 살아 있다고 알린 시각. 없으면 한 번도 안 붙은 것이다. */
 export type RunnerBeat = { lastSeen: string; busy: boolean; note: string };
+
+/**
+ * `GET /api/admin/prequiz-jobs` — **겹쳐 도는 편을 순서대로 보는 자리.**
+ *
+ * `/overview`는 편마다 최근 일감을 하나씩만 들고 있어서 「지금 둘이 도는데 앞에
+ * 몇 편이 남았나」를 말할 수 없다. 도는 것·기다리는 것·상한에 걸린 것을 서버가
+ * 갈라서 준다 — 화면마다 갈라 보면 답이 화면마다 달라진다.
+ */
+export type JobBoard = {
+  jobs: PrequizJob[];
+  running: PrequizJob[];
+  /** 집어 갈 차례대로. 앞에서부터 러너가 가져간다. */
+  waiting: PrequizJob[];
+  held: PrequizJob[];
+  autoUsedToday: number;
+  autoDailyCap: number;
+  maxRunning: number;
+  runner: RunnerBeat | null;
+};
 
 export type AdminRow = {
   subject: string;

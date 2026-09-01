@@ -442,7 +442,19 @@ JOB_QUEUED = "queued"
 JOB_RUNNING = "running"
 JOB_DONE = "done"
 JOB_FAILED = "failed"
-JOB_OPEN = frozenset({JOB_QUEUED, JOB_RUNNING})
+# 자동으로 세웠지만 그날의 상한을 넘어 사람을 기다리는 줄. **러너는 안 집어 간다.**
+# 상한에 걸린 편을 아예 안 세우면 화면에 아무것도 안 남아서, 만들어지지 않은 것과
+# 만들 생각이 없는 것이 같은 모양이 된다.
+JOB_HELD = "held"
+JOB_OPEN = frozenset({JOB_QUEUED, JOB_RUNNING, JOB_HELD})
+
+# 자동으로 세우는 일감의 하루 상한(관리자 지시, 2026-09-01). 사람이 누른 것은
+# 여기 안 든다 — 상한은 「아무도 안 봤는데 돈이 나가는 것」을 막는 장치다.
+JOB_AUTO_DAILY_CAP = 6
+
+# 어디서 온 일감인가. 버튼은 사람이 누른 것, 자동은 재료가 도착해서 선 것.
+JOB_BUTTON = "button"
+JOB_AUTO = "auto"
 
 # 무엇을 만드는 일감인가. 예습(작년 필기 + 예습 대화)과 복습(올해 필기).
 JOB_PRE = "pre"
@@ -488,9 +500,27 @@ class PrequizJob(Base):
     # `studyez.prequeue`가 이미 만든 편을 `done`으로 보고 건너뛰고, 그러면 화면에는
     # 「덱을 못 만들었다」가 적힌다. 만든 것이 있는데 안 만든 것처럼 보이는 자리다.
     force: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # `button` | `auto`. **상한이 자동에만 걸리므로 갈라 둔다** — 사람이 누른 것은
+    # 몇 편째든 선다.
+    origin: Mapped[str] = mapped_column(
+        String(8), nullable=False, default=JOB_BUTTON, server_default=JOB_BUTTON
+    )
+    # 어느 일꾼이 집어 갔나(`w1`·`w2`). 러너가 여럿이 되면서 필요해졌다 — 끊겼다
+    # 붙은 일꾼이 **자기가 잡고 있던 편**을 다시 잡아야 하고, 남의 편을 뺏으면
+    # 같은 편을 둘이 만든다.
+    worker: Mapped[str] = mapped_column(String(16), nullable=False, default="", server_default="")
+    # 몇 단계 중 몇 번째인가. `stage`(사람이 읽는 한 줄)만으로는 얼마나 남았는지를
+    # 화면이 말할 수 없다.
+    stage_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    stage_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # 러너가 지난 편들의 실측으로 셈한 남은 시간(초). 0이면 아직 모른다.
+    eta_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # 지금 단계가 언제 시작했나. 한 단계가 10분 넘게 이어지는 일이 정상이라,
+    # **편 전체의 경과만으로는 멈춘 것과 오래 걸리는 것이 구별되지 않는다.**
+    stage_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (

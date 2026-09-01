@@ -41,13 +41,24 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 # 사람이 손으로 놓는 보류 표시. 안에 적힌 글이 그대로 사유가 된다.
 HOLD_FILE = "HOLD"
+
+# 러너가 **지금 이 자리를 만들고 있다**는 표시. 일꾼이 둘이 되고 쓸기가 따로
+# 돌면서 필요해졌다(2026-09-01) — 만드는 중인 자리를 쓸기가 올리면 반쯤 쓰인
+# 덱이 나간다. 만들기가 끝나면 러너가 지운다.
+BUILDING_FILE = "BUILDING"
+
+# 이 시간이 지나도록 안 지워진 표시는 죽은 것이다. 러너가 도는 동안 계속
+# 만지므로(`agent.Build.touch`), 오래된 것은 러너가 그 편을 놓고 죽었다는 뜻이다.
+BUILDING_STALE = 300
 
 
 @dataclass
@@ -74,6 +85,9 @@ def hold_reason(run_dir: Path) -> str:
     것이라 아직 이 사이트의 눈으로 본 적이 없기 때문이다. 사람이 보고 `studyez
     release <run_id>`로 푼다.
     """
+    building = building_reason(run_dir)
+    if building:
+        return building
     path = run_dir / HOLD_FILE
     if not path.is_file():
         return ""
@@ -81,6 +95,29 @@ def hold_reason(run_dir: Path) -> str:
         return path.read_text(encoding="utf-8").strip() or "사유 없이 보류돼 있다"
     except OSError:
         return "보류 표시를 읽지 못했다"
+
+
+def building_reason(run_dir: Path) -> str:
+    """지금 만드는 중이면 그렇다고. 아니면 빈 문자열.
+
+    **쓸기가 빌드와 겹쳐 돈다**(2026-09-01). 겹치는 것 자체는 뜻이 있다 — 한 편이
+    막혀도 나머지가 올라가야 하니까. 다만 만드는 중인 자리는 산출물이 반만 쓰여
+    있으므로 이번 회차에서 뺀다. 다음 쓸기가 올린다.
+
+    **오래된 표시는 안 믿는다.** 러너가 그 편을 놓고 죽으면 표시만 남는데, 그것을
+    그대로 믿으면 그 편이 영영 안 올라간다.
+    """
+    path = run_dir / BUILDING_FILE
+    try:
+        age = time.time() - path.stat().st_mtime
+    except OSError:
+        return ""
+    if age > BUILDING_STALE:
+        return ""
+    who = ""
+    with contextlib.suppress(OSError):
+        who = path.read_text(encoding="utf-8").strip()
+    return f"지금 만드는 중이다 ({who or '러너'}) — 이번 회차는 건너뛴다"
 
 
 def inspect(run_dir: Path, deck: Path | None, meta_path: Path | None,

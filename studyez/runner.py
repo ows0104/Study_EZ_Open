@@ -458,6 +458,10 @@ def report_prequeue(args) -> int:
 
     queue_path = runs_dir / prequeue.QUEUE_NAME
     prequeue.save(targets, queue_path)
+    # 판정은 편마다 자기 자리에도 적는다. 큐 파일은 한 파일이라 다음 실행이
+    # 지우고, 그것을 되읽던 러너가 「덱을 못 만들었다」를 잘못 적었다.
+    for target in targets:
+        prequeue.save_state(target, runs_dir)
     print(f"  큐: {queue_path}")
     if ready and not args.build:
         print("\n  `python -m studyez prequeue --build` — 이대로 예습 덱까지 만든다:")
@@ -509,17 +513,18 @@ def run_agent(args) -> int:
               "STUDYEZ_RUNNER_TOKEN 환경 변수, 또는 --token으로 준다")
         return 2
 
-    worker = agent.Agent(
+    runner = agent.Agent(
         publish.Client(api, token), Path(args.runs), REPO_ROOT,
         subject=args.subject or "",
         sweep_seconds=0 if args.no_sweep else args.sweep_minutes * 60,
-        timeout=args.timeout)
+        timeout=args.timeout, workers=args.workers)
     if args.once:
-        # 붙는지 보는 용도. 일감이 없으면 쓸기도 한 번 돌려 준다.
-        worker.last_sweep = 0.0
-        worker.tick()
+        # 붙는지 보는 용도. 일감이 없으면 쓸기도 한 번 돌려 준다 — 쓸기가 이제
+        # 따로 도는 실이라(`agent.sweep_loop`) `tick`이 안 부른다.
+        if not runner.tick() and runner.sweep_seconds:
+            runner.sweep()
         return 0
-    return worker.loop(poll=args.poll)
+    return runner.loop(poll=args.poll)
 
 
 def sync_previews(args, subjects: list[str], runs_dir: Path, api: str) -> set[tuple[str, str]]:

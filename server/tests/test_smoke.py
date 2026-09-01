@@ -108,7 +108,23 @@ def main() -> None:
     completed = client.post(
         "/api/admin/lectures/병리학/260813_03/uploads/complete", headers=RUNNER, json=files
     ).json()
-    check("두 파일 다 확인됨", completed == {"stored": 2, "missing": []}, completed)
+    check("두 파일 다 확인됨",
+          (completed["stored"], completed["missing"]) == (2, []), completed)
+    # **올해 필기가 처음 올라오면 복습 덱이 저절로 큐에 선다**(2026-09-01). 버튼은
+    # 이제 안전장치다 — 사람이 누르기를 기다리는 동안 노트북이 놀고 있었다.
+    check("필기가 올라오면 복습 일감이 선다",
+          completed["queued"] is not None
+          and completed["queued"]["kind"] == "main"
+          and completed["queued"]["state"] == "queued"
+          and completed["queued"]["origin"] == "auto"
+          and isinstance(completed["queued"]["id"], int), completed)
+
+    # 러너는 쓸기마다 같은 강의록을 다시 밀어 본다. 그때마다 서면 10분에 한 번씩
+    # 같은 편을 만든다.
+    resent = client.post(
+        "/api/admin/lectures/병리학/260813_03/uploads/complete", headers=RUNNER, json=files
+    ).json()
+    check("같은 파일을 다시 올려도 또 서지 않는다", resent["queued"] is None, resent)
 
     # 필기는 받는 것이 아니라 보는 것이다. `inline=1`을 주면 첨부가 아니라
     # 인라인으로 서명돼야 새 탭이 내려받기로 바뀌지 않는다.
@@ -390,6 +406,14 @@ def main() -> None:
     # 노트북이 집어 가고, 진행이 화면으로 돌아온다.
     base14 = "/api/admin/lectures/병리학/260813_03"
 
+    # **여기까지 오는 동안 저절로 선 줄이 둘 있다** — [3]의 필기 업로드가 복습을,
+    # [5]의 예습 링크가 예습을 세웠다(2026-09-01). 이 절은 버튼 길을 재는 자리라
+    # 먼저 그것들을 닫는다. 자동으로 서는 것 자체는 [14-2]에서 잰다.
+    for row in client.get("/api/admin/prequiz-jobs", headers=USER).json()["jobs"]:
+        if row["runId"] == "260813_03" and row["state"] in ("queued", "running", "held"):
+            client.put(f"/api/admin/prequiz-jobs/{row['id']}", headers=RUNNER,
+                       json={"state": "done"})
+
     empty = client.post("/api/admin/prequiz-jobs/claim", headers=RUNNER)
     check("집어 갈 일감이 없으면 null", empty.status_code == 200 and empty.json()["job"] is None, empty.text)
 
@@ -520,6 +544,100 @@ def main() -> None:
     check("올해 강의록이 없으면 거절한다", nonotes.status_code == 400, nonotes.text)
     check("모르는 갈래는 거절한다", client.post(
         f"{base14}/prequiz-job?kind=quiz", headers=USER).status_code == 400)
+
+    print()
+    print("[14-2] 저절로 서는 줄 — 재료가 도착하면 만든다")
+    # 2026-09-01. 버튼을 기다리는 동안 노트북이 놀고 있었다. 이제 재료가 도착하는
+    # 자리에서 큐가 선다 — 필기 업로드([3])와 예습 링크 저장이 그 둘이다.
+    for row in client.get("/api/admin/prequiz-jobs", headers=USER).json()["jobs"]:
+        if row["state"] in ("queued", "running", "held"):
+            client.put(f"/api/admin/prequiz-jobs/{row['id']}", headers=RUNNER,
+                        json={"state": "done"})
+
+    saved = client.put("/api/admin/lectures/병리학/260813_01/preview", headers=RUNNER,
+                       json={"shareUrl": "https://chatgpt.com/share/auto-1"}).json()
+    check("예습 링크를 저장하면 예습 일감이 선다",
+          saved["queued"] is not None and saved["queued"]["kind"] == "pre"
+          and saved["queued"]["origin"] == "auto", saved)
+
+    # 러너의 `publish`가 쓸기마다 같은 주소를 되밀어 올린다. 저장 자체를 신호로
+    # 삼으면 10분마다 같은 편이 큐에 선다.
+    same = client.put("/api/admin/lectures/병리학/260813_01/preview", headers=RUNNER,
+                      json={"shareUrl": "https://chatgpt.com/share/auto-1"}).json()
+    check("같은 링크를 되밀어도 또 서지 않는다", same["queued"] is None, same)
+
+    # 둘째 줄을 세운다. 한 편만으로는 일꾼이 둘인지 알 수 없다.
+    client.post("/api/admin/lectures", headers=RUNNER, json=[{
+        "subject": "병리학", "runId": "260813_02", "uid": "260813_02#둘째줄#김혜령",
+        "date": "2026-08-13", "slot": 2, "slotEnd": 2, "startTime": "10:00",
+        "title": "두 번째 예습", "professors": ["김혜령"], "author": "", "version": None,
+    }])
+    client.put("/api/admin/lectures/병리학/260813_02/preview", headers=RUNNER,
+               json={"shareUrl": "https://chatgpt.com/share/auto-2"})
+
+    # **일꾼이 둘이다.** 앞의 편이 막혀도 뒤의 편이 간다 — 이것이 없던 동안
+    # 한 편이 45분을 잠들어 있으면 큐가 통째로 섰다.
+    first = client.post("/api/admin/prequiz-jobs/claim?worker=w1", headers=RUNNER).json()["job"]
+    second = client.post("/api/admin/prequiz-jobs/claim?worker=w2", headers=RUNNER).json()["job"]
+    check("일꾼 둘이 서로 다른 편을 집어 간다",
+          first is not None and second is not None and first["id"] != second["id"],
+          (first, second))
+    check("집어 간 일꾼 이름이 남는다",
+          first["worker"] == "w1" and second["worker"] == "w2", (first, second))
+
+    third = client.post("/api/admin/prequiz-jobs/claim?worker=w3", headers=RUNNER).json()["job"]
+    check("상한을 넘겨서는 안 준다", third is None, third)
+
+    mine = client.post("/api/admin/prequiz-jobs/claim?worker=w1", headers=RUNNER).json()["job"]
+    check("끊겼다 붙은 일꾼은 자기 편을 다시 잡는다", mine["id"] == first["id"], mine)
+
+    # 어디까지 왔나·얼마나 남았나. 러너만 아는 값이라 올라온다.
+    client.put(f"/api/admin/prequiz-jobs/{first['id']}", headers=RUNNER,
+               json={"stage": "② 카드", "stageIndex": 3, "stageTotal": 7, "etaSeconds": 900})
+    shown = client.get("/api/admin/prequiz-jobs", headers=USER).json()
+    row = next(item for item in shown["jobs"] if item["id"] == first["id"])
+    check("단계와 남은 시간이 화면까지 온다",
+          (row["stageIndex"], row["stageTotal"], row["etaSeconds"]) == (3, 7, 900), row)
+    check("몇 분째인지도 서버가 셈해 준다", row["elapsedSeconds"] >= 0 and "stageSeconds" in row, row)
+    check("도는 것과 기다리는 것을 갈라서 준다",
+          len(shown["running"]) == 2 and shown["maxRunning"] == 2, shown)
+
+    for job in (first, second):
+        client.put(f"/api/admin/prequiz-jobs/{job['id']}", headers=RUNNER, json={"state": "done"})
+
+    # 하루 상한. 넘은 편은 만들지 않지만 **화면에는 남는다** — 안 세우면 자동이
+    # 안 걸린 편과 상한에 걸린 편이 같은 모양이 된다.
+    from app.models import JOB_AUTO_DAILY_CAP  # noqa: PLC0415
+
+    used = client.get("/api/admin/prequiz-jobs", headers=USER).json()["autoUsedToday"]
+    for index in range(JOB_AUTO_DAILY_CAP - used + 1):
+        run_id = f"26090{index % 10}_0{index % 9 + 1}"
+        client.post("/api/admin/lectures", headers=RUNNER, json=[{
+            "subject": "병리학", "runId": run_id, "uid": f"{run_id}#상한시험{index}#김혜령",
+            "date": "2026-09-02", "slot": 1, "slotEnd": 1, "startTime": "09:00",
+            "title": f"상한 시험 {index}", "professors": ["김혜령"], "author": "", "version": None,
+        }])
+        last = client.put(f"/api/admin/lectures/병리학/{run_id}/preview", headers=RUNNER,
+                          json={"shareUrl": f"https://chatgpt.com/share/cap-{index}"}).json()
+    check(f"자동은 하루 {JOB_AUTO_DAILY_CAP}편에서 멈춘다",
+          last["queued"] is not None and last["queued"]["state"] == "held", last)
+    over = client.get("/api/admin/prequiz-jobs", headers=USER).json()
+    check("상한에 걸린 줄은 화면에 남는다", len(over["held"]) == 1, over["held"])
+
+    # 상한까지 선 줄들을 치우고 남은 것이 `held` 하나가 되게 한다. 러너가 그것을
+    # 집어 가면 상한이 아무것도 안 막은 것이다.
+    for row in over["waiting"]:
+        client.put(f"/api/admin/prequiz-jobs/{row['id']}", headers=RUNNER, json={"state": "done"})
+    check("러너는 그 줄을 안 집어 간다",
+          client.post("/api/admin/prequiz-jobs/claim?worker=w1",
+                      headers=RUNNER).json()["job"] is None)
+
+    held_id = over["held"][0]["id"]
+    released = client.post(
+        f"/api/admin/lectures/병리학/{over['held'][0]['runId']}/prequiz-job", headers=USER)
+    check("사람이 누르면 그 줄이 풀린다 — 새 줄이 서지 않는다",
+          released.json()["job"]["id"] == held_id
+          and released.json()["job"]["state"] == "queued", released.text)
 
     print()
     if failures:

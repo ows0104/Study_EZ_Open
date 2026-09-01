@@ -8,6 +8,7 @@ import {
   type PrequizJob,
   type RunnerBeat,
 } from "../types";
+import { jobMoving, progressLine } from "../jobProgress";
 import { useMe } from "../useMe";
 import { ActionCard, fileSize, Remake, RemakeConfirm } from "./panelShared";
 
@@ -30,6 +31,7 @@ function runnerAlive(runner: RunnerBeat | null): boolean {
  * 막으려고 아래 `jobLine`을 갈랐던 것이라 같은 함정을 여기서 다시 판다.
  */
 function jobShort(job: PrequizJob, runner: RunnerBeat | null): string {
+  if (job.state === "held") return "상한";
   if (!runnerAlive(runner)) return "멈춤";
   return job.state === "running" ? "만드는 중" : "대기";
 }
@@ -52,6 +54,11 @@ function jobShort(job: PrequizJob, runner: RunnerBeat | null): string {
  */
 function jobLine(job: PrequizJob, runner: RunnerBeat | null): string {
   const alive = runnerAlive(runner);
+  if (job.state === "held") {
+    // 재료는 도착했는데 그날 자동 상한을 넘겼다. **누르면 그 줄이 그대로 풀린다** —
+    // 새 줄이 서는 것이 아니라 이미 선 줄이 큐로 들어간다.
+    return job.stage || "오늘 자동으로 만들 만큼 만들었습니다 — 누르면 이 편을 만듭니다";
+  }
   if (!alive) {
     // 러너가 없으면 이 일감은 안 움직인다. 만들다 만 것과 아직 시작도 못 한 것을
     // 가른다 — 앞의 것은 다시 붙으면 이어 잡고(`claim`이 running부터 준다),
@@ -60,9 +67,13 @@ function jobLine(job: PrequizJob, runner: RunnerBeat | null): string {
       ? `러너가 안 붙어 있습니다 · ${job.stage || "시작"}에서 멈췄습니다`
       : "러너가 안 붙어 있습니다 · 노트북에서 띄우면 집어 갑니다";
   }
-  if (job.state === "running") return `${job.force ? "다시 " : ""}만드는 중 · ${job.stage || "시작"}`;
-  // 줄은 섰고 러너도 있다. 그런데 한 번에 한 편만 만든다 — 앞 편이 있으면 그것부터다.
-  const soon = runner?.busy ? "차례를 기다립니다 · 러너가 앞 편을 만드는 중입니다" : "러너가 곧 집어 갑니다";
+  if (job.state === "running") {
+    // 단계·경과·남은 시간까지 한 줄에(`progressLine`). 그 전에는 「만드는 중」뿐이라
+    // 5분째와 40분째가 같은 모양이었다.
+    return `${job.force ? "다시 " : ""}만드는 중 · ${progressLine(job)}`;
+  }
+  // 줄은 섰고 러너도 있다. 겹쳐 도는 편에 상한이 있어서 앞 편이 차면 기다린다.
+  const soon = runner?.busy ? "차례를 기다립니다 · 러너가 다른 편을 만드는 중입니다" : "러너가 곧 집어 갑니다";
   return job.force ? `다시 만듭니다 · ${soon}` : soon;
 }
 
@@ -204,7 +215,8 @@ function DeckMake({
 
   useEffect(load, [load]);
 
-  const open = job?.state === "queued" || job?.state === "running";
+  // `held`는 사람을 기다리는 줄이라 안 움직인다 — 다시 읽어 봐야 같은 값이다.
+  const open = jobMoving(job);
   useEffect(() => {
     // 도는 동안만 다시 읽는다. 한 편에 15분이라 사람이 패널을 닫았다 열어야
     // 진행이 보이면, 그 진행은 없는 것과 같다.
@@ -352,11 +364,14 @@ function DeckMake({
           hit={
             <button className="panel-action-hit" disabled={asking} onClick={() => void ask(false)}>
               <strong>{label}</strong>
-              <small>{asking ? "맡기는 중…" : "만들기"}</small>
+              <small>{asking ? "맡기는 중…" : job?.state === "held" ? "지금 만들기" : "만들기"}</small>
             </button>
           }
         />
       </Combo>
+      {/* 자동으로 서 있다가 그날 상한에 걸린 줄. **왜 아직 없는지를 여기서
+          말한다** — 안 적으면 자동이 안 걸린 편과 같은 모양이 된다. */}
+      {job?.state === "held" ? <p className="panel-hint">{label} — {jobLine(job, runner)}</p> : null}
       {failure}
     </>
   );

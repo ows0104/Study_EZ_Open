@@ -883,6 +883,61 @@ button.resource.is-download:hover:not(:disabled)::after {
   flex-wrap: wrap;
 }
 
+/* 지금 무엇이 도는가. **표보다 먼저 선다** — 「지금 어떤 걸 하고 있고 몇 분째
+ * 인지」를 보려고 표를 훑게 하면, 그 답은 안 보이는 것과 같다(2026-09-01 관리자
+ * 지시). 도는 것이 없으면 통째로 안 그린다. */
+.runner-board {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  background: var(--surface);
+}
+
+.runner-board h2 {
+  margin: 0 0 8px;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.runner-job {
+  display: flex;
+  padding: 6px 0;
+  border-top: 1px solid var(--line-soft);
+  gap: 10px;
+  align-items: baseline;
+  font-size: 12.5px;
+}
+
+.runner-job:first-of-type {
+  border-top: 0;
+}
+
+.runner-job small {
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+/* 진행 막대. 단계 수는 알아도 단계마다 길이가 달라서(「② 카드」가 편의 절반이다)
+ * **시간으로 그린다** — 지난 편들의 실측에서 온 값이다. 모르면 안 그린다. */
+.runner-bar {
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 2px;
+  background: var(--line-soft);
+  overflow: hidden;
+}
+
+.runner-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+  transition: width 1s linear;
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;

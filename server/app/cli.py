@@ -50,6 +50,15 @@ ADDED_COLUMNS = (
     ("prequiz_job", "kind", "VARCHAR(8) NOT NULL DEFAULT 'pre'"),
     # 2026-08-24 「다시 만들기」가 러너까지 가려면 이 값이 표에 남아야 한다.
     ("prequiz_job", "force", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    # 2026-09-01 재료가 도착하면 자동으로 세운다. 상한은 자동에만 건다.
+    ("prequiz_job", "origin", "VARCHAR(8) NOT NULL DEFAULT 'button'"),
+    # 2026-09-01 일꾼이 둘이 되면서 — 끊겼다 붙은 일꾼이 자기 편을 되찾는 값.
+    ("prequiz_job", "worker", "VARCHAR(16) NOT NULL DEFAULT ''"),
+    # 2026-09-01 「어디까지 왔나·얼마나 남았나」를 화면이 말하려면 표에 있어야 한다.
+    ("prequiz_job", "stage_index", "INTEGER NOT NULL DEFAULT 0"),
+    ("prequiz_job", "stage_total", "INTEGER NOT NULL DEFAULT 0"),
+    ("prequiz_job", "eta_seconds", "INTEGER NOT NULL DEFAULT 0"),
+    ("prequiz_job", "stage_started_at", "TIMESTAMP WITH TIME ZONE"),
 )
 
 

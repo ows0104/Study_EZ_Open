@@ -12,19 +12,23 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-from sqlalchemy import select
+from pydantic import BaseModel, Field
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.auth import CurrentUser, require_admin, require_runner
 from app.database import get_db
 from app.models import (
+    JOB_AUTO,
+    JOB_AUTO_DAILY_CAP,
+    JOB_BUTTON,
     JOB_DONE,
     JOB_FAILED,
+    JOB_HELD,
     JOB_KINDS,
     JOB_MAIN,
     JOB_OPEN,
@@ -46,10 +50,50 @@ router = APIRouter()
 # 집어 가는 쪽도 같이 고쳐야 하므로 상수 하나로 묶어 둔다.
 RUNNER_NAME = "local"
 
+# 한 번에 몇 편까지 도는가(관리자 지시, 2026-09-01). **러너의 일꾼 수와 같은 값을
+# 여기도 든다** — 러너가 몇이든 서버가 이보다 많이 내주지 않으면 겹쳐 도는 편이
+# 이 수를 넘지 않는다. 편당 비용은 안 변하고 벽시계만 줄어든다.
+MAX_RUNNING = 2
+
+# 하루가 언제 바뀌는가. 표는 UTC로 적히고 사람은 한국 시각으로 센다.
+KST_OFFSET = timedelta(hours=9)
+
+
+def _kst_day_start() -> datetime:
+    """오늘(한국 시각) 0시를 UTC로. 자동 상한을 세는 창이다."""
+    now_kst = datetime.now(UTC) + KST_OFFSET
+    return now_kst.replace(hour=0, minute=0, second=0, microsecond=0) - KST_OFFSET
+
+
+def auto_used_today(db: Session) -> int:
+    """오늘 자동으로 **돌린** 일감 수. 상한이 무는 값이다.
+
+    사람이 누른 것은 안 센다. 상한에 걸려 `held`로 선 것도 안 센다 — 그것은 아직
+    아무것도 안 쓴 줄이고, 세어 버리면 일곱 번째 필기부터는 화면에 아무 자국도
+    안 남는다.
+    """
+    rows = db.scalars(
+        select(PrequizJob.id).where(
+            PrequizJob.origin == JOB_AUTO,
+            PrequizJob.state != JOB_HELD,
+            PrequizJob.created_at >= _kst_day_start(),
+        )
+    ).all()
+    return len(rows)
+
+
+def _seconds_since(when: datetime | None) -> int:
+    if when is None:
+        return 0
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=UTC)
+    return max(0, int((datetime.now(UTC) - when).total_seconds()))
+
 
 def job_row(job: PrequizJob | None) -> dict[str, Any] | None:
     if job is None:
         return None
+    running = job.state == JOB_RUNNING
     return {
         "id": job.id,
         "subject": job.subject,
@@ -59,6 +103,17 @@ def job_row(job: PrequizJob | None) -> dict[str, Any] | None:
         "stage": job.stage,
         "message": job.message,
         "requestedBy": job.requested_by,
+        # 버튼인가 자동인가. 화면이 「내가 누른 것」과 「저절로 선 것」을 갈라
+        # 보여 주지 않으면, 누른 적 없는 편이 도는 것을 보고 사람이 놀란다.
+        "origin": job.origin,
+        "worker": job.worker,
+        # **서버가 셈해서 준다.** 화면마다 시계를 맞추면 시차만큼 어긋난다.
+        "elapsedSeconds": _seconds_since(job.started_at) if running else 0,
+        "stageSeconds": _seconds_since(job.stage_started_at) if running else 0,
+        "stageIndex": job.stage_index,
+        "stageTotal": job.stage_total,
+        # 러너가 지난 편들의 실측으로 셈한 남은 시간. 0이면 아직 모른다.
+        "etaSeconds": job.eta_seconds if running else 0,
         # 러너가 이것을 보고 이미 만든 편도 버리고 다시 만든다. 화면도 같은 값으로
         # 「만드는 중」과 「다시 만드는 중」을 가른다.
         "force": bool(job.force),
@@ -75,6 +130,14 @@ def runner_row(beat: RunnerBeat | None) -> dict[str, Any] | None:
         "busy": beat.busy,
         "note": beat.note,
     }
+
+
+def _busy_note(running: list[PrequizJob]) -> str:
+    """지금 무엇을 만들고 있는지 한 줄로. 화면 맨 위가 이걸 읽는다."""
+    if not running:
+        return ""
+    head = f"{running[0].subject}/{running[0].run_id}"
+    return head if len(running) == 1 else f"{head} 외 {len(running) - 1}편"
 
 
 def _touch_runner(db: Session, *, busy: bool, note: str) -> None:
@@ -98,6 +161,57 @@ class JobRequest(BaseModel):
     """「다시 만들기」인가. 몸이 없으면 처음 만드는 것이다."""
 
     force: bool = False
+
+
+def open_job_of(db: Session, subject: str, run_id: str, kind: str) -> PrequizJob | None:
+    """이 편·이 갈래에 아직 안 끝난 일감. **중복을 막는 자리는 여기 하나다.**"""
+    return db.scalars(
+        select(PrequizJob)
+        .where(
+            PrequizJob.subject == subject,
+            PrequizJob.run_id == run_id,
+            PrequizJob.kind == kind,
+            PrequizJob.state.in_(tuple(JOB_OPEN)),
+        )
+        .order_by(PrequizJob.created_at.desc())
+    ).first()
+
+
+def ensure_auto_job(db: Session, subject: str, run_id: str, kind: str, why: str) -> PrequizJob | None:
+    """재료가 도착해서 저절로 서는 일감. 이미 서 있으면 아무것도 안 한다.
+
+    **버튼은 이제 안전장치다**(관리자 지시, 2026-09-01). 필기가 올라오면 복습이,
+    예습 링크가 저장되면 예습이 여기서 큐로 들어간다 — 사람이 누르기를 기다리는
+    동안 노트북이 놀고 있었다.
+
+    하루 상한(`JOB_AUTO_DAILY_CAP`)을 넘으면 `held`로 세운다. 만들지는 않지만
+    **화면에는 남는다** — 안 세우면 「자동이 안 걸린 편」과 「상한에 걸린 편」이
+    같은 모양이 되고, 그 둘을 가르려면 사람이 노트북을 열어 봐야 한다.
+
+    커밋은 부르는 쪽이 한다. 업로드·링크 저장과 **한 트랜잭션에 묶여야** 해서다 —
+    따로 커밋하면 링크는 저장됐는데 일감은 안 선 상태가 남을 수 있다.
+    """
+    if kind not in JOB_KINDS:
+        return None
+    if open_job_of(db, subject, run_id, kind) is not None:
+        return None
+
+    over = auto_used_today(db) >= JOB_AUTO_DAILY_CAP
+    job = PrequizJob(
+        subject=subject,
+        run_id=run_id,
+        kind=kind,
+        state=JOB_HELD if over else JOB_QUEUED,
+        stage=(f"오늘 자동 상한 {JOB_AUTO_DAILY_CAP}편을 다 썼다 — 만들려면 눌러라"
+               if over else f"{why} — 러너를 기다리는 중"),
+        requested_by="",
+        origin=JOB_AUTO,
+    )
+    db.add(job)
+    # **부르는 쪽이 이 줄을 그대로 응답에 싣는다.** flush 를 안 하면 id 도 기본값도
+    # 아직 없어서 `{"id": null}` 이 화면까지 간다.
+    db.flush()
+    return job
 
 
 def _job_kind(kind: str) -> str:
@@ -168,16 +282,16 @@ def request_prequiz(
     if blocked:
         raise HTTPException(400, blocked)
 
-    open_job = db.scalars(
-        select(PrequizJob)
-        .where(
-            PrequizJob.subject == lecture.subject,
-            PrequizJob.run_id == lecture.run_id,
-            PrequizJob.kind == kind,
-            PrequizJob.state.in_(tuple(JOB_OPEN)),
-        )
-        .order_by(PrequizJob.created_at.desc())
-    ).first()
+    open_job = open_job_of(db, lecture.subject, lecture.run_id, kind)
+    if open_job is not None and open_job.state == JOB_HELD:
+        # 상한에 걸려 서 있던 줄을 사람이 푼 것이다. **새 줄을 세우지 않는다** —
+        # 세우면 같은 편이 두 줄이 되고, 하나는 영영 `held`로 남는다.
+        open_job.state = JOB_QUEUED
+        open_job.stage = "다시 만들려고 러너를 기다리는 중" if force else "러너를 기다리는 중"
+        open_job.requested_by = user.email
+        open_job.force = open_job.force or force
+        db.commit()
+        return {"job": job_row(open_job), "created": False}
     if open_job is not None:
         # **누른 뜻은 덧붙는다.** 아직 안 집어 간 일감에 「다시 만들기」가 겹치면
         # 그 일감이 다시 만드는 일이 된다 — 새 줄을 세우면 같은 편을 두 번 만든다.
@@ -199,6 +313,7 @@ def request_prequiz(
         stage="다시 만들려고 러너를 기다리는 중" if force else "러너를 기다리는 중",
         requested_by=user.email,
         force=force,
+        origin=JOB_BUTTON,
     )
     db.add(job)
     db.commit()
@@ -241,31 +356,68 @@ def lecture_prequiz_job(
 
 @router.post("/prequiz-jobs/claim")
 def claim_prequiz_job(
+    worker: str = "",
     user: CurrentUser = Depends(require_runner),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    """러너가 일감 하나를 집어 간다. 없으면 `null`. **박동도 여기서 찍는다.**
+    """일꾼 하나가 일감 하나를 집어 간다. 없으면 `null`. **박동도 여기서 찍는다.**
 
-    한 번에 하나만 준다. 한 편이 이미 빈 세션 넷을 띄우므로 겹쳐 돌릴 자리가
-    아니다(`studyez.watch.build`와 같은 이유).
+    **한 대의 러너에 일꾼이 여럿이다**(2026-09-01). 그 전에는 도는 편이 하나라도
+    있으면 그것을 돌려주고 끝이었는데, 그러면 한 편이 막힌 동안 뒤의 편이 전부
+    같이 멈춘다 — 2026-08-31에 한 편이 45분을 잠들어 있는 동안 큐가 통째로 섰다.
 
-    이미 `running`인 것이 있으면 새 일감을 주지 않고 그것을 돌려준다 — 러너가
-    끊겼다 붙었을 때 하던 일을 이어 잡으라는 뜻이다.
+    갈라 주는 규칙은 셋이다.
+
+    ① **자기가 잡고 있던 편이 먼저다.** 끊겼다 붙은 일꾼은 그 편을 이어 만든다.
+    ② **남의 편은 안 준다.** 주면 같은 편을 둘이 만든다 — 편당 빈 세션 넷이다.
+    ③ **같은 강의는 겹쳐 안 돈다.** 예습과 복습이 한 편에서 동시에 도는 것까지는
+       재료가 달라 되지만, 그 둘이 같은 자리에 올리므로 순서가 엉킨다.
+
+    `worker`를 안 주면 옛 러너다. 그때는 이름 없는 일꾼 하나로 친다.
     """
+    slot = (worker or "w1")[:16]
+    now = datetime.now(UTC)
+
     running = db.scalars(
         select(PrequizJob).where(PrequizJob.state == JOB_RUNNING).order_by(PrequizJob.created_at)
-    ).first()
-    job = running or db.scalars(
+    ).all()
+
+    mine = next((job for job in running if job.worker == slot), None)
+    if mine is not None:
+        _touch_runner(db, busy=True, note=_busy_note(running))
+        db.commit()
+        return {"job": job_row(mine)}
+
+    if len(running) >= MAX_RUNNING:
+        _touch_runner(db, busy=True, note=_busy_note(running))
+        db.commit()
+        return {"job": None}
+
+    busy_lectures = {(job.subject, job.run_id) for job in running}
+    queued = db.scalars(
         select(PrequizJob).where(PrequizJob.state == JOB_QUEUED).order_by(PrequizJob.created_at)
-    ).first()
+    ).all()
+    # **읽고 나서 쓰는 사이가 비어 있으면 둘이 같은 줄을 집는다.** 일꾼 둘이 같은
+    # 초에 물어보는 일이 실제로 생긴다(둘 다 15초마다 깨어난다). 조건부 UPDATE 한
+    # 방으로 집고, **뺏겼으면 다음 줄로 넘어간다** — 여기서 빈손으로 돌아가면 그
+    # 일꾼이 다음 회차까지(15초) 논다.
+    job = None
+    for row in queued:
+        if (row.subject, row.run_id) in busy_lectures:
+            continue
+        taken = db.execute(
+            update(PrequizJob)
+            .where(PrequizJob.id == row.id, PrequizJob.state == JOB_QUEUED)
+            .values(state=JOB_RUNNING, stage="시작", worker=slot,
+                    started_at=now, stage_started_at=now)
+        )
+        if taken.rowcount == 1:
+            db.refresh(row)
+            job = row
+            running = [*running, row]
+            break
 
-    if job is not None and job.state == JOB_QUEUED:
-        job.state = JOB_RUNNING
-        job.stage = "시작"
-        job.started_at = datetime.now(UTC)
-
-    _touch_runner(db, busy=job is not None,
-                  note=f"{job.subject}/{job.run_id}" if job is not None else "")
+    _touch_runner(db, busy=bool(running), note=_busy_note(running))
     db.commit()
     return {"job": job_row(job)}
 
@@ -274,6 +426,11 @@ class JobUpdate(BaseModel):
     state: Literal["running", "done", "failed"] | None = None
     stage: str | None = None
     message: str | None = None
+    # 어디까지 왔나·얼마나 남았나. 러너만 아는 값이라 여기로 올라온다
+    # (`studyez.eta`가 지난 편들의 실측으로 셈한다).
+    stage_index: int | None = Field(default=None, alias="stageIndex")
+    stage_total: int | None = Field(default=None, alias="stageTotal")
+    eta_seconds: int | None = Field(default=None, alias="etaSeconds")
 
     model_config = {"populate_by_name": True}
 
@@ -299,9 +456,20 @@ def update_prequiz_job(
         return {"job": job_row(job), "applied": False}
 
     if payload.stage is not None:
+        # **단계가 바뀔 때만 시계를 다시 잡는다.** 러너는 단계가 그대로여도
+        # 20초마다 두드리는데(박동), 그때마다 잡으면 「이 단계에서 12분째」가
+        # 영영 0분으로 보인다.
+        if payload.stage[:500] != job.stage:
+            job.stage_started_at = datetime.now(UTC)
         job.stage = payload.stage[:500]
     if payload.message is not None:
         job.message = payload.message[:2000]
+    if payload.stage_index is not None:
+        job.stage_index = max(0, payload.stage_index)
+    if payload.stage_total is not None:
+        job.stage_total = max(0, payload.stage_total)
+    if payload.eta_seconds is not None:
+        job.eta_seconds = max(0, payload.eta_seconds)
     if payload.state is not None:
         job.state = payload.state
         if payload.state in (JOB_DONE, JOB_FAILED):
@@ -309,9 +477,14 @@ def update_prequiz_job(
 
     # 이 호출 자체가 박동이다(`_touch_runner`). 빈 몸으로 와도 마찬가지 —
     # 러너는 단계가 안 바뀌어도 여기를 두드려 살아 있다고 알린다.
-    finished = job.state in (JOB_DONE, JOB_FAILED)
-    _touch_runner(db, busy=not finished,
-                  note="" if finished else f"{job.subject}/{job.run_id}")
+    #
+    # **한 편이 끝났다고 러너가 논다는 뜻이 아니다.** 일꾼이 둘이라 옆에서 다른
+    # 편이 돌고 있을 수 있다 — 도는 것을 세어서 적는다.
+    db.flush()
+    running = db.scalars(
+        select(PrequizJob).where(PrequizJob.state == JOB_RUNNING).order_by(PrequizJob.created_at)
+    ).all()
+    _touch_runner(db, busy=bool(running), note=_busy_note(list(running)))
     db.commit()
     return {"job": job_row(job), "applied": True}
 
@@ -321,9 +494,25 @@ def list_prequiz_jobs(
     user: CurrentUser = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    """최근 일감. `/overview`가 편마다 하나씩 들고 있지만, 흐름을 보려면 여기다."""
+    """최근 일감. `/overview`가 편마다 하나씩 들고 있지만, 흐름을 보려면 여기다.
+
+    **도는 것과 기다리는 것을 갈라서 준다.** 화면이 50줄을 받아 스스로 갈라도
+    되지만, 「지금 몇 편이 돌고 몇 편이 남았나」는 화면마다 같은 답이어야 한다.
+    """
     jobs = db.scalars(select(PrequizJob).order_by(PrequizJob.created_at.desc()).limit(50)).all()
+    rows = [job_row(job) for job in jobs]
+    running = [row for row in rows if row and row["state"] == JOB_RUNNING]
+    # 기다리는 줄은 **집어 갈 순서대로** 준다. 화면이 「앞에 2편」이라고 말하려면
+    # 최신순이 아니라 이 순서여야 한다.
+    waiting = [row for row in rows if row and row["state"] == JOB_QUEUED][::-1]
     return {
-        "jobs": [job_row(job) for job in jobs],
+        "jobs": rows,
+        "running": running,
+        "waiting": waiting,
+        "held": [row for row in rows if row and row["state"] == JOB_HELD],
+        # 자동이 오늘 몇 편을 썼나. 상한에 걸린 이유를 화면이 그대로 말할 수 있게.
+        "autoUsedToday": auto_used_today(db),
+        "autoDailyCap": JOB_AUTO_DAILY_CAP,
+        "maxRunning": MAX_RUNNING,
         "runner": runner_row(db.get(RunnerBeat, RUNNER_NAME)),
     }

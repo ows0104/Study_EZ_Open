@@ -24,11 +24,34 @@
 
 ## 도는 모양
 
-    POST /api/admin/prequiz-jobs/claim     일감 하나 (없으면 null). 박동도 여기서
-      → 예습: studyez prequeue <과목> --run-id <올해> --build --max 1
-        복습: studyez watch    <과목> --run-id <올해> --build
-      → studyez publish  <과목> --run-id <올해>
-      → PUT /api/admin/prequiz-jobs/<id>   queued → running → done|failed
+    일꾼 w1 ─┐
+    일꾼 w2 ─┤ POST …/prequiz-jobs/claim?worker=<이름>   일감 하나 (없으면 null)
+             │   → 예습: studyez prequeue <과목> --run-id <올해> --build --max 1
+             │     복습: studyez watch    <과목> --run-id <올해> --build
+             │   → studyez publish  <과목> --run-id <올해>
+             │   → PUT …/prequiz-jobs/<id>   queued → running → done|failed
+    쓸기 ────┘ 10분마다 studyez publish — **빌드와 겹쳐 돈다**
+
+## 왜 실을 나눴나 (2026-09-01)
+
+그 전에는 한 실이 `claim` → `handle` → 쓸기를 차례로 했다. 그래서 **한 편이 막히면
+전부 막혔다.** 2026-08-31에 기생충학/260831_01이 「필기 중심으로 만들까요?」에서
+45분을 잠들어 있었는데, 그동안 큐에 선 편도 올릴 것도 아무것도 안 움직였다.
+
+지금은 일꾼이 둘이고(`WORKERS`), 쓸기가 따로 돈다. 겹쳐 도는 것을 서버도 같은
+값으로 막는다(`routes/prequiz_jobs.MAX_RUNNING`).
+
+**같은 편을 둘이 만들지 않는다**는 것을 세 겹으로 지킨다.
+
+    서버   `running`인 편은 그 일꾼에게만 돌려준다
+    러너   `Agent.building`에 든 run_id는 두 번째 일꾼이 안 잡는다
+    파일   `runs/<run_id>/BUILDING` — 쓸기(하위 프로세스)가 이것을 보고 비껴간다
+
+**겹치던 자리 하나를 같이 옮겼다**(2026-09-01). 예습 둘이 같이 돌면 두 `prequeue`
+프로세스가 `runs/prequeue.json`을 각자 통째로 다시 쓴다(`prequeue.save`). 산출물은
+편마다 자리가 달라 안 상하지만, 그 파일을 읽던 `already_made`가 판정을 못 찾아
+**덱은 멀쩡한데 「덱을 못 만들었다」를 적을 수 있었다.** 판정을 편마다 자기 자리에도
+적게 했고(`prequeue.save_state`), 큐 파일은 사람이 읽는 자리로 남겼다.
 
 **갈래는 일감에 실려 온다**(`kind`). 재료가 다르므로 명령이 다르다 — 예습은 관리자가
 만든 예습 대화와 작년 필기로, 복습은 올해 필기로 만든다. 그 뒤(올리기·보고)는 같다.
@@ -62,17 +85,25 @@ import re
 import sqlite3
 import subprocess
 import sys
+import threading
 import time
 from dataclasses import dataclass
 from datetime import date as Date
 from pathlib import Path
 
-from . import ahead, deck, prequeue, publish, watch
+from . import ahead, deck, eta, gate, prequeue, publish, watch
 
 POLL_SECONDS = 15         # 일감을 물어보는 간격
 STAGE_SECONDS = 20        # 하위 로그를 훑어 단계를 올리는 간격
-SWEEP_SECONDS = 600       # 일감이 없을 때 남은 것을 쓸어 올리는 간격
+SWEEP_SECONDS = 600       # 남은 것을 쓸어 올리는 간격
 BUILD_TIMEOUT = 3 * 3600  # 이 시간을 넘기면 그 편을 버린다
+
+# 한 번에 몇 편을 겹쳐 만드나(관리자 지시, 2026-09-01). 서버도 같은 값을 든다
+# (`routes/prequiz_jobs.MAX_RUNNING`) — 둘 중 작은 쪽이 실제 상한이 된다.
+#
+# **편당 비용은 안 변한다.** 한 편이 쓰는 세션 수도 시간도 그대로이고, 벽시계만
+# 줄어든다. 대신 최대 여덟 개 세션이 겹친다(한 편이 재현 검사에서 넷을 띄운다).
+WORKERS = 2
 
 CLAIM = "/api/admin/prequiz-jobs/claim"
 
@@ -113,20 +144,52 @@ class Job:
 class Agent:
     def __init__(self, client: publish.Client, runs_dir: Path, repo_root: Path, *,
                  subject: str = "", sweep_seconds: int = SWEEP_SECONDS,
-                 timeout: int = BUILD_TIMEOUT, announce=print):
+                 timeout: int = BUILD_TIMEOUT, workers: int = WORKERS, announce=print):
         self.client = client
         self.runs_dir = runs_dir
         self.repo_root = repo_root
         self.subject = subject
         self.sweep_seconds = sweep_seconds
         self.timeout = timeout
-        self.say = announce
+        self.workers = max(1, workers)
+        self._say = announce
         self.last_sweep = 0.0
+        # 지금 이 러너가 만들고 있는 편. **서버가 이미 막지만 여기서도 막는다** —
+        # 서버가 잠깐 안 뜨거나 옛 러너가 같이 떠 있으면 그쪽이 뚫린다.
+        self.building: dict[str, str] = {}
+        self._guard = threading.Lock()
+        self._stop = threading.Event()
+        # **올리는 것은 한 번에 하나다.** 무엇을 올렸는지 적는 표가 파일 하나이고
+        # (`publish.LEDGER_NAME`) 통째로 읽어 통째로 다시 쓴다. 두 `publish`가
+        # 겹치면 나중에 끝난 쪽이 앞의 기록을 지우고, 다음 회차가 수백 MB를 다시
+        # 민다. 올리기는 편당 1분 안쪽이라 여기서 줄을 세워도 잃는 것이 없다.
+        self._uploading = threading.Lock()
+
+    def say(self, line: str) -> None:
+        """로그 한 줄. **일꾼이 여럿이라 줄이 섞인다** — 한 번에 하나씩 쓴다."""
+        with self._guard:
+            self._say(line)
+
+    def take(self, job: Job, slot: str) -> bool:
+        """이 편을 이 일꾼이 맡는다고 적는다. 이미 누가 맡고 있으면 False."""
+        with self._guard:
+            if job.run_id in self.building:
+                return False
+            self.building[job.run_id] = slot
+            return True
+
+    def release(self, job: Job) -> None:
+        with self._guard:
+            self.building.pop(job.run_id, None)
 
     # ── 서버와 주고받기 ───────────────────────────────────────────────
-    def claim(self) -> Job | None:
-        """일감 하나를 집어 온다. **박동도 이 호출이 찍는다** — 없어도 불러야 한다."""
-        answer = self.client.call("POST", CLAIM, {}) or {}
+    def claim(self, slot: str = "w1") -> Job | None:
+        """일감 하나를 집어 온다. **박동도 이 호출이 찍는다** — 없어도 불러야 한다.
+
+        `slot`은 이 일꾼의 이름이다. 서버가 그 이름으로 「누가 무엇을 잡고 있나」를
+        들고 있어서, 끊겼다 붙어도 **자기 편**을 다시 받는다.
+        """
+        answer = self.client.call("POST", f"{CLAIM}?worker={slot}", {}) or {}
         row = answer.get("job")
         if not row:
             return None
@@ -162,7 +225,9 @@ class Agent:
                    STUDYEZ_API_BASE_URL=self.client.base,
                    STUDYEZ_RUNNER_TOKEN=self.client.token)
         posted = ""
-        deadline = time.time() + self.timeout
+        started = time.time()
+        stage_at = started
+        deadline = started + self.timeout
 
         with log.open("w", encoding="utf-8") as sink:
             # **자식은 물을 자리가 없다**(`stdin`). 안 막으면 러너의 stdin을 그대로
@@ -178,21 +243,41 @@ class Agent:
                                     cwd=str(self.repo_root), env=env)
             while proc.poll() is None:
                 time.sleep(STAGE_SECONDS)
-                if time.time() > deadline:
+                now = time.time()
+                if now > deadline:
                     proc.kill()
                     proc.wait()
                     return 124, [f"{self.timeout // 60}분 안에 끝나지 않아 끊었다"]
                 if job is None:
                     continue
+                # 그 편을 만드는 동안 계속 만진다. 쓸기가 이 표시를 보고 이번
+                # 회차에서 그 자리를 뺀다(`gate.building_reason`).
+                self.mark_building(job)
                 stage = self.stage_of(log, job)
                 if stage and stage != posted:
-                    posted = stage
-                    self.report(job, stage=stage_prefix + stage)
-                else:
+                    if posted:
+                        # **지난 단계가 얼마나 걸렸는지 여기서만 알 수 있다.**
+                        # 다음 편의 「남은 시간」이 이 값에서 나온다.
+                        eta.observe(self.runs_dir, job.kind, posted, now - stage_at)
+                    posted, stage_at = stage, now
+                    guess = eta.estimate(self.runs_dir, job.kind, stage,
+                                         elapsed=now - started, stage_elapsed=0)
+                    self.report(job, stage=stage_prefix + stage,
+                                stageIndex=guess.index, stageTotal=guess.total,
+                                etaSeconds=guess.eta_seconds)
+                elif posted:
                     # 단계가 그대로여도 한 번은 말을 건다. **이것이 박동이다** —
                     # 한 편을 잡으면 15분 동안 `claim`을 안 부르므로, 여기서 안
-                    # 두드리면 화면이 도는 중인 러너를 죽었다고 말한다. 빈 몸이라
-                    # 서버는 아무것도 안 바꾸고 살아 있다는 것만 적는다.
+                    # 두드리면 화면이 도는 중인 러너를 죽었다고 말한다.
+                    #
+                    # 남은 시간만 다시 셈해 얹는다. 단계 글이 그대로라 서버는 단계
+                    # 시계를 안 건드리고(`update_prequiz_job`), 화면의 「남은 약
+                    # N분」이 20초마다 줄어든다.
+                    live = eta.estimate(self.runs_dir, job.kind, posted,
+                                        elapsed=now - started, stage_elapsed=now - stage_at)
+                    self.report(job, etaSeconds=live.eta_seconds)
+                else:
+                    # 아직 첫 단계도 안 찍혔다. 살아 있다는 것만 알린다.
                     self.report(job)
 
         return proc.returncode, tail(log)
@@ -251,6 +336,28 @@ class Agent:
             argv.append("--force")
         return argv
 
+    def mark_building(self, job: Job) -> None:
+        """「이 자리는 지금 만드는 중」 표시를 만진다. 쓸기가 이것을 본다.
+
+        **프로세스 밖으로 나가는 표시라 파일이다.** 쓸기는 하위 프로세스
+        (`studyez publish`)라 러너의 메모리를 볼 수 없다.
+        """
+        run_dir = self.runs_dir / job.run_id
+        prev = self.prev_run_of(job)
+        for target in {run_dir, self.runs_dir / prev} if prev else {run_dir}:
+            try:
+                target.mkdir(parents=True, exist_ok=True)
+                (target / gate.BUILDING_FILE).write_text(
+                    f"{job.what} {job.label}", encoding="utf-8")
+            except OSError:
+                pass
+
+    def clear_building(self, job: Job) -> None:
+        prev = self.prev_run_of(job)
+        for target in {self.runs_dir / job.run_id, self.runs_dir / prev} if prev else {
+                self.runs_dir / job.run_id}:
+            (target / gate.BUILDING_FILE).unlink(missing_ok=True)
+
     def handle(self, job: Job) -> None:
         """일감 하나를 끝까지. 만들고, 올리고, 무엇이 됐는지 적는다."""
         again = "다시 " if job.force else ""
@@ -258,8 +365,14 @@ class Agent:
         self.report(job, state="running", stage=f"{again}만들 자리 세우는 중")
 
         started = time.time()
+        self.mark_building(job)
         log = self.runs_dir / f"agent.{job.run_id}.log"
-        code, lines = self._run(self.make_argv(job), log, job)
+        try:
+            code, lines = self._run(self.make_argv(job), log, job)
+        finally:
+            # **올리기 전에 푼다.** 이 편의 `publish`는 바로 아래에서 도는데, 표시가
+            # 남아 있으면 자기 자신이 만든 것을 「만드는 중」이라고 건너뛴다.
+            self.clear_building(job)
 
         made = self.outcome(job, lines, code, started)
         if not made:
@@ -271,9 +384,10 @@ class Agent:
         self.report(job, stage=f"{made} · 올리는 중")
 
         up_log = self.runs_dir / f"agent.{job.run_id}.publish.log"
-        code, lines = self._run(
-            [sys.executable, "-m", "studyez", "publish", job.subject, "--run-id", job.run_id],
-            up_log)
+        with self._uploading:
+            code, lines = self._run(
+                [sys.executable, "-m", "studyez", "publish", job.subject, "--run-id", job.run_id],
+                up_log)
         if code != 0:
             why = summary(lines) or f"종료 코드 {code}"
             self.say(f"    올리다 실패 — {why}")
@@ -331,14 +445,27 @@ class Agent:
     def already_made(self, job: Job) -> bool:
         """이 대화로 만든 예습 문항이 이미 노트북에 있는가. `outcome`이 부른다.
 
-        로그를 긁지 않고 **`prequeue`가 적어 둔 큐**를 읽는다 — 같은 실행이 남긴
-        구조화된 판정이라(`prequeue.DONE`) 줄 모양이 바뀌어도 안 흔들린다.
+        로그를 긁지 않고 **`prequeue`가 적어 둔 판정**을 읽는다(`prequeue.DONE`) —
+        같은 실행이 남긴 구조화된 값이라 줄 모양이 바뀌어도 안 흔들린다.
+
+        **그 편의 자리에 적힌 것을 먼저 본다**(`prequeue.state_of`). 큐 파일은 한
+        파일이라 다음 실행이 통째로 덮어쓴다 — 일꾼이 둘이면 두 편이 같은 초에
+        지우고, 하나였을 때도 늘 마지막 한 편만 남아 있었다. 그러면 여기서 판정을
+        못 찾고, **덱은 멀쩡한데 화면에 「덱을 못 만들었다」가 뜬다.**
+
+        큐 파일은 물러설 자리로 남긴다. 2026-09-01 이전에 만든 편에는 편별 판정이
+        없어서, 그 편들에는 이것이 유일한 답이다.
 
         **「다시 만들기」에는 안 쓴다.** 그때 아무것도 안 나왔다는 것은 `--force`가
         안 먹었다는 뜻이고, 그것을 성공으로 적으면 옛 덱을 새것으로 올린다.
         """
         if job.force:
             return False
+        prev = self.prev_run_of(job)
+        if prev:
+            state = prequeue.state_of(self.runs_dir, prev, job.subject, job.run_id)
+            if state:
+                return state == prequeue.DONE
         try:
             queue = json.loads((self.runs_dir / prequeue.QUEUE_NAME).read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -393,24 +520,60 @@ class Agent:
             # **과목마다 로그를 따로 쓴다.** `_run`이 파일을 덮어쓰기로 열어서,
             # 한 파일에 몰면 마지막 과목 것만 남는다.
             log = self.runs_dir / f"agent.sweep.{subject or 'all'}.log"
-            code, lines = self._run(argv, log)
+            with self._uploading:
+                code, lines = self._run(argv, log)
             line = first_match(lines, r"(올린 파일 .+)$") or f"종료 코드 {code}"
             self.say(f"[{stamp()}] 쓸기 {subject or '전부'} — {line}")
 
     # ── 루프 ─────────────────────────────────────────────────────────
-    def tick(self) -> bool:
-        """한 바퀴. 일감을 하나 처리했으면 True."""
+    def tick(self, slot: str = "w1") -> bool:
+        """한 바퀴. 일감을 하나 처리했으면 True.
+
+        **쓸기는 여기 없다**(2026-09-01). 따로 도는 실이 맡는다(`sweep_loop`) —
+        같이 두면 한 편을 만드는 45분 동안 아무것도 안 올라간다.
+        """
         try:
-            job = self.claim()
+            job = self.claim(slot)
         except publish.PublishError as cause:
-            self.say(f"[{stamp()}] 서버에 못 물었다 — {cause}")
+            self.say(f"[{stamp()}] {slot} 서버에 못 물었다 — {cause}")
             return False
-        if job is not None:
+        if job is None:
+            return False
+        if not self.take(job, slot):
+            # 서버가 같은 편을 둘에게 줬다는 뜻이다. 서버도 막지만, 옛 러너가
+            # 같이 떠 있거나 표가 어긋나면 여기까지 온다. **만들지 않는다** —
+            # 편당 빈 세션 넷이다.
+            self.say(f"[{stamp()}] {slot} {job.label}은 이미 만드는 중이다 — 넘긴다")
+            return False
+        try:
             self.handle(job)
-            return True
-        if self.sweep_seconds and time.monotonic() - self.last_sweep > self.sweep_seconds:
-            self.sweep()
-        return False
+        finally:
+            self.release(job)
+        return True
+
+    def work_loop(self, slot: str, poll: int) -> None:
+        """일꾼 하나. 일감이 있으면 만들고, 없으면 쉰다."""
+        while not self._stop.is_set():
+            try:
+                busy = self.tick(slot)
+            except Exception as cause:                      # noqa: BLE001
+                # **한 일꾼이 죽어도 나머지는 돈다.** 여기서 새는 예외 하나가
+                # 러너를 통째로 세우면 고친 것이 도로 무너진다.
+                self.say(f"[{stamp()}] {slot} 일꾼이 넘어졌다 — {type(cause).__name__}: {cause}")
+                busy = False
+            if not busy:
+                self._stop.wait(poll)
+
+    def sweep_loop(self) -> None:
+        """쓸기. **빌드와 겹쳐 돈다** — 앞의 편이 막혀도 올릴 것은 올라간다."""
+        while not self._stop.is_set():
+            self._stop.wait(self.sweep_seconds)
+            if self._stop.is_set():
+                return
+            try:
+                self.sweep()
+            except Exception as cause:                      # noqa: BLE001
+                self.say(f"[{stamp()}] 쓸기가 넘어졌다 — {type(cause).__name__}: {cause}")
 
     # ── 하나만 돈다 ──────────────────────────────────────────────────
     def lock_path(self) -> Path:
@@ -446,24 +609,42 @@ class Agent:
             pass
 
     def loop(self, poll: int = POLL_SECONDS) -> int:
+        """일꾼 여럿과 쓸기를 띄우고, 여기서는 표시만 만진다.
+
+        **일꾼을 실로 나눈 이유가 이것 하나다** — 한 편이 막혀도 뒤의 편이 간다.
+        2026-08-31에 한 편이 45분을 잠들어 있는 동안 큐도 쓸기도 통째로 섰다.
+
+        실을 쓰지만 안에서 하는 일은 하위 프로세스를 기다리는 것뿐이라, GIL이
+        무는 자리가 없다. 진짜 부담은 그 하위 프로세스들이 띄우는 빈 세션이다.
+        """
         if not self.take_lock():
             return 3
         self.say(f"[{stamp()}] 러너가 붙었다 — {self.client.base}"
+                 + f" · 일꾼 {self.workers}명"
                  + (f" · 쓸기 {self.subject}" if self.subject
                     else " · 쓸기는 매 회차 시간표에서 이번 블럭의 과목을 푼다")
                  + f" · {poll}초마다 물어본다")
-        # 첫 바퀴에 쓸기까지 돌면 붙자마자 몇 분을 잡아먹는다. 한 주기 뒤로 민다.
         self.last_sweep = time.monotonic()
+        crew = [threading.Thread(target=self.work_loop, args=(f"w{n + 1}", poll),
+                                 name=f"studyez-w{n + 1}", daemon=True)
+                for n in range(self.workers)]
+        if self.sweep_seconds:
+            crew.append(threading.Thread(target=self.sweep_loop,
+                                         name="studyez-sweep", daemon=True))
+        for thread in crew:
+            thread.start()
         try:
-            while True:
+            while any(thread.is_alive() for thread in crew):
                 self.touch_lock()
-                if not self.tick():
-                    time.sleep(poll)
+                time.sleep(min(poll, LOCK_STALE // 3))
+            self.say(f"[{stamp()}] 일꾼이 다 내려갔다 — 러너를 접는다")
+            return 1
         except KeyboardInterrupt:
             self.say(f"\n[{stamp()}] 멈춘다. 도는 중이던 편은 서버에 running으로 남아 있다 — "
                      "다시 붙으면 그것부터 집는다")
             return 0
         finally:
+            self._stop.set()
             self.lock_path().unlink(missing_ok=True)
 
 

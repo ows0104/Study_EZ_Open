@@ -65,6 +65,10 @@ from . import preview as preview_mod
 
 QUEUE_NAME = "prequeue.json"
 
+# 편 하나의 판정을 그 편의 자리에 적어 두는 파일. 큐 파일과 값은 같지만 **덮어쓰는
+# 것이 자기 자신뿐**이다(`save_state`).
+STATE_NAME = "pre_queue_state.json"
+
 # 한 편이 어디까지 왔는가.
 READY = "ready"        # prep·preview.md까지 섰다. 이제 /prequiz
 DONE = "done"          # 이 대화로 만든 문항이 이미 있다
@@ -449,13 +453,69 @@ def build(targets: list[Target], runs_dir: Path, repo_root: Path, *, model: str 
 
 
 def save(targets: list[Target], path: Path) -> None:
-    """`/prequiz`가 무엇을 돌릴지 여기서 읽는다.
+    """이번 실행이 무엇을 봤는지. **사람이 읽는 자리다.**
 
-    `queue.json`처럼 통째로 다시 쓴다. 편이 끝났다는 표시는 이 파일이 아니라
-    `pre_items.final.json`이 들고 있으므로, 다시 써도 진행이 지워지지 않는다.
+    통째로 다시 쓴다. 그래서 **이 파일은 마지막 실행이 본 것만 든다** — 러너가
+    `--run-id`로 한 편씩 부르므로 대개 한 줄뿐이다. 판정을 여기서 되읽지 마라;
+    그 답은 편마다 자기 자리에 있다(`save_state`).
+
+    한동안 `/prequiz` 스킬이 이걸 읽었는데 그 스킬은 2026-08-23에 지워졌다.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime()),
         "items": [target.as_row() for target in targets],
     }, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def save_state(target: Target, runs_dir: Path) -> Path | None:
+    """이 편의 판정을 **그 편의 자리에** 적는다. 적었으면 그 경로.
+
+    큐 파일(`save`)과 같은 값을 적지만 자리가 다르다. 큐는 한 파일이라 **나중에
+    끝난 실행이 앞의 것을 지운다** — 일꾼이 둘이 된 뒤로는 두 편이 같은 초에
+    덮어쓰고, 그 전에도 러너가 한 편씩 부르는 동안 늘 마지막 한 편만 남아 있었다
+    (2026-08-31의 `runs/prequeue.json`에 한 줄뿐이었다).
+
+    그 파일을 읽는 곳이 하나 있었다 — 러너의 `already_made`. 판정이 지워져 있으면
+    **덱은 멀쩡한데 화면에 「덱을 못 만들었다」가 뜬다.**
+
+    자리가 없는 편(`BLOCKED`)은 적을 곳이 없다. 그 편은 애초에 만들 자리를 못
+    세운 것이라 판정할 산출물도 없다.
+    """
+    if not target.prev_run_id:
+        return None
+    run_dir = runs_dir / target.prev_run_id
+    path = run_dir / STATE_NAME
+    try:
+        run_dir.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({
+            "subject": target.link.subject,
+            "run_id": target.link.run_id,
+            "prev_run_id": target.prev_run_id,
+            "state": target.state,
+            # **그때 본 링크다.** 이 값이 서버의 것과 다르면 판정도 낡은 것이다.
+            "source": target.link.share_url,
+            "reason": target.reason,
+            "written_at": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime()),
+        }, ensure_ascii=False, indent=2), encoding="utf-8")
+    except OSError:
+        return None
+    return path
+
+
+def state_of(runs_dir: Path, prev_run_id: str, subject: str, run_id: str) -> str:
+    """그 편의 자리에 적힌 판정. 없거나 남의 것이면 빈 문자열.
+
+    **자리를 나눠 쓰는 일이 있다**(`pre_target.json`의 `occupancy`와 같은 사정) —
+    같은 교시에 다른 과목이 돌면 한 디렉터리를 두 강의가 쓴다. 그래서 적힌
+    편이 묻는 편과 같은지 보고 답한다.
+    """
+    try:
+        row = json.loads((runs_dir / prev_run_id / STATE_NAME).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+    if not isinstance(row, dict):
+        return ""
+    if row.get("run_id") != run_id or row.get("subject") != subject:
+        return ""
+    return str(row.get("state") or "")

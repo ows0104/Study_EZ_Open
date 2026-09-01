@@ -484,6 +484,9 @@ def main() -> int:
                              f"기본 {agent.SWEEP_SECONDS // 60}")
     parser.add_argument("--no-sweep", action="store_true",
                         help="agent: 쓸기를 하지 않는다. 일감만 받는다")
+    parser.add_argument("--workers", type=int, default=agent.WORKERS,
+                        help=f"agent: 겹쳐 만들 편 수. 기본 {agent.WORKERS} "
+                             "(서버도 같은 상한을 든다 — 둘 중 작은 쪽이 실제 상한이다)")
     parser.add_argument("--no-prequeue", action="store_true",
                         help="publish·done: 올리기 전에 예습 링크를 서버와 맞추는 단계를 "
                              "건너뛴다 (그 사이 링크가 바뀌었으면 옛 주소로 덮어쓴다)")

@@ -8,10 +8,11 @@ import {
   type AdminRow,
   type AppUser,
   type ChecklistItem,
-  type PrequizJob,
+  type JobBoard,
   type PreviewProvider,
   type RunnerBeat,
 } from "../types";
+import { jobMoving, jobOpen, progressLine } from "../jobProgress";
 import { lectureHref } from "../links";
 
 /** 관리자가 채우는 다섯 칸. 순서가 곧 하는 순서다 — 앞 셋이 예습, 뒤 둘이 복습. */
@@ -37,9 +38,80 @@ function runnerAlive(runner: RunnerBeat | null | undefined): boolean {
   return Date.now() - new Date(runner.lastSeen).getTime() < RUNNER_STALE_MS;
 }
 
-/** 일감이 아직 안 끝났는가. 끝나지 않은 것만 화면에서 계속 새로 읽는다. */
-function jobOpen(job: PrequizJob | null | undefined): boolean {
-  return job?.state === "queued" || job?.state === "running";
+/**
+ * 지금 무엇이 도는가. **표보다 먼저 선다.**
+ *
+ * 「지금 어떤 걸 하고 있고, 돌린 지 몇 분째이고, 어느 단계까지 왔고, 예상 시간은
+ * 얼마인지」를 보려면 그 전에는 표를 훑어야 했다(2026-09-01 관리자 지시). 도는
+ * 것도 기다리는 것도 없으면 아무것도 안 그린다.
+ */
+function RunnerBoard({ board }: { board: JobBoard | null }) {
+  if (!board) return null;
+  const { running, waiting, held } = board;
+  if (!running.length && !waiting.length && !held.length) return null;
+  return (
+    <section className="runner-board">
+      <h2>
+        지금 도는 것 {running.length}/{board.maxRunning}
+        {waiting.length ? ` · 기다리는 것 ${waiting.length}` : ""}
+        {held.length ? ` · 상한에 걸린 것 ${held.length}` : ""}
+        {` · 오늘 자동 ${board.autoUsedToday}/${board.autoDailyCap}편`}
+      </h2>
+
+      {running.map((job) => (
+        <div key={job.id} className="runner-job">
+          <span>
+            <strong>
+              {job.subject}/{job.runId}
+            </strong>{" "}
+            {job.kind === "main" ? "Main-Quiz" : "Pre-Quiz"}
+            {job.origin === "auto" ? " · 자동" : ""}
+            <small> {job.worker}</small>
+            <br />
+            <small>{progressLine(job)}</small>
+            {/* 시간으로 그린다. 단계 수로 그리면 「② 카드」 하나가 편의 절반이라
+                막대가 절반에서 오래 멈춰 선다. 남은 시간을 모르면 안 그린다. */}
+            {job.etaSeconds > 0 ? (
+              <span className="runner-bar">
+                <span
+                  style={{
+                    width: `${Math.min(99, Math.round((job.elapsedSeconds / (job.elapsedSeconds + job.etaSeconds)) * 100))}%`,
+                  }}
+                />
+              </span>
+            ) : null}
+          </span>
+        </div>
+      ))}
+
+      {waiting.map((job, index) => (
+        <div key={job.id} className="runner-job">
+          <span>
+            <strong>
+              {job.subject}/{job.runId}
+            </strong>{" "}
+            {job.kind === "main" ? "Main-Quiz" : "Pre-Quiz"}
+            <small> · 차례 {index + 1}번째{job.origin === "auto" ? " · 자동" : ""}</small>
+          </span>
+        </div>
+      ))}
+
+      {held.map((job) => (
+        <div key={job.id} className="runner-job">
+          <span>
+            <strong>
+              {job.subject}/{job.runId}
+            </strong>{" "}
+            {job.kind === "main" ? "Main-Quiz" : "Pre-Quiz"}
+            <br />
+            {/* 상한에 걸린 줄은 **왜 안 만드는지**를 그대로 적는다. 누르는 자리는
+                캘린더의 그 덱 칸이다 — 여기서 또 누르게 하면 같은 버튼이 둘이 된다. */}
+            <small>{job.stage || "오늘 자동 상한을 넘어 기다리는 중"}</small>
+          </span>
+        </div>
+      ))}
+    </section>
+  );
 }
 
 /** 아직 관리자 몫으로 남은 칸. `waived`는 닫은 것이므로 남은 것이 아니다. */
@@ -65,6 +137,7 @@ type Candidate = {
  */
 export function AdminPage() {
   const [overview, setOverview] = useState<AdminOverview | null>(null);
+  const [board, setBoard] = useState<JobBoard | null>(null);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"all" | "pending" | "unmatched" | "flagged" | "no-preview">("all");
 
@@ -72,13 +145,23 @@ export function AdminPage() {
     api<AdminOverview>("/api/admin/overview")
       .then(setOverview)
       .catch((cause: Error) => setError(cause.message));
+    // 일감은 따로 읽는다. `/overview`는 편마다 최근 일감을 하나씩 들고 있어서
+    // **겹쳐 도는 편을 순서대로 볼 수 없다** — 그 답은 이쪽에 있다.
+    api<JobBoard>("/api/admin/prequiz-jobs")
+      .then(setBoard)
+      .catch(() => {});
   }, []);
 
   useEffect(load, [load]);
 
   // 도는 일감이 있는 동안만 다시 읽는다. 한 편에 15분이 걸리는데 사람이 새로고침을
   // 눌러야 진행이 보이면, 그 진행은 없는 것과 같다. 끝나면 폴링도 멈춘다.
-  const working = (overview?.lectures ?? []).some((row) => jobOpen(row.prequizJob));
+  //
+  // **`held`는 안 센다.** 사람을 기다리는 줄이라 다시 읽어 봐야 같은 값이다.
+  const working =
+    (board?.running.length ?? 0) > 0 ||
+    (board?.waiting.length ?? 0) > 0 ||
+    (overview?.lectures ?? []).some((row) => jobMoving(row.prequizJob));
   useEffect(() => {
     if (!working) return;
     const timer = window.setInterval(load, 10_000);
@@ -118,6 +201,8 @@ export function AdminPage() {
         러너{" "}
         <strong>{runnerAlive(overview.runner) ? (overview.runner?.busy ? "만드는 중" : "대기") : "안 붙음"}</strong>
       </p>
+
+      <RunnerBoard board={board} />
 
       {queued > 0 && !runnerAlive(overview.runner) ? (
         <p className="notice is-error">

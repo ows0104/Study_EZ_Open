@@ -46,7 +46,7 @@ from app.preview_links import conversation_url as valid_conversation_url
 from app.preview_links import provider as valid_provider
 from app.preview_links import share_url as valid_share_url
 from app.routes.common import lecture_or_404, storage_or_503
-from app.routes.prequiz_jobs import RUNNER_NAME, job_row, runner_row
+from app.routes.prequiz_jobs import RUNNER_NAME, ensure_auto_job, job_row, runner_row
 
 router = APIRouter()
 
@@ -170,6 +170,9 @@ def complete_uploads(
     storage = storage_or_503()
     stored: list[str] = []
     missing: list[str] = []
+    # 이번에 **처음** 생긴 종류. 다시 올린 것과 갈라야 한다 — 러너는 쓸기마다 같은
+    # 강의록을 다시 밀어 보므로, 갈지 않으면 10분마다 같은 일감이 선다.
+    fresh: set[str] = set()
 
     for item in files:
         filename = nfc(item.filename)
@@ -195,6 +198,7 @@ def complete_uploads(
         if asset is None:
             asset = Asset(id=str(uuid.uuid4()), subject=lecture.subject, run_id=lecture.run_id)
             db.add(asset)
+            fresh.add(item.kind)
         asset.kind = item.kind
         asset.filename = filename
         asset.object_key = key
@@ -207,9 +211,36 @@ def complete_uploads(
         asset.slide_no = slide_no_from_filename(filename) if slides else None
         stored.append(filename)
 
+    queued = _auto_main_job(db, lecture, fresh)
     db.commit()
     # 올라오지 않은 파일을 성공으로 세지 않는다. 러너가 이 목록을 보고 다시 민다.
-    return {"stored": len(stored), "missing": missing}
+    return {"stored": len(stored), "missing": missing, "queued": queued}
+
+
+def _auto_main_job(db: Session, lecture: Lecture, fresh: set[str]) -> dict[str, Any] | None:
+    """올해 필기가 처음 올라왔으면 복습 덱을 큐에 세운다.
+
+    **덱이 이미 있으면 안 세운다.** 두 자리가 이 조건으로 걸러진다.
+
+    ① 방금 만든 편. `watch --build`는 덱을 만들고 나서 강의록과 덱을 **같이**
+       올리므로, 안 걸러 내면 만들자마자 같은 편을 또 만든다.
+    ② 필기의 새 판(v1 → v3). 파일이 새로 온 것은 맞지만 15분과 $12를 다시 쓸지는
+       사람이 정할 일이다 — 그 자리가 덱 옆의 ⟳다.
+    """
+    if "notes_current" not in fresh:
+        return None
+    if "main_apkg" in fresh:
+        return None
+    built = db.scalars(
+        select(Asset.id).where(
+            Asset.subject == lecture.subject,
+            Asset.run_id == lecture.run_id,
+            Asset.kind == "main_apkg",
+        )
+    ).first()
+    if built:
+        return None
+    return job_row(ensure_auto_job(db, lecture.subject, lecture.run_id, "main", "올해 필기가 올라왔다"))
 
 
 # ---------------------------------------------------------------- 산출물 JSON
@@ -372,13 +403,23 @@ def put_preview(
             preview.share_url = ""
         if payload.conversation_url is None:
             preview.conversation_url = ""
+    before = preview.share_url
     preview.provider = selected_provider
     if payload.share_url is not None:
         preview.share_url = payload.share_url.strip()
     if payload.conversation_url is not None:
         preview.conversation_url = payload.conversation_url.strip()
+
+    # **링크가 바뀐 것만 일감이 된다.** 러너의 `publish`가 쓸기마다 같은 주소를
+    # 되밀어 올리므로(산출물 중 예습 링크만 방향이 반대다), 저장 자체를 신호로
+    # 삼으면 10분마다 같은 편이 큐에 선다.
+    queued = None
+    if preview.share_url and preview.share_url != before:
+        queued = job_row(ensure_auto_job(
+            db, lecture.subject, lecture.run_id, "pre", "예습 링크가 저장됐다"))
     db.commit()
-    return {"shareUrl": preview.share_url, "hasConversationUrl": bool(preview.conversation_url)}
+    return {"shareUrl": preview.share_url, "hasConversationUrl": bool(preview.conversation_url),
+            "queued": queued}
 
 
 @router.get("/previews")
