@@ -1,10 +1,33 @@
 import type { LectureRef } from "../types";
-import { hasSlots, hasTodo, lectureSlots, type CalendarEntry, type SlotState } from "./entries";
+import {
+  adminLectureSlots,
+  hasSlots,
+  hasTodo,
+  lectureSlots,
+  type AdminSlotState,
+  type CalendarEntry,
+  type SlotState,
+} from "./entries";
 
 const stateLabels: Record<SlotState, string> = {
   none: "아직 없음",
   ready: "받을 것 있음",
   done: "했음",
+};
+
+/** 관리자가 읽는 말. 「내가 받을 것」이 아니라 「내가 올려 둔 것」을 센다. */
+const adminPreLabels: Record<AdminSlotState, string> = {
+  absent: "작년 필기 없음",
+  none: "예습 링크 없음",
+  ready: "Pre-Quiz 없음",
+  done: "Pre-Quiz까지 있음",
+};
+
+const adminMainLabels: Record<AdminSlotState, string> = {
+  absent: "올해 필기 없음",
+  none: "올해 필기 없음",
+  ready: "Main-Quiz 없음",
+  done: "Main-Quiz까지 있음",
 };
 
 /**
@@ -19,11 +42,50 @@ const stateLabels: Record<SlotState, string> = {
  * 쉬는 자리를 미리 원과 네모로 갈라 두면 "생겼다"가 약해지고, 어차피 3px에서는
  * 네모도 점으로 보인다. 어느 자리인지는 위치가 늘 말한다.
  *
+ * **여기까지가 모양의 문법이고, 무엇을 세는가는 보는 사람에 따라 갈린다**
+ * (2026-09-02 관리자 지시). 학생에게는 「네가 열어 볼 것이 있는가 · 네가
+ * 했는가」이고 관리자에게는 「내가 어디까지 올려 놨는가」다. 모양을 같이 쓰는
+ * 것은 일부러다 — 관리자도 학생 화면을 매일 보는 같은 사람이라, 문법이 둘이면
+ * 어느 쪽을 보고 있는지부터 헷갈린다.
+ */
+export function ChipSlots({ lecture, isAdmin }: { lecture: LectureRef; isAdmin: boolean }) {
+  if (isAdmin) return <AdminChipSlots lecture={lecture} />;
+  return <UserChipSlots lecture={lecture} />;
+}
+
+/**
+ * 관리자가 보는 자리 둘. 세는 것은 `adminLectureSlots`에 적혀 있다.
+ *
+ * 관리자에게 자기 진도를 **주 단위로** 보여 주는 자리는 여기뿐이다 — `/admin`
+ * 표는 편을 세로로 늘어놓아서 「이번 주가 통째로 비었다」가 안 보인다.
+ *
+ * **빈칸이 한 단계 는다.** 작년 필기가 없으면 관리자가 예습으로 할 수 있는 일이
+ * 없으므로 점도 안 찍는다. 그래도 자리는 잡는다(`.chip-slot.is-absent`).
+ *
+ * **채움 비율(`--fill`)은 안 얹는다.** 그것은 이 사람이 웹 예습퀴즈를 얼마나
+ * 풀었는지라 관리자가 여기서 묻는 것이 아니다. 안 얹으면 0%로 떨어져 빈 원이 된다.
+ */
+function AdminChipSlots({ lecture }: { lecture: LectureRef }) {
+  const slots = adminLectureSlots(lecture);
+  return (
+    <span
+      className="chip-slots"
+      aria-label={`예습 ${adminPreLabels[slots.pre]} · 복습 ${adminMainLabels[slots.main]}`}
+    >
+      <i className={`chip-slot is-pre is-${slots.pre}`} />
+      <i className={`chip-slot is-main is-${slots.main}`} />
+    </span>
+  );
+}
+
+/**
+ * 학생이 보는 자리 둘.
+ *
  * **강조색은 "네가 열어 볼 것이 있다"는 뜻으로만 쓴다.** 빈 도형만 계열색을
  * 받고, 채운 것은 무채색으로 가라앉고, 쉬는 점은 더 옅다. 끝낸 것을 색으로
  * 두면 다 한 칸이 제일 시끄러워져서 남은 할 일이 묻힌다.
  */
-export function ChipSlots({ lecture }: { lecture: LectureRef }) {
+function UserChipSlots({ lecture }: { lecture: LectureRef }) {
   const slots = lectureSlots(lecture);
   const progress = lecture.prequizProgress;
   const preLabel =
@@ -56,11 +118,14 @@ export function EventChip({
   compact,
   onOpen,
   active,
+  isAdmin,
 }: {
   entry: CalendarEntry;
   compact: boolean;
   onOpen: (entry: CalendarEntry) => void;
   active: boolean;
+  /** 자리 둘이 무엇을 세는가가 이것으로 갈린다 — `ChipSlots` 주석을 보라. */
+  isAdmin: boolean;
 }) {
   const primary = entry.detail || entry.title;
   // 왼쪽 띠는 범주만 진다. 할 일이 남았는지는 제목의 무게로만 말하고,
@@ -95,7 +160,7 @@ export function EventChip({
       {entry.lectures.length > 1 ? (
         <span className="chip-count">{entry.lectures.length}</span>
       ) : hasSlots(entry) ? (
-        <ChipSlots lecture={entry.lectures[0]} />
+        <ChipSlots lecture={entry.lectures[0]} isAdmin={isAdmin} />
       ) : null}
     </button>
   );

@@ -230,3 +230,44 @@ export function canOpen(entry: CalendarEntry) {
 export function hasSlots(entry: CalendarEntry) {
   return entry.lectures.length === 1;
 }
+
+/**
+ * 관리자가 보는 자리 둘의 네 단계.
+ *
+ * **학생 쪽(`SlotState`)과 재는 것이 다르다.** 학생에게 `ready`는 「네가 열어 볼
+ * 것이 있다」이고 `done`은 「네가 받아 갔거나 풀었다」다. 관리자에게는 그 둘 다
+ * *자기가 무엇을 해 놓았는가*다 — 링크를 넣었는가, 덱을 만들었는가.
+ *
+ * `absent`가 하나 더 있다. 작년 필기가 아직 없는 강의는 관리자가 예습으로 할 수
+ * 있는 일이 아무것도 없다 — 그 자리는 점도 안 찍고 비워 둔다.
+ */
+export type AdminSlotState = "absent" | "none" | "ready" | "done";
+
+export type AdminSlots = {
+  pre: AdminSlotState;
+  main: AdminSlotState;
+};
+
+/**
+ * 강의 하나 → 관리자 자리 둘 (2026-09-02 관리자 지시).
+ *
+ *   예습   작년 필기 없음         빈칸
+ *          예습 링크 없음         점
+ *          링크는 있고 Pre 덱 없음  빈 동그라미
+ *          Pre 덱까지 있음         채운 동그라미
+ *
+ *   복습   올해 필기 없음         점
+ *          필기는 있고 Main 덱 없음 빈 네모
+ *          Main 덱까지 있음        채운 네모
+ *
+ * **닿은 것 중 가장 멀리 간 단계로 판정한다.** 사다리 순서대로 중첩해서 보면
+ * 작년 필기가 없는 강의의 Pre 덱이 빈칸에 가려진다 — 이미 만들어 둔 것이 화면에서
+ * 사라지는 쪽이 더 나쁘다. 순서대로 채운 흔한 경우에는 두 읽기가 같은 그림이다.
+ */
+export function adminLectureSlots(lecture: LectureRef): AdminSlots {
+  const { marks } = lecture;
+  return {
+    pre: marks.prequiz ? "done" : marks.preview ? "ready" : marks.notesPrev ? "none" : "absent",
+    main: marks.quiz ? "done" : marks.notesCurrent ? "ready" : "none",
+  };
+}

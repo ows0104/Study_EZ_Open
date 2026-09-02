@@ -3,6 +3,7 @@ import { api } from "../api";
 import { bumpPreviewVersion, usePreviewLink } from "../bridge/previewBridge";
 import { takeTimetable } from "../firstScreen";
 import { previewProviders, type PreviewProvider, type TimetableEvent } from "../types";
+import { useMe } from "../useMe";
 import { CalendarGrid } from "./CalendarGrid";
 import { EventChip } from "./EventChip";
 import { EventPanel } from "./EventPanel";
@@ -27,6 +28,9 @@ export function CalendarPage() {
   const [mode, setMode] = useState<CalendarMode>("week");
   const [anchorDate, setAnchorDate] = useState(() => new Date());
   const [opened, setOpened] = useState<CalendarEntry | null>(null);
+  // 자리 둘이 무엇을 세는지가 이것으로 갈린다. 칸마다 묻지 않고 여기서 한 번
+  // 묻는다 — `useMe`는 훅이라 칸 안에서 부르면 강의 수만큼 붙는다.
+  const isAdmin = Boolean(useMe()?.isAdmin);
 
   /**
    * 확장이 만들어 준 예습 링크를 받아 저장한다. 종류에 따라 주인이 다르다.
@@ -152,6 +156,7 @@ export function CalendarPage() {
               compact={compact}
               onOpen={setOpened}
               active={opened?.id === entry.id}
+              isAdmin={isAdmin}
             />
           )}
         />
@@ -185,15 +190,35 @@ export function CalendarPage() {
                 복습 <i className="legend-shape is-main" />
               </span>
             </b>
-            <span>
-              <i className="chip-slot is-pre is-none" /> 아직
-            </span>
-            <span>
-              <i className="chip-slot is-pre is-ready" /> 올라옴
-            </span>
-            <span>
-              <i className="chip-slot is-pre is-done" /> 함
-            </span>
+            {/* 관리자는 같은 모양으로 다른 것을 읽는다 — 자기가 어디까지 올려
+                놨는가다. 범례도 같이 갈지 않으면 채운 도형이 「내가 했음」으로
+                읽혀서, 아무것도 안 푼 강의가 다 한 것으로 보인다. */}
+            {isAdmin ? (
+              <>
+                <span>
+                  <i className="chip-slot is-pre is-none" /> 링크·필기 없음
+                </span>
+                <span>
+                  <i className="chip-slot is-pre is-ready" /> 덱 없음
+                </span>
+                <span>
+                  <i className="chip-slot is-pre is-done" /> 덱 있음
+                </span>
+                <span>빈칸 — 작년 필기 없음</span>
+              </>
+            ) : (
+              <>
+                <span>
+                  <i className="chip-slot is-pre is-none" /> 아직
+                </span>
+                <span>
+                  <i className="chip-slot is-pre is-ready" /> 올라옴
+                </span>
+                <span>
+                  <i className="chip-slot is-pre is-done" /> 함
+                </span>
+              </>
+            )}
           </span>
         </div>
       </div>
