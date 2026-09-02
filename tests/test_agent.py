@@ -327,3 +327,16 @@ def test_한도가_아니면_아무_말도_안_한다(tmp_path):
     child = tmp_path / "pipeline.log"
     child.write_text("멈췄다 — ②카드: 스키마가 안 맞는다", encoding="utf-8")
     assert agent.limit_reason([f"실패 — (로그: {child})"]) == ""
+
+
+def test_한도는_마지막_줄을_집는다(tmp_path):
+    """하위 로그는 덧붙여 쓰인다. 첫 줄을 집으면 어제 걸린 시각을 오늘 것으로 적는다 —
+    이미 지난 시각이라 사람이 「풀렸는데 왜 죽지」를 묻게 된다."""
+    child = tmp_path / "pipeline.log"
+    child.write_text("\n".join([
+        '"result":"session limit · resets 5:40am (Asia/Seoul)"',
+        "── 재현 검사",
+        '"result":"session limit · resets 1:40pm (Asia/Seoul)"',
+    ]), encoding="utf-8")
+    lines = [f"    실패 — pdf2anki가 1로 끝났다 (로그: {child})"]
+    assert agent.limit_reason(lines) == "세션 한도에 걸렸다 — resets 1:40pm (Asia/Seoul)"

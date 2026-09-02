@@ -756,10 +756,16 @@ def limit_reason(lines: list[str]) -> str:
     일은 화면에서 갈려야 한다** — 앞의 것에 짝을 고치러 가면 고칠 것이 없다.
     """
     def said(text: str) -> str:
-        hit = RE_LIMIT.search(text)
-        if not hit:
+        """**마지막 것을 집는다.** 하위 로그는 덧붙여 쓰여서(`deck._spawn`) 한
+        파일에 어제 걸린 줄과 오늘 걸린 줄이 같이 있다. 첫 줄을 집으면 원인은
+        맞는데 시각이 틀린다 — 2026-09-02 10:17에 「resets 1:40pm」으로 죽은 편이
+        화면에 「resets 5:40am」으로 떴다. 이미 지난 시각이라 사람이 「풀렸는데 왜
+        죽지」를 묻게 된다.
+        """
+        found = RE_LIMIT.findall(text)
+        if not found:
             return ""
-        when = (hit.group(1) or "").strip(" ·\t")
+        when = (found[-1] or "").strip(" ·\t")
         return f"세션 한도에 걸렸다 — {when}" if when else "세션 한도에 걸렸다"
 
     for line in lines:
