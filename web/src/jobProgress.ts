@@ -49,6 +49,23 @@ export function progressLine(job: PrequizJob): string {
   return parts.join(" · ");
 }
 
+/**
+ * 모델 한도로 멈춰 기다리는 줄인가. 기다리면 되는 것과 사람이 손대야 하는 것을
+ * 여기서 가른다.
+ *
+ * 2026-09-02에 한도에 두 번 걸렸는데(01:32·10:17) 둘 다 사람이 자거나 자리를
+ * 비운 시각이었다. 그 편은 이제 실패로 죽지 않고 풀리는 시각까지 줄에 서 있다 —
+ * **그 사실이 화면에 없으면 사람이 다시 누른다.**
+ */
+export function waitingUntil(job: PrequizJob): string {
+  if (job.state !== "queued" || !job.resumeAt) return "";
+  const when = new Date(job.resumeAt);
+  if (Number.isNaN(when.getTime()) || when.getTime() <= Date.now()) return "";
+  // **24시로 적는다.** 러너가 `stage`에 「13:40에 다시 시작」으로 적으므로, 여기서
+  // 「오후 1:40」으로 그리면 같은 시각이 두 자리에서 다른 꼴이 된다.
+  return when.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
 /** 아직 안 끝난 일감. `held`도 열려 있다 — 사람이 풀면 그대로 도는 줄이다. */
 export function jobOpen(job: PrequizJob | null | undefined): boolean {
   return job?.state === "queued" || job?.state === "running" || job?.state === "held";

@@ -8,7 +8,7 @@ import {
   type PrequizJob,
   type RunnerBeat,
 } from "../types";
-import { jobMoving, progressLine } from "../jobProgress";
+import { jobMoving, progressLine, waitingUntil } from "../jobProgress";
 import { useMe } from "../useMe";
 import { ActionCard, fileSize, Remake, RemakeConfirm } from "./panelShared";
 
@@ -33,6 +33,8 @@ function runnerAlive(runner: RunnerBeat | null): boolean {
 function jobShort(job: PrequizJob, runner: RunnerBeat | null): string {
   if (job.state === "held") return "상한";
   if (!runnerAlive(runner)) return "멈춤";
+  // 한도로 기다리는 줄은 「대기」와 다르다 — 저쪽은 곧 집어 가고 이쪽은 시각을 기다린다.
+  if (waitingUntil(job)) return "한도 대기";
   return job.state === "running" ? "만드는 중" : "대기";
 }
 
@@ -72,6 +74,10 @@ function jobLine(job: PrequizJob, runner: RunnerBeat | null): string {
     // 5분째와 40분째가 같은 모양이었다.
     return `${job.force ? "다시 " : ""}만드는 중 · ${progressLine(job)}`;
   }
+  // 모델 한도로 멈춘 편. **누를 필요가 없다는 것을 말해야 한다** — 안 그러면
+  // 「기다리는 중」으로 보이고, 기다려도 안 되는 줄로 읽혀 사람이 다시 누른다.
+  const until = waitingUntil(job);
+  if (until) return `세션 한도 — ${until}에 저절로 이어 갑니다`;
   // 줄은 섰고 러너도 있다. 겹쳐 도는 편에 상한이 있어서 앞 편이 차면 기다린다.
   const soon = runner?.busy ? "차례를 기다립니다 · 러너가 다른 편을 만드는 중입니다" : "러너가 곧 집어 갑니다";
   return job.force ? `다시 만듭니다 · ${soon}` : soon;

@@ -239,6 +239,14 @@ export type PrequizJob = {
   origin: JobOrigin;
   /** 어느 일꾼이 잡고 있나(`w1`·`w2`). 겹쳐 도는 편을 가려 보는 값이다. */
   worker: string;
+  /**
+   * 모델 한도로 멈춘 편이 **언제 저절로 이어지는가**(ISO 시각). 빈 문자열이면
+   * 그냥 차례를 기다리는 줄이다.
+   *
+   * 이 값이 없으면 화면이 「기다리는 중」밖에 못 말하고, 그러면 사람이 다시
+   * 눌러야 하는 줄로 읽는다 — 누를 필요가 없는데.
+   */
+  resumeAt: string;
   /** **서버가 셈해서 준다.** 화면마다 시계를 맞추면 시차만큼 어긋난다. */
   elapsedSeconds: number;
   stageSeconds: number;

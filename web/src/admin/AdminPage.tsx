@@ -12,7 +12,7 @@ import {
   type PreviewProvider,
   type RunnerBeat,
 } from "../types";
-import { jobMoving, jobOpen, progressLine } from "../jobProgress";
+import { jobMoving, jobOpen, progressLine, waitingUntil } from "../jobProgress";
 import { lectureHref } from "../links";
 
 /** 관리자가 채우는 다섯 칸. 순서가 곧 하는 순서다 — 앞 셋이 예습, 뒤 둘이 복습. */
@@ -91,7 +91,13 @@ function RunnerBoard({ board }: { board: JobBoard | null }) {
               {job.subject}/{job.runId}
             </strong>{" "}
             {job.kind === "main" ? "Main-Quiz" : "Pre-Quiz"}
-            <small> · 차례 {index + 1}번째{job.origin === "auto" ? " · 자동" : ""}</small>
+            {/* 한도로 멈춘 줄은 차례를 기다리는 것이 아니라 **시각**을 기다린다.
+                그 자리에 「차례 1번째」만 적으면 곧 시작할 것으로 읽힌다. */}
+            {waitingUntil(job) ? (
+              <small> · 세션 한도 — {waitingUntil(job)}에 저절로 이어 감</small>
+            ) : (
+              <small> · 차례 {index + 1}번째{job.origin === "auto" ? " · 자동" : ""}</small>
+            )}
           </span>
         </div>
       ))}
