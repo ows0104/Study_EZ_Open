@@ -9,7 +9,7 @@ import json
 import threading
 import time
 
-from studyez import agent, deck, gate, prequeue
+from studyez import agent, deck, eta, gate, prequeue
 
 
 class FakeClient:
@@ -250,3 +250,26 @@ def test_복습은_작년_자리를_안_건드린다(tmp_path):
     # 복습이 끝나도 예습의 표시는 남는다.
     worker.clear_building(main)
     assert (prev / gate.BUILDING_FILE).is_file()
+
+
+def test_끝난_줄은_끝까지_간_것으로_닫는다(tmp_path):
+    """다 끝난 편이 화면에 「7/18단계」로 남아 있던 자리(2026-09-02)."""
+    eta._cache.clear()
+    run_dir = tmp_path / "250917_01"
+    run_dir.mkdir()
+    (run_dir / "run.report.json").write_text(
+        json.dumps({"wall_seconds": 900,
+                    "steps": [{"step": eta.FINAL_STAGE, "seconds": 4}]}), encoding="utf-8")
+    (run_dir / "prequiz.log").write_text(
+        f"── prep\n── ② 카드\n── {eta.FINAL_STAGE}", encoding="utf-8")
+
+    client = FakeClient([])
+    worker = _agent(tmp_path, client)
+    job = agent.Job(id=7, subject="기생충학", run_id="260902_05", kind=deck.PRE)
+    worker._run = lambda *a, **k: (0, ["    끝났다 — 28장", "  올린 파일 3개"])
+    worker.outcome = lambda *a, **k: "28장"
+    worker.handle(job)
+
+    done = [body for _, body in client.puts if body.get("state") == "done"]
+    assert done and done[-1]["stageIndex"] == done[-1]["stageTotal"] == 3
+    eta._cache.clear()

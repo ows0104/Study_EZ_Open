@@ -429,7 +429,12 @@ class Agent:
         if held:
             message += " · 검문에 걸려 덱은 미뤘다 — " + held[0].lstrip("✋ ")
         self.say(f"    끝났다 — {message}")
-        self.report(job, state="done", stage="", message=message)
+        # **끝난 줄은 끝까지 간 것으로 닫는다.** 안 닫으면 마지막으로 본 단계에
+        # 멈춰 있어서, 다 끝난 편이 화면에 「7/18단계」로 남는다(2026-09-02).
+        # 분모를 모르면 아무 값도 안 보낸다 — 서버가 옛 값을 그대로 둔다.
+        total = len(eta.samples(self.runs_dir, job.kind).order)
+        closed = {"stageIndex": total, "stageTotal": total} if total else {}
+        self.report(job, state="done", stage="", message=message, **closed)
 
     def outcome(self, job: Job, lines: list[str], code: int, since: float) -> str:
         """이번 실행에서 무엇이 나왔나. 빈 문자열이면 못 만든 것이다.

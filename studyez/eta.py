@@ -42,6 +42,9 @@ PRE = "pre"
 # 이보다 짧게 끝난 편은 이어 돌린 회차다. 한 편이 걸리는 시간의 표본이 아니다.
 MIN_REAL_SECONDS = 180
 
+# 단계 차례를 볼 때 몇 편까지 거슬러 보나. **한 편에 걸지 않는다** — 아래 참조.
+ORDER_SAMPLE = 5
+
 # 표본을 다시 읽는 간격. 러너가 20초마다 부르므로 매번 60개 파일을 열 수는 없다.
 CACHE_SECONDS = 600
 
@@ -51,6 +54,10 @@ _TRAILING = re.compile(r"(?:\s{2,}\(.*\)|\s+\d+/\d+)+$")
 _STAGE_LINE = re.compile(r"^── (.+)$")
 
 _LOGS = {MAIN: "pipeline.log", PRE: "prequiz.log"}
+
+# 두 파이프라인의 마지막 단계. **끝까지 갔는지를 이걸로 안다** — 보고서에 성패를
+# 적는 칸이 없다. 도중에 죽은 편의 보고서에는 이 단계가 없다.
+FINAL_STAGE = "덱 빌드"
 
 _cache: dict[str, tuple[float, Samples]] = {}
 
@@ -172,8 +179,7 @@ def samples(runs_dir: Path, kind: str) -> Samples:
 
     totals: list[float] = []
     per_stage: dict[str, list[float]] = {}
-    order: list[str] = []
-    newest = 0.0
+    orders: list[tuple[float, list[str]]] = []
 
     for report in runs_dir.glob("*/run.report.json"):
         run_dir = report.parent
@@ -191,16 +197,19 @@ def samples(runs_dir: Path, kind: str) -> Samples:
             if name and seconds > 0:
                 per_stage.setdefault(name, []).append(seconds)
 
-        # 차례는 **가장 최근에 끝난 편**의 것을 쓴다. 단계가 늘거나 줄면 옛 편들과
-        # 다수결을 해 봐야 지금 도는 편과 안 맞는다.
+        # 차례는 **끝까지 간 편**에서만 모은다. 도중에 죽은 편의 로그는 앞부분만
+        # 있어서 분모를 끌어내린다 — 2026-09-02에 한도로 죽은 복습 셋이 최근
+        # 표본을 채우자 `main`의 총 단계가 5로 떨어졌고, `② 카드`가 차례에서
+        # 아예 빠졌다(그 편들은 거기까지 못 갔다).
+        if FINAL_STAGE not in [canon(str(step.get("step", ""))) for step in data.get("steps") or []]:
+            continue
         try:
             stamp = report.stat().st_mtime
         except OSError:
             continue
-        if stamp > newest:
-            found = _stage_order(run_dir / _LOGS[kind])
-            if found:
-                newest, order = stamp, found
+        found = _stage_order(run_dir / _LOGS[kind])
+        if found:
+            orders.append((stamp, found))
 
     for key, values in _observed(runs_dir).items():
         seen_kind, _, name = key.partition("/")
@@ -208,12 +217,33 @@ def samples(runs_dir: Path, kind: str) -> Samples:
             per_stage.setdefault(name, []).extend(values)
 
     result = Samples(
-        order=order,
+        order=_typical_order(orders),
         stage_seconds={name: statistics.median(values) for name, values in per_stage.items()},
         totals=totals,
     )
     _cache[kind] = (now, result)
     return result
+
+
+def _typical_order(orders: list[tuple[float, list[str]]]) -> list[str]:
+    """여러 편의 단계 차례에서 하나를 고른다. **한 편에 걸지 않는다.**
+
+    분모가 표본 하나에서 오면 그 한 편의 변덕이 그대로 화면에 뜬다. 2026-09-02에
+    같은 배치의 예습 두 편이 `7/7`과 `7/18`로 끝났다 — 예습 로그의 단계 이름 수를
+    세어 보면 18이 보통인데 9·7짜리가 섞여 있고, 하필 그 짧은 편이 「가장 최근」이면
+    뒤따르는 편들이 전부 그 분모를 쓴다.
+
+    최근 몇 편의 **길이 최빈값**에 맞는 차례를 쓰고, 그중에서는 새 것을 고른다.
+    이름의 다수결이 아니라 길이의 최빈값인 까닭은 **차례가 실제로 있던 한 편의
+    것이어야** 하기 때문이다 — 여러 편에서 이름을 기워 붙이면 어느 편에도 없던
+    차례가 만들어진다.
+    """
+    recent = [order for _, order in
+              sorted(orders, key=lambda row: row[0], reverse=True)[:ORDER_SAMPLE]]
+    if not recent:
+        return []
+    common = statistics.mode([len(order) for order in recent])
+    return next(order for order in recent if len(order) == common)
 
 
 def estimate(runs_dir: Path, kind: str, stage: str, elapsed: float,

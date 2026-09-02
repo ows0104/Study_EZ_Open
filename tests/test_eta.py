@@ -9,7 +9,11 @@ import json
 from studyez import eta
 
 
-def _run(runs, run_id, kind, wall, steps, stages):
+def _run(runs, run_id, kind, wall, steps, stages, finished=True):
+    """한 편의 산출물. `finished=False`면 도중에 죽은 편이다 — 마지막 단계가 없다."""
+    if finished and eta.FINAL_STAGE not in [name for name, _ in steps]:
+        steps = [*steps, (eta.FINAL_STAGE, 5)]
+        stages = [*stages, eta.FINAL_STAGE] if eta.FINAL_STAGE not in stages else stages
     run_dir = runs / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "run.report.json").write_text(json.dumps({
@@ -97,3 +101,48 @@ def test_러너가_잰_단계도_표본이_된다(tmp_path):
     eta.observe(tmp_path, eta.MAIN, "자료 준비 (prep)", 42)
     _fresh()
     assert eta.samples(tmp_path, eta.MAIN).stage_seconds["자료 준비 (prep)"] == 42
+
+
+# ── 분모는 한 편에 안 걸린다 ──────────────────────────────────────────
+# 2026-09-02에 같은 배치의 예습 두 편이 `7/7`과 `7/18`로 끝났다. 차례를 「가장
+# 최근에 끝난 편」 하나에서만 가져왔기 때문이다.
+
+
+def _aged(run_dir, stamp):
+    import os
+    for name in ("run.report.json", "prequiz.log", "pipeline.log"):
+        path = run_dir / name
+        if path.is_file():
+            os.utime(path, (stamp, stamp))
+
+
+def test_도중에_죽은_편은_분모를_못_바꾼다(tmp_path):
+    """2026-09-02에 한도로 죽은 복습 셋이 최근 표본을 채우자 `main`의 총 단계가
+    5로 떨어졌고 `② 카드`가 차례에서 아예 빠졌다 — 그 편들은 거기까지 못 갔다."""
+    _fresh()
+    full = ["자료 준비 (prep)", "① 반드시 알아야 할 것", "② 카드", "누출", "풀이", "채점", "덱 빌드"]
+    for index, run_id in enumerate(("250917_01", "250917_02", "250917_03")):
+        _aged(_run(tmp_path, run_id, eta.PRE, 900, [("② 카드", 400)], full), 1_000 + index)
+    # 가장 최근 편이 앞부분에서 죽었다. 그 로그에는 앞 두 단계밖에 없다.
+    _aged(_run(tmp_path, "250917_05", eta.PRE, 900, [("자료 준비 (prep)", 3)],
+               ["자료 준비 (prep)", "① 반드시 알아야 할 것"], finished=False), 9_999)
+
+    guess = eta.estimate(tmp_path, eta.PRE, "② 카드", elapsed=300)
+    assert guess.total == len(full), "죽은 편이 분모를 끌어내렸다"
+    assert guess.index == 3
+
+
+def test_끝까지_간_편이_하나도_없으면_아무_말도_안_한다(tmp_path):
+    _fresh()
+    _run(tmp_path, "250917_05", eta.PRE, 900, [("자료 준비 (prep)", 3)],
+         ["자료 준비 (prep)"], finished=False)
+    assert eta.samples(tmp_path, eta.PRE).order == []
+
+
+def test_차례는_실제로_있던_한_편의_것이다(tmp_path):
+    """이름을 여러 편에서 기워 붙이면 어느 편에도 없던 차례가 만들어진다."""
+    _fresh()
+    _aged(_run(tmp_path, "250917_01", eta.PRE, 900, [], ["prep", "카드"]), 1_000)
+    _aged(_run(tmp_path, "250917_02", eta.PRE, 900, [], ["prep", "누출"]), 2_000)
+    order = eta.samples(tmp_path, eta.PRE).order
+    assert order in (["prep", "카드", eta.FINAL_STAGE], ["prep", "누출", eta.FINAL_STAGE])
