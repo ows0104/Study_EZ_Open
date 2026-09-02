@@ -55,3 +55,46 @@ def test_예습이_없는_편은_그대로다(tmp_path):
 
     assert [u.kind for u in plan.uploads] == ["notes_current"]
     assert plan.notes == []
+
+
+# ── 한 장이 없다고 편 전체를 버리지 않는다 ────────────────────────────
+# 2026-09-02, 계획을 세운 뒤 슬라이드 한 장이 사라져서 103장짜리 덱이 통째로 안
+# 올라갔다. 그 자리를 다시 채우는 코드가 따로 돌기 때문에 생길 수 있는 일이다.
+
+
+class FakeClient:
+    base = "http://test"
+
+    def __init__(self, vanish: Path | None = None):
+        self.put = []
+        # 서명을 받아 온 **뒤** 사라진다. 실제로 그 순서였다 — 계획도 서명도 그
+        # 파일이 있을 때 만들어졌고, 올리려고 열었을 때 없었다.
+        self.vanish = vanish
+
+    def call(self, method, path, body=None):
+        if path.endswith("/uploads"):
+            if self.vanish is not None:
+                self.vanish.unlink()
+            return {"files": [{"filename": row["filename"], "uploadUrl": f"/u/{row['filename']}"}
+                              for row in body]}
+        if path.endswith("/uploads/complete"):
+            return {"missing": []}
+        return {}
+
+    def put_file(self, url, path):
+        self.put.append(path.name)
+
+
+def test_사라진_한_장은_건너뛰고_나머지를_올린다(tmp_path):
+    plan = publish.LecturePlan(
+        subject="기생충학", run_id="260902_01",
+        item=publish.LectureFile.__new__(publish.LectureFile))
+    for name in ("s008.png", "s025.png"):
+        path = tmp_path / name
+        path.write_bytes(b"png")
+        plan.uploads.append(publish.Upload("main_media", path))
+    client, report = FakeClient(vanish=tmp_path / "s008.png"), publish.Report()
+    publish._publish_one(plan, client, {}, report, force=True, log=lambda *_: None)
+
+    assert client.put == ["s025.png"], "남은 것을 안 올렸다"
+    assert any("사라졌다" in line and "s008.png" in line for line in report.failures)

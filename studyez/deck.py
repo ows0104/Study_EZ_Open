@@ -386,20 +386,35 @@ def _slides(run_dir: Path, run_id: str) -> int:
     웹이 읽는 것은 「이 카드의 근거가 몇 번 슬라이드인가」뿐이다.
     """
     out = run_dir / "slides"
-    if out.exists():
-        shutil.rmtree(out)
     media = run_dir / "media"
     if not media.is_dir():
+        if out.exists():
+            shutil.rmtree(out)
         return 0
 
-    out.mkdir(parents=True)
+    # **다 채운 뒤에 바꿔치기한다.** 예전에는 `out`을 먼저 통째로 지우고 채웠는데,
+    # 그 사이 폴더가 반쯤 빈다. 빌드와 업로드가 겹쳐 돌기 시작한 뒤(2026-09-01
+    # 일꾼 둘) 그 창이 실제로 열렸다 — 2026-09-02 `260902_01`이 103장을 만들어
+    # 놓고 올리다 죽었다. `slides/`의 앞 9장이 이름 순서대로 사라진 뒤였다.
+    staging = run_dir / "slides.tmp"
+    if staging.exists():
+        shutil.rmtree(staging)
+    staging.mkdir(parents=True)
     moved = 0
     for png in sorted(media.glob("*.png")):
         match = RE_SLIDE_PNG.search(png.name)
         if not match:
             continue
-        shutil.copy2(png, out / f"{run_id}_s{int(match.group(1)):03d}.png")
+        shutil.copy2(png, staging / f"{run_id}_s{int(match.group(1)):03d}.png")
         moved += 1
+
+    old = run_dir / "slides.old"
+    if old.exists():
+        shutil.rmtree(old)
+    if out.exists():
+        out.rename(old)
+    staging.rename(out)
+    shutil.rmtree(old, ignore_errors=True)
     return moved
 
 

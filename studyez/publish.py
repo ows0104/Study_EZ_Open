@@ -630,6 +630,13 @@ def _publish_one(
     present = client.call("POST", f"{base}/uploads/complete", payloads)
     missing = set(present.get("missing", []))
 
+    # **계획을 세운 뒤 사라진 것을 먼저 뺀다.** 슬라이드는 그 자리를 다시 채우는
+    # 코드가 따로 돈다(`deck._slides`). 2026-09-02에 한 장이 사라져서 103장짜리
+    # 덱이 통째로 안 올라갔다 — 크기를 재는 줄에서 죽었다.
+    for upload in [u for u in plan.uploads if not u.path.is_file()]:
+        report.failures.append(f"{plan.label} — 계획을 세운 뒤 사라졌다: {upload.filename}")
+    plan.uploads = [upload for upload in plan.uploads if upload.path.is_file()]
+
     pending = [
         upload for upload in plan.uploads
         if force
@@ -644,6 +651,12 @@ def _publish_one(
         log(f"    {plan.label} — 올릴 것 {len(pending)}개 ({human(total)})")
     for upload in pending:
         started = time.monotonic()
+        # **한 장이 없다고 편 전체를 버리지 않는다.** 슬라이드는 계획을 세운 뒤에
+        # 사라질 수 있다 — 그 자리를 다시 채우는 코드가 따로 돈다(`deck._slides`).
+        # 2026-09-02에 그 한 장 때문에 103장짜리 덱이 통째로 안 올라갔다.
+        if not upload.path.is_file():
+            report.failures.append(f"{plan.label} — 계획을 세운 뒤 사라졌다: {upload.filename}")
+            continue
         _put_with_retry(client, urls[upload.filename], upload)
         report.uploaded += 1
         report.uploaded_bytes += upload.size
