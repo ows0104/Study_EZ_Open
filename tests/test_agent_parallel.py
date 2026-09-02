@@ -310,3 +310,29 @@ def test_한도가_아닌_실패는_그대로_실패다(tmp_path):
     last = client.puts[-1][1]
     assert last["state"] == "failed"
     assert "validate" in last["message"]
+
+
+def test_갓_올라온_필기는_기다렸다_다시_한다(tmp_path):
+    """자동 큐잉과 동기화 대기가 서로를 물던 자리. 필기가 올라오는 순간 일감이
+    서는데 `watch`는 10분이 안 된 파일을 안 건드린다 — 9/2에 필기 넷 중 둘이
+    그렇게 복습 없이 남았다."""
+    client = FakeClient([])
+    worker = _agent(tmp_path, client)
+    job = agent.Job(id=9, subject="기생충학", run_id="260902_03", kind=deck.MAIN)
+    worker._run = lambda *a, **k: (0, [
+        "  · 기생충학/260902_03 간흡충증(송현범) — 올라온 지 9분. 동기화 중일 수 있어 다음 차례로"])
+    worker.handle(job)
+
+    last = client.puts[-1][1]
+    assert last["state"] == "queued", "실패로 적었다"
+    assert "동기화" in last["stage"]
+    assert last["resumeAt"], "언제 다시 올지를 안 적었다"
+
+
+def test_기다리는_시간은_남은_만큼만이다():
+    from datetime import datetime
+
+    now = datetime(2026, 9, 2, 18, 55).astimezone()
+    when = agent.sync_wait(["— 올라온 지 9분. 동기화 중일 수 있어 다음 차례로"], now)
+    # 10분 규칙에서 9분이 지났으니 1분 + 여유 1분.
+    assert 60 <= (when - now).total_seconds() <= 180

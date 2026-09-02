@@ -143,6 +143,9 @@ RE_LIMIT = re.compile(r"(?:session|usage) limit\s*(?:·\s*)?([^\"\\]*)", re.IGNO
 RE_CHILD_LOG = re.compile(r"\(로그: (.+?\.log)\)")
 # `pdf2anki`가 멈출 때 찍는 말. 로그가 덧붙여 쓰이므로 **마지막 것이 이번 것**이다.
 STOPPED = "멈췄다 — "
+# 필기가 너무 갓 올라와서 건드리지 않은 자리(`watch.MIN_AGE_SECONDS`).
+# `— 올라온 지 9분. 동기화 중일 수 있어 다음 차례로` 꼴이다.
+RE_TOO_FRESH = re.compile(r"올라온 지 (\d+)분\. 동기화")
 # 한도가 언제 풀리는지. `resets 1:40pm (Asia/Seoul)` 꼴로 온다.
 RE_RESET_AT = re.compile(r"resets\s+(\d{1,2}):(\d{2})\s*(am|pm)?", re.IGNORECASE)
 # 풀리는 시각을 못 읽었을 때 기다릴 시간. 한도 창이 5시간이라 그보다 짧게 잡는다 —
@@ -426,18 +429,21 @@ class Agent:
             why = (hit_limit or child_stop_reason(lines)
                    or blocked_reason(lines, job.run_id)
                    or summary(lines) or f"종료 코드 {code}")
-            if hit_limit:
-                # **실패가 아니라 기다림이다.** 이 편의 잘못이 아니고 시각이 되면
-                # 풀린다. 실패로 적으면 사람이 다시 눌러야 하는데, 걸리는 시각이
-                # 대개 사람이 자는 때다(2026-09-02에 01:32·10:17 두 번).
-                #
-                # 여기까지 온 것은 그대로 남는다 — 다시 집으면 만들어 둔 단계를
-                # 건너뛰고 이어 간다.
-                when = resume_at(hit_limit)
-                self.say(f"    한도 — {when:%H:%M}에 저절로 이어 간다")
+            # **실패가 아니라 기다림인 것이 둘 있다.** 둘 다 이 편의 잘못이
+            # 아니고 시각이 되면 풀린다. 실패로 적으면 사람이 다시 눌러야 하는데,
+            # 걸리는 시각이 대개 사람이 자거나 자리를 비운 때다.
+            #
+            # 여기까지 온 것은 그대로 남는다 — 다시 집으면 만들어 둔 단계를
+            # 건너뛰고 이어 간다.
+            waiting = sync_wait(lines)
+            if hit_limit or waiting:
+                when = resume_at(hit_limit) if hit_limit else waiting
+                what = "세션 한도" if hit_limit else "동기화 대기"
+                note = hit_limit or "필기가 올라온 지 얼마 안 됐다 — 동기화를 기다린다"
+                self.say(f"    {what} — {when:%H:%M}에 저절로 이어 간다")
                 self.report(job, state="queued", resumeAt=when.isoformat(),
-                            stage=f"세션 한도 — {when:%H:%M}에 다시 시작",
-                            message=f"{hit_limit} · 그때까지 줄에서 기다린다 (로그: {log})")
+                            stage=f"{what} — {when:%H:%M}에 다시 시작",
+                            message=f"{note} · 그때까지 줄에서 기다린다 (로그: {log})")
                 return
             self.say(f"    실패 — {why}")
             self.report(job, state="failed", stage="", message=f"덱을 못 만들었다: {why} (로그: {log})")
@@ -850,6 +856,27 @@ def resume_at(reason: str, now: datetime | None = None) -> datetime:
         return now + timedelta(seconds=BLIND_WAIT)
     when = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
     return when if when > now else when + timedelta(days=1)
+
+
+def sync_wait(lines: list[str], now: datetime | None = None) -> datetime | None:
+    """필기가 갓 올라와 못 만든 자리. 언제 다시 오면 되는가.
+
+    **자동 큐잉과 동기화 대기가 서로를 문다**(2026-09-02). 필기가 올라오는 그
+    순간에 일감이 서는데(`ensure_auto_job`), `watch`는 올라온 지 10분이 안 된
+    파일을 안 건드린다(`watch.MIN_AGE_SECONDS` — Synology가 아직 쓰는 중일 수
+    있다). 그래서 러너가 몇 초 만에 집어 가 「아직 이르다」로 죽었고, 그 편은
+    **다시 서지 않았다** — 9/2 필기 넷 중 둘이 그렇게 복습 없이 남았다.
+
+    한도와 같은 성격이다 — 이 편의 잘못이 아니고 기다리면 풀린다. 1분을 더
+    얹는 것은 경계에서 또 걸리지 않게 하려는 것이다.
+    """
+    for line in lines:
+        found = RE_TOO_FRESH.search(line)
+        if not found:
+            continue
+        left = watch.MIN_AGE_SECONDS - int(found.group(1)) * 60
+        return (now or datetime.now().astimezone()) + timedelta(seconds=max(60, left) + 60)
+    return None
 
 
 def child_stop_reason(lines: list[str]) -> str:
