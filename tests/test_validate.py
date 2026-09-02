@@ -113,3 +113,18 @@ def test_고친_것을_안_적으면_표시한다():
     kept, s = validate(raw, _prep(), _jokbo(("2022", "58")))
     assert len(kept) == 1
     assert "corrected_without_note" in kept[0]["review_flags"]
+
+
+# ── 요약을 찍다가 죽지 않는다 ─────────────────────────────────────────
+# 2026-09-02, 모델이 카드 목록 끝에 `"__MORE__"` 한 줄을 붙여 냈다. 검증은 그것을
+# 제대로 빼냈는데 **뺀 것을 화면에 찍는 줄**이 `AttributeError`로 죽었다. 죽은
+# 자리가 `items.checked.json` 을 쓴 뒤라 산출물은 멀쩡했고 종료 코드만 거짓말을 했다.
+
+
+def test_사전이_아닌_것이_빠져도_찍을_수_있다():
+    from pdf2anki.validate import dropped_q
+
+    assert dropped_q("__MORE__") == "__MORE__"
+    assert dropped_q({"q": "장내선충증의 감염 경로는?"}) == "장내선충증의 감염 경로는?"
+    assert dropped_q({}) == ""
+    assert dropped_q(None) == "None"

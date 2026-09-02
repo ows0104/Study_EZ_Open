@@ -502,6 +502,21 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
     return kept, suspects
 
 
+def dropped_q(card: object) -> str:
+    """hard 제거된 것의 앞면. **카드가 사전이 아닐 수 있다.**
+
+    `schema` 위반은 「object 가 아니다」까지 잡아 낸다. 2026-09-02에 모델이 카드
+    목록 끝에 `"__MORE__"` 한 줄을 붙여 냈고(더 있다는 뜻의 자리표시자), 검증은
+    그것을 제대로 빼냈는데 **이 줄을 찍다가 `AttributeError`로 죽었다.**
+
+    죽은 자리가 `items.checked.json` 을 쓴 **뒤**라 산출물은 멀쩡했다. 그래도
+    종료 코드는 실패였고, 그 편은 「② 카드까지 다 해 놓고」 멈춰 섰다.
+    """
+    if isinstance(card, dict):
+        return str(card.get("q", ""))[:70]
+    return str(card)[:70]
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="생성 결과를 기계 검증한다")
     ap.add_argument("raw")
@@ -543,7 +558,7 @@ def main(argv=None) -> int:
         print("\nhard 제거:")
         for d in s["dropped"]:
             print(f"   {d['code']:<28}{d['detail'][:60]}")
-            print(f"      q: {d['card'].get('q','')[:70]!r}")
+            print(f"      q: {dropped_q(d['card'])!r}")
     if s["autofixed"]:
         print(f"\n기계 교정: {s['autofixed']}")
     if s["flag_counts"]:
