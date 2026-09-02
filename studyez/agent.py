@@ -125,6 +125,8 @@ RE_NOTHING = re.compile(r"^\s*만들 것 0편")
 RE_LIMIT = re.compile(r"(?:session|usage) limit\s*(?:·\s*)?([^\"\\]*)", re.IGNORECASE)
 # 하위 로그가 어디 있는지. 실패 줄이 경로를 달고 온다.
 RE_CHILD_LOG = re.compile(r"\(로그: (.+?\.log)\)")
+# `pdf2anki`가 멈출 때 찍는 말. 로그가 덧붙여 쓰이므로 **마지막 것이 이번 것**이다.
+STOPPED = "멈췄다 — "
 
 
 @dataclass
@@ -399,7 +401,8 @@ class Agent:
         if not made:
             # 한도가 먼저다. 기다리면 풀리는 일을 다른 말로 적으면 사람이
             # 고칠 것이 없는 곳을 고치러 간다.
-            why = (limit_reason(lines) or blocked_reason(lines, job.run_id)
+            why = (limit_reason(lines) or child_stop_reason(lines)
+                   or blocked_reason(lines, job.run_id)
                    or summary(lines) or f"종료 코드 {code}")
             self.say(f"    실패 — {why}")
             self.report(job, state="failed", stage="", message=f"덱을 못 만들었다: {why} (로그: {log})")
@@ -756,13 +759,19 @@ def limit_reason(lines: list[str]) -> str:
     일은 화면에서 갈려야 한다** — 앞의 것에 짝을 고치러 가면 고칠 것이 없다.
     """
     def said(text: str) -> str:
-        """**마지막 것을 집는다.** 하위 로그는 덧붙여 쓰여서(`deck._spawn`) 한
-        파일에 어제 걸린 줄과 오늘 걸린 줄이 같이 있다. 첫 줄을 집으면 원인은
-        맞는데 시각이 틀린다 — 2026-09-02 10:17에 「resets 1:40pm」으로 죽은 편이
-        화면에 「resets 5:40am」으로 떴다. 이미 지난 시각이라 사람이 「풀렸는데 왜
-        죽지」를 묻게 된다.
+        """**이번에 멈춘 자리만 본다.** 하위 로그는 덧붙여 쓰인다(`deck._spawn`).
+
+        그래서 한 파일에 어제 걸린 한도와 오늘 걸린 한도가 같이 있고, 아침에는
+        첫 줄을 집어 이미 지난 시각을 적었다. 마지막 것을 집게 고쳤더니 이번에는
+        **한도가 아닌 실패에 한도를 갖다 붙였다** — `260901_01`이 16:13에
+        `pdf2anki.validate` 실패로 죽었는데 화면에는 「세션 한도 · resets 1:40pm」이
+        떴다. 그 편의 로그에 아침의 한도 줄이 남아 있었기 때문이다.
+
+        그래서 **마지막 `멈췄다 —` 뒤**만 본다. 그 줄이 이번 실행이 멈춘 자리이고,
+        한도였다면 그 뒤에 API가 준 말이 그대로 붙어 있다.
         """
-        found = RE_LIMIT.findall(text)
+        cut = text.rfind(STOPPED)
+        found = RE_LIMIT.findall(text[cut:] if cut >= 0 else text)
         if not found:
             return ""
         when = (found[-1] or "").strip(" ·\t")
@@ -781,6 +790,29 @@ def limit_reason(lines: list[str]) -> str:
             continue
         if found := said(text):
             return found
+    return ""
+
+
+def child_stop_reason(lines: list[str]) -> str:
+    """하위 로그가 **이번에 멈춘 자리**. 한도가 아닐 때 그 자리를 대신 말한다.
+
+    러너가 보는 줄은 「pdf2anki가 1로 끝났다」까지다. 그 말로는 사람이 로그를 열기
+    전까지 아무것도 모른다 — 어느 단계였는지, 모델이 죽은 것인지 코드가 죽은
+    것인지도. `260901_01`이 `pdf2anki.validate` 실패로 죽었을 때 화면에 그 말이
+    한 줄도 없었다.
+    """
+    for line in lines:
+        child = RE_CHILD_LOG.search(line)
+        if not child:
+            continue
+        try:
+            text = Path(child.group(1)).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        cut = text.rfind(STOPPED)
+        if cut < 0:
+            continue
+        return text[cut + len(STOPPED):].splitlines()[0].strip()[:300]
     return ""
 
 

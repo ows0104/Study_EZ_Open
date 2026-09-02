@@ -340,3 +340,30 @@ def test_한도는_마지막_줄을_집는다(tmp_path):
     ]), encoding="utf-8")
     lines = [f"    실패 — pdf2anki가 1로 끝났다 (로그: {child})"]
     assert agent.limit_reason(lines) == "세션 한도에 걸렸다 — resets 1:40pm (Asia/Seoul)"
+
+
+def test_한도가_아닌_실패에_한도를_안_갖다_붙인다(tmp_path):
+    """로그가 덧붙여 쓰여서 아침의 한도 줄이 남아 있다. 이번에 멈춘 자리는 다른
+    곳이다 — `260901_01`이 validate 실패로 죽었는데 화면에 「세션 한도」가 떴다."""
+    child = tmp_path / "pipeline.log"
+    child.write_text("\n".join([
+        '"result":"session limit · resets 1:40pm (Asia/Seoul)"',
+        "멈췄다 — ①학습목표: claude 가 1 로 끝났다",
+        "── ② 카드",
+        "멈췄다 — 명령 실패: pdf2anki.validate items.raw.json --strategy base",
+    ]), encoding="utf-8")
+    lines = [f"    실패 — pdf2anki가 1로 끝났다 (로그: {child})"]
+    assert agent.limit_reason(lines) == ""
+    assert agent.child_stop_reason(lines).startswith("명령 실패: pdf2anki.validate")
+
+
+def test_이번에_멈춘_것이_한도면_한도로_적는다(tmp_path):
+    child = tmp_path / "pipeline.log"
+    child.write_text("\n".join([
+        "멈췄다 — 명령 실패: 어제 죽은 자리",
+        "── ① 학습목표",
+        "멈췄다 — ①학습목표: claude 가 1 로 끝났다",
+        '"result":"session limit · resets 6:40pm (Asia/Seoul)"',
+    ]), encoding="utf-8")
+    lines = [f"    실패 — pdf2anki가 1로 끝났다 (로그: {child})"]
+    assert agent.limit_reason(lines) == "세션 한도에 걸렸다 — resets 6:40pm (Asia/Seoul)"
