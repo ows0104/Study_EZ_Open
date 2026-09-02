@@ -66,6 +66,21 @@
 **한 번에 한 편이다.** 한 편이 이미 빈 세션 넷을 띄운다(`studyez.watch.build`와
 같은 이유). 서버도 `running`이 있으면 새 일감을 안 준다.
 
+## 한도는 실패가 아니다 (2026-09-02)
+
+모델 한도(`session limit`)로 멈춘 편은 **실패로 적지 않고 줄 앞으로 되돌린다.**
+이 편의 잘못이 아니고 시각이 되면 풀리기 때문이다. 실패로 적으면 사람이 다시
+눌러야 하는데, 걸리는 시각이 대개 사람이 자는 때다 — 그날 01:32과 10:17 두 번이
+그랬고 둘 다 아침까지 아무것도 안 만들어졌다.
+
+    state=queued · resumeAt=<풀리는 시각> · stage=「세션 한도 — 13:40에 다시 시작」
+
+**기다림은 큐가 든다**(`prequiz_job.resume_at`). 러너 메모리에 두면 재시작에
+날아가고, 그러면 풀리지도 않은 한도에 다시 부딪힌다. 서버가 그 시각 전에는 그
+줄을 아무에게도 안 준다.
+
+만들어 둔 단계는 그대로 남으므로, 다시 집으면 **거기서 이어 간다**.
+
 ## 박동은 두 자리에서 찍는다
 
 `claim`만으로는 모자란다. **한 편을 잡으면 15분 동안 `claim`을 안 부른다** —
@@ -89,6 +104,7 @@ import threading
 import time
 from dataclasses import dataclass
 from datetime import date as Date
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from . import ahead, deck, eta, gate, prequeue, publish, watch
@@ -127,6 +143,11 @@ RE_LIMIT = re.compile(r"(?:session|usage) limit\s*(?:·\s*)?([^\"\\]*)", re.IGNO
 RE_CHILD_LOG = re.compile(r"\(로그: (.+?\.log)\)")
 # `pdf2anki`가 멈출 때 찍는 말. 로그가 덧붙여 쓰이므로 **마지막 것이 이번 것**이다.
 STOPPED = "멈췄다 — "
+# 한도가 언제 풀리는지. `resets 1:40pm (Asia/Seoul)` 꼴로 온다.
+RE_RESET_AT = re.compile(r"resets\s+(\d{1,2}):(\d{2})\s*(am|pm)?", re.IGNORECASE)
+# 풀리는 시각을 못 읽었을 때 기다릴 시간. 한도 창이 5시간이라 그보다 짧게 잡는다 —
+# 너무 길게 자면 이미 풀린 뒤에도 큐가 서 있고, 짧으면 한 번 더 부딪힐 뿐이다.
+BLIND_WAIT = 30 * 60
 
 
 @dataclass
@@ -401,9 +422,23 @@ class Agent:
         if not made:
             # 한도가 먼저다. 기다리면 풀리는 일을 다른 말로 적으면 사람이
             # 고칠 것이 없는 곳을 고치러 간다.
-            why = (limit_reason(lines) or child_stop_reason(lines)
+            hit_limit = limit_reason(lines)
+            why = (hit_limit or child_stop_reason(lines)
                    or blocked_reason(lines, job.run_id)
                    or summary(lines) or f"종료 코드 {code}")
+            if hit_limit:
+                # **실패가 아니라 기다림이다.** 이 편의 잘못이 아니고 시각이 되면
+                # 풀린다. 실패로 적으면 사람이 다시 눌러야 하는데, 걸리는 시각이
+                # 대개 사람이 자는 때다(2026-09-02에 01:32·10:17 두 번).
+                #
+                # 여기까지 온 것은 그대로 남는다 — 다시 집으면 만들어 둔 단계를
+                # 건너뛰고 이어 간다.
+                when = resume_at(hit_limit)
+                self.say(f"    한도 — {when:%H:%M}에 저절로 이어 간다")
+                self.report(job, state="queued", resumeAt=when.isoformat(),
+                            stage=f"세션 한도 — {when:%H:%M}에 다시 시작",
+                            message=f"{hit_limit} · 그때까지 줄에서 기다린다 (로그: {log})")
+                return
             self.say(f"    실패 — {why}")
             self.report(job, state="failed", stage="", message=f"덱을 못 만들었다: {why} (로그: {log})")
             return
@@ -791,6 +826,30 @@ def limit_reason(lines: list[str]) -> str:
         if found := said(text):
             return found
     return ""
+
+
+def resume_at(reason: str, now: datetime | None = None) -> datetime:
+    """한도가 풀리는 시각. 못 읽으면 `BLIND_WAIT` 뒤.
+
+    「resets 1:40pm」은 **다음번 그 시각**이다. 지금이 그보다 뒤면 내일 것이다 —
+    밤 10시에 「resets 5:40am」을 받으면 여섯 시간을 기다려야 한다.
+
+    돌려주는 값에는 시간대가 붙어 있다(이 기계의 것). 서버가 UTC로 바꿔 든다.
+    """
+    now = now or datetime.now().astimezone()
+    found = RE_RESET_AT.search(reason)
+    if not found:
+        return now + timedelta(seconds=BLIND_WAIT)
+    hour, minute = int(found.group(1)), int(found.group(2))
+    half = (found.group(3) or "").lower()
+    if half == "pm" and hour != 12:
+        hour += 12
+    elif half == "am" and hour == 12:
+        hour = 0
+    if hour > 23:
+        return now + timedelta(seconds=BLIND_WAIT)
+    when = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    return when if when > now else when + timedelta(days=1)
 
 
 def child_stop_reason(lines: list[str]) -> str:

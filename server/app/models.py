@@ -515,6 +515,11 @@ class PrequizJob(Base):
     stage_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     # 러너가 지난 편들의 실측으로 셈한 남은 시간(초). 0이면 아직 모른다.
     eta_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # 이 시각 전에는 아무도 못 집어 간다. **모델 한도로 멈춘 편이 여기 선다** —
+    # 러너가 「resets 1:40pm」을 읽어 적어 두면, 그때까지 큐에 서 있다가 저절로
+    # 이어진다. 기다림을 러너 메모리가 아니라 큐가 드는 까닭은 러너가 재시작하면
+    # 메모리가 날아가고, 그러면 풀리지도 않은 한도에 다시 부딪히기 때문이다.
+    resume_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

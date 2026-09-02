@@ -7,6 +7,7 @@
 
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 from studyez import agent, deck
@@ -367,3 +368,28 @@ def test_이번에_멈춘_것이_한도면_한도로_적는다(tmp_path):
     ]), encoding="utf-8")
     lines = [f"    실패 — pdf2anki가 1로 끝났다 (로그: {child})"]
     assert agent.limit_reason(lines) == "세션 한도에 걸렸다 — resets 6:40pm (Asia/Seoul)"
+
+
+# ── 한도는 실패가 아니라 기다림이다 ───────────────────────────────────
+# 2026-09-02에 두 번 걸렸다(01:32·10:17). 실패로 적으면 사람이 다시 눌러야 하는데,
+# 걸리는 시각이 대개 사람이 자는 때다.
+
+
+def test_풀리는_시각을_읽는다():
+    now = datetime(2026, 9, 2, 10, 17).astimezone()
+    assert agent.resume_at("한도 — resets 1:40pm (Asia/Seoul)", now).hour == 13
+    assert agent.resume_at("한도 — resets 1:40pm (Asia/Seoul)", now).minute == 40
+
+
+def test_이미_지난_시각이면_내일이다():
+    """밤 10시에 「resets 5:40am」을 받으면 여섯 시간을 기다려야 한다."""
+    now = datetime(2026, 9, 2, 10, 17).astimezone()
+    when = agent.resume_at("한도 — resets 5:40am (Asia/Seoul)", now)
+    assert (when.day, when.hour) == (3, 5)
+
+
+def test_시각을_못_읽으면_잠깐만_기다린다():
+    """지어낸 시각을 적느니 짧게 기다린다 — 틀려도 한 번 더 부딪힐 뿐이다."""
+    now = datetime(2026, 9, 2, 10, 17).astimezone()
+    when = agent.resume_at("세션 한도에 걸렸다", now)
+    assert 0 < (when - now).total_seconds() <= agent.BLIND_WAIT

@@ -59,6 +59,8 @@ ADDED_COLUMNS = (
     ("prequiz_job", "stage_total", "INTEGER NOT NULL DEFAULT 0"),
     ("prequiz_job", "eta_seconds", "INTEGER NOT NULL DEFAULT 0"),
     ("prequiz_job", "stage_started_at", "TIMESTAMP WITH TIME ZONE"),
+    # 2026-09-02 모델 한도로 멈춘 편이 풀리는 시각까지 큐에 서 있다가 저절로 이어진다.
+    ("prequiz_job", "resume_at", "TIMESTAMP WITH TIME ZONE"),
 )
 
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import tempfile
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 _TMP = Path(tempfile.mkdtemp(prefix="studyez-smoke-"))
@@ -638,6 +639,40 @@ def main() -> None:
     check("사람이 누르면 그 줄이 풀린다 — 새 줄이 서지 않는다",
           released.json()["job"]["id"] == held_id
           and released.json()["job"]["state"] == "queued", released.text)
+
+    print("\n[14-4] 한도로 멈춘 줄은 그 시각까지 기다렸다 저절로 이어진다")
+    # 2026-09-02, 모델 한도에 두 번 걸렸다(01:32·10:17). 실패로 적으면 사람이 다시
+    # 눌러야 하는데 그 시각이 대개 사람이 자는 때다. 기다림을 러너 메모리가 아니라
+    # **큐가 든다** — 러너가 재시작해도 남아 있어야 하기 때문이다.
+    for row in client.get("/api/admin/prequiz-jobs", headers=USER).json()["jobs"]:
+        if row["state"] in ("queued", "running", "held"):
+            client.put(f"/api/admin/prequiz-jobs/{row['id']}", headers=RUNNER,
+                       json={"state": "done"})
+
+    waiting = client.post("/api/admin/lectures/병리학/260813_03/prequiz-job",
+                          headers=USER).json()["job"]
+    client.post("/api/admin/prequiz-jobs/claim?worker=w1", headers=RUNNER)
+    later = (datetime.now(UTC) + timedelta(hours=3)).isoformat()
+    stepped = client.put(f"/api/admin/prequiz-jobs/{waiting['id']}", headers=RUNNER,
+                         json={"state": "queued", "resumeAt": later,
+                               "stage": "세션 한도 — 13:40에 다시 시작"})
+    check("러너가 줄 앞으로 되돌릴 수 있다",
+          stepped.status_code == 200 and stepped.json()["job"]["state"] == "queued", stepped.text)
+    check("일꾼 이름을 지운다 — 안 지우면 그 일꾼만 다시 집을 수 있다",
+          stepped.json()["job"]["worker"] == "", stepped.json())
+    check("기다리는 시각이 화면으로 나간다", stepped.json()["job"]["resumeAt"][:4] == later[:4],
+          stepped.json())
+    check("그때까지는 아무도 못 집어 간다",
+          client.post("/api/admin/prequiz-jobs/claim?worker=w1",
+                      headers=RUNNER).json()["job"] is None)
+
+    passed = (datetime.now(UTC) - timedelta(minutes=1)).isoformat()
+    client.put(f"/api/admin/prequiz-jobs/{waiting['id']}", headers=RUNNER,
+               json={"resumeAt": passed})
+    resumed = client.post("/api/admin/prequiz-jobs/claim?worker=w1", headers=RUNNER).json()["job"]
+    check("시각이 지나면 저절로 이어진다 — 사람이 다시 누르지 않는다",
+          resumed is not None and resumed["id"] == waiting["id"], resumed)
+    client.put(f"/api/admin/prequiz-jobs/{waiting['id']}", headers=RUNNER, json={"state": "done"})
 
     print()
     if failures:

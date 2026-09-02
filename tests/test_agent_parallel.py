@@ -273,3 +273,40 @@ def test_끝난_줄은_끝까지_간_것으로_닫는다(tmp_path):
     done = [body for _, body in client.puts if body.get("state") == "done"]
     assert done and done[-1]["stageIndex"] == done[-1]["stageTotal"] == 3
     eta._cache.clear()
+
+
+def test_한도로_멈춘_편은_실패가_아니라_줄로_돌아간다(tmp_path):
+    """실패로 적으면 사람이 다시 눌러야 한다. 기다리면 풀리는 일이므로 큐에
+    되돌려 놓고, 서버가 그 시각까지 아무에게도 안 준다."""
+    child = tmp_path / "pipeline.log"
+    child.write_text("\n".join([
+        "멈췄다 — ②카드: claude 가 1 로 끝났다",
+        '"result":"session limit · resets 1:40pm (Asia/Seoul)"',
+    ]), encoding="utf-8")
+
+    client = FakeClient([])
+    worker = _agent(tmp_path, client)
+    job = agent.Job(id=9, subject="기생충학", run_id="260901_01", kind=deck.MAIN)
+    worker._run = lambda *a, **k: (1, [f"    실패 — pdf2anki가 1로 끝났다 (로그: {child})"])
+    worker.handle(job)
+
+    last = client.puts[-1][1]
+    assert last["state"] == "queued", "실패로 적었다"
+    assert last["resumeAt"][11:16] == "13:40", last["resumeAt"]
+    assert "13:40" in last["stage"]
+    assert not any(body.get("state") == "failed" for _, body in client.puts)
+
+
+def test_한도가_아닌_실패는_그대로_실패다(tmp_path):
+    child = tmp_path / "pipeline.log"
+    child.write_text("멈췄다 — 명령 실패: pdf2anki.validate", encoding="utf-8")
+
+    client = FakeClient([])
+    worker = _agent(tmp_path, client)
+    job = agent.Job(id=9, subject="기생충학", run_id="260901_01", kind=deck.MAIN)
+    worker._run = lambda *a, **k: (1, [f"    실패 — pdf2anki가 1로 끝났다 (로그: {child})"])
+    worker.handle(job)
+
+    last = client.puts[-1][1]
+    assert last["state"] == "failed"
+    assert "validate" in last["message"]

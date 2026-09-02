@@ -17,7 +17,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session
 
 from app.auth import CurrentUser, require_admin, require_runner
@@ -117,6 +117,9 @@ def job_row(job: PrequizJob | None) -> dict[str, Any] | None:
         # 러너가 이것을 보고 이미 만든 편도 버리고 다시 만든다. 화면도 같은 값으로
         # 「만드는 중」과 「다시 만드는 중」을 가른다.
         "force": bool(job.force),
+        # 이 시각까지 줄에서 기다린다(모델 한도). 화면이 「멈춰 있다」와 「기다리는
+        # 중이다」를 갈라 말하려면 이 값이 필요하다.
+        "resumeAt": job.resume_at.isoformat() if job.resume_at else "",
         "createdAt": job.created_at.isoformat() if job.created_at else "",
         "updatedAt": job.updated_at.isoformat() if job.updated_at else "",
     }
@@ -395,7 +398,16 @@ def claim_prequiz_job(
 
     busy_lectures = {(job.subject, job.run_id) for job in running}
     queued = db.scalars(
-        select(PrequizJob).where(PrequizJob.state == JOB_QUEUED).order_by(PrequizJob.created_at)
+        select(PrequizJob)
+        .where(
+            PrequizJob.state == JOB_QUEUED,
+            # **아직 때가 안 된 편은 안 준다.** 모델 한도로 멈춘 편이 여기 선다 —
+            # 러너가 「resets 1:40pm」을 읽어 적어 두면 그때까지 줄에서 기다린다.
+            # 이 기다림을 러너 메모리에 두면 재시작에 날아가고, 그러면 풀리지도
+            # 않은 한도에 다시 부딪힌다.
+            or_(PrequizJob.resume_at.is_(None), PrequizJob.resume_at <= now),
+        )
+        .order_by(PrequizJob.created_at)
     ).all()
     # **읽고 나서 쓰는 사이가 비어 있으면 둘이 같은 줄을 집는다.** 일꾼 둘이 같은
     # 초에 물어보는 일이 실제로 생긴다(둘 다 15초마다 깨어난다). 조건부 UPDATE 한
@@ -423,7 +435,12 @@ def claim_prequiz_job(
 
 
 class JobUpdate(BaseModel):
-    state: Literal["running", "done", "failed"] | None = None
+    # `queued`는 **러너가 물러설 때** 쓴다 — 모델 한도처럼 이 편의 잘못이 아니고
+    # 기다리면 풀리는 것. 실패로 적으면 사람이 다시 눌러야 하는데, 누를 사람이
+    # 자는 시각에 걸리는 일이 잦다(2026-09-02에 01:32과 10:17 두 번).
+    state: Literal["running", "done", "failed", "queued"] | None = None
+    # 그때까지는 아무도 못 집어 간다. ISO 시각.
+    resume_at: str | None = Field(default=None, alias="resumeAt")
     stage: str | None = None
     message: str | None = None
     # 어디까지 왔나·얼마나 남았나. 러너만 아는 값이라 여기로 올라온다
@@ -470,10 +487,21 @@ def update_prequiz_job(
         job.stage_total = max(0, payload.stage_total)
     if payload.eta_seconds is not None:
         job.eta_seconds = max(0, payload.eta_seconds)
+    if payload.resume_at is not None:
+        try:
+            job.resume_at = datetime.fromisoformat(payload.resume_at)
+        except ValueError:
+            raise HTTPException(400, "resumeAt은 ISO 시각이어야 합니다.") from None
     if payload.state is not None:
         job.state = payload.state
         if payload.state in (JOB_DONE, JOB_FAILED):
             job.finished_at = datetime.now(UTC)
+        if payload.state == JOB_QUEUED:
+            # **줄 앞으로 되돌린다.** 일꾼 이름을 지우지 않으면 그 일꾼만 다시
+            # 집을 수 있고(claim ①), 러너가 재시작해 이름이 바뀌면 아무도 못 집는다.
+            job.worker = ""
+            job.started_at = None
+            job.finished_at = None
 
     # 이 호출 자체가 박동이다(`_touch_runner`). 빈 몸으로 와도 마찬가지 —
     # 러너는 단계가 안 바뀌어도 여기를 두드려 살아 있다고 알린다.
