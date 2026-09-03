@@ -36,6 +36,7 @@ PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m studyez watch
 | 이대로 만든다 | `studyez watch --build` (한 번에 만드는 상한은 `--max`, 기본 2) |
 | 한 편만 지목해 만든다 | `studyez watch 기생충학 --run-id 260831_01 --build` |
 | 이미 만든 편을 다시 만든다 | 위에 `--force` (`--run-id`가 필요하다) |
+| **필기가 새 판으로 갈렸다** | 위와 같다 — `--run-id … --build --force`. **쓸기에 맡기면 안 된다** (아래) |
 | 전략을 정한다 | `--strategy 기본\|필기\|족보\|사진` (기본은 `auto`. 실습 사진 중심이면 `사진`) |
 | 밀린 것을 몰아 만든다 | `--all-dates`, 또는 `--since 2026-08-01 --until 2026-08-31` |
 | 방금 올라온 파일도 잡는다 | `--now` (동기화가 끝나기를 기다리는 10분을 건너뛴다) |
@@ -43,6 +44,15 @@ PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m studyez watch
 | PDF 하나를 직접 굽는다 | `pdf2anki.run "<올해 필기.pdf>" --strategy … --resume out/<id>` |
 
 `--run-id`로 지목한 편은 **블럭 창·하루 상한·이미 만들었다는 표시를 지난다.**
+
+> ⚠ **새 판으로 갈린 편을 밤 쓸기가 못 다시 만든다** (2026-09-03 확인, 아직 안 고침).
+> `studyez watch --build` 는 화면에 「v2 갱신」이라고 찍지만, 그 `reason` 을 읽는 곳이
+> [runner.py:189](../studyez/runner.py) 의 그 출력 한 줄뿐이라 `--force` 가 빌드까지
+> 안 간다. `pdf2anki.run` 은 산출물이 있는 단계를 전부 건너뛰므로 **아무것도 안 만들고
+> `source.json` 에만 새 판이 찍힌다** — 그 편은 「갱신됨」이 되어 다시는 안 걸린다.
+>
+> 그래서 **판이 갈린 편은 손으로 부른다** — `--run-id <편> --build --force`.
+> 예습(`prequeue`)은 이 자리가 막혀 있다. 복습 쓸기만 뚫려 있다.
 사람이 그 편을 골랐기 때문이다.
 
 ## 3. 예습 덱 (Pre-Quiz) — 예습 대화 + 작년 필기로 만든다

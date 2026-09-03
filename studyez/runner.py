@@ -186,6 +186,21 @@ def report_watch(args) -> int:
     else:
         print(f"\n  만들 강의 {len(queue.items)}편")
         for item in queue.items:
+            # **「v2 갱신」은 지금 화면에만 있다.** `reason` 을 읽는 곳이 저장소에서
+            # 여기 하나뿐이고, 아래 `watch.build` 는 `extra` 를 안 받으므로 `--force` 가
+            # 갈 길이 없다. 그런데 `pdf2anki.run` 은 산출물이 있는 단계를 전부
+            # 건너뛴다(`runbase.step`). 갱신된 편의 run 폴더에는 prep.json 부터
+            # .apkg 까지 다 있으므로 **아무것도 안 만들고 source.json 에만 새 판이
+            # 찍힌다** — 그 편은 「갱신됨」이 되어 다시는 안 걸린다.
+            #
+            # 2026-09-03 에 세 편이 이 상태였다(260901_03 · 260902_02 · 260903_05).
+            # 손으로 부르는 길은 막혀 있다 — `run_watch_one` 이 덱이 있으면 멈추고
+            # `--force` 를 안내한다. 예습도 막혀 있다(`prequeue.build_one` 이
+            # `occupancy == NEWER` 면 `--force` 를 붙인다). **밤 쓸기만 뚫려 있다.**
+            #
+            # 고치는 길은 예습과 같은 모양이다 — 여기서 `--force` 를 실어 보내면 된다.
+            # 2026-09-03 에 관리자가 「지금은 그대로 두고 적기만」으로 판단했다.
+            # 그때까지 갱신된 편은 손으로 부른다: `--run-id <편> --build --force`.
             mark = "새로" if item.reason == "new" else f"v{item.this_version} 갱신"
             print(f"    {item.date}  {item.subject}/{item.run_id}  [{mark}]  {item.title[:38]}")
             for note in item.notes:
