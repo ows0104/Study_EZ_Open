@@ -58,8 +58,30 @@ CSS = """
         color: #1a1a1a; background: #ffffff; padding: 16px; }
 .nightMode.card, .card.nightMode { color: #e8e8e8; background: #1e1e1e; }
 .q { font-size: 22px; font-weight: 600; margin-bottom: 12px; white-space: pre-line; }
-.a { font-size: 24px; font-weight: 700; color: #0b5cad; margin: 12px auto;
-     display: inline-block; text-align: left; max-width: 100%; white-space: pre-line; }
+/* **가운데로 모으되 줄은 각자 쓴다.** `.a`·`.warn`·`.exam` 은 안쪽 글을 왼쪽으로
+   세우면서 덩어리 자체는 가운데 두려고 `display: inline-block` 이었는데, 그러면
+   이웃한 inline-block 과 **같은 줄에 나란히 선다.** 2026-09-03 에 예습 덱에서
+   그것이 났다 — 답 아래 있어야 할 해설(`.bridge`)이 짧은 답 옆으로 붙었다.
+   폭이 좁아 다음 줄로 밀리기도 해서 편마다 다르게 보인다.
+   `display: block` + `width: fit-content` 는 생김새가 같으면서 줄을 안 나눠 쓴다.
+
+   **다만 그 바꿈이 뒷면의 세로 간격을 통째로 반으로 줄였다.** inline-block 은 위아래
+   margin 이 이웃과 합쳐지지 않는데 block 은 **붙어 있는 형제끼리 상쇄된다**(margin
+   collapsing) — 둘 중 큰 것 하나만 남는다. `.a` 아래 12px 와 `.warn` 위 12px 는
+   24px 이었는데 12px 이 됐고, 답과 노란 상자가 붙어 나왔다(2026-09-03 관리자 보고).
+   같은 자리가 여럿이라 "다른 것도 가끔" 그래 보인 것이다.
+
+       답 → 경고        24 → 12        답 → 기출 원문    24 → 12
+       답 → 해설        22 → 12        답 → 출처         26 → 14
+       경고 → 해설      22 → 12        구분선 → 답       26 → 14
+
+   **그래서 아래 요소들은 간격을 더하지 않고 혼자 정한다.** 아래쪽 margin 을 0 으로
+   두고 **뒤에 오는 것의 위쪽 margin 하나가** 그 사이를 책임진다. 상쇄가 큰 쪽을
+   남기므로 그 값이 그대로 눈에 보이는 간격이 된다. 여기 숫자를 고칠 때는 앞 요소의
+   아래쪽이 아니라 **뒤 요소의 위쪽**을 만져라. */
+.a { font-size: 24px; font-weight: 700; color: #0b5cad; margin: 26px auto 0;
+     display: block; width: -webkit-fit-content; width: fit-content;
+     text-align: left; max-width: 100%; white-space: pre-line; }
 .nightMode .a { color: #7ab8f5; }
 /* 답이 통째로 파라면 그 안에서 강조가 서지 않는다. 강조할 자리를 찾은 답만 본문 색을
    내리고(`.body`) 회수 핵심에만 파랑을 남긴다. 자리를 못 찾은 답 — 대개 한 덩어리가
@@ -81,32 +103,54 @@ CSS = """
 img { max-width: 100%; height: auto; border-radius: 4px; }
 hr { border: none; border-top: 1px solid #d8d8d8; margin: 14px 0; }
 .nightMode hr { border-top-color: #3a3a3a; }
+/* **경고는 세 층으로 나뉜다** (2026-09-03 관리자 지시). 가르는 축은 「푸는 사람이 지금
+   할 일이 있나」이고, 층마다 보이는 세기가 다르다. 어느 층인지는 `WARN_*` 표가 정한다.
+
+     ① .warn    답을 그대로 믿지 마라   노란 상자로 답 아래 선다
+     ② .minor   카드가 반쪽이다        접힌 출처 안, 출처 줄 바로 아래
+     ③ .chore   기록용 잔소리          접힌 출처 안, ② 아래
+
+   **카드 겉면에 남는 것은 ① 뿐이다**(2026-09-03 관리자 지시). ② 는 풀다 막혔을 때
+   왜 막혔는지 알려 주는 값이라 없애지는 않지만, 안 막힌 사람에게는 볼 것이 아니다.
+
+   나누기 전에는 셋이 한 상자였다. 실측하면 「자료 주의」로 뜬 272건 중 202건(74%)이
+   ③ 이었다 — 노란 상자가 거의 잔소리 전용이었던 셈이라, 정작 ① 이 그 속에 묻혔다. */
 .warn { border-left: 4px solid #d08700; background: #fff8e6; padding: 8px 12px;
-        margin: 12px auto; font-size: 16px; border-radius: 3px;
-        display: inline-block; text-align: left; max-width: 100%; }
+        margin: 24px auto 0; font-size: 16px; border-radius: 3px;
+        display: block; width: -webkit-fit-content; width: fit-content;
+        text-align: left; max-width: 100%; }
 .warn .h { font-weight: 700; color: #8a5a00; }
 .nightMode .warn { background: #33290f; border-left-color: #d0a040; }
 .nightMode .warn .h { color: #e8bc60; }
-.exp { font-size: 17px; color: #444; margin: 10px auto 0;
+/* ②·③ 은 접힌 출처 안에 든다. 카드에서 치우지는 않는다 — 표시가 `suspects.json` 에만
+   있으면 볼 일이 없다는 것이 CLAUDE.md 「계수기는 아직 사람을 부를 줄 모른다」의
+   결론이다. 펴 보면 있고, 안 펴면 안 보인다.
+   둘을 같은 자리에 두되 색과 크기로 층을 남긴다 — ② 가 ③ 보다 진하고 크다. */
+.minor { font-size: 14px; color: #7a7a7a; margin-top: 9px; text-align: center; }
+.nightMode .minor { color: #909090; }
+.chore { font-size: 13px; color: #a2a2a2; margin-top: 6px; text-align: center; }
+.nightMode .chore { color: #6f6f6f; }
+.exp { font-size: 17px; color: #444; margin: 22px auto 0;
        display: block; text-align: center; max-width: 100%; }
 .nightMode .exp { color: #b8b8b8; }
 .src { font-size: 14px; color: #888; margin-top: 6px; text-align: center; }
-.ox { font-size: 30px; font-weight: 800; letter-spacing: 6px; margin-top: 12px; }
+.ox { font-size: 30px; font-weight: 800; letter-spacing: 6px; margin-top: 26px; }
 .slide { margin-top: 16px; border: 1px solid #ddd; display: inline-block;
          line-height: 0; background: #fff; }
 .nightMode .slide { border-color: #444; }
 .slide img { display: block; }
-.fold { margin: 14px auto 0; text-align: center; max-width: 100%; display: block; }
+.fold { margin: 22px auto 0; text-align: center; max-width: 100%; display: block; }
 .fold > summary { cursor: pointer; font-size: 15px; color: #6a6a6a; list-style: none;
                   padding: 6px 0; border-top: 1px solid #e2e2e2; user-select: none; }
 .fold > summary::before { content: "▸ "; }
 .fold[open] > summary::before { content: "▾ "; }
 .nightMode .fold > summary { color: #9a9a9a; border-top-color: #3a3a3a; }
-.origin { margin-top: 12px; }
+.origin { margin-top: 24px; }
 /* 기출 원문은 왼쪽으로 세운다. 선지가 줄줄이 붙는 덩어리라 가운데 정렬하면
    줄마다 시작점이 달라져 읽는 눈이 매번 처음을 다시 찾는다. */
-.exam { font-size: 15px; color: #555; margin: 12px auto 0; white-space: pre-line;
-        display: inline-block; text-align: left; max-width: 100%; }
+.exam { font-size: 15px; color: #555; margin: 24px auto 0; white-space: pre-line;
+        display: block; width: -webkit-fit-content; width: fit-content;
+        text-align: left; max-width: 100%; }
 .exam .h { font-weight: 700; color: #0b5cad; }
 .nightMode .exam { color: #b0b0b0; }
 .nightMode .exam .h { color: #7ab8f5; }
@@ -114,8 +158,8 @@ hr { border: none; border-top: 1px solid #d8d8d8; margin: 14px 0; }
 
 # 뒷면 공통 꼬리. **순서가 기원에 따라 다르다.**
 #
-#     기출     정답 · 족보 검토 · 해설 · 기출 원문 · 출처(접힘) · 참고 슬라이드
-#     강의록   정답 · 해설 · 참고 슬라이드 · 출처(접힘)
+#     기출     정답 · 해설 · 경고① · 기출 원문 · 출처(접힘 · 경고②③) · 참고 슬라이드
+#     강의록   정답 · 해설 · 경고① · 참고 슬라이드 · 출처(접힘 · 경고②③)
 #
 # 기출 카드에서 원본은 족보 문항 자체다. 그래서 원문이 해설 바로 뒤에 서고, 그 문항이
 # 실린 지면은 맨 끝으로 간다 — 글로 읽어 확인이 끝나는데 지면 사진이 그 사이를 막고
@@ -123,15 +167,22 @@ hr { border: none; border-top: 1px solid #d8d8d8; margin: 14px 0; }
 #
 # 해설은 접지 않는다. 접어 두면 답만 보고 넘기게 되는데, 왜 그런가가 답과 같은 무게라는
 # 것이 이 덱의 전제다(CLAUDE.md 「암기와 이해는 동등하다」). 접는 것은 출처 한 줄뿐이다.
-# 경고도 접지 않는다 — 자료가 미덥지 않다는 사실은 답과 같이 보여야 한다.
+# 경고도 접지 않는다 — 자료가 미덥지 않다는 사실은 카드 안에서 보여야 한다.
+#
+# **다만 경고가 해설보다 앞에 서지는 않는다.** 2026-09-03 이전에는 답 바로 밑이었는데,
+# 그러면 답 다음으로 읽히는 것이 해설이 아니라 곁말이 된다. 관리자가 자리를 바꾸라고
+# 했고(*"해설과 위치를 바꾸고 저거를 좀 더 눈에 덜 띄게 하자"*) 생김새도 같이 낮췄다
+# (`.warn` — 바탕 없는 14px 회색). **예습 덱은 처음부터 이 순서였다**(`prequiz/build.py`
+# 의 `PRE_TAIL`) — 복습만 반대였던 것이라, 바꾼 것이 아니라 맞춘 것이다.
+# 「정답 의심」·「족보 검토」도 같은 `Warning` 필드라 함께 내려간다.
 #
 # **순서를 템플릿이 정하지 않는다.** Anki 템플릿은 필드가 비었나만 볼 수 있어서 한 벌로
 # 두 순서를 낼 수 없고, 갈라내려고 필드를 늘리면 이미 임포트한 덱의 노트 타입이 흔들린다.
 # 그래서 `Source` 에 **해설 뒤에 올 것을 순서대로 조립해** 담는다(`tail_of`).
 # `SlideImage` 는 강의록 카드의 슬라이드만 든다 — 기출 카드에서는 비어 있고, 그 이미지는
 # `Source` 꼬리의 맨 끝에 들어간다.
-TAIL = ('{{#Warning}}<div class="warn">{{Warning}}</div>{{/Warning}}'
-        '{{#Explanation}}<div class="exp">{{Explanation}}</div>{{/Explanation}}'
+TAIL = ('{{#Explanation}}<div class="exp">{{Explanation}}</div>{{/Explanation}}'
+        '{{Warning}}'
         '{{#SlideImage}}<div class="origin">{{SlideImage}}</div>{{/SlideImage}}'
         '{{Source}}')
 
@@ -191,31 +242,49 @@ CLOZE_MODEL = genanki.Model(
                 "qfmt": '<div class="q">{{cloze:Text}}</div>',
                 # 빈칸 카드의 해설은 `Extra` 에 든다. 나머지 순서는 TAIL 과 같다.
                 "afmt": '<div class="q">{{cloze:Text}}</div>'
-                        '{{#Warning}}<div class="warn">{{Warning}}</div>{{/Warning}}'
                         '{{#Extra}}<div class="exp">{{Extra}}</div>{{/Extra}}'
+                        '{{Warning}}'
                         '{{#SlideImage}}<div class="origin">{{SlideImage}}</div>'
                         '{{/SlideImage}}'
                         '{{Source}}'}],
     css=CSS, model_type=genanki.Model.CLOZE)
 
-FLAG_LABEL = {
+# ① **답을 그대로 믿지 마라.** 답 자체가 틀렸을 수 있다는 말이라 노란 상자로 선다.
+# `review_note`(족보 검토)와 재현 채점의 `answer_suspect`(정답 의심)도 이 층이다.
+WARN_TRUST = {
+    "annotation_evidence_without_exam_hit": "필기에만 있는 내용이다 — 강의록으로 확인할 것",
+    "corrected_without_note": "기출 복원을 외부 지식으로 고쳤는데 무엇을 고쳤는지 적혀 있지 않다",
+}
+
+# ② **카드가 반쪽이다.** 답은 믿어도 되는데 자극이 모자라거나 새어 있다. 풀다 막히면
+# 왜 막혔는지 알려 주는 값이라 카드에 두되, 답을 의심하게 만들지는 않는다.
+WARN_MINOR = {
     "points_at_source": "질문이 원본 자료를 가리킨다",
     "answer_leaked_in_question": "정답 단서가 질문에 노출됐을 수 있다",
+    "occlusion_answer_leaked_in_question": "가린 라벨이 질문에 그대로 나온다",
+    "ox_is_question_not_statement": "O/X 카드인데 진술문이 아니다",
+    "jokbo_figure_dropped": "원문은 그림을 보고 푸는 문항인데 앞면에 그림이 없다",
+}
+
+# ③ **기록용 잔소리.** 푸는 사람이 지금 할 일이 없다 — 덱을 다시 만들 때 볼 것이거나
+# (`similar_duplicate`·`question_too_long`), 검증기가 이미 고쳐 놓은 것이거나
+# (`media_on_text_card`·`exam_hit_on_jokbo` — 글이 「(제거됨)」으로 끝난다),
+# 왜 원문이 안 붙었는지를 적은 것이다. 접힌 출처 안으로 들어간다.
+WARN_CHORE = {
     "similar_duplicate": "다른 카드와 회수 방향이 겹칠 수 있다",
-    "too_many_items": "한 번에 회수할 항목이 많다",
     "question_too_long": "질문이 길다 — 축을 여럿 물고 있지 않은지 볼 것",
     "cloze_sentence_too_long": "빈칸 문장이 길다 — 정의문을 통째로 옮겨 놓지 않았는지 볼 것",
+    "too_many_items": "한 번에 회수할 항목이 많다",
     "too_many_clozes": "가린 곳이 많다",
-    "annotation_evidence_without_exam_hit": "필기에만 있는 내용이다 — 강의록으로 확인할 것",
-    "ox_is_question_not_statement": "O/X 카드인데 진술문이 아니다",
-    "occlusion_answer_leaked_in_question": "가린 라벨이 질문에 그대로 나온다",
     "media_on_text_card": "그림이 붙지 않는 형식인데 media 가 있었다 (제거됨)",
     "exam_hit_on_jokbo": "기출 카드에 exam_hit 이 잘못 붙어 있었다 (제거됨)",
     "jokbo_ref_outside_slice": "족보 조각에 없는 연도의 기출이다 — 원문을 붙이지 못했다",
-    "jokbo_figure_dropped": "원문은 그림을 보고 푸는 문항인데 앞면에 그림이 없다",
     "jokbo_ref_not_found": "인용한 기출 문항을 족보에서 찾지 못했다",
-    "corrected_without_note": "기출 복원을 외부 지식으로 고쳤는데 무엇을 고쳤는지 적혀 있지 않다",
 }
+
+# 층을 안 가리고 「이 플래그가 카드에 뜨나」만 볼 때 쓴다. 새 플래그는 셋 중 하나에
+# 넣어야 여기 들어온다 — 어디에도 안 넣으면 조용히 안 뜬다.
+FLAG_LABEL = {**WARN_TRUST, **WARN_MINOR, **WARN_CHORE}
 
 
 class Jokbo:
@@ -506,21 +575,41 @@ def tags_of(c: dict, lecture_id: str) -> list[str]:
     return t
 
 
+def _labels(c: dict, table: dict) -> list[str]:
+    return [table[f] for f in c.get("review_flags", []) if f in table]
+
+
 def warning_of(c: dict) -> str:
-    parts = []
+    """`Warning` 필드. **① 층만** 담는다 — 카드 겉면에 남는 경고는 이것뿐이다.
+
+    ②·③ 은 이 필드에 안 들어간다. 접힌 출처 안으로 가고 `fold_notes_of` 가 만든다.
+    필드가 하나뿐이라(늘리면 이미 임포트한 덱의 노트 타입이 흔들린다) 층을 나누는 일을
+    템플릿이 못 해서, div 를 여기서 붙이고 템플릿은 `{{Warning}}` 만 놓는다.
+    """
+    trust = []
     if c.get("review_note"):
-        parts.append(f'<span class="h">족보 검토</span><br>{html.escape(c["review_note"])}')
+        trust.append(f'<span class="h">족보 검토</span><br>{html.escape(c["review_note"])}')
     # 재현 채점이 기출의 정답 쪽을 의심했다. 버리지 않고 푸는 사람에게 띄운다 —
     # 족보는 복원본이라 정답 표기가 어긋날 수 있고, 판정은 사람 몫이다.
     r = c.get("reproduce") or {}
     if r.get("reason") == "answer_suspect":
         tail = f'<br>{html.escape(r["note"])}' if r.get("note") else ""
-        parts.append('<span class="h">정답 의심</span><br>'
+        trust.append('<span class="h">정답 의심</span><br>'
                      '이 답이 의학적으로 맞는지 원 족보로 확인해 볼 것.' + tail)
-    flags = [FLAG_LABEL[f] for f in c.get("review_flags", []) if f in FLAG_LABEL]
-    if flags:
-        parts.append('<span class="h">자료 주의</span><br>' + " · ".join(flags))
-    return "<br><br>".join(parts)
+    if flags := _labels(c, WARN_TRUST):
+        trust.append('<span class="h">자료 주의</span><br>' + " · ".join(flags))
+
+    return '<div class="warn">' + "<br><br>".join(trust) + "</div>" if trust else ""
+
+
+def fold_notes_of(c: dict) -> str:
+    """접힌 출처 안에 들어갈 ②·③. 출처 줄 아래에 ② 가 먼저, ③ 이 나중이다."""
+    out = ""
+    if minor := _labels(c, WARN_MINOR):
+        out += '<div class="minor">' + html.escape(" · ".join(minor)) + "</div>"
+    if chore := _labels(c, WARN_CHORE):
+        out += '<div class="chore">' + html.escape(" · ".join(chore)) + "</div>"
+    return out
 
 
 def source_of(c: dict, title: str) -> str:
@@ -534,7 +623,8 @@ def source_of(c: dict, title: str) -> str:
     return html.escape(" · ".join(bits))
 
 
-def tail_of(c: dict, srctxt: str, exam_text: str, images: str) -> tuple[str, str]:
+def tail_of(c: dict, srctxt: str, exam_text: str, images: str,
+            notes: str = "") -> tuple[str, str]:
     """해설 뒤에 올 것을 순서대로 조립한다. `(SlideImage, Source)` 를 돌려준다.
 
     두 기원의 순서가 다르고 Anki 템플릿은 그 갈래를 그릴 수 없다 — 필드가 비었나만
@@ -546,9 +636,12 @@ def tail_of(c: dict, srctxt: str, exam_text: str, images: str) -> tuple[str, str
 
     `images` 는 강의록이면 출처 슬라이드, 기출이면 슬라이드 + 족보 지면이다.
     돌려주는 첫 값이 `SlideImage` 필드이고 강의록에서만 차 있다.
+
+    `notes` 는 ②·③ 층 경고다(`fold_notes_of`). **접힌 출처 안**에 들어간다 — 카드에서
+    치우지는 않되 펴 봐야 보이는 자리다. 겉면에 남는 경고는 ① 뿐이다.
     """
     fold = (f'<details class="fold"><summary>출처</summary>'
-            f'<div class="src">{srctxt}</div></details>')
+            f'<div class="src">{srctxt}</div>{notes}</details>')
     if c["source_type"] == "jokbo":
         origin = f'<div class="origin">{images}</div>' if images else ""
         return "", exam_text + fold + origin
@@ -690,7 +783,7 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str,
             images += exam_imgs
             stats["기출원문:" + ("붙임" if exam_text else "못찾음")] += 1
         # 순서는 기원이 정한다. 무엇이 어디로 가는지는 `tail_of` 첫머리에 있다.
-        origin, srctxt = tail_of(c, srctxt, exam_text, images)
+        origin, srctxt = tail_of(c, srctxt, exam_text, images, fold_notes_of(c))
         m = c.get("media") or {}
         crop = m.get("crop")
 
