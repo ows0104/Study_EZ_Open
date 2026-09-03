@@ -207,6 +207,11 @@ def _owns(run_dir: Path, item: LectureFile) -> tuple[bool, str]:
     if parsed.uid != item.uid:
         which = "같은 교시의 다른 강의가 쓴 자리다" if parsed.key == item.key else "다른 강의의 것이다"
         return False, f"{run_dir.name}은 {which} ({Path(source).name[:44]}) — 산출물을 올리지 않는다"
+    # **판 번호만 본다. 같은 이름으로 내용만 갈린 것은 못 잡는다.**
+    # 2026-09-04 에 `260903_03` 이 그랬다 — 이름은 `v1` 그대로인데 16:37(5,769,068B)
+    # 에서 19:52(5,791,054B) 로 바뀌었고, 그 사이 18:13 에 만든 덱이 그대로 통과했다.
+    # `source.json` 은 `size` 와 `mtime` 을 적어 두는데(`watch._source_record`) 여기서도
+    # 쓸기에서도 안 본다. 잡으려면 그 둘을 대야 한다 — 아직 안 했다.
     if parsed.version != item.version:
         return True, (f"{run_dir.name}의 산출물은 v{parsed.version}로 만들었는데 필기는 "
                       f"v{item.version}이다 — 덱을 다시 만들어야 한다")
