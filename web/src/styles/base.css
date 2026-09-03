@@ -920,6 +920,39 @@ button.resource.is-download:hover:not(:disabled)::after {
   font-size: 11px;
 }
 
+/* 줄 세우는 규칙. 줄마다 붙는 「내일 예습」이 순위라는 것을 여기서 한 번 말한다. */
+.runner-rule {
+  margin: 0;
+  padding: 6px 0 0;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+/* 순서를 바꾸는 버튼. **줄 오른쪽 끝에 붙는다** — 가운데 두면 줄마다 길이가
+ * 달라 버튼이 들쭉날쭉 선다. */
+.runner-move {
+  display: flex;
+  margin-left: auto;
+  gap: 2px;
+  flex: none;
+}
+
+.runner-move button {
+  min-height: 26px;
+  padding: 0 8px;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+/* 되돌릴 수 없는 것을 확인하는 버튼. **평소에는 안 뜬다** — 한 번 누른 다음에만
+ * 이 꼴로 갈아 끼운다. 처음부터 빨간 버튼이 줄마다 서 있으면 눈이 곧 그것을
+ * 안 본다. */
+.runner-move button.is-danger {
+  border-color: var(--warn-line);
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+
 /* 진행 막대. 단계 수는 알아도 단계마다 길이가 달라서(「② 카드」가 편의 절반이다)
  * **시간으로 그린다** — 지난 편들의 실측에서 온 값이다. 모르면 안 그린다. */
 .runner-bar {

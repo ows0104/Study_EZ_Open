@@ -210,7 +210,11 @@ export type ChecklistState = "done" | "waived" | "todo";
  * 만들지는 않지만 화면에는 남는다 — 안 세우면 「자동이 안 걸린 편」과 「상한에
  * 걸린 편」이 같은 모양이 된다.
  */
-export type PrequizJobState = "queued" | "running" | "done" | "failed" | "held";
+/**
+ * `canceled`는 **사람이 지우거나 멈춘 줄**이다(2026-09-03). 실패와 갈라 둔다 —
+ * 실패는 고칠 것이 있다는 뜻이고 이것은 사람이 안 만들기로 한 것이다.
+ */
+export type PrequizJobState = "queued" | "running" | "done" | "failed" | "held" | "canceled";
 
 /** 누가 세운 줄인가. 버튼은 이제 안전장치고, 재료가 도착하면 저절로 선다. */
 export type JobOrigin = "button" | "auto";
@@ -247,6 +251,25 @@ export type PrequizJob = {
    * 눌러야 하는 줄로 읽는다 — 누를 필요가 없는데.
    */
   resumeAt: string;
+  /**
+   * 왜 이 줄이 거기 섰나 — `내일 예습` · `오늘 복습`, 아니면 빈 문자열.
+   *
+   * **화면이 다시 세지 않는다.** 하루가 바뀌는 시각을 서버가 새벽 5시로 잡고
+   * 있어서(`QUEUE_DAY_START_HOUR`), 여기서 자정으로 세면 새벽에 두 자리가
+   * 다른 말을 한다.
+   */
+  priority: string;
+  /** 사람이 옮긴 자리. 0이 아니면 자동 순위를 덮고 있다. */
+  queueRank: number;
+  /**
+   * 사람이 「멈추기」를 눌렀고 러너가 아직 안 받아 갔다.
+   *
+   * **서버는 노트북의 프로세스를 모른다.** 그래서 도는 편은 이 표시가 켜진 채로
+   * 잠시 `running`에 남아 있고, 러너가 진행을 적으러 올 때 받아 가 자식을 죽인다.
+   * 화면은 그동안 「멈추는 중」이라고 말해야 한다 — 「만드는 중」으로 두면 누른
+   * 사람이 안 눌린 줄 알고 다시 누른다.
+   */
+  cancelRequested: boolean;
   /** **서버가 셈해서 준다.** 화면마다 시계를 맞추면 시차만큼 어긋난다. */
   elapsedSeconds: number;
   stageSeconds: number;

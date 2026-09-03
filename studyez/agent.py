@@ -81,6 +81,18 @@
 
 만들어 둔 단계는 그대로 남으므로, 다시 집으면 **거기서 이어 간다**.
 
+## 멈추라는 말은 진행을 적으러 갈 때 받아 온다 (2026-09-03)
+
+`/admin`에서 「멈추기」를 눌러도 **서버는 이 프로세스를 모른다.** 만드는 것은
+노트북이고 서버가 아는 것은 표 한 줄뿐이다. 그래서 서버는 그 줄에 표시만 남기고
+(`prequiz_job.cancel_requested`), 러너가 20초마다 진행을 적으러 갈 때 그것을
+받아 온다(`report`가 돌려주는 줄).
+
+받으면 **나무째 내린다**(`kill_tree`). 우리가 띄운 파이썬만 죽이면 그 아래
+빈 세션 넷이 부모 없이 남아 토큰을 계속 쓴다 — 누른 사람이 막으려던 것이 그것이다.
+
+만들던 것은 지우지 않는다. 다시 누르면 그 단계를 건너뛰고 이어 간다.
+
 ## 박동은 두 자리에서 찍는다
 
 `claim`만으로는 모자란다. **한 편을 잡으면 15분 동안 `claim`을 안 부른다** —
@@ -152,6 +164,11 @@ RE_RESET_AT = re.compile(r"resets\s+(\d{1,2}):(\d{2})\s*(am|pm)?", re.IGNORECASE
 # 너무 길게 자면 이미 풀린 뒤에도 큐가 서 있고, 짧으면 한 번 더 부딪힐 뿐이다.
 BLIND_WAIT = 30 * 60
 
+# 사람이 멈춰서 끝난 실행. **어떤 프로세스도 이 값을 내지 않는다** — 종료 코드로
+# 「왜 끝났나」를 말해야 하는데, 실제 코드(윈도우에서 죽인 프로세스는 1을 낸다)를
+# 그대로 쓰면 진짜 실패와 구별이 안 된다.
+KILLED_BY_HUMAN = -1000
+
 
 @dataclass
 class Job:
@@ -163,6 +180,9 @@ class Job:
     # 사람이 「다시 만들기」를 눌렀는가. **서버만 아는 값이다** — 노트북에 산출물이
     # 남아 있으면 `prequeue`는 그 편을 이미 만든 것으로 보고 건너뛴다.
     force: bool = False
+    # 사람이 「멈추기」를 눌렀는가. 집어 오는 순간에도 켜져 있을 수 있다 — 러너가
+    # 만드는 중에 재시작하면 그 편을 다시 집는데, 그때 표시가 그대로 온다.
+    cancel_requested: bool = False
 
     @property
     def label(self) -> str:
@@ -227,18 +247,33 @@ class Agent:
         if not row:
             return None
         return Job(id=int(row["id"]), subject=str(row["subject"]), run_id=str(row["runId"]),
-                   kind=str(row.get("kind") or deck.PRE), force=bool(row.get("force")))
+                   kind=str(row.get("kind") or deck.PRE), force=bool(row.get("force")),
+                   cancel_requested=bool(row.get("cancelRequested")))
 
-    def report(self, job: Job, **fields) -> None:
+    def report(self, job: Job, **fields) -> dict:
         """진행을 적는다. **실패해도 하던 일은 계속한다.**
 
         서버가 잠깐 안 뜬 것 때문에 다 만든 덱을 버릴 이유가 없다. 못 적은 것은
         화면에서 「멈춘 것처럼」 보이지만, 끝나면 마지막 갱신이 따라잡는다.
+
+        **돌아오는 줄을 버리지 않는다.** 사람이 누른 「멈추기」가 그 줄에 실려
+        온다(`cancelRequested`) — 서버는 노트북의 프로세스를 모르므로 여기로
+        말을 걸 수밖에 없고, 진행을 적는 이 호출이 20초마다 그 자리를 지난다.
         """
         try:
-            self.client.call("PUT", f"/api/admin/prequiz-jobs/{job.id}", fields)
+            return self.client.call("PUT", f"/api/admin/prequiz-jobs/{job.id}", fields) or {}
         except publish.PublishError as cause:
             self.say(f"    (진행을 못 적었다 — {cause})")
+            return {}
+
+    @staticmethod
+    def stop_asked(answer: dict) -> bool:
+        """사람이 이 편을 멈추라고 했는가. 못 물어봤으면 거짓이다.
+
+        **서버에 못 닿은 것을 「멈추라」로 읽으면 안 된다.** 네트워크가 잠깐
+        끊긴 것 때문에 45분짜리 빌드를 죽이는 것이 그 반대보다 훨씬 나쁘다.
+        """
+        return bool(((answer or {}).get("job") or {}).get("cancelRequested"))
 
     # ── 하위 프로세스 ────────────────────────────────────────────────
     def _run(self, argv: list[str], log: Path, job: Job | None = None,
@@ -278,8 +313,7 @@ class Agent:
                 time.sleep(STAGE_SECONDS)
                 now = time.time()
                 if now > deadline:
-                    proc.kill()
-                    proc.wait()
+                    kill_tree(proc)
                     return 124, [f"{self.timeout // 60}분 안에 끝나지 않아 끊었다"]
                 if job is None:
                     continue
@@ -295,9 +329,9 @@ class Agent:
                     posted, stage_at = stage, now
                     guess = eta.estimate(self.runs_dir, job.kind, stage,
                                          elapsed=now - started, stage_elapsed=0)
-                    self.report(job, stage=stage_prefix + stage,
-                                stageIndex=guess.index, stageTotal=guess.total,
-                                etaSeconds=guess.eta_seconds)
+                    answer = self.report(job, stage=stage_prefix + stage,
+                                         stageIndex=guess.index, stageTotal=guess.total,
+                                         etaSeconds=guess.eta_seconds)
                 elif posted:
                     # 단계가 그대로여도 한 번은 말을 건다. **이것이 박동이다** —
                     # 한 편을 잡으면 15분 동안 `claim`을 안 부르므로, 여기서 안
@@ -308,10 +342,19 @@ class Agent:
                     # N분」이 20초마다 줄어든다.
                     live = eta.estimate(self.runs_dir, job.kind, posted,
                                         elapsed=now - started, stage_elapsed=now - stage_at)
-                    self.report(job, etaSeconds=live.eta_seconds)
+                    answer = self.report(job, etaSeconds=live.eta_seconds)
                 else:
                     # 아직 첫 단계도 안 찍혔다. 살아 있다는 것만 알린다.
-                    self.report(job)
+                    answer = self.report(job)
+
+                # **멈추라는 말이 여기로 온다.** 서버는 이 프로세스를 모르므로
+                # 표에 적어 두고, 진행을 적으러 온 이 자리에서 우리가 받아 간다.
+                # 나무째 죽이는 까닭은 `kill_tree`에 적혀 있다 — 자식만 죽이면
+                # 빈 세션 넷이 남아 토큰을 계속 쓴다.
+                if self.stop_asked(answer):
+                    self.say(f"    사람이 멈췄다 — {job.label} 하위 프로세스를 내린다")
+                    kill_tree(proc)
+                    return KILLED_BY_HUMAN, tail(log)
 
         return proc.returncode, tail(log)
 
@@ -407,6 +450,14 @@ class Agent:
 
     def handle(self, job: Job) -> None:
         """일감 하나를 끝까지. 만들고, 올리고, 무엇이 됐는지 적는다."""
+        if job.cancel_requested:
+            # 집어 오는 순간에 이미 멈춤이 걸려 있다. 러너가 만드는 중에
+            # 재시작하면 그 편을 다시 집는데, 그때 표시가 그대로 온다 —
+            # **여기서 안 보면 사람이 멈춘 편을 처음부터 다시 만든다.**
+            self.say(f"[{stamp()}] {job.label} — 멈추라고 적혀 있다. 만들지 않는다")
+            self.report(job, state="canceled", stage="",
+                        message="사람이 멈췄다 — 집어 오기 전에 걸려 있었다")
+            return
         again = "다시 " if job.force else ""
         self.say(f"[{stamp()}] {job.label} {job.what} — {again}만드는 중")
         self.report(job, state="running", stage=f"{again}만들 자리 세우는 중")
@@ -420,6 +471,15 @@ class Agent:
             # **올리기 전에 푼다.** 이 편의 `publish`는 바로 아래에서 도는데, 표시가
             # 남아 있으면 자기 자신이 만든 것을 「만드는 중」이라고 건너뛴다.
             self.clear_building(job)
+
+        if code == KILLED_BY_HUMAN:
+            # **여기까지 만든 것은 안 지운다.** 다시 누르면 그 단계를 건너뛰고
+            # 이어 간다(`pdf2anki`가 산출물이 있는 단계를 안 다시 만든다).
+            # 올리지도 않는다 — 반쯤 만든 것을 올리면 학생에게 그것이 간다.
+            self.say(f"    멈췄다 — 사람이 눌렀다 ({time.time() - started:.0f}초 만듦)")
+            self.report(job, state="canceled", stage="",
+                        message=f"사람이 멈췄다. 만들던 것은 그대로 뒀다 (로그: {log})")
+            return
 
         made = self.outcome(job, lines, code, started)
         if not made:
@@ -719,6 +779,29 @@ class Agent:
         finally:
             self._stop.set()
             self.lock_path().unlink(missing_ok=True)
+
+
+def kill_tree(proc: subprocess.Popen) -> None:
+    """하위 프로세스를 **나무째** 내린다. 자식만 죽이면 손자가 남는다.
+
+    우리가 띄우는 것은 파이썬 하나(`studyez prequeue` · `studyez watch`)지만, 그
+    아래에 pdf2anki가 띄운 **빈 세션이 넷까지** 있다(`claude -p`). `proc.kill()`은
+    가운데 하나만 죽이므로, 그 넷은 부모를 잃은 채 계속 돌며 토큰을 쓴다 —
+    멈추라고 누른 사람이 막으려던 것이 정확히 그것이다.
+
+    윈도우에서 나무째 내리는 길은 `taskkill /T`뿐이다. 러너가 도는 곳이 거기다.
+    """
+    if os.name == "nt":
+        subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)],
+                       capture_output=True, check=False)
+    else:
+        proc.kill()
+    try:
+        proc.wait(timeout=30)
+    except subprocess.TimeoutExpired:
+        # `taskkill`이 못 잡았다. 적어도 우리 자식은 확실히 내린다.
+        proc.kill()
+        proc.wait()
 
 
 # ── 로그에서 줍는 것들 ────────────────────────────────────────────────

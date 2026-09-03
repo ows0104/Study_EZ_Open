@@ -61,6 +61,10 @@ ADDED_COLUMNS = (
     ("prequiz_job", "stage_started_at", "TIMESTAMP WITH TIME ZONE"),
     # 2026-09-02 모델 한도로 멈춘 편이 풀리는 시각까지 큐에 서 있다가 저절로 이어진다.
     ("prequiz_job", "resume_at", "TIMESTAMP WITH TIME ZONE"),
+    # 2026-09-03 사람이 줄에서 옮긴 자리. 0이면 안 건드린 것이라 자동 순위가 정한다.
+    ("prequiz_job", "queue_rank", "INTEGER NOT NULL DEFAULT 0"),
+    # 2026-09-03 「멈추기」. 도는 편을 서버가 못 죽이므로 여기 적어 두고 러너가 받아 간다.
+    ("prequiz_job", "cancel_requested", "BOOLEAN NOT NULL DEFAULT FALSE"),
 )
 
 

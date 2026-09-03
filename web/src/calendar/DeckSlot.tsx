@@ -35,6 +35,7 @@ function jobShort(job: PrequizJob, runner: RunnerBeat | null): string {
   if (!runnerAlive(runner)) return "멈춤";
   // 한도로 기다리는 줄은 「대기」와 다르다 — 저쪽은 곧 집어 가고 이쪽은 시각을 기다린다.
   if (waitingUntil(job)) return "한도 대기";
+  if (job.cancelRequested) return "멈추는 중";
   return job.state === "running" ? "만드는 중" : "대기";
 }
 
@@ -70,6 +71,9 @@ function jobLine(job: PrequizJob, runner: RunnerBeat | null): string {
       : "러너가 안 붙어 있습니다 · 노트북에서 띄우면 집어 갑니다";
   }
   if (job.state === "running") {
+    // 사람이 멈추라고 눌렀는데 러너가 아직 안 받아 갔다. **「만드는 중」이라고
+    // 하면 안 된다** — 누른 사람이 안 눌린 줄 알고 다른 자리를 찾으러 간다.
+    if (job.cancelRequested) return `멈추는 중 · ${progressLine(job, false)}`;
     // 단계·경과·남은 시간까지 한 줄에(`progressLine`). 그 전에는 「만드는 중」뿐이라
     // 5분째와 40분째가 같은 모양이었다.
     return `${job.force ? "다시 " : ""}만드는 중 · ${progressLine(job)}`;

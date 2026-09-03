@@ -35,9 +35,12 @@ export function stageLabel(job: PrequizJob): string {
  * 도는 일감의 진행. `running`이 아니면 빈 문자열이다 — 줄 서 있는 일감의
  * `stage`는 서버가 넣어 둔 안내문이라 진행이 아니다.
  */
-export function progressLine(job: PrequizJob): string {
+export function progressLine(job: PrequizJob, withStage = true): string {
   if (job.state !== "running") return "";
-  const parts = [stageLabel(job)];
+  // 단계 이름을 빼는 자리가 하나 있다 — **멈추는 중**. 그때는 부르는 쪽이 그
+  // 사실을 앞에 적는데(서버도 `stage`에 같은 말을 넣어 둔다), 여기서 또 적으면
+  // 한 줄에 같은 말이 두 번 선다.
+  const parts = withStage ? [stageLabel(job)] : [];
   const elapsed = humanSeconds(job.elapsedSeconds);
   if (elapsed) parts.push(`${elapsed}째`);
   const stuck = humanSeconds(job.stageSeconds);

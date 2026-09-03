@@ -674,6 +674,173 @@ def main() -> None:
           resumed is not None and resumed["id"] == waiting["id"], resumed)
     client.put(f"/api/admin/prequiz-jobs/{waiting['id']}", headers=RUNNER, json={"state": "done"})
 
+    print("\n[14-5] 줄은 선 순서가 아니라 급한 순서다")
+    # 관리자 지시(2026-09-03) — (1) 내일 예습 (2) 오늘 복습 (3) 나머지는 선 순서대로.
+    # 선 순서대로만 주면 낮에 올라온 필기의 복습이 밤에 저장된 내일 예습을
+    # 앞지른다. 복습은 하루 늦어도 되지만 예습은 강의가 끝나면 쓸모가 없어진다.
+    from app.models import PrequizJob  # noqa: PLC0415
+    from app.routes.prequiz_jobs import study_today  # noqa: PLC0415
+
+    for row in client.get("/api/admin/prequiz-jobs", headers=USER).json()["jobs"]:
+        if row["state"] in ("queued", "running", "held"):
+            client.put(f"/api/admin/prequiz-jobs/{row['id']}", headers=RUNNER,
+                       json={"state": "done"})
+
+    today = study_today()
+    tomorrow = today + timedelta(days=1)
+    client.post("/api/admin/lectures", headers=RUNNER, json=[
+        {"subject": "병리학", "runId": "990101_01", "uid": "990101_01#지난편#김혜령",
+         "date": "2026-08-10", "slot": 1, "slotEnd": 1, "startTime": "09:00",
+         "title": "지난 편", "professors": ["김혜령"], "author": "", "version": None},
+        {"subject": "병리학", "runId": "990102_03", "uid": "990102_03#오늘#김혜령",
+         "date": today.isoformat(), "slot": 3, "slotEnd": 3, "startTime": "11:00",
+         "title": "오늘 강의", "professors": ["김혜령"], "author": "", "version": None},
+        {"subject": "병리학", "runId": "990103_02", "uid": "990103_02#내일#김혜령",
+         "date": tomorrow.isoformat(), "slot": 2, "slotEnd": 2, "startTime": "10:00",
+         "title": "내일 강의", "professors": ["김혜령"], "author": "", "version": None},
+    ])
+
+    # 재료 검사(`_no_material`)를 지나는 길이 갈래마다 다르고, 여기서 재는 것은
+    # 순서뿐이다. 줄을 표에 바로 세운다 — **선 순서를 내가 정해야** 급한 순서가
+    # 그것을 뒤집는지 볼 수 있다.
+    with SessionLocal() as db:
+        for run_id, kind in (("990101_01", "main"), ("990102_03", "main"), ("990103_02", "pre")):
+            db.add(PrequizJob(subject="병리학", run_id=run_id, kind=kind,
+                              state="queued", stage="", requested_by="", origin="auto"))
+        db.commit()
+
+    waiting_now = client.get("/api/admin/prequiz-jobs", headers=USER).json()["waiting"]
+    order = [f"{row['runId']}/{row['kind']}" for row in waiting_now]
+    check("내일 예습 · 오늘 복습 · 나머지 순으로 선다",
+          order == ["990103_02/pre", "990102_03/main", "990101_01/main"], order)
+    check("왜 앞인지가 화면까지 온다",
+          [row["priority"] for row in waiting_now] == ["내일 예습", "오늘 복습", ""],
+          [row["priority"] for row in waiting_now])
+
+    picked = client.post("/api/admin/prequiz-jobs/claim?worker=w1", headers=RUNNER).json()["job"]
+    check("러너가 집는 편도 그 순서다 — 화면과 같은 함수로 줄을 센다",
+          picked["runId"] == "990103_02", picked)
+    client.put(f"/api/admin/prequiz-jobs/{picked['id']}", headers=RUNNER, json={"state": "done"})
+
+    # 날짜에 안 적힌 사정은 자동 순위가 모른다. 사람이 옮긴 자리가 그 위에 선다.
+    last = client.get("/api/admin/prequiz-jobs", headers=USER).json()["waiting"][-1]
+    moved = client.post(f"/api/admin/prequiz-jobs/{last['id']}/move", headers=USER,
+                        json={"to": "front"})
+    check("맨 앞으로 옮기면 자동 순위를 덮는다",
+          moved.status_code == 200 and moved.json()["waiting"][0]["id"] == last["id"], moved.text)
+    check("옮긴 줄이라고 표시된다 — 안 적으면 왜 앞인지 아무도 모른다",
+          moved.json()["waiting"][0]["queueRank"] < 0, moved.json()["waiting"][0])
+    check("바꾼 뒤의 줄을 그대로 돌려준다 — 다시 읽지 않아도 된다",
+          len(moved.json()["waiting"]) == 2, moved.json()["waiting"])
+
+    back = client.post(f"/api/admin/prequiz-jobs/{last['id']}/move", headers=USER,
+                       json={"to": "back"})
+    check("맨 뒤로도 옮긴다", back.json()["waiting"][-1]["id"] == last["id"], back.text)
+
+    after_move = client.post("/api/admin/prequiz-jobs/claim?worker=w1", headers=RUNNER).json()["job"]
+    check("러너도 옮긴 순서대로 집는다", after_move["runId"] == "990102_03", after_move)
+
+    check("도는 편은 못 옮긴다 — 러너가 이미 만들고 있다",
+          client.post(f"/api/admin/prequiz-jobs/{after_move['id']}/move", headers=USER,
+                      json={"to": "back"}).status_code == 400)
+    check("러너 토큰으로는 못 바꾼다 — 사람이 정하는 자리다",
+          client.post(f"/api/admin/prequiz-jobs/{last['id']}/move", headers=RUNNER,
+                      json={"to": "front"}).status_code in (401, 403))
+    check("없는 일감은 404",
+          client.post("/api/admin/prequiz-jobs/999999/move", headers=USER,
+                      json={"to": "front"}).status_code == 404)
+    client.put(f"/api/admin/prequiz-jobs/{after_move['id']}", headers=RUNNER, json={"state": "done"})
+    client.put(f"/api/admin/prequiz-jobs/{last['id']}", headers=RUNNER, json={"state": "done"})
+
+    print()
+    print("[14-6] 지우는 것과 멈추는 것 — 버튼 하나가 상태를 보고 갈린다")
+    # 기다리는 줄은 그 자리에서 끝나고, 도는 편은 **서버가 못 죽인다** — 만드는
+    # 것은 노트북의 하위 프로세스이고 서버는 그것을 모른다. 표시를 남기고 러너가
+    # 받아 가게 한다. 그 갈래를 안 만들면 화면만 멈추고 빈 세션 넷은 계속 돈다.
+    from app.routes.prequiz_jobs import ensure_auto_job  # noqa: PLC0415
+
+    for row in client.get("/api/admin/prequiz-jobs", headers=USER).json()["jobs"]:
+        if row["state"] in ("queued", "running", "held"):
+            client.put(f"/api/admin/prequiz-jobs/{row['id']}", headers=RUNNER,
+                       json={"state": "done"})
+
+    with SessionLocal() as db:
+        db.add(PrequizJob(subject="병리학", run_id="990102_03", kind="main",
+                          state="queued", stage="", requested_by="", origin="auto"))
+        db.commit()
+    queued_id = client.get("/api/admin/prequiz-jobs", headers=USER).json()["waiting"][0]["id"]
+
+    erased = client.post(f"/api/admin/prequiz-jobs/{queued_id}/cancel", headers=USER)
+    check("기다리는 줄은 그 자리에서 지워진다",
+          erased.status_code == 200 and not erased.json()["waiting"], erased.text)
+    gone = next(r for r in erased.json()["jobs"] if r["id"] == queued_id)
+    check("실패가 아니라 취소로 적힌다 — 고칠 것이 있다는 뜻이 아니다",
+          gone["state"] == "canceled", gone)
+    check("러너는 그것을 안 집어 간다",
+          client.post("/api/admin/prequiz-jobs/claim?worker=w1",
+                      headers=RUNNER).json()["job"] is None)
+
+    # **지운 줄이 10분 뒤에 되살아나면 안 된다.** 재료가 도착했다는 신호는 쓸기마다
+    # 다시 온다(`publish`가 회차마다 `uploads/complete`를 두드린다).
+    with SessionLocal() as db:
+        again = ensure_auto_job(db, "병리학", "990102_03", "main", "올해 필기가 올라왔다")
+        db.commit()
+    check("사람이 지운 편은 자동으로 다시 안 선다", again is None, again)
+
+    with SessionLocal() as db:
+        db.add(PrequizJob(subject="병리학", run_id="990103_02", kind="pre",
+                          state="queued", stage="", requested_by="", origin="auto"))
+        db.commit()
+    running_job = client.post("/api/admin/prequiz-jobs/claim?worker=w1", headers=RUNNER).json()["job"]
+    check("도는 편이 하나 섰다", running_job["state"] == "running", running_job)
+
+    asked = client.post(f"/api/admin/prequiz-jobs/{running_job['id']}/cancel", headers=USER)
+    row = next(r for r in asked.json()["jobs"] if r["id"] == running_job["id"])
+    check("도는 편은 바로 안 끝난다 — 러너가 받아 가야 한다",
+          row["state"] == "running" and row["cancelRequested"] is True, row)
+    check("화면이 「멈추는 중」이라고 말할 수 있다", "멈추는 중" in row["stage"], row)
+
+    taken = client.post("/api/admin/prequiz-jobs/claim?worker=w1", headers=RUNNER).json()["job"]
+    check("러너가 그 표시를 받아 간다", taken["cancelRequested"] is True, taken)
+    beat = client.put(f"/api/admin/prequiz-jobs/{running_job['id']}", headers=RUNNER,
+                      json={"stage": "② 카드"})
+    check("진행을 적으러 올 때도 실려 온다 — 이 길로 러너가 자식을 죽인다",
+          beat.json()["job"]["cancelRequested"] is True, beat.json())
+
+    done = client.put(f"/api/admin/prequiz-jobs/{running_job['id']}", headers=RUNNER,
+                      json={"state": "canceled", "message": "사람이 멈췄다"})
+    check("러너가 멈췄다고 적으면 끝난다", done.json()["job"]["state"] == "canceled", done.text)
+    check("표시를 지운다 — 남기면 끝난 줄이 「멈추는 중」으로 보인다",
+          done.json()["job"]["cancelRequested"] is False, done.json())
+    late = client.put(f"/api/admin/prequiz-jobs/{running_job['id']}", headers=RUNNER,
+                      json={"state": "running", "stage": "늦게 온 갱신"})
+    check("멈춘 줄은 늦게 온 갱신으로 되살아나지 않는다",
+          late.json()["applied"] is False and late.json()["job"]["state"] == "canceled", late.text)
+
+    # 러너가 안 붙어 있으면 표시를 아무도 안 받아 간다. 한 번 더 누르면 강제로 내린다 —
+    # 안 그러면 그 줄이 `running` 자리를 하나 먹은 채로 굳는다(동시 2편이 1편이 된다).
+    with SessionLocal() as db:
+        db.add(PrequizJob(subject="병리학", run_id="990104_04", kind="pre",
+                          state="queued", stage="", requested_by="", origin="auto"))
+        db.commit()
+    stuck = client.post("/api/admin/prequiz-jobs/claim?worker=w2", headers=RUNNER).json()["job"]
+    client.post(f"/api/admin/prequiz-jobs/{stuck['id']}/cancel", headers=USER)
+    forced = client.post(f"/api/admin/prequiz-jobs/{stuck['id']}/cancel", headers=USER)
+    stuck_row = next(r for r in forced.json()["jobs"] if r["id"] == stuck["id"])
+    check("한 번 더 누르면 강제로 내린다 — 러너가 안 받아 갈 때의 길",
+          stuck_row["state"] == "canceled", stuck_row)
+    check("강제로 내린 것은 그렇게 적힌다 — 노트북에서 아직 돌 수 있다",
+          "강제로" in stuck_row["message"], stuck_row)
+
+    check("끝난 일감은 못 멈춘다",
+          client.post(f"/api/admin/prequiz-jobs/{stuck['id']}/cancel",
+                      headers=USER).status_code == 400)
+    check("러너 토큰으로는 못 지운다 — 사람이 정하는 자리다",
+          client.post(f"/api/admin/prequiz-jobs/{queued_id}/cancel",
+                      headers=RUNNER).status_code in (401, 403))
+    check("없는 일감은 404",
+          client.post("/api/admin/prequiz-jobs/999999/cancel", headers=USER).status_code == 404)
+
     print()
     if failures:
         raise SystemExit(f"{len(failures)}개 실패: {failures}")

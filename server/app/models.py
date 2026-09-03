@@ -446,6 +446,10 @@ JOB_FAILED = "failed"
 # 상한에 걸린 편을 아예 안 세우면 화면에 아무것도 안 남아서, 만들어지지 않은 것과
 # 만들 생각이 없는 것이 같은 모양이 된다.
 JOB_HELD = "held"
+# 사람이 지우거나 멈춘 줄. **실패와 갈라 둔다** — 실패는 고칠 것이 있다는 뜻이고
+# 이것은 사람이 안 만들기로 한 것이다. 같은 자리에 적으면 화면의 실패 수가
+# 「고쳐야 할 것」을 못 세고, 다음 사람이 없는 고장을 찾으러 간다.
+JOB_CANCELED = "canceled"
 JOB_OPEN = frozenset({JOB_QUEUED, JOB_RUNNING, JOB_HELD})
 
 # 자동으로 세우는 일감의 하루 상한(관리자 지시, 2026-09-01). 사람이 누른 것은
@@ -520,6 +524,17 @@ class PrequizJob(Base):
     # 이어진다. 기다림을 러너 메모리가 아니라 큐가 드는 까닭은 러너가 재시작하면
     # 메모리가 날아가고, 그러면 풀리지도 않은 한도에 다시 부딪히기 때문이다.
     resume_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # 사람이 줄에서 옮긴 자리. 작을수록 먼저다. **0이 안 건드린 것이고**, 그때는
+    # 자동 순위가 정한다(`routes/prequiz_jobs.queue_priority` — 내일 예습 → 오늘
+    # 복습 → 나머지). 사람이 옮긴 줄은 그 자동 순위보다 앞에서 갈리므로, 한 번
+    # 맨 앞으로 보낸 편은 다음 날 순위가 바뀌어도 앞에 남는다.
+    queue_rank: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # 사람이 「멈추기」를 눌렀다. **도는 편은 서버가 못 멈춘다** — 만드는 것은
+    # 노트북의 하위 프로세스이고 서버는 그 프로세스를 모른다. 그래서 여기 적어
+    # 두고, 러너가 진행을 적으러 올 때(20초마다) 받아 가 자기 자식을 죽인다.
+    # 러너가 안 붙어 있으면 이 값은 그대로 남는다 — 그때는 사람이 한 번 더 눌러
+    # 강제로 내린다(`move`가 아니라 `cancel`이 그것을 판정한다).
+    cancel_requested: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
