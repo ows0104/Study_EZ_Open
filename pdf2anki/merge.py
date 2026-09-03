@@ -238,6 +238,25 @@ def make(da: Path, db: Path, out: Path, lecture_id: str, deck: str,
                            {"dir": db.name, "slides": pb["slides"], "offset": off}]
     for k in ("badge_failed_slides", "slides_with_covered_lecture_content"):
         prep[k] = list(pa.get(k, [])) + pbs.get(k, [])
+    # 팔레트는 편마다 따로 잰 것이라 한쪽만 남기면 뒤쪽 색이 사이드카에서 사라진다.
+    # 쪽별 `lecture_emphasis` 는 이미 각자 계산돼 있으니 설명만 합치면 된다.
+    pa_pal, pb_pal = pa.get("lecture_palette") or {}, pb.get("lecture_palette") or {}
+    if pa_pal or pb_pal:
+        cols = dict(pa_pal.get("colors") or {})
+        for c, v in (pb_pal.get("colors") or {}).items():
+            if c in cols:
+                cols[c] = {**cols[c], "chars": cols[c]["chars"] + v["chars"],
+                           "pages": cols[c]["pages"] + v["pages"]}
+            else:
+                cols[c] = v
+        body_a, body_b = pa_pal.get("body_color"), pb_pal.get("body_color")
+        prep["lecture_palette"] = {
+            "body_color": body_a if body_a == body_b else None,
+            "merged_body_colors": None if body_a == body_b else [body_a, body_b],
+            "colors": dict(sorted(cols.items(), key=lambda kv: -kv[1]["chars"])),
+            "template_slots": sorted(set((pa_pal.get("template_slots") or [])
+                                         + (pb_pal.get("template_slots") or []))),
+        }
     prep.setdefault("annotation_years", {})
     for y, n in (pb.get("annotation_years") or {}).items():
         prep["annotation_years"][y] = prep["annotation_years"].get(y, 0) + n

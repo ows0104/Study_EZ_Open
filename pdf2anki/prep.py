@@ -6,9 +6,13 @@
   annotated.pdf   원본 그대로. 모델이 실제로 보는 페이지다.
   prep.json/.md   슬라이드별 사이드카. 무엇이 강의록이고 무엇이 필기인지 코드가 확정해 준다.
 
-위계는 색이나 필기자 규약이 아니라 구조에서 나온다.
+무엇이 강의록이고 무엇이 필기인가는 색이 아니라 구조에서 나온다.
 페이지 컨텐트 = 강의록, annotation 객체 = 필기. 어떤 필기본에서도 참이다.
-필기의 연도는 annotation의 creationDate에서 얻는다. 색 규약을 읽지 않는다.
+필기의 연도는 annotation의 creationDate에서 얻는다. **필기자의 색 규약은 읽지 않는다.**
+
+색을 읽는 자리는 하나뿐이다 — 강의록 **안에서** 어디가 강조인가. 그것은 필기자가 아니라
+자료를 만든 교수가 칠한 것이라 편 안에서 일관된다(`lecture_emphasis`). 편마다 본문색을
+정하고 그 밖의 유채색을 강조로 본다.
 
 사용:
     python -m pdf2anki.prep "필기_예시/....pdf" -o out/lec03
@@ -39,6 +43,22 @@ MAX_LABEL_HEIGHT_RATIO = 0.35
 MARKER_MIN_COUNT = 3
 # 슬라이드 번호 배지 크기 (pt)
 BADGE_W, BADGE_H = 78, 22
+
+# ── 강의록 자체의 글자색 ──────────────────────────────────────────
+# 무채색으로 볼 채도(max-min). 회색 각주·출처와 흰 글자는 강조가 아니라 약화이거나
+# 색 띠 위에 얹힌 제목이다. 12편에서 이 문턱이 `#222222`·`#bfbfbf`·`#ffffff` 를 걷어냈다.
+NEUTRAL_SATURATION = 24
+# 같은 색이 같은 높이에 이만큼 반복되면 템플릿(머리글·꼬리말)으로 보고 강조에서 뺀다.
+TEMPLATE_PAGE_RATIO = 0.2
+TEMPLATE_MIN_PAGES = 3
+# 붙은 span 사이에 공백을 넣을 간격 (폰트 크기 대비)
+SPAN_GAP_RATIO = 0.15
+# 글머리표·번호·기호만인 조각은 강조가 아니다. 사설 영역(\uf000-\uf8ff)이 Wingdings 다.
+GLYPH_ONLY = re.compile(r"^[\W\d\uf000-\uf8ff_]+$")
+# 기호 글꼴로 찍힌 조각은 글머리표다. Wingdings 의 글머리표는 사설 영역이 아니라
+# 평범한 `m`·`` 로 나오므로 글자만 봐서는 못 가른다 (`m Broad sense:`).
+SYMBOL_FONTS = ("wingding", "webding", "symbol", "dingbat", "marlett")
+LEADING_GLYPH = re.compile(r"^[\s\u2022\u25aa\u25cf\u25a0\u00b7\-\uf000-\uf8ff]+")
 
 EMPHASIS_TYPES = {"Square", "Highlight", "Underline", "Line", "Polygon", "Ink", "StrikeOut"}
 GENERIC_SUBJECTS = {"stamp", "스탬프", "도장", ""}
@@ -161,6 +181,132 @@ def stamp_slide_numbers(doc: fitz.Document) -> list[int]:
     return failed
 
 
+def merged_spans(page: fitz.Page):
+    """줄 안에서 같은 색으로 이어진 조각을 하나로 붙여 돌려준다.
+
+    PowerPoint 는 한 단어를 여러 span 으로 쪼개 놓는 일이 잦다(`para` + `sitos`).
+    쪼갠 채로 세면 강조 조각이 어휘가 아니라 음절로 나온다. 반대로 붙이기만 하면
+    `Wuchereriabancrofti` 처럼 공백이 사라지므로, span 사이가 벌어져 있으면 넣어 준다.
+    """
+    for blk in page.get_text("dict")["blocks"]:
+        if blk["type"] != 0:
+            continue
+        for ln in blk["lines"]:
+            sps = [s for s in ln["spans"] if s["text"].strip()]
+            if not sps:
+                continue
+            sps = [s for s in sps if not is_symbol_font(s["font"])]
+            if not sps:
+                continue
+            colors = {s["color"] for s in sps}
+            cur = None
+            for s in sps:
+                if cur and (cur["color"], cur["font"]) == (s["color"], s["font"]):
+                    gap = s["bbox"][0] - cur["bbox"][2]
+                    sep = " " if gap > SPAN_GAP_RATIO * s["size"] else ""
+                    cur["text"] += sep + s["text"]
+                    cur["bbox"] = [min(cur["bbox"][0], s["bbox"][0]), min(cur["bbox"][1], s["bbox"][1]),
+                                   max(cur["bbox"][2], s["bbox"][2]), max(cur["bbox"][3], s["bbox"][3])]
+                    continue
+                if cur:
+                    yield cur, colors
+                cur = {"color": s["color"], "size": s["size"], "font": s["font"],
+                       "text": s["text"], "bbox": list(s["bbox"])}
+            if cur:
+                yield cur, colors
+
+
+def is_symbol_font(font: str) -> bool:
+    f = (font or "").lower()
+    return any(k in f for k in SYMBOL_FONTS)
+
+
+def is_neutral(color: int) -> bool:
+    """회색·흰색·검정. 강조가 아니라 각인이거나 각주이거나 색 띠 위의 제목이다."""
+    r, g, b = (color >> 16) & 255, (color >> 8) & 255, color & 255
+    return max(r, g, b) - min(r, g, b) <= NEUTRAL_SATURATION
+
+
+def emphasis_text(raw: str) -> str:
+    """앞에 붙은 글머리표를 벗긴다. 벗기고 남는 것이 없으면 빈 문자열."""
+    t = LEADING_GLYPH.sub("", raw.strip()).strip()
+    return "" if GLYPH_ONLY.match(t) else t
+
+
+def build_palette(doc: fitz.Document) -> dict:
+    """편 전체에서 본문색을 정하고, 템플릿으로 반복되는 자리를 찾아 둔다.
+
+    **본문색은 '가장 많이 쓰인 색'이다.** 글자 크기로 본문을 찾으려던 판은 작은 참조
+    텍스트가 많은 편에서 무너졌다(`260831_02` 가 본문 6pt 로 잡혀 유채색 전부가
+    '제목급 100%' 가 됐다). 색으로 세면 12편 모두 검정이 안정적으로 나온다.
+
+    **빼는 것은 반복되는 템플릿 자리 하나뿐이다.** 색 단위로 '이 색은 제목색'을
+    판정하려던 판도 버렸다 — `260902_01` 의 `#002060` 은 머리글과 강조를 겸해서
+    (y 사분위폭 0.36) 색으로는 안 갈렸고, 상단 비율 0.69 가 문턱 0.70 에 걸려
+    데이터 한 점에 문턱이 붙는 꼴이 됐다. 대신 **같은 색이 같은 높이에 여러 쪽
+    반복되면** 템플릿으로 본다. 반복 자체가 사실이라 기계가 확실히 아는 것이고,
+    12편에서 그 편 하나만 발동해 63쪽짜리 머리글 63조각을 뺐다.
+
+    그 밖의 판정은 하지 않는다. 어떤 교수는 제목·부제목에만 색을 쓰는데, 그것을
+    색깔로 미리 걸러 내려 하면 진짜 강조까지 같이 날아간다. 성격만 적어 넘긴다.
+    """
+    weight: Counter = Counter()
+    pieces: list[tuple[int, int, float, int, bool]] = []   # 쪽, 색, y, 글자수, 본문줄속
+    for page in doc:
+        H = max(page.rect.height, 1)
+        for sp, line_colors in merged_spans(page):
+            t = sp["text"].strip()
+            if not t:
+                continue
+            weight[sp["color"]] += len(t)
+            pieces.append((page.number, sp["color"], round(sp["bbox"][1] / H, 2),
+                           len(t), len(line_colors) > 1))
+    if not weight:
+        return {"body_color": None, "colors": {}, "template_slots": set()}
+
+    body = weight.most_common(1)[0][0]
+    cand = [p for p in pieces if p[1] != body and not is_neutral(p[1])]
+
+    slots: dict[tuple[int, float], set[int]] = {}
+    for pn, c, y, _, _ in cand:
+        slots.setdefault((c, y), set()).add(pn)
+    need = max(TEMPLATE_MIN_PAGES, TEMPLATE_PAGE_RATIO * max(doc.page_count, 1))
+    template = {k for k, v in slots.items() if len(v) >= need}
+
+    stat: dict[int, dict] = {}
+    for pn, c, y, n, inline in cand:
+        if (c, y) in template:
+            continue
+        d = stat.setdefault(c, {"chars": 0, "inline": 0, "pages": set()})
+        d["chars"] += n
+        d["pages"].add(pn)
+        if inline:
+            d["inline"] += n
+    colors = {c: {"chars": d["chars"], "pages": len(d["pages"]),
+                  "inline_ratio": round(d["inline"] / d["chars"], 2)}
+              for c, d in stat.items()}
+    return {"body_color": body, "colors": colors, "template_slots": template}
+
+
+def emphasis_of(page: fitz.Page, palette: dict) -> list[dict]:
+    """강의록 자체가 색으로 강조한 조각. 필기가 아니라 자료를 만든 사람의 표시다."""
+    out = []
+    H = max(page.rect.height, 1)
+    for sp, line_colors in merged_spans(page):
+        c = sp["color"]
+        if c not in palette["colors"]:
+            continue
+        if (c, round(sp["bbox"][1] / H, 2)) in palette["template_slots"]:
+            continue
+        t = emphasis_text(sp["text"])
+        if not t:
+            continue
+        out.append({"color": f"#{c:06x}", "text": t,
+                    "rect": [round(v, 1) for v in sp["bbox"]],
+                    "inline": len(line_colors) > 1})
+    return out
+
+
 def build(src: Path, outdir: Path) -> dict:
     outdir.mkdir(parents=True, exist_ok=True)
     ann = fitz.open(src)
@@ -178,11 +324,14 @@ def build(src: Path, outdir: Path) -> dict:
         while a:
             a = page.delete_annot(a)
 
+    palette = build_palette(clean)
+
     slides, covered_report = [], []
     for i in range(ann.page_count):
         ap, cp = ann[i], clean[i]
         lecture_text = cp.get_text().strip()
         lecture_figs = figures_of(cp)
+        lecture_emphasis = emphasis_of(cp, palette)
 
         notes, markers, pasted = [], [], []
         opaque: list[fitz.Rect] = []
@@ -236,6 +385,7 @@ def build(src: Path, outdir: Path) -> dict:
 
         slides.append({"slide": i + 1, "size": [round(ap.rect.width), round(ap.rect.height)],
                        "lecture_text": lecture_text, "lecture_figures": lecture_figs,
+                       "lecture_emphasis": lecture_emphasis,
                        "annotations": notes, "markers": markers, "pasted_images": pasted,
                        "occlusion_candidates": occl, "covered_by_annotation": covered})
 
@@ -254,7 +404,15 @@ def build(src: Path, outdir: Path) -> dict:
             "lecture_figures": "근거 가능",
             "annotations": "기본 근거 불가 · 중요도 신호. 기출이 그 지점을 실제로 물었으면 근거로 승격",
             "markers": "우선순위 신호만. 근거 아님",
+            "lecture_emphasis": "강의록이 색으로 강조한 곳. `markers` 와 같은 급 — 중요도 신호이며 단독 근거 아님",
             "pasted_images": "필기자가 붙인 외부 자료. 근거 아님",
+        },
+        "lecture_palette": {
+            "body_color": (f"#{palette['body_color']:06x}"
+                           if palette["body_color"] is not None else None),
+            "colors": {f"#{c:06x}": v for c, v in
+                       sorted(palette["colors"].items(), key=lambda kv: -kv[1]["chars"])},
+            "template_slots": sorted(f"#{c:06x}@y{y}" for c, y in palette["template_slots"]),
         },
         "annotation_years": dict(sorted(years.items(), reverse=True)),
         "stamp_markers": {v: k for k, v in stamp_labels.items() if v},
@@ -287,6 +445,15 @@ def to_markdown(prep: dict) -> str:
         L.append("필기 작성연도별 개수: " +
                  " · ".join(f"{y} {n}개" for y, n in prep["annotation_years"].items()) +
                  "  (최근 연도일수록 올해 강의의 강조점에 가깝다)")
+    pal = prep.get("lecture_palette") or {}
+    if pal.get("body_color"):
+        emph = list(pal["colors"])
+        L.append("")
+        L.append(f"강의록 본문색은 `{pal['body_color']}` 다. 그 밖의 유채색으로 찍힌 곳은 "
+                 "강의록이 스스로 강조한 자리이며 아래 `강의록 강조` 로 표시했다"
+                 + (f" (쓰인 색 {len(emph)}가지)." if emph else " (이 편에는 없다)."))
+        for slot in pal.get("template_slots") or []:
+            L.append(f"  - `{slot}` 는 쪽마다 같은 자리에 반복돼 템플릿으로 보고 강조에서 뺐다.")
     if prep["stamp_markers"]:
         L.append("반복 스탬프 마커: " + ", ".join(prep["stamp_markers"]))
     if prep["slides_with_covered_lecture_content"]:
@@ -306,6 +473,12 @@ def to_markdown(prep: dict) -> str:
                 L.append(f"  - {f['id']} {where(f['bbox'], s['size'])} "
                          f"{round(f['bbox'][2] - f['bbox'][0])}x{round(f['bbox'][3] - f['bbox'][1])}pt "
                          f"(원본 {f['px'][0]}x{f['px'][1]}px)")
+        by_color: dict[str, list[str]] = {}
+        for e in s.get("lecture_emphasis") or []:
+            by_color.setdefault(e["color"], []).append(e["text"])
+        for c, texts in by_color.items():
+            L.append(f"- 강의록 강조({c}): " + " · ".join(repr(t) for t in texts[:12])
+                     + (f" 외 {len(texts) - 12}개" if len(texts) > 12 else ""))
         for n in s["annotations"]:
             L.append(f"- 필기({n['year']}): {n['text']}")
         if s["markers"]:
