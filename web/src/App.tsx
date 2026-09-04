@@ -100,8 +100,10 @@ function Shell() {
                 (`links.quizWindow`) 예습 창과 복습 창이 서로를 안 밀어낸다. */}
             <Route path="/prequiz/:subject/:runId" element={<QuizPage kind="pre" />} />
             <Route path="/mainquiz/:subject/:runId" element={<QuizPage kind="main" />} />
+            {/* 관리 화면은 탭을 갈래로 들고 있다(`/admin/match` 등). 그 갈래는
+                안에서 고르므로 여기서는 통째로 넘긴다. */}
             <Route
-              path="/admin"
+              path="/admin/*"
               element={me.isAdmin ? <AdminPage /> : <p className="notice">관리자만 쓸 수 있습니다.</p>}
             />
             <Route path="*" element={<p className="notice">없는 화면입니다.</p>} />
