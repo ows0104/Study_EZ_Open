@@ -16,8 +16,11 @@ import { isUnconfirmed, isUnmatched, pending, runnerAlive } from "./rows";
  * 많은 게 한 번에 붙어 있다"). 가른 축은 *지금 무엇을 하려고 왔는가*다.
  *
  *     진행   자료가 다 올라왔는가 — 체크리스트 · 예습 링크 · 검토 표시
- *     매칭   어느 시간의 강의인가 — 편별 매칭 · 과목 이름 잇기
  *     계정   승인
+ *     매칭   어느 시간의 강의인가 — 편별 매칭 · 과목 이름 잇기
+ *
+ * **이 순서는 관리자가 정했다**(2026-09-04). 자주 여는 것이 앞이다 — 매칭은
+ * 학기 초에 몰리고 그 뒤로는 새 편이 붙을 때만 본다.
  *
  * **탭 밖에 남는 것이 둘 있다.** 요약 한 줄과 일감 판이다. 일감 판은 표보다
  * 먼저 서라는 지시(2026-09-01)를 받은 자리라 탭 뒤로 못 넣는다 — 도는 것도
@@ -100,20 +103,20 @@ export function AdminPage() {
           진행
           {incomplete ? <span className="admin-tab-count">{incomplete}</span> : null}
         </NavLink>
-        <NavLink to="/admin/match" className={tabClass} title="시간표에 못 붙었거나 아직 확인 안 한 편">
-          매칭
-          {needsMatch ? <span className="admin-tab-count">{needsMatch}</span> : null}
-        </NavLink>
         <NavLink to="/admin/users" className={tabClass} title="승인을 기다리는 사람">
           계정
           {waitingUsers ? <span className="admin-tab-count">{waitingUsers}</span> : null}
+        </NavLink>
+        <NavLink to="/admin/match" className={tabClass} title="시간표에 못 붙었거나 아직 확인 안 한 편">
+          매칭
+          {needsMatch ? <span className="admin-tab-count">{needsMatch}</span> : null}
         </NavLink>
       </nav>
 
       <Routes>
         <Route index element={<ProgressTab overview={overview} onChanged={load} />} />
-        <Route path="match" element={<MatchTab overview={overview} onChanged={load} />} />
         <Route path="users" element={<UsersTab users={users} onChanged={loadUsers} />} />
+        <Route path="match" element={<MatchTab overview={overview} onChanged={load} />} />
         {/* 없는 탭은 첫 탭으로. 주소를 손으로 고쳤을 때 빈 화면을 주지 않는다. */}
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Routes>

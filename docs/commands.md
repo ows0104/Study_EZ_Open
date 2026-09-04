@@ -117,9 +117,9 @@ PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m studyez watch
   명령은 없다. 원본은 Synology에 있고 사이트로는 `publish`가 밀어 올린다
 - **웹 풀이(자기채점)** — Pre-Quiz·Main-Quiz의 `reveal`·`grade`, 기록 지우기는
   `DELETE …/attempts`
-- **관리자 화면** — 탭 셋으로 갈라져 있다(2026-09-04). `/admin` **진행**은 자료가
-  다 올라왔는가(체크리스트 `waive` · 예습 링크 · 검토 표시), `/admin/match`
-  **매칭**은 짝 확정(`PUT …/match`)과 과목 별칭, `/admin/users` **계정**은 승인.
+- **관리자 화면** — 탭 셋으로 갈라져 있다(2026-09-04). 왼쪽부터 `/admin` **진행**은
+  자료가 다 올라왔는가(체크리스트 `waive` · 예습 링크 · 검토 표시), `/admin/users`
+  **계정**은 승인, `/admin/match` **매칭**은 짝 확정(`PUT …/match`)과 과목 별칭.
   러너가 붙어 있는지와 도는 일감 판(`/api/admin/overview`·`/api/admin/prequiz-jobs`)은
   탭 위에 늘 서 있다
 - **크롬 확장** — 작년 PDF와 예습 프롬프트를 ChatGPT·Gemini·Claude 새 대화에
