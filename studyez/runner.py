@@ -93,13 +93,6 @@ def run_watch_one(args) -> int:
     """
     runs_dir = Path(args.runs)
     run_dir = runs_dir / args.run_id
-    made = deck.apkg_of(run_dir, deck.MAIN)
-    if made and not args.force:
-        print(f"[watch] {args.run_id} — 이미 덱이 있다: {made.name}\n"
-              f"  안 올라간 것뿐이면 `python -m studyez publish --run-id {args.run_id}`가 민다.\n"
-              "  덱 자체를 다시 만들려면 --force.")
-        return 0
-
     root = Path(args.root)
     subjects = [args.subject] if args.subject else subjects_with_notes(root, args.this)
     queue = watch.build_queue(
@@ -124,6 +117,24 @@ def run_watch_one(args) -> int:
     item = queue.items[0]
     for note in item.notes:
         print(f"  ⚠ {note}")
+
+    # **덱이 있어도 원본이 갈렸으면 만든다.** 예전에는 여기서 무조건 멈추고 `--force` 를
+    # 안내했는데, 그러면 새 판이 온 편은 사람이 손으로 부르기 전에는 안 고쳐졌다.
+    # 갈렸는지는 `fingerprint` 가 판정한다(`item.reason`).
+    made = deck.apkg_of(run_dir, deck.MAIN)
+    changed = item.reason in watch.UPDATED or bool(getattr(args, "slides", ""))
+    if made and not args.force and not changed:
+        print(f"[watch] {args.run_id} — 이미 덱이 있다: {made.name}\n"
+              f"  안 올라간 것뿐이면 `python -m studyez publish --run-id {args.run_id}`가 민다.\n"
+              "  덱 자체를 다시 만들려면 --force. 어느 슬라이드가 고쳐졌는지 알면 "
+              "`--slides 37` 로 그 자리만 갈아 끼운다.")
+        return 0
+    if made and changed:
+        why = ("사람이 슬라이드를 지목했다" if getattr(args, "slides", "")
+               else "원본이 갈렸다")
+        print(f"[watch] {args.run_id} — 덱은 있는데 {why}. "
+              "갈린 슬라이드의 카드만 갈아 끼운다 (통째로는 --force).")
+
     if not args.build:
         print(f"[watch] {item.subject}/{item.run_id} {item.title[:38]}\n"
               f"  {Path(item.this_pdf).name}\n"
@@ -138,6 +149,12 @@ def run_watch_one(args) -> int:
     extra = (["--force"] if args.force else [])
     if args.strategy != "auto":
         extra += ["--strategy", args.strategy]
+    if getattr(args, "slides", ""):
+        # 사람이 「37p 를 고쳤다」고 알려준 것. 갈아 끼우기가 그 슬라이드를 무조건 다시 쓴다.
+        # 판이 안 갈렸다고 판정된 편에도 붙여 준다 — 코드가 못 보는 갈림이 그것이다.
+        extra += ["--slides", args.slides]
+        if "--force" not in extra and "--revise" not in extra:
+            extra.append("--revise")
     ok, note = watch.build_one(item, runs_dir, REPO_ROOT, model=args.model, timeout=args.timeout,
                                extra=extra or None)
     minutes = (time.monotonic() - started) / 60
@@ -186,29 +203,19 @@ def report_watch(args) -> int:
     else:
         print(f"\n  만들 강의 {len(queue.items)}편")
         for item in queue.items:
-            # **「v2 갱신」은 지금 화면에만 있다.** `reason` 을 읽는 곳이 저장소에서
-            # 여기 하나뿐이고, 아래 `watch.build` 는 `extra` 를 안 받으므로 `--force` 가
-            # 갈 길이 없다. 그런데 `pdf2anki.run` 은 산출물이 있는 단계를 전부
-            # 건너뛴다(`runbase.step`). 갱신된 편의 run 폴더에는 prep.json 부터
-            # .apkg 까지 다 있으므로 **아무것도 안 만들고 source.json 에만 새 판이
-            # 찍힌다** — 그 편은 「갱신됨」이 되어 다시는 안 걸린다.
+            # **「갱신」은 한동안 화면에만 있었다.** `reason` 을 읽는 곳이 여기 하나뿐이고
+            # `watch.build` 는 `extra` 를 안 받아서 깃발이 갈 길이 없었다. 그러면
+            # `pdf2anki.run` 이 산출물이 있는 단계를 전부 건너뛰어(`runbase.step`)
+            # **아무것도 안 만들고 `source.json` 에만 새 판이 찍힌다.** 그 편은
+            # 쓸기에는 「이미 만듦」, 문지기에는 「옛 판이라 못 내보낸다」가 되어 갇혔다
+            # (2026-09-03 에 세 편이 그랬다).
             #
-            # 2026-09-03 에 세 편이 이 상태였다(260901_03 · 260902_02 · 260903_05).
-            # 손으로 부르는 길은 막혀 있다 — `run_watch_one` 이 덱이 있으면 멈추고
-            # `--force` 를 안내한다. 예습도 막혀 있다(`prequeue.build_one` 이
-            # `occupancy == NEWER` 면 `--force` 를 붙인다). **밤 쓸기만 뚫려 있다.**
-            #
-            # **2026-09-04 정정 — 옛 덱이 나가는 것이 아니라 아예 안 나간다.**
-            # 문지기와 쓸기가 서로 다른 파일을 본다. 문지기(`publish._owns`)는 빌드가
-            # 쓴 `run.config.json` 의 파일명을, 쓸기(`watch._already_built`)는 빌드 뒤에
-            # 찍는 `source.json` 을 본다. 그래서 여기서 아무것도 안 만들고 `source.json`
-            # 만 v2 로 찍히면 — **쓸기는 「이미 만듦」, 문지기는 「v1 이라 못 내보낸다」**
-            # 가 되어 그 편이 영원히 갇힌다. 사람이 `--force` 로 부르기 전에는 안 풀린다.
-            #
-            # 고치는 길은 예습과 같은 모양이다 — 여기서 `--force` 를 실어 보내면 된다.
-            # 2026-09-03 에 관리자가 「지금은 그대로 두고 적기만」으로 판단했다.
-            # 그때까지 갱신된 편은 손으로 부른다: `--run-id <편> --build --force`.
-            mark = "새로" if item.reason == "new" else f"v{item.this_version} 갱신"
+            # 2026-09-04 에 둘 다 고쳤다 — 판정은 `studyez.fingerprint` 한 곳에서
+            # 나오고(쓸기·문지기가 같은 값을 본다), 갱신된 편에는 `watch.build_extra`
+            # 가 `--revise` 를 실어 보낸다(갈린 슬라이드의 카드만 갈아 끼운다).
+            mark = ("새로" if item.reason == "new"
+                    else "내용 갈림" if item.reason == "content_changed"
+                    else f"v{item.this_version} 갱신")
             print(f"    {item.date}  {item.subject}/{item.run_id}  [{mark}]  {item.title[:38]}")
             for note in item.notes:
                 print(f"        ⚠ {note}")

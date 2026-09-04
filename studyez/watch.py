@@ -49,7 +49,7 @@ import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from . import deck, filenames
+from . import deck, filenames, fingerprint
 from .filenames import LectureFile
 
 DEFAULT_ROOT = Path.home() / "SynologyDrive"
@@ -69,6 +69,16 @@ MIN_AGE_SECONDS = 10 * 60
 # 읽어 정하면 된다. 그 전까지 짐작으로 올리지 않는다.
 DEFAULT_MAX_ITEMS = 2
 
+# 지문이 말한 상태 → 큐가 쓰는 사유. 사유가 「갱신」인 편에는 아래 `build_extra` 가
+# `--revise` 를 실어 보낸다. **이 끈이 없어서 2026-09-03 에 세 편이 갇혔다** —
+# 화면에는 「v2 갱신」이라고 찍고는 아무것도 안 만들었다.
+REASON_OF = {
+    fingerprint.ABSENT: "new",
+    fingerprint.NEWER_VERSION: "newer_version",
+    fingerprint.CONTENT_CHANGED: "content_changed",
+}
+UPDATED = ("newer_version", "content_changed")
+
 
 @dataclass
 class WorkItem:
@@ -86,7 +96,7 @@ class WorkItem:
     title: str
     this_pdf: str
     this_version: int
-    reason: str                      # 'new' | 'newer_version'
+    reason: str                      # 'new' | 'newer_version' | 'content_changed'
     # 덱 나무의 가운데 마디. `title`과 달리 교수 괄호를 뗐다 — 그대로 쓰면
     # 교수가 바뀌는 해에 같은 강의가 두 노드로 갈린다.
     lecture: str = ""
@@ -111,29 +121,18 @@ def jokbo_ready(runs_dir: Path, subject: str) -> bool:
     return (deck.jokbo_dir(runs_dir, subject) / "index.json").is_file()
 
 
-def _source_record(pdf: Path, item: LectureFile) -> dict:
-    stat = pdf.stat()
-    return {
-        "path": str(pdf),
-        "stem": pdf.stem,
-        "version": item.version,
-        "size": stat.st_size,
-        "mtime": int(stat.st_mtime),
-    }
-
-
 def _already_built(runs_dir: Path, run_id: str, item: LectureFile) -> str | None:
-    """이미 만들었으면 None이 아닌 사유를 돌려준다."""
-    source_path = runs_dir / run_id / "source.json"
-    if not source_path.exists():
+    """이미 만들었으면 None이 아닌 사유를 돌려준다.
+
+    **판 번호만 보지 않는다.** `fingerprint` 가 내용 해시까지 본다 — 2026-09-04 에
+    `260903_03` 의 v1 파일이 이름 그대로 내용만 갈렸고, 그 사이에 만든 덱이 아무
+    검사도 안 걸렸다. 문지기(`publish._owns`)도 같은 값을 본다.
+    """
+    verdict = fingerprint.compare(runs_dir / run_id, item.path, item.version)
+    if verdict.state == fingerprint.ABSENT or verdict.stale:
         return None
-    try:
-        recorded = json.loads(source_path.read_text(encoding="utf-8"))
-    except (ValueError, OSError):
-        return None
-    if recorded.get("version", 0) >= item.version:
-        return f"이미 v{recorded.get('version')}로 만듦"
-    return None
+    where = (verdict.recorded or {}).get("where", "")
+    return f"이미 만듦 ({where}{' · 내용 해시까지 같다' if verdict.by_hash else ''})"
 
 
 def assign_run_ids(files: list[LectureFile]) -> dict[str, str]:
@@ -240,8 +239,11 @@ def build_queue(
                     f"{int(age / 60)}분. 동기화 중일 수 있어 다음 차례로")
                 continue
 
-            reason = "newer_version" if (runs_dir / run_id / "source.json").exists() else "new"
+            verdict = fingerprint.compare(runs_dir / run_id, pdf, item.version)
+            reason = REASON_OF.get(verdict.state, "new")
             notes: list[str] = []
+            if verdict.note:
+                notes.append(verdict.note)
             if not has_jokbo:
                 notes.append("과목 족보가 아직 안 잘려 있다 — 기출 카드 없이 만들어진다 "
                              f"(`python -m studyez jokbo {subject}`)")
@@ -271,6 +273,24 @@ def build_queue(
     )
 
 
+def build_extra(item: WorkItem, extra: list[str] | None = None) -> list[str]:
+    """이 편에만 붙는 깃발. **판이 갈린 편에는 `--revise` 가 실린다.**
+
+    안 실으면 `pdf2anki.run` 이 산출물이 있는 단계를 전부 건너뛰어(`runbase.step`)
+    **아무것도 안 만들고 `source.json` 에만 새 판이 찍힌다.** 2026-09-03 에 세 편이
+    그 상태였고, 그러면 쓸기는 「이미 만듦」·문지기는 「옛 판이라 못 내보낸다」가 되어
+    그 편이 갇힌다.
+
+    `--force`(통째로 다시)가 아니라 `--revise`(갈린 자리만)인 이유는 복습 이력이다 —
+    통째로 다시 만들면 질문 글자가 달라져 그 편 카드의 이력이 거의 다 죽는다
+    (`260903_05` 실측: 53장 중 7장만 살아남았다).
+    """
+    flags = list(extra or [])
+    if item.reason in UPDATED and "--force" not in flags and "--revise" not in flags:
+        flags.append("--revise")
+    return flags
+
+
 def build_one(item: WorkItem, runs_dir: Path, repo_root: Path, *,
               model: str = "", timeout: int = deck.DEFAULT_TIMEOUT,
               extra: list[str] | None = None) -> tuple[bool, str]:
@@ -287,7 +307,7 @@ def build_one(item: WorkItem, runs_dir: Path, repo_root: Path, *,
         pdf=item.this_pdf, run_id=item.run_id, subject=item.subject,
         lecture=item.lecture or item.title, title=item.title,
         runs_dir=runs_dir, repo_root=repo_root,
-        model=model, timeout=timeout, extra=extra)
+        model=model, timeout=timeout, extra=build_extra(item, extra))
     if not result.ok:
         return False, f"{result.error} (로그: {result.log})"
 
@@ -343,7 +363,7 @@ def stamp_run(runs_dir: Path, run_id: str, pdf: Path) -> bool:
         return False
     (runs_dir / run_id).mkdir(parents=True, exist_ok=True)
     (runs_dir / run_id / "source.json").write_text(
-        json.dumps(_source_record(pdf, parsed), ensure_ascii=False, indent=2),
+        json.dumps(fingerprint.record(pdf, parsed.version), ensure_ascii=False, indent=2),
         encoding="utf-8")
     return True
 

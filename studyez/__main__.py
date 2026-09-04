@@ -431,6 +431,9 @@ def main() -> int:
                                  "사진", "사진 중심",
                                  "base", "annotation", "jokbo", "image", "photo"),
                         help="watch --run-id: 복습 덱 전략. 실습 사진 중심은 '사진'")
+    parser.add_argument("--slides", default="",
+                        help="watch --run-id: 새 판에서 고쳐졌다고 **사람이 알려준** 슬라이드 "
+                             "(쉼표 구분). 코드가 못 보는 갈림(그림 픽셀만 바뀐 것)이 여기로 들어온다")
     parser.add_argument("--timeout", type=int, default=deck.DEFAULT_TIMEOUT,
                         help=f"watch·prequeue: 한 편의 제한 시간(초). 기본 {deck.DEFAULT_TIMEOUT}")
     parser.add_argument("--max", type=int, default=watch.DEFAULT_MAX_ITEMS,

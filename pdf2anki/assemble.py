@@ -19,6 +19,7 @@ import re
 import sys
 from pathlib import Path
 
+from . import slidediff
 from .pack import (
     READ_TOKEN_CAP,
     estimate_pdf_tokens,
@@ -511,8 +512,23 @@ def jokbo_guidance(stats: dict, title: str, mixed: list | None = None,
             f"{mix}\n{body}\n{repeats}")
 
 
+def revise_pages(changed: list[int], n_slides: int, margin: int = 1) -> list[int]:
+    """갈린 슬라이드와 그 앞뒤. **앞뒤를 얹는 이유는 문맥이다.**
+
+    한 장만 떼어 보고 카드를 쓰면 그 장이 어느 흐름의 어디인지 모른다. 앞뒤 한 장이면
+    대개 충분하고, 전 페이지를 읽히면 새로 만드는 것과 비용이 같아진다.
+    """
+    want: set[int] = set()
+    for s in changed:
+        for p in range(s - margin, s + margin + 1):
+            if 1 <= p <= n_slides:
+                want.add(p)
+    return sorted(want)
+
+
 def assemble(prep_dir: Path, jokbo_file: Path | None, schema_dir: Path,
-             strategy: str | None = None, domain: str = DEFAULT_DOMAIN) -> dict:
+             strategy: str | None = None, domain: str = DEFAULT_DOMAIN,
+             revise: dict | None = None) -> dict:
     prep = json.loads((prep_dir / "prep.json").read_text(encoding="utf-8"))
     prep_md = (prep_dir / "prep.md").read_text(encoding="utf-8")
     contract = (schema_dir / "contract.md").read_text(encoding="utf-8")
@@ -552,17 +568,40 @@ def assemble(prep_dir: Path, jokbo_file: Path | None, schema_dir: Path,
                                 needs_clean(prep))
             + "\n" + guidance)
 
+    stages = [
+        ("plan", "plan.md", head, {"plan_out": (prep_dir / "plan.json").as_posix()}),
+        ("cards", "cards.md", head, {"plan_in": (prep_dir / "plan.approved.json").as_posix(),
+                                     "cards_out": (prep_dir / "items.raw.json").as_posix()}),
+    ]
+    if revise:
+        # 판 교체는 한 칸이다. 갈린 슬라이드가 몇 장이라 ①목표와 ②카드를 두 세션으로
+        # 가를 이유가 없다 — 그 사이의 사람 승인도 여기서는 안 선다(고칠 자리가
+        # 이미 정해져 있다).
+        pages = revise_pages(revise["changed_slides"], prep["slides"])
+        covered = [s for s in needs_clean(prep) if s in set(pages)]
+        rhead = (f"# 강의 → Anki 덱 (판 교체) : {prep['source']}\n\n"
+                 "이 강의의 덱은 **이미 있다.** 필기본이 새 판으로 갈렸고, 갈린 자리만 다시 쓴다.\n\n"
+                 + read_instructions(pdf, prep["slides"], [prep_dir / n for n in ctx_names],
+                                     (prep_dir / prep["clean_pdf"]).resolve(), covered,
+                                     pages=pages)
+                 + "\n" + guidance)
+        stages.append(("revise", "revise.md", rhead, {
+            # `revise` 가 미리 지어 둔 블록이 있으면 그것을 쓴다 — 갈린 문구·그 자리의
+            # 카드·v1 의 판단이 거기 다 들어 있다(`revise.change_block`). 없으면
+            # 채널 요약만이라도 싣는다.
+            "changed_block": revise.get("prompt_block") or slidediff.render(revise),
+            "plan_in": (prep_dir / "plan.carry.json").as_posix(),
+            "carry_in": (prep_dir / "items.carry.json").as_posix(),
+            "out": (prep_dir / "revise.out.json").as_posix(),
+        }))
+
     out = {"context": ctx_files}
-    for stage, task_file, subs in (
-        ("plan", "plan.md", {"plan_out": (prep_dir / "plan.json").as_posix()}),
-        ("cards", "cards.md", {"plan_in": (prep_dir / "plan.approved.json").as_posix(),
-                               "cards_out": (prep_dir / "items.raw.json").as_posix()}),
-    ):
+    for stage, task_file, stage_head, subs in stages:
         task = (PROMPTS / task_file).read_text(encoding="utf-8")
         for k, v in subs.items():
             task = task.replace("{" + k + "}", v)
-        sections = [head, *shared_prompt, task]
-        if stage == "cards":
+        sections = [stage_head, *shared_prompt, task]
+        if stage in ("cards", "revise"):
             sections.append(contract)
 
         out[stage] = write_parts(prep_dir, f"prompt.{stage}", sections, manifest=True)
@@ -583,6 +622,7 @@ def main(argv=None) -> int:
                          "auto 면 실습 사진·반복률·교수 교체 순으로 판정한다")
     ap.add_argument("--domain", default=DEFAULT_DOMAIN, choices=sorted(DOMAINS),
                     help=f"퀴즈 도메인 정책 (기본 {DEFAULT_DOMAIN})")
+    ap.add_argument("--revise", help="판 비교 결과(revise.json). 주면 prompt.revise.md 도 만든다")
     args = ap.parse_args(argv)
 
     prep_dir = Path(args.prep_dir)
@@ -621,7 +661,14 @@ def main(argv=None) -> int:
         # 지정했다」고 단언하지 않는다.
         why = "전략을 인자로 받았다 (부른 쪽이 정했다)"
 
-    res = assemble(prep_dir, jokbo_file, Path(args.schema_dir), strategy, args.domain)
+    revise = None
+    if args.revise:
+        rpath = Path(args.revise)
+        revise = json.loads(rpath.read_text(encoding="utf-8"))
+        print(f"판 교체 프롬프트도 만든다 — 갈린 슬라이드 {len(revise['changed_slides'])}장")
+
+    res = assemble(prep_dir, jokbo_file, Path(args.schema_dir), strategy, args.domain,
+                   revise=revise)
 
     print(f"\n전략: {STRATEGIES[strategy]}  — {why}")
     if res["_jokbo"]:
@@ -631,8 +678,8 @@ def main(argv=None) -> int:
               f"{' · 교수 교체' if st['professor_changed_2026'] else ''}")
     print()
     ctx_tok = sum(f["tokens"] for f in res["context"])
-    for label in ("context", "plan", "cards"):
-        files = res[label]
+    for label in ("context", "plan", "cards", "revise"):
+        files = res.get(label) or []
         for f in files:
             warn = "  ⚠ Read 상한 초과" if f["tokens"] > READ_TOKEN_CAP else ""
             print(f"[{label:<7}] {f['name']:<24}{f['chars']:>7,}자 {f['tokens']:>7,}토큰{warn}")

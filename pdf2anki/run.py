@@ -498,7 +498,18 @@ def main(argv=None) -> int:
     ap.add_argument("--no-image-check", action="store_true",
                     help="접촉 시트를 모으지 않는다 (눈검사가 더 필요 없어지면)")
     ap.add_argument("--force", action="store_true", help="이미 있는 산출물도 다시 만든다")
+    # ── 판이 갈렸을 때 ──
+    ap.add_argument("--revise", action="store_true",
+                    help="이 폴더는 다른 판으로 이미 만들어졌다. 갈린 슬라이드의 카드만 "
+                         "갈아 끼운다 (pdf2anki.revise)")
+    ap.add_argument("--slides", default="",
+                    help="사람이 알려준 수정 슬라이드 (새 판 번호, 쉼표 구분). "
+                         "코드가 못 보는 갈림을 여기로 넣는다. --revise 와 같이 쓴다")
+    ap.add_argument("--full-rebuild-over", type=float, default=None, metavar="비율",
+                    help="갈린 슬라이드가 이 비율을 넘으면 통째로 다시 만든다 (예: 0.5). "
+                         "**기본은 없음** — 문턱은 아직 실측으로 정해지지 않았다")
     args = ap.parse_args(argv)
+    args.slides = [int(x) for x in str(args.slides).replace(" ", "").split(",") if x]
 
     # ── 이어 돌리기: 폴더가 기억한 이름을 되찾는다 ──
     saved, given = {}, args.pdf          # 명령줄에서 준 PDF 가 기억보다 우선한다
@@ -548,7 +559,22 @@ def main(argv=None) -> int:
             print(f"   {k}")
         print("   한 강의가 두 교시에 걸친 것이면 맞다. 아니면 --deck 으로 갈라라.")
 
-    r = Runner(out, args)
+    make = Runner
+    if args.revise:
+        if args.force:
+            print("\n--force 와 --revise 를 같이 줬다. 통째로 다시 만든다 "
+                  "(갈아 끼우기는 이미 있는 산출물 위에 선다).")
+        elif not args.pdf:
+            print("\n--revise 는 **새 판의 PDF** 가 있어야 한다. 무엇과 맞댈지 알 수 없다.")
+            return 1
+        else:
+            # 늦게 들여온다 — `revise` 가 이 모듈의 `Runner` 를 상속한다.
+            from .revise import ReviseRunner
+            make = ReviseRunner
+            print("판 교체 : 갈린 슬라이드의 카드만 갈아 끼운다"
+                  + (f"  (사람이 알려준 슬라이드 {args.slides})" if args.slides else ""))
+
+    r = make(out, args)
     try:
         r.all()
     except (Failed, SessionError) as e:

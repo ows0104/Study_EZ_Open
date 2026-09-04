@@ -21,6 +21,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -307,6 +308,24 @@ def emphasis_of(page: fitz.Page, palette: dict) -> list[dict]:
     return out
 
 
+def sha256_of(path: Path) -> str:
+    """원본의 내용 지문. **판 번호가 같은데 내용만 갈린 판을 잡는 유일한 값이다.**
+
+    2026-09-04 에 `260903_03` 의 v1 파일이 이름 그대로 5,769,068B 에서 5,791,054B 로
+    바뀌었고, 그 사이에 만든 덱이 문지기를 그냥 지났다. 이름만 보면 못 잡는다.
+
+    **이 자리에 박는 이유**는 여기가 원본을 실제로 읽는 자리이기 때문이다. prep 을
+    다시 돌리지 않는 한 이 값은 산출물보다 앞서지 않는다 — 기록이 산출물을 앞지르면
+    그 편은 「갱신됨」이 되어 다시는 안 걸린다(2026-09-03 에 세 편이 그랬다).
+    읽는 쪽은 `studyez.fingerprint` 이고, 키 이름 `source_sha256` 이 둘 사이의 계약이다.
+    """
+    h = hashlib.sha256()
+    with Path(path).open("rb") as fp:
+        while chunk := fp.read(1 << 20):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def build(src: Path, outdir: Path) -> dict:
     outdir.mkdir(parents=True, exist_ok=True)
     ann = fitz.open(src)
@@ -396,6 +415,8 @@ def build(src: Path, outdir: Path) -> dict:
     years = Counter(n["year"] for s in slides for n in s["annotations"])
     prep = {
         "source": src.name,
+        "source_sha256": sha256_of(src),
+        "source_bytes": src.stat().st_size,
         "slides": ann.page_count,
         "annotated_pdf": "annotated.pdf",
         "clean_pdf": "clean.pdf",

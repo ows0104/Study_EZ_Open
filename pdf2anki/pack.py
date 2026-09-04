@@ -150,15 +150,39 @@ def clean_instructions(clean_pdf: Path, covered: list[int]) -> str:
 
 
 def read_instructions(pdf: Path, n_pages: int, context_files: list[Path],
-                      clean_pdf: Path | None = None, covered: list[int] | None = None) -> str:
-    spans = []
-    for start in range(1, n_pages + 1, READ_PAGE_LIMIT):
-        end = min(start + READ_PAGE_LIMIT - 1, n_pages)
-        spans.append(f'Read("{pdf.as_posix()}", pages="{start}-{end}")')
+                      clean_pdf: Path | None = None, covered: list[int] | None = None,
+                      pages: list[int] | None = None) -> str:
+    """`pages` 를 주면 그 쪽만 읽힌다 — 판이 갈려 그 자리만 다시 쓰는 경우다.
+
+    전 페이지를 읽히면 새로 만드는 것과 비용이 같아진다. 다만 **갈린 슬라이드만
+    보고 카드를 쓰면 앞뒤 문맥을 모른다.** 부르는 쪽이 앞뒤 한 장씩 얹어 준다
+    (`revise` 가 그렇게 한다).
+    """
+    if pages:
+        # 이어진 구간이라도 Read 는 한 번에 20쪽까지다. 갈린 자리가 길게 이어지면
+        # 조용히 잘리므로 여기서 미리 나눈다.
+        capped: list[str] = []
+        for r in _ranges(pages):
+            lo, hi = (int(v) for v in (r.split("-") if "-" in r else [r, r]))
+            while lo <= hi:
+                end = min(lo + READ_PAGE_LIMIT - 1, hi)
+                capped.append(f"{lo}" if lo == end else f"{lo}-{end}")
+                lo = end + 1
+        spans = [f'Read("{pdf.as_posix()}", pages="{r}")' for r in capped]
+        head = (f"## 먼저 읽을 것\n\n"
+                f"이번에 볼 것은 **판이 갈린 자리와 그 앞뒤뿐**이다 (전체 {n_pages}장 중 "
+                f"{len(pages)}장). 나머지 슬라이드의 카드는 이미 있고 그대로 둔다.\n\n"
+                "```\n" + "\n".join(spans) + "\n```\n\n")
+    else:
+        spans = []
+        for start in range(1, n_pages + 1, READ_PAGE_LIMIT):
+            end = min(start + READ_PAGE_LIMIT - 1, n_pages)
+            spans.append(f'Read("{pdf.as_posix()}", pages="{start}-{end}")')
+        head = ("## 먼저 읽을 것\n\n"
+                f"강의 {n_pages}장을 **전부** 본다. Read 는 한 번에 {READ_PAGE_LIMIT}쪽까지만 되므로 "
+                f"{len(spans)}회로 나눈다.\n\n```\n" + "\n".join(spans) + "\n```\n\n")
     ctx = [f'Read("{p.resolve().as_posix()}")' for p in context_files]
-    return ("## 먼저 읽을 것\n\n"
-            f"강의 {n_pages}장을 **전부** 본다. Read 는 한 번에 {READ_PAGE_LIMIT}쪽까지만 되므로 "
-            f"{len(spans)}회로 나눈다.\n\n```\n" + "\n".join(spans) + "\n```\n\n"
+    return (head +
             "이 PDF 는 필기가 얹힌 원본이다. 각 페이지 하단에 `Slide N` 이 각인돼 있으니 "
             "카드의 `slide_no` 는 그 번호를 쓴다.\n"
             "**텍스트 레이어는 오지 않는다.** 강의록 본문·필기의 정확한 문자열은 "
