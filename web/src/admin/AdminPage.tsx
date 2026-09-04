@@ -3,9 +3,8 @@ import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { api } from "../api";
 import type { AdminOverview, AppUser, JobBoard } from "../types";
 import { jobMoving, jobOpen } from "../jobProgress";
-import { MatchTab } from "./MatchTab";
-import { ProgressTab } from "./ProgressTab";
-import { RunnerBoard } from "./RunnerBoard";
+import { LectureTab } from "./LectureTab";
+import { QuizTab } from "./QuizTab";
 import { UsersTab } from "./UsersTab";
 import { isUnconfirmed, isUnmatched, pending, runnerAlive } from "./rows";
 
@@ -13,19 +12,18 @@ import { isUnconfirmed, isUnmatched, pending, runnerAlive } from "./rows";
  * 관리 화면의 겉틀.
  *
  * **한 화면에 다 붙어 있던 것을 탭으로 갈랐다**(2026-09-04 관리자 지시 — "너무
- * 많은 게 한 번에 붙어 있다"). 가른 축은 *지금 무엇을 하려고 왔는가*다.
+ * 많은 게 한 번에 붙어 있다"). 가른 축은 *지금 무엇을 하려고 왔는가*이고,
+ * 셋의 내용과 순서를 관리자가 직접 적어 줬다.
  *
- *     진행   자료가 다 올라왔는가 — 체크리스트 · 예습 링크 · 검토 표시
- *     계정   승인
- *     매칭   어느 시간의 강의인가 — 편별 매칭 · 과목 이름 잇기
+ *     퀴즈   위는 지금 도는 것과 진행도, 아래는 지금까지 만들어진 퀴즈들
+ *     계정   신청이 들어온 계정 — 승인
+ *     강의   매칭 · 과목 이름 잇기 · 편별 자료 체크리스트와 예습 링크
  *
- * **이 순서는 관리자가 정했다**(2026-09-04). 자주 여는 것이 앞이다 — 매칭은
- * 학기 초에 몰리고 그 뒤로는 새 편이 붙을 때만 본다.
- *
- * **탭 밖에 남는 것이 둘 있다.** 요약 한 줄과 일감 판이다. 일감 판은 표보다
- * 먼저 서라는 지시(2026-09-01)를 받은 자리라 탭 뒤로 못 넣는다 — 도는 것도
- * 기다리는 것도 없으면 스스로 안 그린다. 탭 이름 옆 숫자도 같은 이유다:
- * 갈라 놓은 화면에서 남은 일이 다른 탭에 있으면, 그 일은 없는 것이 된다.
+ * **일감 판이 겉틀에서 「퀴즈」 탭 안으로 내려갔다.** 표보다 먼저 서라는
+ * 2026-09-01 지시는 그 탭 안에서 지켜진다(맨 위). 다른 탭에서는 안 보이게
+ * 되는 대신, 도는 일감 수가 탭 이름 옆에 선다 — 갈라 놓은 화면에서 남은 일이
+ * 다른 탭에 있으면 그 일은 없는 것이 되기 때문이다. 러너가 안 붙었다는 경고만
+ * 겉틀에 남긴다. 그건 어느 탭에 있든 손을 대야 하는 사실이다.
  */
 /** 고른 탭에 표시를 남긴다. NavLink 기본값(`active`)은 이 앱의 이름이 아니다. */
 const tabClass = ({ isActive }: { isActive: boolean }) => (isActive ? "is-active" : "");
@@ -75,9 +73,13 @@ export function AdminPage() {
   if (error) return <p className="notice is-error">{error}</p>;
   if (!overview) return <p className="notice">불러오는 중…</p>;
 
-  const incomplete = overview.lectures.filter((row) => pending(row).length > 0).length;
-  const needsMatch = overview.lectures.filter((row) => isUnmatched(row) || isUnconfirmed(row)).length;
+  // 퀴즈 탭의 숫자만 **남은 일이 아니라 도는 일**이다. 만들어진 덱 수를 적으면
+  // 늘 서 있는 숫자가 되고, 그런 숫자는 곧 안 읽힌다.
+  const inFlight = (board?.running.length ?? 0) + (board?.waiting.length ?? 0) + (board?.held.length ?? 0);
   const waitingUsers = (users ?? []).filter((row) => !row.isApproved).length;
+  const lectureTodo = overview.lectures.filter(
+    (row) => pending(row).length > 0 || isUnmatched(row) || isUnconfirmed(row),
+  ).length;
   const queued = overview.lectures.filter((row) => jobOpen(row.prequizJob)).length;
 
   return (
@@ -88,8 +90,6 @@ export function AdminPage() {
         <strong>{runnerAlive(overview.runner) ? (overview.runner?.busy ? "만드는 중" : "대기") : "안 붙음"}</strong>
       </p>
 
-      <RunnerBoard board={board} onBoard={setBoard} />
-
       {queued > 0 && !runnerAlive(overview.runner) ? (
         <p className="notice is-error">
           덱 일감 {queued}개가 기다리는데 <strong>러너가 안 붙어 있습니다.</strong> 만드는 것은
@@ -97,26 +97,29 @@ export function AdminPage() {
         </p>
       ) : null}
 
-      {/* 숫자는 **남은 일**이다. 0이면 안 그린다 — 늘 서 있는 숫자는 곧 안 읽힌다. */}
+      {/* 0이면 안 그린다 — 늘 서 있는 숫자는 곧 안 읽힌다. */}
       <nav className="admin-tabs" aria-label="관리 화면">
-        <NavLink to="/admin" end className={tabClass} title="자료가 다 올라왔는가">
-          진행
-          {incomplete ? <span className="admin-tab-count">{incomplete}</span> : null}
+        <NavLink to="/admin" end className={tabClass} title="지금 도는 것과 기다리는 것">
+          퀴즈
+          {inFlight ? <span className="admin-tab-count">{inFlight}</span> : null}
         </NavLink>
-        <NavLink to="/admin/users" className={tabClass} title="승인을 기다리는 사람">
+        <NavLink to="/admin/users" className={tabClass} title="승인을 기다리는 신청">
           계정
           {waitingUsers ? <span className="admin-tab-count">{waitingUsers}</span> : null}
         </NavLink>
-        <NavLink to="/admin/match" className={tabClass} title="시간표에 못 붙었거나 아직 확인 안 한 편">
-          매칭
-          {needsMatch ? <span className="admin-tab-count">{needsMatch}</span> : null}
+        <NavLink to="/admin/lectures" className={tabClass} title="체크가 남았거나 매칭을 확인해야 하는 편">
+          강의
+          {lectureTodo ? <span className="admin-tab-count">{lectureTodo}</span> : null}
         </NavLink>
       </nav>
 
       <Routes>
-        <Route index element={<ProgressTab overview={overview} onChanged={load} />} />
+        <Route index element={<QuizTab overview={overview} board={board} onBoard={setBoard} />} />
         <Route path="users" element={<UsersTab users={users} onChanged={loadUsers} />} />
-        <Route path="match" element={<MatchTab overview={overview} onChanged={load} />} />
+        <Route path="lectures" element={<LectureTab overview={overview} onChanged={load} />} />
+        {/* 하루 나가 있던 주소다(2026-09-04). 눌러 둔 사람이 빈 화면을 보지 않게
+            제자리로 보낸다. */}
+        <Route path="match" element={<Navigate to="/admin/lectures" replace />} />
         {/* 없는 탭은 첫 탭으로. 주소를 손으로 고쳤을 때 빈 화면을 주지 않는다. */}
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Routes>

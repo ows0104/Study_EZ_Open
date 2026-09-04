@@ -1047,14 +1047,16 @@ button.resource.is-download:hover:not(:disabled)::after {
   font-size: 12px;
 }
 
-/* 칸이 둘뿐인 표(매칭). 화면 폭을 다 쓰면 두 칸이 양 끝으로 갈라선다. */
-.admin-table.is-narrow {
-  max-width: 900px;
-}
-
 /* 예습 링크 입력 묶음. 링크 한 줄이 남는 가로를 다 가져가지 않게 한다. */
 .admin-preview {
   max-width: 380px;
+}
+
+/* 탭 안에서 덩이를 가르는 제목. 「퀴즈」 탭의 일감 판과 만들어진 목록 사이가
+ * 그 자리다 — 위아래가 다른 것을 말한다는 것을 한 줄로 알린다. */
+.admin-section {
+  margin: 22px 0 10px;
+  font-size: 14px;
 }
 
 /* 관리자 체크리스트 다섯 칸.

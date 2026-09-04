@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { api } from "../api";
 import type { AppUser } from "../types";
 
@@ -14,8 +14,16 @@ import type { AppUser } from "../types";
  */
 export function UsersTab({ users, onChanged }: { users: AppUser[] | null; onChanged: () => void }) {
   const [busy, setBusy] = useState("");
+  // **신청이 들어온 계정이 먼저다**(2026-09-04 관리자 지시). 승인이 이 화면에서
+  // 하는 유일한 일이라, 기다리는 사람이 목록 아래에 섞여 있으면 화면이 할 일을
+  // 안 말한다. 그 안에서는 들어온 순서 그대로다 — 서버가 그렇게 준다.
+  const sorted = useMemo(
+    () => [...(users ?? [])].sort((a, b) => Number(a.isApproved) - Number(b.isApproved)),
+    [users],
+  );
 
   if (!users) return <p className="notice">불러오는 중…</p>;
+  const waiting = users.filter((row) => !row.isApproved).length;
 
   async function setApproval(row: AppUser, isApproved: boolean) {
     setBusy(row.id);
@@ -32,6 +40,16 @@ export function UsersTab({ users, onChanged }: { users: AppUser[] | null; onChan
 
   return (
     <section className="admin-users">
+      {/* 기다리는 사람이 없다는 것도 답이다. 빈 화면으로 두면 못 불러온 것과 같다. */}
+      <p className="admin-summary">
+        {waiting ? (
+          <>
+            승인 대기 <strong>{waiting}명</strong> · 전체 {users.length}명
+          </>
+        ) : (
+          <>기다리는 신청 없음 · 전체 {users.length}명</>
+        )}
+      </p>
       <table className="admin-table">
         <thead>
           <tr>
@@ -41,7 +59,7 @@ export function UsersTab({ users, onChanged }: { users: AppUser[] | null; onChan
           </tr>
         </thead>
         <tbody>
-          {users.map((row) => (
+          {sorted.map((row) => (
             <tr key={row.id} className={row.isApproved ? "" : "is-unmatched"}>
               <td>
                 {row.email || row.id}

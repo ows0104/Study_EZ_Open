@@ -9,8 +9,9 @@ import {
   type ChecklistItem,
   type PreviewProvider,
 } from "../types";
+import { CourseAliases } from "./CourseAliases";
 import { LectureCell } from "./LectureCell";
-import { flaggedRuns, pending } from "./rows";
+import { isUnconfirmed, isUnmatched, pending } from "./rows";
 
 /** 관리자가 채우는 다섯 칸. 순서가 곧 하는 순서다 — 앞 셋이 예습, 뒤 둘이 복습. */
 const checklistLabels: Record<ChecklistItem, string> = {
@@ -21,23 +22,36 @@ const checklistLabels: Record<ChecklistItem, string> = {
   main_apkg: "Main덱",
 };
 
-type Filter = "all" | "pending" | "flagged" | "no-preview";
+type Candidate = {
+  id: string;
+  startTime: string;
+  slot: number | null;
+  title: string;
+  details: string;
+  professor: string;
+  category: string;
+};
+
+type Filter = "all" | "checklist" | "match" | "no-preview";
 
 /**
- * **자료가 다 올라왔는가**만 보는 탭.
+ * **강의 관리.** 어느 시간의 강의인가 · 자료가 다 올라왔는가 · 과목 이름 잇기.
  *
- * 시간표 매칭은 여기 없다(→ 「매칭」 탭). 한 편에 대해 묻는 것이 둘이었는데
- * ―「올라왔나」와 「어느 시간의 강의인가」― 둘을 한 줄에 붙여 놓으면 네 칸짜리
- * 표가 되고, 밀린 자료를 훑는 눈이 매칭 칸을 매번 건너뛰어야 했다.
+ * 관리자 지시(2026-09-04) — "매칭 및 과목, 강의 관리". 셋은 한 편을 세팅하는
+ * 같은 일의 앞뒤다: 시간표에 붙이고, 자료를 채우고, 과목 이름이 안 맞으면 잇는다.
+ *
+ * **덱이 몇 장인지·검토 표시가 있는지는 여기 없다**(→ 「퀴즈」 탭). 여기 남는
+ * 것은 체크리스트의 `Pre덱`·`Main덱` 칸뿐이고, 그건 만들어졌나 아닌가 하나만
+ * 말한다.
  */
-export function ProgressTab({ overview, onChanged }: { overview: AdminOverview; onChanged: () => void }) {
+export function LectureTab({ overview, onChanged }: { overview: AdminOverview; onChanged: () => void }) {
   const [filter, setFilter] = useState<Filter>("all");
 
   const rows = useMemo(() => {
     const all = overview.lectures;
     // 밀린 것만 보는 갈래. 여기가 비면 그 주는 끝난 것이다.
-    if (filter === "pending") return all.filter((row) => pending(row).length > 0);
-    if (filter === "flagged") return all.filter((row) => flaggedRuns(row).length > 0);
+    if (filter === "checklist") return all.filter((row) => pending(row).length > 0);
+    if (filter === "match") return all.filter((row) => isUnmatched(row) || isUnconfirmed(row));
     if (filter === "no-preview") return all.filter((row) => !row.preview?.shareUrl);
     return all;
   }, [overview, filter]);
@@ -48,8 +62,8 @@ export function ProgressTab({ overview, onChanged }: { overview: AdminOverview; 
         {(
           [
             ["all", "전체"],
-            ["pending", "체크 남음"],
-            ["flagged", "검토 표시"],
+            ["checklist", "체크 남음"],
+            ["match", "매칭 확인 필요"],
             ["no-preview", "예습 링크 없음"],
           ] as const
         ).map(([key, label]) => (
@@ -63,30 +77,40 @@ export function ProgressTab({ overview, onChanged }: { overview: AdminOverview; 
         <thead>
           <tr>
             <th>강의</th>
+            <th>시간표 매칭</th>
             <th>체크리스트</th>
             <th>예습 링크</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
-            <ProgressRow key={`${row.subject}/${row.runId}`} row={row} onChanged={onChanged} />
+            <LectureRow key={`${row.subject}/${row.runId}`} row={row} onChanged={onChanged} />
           ))}
         </tbody>
       </table>
       {!rows.length ? <p className="notice">해당하는 강의가 없습니다.</p> : null}
+
+      <CourseAliases overview={overview} onChanged={onChanged} />
     </>
   );
 }
 
-function ProgressRow({ row, onChanged }: { row: AdminRow; onChanged: () => void }) {
+function LectureRow({ row, onChanged }: { row: AdminRow; onChanged: () => void }) {
   const base = `/api/admin/lectures/${encodeURIComponent(row.subject)}/${encodeURIComponent(row.runId)}`;
+  const [candidates, setCandidates] = useState<Candidate[] | null>(null);
   const [share, setShare] = useState(row.preview?.shareUrl ?? "");
   const [conversation, setConversation] = useState(row.preview?.conversationUrl ?? "");
   const [previewProvider, setPreviewProvider] = useState<PreviewProvider>(row.preview?.provider ?? "chatgpt");
   const [saving, setSaving] = useState(false);
   const [waiving, setWaiving] = useState<ChecklistItem | null>(null);
 
-  const flagged = flaggedRuns(row);
+  async function setMatch(timetableEventId: string | null) {
+    await api(`${base}/match`, {
+      method: "PUT",
+      body: JSON.stringify({ timetableEventId, confirmed: true }),
+    });
+    onChanged();
+  }
 
   async function setWaived(item: ChecklistItem, waived: boolean) {
     setWaiving(item);
@@ -112,8 +136,51 @@ function ProgressRow({ row, onChanged }: { row: AdminRow; onChanged: () => void 
   }
 
   return (
-    <tr>
+    <tr className={row.match.timetableEventId ? "" : "is-unmatched"}>
       <LectureCell row={row} />
+
+      <td>
+        {row.match.timetableEventId ? (
+          <>
+            <span className={row.match.confirmed ? "tag is-ok" : "tag"}>
+              {row.match.confirmed ? "확인함" : "자동 매칭"}
+            </span>
+            <small>{(row.match.eventDetails || row.match.eventTitle || "").split("\n")[0]}</small>
+          </>
+        ) : (
+          <span className="tag is-warn">못 붙음</span>
+        )}
+        <div className="row">
+          {!row.match.confirmed && row.match.timetableEventId ? (
+            <button onClick={() => setMatch(row.match.timetableEventId)}>맞음</button>
+          ) : null}
+          <button
+            className="is-quiet"
+            onClick={async () => {
+              if (candidates) return setCandidates(null);
+              setCandidates(await api<Candidate[]>(`/api/admin/timetable-events?date=${row.date}`));
+            }}
+          >
+            {candidates ? "닫기" : "고르기"}
+          </button>
+        </div>
+        {candidates ? (
+          <ul className="candidates">
+            {candidates.map((candidate) => (
+              <li key={candidate.id}>
+                <button onClick={() => setMatch(candidate.id)}>
+                  {candidate.startTime} {(candidate.details || candidate.title).split("\n")[0]}
+                </button>
+              </li>
+            ))}
+            <li>
+              <button className="is-quiet" onClick={() => setMatch(null)}>
+                연결 끊기
+              </button>
+            </li>
+          </ul>
+        ) : null}
+      </td>
 
       <td>
         {/* 다섯 칸을 하는 순서대로 세운다. 안 한 것이 눈에 띄어야 하므로 색은
@@ -145,18 +212,6 @@ function ProgressRow({ row, onChanged }: { row: AdminRow; onChanged: () => void 
             );
           })}
         </ul>
-        <ul className="uploads">
-          <li className={row.has.media ? "is-on" : ""}>슬라이드</li>
-          <li className={row.preItemCount ? "is-on" : ""}>문항 {row.preItemCount}</li>
-        </ul>
-        {/* 검토 표시가 남은 덱은 사람이 카드 뒷면 경고 박스를 보기 전까지
-            배포해서는 안 된다. 목록에서 바로 보이게 둔다. */}
-        {flagged.map(([kind, meta]) => (
-          <span className="tag is-warn" key={kind}>
-            {kind} 검토 {meta.reviewFlagged}
-            {meta.slidesUnused ? ` · 미사용 슬라이드 ${meta.slidesUnused}` : ""}
-          </span>
-        ))}
       </td>
 
       <td>
