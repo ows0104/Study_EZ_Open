@@ -37,7 +37,7 @@ from pathlib import Path
 import fitz
 import genanki
 
-from .textutil import answer_runs, norm_key
+from .textutil import answer_runs, collapse_cloze, norm_key
 
 # 재현 검사에서 '카드 결함' 으로 갈린 이유 — 이것만 덱을 막는다.
 # lecture_specific · genuinely_wrong 은 결함이 아니다.
@@ -788,8 +788,12 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str,
         crop = m.get("crop")
 
         if fmt == "cloze":
+            # 번호를 모으는 자리는 **굽는 직전 하나다.** guid 는 위에서 모델이 낸
+            # 글자 그대로 떠 있으므로, 이미 나간 덤을 다시 구워도 같은 노트로 들어간다
+            # (복습 이력이 살아남는다). 옥아 있던 c2.. 카드는 Anki 에서
+            # 「빈 카드」가 되므로 사람이 한 번 치워야 한다.
             note = genanki.Note(model=CLOZE_MODEL, guid=guid, tags=tags,
-                                fields=[c["q"], exp, warn, srctxt, origin])
+                                fields=[collapse_cloze(c["q"]), exp, warn, srctxt, origin])
         else:
             img, answer = "", render_answer(c["a"])
             if fmt == "image_basic":

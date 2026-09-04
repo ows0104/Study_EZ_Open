@@ -26,6 +26,29 @@ STOPWORDS = {
 }
 
 
+RE_CLOZE_NUM = re.compile(r"\{\{c\d+::")
+
+
+def collapse_cloze(q: str) -> str:
+    """빈칸 번호를 전부 `c1` 로 모은다 — 한 노트가 카드 한 장이 되게.
+
+    Anki 는 **번호 하나에 카드 한 장**을 만들고, 각 카드는 나머지 번호의 답을
+    앞면에 그대로 인쇄한다. `c1..c4` 로 나뉘면 카드가 네 장이 되고 그 넷 모두
+    앞면에 답 셋이 적혀 있다. 2026-09-04 에 세어 보니 `runs/` 의 cloze 64장 중
+    **39장(61%)이 번호가 갈려 있었고**, 갈린 것 대부분이 한 축이었다
+    (amastigote→promastigote→epimastigote→trypomastigote 같은 나열).
+
+    재현 검사는 이미 **모든 빈칸이 함께 가려진 앞면**을 채점하고 있었다
+    (`reproduce.front_of`). 즉 채점한 앞면과 실제로 구워지던 앞면이 달랐다.
+    여기서 모으면 둘이 같아진다.
+
+    번호를 지우는 것이지 빈칸을 지우는 것이 아니다 — 가린 자리 수는 그대로라
+    `too_many_clozes` 계수기는 영향을 받지 않는다. `norm_key` 는 껍데기를
+    통째로 벗기므로 **guid 도 바뀌지 않는다**(복습 이력이 보존된다).
+    """
+    return RE_CLOZE_NUM.sub("{{c1::", q)
+
+
 def norm_key(s: str) -> str:
     """공백·장식문자·괄호 형태 차이를 지운 비교용 키."""
     s = unicodedata.normalize("NFKC", s)

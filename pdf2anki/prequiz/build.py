@@ -40,6 +40,7 @@ from ..build import (
     _labels,
     _mid,
     check_guids,
+    collapse_cloze,
     contact_sheet,
     find_jokbo_source,
     guid_of,
@@ -260,8 +261,9 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str, src: Path | None = No
         crop = m.get("crop")
 
         if fmt == "cloze":
+            # 복습과 같은 자리에서 번호를 모은다 (`build.collapse_cloze` 주석).
             note = genanki.Note(model=CLOZE_MODEL, guid=guid, tags=tags,
-                                fields=[c["q"], exp, warn, srctxt, origin])
+                                fields=[collapse_cloze(c["q"]), exp, warn, srctxt, origin])
         else:
             img, answer = "", render_answer(c["a"])
             if fmt == "image_basic":

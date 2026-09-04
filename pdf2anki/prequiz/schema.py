@@ -216,9 +216,10 @@ GENERATE_SCHEMA = {
 
 FORMAT_RULES = {
     "basic": "q 는 질문문, a 는 핵심 정답. media 는 null.",
-    "cloze": "q 에 {{c1::...}} 가 하나 이상. a 는 가려진 내용을 모은 것. media 는 null. "
-             "가린 말이 같은 문장 다른 자리에 맨몸으로 또 나오면 안 된다 — "
-             "같은 말이 두 번 필요하면 두 자리를 같은 번호로 가린다.",
+    "cloze": "q 에 {{c1::...}} 가 하나 이상. **번호는 언제나 c1 하나만 쓴다** — 빈칸이 "
+             "여럿이어도 전부 c1 이고, 한 노트가 카드 한 장이다. a 는 가려진 내용을 모은 것. "
+             "media 는 null. 가린 말이 같은 문장 다른 자리에 맨몸으로 또 나오면 안 된다 — "
+             "같은 말이 두 번 필요하면 두 자리를 함께 가린다.",
     "ox": "q 는 진술문, a 는 'O' 또는 'X'. 틀린 진술이면 explanation 에 왜 틀렸는지 적는다.",
     "image_basic": "media.figure_id 필수. 앞면에 그림을 붙이고 무엇인지 묻는다.",
     "image_occlusion": "media.figure_id 와 media.occlusion_ids 필수. 이름 있는 must-know 라벨만 "
