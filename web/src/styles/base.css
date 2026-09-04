@@ -481,15 +481,7 @@ input:focus-visible {
   line-height: 1.6;
 }
 
-.admin-users {
-  margin-top: 36px;
-}
-
-.admin-users h2 {
-  margin-bottom: 10px;
-  font-size: 14px;
-}
-
+/* 계정은 이제 자기 탭 안에 혼자 선다 — 제목도 위 여백도 탭 이름이 대신한다. */
 .admin-users table {
   max-width: 620px;
 }
@@ -883,6 +875,52 @@ button.resource.is-download:hover:not(:disabled)::after {
   flex-wrap: wrap;
 }
 
+/* 탭. **한 화면에 다 붙어 있던 것을 여기서 가른다** — 진행 · 매칭 · 계정.
+ * 밑줄로만 고른 것을 표시한다: 버튼 꼴로 칠하면 바로 아래 거르기 버튼과
+ * 같은 무게가 되어 어느 쪽이 화면을 가르는 것인지 안 보인다. */
+.admin-tabs {
+  display: flex;
+  margin: 14px 0 12px;
+  gap: 2px;
+  border-bottom: 1px solid var(--line);
+}
+
+.admin-tabs a {
+  display: inline-flex;
+  padding: 7px 12px;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-3);
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.admin-tabs a:hover {
+  color: var(--ink);
+}
+
+.admin-tabs a.is-active {
+  border-bottom-color: var(--accent);
+  color: var(--ink);
+}
+
+/* 남은 일의 수. 0이면 아예 안 그리므로(`AdminPage`) 여기 있는 숫자는 늘 할 일이다. */
+.admin-tab-count {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--ink-2);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-tabs a.is-active .admin-tab-count {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
 /* 지금 무엇이 도는가. **표보다 먼저 선다** — 「지금 어떤 걸 하고 있고 몇 분째
  * 인지」를 보려고 표를 훑게 하면, 그 답은 안 보이는 것과 같다(2026-09-01 관리자
  * 지시). 도는 것이 없으면 통째로 안 그린다. */
@@ -1007,6 +1045,16 @@ button.resource.is-download:hover:not(:disabled)::after {
   width: 100%;
   margin-bottom: 4px;
   font-size: 12px;
+}
+
+/* 칸이 둘뿐인 표(매칭). 화면 폭을 다 쓰면 두 칸이 양 끝으로 갈라선다. */
+.admin-table.is-narrow {
+  max-width: 900px;
+}
+
+/* 예습 링크 입력 묶음. 링크 한 줄이 남는 가로를 다 가져가지 않게 한다. */
+.admin-preview {
+  max-width: 380px;
 }
 
 /* 관리자 체크리스트 다섯 칸.
