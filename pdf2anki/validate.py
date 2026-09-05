@@ -22,7 +22,8 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
-from .schema import CARD_SCHEMA, IMAGE_FORMATS, MAX_Q_CHARS, MAX_RECALL_ITEMS
+from .schema import (CARD_SCHEMA, FRAME_HEAVY_MIN_CHARS, IMAGE_FORMATS, MAX_Q_CHARS,
+                     MAX_RECALL_CHARS, MAX_RECALL_ITEMS, MIN_RECALL_SHARE)
 from .textutil import char_ngrams, containment, jaccard, norm_key
 
 RE_CLOZE = re.compile(r"\{\{c(\d+)::(.*?)(?:::(.*?))?\}\}")
@@ -49,9 +50,33 @@ OX_TRUE = {"o", "○", "맞다", "true", "예", "참"}
 OX_FALSE = {"x", "×", "틀리다", "false", "아니오", "거짓"}
 SPLIT_ITEMS = re.compile(r"[,;·/\n]|\s→\s|\s-\s")
 RE_BULLET_LINE = re.compile(r"^\s*[-•*]\s+\S", re.M)
+# 답 안의 `**강조**` — 회수의 핵심이라고 저자가 표시한 자리(`quality.md` 「답의 서식」).
+# `build.render_answer` 가 이것을 `.key` 로 세우고, 여기서는 그 무게를 잰다.
+RE_EMPH = re.compile(r"\*\*(.+?)\*\*", re.S)
 
 # 질문 길이 상한(`MAX_Q_CHARS`)은 `schema.py` 에 있다 — 계약에 실려야 모델이 안다.
 # 여기서 이름을 다시 내보내는 것은 `prequiz/schema.py` 가 그렇게 가져다 쓰기 때문이다.
+
+
+def recall_load(a: str, fmt: str) -> tuple[int, int]:
+    """`(외워야 하는 글자 수, 뒷면에 찍히는 글자 수)`.
+
+    **뒷면 길이와 회수 부담은 다른 값이다.** `basic` 의 답은 강조 아닌 부분이 프레임이라
+    읽기만 하면 되는데, 길이만 재면 그것까지 부담으로 잡힌다. 그래서 형식마다 회수
+    대상이 어디 있는지를 보고 센다.
+
+        basic·ox·image   `a` 안의 `**` 강조. 강조가 없으면 답이 통째로 회수 대상이다
+                         (`quality.md` — "한 덩어리라 통째로 회수 대상이면 씌우지 않는다")
+        cloze            `a` 전체. 계약상 `a` 는 이미 가린 것만 모은 것이다
+
+    `cloze` 의 프레임(문장)은 앞면에 주어지므로 어느 쪽에도 안 든다. 그것이 길다는 신호는
+    `cloze_sentence_too_long` 이 따로 낸다.
+    """
+    plain = RE_EMPH.sub(r"\1", a)
+    if fmt == "cloze":
+        return len(plain), len(plain)
+    marked = sum(len(x) for x in RE_EMPH.findall(a))
+    return (marked or len(plain)), len(plain)
 
 
 def count_items(a: str) -> int:
@@ -327,6 +352,20 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
         # cloze 는 정답이 질문 안에 있는 것이 정의이므로 노출 검사 대상이 아니다
         if fmt != "cloze" and containment(char_ngrams(a), char_ngrams(q)) >= LEAK_THRESHOLD:
             flags[i].append("answer_leaked_in_question")
+
+        # 답의 무게. **뒷면 길이가 아니라 외워야 하는 글자를 잰다**(`recall_load`).
+        # 두 축은 서로 다른 고장이고 거의 안 겹친다 — 2083장에서 9장(3%)뿐이었다.
+        recall, printed = recall_load(a, fmt)
+        if recall > MAX_RECALL_CHARS:
+            flags[i].append("recall_load_high")
+        # 외울 건 적은데 뒷면이 긴 카드. 프레임이 답에 눌러앉았다는 뜻이라 갈 곳이 있다 —
+        # `explanation` 이거나, 프레임이 회수의 이름이라면 `cloze` 다. cloze 는 프레임이
+        # 이미 앞면에 있으므로 이 검사에 걸릴 수 없다(`recall == printed`).
+        #
+        # **뒷면 길이를 같이 무는 이유**는 비율만 보면 짧고 멀쩡한 답이 쓸려 오기
+        # 때문이다 — 「**흡혈**하는 선충」은 비율이 낮아도 읽을 것이 없다.
+        if printed >= FRAME_HEAVY_MIN_CHARS and recall / printed < MIN_RECALL_SHARE:
+            flags[i].append("answer_frame_heavy")
 
         if len(RE_CLOZE.findall(q)) > MAX_RECALL_ITEMS:
             flags[i].append("too_many_clozes")

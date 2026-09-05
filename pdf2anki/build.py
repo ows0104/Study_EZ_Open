@@ -86,8 +86,13 @@ CSS = """
 /* 답이 통째로 파라면 그 안에서 강조가 서지 않는다. 강조할 자리를 찾은 답만 본문 색을
    내리고(`.body`) 회수 핵심에만 파랑을 남긴다. 자리를 못 찾은 답 — 대개 한 덩어리가
    그대로 회수 대상인 짧은 답 — 은 `.body` 가 없어 예전처럼 통째로 파랗다. */
-.a .body { color: #1a1a1a; font-weight: 600; }
-.nightMode .a .body { color: #e8e8e8; }
+/* 프레임은 **읽기만 하면 되는 글자다.** 회수 대상과 같은 무게로 서 있으면 눈이 매번
+   전부를 훑는다 — 답 글자의 중앙 43% 가 이 부분이다. 한 단계 눌러 강조에 먼저 앉게
+   한다. 지우지는 않는다 — 답이 무슨 말인지는 프레임이 쥐고 있다.
+   **글자 크기는 건드리지 않는다.** `.key` 가 `.body` 안에 들어 있어서(`render_answer`)
+   `em` 으로 줄이면 강조까지 같이 줄어든다. */
+.a .body { color: #4a4a4a; font-weight: 500; }
+.nightMode .a .body { color: #b0b0b0; }
 .a .key { color: #0b5cad; font-weight: 700; }
 .nightMode .a .key { color: #7ab8f5; }
 /* 빈칸 카드는 `a` 필드를 안 쓰고 뒷면이 문장을 통째로 다시 그린다. Anki 가 드러난
@@ -273,6 +278,9 @@ WARN_MINOR = {
 WARN_CHORE = {
     "similar_duplicate": "다른 카드와 회수 방향이 겹칠 수 있다",
     "question_too_long": "질문이 길다 — 축을 여럿 물고 있지 않은지 볼 것",
+    "recall_load_high": "한 번에 외울 것이 많다 — 축을 갈라 나눌 수 있는지 볼 것",
+    "answer_frame_heavy": "외울 것에 비해 뒷면이 길다 — 부연을 해설로 보내거나 "
+                          "빈칸 형식이 맞는지 볼 것",
     "cloze_sentence_too_long": "빈칸 문장이 길다 — 정의문을 통째로 옮겨 놓지 않았는지 볼 것",
     "too_many_items": "한 번에 회수할 항목이 많다",
     "too_many_clozes": "가린 곳이 많다",
