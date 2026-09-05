@@ -1059,6 +1059,185 @@ button.resource.is-download:hover:not(:disabled)::after {
   font-size: 14px;
 }
 
+/* 「더 보기」. 표 아래에 혼자 서고, 옆에 몇/몇을 적어 둔다 — 남은 줄이 있다는
+ * 것을 버튼 하나로만 말하면 목록이 끝난 줄 안다. */
+.admin-more {
+  display: flex;
+  margin-top: 10px;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-more small {
+  color: var(--ink-3);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 과목 블록. 접힌 채로 서고 최신 과목 하나만 펴 둔다. 머리글은 접혀 있어도
+ * 편 수와 남은 일 수를 말한다. */
+.admin-group {
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  background: var(--surface);
+}
+
+.admin-group > summary {
+  display: flex;
+  padding: 10px 14px;
+  gap: 8px;
+  align-items: baseline;
+  border-radius: var(--r-3);
+  cursor: pointer;
+  list-style: none;
+}
+
+.admin-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* 접힘/펴짐을 삼각형 하나로. 글자로 적으면 과목 이름과 경쟁한다. */
+.admin-group > summary::before {
+  content: "▸";
+  color: var(--ink-3);
+  font-size: 10px;
+  transition: transform 0.12s ease;
+}
+
+.admin-group[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.admin-group > summary:hover {
+  background: var(--surface-2);
+}
+
+.admin-group-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-group > summary small {
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+/* 남은 일 수는 오른쪽 끝에. 탭 옆 숫자와 같은 모양을 쓴다 — 같은 뜻이다. */
+.admin-group > summary .admin-tab-count {
+  margin-left: auto;
+}
+
+.admin-group-body {
+  padding: 0 10px 10px;
+}
+
+/* 한 편. **평소에 보이는 것은 사실뿐이고 고치는 자리는 눌러야 열린다** —
+ * 입력 상자가 줄마다 셋씩 서 있으면 목록이 서식지처럼 보인다. */
+.lecture-card {
+  display: grid;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line-soft);
+  gap: 8px 14px;
+  grid-template-columns: minmax(200px, 1.2fr) auto;
+  align-items: start;
+}
+
+.lecture-card:first-of-type {
+  border-top: 0;
+}
+
+.lecture-card.is-unmatched {
+  border-radius: var(--r-2);
+  background: var(--warn-soft);
+}
+
+.lecture-card-head a {
+  font-size: 13.5px;
+  font-weight: 550;
+}
+
+.lecture-card-head small {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+/* 체크리스트는 제목 오른쪽에 붙는다. 줄을 따로 쓰면 편마다 높이가 두 배가 된다. */
+.lecture-card .checklist {
+  justify-self: end;
+}
+
+/* 사실 줄 — 매칭과 예습 링크. 버튼은 그 오른쪽 끝이다. */
+.lecture-card-facts {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 6px 14px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.lecture-fact {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.lecture-fact small {
+  color: var(--ink-3);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 320px;
+}
+
+.lecture-card-actions {
+  display: flex;
+  margin-left: auto;
+  gap: 4px;
+}
+
+.lecture-card-actions button {
+  min-height: 26px;
+  padding: 0 9px;
+  font-size: 11.5px;
+}
+
+/* 예습 링크를 넣는 자리. 눌렀을 때만 열린다. */
+.lecture-preview {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.lecture-preview input {
+  flex: 1 1 220px;
+  min-width: 160px;
+  font-size: 12px;
+}
+
+.lecture-card .candidates {
+  grid-column: 1 / -1;
+  max-width: 520px;
+}
+
+/* 좁은 화면에서는 한 줄로 세운다. 체크리스트가 오른쪽 끝에 붙어 있으면
+ * 제목과 겹친다. */
+@media (max-width: 720px) {
+  .lecture-card {
+    grid-template-columns: 1fr;
+  }
+
+  .lecture-card .checklist {
+    justify-self: start;
+  }
+}
+
 /* 관리자 체크리스트 다섯 칸.
  *
  * **색은 남은 칸이 가져간다.** 끝낸 칸을 칠하면 다 한 강의가 화면에서 제일

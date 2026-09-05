@@ -119,9 +119,11 @@ PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m studyez watch
   `DELETE …/attempts`
 - **관리자 화면** — 탭 셋으로 갈라져 있다(2026-09-04). 왼쪽부터 `/admin` **퀴즈**는
   위가 도는 일감 판(`/api/admin/prequiz-jobs` — 순서 옮기기·멈추기)이고 아래가
-  만들어진 덱 목록(`runMeta`의 문항 수·만든 날·검토 표시), `/admin/users` **계정**은
-  승인(대기가 위로 선다), `/admin/lectures` **강의**는 짝 확정(`PUT …/match`) ·
-  체크리스트 `waive` · 예습 링크 · 과목 별칭. 러너가 안 붙었는데 일감이 기다리면
+  만들어진 덱 목록이다 — 최신순 열 줄씩, 문항 수·만든 때·검토 표시와 **무슨 판으로
+  구웠나**(`run.meta.json`의 `source_pdf`에서 읽는다. 필기 판이 그 뒤로 올라갔으면
+  「옛 판」으로 뜬다). `/admin/users` **계정**은 승인(대기가 위로 선다),
+  `/admin/lectures` **강의**는 과목별 블록에 짝 확정(`PUT …/match`) · 체크리스트
+  `waive` · 예습 링크 · 과목 별칭. 러너가 안 붙었는데 일감이 기다리면
   그 경고만 어느 탭에서든 뜬다
 - **크롬 확장** — 작년 PDF와 예습 프롬프트를 ChatGPT·Gemini·Claude 새 대화에
   채우고 링크를 회수한다. 스토어용 ZIP은 `chrome-extension\build-store-package.ps1`

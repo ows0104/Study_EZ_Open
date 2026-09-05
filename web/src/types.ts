@@ -151,7 +151,7 @@ export type LectureDetail = {
    * `null`이면 화면이 그 자리를 아예 안 그린다 — 덱만 있는 편과 같다.
    */
   mainquiz: QuizProgress | null;
-  runMeta?: Record<string, { reviewFlagged: number; slidesUnused: number; itemCount: number; builtAt: string | null }>;
+  runMeta?: Record<string, RunMetaBrief>;
 };
 
 /**
@@ -310,6 +310,22 @@ export type JobBoard = {
   runner: RunnerBeat | null;
 };
 
+/**
+ * 구워진 덱 하나의 요약. `run.meta.json`에서 서버가 꺼내 둔 값이다.
+ *
+ * `sourceVersion`은 **무슨 판으로 구웠나**다. 지금 필기의 판(`AdminRow.version`)이
+ * 그보다 크면 그 덱은 옛 자료로 만든 것이고, 한 편의 두 덱 중 하나만 다시 구운
+ * 경우가 여기서 갈려 보인다. 파일명을 못 읽으면 `null`이다 — 1로 메우면 「같은
+ * 판」으로 읽힌다.
+ */
+export type RunMetaBrief = {
+  reviewFlagged: number;
+  slidesUnused: number;
+  itemCount: number;
+  builtAt: string | null;
+  sourceVersion: number | null;
+};
+
 export type AdminRow = {
   subject: string;
   runId: string;
@@ -334,7 +350,7 @@ export type AdminRow = {
    *  끝난 것도 남는다 — 실패가 조용히 사라지면 안 된다. */
   prequizJob: PrequizJob | null;
   preview: { shareUrl: string; conversationUrl: string; provider: PreviewProvider } | null;
-  runMeta: Record<string, { reviewFlagged: number; slidesUnused: number; itemCount: number; builtAt: string | null }>;
+  runMeta: Record<string, RunMetaBrief>;
 };
 
 export type AdminOverview = {
