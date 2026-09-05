@@ -109,7 +109,7 @@ CARD_SCHEMA = {
         "q": {"type": "string", "minLength": 1,
               "description": "질문. cloze 는 {{c1::...}} 를 포함한 문장."},
         "a": {"type": "string", "minLength": 1,
-              "description": "핵심 정답만. 이유와 부연은 explanation 으로."},
+              "description": "회수 대상을 담는다. 회수 대상이 아닌 부연은 explanation 으로."},
         "explanation": {"type": ["string", "null"],
                         "description": "왜 이 답인지. q/a 의 근거가 되어서는 안 된다. "
                                        "예습 카드에서는 **수업에서 이것이 어디에 쓰이는지**를 "
