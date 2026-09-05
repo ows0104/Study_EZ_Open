@@ -186,9 +186,19 @@ def leaks(prompt: str, cards: list[dict],
             out.append({"id": c["id"], "kind": "explanation_leaked",
                         "hard": True, "detail": exp[:60], "card": c})
         if c["card_format"] == "cloze":
+            # **힌트 칸은 앞면에서 뺀 뒤에 견준다.** `{{c1::답::갈림}}` 의 셋째 칸은
+            # Anki 가 앞면에 보여 주는 힌트이고, 갈림을 보이는 힌트는 정의상 답을 품는다
+            # (`자웅{{c1::이체::동체/이체}}`). 그것을 누출로 세면 **의도한 카드가 hard 로
+            # 사라진다** — 답이 4글자 이상일 때만 걸려서 짧은 답으로 시험하면 안 보인다
+            # (`{{c1::사상유충::간상유충/사상유충}}` 이 걸리고 위의 「이체」는 안 걸렸다).
+            #
+            # 힌트가 답을 지나치게 알려 주는 것은 다른 문제이고, 그 판단은 저작 쪽
+            # 철학이 맡는다. 여기서 보는 것은 **가린 말이 문장 본문에 맨몸으로 또
+            # 있는가** 하나다.
+            bare = norm_key(RE_CLOZE.sub(lambda m: "[...]", c["q"]))
             for m in RE_CLOZE.finditer(c["q"]):
                 hidden = norm_key(m.group(1))
-                if len(hidden) >= 4 and hidden in front:
+                if len(hidden) >= 4 and hidden in bare:
                     out.append({"id": c["id"], "kind": "cloze_unmasked",
                                 "hard": True, "detail": m.group(1)[:30], "card": c})
     return out
