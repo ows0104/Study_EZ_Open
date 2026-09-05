@@ -23,6 +23,26 @@ PROFILES = {
     "prelecture": "profiles/prelecture.md",
 }
 
+# **도메인 모듈의 예시는 실제로 나간 카드다. 그래서 그 편으로는 평가하지 마라.**
+#
+# `domains/medical_ko.md` 의 「형식 선택 — 이 분야의 실제 카드」가 쓰는 편은 이렇다.
+#
+#     250919_03  말라리아 재발 (recrudescence/relapse/reinfection)
+#     250919_02  말라리아 모기 내 발육 (ookinete/oocyst/sporozoite)
+#     250825_03  종양 혈관신생 (hypoxia/HIF-1α/VEGF)
+#     250826_02  PCR cycle
+#     260821_01  혈소판 부착·응집
+#     260902_03  Praziquantel · 260903_02  T. saginata · 260821_03  염증의 네 징후
+#
+# 2026-09-05 에 이 목록이 한 편에 몰려 있어서 데었다. `core/quality.md` 의 예시가
+# 넷 다 `260901_01`(장내선충증) 카드였고, 그 편을 새 프롬프트로 돌려 재 보니
+# **cloze 14장 중 5장이 예시에서 그대로 나왔다.** 「규칙이 작동했다」로 읽을 뻔했다.
+#
+# 그래서 둘로 나눴다 — 코어는 분야를 비운 예시로 역학만 가르치고(모든 편에 실려도
+# 누출이 없다), 실제 카드는 도메인 모듈에 두되 **여러 편에 흩는다.** 흩어도 누출은
+# 남으니(같은 주제의 올해 편이 여전히 그 예시를 본다) 위 목록을 보고 평가할 편을 고른다.
+# 주제까지 봐야 한다 — 작년 말라리아 예시는 올해 말라리아 편에도 닿는다.
+
 DOMAINS = {
     "generic": "domains/generic.md",
     "medical_ko": "domains/medical_ko.md",
