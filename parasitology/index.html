@@ -93,19 +93,28 @@ button:disabled{opacity:.45;cursor:default}
 .pill{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--accent-soft);
   color:var(--accent);font-weight:700}
 .count{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
-.timer{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:700;font-size:15px}
-.timer.warn{color:var(--no)}
-.bar{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-bottom:14px}
-.bar>i{display:block;height:100%;background:var(--accent);transition:width .25s linear}
+/* 남은 시간은 **조용한 숫자 하나**로만 둔다. 폭이 줄어드는 막대를 같이
+   두었더니 눈가에서 계속 움직여서, 문제를 보는 내내 쫓기는 기분이 들었다.
+   숫자는 1초에 한 번 조용히 바뀔 뿐이고 필요할 때만 보면 된다.
+   자리를 고정하려고 tabular-nums를 쓴다 — 9와 10 사이에서 흔들리면 그것도
+   움직임이다. */
+.timer{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:600;
+  font-size:15px;color:var(--muted);letter-spacing:.02em}
+.timer.warn{color:var(--no);font-weight:700}
 .stem{font-size:16px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em}
 /* 사진 왼쪽, 보기 오른쪽.
    땡시는 결국 사진을 보는 시험이라 사진에 넓은 쪽을 준다. 세로로 쌓으면
    사진과 보기를 같이 볼 수 없어 눈이 오르내린다 — 시간을 재는 화면에서 그건 손해다.
    좁은 화면에서는 다시 한 줄로 쌓는다. */
 .qgrid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(270px,1fr);
-  gap:18px;align-items:start}
-/* 보기는 사진 옆 가운데에 선다. 위로 붙이면 사진 절반 높이만큼 빈자리가 남는다. */
-.qgrid .opts{align-self:center}
+  grid-template-rows:auto 1fr;gap:0 18px;align-items:start}
+/* **질문은 보기 바로 위에 둔다.** 카드 맨 위(사진 왼쪽 어깨)에 두면 질문과
+   보기가 화면 양 끝으로 갈라져서, 무엇을 묻는지 확인하려면 눈이 가로로
+   한 번 더 왕복해야 한다. 사진은 두 줄을 다 쓰고 오른쪽 칸만 위아래로 나눈다.
+   좁은 화면에서는 이 배치를 걷어내고 질문 → 사진 → 보기로 다시 쌓는다. */
+.qgrid .stem{grid-column:2;grid-row:1}
+.qgrid .imgwrap{grid-column:1;grid-row:1/3}
+.qgrid .opts{grid-column:2;grid-row:2;align-self:start}
 .imgbox{position:relative;background:#0b0d10;border-radius:10px;overflow:hidden;
   display:flex;align-items:center;justify-content:center;cursor:zoom-in}
 .imgbox img{max-width:100%;max-height:min(48vh,430px);display:block}
@@ -232,7 +241,15 @@ body:has(#quiz:not(.hidden)) #who{display:none}
 /* 두 단이 들어갈 폭이 아니면 한 줄로 쌓는다. 이 선 아래에서는 사진 옆에
    보기를 세워봐야 둘 다 좁아질 뿐이다. */
 @media (max-width:760px){
-  .qgrid{grid-template-columns:1fr}
+  /* 한 줄로 쌓을 때는 칸 지정을 걷어낸다. 남겨 두면 사진이 두 줄을 차지한
+     채로 겹친다. 그 위에 **사진 → 질문 → 보기**로 세운다 — 2단에서 질문이
+     보기 바로 위에 오는 것과 같은 이유로, 고를 것 바로 앞에서 무엇을
+     묻는지 읽게 된다. (적힌 순서는 질문이 먼저라 여기서 뒤집는다.) */
+  .qgrid{grid-template-columns:1fr;grid-template-rows:none;gap:0}
+  .qgrid .stem,.qgrid .imgwrap,.qgrid .opts{grid-column:auto;grid-row:auto}
+  .qgrid .imgwrap{order:1}
+  .qgrid .stem{order:2;margin-top:12px}
+  .qgrid .opts{order:3}
   .qgrid .imgbox img{max-height:min(44vh,380px)}
   .qgrid .opts{margin-top:2px}
 }
@@ -343,13 +360,13 @@ body:has(#quiz:not(.hidden)) #who{display:none}
     <span class="count" id="q-count"></span>
     <span class="timer" id="q-timer"></span>
   </div>
-  <div class="bar"><i id="q-bar"></i></div>
 
   <div class="card">
-    <p class="stem" id="q-stem"></p>
-    <!-- 왼쪽 사진 · 오른쪽 보기. 좁은 화면에서는 한 줄로 쌓인다. -->
+    <!-- 왼쪽 사진 · 오른쪽에 질문과 보기. 좁은 화면에서는 한 줄로 쌓인다.
+         질문이 grid 안에 있는 것은 2단일 때 보기 위로 보내기 위해서다. -->
     <div class="qgrid">
-      <div>
+      <p class="stem" id="q-stem"></p>
+      <div class="imgwrap">
         <div class="imgbox" id="q-imgbox" onclick="zoom()">
           <img id="q-img" alt="표본 사진">
           <span class="imgmeta" id="q-meta"></span>
@@ -438,6 +455,6 @@ body:has(#quiz:not(.hidden)) #who{display:none}
 <script src="../auth.js?v=0399f336"></script>
 <!-- 다섯 과목이 같이 쓰는 로그인 문. 화면은 이 파일이 들고 온다. -->
 <script src="../gate.js?v=38aef296"></script>
-<script src="app.js?v=643f5a65"></script>
+<script src="app.js?v=7ba2f8e0"></script>
 </body>
 </html>

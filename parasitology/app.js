@@ -354,9 +354,11 @@ function buzz(){                     // 땡 — 시간이 다 됐을 때
   } catch (e) {}
 }
 function tick(){
-  $('q-timer').textContent = S.left + '초';
+  // 「30초」가 아니라 「0:30」. 글자가 붙으면 문장처럼 읽혀 자꾸 눈이 가는데,
+  // 시계 모양이면 시계로만 보인다. 자리 수도 끝까지 안 바뀐다.
+  $('q-timer').textContent = Math.floor(S.left / 60) + ':'
+    + String(S.left % 60).padStart(2, '0');
   $('q-timer').classList.toggle('warn', S.left <= 5);
-  $('q-bar').style.width = (S.left / S.limit * 100) + '%';
   if (S.left <= 0){ stopTimer(); buzz();
     if (S.i < S.qs.length-1){ S.i++; render(); } else finish();
     return; }
@@ -365,7 +367,7 @@ function tick(){
 function startTimer(){
   stopTimer();
   S.timedFor = S.i;
-  if (!S.limit){ $('q-timer').textContent = ''; $('q-bar').style.width = '100%'; return; }
+  if (!S.limit){ $('q-timer').textContent = ''; return; }
   S.left = S.limit;
   tick();
   S.timer = setInterval(tick, 1000);
@@ -676,7 +678,9 @@ function zoom(){
     if (Z.k > 1.01){
       Z.drag = { x:e.clientX, y:e.clientY };
       m.classList.add('dragging');
-      m.setPointerCapture(e.pointerId);
+      // 창 밖으로 끌고 나가도 계속 따라오게 붙잡는다. 붙잡을 수 없는
+      // 포인터면(이미 놓인 뒤 등) 던지므로, 못 붙잡아도 끌기는 되게 둔다.
+      try { m.setPointerCapture(e.pointerId); } catch (_){}
     }
   });
   m.addEventListener('pointermove', e => {
