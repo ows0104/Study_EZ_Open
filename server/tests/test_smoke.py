@@ -345,22 +345,42 @@ def main() -> None:
     client.put(waive, headers=USER, json={"item": "notes_prev", "waived": False})
     check("되돌리면 todo", _checklist()["notes_prev"] == "todo", _checklist())
 
-    print("\n[11] 승인 게이트 — 가입만으로는 자료가 안 보인다")
+    print("\n[11] 앱별 문 — Study_EZ는 승인, 땡시는 로그인")
     from fastapi import HTTPException
 
-    from app.auth import CurrentUser, require_approved_user
+    from app.auth import CurrentUser, require_app, require_approved_user
+    from app.database import SessionLocal as _Session
+    from app.models import APP_SPOTTER, APP_STUDYEZ, AppGrant
 
-    pending = CurrentUser(id="u1", email="new@snu.ac.kr", is_admin=False, is_approved=False)
-    try:
-        require_approved_user(pending)
-        check("승인 전에는 막힌다", False, "통과해 버렸다")
-    except HTTPException as exc:
-        check("403으로 막힌다", exc.status_code == 403, exc.status_code)
-        # 프론트가 "승인 대기 중" 화면과 진짜 권한 오류를 갈라야 한다.
-        check("pending_approval 코드가 실린다", exc.detail.get("code") == "pending_approval", exc.detail)
+    with _Session() as db:
+        pending = CurrentUser(id="u1", email="new@snu.ac.kr", is_admin=False, apps={})
+        try:
+            require_approved_user(pending, db)
+            check("승인 전에는 막힌다", False, "통과해 버렸다")
+        except HTTPException as exc:
+            check("403으로 막힌다", exc.status_code == 403, exc.status_code)
+            # 프론트가 "승인 대기 중" 화면과 진짜 권한 오류를 갈라야 한다.
+            check(
+                "pending_approval 코드가 실린다",
+                exc.detail.get("code") == "pending_approval",
+                exc.detail,
+            )
 
-    approved = CurrentUser(id="u2", email="ok@snu.ac.kr", is_admin=False, is_approved=True)
-    check("승인되면 통과한다", require_approved_user(approved) is approved)
+        approved = CurrentUser(
+            id="u2", email="ok@snu.ac.kr", is_admin=False, apps={APP_STUDYEZ: "member"}
+        )
+        check("승인되면 통과한다", require_approved_user(approved, db) is approved)
+        check("is_approved는 권한에서 나온다", approved.is_approved and not pending.is_approved)
+
+        # 땡시는 정책이 auto다. 같은 사람이 저기서는 막히고 여기서는 그 자리에서
+        # 권한을 받는다 — 형제 앱이 갈리는 것이 이 한 줄로 보인다.
+        got = require_app(APP_SPOTTER)(pending, db)
+        check("땡시는 로그인만으로 통과한다", got.apps.get(APP_SPOTTER) == "member", got.apps)
+        check(
+            "그 권한이 표에 남는다",
+            db.get(AppGrant, ("u1", APP_SPOTTER)) is not None,
+        )
+        check("그래도 Study_EZ는 여전히 막힌다", not pending.is_approved)
 
     print("\n[12] R2가 없어도 서버는 돈다 — 파일 경로만 잠긴다")
     # 첫 배포는 R2 없이 나간다. 캘린더가 시간표만으로 완성되는 화면이라
