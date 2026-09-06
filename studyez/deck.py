@@ -91,9 +91,10 @@ def deck_node(run_id: str, title: str,
     번호가 없어 `260820_01`과 `260820_02`(같은 제목의 연강)가 한 노드로 뭉개지고
     있었다.
 
-    예습·강의록·기출이 한 노드 아래 모이는 것은 그대로다. 예습 덱의 이름도 **올해
-    강의**에서 나오기 때문이다(`calendar_name`). 실측으로 짝이 선 15쌍 중 올해
-    필기가 이미 있는 12쌍이 전부 같은 노드에 섰다.
+    예습·강의록·기출이 한 노드 아래 모이는 것은 **두 갈래가 같은 제목을 받을 때만**
+    성립한다. 이 함수는 받은 제목을 다듬을 뿐이라 갈린 것을 붙여 주지 못한다 —
+    한동안 그 자리가 뚫려 있었고 2026-09-03 실측에서 짝이 선 20쌍 중 5쌍이 어긋나
+    있었다. 지금은 `pinned_node`가 못을 박는다.
     """
     clean = RE_FS_UNSAFE.sub("", unicodedata.normalize("NFC", title))
     clean = " ".join(clean.split()).rstrip(". ")
@@ -111,9 +112,8 @@ TARGET_NAME = "pre_target.json"
 RE_FS_UNSAFE = re.compile(r'[\\/:*?"<>|]')
 
 
-def apkg_name(run_id: str, title: str, kind: str,
-              professors: tuple[str, ...] | list[str] = ()) -> str:
-    """덱 파일 이름. **자료 파일명과 같은 꼴로 세운다.**
+def apkg_name(node: str, kind: str) -> str:
+    """덱 파일 이름. **덱 나무의 가운데 마디에 갈래 꼬리만 단다.**
 
         [260820_03] 소아질환의 병태생리(2) 소아기 특이 질환 1(김은나).apkg
         [260825_01] 종양의 분자생물학(1)(전윤경) 예습.apkg
@@ -124,16 +124,92 @@ def apkg_name(run_id: str, title: str, kind: str,
     **`deck_id`는 안 바꾼다.** 그쪽이 guid의 씨앗이라 바꾸면 Anki가 이미 받아 간
     카드를 전부 새 노트로 본다. 파일 이름은 guid에 안 들어간다.
 
-    괄호 안 교수는 필기에서 온 제목이면 이미 들어 있다(`LectureFile.title`은 파일명에서
-    뽑은 표시용 원문이다). **시간표에서 온 제목에는 없다** — 캘린더는 제목과 교수를 따로
-    들고 있어서, 그때만 여기서 붙인다.
+    괄호 안 교수를 붙이는 자리는 `deck_node`다. 필기에서 온 제목이면 이미 들어 있고
+    (`LectureFile.title`은 파일명에서 뽑은 표시용 원문이다) 시간표에서 온 제목에는
+    없어서, 거기서 한 번만 가른다.
 
-    덱 나무의 가운데 마디도 같은 이름을 쓴다(`deck_node`). Anki 안에서 보는 이름과
-    받아 둔 파일 이름이 다르면 둘을 맞춰 보는 일이 사람 몫이 된다.
+    덱 나무의 가운데 마디와 **같은 글자를 쓴다**(`deck_node`). Anki 안에서 보는 이름과
+    받아 둔 파일 이름이 다르면 둘을 맞춰 보는 일이 사람 몫이 된다. 그래서 마디를
+    여기서 다시 짓지 않고 받아만 온다 — 한동안 이 함수가 따로 짓고 있었고, 그동안
+    파일 이름만 옛 규칙으로 남는 자리가 생겼다(`calendar_name`).
     """
-    name = deck_node(run_id, title, professors)
     # 예습 덱은 파일에서만 꼬리를 단다. 덱 나무에서는 마지막 마디가 이미 `::예습`이다.
-    return f"{name} 예습" if kind == PRE else name
+    return f"{node} 예습" if kind == PRE else node
+
+
+def pre_seat_of(runs_dir: Path, run_id: str, subject: str = "") -> Path | None:
+    """올해 강의 `run_id`의 예습이 도는 **작년 자리**.
+
+    예습 산출물은 작년 run 디렉터리에 있고 거기 적힌 `run_id`가 올해 것이다. 그래서
+    올해 쪽에서 자기 짝을 찾으려면 `runs/`를 훑는 수밖에 없다
+    (`agent.prev_run_of`가 같은 훑기를 단계 로그를 찾는 데 쓴다).
+
+    **같은 교시를 두 과목이 나눠 쓸 수 있다.** 둘이 걸리면 아무것도 돌려주지 않는다 —
+    남의 강의 이름이 붙는 것보다 갈려 있는 편이 낫다.
+    """
+    hits = []
+    for target in sorted(runs_dir.glob(f"*/{TARGET_NAME}")):
+        row = _load(target)
+        if not isinstance(row, dict) or str(row.get("run_id") or "") != run_id:
+            continue
+        if subject and row.get("subject") and str(row["subject"]) != subject:
+            continue
+        hits.append(target.parent)
+    return hits[0] if len(hits) == 1 else None
+
+
+def node_of(deck_name: str) -> str:
+    """덱 전체 이름에서 가운데 마디만. 마디에는 `::`가 못 들어간다(`RE_FS_UNSAFE`)."""
+    parts = [p for p in str(deck_name or "").split("::") if p]
+    if parts and parts[-1] == "예습":
+        parts.pop()
+    return parts[-1] if parts else ""
+
+
+def pinned_node(runs_dir: Path, run_id: str, kind: str, subject: str = "") -> str:
+    """**이미 나간 예습 덱이 쓰고 있는 마디.** 없으면 빈 문자열.
+
+    ## 왜 못을 박는가
+
+    두 갈래가 제목을 다른 데서 딴다 — 예습은 시간표 칸, 복습은 올해 필기의 파일명.
+    사람이 손으로 적는 두 글이라 띄어쓰기 하나로 갈린다. 2026-09-03 실측에서 짝이
+    선 20쌍 중 5쌍이 어긋나 있었다.
+
+        예습  [260831_01] 기생충학 총론 (1)(최민호)      ← 시간표
+        복습  [260831_01] 기생충학 총론1(최민호)         ← 파일명
+
+        예습  [260831_05] 연충란(최민호, 신은희, 여선주)
+        복습  [260831_05] 감염의 기초 실습 1 - 연충란
+
+    갈리면 Anki에서 형제로 안 서고 각자 나무를 하나씩 만든다.
+
+    **`pre_target.json`을 보고 맞추는 것으로는 안 된다.** 그 파일은 돌 때마다 다시
+    쓰이는데, 올해 필기가 들어오는 순간 출처가 시간표에서 파일명으로 갈아탄다
+    (`publish.plan_subject` — 필기가 없을 때만 `ahead`의 시간표 칸을 쓴다). 위 다섯
+    편의 `pre_target.json`은 지금 전부 파일명 쪽을 들고 있고, 이미 나간 예습 덱만
+    시간표 이름을 들고 있다.
+
+    그래서 **이미 나간 덱의 이름에 못을 박는다.** 그 덱은 학생의 Anki에 이미 들어가
+    있어서, 뒤늦게 이름을 바꾸면 카드가 옛 마디에 남고 새 마디가 옆에 하나 더 선다.
+
+    이름을 정말 바꿔야 하면 그 자리의 `pre_run.meta.json`을 지우고 두 갈래를 다시
+    구우면 된다 — 못은 그 파일 하나에 박혀 있다.
+
+    **못이 이 강의의 것인지는 마디에 박힌 `run_id`로 본다.** 짝이 바뀌면 한 자리가
+    지난번 강의의 덱을 그대로 안고 있다(`prequeue --force`) — 그때 못을 그냥 믿으면
+    남의 강의 이름으로 굽고, `rebuild`가 옛 파일까지 지운다.
+    """
+    seat = runs_dir / run_id if kind == PRE else pre_seat_of(runs_dir, run_id, subject)
+    if seat is None:
+        return ""
+    row = _load(seat / "pre_run.meta.json")
+    node = node_of(row.get("deck_name", "")) if isinstance(row, dict) else ""
+    if kind == PRE:
+        # 예습의 `run_id`는 작년 것이고 마디에는 올해 것이 박힌다. 지금 겨냥한
+        # 올해 강의가 무엇인지는 `pre_target.json`만 안다.
+        target = _load(seat / TARGET_NAME)
+        run_id = str((target or {}).get("run_id") or run_id) if isinstance(target, dict) else run_id
+    return node if node.startswith(f"[{run_id}]") else ""
 
 
 def calendar_of(run_dir: Path, run_id: str, title: str, kind: str,
@@ -156,11 +232,27 @@ def calendar_of(run_dir: Path, run_id: str, title: str, kind: str,
     return run_id, title, professors
 
 
+def calendar_node(runs_dir: Path, run_id: str, title: str, kind: str,
+                  professors: tuple[str, ...] | list[str] = (),
+                  subject: str = "") -> str:
+    """이 자리에서 나올 덱의 **가운데 마디**. 아직 자리가 없어도 부를 수 있다.
+
+    `run_dir`가 아니라 `runs_dir`를 받는다 — 쓸기가 덱을 만들기 전에 이름을 세우고
+    (`watch.build_queue`) 그때는 올해 자리가 아직 안 생겼기 때문이다.
+    """
+    pinned = pinned_node(runs_dir, run_id, kind, subject)
+    if pinned:
+        return pinned
+    rid, name, profs = calendar_of(runs_dir / run_id, run_id, title, kind, professors)
+    return deck_node(rid, name, profs)
+
+
 def calendar_name(run_dir: Path, run_id: str, title: str, kind: str,
-                  professors: tuple[str, ...] | list[str] = ()) -> str:
+                  professors: tuple[str, ...] | list[str] = (),
+                  subject: str = "") -> str:
     """이 자리에서 나올 덱의 파일 이름."""
-    rid, name, profs = calendar_of(run_dir, run_id, title, kind, professors)
-    return apkg_name(rid, name, kind, profs)
+    return apkg_name(calendar_node(run_dir.parent, run_id, title, kind,
+                                   professors, subject), kind)
 
 
 def calendar_deck(run_dir: Path, run_id: str, title: str, kind: str, subject: str,
@@ -170,8 +262,7 @@ def calendar_deck(run_dir: Path, run_id: str, title: str, kind: str, subject: st
     마지막 마디(`::강의록`·`::기출`)는 복습 빌드가 카드의 기원을 보고 스스로 단다.
     예습은 덱이 하나뿐이라 여기서 붙인다.
     """
-    rid, title, profs = calendar_of(run_dir, run_id, title, kind, professors)
-    node = deck_node(rid, title, profs)
+    node = calendar_node(run_dir.parent, run_id, title, kind, professors, subject)
     name = f"{subject}::{node}" if subject else node
     return f"{name}::예습" if kind == PRE else name
 
@@ -236,7 +327,10 @@ def run_main(*, pdf: str | Path, run_id: str, subject: str, lecture: str, title:
             "--subject", subject, "--lecture", lecture,
             "--jokbo-dir", str(jokbo_dir(runs_dir, subject)),
             "--check-dir", str(runs_dir / "_image_check"),
-            "--apkg-name", apkg_name(run_id, title or lecture, MAIN)]
+            # 덱 마디와 **같은 자리에서** 이름을 딴다. 여기만 `apkg_name` 을 직접
+            # 부르던 동안, 예습 짝이 있는 편에서 파일 이름만 파일명 제목으로 남았다.
+            "--apkg-name", calendar_name(runs_dir / run_id, run_id,
+                                         title or lecture, MAIN, subject=subject)]
     if note:
         argv += ["--note", note]
     if model:
@@ -292,11 +386,19 @@ def rebuild(*, run_dir: Path, kind: str, deck_name: str, id: str, jokbo_dir: Pat
     **`build` 의 인자 모양을 아는 유일한 자리다.**
 
     편당 몇 초라 로그 파일을 열지 않고 받아서 실패했을 때만 꼬리를 돌려준다.
+
+    **분량 계약은 여기서 안 건다**(`--allow-size`). 그것은 모델이 무엇을 낼지를 죄는
+    값인데 이 자리는 모델을 안 부른다 — 이미 있는 카드를 다시 쌀 뿐이다. 걸어 두면
+    상한을 내리는 날 **이미 나간 덱이 전부 다시 못 구워진다.** 2026-09-03 에 상한을
+    30 에서 20 으로 내리면서 그렇게 됐고, 하필 그날 같이 고친 것이 뒷면 CSS 라
+    「고쳤는데 아무 덱에도 안 붙는」 자리가 될 뻔했다. 장수는 빌드가 화면에 찍는다.
     """
     module = "pdf2anki.prequiz.build" if kind == PRE else "pdf2anki.build"
     argv = [sys.executable, "-m", module, str(run_dir),
             "--deck", deck_name, "--id", id,
             "--jokbo-dir", str(jokbo_dir), "--apkg-name", apkg_name]
+    if kind == PRE:
+        argv.append("--allow-size")
     done = subprocess.run(argv, cwd=str(repo_root), capture_output=True, text=True,
                           encoding="utf-8", errors="replace",
                           env=dict(os.environ, PYTHONIOENCODING="utf-8"))
@@ -482,6 +584,17 @@ def _reproduce_defects(cards: list[dict]) -> list[str]:
             if (c.get("reproduce") or {}).get("reason") in pdf2anki_build.DEFECT_REASONS]
 
 
+def _axis_unresolved(cards: list[dict]) -> list[str]:
+    """축 검사가 「무엇을 묻는지 모르겠다」고 한 채로 덱에 남은 빈칸 카드.
+
+    `_reproduce_defects`와 갈라 둔다. 저쪽은 문지기가 배포를 미루는 값이고 이쪽은
+    아니다 — 축 검사는 2026-09-06에 붙었고 한 편에서만 재 봤다(`build.AXIS_REASON`
+    주석). 세어서 적기만 하고, 사람이 보는 자리는 카드 뒷면이다(`build.warning_of`).
+    """
+    return [str(c.get("id") or "?") for c in cards
+            if (c.get("reproduce") or {}).get("reason") == pdf2anki_build.AXIS_REASON]
+
+
 def reflag(run_dir: Path) -> dict[str, int]:
     """이미 만들어 둔 카드에 **소프트 플래그만 다시 계산해 덧붙인다.**
 
@@ -609,6 +722,15 @@ def contract(run_dir: Path, run_id: str, title: str, kind: str) -> dict:
         # 있는 것은 「빠진 슬라이드가 없다」가 아니라 「그것을 재지 않는다」는 뜻이다.
         "untouched_slides": coverage.get("untouched_undeclared") or [],
         "objectives_without_card": coverage.get("objectives_without_card") or [],
+        # **기출 목표는 따로 센다 — 슬라이드로는 못 맞추기 때문이다**(`validate.py`가
+        # 인용 문항이 겹치는지로 본다). 값은 예전부터 `suspects.json` 에 있었는데 이
+        # 자리로 안 넘어와서 문지기도 publish 보고도 못 봤고, 2026-09-03 `260901_01`
+        # 이 기출 목표 11개를 세워 놓고 ②단계에서 카드를 한 장도 안 쓴 채 나갈 뻔했다.
+        # 그때 옆칸의 `objectives_without_card` 는 `[]` 였다.
+        "jokbo_objectives_without_card": coverage.get("jokbo_objectives_without_card") or [],
+        # 축 검사가 잡았는데 수선 고리(`--repair-rounds`)를 다 쓰고도 남은 빈칸 카드.
+        # 배포는 안 막는다 — 다만 남은 것이 어디에도 안 적히면 세어 볼 자리가 없다.
+        "axis_unresolved": _axis_unresolved(cards),
     }
 
     if kind == MAIN:

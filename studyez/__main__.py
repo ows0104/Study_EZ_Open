@@ -349,7 +349,8 @@ def run_rebuild(args) -> int:
         parsed = filenames.parse(deck.source_pdf(run_dir))
         title = parsed.title if parsed else run_dir.name
         professors = parsed.professors if parsed else ()
-        name = deck.calendar_name(run_dir, run_dir.name, title, kind, professors)
+        name = deck.calendar_name(run_dir, run_dir.name, title, kind, professors,
+                                  subject=subject)
         # **덱 이름도 다시 세운다.** `run.config.json`의 것을 그대로 쓰면 이름 규칙이
         # 바뀌어도 Anki 안에서 보이는 이름만 옛것으로 남는다 — 파일만 바뀌고 덱은
         # 그대로였던 것이 실제로 그 이유였다.

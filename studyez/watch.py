@@ -252,7 +252,10 @@ def build_queue(
                 subject=subject, run_id=run_id, key=item.key, date=item.date,
                 title=item.title, this_pdf=str(pdf), this_version=item.version,
                 reason=reason,
-                lecture=deck.deck_node(run_id, item.title, item.professors),
+                # 예습 짝이 이미 세워 둔 이름이 있으면 그것을 따른다. 파일명과
+                # 시간표가 띄어쓰기 하나로 갈리면 두 덱이 형제로 안 선다.
+                lecture=deck.calendar_node(runs_dir, run_id, item.title, deck.MAIN,
+                                           item.professors, subject=subject),
                 notes=notes,
             ))
 
