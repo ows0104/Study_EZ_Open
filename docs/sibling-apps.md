@@ -118,3 +118,17 @@ DNS는 Cloudflare에 있다(`docs/domain-runbook.md`). 앱마다 Pages 프로젝
 **쿠키가 거부되면 조용히 떨어진다.** `Domain=.localhost`처럼 브라우저가 받아
 주지 않는 자리에서는 쿠키가 예외 없이 그냥 사라진다. `session.js`는 쓴 뒤 되읽어
 확인하고, 안 들어갔으면 localStorage로 떨어진다 — 공유는 잃지만 그 앱은 돈다.
+
+## 앱 안의 갈래 — 과목
+
+땡시(`spotter`)는 **과목 다섯이 한 앱**이다(`routes/spotter.py`의 `SUBJECTS`).
+문은 `require_spotter` 하나이고, 로그인하면 다섯이 다 열린다. 갈리는 것은 R2
+키(`spotter/<과목>/`)와 사이트 경로(`spotter.studyez.kr/<과목>/`)뿐이다.
+
+**앱과 과목을 가르는 기준은 문이다.** 문이 다르면 앱이고(Study_EZ는 승인이
+필요해서 앱이다), 같으면 과목이다. 해부학 넷과 기생충학은 같은 사람에게 같은
+조건으로 열려야 해서 과목으로 뒀다 — 앱으로 갈랐으면 `app_grant`에 줄이 다섯
+생기고 승인 화면에 체크박스가 다섯 늘었을 것이다.
+
+과목을 더하는 것은 `SUBJECTS`에 한 줄, 그리고 자료를 올리는 것뿐이다.
+땡시 앱 자체의 문서는 `Spotter_Quiz/web/README.md`에 있다.

@@ -1,8 +1,11 @@
-"""기생충학 땡시 연습(Spotter_Quiz)이 쓰는 경로.
+"""땡시 연습(Spotter)이 쓰는 경로. 과목 다섯이 한 앱이다.
 
 **문은 로그인 하나다.** Study_EZ의 경로가 사람의 승인을 기다리는 것과 갈린다 —
 저기서 나가는 것은 남이 만든 강의 필기라 「이 학년 학생인가」를 사람이 확인해야
 하지만, 여기 있는 것은 우리가 만든 문항과 실습 정리본 사진이다. 가입하면 열린다.
+
+과목(`SUBJECTS`)은 갈래지 앱이 아니다. 해부학 넷과 기생충학이 문 하나를
+같이 쓰고, 로그인하면 다섯이 다 열린다. 갈리는 것은 R2 키와 사이트 경로뿐이다.
 
 그 차이는 이 파일이 아니라 `models.APP_POLICY`에 한 줄로 적혀 있다
 (`spotter: auto`). 여기서는 `require_spotter`를 지나는 것이 전부이고, 세 번째
@@ -11,9 +14,9 @@
 계정은 같다. 같은 Supabase, 같은 `profile` 표를 쓰므로 두 앱에 각각 가입할
 필요가 없다. 승인(`is_approved`)은 Study_EZ 쪽 화면에서만 의미를 갖는다.
 
-R2 키는 `spotter/` 아래에 모은다. Study_EZ의 강의 자료와 같은 버킷을 쓰되
-접두사로 갈라 둔다 — 버킷을 따로 두면 자격증명이 한 벌 더 늘고, 그것이 이
-분리가 막아 주는 것보다 크다.
+R2 키는 `spotter/<과목>/` 아래에 모은다. Study_EZ의 강의 자료와 같은 버킷을
+쓰되 접두사로 갈라 둔다 — 버킷을 따로 두면 자격증명이 한 벌 더 늘고, 그것이
+이 분리가 막아 주는 것보다 크다.
 """
 
 from __future__ import annotations
@@ -53,20 +56,44 @@ router = APIRouter(prefix="/spotter", tags=["spotter"])
 require_spotter = require_app(APP_SPOTTER)
 
 PREFIX = "spotter"
-DB_KEY = f"{PREFIX}/quiz_db.json"
-IMAGE_PREFIX = f"{PREFIX}/images"
 
-# 한 번에 서명해 줄 사진의 수. 한 세트가 최대 60문항이고 다시보기에서 같은
-# 세트를 또 쓰므로 그보다 넉넉히 잡는다. 상한이 있는 것은 이 경로가 로그인만
-# 지나기 때문이다 — 없으면 한 번의 요청으로 555장을 통째로 받아 갈 수 있다.
-MAX_SIGN = 80
+# 과목. **하나의 앱 안에서 갈리는 갈래지 앱이 아니다** — 문은 `require_spotter`
+# 하나이고, 로그인하면 다섯이 다 열린다. 과목을 늘리는 것은 여기 한 줄이다.
+#
+# 이름이 곧 R2 키의 한 칸이고 배포된 사이트의 경로와도 같다
+# (`spotter.studyez.kr/<과목>/`). 셋을 맞춰 두면 어디서 왔는지 헷갈릴 일이 없다.
+SUBJECTS = ("parasitology", "exam1", "trunk", "head-neck", "neuro")
 
-# 문항 DB. 인스턴스마다 한 벌 들고 있는다.
+# 기본 과목. 옛 경로(`/api/spotter/db`)가 가리키는 곳이다 — 과목이 하나뿐이던
+# 시절에 배포된 화면이 아직 열려 있을 수 있어서 남겨 둔다.
+DEFAULT_SUBJECT = "parasitology"
+
+# 한 번에 서명해 줄 사진의 수. 해부학 과목은 한 판에 700장까지 쓸 수 있어서
+# 화면이 커서 앞뒤로 창을 밀며 나눠 받는다. 상한이 있는 것은 이 경로가
+# 로그인만 지나기 때문이다 — 없으면 한 번에 전부 받아 갈 수 있다.
+MAX_SIGN = 120
+
+
+def _subject(name: str) -> str:
+    if name not in SUBJECTS:
+        raise HTTPException(status_code=404, detail=f"없는 과목입니다: {name}")
+    return name
+
+
+def _db_key(subject: str) -> str:
+    return f"{PREFIX}/{subject}/quiz_db.json"
+
+
+def _image_prefix(subject: str) -> str:
+    return f"{PREFIX}/{subject}/images"
+
+
+# 문항 DB. 인스턴스마다 과목별로 한 벌씩 들고 있는다.
 #
 # **바이트가 서버를 지나는 유일한 자리다.** 서명 URL로 내보내면 주소가 매번
 # 달라져 브라우저 캐시가 안 듣고, 5.4MB짜리를 접속할 때마다 새로 받는다.
 # gzip하면 0.24MB고 ETag가 붙으므로 두 번째 접속부터는 304로 끝난다.
-_db_cache: dict[str, Any] = {"etag": "", "gzipped": b""}
+_db_cache: dict[str, dict[str, Any]] = {}
 
 
 def _storage() -> ObjectStorage:
@@ -102,29 +129,37 @@ def _safe_name(name: str) -> str:
 # ── 문항 DB ──────────────────────────────────────────────────────────
 
 
-@router.get("/db")
-def read_db(request: Request, user: CurrentUser = Depends(require_spotter)) -> Response:
-    """문항 DB 전체. `scripts/build_web.py`가 굽고 `scripts/upload_web.py`가 올린 것.
+@router.get("/subjects/{subject}/db")
+def read_subject_db(
+    subject: str, request: Request, user: CurrentUser = Depends(require_spotter)
+) -> Response:
+    """한 과목의 문항 DB 전체. `scripts/upload_subject.py`가 올린 것.
 
-    내용을 서버가 해석하지 않는다. 어떤 40문항을 뽑을지는 브라우저가 정하고
-    (가중 표집·중복 회피·순서), 서버는 후보를 통째로 넘길 뿐이다. 문항 조립을
-    서버로 올리면 시드를 바꿀 때마다 왕복이 한 번씩 붙는다.
+    내용을 서버가 해석하지 않는다. 어떤 문항을 어떤 순서로 낼지는 브라우저가
+    정하고, 서버는 후보를 통째로 넘길 뿐이다. 문항 조립을 서버로 올리면 시드를
+    바꿀 때마다 왕복이 한 번씩 붙는다.
     """
-    if not _db_cache["gzipped"]:
-        raw = _storage().get_bytes(DB_KEY)
+    subject = _subject(subject)
+    cached = _db_cache.get(subject)
+    if not cached:
+        raw = _storage().get_bytes(_db_key(subject))
         if raw is None:
             raise HTTPException(
                 status_code=503,
-                detail="문항 DB가 아직 올라오지 않았습니다. scripts/upload_web.py 를 돌려 주세요.",
+                detail=f"{subject} 문항 DB가 아직 올라오지 않았습니다. "
+                "scripts/upload_subject.py 를 돌려 주세요.",
             )
-        _db_cache["etag"] = '"' + hashlib.sha1(raw).hexdigest()[:16] + '"'
-        _db_cache["gzipped"] = gzip.compress(raw, 6)
+        cached = {
+            "etag": '"' + hashlib.sha1(raw).hexdigest()[:16] + '"',
+            "gzipped": gzip.compress(raw, 6),
+        }
+        _db_cache[subject] = cached
 
-    etag = _db_cache["etag"]
+    etag = cached["etag"]
     if request.headers.get("if-none-match") == etag:
         return Response(status_code=304, headers={"ETag": etag})
     return Response(
-        content=_db_cache["gzipped"],
+        content=cached["gzipped"],
         media_type="application/json",
         headers={
             "ETag": etag,
@@ -136,6 +171,17 @@ def read_db(request: Request, user: CurrentUser = Depends(require_spotter)) -> R
     )
 
 
+@router.get("/db", deprecated=True)
+def read_db(request: Request, user: CurrentUser = Depends(require_spotter)) -> Response:
+    """과목이 하나뿐이던 시절의 주소. 기생충학을 가리킨다.
+
+    **열어 둔 탭을 위한 것이다.** 과목이 다섯이 되면서 주소에 과목이 들어갔는데,
+    그 사이에 화면을 열어 둔 사람이 새로고침 없이 다음 문항을 넘기면 여기로
+    온다. 한 학기쯤 두고 떼면 된다.
+    """
+    return read_subject_db(DEFAULT_SUBJECT, request, user)
+
+
 # ── 사진 ─────────────────────────────────────────────────────────────
 
 
@@ -143,32 +189,46 @@ class SignIn(BaseModel):
     names: list[str] = Field(default_factory=list)
 
 
-@router.post("/images/sign")
-def sign_images(
-    payload: SignIn, user: CurrentUser = Depends(require_spotter)
+@router.post("/subjects/{subject}/images/sign")
+def sign_subject_images(
+    subject: str, payload: SignIn, user: CurrentUser = Depends(require_spotter)
 ) -> dict[str, dict[str, str]]:
-    """세트가 쓰는 사진의 서명 URL을 한 번에 받아 간다.
+    """이 과목의 사진 서명 URL을 한 번에 받아 간다.
 
     **문항마다 따로 부르지 않는다.** 40문항이면 왕복이 40번이고, 그중 39번은
-    사용자가 다음 문제로 넘어가기를 기다리는 동안 놀고 있는 요청이다. 세트를
-    만든 직후에 한 번에 받아 두면 미리 받기(`new Image().src`)도 그대로 듣는다.
+    사용자가 다음 문제로 넘어가기를 기다리는 동안 놀고 있는 요청이다. 한 번에
+    받아 두면 미리 받기(`new Image().src`)도 그대로 듣는다.
 
-    수명은 `STUDYEZ_SIGNED_URL_TTL`(기본 한 시간)이다. 한 판이 그보다 길어지는
-    일은 드물고, 길어지면 화면이 다시 부른다.
+    해부학 과목은 한 판이 700장을 넘길 수 있어서 화면이 커서 앞뒤로 창을 밀며
+    나눠 받는다. 전부 한 번에 받으면 응답이 수백 KB가 되고, 그중 대부분은
+    사용자가 끝까지 안 가서 안 쓰인다.
+
+    수명은 `STUDYEZ_SIGNED_URL_TTL`(기본 한 시간)이다. 한 판이 그보다 길어지면
+    화면이 다시 부른다.
     """
+    subject = _subject(subject)
     names = [n for n in dict.fromkeys(payload.names) if n]
     if len(names) > MAX_SIGN:
         raise HTTPException(status_code=400, detail=f"한 번에 {MAX_SIGN}장까지만 됩니다.")
     storage = _storage()
+    prefix = _image_prefix(subject)
     urls: dict[str, str] = {}
     for name in names:
         _safe_name(name)
         urls[name] = storage.presign_download(
-            f"{IMAGE_PREFIX}/{name}",
+            f"{prefix}/{name}",
             inline=True,
             content_type=mimetypes.guess_type(name)[0] or "image/jpeg",
         )
     return {"urls": urls}
+
+
+@router.post("/images/sign", deprecated=True)
+def sign_images(
+    payload: SignIn, user: CurrentUser = Depends(require_spotter)
+) -> dict[str, dict[str, str]]:
+    """과목이 하나뿐이던 시절의 주소. `read_db`와 같은 이유로 남겨 둔다."""
+    return sign_subject_images(DEFAULT_SUBJECT, payload, user)
 
 
 # ── 내 기록 ──────────────────────────────────────────────────────────
@@ -488,9 +548,11 @@ class UploadIn(BaseModel):
     db: bool = False
 
 
-@router.post("/admin/uploads")
-def presign_uploads(payload: UploadIn, user: CurrentUser = Depends(require_runner)) -> dict[str, Any]:
-    """`scripts/upload_web.py`가 쓰는 자리. 문항 DB와 사진을 밀어 넣는다.
+@router.post("/admin/subjects/{subject}/uploads")
+def presign_uploads(
+    subject: str, payload: UploadIn, user: CurrentUser = Depends(require_runner)
+) -> dict[str, Any]:
+    """`scripts/upload_subject.py`가 쓰는 자리. 문항 DB와 사진을 밀어 넣는다.
 
     **`RUNNER_TOKEN`이거나 관리자 세션이다**(`require_runner`). 올리는 쪽은
     사람이 손으로 돌리는 스크립트지만, 사람이 매번 비밀번호를 치지 않고도
@@ -500,34 +562,40 @@ def presign_uploads(payload: UploadIn, user: CurrentUser = Depends(require_runne
     신고함(`/admin/reports`)은 이 갈래를 안 연다 — 저기는 사람이 읽는 화면이고
     토큰이 볼 일이 없다.
     """
+    subject = _subject(subject)
     storage = _storage()
+    prefix = _image_prefix(subject)
     out: dict[str, Any] = {"images": {}}
     for name in dict.fromkeys(payload.names):
         _safe_name(name)
         out["images"][name] = storage.presign_upload(
-            f"{IMAGE_PREFIX}/{name}",
+            f"{prefix}/{name}",
             content_type=mimetypes.guess_type(name)[0] or "image/jpeg",
         )
     if payload.db:
-        out["db"] = storage.presign_upload(DB_KEY, content_type="application/json")
+        out["db"] = storage.presign_upload(_db_key(subject), content_type="application/json")
     return out
 
 
-@router.get("/admin/manifest")
-def manifest(user: CurrentUser = Depends(require_runner)) -> dict[str, Any]:
-    """지금 R2에 있는 사진과 그 ETag.
+@router.get("/admin/subjects/{subject}/manifest")
+def manifest(subject: str, user: CurrentUser = Depends(require_runner)) -> dict[str, Any]:
+    """지금 R2에 있는 이 과목의 사진과 그 ETag.
 
-    올리는 쪽이 **안 바뀐 것을 건너뛰려고** 본다. 555장 중 두 장을 고쳤을 때
-    전부 다시 올리면 30MB가 오간다. R2의 ETag는 한 번에 올린 객체에 한해
+    올리는 쪽이 **안 바뀐 것을 건너뛰려고** 본다. 700장 중 두 장을 고쳤을 때
+    전부 다시 올리면 수십 MB가 오간다. R2의 ETag는 한 번에 올린 객체에 한해
     내용의 MD5라서, 로컬에서 같은 값을 계산해 견주면 된다.
     """
+    subject = _subject(subject)
     storage = _storage()
     if storage.client is None:  # local-test. 디스크에는 ETag가 없다.
         return {"images": {}, "local": True}
     found: dict[str, str] = {}
     token = ""
     while True:
-        kwargs: dict[str, Any] = {"Bucket": storage.bucket, "Prefix": f"{IMAGE_PREFIX}/"}
+        kwargs: dict[str, Any] = {
+            "Bucket": storage.bucket,
+            "Prefix": f"{_image_prefix(subject)}/",
+        }
         if token:
             kwargs["ContinuationToken"] = token
         page = storage.client.list_objects_v2(**kwargs)
@@ -539,8 +607,8 @@ def manifest(user: CurrentUser = Depends(require_runner)) -> dict[str, Any]:
     return {"images": found, "local": False}
 
 
-@router.post("/admin/db/refresh")
-def refresh_db_cache(user: CurrentUser = Depends(require_runner)) -> dict[str, str]:
+@router.post("/admin/subjects/{subject}/db/refresh")
+def refresh_db_cache(subject: str, user: CurrentUser = Depends(require_runner)) -> dict[str, str]:
     """방금 올린 문항 DB를 이 인스턴스가 다시 읽게 한다.
 
     **인스턴스가 여럿이면 이 호출은 그중 하나만 비운다.** Cloud Run은 요청을
@@ -549,6 +617,5 @@ def refresh_db_cache(user: CurrentUser = Depends(require_runner)) -> dict[str, s
     판을 볼지 정하는 값이 하나 더 생긴다. 사용자가 한 학년이고 빌드가 드물어
     지금은 이 쪽이 낫다 — 늦어도 다음 콜드 스타트에는 맞춰진다.
     """
-    _db_cache["etag"] = ""
-    _db_cache["gzipped"] = b""
-    return {"status": "cleared"}
+    _db_cache.pop(_subject(subject), None)
+    return {"status": "cleared", "subject": subject}
