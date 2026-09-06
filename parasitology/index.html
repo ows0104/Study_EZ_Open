@@ -120,8 +120,8 @@ button:disabled{opacity:.45;cursor:default}
 .imgsrc .dim{margin-left:auto}
 /* 출처를 여는 손잡이. 문제를 푸는 동안에는 접혀 있다 — 지금 볼 것은
    사진이고, 원본이 어디인지는 이상한 사진을 만났을 때만 궁금하다.
-   **선명도는 접지 않는다.** 그건 출처가 아니라 "내 눈이 문제인가"를
-   가르는 신호라서, 시간을 재는 중에 바로 보여야 쓸모가 있다. */
+   선명도도 같이 접는다 — 흐린 사진이라는 말이 먼저 눈에 들어오면 사진을
+   보기도 전에 못 맞힐 문제로 접어 버리게 된다. */
 .src-toggle{background:var(--bg);border:1px solid var(--line);color:var(--muted);
   font-size:11.5px;padding:3px 10px;border-radius:999px;line-height:1.45}
 .src-toggle:hover{border-color:var(--accent);color:var(--accent)}
@@ -163,7 +163,16 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 /* ── 이미지 확대 */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.9);display:flex;align-items:center;
   justify-content:center;z-index:50;cursor:zoom-out;padding:20px}
-.modal img{max-width:100%;max-height:100%}
+/* 확대창은 **화면에 맞추는 것으로 끝이 아니다.** 400x 시야에서 충란 하나를
+   가려내려면 그 위에서 더 키우고 밀어 볼 수 있어야 한다. `transform`으로
+   키우므로 원본 픽셀이 그대로 보인다. */
+.modal img{max-width:100%;max-height:100%;transform-origin:0 0;
+  will-change:transform;touch-action:none;-webkit-user-drag:none;user-select:none}
+.modal.zoomed{cursor:grab}
+.modal.zoomed.dragging{cursor:grabbing}
+.zoomhint{position:fixed;top:16px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.6);color:#fff;font-size:11.5px;padding:4px 10px;
+  border-radius:6px;letter-spacing:.02em;pointer-events:none}
 .foot{margin-top:26px;font-size:12px;color:var(--muted);text-align:center;line-height:1.7}
 /* ── 로그인한 사람 (문 자체는 gate.js 가 자기 화면을 들고 온다) */
 /* 조용한 버튼. **테두리는 남긴다** — 밑줄만 그은 12px 회색 글씨는 화면
@@ -389,8 +398,9 @@ body:has(#quiz:not(.hidden)) #who{display:none}
 
 </div>
 
-<div class="modal hidden" id="modal" onclick="this.classList.add('hidden')">
+<div class="modal hidden" id="modal">
   <img id="modal-img" alt="">
+  <span class="zoomhint" id="modal-hint">휠·두 손가락으로 확대 · 끌어서 이동 · 두 번 눌러 되돌리기</span>
   <span class="imgmeta" id="modal-src" style="position:fixed;left:50%;transform:translateX(-50%);bottom:16px"></span>
 </div>
 
@@ -428,6 +438,6 @@ body:has(#quiz:not(.hidden)) #who{display:none}
 <script src="../auth.js?v=0399f336"></script>
 <!-- 다섯 과목이 같이 쓰는 로그인 문. 화면은 이 파일이 들고 온다. -->
 <script src="../gate.js?v=38aef296"></script>
-<script src="app.js?v=69039f53"></script>
+<script src="app.js?v=643f5a65"></script>
 </body>
 </html>

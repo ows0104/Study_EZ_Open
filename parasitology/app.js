@@ -610,8 +610,9 @@ function srcHtml(name){
 
 /** 문제 화면의 출처 줄. 접힌 채로 손잡이만 서 있다가, 누르면 펴진다.
  *
- *  **선명도는 접지 않는다.** 그건 출처가 아니라 사진의 상태이고, 답을 고르는
- *  동안 바로 보여야 "흐려서 못 알아본 것"과 "몰라서 못 고른 것"이 갈린다.
+ *  선명도도 같이 접는다. 흐린 사진이라는 말이 먼저 눈에 들어오면 사진을
+ *  보기 전에 "이건 못 맞히는 문제"라고 접어 버리게 된다 — 알아볼 수 있는지
+ *  먼저 겨뤄 보고, 그러고 나서 펴 보는 순서가 맞다.
  */
 function renderSrc(){
   const el = $('q-src');
@@ -619,17 +620,109 @@ function renderSrc(){
   if (!s){ el.innerHTML = ''; return; }
   el.innerHTML =
     `<button class="src-toggle" onclick="toggleSrc()">출처 ${S.srcOpen ? '▾' : '▸'}</button>`
-    + (S.srcOpen ? `<span>${esc(s.src)}</span><code>${esc(s.path)}</code>` : '')
-    + blurHtml(s);
+    + (S.srcOpen ? `<span>${esc(s.src)}</span><code>${esc(s.path)}</code>${blurHtml(s)}` : '');
 }
 function toggleSrc(){ S.srcOpen = !S.srcOpen; renderSrc(); }
+
+/* ── 확대창
+ *
+ * 화면에 맞춰 놓는 것만으로는 부족하다. 실습 사진은 접안렌즈에 대고 찍은
+ * 것이라 400x라 해도 정작 봐야 할 충란은 시야 한구석의 작은 점이고, 화면
+ * 폭에 맞춘 크기로는 무엇인지 가려낼 수가 없다. 그래서 **그 위에서 더
+ * 키우고 밀어 볼 수 있게** 한다.
+ *
+ * 배율은 `transform: scale`로 준다 — `width`를 늘리면 브라우저가 레이아웃을
+ * 다시 잡느라 손가락을 따라오지 못한다.
+ */
+let Z = { k:1, x:0, y:0, drag:null };
+
+function zApply(){
+  const el = $('modal-img');
+  el.style.transform = `translate(${Z.x}px,${Z.y}px) scale(${Z.k})`;
+  $('modal').classList.toggle('zoomed', Z.k > 1.01);
+  $('modal-hint').style.opacity = Z.k > 1.01 ? 0 : 1;
+}
+function zReset(){ Z.k = 1; Z.x = 0; Z.y = 0; zApply(); }
+
+/** 화면의 한 점을 붙잡은 채로 배율만 바꾼다. 손가락(또는 커서) 밑에 있던
+ *  것이 그 자리에 그대로 있어야 어디를 보고 있었는지 놓치지 않는다. */
+function zAt(cx, cy, k2){
+  const b = $('modal-img').getBoundingClientRect();
+  // 이미지 좌표에서 그 점이 어디였는지 — 지금 배율을 걷어낸 값
+  const ix = (cx - b.left) / Z.k, iy = (cy - b.top) / Z.k;
+  Z.k = Math.min(8, Math.max(1, k2));
+  Z.x += cx - (b.left + ix * Z.k);
+  Z.y += cy - (b.top + iy * Z.k);
+  if (Z.k <= 1.01) { Z.x = 0; Z.y = 0; Z.k = 1; }
+  zApply();
+}
 
 function zoom(){
   $('modal-img').src = $('q-img').src;
   const s = imgSrc(S.imgs[S.i]);
   $('modal-src').textContent = s ? s.src + '  ·  ' + s.path : '';
+  zReset();
   $('modal').classList.remove('hidden');
 }
+
+(function zoomControls(){
+  const m = $('modal');
+
+  // 배경을 누르면 닫는다. **끌고 나서 뗀 것은 닫지 않는다** — 사진을 밀다가
+  // 손을 떼면 창이 닫혀 버리면 확대해 놓은 것이 매번 날아간다.
+  let moved = false;
+  m.addEventListener('pointerdown', e => {
+    moved = false;
+    if (Z.k > 1.01){
+      Z.drag = { x:e.clientX, y:e.clientY };
+      m.classList.add('dragging');
+      m.setPointerCapture(e.pointerId);
+    }
+  });
+  m.addEventListener('pointermove', e => {
+    if (!Z.drag) return;
+    const dx = e.clientX - Z.drag.x, dy = e.clientY - Z.drag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
+    Z.x += dx; Z.y += dy;
+    Z.drag = { x:e.clientX, y:e.clientY };
+    zApply();
+  });
+  m.addEventListener('pointerup', e => {
+    Z.drag = null;
+    m.classList.remove('dragging');
+    if (!moved && e.target.id !== 'modal-img') m.classList.add('hidden');
+    else if (!moved && Z.k <= 1.01) m.classList.add('hidden');
+  });
+
+  m.addEventListener('wheel', e => {
+    e.preventDefault();
+    zAt(e.clientX, e.clientY, Z.k * (e.deltaY < 0 ? 1.18 : 1 / 1.18));
+  }, { passive:false });
+
+  m.addEventListener('dblclick', e => {
+    e.preventDefault();
+    Z.k > 1.01 ? zReset() : zAt(e.clientX, e.clientY, 3);
+  });
+
+  // 두 손가락. 포인터 두 개의 거리 변화가 곧 배율이다.
+  const pts = new Map();
+  let base = 0;
+  m.addEventListener('pointerdown', e => { pts.set(e.pointerId, e); if (pts.size === 2) base = 0; });
+  m.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, e);
+    if (pts.size !== 2) return;
+    Z.drag = null;                      // 두 손가락일 때는 끌기를 멈춘다
+    const [a, b] = [...pts.values()];
+    const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    if (!base) { base = d; return; }
+    zAt((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2, Z.k * (d / base));
+    base = d;
+  });
+  const drop = e => { pts.delete(e.pointerId); base = 0; };
+  m.addEventListener('pointerup', drop);
+  m.addEventListener('pointercancel', drop);
+})();
 document.addEventListener('keydown', e => {
   if (!$('report').classList.contains('hidden')){
     if (e.key === 'Escape') closeReport();
