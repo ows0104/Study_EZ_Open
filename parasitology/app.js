@@ -52,6 +52,23 @@ async function signImages(names){
   names.forEach(n => { S.imgUrl[n] = GATE.image(n); });
 }
 
+/* ══════════ 고른 범위 ══════════ */
+/* 화면 셋(분류군·표본·묻는 방식)이 정하는 것은 결국 "이 문항을 쓸까"
+   하나뿐이다. 그 판단을 한 군데 두고, 세트를 만들 때도 몇 개인지 셀 때도
+   같은 것을 부른다 — 두 벌이면 화면에 뜬 수와 실제로 나오는 세트가 갈린다. */
+function filters(){
+  return { groups: chosen($('f-group')), sptypes: chosen($('f-sptype')),
+           types: chosen($('f-qtype')) };
+}
+function inScope(q, f){
+  return (!f.groups.length  || f.groups.includes(q.group))
+      && (!f.sptypes.length || f.sptypes.includes(q.specimen_type))
+      && (!f.types.length   || f.types.includes(q.qtype));
+}
+/** 한 세트에 담을 수 있는 최대 문항 수. 같은 표본은 한 판에 두 번 안 나오므로
+ *  문항 수가 아니라 **표본 수**가 천장이다. */
+function capacity(pool){ return new Set(pool.map(q => q.specimen_id)).size; }
+
 /* ══════════ 세트 만들기 ══════════ */
 function weightedPick(pool, rand){
   const total = pool.reduce((a,q) => a + (q.weight || 1), 0);
@@ -60,28 +77,53 @@ function weightedPick(pool, rand){
   return pool[pool.length - 1];
 }
 
-function buildSet(n, types, rand){
-  const mix = QUIZ_META.qtype_mix, gmix = QUIZ_META.group_mix;
-  const wantQ = {}, wantG = {};
-  for (const k in mix) if (!types.length || types.includes(k)) wantQ[k] = Math.max(1, Math.round(mix[k]*n));
-  for (const k in gmix) wantG[k] = Math.max(1, Math.round(gmix[k]*n));
-  // indicator가 모자라면 '특징 구조물'로 대체한다
-  if (wantQ['indicator']) wantQ['특징 구조물'] = 0;
+function buildSet(n, f, rand){
+  const DB = QUIZ_DB.filter(q => inScope(q, f));
+  if (!DB.length) return [];
+
+  /* 비율은 meta가 준 것을 쓰되 **고른 범위 안에서 다시 정규화한다.** 흡충만
+     골랐는데 선충 몫 29%를 그대로 두면 그 자리가 빈 채 남아 40문항을 시켜도
+     서른 몇 개만 나온다. 비율표에 없는 값(범위를 좁히면 나온다)은 그 범위에서
+     실제로 차지하는 비중으로 대신한다. */
+  const spread = (mix, field) => {
+    const keys = [...new Set(DB.map(q => q[field]))].filter(Boolean);
+    const w = {};
+    keys.forEach(k => { w[k] = mix[k] != null ? mix[k]
+      : DB.filter(q => q[field] === k).length / DB.length; });
+    const sum = keys.reduce((a,k) => a + w[k], 0) || 1;
+    const out = {};
+    keys.forEach(k => { out[k] = Math.max(1, Math.round(w[k] / sum * n)); });
+    return out;
+  };
+  const baseQ = spread(QUIZ_META.qtype_mix, 'qtype');
+  const wantQ = { ...baseQ };
+  const wantG = spread(QUIZ_META.group_mix, 'group');
+
+  /* 바닥난 유형. **한 번 비면 다시 안 찬다** — 뽑을수록 `usedSpec`이 늘어날
+     뿐이라서다. 되채울 때 이것들을 살려내면 빈 유형을 붙잡고 도는 바퀴가
+     된다. '특징 구조물'은 indicator의 예비 통이라 따로 뽑지 않는다. */
+  const dead = new Set();
+  if (baseQ['indicator']) dead.add('특징 구조물');
 
   const usedSpec = new Set(), usedSp = {}, out = [];
   const order = Object.keys(wantQ).sort((a,b) => wantQ[b]-wantQ[a]);
   let guard = 0;
   while (out.length < n && guard++ < n*80){
-    let qt = order.find(k => wantQ[k] > 0);
-    if (!qt){ for (const k in wantQ) wantQ[k] = Math.max(1, Math.round(mix[k]*n)); continue; }
-    const pick = (loose) => QUIZ_DB.filter(q =>
+    const qt = order.find(k => wantQ[k] > 0 && !dead.has(k));
+    if (!qt){
+      const live = order.filter(k => !dead.has(k));
+      if (!live.length) break;
+      live.forEach(k => { wantQ[k] = baseQ[k]; });
+      continue;
+    }
+    const pick = (loose) => DB.filter(q =>
       (q.qtype === qt || (loose && qt === 'indicator' && q.qtype === '특징 구조물'))
       && !usedSpec.has(q.specimen_id)
       && (usedSp[q.species_id]||0) < 2
       && (loose || (wantG[q.group]||0) > 0));
     let pool = pick(false);
     if (!pool.length) pool = pick(true);
-    if (!pool.length){ wantQ[qt] = 0; continue; }
+    if (!pool.length){ dead.add(qt); continue; }
     const q = weightedPick(pool, rand);
     out.push(q);
     usedSpec.add(q.specimen_id);
@@ -118,29 +160,85 @@ function renderWrongButton(){
   $('wrong-btn').disabled = !n;
 }
 
+/* 화면에 쓰는 이름. 데이터의 값은 그대로 두고 보이는 글자만 바꾼다 —
+   'gross'와 'indicator'는 한글 화면에 그대로 두기에는 낯설다. */
+const SPTYPE_KO = { gross:'육안 표본', '혈액도말':'혈액도말' };
+const QTYPE_KO  = { indicator:'지시 구조물' };
+const ko = (map, v) => map[v] || v;
+
+/** 칩 한 줄. 맨 앞의 '전체'가 켜져 있으면 그 줄은 아무것도 안 거른다. */
+function chipRow(el, values, label){
+  el.innerHTML =
+    `<label class="chip on"><input type="checkbox" data-all checked> 전체</label>` +
+    values.map(v =>
+      `<label class="chip"><input type="checkbox" value="${esc(v)}"> ${esc(label(v))}</label>`).join('');
+  const all = el.querySelector('[data-all]');
+  const rest = [...el.querySelectorAll('input:not([data-all])')];
+  const paint = () => {
+    const any = rest.some(i => i.checked);
+    all.checked = !any;                       // 아무것도 안 고르면 곧 '전체'다
+    all.closest('.chip').classList.toggle('on', !any);
+    rest.forEach(i => i.closest('.chip').classList.toggle('on', i.checked));
+  };
+  el.addEventListener('change', e => {
+    if (e.target === all) rest.forEach(i => { i.checked = false; });
+    paint();
+    renderScope();
+  });
+  paint();
+}
+function chosen(el){
+  return [...el.querySelectorAll('input:not([data-all]):checked')].map(i => i.value);
+}
+
+/** 지금 고른 범위가 몇 문항인지. **시작을 누르기 전에** 알려 준다 —
+ *  좁히다 보면 40문항이 안 나오는 조합이 생기고, 눌러 보고 아는 것은 늦다. */
+function renderScope(){
+  const pool = QUIZ_DB.filter(q => inScope(q, filters()));
+  const cap = capacity(pool), want = +$('n-input').value;
+  const el = $('scope');
+  if (!pool.length){
+    el.className = 'scope thin';
+    el.innerHTML = '<b>이 조합에는 문항이 없습니다.</b> 하나쯤 되돌려 주세요.';
+    return;
+  }
+  el.className = 'scope' + (cap < want ? ' thin' : '');
+  el.innerHTML = `고른 범위 <b>${pool.length.toLocaleString('ko-KR')}</b>문항 · 표본 <b>${cap}</b>건`
+    + (cap < want
+        ? ` — 같은 표본은 한 판에 한 번만 나오므로 <b>${cap}문항</b>까지입니다.`
+        : '');
+}
+
 function initStart(){
   const c = QUIZ_META.counts;
   $('dbinfo').textContent =
     `문항 ${c.questions}개 · 표본 ${c.specimens}건 · ${c.species}종 · 사진 ${c.images}장`;
 
-  const types = [...new Set(QUIZ_DB.map(q => q.qtype))];
-  $('filters').innerHTML = types.map(t =>
-    `<label class="chip"><input type="checkbox" value="${esc(t)}"> ${esc(t)}</label>`).join('')
-    + `<label class="chip" style="opacity:.7"><input type="checkbox" id="all-off" checked> 전체</label>`;
-  $('filters').addEventListener('change', e => {
-    const all = $('all-off');
-    if (e.target === all && all.checked)
-      $('filters').querySelectorAll('input:not(#all-off)').forEach(i => { i.checked = false; i.closest('.chip').classList.remove('on'); });
-    else if (e.target !== all){ all.checked = false; e.target.closest('.chip').classList.toggle('on', e.target.checked); }
-    if (![...$('filters').querySelectorAll('input:not(#all-off)')].some(i => i.checked)) all.checked = true;
-  });
+  /* 값은 문항 DB에서 뽑고, 늘어놓는 차례는 meta가 정한 것을 따른다. meta에
+     없는 값이 나오면 뒤에 붙인다 — 데이터가 늘었을 때 조용히 사라지느니
+     낯선 자리에라도 보이는 편이 낫다. */
+  const uniq = (field, order) => {
+    const seen = [...new Set(QUIZ_DB.map(q => q[field]))].filter(Boolean);
+    return (order || []).filter(k => seen.includes(k))
+      .concat(seen.filter(k => !(order || []).includes(k)));
+  };
+  chipRow($('f-group'),  uniq('group', QUIZ_META.group_order), v => v);
+  chipRow($('f-sptype'), uniq('specimen_type', ['충란','충체','조직','혈액도말','gross']),
+          v => ko(SPTYPE_KO, v));
+  chipRow($('f-qtype'),  uniq('qtype', Object.keys(QUIZ_META.qtype_mix || {})),
+          v => ko(QTYPE_KO, v));
+  $('n-input').addEventListener('change', renderScope);
 
+  renderScope();
   renderRecords();
   renderWrongButton();
 }
 
 async function start(mode, wrongOnly){
-  const n = +$('n-input').value;
+  const f = filters();
+  // 고른 범위가 좁으면 그만큼만 낸다. 40을 시켰다고 없는 표본을 지어낼 수는 없다.
+  const n = Math.min(+$('n-input').value,
+                     capacity(QUIZ_DB.filter(q => inScope(q, f))) || 1);
   const seedRaw = $('seed-input').value;
   const seed = seedRaw ? +seedRaw : Math.floor(Math.random()*1e9);
   S.rand = rng(seed);
@@ -151,8 +249,7 @@ async function start(mode, wrongOnly){
     S.qs = QUIZ_DB.filter(q => WRONG.has(q.id));
     for (let i = S.qs.length-1; i > 0; i--){ const j = Math.floor(S.rand()*(i+1)); [S.qs[i],S.qs[j]] = [S.qs[j],S.qs[i]]; }
   } else {
-    const types = [...$('filters').querySelectorAll('input:not(#all-off)')].filter(i => i.checked).map(i => i.value);
-    S.qs = buildSet(n, types, S.rand);
+    S.qs = buildSet(n, f, S.rand);
   }
   if (!S.qs.length){ alert('조건에 맞는 문항이 없습니다.'); return; }
 
@@ -184,7 +281,8 @@ async function start(mode, wrongOnly){
 /* ══════════ 문제 표시 ══════════ */
 function render(){
   const q = S.qs[S.i];
-  $('q-type').textContent = q.jokbo ? q.qtype + ' · 족보' : q.qtype;
+  const qt = ko(QTYPE_KO, q.qtype);
+  $('q-type').textContent = q.jokbo ? qt + ' · 족보' : qt;
   $('q-count').textContent = `${S.i+1} / ${S.qs.length}`;
   $('q-stem').textContent = q.stem;
 
@@ -283,7 +381,9 @@ async function finish(){
     const m = {};
     // 족보에서 그대로 가져온 문항 중 몇 개는 표본을 못 짚어 분류군이 비어 있다.
     // 없는 분류군을 지어내지 않고 그대로 '미상'으로 센다.
-    rows.forEach(r => { const k = r.q[key] || '미상'; (m[k] = m[k] || [0,0]); m[k][1]++; if (r.ok) m[k][0]++; });
+    rows.forEach(r => {
+      const k = key === 'qtype' ? ko(QTYPE_KO, r.q.qtype) : (r.q[key] || '미상');
+      (m[k] = m[k] || [0,0]); m[k][1]++; if (r.ok) m[k][0]++; });
     return `<tr><th>${key==='qtype'?'유형':'분류군'}</th><th class="num">정답</th><th class="num">문항</th><th class="num">정답률</th></tr>` +
       Object.entries(m).sort((a,b)=>b[1][1]-a[1][1]).map(([k,[c,t]]) =>
       `<tr><td>${esc(k)}</td><td class="num">${c}</td><td class="num">${t}</td><td class="num">${Math.round(c/t*100)}%</td></tr>`).join('');
@@ -294,7 +394,7 @@ async function finish(){
   $('r-review').innerHTML = rows.map((r,i) => `
     <div class="rev ${r.ok?'right':'wrong'}">
       <img src="${esc(S.imgUrl[S.imgs[i]] || '')}" alt="">
-      <div class="q">${i+1}. [${esc(r.q.qtype)}] ${esc(r.q.stem)}</div>
+      <div class="q">${i+1}. [${esc(ko(QTYPE_KO, r.q.qtype))}] ${esc(r.q.stem)}</div>
       <div class="a">${r.ok ? '' : `<i>내 답: ${r.picked===null?'무응답':esc(r.q.options[r.picked])}</i><br>`}
         <b>정답: ${esc(r.q.options[r.q.answer])}</b></div>
       <div class="explain" style="margin-top:8px">${esc(r.q.explanation)}</div>

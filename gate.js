@@ -90,6 +90,13 @@ const GATE = (() => {
     async start(name, ready) {
       started = true;
       subject = name;
+      /* **콜백을 여기서 붙잡아 둔다.** 아래 세 갈래(설정 없음·재설정·로그인
+         화면)는 `enter`를 안 거치고 돌아가는데, `onReady`를 `enter` 안에서만
+         세우면 그 세 갈래를 지난 뒤 폼에서 로그인했을 때 넘길 것이 남지
+         않는다 — 문항 DB는 잘 받아 놓고 `onReady(db)`에서 터져서 화면이
+         빈 채로 선다. 새로고침하면 세션이 있으니 곧장 `enter`로 가서
+         멀쩡해지는, 첫 로그인에서만 나는 고장이었다. */
+      onReady = ready || onReady;
       mountGate();
 
       if (!LOCAL_TEST) {
@@ -259,10 +266,14 @@ const GATE = (() => {
       const db = subject
         ? await api(`/api/spotter/subjects/${subject}/db`)
         : await api('/api/me');
-      $('gate-root').hidden = true;
+      /* **화면을 다 세운 뒤에 덮개를 걷는다.** 먼저 걷으면 그 사이에 터진
+         오류를 적을 자리가 이미 숨어 있어서, 남는 것은 빈 화면뿐이다. */
       await onReady(db);
+      $('gate-root').hidden = true;
     } catch (e) {
+      show();
       $('gate-form').hidden = true;
+      $('gate-switch').innerHTML = '';
       $('gate-note').textContent = '';
       $('gate-error').textContent = e.message;
     }

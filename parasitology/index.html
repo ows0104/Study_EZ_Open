@@ -28,6 +28,10 @@ body{
   padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 .wrap{max-width:980px;margin:0 auto;padding:20px 16px 64px}
+/* 문제를 푸는 동안만 넓힌다. 사진과 보기가 나란히 서므로 980px에서는 사진이
+   원본보다 작게 줄어든다 — 알아보라고 내는 사진을 줄이는 것은 문제를 바꾸는 일이다.
+   시작·결과 화면은 글이라 980px가 읽기 좋다. */
+body:has(#quiz:not(.hidden)) .wrap{max-width:1240px}
 .hidden{display:none !important}
 h1{font-size:22px;margin:0 0 4px;letter-spacing:-.02em}
 h2{font-size:17px;margin:26px 0 10px;letter-spacing:-.01em}
@@ -49,6 +53,29 @@ input[type=number]:focus,select:focus{outline:2px solid var(--accent);outline-of
   border-radius:999px;font-size:13px;cursor:pointer;user-select:none;background:var(--bg)}
 .chip input{margin:0;accent-color:var(--accent)}
 .chip.on{background:var(--accent-soft);border-color:var(--accent)}
+
+/* ── 무엇을 풀지 고르는 자리
+   **내용을 위에, 묻는 방식을 아래에 접어 둔다.** 예전에는 「감염경로」·「치료」
+   같은 유형 열두 개가 이름표 없이 한 줄로 깔려 있었는데, 그러면 무엇을 고르는
+   칸인지부터 안 읽힌다. 시험 전에 실제로 좁히고 싶은 것은 "오늘 배운 흡충만",
+   "충란만" 쪽이지 "치료만"이 아니다. */
+.pick{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px}
+.pick>.pick-label{flex:none;width:46px;padding-top:7px;font-size:12px;
+  color:var(--muted);font-weight:600;letter-spacing:.02em}
+.pick .checks{margin:0;flex:1;min-width:0}
+/* 고른 범위가 몇 문항인지. 좁히다 보면 40문항이 안 나오는 조합이 생기는데,
+   시작을 누르고 나서 알면 늦다. */
+.scope{font-size:12.5px;color:var(--muted);margin:4px 0 0 58px;line-height:1.6}
+.scope b{color:var(--ink);font-variant-numeric:tabular-nums}
+.scope.thin b{color:var(--no)}
+details.more{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+details.more>summary{cursor:pointer;font-size:12.5px;color:var(--muted);
+  list-style:none;user-select:none}
+details.more>summary::-webkit-details-marker{display:none}
+details.more>summary::before{content:'▸  '}
+details.more[open]>summary::before{content:'▾  '}
+details.more>summary:hover{color:var(--accent)}
+.sep{border:0;border-top:1px solid var(--line);margin:16px 0 0}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
 button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);
   background:var(--card);color:var(--ink);padding:11px 14px;transition:.12s}
@@ -71,9 +98,20 @@ button:disabled{opacity:.45;cursor:default}
 .bar{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-bottom:14px}
 .bar>i{display:block;height:100%;background:var(--accent);transition:width .25s linear}
 .stem{font-size:16px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em}
+/* 사진 왼쪽, 보기 오른쪽.
+   땡시는 결국 사진을 보는 시험이라 사진에 넓은 쪽을 준다. 세로로 쌓으면
+   사진과 보기를 같이 볼 수 없어 눈이 오르내린다 — 시간을 재는 화면에서 그건 손해다.
+   좁은 화면에서는 다시 한 줄로 쌓는다. */
+.qgrid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(270px,1fr);
+  gap:18px;align-items:start}
+/* 보기는 사진 옆 가운데에 선다. 위로 붙이면 사진 절반 높이만큼 빈자리가 남는다. */
+.qgrid .opts{align-self:center}
 .imgbox{position:relative;background:#0b0d10;border-radius:10px;overflow:hidden;
   display:flex;align-items:center;justify-content:center;cursor:zoom-in}
 .imgbox img{max-width:100%;max-height:min(48vh,430px);display:block}
+/* 2단일 때는 사진이 세로로 더 큰 자리를 쓴다 */
+.qgrid .imgbox img{max-height:min(62vh,600px)}
+.qgrid .opts{margin-top:0}
 .imgmeta{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.6);color:#fff;
   font-size:11px;padding:3px 8px;border-radius:6px;letter-spacing:.02em}
 .imgsrc{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;
@@ -129,9 +167,17 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 .who{display:flex;align-items:center;gap:10px;justify-content:flex-end;
   font-size:12px;color:var(--muted);margin-bottom:6px}
 
-/* ── 신고 */
-.report-link{font-size:12px;padding:6px 10px;border-radius:8px;color:var(--muted)}
+/* ── 신고
+   빨갛게 둔다. 신고는 눌러 주는 사람이 있어야 쌓이는데, 조용한 회색이면
+   있는 줄도 모른다. **이미 신고한 것은 초록으로 바뀐다** — 빨강이 "누르세요"라면
+   초록은 "받았습니다"이고, 둘이 같은 색이면 어느 쪽인지 알 수 없다. */
+.report-link{font-size:12px;padding:6px 10px;border-radius:8px;
+  color:var(--no);border-color:var(--no)}
+.report-link:hover{border-color:var(--no);background:var(--no-soft)}
 .report-link.done{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.report-link.done:hover{border-color:var(--accent);background:var(--accent-soft)}
+/* 문제 화면의 것은 카드 아래에 홀로 서므로 조금 크게 */
+#report-btn{font-size:13px;padding:9px 18px;font-weight:600}
 .rev .report-link{margin-top:10px}
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;
   justify-content:center;z-index:60;padding:20px}
@@ -158,9 +204,21 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 .rep-who{color:var(--muted);font-size:12px;margin-left:6px}
 .rep-note{white-space:pre-wrap;margin-top:4px;font-size:13px}
 
+/* 두 단이 들어갈 폭이 아니면 한 줄로 쌓는다. 이 선 아래에서는 사진 옆에
+   보기를 세워봐야 둘 다 좁아질 뿐이다. */
+@media (max-width:760px){
+  .qgrid{grid-template-columns:1fr}
+  .qgrid .imgbox img{max-height:min(44vh,380px)}
+  .qgrid .opts{margin-top:2px}
+}
 @media (max-width:560px){
   .actions{grid-template-columns:1fr}
   .rev img{float:none;display:block;margin:0 0 8px}
+  /* 이름표를 칩 위로 올린다. 좁은 화면에서 46px를 떼어 주면 칩이 한 줄에
+     두 개밖에 못 선다. */
+  .pick{flex-direction:column;gap:5px}
+  .pick>.pick-label{padding-top:0;width:auto}
+  .scope{margin-left:0}
 }
 </style>
 </head>
@@ -177,7 +235,21 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   <p class="sub" id="dbinfo"></p>
 
   <div class="card">
-    <div class="settings">
+    <!-- ① 무엇을 풀지. 내용으로 고른다 — 분류군과 표본 종류. -->
+    <div class="pick">
+      <span class="pick-label">분류군</span>
+      <div class="checks" id="f-group"></div>
+    </div>
+    <div class="pick">
+      <span class="pick-label">표본</span>
+      <div class="checks" id="f-sptype"></div>
+    </div>
+    <p class="scope" id="scope"></p>
+
+    <hr class="sep">
+
+    <!-- ② 어떻게 풀지. -->
+    <div class="settings" style="margin-top:16px">
       <label class="field"><span>문제 수</span>
         <select id="n-input">
           <option value="20">20문항</option>
@@ -186,19 +258,28 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
         </select></label>
       <label class="field"><span>제한 시간 (초)</span>
         <input type="number" id="t-input" value="30" min="5" max="180"></label>
-      <label class="field"><span>시드 번호</span>
-        <input type="number" id="seed-input" placeholder="비우면 랜덤"></label>
-      <label class="field"><span>문항 순서</span>
-        <select id="order-input">
-          <option value="exam" selected>시험처럼 (충란 먼저)</option>
-          <option value="random">완전 랜덤</option>
-        </select></label>
     </div>
 
     <label class="chip on" style="margin-top:14px">
       <input type="checkbox" id="buzzer" checked> 시간 종료 알림음</label>
 
-    <div class="checks" id="filters"></div>
+    <!-- ③ 그 밖. 접어 둔다 — 매번 만지는 칸이 아니다. -->
+    <details class="more">
+      <summary>묻는 방식 · 문항 순서 · 시드</summary>
+      <div class="pick" style="margin-top:14px">
+        <span class="pick-label">방식</span>
+        <div class="checks" id="f-qtype"></div>
+      </div>
+      <div class="settings" style="margin-top:14px">
+        <label class="field"><span>문항 순서</span>
+          <select id="order-input">
+            <option value="exam" selected>시험처럼 (충란 먼저)</option>
+            <option value="random">완전 랜덤</option>
+          </select></label>
+        <label class="field"><span>시드 번호</span>
+          <input type="number" id="seed-input" placeholder="비우면 랜덤"></label>
+      </div>
+    </details>
 
     <div class="actions">
       <button class="mode-btn btn-primary" onclick="start('exam')">
@@ -237,13 +318,19 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 
   <div class="card">
     <p class="stem" id="q-stem"></p>
-    <div class="imgbox" id="q-imgbox" onclick="zoom()">
-      <img id="q-img" alt="표본 사진">
-      <span class="imgmeta" id="q-meta"></span>
+    <!-- 왼쪽 사진 · 오른쪽 보기. 좁은 화면에서는 한 줄로 쌓인다. -->
+    <div class="qgrid">
+      <div>
+        <div class="imgbox" id="q-imgbox" onclick="zoom()">
+          <img id="q-img" alt="표본 사진">
+          <span class="imgmeta" id="q-meta"></span>
+        </div>
+        <!-- 사진 출처. 흐리거나 잘못 잘린 사진을 신고할 때 어느 원본인지 짚을 수 있어야 한다. -->
+        <div class="imgsrc" id="q-src"></div>
+      </div>
+      <div class="opts" id="q-opts"></div>
     </div>
-    <!-- 사진 출처. 흐리거나 잘못 잘린 사진을 신고할 때 어느 원본인지 짚을 수 있어야 한다. -->
-    <div class="imgsrc" id="q-src"></div>
-    <div class="opts" id="q-opts"></div>
+    <!-- 해설은 두 단 아래 전체 폭으로. 보기 칸에 넣으면 줄이 좁아 읽기 나쁘다. -->
     <div class="explain hidden" id="q-explain"></div>
     <div class="nav">
       <button onclick="prev()" id="btn-prev">이전</button>
