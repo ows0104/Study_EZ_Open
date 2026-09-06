@@ -3,8 +3,8 @@
 계정은 하나, 문은 앱마다, 로그인은 한 번.
 
 ```
-para.studyez.kr  ─┐
-studyez.kr       ─┼─►  studyez-api (Cloud Run)  ─►  Supabase Postgres
+spotter.studyez.kr ─┐
+studyez.kr         ─┼─►  studyez-api (Cloud Run)  ─►  Supabase Postgres
 <세 번째>.studyez.kr ─┘        /api/<app>/*                 R2 (spotter/, lectures/)
 
            Supabase Auth — 세션은 Domain=.studyez.kr 쿠키
@@ -73,7 +73,8 @@ app.include_router(newthing.router, prefix="/api")
 
 ### 그 밖 — 세 곳
 
-1. `server/.env`의 `CORS_ALLOWED_ORIGINS`에 새 주소를 더하고 배포한다.
+1. `server/.env`의 `CORS_ALLOWED_ORIGINS`에 새 오리진을 더하고 배포한다. 경로가 아니라
+   오리진이다 — `https://spotter.studyez.kr` 까지만 적는다.
 2. Supabase **Authentication → URL Configuration → Redirect URLs**에 새 주소를
    더한다. **빠뜨리면 비밀번호 재설정 메일은 오는데 링크가 죽는다.**
 3. Cloudflare에 서브도메인을 붙인다(아래).
@@ -91,13 +92,18 @@ DNS는 Cloudflare에 있다(`docs/domain-runbook.md`). 앱마다 Pages 프로젝
    |---|---|
    | Framework preset | None |
    | Build command | (비움) |
-   | Build output directory | `parasitology` |
+   | Build output directory | `/` (저장소 루트) |
 
-   출력 디렉터리를 앱 폴더로 주면 **그 폴더가 도메인 루트가 된다.** 저장소 루트의
-   해부학 허브는 안 나간다.
-3. 프로젝트 → **Custom domains → Set up a domain** → `para.studyez.kr`.
+   **저장소 루트를 통째로 낸다.** 이 저장소는 루트가 이미 과목 허브이고
+   `exam1/`·`trunk/`·`head-neck/`·`neuro/`·`parasitology/`가 그 아래 있다.
+   한 과목만 내려고 출력 디렉터리를 그 폴더로 좁히면 나머지가 사라진다.
+3. 프로젝트 → **Custom domains → Set up a domain** → `spotter.studyez.kr`.
    Cloudflare가 CNAME을 알아서 넣는다(같은 계정의 존이므로).
 4. `Active / SSL enabled`가 될 때까지 기다린다. 보통 1~2분이다.
+
+   기생충학은 `https://spotter.studyez.kr/parasitology/`가 된다. 로그인이
+   필요한 것은 그 하나뿐이고, 해부학 넷은 로그인 없이 그대로 돈다 — 한
+   도메인 아래 있어도 문은 앱마다 따로다.
 
 세션 공유는 **여기까지 끝나야 실제로 동작한다.** 그전에는 형제가 서로 다른 등록
 도메인에 있어서 쿠키가 안 넘어간다 — 공유만 안 되고 로그인은 그대로 된다.
