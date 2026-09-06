@@ -625,6 +625,13 @@ def main(argv=None) -> int:
     print(f"커버리지: 카드 있는 슬라이드 {c['slides_with_cards']}/{c['slides_total']} · "
           f"학습목표 {c['objectives_total']}개 중 카드 없는 것 {len(c['objectives_without_card'])}개 · "
           f"제외 기록 {c['rejected_candidates']}건")
+    # **기출 목표도 같이 찍는다.** 값은 예전부터 `suspects.json` 에 있었는데 화면에도
+    # `run.meta` 에도 안 나가서, 2026-09-03 `260901_01` 이 기출 목표 11개를 세워 놓고
+    # 카드를 한 장도 안 쓴 것을 아무도 못 봤다 — 그때 `objectives_without_card` 는
+    # 비어 있었고 계수기는 깨끗하다고 말하고 있었다.
+    if c["jokbo_objectives_without_card"]:
+        print(f"⚠ 기출 목표 {c['jokbo_objectives_total']}개 중 카드 없는 것 "
+              f"{len(c['jokbo_objectives_without_card'])}개")
     if c["untouched_undeclared"]:
         print(f"⚠ 카드도 없고 제외 기록에도 없는 슬라이드: {c['untouched_undeclared']}")
     print(f"\n→ {outdir}/items.checked.json, suspects.json")

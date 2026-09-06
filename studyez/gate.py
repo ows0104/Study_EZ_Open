@@ -184,6 +184,16 @@ def inspect(run_dir: Path, deck: Path | None, meta_path: Path | None,
     orphan = meta.get("objectives_without_card") or []
     if orphan:
         verdict.notes.append(f"{label} 카드가 안 붙은 학습목표 {len(orphan)}개")
+    # 기출 목표가 통째로 비는 일이 실제로 났다(2026-09-03 `260901_01`, 11개 중 11개).
+    # 옆칸의 학습목표 계수기는 그때 `[]` 였다 — 둘은 다른 것을 센다.
+    jorphan = meta.get("jokbo_objectives_without_card") or []
+    if jorphan:
+        verdict.notes.append(f"{label} 카드가 안 붙은 기출 목표 {len(jorphan)}개")
+    axis = meta.get("axis_unresolved") or []
+    if axis:
+        verdict.notes.append(
+            f"{label} 빈칸의 축이 안 선 카드 {len(axis)}장: {', '.join(axis)} — "
+            "수선을 다 쓰고도 남았다. 카드 뒷면 경고 박스를 확인할 것")
     if meta.get("similar_pairs"):
         verdict.notes.append(f"{label} 비슷한 카드 쌍 {meta['similar_pairs']}건")
     # **예습에만 적는다.** 2026-08-31부터 복습도 `web_items`를 내지만 그것을 읽는

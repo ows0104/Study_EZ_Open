@@ -612,6 +612,16 @@ def warning_of(c: dict) -> str:
         tail = f'<br>{html.escape(r["note"])}' if r.get("note") else ""
         trust.append('<span class="h">정답 의심</span><br>'
                      '이 답이 의학적으로 맞는지 원 족보로 확인해 볼 것.' + tail)
+    # 축 검사가 「이 빈칸이 무엇을 묻는지 모르겠다」고 한 것이 수선 고리를 지나고도
+    # 남았다. 배포는 안 막는다(`AXIS_REASON` 은 `DEFECT_REASONS` 가 아니다) —
+    # 다만 **남은 채로 아무 데도 안 뜨는 것은 다른 얘기다.** 2026-09-06 `260901_01`
+    # 에서 마지막 회차가 잡은 한 장이 그대로 나갔고, `reproduce.axis.json` 과
+    # 파이프라인 로그 말고는 그 사실이 적힌 자리가 없었다. 관리자는 계수기를 따로
+    # 안 보고 카드 뒷면에서 걸러낸다(CLAUDE.md).
+    if r.get("reason") == AXIS_REASON:
+        tail = f'<br>{html.escape(r["note"])}' if r.get("note") else ""
+        trust.append('<span class="h">빈칸 축</span><br>'
+                     '이 빈칸이 무엇을 묻는지 서 있는지 확인할 것.' + tail)
     if flags := _labels(c, WARN_TRUST):
         trust.append('<span class="h">자료 주의</span><br>' + " · ".join(flags))
 
