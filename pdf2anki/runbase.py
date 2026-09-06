@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 
 from . import ledger
-from .build import DEFECT_REASONS
+from .build import DEFECT_REASONS, REPAIR_REASONS
 from .prompting import DEFAULT_DOMAIN
 from .session import run_agent
 
@@ -60,14 +60,30 @@ class BaseRunner:
             return any(self.out.glob(produces))
         return (self.out / produces).exists()
 
-    def defects(self) -> list[dict]:
-        """재현 검사가 **카드 결함**으로 가른 것만. lecture_specific·genuinely_wrong 은 아니다."""
+    def _reproduced(self) -> list[dict]:
         f = self.out / "items.reproduced.json"
         if not f.exists():
             return []
-        cards = json.loads(f.read_text(encoding="utf-8"))["cards"]
-        return [c for c in cards
+        return json.loads(f.read_text(encoding="utf-8"))["cards"]
+
+    def defects(self) -> list[dict]:
+        """재현 검사가 **카드 결함**으로 가른 것만. lecture_specific·genuinely_wrong 은 아니다.
+
+        **문지기가 보는 것이 이쪽이다.** 남으면 `run.meta.json` 의 `reproduce_defects`
+        에 실려 그 편의 배포가 미뤄진다.
+        """
+        return [c for c in self._reproduced()
                 if (c.get("reproduce") or {}).get("reason") in DEFECT_REASONS]
+
+    def repairables(self) -> list[dict]:
+        """수선 고리에 태울 것. `defects()` 에 축 검사가 가른 것을 더한다.
+
+        갈래를 둘로 둔 이유는 **고칠 값과 막을 값이 다르기 때문이다.** 축 위반은
+        고쳐 볼 가치가 있지만(한 번에 대개 고쳐진다), 남았다고 배포를 미룰 만큼
+        검증되지는 않았다 — 2026-09-06 에 한 편에서 처음 쟀다.
+        """
+        return [c for c in self._reproduced()
+                if (c.get("reproduce") or {}).get("reason") in REPAIR_REASONS]
 
     # ------------------------------------------------------------ 실행
 

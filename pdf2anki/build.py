@@ -45,6 +45,14 @@ from .textutil import answer_runs, collapse_cloze, norm_key
 # 표시는 warning_of() 가 카드 뒷면에 띄운다.
 DEFECT_REASONS = ("question_ambiguous", "needs_options", "answer_underspecified")
 
+# 축 검사(`reproduce axis`)가 가른 것. **`DEFECT_REASONS` 에 넣지 않는다** —
+# 수선 고리는 태우되 남아도 배포를 막지는 않는다. 문지기(`studyez.gate`)가 보는
+# `reproduce_defects` 는 `DEFECT_REASONS` 로만 서고, 그 자리는 「사람이 열어 봐야
+# 아는 결함」이라는 뜻으로 굳어 있다. 축 검사는 2026-09-06 에 붙었고 **한 편에서만
+# 재 봤다** — 그 값으로 배포를 미루기에는 이르다.
+AXIS_REASON = "blank_axis_missing"
+REPAIR_REASONS = DEFECT_REASONS + (AXIS_REASON,)
+
 RENDER_ZOOM = 2.0          # 크롭 렌더 배율
 SLIDE_ZOOM = 1.6           # 뒷면에 붙는 슬라이드 전체 렌더 배율
 JOKBO_ZOOM = 1.5           # 뒷면에 붙는 족보 지면 렌더 배율

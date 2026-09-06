@@ -346,7 +346,7 @@ class Runner(BaseRunner):
     def repair(self):
         """결함 카드를 다시 쓰게 하고 검사를 다시 돈다. 줄지 않으면 그만둔다."""
         for rnd in range(1, self.args.repair_rounds + 1):
-            bad = self.defects()
+            bad = self.repairables()
             if not bad:
                 return
             print(f"\n── 수선 {rnd}/{self.args.repair_rounds}  (결함 {len(bad)}장)", flush=True)
@@ -361,7 +361,9 @@ class Runner(BaseRunner):
                             f"- 원래 답: {c['a']}\n"
                             f"- 질문만 보고 다시 푼 답: {r.get('reproduced_answer') or '(풀 수 없다고 답함)'}\n"
                             f"- 채점 메모: {r.get('note') or ''}")
-            task = (PROMPTS / "repair.md").read_text(encoding="utf-8").replace("{raw}", raw)
+            task = ((PROMPTS / "repair.md").read_text(encoding="utf-8")
+                    .replace("{raw}", raw)
+                    .replace("{dir}", self.out.resolve().as_posix()))
             self.agent(task + "\n\n" + "\n\n".join(body), f"수선{rnd}",
                        resume=bool(self.sid))
             ledger.append(self.out, "수선", seconds=time.time() - t, cost=self.pend_cost,
@@ -371,7 +373,7 @@ class Runner(BaseRunner):
             ids = [c["id"] for c in bad if c.get("id")]
             self.validate()
             self.reproduce(only=ids)     # 고친 카드만 다시 검사한다
-            if len(self.defects()) >= len(bad):
+            if len(self.repairables()) >= len(bad):
                 print("   결함이 줄지 않았다. 수선을 멈춘다.", flush=True)
                 return
 

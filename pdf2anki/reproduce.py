@@ -50,6 +50,8 @@ from .schema import IMAGE_FORMATS
 from .session import SessionError, run_blind, verify_blind
 from .textutil import answer_runs, norm_key
 
+from .build import AXIS_REASON, DEFECT_REASONS
+
 PROMPTS = Path(__file__).parent / "prompts"
 # 프롬프트 파일은 "파일에 써라"라고 지시한다. 자동 모드는 도구가 없으니 stdout 으로 돌린다.
 WRITE_TO_FILE = "아래 경로에 이 형태로 쓴다. 다른 말은 덧붙이지 않는다."
@@ -653,11 +655,46 @@ def cmd_apply(d: Path, **_) -> int:  # apply 는 항상 전체를 훑는다 (--o
     return 0
 
 
+def mark_axis(d: Path) -> int:
+    """축 검사 결과를 `items.reproduced.json` 의 판정에 얹는다. 얹은 카드 수를 돌려준다.
+
+    **이미 결함으로 갈린 카드는 건드리지 않는다.** 재현 채점이 내린 판정이 더 구체적이라
+    (`answer_underspecified` 는 무엇이 안 닫혔는지까지 적는다) 축으로 덮으면 수선이
+    받을 정보가 줄어든다. 축은 **깨끗이 지나간 카드**에만 붙는다 — 그것이 이 검사를
+    만든 이유다(재현을 통과하는 나쁜 빈칸).
+    """
+    axis_f, items_f = d / "reproduce.axis.json", d / "items.reproduced.json"
+    if not (axis_f.exists() and items_f.exists()):
+        return 0
+    axes = {r["id"]: r for r in json.loads(axis_f.read_text(encoding="utf-8"))["axes"]}
+    data = json.loads(items_f.read_text(encoding="utf-8"))
+    n = 0
+    for c in data["cards"]:
+        r = axes.get(c.get("id"))
+        if not r or c.get("card_format") != "cloze":
+            continue
+        miss = [b for b in r.get("blanks", []) if not b.get("told", True)]
+        if not miss:
+            continue
+        cur = (c.get("reproduce") or {}).get("reason")
+        if cur in DEFECT_REASONS:
+            continue
+        note = " / ".join(f"[{b.get('n')}] {b.get('why_not', '')}" for b in miss)
+        c["reproduce"] = {**(c.get("reproduce") or {}), "reason": AXIS_REASON,
+                          "note": f"빈칸이 무엇을 묻는지 알 수 없다 — {note}"}
+        n += 1
+    items_f.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return n
+
+
 def cmd_check(d: Path, **kw) -> int:
-    """solve → judge → apply. 파이프라인에서 쓰는 한 칸.
+    """solve → judge → apply → axis. 파이프라인에서 쓰는 한 칸.
 
     --only 를 주면 그 카드만 다시 풀고 채점한다. 나머지 카드의 결과는 그대로 살아 있고,
     apply 는 늘 전체를 대상으로 돌아 items.reproduced.json 을 완전한 상태로 만든다.
+
+    **축 검사는 마지막에 온다.** 앞의 셋이 「답이 나오는가」를 보고, 축은 그것을 지나간
+    카드에서 「빈칸이 무엇을 묻는지 서 있는가」를 본다. cloze 만 보므로 싸다.
     """
     for name, fn in (("풀이", cmd_solve), ("채점", cmd_judge), ("반영", cmd_apply)):
         print(f"\n── {name}")
@@ -666,6 +703,16 @@ def cmd_check(d: Path, **kw) -> int:
             print(f"{name} 단계에서 멈췄다.")
             return rc
         kw = {**kw, "canary_done": True}   # 카나리아는 한 번만 확인하면 된다
+    print("\n── 축 검사")
+    # 축 검사가 실패해도 앞의 결과는 살아 있다. 멈추지 않고 넘어간다 —
+    # 이것 때문에 편 전체가 죽으면 얻는 것보다 잃는 것이 크다.
+    if cmd_axis(d, force=True, **{k: v for k, v in kw.items()
+                                  if k in ("model", "chunk", "timeout", "retries", "jobs")}):
+        print("   축 검사를 건너뛴다 (앞 단계 결과는 그대로다).")
+        return 0
+    marked = mark_axis(d)
+    if marked:
+        print(f"   축이 안 선 빈칸 카드 {marked}장을 수선 대상으로 올렸다.")
     return 0
 
 
