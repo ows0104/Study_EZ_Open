@@ -25,9 +25,14 @@ from app.config import get_settings
 from app.database import get_db
 from app.matching import relink
 from app.models import (
+    APP_POLICY,
+    APP_STUDYEZ,
     ASSET_KINDS,
     CHECKLIST_ITEMS,
+    POLICY_AUTO,
+    ROLE_MEMBER,
     SLIDE_KINDS,
+    AppGrant,
     Asset,
     CourseAlias,
     Lecture,
@@ -744,15 +749,24 @@ def list_users(
     user: CurrentUser = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> list[dict[str, Any]]:
-    """가입한 사람 전부. 승인 안 된 사람이 먼저 온다 — 할 일이 위에 있어야 한다."""
+    """가입한 사람 전부. 승인 안 된 사람이 먼저 온다 — 할 일이 위에 있어야 한다.
+
+    `apps`는 이 사람이 들어갈 수 있는 앱이다. `isApproved`는 그중 Study_EZ가
+    있느냐를 옛 이름으로 부른 것이고, 화면이 아직 그 이름을 쓰고 있어서 같이
+    낸다 — 승인 버튼이 실제로 쓰는 값은 이쪽이다.
+    """
     profiles = db.scalars(select(Profile)).all()
-    profiles.sort(key=lambda row: (row.is_approved, row.email.lower()))
+    grants: dict[str, dict[str, str]] = {}
+    for row in db.scalars(select(AppGrant)).all():
+        grants.setdefault(row.user_id, {})[row.app] = row.role
+    profiles.sort(key=lambda row: (APP_STUDYEZ in grants.get(row.id, {}), row.email.lower()))
     return [
         {
             "id": row.id,
             "email": row.email,
             "isAdmin": row.is_admin,
-            "isApproved": row.is_approved,
+            "isApproved": APP_STUDYEZ in grants.get(row.id, {}),
+            "apps": grants.get(row.id, {}),
             "createdAt": row.created_at.isoformat() if row.created_at else None,
         }
         for row in profiles
@@ -761,6 +775,9 @@ def list_users(
 
 class ApprovalIn(BaseModel):
     is_approved: bool = Field(alias="isApproved")
+    # 어느 앱의 권한인가. 안 주면 Study_EZ다 — 화면이 아직 앱을 안 말하고,
+    # 승인이라는 말이 원래 이 앱의 것이었다.
+    app: str = APP_STUDYEZ
 
     model_config = {"populate_by_name": True}
 
@@ -772,16 +789,31 @@ def set_approval(
     user: CurrentUser = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
+    """앱 하나의 권한을 주거나 거둔다. `app_grant`의 줄 하나를 세우고 지운다."""
     profile = db.get(Profile, user_id)
     if profile is None:
         raise HTTPException(status_code=404, detail="계정을 찾을 수 없습니다.")
+    if payload.app not in APP_POLICY:
+        raise HTTPException(status_code=400, detail=f"없는 앱입니다: {payload.app}")
     # 관리자가 자기 승인을 내리면 그 길로 /admin에서 잠긴다. 되돌릴 사람이
     # 자기뿐일 수 있으므로 아예 막는다.
     if profile.id == user.id and not payload.is_approved:
         raise HTTPException(status_code=400, detail="자기 승인은 내릴 수 없습니다.")
-    profile.is_approved = payload.is_approved
+
+    grant = db.get(AppGrant, (user_id, payload.app))
+    if payload.is_approved and grant is None:
+        db.add(AppGrant(user_id=user_id, app=payload.app, role=ROLE_MEMBER))
+    elif not payload.is_approved and grant is not None:
+        # 자동 정책 앱은 다음 요청에서 스스로 다시 발급된다. 거두려면 정책을
+        # 바꿔야 한다 — 그 사실을 여기서 알린다.
+        if APP_POLICY[payload.app] == POLICY_AUTO:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{payload.app}는 로그인하면 열리는 앱이라 권한만 거둘 수 없습니다.",
+            )
+        db.delete(grant)
     db.commit()
-    return {"id": profile.id, "isApproved": profile.is_approved}
+    return {"id": profile.id, "app": payload.app, "isApproved": payload.is_approved}
 
 
 @router.get("/timetable-events")

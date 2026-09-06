@@ -188,11 +188,33 @@ cd server; ./deploy.ps1
 | 스키마 | `init-db`. 표를 지우지는 않으므로 컬럼을 뺄 때는 손으로 |
 | 시간표 | `seed-timetable`. 없어진 칸은 지우고 매칭을 다시 계산한다 |
 
+## 같이 얹혀 있는 것 — 기생충학 땡시
+
+`Spotter_Quiz`가 **이 서버와 이 Supabase를 같이 쓴다.** 코드는
+`server/app/routes/spotter.py` 하나이고, R2 키는 `spotter/` 아래로 모인다.
+학생이 두 앱에 각각 가입하지 않게 하려는 것이라 계정 표(`profile`)를 공유한다.
+
+**문은 다르다.** 땡시 경로는 `require_approved_user`를 안 지나고
+`get_current_user`만 지난다 — 가입하면 열린다. 승인 게이트는 강의 필기가
+남이 만든 것이기 때문에 있는 것이고, 땡시 문항은 우리가 만들었다.
+
+배포할 때 이것 때문에 더 할 일:
+
+| | |
+|---|---|
+| `CORS_ALLOWED_ORIGINS` | 땡시가 올라간 주소도 넣는다 (쉼표로 이어서) |
+| Supabase **Redirect URLs** | 땡시 주소도 넣는다. 빠지면 비번 재설정 링크가 죽는다 |
+| `init-db` | `spotter_record`·`spotter_wrong`·`spotter_report` 셋을 세운다 |
+| 문항 DB·사진 | `Spotter_Quiz/scripts/upload_web.py`가 서명 URL로 올린다 |
+
+땡시 쪽 문서는 `Spotter_Quiz/web/README.md`에 있다.
+
 ## 확인
 
 ```bash
 curl https://studyez-api-xxxx.a.run.app/api/health
 curl -i https://studyez-api-xxxx.a.run.app/api/timetable    # 401이어야 한다
+curl -i https://studyez-api-xxxx.a.run.app/api/spotter/db   # 401이어야 한다
 ```
 
 로그인 없이 열리는 읽기 경로는 없다. `/api/health`만 예외다.

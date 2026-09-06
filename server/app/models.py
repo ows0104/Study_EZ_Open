@@ -566,3 +566,152 @@ class RunnerBeat(Base):
     busy: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     note: Mapped[str] = mapped_column(Text, nullable=False, default="")
     last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 기생충학 땡시(Spotter_Quiz). 같은 계정, 다른 문.
+#
+# **이 앱은 `is_approved`를 보지 않는다.** Study_EZ가 내보내는 것은 남이 만든
+# 강의 필기라서 「이 학년 학생인가」를 사람이 확인해야 하지만, 땡시는 우리가
+# 만든 문항이고 사진도 실습 정리본이다. 가입만 하면 열린다 — 라우터가
+# `require_approved_user` 대신 `get_current_user`를 쓰는 것이 그 차이의 전부다.
+#
+# 표 이름에 `spotter_`를 붙인 것은 DB를 함께 쓰기 때문이다. `quiz_attempt`는
+# 이미 Study_EZ의 Pre-Quiz가 쓰고 있어서 이름이 겹치면 안 된다.
+# ─────────────────────────────────────────────────────────────────────
+
+# 신고의 갈래. 화면의 선택지와 같은 순서다.
+SPOTTER_REPORT_KINDS = ("answer", "image", "explanation", "options", "other")
+
+SPOTTER_REPORT_OPEN = "open"
+SPOTTER_REPORT_RESOLVED = "resolved"
+SPOTTER_REPORT_WONTFIX = "wontfix"
+SPOTTER_REPORT_STATUSES = frozenset(
+    {SPOTTER_REPORT_OPEN, SPOTTER_REPORT_RESOLVED, SPOTTER_REPORT_WONTFIX}
+)
+
+# 한 사람이 들고 다니는 기록의 수. 브라우저에 쌓던 시절과 같은 수다.
+SPOTTER_RECORD_KEEP = 30
+
+
+class SpotterRecord(Base):
+    """땡시 한 판의 결과. `localStorage`의 `para_records`가 여기로 왔다.
+
+    **점수만 남기고 문항은 안 남긴다.** 화면이 쓰는 것은 「언제·무슨 모드·몇
+    점」 세 가지뿐이고, 어느 문항을 틀렸는지는 `spotter_wrong`이 따로 든다 —
+    오답노트는 판이 아니라 문항을 따라다니기 때문이다. 다음 판에 맞히면
+    빠져야 하는데, 판마다 목록을 남기면 어느 판의 것이 참인지 알 수 없다.
+    """
+
+    __tablename__ = "spotter_record"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    mode: Mapped[str] = mapped_column(String(8), nullable=False, default="exam")  # exam|study
+    score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (Index("ix_spotter_record_user", "user_id", "created_at"),)
+
+
+class SpotterWrong(Base):
+    """아직 못 맞힌 문항. 맞히는 순간 줄이 사라진다.
+
+    **문항 id는 내용에서 뽑은 해시다**(`scripts/build_web.py`의 `question_id`).
+    사진이 늘거나 표본이 추가돼도 남은 문항의 id는 그대로라, 문항 DB를 다시
+    구워도 이 표가 엉뚱한 문제를 가리키지 않는다. 순번을 썼다면 앞에 사진 한
+    장만 끼어도 전부 밀렸을 것이다.
+
+    그래도 문항이 정말 사라지는 경우(표본을 지웠다)는 남는다. 그때는 화면이
+    DB에 없는 id를 그냥 버린다 — 서버가 청소하지 않는 것은, 청소하려면 서버가
+    문항 DB의 내용을 알아야 하고 그러면 이 표가 DB 재빌드에 묶이기 때문이다.
+    """
+
+    __tablename__ = "spotter_wrong"
+
+    user_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    question_id: Mapped[str] = mapped_column(String(16), primary_key=True)
+    missed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class SpotterReport(Base):
+    """「이 문항 이상해요」. 문항이 자동 생성이라 반드시 필요한 표다.
+
+    **한 사람이 한 문항에 한 줄이다**(unique). 같은 문항을 다시 신고하면 그
+    줄을 고쳐 쓴다 — 목록에 같은 문항이 여러 줄로 늘어서면 몇 명이 걸렸는지가
+    안 보이고, 그걸 세는 것이 이 표의 쓸모다.
+
+    **`stem`·`answer`·`image`는 신고한 사람이 본 것을 그대로 뜬 것이다.**
+    지금의 문항이 아니다. 문항 DB를 다시 구우면서 그 문항이 사라져도 신고는
+    읽을 수 있어야 하고, 무엇보다 "고쳤다"를 판단하려면 신고 당시의 문면이
+    있어야 한다. 화면이 이 값을 현재 문항처럼 그리면 안 된다.
+    """
+
+    __tablename__ = "spotter_report"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    question_id: Mapped[str] = mapped_column(String(16), nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, default="other")
+    note: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # 신고 당시의 문면. 위 설명을 보라 — 현재 문항이 아니다.
+    stem: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    answer: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    image: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default=SPOTTER_REPORT_OPEN)
+    admin_note: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "question_id", name="uq_spotter_report_user_question"),
+        Index("ix_spotter_report_triage", "status", "created_at"),
+        Index("ix_spotter_report_question", "question_id"),
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 형제 앱들. 계정은 하나, 문은 앱마다.
+# ─────────────────────────────────────────────────────────────────────
+
+APP_STUDYEZ = "studyez"
+APP_SPOTTER = "spotter"
+
+# 누가 들어오나. **앱을 더할 때 정하는 것은 이 값 하나다.**
+#
+#   auto    로그인하면 열린다. 우리가 만든 것을 우리 학년에 여는 앱.
+#   manual  사람이 승인해야 열린다. 남이 만든 자료를 내보내는 앱.
+#
+# 전에는 이 갈림이 `profile.is_approved` 불리언 하나였고, 그 불리언은 이름이
+# 전역인데 뜻은 Study_EZ 전용이었다. 앱이 셋이 되면 `is_approved_xxx`가 줄줄이
+# 늘어난다 — 그래서 표로 옮겼다.
+POLICY_AUTO = "auto"
+POLICY_MANUAL = "manual"
+APP_POLICY = {APP_STUDYEZ: POLICY_MANUAL, APP_SPOTTER: POLICY_AUTO}
+
+ROLE_MEMBER = "member"
+ROLE_ADMIN = "admin"
+
+
+class AppGrant(Base):
+    """이 사람이 이 앱을 쓸 수 있다.
+
+    **`profile.is_admin`을 대신하지 않는다.** 저것은 플랫폼 전체를 관리하는
+    사람이고(부트스트랩이 `STUDYEZ_ADMIN_EMAILS`에서 온다), 이 표는 「어느 앱에
+    들어갈 수 있나」다. 둘을 한 자리에 합치면 앱을 더할 때마다 관리자 개념이
+    갈라진다.
+
+    `role`은 지금 `member`뿐이고 `admin`은 자리만 잡아 뒀다 — 앱 안에서 역할이
+    갈라지는 날(조교·출제자 같은) 값을 더하면 되고, 문자열이라 그때 마이그레이션이
+    필요 없다.
+    """
+
+    __tablename__ = "app_grant"
+
+    user_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    app: Mapped[str] = mapped_column(String(32), primary_key=True)
+    role: Mapped[str] = mapped_column(String(16), nullable=False, default=ROLE_MEMBER)
+    granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (Index("ix_app_grant_app", "app", "role"),)

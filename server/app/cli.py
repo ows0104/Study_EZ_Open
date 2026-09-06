@@ -27,7 +27,14 @@ from sqlalchemy import inspect, select, text
 
 from app.database import Base, SessionLocal, engine
 from app.matching import relink
-from app.models import Lecture, TimetableEvent
+from app.models import (
+    APP_STUDYEZ,
+    ROLE_ADMIN,
+    ROLE_MEMBER,
+    AppGrant,
+    Lecture,
+    TimetableEvent,
+)
 from app.naming import (
     course_from_title,
     nfc,
@@ -83,9 +90,47 @@ def ensure_columns() -> None:
         print(f"칼럼을 붙였습니다: {', '.join(added)}")
 
 
+def backfill_app_grants() -> None:
+    """`profile.is_approved` 불리언을 `app_grant` 줄로 옮긴다.
+
+    **한 번만 하는 일이고, 여러 번 돌려도 같다.** 이미 줄이 있으면 건너뛴다.
+    옛 칼럼을 지우지는 않는다 — 지웠다가 되돌릴 일이 생기면 값이 없어서
+    못 되돌린다. 읽는 쪽은 이미 표를 보므로 남아 있어도 아무 일도 안 한다.
+    """
+    inspector = inspect(engine)
+    columns = {row["name"] for row in inspector.get_columns("profile")}
+    if "is_approved" not in columns:
+        return  # 이미 칼럼을 뗀 DB. 옮길 것이 없다.
+
+    with SessionLocal() as db:
+        have = {
+            (row.user_id, row.app)
+            for row in db.scalars(select(AppGrant).where(AppGrant.app == APP_STUDYEZ)).all()
+        }
+        rows = db.execute(
+            text("SELECT id, is_admin, is_approved FROM profile WHERE is_approved")
+        ).all()
+        made = 0
+        for user_id, is_admin, _ in rows:
+            if (user_id, APP_STUDYEZ) in have:
+                continue
+            db.add(
+                AppGrant(
+                    user_id=user_id,
+                    app=APP_STUDYEZ,
+                    role=ROLE_ADMIN if is_admin else ROLE_MEMBER,
+                )
+            )
+            made += 1
+        if made:
+            db.commit()
+            print(f"app_grant로 옮긴 승인: {made}건")
+
+
 def init_db() -> None:
     Base.metadata.create_all(engine)
     ensure_columns()
+    backfill_app_grants()
     print(f"{len(Base.metadata.tables)}개 표를 준비했습니다.")
 
 

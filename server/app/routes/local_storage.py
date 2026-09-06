@@ -15,11 +15,14 @@ from app.storage import ObjectStorage
 
 router = APIRouter()
 
-_ALLOWED_PREFIX = "lectures/"
+# 산출물이 사는 접두사. **여기 없는 것은 local-test에서도 안 나간다** —
+# 이 경로가 로그인 게이트 바깥에 있으므로, 열어 주는 범위가 곧 이 우회로의
+# 위험 범위다. `spotter/`는 기생충학 땡시의 문항 DB와 사진이다.
+_ALLOWED_PREFIXES = ("lectures/", "spotter/")
 
 
 def _guard(object_key: str) -> None:
-    if not get_settings().local_test_mode or not object_key.startswith(_ALLOWED_PREFIX):
+    if not get_settings().local_test_mode or not object_key.startswith(_ALLOWED_PREFIXES):
         raise HTTPException(status_code=404, detail="Not found")
 
 

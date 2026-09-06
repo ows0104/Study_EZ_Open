@@ -1,7 +1,24 @@
 import { AuthClient, type GoTrueClient } from "@supabase/auth-js";
+// 부작용으로 `globalThis.SharedSession`을 세운다. 빌드 도구가 없는 형제 앱
+// (기생충학 땡시)이 같은 파일을 `<script src>`로 읽어야 해서 클래식 스크립트다.
+import "../../packages/session/session.js";
 
 const url = import.meta.env.VITE_SUPABASE_URL ?? "";
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? "";
+// 세션 쿠키를 어느 도메인에 걸 것인가. 비우면 이 호스트 전용이 되고 형제 앱과
+// 공유되지 않는다 — 로컬 개발과 `pages.dev` 비상 경로가 그 경우다.
+const sessionDomain = import.meta.env.VITE_SESSION_DOMAIN ?? "";
+
+type SharedSessionApi = {
+  cookieStorage: (options: { domain: string }) => {
+    getItem: (key: string) => string | null;
+    setItem: (key: string, value: string) => void;
+    removeItem: (key: string) => void;
+  };
+  storageKey: (supabaseUrl: string) => string;
+};
+
+const shared = (globalThis as unknown as { SharedSession: SharedSessionApi }).SharedSession;
 
 /**
  * Supabase가 로그인을 맡는다.
@@ -36,7 +53,24 @@ function client(): GoTrueClient | null {
   return new AuthClient({
     url: new URL("auth/v1", base).href,
     headers: { Authorization: `Bearer ${anonKey}`, apikey: anonKey },
-    storageKey: `sb-${base.hostname.split(".")[0]}-auth-token`,
+    storageKey: shared.storageKey(base.href),
+    /**
+     * **세션을 localStorage가 아니라 쿠키에 둔다.**
+     *
+     * localStorage는 오리진마다 따로라, 형제 앱이 서브도메인으로 갈리면 같은
+     * 계정인데도 로그인을 두 번 해야 한다. `Domain=.studyez.kr` 쿠키는 형제가
+     * 같이 읽는다.
+     *
+     * 이미 로그인해 둔 사람은 안 튕긴다 — 어댑터가 처음 읽을 때 localStorage에
+     * 남은 세션을 쿠키로 옮긴다.
+     *
+     * 대가가 하나 있다. **두 앱을 동시에 열어 두면 토큰 갱신이 겹칠 수 있다.**
+     * Supabase는 리프레시 토큰을 회전시키므로 한쪽이 갱신한 직후 다른 쪽이 옛
+     * 토큰으로 갱신하려 들 수 있고, 그때는 재사용 유예 창(기본 10초) 안이면
+     * 통과하고 아니면 한쪽이 다시 로그인한다. 창을 늘리려면 Supabase의
+     * Refresh Token Reuse Interval을 키운다.
+     */
+    storage: shared.cookieStorage({ domain: sessionDomain }),
   });
 }
 

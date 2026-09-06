@@ -92,6 +92,25 @@ class ObjectStorage:
             params["ResponseContentType"] = content_type
         return self.client.generate_presigned_url("get_object", Params=params, ExpiresIn=expires_in)
 
+    def get_bytes(self, key: str) -> bytes | None:
+        """객체를 통째로 읽는다. 서버가 내용을 봐야 하는 것에만 쓴다.
+
+        파일은 원칙적으로 서명 URL로 나간다 — 바이트가 서버를 지나가지 않는
+        것이 이 앱에서 Cloud Run이 싼 이유다. 예외는 **서버가 그 내용을
+        가공해서 내보내는 것**뿐이고, 지금은 땡시 문항 DB 하나다(gzip으로
+        줄여서 ETag와 함께 낸다. 서명 URL은 매번 주소가 달라 브라우저 캐시가
+        안 듣는다).
+        """
+        if self.local_root is not None:
+            path = self.local_path(key)
+            return path.read_bytes() if path.is_file() else None
+        try:
+            return self.client.get_object(Bucket=self.bucket, Key=key)["Body"].read()
+        except ClientError as exc:
+            if str(exc.response.get("Error", {}).get("Code", "")) in {"404", "NoSuchKey", "NotFound"}:
+                return None
+            raise
+
     def head(self, key: str) -> dict[str, Any] | None:
         if self.local_root is not None:
             path = self.local_path(key)
