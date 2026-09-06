@@ -438,6 +438,23 @@ async function finish(){
   scrollTo(0,0);
 }
 
+/** 풀던 판을 접고 시작 화면으로. 결과 화면의 「처음으로」도 여기로 온다.
+ *
+ *  **땡시 모드에서 답을 하나라도 골랐으면 한 번 묻는다.** 시간을 재는 화면에서
+ *  잘못 누르면 그 판이 채점도 없이 사라지고, 되돌릴 방법이 없다. 공부 모드는
+ *  고른 즉시 정답을 봤으므로 잃을 것이 없어 그냥 나간다.
+ */
+function quit(){
+  const inQuiz = !$('quiz').classList.contains('hidden');
+  if (inQuiz && S.mode === 'exam' && S.answers.some(a => a !== null)
+      && !confirm('풀던 땡시를 그만둡니다. 지금까지 고른 답은 채점하지 않습니다.')) return;
+  stopTimer();
+  $('quiz').classList.add('hidden');
+  $('result').classList.add('hidden');
+  $('start').classList.remove('hidden');
+  scrollTo(0,0);
+}
+
 function retryWrong(){
   if (!S.wrongSet || !S.wrongSet.length) return;
   S.qs = S.wrongSet.slice();
