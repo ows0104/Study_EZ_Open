@@ -253,6 +253,29 @@ def build_blind(d: Path, cards: list[dict], out_path: Path | None,
     return f"{task}\n\n---\n\n# 카드 {len(cards)}장\n\n{table}\n"
 
 
+def numbered_front(card: dict) -> str:
+    """빈칸을 `[1]`·`[2]` 로 번호 붙여 그린 앞면. 힌트가 있으면 힌트도 함께 보인다.
+
+    `front_of` 는 전부 `[...]` 로 그려서 **어느 빈칸을 말하는지 가리킬 수가 없다.**
+    축 검사는 빈칸마다 판정을 받아야 하므로 번호가 필요하다.
+    """
+    n = [0]
+
+    def one(m):
+        n[0] += 1
+        hint = m.group(2)
+        return f"[{n[0]}{'|' + hint if hint else ''}]"
+
+    return RE_CLOZE.sub(one, card["q"]).strip()
+
+
+def build_axis(cards: list[dict], out_path: Path | None) -> str:
+    lines = [f"| {c['id']} | {numbered_front(c)} |" for c in cards]
+    table = "\n".join(["| id | 앞면 |", "|---|---|"] + lines)
+    task = task_text("reproduce_axis.md", out_path)
+    return f"{task}\n\n---\n\n# 카드 {len(cards)}장\n\n{table}\n"
+
+
 def load_cards(d: Path) -> list[dict]:
     """id 를 확정해 되쓴다. 이후 단계가 전부 id 로 짝을 맞추기 때문이다."""
     src = d / "items.checked.json"
@@ -474,6 +497,54 @@ def cmd_solve(d: Path, *, model=None, chunk=25, timeout=1800, retries=1, force=F
     return 0
 
 
+def cmd_axis(d: Path, *, model=None, chunk=25, timeout=1800, retries=1,
+             force=False, jobs=4, **_) -> int:
+    """**빈칸이 무엇을 묻는지** 빈 세션에게 물어 ① 위반을 센다.
+
+    풀이(`cmd_solve`)는 「답이 뭐냐」를 묻는데, `cloze` 는 앞면에 문장이 있어서
+    **나쁜 빈칸일수록 잘 풀린다** — 그럴듯한 것을 채워 넣을 수 있기 때문이다.
+    2026-09-06 `260901_01` v6 에서 관리자가 「별로」라고 판정한 카드가
+    (`선충류는 [ ], 흡충류는 [ ], 조충류는 [ ]이다`) 재현·검증·soft flag 를
+    **전부 깨끗이 지났다.** 그래서 다른 것을 묻는 세션을 따로 둔다.
+
+    답을 맞히라고 하지 않으므로 **정답 누출이 원리적으로 없다** — 앞면만 준다.
+    """
+    out = d / "reproduce.axis.json"
+    if out.exists() and not force:
+        print(f"{out} 가 이미 있다. 다시 재려면 --force 를 줘라.")
+        return 1
+    cards = [c for c in load_cards(d) if c.get("card_format") == "cloze"]
+    if not cards:
+        print("빈칸 카드가 없다. 잴 것이 없다.")
+        out.write_text(json.dumps({"axes": []}, ensure_ascii=False, indent=2), encoding="utf-8")
+        return 0
+
+    batches = chunks(cards, chunk)
+    print(f"빈칸 카드 {len(cards)}장 · 세션 {len(batches)}개")
+    rows = run_chunks(batches, lambda b: build_axis(b, None), "axes",
+                      lambda c: c["id"], model=model, timeout=timeout,
+                      retries=retries, label="축 검사", jobs=jobs, out=d)
+    if not rows:
+        print("한 장도 받지 못했다. 아무것도 쓰지 않는다.")
+        return 1
+    out.write_text(json.dumps({"axes": merge_by_id(out, "axes", rows)},
+                              ensure_ascii=False, indent=2), encoding="utf-8")
+
+    by_id = {c["id"]: c for c in cards}
+    bad = [r for r in rows if any(not b.get("told", True) for b in r.get("blanks", []))]
+    n_blank = sum(len(r.get("blanks", [])) for r in rows)
+    n_bad = sum(1 for r in rows for b in r.get("blanks", []) if not b.get("told", True))
+    print(f"\n빈칸 {n_blank}개 중 축을 못 댄 것 {n_bad}개 · 그런 카드 {len(bad)}장")
+    for r in bad:
+        c = by_id.get(r["id"])
+        print(f"   [{r['id']}] {numbered_front(c) if c else ''}")
+        for b in r.get("blanks", []):
+            if not b.get("told", True):
+                print(f"      [{b.get('n')}] {b.get('why_not', '')[:90]}")
+    print(f"→ {out}")
+    return 0
+
+
 def cmd_judge(d: Path, *, model=None, judge_model="sonnet", chunk=25, timeout=1800,
               retries=1, force=False, skip_canary=False, canary_done=False,
               only=None, jobs=4, domain=None, **_) -> int:
@@ -600,7 +671,8 @@ def cmd_check(d: Path, **kw) -> int:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="질문만 보고 다시 풀어 카드를 검사한다")
-    ap.add_argument("step", choices=["check", "solve", "judge", "apply", "prepare", "grade"])
+    ap.add_argument("step", choices=["check", "solve", "judge", "apply", "prepare",
+                                 "grade", "axis"])
     ap.add_argument("prep_dir")
     ap.add_argument("--model", help="빈 세션에 쓸 모델 (예: opus, sonnet). 생략하면 CLI 기본값")
     ap.add_argument("--chunk", type=int, default=25,
@@ -624,7 +696,7 @@ def main(argv=None) -> int:
         print(f"{d} 가 없다.")
         return 1
     fn = {"check": cmd_check, "solve": cmd_solve, "judge": cmd_judge, "apply": cmd_apply,
-          "prepare": cmd_prepare, "grade": cmd_grade}[args.step]
+          "prepare": cmd_prepare, "grade": cmd_grade, "axis": cmd_axis}[args.step]
     only = {x.strip() for x in args.only.split(",") if x.strip()} if args.only else None
     domain = resolved_domain(d, args.domain)
     return fn(d, model=args.model, judge_model=args.judge_model, chunk=args.chunk,
