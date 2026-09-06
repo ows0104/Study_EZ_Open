@@ -93,7 +93,13 @@ def run_blind(prompt: str, *, model: str | None = None, timeout: int = 1800,
     if model:
         argv += ["--model", model]
 
-    with tempfile.TemporaryDirectory(prefix="pdf2anki-blind-") as cwd:
+    # **뒷정리 실패로 편을 죽이지 않는다.** `claude` 가 이 폴더를 cwd 로 잡고 끝나면
+    # 윈도우에서는 핸들이 곧바로 안 놓여서 `rmdir` 이 WinError 32 로 튄다. 혼자 돌 때는
+    # 거의 안 나는데 2026-09-06 에 4편을 나란히 돌리자 **1파 넷이 전부 여기서 죽었다** —
+    # 죽은 자리가 세션의 산출물을 다 받은 뒤라 ①② 20여 분이 「실패」로 보고됐다.
+    # 안 지워진 폴더는 빈 껍데기이고 윈도우가 나중에 치운다.
+    with tempfile.TemporaryDirectory(prefix="pdf2anki-blind-",
+                                     ignore_cleanup_errors=True) as cwd:
         try:
             proc = subprocess.run(argv, input=prompt, cwd=cwd, timeout=timeout,
                                   capture_output=True, text=True,
