@@ -46,7 +46,7 @@ from app.models import (
     RunnerBeat,
     TimetableEvent,
 )
-from app.naming import nfc, object_key, slide_no_from_filename
+from app.naming import nfc, object_key, slide_no_from_filename, version_from_filename
 from app.preview_links import conversation_url as valid_conversation_url
 from app.preview_links import provider as valid_provider
 from app.preview_links import share_url as valid_share_url
@@ -691,6 +691,13 @@ def overview(
                         "slidesUnused": value.slides_unused,
                         "itemCount": value.item_count,
                         "builtAt": value.built_at.isoformat() if value.built_at else None,
+                        # **무슨 판으로 구웠나.** 필기의 판(`lecture.version`)이 그 뒤로
+                        # 올라갔으면 그 덱은 옛 자료로 만든 것이고, 한 편의 두 덱 중
+                        # 하나만 다시 구운 경우가 여기서 갈려 보인다. 파일명을 못 읽으면
+                        # `null`이다 — 1로 메우면 「같은 판」으로 읽힌다.
+                        "sourceVersion": version_from_filename(
+                            str((value.payload or {}).get("source_pdf") or "")
+                        ),
                     }
                     for quiz_kind, value in meta.items()
                 },

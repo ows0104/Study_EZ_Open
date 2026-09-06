@@ -175,8 +175,15 @@ ventral sucker 라벨링이 반대로 되어있는 듯하여 수정했습니다"
   명령은 없다. 원본은 Synology에 있고 사이트로는 `publish`가 밀어 올린다
 - **웹 풀이(자기채점)** — Pre-Quiz·Main-Quiz의 `reveal`·`grade`, 기록 지우기는
   `DELETE …/attempts`
-- **관리자 화면** — 러너가 붙어 있는지와 대기 일감 수(`/api/admin/overview`),
-  사용자 승인, 짝 확정(`PUT …/match`), 예외 처리(`waive`), 과목 별칭
+- **관리자 화면** — 탭 셋으로 갈라져 있다(2026-09-04). 왼쪽부터 `/admin` **퀴즈**는
+  위가 도는 일감 판(`/api/admin/prequiz-jobs` — 순서 옮기기·멈추기)이고 아래가
+  만들어진 덱 목록이다 — 최신순 열 줄씩, 문항 수·만든 때·검토 표시와 **무슨 판으로
+  구웠나**(`run.meta.json`의 `source_pdf`에서 읽는다. 필기 판이 그 뒤로 올라갔으면
+  「옛 판」으로 뜬다). `/admin/users` **계정**은 승인(대기가 위로 선다),
+  `/admin/lectures` **강의**는 과목별 블록(진행 중 → 예정 → 지난 것 순. **미래 날짜로
+  세우지 않는다** — 시간표가 몇 주 앞까지 들어와 있어서 그러면 아직 시작도 안 한
+  과목이 이긴다)에 짝 확정(`PUT …/match`) · 체크리스트 `waive` · 예습 링크 · 과목 별칭. 러너가 안 붙었는데 일감이 기다리면
+  그 경고만 어느 탭에서든 뜬다
 - **크롬 확장** — 작년 PDF와 예습 프롬프트를 ChatGPT·Gemini·Claude 새 대화에
   채우고 링크를 회수한다. 스토어용 ZIP은 `chrome-extension\build-store-package.ps1`
 

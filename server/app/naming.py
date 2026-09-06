@@ -53,6 +53,27 @@ def normalize_stem(text: str) -> str:
     return _JUNK_RE.sub("", canonical(text))
 
 
+# 필기 파일명 꼬리의 판 번호. "_최나예v1" · "_고명재 v2" · "_오서연_v3" · "_이채현v.1".
+#
+# `studyez/filenames.py`의 `_AUTHOR_RE`와 **같은 규칙**이다(이 파일 첫머리 참고).
+# 필기자 이름은 한글 2~4자이고 판 번호는 없을 수도 있다 — 없으면 v1이다.
+_AUTHOR_RE = re.compile(r"_\s*([가-힣]{2,4})\s*_?\s*[vV]?\s*\.?\s*(\d+)?\s*\.*\s*$")
+
+
+def version_from_filename(path: str) -> int | None:
+    """덱을 무엇으로 만들었는지. **모르면 `None`이다.**
+
+    파이프라인이 `run.meta.json`에 적어 둔 원본 PDF 이름에서 판 번호를 읽는다.
+    이름이 규칙을 안 따르면 0이나 1로 메우지 않고 모른다고 말한다 — 메우면
+    「같은 판으로 만들었다」로 읽히고, 그것은 덱을 다시 만들 이유를 지운다.
+    """
+    stem = nfc(path).replace("\\", "/").rsplit("/", 1)[-1].rsplit(".", 1)[0]
+    tail = _AUTHOR_RE.search(stem)
+    if not tail:
+        return None
+    return int(tail.group(2)) if tail.group(2) else 1
+
+
 def slot_from_time(start_time: str) -> int | None:
     """시작 시각 → 교시. 09:00부터 세고 04가 점심이라 교시는 시각 - 8이다.
 
