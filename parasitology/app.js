@@ -19,7 +19,7 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g,
 
 /* ══════════ 상태 ══════════ */
 let S = { qs:[], i:0, answers:[], mode:'exam', limit:30, timer:null, left:0, rand:null,
-          imgs:[], imgUrl:{}, opts:[], timedFor:-1 };
+          imgs:[], imgUrl:{}, opts:[], timedFor:-1, srcOpen:false, srcFor:-1 };
 let QUIZ_META = null, QUIZ_DB = [];
 let ME = null;                      // /api/me. 관리자 화면을 그릴지 정한다
 let WRONG = new Set();              // 오답노트. 서버가 참, 없으면 localStorage
@@ -263,6 +263,8 @@ async function start(mode, wrongOnly){
   });
   S.i = 0;
   S.timedFor = -1;
+  // 새 판은 접힌 채로 시작한다. 지난 판에서 펴 둔 것이 따라오지 않는다.
+  S.srcOpen = false; S.srcFor = -1;
 
   // 사진은 세트를 만든 직후에 한 번에 서명받는다. 문항마다 부르면 왕복이
   // 40번이고 그중 39번은 사용자를 기다리는 동안 노는 요청이 된다.
@@ -291,7 +293,13 @@ function render(){
   const meta = [q.stain, q.magnification].filter(Boolean).join(' · ');
   $('q-meta').textContent = meta;
   $('q-meta').style.display = meta ? '' : 'none';
-  $('q-src').innerHTML = srcHtml(S.imgs[S.i]);
+  /* 출처는 접어 둔다. **땡시에서는 문항이 바뀌면 다시 접히고, 공부에서는
+     펴 둔 채로 따라온다.** 시간을 재는 화면에서 한 번 편 것이 마흔 문항을
+     따라다니면 접어 둔 뜻이 없고, 사진마다 원본을 짚어 보는 공부 중에는
+     문항마다 다시 누르는 것이 성가시다. */
+  if (S.mode === 'exam' && S.srcFor !== S.i) S.srcOpen = false;
+  S.srcFor = S.i;
+  renderSrc();
 
   const picked = S.answers[S.i];              // 원본 보기 번호로 저장한다
   const reveal = S.mode === 'study' && picked !== null;
@@ -462,6 +470,7 @@ function retryWrong(){
   S.imgs = S.qs.map(q => q.image);
   S.opts = S.qs.map(q => q.options.map((_,i) => i));
   S.i = 0; S.timedFor = -1; S.mode = 'study'; S.limit = 0;
+  S.srcOpen = false; S.srcFor = -1;
   $('result').classList.add('hidden');
   $('quiz').classList.remove('hidden');
   render(); scrollTo(0,0);
@@ -589,13 +598,31 @@ function loadLocal(){
 /** 사진 한 장의 출처 한 줄. `meta.images`에 사진마다 한 번만 들어 있다 —
  *  문항마다 넣으면 같은 문장이 6,461번 되풀이된다. */
 function imgSrc(name){ return (QUIZ_META && QUIZ_META.images && QUIZ_META.images[name]) || null; }
+// 선명도는 낮을수록 흐리다. 아래쪽 것들만 표시해서 "내 눈이 문제인가"를 가른다.
+function blurHtml(s){
+  return s.sharp && s.sharp < 12 ? `<span class="dim">흐린 사진 (선명도 ${s.sharp})</span>` : '';
+}
 function srcHtml(name){
   const s = imgSrc(name);
   if (!s) return '';
-  // 선명도는 낮을수록 흐리다. 아래쪽 것들만 표시해서 "내 눈이 문제인가"를 가른다.
-  const blur = s.sharp && s.sharp < 12 ? `<span class="dim">흐린 사진 (선명도 ${s.sharp})</span>` : '';
-  return `<span>출처: ${esc(s.src)}</span><code>${esc(s.path)}</code>${blur}`;
+  return `<span>출처: ${esc(s.src)}</span><code>${esc(s.path)}</code>${blurHtml(s)}`;
 }
+
+/** 문제 화면의 출처 줄. 접힌 채로 손잡이만 서 있다가, 누르면 펴진다.
+ *
+ *  **선명도는 접지 않는다.** 그건 출처가 아니라 사진의 상태이고, 답을 고르는
+ *  동안 바로 보여야 "흐려서 못 알아본 것"과 "몰라서 못 고른 것"이 갈린다.
+ */
+function renderSrc(){
+  const el = $('q-src');
+  const s = imgSrc(S.imgs[S.i]);
+  if (!s){ el.innerHTML = ''; return; }
+  el.innerHTML =
+    `<button class="src-toggle" onclick="toggleSrc()">출처 ${S.srcOpen ? '▾' : '▸'}</button>`
+    + (S.srcOpen ? `<span>${esc(s.src)}</span><code>${esc(s.path)}</code>` : '')
+    + blurHtml(s);
+}
+function toggleSrc(){ S.srcOpen = !S.srcOpen; renderSrc(); }
 
 function zoom(){
   $('modal-img').src = $('q-img').src;
