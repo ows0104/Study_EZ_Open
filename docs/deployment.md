@@ -207,7 +207,9 @@ cd server; ./deploy.ps1
 | `init-db` | `spotter_record`·`spotter_wrong`·`spotter_report` 셋을 세운다 |
 | 문항 DB·사진 | `Spotter_Quiz/scripts/upload_web.py`가 서명 URL로 올린다 |
 
-땡시 쪽 문서는 `Spotter_Quiz/web/README.md`에 있다.
+형제 앱을 어떻게 운영하는지, 세 번째를 어떻게 붙이는지는
+[sibling-apps.md](sibling-apps.md)에 있다. 땡시 앱 자체의 문서는
+`Spotter_Quiz/web/README.md`다.
 
 ## 확인
 

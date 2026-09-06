@@ -56,7 +56,7 @@ def write_preview_prompt(
 ) -> dict[str, str]:
     profile = db.get(Profile, user.id)
     if profile is None:
-        profile = Profile(id=user.id, email=user.email, is_approved=True)
+        profile = Profile(id=user.id, email=user.email)
         db.add(profile)
     # 빈 문자열로 저장하는 것이 곧 "기본값으로 되돌리기"다.
     profile.preview_prompt = payload.prompt.strip()

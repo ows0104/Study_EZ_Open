@@ -70,14 +70,15 @@ GRABBABLE_KINDS = frozenset({"notes_prev", "notes_current", "pre_apkg", "main_ap
 
 
 class Profile(Base):
-    """계정. 불리언 둘이다.
+    """계정. **어느 앱을 쓸 수 있는지는 여기 없다** — `app_grant`가 든다.
 
-    `is_admin`은 올릴 수 있는 사람인가, `is_approved`는 볼 수 있는 사람인가.
-    소유권 검사는 없다 — 콘텐츠가 모두에게 동일하므로 "볼 수 있는가"까지만
-    가르면 된다.
+    `is_admin`은 플랫폼 전체를 관리하는 사람이다. 앱마다 갈라지지 않으므로
+    여기 남았다.
 
-    가입은 누구나 하지만 승인 전에는 아무것도 안 보인다. Supabase에 가입한
-    사람과 이 학년 학생이 같지 않기 때문이고, 그 판단은 사람이 한다.
+    `is_approved`는 **남아 있지만 아무도 안 읽는다.** 2026-09-06에 그 값이
+    `app_grant(studyez)` 줄로 옮겨 갔고(`cli.backfill_app_grants`), 칼럼을 안 지운
+    것은 되돌릴 일이 생겼을 때 값이 없으면 못 되돌리기 때문이다.
+    한 학기쯤 지나고 떼면 된다.
     """
 
     __tablename__ = "profile"
