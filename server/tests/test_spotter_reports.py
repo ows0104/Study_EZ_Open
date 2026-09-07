@@ -258,6 +258,23 @@ def main() -> None:
     check("결론이 남아 있다", spot["verdict"].startswith("사진을"), spot)
 
     print()
+    print("[14] 선이 옮겨 가 뒤처진 제보는 게시판을 열 때 따라 올라온다")
+    # 선이 2이던 시절에 들어온 1인 제보다. 그때는 글타래가 안 섰고, 그 문항에
+    # 누가 한 번 더 제보하기 전까지는 설 일도 없었다 — `ensure_threads`가
+    # 제보가 들어오는 길에만 있었기 때문이다. 그래서 글타래를 세우지 않고
+    # 제보만 놓아 그 자리를 그대로 만든다.
+    with SessionLocal() as db:
+        db.add(SpotterReport(user_id="stale", question_id="q-stale", kind="answer",
+                             note="정답이 이상합니다", stem="뒤처진 문항의 문면",
+                             answer="Ascaris lumbricoides", image="stale.jpg", images="stale.jpg"))
+        db.commit()
+    seats = {(t["kind"], t["subject"])
+             for t in client.get("/api/spotter/threads", headers=USER).json()["threads"]}
+    check("게시판을 열자 글타래가 섰다", ("question", "q-stale") in seats, sorted(seats))
+    flagged = client.get("/api/spotter/flagged", headers=USER).json()
+    check("격리에도 따라 들어왔다", "q-stale" in flagged["questions"], flagged)
+
+    print()
     if failures:
         print(f"실패 {len(failures)}건: " + ", ".join(failures))
         raise SystemExit(1)

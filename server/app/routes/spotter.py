@@ -631,6 +631,13 @@ def ensure_threads(db: Session) -> None:
     많아야 몇백이고, 그 대신 「어디서 세는가」가 한 군데로 남는다 — 들어오는
     길마다 따로 세면 늦게 들어온 제보가 글타래를 못 세우는 자리가 생긴다.
 
+    **읽는 자리(/threads·/flagged)에서도 부른다.** 지켜야 하는 것은
+    「선을 넘은 것에는 글타래가 있다」인데, 이것은 제보가 들어올 때만 깨지는
+    것이 아니라 **선이 움직일 때도 깨진다**. 선을 2에서 1로 내렸을 때 이미
+    들어와 있던 1인 제보들이 그랬다 — 그 문항에 누가 한 번 더 제보하기
+    전까지는 게시판에 오르지 못한 채 제보함에만 남아서, 관리자만 아는 것이
+    되었다. 읽을 때 맞추면 선을 옮기는 것만으로 밀린 것이 따라 올라온다.
+
     **닫힌 글타래는 다시 안 연다.** 고쳐 놓고 닫았는데 옛 제보가 그대로
     열려 있다고 해서 되살아나면 닫을 방법이 없다.
     """
@@ -738,6 +745,7 @@ def list_threads(
     닫힌 글타래도 남긴다 — 「이건 왜 이렇게 결론이 났나」를 나중에 다시 묻는
     사람이 있고, 그때 답이 남아 있어야 같은 이야기를 두 번 안 한다.
     """
+    ensure_threads(db)
     threads = db.scalars(select(SpotterThread).order_by(SpotterThread.updated_at.desc())).all()
     rows = db.scalars(select(SpotterReport)).all()
     counts = _comment_counts(db)
@@ -883,6 +891,7 @@ def list_flagged(
 
     사진은 이름으로 낸다. 어느 문항이 그 사진을 쓰는지는 화면이 이미 안다.
     """
+    ensure_threads(db)
     threads = db.scalars(
         select(SpotterThread).where(SpotterThread.status == SPOTTER_REPORT_OPEN)
     ).all()
