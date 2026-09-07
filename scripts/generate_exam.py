@@ -129,10 +129,46 @@ def contains(a, b):
     return wa < wb or wb < wa
 
 
+# ── 같은 것을 다르게 부른 말
+#
+# 자료가 종마다 다른 표기를 쓴다. 구충의 감염형은 `사상유충 (filariform larva,
+# L3)`인데 고래회충·사상충 쪽은 같은 것을 `L3 유충`이라 적어 두었고,
+# 폐포자충의 `cyst`는 대장아메바의 `포낭`과 같은 말이다. 글자도 낱말도 겹치지
+# 않아 `contains`가 못 잡는데, 보기 넷 안에서 만나면 **답이 둘이 된다** —
+# 구충의 감염형을 묻고 `L3 유충`을 오답으로 세워 놓은 문항이 그랬다.
+#
+# 표기가 통일되면 이 표는 비어도 된다. 값을 고치는 쪽이 낫지만, 자료의 표기는
+# 필기본과 정리본에서 그대로 온 것이라 함부로 바꾸면 출처와 어긋난다.
+ALIAS = {
+    "l3유충": "감염기 유충 (L3)",
+    "사상유충": "감염기 유충 (L3)",
+    "포낭": "포낭 (cyst)",
+    "cyst": "포낭 (cyst)",
+}
+
+
+def alias(text):
+    """이 보기가 가리키는 것. 같은 것이면 표기가 달라도 같은 값이 나온다.
+
+    **보기 전체를 본다.** `hydatid cyst`·`oocyst`처럼 다른 것을 가리키는
+    말까지 낱말 단위로 훑으면 같은 것으로 묶여 버린다.
+    """
+    for key in (norm(text), norm(short(text))):
+        if key in ALIAS:
+            return ALIAS[key]
+    return None
+
+
+def conflict(a, b):
+    """보기 둘을 한 문항에 나란히 놓을 수 없는가."""
+    ta = alias(a)
+    return (norm(a) == norm(b) or similar(a, b) or contains(a, b)
+            or bool(ta and ta == alias(b)))
+
+
 def clash(cand, chosen):
     """이 보기를 이미 고른 보기들 옆에 놓아도 되는가."""
-    return any(norm(cand) == norm(c) or similar(cand, c) or contains(cand, c)
-               for c in chosen)
+    return any(conflict(cand, c) for c in chosen)
 
 
 def load(n):
@@ -149,6 +185,58 @@ def short(text, limit=40):
     """보기로 쓸 수 있게 괄호 부연을 떼고 줄인다."""
     t = re.split(r"\s*[(（]", text or "", maxsplit=1)[0].strip(" .,")
     return t if t else (text or "")[:limit]
+
+
+# 값 하나에 답이 **여럿** 적힌 자리를 가르는 구분자. 띄어 쓴 '/'만 본다 —
+# 붙여 쓴 것은 `25mg/kg`·`thick/thin smear`·`IgG/IgM`처럼 한 낱말의 일부여서
+# 가르면 없는 답이 생긴다.
+LISTED = re.compile(r"\s+/\s+")
+
+
+def listed(text):
+    """'A / B'처럼 나란히 적힌 값을 낱개로. 하나뿐이면 한 개짜리 목록.
+
+    **여기 적힌 것은 전부 정답이다.** 만손열두조충의 인체 감염형은
+    `전미충 (procercoid) / 의미충 (plerocercoid)`인데, 물벼룩을 삼켜도
+    개구리를 먹어도 걸리기 때문에 둘 다 맞다. `short()`는 첫 괄호에서
+    자르므로 '전미충'만 남고, 남은 '의미충'이 광절열두조충 쪽에서 오답으로
+    실려 나왔다 — 보기 넷 중 둘이 정답인 문항이 그렇게 만들어졌다.
+    """
+    return [t.strip(" .,") for t in LISTED.split(text or "") if t.strip(" .,")]
+
+
+def stage_option(text):
+    """감염형 보기 하나. **괄호 속 영문을 남긴다.**
+
+    전미충·의미충·유미유충·피낭유충은 한글만 놓으면 글자 한 자로 갈리는데
+    시험에서 쓰는 말은 procercoid·plerocercoid·cercaria·metacercaria 쪽이다.
+    영문은 답을 알려 주는 것이 아니라 같은 말의 다른 표기여서, 남겨 두면
+    보기가 무엇을 가리키는지가 분명해진다.
+
+    **남기는 것은 영문 이름뿐이다.** `영양형 (포낭기 없음)`의 괄호는 다른
+    표기가 아니라 설명이고, 옆에 `포낭`이 보기로 서 있으면 그 설명이 곧
+    답이 된다.
+
+    답이 여럿 적혀 있으면 **첫 번째만** 보기로 낸다. 나머지도 정답이므로
+    오답으로는 절대 쓰지 않는다(`Generator.also_correct`).
+    """
+    parts = listed(text)
+    if not parts:
+        return short(text)
+    one = parts[0]
+    inside = re.search(r"[(（]([^)）]*)[)）]", one)
+    return one if inside and re.search(r"[A-Za-z]", inside.group(1)) else short(one)
+
+
+def unparen(options):
+    """보기 넷에서 괄호를 통째로 뗀다.
+
+    영문을 남기면 **괄호가 붙은 보기와 안 붙은 보기가 섞이는** 자리가 있다.
+    `충란`·`포낭`·`영양형`처럼 자료에 영문이 없는 값이 있어서다. 넷 중
+    정답 하나만 괄호가 붙어(또는 정답 하나만 안 붙어) 있으면 무엇을 묻든
+    모양만 보고 고를 수 있으므로, 그때는 넷 다 한글만 남긴다.
+    """
+    return [short(o) for o in options]
 
 
 class Generator:
@@ -274,8 +362,13 @@ class Generator:
                     break
         return out
 
-    def field_distractors(self, field, sid, correct, want, rnd=None):
-        """같은 분류군의 다른 종에서 같은 필드 값을 가져온다."""
+    def field_distractors(self, field, sid, correct, want, rnd=None, also=()):
+        """같은 분류군의 다른 종에서 같은 필드 값을 가져온다.
+
+        `also`는 **보기에 안 실렸을 뿐 정답인 값들**이다. 오답 후보가 그중
+        하나와 같으면 버린다 — 안 그러면 다른 종에서 온 값이 이 문항에서도
+        맞는 답인 채로 오답 자리에 앉는다.
+        """
         group = self.sp[sid]["group"]
         pool = [s for s in self.by_group[group] if s["id"] != sid]
         pool += [s for s in self.species if s["id"] != sid and s["group"] != group]
@@ -301,9 +394,13 @@ class Generator:
                 v = short(v)
                 if v == "해당 없음":
                     continue
+            elif field == "infective_stage":
+                # 정답과 같은 표기여야 한다. 정답에만 영문이 붙어 있으면
+                # 넷 중 하나만 모양이 달라 그것이 곧 답이 된다.
+                v = stage_option(v)
             else:
                 v = short(v)
-            if clash(v, [correct] + out):
+            if clash(v, [correct, *also] + out):
                 continue
             out.append(v)
             if len(out) >= want:
@@ -324,7 +421,29 @@ class Generator:
             return DIAG_FIX.get(short(v), short(v))
         if field == "transmission_mode":
             return v
+        if field == "infective_stage":
+            return stage_option(v)
         return short(v)
+
+    def also_correct(self, sp, field, correct):
+        """보기에는 안 실렸지만 **이 문항에서도 정답인** 값들.
+
+        자료의 한 칸에 답이 여럿 적힌 자리가 있다(`listed`). 그중 하나만
+        보기로 내보내므로, 나머지가 다른 종에서 오답으로 돌아오는 길을
+        여기서 막는다.
+        """
+        v = sp.get(field)
+        if isinstance(v, list):
+            v = v[0] if v else None
+        parts = listed(v)
+        if len(parts) < 2:
+            return []
+        # 낱개와 그것을 줄인 것 둘 다 막는다. 오답은 `short()`를 거쳐 오는
+        # 필드가 있고, 그때 '의미충 (plerocercoid)'은 '의미충'으로 온다.
+        out = []
+        for p in parts:
+            out += [p, short(p)]
+        return [x for x in dict.fromkeys(out) if x and norm(x) != norm(correct)]
 
     def same_across(self, x, field):
         """`answer_label`이 있는 표본에서 이 필드로 문항을 내도 되는가.
@@ -368,11 +487,15 @@ class Generator:
                     return
                 # 사진이 종까지 안 가르는 표본에서는, 갈라지는 종들이 같은 답을
                 # 낼 때만 종 지식 문항을 낸다.
-                if kind == "field" and not self.same_across(x, field):
-                    return
+                also = ()
+                if kind == "field":
+                    if not self.same_across(x, field):
+                        return
+                    also = self.also_correct(s, field, correct)
                 for img in pool:
                     out.append({"qtype": qtype, "specimen": x, "species": s,
                                 "correct": correct, "kind": kind, "field": field,
+                                "also": also,
                                 "image": img, "images": pool, "weight": w,
                                 "stem_key": stem_key or qtype})
 
@@ -408,7 +531,10 @@ class Generator:
             if mode and mode != "해당 없음":
                 add("감염경로", mode, "field", "transmission_mode",
                     stem_key="전파방식")
-            add("감염형", short(s.get("infective_stage")), "field", "infective_stage")
+            # 감염형만 괄호 속 영문을 남긴다 (`stage_option`). 한글만 놓으면
+            # 전미충·의미충이 글자 한 자로 갈린다.
+            add("감염형", stage_option(s.get("infective_stage")), "field",
+                "infective_stage")
             add("증상·질병", short(s.get("disease_ko")), "field", "disease_ko")
             add("기생부위", short(s.get("habitat")), "field", "habitat")
             add("숙주", short(s.get("definitive_host")), "field", "definitive_host")
@@ -436,16 +562,23 @@ class Generator:
             distractors = self.structure_distractors(
                 x, correct, 3, same_specimen=(cand["qtype"] == "indicator"), rnd=vr)
         else:
-            distractors = self.field_distractors(cand["field"], s["id"], correct, 3, rnd=vr)
+            distractors = self.field_distractors(cand["field"], s["id"], correct, 3,
+                                                 rnd=vr, also=cand.get("also") or ())
         if len(distractors) < 3:
             return None
 
         options = distractors[:3] + [correct]
+        # 괄호가 정답 하나만 갈라 놓으면 넷 다 뗀다 (`unparen`). 답을 아는
+        # 것과 상관없이 모양만으로 고를 수 있는 자리가 그렇게 생긴다.
+        has = [bool(re.search(r"[(（]", o)) for o in options]
+        if has.count(has[-1]) == 1:
+            options = unparen(options)
+            correct = options[-1]
         # 안전망. 위에서 걸렀어도 오답끼리 포함관계가 생길 수 있다 —
         # 정답이 안 끼어도 보기 넷 중 둘이 상하위면 문항으로 내지 않는다.
         for i in range(len(options)):
             for j in range(i + 1, len(options)):
-                if contains(options[i], options[j]) or similar(options[i], options[j]):
+                if conflict(options[i], options[j]):
                     return None
         vr.shuffle(options)
         # 실습 사진 우선, 그다음 선명한 것 우선

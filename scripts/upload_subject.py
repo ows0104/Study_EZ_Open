@@ -49,18 +49,31 @@ def load_db(folder):
     return json.loads(text[start : end + 1])
 
 
-def image_name(item):
-    """문항 하나가 가리키는 사진의 **파일명**. 경로는 버린다.
+def image_names(item):
+    """문항 하나가 쓰는 사진의 **파일명 전부**. 경로는 버린다.
 
     과목마다 어느 칸에 경로가 있는지가 다르다 — 해부학 셋은 `image_path`,
     neuro는 `image_filename`에 폴더까지 들어 있다. R2에서는 과목이 이미 키에
     있으므로 폴더 이름은 필요 없고, 파일명만 쓰면 셋이 같은 규칙이 된다.
+
+    **`images`를 같이 본다.** 족보에는 현미경과 데모를 나란히 놓고 묻는
+    두 장짜리 문항이 있고, 화면은 `images`에 적힌 것을 전부 그린다
+    (`web/app.js`의 `imgsOf`). 여기서 `image` 한 칸만 세면 둘째 장이
+    버킷에 없는 채로 남아 서명이 안 나가고, 화면에는 빈 칸이 뜬다 —
+    2019년 16번은 indicator가 둘째 장에만 찍혀 있어 그 빈 칸이 곧
+    문제가 성립하지 않는 것이 된다.
     """
+    def base(value):
+        return str(value or "").replace("\\", "/").strip().rsplit("/", 1)[-1]
+
+    many = [base(v) for v in (item.get("images") or [])]
+    if many:
+        return [n for n in dict.fromkeys(many) if n]
     for key in ("image_path", "image_filename", "image"):
-        value = str(item.get(key) or "").replace("\\", "/").strip()
-        if value:
-            return value.rsplit("/", 1)[-1]
-    return ""
+        name = base(item.get(key))
+        if name:
+            return [name]
+    return []
 
 
 def find_images(folder, wanted):
@@ -100,7 +113,7 @@ def main():
     # (`build_web.py`가 유형 비율과 개수를 같이 싣는다). 사진을 세는 것은
     # 문항 쪽이고, 올리는 것은 받은 모양 그대로다 — 화면이 그 모양을 안다.
     questions = items["questions"] if isinstance(items, dict) else items
-    wanted = {image_name(it) for it in questions} - {""}
+    wanted = {n for it in questions for n in image_names(it)} - {""}
     local = find_images(folder, wanted)
     missing = sorted(wanted - set(local))
     print(f"[{subject}] 문항 {len(questions)}개 · 사진 {len(wanted)}장")

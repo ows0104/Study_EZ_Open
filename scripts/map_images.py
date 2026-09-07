@@ -486,6 +486,17 @@ def main():
             row["kind"] = "diagram"
             row["confidence"] = "high"
             row["review_reason"] = "모식도·생활사 그림 (표본 사진 아님)"
+        elif val == "compare":
+            # **두 종을 한 화면에 나란히 놓고 견주는 사진.** 필기본에는
+            # 「분선충은 M자, 구충은 뾰족」처럼 감별점을 가르쳐 주려고 둘을
+            # 붙여 놓은 자리가 있다. 표본 하나를 붙이면 어느 쪽을 붙여도
+            # 틀린 것이 되고 — 실제로 분선충·구충 유충 꼬리 비교 사진이
+            # 두비니구충 성충으로 나갔다 — 「다음 기생충은?」이라고 물을
+            # 수도 없다. 화면에 답이 둘 있기 때문이다.
+            row["specimen_id"] = None
+            row["kind"] = "compare"
+            row["confidence"] = "high"
+            row["review_reason"] = "두 종을 나란히 놓고 견주는 사진 (한 종을 묻는 문제로 쓸 수 없음)"
         elif val in spec_ids:
             row["specimen_id"] = val
             row["confidence"] = "high"
@@ -601,6 +612,8 @@ def main():
             final["모식도·선화 (제외)"] += 1
         elif r.get("kind") == "answer_visible":
             final["정답 노출 (제외)"] += 1
+        elif r.get("kind") == "compare":
+            final["두 종 비교 (제외)"] += 1
         elif not r["specimen_id"]:
             final["미매칭"] += 1
         elif r["confidence"] == "high":

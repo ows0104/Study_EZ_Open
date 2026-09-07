@@ -4,11 +4,11 @@ ascaris_unfertilized_egg,회충 불수정란,충란,선충,10,8,1,1,10,10
 trichuris_egg,편충 충란,충란,선충,16,14,1,1,16,16
 hookworm_egg,구충 충란,충란,선충,9,7,1,1,9,9
 enterobius_egg,요충 충란,충란,선충,14,13,1,0,14,12
-clonorchis_egg,간흡충 충란,충란,흡충,9,7,1,1,9,9
+clonorchis_egg,간흡충 충란,충란,흡충,8,6,1,1,8,8
 metagonimus_egg,요코가와흡충 충란,충란,흡충,12,10,1,1,12,8
 paragonimus_egg,폐흡충 충란,충란,흡충,11,9,1,1,11,11
 diphyllobothrium_egg,광절열두조충 충란,충란,조충,9,8,1,0,9,7
-taenia_egg,유무구조충 충란,충란,조충,9,6,1,2,9,7
+taenia_egg,유무구조충 충란,충란,조충,10,7,1,2,10,8
 schistosoma_japonicum_egg,일본주혈흡충 충란,충란,흡충,10,9,1,0,10,10
 schistosoma_mansoni_egg,만손주혈흡충 충란,충란,흡충,10,9,1,0,9,8
 schistosoma_haematobium_egg,방광주혈흡충 충란,충란,흡충,11,9,1,1,10,10
@@ -19,7 +19,7 @@ trichuris_adult_wholemount,편충 성충 (현미경),충체,선충,26,20,4,2,26,
 trichuris_section,편충 조직절편 (충수),조직,선충,13,9,2,2,13,13
 strongyloides_rhabditoid,분선충 간상유충,충체,선충,2,2,0,0,0,0
 strongyloides_filariform,분선충 사상유충,충체,선충,15,11,2,2,15,8
-ancylostoma_wholemount,두비니구충 성충,충체,선충,22,17,3,2,20,18
+ancylostoma_wholemount,두비니구충 성충,충체,선충,21,16,3,2,19,17
 necator_wholemount,아메리카구충 성충,충체,선충,13,10,2,1,10,8
 enterobius_adult_wholemount,요충 성충 (현미경),충체,선충,24,18,4,2,21,21
 anisakis_larva_wholemount,고래회충 유충 (현미경),충체,선충,18,15,2,1,14,14
