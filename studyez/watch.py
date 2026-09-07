@@ -97,6 +97,8 @@ class WorkItem:
     this_pdf: str
     this_version: int
     reason: str                      # 'new' | 'newer_version' | 'content_changed'
+    # 파일명 괄호에서 뽑은 담당 교수. `PROFESSOR_STRATEGY`가 이걸 본다.
+    professors: tuple[str, ...] = ()
     # 덱 나무의 가운데 마디. `title`과 달리 교수 괄호를 뗐다 — 그대로 쓰면
     # 교수가 바뀌는 해에 같은 강의가 두 노드로 갈린다.
     lecture: str = ""
@@ -251,7 +253,7 @@ def build_queue(
             items.append(WorkItem(
                 subject=subject, run_id=run_id, key=item.key, date=item.date,
                 title=item.title, this_pdf=str(pdf), this_version=item.version,
-                reason=reason,
+                reason=reason, professors=tuple(item.professors),
                 # 예습 짝이 이미 세워 둔 이름이 있으면 그것을 따른다. 파일명과
                 # 시간표가 띄어쓰기 하나로 갈리면 두 덱이 형제로 안 선다.
                 lecture=deck.calendar_node(runs_dir, run_id, item.title, deck.MAIN,
@@ -276,6 +278,31 @@ def build_queue(
     )
 
 
+PROFESSOR_STRATEGY = {
+    # 최민호 — 강의록에 없는 것을 강의 중 설명해 낸다는 이야기가 있어 필기를 무겁게 본다.
+    "최민호": "필기",
+}
+
+
+def strategy_for(professors) -> str | None:
+    """이 편의 담당 교수에게 걸린 전략. 없으면 None.
+
+    **이 표는 실측이 아니라 관리자의 판단이다.** 2026-09-07에 그 이야기를 2025 기출로
+    재 봤고 **지지되지 않았다** — 최민호의 강의 7편 20문항에서 「강의록에 없다」가 0개였고,
+    지면을 눈으로 본 판정에서도 0.83으로 대조군(송현범 0.80 · 홍성태 0.67)보다 높았다.
+    이 연구에서 나온 유일한 `off_slide`는 다른 교수의 문항이었다.
+
+    그런데도 이쪽으로 가는 것은 **안전 쪽으로 기운 선택**이다. 나중에 이 표를 보고
+    「실측으로 정해졌다」고 읽지 마라. 되돌리는 것도 관리자만 한다.
+
+    사람이 `--strategy`로 지정했으면 그쪽이 이긴다(`build_extra`).
+    """
+    for name in professors or ():
+        if name in PROFESSOR_STRATEGY:
+            return PROFESSOR_STRATEGY[name]
+    return None
+
+
 def build_extra(item: WorkItem, extra: list[str] | None = None) -> list[str]:
     """이 편에만 붙는 깃발. **판이 갈린 편에는 `--revise` 가 실린다.**
 
@@ -291,6 +318,10 @@ def build_extra(item: WorkItem, extra: list[str] | None = None) -> list[str]:
     flags = list(extra or [])
     if item.reason in UPDATED and "--force" not in flags and "--revise" not in flags:
         flags.append("--revise")
+    # 교수별 전략. **사람이 지정한 것을 덮지 않는다** — `--strategy`가 이미 있으면
+    # 그건 그 편을 지목한 사람의 판단이고, 이 표보다 뒤에 온 것이다.
+    if "--strategy" not in flags and (picked := strategy_for(item.professors)):
+        flags += ["--strategy", picked]
     return flags
 
 
