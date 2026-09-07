@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>기생충학 땡시 연습</title>
+<style>
+:root{
+  --bg:#f4f5f7; --card:#fff; --ink:#1b1d21; --muted:#6b7280; --line:#e3e6ea;
+  --accent:#2f6f4f; --accent-soft:#e7f1ec;
+  --ok:#1f7a4d; --ok-soft:#e4f4ec; --no:#b3261e; --no-soft:#fbeae9;
+  --shadow:0 1px 3px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.06);
+  --radius:12px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#14161a; --card:#1c1f24; --ink:#e9ecf1; --muted:#9aa3af; --line:#2c313a;
+    --accent:#6cc196; --accent-soft:#1e3a2d;
+    --ok:#6cc196; --ok-soft:#1b3629; --no:#f2867d; --no-soft:#3a1f1e;
+    --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink); font:15px/1.55 -apple-system,BlinkMacSystemFont,
+  "Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.wrap{max-width:980px;margin:0 auto;padding:20px 16px 64px}
+/* 문제를 푸는 동안만 넓힌다. 사진과 보기가 나란히 서므로 980px에서는 사진이
+   원본보다 작게 줄어든다 — 알아보라고 내는 사진을 줄이는 것은 문제를 바꾸는 일이다.
+   시작·결과 화면은 글이라 980px가 읽기 좋다. */
+body:has(#quiz:not(.hidden)) .wrap{max-width:1240px}
+.hidden{display:none !important}
+h1{font-size:22px;margin:0 0 4px;letter-spacing:-.02em}
+h2{font-size:17px;margin:26px 0 10px;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13px;margin:0 0 22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:18px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+
+/* ── 시작 화면 */
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field span{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.02em}
+input[type=number],select{
+  width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;
+  background:var(--bg);color:var(--ink);font:inherit;font-size:14px}
+input[type=number]:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.checks{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border:1px solid var(--line);
+  border-radius:999px;font-size:13px;cursor:pointer;user-select:none;background:var(--bg)}
+.chip input{margin:0;accent-color:var(--accent)}
+.chip.on{background:var(--accent-soft);border-color:var(--accent)}
+
+/* ── 무엇을 풀지 고르는 자리
+   **내용을 위에, 묻는 방식을 아래에 접어 둔다.** 예전에는 「감염경로」·「치료」
+   같은 유형 열두 개가 이름표 없이 한 줄로 깔려 있었는데, 그러면 무엇을 고르는
+   칸인지부터 안 읽힌다. 시험 전에 실제로 좁히고 싶은 것은 "오늘 배운 흡충만",
+   "충란만" 쪽이지 "치료만"이 아니다. */
+.pick{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px}
+.pick>.pick-label{flex:none;width:46px;padding-top:7px;font-size:12px;
+  color:var(--muted);font-weight:600;letter-spacing:.02em}
+.pick .checks{margin:0;flex:1;min-width:0}
+/* 고른 범위가 몇 문항인지. 좁히다 보면 40문항이 안 나오는 조합이 생기는데,
+   시작을 누르고 나서 알면 늦다. */
+.scope{font-size:12.5px;color:var(--muted);margin:4px 0 0 58px;line-height:1.6}
+.scope b{color:var(--ink);font-variant-numeric:tabular-nums}
+.scope.thin b{color:var(--no)}
+details.more{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+details.more>summary{cursor:pointer;font-size:12.5px;color:var(--muted);
+  list-style:none;user-select:none}
+details.more>summary::-webkit-details-marker{display:none}
+details.more>summary::before{content:'▸  '}
+details.more[open]>summary::before{content:'▾  '}
+details.more>summary:hover{color:var(--accent)}
+.sep{border:0;border-top:1px solid var(--line);margin:16px 0 0}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);padding:11px 14px;transition:.12s}
+button:hover{border-color:var(--accent)}
+button:disabled{opacity:.45;cursor:default}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn-primary:hover{filter:brightness(1.06)}
+.mode-btn{padding:14px;text-align:left;line-height:1.35}
+.mode-btn strong{display:block;font-size:15px}
+.mode-btn em{font-style:normal;font-size:12px;color:var(--muted)}
+.btn-primary em{color:rgba(255,255,255,.82)}
+
+/* ── 문제 화면 */
+.topbar{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.pill{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--accent-soft);
+  color:var(--accent);font-weight:700}
+.count{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+/* 남은 시간은 **조용한 숫자 하나**로만 둔다. 폭이 줄어드는 막대를 같이
+   두었더니 눈가에서 계속 움직여서, 문제를 보는 내내 쫓기는 기분이 들었다.
+   숫자는 1초에 한 번 조용히 바뀔 뿐이고 필요할 때만 보면 된다.
+   자리를 고정하려고 tabular-nums를 쓴다 — 9와 10 사이에서 흔들리면 그것도
+   움직임이다. */
+.timer{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:600;
+  font-size:15px;color:var(--muted);letter-spacing:.02em}
+.timer.warn{color:var(--no);font-weight:700}
+.stem{font-size:16px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em}
+/* 사진 왼쪽, 보기 오른쪽.
+   땡시는 결국 사진을 보는 시험이라 사진에 넓은 쪽을 준다. 세로로 쌓으면
+   사진과 보기를 같이 볼 수 없어 눈이 오르내린다 — 시간을 재는 화면에서 그건 손해다.
+   좁은 화면에서는 다시 한 줄로 쌓는다. */
+.qgrid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(270px,1fr);
+  grid-template-rows:auto 1fr;gap:0 18px;align-items:start}
+/* **질문은 보기 바로 위에 둔다.** 카드 맨 위(사진 왼쪽 어깨)에 두면 질문과
+   보기가 화면 양 끝으로 갈라져서, 무엇을 묻는지 확인하려면 눈이 가로로
+   한 번 더 왕복해야 한다. 사진은 두 줄을 다 쓰고 오른쪽 칸만 위아래로 나눈다.
+   좁은 화면에서는 이 배치를 걷어내고 질문 → 사진 → 보기로 다시 쌓는다. */
+.qgrid .stem{grid-column:2;grid-row:1}
+.qgrid .imgwrap{grid-column:1;grid-row:1/3}
+.qgrid .opts{grid-column:2;grid-row:2;align-self:start}
+.imgbox{position:relative;background:#0b0d10;border-radius:10px;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;cursor:zoom-in}
+.imgbox img{max-width:100%;max-height:min(48vh,430px);display:block}
+/* 2단일 때는 사진이 세로로 더 큰 자리를 쓴다 */
+.qgrid .imgbox img{max-height:min(62vh,600px)}
+.qgrid .opts{margin-top:0}
+.imgmeta{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.6);color:#fff;
+  font-size:11px;padding:3px 8px;border-radius:6px;letter-spacing:.02em}
+.imgsrc{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;
+  margin-top:6px;font-size:11.5px;color:var(--muted)}
+.imgsrc code{font-size:11px;opacity:.75}
+.imgsrc .dim{margin-left:auto}
+/* 출처를 여는 손잡이. 문제를 푸는 동안에는 접혀 있다 — 지금 볼 것은
+   사진이고, 원본이 어디인지는 이상한 사진을 만났을 때만 궁금하다.
+   선명도도 같이 접는다 — 흐린 사진이라는 말이 먼저 눈에 들어오면 사진을
+   보기도 전에 못 맞힐 문제로 접어 버리게 된다. */
+.src-toggle{background:var(--bg);border:1px solid var(--line);color:var(--muted);
+  font-size:11.5px;padding:3px 10px;border-radius:999px;line-height:1.45}
+.src-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.opts{display:grid;gap:8px;margin-top:14px}
+.opt{display:flex;gap:10px;align-items:flex-start;text-align:left;padding:12px 13px;
+  border:1px solid var(--line);border-radius:10px;background:var(--card);width:100%}
+.opt:hover{border-color:var(--accent)}
+.opt b{flex:none;width:20px;color:var(--muted);font-weight:700}
+.opt.sel{border-color:var(--accent);background:var(--accent-soft)}
+.opt.ok{border-color:var(--ok);background:var(--ok-soft)}
+.opt.no{border-color:var(--no);background:var(--no-soft)}
+.opt.ok b,.opt.no b{color:inherit}
+.explain{margin-top:12px;padding:12px 13px;border-radius:10px;background:var(--bg);
+  border:1px solid var(--line);font-size:13.5px;white-space:pre-wrap;line-height:1.6}
+.explain .tag{display:inline-block;font-size:11px;font-weight:700;color:var(--accent);
+  margin-bottom:4px;letter-spacing:.03em}
+.nav{display:flex;gap:10px;margin-top:16px}
+.nav button{flex:1}
+
+/* ── 결과 */
+.score{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.score small{font-size:16px;font-weight:600;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:6px}
+th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:600;font-size:12px}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.review{display:grid;gap:12px;margin-top:10px}
+.rev{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--card)}
+.rev.wrong{border-left:3px solid var(--no)}
+.rev.right{border-left:3px solid var(--ok)}
+.rev .q{font-weight:600;font-size:14px;margin-bottom:8px}
+.rev img{max-width:190px;max-height:150px;border-radius:8px;float:right;margin:0 0 8px 12px}
+.rev .a{font-size:13px}
+.rev .a i{font-style:normal;color:var(--no)}
+.rev .a b{color:var(--ok)}
+.recs{font-size:13px;color:var(--muted)}
+.recs div{padding:5px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+
+/* ── 이미지 확대 */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.9);display:flex;align-items:center;
+  justify-content:center;z-index:50;cursor:zoom-out;padding:20px}
+/* 확대창은 **화면에 맞추는 것으로 끝이 아니다.** 400x 시야에서 충란 하나를
+   가려내려면 그 위에서 더 키우고 밀어 볼 수 있어야 한다. `transform`으로
+   키우므로 원본 픽셀이 그대로 보인다. */
+.modal img{max-width:100%;max-height:100%;transform-origin:0 0;
+  will-change:transform;touch-action:none;-webkit-user-drag:none;user-select:none}
+.modal.zoomed{cursor:grab}
+.modal.zoomed.dragging{cursor:grabbing}
+.zoomhint{position:fixed;top:16px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.6);color:#fff;font-size:11.5px;padding:4px 10px;
+  border-radius:6px;letter-spacing:.02em;pointer-events:none}
+.foot{margin-top:26px;font-size:12px;color:var(--muted);text-align:center;line-height:1.7}
+/* ── 로그인한 사람 (문 자체는 gate.js 가 자기 화면을 들고 온다) */
+/* 조용한 버튼. **테두리는 남긴다** — 밑줄만 그은 12px 회색 글씨는 화면
+   구석에서 글자인지 버튼인지 구분되지 않아서, 로그아웃이 어디 있냐는 말을
+   들었다. 눌러야 하는 것은 눌러 보이는 편이 낫다. */
+.is-quiet{background:var(--card);border:1px solid var(--line);color:var(--muted);
+  font-size:12.5px;padding:6px 13px;border-radius:999px}
+.is-quiet:hover{border-color:var(--accent);color:var(--accent)}
+.gate-msg{font-size:13px;margin:10px 0 0;line-height:1.6}
+.gate-msg.bad{color:var(--no)}
+/* 계정 줄. 화면 셋(시작·문제·결과)의 바깥에 서 있어서 결과 화면에서도
+   로그아웃이 된다. 예전에는 시작 화면 안에 있어서 한 판을 끝내고 나면
+   나갈 자리가 없었다. */
+.who{display:flex;align-items:center;gap:10px;justify-content:flex-end;
+  font-size:12px;color:var(--muted);margin:0 0 10px}
+/* 문제를 푸는 동안에는 감춘다. 시계가 도는 화면에서 누를 일이 없고,
+   잘못 누르면 풀던 판이 통째로 날아간다. 나가는 문은 그 화면 안에 따로 있다. */
+body:has(#quiz:not(.hidden)) #who{display:none}
+
+/* ── 신고
+   빨갛게 둔다. 신고는 눌러 주는 사람이 있어야 쌓이는데, 조용한 회색이면
+   있는 줄도 모른다. **이미 신고한 것은 초록으로 바뀐다** — 빨강이 "누르세요"라면
+   초록은 "받았습니다"이고, 둘이 같은 색이면 어느 쪽인지 알 수 없다. */
+.report-link{font-size:12px;padding:6px 10px;border-radius:8px;
+  color:var(--no);border-color:var(--no)}
+.report-link:hover{border-color:var(--no);background:var(--no-soft)}
+.report-link.done{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.report-link.done:hover{border-color:var(--accent);background:var(--accent-soft)}
+/* 문제 화면의 것은 카드 아래에 홀로 서므로 조금 크게 */
+#report-btn{font-size:13px;padding:9px 18px;font-weight:600}
+.rev .report-link{margin-top:10px}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;
+  justify-content:center;z-index:60;padding:20px}
+.sheet .card{width:100%;max-width:440px;max-height:88vh;overflow:auto}
+.sheet h3{margin:0 0 4px;font-size:16px}
+.sheet select,.sheet textarea{width:100%;padding:9px 10px;border:1px solid var(--line);
+  border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:14px}
+.sheet textarea{min-height:96px;resize:vertical}
+.sheet .row{margin-top:14px;justify-content:flex-end}
+.quoted{font-size:13px;color:var(--muted);background:var(--bg);border:1px solid var(--line);
+  border-radius:8px;padding:9px 10px;margin:8px 0 14px;line-height:1.5}
+
+/* ── 신고함 */
+.rep{border:1px solid var(--line);border-left:3px solid var(--line);border-radius:10px;
+  padding:12px;margin-bottom:10px}
+.rep.hot{border-left-color:var(--no)}
+.rep-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}
+.rep-head code{font-size:11px;color:var(--muted)}
+.rep-head button{margin-left:auto;font-size:12px;padding:4px 8px}
+.rep-stem{font-size:14px;font-weight:600;margin:8px 0 2px}
+.rep-ans{font-size:12px;color:var(--muted);margin-bottom:8px}
+.rep-one{border-top:1px solid var(--line);padding:7px 0;font-size:13px}
+.rep-kind{font-weight:600}
+.rep-who{color:var(--muted);font-size:12px;margin-left:6px}
+.rep-note{white-space:pre-wrap;margin-top:4px;font-size:13px}
+
+/* 두 단이 들어갈 폭이 아니면 한 줄로 쌓는다. 이 선 아래에서는 사진 옆에
+   보기를 세워봐야 둘 다 좁아질 뿐이다. */
+@media (max-width:760px){
+  /* 한 줄로 쌓을 때는 칸 지정을 걷어낸다. 남겨 두면 사진이 두 줄을 차지한
+     채로 겹친다. 그 위에 **사진 → 질문 → 보기**로 세운다 — 2단에서 질문이
+     보기 바로 위에 오는 것과 같은 이유로, 고를 것 바로 앞에서 무엇을
+     묻는지 읽게 된다. (적힌 순서는 질문이 먼저라 여기서 뒤집는다.) */
+  .qgrid{grid-template-columns:1fr;grid-template-rows:none;gap:0}
+  .qgrid .stem,.qgrid .imgwrap,.qgrid .opts{grid-column:auto;grid-row:auto}
+  .qgrid .imgwrap{order:1}
+  .qgrid .stem{order:2;margin-top:12px}
+  .qgrid .opts{order:3}
+  .qgrid .imgbox img{max-height:min(44vh,380px)}
+  .qgrid .opts{margin-top:2px}
+}
+@media (max-width:560px){
+  .actions{grid-template-columns:1fr}
+  .rev img{float:none;display:block;margin:0 0 8px}
+  /* 이름표를 칩 위로 올린다. 좁은 화면에서 46px를 떼어 주면 칩이 한 줄에
+     두 개밖에 못 선다. */
+  .pick{flex-direction:column;gap:5px}
+  .pick>.pick-label{padding-top:0;width:auto}
+  .scope{margin-left:0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- 로그인한 사람. 화면 셋의 바깥이라 결과 화면에서도 로그아웃이 된다. -->
+<div class="who hidden" id="who">
+  <span id="who-email"></span>
+  <button class="is-quiet" onclick="signOut()">로그아웃</button>
+</div>
+
+<!-- ══════════ 시작 ══════════ -->
+<div id="start" class="hidden">
+  <h1>기생충학 땡시 연습</h1>
+  <p class="sub" id="dbinfo"></p>
+
+  <div class="card">
+    <!-- ① 무엇을 풀지. 내용으로 고른다 — 분류군과 표본 종류. -->
+    <div class="pick">
+      <span class="pick-label">분류군</span>
+      <div class="checks" id="f-group"></div>
+    </div>
+    <div class="pick">
+      <span class="pick-label">표본</span>
+      <div class="checks" id="f-sptype"></div>
+    </div>
+    <p class="scope" id="scope"></p>
+
+    <hr class="sep">
+
+    <!-- ② 어떻게 풀지. -->
+    <div class="settings" style="margin-top:16px">
+      <label class="field"><span>문제 수</span>
+        <select id="n-input">
+          <option value="20">20문항</option>
+          <option value="40" selected>40문항</option>
+          <option value="60">60문항</option>
+        </select></label>
+      <label class="field"><span>제한 시간 (초)</span>
+        <input type="number" id="t-input" value="30" min="5" max="180"></label>
+    </div>
+
+    <label class="chip on" style="margin-top:14px">
+      <input type="checkbox" id="buzzer" checked> 시간 종료 알림음</label>
+
+    <!-- ③ 그 밖. 접어 둔다 — 매번 만지는 칸이 아니다. -->
+    <details class="more">
+      <summary>묻는 방식 · 문항 순서 · 시드</summary>
+      <div class="pick" style="margin-top:14px">
+        <span class="pick-label">방식</span>
+        <div class="checks" id="f-qtype"></div>
+      </div>
+      <div class="settings" style="margin-top:14px">
+        <label class="field"><span>문항 순서</span>
+          <select id="order-input">
+            <option value="exam" selected>시험처럼 (충란 먼저)</option>
+            <option value="random">완전 랜덤</option>
+          </select></label>
+        <label class="field"><span>시드 번호</span>
+          <input type="number" id="seed-input" placeholder="비우면 랜덤"></label>
+      </div>
+    </details>
+
+    <div class="actions">
+      <button class="mode-btn btn-primary" onclick="start('exam')">
+        <strong>땡시 모드</strong><em>제한 시간, 채점은 끝나고 한 번에</em></button>
+      <button class="mode-btn" onclick="start('study')">
+        <strong>공부 모드</strong><em>시간 제한 없이 바로 정답과 해설</em></button>
+    </div>
+    <div class="actions" style="grid-template-columns:1fr">
+      <button id="wrong-btn" onclick="start('study',true)">오답만 다시 풀기</button>
+    </div>
+  </div>
+
+  <h2>최근 기록</h2>
+  <div class="card recs" id="records">아직 기록이 없습니다.</div>
+
+  <div id="admin" class="hidden">
+    <h2>신고함</h2>
+    <div class="card">
+      <p class="sub" id="admin-sum" style="margin:0 0 12px">읽는 중…</p>
+      <div id="admin-list"></div>
+    </div>
+  </div>
+
+  <p class="foot">사진은 실습 정리본·실제실습본에서, 출제 경향은 2015–2025년 족보에서 가져왔습니다.<br>
+    문항은 자동 생성이므로 오류가 있습니다. 이상한 문항은 그 자리에서 신고해 주세요.</p>
+</div>
+
+<!-- ══════════ 문제 ══════════ -->
+<div id="quiz" class="hidden">
+  <div class="topbar">
+    <!-- 나가는 문. 풀다가 그만두려면 예전에는 새로고침밖에 없었다. -->
+    <button class="is-quiet" onclick="quit()">← 나가기</button>
+    <span class="pill" id="q-type"></span>
+    <span class="count" id="q-count"></span>
+    <span class="timer" id="q-timer"></span>
+  </div>
+
+  <div class="card">
+    <!-- 왼쪽 사진 · 오른쪽에 질문과 보기. 좁은 화면에서는 한 줄로 쌓인다.
+         질문이 grid 안에 있는 것은 2단일 때 보기 위로 보내기 위해서다. -->
+    <div class="qgrid">
+      <p class="stem" id="q-stem"></p>
+      <div class="imgwrap">
+        <div class="imgbox" id="q-imgbox" onclick="zoom()">
+          <img id="q-img" alt="표본 사진">
+          <span class="imgmeta" id="q-meta"></span>
+        </div>
+        <!-- 사진 출처. 흐리거나 잘못 잘린 사진을 신고할 때 어느 원본인지 짚을 수
+             있어야 한다. 평소에는 접혀 있고 「출처」를 누르면 펴진다. -->
+        <div class="imgsrc" id="q-src"></div>
+      </div>
+      <div class="opts" id="q-opts"></div>
+    </div>
+    <!-- 해설은 두 단 아래 전체 폭으로. 보기 칸에 넣으면 줄이 좁아 읽기 나쁘다. -->
+    <div class="explain hidden" id="q-explain"></div>
+    <div class="nav">
+      <button onclick="prev()" id="btn-prev">이전</button>
+      <button onclick="next()" id="btn-next" class="btn-primary">다음</button>
+      <button onclick="finish()" id="btn-finish" class="btn-primary hidden">채점하기</button>
+    </div>
+  </div>
+  <div class="row" style="margin-top:10px;justify-content:center">
+    <button class="report-link" id="report-btn"
+      onclick="openReport(S.qs[S.i].id)">이 문항 신고</button>
+  </div>
+  <p class="foot">키보드 1·2·3·4로 선택, Enter로 다음<br>신고하는 동안은 시계가 멈춥니다.</p>
+</div>
+
+<!-- ══════════ 결과 ══════════ -->
+<div id="result" class="hidden">
+  <h1>결과</h1>
+  <div class="card">
+    <div class="score" id="r-score"></div>
+    <div class="row" style="margin-top:14px">
+      <!-- 새로고침이 아니라 화면만 되돌린다. 새로고침은 5.4MB짜리 문항 DB를
+           다시 받는 일이고, 방금 받아 둔 것이 그대로 있다. -->
+      <button class="btn-primary" onclick="quit()">처음으로</button>
+      <button onclick="retryWrong()" id="r-retry">틀린 문제 다시 풀기</button>
+    </div>
+    <p class="gate-msg bad hidden" id="r-sync"></p>
+  </div>
+  <h2>유형별</h2>
+  <div class="card"><table id="r-type"></table></div>
+  <h2>분류군별</h2>
+  <div class="card"><table id="r-group"></table></div>
+  <h2>문항 다시보기</h2>
+  <div class="review" id="r-review"></div>
+</div>
+
+</div>
+
+<div class="modal hidden" id="modal">
+  <img id="modal-img" alt="">
+  <span class="zoomhint" id="modal-hint">휠·두 손가락으로 확대 · 끌어서 이동 · 두 번 눌러 되돌리기</span>
+  <span class="imgmeta" id="modal-src" style="position:fixed;left:50%;transform:translateX(-50%);bottom:16px"></span>
+</div>
+
+<!-- ══════════ 문항 신고 ══════════ -->
+<div class="sheet hidden" id="report">
+  <div class="card">
+    <h3>이 문항이 이상합니다</h3>
+    <p class="sub" style="margin:0">문항은 자동 생성이라 오류가 남습니다. 어디가 틀렸는지 알려 주세요.</p>
+    <div class="quoted" id="report-stem"></div>
+
+    <label class="field"><span>무엇이 틀렸나요</span>
+      <select id="report-kind">
+        <option value="answer">정답이 틀렸다</option>
+        <option value="image">사진이 문제와 안 맞는다</option>
+        <option value="options">보기가 이상하다 (정답이 둘이거나, 오답이 말이 안 됨)</option>
+        <option value="explanation">해설이 틀렸다</option>
+        <option value="other">그 밖에</option>
+      </select></label>
+
+    <label class="field" style="margin-top:12px"><span>설명 (없어도 됩니다)</span>
+      <textarea id="report-note" placeholder="예: 정답이 Clonorchis로 되어 있는데 사진은 Metagonimus 충란입니다."></textarea></label>
+
+    <p class="gate-msg bad" id="report-msg"></p>
+    <div class="row">
+      <button onclick="closeReport()">취소</button>
+      <button class="btn-primary" id="report-save" onclick="sendReport()">보내기</button>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<!-- Study_EZ와 나눠 쓰는 세션 저장소. 원본은 Study_EZ_Open/packages/session/ 이고
+     scripts/sync_shared.py 가 가져온다. auth.js 보다 먼저 와야 한다. -->
+<script src="session.js"></script>
+<script src="auth.js"></script>
+<!-- 다섯 과목이 같이 쓰는 로그인 문. 화면은 이 파일이 들고 온다. -->
+<script src="gate.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

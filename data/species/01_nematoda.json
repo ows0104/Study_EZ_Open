@@ -1,0 +1,495 @@
+[
+  {
+    "id": "ascaris_lumbricoides",
+    "scientific_name": "Ascaris lumbricoides",
+    "name_ko": "회충",
+    "name_en": "roundworm",
+    "aliases": [
+      "Ascarus lumbricoides",
+      "Ascaris lumbricodies"
+    ],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "장내 선충",
+    "size": "20-35cm (암) / 13-17cm (수)",
+    "transmission_mode": "토양매개성",
+    "transmission_route": "경구감염 (fecal-oral)",
+    "source": "자충포장란에 오염된 식수·채소",
+    "infective_stage": "자충포장란 (embryonated egg)",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "소장 (jejunum, middle ileum)",
+    "lung_migration": true,
+    "disease_ko": "회충증",
+    "disease_en": "ascariasis",
+    "symptoms": [
+      "Loeffler 증후군 (호산구성 폐렴)",
+      "장폐색 (ileus)",
+      "야맹증·Kwashiorkor",
+      "이소기생 → 담석·장천공"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)",
+      "객담검사 (유충)"
+    ],
+    "treatment": [
+      "Albendazole 400mg single",
+      "Mebendazole 100mg bid 3d",
+      "Ivermectin 150-200mcg/kg single"
+    ],
+    "epidemiology": "열대·아열대·온대 개발도상국. 숙주특이성 높음",
+    "exam_notes": "충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "trichuris_trichiura",
+    "scientific_name": "Trichuris trichiura",
+    "name_ko": "편충",
+    "name_en": "whipworm",
+    "aliases": [
+      "Trichuris trichuria",
+      "Trichruis trichiura",
+      "Trichuris trichuira"
+    ],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "장내 선충",
+    "size": "3-5cm",
+    "transmission_mode": "토양매개성",
+    "transmission_route": "경구감염",
+    "source": "자충포장란에 오염된 식수·채소",
+    "infective_stage": "자충포장란 (embryonated egg)",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "맹장 (cecum), 대장·직장",
+    "lung_migration": false,
+    "disease_ko": "편충증",
+    "disease_en": "trichuriasis",
+    "symptoms": [
+      "대부분 무증상",
+      "혈점액성 설사",
+      "직장탈출증 (rectal prolapse)"
+    ],
+    "diagnosis": [
+      "대장내시경 (충체)",
+      "대변검사 (충란)"
+    ],
+    "treatment": [
+      "Albendazole 400mg 3d",
+      "Mebendazole 100mg bid 3d",
+      "Ivermectin 200mcg/kg 3d"
+    ],
+    "epidemiology": "전세계 분포",
+    "exam_notes": "충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "ancylostoma_duodenale",
+    "scientific_name": "Ancylostoma duodenale",
+    "name_ko": "두비니구충",
+    "name_en": "Old World hookworm",
+    "aliases": [
+      "Ancyclostoma duodenale",
+      "Hook worm",
+      "Hookworm",
+      "Ancyllstoma duldenale"
+    ],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "장내 선충",
+    "size": "1.3cm (암) / 1.1cm (수)",
+    "transmission_mode": "토양매개성",
+    "transmission_route": "경구감염 / 경피감염",
+    "source": "오염 토양",
+    "infective_stage": "사상유충 (filariform larva, L3)",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "소장 상부",
+    "lung_migration": true,
+    "disease_ko": "구충증",
+    "disease_en": "hookworm infection",
+    "symptoms": [
+      "채독증 (피부침입)",
+      "소혈구성 저색소성 빈혈",
+      "pica"
+    ],
+    "diagnosis": [
+      "대변검사 (충란 - 4-cell stage)"
+    ],
+    "treatment": [
+      "Albendazole 400mg single",
+      "Mebendazole 100mg bid 3d",
+      "Pyrantel pamoate 10mg/kg single"
+    ],
+    "epidemiology": "유럽·북아프리카·북아시아. 국내에는 두 종 모두 존재 (Ad > Na)",
+    "exam_notes": "구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "necator_americanus",
+    "scientific_name": "Necator americanus",
+    "name_ko": "아메리카구충",
+    "name_en": "New World hookworm",
+    "aliases": [],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "장내 선충",
+    "size": "1.2cm (암) / 0.8cm (수)",
+    "transmission_mode": "토양매개성",
+    "transmission_route": "경피감염",
+    "source": "오염 토양",
+    "infective_stage": "사상유충 (filariform larva, L3)",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "소장 상부",
+    "lung_migration": true,
+    "disease_ko": "구충증",
+    "disease_en": "hookworm infection",
+    "symptoms": [
+      "채독증",
+      "소혈구성 저색소성 빈혈"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)"
+    ],
+    "treatment": [
+      "Albendazole 400mg single",
+      "Mebendazole 100mg bid 3d"
+    ],
+    "epidemiology": "중남미·아프리카·아시아. 병원성은 Ad > Na",
+    "exam_notes": "구강에 칼날 모양 cutting plate 1쌍. dorsal costa 깊게 2분지 → 각각 2분지",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "strongyloides_stercoralis",
+    "scientific_name": "Strongyloides stercoralis",
+    "name_ko": "분선충",
+    "name_en": "threadworm",
+    "aliases": [],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "장내 선충",
+    "size": "1.0mm (암) / 0.7mm (수)",
+    "transmission_mode": "토양매개성",
+    "transmission_route": "경피감염 / 경구감염 / 자가감염 (autoinfection)",
+    "source": "오염 토양",
+    "infective_stage": "사상유충 (filariform larva)",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "소장 (유충을 배출)",
+    "lung_migration": true,
+    "disease_ko": "분선충증",
+    "disease_en": "strongyloidiasis",
+    "symptoms": [
+      "수양성 설사",
+      "연충성 이질 (혈점액성 설사)",
+      "면역억제 시 파종성 감염·패혈증"
+    ],
+    "diagnosis": [
+      "대변검사 (간상유충)",
+      "유충배양",
+      "객담검사"
+    ],
+    "treatment": [
+      "Ivermectin 200mcg/kg 2d (1차약)",
+      "Albendazole 400mg 3d"
+    ],
+    "epidemiology": "열대·아열대 (아시아·아프리카·남미)",
+    "exam_notes": "간상유충 (rhabditoid) = 백열전구 모양 식도 / 사상유충 (filariform) = 직경 일정한 식도 + notched tail. 구충 유충과는 꼬리 모양으로 감별",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "enterobius_vermicularis",
+    "scientific_name": "Enterobius vermicularis",
+    "name_ko": "요충",
+    "name_en": "pinworm",
+    "aliases": [
+      "Entrobius vermicularis"
+    ],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "장내 선충",
+    "size": "약 1cm",
+    "transmission_mode": "접촉매개성",
+    "transmission_route": "경구감염 / 공기매개 / 접촉감염",
+    "source": "충란에 오염된 손·침구·먼지",
+    "infective_stage": "자충포장란 (embryonated egg)",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "맹장·대장 (항문 주위에 산란)",
+    "lung_migration": false,
+    "disease_ko": "요충증",
+    "disease_en": "enterobiasis",
+    "symptoms": [
+      "야간 항문 주위 심한 소양감",
+      "학습력 저하",
+      "급성 충수염",
+      "여아 외음부·복강 육아종"
+    ],
+    "diagnosis": [
+      "항문주위 도말검사 (셀로판테이프법) — 대변검사 아님"
+    ],
+    "treatment": [
+      "Albendazole 400mg single",
+      "Mebendazole 100mg single",
+      "Pyrantel pamoate 10mg/kg single"
+    ],
+    "epidemiology": "전세계. 온대·한대 > 열대, 겨울 > 여름, 어린이 > 어른. 전원 치료 + 2-3주 간격 3회 반복투여",
+    "exam_notes": "충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "anisakis_simplex",
+    "scientific_name": "Anisakis simplex",
+    "name_ko": "고래회충",
+    "name_en": "herring worm",
+    "aliases": [],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "조직 내 기생 선충",
+    "size": "약 2cm (L3 유충)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "바다생선회·두족류·해산 갑각류 생식",
+    "infective_stage": "L3 유충",
+    "intermediate_host": [
+      "해산 갑각류 (L2→L3)",
+      "바다생선·두족류 (L3)"
+    ],
+    "definitive_host": "고래·돌고래 등 해산 포유류 (사람은 우연숙주)",
+    "habitat": "위벽·장벽 (사람에서는 성충이 되지 못함)",
+    "lung_migration": false,
+    "disease_ko": "고래회충증",
+    "disease_en": "anisakiasis",
+    "symptoms": [
+      "생선회 섭취 3-6시간 후 급성 상복부 통증",
+      "구토·설사",
+      "급성복증"
+    ],
+    "diagnosis": [
+      "섭취력 청취",
+      "내시경 (충체 직접 확인)"
+    ],
+    "treatment": [
+      "내시경적 제거"
+    ],
+    "epidemiology": "제주도 등 해안 지역. 예방은 63℃ 이상 가열 또는 -20℃ 7일 냉동",
+    "exam_notes": "머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "trichinella_spiralis",
+    "scientific_name": "Trichinella spiralis",
+    "name_ko": "선모충",
+    "name_en": "trichina worm",
+    "aliases": [],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "조직 내 기생 선충",
+    "size": "유충 약 1mm",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "덜 익힌 돼지고기·야생동물 고기·가공식품",
+    "infective_stage": "피낭유충 (encysted larva)",
+    "intermediate_host": [],
+    "definitive_host": "쥐·돼지·사람",
+    "habitat": "성충 - 소장 점막 / 유충 - 횡문근",
+    "lung_migration": false,
+    "disease_ko": "선모충증",
+    "disease_en": "trichinellosis",
+    "symptoms": [
+      "근육통",
+      "안와주위 부종",
+      "발열",
+      "호산구증다증"
+    ],
+    "diagnosis": [
+      "근육 생검",
+      "혈청검사"
+    ],
+    "treatment": [
+      "Albendazole 또는 Mebendazole 10-14d"
+    ],
+    "epidemiology": "야생동물 생식 문화권",
+    "exam_notes": "근육 조직절편에서 nursing cell complex 내부에 돌돌 말린 유충 — 조직 문제 단골",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "brugia_malayi",
+    "scientific_name": "Brugia malayi",
+    "name_ko": "말레이사상충",
+    "name_en": "Malayan filaria",
+    "aliases": [],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "사상충",
+    "size": "성충 4-10cm / microfilaria 200-400um",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "모기 흡혈",
+    "source": "모기 (Aedes togoi 등)",
+    "infective_stage": "L3 유충",
+    "intermediate_host": [
+      "모기"
+    ],
+    "definitive_host": "사람",
+    "habitat": "림프관",
+    "lung_migration": false,
+    "disease_ko": "림프사상충증",
+    "disease_en": "lymphatic filariasis",
+    "symptoms": [
+      "급성 림프선염",
+      "만성 림프관 폐색 → 상피증 (elephantiasis)",
+      "유미뇨"
+    ],
+    "diagnosis": [
+      "야간 혈액도말검사",
+      "PCR",
+      "혈청 IgG4"
+    ],
+    "treatment": [
+      "DEC 12d",
+      "Albendazole",
+      "Doxycycline (Wolbachia 제거)"
+    ],
+    "epidemiology": "말레이시아. 과거 제주도·남해 유행, 2007년 퇴치 선언",
+    "exam_notes": "sheath에 싸여 있고 꼬리 끝에 끊어진 terminal nuclei 2개 — Wuchereria (nuclei가 중간에 끊김) 와 감별",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "wuchereria_bancrofti",
+    "scientific_name": "Wuchereria bancrofti",
+    "name_ko": "반크롭트사상충",
+    "name_en": "Bancroftian filaria",
+    "aliases": [],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "사상충",
+    "size": "성충 4-10cm",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "모기 흡혈",
+    "source": "모기 (Culex, Aedes, Anopheles, Mansonia)",
+    "infective_stage": "L3 유충",
+    "intermediate_host": [
+      "모기"
+    ],
+    "definitive_host": "사람",
+    "habitat": "림프관 (생식기 림프관)",
+    "lung_migration": false,
+    "disease_ko": "림프사상충증",
+    "disease_en": "lymphatic filariasis",
+    "symptoms": [
+      "상피증",
+      "음낭수종",
+      "유미뇨"
+    ],
+    "diagnosis": [
+      "야간 혈액도말검사",
+      "ICT filariasis kit"
+    ],
+    "treatment": [
+      "DEC",
+      "Albendazole"
+    ],
+    "epidemiology": "전세계 열대지방 (림프사상충증의 90%)",
+    "exam_notes": "sheath 있음. nuclei가 꼬리 끝까지 가지 않고 중간에 끊김",
+    "sources": [
+      "서유지"
+    ],
+    "distractor_only": true
+  },
+  {
+    "id": "toxocara_canis",
+    "scientific_name": "Toxocara canis",
+    "name_ko": "개회충",
+    "name_en": "dog roundworm",
+    "aliases": [],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "조직 내 기생 선충",
+    "size": "사람에서는 유충만 관찰",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "충란에 오염된 토양, 소 생간 등 유충을 포함한 내장육",
+    "infective_stage": "자충포장란 / 조직 내 유충",
+    "intermediate_host": [],
+    "definitive_host": "개 (사람은 우연숙주)",
+    "habitat": "간·폐·눈·뇌 (유충)",
+    "lung_migration": true,
+    "disease_ko": "개회충증 (유충내장이행증)",
+    "disease_en": "toxocariasis / visceral larva migrans",
+    "symptoms": [
+      "대부분 무증상",
+      "간종대·복통",
+      "안구유충이행증 → 단안 시각이상"
+    ],
+    "diagnosis": [
+      "혈청검사 ELISA",
+      "CBC 호산구증다증"
+    ],
+    "treatment": [
+      "Albendazole 또는 Mebendazole 5d",
+      "안구형은 + prednisone"
+    ],
+    "epidemiology": "소아 > 성인. 위험인자는 남성·시골 거주·생간 섭취",
+    "exam_notes": "사람 몸에 성충이 없다는 점이 핵심 — 유충만 조직에서 관찰",
+    "sources": [
+      "서유지",
+      "오민석"
+    ],
+    "distractor_only": true
+  }
+]

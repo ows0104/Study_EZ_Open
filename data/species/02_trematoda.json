@@ -1,0 +1,586 @@
+[
+  {
+    "id": "clonorchis_sinensis",
+    "scientific_name": "Clonorchis sinensis",
+    "name_ko": "간흡충",
+    "name_en": "Chinese liver fluke",
+    "aliases": [
+      "Clonochis sinensis"
+    ],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "간흡충",
+    "size": "10-25mm x 4-6mm (충란 약 30um)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "민물고기 생식 (잉어·붕어·향어·모래무지·빙어)",
+    "infective_stage": "피낭유충 (metacercaria)",
+    "intermediate_host": [
+      "제1 - 쇠우렁",
+      "제2 - 잉어과 담수어"
+    ],
+    "definitive_host": "사람·개·고양이·돼지",
+    "habitat": "간내 담관, 담낭",
+    "lung_migration": false,
+    "disease_ko": "간흡충증",
+    "disease_en": "clonorchiasis",
+    "symptoms": [
+      "무증상",
+      "담관 부종·섬유화",
+      "황달·간종대·간경화",
+      "담관염·담낭염·담석"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)",
+      "ELISA",
+      "초음파"
+    ],
+    "treatment": [
+      "Praziquantel 25mg/kg tid 1d"
+    ],
+    "epidemiology": "동아시아 강 유역 (낙동강·섬진강), 중년 남성. 숙주특이성 낮음. WHO group 1 발암물질 (담관암)",
+    "exam_notes": "충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "opisthorchis_viverrini",
+    "scientific_name": "Opisthorchis viverrini",
+    "name_ko": "타이간흡충",
+    "name_en": "Southeast Asian liver fluke",
+    "aliases": [],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "간흡충",
+    "size": "간흡충보다 작음",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "민물고기 생식",
+    "infective_stage": "피낭유충 (metacercaria)",
+    "intermediate_host": [
+      "제1 - 민물패류",
+      "제2 - 담수어"
+    ],
+    "definitive_host": "사람·고양이과 동물",
+    "habitat": "간내 담관",
+    "lung_migration": false,
+    "disease_ko": "타이간흡충증",
+    "disease_en": "opisthorchiasis",
+    "symptoms": [
+      "간흡충증과 유사",
+      "담관암"
+    ],
+    "diagnosis": [
+      "대변검사",
+      "ELISA"
+    ],
+    "treatment": [
+      "Praziquantel"
+    ],
+    "epidemiology": "동남아·동유럽·중앙아시아. WHO group 1 발암물질",
+    "exam_notes": "간흡충과 달리 testis가 lobulation 되어 있음 — 성충 감별 포인트",
+    "sources": [
+      "실습.pdf",
+      "서유지"
+    ],
+    "distractor_only": true
+  },
+  {
+    "id": "paragonimus_westermani",
+    "scientific_name": "Paragonimus westermani",
+    "name_ko": "폐흡충",
+    "name_en": "lung fluke",
+    "aliases": [
+      "Paragoninus westermanii"
+    ],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "폐흡충",
+    "size": "5-10mm x 4-7mm, 두께 3-4mm (충란 약 90um)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "민물 갑각류 생식 (참게·참가재), 야생동물 근육",
+    "infective_stage": "피낭유충 (metacercaria)",
+    "intermediate_host": [
+      "제1 - 다슬기",
+      "제2 - 참게·참가재"
+    ],
+    "definitive_host": "사람·여우과·고양이과",
+    "habitat": "폐 (55%)",
+    "lung_migration": false,
+    "disease_ko": "폐흡충증",
+    "disease_en": "paragonimiasis",
+    "symptoms": [
+      "객혈 (결핵과 감별)",
+      "worm capsule·육아종",
+      "뇌폐흡충증 (25%) - grape bunch 병변"
+    ],
+    "diagnosis": [
+      "객담 충란",
+      "대변 충란",
+      "ELISA"
+    ],
+    "treatment": [
+      "Praziquantel 25mg/kg tid 2-3d",
+      "CNS 침범 시 + corticosteroid"
+    ],
+    "epidemiology": "한국·일본 유행. 65℃ 이상 가열조리로 예방",
+    "exam_notes": "충란 - 90um 그룹, operculum + abopercular thickening. 성충 - plump ovoid, 적갈색, 6개 lobe로 나뉜 ovary. 슬라이드가 두껍게 mounting 되어 있음",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "metagonimus_yokogawai",
+    "scientific_name": "Metagonimus yokogawai",
+    "name_ko": "요코가와흡충",
+    "name_en": "Yokogawa fluke",
+    "aliases": [
+      "Metatonimus yokogawai",
+      "Metaonimus yokogawai",
+      "Metagonimus yokowai",
+      "Metagonimus yokogawi"
+    ],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "장흡충",
+    "size": "1-2mm (충란 약 30um)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "은어·황어 생식",
+    "infective_stage": "피낭유충 (metacercaria)",
+    "intermediate_host": [
+      "제1 - 다슬기",
+      "제2 - 은어 등 민물고기"
+    ],
+    "definitive_host": "사람·조류·포유류",
+    "habitat": "소장 (융모 사이에 파묻힘)",
+    "lung_migration": false,
+    "disease_ko": "요코가와흡충증",
+    "disease_en": "metagonimiasis",
+    "symptoms": [
+      "융모 위축 + 음와 증식 → V/C 비 감소",
+      "설사·복통"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)"
+    ],
+    "treatment": [
+      "Praziquantel 10mg/kg single"
+    ],
+    "epidemiology": "국내 해안가 안쪽 담수지역, 시베리아·발칸반도·지중해 연안",
+    "exam_notes": "충란은 간흡충과 크기가 같은 30um이지만 충란벽이 매끄러움 (muskmelon 무늬 없음). 성충은 ventral sucker가 한쪽으로 치우침",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "fasciola_hepatica",
+    "scientific_name": "Fasciola hepatica",
+    "name_ko": "간질",
+    "name_en": "sheep liver fluke",
+    "aliases": [
+      "Fasciola hapatica",
+      "Fasicola hepatica"
+    ],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "간흡충",
+    "size": "약 3cm (25-75mm x 10mm)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "미나리 등 수생식물, 초식동물 생간·녹즙",
+    "infective_stage": "피낭유충 (metacercaria) / 유약충",
+    "intermediate_host": [
+      "패류"
+    ],
+    "definitive_host": "양·소 등 초식동물, 사람",
+    "habitat": "큰 담관",
+    "lung_migration": false,
+    "disease_ko": "간질증",
+    "disease_en": "fascioliasis",
+    "symptoms": [
+      "간 괴사·농양",
+      "생간 섭취 후 급성 비인두염",
+      "이소기생 흔함 (폐·심장·피부)"
+    ],
+    "diagnosis": [
+      "대변·담즙 흡인액 충란",
+      "혈청검사"
+    ],
+    "treatment": [
+      "Triclabendazole 10-12mg/kg 1-2d"
+    ],
+    "epidemiology": "전세계 가축, 국내 발생. 수명 10년",
+    "exam_notes": "납작한 나뭇잎 모양 + conical projection (= cephalic cone). highly branched intestine·testes·vitellaria. 조직에서는 구멍이 송송 뚫린 내부",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "neodiplostomum_seoulense",
+    "scientific_name": "Neodiplostomum seoulense",
+    "name_ko": "서울주걱흡충",
+    "name_en": "",
+    "aliases": [],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "장흡충",
+    "size": "약 1mm",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "꽃뱀·개구리 생식",
+    "infective_stage": "피낭유충 (metacercaria)",
+    "intermediate_host": [
+      "제1 - 또아리물달팽이",
+      "제2 - 올챙이·개구리",
+      "대기숙주 - 뱀"
+    ],
+    "definitive_host": "사람·설치류",
+    "habitat": "소장",
+    "lung_migration": false,
+    "disease_ko": "서울주걱흡충증",
+    "disease_en": "neodiplostomiasis",
+    "symptoms": [
+      "매우 강한 상복부 통증",
+      "장출혈",
+      "융모 위축 → 음와 증식 → V/C 비 감소"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)"
+    ],
+    "treatment": [
+      "Praziquantel"
+    ],
+    "epidemiology": "우리나라에서만 보고",
+    "exam_notes": "주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "gymnophalloides_seoi",
+    "scientific_name": "Gymnophalloides seoi",
+    "name_ko": "참굴큰입흡충",
+    "name_en": "",
+    "aliases": [
+      "Gynecophalloides seoi",
+      "Gymnopalloides seoi"
+    ],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "장흡충",
+    "size": "매우 작음 (0.4-0.5mm)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "자연산 굴 생식",
+    "infective_stage": "피낭유충 (metacercaria)",
+    "intermediate_host": [
+      "참굴"
+    ],
+    "definitive_host": "검은머리물떼새 (oystercatcher), 사람",
+    "habitat": "소장",
+    "lung_migration": false,
+    "disease_ko": "참굴큰입흡충증",
+    "disease_en": "gymnophalloidiasis",
+    "symptoms": [
+      "설사·복통",
+      "췌장염·당뇨 환자에서 발견"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)"
+    ],
+    "treatment": [
+      "Praziquantel"
+    ],
+    "epidemiology": "우리나라에서만 보고 (서남해안 도서)",
+    "exam_notes": "거대한 oral sucker + ventral sucker 앞의 홈 (ventral pit) 이 결정적 감별점",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "schistosoma_japonicum",
+    "scientific_name": "Schistosoma japonicum",
+    "name_ko": "일본주혈흡충",
+    "name_en": "",
+    "aliases": [
+      "Schistosoma japnoicum",
+      "Schistosoma japonium",
+      "Schistomsoma japonicum"
+    ],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "주혈흡충",
+    "size": "수컷 6-10mm (충란 70-100um)",
+    "transmission_mode": "패류매개성",
+    "transmission_route": "경피감염 (7분 이내 침입)",
+    "source": "유미유충이 있는 민물 접촉 (물 길어오기·수영)",
+    "infective_stage": "유미유충 (cercaria)",
+    "intermediate_host": [
+      "Oncomelania (패류)"
+    ],
+    "definitive_host": "사람·소·개 등 (extensive zoonotic)",
+    "habitat": "장간막 정맥, 직장 정맥",
+    "lung_migration": false,
+    "disease_ko": "일본주혈흡충증",
+    "disease_en": "schistosomiasis japonica",
+    "symptoms": [
+      "Katayama 증후군",
+      "간경화·비종대",
+      "Jacksonian 간질 (충란 색전)"
+    ],
+    "diagnosis": [
+      "대변 충란",
+      "직장 점막·간 생검"
+    ],
+    "treatment": [
+      "Praziquantel 60mg/kg bid 3d"
+    ],
+    "epidemiology": "중국·인도네시아·필리핀. 우리나라는 중간숙주 부재로 토착 발생 없음",
+    "exam_notes": "충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "schistosoma_mansoni",
+    "scientific_name": "Schistosoma mansoni",
+    "name_ko": "만손주혈흡충",
+    "name_en": "",
+    "aliases": [
+      "Schistomsoma mansoni"
+    ],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "주혈흡충",
+    "size": "충란 110-180um",
+    "transmission_mode": "패류매개성",
+    "transmission_route": "경피감염",
+    "source": "유미유충이 있는 민물 접촉",
+    "infective_stage": "유미유충 (cercaria)",
+    "intermediate_host": [
+      "Biomphalaria"
+    ],
+    "definitive_host": "사람·쥐·원숭이",
+    "habitat": "장간막 정맥, 직장 정맥",
+    "lung_migration": false,
+    "disease_ko": "만손주혈흡충증",
+    "disease_en": "schistosomiasis mansoni",
+    "symptoms": [
+      "Katayama 증후군",
+      "간비대·간경화",
+      "혈변"
+    ],
+    "diagnosis": [
+      "대변 충란 (다량 필요)",
+      "직장 점막·간 생검"
+    ],
+    "treatment": [
+      "Praziquantel 60mg/kg bid 3d"
+    ],
+    "epidemiology": "아프리카·남미",
+    "exam_notes": "충란이 가장 큼 (100um 이상) + 뚜렷한 lateral spine (측방 돌기)",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "schistosoma_haematobium",
+    "scientific_name": "Schistosoma haematobium",
+    "name_ko": "방광주혈흡충",
+    "name_en": "",
+    "aliases": [],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "주혈흡충",
+    "size": "충란 110-170um",
+    "transmission_mode": "패류매개성",
+    "transmission_route": "경피감염",
+    "source": "유미유충이 있는 민물 접촉 (아프리카 강에서 수영)",
+    "infective_stage": "유미유충 (cercaria)",
+    "intermediate_host": [
+      "Bulinus",
+      "Physopsis"
+    ],
+    "definitive_host": "사람·쥐·원숭이",
+    "habitat": "방광정맥총, 골반정맥총",
+    "lung_migration": false,
+    "disease_ko": "방광주혈흡충증",
+    "disease_en": "urinary schistosomiasis",
+    "symptoms": [
+      "혈뇨",
+      "방광 궤양",
+      "방광암 (편평세포암)",
+      "충란 석회화 → 방광결석"
+    ],
+    "diagnosis": [
+      "소변 충란",
+      "방광 내시경·점막 생검"
+    ],
+    "treatment": [
+      "Praziquantel 60mg/kg bid 3d"
+    ],
+    "epidemiology": "아프리카·중동·인도",
+    "exam_notes": "충란 아래쪽 끝에 terminal spine (말단 돌기) — 만손(lateral)과의 결정적 감별점",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "heterophyes_nocens",
+    "scientific_name": "Heterophyes nocens",
+    "name_ko": "유해이형흡충",
+    "name_en": "",
+    "aliases": [],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "장흡충",
+    "size": "1-2mm",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "숭어·농어·문절망둑 등 반수산 어류 생식",
+    "infective_stage": "피낭유충 (metacercaria)",
+    "intermediate_host": [
+      "패류",
+      "반수산 어류"
+    ],
+    "definitive_host": "사람·조류",
+    "habitat": "소장",
+    "lung_migration": false,
+    "disease_ko": "이형흡충증",
+    "disease_en": "heterophyiasis",
+    "symptoms": [
+      "설사·복통"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)"
+    ],
+    "treatment": [
+      "Praziquantel 10mg/kg single"
+    ],
+    "epidemiology": "서해안·남해안 도서 지방",
+    "exam_notes": "요코가와흡충과 충란이 거의 구별되지 않음 — 보기 세트용 오답 후보",
+    "sources": [
+      "서유지",
+      "오민석"
+    ],
+    "distractor_only": true
+  },
+  {
+    "id": "echinostoma_hortense",
+    "scientific_name": "Echinostoma hortense",
+    "name_ko": "호르텐스극구흡충",
+    "name_en": "",
+    "aliases": [],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "장흡충",
+    "size": "크고 길쭉함 (약 1cm)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "얼룩동사리·버들치·미꾸라지 생식",
+    "infective_stage": "피낭유충 (metacercaria)",
+    "intermediate_host": [
+      "패류",
+      "담수산 어류"
+    ],
+    "definitive_host": "사람·쥐",
+    "habitat": "소장 (융모를 흡입)",
+    "lung_migration": false,
+    "disease_ko": "극구흡충증",
+    "disease_en": "echinostomiasis",
+    "symptoms": [
+      "융모 흡입에 의한 통증·출혈"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)",
+      "내시경"
+    ],
+    "treatment": [
+      "Praziquantel"
+    ],
+    "epidemiology": "내륙지방 소하천 유역",
+    "exam_notes": "머리에 collar spine이 있는 것이 특징",
+    "sources": [
+      "서유지",
+      "오민석"
+    ],
+    "distractor_only": true
+  },
+  {
+    "id": "schistosoma_mekongi",
+    "scientific_name": "Schistosoma mekongi",
+    "name_ko": "메콩주혈흡충",
+    "name_en": "",
+    "aliases": [],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "주혈흡충",
+    "size": "충란 50-80um",
+    "transmission_mode": "패류매개성",
+    "transmission_route": "경피감염",
+    "source": "유미유충이 있는 민물 접촉",
+    "infective_stage": "유미유충 (cercaria)",
+    "intermediate_host": [
+      "Neotricula (패류)"
+    ],
+    "definitive_host": "사람·개",
+    "habitat": "장간막 정맥",
+    "lung_migration": false,
+    "disease_ko": "메콩주혈흡충증",
+    "disease_en": "schistosomiasis mekongi",
+    "symptoms": [
+      "일본주혈흡충증과 유사하나 경증"
+    ],
+    "diagnosis": [
+      "대변 충란"
+    ],
+    "treatment": [
+      "Praziquantel"
+    ],
+    "epidemiology": "메콩강 유역 (라오스·캄보디아)",
+    "exam_notes": "일본주혈흡충과 충란이 유사하나 더 작음 — 주혈흡충 보기 세트용",
+    "sources": [
+      "서유지"
+    ],
+    "distractor_only": true
+  }
+]

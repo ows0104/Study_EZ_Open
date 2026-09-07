@@ -1,0 +1,434 @@
+[
+  {
+    "id": "ascaris_fertilized_egg",
+    "species_id": "ascaris_lumbricoides",
+    "specimen_type": "충란",
+    "stage": "fertilized egg",
+    "label_ko": "회충 수정란",
+    "label_en": "Ascaris lumbricoides, fertilized egg",
+    "size_um": "60-70",
+    "size_group": "60um 그룹",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "난원형, 두꺼운 충란벽",
+      "3 layer 구조 (바깥 albumin - chitin - lipoid)",
+      "바깥 albumin layer가 울퉁불퉁하게 요철",
+      "내부에 단일 난세포가 꽉 참"
+    ],
+    "structures": [
+      "albumin layer",
+      "chitin layer",
+      "lipoid layer"
+    ],
+    "confusable_with": [
+      "ascaris_unfertilized_egg",
+      "taenia_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ]
+  },
+  {
+    "id": "ascaris_unfertilized_egg",
+    "species_id": "ascaris_lumbricoides",
+    "specimen_type": "충란",
+    "stage": "unfertilized egg",
+    "label_ko": "회충 불수정란",
+    "label_en": "Ascaris lumbricoides, unfertilized egg",
+    "size_um": "90",
+    "size_group": "90um 그룹",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "수정란보다 길쭉하고 큼",
+      "충란벽 3 layer가 제대로 형성되지 않음",
+      "내부가 불규칙한 과립으로 차 있음"
+    ],
+    "structures": [
+      "albumin layer"
+    ],
+    "confusable_with": [
+      "ascaris_fertilized_egg",
+      "paragonimus_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ]
+  },
+  {
+    "id": "trichuris_egg",
+    "species_id": "trichuris_trichiura",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "편충 충란",
+    "label_en": "Trichuris trichiura, egg",
+    "size_um": "45-50",
+    "size_group": "60um 그룹",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "양쪽 끝에 투명한 mucoid plug",
+      "나뭇잎·럭비공·barrel 모양",
+      "갈색의 매끈한 충란벽"
+    ],
+    "structures": [
+      "mucoid plug"
+    ],
+    "confusable_with": [
+      "ascaris_fertilized_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ]
+  },
+  {
+    "id": "hookworm_egg",
+    "species_id": "ancylostoma_duodenale",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "구충 충란",
+    "label_en": "Hookworm (Ancylostoma duodenale / Necator americanus), egg",
+    "size_um": "60",
+    "size_group": "60um 그룹",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "타원형, 충란벽이 키틴층 하나로 얇고 투명",
+      "내부에 난할된 세포가 여러 개 (4-8 cell stage)",
+      "충란벽과 내용물 사이에 빈 공간"
+    ],
+    "structures": [
+      "chitin layer"
+    ],
+    "confusable_with": [
+      "enterobius_egg",
+      "diphyllobothrium_egg"
+    ],
+    "note": "두비니구충과 아메리카구충의 충란은 구별 불가 — 답은 Hookworm",
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ],
+    "answer_label": "Hookworm",
+    "exclude_distractors": [
+      "necator_americanus"
+    ]
+  },
+  {
+    "id": "enterobius_egg",
+    "species_id": "enterobius_vermicularis",
+    "specimen_type": "충란",
+    "stage": "embryonated egg",
+    "label_ko": "요충 충란",
+    "label_en": "Enterobius vermicularis, egg",
+    "size_um": "60",
+    "size_group": "60um 그룹",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "한쪽이 편평하고 반대쪽이 볼록한 비대칭 타원형",
+      "커피콩·죠리퐁·감씨 모양",
+      "내부에 반으로 접힌 유충(larva)"
+    ],
+    "structures": [
+      "chitin layer"
+    ],
+    "confusable_with": [
+      "hookworm_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ]
+  },
+  {
+    "id": "clonorchis_egg",
+    "species_id": "clonorchis_sinensis",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "간흡충 충란",
+    "label_en": "Clonorchis sinensis, egg",
+    "size_um": "30",
+    "size_group": "30um 그룹 (가장 작음)",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "전구·플라스크 모양",
+      "operculum 주변이 어깨처럼 튀어나옴 (shouldering)",
+      "충란벽에 muskmelon appearance (그물무늬)",
+      "operculum 반대쪽에 abopercular knob"
+    ],
+    "structures": [
+      "operculum",
+      "shoulder",
+      "abopercular knob"
+    ],
+    "confusable_with": [
+      "metagonimus_egg",
+      "heterophyes_nocens"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ]
+  },
+  {
+    "id": "metagonimus_egg",
+    "species_id": "metagonimus_yokogawai",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "요코가와흡충 충란",
+    "label_en": "Metagonimus yokogawai, egg",
+    "size_um": "30",
+    "size_group": "30um 그룹",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "간흡충과 크기가 같으나 충란벽이 매끄러움 (muskmelon 무늬 없음)",
+      "shouldering이 뚜렷하지 않음",
+      "operculum이 떨어져 나간 형태로 보이기도 함"
+    ],
+    "structures": [
+      "operculum"
+    ],
+    "confusable_with": [
+      "clonorchis_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ]
+  },
+  {
+    "id": "paragonimus_egg",
+    "species_id": "paragonimus_westermani",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "폐흡충 충란",
+    "label_en": "Paragonimus westermani, egg",
+    "size_um": "80-100",
+    "size_group": "90um 그룹",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "황갈색의 큰 난원형",
+      "한쪽 끝에 뚜렷한 operculum",
+      "operculum 반대쪽 충란벽이 두꺼워짐 (abopercular thickening)",
+      "좌우가 약간 비대칭"
+    ],
+    "structures": [
+      "operculum",
+      "abopercular thickening"
+    ],
+    "confusable_with": [
+      "diphyllobothrium_egg",
+      "ascaris_unfertilized_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ]
+  },
+  {
+    "id": "diphyllobothrium_egg",
+    "species_id": "diphyllobothrium_latum",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "광절열두조충 충란",
+    "label_en": "Diphyllobothrium latum, egg",
+    "size_um": "60-70",
+    "size_group": "60um 그룹",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "갈색 타원형",
+      "한쪽에 operculum, 반대쪽에 작은 terminal knob",
+      "폐흡충란보다 작고 abopercular thickening이 없음"
+    ],
+    "structures": [
+      "operculum",
+      "terminal knob"
+    ],
+    "confusable_with": [
+      "paragonimus_egg",
+      "hookworm_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ]
+  },
+  {
+    "id": "taenia_egg",
+    "species_id": "taenia_solium",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "유무구조충 충란",
+    "label_en": "Taenia spp., egg",
+    "size_um": "30-45",
+    "size_group": "30-45um",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "원형 또는 타원형",
+      "두껍고 방사상 무늬의 embryophoral block",
+      "내부에 6개의 hooklet을 가진 육구유충 (hexacanth embryo)"
+    ],
+    "structures": [
+      "embryophoral block",
+      "hexacanth embryo",
+      "hooklet"
+    ],
+    "confusable_with": [
+      "clonorchis_egg"
+    ],
+    "note": "유구조충과 무구조충의 충란은 구별 불가 — 답은 Taenia spp.",
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ],
+    "answer_label": "Taenia spp.",
+    "exclude_distractors": [
+      "taenia_saginata",
+      "taenia_asiatica"
+    ]
+  },
+  {
+    "id": "schistosoma_japonicum_egg",
+    "species_id": "schistosoma_japonicum",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "일본주혈흡충 충란",
+    "label_en": "Schistosoma japonicum, egg",
+    "size_um": "70-100",
+    "size_group": "70-100um",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "둥글고 통통함 (주혈흡충 중 가장 작고 둥금)",
+      "매우 작은 lateral spine — 잘 보이지 않음",
+      "operculum 없음"
+    ],
+    "structures": [
+      "lateral spine"
+    ],
+    "confusable_with": [
+      "schistosoma_mansoni_egg",
+      "schistosoma_haematobium_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ]
+  },
+  {
+    "id": "schistosoma_mansoni_egg",
+    "species_id": "schistosoma_mansoni",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "만손주혈흡충 충란",
+    "label_en": "Schistosoma mansoni, egg",
+    "size_um": "110-180",
+    "size_group": "100um 이상 (가장 큼)",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "매우 큼 (100um 이상)",
+      "옆구리에 뚜렷하게 돌출된 lateral spine",
+      "operculum 없음"
+    ],
+    "structures": [
+      "lateral spine"
+    ],
+    "confusable_with": [
+      "schistosoma_haematobium_egg",
+      "schistosoma_japonicum_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ]
+  },
+  {
+    "id": "schistosoma_haematobium_egg",
+    "species_id": "schistosoma_haematobium",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "방광주혈흡충 충란",
+    "label_en": "Schistosoma haematobium, egg",
+    "size_um": "110-170",
+    "size_group": "100um 이상",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "큰 방추형",
+      "아래쪽 끝에 돌출된 terminal spine",
+      "operculum 없음"
+    ],
+    "structures": [
+      "terminal spine"
+    ],
+    "confusable_with": [
+      "schistosoma_mansoni_egg",
+      "schistosoma_japonicum_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ]
+  },
+  {
+    "id": "pediculus_egg",
+    "species_id": "pediculus_humanus",
+    "specimen_type": "충란",
+    "stage": "nit",
+    "label_ko": "이의 충란 (서캐)",
+    "label_en": "Pediculus humanus, egg (nit)",
+    "size_um": "800",
+    "size_group": "육안 관찰 가능",
+    "stain": null,
+    "magnification": "100x",
+    "key_features": [
+      "모발에 투명한 막(cement)으로 단단히 붙어 있음",
+      "한쪽 끝에 operculum 모양의 뚜껑"
+    ],
+    "structures": [
+      "operculum"
+    ],
+    "confusable_with": [],
+    "sources": [
+      "실습.pdf",
+      "전민서"
+    ]
+  }
+]

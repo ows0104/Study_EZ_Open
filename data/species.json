@@ -1,0 +1,3103 @@
+[
+  {
+    "id": "ascaris_lumbricoides",
+    "scientific_name": "Ascaris lumbricoides",
+    "name_ko": "회충",
+    "name_en": "roundworm",
+    "aliases": [
+      "Ascarus lumbricoides",
+      "Ascaris lumbricodies"
+    ],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "장내 선충",
+    "size": "20-35cm (암) / 13-17cm (수)",
+    "transmission_mode": "토양매개성",
+    "transmission_route": "경구감염 (fecal-oral)",
+    "source": "자충포장란에 오염된 식수·채소",
+    "infective_stage": "자충포장란 (embryonated egg)",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "소장 (jejunum, middle ileum)",
+    "lung_migration": true,
+    "disease_ko": "회충증",
+    "disease_en": "ascariasis",
+    "symptoms": [
+      "Loeffler 증후군 (호산구성 폐렴)",
+      "장폐색 (ileus)",
+      "야맹증·Kwashiorkor",
+      "이소기생 → 담석·장천공"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)",
+      "객담검사 (유충)"
+    ],
+    "treatment": [
+      "Albendazole 400mg single",
+      "Mebendazole 100mg bid 3d",
+      "Ivermectin 150-200mcg/kg single"
+    ],
+    "epidemiology": "열대·아열대·온대 개발도상국. 숙주특이성 높음",
+    "exam_notes": "충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "01_nematoda.json"
+  },
+  {
+    "id": "trichuris_trichiura",
+    "scientific_name": "Trichuris trichiura",
+    "name_ko": "편충",
+    "name_en": "whipworm",
+    "aliases": [
+      "Trichuris trichuria",
+      "Trichruis trichiura",
+      "Trichuris trichuira"
+    ],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "장내 선충",
+    "size": "3-5cm",
+    "transmission_mode": "토양매개성",
+    "transmission_route": "경구감염",
+    "source": "자충포장란에 오염된 식수·채소",
+    "infective_stage": "자충포장란 (embryonated egg)",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "맹장 (cecum), 대장·직장",
+    "lung_migration": false,
+    "disease_ko": "편충증",
+    "disease_en": "trichuriasis",
+    "symptoms": [
+      "대부분 무증상",
+      "혈점액성 설사",
+      "직장탈출증 (rectal prolapse)"
+    ],
+    "diagnosis": [
+      "대장내시경 (충체)",
+      "대변검사 (충란)"
+    ],
+    "treatment": [
+      "Albendazole 400mg 3d",
+      "Mebendazole 100mg bid 3d",
+      "Ivermectin 200mcg/kg 3d"
+    ],
+    "epidemiology": "전세계 분포",
+    "exam_notes": "충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "01_nematoda.json"
+  },
+  {
+    "id": "ancylostoma_duodenale",
+    "scientific_name": "Ancylostoma duodenale",
+    "name_ko": "두비니구충",
+    "name_en": "Old World hookworm",
+    "aliases": [
+      "Ancyclostoma duodenale",
+      "Hook worm",
+      "Hookworm",
+      "Ancyllstoma duldenale"
+    ],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "장내 선충",
+    "size": "1.3cm (암) / 1.1cm (수)",
+    "transmission_mode": "토양매개성",
+    "transmission_route": "경구감염 / 경피감염",
+    "source": "오염 토양",
+    "infective_stage": "사상유충 (filariform larva, L3)",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "소장 상부",
+    "lung_migration": true,
+    "disease_ko": "구충증",
+    "disease_en": "hookworm infection",
+    "symptoms": [
+      "채독증 (피부침입)",
+      "소혈구성 저색소성 빈혈",
+      "pica"
+    ],
+    "diagnosis": [
+      "대변검사 (충란 - 4-cell stage)"
+    ],
+    "treatment": [
+      "Albendazole 400mg single",
+      "Mebendazole 100mg bid 3d",
+      "Pyrantel pamoate 10mg/kg single"
+    ],
+    "epidemiology": "유럽·북아프리카·북아시아. 국내에는 두 종 모두 존재 (Ad > Na)",
+    "exam_notes": "구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "01_nematoda.json"
+  },
+  {
+    "id": "necator_americanus",
+    "scientific_name": "Necator americanus",
+    "name_ko": "아메리카구충",
+    "name_en": "New World hookworm",
+    "aliases": [],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "장내 선충",
+    "size": "1.2cm (암) / 0.8cm (수)",
+    "transmission_mode": "토양매개성",
+    "transmission_route": "경피감염",
+    "source": "오염 토양",
+    "infective_stage": "사상유충 (filariform larva, L3)",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "소장 상부",
+    "lung_migration": true,
+    "disease_ko": "구충증",
+    "disease_en": "hookworm infection",
+    "symptoms": [
+      "채독증",
+      "소혈구성 저색소성 빈혈"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)"
+    ],
+    "treatment": [
+      "Albendazole 400mg single",
+      "Mebendazole 100mg bid 3d"
+    ],
+    "epidemiology": "중남미·아프리카·아시아. 병원성은 Ad > Na",
+    "exam_notes": "구강에 칼날 모양 cutting plate 1쌍. dorsal costa 깊게 2분지 → 각각 2분지",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "01_nematoda.json"
+  },
+  {
+    "id": "strongyloides_stercoralis",
+    "scientific_name": "Strongyloides stercoralis",
+    "name_ko": "분선충",
+    "name_en": "threadworm",
+    "aliases": [],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "장내 선충",
+    "size": "1.0mm (암) / 0.7mm (수)",
+    "transmission_mode": "토양매개성",
+    "transmission_route": "경피감염 / 경구감염 / 자가감염 (autoinfection)",
+    "source": "오염 토양",
+    "infective_stage": "사상유충 (filariform larva)",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "소장 (유충을 배출)",
+    "lung_migration": true,
+    "disease_ko": "분선충증",
+    "disease_en": "strongyloidiasis",
+    "symptoms": [
+      "수양성 설사",
+      "연충성 이질 (혈점액성 설사)",
+      "면역억제 시 파종성 감염·패혈증"
+    ],
+    "diagnosis": [
+      "대변검사 (간상유충)",
+      "유충배양",
+      "객담검사"
+    ],
+    "treatment": [
+      "Ivermectin 200mcg/kg 2d (1차약)",
+      "Albendazole 400mg 3d"
+    ],
+    "epidemiology": "열대·아열대 (아시아·아프리카·남미)",
+    "exam_notes": "간상유충 (rhabditoid) = 백열전구 모양 식도 / 사상유충 (filariform) = 직경 일정한 식도 + notched tail. 구충 유충과는 꼬리 모양으로 감별",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "01_nematoda.json"
+  },
+  {
+    "id": "enterobius_vermicularis",
+    "scientific_name": "Enterobius vermicularis",
+    "name_ko": "요충",
+    "name_en": "pinworm",
+    "aliases": [
+      "Entrobius vermicularis"
+    ],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "장내 선충",
+    "size": "약 1cm",
+    "transmission_mode": "접촉매개성",
+    "transmission_route": "경구감염 / 공기매개 / 접촉감염",
+    "source": "충란에 오염된 손·침구·먼지",
+    "infective_stage": "자충포장란 (embryonated egg)",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "맹장·대장 (항문 주위에 산란)",
+    "lung_migration": false,
+    "disease_ko": "요충증",
+    "disease_en": "enterobiasis",
+    "symptoms": [
+      "야간 항문 주위 심한 소양감",
+      "학습력 저하",
+      "급성 충수염",
+      "여아 외음부·복강 육아종"
+    ],
+    "diagnosis": [
+      "항문주위 도말검사 (셀로판테이프법) — 대변검사 아님"
+    ],
+    "treatment": [
+      "Albendazole 400mg single",
+      "Mebendazole 100mg single",
+      "Pyrantel pamoate 10mg/kg single"
+    ],
+    "epidemiology": "전세계. 온대·한대 > 열대, 겨울 > 여름, 어린이 > 어른. 전원 치료 + 2-3주 간격 3회 반복투여",
+    "exam_notes": "충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "01_nematoda.json"
+  },
+  {
+    "id": "anisakis_simplex",
+    "scientific_name": "Anisakis simplex",
+    "name_ko": "고래회충",
+    "name_en": "herring worm",
+    "aliases": [],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "조직 내 기생 선충",
+    "size": "약 2cm (L3 유충)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "바다생선회·두족류·해산 갑각류 생식",
+    "infective_stage": "L3 유충",
+    "intermediate_host": [
+      "해산 갑각류 (L2→L3)",
+      "바다생선·두족류 (L3)"
+    ],
+    "definitive_host": "고래·돌고래 등 해산 포유류 (사람은 우연숙주)",
+    "habitat": "위벽·장벽 (사람에서는 성충이 되지 못함)",
+    "lung_migration": false,
+    "disease_ko": "고래회충증",
+    "disease_en": "anisakiasis",
+    "symptoms": [
+      "생선회 섭취 3-6시간 후 급성 상복부 통증",
+      "구토·설사",
+      "급성복증"
+    ],
+    "diagnosis": [
+      "섭취력 청취",
+      "내시경 (충체 직접 확인)"
+    ],
+    "treatment": [
+      "내시경적 제거"
+    ],
+    "epidemiology": "제주도 등 해안 지역. 예방은 63℃ 이상 가열 또는 -20℃ 7일 냉동",
+    "exam_notes": "머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "01_nematoda.json"
+  },
+  {
+    "id": "trichinella_spiralis",
+    "scientific_name": "Trichinella spiralis",
+    "name_ko": "선모충",
+    "name_en": "trichina worm",
+    "aliases": [],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "조직 내 기생 선충",
+    "size": "유충 약 1mm",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "덜 익힌 돼지고기·야생동물 고기·가공식품",
+    "infective_stage": "피낭유충 (encysted larva)",
+    "intermediate_host": [],
+    "definitive_host": "쥐·돼지·사람",
+    "habitat": "성충 - 소장 점막 / 유충 - 횡문근",
+    "lung_migration": false,
+    "disease_ko": "선모충증",
+    "disease_en": "trichinellosis",
+    "symptoms": [
+      "근육통",
+      "안와주위 부종",
+      "발열",
+      "호산구증다증"
+    ],
+    "diagnosis": [
+      "근육 생검",
+      "혈청검사"
+    ],
+    "treatment": [
+      "Albendazole 또는 Mebendazole 10-14d"
+    ],
+    "epidemiology": "야생동물 생식 문화권",
+    "exam_notes": "근육 조직절편에서 nursing cell complex 내부에 돌돌 말린 유충 — 조직 문제 단골",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "01_nematoda.json"
+  },
+  {
+    "id": "brugia_malayi",
+    "scientific_name": "Brugia malayi",
+    "name_ko": "말레이사상충",
+    "name_en": "Malayan filaria",
+    "aliases": [],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "사상충",
+    "size": "성충 4-10cm / microfilaria 200-400um",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "모기 흡혈",
+    "source": "모기 (Aedes togoi 등)",
+    "infective_stage": "L3 유충",
+    "intermediate_host": [
+      "모기"
+    ],
+    "definitive_host": "사람",
+    "habitat": "림프관",
+    "lung_migration": false,
+    "disease_ko": "림프사상충증",
+    "disease_en": "lymphatic filariasis",
+    "symptoms": [
+      "급성 림프선염",
+      "만성 림프관 폐색 → 상피증 (elephantiasis)",
+      "유미뇨"
+    ],
+    "diagnosis": [
+      "야간 혈액도말검사",
+      "PCR",
+      "혈청 IgG4"
+    ],
+    "treatment": [
+      "DEC 12d",
+      "Albendazole",
+      "Doxycycline (Wolbachia 제거)"
+    ],
+    "epidemiology": "말레이시아. 과거 제주도·남해 유행, 2007년 퇴치 선언",
+    "exam_notes": "sheath에 싸여 있고 꼬리 끝에 끊어진 terminal nuclei 2개 — Wuchereria (nuclei가 중간에 끊김) 와 감별",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "01_nematoda.json"
+  },
+  {
+    "id": "wuchereria_bancrofti",
+    "scientific_name": "Wuchereria bancrofti",
+    "name_ko": "반크롭트사상충",
+    "name_en": "Bancroftian filaria",
+    "aliases": [],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "사상충",
+    "size": "성충 4-10cm",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "모기 흡혈",
+    "source": "모기 (Culex, Aedes, Anopheles, Mansonia)",
+    "infective_stage": "L3 유충",
+    "intermediate_host": [
+      "모기"
+    ],
+    "definitive_host": "사람",
+    "habitat": "림프관 (생식기 림프관)",
+    "lung_migration": false,
+    "disease_ko": "림프사상충증",
+    "disease_en": "lymphatic filariasis",
+    "symptoms": [
+      "상피증",
+      "음낭수종",
+      "유미뇨"
+    ],
+    "diagnosis": [
+      "야간 혈액도말검사",
+      "ICT filariasis kit"
+    ],
+    "treatment": [
+      "DEC",
+      "Albendazole"
+    ],
+    "epidemiology": "전세계 열대지방 (림프사상충증의 90%)",
+    "exam_notes": "sheath 있음. nuclei가 꼬리 끝까지 가지 않고 중간에 끊김",
+    "sources": [
+      "서유지"
+    ],
+    "distractor_only": true,
+    "_file": "01_nematoda.json"
+  },
+  {
+    "id": "toxocara_canis",
+    "scientific_name": "Toxocara canis",
+    "name_ko": "개회충",
+    "name_en": "dog roundworm",
+    "aliases": [],
+    "group": "선충",
+    "group_en": "Nematoda",
+    "subgroup": "조직 내 기생 선충",
+    "size": "사람에서는 유충만 관찰",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "충란에 오염된 토양, 소 생간 등 유충을 포함한 내장육",
+    "infective_stage": "자충포장란 / 조직 내 유충",
+    "intermediate_host": [],
+    "definitive_host": "개 (사람은 우연숙주)",
+    "habitat": "간·폐·눈·뇌 (유충)",
+    "lung_migration": true,
+    "disease_ko": "개회충증 (유충내장이행증)",
+    "disease_en": "toxocariasis / visceral larva migrans",
+    "symptoms": [
+      "대부분 무증상",
+      "간종대·복통",
+      "안구유충이행증 → 단안 시각이상"
+    ],
+    "diagnosis": [
+      "혈청검사 ELISA",
+      "CBC 호산구증다증"
+    ],
+    "treatment": [
+      "Albendazole 또는 Mebendazole 5d",
+      "안구형은 + prednisone"
+    ],
+    "epidemiology": "소아 > 성인. 위험인자는 남성·시골 거주·생간 섭취",
+    "exam_notes": "사람 몸에 성충이 없다는 점이 핵심 — 유충만 조직에서 관찰",
+    "sources": [
+      "서유지",
+      "오민석"
+    ],
+    "distractor_only": true,
+    "_file": "01_nematoda.json"
+  },
+  {
+    "id": "clonorchis_sinensis",
+    "scientific_name": "Clonorchis sinensis",
+    "name_ko": "간흡충",
+    "name_en": "Chinese liver fluke",
+    "aliases": [
+      "Clonochis sinensis"
+    ],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "간흡충",
+    "size": "10-25mm x 4-6mm (충란 약 30um)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "민물고기 생식 (잉어·붕어·향어·모래무지·빙어)",
+    "infective_stage": "피낭유충 (metacercaria)",
+    "intermediate_host": [
+      "제1 - 쇠우렁",
+      "제2 - 잉어과 담수어"
+    ],
+    "definitive_host": "사람·개·고양이·돼지",
+    "habitat": "간내 담관, 담낭",
+    "lung_migration": false,
+    "disease_ko": "간흡충증",
+    "disease_en": "clonorchiasis",
+    "symptoms": [
+      "무증상",
+      "담관 부종·섬유화",
+      "황달·간종대·간경화",
+      "담관염·담낭염·담석"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)",
+      "ELISA",
+      "초음파"
+    ],
+    "treatment": [
+      "Praziquantel 25mg/kg tid 1d"
+    ],
+    "epidemiology": "동아시아 강 유역 (낙동강·섬진강), 중년 남성. 숙주특이성 낮음. WHO group 1 발암물질 (담관암)",
+    "exam_notes": "충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "02_trematoda.json"
+  },
+  {
+    "id": "opisthorchis_viverrini",
+    "scientific_name": "Opisthorchis viverrini",
+    "name_ko": "타이간흡충",
+    "name_en": "Southeast Asian liver fluke",
+    "aliases": [],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "간흡충",
+    "size": "간흡충보다 작음",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "민물고기 생식",
+    "infective_stage": "피낭유충 (metacercaria)",
+    "intermediate_host": [
+      "제1 - 민물패류",
+      "제2 - 담수어"
+    ],
+    "definitive_host": "사람·고양이과 동물",
+    "habitat": "간내 담관",
+    "lung_migration": false,
+    "disease_ko": "타이간흡충증",
+    "disease_en": "opisthorchiasis",
+    "symptoms": [
+      "간흡충증과 유사",
+      "담관암"
+    ],
+    "diagnosis": [
+      "대변검사",
+      "ELISA"
+    ],
+    "treatment": [
+      "Praziquantel"
+    ],
+    "epidemiology": "동남아·동유럽·중앙아시아. WHO group 1 발암물질",
+    "exam_notes": "간흡충과 달리 testis가 lobulation 되어 있음 — 성충 감별 포인트",
+    "sources": [
+      "실습.pdf",
+      "서유지"
+    ],
+    "distractor_only": true,
+    "_file": "02_trematoda.json"
+  },
+  {
+    "id": "paragonimus_westermani",
+    "scientific_name": "Paragonimus westermani",
+    "name_ko": "폐흡충",
+    "name_en": "lung fluke",
+    "aliases": [
+      "Paragoninus westermanii"
+    ],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "폐흡충",
+    "size": "5-10mm x 4-7mm, 두께 3-4mm (충란 약 90um)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "민물 갑각류 생식 (참게·참가재), 야생동물 근육",
+    "infective_stage": "피낭유충 (metacercaria)",
+    "intermediate_host": [
+      "제1 - 다슬기",
+      "제2 - 참게·참가재"
+    ],
+    "definitive_host": "사람·여우과·고양이과",
+    "habitat": "폐 (55%)",
+    "lung_migration": false,
+    "disease_ko": "폐흡충증",
+    "disease_en": "paragonimiasis",
+    "symptoms": [
+      "객혈 (결핵과 감별)",
+      "worm capsule·육아종",
+      "뇌폐흡충증 (25%) - grape bunch 병변"
+    ],
+    "diagnosis": [
+      "객담 충란",
+      "대변 충란",
+      "ELISA"
+    ],
+    "treatment": [
+      "Praziquantel 25mg/kg tid 2-3d",
+      "CNS 침범 시 + corticosteroid"
+    ],
+    "epidemiology": "한국·일본 유행. 65℃ 이상 가열조리로 예방",
+    "exam_notes": "충란 - 90um 그룹, operculum + abopercular thickening. 성충 - plump ovoid, 적갈색, 6개 lobe로 나뉜 ovary. 슬라이드가 두껍게 mounting 되어 있음",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "02_trematoda.json"
+  },
+  {
+    "id": "metagonimus_yokogawai",
+    "scientific_name": "Metagonimus yokogawai",
+    "name_ko": "요코가와흡충",
+    "name_en": "Yokogawa fluke",
+    "aliases": [
+      "Metatonimus yokogawai",
+      "Metaonimus yokogawai",
+      "Metagonimus yokowai",
+      "Metagonimus yokogawi"
+    ],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "장흡충",
+    "size": "1-2mm (충란 약 30um)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "은어·황어 생식",
+    "infective_stage": "피낭유충 (metacercaria)",
+    "intermediate_host": [
+      "제1 - 다슬기",
+      "제2 - 은어 등 민물고기"
+    ],
+    "definitive_host": "사람·조류·포유류",
+    "habitat": "소장 (융모 사이에 파묻힘)",
+    "lung_migration": false,
+    "disease_ko": "요코가와흡충증",
+    "disease_en": "metagonimiasis",
+    "symptoms": [
+      "융모 위축 + 음와 증식 → V/C 비 감소",
+      "설사·복통"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)"
+    ],
+    "treatment": [
+      "Praziquantel 10mg/kg single"
+    ],
+    "epidemiology": "국내 해안가 안쪽 담수지역, 시베리아·발칸반도·지중해 연안",
+    "exam_notes": "충란은 간흡충과 크기가 같은 30um이지만 충란벽이 매끄러움 (muskmelon 무늬 없음). 성충은 ventral sucker가 한쪽으로 치우침",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "02_trematoda.json"
+  },
+  {
+    "id": "fasciola_hepatica",
+    "scientific_name": "Fasciola hepatica",
+    "name_ko": "간질",
+    "name_en": "sheep liver fluke",
+    "aliases": [
+      "Fasciola hapatica",
+      "Fasicola hepatica"
+    ],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "간흡충",
+    "size": "약 3cm (25-75mm x 10mm)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "미나리 등 수생식물, 초식동물 생간·녹즙",
+    "infective_stage": "피낭유충 (metacercaria) / 유약충",
+    "intermediate_host": [
+      "패류"
+    ],
+    "definitive_host": "양·소 등 초식동물, 사람",
+    "habitat": "큰 담관",
+    "lung_migration": false,
+    "disease_ko": "간질증",
+    "disease_en": "fascioliasis",
+    "symptoms": [
+      "간 괴사·농양",
+      "생간 섭취 후 급성 비인두염",
+      "이소기생 흔함 (폐·심장·피부)"
+    ],
+    "diagnosis": [
+      "대변·담즙 흡인액 충란",
+      "혈청검사"
+    ],
+    "treatment": [
+      "Triclabendazole 10-12mg/kg 1-2d"
+    ],
+    "epidemiology": "전세계 가축, 국내 발생. 수명 10년",
+    "exam_notes": "납작한 나뭇잎 모양 + conical projection (= cephalic cone). highly branched intestine·testes·vitellaria. 조직에서는 구멍이 송송 뚫린 내부",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "02_trematoda.json"
+  },
+  {
+    "id": "neodiplostomum_seoulense",
+    "scientific_name": "Neodiplostomum seoulense",
+    "name_ko": "서울주걱흡충",
+    "name_en": "",
+    "aliases": [],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "장흡충",
+    "size": "약 1mm",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "꽃뱀·개구리 생식",
+    "infective_stage": "피낭유충 (metacercaria)",
+    "intermediate_host": [
+      "제1 - 또아리물달팽이",
+      "제2 - 올챙이·개구리",
+      "대기숙주 - 뱀"
+    ],
+    "definitive_host": "사람·설치류",
+    "habitat": "소장",
+    "lung_migration": false,
+    "disease_ko": "서울주걱흡충증",
+    "disease_en": "neodiplostomiasis",
+    "symptoms": [
+      "매우 강한 상복부 통증",
+      "장출혈",
+      "융모 위축 → 음와 증식 → V/C 비 감소"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)"
+    ],
+    "treatment": [
+      "Praziquantel"
+    ],
+    "epidemiology": "우리나라에서만 보고",
+    "exam_notes": "주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "02_trematoda.json"
+  },
+  {
+    "id": "gymnophalloides_seoi",
+    "scientific_name": "Gymnophalloides seoi",
+    "name_ko": "참굴큰입흡충",
+    "name_en": "",
+    "aliases": [
+      "Gynecophalloides seoi",
+      "Gymnopalloides seoi"
+    ],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "장흡충",
+    "size": "매우 작음 (0.4-0.5mm)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "자연산 굴 생식",
+    "infective_stage": "피낭유충 (metacercaria)",
+    "intermediate_host": [
+      "참굴"
+    ],
+    "definitive_host": "검은머리물떼새 (oystercatcher), 사람",
+    "habitat": "소장",
+    "lung_migration": false,
+    "disease_ko": "참굴큰입흡충증",
+    "disease_en": "gymnophalloidiasis",
+    "symptoms": [
+      "설사·복통",
+      "췌장염·당뇨 환자에서 발견"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)"
+    ],
+    "treatment": [
+      "Praziquantel"
+    ],
+    "epidemiology": "우리나라에서만 보고 (서남해안 도서)",
+    "exam_notes": "거대한 oral sucker + ventral sucker 앞의 홈 (ventral pit) 이 결정적 감별점",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "02_trematoda.json"
+  },
+  {
+    "id": "schistosoma_japonicum",
+    "scientific_name": "Schistosoma japonicum",
+    "name_ko": "일본주혈흡충",
+    "name_en": "",
+    "aliases": [
+      "Schistosoma japnoicum",
+      "Schistosoma japonium",
+      "Schistomsoma japonicum"
+    ],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "주혈흡충",
+    "size": "수컷 6-10mm (충란 70-100um)",
+    "transmission_mode": "패류매개성",
+    "transmission_route": "경피감염 (7분 이내 침입)",
+    "source": "유미유충이 있는 민물 접촉 (물 길어오기·수영)",
+    "infective_stage": "유미유충 (cercaria)",
+    "intermediate_host": [
+      "Oncomelania (패류)"
+    ],
+    "definitive_host": "사람·소·개 등 (extensive zoonotic)",
+    "habitat": "장간막 정맥, 직장 정맥",
+    "lung_migration": false,
+    "disease_ko": "일본주혈흡충증",
+    "disease_en": "schistosomiasis japonica",
+    "symptoms": [
+      "Katayama 증후군",
+      "간경화·비종대",
+      "Jacksonian 간질 (충란 색전)"
+    ],
+    "diagnosis": [
+      "대변 충란",
+      "직장 점막·간 생검"
+    ],
+    "treatment": [
+      "Praziquantel 60mg/kg bid 3d"
+    ],
+    "epidemiology": "중국·인도네시아·필리핀. 우리나라는 중간숙주 부재로 토착 발생 없음",
+    "exam_notes": "충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "02_trematoda.json"
+  },
+  {
+    "id": "schistosoma_mansoni",
+    "scientific_name": "Schistosoma mansoni",
+    "name_ko": "만손주혈흡충",
+    "name_en": "",
+    "aliases": [
+      "Schistomsoma mansoni"
+    ],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "주혈흡충",
+    "size": "충란 110-180um",
+    "transmission_mode": "패류매개성",
+    "transmission_route": "경피감염",
+    "source": "유미유충이 있는 민물 접촉",
+    "infective_stage": "유미유충 (cercaria)",
+    "intermediate_host": [
+      "Biomphalaria"
+    ],
+    "definitive_host": "사람·쥐·원숭이",
+    "habitat": "장간막 정맥, 직장 정맥",
+    "lung_migration": false,
+    "disease_ko": "만손주혈흡충증",
+    "disease_en": "schistosomiasis mansoni",
+    "symptoms": [
+      "Katayama 증후군",
+      "간비대·간경화",
+      "혈변"
+    ],
+    "diagnosis": [
+      "대변 충란 (다량 필요)",
+      "직장 점막·간 생검"
+    ],
+    "treatment": [
+      "Praziquantel 60mg/kg bid 3d"
+    ],
+    "epidemiology": "아프리카·남미",
+    "exam_notes": "충란이 가장 큼 (100um 이상) + 뚜렷한 lateral spine (측방 돌기)",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "02_trematoda.json"
+  },
+  {
+    "id": "schistosoma_haematobium",
+    "scientific_name": "Schistosoma haematobium",
+    "name_ko": "방광주혈흡충",
+    "name_en": "",
+    "aliases": [],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "주혈흡충",
+    "size": "충란 110-170um",
+    "transmission_mode": "패류매개성",
+    "transmission_route": "경피감염",
+    "source": "유미유충이 있는 민물 접촉 (아프리카 강에서 수영)",
+    "infective_stage": "유미유충 (cercaria)",
+    "intermediate_host": [
+      "Bulinus",
+      "Physopsis"
+    ],
+    "definitive_host": "사람·쥐·원숭이",
+    "habitat": "방광정맥총, 골반정맥총",
+    "lung_migration": false,
+    "disease_ko": "방광주혈흡충증",
+    "disease_en": "urinary schistosomiasis",
+    "symptoms": [
+      "혈뇨",
+      "방광 궤양",
+      "방광암 (편평세포암)",
+      "충란 석회화 → 방광결석"
+    ],
+    "diagnosis": [
+      "소변 충란",
+      "방광 내시경·점막 생검"
+    ],
+    "treatment": [
+      "Praziquantel 60mg/kg bid 3d"
+    ],
+    "epidemiology": "아프리카·중동·인도",
+    "exam_notes": "충란 아래쪽 끝에 terminal spine (말단 돌기) — 만손(lateral)과의 결정적 감별점",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "02_trematoda.json"
+  },
+  {
+    "id": "heterophyes_nocens",
+    "scientific_name": "Heterophyes nocens",
+    "name_ko": "유해이형흡충",
+    "name_en": "",
+    "aliases": [],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "장흡충",
+    "size": "1-2mm",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "숭어·농어·문절망둑 등 반수산 어류 생식",
+    "infective_stage": "피낭유충 (metacercaria)",
+    "intermediate_host": [
+      "패류",
+      "반수산 어류"
+    ],
+    "definitive_host": "사람·조류",
+    "habitat": "소장",
+    "lung_migration": false,
+    "disease_ko": "이형흡충증",
+    "disease_en": "heterophyiasis",
+    "symptoms": [
+      "설사·복통"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)"
+    ],
+    "treatment": [
+      "Praziquantel 10mg/kg single"
+    ],
+    "epidemiology": "서해안·남해안 도서 지방",
+    "exam_notes": "요코가와흡충과 충란이 거의 구별되지 않음 — 보기 세트용 오답 후보",
+    "sources": [
+      "서유지",
+      "오민석"
+    ],
+    "distractor_only": true,
+    "_file": "02_trematoda.json"
+  },
+  {
+    "id": "echinostoma_hortense",
+    "scientific_name": "Echinostoma hortense",
+    "name_ko": "호르텐스극구흡충",
+    "name_en": "",
+    "aliases": [],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "장흡충",
+    "size": "크고 길쭉함 (약 1cm)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "얼룩동사리·버들치·미꾸라지 생식",
+    "infective_stage": "피낭유충 (metacercaria)",
+    "intermediate_host": [
+      "패류",
+      "담수산 어류"
+    ],
+    "definitive_host": "사람·쥐",
+    "habitat": "소장 (융모를 흡입)",
+    "lung_migration": false,
+    "disease_ko": "극구흡충증",
+    "disease_en": "echinostomiasis",
+    "symptoms": [
+      "융모 흡입에 의한 통증·출혈"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)",
+      "내시경"
+    ],
+    "treatment": [
+      "Praziquantel"
+    ],
+    "epidemiology": "내륙지방 소하천 유역",
+    "exam_notes": "머리에 collar spine이 있는 것이 특징",
+    "sources": [
+      "서유지",
+      "오민석"
+    ],
+    "distractor_only": true,
+    "_file": "02_trematoda.json"
+  },
+  {
+    "id": "schistosoma_mekongi",
+    "scientific_name": "Schistosoma mekongi",
+    "name_ko": "메콩주혈흡충",
+    "name_en": "",
+    "aliases": [],
+    "group": "흡충",
+    "group_en": "Trematoda",
+    "subgroup": "주혈흡충",
+    "size": "충란 50-80um",
+    "transmission_mode": "패류매개성",
+    "transmission_route": "경피감염",
+    "source": "유미유충이 있는 민물 접촉",
+    "infective_stage": "유미유충 (cercaria)",
+    "intermediate_host": [
+      "Neotricula (패류)"
+    ],
+    "definitive_host": "사람·개",
+    "habitat": "장간막 정맥",
+    "lung_migration": false,
+    "disease_ko": "메콩주혈흡충증",
+    "disease_en": "schistosomiasis mekongi",
+    "symptoms": [
+      "일본주혈흡충증과 유사하나 경증"
+    ],
+    "diagnosis": [
+      "대변 충란"
+    ],
+    "treatment": [
+      "Praziquantel"
+    ],
+    "epidemiology": "메콩강 유역 (라오스·캄보디아)",
+    "exam_notes": "일본주혈흡충과 충란이 유사하나 더 작음 — 주혈흡충 보기 세트용",
+    "sources": [
+      "서유지"
+    ],
+    "distractor_only": true,
+    "_file": "02_trematoda.json"
+  },
+  {
+    "id": "diphyllobothrium_latum",
+    "scientific_name": "Diphyllobothrium latum",
+    "name_ko": "광절열두조충",
+    "name_en": "broad fish tapeworm",
+    "aliases": [
+      "Diphyllbothrium latum",
+      "Diphyllobthrium latum"
+    ],
+    "group": "조충",
+    "group_en": "Cestoda",
+    "subgroup": "의엽조충 (Pseudophyllidea)",
+    "size": "3-10m, 편절 약 3000개 (충란 60-70um)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "연어·송어·농어 생식",
+    "infective_stage": "의미충 (plerocercoid larva)",
+    "intermediate_host": [
+      "제1 - 물벼룩 (procercoid)",
+      "제2 - 어류 (plerocercoid)"
+    ],
+    "definitive_host": "사람·개·곰",
+    "habitat": "소장",
+    "lung_migration": false,
+    "disease_ko": "광절열두조충증",
+    "disease_en": "diphyllobothriasis",
+    "symptoms": [
+      "대부분 무증상",
+      "비타민 B12 결핍성 거대적혈모구빈혈",
+      "장폐색"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)",
+      "배출 편절"
+    ],
+    "treatment": [
+      "Praziquantel 5-10mg/kg single"
+    ],
+    "epidemiology": "북유럽·동아시아·북미·알래스카. 수명 25-30년",
+    "exam_notes": "충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "03_cestoda.json"
+  },
+  {
+    "id": "spirometra_erinacei",
+    "scientific_name": "Spirometra erinacei",
+    "name_ko": "만손열두조충",
+    "name_en": "",
+    "aliases": [
+      "Spirometra erinaceieuropaei",
+      "Spargnum",
+      "Sparganum",
+      "고충",
+      "Sparganum (고충)",
+      "스파르가눔"
+    ],
+    "group": "조충",
+    "group_en": "Cestoda",
+    "subgroup": "의엽조충 (Pseudophyllidea)",
+    "size": "고충 (sparganum) 수 cm ~ 수십 cm",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염 / 상처 접촉",
+    "source": "물벼룩이 든 생수, 뱀·개구리 생식, 개구리 살을 상처에 붙이는 민간요법",
+    "infective_stage": "전미충 (procercoid) / 의미충 (plerocercoid)",
+    "intermediate_host": [
+      "제1 - 물벼룩",
+      "제2 - 뱀·개구리"
+    ],
+    "definitive_host": "개·고양이 (사람은 중간숙주 역할)",
+    "habitat": "피하조직, 근육, 안와, 뇌",
+    "lung_migration": false,
+    "disease_ko": "고충증",
+    "disease_en": "sparganosis",
+    "symptoms": [
+      "이동성 무통성 피하결절",
+      "뇌고충증 (cerebral sparganosis)"
+    ],
+    "diagnosis": [
+      "피하결절 생검",
+      "혈청 ELISA (혈액·CSF)",
+      "영상검사"
+    ],
+    "treatment": [
+      "외과적 적출 (약물치료 없음)"
+    ],
+    "epidemiology": "우리나라가 농후 유행지",
+    "exam_notes": "gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "03_cestoda.json"
+  },
+  {
+    "id": "taenia_solium",
+    "scientific_name": "Taenia solium",
+    "name_ko": "유구조충",
+    "name_en": "pork tapeworm",
+    "aliases": [
+      "Taniae solium",
+      "Taenia spp",
+      "Taniae spp",
+      "Taenia spp.",
+      "Taneia solium"
+    ],
+    "group": "조충",
+    "group_en": "Cestoda",
+    "subgroup": "원엽조충 (Cyclophyllidea)",
+    "size": "2-4m (충란 30-45um)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "덜 익힌 돼지고기",
+    "infective_stage": "유구낭미충 (Cysticercus cellulosae)",
+    "intermediate_host": [
+      "돼지"
+    ],
+    "definitive_host": "사람",
+    "habitat": "소장 (공장-회장)",
+    "lung_migration": false,
+    "disease_ko": "유구조충증",
+    "disease_en": "taeniasis solium",
+    "symptoms": [
+      "대개 무증상",
+      "대변으로 편절 배출 (운동성 적음)"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)",
+      "배출 편절의 자궁측지 수"
+    ],
+    "treatment": [
+      "Praziquantel 5-10mg/kg single"
+    ],
+    "epidemiology": "과거 제주도 유행. 자유방목 돼지가 인분을 먹는 환경",
+    "exam_notes": "두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "03_cestoda.json"
+  },
+  {
+    "id": "taenia_saginata",
+    "scientific_name": "Taenia saginata",
+    "name_ko": "무구조충",
+    "name_en": "beef tapeworm",
+    "aliases": [
+      "Taneia saginata"
+    ],
+    "group": "조충",
+    "group_en": "Cestoda",
+    "subgroup": "원엽조충 (Cyclophyllidea)",
+    "size": "4-10m (충란 30-45um)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "소고기 육회 등 덜 익힌 소고기",
+    "infective_stage": "무구낭미충 (Cysticercus bovis)",
+    "intermediate_host": [
+      "소"
+    ],
+    "definitive_host": "사람",
+    "habitat": "소장 (공장-회장)",
+    "lung_migration": false,
+    "disease_ko": "무구조충증",
+    "disease_en": "taeniasis saginata",
+    "symptoms": [
+      "대개 무증상",
+      "편절이 스스로 기어나와 항문 소양감",
+      "장폐색",
+      "담관·충수 이행"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)",
+      "배출 편절의 자궁측지 수"
+    ],
+    "treatment": [
+      "Praziquantel 5-10mg/kg single"
+    ],
+    "epidemiology": "아시아. 인분에 오염된 목초를 먹은 소",
+    "exam_notes": "두절이 납작하고 갈고리 없음 (sucker 4개만). 자궁측지 13개 이상, 얇고 많음. 사람에서 낭미충증을 일으키지 않음",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "03_cestoda.json"
+  },
+  {
+    "id": "taenia_asiatica",
+    "scientific_name": "Taenia asiatica",
+    "name_ko": "아시아조충",
+    "name_en": "Asian tapeworm",
+    "aliases": [],
+    "group": "조충",
+    "group_en": "Cestoda",
+    "subgroup": "원엽조충 (Cyclophyllidea)",
+    "size": "4-8m",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "돼지 간 생식",
+    "infective_stage": "내장낭미충 (Cysticercus viscerotropica)",
+    "intermediate_host": [
+      "돼지 (간·내장)"
+    ],
+    "definitive_host": "사람",
+    "habitat": "소장",
+    "lung_migration": false,
+    "disease_ko": "아시아조충증",
+    "disease_en": "taeniasis asiatica",
+    "symptoms": [
+      "무구조충증과 유사"
+    ],
+    "diagnosis": [
+      "편절 형태",
+      "항문도말법"
+    ],
+    "treatment": [
+      "Praziquantel 10mg/kg single"
+    ],
+    "epidemiology": "돼지 간 생식 문화권. 국내 농촌 노인층",
+    "exam_notes": "두절 돌출 정도가 중간, 자궁측지 13개 이상 + 자궁세지 많음, 편절 하단에 불규칙 돌기. 낭미충이 가장 작음",
+    "sources": [
+      "서유지",
+      "오민석"
+    ],
+    "distractor_only": true,
+    "_file": "03_cestoda.json"
+  },
+  {
+    "id": "cysticercus_cellulosae",
+    "scientific_name": "Cysticercus cellulosae",
+    "name_ko": "유구낭미충",
+    "name_en": "cysticercus of Taenia solium",
+    "aliases": [
+      "metacestode of Taenia solium",
+      "metacestode of Taneia solium"
+    ],
+    "group": "조충",
+    "group_en": "Cestoda",
+    "subgroup": "원엽조충 (유충기)",
+    "size": "쌀알 크기 (약 1cm)",
+    "transmission_mode": "접촉매개성",
+    "transmission_route": "경구감염 (유구조충 충란 섭취)",
+    "source": "유구조충 충란에 오염된 음식·손 (자가감염 포함)",
+    "infective_stage": "충란",
+    "intermediate_host": [],
+    "definitive_host": "사람이 중간숙주가 됨",
+    "habitat": "피하조직, 근육, 뇌, 눈",
+    "lung_migration": false,
+    "disease_ko": "유구낭미충증",
+    "disease_en": "cysticercosis",
+    "symptoms": [
+      "고정성 무통성 피하결절",
+      "뇌낭미충증 - 두통·구토·간질발작·마비"
+    ],
+    "diagnosis": [
+      "피하결절 생검",
+      "ELISA (혈액·CSF)",
+      "영상검사"
+    ],
+    "treatment": [
+      "외과적 적출",
+      "Praziquantel 25mg/kg/d 2주",
+      "Albendazole 15mg/kg/d",
+      "+ steroid, 항경련제"
+    ],
+    "epidemiology": "아시아·중남미·아프리카",
+    "exam_notes": "gross - 투명한 cyst 안에 하얀 scolex. 조직 - cyst + 양치식물 모양 neck/scolex, 갈고리 진하게 보임. 고충증(sparganosis)과의 감별이 단골",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "03_cestoda.json"
+  },
+  {
+    "id": "echinococcus_granulosus",
+    "scientific_name": "Echinococcus granulosus",
+    "name_ko": "단방조충",
+    "name_en": "dog tapeworm",
+    "aliases": [
+      "Cryptosporidium granulosus",
+      "Enchinococcus granulosus",
+      "Echinococcosis",
+      "포충증",
+      "hydatid disease"
+    ],
+    "group": "조충",
+    "group_en": "Cestoda",
+    "subgroup": "원엽조충 (Cyclophyllidea)",
+    "size": "성충 3-6mm (편절 3개)",
+    "transmission_mode": "접촉매개성",
+    "transmission_route": "경구감염",
+    "source": "개 분변의 충란 (개와 접촉)",
+    "infective_stage": "충란",
+    "intermediate_host": [
+      "양·소 등 초식동물, 사람"
+    ],
+    "definitive_host": "개·여우",
+    "habitat": "간 (66%), 폐 (22%), 신장, 뇌",
+    "lung_migration": false,
+    "disease_ko": "포충증 (단방포충증)",
+    "disease_en": "cystic echinococcosis",
+    "symptoms": [
+      "천천히 커지는 낭종",
+      "낭종 파열 시 아나필락시스"
+    ],
+    "diagnosis": [
+      "유행지·개 접촉 과거력",
+      "혈청 ELISA",
+      "영상검사"
+    ],
+    "treatment": [
+      "PAIR",
+      "외과적 적출 (no touch isolation)",
+      "Albendazole 10-15mg/kg/d 3개월"
+    ],
+    "epidemiology": "목축업 발달 지역",
+    "exam_notes": "성충은 immature·mature·gravid 편절이 1개씩. 포충 내부에 여러 개의 protoscolex, 콧수염 모양 hooklet",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false,
+    "_file": "03_cestoda.json"
+  },
+  {
+    "id": "echinococcus_multilocularis",
+    "scientific_name": "Echinococcus multilocularis",
+    "name_ko": "다방조충",
+    "name_en": "fox tapeworm",
+    "aliases": [],
+    "group": "조충",
+    "group_en": "Cestoda",
+    "subgroup": "원엽조충 (Cyclophyllidea)",
+    "size": "성충 3-6mm (편절 4개)",
+    "transmission_mode": "접촉매개성",
+    "transmission_route": "경구감염",
+    "source": "여우·개 분변의 충란",
+    "infective_stage": "충란",
+    "intermediate_host": [
+      "설치류, 사람"
+    ],
+    "definitive_host": "여우·개",
+    "habitat": "간 (침윤성 성장)",
+    "lung_migration": false,
+    "disease_ko": "포충증 (다방포충증)",
+    "disease_en": "alveolar echinococcosis",
+    "symptoms": [
+      "암처럼 침윤·전이 (폐·뇌)",
+      "예후 불량"
+    ],
+    "diagnosis": [
+      "혈청검사",
+      "영상검사"
+    ],
+    "treatment": [
+      "외과적 절제",
+      "Albendazole 장기 투여"
+    ],
+    "epidemiology": "북반구 한대 지역",
+    "exam_notes": "단방조충보다 gravid 편절이 하나 더 있음 (총 4편절)",
+    "sources": [
+      "서유지",
+      "실습.pdf"
+    ],
+    "distractor_only": true,
+    "_file": "03_cestoda.json"
+  },
+  {
+    "id": "hymenolepis_nana",
+    "scientific_name": "Hymenolepis nana",
+    "name_ko": "왜소조충",
+    "name_en": "dwarf tapeworm",
+    "aliases": [],
+    "group": "조충",
+    "group_en": "Cestoda",
+    "subgroup": "원엽조충 (Cyclophyllidea)",
+    "size": "1-4cm",
+    "transmission_mode": "접촉매개성",
+    "transmission_route": "경구감염",
+    "source": "충란에 오염된 손·음식",
+    "infective_stage": "충란",
+    "intermediate_host": [],
+    "definitive_host": "사람·설치류",
+    "habitat": "소장",
+    "lung_migration": false,
+    "disease_ko": "왜소조충증",
+    "disease_en": "hymenolepiasis",
+    "symptoms": [
+      "대개 무증상",
+      "다수 감염 시 복통·설사"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)"
+    ],
+    "treatment": [
+      "Praziquantel"
+    ],
+    "epidemiology": "소아. 조충 중 유일하게 중간숙주가 필요 없음",
+    "exam_notes": "중간숙주 없이 직접 감염되는 유일한 조충",
+    "sources": [
+      "서유지"
+    ],
+    "distractor_only": true,
+    "_file": "03_cestoda.json"
+  },
+  {
+    "id": "entamoeba_histolytica",
+    "scientific_name": "Entamoeba histolytica",
+    "name_ko": "이질아메바",
+    "name_en": "",
+    "aliases": [
+      "Entameoba histolyca",
+      "Entamoeba histolyca"
+    ],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "아메바",
+    "size": "영양형 20-40um / 포낭 10-20um",
+    "transmission_mode": "수인성",
+    "transmission_route": "경구감염",
+    "source": "포낭에 오염된 물·음식",
+    "infective_stage": "4핵성 포낭 (quadrinucleated cyst)",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "대장 (조직 내 침입)",
+    "lung_migration": false,
+    "disease_ko": "아메바증",
+    "disease_en": "amebiasis",
+    "symptoms": [
+      "혈점액성 설사 (Crohn병과 감별)",
+      "플라스크 모양 궤양",
+      "아메바성 간농양 (우상복부 → 오른쪽 어깨 방사통, 갈색 농)"
+    ],
+    "diagnosis": [
+      "대변검사 - 급성기 영양형, 만성기 포낭",
+      "생검",
+      "혈청·대변 항원검사"
+    ],
+    "treatment": [
+      "Metronidazole 750mg 5-10d (선택약)",
+      "Iodoquinol 650mg 20d"
+    ],
+    "epidemiology": "개발도상국 (방글라데시). 기생충 사망 3위. 위험군 - 남성 동성애자·유행지 여행자·집단수용시설",
+    "exam_notes": "영양형 - karyosome 중앙 + peripheral chromatin 두께 균일, RBC 탐식. 포낭 - 핵 4개 이하. 조직 - flask-shaped ulcer",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "04_protozoa.json"
+  },
+  {
+    "id": "entamoeba_coli",
+    "scientific_name": "Entamoeba coli",
+    "name_ko": "대장아메바",
+    "name_en": "",
+    "aliases": [
+      "Entameoba coli"
+    ],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "아메바",
+    "size": "포낭 15-25um",
+    "transmission_mode": "수인성",
+    "transmission_route": "경구감염",
+    "source": "포낭에 오염된 물·음식",
+    "infective_stage": "포낭",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "대장 lumen (조직 침입 없음)",
+    "lung_migration": false,
+    "disease_ko": "비병원성",
+    "disease_en": "non-pathogenic",
+    "symptoms": [
+      "비병원성 — 증상 없음"
+    ],
+    "diagnosis": [
+      "대변검사 (포낭)"
+    ],
+    "treatment": [
+      "치료 불필요"
+    ],
+    "epidemiology": "전세계",
+    "exam_notes": "핵 4-8개 (최대 8개), karyosome이 크고 한쪽으로 치우침 (붓으로 누른 모양), peripheral chromatin 두께 불규칙 — 이질아메바와의 감별이 핵심",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "04_protozoa.json"
+  },
+  {
+    "id": "endolimax_nana",
+    "scientific_name": "Endolimax nana",
+    "name_ko": "왜소아메바",
+    "name_en": "",
+    "aliases": [
+      "Entamoeba nana",
+      "Entameoba nana"
+    ],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "아메바",
+    "size": "포낭 6-12um (RBC보다 조금 큼)",
+    "transmission_mode": "수인성",
+    "transmission_route": "경구감염",
+    "source": "포낭에 오염된 물·음식",
+    "infective_stage": "포낭",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "대장 lumen",
+    "lung_migration": false,
+    "disease_ko": "비병원성",
+    "disease_en": "non-pathogenic",
+    "symptoms": [
+      "비병원성"
+    ],
+    "diagnosis": [
+      "대변검사 (포낭)"
+    ],
+    "treatment": [
+      "치료 불필요"
+    ],
+    "epidemiology": "전세계",
+    "exam_notes": "크기가 매우 작고 핵 1-4개. karyosome이 커서 핵에 빈 공간이 없음. 족보에 Entamoeba nana로 잘못 표기되어 나온 적 있음 — 정명은 Endolimax nana",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "04_protozoa.json"
+  },
+  {
+    "id": "giardia_lamblia",
+    "scientific_name": "Giardia lamblia",
+    "name_ko": "람블편모충",
+    "name_en": "",
+    "aliases": [
+      "Girardia lambila",
+      "Giardia intestinalis",
+      "Giardia duodenalis"
+    ],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "편모충",
+    "size": "영양형 10-20um / 포낭 10-12um",
+    "transmission_mode": "수인성",
+    "transmission_route": "경구감염",
+    "source": "포낭에 오염된 물·음식",
+    "infective_stage": "4핵성 포낭",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "십이지장 (brush border에 기계적 부착)",
+    "lung_migration": false,
+    "disease_ko": "람블편모충증",
+    "disease_en": "giardiasis",
+    "symptoms": [
+      "지방변 (steatorrhea)",
+      "여행자 설사",
+      "융모 위축 → 영양소 흡수 장애"
+    ],
+    "diagnosis": [
+      "대변검사 (포낭)",
+      "enterotest (십이지장액)",
+      "생검"
+    ],
+    "treatment": [
+      "Metronidazole 250mg 5-10d (선택약)"
+    ],
+    "epidemiology": "전세계 따뜻한 지역. Aspen(Colorado) 스키장 유행 사례",
+    "exam_notes": "영양형 - pear/올빼미 얼굴 모양, 핵 2개, 4쌍 편모, sucking disc. 포낭 - 타원형, 핵 2-4개가 한쪽에 몰림, axostyle 주변 fibril. 조직 파괴는 하지 않음",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "04_protozoa.json"
+  },
+  {
+    "id": "trichomonas_vaginalis",
+    "scientific_name": "Trichomonas vaginalis",
+    "name_ko": "질편모충",
+    "name_en": "",
+    "aliases": [],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "편모충",
+    "size": "10-20um",
+    "transmission_mode": "성접촉",
+    "transmission_route": "성접촉 감염 (STD)",
+    "source": "감염자와의 성접촉",
+    "infective_stage": "영양형 (포낭기 없음)",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "질·요도 lumen",
+    "lung_migration": false,
+    "disease_ko": "질편모충증",
+    "disease_en": "trichomoniasis",
+    "symptoms": [
+      "여성 - 질염, 대하 (leukorrhea)",
+      "남성 - 거의 무증상"
+    ],
+    "diagnosis": [
+      "질 분비물 현미경 관찰"
+    ],
+    "treatment": [
+      "Metronidazole 250mg tid 7d (배우자와 함께)"
+    ],
+    "epidemiology": "전세계",
+    "exam_notes": "핵 1개 + 앞쪽 4개 편모 + 한쪽에 undulating membrane (파동막). 포낭기가 없는 것이 특징",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "04_protozoa.json"
+  },
+  {
+    "id": "balantidium_coli",
+    "scientific_name": "Balantidium coli",
+    "name_ko": "대장섬모충",
+    "name_en": "",
+    "aliases": [],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "섬모충",
+    "size": "50-100um (사람 기생 원충 중 가장 큼)",
+    "transmission_mode": "수인성",
+    "transmission_route": "경구감염",
+    "source": "돼지 분변에 오염된 물·음식",
+    "infective_stage": "포낭",
+    "intermediate_host": [],
+    "definitive_host": "돼지 (사람은 우연숙주)",
+    "habitat": "대장",
+    "lung_migration": false,
+    "disease_ko": "대장섬모충증",
+    "disease_en": "balantidiasis",
+    "symptoms": [
+      "설사·이질",
+      "대장 궤양"
+    ],
+    "diagnosis": [
+      "대변검사",
+      "대장 생검"
+    ],
+    "treatment": [
+      "Tetracycline",
+      "Metronidazole"
+    ],
+    "epidemiology": "양돈 지역",
+    "exam_notes": "운동기관이 섬모 (cilia). 크기가 커서 저배율에서도 바로 보임. 핵이 macronucleus + micronucleus 2종류",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "04_protozoa.json"
+  },
+  {
+    "id": "leishmania_donovani",
+    "scientific_name": "Leishmania donovani",
+    "name_ko": "내장리슈만편모충",
+    "name_en": "",
+    "aliases": [],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "편모충 (혈액·조직)",
+    "size": "amastigote 2-5um",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "모래파리 흡혈",
+    "source": "모래파리 (Phlebotomus spp.)",
+    "infective_stage": "promastigote",
+    "intermediate_host": [
+      "모래파리 (sandfly)"
+    ],
+    "definitive_host": "사람·개·설치류",
+    "habitat": "단핵구·망상내피계 (비장·간·골수)",
+    "lung_migration": false,
+    "disease_ko": "내장리슈만편모충증",
+    "disease_en": "visceral leishmaniasis (Kala-azar)",
+    "symptoms": [
+      "불규칙 고열 (말라리아와 감별)",
+      "간비종대",
+      "범혈구감소증",
+      "흑열병 (Kala-azar)"
+    ],
+    "diagnosis": [
+      "골수·비장 천자 (amastigote)",
+      "항체검출",
+      "배양"
+    ],
+    "treatment": [
+      "pentavalent antimonials",
+      "Amphotericin B",
+      "Miltefosine"
+    ],
+    "epidemiology": "브라질·동아프리카·인도",
+    "exam_notes": "사람 조직 내에서는 amastigote (무편모형, 세포 내 작은 점), 모래파리에서는 promastigote (전편모형). 간·비장 조직에서 세포 내 작은 dot으로 보임",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "04_protozoa.json"
+  },
+  {
+    "id": "leishmania_major",
+    "scientific_name": "Leishmania major",
+    "name_ko": "큰리슈만편모충",
+    "name_en": "",
+    "aliases": [],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "편모충 (혈액·조직)",
+    "size": "promastigote 15-20um",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "모래파리 흡혈",
+    "source": "모래파리 (Phlebotomus spp.)",
+    "infective_stage": "promastigote",
+    "intermediate_host": [
+      "모래파리 (sandfly)"
+    ],
+    "definitive_host": "사람·설치류",
+    "habitat": "피부 대식세포",
+    "lung_migration": false,
+    "disease_ko": "피부리슈만편모충증",
+    "disease_en": "cutaneous leishmaniasis",
+    "symptoms": [
+      "oriental sore (피부 궤양)",
+      "국소 림프절 종대"
+    ],
+    "diagnosis": [
+      "punch biopsy",
+      "배양"
+    ],
+    "treatment": [
+      "pentavalent antimonials",
+      "Paromomycin",
+      "냉동·온열요법"
+    ],
+    "epidemiology": "중동·아프리카·중앙아시아",
+    "exam_notes": "실습 슬라이드는 배양에서 만든 promastigote — 액체가 결정화된 배경이 보이면 리슈만편모충. 배열이 편모 → kinetoplast → 핵 순서",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "04_protozoa.json"
+  },
+  {
+    "id": "trypanosoma_cruzi",
+    "scientific_name": "Trypanosoma cruzi",
+    "name_ko": "크루스파동편모충",
+    "name_en": "",
+    "aliases": [
+      "크루즈파동편모충"
+    ],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "편모충 (혈액·조직)",
+    "size": "trypomastigote 약 20um",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "침노린재 분변이 상처로 침입 / 오염 음식",
+    "source": "침노린재 (Triatoma, kissing bug)",
+    "infective_stage": "trypomastigote",
+    "intermediate_host": [
+      "침노린재"
+    ],
+    "definitive_host": "사람·포유류",
+    "habitat": "혈액·림프절·심근·뇌",
+    "lung_migration": false,
+    "disease_ko": "샤가스병",
+    "disease_en": "Chagas disease (American trypanosomiasis)",
+    "symptoms": [
+      "Romana 징후 (눈꺼풀 부종)",
+      "만성 - 심근병증 (가장 심각)",
+      "거대식도·거대결장"
+    ],
+    "diagnosis": [
+      "혈액도말 Giemsa",
+      "xenodiagnosis",
+      "배양"
+    ],
+    "treatment": [
+      "Benznidazole 또는 Nifurtimox (급성기에만 효과)"
+    ],
+    "epidemiology": "중남미 (미국 남부-아르헨티나). 수혈 감염 위험",
+    "exam_notes": "혈액에서는 trypomastigote (핵 + kinetoplast + 편모 + 파동막), 심근세포 안에서는 amastigote 무리. 배열이 편모 → 핵 → kinetoplast 순서 (리슈만과 반대)",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "04_protozoa.json"
+  },
+  {
+    "id": "trypanosoma_brucei",
+    "scientific_name": "Trypanosoma brucei",
+    "name_ko": "아프리카파동편모충",
+    "name_en": "",
+    "aliases": [
+      "Trypanosoma brucei gambiense",
+      "Trypanosoma brucei rhodesiense"
+    ],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "편모충 (혈액·조직)",
+    "size": "trypomastigote 15-30um",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "체체파리 흡혈",
+    "source": "체체파리 (Glossina spp.)",
+    "infective_stage": "trypomastigote",
+    "intermediate_host": [
+      "체체파리"
+    ],
+    "definitive_host": "사람·동물",
+    "habitat": "혈액·림프절·비장·중추신경계",
+    "lung_migration": false,
+    "disease_ko": "아프리카 수면병",
+    "disease_en": "African trypanosomiasis",
+    "symptoms": [
+      "trypanosomal chancre",
+      "Winterbottom 징후 (목 뒤 림프절 비대)",
+      "수막뇌염기 - 두통·졸림·혼수"
+    ],
+    "diagnosis": [
+      "혈액·림프액 도말 Giemsa",
+      "CATT"
+    ],
+    "treatment": [
+      "Pentamidine (혈액림프기)",
+      "Melarsoprol (CNS기)"
+    ],
+    "epidemiology": "사하라 이남 tsetse fly belt",
+    "exam_notes": "혈액에서 trypomastigote만 관찰됨 (조직 내 amastigote 없음) — T. cruzi와의 감별점. VSG에 의한 항원변이",
+    "sources": [
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": true,
+    "_file": "04_protozoa.json"
+  },
+  {
+    "id": "toxoplasma_gondii",
+    "scientific_name": "Toxoplasma gondii",
+    "name_ko": "톡소포자충",
+    "name_en": "",
+    "aliases": [],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "포자충",
+    "size": "tachyzoite 2x6um",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염 / 수직감염 / 수혈·장기이식",
+    "source": "고양이 분변에 오염된 채소·식수 (oocyst), 덜 익힌 고기 (tissue cyst)",
+    "infective_stage": "oocyst / tissue cyst",
+    "intermediate_host": [
+      "모든 온혈동물"
+    ],
+    "definitive_host": "고양이",
+    "habitat": "단핵구 → 근육·뇌·눈·심장 (세포 내 기생)",
+    "lung_migration": false,
+    "disease_ko": "톡소포자충증",
+    "disease_en": "toxoplasmosis",
+    "symptoms": [
+      "90% 무증상",
+      "면역저하 시 재활성화 → 괴사성 뇌염",
+      "선천성 톡소포자충증 (TORCH)",
+      "안구톡소포자충증 - 괴사성 망막맥락막염"
+    ],
+    "diagnosis": [
+      "혈청 IgG/IgM",
+      "PCR (양수)",
+      "생검"
+    ],
+    "treatment": [
+      "Pyrimethamine + Sulfadiazine + Folinic acid",
+      "임산부는 Spiramycin",
+      "국내는 TMP-SMX"
+    ],
+    "epidemiology": "국내 감염률 약 25% (경기 북부 높음). 프랑스 43%, 미국 13%",
+    "exam_notes": "tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "04_protozoa.json"
+  },
+  {
+    "id": "pneumocystis_jirovecii",
+    "scientific_name": "Pneumocystis jirovecii",
+    "name_ko": "폐포자충",
+    "name_en": "",
+    "aliases": [
+      "Pneumocystis carinii",
+      "Pnemocystis jirovecii",
+      "Pneumocystic carinii"
+    ],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "포자충 (분류학상 진균)",
+    "size": "cyst 5-8um",
+    "transmission_mode": "공기매개",
+    "transmission_route": "공기감염",
+    "source": "비말·공기",
+    "infective_stage": "cyst",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "폐포 (type I pneumocyte 외벽)",
+    "lung_migration": false,
+    "disease_ko": "폐포자충폐렴",
+    "disease_en": "Pneumocystis pneumonia (PCP)",
+    "symptoms": [
+      "면역결핍자의 간질성 폐렴·저산소증 (결핵과 감별)",
+      "폐외 침범 3% 미만"
+    ],
+    "diagnosis": [
+      "폐포세척액·객담·생검",
+      "Gomori methenamine silver (GMS) 염색",
+      "PCR"
+    ],
+    "treatment": [
+      "TMP-SMX 3주",
+      "저산소 시 corticosteroid"
+    ],
+    "epidemiology": "CD4 200/mm3 이하 면역결핍자의 주요 사망원인. 성인 20% 보균",
+    "exam_notes": "분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "04_protozoa.json"
+  },
+  {
+    "id": "cryptosporidium_parvum",
+    "scientific_name": "Cryptosporidium parvum",
+    "name_ko": "작은와포자충",
+    "name_en": "",
+    "aliases": [],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "포자충",
+    "size": "oocyst 4-6um",
+    "transmission_mode": "수인성",
+    "transmission_route": "경구감염",
+    "source": "오염된 식수·음식, 가축·애완동물·감염자 접촉",
+    "infective_stage": "oocyst",
+    "intermediate_host": [],
+    "definitive_host": "사람·소",
+    "habitat": "소장 상피세포 미세융모 (intracellular extracytoplasmic)",
+    "lung_migration": false,
+    "disease_ko": "와포자충증",
+    "disease_en": "cryptosporidiosis",
+    "symptoms": [
+      "수양성 설사 (잠복기 2-10일)",
+      "정상인은 1-2주 후 자연치유",
+      "AIDS 환자는 만성 설사"
+    ],
+    "diagnosis": [
+      "대변검사 - modified acid-fast (MAF) 염색"
+    ],
+    "treatment": [
+      "특효약 없음 (대증치료)",
+      "Nitazoxanide",
+      "AIDS는 항레트로바이러스 치료"
+    ],
+    "epidemiology": "개발도상국·여행자 설사·면역억제 기회감염. 국내 주 감염원은 소",
+    "exam_notes": "장 조직에서 미세융모에 붙은 작은 점들. MAF 염색에서 파란 배경에 분홍색 oocyst",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "04_protozoa.json"
+  },
+  {
+    "id": "naegleria_fowleri",
+    "scientific_name": "Naegleria fowleri",
+    "name_ko": "파울러자유아메바",
+    "name_en": "brain-eating amoeba",
+    "aliases": [],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "자유생활아메바",
+    "size": "영양형 10-25um",
+    "transmission_mode": "수인성",
+    "transmission_route": "비강을 통한 침입 (담수 수영)",
+    "source": "따뜻한 담수",
+    "infective_stage": "영양형",
+    "intermediate_host": [],
+    "definitive_host": "자유생활종",
+    "habitat": "뇌",
+    "lung_migration": false,
+    "disease_ko": "원발성 아메바성 수막뇌염",
+    "disease_en": "primary amebic meningoencephalitis (PAM)",
+    "symptoms": [
+      "급속 진행하는 수막뇌염 (거의 사망)",
+      "잠복기 2-15일"
+    ],
+    "diagnosis": [
+      "뇌척수액·뇌생검에서 영양형"
+    ],
+    "treatment": [
+      "Amphotericin B",
+      "Miconazole",
+      "Rifampin"
+    ],
+    "epidemiology": "아프리카·남미 등 따뜻한 지역",
+    "exam_notes": "자유생활종의 병원성 사례로 언급됨",
+    "sources": [
+      "서유지"
+    ],
+    "distractor_only": true,
+    "_file": "04_protozoa.json"
+  },
+  {
+    "id": "acanthamoeba_spp",
+    "scientific_name": "Acanthamoeba spp.",
+    "name_ko": "가시아메바",
+    "name_en": "",
+    "aliases": [
+      "Acanthamoeba culbertsoni",
+      "Acanthamoeba castellanii"
+    ],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "자유생활아메바",
+    "size": "영양형 15-45um",
+    "transmission_mode": "접촉매개성",
+    "transmission_route": "각막 접촉 / 혈행성",
+    "source": "오염된 렌즈 세척액·물",
+    "infective_stage": "영양형·포낭",
+    "intermediate_host": [],
+    "definitive_host": "자유생활종",
+    "habitat": "각막, 뇌",
+    "lung_migration": false,
+    "disease_ko": "가시아메바각막염 / 육아종성 아메바성 뇌염",
+    "disease_en": "Acanthamoeba keratitis / GAE",
+    "symptoms": [
+      "각막염 (렌즈 착용자)",
+      "각막 천공 → 각막이식"
+    ],
+    "diagnosis": [
+      "각막 도말·배양 (진균·herpes 각막염과 감별)"
+    ],
+    "treatment": [
+      "0.02% PHMB 점안"
+    ],
+    "epidemiology": "콘택트렌즈 착용자",
+    "exam_notes": "acanthapodia (뾰족뾰족한 위족) 가 특징",
+    "sources": [
+      "서유지"
+    ],
+    "distractor_only": true,
+    "_file": "04_protozoa.json"
+  },
+  {
+    "id": "plasmodium_falciparum",
+    "scientific_name": "Plasmodium falciparum",
+    "name_ko": "열대열원충",
+    "name_en": "",
+    "aliases": [
+      "Plasmoidum flaciparum"
+    ],
+    "group": "말라리아",
+    "group_en": "Plasmodium",
+    "subgroup": "열원충",
+    "size": "ring form이 RBC 지름의 1/4-1/5",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "얼룩날개모기 흡혈 / 수혈 / 수직감염",
+    "source": "Anopheles 모기 (Anopheles gambiae 등)",
+    "infective_stage": "sporozoite",
+    "intermediate_host": [
+      "사람 (무성생식)"
+    ],
+    "definitive_host": "얼룩날개모기 (유성생식)",
+    "habitat": "간세포 → 적혈구",
+    "lung_migration": false,
+    "disease_ko": "열대열말라리아",
+    "disease_en": "falciparum malaria",
+    "symptoms": [
+      "주기적 발열 (36-48시간, 불규칙한 편)",
+      "뇌말라리아 - 모세혈관 폐색 → 저산소·경색",
+      "중증 빈혈·비장종대",
+      "유일하게 치사율 높음"
+    ],
+    "diagnosis": [
+      "혈액도말 (thick/thin smear, Giemsa)",
+      "신속진단키트",
+      "열대지역 여행력"
+    ],
+    "treatment": [
+      "ACT (artemisinin-combined therapy)",
+      "Chloroquine (내성 지역 주의)"
+    ],
+    "epidemiology": "열대·아열대 (아프리카). hypnozoite 없음 → 재발 없음",
+    "exam_notes": "RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "05_plasmodium.json"
+  },
+  {
+    "id": "plasmodium_vivax",
+    "scientific_name": "Plasmodium vivax",
+    "name_ko": "삼일열원충",
+    "name_en": "",
+    "aliases": [],
+    "group": "말라리아",
+    "group_en": "Plasmodium",
+    "subgroup": "열원충",
+    "size": "ring form이 RBC 지름의 1/3",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "얼룩날개모기 흡혈",
+    "source": "Anopheles 모기 (국내는 Anopheles sinensis)",
+    "infective_stage": "sporozoite",
+    "intermediate_host": [
+      "사람"
+    ],
+    "definitive_host": "얼룩날개모기",
+    "habitat": "간세포 (hypnozoite) → 적혈구",
+    "lung_migration": false,
+    "disease_ko": "삼일열말라리아",
+    "disease_en": "vivax malaria",
+    "symptoms": [
+      "48시간 주기 발열",
+      "빈혈·비장종대",
+      "hypnozoite에 의한 재발"
+    ],
+    "diagnosis": [
+      "혈액도말 (Giemsa)",
+      "신속진단키트"
+    ],
+    "treatment": [
+      "Chloroquine",
+      "Primaquine (hypnozoite 제거)"
+    ],
+    "epidemiology": "온대 지역. 국내에서 유일하게 발생하는 종 (휴전선 인근, 민간인 > 군인). 긴 잠복기",
+    "exam_notes": "RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "05_plasmodium.json"
+  },
+  {
+    "id": "plasmodium_ovale",
+    "scientific_name": "Plasmodium ovale",
+    "name_ko": "난형열원충",
+    "name_en": "",
+    "aliases": [],
+    "group": "말라리아",
+    "group_en": "Plasmodium",
+    "subgroup": "열원충",
+    "size": "",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "얼룩날개모기 흡혈",
+    "source": "Anopheles 모기",
+    "infective_stage": "sporozoite",
+    "intermediate_host": [
+      "사람"
+    ],
+    "definitive_host": "얼룩날개모기",
+    "habitat": "간세포 (hypnozoite) → 적혈구",
+    "lung_migration": false,
+    "disease_ko": "난형열말라리아",
+    "disease_en": "ovale malaria",
+    "symptoms": [
+      "48시간 주기 발열",
+      "비교적 경증",
+      "hypnozoite에 의한 재발"
+    ],
+    "diagnosis": [
+      "혈액도말 (Giemsa)"
+    ],
+    "treatment": [
+      "Chloroquine",
+      "Primaquine"
+    ],
+    "epidemiology": "서아프리카",
+    "exam_notes": "RBC가 커지고 옅어지며 타원형(oval)이 되고 가장자리가 술처럼 갈라짐 (fimbriation). merozoite 8개 이하. dot 관찰 가능",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "05_plasmodium.json"
+  },
+  {
+    "id": "plasmodium_malariae",
+    "scientific_name": "Plasmodium malariae",
+    "name_ko": "사일열원충",
+    "name_en": "",
+    "aliases": [
+      "P. malariae"
+    ],
+    "group": "말라리아",
+    "group_en": "Plasmodium",
+    "subgroup": "열원충",
+    "size": "",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "얼룩날개모기 흡혈",
+    "source": "Anopheles 모기",
+    "infective_stage": "sporozoite",
+    "intermediate_host": [
+      "사람"
+    ],
+    "definitive_host": "얼룩날개모기",
+    "habitat": "적혈구 (hypnozoite 없음)",
+    "lung_migration": false,
+    "disease_ko": "사일열말라리아",
+    "disease_en": "malariae malaria",
+    "symptoms": [
+      "72시간 주기 발열",
+      "신증후군 (면역복합체)"
+    ],
+    "diagnosis": [
+      "혈액도말 (Giemsa)"
+    ],
+    "treatment": [
+      "Chloroquine"
+    ],
+    "epidemiology": "산발적 분포",
+    "exam_notes": "RBC 크기 변화 없음 + ring이 아닌 band form trophozoite + daisy flower(daisy head) 모양 schizont + dot 없음",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "05_plasmodium.json"
+  },
+  {
+    "id": "plasmodium_knowlesi",
+    "scientific_name": "Plasmodium knowlesi",
+    "name_ko": "원숭이열원충",
+    "name_en": "",
+    "aliases": [],
+    "group": "말라리아",
+    "group_en": "Plasmodium",
+    "subgroup": "열원충",
+    "size": "",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "얼룩날개모기 흡혈",
+    "source": "Anopheles 모기",
+    "infective_stage": "sporozoite",
+    "intermediate_host": [
+      "원숭이·사람"
+    ],
+    "definitive_host": "얼룩날개모기",
+    "habitat": "적혈구",
+    "lung_migration": false,
+    "disease_ko": "원숭이열말라리아",
+    "disease_en": "knowlesi malaria",
+    "symptoms": [
+      "24시간 주기 발열 (가장 짧음)",
+      "중증화 가능"
+    ],
+    "diagnosis": [
+      "혈액도말 (P. malariae와 유사하여 오진 흔함)",
+      "PCR"
+    ],
+    "treatment": [
+      "Chloroquine",
+      "ACT"
+    ],
+    "epidemiology": "동남아 (말레이시아 보르네오)",
+    "exam_notes": "형태가 P. malariae와 유사 — 보기 세트용",
+    "sources": [
+      "오민석"
+    ],
+    "distractor_only": true,
+    "_file": "05_plasmodium.json"
+  },
+  {
+    "id": "sarcoptes_scabiei",
+    "scientific_name": "Sarcoptes scabiei",
+    "name_ko": "옴진드기",
+    "name_en": "itch mite",
+    "aliases": [
+      "Sarcoptes sabiei",
+      "옴진드기"
+    ],
+    "group": "의용곤충",
+    "group_en": "Arthropoda",
+    "subgroup": "진드기 (기생성, vector 아님)",
+    "size": "0.3-0.4mm",
+    "transmission_mode": "접촉매개성",
+    "transmission_route": "직접 접촉",
+    "source": "감염자와의 피부 접촉·침구",
+    "infective_stage": "성충·유충",
+    "intermediate_host": [],
+    "definitive_host": "사람 (숙주특이성 높음)",
+    "habitat": "피부 각질층 (옴진드기굴)",
+    "lung_migration": false,
+    "disease_ko": "옴",
+    "disease_en": "scabies",
+    "symptoms": [
+      "야간에 심해지는 소양감 (잠복기 4-6주)",
+      "손·손목의 옴진드기굴",
+      "딱지옴 (Norwegian scabies) - 과다각화·높은 전염성"
+    ],
+    "diagnosis": [
+      "굴 끝 생검",
+      "dermoscopy"
+    ],
+    "treatment": [
+      "5% permethrin 크림 전신 도포",
+      "경구 ivermectin",
+      "접촉자 동시치료"
+    ],
+    "epidemiology": "최근 요양시설 집단감염 증가",
+    "vector_for": [],
+    "exam_notes": "앞쪽에 다리 4개가 몰려 있음. 조직절편에서는 뾰족한 dorsal spine. 치료 문제로 자주 나옴 — permethrin 크림을 전신에 도포 (두피 아님)",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "06_arthropoda.json"
+  },
+  {
+    "id": "dermatophagoides_pteronyssinus",
+    "scientific_name": "Dermatophagoides pteronyssinus",
+    "name_ko": "세로무늬먼지진드기",
+    "name_en": "house dust mite",
+    "aliases": [
+      "Dermatophagoides farinae",
+      "큰다리먼지진드기"
+    ],
+    "group": "의용곤충",
+    "group_en": "Arthropoda",
+    "subgroup": "진드기 (기생성, vector 아님)",
+    "size": "0.2-0.3mm",
+    "transmission_mode": "해당 없음",
+    "transmission_route": "흡입 (알레르겐)",
+    "source": "침구·카펫의 먼지",
+    "infective_stage": "해당 없음",
+    "intermediate_host": [],
+    "definitive_host": "기생하지 않음 (각질·곰팡이 섭취)",
+    "habitat": "침구·카펫 (습도 55% 이상, 25-30℃)",
+    "lung_migration": false,
+    "disease_ko": "알레르기 질환",
+    "disease_en": "allergic diseases",
+    "symptoms": [
+      "천식·비염·아토피 피부염 등 알레르기"
+    ],
+    "diagnosis": [
+      "알레르겐 피부반응검사"
+    ],
+    "treatment": [
+      "회피 - 진공청소·고온세탁·습도 조절",
+      "살비제"
+    ],
+    "epidemiology": "국내에 큰다리먼지진드기(D. farinae)와 함께 분포. 박멸 불가, 관리 대상",
+    "vector_for": [],
+    "exam_notes": "앞쪽 다리 4개 + 옆쪽 다리 2개. 특징적 소견을 묻는 문제의 답은 알레르기성 질환",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "06_arthropoda.json"
+  },
+  {
+    "id": "pediculus_humanus",
+    "scientific_name": "Pediculus humanus",
+    "name_ko": "머릿니 / 몸니",
+    "name_en": "human louse",
+    "aliases": [
+      "Pediculus humanus capitis",
+      "Pediculus humanus humanus",
+      "머릿니",
+      "몸니"
+    ],
+    "group": "의용곤충",
+    "group_en": "Arthropoda",
+    "subgroup": "이 (louse)",
+    "size": "2-4mm",
+    "transmission_mode": "접촉매개성",
+    "transmission_route": "직접 접촉",
+    "source": "감염자의 머리카락·옷",
+    "infective_stage": "성충·약충·알",
+    "intermediate_host": [],
+    "definitive_host": "사람 (숙주특이성 매우 높음)",
+    "habitat": "머릿니 - 두피 / 몸니 - 옷",
+    "lung_migration": false,
+    "disease_ko": "이감염증",
+    "disease_en": "pediculosis",
+    "symptoms": [
+      "타액에 대한 알레르기성 소양감"
+    ],
+    "diagnosis": [
+      "육안 관찰 (모발에 붙은 서캐)"
+    ],
+    "treatment": [
+      "permethrin 샴푸, 7일 간격 2회",
+      "물리적 제거",
+      "몸니는 옷 폐기"
+    ],
+    "epidemiology": "몸니는 유일한 질병매개 이",
+    "vector_for": [
+      "발진티푸스",
+      "참호열",
+      "재귀열"
+    ],
+    "exam_notes": "마름모꼴의 긴 몸통. 충란은 모발에 투명한 막으로 붙어 있음. 치료는 permethrin을 두피에 도포 — 옴(전신 도포)과 구별",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "06_arthropoda.json"
+  },
+  {
+    "id": "pthirus_pubis",
+    "scientific_name": "Pthirus pubis",
+    "name_ko": "사면발이",
+    "name_en": "crab louse",
+    "aliases": [
+      "Phthirus pubis",
+      "사면발이"
+    ],
+    "group": "의용곤충",
+    "group_en": "Arthropoda",
+    "subgroup": "이 (louse)",
+    "size": "1-2mm",
+    "transmission_mode": "성접촉",
+    "transmission_route": "성적 접촉",
+    "source": "감염자의 음모",
+    "infective_stage": "성충·약충·알",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "생식기 주변 털",
+    "lung_migration": false,
+    "disease_ko": "사면발이증",
+    "disease_en": "pthiriasis",
+    "symptoms": [
+      "장시간 흡혈로 인한 심한 소양감"
+    ],
+    "diagnosis": [
+      "육안 관찰"
+    ],
+    "treatment": [
+      "1% permethrin 크림",
+      "7일 간격 2회"
+    ],
+    "epidemiology": "성매개",
+    "vector_for": [],
+    "exam_notes": "사다리꼴(게 모양) 몸통 — 마름모꼴의 이와 감별",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "06_arthropoda.json"
+  },
+  {
+    "id": "cimex_lectularius",
+    "scientific_name": "Cimex lectularius",
+    "name_ko": "빈대",
+    "name_en": "bed bug",
+    "aliases": [
+      "빈대"
+    ],
+    "group": "의용곤충",
+    "group_en": "Arthropoda",
+    "subgroup": "노린재",
+    "size": "5-7mm",
+    "transmission_mode": "해당 없음",
+    "transmission_route": "흡혈",
+    "source": "침구·가구 틈",
+    "infective_stage": "해당 없음",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "침실 (야간 흡혈)",
+    "lung_migration": false,
+    "disease_ko": "빈대물림",
+    "disease_en": "cimicosis",
+    "symptoms": [
+      "상체에 일렬로 나타나는 흡혈자국 (벼룩은 발목)"
+    ],
+    "diagnosis": [
+      "물린 자국 패턴",
+      "배설물 흔적"
+    ],
+    "treatment": [
+      "대증치료",
+      "환경 방제"
+    ],
+    "epidemiology": "최근 재유행",
+    "vector_for": [],
+    "exam_notes": "질병을 매개하지 않음 — 매개질환을 묻는 문제의 답이 매개 안 함",
+    "sources": [
+      "서유지",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "06_arthropoda.json"
+  },
+  {
+    "id": "haemaphysalis_longicornis",
+    "scientific_name": "Haemaphysalis longicornis",
+    "name_ko": "작은소피참진드기",
+    "name_en": "Asian longhorned tick",
+    "aliases": [
+      "소피참진드기"
+    ],
+    "group": "의용곤충",
+    "group_en": "Arthropoda",
+    "subgroup": "참진드기 (hard tick)",
+    "size": "흡혈 전 2-3mm, 흡혈 후 1cm 이상",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "흡혈 (수 일간 부착)",
+    "source": "야외 풀숲",
+    "infective_stage": "해당 없음",
+    "intermediate_host": [],
+    "definitive_host": "포유동물",
+    "habitat": "야외 초지",
+    "lung_migration": false,
+    "disease_ko": "중증열성혈소판감소증후군",
+    "disease_en": "SFTS",
+    "symptoms": [
+      "고열·혈소판감소·백혈구감소",
+      "다발성 장기부전"
+    ],
+    "diagnosis": [
+      "SFTS virus PCR",
+      "노출력"
+    ],
+    "treatment": [
+      "대증치료"
+    ],
+    "epidemiology": "5-10월 호발. 경란전염 (transovarial transmission)",
+    "vector_for": [
+      "SFTS",
+      "티푸스열",
+      "재귀열",
+      "라임병",
+      "Q열",
+      "바베스열원충증"
+    ],
+    "exam_notes": "몸에 붙어 커진 진드기를 보여주고 매개질환을 묻는 문제 — 답은 SFTS. 털진드기(쯔쯔가무시)와 감별",
+    "sources": [
+      "서유지",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "06_arthropoda.json"
+  },
+  {
+    "id": "leptotrombidium_spp",
+    "scientific_name": "Leptotrombidium spp.",
+    "name_ko": "털진드기",
+    "name_en": "chigger mite",
+    "aliases": [
+      "Leptotrombidium pallidum",
+      "Leptotrombidium scutellare",
+      "대잎털진드기"
+    ],
+    "group": "의용곤충",
+    "group_en": "Arthropoda",
+    "subgroup": "털진드기 (chigger mite)",
+    "size": "유충 0.2mm",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "유충이 체액 섭취 (흡혈 아님)",
+    "source": "야외 풀숲 (설치류 기생)",
+    "infective_stage": "해당 없음",
+    "intermediate_host": [],
+    "definitive_host": "유충만 포유동물(쥐)에 기생, 성충은 흙에서 자유생활",
+    "habitat": "야외 초지",
+    "lung_migration": false,
+    "disease_ko": "쯔쯔가무시증",
+    "disease_en": "scrub typhus",
+    "symptoms": [
+      "고열·발진",
+      "물린 자리의 가피 (eschar) — 진단 기준"
+    ],
+    "diagnosis": [
+      "가피 확인",
+      "혈청검사"
+    ],
+    "treatment": [
+      "Doxycycline"
+    ],
+    "epidemiology": "9-11월 호발. 대잎털진드기는 중부지방, 활순털진드기는 전국. 경란전염",
+    "vector_for": [
+      "쯔쯔가무시증 (Orientia tsutsugamushi)"
+    ],
+    "exam_notes": "타액으로 stylostome이라는 관상구조를 만들어 체액을 빨아먹음 → 가피 형성. 특징적 소견을 묻는 문제의 답은 가피",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "06_arthropoda.json"
+  },
+  {
+    "id": "culex_tritaeniorhynchus",
+    "scientific_name": "Culex tritaeniorhynchus",
+    "name_ko": "작은빨간집모기",
+    "name_en": "",
+    "aliases": [
+      "Culex pipiens",
+      "Culex pipiens molestus",
+      "지하집모기",
+      "빨간집모기"
+    ],
+    "group": "의용곤충",
+    "group_en": "Arthropoda",
+    "subgroup": "모기 (Culex)",
+    "size": "4-5mm",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "흡혈",
+    "source": "논·웅덩이",
+    "infective_stage": "해당 없음",
+    "intermediate_host": [],
+    "definitive_host": "",
+    "habitat": "주로 야간 활동",
+    "lung_migration": false,
+    "disease_ko": "일본뇌염",
+    "disease_en": "Japanese encephalitis",
+    "symptoms": [
+      "뇌염"
+    ],
+    "diagnosis": [
+      "혈청검사"
+    ],
+    "treatment": [
+      "대증치료 (예방접종)"
+    ],
+    "epidemiology": "국내 여름철",
+    "vector_for": [
+      "일본뇌염"
+    ],
+    "exam_notes": "집모기속(Culex)은 몸통이 지면과 평행. 빨간집모기(C. pipiens)는 웨스트나일열 매개",
+    "sources": [
+      "서유지",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "06_arthropoda.json"
+  },
+  {
+    "id": "aedes_spp",
+    "scientific_name": "Aedes spp.",
+    "name_ko": "숲모기",
+    "name_en": "",
+    "aliases": [
+      "Aedes aegypti",
+      "Aedes albopictus",
+      "흰줄숲모기"
+    ],
+    "group": "의용곤충",
+    "group_en": "Arthropoda",
+    "subgroup": "모기 (Aedes)",
+    "size": "4-6mm",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "흡혈",
+    "source": "고인 물 (인공용기)",
+    "infective_stage": "해당 없음",
+    "intermediate_host": [],
+    "definitive_host": "",
+    "habitat": "주로 주간 활동",
+    "lung_migration": false,
+    "disease_ko": "뎅기열·지카·황열·치쿤구니아",
+    "disease_en": "dengue, Zika, yellow fever, chikungunya",
+    "symptoms": [
+      "발열·발진·관절통"
+    ],
+    "diagnosis": [
+      "혈청검사·PCR"
+    ],
+    "treatment": [
+      "대증치료"
+    ],
+    "epidemiology": "이집트숲모기는 국내 미분포, 흰줄숲모기는 국내 분포",
+    "vector_for": [
+      "뎅기열",
+      "지카",
+      "황열",
+      "치쿤구니아열"
+    ],
+    "exam_notes": "흰줄무늬(삼디다스) 다리가 특징. 낮에 문다",
+    "sources": [
+      "서유지",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "06_arthropoda.json"
+  },
+  {
+    "id": "anopheles_sinensis",
+    "scientific_name": "Anopheles sinensis",
+    "name_ko": "중국얼룩날개모기",
+    "name_en": "",
+    "aliases": [
+      "중국얼룩날개모기"
+    ],
+    "group": "의용곤충",
+    "group_en": "Arthropoda",
+    "subgroup": "모기 (Anopheles)",
+    "size": "5-6mm",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "흡혈",
+    "source": "논·습지",
+    "infective_stage": "해당 없음",
+    "intermediate_host": [],
+    "definitive_host": "말라리아 원충의 종숙주",
+    "habitat": "주로 야간 활동",
+    "lung_migration": false,
+    "disease_ko": "삼일열말라리아",
+    "disease_en": "vivax malaria",
+    "symptoms": [
+      "주기적 발열"
+    ],
+    "diagnosis": [
+      "혈액도말"
+    ],
+    "treatment": [
+      "Chloroquine + Primaquine"
+    ],
+    "epidemiology": "국내 말라리아 주요 매개종",
+    "vector_for": [
+      "삼일열말라리아"
+    ],
+    "exam_notes": "날개에 얼룩무늬. 앉을 때 엉덩이를 드는 자세가 특징 — 집모기와 감별",
+    "sources": [
+      "서유지",
+      "전민서"
+    ],
+    "distractor_only": false,
+    "_file": "06_arthropoda.json"
+  },
+  {
+    "id": "xenopsylla_cheopis",
+    "scientific_name": "Xenopsylla cheopis",
+    "name_ko": "열대쥐벼룩",
+    "name_en": "oriental rat flea",
+    "aliases": [],
+    "group": "의용곤충",
+    "group_en": "Arthropoda",
+    "subgroup": "벼룩",
+    "size": "2-3mm",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "흡혈 / 분변 오염",
+    "source": "쥐",
+    "infective_stage": "해당 없음",
+    "intermediate_host": [],
+    "definitive_host": "쥐",
+    "habitat": "설치류 체표",
+    "lung_migration": false,
+    "disease_ko": "흑사병·발진열",
+    "disease_en": "plague, murine typhus",
+    "symptoms": [
+      "발열·림프절종대"
+    ],
+    "diagnosis": [
+      "세균배양·혈청검사"
+    ],
+    "treatment": [
+      "항생제"
+    ],
+    "epidemiology": "설치류 서식지",
+    "vector_for": [
+      "흑사병 (페스트)",
+      "발진열 (벼룩매개티푸스)"
+    ],
+    "exam_notes": "흡혈자국이 발목 등 하지에 생김 — 상체 일렬인 빈대와 감별",
+    "sources": [
+      "서유지"
+    ],
+    "distractor_only": true,
+    "_file": "06_arthropoda.json"
+  },
+  {
+    "id": "phlebotomus_spp",
+    "scientific_name": "Phlebotomus spp.",
+    "name_ko": "모래파리",
+    "name_en": "sandfly",
+    "aliases": [],
+    "group": "의용곤충",
+    "group_en": "Arthropoda",
+    "subgroup": "파리",
+    "size": "2-3mm",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "흡혈",
+    "source": "",
+    "infective_stage": "해당 없음",
+    "intermediate_host": [],
+    "definitive_host": "",
+    "habitat": "열대·아열대",
+    "lung_migration": false,
+    "disease_ko": "리슈만편모충증",
+    "disease_en": "leishmaniasis",
+    "symptoms": [
+      "피부 궤양 또는 Kala-azar"
+    ],
+    "diagnosis": [
+      "생검·배양"
+    ],
+    "treatment": [
+      "pentavalent antimonials"
+    ],
+    "epidemiology": "열대·아열대",
+    "vector_for": [
+      "리슈만편모충증"
+    ],
+    "exam_notes": "매개 곤충-질환 짝짓기 문제용",
+    "sources": [
+      "서유지"
+    ],
+    "distractor_only": true,
+    "_file": "06_arthropoda.json"
+  },
+  {
+    "id": "glossina_spp",
+    "scientific_name": "Glossina spp.",
+    "name_ko": "체체파리",
+    "name_en": "tsetse fly",
+    "aliases": [],
+    "group": "의용곤충",
+    "group_en": "Arthropoda",
+    "subgroup": "파리",
+    "size": "6-15mm",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "흡혈",
+    "source": "",
+    "infective_stage": "해당 없음",
+    "intermediate_host": [],
+    "definitive_host": "",
+    "habitat": "사하라 이남 아프리카 물가",
+    "lung_migration": false,
+    "disease_ko": "아프리카 수면병",
+    "disease_en": "African trypanosomiasis",
+    "symptoms": [
+      "수면병"
+    ],
+    "diagnosis": [
+      "혈액도말"
+    ],
+    "treatment": [
+      "Pentamidine, Melarsoprol"
+    ],
+    "epidemiology": "tsetse fly belt",
+    "vector_for": [
+      "아프리카 수면병"
+    ],
+    "exam_notes": "Glossina palpalis는 큰 하천(감비아형), G. morsitans는 사바나(로데시아형)",
+    "sources": [
+      "서유지"
+    ],
+    "distractor_only": true,
+    "_file": "06_arthropoda.json"
+  },
+  {
+    "id": "simulium_spp",
+    "scientific_name": "Simulium spp.",
+    "name_ko": "먹파리 (꼽추파리)",
+    "name_en": "blackfly",
+    "aliases": [],
+    "group": "의용곤충",
+    "group_en": "Arthropoda",
+    "subgroup": "파리",
+    "size": "2-5mm",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "흡혈",
+    "source": "",
+    "infective_stage": "해당 없음",
+    "intermediate_host": [],
+    "definitive_host": "",
+    "habitat": "빠르게 흐르는 강가",
+    "lung_migration": false,
+    "disease_ko": "회선사상충증 (강변실명증)",
+    "disease_en": "onchocerciasis",
+    "symptoms": [
+      "피부결절·실명"
+    ],
+    "diagnosis": [
+      "skin snip"
+    ],
+    "treatment": [
+      "Ivermectin"
+    ],
+    "epidemiology": "아프리카·중남미",
+    "vector_for": [
+      "회선사상충증"
+    ],
+    "exam_notes": "강가 번식 → river blindness라는 이름의 유래",
+    "sources": [
+      "서유지"
+    ],
+    "distractor_only": true,
+    "_file": "06_arthropoda.json"
+  },
+  {
+    "id": "triatoma_spp",
+    "scientific_name": "Triatoma spp.",
+    "name_ko": "흡혈성 침노린재",
+    "name_en": "kissing bug",
+    "aliases": [
+      "Triatomine bug",
+      "Triatominae"
+    ],
+    "group": "의용곤충",
+    "group_en": "Arthropoda",
+    "subgroup": "노린재",
+    "size": "1-3cm",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "흡혈 후 배설한 분변이 상처·점막으로 침입 (후방정류형)",
+    "source": "중남미 흙집 벽 틈",
+    "infective_stage": "해당 없음",
+    "intermediate_host": [],
+    "definitive_host": "",
+    "habitat": "중남미 주거지",
+    "lung_migration": false,
+    "disease_ko": "샤가스병",
+    "disease_en": "Chagas disease",
+    "symptoms": [
+      "Romana 징후",
+      "만성 심근병증"
+    ],
+    "diagnosis": [
+      "혈액도말",
+      "혈청검사"
+    ],
+    "treatment": [
+      "Benznidazole, Nifurtimox"
+    ],
+    "epidemiology": "중남미",
+    "vector_for": [
+      "샤가스병 (Trypanosoma cruzi)"
+    ],
+    "exam_notes": "빈대(Cimex)와 혼동 주의 — 빈대는 질병을 매개하지 않고 침노린재는 샤가스병을 매개",
+    "sources": [
+      "전민서",
+      "서유지"
+    ],
+    "distractor_only": false,
+    "_file": "06_arthropoda.json"
+  }
+]

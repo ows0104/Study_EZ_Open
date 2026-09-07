@@ -1,0 +1,539 @@
+[
+  {
+    "id": "ascaris_gross",
+    "species_id": "ascaris_lumbricoides",
+    "specimen_type": "gross",
+    "stage": "adult",
+    "label_ko": "회충 성충 (육안)",
+    "label_en": "Ascaris lumbricoides, gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "통통하고 길다 (20-35cm) — 인체 기생 선충 중 독보적으로 큼",
+      "유백색·분홍빛",
+      "암컷이 수컷보다 크고 꼬리가 곧음"
+    ],
+    "structures": [],
+    "confusable_with": [
+      "anisakis_gross"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "enterobius_gross",
+    "species_id": "enterobius_vermicularis",
+    "specimen_type": "gross",
+    "stage": "adult",
+    "label_ko": "요충 성충 (육안)",
+    "label_en": "Enterobius vermicularis, gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "1cm 정도로 짧고 유백색 (pin worm)",
+      "머리가 길지 않음"
+    ],
+    "structures": [],
+    "confusable_with": [
+      "trichuris_gross"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "trichuris_gross",
+    "species_id": "trichuris_trichiura",
+    "specimen_type": "gross",
+    "stage": "adult",
+    "label_ko": "편충 성충 (육안)",
+    "label_en": "Trichuris trichiura, gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "1-2cm, 채찍 모양",
+      "앞쪽이 실처럼 가늘고 뒤쪽이 굵음"
+    ],
+    "structures": [],
+    "confusable_with": [
+      "enterobius_gross"
+    ],
+    "sources": [
+      "통합xlsx"
+    ]
+  },
+  {
+    "id": "anisakis_gross",
+    "species_id": "anisakis_simplex",
+    "specimen_type": "gross",
+    "stage": "L3 larva",
+    "label_ko": "고래회충 유충 (육안)",
+    "label_en": "Anisakis simplex, gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "약 2cm, 유백색의 실 모양",
+      "생선 내장·근육에 나선형으로 말려 있음"
+    ],
+    "structures": [],
+    "confusable_with": [
+      "ascaris_gross"
+    ],
+    "sources": [
+      "통합xlsx"
+    ]
+  },
+  {
+    "id": "clonorchis_gross",
+    "species_id": "clonorchis_sinensis",
+    "specimen_type": "gross",
+    "stage": "adult",
+    "label_ko": "간흡충 성충 (육안)",
+    "label_en": "Clonorchis sinensis, gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "바질시드 모양의 작고 납작한 나뭇잎형",
+      "10-25mm"
+    ],
+    "structures": [],
+    "confusable_with": [
+      "fasciola_gross"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "fasciola_gross",
+    "species_id": "fasciola_hepatica",
+    "specimen_type": "gross",
+    "stage": "adult",
+    "label_ko": "간질 성충 (육안)",
+    "label_en": "Fasciola hepatica, gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "약 3cm의 큰 나뭇잎 모양",
+      "머리쪽 원뿔형 돌출 (conical projection)"
+    ],
+    "structures": [
+      "conical projection"
+    ],
+    "confusable_with": [
+      "clonorchis_gross"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "diphyllobothrium_gross",
+    "species_id": "diphyllobothrium_latum",
+    "specimen_type": "gross",
+    "stage": "adult strobila",
+    "label_ko": "광절열두조충 (육안)",
+    "label_en": "Diphyllobothrium latum, gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "중국당면처럼 폭이 넓고 모서리가 매끈함",
+      "각 편절이 좌우로 긴 사각형",
+      "가운데에 노란 띠(자궁)가 보임"
+    ],
+    "structures": [],
+    "confusable_with": [
+      "taenia_gross",
+      "sparganum_gross"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "taenia_gross",
+    "species_id": "taenia_saginata",
+    "specimen_type": "gross",
+    "stage": "adult strobila",
+    "label_ko": "유무구조충 (육안)",
+    "label_en": "Taenia spp., gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "칼국수면처럼 세로가 더 길고 모서리가 울퉁불퉁",
+      "gravid 편절이 위아래로 김"
+    ],
+    "structures": [],
+    "confusable_with": [
+      "diphyllobothrium_gross"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "answer_label": "Taenia spp.",
+    "exclude_distractors": [
+      "taenia_solium",
+      "taenia_asiatica"
+    ],
+    "note": "육안으로는 유구·무구조충을 구별할 수 없다. 광절열두조충(중국당면)과의 감별이 출제 포인트"
+  },
+  {
+    "id": "sparganum_gross",
+    "species_id": "spirometra_erinacei",
+    "specimen_type": "gross",
+    "stage": "plerocercoid",
+    "label_ko": "고충 (육안)",
+    "label_en": "Sparganum, gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "하얀 고무줄처럼 쭈굴쭈굴하고 길다",
+      "편절 구분이 없음"
+    ],
+    "structures": [],
+    "confusable_with": [
+      "diphyllobothrium_gross",
+      "cysticercus_gross"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "cysticercus_gross",
+    "species_id": "cysticercus_cellulosae",
+    "specimen_type": "gross",
+    "stage": "cysticercus",
+    "label_ko": "유구낭미충 (육안)",
+    "label_en": "Cysticercus cellulosae, gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "쌀알 크기의 투명한 cyst",
+      "cyst 안에 하얀 점처럼 scolex가 보임"
+    ],
+    "structures": [
+      "scolex"
+    ],
+    "confusable_with": [
+      "sparganum_gross"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "sarcoptes_wholemount",
+    "species_id": "sarcoptes_scabiei",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "옴진드기",
+    "label_en": "Sarcoptes scabiei",
+    "stain": null,
+    "magnification": "100-400x",
+    "key_features": [
+      "거북이 모양의 둥근 몸통",
+      "다리 4쌍이 모두 몸 앞쪽에 몰려 있음",
+      "뒷다리는 짧아 몸 밖으로 잘 나오지 않음"
+    ],
+    "structures": [
+      "leg"
+    ],
+    "confusable_with": [
+      "dermatophagoides_wholemount"
+    ],
+    "sources": [
+      "전민서",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "sarcoptes_skin_section",
+    "species_id": "sarcoptes_scabiei",
+    "specimen_type": "조직",
+    "stage": "adult in burrow",
+    "label_ko": "옴진드기 피부 조직절편",
+    "label_en": "Sarcoptes scabiei in skin section",
+    "stain": "H&E",
+    "magnification": "100x",
+    "key_features": [
+      "각질층 안의 굴(burrow) 속 충체",
+      "등쪽에 뾰족한 dorsal spine"
+    ],
+    "structures": [
+      "dorsal spine",
+      "burrow"
+    ],
+    "confusable_with": [],
+    "sources": [
+      "전민서",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "dermatophagoides_wholemount",
+    "species_id": "dermatophagoides_pteronyssinus",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "세로무늬먼지진드기",
+    "label_en": "Dermatophagoides pteronyssinus",
+    "stain": null,
+    "magnification": "100-400x",
+    "key_features": [
+      "앞쪽 다리 4개 + 옆으로 뻗은 다리 2개",
+      "몸에 세로무늬",
+      "옴진드기보다 다리가 길고 뚜렷"
+    ],
+    "structures": [
+      "leg"
+    ],
+    "confusable_with": [
+      "sarcoptes_wholemount"
+    ],
+    "sources": [
+      "전민서",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "pediculus_wholemount",
+    "species_id": "pediculus_humanus",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "이 (머릿니·몸니)",
+    "label_en": "Pediculus humanus",
+    "stain": null,
+    "magnification": "40-100x",
+    "key_features": [
+      "마름모꼴의 길쭉한 몸통",
+      "다리 3쌍에 갈고리 모양 발톱",
+      "암컷은 꽁무니에 집게 모양 구조"
+    ],
+    "structures": [
+      "claw"
+    ],
+    "confusable_with": [
+      "pthirus_wholemount"
+    ],
+    "sources": [
+      "전민서",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "pthirus_wholemount",
+    "species_id": "pthirus_pubis",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "사면발이",
+    "label_en": "Pthirus pubis",
+    "stain": null,
+    "magnification": "40-100x",
+    "key_features": [
+      "사다리꼴(게 모양)의 짧고 넓은 몸통",
+      "굵은 앞다리 집게"
+    ],
+    "structures": [
+      "claw"
+    ],
+    "confusable_with": [
+      "pediculus_wholemount"
+    ],
+    "sources": [
+      "전민서",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "haemaphysalis_gross",
+    "species_id": "haemaphysalis_longicornis",
+    "specimen_type": "gross",
+    "stage": "adult",
+    "label_ko": "작은소피참진드기",
+    "label_en": "Haemaphysalis longicornis",
+    "stain": null,
+    "magnification": "육안-40x",
+    "key_features": [
+      "단단한 등판(scutum)을 가진 참진드기",
+      "흡혈 후 몸이 콩알처럼 부풀어 오름",
+      "피부에 구기를 박고 수 일간 부착"
+    ],
+    "structures": [
+      "scutum",
+      "capitulum"
+    ],
+    "confusable_with": [
+      "leptotrombidium_wholemount"
+    ],
+    "sources": [
+      "전민서"
+    ]
+  },
+  {
+    "id": "leptotrombidium_wholemount",
+    "species_id": "leptotrombidium_spp",
+    "specimen_type": "충체",
+    "stage": "larva (chigger)",
+    "label_ko": "털진드기 유충",
+    "label_en": "Leptotrombidium spp., larva",
+    "stain": null,
+    "magnification": "100-400x",
+    "key_features": [
+      "몸 전체에 털이 나 있는 주황색 유충",
+      "다리 3쌍 (유충기)",
+      "매우 작음 (0.2mm)"
+    ],
+    "structures": [
+      "stylostome"
+    ],
+    "confusable_with": [
+      "haemaphysalis_gross"
+    ],
+    "sources": [
+      "전민서",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "mosquito_wholemount",
+    "species_id": "anopheles_sinensis",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "얼룩날개모기",
+    "label_en": "Anopheles spp., adult",
+    "stain": null,
+    "magnification": "육안-40x",
+    "key_features": [
+      "날개에 얼룩무늬",
+      "앉을 때 몸을 45도로 들어 올림 (엉덩이를 듦)",
+      "촉수가 주둥이만큼 김"
+    ],
+    "structures": [
+      "palpus",
+      "proboscis",
+      "wing"
+    ],
+    "confusable_with": [
+      "culex_wholemount",
+      "aedes_wholemount"
+    ],
+    "sources": [
+      "전민서"
+    ]
+  },
+  {
+    "id": "culex_wholemount",
+    "species_id": "culex_tritaeniorhynchus",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "집모기",
+    "label_en": "Culex spp., adult",
+    "stain": null,
+    "magnification": "육안-40x",
+    "key_features": [
+      "날개에 무늬 없음",
+      "앉을 때 몸이 지면과 평행",
+      "촉수가 짧음"
+    ],
+    "structures": [
+      "palpus",
+      "proboscis",
+      "wing"
+    ],
+    "confusable_with": [
+      "mosquito_wholemount",
+      "aedes_wholemount"
+    ],
+    "sources": [
+      "전민서"
+    ]
+  },
+  {
+    "id": "aedes_wholemount",
+    "species_id": "aedes_spp",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "숲모기",
+    "label_en": "Aedes spp., adult",
+    "stain": null,
+    "magnification": "육안-40x",
+    "key_features": [
+      "다리와 몸에 흰 줄무늬",
+      "주로 낮에 활동"
+    ],
+    "structures": [
+      "leg",
+      "wing"
+    ],
+    "confusable_with": [
+      "culex_wholemount",
+      "mosquito_wholemount"
+    ],
+    "sources": [
+      "전민서"
+    ]
+  },
+  {
+    "id": "cimex_wholemount",
+    "species_id": "cimex_lectularius",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "빈대",
+    "label_en": "Cimex lectularius",
+    "stain": null,
+    "magnification": "40x",
+    "key_features": [
+      "위아래로 납작한 갈색 타원형 몸통",
+      "날개가 퇴화되어 흔적만 남음",
+      "짧은 더듬이"
+    ],
+    "structures": [
+      "proboscis"
+    ],
+    "confusable_with": [
+      "triatoma_wholemount"
+    ],
+    "note": "질병을 매개하지 않는다는 점이 출제 포인트",
+    "sources": [
+      "전민서"
+    ]
+  },
+  {
+    "id": "triatoma_wholemount",
+    "species_id": "triatoma_spp",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "흡혈성 침노린재",
+    "label_en": "Triatomine bug (Triatoma spp.)",
+    "stain": null,
+    "magnification": "육안-40x",
+    "key_features": [
+      "빈대보다 크고 길쭉함 (1-3cm)",
+      "뾰족하고 긴 주둥이",
+      "배 가장자리에 줄무늬"
+    ],
+    "structures": [
+      "proboscis"
+    ],
+    "confusable_with": [
+      "cimex_wholemount"
+    ],
+    "note": "빈대와 감별 — 침노린재는 샤가스병을 매개",
+    "sources": [
+      "전민서"
+    ]
+  }
+]
