@@ -852,6 +852,44 @@ async function decideThread(status){
 }
 
 /* ══════════ 제보함 (관리자) ══════════ */
+
+/** 제보된 문항 **전문**. 사진 · 문면 · 보기 넷 · 정답 · 해설 · 출처.
+ *
+ *  제보함에는 문면 한 줄과 「정답으로 나간 보기」 한 줄만 있었다. 그것으로는
+ *  판정을 할 수가 없다 — 「보기가 이상하다」는 제보는 보기를 봐야 읽히고,
+ *  「사진이 문제와 안 맞는다」는 사진을 봐야 읽힌다. 고칠지 말지를 여기서
+ *  정하는 이상, 정할 근거도 여기 있어야 한다.
+ *
+ *  **문항 DB에서 다시 찾는다.** 제보에 실려 온 문면은 제보하던 날의 사본이라,
+ *  그 뒤에 고쳐 구웠으면 지금 나가는 문항과 다르다. 판정할 것은 지금 나가는
+ *  쪽이다. 다시 구우면서 사라진 문항만 사본으로 떨어진다.
+ */
+function questionFull(qid, copy){
+  const q = QUIZ_DB.find(x => x.id === qid);
+  if (!q) return `
+    <div class="rep-stem">${esc(copy.stem)}</div>
+    <div class="rep-ans">정답으로 나간 보기: ${esc(copy.answer) || '—'}</div>
+    <div class="rep-gone">지금 문항 DB에 없습니다 — 위는 제보하던 날의 사본입니다.</div>`;
+
+  const names = imgsOf(q);
+  return `
+    <div class="rep-q">
+      <div class="imgrow${names.length > 1 ? ' multi' : ''}">
+        ${names.map(n => `<div class="imgbox" onclick="zoomImg('${esc(n)}')">
+          <img src="${esc(S.imgUrl[n] || '')}" loading="lazy" alt="표본 사진">
+          ${q.magnification ? `<span class="imgmeta">${esc(q.magnification)}</span>` : ''}
+        </div>`).join('')}
+      </div>
+      <div class="rep-stem">${esc(q.stem)}</div>
+      <div class="opts">${q.options.map((o,i) => `
+        <div class="opt${i === q.answer ? ' ok' : ''}"><b>${KEYS[i]}</b><span>${esc(o)}</span>${
+          i === q.answer ? '<em class="opt-tag">정답</em>' : ''}</div>`).join('')}</div>
+      ${q.explanation ? `<div class="explain"><span class="tag">해설</span>
+${esc(q.explanation)}</div>` : ''}
+      <div class="imgsrc">${stainHtml(q)}${names.map(n => srcHtml(n, true)).join('')}</div>
+    </div>`;
+}
+
 async function loadAdmin(){
   if (!ME || !ME.isAdmin) return;
   $('admin').classList.remove('hidden');
@@ -860,6 +898,16 @@ async function loadAdmin(){
     const open = groups.reduce((a,g) => a + g.open, 0);
     $('admin-sum').textContent = `제보 ${total}건 · 문항 ${groups.length}개 · 확인 중 ${open}건`;
     renderAlert(images, alert);
+    /* 목록에 실릴 사진 전부를 한 번에 서명받는다. 문항마다 부르면 왕복이
+       목록 길이만큼 난다. **못 받아도 목록은 그린다** — 사진이 안 떠도 문면과
+       보기는 읽히고, 그것만으로 판정되는 제보가 많다. */
+    try {
+      const want = [...new Set(groups.flatMap(g => {
+        const q = QUIZ_DB.find(x => x.id === g.questionId);
+        return q ? imgsOf(q) : [];
+      }))].filter(n => !S.imgUrl[n]);
+      if (want.length) await signImages(want);
+    } catch (e) {}
     $('admin-list').innerHTML = groups.length ? groups.map(g => `
       <div class="rep${g.hot ? ' alert' : (g.open ? ' hot' : '')}">
         <div class="rep-head">
@@ -868,8 +916,7 @@ async function loadAdmin(){
           <code>${esc(g.questionId)}</code>
           ${g.open ? `<button class="is-quiet" onclick="closeQuestion('${esc(g.questionId)}')">이 문항 닫기</button>` : ''}
         </div>
-        <div class="rep-stem">${esc(g.reports[0].stem)}</div>
-        <div class="rep-ans">정답으로 나간 보기: ${esc(g.reports[0].answer) || '—'}</div>
+        ${questionFull(g.questionId, g.reports[0])}
         ${g.reports.map(r => `
           <div class="rep-one">
             <span class="rep-kind">${esc(KIND_KO[r.kind] || r.kind)}</span>

@@ -321,6 +321,27 @@ body:has(#quiz:not(.hidden)) #who{display:none}
 .rep-head button{margin-left:auto;font-size:12px;padding:4px 8px}
 .rep-stem{font-size:14px;font-weight:600;margin:8px 0 2px}
 .rep-ans{font-size:12px;color:var(--muted);margin-bottom:8px}
+/* ── 제보함에 실리는 문항 전문
+   판정하려면 문항을 봐야 한다. 다만 여기는 **목록**이라, 푸는 화면과 같은
+   크기로 놓으면 제보 세 건에 화면이 다 찬다 — 사진을 낮추고 보기 글자를
+   줄여서 한 카드가 눈에 들어오게 둔다. 자세히 볼 것은 눌러서 키운다. */
+.rep-q{margin:8px 0 10px}
+.rep-q .imgbox img,
+.rep-q .imgrow.multi>.imgbox img{max-height:min(30vh,240px)}
+.rep-q .opts{gap:5px;margin-top:8px}
+.rep-q .opt{padding:7px 10px;font-size:13px;cursor:default}
+.rep-q .opt:hover{border-color:var(--line)}
+/* 정답만 초록으로. 푸는 화면과 같은 색이라 따로 익힐 것이 없다. */
+.rep-q .opt.ok:hover{border-color:var(--ok)}
+/* 정답을 색으로만 두지 않는다. 훑는 자리라 초록 하나는 눈에 안 걸리고,
+   색을 못 가리는 사람에게는 아예 안 보인다. */
+.opt-tag{margin-left:auto;flex:none;font-style:normal;font-size:11px;font-weight:700;
+  color:var(--ok);border:1px solid var(--ok);border-radius:999px;padding:1px 7px}
+.rep-q .explain{margin-top:8px;font-size:13px}
+.rep-q .imgsrc{margin-top:8px}
+/* 다시 구우면서 사라진 문항. 사본만 남았다는 것을 조용히 알린다. */
+.rep-gone{font-size:12px;color:var(--muted);border:1px dashed var(--line);
+  border-radius:8px;padding:6px 9px;margin-bottom:8px}
 .rep-one{border-top:1px solid var(--line);padding:7px 0;font-size:13px}
 .rep-kind{font-weight:600}
 .rep-who{color:var(--muted);font-size:12px;margin-left:6px}
@@ -585,6 +606,6 @@ body:has(#quiz:not(.hidden)) #who{display:none}
 <script src="../auth.js?v=06ba6b65"></script>
 <!-- 다섯 과목이 같이 쓰는 로그인 문. 화면은 이 파일이 들고 온다. -->
 <script src="../gate.js?v=c12746c4"></script>
-<script src="app.js?v=09c60085"></script>
+<script src="app.js?v=aadd9334"></script>
 </body>
 </html>
