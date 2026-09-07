@@ -31,6 +31,11 @@ from fastapi.testclient import TestClient  # noqa: E402
 from app.database import Base, SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import SPOTTER_ALERT_MIN, SpotterReport  # noqa: E402
+
+# 사진 묶음이 서려면 **문항이 둘 이상**이어야 한다 — 한 문항에 걸린 사진은
+# 문항 묶음이 이미 말한 것이라 서버가 안 낸다. 선이 1로 내려가도 이 수는
+# 1이 될 수 없어서, 선과 따로 부른다.
+SCATTER = max(2, SPOTTER_ALERT_MIN)
 from app.routes.spotter import ensure_threads  # noqa: E402
 
 USER = {"Authorization": "Bearer local-test-token"}
@@ -110,7 +115,13 @@ def main() -> None:
     )
     data = reports()
     check("문항 한 줄", group(data, "q-two-photos")["open"] == 1, data["groups"])
-    check("아직 조용하다", data["alert"]["questions"] == 0, data["alert"])
+    # 선이 1이면 이 한 줄로 이미 넘는다. 선을 옮기면 여기 기대도 따라 옮긴다.
+    quiet = SPOTTER_ALERT_MIN > 1
+    check(
+        "아직 조용하다" if quiet else "한 줄로 바로 뜬다",
+        data["alert"]["questions"] == (0 if quiet else 1),
+        data["alert"],
+    )
 
     print(f"\n[3] {SPOTTER_ALERT_MIN}명이 같은 문항에 걸리면 뜬다")
     for i in range(SPOTTER_ALERT_MIN - 1):
@@ -128,19 +139,22 @@ def main() -> None:
     print("\n[5] 흩어져 들어온 같은 사진은 사진 묶음이 잡는다")
     # 세 사람이 **다른 문항**을 제보했지만 사진은 같다. 문항으로만 세면
     # 셋 다 한 명씩이라 아무 데도 안 걸린다.
-    for i in range(SPOTTER_ALERT_MIN):
+    for i in range(SCATTER):
         add(f"scatter-{i}", f"q-scatter-{i}", "blurry.jpg")
     data = reports()
-    check(
-        "문항 쪽은 조용하다",
-        all(group(data, f"q-scatter-{i}")["hot"] is False for i in range(SPOTTER_ALERT_MIN)),
-        [group(data, f"q-scatter-{i}")["open"] for i in range(SPOTTER_ALERT_MIN)],
-    )
+    # 선이 1이면 문항 쪽도 같이 뜬다. 그때 이 자리가 말하려는 것은 「문항으로만
+    # 세면 안 보인다」가 아니라 「사진 쪽이 흩어진 것을 한 줄로 모은다」가 된다.
+    if SPOTTER_ALERT_MIN > 1:
+        check(
+            "문항 쪽은 조용하다",
+            all(group(data, f"q-scatter-{i}")["hot"] is False for i in range(SCATTER)),
+            [group(data, f"q-scatter-{i}")["open"] for i in range(SCATTER)],
+        )
     spot = next((g for g in data["images"] if g["image"] == "blurry.jpg"), None)
     check("사진 쪽이 잡았다", spot is not None, data["images"])
     if spot:
-        check(f"{SPOTTER_ALERT_MIN}명", spot["open"] == SPOTTER_ALERT_MIN, spot)
-        check("문항 셋을 짚는다", len(spot["questionIds"]) == SPOTTER_ALERT_MIN, spot)
+        check(f"{SCATTER}명", spot["open"] == SCATTER, spot)
+        check(f"문항 {SCATTER}개를 짚는다", len(spot["questionIds"]) == SCATTER, spot)
     check("배지가 사진 1을 든다", data["alert"]["images"] == 1, data["alert"])
 
     print("\n[6] 한 사람이 같은 사진의 두 문항을 제보해도 한 명이다")
@@ -148,17 +162,25 @@ def main() -> None:
     add("dupe", "q-dupe-b", "twice.jpg")
     data = reports()
     spot = next((g for g in data["images"] if g["image"] == "twice.jpg"), None)
-    check("한 명뿐이라 안 뜬다", spot is None, spot)
+    # 두 문항을 눌렀어도 한 명이다. 선이 2 이상이면 그래서 안 뜨고, 선이 1이면
+    # 뜨되 **1명**으로 뜬다 — 어느 쪽이든 볼 것은 둘이 아니라 하나라는 것이다.
+    if SPOTTER_ALERT_MIN > 1:
+        check("한 명뿐이라 안 뜬다", spot is None, spot)
+    else:
+        check("떠도 한 명으로 센다", spot is not None and spot["open"] == 1, spot)
 
     print("\n[7] 닫은 제보는 안 센다")
+    before = reports()["alert"]["questions"]
     client.post("/api/spotter/admin/reports/q-two-photos/close", headers=USER)
     data = reports()
     check("문항이 식었다", group(data, "q-two-photos")["hot"] is False, group(data, "q-two-photos"))
-    check("배지도 내려갔다", data["alert"]["questions"] == 0, data["alert"])
+    # 선이 1이면 다른 문항들이 저마다 걸려 있어서 0으로 안 떨어진다. 볼 것은
+    # 「비었는가」가 아니라 방금 닫은 하나가 빠졌는가다.
+    check("배지가 하나 내려갔다", data["alert"]["questions"] == before - 1, (before, data["alert"]))
 
     # 콘솔이 cp949라 찍는 글에는 줄표를 안 쓴다. 설명은 주석에 둔다.
     print("\n[8] 옛 줄: `images`가 비어 있어도 `image`에서 이름을 뽑는다")
-    for i in range(SPOTTER_ALERT_MIN):
+    for i in range(SCATTER):
         with SessionLocal() as db:
             db.add(
                 SpotterReport(
@@ -181,10 +203,16 @@ def main() -> None:
     seats = {(t["kind"], t["subject"]) for t in threads["threads"]}
     check("문항 글타래", ("question", "q-two-photos") in seats, sorted(seats))
     check("사진 글타래", ("image", "blurry.jpg") in seats, sorted(seats))
-    check("한 명짜리는 안 선다", ("question", "qsolo") not in seats, sorted(seats))
+    # 선이 1이면 한 명이 제보한 문항도 선다. 그것이 선을 내린 뜻이다.
+    solo = ("question", "q-scatter-0") in seats
+    check(
+        "한 명짜리도 선다" if SPOTTER_ALERT_MIN == 1 else "한 명짜리는 안 선다",
+        solo is (SPOTTER_ALERT_MIN == 1),
+        sorted(seats),
+    )
     hot = next(t for t in threads["threads"] if t["subject"] == "blurry.jpg")
-    check("사진 글타래가 걸린 문항을 다 안는다", len(hot["questionIds"]) == SPOTTER_ALERT_MIN, hot)
-    check("걸린 사람 수를 든다", hot["reports"] == SPOTTER_ALERT_MIN, hot)
+    check(f"사진 글타래가 걸린 문항 {SCATTER}개를 다 안는다", len(hot["questionIds"]) == SCATTER, hot)
+    check("걸린 사람 수를 든다", hot["reports"] == SCATTER, hot)
 
     print("\n[10] 열린 글타래의 문항은 새 세트에서 빠진다")
     flagged = client.get("/api/spotter/flagged", headers=USER).json()
