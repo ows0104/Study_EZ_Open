@@ -269,10 +269,53 @@ body:has(#quiz:not(.hidden)) #who{display:none}
 .quoted{font-size:13px;color:var(--muted);background:var(--bg);border:1px solid var(--line);
   border-radius:8px;padding:9px 10px;margin:8px 0 14px;line-height:1.5}
 
+/* ── 진리탐구 게시판
+   목록의 한 줄이 곧 단추다. 카드 안에 「열기」를 따로 두면 누를 데가 둘로
+   갈리는데, 여기서 할 일은 열어 보는 것 하나뿐이다. */
+.thread{display:block;width:100%;text-align:left;margin-bottom:10px;padding:13px 14px}
+.thread-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px}
+.thread-title{font-size:14.5px;font-weight:600;margin-top:7px;line-height:1.45}
+.thread-sub{font-size:12.5px;color:var(--muted);margin:4px 0 0}
+.tkind{color:var(--muted);font-weight:600}
+.tcount{color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
+.tpill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;
+  background:var(--no-soft);color:var(--no)}
+/* 끝난 것은 조용해진다. 목록에서 먼저 눈에 들어와야 하는 것은 아직 열린 자리다. */
+.tpill.resolved{background:var(--ok-soft);color:var(--ok)}
+.tpill.wontfix{background:var(--bg);color:var(--muted)}
+.verdict{font-size:13px;background:var(--ok-soft);color:var(--ink);
+  border-radius:8px;padding:9px 11px;margin:12px 0 0;line-height:1.6}
+.talk{border-top:1px solid var(--line);padding:9px 0}
+.talk:first-child{border-top:0;padding-top:0}
+.talk-head{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.talk-head b{color:var(--ink);font-size:13px}
+.talk-head button{margin-left:auto;font-size:11px;padding:2px 7px}
+.talk-body{font-size:13.5px;white-space:pre-wrap;margin-top:3px;line-height:1.6}
+.talk.gone .talk-body{color:var(--muted);font-style:italic}
+.talk-write{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
+#board textarea{width:100%;min-height:78px;resize:vertical;padding:9px 10px;
+  border:1px solid var(--line);border-radius:8px;background:var(--bg);
+  color:var(--ink);font:inherit;font-size:13.5px}
+#board textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+
+/* ── 여럿이 걸렸다는 알림
+   시작 화면 맨 위에, **선을 넘은 것이 있을 때만** 선다. 확인 중인 제보가
+   있다고 늘 서 있으면 배경이 되어 안 읽힌다. */
+.alert-bar{display:block;width:100%;text-align:left;margin:0 0 18px;
+  background:var(--no-soft);border-color:var(--no);color:var(--no);
+  font-size:13.5px;font-weight:600;padding:10px 13px}
+.alert-bar::before{content:'● '}
+.alert-bar:hover{border-color:var(--no);filter:brightness(.98)}
+
 /* ── 제보함 */
 .rep{border:1px solid var(--line);border-left:3px solid var(--line);border-radius:10px;
   padding:12px;margin-bottom:10px}
 .rep.hot{border-left-color:var(--no)}
+/* 선을 넘은 묶음. 왼쪽 선만으로는 「한 명 걸린 것」과 구별이 안 된다 —
+   목록이 길어지면 그 셋을 눈으로 세어 찾게 된다. */
+.rep.alert{border-left-color:var(--no);background:var(--no-soft)}
+.rep-badge{font-size:11px;font-weight:700;color:#fff;background:var(--no);
+  padding:2px 7px;border-radius:999px;letter-spacing:.02em}
 .rep-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}
 .rep-head code{font-size:11px;color:var(--muted)}
 .rep-head button{margin-left:auto;font-size:12px;padding:4px 8px}
@@ -325,6 +368,11 @@ body:has(#quiz:not(.hidden)) #who{display:none}
 <div id="start" class="hidden">
   <h1>기생충학 땡시 연습</h1>
   <p class="sub" id="dbinfo"></p>
+
+  <!-- 여럿이 걸린 제보가 있을 때만 선다. 관리자에게만 보이고, 누르면
+       화면 맨 아래 제보함으로 내려간다. -->
+  <button class="alert-bar hidden" id="admin-alert"
+    onclick="document.getElementById('admin').scrollIntoView({behavior:'smooth'})"></button>
 
   <div class="card">
     <!-- ① 무엇을 풀지. 내용으로 고른다 — 분류군과 표본 종류. -->
@@ -384,6 +432,17 @@ body:has(#quiz:not(.hidden)) #who{display:none}
     </div>
   </div>
 
+  <!-- 로그인해야 있는 자리. 로그인 없이 도는 갈래에는 서버가 없어 게시판도 없다. -->
+  <div id="board-card" class="hidden">
+    <h2>진리탐구 게시판</h2>
+    <div class="card">
+      <p class="sub" id="board-sum" style="margin:0">읽는 중…</p>
+      <div class="row" style="margin-top:12px">
+        <button onclick="openBoard()">게시판 열기</button>
+      </div>
+    </div>
+  </div>
+
   <h2>최근 기록</h2>
   <div class="card recs" id="records">아직 기록이 없습니다.</div>
 
@@ -391,6 +450,8 @@ body:has(#quiz:not(.hidden)) #who{display:none}
     <h2>제보함</h2>
     <div class="card">
       <p class="sub" id="admin-sum" style="margin:0 0 12px">읽는 중…</p>
+      <!-- 사진으로 묶인 것이 먼저다. 문항 목록만 보면 안 보이는 자리라서다. -->
+      <div id="admin-images"></div>
       <div id="admin-list"></div>
     </div>
   </div>
@@ -468,6 +529,17 @@ body:has(#quiz:not(.hidden)) #who{display:none}
   <div class="review" id="r-review"></div>
 </div>
 
+<!-- ══════════ 진리탐구 게시판 ══════════
+     여럿이 제보한 문항이 자동으로 오른다. 사람이 글을 세우지 않는다. -->
+<div id="board" class="hidden">
+  <h1>진리탐구 게시판</h1>
+  <p class="sub" id="board-hint">여럿이 같은 문항을 제보하면 여기 자동으로 올라옵니다.
+    올라온 문항은 이야기가 끝날 때까지 새 세트에서 빠집니다.</p>
+  <div class="row" id="board-back"><button onclick="closeBoard()">처음으로</button></div>
+  <div id="board-list" style="margin-top:14px"></div>
+  <div id="board-one" class="hidden"></div>
+</div>
+
 </div>
 
 <div class="modal hidden" id="modal">
@@ -509,10 +581,10 @@ body:has(#quiz:not(.hidden)) #who{display:none}
 <script src="../config.js?v=c3103667"></script>
 <!-- Study_EZ와 나눠 쓰는 세션 저장소. 원본은 Study_EZ_Open/packages/session/ 이고
      scripts/sync_shared.py 가 가져온다. auth.js 보다 먼저 와야 한다. -->
-<script src="../session.js?v=40eb7d79"></script>
-<script src="../auth.js?v=6376c016"></script>
+<script src="../session.js?v=f2620373"></script>
+<script src="../auth.js?v=06ba6b65"></script>
 <!-- 다섯 과목이 같이 쓰는 로그인 문. 화면은 이 파일이 들고 온다. -->
-<script src="../gate.js?v=38aef296"></script>
-<script src="app.js?v=e0018aea"></script>
+<script src="../gate.js?v=c12746c4"></script>
+<script src="app.js?v=b16878c1"></script>
 </body>
 </html>

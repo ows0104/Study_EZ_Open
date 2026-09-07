@@ -132,54 +132,110 @@ const GATE = (() => {
 
   function $(id) { return document.getElementById(id); }
 
+  /* 글꼴도 Study_EZ가 받는 곳에서 같은 판을 받는다. 이름만 적어 두면 윈도우에서
+     맑은 고딕으로 떨어지는데, 그러면 자간도 숫자 폭도 달라져서 같은 화면으로
+     안 보인다. 못 받으면 아래 대체 글꼴로 떨어질 뿐 문이 막히지는 않는다. */
+  function mountFont() {
+    if (document.getElementById('gate-font')) return;
+    const link = document.createElement('link');
+    link.id = 'gate-font';
+    link.rel = 'stylesheet';
+    link.href = 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/'
+      + 'dist/web/variable/pretendardvariable-dynamic-subset.min.css';
+    document.head.append(link);
+  }
+
   /** 로그인 화면을 문서에 심는다. 과목마다 HTML을 베끼지 않으려고 여기서 만든다. */
   function mountGate() {
     if ($('gate-root')) return;
+    mountFont();
     const el = document.createElement('div');
     el.id = 'gate-root';
     el.hidden = true;
     el.innerHTML = `
 <style>
-  #gate-root{position:fixed;inset:0;z-index:9999;overflow:auto;
-    background:#f4f5f7;color:#1b1d21;
-    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif}
-  @media (prefers-color-scheme:dark){#gate-root{background:#14161a;color:#e9ecf1}}
-  #gate-root .box{max-width:380px;margin:12vh auto 0;padding:0 16px}
-  #gate-root h1{font-size:22px;margin:0 0 4px;letter-spacing:-.02em}
-  #gate-root .sub{color:#6b7280;font-size:13px;margin:0 0 22px}
-  #gate-root .card{background:#fff;border:1px solid #e3e6ea;border-radius:12px;padding:18px;
-    box-shadow:0 1px 3px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.06)}
-  @media (prefers-color-scheme:dark){#gate-root .card{background:#1c1f24;border-color:#2c313a}}
+  /* **Study_EZ의 로그인 화면과 같은 옷이다.** 한 계정으로 두 사이트가 열리는데
+     문이 서로 다르게 생기면 같은 계정이라는 말이 안 믿긴다. 그래서 값을 눈대중
+     맞춘 게 아니라 저쪽 web/src/styles/base.css의 토큰과 .gate 규칙을
+     그대로 옮겨 왔다 — 고칠 일이 생기면 두 곳을 같이 고친다.
+
+     여기서 달라진 것은 셋뿐이고, 다 옮기는 과정에서 어쩔 수 없었던 것이다:
+     토큰을 :root 가 아니라 #gate-root 에 매단 것(이 덮개는 자기 스타일을
+     가진 과목 화면 위에 얹히므로 밖으로 새면 안 된다), 초록 강조색을 버린 것,
+     카드를 걷은 것. */
+  #gate-root{
+    --bg:#fbfbfc; --surface:#ffffff; --surface-2:#f6f7f9; --surface-3:#eceef1;
+    --line:#e4e6ea; --line-strong:#d3d7dd;
+    --ink:#16181d; --ink-2:#565b64; --ink-3:#878d97;
+    --accent:#3e63dd; --accent-ink:#3a5bc7; --accent-line:#c1d0ff; --on-accent:#fff;
+    --warn:#9a3412;
+    --r-2:8px;
+    --ring:0 0 0 2px var(--bg),0 0 0 4px var(--accent-line);
+    position:fixed;inset:0;z-index:9999;overflow:auto;
+    color-scheme:light;background:var(--bg);color:var(--ink);
+    font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,
+      "Segoe UI","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    font-size:15px;line-height:1.55;font-feature-settings:"cv05" 1;
+    -webkit-font-smoothing:antialiased}
+  /* 다크는 색을 뒤집는 게 아니라 같은 층 구조를 어두운 쪽에서 다시 세운 것이다. */
+  @media (prefers-color-scheme:dark){#gate-root{
+    --bg:#0d0e11; --surface:#15171b; --surface-2:#1a1d22; --surface-3:#23262c;
+    --line:#272a31; --line-strong:#363a43;
+    --ink:#eceef1; --ink-2:#a8aeb8; --ink-3:#757c88;
+    --accent:#3e63dd; --accent-ink:#9eb1ff; --accent-line:#304384;
+    --warn:#f0a06a;
+    color-scheme:dark}}
+  #gate-root .box{max-width:340px;margin:16vh auto 0;padding:0 20px;text-align:center}
+  #gate-root h1{margin:0 0 4px;font-size:22px;font-weight:650;letter-spacing:-.021em}
+  #gate-root .sub{margin:0 0 24px;color:var(--ink-3);font-size:12px}
+  #gate-root form{display:grid;gap:8px;text-align:left}
   #gate-root label{display:block}
-  #gate-root label span{font-size:12px;color:#6b7280;font-weight:600}
-  #gate-root input{width:100%;padding:10px;border:1px solid #e3e6ea;border-radius:8px;
-    background:transparent;color:inherit;font:inherit;margin:4px 0 10px;box-sizing:border-box}
-  #gate-root input:focus{outline:2px solid #2f6f4f;outline-offset:-1px}
-  #gate-root button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid #e3e6ea;
-    background:transparent;color:inherit;padding:11px 14px;width:100%}
-  #gate-root button.primary{background:#2f6f4f;border-color:#2f6f4f;color:#fff;font-weight:600}
-  #gate-root .switch{display:flex;gap:6px;margin-top:14px;justify-content:center;flex-wrap:wrap}
-  #gate-root .switch button{width:auto;border:none;color:#6b7280;font-size:13px;padding:6px 8px;
-    text-decoration:underline;text-underline-offset:3px}
-  #gate-root .msg{font-size:13px;margin:10px 0 0;line-height:1.6}
-  #gate-root .msg.bad{color:#b3261e}
-  #gate-root .foot{margin-top:22px;font-size:12px;color:#6b7280;text-align:center;line-height:1.7}
+  /* [hidden] 은 브라우저 기본 규칙이라 바로 위의 #gate-root label 에 진다.
+     재설정 갈래에서 비밀번호 칸을 숨겼는데도 그대로 서 있던 것이 이것이다 —
+     required 만 꺼져서 폼은 넘어가고, 화면에는 안 쓰는 칸이 남았다. */
+  #gate-root [hidden]{display:none}
+  #gate-root label span{display:block;margin-bottom:4px;
+    color:var(--ink-3);font-size:12px;font-weight:600}
+  #gate-root input{width:100%;min-height:32px;padding:0 10px;box-sizing:border-box;
+    border:1px solid var(--line);border-radius:var(--r-2);
+    background:var(--surface);color:inherit;font:inherit;font-size:13px}
+  #gate-root button{display:inline-flex;gap:6px;align-items:center;justify-content:center;
+    width:100%;min-height:32px;padding:0 12px;
+    border:1px solid var(--line);border-radius:var(--r-2);
+    color:var(--ink-2);background:var(--surface);font:inherit;font-size:13px;font-weight:550;
+    cursor:pointer;transition:background .12s ease,border-color .12s ease,color .12s ease}
+  #gate-root button:hover:not(:disabled){
+    border-color:var(--line-strong);color:var(--ink);background:var(--surface-2)}
+  #gate-root button:disabled{opacity:.45;cursor:default}
+  #gate-root button.primary{margin-top:4px;border-color:transparent;
+    color:var(--on-accent);background:var(--accent)}
+  #gate-root button.primary:hover:not(:disabled){border-color:transparent;
+    color:var(--on-accent);background:var(--accent-ink)}
+  #gate-root input:focus-visible,#gate-root button:focus-visible{outline:none;box-shadow:var(--ring)}
+  #gate-root input:focus-visible{border-color:var(--accent)}
+  /* 갈래를 바꾸는 단추는 밑줄이 아니라 조용한 단추다(저쪽 button.is-quiet). */
+  #gate-root .switch{display:flex;gap:4px;margin-top:14px;justify-content:center;flex-wrap:wrap}
+  #gate-root .switch button{width:auto;border-color:transparent;background:transparent;font-size:12px}
+  #gate-root .switch button:hover:not(:disabled){border-color:transparent;background:var(--surface-3)}
+  #gate-root .msg{margin:10px 0 0;color:var(--ink-2);font-size:13px;line-height:1.6}
+  #gate-root .msg.bad{color:var(--warn);font-size:12px}
+  /* 빈 줄이 자리를 차지하면 단추와 갈래 사이가 이유 없이 벌어진다. */
+  #gate-root .msg:empty{display:none}
+  #gate-root .foot{margin-top:32px;color:var(--ink-3);font-size:11px;line-height:1.6}
 </style>
 <div class="box">
   <h1>Spotter</h1>
   <p class="sub">같은 계정으로 Study_EZ에도 로그인합니다.</p>
-  <div class="card">
-    <form id="gate-form">
-      <label id="gate-email-row"><span>이메일</span>
-        <input type="email" id="gate-email" autocomplete="email" required></label>
-      <label id="gate-pw-row"><span>비밀번호</span>
-        <input type="password" id="gate-pw" minlength="8" autocomplete="current-password" required></label>
-      <button type="submit" id="gate-submit" class="primary">로그인</button>
-    </form>
-    <p class="msg" id="gate-note"></p>
-    <p class="msg bad" id="gate-error"></p>
-    <div class="switch" id="gate-switch"></div>
-  </div>
+  <form id="gate-form">
+    <label id="gate-email-row"><span>이메일</span>
+      <input type="email" id="gate-email" autocomplete="email" required></label>
+    <label id="gate-pw-row"><span>비밀번호</span>
+      <input type="password" id="gate-pw" minlength="8" autocomplete="current-password" required></label>
+    <button type="submit" id="gate-submit" class="primary">로그인</button>
+  </form>
+  <p class="msg" id="gate-note"></p>
+  <p class="msg bad" id="gate-error"></p>
+  <div class="switch" id="gate-switch"></div>
   <p class="foot">가입하면 바로 쓸 수 있습니다. 승인은 따로 필요 없습니다.</p>
 </div>`;
     /* **`body` 밑이 아니라 `html` 밑에 단다.** 화면이 자기 본문을 통째로
