@@ -3855,17 +3855,22 @@
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 26,
       "answer_raw": "4",
-      "answer_index": 3,
+      "answer_index": 2,
       "answer_text": null,
       "format": "mcq",
       "restored": true,
       "image_paths": [
         "2019/q24_1.png"
       ],
+      "correction": {
+        "was": "Ventral pit",
+        "answer": "Conical projection",
+        "why": "사진은 간질(Fasciola hepatica) 성충이다. 원 안이 cephalic cone — 끝에 oral sucker, 밑동에 ventral sucker가 있고 그 아래로 어깨가 벌어진다. 몸통은 잘게 갈라진 장관·고환·난황선으로 차 있다. 참굴큰입흡충은 0.3~0.5mm짜리 타원형이라 이 배율로 이렇게 찍힐 수 없고, 같은 시험지 22번에 이미 나와 있다. 결정적으로 2021년 10번이 지문·보기·사진이 모두 같은 문항인데 정답이 3) Conical projection이고, 2021년 쪽 사진은 크롭이 넓어 옆에 적힌 손글씨 '간질'이 그대로 보인다. 족보 9쪽 정답표의 '24. 4'가 복원 과정에서 잘못 적힌 것이다."
+      },
       "qtype": "indicator",
-      "correct_text": "Ventral pit",
+      "correct_text": "Conical projection",
       "answer_species_id": null,
-      "answer_structure": "ventral pit",
+      "answer_structure": "conical projection",
       "answer_stage": null,
       "answer_kind": "structure",
       "option_species_ids": [],

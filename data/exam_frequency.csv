@@ -91,9 +91,9 @@
 표본,sparganum_gross,고충 (육안),1,,2015,2015,1.414
 표본,sparganum_section,고충 조직절편,1,,2025,2025,1.414
 표본,triatoma_wholemount,흡혈성 침노린재,1,,2015,2015,1.414
+구조물,conical projection,conical projection,7,,2015 2016-1 2017 2019 2021 2021 2025,2025,2.828
 구조물,gametocyte,gametocyte,7,,2015 2016-1 2017 2019 2022 2023 2025,2025,2.828
 구조물,amastigote,amastigote,6,,2015 2016-1 2019 2021 2022 2023,2023,2.646
-구조물,conical projection,conical projection,6,,2015 2016-1 2017 2021 2021 2025,2025,2.646
 구조물,ovary,ovary,5,,2015 2016-1 2019 2023 2025,2025,2.449
 구조물,cephalic alae,cephalic alae,4,,2019 2021 2022 2023,2023,2.236
 구조물,protoscolex,protoscolex,4,,2015 2016-1 2019 2023,2023,2.236
@@ -117,4 +117,3 @@
 구조물,pseudopodia,pseudopodia,1,,2015,2015,1.414
 구조물,ring form,ring form,1,,2022,2022,1.414
 구조물,terminal spine,terminal spine,1,,2016-1,2016-1,1.414
-구조물,ventral pit,ventral pit,1,,2019,2019,1.414

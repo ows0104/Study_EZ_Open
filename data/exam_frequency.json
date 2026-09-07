@@ -965,6 +965,22 @@
   ],
   "structures": [
     {
+      "id": "conical projection",
+      "answer_count": 7,
+      "years": [
+        "2015",
+        "2016-1",
+        "2017",
+        "2019",
+        "2021",
+        "2021",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 2.828
+    },
+    {
       "id": "gametocyte",
       "answer_count": 7,
       "years": [
@@ -992,21 +1008,6 @@
         "2023"
       ],
       "recent_year": "2023",
-      "option_count": 0,
-      "exam_weight": 2.646
-    },
-    {
-      "id": "conical projection",
-      "answer_count": 6,
-      "years": [
-        "2015",
-        "2016-1",
-        "2017",
-        "2021",
-        "2021",
-        "2025"
-      ],
-      "recent_year": "2025",
       "option_count": 0,
       "exam_weight": 2.646
     },
@@ -1260,16 +1261,6 @@
         "2016-1"
       ],
       "recent_year": "2016-1",
-      "option_count": 0,
-      "exam_weight": 1.414
-    },
-    {
-      "id": "ventral pit",
-      "answer_count": 1,
-      "years": [
-        "2019"
-      ],
-      "recent_year": "2019",
       "option_count": 0,
       "exam_weight": 1.414
     }

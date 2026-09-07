@@ -2,6 +2,10 @@
 
     uv run --python 3.13 --with pymupdf python scripts/parse_jokbo.py
 
+입력:
+    기생충학/족보/*.pdf
+    data/question_corrections.json   족보 정답표가 틀린 문항을 사람이 고쳐 적어 둔 표
+
 출력:
     questions/<year>/q<NN>_<k>.png   문항별 사진
     data/past_questions.json         문항 텍스트 + 보기 + 정답 + 사진 경로
@@ -217,6 +221,57 @@ def resolve_answer(raw, options):
     return None, raw
 
 
+def optkey(s):
+    return re.sub(r"[^0-9a-z가-힣]", "", (s or "").lower())
+
+
+def apply_corrections(questions):
+    """족보 정답표가 틀린 문항을 `data/question_corrections.json` 대로 고친다.
+
+    족보의 정답표는 시험지가 아니라 **먼저 본 사람이 기억으로 적어 둔 것**이라
+    틀린 칸이 섞인다. 2019년 24번이 그랬다 — 사진은 누가 봐도 간질인데 정답이
+    ventral pit으로 적혀 있었고, 같은 사진·같은 보기로 나온 2021년 10번은
+    conical projection이었다.
+
+    고칠 데가 여기인 이유는 `past_questions.json`이 PDF에서 매번 새로 만들어지는
+    생성물이기 때문이다. 결과 파일을 손으로 고치면 다음 파싱에 날아간다.
+
+    정정은 번호가 아니라 **보기 텍스트**로 적는다. 파서가 보기를 하나 더 살려내
+    순서가 밀려도 따라가고, 무엇보다 사람이 읽고 검토할 수 있다.
+
+    `was`가 안 맞으면 세운다. 족보가 개정됐거나 파서가 달라졌다는 뜻이고, 그러면
+    이 정정이 아직 필요한지, 필요하다면 같은 내용인지를 사람이 다시 봐야 한다.
+    조용히 덮어쓰면 그 신호가 사라진다.
+    """
+    path = os.path.join(DATA, "question_corrections.json")
+    if not os.path.exists(path):
+        return
+    table = json.load(open(path, encoding="utf-8")).get("corrections", {})
+    if not table:
+        return
+    index = {f"{q['year']}/{q['no']}": q for q in questions}
+    for key, fix in sorted(table.items()):
+        q = index.get(key)
+        if q is None:
+            raise SystemExit(f"정정 대상 문항이 없다: {key}")
+        opts = q.get("options") or []
+        i = q.get("answer_index")
+        now = opts[i] if i is not None and i < len(opts) else (q.get("answer_raw") or "")
+        if optkey(now) != optkey(fix["was"]):
+            raise SystemExit(
+                f"정정 {key}: 족보가 {fix['was']!r}라고 되어 있어야 하는데 "
+                f"{now!r}로 파싱됐다. 정정이 아직 필요한지 확인할 것.")
+        hits = [n for n, o in enumerate(opts) if optkey(o) == optkey(fix["answer"])]
+        if len(hits) != 1:
+            raise SystemExit(
+                f"정정 {key}: 보기에서 {fix['answer']!r}를 하나로 못 찾았다 -> {opts}")
+        # answer_raw는 족보에 적힌 그대로 둔다. 무엇을 고쳤는지가 남아야 한다.
+        q["answer_index"] = hits[0]
+        q["answer_text"] = None
+        q["correction"] = fix
+        print(f"정정 {key}: {fix['was']} -> {fix['answer']}")
+
+
 def main():
     if os.path.isdir(OUT_IMG):
         shutil.rmtree(OUT_IMG)
@@ -273,6 +328,8 @@ def main():
             paths.append(rel)
         q["image_paths"] = paths
         del q["images"]
+
+    apply_corrections(questions)
 
     questions.sort(key=lambda q: (q["year"], q["no"]))
     payload = {

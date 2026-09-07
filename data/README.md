@@ -171,6 +171,32 @@ uv run --python 3.13 python scripts/link_questions.py               # -> past_qu
 - 2016-2는 사진도 보기도 없는 **복원 목록**이라 문항으로 만들 수 없다. `recall_lists`로 따로 담았다.
 - 2026 족보는 머리글이 "…2026 족보"라 `땡시` 패턴에 안 걸린다. 별도로 처리한다.
 
+## 족보 정답표가 틀렸을 때 — `question_corrections.json`
+
+정답표는 시험지가 아니라 **먼저 본 사람이 기억으로 적어 둔 것**이라 틀린 칸이 섞인다.
+파싱이 잘못된 게 아니라 원본이 잘못된 경우이므로 파서로는 못 고친다.
+
+`past_questions.json`은 PDF에서 매번 새로 만들어지는 생성물이라 손으로 고치면 다음
+파싱에 날아간다. 그래서 정정은 `data/question_corrections.json`에 적고,
+`parse_jokbo.py`가 쓰기 직전에 덮어쓴다. 여기서 고치면 linked → filled → `build/quiz_db.json`
+까지 그대로 흘러가고 해설도 따라 바뀐다.
+
+```json
+"2019/24": {
+  "was": "Ventral pit",
+  "answer": "Conical projection",
+  "why": "사진은 간질이다. …"
+}
+```
+
+- 번호가 아니라 **보기 텍스트**로 적는다. 보기 순서가 밀려도 따라가고, 사람이 읽고 검토할 수 있다.
+- `was`가 파싱 결과와 다르면 **빌드를 세운다.** 족보가 개정됐거나 파서가 달라졌다는 뜻이고,
+  그때는 이 정정이 아직 필요한지 사람이 다시 봐야 한다. 조용히 덮어쓰면 그 신호가 사라진다.
+- `answer_raw`는 족보에 적힌 그대로 남는다. 무엇을 고쳤는지가 파일에 남아야 하고,
+  고친 내용과 이유는 문항의 `correction` 필드로 따라간다.
+
+문항 id는 `sha1("<year>|<no>")`라 정답을 고쳐도 안 바뀐다. 오답노트와 제보 기록이 그대로 붙어 있다.
+
 ## past_questions_linked.json 필드
 
 | 필드 | 설명 |

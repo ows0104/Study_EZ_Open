@@ -1293,15 +1293,15 @@
       "no": 1,
       "stem": "다음은 어떤 기생충의 충란인가?",
       "options": [
-        "Enterobius vermicularis",
-        "Strongyloides stercoralis",
         "Trichuris trichiura",
-        "Ascaris lumbricoides"
+        "Enterobius vermicularis",
+        "Ascaris lumbricoides",
+        "Strongyloides stercoralis"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 41,
       "answer_raw": "Trichuris trichiura",
-      "answer_index": 2,
+      "answer_index": 0,
       "answer_text": "Trichuris trichiura",
       "format": "mcq",
       "restored": true,
@@ -1323,15 +1323,15 @@
       "no": 2,
       "stem": "다음은 어떤 기생충의 충란인가?",
       "options": [
-        "Anisakis simplex",
-        "Ascaris lumbricoides",
         "Paragonimus westermani",
-        "Taenia solium"
+        "Taenia solium",
+        "Ascaris lumbricoides",
+        "Anisakis simplex"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 41,
       "answer_raw": "Ascaris lumbricoides",
-      "answer_index": 1,
+      "answer_index": 2,
       "answer_text": "Ascaris lumbricoides",
       "format": "mcq",
       "restored": true,
@@ -1353,9 +1353,9 @@
       "no": 3,
       "stem": "다음 기생충의 주요 감염경로는?",
       "options": [
-        "아프리카 호수에서 수영",
+        "민물고기",
+        "소고기육회",
         "민물게장",
-        "붕장어회",
         "접촉성"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
@@ -1385,8 +1385,8 @@
       "options": [
         "덜 익은 돼지고기",
         "민물게장",
-        "아프리카 호수에서 수영",
-        "연어회"
+        "민물고기",
+        "포낭에 오염된 물"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 41,
@@ -1414,14 +1414,14 @@
       "stem": "환자에게서 다음의 충란이 검출되었다. 감염 경로는?",
       "options": [
         "접촉감염성",
-        "접촉성감염",
-        "수인성감염",
-        "토양매개성"
+        "토양매개성",
+        "패류매개성",
+        "식품매개성"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 41,
       "answer_raw": "토양매개성",
-      "answer_index": 3,
+      "answer_index": 1,
       "answer_text": "토양매개성",
       "format": "mcq",
       "restored": true,
@@ -1504,14 +1504,14 @@
       "stem": "다음 기생충에서 indicator가 가리키는 구조물의 이름 은?",
       "options": [
         "testis",
-        "ventral sucker",
         "oral sucker",
-        "Ovary"
+        "Ovary",
+        "ventral sucker"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 42,
       "answer_raw": "Ovary",
-      "answer_index": 3,
+      "answer_index": 2,
       "answer_text": "Ovary",
       "format": "mcq",
       "restored": true,
@@ -1593,15 +1593,15 @@
       "no": 11,
       "stem": "환자에게서 다음의 충체를 적출하였다. 환자가 먹은 것 은?",
       "options": [
-        "민물고기",
+        "덜 익은 돼지고기",
+        "민물게장",
         "뱀, 개구리",
-        "은어",
-        "연어회"
+        "아프리카 호수에서 수영"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 43,
       "answer_raw": "뱀, 개구리",
-      "answer_index": 1,
+      "answer_index": 2,
       "answer_text": "뱀, 개구리",
       "format": "mcq",
       "restored": true,
@@ -1623,15 +1623,15 @@
       "no": 12,
       "stem": "환자에게서 다음의 충체를 적출하였다. 환자가 먹은 것 은?",
       "options": [
-        "연어회",
-        "대변과 함께 배출된 유구조충의 충란에 오염된 음식",
-        "덜 익은 돼지고기",
-        "붕장어회"
+        "붕장어회",
+        "민물게장",
+        "은어",
+        "대변과 함께 배출된 유구조충의 충란에 오염된 음식"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 43,
       "answer_raw": "대변과 함께 배출된 유구조충의 충란에 오염된 음식",
-      "answer_index": 1,
+      "answer_index": 3,
       "answer_text": "대변과 함께 배출된 유구조충의 충란에 오염된 음식",
       "format": "mcq",
       "restored": true,
@@ -1653,15 +1653,15 @@
       "no": 13,
       "stem": "환자에게서 다음의 충체를 적출하였다. 환자가 먹은 것 은?",
       "options": [
-        "민물게장",
-        "소고기육회",
-        "은어",
-        "뱀"
+        "돼지의 간",
+        "민물고기",
+        "뱀",
+        "민물게장"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 43,
       "answer_raw": "뱀",
-      "answer_index": 3,
+      "answer_index": 2,
       "answer_text": "뱀",
       "format": "mcq",
       "restored": true,
@@ -1683,15 +1683,15 @@
       "no": 14,
       "stem": "환자에게서 다음의 충체를 적출하였다. 환자가 먹은 것 은?",
       "options": [
-        "민물게장",
-        "미꾸라지",
-        "붕장어회",
-        "은어"
+        "민물고기",
+        "연어회",
+        "소고기육회",
+        "미꾸라지"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 43,
       "answer_raw": "미꾸라지",
-      "answer_index": 1,
+      "answer_index": 3,
       "answer_text": "미꾸라지",
       "format": "mcq",
       "restored": true,
@@ -1713,15 +1713,15 @@
       "no": 15,
       "stem": "위의 충란에서 indicator가 가리키는 구조물은?",
       "options": [
-        "Ventral pit",
+        "Terminal spine",
         "lateral spine",
-        "Conical projection",
-        "Terminal spine"
+        "Tribocytic organ",
+        "Conical projection"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 43,
       "answer_raw": "Terminal spine",
-      "answer_index": 3,
+      "answer_index": 0,
       "answer_text": "Terminal spine",
       "format": "mcq",
       "restored": true,
@@ -1743,15 +1743,15 @@
       "no": 16,
       "stem": "환자에게서 다음의 기생충을 얻었다. 환자의 증상은?",
       "options": [
+        "물 같은 설사",
+        "혈점액성 설사",
         "Cysticercosis",
-        "수양성 설사",
-        "Echinococcosis",
-        "물 같은 설사"
+        "지방변"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 43,
       "answer_raw": "물 같은 설사",
-      "answer_index": 3,
+      "answer_index": 0,
       "answer_text": "물 같은 설사",
       "format": "mcq",
       "restored": true,
@@ -1773,15 +1773,15 @@
       "no": 17,
       "stem": "환자에게서 다음의 기생충을 얻었다. 기생충의 감염형 은?",
       "options": [
-        "trophozoite",
-        "Cercaria",
         "promastigote",
-        "Miracidium"
+        "trypomastigote",
+        "Cercaria",
+        "gametocyte"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 44,
       "answer_raw": "Cercaria",
-      "answer_index": 1,
+      "answer_index": 2,
       "answer_text": "Cercaria",
       "format": "mcq",
       "restored": true,
@@ -1803,15 +1803,15 @@
       "no": 18,
       "stem": "대변검사 결과 다음과 같은 원충의 영양형이 관촬되었",
       "options": [
+        "Entamoeba coli",
         "Entamoeba histolytica",
         "이 기생충은 무엇인가?",
-        "Entamoeba coli",
         "Endolimax nana"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 44,
       "answer_raw": "Entamoeba coli",
-      "answer_index": 2,
+      "answer_index": 0,
       "answer_text": "Entamoeba coli",
       "format": "mcq",
       "restored": true,
@@ -1833,15 +1833,15 @@
       "no": 19,
       "stem": "다음 기생충에서 indicator가 가리키는 구조물의 이름 은?",
       "options": [
-        "Conical projection",
-        "branched intestine",
+        "testis",
         "cephalic cone",
-        "testis"
+        "Conical projection",
+        "branched intestine"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 44,
       "answer_raw": "Conical projection",
-      "answer_index": 0,
+      "answer_index": 2,
       "answer_text": "Conical projection",
       "format": "mcq",
       "restored": true,
@@ -1863,15 +1863,15 @@
       "no": 20,
       "stem": "다음은 방글라데시 여행 후 불규칙한 고열, 빈혈을 호 소하는 환자의 간 표본이다. 현미경에 보이는 기생충의 발 육단계는?",
       "options": [
+        "kinetoplast",
         "Amastigote",
         "amastigote nest",
-        "tachyzoite",
-        "kinetoplast"
+        "tachyzoite"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 44,
       "answer_raw": "Amastigote",
-      "answer_index": 0,
+      "answer_index": 1,
       "answer_text": "Amastigote",
       "format": "mcq",
       "restored": true,
@@ -1923,15 +1923,15 @@
       "no": 22,
       "stem": "(Gross) 다음 기생충에 대한 특징으로 맞는 것? 실제로는 jar에 담겨있는 성충을 보여주셨습니다.",
       "options": [
-        "Toxoplasma gondii",
-        "Balantidium coli",
         "B12 결핍",
+        "amastigote",
+        "Toxoplasma gondii",
         "promastigote"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 45,
       "answer_raw": "B12 결핍",
-      "answer_index": 2,
+      "answer_index": 0,
       "answer_text": "B12 결핍",
       "format": "mcq",
       "restored": true,
@@ -1953,15 +1953,15 @@
       "no": 23,
       "stem": "위암으로 의심되는 환자를 수술하다가 위에서 발견된 충체의 단면이다. Indicator가 가리키는 구조물의 이름은?",
       "options": [
-        "lateral cord",
-        "Y-shaped intestinal lumen",
+        "intestinal lumen",
         "Renette cell",
-        "intestinal lumen"
+        "Y-shaped intestinal lumen",
+        "lateral cord"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 45,
       "answer_raw": "Renette cell",
-      "answer_index": 2,
+      "answer_index": 1,
       "answer_text": "Renette cell",
       "format": "mcq",
       "restored": true,
@@ -1985,13 +1985,13 @@
       "options": [
         "Entamoeba histolytica",
         "Trichomonas vaginalis",
-        "Toxoplasma gondii",
-        "Giardia lamblia"
+        "Giardia lamblia",
+        "Toxoplasma gondii"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 45,
       "answer_raw": "Giardia lamblia",
-      "answer_index": 3,
+      "answer_index": 2,
       "answer_text": "Giardia lamblia",
       "format": "mcq",
       "restored": true,
@@ -2014,14 +2014,14 @@
       "stem": "현미경에서 보이는 기생충의 발육단계는?",
       "options": [
         "brood capsule",
-        "hooklet",
+        "Protoscolex",
         "daughter cyst",
-        "Protoscolex"
+        "hooklet"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 45,
       "answer_raw": "Protoscolex",
-      "answer_index": 3,
+      "answer_index": 1,
       "answer_text": "Protoscolex",
       "format": "mcq",
       "restored": true,
@@ -2073,15 +2073,15 @@
       "no": 27,
       "stem": "다음 열 패턴을 따르고, 현미경에 보이는 말라리아의 종은? Fever pattern 그래프와 같이 주셨습니다.",
       "options": [
-        "Plasmodium falciparum",
-        "Plasmodium malariae",
         "Plasmodium ovale",
-        "Plasmodium vivax"
+        "Plasmodium malariae",
+        "Plasmodium vivax",
+        "Plasmodium falciparum"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 45,
       "answer_raw": "Plasmodium vivax",
-      "answer_index": 3,
+      "answer_index": 2,
       "answer_text": "Plasmodium vivax",
       "format": "mcq",
       "restored": true,
@@ -2103,15 +2103,15 @@
       "no": 28,
       "stem": "다음 절지동물로 인해 발생하는 병은?",
       "options": [
-        "Trichomonas vaginalis",
-        "Leishmania major",
         "샤가스 병",
-        "Leishmania donovani"
+        "Leishmania major",
+        "Leishmania donovani",
+        "Trichomonas vaginalis"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 46,
       "answer_raw": "샤가스 병",
-      "answer_index": 2,
+      "answer_index": 0,
       "answer_text": "샤가스 병",
       "format": "mcq",
       "restored": true,
@@ -2133,15 +2133,15 @@
       "no": 29,
       "stem": "다음은 말라리아 환자의 박층 도말 표본이다. 현미경에 보이는 말라리아의 발육단계는?",
       "options": [
-        "ring form",
-        "RBC",
+        "Gametocyte",
         "trophozoite",
-        "Gametocyte"
+        "RBC",
+        "ring form"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 46,
       "answer_raw": "Gametocyte",
-      "answer_index": 3,
+      "answer_index": 0,
       "answer_text": "Gametocyte",
       "format": "mcq",
       "restored": true,
@@ -2163,15 +2163,15 @@
       "no": 30,
       "stem": "다음은 어떤 기생충의 주요 구조물이다. 이 기생충은 무엇인가? + 입모양이 보이는 사진",
       "options": [
-        "Ancylostoma duodenale",
-        "Necator americanus",
         "Enterobius vermicularis",
+        "Necator americanus",
+        "Ancylostoma duodenale",
         "Diphyllobothrium latum"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 46,
       "answer_raw": "Ancylostoma duodenale",
-      "answer_index": 0,
+      "answer_index": 2,
       "answer_text": "Ancylostoma duodenale",
       "format": "mcq",
       "restored": true,
@@ -2193,15 +2193,15 @@
       "no": 31,
       "stem": "호흡이 어렵고, 기침을 하는 환자의 폐소견에서 찾은 다음 기생충은 무엇인가?",
       "options": [
-        "Entamoeba histolytica",
-        "Cryptosporidium parvum",
         "Toxoplasma gondii",
-        "Pneumocystis carinii"
+        "Entamoeba histolytica",
+        "Pneumocystis carinii",
+        "Cryptosporidium parvum"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 46,
       "answer_raw": "Pneumocystis carinii",
-      "answer_index": 3,
+      "answer_index": 2,
       "answer_text": "Pneumocystis carinii",
       "format": "mcq",
       "restored": true,
@@ -2223,15 +2223,15 @@
       "no": 32,
       "stem": "다음은 뇌조직 표본이다. 다음은 어떤 기생충인가?",
       "options": [
+        "Toxoplasma gondii",
         "Cryptosporidium parvum",
         "Leishmania donovani",
-        "Toxoplasma gondii",
         "Paragonimus westermani"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 46,
       "answer_raw": "Toxoplasma gondii",
-      "answer_index": 2,
+      "answer_index": 0,
       "answer_text": "Toxoplasma gondii",
       "format": "mcq",
       "restored": true,
@@ -2253,15 +2253,15 @@
       "no": 33,
       "stem": "(Gross) 적출한 충체의 감염원인은?",
       "options": [
-        "오징어회",
-        "민물고기",
         "아프리카 호수에서 수영",
-        "덜 익은 돼지고기"
+        "오징어회",
+        "붕장어회",
+        "민물고기"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 47,
       "answer_raw": "오징어회",
-      "answer_index": 0,
+      "answer_index": 1,
       "answer_text": "오징어회",
       "format": "mcq",
       "restored": true,
@@ -2283,15 +2283,15 @@
       "no": 34,
       "stem": "다음 기생충이 우리 몸에서 거주하는 조직은?",
       "options": [
-        "Muscle cell",
-        "Paragonimus westermani",
         "Enterobius vermicularis",
-        "피부"
+        "대장",
+        "Paragonimus westermani",
+        "Muscle cell"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 47,
       "answer_raw": "Muscle cell",
-      "answer_index": 0,
+      "answer_index": 3,
       "answer_text": "Muscle cell",
       "format": "mcq",
       "restored": true,
@@ -2313,15 +2313,15 @@
       "no": 35,
       "stem": "다음 원충의 운동방식은? (람블편모충)",
       "options": [
-        "nucleus",
-        "Flagella",
+        "sucking disc",
         "axostyle",
-        "sucking disc"
+        "Flagella",
+        "nucleus"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 47,
       "answer_raw": "Flagella",
-      "answer_index": 1,
+      "answer_index": 2,
       "answer_text": "Flagella",
       "format": "mcq",
       "restored": true,
@@ -3326,10 +3326,10 @@
       "no": 29,
       "stem": "비타민 B12의 부족이 나타나는 환자의 몸에서 다음과 같은 충란이 나왔다. 표를 보고 이 기생충의 충란의 크기 를 계산하시오. 위의 사진은 실제 시험에 나왔던 현미경 시야로, 시험이 끝 나자마자 교수님 허락을 받고 찍은 귀중한 사진입니다. 옛 족보와는 표에 적힌 값이 다릅니다. 표의 값을 외워가려 하지 마시고 시험장에서 실제로 출제된 값을 보고 계산하 시기 바랍니다.",
       "options": [
-        "Ascaris lumbricoides",
+        "Clonorchis sinensis",
         "66um (사진찍은 걸 자로 대어보면 정확히 30 눈금이",
-        "Metagonimus yokogawai",
-        "Enterobius vermicularis"
+        "Trichuris trichiura",
+        "Schistosoma mansoni"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 38,
@@ -3358,15 +3358,15 @@
       "no": 30,
       "stem": "혈액 도말 파경로 공부! • 전자기기 사용한 부정행위 금지 – 핸드폰, 아이패드 등 회수 • 1,2번 방: 가방 등 개인 소지물 보관 • 3,4번 방: 시험 • 5,6번: 시험대기 (노트북 사용 가능) • 복도에서는 조용히!!!!!! • 40문제, 30초/문제 • 문제형식: 객관식, 실기 (혈액도말) • 문제내용: 현미경 슬라이드 (광학현미경 or 입체해부), 육 안표본",
       "options": [
-        "Entamoeba nana",
+        "아래 사진은 실제로 시험을 통과한 PBS 결과입니다.",
+        "promastigote",
         "epimastigote",
-        "이 기생충은 무엇인가?",
-        "아래 사진은 실제로 시험을 통과한 PBS 결과입니다."
+        "Toxoplasma gondii"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 38,
       "answer_raw": "아래 사진은 실제로 시험을 통과한 PBS 결과입니다.",
-      "answer_index": 3,
+      "answer_index": 0,
       "answer_text": "아래 사진은 실제로 시험을 통과한 PBS 결과입니다.",
       "format": "mcq",
       "restored": true,
@@ -3811,15 +3811,15 @@
       "no": 14,
       "stem": "복통을 겼던 어린아이에서 다음의 충체가 입으로 빠져 나왔다면 그 원인은 무엇인가?",
       "options": [
-        "Necator americanus",
-        "구멍을 좋아하는 특성 때문",
+        "위산 분비의 감소로 인해 위로 이동한 충체가 입으로 빠져나왔다.",
+        "Trichuris trichiura",
         "암수 성비가 맞지 않아서",
-        "위산 분비의 감소로 인해 위로 이동한 충체가 입으로 빠져나왔다."
+        "구멍을 좋아하는 특성 때문"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 24,
       "answer_raw": "1",
-      "answer_index": 3,
+      "answer_index": 0,
       "answer_text": null,
       "format": "mcq",
       "restored": true,
@@ -4140,17 +4140,22 @@
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 26,
       "answer_raw": "4",
-      "answer_index": 3,
+      "answer_index": 2,
       "answer_text": null,
       "format": "mcq",
       "restored": true,
       "image_paths": [
         "2019/q24_1.png"
       ],
+      "correction": {
+        "was": "Ventral pit",
+        "answer": "Conical projection",
+        "why": "사진은 간질(Fasciola hepatica) 성충이다. 원 안이 cephalic cone — 끝에 oral sucker, 밑동에 ventral sucker가 있고 그 아래로 어깨가 벌어진다. 몸통은 잘게 갈라진 장관·고환·난황선으로 차 있다. 참굴큰입흡충은 0.3~0.5mm짜리 타원형이라 이 배율로 이렇게 찍힐 수 없고, 같은 시험지 22번에 이미 나와 있다. 결정적으로 2021년 10번이 지문·보기·사진이 모두 같은 문항인데 정답이 3) Conical projection이고, 2021년 쪽 사진은 크롭이 넓어 옆에 적힌 손글씨 '간질'이 그대로 보인다. 족보 9쪽 정답표의 '24. 4'가 복원 과정에서 잘못 적힌 것이다."
+      },
       "qtype": "indicator",
-      "correct_text": "Ventral pit",
+      "correct_text": "Conical projection",
       "answer_species_id": null,
-      "answer_structure": "ventral pit",
+      "answer_structure": "conical projection",
       "answer_stage": null,
       "answer_kind": "structure",
       "option_species_ids": [],
@@ -5519,15 +5524,15 @@
       "no": 7,
       "stem": "다음충란을가지는기생충은? (선지복원안됨)",
       "options": [
-        "Heterophyes nocens",
-        "Gymnophalloides seoi",
+        "Metagonimus yokogawai",
         "Clonorchis sinensis",
-        "Metagonimus yokogawai"
+        "Gymnophalloides seoi",
+        "Heterophyes nocens"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 11,
       "answer_raw": "Metagonimus yokogawai",
-      "answer_index": 3,
+      "answer_index": 0,
       "answer_text": "Metagonimus yokogawai",
       "format": "mcq",
       "restored": true,
@@ -5868,9 +5873,9 @@
       "stem": "다음기생충은? (선지복원안되었고실제로현미경2 개였음. 하나는저배율, 하나는고배율)",
       "options": [
         "Strongylodes stercoralis",
-        "Ascaris lumbricoides",
+        "Ancylostoma duodenale",
         "Trichuris trichiura",
-        "Ancylostoma duodenale"
+        "Ascaris lumbricoides"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 13,
@@ -6012,14 +6017,14 @@
       "stem": "다음현미경사진의증상을일으키는기생충의특징적 구조물은? (선지복원안됨)",
       "options": [
         "scolex",
+        "nursing cell? (선지복원잘안되어있습니다.)",
         "cyst wall",
-        "Gynecophoral canal",
-        "nursing cell? (선지복원잘안되어있습니다.)"
+        "Conical projection"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 13,
       "answer_raw": "nursing cell? (선지복원잘안되어있습니다.)",
-      "answer_index": 3,
+      "answer_index": 1,
       "answer_text": "nursing cell? (선지복원잘안되어있습니다.)",
       "format": "mcq",
       "restored": true,
@@ -6502,15 +6507,15 @@
       "no": 8,
       "stem": "(복원 안 됨)",
       "options": [
-        "promastigote",
-        "Balantidium coli",
-        "Entamoeba histolytica",
-        "(복원 안 됨)"
+        "이 기생충은 무엇인가?",
+        "epimastigote",
+        "(복원 안 됨)",
+        "Balantidium coli"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 2,
       "answer_raw": "(복원 안 됨)",
-      "answer_index": 3,
+      "answer_index": 2,
       "answer_text": "(복원 안 됨)",
       "format": "mcq",
       "restored": true,
@@ -6973,15 +6978,15 @@
       "no": 23,
       "stem": "(복원되지 않음)",
       "options": [
-        "Cryptosporidium parvum",
-        "Balantidium coli",
-        "Entamoeba nana",
-        "복원되지 않음"
+        "promastigote",
+        "복원되지 않음",
+        "epimastigote",
+        "Toxoplasma gondii"
       ],
       "source_pdf": "2025 기생충학 족보.pdf",
       "page": 4,
       "answer_raw": "복원되지 않음",
-      "answer_index": 3,
+      "answer_index": 1,
       "answer_text": "복원되지 않음",
       "format": "mcq",
       "restored": true,
@@ -8011,15 +8016,15 @@
       "no": 15,
       "stem": "Indicator가 지시하는 구조물은?",
       "options": [
-        "Renette cell",
+        "Y-shaped intestinal lumen",
         "Lateral chord",
         "lateral cord",
-        "Y-shaped intestinal lumen"
+        "Renette cell"
       ],
       "source_pdf": "2026 감염의 기초(기생충학) 족보.pdf",
       "page": 4,
       "answer_raw": "4",
-      "answer_index": 0,
+      "answer_index": 3,
       "answer_text": null,
       "format": "mcq",
       "restored": true,
@@ -8645,14 +8650,14 @@
       "stem": "다음 현미경 사진의 기생충이 나타내는 특징적인 소 견은?",
       "options": [
         "알레르기성 질환",
-        "Entamoeba nana",
         "가피",
-        "Toxoplasma gondii"
+        "Entamoeba histolytica",
+        "Entamoeba nana"
       ],
       "source_pdf": "2026 감염의 기초(기생충학) 족보.pdf",
       "page": 8,
       "answer_raw": "3",
-      "answer_index": 2,
+      "answer_index": 1,
       "answer_text": null,
       "format": "mcq",
       "restored": true,
