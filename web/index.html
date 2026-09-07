@@ -239,6 +239,20 @@ body:has(#quiz:not(.hidden)) #who{display:none}
   border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:14px}
 .sheet textarea{min-height:96px;resize:vertical}
 .sheet .row{margin-top:14px;justify-content:flex-end}
+/* 신고 창 안에서 펴 보는 출처와 해설. 손잡이는 조용한 회색이다 — 여기서
+   눈에 들어와야 하는 것은 적는 칸이지 펴는 단추가 아니다. */
+.reveal{display:grid;gap:6px;margin-top:10px}
+.reveal details{border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.reveal summary{cursor:pointer;list-style:none;padding:7px 10px;
+  font-size:12px;font-weight:600;color:var(--muted)}
+.reveal summary::-webkit-details-marker{display:none}
+.reveal summary::before{content:'▸ '}
+.reveal details[open] summary::before{content:'▾ '}
+.reveal summary i{font-weight:500;font-style:normal;opacity:.75}
+.reveal .body{padding:0 10px 9px;font-size:12.5px;line-height:1.65;
+  color:var(--ink);word-break:break-word}
+.reveal .body code{font-size:11px;opacity:.75}
+.reveal .body .k{color:var(--muted);font-weight:600}
 .quoted{font-size:13px;color:var(--muted);background:var(--bg);border:1px solid var(--line);
   border-radius:8px;padding:9px 10px;margin:8px 0 14px;line-height:1.5}
 
@@ -407,8 +421,8 @@ body:has(#quiz:not(.hidden)) #who{display:none}
     </div>
   </div>
   <div class="row" style="margin-top:10px;justify-content:center">
-    <button class="report-link" id="report-btn"
-      onclick="openReport(S.qs[S.i].id)">이 문항 신고</button>
+    <button class="report-link" id="report-btn" data-label="일시정지/신고"
+      onclick="openReport(S.qs[S.i].id)">일시정지/신고</button>
   </div>
   <!-- 안내 문구는 render()가 모드에 맞춰 채운다. 땡시에서는 고르는 것이 곧
        넘기는 것이라 「Enter로 다음」이 틀린 말이 된다. -->
@@ -450,6 +464,9 @@ body:has(#quiz:not(.hidden)) #who{display:none}
     <h3>이 문항이 이상합니다</h3>
     <p class="sub" style="margin:0">문항은 자동 생성이라 오류가 남습니다. 어디가 틀렸는지 알려 주세요.</p>
     <div class="quoted" id="report-stem"></div>
+    <!-- 무엇이 틀렸는지 확인할 자리. 창을 닫지 않고 펴 볼 수 있어야
+         적던 신고 글이 살아남는다. 해설은 접힌 채로 열린다. -->
+    <div class="reveal" id="report-detail"></div>
 
     <label class="field"><span>무엇이 틀렸나요</span>
       <select id="report-kind">

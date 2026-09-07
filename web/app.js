@@ -516,10 +516,13 @@ let reportFor = null;
 function markReported(btn, qid){
   if (!btn) return;
   const mine = MY_REPORTS[qid];
+  // 문제 화면의 버튼은 시계를 멈추는 일도 겸하므로 이름이 다르다. 그 이름은
+  // 버튼이 `data-label`로 들고 있고, 다시보기 쪽은 예전 이름을 그대로 쓴다.
+  const base = btn.dataset.label || '이 문항 신고';
   btn.classList.toggle('done', !!mine);
   btn.textContent = mine
     ? (mine.status === 'open' ? '신고함 · 고치기' : '신고함 · ' + STATUS_KO[mine.status])
-    : '이 문항 신고';
+    : base;
 }
 
 const STATUS_KO = { open:'확인 중', resolved:'고침', wontfix:'의도된 것' };
@@ -539,11 +542,44 @@ function openReport(qid, idx){
   $('report-kind').value = mine ? mine.kind : 'answer';
   $('report-note').value = mine ? mine.note : '';
   $('report-stem').textContent = reportFor.stem;
+  $('report-detail').innerHTML = reportDetail(q, names);
   $('report-msg').textContent = '';
   $('report-save').disabled = false;
   stopTimer();                       // 적는 시간은 안 잰다
   $('report').classList.remove('hidden');
   $('report-note').focus();
+}
+
+/** 신고 창 안에서 펴 보는 출처와 해설.
+ *
+ *  틀렸다고 적으려면 무엇이 어떻게 틀렸는지부터 봐야 한다. 창을 닫고
+ *  확인한 뒤 다시 열면 적던 글이 날아가므로, 볼 것을 창 안으로 들인다.
+ *
+ *  **접은 채로 연다.** 해설에는 정답이 들어 있어서, 땡시 중에 신고 버튼을
+ *  누른 것만으로 답이 보이면 안 된다 — 펴는 것은 한 번 더 누른 사람뿐이고,
+ *  그 사람은 이미 이 문항을 포기하고 고치러 온 사람이다.
+ */
+function reportDetail(q, names){
+  const box = (title, body) =>
+    `<details><summary>${title}</summary><div class="body">${body}</div></details>`;
+  const out = [];
+
+  const srcs = (names || []).map(imgSrc).filter(Boolean);
+  const bits = [
+    q.stain ? `<span class="k">염색</span> ${esc(q.stain)}` : '',
+    q.magnification ? `<span class="k">배율</span> ${esc(q.magnification)}` : '',
+    ...srcs.map(s => `<span class="k">출처</span> ${esc(s.src)}<br><code>${esc(s.path)}</code>`
+      + (s.sharp && s.sharp < 12 ? `<br><span class="k">선명도 ${s.sharp} · 흐린 사진</span>` : '')),
+  ].filter(Boolean);
+  if (bits.length) out.push(box('사진 출처', bits.join('<br>')));
+
+  const ans = (q.options || [])[q.answer];
+  if (ans || q.explanation)
+    out.push(box('정답과 해설 <i>— 펴면 답이 보입니다</i>',
+      (ans ? `<b>정답: ${esc(ans)}</b>` : '')
+      + (q.explanation ? `${ans ? '<br>' : ''}${esc(q.explanation)}` : '')));
+
+  return out.join('');
 }
 
 function closeReport(){
