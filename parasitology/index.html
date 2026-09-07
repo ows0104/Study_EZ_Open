@@ -120,6 +120,15 @@ button:disabled{opacity:.45;cursor:default}
 .imgbox img{max-width:100%;max-height:min(48vh,430px);display:block}
 /* 2단일 때는 사진이 세로로 더 큰 자리를 쓴다 */
 .qgrid .imgbox img{max-height:min(62vh,600px)}
+/* 사진이 둘인 문항은 나란히 놓는다. 세로로 쌓으면 두 장을 다 담느라 각각이
+   절반 높이가 되는데, 이 자리는 세로보다 가로가 남는다. 두 장을 한눈에 놓고
+   견주는 것이 이 문항들이 묻는 방식이기도 하다 — 데모에서 무엇인지 알아보고
+   현미경에서 indicator를 짚는다. 좁은 화면에서만 아래로 내린다. */
+.imgrow{display:flex;gap:8px;align-items:stretch}
+.imgrow>.imgbox{flex:1;min-width:0}
+/* 나란히 놓이면 한 장이 쓸 폭이 절반이라, 세로로 더 키워도 넘치지 않는다 */
+.imgrow.multi>.imgbox img{max-height:min(56vh,500px)}
+.qgrid .imgrow.multi>.imgbox img{max-height:min(62vh,600px)}
 .qgrid .opts{margin-top:0}
 .imgmeta{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.6);color:#fff;
   font-size:11px;padding:3px 8px;border-radius:6px;letter-spacing:.02em}
@@ -127,6 +136,11 @@ button:disabled{opacity:.45;cursor:default}
   margin-top:6px;font-size:11.5px;color:var(--muted)}
 .imgsrc code{font-size:11px;opacity:.75}
 .imgsrc .dim{margin-left:auto}
+/* 사진 하나가 한 덩어리. 한 장짜리는 손잡이 옆에 그대로 붙어 서고, 두 장짜리는
+   덩어리마다 한 줄을 쓴다 — 섞어 놓으면 「흐린 사진」이 어느 쪽 이야기인지
+   알 수 없다. */
+.imgsrc .src-one{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;flex:1 1 auto;min-width:0}
+.imgsrc.many .src-one{flex:1 0 100%}
 /* 출처를 여는 손잡이. 문제를 푸는 동안에는 접혀 있다 — 지금 볼 것은
    사진이고, 원본이 어디인지는 이상한 사진을 만났을 때만 궁금하다.
    선명도도 같이 접는다 — 흐린 사진이라는 말이 먼저 눈에 들어오면 사진을
@@ -157,12 +171,29 @@ table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:6px}
 th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line)}
 th{color:var(--muted);font-weight:600;font-size:12px}
 td.num{text-align:right;font-variant-numeric:tabular-nums}
+/* 접어 둔 표. 손잡이는 h2와 같은 크기로 세운다 — 「유형별」은 접혀 있을
+   뿐이지 「분류군별」보다 작은 항목이 아니고, 회색 잔글씨로 만들면 표가
+   하나뿐인 화면처럼 읽힌다. */
+details.fold{margin-top:26px}
+details.fold>summary{cursor:pointer;list-style:none;user-select:none;
+  font-size:17px;font-weight:700;letter-spacing:-.01em;margin-bottom:10px}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::before{content:'▸  ';color:var(--muted);font-weight:400}
+details.fold[open]>summary::before{content:'▾  '}
+details.fold>summary:hover{color:var(--accent)}
 .review{display:grid;gap:12px;margin-top:10px}
 .rev{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--card)}
 .rev.wrong{border-left:3px solid var(--no)}
 .rev.right{border-left:3px solid var(--ok)}
 .rev .q{font-weight:600;font-size:14px;margin-bottom:8px}
-.rev img{max-width:190px;max-height:150px;border-radius:8px;float:right;margin:0 0 8px 12px}
+.rev .revimgs{float:right;display:flex;gap:6px;margin:0 0 8px 12px}
+/* 다시보기 사진도 누르면 커진다. 틀린 문항에서 정작 봐야 할 것은 「무엇을
+   못 알아봤는가」인데, 150px짜리 섬네일로는 문제를 풀 때보다 덜 보인다. */
+.rev img{max-width:190px;max-height:150px;border-radius:8px;display:block;
+  cursor:zoom-in}
+/* 두 장이면 나란히. 사진마다 float를 걸면 순서가 뒤집혀서 「사진 1/2」이
+   오른쪽에 서고 2/2가 왼쪽에 선다 — 아래 출처 줄과 짝이 안 맞는다. */
+.rev .revimgs img{max-width:150px}
 .rev .a{font-size:13px}
 .rev .a i{font-style:normal;color:var(--no)}
 .rev .a b{color:var(--ok)}
@@ -201,9 +232,9 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
    잘못 누르면 풀던 판이 통째로 날아간다. 나가는 문은 그 화면 안에 따로 있다. */
 body:has(#quiz:not(.hidden)) #who{display:none}
 
-/* ── 신고
-   빨갛게 둔다. 신고는 눌러 주는 사람이 있어야 쌓이는데, 조용한 회색이면
-   있는 줄도 모른다. **이미 신고한 것은 초록으로 바뀐다** — 빨강이 "누르세요"라면
+/* ── 제보
+   빨갛게 둔다. 제보는 눌러 주는 사람이 있어야 쌓이는데, 조용한 회색이면
+   있는 줄도 모른다. **이미 제보한 것은 초록으로 바뀐다** — 빨강이 "누르세요"라면
    초록은 "받았습니다"이고, 둘이 같은 색이면 어느 쪽인지 알 수 없다. */
 .report-link{font-size:12px;padding:6px 10px;border-radius:8px;
   color:var(--no);border-color:var(--no)}
@@ -221,10 +252,24 @@ body:has(#quiz:not(.hidden)) #who{display:none}
   border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:14px}
 .sheet textarea{min-height:96px;resize:vertical}
 .sheet .row{margin-top:14px;justify-content:flex-end}
+/* 제보 창 안에서 펴 보는 출처와 해설. 손잡이는 조용한 회색이다 — 여기서
+   눈에 들어와야 하는 것은 적는 칸이지 펴는 단추가 아니다. */
+.reveal{display:grid;gap:6px;margin-top:10px}
+.reveal details{border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.reveal summary{cursor:pointer;list-style:none;padding:7px 10px;
+  font-size:12px;font-weight:600;color:var(--muted)}
+.reveal summary::-webkit-details-marker{display:none}
+.reveal summary::before{content:'▸ '}
+.reveal details[open] summary::before{content:'▾ '}
+.reveal summary i{font-weight:500;font-style:normal;opacity:.75}
+.reveal .body{padding:0 10px 9px;font-size:12.5px;line-height:1.65;
+  color:var(--ink);word-break:break-word}
+.reveal .body code{font-size:11px;opacity:.75}
+.reveal .body .k{color:var(--muted);font-weight:600}
 .quoted{font-size:13px;color:var(--muted);background:var(--bg);border:1px solid var(--line);
   border-radius:8px;padding:9px 10px;margin:8px 0 14px;line-height:1.5}
 
-/* ── 신고함 */
+/* ── 제보함 */
 .rep{border:1px solid var(--line);border-left:3px solid var(--line);border-radius:10px;
   padding:12px;margin-bottom:10px}
 .rep.hot{border-left-color:var(--no)}
@@ -252,10 +297,13 @@ body:has(#quiz:not(.hidden)) #who{display:none}
   .qgrid .opts{order:3}
   .qgrid .imgbox img{max-height:min(44vh,380px)}
   .qgrid .opts{margin-top:2px}
+  /* 이 폭에서 두 장을 나란히 놓으면 한 장이 손톱만 해진다. 아래로 내린다. */
+  .imgrow.multi{flex-direction:column}
+  .qgrid .imgrow.multi>.imgbox img{max-height:min(32vh,280px)}
 }
 @media (max-width:560px){
   .actions{grid-template-columns:1fr}
-  .rev img{float:none;display:block;margin:0 0 8px}
+  .rev .revimgs{float:none;margin:0 0 8px}
   /* 이름표를 칩 위로 올린다. 좁은 화면에서 46px를 떼어 주면 칩이 한 줄에
      두 개밖에 못 선다. */
   .pick{flex-direction:column;gap:5px}
@@ -340,7 +388,7 @@ body:has(#quiz:not(.hidden)) #who{display:none}
   <div class="card recs" id="records">아직 기록이 없습니다.</div>
 
   <div id="admin" class="hidden">
-    <h2>신고함</h2>
+    <h2>제보함</h2>
     <div class="card">
       <p class="sub" id="admin-sum" style="margin:0 0 12px">읽는 중…</p>
       <div id="admin-list"></div>
@@ -348,7 +396,7 @@ body:has(#quiz:not(.hidden)) #who{display:none}
   </div>
 
   <p class="foot">사진은 실습 정리본·실제실습본에서, 출제 경향은 2015–2025년 족보에서 가져왔습니다.<br>
-    문항은 자동 생성이므로 오류가 있습니다. 이상한 문항은 그 자리에서 신고해 주세요.</p>
+    문항은 자동 생성이므로 오류가 있습니다. 이상한 문항은 그 자리에서 제보해 주세요.</p>
 </div>
 
 <!-- ══════════ 문제 ══════════ -->
@@ -367,11 +415,11 @@ body:has(#quiz:not(.hidden)) #who{display:none}
     <div class="qgrid">
       <p class="stem" id="q-stem"></p>
       <div class="imgwrap">
-        <div class="imgbox" id="q-imgbox" onclick="zoom()">
-          <img id="q-img" alt="표본 사진">
-          <span class="imgmeta" id="q-meta"></span>
-        </div>
-        <!-- 사진 출처. 흐리거나 잘못 잘린 사진을 신고할 때 어느 원본인지 짚을 수
+        <!-- 사진은 JS가 채운다. **한 문항에 두 장인 자리가 있다** — 현미경 +
+             데모, 또는 현미경 둘. 실제 땡시가 그렇게 놓고 묻고, 그중에는
+             indicator가 둘째 장에만 찍힌 것도 있다. -->
+        <div class="imgrow" id="q-imgs"></div>
+        <!-- 사진 출처. 흐리거나 잘못 잘린 사진을 제보할 때 어느 원본인지 짚을 수
              있어야 한다. 평소에는 접혀 있고 「출처」를 누르면 펴진다. -->
         <div class="imgsrc" id="q-src"></div>
       </div>
@@ -386,10 +434,12 @@ body:has(#quiz:not(.hidden)) #who{display:none}
     </div>
   </div>
   <div class="row" style="margin-top:10px;justify-content:center">
-    <button class="report-link" id="report-btn"
-      onclick="openReport(S.qs[S.i].id)">이 문항 신고</button>
+    <button class="report-link" id="report-btn" data-label="일시정지/제보"
+      onclick="openReport(S.qs[S.i].id)">일시정지/제보</button>
   </div>
-  <p class="foot">키보드 1·2·3·4로 선택, Enter로 다음<br>신고하는 동안은 시계가 멈춥니다.</p>
+  <!-- 안내 문구는 render()가 모드에 맞춰 채운다. 땡시에서는 고르는 것이 곧
+       넘기는 것이라 「Enter로 다음」이 틀린 말이 된다. -->
+  <p class="foot" id="q-hint"></p>
 </div>
 
 <!-- ══════════ 결과 ══════════ -->
@@ -405,10 +455,15 @@ body:has(#quiz:not(.hidden)) #who{display:none}
     </div>
     <p class="gate-msg bad hidden" id="r-sync"></p>
   </div>
-  <h2>유형별</h2>
-  <div class="card"><table id="r-type"></table></div>
+  <!-- 채점하고 나서 제일 먼저 보는 것은 「어느 분류군이 약한가」다. 다음에
+       무엇을 다시 볼지가 거기서 갈린다. 「어떤 물음 방식에 약한가」는 그 다음
+       이야기라 접어 둔다 — 펴 보고 싶을 때 누르면 된다. -->
   <h2>분류군별</h2>
   <div class="card"><table id="r-group"></table></div>
+  <details class="fold">
+    <summary>유형별</summary>
+    <div class="card"><table id="r-type"></table></div>
+  </details>
   <h2>문항 다시보기</h2>
   <div class="review" id="r-review"></div>
 </div>
@@ -421,12 +476,15 @@ body:has(#quiz:not(.hidden)) #who{display:none}
   <span class="imgmeta" id="modal-src" style="position:fixed;left:50%;transform:translateX(-50%);bottom:16px"></span>
 </div>
 
-<!-- ══════════ 문항 신고 ══════════ -->
+<!-- ══════════ 문항 제보 ══════════ -->
 <div class="sheet hidden" id="report">
   <div class="card">
     <h3>이 문항이 이상합니다</h3>
     <p class="sub" style="margin:0">문항은 자동 생성이라 오류가 남습니다. 어디가 틀렸는지 알려 주세요.</p>
     <div class="quoted" id="report-stem"></div>
+    <!-- 무엇이 틀렸는지 확인할 자리. 창을 닫지 않고 펴 볼 수 있어야
+         적던 제보 글이 살아남는다. 해설은 접힌 채로 열린다. -->
+    <div class="reveal" id="report-detail"></div>
 
     <label class="field"><span>무엇이 틀렸나요</span>
       <select id="report-kind">
@@ -451,10 +509,10 @@ body:has(#quiz:not(.hidden)) #who{display:none}
 <script src="../config.js?v=c3103667"></script>
 <!-- Study_EZ와 나눠 쓰는 세션 저장소. 원본은 Study_EZ_Open/packages/session/ 이고
      scripts/sync_shared.py 가 가져온다. auth.js 보다 먼저 와야 한다. -->
-<script src="../session.js?v=f2620373"></script>
-<script src="../auth.js?v=0399f336"></script>
+<script src="../session.js?v=40eb7d79"></script>
+<script src="../auth.js?v=6376c016"></script>
 <!-- 다섯 과목이 같이 쓰는 로그인 문. 화면은 이 파일이 들고 온다. -->
 <script src="../gate.js?v=38aef296"></script>
-<script src="app.js?v=7ba2f8e0"></script>
+<script src="app.js?v=ef2b8094"></script>
 </body>
 </html>
