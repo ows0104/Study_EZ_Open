@@ -550,18 +550,20 @@ function openReport(qid, idx){
   $('report-note').focus();
 }
 
-/** 제보 창 안에서 펴 보는 출처와 해설.
+/** 제보 창 안에서 보는 출처와 해설.
  *
  *  틀렸다고 적으려면 무엇이 어떻게 틀렸는지부터 봐야 한다. 창을 닫고
  *  확인한 뒤 다시 열면 적던 글이 날아가므로, 볼 것을 창 안으로 들인다.
  *
- *  **접은 채로 연다.** 해설에는 정답이 들어 있어서, 땡시 중에 제보 버튼을
- *  누른 것만으로 답이 보이면 안 된다 — 펴는 것은 한 번 더 누른 사람뿐이고,
- *  그 사람은 이미 이 문항을 포기하고 고치러 온 사람이다.
+ *  **편 채로 연다.** 제보하러 온 사람은 이미 이 문항을 포기하고 고치러 온
+ *  사람이라, 답이 보이는 것은 잃을 것이 아니다. 한 번 더 누르게 하면 그
+ *  한 번이 제보를 그만두게 하는 쪽에 선다.
+ *
+ *  접는 손잡이는 남겨 둔다 — 해설이 길면 적는 칸이 화면 밖으로 밀린다.
  */
 function reportDetail(q, names){
   const box = (title, body) =>
-    `<details><summary>${title}</summary><div class="body">${body}</div></details>`;
+    `<details open><summary>${title}</summary><div class="body">${body}</div></details>`;
   const out = [];
 
   const srcs = (names || []).map(imgSrc).filter(Boolean);
@@ -575,7 +577,7 @@ function reportDetail(q, names){
 
   const ans = (q.options || [])[q.answer];
   if (ans || q.explanation)
-    out.push(box('정답과 해설 <i>— 펴면 답이 보입니다</i>',
+    out.push(box('정답과 해설',
       (ans ? `<b>정답: ${esc(ans)}</b>` : '')
       + (q.explanation ? `${ans ? '<br>' : ''}${esc(q.explanation)}` : '')));
 
