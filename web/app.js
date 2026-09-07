@@ -4,7 +4,7 @@
  * 어떤 40문항을 뽑을지(가중 표집·중복 회피·순서)는 브라우저가 정한다. 시드를
  * 바꿀 때마다 왕복이 붙지 않게 하려는 것이다.
  *
- * 서버가 하는 일은 셋이다 — 로그인 확인, 사진 서명, 기록·신고 보관.
+ * 서버가 하는 일은 셋이다 — 로그인 확인, 사진 서명, 기록·제보 보관.
  */
 
 /* ══════════ 유틸 ══════════ */
@@ -29,7 +29,7 @@ let QUIZ_META = null, QUIZ_DB = [];
 let ME = null;                      // /api/me. 관리자 화면을 그릴지 정한다
 let WRONG = new Set();              // 오답노트. 서버가 참, 없으면 localStorage
 let RECORDS = [];
-let MY_REPORTS = {};                // question_id → 내가 낸 신고
+let MY_REPORTS = {};                // question_id → 내가 낸 제보
 
 /* 로그인 없이 도는 갈래. **localhost에서만이다** — `config.js`의 설명을 보라. */
 const OFFLINE = !CONFIG.apiBase && ['localhost','127.0.0.1',''].includes(location.hostname);
@@ -334,8 +334,8 @@ function render(){
   } else ex.classList.add('hidden');
 
   $('q-hint').innerHTML = S.mode === 'exam'
-    ? '키보드 1·2·3·4로 선택 — 고르면 바로 다음 문항으로 넘어갑니다<br>신고하는 동안은 시계가 멈춥니다.'
-    : '키보드 1·2·3·4로 선택, Enter로 다음<br>신고하는 동안은 시계가 멈춥니다.';
+    ? '키보드 1·2·3·4로 선택 — 고르면 바로 다음 문항으로 넘어갑니다<br>제보하는 동안은 시계가 멈춥니다.'
+    : '키보드 1·2·3·4로 선택, Enter로 다음<br>제보하는 동안은 시계가 멈춥니다.';
   markReported($('report-btn'), q.id);
   $('btn-prev').disabled = S.i === 0;
   $('btn-next').classList.toggle('hidden', S.i === S.qs.length-1);
@@ -403,8 +403,8 @@ function startTimer(){
   S.timer = setInterval(tick, 1000);
 }
 function stopTimer(){ if (S.timer){ clearInterval(S.timer); S.timer = null; } }
-/** 신고 창이 열려 있는 동안은 시계를 멈춘다. 오류를 적는 시간까지 재면
- *  신고하는 것이 손해가 되고, 그러면 아무도 안 한다. */
+/** 제보 창이 열려 있는 동안은 시계를 멈춘다. 오류를 적는 시간까지 재면
+ *  제보하는 것이 손해가 되고, 그러면 아무도 안 한다. */
 function resumeTimer(){ if (S.limit && !S.timer && !$('quiz').classList.contains('hidden')) S.timer = setInterval(tick, 1000); }
 
 /* ══════════ 채점 ══════════ */
@@ -434,7 +434,7 @@ async function finish(){
   $('r-review').innerHTML = rows.map((r,i) => `
     <div class="rev ${r.ok?'right':'wrong'}">
       <span class="revimgs">${S.imgs[i].map(n =>
-        `<img src="${esc(S.imgUrl[n] || '')}" alt="">`).join('')}</span>
+        `<img src="${esc(S.imgUrl[n] || '')}" data-img="${esc(n)}" alt="">`).join('')}</span>
       <div class="q">${i+1}. [${esc(ko(QTYPE_KO, r.q.qtype))}] ${esc(r.q.stem)}</div>
       <div class="a">${r.ok ? '' : `<i>내 답: ${r.picked===null?'무응답':esc(r.q.options[r.picked])}</i><br>`}
         <b>정답: ${esc(r.q.options[r.q.answer])}</b></div>
@@ -442,7 +442,7 @@ async function finish(){
       <div class="imgsrc${S.imgs[i].length > 1 ? ' many' : ''}">${stainHtml(r.q)}${
         S.imgs[i].map(n => srcHtml(n, true)).join('')}</div>
       <button class="report-link" data-qid="${esc(r.q.id)}" data-idx="${i}"
-        onclick="openReport('${esc(r.q.id)}', ${i})">이 문항 신고</button>
+        onclick="openReport('${esc(r.q.id)}', ${i})">이 문항 제보</button>
     </div>`).join('');
   [...$('r-review').querySelectorAll('.report-link')]
     .forEach(b => markReported(b, b.dataset.qid));
@@ -510,7 +510,7 @@ function retryWrong(){
   render(); scrollTo(0,0);
 }
 
-/* ══════════ 문항 신고 ══════════ */
+/* ══════════ 문항 제보 ══════════ */
 let reportFor = null;
 
 function markReported(btn, qid){
@@ -518,10 +518,10 @@ function markReported(btn, qid){
   const mine = MY_REPORTS[qid];
   // 문제 화면의 버튼은 시계를 멈추는 일도 겸하므로 이름이 다르다. 그 이름은
   // 버튼이 `data-label`로 들고 있고, 다시보기 쪽은 예전 이름을 그대로 쓴다.
-  const base = btn.dataset.label || '이 문항 신고';
+  const base = btn.dataset.label || '이 문항 제보';
   btn.classList.toggle('done', !!mine);
   btn.textContent = mine
-    ? (mine.status === 'open' ? '신고함 · 고치기' : '신고함 · ' + STATUS_KO[mine.status])
+    ? (mine.status === 'open' ? '제보함 · 고치기' : '제보함 · ' + STATUS_KO[mine.status])
     : base;
 }
 
@@ -531,9 +531,9 @@ const KIND_KO = { answer:'정답이 틀렸다', image:'사진이 문제와 안 �
 
 /** `idx`가 있으면 다시보기에서 부른 것이다. 없으면 푸는 중이다. */
 function openReport(qid, idx){
-  if (OFFLINE){ alert('로그인해야 신고할 수 있습니다.'); return; }
+  if (OFFLINE){ alert('로그인해야 제보할 수 있습니다.'); return; }
   const q = QUIZ_DB.find(x => x.id === qid) || (S.qs[S.i] || {});
-  // 사진이 둘인 문항은 둘 다 적어 보낸다. 어느 쪽이 이상한지는 신고 글이 말한다.
+  // 사진이 둘인 문항은 둘 다 적어 보낸다. 어느 쪽이 이상한지는 제보 글이 말한다.
   const names = imgsOf(q);
   const srcs = names.map(imgSrc).filter(Boolean).map(s => s.src + ' / ' + s.path);
   reportFor = { id: qid, stem: q.stem || '', answer: (q.options||[])[q.answer] || '',
@@ -550,12 +550,12 @@ function openReport(qid, idx){
   $('report-note').focus();
 }
 
-/** 신고 창 안에서 펴 보는 출처와 해설.
+/** 제보 창 안에서 펴 보는 출처와 해설.
  *
  *  틀렸다고 적으려면 무엇이 어떻게 틀렸는지부터 봐야 한다. 창을 닫고
  *  확인한 뒤 다시 열면 적던 글이 날아가므로, 볼 것을 창 안으로 들인다.
  *
- *  **접은 채로 연다.** 해설에는 정답이 들어 있어서, 땡시 중에 신고 버튼을
+ *  **접은 채로 연다.** 해설에는 정답이 들어 있어서, 땡시 중에 제보 버튼을
  *  누른 것만으로 답이 보이면 안 된다 — 펴는 것은 한 번 더 누른 사람뿐이고,
  *  그 사람은 이미 이 문항을 포기하고 고치러 온 사람이다.
  */
@@ -614,14 +614,14 @@ async function sendReport(){
   }
 }
 
-/* ══════════ 신고함 (관리자) ══════════ */
+/* ══════════ 제보함 (관리자) ══════════ */
 async function loadAdmin(){
   if (!ME || !ME.isAdmin) return;
   $('admin').classList.remove('hidden');
   try {
     const { groups, total } = await api('/api/spotter/admin/reports');
     const open = groups.reduce((a,g) => a + g.open, 0);
-    $('admin-sum').textContent = `신고 ${total}건 · 문항 ${groups.length}개 · 확인 중 ${open}건`;
+    $('admin-sum').textContent = `제보 ${total}건 · 문항 ${groups.length}개 · 확인 중 ${open}건`;
     $('admin-list').innerHTML = groups.length ? groups.map(g => `
       <div class="rep${g.open ? ' hot' : ''}">
         <div class="rep-head">
@@ -637,9 +637,9 @@ async function loadAdmin(){
             <span class="rep-who">${esc(r.email)} · ${esc(STATUS_KO[r.status] || r.status)}</span>
             ${r.note ? `<div class="rep-note">${esc(r.note)}</div>` : ''}
           </div>`).join('')}
-      </div>`).join('') : '들어온 신고가 없습니다.';
+      </div>`).join('') : '들어온 제보가 없습니다.';
   } catch (e){
-    $('admin-sum').textContent = '신고함을 못 읽었습니다: ' + e.message;
+    $('admin-sum').textContent = '제보함을 못 읽었습니다: ' + e.message;
   }
 }
 
@@ -741,15 +741,27 @@ function zAt(cx, cy, k2){
   zApply();
 }
 
-function zoom(k){
-  // 누른 사진을 키운다. 두 장짜리 문항에서 아무 쪽이나 키울 수 있어야 한다.
-  const name = S.imgs[S.i][k || 0];
+/** 사진 이름 하나를 확대창에 건다. 문제 화면과 채점 화면이 같은 창을 쓴다. */
+function zoomImg(name){
+  if (!name) return;
   $('modal-img').src = S.imgUrl[name] || '';
   const s = imgSrc(name);
   $('modal-src').textContent = s ? s.src + '  ·  ' + s.path : '';
   zReset();
   $('modal').classList.remove('hidden');
 }
+
+function zoom(k){
+  // 누른 사진을 키운다. 두 장짜리 문항에서 아무 쪽이나 키울 수 있어야 한다.
+  zoomImg(S.imgs[S.i][k || 0]);
+}
+
+/* 다시보기 사진을 누르면 같은 확대창이 뜬다. 다시보기는 채점할 때마다 통째로
+   다시 그리므로 사진 하나하나에 손잡이를 다는 대신 목록에 하나만 단다. */
+$('r-review').addEventListener('click', e => {
+  const img = e.target.closest('img[data-img]');
+  if (img) zoomImg(img.dataset.img);
+});
 
 (function zoomControls(){
   const m = $('modal');
@@ -814,7 +826,13 @@ function zoom(k){
 document.addEventListener('keydown', e => {
   if (!$('report').classList.contains('hidden')){
     if (e.key === 'Escape') closeReport();
-    return;                          // 신고 창이 열려 있으면 문제 단축키를 막는다
+    return;                          // 제보 창이 열려 있으면 문제 단축키를 막는다
+  }
+  // 확대창은 채점 화면에서도 열리므로 문제 화면인지보다 먼저 본다. 닫는 키만
+  // 가로챈다 — 문제 화면에서는 사진을 키워 둔 채로 답을 고를 수 있어야 한다.
+  if (e.key === 'Escape' && !$('modal').classList.contains('hidden')){
+    $('modal').classList.add('hidden');
+    return;
   }
   if ($('quiz').classList.contains('hidden')) return;
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -824,7 +842,6 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'Enter'){ S.i === S.qs.length-1 ? finish() : next(); }
   else if (e.key === 'ArrowLeft') prev();
   else if (e.key === 'ArrowRight') next();
-  else if (e.key === 'Escape') $('modal').classList.add('hidden');
 });
 
 /* ══════════ 부팅 ══════════ */

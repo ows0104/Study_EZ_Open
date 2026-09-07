@@ -170,7 +170,7 @@ def flat(path):
 
 
 # 사진마다 어디서 온 것인지. 흐리거나 잘못 잘린 사진을 만났을 때 원본을 찾아갈
-# 자리가 없으면 신고가 "3번 사진이 이상함"에서 멈춘다.
+# 자리가 없으면 제보가 "3번 사진이 이상함"에서 멈춘다.
 SOURCE_KO = {
     "practical": "실제실습본",
     "tonghap": "2026 실습사진통합",
@@ -324,7 +324,7 @@ def main():
     for q in past:
         # 사진이 둘인 문항이 있다 — 현미경 + 데모, 또는 현미경 둘. 전부 내보내고
         # 문항에는 순서대로 달아 준다. 첫 장은 `image`에도 그대로 두어서 사진
-        # 하나를 기대하는 쪽(다시보기 섬네일·신고·audit)이 그대로 돈다.
+        # 하나를 기대하는 쪽(다시보기 섬네일·제보·audit)이 그대로 돈다.
         names = []
         for i, path in enumerate(q["imgs"]):
             rel = os.path.relpath(path, os.path.join(ROOT, "questions"))
