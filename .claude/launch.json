@@ -32,6 +32,21 @@
       "port": 8812
     },
     {
+      "_note": "앞의 셋이 다 물려 있을 때 쓰는 네 번째 자리. 여는 곳은 같다 — 저장소 루트.",
+      "name": "spotter-web-8814",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": [
+        "run",
+        "--python",
+        "3.13",
+        "python",
+        "-m",
+        "http.server",
+        "8814"
+      ],
+      "port": 8814
+    },
+    {
       "_note": "8811·8812가 다 물려 있을 때 쓰는 세 번째 자리. 여는 곳은 같다 — 저장소 루트.",
       "name": "spotter-web-8813",
       "runtimeExecutable": "uv",

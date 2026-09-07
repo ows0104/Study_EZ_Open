@@ -30,6 +30,12 @@ let ME = null;                      // /api/me. 관리자 화면을 그릴지 �
 let WRONG = new Set();              // 오답노트. 서버가 참, 없으면 localStorage
 let RECORDS = [];
 let MY_REPORTS = {};                // question_id → 내가 낸 제보
+/* 점검 중이라 새 세트에서 빼는 것들. 여럿이 제보한 문항과 사진이고, 게시판의
+   글타래를 닫으면 목록에서 빠져 다시 나온다. **문항 DB에 표시를 심지 않는
+   까닭**은 그 DB가 R2에 올려 둔 5MB 한 덩어리여서, 문항 하나를 격리하려고
+   전체를 다시 굽고 다시 올릴 수는 없기 때문이다. */
+let FLAGGED = { questions:new Set(), images:new Set() };
+let BOARD = { threads:[], one:null, min:2 };
 
 /* 로그인 없이 도는 갈래. **localhost에서만이다** — `config.js`의 설명을 보라. */
 const OFFLINE = !CONFIG.apiBase && ['localhost','127.0.0.1',''].includes(location.hostname);
@@ -66,9 +72,23 @@ function filters(){
            types: chosen($('f-qtype')) };
 }
 function inScope(q, f){
-  return (!f.groups.length  || f.groups.includes(q.group))
+  return !flagged(q)
+      && (!f.groups.length  || f.groups.includes(q.group))
       && (!f.sptypes.length || f.sptypes.includes(q.specimen_type))
       && (!f.types.length   || f.types.includes(q.qtype));
+}
+/** 점검 중이라 안 내보내는 문항인가.
+ *
+ *  **거르는 자리를 `inScope` 안에 둔다.** 세트를 만들 때와 「몇 문항인지」를
+ *  셀 때가 같은 판단을 써야 해서다 — 세트에서만 빼면 화면은 40문항이라고
+ *  적어 놓고 서른아홉 개를 낸다.
+ *
+ *  사진으로 걸린 것은 **그 사진을 쓰는 문항 전부**가 빠진다. 사진 한 장이
+ *  이상한데 그 사진을 쓰는 다른 문항만 계속 나오면 격리한 뜻이 없다.
+ */
+function flagged(q){
+  if (FLAGGED.questions.has(q.id)) return true;
+  return imgsOf(q).some(n => FLAGGED.images.has(n));
 }
 /** 한 세트에 담을 수 있는 최대 문항 수. 같은 표본은 한 판에 두 번 안 나오므로
  *  문항 수가 아니라 **표본 수**가 천장이다. */
@@ -434,7 +454,8 @@ async function finish(){
   $('r-review').innerHTML = rows.map((r,i) => `
     <div class="rev ${r.ok?'right':'wrong'}">
       <span class="revimgs">${S.imgs[i].map(n =>
-        `<img src="${esc(S.imgUrl[n] || '')}" data-img="${esc(n)}" alt="">`).join('')}</span>
+        `<img src="${esc(S.imgUrl[n] || '')}" data-img="${esc(n)}"
+              data-mag="${esc(r.q.magnification || '')}" alt="">`).join('')}</span>
       <div class="q">${i+1}. [${esc(ko(QTYPE_KO, r.q.qtype))}] ${esc(r.q.stem)}</div>
       <div class="a">${r.ok ? '' : `<i>내 답: ${r.picked===null?'무응답':esc(r.q.options[r.picked])}</i><br>`}
         <b>정답: ${esc(r.q.options[r.q.answer])}</b></div>
@@ -536,8 +557,11 @@ function openReport(qid, idx){
   // 사진이 둘인 문항은 둘 다 적어 보낸다. 어느 쪽이 이상한지는 제보 글이 말한다.
   const names = imgsOf(q);
   const srcs = names.map(imgSrc).filter(Boolean).map(s => s.src + ' / ' + s.path);
+  /* `image`는 제보함이 읽는 줄이고 `images`는 **서버가 묶어 세는 값**이다.
+     같은 사진이 여러 문항에 쓰여서, 사진이 흐리다는 제보는 문항마다 흩어져
+     들어온다 — 이름만 따로 보내야 서버가 그것을 한 사진으로 모은다. */
   reportFor = { id: qid, stem: q.stem || '', answer: (q.options||[])[q.answer] || '',
-                image: names.join(', '), imageSrc: srcs.join(' · ') };
+                image: names.join(', '), imageSrc: srcs.join(' · '), images: names };
   const mine = MY_REPORTS[qid];
   $('report-kind').value = mine ? mine.kind : 'answer';
   $('report-note').value = mine ? mine.note : '';
@@ -602,6 +626,7 @@ async function sendReport(){
       stem: reportFor.stem, answer: reportFor.answer,
       // 사진은 파일명만으로는 원본을 못 찾는다. 출처를 붙여서 보낸다.
       image: reportFor.imageSrc ? `${reportFor.image} (${reportFor.imageSrc})` : reportFor.image,
+      images: reportFor.images,
     })});
     MY_REPORTS[row.questionId] = row;
     markReported($('report-btn'), S.qs[S.i] && S.qs[S.i].id);
@@ -616,18 +641,222 @@ async function sendReport(){
   }
 }
 
+/* ══════════ 진리탐구 게시판 ══════════
+ *
+ * **글은 사람이 세우지 않는다.** 여럿이 같은 자리에서 멈춘 문항만 서버가
+ * 자동으로 올린다. 아무 이야기나 하는 자리로 열면 「무엇을 올릴지」를 사람이
+ * 고르게 되고, 그러면 판정이 두 벌이 된다.
+ *
+ * 여기 오른 문항은 그동안 새 세트에서 빠진다. 이야기가 끝나 글타래를 닫으면
+ * 다시 나온다 — 닫는 것이 곧 다시 내보내는 것이라, 닫기 전에 문항을 고쳐서
+ * 다시 구워야 한다.
+ */
+const THREAD_STATUS_KO = { open:'점검 중', resolved:'고침', wontfix:'의도된 것' };
+
+/** 시작 화면의 안내. 게시판을 열지 않아도 **지금 몇 개가 빠져 있는지**는
+ *  알아야 한다 — 세트가 조용히 줄어드는 것이 설명 없이 일어나면 안 된다. */
+async function loadFlagged(){
+  try {
+    const f = await api('/api/spotter/flagged');
+    FLAGGED = { questions:new Set(f.questions), images:new Set(f.images) };
+    BOARD.min = f.min;
+    const n = f.questions.length + f.images.length;
+    $('board-sum').innerHTML = n
+      ? `${f.min}명 이상이 제보한 <b>문항 ${f.questions.length}개 · 사진 ${f.images.length}장</b>이
+         점검 중입니다. 점검이 끝날 때까지 새 세트에서 빠집니다.`
+      : '점검 중인 문항이 없습니다. 여럿이 같은 문항을 제보하면 여기에 올라옵니다.';
+  } catch (e){
+    // 못 읽어도 문제를 푸는 데는 지장이 없다. 격리만 이번 판에서 안 걸린다.
+    $('board-sum').textContent = '점검 목록을 못 읽었습니다 (' + e.message + ')';
+  }
+}
+
+/** 이 사진을 쓰는 문항이 몇 개인가. **제보가 온 문항 수와 다르다** — 제보는
+ *  셋에서 왔어도 그 사진을 쓰는 문항이 열둘이면 열둘이 다 빠진다. 서버는
+ *  문항 DB의 내용을 모르므로 이 수는 화면만 알 수 있다. */
+const usedBy = name => QUIZ_DB.filter(q => imgsOf(q).includes(name)).length;
+
+function openBoard(){
+  $('start').classList.add('hidden');
+  $('board').classList.remove('hidden');
+  showBoardList();
+  scrollTo(0,0);
+}
+function closeBoard(){
+  $('board').classList.add('hidden');
+  $('start').classList.remove('hidden');
+  scrollTo(0,0);
+}
+
+async function showBoardList(){
+  $('board-one').classList.add('hidden');
+  $('board-list').classList.remove('hidden');
+  $('board-back').classList.remove('hidden');
+  $('board-list').innerHTML = '<p class="sub">읽는 중…</p>';
+  try {
+    const data = await api('/api/spotter/threads');
+    BOARD.threads = data.threads; BOARD.min = data.min;
+    // 몇 명부터인지는 서버가 정한다. 여기 2를 적어 두면 선을 옮겼을 때
+    // 화면만 옛말을 한다.
+    $('board-hint').innerHTML = `<b>${data.min}명 이상</b>이 같은 문항이나 사진을 제보하면
+      여기 자동으로 올라옵니다. 올라온 문항은 이야기가 끝날 때까지 새 세트에서 빠집니다.`;
+    $('board-list').innerHTML = data.threads.length ? data.threads.map(t => `
+      <button class="thread" onclick="openThread('${esc(t.kind)}', ${JSON.stringify(t.subject).replace(/"/g,'&quot;')})">
+        <div class="thread-head">
+          <span class="tpill ${esc(t.status)}">${esc(THREAD_STATUS_KO[t.status] || t.status)}</span>
+          <span class="tkind">${t.kind === 'image' ? '사진' : '문항'}</span>
+          <span class="tcount">${t.reports}명 제보 · 의견 ${t.commentCount}</span>
+        </div>
+        <div class="thread-title">${esc(t.kind === 'image' ? t.subject : (t.stem || t.subject))}</div>
+        ${t.kind === 'image' ? `<div class="thread-sub">이 사진을 쓰는 문항 ${usedBy(t.subject)}개</div>` : ''}
+      </button>`).join('')
+      : '<p class="sub">아직 올라온 글이 없습니다. 여럿이 같은 문항을 제보하면 자동으로 섭니다.</p>';
+  } catch (e){
+    $('board-list').innerHTML = `<p class="gate-msg bad">게시판을 못 읽었습니다: ${esc(e.message)}</p>`;
+  }
+}
+
+async function openThread(kind, subject){
+  $('board-list').classList.add('hidden');
+  $('board-one').classList.remove('hidden');
+  // 「처음으로」는 목록에서만. 글 하나를 볼 때는 「목록으로」가 그 자리를 쓴다.
+  $('board-back').classList.add('hidden');
+  $('board-one').innerHTML = '<p class="sub">읽는 중…</p>';
+  try {
+    const t = await api(`/api/spotter/threads/${kind}/${encodeURIComponent(subject)}`);
+    BOARD.one = t;
+    // 사진은 여기서도 서명을 받아야 뜬다. 세트를 안 만들고 들어온 자리다.
+    await signImages(t.images.filter(n => !S.imgUrl[n]));
+    renderThread();
+  } catch (e){
+    $('board-one').innerHTML = `<p class="gate-msg bad">${esc(e.message)}</p>`;
+  }
+  scrollTo(0,0);
+}
+
+function renderThread(){
+  const t = BOARD.one;
+  const when = s => new Date(s).toLocaleString('ko-KR',
+    { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+
+  $('board-one').innerHTML = `
+    <div class="row"><button onclick="showBoardList()">목록으로</button></div>
+    <div class="card" style="margin-top:12px">
+      <div class="thread-head">
+        <span class="tpill ${esc(t.status)}">${esc(THREAD_STATUS_KO[t.status] || t.status)}</span>
+        <span class="tkind">${t.kind === 'image' ? '사진' : '문항'}</span>
+        <span class="tcount">${t.reports}명 제보</span>
+      </div>
+      <h3 style="margin:10px 0 4px">${esc(t.kind === 'image' ? t.subject : (t.stem || t.subject))}</h3>
+      ${t.kind === 'question' && t.answer
+        ? `<p class="thread-sub">정답으로 나간 보기: <b>${esc(t.answer)}</b></p>` : ''}
+      ${t.kind === 'image'
+        ? `<p class="thread-sub">제보는 문항 ${t.questionIds.length}개에서 왔지만,
+             <b>이 사진을 쓰는 문항 ${usedBy(t.subject)}개가 모두</b> 빠져 있습니다.</p>` : ''}
+      <div class="imgrow${t.images.length > 1 ? ' multi' : ''}" style="margin-top:10px">
+        ${t.images.map(n => `<div class="imgbox" onclick="zoomImg('${esc(n)}')">
+          <img src="${esc(S.imgUrl[n] || '')}" alt="표본 사진"></div>`).join('')}
+      </div>
+      ${t.verdict ? `<p class="verdict"><b>결론</b> ${esc(t.verdict)}</p>` : ''}
+    </div>
+
+    <h2>어디가 이상한가</h2>
+    <div class="card">${t.notes.map(n => `
+      <div class="rep-one">
+        <span class="rep-kind">${esc(KIND_KO[n.kind] || n.kind)}</span>
+        <span class="rep-who">${esc(n.who)} · ${esc(when(n.at))}</span>
+        ${n.note ? `<div class="rep-note">${esc(n.note)}</div>` : ''}
+      </div>`).join('')}</div>
+
+    <h2>의견 ${t.commentCount}</h2>
+    <div class="card">
+      ${t.comments.length ? t.comments.map(c => `
+        <div class="talk${c.deleted ? ' gone' : ''}">
+          <div class="talk-head">
+            <b>${esc(c.who)}</b><span>${esc(when(c.at))}</span>
+            ${c.mine && !c.deleted
+              ? `<button class="is-quiet" onclick="removeComment(${c.id})">지우기</button>` : ''}
+          </div>
+          <div class="talk-body">${c.deleted ? '지운 글입니다.' : esc(c.body)}</div>
+        </div>`).join('')
+        : '<p class="sub" style="margin:0">아직 의견이 없습니다. 어떻게 보이는지 적어 주세요.</p>'}
+
+      <div class="talk-write">
+        <textarea id="talk-input" placeholder="예: 저도 편충 충란으로 보입니다. 극(polar plug)이 양쪽에 보입니다."></textarea>
+        <p class="gate-msg bad hidden" id="talk-msg"></p>
+        <div class="row" style="justify-content:flex-end">
+          <button class="btn-primary" id="talk-save" onclick="postComment()">의견 남기기</button>
+        </div>
+      </div>
+    </div>
+
+    ${ME && ME.isAdmin ? `
+      <h2>결론 내기</h2>
+      <div class="card">
+        <p class="sub" style="margin:0 0 10px">닫으면 이 문항이 다시 세트에 나옵니다.
+          <b>닫기 전에 문항을 고쳐서 다시 구워야 합니다.</b></p>
+        <textarea id="verdict-input" placeholder="무엇이 문제였고 어떻게 고쳤는지">${esc(t.verdict)}</textarea>
+        <div class="row" style="margin-top:10px;justify-content:flex-end">
+          <button onclick="decideThread('wontfix')">의도된 것</button>
+          <button class="btn-primary" onclick="decideThread('resolved')">고쳤음 · 닫기</button>
+          ${t.status !== 'open' ? '<button onclick="decideThread(\'open\')">다시 열기</button>' : ''}
+        </div>
+      </div>` : ''}`;
+}
+
+async function postComment(){
+  const body = $('talk-input').value.trim();
+  if (!body){ $('talk-input').focus(); return; }
+  $('talk-save').disabled = true;
+  try {
+    const t = BOARD.one;
+    BOARD.one = await api(
+      `/api/spotter/threads/${t.kind}/${encodeURIComponent(t.subject)}/comments`,
+      { method:'POST', body: JSON.stringify({ body }) });
+    renderThread();
+  } catch (e){
+    $('talk-msg').textContent = e.message;
+    $('talk-msg').classList.remove('hidden');
+    $('talk-save').disabled = false;
+  }
+}
+
+async function removeComment(id){
+  if (!confirm('이 의견을 지웁니다.')) return;
+  try {
+    await api(`/api/spotter/comments/${id}`, { method:'DELETE' });
+    await openThread(BOARD.one.kind, BOARD.one.subject);
+  } catch (e){ alert(e.message); }
+}
+
+/** 관리자가 결론을 적고 닫는다(또는 다시 연다).
+ *  닫으면 격리가 풀리므로 **점검 목록을 다시 받아 온다** — 안 그러면 이 판에서
+ *  방금 푼 문항이 여전히 빠진 채로 세트가 만들어진다. */
+async function decideThread(status){
+  const t = BOARD.one;
+  try {
+    BOARD.one = await api(`/api/spotter/admin/threads/${t.kind}/${encodeURIComponent(t.subject)}`,
+      { method:'PATCH', body: JSON.stringify({ status, verdict: $('verdict-input').value }) });
+    renderThread();
+    await loadFlagged();
+    renderScope();
+  } catch (e){ alert(e.message); }
+}
+
 /* ══════════ 제보함 (관리자) ══════════ */
 async function loadAdmin(){
   if (!ME || !ME.isAdmin) return;
   $('admin').classList.remove('hidden');
   try {
-    const { groups, total } = await api('/api/spotter/admin/reports');
+    const { groups, total, images, alert } = await api('/api/spotter/admin/reports');
     const open = groups.reduce((a,g) => a + g.open, 0);
     $('admin-sum').textContent = `제보 ${total}건 · 문항 ${groups.length}개 · 확인 중 ${open}건`;
+    renderAlert(images, alert);
     $('admin-list').innerHTML = groups.length ? groups.map(g => `
-      <div class="rep${g.open ? ' hot' : ''}">
+      <div class="rep${g.hot ? ' alert' : (g.open ? ' hot' : '')}">
         <div class="rep-head">
           <b>${g.open ? g.open + '명 확인 중' : '닫힘'}</b>
+          ${g.hot ? `<span class="rep-badge">${alert.min}명 이상</span>` : ''}
           <code>${esc(g.questionId)}</code>
           ${g.open ? `<button class="is-quiet" onclick="closeQuestion('${esc(g.questionId)}')">이 문항 닫기</button>` : ''}
         </div>
@@ -643,6 +872,40 @@ async function loadAdmin(){
   } catch (e){
     $('admin-sum').textContent = '제보함을 못 읽었습니다: ' + e.message;
   }
+}
+
+/** 여럿이 걸린 것이 있으면 **화면 맨 위**에 한 줄로 세운다.
+ *
+ *  제보함은 시작 화면 맨 아래에 있다. 거기까지 내려가 본 날에만 알게 되는
+ *  것은 알림이 아니라 목록이다. 반대로 확인 중인 제보가 있다고 늘 빨간 줄을
+ *  세우면 그것은 배경이 되어 안 읽힌다 — **선을 넘은 것이 있을 때만** 선다.
+ *
+ *  몇 명부터가 「넘은 것」인지는 서버가 정한다(`alert.min`). 여기서 3을
+ *  적어 두면 서버에서 선을 옮겼을 때 화면만 옛말을 하게 된다.
+ */
+function renderAlert(images, alert){
+  const bar = $('admin-alert');
+  if (!alert || !(alert.questions + alert.images)){ bar.classList.add('hidden'); return; }
+  const parts = [];
+  if (alert.questions) parts.push(`문항 ${alert.questions}개`);
+  if (alert.images) parts.push(`사진 ${alert.images}장`);
+  bar.innerHTML = `${alert.min}명 이상이 걸린 ${parts.join(' · ')}`;
+  bar.classList.remove('hidden');
+
+  /* 사진 묶음은 **여러 문항에 걸친 것만** 온다. 한 문항에 몰린 것은 아래
+     목록이 이미 말한 것이라 서버가 안 낸다. 여기 서는 것은 그러니까
+     「문항으로만 세면 못 보는 것」뿐이다 — 나쁜 사진 한 장이 문항 여럿에
+     흩어져 들어온 자리다. */
+  $('admin-images').innerHTML = images && images.length
+    ? `<div class="rep alert"><div class="rep-head">
+         <b>같은 사진 ${images.length}장</b>
+         <span class="rep-badge">문항에 흩어져 들어옴</span></div>`
+      + images.map(g => `<div class="rep-one">
+           <span class="rep-kind">${g.open}명</span>
+           <span class="rep-who"><code>${esc(g.image)}</code> · 문항 ${g.questionIds.length}개</span>
+         </div>`).join('')
+      + '</div>'
+    : '';
 }
 
 async function closeQuestion(qid){
@@ -743,26 +1006,28 @@ function zAt(cx, cy, k2){
   zApply();
 }
 
-/** 사진 이름 하나를 확대창에 건다. 문제 화면과 채점 화면이 같은 창을 쓴다. */
-function zoomImg(name){
+/** 사진 이름 하나를 확대창에 건다. 문제 화면과 채점 화면이 같은 창을 쓴다.
+ *  **사진 밑에 남기는 것도 배율뿐이다** — 작은 사진 위와 같은 규칙이다.
+ *  출처의 파일 이름에는 표본 이름이 그대로 들어 있어, 키워 보려고 누른 것이
+ *  답을 읽는 일이 되어 버린다. 출처는 채점 화면과 제보 창에 있다. */
+function zoomImg(name, mag){
   if (!name) return;
   $('modal-img').src = S.imgUrl[name] || '';
-  const s = imgSrc(name);
-  $('modal-src').textContent = s ? s.src + '  ·  ' + s.path : '';
+  $('modal-src').textContent = mag || '';
   zReset();
   $('modal').classList.remove('hidden');
 }
 
 function zoom(k){
   // 누른 사진을 키운다. 두 장짜리 문항에서 아무 쪽이나 키울 수 있어야 한다.
-  zoomImg(S.imgs[S.i][k || 0]);
+  zoomImg(S.imgs[S.i][k || 0], S.qs[S.i].magnification);
 }
 
 /* 다시보기 사진을 누르면 같은 확대창이 뜬다. 다시보기는 채점할 때마다 통째로
    다시 그리므로 사진 하나하나에 손잡이를 다는 대신 목록에 하나만 단다. */
 $('r-review').addEventListener('click', e => {
   const img = e.target.closest('img[data-img]');
-  if (img) zoomImg(img.dataset.img);
+  if (img) zoomImg(img.dataset.img, img.dataset.mag);
 });
 
 (function zoomControls(){
@@ -876,6 +1141,11 @@ async function enter(db){
     MY_REPORTS = Object.fromEntries(mine.reports.map(r => [r.questionId, r]));
     $('who-email').textContent = ME.email;
     $('who').classList.remove('hidden');
+    // 점검 목록은 **세트를 만들기 전에** 있어야 한다. 늦게 오면 이번 판에만
+    // 격리가 안 걸리고, 그 판은 이미 이상한 문항을 안고 시작한 뒤다.
+    await loadFlagged();
+    $('board').classList.add('hidden');
+    $('board-card').classList.remove('hidden');
     loadAdmin();
   }
 

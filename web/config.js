@@ -22,6 +22,6 @@ const CONFIG = {
 
   /* 서버가 `ENVIRONMENT=local-test`로 떠 있을 때만 통하는 토큰. Study_EZ의
      `web/src/localTest.ts`와 같은 자리다 — Supabase 없이 서버까지 붙여서
-     기록·신고까지 돌려 보려고 있다. **배포에서는 반드시 비운다.** */
+     기록·제보까지 돌려 보려고 있다. **배포에서는 반드시 비운다.** */
   localTestToken: '',
 };
