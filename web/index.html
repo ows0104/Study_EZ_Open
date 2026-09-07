@@ -410,7 +410,9 @@ body:has(#quiz:not(.hidden)) #who{display:none}
     <button class="report-link" id="report-btn"
       onclick="openReport(S.qs[S.i].id)">이 문항 신고</button>
   </div>
-  <p class="foot">키보드 1·2·3·4로 선택, Enter로 다음<br>신고하는 동안은 시계가 멈춥니다.</p>
+  <!-- 안내 문구는 render()가 모드에 맞춰 채운다. 땡시에서는 고르는 것이 곧
+       넘기는 것이라 「Enter로 다음」이 틀린 말이 된다. -->
+  <p class="foot" id="q-hint"></p>
 </div>
 
 <!-- ══════════ 결과 ══════════ -->

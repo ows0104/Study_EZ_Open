@@ -333,6 +333,9 @@ function render(){
     ex.innerHTML = `<span class="tag">해설</span>\n` + esc(q.explanation);
   } else ex.classList.add('hidden');
 
+  $('q-hint').innerHTML = S.mode === 'exam'
+    ? '키보드 1·2·3·4로 선택 — 고르면 바로 다음 문항으로 넘어갑니다<br>신고하는 동안은 시계가 멈춥니다.'
+    : '키보드 1·2·3·4로 선택, Enter로 다음<br>신고하는 동안은 시계가 멈춥니다.';
   markReported($('report-btn'), q.id);
   $('btn-prev').disabled = S.i === 0;
   $('btn-next').classList.toggle('hidden', S.i === S.qs.length-1);
@@ -346,10 +349,21 @@ function render(){
 
 function choose(i){
   S.answers[S.i] = i;
-  // 공부 모드는 답을 고른 순간 시계를 세운다. 땡시 모드는 그대로 흐른다 —
-  // 고르고 나서 남은 시간에 다시 고를 수 있어야 실제 땡시와 같다.
-  if (S.mode === 'study') stopTimer();
-  render();
+  // 공부 모드는 답을 고른 순간 시계를 세운다. 여기서는 고른 자리에 머물러
+  // 정답과 해설을 읽는 것이 할 일이다.
+  if (S.mode === 'study'){ stopTimer(); render(); return; }
+  /* **땡시 모드에서는 고르는 것이 곧 넘기는 것이다.** 실제 땡시는 종이 울리면
+     다음 자리로 옮겨 서는 것이고, 다 골라 놓고 Enter를 한 번 더 치는 동작은
+     화면에만 있는 절차다. 30초 안에 두 번 누르게 하면 그 한 번이 아깝다.
+
+     다시 고를 길은 남는다 — 「이전」이나 ←로 돌아오면 고른 것이 그대로 있고
+     바꿀 수 있다. 잃는 것은 그 문항에 남아 있던 시간뿐이다.
+
+     **마지막 문항에서는 넘기지 않는다.** 넘길 자리가 채점밖에 없는데, 손이
+     미끄러진 한 번으로 마흔 문항이 끝나 버리면 되돌릴 방법이 없다. 채점은
+     눌러서 끝낸다. */
+  if (S.i < S.qs.length - 1) next();
+  else render();
 }
 
 function next(){ if (S.i < S.qs.length-1){ S.i++; render(); } }
