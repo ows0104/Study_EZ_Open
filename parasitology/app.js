@@ -35,7 +35,9 @@ let MY_REPORTS = {};                // question_id → 내가 낸 제보
    까닭**은 그 DB가 R2에 올려 둔 5MB 한 덩어리여서, 문항 하나를 격리하려고
    전체를 다시 굽고 다시 올릴 수는 없기 때문이다. */
 let FLAGGED = { questions:new Set(), images:new Set() };
-let BOARD = { threads:[], one:null, min:2 };
+/* `min`은 서버가 오기 전까지만 쓰는 값이다. 서버가 `SPOTTER_ALERT_MIN`을
+   함께 내면 그것으로 덮인다 — 여기 적힌 수가 화면에 오래 남지 않도록. */
+let BOARD = { threads:[], one:null, min:1 };
 
 /* 로그인 없이 도는 갈래. **localhost에서만이다** — `config.js`의 설명을 보라. */
 const OFFLINE = !CONFIG.apiBase && ['localhost','127.0.0.1',''].includes(location.hostname);
@@ -653,6 +655,11 @@ async function sendReport(){
  */
 const THREAD_STATUS_KO = { open:'점검 중', resolved:'고침', wontfix:'의도된 것' };
 
+/** 선을 사람 말로 옮긴다. **선이 1이면 「1명 이상」이라 쓰지 않는다** —
+ *  「1명 이상이 같은 문항을 제보하면」은 여럿을 가리키는 「같은」과 부딪혀
+ *  뜻이 흐려진다. 수는 서버가 정하고, 말을 고르는 것만 여기서 한다. */
+const minWord = min => min <= 1 ? '한 명이라도' : `${min}명 이상이`;
+
 /** 시작 화면의 안내. 게시판을 열지 않아도 **지금 몇 개가 빠져 있는지**는
  *  알아야 한다 — 세트가 조용히 줄어드는 것이 설명 없이 일어나면 안 된다. */
 async function loadFlagged(){
@@ -662,9 +669,9 @@ async function loadFlagged(){
     BOARD.min = f.min;
     const n = f.questions.length + f.images.length;
     $('board-sum').innerHTML = n
-      ? `${f.min}명 이상이 제보한 <b>문항 ${f.questions.length}개 · 사진 ${f.images.length}장</b>이
+      ? `${minWord(f.min)} 제보한 <b>문항 ${f.questions.length}개 · 사진 ${f.images.length}장</b>이
          점검 중입니다. 점검이 끝날 때까지 새 세트에서 빠집니다.`
-      : '점검 중인 문항이 없습니다. 여럿이 같은 문항을 제보하면 여기에 올라옵니다.';
+      : `점검 중인 문항이 없습니다. ${minWord(f.min)} 제보하면 여기에 올라옵니다.`;
   } catch (e){
     // 못 읽어도 문제를 푸는 데는 지장이 없다. 격리만 이번 판에서 안 걸린다.
     $('board-sum').textContent = '점검 목록을 못 읽었습니다 (' + e.message + ')';
@@ -698,8 +705,9 @@ async function showBoardList(){
     BOARD.threads = data.threads; BOARD.min = data.min;
     // 몇 명부터인지는 서버가 정한다. 여기 2를 적어 두면 선을 옮겼을 때
     // 화면만 옛말을 한다.
-    $('board-hint').innerHTML = `<b>${data.min}명 이상</b>이 같은 문항이나 사진을 제보하면
-      여기 자동으로 올라옵니다. 올라온 문항은 이야기가 끝날 때까지 새 세트에서 빠집니다.`;
+    // 선이 2 이상일 때만 「같은」이 뜻을 갖는다. 한 명이면 견줄 상대가 없다.
+    $('board-hint').innerHTML = `<b>${minWord(data.min)}</b>${data.min > 1 ? ' 같은' : ''} 문항이나 사진을
+      제보하면 여기 자동으로 올라옵니다. 올라온 문항은 이야기가 끝날 때까지 새 세트에서 빠집니다.`;
     $('board-list').innerHTML = data.threads.length ? data.threads.map(t => `
       <button class="thread" onclick="openThread('${esc(t.kind)}', ${JSON.stringify(t.subject).replace(/"/g,'&quot;')})">
         <div class="thread-head">
@@ -856,7 +864,7 @@ async function loadAdmin(){
       <div class="rep${g.hot ? ' alert' : (g.open ? ' hot' : '')}">
         <div class="rep-head">
           <b>${g.open ? g.open + '명 확인 중' : '닫힘'}</b>
-          ${g.hot ? `<span class="rep-badge">${alert.min}명 이상</span>` : ''}
+          ${g.hot ? `<span class="rep-badge">${alert.min <= 1 ? '제보 있음' : alert.min + '명 이상'}</span>` : ''}
           <code>${esc(g.questionId)}</code>
           ${g.open ? `<button class="is-quiet" onclick="closeQuestion('${esc(g.questionId)}')">이 문항 닫기</button>` : ''}
         </div>
@@ -889,7 +897,7 @@ function renderAlert(images, alert){
   const parts = [];
   if (alert.questions) parts.push(`문항 ${alert.questions}개`);
   if (alert.images) parts.push(`사진 ${alert.images}장`);
-  bar.innerHTML = `${alert.min}명 이상이 걸린 ${parts.join(' · ')}`;
+  bar.innerHTML = `${minWord(alert.min)} 걸린 ${parts.join(' · ')}`;
   bar.classList.remove('hidden');
 
   /* 사진 묶음은 **여러 문항에 걸친 것만** 온다. 한 문항에 몰린 것은 아래
