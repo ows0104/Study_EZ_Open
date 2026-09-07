@@ -581,7 +581,7 @@ class RunnerBeat(Base):
 # 이미 Study_EZ의 Pre-Quiz가 쓰고 있어서 이름이 겹치면 안 된다.
 # ─────────────────────────────────────────────────────────────────────
 
-# 신고의 갈래. 화면의 선택지와 같은 순서다.
+# 제보의 갈래. 화면의 선택지와 같은 순서다.
 SPOTTER_REPORT_KINDS = ("answer", "image", "explanation", "options", "other")
 
 SPOTTER_REPORT_OPEN = "open"
@@ -593,6 +593,25 @@ SPOTTER_REPORT_STATUSES = frozenset(
 
 # 한 사람이 들고 다니는 기록의 수. 브라우저에 쌓던 시절과 같은 수다.
 SPOTTER_RECORD_KEEP = 30
+
+# **몇 명이 걸리면 「쌓였다」고 볼 것인가.** 한 사람이 잘못 읽은 것과 둘이 같은
+# 자리에서 멈춘 것은 다른 일이다. 선을 넘으면 세 가지가 한꺼번에 일어난다 —
+# 관리자 화면에 빨간 줄이 서고, 그 문항이 새 세트에서 빠지고(격리), 진리탐구
+# 게시판에 글타래가 선다.
+#
+# 세는 것은 제보의 수가 아니라 **사람의 수**다. 한 사람이 한 문항에 한 줄이라
+# (`uq_spotter_report_user_question`) 열린 줄을 세면 그대로 사람 수가 된다.
+# 선을 옮기려면 이 한 줄만 고친다.
+SPOTTER_ALERT_MIN = 2
+
+# 글타래가 무엇에 걸렸는가. 문항 하나가 이상한 것과 사진 한 장이 이상한 것은
+# 고치는 일이 달라서(보기를 고친다 / 사진을 다시 자른다) 따로 선다.
+SPOTTER_THREAD_QUESTION = "question"
+SPOTTER_THREAD_IMAGE = "image"
+SPOTTER_THREAD_KINDS = (SPOTTER_THREAD_QUESTION, SPOTTER_THREAD_IMAGE)
+
+# 댓글 한 줄의 길이. 게시판이지 논문이 아니다.
+SPOTTER_COMMENT_MAX = 2000
 
 
 class SpotterRecord(Base):
@@ -639,13 +658,13 @@ class SpotterWrong(Base):
 class SpotterReport(Base):
     """「이 문항 이상해요」. 문항이 자동 생성이라 반드시 필요한 표다.
 
-    **한 사람이 한 문항에 한 줄이다**(unique). 같은 문항을 다시 신고하면 그
+    **한 사람이 한 문항에 한 줄이다**(unique). 같은 문항을 다시 제보하면 그
     줄을 고쳐 쓴다 — 목록에 같은 문항이 여러 줄로 늘어서면 몇 명이 걸렸는지가
     안 보이고, 그걸 세는 것이 이 표의 쓸모다.
 
-    **`stem`·`answer`·`image`는 신고한 사람이 본 것을 그대로 뜬 것이다.**
-    지금의 문항이 아니다. 문항 DB를 다시 구우면서 그 문항이 사라져도 신고는
-    읽을 수 있어야 하고, 무엇보다 "고쳤다"를 판단하려면 신고 당시의 문면이
+    **`stem`·`answer`·`image`는 제보한 사람이 본 것을 그대로 뜬 것이다.**
+    지금의 문항이 아니다. 문항 DB를 다시 구우면서 그 문항이 사라져도 제보는
+    읽을 수 있어야 하고, 무엇보다 "고쳤다"를 판단하려면 제보 당시의 문면이
     있어야 한다. 화면이 이 값을 현재 문항처럼 그리면 안 된다.
     """
 
@@ -656,10 +675,19 @@ class SpotterReport(Base):
     question_id: Mapped[str] = mapped_column(String(16), nullable=False)
     kind: Mapped[str] = mapped_column(String(16), nullable=False, default="other")
     note: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    # 신고 당시의 문면. 위 설명을 보라 — 현재 문항이 아니다.
+    # 제보 당시의 문면. 위 설명을 보라 — 현재 문항이 아니다.
     stem: Mapped[str] = mapped_column(Text, nullable=False, default="")
     answer: Mapped[str] = mapped_column(Text, nullable=False, default="")
     image: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # 사진 파일명만, 쉼표로 이어서. 바로 위의 `image`는 **사람이 읽는 줄**이라
+    # 출처가 괄호로 붙어 있고, 이것은 **묶어 세는 값**이다.
+    #
+    # 둘로 나눈 까닭은 한 사진이 여러 문항에 쓰이기 때문이다. 「이 사진이
+    # 흐리다」는 제보는 그 사진을 쓰는 문항마다 흩어져 들어와서, 문항으로만
+    # 세면 어느 쪽도 임계값을 못 넘은 채 사진 하나가 계속 돌아다닌다.
+    # 표시용 문자열을 갈라 읽는 대신 칼럼을 하나 둔다 — 화면에 붙이는 글이
+    # 바뀔 때마다 세는 쪽이 조용히 틀리면 안 된다.
+    images: Mapped[str] = mapped_column(Text, nullable=False, default="")
     status: Mapped[str] = mapped_column(String(16), nullable=False, default=SPOTTER_REPORT_OPEN)
     admin_note: Mapped[str] = mapped_column(Text, nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
@@ -670,6 +698,67 @@ class SpotterReport(Base):
         Index("ix_spotter_report_triage", "status", "created_at"),
         Index("ix_spotter_report_question", "question_id"),
     )
+
+
+class SpotterThread(Base):
+    """진리탐구 게시판의 글타래. **사람이 세우지 않는다.**
+
+    제보가 선(`SPOTTER_ALERT_MIN`)을 넘는 순간 서버가 세운다. 글을 쓰는
+    단추를 두지 않은 것은, 이 게시판이 아무 이야기나 하는 자리가 아니라
+    **여럿이 같은 자리에서 멈춘 문항만 모이는 자리**이기 때문이다. 무엇을
+    올릴지 사람이 고르기 시작하면 판정이 두 벌이 된다.
+
+    `kind`가 둘인 까닭은 고치는 일이 다르기 때문이다. 문항이 이상하면 보기나
+    정답을 고치고, 사진이 이상하면 사진을 다시 자른다. 사진 글타래는 그 사진을
+    쓰는 문항 **전부**를 한꺼번에 가리킨다.
+
+    **문면은 여기에도 뜬다.** 제보와 같은 이유다 — 문항 DB를 다시 구워 그
+    문항이 사라져도 글타래는 읽을 수 있어야 하고, 무엇을 두고 이야기했는지가
+    남아야 한다.
+
+    글타래가 열려 있는 동안 그 문항은 새 세트에서 빠진다(`/flagged`). 닫는
+    것이 곧 다시 내보내는 것이라, 닫기 전에 문항을 고쳐 다시 구워야 한다.
+    """
+
+    __tablename__ = "spotter_thread"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, default=SPOTTER_THREAD_QUESTION)
+    # 문항 글타래면 question_id, 사진 글타래면 파일명.
+    subject: Mapped[str] = mapped_column(String(300), nullable=False)
+    stem: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    answer: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    images: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default=SPOTTER_REPORT_OPEN)
+    # 관리자가 내린 결론. 닫을 때 한 줄 적는 자리다.
+    verdict: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    __table_args__ = (
+        UniqueConstraint("kind", "subject", name="uq_spotter_thread_subject"),
+        Index("ix_spotter_thread_status", "status", "updated_at"),
+    )
+
+
+class SpotterComment(Base):
+    """글타래에 달린 의견 한 줄.
+
+    **지운 줄은 남긴다**(`deleted`). 대화가 오간 자리에서 한 줄만 사라지면
+    남은 줄들이 무엇에 답한 것인지 알 수 없게 된다. 화면은 「지운 글입니다」로
+    그리고 내용만 안 보인다.
+    """
+
+    __tablename__ = "spotter_comment"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    thread_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    user_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (Index("ix_spotter_comment_thread", "thread_id", "created_at"),)
 
 
 # ─────────────────────────────────────────────────────────────────────

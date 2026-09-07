@@ -72,6 +72,8 @@ ADDED_COLUMNS = (
     ("prequiz_job", "queue_rank", "INTEGER NOT NULL DEFAULT 0"),
     # 2026-09-03 「멈추기」. 도는 편을 서버가 못 죽이므로 여기 적어 두고 러너가 받아 간다.
     ("prequiz_job", "cancel_requested", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    # 2026-09-07 제보를 사진으로도 묶어 세려고. 표시용 `image`와 갈라 둔 값이다.
+    ("spotter_report", "images", "TEXT NOT NULL DEFAULT ''"),
 )
 
 
