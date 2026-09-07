@@ -69,6 +69,19 @@ from .session import SessionError
 PROMPTS = Path(__file__).parent / "prompts"
 CONFIG = "run.config.json"       # 덱 이름·전략을 폴더가 기억한다 (--resume 이 한 줄이 되게)
 
+# **기본값을 argparse 가 아니라 여기서 준다.** 기본값이 argparse 에 박혀 있으면
+# `args.jokbo_dir` 이 늘 참이라 `args.x or saved.get("x")` 가 기억을 못 이긴다 —
+# 사람이 안 준 것과 기본값을 준 것을 구별할 방법이 없어진다.
+DEFAULT_JOKBO_DIR = "out/jokbo"
+DEFAULT_CHECK_DIR = "out/_image_check"
+
+# 부르는 쪽이 넘겨 주던 경로들. **폴더가 기억하고 `--resume` 이 되살린다.**
+# 2026-09-07 에 이것이 없어 세 번 걸렸다 — 이어 돌린 편이 기본값 `out/jokbo` 를 보고
+# 「기출 조각을 못 찾았다」로 빌드가 거부되고(두 번), 한 번은 덱 파일이 규칙 밖
+# 이름(`p260902_01.apkg`)으로 구워져 나갔다. `studyez watch` 가 늘 같이 넘겨 주던
+# 값이라 손으로 `--resume` 할 때만 드러난다.
+RESTORED = ("jokbo_dir", "jokbo", "apkg_name", "check_dir")
+
 
 # ── 이름 짓기 ──────────────────────────────────────────────────────
 def lecture_id_of(pdf: Path) -> str:
@@ -423,7 +436,9 @@ class Runner(BaseRunner):
              "pdf_name": self.args.pdf_name, "subject": self.args.subject,
              "lecture": self.args.lecture, "strategy": self.strategy,
              "strategy_why": self.strategy_why, "annotation_evidence": self.annotation,
-             "domain": self.args.domain},
+             "domain": self.args.domain,
+             # 부르는 쪽이 준 경로들. `--resume` 이 이걸 되살린다 (`RESTORED`).
+             **{k: getattr(self.args, k, None) or "" for k in RESTORED}},
             ensure_ascii=False, indent=2), encoding="utf-8")
 
     def report(self, check: Path | None):
@@ -474,7 +489,7 @@ def main(argv=None) -> int:
     ap.add_argument("--id", help="강의 ID (태그·파일명·guid). 기본은 파일명의 [260820_03]")
     ap.add_argument("-o", "--out", help="작업 폴더. 기본 out/<id>")
     ap.add_argument("--resume", help="이 폴더에서 이어서 돌린다 (pdf·덱 이름 생략 가능)")
-    ap.add_argument("--jokbo-dir", default="out/jokbo")
+    ap.add_argument("--jokbo-dir")   # 기본값은 DEFAULT_JOKBO_DIR 에서 준다
     ap.add_argument("--jokbo", help="족보 조각 json. 생략하면 목차 제목으로 자동 대조")
     ap.add_argument("--apkg-name", help="덱 파일 이름 (확장자 없이). 기본은 강의 ID")
     ap.add_argument("--strategy", choices=sorted(STRATEGY_ALIAS),
@@ -495,7 +510,7 @@ def main(argv=None) -> int:
                     help="자동 판정과 무관하게 올해 필기를 근거로 인정한다")
     ap.add_argument("--no-annotation-evidence", action="store_true",
                     help="교수가 바뀌었어도 필기를 근거로 인정하지 않는다")
-    ap.add_argument("--check-dir", default="out/_image_check",
+    ap.add_argument("--check-dir",   # 기본값은 DEFAULT_CHECK_DIR 에서 준다
                     help="이미지 카드 접촉 시트를 모아 둘 폴더")
     ap.add_argument("--no-image-check", action="store_true",
                     help="접촉 시트를 모으지 않는다 (눈검사가 더 필요 없어지면)")
@@ -523,6 +538,9 @@ def main(argv=None) -> int:
         args.pdf = args.pdf or saved.get("pdf") or None
         args.domain = args.domain or saved.get("domain") or None
         args.strategy = args.strategy or saved.get("strategy") or None
+        for key in RESTORED:
+            if not getattr(args, key, None):
+                setattr(args, key, saved.get(key) or None)
 
     if not args.resume and not args.pdf:
         print("필기 PDF 경로가 필요하다 (또는 --resume <폴더>).", flush=True)
@@ -539,6 +557,8 @@ def main(argv=None) -> int:
     args.deck = args.deck or saved.get("deck") or deck_of(args.lecture, args.subject)
     args.id = args.id or saved.get("id") or lecture_id_of(Path(args.pdf_name))
     args.domain = args.domain or DEFAULT_DOMAIN
+    args.jokbo_dir = args.jokbo_dir or DEFAULT_JOKBO_DIR
+    args.check_dir = args.check_dir or DEFAULT_CHECK_DIR
     # **전략은 출처가 셋이라 그것을 같이 들고 간다.** 예전에는 구별이 없어서 폴더가
     # 기억한 값을 「사람이 --strategy 로 지정했다」고 적었고, 그 거짓 문구 때문에
     # 08-25 의 확정이 무시된 것을 08-30까지 아무도 몰랐다.
