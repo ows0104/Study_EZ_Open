@@ -81,8 +81,8 @@ malaria_brain_section,뇌말라리아 조직절편,조직,말라리아,1,1,0,0,1
 pvivax_thick_smear,삼일열원충 두꺼운 도말,혈액도말,말라리아,10,6,2,2,10,9
 ascaris_gross,회충 성충 (육안),gross,선충,8,5,2,1,8,5
 enterobius_gross,요충 성충 (육안),gross,선충,0,0,0,0,0,0
-trichuris_gross,편충 성충 (육안),gross,선충,6,6,0,0,6,4
-anisakis_gross,고래회충 유충 (육안),gross,선충,7,7,0,0,7,6
+trichuris_gross,편충 성충 (육안),gross,선충,5,5,0,0,5,3
+anisakis_gross,고래회충 유충 (육안),gross,선충,8,8,0,0,8,7
 clonorchis_gross,간흡충 성충 (육안),gross,흡충,1,1,0,0,1,1
 fasciola_gross,간질 성충 (육안),gross,흡충,2,2,0,0,2,1
 diphyllobothrium_gross,광절열두조충 (육안),gross,조충,3,2,1,0,3,2

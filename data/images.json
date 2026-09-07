@@ -32220,7 +32220,7 @@
     "bytes": 0,
     "species_id": "trichuris_trichiura",
     "match_method": "부분일치",
-    "specimen_id": "trichuris_gross",
+    "specimen_id": "anisakis_gross",
     "confidence": "high",
     "review_reason": "",
     "width": 531,
