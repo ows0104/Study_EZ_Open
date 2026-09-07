@@ -212,6 +212,11 @@ def past_indicator(gen):
     표본 연결은 없다 — 구조물 이름으로 되짚는다. `ovary`처럼 여러 종에 걸치는
     구조물은 사진을 봐야 갈리므로 **연결하지 않고 비워 둔다**(분류군 비율 계산에서
     빠질 뿐, 문항 자체는 멀쩡하다).
+
+    **사진은 딸린 것을 전부 가져온다.** 실제 땡시는 한 문항에 현미경 둘, 또는
+    현미경 하나와 데모 하나를 같이 놓고 묻는 자리가 있고, 족보도 그대로 두 장을
+    싣는다. 첫 장만 쓰면 2019년 16번처럼 **indicator가 둘째 장에만 찍힌 문항이
+    화살표 없는 사진만 남아** 무엇을 묻는지 알 수 없게 된다.
     """
     path = os.path.join(ROOT, "data", "past_questions_linked.json")
     if not os.path.exists(path):
@@ -233,8 +238,9 @@ def past_indicator(gen):
                 and q.get("options") and len(q["options"]) >= 4
                 and q.get("answer_index") is not None):
             continue
-        img = os.path.join(ROOT, "questions", q["image_paths"][0])
-        if not os.path.exists(img):
+        imgs = [os.path.join(ROOT, "questions", p) for p in q["image_paths"]]
+        imgs = [p for p in imgs if os.path.exists(p)]
+        if not imgs:
             continue
         # 족보에 "복원 안됨"으로 남은 보기가 섞인 문항이 있다. 보기가 서로 같으면
         # 채점이 성립하지 않으므로 낸다는 것 자체가 말이 안 된다.
@@ -247,7 +253,7 @@ def past_indicator(gen):
         spec = cands[0] if len(sids) == 1 else None
         sp = gen.sp[spec["species_id"]] if spec else None
         out.append({
-            "year": q["year"], "no": q["no"], "img": img,
+            "year": q["year"], "no": q["no"], "imgs": imgs,
             "stem": q["stem"], "options": q["options"],
             "answer": q["answer_index"], "structure": q["answer_structure"],
             "spec": spec, "sp": sp,
@@ -316,11 +322,21 @@ def main():
     # indicator(파란 선분)가 그대로 찍혀 있다. 지문·보기·정답도 실제 것이다.
     past = past_indicator(gen)
     for q in past:
-        name = "jokbo_" + flat(os.path.relpath(q["img"], os.path.join(ROOT, "questions")))
-        used[name] = q["img"]
-        img_meta[name] = {"src": f"{q['year']}년 족보 {q['no']}번", "path": "questions/"
-                          + os.path.relpath(q["img"], os.path.join(ROOT, "questions")).replace("\\", "/"),
-                          "sharp": 0}
+        # 사진이 둘인 문항이 있다 — 현미경 + 데모, 또는 현미경 둘. 전부 내보내고
+        # 문항에는 순서대로 달아 준다. 첫 장은 `image`에도 그대로 두어서 사진
+        # 하나를 기대하는 쪽(다시보기 섬네일·신고·audit)이 그대로 돈다.
+        names = []
+        for i, path in enumerate(q["imgs"]):
+            rel = os.path.relpath(path, os.path.join(ROOT, "questions"))
+            name = "jokbo_" + flat(rel)
+            used[name] = path
+            n = f"{q['year']}년 족보 {q['no']}번"
+            if len(q["imgs"]) > 1:
+                n += f" (사진 {i + 1}/{len(q['imgs'])})"
+            img_meta[name] = {"src": n, "path": "questions/" + rel.replace("\\", "/"),
+                              "sharp": 0}
+            names.append(name)
+        name = names[0]
         spec, sp = q["spec"], q["sp"]
         qid = "j" + hashlib.sha1(f'{q["year"]}|{q["no"]}'.encode()).hexdigest()[:9]
         if qid in seen_ids:
@@ -335,6 +351,9 @@ def main():
             "qtype": "indicator",
             "stem": q["stem"],
             "image": name,
+            # 한 장짜리에는 달지 않는다. 5,300문항이 같은 값을 한 번 더
+            # 들고 가면 DB만 커지고 읽는 쪽은 `q.images || [q.image]`로 같다.
+            **({"images": names} if len(names) > 1 else {}),
             "options": q["options"],
             "answer": q["answer"],
             "explanation": expl,
@@ -351,7 +370,8 @@ def main():
             "years": [str(q["year"])],
             "jokbo": True,
         })
-    print(f"족보 indicator {len(past)}문항 (표본 연결 {sum(1 for q in past if q['spec'])}건)")
+    print(f"족보 indicator {len(past)}문항 (표본 연결 {sum(1 for q in past if q['spec'])}건"
+          f" / 사진 여러 장 {sum(1 for q in past if len(q['imgs']) > 1)}문항)")
 
     # ── 이미지 리사이즈
     if os.path.isdir(BUILD_IMG):

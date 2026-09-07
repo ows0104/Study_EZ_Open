@@ -18,8 +18,13 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g,
   c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
 
 /* ══════════ 상태 ══════════ */
+/* `imgs`는 **문항마다 사진 이름의 배열**이다. 대개 한 장이지만 족보에는
+   현미경 + 데모처럼 두 장을 놓고 묻는 문항이 있고, 그중에는 indicator가
+   둘째 장에만 찍힌 것도 있어서 첫 장만 그리면 문제가 성립하지 않는다. */
 let S = { qs:[], i:0, answers:[], mode:'exam', limit:30, timer:null, left:0, rand:null,
           imgs:[], imgUrl:{}, opts:[], timedFor:-1, srcOpen:false, srcFor:-1 };
+/** 문항이 쓰는 사진 이름 전부. 한 장짜리는 `images` 없이 `image`만 들고 온다. */
+const imgsOf = q => (q.images && q.images.length ? q.images : [q.image]).filter(Boolean);
 let QUIZ_META = null, QUIZ_DB = [];
 let ME = null;                      // /api/me. 관리자 화면을 그릴지 정한다
 let WRONG = new Set();              // 오답노트. 서버가 참, 없으면 localStorage
@@ -254,7 +259,7 @@ async function start(mode, wrongOnly){
   if (!S.qs.length){ alert('조건에 맞는 문항이 없습니다.'); return; }
 
   S.answers = new Array(S.qs.length).fill(null);
-  S.imgs = S.qs.map(q => q.image);
+  S.imgs = S.qs.map(imgsOf);
   // 보기 순서는 풀 때마다 새로 섞는다. 위치를 외우는 걸 막는다.
   S.opts = S.qs.map(q => {
     const idx = q.options.map((_,i) => i);
@@ -269,7 +274,7 @@ async function start(mode, wrongOnly){
   // 사진은 세트를 만든 직후에 한 번에 서명받는다. 문항마다 부르면 왕복이
   // 40번이고 그중 39번은 사용자를 기다리는 동안 노는 요청이 된다.
   try {
-    await signImages(S.imgs);
+    await signImages([...new Set(S.imgs.flat())]);
   } catch (e){
     alert('사진을 불러오지 못했습니다. ' + e.message);
     return;
@@ -288,11 +293,18 @@ function render(){
   $('q-count').textContent = `${S.i+1} / ${S.qs.length}`;
   $('q-stem').textContent = q.stem;
 
-  // 사진은 문항마다 한 번만 고른다. 다시 그릴 때마다 바꾸면 답을 고른 순간 사진이 바뀐다.
-  $('q-img').src = S.imgUrl[S.imgs[S.i]] || '';
+  /* 사진은 문항마다 한 번만 고른다. 다시 그릴 때마다 바꾸면 답을 고른 순간
+     사진이 바뀐다. **두 장짜리는 둘 다 놓는다** — 실제 땡시가 현미경과 데모를
+     같이 놓고 묻는 자리가 있고, indicator가 둘째 장에만 찍힌 문항도 있다. */
+  const names = S.imgs[S.i];
   const meta = [q.stain, q.magnification].filter(Boolean).join(' · ');
-  $('q-meta').textContent = meta;
-  $('q-meta').style.display = meta ? '' : 'none';
+  const row = $('q-imgs');
+  row.classList.toggle('multi', names.length > 1);
+  row.innerHTML = names.map((n, k) => `
+    <div class="imgbox" onclick="zoom(${k})">
+      <img src="${esc(S.imgUrl[n] || '')}" alt="표본 사진">
+      ${meta && k === 0 ? `<span class="imgmeta">${esc(meta)}</span>` : ''}
+    </div>`).join('');
   /* 출처는 접어 둔다. **땡시에서는 문항이 바뀌면 다시 접히고, 공부에서는
      펴 둔 채로 따라온다.** 시간을 재는 화면에서 한 번 편 것이 마흔 문항을
      따라다니면 접어 둔 뜻이 없고, 사진마다 원본을 짚어 보는 공부 중에는
@@ -322,7 +334,7 @@ function render(){
   $('btn-next').classList.toggle('hidden', S.i === S.qs.length-1);
   $('btn-finish').classList.toggle('hidden', S.i !== S.qs.length-1);
   // 다음 문제 사진 미리 받아두기
-  if (S.imgs[S.i+1] && S.imgUrl[S.imgs[S.i+1]]) new Image().src = S.imgUrl[S.imgs[S.i+1]];
+  (S.imgs[S.i+1] || []).forEach(n => { if (S.imgUrl[n]) new Image().src = S.imgUrl[n]; });
   // **시계는 문항이 바뀔 때만 되감는다.** render()는 답을 고를 때도 불리므로
   // 여기서 무조건 startTimer()를 부르면 답을 누르는 것이 곧 시간 연장이 된다.
   if (S.timedFor !== S.i) startTimer();
@@ -403,12 +415,14 @@ async function finish(){
 
   $('r-review').innerHTML = rows.map((r,i) => `
     <div class="rev ${r.ok?'right':'wrong'}">
-      <img src="${esc(S.imgUrl[S.imgs[i]] || '')}" alt="">
+      <span class="revimgs">${S.imgs[i].map(n =>
+        `<img src="${esc(S.imgUrl[n] || '')}" alt="">`).join('')}</span>
       <div class="q">${i+1}. [${esc(ko(QTYPE_KO, r.q.qtype))}] ${esc(r.q.stem)}</div>
       <div class="a">${r.ok ? '' : `<i>내 답: ${r.picked===null?'무응답':esc(r.q.options[r.picked])}</i><br>`}
         <b>정답: ${esc(r.q.options[r.q.answer])}</b></div>
       <div class="explain" style="margin-top:8px">${esc(r.q.explanation)}</div>
-      <div class="imgsrc">${srcHtml(S.imgs[i])}</div>
+      <div class="imgsrc${S.imgs[i].length > 1 ? ' many' : ''}">${
+        S.imgs[i].map(n => srcHtml(n, true)).join('')}</div>
       <button class="report-link" data-qid="${esc(r.q.id)}" data-idx="${i}"
         onclick="openReport('${esc(r.q.id)}', ${i})">이 문항 신고</button>
     </div>`).join('');
@@ -469,7 +483,7 @@ function retryWrong(){
   if (!S.wrongSet || !S.wrongSet.length) return;
   S.qs = S.wrongSet.slice();
   S.answers = new Array(S.qs.length).fill(null);
-  S.imgs = S.qs.map(q => q.image);
+  S.imgs = S.qs.map(imgsOf);
   S.opts = S.qs.map(q => q.options.map((_,i) => i));
   S.i = 0; S.timedFor = -1; S.mode = 'study'; S.limit = 0;
   S.srcOpen = false; S.srcFor = -1;
@@ -498,9 +512,11 @@ const KIND_KO = { answer:'정답이 틀렸다', image:'사진이 문제와 안 �
 function openReport(qid, idx){
   if (OFFLINE){ alert('로그인해야 신고할 수 있습니다.'); return; }
   const q = QUIZ_DB.find(x => x.id === qid) || (S.qs[S.i] || {});
-  const src = imgSrc(q.image);
+  // 사진이 둘인 문항은 둘 다 적어 보낸다. 어느 쪽이 이상한지는 신고 글이 말한다.
+  const names = imgsOf(q);
+  const srcs = names.map(imgSrc).filter(Boolean).map(s => s.src + ' / ' + s.path);
   reportFor = { id: qid, stem: q.stem || '', answer: (q.options||[])[q.answer] || '',
-                image: q.image || '', imageSrc: src ? src.src + ' / ' + src.path : '' };
+                image: names.join(', '), imageSrc: srcs.join(' · ') };
   const mine = MY_REPORTS[qid];
   $('report-kind').value = mine ? mine.kind : 'answer';
   $('report-note').value = mine ? mine.note : '';
@@ -604,10 +620,13 @@ function imgSrc(name){ return (QUIZ_META && QUIZ_META.images && QUIZ_META.images
 function blurHtml(s){
   return s.sharp && s.sharp < 12 ? `<span class="dim">흐린 사진 (선명도 ${s.sharp})</span>` : '';
 }
-function srcHtml(name){
+/* 사진 하나가 한 덩어리다. **둘일 때 덩어리로 묶지 않으면** 두 줄이 한 줄로
+   섞여서, 「흐린 사진」이 어느 쪽 이야기인지 알 수 없게 된다. */
+function srcHtml(name, withLabel){
   const s = imgSrc(name);
   if (!s) return '';
-  return `<span>출처: ${esc(s.src)}</span><code>${esc(s.path)}</code>${blurHtml(s)}`;
+  return `<span class="src-one"><span>${withLabel ? '출처: ' : ''}${esc(s.src)}</span>`
+       + `<code>${esc(s.path)}</code>${blurHtml(s)}</span>`;
 }
 
 /** 문제 화면의 출처 줄. 접힌 채로 손잡이만 서 있다가, 누르면 펴진다.
@@ -618,11 +637,13 @@ function srcHtml(name){
  */
 function renderSrc(){
   const el = $('q-src');
-  const s = imgSrc(S.imgs[S.i]);
-  if (!s){ el.innerHTML = ''; return; }
+  // 사진이 둘이면 출처도 둘이다. 사진 하나가 한 줄이 되게 나눠 놓는다.
+  const names = S.imgs[S.i].filter(imgSrc);
+  if (!names.length){ el.innerHTML = ''; return; }
+  el.classList.toggle('many', names.length > 1);
   el.innerHTML =
     `<button class="src-toggle" onclick="toggleSrc()">출처 ${S.srcOpen ? '▾' : '▸'}</button>`
-    + (S.srcOpen ? `<span>${esc(s.src)}</span><code>${esc(s.path)}</code>${blurHtml(s)}` : '');
+    + (S.srcOpen ? names.map(n => srcHtml(n)).join('') : '');
 }
 function toggleSrc(){ S.srcOpen = !S.srcOpen; renderSrc(); }
 
@@ -659,9 +680,11 @@ function zAt(cx, cy, k2){
   zApply();
 }
 
-function zoom(){
-  $('modal-img').src = $('q-img').src;
-  const s = imgSrc(S.imgs[S.i]);
+function zoom(k){
+  // 누른 사진을 키운다. 두 장짜리 문항에서 아무 쪽이나 키울 수 있어야 한다.
+  const name = S.imgs[S.i][k || 0];
+  $('modal-img').src = S.imgUrl[name] || '';
+  const s = imgSrc(name);
   $('modal-src').textContent = s ? s.src + '  ·  ' + s.path : '';
   zReset();
   $('modal').classList.remove('hidden');
