@@ -297,7 +297,11 @@ function render(){
      사진이 바뀐다. **두 장짜리는 둘 다 놓는다** — 실제 땡시가 현미경과 데모를
      같이 놓고 묻는 자리가 있고, indicator가 둘째 장에만 찍힌 문항도 있다. */
   const names = S.imgs[S.i];
-  const meta = [q.stain, q.magnification].filter(Boolean).join(' · ');
+  /* 사진 위에 남기는 것은 배율뿐이다. **염색법은 답을 반쯤 알려 준다** —
+     철헤마톡실린이라 쓰여 있으면 원충을 찍은 사진이고, 그것만으로 보기 넷 중
+     둘이 지워진다. 사진을 보고 알아보는 것이 이 시험이므로, 염색은 출처와
+     함께 접어 둔다 — 접힌 것을 펴는 것은 알아보기를 포기한 뒤의 일이다. */
+  const meta = q.magnification || '';
   const row = $('q-imgs');
   row.classList.toggle('multi', names.length > 1);
   row.innerHTML = names.map((n, k) => `
@@ -421,7 +425,7 @@ async function finish(){
       <div class="a">${r.ok ? '' : `<i>내 답: ${r.picked===null?'무응답':esc(r.q.options[r.picked])}</i><br>`}
         <b>정답: ${esc(r.q.options[r.q.answer])}</b></div>
       <div class="explain" style="margin-top:8px">${esc(r.q.explanation)}</div>
-      <div class="imgsrc${S.imgs[i].length > 1 ? ' many' : ''}">${
+      <div class="imgsrc${S.imgs[i].length > 1 ? ' many' : ''}">${stainHtml(r.q)}${
         S.imgs[i].map(n => srcHtml(n, true)).join('')}</div>
       <button class="report-link" data-qid="${esc(r.q.id)}" data-idx="${i}"
         onclick="openReport('${esc(r.q.id)}', ${i})">이 문항 신고</button>
@@ -628,6 +632,11 @@ function srcHtml(name, withLabel){
   return `<span class="src-one"><span>${withLabel ? '출처: ' : ''}${esc(s.src)}</span>`
        + `<code>${esc(s.path)}</code>${blurHtml(s)}</span>`;
 }
+/** 염색법 한 줄. 사진 위가 아니라 출처 쪽에 선다. 사진이 둘이어도 염색은
+ *  문항의 것이라 한 번만 적는다. */
+function stainHtml(q){
+  return q && q.stain ? `<span>염색: ${esc(q.stain)}</span>` : '';
+}
 
 /** 문제 화면의 출처 줄. 접힌 채로 손잡이만 서 있다가, 누르면 펴진다.
  *
@@ -639,11 +648,13 @@ function renderSrc(){
   const el = $('q-src');
   // 사진이 둘이면 출처도 둘이다. 사진 하나가 한 줄이 되게 나눠 놓는다.
   const names = S.imgs[S.i].filter(imgSrc);
-  if (!names.length){ el.innerHTML = ''; return; }
+  // 염색만 있고 출처가 없는 사진도 있다. 그때도 손잡이는 서 있어야 한다.
+  const stain = stainHtml(S.qs[S.i]);
+  if (!names.length && !stain){ el.innerHTML = ''; return; }
   el.classList.toggle('many', names.length > 1);
   el.innerHTML =
     `<button class="src-toggle" onclick="toggleSrc()">출처 ${S.srcOpen ? '▾' : '▸'}</button>`
-    + (S.srcOpen ? names.map(n => srcHtml(n)).join('') : '');
+    + (S.srcOpen ? stain + names.map(n => srcHtml(n)).join('') : '');
 }
 function toggleSrc(){ S.srcOpen = !S.srcOpen; renderSrc(); }
 
