@@ -342,6 +342,14 @@ body:has(#quiz:not(.hidden)) #who{display:none}
 /* 다시 구우면서 사라진 문항. 사본만 남았다는 것을 조용히 알린다. */
 .rep-gone{font-size:12px;color:var(--muted);border:1px dashed var(--line);
   border-radius:8px;padding:6px 9px;margin-bottom:8px}
+/* ── 게시판에 놓이는 문항 전문
+   여기서는 문면이 곧 제목이라(글타래 이름이 따로 없다) 조금 키운다. 사진도
+   제보함보다는 크게 — 목록이 아니라 한 건을 놓고 이야기하는 자리다. */
+.board-q .rep-stem{font-size:16px;margin-top:0}
+.board-q .imgbox img,
+.board-q .imgrow.multi>.imgbox img{max-height:min(42vh,360px)}
+/* 사진 글타래가 문항 여럿을 안을 때 그 사이의 금 */
+.q-split{border:0;border-top:1px solid var(--line);margin:16px 0}
 .rep-one{border-top:1px solid var(--line);padding:7px 0;font-size:13px}
 .rep-kind{font-weight:600}
 .rep-who{color:var(--muted);font-size:12px;margin-left:6px}
@@ -606,6 +614,6 @@ body:has(#quiz:not(.hidden)) #who{display:none}
 <script src="../auth.js?v=06ba6b65"></script>
 <!-- 다섯 과목이 같이 쓰는 로그인 문. 화면은 이 파일이 들고 온다. -->
 <script src="../gate.js?v=c12746c4"></script>
-<script src="app.js?v=aadd9334"></script>
+<script src="app.js?v=d6da18f2"></script>
 </body>
 </html>

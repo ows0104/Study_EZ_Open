@@ -733,8 +733,15 @@ async function openThread(kind, subject){
   try {
     const t = await api(`/api/spotter/threads/${kind}/${encodeURIComponent(subject)}`);
     BOARD.one = t;
-    // 사진은 여기서도 서명을 받아야 뜬다. 세트를 안 만들고 들어온 자리다.
-    await signImages(t.images.filter(n => !S.imgUrl[n]));
+    /* 사진은 여기서도 서명을 받아야 뜬다. 세트를 안 만들고 들어온 자리다.
+       **글타래가 안은 문항들의 사진까지** 받는다 — 사진 글타래는 문항 여럿을
+       안고 있고, 그 문항들이 쓰는 다른 사진은 t.images에 없다. */
+    const want = new Set(t.images);
+    t.questionIds.forEach(id => {
+      const q = QUIZ_DB.find(x => x.id === id);
+      if (q) imgsOf(q).forEach(n => want.add(n));
+    });
+    await signImages([...want].filter(n => !S.imgUrl[n]));
     renderThread();
   } catch (e){
     $('board-one').innerHTML = `<p class="gate-msg bad">${esc(e.message)}</p>`;
@@ -755,18 +762,25 @@ function renderThread(){
         <span class="tkind">${t.kind === 'image' ? '사진' : '문항'}</span>
         <span class="tcount">${t.reports}명 제보</span>
       </div>
-      <h3 style="margin:10px 0 4px">${esc(t.kind === 'image' ? t.subject : (t.stem || t.subject))}</h3>
-      ${t.kind === 'question' && t.answer
-        ? `<p class="thread-sub">정답으로 나간 보기: <b>${esc(t.answer)}</b></p>` : ''}
-      ${t.kind === 'image'
-        ? `<p class="thread-sub">제보는 문항 ${t.questionIds.length}개에서 왔지만,
-             <b>이 사진을 쓰는 문항 ${usedBy(t.subject)}개가 모두</b> 빠져 있습니다.</p>` : ''}
-      <div class="imgrow${t.images.length > 1 ? ' multi' : ''}" style="margin-top:10px">
-        ${t.images.map(n => `<div class="imgbox" onclick="zoomImg('${esc(n)}')">
-          <img src="${esc(S.imgUrl[n] || '')}" alt="표본 사진"></div>`).join('')}
-      </div>
+      ${t.kind === 'image' ? `
+        <h3 style="margin:10px 0 4px">${esc(t.subject)}</h3>
+        <p class="thread-sub">제보는 문항 ${t.questionIds.length}개에서 왔지만,
+          <b>이 사진을 쓰는 문항 ${usedBy(t.subject)}개가 모두</b> 빠져 있습니다.</p>
+        <div class="imgrow" style="margin-top:10px">
+          <div class="imgbox" onclick="zoomImg('${esc(t.subject)}')">
+            <img src="${esc(S.imgUrl[t.subject] || '')}" alt="표본 사진"></div>
+        </div>` : ''}
       ${t.verdict ? `<p class="verdict"><b>결론</b> ${esc(t.verdict)}</p>` : ''}
     </div>
+
+    ${/* **여기가 이야기의 대상이다.** 문면 한 줄을 놓고 「보기가 이상하다」를
+          이야기할 수는 없다. 제보함과 같은 것을 놓는다 — 같은 함수라 두 화면이
+          갈릴 일이 없다. 사진 글타래는 걸린 문항을 전부 편다. */''}
+    ${t.kind === 'image' ? `<h2>걸린 문항 ${t.questionIds.length}개</h2>` : ''}
+    <div class="card board-q">${t.questionIds.map((id, k) =>
+      (k ? '<hr class="q-split">' : '')
+      + questionFull(id, t.kind === 'question' ? { stem: t.stem, answer: t.answer } : null)
+    ).join('')}</div>
 
     <h2>어디가 이상한가</h2>
     <div class="card">${t.notes.map(n => `
@@ -866,10 +880,13 @@ async function decideThread(status){
  */
 function questionFull(qid, copy){
   const q = QUIZ_DB.find(x => x.id === qid);
-  if (!q) return `
-    <div class="rep-stem">${esc(copy.stem)}</div>
-    <div class="rep-ans">정답으로 나간 보기: ${esc(copy.answer) || '—'}</div>
-    <div class="rep-gone">지금 문항 DB에 없습니다 — 위는 제보하던 날의 사본입니다.</div>`;
+  /* 사본조차 없을 수 있다 — 사진 글타래는 문항 하나의 것이 아니라서 문면을
+     안 들고 온다. 그때는 없다는 사실만 적는다. */
+  if (!q) return (copy && copy.stem
+    ? `<div class="rep-stem">${esc(copy.stem)}</div>
+       <div class="rep-ans">정답으로 나간 보기: ${esc(copy.answer) || '—'}</div>
+       <div class="rep-gone">지금 문항 DB에 없습니다 — 위는 제보하던 날의 사본입니다.</div>`
+    : `<div class="rep-gone">지금 문항 DB에 없는 문항입니다 (${esc(qid)}).</div>`);
 
   const names = imgsOf(q);
   return `
