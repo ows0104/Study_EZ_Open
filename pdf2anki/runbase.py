@@ -102,10 +102,24 @@ class BaseRunner:
         return r.returncode
 
     def step(self, name: str, produces: str | None, fn):
-        """산출물이 있으면 건너뛴다. 재개가 공짜가 되는 지점이다."""
-        if produces and self.made(produces) and not self.args.force:
-            print(f"[건너뜀] {name}  ({produces} 이미 있음)", flush=True)
-            return
+        """산출물이 있으면 건너뛴다. 재개가 공짜가 되는 지점이다.
+
+        **`--force` 면 만들기 전에 옛 산출물을 지운다.** 어차피 덮어쓸 것이라 결과는
+        같지만, **중간에 죽었을 때가 다르다.** 지우지 않으면 옛 파일이 그대로 남고,
+        그 뒤의 `--resume` 은 그것을 이번 실행의 산출물로 보고 그 단계를 건너뛴다.
+
+        2026-09-08 에 `260904_02` 가 그렇게 됐다. `--force` 로 돌려 ① 이 새 계획을
+        썼는데 ② 가 세션 한도(429)로 죽었고, `--resume` 이 **아흐레 전 `items.raw.json`**
+        을 보고 ② 를 건너뛰었다. 오늘 세운 계획에 어제 카드를 붙여 덱이 구워졌고,
+        화면에는 「끝났다」만 찍혔다.
+        """
+        if produces and self.made(produces):
+            if not self.args.force:
+                print(f"[건너뜀] {name}  ({produces} 이미 있음)", flush=True)
+                return
+            for old in (self.out.glob(produces) if "*" in produces
+                        else [self.out / produces]):
+                old.unlink(missing_ok=True)
         print(f"\n── {name}", flush=True)
         n0 = len(ledger.read(self.out))
         t = time.time()

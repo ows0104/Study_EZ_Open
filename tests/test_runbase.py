@@ -139,8 +139,54 @@ def test_step은_force면_있어도_다시_돈다(tmp_path):
     (tmp_path / "있다.json").write_text("{}", encoding="utf-8")
     r = main_run.Runner(tmp_path, _args(force=True))
     ran = []
-    r.step("강제", "있다.json", lambda: ran.append(1))
+
+    def remake():
+        ran.append(1)
+        (tmp_path / "있다.json").write_text("새것", encoding="utf-8")
+
+    r.step("강제", "있다.json", remake)
     assert ran == [1]
+    assert (tmp_path / "있다.json").read_text(encoding="utf-8") == "새것"
+
+
+def test_force가_중간에_죽으면_옛_산출물이_안_남는다(tmp_path):
+    """남으면 그다음 `--resume` 이 그것을 이번 실행 것으로 보고 그 단계를 건너뛴다.
+
+    2026-09-08 `260904_02` — `--force` 로 ① 이 새 계획을 썼는데 ② 가 세션 한도로
+    죽었고, 재개가 아흐레 전 `items.raw.json` 을 보고 ② 를 건너뛰었다. 오늘 계획에
+    어제 카드가 붙은 덱이 나왔고 화면에는 「끝났다」만 찍혔다.
+    """
+    (tmp_path / "items.raw.json").write_text("어제 카드", encoding="utf-8")
+    r = main_run.Runner(tmp_path, _args(force=True))
+
+    def die():
+        raise RuntimeError("세션 한도")
+
+    with pytest.raises(RuntimeError):
+        r.step("② 카드", "items.raw.json", die)
+    assert not (tmp_path / "items.raw.json").exists()
+
+    # 그래서 이어 돌리면 건너뛰지 않는다
+    r2 = main_run.Runner(tmp_path, _args())
+    ran = []
+    r2.step("② 카드", "items.raw.json",
+            lambda: (ran.append(1),
+                     (tmp_path / "items.raw.json").write_text("새 카드", encoding="utf-8")))
+    assert ran == [1]
+
+
+def test_force가_파트로_갈린_산출물도_지운다(tmp_path):
+    """`prompt.cards*.md` 처럼 `*` 가 든 것도 같이 지운다."""
+    for n in ("prompt.cards.1of2.md", "prompt.cards.2of2.md"):
+        (tmp_path / n).write_text("어제 것", encoding="utf-8")
+    r = main_run.Runner(tmp_path, _args(force=True))
+
+    def die():
+        raise RuntimeError("죽었다")
+
+    with pytest.raises(RuntimeError):
+        r.step("프롬프트 조립", "prompt.cards*.md", die)
+    assert list(tmp_path.glob("prompt.cards*.md")) == []
 
 
 def test_step은_원장에_단계를_적는다(tmp_path):
