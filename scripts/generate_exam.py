@@ -384,22 +384,9 @@ class Generator:
                 v = v[0] if v else None
             if not v:
                 continue
-            if field == "treatment":
-                v = drug_only(v)
-            elif field == "intermediate_host":
-                v = re.sub(r"^제\d\s*-\s*", "", short(v))
-            elif field == "diagnosis":
-                v = DIAG_FIX.get(short(v), short(v))
-            elif field == "transmission_mode":
-                v = short(v)
-                if v == "해당 없음":
-                    continue
-            elif field == "infective_stage":
-                # 정답과 같은 표기여야 한다. 정답에만 영문이 붙어 있으면
-                # 넷 중 하나만 모양이 달라 그것이 곧 답이 된다.
-                v = stage_option(v)
-            else:
-                v = short(v)
+            v = self.option_text(field, v)
+            if field == "transmission_mode" and v == "해당 없음":
+                continue
             if clash(v, [correct, *also] + out):
                 continue
             out.append(v)
@@ -407,42 +394,61 @@ class Generator:
                 break
         return out
 
+    # ── 필드 값을 보기 문장으로 ────────────────────────────────────
+    @staticmethod
+    def option_text(field, value):
+        """필드 값 하나를 보기로 쓸 문장으로 바꾼다.
+
+        **정답도 오답도 반드시 이것을 거친다.** 한쪽만 바꾸면 넷 중 하나만
+        모양이 달라져 그것이 곧 답이 된다. 예전에는 이 변환이 정답 만드는
+        자리와 오답 만드는 자리에 따로 적혀 있었다.
+        """
+        if field == "treatment":
+            return drug_only(value)
+        if field == "intermediate_host":
+            return re.sub(r"^제\d\s*-\s*", "", short(value))
+        if field == "diagnosis":
+            return DIAG_FIX.get(short(value), short(value))
+        if field == "infective_stage":
+            return stage_option(value)
+        return short(value)
+
     # ── 종까지 안 갈리는 표본 ──────────────────────────────────────
     def field_value(self, sp, field):
         """`candidates()`가 정답을 만들 때 쓰는 것과 같은 변환."""
         v = sp.get(field)
         if isinstance(v, list):
             v = v[0] if v else None
-        if not v:
-            return None
-        if field == "treatment":
-            return drug_only(v)
-        if field == "diagnosis":
-            return DIAG_FIX.get(short(v), short(v))
-        if field == "transmission_mode":
-            return v
-        if field == "infective_stage":
-            return stage_option(v)
-        return short(v)
+        return self.option_text(field, v) if v else None
 
     def also_correct(self, sp, field, correct):
         """보기에는 안 실렸지만 **이 문항에서도 정답인** 값들.
 
-        자료의 한 칸에 답이 여럿 적힌 자리가 있다(`listed`). 그중 하나만
-        보기로 내보내므로, 나머지가 다른 종에서 오답으로 돌아오는 길을
-        여기서 막는다.
+        답이 여럿인 자리가 둘 있다.
+
+        하나는 한 칸에 '/'로 나란히 적힌 값이다(`listed`) — 만손열두조충의
+        감염형 `전미충 (procercoid) / 의미충 (plerocercoid)`.
+
+        다른 하나는 **목록으로 적힌 필드**다. `vector_for`·`diagnosis`·
+        `treatment`는 값이 여럿인데 첫 값만 정답으로 내보낸다. 나머지도
+        맞는 답이라 오답으로 쓰면 안 된다 — 편충의 진단은 대장내시경이자
+        대변검사이고(오히려 대변검사가 먼저다), 단방조충의 치료는 PAIR이자
+        외과적 적출이며, 작은소피참진드기는 SFTS도 재귀열도 매개한다.
+
+        둘 다 그중 하나만 보기로 나가므로, 나머지가 다른 종에서 오답으로
+        돌아오는 길을 여기서 막는다.
         """
         v = sp.get(field)
-        if isinstance(v, list):
-            v = v[0] if v else None
-        parts = listed(v)
+        values = v if isinstance(v, list) else [v]
+        parts = [p for value in values for p in listed(value)]
         if len(parts) < 2:
             return []
-        # 낱개와 그것을 줄인 것 둘 다 막는다. 오답은 `short()`를 거쳐 오는
-        # 필드가 있고, 그때 '의미충 (plerocercoid)'은 '의미충'으로 온다.
+        # 낱개·줄인 것·보기 문장 셋 다 막는다. 오답이 어느 모양으로 돌아올지는
+        # 필드마다 다르다 — '의미충 (plerocercoid)'은 '의미충'으로, '대변 충란'은
+        # `DIAG_FIX`를 거쳐 '대변검사'로 온다.
         out = []
         for p in parts:
-            out += [p, short(p)]
+            out += [p, short(p), self.option_text(field, p)]
         return [x for x in dict.fromkeys(out) if x and norm(x) != norm(correct)]
 
     def same_across(self, x, field):
@@ -526,27 +532,30 @@ class Generator:
                 for st in x["structures"]:
                     add("특징 구조물", st, "structure")
 
-            add("감염경로", short(s.get("source")), "field", "source")
+            # 정답도 오답과 같은 `option_text`를 거친다. 예전에는 여기에
+            # 변환이 따로 적혀 있어 둘이 어긋날 수 있었다.
+            def field_add(qtype, field, value, **kw):
+                add(qtype, self.option_text(field, value), "field", field, **kw)
+
+            field_add("감염경로", "source", s.get("source"))
             mode = s.get("transmission_mode")
             if mode and mode != "해당 없음":
-                add("감염경로", mode, "field", "transmission_mode",
-                    stem_key="전파방식")
-            # 감염형만 괄호 속 영문을 남긴다 (`stage_option`). 한글만 놓으면
-            # 전미충·의미충이 글자 한 자로 갈린다.
-            add("감염형", stage_option(s.get("infective_stage")), "field",
-                "infective_stage")
-            add("증상·질병", short(s.get("disease_ko")), "field", "disease_ko")
-            add("기생부위", short(s.get("habitat")), "field", "habitat")
-            add("숙주", short(s.get("definitive_host")), "field", "definitive_host")
+                field_add("감염경로", "transmission_mode", mode, stem_key="전파방식")
+            field_add("감염형", "infective_stage", s.get("infective_stage"))
+            field_add("증상·질병", "disease_ko", s.get("disease_ko"))
+            field_add("기생부위", "habitat", s.get("habitat"))
+            field_add("숙주", "definitive_host", s.get("definitive_host"))
             # 중간숙주는 자료의 값이 '패류'처럼 뭉뚱그려져 있어
             # '쇠우렁'과 상하위 관계가 되므로 문항으로 쓰지 않는다.
+            #
+            # 아래 셋은 값이 **목록**이다. 첫 값만 정답으로 내보내고 나머지는
+            # `also_correct`가 오답에서 막는다 — 나머지도 맞는 답이다.
             if s.get("diagnosis"):
-                add("진단", DIAG_FIX.get(short(s["diagnosis"][0]), short(s["diagnosis"][0])),
-                    "field", "diagnosis")
+                field_add("진단", "diagnosis", s["diagnosis"][0])
             if s.get("treatment"):
-                add("치료", drug_only(s["treatment"][0]), "field", "treatment")
+                field_add("치료", "treatment", s["treatment"][0])
             if s.get("vector_for"):
-                add("매개질환", short(s["vector_for"][0]), "field", "vector_for")
+                field_add("매개질환", "vector_for", s["vector_for"][0])
         return out
 
     # ── 한 문항 완성 ──────────────────────────────────────────────

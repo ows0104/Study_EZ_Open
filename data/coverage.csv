@@ -1,8 +1,8 @@
 ﻿specimen_id,label_ko,specimen_type,group,이미지수,실습사진,강의록사진,기타,확정매칭,문제사용가능
 ascaris_fertilized_egg,회충 수정란,충란,선충,18,16,1,1,15,15
 ascaris_unfertilized_egg,회충 불수정란,충란,선충,10,8,1,1,10,10
-trichuris_egg,편충 충란,충란,선충,16,14,1,1,16,16
-hookworm_egg,구충 충란,충란,선충,9,7,1,1,9,9
+trichuris_egg,편충 충란,충란,선충,15,13,1,1,15,15
+hookworm_egg,구충 충란,충란,선충,10,8,1,1,10,10
 enterobius_egg,요충 충란,충란,선충,14,13,1,0,14,12
 clonorchis_egg,간흡충 충란,충란,흡충,8,6,1,1,8,8
 metagonimus_egg,요코가와흡충 충란,충란,흡충,12,10,1,1,12,8
@@ -94,10 +94,10 @@ sarcoptes_skin_section,옴진드기 피부 조직절편,조직,의용곤충,0,0,
 dermatophagoides_wholemount,세로무늬먼지진드기,충체,의용곤충,3,3,0,0,1,2
 pediculus_wholemount,이 (머릿니·몸니),충체,의용곤충,7,3,3,1,1,6
 pthirus_wholemount,사면발이,충체,의용곤충,3,2,1,0,1,3
-haemaphysalis_gross,작은소피참진드기,gross,의용곤충,6,4,2,0,1,5
+haemaphysalis_gross,작은소피참진드기,gross,의용곤충,7,5,2,0,2,6
 leptotrombidium_wholemount,털진드기 유충,충체,의용곤충,7,5,2,0,1,7
 mosquito_wholemount,얼룩날개모기,충체,의용곤충,5,2,2,1,0,2
 culex_wholemount,집모기,충체,의용곤충,2,1,1,0,0,2
-aedes_wholemount,숲모기,충체,의용곤충,3,1,1,1,1,2
+aedes_wholemount,숲모기,충체,의용곤충,2,0,1,1,0,1
 cimex_wholemount,빈대,충체,의용곤충,4,2,2,0,2,2
 triatoma_wholemount,흡혈성 침노린재,충체,의용곤충,5,3,2,0,1,4
