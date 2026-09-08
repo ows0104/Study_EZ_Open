@@ -59,6 +59,9 @@ class Question:
     figures: list[dict] = field(default_factory=list)   # {page, bbox}
     needs_figure: bool = False
     grouped: bool = False       # 답가지가 문항 밖에 한 번만 인쇄된 연결형
+    # `pages`가 가리키는 PDF. None이면 과목 족보 원본(`index.source_path`)이고,
+    # 정수면 조각의 `sources[src]`다 — 실습 족보는 파일이 여럿이라 문항마다 다르다.
+    src: int | None = None
     # 파싱 중에만 쓰는 작업 영역 (finalize에서 stem/options로 접힌다)
     body: list[dict] = field(default_factory=list, repr=False)
     span: list[tuple] = field(default_factory=list, repr=False)
@@ -431,12 +434,17 @@ def running_header(doc, pages: list[int]) -> str:
     return top if n * 2 > len(pages) else ""
 
 
-def parse_question_region(doc, pages, title_index) -> list[Section]:
+def parse_question_region(doc, pages, title_index, *, lines_of=None,
+                          page_year: dict[int, str] | None = None) -> list[Section]:
     """문항 구역을 섹션/연도/문항으로 가른다. title_index: {정규화제목: (key, 원제목)}
 
     섹션 제목은 원본에서 한 줄일 수도, 번호와 제목이 여러 줄로 쪼개져 있을 수도 있다
     (예: "24-25" / "종양의 생물학적 특성," / "발암의 원인"). 그래서 최근 몇 줄을
     이어붙여 가며 목차 제목과 대조하고, 맞으면 이미 문항 본문에 넣은 조각을 되돌린다.
+
+    `lines_of`·`page_year` 는 실습 전용 족보를 위한 것이다(`parse_practical`).
+    거기서는 연도가 본문의 낱줄이 아니라 **쪽마다의 머리글**에 있고, 한 쪽 안에서
+    문항과 정답이 갈리기도 해서 부르는 쪽이 줄을 잘라 넘긴다.
     """
     sections: list[Section] = []
     cur_sec: Section | None = None
@@ -474,7 +482,11 @@ def parse_question_region(doc, pages, title_index) -> list[Section]:
     for pno in pages:
         page = doc[pno]
         img_index[pno + 1] = page_images(page)
-        for ln in page_lines(page):
+        if page_year and page_year.get(pno) not in (None, cur_year):
+            close_q()
+            cur_year = page_year[pno]
+            bank, last_no = None, None
+        for ln in (lines_of(pno) if lines_of else page_lines(page)):
             t = ln["text"].strip()
             if not t or (header and t == header):
                 continue
@@ -644,6 +656,127 @@ def parse_answer_region(doc, pages, title_index) -> dict:
     return out
 
 
+# ───────────────────────────────────────────── 실습 전용 족보 (회차가 여럿인 파일)
+
+# 실습 족보는 과목 족보와 따로 돈다. 해마다 앞 해를 안고 커지는 누적본이고
+# (`2023 …실습 족보.pdf` 48쪽 안에 2022~2015가 들어 있다), 한 파일에 여러 회차가
+# 이어 붙는다. 그래서 `split_regions`의 「문항 구역 하나 · 정답 구역 하나」가 안 맞는다 —
+# 첫 정답면 뒤로 전부를 정답으로 보면 두 번째 회차의 문항이 통째로 삼켜진다.
+RE_PRAC_NUMLINE = re.compile(r"^\s*\d{1,3}\s*\.\s*\S")
+RE_PRAC_MARKER = re.compile(r"^(20\d\d)\s*(?:-\s*(\d))?\s*.{0,12}실습\s*시험\s*$")
+RE_PRAC_HEADYEAR = re.compile(r"(20\d\d)(?:\s*-\s*(\d)\s*학기)?\s*(?:땡시|족보)")
+# 정답면 판정. 실측(2026 기생충학 실습 족보 두 권 68쪽)에서 문항면의 번호줄은
+# 최대 7개, 정답면은 최소 21개였다. 그 사이를 넉넉히 잡는다.
+PRAC_ANSWER_LINES = 15
+# 정답이 다음 쪽으로 넘어간 자리(2025 회차 p10-11). 그림이 없고 번호줄이 이만큼
+# 이어지면 앞 쪽의 정답이 계속되는 것으로 본다.
+PRAC_ANSWER_TAIL = 5
+# 정답면 안에서 문항이 앞머리에 남아 있는 자리(2016-1학기 p47은 33-35번 뒤에
+# 정답표가 붙어 있다). `1.` 부터 번호줄이 몰려 시작하는 지점을 경계로 삼는다.
+PRAC_ANSWER_RUN = 5
+
+
+def _prac_year(y: str, half: str | None) -> str:
+    return f"{y}-{half}" if half else y
+
+
+def practical_layout(doc) -> list[dict]:
+    """쪽마다 {page, year, answers, cut}. cut은 그 쪽에서 정답이 시작하는 줄 번호.
+
+    회차는 **쪽 머리글**이 가른다(`… 2023 땡시`). 회차 이름은 본문 표제를
+    우선한다 — 2025 회차는 머리글이 `2026 족보`이고 표제가 `2025 기생충학
+    실습시험`이라, 머리글을 믿으면 시험 연도가 한 해 밀린다.
+    """
+    out, prev_head, cur, prev_ans = [], None, None, False
+    for pno in range(doc.page_count):
+        lines = [d["text"].strip() for d in page_lines(doc[pno])]
+        mh = RE_PRAC_HEADYEAR.search(lines[0] if lines else "")
+        head_year = _prac_year(mh.group(1), mh.group(2)) if mh else None
+        new_sitting = bool(head_year) and head_year != prev_head
+        if new_sitting or cur is None:
+            cur = head_year or cur
+        prev_head = head_year
+        for t in lines:
+            mk = RE_PRAC_MARKER.match(t)
+            if mk:
+                cur = _prac_year(mk.group(1), mk.group(2))
+                break
+
+        n = sum(1 for t in lines if RE_PRAC_NUMLINE.match(t))
+        answers = n >= PRAC_ANSWER_LINES or (
+            prev_ans and not new_sitting and n >= PRAC_ANSWER_TAIL
+            and not doc[pno].get_images(full=True))
+        cut = 0
+        if answers:
+            for i, t in enumerate(lines):
+                if re.match(r"^\s*1\s*\.\s*\S", t) and sum(
+                        1 for k in range(i, min(i + 7, len(lines)))
+                        if RE_PRAC_NUMLINE.match(lines[k])) >= PRAC_ANSWER_RUN:
+                    cut = i
+                    break
+        prev_ans = answers
+        out.append({"page": pno, "year": cur or "unknown",
+                    "answers": answers, "cut": cut})
+    return out
+
+
+def parse_practical_answers(doc, layout: list[dict]) -> dict:
+    """{(회차, 번호): {'answer':…, 'objection': None}}
+
+    **정답면에서는 `N.` 뒤가 무엇이든 정답이다.** 구역이 이미 그렇게 말하고 있다.
+    필기 족보용 `RE_ANSWER`는 숫자만 받는데, 실습 정답은 해마다 꼴이 다르다 —
+    `1. 3`(2019·2021·2023) · `1. 가`(2015·2022) · `1. 2 (A. lumbricoides, egg)`(2017)
+    · `1. 방광주혈흡충 충란 (이름)`(2016-2). 숫자만 받으면 절반이 빈다.
+    """
+    out: dict = {}
+    for row in layout:
+        if not row["answers"]:
+            continue
+        key = None
+        for ln in page_lines(doc[row["page"]])[row["cut"]:]:
+            t = ln["text"].strip()
+            if not t or re.fullmatch(r"\d{1,3}", t):
+                continue
+            m = re.match(r"^\s*(\d{1,3})\s*\.\s*(.*)$", t)
+            if m:
+                key = (row["year"], m.group(1))
+                out[key] = {"answer": m.group(2).strip() or None, "objection": None}
+            elif key and out[key]["answer"]:
+                out[key]["answer"] += " " + t      # 줄을 넘긴 설명
+    return {k: v for k, v in out.items() if v["answer"]}
+
+
+def parse_practical(doc, title: str) -> tuple[list[Question], list[dict]]:
+    """실습 전용 족보 한 권을 문항 목록으로 만든다. (문항, 쪽 배치)"""
+    layout = practical_layout(doc)
+    by_page = {r["page"]: r for r in layout}
+    pages = [r["page"] for r in layout if not r["answers"] or r["cut"] > 0]
+
+    def lines_of(pno):
+        row = by_page[pno]
+        lines = page_lines(doc[pno])
+        if row["answers"]:
+            lines = lines[:row["cut"]]
+        # 머리글은 회차마다 달라 `running_header`가 못 걸러낸다. 여기서 뗀다.
+        # 회차 표제(`2015 기생충학 실습시험`)와 `- 35 -` 꼴 쪽번호도 같이 뗀다 —
+        # 둘 다 그 쪽 마지막 문항의 `stem` 꼬리에 붙는다(실측 6장·3장).
+        return [ln for ln in lines
+                if not RE_PRAC_HEADYEAR.search(ln["text"])
+                and not RE_PRAC_MARKER.match(ln["text"].strip())
+                and not re.fullmatch(r"-\s*\d{1,3}\s*-", ln["text"].strip())]
+
+    secs = parse_question_region(
+        doc, pages, {"__practical__": ("PRAC", title)},
+        lines_of=lines_of, page_year={r["page"]: r["year"] for r in layout})
+    questions = secs[0].questions if secs else []
+    answers = parse_practical_answers(doc, layout)
+    for q in questions:
+        rec = answers.get((q.year, q.no))
+        if rec:
+            q.answer = rec["answer"]
+    return questions, layout
+
+
 def join_answer(answers: dict, q: Question) -> dict | None:
     """정답표에서 이 문항의 기록을 찾는다.
 
@@ -742,6 +875,8 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="족보 PDF를 강의별 조각으로 미리 자른다")
     ap.add_argument("pdf")
     ap.add_argument("-o", "--out", default="out/jokbo")
+    ap.add_argument("--practical", nargs="+", metavar="PDF",
+                    help="실습 족보 PDF (여러 개 가능). 주면 PRAC 조각을 이것으로만 만든다")
     args = ap.parse_args(argv)
 
     doc = fitz.open(args.pdf)
@@ -776,27 +911,55 @@ def main(argv=None) -> int:
     prac_name = f"{outdir.name} 실습"
     prac_keys = {norm(f"{outdir.name}실습"): ("PRAC", prac_name),
                  norm(f"{outdir.name}실습시험"): ("PRAC", prac_name)}
-    prac = parse_question_region(
-        doc, regions["practical_q"], {"__practical__": ("PRAC", prac_name), **prac_keys})
-    prac_ans = parse_answer_region(doc, regions["practical_a"], prac_keys)
-    for sec in prac:
-        for q in sec.questions:
-            rec = join_answer(prac_ans, q)
-            if rec:
-                q.answer, q.objection = rec["answer"], rec["objection"]
+    prac_sources: list[dict] = []
+    prac_layouts: list[tuple[str, list[dict]]] = []
+    if args.practical:
+        # **실습 족보를 따로 받으면 과목 족보의 실습 구역은 안 쓴다.** 겹치기
+        # 때문이다 — 2026 기생충학 족보의 실습 구역(p60-70)은 실습 족보 폴더의
+        # 11쪽짜리와 같은 지면이다. 한 조각이 원본 PDF 하나를 가리키던 자리를
+        # `sources`로 늘렸으므로, 섞지 않고 실습 족보 쪽으로 통일한다.
+        prac = [Section(lecture_key="PRAC", title=prac_name)]
+        for i, path in enumerate(args.practical):
+            pdoc = fitz.open(path)
+            qs, layout = parse_practical(pdoc, prac_name)
+            for q in qs:
+                q.src = i
+            prac[0].questions += qs
+            prac_sources.append({"name": Path(path).name,
+                                 "path": str(Path(path).resolve()),
+                                 "pages": pdoc.page_count})
+            prac_layouts.append((Path(path).name, layout))
+            pdoc.close()
+    else:
+        prac = parse_question_region(
+            doc, regions["practical_q"], {"__practical__": ("PRAC", prac_name), **prac_keys})
+        prac_ans = parse_answer_region(doc, regions["practical_a"], prac_keys)
+        for sec in prac:
+            for q in sec.questions:
+                rec = join_answer(prac_ans, q)
+                if rec:
+                    q.answer, q.objection = rec["answer"], rec["objection"]
 
     index = {"source": Path(args.pdf).name, "pages": doc.page_count,
              "regions": {k: [p + 1 for p in v] for k, v in regions.items()},
              "toc_warning": warn, "lectures": []}
+    if prac_sources:
+        index["practical_sources"] = prac_sources
 
     for sec in sections + prac:
         stats = repeat_stats(sec, profs)
         name = slug(sec.lecture_key, sec.title)
-        qs = [{k: v for k, v in asdict(q).items() if k not in ("body", "span", "bank")}
+        drop = ("body", "span", "bank")
+        qs = [{k: v for k, v in asdict(q).items()
+               if k not in drop and not (k == "src" and v is None)}
               for q in sec.questions]
         payload = {"lecture_key": sec.lecture_key, "title": sec.title,
                    "may_contain": [{"lecture_key": k, "title": t} for k, t in sec.may_contain],
                    "stats": stats, "questions": qs}
+        if sec.lecture_key == "PRAC" and prac_sources:
+            # 조각이 자기 원본을 들고 다닌다. 빌드는 조각만 받으므로
+            # (`build.Jokbo`) 여기 없으면 지면 이미지가 조용히 빠진다.
+            payload["sources"] = prac_sources
         (outdir / f"{name}.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         (outdir / f"{name}.md").write_text(to_markdown(sec, stats), encoding="utf-8")
         index["lectures"].append({
@@ -825,6 +988,16 @@ def main(argv=None) -> int:
           f"필기정답 {_span(regions['written_a'])} · "
           f"실습문항 {_span(regions['practical_q'])} · "
           f"실습정답 {_span(regions['practical_a'])}")
+    for fname, layout in prac_layouts:
+        sittings = {}
+        for row in layout:
+            e = sittings.setdefault(row["year"], [0, 0])
+            e[1 if row["answers"] else 0] += 1
+        detail = " · ".join(f"{y} 문항{q}쪽/정답{a}쪽" for y, (q, a) in sittings.items())
+        print(f"실습 족보 {fname}: 회차 {len(sittings)}개 — {detail}")
+        if regions["practical_q"]:
+            print(f"   과목 족보의 실습 구역 {_span(regions['practical_q'])} 는 "
+                  f"이것과 겹쳐 쓰지 않았다")
     if warn:
         print(f"경고: {warn}")
     print(f"목차 강의 {len(lectures)}개 / 본문에서 잡힌 섹션 {len(sections)}개\n")

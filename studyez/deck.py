@@ -364,7 +364,8 @@ def run_pre(*, pdf: str | Path, run_id: str, subject: str, lecture: str, note: s
     return _spawn(argv, run_dir, repo_root, timeout, "prequiz.log")
 
 
-def cut_jokbo(pdf: Path, out_dir: Path, repo_root: Path) -> int:
+def cut_jokbo(pdf: Path, out_dir: Path, repo_root: Path,
+              practical: list[Path] | None = None) -> int:
     """과목 족보 PDF를 강의별 조각으로 자른다. `pdf2anki.jokbo` 를 그대로 부른다.
 
     학기당 과목당 한 번이라 사람이 지켜보는 명령이다. 그래서 `_spawn` 과 달리
@@ -372,6 +373,8 @@ def cut_jokbo(pdf: Path, out_dir: Path, repo_root: Path) -> int:
     산출물이 제대로 나왔는지는 부르는 쪽이 본다.
     """
     argv = [sys.executable, "-m", "pdf2anki.jokbo", str(pdf), "-o", str(out_dir)]
+    if practical:
+        argv += ["--practical", *[str(p) for p in practical]]
     done = subprocess.run(argv, cwd=str(repo_root),
                           env=dict(os.environ, PYTHONIOENCODING="utf-8"))
     return done.returncode
@@ -595,6 +598,27 @@ def _axis_unresolved(cards: list[dict]) -> list[str]:
             if (c.get("reproduce") or {}).get("reason") == pdf2anki_build.AXIS_REASON]
 
 
+JOKBO_REF_FLAGS = ("jokbo_ref_outside_slice", "jokbo_ref_not_found")
+
+
+def _reflag_jokbo(prep: dict, cfg: dict) -> dict | None:
+    """이 편이 물었던 족보 조각. 못 찾으면 None.
+
+    **못 찾은 것과 안 물린 것은 다르다.** 둘을 같은 None으로 넘기므로, 부르는 쪽은
+    None일 때 기출 ref 표시를 떼지 않는다(`reflag`).
+    """
+    from pdf2anki.assemble import slice_for
+
+    jokbo_dir = cfg.get("jokbo_dir")
+    if not jokbo_dir or not Path(jokbo_dir).is_dir():
+        return None
+    path, _, _ = slice_for(prep, Path(jokbo_dir), cfg.get("jokbo") or None)
+    if not path or not path.is_file():
+        return None
+    got = _load(path)
+    return got if isinstance(got, dict) else None
+
+
 def reflag(run_dir: Path) -> dict[str, int]:
     """이미 만들어 둔 카드에 **소프트 플래그만 다시 계산해 덧붙인다.**
 
@@ -627,14 +651,21 @@ def reflag(run_dir: Path) -> dict[str, int]:
     cfg = config_of(run_dir, MAIN) or config_of(run_dir, PRE) or {}
     annotation_evidence = bool(cfg.get("annotation_evidence"))
 
+    # **족보 조각과 전략도 같이 준다.** 안 주면 조각을 못 본 채로 판정하게 되는데,
+    # 그러면 기출 ref 표시(`jokbo_ref_outside_slice`·`jokbo_ref_not_found`)가 전부
+    # 「맞는 것」으로 나와 **근거 없이 지워진다.** 전략도 마찬가지다 — 기본값
+    # `base` 로 재면 사진 중심 편의 표시가 다른 규칙으로 계산된다.
+    jokbo = _reflag_jokbo(prep, cfg)
+    strategy = cfg.get("strategy") or "base"
+
     # 계약에 없는 키를 떼고 넘긴다. `CARD_SCHEMA` 는 `additionalProperties: False` 라서
     # 뒤 단계가 붙인 `reproduce`·`review_flags` 가 그대로 들어가면 **전 카드가 스키마
     # 위반으로 떨어지고**, 그러면 조용히 아무 표시도 안 붙는다.
     allowed = set(pdf2anki_validate.CARD_SCHEMA["properties"])
     clean = [{k: v for k, v in c.items() if k in allowed} for c in cards]
 
-    fresh, _ = pdf2anki_validate.validate({"cards": clean}, prep, None,
-                                          annotation_evidence)
+    fresh, _ = pdf2anki_validate.validate({"cards": clean}, prep, jokbo,
+                                          annotation_evidence, strategy)
     by_id = {c.get("id"): set(c.get("review_flags") or []) for c in fresh if c.get("id")}
 
     added: dict[str, int] = {}
@@ -647,6 +678,10 @@ def reflag(run_dir: Path) -> dict[str, int]:
         # (설정을 안 넘겨 90장), 더하기만 하면 그런 실수가 영영 안 지워진다.
         # 사람이 보고 넘긴 표시가 근거 없이 사라지는 일은 없다 — 규칙이 그대로면
         # 같은 표시가 다시 계산되기 때문이다.
+        if jokbo is None:
+            # 조각을 못 봤으면 기출 ref 는 판정할 수 없다. 그 표시는 손대지 않는다 —
+            # 안 그러면 「조각이 없다」가 「표시가 철회됐다」로 둔갑한다.
+            now = now | {f for f in was if f in JOKBO_REF_FLAGS}
         if was == now:
             continue
         card["review_flags"] = sorted(now)

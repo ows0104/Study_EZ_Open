@@ -38,6 +38,25 @@ EVIDENCE_TYPES = (
     "medical_knowledge",
 )
 IMAGE_FORMATS = ("image_basic", "image_occlusion")
+
+
+def resolve_jokbo_key(year: str, no: str, keys) -> tuple[str, str] | None:
+    """인용한 (연도, 번호)에 맞는 조각의 열쇠. 없으면 None.
+
+    **인용 연도가 조각의 회차 이름과 한 겹 다를 수 있다.** 실습 족보는 한 해에
+    시험이 둘인 해가 있어 회차를 `2016-1`·`2016-2`로 적는데, 강의록 뒤에 붙는 기출
+    부록은 그냥 `2016`이라 적는다. 모델은 부록을 읽고 인용하므로 조각과 안 맞는다 —
+    2026-09-08 `260904_05` 에서 카드 6장이 그렇게 어긋났고, 그 6장은 뒷면의 문항
+    원문과 지면 이미지를 잃은 채 나갈 뻔했다.
+
+    **갈래가 여럿이면 안 고른다.** `2016-1`과 `2016-2`가 둘 다 그 번호를 들고 있으면
+    어느 쪽인지 여기서는 알 수 없다. 그때는 None을 돌려주어 표시가 그대로 뜨게 둔다 —
+    아무거나 집어서 남의 문항을 뒷면에 붙이는 것보다 낫다.
+    """
+    if (year, no) in keys:
+        return (year, no)
+    same = sorted(k for k in keys if k[1] == no and k[0].split("-")[0] == year)
+    return same[0] if len(same) == 1 else None
 # `jokbo_appendix` 만 성격이 다르다. 나머지 여섯은 "안 낸다"이고 이것은
 # **"여기서는 안 낸다 — 기출 파트 소관이다"** 이다. 필기자가 강의록 뒤에 붙여 놓는
 # 족보 정리 구간이 그 자리다(28편 중 27편에 있었고, 합계 116슬라이드).

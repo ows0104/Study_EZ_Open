@@ -23,7 +23,8 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 
 from .schema import (CARD_SCHEMA, FRAME_HEAVY_MIN_CHARS, IMAGE_FORMATS, MAX_Q_CHARS,
-                     MAX_RECALL_CHARS, MAX_RECALL_ITEMS, MIN_RECALL_SHARE)
+                     MAX_RECALL_CHARS, MAX_RECALL_ITEMS, MIN_RECALL_SHARE,
+                     resolve_jokbo_key)
 from .textutil import char_ngrams, containment, jaccard, norm_key
 
 RE_CLOZE = re.compile(r"\{\{c(\d+)::(.*?)(?:::(.*?))?\}\}")
@@ -166,9 +167,11 @@ def _ref_status(ref: dict, keys: set, years: set) -> str:
     """
     if not keys:
         return "ok"                              # 조각이 없으면 맞출 것도 없다
-    if (ref["year"], ref["no"]) in keys:
+    if resolve_jokbo_key(ref["year"], ref["no"], keys):
         return "ok"
-    return "missing" if ref["year"] in years else "outside"
+    # 회차 이름이 `2016-1` 이어도 「그 해를 든다」로 센다. 안 그러면 번호만 틀린 것이
+    # `outside`(조각 밖)로 새어 나가 지어낸 것과 구별이 안 된다.
+    return "missing" if ref["year"] in {y.split("-")[0] for y in years} else "outside"
 
 
 def validate(raw: dict, prep: dict, jokbo: dict | None,

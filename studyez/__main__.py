@@ -147,6 +147,42 @@ def run_preview(args) -> int:
     return 0
 
 
+def practical_pdfs(spec: str | None) -> list[Path]:
+    """`--practical` 로 받은 폴더나 파일을 PDF 목록으로 편다.
+
+    **실습 족보는 과목 족보와 다른 자리에 산다.** 과목 족보는 해마다 한 권이라
+    `족보/<올해>/` 에서 집으면 되지만, 실습 족보는 회차가 여러 해에 걸쳐
+    누적본 여러 권으로 흩어져 있고(2026-09-07 실측 — 2025 회차는 올해 족보 안,
+    2023~2015 회차는 별도 누적본 한 권) 어느 것이 정본인지 코드가 모른다.
+    그래서 사람이 지목한다.
+    """
+    if not spec:
+        return []
+    p = Path(spec)
+    if p.is_dir():
+        return sorted(p.glob("*.pdf"))
+    return [p] if p.is_file() else []
+
+
+def remembered_practical(index: Path) -> tuple[list[Path], list[str]]:
+    """지난번에 쓴 실습 족보를 되살린다. (아직 있는 것, 없어진 것의 이름)
+
+    **안 되살리면 다음 절단이 조용히 되돌아간다.** 실습 조각은 `--practical` 을
+    줬을 때만 서고, 안 주면 과목 족보 안의 실습 구역(한 회차)만 남는다. 그러면
+    문항이 277개에서 40개로 줄어드는데 화면에는 아무 말도 안 뜬다 — 그리고 그
+    차이는 다음에 굽는 실습 편의 기출 카드에서야 드러난다.
+    """
+    try:
+        data = json.loads(index.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return [], []
+    found, lost = [], []
+    for src in data.get("practical_sources") or []:
+        path = Path(src.get("path", ""))
+        (found if path.is_file() else lost).append(path if path.is_file() else src.get("name", "?"))
+    return found, lost
+
+
 def run_jokbo(args) -> int:
     """과목 족보 PDF를 강의별 조각으로 자른다. 학기당 과목당 한 번이면 된다.
 
@@ -173,9 +209,27 @@ def run_jokbo(args) -> int:
             print(f"    {candidate.name} ({candidate.stat().st_size / 1024 / 1024:.1f}MB)")
         pdfs.sort(key=lambda candidate: candidate.stat().st_size, reverse=True)
 
+    practical = practical_pdfs(args.practical)
+    if args.practical and not practical:
+        print(f"[jokbo] --practical {args.practical} 에 PDF가 없습니다")
+        return 1
+
     out_dir = deck.jokbo_dir(Path(args.runs), subject)
+    if not practical:
+        practical, lost = remembered_practical(out_dir / "index.json")
+        for p in practical:
+            print(f"[jokbo] 지난번에 쓴 실습 족보를 그대로 씁니다: {p.name}")
+        for name in lost:
+            print(f"[jokbo] ⚠ 지난번 실습 족보 {name} 이 그 자리에 없습니다")
+        if lost:
+            print("        이대로 자르면 그 회차 문항이 빠집니다. --practical 로 새 자리를 주세요.")
     print(f"[jokbo] {pdfs[0].name} → {out_dir}")
-    code = deck.cut_jokbo(pdfs[0], out_dir, REPO_ROOT)
+    for p in practical:
+        print(f"        실습 족보: {p.name}")
+    # 자르는 쪽은 자기 출력을 화면으로 바로 흘린다(`cut_jokbo`). 여기 것을 안 밀어내면
+    # 어느 PDF를 골랐는지가 그 뒤에 찍혀 순서가 뒤집힌다.
+    sys.stdout.flush()
+    code = deck.cut_jokbo(pdfs[0], out_dir, REPO_ROOT, practical=practical)
     if code != 0:
         print(f"  자르지 못했다 (코드 {code})")
         return 1
@@ -422,6 +476,9 @@ def main() -> int:
     parser.add_argument("--this", default="2026", help="올해 폴더명")
     parser.add_argument("--prev", default="2025", help="작년 폴더명")
     parser.add_argument("--root", default=str(DEFAULT_ROOT), help="자료 최상위 폴더")
+    parser.add_argument("--practical", default="",
+                        help="jokbo: 실습 족보 PDF 또는 그 PDF들이 든 폴더. "
+                             "주면 실습 조각(PRAC)을 이것으로만 만든다")
     parser.add_argument("--runs", default=str(REPO_ROOT / "runs"), help="산출물 루트")
     parser.add_argument("--build", action="store_true",
                         help="watch·prequeue: 자리만 세우지 말고 덱까지 만든다")

@@ -37,6 +37,7 @@ from pathlib import Path
 import fitz
 import genanki
 
+from .schema import resolve_jokbo_key
 from .textutil import answer_runs, collapse_cloze, norm_key
 
 # 재현 검사에서 '카드 결함' 으로 갈린 이유 — 이것만 덱을 막는다.
@@ -314,23 +315,40 @@ class Jokbo:
     def __init__(self, slice_path: Path | None, pdf_path: Path | None,
                  lecture_id: str, outdir: Path):
         self.q: dict[tuple[str, str], dict] = {}
-        self.doc = None
+        # 문항이 가리키는 원본. `None` 은 과목 족보이고, 정수는 **조각이 직접 들고 온**
+        # 원본이다(`payload["sources"]`). 실습 족보는 회차가 여러 파일에 흩어져 있어
+        # 조각 하나가 PDF 하나를 가리키던 규칙이 안 선다.
+        self.docs: dict[int | None, object] = {}
         self.lecture_id, self.dir, self.files = lecture_id, outdir, {}
+        sources: list[dict] = []
         if slice_path and slice_path.exists():
             data = json.loads(slice_path.read_text(encoding="utf-8"))
             self.q = {(str(q["year"]), str(q["no"])): q for q in data["questions"]}
+            sources = data.get("sources") or []
         if pdf_path and Path(pdf_path).exists():
-            self.doc = fitz.open(pdf_path)
+            self.docs[None] = fitz.open(pdf_path)
+        for i, src in enumerate(sources):
+            if src.get("path") and Path(src["path"]).exists():
+                self.docs[i] = fitz.open(src["path"])
+        if self.docs:
             self.dir.mkdir(parents=True, exist_ok=True)
 
-    def page(self, no: int) -> str | None:
-        if not self.doc or not (1 <= no <= self.doc.page_count):
+    def has_pages(self) -> bool:
+        """지면 이미지를 붙일 원본이 하나라도 열렸는가."""
+        return bool(self.docs)
+
+    def page(self, no: int, src: int | None = None) -> str | None:
+        doc = self.docs.get(src)
+        if not doc or not (1 <= no <= doc.page_count):
             return None
-        name = f"{self.lecture_id}_jokbo_p{no:03d}.png"
+        # 원본이 여럿이면 쪽 번호만으로는 파일이 겹친다. 과목 족보는 이름을 그대로
+        # 두어 이미 나간 덱과 어긋나지 않게 한다.
+        tag = "" if src is None else f"s{src}"
+        name = f"{self.lecture_id}_jokbo_{tag}p{no:03d}.png"
         path = self.dir / name
         if name not in self.files:
-            self.doc[no - 1].get_pixmap(matrix=fitz.Matrix(JOKBO_ZOOM, JOKBO_ZOOM),
-                                        alpha=False).save(path)
+            doc[no - 1].get_pixmap(matrix=fitz.Matrix(JOKBO_ZOOM, JOKBO_ZOOM),
+                                   alpha=False).save(path)
             self.files[name] = path
         return name
 
@@ -339,7 +357,8 @@ class Jokbo:
 
         텍스트는 접히는 쪽으로, 지면 이미지는 답 바로 아래 보이는 쪽으로 간다.
         """
-        q = self.q.get((str(ref["year"]), str(ref["no"])))
+        key = resolve_jokbo_key(str(ref["year"]), str(ref["no"]), self.q)
+        q = self.q.get(key) if key else None
         if not q:
             return "", ""
         bits = [f'<span class="h">기출 {ref["year"]}-{ref["no"]} 원문</span>',
@@ -353,7 +372,7 @@ class Jokbo:
         text = f'<div class="exam">{"<br>".join(b for b in bits if b)}</div>'
         imgs = ""
         for pno in (q.get("pages") or [])[:2]:
-            name = self.page(pno)
+            name = self.page(pno, q.get("src"))
             if name:
                 imgs += f'<div class="slide"><img src="{name}"></div>'
         return text, imgs
@@ -1034,15 +1053,23 @@ def main(argv=None) -> int:
 
     jslice, jpdf = find_jokbo_source(prep_dir, Path(args.jokbo_dir),
                                      args.jokbo, args.jokbo_pdf)
-    print(f"기출 원본: {jslice.name if jslice else '조각 없음'}"
-          f" · {jpdf.name if jpdf else 'PDF 없음 (지면 이미지 생략)'}")
+    # 조각이 자기 원본을 들고 오는 경우가 있다(실습 족보 — `jokbo.py --practical`).
+    # 그러면 과목 족보 PDF가 없어도 지면 이미지가 붙는다.
+    own = []
+    if jslice and jslice.exists():
+        own = [s for s in (json.loads(jslice.read_text(encoding="utf-8")).get("sources") or [])
+               if s.get("path") and Path(s["path"]).exists()]
+    src_line = jpdf.name if jpdf else "PDF 없음 (지면 이미지 생략)"
+    if own:
+        src_line = " + ".join(s["name"] for s in own) + " (조각이 들고 온 원본)"
+    print(f"기출 원본: {jslice.name if jslice else '조각 없음'} · {src_line}")
 
     # **기출 카드가 있는데 원본을 못 찾으면 멈춘다.** 예전에는 한 줄 찍고 그냥
     # 구웠고, 그 결과 26편을 다시 구우면서 기출 뒷면의 지면 이미지가 통째로
     # 빠졌다(260819_01 은 미디어가 66 → 57). 카드 수도 노트 수도 그대로라
     # 문지기도 못 잡는다 — 사라진 것이 미디어뿐이기 때문이다.
     n_jokbo = sum(1 for c in cards if c.get("source_type") == "jokbo")
-    if n_jokbo and not (jslice and jpdf):
+    if n_jokbo and not (jslice and (jpdf or own)):
         missing = "조각" if not jslice else "원본 PDF"
         print(f"\n기출 카드가 {n_jokbo}장인데 {missing}을 못 찾았다. 이대로 구우면 "
               "뒷면의 문항 원문·지면 이미지가 빠진 채 나간다.")

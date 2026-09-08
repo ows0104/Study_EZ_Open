@@ -72,7 +72,19 @@ def write_parts(outdir: Path, stem: str, sections: list[str], *,
     Read 는 1회 25k 토큰에서 잘린다. 조용히 잘리느니 파트로 나눠 준다.
     `manifest=True` 면 파트 1이 나머지를 읽으라는 목록을 달고 선다 — 그러지 않으면
     모델이 1편만 읽고 시작한다.
+
+    **먼저 이 stem 의 지난 파일을 지운다.** 파트 수는 실행마다 달라지는데(자료가
+    늘거나 줄면 바뀐다) 지우지 않으면 옛 판이 그대로 남고, 그것을 고르는 쪽이 있다.
+    `run.prompt_path` 는 `<stem>.md` 를 먼저 보고 없으면 `<stem>.1of*.md` 를 이름순으로
+    고르는데, 둘 다 **옛 파일을 새 파일보다 먼저 집는다** — `prompt.plan.md`(1파트)는
+    `prompt.plan.1of2.md` 를 이기고, `prompt.cards.1of2.md` 는 `1of3.md` 를 이긴다.
+
+    2026-09-08에 실습 5편을 다시 구웠는데 **넷이 9월 1~4일 프롬프트로 돌았다.**
+    그날 붙인 기출 조각이 새 파트에만 있어서, 화면에는 조각이 붙었다고 찍히고
+    모델은 그것을 한 글자도 못 봤다. 카드가 멀쩡히 나오므로 아무 검사에도 안 걸린다.
     """
+    for old in sorted(outdir.glob(f"{stem}.md")) + sorted(outdir.glob(f"{stem}.*of*.md")):
+        old.unlink()
     bodies = pack_parts([s.strip() for s in sections], budget)
     n = len(bodies)
     names = [f"{stem}.md" if n == 1 else f"{stem}.{i + 1}of{n}.md" for i in range(n)]

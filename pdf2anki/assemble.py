@@ -305,6 +305,24 @@ NO_JOKBO_DIR = ("⚠ 족보를 물리지 않았다 — {index} 가 없다.\n"
                 "   이미 잘라 뒀으면 --jokbo-dir 로 그 폴더를 지정해라.")
 NO_JOKBO_MATCH = ("⚠ 이 강의에 맞는 족보 조각을 못 찾았다 (최고 일치도 {score:.2f} < 0.25).\n"
                   "   기출 카드가 안 나온다. --jokbo 로 조각을 직접 지정할 수 있다.")
+PRACTICE_ONLY_MATCH = ("실습 조각 {name} 을 물린다 (제목 일치도 {score:.2f} — 문턱을 안 본다).\n"
+                       "   실습은 후보가 이 조각 하나뿐이라 고를 것이 없다.")
+
+
+def only_practice_pool(top: list) -> bool:
+    """후보가 실습 문항 풀(PRAC) 하나뿐인가.
+
+    **여기서 점수를 보면 실습은 영영 안 붙는다.** 점수는 강의 파일명과 조각 제목의
+    글자 겹침인데, `find_jokbo` 가 실습 강의에는 PRAC 만 후보로 남기므로 재 봐야
+    고를 것이 없고 **거부만 한다.** 2026-09-07 에 그 자리를 찾았다 — 기생충학 실습
+    5편이 전부 0.20 으로 떨어져 **기출 0장으로 나갔다.** 강의 파일명이 「감염의 기초
+    실습 4 - 조충류」라 「기생충학 실습」과 겹치는 글자가 "실습" 뿐이다. 병리학은
+    파일명에 「병리」가 들어 있어 0.75 로 붙었고, 그래서 한 과목에서만 보였다.
+
+    `build.find_jokbo_source` 는 문턱이 0.2 라 같은 조각을 이미 통과시키고 있었다.
+    카드를 만들 때 안 보이던 것이 구울 때만 보이던 셈이다.
+    """
+    return len(top) == 1 and top[0][1].get("lecture_key") == "PRAC"
 
 
 def slice_for(prep: dict, jokbo_dir: Path, explicit: str | None = None
@@ -328,9 +346,11 @@ def slice_for(prep: dict, jokbo_dir: Path, explicit: str | None = None
         print(NO_JOKBO_DIR.format(index=index), flush=True)
         return None, {}, False
     path, score, top = find_jokbo(prep, Path(jokbo_dir))
-    if not path or score < 0.25:
+    if not path or (score < 0.25 and not only_practice_pool(top)):
         print(NO_JOKBO_MATCH.format(score=score), flush=True)
         return None, {}, False
+    if score < 0.25:
+        print(PRACTICE_ONLY_MATCH.format(score=score, name=path.name), flush=True)
     jk = json.loads(path.read_text(encoding="utf-8"))
     return path, jk.get("stats", {}), top[0][2] is not None
 
@@ -638,7 +658,7 @@ def main(argv=None) -> int:
             label = (f"{e['lecture_key']} {e['title']}" if not via
                      else f"{via['lecture_key']} {via['title']}  (조각은 {e['lecture_key']} 안에 섞여 있음)")
             print(f"   {sc:.2f}  {label}{mark}")
-        if score < 0.25:
+        if score < 0.25 and not only_practice_pool(top):
             print(f"⚠ 일치도가 낮다({score:.2f}). --jokbo 로 직접 지정하는 편이 낫다.")
             jokbo_file = None
         else:

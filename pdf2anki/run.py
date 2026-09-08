@@ -158,14 +158,26 @@ class Runner(BaseRunner):
         `prompt.cards.md` 는 아예 생기지 않고 `prompt.cards.1of2.md` 가 대신 선다
         (파트 1이 나머지를 읽으라는 목록을 달고 있다). 그 이름을 고정으로 쓰면
         갈린 강의에서만 조용히 멈춘다 — 실제로 순환장애 두 강의가 여기서 멈췄다.
+
+        **여럿이면 제일 새것을 고르고, 버린 것을 화면에 적는다.** 파트 수는 실행마다
+        달라지므로(`prompt.cards.1of2.md` 였던 편이 다음에 `1of3.md` 가 된다) 옛 파일이
+        남아 있으면 이름순·단일파일 우선 규칙이 **옛것을 집는다.** 2026-09-08에 실습
+        5편을 다시 구웠는데 넷이 9월 1~4일 프롬프트로 돌았다 — 그날 붙인 기출 조각을
+        모델이 한 글자도 못 봤고, 카드는 멀쩡히 나와 아무 검사에도 안 걸렸다.
+
+        지우는 것은 `pack.write_parts` 가 한다. 여기는 그것이 안 돌았을 때(재개 등)의
+        두 번째 그물이다.
         """
-        one = self.out / f"prompt.{stage}.md"
-        if one.exists():
-            return one
-        parts = sorted(self.out.glob(f"prompt.{stage}.1of*.md"))
-        if parts:
-            return parts[0]
-        raise Failed(f"prompt.{stage}.md 도 prompt.{stage}.1ofN.md 도 없다")
+        cands = [p for p in (self.out / f"prompt.{stage}.md",) if p.exists()]
+        cands += sorted(self.out.glob(f"prompt.{stage}.1of*.md"))
+        if not cands:
+            raise Failed(f"prompt.{stage}.md 도 prompt.{stage}.1ofN.md 도 없다")
+        cands.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        if len(cands) > 1:
+            print(f"   ⚠ {stage} 프롬프트가 {len(cands)}벌 있다. 제일 새것을 쓴다: "
+                  f"{cands[0].name} (버린 것: {', '.join(p.name for p in cands[1:])})",
+                  flush=True)
+        return cands[0]
 
     ANNOTATION_POLICY = """
 
