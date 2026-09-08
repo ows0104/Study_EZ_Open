@@ -201,6 +201,12 @@ def _stolen(line_box, gap, others, mine, below):
 
 
 HEADING_RE = re.compile(r"^\s*\d+\s*[.)]")
+# 번호를 매긴 **항목 제목**. 「4. Ascaris…」·「[6] 흰줄숲모기…」.
+# 번호가 있다는 것은 한 쪽에 항목이 여럿이라는 뜻이고, 그때에만 「내 아래에
+# 선 제목은 남의 것」이 성립한다. 필기본 슬라이드는 종 이름만 크게 적어
+# 두어서(「Schistosoma mansoni」) 번호가 없고, 그 이름은 사진 아래에 있어도
+# 그 사진의 것이다.
+ITEM_RE = re.compile(r"^\s*[\[(]?\s*\d+\s*[\]).]")
 BAND = 30          # 표제가 이만큼 안에 있으면 같은 띠(가로줄)로 본다
 
 # ── 표로 된 쪽
@@ -567,8 +573,18 @@ def run(key, reader, dry=False):
     for pdf in pdfs:
         stem = os.path.splitext(os.path.basename(pdf))[0]
         # 파일 이름이 곧 단원인 경우가 많다 (「기생충 실습 (선충류)」).
-        file_topic = section_of(stem)
         doc = pymupdf.open(pdf)
+        # **파일 이름이 말해 주지 않으면 첫 쪽 제목을 본다.** 이지석은 파일이
+        # 「실습 1」·「실습 2」라 이름만으로는 단원을 알 수 없고, 첫 쪽 제목이
+        # 「실습 1 - 연충란」·「실습 2 - 선충류」로 적혀 있다.
+        #
+        # 이것이 없으면 아래 「앞 12줄에서 찾기」로 떨어지는데, 그 12줄에는
+        # **다른 행의 종 이름**이 섞여 있다. 실습1 p2는 다섯 행이 전부 충란인
+        # 표인데 마지막 행이 「폐흡충」이라 단원이 「흡충」으로 잡혔고, 그래서
+        # 구충란 넉 장이 「충란 시트가 아니다」라는 이유로 충란 표본 후보에서
+        # 밀려 성충으로 붙었다.
+        file_topic = section_of(stem) or (
+            section_of(title_of(page_lines(doc[0]))) if doc.page_count else None)
         for pno in range(doc.page_count):
             page = doc[pno]
             lines = page_lines(page)
@@ -662,10 +678,31 @@ def run(key, reader, dry=False):
                 # 있어서 「식도를 이룸」 같은 설명이 전부 이름표가 됐고, 캡션이
                 # 행 이름표(`head`)를 밀어냈다. 표로 된 쪽에서 행 이름은 짐작이
                 # 아니라 사실인데 그것이 설명에 밀렸다.
+                # **내 아래에 선 표제는 다음 항목의 것이다.**
+                #
+                # 항목 제목이 사진 위에 서는 쪽에서는, 사진 아래 34pt 안에 든
+                # 표제가 곧 아래 칸의 제목이다. 그것을 캡션으로 집으면 아래 칸의
+                # 종이 이 사진의 이름표가 된다 — 이지석 실습2 p2-7은 회충 수컷
+                # 단면인데 밑에 선 「5. Anisakis simplex (고래회충)」을 집어
+                # 고래회충이 됐고, p3-1·p3-2는 선모충 근육절편인데 밑에 선
+                # 「7. Enterobius vermicularis (요충)」을 집어 요충이 됐다.
+                #
+                # **아래 것만 뺀다.** 옆이나 위의 표제는 내 것일 수 있다 —
+                # 이지석 표는 사진이 왼쪽이고 이름이 오른쪽이라 행 이름이 「옆의
+                # 표제」로 잡힌다. 방향을 안 보고 걷어내면 그 행 이름까지 잃고,
+                # 실제로 광절열두조충 충란이 구충란이 됐다.
+                downstairs = {h["text"].strip() for h in heads
+                              if h["bbox"][1] >= info["bbox"][3]
+                              and ITEM_RE.match(h["text"])} - {head}
+                caption = [c for c in caption if c not in downstairs]
                 named = next((c for c in caption
                               if LATIN_RE.search(c) or names_species(c)), "")
+                # 학명도 **가까운 것부터** 찾는다. 쪽 제목을 먼저 훑으면 그 쪽의
+                # 다른 종이 이 사진의 학명이 된다 — `name_en`은 매칭이 가장 먼저
+                # 보는 칸이라(`match_species`의 `near[0]`) 사진 자신의 이름표를
+                # 그대로 이긴다.
                 latin = ""
-                m = LATIN_RE.search(" / ".join([head, title] + caption))
+                m = LATIN_RE.search(" / ".join([named, head] + caption + [title]))
                 if m:
                     latin = f"{m.group(1)} {m.group(2)}"
                 records.append({

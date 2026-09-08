@@ -2,1671 +2,263 @@
 모의 땡시 1세트  (40문항)
 ======================================================================
 
- 1. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
+ 1. [충란 동정] 다음은 어떤 기생충의 충란인가?
     사진: note/[260831_05]_감염의_기초_실습__075_2.png
      ① Clonorchis sinensis
-     ② Metagonimus yokogawai   <== 정답
-     ③ Schistosoma japonicum
-     ④ Gymnophalloides seoi
+     ② Schistosoma japonicum
+     ③ Fasciola hepatica
+     ④ Metagonimus yokogawai   <== 정답
     해설: 요코가와흡충 충란 — 간흡충과 크기가 같으나 충란벽이 매끄러움 (muskmelon 무늬 없음) / shouldering이 뚜렷하지 않음
           출제 포인트: 충란은 간흡충과 크기가 같은 30um이지만 충란벽이 매끄러움 (muskmelon 무늬 없음). 성충은 ventral sucker가 한쪽으로 치우침
 
  2. [충란 동정] 다음은 어떤 기생충의 충란인가?
     사진: note/[260831_05]_감염의_기초_실습__074_3.png
-     ① Anisakis simplex
-     ② Trichuris trichiura   <== 정답
-     ③ Ascaris lumbricoides
-     ④ Strongyloides stercoralis
+     ① Ancylostoma duodenale
+     ② Ascaris lumbricoides
+     ③ Trichuris trichiura   <== 정답
+     ④ Necator americanus
     해설: 편충 충란 — 양쪽 끝에 투명한 mucoid plug / 나뭇잎·럭비공·barrel 모양
           출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골
 
  3. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
     사진: tonghap/충란/014_D14.png
-     ① Clonorchis sinensis
-     ② Schistosoma mansoni
-     ③ Schistosoma haematobium   <== 정답
-     ④ Schistosoma japonicum
+     ① Schistosoma japonicum
+     ② Clonorchis sinensis
+     ③ Schistosoma mansoni
+     ④ Schistosoma haematobium   <== 정답
     해설: 방광주혈흡충 충란 — 큰 방추형 / 아래쪽 끝에 돌출된 terminal spine
           출제 포인트: 충란 아래쪽 끝에 terminal spine (말단 돌기) — 만손(lateral)과의 결정적 감별점
 
  4. [감염형] 다음 충란을 가지는 기생충의 인체 감염형은?
-    사진: jiseok/실습_1_003_6.png
-     ① 무구낭미충 (Cysticercus bovis)
+    사진: eunju/기생충_실습_(연충란)_001_25.png
+     ① 영양형
      ② 피낭유충 (metacercaria)
-     ③ 해당 없음
+     ③ oocyst
      ④ 유미유충 (cercaria)   <== 정답
     해설: 일본주혈흡충 충란 — 둥글고 통통함 (주혈흡충 중 가장 작고 둥금) / 매우 작은 lateral spine — 잘 보이지 않음
           일본주혈흡충의 인체 감염형은 유미유충 (cercaria)이다.
           출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태
 
- 5. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
+ 5. [충란 동정] 다음은 어떤 기생충의 충란인가?
     사진: tonghap/충란/013_D13.png
-     ① Schistosoma haematobium
+     ① Paragonimus westermani
      ② Schistosoma mansoni   <== 정답
-     ③ Paragonimus westermani
-     ④ Schistosoma japonicum
+     ③ Schistosoma japonicum
+     ④ Schistosoma haematobium
     해설: 만손주혈흡충 충란 — 매우 큼 (100um 이상) / 옆구리에 뚜렷하게 돌출된 lateral spine
           출제 포인트: 충란이 가장 큼 (100um 이상) + 뚜렷한 lateral spine (측방 돌기)
 
- 6. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+ 6. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
     사진: tonghap/충란/004_F4.png
-     ① gelatin layer
-     ② operculum   <== 정답
-     ③ ventral sucker
-     ④ tribocytic organ
+     ① ventral pit
+     ② gelatin layer
+     ③ operculum   <== 정답
+     ④ gynecophoral canal
     해설: 간흡충 충란 — 전구·플라스크 모양 / operculum 주변이 어깨처럼 튀어나옴 (shouldering)
           출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
 
  7. [충란 동정] 다음은 어떤 기생충의 충란인가?
     사진: jiseok/실습_1_002_8.png
      ① Enterobius vermicularis
-     ② Diphyllobothrium latum
+     ② Trichuris trichiura
      ③ Hookworm   <== 정답
-     ④ Trichinella spiralis
+     ④ Diphyllobothrium latum
     해설: 구충 충란 — 타원형, 충란벽이 키틴층 하나로 얇고 투명 / 내부에 난할된 세포가 여러 개 (4-8 cell stage)
           두비니구충과 아메리카구충의 충란은 구별 불가 — 답은 Hookworm
           출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지
 
- 8. [충란 동정] 다음은 어떤 기생충의 충란인가?
-    사진: tonghap/충란/010_F10.png
+ 8. [충란 동정] 다음 충란을 가지는 기생충은?
+    사진: jms_egg/충란_Helminth_eggs/015_D15.png
      ① Paragonimus westermani
-     ② Diphyllobothrium latum   <== 정답
-     ③ Taenia solium
-     ④ Ancylostoma duodenale
+     ② Ancylostoma duodenale
+     ③ Spirometra erinacei
+     ④ Diphyllobothrium latum   <== 정답
     해설: 광절열두조충 충란 — 갈색 타원형 / 한쪽에 operculum, 반대쪽에 작은 terminal knob
           출제 포인트: 충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만
 
- 9. [충란 동정] 다음 충란을 가지는 기생충은?
+ 9. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
     사진: tonghap/충란/007_F7.png
-     ① Anisakis simplex
-     ② Ancylostoma duodenale
-     ③ Trichuris trichiura
-     ④ Enterobius vermicularis   <== 정답
+     ① Necator americanus
+     ② Enterobius vermicularis   <== 정답
+     ③ Ancylostoma duodenale
+     ④ Anisakis simplex
     해설: 요충 충란 — 한쪽이 편평하고 반대쪽이 볼록한 비대칭 타원형 / 커피콩·죠리퐁·감씨 모양
           출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)
 
 10. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
     사진: note/[260831_05]_감염의_기초_실습__075_4.png
-     ① operculum
+     ① abopercular knob
      ② gelatin layer
-     ③ hexacanth embryo   <== 정답
-     ④ shoulder
+     ③ shoulder
+     ④ hexacanth embryo   <== 정답
     해설: 유무구조충 충란 — 원형 또는 타원형 / 두껍고 방사상 무늬의 embryophoral block
           유구조충과 무구조충의 충란은 구별 불가 — 답은 Taenia spp.
           출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)
 
-11. [종 동정] 다음은 어떤 기생충인가?
+11. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
     사진: eunju/기생충_실습_(조충류,_흡충류)_001_9.png
-     ① Fasciola hepatica   <== 정답
-     ② Gymnophalloides seoi
-     ③ Clonorchis sinensis
-     ④ Metagonimus yokogawai
+     ① Paragonimus westermani
+     ② Clonorchis sinensis
+     ③ Fasciola hepatica   <== 정답
+     ④ Schistosoma japonicum
     해설: 간질 조직절편 — 충체 내부가 구멍이 송송 뚫린 모양 / 간 실질의 괴사·염증
           출제 포인트: 납작한 나뭇잎 모양 + conical projection (= cephalic cone). highly branched intestine·testes·vitellaria. 조직에서는 구멍이 송송 뚫린 내부
 
-12. [증상·질병] 다음 기생충에 감염된 환자의 병명으로 옳은 것은?
-    사진: jms_protozoa/원충_Protozoa/003_H3.png
-     ① 톡소포자충증
-     ② 와포자충증
-     ③ 아메바증   <== 정답
-     ④ 비병원성
-    해설: 이질아메바 영양형 — karyosome이 핵 중앙에 작은 점처럼 위치 / peripheral chromatin의 두께가 균일
+12. [증상·질병] 다음 기생충이 일으키는 질환은?
+    사진: jms_protozoa/원충_Protozoa/006_F6.png
+     ① 질편모충증
+     ② 폐포자충폐렴
+     ③ 와포자충증
+     ④ 아메바증   <== 정답
+    해설: 이질아메바 조직절편 (대장) — flask-shaped ulcer (플라스크 모양 궤양) / 궤양 내부는 괴사 조직이라 충체가 없음
           이질아메바 감염증의 병명은 아메바증 (amebiasis)이다.
           출제 포인트: 영양형 - karyosome 중앙 + peripheral chromatin 두께 균일, RBC 탐식. 포낭 - 핵 4개 이하. 조직 - flask-shaped ulcer
 
-13. [감염경로] 다음 기생충의 감염 원인으로 알맞은 것은?
-    사진: eunju/기생충_실습_(선충류)_001_29.png
-     ① 충란에 오염된 손·침구·먼지   <== 정답
-     ② 자충포장란에 오염된 식수·채소
-     ③ 모기
-     ④ 바다생선회·두족류·해산 갑각류 생식
-    해설: 요충 성충 (현미경) — 머리쪽에 투명한 키틴성 날개 cephalic alae / 수컷은 꼬리가 나선형으로 말리고 caudal alae
-          요충은(는) 경구감염 / 공기매개 / 접촉감염으로 감염되며, 감염원은 충란에 오염된 손·침구·먼지이다.
-          출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)
+13. [감염경로] 다음 기생충의 전파 방식은?
+    사진: eunju/기생충_실습_(선충류)_001_16.png
+     ① 토양매개성   <== 정답
+     ② 식품매개성
+     ③ 접촉매개성
+     ④ 절지동물매개성
+    해설: 아메리카구충 성충 — 구강에 칼날 모양 cutting plate 1쌍 (송곳니 아님) / dorsal costa가 깊게 2분지 후 각각 2분지 (2+2)
+          아메리카구충의 전파 방식은 토양매개성이다.
+          dorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)
+          출제 포인트: 구강에 칼날 모양 cutting plate 1쌍. dorsal costa 깊게 2분지 → 각각 2분지
 
 14. [종 동정] 다음 기생충의 학명으로 옳은 것은?
     사진: practical/082_1.png
-     ① Plasmodium knowlesi
+     ① Plasmodium falciparum   <== 정답
      ② Plasmodium vivax
-     ③ Plasmodium falciparum   <== 정답
+     ③ Plasmodium ovale
      ④ Plasmodium malariae
     해설: 열대열원충 두꺼운 도말 — 적혈구가 용혈되어 원충만 남음 / 선별검사용 — 민감도가 높지만 종 감별은 어려움
           출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾
 
 15. [종 동정] 다음은 어떤 기생충인가?
     사진: tonghap/선충/017_D17.png
-     ① Enterobius vermicularis
+     ① Trichuris trichiura
      ② Ascaris lumbricoides   <== 정답
      ③ Anisakis simplex
-     ④ Ancylostoma duodenale
+     ④ Strongyloides stercoralis
     해설: 회충 성충 (현미경) — 머리에 3개의 입술 (three lips) / 수컷은 꼬리가 배쪽으로 말리고 교미침 2개
           출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제
 
 16. [감염형] 다음 기생충의 감염형으로 옳은 것은?
-    사진: jms_arthropoda/의용곤충_Anthropods/005_G5.png
-     ① 성충·약충·알   <== 정답
-     ② 해당 없음
-     ③ 사상유충 (filariform larva, L3)
-     ④ 성충·유충
+    사진: jms_arthropoda/의용곤충_Anthropods/006_F6.png
+     ① 해당 없음
+     ② 성충·유충
+     ③ 피낭유충 (metacercaria)
+     ④ 성충·약충·알   <== 정답
     해설: 이 (머릿니·몸니) — 마름모꼴의 길쭉한 몸통 / 다리 3쌍에 갈고리 모양 발톱
           머릿니 / 몸니의 인체 감염형은 성충·약충·알이다.
           출제 포인트: 마름모꼴의 긴 몸통. 충란은 모발에 투명한 막으로 붙어 있음. 치료는 permethrin을 두피에 도포 — 옴(전신 도포)과 구별
 
-17. [종 동정] 다음은 어떤 기생충인가?
-    사진: jiseok/실습_5_002_1.png
-     ① Endolimax nana
-     ② Cryptosporidium parvum
-     ③ Balantidium coli
-     ④ Pneumocystis jirovecii   <== 정답
-    해설: 폐포자충 (Diff-Quik, 폐) — 폐포 안에 거품 같은 exudate / cyst 안에 매우 작은 8개의 핵 (octa-nucleated cyst)
-          출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)
+17. [종 동정] 다음 기생충의 학명으로 옳은 것은?
+    사진: jms_protozoa/원충_Protozoa/028_F28.png
+     ① Entamoeba histolytica
+     ② Cryptosporidium parvum   <== 정답
+     ③ Neodiplostomum seoulense
+     ④ Balantidium coli
+    해설: 작은와포자충 조직절편 (소장) — 소장 융모 표면 미세융모에 붙은 작은 점들 / 세포 안이면서 세포질 밖(intracellular extracytoplasmic)에 위치
+          출제 포인트: 장 조직에서 미세융모에 붙은 작은 점들. MAF 염색에서 파란 배경에 분홍색 oocyst
 
-18. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
-    사진: eunju/기생충_실습_(선충류)_001_16.png
-     ① hook-like teeth
-     ② copulatory bursa   <== 정답
-     ③ three lips
-     ④ gelatin layer
-    해설: 아메리카구충 성충 — 구강에 칼날 모양 cutting plate 1쌍 (송곳니 아님) / dorsal costa가 깊게 2분지 후 각각 2분지 (2+2)
-          dorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)
-          출제 포인트: 구강에 칼날 모양 cutting plate 1쌍. dorsal costa 깊게 2분지 → 각각 2분지
+18. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+    사진: tonghap/선충/021_E21.png
+     ① cephalic alae   <== 정답
+     ② mucron
+     ③ boring tooth
+     ④ ventricle
+    해설: 요충 성충 (현미경) — 머리쪽에 투명한 키틴성 날개 cephalic alae / 수컷은 꼬리가 나선형으로 말리고 caudal alae
+          출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)
 
 19. [숙주] 다음 기생충의 종숙주로 옳은 것은?
-    사진: eunju/기생충_실습_(선충류)_001_15.png
-     ① 고래·돌고래 등 해산 포유류
+    사진: jiseok/실습_2_002_11.png
+     ① 고래·돌고래 등 해산 포유류   <== 정답
      ② 개
-     ③ 사람   <== 정답
-     ④ 말라리아 원충의 종숙주
-    해설: 두비니구충 성충 — 구강에 투명하게 반짝이는 송곳니 2쌍 (hook-like teeth) / 꼬리에 copulatory bursa
-          두비니구충의 종숙주는 사람이다.
-          dorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)
-          출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지
+     ③ 사람
+     ④ 포유동물
+    해설: 고래회충 유충 (현미경) — 머리에 boring tooth (상어 지느러미처럼 튀어나옴) / 꼬리에 mucron
+          고래회충의 종숙주는 고래·돌고래 등 해산 포유류 (사람은 우연숙주)이다.
+          출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell
 
 20. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
-    사진: jms_protozoa/원충_Protozoa/014_F14.png
-     ① bradyzoite
-     ② tissue cyst
-     ③ amastigote nest   <== 정답
+    사진: eunju/기생충_실습_(포자충류,_말라리아,_의용_001_3.png
+     ① kinetoplast
+     ② amastigote
+     ③ tachyzoite   <== 정답
      ④ gelatin layer
-    해설: 크루스파동편모충 심근 조직절편 — 심근세포 안에 동글동글하게 들어찬 amastigote 무리 / 주변 심근염
-          출제 포인트: 혈액에서는 trypomastigote (핵 + kinetoplast + 편모 + 파동막), 심근세포 안에서는 amastigote 무리. 배열이 편모 → 핵 → kinetoplast 순서 (리슈만과 반대)
+    해설: 톡소포자충 tachyzoite — 초승달·활 모양 (arc shaped) / 편모나 섬모가 없음
+          출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골
 
 21. [감염경로] 환자에게서 다음 표본이 검출되었다. 감염 원인은?
-    사진: jms_nematoda/선충_Nematodes/011_I11.png
-     ① 충란에 오염된 손·침구·먼지
-     ② 자충포장란에 오염된 식수·채소   <== 정답
-     ③ 오염 토양
-     ④ 바다생선회·두족류·해산 갑각류 생식
+    사진: eunju/기생충_실습_(선충류)_001_1.png
+     ① 모기
+     ② 충란에 오염된 손·침구·먼지
+     ③ 바다생선회·두족류·해산 갑각류 생식
+     ④ 자충포장란에 오염된 식수·채소   <== 정답
     해설: 편충 성충 (현미경) — 채찍 모양 — 앞 3/5이 가늘고 뒤 2/5가 굵음 / 가는 쪽이 머리
           편충은(는) 경구감염으로 감염되며, 감염원은 자충포장란에 오염된 식수·채소이다.
           출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골
 
-22. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
-    사진: jiseok/실습_5_002_2.png
-     ① octa-nucleated cyst
-     ② gelatin layer
-     ③ intracystic body
-     ④ alveolus   <== 정답
-    해설: 폐포자충 (GMS 염색, 폐) — 폐포 안이 검게 염색된 cyst로 가득 참 / cyst 벽이 검게 염색되고 안이 비침 (컵·초승달 모양)
+22. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+    사진: jms_protozoa/원충_Protozoa/026_G26.png
+     ① gelatin layer
+     ② octa-nucleated cyst   <== 정답
+     ③ alveolus
+     ④ kinetoplast
+    해설: 폐포자충 (Diff-Quik, 폐) — 폐포 안에 거품 같은 exudate / cyst 안에 매우 작은 8개의 핵 (octa-nucleated cyst)
           출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)
 
-23. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
-    사진: jms_nematoda/선충_Nematodes/017_G17.png
-     ① Ancylostoma duodenale
+23. [종 동정] 다음은 어떤 기생충인가?
+    사진: tonghap/선충/024_H24.png
+     ① Enterobius vermicularis
      ② Trichinella spiralis   <== 정답
-     ③ Enterobius vermicularis
-     ④ Trichuris trichiura
+     ③ Strongyloides stercoralis
+     ④ Necator americanus
     해설: 선모충 유충 (마운트) — 돌돌 말린 형태의 유충 / 근육에서 분리한 표본
           출제 포인트: 근육 조직절편에서 nursing cell complex 내부에 돌돌 말린 유충 — 조직 문제 단골
 
 24. [증상·질병] 다음 기생충에 감염된 환자의 병명으로 옳은 것은?
-    사진: tonghap/조충/002_F2.png
-     ① 광절열두조충증   <== 정답
-     ② 유구낭미충증
-     ③ 아시아조충증
-     ④ 왜소조충증
-    해설: 광절열두조충 편절 — 좌우로 넓은 사각형 편절 / 가운데에 rosette (꽃모양) uterus
-          광절열두조충 감염증의 병명은 광절열두조충증 (diphyllobothriasis)이다.
-          출제 포인트: 충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만
+    사진: eunju/기생충_실습_(조충류,_흡충류)_001_1.png
+     ① 폐흡충증
+     ② 일본주혈흡충증   <== 정답
+     ③ 요코가와흡충증
+     ④ 메콩주혈흡충증
+    해설: 일본주혈흡충 자웅 합체 — 자웅이체 — 수컷의 gynecophoral canal(포자관)에 가느다란 암컷이 끼어 있음 / 수컷 6-10mm
+          일본주혈흡충 감염증의 병명은 일본주혈흡충증 (schistosomiasis japonica)이다.
+          출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태
 
 25. [indicator] Indicator(표시)가 가리키는 구조물의 이름은?
     사진: practical_ind/088_1.png
-     ① schizont   <== 정답
-     ② gelatin layer
-     ③ gametocyte
-     ④ trophozoite
+     ① gelatin layer
+     ② schizont   <== 정답
+     ③ ring form
+     ④ gametocyte
     해설: 삼일열원충 두꺼운 도말 — 적혈구가 용혈되어 원충만 남음 / ring form과 schizont가 함께 보임
           출제 포인트: RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot
 
-26. [감염경로] 다음 기생충의 감염 원인으로 알맞은 것은?
-    사진: jms_trematoda/흡충_Trematodes/013_G13.png
-     ① 미나리 등 수생식물, 초식동물 생간·녹즙
-     ② 숭어·농어·문절망둑 등 반수산 어류 생식
-     ③ 은어·황어 생식
-     ④ 꽃뱀·개구리 생식   <== 정답
-    해설: 서울주걱흡충 조직절편 (소장) — 충체가 tribocytic organ으로 융모를 빨아먹는 모습 / 융모 위축(fusion, blunting) + 음와 증식 → V/C 비 감소
-          서울주걱흡충은(는) 경구감염으로 감염되며, 감염원은 꽃뱀·개구리 생식이다.
-          출제 포인트: 주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습
-
-27. [감염경로] 다음 기생충의 전파 방식은?
-    사진: jms_protozoa/원충_Protozoa/025_G25.png
-     ① 수인성
-     ② 공기매개
-     ③ 식품매개성   <== 정답
-     ④ 절지동물매개성
-    해설: 톡소포자충 tissue cyst (뇌) — 뇌 조직 안에 둥근 tissue cyst / cyst 내부에 매우 많은 bradyzoite가 빽빽하게 들어참
-          톡소포자충의 전파 방식은 식품매개성이다.
-          출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골
-
-28. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
-    사진: jms_nematoda/선충_Nematodes/004_H4.png
-     ① Ascaris lumbricoides   <== 정답
-     ② Trichuris trichiura
-     ③ Enterobius vermicularis
-     ④ Anisakis simplex
-    해설: 회충 단면 — 소화관 lumen을 단층 원주상피가 둘러쌈 / 양 옆에 lateral cord (족보에는 lateral chord 표기도 등장)
-          출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제
-
-29. [종 동정] 다음 기생충의 학명으로 옳은 것은?
-    사진: note/[260904_05]_감염의_기초_실습__029_1.png
-     ① Cysticercus cellulosae
-     ② Spirometra erinacei   <== 정답
-     ③ Taenia solium
-     ④ Echinococcus granulosus
-    해설: 고충 조직절편 — 성긴 스폰지 모양 실질 구조 / 내부에 보라색으로 염색되는 calcium (calcareous) corpuscle
-          출제 포인트: gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle
-
-30. [종 동정] 다음은 어떤 기생충인가?
-    사진: tonghap/조충/006_G6.png
-     ① Taenia solium   <== 정답
-     ② Diphyllobothrium latum
-     ③ Echinococcus granulosus
-     ④ Taenia saginata
-    해설: 유구조충 편절 — 자궁측지 13개 이하, 두껍고 듬성듬성 / 위아래로 긴 사각형
-          출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)
-
-31. [기생부위] 다음 기생충이 기생하는 부위는?
-    사진: note/[260902_05]_감염의_기초_실습__054_1.png
-     ① 성충 - 소장 점막 / 유충 - 횡문근
-     ② 소장 상부
-     ③ 맹장
-     ④ 위벽·장벽   <== 정답
-    해설: 고래회충 유충 (육안) — 약 2cm, 유백색의 실 모양 / 생선 내장·근육에 나선형으로 말려 있음
-          고래회충 성충은 위벽·장벽 (사람에서는 성충이 되지 못함)에 기생한다.
-          출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell
-
-32. [기생부위] 다음 기생충의 성충 기생 부위는?
-    사진: eunju/기생충_실습_(protozoa)_001_11.png
-     ① 뇌
-     ② 혈액·림프절·비장·중추신경계
-     ③ 십이지장
-     ④ 대장 lumen   <== 정답
-    해설: 대장아메바 포낭 — 핵이 4-8개로 많음 / karyosome이 크고 한쪽으로 치우침 (붓으로 꾹 누른 모양)
-          대장아메바 성충은 대장 lumen (조직 침입 없음)에 기생한다.
-          출제 포인트: 핵 4-8개 (최대 8개), karyosome이 크고 한쪽으로 치우침 (붓으로 누른 모양), peripheral chromatin 두께 불규칙 — 이질아메바와의 감별이 핵심
-
-33. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
-    사진: jms_cestoda/조충_Cestodes/009_G9.png
-     ① calcareous corpuscle
-     ② gelatin layer
-     ③ hook   <== 정답
-     ④ brood capsule
-    해설: 유구낭미충 (현미경) — cyst 안으로 scolex가 말려 들어가 있음 / scolex의 갈고리와 흡반이 진하게 보임
-          출제 포인트: gross - 투명한 cyst 안에 하얀 scolex. 조직 - cyst + 양치식물 모양 neck/scolex, 갈고리 진하게 보임. 고충증(sparganosis)과의 감별이 단골
-
-34. [증상·질병] 다음 기생충에 감염된 환자의 병명으로 옳은 것은?
-    사진: eunju/기생충_실습_(포자충류,_말라리아,_의용_001_3.png
-     ① 질편모충증
-     ② 아메바증
-     ③ 톡소포자충증   <== 정답
-     ④ 비병원성
-    해설: 톡소포자충 tachyzoite — 초승달·활 모양 (arc shaped) / 편모나 섬모가 없음
-          톡소포자충 감염증의 병명은 톡소포자충증 (toxoplasmosis)이다.
-          출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골
-
-35. [indicator] 다음 표본에서 표시가 가리키는 구조물은?
-    사진: practical_ind/082_3.png
-     ① Schuffner dot
-     ② gametocyte   <== 정답
-     ③ RBC
-     ④ schizont
-    해설: 열대열원충 얇은 도말 — RBC 크기 변화 없음 / 한 적혈구에 여러 개의 ring (multiple ring form)
-          출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾
-
-36. [감염경로] 다음 기생충이 감염되는 방식은?
-    사진: tonghap/선충/019_G19.png
-     ① 식품매개성   <== 정답
-     ② 절지동물매개성
-     ③ 접촉매개성
-     ④ 토양매개성
-    해설: 고래회충 단면 (토끼 위) — Y자 모양 intestinal lumen / 나비 모양 lateral cord
-          고래회충의 전파 방식은 식품매개성이다.
-          출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell
-
-37. [감염형] 다음 기생충의 감염형으로 옳은 것은?
-    사진: jms_trematoda/흡충_Trematodes/009_F9.png
-     ① 포낭
-     ② 유미유충 (cercaria)
-     ③ 해당 없음
-     ④ 피낭유충 (metacercaria)   <== 정답
-    해설: 뇌폐흡충증 조직절편 — 뇌 조직 내 충란과 육아종 / 포도송이(grape bunch) 모양 병변
-          폐흡충의 인체 감염형은 피낭유충 (metacercaria)이다.
-          출제 포인트: 충란 - 90um 그룹, operculum + abopercular thickening. 성충 - plump ovoid, 적갈색, 6개 lobe로 나뉜 ovary. 슬라이드가 두껍게 mounting 되어 있음
-
-38. [진단] 다음 기생충을 진단하는 검사로 알맞은 것은?
-    사진: jms_protozoa/원충_Protozoa/011_G11.png
-     ① 폐포세척액·객담·생검
-     ② 각막 도말·배양
-     ③ 질 분비물 현미경 관찰   <== 정답
-     ④ 대변검사
-    해설: 질편모충 영양형 — 핵 1개 / 앞쪽으로 뻗은 편모 4개
-          질편모충 진단: 질 분비물 현미경 관찰
-          출제 포인트: 핵 1개 + 앞쪽 4개 편모 + 한쪽에 undulating membrane (파동막). 포낭기가 없는 것이 특징
-
-39. [감염경로] 다음 기생충의 전파 방식은?
-    사진: eunju/기생충_실습_(조충류,_흡충류)_001_35.png
-     ① 패류매개성
-     ② 성접촉
-     ③ 토양매개성
-     ④ 식품매개성   <== 정답
-    해설: 참굴큰입흡충 성충 — 몸에 비해 거대한 oral sucker / ventral sucker 앞쪽에 홈처럼 파인 ventral pit
-          참굴큰입흡충의 전파 방식은 식품매개성이다.
-          출제 포인트: 거대한 oral sucker + ventral sucker 앞의 홈 (ventral pit) 이 결정적 감별점
-
-40. [치료] 다음 기생충 감염의 치료로 옳은 것은?
-    사진: tonghap/흡충/003_D3.png
-     ① 치료 불필요
-     ② 외과적 적출
-     ③ Praziquantel 복용   <== 정답
-     ④ Triclabendazole 복용
-    해설: 간흡충 성충 (육안) — 바질시드 모양의 작고 납작한 나뭇잎형 / 10-25mm
-          간흡충 치료: Praziquantel 25mg/kg tid 1d
-          출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
-======================================================================
-모의 땡시 2세트  (40문항)
-======================================================================
-
- 1. [충란 동정] 다음은 어떤 기생충의 충란인가?
-    사진: jms_egg/충란_Helminth_eggs/007_D7.png
-     ① Ascaris lumbricoides
-     ② Anisakis simplex
-     ③ Ancylostoma duodenale
-     ④ Enterobius vermicularis   <== 정답
-    해설: 요충 충란 — 한쪽이 편평하고 반대쪽이 볼록한 비대칭 타원형 / 커피콩·죠리퐁·감씨 모양
-          출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)
-
- 2. [감염형] 다음 충란을 가지는 기생충의 감염형으로 옳은 것은?
-    사진: note/[260831_05]_감염의_기초_실습__074_3.png
-     ① 피낭유충 (encysted larva)
-     ② 자충포장란 (embryonated egg)   <== 정답
-     ③ L3 유충
-     ④ 충란
-    해설: 편충 충란 — 양쪽 끝에 투명한 mucoid plug / 나뭇잎·럭비공·barrel 모양
-          편충의 인체 감염형은 자충포장란 (embryonated egg)이다.
-          출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골
-
- 3. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
-    사진: tonghap/충란/009_E9.png
-     ① Trichuris trichiura
-     ② Hookworm   <== 정답
-     ③ Enterobius vermicularis
-     ④ Diphyllobothrium latum
-    해설: 구충 충란 — 타원형, 충란벽이 키틴층 하나로 얇고 투명 / 내부에 난할된 세포가 여러 개 (4-8 cell stage)
-          두비니구충과 아메리카구충의 충란은 구별 불가 — 답은 Hookworm
-          출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지
-
- 4. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
-    사진: note/[260831_05]_감염의_기초_실습__066_2.png
-     ① Gymnophalloides seoi
-     ② Schistosoma japonicum
-     ③ Schistosoma haematobium   <== 정답
-     ④ Schistosoma mansoni
-    해설: 방광주혈흡충 충란 — 큰 방추형 / 아래쪽 끝에 돌출된 terminal spine
-          출제 포인트: 충란 아래쪽 끝에 terminal spine (말단 돌기) — 만손(lateral)과의 결정적 감별점
-
- 5. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
-    사진: tonghap/충란/002_D2.png
-     ① hooklet
-     ② albumin layer   <== 정답
-     ③ hexacanth embryo
-     ④ gelatin layer
-    해설: 회충 수정란 — 난원형, 두꺼운 충란벽 / 3 layer 구조 (바깥 albumin - chitin - lipoid)
-          출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제
-
- 6. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
-    사진: tonghap/충란/006_E6.png
-     ① Echinococcus granulosus
-     ② Clonorchis sinensis
-     ③ Echinococcus multilocularis
-     ④ Taenia spp.   <== 정답
-    해설: 유무구조충 충란 — 원형 또는 타원형 / 두껍고 방사상 무늬의 embryophoral block
-          유구조충과 무구조충의 충란은 구별 불가 — 답은 Taenia spp.
-          출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)
-
- 7. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
-    사진: note/[260831_05]_감염의_기초_실습__076_1.png
-     ① gelatin layer
-     ② terminal spine
-     ③ oral sucker
-     ④ lateral spine   <== 정답
-    해설: 일본주혈흡충 충란 — 둥글고 통통함 (주혈흡충 중 가장 작고 둥금) / 매우 작은 lateral spine — 잘 보이지 않음
-          출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태
-
- 8. [충란 동정] 다음 충란을 가지는 기생충은?
-    사진: jms_egg/충란_Helminth_eggs/015_D15.png
-     ① Paragonimus westermani
-     ② Diphyllobothrium latum   <== 정답
-     ③ Ancylostoma duodenale
-     ④ Taenia asiatica
-    해설: 광절열두조충 충란 — 갈색 타원형 / 한쪽에 operculum, 반대쪽에 작은 terminal knob
-          출제 포인트: 충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만
-
- 9. [숙주] 다음 충란을 가지는 기생충의 종숙주로 옳은 것은?
-    사진: note/[260831_05]_감염의_기초_실습__075_5.png
-     ① 사람·고양이과 동물
-     ② 사람·개
-     ③ 사람·조류·포유류   <== 정답
-     ④ 검은머리물떼새
-    해설: 요코가와흡충 충란 — 간흡충과 크기가 같으나 충란벽이 매끄러움 (muskmelon 무늬 없음) / shouldering이 뚜렷하지 않음
-          요코가와흡충의 종숙주는 사람·조류·포유류이다.
-          출제 포인트: 충란은 간흡충과 크기가 같은 30um이지만 충란벽이 매끄러움 (muskmelon 무늬 없음). 성충은 ventral sucker가 한쪽으로 치우침
-
-10. [충란 동정] 다음 충란을 가지는 기생충은?
-    사진: jiseok/실습_1_003_8.png
-     ① Schistosoma haematobium
-     ② Schistosoma japonicum
-     ③ Fasciola hepatica
-     ④ Schistosoma mansoni   <== 정답
-    해설: 만손주혈흡충 충란 — 매우 큼 (100um 이상) / 옆구리에 뚜렷하게 돌출된 lateral spine
-          출제 포인트: 충란이 가장 큼 (100um 이상) + 뚜렷한 lateral spine (측방 돌기)
-
-11. [충란 동정] 다음은 어떤 기생충의 충란인가?
-    사진: eunju/기생충_실습_(조충류,_흡충류)_001_19.png
-     ① Metagonimus yokogawai
-     ② Paragonimus westermani   <== 정답
-     ③ Ascaris lumbricoides
-     ④ Diphyllobothrium latum
-    해설: 폐흡충 충란 — 황갈색의 큰 난원형 / 한쪽 끝에 뚜렷한 operculum
-          출제 포인트: 충란 - 90um 그룹, operculum + abopercular thickening. 성충 - plump ovoid, 적갈색, 6개 lobe로 나뉜 ovary. 슬라이드가 두껍게 mounting 되어 있음
-
-12. [증상·질병] 다음 기생충에 감염된 환자의 병명으로 옳은 것은?
-    사진: eunju/기생충_실습_(protozoa)_001_19.png
-     ① 피부리슈만편모충증
-     ② 비병원성
-     ③ 람블편모충증   <== 정답
-     ④ 가시아메바각막염 / 육아종성 아메바성 뇌염
-    해설: 람블편모충 영양형 — 서양배(pear) 또는 올빼미 얼굴 모양 / 눈처럼 보이는 핵 2개
-          람블편모충 감염증의 병명은 람블편모충증 (giardiasis)이다.
-          출제 포인트: 영양형 - pear/올빼미 얼굴 모양, 핵 2개, 4쌍 편모, sucking disc. 포낭 - 타원형, 핵 2-4개가 한쪽에 몰림, axostyle 주변 fibril. 조직 파괴는 하지 않음
-
-13. [감염경로] 다음 기생충이 감염되는 방식은?
-    사진: jms_protozoa/원충_Protozoa/026_G26.png
-     ① 공기매개   <== 정답
-     ② 수인성
-     ③ 접촉매개성
-     ④ 절지동물매개성
-    해설: 폐포자충 (Diff-Quik, 폐) — 폐포 안에 거품 같은 exudate / cyst 안에 매우 작은 8개의 핵 (octa-nucleated cyst)
-          폐포자충의 전파 방식은 공기매개이다.
-          출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)
-
-14. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
-    사진: jms_protozoa/원충_Protozoa/016_F16.png
-     ① Plasmodium malariae
-     ② Plasmodium knowlesi
-     ③ Plasmodium vivax
-     ④ Plasmodium falciparum   <== 정답
-    해설: 열대열원충 얇은 도말 — RBC 크기 변화 없음 / 한 적혈구에 여러 개의 ring (multiple ring form)
-          출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾
-
-15. [감염경로] 다음 기생충의 전파 방식은?
-    사진: tonghap/선충/019_F19.png
-     ① 토양매개성
-     ② 절지동물매개성
-     ③ 식품매개성   <== 정답
-     ④ 접촉매개성
-    해설: 고래회충 유충 (현미경) — 머리에 boring tooth (상어 지느러미처럼 튀어나옴) / 꼬리에 mucron
-          고래회충의 전파 방식은 식품매개성이다.
-          출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell
-
-16. [증상·질병] 다음 기생충이 일으키는 질환은?
-    사진: note/[260903_05]_감염의_기초_실습3_039_3.png
-     ① 서울주걱흡충증
-     ② 간질증
-     ③ 폐흡충증
-     ④ 요코가와흡충증   <== 정답
-    해설: 요코가와흡충 성충 — 매우 작아 육안으로 잘 안 보임 (1-2mm) / ventral sucker가 한쪽으로 치우쳐 있음
-          요코가와흡충 감염증의 병명은 요코가와흡충증 (metagonimiasis)이다.
-          출제 포인트: 충란은 간흡충과 크기가 같은 30um이지만 충란벽이 매끄러움 (muskmelon 무늬 없음). 성충은 ventral sucker가 한쪽으로 치우침
-
-17. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
-    사진: note/[260904_05]_감염의_기초_실습__014_2.png
-     ① ovary
-     ② genital pore   <== 정답
-     ③ rosette uterus
-     ④ gelatin layer
-    해설: 유구조충 편절 — 자궁측지 13개 이하, 두껍고 듬성듬성 / 위아래로 긴 사각형
-          출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)
-
-18. [종 동정] 다음 기생충의 학명으로 옳은 것은?
-    사진: practical/085_2.png
-     ① Plasmodium malariae
-     ② Plasmodium ovale
-     ③ Plasmodium falciparum   <== 정답
-     ④ Plasmodium vivax
-    해설: 열대열원충 두꺼운 도말 — 적혈구가 용혈되어 원충만 남음 / 선별검사용 — 민감도가 높지만 종 감별은 어려움
-          출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾
-
-19. [감염경로] 다음 기생충의 전파 방식은?
-    사진: tonghap/조충/004_D4.png
-     ① 접촉매개성
-     ② 성접촉
-     ③ 절지동물매개성
-     ④ 식품매개성   <== 정답
-    해설: 고충 (육안) — 하얀 고무줄처럼 쭈굴쭈굴하고 길다 / 편절 구분이 없음
-          만손열두조충의 전파 방식은 식품매개성이다.
-          출제 포인트: gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle
-
-20. [진단] 다음 기생충 감염의 진단법으로 옳은 것은?
-    사진: eunju/기생충_실습_(protozoa)_002_2.png
-     ① 혈액도말 Giemsa   <== 정답
-     ② 혈액·림프액 도말 Giemsa
-     ③ 뇌척수액·뇌생검에서 영양형
-     ④ 대변검사
-    해설: 크루스파동편모충 심근 조직절편 — 심근세포 안에 동글동글하게 들어찬 amastigote 무리 / 주변 심근염
-          크루스파동편모충 진단: 혈액도말 Giemsa, xenodiagnosis
-          출제 포인트: 혈액에서는 trypomastigote (핵 + kinetoplast + 편모 + 파동막), 심근세포 안에서는 amastigote 무리. 배열이 편모 → 핵 → kinetoplast 순서 (리슈만과 반대)
-
-21. [기생부위] 다음 기생충이 기생하는 부위는?
-    사진: jms_nematoda/선충_Nematodes/008_F8.png
-     ① 간·폐·눈·뇌
-     ② 맹장·대장
-     ③ 소장 상부   <== 정답
-     ④ 림프관
-    해설: 아메리카구충 성충 — 구강에 칼날 모양 cutting plate 1쌍 (송곳니 아님) / dorsal costa가 깊게 2분지 후 각각 2분지 (2+2)
-          아메리카구충 성충은 소장 상부에 기생한다.
-          dorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)
-          출제 포인트: 구강에 칼날 모양 cutting plate 1쌍. dorsal costa 깊게 2분지 → 각각 2분지
-
-22. [감염경로] 다음 기생충의 감염 원인으로 알맞은 것은?
-    사진: jms_protozoa/원충_Protozoa/005_G5.jpg
-     ① 체체파리
-     ② 고양이 분변에 오염된 채소·식수
-     ③ 돼지 분변에 오염된 물·음식
-     ④ 포낭에 오염된 물·음식   <== 정답
-    해설: 이질아메바 포낭 — 핵이 4개 이하로 듬성듬성 / karyosome 중앙 위치
+26. [감염경로] 환자에게서 다음 표본이 검출되었다. 감염 원인은?
+    사진: jms_protozoa/원충_Protozoa/003_F3.png
+     ① 모래파리
+     ② 비말·공기
+     ③ 포낭에 오염된 물·음식   <== 정답
+     ④ 감염자와의 성접촉
+    해설: 이질아메바 영양형 — karyosome이 핵 중앙에 작은 점처럼 위치 / peripheral chromatin의 두께가 균일
           이질아메바은(는) 경구감염으로 감염되며, 감염원은 포낭에 오염된 물·음식이다.
           출제 포인트: 영양형 - karyosome 중앙 + peripheral chromatin 두께 균일, RBC 탐식. 포낭 - 핵 4개 이하. 조직 - flask-shaped ulcer
 
-23. [감염형] 다음 기생충의 인체 감염형은?
-    사진: tonghap/조충/011_D11.png
-     ① 무구낭미충
-     ② 유구낭미충
-     ③ 충란   <== 정답
-     ④ 의미충
-    해설: 단방조충 protoscolex — 포충(hydatid cyst) 안에 여러 개의 protoscolex / 콧수염 모양으로 배열된 hooklet
-          단방조충의 인체 감염형은 충란이다.
-          출제 포인트: 성충은 immature·mature·gravid 편절이 1개씩. 포충 내부에 여러 개의 protoscolex, 콧수염 모양 hooklet
-
-24. [감염형] 다음 기생충의 인체 감염형은?
-    사진: jms_nematoda/선충_Nematodes/012_G12.png
-     ① 자충포장란 (embryonated egg)   <== 정답
-     ② 사상유충 (filariform larva, L3)
-     ③ 피낭유충 (encysted larva)
-     ④ promastigote
-    해설: 편충 조직절편 (충수) — 계란후라이 모양의 stichocyte가 쌓여 stichosome을 이룸 / 충수 점막에 박힌 여러 개의 단면
-          편충의 인체 감염형은 자충포장란 (embryonated egg)이다.
-          출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골
-
-25. [종 동정] 다음 기생충의 학명으로 옳은 것은?
-    사진: tonghap/선충/022_D22.png
-     ① Anisakis simplex
-     ② Ascaris lumbricoides
-     ③ Enterobius vermicularis   <== 정답
-     ④ Strongyloides stercoralis
-    해설: 요충 성충 (현미경) — 머리쪽에 투명한 키틴성 날개 cephalic alae / 수컷은 꼬리가 나선형으로 말리고 caudal alae
-          출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)
-
-26. [치료] 다음 기생충 감염의 치료로 옳은 것은?
-    사진: jms_protozoa/원충_Protozoa/024_F24.jpg
-     ① Pentamidine 복용
-     ② Pyrimethamine 복용   <== 정답
-     ③ 치료 불필요
-     ④ pentavalent antimonials 복용
-    해설: 톡소포자충 tachyzoite — 초승달·활 모양 (arc shaped) / 편모나 섬모가 없음
-          톡소포자충 치료: Pyrimethamine + Sulfadiazine + Folinic acid, 임산부는 Spiramycin
-          출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골
-
-27. [기생부위] 다음 기생충의 성충 기생 부위는?
-    사진: jiseok/실습_5_003_7.png
-     ① 중남미 주거지   <== 정답
-     ② 피부 각질층
-     ③ 열대·아열대
-     ④ 야외 초지
-    해설: 흡혈성 침노린재 — 빈대보다 크고 길쭉함 (1-3cm) / 뾰족하고 긴 주둥이
-          흡혈성 침노린재 성충은 중남미 주거지에 기생한다.
-          빈대와 감별 — 침노린재는 샤가스병을 매개
-          출제 포인트: 빈대(Cimex)와 혼동 주의 — 빈대는 질병을 매개하지 않고 침노린재는 샤가스병을 매개
+27. [감염경로] 다음 기생충이 감염되는 방식은?
+    사진: jms_protozoa/원충_Protozoa/027_G27.jpg
+     ① 절지동물매개성
+     ② 성접촉
+     ③ 공기매개   <== 정답
+     ④ 수인성
+    해설: 폐포자충 (GMS 염색, 폐) — 폐포 안이 검게 염색된 cyst로 가득 참 / cyst 벽이 검게 염색되고 안이 비침 (컵·초승달 모양)
+          폐포자충의 전파 방식은 공기매개이다.
+          출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)
 
 28. [종 동정] 다음은 어떤 기생충인가?
-    사진: jms_trematoda/흡충_Trematodes/006_F6.png
-     ① Paragonimus westermani
-     ② Opisthorchis viverrini
-     ③ Clonorchis sinensis   <== 정답
-     ④ Fasciola hepatica
-    해설: 간흡충 성충 — 납작한 나뭇잎 모양, 10-25mm / 몸 뒤쪽에 나뭇가지처럼 갈라진 branched testis 2개
-          출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
-
-29. [종 동정] 다음은 어떤 기생충인가?
-    사진: note/[260902_05]_감염의_기초_실습__052_1.png
-     ① Anisakis simplex   <== 정답
-     ② Enterobius vermicularis
-     ③ Necator americanus
-     ④ Ascaris lumbricoides
-    해설: 고래회충 유충 (육안) — 약 2cm, 유백색의 실 모양 / 생선 내장·근육에 나선형으로 말려 있음
-          출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell
-
-30. [감염경로] 환자에게서 다음 표본이 검출되었다. 감염 원인은?
-    사진: note/[260903_05]_감염의_기초_실습3_042_2.png
-     ① 유미유충이 있는 민물 접촉
-     ② 얼룩동사리·버들치·미꾸라지 생식
-     ③ 미나리 등 수생식물, 초식동물 생간·녹즙
-     ④ 꽃뱀·개구리 생식   <== 정답
-    해설: 서울주걱흡충 성충 — 앞쪽이 주걱처럼 넓게 퍼진 모양 / tribocytic organ (제2의 입) 이 결정적 감별점
-          서울주걱흡충은(는) 경구감염으로 감염되며, 감염원은 꽃뱀·개구리 생식이다.
-          출제 포인트: 주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습
-
-31. [증상·질병] 다음 기생충에 감염된 환자의 병명으로 옳은 것은?
-    사진: jms_protozoa/원충_Protozoa/004_H4.png
-     ① 비병원성
-     ② 아메바증   <== 정답
-     ③ 람블편모충증
-     ④ 질편모충증
-    해설: 이질아메바 영양형 — karyosome이 핵 중앙에 작은 점처럼 위치 / peripheral chromatin의 두께가 균일
-          이질아메바 감염증의 병명은 아메바증 (amebiasis)이다.
-          출제 포인트: 영양형 - karyosome 중앙 + peripheral chromatin 두께 균일, RBC 탐식. 포낭 - 핵 4개 이하. 조직 - flask-shaped ulcer
-
-32. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
-    사진: jms_protozoa/원충_Protozoa/025_F25.png
-     ① bradyzoite   <== 정답
-     ② amastigote nest
-     ③ egg
-     ④ granuloma
-    해설: 톡소포자충 tissue cyst (뇌) — 뇌 조직 안에 둥근 tissue cyst / cyst 내부에 매우 많은 bradyzoite가 빽빽하게 들어참
-          출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골
-
-33. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
-    사진: jms_nematoda/선충_Nematodes/004_G4.png
-     ① stichosome
-     ② Renette cell
-     ③ cuticle   <== 정답
-     ④ gelatin layer
-    해설: 회충 단면 — 소화관 lumen을 단층 원주상피가 둘러쌈 / 양 옆에 lateral cord (족보에는 lateral chord 표기도 등장)
-          출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제
-
-34. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
-    사진: tonghap/선충/013_D13.png
-     ① dorsal costa   <== 정답
-     ② gelatin layer
-     ③ notched tail
-     ④ cutting plate
-    해설: 두비니구충 성충 — 구강에 투명하게 반짝이는 송곳니 2쌍 (hook-like teeth) / 꼬리에 copulatory bursa
-          dorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)
-          출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지
-
-35. [indicator] Indicator(표시)가 가리키는 구조물의 이름은?
-    사진: practical_ind/087_3.png
-     ① schizont   <== 정답
-     ② gelatin layer
-     ③ ring form
-     ④ gametocyte
-    해설: 삼일열원충 두꺼운 도말 — 적혈구가 용혈되어 원충만 남음 / ring form과 schizont가 함께 보임
-          출제 포인트: RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot
-
-36. [감염경로] 다음 기생충의 감염 원인으로 알맞은 것은?
-    사진: eunju/기생충_실습_(조충류,_흡충류)_001_1.png
-     ① 민물고기 생식
-     ② 유미유충이 있는 민물 접촉   <== 정답
-     ③ 숭어·농어·문절망둑 등 반수산 어류 생식
-     ④ 민물 갑각류 생식
-    해설: 일본주혈흡충 자웅 합체 — 자웅이체 — 수컷의 gynecophoral canal(포자관)에 가느다란 암컷이 끼어 있음 / 수컷 6-10mm
-          일본주혈흡충은(는) 경피감염 (7분 이내 침입)으로 감염되며, 감염원은 유미유충이 있는 민물 접촉 (물 길어오기·수영)이다.
-          출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태
-
-37. [종 동정] 다음은 어떤 기생충인가?
-    사진: tonghap/흡충/004_H4.png
-     ① Paragonimus westermani
-     ② Fasciola hepatica
-     ③ Clonorchis sinensis   <== 정답
-     ④ Gymnophalloides seoi
-    해설: 간흡충 조직절편 (간) — 담관 직경이 늘어나 있음 / 담관 안에 여러 마리의 충체 단면
-          출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
-
-38. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
-    사진: tonghap/조충/009_G9.png
-     ① protoscolex
-     ② sucker   <== 정답
-     ③ gelatin layer
-     ④ brood capsule
-    해설: 유구낭미충 (현미경) — cyst 안으로 scolex가 말려 들어가 있음 / scolex의 갈고리와 흡반이 진하게 보임
-          출제 포인트: gross - 투명한 cyst 안에 하얀 scolex. 조직 - cyst + 양치식물 모양 neck/scolex, 갈고리 진하게 보임. 고충증(sparganosis)과의 감별이 단골
-
-39. [종 동정] 다음은 어떤 기생충인가?
-    사진: jms_protozoa/원충_Protozoa/027_F27.jpg
-     ① Toxoplasma gondii
-     ② Pneumocystis jirovecii   <== 정답
-     ③ Entamoeba coli
-     ④ Entamoeba histolytica
-    해설: 폐포자충 (GMS 염색, 폐) — 폐포 안이 검게 염색된 cyst로 가득 참 / cyst 벽이 검게 염색되고 안이 비침 (컵·초승달 모양)
-          출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)
-
-40. [종 동정] 다음 기생충의 학명으로 옳은 것은?
-    사진: jms_nematoda/선충_Nematodes/009_F9.png
-     ① Strongyloides stercoralis   <== 정답
-     ② Necator americanus
-     ③ Enterobius vermicularis
-     ④ Trichuris trichiura
-    해설: 분선충 사상유충 — 식도의 직경이 일정하고 길다 / 꼬리 끝이 갈라짐 (notched tail)
-          출제 포인트: 간상유충 (rhabditoid) = 백열전구 모양 식도 / 사상유충 (filariform) = 직경 일정한 식도 + notched tail. 구충 유충과는 꼬리 모양으로 감별
-======================================================================
-모의 땡시 3세트  (40문항)
-======================================================================
-
- 1. [충란 동정] 다음 충란을 가지는 기생충은?
-    사진: eunju/기생충_실습_(연충란)_001_25.png
-     ① Schistosoma mansoni
-     ② Schistosoma haematobium
-     ③ Schistosoma japonicum   <== 정답
-     ④ Fasciola hepatica
-    해설: 일본주혈흡충 충란 — 둥글고 통통함 (주혈흡충 중 가장 작고 둥금) / 매우 작은 lateral spine — 잘 보이지 않음
-          출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태
-
- 2. [충란 동정] 다음 충란을 가지는 기생충은?
-    사진: tonghap/충란/003_F3.png
-     ① Ascaris lumbricoides   <== 정답
-     ② Strongyloides stercoralis
-     ③ Paragonimus westermani
-     ④ Necator americanus
-    해설: 회충 불수정란 — 수정란보다 길쭉하고 큼 / 충란벽 3 layer가 제대로 형성되지 않음
-          출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제
-
- 3. [감염형] 다음 충란을 가지는 기생충의 인체 감염형은?
-    사진: jms_egg/충란_Helminth_eggs/006_D6.png
-     ① 자충포장란 (embryonated egg)
-     ② 해당 없음
-     ③ 사상유충 (filariform larva, L3)   <== 정답
-     ④ 피낭유충 (encysted larva)
-    해설: 구충 충란 — 타원형, 충란벽이 키틴층 하나로 얇고 투명 / 내부에 난할된 세포가 여러 개 (4-8 cell stage)
-          두비니구충의 인체 감염형은 사상유충 (filariform larva, L3)이다.
-          두비니구충과 아메리카구충의 충란은 구별 불가 — 답은 Hookworm
-          출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지
-
- 4. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
-    사진: jiseok/실습_1_003_5.png
-     ① embryophoral block
-     ② gelatin layer
-     ③ hexacanth embryo
-     ④ lipoid layer   <== 정답
-    해설: 회충 수정란 — 난원형, 두꺼운 충란벽 / 3 layer 구조 (바깥 albumin - chitin - lipoid)
-          출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제
-
- 5. [충란 동정] 다음은 어떤 기생충의 충란인가?
-    사진: jiseok/실습_1_002_3.png
-     ① Ascaris lumbricoides
-     ② Necator americanus
-     ③ Strongyloides stercoralis
-     ④ Trichuris trichiura   <== 정답
-    해설: 편충 충란 — 양쪽 끝에 투명한 mucoid plug / 나뭇잎·럭비공·barrel 모양
-          출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골
-
- 6. [충란 동정] 다음 충란을 가지는 기생충은?
-    사진: note/[260831_05]_감염의_기초_실습__059_2.png
-     ① Diphyllobothrium latum
-     ② Metagonimus yokogawai
-     ③ Paragonimus westermani   <== 정답
-     ④ Ascaris lumbricoides
-    해설: 폐흡충 충란 — 황갈색의 큰 난원형 / 한쪽 끝에 뚜렷한 operculum
-          출제 포인트: 충란 - 90um 그룹, operculum + abopercular thickening. 성충 - plump ovoid, 적갈색, 6개 lobe로 나뉜 ovary. 슬라이드가 두껍게 mounting 되어 있음
-
- 7. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
-    사진: tonghap/충란/006_F6.png
-     ① gelatin layer
-     ② hexacanth embryo   <== 정답
-     ③ operculum
-     ④ abopercular knob
-    해설: 유무구조충 충란 — 원형 또는 타원형 / 두껍고 방사상 무늬의 embryophoral block
-          유구조충과 무구조충의 충란은 구별 불가 — 답은 Taenia spp.
-          출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)
-
- 8. [충란 동정] 다음 충란을 가지는 기생충은?
-    사진: eunju/기생충_실습_(연충란)_001_9.png
-     ① Ancylostoma duodenale
-     ② Necator americanus
-     ③ Enterobius vermicularis   <== 정답
-     ④ Anisakis simplex
-    해설: 요충 충란 — 한쪽이 편평하고 반대쪽이 볼록한 비대칭 타원형 / 커피콩·죠리퐁·감씨 모양
-          출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)
-
- 9. [증상·질병] 다음 충란을 가지는 기생충이 일으키는 질환은?
-    사진: note/[260831_05]_감염의_기초_실습__075_2.png
-     ① 만손주혈흡충증
-     ② 간흡충증
-     ③ 간질증
-     ④ 요코가와흡충증   <== 정답
-    해설: 요코가와흡충 충란 — 간흡충과 크기가 같으나 충란벽이 매끄러움 (muskmelon 무늬 없음) / shouldering이 뚜렷하지 않음
-          요코가와흡충 감염증의 병명은 요코가와흡충증 (metagonimiasis)이다.
-          출제 포인트: 충란은 간흡충과 크기가 같은 30um이지만 충란벽이 매끄러움 (muskmelon 무늬 없음). 성충은 ventral sucker가 한쪽으로 치우침
-
-10. [충란 동정] 다음 충란을 가지는 기생충은?
-    사진: tonghap/충란/014_F14.png
-     ① Schistosoma japonicum
-     ② Schistosoma haematobium   <== 정답
-     ③ Schistosoma mansoni
-     ④ Metagonimus yokogawai
-    해설: 방광주혈흡충 충란 — 큰 방추형 / 아래쪽 끝에 돌출된 terminal spine
-          출제 포인트: 충란 아래쪽 끝에 terminal spine (말단 돌기) — 만손(lateral)과의 결정적 감별점
-
-11. [감염경로] 환자에게서 다음 표본이 검출되었다. 감염 원인은?
-    사진: note/[260831_05]_감염의_기초_실습__063_2.png
-     ① 소고기 육회 등 덜 익힌 소고기
-     ② 개 분변의 충란
-     ③ 연어·송어·농어 생식   <== 정답
-     ④ 유구조충 충란에 오염된 음식·손
-    해설: 광절열두조충 충란 — 갈색 타원형 / 한쪽에 operculum, 반대쪽에 작은 terminal knob
-          광절열두조충은(는) 경구감염으로 감염되며, 감염원은 연어·송어·농어 생식이다.
-          출제 포인트: 충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만
-
-12. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
-    사진: jms_egg/충란_Helminth_eggs/008_D8.png
-     ① Heterophyes nocens
-     ② Clonorchis sinensis   <== 정답
-     ③ Metagonimus yokogawai
-     ④ Gymnophalloides seoi
-    해설: 간흡충 충란 — 전구·플라스크 모양 / operculum 주변이 어깨처럼 튀어나옴 (shouldering)
-          출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
-
-13. [감염경로] 환자에게서 다음 표본이 검출되었다. 감염 원인은?
-    사진: jms_protozoa/원충_Protozoa/026_F26.png
-     ① 침노린재
-     ② 비말·공기   <== 정답
-     ③ 체체파리
-     ④ 따뜻한 담수
-    해설: 폐포자충 (Diff-Quik, 폐) — 폐포 안에 거품 같은 exudate / cyst 안에 매우 작은 8개의 핵 (octa-nucleated cyst)
-          폐포자충은(는) 공기감염으로 감염되며, 감염원은 비말·공기이다.
-          출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)
-
-14. [종 동정] 다음은 어떤 기생충인가?
-    사진: jms_trematoda/흡충_Trematodes/012_G12.png
-     ① Clonorchis sinensis
-     ② Neodiplostomum seoulense   <== 정답
-     ③ Fasciola hepatica
-     ④ Gymnophalloides seoi
-    해설: 서울주걱흡충 성충 — 앞쪽이 주걱처럼 넓게 퍼진 모양 / tribocytic organ (제2의 입) 이 결정적 감별점
-          출제 포인트: 주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습
-
-15. [감염형] 다음 기생충의 감염형으로 옳은 것은?
-    사진: practical/090_4.png
-     ① sporozoite   <== 정답
-     ② 피낭유충 (metacercaria)
-     ③ 해당 없음
-     ④ 성충·약충·알
-    해설: 삼일열원충 얇은 도말 — 감염된 RBC가 커지고 옅어짐 / multiple ring 없음, ring이 RBC 지름의 1/3
-          삼일열원충의 인체 감염형은 sporozoite이다.
-          출제 포인트: RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot
-
-16. [감염경로] 다음 기생충이 감염되는 방식은?
-    사진: eunju/기생충_실습_(포자충류,_말라리아,_의용_003_6.png
-     ① 접촉매개성
-     ② 성접촉
-     ③ 절지동물매개성   <== 정답
-     ④ 수인성
-    해설: 얼룩날개모기 — 날개에 얼룩무늬 / 앉을 때 몸을 45도로 들어 올림 (엉덩이를 듦)
-          중국얼룩날개모기의 전파 방식은 절지동물매개성이다.
-          출제 포인트: 날개에 얼룩무늬. 앉을 때 엉덩이를 드는 자세가 특징 — 집모기와 감별
-
-17. [종 동정] 다음 기생충의 학명으로 옳은 것은?
-    사진: jms_trematoda/흡충_Trematodes/003_F3.png
-     ① Schistosoma japonicum   <== 정답
-     ② Gymnophalloides seoi
-     ③ Fasciola hepatica
-     ④ Paragonimus westermani
-    해설: 일본주혈흡충 자웅 합체 — 자웅이체 — 수컷의 gynecophoral canal(포자관)에 가느다란 암컷이 끼어 있음 / 수컷 6-10mm
-          출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태
-
-18. [종 동정] 다음은 어떤 기생충인가?
-    사진: tonghap/선충/014_D14.png
-     ① Ancylostoma duodenale
-     ② Trichuris trichiura
-     ③ Ascaris lumbricoides
-     ④ Necator americanus   <== 정답
-    해설: 아메리카구충 성충 — 구강에 칼날 모양 cutting plate 1쌍 (송곳니 아님) / dorsal costa가 깊게 2분지 후 각각 2분지 (2+2)
-          dorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)
-          출제 포인트: 구강에 칼날 모양 cutting plate 1쌍. dorsal costa 깊게 2분지 → 각각 2분지
-
-19. [감염형] 다음 기생충의 감염형으로 옳은 것은?
-    사진: jms_protozoa/원충_Protozoa/009_G9.jpg
-     ① trypomastigote
-     ② 4핵성 포낭   <== 정답
-     ③ oocyst
-     ④ promastigote
-    해설: 람블편모충 포낭 — 타원형, 10-12um / 핵 2-4개가 한쪽 끝에 몰려 있음
-          람블편모충의 인체 감염형은 4핵성 포낭이다.
-          출제 포인트: 영양형 - pear/올빼미 얼굴 모양, 핵 2개, 4쌍 편모, sucking disc. 포낭 - 타원형, 핵 2-4개가 한쪽에 몰림, axostyle 주변 fibril. 조직 파괴는 하지 않음
-
-20. [증상·질병] 다음 기생충에 감염된 환자의 병명으로 옳은 것은?
-    사진: jms_cestoda/조충_Cestodes/005_F5.png
-     ① 아시아조충증
-     ② 왜소조충증
-     ③ 무구조충증
-     ④ 고충증   <== 정답
-    해설: 고충 조직절편 — 성긴 스폰지 모양 실질 구조 / 내부에 보라색으로 염색되는 calcium (calcareous) corpuscle
-          만손열두조충 감염증의 병명은 고충증 (sparganosis)이다.
-          출제 포인트: gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle
-
-21. [진단] 다음 기생충 감염의 진단법으로 옳은 것은?
-    사진: eunju/기생충_실습_(포자충류,_말라리아,_의용_001_14.png
-     ① 대변검사 - 급성기 영양형, 만성기 포낭
-     ② 혈청 IgG/IgM
-     ③ 뇌척수액·뇌생검에서 영양형
-     ④ 대변검사 - modified acid-fast   <== 정답
-    해설: 작은와포자충 조직절편 (소장) — 소장 융모 표면 미세융모에 붙은 작은 점들 / 세포 안이면서 세포질 밖(intracellular extracytoplasmic)에 위치
-          작은와포자충 진단: 대변검사 - modified acid-fast (MAF) 염색
-          출제 포인트: 장 조직에서 미세융모에 붙은 작은 점들. MAF 염색에서 파란 배경에 분홍색 oocyst
-
-22. [숙주] 다음 기생충의 종숙주로 옳은 것은?
-    사진: jms_protozoa/원충_Protozoa/024_F24.jpg
-     ① 고양이   <== 정답
-     ② 사람
-     ③ 돼지
-     ④ 자유생활종
-    해설: 톡소포자충 tachyzoite — 초승달·활 모양 (arc shaped) / 편모나 섬모가 없음
-          톡소포자충의 종숙주는 고양이이다.
-          출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골
-
-23. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
-    사진: jms_protozoa/원충_Protozoa/005_F5.png
-     ① undulating membrane
-     ② gelatin layer
-     ③ peripheral chromatin   <== 정답
-     ④ nucleus
-    해설: 이질아메바 포낭 — 핵이 4개 이하로 듬성듬성 / karyosome 중앙 위치
-          출제 포인트: 영양형 - karyosome 중앙 + peripheral chromatin 두께 균일, RBC 탐식. 포낭 - 핵 4개 이하. 조직 - flask-shaped ulcer
-
-24. [치료] 다음 기생충 감염의 치료로 옳은 것은?
-    사진: jms_cestoda/조충_Cestodes/007_G7.png
-     ① 외과적 절제
-     ② Praziquantel 복용   <== 정답
-     ③ PAIR
-     ④ 외과적 적출 (약물치료 없음)
-    해설: 무구조충 편절 — 자궁측지 13개 이상, 얇고 많음 / 위아래로 긴 사각형
-          무구조충 치료: Praziquantel 5-10mg/kg single
-          출제 포인트: 두절이 납작하고 갈고리 없음 (sucker 4개만). 자궁측지 13개 이상, 얇고 많음. 사람에서 낭미충증을 일으키지 않음
-
-25. [indicator] Indicator(표시)가 가리키는 구조물의 이름은?
-    사진: practical_ind/087_4.png
-     ① gametocyte
-     ② schizont   <== 정답
-     ③ ring form
-     ④ trophozoite
-    해설: 삼일열원충 두꺼운 도말 — 적혈구가 용혈되어 원충만 남음 / ring form과 schizont가 함께 보임
-          출제 포인트: RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot
-
-26. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
-    사진: jiseok/실습_3_003_10.png
-     ① Diphyllobothrium latum   <== 정답
-     ② Taenia solium
-     ③ Taenia asiatica
-     ④ Taenia saginata
-    해설: 광절열두조충 편절 — 좌우로 넓은 사각형 편절 / 가운데에 rosette (꽃모양) uterus
-          출제 포인트: 충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만
-
-27. [종 동정] 다음은 어떤 기생충인가?
-    사진: jms_nematoda/선충_Nematodes/006_G6.png
-     ① Enterobius vermicularis
-     ② Ancylostoma duodenale   <== 정답
-     ③ Ascaris lumbricoides
-     ④ Necator americanus
-    해설: 두비니구충 성충 — 구강에 투명하게 반짝이는 송곳니 2쌍 (hook-like teeth) / 꼬리에 copulatory bursa
-          dorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)
-          출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지
-
-28. [기생부위] 다음 기생충이 기생하는 부위는?
-    사진: note/[260902_05]_감염의_기초_실습__052_3.png
-     ① 소장
-     ② 간·폐·눈·뇌
-     ③ 위벽·장벽   <== 정답
-     ④ 맹장
-    해설: 고래회충 유충 (육안) — 약 2cm, 유백색의 실 모양 / 생선 내장·근육에 나선형으로 말려 있음
-          고래회충 성충은 위벽·장벽 (사람에서는 성충이 되지 못함)에 기생한다.
-          출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell
-
-29. [감염경로] 다음 기생충의 전파 방식은?
-    사진: jms_nematoda/선충_Nematodes/019_F19.png
-     ① 식품매개성
-     ② 절지동물매개성   <== 정답
-     ③ 토양매개성
-     ④ 접촉매개성
-    해설: 말레이사상충 microfilaria — sheath에 싸여 있음 / 꼬리 끝에 끊어져 떨어진 terminal nuclei 2개
-          말레이사상충의 전파 방식은 절지동물매개성이다.
-          출제 포인트: sheath에 싸여 있고 꼬리 끝에 끊어진 terminal nuclei 2개 — Wuchereria (nuclei가 중간에 끊김) 와 감별
-
-30. [indicator] 다음 표본에서 표시가 가리키는 구조물은?
-    사진: practical_ind/082_3.png
-     ① Schuffner dot
-     ② gametocyte   <== 정답
-     ③ RBC
-     ④ schizont
-    해설: 열대열원충 얇은 도말 — RBC 크기 변화 없음 / 한 적혈구에 여러 개의 ring (multiple ring form)
-          출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾
-
-31. [감염경로] 다음 기생충의 감염 원인으로 알맞은 것은?
-    사진: tonghap/흡충/009_E9.png
-     ① 얼룩동사리·버들치·미꾸라지 생식
-     ② 은어·황어 생식
-     ③ 유미유충이 있는 민물 접촉
-     ④ 꽃뱀·개구리 생식   <== 정답
-    해설: 서울주걱흡충 조직절편 (소장) — 충체가 tribocytic organ으로 융모를 빨아먹는 모습 / 융모 위축(fusion, blunting) + 음와 증식 → V/C 비 감소
-          서울주걱흡충은(는) 경구감염으로 감염되며, 감염원은 꽃뱀·개구리 생식이다.
-          출제 포인트: 주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습
-
-32. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
-    사진: tonghap/흡충/004_D4.png
-     ① conical projection
-     ② gelatin layer
-     ③ cephalic cone
-     ④ branched testis   <== 정답
-    해설: 간흡충 성충 — 납작한 나뭇잎 모양, 10-25mm / 몸 뒤쪽에 나뭇가지처럼 갈라진 branched testis 2개
-          출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
-
-33. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
-    사진: jiseok/실습_4_001_14.png
-     ① fibril
-     ② flagella   <== 정답
-     ③ gelatin layer
-     ④ undulating membrane
-    해설: 람블편모충 영양형 — 서양배(pear) 또는 올빼미 얼굴 모양 / 눈처럼 보이는 핵 2개
-          출제 포인트: 영양형 - pear/올빼미 얼굴 모양, 핵 2개, 4쌍 편모, sucking disc. 포낭 - 타원형, 핵 2-4개가 한쪽에 몰림, axostyle 주변 fibril. 조직 파괴는 하지 않음
-
-34. [증상·질병] 다음 기생충이 일으키는 질환은?
-    사진: jms_protozoa/원충_Protozoa/027_H27.jpg
-     ① 폐포자충폐렴   <== 정답
-     ② 대장섬모충증
-     ③ 아프리카 수면병
-     ④ 가시아메바각막염 / 육아종성 아메바성 뇌염
-    해설: 폐포자충 (GMS 염색, 폐) — 폐포 안이 검게 염색된 cyst로 가득 참 / cyst 벽이 검게 염색되고 안이 비침 (컵·초승달 모양)
-          폐포자충 감염증의 병명은 폐포자충폐렴 (Pneumocystis pneumonia (PCP))이다.
-          출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)
-
-35. [종 동정] 다음 기생충의 학명으로 옳은 것은?
-    사진: note/[260902_05]_감염의_기초_실습__017_1.png
-     ① Enterobius vermicularis
-     ② Ascaris lumbricoides
-     ③ Trichuris trichiura   <== 정답
-     ④ Anisakis simplex
-    해설: 편충 성충 (육안) — 1-2cm, 채찍 모양 / 앞쪽이 실처럼 가늘고 뒤쪽이 굵음
-          출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골
-
-36. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
-    사진: jms_trematoda/흡충_Trematodes/005_G5.png
-     ① Schistosoma mansoni
-     ② Fasciola hepatica   <== 정답
-     ③ Clonorchis sinensis
-     ④ Metagonimus yokogawai
-    해설: 간질 조직절편 — 충체 내부가 구멍이 송송 뚫린 모양 / 간 실질의 괴사·염증
-          출제 포인트: 납작한 나뭇잎 모양 + conical projection (= cephalic cone). highly branched intestine·testes·vitellaria. 조직에서는 구멍이 송송 뚫린 내부
-
-37. [기생부위] 다음 기생충의 성충 기생 부위는?
-    사진: tonghap/조충/009_G9.png
-     ① 피하조직, 근육, 안와, 뇌
-     ② 소장
-     ③ 피하조직, 근육, 뇌, 눈   <== 정답
-     ④ 간
-    해설: 유구낭미충 (현미경) — cyst 안으로 scolex가 말려 들어가 있음 / scolex의 갈고리와 흡반이 진하게 보임
-          유구낭미충 성충은 피하조직, 근육, 뇌, 눈에 기생한다.
-          출제 포인트: gross - 투명한 cyst 안에 하얀 scolex. 조직 - cyst + 양치식물 모양 neck/scolex, 갈고리 진하게 보임. 고충증(sparganosis)과의 감별이 단골
-
-38. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
-    사진: jms_protozoa/원충_Protozoa/025_F25.png
-     ① gelatin layer
-     ② amastigote nest
-     ③ tissue cyst   <== 정답
-     ④ egg
-    해설: 톡소포자충 tissue cyst (뇌) — 뇌 조직 안에 둥근 tissue cyst / cyst 내부에 매우 많은 bradyzoite가 빽빽하게 들어참
-          출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골
-
-39. [종 동정] 다음 기생충의 학명으로 옳은 것은?
-    사진: tonghap/선충/010_D10.png
-     ① Ancylostoma duodenale
-     ② Anisakis simplex
-     ③ Strongyloides stercoralis   <== 정답
-     ④ Ascaris lumbricoides
-    해설: 분선충 사상유충 — 식도의 직경이 일정하고 길다 / 꼬리 끝이 갈라짐 (notched tail)
-          출제 포인트: 간상유충 (rhabditoid) = 백열전구 모양 식도 / 사상유충 (filariform) = 직경 일정한 식도 + notched tail. 구충 유충과는 꼬리 모양으로 감별
-
-40. [감염경로] 다음 기생충의 감염 원인으로 알맞은 것은?
-    사진: eunju/기생충_실습_(선충류)_001_35.png
-     ① 덜 익힌 돼지고기·야생동물 고기·가공식품
-     ② 바다생선회·두족류·해산 갑각류 생식   <== 정답
-     ③ 모기
-     ④ 자충포장란에 오염된 식수·채소
-    해설: 고래회충 단면 (토끼 위) — Y자 모양 intestinal lumen / 나비 모양 lateral cord
-          고래회충은(는) 경구감염으로 감염되며, 감염원은 바다생선회·두족류·해산 갑각류 생식이다.
-          출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell
-======================================================================
-모의 땡시 4세트  (40문항)
-======================================================================
-
- 1. [충란 동정] 다음은 어떤 기생충의 충란인가?
-    사진: note/[260831_05]_감염의_기초_실습__076_3.png
-     ① Schistosoma japonicum
-     ② Schistosoma mansoni
-     ③ Metagonimus yokogawai
-     ④ Schistosoma haematobium   <== 정답
-    해설: 방광주혈흡충 충란 — 큰 방추형 / 아래쪽 끝에 돌출된 terminal spine
-          출제 포인트: 충란 아래쪽 끝에 terminal spine (말단 돌기) — 만손(lateral)과의 결정적 감별점
-
- 2. [충란 동정] 다음 충란을 가지는 기생충은?
-    사진: tonghap/충란/012_E12.png
-     ① Fasciola hepatica
-     ② Schistosoma japonicum   <== 정답
-     ③ Schistosoma haematobium
-     ④ Schistosoma mansoni
-    해설: 일본주혈흡충 충란 — 둥글고 통통함 (주혈흡충 중 가장 작고 둥금) / 매우 작은 lateral spine — 잘 보이지 않음
-          출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태
-
- 3. [감염경로] 환자에게서 다음 표본이 검출되었다. 감염 원인은?
-    사진: eunju/기생충_실습_(연충란)_001_9.png
-     ① 모기
-     ② 바다생선회·두족류·해산 갑각류 생식
-     ③ 충란에 오염된 손·침구·먼지   <== 정답
-     ④ 자충포장란에 오염된 식수·채소
-    해설: 요충 충란 — 한쪽이 편평하고 반대쪽이 볼록한 비대칭 타원형 / 커피콩·죠리퐁·감씨 모양
-          요충은(는) 경구감염 / 공기매개 / 접촉감염으로 감염되며, 감염원은 충란에 오염된 손·침구·먼지이다.
-          출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)
-
- 4. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
-    사진: note/[260831_05]_감염의_기초_실습__075_5.png
-     ① Paragonimus westermani
-     ② Fasciola hepatica
-     ③ Metagonimus yokogawai   <== 정답
-     ④ Clonorchis sinensis
-    해설: 요코가와흡충 충란 — 간흡충과 크기가 같으나 충란벽이 매끄러움 (muskmelon 무늬 없음) / shouldering이 뚜렷하지 않음
-          출제 포인트: 충란은 간흡충과 크기가 같은 30um이지만 충란벽이 매끄러움 (muskmelon 무늬 없음). 성충은 ventral sucker가 한쪽으로 치우침
-
- 5. [충란 동정] 다음은 어떤 기생충의 충란인가?
-    사진: jms_egg/충란_Helminth_eggs/006_E6.png
-     ① Diphyllobothrium latum
-     ② Ascaris lumbricoides
-     ③ Enterobius vermicularis
-     ④ Hookworm   <== 정답
-    해설: 구충 충란 — 타원형, 충란벽이 키틴층 하나로 얇고 투명 / 내부에 난할된 세포가 여러 개 (4-8 cell stage)
-          두비니구충과 아메리카구충의 충란은 구별 불가 — 답은 Hookworm
-          출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지
-
- 6. [충란 동정] 다음은 어떤 기생충의 충란인가?
-    사진: tonghap/충란/004_D4.png
-     ① Heterophyes nocens
-     ② Clonorchis sinensis   <== 정답
-     ③ Metagonimus yokogawai
-     ④ Paragonimus westermani
-    해설: 간흡충 충란 — 전구·플라스크 모양 / operculum 주변이 어깨처럼 튀어나옴 (shouldering)
-          출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
-
- 7. [충란 동정] 다음은 어떤 기생충의 충란인가?
-    사진: eunju/기생충_실습_(연충란)_001_16.png
-     ① Diphyllobothrium latum
-     ② Gymnophalloides seoi
-     ③ Paragonimus westermani   <== 정답
-     ④ Ascaris lumbricoides
-    해설: 폐흡충 충란 — 황갈색의 큰 난원형 / 한쪽 끝에 뚜렷한 operculum
-          출제 포인트: 충란 - 90um 그룹, operculum + abopercular thickening. 성충 - plump ovoid, 적갈색, 6개 lobe로 나뉜 ovary. 슬라이드가 두껍게 mounting 되어 있음
-
- 8. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
-    사진: note/[260831_05]_감염의_기초_실습__060_2.png
-     ① operculum
-     ② embryophoral block   <== 정답
-     ③ gelatin layer
-     ④ abopercular knob
-    해설: 유무구조충 충란 — 원형 또는 타원형 / 두껍고 방사상 무늬의 embryophoral block
-          유구조충과 무구조충의 충란은 구별 불가 — 답은 Taenia spp.
-          출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)
-
- 9. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
-    사진: tonghap/충란/008_F8.png
-     ① Trichuris trichiura   <== 정답
-     ② Ascaris lumbricoides
-     ③ Anisakis simplex
-     ④ Necator americanus
-    해설: 편충 충란 — 양쪽 끝에 투명한 mucoid plug / 나뭇잎·럭비공·barrel 모양
-          출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골
-
-10. [종 동정] 다음 기생충의 학명으로 옳은 것은?
-    사진: jms_nematoda/선충_Nematodes/009_G9.png
-     ① Ancylostoma duodenale
-     ② Trichuris trichiura
-     ③ Enterobius vermicularis
-     ④ Strongyloides stercoralis   <== 정답
-    해설: 분선충 사상유충 — 식도의 직경이 일정하고 길다 / 꼬리 끝이 갈라짐 (notched tail)
-          출제 포인트: 간상유충 (rhabditoid) = 백열전구 모양 식도 / 사상유충 (filariform) = 직경 일정한 식도 + notched tail. 구충 유충과는 꼬리 모양으로 감별
-
-11. [증상·질병] 다음 기생충에 감염된 환자의 병명으로 옳은 것은?
-    사진: tonghap/흡충/006_G6.png
-     ① 간질증   <== 정답
-     ② 이형흡충증
-     ③ 일본주혈흡충증
-     ④ 방광주혈흡충증
-    해설: 간질 조직절편 — 충체 내부가 구멍이 송송 뚫린 모양 / 간 실질의 괴사·염증
-          간질 감염증의 병명은 간질증 (fascioliasis)이다.
-          출제 포인트: 납작한 나뭇잎 모양 + conical projection (= cephalic cone). highly branched intestine·testes·vitellaria. 조직에서는 구멍이 송송 뚫린 내부
-
-12. [종 동정] 다음 기생충의 학명으로 옳은 것은?
-    사진: eunju/기생충_실습_(protozoa)_002_7.png
-     ① Entamoeba histolytica
-     ② Trypanosoma cruzi
-     ③ Toxoplasma gondii
-     ④ Leishmania donovani   <== 정답
-    해설: 내장리슈만편모충 amastigote (간·비장) — 대식세포 안에 점박이처럼 들어 있는 무편모형 / 편모가 보이지 않음
-          출제 포인트: 사람 조직 내에서는 amastigote (무편모형, 세포 내 작은 점), 모래파리에서는 promastigote (전편모형). 간·비장 조직에서 세포 내 작은 dot으로 보임
-
-13. [감염형] 다음 기생충의 감염형으로 옳은 것은?
-    사진: tonghap/조충/004_E4.png
-     ① 내장낭미충 (Cysticercus viscerotropica)
-     ② 충란
-     ③ 무구낭미충 (Cysticercus bovis)
-     ④ 전미충 (procercoid)   <== 정답
-    해설: 고충 (육안) — 하얀 고무줄처럼 쭈굴쭈굴하고 길다 / 편절 구분이 없음
-          만손열두조충의 인체 감염형은 전미충 (procercoid) / 의미충 (plerocercoid)이다.
-          출제 포인트: gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle
-
-14. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
-    사진: note/[260903_05]_감염의_기초_실습3_017_1.png
-     ① conical projection
-     ② cephalic cone
-     ③ gelatin layer
-     ④ oral sucker   <== 정답
-    해설: 간흡충 성충 — 납작한 나뭇잎 모양, 10-25mm / 몸 뒤쪽에 나뭇가지처럼 갈라진 branched testis 2개
-          출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
-
-15. [감염형] 다음 기생충의 감염형으로 옳은 것은?
-    사진: jms_trematoda/흡충_Trematodes/012_F12.png
-     ① L3 유충
-     ② sporozoite
-     ③ 피낭유충 (metacercaria)   <== 정답
-     ④ 유미유충 (cercaria)
-    해설: 서울주걱흡충 성충 — 앞쪽이 주걱처럼 넓게 퍼진 모양 / tribocytic organ (제2의 입) 이 결정적 감별점
-          서울주걱흡충의 인체 감염형은 피낭유충 (metacercaria)이다.
-          출제 포인트: 주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습
-
-16. [감염형] 다음 기생충의 감염형으로 옳은 것은?
-    사진: jms_nematoda/선충_Nematodes/008_G8.png
-     ① 피낭유충 (encysted larva)
-     ② 자충포장란 (embryonated egg)
-     ③ 사상유충 (filariform larva, L3)   <== 정답
-     ④ 피낭유충 (metacercaria)
-    해설: 아메리카구충 성충 — 구강에 칼날 모양 cutting plate 1쌍 (송곳니 아님) / dorsal costa가 깊게 2분지 후 각각 2분지 (2+2)
-          아메리카구충의 인체 감염형은 사상유충 (filariform larva, L3)이다.
-          dorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)
-          출제 포인트: 구강에 칼날 모양 cutting plate 1쌍. dorsal costa 깊게 2분지 → 각각 2분지
-
-17. [종 동정] 다음 기생충의 학명으로 옳은 것은?
-    사진: jms_nematoda/선충_Nematodes/007_F7.png
-     ① Ascaris lumbricoides
-     ② Enterobius vermicularis
-     ③ Ancylostoma duodenale   <== 정답
-     ④ Necator americanus
-    해설: 두비니구충 성충 — 구강에 투명하게 반짝이는 송곳니 2쌍 (hook-like teeth) / 꼬리에 copulatory bursa
-          dorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)
-          출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지
-
-18. [증상·질병] 다음 기생충이 일으키는 질환은?
-    사진: tonghap/조충/011_F11.png
-     ① 고충증
-     ② 무구조충증
-     ③ 유구조충증
-     ④ 포충증   <== 정답
-    해설: 포충 조직절편 — 두꺼운 층상 낭벽 (fibrous - gelatin - germinal layer) / 낭벽 안쪽에 brood capsule과 protoscolex
-          단방조충 감염증의 병명은 포충증 (단방포충증) (cystic echinococcosis)이다.
-          이미지 검토 중 발견 — 통합xlsx 단방조충 행에 조직절편이 섞여 있었다
-          출제 포인트: 성충은 immature·mature·gravid 편절이 1개씩. 포충 내부에 여러 개의 protoscolex, 콧수염 모양 hooklet
-
-19. [종 동정] 다음은 어떤 기생충인가?
-    사진: jms_protozoa/원충_Protozoa/026_G26.png
-     ① Balantidium coli
-     ② Entamoeba coli
-     ③ Entamoeba histolytica
-     ④ Pneumocystis jirovecii   <== 정답
-    해설: 폐포자충 (Diff-Quik, 폐) — 폐포 안에 거품 같은 exudate / cyst 안에 매우 작은 8개의 핵 (octa-nucleated cyst)
-          출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)
-
-20. [종 동정] 다음은 어떤 기생충인가?
-    사진: note/[260902_05]_감염의_기초_실습__054_1.png
-     ① Trichuris trichiura
-     ② Enterobius vermicularis
-     ③ Ascaris lumbricoides
-     ④ Anisakis simplex   <== 정답
-    해설: 고래회충 유충 (육안) — 약 2cm, 유백색의 실 모양 / 생선 내장·근육에 나선형으로 말려 있음
-          출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell
-
-21. [감염경로] 다음 기생충이 감염되는 방식은?
-    사진: jms_cestoda/조충_Cestodes/003_I3.png
-     ① 패류매개성
-     ② 식품매개성   <== 정답
-     ③ 절지동물매개성
-     ④ 접촉매개성
-    해설: 광절열두조충 편절 — 좌우로 넓은 사각형 편절 / 가운데에 rosette (꽃모양) uterus
-          광절열두조충의 전파 방식은 식품매개성이다.
-          출제 포인트: 충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만
-
-22. [종 동정] 다음 기생충의 학명으로 옳은 것은?
-    사진: jms_protozoa/원충_Protozoa/020_F20.png
-     ① Plasmodium falciparum
-     ② Plasmodium knowlesi
-     ③ Plasmodium ovale
-     ④ Plasmodium vivax   <== 정답
-    해설: 삼일열원충 얇은 도말 — 감염된 RBC가 커지고 옅어짐 / multiple ring 없음, ring이 RBC 지름의 1/3
-          출제 포인트: RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot
-
-23. [indicator] Indicator(표시)가 가리키는 구조물의 이름은?
-    사진: practical_ind/087_3.png
-     ① schizont   <== 정답
-     ② gelatin layer
-     ③ ring form
-     ④ gametocyte
-    해설: 삼일열원충 두꺼운 도말 — 적혈구가 용혈되어 원충만 남음 / ring form과 schizont가 함께 보임
-          출제 포인트: RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot
-
-24. [감염경로] 다음 기생충의 전파 방식은?
-    사진: eunju/기생충_실습_(포자충류,_말라리아,_의용_001_11.png
-     ① 성접촉
-     ② 수인성   <== 정답
-     ③ 절지동물매개성
-     ④ 공기매개
-    해설: 작은와포자충 oocyst (MAF 염색) — 파란 배경에 분홍·붉은색으로 염색된 둥근 oocyst / 크기 4-6um
-          작은와포자충의 전파 방식은 수인성이다.
-          출제 포인트: 장 조직에서 미세융모에 붙은 작은 점들. MAF 염색에서 파란 배경에 분홍색 oocyst
-
-25. [기생부위] 다음 기생충의 성충 기생 부위는?
-    사진: jms_protozoa/원충_Protozoa/003_G3.png
-     ① 폐포
-     ② 대장   <== 정답
-     ③ 뇌
-     ④ 소장 상피세포 미세융모
-    해설: 이질아메바 영양형 — karyosome이 핵 중앙에 작은 점처럼 위치 / peripheral chromatin의 두께가 균일
-          이질아메바 성충은 대장 (조직 내 침입)에 기생한다.
-          출제 포인트: 영양형 - karyosome 중앙 + peripheral chromatin 두께 균일, RBC 탐식. 포낭 - 핵 4개 이하. 조직 - flask-shaped ulcer
-
-26. [종 동정] 다음 기생충의 학명으로 옳은 것은?
-    사진: tonghap/선충/019_G19.png
-     ① Ascaris lumbricoides
-     ② Ancylostoma duodenale
-     ③ Anisakis simplex   <== 정답
-     ④ Trichuris trichiura
-    해설: 고래회충 단면 (토끼 위) — Y자 모양 intestinal lumen / 나비 모양 lateral cord
-          출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell
-
-27. [숙주] 다음 기생충의 종숙주로 옳은 것은?
-    사진: tonghap/조충/009_H9.png
-     ① 사람·개·곰
-     ② 사람이 중간숙주가 됨   <== 정답
-     ③ 개·고양이
-     ④ 여우·개
-    해설: 유구낭미충 (현미경) — cyst 안으로 scolex가 말려 들어가 있음 / scolex의 갈고리와 흡반이 진하게 보임
-          유구낭미충의 종숙주는 사람이 중간숙주가 됨이다.
-          출제 포인트: gross - 투명한 cyst 안에 하얀 scolex. 조직 - cyst + 양치식물 모양 neck/scolex, 갈고리 진하게 보임. 고충증(sparganosis)과의 감별이 단골
-
-28. [증상·질병] 다음 기생충이 일으키는 질환은?
-    사진: tonghap/흡충/002_G2.png
-     ① 간흡충증
-     ② 이형흡충증
-     ③ 메콩주혈흡충증
-     ④ 폐흡충증   <== 정답
-    해설: 폐흡충 조직절편 (폐) — 폐 조직 내 worm capsule / 주변에 다수의 충란
-          폐흡충 감염증의 병명은 폐흡충증 (paragonimiasis)이다.
-          출제 포인트: 충란 - 90um 그룹, operculum + abopercular thickening. 성충 - plump ovoid, 적갈색, 6개 lobe로 나뉜 ovary. 슬라이드가 두껍게 mounting 되어 있음
-
-29. [indicator] 다음 표본에서 표시가 가리키는 구조물은?
-    사진: practical_ind/082_3.png
-     ① Schuffner dot
-     ② gametocyte   <== 정답
-     ③ RBC
-     ④ schizont
-    해설: 열대열원충 얇은 도말 — RBC 크기 변화 없음 / 한 적혈구에 여러 개의 ring (multiple ring form)
-          출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾
-
-30. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
-    사진: eunju/기생충_실습_(선충류)_001_6.png
-     ① gelatin layer
-     ② notched tail
-     ③ filariform esophagus
-     ④ stichosome   <== 정답
-    해설: 편충 성충 (현미경) — 채찍 모양 — 앞 3/5이 가늘고 뒤 2/5가 굵음 / 가는 쪽이 머리
-          출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골
-
-31. [진단] 다음 기생충을 진단하는 검사로 알맞은 것은?
-    사진: jms_protozoa/원충_Protozoa/005_G5.jpg
-     ① 대변검사 - 급성기 영양형, 만성기 포낭   <== 정답
-     ② punch biopsy
-     ③ 혈액도말 Giemsa
-     ④ 골수·비장 천자
-    해설: 이질아메바 포낭 — 핵이 4개 이하로 듬성듬성 / karyosome 중앙 위치
-          이질아메바 진단: 대변검사 - 급성기 영양형, 만성기 포낭, 생검
-          출제 포인트: 영양형 - karyosome 중앙 + peripheral chromatin 두께 균일, RBC 탐식. 포낭 - 핵 4개 이하. 조직 - flask-shaped ulcer
-
-32. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
-    사진: jms_nematoda/선충_Nematodes/004_I4.png
-     ① gelatin layer
-     ② stichocyte
-     ③ lateral cord   <== 정답
-     ④ Renette cell
-    해설: 회충 단면 — 소화관 lumen을 단층 원주상피가 둘러쌈 / 양 옆에 lateral cord (족보에는 lateral chord 표기도 등장)
-          출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제
-
-33. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
-    사진: tonghap/선충/021_D21.png
-     ① ventricle
-     ② gelatin layer
-     ③ caudal alae   <== 정답
-     ④ boring tooth
-    해설: 요충 성충 (현미경) — 머리쪽에 투명한 키틴성 날개 cephalic alae / 수컷은 꼬리가 나선형으로 말리고 caudal alae
-          출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)
-
-34. [종 동정] 다음 기생충의 학명으로 옳은 것은?
-    사진: jms_arthropoda/의용곤충_Anthropods/009_G9.png
-     ① Dermatophagoides pteronyssinus
-     ② Leptotrombidium spp.
-     ③ Haemaphysalis longicornis   <== 정답
-     ④ Simulium spp.
-    해설: 작은소피참진드기 — 단단한 등판(scutum)을 가진 참진드기 / 흡혈 후 몸이 콩알처럼 부풀어 오름
-          출제 포인트: 몸에 붙어 커진 진드기를 보여주고 매개질환을 묻는 문제 — 답은 SFTS. 털진드기(쯔쯔가무시)와 감별
-
-35. [기생부위] 다음 기생충의 성충 기생 부위는?
-    사진: jiseok/실습_5_002_2.png
-     ① 대장 lumen
-     ② 폐포   <== 정답
-     ③ 질·요도 lumen
-     ④ 각막, 뇌
-    해설: 폐포자충 (GMS 염색, 폐) — 폐포 안이 검게 염색된 cyst로 가득 참 / cyst 벽이 검게 염색되고 안이 비침 (컵·초승달 모양)
-          폐포자충 성충은 폐포 (type I pneumocyte 외벽)에 기생한다.
-          출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)
-
-36. [감염경로] 환자에게서 다음 표본이 검출되었다. 감염 원인은?
-    사진: eunju/기생충_실습_(조충류,_흡충류)_002_6.png
-     ① 물벼룩이 든 생수, 뱀·개구리 생식, 개구리 살을 상처에 붙이는 민간요법   <== 정답
-     ② 소고기 육회 등 덜 익힌 소고기
-     ③ 유구조충 충란에 오염된 음식·손
-     ④ 개 분변의 충란
-    해설: 고충 조직절편 — 성긴 스폰지 모양 실질 구조 / 내부에 보라색으로 염색되는 calcium (calcareous) corpuscle
-          만손열두조충은(는) 경구감염 / 상처 접촉으로 감염되며, 감염원은 물벼룩이 든 생수, 뱀·개구리 생식, 개구리 살을 상처에 붙이는 민간요법이다.
-          출제 포인트: gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle
-
-37. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
-    사진: tonghap/선충/016_E16.png
-     ① boring tooth
-     ② gelatin layer
-     ③ 교미침   <== 정답
-     ④ ventricle
-    해설: 회충 성충 (현미경) — 머리에 3개의 입술 (three lips) / 수컷은 꼬리가 배쪽으로 말리고 교미침 2개
-          출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제
-
-38. [감염경로] 환자에게서 다음 표본이 검출되었다. 감염 원인은?
-    사진: eunju/기생충_실습_(포자충류,_말라리아,_의용_001_2.png
-     ① 포낭에 오염된 물·음식
-     ② 고양이 분변에 오염된 채소·식수   <== 정답
-     ③ 침노린재
-     ④ 체체파리
-    해설: 톡소포자충 tissue cyst (뇌) — 뇌 조직 안에 둥근 tissue cyst / cyst 내부에 매우 많은 bradyzoite가 빽빽하게 들어참
-          톡소포자충은(는) 경구감염 / 수직감염 / 수혈·장기이식으로 감염되며, 감염원은 고양이 분변에 오염된 채소·식수 (oocyst), 덜 익힌 고기 (tissue cyst)이다.
-          출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골
-
-39. [치료] 다음 기생충 감염의 치료로 옳은 것은?
-    사진: eunju/기생충_실습_(protozoa)_001_19.png
-     ① Benznidazole 복용
-     ② TMP-SMX 복용
-     ③ 특효약 없음 (대증치료)
-     ④ Metronidazole 복용   <== 정답
-    해설: 람블편모충 영양형 — 서양배(pear) 또는 올빼미 얼굴 모양 / 눈처럼 보이는 핵 2개
-          람블편모충 치료: Metronidazole 250mg 5-10d (선택약)
-          출제 포인트: 영양형 - pear/올빼미 얼굴 모양, 핵 2개, 4쌍 편모, sucking disc. 포낭 - 타원형, 핵 2-4개가 한쪽에 몰림, axostyle 주변 fibril. 조직 파괴는 하지 않음
-
-40. [감염경로] 다음 기생충의 감염 원인으로 알맞은 것은?
-    사진: jms_trematoda/흡충_Trematodes/003_F3.png
-     ① 자연산 굴 생식
-     ② 은어·황어 생식
-     ③ 민물고기 생식
-     ④ 유미유충이 있는 민물 접촉   <== 정답
-    해설: 일본주혈흡충 자웅 합체 — 자웅이체 — 수컷의 gynecophoral canal(포자관)에 가느다란 암컷이 끼어 있음 / 수컷 6-10mm
-          일본주혈흡충은(는) 경피감염 (7분 이내 침입)으로 감염되며, 감염원은 유미유충이 있는 민물 접촉 (물 길어오기·수영)이다.
-          출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태
-======================================================================
-모의 땡시 5세트  (40문항)
-======================================================================
-
- 1. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
-    사진: note/[260831_05]_감염의_기초_실습__041_2.png
-     ① Ascaris lumbricoides   <== 정답
-     ② Paragonimus westermani
-     ③ Trichuris trichiura
-     ④ Anisakis simplex
-    해설: 회충 불수정란 — 수정란보다 길쭉하고 큼 / 충란벽 3 layer가 제대로 형성되지 않음
-          출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제
-
- 2. [충란 동정] 다음 충란을 가지는 기생충은?
-    사진: note/[260831_05]_감염의_기초_실습__063_2.png
-     ① Ancylostoma duodenale
-     ② Diphyllobothrium latum   <== 정답
-     ③ Paragonimus westermani
-     ④ Taenia asiatica
-    해설: 광절열두조충 충란 — 갈색 타원형 / 한쪽에 operculum, 반대쪽에 작은 terminal knob
-          출제 포인트: 충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만
-
- 3. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
-    사진: eunju/기생충_실습_(연충란)_001_5.png
-     ① Enterobius vermicularis
-     ② Anisakis simplex
-     ③ Ascaris lumbricoides
-     ④ Trichuris trichiura   <== 정답
-    해설: 편충 충란 — 양쪽 끝에 투명한 mucoid plug / 나뭇잎·럭비공·barrel 모양
-          출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골
-
- 4. [감염경로] 환자에게서 다음 표본이 검출되었다. 감염 원인은?
-    사진: tonghap/충란/007_E7.png
-     ① 오염 토양
-     ② 충란에 오염된 손·침구·먼지   <== 정답
-     ③ 충란에 오염된 토양, 소 생간 등 유충을 포함한 내장육
-     ④ 모기
-    해설: 요충 충란 — 한쪽이 편평하고 반대쪽이 볼록한 비대칭 타원형 / 커피콩·죠리퐁·감씨 모양
-          요충은(는) 경구감염 / 공기매개 / 접촉감염으로 감염되며, 감염원은 충란에 오염된 손·침구·먼지이다.
-          출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)
-
- 5. [충란 동정] 다음 충란을 가지는 기생충은?
-    사진: note/[260831_05]_감염의_기초_실습__075_4.png
-     ① Echinococcus multilocularis
-     ② Hymenolepis nana
-     ③ Clonorchis sinensis
-     ④ Taenia spp.   <== 정답
-    해설: 유무구조충 충란 — 원형 또는 타원형 / 두껍고 방사상 무늬의 embryophoral block
-          유구조충과 무구조충의 충란은 구별 불가 — 답은 Taenia spp.
-          출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)
-
- 6. [충란 동정] 다음 충란을 가지는 기생충은?
-    사진: tonghap/충란/004_F4.png
-     ① Metagonimus yokogawai
-     ② Heterophyes nocens
-     ③ Clonorchis sinensis   <== 정답
-     ④ Paragonimus westermani
-    해설: 간흡충 충란 — 전구·플라스크 모양 / operculum 주변이 어깨처럼 튀어나옴 (shouldering)
-          출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
-
- 7. [충란 동정] 다음 충란을 가지는 기생충은?
-    사진: note/[260831_05]_감염의_기초_실습__028_1.png
-     ① Diphyllobothrium latum
-     ② Strongyloides stercoralis
-     ③ Enterobius vermicularis
-     ④ Hookworm   <== 정답
-    해설: 구충 충란 — 타원형, 충란벽이 키틴층 하나로 얇고 투명 / 내부에 난할된 세포가 여러 개 (4-8 cell stage)
-          두비니구충과 아메리카구충의 충란은 구별 불가 — 답은 Hookworm
-          출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지
-
- 8. [감염형] 다음 충란을 가지는 기생충의 감염형으로 옳은 것은?
-    사진: note/[260831_05]_감염의_기초_실습__064_2.png
-     ① 자충포장란
-     ② 피낭유충 (metacercaria)
-     ③ 포낭
-     ④ 유미유충 (cercaria)   <== 정답
-    해설: 만손주혈흡충 충란 — 매우 큼 (100um 이상) / 옆구리에 뚜렷하게 돌출된 lateral spine
-          만손주혈흡충의 인체 감염형은 유미유충 (cercaria)이다.
-          출제 포인트: 충란이 가장 큼 (100um 이상) + 뚜렷한 lateral spine (측방 돌기)
-
- 9. [충란 동정] 다음은 어떤 기생충의 충란인가?
-    사진: jms_egg/충란_Helminth_eggs/012_D12.png
-     ① Schistosoma japonicum   <== 정답
-     ② Schistosoma haematobium
-     ③ Schistosoma mansoni
-     ④ Clonorchis sinensis
-    해설: 일본주혈흡충 충란 — 둥글고 통통함 (주혈흡충 중 가장 작고 둥금) / 매우 작은 lateral spine — 잘 보이지 않음
-          출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태
-
-10. [기생부위] 다음 기생충의 성충 기생 부위는?
-    사진: jms_trematoda/흡충_Trematodes/013_G13.png
-     ① 큰 담관
-     ② 장간막 정맥
-     ③ 소장   <== 정답
-     ④ 폐
-    해설: 서울주걱흡충 조직절편 (소장) — 충체가 tribocytic organ으로 융모를 빨아먹는 모습 / 융모 위축(fusion, blunting) + 음와 증식 → V/C 비 감소
-          서울주걱흡충 성충은 소장에 기생한다.
-          출제 포인트: 주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습
-
-11. [증상·질병] 다음 기생충이 일으키는 질환은?
-    사진: jms_protozoa/원충_Protozoa/022_F22.png
-     ① 난형열말라리아   <== 정답
-     ② 열대열말라리아
-     ③ 원숭이열말라리아
-     ④ 삼일열말라리아
-    해설: 난형열원충 얇은 도말 — RBC가 커지고 타원형(oval)이 됨 / RBC 가장자리가 술처럼 갈라짐 (fimbriation)
-          난형열원충 감염증의 병명은 난형열말라리아 (ovale malaria)이다.
-          출제 포인트: RBC가 커지고 옅어지며 타원형(oval)이 되고 가장자리가 술처럼 갈라짐 (fimbriation). merozoite 8개 이하. dot 관찰 가능
-
-12. [감염경로] 다음 기생충의 감염 원인으로 알맞은 것은?
-    사진: jiseok/실습_5_003_7.png
-     ① 감염자와의 피부 접촉·침구
-     ② 논·웅덩이
-     ③ 중남미 흙집 벽 틈   <== 정답
-     ④ 감염자의 음모
-    해설: 흡혈성 침노린재 — 빈대보다 크고 길쭉함 (1-3cm) / 뾰족하고 긴 주둥이
-          흡혈성 침노린재은(는) 흡혈 후 배설한 분변이 상처·점막으로 침입 (후방정류형)으로 감염되며, 감염원은 중남미 흙집 벽 틈이다.
-          빈대와 감별 — 침노린재는 샤가스병을 매개
-          출제 포인트: 빈대(Cimex)와 혼동 주의 — 빈대는 질병을 매개하지 않고 침노린재는 샤가스병을 매개
-
-13. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
-    사진: tonghap/선충/023_D23.png
-     ① Necator americanus
-     ② Ancylostoma duodenale
-     ③ Brugia malayi   <== 정답
-     ④ Wuchereria bancrofti
-    해설: 말레이사상충 microfilaria — sheath에 싸여 있음 / 꼬리 끝에 끊어져 떨어진 terminal nuclei 2개
-          출제 포인트: sheath에 싸여 있고 꼬리 끝에 끊어진 terminal nuclei 2개 — Wuchereria (nuclei가 중간에 끊김) 와 감별
-
-14. [종 동정] 다음 기생충의 학명으로 옳은 것은?
-    사진: jms_nematoda/선충_Nematodes/003_F3.png
+    사진: jms_nematoda/선충_Nematodes/004_H4.png
      ① Trichuris trichiura
      ② Anisakis simplex
      ③ Necator americanus
@@ -1674,249 +266,1654 @@
     해설: 회충 단면 — 소화관 lumen을 단층 원주상피가 둘러쌈 / 양 옆에 lateral cord (족보에는 lateral chord 표기도 등장)
           출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제
 
-15. [종 동정] 다음은 어떤 기생충인가?
-    사진: jms_nematoda/선충_Nematodes/008_H8.png
-     ① Necator americanus   <== 정답
-     ② Ascaris lumbricoides
-     ③ Strongyloides stercoralis
-     ④ Ancylostoma duodenale
-    해설: 아메리카구충 성충 — 구강에 칼날 모양 cutting plate 1쌍 (송곳니 아님) / dorsal costa가 깊게 2분지 후 각각 2분지 (2+2)
-          dorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)
-          출제 포인트: 구강에 칼날 모양 cutting plate 1쌍. dorsal costa 깊게 2분지 → 각각 2분지
+29. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
+    사진: eunju/기생충_실습_(조충류,_흡충류)_002_10.png
+     ① Echinococcus granulosus
+     ② Taenia asiatica
+     ③ Spirometra erinacei   <== 정답
+     ④ Cysticercus cellulosae
+    해설: 고충 조직절편 — 성긴 스폰지 모양 실질 구조 / 내부에 보라색으로 염색되는 calcium (calcareous) corpuscle
+          출제 포인트: gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle
 
-16. [기생부위] 다음 기생충의 성충 기생 부위는?
-    사진: jms_protozoa/원충_Protozoa/012_F12.png
-     ① 피부 대식세포   <== 정답
-     ② 질·요도 lumen
-     ③ 대장 lumen
-     ④ 소장 상피세포 미세융모
-    해설: 리슈만편모충 promastigote — 가늘고 긴 방추형에 앞쪽으로 편모 1개 / 핵 + 그보다 작은 kinetoplast
-          큰리슈만편모충 성충은 피부 대식세포에 기생한다.
-          출제 포인트: 실습 슬라이드는 배양에서 만든 promastigote — 액체가 결정화된 배경이 보이면 리슈만편모충. 배열이 편모 → kinetoplast → 핵 순서
+30. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
+    사진: tonghap/조충/006_E6.png
+     ① Taenia saginata
+     ② Taenia solium   <== 정답
+     ③ Cysticercus cellulosae
+     ④ Diphyllobothrium latum
+    해설: 유구조충 편절 — 자궁측지 13개 이하, 두껍고 듬성듬성 / 위아래로 긴 사각형
+          출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)
 
-17. [종 동정] 다음은 어떤 기생충인가?
-    사진: jms_nematoda/선충_Nematodes/017_F17.png
-     ① Ascaris lumbricoides
-     ② Necator americanus
-     ③ Trichinella spiralis   <== 정답
-     ④ Trichuris trichiura
-    해설: 선모충 유충 (마운트) — 돌돌 말린 형태의 유충 / 근육에서 분리한 표본
-          출제 포인트: 근육 조직절편에서 nursing cell complex 내부에 돌돌 말린 유충 — 조직 문제 단골
+31. [기생부위] 다음 기생충의 성충 기생 부위는?
+    사진: tonghap/조충/004_E4.png
+     ① 피하조직, 근육, 안와, 뇌   <== 정답
+     ② 피하조직, 근육, 뇌, 눈
+     ③ 간
+     ④ 소장
+    해설: 고충 (육안) — 하얀 고무줄처럼 쭈굴쭈굴하고 길다 / 편절 구분이 없음
+          만손열두조충 성충은 피하조직, 근육, 안와, 뇌에 기생한다.
+          출제 포인트: gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle
 
-18. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
-    사진: note/[260903_05]_감염의_기초_실습3_039_3.png
-     ① branched intestine
-     ② gelatin layer
-     ③ ventral pit
-     ④ testis   <== 정답
-    해설: 요코가와흡충 성충 — 매우 작아 육안으로 잘 안 보임 (1-2mm) / ventral sucker가 한쪽으로 치우쳐 있음
-          출제 포인트: 충란은 간흡충과 크기가 같은 30um이지만 충란벽이 매끄러움 (muskmelon 무늬 없음). 성충은 ventral sucker가 한쪽으로 치우침
-
-19. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
-    사진: eunju/기생충_실습_(protozoa)_002_5.png
-     ① peripheral chromatin
-     ② cilia   <== 정답
-     ③ karyosome
-     ④ pseudopodia
-    해설: 대장섬모충 — 크기가 매우 커서 저배율에서도 바로 눈에 띔 / 가장자리에 섬모(cilia)
-          출제 포인트: 운동기관이 섬모 (cilia). 크기가 커서 저배율에서도 바로 보임. 핵이 macronucleus + micronucleus 2종류
-
-20. [감염형] 다음 기생충의 인체 감염형은?
-    사진: jiseok/실습_4_001_14.png
-     ① 영양형·포낭
-     ② 4핵성 포낭   <== 정답
-     ③ trypomastigote
-     ④ promastigote
-    해설: 람블편모충 영양형 — 서양배(pear) 또는 올빼미 얼굴 모양 / 눈처럼 보이는 핵 2개
-          람블편모충의 인체 감염형은 4핵성 포낭이다.
+32. [기생부위] 다음 기생충의 성충 기생 부위는?
+    사진: jms_protozoa/원충_Protozoa/009_G9.jpg
+     ① 폐포
+     ② 십이지장   <== 정답
+     ③ 혈액·림프절·비장·중추신경계
+     ④ 대장
+    해설: 람블편모충 포낭 — 타원형, 10-12um / 핵 2-4개가 한쪽 끝에 몰려 있음
+          람블편모충 성충은 십이지장 (brush border에 기계적 부착)에 기생한다.
           출제 포인트: 영양형 - pear/올빼미 얼굴 모양, 핵 2개, 4쌍 편모, sucking disc. 포낭 - 타원형, 핵 2-4개가 한쪽에 몰림, axostyle 주변 fibril. 조직 파괴는 하지 않음
 
-21. [indicator] 다음 표본에서 표시가 가리키는 구조물은?
+33. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+    사진: tonghap/조충/009_H9.png
+     ① brood capsule
+     ② daughter cyst
+     ③ sucker   <== 정답
+     ④ calcareous corpuscle
+    해설: 유구낭미충 (현미경) — cyst 안으로 scolex가 말려 들어가 있음 / scolex의 갈고리와 흡반이 진하게 보임
+          출제 포인트: gross - 투명한 cyst 안에 하얀 scolex. 조직 - cyst + 양치식물 모양 neck/scolex, 갈고리 진하게 보임. 고충증(sparganosis)과의 감별이 단골
+
+34. [증상·질병] 다음 기생충에 감염된 환자의 병명으로 옳은 것은?
+    사진: eunju/기생충_실습_(포자충류,_말라리아,_의용_001_2.png
+     ① 람블편모충증
+     ② 톡소포자충증   <== 정답
+     ③ 원발성 아메바성 수막뇌염
+     ④ 와포자충증
+    해설: 톡소포자충 tissue cyst (뇌) — 뇌 조직 안에 둥근 tissue cyst / cyst 내부에 매우 많은 bradyzoite가 빽빽하게 들어참
+          톡소포자충 감염증의 병명은 톡소포자충증 (toxoplasmosis)이다.
+          출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골
+
+35. [indicator] 다음 표본에서 표시가 가리키는 구조물은?
     사진: practical_ind/082_3.png
      ① Schuffner dot
-     ② gametocyte   <== 정답
-     ③ RBC
-     ④ schizont
+     ② RBC
+     ③ schizont
+     ④ gametocyte   <== 정답
     해설: 열대열원충 얇은 도말 — RBC 크기 변화 없음 / 한 적혈구에 여러 개의 ring (multiple ring form)
           출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾
 
-22. [indicator] Indicator(표시)가 가리키는 구조물의 이름은?
-    사진: practical_ind/087_4.png
-     ① gametocyte
-     ② schizont   <== 정답
-     ③ ring form
+36. [감염경로] 환자에게서 다음 표본이 검출되었다. 감염 원인은?
+    사진: eunju/기생충_실습_(선충류)_001_36.png
+     ① 바다생선회·두족류·해산 갑각류 생식   <== 정답
+     ② 모기
+     ③ 덜 익힌 돼지고기·야생동물 고기·가공식품
+     ④ 오염 토양
+    해설: 고래회충 단면 (토끼 위) — Y자 모양 intestinal lumen / 나비 모양 lateral cord
+          고래회충은(는) 경구감염으로 감염되며, 감염원은 바다생선회·두족류·해산 갑각류 생식이다.
+          출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell
+
+37. [감염형] 다음 기생충의 인체 감염형은?
+    사진: jiseok/실습_3_002_8.png
+     ① 피낭유충 (metacercaria)   <== 정답
+     ② 유미유충 (cercaria)
+     ③ 해당 없음
+     ④ 의미충 (plerocercoid larva)
+    해설: 서울주걱흡충 조직절편 (소장) — 충체가 tribocytic organ으로 융모를 빨아먹는 모습 / 융모 위축(fusion, blunting) + 음와 증식 → V/C 비 감소
+          서울주걱흡충의 인체 감염형은 피낭유충 (metacercaria)이다.
+          출제 포인트: 주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습
+
+38. [진단] 다음 기생충 감염의 진단법으로 옳은 것은?
+    사진: jiseok/실습_2_003_5.png
+     ① 항문주위 도말검사
+     ② 야간 혈액도말검사
+     ③ 근육 생검   <== 정답
+     ④ 대장내시경
+    해설: 선모충 피낭유충 (근육) — 횡문근 안에 nursing cell complex 형성 / 유충이 돌돌 말린 채로 들어 있음
+          선모충 진단: 근육 생검, 혈청검사
+          출제 포인트: 근육 조직절편에서 nursing cell complex 내부에 돌돌 말린 유충 — 조직 문제 단골
+
+39. [감염경로] 환자에게서 다음 표본이 검출되었다. 감염 원인은?
+    사진: note/[260903_05]_감염의_기초_실습3_042_2.png
+     ① 유미유충이 있는 민물 접촉
+     ② 꽃뱀·개구리 생식   <== 정답
+     ③ 민물고기 생식
+     ④ 얼룩동사리·버들치·미꾸라지 생식
+    해설: 서울주걱흡충 성충 — 앞쪽이 주걱처럼 넓게 퍼진 모양 / tribocytic organ (제2의 입) 이 결정적 감별점
+          서울주걱흡충은(는) 경구감염으로 감염되며, 감염원은 꽃뱀·개구리 생식이다.
+          출제 포인트: 주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습
+
+40. [치료] 다음 기생충 감염의 치료로 옳은 것은?
+    사진: tonghap/흡충/003_D3.png
+     ① Chloroquine 복용
+     ② Triclabendazole 복용
+     ③ Doxycycline 복용
+     ④ Praziquantel 복용   <== 정답
+    해설: 간흡충 성충 (육안) — 바질시드 모양의 작고 납작한 나뭇잎형 / 10-25mm
+          간흡충 치료: Praziquantel 25mg/kg tid 1d
+          출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
+======================================================================
+모의 땡시 2세트  (40문항)
+======================================================================
+
+ 1. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+    사진: tonghap/충란/002_D2.png
+     ① embryophoral block
+     ② albumin layer   <== 정답
+     ③ gelatin layer
+     ④ hexacanth embryo
+    해설: 회충 수정란 — 난원형, 두꺼운 충란벽 / 3 layer 구조 (바깥 albumin - chitin - lipoid)
+          출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제
+
+ 2. [충란 동정] 다음은 어떤 기생충의 충란인가?
+    사진: tonghap/충란/009_E9.png
+     ① Hookworm   <== 정답
+     ② Enterobius vermicularis
+     ③ Anisakis simplex
+     ④ Diphyllobothrium latum
+    해설: 구충 충란 — 타원형, 충란벽이 키틴층 하나로 얇고 투명 / 내부에 난할된 세포가 여러 개 (4-8 cell stage)
+          두비니구충과 아메리카구충의 충란은 구별 불가 — 답은 Hookworm
+          출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지
+
+ 3. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+    사진: note/[260831_05]_감염의_기초_실습__076_3.png
+     ① ventral pit
+     ② terminal spine   <== 정답
+     ③ lateral spine
+     ④ gelatin layer
+    해설: 방광주혈흡충 충란 — 큰 방추형 / 아래쪽 끝에 돌출된 terminal spine
+          출제 포인트: 충란 아래쪽 끝에 terminal spine (말단 돌기) — 만손(lateral)과의 결정적 감별점
+
+ 4. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
+    사진: jms_egg/충란_Helminth_eggs/007_E7.png
+     ① Ancylostoma duodenale
+     ② Enterobius vermicularis   <== 정답
+     ③ Strongyloides stercoralis
+     ④ Necator americanus
+    해설: 요충 충란 — 한쪽이 편평하고 반대쪽이 볼록한 비대칭 타원형 / 커피콩·죠리퐁·감씨 모양
+          출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)
+
+ 5. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
+    사진: tonghap/충란/010_F10.png
+     ① Paragonimus westermani
+     ② Ancylostoma duodenale
+     ③ Diphyllobothrium latum   <== 정답
+     ④ Taenia solium
+    해설: 광절열두조충 충란 — 갈색 타원형 / 한쪽에 operculum, 반대쪽에 작은 terminal knob
+          출제 포인트: 충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만
+
+ 6. [충란 동정] 다음 충란을 가지는 기생충은?
+    사진: jiseok/실습_1_003_10.png
+     ① Schistosoma haematobium
+     ② Schistosoma japonicum
+     ③ Schistosoma mansoni   <== 정답
+     ④ Fasciola hepatica
+    해설: 만손주혈흡충 충란 — 매우 큼 (100um 이상) / 옆구리에 뚜렷하게 돌출된 lateral spine
+          출제 포인트: 충란이 가장 큼 (100um 이상) + 뚜렷한 lateral spine (측방 돌기)
+
+ 7. [충란 동정] 다음은 어떤 기생충의 충란인가?
+    사진: tonghap/충란/006_F6.png
+     ① Taenia spp.   <== 정답
+     ② Clonorchis sinensis
+     ③ Echinococcus multilocularis
+     ④ Echinococcus granulosus
+    해설: 유무구조충 충란 — 원형 또는 타원형 / 두껍고 방사상 무늬의 embryophoral block
+          유구조충과 무구조충의 충란은 구별 불가 — 답은 Taenia spp.
+          출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)
+
+ 8. [감염형] 다음 충란을 가지는 기생충의 감염형으로 옳은 것은?
+    사진: tonghap/충란/005_D5.png
+     ① 피낭유충 (metacercaria)   <== 정답
+     ② 해당 없음
+     ③ 4핵성 포낭 (quadrinucleated cyst)
+     ④ 유미유충 (cercaria)
+    해설: 요코가와흡충 충란 — 간흡충과 크기가 같으나 충란벽이 매끄러움 (muskmelon 무늬 없음) / shouldering이 뚜렷하지 않음
+          요코가와흡충의 인체 감염형은 피낭유충 (metacercaria)이다.
+          출제 포인트: 충란은 간흡충과 크기가 같은 30um이지만 충란벽이 매끄러움 (muskmelon 무늬 없음). 성충은 ventral sucker가 한쪽으로 치우침
+
+ 9. [충란 동정] 다음은 어떤 기생충의 충란인가?
+    사진: jiseok/실습_1_003_6.png
+     ① Schistosoma haematobium
+     ② Schistosoma mansoni
+     ③ Paragonimus westermani
+     ④ Schistosoma japonicum   <== 정답
+    해설: 일본주혈흡충 충란 — 둥글고 통통함 (주혈흡충 중 가장 작고 둥금) / 매우 작은 lateral spine — 잘 보이지 않음
+          출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태
+
+10. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
+    사진: eunju/기생충_실습_(조충류,_흡충류)_001_19.png
+     ① Fasciola hepatica
+     ② Ascaris lumbricoides
+     ③ Diphyllobothrium latum
+     ④ Paragonimus westermani   <== 정답
+    해설: 폐흡충 충란 — 황갈색의 큰 난원형 / 한쪽 끝에 뚜렷한 operculum
+          출제 포인트: 충란 - 90um 그룹, operculum + abopercular thickening. 성충 - plump ovoid, 적갈색, 6개 lobe로 나뉜 ovary. 슬라이드가 두껍게 mounting 되어 있음
+
+11. [증상·질병] 다음 기생충에 감염된 환자의 병명으로 옳은 것은?
+    사진: jms_protozoa/원충_Protozoa/003_F3.png
+     ① 아메바증   <== 정답
+     ② 폐포자충폐렴
+     ③ 람블편모충증
+     ④ 피부리슈만편모충증
+    해설: 이질아메바 영양형 — karyosome이 핵 중앙에 작은 점처럼 위치 / peripheral chromatin의 두께가 균일
+          이질아메바 감염증의 병명은 아메바증 (amebiasis)이다.
+          출제 포인트: 영양형 - karyosome 중앙 + peripheral chromatin 두께 균일, RBC 탐식. 포낭 - 핵 4개 이하. 조직 - flask-shaped ulcer
+
+12. [치료] 다음 기생충 감염의 치료로 옳은 것은?
+    사진: eunju/기생충_실습_(protozoa)_002_1.png
+     ① pentavalent antimonials 복용   <== 정답
+     ② TMP-SMX 복용
+     ③ Pentamidine 복용
+     ④ 0.02% PHMB 점안
+    해설: 내장리슈만편모충 amastigote (간·비장) — 대식세포 안에 점박이처럼 들어 있는 무편모형 / 편모가 보이지 않음
+          내장리슈만편모충 치료: pentavalent antimonials, Amphotericin B
+          출제 포인트: 사람 조직 내에서는 amastigote (무편모형, 세포 내 작은 점), 모래파리에서는 promastigote (전편모형). 간·비장 조직에서 세포 내 작은 dot으로 보임
+
+13. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
+    사진: jms_cestoda/조충_Cestodes/003_F3.png
+     ① uterine branch
+     ② gelatin layer
+     ③ sucker
+     ④ ovary   <== 정답
+    해설: 광절열두조충 편절 — 좌우로 넓은 사각형 편절 / 가운데에 rosette (꽃모양) uterus
+          출제 포인트: 충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만
+
+14. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
+    사진: practical/085_2.png
+     ① Plasmodium malariae
+     ② Plasmodium vivax
+     ③ Plasmodium knowlesi
+     ④ Plasmodium falciparum   <== 정답
+    해설: 열대열원충 두꺼운 도말 — 적혈구가 용혈되어 원충만 남음 / 선별검사용 — 민감도가 높지만 종 감별은 어려움
+          출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾
+
+15. [감염경로] 다음 기생충의 전파 방식은?
+    사진: jms_trematoda/흡충_Trematodes/008_G8.png
+     ① 패류매개성
+     ② 수인성
+     ③ 식품매개성   <== 정답
+     ④ 절지동물매개성
+    해설: 폐흡충 성충 — 통통한 난원형 (강낭콩 모양), 적갈색 / 슬라이드가 두껍게 mounting 되어 있음
+          폐흡충의 전파 방식은 식품매개성이다.
+          출제 포인트: 충란 - 90um 그룹, operculum + abopercular thickening. 성충 - plump ovoid, 적갈색, 6개 lobe로 나뉜 ovary. 슬라이드가 두껍게 mounting 되어 있음
+
+16. [감염경로] 다음 기생충이 감염되는 방식은?
+    사진: tonghap/조충/004_D4.png
+     ① 식품매개성   <== 정답
+     ② 접촉매개성
+     ③ 절지동물매개성
+     ④ 토양매개성
+    해설: 고충 (육안) — 하얀 고무줄처럼 쭈굴쭈굴하고 길다 / 편절 구분이 없음
+          만손열두조충의 전파 방식은 식품매개성이다.
+          출제 포인트: gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle
+
+17. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
+    사진: note/[260902_05]_감염의_기초_실습__052_1.png
+     ① Trichuris trichiura
+     ② Anisakis simplex   <== 정답
+     ③ Ascaris lumbricoides
+     ④ Necator americanus
+    해설: 고래회충 유충 (육안) — 약 2cm, 유백색의 실 모양 / 생선 내장·근육에 나선형으로 말려 있음
+          출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell
+
+18. [증상·질병] 다음 기생충이 일으키는 질환은?
+    사진: note/[260902_05]_감염의_기초_실습__051_2.png
+     ① 편충증
+     ② 고래회충증   <== 정답
+     ③ 요충증
+     ④ 구충증
+    해설: 고래회충 유충 (현미경) — 머리에 boring tooth (상어 지느러미처럼 튀어나옴) / 꼬리에 mucron
+          고래회충 감염증의 병명은 고래회충증 (anisakiasis)이다.
+          출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell
+
+19. [종 동정] 다음 기생충의 학명으로 옳은 것은?
+    사진: tonghap/선충/022_F22.png
+     ① Necator americanus
+     ② Enterobius vermicularis   <== 정답
+     ③ Trichuris trichiura
+     ④ Anisakis simplex
+    해설: 요충 성충 (현미경) — 머리쪽에 투명한 키틴성 날개 cephalic alae / 수컷은 꼬리가 나선형으로 말리고 caudal alae
+          출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)
+
+20. [기생부위] 다음 기생충이 기생하는 부위는?
+    사진: tonghap/선충/008_D8.png
+     ① 림프관
+     ② 소장 상부
+     ③ 맹장   <== 정답
+     ④ 위벽·장벽
+    해설: 편충 성충 (현미경) — 채찍 모양 — 앞 3/5이 가늘고 뒤 2/5가 굵음 / 가는 쪽이 머리
+          편충 성충은 맹장 (cecum), 대장·직장에 기생한다.
+          출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골
+
+21. [감염형] 다음 기생충의 감염형으로 옳은 것은?
+    사진: jms_cestoda/조충_Cestodes/009_G9.png
+     ① 충란   <== 정답
+     ② 유구낭미충
+     ③ 전미충
+     ④ 무구낭미충
+    해설: 유구낭미충 (현미경) — cyst 안으로 scolex가 말려 들어가 있음 / scolex의 갈고리와 흡반이 진하게 보임
+          유구낭미충의 인체 감염형은 충란이다.
+          출제 포인트: gross - 투명한 cyst 안에 하얀 scolex. 조직 - cyst + 양치식물 모양 neck/scolex, 갈고리 진하게 보임. 고충증(sparganosis)과의 감별이 단골
+
+22. [감염경로] 다음 기생충의 감염 원인으로 알맞은 것은?
+    사진: jms_protozoa/원충_Protozoa/025_G25.png
+     ① 오염된 렌즈 세척액·물
+     ② 포낭에 오염된 물·음식
+     ③ 고양이 분변에 오염된 채소·식수   <== 정답
+     ④ 돼지 분변에 오염된 물·음식
+    해설: 톡소포자충 tissue cyst (뇌) — 뇌 조직 안에 둥근 tissue cyst / cyst 내부에 매우 많은 bradyzoite가 빽빽하게 들어참
+          톡소포자충은(는) 경구감염 / 수직감염 / 수혈·장기이식으로 감염되며, 감염원은 고양이 분변에 오염된 채소·식수 (oocyst), 덜 익힌 고기 (tissue cyst)이다.
+          출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골
+
+23. [증상·질병] 다음 기생충이 일으키는 질환은?
+    사진: jms_protozoa/원충_Protozoa/010_F10.jpg
+     ① 람블편모충증   <== 정답
+     ② 비병원성
+     ③ 폐포자충폐렴
+     ④ 샤가스병
+    해설: 람블편모충 영양형 — 서양배(pear) 또는 올빼미 얼굴 모양 / 눈처럼 보이는 핵 2개
+          람블편모충 감염증의 병명은 람블편모충증 (giardiasis)이다.
+          출제 포인트: 영양형 - pear/올빼미 얼굴 모양, 핵 2개, 4쌍 편모, sucking disc. 포낭 - 타원형, 핵 2-4개가 한쪽에 몰림, axostyle 주변 fibril. 조직 파괴는 하지 않음
+
+24. [감염경로] 환자에게서 다음 표본이 검출되었다. 감염 원인은?
+    사진: tonghap/선충/014_D14.png
+     ① 충란에 오염된 손·침구·먼지
+     ② 자충포장란에 오염된 식수·채소
+     ③ 바다생선회·두족류·해산 갑각류 생식
+     ④ 오염 토양   <== 정답
+    해설: 아메리카구충 성충 — 구강에 칼날 모양 cutting plate 1쌍 (송곳니 아님) / dorsal costa가 깊게 2분지 후 각각 2분지 (2+2)
+          아메리카구충은(는) 경피감염으로 감염되며, 감염원은 오염 토양이다.
+          dorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)
+          출제 포인트: 구강에 칼날 모양 cutting plate 1쌍. dorsal costa 깊게 2분지 → 각각 2분지
+
+25. [감염형] 다음 기생충의 인체 감염형은?
+    사진: note/[260902_05]_감염의_기초_실습__021_1.png
+     ① 자충포장란 (embryonated egg)   <== 정답
+     ② 피낭유충 (encysted larva)
+     ③ sporozoite
+     ④ L3 유충
+    해설: 편충 조직절편 (충수) — 계란후라이 모양의 stichocyte가 쌓여 stichosome을 이룸 / 충수 점막에 박힌 여러 개의 단면
+          편충의 인체 감염형은 자충포장란 (embryonated egg)이다.
+          출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골
+
+26. [감염경로] 다음 기생충의 감염 원인으로 알맞은 것은?
+    사진: jms_trematoda/흡충_Trematodes/013_G13.png
+     ① 유미유충이 있는 민물 접촉
+     ② 미나리 등 수생식물, 초식동물 생간·녹즙
+     ③ 꽃뱀·개구리 생식   <== 정답
+     ④ 숭어·농어·문절망둑 등 반수산 어류 생식
+    해설: 서울주걱흡충 조직절편 (소장) — 충체가 tribocytic organ으로 융모를 빨아먹는 모습 / 융모 위축(fusion, blunting) + 음와 증식 → V/C 비 감소
+          서울주걱흡충은(는) 경구감염으로 감염되며, 감염원은 꽃뱀·개구리 생식이다.
+          출제 포인트: 주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습
+
+27. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
+    사진: eunju/기생충_실습_(protozoa)_002_2.png
+     ① bradyzoite
+     ② tissue cyst
+     ③ amastigote nest   <== 정답
+     ④ kinetoplast
+    해설: 크루스파동편모충 심근 조직절편 — 심근세포 안에 동글동글하게 들어찬 amastigote 무리 / 주변 심근염
+          출제 포인트: 혈액에서는 trypomastigote (핵 + kinetoplast + 편모 + 파동막), 심근세포 안에서는 amastigote 무리. 배열이 편모 → 핵 → kinetoplast 순서 (리슈만과 반대)
+
+28. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+    사진: note/[260902_05]_감염의_기초_실습__036_2.png
+     ① gelatin layer
+     ② stichosome
+     ③ cuticle   <== 정답
+     ④ stichocyte
+    해설: 회충 단면 — 소화관 lumen을 단층 원주상피가 둘러쌈 / 양 옆에 lateral cord (족보에는 lateral chord 표기도 등장)
+          출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제
+
+29. [숙주] 다음 기생충의 종숙주로 옳은 것은?
+    사진: jms_nematoda/선충_Nematodes/006_F6.png
+     ① 쥐
+     ② 고래·돌고래 등 해산 포유류
+     ③ 사람   <== 정답
+     ④ 개
+    해설: 두비니구충 성충 — 구강에 투명하게 반짝이는 송곳니 2쌍 (hook-like teeth) / 꼬리에 copulatory bursa
+          두비니구충의 종숙주는 사람이다.
+          dorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)
+          출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지
+
+30. [indicator] 다음 표본에서 표시가 가리키는 구조물은?
+    사진: practical_ind/087_3.png
+     ① Schuffner dot
+     ② gelatin layer
+     ③ schizont   <== 정답
      ④ trophozoite
     해설: 삼일열원충 두꺼운 도말 — 적혈구가 용혈되어 원충만 남음 / ring form과 schizont가 함께 보임
           출제 포인트: RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot
 
-23. [증상·질병] 다음 기생충에 감염된 환자의 병명으로 옳은 것은?
-    사진: jms_trematoda/흡충_Trematodes/003_F3.png
-     ① 폐흡충증
-     ② 방광주혈흡충증
-     ③ 일본주혈흡충증   <== 정답
-     ④ 만손주혈흡충증
-    해설: 일본주혈흡충 자웅 합체 — 자웅이체 — 수컷의 gynecophoral canal(포자관)에 가느다란 암컷이 끼어 있음 / 수컷 6-10mm
-          일본주혈흡충 감염증의 병명은 일본주혈흡충증 (schistosomiasis japonica)이다.
-          출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태
+31. [감염경로] 다음 기생충의 감염 원인으로 알맞은 것은?
+    사진: eunju/기생충_실습_(조충류,_흡충류)_001_4.png
+     ① 민물 갑각류 생식
+     ② 민물고기 생식
+     ③ 유미유충이 있는 민물 접촉
+     ④ 미나리 등 수생식물, 초식동물 생간·녹즙   <== 정답
+    해설: 간질 성충 — 크고 납작한 나뭇잎 모양 (약 3cm) / 머리쪽이 원뿔형으로 돌출 (conical projection = cephalic cone)
+          간질은(는) 경구감염으로 감염되며, 감염원은 미나리 등 수생식물, 초식동물 생간·녹즙이다.
+          출제 포인트: 납작한 나뭇잎 모양 + conical projection (= cephalic cone). highly branched intestine·testes·vitellaria. 조직에서는 구멍이 송송 뚫린 내부
 
-24. [종 동정] 다음은 어떤 기생충인가?
-    사진: note/[260903_05]_감염의_기초_실습3_042_2.png
-     ① Schistosoma mansoni
-     ② Neodiplostomum seoulense   <== 정답
-     ③ Paragonimus westermani
-     ④ Gymnophalloides seoi
-    해설: 서울주걱흡충 성충 — 앞쪽이 주걱처럼 넓게 퍼진 모양 / tribocytic organ (제2의 입) 이 결정적 감별점
-          출제 포인트: 주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습
+32. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
+    사진: eunju/기생충_실습_(조충류,_흡충류)_001_12.png
+     ① Paragonimus westermani
+     ② Fasciola hepatica
+     ③ Schistosoma japonicum
+     ④ Clonorchis sinensis   <== 정답
+    해설: 간흡충 조직절편 (간) — 담관 직경이 늘어나 있음 / 담관 안에 여러 마리의 충체 단면
+          출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
 
-25. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
-    사진: note/[260904_05]_감염의_기초_실습__014_3.png
-     ① rosette uterus
-     ② genital pore   <== 정답
-     ③ ovary
-     ④ gelatin layer
+33. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+    사진: note/[260904_05]_감염의_기초_실습__014_2.png
+     ① ovary
+     ② rosette uterus
+     ③ gelatin layer
+     ④ uterine branch   <== 정답
     해설: 유구조충 편절 — 자궁측지 13개 이하, 두껍고 듬성듬성 / 위아래로 긴 사각형
           출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)
 
-26. [증상·질병] 다음 기생충이 일으키는 질환은?
-    사진: jms_protozoa/원충_Protozoa/026_F26.png
-     ① 아메바증
-     ② 피부리슈만편모충증
-     ③ 폐포자충폐렴   <== 정답
-     ④ 비병원성
-    해설: 폐포자충 (Diff-Quik, 폐) — 폐포 안에 거품 같은 exudate / cyst 안에 매우 작은 8개의 핵 (octa-nucleated cyst)
-          폐포자충 감염증의 병명은 폐포자충폐렴 (Pneumocystis pneumonia (PCP))이다.
+34. [종 동정] 다음 기생충의 학명으로 옳은 것은?
+    사진: jms_protozoa/원충_Protozoa/027_G27.jpg
+     ① Entamoeba histolytica
+     ② Toxoplasma gondii
+     ③ Pneumocystis jirovecii   <== 정답
+     ④ Entamoeba coli
+    해설: 폐포자충 (GMS 염색, 폐) — 폐포 안이 검게 염색된 cyst로 가득 참 / cyst 벽이 검게 염색되고 안이 비침 (컵·초승달 모양)
           출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)
 
-27. [치료] 다음 기생충 감염의 치료로 옳은 것은?
-    사진: eunju/기생충_실습_(protozoa)_001_11.png
-     ① Metronidazole 복용
-     ② pentavalent antimonials 복용
-     ③ Amphotericin B 복용
-     ④ 치료 불필요   <== 정답
-    해설: 대장아메바 포낭 — 핵이 4-8개로 많음 / karyosome이 크고 한쪽으로 치우침 (붓으로 꾹 누른 모양)
-          대장아메바 치료: 치료 불필요
-          출제 포인트: 핵 4-8개 (최대 8개), karyosome이 크고 한쪽으로 치우침 (붓으로 누른 모양), peripheral chromatin 두께 불규칙 — 이질아메바와의 감별이 핵심
+35. [종 동정] 다음 기생충의 학명으로 옳은 것은?
+    사진: jms_nematoda/선충_Nematodes/009_F9.png
+     ① Ancylostoma duodenale
+     ② Anisakis simplex
+     ③ Strongyloides stercoralis   <== 정답
+     ④ Necator americanus
+    해설: 분선충 사상유충 — 식도의 직경이 일정하고 길다 / 꼬리 끝이 갈라짐 (notched tail)
+          출제 포인트: 간상유충 (rhabditoid) = 백열전구 모양 식도 / 사상유충 (filariform) = 직경 일정한 식도 + notched tail. 구충 유충과는 꼬리 모양으로 감별
 
-28. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
-    사진: jms_nematoda/선충_Nematodes/014_I14.png
-     ① ventricle
-     ② gelatin layer
-     ③ boring tooth
-     ④ caudal alae   <== 정답
+36. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
+    사진: tonghap/흡충/004_E4.png
+     ① Schistosoma japonicum
+     ② Clonorchis sinensis   <== 정답
+     ③ Opisthorchis viverrini
+     ④ Fasciola hepatica
+    해설: 간흡충 성충 — 납작한 나뭇잎 모양, 10-25mm / 몸 뒤쪽에 나뭇가지처럼 갈라진 branched testis 2개
+          출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
+
+37. [indicator] 다음 표본에서 표시가 가리키는 구조물은?
+    사진: practical_ind/082_3.png
+     ① Schuffner dot
+     ② RBC
+     ③ schizont
+     ④ gametocyte   <== 정답
+    해설: 열대열원충 얇은 도말 — RBC 크기 변화 없음 / 한 적혈구에 여러 개의 ring (multiple ring form)
+          출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾
+
+38. [진단] 다음 기생충 감염의 진단법으로 옳은 것은?
+    사진: jms_protozoa/원충_Protozoa/024_F24.jpg
+     ① 혈청 IgG/IgM   <== 정답
+     ② 질 분비물 현미경 관찰
+     ③ 뇌척수액·뇌생검에서 영양형
+     ④ 대변검사
+    해설: 톡소포자충 tachyzoite — 초승달·활 모양 (arc shaped) / 편모나 섬모가 없음
+          톡소포자충 진단: 혈청 IgG/IgM, PCR (양수)
+          출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골
+
+39. [기생부위] 다음 기생충이 기생하는 부위는?
+    사진: jiseok/실습_5_003_7.png
+     ① 머릿니 - 두피 / 몸니 - 옷
+     ② 주로 주간 활동
+     ③ 주로 야간 활동
+     ④ 중남미 주거지   <== 정답
+    해설: 흡혈성 침노린재 — 빈대보다 크고 길쭉함 (1-3cm) / 뾰족하고 긴 주둥이
+          흡혈성 침노린재 성충은 중남미 주거지에 기생한다.
+          빈대와 감별 — 침노린재는 샤가스병을 매개
+          출제 포인트: 빈대(Cimex)와 혼동 주의 — 빈대는 질병을 매개하지 않고 침노린재는 샤가스병을 매개
+
+40. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
+    사진: eunju/기생충_실습_(포자충류,_말라리아,_의용_001_12.png
+     ① Entamoeba histolytica
+     ② Cryptosporidium parvum   <== 정답
+     ③ Toxoplasma gondii
+     ④ Entamoeba coli
+    해설: 작은와포자충 oocyst (MAF 염색) — 파란 배경에 분홍·붉은색으로 염색된 둥근 oocyst / 크기 4-6um
+          출제 포인트: 장 조직에서 미세융모에 붙은 작은 점들. MAF 염색에서 파란 배경에 분홍색 oocyst
+======================================================================
+모의 땡시 3세트  (40문항)
+======================================================================
+
+ 1. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+    사진: jiseok/실습_1_003_6.png
+     ① oral sucker
+     ② terminal spine
+     ③ gelatin layer
+     ④ lateral spine   <== 정답
+    해설: 일본주혈흡충 충란 — 둥글고 통통함 (주혈흡충 중 가장 작고 둥금) / 매우 작은 lateral spine — 잘 보이지 않음
+          출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태
+
+ 2. [충란 동정] 다음 충란을 가지는 기생충은?
+    사진: tonghap/충란/003_F3.png
+     ① Ascaris lumbricoides   <== 정답
+     ② Enterobius vermicularis
+     ③ Paragonimus westermani
+     ④ Anisakis simplex
+    해설: 회충 불수정란 — 수정란보다 길쭉하고 큼 / 충란벽 3 layer가 제대로 형성되지 않음
+          출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제
+
+ 3. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
+    사진: eunju/기생충_실습_(연충란)_001_21.png
+     ① Ancylostoma duodenale
+     ② Paragonimus westermani
+     ③ Cysticercus cellulosae
+     ④ Diphyllobothrium latum   <== 정답
+    해설: 광절열두조충 충란 — 갈색 타원형 / 한쪽에 operculum, 반대쪽에 작은 terminal knob
+          출제 포인트: 충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만
+
+ 4. [충란 동정] 다음은 어떤 기생충의 충란인가?
+    사진: jms_egg/충란_Helminth_eggs/009_D9.png
+     ① Metagonimus yokogawai   <== 정답
+     ② Clonorchis sinensis
+     ③ Gymnophalloides seoi
+     ④ Fasciola hepatica
+    해설: 요코가와흡충 충란 — 간흡충과 크기가 같으나 충란벽이 매끄러움 (muskmelon 무늬 없음) / shouldering이 뚜렷하지 않음
+          출제 포인트: 충란은 간흡충과 크기가 같은 30um이지만 충란벽이 매끄러움 (muskmelon 무늬 없음). 성충은 ventral sucker가 한쪽으로 치우침
+
+ 5. [충란 동정] 다음은 어떤 기생충의 충란인가?
+    사진: note/[260831_05]_감염의_기초_실습__054_2.png
+     ① Paragonimus westermani
+     ② Heterophyes nocens
+     ③ Clonorchis sinensis   <== 정답
+     ④ Metagonimus yokogawai
+    해설: 간흡충 충란 — 전구·플라스크 모양 / operculum 주변이 어깨처럼 튀어나옴 (shouldering)
+          출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
+
+ 6. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
+    사진: note/[260831_05]_감염의_기초_실습__074_2.png
+     ① Ancylostoma duodenale
+     ② Trichuris trichiura
+     ③ Ascaris lumbricoides   <== 정답
+     ④ Taenia solium
+    해설: 회충 수정란 — 난원형, 두꺼운 충란벽 / 3 layer 구조 (바깥 albumin - chitin - lipoid)
+          출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제
+
+ 7. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
+    사진: eunju/기생충_실습_(연충란)_001_16.png
+     ① albumin layer
+     ② terminal knob
+     ③ gelatin layer
+     ④ operculum   <== 정답
+    해설: 폐흡충 충란 — 황갈색의 큰 난원형 / 한쪽 끝에 뚜렷한 operculum
+          출제 포인트: 충란 - 90um 그룹, operculum + abopercular thickening. 성충 - plump ovoid, 적갈색, 6개 lobe로 나뉜 ovary. 슬라이드가 두껍게 mounting 되어 있음
+
+ 8. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
+    사진: note/[260831_05]_감염의_기초_실습__064_2.png
+     ① Schistosoma japonicum
+     ② Schistosoma haematobium
+     ③ Gymnophalloides seoi
+     ④ Schistosoma mansoni   <== 정답
+    해설: 만손주혈흡충 충란 — 매우 큼 (100um 이상) / 옆구리에 뚜렷하게 돌출된 lateral spine
+          출제 포인트: 충란이 가장 큼 (100um 이상) + 뚜렷한 lateral spine (측방 돌기)
+
+ 9. [감염경로] 다음 충란을 가지는 기생충이 감염되는 방식은?
+    사진: jms_egg/충란_Helminth_eggs/007_E7.png
+     ① 토양매개성
+     ② 접촉매개성   <== 정답
+     ③ 식품매개성
+     ④ 절지동물매개성
+    해설: 요충 충란 — 한쪽이 편평하고 반대쪽이 볼록한 비대칭 타원형 / 커피콩·죠리퐁·감씨 모양
+          요충의 전파 방식은 접촉매개성이다.
+          출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)
+
+10. [충란 동정] 다음은 어떤 기생충의 충란인가?
+    사진: note/[260831_05]_감염의_기초_실습__034_1.png
+     ① Enterobius vermicularis
+     ② Diphyllobothrium latum
+     ③ Strongyloides stercoralis
+     ④ Hookworm   <== 정답
+    해설: 구충 충란 — 타원형, 충란벽이 키틴층 하나로 얇고 투명 / 내부에 난할된 세포가 여러 개 (4-8 cell stage)
+          두비니구충과 아메리카구충의 충란은 구별 불가 — 답은 Hookworm
+          출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지
+
+11. [증상·질병] 다음 기생충이 일으키는 질환은?
+    사진: note/[260902_05]_감염의_기초_실습__017_1.png
+     ① 요충증
+     ② 편충증   <== 정답
+     ③ 림프사상충증
+     ④ 개회충증
+    해설: 편충 성충 (육안) — 1-2cm, 채찍 모양 / 앞쪽이 실처럼 가늘고 뒤쪽이 굵음
+          편충 감염증의 병명은 편충증 (trichuriasis)이다.
+          출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골
+
+12. [기생부위] 다음 기생충이 기생하는 부위는?
+    사진: jms_protozoa/원충_Protozoa/003_G3.png
+     ① 뇌
+     ② 단핵구·망상내피계
+     ③ 대장   <== 정답
+     ④ 혈액·림프절·비장·중추신경계
+    해설: 이질아메바 영양형 — karyosome이 핵 중앙에 작은 점처럼 위치 / peripheral chromatin의 두께가 균일
+          이질아메바 성충은 대장 (조직 내 침입)에 기생한다.
+          출제 포인트: 영양형 - karyosome 중앙 + peripheral chromatin 두께 균일, RBC 탐식. 포낭 - 핵 4개 이하. 조직 - flask-shaped ulcer
+
+13. [증상·질병] 다음 기생충이 일으키는 질환은?
+    사진: jms_nematoda/선충_Nematodes/010_F10.png
+     ① 회충증
+     ② 선모충증
+     ③ 고래회충증
+     ④ 편충증   <== 정답
+    해설: 편충 성충 (현미경) — 채찍 모양 — 앞 3/5이 가늘고 뒤 2/5가 굵음 / 가는 쪽이 머리
+          편충 감염증의 병명은 편충증 (trichuriasis)이다.
+          출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골
+
+14. [종 동정] 다음 기생충의 학명으로 옳은 것은?
+    사진: jms_cestoda/조충_Cestodes/011_G11.png
+     ① Taenia saginata
+     ② Taenia solium
+     ③ Echinococcus granulosus   <== 정답
+     ④ Cysticercus cellulosae
+    해설: 단방조충 protoscolex — 포충(hydatid cyst) 안에 여러 개의 protoscolex / 콧수염 모양으로 배열된 hooklet
+          출제 포인트: 성충은 immature·mature·gravid 편절이 1개씩. 포충 내부에 여러 개의 protoscolex, 콧수염 모양 hooklet
+
+15. [치료] 다음 기생충 감염의 치료로 옳은 것은?
+    사진: jms_protozoa/원충_Protozoa/027_F27.jpg
+     ① 치료 불필요
+     ② TMP-SMX 복용   <== 정답
+     ③ 0.02% PHMB 점안
+     ④ 특효약 없음 (대증치료)
+    해설: 폐포자충 (GMS 염색, 폐) — 폐포 안이 검게 염색된 cyst로 가득 참 / cyst 벽이 검게 염색되고 안이 비침 (컵·초승달 모양)
+          폐포자충 치료: TMP-SMX 3주, 저산소 시 corticosteroid
+          출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)
+
+16. [감염경로] 환자에게서 다음 표본이 검출되었다. 감염 원인은?
+    사진: jms_nematoda/선충_Nematodes/009_G9.png
+     ① 모기
+     ② 충란에 오염된 토양, 소 생간 등 유충을 포함한 내장육
+     ③ 오염 토양   <== 정답
+     ④ 덜 익힌 돼지고기·야생동물 고기·가공식품
+    해설: 분선충 사상유충 — 식도의 직경이 일정하고 길다 / 꼬리 끝이 갈라짐 (notched tail)
+          분선충은(는) 경피감염 / 경구감염 / 자가감염 (autoinfection)으로 감염되며, 감염원은 오염 토양이다.
+          출제 포인트: 간상유충 (rhabditoid) = 백열전구 모양 식도 / 사상유충 (filariform) = 직경 일정한 식도 + notched tail. 구충 유충과는 꼬리 모양으로 감별
+
+17. [indicator] Indicator(표시)가 가리키는 구조물의 이름은?
+    사진: practical_ind/087_4.png
+     ① Schuffner dot
+     ② ring form
+     ③ gametocyte
+     ④ schizont   <== 정답
+    해설: 삼일열원충 두꺼운 도말 — 적혈구가 용혈되어 원충만 남음 / ring form과 schizont가 함께 보임
+          출제 포인트: RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot
+
+18. [감염형] 다음 기생충의 감염형으로 옳은 것은?
+    사진: tonghap/조충/011_F11.png
+     ① 내장낭미충
+     ② 충란   <== 정답
+     ③ 무구낭미충
+     ④ 전미충
+    해설: 포충 조직절편 — 두꺼운 층상 낭벽 (fibrous - gelatin - germinal layer) / 낭벽 안쪽에 brood capsule과 protoscolex
+          단방조충의 인체 감염형은 충란이다.
+          이미지 검토 중 발견 — 통합xlsx 단방조충 행에 조직절편이 섞여 있었다
+          출제 포인트: 성충은 immature·mature·gravid 편절이 1개씩. 포충 내부에 여러 개의 protoscolex, 콧수염 모양 hooklet
+
+19. [숙주] 다음 기생충의 종숙주로 옳은 것은?
+    사진: jms_protozoa/원충_Protozoa/005_F5.png
+     ① 고양이
+     ② 사람   <== 정답
+     ③ 자유생활종
+     ④ 돼지
+    해설: 이질아메바 포낭 — 핵이 4개 이하로 듬성듬성 / karyosome 중앙 위치
+          이질아메바의 종숙주는 사람이다.
+          출제 포인트: 영양형 - karyosome 중앙 + peripheral chromatin 두께 균일, RBC 탐식. 포낭 - 핵 4개 이하. 조직 - flask-shaped ulcer
+
+20. [종 동정] 다음은 어떤 기생충인가?
+    사진: eunju/기생충_실습_(선충류)_001_25.png
+     ① Necator americanus
+     ② Trichuris trichiura
+     ③ Trichinella spiralis   <== 정답
+     ④ Cysticercus cellulosae
+    해설: 선모충 피낭유충 (근육) — 횡문근 안에 nursing cell complex 형성 / 유충이 돌돌 말린 채로 들어 있음
+          출제 포인트: 근육 조직절편에서 nursing cell complex 내부에 돌돌 말린 유충 — 조직 문제 단골
+
+21. [증상·질병] 다음 기생충에 감염된 환자의 병명으로 옳은 것은?
+    사진: eunju/기생충_실습_(조충류,_흡충류)_001_9.png
+     ① 간질증   <== 정답
+     ② 타이간흡충증
+     ③ 극구흡충증
+     ④ 메콩주혈흡충증
+    해설: 간질 조직절편 — 충체 내부가 구멍이 송송 뚫린 모양 / 간 실질의 괴사·염증
+          간질 감염증의 병명은 간질증 (fascioliasis)이다.
+          출제 포인트: 납작한 나뭇잎 모양 + conical projection (= cephalic cone). highly branched intestine·testes·vitellaria. 조직에서는 구멍이 송송 뚫린 내부
+
+22. [감염경로] 다음 기생충의 전파 방식은?
+    사진: jms_cestoda/조충_Cestodes/004_G4.png
+     ① 수인성
+     ② 접촉매개성
+     ③ 식품매개성   <== 정답
+     ④ 토양매개성
+    해설: 광절열두조충 두절 — 흡반(sucker)과 갈고리(hook)가 없음 / 길쭉한 홈 모양의 sucking groove (bothrium) 2개만 관찰
+          광절열두조충의 전파 방식은 식품매개성이다.
+          출제 포인트: 충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만
+
+23. [감염형] 다음 기생충의 감염형으로 옳은 것은?
+    사진: jms_nematoda/선충_Nematodes/006_H6.png
+     ① 성충·약충·알
+     ② 사상유충 (filariform larva, L3)   <== 정답
+     ③ 자충포장란 (embryonated egg)
+     ④ 피낭유충 (encysted larva)
+    해설: 두비니구충 성충 — 구강에 투명하게 반짝이는 송곳니 2쌍 (hook-like teeth) / 꼬리에 copulatory bursa
+          두비니구충의 인체 감염형은 사상유충 (filariform larva, L3)이다.
+          dorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)
+          출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지
+
+24. [감염경로] 환자에게서 다음 표본이 검출되었다. 감염 원인은?
+    사진: eunju/기생충_실습_(조충류,_흡충류)_002_6.png
+     ① 개 분변의 충란
+     ② 유구조충 충란에 오염된 음식·손
+     ③ 물벼룩이 든 생수, 뱀·개구리 생식, 개구리 살을 상처에 붙이는 민간요법   <== 정답
+     ④ 연어·송어·농어 생식
+    해설: 고충 조직절편 — 성긴 스폰지 모양 실질 구조 / 내부에 보라색으로 염색되는 calcium (calcareous) corpuscle
+          만손열두조충은(는) 경구감염 / 상처 접촉으로 감염되며, 감염원은 물벼룩이 든 생수, 뱀·개구리 생식, 개구리 살을 상처에 붙이는 민간요법이다.
+          출제 포인트: gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle
+
+25. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+    사진: tonghap/흡충/002_G2.png
+     ① bile duct
+     ② fibrosis
+     ③ worm capsule   <== 정답
+     ④ gelatin layer
+    해설: 폐흡충 조직절편 (폐) — 폐 조직 내 worm capsule / 주변에 다수의 충란
+          출제 포인트: 충란 - 90um 그룹, operculum + abopercular thickening. 성충 - plump ovoid, 적갈색, 6개 lobe로 나뉜 ovary. 슬라이드가 두껍게 mounting 되어 있음
+
+26. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+    사진: jiseok/실습_5_003_7.png
+     ① proboscis   <== 정답
+     ② claw
+     ③ gelatin layer
+     ④ leg
+    해설: 흡혈성 침노린재 — 빈대보다 크고 길쭉함 (1-3cm) / 뾰족하고 긴 주둥이
+          빈대와 감별 — 침노린재는 샤가스병을 매개
+          출제 포인트: 빈대(Cimex)와 혼동 주의 — 빈대는 질병을 매개하지 않고 침노린재는 샤가스병을 매개
+
+27. [감염경로] 다음 기생충의 감염 원인으로 알맞은 것은?
+    사진: jiseok/실습_5_002_6.png
+     ① 오염된 식수·음식, 가축·애완동물·감염자 접촉   <== 정답
+     ② 오염된 렌즈 세척액·물
+     ③ 비말·공기
+     ④ 포낭에 오염된 물·음식
+    해설: 작은와포자충 oocyst (MAF 염색) — 파란 배경에 분홍·붉은색으로 염색된 둥근 oocyst / 크기 4-6um
+          작은와포자충은(는) 경구감염으로 감염되며, 감염원은 오염된 식수·음식, 가축·애완동물·감염자 접촉이다.
+          출제 포인트: 장 조직에서 미세융모에 붙은 작은 점들. MAF 염색에서 파란 배경에 분홍색 oocyst
+
+28. [종 동정] 다음 기생충의 학명으로 옳은 것은?
+    사진: jms_nematoda/선충_Nematodes/014_H14.png
+     ① Ancylostoma duodenale
+     ② Anisakis simplex
+     ③ Enterobius vermicularis   <== 정답
+     ④ Strongyloides stercoralis
     해설: 요충 성충 (현미경) — 머리쪽에 투명한 키틴성 날개 cephalic alae / 수컷은 꼬리가 나선형으로 말리고 caudal alae
           출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)
 
-29. [진단] 다음 기생충을 진단하는 검사로 알맞은 것은?
-    사진: jiseok/실습_4_001_18.png
-     ① 대변검사
-     ② 폐포세척액·객담·생검
-     ③ 질 분비물 현미경 관찰   <== 정답
-     ④ 혈액·림프액 도말 Giemsa
+29. [종 동정] 다음은 어떤 기생충인가?
+    사진: eunju/기생충_실습_(조충류,_흡충류)_001_3.png
+     ① Clonorchis sinensis
+     ② Schistosoma japonicum   <== 정답
+     ③ Gymnophalloides seoi
+     ④ Paragonimus westermani
+    해설: 일본주혈흡충 자웅 합체 — 자웅이체 — 수컷의 gynecophoral canal(포자관)에 가느다란 암컷이 끼어 있음 / 수컷 6-10mm
+          출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태
+
+30. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+    사진: jms_nematoda/선충_Nematodes/008_H8.png
+     ① hook-like teeth
+     ② chitin layer
+     ③ gelatin layer
+     ④ copulatory bursa   <== 정답
+    해설: 아메리카구충 성충 — 구강에 칼날 모양 cutting plate 1쌍 (송곳니 아님) / dorsal costa가 깊게 2분지 후 각각 2분지 (2+2)
+          dorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)
+          출제 포인트: 구강에 칼날 모양 cutting plate 1쌍. dorsal costa 깊게 2분지 → 각각 2분지
+
+31. [종 동정] 다음 기생충의 학명으로 옳은 것은?
+    사진: tonghap/조충/008_D8.png
+     ① Diphyllobothrium latum
+     ② Taenia solium
+     ③ Spirometra erinacei
+     ④ Taenia saginata   <== 정답
+    해설: 무구조충 편절 — 자궁측지 13개 이상, 얇고 많음 / 위아래로 긴 사각형
+          출제 포인트: 두절이 납작하고 갈고리 없음 (sucker 4개만). 자궁측지 13개 이상, 얇고 많음. 사람에서 낭미충증을 일으키지 않음
+
+32. [감염경로] 다음 기생충의 감염 원인으로 알맞은 것은?
+    사진: jiseok/실습_5_001_9.png
+     ① 고양이 분변에 오염된 채소·식수   <== 정답
+     ② 따뜻한 담수
+     ③ 모래파리
+     ④ 체체파리
+    해설: 톡소포자충 tissue cyst (뇌) — 뇌 조직 안에 둥근 tissue cyst / cyst 내부에 매우 많은 bradyzoite가 빽빽하게 들어참
+          톡소포자충은(는) 경구감염 / 수직감염 / 수혈·장기이식으로 감염되며, 감염원은 고양이 분변에 오염된 채소·식수 (oocyst), 덜 익힌 고기 (tissue cyst)이다.
+          출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골
+
+33. [진단] 다음 기생충 감염의 진단법으로 옳은 것은?
+    사진: eunju/기생충_실습_(protozoa)_001_21.png
+     ① 질 분비물 현미경 관찰   <== 정답
+     ② 혈액·림프액 도말 Giemsa
+     ③ 혈청 IgG/IgM
+     ④ 대변검사
     해설: 질편모충 영양형 — 핵 1개 / 앞쪽으로 뻗은 편모 4개
           질편모충 진단: 질 분비물 현미경 관찰
           출제 포인트: 핵 1개 + 앞쪽 4개 편모 + 한쪽에 undulating membrane (파동막). 포낭기가 없는 것이 특징
 
-30. [종 동정] 다음 기생충의 학명으로 옳은 것은?
-    사진: tonghap/조충/004_E4.png
-     ① Taenia asiatica
-     ② Cysticercus cellulosae
-     ③ Spirometra erinacei   <== 정답
-     ④ Diphyllobothrium latum
-    해설: 고충 (육안) — 하얀 고무줄처럼 쭈굴쭈굴하고 길다 / 편절 구분이 없음
-          출제 포인트: gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle
+34. [종 동정] 다음 기생충의 학명으로 옳은 것은?
+    사진: practical/089_2.png
+     ① Plasmodium knowlesi
+     ② Plasmodium vivax   <== 정답
+     ③ Plasmodium ovale
+     ④ Plasmodium falciparum
+    해설: 삼일열원충 얇은 도말 — 감염된 RBC가 커지고 옅어짐 / multiple ring 없음, ring이 RBC 지름의 1/3
+          출제 포인트: RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot
 
-31. [감염경로] 다음 기생충의 전파 방식은?
-    사진: eunju/기생충_실습_(조충류,_흡충류)_002_7.png
-     ① 절지동물매개성
-     ② 패류매개성
-     ③ 식품매개성   <== 정답
-     ④ 접촉매개성
-    해설: 고충 조직절편 — 성긴 스폰지 모양 실질 구조 / 내부에 보라색으로 염색되는 calcium (calcareous) corpuscle
-          만손열두조충의 전파 방식은 식품매개성이다.
-          출제 포인트: gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle
-
-32. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
-    사진: tonghap/조충/002_H2.png
-     ① uterine branch
-     ② uterine pore   <== 정답
-     ③ sucking groove
-     ④ gelatin layer
-    해설: 광절열두조충 편절 — 좌우로 넓은 사각형 편절 / 가운데에 rosette (꽃모양) uterus
-          출제 포인트: 충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만
-
-33. [감염경로] 다음 기생충이 감염되는 방식은?
-    사진: jiseok/실습_4_001_13.png
-     ① 수인성   <== 정답
-     ② 공기매개
-     ③ 성접촉
-     ④ 절지동물매개성
-    해설: 람블편모충 포낭 — 타원형, 10-12um / 핵 2-4개가 한쪽 끝에 몰려 있음
-          람블편모충의 전파 방식은 수인성이다.
-          출제 포인트: 영양형 - pear/올빼미 얼굴 모양, 핵 2개, 4쌍 편모, sucking disc. 포낭 - 타원형, 핵 2-4개가 한쪽에 몰림, axostyle 주변 fibril. 조직 파괴는 하지 않음
-
-34. [감염형] 다음 기생충의 인체 감염형은?
-    사진: jms_trematoda/흡충_Trematodes/004_F4.png
-     ① 피낭유충 (metacercaria)   <== 정답
-     ② 성충·유충
-     ③ 유미유충 (cercaria)
-     ④ 자충포장란 (embryonated egg)
-    해설: 간질 성충 — 크고 납작한 나뭇잎 모양 (약 3cm) / 머리쪽이 원뿔형으로 돌출 (conical projection = cephalic cone)
-          간질의 인체 감염형은 피낭유충 (metacercaria) / 유약충이다.
-          출제 포인트: 납작한 나뭇잎 모양 + conical projection (= cephalic cone). highly branched intestine·testes·vitellaria. 조직에서는 구멍이 송송 뚫린 내부
-
-35. [감염경로] 환자에게서 다음 표본이 검출되었다. 감염 원인은?
-    사진: note/[260902_05]_감염의_기초_실습__043_2.png
-     ① 충란에 오염된 손·침구·먼지
-     ② 오염 토양
-     ③ 충란에 오염된 토양, 소 생간 등 유충을 포함한 내장육
-     ④ 덜 익힌 돼지고기·야생동물 고기·가공식품   <== 정답
-    해설: 선모충 피낭유충 (근육) — 횡문근 안에 nursing cell complex 형성 / 유충이 돌돌 말린 채로 들어 있음
-          선모충은(는) 경구감염으로 감염되며, 감염원은 덜 익힌 돼지고기·야생동물 고기·가공식품이다.
-          출제 포인트: 근육 조직절편에서 nursing cell complex 내부에 돌돌 말린 유충 — 조직 문제 단골
-
-36. [감염경로] 다음 기생충의 감염 원인으로 알맞은 것은?
-    사진: jms_trematoda/흡충_Trematodes/006_H6.png
-     ① 자연산 굴 생식
-     ② 얼룩동사리·버들치·미꾸라지 생식
-     ③ 민물고기 생식   <== 정답
-     ④ 유미유충이 있는 민물 접촉
-    해설: 간흡충 성충 — 납작한 나뭇잎 모양, 10-25mm / 몸 뒤쪽에 나뭇가지처럼 갈라진 branched testis 2개
-          간흡충은(는) 경구감염으로 감염되며, 감염원은 민물고기 생식 (잉어·붕어·향어·모래무지·빙어)이다.
-          출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
-
-37. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
-    사진: tonghap/선충/019_D19.png
-     ① gelatin layer
-     ② caudal alae
-     ③ ventricle   <== 정답
-     ④ cephalic alae
-    해설: 고래회충 유충 (현미경) — 머리에 boring tooth (상어 지느러미처럼 튀어나옴) / 꼬리에 mucron
+35. [종 동정] 다음 기생충의 학명으로 옳은 것은?
+    사진: note/[260902_05]_감염의_기초_실습__052_3.png
+     ① Ascaris lumbricoides
+     ② Necator americanus
+     ③ Anisakis simplex   <== 정답
+     ④ Enterobius vermicularis
+    해설: 고래회충 유충 (육안) — 약 2cm, 유백색의 실 모양 / 생선 내장·근육에 나선형으로 말려 있음
           출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell
 
-38. [종 동정] 다음 기생충의 학명으로 옳은 것은?
-    사진: note/[260902_05]_감염의_기초_실습__018_1.png
-     ① Trichuris trichiura   <== 정답
-     ② Strongyloides stercoralis
+36. [감염형] 다음 기생충의 감염형으로 옳은 것은?
+    사진: eunju/기생충_실습_(protozoa)_001_15.png
+     ① trypomastigote
+     ② oocyst
+     ③ 포낭   <== 정답
+     ④ 영양형
+    해설: 왜소아메바 포낭 — 크기가 매우 작음 (RBC보다 조금 큰 수준) / 핵 1-4개
+          왜소아메바의 인체 감염형은 포낭이다.
+          출제 포인트: 크기가 매우 작고 핵 1-4개. karyosome이 커서 핵에 빈 공간이 없음. 족보에 Entamoeba nana로 잘못 표기되어 나온 적 있음 — 정명은 Endolimax nana
+
+37. [기생부위] 다음 기생충의 성충 기생 부위는?
+    사진: jms_protozoa/원충_Protozoa/026_G26.png
+     ① 질·요도 lumen
+     ② 폐포   <== 정답
+     ③ 피부 대식세포
+     ④ 혈액·림프절·심근·뇌
+    해설: 폐포자충 (Diff-Quik, 폐) — 폐포 안에 거품 같은 exudate / cyst 안에 매우 작은 8개의 핵 (octa-nucleated cyst)
+          폐포자충 성충은 폐포 (type I pneumocyte 외벽)에 기생한다.
+          출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)
+
+38. [indicator] 다음 표본에서 표시가 가리키는 구조물은?
+    사진: practical_ind/082_3.png
+     ① Schuffner dot
+     ② RBC
+     ③ schizont
+     ④ gametocyte   <== 정답
+    해설: 열대열원충 얇은 도말 — RBC 크기 변화 없음 / 한 적혈구에 여러 개의 ring (multiple ring form)
+          출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾
+
+39. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
+    사진: jms_trematoda/흡충_Trematodes/012_H12.png
+     ① gelatin layer
+     ② tribocytic organ   <== 정답
+     ③ uterus
+     ④ ventral pit
+    해설: 서울주걱흡충 성충 — 앞쪽이 주걱처럼 넓게 퍼진 모양 / tribocytic organ (제2의 입) 이 결정적 감별점
+          출제 포인트: 주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습
+
+40. [종 동정] 다음 기생충의 학명으로 옳은 것은?
+    사진: jms_trematoda/흡충_Trematodes/006_F6.png
+     ① Opisthorchis viverrini
+     ② Schistosoma mansoni
+     ③ Clonorchis sinensis   <== 정답
+     ④ Fasciola hepatica
+    해설: 간흡충 성충 — 납작한 나뭇잎 모양, 10-25mm / 몸 뒤쪽에 나뭇가지처럼 갈라진 branched testis 2개
+          출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
+======================================================================
+모의 땡시 4세트  (40문항)
+======================================================================
+
+ 1. [충란 동정] 다음 충란을 가지는 기생충은?
+    사진: jms_egg/충란_Helminth_eggs/007_D7.png
+     ① Ancylostoma duodenale
+     ② Enterobius vermicularis   <== 정답
+     ③ Trichuris trichiura
+     ④ Ascaris lumbricoides
+    해설: 요충 충란 — 한쪽이 편평하고 반대쪽이 볼록한 비대칭 타원형 / 커피콩·죠리퐁·감씨 모양
+          출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)
+
+ 2. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
+    사진: tonghap/충란/004_D4.png
+     ① granuloma
+     ② gynecophoral canal
+     ③ shoulder   <== 정답
+     ④ gelatin layer
+    해설: 간흡충 충란 — 전구·플라스크 모양 / operculum 주변이 어깨처럼 튀어나옴 (shouldering)
+          출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
+
+ 3. [충란 동정] 다음은 어떤 기생충의 충란인가?
+    사진: note/[260831_05]_감염의_기초_실습__074_1.png
+     ① Ascaris lumbricoides   <== 정답
+     ② Taenia solium
+     ③ Ancylostoma duodenale
+     ④ Anisakis simplex
+    해설: 회충 수정란 — 난원형, 두꺼운 충란벽 / 3 layer 구조 (바깥 albumin - chitin - lipoid)
+          출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제
+
+ 4. [충란 동정] 다음은 어떤 기생충의 충란인가?
+    사진: tonghap/충란/014_F14.png
+     ① Schistosoma japonicum
+     ② Gymnophalloides seoi
+     ③ Schistosoma haematobium   <== 정답
+     ④ Schistosoma mansoni
+    해설: 방광주혈흡충 충란 — 큰 방추형 / 아래쪽 끝에 돌출된 terminal spine
+          출제 포인트: 충란 아래쪽 끝에 terminal spine (말단 돌기) — 만손(lateral)과의 결정적 감별점
+
+ 5. [충란 동정] 다음은 어떤 기생충의 충란인가?
+    사진: tonghap/충란/009_F9.png
+     ① Ascaris lumbricoides
+     ② Hookworm   <== 정답
      ③ Enterobius vermicularis
+     ④ Diphyllobothrium latum
+    해설: 구충 충란 — 타원형, 충란벽이 키틴층 하나로 얇고 투명 / 내부에 난할된 세포가 여러 개 (4-8 cell stage)
+          두비니구충과 아메리카구충의 충란은 구별 불가 — 답은 Hookworm
+          출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지
+
+ 6. [감염경로] 환자에게서 다음 표본이 검출되었다. 감염 원인은?
+    사진: tonghap/충란/013_D13.png
+     ① 민물 갑각류 생식
+     ② 얼룩동사리·버들치·미꾸라지 생식
+     ③ 유미유충이 있는 민물 접촉   <== 정답
+     ④ 민물고기 생식
+    해설: 만손주혈흡충 충란 — 매우 큼 (100um 이상) / 옆구리에 뚜렷하게 돌출된 lateral spine
+          만손주혈흡충은(는) 경피감염으로 감염되며, 감염원은 유미유충이 있는 민물 접촉이다.
+          출제 포인트: 충란이 가장 큼 (100um 이상) + 뚜렷한 lateral spine (측방 돌기)
+
+ 7. [증상·질병] 다음 충란을 가지는 기생충이 일으키는 질환은?
+    사진: eunju/기생충_실습_(연충란)_001_16.png
+     ① 폐흡충증   <== 정답
+     ② 간질증
+     ③ 극구흡충증
+     ④ 만손주혈흡충증
+    해설: 폐흡충 충란 — 황갈색의 큰 난원형 / 한쪽 끝에 뚜렷한 operculum
+          폐흡충 감염증의 병명은 폐흡충증 (paragonimiasis)이다.
+          출제 포인트: 충란 - 90um 그룹, operculum + abopercular thickening. 성충 - plump ovoid, 적갈색, 6개 lobe로 나뉜 ovary. 슬라이드가 두껍게 mounting 되어 있음
+
+ 8. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+    사진: tonghap/충란/012_D12.png
+     ① terminal spine
+     ② gelatin layer
+     ③ lateral spine   <== 정답
+     ④ oral sucker
+    해설: 일본주혈흡충 충란 — 둥글고 통통함 (주혈흡충 중 가장 작고 둥금) / 매우 작은 lateral spine — 잘 보이지 않음
+          출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태
+
+ 9. [충란 동정] 다음은 어떤 기생충의 충란인가?
+    사진: tonghap/충란/005_D5.png
+     ① Clonorchis sinensis
+     ② Schistosoma mansoni
+     ③ Schistosoma japonicum
+     ④ Metagonimus yokogawai   <== 정답
+    해설: 요코가와흡충 충란 — 간흡충과 크기가 같으나 충란벽이 매끄러움 (muskmelon 무늬 없음) / shouldering이 뚜렷하지 않음
+          출제 포인트: 충란은 간흡충과 크기가 같은 30um이지만 충란벽이 매끄러움 (muskmelon 무늬 없음). 성충은 ventral sucker가 한쪽으로 치우침
+
+10. [충란 동정] 다음은 어떤 기생충의 충란인가?
+    사진: note/[260831_05]_감염의_기초_실습__075_4.png
+     ① Diphyllobothrium latum
+     ② Taenia spp.   <== 정답
+     ③ Cysticercus cellulosae
+     ④ Clonorchis sinensis
+    해설: 유무구조충 충란 — 원형 또는 타원형 / 두껍고 방사상 무늬의 embryophoral block
+          유구조충과 무구조충의 충란은 구별 불가 — 답은 Taenia spp.
+          출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)
+
+11. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
+    사진: eunju/기생충_실습_(연충란)_001_6.png
+     ① Trichuris trichiura   <== 정답
+     ② Ascaris lumbricoides
+     ③ Anisakis simplex
      ④ Ancylostoma duodenale
+    해설: 편충 충란 — 양쪽 끝에 투명한 mucoid plug / 나뭇잎·럭비공·barrel 모양
+          출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골
+
+12. [기생부위] 다음 기생충의 성충 기생 부위는?
+    사진: eunju/기생충_실습_(protozoa)_001_8.png
+     ① 단핵구·망상내피계
+     ② 대장 lumen   <== 정답
+     ③ 혈액·림프절·비장·중추신경계
+     ④ 십이지장
+    해설: 대장아메바 포낭 — 핵이 4-8개로 많음 / karyosome이 크고 한쪽으로 치우침 (붓으로 꾹 누른 모양)
+          대장아메바 성충은 대장 lumen (조직 침입 없음)에 기생한다.
+          출제 포인트: 핵 4-8개 (최대 8개), karyosome이 크고 한쪽으로 치우침 (붓으로 누른 모양), peripheral chromatin 두께 불규칙 — 이질아메바와의 감별이 핵심
+
+13. [종 동정] 다음 기생충의 학명으로 옳은 것은?
+    사진: jiseok/실습_3_002_5.png
+     ① Metagonimus yokogawai
+     ② Paragonimus westermani
+     ③ Schistosoma japonicum
+     ④ Gymnophalloides seoi   <== 정답
+    해설: 참굴큰입흡충 성충 — 몸에 비해 거대한 oral sucker / ventral sucker 앞쪽에 홈처럼 파인 ventral pit
+          출제 포인트: 거대한 oral sucker + ventral sucker 앞의 홈 (ventral pit) 이 결정적 감별점
+
+14. [감염형] 다음 기생충의 인체 감염형은?
+    사진: note/[260904_05]_감염의_기초_실습__014_3.png
+     ① 내장낭미충 (Cysticercus viscerotropica)
+     ② 유구낭미충 (Cysticercus cellulosae)   <== 정답
+     ③ 무구낭미충 (Cysticercus bovis)
+     ④ 충란
+    해설: 유구조충 편절 — 자궁측지 13개 이하, 두껍고 듬성듬성 / 위아래로 긴 사각형
+          유구조충의 인체 감염형은 유구낭미충 (Cysticercus cellulosae)이다.
+          출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)
+
+15. [증상·질병] 다음 기생충이 일으키는 질환은?
+    사진: eunju/기생충_실습_(선충류)_001_26.png
+     ① 선모충증   <== 정답
+     ② 회충증
+     ③ 구충증
+     ④ 림프사상충증
+    해설: 선모충 피낭유충 (근육) — 횡문근 안에 nursing cell complex 형성 / 유충이 돌돌 말린 채로 들어 있음
+          선모충 감염증의 병명은 선모충증 (trichinellosis)이다.
+          출제 포인트: 근육 조직절편에서 nursing cell complex 내부에 돌돌 말린 유충 — 조직 문제 단골
+
+16. [종 동정] 다음 기생충의 학명으로 옳은 것은?
+    사진: jms_arthropoda/의용곤충_Anthropods/009_G9.png
+     ① Leptotrombidium spp.
+     ② Dermatophagoides pteronyssinus
+     ③ Haemaphysalis longicornis   <== 정답
+     ④ Pediculus humanus
+    해설: 작은소피참진드기 — 단단한 등판(scutum)을 가진 참진드기 / 흡혈 후 몸이 콩알처럼 부풀어 오름
+          출제 포인트: 몸에 붙어 커진 진드기를 보여주고 매개질환을 묻는 문제 — 답은 SFTS. 털진드기(쯔쯔가무시)와 감별
+
+17. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+    사진: jms_protozoa/원충_Protozoa/005_F5.png
+     ① gelatin layer
+     ② microvillus
+     ③ karyosome   <== 정답
+     ④ flagella
+    해설: 이질아메바 포낭 — 핵이 4개 이하로 듬성듬성 / karyosome 중앙 위치
+          출제 포인트: 영양형 - karyosome 중앙 + peripheral chromatin 두께 균일, RBC 탐식. 포낭 - 핵 4개 이하. 조직 - flask-shaped ulcer
+
+18. [감염경로] 다음 기생충의 전파 방식은?
+    사진: jms_trematoda/흡충_Trematodes/004_F4.png
+     ① 절지동물매개성
+     ② 수인성
+     ③ 패류매개성
+     ④ 식품매개성   <== 정답
+    해설: 간질 성충 — 크고 납작한 나뭇잎 모양 (약 3cm) / 머리쪽이 원뿔형으로 돌출 (conical projection = cephalic cone)
+          간질의 전파 방식은 식품매개성이다.
+          출제 포인트: 납작한 나뭇잎 모양 + conical projection (= cephalic cone). highly branched intestine·testes·vitellaria. 조직에서는 구멍이 송송 뚫린 내부
+
+19. [숙주] 다음 기생충의 종숙주로 옳은 것은?
+    사진: jms_protozoa/원충_Protozoa/014_F14.png
+     ① 사람·포유류   <== 정답
+     ② 사람·개·설치류
+     ③ 사람·동물
+     ④ 돼지
+    해설: 크루스파동편모충 심근 조직절편 — 심근세포 안에 동글동글하게 들어찬 amastigote 무리 / 주변 심근염
+          크루스파동편모충의 종숙주는 사람·포유류이다.
+          출제 포인트: 혈액에서는 trypomastigote (핵 + kinetoplast + 편모 + 파동막), 심근세포 안에서는 amastigote 무리. 배열이 편모 → 핵 → kinetoplast 순서 (리슈만과 반대)
+
+20. [indicator] 다음 표본에서 표시가 가리키는 구조물은?
+    사진: practical_ind/082_3.png
+     ① Schuffner dot
+     ② RBC
+     ③ schizont
+     ④ gametocyte   <== 정답
+    해설: 열대열원충 얇은 도말 — RBC 크기 변화 없음 / 한 적혈구에 여러 개의 ring (multiple ring form)
+          출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾
+
+21. [종 동정] 다음 기생충의 학명으로 옳은 것은?
+    사진: tonghap/흡충/003_D3.png
+     ① Metagonimus yokogawai
+     ② Gymnophalloides seoi
+     ③ Clonorchis sinensis   <== 정답
+     ④ Fasciola hepatica
+    해설: 간흡충 성충 (육안) — 바질시드 모양의 작고 납작한 나뭇잎형 / 10-25mm
+          출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
+
+22. [증상·질병] 다음 기생충에 감염된 환자의 병명으로 옳은 것은?
+    사진: jms_nematoda/선충_Nematodes/009_H9.png
+     ① 회충증
+     ② 분선충증   <== 정답
+     ③ 림프사상충증
+     ④ 구충증
+    해설: 분선충 사상유충 — 식도의 직경이 일정하고 길다 / 꼬리 끝이 갈라짐 (notched tail)
+          분선충 감염증의 병명은 분선충증 (strongyloidiasis)이다.
+          출제 포인트: 간상유충 (rhabditoid) = 백열전구 모양 식도 / 사상유충 (filariform) = 직경 일정한 식도 + notched tail. 구충 유충과는 꼬리 모양으로 감별
+
+23. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
+    사진: note/[260904_05]_감염의_기초_실습__029_3.png
+     ① Spirometra erinacei   <== 정답
+     ② Echinococcus granulosus
+     ③ Taenia saginata
+     ④ Cysticercus cellulosae
+    해설: 고충 조직절편 — 성긴 스폰지 모양 실질 구조 / 내부에 보라색으로 염색되는 calcium (calcareous) corpuscle
+          출제 포인트: gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle
+
+24. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
+    사진: jiseok/실습_3_002_9.png
+     ① Clonorchis sinensis
+     ② Fasciola hepatica
+     ③ Neodiplostomum seoulense   <== 정답
+     ④ Cryptosporidium parvum
+    해설: 서울주걱흡충 조직절편 (소장) — 충체가 tribocytic organ으로 융모를 빨아먹는 모습 / 융모 위축(fusion, blunting) + 음와 증식 → V/C 비 감소
+          출제 포인트: 주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습
+
+25. [감염경로] 환자에게서 다음 표본이 검출되었다. 감염 원인은?
+    사진: jms_cestoda/조충_Cestodes/007_H7.png
+     ① 소고기 육회 등 덜 익힌 소고기   <== 정답
+     ② 덜 익힌 돼지고기
+     ③ 연어·송어·농어 생식
+     ④ 돼지 간 생식
+    해설: 무구조충 편절 — 자궁측지 13개 이상, 얇고 많음 / 위아래로 긴 사각형
+          무구조충은(는) 경구감염으로 감염되며, 감염원은 소고기 육회 등 덜 익힌 소고기이다.
+          출제 포인트: 두절이 납작하고 갈고리 없음 (sucker 4개만). 자궁측지 13개 이상, 얇고 많음. 사람에서 낭미충증을 일으키지 않음
+
+26. [종 동정] 다음 기생충의 학명으로 옳은 것은?
+    사진: eunju/기생충_실습_(포자충류,_말라리아,_의용_001_3.png
+     ① Cryptosporidium parvum
+     ② Balantidium coli
+     ③ Toxoplasma gondii   <== 정답
+     ④ Leishmania donovani
+    해설: 톡소포자충 tachyzoite — 초승달·활 모양 (arc shaped) / 편모나 섬모가 없음
+          출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골
+
+27. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
+    사진: tonghap/선충/022_F22.png
+     ① gelatin layer
+     ② ventricle
+     ③ mucron
+     ④ caudal alae   <== 정답
+    해설: 요충 성충 (현미경) — 머리쪽에 투명한 키틴성 날개 cephalic alae / 수컷은 꼬리가 나선형으로 말리고 caudal alae
+          출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)
+
+28. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+    사진: note/[260902_05]_감염의_기초_실습__016_1.png
+     ① filariform esophagus
+     ② gelatin layer
+     ③ stichocyte   <== 정답
+     ④ notched tail
     해설: 편충 성충 (현미경) — 채찍 모양 — 앞 3/5이 가늘고 뒤 2/5가 굵음 / 가는 쪽이 머리
           출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골
 
-39. [숙주] 다음 기생충의 종숙주로 옳은 것은?
-    사진: note/[260903_05]_감염의_기초_실습3_027_1.png
-     ① 사람·설치류
-     ② 양·소 등 초식동물, 사람   <== 정답
-     ③ 사람·쥐
-     ④ 사람·개
+29. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
+    사진: jms_nematoda/선충_Nematodes/008_H8.png
+     ① Anisakis simplex
+     ② Ascaris lumbricoides
+     ③ Ancylostoma duodenale
+     ④ Necator americanus   <== 정답
+    해설: 아메리카구충 성충 — 구강에 칼날 모양 cutting plate 1쌍 (송곳니 아님) / dorsal costa가 깊게 2분지 후 각각 2분지 (2+2)
+          dorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)
+          출제 포인트: 구강에 칼날 모양 cutting plate 1쌍. dorsal costa 깊게 2분지 → 각각 2분지
+
+30. [감염형] 다음 기생충의 인체 감염형은?
+    사진: jms_protozoa/원충_Protozoa/026_G26.png
+     ① trypomastigote
+     ② promastigote
+     ③ cyst   <== 정답
+     ④ 영양형
+    해설: 폐포자충 (Diff-Quik, 폐) — 폐포 안에 거품 같은 exudate / cyst 안에 매우 작은 8개의 핵 (octa-nucleated cyst)
+          폐포자충의 인체 감염형은 cyst이다.
+          출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)
+
+31. [감염경로] 다음 기생충의 감염 원인으로 알맞은 것은?
+    사진: tonghap/조충/009_H9.png
+     ① 소고기 육회 등 덜 익힌 소고기
+     ② 유구조충 충란에 오염된 음식·손   <== 정답
+     ③ 개 분변의 충란
+     ④ 연어·송어·농어 생식
+    해설: 유구낭미충 (현미경) — cyst 안으로 scolex가 말려 들어가 있음 / scolex의 갈고리와 흡반이 진하게 보임
+          유구낭미충은(는) 경구감염 (유구조충 충란 섭취)으로 감염되며, 감염원은 유구조충 충란에 오염된 음식·손 (자가감염 포함)이다.
+          출제 포인트: gross - 투명한 cyst 안에 하얀 scolex. 조직 - cyst + 양치식물 모양 neck/scolex, 갈고리 진하게 보임. 고충증(sparganosis)과의 감별이 단골
+
+32. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+    사진: jms_nematoda/선충_Nematodes/003_H3.png
+     ① stichosome
+     ② Renette cell
+     ③ Y-shaped intestinal lumen
+     ④ cuticle   <== 정답
+    해설: 회충 단면 — 소화관 lumen을 단층 원주상피가 둘러쌈 / 양 옆에 lateral cord (족보에는 lateral chord 표기도 등장)
+          출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제
+
+33. [진단] 다음 기생충을 진단하는 검사로 알맞은 것은?
+    사진: jms_protozoa/원충_Protozoa/011_G11.png
+     ① 골수·비장 천자
+     ② 혈액·림프액 도말 Giemsa
+     ③ 혈액도말 Giemsa
+     ④ 질 분비물 현미경 관찰   <== 정답
+    해설: 질편모충 영양형 — 핵 1개 / 앞쪽으로 뻗은 편모 4개
+          질편모충 진단: 질 분비물 현미경 관찰
+          출제 포인트: 핵 1개 + 앞쪽 4개 편모 + 한쪽에 undulating membrane (파동막). 포낭기가 없는 것이 특징
+
+34. [기생부위] 다음 기생충의 성충 기생 부위는?
+    사진: eunju/기생충_실습_(포자충류,_말라리아,_의용_001_12.png
+     ① 혈액·림프절·비장·중추신경계
+     ② 소장 상피세포 미세융모   <== 정답
+     ③ 대장
+     ④ 십이지장
+    해설: 작은와포자충 oocyst (MAF 염색) — 파란 배경에 분홍·붉은색으로 염색된 둥근 oocyst / 크기 4-6um
+          작은와포자충 성충은 소장 상피세포 미세융모 (intracellular extracytoplasmic)에 기생한다.
+          출제 포인트: 장 조직에서 미세융모에 붙은 작은 점들. MAF 염색에서 파란 배경에 분홍색 oocyst
+
+35. [indicator] Indicator(표시)가 가리키는 구조물의 이름은?
+    사진: practical_ind/088_1.png
+     ① gelatin layer
+     ② schizont   <== 정답
+     ③ ring form
+     ④ gametocyte
+    해설: 삼일열원충 두꺼운 도말 — 적혈구가 용혈되어 원충만 남음 / ring form과 schizont가 함께 보임
+          출제 포인트: RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot
+
+36. [감염경로] 다음 기생충의 전파 방식은?
+    사진: jms_nematoda/선충_Nematodes/015_G15.png
+     ① 토양매개성
+     ② 절지동물매개성
+     ③ 접촉매개성
+     ④ 식품매개성   <== 정답
+    해설: 고래회충 유충 (현미경) — 머리에 boring tooth (상어 지느러미처럼 튀어나옴) / 꼬리에 mucron
+          고래회충의 전파 방식은 식품매개성이다.
+          출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell
+
+37. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
+    사진: practical/088_2.png
+     ① Plasmodium vivax   <== 정답
+     ② Plasmodium knowlesi
+     ③ Plasmodium falciparum
+     ④ Plasmodium ovale
+    해설: 삼일열원충 얇은 도말 — 감염된 RBC가 커지고 옅어짐 / multiple ring 없음, ring이 RBC 지름의 1/3
+          출제 포인트: RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot
+
+38. [감염경로] 다음 기생충의 감염 원인으로 알맞은 것은?
+    사진: tonghap/조충/010_D10.png
+     ① 개 분변의 충란
+     ② 유구조충 충란에 오염된 음식·손   <== 정답
+     ③ 소고기 육회 등 덜 익힌 소고기
+     ④ 연어·송어·농어 생식
+    해설: 유구낭미충 (육안) — 쌀알 크기의 투명한 cyst / cyst 안에 하얀 점처럼 scolex가 보임
+          유구낭미충은(는) 경구감염 (유구조충 충란 섭취)으로 감염되며, 감염원은 유구조충 충란에 오염된 음식·손 (자가감염 포함)이다.
+          출제 포인트: gross - 투명한 cyst 안에 하얀 scolex. 조직 - cyst + 양치식물 모양 neck/scolex, 갈고리 진하게 보임. 고충증(sparganosis)과의 감별이 단골
+
+39. [감염형] 다음 기생충의 인체 감염형은?
+    사진: eunju/기생충_실습_(선충류)_002_7.png
+     ① 자충포장란 (embryonated egg)
+     ② 해당 없음
+     ③ 피낭유충 (encysted larva)
+     ④ L3 유충   <== 정답
+    해설: 고래회충 유충 (육안) — 약 2cm, 유백색의 실 모양 / 생선 내장·근육에 나선형으로 말려 있음
+          고래회충의 인체 감염형은 L3 유충이다.
+          출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell
+
+40. [치료] 다음 기생충 감염의 치료로 옳은 것은?
+    사진: jms_protozoa/원충_Protozoa/013_F13.png
+     ① Pentamidine 복용
+     ② pentavalent antimonials 복용   <== 정답
+     ③ Metronidazole 복용
+     ④ Pyrimethamine 복용
+    해설: 내장리슈만편모충 amastigote (간·비장) — 대식세포 안에 점박이처럼 들어 있는 무편모형 / 편모가 보이지 않음
+          내장리슈만편모충 치료: pentavalent antimonials, Amphotericin B
+          출제 포인트: 사람 조직 내에서는 amastigote (무편모형, 세포 내 작은 점), 모래파리에서는 promastigote (전편모형). 간·비장 조직에서 세포 내 작은 dot으로 보임
+======================================================================
+모의 땡시 5세트  (40문항)
+======================================================================
+
+ 1. [증상·질병] 다음 충란을 가지는 기생충에 감염된 환자의 병명으로 옳은 것은?
+    사진: tonghap/충란/011_D11.png
+     ① 극구흡충증
+     ② 폐흡충증   <== 정답
+     ③ 서울주걱흡충증
+     ④ 참굴큰입흡충증
+    해설: 폐흡충 충란 — 황갈색의 큰 난원형 / 한쪽 끝에 뚜렷한 operculum
+          폐흡충 감염증의 병명은 폐흡충증 (paragonimiasis)이다.
+          출제 포인트: 충란 - 90um 그룹, operculum + abopercular thickening. 성충 - plump ovoid, 적갈색, 6개 lobe로 나뉜 ovary. 슬라이드가 두껍게 mounting 되어 있음
+
+ 2. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+    사진: tonghap/충란/002_D2.png
+     ① chitin layer   <== 정답
+     ② gelatin layer
+     ③ embryophoral block
+     ④ hooklet
+    해설: 회충 수정란 — 난원형, 두꺼운 충란벽 / 3 layer 구조 (바깥 albumin - chitin - lipoid)
+          출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제
+
+ 3. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
+    사진: jiseok/실습_1_002_3.png
+     ① Trichuris trichiura   <== 정답
+     ② Ascaris lumbricoides
+     ③ Necator americanus
+     ④ Strongyloides stercoralis
+    해설: 편충 충란 — 양쪽 끝에 투명한 mucoid plug / 나뭇잎·럭비공·barrel 모양
+          출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골
+
+ 4. [충란 동정] 다음은 어떤 기생충의 충란인가?
+    사진: tonghap/충란/005_E5.png
+     ① Paragonimus westermani
+     ② Metagonimus yokogawai   <== 정답
+     ③ Clonorchis sinensis
+     ④ Fasciola hepatica
+    해설: 요코가와흡충 충란 — 간흡충과 크기가 같으나 충란벽이 매끄러움 (muskmelon 무늬 없음) / shouldering이 뚜렷하지 않음
+          출제 포인트: 충란은 간흡충과 크기가 같은 30um이지만 충란벽이 매끄러움 (muskmelon 무늬 없음). 성충은 ventral sucker가 한쪽으로 치우침
+
+ 5. [충란 동정] 다음 현미경에서 관찰되는 충란의 기생충을 고르시오.
+    사진: eunju/기생충_실습_(연충란)_001_7.png
+     ① Enterobius vermicularis
+     ② Diphyllobothrium latum
+     ③ Strongyloides stercoralis
+     ④ Hookworm   <== 정답
+    해설: 구충 충란 — 타원형, 충란벽이 키틴층 하나로 얇고 투명 / 내부에 난할된 세포가 여러 개 (4-8 cell stage)
+          두비니구충과 아메리카구충의 충란은 구별 불가 — 답은 Hookworm
+          출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지
+
+ 6. [충란 동정] 다음 충란을 가지는 기생충은?
+    사진: jms_egg/충란_Helminth_eggs/008_D8.png
+     ① Clonorchis sinensis   <== 정답
+     ② Heterophyes nocens
+     ③ Paragonimus westermani
+     ④ Metagonimus yokogawai
+    해설: 간흡충 충란 — 전구·플라스크 모양 / operculum 주변이 어깨처럼 튀어나옴 (shouldering)
+          출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
+
+ 7. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
+    사진: tonghap/충란/010_F10.png
+     ① abopercular thickening
+     ② gelatin layer
+     ③ chitin layer
+     ④ operculum   <== 정답
+    해설: 광절열두조충 충란 — 갈색 타원형 / 한쪽에 operculum, 반대쪽에 작은 terminal knob
+          출제 포인트: 충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만
+
+ 8. [충란 동정] 다음은 어떤 기생충의 충란인가?
+    사진: eunju/기생충_실습_(연충란)_001_18.png
+     ① Taenia spp.   <== 정답
+     ② Clonorchis sinensis
+     ③ Diphyllobothrium latum
+     ④ Echinococcus multilocularis
+    해설: 유무구조충 충란 — 원형 또는 타원형 / 두껍고 방사상 무늬의 embryophoral block
+          유구조충과 무구조충의 충란은 구별 불가 — 답은 Taenia spp.
+          출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)
+
+ 9. [충란 동정] 다음 충란을 가지는 기생충은?
+    사진: note/[260831_05]_감염의_기초_실습__065_2.png
+     ① Schistosoma japonicum   <== 정답
+     ② Schistosoma haematobium
+     ③ Schistosoma mansoni
+     ④ Paragonimus westermani
+    해설: 일본주혈흡충 충란 — 둥글고 통통함 (주혈흡충 중 가장 작고 둥금) / 매우 작은 lateral spine — 잘 보이지 않음
+          출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태
+
+10. [충란 동정] 다음은 어떤 기생충의 충란인가?
+    사진: note/[260902_05]_감염의_기초_실습__050_1.png
+     ① Necator americanus
+     ② Ancylostoma duodenale
+     ③ Enterobius vermicularis   <== 정답
+     ④ Anisakis simplex
+    해설: 요충 충란 — 한쪽이 편평하고 반대쪽이 볼록한 비대칭 타원형 / 커피콩·죠리퐁·감씨 모양
+          출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)
+
+11. [종 동정] 다음은 어떤 기생충인가?
+    사진: jms_protozoa/원충_Protozoa/026_F26.png
+     ① Pneumocystis jirovecii   <== 정답
+     ② Endolimax nana
+     ③ Toxoplasma gondii
+     ④ Entamoeba coli
+    해설: 폐포자충 (Diff-Quik, 폐) — 폐포 안에 거품 같은 exudate / cyst 안에 매우 작은 8개의 핵 (octa-nucleated cyst)
+          출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)
+
+12. [감염형] 다음 기생충의 인체 감염형은?
+    사진: eunju/기생충_실습_(protozoa)_001_19.png
+     ① 4핵성 포낭   <== 정답
+     ② cyst
+     ③ 영양형
+     ④ trypomastigote
+    해설: 람블편모충 영양형 — 서양배(pear) 또는 올빼미 얼굴 모양 / 눈처럼 보이는 핵 2개
+          람블편모충의 인체 감염형은 4핵성 포낭이다.
+          출제 포인트: 영양형 - pear/올빼미 얼굴 모양, 핵 2개, 4쌍 편모, sucking disc. 포낭 - 타원형, 핵 2-4개가 한쪽에 몰림, axostyle 주변 fibril. 조직 파괴는 하지 않음
+
+13. [indicator] 다음 표본에서 표시가 가리키는 구조물은?
+    사진: practical_ind/087_3.png
+     ① Schuffner dot
+     ② gelatin layer
+     ③ schizont   <== 정답
+     ④ trophozoite
+    해설: 삼일열원충 두꺼운 도말 — 적혈구가 용혈되어 원충만 남음 / ring form과 schizont가 함께 보임
+          출제 포인트: RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot
+
+14. [감염경로] 다음 기생충이 감염되는 방식은?
+    사진: tonghap/흡충/010_E10.png
+     ① 절지동물매개성
+     ② 패류매개성   <== 정답
+     ③ 식품매개성
+     ④ 접촉매개성
+    해설: 일본주혈흡충 자웅 합체 — 자웅이체 — 수컷의 gynecophoral canal(포자관)에 가느다란 암컷이 끼어 있음 / 수컷 6-10mm
+          일본주혈흡충의 전파 방식은 패류매개성이다.
+          출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태
+
+15. [감염경로] 다음 기생충의 전파 방식은?
+    사진: note/[260903_05]_감염의_기초_실습3_039_3.png
+     ① 수인성
+     ② 식품매개성   <== 정답
+     ③ 패류매개성
+     ④ 절지동물매개성
+    해설: 요코가와흡충 성충 — 매우 작아 육안으로 잘 안 보임 (1-2mm) / ventral sucker가 한쪽으로 치우쳐 있음
+          요코가와흡충의 전파 방식은 식품매개성이다.
+          출제 포인트: 충란은 간흡충과 크기가 같은 30um이지만 충란벽이 매끄러움 (muskmelon 무늬 없음). 성충은 ventral sucker가 한쪽으로 치우침
+
+16. [진단] 다음 기생충을 진단하는 검사로 알맞은 것은?
+    사진: jms_protozoa/원충_Protozoa/027_H27.jpg
+     ① 혈액도말 Giemsa
+     ② 골수·비장 천자
+     ③ 대변검사
+     ④ 폐포세척액·객담·생검   <== 정답
+    해설: 폐포자충 (GMS 염색, 폐) — 폐포 안이 검게 염색된 cyst로 가득 참 / cyst 벽이 검게 염색되고 안이 비침 (컵·초승달 모양)
+          폐포자충 진단: 폐포세척액·객담·생검, Gomori methenamine silver (GMS) 염색
+          출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)
+
+17. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
+    사진: note/[260902_05]_감염의_기초_실습__021_1.png
+     ① Ascaris lumbricoides
+     ② Anisakis simplex
+     ③ Trichuris trichiura   <== 정답
+     ④ Enterobius vermicularis
+    해설: 편충 조직절편 (충수) — 계란후라이 모양의 stichocyte가 쌓여 stichosome을 이룸 / 충수 점막에 박힌 여러 개의 단면
+          출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골
+
+18. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+    사진: jms_nematoda/선충_Nematodes/009_F9.png
+     ① rhabditoid esophagus
+     ② notched tail   <== 정답
+     ③ Renette cell
+     ④ gelatin layer
+    해설: 분선충 사상유충 — 식도의 직경이 일정하고 길다 / 꼬리 끝이 갈라짐 (notched tail)
+          출제 포인트: 간상유충 (rhabditoid) = 백열전구 모양 식도 / 사상유충 (filariform) = 직경 일정한 식도 + notched tail. 구충 유충과는 꼬리 모양으로 감별
+
+19. [종 동정] 다음 기생충의 학명으로 옳은 것은?
+    사진: jms_nematoda/선충_Nematodes/003_G3.png
+     ① Strongyloides stercoralis
+     ② Ascaris lumbricoides   <== 정답
+     ③ Anisakis simplex
+     ④ Trichuris trichiura
+    해설: 회충 단면 — 소화관 lumen을 단층 원주상피가 둘러쌈 / 양 옆에 lateral cord (족보에는 lateral chord 표기도 등장)
+          출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제
+
+20. [감염경로] 다음 기생충의 전파 방식은?
+    사진: jms_protozoa/원충_Protozoa/024_F24.jpg
+     ① 절지동물매개성
+     ② 성접촉
+     ③ 수인성
+     ④ 식품매개성   <== 정답
+    해설: 톡소포자충 tachyzoite — 초승달·활 모양 (arc shaped) / 편모나 섬모가 없음
+          톡소포자충의 전파 방식은 식품매개성이다.
+          출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골
+
+21. [숙주] 다음 기생충의 종숙주로 옳은 것은?
+    사진: jms_protozoa/원충_Protozoa/005_G5.jpg
+     ① 고양이
+     ② 사람   <== 정답
+     ③ 자유생활종
+     ④ 돼지
+    해설: 이질아메바 포낭 — 핵이 4개 이하로 듬성듬성 / karyosome 중앙 위치
+          이질아메바의 종숙주는 사람이다.
+          출제 포인트: 영양형 - karyosome 중앙 + peripheral chromatin 두께 균일, RBC 탐식. 포낭 - 핵 4개 이하. 조직 - flask-shaped ulcer
+
+22. [감염경로] 다음 기생충이 감염되는 방식은?
+    사진: eunju/기생충_실습_(조충류,_흡충류)_001_8.png
+     ① 절지동물매개성
+     ② 패류매개성
+     ③ 수인성
+     ④ 식품매개성   <== 정답
     해설: 간질 조직절편 — 충체 내부가 구멍이 송송 뚫린 모양 / 간 실질의 괴사·염증
-          간질의 종숙주는 양·소 등 초식동물, 사람이다.
+          간질의 전파 방식은 식품매개성이다.
           출제 포인트: 납작한 나뭇잎 모양 + conical projection (= cephalic cone). highly branched intestine·testes·vitellaria. 조직에서는 구멍이 송송 뚫린 내부
 
-40. [종 동정] 현미경에서 관찰되는 기생충을 고르시오.
-    사진: eunju/기생충_실습_(포자충류,_말라리아,_의용_001_12.png
-     ① Cryptosporidium parvum   <== 정답
-     ② Pneumocystis jirovecii
+23. [치료] 다음 기생충 감염의 치료로 옳은 것은?
+    사진: jms_nematoda/선충_Nematodes/014_I14.png
+     ① 내시경적 제거
+     ② Albendazole 복용   <== 정답
+     ③ Ivermectin 복용
+     ④ DEC 복용
+    해설: 요충 성충 (현미경) — 머리쪽에 투명한 키틴성 날개 cephalic alae / 수컷은 꼬리가 나선형으로 말리고 caudal alae
+          요충 치료: Albendazole 400mg single, Mebendazole 100mg single
+          출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)
+
+24. [indicator] 다음 표본에서 표시가 가리키는 구조물은?
+    사진: practical_ind/082_3.png
+     ① Schuffner dot
+     ② RBC
+     ③ schizont
+     ④ gametocyte   <== 정답
+    해설: 열대열원충 얇은 도말 — RBC 크기 변화 없음 / 한 적혈구에 여러 개의 ring (multiple ring form)
+          출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾
+
+25. [종 동정] 다음은 어떤 기생충인가?
+    사진: tonghap/조충/004_D4.png
+     ① Diphyllobothrium latum
+     ② Spirometra erinacei   <== 정답
+     ③ Cysticercus cellulosae
+     ④ Taenia solium
+    해설: 고충 (육안) — 하얀 고무줄처럼 쭈굴쭈굴하고 길다 / 편절 구분이 없음
+          출제 포인트: gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle
+
+26. [종 동정] 다음 기생충의 학명으로 옳은 것은?
+    사진: eunju/기생충_실습_(포자충류,_말라리아,_의용_003_6.png
+     ① Anopheles sinensis   <== 정답
+     ② Sarcoptes scabiei
+     ③ Aedes spp.
+     ④ Culex tritaeniorhynchus
+    해설: 얼룩날개모기 — 날개에 얼룩무늬 / 앉을 때 몸을 45도로 들어 올림 (엉덩이를 듦)
+          출제 포인트: 날개에 얼룩무늬. 앉을 때 엉덩이를 드는 자세가 특징 — 집모기와 감별
+
+27. [종 동정] 다음은 어떤 기생충인가?
+    사진: jms_nematoda/선충_Nematodes/006_G6.png
+     ① Strongyloides stercoralis
+     ② Anisakis simplex
+     ③ Ancylostoma duodenale   <== 정답
+     ④ Necator americanus
+    해설: 두비니구충 성충 — 구강에 투명하게 반짝이는 송곳니 2쌍 (hook-like teeth) / 꼬리에 copulatory bursa
+          dorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)
+          출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지
+
+28. [감염경로] 다음 기생충이 감염되는 방식은?
+    사진: tonghap/조충/006_E6.png
+     ① 성접촉
+     ② 수인성
+     ③ 접촉매개성
+     ④ 식품매개성   <== 정답
+    해설: 유구조충 편절 — 자궁측지 13개 이하, 두껍고 듬성듬성 / 위아래로 긴 사각형
+          유구조충의 전파 방식은 식품매개성이다.
+          출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)
+
+29. [기생부위] 다음 기생충의 성충 기생 부위는?
+    사진: jiseok/실습_3_001_8.png
+     ① 간내 담관
+     ② 폐
+     ③ 큰 담관   <== 정답
+     ④ 장간막 정맥, 직장 정맥
+    해설: 간질 성충 — 크고 납작한 나뭇잎 모양 (약 3cm) / 머리쪽이 원뿔형으로 돌출 (conical projection = cephalic cone)
+          간질 성충은 큰 담관에 기생한다.
+          출제 포인트: 납작한 나뭇잎 모양 + conical projection (= cephalic cone). highly branched intestine·testes·vitellaria. 조직에서는 구멍이 송송 뚫린 내부
+
+30. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
+    사진: eunju/기생충_실습_(protozoa)_001_8.png
+     ① gelatin layer
+     ② microvillus
+     ③ sucking disc
+     ④ karyosome   <== 정답
+    해설: 대장아메바 포낭 — 핵이 4-8개로 많음 / karyosome이 크고 한쪽으로 치우침 (붓으로 꾹 누른 모양)
+          출제 포인트: 핵 4-8개 (최대 8개), karyosome이 크고 한쪽으로 치우침 (붓으로 누른 모양), peripheral chromatin 두께 불규칙 — 이질아메바와의 감별이 핵심
+
+31. [증상·질병] 다음 기생충이 일으키는 질환은?
+    사진: tonghap/조충/010_D10.png
+     ① 무구조충증
+     ② 광절열두조충증
+     ③ 유구낭미충증   <== 정답
+     ④ 유구조충증
+    해설: 유구낭미충 (육안) — 쌀알 크기의 투명한 cyst / cyst 안에 하얀 점처럼 scolex가 보임
+          유구낭미충 감염증의 병명은 유구낭미충증 (cysticercosis)이다.
+          출제 포인트: gross - 투명한 cyst 안에 하얀 scolex. 조직 - cyst + 양치식물 모양 neck/scolex, 갈고리 진하게 보임. 고충증(sparganosis)과의 감별이 단골
+
+32. [감염형] 다음 기생충의 인체 감염형은?
+    사진: note/[260902_05]_감염의_기초_실습__058_2.png
+     ① L3 유충   <== 정답
+     ② 유미유충
+     ③ 자충포장란
+     ④ 피낭유충
+    해설: 고래회충 유충 (현미경) — 머리에 boring tooth (상어 지느러미처럼 튀어나옴) / 꼬리에 mucron
+          고래회충의 인체 감염형은 L3 유충이다.
+          출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell
+
+33. [기생부위] 다음 기생충이 기생하는 부위는?
+    사진: jms_protozoa/원충_Protozoa/014_F14.png
+     ① 십이지장
+     ② 소장 상피세포 미세융모
+     ③ 혈액·림프절·심근·뇌   <== 정답
+     ④ 대장
+    해설: 크루스파동편모충 심근 조직절편 — 심근세포 안에 동글동글하게 들어찬 amastigote 무리 / 주변 심근염
+          크루스파동편모충 성충은 혈액·림프절·심근·뇌에 기생한다.
+          출제 포인트: 혈액에서는 trypomastigote (핵 + kinetoplast + 편모 + 파동막), 심근세포 안에서는 amastigote 무리. 배열이 편모 → 핵 → kinetoplast 순서 (리슈만과 반대)
+
+34. [종 동정] 다음 기생충의 학명으로 옳은 것은?
+    사진: jms_cestoda/조충_Cestodes/010_H10.png
+     ① Taenia saginata
+     ② Trichinella spiralis
+     ③ Cysticercus cellulosae   <== 정답
+     ④ Spirometra erinacei
+    해설: 유구낭미충 조직절편 (돼지 근육) — 근육 조직 내 cyst / cyst 안에 함입된 scolex 단면
+          출제 포인트: gross - 투명한 cyst 안에 하얀 scolex. 조직 - cyst + 양치식물 모양 neck/scolex, 갈고리 진하게 보임. 고충증(sparganosis)과의 감별이 단골
+
+35. [감염형] 다음 기생충의 인체 감염형은?
+    사진: note/[260831_05]_감염의_기초_실습__075_6.png
+     ① trypomastigote
+     ② 피낭유충 (metacercaria)   <== 정답
+     ③ 유미유충 (cercaria)
+     ④ 해당 없음
+    해설: 폐흡충 성충 — 통통한 난원형 (강낭콩 모양), 적갈색 / 슬라이드가 두껍게 mounting 되어 있음
+          폐흡충의 인체 감염형은 피낭유충 (metacercaria)이다.
+          출제 포인트: 충란 - 90um 그룹, operculum + abopercular thickening. 성충 - plump ovoid, 적갈색, 6개 lobe로 나뉜 ovary. 슬라이드가 두껍게 mounting 되어 있음
+
+36. [증상·질병] 다음 기생충이 일으키는 질환은?
+    사진: jiseok/실습_2_003_4.png
+     ① 고래회충증
+     ② 구충증
+     ③ 회충증
+     ④ 선모충증   <== 정답
+    해설: 선모충 피낭유충 (근육) — 횡문근 안에 nursing cell complex 형성 / 유충이 돌돌 말린 채로 들어 있음
+          선모충 감염증의 병명은 선모충증 (trichinellosis)이다.
+          출제 포인트: 근육 조직절편에서 nursing cell complex 내부에 돌돌 말린 유충 — 조직 문제 단골
+
+37. [종 동정] 다음은 어떤 기생충인가?
+    사진: jms_protozoa/원충_Protozoa/006_H6.png
+     ① Pneumocystis jirovecii
+     ② Entamoeba coli
      ③ Toxoplasma gondii
-     ④ Endolimax nana
-    해설: 작은와포자충 oocyst (MAF 염색) — 파란 배경에 분홍·붉은색으로 염색된 둥근 oocyst / 크기 4-6um
-          출제 포인트: 장 조직에서 미세융모에 붙은 작은 점들. MAF 염색에서 파란 배경에 분홍색 oocyst
+     ④ Entamoeba histolytica   <== 정답
+    해설: 이질아메바 조직절편 (대장) — flask-shaped ulcer (플라스크 모양 궤양) / 궤양 내부는 괴사 조직이라 충체가 없음
+          출제 포인트: 영양형 - karyosome 중앙 + peripheral chromatin 두께 균일, RBC 탐식. 포낭 - 핵 4개 이하. 조직 - flask-shaped ulcer
+
+38. [특징 구조물] 다음 기생충이 가진 특징적 구조물은?
+    사진: jms_nematoda/선충_Nematodes/019_H19.png
+     ① cutting plate
+     ② copulatory bursa
+     ③ gelatin layer
+     ④ terminal nuclei   <== 정답
+    해설: 말레이사상충 microfilaria — sheath에 싸여 있음 / 꼬리 끝에 끊어져 떨어진 terminal nuclei 2개
+          출제 포인트: sheath에 싸여 있고 꼬리 끝에 끊어진 terminal nuclei 2개 — Wuchereria (nuclei가 중간에 끊김) 와 감별
+
+39. [특징 구조물] 다음 기생충에서 가장 특징적인 구조물은?
+    사진: practical/090_3.png
+     ① gelatin layer
+     ② fimbriation
+     ③ RBC
+     ④ Schuffner dot   <== 정답
+    해설: 삼일열원충 얇은 도말 — 감염된 RBC가 커지고 옅어짐 / multiple ring 없음, ring이 RBC 지름의 1/3
+          출제 포인트: RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot
+
+40. [감염경로] 다음 기생충의 감염 원인으로 알맞은 것은?
+    사진: jms_trematoda/흡충_Trematodes/006_G6.png
+     ① 유미유충이 있는 민물 접촉
+     ② 민물고기 생식   <== 정답
+     ③ 자연산 굴 생식
+     ④ 미나리 등 수생식물, 초식동물 생간·녹즙
+    해설: 간흡충 성충 — 납작한 나뭇잎 모양, 10-25mm / 몸 뒤쪽에 나뭇가지처럼 갈라진 branched testis 2개
+          간흡충은(는) 경구감염으로 감염되며, 감염원은 민물고기 생식 (잉어·붕어·향어·모래무지·빙어)이다.
+          출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis
