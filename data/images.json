@@ -35190,7 +35190,7 @@
     "bytes": 0,
     "species_id": "leptotrombidium_spp",
     "match_method": "exact",
-    "specimen_id": "sarcoptes_wholemount",
+    "specimen_id": "leptotrombidium_wholemount",
     "confidence": "high",
     "review_reason": "",
     "width": 426,

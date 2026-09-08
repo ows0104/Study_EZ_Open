@@ -89,13 +89,13 @@ diphyllobothrium_gross,광절열두조충 (육안),gross,조충,3,2,1,0,3,2
 taenia_gross,유무구조충 (육안),gross,조충,2,1,0,1,2,2
 sparganum_gross,고충 (육안),gross,조충,6,4,1,1,6,6
 cysticercus_gross,유구낭미충 (육안),gross,조충,2,2,0,0,2,2
-sarcoptes_wholemount,옴진드기,충체,의용곤충,7,5,2,0,7,5
+sarcoptes_wholemount,옴진드기,충체,의용곤충,6,4,2,0,6,4
 sarcoptes_skin_section,옴진드기 피부 조직절편,조직,의용곤충,0,0,0,0,0,0
 dermatophagoides_wholemount,세로무늬먼지진드기,충체,의용곤충,3,3,0,0,1,2
 pediculus_wholemount,이 (머릿니·몸니),충체,의용곤충,7,3,3,1,1,6
 pthirus_wholemount,사면발이,충체,의용곤충,2,1,1,0,0,2
 haemaphysalis_gross,작은소피참진드기,gross,의용곤충,7,5,2,0,1,6
-leptotrombidium_wholemount,털진드기 유충,충체,의용곤충,6,4,2,0,0,6
+leptotrombidium_wholemount,털진드기 유충,충체,의용곤충,7,5,2,0,1,7
 mosquito_wholemount,얼룩날개모기,충체,의용곤충,6,3,2,1,1,3
 culex_wholemount,집모기,충체,의용곤충,2,1,1,0,0,2
 aedes_wholemount,숲모기,충체,의용곤충,2,0,1,1,0,1

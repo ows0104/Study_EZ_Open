@@ -175,10 +175,32 @@ def load(n):
     return json.load(open(os.path.join(DATA, n), encoding="utf-8"))
 
 
+# 앞머리가 알파벳이라고 다 약은 아니다.
+#
+#   PAIR   단방조충의 치료. 천자·흡인·주입·재흡인(Puncture, Aspiration,
+#          Injection, Re-aspiration)을 하는 **시술**이라 삼키는 것이 아니다.
+#   AIDS   「AIDS는 항레트로바이러스 치료」의 말머리. 조건을 적어 둔 것이라
+#   CNS    「CNS 침범 시 + corticosteroid」처럼 떼어 내면 뜻이 없어진다.
+#
+# 이런 것은 원문을 그대로 둔다 — 「PAIR 복용」·「AIDS 복용」으로 나가고 있었다.
+NOT_A_DRUG = {"pair", "aids", "cns"}
+# 두 낱말이 한 이름인 약. 뒤를 자르면 다른 것이 되거나 반쪽이 된다.
+DRUG_TAIL = r"(?:\s+(?:B|pamoate|antimonials))?"
+
+
 def drug_only(text):
-    """치료 보기는 약 이름만 남긴다. 용량까지 가르면 보기가 부자연스러워진다."""
-    m = re.match(r"([A-Za-z][A-Za-z\-]+)", (text or "").strip())
-    return f"{m.group(1)} 복용" if m else (text or "")
+    """치료 보기에서 용량을 떼어 낸다. 용량까지 적으면 보기가 부자연스러워진다.
+
+    **「복용」은 약일 때만 붙인다** (`NOT_A_DRUG`).
+    """
+    t = (text or "").strip()
+    m = re.match(r"([A-Za-z][A-Za-z\-]+" + DRUG_TAIL + ")", t)
+    if not m:
+        return t
+    head = m.group(1)
+    if norm(head.split()[0]) in NOT_A_DRUG:
+        return t
+    return f"{head} 복용"
 
 
 def short(text, limit=40):

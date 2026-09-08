@@ -9,16 +9,16 @@
           "set": 1,
           "no": 1,
           "qtype": "충란 동정",
-          "stem": "다음은 어떤 기생충의 충란인가?",
+          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
           "image_path": "note/[260831_05]_감염의_기초_실습__075_2.png",
           "image_source": "note",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Gymnophalloides seoi",
-            "Metagonimus yokogawai",
             "Clonorchis sinensis",
-            "Schistosoma mansoni"
+            "Metagonimus yokogawai",
+            "Schistosoma japonicum",
+            "Gymnophalloides seoi"
           ],
           "answer_index": 1,
           "answer": "Metagonimus yokogawai",
@@ -45,10 +45,10 @@
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Enterobius vermicularis",
-            "Trichuris trichiura",
             "Anisakis simplex",
-            "Ascaris lumbricoides"
+            "Trichuris trichiura",
+            "Ascaris lumbricoides",
+            "Strongyloides stercoralis"
           ],
           "answer_index": 1,
           "answer": "Trichuris trichiura",
@@ -75,12 +75,12 @@
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Schistosoma japonicum",
-            "Gymnophalloides seoi",
+            "Clonorchis sinensis",
             "Schistosoma mansoni",
-            "Schistosoma haematobium"
+            "Schistosoma haematobium",
+            "Schistosoma japonicum"
           ],
-          "answer_index": 3,
+          "answer_index": 2,
           "answer": "Schistosoma haematobium",
           "explanation": "방광주혈흡충 충란 — 큰 방추형 / 아래쪽 끝에 돌출된 terminal spine\n출제 포인트: 충란 아래쪽 끝에 terminal spine (말단 돌기) — 만손(lateral)과의 결정적 감별점",
           "species_id": "schistosoma_haematobium",
@@ -98,18 +98,18 @@
           "set": 1,
           "no": 4,
           "qtype": "감염형",
-          "stem": "다음 충란을 가지는 기생충의 감염형으로 옳은 것은?",
+          "stem": "다음 충란을 가지는 기생충의 인체 감염형은?",
           "image_path": "jiseok/실습_1_003_6.png",
           "image_source": "jiseok",
           "stain": null,
           "magnification": "400x",
           "options": [
+            "무구낭미충 (Cysticercus bovis)",
             "피낭유충 (metacercaria)",
-            "사상유충 (filariform larva, L3)",
-            "유미유충 (cercaria)",
-            "자충포장란 (embryonated egg)"
+            "해당 없음",
+            "유미유충 (cercaria)"
           ],
-          "answer_index": 2,
+          "answer_index": 3,
           "answer": "유미유충 (cercaria)",
           "explanation": "일본주혈흡충 충란 — 둥글고 통통함 (주혈흡충 중 가장 작고 둥금) / 매우 작은 lateral spine — 잘 보이지 않음\n일본주혈흡충의 인체 감염형은 유미유충 (cercaria)이다.\n출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태",
           "species_id": "schistosoma_japonicum",
@@ -125,16 +125,16 @@
           "set": 1,
           "no": 5,
           "qtype": "충란 동정",
-          "stem": "다음은 어떤 기생충의 충란인가?",
+          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
           "image_path": "tonghap/충란/013_D13.png",
           "image_source": "tonghap",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Paragonimus westermani",
+            "Schistosoma haematobium",
             "Schistosoma mansoni",
-            "Schistosoma japonicum",
-            "Schistosoma haematobium"
+            "Paragonimus westermani",
+            "Schistosoma japonicum"
           ],
           "answer_index": 1,
           "answer": "Schistosoma mansoni",
@@ -160,11 +160,11 @@
           "magnification": "400x",
           "options": [
             "gelatin layer",
-            "oral sucker",
             "operculum",
-            "ventral sucker"
+            "ventral sucker",
+            "tribocytic organ"
           ],
-          "answer_index": 2,
+          "answer_index": 1,
           "answer": "operculum",
           "explanation": "간흡충 충란 — 전구·플라스크 모양 / operculum 주변이 어깨처럼 튀어나옴 (shouldering)\n출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis",
           "species_id": "clonorchis_sinensis",
@@ -191,18 +191,18 @@
           "set": 1,
           "no": 7,
           "qtype": "충란 동정",
-          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
+          "stem": "다음은 어떤 기생충의 충란인가?",
           "image_path": "jiseok/실습_1_002_8.png",
           "image_source": "jiseok",
           "stain": null,
           "magnification": "400x",
           "options": [
+            "Enterobius vermicularis",
             "Diphyllobothrium latum",
             "Hookworm",
-            "Enterobius vermicularis",
-            "Strongyloides stercoralis"
+            "Trichinella spiralis"
           ],
-          "answer_index": 1,
+          "answer_index": 2,
           "answer": "Hookworm",
           "explanation": "구충 충란 — 타원형, 충란벽이 키틴층 하나로 얇고 투명 / 내부에 난할된 세포가 여러 개 (4-8 cell stage)\n두비니구충과 아메리카구충의 충란은 구별 불가 — 답은 Hookworm\n출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지",
           "species_id": "ancylostoma_duodenale",
@@ -230,10 +230,10 @@
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Echinococcus granulosus",
+            "Paragonimus westermani",
             "Diphyllobothrium latum",
-            "Ancylostoma duodenale",
-            "Paragonimus westermani"
+            "Taenia solium",
+            "Ancylostoma duodenale"
           ],
           "answer_index": 1,
           "answer": "Diphyllobothrium latum",
@@ -253,18 +253,18 @@
           "set": 1,
           "no": 9,
           "qtype": "충란 동정",
-          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
+          "stem": "다음 충란을 가지는 기생충은?",
           "image_path": "tonghap/충란/007_F7.png",
           "image_source": "tonghap",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Strongyloides stercoralis",
-            "Necator americanus",
-            "Enterobius vermicularis",
-            "Ancylostoma duodenale"
+            "Anisakis simplex",
+            "Ancylostoma duodenale",
+            "Trichuris trichiura",
+            "Enterobius vermicularis"
           ],
-          "answer_index": 2,
+          "answer_index": 3,
           "answer": "Enterobius vermicularis",
           "explanation": "요충 충란 — 한쪽이 편평하고 반대쪽이 볼록한 비대칭 타원형 / 커피콩·죠리퐁·감씨 모양\n출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)",
           "species_id": "enterobius_vermicularis",
@@ -282,18 +282,18 @@
           "set": 1,
           "no": 10,
           "qtype": "특징 구조물",
-          "stem": "다음 기생충에서 가장 특징적인 구조물은?",
+          "stem": "다음 기생충이 가진 특징적 구조물은?",
           "image_path": "note/[260831_05]_감염의_기초_실습__075_4.png",
           "image_source": "note",
           "stain": null,
           "magnification": "400x",
           "options": [
             "operculum",
+            "gelatin layer",
             "hexacanth embryo",
-            "abopercular knob",
             "shoulder"
           ],
-          "answer_index": 1,
+          "answer_index": 2,
           "answer": "hexacanth embryo",
           "explanation": "유무구조충 충란 — 원형 또는 타원형 / 두껍고 방사상 무늬의 embryophoral block\n유구조충과 무구조충의 충란은 구별 불가 — 답은 Taenia spp.\n출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)",
           "species_id": "taenia_solium",
@@ -311,7 +311,7 @@
           "set": 1,
           "no": 11,
           "qtype": "종 동정",
-          "stem": "다음 기생충의 학명으로 옳은 것은?",
+          "stem": "다음은 어떤 기생충인가?",
           "image_path": "eunju/기생충_실습_(조충류,_흡충류)_001_9.png",
           "image_source": "eunju",
           "stain": "H&E",
@@ -320,7 +320,7 @@
             "Fasciola hepatica",
             "Gymnophalloides seoi",
             "Clonorchis sinensis",
-            "Schistosoma japonicum"
+            "Metagonimus yokogawai"
           ],
           "answer_index": 0,
           "answer": "Fasciola hepatica",
@@ -336,18 +336,18 @@
           "set": 1,
           "no": 12,
           "qtype": "증상·질병",
-          "stem": "다음 기생충이 일으키는 질환은?",
+          "stem": "다음 기생충에 감염된 환자의 병명으로 옳은 것은?",
           "image_path": "jms_protozoa/원충_Protozoa/003_H3.png",
           "image_source": "jms_protozoa",
           "stain": "iron hematoxylin / trichrome",
           "magnification": "1000x",
           "options": [
-            "가시아메바각막염 / 육아종성 아메바성 뇌염",
-            "비병원성",
-            "아프리카 수면병",
-            "아메바증"
+            "톡소포자충증",
+            "와포자충증",
+            "아메바증",
+            "비병원성"
           ],
-          "answer_index": 3,
+          "answer_index": 2,
           "answer": "아메바증",
           "explanation": "이질아메바 영양형 — karyosome이 핵 중앙에 작은 점처럼 위치 / peripheral chromatin의 두께가 균일\n이질아메바 감염증의 병명은 아메바증 (amebiasis)이다.\n출제 포인트: 영양형 - karyosome 중앙 + peripheral chromatin 두께 균일, RBC 탐식. 포낭 - 핵 4개 이하. 조직 - flask-shaped ulcer",
           "species_id": "entamoeba_histolytica",
@@ -371,12 +371,12 @@
           "stain": null,
           "magnification": "40-100x",
           "options": [
-            "덜 익힌 돼지고기·야생동물 고기·가공식품",
+            "충란에 오염된 손·침구·먼지",
+            "자충포장란에 오염된 식수·채소",
             "모기",
-            "오염 토양",
-            "충란에 오염된 손·침구·먼지"
+            "바다생선회·두족류·해산 갑각류 생식"
           ],
-          "answer_index": 3,
+          "answer_index": 0,
           "answer": "충란에 오염된 손·침구·먼지",
           "explanation": "요충 성충 (현미경) — 머리쪽에 투명한 키틴성 날개 cephalic alae / 수컷은 꼬리가 나선형으로 말리고 caudal alae\n요충은(는) 경구감염 / 공기매개 / 접촉감염으로 감염되며, 감염원은 충란에 오염된 손·침구·먼지이다.\n출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)",
           "species_id": "enterobius_vermicularis",
@@ -400,12 +400,12 @@
           "stain": "Giemsa",
           "magnification": "1000x",
           "options": [
-            "Plasmodium malariae",
+            "Plasmodium knowlesi",
+            "Plasmodium vivax",
             "Plasmodium falciparum",
-            "Plasmodium ovale",
-            "Plasmodium vivax"
+            "Plasmodium malariae"
           ],
-          "answer_index": 1,
+          "answer_index": 2,
           "answer": "Plasmodium falciparum",
           "explanation": "열대열원충 두꺼운 도말 — 적혈구가 용혈되어 원충만 남음 / 선별검사용 — 민감도가 높지만 종 감별은 어려움\n출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾",
           "species_id": "plasmodium_falciparum",
@@ -431,10 +431,10 @@
           "stain": null,
           "magnification": "40x",
           "options": [
-            "Ancylostoma duodenale",
+            "Enterobius vermicularis",
             "Ascaris lumbricoides",
-            "Trichuris trichiura",
-            "Anisakis simplex"
+            "Anisakis simplex",
+            "Ancylostoma duodenale"
           ],
           "answer_index": 1,
           "answer": "Ascaris lumbricoides",
@@ -457,22 +457,22 @@
           "set": 1,
           "no": 16,
           "qtype": "감염형",
-          "stem": "다음 기생충의 인체 감염형은?",
-          "image_path": "eunju/기생충_실습_(포자충류,_말라리아,_의용_003_4.png",
-          "image_source": "eunju",
+          "stem": "다음 기생충의 감염형으로 옳은 것은?",
+          "image_path": "jms_arthropoda/의용곤충_Anthropods/005_G5.png",
+          "image_source": "jms_arthropoda",
           "stain": null,
-          "magnification": "100-400x",
+          "magnification": "40-100x",
           "options": [
-            "promastigote",
-            "해당 없음",
             "성충·약충·알",
+            "해당 없음",
+            "사상유충 (filariform larva, L3)",
             "성충·유충"
           ],
-          "answer_index": 3,
-          "answer": "성충·유충",
-          "explanation": "옴진드기 — 거북이 모양의 둥근 몸통 / 다리 4쌍이 모두 몸 앞쪽에 몰려 있음\n옴진드기의 인체 감염형은 성충·유충이다.\n출제 포인트: 앞쪽에 다리 4개가 몰려 있음. 조직절편에서는 뾰족한 dorsal spine. 치료 문제로 자주 나옴 — permethrin 크림을 전신에 도포 (두피 아님)",
-          "species_id": "sarcoptes_scabiei",
-          "specimen_id": "sarcoptes_wholemount",
+          "answer_index": 0,
+          "answer": "성충·약충·알",
+          "explanation": "이 (머릿니·몸니) — 마름모꼴의 길쭉한 몸통 / 다리 3쌍에 갈고리 모양 발톱\n머릿니 / 몸니의 인체 감염형은 성충·약충·알이다.\n출제 포인트: 마름모꼴의 긴 몸통. 충란은 모발에 투명한 막으로 붙어 있음. 치료는 permethrin을 두피에 도포 — 옴(전신 도포)과 구별",
+          "species_id": "pediculus_humanus",
+          "specimen_id": "pediculus_wholemount",
           "group": "의용곤충",
           "exam_weight": 1.0,
           "past_years": []
@@ -482,14 +482,14 @@
           "set": 1,
           "no": 17,
           "qtype": "종 동정",
-          "stem": "현미경에서 관찰되는 기생충을 고르시오.",
+          "stem": "다음은 어떤 기생충인가?",
           "image_path": "jiseok/실습_5_002_1.png",
           "image_source": "jiseok",
           "stain": "Diff-Quik",
           "magnification": "400-1000x",
           "options": [
-            "Entamoeba histolytica",
             "Endolimax nana",
+            "Cryptosporidium parvum",
             "Balantidium coli",
             "Pneumocystis jirovecii"
           ],
@@ -519,10 +519,10 @@
           "stain": null,
           "magnification": "40-400x",
           "options": [
-            "albumin layer",
+            "hook-like teeth",
             "copulatory bursa",
-            "gelatin layer",
-            "hook-like teeth"
+            "three lips",
+            "gelatin layer"
           ],
           "answer_index": 1,
           "answer": "copulatory bursa",
@@ -548,10 +548,10 @@
           "stain": null,
           "magnification": "40-400x",
           "options": [
-            "고양이",
+            "고래·돌고래 등 해산 포유류",
             "개",
             "사람",
-            "고래·돌고래 등 해산 포유류"
+            "말라리아 원충의 종숙주"
           ],
           "answer_index": 2,
           "answer": "사람",
@@ -581,10 +581,10 @@
           "stain": "H&E",
           "magnification": "400-1000x",
           "options": [
-            "kinetoplast",
-            "gelatin layer",
+            "bradyzoite",
+            "tissue cyst",
             "amastigote nest",
-            "tissue cyst"
+            "gelatin layer"
           ],
           "answer_index": 2,
           "answer": "amastigote nest",
@@ -602,18 +602,18 @@
           "set": 1,
           "no": 21,
           "qtype": "감염경로",
-          "stem": "다음 기생충의 감염 원인으로 알맞은 것은?",
+          "stem": "환자에게서 다음 표본이 검출되었다. 감염 원인은?",
           "image_path": "jms_nematoda/선충_Nematodes/011_I11.png",
           "image_source": "jms_nematoda",
           "stain": null,
           "magnification": "40-100x",
           "options": [
-            "모기",
-            "오염 토양",
+            "충란에 오염된 손·침구·먼지",
             "자충포장란에 오염된 식수·채소",
-            "덜 익힌 돼지고기·야생동물 고기·가공식품"
+            "오염 토양",
+            "바다생선회·두족류·해산 갑각류 생식"
           ],
-          "answer_index": 2,
+          "answer_index": 1,
           "answer": "자충포장란에 오염된 식수·채소",
           "explanation": "편충 성충 (현미경) — 채찍 모양 — 앞 3/5이 가늘고 뒤 2/5가 굵음 / 가는 쪽이 머리\n편충은(는) 경구감염으로 감염되며, 감염원은 자충포장란에 오염된 식수·채소이다.\n출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골",
           "species_id": "trichuris_trichiura",
@@ -632,18 +632,18 @@
           "set": 1,
           "no": 22,
           "qtype": "특징 구조물",
-          "stem": "다음 기생충에서 가장 특징적인 구조물은?",
+          "stem": "다음 기생충이 가진 특징적 구조물은?",
           "image_path": "jiseok/실습_5_002_2.png",
           "image_source": "jiseok",
           "stain": "GMS (Gomori methenamine silver)",
           "magnification": "400-1000x",
           "options": [
-            "alveolus",
+            "octa-nucleated cyst",
             "gelatin layer",
             "intracystic body",
-            "octa-nucleated cyst"
+            "alveolus"
           ],
-          "answer_index": 0,
+          "answer_index": 3,
           "answer": "alveolus",
           "explanation": "폐포자충 (GMS 염색, 폐) — 폐포 안이 검게 염색된 cyst로 가득 참 / cyst 벽이 검게 염색되고 안이 비침 (컵·초승달 모양)\n출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)",
           "species_id": "pneumocystis_jirovecii",
@@ -671,8 +671,8 @@
           "options": [
             "Ancylostoma duodenale",
             "Trichinella spiralis",
-            "Strongyloides stercoralis",
-            "Necator americanus"
+            "Enterobius vermicularis",
+            "Trichuris trichiura"
           ],
           "answer_index": 1,
           "answer": "Trichinella spiralis",
@@ -696,12 +696,12 @@
           "stain": "carmine",
           "magnification": "40x",
           "options": [
-            "왜소조충증",
-            "무구조충증",
+            "광절열두조충증",
+            "유구낭미충증",
             "아시아조충증",
-            "광절열두조충증"
+            "왜소조충증"
           ],
-          "answer_index": 3,
+          "answer_index": 0,
           "answer": "광절열두조충증",
           "explanation": "광절열두조충 편절 — 좌우로 넓은 사각형 편절 / 가운데에 rosette (꽃모양) uterus\n광절열두조충 감염증의 병명은 광절열두조충증 (diphyllobothriasis)이다.\n출제 포인트: 충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만",
           "species_id": "diphyllobothrium_latum",
@@ -725,12 +725,12 @@
           "stain": "Giemsa",
           "magnification": "1000x",
           "options": [
-            "Schuffner dot",
             "schizont",
-            "trophozoite",
-            "gametocyte"
+            "gelatin layer",
+            "gametocyte",
+            "trophozoite"
           ],
-          "answer_index": 1,
+          "answer_index": 0,
           "answer": "schizont",
           "explanation": "삼일열원충 두꺼운 도말 — 적혈구가 용혈되어 원충만 남음 / ring form과 schizont가 함께 보임\n출제 포인트: RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot",
           "species_id": "plasmodium_vivax",
@@ -747,18 +747,18 @@
           "set": 1,
           "no": 26,
           "qtype": "감염경로",
-          "stem": "환자에게서 다음 표본이 검출되었다. 감염 원인은?",
+          "stem": "다음 기생충의 감염 원인으로 알맞은 것은?",
           "image_path": "jms_trematoda/흡충_Trematodes/013_G13.png",
           "image_source": "jms_trematoda",
           "stain": "H&E",
           "magnification": "100x",
           "options": [
-            "꽃뱀·개구리 생식",
-            "유미유충이 있는 민물 접촉",
-            "민물고기 생식",
-            "미나리 등 수생식물, 초식동물 생간·녹즙"
+            "미나리 등 수생식물, 초식동물 생간·녹즙",
+            "숭어·농어·문절망둑 등 반수산 어류 생식",
+            "은어·황어 생식",
+            "꽃뱀·개구리 생식"
           ],
-          "answer_index": 0,
+          "answer_index": 3,
           "answer": "꽃뱀·개구리 생식",
           "explanation": "서울주걱흡충 조직절편 (소장) — 충체가 tribocytic organ으로 융모를 빨아먹는 모습 / 융모 위축(fusion, blunting) + 음와 증식 → V/C 비 감소\n서울주걱흡충은(는) 경구감염으로 감염되며, 감염원은 꽃뱀·개구리 생식이다.\n출제 포인트: 주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습",
           "species_id": "neodiplostomum_seoulense",
@@ -782,12 +782,12 @@
           "stain": "H&E",
           "magnification": "400-1000x",
           "options": [
-            "절지동물매개성",
             "수인성",
             "공기매개",
-            "식품매개성"
+            "식품매개성",
+            "절지동물매개성"
           ],
-          "answer_index": 3,
+          "answer_index": 2,
           "answer": "식품매개성",
           "explanation": "톡소포자충 tissue cyst (뇌) — 뇌 조직 안에 둥근 tissue cyst / cyst 내부에 매우 많은 bradyzoite가 빽빽하게 들어참\n톡소포자충의 전파 방식은 식품매개성이다.\n출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골",
           "species_id": "toxoplasma_gondii",
@@ -807,18 +807,18 @@
           "set": 1,
           "no": 28,
           "qtype": "종 동정",
-          "stem": "다음 기생충의 학명으로 옳은 것은?",
+          "stem": "현미경에서 관찰되는 기생충을 고르시오.",
           "image_path": "jms_nematoda/선충_Nematodes/004_H4.png",
           "image_source": "jms_nematoda",
           "stain": "H&E",
           "magnification": "40-100x",
           "options": [
-            "Anisakis simplex",
-            "Necator americanus",
             "Ascaris lumbricoides",
-            "Trichuris trichiura"
+            "Trichuris trichiura",
+            "Enterobius vermicularis",
+            "Anisakis simplex"
           ],
-          "answer_index": 2,
+          "answer_index": 0,
           "answer": "Ascaris lumbricoides",
           "explanation": "회충 단면 — 소화관 lumen을 단층 원주상피가 둘러쌈 / 양 옆에 lateral cord (족보에는 lateral chord 표기도 등장)\n출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제",
           "species_id": "ascaris_lumbricoides",
@@ -845,10 +845,10 @@
           "stain": "H&E",
           "magnification": "40x",
           "options": [
-            "Taenia solium",
+            "Cysticercus cellulosae",
             "Spirometra erinacei",
-            "Echinococcus granulosus",
-            "Cysticercus cellulosae"
+            "Taenia solium",
+            "Echinococcus granulosus"
           ],
           "answer_index": 1,
           "answer": "Spirometra erinacei",
@@ -873,12 +873,12 @@
           "stain": "carmine",
           "magnification": "40x",
           "options": [
-            "Cysticercus cellulosae",
+            "Taenia solium",
             "Diphyllobothrium latum",
-            "Taenia saginata",
-            "Taenia solium"
+            "Echinococcus granulosus",
+            "Taenia saginata"
           ],
-          "answer_index": 3,
+          "answer_index": 0,
           "answer": "Taenia solium",
           "explanation": "유구조충 편절 — 자궁측지 13개 이하, 두껍고 듬성듬성 / 위아래로 긴 사각형\n출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)",
           "species_id": "taenia_solium",
@@ -902,9 +902,9 @@
           "stain": null,
           "magnification": "육안",
           "options": [
-            "림프관",
+            "성충 - 소장 점막 / 유충 - 횡문근",
             "소장 상부",
-            "간·폐·눈·뇌",
+            "맹장",
             "위벽·장벽"
           ],
           "answer_index": 3,
@@ -930,12 +930,12 @@
           "stain": "trichrome",
           "magnification": "1000x",
           "options": [
-            "피부 대식세포",
-            "대장 lumen",
-            "단핵구·망상내피계",
-            "소장 상피세포 미세융모"
+            "뇌",
+            "혈액·림프절·비장·중추신경계",
+            "십이지장",
+            "대장 lumen"
           ],
-          "answer_index": 1,
+          "answer_index": 3,
           "answer": "대장 lumen",
           "explanation": "대장아메바 포낭 — 핵이 4-8개로 많음 / karyosome이 크고 한쪽으로 치우침 (붓으로 꾹 누른 모양)\n대장아메바 성충은 대장 lumen (조직 침입 없음)에 기생한다.\n출제 포인트: 핵 4-8개 (최대 8개), karyosome이 크고 한쪽으로 치우침 (붓으로 누른 모양), peripheral chromatin 두께 불규칙 — 이질아메바와의 감별이 핵심",
           "species_id": "entamoeba_coli",
@@ -961,11 +961,11 @@
           "magnification": "40x",
           "options": [
             "calcareous corpuscle",
-            "hook",
             "gelatin layer",
-            "hooklet"
+            "hook",
+            "brood capsule"
           ],
-          "answer_index": 1,
+          "answer_index": 2,
           "answer": "hook",
           "explanation": "유구낭미충 (현미경) — cyst 안으로 scolex가 말려 들어가 있음 / scolex의 갈고리와 흡반이 진하게 보임\n출제 포인트: gross - 투명한 cyst 안에 하얀 scolex. 조직 - cyst + 양치식물 모양 neck/scolex, 갈고리 진하게 보임. 고충증(sparganosis)과의 감별이 단골",
           "species_id": "cysticercus_cellulosae",
@@ -981,16 +981,16 @@
           "set": 1,
           "no": 34,
           "qtype": "증상·질병",
-          "stem": "다음 기생충이 일으키는 질환은?",
+          "stem": "다음 기생충에 감염된 환자의 병명으로 옳은 것은?",
           "image_path": "eunju/기생충_실습_(포자충류,_말라리아,_의용_001_3.png",
           "image_source": "eunju",
           "stain": "Giemsa",
           "magnification": "400-1000x",
           "options": [
-            "샤가스병",
             "질편모충증",
+            "아메바증",
             "톡소포자충증",
-            "원발성 아메바성 수막뇌염"
+            "비병원성"
           ],
           "answer_index": 2,
           "answer": "톡소포자충증",
@@ -1012,18 +1012,18 @@
           "set": 1,
           "no": 35,
           "qtype": "indicator",
-          "stem": "Indicator(표시)가 가리키는 구조물의 이름은?",
+          "stem": "다음 표본에서 표시가 가리키는 구조물은?",
           "image_path": "practical_ind/082_3.png",
           "image_source": "practical",
           "stain": "Giemsa",
           "magnification": "1000x",
           "options": [
-            "ring form",
-            "schizont",
-            "gelatin layer",
-            "gametocyte"
+            "Schuffner dot",
+            "gametocyte",
+            "RBC",
+            "schizont"
           ],
-          "answer_index": 3,
+          "answer_index": 1,
           "answer": "gametocyte",
           "explanation": "열대열원충 얇은 도말 — RBC 크기 변화 없음 / 한 적혈구에 여러 개의 ring (multiple ring form)\n출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾",
           "species_id": "plasmodium_falciparum",
@@ -1049,12 +1049,12 @@
           "stain": "H&E",
           "magnification": "40-400x",
           "options": [
-            "접촉매개성",
-            "절지동물매개성",
             "식품매개성",
+            "절지동물매개성",
+            "접촉매개성",
             "토양매개성"
           ],
-          "answer_index": 2,
+          "answer_index": 0,
           "answer": "식품매개성",
           "explanation": "고래회충 단면 (토끼 위) — Y자 모양 intestinal lumen / 나비 모양 lateral cord\n고래회충의 전파 방식은 식품매개성이다.\n출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell",
           "species_id": "anisakis_simplex",
@@ -1071,15 +1071,15 @@
           "set": 1,
           "no": 37,
           "qtype": "감염형",
-          "stem": "다음 기생충의 인체 감염형은?",
+          "stem": "다음 기생충의 감염형으로 옳은 것은?",
           "image_path": "jms_trematoda/흡충_Trematodes/009_F9.png",
           "image_source": "jms_trematoda",
           "stain": "H&E",
           "magnification": "40-100x",
           "options": [
-            "해당 없음",
+            "포낭",
             "유미유충 (cercaria)",
-            "의미충 (plerocercoid larva)",
+            "해당 없음",
             "피낭유충 (metacercaria)"
           ],
           "answer_index": 3,
@@ -1096,18 +1096,18 @@
           "set": 1,
           "no": 38,
           "qtype": "진단",
-          "stem": "다음 기생충 감염의 진단법으로 옳은 것은?",
+          "stem": "다음 기생충을 진단하는 검사로 알맞은 것은?",
           "image_path": "jms_protozoa/원충_Protozoa/011_G11.png",
           "image_source": "jms_protozoa",
           "stain": "Diff-Quik",
           "magnification": "1000x",
           "options": [
+            "폐포세척액·객담·생검",
+            "각막 도말·배양",
             "질 분비물 현미경 관찰",
-            "뇌척수액·뇌생검에서 영양형",
-            "대변검사",
-            "혈액·림프액 도말 Giemsa"
+            "대변검사"
           ],
-          "answer_index": 0,
+          "answer_index": 2,
           "answer": "질 분비물 현미경 관찰",
           "explanation": "질편모충 영양형 — 핵 1개 / 앞쪽으로 뻗은 편모 4개\n질편모충 진단: 질 분비물 현미경 관찰\n출제 포인트: 핵 1개 + 앞쪽 4개 편모 + 한쪽에 undulating membrane (파동막). 포낭기가 없는 것이 특징",
           "species_id": "trichomonas_vaginalis",
@@ -1127,12 +1127,12 @@
           "stain": "carmine",
           "magnification": "400x",
           "options": [
+            "패류매개성",
+            "성접촉",
             "토양매개성",
-            "식품매개성",
-            "접촉매개성",
-            "패류매개성"
+            "식품매개성"
           ],
-          "answer_index": 1,
+          "answer_index": 3,
           "answer": "식품매개성",
           "explanation": "참굴큰입흡충 성충 — 몸에 비해 거대한 oral sucker / ventral sucker 앞쪽에 홈처럼 파인 ventral pit\n참굴큰입흡충의 전파 방식은 식품매개성이다.\n출제 포인트: 거대한 oral sucker + ventral sucker 앞의 홈 (ventral pit) 이 결정적 감별점",
           "species_id": "gymnophalloides_seoi",
@@ -1154,12 +1154,12 @@
           "stain": null,
           "magnification": "육안",
           "options": [
-            "pentavalent 복용",
+            "치료 불필요",
+            "외과적 적출",
             "Praziquantel 복용",
-            "Triclabendazole 복용",
-            "TMP-SMX 복용"
+            "Triclabendazole 복용"
           ],
-          "answer_index": 1,
+          "answer_index": 2,
           "answer": "Praziquantel 복용",
           "explanation": "간흡충 성충 (육안) — 바질시드 모양의 작고 납작한 나뭇잎형 / 10-25mm\n간흡충 치료: Praziquantel 25mg/kg tid 1d\n출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis",
           "species_id": "clonorchis_sinensis",
@@ -1197,12 +1197,12 @@
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Enterobius vermicularis",
-            "Strongyloides stercoralis",
+            "Ascaris lumbricoides",
+            "Anisakis simplex",
             "Ancylostoma duodenale",
-            "Trichuris trichiura"
+            "Enterobius vermicularis"
           ],
-          "answer_index": 0,
+          "answer_index": 3,
           "answer": "Enterobius vermicularis",
           "explanation": "요충 충란 — 한쪽이 편평하고 반대쪽이 볼록한 비대칭 타원형 / 커피콩·죠리퐁·감씨 모양\n출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)",
           "species_id": "enterobius_vermicularis",
@@ -1220,18 +1220,18 @@
           "set": 2,
           "no": 2,
           "qtype": "감염형",
-          "stem": "다음 충란을 가지는 기생충의 인체 감염형은?",
+          "stem": "다음 충란을 가지는 기생충의 감염형으로 옳은 것은?",
           "image_path": "note/[260831_05]_감염의_기초_실습__074_3.png",
           "image_source": "note",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "포낭",
             "피낭유충 (encysted larva)",
-            "사상유충 (filariform larva)",
-            "자충포장란 (embryonated egg)"
+            "자충포장란 (embryonated egg)",
+            "L3 유충",
+            "충란"
           ],
-          "answer_index": 3,
+          "answer_index": 1,
           "answer": "자충포장란 (embryonated egg)",
           "explanation": "편충 충란 — 양쪽 끝에 투명한 mucoid plug / 나뭇잎·럭비공·barrel 모양\n편충의 인체 감염형은 자충포장란 (embryonated egg)이다.\n출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골",
           "species_id": "trichuris_trichiura",
@@ -1250,18 +1250,18 @@
           "set": 2,
           "no": 3,
           "qtype": "충란 동정",
-          "stem": "다음 충란을 가지는 기생충은?",
+          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
           "image_path": "tonghap/충란/009_E9.png",
           "image_source": "tonghap",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Diphyllobothrium latum",
-            "Strongyloides stercoralis",
+            "Trichuris trichiura",
+            "Hookworm",
             "Enterobius vermicularis",
-            "Hookworm"
+            "Diphyllobothrium latum"
           ],
-          "answer_index": 3,
+          "answer_index": 1,
           "answer": "Hookworm",
           "explanation": "구충 충란 — 타원형, 충란벽이 키틴층 하나로 얇고 투명 / 내부에 난할된 세포가 여러 개 (4-8 cell stage)\n두비니구충과 아메리카구충의 충란은 구별 불가 — 답은 Hookworm\n출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지",
           "species_id": "ancylostoma_duodenale",
@@ -1283,18 +1283,18 @@
           "set": 2,
           "no": 4,
           "qtype": "충란 동정",
-          "stem": "다음 충란을 가지는 기생충은?",
+          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
           "image_path": "note/[260831_05]_감염의_기초_실습__066_2.png",
           "image_source": "note",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Schistosoma mansoni",
-            "Schistosoma haematobium",
+            "Gymnophalloides seoi",
             "Schistosoma japonicum",
-            "Paragonimus westermani"
+            "Schistosoma haematobium",
+            "Schistosoma mansoni"
           ],
-          "answer_index": 1,
+          "answer_index": 2,
           "answer": "Schistosoma haematobium",
           "explanation": "방광주혈흡충 충란 — 큰 방추형 / 아래쪽 끝에 돌출된 terminal spine\n출제 포인트: 충란 아래쪽 끝에 terminal spine (말단 돌기) — 만손(lateral)과의 결정적 감별점",
           "species_id": "schistosoma_haematobium",
@@ -1318,12 +1318,12 @@
           "stain": null,
           "magnification": "400x",
           "options": [
+            "hooklet",
             "albumin layer",
-            "embryophoral block",
-            "gelatin layer",
-            "hooklet"
+            "hexacanth embryo",
+            "gelatin layer"
           ],
-          "answer_index": 0,
+          "answer_index": 1,
           "answer": "albumin layer",
           "explanation": "회충 수정란 — 난원형, 두꺼운 충란벽 / 3 layer 구조 (바깥 albumin - chitin - lipoid)\n출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제",
           "species_id": "ascaris_lumbricoides",
@@ -1350,12 +1350,12 @@
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Cysticercus cellulosae",
             "Echinococcus granulosus",
-            "Taenia spp.",
-            "Clonorchis sinensis"
+            "Clonorchis sinensis",
+            "Echinococcus multilocularis",
+            "Taenia spp."
           ],
-          "answer_index": 2,
+          "answer_index": 3,
           "answer": "Taenia spp.",
           "explanation": "유무구조충 충란 — 원형 또는 타원형 / 두껍고 방사상 무늬의 embryophoral block\n유구조충과 무구조충의 충란은 구별 불가 — 답은 Taenia spp.\n출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)",
           "species_id": "taenia_solium",
@@ -1379,12 +1379,12 @@
           "stain": null,
           "magnification": "400x",
           "options": [
-            "crypt",
+            "gelatin layer",
             "terminal spine",
-            "lateral spine",
-            "gelatin layer"
+            "oral sucker",
+            "lateral spine"
           ],
-          "answer_index": 2,
+          "answer_index": 3,
           "answer": "lateral spine",
           "explanation": "일본주혈흡충 충란 — 둥글고 통통함 (주혈흡충 중 가장 작고 둥금) / 매우 작은 lateral spine — 잘 보이지 않음\n출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태",
           "species_id": "schistosoma_japonicum",
@@ -1400,18 +1400,18 @@
           "set": 2,
           "no": 8,
           "qtype": "충란 동정",
-          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
+          "stem": "다음 충란을 가지는 기생충은?",
           "image_path": "jms_egg/충란_Helminth_eggs/015_D15.png",
           "image_source": "jms_egg",
           "stain": null,
           "magnification": "400x",
           "options": [
             "Paragonimus westermani",
-            "Taenia asiatica",
             "Diphyllobothrium latum",
-            "Ancylostoma duodenale"
+            "Ancylostoma duodenale",
+            "Taenia asiatica"
           ],
-          "answer_index": 2,
+          "answer_index": 1,
           "answer": "Diphyllobothrium latum",
           "explanation": "광절열두조충 충란 — 갈색 타원형 / 한쪽에 operculum, 반대쪽에 작은 terminal knob\n출제 포인트: 충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만",
           "species_id": "diphyllobothrium_latum",
@@ -1435,12 +1435,12 @@
           "stain": null,
           "magnification": "400x",
           "options": [
-            "사람·조류·포유류",
             "사람·고양이과 동물",
-            "양·소 등 초식동물, 사람",
-            "사람·쥐·원숭이"
+            "사람·개",
+            "사람·조류·포유류",
+            "검은머리물떼새"
           ],
-          "answer_index": 0,
+          "answer_index": 2,
           "answer": "사람·조류·포유류",
           "explanation": "요코가와흡충 충란 — 간흡충과 크기가 같으나 충란벽이 매끄러움 (muskmelon 무늬 없음) / shouldering이 뚜렷하지 않음\n요코가와흡충의 종숙주는 사람·조류·포유류이다.\n출제 포인트: 충란은 간흡충과 크기가 같은 30um이지만 충란벽이 매끄러움 (muskmelon 무늬 없음). 성충은 ventral sucker가 한쪽으로 치우침",
           "species_id": "metagonimus_yokogawai",
@@ -1459,18 +1459,18 @@
           "set": 2,
           "no": 10,
           "qtype": "충란 동정",
-          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
+          "stem": "다음 충란을 가지는 기생충은?",
           "image_path": "jiseok/실습_1_003_8.png",
           "image_source": "jiseok",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Schistosoma mansoni",
             "Schistosoma haematobium",
             "Schistosoma japonicum",
-            "Metagonimus yokogawai"
+            "Fasciola hepatica",
+            "Schistosoma mansoni"
           ],
-          "answer_index": 0,
+          "answer_index": 3,
           "answer": "Schistosoma mansoni",
           "explanation": "만손주혈흡충 충란 — 매우 큼 (100um 이상) / 옆구리에 뚜렷하게 돌출된 lateral spine\n출제 포인트: 충란이 가장 큼 (100um 이상) + 뚜렷한 lateral spine (측방 돌기)",
           "species_id": "schistosoma_mansoni",
@@ -1487,18 +1487,18 @@
           "set": 2,
           "no": 11,
           "qtype": "충란 동정",
-          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
+          "stem": "다음은 어떤 기생충의 충란인가?",
           "image_path": "eunju/기생충_실습_(조충류,_흡충류)_001_19.png",
           "image_source": "eunju",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Diphyllobothrium latum",
-            "Ascaris lumbricoides",
+            "Metagonimus yokogawai",
             "Paragonimus westermani",
-            "Metagonimus yokogawai"
+            "Ascaris lumbricoides",
+            "Diphyllobothrium latum"
           ],
-          "answer_index": 2,
+          "answer_index": 1,
           "answer": "Paragonimus westermani",
           "explanation": "폐흡충 충란 — 황갈색의 큰 난원형 / 한쪽 끝에 뚜렷한 operculum\n출제 포인트: 충란 - 90um 그룹, operculum + abopercular thickening. 성충 - plump ovoid, 적갈색, 6개 lobe로 나뉜 ovary. 슬라이드가 두껍게 mounting 되어 있음",
           "species_id": "paragonimus_westermani",
@@ -1512,18 +1512,18 @@
           "set": 2,
           "no": 12,
           "qtype": "증상·질병",
-          "stem": "다음 기생충이 일으키는 질환은?",
+          "stem": "다음 기생충에 감염된 환자의 병명으로 옳은 것은?",
           "image_path": "eunju/기생충_실습_(protozoa)_001_19.png",
           "image_source": "eunju",
           "stain": "Diff-Quik",
           "magnification": "1000x",
           "options": [
-            "질편모충증",
-            "톡소포자충증",
+            "피부리슈만편모충증",
             "비병원성",
-            "람블편모충증"
+            "람블편모충증",
+            "가시아메바각막염 / 육아종성 아메바성 뇌염"
           ],
-          "answer_index": 3,
+          "answer_index": 2,
           "answer": "람블편모충증",
           "explanation": "람블편모충 영양형 — 서양배(pear) 또는 올빼미 얼굴 모양 / 눈처럼 보이는 핵 2개\n람블편모충 감염증의 병명은 람블편모충증 (giardiasis)이다.\n출제 포인트: 영양형 - pear/올빼미 얼굴 모양, 핵 2개, 4쌍 편모, sucking disc. 포낭 - 타원형, 핵 2-4개가 한쪽에 몰림, axostyle 주변 fibril. 조직 파괴는 하지 않음",
           "species_id": "giardia_lamblia",
@@ -1539,18 +1539,18 @@
           "set": 2,
           "no": 13,
           "qtype": "감염경로",
-          "stem": "다음 기생충의 전파 방식은?",
+          "stem": "다음 기생충이 감염되는 방식은?",
           "image_path": "jms_protozoa/원충_Protozoa/026_G26.png",
           "image_source": "jms_protozoa",
           "stain": "Diff-Quik",
           "magnification": "400-1000x",
           "options": [
+            "공기매개",
             "수인성",
             "접촉매개성",
-            "공기매개",
             "절지동물매개성"
           ],
-          "answer_index": 2,
+          "answer_index": 0,
           "answer": "공기매개",
           "explanation": "폐포자충 (Diff-Quik, 폐) — 폐포 안에 거품 같은 exudate / cyst 안에 매우 작은 8개의 핵 (octa-nucleated cyst)\n폐포자충의 전파 방식은 공기매개이다.\n출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)",
           "species_id": "pneumocystis_jirovecii",
@@ -1570,18 +1570,18 @@
           "set": 2,
           "no": 14,
           "qtype": "종 동정",
-          "stem": "다음 기생충의 학명으로 옳은 것은?",
+          "stem": "현미경에서 관찰되는 기생충을 고르시오.",
           "image_path": "jms_protozoa/원충_Protozoa/016_F16.png",
           "image_source": "jms_protozoa",
           "stain": "Giemsa",
           "magnification": "1000x",
           "options": [
             "Plasmodium malariae",
-            "Plasmodium falciparum",
+            "Plasmodium knowlesi",
             "Plasmodium vivax",
-            "Plasmodium knowlesi"
+            "Plasmodium falciparum"
           ],
-          "answer_index": 1,
+          "answer_index": 3,
           "answer": "Plasmodium falciparum",
           "explanation": "열대열원충 얇은 도말 — RBC 크기 변화 없음 / 한 적혈구에 여러 개의 ring (multiple ring form)\n출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾",
           "species_id": "plasmodium_falciparum",
@@ -1608,9 +1608,9 @@
           "magnification": "40-400x",
           "options": [
             "토양매개성",
-            "접촉매개성",
+            "절지동물매개성",
             "식품매개성",
-            "절지동물매개성"
+            "접촉매개성"
           ],
           "answer_index": 2,
           "answer": "식품매개성",
@@ -1635,12 +1635,12 @@
           "stain": "carmine",
           "magnification": "100x",
           "options": [
-            "폐흡충증",
-            "요코가와흡충증",
             "서울주걱흡충증",
-            "극구흡충증"
+            "간질증",
+            "폐흡충증",
+            "요코가와흡충증"
           ],
-          "answer_index": 1,
+          "answer_index": 3,
           "answer": "요코가와흡충증",
           "explanation": "요코가와흡충 성충 — 매우 작아 육안으로 잘 안 보임 (1-2mm) / ventral sucker가 한쪽으로 치우쳐 있음\n요코가와흡충 감염증의 병명은 요코가와흡충증 (metagonimiasis)이다.\n출제 포인트: 충란은 간흡충과 크기가 같은 30um이지만 충란벽이 매끄러움 (muskmelon 무늬 없음). 성충은 ventral sucker가 한쪽으로 치우침",
           "species_id": "metagonimus_yokogawai",
@@ -1659,7 +1659,7 @@
           "set": 2,
           "no": 17,
           "qtype": "특징 구조물",
-          "stem": "다음 기생충이 가진 특징적 구조물은?",
+          "stem": "다음 기생충에서 가장 특징적인 구조물은?",
           "image_path": "note/[260904_05]_감염의_기초_실습__014_2.png",
           "image_source": "note",
           "stain": "carmine",
@@ -1688,18 +1688,18 @@
           "set": 2,
           "no": 18,
           "qtype": "종 동정",
-          "stem": "현미경에서 관찰되는 기생충을 고르시오.",
+          "stem": "다음 기생충의 학명으로 옳은 것은?",
           "image_path": "practical/085_2.png",
           "image_source": "practical",
           "stain": "Giemsa",
           "magnification": "1000x",
           "options": [
+            "Plasmodium malariae",
             "Plasmodium ovale",
             "Plasmodium falciparum",
-            "Plasmodium vivax",
-            "Plasmodium malariae"
+            "Plasmodium vivax"
           ],
-          "answer_index": 1,
+          "answer_index": 2,
           "answer": "Plasmodium falciparum",
           "explanation": "열대열원충 두꺼운 도말 — 적혈구가 용혈되어 원충만 남음 / 선별검사용 — 민감도가 높지만 종 감별은 어려움\n출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾",
           "species_id": "plasmodium_falciparum",
@@ -1719,18 +1719,18 @@
           "set": 2,
           "no": 19,
           "qtype": "감염경로",
-          "stem": "다음 기생충이 감염되는 방식은?",
+          "stem": "다음 기생충의 전파 방식은?",
           "image_path": "tonghap/조충/004_D4.png",
           "image_source": "tonghap",
           "stain": null,
           "magnification": "육안",
           "options": [
-            "성접촉",
             "접촉매개성",
-            "식품매개성",
-            "절지동물매개성"
+            "성접촉",
+            "절지동물매개성",
+            "식품매개성"
           ],
-          "answer_index": 2,
+          "answer_index": 3,
           "answer": "식품매개성",
           "explanation": "고충 (육안) — 하얀 고무줄처럼 쭈굴쭈굴하고 길다 / 편절 구분이 없음\n만손열두조충의 전파 방식은 식품매개성이다.\n출제 포인트: gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle",
           "species_id": "spirometra_erinacei",
@@ -1754,8 +1754,8 @@
           "magnification": "400-1000x",
           "options": [
             "혈액도말 Giemsa",
-            "골수·비장 천자",
-            "punch biopsy",
+            "혈액·림프액 도말 Giemsa",
+            "뇌척수액·뇌생검에서 영양형",
             "대변검사"
           ],
           "answer_index": 0,
@@ -1774,18 +1774,18 @@
           "set": 2,
           "no": 21,
           "qtype": "기생부위",
-          "stem": "다음 기생충의 성충 기생 부위는?",
+          "stem": "다음 기생충이 기생하는 부위는?",
           "image_path": "jms_nematoda/선충_Nematodes/008_F8.png",
           "image_source": "jms_nematoda",
           "stain": null,
           "magnification": "40-400x",
           "options": [
-            "위벽·장벽",
-            "소장 상부",
+            "간·폐·눈·뇌",
             "맹장·대장",
-            "성충 - 소장 점막 / 유충 - 횡문근"
+            "소장 상부",
+            "림프관"
           ],
-          "answer_index": 1,
+          "answer_index": 2,
           "answer": "소장 상부",
           "explanation": "아메리카구충 성충 — 구강에 칼날 모양 cutting plate 1쌍 (송곳니 아님) / dorsal costa가 깊게 2분지 후 각각 2분지 (2+2)\n아메리카구충 성충은 소장 상부에 기생한다.\ndorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)\n출제 포인트: 구강에 칼날 모양 cutting plate 1쌍. dorsal costa 깊게 2분지 → 각각 2분지",
           "species_id": "necator_americanus",
@@ -1809,9 +1809,9 @@
           "stain": "trichrome",
           "magnification": "1000x",
           "options": [
+            "체체파리",
+            "고양이 분변에 오염된 채소·식수",
             "돼지 분변에 오염된 물·음식",
-            "침노린재",
-            "오염된 렌즈 세척액·물",
             "포낭에 오염된 물·음식"
           ],
           "answer_index": 3,
@@ -1832,18 +1832,18 @@
           "set": 2,
           "no": 23,
           "qtype": "감염형",
-          "stem": "다음 기생충의 감염형으로 옳은 것은?",
+          "stem": "다음 기생충의 인체 감염형은?",
           "image_path": "tonghap/조충/011_D11.png",
           "image_source": "tonghap",
           "stain": "carmine",
           "magnification": "100x",
           "options": [
-            "충란",
             "무구낭미충",
-            "의미충",
-            "전미충"
+            "유구낭미충",
+            "충란",
+            "의미충"
           ],
-          "answer_index": 0,
+          "answer_index": 2,
           "answer": "충란",
           "explanation": "단방조충 protoscolex — 포충(hydatid cyst) 안에 여러 개의 protoscolex / 콧수염 모양으로 배열된 hooklet\n단방조충의 인체 감염형은 충란이다.\n출제 포인트: 성충은 immature·mature·gravid 편절이 1개씩. 포충 내부에 여러 개의 protoscolex, 콧수염 모양 hooklet",
           "species_id": "echinococcus_granulosus",
@@ -1862,16 +1862,16 @@
           "set": 2,
           "no": 24,
           "qtype": "감염형",
-          "stem": "다음 기생충의 감염형으로 옳은 것은?",
+          "stem": "다음 기생충의 인체 감염형은?",
           "image_path": "jms_nematoda/선충_Nematodes/012_G12.png",
           "image_source": "jms_nematoda",
           "stain": "H&E",
           "magnification": "100-400x",
           "options": [
             "자충포장란 (embryonated egg)",
+            "사상유충 (filariform larva, L3)",
             "피낭유충 (encysted larva)",
-            "해당 없음",
-            "사상유충 (filariform larva, L3)"
+            "promastigote"
           ],
           "answer_index": 0,
           "answer": "자충포장란 (embryonated egg)",
@@ -1892,14 +1892,14 @@
           "set": 2,
           "no": 25,
           "qtype": "종 동정",
-          "stem": "다음은 어떤 기생충인가?",
+          "stem": "다음 기생충의 학명으로 옳은 것은?",
           "image_path": "tonghap/선충/022_D22.png",
           "image_source": "tonghap",
           "stain": null,
           "magnification": "40-100x",
           "options": [
-            "Ascaris lumbricoides",
             "Anisakis simplex",
+            "Ascaris lumbricoides",
             "Enterobius vermicularis",
             "Strongyloides stercoralis"
           ],
@@ -1927,10 +1927,10 @@
           "stain": "Giemsa",
           "magnification": "400-1000x",
           "options": [
-            "Amphotericin 복용",
+            "Pentamidine 복용",
             "Pyrimethamine 복용",
-            "Benznidazole 복용",
-            "Pentamidine 복용"
+            "치료 불필요",
+            "pentavalent antimonials 복용"
           ],
           "answer_index": 1,
           "answer": "Pyrimethamine 복용",
@@ -1952,15 +1952,15 @@
           "set": 2,
           "no": 27,
           "qtype": "기생부위",
-          "stem": "다음 기생충이 기생하는 부위는?",
+          "stem": "다음 기생충의 성충 기생 부위는?",
           "image_path": "jiseok/실습_5_003_7.png",
           "image_source": "jiseok",
           "stain": null,
           "magnification": "육안-40x",
           "options": [
             "중남미 주거지",
-            "주로 주간 활동",
-            "생식기 주변 털",
+            "피부 각질층",
+            "열대·아열대",
             "야외 초지"
           ],
           "answer_index": 0,
@@ -1985,8 +1985,8 @@
           "stain": "carmine",
           "magnification": "40x",
           "options": [
+            "Paragonimus westermani",
             "Opisthorchis viverrini",
-            "Schistosoma japonicum",
             "Clonorchis sinensis",
             "Fasciola hepatica"
           ],
@@ -2017,18 +2017,18 @@
           "set": 2,
           "no": 29,
           "qtype": "종 동정",
-          "stem": "현미경에서 관찰되는 기생충을 고르시오.",
+          "stem": "다음은 어떤 기생충인가?",
           "image_path": "note/[260902_05]_감염의_기초_실습__052_1.png",
           "image_source": "note",
           "stain": null,
           "magnification": "육안",
           "options": [
-            "Strongyloides stercoralis",
-            "Ascaris lumbricoides",
             "Anisakis simplex",
-            "Enterobius vermicularis"
+            "Enterobius vermicularis",
+            "Necator americanus",
+            "Ascaris lumbricoides"
           ],
-          "answer_index": 2,
+          "answer_index": 0,
           "answer": "Anisakis simplex",
           "explanation": "고래회충 유충 (육안) — 약 2cm, 유백색의 실 모양 / 생선 내장·근육에 나선형으로 말려 있음\n출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell",
           "species_id": "anisakis_simplex",
@@ -2051,12 +2051,12 @@
           "stain": "carmine",
           "magnification": "100-400x",
           "options": [
-            "꽃뱀·개구리 생식",
             "유미유충이 있는 민물 접촉",
-            "자연산 굴 생식",
-            "숭어·농어·문절망둑 등 반수산 어류 생식"
+            "얼룩동사리·버들치·미꾸라지 생식",
+            "미나리 등 수생식물, 초식동물 생간·녹즙",
+            "꽃뱀·개구리 생식"
           ],
-          "answer_index": 0,
+          "answer_index": 3,
           "answer": "꽃뱀·개구리 생식",
           "explanation": "서울주걱흡충 성충 — 앞쪽이 주걱처럼 넓게 퍼진 모양 / tribocytic organ (제2의 입) 이 결정적 감별점\n서울주걱흡충은(는) 경구감염으로 감염되며, 감염원은 꽃뱀·개구리 생식이다.\n출제 포인트: 주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습",
           "species_id": "neodiplostomum_seoulense",
@@ -2080,12 +2080,12 @@
           "stain": "iron hematoxylin / trichrome",
           "magnification": "1000x",
           "options": [
-            "가시아메바각막염 / 육아종성 아메바성 뇌염",
-            "대장섬모충증",
+            "비병원성",
             "아메바증",
-            "람블편모충증"
+            "람블편모충증",
+            "질편모충증"
           ],
-          "answer_index": 2,
+          "answer_index": 1,
           "answer": "아메바증",
           "explanation": "이질아메바 영양형 — karyosome이 핵 중앙에 작은 점처럼 위치 / peripheral chromatin의 두께가 균일\n이질아메바 감염증의 병명은 아메바증 (amebiasis)이다.\n출제 포인트: 영양형 - karyosome 중앙 + peripheral chromatin 두께 균일, RBC 탐식. 포낭 - 핵 4개 이하. 조직 - flask-shaped ulcer",
           "species_id": "entamoeba_histolytica",
@@ -2109,12 +2109,12 @@
           "stain": "H&E",
           "magnification": "400-1000x",
           "options": [
-            "gelatin layer",
             "bradyzoite",
             "amastigote nest",
-            "egg"
+            "egg",
+            "granuloma"
           ],
-          "answer_index": 1,
+          "answer_index": 0,
           "answer": "bradyzoite",
           "explanation": "톡소포자충 tissue cyst (뇌) — 뇌 조직 안에 둥근 tissue cyst / cyst 내부에 매우 많은 bradyzoite가 빽빽하게 들어참\n출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골",
           "species_id": "toxoplasma_gondii",
@@ -2134,18 +2134,18 @@
           "set": 2,
           "no": 33,
           "qtype": "특징 구조물",
-          "stem": "다음 기생충에서 가장 특징적인 구조물은?",
+          "stem": "다음 기생충이 가진 특징적 구조물은?",
           "image_path": "jms_nematoda/선충_Nematodes/004_G4.png",
           "image_source": "jms_nematoda",
           "stain": "H&E",
           "magnification": "40-100x",
           "options": [
-            "Y-shaped intestinal lumen",
-            "cuticle",
+            "stichosome",
             "Renette cell",
+            "cuticle",
             "gelatin layer"
           ],
-          "answer_index": 1,
+          "answer_index": 2,
           "answer": "cuticle",
           "explanation": "회충 단면 — 소화관 lumen을 단층 원주상피가 둘러쌈 / 양 옆에 lateral cord (족보에는 lateral chord 표기도 등장)\n출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제",
           "species_id": "ascaris_lumbricoides",
@@ -2172,12 +2172,12 @@
           "stain": null,
           "magnification": "40-400x",
           "options": [
-            "lateral cord",
+            "dorsal costa",
             "gelatin layer",
-            "cutting plate",
-            "dorsal costa"
+            "notched tail",
+            "cutting plate"
           ],
-          "answer_index": 3,
+          "answer_index": 0,
           "answer": "dorsal costa",
           "explanation": "두비니구충 성충 — 구강에 투명하게 반짝이는 송곳니 2쌍 (hook-like teeth) / 꼬리에 copulatory bursa\ndorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)\n출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지",
           "species_id": "ancylostoma_duodenale",
@@ -2199,15 +2199,15 @@
           "set": 2,
           "no": 35,
           "qtype": "indicator",
-          "stem": "다음 표본에서 표시가 가리키는 구조물은?",
+          "stem": "Indicator(표시)가 가리키는 구조물의 이름은?",
           "image_path": "practical_ind/087_3.png",
           "image_source": "practical",
           "stain": "Giemsa",
           "magnification": "1000x",
           "options": [
             "schizont",
-            "Schuffner dot",
             "gelatin layer",
+            "ring form",
             "gametocyte"
           ],
           "answer_index": 0,
@@ -2233,10 +2233,10 @@
           "stain": "carmine",
           "magnification": "40x",
           "options": [
-            "미나리 등 수생식물, 초식동물 생간·녹즙",
-            "유미유충이 있는 민물 접촉",
             "민물고기 생식",
-            "얼룩동사리·버들치·미꾸라지 생식"
+            "유미유충이 있는 민물 접촉",
+            "숭어·농어·문절망둑 등 반수산 어류 생식",
+            "민물 갑각류 생식"
           ],
           "answer_index": 1,
           "answer": "유미유충이 있는 민물 접촉",
@@ -2254,18 +2254,18 @@
           "set": 2,
           "no": 37,
           "qtype": "종 동정",
-          "stem": "현미경에서 관찰되는 기생충을 고르시오.",
+          "stem": "다음은 어떤 기생충인가?",
           "image_path": "tonghap/흡충/004_H4.png",
           "image_source": "tonghap",
           "stain": "H&E",
           "magnification": "40-400x",
           "options": [
             "Paragonimus westermani",
-            "Clonorchis sinensis",
             "Fasciola hepatica",
-            "Metagonimus yokogawai"
+            "Clonorchis sinensis",
+            "Gymnophalloides seoi"
           ],
-          "answer_index": 1,
+          "answer_index": 2,
           "answer": "Clonorchis sinensis",
           "explanation": "간흡충 조직절편 (간) — 담관 직경이 늘어나 있음 / 담관 안에 여러 마리의 충체 단면\n출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis",
           "species_id": "clonorchis_sinensis",
@@ -2298,12 +2298,12 @@
           "stain": "carmine",
           "magnification": "40x",
           "options": [
-            "calcareous corpuscle",
             "protoscolex",
             "sucker",
+            "gelatin layer",
             "brood capsule"
           ],
-          "answer_index": 2,
+          "answer_index": 1,
           "answer": "sucker",
           "explanation": "유구낭미충 (현미경) — cyst 안으로 scolex가 말려 들어가 있음 / scolex의 갈고리와 흡반이 진하게 보임\n출제 포인트: gross - 투명한 cyst 안에 하얀 scolex. 조직 - cyst + 양치식물 모양 neck/scolex, 갈고리 진하게 보임. 고충증(sparganosis)과의 감별이 단골",
           "species_id": "cysticercus_cellulosae",
@@ -2325,12 +2325,12 @@
           "stain": "GMS (Gomori methenamine silver)",
           "magnification": "400-1000x",
           "options": [
-            "Pneumocystis jirovecii",
-            "Endolimax nana",
             "Toxoplasma gondii",
-            "Cryptosporidium parvum"
+            "Pneumocystis jirovecii",
+            "Entamoeba coli",
+            "Entamoeba histolytica"
           ],
-          "answer_index": 0,
+          "answer_index": 1,
           "answer": "Pneumocystis jirovecii",
           "explanation": "폐포자충 (GMS 염색, 폐) — 폐포 안이 검게 염색된 cyst로 가득 참 / cyst 벽이 검게 염색되고 안이 비침 (컵·초승달 모양)\n출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)",
           "species_id": "pneumocystis_jirovecii",
@@ -2356,12 +2356,12 @@
           "stain": null,
           "magnification": "100-400x",
           "options": [
-            "Trichuris trichiura",
-            "Enterobius vermicularis",
             "Strongyloides stercoralis",
-            "Necator americanus"
+            "Necator americanus",
+            "Enterobius vermicularis",
+            "Trichuris trichiura"
           ],
-          "answer_index": 2,
+          "answer_index": 0,
           "answer": "Strongyloides stercoralis",
           "explanation": "분선충 사상유충 — 식도의 직경이 일정하고 길다 / 꼬리 끝이 갈라짐 (notched tail)\n출제 포인트: 간상유충 (rhabditoid) = 백열전구 모양 식도 / 사상유충 (filariform) = 직경 일정한 식도 + notched tail. 구충 유충과는 꼬리 모양으로 감별",
           "species_id": "strongyloides_stercoralis",
@@ -2393,12 +2393,12 @@
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Schistosoma haematobium",
             "Schistosoma mansoni",
-            "Clonorchis sinensis",
-            "Schistosoma japonicum"
+            "Schistosoma haematobium",
+            "Schistosoma japonicum",
+            "Fasciola hepatica"
           ],
-          "answer_index": 3,
+          "answer_index": 2,
           "answer": "Schistosoma japonicum",
           "explanation": "일본주혈흡충 충란 — 둥글고 통통함 (주혈흡충 중 가장 작고 둥금) / 매우 작은 lateral spine — 잘 보이지 않음\n출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태",
           "species_id": "schistosoma_japonicum",
@@ -2414,18 +2414,18 @@
           "set": 3,
           "no": 2,
           "qtype": "충란 동정",
-          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
+          "stem": "다음 충란을 가지는 기생충은?",
           "image_path": "tonghap/충란/003_F3.png",
           "image_source": "tonghap",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Anisakis simplex",
-            "Enterobius vermicularis",
             "Ascaris lumbricoides",
-            "Paragonimus westermani"
+            "Strongyloides stercoralis",
+            "Paragonimus westermani",
+            "Necator americanus"
           ],
-          "answer_index": 2,
+          "answer_index": 0,
           "answer": "Ascaris lumbricoides",
           "explanation": "회충 불수정란 — 수정란보다 길쭉하고 큼 / 충란벽 3 layer가 제대로 형성되지 않음\n출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제",
           "species_id": "ascaris_lumbricoides",
@@ -2446,16 +2446,16 @@
           "set": 3,
           "no": 3,
           "qtype": "감염형",
-          "stem": "다음 충란을 가지는 기생충의 감염형으로 옳은 것은?",
+          "stem": "다음 충란을 가지는 기생충의 인체 감염형은?",
           "image_path": "jms_egg/충란_Helminth_eggs/006_D6.png",
           "image_source": "jms_egg",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "피낭유충 (encysted larva)",
             "자충포장란 (embryonated egg)",
+            "해당 없음",
             "사상유충 (filariform larva, L3)",
-            "피낭유충 (metacercaria)"
+            "피낭유충 (encysted larva)"
           ],
           "answer_index": 2,
           "answer": "사상유충 (filariform larva, L3)",
@@ -2479,18 +2479,18 @@
           "set": 3,
           "no": 4,
           "qtype": "특징 구조물",
-          "stem": "다음 기생충이 가진 특징적 구조물은?",
+          "stem": "다음 기생충에서 가장 특징적인 구조물은?",
           "image_path": "jiseok/실습_1_003_5.png",
           "image_source": "jiseok",
           "stain": null,
           "magnification": "400x",
           "options": [
             "embryophoral block",
-            "lipoid layer",
-            "hooklet",
-            "gelatin layer"
+            "gelatin layer",
+            "hexacanth embryo",
+            "lipoid layer"
           ],
-          "answer_index": 1,
+          "answer_index": 3,
           "answer": "lipoid layer",
           "explanation": "회충 수정란 — 난원형, 두꺼운 충란벽 / 3 layer 구조 (바깥 albumin - chitin - lipoid)\n출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제",
           "species_id": "ascaris_lumbricoides",
@@ -2517,12 +2517,12 @@
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Enterobius vermicularis",
             "Ascaris lumbricoides",
-            "Trichuris trichiura",
-            "Necator americanus"
+            "Necator americanus",
+            "Strongyloides stercoralis",
+            "Trichuris trichiura"
           ],
-          "answer_index": 2,
+          "answer_index": 3,
           "answer": "Trichuris trichiura",
           "explanation": "편충 충란 — 양쪽 끝에 투명한 mucoid plug / 나뭇잎·럭비공·barrel 모양\n출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골",
           "species_id": "trichuris_trichiura",
@@ -2548,11 +2548,11 @@
           "magnification": "400x",
           "options": [
             "Diphyllobothrium latum",
-            "Fasciola hepatica",
-            "Ascaris lumbricoides",
-            "Paragonimus westermani"
+            "Metagonimus yokogawai",
+            "Paragonimus westermani",
+            "Ascaris lumbricoides"
           ],
-          "answer_index": 3,
+          "answer_index": 2,
           "answer": "Paragonimus westermani",
           "explanation": "폐흡충 충란 — 황갈색의 큰 난원형 / 한쪽 끝에 뚜렷한 operculum\n출제 포인트: 충란 - 90um 그룹, operculum + abopercular thickening. 성충 - plump ovoid, 적갈색, 6개 lobe로 나뉜 ovary. 슬라이드가 두껍게 mounting 되어 있음",
           "species_id": "paragonimus_westermani",
@@ -2572,12 +2572,12 @@
           "stain": null,
           "magnification": "400x",
           "options": [
-            "shoulder",
             "gelatin layer",
             "hexacanth embryo",
+            "operculum",
             "abopercular knob"
           ],
-          "answer_index": 2,
+          "answer_index": 1,
           "answer": "hexacanth embryo",
           "explanation": "유무구조충 충란 — 원형 또는 타원형 / 두껍고 방사상 무늬의 embryophoral block\n유구조충과 무구조충의 충란은 구별 불가 — 답은 Taenia spp.\n출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)",
           "species_id": "taenia_solium",
@@ -2595,18 +2595,18 @@
           "set": 3,
           "no": 8,
           "qtype": "충란 동정",
-          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
+          "stem": "다음 충란을 가지는 기생충은?",
           "image_path": "eunju/기생충_실습_(연충란)_001_9.png",
           "image_source": "eunju",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Necator americanus",
             "Ancylostoma duodenale",
-            "Ascaris lumbricoides",
-            "Enterobius vermicularis"
+            "Necator americanus",
+            "Enterobius vermicularis",
+            "Anisakis simplex"
           ],
-          "answer_index": 3,
+          "answer_index": 2,
           "answer": "Enterobius vermicularis",
           "explanation": "요충 충란 — 한쪽이 편평하고 반대쪽이 볼록한 비대칭 타원형 / 커피콩·죠리퐁·감씨 모양\n출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)",
           "species_id": "enterobius_vermicularis",
@@ -2630,9 +2630,9 @@
           "stain": null,
           "magnification": "400x",
           "options": [
-            "메콩주혈흡충증",
+            "만손주혈흡충증",
+            "간흡충증",
             "간질증",
-            "참굴큰입흡충증",
             "요코가와흡충증"
           ],
           "answer_index": 3,
@@ -2654,16 +2654,16 @@
           "set": 3,
           "no": 10,
           "qtype": "충란 동정",
-          "stem": "다음은 어떤 기생충의 충란인가?",
+          "stem": "다음 충란을 가지는 기생충은?",
           "image_path": "tonghap/충란/014_F14.png",
           "image_source": "tonghap",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Fasciola hepatica",
-            "Schistosoma haematobium",
             "Schistosoma japonicum",
-            "Schistosoma mansoni"
+            "Schistosoma haematobium",
+            "Schistosoma mansoni",
+            "Metagonimus yokogawai"
           ],
           "answer_index": 1,
           "answer": "Schistosoma haematobium",
@@ -2683,16 +2683,16 @@
           "set": 3,
           "no": 11,
           "qtype": "감염경로",
-          "stem": "다음 충란을 가지는 기생충의 감염 원인으로 알맞은 것은?",
+          "stem": "환자에게서 다음 표본이 검출되었다. 감염 원인은?",
           "image_path": "note/[260831_05]_감염의_기초_실습__063_2.png",
           "image_source": "note",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "돼지 간 생식",
-            "물벼룩이 든 생수, 뱀·개구리 생식, 개구리 살을 상처에 붙이는 민간요법",
+            "소고기 육회 등 덜 익힌 소고기",
+            "개 분변의 충란",
             "연어·송어·농어 생식",
-            "소고기 육회 등 덜 익힌 소고기"
+            "유구조충 충란에 오염된 음식·손"
           ],
           "answer_index": 2,
           "answer": "연어·송어·농어 생식",
@@ -2712,18 +2712,18 @@
           "set": 3,
           "no": 12,
           "qtype": "충란 동정",
-          "stem": "다음 충란을 가지는 기생충은?",
+          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
           "image_path": "jms_egg/충란_Helminth_eggs/008_D8.png",
           "image_source": "jms_egg",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Clonorchis sinensis",
             "Heterophyes nocens",
-            "Schistosoma mansoni",
-            "Metagonimus yokogawai"
+            "Clonorchis sinensis",
+            "Metagonimus yokogawai",
+            "Gymnophalloides seoi"
           ],
-          "answer_index": 0,
+          "answer_index": 1,
           "answer": "Clonorchis sinensis",
           "explanation": "간흡충 충란 — 전구·플라스크 모양 / operculum 주변이 어깨처럼 튀어나옴 (shouldering)\n출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis",
           "species_id": "clonorchis_sinensis",
@@ -2756,12 +2756,12 @@
           "stain": "Diff-Quik",
           "magnification": "400-1000x",
           "options": [
-            "오염된 렌즈 세척액·물",
-            "모래파리",
             "침노린재",
-            "비말·공기"
+            "비말·공기",
+            "체체파리",
+            "따뜻한 담수"
           ],
-          "answer_index": 3,
+          "answer_index": 1,
           "answer": "비말·공기",
           "explanation": "폐포자충 (Diff-Quik, 폐) — 폐포 안에 거품 같은 exudate / cyst 안에 매우 작은 8개의 핵 (octa-nucleated cyst)\n폐포자충은(는) 공기감염으로 감염되며, 감염원은 비말·공기이다.\n출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)",
           "species_id": "pneumocystis_jirovecii",
@@ -2787,10 +2787,10 @@
           "stain": "carmine",
           "magnification": "100-400x",
           "options": [
-            "Gymnophalloides seoi",
+            "Clonorchis sinensis",
             "Neodiplostomum seoulense",
             "Fasciola hepatica",
-            "Paragonimus westermani"
+            "Gymnophalloides seoi"
           ],
           "answer_index": 1,
           "answer": "Neodiplostomum seoulense",
@@ -2816,12 +2816,12 @@
           "stain": "Giemsa",
           "magnification": "1000x",
           "options": [
-            "자충포장란",
-            "해당 없음",
             "sporozoite",
-            "포낭"
+            "피낭유충 (metacercaria)",
+            "해당 없음",
+            "성충·약충·알"
           ],
-          "answer_index": 2,
+          "answer_index": 0,
           "answer": "sporozoite",
           "explanation": "삼일열원충 얇은 도말 — 감염된 RBC가 커지고 옅어짐 / multiple ring 없음, ring이 RBC 지름의 1/3\n삼일열원충의 인체 감염형은 sporozoite이다.\n출제 포인트: RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot",
           "species_id": "plasmodium_vivax",
@@ -2847,7 +2847,7 @@
             "접촉매개성",
             "성접촉",
             "절지동물매개성",
-            "식품매개성"
+            "수인성"
           ],
           "answer_index": 2,
           "answer": "절지동물매개성",
@@ -2863,16 +2863,16 @@
           "set": 3,
           "no": 17,
           "qtype": "종 동정",
-          "stem": "현미경에서 관찰되는 기생충을 고르시오.",
+          "stem": "다음 기생충의 학명으로 옳은 것은?",
           "image_path": "jms_trematoda/흡충_Trematodes/003_F3.png",
           "image_source": "jms_trematoda",
           "stain": "carmine",
           "magnification": "40x",
           "options": [
             "Schistosoma japonicum",
-            "Paragonimus westermani",
+            "Gymnophalloides seoi",
             "Fasciola hepatica",
-            "Schistosoma mansoni"
+            "Paragonimus westermani"
           ],
           "answer_index": 0,
           "answer": "Schistosoma japonicum",
@@ -2890,18 +2890,18 @@
           "set": 3,
           "no": 18,
           "qtype": "종 동정",
-          "stem": "현미경에서 관찰되는 기생충을 고르시오.",
+          "stem": "다음은 어떤 기생충인가?",
           "image_path": "tonghap/선충/014_D14.png",
           "image_source": "tonghap",
           "stain": null,
           "magnification": "40-400x",
           "options": [
-            "Enterobius vermicularis",
-            "Necator americanus",
             "Ancylostoma duodenale",
-            "Anisakis simplex"
+            "Trichuris trichiura",
+            "Ascaris lumbricoides",
+            "Necator americanus"
           ],
-          "answer_index": 1,
+          "answer_index": 3,
           "answer": "Necator americanus",
           "explanation": "아메리카구충 성충 — 구강에 칼날 모양 cutting plate 1쌍 (송곳니 아님) / dorsal costa가 깊게 2분지 후 각각 2분지 (2+2)\ndorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)\n출제 포인트: 구강에 칼날 모양 cutting plate 1쌍. dorsal costa 깊게 2분지 → 각각 2분지",
           "species_id": "necator_americanus",
@@ -2925,12 +2925,12 @@
           "stain": "trichrome",
           "magnification": "1000x",
           "options": [
+            "trypomastigote",
             "4핵성 포낭",
             "oocyst",
-            "promastigote",
-            "영양형·포낭"
+            "promastigote"
           ],
-          "answer_index": 0,
+          "answer_index": 1,
           "answer": "4핵성 포낭",
           "explanation": "람블편모충 포낭 — 타원형, 10-12um / 핵 2-4개가 한쪽 끝에 몰려 있음\n람블편모충의 인체 감염형은 4핵성 포낭이다.\n출제 포인트: 영양형 - pear/올빼미 얼굴 모양, 핵 2개, 4쌍 편모, sucking disc. 포낭 - 타원형, 핵 2-4개가 한쪽에 몰림, axostyle 주변 fibril. 조직 파괴는 하지 않음",
           "species_id": "giardia_lamblia",
@@ -2952,9 +2952,9 @@
           "stain": "H&E",
           "magnification": "40x",
           "options": [
-            "유구조충증",
-            "포충증",
-            "유구낭미충증",
+            "아시아조충증",
+            "왜소조충증",
+            "무구조충증",
             "고충증"
           ],
           "answer_index": 3,
@@ -2980,12 +2980,12 @@
           "stain": "H&E",
           "magnification": "400-1000x",
           "options": [
-            "질 분비물 현미경 관찰",
-            "혈액·림프액 도말 Giemsa",
-            "대변검사 - modified acid-fast",
-            "혈청 IgG/IgM"
+            "대변검사 - 급성기 영양형, 만성기 포낭",
+            "혈청 IgG/IgM",
+            "뇌척수액·뇌생검에서 영양형",
+            "대변검사 - modified acid-fast"
           ],
-          "answer_index": 2,
+          "answer_index": 3,
           "answer": "대변검사 - modified acid-fast",
           "explanation": "작은와포자충 조직절편 (소장) — 소장 융모 표면 미세융모에 붙은 작은 점들 / 세포 안이면서 세포질 밖(intracellular extracytoplasmic)에 위치\n작은와포자충 진단: 대변검사 - modified acid-fast (MAF) 염색\n출제 포인트: 장 조직에서 미세융모에 붙은 작은 점들. MAF 염색에서 파란 배경에 분홍색 oocyst",
           "species_id": "cryptosporidium_parvum",
@@ -3011,12 +3011,12 @@
           "stain": "Giemsa",
           "magnification": "400-1000x",
           "options": [
+            "고양이",
+            "사람",
             "돼지",
-            "자유생활종",
-            "사람·동물",
-            "고양이"
+            "자유생활종"
           ],
-          "answer_index": 3,
+          "answer_index": 0,
           "answer": "고양이",
           "explanation": "톡소포자충 tachyzoite — 초승달·활 모양 (arc shaped) / 편모나 섬모가 없음\n톡소포자충의 종숙주는 고양이이다.\n출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골",
           "species_id": "toxoplasma_gondii",
@@ -3042,12 +3042,12 @@
           "stain": "trichrome",
           "magnification": "1000x",
           "options": [
+            "undulating membrane",
             "gelatin layer",
-            "axostyle",
-            "intracystic body",
-            "peripheral chromatin"
+            "peripheral chromatin",
+            "nucleus"
           ],
-          "answer_index": 3,
+          "answer_index": 2,
           "answer": "peripheral chromatin",
           "explanation": "이질아메바 포낭 — 핵이 4개 이하로 듬성듬성 / karyosome 중앙 위치\n출제 포인트: 영양형 - karyosome 중앙 + peripheral chromatin 두께 균일, RBC 탐식. 포낭 - 핵 4개 이하. 조직 - flask-shaped ulcer",
           "species_id": "entamoeba_histolytica",
@@ -3071,12 +3071,12 @@
           "stain": "carmine",
           "magnification": "40x",
           "options": [
-            "PAIR 복용",
             "외과적 절제",
             "Praziquantel 복용",
+            "PAIR",
             "외과적 적출 (약물치료 없음)"
           ],
-          "answer_index": 2,
+          "answer_index": 1,
           "answer": "Praziquantel 복용",
           "explanation": "무구조충 편절 — 자궁측지 13개 이상, 얇고 많음 / 위아래로 긴 사각형\n무구조충 치료: Praziquantel 5-10mg/kg single\n출제 포인트: 두절이 납작하고 갈고리 없음 (sucker 4개만). 자궁측지 13개 이상, 얇고 많음. 사람에서 낭미충증을 일으키지 않음",
           "species_id": "taenia_saginata",
@@ -3093,18 +3093,18 @@
           "set": 3,
           "no": 25,
           "qtype": "indicator",
-          "stem": "다음 표본에서 표시가 가리키는 구조물은?",
+          "stem": "Indicator(표시)가 가리키는 구조물의 이름은?",
           "image_path": "practical_ind/087_4.png",
           "image_source": "practical",
           "stain": "Giemsa",
           "magnification": "1000x",
           "options": [
-            "Schuffner dot",
             "gametocyte",
-            "gelatin layer",
-            "schizont"
+            "schizont",
+            "ring form",
+            "trophozoite"
           ],
-          "answer_index": 3,
+          "answer_index": 1,
           "answer": "schizont",
           "explanation": "삼일열원충 두꺼운 도말 — 적혈구가 용혈되어 원충만 남음 / ring form과 schizont가 함께 보임\n출제 포인트: RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot",
           "species_id": "plasmodium_vivax",
@@ -3121,7 +3121,7 @@
           "set": 3,
           "no": 26,
           "qtype": "종 동정",
-          "stem": "다음은 어떤 기생충인가?",
+          "stem": "현미경에서 관찰되는 기생충을 고르시오.",
           "image_path": "jiseok/실습_3_003_10.png",
           "image_source": "jiseok",
           "stain": "carmine",
@@ -3129,8 +3129,8 @@
           "options": [
             "Diphyllobothrium latum",
             "Taenia solium",
-            "Taenia saginata",
-            "Spirometra erinacei"
+            "Taenia asiatica",
+            "Taenia saginata"
           ],
           "answer_index": 0,
           "answer": "Diphyllobothrium latum",
@@ -3150,18 +3150,18 @@
           "set": 3,
           "no": 27,
           "qtype": "종 동정",
-          "stem": "다음 기생충의 학명으로 옳은 것은?",
+          "stem": "다음은 어떤 기생충인가?",
           "image_path": "jms_nematoda/선충_Nematodes/006_G6.png",
           "image_source": "jms_nematoda",
           "stain": null,
           "magnification": "40-400x",
           "options": [
+            "Enterobius vermicularis",
             "Ancylostoma duodenale",
             "Ascaris lumbricoides",
-            "Strongyloides stercoralis",
             "Necator americanus"
           ],
-          "answer_index": 0,
+          "answer_index": 1,
           "answer": "Ancylostoma duodenale",
           "explanation": "두비니구충 성충 — 구강에 투명하게 반짝이는 송곳니 2쌍 (hook-like teeth) / 꼬리에 copulatory bursa\ndorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)\n출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지",
           "species_id": "ancylostoma_duodenale",
@@ -3189,12 +3189,12 @@
           "stain": null,
           "magnification": "육안",
           "options": [
-            "위벽·장벽",
-            "소장 상부",
+            "소장",
             "간·폐·눈·뇌",
+            "위벽·장벽",
             "맹장"
           ],
-          "answer_index": 0,
+          "answer_index": 2,
           "answer": "위벽·장벽",
           "explanation": "고래회충 유충 (육안) — 약 2cm, 유백색의 실 모양 / 생선 내장·근육에 나선형으로 말려 있음\n고래회충 성충은 위벽·장벽 (사람에서는 성충이 되지 못함)에 기생한다.\n출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell",
           "species_id": "anisakis_simplex",
@@ -3211,18 +3211,18 @@
           "set": 3,
           "no": 29,
           "qtype": "감염경로",
-          "stem": "다음 기생충이 감염되는 방식은?",
+          "stem": "다음 기생충의 전파 방식은?",
           "image_path": "jms_nematoda/선충_Nematodes/019_F19.png",
           "image_source": "jms_nematoda",
           "stain": "Giemsa",
           "magnification": "400-1000x",
           "options": [
-            "토양매개성",
-            "접촉매개성",
             "식품매개성",
-            "절지동물매개성"
+            "절지동물매개성",
+            "토양매개성",
+            "접촉매개성"
           ],
-          "answer_index": 3,
+          "answer_index": 1,
           "answer": "절지동물매개성",
           "explanation": "말레이사상충 microfilaria — sheath에 싸여 있음 / 꼬리 끝에 끊어져 떨어진 terminal nuclei 2개\n말레이사상충의 전파 방식은 절지동물매개성이다.\n출제 포인트: sheath에 싸여 있고 꼬리 끝에 끊어진 terminal nuclei 2개 — Wuchereria (nuclei가 중간에 끊김) 와 감별",
           "species_id": "brugia_malayi",
@@ -3236,18 +3236,18 @@
           "set": 3,
           "no": 30,
           "qtype": "indicator",
-          "stem": "Indicator(표시)가 가리키는 구조물의 이름은?",
+          "stem": "다음 표본에서 표시가 가리키는 구조물은?",
           "image_path": "practical_ind/082_3.png",
           "image_source": "practical",
           "stain": "Giemsa",
           "magnification": "1000x",
           "options": [
-            "ring form",
-            "schizont",
-            "gelatin layer",
-            "gametocyte"
+            "Schuffner dot",
+            "gametocyte",
+            "RBC",
+            "schizont"
           ],
-          "answer_index": 3,
+          "answer_index": 1,
           "answer": "gametocyte",
           "explanation": "열대열원충 얇은 도말 — RBC 크기 변화 없음 / 한 적혈구에 여러 개의 ring (multiple ring form)\n출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾",
           "species_id": "plasmodium_falciparum",
@@ -3274,11 +3274,11 @@
           "magnification": "100x",
           "options": [
             "얼룩동사리·버들치·미꾸라지 생식",
+            "은어·황어 생식",
             "유미유충이 있는 민물 접촉",
-            "꽃뱀·개구리 생식",
-            "숭어·농어·문절망둑 등 반수산 어류 생식"
+            "꽃뱀·개구리 생식"
           ],
-          "answer_index": 2,
+          "answer_index": 3,
           "answer": "꽃뱀·개구리 생식",
           "explanation": "서울주걱흡충 조직절편 (소장) — 충체가 tribocytic organ으로 융모를 빨아먹는 모습 / 융모 위축(fusion, blunting) + 음와 증식 → V/C 비 감소\n서울주걱흡충은(는) 경구감염으로 감염되며, 감염원은 꽃뱀·개구리 생식이다.\n출제 포인트: 주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습",
           "species_id": "neodiplostomum_seoulense",
@@ -3296,14 +3296,14 @@
           "set": 3,
           "no": 32,
           "qtype": "특징 구조물",
-          "stem": "다음 기생충이 가진 특징적 구조물은?",
+          "stem": "다음 기생충에서 가장 특징적인 구조물은?",
           "image_path": "tonghap/흡충/004_D4.png",
           "image_source": "tonghap",
           "stain": "carmine",
           "magnification": "40x",
           "options": [
-            "gelatin layer",
             "conical projection",
+            "gelatin layer",
             "cephalic cone",
             "branched testis"
           ],
@@ -3340,12 +3340,12 @@
           "stain": "Diff-Quik",
           "magnification": "1000x",
           "options": [
-            "flagella",
-            "undulating membrane",
             "fibril",
-            "gelatin layer"
+            "flagella",
+            "gelatin layer",
+            "undulating membrane"
           ],
-          "answer_index": 0,
+          "answer_index": 1,
           "answer": "flagella",
           "explanation": "람블편모충 영양형 — 서양배(pear) 또는 올빼미 얼굴 모양 / 눈처럼 보이는 핵 2개\n출제 포인트: 영양형 - pear/올빼미 얼굴 모양, 핵 2개, 4쌍 편모, sucking disc. 포낭 - 타원형, 핵 2-4개가 한쪽에 몰림, axostyle 주변 fibril. 조직 파괴는 하지 않음",
           "species_id": "giardia_lamblia",
@@ -3361,18 +3361,18 @@
           "set": 3,
           "no": 34,
           "qtype": "증상·질병",
-          "stem": "다음 기생충에 감염된 환자의 병명으로 옳은 것은?",
+          "stem": "다음 기생충이 일으키는 질환은?",
           "image_path": "jms_protozoa/원충_Protozoa/027_H27.jpg",
           "image_source": "jms_protozoa",
           "stain": "GMS (Gomori methenamine silver)",
           "magnification": "400-1000x",
           "options": [
-            "내장리슈만편모충증",
             "폐포자충폐렴",
-            "가시아메바각막염 / 육아종성 아메바성 뇌염",
-            "아프리카 수면병"
+            "대장섬모충증",
+            "아프리카 수면병",
+            "가시아메바각막염 / 육아종성 아메바성 뇌염"
           ],
-          "answer_index": 1,
+          "answer_index": 0,
           "answer": "폐포자충폐렴",
           "explanation": "폐포자충 (GMS 염색, 폐) — 폐포 안이 검게 염색된 cyst로 가득 참 / cyst 벽이 검게 염색되고 안이 비침 (컵·초승달 모양)\n폐포자충 감염증의 병명은 폐포자충폐렴 (Pneumocystis pneumonia (PCP))이다.\n출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)",
           "species_id": "pneumocystis_jirovecii",
@@ -3392,18 +3392,18 @@
           "set": 3,
           "no": 35,
           "qtype": "종 동정",
-          "stem": "현미경에서 관찰되는 기생충을 고르시오.",
+          "stem": "다음 기생충의 학명으로 옳은 것은?",
           "image_path": "note/[260902_05]_감염의_기초_실습__017_1.png",
           "image_source": "note",
           "stain": null,
           "magnification": "육안",
           "options": [
-            "Trichuris trichiura",
             "Enterobius vermicularis",
-            "Anisakis simplex",
-            "Ascaris lumbricoides"
+            "Ascaris lumbricoides",
+            "Trichuris trichiura",
+            "Anisakis simplex"
           ],
-          "answer_index": 0,
+          "answer_index": 2,
           "answer": "Trichuris trichiura",
           "explanation": "편충 성충 (육안) — 1-2cm, 채찍 모양 / 앞쪽이 실처럼 가늘고 뒤쪽이 굵음\n출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골",
           "species_id": "trichuris_trichiura",
@@ -3428,12 +3428,12 @@
           "stain": "H&E",
           "magnification": "40-100x",
           "options": [
-            "Fasciola hepatica",
-            "Gymnophalloides seoi",
             "Schistosoma mansoni",
-            "Clonorchis sinensis"
+            "Fasciola hepatica",
+            "Clonorchis sinensis",
+            "Metagonimus yokogawai"
           ],
-          "answer_index": 0,
+          "answer_index": 1,
           "answer": "Fasciola hepatica",
           "explanation": "간질 조직절편 — 충체 내부가 구멍이 송송 뚫린 모양 / 간 실질의 괴사·염증\n출제 포인트: 납작한 나뭇잎 모양 + conical projection (= cephalic cone). highly branched intestine·testes·vitellaria. 조직에서는 구멍이 송송 뚫린 내부",
           "species_id": "fasciola_hepatica",
@@ -3447,18 +3447,18 @@
           "set": 3,
           "no": 37,
           "qtype": "기생부위",
-          "stem": "다음 기생충이 기생하는 부위는?",
+          "stem": "다음 기생충의 성충 기생 부위는?",
           "image_path": "tonghap/조충/009_G9.png",
           "image_source": "tonghap",
           "stain": "carmine",
           "magnification": "40x",
           "options": [
-            "간",
-            "피하조직, 근육, 뇌, 눈",
+            "피하조직, 근육, 안와, 뇌",
             "소장",
-            "피하조직, 근육, 안와, 뇌"
+            "피하조직, 근육, 뇌, 눈",
+            "간"
           ],
-          "answer_index": 1,
+          "answer_index": 2,
           "answer": "피하조직, 근육, 뇌, 눈",
           "explanation": "유구낭미충 (현미경) — cyst 안으로 scolex가 말려 들어가 있음 / scolex의 갈고리와 흡반이 진하게 보임\n유구낭미충 성충은 피하조직, 근육, 뇌, 눈에 기생한다.\n출제 포인트: gross - 투명한 cyst 안에 하얀 scolex. 조직 - cyst + 양치식물 모양 neck/scolex, 갈고리 진하게 보임. 고충증(sparganosis)과의 감별이 단골",
           "species_id": "cysticercus_cellulosae",
@@ -3474,18 +3474,18 @@
           "set": 3,
           "no": 38,
           "qtype": "특징 구조물",
-          "stem": "다음 기생충이 가진 특징적 구조물은?",
+          "stem": "다음 기생충에서 가장 특징적인 구조물은?",
           "image_path": "jms_protozoa/원충_Protozoa/025_F25.png",
           "image_source": "jms_protozoa",
           "stain": "H&E",
           "magnification": "400-1000x",
           "options": [
-            "tissue cyst",
-            "egg",
+            "gelatin layer",
             "amastigote nest",
-            "granuloma"
+            "tissue cyst",
+            "egg"
           ],
-          "answer_index": 0,
+          "answer_index": 2,
           "answer": "tissue cyst",
           "explanation": "톡소포자충 tissue cyst (뇌) — 뇌 조직 안에 둥근 tissue cyst / cyst 내부에 매우 많은 bradyzoite가 빽빽하게 들어참\n출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골",
           "species_id": "toxoplasma_gondii",
@@ -3511,12 +3511,12 @@
           "stain": null,
           "magnification": "100-400x",
           "options": [
-            "Necator americanus",
+            "Ancylostoma duodenale",
+            "Anisakis simplex",
             "Strongyloides stercoralis",
-            "Ascaris lumbricoides",
-            "Anisakis simplex"
+            "Ascaris lumbricoides"
           ],
-          "answer_index": 1,
+          "answer_index": 2,
           "answer": "Strongyloides stercoralis",
           "explanation": "분선충 사상유충 — 식도의 직경이 일정하고 길다 / 꼬리 끝이 갈라짐 (notched tail)\n출제 포인트: 간상유충 (rhabditoid) = 백열전구 모양 식도 / 사상유충 (filariform) = 직경 일정한 식도 + notched tail. 구충 유충과는 꼬리 모양으로 감별",
           "species_id": "strongyloides_stercoralis",
@@ -3543,10 +3543,10 @@
           "stain": "H&E",
           "magnification": "40-400x",
           "options": [
-            "모기",
+            "덜 익힌 돼지고기·야생동물 고기·가공식품",
             "바다생선회·두족류·해산 갑각류 생식",
-            "자충포장란에 오염된 식수·채소",
-            "오염 토양"
+            "모기",
+            "자충포장란에 오염된 식수·채소"
           ],
           "answer_index": 1,
           "answer": "바다생선회·두족류·해산 갑각류 생식",
@@ -3576,12 +3576,12 @@
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Fasciola hepatica",
-            "Schistosoma haematobium",
             "Schistosoma japonicum",
-            "Schistosoma mansoni"
+            "Schistosoma mansoni",
+            "Metagonimus yokogawai",
+            "Schistosoma haematobium"
           ],
-          "answer_index": 1,
+          "answer_index": 3,
           "answer": "Schistosoma haematobium",
           "explanation": "방광주혈흡충 충란 — 큰 방추형 / 아래쪽 끝에 돌출된 terminal spine\n출제 포인트: 충란 아래쪽 끝에 terminal spine (말단 돌기) — 만손(lateral)과의 결정적 감별점",
           "species_id": "schistosoma_haematobium",
@@ -3599,18 +3599,18 @@
           "set": 4,
           "no": 2,
           "qtype": "충란 동정",
-          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
+          "stem": "다음 충란을 가지는 기생충은?",
           "image_path": "tonghap/충란/012_E12.png",
           "image_source": "tonghap",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Schistosoma haematobium",
-            "Gymnophalloides seoi",
+            "Fasciola hepatica",
             "Schistosoma japonicum",
+            "Schistosoma haematobium",
             "Schistosoma mansoni"
           ],
-          "answer_index": 2,
+          "answer_index": 1,
           "answer": "Schistosoma japonicum",
           "explanation": "일본주혈흡충 충란 — 둥글고 통통함 (주혈흡충 중 가장 작고 둥금) / 매우 작은 lateral spine — 잘 보이지 않음\n출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태",
           "species_id": "schistosoma_japonicum",
@@ -3626,16 +3626,16 @@
           "set": 4,
           "no": 3,
           "qtype": "감염경로",
-          "stem": "다음 충란을 가지는 기생충의 감염 원인으로 알맞은 것은?",
+          "stem": "환자에게서 다음 표본이 검출되었다. 감염 원인은?",
           "image_path": "eunju/기생충_실습_(연충란)_001_9.png",
           "image_source": "eunju",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "오염 토양",
-            "자충포장란에 오염된 식수·채소",
+            "모기",
+            "바다생선회·두족류·해산 갑각류 생식",
             "충란에 오염된 손·침구·먼지",
-            "바다생선회·두족류·해산 갑각류 생식"
+            "자충포장란에 오염된 식수·채소"
           ],
           "answer_index": 2,
           "answer": "충란에 오염된 손·침구·먼지",
@@ -3655,16 +3655,16 @@
           "set": 4,
           "no": 4,
           "qtype": "충란 동정",
-          "stem": "다음은 어떤 기생충의 충란인가?",
+          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
           "image_path": "note/[260831_05]_감염의_기초_실습__075_5.png",
           "image_source": "note",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Clonorchis sinensis",
-            "Schistosoma japonicum",
+            "Paragonimus westermani",
+            "Fasciola hepatica",
             "Metagonimus yokogawai",
-            "Fasciola hepatica"
+            "Clonorchis sinensis"
           ],
           "answer_index": 2,
           "answer": "Metagonimus yokogawai",
@@ -3691,12 +3691,12 @@
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Hookworm",
-            "Trichinella spiralis",
             "Diphyllobothrium latum",
-            "Enterobius vermicularis"
+            "Ascaris lumbricoides",
+            "Enterobius vermicularis",
+            "Hookworm"
           ],
-          "answer_index": 0,
+          "answer_index": 3,
           "answer": "Hookworm",
           "explanation": "구충 충란 — 타원형, 충란벽이 키틴층 하나로 얇고 투명 / 내부에 난할된 세포가 여러 개 (4-8 cell stage)\n두비니구충과 아메리카구충의 충란은 구별 불가 — 답은 Hookworm\n출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지",
           "species_id": "ancylostoma_duodenale",
@@ -3718,18 +3718,18 @@
           "set": 4,
           "no": 6,
           "qtype": "충란 동정",
-          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
+          "stem": "다음은 어떤 기생충의 충란인가?",
           "image_path": "tonghap/충란/004_D4.png",
           "image_source": "tonghap",
           "stain": null,
           "magnification": "400x",
           "options": [
             "Heterophyes nocens",
-            "Gymnophalloides seoi",
             "Clonorchis sinensis",
-            "Metagonimus yokogawai"
+            "Metagonimus yokogawai",
+            "Paragonimus westermani"
           ],
-          "answer_index": 2,
+          "answer_index": 1,
           "answer": "Clonorchis sinensis",
           "explanation": "간흡충 충란 — 전구·플라스크 모양 / operculum 주변이 어깨처럼 튀어나옴 (shouldering)\n출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis",
           "species_id": "clonorchis_sinensis",
@@ -3756,18 +3756,18 @@
           "set": 4,
           "no": 7,
           "qtype": "충란 동정",
-          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
+          "stem": "다음은 어떤 기생충의 충란인가?",
           "image_path": "eunju/기생충_실습_(연충란)_001_16.png",
           "image_source": "eunju",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Clonorchis sinensis",
             "Diphyllobothrium latum",
-            "Ascaris lumbricoides",
-            "Paragonimus westermani"
+            "Gymnophalloides seoi",
+            "Paragonimus westermani",
+            "Ascaris lumbricoides"
           ],
-          "answer_index": 3,
+          "answer_index": 2,
           "answer": "Paragonimus westermani",
           "explanation": "폐흡충 충란 — 황갈색의 큰 난원형 / 한쪽 끝에 뚜렷한 operculum\n출제 포인트: 충란 - 90um 그룹, operculum + abopercular thickening. 성충 - plump ovoid, 적갈색, 6개 lobe로 나뉜 ovary. 슬라이드가 두껍게 mounting 되어 있음",
           "species_id": "paragonimus_westermani",
@@ -3781,18 +3781,18 @@
           "set": 4,
           "no": 8,
           "qtype": "특징 구조물",
-          "stem": "다음 기생충에서 가장 특징적인 구조물은?",
-          "image_path": "note/[260831_05]_감염의_기초_실습__075_4.png",
+          "stem": "다음 기생충이 가진 특징적 구조물은?",
+          "image_path": "note/[260831_05]_감염의_기초_실습__060_2.png",
           "image_source": "note",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "shoulder",
-            "gelatin layer",
+            "operculum",
             "embryophoral block",
-            "operculum"
+            "gelatin layer",
+            "abopercular knob"
           ],
-          "answer_index": 2,
+          "answer_index": 1,
           "answer": "embryophoral block",
           "explanation": "유무구조충 충란 — 원형 또는 타원형 / 두껍고 방사상 무늬의 embryophoral block\n유구조충과 무구조충의 충란은 구별 불가 — 답은 Taenia spp.\n출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)",
           "species_id": "taenia_solium",
@@ -3816,12 +3816,12 @@
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Ascaris lumbricoides",
             "Trichuris trichiura",
-            "Strongyloides stercoralis",
-            "Anisakis simplex"
+            "Ascaris lumbricoides",
+            "Anisakis simplex",
+            "Necator americanus"
           ],
-          "answer_index": 1,
+          "answer_index": 0,
           "answer": "Trichuris trichiura",
           "explanation": "편충 충란 — 양쪽 끝에 투명한 mucoid plug / 나뭇잎·럭비공·barrel 모양\n출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골",
           "species_id": "trichuris_trichiura",
@@ -3840,18 +3840,18 @@
           "set": 4,
           "no": 10,
           "qtype": "종 동정",
-          "stem": "다음은 어떤 기생충인가?",
+          "stem": "다음 기생충의 학명으로 옳은 것은?",
           "image_path": "jms_nematoda/선충_Nematodes/009_G9.png",
           "image_source": "jms_nematoda",
           "stain": null,
           "magnification": "100-400x",
           "options": [
             "Ancylostoma duodenale",
-            "Ascaris lumbricoides",
-            "Strongyloides stercoralis",
-            "Anisakis simplex"
+            "Trichuris trichiura",
+            "Enterobius vermicularis",
+            "Strongyloides stercoralis"
           ],
-          "answer_index": 2,
+          "answer_index": 3,
           "answer": "Strongyloides stercoralis",
           "explanation": "분선충 사상유충 — 식도의 직경이 일정하고 길다 / 꼬리 끝이 갈라짐 (notched tail)\n출제 포인트: 간상유충 (rhabditoid) = 백열전구 모양 식도 / 사상유충 (filariform) = 직경 일정한 식도 + notched tail. 구충 유충과는 꼬리 모양으로 감별",
           "species_id": "strongyloides_stercoralis",
@@ -3878,12 +3878,12 @@
           "stain": "H&E",
           "magnification": "40-100x",
           "options": [
-            "서울주걱흡충증",
-            "극구흡충증",
             "간질증",
+            "이형흡충증",
+            "일본주혈흡충증",
             "방광주혈흡충증"
           ],
-          "answer_index": 2,
+          "answer_index": 0,
           "answer": "간질증",
           "explanation": "간질 조직절편 — 충체 내부가 구멍이 송송 뚫린 모양 / 간 실질의 괴사·염증\n간질 감염증의 병명은 간질증 (fascioliasis)이다.\n출제 포인트: 납작한 나뭇잎 모양 + conical projection (= cephalic cone). highly branched intestine·testes·vitellaria. 조직에서는 구멍이 송송 뚫린 내부",
           "species_id": "fasciola_hepatica",
@@ -3903,7 +3903,7 @@
           "stain": "H&E",
           "magnification": "1000x",
           "options": [
-            "Cryptosporidium parvum",
+            "Entamoeba histolytica",
             "Trypanosoma cruzi",
             "Toxoplasma gondii",
             "Leishmania donovani"
@@ -3928,9 +3928,9 @@
           "stain": null,
           "magnification": "육안",
           "options": [
-            "충란",
             "내장낭미충 (Cysticercus viscerotropica)",
-            "유구낭미충 (Cysticercus cellulosae)",
+            "충란",
+            "무구낭미충 (Cysticercus bovis)",
             "전미충 (procercoid)"
           ],
           "answer_index": 3,
@@ -3951,18 +3951,18 @@
           "no": 14,
           "qtype": "특징 구조물",
           "stem": "다음 기생충에서 가장 특징적인 구조물은?",
-          "image_path": "tonghap/흡충/004_E4.png",
-          "image_source": "tonghap",
+          "image_path": "note/[260903_05]_감염의_기초_실습3_017_1.png",
+          "image_source": "note",
           "stain": "carmine",
           "magnification": "40x",
           "options": [
-            "ventral sucker",
+            "conical projection",
             "cephalic cone",
-            "testis",
-            "conical projection"
+            "gelatin layer",
+            "oral sucker"
           ],
-          "answer_index": 0,
-          "answer": "ventral sucker",
+          "answer_index": 3,
+          "answer": "oral sucker",
           "explanation": "간흡충 성충 — 납작한 나뭇잎 모양, 10-25mm / 몸 뒤쪽에 나뭇가지처럼 갈라진 branched testis 2개\n출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis",
           "species_id": "clonorchis_sinensis",
           "specimen_id": "clonorchis_adult_wholemount",
@@ -3988,18 +3988,18 @@
           "set": 4,
           "no": 15,
           "qtype": "감염형",
-          "stem": "다음 기생충의 인체 감염형은?",
+          "stem": "다음 기생충의 감염형으로 옳은 것은?",
           "image_path": "jms_trematoda/흡충_Trematodes/012_F12.png",
           "image_source": "jms_trematoda",
           "stain": "carmine",
           "magnification": "100-400x",
           "options": [
-            "promastigote",
+            "L3 유충",
+            "sporozoite",
             "피낭유충 (metacercaria)",
-            "유미유충 (cercaria)",
-            "해당 없음"
+            "유미유충 (cercaria)"
           ],
-          "answer_index": 1,
+          "answer_index": 2,
           "answer": "피낭유충 (metacercaria)",
           "explanation": "서울주걱흡충 성충 — 앞쪽이 주걱처럼 넓게 퍼진 모양 / tribocytic organ (제2의 입) 이 결정적 감별점\n서울주걱흡충의 인체 감염형은 피낭유충 (metacercaria)이다.\n출제 포인트: 주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습",
           "species_id": "neodiplostomum_seoulense",
@@ -4023,12 +4023,12 @@
           "stain": null,
           "magnification": "40-400x",
           "options": [
-            "사상유충 (filariform larva, L3)",
-            "피낭유충 (metacercaria)",
             "피낭유충 (encysted larva)",
-            "자충포장란"
+            "자충포장란 (embryonated egg)",
+            "사상유충 (filariform larva, L3)",
+            "피낭유충 (metacercaria)"
           ],
-          "answer_index": 0,
+          "answer_index": 2,
           "answer": "사상유충 (filariform larva, L3)",
           "explanation": "아메리카구충 성충 — 구강에 칼날 모양 cutting plate 1쌍 (송곳니 아님) / dorsal costa가 깊게 2분지 후 각각 2분지 (2+2)\n아메리카구충의 인체 감염형은 사상유충 (filariform larva, L3)이다.\ndorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)\n출제 포인트: 구강에 칼날 모양 cutting plate 1쌍. dorsal costa 깊게 2분지 → 각각 2분지",
           "species_id": "necator_americanus",
@@ -4046,18 +4046,18 @@
           "set": 4,
           "no": 17,
           "qtype": "종 동정",
-          "stem": "다음은 어떤 기생충인가?",
+          "stem": "다음 기생충의 학명으로 옳은 것은?",
           "image_path": "jms_nematoda/선충_Nematodes/007_F7.png",
           "image_source": "jms_nematoda",
           "stain": null,
           "magnification": "40-400x",
           "options": [
+            "Ascaris lumbricoides",
             "Enterobius vermicularis",
-            "Necator americanus",
-            "Trichuris trichiura",
-            "Ancylostoma duodenale"
+            "Ancylostoma duodenale",
+            "Necator americanus"
           ],
-          "answer_index": 3,
+          "answer_index": 2,
           "answer": "Ancylostoma duodenale",
           "explanation": "두비니구충 성충 — 구강에 투명하게 반짝이는 송곳니 2쌍 (hook-like teeth) / 꼬리에 copulatory bursa\ndorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)\n출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지",
           "species_id": "ancylostoma_duodenale",
@@ -4085,12 +4085,12 @@
           "stain": "H&E",
           "magnification": "40-100x",
           "options": [
-            "포충증",
+            "고충증",
             "무구조충증",
-            "유구낭미충증",
-            "고충증"
+            "유구조충증",
+            "포충증"
           ],
-          "answer_index": 0,
+          "answer_index": 3,
           "answer": "포충증",
           "explanation": "포충 조직절편 — 두꺼운 층상 낭벽 (fibrous - gelatin - germinal layer) / 낭벽 안쪽에 brood capsule과 protoscolex\n단방조충 감염증의 병명은 포충증 (단방포충증) (cystic echinococcosis)이다.\n이미지 검토 중 발견 — 통합xlsx 단방조충 행에 조직절편이 섞여 있었다\n출제 포인트: 성충은 immature·mature·gravid 편절이 1개씩. 포충 내부에 여러 개의 protoscolex, 콧수염 모양 hooklet",
           "species_id": "echinococcus_granulosus",
@@ -4115,12 +4115,12 @@
           "stain": "Diff-Quik",
           "magnification": "400-1000x",
           "options": [
-            "Toxoplasma gondii",
-            "Pneumocystis jirovecii",
-            "Cryptosporidium parvum",
-            "Balantidium coli"
+            "Balantidium coli",
+            "Entamoeba coli",
+            "Entamoeba histolytica",
+            "Pneumocystis jirovecii"
           ],
-          "answer_index": 1,
+          "answer_index": 3,
           "answer": "Pneumocystis jirovecii",
           "explanation": "폐포자충 (Diff-Quik, 폐) — 폐포 안에 거품 같은 exudate / cyst 안에 매우 작은 8개의 핵 (octa-nucleated cyst)\n출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)",
           "species_id": "pneumocystis_jirovecii",
@@ -4140,18 +4140,18 @@
           "set": 4,
           "no": 20,
           "qtype": "종 동정",
-          "stem": "현미경에서 관찰되는 기생충을 고르시오.",
+          "stem": "다음은 어떤 기생충인가?",
           "image_path": "note/[260902_05]_감염의_기초_실습__054_1.png",
           "image_source": "note",
           "stain": null,
           "magnification": "육안",
           "options": [
-            "Anisakis simplex",
-            "Ascaris lumbricoides",
+            "Trichuris trichiura",
             "Enterobius vermicularis",
-            "Ancylostoma duodenale"
+            "Ascaris lumbricoides",
+            "Anisakis simplex"
           ],
-          "answer_index": 0,
+          "answer_index": 3,
           "answer": "Anisakis simplex",
           "explanation": "고래회충 유충 (육안) — 약 2cm, 유백색의 실 모양 / 생선 내장·근육에 나선형으로 말려 있음\n출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell",
           "species_id": "anisakis_simplex",
@@ -4174,10 +4174,10 @@
           "stain": "carmine",
           "magnification": "40x",
           "options": [
-            "수인성",
+            "패류매개성",
             "식품매개성",
-            "접촉매개성",
-            "절지동물매개성"
+            "절지동물매개성",
+            "접촉매개성"
           ],
           "answer_index": 1,
           "answer": "식품매개성",
@@ -4203,12 +4203,12 @@
           "stain": "Giemsa",
           "magnification": "1000x",
           "options": [
-            "Plasmodium vivax",
-            "Plasmodium malariae",
             "Plasmodium falciparum",
-            "Plasmodium ovale"
+            "Plasmodium knowlesi",
+            "Plasmodium ovale",
+            "Plasmodium vivax"
           ],
-          "answer_index": 0,
+          "answer_index": 3,
           "answer": "Plasmodium vivax",
           "explanation": "삼일열원충 얇은 도말 — 감염된 RBC가 커지고 옅어짐 / multiple ring 없음, ring이 RBC 지름의 1/3\n출제 포인트: RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot",
           "species_id": "plasmodium_vivax",
@@ -4225,15 +4225,15 @@
           "set": 4,
           "no": 23,
           "qtype": "indicator",
-          "stem": "다음 표본에서 표시가 가리키는 구조물은?",
+          "stem": "Indicator(표시)가 가리키는 구조물의 이름은?",
           "image_path": "practical_ind/087_3.png",
           "image_source": "practical",
           "stain": "Giemsa",
           "magnification": "1000x",
           "options": [
             "schizont",
-            "Schuffner dot",
             "gelatin layer",
+            "ring form",
             "gametocyte"
           ],
           "answer_index": 0,
@@ -4253,18 +4253,18 @@
           "set": 4,
           "no": 24,
           "qtype": "감염경로",
-          "stem": "다음 기생충이 감염되는 방식은?",
+          "stem": "다음 기생충의 전파 방식은?",
           "image_path": "eunju/기생충_실습_(포자충류,_말라리아,_의용_001_11.png",
           "image_source": "eunju",
           "stain": "modified acid-fast (MAF)",
           "magnification": "400-1000x",
           "options": [
-            "절지동물매개성",
             "성접촉",
-            "식품매개성",
-            "수인성"
+            "수인성",
+            "절지동물매개성",
+            "공기매개"
           ],
-          "answer_index": 3,
+          "answer_index": 1,
           "answer": "수인성",
           "explanation": "작은와포자충 oocyst (MAF 염색) — 파란 배경에 분홍·붉은색으로 염색된 둥근 oocyst / 크기 4-6um\n작은와포자충의 전파 방식은 수인성이다.\n출제 포인트: 장 조직에서 미세융모에 붙은 작은 점들. MAF 염색에서 파란 배경에 분홍색 oocyst",
           "species_id": "cryptosporidium_parvum",
@@ -4284,16 +4284,16 @@
           "set": 4,
           "no": 25,
           "qtype": "기생부위",
-          "stem": "다음 기생충이 기생하는 부위는?",
+          "stem": "다음 기생충의 성충 기생 부위는?",
           "image_path": "jms_protozoa/원충_Protozoa/003_G3.png",
           "image_source": "jms_protozoa",
           "stain": "iron hematoxylin / trichrome",
           "magnification": "1000x",
           "options": [
-            "혈액·림프절·비장·중추신경계",
+            "폐포",
             "대장",
-            "피부 대식세포",
-            "혈액·림프절·심근·뇌"
+            "뇌",
+            "소장 상피세포 미세융모"
           ],
           "answer_index": 1,
           "answer": "대장",
@@ -4313,18 +4313,18 @@
           "set": 4,
           "no": 26,
           "qtype": "종 동정",
-          "stem": "다음은 어떤 기생충인가?",
+          "stem": "다음 기생충의 학명으로 옳은 것은?",
           "image_path": "tonghap/선충/019_G19.png",
           "image_source": "tonghap",
           "stain": "H&E",
           "magnification": "40-400x",
           "options": [
-            "Anisakis simplex",
             "Ascaris lumbricoides",
-            "Necator americanus",
-            "Ancylostoma duodenale"
+            "Ancylostoma duodenale",
+            "Anisakis simplex",
+            "Trichuris trichiura"
           ],
-          "answer_index": 0,
+          "answer_index": 2,
           "answer": "Anisakis simplex",
           "explanation": "고래회충 단면 (토끼 위) — Y자 모양 intestinal lumen / 나비 모양 lateral cord\n출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell",
           "species_id": "anisakis_simplex",
@@ -4347,12 +4347,12 @@
           "stain": "carmine",
           "magnification": "40x",
           "options": [
-            "개·여우",
-            "개·고양이",
+            "사람·개·곰",
             "사람이 중간숙주가 됨",
-            "사람·설치류"
+            "개·고양이",
+            "여우·개"
           ],
-          "answer_index": 2,
+          "answer_index": 1,
           "answer": "사람이 중간숙주가 됨",
           "explanation": "유구낭미충 (현미경) — cyst 안으로 scolex가 말려 들어가 있음 / scolex의 갈고리와 흡반이 진하게 보임\n유구낭미충의 종숙주는 사람이 중간숙주가 됨이다.\n출제 포인트: gross - 투명한 cyst 안에 하얀 scolex. 조직 - cyst + 양치식물 모양 neck/scolex, 갈고리 진하게 보임. 고충증(sparganosis)과의 감별이 단골",
           "species_id": "cysticercus_cellulosae",
@@ -4374,12 +4374,12 @@
           "stain": "H&E",
           "magnification": "40-400x",
           "options": [
-            "서울주걱흡충증",
-            "폐흡충증",
-            "간질증",
-            "간흡충증"
+            "간흡충증",
+            "이형흡충증",
+            "메콩주혈흡충증",
+            "폐흡충증"
           ],
-          "answer_index": 1,
+          "answer_index": 3,
           "answer": "폐흡충증",
           "explanation": "폐흡충 조직절편 (폐) — 폐 조직 내 worm capsule / 주변에 다수의 충란\n폐흡충 감염증의 병명은 폐흡충증 (paragonimiasis)이다.\n출제 포인트: 충란 - 90um 그룹, operculum + abopercular thickening. 성충 - plump ovoid, 적갈색, 6개 lobe로 나뉜 ovary. 슬라이드가 두껍게 mounting 되어 있음",
           "species_id": "paragonimus_westermani",
@@ -4393,18 +4393,18 @@
           "set": 4,
           "no": 29,
           "qtype": "indicator",
-          "stem": "Indicator(표시)가 가리키는 구조물의 이름은?",
+          "stem": "다음 표본에서 표시가 가리키는 구조물은?",
           "image_path": "practical_ind/082_3.png",
           "image_source": "practical",
           "stain": "Giemsa",
           "magnification": "1000x",
           "options": [
-            "ring form",
-            "schizont",
-            "gelatin layer",
-            "gametocyte"
+            "Schuffner dot",
+            "gametocyte",
+            "RBC",
+            "schizont"
           ],
-          "answer_index": 3,
+          "answer_index": 1,
           "answer": "gametocyte",
           "explanation": "열대열원충 얇은 도말 — RBC 크기 변화 없음 / 한 적혈구에 여러 개의 ring (multiple ring form)\n출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾",
           "species_id": "plasmodium_falciparum",
@@ -4425,17 +4425,17 @@
           "no": 30,
           "qtype": "특징 구조물",
           "stem": "다음 기생충에서 가장 특징적인 구조물은?",
-          "image_path": "note/[260902_05]_감염의_기초_실습__016_1.png",
-          "image_source": "note",
+          "image_path": "eunju/기생충_실습_(선충류)_001_6.png",
+          "image_source": "eunju",
           "stain": null,
           "magnification": "40-100x",
           "options": [
-            "notched tail",
-            "stichosome",
             "gelatin layer",
-            "filariform esophagus"
+            "notched tail",
+            "filariform esophagus",
+            "stichosome"
           ],
-          "answer_index": 1,
+          "answer_index": 3,
           "answer": "stichosome",
           "explanation": "편충 성충 (현미경) — 채찍 모양 — 앞 3/5이 가늘고 뒤 2/5가 굵음 / 가는 쪽이 머리\n출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골",
           "species_id": "trichuris_trichiura",
@@ -4460,12 +4460,12 @@
           "stain": "trichrome",
           "magnification": "1000x",
           "options": [
-            "질 분비물 현미경 관찰",
             "대변검사 - 급성기 영양형, 만성기 포낭",
-            "혈액·림프액 도말 Giemsa",
+            "punch biopsy",
+            "혈액도말 Giemsa",
             "골수·비장 천자"
           ],
-          "answer_index": 1,
+          "answer_index": 0,
           "answer": "대변검사 - 급성기 영양형, 만성기 포낭",
           "explanation": "이질아메바 포낭 — 핵이 4개 이하로 듬성듬성 / karyosome 중앙 위치\n이질아메바 진단: 대변검사 - 급성기 영양형, 만성기 포낭, 생검\n출제 포인트: 영양형 - karyosome 중앙 + peripheral chromatin 두께 균일, RBC 탐식. 포낭 - 핵 4개 이하. 조직 - flask-shaped ulcer",
           "species_id": "entamoeba_histolytica",
@@ -4484,17 +4484,17 @@
           "no": 32,
           "qtype": "특징 구조물",
           "stem": "다음 기생충이 가진 특징적 구조물은?",
-          "image_path": "eunju/기생충_실습_(선충류)_001_21.png",
-          "image_source": "eunju",
+          "image_path": "jms_nematoda/선충_Nematodes/004_I4.png",
+          "image_source": "jms_nematoda",
           "stain": "H&E",
           "magnification": "40-100x",
           "options": [
+            "gelatin layer",
             "stichocyte",
-            "Renette cell",
-            "stichosome",
-            "lateral cord"
+            "lateral cord",
+            "Renette cell"
           ],
-          "answer_index": 3,
+          "answer_index": 2,
           "answer": "lateral cord",
           "explanation": "회충 단면 — 소화관 lumen을 단층 원주상피가 둘러쌈 / 양 옆에 lateral cord (족보에는 lateral chord 표기도 등장)\n출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제",
           "species_id": "ascaris_lumbricoides",
@@ -4516,17 +4516,17 @@
           "no": 33,
           "qtype": "특징 구조물",
           "stem": "다음 기생충이 가진 특징적 구조물은?",
-          "image_path": "tonghap/선충/022_D22.png",
+          "image_path": "tonghap/선충/021_D21.png",
           "image_source": "tonghap",
           "stain": null,
           "magnification": "40-100x",
           "options": [
-            "caudal alae",
-            "boring tooth",
             "ventricle",
-            "mucron"
+            "gelatin layer",
+            "caudal alae",
+            "boring tooth"
           ],
-          "answer_index": 0,
+          "answer_index": 2,
           "answer": "caudal alae",
           "explanation": "요충 성충 (현미경) — 머리쪽에 투명한 키틴성 날개 cephalic alae / 수컷은 꼬리가 나선형으로 말리고 caudal alae\n출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)",
           "species_id": "enterobius_vermicularis",
@@ -4544,26 +4544,26 @@
           "set": 4,
           "no": 34,
           "qtype": "종 동정",
-          "stem": "다음은 어떤 기생충인가?",
-          "image_path": "jms_arthropoda/의용곤충_Anthropods/007_F7.png",
+          "stem": "다음 기생충의 학명으로 옳은 것은?",
+          "image_path": "jms_arthropoda/의용곤충_Anthropods/009_G9.png",
           "image_source": "jms_arthropoda",
           "stain": null,
-          "magnification": "40-100x",
+          "magnification": "육안-40x",
           "options": [
-            "Pediculus humanus",
             "Dermatophagoides pteronyssinus",
-            "Pthirus pubis",
-            "Sarcoptes scabiei"
+            "Leptotrombidium spp.",
+            "Haemaphysalis longicornis",
+            "Simulium spp."
           ],
           "answer_index": 2,
-          "answer": "Pthirus pubis",
-          "explanation": "사면발이 — 사다리꼴(게 모양)의 짧고 넓은 몸통 / 굵은 앞다리 집게\n출제 포인트: 사다리꼴(게 모양) 몸통 — 마름모꼴의 이와 감별",
-          "species_id": "pthirus_pubis",
-          "specimen_id": "pthirus_wholemount",
+          "answer": "Haemaphysalis longicornis",
+          "explanation": "작은소피참진드기 — 단단한 등판(scutum)을 가진 참진드기 / 흡혈 후 몸이 콩알처럼 부풀어 오름\n출제 포인트: 몸에 붙어 커진 진드기를 보여주고 매개질환을 묻는 문제 — 답은 SFTS. 털진드기(쯔쯔가무시)와 감별",
+          "species_id": "haemaphysalis_longicornis",
+          "specimen_id": "haemaphysalis_gross",
           "group": "의용곤충",
           "exam_weight": 1.414,
           "past_years": [
-            "2023"
+            "2025"
           ]
         },
         {
@@ -4577,12 +4577,12 @@
           "stain": "GMS (Gomori methenamine silver)",
           "magnification": "400-1000x",
           "options": [
-            "혈액·림프절·비장·중추신경계",
-            "각막, 뇌",
+            "대장 lumen",
             "폐포",
-            "대장 lumen"
+            "질·요도 lumen",
+            "각막, 뇌"
           ],
-          "answer_index": 2,
+          "answer_index": 1,
           "answer": "폐포",
           "explanation": "폐포자충 (GMS 염색, 폐) — 폐포 안이 검게 염색된 cyst로 가득 참 / cyst 벽이 검게 염색되고 안이 비침 (컵·초승달 모양)\n폐포자충 성충은 폐포 (type I pneumocyte 외벽)에 기생한다.\n출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)",
           "species_id": "pneumocystis_jirovecii",
@@ -4608,12 +4608,12 @@
           "stain": "H&E",
           "magnification": "40x",
           "options": [
-            "덜 익힌 돼지고기",
-            "개 분변의 충란",
             "물벼룩이 든 생수, 뱀·개구리 생식, 개구리 살을 상처에 붙이는 민간요법",
-            "충란에 오염된 손·음식"
+            "소고기 육회 등 덜 익힌 소고기",
+            "유구조충 충란에 오염된 음식·손",
+            "개 분변의 충란"
           ],
-          "answer_index": 2,
+          "answer_index": 0,
           "answer": "물벼룩이 든 생수, 뱀·개구리 생식, 개구리 살을 상처에 붙이는 민간요법",
           "explanation": "고충 조직절편 — 성긴 스폰지 모양 실질 구조 / 내부에 보라색으로 염색되는 calcium (calcareous) corpuscle\n만손열두조충은(는) 경구감염 / 상처 접촉으로 감염되며, 감염원은 물벼룩이 든 생수, 뱀·개구리 생식, 개구리 살을 상처에 붙이는 민간요법이다.\n출제 포인트: gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle",
           "species_id": "spirometra_erinacei",
@@ -4631,15 +4631,15 @@
           "no": 37,
           "qtype": "특징 구조물",
           "stem": "다음 기생충에서 가장 특징적인 구조물은?",
-          "image_path": "tonghap/선충/016_F16.png",
+          "image_path": "tonghap/선충/016_E16.png",
           "image_source": "tonghap",
           "stain": null,
           "magnification": "40x",
           "options": [
-            "ventricle",
             "boring tooth",
+            "gelatin layer",
             "교미침",
-            "mucron"
+            "ventricle"
           ],
           "answer_index": 2,
           "answer": "교미침",
@@ -4668,12 +4668,12 @@
           "stain": "H&E",
           "magnification": "400-1000x",
           "options": [
-            "모래파리",
-            "돼지 분변에 오염된 물·음식",
+            "포낭에 오염된 물·음식",
             "고양이 분변에 오염된 채소·식수",
-            "포낭에 오염된 물·음식"
+            "침노린재",
+            "체체파리"
           ],
-          "answer_index": 2,
+          "answer_index": 1,
           "answer": "고양이 분변에 오염된 채소·식수",
           "explanation": "톡소포자충 tissue cyst (뇌) — 뇌 조직 안에 둥근 tissue cyst / cyst 내부에 매우 많은 bradyzoite가 빽빽하게 들어참\n톡소포자충은(는) 경구감염 / 수직감염 / 수혈·장기이식으로 감염되며, 감염원은 고양이 분변에 오염된 채소·식수 (oocyst), 덜 익힌 고기 (tissue cyst)이다.\n출제 포인트: tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골",
           "species_id": "toxoplasma_gondii",
@@ -4700,8 +4700,8 @@
           "magnification": "1000x",
           "options": [
             "Benznidazole 복용",
+            "TMP-SMX 복용",
             "특효약 없음 (대증치료)",
-            "0.02% PHMB 점안",
             "Metronidazole 복용"
           ],
           "answer_index": 3,
@@ -4720,18 +4720,18 @@
           "set": 4,
           "no": 40,
           "qtype": "감염경로",
-          "stem": "환자에게서 다음 표본이 검출되었다. 감염 원인은?",
+          "stem": "다음 기생충의 감염 원인으로 알맞은 것은?",
           "image_path": "jms_trematoda/흡충_Trematodes/003_F3.png",
           "image_source": "jms_trematoda",
           "stain": "carmine",
           "magnification": "40x",
           "options": [
-            "유미유충이 있는 민물 접촉",
-            "꽃뱀·개구리 생식",
+            "자연산 굴 생식",
             "은어·황어 생식",
-            "자연산 굴 생식"
+            "민물고기 생식",
+            "유미유충이 있는 민물 접촉"
           ],
-          "answer_index": 0,
+          "answer_index": 3,
           "answer": "유미유충이 있는 민물 접촉",
           "explanation": "일본주혈흡충 자웅 합체 — 자웅이체 — 수컷의 gynecophoral canal(포자관)에 가느다란 암컷이 끼어 있음 / 수컷 6-10mm\n일본주혈흡충은(는) 경피감염 (7분 이내 침입)으로 감염되며, 감염원은 유미유충이 있는 민물 접촉 (물 길어오기·수영)이다.\n출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태",
           "species_id": "schistosoma_japonicum",
@@ -4752,18 +4752,18 @@
           "set": 5,
           "no": 1,
           "qtype": "충란 동정",
-          "stem": "다음은 어떤 기생충의 충란인가?",
+          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
           "image_path": "note/[260831_05]_감염의_기초_실습__041_2.png",
           "image_source": "note",
           "stain": null,
           "magnification": "400x",
           "options": [
+            "Ascaris lumbricoides",
             "Paragonimus westermani",
-            "Anisakis simplex",
-            "Enterobius vermicularis",
-            "Ascaris lumbricoides"
+            "Trichuris trichiura",
+            "Anisakis simplex"
           ],
-          "answer_index": 3,
+          "answer_index": 0,
           "answer": "Ascaris lumbricoides",
           "explanation": "회충 불수정란 — 수정란보다 길쭉하고 큼 / 충란벽 3 layer가 제대로 형성되지 않음\n출제 포인트: 충란은 3-layer (albumin-chitin-lipoid). 수정란 vs 불수정란 감별이 최다 출제",
           "species_id": "ascaris_lumbricoides",
@@ -4784,18 +4784,18 @@
           "set": 5,
           "no": 2,
           "qtype": "충란 동정",
-          "stem": "다음은 어떤 기생충의 충란인가?",
+          "stem": "다음 충란을 가지는 기생충은?",
           "image_path": "note/[260831_05]_감염의_기초_실습__063_2.png",
           "image_source": "note",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Diphyllobothrium latum",
             "Ancylostoma duodenale",
-            "Spirometra erinacei",
-            "Paragonimus westermani"
+            "Diphyllobothrium latum",
+            "Paragonimus westermani",
+            "Taenia asiatica"
           ],
-          "answer_index": 0,
+          "answer_index": 1,
           "answer": "Diphyllobothrium latum",
           "explanation": "광절열두조충 충란 — 갈색 타원형 / 한쪽에 operculum, 반대쪽에 작은 terminal knob\n출제 포인트: 충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만",
           "species_id": "diphyllobothrium_latum",
@@ -4813,18 +4813,18 @@
           "set": 5,
           "no": 3,
           "qtype": "충란 동정",
-          "stem": "다음 충란을 가지는 기생충은?",
+          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
           "image_path": "eunju/기생충_실습_(연충란)_001_5.png",
           "image_source": "eunju",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Trichuris trichiura",
+            "Enterobius vermicularis",
+            "Anisakis simplex",
             "Ascaris lumbricoides",
-            "Strongyloides stercoralis",
-            "Necator americanus"
+            "Trichuris trichiura"
           ],
-          "answer_index": 0,
+          "answer_index": 3,
           "answer": "Trichuris trichiura",
           "explanation": "편충 충란 — 양쪽 끝에 투명한 mucoid plug / 나뭇잎·럭비공·barrel 모양\n출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골",
           "species_id": "trichuris_trichiura",
@@ -4849,10 +4849,10 @@
           "stain": null,
           "magnification": "400x",
           "options": [
-            "자충포장란에 오염된 식수·채소",
+            "오염 토양",
             "충란에 오염된 손·침구·먼지",
             "충란에 오염된 토양, 소 생간 등 유충을 포함한 내장육",
-            "덜 익힌 돼지고기·야생동물 고기·가공식품"
+            "모기"
           ],
           "answer_index": 1,
           "answer": "충란에 오염된 손·침구·먼지",
@@ -4878,12 +4878,12 @@
           "stain": null,
           "magnification": "400x",
           "options": [
+            "Echinococcus multilocularis",
+            "Hymenolepis nana",
             "Clonorchis sinensis",
-            "Spirometra erinacei",
-            "Taenia spp.",
-            "Hymenolepis nana"
+            "Taenia spp."
           ],
-          "answer_index": 2,
+          "answer_index": 3,
           "answer": "Taenia spp.",
           "explanation": "유무구조충 충란 — 원형 또는 타원형 / 두껍고 방사상 무늬의 embryophoral block\n유구조충과 무구조충의 충란은 구별 불가 — 답은 Taenia spp.\n출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)",
           "species_id": "taenia_solium",
@@ -4901,18 +4901,18 @@
           "set": 5,
           "no": 6,
           "qtype": "충란 동정",
-          "stem": "다음은 어떤 기생충의 충란인가?",
+          "stem": "다음 충란을 가지는 기생충은?",
           "image_path": "tonghap/충란/004_F4.png",
           "image_source": "tonghap",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Clonorchis sinensis",
-            "Paragonimus westermani",
             "Metagonimus yokogawai",
-            "Heterophyes nocens"
+            "Heterophyes nocens",
+            "Clonorchis sinensis",
+            "Paragonimus westermani"
           ],
-          "answer_index": 0,
+          "answer_index": 2,
           "answer": "Clonorchis sinensis",
           "explanation": "간흡충 충란 — 전구·플라스크 모양 / operculum 주변이 어깨처럼 튀어나옴 (shouldering)\n출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis",
           "species_id": "clonorchis_sinensis",
@@ -4939,18 +4939,18 @@
           "set": 5,
           "no": 7,
           "qtype": "충란 동정",
-          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
+          "stem": "다음 충란을 가지는 기생충은?",
           "image_path": "note/[260831_05]_감염의_기초_실습__028_1.png",
           "image_source": "note",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Trichuris trichiura",
             "Diphyllobothrium latum",
-            "Hookworm",
-            "Enterobius vermicularis"
+            "Strongyloides stercoralis",
+            "Enterobius vermicularis",
+            "Hookworm"
           ],
-          "answer_index": 2,
+          "answer_index": 3,
           "answer": "Hookworm",
           "explanation": "구충 충란 — 타원형, 충란벽이 키틴층 하나로 얇고 투명 / 내부에 난할된 세포가 여러 개 (4-8 cell stage)\n두비니구충과 아메리카구충의 충란은 구별 불가 — 답은 Hookworm\n출제 포인트: 구강에 송곳니 2쌍 (hook-like teeth). dorsal costa 얕게 2분지 → 각각 3분지",
           "species_id": "ancylostoma_duodenale",
@@ -4978,12 +4978,12 @@
           "stain": null,
           "magnification": "400x",
           "options": [
-            "해당 없음",
-            "유미유충 (cercaria)",
-            "자충포장란 (embryonated egg)",
-            "피낭유충 (metacercaria)"
+            "자충포장란",
+            "피낭유충 (metacercaria)",
+            "포낭",
+            "유미유충 (cercaria)"
           ],
-          "answer_index": 1,
+          "answer_index": 3,
           "answer": "유미유충 (cercaria)",
           "explanation": "만손주혈흡충 충란 — 매우 큼 (100um 이상) / 옆구리에 뚜렷하게 돌출된 lateral spine\n만손주혈흡충의 인체 감염형은 유미유충 (cercaria)이다.\n출제 포인트: 충란이 가장 큼 (100um 이상) + 뚜렷한 lateral spine (측방 돌기)",
           "species_id": "schistosoma_mansoni",
@@ -5000,18 +5000,18 @@
           "set": 5,
           "no": 9,
           "qtype": "충란 동정",
-          "stem": "다음 현미경에서 관찰되는 충란의 기생충을 고르시오.",
+          "stem": "다음은 어떤 기생충의 충란인가?",
           "image_path": "jms_egg/충란_Helminth_eggs/012_D12.png",
           "image_source": "jms_egg",
           "stain": null,
           "magnification": "400x",
           "options": [
-            "Schistosoma haematobium",
             "Schistosoma japonicum",
+            "Schistosoma haematobium",
             "Schistosoma mansoni",
-            "Metagonimus yokogawai"
+            "Clonorchis sinensis"
           ],
-          "answer_index": 1,
+          "answer_index": 0,
           "answer": "Schistosoma japonicum",
           "explanation": "일본주혈흡충 충란 — 둥글고 통통함 (주혈흡충 중 가장 작고 둥금) / 매우 작은 lateral spine — 잘 보이지 않음\n출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태",
           "species_id": "schistosoma_japonicum",
@@ -5033,12 +5033,12 @@
           "stain": "H&E",
           "magnification": "100x",
           "options": [
-            "간내 담관, 담낭",
-            "소장",
             "큰 담관",
-            "장간막 정맥, 직장 정맥"
+            "장간막 정맥",
+            "소장",
+            "폐"
           ],
-          "answer_index": 1,
+          "answer_index": 2,
           "answer": "소장",
           "explanation": "서울주걱흡충 조직절편 (소장) — 충체가 tribocytic organ으로 융모를 빨아먹는 모습 / 융모 위축(fusion, blunting) + 음와 증식 → V/C 비 감소\n서울주걱흡충 성충은 소장에 기생한다.\n출제 포인트: 주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습",
           "species_id": "neodiplostomum_seoulense",
@@ -5062,12 +5062,12 @@
           "stain": "Giemsa",
           "magnification": "1000x",
           "options": [
-            "열대열말라리아",
             "난형열말라리아",
+            "열대열말라리아",
             "원숭이열말라리아",
-            "사일열말라리아"
+            "삼일열말라리아"
           ],
-          "answer_index": 1,
+          "answer_index": 0,
           "answer": "난형열말라리아",
           "explanation": "난형열원충 얇은 도말 — RBC가 커지고 타원형(oval)이 됨 / RBC 가장자리가 술처럼 갈라짐 (fimbriation)\n난형열원충 감염증의 병명은 난형열말라리아 (ovale malaria)이다.\n출제 포인트: RBC가 커지고 옅어지며 타원형(oval)이 되고 가장자리가 술처럼 갈라짐 (fimbriation). merozoite 8개 이하. dot 관찰 가능",
           "species_id": "plasmodium_ovale",
@@ -5087,12 +5087,12 @@
           "stain": null,
           "magnification": "육안-40x",
           "options": [
-            "논·습지",
+            "감염자와의 피부 접촉·침구",
             "논·웅덩이",
-            "침구·가구 틈",
-            "중남미 흙집 벽 틈"
+            "중남미 흙집 벽 틈",
+            "감염자의 음모"
           ],
-          "answer_index": 3,
+          "answer_index": 2,
           "answer": "중남미 흙집 벽 틈",
           "explanation": "흡혈성 침노린재 — 빈대보다 크고 길쭉함 (1-3cm) / 뾰족하고 긴 주둥이\n흡혈성 침노린재은(는) 흡혈 후 배설한 분변이 상처·점막으로 침입 (후방정류형)으로 감염되며, 감염원은 중남미 흙집 벽 틈이다.\n빈대와 감별 — 침노린재는 샤가스병을 매개\n출제 포인트: 빈대(Cimex)와 혼동 주의 — 빈대는 질병을 매개하지 않고 침노린재는 샤가스병을 매개",
           "species_id": "triatoma_spp",
@@ -5114,10 +5114,10 @@
           "stain": "Giemsa",
           "magnification": "400-1000x",
           "options": [
-            "Trichuris trichiura",
-            "Wuchereria bancrofti",
+            "Necator americanus",
+            "Ancylostoma duodenale",
             "Brugia malayi",
-            "Necator americanus"
+            "Wuchereria bancrofti"
           ],
           "answer_index": 2,
           "answer": "Brugia malayi",
@@ -5133,15 +5133,15 @@
           "set": 5,
           "no": 14,
           "qtype": "종 동정",
-          "stem": "현미경에서 관찰되는 기생충을 고르시오.",
+          "stem": "다음 기생충의 학명으로 옳은 것은?",
           "image_path": "jms_nematoda/선충_Nematodes/003_F3.png",
           "image_source": "jms_nematoda",
           "stain": "H&E",
           "magnification": "40-100x",
           "options": [
-            "Anisakis simplex",
-            "Ancylostoma duodenale",
             "Trichuris trichiura",
+            "Anisakis simplex",
+            "Necator americanus",
             "Ascaris lumbricoides"
           ],
           "answer_index": 3,
@@ -5165,16 +5165,16 @@
           "set": 5,
           "no": 15,
           "qtype": "종 동정",
-          "stem": "다음 기생충의 학명으로 옳은 것은?",
+          "stem": "다음은 어떤 기생충인가?",
           "image_path": "jms_nematoda/선충_Nematodes/008_H8.png",
           "image_source": "jms_nematoda",
           "stain": null,
           "magnification": "40-400x",
           "options": [
             "Necator americanus",
-            "Trichuris trichiura",
-            "Ancylostoma duodenale",
-            "Ascaris lumbricoides"
+            "Ascaris lumbricoides",
+            "Strongyloides stercoralis",
+            "Ancylostoma duodenale"
           ],
           "answer_index": 0,
           "answer": "Necator americanus",
@@ -5194,16 +5194,16 @@
           "set": 5,
           "no": 16,
           "qtype": "기생부위",
-          "stem": "다음 기생충이 기생하는 부위는?",
+          "stem": "다음 기생충의 성충 기생 부위는?",
           "image_path": "jms_protozoa/원충_Protozoa/012_F12.png",
           "image_source": "jms_protozoa",
           "stain": "Diff-Quik",
           "magnification": "1000x",
           "options": [
             "피부 대식세포",
+            "질·요도 lumen",
             "대장 lumen",
-            "소장 상피세포 미세융모",
-            "혈액·림프절·비장·중추신경계"
+            "소장 상피세포 미세융모"
           ],
           "answer_index": 0,
           "answer": "피부 대식세포",
@@ -5219,18 +5219,18 @@
           "set": 5,
           "no": 17,
           "qtype": "종 동정",
-          "stem": "현미경에서 관찰되는 기생충을 고르시오.",
+          "stem": "다음은 어떤 기생충인가?",
           "image_path": "jms_nematoda/선충_Nematodes/017_F17.png",
           "image_source": "jms_nematoda",
           "stain": "AC (acetocarmine)",
           "magnification": "100-400x",
           "options": [
-            "Trichuris trichiura",
+            "Ascaris lumbricoides",
             "Necator americanus",
-            "Strongyloides stercoralis",
-            "Trichinella spiralis"
+            "Trichinella spiralis",
+            "Trichuris trichiura"
           ],
-          "answer_index": 3,
+          "answer_index": 2,
           "answer": "Trichinella spiralis",
           "explanation": "선모충 유충 (마운트) — 돌돌 말린 형태의 유충 / 근육에서 분리한 표본\n출제 포인트: 근육 조직절편에서 nursing cell complex 내부에 돌돌 말린 유충 — 조직 문제 단골",
           "species_id": "trichinella_spiralis",
@@ -5246,18 +5246,18 @@
           "set": 5,
           "no": 18,
           "qtype": "특징 구조물",
-          "stem": "다음 기생충이 가진 특징적 구조물은?",
+          "stem": "다음 기생충에서 가장 특징적인 구조물은?",
           "image_path": "note/[260903_05]_감염의_기초_실습3_039_3.png",
           "image_source": "note",
           "stain": "carmine",
           "magnification": "100x",
           "options": [
+            "branched intestine",
             "gelatin layer",
             "ventral pit",
-            "testis",
-            "fibrosis"
+            "testis"
           ],
-          "answer_index": 2,
+          "answer_index": 3,
           "answer": "testis",
           "explanation": "요코가와흡충 성충 — 매우 작아 육안으로 잘 안 보임 (1-2mm) / ventral sucker가 한쪽으로 치우쳐 있음\n출제 포인트: 충란은 간흡충과 크기가 같은 30um이지만 충란벽이 매끄러움 (muskmelon 무늬 없음). 성충은 ventral sucker가 한쪽으로 치우침",
           "species_id": "metagonimus_yokogawai",
@@ -5282,12 +5282,12 @@
           "stain": "H&E",
           "magnification": "400x",
           "options": [
-            "pseudopodia",
             "peripheral chromatin",
+            "cilia",
             "karyosome",
-            "cilia"
+            "pseudopodia"
           ],
-          "answer_index": 3,
+          "answer_index": 1,
           "answer": "cilia",
           "explanation": "대장섬모충 — 크기가 매우 커서 저배율에서도 바로 눈에 띔 / 가장자리에 섬모(cilia)\n출제 포인트: 운동기관이 섬모 (cilia). 크기가 커서 저배율에서도 바로 보임. 핵이 macronucleus + micronucleus 2종류",
           "species_id": "balantidium_coli",
@@ -5307,12 +5307,12 @@
           "stain": "Diff-Quik",
           "magnification": "1000x",
           "options": [
-            "oocyst",
             "영양형·포낭",
+            "4핵성 포낭",
             "trypomastigote",
-            "4핵성 포낭"
+            "promastigote"
           ],
-          "answer_index": 3,
+          "answer_index": 1,
           "answer": "4핵성 포낭",
           "explanation": "람블편모충 영양형 — 서양배(pear) 또는 올빼미 얼굴 모양 / 눈처럼 보이는 핵 2개\n람블편모충의 인체 감염형은 4핵성 포낭이다.\n출제 포인트: 영양형 - pear/올빼미 얼굴 모양, 핵 2개, 4쌍 편모, sucking disc. 포낭 - 타원형, 핵 2-4개가 한쪽에 몰림, axostyle 주변 fibril. 조직 파괴는 하지 않음",
           "species_id": "giardia_lamblia",
@@ -5328,18 +5328,18 @@
           "set": 5,
           "no": 21,
           "qtype": "indicator",
-          "stem": "Indicator(표시)가 가리키는 구조물의 이름은?",
+          "stem": "다음 표본에서 표시가 가리키는 구조물은?",
           "image_path": "practical_ind/082_3.png",
           "image_source": "practical",
           "stain": "Giemsa",
           "magnification": "1000x",
           "options": [
-            "ring form",
-            "schizont",
-            "gelatin layer",
-            "gametocyte"
+            "Schuffner dot",
+            "gametocyte",
+            "RBC",
+            "schizont"
           ],
-          "answer_index": 3,
+          "answer_index": 1,
           "answer": "gametocyte",
           "explanation": "열대열원충 얇은 도말 — RBC 크기 변화 없음 / 한 적혈구에 여러 개의 ring (multiple ring form)\n출제 포인트: RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾",
           "species_id": "plasmodium_falciparum",
@@ -5359,18 +5359,18 @@
           "set": 5,
           "no": 22,
           "qtype": "indicator",
-          "stem": "다음 표본에서 표시가 가리키는 구조물은?",
+          "stem": "Indicator(표시)가 가리키는 구조물의 이름은?",
           "image_path": "practical_ind/087_4.png",
           "image_source": "practical",
           "stain": "Giemsa",
           "magnification": "1000x",
           "options": [
-            "Schuffner dot",
             "gametocyte",
-            "gelatin layer",
-            "schizont"
+            "schizont",
+            "ring form",
+            "trophozoite"
           ],
-          "answer_index": 3,
+          "answer_index": 1,
           "answer": "schizont",
           "explanation": "삼일열원충 두꺼운 도말 — 적혈구가 용혈되어 원충만 남음 / ring form과 schizont가 함께 보임\n출제 포인트: RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot",
           "species_id": "plasmodium_vivax",
@@ -5393,12 +5393,12 @@
           "stain": "carmine",
           "magnification": "40x",
           "options": [
-            "만손주혈흡충증",
-            "극구흡충증",
-            "간흡충증",
-            "일본주혈흡충증"
+            "폐흡충증",
+            "방광주혈흡충증",
+            "일본주혈흡충증",
+            "만손주혈흡충증"
           ],
-          "answer_index": 3,
+          "answer_index": 2,
           "answer": "일본주혈흡충증",
           "explanation": "일본주혈흡충 자웅 합체 — 자웅이체 — 수컷의 gynecophoral canal(포자관)에 가느다란 암컷이 끼어 있음 / 수컷 6-10mm\n일본주혈흡충 감염증의 병명은 일본주혈흡충증 (schistosomiasis japonica)이다.\n출제 포인트: 충란이 둥글고 작으며 lateral spine이 매우 작아 잘 안 보임. 성충은 gynecophoral canal에 암컷이 끼어 있는 쌍 형태",
           "species_id": "schistosoma_japonicum",
@@ -5414,18 +5414,18 @@
           "set": 5,
           "no": 24,
           "qtype": "종 동정",
-          "stem": "현미경에서 관찰되는 기생충을 고르시오.",
+          "stem": "다음은 어떤 기생충인가?",
           "image_path": "note/[260903_05]_감염의_기초_실습3_042_2.png",
           "image_source": "note",
           "stain": "carmine",
           "magnification": "100-400x",
           "options": [
-            "Clonorchis sinensis",
-            "Paragonimus westermani",
+            "Schistosoma mansoni",
             "Neodiplostomum seoulense",
+            "Paragonimus westermani",
             "Gymnophalloides seoi"
           ],
-          "answer_index": 2,
+          "answer_index": 1,
           "answer": "Neodiplostomum seoulense",
           "explanation": "서울주걱흡충 성충 — 앞쪽이 주걱처럼 넓게 퍼진 모양 / tribocytic organ (제2의 입) 이 결정적 감별점\n출제 포인트: 주걱 모양 몸체 + tribocytic organ (제2의 입) 이 최대 감별점. 조직에서는 융모를 빨아먹는 모습",
           "species_id": "neodiplostomum_seoulense",
@@ -5449,12 +5449,12 @@
           "stain": "carmine",
           "magnification": "40x",
           "options": [
+            "rosette uterus",
             "genital pore",
             "ovary",
-            "uterine pore",
-            "rosette uterus"
+            "gelatin layer"
           ],
-          "answer_index": 0,
+          "answer_index": 1,
           "answer": "genital pore",
           "explanation": "유구조충 편절 — 자궁측지 13개 이하, 두껍고 듬성듬성 / 위아래로 긴 사각형\n출제 포인트: 두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)",
           "species_id": "taenia_solium",
@@ -5472,18 +5472,18 @@
           "set": 5,
           "no": 26,
           "qtype": "증상·질병",
-          "stem": "다음 기생충에 감염된 환자의 병명으로 옳은 것은?",
+          "stem": "다음 기생충이 일으키는 질환은?",
           "image_path": "jms_protozoa/원충_Protozoa/026_F26.png",
           "image_source": "jms_protozoa",
           "stain": "Diff-Quik",
           "magnification": "400-1000x",
           "options": [
-            "아프리카 수면병",
+            "아메바증",
+            "피부리슈만편모충증",
             "폐포자충폐렴",
-            "와포자충증",
-            "피부리슈만편모충증"
+            "비병원성"
           ],
-          "answer_index": 1,
+          "answer_index": 2,
           "answer": "폐포자충폐렴",
           "explanation": "폐포자충 (Diff-Quik, 폐) — 폐포 안에 거품 같은 exudate / cyst 안에 매우 작은 8개의 핵 (octa-nucleated cyst)\n폐포자충 감염증의 병명은 폐포자충폐렴 (Pneumocystis pneumonia (PCP))이다.\n출제 포인트: 분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)",
           "species_id": "pneumocystis_jirovecii",
@@ -5509,12 +5509,12 @@
           "stain": "trichrome",
           "magnification": "1000x",
           "options": [
-            "치료 불필요",
-            "Tetracycline 복용",
-            "Pyrimethamine 복용",
-            "Amphotericin 복용"
+            "Metronidazole 복용",
+            "pentavalent antimonials 복용",
+            "Amphotericin B 복용",
+            "치료 불필요"
           ],
-          "answer_index": 0,
+          "answer_index": 3,
           "answer": "치료 불필요",
           "explanation": "대장아메바 포낭 — 핵이 4-8개로 많음 / karyosome이 크고 한쪽으로 치우침 (붓으로 꾹 누른 모양)\n대장아메바 치료: 치료 불필요\n출제 포인트: 핵 4-8개 (최대 8개), karyosome이 크고 한쪽으로 치우침 (붓으로 누른 모양), peripheral chromatin 두께 불규칙 — 이질아메바와의 감별이 핵심",
           "species_id": "entamoeba_coli",
@@ -5541,10 +5541,10 @@
           "options": [
             "ventricle",
             "gelatin layer",
-            "caudal alae",
-            "mucron"
+            "boring tooth",
+            "caudal alae"
           ],
-          "answer_index": 2,
+          "answer_index": 3,
           "answer": "caudal alae",
           "explanation": "요충 성충 (현미경) — 머리쪽에 투명한 키틴성 날개 cephalic alae / 수컷은 꼬리가 나선형으로 말리고 caudal alae\n출제 포인트: 충란은 커피콩·죠리퐁·감씨 모양 (한쪽이 편평). 충체는 cephalic alae (수컷은 caudal alae도)",
           "species_id": "enterobius_vermicularis",
@@ -5568,10 +5568,10 @@
           "stain": "Diff-Quik",
           "magnification": "1000x",
           "options": [
-            "punch biopsy",
-            "혈청 IgG/IgM",
+            "대변검사",
+            "폐포세척액·객담·생검",
             "질 분비물 현미경 관찰",
-            "뇌척수액·뇌생검에서 영양형"
+            "혈액·림프액 도말 Giemsa"
           ],
           "answer_index": 2,
           "answer": "질 분비물 현미경 관찰",
@@ -5587,18 +5587,18 @@
           "set": 5,
           "no": 30,
           "qtype": "종 동정",
-          "stem": "현미경에서 관찰되는 기생충을 고르시오.",
+          "stem": "다음 기생충의 학명으로 옳은 것은?",
           "image_path": "tonghap/조충/004_E4.png",
           "image_source": "tonghap",
           "stain": null,
           "magnification": "육안",
           "options": [
+            "Taenia asiatica",
             "Cysticercus cellulosae",
             "Spirometra erinacei",
-            "Taenia saginata",
             "Diphyllobothrium latum"
           ],
-          "answer_index": 1,
+          "answer_index": 2,
           "answer": "Spirometra erinacei",
           "explanation": "고충 (육안) — 하얀 고무줄처럼 쭈굴쭈굴하고 길다 / 편절 구분이 없음\n출제 포인트: gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle",
           "species_id": "spirometra_erinacei",
@@ -5621,12 +5621,12 @@
           "stain": "H&E",
           "magnification": "40x",
           "options": [
-            "수인성",
-            "접촉매개성",
             "절지동물매개성",
-            "식품매개성"
+            "패류매개성",
+            "식품매개성",
+            "접촉매개성"
           ],
-          "answer_index": 3,
+          "answer_index": 2,
           "answer": "식품매개성",
           "explanation": "고충 조직절편 — 성긴 스폰지 모양 실질 구조 / 내부에 보라색으로 염색되는 calcium (calcareous) corpuscle\n만손열두조충의 전파 방식은 식품매개성이다.\n출제 포인트: gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle",
           "species_id": "spirometra_erinacei",
@@ -5649,12 +5649,12 @@
           "stain": "carmine",
           "magnification": "40x",
           "options": [
-            "uterine pore",
-            "gelatin layer",
             "uterine branch",
-            "calcareous corpuscle"
+            "uterine pore",
+            "sucking groove",
+            "gelatin layer"
           ],
-          "answer_index": 0,
+          "answer_index": 1,
           "answer": "uterine pore",
           "explanation": "광절열두조충 편절 — 좌우로 넓은 사각형 편절 / 가운데에 rosette (꽃모양) uterus\n출제 포인트: 충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만",
           "species_id": "diphyllobothrium_latum",
@@ -5672,18 +5672,18 @@
           "set": 5,
           "no": 33,
           "qtype": "감염경로",
-          "stem": "다음 기생충의 전파 방식은?",
+          "stem": "다음 기생충이 감염되는 방식은?",
           "image_path": "jiseok/실습_4_001_13.png",
           "image_source": "jiseok",
           "stain": "trichrome",
           "magnification": "1000x",
           "options": [
-            "성접촉",
-            "절지동물매개성",
+            "수인성",
             "공기매개",
-            "수인성"
+            "성접촉",
+            "절지동물매개성"
           ],
-          "answer_index": 3,
+          "answer_index": 0,
           "answer": "수인성",
           "explanation": "람블편모충 포낭 — 타원형, 10-12um / 핵 2-4개가 한쪽 끝에 몰려 있음\n람블편모충의 전파 방식은 수인성이다.\n출제 포인트: 영양형 - pear/올빼미 얼굴 모양, 핵 2개, 4쌍 편모, sucking disc. 포낭 - 타원형, 핵 2-4개가 한쪽에 몰림, axostyle 주변 fibril. 조직 파괴는 하지 않음",
           "species_id": "giardia_lamblia",
@@ -5705,12 +5705,12 @@
           "stain": "carmine",
           "magnification": "40x",
           "options": [
-            "promastigote",
             "피낭유충 (metacercaria)",
-            "해당 없음",
-            "유미유충 (cercaria)"
+            "성충·유충",
+            "유미유충 (cercaria)",
+            "자충포장란 (embryonated egg)"
           ],
-          "answer_index": 1,
+          "answer_index": 0,
           "answer": "피낭유충 (metacercaria)",
           "explanation": "간질 성충 — 크고 납작한 나뭇잎 모양 (약 3cm) / 머리쪽이 원뿔형으로 돌출 (conical projection = cephalic cone)\n간질의 인체 감염형은 피낭유충 (metacercaria) / 유약충이다.\n출제 포인트: 납작한 나뭇잎 모양 + conical projection (= cephalic cone). highly branched intestine·testes·vitellaria. 조직에서는 구멍이 송송 뚫린 내부",
           "species_id": "fasciola_hepatica",
@@ -5730,12 +5730,12 @@
           "stain": "H&E",
           "magnification": "100-400x",
           "options": [
-            "덜 익힌 돼지고기·야생동물 고기·가공식품",
-            "모기",
-            "자충포장란에 오염된 식수·채소",
-            "충란에 오염된 토양, 소 생간 등 유충을 포함한 내장육"
+            "충란에 오염된 손·침구·먼지",
+            "오염 토양",
+            "충란에 오염된 토양, 소 생간 등 유충을 포함한 내장육",
+            "덜 익힌 돼지고기·야생동물 고기·가공식품"
           ],
-          "answer_index": 0,
+          "answer_index": 3,
           "answer": "덜 익힌 돼지고기·야생동물 고기·가공식품",
           "explanation": "선모충 피낭유충 (근육) — 횡문근 안에 nursing cell complex 형성 / 유충이 돌돌 말린 채로 들어 있음\n선모충은(는) 경구감염으로 감염되며, 감염원은 덜 익힌 돼지고기·야생동물 고기·가공식품이다.\n출제 포인트: 근육 조직절편에서 nursing cell complex 내부에 돌돌 말린 유충 — 조직 문제 단골",
           "species_id": "trichinella_spiralis",
@@ -5751,18 +5751,18 @@
           "set": 5,
           "no": 36,
           "qtype": "감염경로",
-          "stem": "환자에게서 다음 표본이 검출되었다. 감염 원인은?",
+          "stem": "다음 기생충의 감염 원인으로 알맞은 것은?",
           "image_path": "jms_trematoda/흡충_Trematodes/006_H6.png",
           "image_source": "jms_trematoda",
           "stain": "carmine",
           "magnification": "40x",
           "options": [
-            "은어·황어 생식",
-            "민물 갑각류 생식",
-            "숭어·농어·문절망둑 등 반수산 어류 생식",
-            "민물고기 생식"
+            "자연산 굴 생식",
+            "얼룩동사리·버들치·미꾸라지 생식",
+            "민물고기 생식",
+            "유미유충이 있는 민물 접촉"
           ],
-          "answer_index": 3,
+          "answer_index": 2,
           "answer": "민물고기 생식",
           "explanation": "간흡충 성충 — 납작한 나뭇잎 모양, 10-25mm / 몸 뒤쪽에 나뭇가지처럼 갈라진 branched testis 2개\n간흡충은(는) 경구감염으로 감염되며, 감염원은 민물고기 생식 (잉어·붕어·향어·모래무지·빙어)이다.\n출제 포인트: 충란 - shouldering + muskmelon appearance + operculum + abopercular knob. 성충 - 나뭇잎 모양에 branched testis",
           "species_id": "clonorchis_sinensis",
@@ -5796,11 +5796,11 @@
           "magnification": "40-400x",
           "options": [
             "gelatin layer",
-            "cephalic alae",
             "caudal alae",
-            "ventricle"
+            "ventricle",
+            "cephalic alae"
           ],
-          "answer_index": 3,
+          "answer_index": 2,
           "answer": "ventricle",
           "explanation": "고래회충 유충 (현미경) — 머리에 boring tooth (상어 지느러미처럼 튀어나옴) / 꼬리에 mucron\n출제 포인트: 머리쪽 boring tooth, 꼬리쪽 mucron, 머리 근처 하얀 ventricle. 단면은 Y자형 intestinal lumen + 나비모양 lateral cord + Renette cell",
           "species_id": "anisakis_simplex",
@@ -5817,18 +5817,18 @@
           "set": 5,
           "no": 38,
           "qtype": "종 동정",
-          "stem": "현미경에서 관찰되는 기생충을 고르시오.",
+          "stem": "다음 기생충의 학명으로 옳은 것은?",
           "image_path": "note/[260902_05]_감염의_기초_실습__018_1.png",
           "image_source": "note",
           "stain": null,
           "magnification": "40-100x",
           "options": [
-            "Strongyloides stercoralis",
             "Trichuris trichiura",
+            "Strongyloides stercoralis",
             "Enterobius vermicularis",
-            "Ascaris lumbricoides"
+            "Ancylostoma duodenale"
           ],
-          "answer_index": 1,
+          "answer_index": 0,
           "answer": "Trichuris trichiura",
           "explanation": "편충 성충 (현미경) — 채찍 모양 — 앞 3/5이 가늘고 뒤 2/5가 굵음 / 가는 쪽이 머리\n출제 포인트: 충란 양극 mucoid plug. 충체는 stichocyte가 stichosome 형성 — 조직절편 문제 단골",
           "species_id": "trichuris_trichiura",
@@ -5853,12 +5853,12 @@
           "stain": "H&E",
           "magnification": "40-100x",
           "options": [
-            "양·소 등 초식동물, 사람",
             "사람·설치류",
-            "사람·소·개 등",
-            "사람·조류"
+            "양·소 등 초식동물, 사람",
+            "사람·쥐",
+            "사람·개"
           ],
-          "answer_index": 0,
+          "answer_index": 1,
           "answer": "양·소 등 초식동물, 사람",
           "explanation": "간질 조직절편 — 충체 내부가 구멍이 송송 뚫린 모양 / 간 실질의 괴사·염증\n간질의 종숙주는 양·소 등 초식동물, 사람이다.\n출제 포인트: 납작한 나뭇잎 모양 + conical projection (= cephalic cone). highly branched intestine·testes·vitellaria. 조직에서는 구멍이 송송 뚫린 내부",
           "species_id": "fasciola_hepatica",
@@ -5872,18 +5872,18 @@
           "set": 5,
           "no": 40,
           "qtype": "종 동정",
-          "stem": "다음은 어떤 기생충인가?",
+          "stem": "현미경에서 관찰되는 기생충을 고르시오.",
           "image_path": "eunju/기생충_실습_(포자충류,_말라리아,_의용_001_12.png",
           "image_source": "eunju",
           "stain": "modified acid-fast (MAF)",
           "magnification": "400-1000x",
           "options": [
-            "Entamoeba coli",
             "Cryptosporidium parvum",
+            "Pneumocystis jirovecii",
             "Toxoplasma gondii",
             "Endolimax nana"
           ],
-          "answer_index": 1,
+          "answer_index": 0,
           "answer": "Cryptosporidium parvum",
           "explanation": "작은와포자충 oocyst (MAF 염색) — 파란 배경에 분홍·붉은색으로 염색된 둥근 oocyst / 크기 4-6um\n출제 포인트: 장 조직에서 미세융모에 붙은 작은 점들. MAF 염색에서 파란 배경에 분홍색 oocyst",
           "species_id": "cryptosporidium_parvum",
