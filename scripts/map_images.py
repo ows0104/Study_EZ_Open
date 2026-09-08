@@ -217,24 +217,8 @@ def build_index(species):
 FROM_PDF = ("jiseok", "eunju", "note")
 
 
-def match_species(rec, exact, genus, keys_norm, ko_keys):
-    """정확 -> 퍼지 -> 속명 순. (species_id, 방법) 반환.
-
-    **가까운 글을 먼 글보다 먼저 본다.** 정리본에서 뽑은 사진은 `name_ko`가
-    사진 옆에 적힌 것이고 `name_sub`는 그 칸 머리의 표제다. 표제를 먼저 보면
-    한 쪽에 여러 종이 선 포스터에서 표제 하나가 그 쪽 사진 전부를 삼킨다 —
-    실제로 캡션이 「구충」·「편충」인 사진까지 회충으로 붙어서, 새 출처 506장
-    중 217장이 회충 한 종으로 몰렸다.
-
-    엑셀에서 온 것은 순서를 그대로 둔다. 거기 `name_sub`는 같은 칸의 부제라
-    멀리 있는 글이 아니고, 바꾸면 잘 붙던 것이 흔들린다.
-    """
-    near = [rec["name_en"]] + latin_from(rec["name_ko"]) + [rec["name_ko"]]
-    far = latin_from(rec["name_sub"]) + [rec["name_sub"]]
-    cands = (near + far) if rec.get("source") in FROM_PDF else (
-        [rec["name_en"]] + latin_from(rec["name_sub"]) + latin_from(rec["name_ko"])
-        + [rec["name_sub"], rec["name_ko"]])
-
+def _ladder(cands, exact, genus, keys_norm, ko_keys):
+    """이름표 몇 개를 놓고 종을 찾는다. 정확 -> 부분일치 -> 퍼지 -> 속명."""
     for c in cands:
         if not c:
             continue
@@ -277,12 +261,62 @@ def match_species(rec, exact, genus, keys_norm, ko_keys):
             if hit:
                 return exact[hit[0]], "fuzzy"
 
+    ambiguous = False
     for c in cands:
         for g in re.findall(r"\b([A-Z][a-z]{2,})\b", c or ""):
             ids = genus.get(norm(g))
-            if ids and len(ids) == 1:
+            if not ids:
+                continue
+            if len(ids) == 1:
                 return next(iter(ids)), "genus"
-    return None, None
+            ambiguous = True       # 아는 속인데 종까지 못 좁혔다
+    return None, ("속만 맞음" if ambiguous else None)
+
+
+def match_species(rec, exact, genus, keys_norm, ko_keys):
+    """이름표에서 종을 찾는다. (species_id, 방법) 반환.
+
+    **가까운 글을 먼저 끝까지 본다.** 정리본에서 뽑은 사진은 `name_ko`가
+    사진 옆에 적힌 것이고 `name_sub`는 그 칸 머리의 표제(또는 쪽 제목)다.
+    표제를 먼저 보면 한 쪽에 여러 종이 선 포스터에서 표제 하나가 그 쪽 사진
+    전부를 삼킨다 — 실제로 캡션이 「구충」·「편충」인 사진까지 회충으로
+    붙어서, 새 출처 506장 중 217장이 회충 한 종으로 몰렸다.
+
+    **끝까지가 중요하다.** 예전에는 단계마다(정확 -> 부분일치 -> 퍼지) 가까운
+    것과 먼 것을 함께 훑었다. 그러면 순서가 「가까운 것 먼저」가 아니라
+    「강하게 맞는 것 먼저」가 된다 — 먼 쪽의 정확 일치가 가까운 쪽의 부분
+    일치를 이긴다. 이지석 실습1 p2가 그렇게 틀렸다. 사진 옆에는 「구충」이라
+    적혀 있고 쪽 제목이 「편충」인데, **「구충」은 종이 아니라 표본 답 라벨**
+    이라 종 색인에 없었다(종은 두비니구충·아메리카구충이다). 그래서 정확
+    일치 단계에서 쪽 제목의 「편충」이 먼저 걸렸고, 구충란 석 장이 편충란이
+    되어 나갔다 — 학생이 「이거 구충임」이라고 제보할 때까지.
+
+    지금은 가까운 것으로 사다리를 끝까지 타 보고, 그래도 못 찾을 때만 먼
+    것으로 넘어간다. 「구충」은 색인에 별칭으로 넣었다(`Hookworm`이 이미 그
+    자리에 있었다).
+
+    엑셀에서 온 것은 순서를 그대로 둔다. 거기 `name_sub`는 같은 칸의 부제라
+    멀리 있는 글이 아니고, 바꾸면 잘 붙던 것이 흔들린다.
+    """
+    if rec.get("source") not in FROM_PDF:
+        cands = ([rec["name_en"]] + latin_from(rec["name_sub"])
+                 + latin_from(rec["name_ko"]) + [rec["name_sub"], rec["name_ko"]])
+        return _ladder(cands, exact, genus, keys_norm, ko_keys)
+
+    near = [rec["name_en"]] + latin_from(rec["name_ko"]) + [rec["name_ko"]]
+    far = latin_from(rec["name_sub"]) + [rec["name_sub"]]
+    sid, how = _ladder(near, exact, genus, keys_norm, ko_keys)
+    if sid:
+        return sid, how
+    if how == "속만 맞음":
+        # **가까운 이름표가 이미 종을 부르고 있다.** 좁히지 못했을 뿐이지
+        # 다른 항목 이야기가 아니므로, 먼 글로 넘어가면 안 된다. 이지석
+        # 실습4 p2가 그랬다 — 사진 위 표제가 「5. Plasmodium spp. (열원충)」
+        # 인데 속만으로는 네 종 중 하나를 못 고르니, 쪽 제목 「4. Balantidium
+        # coli (대장섬모충)」로 넘어가 말라리아 도말 두 장이 대장섬모충이
+        # 됐다. 못 고르면 비워 두는 편이 낫다.
+        return None, None
+    return _ladder(far, exact, genus, keys_norm, ko_keys)
 
 
 def is_egg_sheet(sheet, topic=None):

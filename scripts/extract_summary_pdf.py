@@ -95,10 +95,13 @@ TITLE_MAX_Y = 90      # 이 위쪽 텍스트를 페이지 제목으로 본다
 CAPTION_GAP = 34      # 사진 아래 이만큼까지의 짧은 글을 캡션으로 본다
 
 LATIN_RE = re.compile(r"\b([A-Z][a-z]{3,})\s+([a-z]{3,})\b")
+# **「이」를 낱자로 넣지 않는다.** 넣으면 「식도를 이룸」·「보이는」·「같이」처럼
+# 거의 모든 한글 글월이 종 이름을 부르는 것으로 잡힌다. 이(louse)는 자료에서
+# 「머릿니」·「몸니」·「사면발이」로 불린다.
 KO_NAME_RE = re.compile(
     r"(회충|편충|구충|요충|분선충|선모충|사상충|고래회충|간흡충|폐흡충|요코가와흡충"
     r"|간질|주걱흡충|큰입흡충|주혈흡충|조충|낭미충|고충|아메바|편모충|섬모충"
-    r"|열원충|포자충|말라리아|진드기|모기|벼룩|이|빈대)")
+    r"|열원충|포자충|말라리아|진드기|모기|벼룩|머릿니|몸니|사면발이|빈대)")
 SECTION_RE = [("충란", r"연충란|충란|Helminth\s*eggs"), ("선충", r"선충|Nematod"),
               ("흡충", r"흡충|Tremato"), ("조충", r"조충|Cestod"),
               ("원충", r"원충|Protozoa"), ("말라리아", r"말라리아|Plasmodium"),
@@ -130,11 +133,29 @@ def title_of(lines):
     return top[0]["text"].strip()
 
 
-def captions_for(bbox, lines):
+def captions_for(bbox, lines, others=(), above=False):
     """이 사진을 가리키는 글. 포스터형에서는 **이것만이 사진의 이름표다.**
 
     한 쪽에 사진이 마흔 장 깔린 정리본에서는 페이지 제목이 아무것도 말해
     주지 않는다. 사진 안·바로 아래·바로 옆의 짧은 글을 거리순으로 모은다.
+
+    **바로 위도 본다.** 항목 제목이 사진 위에 서는 쪽이 있다. 신은주 정리본
+    「포자충류, 말라리아, 의용곤충」 p3이 그렇다 — 「[5] 작은소피참진드기
+    Haemaphysalis longicornis」 바로 밑에 그 사진이 놓인다. 그 쪽은 글씨
+    크기가 전부 같아서 `headings_of`가 표제를 하나도 못 잡고(제목만 크다),
+    아래만 보던 이 함수는 **다음 항목의 제목**을 집었다. 그래서 접시에 담긴
+    진드기가 「[6] 흰줄숲모기 Aedes albopictus」로 나갔다. 정작 이 사진에
+    달린 설명은 「-> 다리 8개 !!! 거미st」였다.
+
+    **줄은 제일 가까운 사진의 것이다.** `others`에 같은 쪽의 다른 사진 자리를
+    넘기면, 위아래 양쪽으로 그 규칙을 지킨다 — 내 아래에 있는 줄이라도 그
+    밑의 사진에 더 붙어 있으면 그 사진의 제목이고, 내 위의 줄이라도 그 위의
+    사진에 더 붙어 있으면 그 사진의 설명이다.
+
+    `above`는 **표제를 하나도 못 찾은 쪽에서만** 켠다(호출부가 정한다). 표제가
+    잡히는 쪽에서는 위쪽 글이 이미 `heading_for`로 제대로 붙으므로, 거기까지
+    캡션으로 끌어오면 슬라이드(필기본)에서 윗 문단이 사진 이름표가 된다 —
+    267쪽을 견줘 보니 그쪽에서만 라벨이 나빠졌다.
     """
     x0, y0, x1, y1 = bbox
     near = []
@@ -142,13 +163,41 @@ def captions_for(bbox, lines):
         lx0, ly0, lx1, ly1 = l["bbox"]
         if len(l["text"]) > 90:
             continue
-        inside = lx0 >= x0 - 4 and lx1 <= x1 + 4 and ly0 >= y0 - 4 and ly1 <= y1 + 4
-        below = (y1 <= ly0 <= y1 + CAPTION_GAP) and not (lx1 < x0 or lx0 > x1)
-        beside = (x1 <= lx0 <= x1 + CAPTION_GAP) and not (ly1 < y0 or ly0 > y1)
-        if inside or below or beside:
-            near.append((abs(ly0 - y1), l["text"].strip()))
-    near.sort()
+        wide = not (lx1 < x0 or lx0 > x1)          # 가로로 겹친다 = 같은 단
+        tall = not (ly1 < y0 or ly0 > y1)
+        if lx0 >= x0 - 4 and lx1 <= x1 + 4 and ly0 >= y0 - 4 and ly1 <= y1 + 4:
+            gap = 0.0                              # 사진 안
+        elif wide and y1 <= ly0 <= y1 + CAPTION_GAP:
+            gap = ly0 - y1                         # 바로 아래 — 설명
+            if _stolen(l["bbox"], gap, others, bbox, below=True):
+                continue
+        elif above and wide and y0 - CAPTION_GAP <= ly1 <= y0:
+            gap = y0 - ly1                         # 바로 위 — 항목 제목
+            if _stolen(l["bbox"], gap, others, bbox, below=False):
+                continue
+        elif tall and x1 <= lx0 <= x1 + CAPTION_GAP:
+            gap = lx0 - x1                         # 바로 옆
+        else:
+            continue
+        near.append((gap, l["text"].strip()))
+    near.sort(key=lambda t: t[0])
     return [t for _, t in near]
+
+
+def _stolen(line_box, gap, others, mine, below):
+    """이 줄이 **다른 사진에 더 가까운가.** 가로로 겹치는 사진만 견준다.
+
+    `below=True`면 줄이 내 아래에 있는 경우다 — 줄 **밑**의 사진들과 견준다.
+    `below=False`면 줄이 내 위에 있는 경우 — 줄 **위**의 사진들과 견준다.
+    """
+    lx0, ly0, lx1, ly1 = line_box
+    for o in others:
+        if o is mine or o[2] < lx0 or o[0] > lx1:
+            continue
+        d = (o[1] - ly1) if below else (ly0 - o[3])
+        if 0 <= d < gap:
+            return True
+    return False
 
 
 HEADING_RE = re.compile(r"^\s*\d+\s*[.)]")
@@ -539,7 +588,12 @@ def run(key, reader, dry=False):
             picked.sort(key=lambda i: (round(i["bbox"][1] / 30), i["bbox"][0]))
 
             heads = headings_of(lines)
-            caps = {id(i): captions_for(i["bbox"], lines) for i in picked}
+            boxes = [i["bbox"] for i in picked]
+            # **표제가 하나도 안 잡힌 쪽에서만 사진 위쪽 글을 본다.** 그런 쪽은
+            # 글씨 크기가 전부 같아 항목 제목이 표제로 안 걸린다(신은주 정리본의
+            # 서술형 쪽이 그렇다). 표제가 잡히는 쪽은 `heading_for`에 맡긴다.
+            caps = {id(i): captions_for(i["bbox"], lines, boxes, above=not heads)
+                    for i in picked}
             # **행으로 먼저 읽는다.** 줄이 그어졌든 아니든 정리본은 표다 —
             # 왼쪽에 이름, 오른쪽에 그 종의 사진들. 행에서 못 찾을 때만
             # 표제식(위에 선 제목)으로 내려간다. 슬라이드(필기본)가 그쪽이다.
@@ -601,9 +655,15 @@ def run(key, reader, dry=False):
                     im.save(os.path.join(out_dir, name))
                 caption = caps.get(id(info)) or []
                 head = owns.get(id(info)) or ""
-                # 캡션 중에 학명이나 한국어 기생충 이름을 든 것이 있는가.
+                # 캡션 중에 **아는 종**을 부르는 것이 있는가.
+                #
+                # `row_label`과 같은 잣대를 쓴다 — 생김새가 아니라 종 테이블과
+                # 견준다. 예전에는 `KO_NAME_RE`로 봤는데 그 안에 낱자 「이」가
+                # 있어서 「식도를 이룸」 같은 설명이 전부 이름표가 됐고, 캡션이
+                # 행 이름표(`head`)를 밀어냈다. 표로 된 쪽에서 행 이름은 짐작이
+                # 아니라 사실인데 그것이 설명에 밀렸다.
                 named = next((c for c in caption
-                              if LATIN_RE.search(c) or KO_NAME_RE.search(c)), "")
+                              if LATIN_RE.search(c) or names_species(c)), "")
                 latin = ""
                 m = LATIN_RE.search(" / ".join([head, title] + caption))
                 if m:

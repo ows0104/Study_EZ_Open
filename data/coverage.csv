@@ -1,16 +1,16 @@
 ﻿specimen_id,label_ko,specimen_type,group,이미지수,실습사진,강의록사진,기타,확정매칭,문제사용가능
-ascaris_fertilized_egg,회충 수정란,충란,선충,18,16,1,1,15,15
-ascaris_unfertilized_egg,회충 불수정란,충란,선충,10,8,1,1,10,10
-trichuris_egg,편충 충란,충란,선충,15,13,1,1,15,15
-hookworm_egg,구충 충란,충란,선충,10,8,1,1,10,10
+ascaris_fertilized_egg,회충 수정란,충란,선충,19,17,1,1,15,15
+ascaris_unfertilized_egg,회충 불수정란,충란,선충,11,9,1,1,11,11
+trichuris_egg,편충 충란,충란,선충,13,11,1,1,13,13
+hookworm_egg,구충 충란,충란,선충,15,13,1,1,15,15
 enterobius_egg,요충 충란,충란,선충,14,13,1,0,14,12
-clonorchis_egg,간흡충 충란,충란,흡충,8,6,1,1,8,8
-metagonimus_egg,요코가와흡충 충란,충란,흡충,12,10,1,1,12,8
+clonorchis_egg,간흡충 충란,충란,흡충,9,7,1,1,9,8
+metagonimus_egg,요코가와흡충 충란,충란,흡충,11,9,1,1,11,8
 paragonimus_egg,폐흡충 충란,충란,흡충,11,9,1,1,11,11
 diphyllobothrium_egg,광절열두조충 충란,충란,조충,9,8,1,0,9,7
 taenia_egg,유무구조충 충란,충란,조충,10,7,1,2,10,8
-schistosoma_japonicum_egg,일본주혈흡충 충란,충란,흡충,10,9,1,0,10,10
-schistosoma_mansoni_egg,만손주혈흡충 충란,충란,흡충,10,9,1,0,9,8
+schistosoma_japonicum_egg,일본주혈흡충 충란,충란,흡충,11,10,1,0,11,11
+schistosoma_mansoni_egg,만손주혈흡충 충란,충란,흡충,9,8,1,0,8,7
 schistosoma_haematobium_egg,방광주혈흡충 충란,충란,흡충,11,9,1,1,10,10
 pediculus_egg,이의 충란 (서캐),충란,의용곤충,0,0,0,0,0,0
 ascaris_adult_wholemount,회충 성충 (현미경),충체,선충,5,5,0,0,5,5
@@ -20,15 +20,15 @@ trichuris_section,편충 조직절편 (충수),조직,선충,13,9,2,2,13,13
 strongyloides_rhabditoid,분선충 간상유충,충체,선충,2,2,0,0,0,0
 strongyloides_filariform,분선충 사상유충,충체,선충,15,11,2,2,15,8
 ancylostoma_wholemount,두비니구충 성충,충체,선충,21,16,3,2,19,17
-necator_wholemount,아메리카구충 성충,충체,선충,13,10,2,1,10,8
+necator_wholemount,아메리카구충 성충,충체,선충,13,10,2,1,11,8
 enterobius_adult_wholemount,요충 성충 (현미경),충체,선충,24,18,4,2,21,21
-anisakis_larva_wholemount,고래회충 유충 (현미경),충체,선충,18,15,2,1,14,14
+anisakis_larva_wholemount,고래회충 유충 (현미경),충체,선충,20,17,2,1,16,16
 anisakis_section,고래회충 단면 (토끼 위),조직,선충,7,5,2,0,7,7
 trichinella_larva_wholemount,선모충 유충 (마운트),충체,선충,16,14,2,0,11,7
 trichinella_encysted_larva,선모충 피낭유충 (근육),조직,선충,14,13,1,0,13,13
 brugia_microfilaria,말레이사상충 microfilaria,혈액도말,선충,13,10,2,1,0,11
 paragonimus_adult_wholemount,폐흡충 성충,충체,흡충,13,11,2,0,13,10
-clonorchis_adult_wholemount,간흡충 성충,충체,흡충,12,9,1,2,12,10
+clonorchis_adult_wholemount,간흡충 성충,충체,흡충,13,10,1,2,13,11
 fasciola_adult_wholemount,간질 성충,충체,흡충,8,7,1,0,8,6
 metagonimus_adult_wholemount,요코가와흡충 성충,충체,흡충,8,7,1,0,6,8
 gymnophalloides_adult_wholemount,참굴큰입흡충 성충,충체,흡충,13,11,2,0,11,11
@@ -38,15 +38,15 @@ diphyllobothrium_gravid_proglottid,광절열두조충 편절,충체,조충,22,21
 diphyllobothrium_scolex,광절열두조충 두절,충체,조충,5,4,1,0,5,3
 taenia_solium_gravid_proglottid,유구조충 편절,충체,조충,26,25,1,0,20,8
 taenia_solium_scolex,유구조충 두절,충체,조충,5,4,1,0,5,2
-taenia_saginata_gravid_proglottid,무구조충 편절,충체,조충,16,15,1,0,9,6
+taenia_saginata_gravid_proglottid,무구조충 편절,충체,조충,17,16,1,0,9,6
 taenia_saginata_scolex,무구조충 두절,충체,조충,5,4,1,0,5,4
 cysticercus_wholemount,유구낭미충 (현미경),충체,조충,11,8,2,1,11,10
-cysticercus_muscle_section,유구낭미충 조직절편 (돼지 근육),조직,조충,7,6,1,0,7,6
-sparganum_section,고충 조직절편,조직,조충,16,14,1,1,12,13
+cysticercus_muscle_section,유구낭미충 조직절편 (돼지 근육),조직,조충,8,7,1,0,7,6
+sparganum_section,고충 조직절편,조직,조충,18,16,1,1,14,16
 echinococcus_protoscolex,단방조충 protoscolex,충체,조충,10,9,1,0,8,4
 echinococcus_hydatid_section,포충 조직절편,조직,조충,3,3,0,0,3,2
 echinococcus_adult_wholemount,단방조충 성충,충체,조충,0,0,0,0,0,0
-clonorchis_liver_section,간흡충 조직절편 (간),조직,흡충,6,5,1,0,6,5
+clonorchis_liver_section,간흡충 조직절편 (간),조직,흡충,7,6,1,0,7,6
 fasciola_liver_section,간질 조직절편,조직,흡충,10,9,1,0,10,10
 paragonimus_lung_section,폐흡충 조직절편 (폐),조직,흡충,10,8,2,0,10,8
 paragonimus_brain_section,뇌폐흡충증 조직절편,조직,흡충,1,1,0,0,1,1
@@ -64,9 +64,9 @@ balantidium_coli_section,대장섬모충,조직,원충,5,3,2,0,4,4
 leishmania_promastigote,리슈만편모충 promastigote,충체,원충,6,2,2,2,6,6
 leishmania_amastigote_liver,내장리슈만편모충 amastigote (간·비장),조직,원충,6,3,2,1,4,5
 trypanosoma_cruzi_trypomastigote,크루스파동편모충 trypomastigote,혈액도말,원충,3,2,1,0,2,2
-trypanosoma_cruzi_heart_section,크루스파동편모충 심근 조직절편,조직,원충,4,3,1,0,3,3
+trypanosoma_cruzi_heart_section,크루스파동편모충 심근 조직절편,조직,원충,4,3,1,0,4,4
 toxoplasma_tachyzoite,톡소포자충 tachyzoite,충체,원충,3,2,1,0,3,3
-toxoplasma_brain_section,톡소포자충 tissue cyst (뇌),조직,원충,7,5,2,0,5,5
+toxoplasma_brain_section,톡소포자충 tissue cyst (뇌),조직,원충,8,6,2,0,6,6
 pneumocystis_gms,"폐포자충 (GMS 염색, 폐)",조직,원충,21,18,2,1,11,8
 pneumocystis_diffquik,"폐포자충 (Diff-Quik, 폐)",조직,원충,11,10,1,0,11,4
 cryptosporidium_intestine_section,작은와포자충 조직절편 (소장),조직,원충,3,2,1,0,3,3
@@ -89,14 +89,14 @@ diphyllobothrium_gross,광절열두조충 (육안),gross,조충,3,2,1,0,3,2
 taenia_gross,유무구조충 (육안),gross,조충,2,1,0,1,2,2
 sparganum_gross,고충 (육안),gross,조충,6,4,1,1,6,6
 cysticercus_gross,유구낭미충 (육안),gross,조충,2,2,0,0,2,2
-sarcoptes_wholemount,옴진드기,충체,의용곤충,6,4,2,0,6,4
+sarcoptes_wholemount,옴진드기,충체,의용곤충,7,5,2,0,7,5
 sarcoptes_skin_section,옴진드기 피부 조직절편,조직,의용곤충,0,0,0,0,0,0
 dermatophagoides_wholemount,세로무늬먼지진드기,충체,의용곤충,3,3,0,0,1,2
 pediculus_wholemount,이 (머릿니·몸니),충체,의용곤충,7,3,3,1,1,6
-pthirus_wholemount,사면발이,충체,의용곤충,3,2,1,0,1,3
-haemaphysalis_gross,작은소피참진드기,gross,의용곤충,7,5,2,0,2,6
-leptotrombidium_wholemount,털진드기 유충,충체,의용곤충,7,5,2,0,1,7
-mosquito_wholemount,얼룩날개모기,충체,의용곤충,5,2,2,1,0,2
+pthirus_wholemount,사면발이,충체,의용곤충,2,1,1,0,0,2
+haemaphysalis_gross,작은소피참진드기,gross,의용곤충,7,5,2,0,1,6
+leptotrombidium_wholemount,털진드기 유충,충체,의용곤충,6,4,2,0,0,6
+mosquito_wholemount,얼룩날개모기,충체,의용곤충,6,3,2,1,1,3
 culex_wholemount,집모기,충체,의용곤충,2,1,1,0,0,2
 aedes_wholemount,숲모기,충체,의용곤충,2,0,1,1,0,1
 cimex_wholemount,빈대,충체,의용곤충,4,2,2,0,2,2
