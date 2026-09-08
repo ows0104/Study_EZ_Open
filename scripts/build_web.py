@@ -217,6 +217,11 @@ def past_indicator(gen):
     현미경 하나와 데모 하나를 같이 놓고 묻는 자리가 있고, 족보도 그대로 두 장을
     싣는다. 첫 장만 쓰면 2019년 16번처럼 **indicator가 둘째 장에만 찍힌 문항이
     화살표 없는 사진만 남아** 무엇을 묻는지 알 수 없게 된다.
+
+    **그 전제가 깨지는 문항은 안 낸다.** 스캔에 그 선이 아예 없는 것이 있고,
+    그러면 가리키는 것이 없으므로 답을 고를 수가 없다. 어느 문항이 그런지는
+    사람이 사진을 열어 봐야 알 수 있으므로 `data/question_corrections.json`의
+    `drop`에 이유와 함께 적어 둔다. 2023년 34번이 그렇게 제보로 들어왔다.
     """
     path = os.path.join(ROOT, "data", "past_questions_linked.json")
     if not os.path.exists(path):
@@ -225,14 +230,23 @@ def past_indicator(gen):
     if isinstance(rows, dict):
         rows = rows.get("questions", rows)
 
+    fix_path = os.path.join(ROOT, "data", "question_corrections.json")
+    drop = {}
+    if os.path.exists(fix_path):
+        drop = json.load(open(fix_path, encoding="utf-8")).get("drop", {})
+
     by_struct = {}
     for x in gen.specimens:
         for st in x.get("structures", []):
             by_struct.setdefault(nkey(st), []).append(x)
 
     out = []
+    dropped = []
     for q in rows:
         if q.get("qtype") != "indicator" or q.get("answer_kind") != "structure":
+            continue
+        if f'{q["year"]}/{q["no"]}' in drop:
+            dropped.append(f'{q["year"]}년 {q["no"]}번')
             continue
         if not (q.get("answer_structure") and q.get("image_paths")
                 and q.get("options") and len(q["options"]) >= 4
@@ -258,6 +272,8 @@ def past_indicator(gen):
             "answer": q["answer_index"], "structure": q["answer_structure"],
             "spec": spec, "sp": sp,
         })
+    if dropped:
+        print("indicator 없어 뺀 족보 문항: " + ", ".join(dropped))
     return out
 
 

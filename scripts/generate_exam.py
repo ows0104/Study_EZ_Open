@@ -14,6 +14,7 @@
 """
 
 import argparse
+import hashlib
 import json
 import os
 import random
@@ -264,9 +265,21 @@ def unparen(options):
 class Generator:
     def variant_rng(self, cand):
         """사진까지 포함한 키로 난수를 고정한다.
-        같은 표본·유형이라도 사진이 다르면 오답 조합이 달라진다."""
+        같은 표본·유형이라도 사진이 다르면 오답 조합이 달라진다.
+
+        **`hash()`를 쓰면 안 된다.** 파이썬의 문자열 해시는 프로세스마다 소금이
+        달라서(`PYTHONHASHSEED`) 같은 키가 매번 다른 값이 된다. 그러면 구울
+        때마다 오답 조합이 바뀌고, 보기가 부딪혀 버려지는 문항도 달라져서
+        **같은 자료로 구워도 문항 수가 흔들린다** — 실제로 연달아 구운 두 번이
+        5,609개와 5,608개였고 문항 목록도 서로 달랐다.
+
+        문항 번호(`build_web.question_id`)는 내용에서 뽑으므로 사라지지만 않으면
+        그대로다. 그래서 흔들리는 것은 「어제 틀린 문제가 오늘 없다」로 나타난다 —
+        오답노트가 가리킬 곳을 잃는다. `sha1`은 어디서 돌려도 같은 값이다.
+        """
         key = f'{cand["specimen"]["id"]}|{cand["qtype"]}|{cand["correct"]}|{cand["image"]["path"]}'
-        return random.Random(self.seed + (hash(key) & 0x7FFFFFFF))
+        digest = hashlib.sha1(key.encode("utf-8")).digest()[:4]
+        return random.Random(self.seed + int.from_bytes(digest, "big"))
 
     def __init__(self, seed):
         self.seed = seed
