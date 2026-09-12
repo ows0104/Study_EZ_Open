@@ -198,7 +198,9 @@ def run_jokbo(args) -> int:
         print("과목명을 주세요: python -m studyez jokbo 병리학")
         return 2
 
-    folder = Path(args.root) / subject / "족보" / args.this
+    # 경로는 `watch` 가 들고 있다 — 「잘렸는가」를 묻는 쪽과 자르는 쪽이 같은 곳을
+    # 봐야 한다(`watch.jokbo_state` 가 이 폴더를 보고 UNCUT 을 가른다).
+    folder = watch.jokbo_source_dir(Path(args.root), subject, args.this)
     pdfs = sorted(folder.glob("*.pdf")) if folder.is_dir() else []
     if not pdfs:
         print(f"[jokbo] {folder} 에 PDF가 없습니다")
@@ -500,6 +502,9 @@ def main() -> int:
                         help="prequeue: 강의가 오늘부터 이 날짜 안에 있는 것만 만든다")
     parser.add_argument("--now", action="store_true",
                         help="watch: 방금 올라온 파일도 포함 (동기화 대기 생략)")
+    parser.add_argument("--no-jokbo", action="store_true",
+                        help="watch --run-id: 과목 족보가 안 잘려 있어도 그냥 만든다. "
+                             "기본은 멈추고 `studyez jokbo <과목>`을 안내한다")
     parser.add_argument("--since", default=None,
                         help="watch: 이 날짜부터의 강의만 (YYYY-MM-DD). 주면 시간표를 안 본다")
     parser.add_argument("--until", default=None, help="watch: 이 날짜까지의 강의만")

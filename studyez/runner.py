@@ -118,6 +118,28 @@ def run_watch_one(args) -> int:
     for note in item.notes:
         print(f"  ⚠ {note}")
 
+    # **자를 수 있는 족보를 안 자른 채로는 안 만든다.**
+    #
+    # 여기서 막는 이유는 뒤에서 막혀 봤기 때문이다. 2026-09-12 에 `260911_03` 이
+    # 22.9분·$8.53 을 다 쓰고 `build.py` 의 마지막 검사에서 죽었다 — 모델이 강의록
+    # 뒤의 족보 부록에서 기출 카드 3장을 뽑았는데 물릴 조각이 없었다. 같은 날 같은
+    # 과목의 다른 세 편은 기출 카드를 안 뽑아서 살았다. **모델이 무엇을 뽑느냐로
+    # 생사가 갈리는 자리였다.**
+    #
+    # 그 세 편도 무사한 것은 아니다. 미생물학 족보는 반복률이 32~74%인데 기출 0
+    # 으로 나갔고, 다시 구우면 편당 ~30분·$12 이다. 자르는 것은 몇 분이고 LLM 을
+    # 안 쓴다.
+    #
+    # **원본이 없는 과목은 막지 않는다**(`JOKBO_ABSENT`). 사람이 어찌할 수 없는
+    # 것을 막으면 그 과목은 영영 안 만들어진다. `--no-jokbo` 로도 넘어간다.
+    jokbo = watch.jokbo_state(runs_dir, item.subject, root, args.this)
+    if jokbo == watch.JOKBO_UNCUT and not getattr(args, "no_jokbo", False):
+        print(f"[watch] {args.run_id} — 과목 족보를 먼저 자른다.\n"
+              f"  `python -m studyez jokbo {item.subject}`  (몇 분 · LLM 안 씀)\n"
+              "  그 뒤에 이 명령을 다시 부르면 조각이 스스로 물린다.\n"
+              "  족보 없이 만들려면 --no-jokbo.")
+        return 1
+
     # **덱이 있어도 원본이 갈렸으면 만든다.** 예전에는 여기서 무조건 멈추고 `--force` 를
     # 안내했는데, 그러면 새 판이 온 편은 사람이 손으로 부르기 전에는 안 고쳐졌다.
     # 갈렸는지는 `fingerprint` 가 판정한다(`item.reason`).
@@ -222,6 +244,16 @@ def report_watch(args) -> int:
 
     for line in queue.skipped:
         print(f"  · 건너뜀 — {line}")
+
+    # **밀린 것을 센다.** 한 줄씩은 위에 이미 적혀 있는데, 그 줄들이 다른 사유와
+    # 섞여 있어서 「줄고 있는가」가 안 보였다. 2026-09-12 에 기생충학 7편이 상한
+    # 뒤에 줄 서 있었고 제일 오래된 것이 12일째였다 — 상한(2)보다 하루 들어오는
+    # 양이 많으면 큐는 원리상 안 줄어든다. 그 사실이 로그 어디에도 없었다.
+    if queue.backlog:
+        oldest = queue.backlog[0]
+        print(f"\n  ✋ 밀린 것 {len(queue.backlog)}편 — 가장 오래된 것은 "
+              f"{oldest.date} {oldest.subject}/{oldest.run_id}."
+              f" 하루 상한은 {args.max}편이다 (--max 로 올린다)")
 
     if args.build and queue.items:
         planned = len(queue.items)

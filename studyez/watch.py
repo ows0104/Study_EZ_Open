@@ -111,16 +111,63 @@ class Queue:
     items: list[WorkItem]
     skipped: list[str]
     warnings: list[str]
+    # 하루 상한에 밀린 것. **`skipped` 에 한 줄씩 이미 적히는데 따로 드는 이유**는
+    # 그 줄이 다른 사유(동기화 대기·블럭 밖·빌드 실패)와 섞여 있어서 세어지지
+    # 않기 때문이다. 큐가 줄고 있는지는 이 수가 날마다 어떻게 변하는지로만 안다.
+    backlog: list[WorkItem] = field(default_factory=list)
 
 
-def jokbo_ready(runs_dir: Path, subject: str) -> bool:
-    """과목 족보가 잘려 있는가.
+# 족보 자리의 상태. **「없다」가 두 가지라 셋으로 가른다.**
+#
+# 2026-09-11 에 블럭이 미생물학으로 넘어갔는데 `studyez jokbo 미생물학` 을 아무도
+# 안 쳤다. 재료(`족보/2026/*.pdf`)는 있었다. 그동안 편마다 경고가 떴고 아무도
+# 안 봤고, 세 편이 기출 0 으로 나갔고, `260911_03` 은 22.9분·$8.53 을 쓴 뒤
+# **마지막 줄**에서 죽었다(`build.py` 가 기출 카드를 만들어 놓고 조각을 못 찾았다).
+#
+# 그때 화면에 뜬 것은 「족보가 없다」 한 가지였다. **한 줄이면 풀리는 것과 사람이
+# 어찌할 수 없는 것이 같은 말로 나왔다는 것이 이 함정의 전부다.**
+JOKBO_READY = "ready"      # 조각이 서 있다
+JOKBO_UNCUT = "uncut"      # 원본은 있는데 안 잘랐다 — 명령 한 줄이면 풀린다
+JOKBO_ABSENT = "absent"    # 원본이 없다 — 이 과목은 기출 없이 만든다
+
+
+def jokbo_source_dir(root: Path, subject: str, year: str) -> Path:
+    """과목 족보 원본이 사는 자리.
+
+    **자르는 쪽과 세는 쪽이 같은 곳을 봐야 한다.** 이 경로가 `studyez jokbo` 안에
+    글자로 박혀 있었는데, 「잘렸는가」를 묻는 자리가 늘면서 둘이 갈릴 자리가 됐다.
+    """
+    return Path(root) / subject / "족보" / year
+
+
+def jokbo_state(runs_dir: Path, subject: str,
+                root: Path | None = None, year: str = "") -> str:
+    """과목 족보가 어느 상태인가. `JOKBO_*` 중 하나.
 
     어느 조각을 어느 강의에 물릴지는 **여기서 정하지 않는다.** pdf2anki가 목차
     제목으로 대조한다 — 카드를 만들 때 본 조각과 뒷면에 붙이는 조각이 갈리면 안
     되므로 그 판단은 한 곳에만 있어야 한다. 여기서는 자리가 섰는지만 본다.
+
+    `root` 를 안 주면 `UNCUT` 을 못 가른다 — 원본이 어디 있는지 모르기 때문이다.
+    그때는 `ABSENT` 로 돌려준다. **덜 아는 쪽이 덜 막는다.**
     """
-    return (deck.jokbo_dir(runs_dir, subject) / "index.json").is_file()
+    if (deck.jokbo_dir(runs_dir, subject) / "index.json").is_file():
+        return JOKBO_READY
+    if root is not None and year:
+        folder = jokbo_source_dir(root, subject, year)
+        if folder.is_dir() and any(folder.glob("*.pdf")):
+            return JOKBO_UNCUT
+    return JOKBO_ABSENT
+
+
+def jokbo_note(state: str, subject: str) -> str:
+    """그 상태를 사람에게 적어 주는 한 줄. 없으면 빈 문자열."""
+    if state == JOKBO_UNCUT:
+        return ("과목 족보 원본은 있는데 아직 안 잘렸다 — "
+                f"`python -m studyez jokbo {subject}` 먼저")
+    if state == JOKBO_ABSENT:
+        return "이 과목은 족보 원본이 없다 — 기출 카드 없이 만들어진다"
+    return ""
 
 
 def _already_built(runs_dir: Path, run_id: str, item: LectureFile) -> str | None:
@@ -216,7 +263,7 @@ def build_queue(
 
         this_files = filenames.latest_versions(this_scan.files)
         run_ids = assign_run_ids(this_files)
-        has_jokbo = jokbo_ready(runs_dir, subject)
+        jokbo = jokbo_state(runs_dir, subject, root, this_year)
 
         for item in this_files:
             run_id = run_ids[item.uid]
@@ -246,9 +293,9 @@ def build_queue(
             notes: list[str] = []
             if verdict.note:
                 notes.append(verdict.note)
-            if not has_jokbo:
-                notes.append("과목 족보가 아직 안 잘려 있다 — 기출 카드 없이 만들어진다 "
-                             f"(`python -m studyez jokbo {subject}`)")
+            note = jokbo_note(jokbo, subject)
+            if note:
+                notes.append(note)
 
             items.append(WorkItem(
                 subject=subject, run_id=run_id, key=item.key, date=item.date,
@@ -265,8 +312,10 @@ def build_queue(
         skipped.append(f"{subject} {count}편 — 이번 블럭({since}~{until}) 밖")
 
     items.sort(key=lambda w: (w.date, w.run_id))
+    backlog: list[WorkItem] = []
     if not only_run_id and len(items) > max_items:
-        for extra in items[max_items:]:
+        backlog = items[max_items:]
+        for extra in backlog:
             skipped.append(
                 f"{extra.subject}/{extra.run_id} {extra.title[:26]} — "
                 f"하루 상한 {max_items}편 초과. 내일 다시 잡힌다")
@@ -274,7 +323,7 @@ def build_queue(
 
     return Queue(
         generated_at=time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(now)),
-        items=items, skipped=skipped, warnings=warnings,
+        items=items, skipped=skipped, warnings=warnings, backlog=backlog,
     )
 
 
@@ -409,4 +458,5 @@ def save(queue: Queue, path: Path) -> None:
         "items": [asdict(i) for i in queue.items],
         "skipped": queue.skipped,
         "warnings": queue.warnings,
+        "backlog": [asdict(i) for i in queue.backlog],
     }, ensure_ascii=False, indent=2), encoding="utf-8")
