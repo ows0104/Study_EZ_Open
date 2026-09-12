@@ -17,13 +17,14 @@ app/
   routes/       me · timetable · lectures · prequiz · admin · prequiz_jobs · local_storage
                 prequiz.py 는 학생이 푸는 문항 — **예습·복습 두 갈래가 이 한 파일이다**.
                 prequiz_jobs.py 는 러너가 집어 가는 일감이다
-tests/          test_smoke.py · test_matching.py · test_samples.py · test_quiz_kinds.py
+tests/          검사 일곱. pytest 가 아니라 스크립트다 — 아래 「검사」를 보라
 ```
 
-테스트는 pytest 가 아니라 스크립트다. 하나씩 돌린다.
+테스트는 pytest 가 아니라 스크립트다 — **파일마다 프로세스가 따로여야 한다**
+(아래 「검사」에 이유가 있다).
 
 ```bash
-.venv/Scripts/python.exe -m tests.test_smoke
+.venv/Scripts/python.exe -m tests
 ```
 
 ## 띄우기
@@ -43,12 +44,29 @@ python -m uvicorn app.main:app --reload
 ## 검사
 
 ```bash
-.venv/Scripts/python.exe -m tests.test_smoke      # 강의 한 편이 통과하는 전 과정
-.venv/Scripts/python.exe -m tests.test_matching   # 한 교시에 여러 강의가 열릴 때
-.venv/Scripts/python.exe -m tests.test_quiz_kinds # 예습·복습이 서로를 안 덮는가
+.venv/Scripts/python.exe -m tests                 # 일곱 개 전부 (파일마다 새 프로세스)
+.venv/Scripts/python.exe -m tests smoke           # 이름에 그 글자가 든 것만
 ```
 
+| | |
+|---|---|
+| `test_smoke` | 강의 한 편이 통과하는 전 과정 |
+| `test_matching` | 한 교시에 여러 강의가 열릴 때 |
+| `test_quiz_kinds` | 예습·복습이 서로를 안 덮는가 |
+| `test_samples` | 표본 산출물이 계약과 맞는가 |
+| `test_details_split` | 시간표 `details` 를 제목과 교수로 가르기 |
+| `test_source_version` | 산출물의 판 번호 |
+| `test_spotter_reports` | 땡시 제보·게시판 |
+
 SQLite로 돈다. Postgres 고유 기능을 쓰지 않는다는 것도 같이 확인된다.
+
+**`pytest` 로는 안 돈다.** 파일마다 import 시점에 자기 `DATABASE_URL` 을 세우고
+`app.database` 의 모듈 수준 엔진을 만들기 때문에, 한 프로세스에 모으면 먼저 import
+된 것의 DB 를 나머지가 같이 쓴다. 그래서 파일마다 프로세스가 따로여야 한다.
+
+예전에는 `pytest server/tests` 가 **`no tests ran` 과 함께 종료 코드 0** 을 냈다 —
+초록색이 「통과」인지 「안 돌았다」인지 구별되지 않았다. 지금은 `conftest.py` 가
+그 자리에서 이 문서를 가리키고 0 이 아닌 값으로 끝낸다.
 
 ## 로컬 러너가 부르는 것
 
