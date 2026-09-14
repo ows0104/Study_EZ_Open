@@ -51,7 +51,12 @@ web/dist/
 # 확장 zip은 빌드마다 chrome-extension/에서 다시 묶인다. 소스가 원본이다.
 web/public/studyez-extension.zip
 # 스토어 제출 zip 도 `build-store-package.ps1` 이 버전마다 다시 묶는다.
-chrome-extension/release/
+#
+# **이 줄이 2026-09-14 개명을 못 따라갔다.** `chrome-extension/` 이 `bridge/` 가
+# 됐는데 여기가 옛 이름이라, 그 커밋(`bd23e99`)이 `bridge/release/` 16개를 저장소에
+# 넣었다 — `package/` 사본 11개와 제출 zip 5개다. `package/` 는 그 스크립트가 매번
+# 지우고 다시 만드는 자리다. **경로를 옮길 때는 이 파일도 같이 봐라.**
+bridge/release/
 .env.local
 .env.production
 *.tsbuildinfo
