@@ -11,7 +11,7 @@
 
 import pytest
 
-from pdf2anki.jokbo import Bank, bank_targets
+from quizgen.jokbo import Bank, bank_targets
 
 
 def drain(bank, lines):

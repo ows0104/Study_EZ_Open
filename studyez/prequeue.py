@@ -255,7 +255,7 @@ def occupancy(run_dir: Path, pdf: str) -> str:
 
     `run_id`는 날짜_교시라서 과목을 포함하지 않는다. 다른 과목이 같은 교시에
     돌면 한 디렉터리를 두 강의가 나눠 갖게 되므로, 돌리기 전에 **정말 이 강의의
-    것인지** 확인한다. 확인 없이 돌리면 pdf2anki가 남의 prep을 그대로 이어받는다.
+    것인지** 확인한다. 확인 없이 돌리면 quizgen가 남의 prep을 그대로 이어받는다.
 
     남의 것이면 **지우지 않고 멈춘다.** 산출물 디렉터리를 코드가 조용히 비우면
     무엇이 사라졌는지 아무도 모른다.
@@ -279,7 +279,7 @@ def prepare(targets: list[Target], runs_dir: Path, *, force: bool = False) -> li
     것을 본다. 한 편에 빈 세션 넷이라 **부르는 쪽이 한 편으로 좁혀** 준다
     (`__main__`이 `--run-id` 없는 `--force`를 막는다).
 
-    한동안 이 자리가 prep도 돌렸다. 지금은 pdf2anki가 prep부터 빌드까지 한 명령으로
+    한동안 이 자리가 prep도 돌렸다. 지금은 quizgen가 prep부터 빌드까지 한 명령으로
     하므로, 남는 것은 그 앞의 결정적인 부분 둘뿐이다 — 자리를 확인하고, 남의
     서비스에 있는 예습 대화를 `preview.md`로 받아 오는 것.
 
@@ -383,7 +383,7 @@ def build_one(target: Target, runs_dir: Path, repo_root: Path, *, model: str = "
     하므로 그 이름으로는 어느 강의의 것인지 안 보인다.
 
     새 판으로 갈린 자리와 **사람이 다시 만들라고 누른 자리**는 `--force`로 통째로
-    다시 만든다. 이어 돌리면 pdf2anki가 이미 만든 단계를 건너뛴다.
+    다시 만든다. 이어 돌리면 quizgen가 이미 만든 단계를 건너뛴다.
     """
     run_dir = runs_dir / target.prev_run_id
     note = run_dir / preview_mod.PREVIEW_NAME

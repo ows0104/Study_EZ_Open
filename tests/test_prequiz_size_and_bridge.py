@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import re
 
-from pdf2anki.build import CSS
-from pdf2anki.prequiz.build import PRE_CSS
-from pdf2anki.prequiz.schema import MAX_CARDS, MIN_CARDS, MUST_KNOW_SCHEMA
+from quizgen.build import CSS
+from quizgen.prequiz.build import PRE_CSS
+from quizgen.prequiz.schema import MAX_CARDS, MIN_CARDS, MUST_KNOW_SCHEMA
 
 
 def rule(css: str, selector: str) -> str:

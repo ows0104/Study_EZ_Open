@@ -19,10 +19,10 @@ import json
 
 import pytest
 
-from pdf2anki.prequiz.run import Runner, load_must, stamp_must_ids
-from pdf2anki.prequiz.schema import MIN_CARDS
-from pdf2anki.prequiz.validate import validate
-from pdf2anki.runbase import Failed
+from quizgen.prequiz.run import Runner, load_must, stamp_must_ids
+from quizgen.prequiz.schema import MIN_CARDS
+from quizgen.prequiz.validate import validate
+from quizgen.runbase import Failed
 
 
 def _prep(n_slides=10):
@@ -255,7 +255,7 @@ def test_자족적인_프롬프트가_없으면_세션을_열지_않는다(tmp_p
 
 def test_누출이_없으면_세션을_안_연다(tmp_path, monkeypatch):
     """검사는 결정론적이라 공짜다. 누출이 없으면 이 단계는 아무 것도 안 쓴다."""
-    import pdf2anki.reproduce as rp
+    import quizgen.reproduce as rp
     monkeypatch.setattr(rp, "hard_leaks", lambda d: [])
     r = _runner(tmp_path)
     monkeypatch.setattr(r, "agent", lambda *a, **k: pytest.fail("세션을 열면 안 된다"))
@@ -264,7 +264,7 @@ def test_누출이_없으면_세션을_안_연다(tmp_path, monkeypatch):
 
 def test_누출이_줄지_않으면_멈춘다(tmp_path, monkeypatch):
     """무한히 다시 쓰지 않는다 — 재현 검사가 뒤에서 다시 막는다."""
-    import pdf2anki.reproduce as rp
+    import quizgen.reproduce as rp
     leak = [{"kind": "answer_in_front", "id": "c01", "detail": "답",
              "card": {"q": "질문", "a": "답"}, "hard": True}]
     monkeypatch.setattr(rp, "hard_leaks", lambda d: leak)

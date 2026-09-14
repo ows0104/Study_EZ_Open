@@ -16,14 +16,14 @@ import json
 
 import pytest
 
-from pdf2anki.pack import write_parts
+from quizgen.pack import write_parts
 
 LONG = "가" * 40_000       # 한 파트에 안 들어가는 길이
 
 
 def _run(tmp_path):
-    """`pdf2anki.run` 의 프롬프트 고르기만 떼어 쓴다."""
-    from pdf2anki.run import Runner
+    """`quizgen.run` 의 프롬프트 고르기만 떼어 쓴다."""
+    from quizgen.run import Runner
 
     obj = Runner.__new__(Runner)
     obj.out = tmp_path
@@ -78,7 +78,7 @@ def test_옛_판이_남아_있으면_새것을_고르고_말한다(tmp_path, cap
 
 
 def test_프롬프트가_아예_없으면_실패한다(tmp_path):
-    from pdf2anki.run import Failed
+    from quizgen.run import Failed
 
     with pytest.raises(Failed):
         _run(tmp_path).prompt_path("cards")

@@ -18,8 +18,8 @@ import types
 
 import pytest
 
-from pdf2anki import run as main_run
-from pdf2anki.assemble import CONFIRMED_STRATEGY_OVERRIDES, confirmed_strategy
+from quizgen import run as main_run
+from quizgen.assemble import CONFIRMED_STRATEGY_OVERRIDES, confirmed_strategy
 
 # 실제로 어긋났던 편. 자동 판정은 「기본」, 폴더 기억은 「필기 중심」이었다.
 CONFLICTED = "260819_02"
@@ -111,7 +111,7 @@ def test_필기_근거_인정은_전략을_따라간다(tmp_path, strategy, expe
 
 def test_assemble은_사람이_정했다고_단언하지_않는다():
     """`run.py` 는 자동 판정한 값도 `--strategy` 로 넘긴다. 받는 쪽은 출처를 모른다."""
-    from pdf2anki import assemble
+    from quizgen import assemble
     src = (assemble.__file__.replace(".pyc", ".py"))
     with open(src, encoding="utf-8") as fh:
         body = fh.read()

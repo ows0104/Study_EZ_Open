@@ -19,8 +19,8 @@
 
 import pytest
 
-from pdf2anki.review import stamp_ids
-from pdf2anki.validate import validate
+from quizgen.review import stamp_ids
+from quizgen.validate import validate
 
 MECH = "세포자멸사에서 caspase 연쇄가 어떻게 시작되는지 설명한다"
 TARGET = "내인성 경로: mitochondria 에서 cytochrome c 가 나온다"
@@ -157,7 +157,7 @@ def test_승인이_id를_찍어_파일로_쓴다(tmp_path):
     """
     import json
 
-    from pdf2anki import review
+    from quizgen import review
 
     plan = {"objectives": [{"objective": MECH, "retrieval_targets": [TARGET],
                             "slides": [1]}],

@@ -18,9 +18,9 @@ from pathlib import Path
 
 import pytest
 
-from pdf2anki.pack import clean_lecture_name, lecture_of
-from pdf2anki.prequiz.run import deck_of as pre_deck_of
-from pdf2anki.run import deck_of, lecture_id_of
+from quizgen.pack import clean_lecture_name, lecture_of
+from quizgen.prequiz.run import deck_of as pre_deck_of
+from quizgen.run import deck_of, lecture_id_of
 
 
 @pytest.mark.parametrize("stem,want", [

@@ -9,9 +9,9 @@
     answer_frame_heavy   외울 건 적은데 읽을 게 많다  → 해설로 보내거나 cloze 를 본다
 """
 
-from pdf2anki.schema import (FRAME_HEAVY_MIN_CHARS, MAX_RECALL_CHARS,
+from quizgen.schema import (FRAME_HEAVY_MIN_CHARS, MAX_RECALL_CHARS,
                              MIN_RECALL_SHARE)
-from pdf2anki.validate import recall_load, validate
+from quizgen.validate import recall_load, validate
 
 # 화면으로 받은 실제 카드. 강의 `260901_01` 의 c012 — 뒷면 167자 가운데 회수 대상은
 # 62자(37%)뿐이고 나머지 105자는 읽기만 하면 되는 프레임이다.

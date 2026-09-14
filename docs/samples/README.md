@@ -9,7 +9,7 @@
 | `pre_run.meta.sample.json` | 예습 덱의 요약 | 같은 편 (28장 · 웹 풀이 28장) |
 | `run.meta.sample.json` | 복습 덱의 요약. 관리자 화면이 "배포해도 되는가"를 판단하는 값 | 병리학 `260820_03` 소아질환의 병태생리(2) (88장) |
 
-전부 `pdf2anki` → `studyez.deck.contract`가 낸 것이다.
+전부 `quizgen` → `studyez.deck.contract`가 낸 것이다.
 
 ## `pre_items.sample.json`에서 놓치기 쉬운 것
 
@@ -40,7 +40,7 @@
   종류가 사람을 부르는 신호이지 개수가 아니다
 - `slides_unused`는 카드가 하나도 없는 슬라이드 전부다(표지·학습목표가 여기 든다).
   진짜 누락 신호는 **선언된 건너뜀을 이미 뺀** `untouched_slides` 쪽이다
-- `lecture_id` 필드 이름은 역사적인 것이고 값은 `run_id`다. `deck_id`가 pdf2anki의
+- `lecture_id` 필드 이름은 역사적인 것이고 값은 `run_id`다. `deck_id`가 quizgen의
   ID(`p260820_03`)이고 그쪽이 guid의 씨앗이다
 
 ## 갱신

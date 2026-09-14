@@ -52,7 +52,7 @@ def test_아직_만든_것이_없어도_눌릴_수_있다(tmp_path):
     assert target.force is True
 
 
-def test_눌린_편은_pdf2anki까지_force로_간다(tmp_path, monkeypatch):
+def test_눌린_편은_quizgen까지_force로_간다(tmp_path, monkeypatch):
     """중간 산출물을 이어받으면 「다시 만들었는데 그대로다」가 된다."""
     seen: dict = {}
 

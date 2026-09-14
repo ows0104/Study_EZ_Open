@@ -5,7 +5,7 @@
   "deck_name": "병리학::종양의 병태생리(2) 종양의 분자생물학(1)::예습",
   "deck_file": "p250825_01_pre.apkg",
   "built_at": "2026-08-23T02:48:21",
-  "pipeline": "pdf2anki",
+  "pipeline": "quizgen",
   "source_pdf": "C:/Users/ows01/SynologyDrive/병리학/필기/2025/[250825_01] 종양의 병태생리(2) 종양의 분자생물학(1)(전윤경)_박주항v3.pdf",
   "verified": {
     "notes": 30,

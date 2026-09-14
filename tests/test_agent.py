@@ -314,13 +314,13 @@ def test_정말_만들_것이_없으면_그대로_말한다():
 
 
 def test_한도는_하위_로그에서_읽어_온다(tmp_path):
-    """러너가 보는 것은 「pdf2anki가 1로 끝났다」까지다. 이유는 그 줄이 달고 오는
+    """러너가 보는 것은 「quizgen가 1로 끝났다」까지다. 이유는 그 줄이 달고 오는
     로그 안에 있다."""
     child = tmp_path / "pipeline.log"
     child.write_text(
         '{"api_error_status":429,"result":"You\'ve hit your session limit '
         '· resets 5:40am (Asia/Seoul)","type":"result"}', encoding="utf-8")
-    lines = [f"    실패 — pdf2anki가 1로 끝났다 (로그: {child}) · 0.1분"]
+    lines = [f"    실패 — quizgen가 1로 끝났다 (로그: {child}) · 0.1분"]
     assert agent.limit_reason(lines) == "세션 한도에 걸렸다 — resets 5:40am (Asia/Seoul)"
 
 
@@ -339,7 +339,7 @@ def test_한도는_마지막_줄을_집는다(tmp_path):
         "── 재현 검사",
         '"result":"session limit · resets 1:40pm (Asia/Seoul)"',
     ]), encoding="utf-8")
-    lines = [f"    실패 — pdf2anki가 1로 끝났다 (로그: {child})"]
+    lines = [f"    실패 — quizgen가 1로 끝났다 (로그: {child})"]
     assert agent.limit_reason(lines) == "세션 한도에 걸렸다 — resets 1:40pm (Asia/Seoul)"
 
 
@@ -351,11 +351,11 @@ def test_한도가_아닌_실패에_한도를_안_갖다_붙인다(tmp_path):
         '"result":"session limit · resets 1:40pm (Asia/Seoul)"',
         "멈췄다 — ①학습목표: claude 가 1 로 끝났다",
         "── ② 카드",
-        "멈췄다 — 명령 실패: pdf2anki.validate items.raw.json --strategy base",
+        "멈췄다 — 명령 실패: quizgen.validate items.raw.json --strategy base",
     ]), encoding="utf-8")
-    lines = [f"    실패 — pdf2anki가 1로 끝났다 (로그: {child})"]
+    lines = [f"    실패 — quizgen가 1로 끝났다 (로그: {child})"]
     assert agent.limit_reason(lines) == ""
-    assert agent.child_stop_reason(lines).startswith("명령 실패: pdf2anki.validate")
+    assert agent.child_stop_reason(lines).startswith("명령 실패: quizgen.validate")
 
 
 def test_이번에_멈춘_것이_한도면_한도로_적는다(tmp_path):
@@ -366,7 +366,7 @@ def test_이번에_멈춘_것이_한도면_한도로_적는다(tmp_path):
         "멈췄다 — ①학습목표: claude 가 1 로 끝났다",
         '"result":"session limit · resets 6:40pm (Asia/Seoul)"',
     ]), encoding="utf-8")
-    lines = [f"    실패 — pdf2anki가 1로 끝났다 (로그: {child})"]
+    lines = [f"    실패 — quizgen가 1로 끝났다 (로그: {child})"]
     assert agent.limit_reason(lines) == "세션 한도에 걸렸다 — resets 6:40pm (Asia/Seoul)"
 
 

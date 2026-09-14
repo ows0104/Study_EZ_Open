@@ -11,7 +11,7 @@
 
 import json
 
-from pdf2anki.build import jokbo_dir_candidates, main
+from quizgen.build import jokbo_dir_candidates, main
 
 
 def _card(source_type: str, n: int) -> dict:

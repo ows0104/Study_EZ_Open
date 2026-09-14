@@ -1,7 +1,7 @@
 import { AuthClient, type GoTrueClient } from "@supabase/auth-js";
 // 부작용으로 `globalThis.SharedSession`을 세운다. 빌드 도구가 없는 형제 앱
 // (기생충학 땡시)이 같은 파일을 `<script src>`로 읽어야 해서 클래식 스크립트다.
-import "../../packages/session/session.js";
+import "../../platform/session/session.js";
 
 const url = import.meta.env.VITE_SUPABASE_URL ?? "";
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? "";

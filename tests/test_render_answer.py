@@ -1,6 +1,6 @@
 """답의 강조. **무엇을 강조할지는 모델이 정하고 코드는 보여 주기만 한다.**"""
 
-from pdf2anki.build import render_answer
+from quizgen.build import render_answer
 
 
 def test_unmarked_answer_is_untouched():

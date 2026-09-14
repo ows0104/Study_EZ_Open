@@ -1,6 +1,6 @@
-"""pdf2anki를 부르고, 그 산출물을 서버가 아는 모양으로 옮긴다.
+"""quizgen를 부르고, 그 산출물을 서버가 아는 모양으로 옮긴다.
 
-**로컬 러너와 파이프라인의 유일한 접점이다.** `studyez/`의 다른 모듈은 pdf2anki를
+**로컬 러너와 파이프라인의 유일한 접점이다.** `studyez/`의 다른 모듈은 quizgen를
 직접 부르지 않고 여기를 지난다. 계약이 바뀌면 `docs/artifact-contract.md`와 이
 파일이 함께 움직인다.
 
@@ -10,23 +10,23 @@
 남기고, **사람이 연 Claude Code 세션**이 `/quiz`를 돌려 문항을 만들고, 다시 코드가
 빌드했다. 그래서 편당 53~72분이 들었고 그 시간이 세션의 컨텍스트를 통째로 먹었다.
 
-pdf2anki는 모델이 필요한 자리마다 `claude -p`로 **빈 세션을 스스로 띄운다**
-(`pdf2anki/session.py`). 이력도 설정도 도구도 없는 세션이라 이 저장소의 CLAUDE.md도
+quizgen는 모델이 필요한 자리마다 `claude -p`로 **빈 세션을 스스로 띄운다**
+(`quizgen/session.py`). 이력도 설정도 도구도 없는 세션이라 이 저장소의 CLAUDE.md도
 메모리도 딸려가지 않는다. 그러니 이 자리에서 할 일은 하위 프로세스를 띄우는 것뿐이고,
 **부르는 쪽의 컨텍스트는 한 글자도 쓰이지 않는다.**
 
 ## 작업 폴더와 덱 ID를 나눠 둔 이유
 
-pdf2anki는 기본적으로 `out/<id>/`에서 일하고 `<id>`는 파일명 앞머리에서 딴
+quizgen는 기본적으로 `out/<id>/`에서 일하고 `<id>`는 파일명 앞머리에서 딴
 `p260820_03`이다. 서버 계약의 기본키는 `260820_03`(`run_id`)이라 둘이 다르다.
 
 둘을 억지로 맞추지 않는다. **`<id>`는 guid의 씨앗이다** — 바꾸면 Anki가 이미 받아
 간 카드를 전부 새 노트로 보고, 학생의 복습 이력이 통째로 끊긴다. 그래서 폴더만
-`runs/<run_id>/`로 옮기고 ID는 pdf2anki가 쓰던 그대로 `p<run_id>`를 준다.
+`runs/<run_id>/`로 옮기고 ID는 quizgen가 쓰던 그대로 `p<run_id>`를 준다.
 
 ## 무엇을 만들어 두는가
 
-pdf2anki가 남기는 것(`run.config.json`·`items.reproduced.json`·`suspects.json`·
+quizgen가 남기는 것(`run.config.json`·`items.reproduced.json`·`suspects.json`·
 `.apkg`)은 파이프라인 안쪽이라 서버가 보지 않는다. `contract()`가 그것을 읽어
 서버가 아는 셋으로 옮긴다.
 
@@ -52,7 +52,7 @@ import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from pdf2anki import build as pdf2anki_build
+from quizgen import build as quizgen_build
 
 # 웹에서 풀 수 있는 카드. 그림 카드는 앞면이 이미지라 텍스트만으로는 물음이
 # 성립하지 않는다("이 조직은 어느 장기이며…"). apkg에는 그대로 들어 있다.
@@ -61,13 +61,13 @@ WEB_FORMATS = ("basic", "cloze", "ox")
 # `{{c1::답::힌트}}`. 웹은 Anki가 아니므로 빈칸으로 펴서 보여 준다.
 RE_CLOZE = re.compile(r"\{\{c(\d+)::(.+?)(?:::(.+?))?\}\}", re.S)
 
-# pdf2anki가 media/에 남기는 슬라이드 렌더. 앞머리는 파이프라인마다 달라서
+# quizgen가 media/에 남기는 슬라이드 렌더. 앞머리는 파이프라인마다 달라서
 # (복습은 강의 ID, 예습은 `lecture`) 번호만 본다.
 RE_SLIDE_PNG = re.compile(r"slide(\d+)\.png$", re.IGNORECASE)
 
 MAIN, PRE = "main", "pre"
 
-# 한 편이 이만큼 안에 안 끝나면 버린다. 실측 상한이 편당 72분이었고 pdf2anki는
+# 한 편이 이만큼 안에 안 끝나면 버린다. 실측 상한이 편당 72분이었고 quizgen는
 # 그보다 짧지만, 빈 세션 하나가 멈춰 서면 밤을 통째로 먹는다.
 DEFAULT_TIMEOUT = 3 * 3600
 
@@ -268,7 +268,7 @@ def calendar_deck(run_dir: Path, run_id: str, title: str, kind: str, subject: st
 
 
 def jokbo_dir(runs_dir: Path, subject: str) -> Path:
-    """과목마다 따로 둔다. pdf2anki는 조각을 **강의 제목으로** 대조하는데, 제목만
+    """과목마다 따로 둔다. quizgen는 조각을 **강의 제목으로** 대조하는데, 제목만
     보면 과목이 다른 두 강의가 서로의 족보를 물어 갈 수 있다."""
     return runs_dir / "_jokbo" / subject
 
@@ -308,21 +308,21 @@ def _spawn(argv: list[str], run_dir: Path, repo_root: Path, timeout: int,
 
     tail = log.read_text(encoding="utf-8", errors="replace").splitlines()[-12:]
     if done.returncode != 0:
-        return Result(False, run_dir, log, f"pdf2anki가 {done.returncode}로 끝났다", tail)
+        return Result(False, run_dir, log, f"quizgen가 {done.returncode}로 끝났다", tail)
     return Result(True, run_dir, log, tail=tail)
 
 
 def run_main(*, pdf: str | Path, run_id: str, subject: str, lecture: str, title: str = "",
              runs_dir: Path, repo_root: Path, note: str = "", model: str = "",
              timeout: int = DEFAULT_TIMEOUT, extra: list[str] | None = None) -> Result:
-    """복습 덱 한 편. `python -m pdf2anki.run`을 그대로 부른다.
+    """복습 덱 한 편. `python -m quizgen.run`을 그대로 부른다.
 
     `--jokbo-dir`을 `runs/_jokbo`로 주면 `studyez jokbo`가 잘라 둔 조각을 스스로
-    찾아 쓴다. 어느 조각을 물릴지는 pdf2anki가 목차 제목으로 대조한다 —
+    찾아 쓴다. 어느 조각을 물릴지는 quizgen가 목차 제목으로 대조한다 —
     로컬 러너가 따로 짝지어 줄 것이 없다.
     """
     run_dir = runs_dir / run_id
-    argv = [sys.executable, "-m", "pdf2anki.run", str(pdf),
+    argv = [sys.executable, "-m", "quizgen.run", str(pdf),
             "--out", str(run_dir), "--id", deck_id(run_id),
             "--subject", subject, "--lecture", lecture,
             "--jokbo-dir", str(jokbo_dir(runs_dir, subject)),
@@ -348,7 +348,7 @@ def run_pre(*, pdf: str | Path, run_id: str, subject: str, lecture: str, note: s
     작년 파일제목이 되어 복습 덱과 다른 노드에 선다.
     """
     run_dir = runs_dir / run_id
-    argv = [sys.executable, "-m", "pdf2anki.prequiz.run", str(pdf),
+    argv = [sys.executable, "-m", "quizgen.prequiz.run", str(pdf),
             "--out", str(run_dir), "--id", deck_id(run_id),
             "--subject", subject, "--lecture", lecture, "--note", note,
             "--jokbo-dir", str(jokbo_dir(runs_dir, subject)),
@@ -366,13 +366,13 @@ def run_pre(*, pdf: str | Path, run_id: str, subject: str, lecture: str, note: s
 
 def cut_jokbo(pdf: Path, out_dir: Path, repo_root: Path,
               practical: list[Path] | None = None) -> int:
-    """과목 족보 PDF를 강의별 조각으로 자른다. `pdf2anki.jokbo` 를 그대로 부른다.
+    """과목 족보 PDF를 강의별 조각으로 자른다. `quizgen.jokbo` 를 그대로 부른다.
 
     학기당 과목당 한 번이라 사람이 지켜보는 명령이다. 그래서 `_spawn` 과 달리
     출력을 로그로 삼키지 않고 화면으로 흘린다. 돌려주는 것은 종료 코드뿐이고,
     산출물이 제대로 나왔는지는 부르는 쪽이 본다.
     """
-    argv = [sys.executable, "-m", "pdf2anki.jokbo", str(pdf), "-o", str(out_dir)]
+    argv = [sys.executable, "-m", "quizgen.jokbo", str(pdf), "-o", str(out_dir)]
     if practical:
         argv += ["--practical", *[str(p) for p in practical]]
     done = subprocess.run(argv, cwd=str(repo_root),
@@ -384,8 +384,8 @@ def rebuild(*, run_dir: Path, kind: str, deck_name: str, id: str, jokbo_dir: Pat
             apkg_name: str, repo_root: Path) -> tuple[bool, list[str]]:
     """이미 만든 카드로 덱만 다시 굽는다. **모델을 부르지 않는다.**
 
-    `run_main`·`run_pre` 가 부르는 `pdf2anki.run` 은 prep부터 빌드까지 하는
-    오케스트레이터다. 여기는 그 마지막 단계인 `pdf2anki.build` 만 직접 부른다 —
+    `run_main`·`run_pre` 가 부르는 `quizgen.run` 은 prep부터 빌드까지 하는
+    오케스트레이터다. 여기는 그 마지막 단계인 `quizgen.build` 만 직접 부른다 —
     **`build` 의 인자 모양을 아는 유일한 자리다.**
 
     편당 몇 초라 로그 파일을 열지 않고 받아서 실패했을 때만 꼬리를 돌려준다.
@@ -396,7 +396,7 @@ def rebuild(*, run_dir: Path, kind: str, deck_name: str, id: str, jokbo_dir: Pat
     30 에서 20 으로 내리면서 그렇게 됐고, 하필 그날 같이 고친 것이 뒷면 CSS 라
     「고쳤는데 아무 덱에도 안 붙는」 자리가 될 뻔했다. 장수는 빌드가 화면에 찍는다.
     """
-    module = "pdf2anki.prequiz.build" if kind == PRE else "pdf2anki.build"
+    module = "quizgen.prequiz.build" if kind == PRE else "quizgen.build"
     argv = [sys.executable, "-m", module, str(run_dir),
             "--deck", deck_name, "--id", id,
             "--jokbo-dir", str(jokbo_dir), "--apkg-name", apkg_name]
@@ -486,7 +486,7 @@ def _slides(run_dir: Path, run_id: str) -> int:
     """카드 뒷면 슬라이드를 서버가 찾을 수 있는 이름으로 옮긴다.
 
     서버는 파일명 끝의 `_s042.png`에서만 슬라이드 번호를 읽는다
-    (`server/app/naming.py`). pdf2anki의 이름은 파이프라인마다 앞머리가 달라
+    (`server/app/naming.py`). quizgen의 이름은 파이프라인마다 앞머리가 달라
     그 규칙에 안 맞으므로 여기서 한 번 맞춰 둔다. 그림 크롭은 옮기지 않는다 —
     웹이 읽는 것은 「이 카드의 근거가 몇 번 슬라이드인가」뿐이다.
     """
@@ -560,7 +560,7 @@ def _reproduce_mix(cards: list[dict]) -> dict[str, int]:
     """재현 판정을 종류별로 센다.
 
     `different`나 `partial`이 있다고 나쁜 덱은 아니다. 눈가리개 세션이 그 지식을
-    몰랐을 뿐일 수 있고, pdf2anki가 덱을 거부하는 것은 **문항 자체의 결함**으로
+    몰랐을 뿐일 수 있고, quizgen가 덱을 거부하는 것은 **문항 자체의 결함**으로
     갈린 것(`DEFECT_REASONS`)뿐이다. 그래서 판정과 결함을 따로 센다.
 
     그림 카드는 판정이 `없음`이다 — 앞면이 이미지라 텍스트만으로 풀 수 없다.
@@ -584,7 +584,7 @@ def _flag_counts(cards: list[dict]) -> dict[str, int]:
 def _reproduce_defects(cards: list[dict]) -> list[str]:
     """덱에 들어와서는 안 될 카드. 여기 뭔가 있으면 빌드가 자기 규칙을 어긴 것이다."""
     return [str(c.get("id") or "?") for c in cards
-            if (c.get("reproduce") or {}).get("reason") in pdf2anki_build.DEFECT_REASONS]
+            if (c.get("reproduce") or {}).get("reason") in quizgen_build.DEFECT_REASONS]
 
 
 def _axis_unresolved(cards: list[dict]) -> list[str]:
@@ -595,7 +595,7 @@ def _axis_unresolved(cards: list[dict]) -> list[str]:
     주석). 세어서 적기만 하고, 사람이 보는 자리는 카드 뒷면이다(`build.warning_of`).
     """
     return [str(c.get("id") or "?") for c in cards
-            if (c.get("reproduce") or {}).get("reason") == pdf2anki_build.AXIS_REASON]
+            if (c.get("reproduce") or {}).get("reason") == quizgen_build.AXIS_REASON]
 
 
 JOKBO_REF_FLAGS = ("jokbo_ref_outside_slice", "jokbo_ref_not_found")
@@ -607,7 +607,7 @@ def _reflag_jokbo(prep: dict, cfg: dict) -> dict | None:
     **못 찾은 것과 안 물린 것은 다르다.** 둘을 같은 None으로 넘기므로, 부르는 쪽은
     None일 때 기출 ref 표시를 떼지 않는다(`reflag`).
     """
-    from pdf2anki.assemble import slice_for
+    from quizgen.assemble import slice_for
 
     jokbo_dir = cfg.get("jokbo_dir")
     if not jokbo_dir or not Path(jokbo_dir).is_dir():
@@ -638,7 +638,7 @@ def reflag(run_dir: Path) -> dict[str, int]:
     **hard 제거는 하지 않는다.** 이 카드들은 이미 한 번 통과한 것이고, 여기서
     떨어뜨리면 재현 검사까지 지난 카드가 표시 하나 때문에 사라진다.
     """
-    from pdf2anki import validate as pdf2anki_validate
+    from quizgen import validate as quizgen_validate
 
     cards = cards_of(run_dir)
     prep = _load(run_dir / "prep.json")
@@ -661,10 +661,10 @@ def reflag(run_dir: Path) -> dict[str, int]:
     # 계약에 없는 키를 떼고 넘긴다. `CARD_SCHEMA` 는 `additionalProperties: False` 라서
     # 뒤 단계가 붙인 `reproduce`·`review_flags` 가 그대로 들어가면 **전 카드가 스키마
     # 위반으로 떨어지고**, 그러면 조용히 아무 표시도 안 붙는다.
-    allowed = set(pdf2anki_validate.CARD_SCHEMA["properties"])
+    allowed = set(quizgen_validate.CARD_SCHEMA["properties"])
     clean = [{k: v for k, v in c.items() if k in allowed} for c in cards]
 
-    fresh, _ = pdf2anki_validate.validate({"cards": clean}, prep, jokbo,
+    fresh, _ = quizgen_validate.validate({"cards": clean}, prep, jokbo,
                                           annotation_evidence, strategy)
     by_id = {c.get("id"): set(c.get("review_flags") or []) for c in fresh if c.get("id")}
 
@@ -697,7 +697,7 @@ def reflag(run_dir: Path) -> dict[str, int]:
 
 
 def contract(run_dir: Path, run_id: str, title: str, kind: str) -> dict:
-    """pdf2anki 산출물을 서버 계약으로 옮긴다. 만든 `run.meta`를 돌려준다.
+    """quizgen 산출물을 서버 계약으로 옮긴다. 만든 `run.meta`를 돌려준다.
 
     **여기서 아무것도 판정하지 않는다.** 세어서 적을 뿐이고, 올려도 되는지는
     `studyez.gate`가 이 파일을 읽고 정한다. 문서를 코드보다 세게 적지 않는다는
@@ -713,7 +713,7 @@ def contract(run_dir: Path, run_id: str, title: str, kind: str) -> dict:
     suspects = _load(run_dir / "suspects.json") or {}
     prep = _load(run_dir / "prep.json") or {}
 
-    got = pdf2anki_build.counts(apkg)
+    got = quizgen_build.counts(apkg)
     used = sorted({c["slide_no"] for c in cards if isinstance(c.get("slide_no"), int)})
     total = int(prep.get("slides") or 0)
     coverage = suspects.get("coverage") or {}
@@ -726,7 +726,10 @@ def contract(run_dir: Path, run_id: str, title: str, kind: str) -> dict:
         "deck_file": apkg.name,
         "built_at": time.strftime("%Y-%m-%dT%H:%M:%S",
                                   time.localtime(apkg.stat().st_mtime)),
-        "pipeline": "pdf2anki",
+        # **옛 덱은 여기에 `pdf2anki` 라고 적혀 있다.** 2026-09-14 개명 전에 구운
+        # 72편이 그렇다. 읽는 쪽이 아무 데도 없어서 고치지 않았다 — 맞추겠다고
+        # 옛 산출물을 일괄로 손대면, 그 편들이 「그때 무엇으로 구웠는지」를 잃는다.
+        "pipeline": "quizgen",
         "source_pdf": cfg.get("pdf") or "",
         # 덱을 다시 열어 센 값이다. `item_count`와 어긋나면 덱이 내용과 다른 것을
         # 담고 있다는 뜻이고, 그건 gate가 막는 몇 안 되는 것 중 하나다.
@@ -795,7 +798,7 @@ def contract(run_dir: Path, run_id: str, title: str, kind: str) -> dict:
     name = "pre_items.final.json" if kind == PRE else "main_items.final.json"
     (run_dir / name).write_text(json.dumps(
         {"lecture_id": run_id, "deck_id": meta["deck_id"],
-         "generated_by": "pdf2anki.prequiz" if kind == PRE else "pdf2anki.main",
+         "generated_by": "quizgen.prequiz" if kind == PRE else "quizgen.main",
          "items": items},
         ensure_ascii=False, indent=2), encoding="utf-8")
 

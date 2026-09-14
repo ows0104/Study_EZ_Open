@@ -12,7 +12,7 @@ import json
 
 import pytest
 
-from pdf2anki.prequiz.run import _Text, from_rsc
+from quizgen.prequiz.run import _Text, from_rsc
 
 
 def _payload(text: str) -> str:

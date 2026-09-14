@@ -1,7 +1,7 @@
 """사진 중심 전략의 기계 검증."""
 
-from pdf2anki.assemble import guidance_without_jokbo, image_strategy_body
-from pdf2anki.validate import validate
+from quizgen.assemble import guidance_without_jokbo, image_strategy_body
+from quizgen.validate import validate
 
 
 def _prep():

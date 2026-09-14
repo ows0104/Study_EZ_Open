@@ -9,8 +9,8 @@ hard 로 사라진다.
 `cloze_unmasked` 가 지웠다. **짧은 답으로 시험하면 안 보인다** — 문턱이 4글자다.
 """
 
-from pdf2anki.reproduce import front_of, leaks
-from pdf2anki.textutil import collapse_cloze
+from quizgen.reproduce import front_of, leaks
+from quizgen.textutil import collapse_cloze
 from studyez.deck import plain_stem
 
 

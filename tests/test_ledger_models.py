@@ -12,7 +12,7 @@
 
 import json
 
-from pdf2anki import ledger
+from quizgen import ledger
 
 ENV = {
     "modelUsage": {

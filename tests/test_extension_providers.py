@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-EXTENSION = ROOT / "chrome-extension"
+EXTENSION = ROOT / "bridge"
 sys.path.insert(0, str(ROOT / "server"))
 
 from app.preview_links import conversation_url, share_url  # noqa: E402

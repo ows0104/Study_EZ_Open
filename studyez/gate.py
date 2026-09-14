@@ -6,10 +6,10 @@
 
 ## `.apkg`가 있다고 검사를 지난 것은 아니다
 
-`pdf2anki.build`는 문항 결함(`question_ambiguous`·`needs_options`·
+`quizgen.build`는 문항 결함(`question_ambiguous`·`needs_options`·
 `answer_underspecified`)이 남은 카드가 있으면 덱 만들기를 **거부한다.** 그런데
-**러너가 그 거부를 넘긴다** — `pdf2anki.run` 은 수선을 두 번 시도해 결함이 줄지
-않으면 `--allow-defects` 를 붙여 그대로 굽는다([run.py](../pdf2anki/run.py) 참조).
+**러너가 그 거부를 넘긴다** — `quizgen.run` 은 수선을 두 번 시도해 결함이 줄지
+않으면 `--allow-defects` 를 붙여 그대로 굽는다([run.py](../quizgen/run.py) 참조).
 
 이 문서가 한동안 *"그러니 `.apkg`가 있다는 것 자체가 그 검사를 지났다는 뜻이다"*
 라고 적고 있었는데 **사실이 아니었다.** 2026-08-23에 `260821_05` 가 `needs_options`

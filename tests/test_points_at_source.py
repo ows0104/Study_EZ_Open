@@ -14,7 +14,7 @@
 
 import pytest
 
-from pdf2anki.validate import RE_POINTS_AT_SOURCE as POINTS
+from quizgen.validate import RE_POINTS_AT_SOURCE as POINTS
 
 
 def fires(q: str) -> bool:
@@ -76,12 +76,12 @@ def test_이미지_카드는_이_검사를_안_받는다():
     실측으로 이미지 카드 98장이 이 낱말에 걸리는데, 그림이 붙어 있으니 정상이다.
     검사를 형식으로 거르지 않으면 그 98장이 전부 거짓 신호가 된다.
     """
-    from pdf2anki.schema import IMAGE_FORMATS
+    from quizgen.schema import IMAGE_FORMATS
     assert "image_basic" in IMAGE_FORMATS and "image_occlusion" in IMAGE_FORMATS
     assert fires("이 사진이 보여 주는 양상은?")      # 낱말 자체는 걸린다
 
 
 def test_예습도_같은_규칙을_쓴다():
     """규칙이 갈라지면 한쪽만 고쳐진다."""
-    from pdf2anki.prequiz import validate as pre
+    from quizgen.prequiz import validate as pre
     assert pre.RE_POINTS_AT_SOURCE is POINTS

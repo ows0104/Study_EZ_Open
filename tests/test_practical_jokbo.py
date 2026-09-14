@@ -19,9 +19,9 @@ import json
 import fitz
 import pytest
 
-from pdf2anki.assemble import slice_for
-from pdf2anki.build import Jokbo
-from pdf2anki.jokbo import parse_practical, practical_layout
+from quizgen.assemble import slice_for
+from quizgen.build import Jokbo
+from quizgen.jokbo import parse_practical, practical_layout
 
 # ────────────────────────────────────────────────── 실습 족보 PDF 를 지어낸다
 
@@ -267,7 +267,7 @@ def test_지난번_실습_족보가_사라졌으면_이름을_돌려준다(tmp_p
 
 
 def test_2016이라_적힌_인용이_2016_1_회차를_찾아간다():
-    from pdf2anki.schema import resolve_jokbo_key
+    from quizgen.schema import resolve_jokbo_key
 
     keys = {("2016-1", "7"), ("2015", "7"), ("2023", "7")}
     assert resolve_jokbo_key("2016", "7", keys) == ("2016-1", "7")
@@ -278,7 +278,7 @@ def test_2016이라_적힌_인용이_2016_1_회차를_찾아간다():
 def test_같은_해에_회차가_둘이면_고르지_않는다():
     """`2016-1`·`2016-2` 가 둘 다 그 번호를 들면 어느 쪽인지 알 수 없다.
     아무거나 집으면 남의 문항이 뒷면에 붙는다."""
-    from pdf2anki.schema import resolve_jokbo_key
+    from quizgen.schema import resolve_jokbo_key
 
     keys = {("2016-1", "7"), ("2016-2", "7")}
     assert resolve_jokbo_key("2016", "7", keys) is None

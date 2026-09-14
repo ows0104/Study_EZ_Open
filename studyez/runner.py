@@ -165,8 +165,8 @@ def run_watch_one(args) -> int:
 
     print(f"[watch] {item.subject}/{item.run_id} {item.title[:38]} — 만드는 중")
     started = time.monotonic()
-    # **`--force`는 pdf2anki까지 내려가야 한다.** 여기서 「덱이 있어도 만든다」까지만
-    # 하고 넘기면 pdf2anki가 이미 만든 단계를 건너뛰고 그 산출물로 덱만 다시 굽는다 —
+    # **`--force`는 quizgen까지 내려가야 한다.** 여기서 「덱이 있어도 만든다」까지만
+    # 하고 넘기면 quizgen가 이미 만든 단계를 건너뛰고 그 산출물로 덱만 다시 굽는다 —
     # 다시 만들라고 누른 사람은 「다시 만들었는데 그대로다」를 본다(`prequeue`도 같다).
     extra = (["--force"] if args.force else [])
     if args.strategy != "auto":
@@ -227,7 +227,7 @@ def report_watch(args) -> int:
         for item in queue.items:
             # **「갱신」은 한동안 화면에만 있었다.** `reason` 을 읽는 곳이 여기 하나뿐이고
             # `watch.build` 는 `extra` 를 안 받아서 깃발이 갈 길이 없었다. 그러면
-            # `pdf2anki.run` 이 산출물이 있는 단계를 전부 건너뛰어(`runbase.step`)
+            # `quizgen.run` 이 산출물이 있는 단계를 전부 건너뛰어(`runbase.step`)
             # **아무것도 안 만들고 `source.json` 에만 새 판이 찍힌다.** 그 편은
             # 쓸기에는 「이미 만듦」, 문지기에는 「옛 판이라 못 내보낸다」가 되어 갇혔다
             # (2026-09-03 에 세 편이 그랬다).
@@ -334,7 +334,7 @@ def stamp_source(runs_dir: Path, run_id: str, this_year: str, dry_run: bool = Fa
 def report_cost(run_dir: Path) -> None:
     """이 편이 얼마나 들었는지 적는다. 세는 것은 파이프라인이 한다.
 
-    예전에는 여기서 세션 트랜스크립트를 뒤져 토큰을 셈했다. 지금은 pdf2anki가
+    예전에는 여기서 세션 트랜스크립트를 뒤져 토큰을 셈했다. 지금은 quizgen가
     `claude -p --output-format json` 봉투에 이미 실려 오는 값을 단계마다
     `usage.jsonl`에 적고 `run.report.json`으로 모으므로, 읽어 보여 주기만 한다.
 
@@ -420,7 +420,7 @@ def report_prequeue(args) -> int:
     """관리자가 저장한 예습 링크를 받아 Pre-Quiz를 만들 자리까지 세운다.
 
     `--build` 없이 부르면 자리만 세운다 — 짝 고르기와 예습 대화 내려받기까지다.
-    `--build`면 이어서 `pdf2anki.prequiz`가 덱을 만든다.
+    `--build`면 이어서 `quizgen.prequiz`가 덱을 만든다.
     """
     root, runs_dir = Path(args.root), Path(args.runs)
     api = (args.api or os.getenv("STUDYEZ_API_BASE_URL") or publish.DEFAULT_API_BASE).rstrip("/")
@@ -541,7 +541,7 @@ def explain_missing_run(runs_dir: Path, run_id: str, prev_year: str) -> int:
     뒤 야간 `publish --all`이 그때 같이 민다. 그래서 이 경우만 0으로 끝낸다.
     """
     # **`prep.json` 을 직접 읽지 않는다.** 한동안 여기서 `source_pdf` 키를 찾았는데
-    # `374071a`(pdf2anki 이관)에서 `prep.py` 가 `source` 로 이름을 바꿨다. 그래서 이
+    # `374071a`(pdf2anki 이관 — 지금의 `quizgen/`)에서 `prep.py` 가 `source` 로 이름을 바꿨다. 그래서 이
     # 함수가 원본을 영영 못 읽었고, 아래 「작년 run 이라 정상」 분기가 통째로 죽어
     # 있었다 — 작년 run 인데도 「필기가 지워졌다」고 찍고 1 로 끝냈다.
     # `run_source_pdf` 가 `run.config.json` 까지 보고 두 키를 다 안다.

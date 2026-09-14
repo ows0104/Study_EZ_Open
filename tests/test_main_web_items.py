@@ -46,7 +46,7 @@ def contract(monkeypatch):
     monkeypatch.setattr(deck, "apkg_of", lambda run_dir, kind: run_dir / "deck.apkg")
     monkeypatch.setattr(deck, "config_of", lambda run_dir, kind: {"id": "p260820_02"})
     monkeypatch.setattr(deck, "cards_of", lambda run_dir: CARDS)
-    monkeypatch.setattr(deck.pdf2anki_build, "counts", lambda apkg: {})
+    monkeypatch.setattr(deck.quizgen_build, "counts", lambda apkg: {})
 
     def run(run_dir: Path, kind: str) -> dict:
         (run_dir / "deck.apkg").write_bytes(b"apkg")
@@ -60,7 +60,7 @@ def test_복습이_웹_문항과_슬라이드를_낸다(tmp_path, contract):
     meta = contract(run, deck.MAIN)
 
     items = json.loads((run / "main_items.final.json").read_text(encoding="utf-8"))
-    assert items["generated_by"] == "pdf2anki.main"
+    assert items["generated_by"] == "quizgen.main"
     assert [i["id"] for i in items["items"]] == ["c001", "c002"]
     assert meta["web_items"] == 2
     assert meta["web_excluded"] == 1
@@ -88,7 +88,7 @@ def test_예습은_제_이름으로만_낸다(tmp_path, contract):
     contract(run, deck.PRE)
 
     items = json.loads((run / "pre_items.final.json").read_text(encoding="utf-8"))
-    assert items["generated_by"] == "pdf2anki.prequiz"
+    assert items["generated_by"] == "quizgen.prequiz"
     assert not (run / "main_items.final.json").exists()
 
 

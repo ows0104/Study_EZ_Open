@@ -5,7 +5,7 @@
 필기자가 강의록 뒤에 조각보다 오래된 기출을 직접 붙여 놓기 때문이다.
 """
 
-from pdf2anki.validate import validate
+from quizgen.validate import validate
 
 
 def _prep(n_slides=10):
@@ -122,7 +122,7 @@ def test_고친_것을_안_적으면_표시한다():
 
 
 def test_사전이_아닌_것이_빠져도_찍을_수_있다():
-    from pdf2anki.validate import dropped_q
+    from quizgen.validate import dropped_q
 
     assert dropped_q("__MORE__") == "__MORE__"
     assert dropped_q({"q": "장내선충증의 감염 경로는?"}) == "장내선충증의 감염 경로는?"

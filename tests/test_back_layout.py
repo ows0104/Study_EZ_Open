@@ -22,10 +22,10 @@ import re
 
 import pytest
 
-import pdf2anki.build as B
-import pdf2anki.prequiz.build as P
-from pdf2anki.build import CLOZE_MODEL, CSS, MODELS, TAIL
-from pdf2anki.prequiz.build import PRE_CSS
+import quizgen.build as B
+import quizgen.prequiz.build as P
+from quizgen.build import CLOZE_MODEL, CSS, MODELS, TAIL
+from quizgen.prequiz.build import PRE_CSS
 
 # 답 아래로 쌓이는 것들. 이 중 하나가 답이나 경고 바로 뒤에 설 수 있다.
 STACKED = [".warn", ".exp", ".exam", ".fold", ".origin", ".ox", ".a"]

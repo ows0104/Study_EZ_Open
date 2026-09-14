@@ -6,17 +6,17 @@ domain-specific behavior.
 
 ## Composition order
 
-1. `pdf2anki/prompts/core/`: rules that should hold for almost any quiz
-2. `pdf2anki/prompts/profiles/`: the learning purpose, such as exam review or
+1. `quizgen/prompts/core/`: rules that should hold for almost any quiz
+2. `quizgen/prompts/profiles/`: the learning purpose, such as exam review or
    pre-lecture preparation
-3. `pdf2anki/prompts/adapters/`: rules enabled only when a matching input is
+3. `quizgen/prompts/adapters/`: rules enabled only when a matching input is
    present, such as a lecture PDF, annotations, or a past exam
-4. `pdf2anki/prompts/domains/`: terminology or conventions for one domain; the
+4. `quizgen/prompts/domains/`: terminology or conventions for one domain; the
    runtime default is `medical_ko`, while `generic` remains selectable
 5. A short stage prompt, such as planning, card generation, or repair
 6. The generated input and output contract
 
-`pdf2anki/prompting.py` owns the shared composition order. The main and
+`quizgen/prompting.py` owns the shared composition order. The main and
 pre-lecture pipelines select different profiles but use the same core.
 
 ## Where a new rule belongs

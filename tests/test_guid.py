@@ -11,9 +11,9 @@ Anki 는 guid 로 노트의 정체를 잡는다. 두 카드의 guid 가 같으�
 import genanki
 import pytest
 
-from pdf2anki.build import GuidClash, check_guids, guid_of
-from pdf2anki.prequiz.build import guid_seed
-from pdf2anki.textutil import norm_key
+from quizgen.build import GuidClash, check_guids, guid_of
+from quizgen.prequiz.build import guid_seed
+from quizgen.textutil import norm_key
 
 LID = "p260821_02"
 Q = "이 육안 소견은 어떤 종류의 경색이며, 조직의 성상은 어떠해야 하는가"

@@ -13,7 +13,7 @@
                        ▼
             로컬 러너 (이 저장소)
             · 강의 인덱싱 · 작년 짝 붙이기
-            · pdf2anki 실행 (덱을 만드는 자리)
+            · quizgen 실행 (덱을 만드는 자리)
             · 산출물 업로드
                        │
                        ▼
@@ -27,11 +27,11 @@ studyez/     로컬 러너 — 파일명 파싱, 연도 매칭, 워처, 업로�
 studyez/__main__.py  CLI 껍데기 + 사람이 한 번씩 치는 명령 (import·rebuild·jokbo·match)
 studyez/runner.py    스케줄러가 돌리는 한 사이클 (watch·prequeue·publish·done·agent)
 studyez/deck.py      그 러너와 파이프라인의 유일한 접점
-pdf2anki/    덱을 만드는 파이프라인. 명령 하나가 PDF에서 .apkg까지 간다
+quizgen/    덱을 만드는 파이프라인. 명령 하나가 PDF에서 .apkg까지 간다
 data/timetable/  학기 시간표 JSON. 캘린더가 이것만으로 그려지고, 만드는 코드는
              없다 — 요람을 사람이 옮겨 적는다 ([README](data/timetable/README.md))
 runs/        산출물. 원본 PDF에서 언제든 재생성된다 (저장소에 안 들어감)
-out/         pdf2anki 작업 폴더. 같은 성격이고 **수명은 한 학기(180일)**다
+out/         quizgen 작업 폴더. 같은 성격이고 **수명은 한 학기(180일)**다
              (한 강의를 여러 번 돌린 시도가 여기 쌓인다. 재배치 설계는
               [docs/runs-layout.md](docs/runs-layout.md))
 server/      읽기 API + 관리자 업로드 (FastAPI, Cloud Run)
@@ -56,17 +56,17 @@ Get-ChildItem out -Directory | Where-Object { $_.LastWriteTime -lt (Get-Date).Ad
 남기면, **사람이 연 Claude Code 세션**이 `/quiz` 스킬을 돌려 문항을 만들고, 다시
 코드가 빌드했다. 편당 53~72분이었고 그 시간이 세션의 컨텍스트를 통째로 먹었다.
 
-`pdf2anki`는 모델이 필요한 자리마다 `claude -p`로 **빈 세션을 스스로 띄운다**
-([pdf2anki/session.py](pdf2anki/session.py)). 이력도 설정도 도구도 없는 세션이라
+`quizgen`는 모델이 필요한 자리마다 `claude -p`로 **빈 세션을 스스로 띄운다**
+([quizgen/session.py](quizgen/session.py)). 이력도 설정도 도구도 없는 세션이라
 이 저장소의 `CLAUDE.md`도 메모리도 딸려가지 않는다. 그래서 명령 하나로 끝난다.
 
 ```bash
-python -m pdf2anki.run "<올해 필기 PDF>"
+python -m quizgen.run "<올해 필기 PDF>"
 ```
 
 로컬 러너가 그 명령을 강의 단위로 부르고, 나온 것을 서버 계약의 모양으로 옮긴다
 ([studyez/deck.py](studyez/deck.py)). 파이프라인의 사용법과 설계·실패 기록은
-[docs/pdf2anki.md](docs/pdf2anki.md) 한 곳에 있다.
+[docs/quizgen.md](docs/quizgen.md) 한 곳에 있다.
 
 ## 쓰는 법
 
@@ -113,7 +113,7 @@ PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m studyez watch
 ```
 관리자가 /admin에 예습 링크 저장
   → studyez prequeue           작년 짝 고르기 · preview.md
-  → studyez prequeue --build   pdf2anki.prequiz가 덱을 만든다
+  → studyez prequeue --build   quizgen.prequiz가 덱을 만든다
   → studyez publish            덱·문항·링크가 함께 올라간다
 ```
 
@@ -357,12 +357,12 @@ powershell -ExecutionPolicy Bypass -File scripts\install-agent-task.ps1 -Remove
                  p78~ 실습 시험 블록 (같은 강의 번호를 다시 훑는다)
 ```
 
-`studyez jokbo <과목>`이 `pdf2anki.jokbo`를 불러 이걸 강의별 조각으로 자르고
+`studyez jokbo <과목>`이 `quizgen.jokbo`를 불러 이걸 강의별 조각으로 자르고
 `runs/_jokbo/<과목>/`에 둔다. 문항·정답·이의제기를 짝지어 붙이고 연도별 반복률과
 교수 교체 여부까지 계산해 두므로, 그 판정이 복습 덱의 전략(필기 중심이냐 족보
 중심이냐)을 가른다.
 
-**어느 조각을 어느 강의에 물릴지는 로컬 러너가 정하지 않는다.** pdf2anki가 카드를
+**어느 조각을 어느 강의에 물릴지는 로컬 러너가 정하지 않는다.** quizgen가 카드를
 만들 때 목차 제목으로 대조한다. 두 곳에서 각각 짝지으면 카드가 본 조각과 뒷면에
 붙는 조각이 갈릴 수 있다.
 
@@ -385,7 +385,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install-agent-task.ps1 -Remove
 **강의록만 내보내고 덱·run-meta·예습은 미룬다.** 통째로 멈추지 않는 이유는
 강의록이 그 검토와 무관한 자료이고, 먼저 나가야 캘린더 칸이 열리기 때문이다.
 
-**파이프라인이 이미 막는 것은 여기서 다시 막지 않는다.** pdf2anki는 질문만 보고
+**파이프라인이 이미 막는 것은 여기서 다시 막지 않는다.** quizgen는 질문만 보고
 다시 푼 답이 원래 답과 갈리고 그 사유가 문항 결함이면 그 카드를 다시 쓰게 하고,
 그래도 안 되면 빌드를 거부한다. `.apkg`가 있다는 것 자체가 그 검사를 지났다는 뜻이다.
 

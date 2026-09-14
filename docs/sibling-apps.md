@@ -60,7 +60,7 @@ app.include_router(newthing.router, prefix="/api")
 
 | | 값 |
 |---|---|
-| 저장소 | `packages/session/session.js`의 `cookieStorage` |
+| 저장소 | `platform/session/session.js`의 `cookieStorage` |
 | 도메인 | `studyez.kr` (`VITE_SESSION_DOMAIN` 또는 `CONFIG.sessionDomain`) |
 | 키 | `SharedSession.storageKey(supabaseUrl)` — `sb-<ref>-auth-token` |
 

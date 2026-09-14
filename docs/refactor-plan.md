@@ -10,7 +10,7 @@
 
 | | 줄 |
 |---|---|
-| `pdf2anki/` 파이프라인 | 10,870 |
+| `quizgen/` 파이프라인 | 10,870 |
 | `tests/` | 7,126 |
 | `studyez/` 로컬 러너 | 7,091 |
 | `server/app/` | 5,711 |
@@ -35,7 +35,7 @@
 
 세로는 제품이다.
 
-    Study_EZ    강의 한 편 → 예습 덱 · 복습 덱 · 강의록        (studyez + pdf2anki + web)
+    Study_EZ    강의 한 편 → 예습 덱 · 복습 덱 · 강의록        (studyez + quizgen + web)
     Spotter     과목 하나 → 땡시 문항 세트                     (Spotter_Quiz/scripts + web)
 
 가로는 층이다. **둘 다 이 넷을 지난다.**
@@ -61,7 +61,7 @@ Spotter     extract_*.py   generate_exam 793     upload_*.py 366    web/app.js 1
 ```
 
 **가로줄에서 둘이 만나는 곳은 `server/`뿐이다.** 그리고 파이썬 쪽 의존 방향은 이미
-깨끗하다 — 실측하니 `studyez → pdf2anki` 3회가 전부이고 `server/app`은 둘 중
+깨끗하다 — 실측하니 `studyez → quizgen` 3회가 전부이고 `server/app`은 둘 중
 아무것도 import하지 않는다. **뒤엉킨 것이 아니라 나뉘어 있지 않은 것이다.** 고칠
 것은 실타래가 아니라 빈 자리다.
 
@@ -69,7 +69,7 @@ Spotter     extract_*.py   generate_exam 793     upload_*.py 366    web/app.js 1
 
 | 층 | Study_EZ | Spotter | 공유 |
 |---|---|---|---|
-| 족보 파싱 | `pdf2anki/jokbo.py` 1035 | `parse_jokbo.py` 365 | **0** — 같은 문서 같은 쪽 |
+| 족보 파싱 | `quizgen/jokbo.py` 1035 | `parse_jokbo.py` 365 | **0** — 같은 문서 같은 쪽 |
 | AI로 재기 | `reproduce.py` 755 | `screen_questions.py` 218 | **0** — 같은 착상 |
 | 기계 검증 | `validate.py` 647 | `audit_questions.py` 218 | **0** |
 | R2 올리기 | `studyez/publish.py` 720 | `upload_web`·`upload_subject` 366 | **0** |
@@ -89,7 +89,7 @@ Spotter    Spotter_Quiz/기생충학/족보/…족보.pdf           11쪽   PDFi
 머리글이 70쪽 내내 같아 본문 표제로만 시작하는 것을 그때의 코드가 못 봤다」가
 정확히 이 열한 쪽이다.
 
-**한쪽이 배운 것이 다른 쪽에 안 간다.** `pdf2anki`가 머리글 함정을 배웠고,
+**한쪽이 배운 것이 다른 쪽에 안 간다.** `quizgen`가 머리글 함정을 배웠고,
 Spotter는 2단 조판·보기 번호 꼴·「2016-1·2017은 정답이 텍스트로 적혀 있다」를
 배웠다. 교정표도 둘이다(`data/question_corrections.json`은 Spotter에만 있다).
 
@@ -97,13 +97,13 @@ Spotter는 2단 조판·보기 번호 꼴·「2016-1·2017은 정답이 텍스�
 
 둘 다 **「사람이 풀 수 있게 생겼는가」를 모델에게 풀려서 본다.**
 
-    pdf2anki/reproduce.py       질문만 주고 답이 재현되는가 · 빈칸이 무엇을 묻는지 댈 수 있는가
+    quizgen/reproduce.py       질문만 주고 답이 재현되는가 · 빈칸이 무엇을 묻는지 댈 수 있는가
     screen_questions.py         사진만으로 갈리는가 · **사진이 똑같이 받쳐 주는 다른 보기가 있는가**
 
 셋째 물음이 둘 중 어디에도 없는 쪽에 필요한 것이다. Spotter의 그것은
-「유무구조충 충란처럼 실제로 구별 불가능한 짝」을 잡고, pdf2anki에는 그 자리가 없다
+「유무구조충 충란처럼 실제로 구별 불가능한 짝」을 잡고, quizgen에는 그 자리가 없다
 (CLAUDE.md의 「자명한 카드는 재현 검사를 반드시 통과한다」가 같은 구멍의 다른 얼굴이다).
-거꾸로 pdf2anki의 축 검사(`reproduce_axis`)는 Spotter에 없다.
+거꾸로 quizgen의 축 검사(`reproduce_axis`)는 Spotter에 없다.
 
 **둘이 서로의 구멍을 이미 메울 재료를 들고 있다.** 그게 이 중복이 아까운 이유다.
 
@@ -122,7 +122,7 @@ Spotter는 2단 조판·보기 번호 꼴·「2016-1·2017은 정답이 텍스�
 마지막 줄이 특히 그렇다. Spotter가 빌드 도구 없이 도는 것은 게으름이 아니라
 **Pages가 저장소 루트를 통째로 내기 때문**이고, 그 덕에 과목 하나가 깨져도 나머지가 산다.
 
-**② 문항을 만드는 원리 둘.** pdf2anki는 LLM이 강의록을 읽고 쓴다. Spotter는
+**② 문항을 만드는 원리 둘.** quizgen는 LLM이 강의록을 읽고 쓴다. Spotter는
 마스터 테이블 × 사진 풀 × 출제빈도로 **조합한다**(`generate_exam.py`). 앞은 생성,
 뒤는 표집이다. 같은 자리에 못 넣는다. **재는 것(②의 뒷절반)만 합칠 수 있다.**
 
@@ -142,9 +142,9 @@ Study_EZ_Open/
     jokbo/               족보 PDF → 문항. 파서 하나, 교정표 하나
     quality/             모델에게 풀려 보는 검사의 계약 (재현·선별·축이 같은 모양을 쓴다)
     publish/             R2 키 규칙 · 서명 · 업로드 · 나가는 문
-    session/             이미 있다 (packages/session → 여기로)
+    session/             이미 있다 (platform/session → 여기로)
 
-  pdf2anki/  studyez/    ← 그대로. platform 을 쓴다
+  quizgen/  studyez/    ← 그대로. platform 을 쓴다
   server/
     core/                auth · db · storage · config
     studyez/             lectures · prequiz · prequiz_jobs · timetable
@@ -181,7 +181,7 @@ Study_EZ_Open/
 
 **여기가 제일 싸고 제일 확실하다.** 이유 셋.
 
-1. `server/app`은 `studyez`·`pdf2anki`를 **하나도 import하지 않는다**(실측). 자를 때
+1. `server/app`은 `studyez`·`quizgen`를 **하나도 import하지 않는다**(실측). 자를 때
    딸려 오는 것이 없다.
 2. 이미 두 앱이 만나는 유일한 자리라 경계가 이미 개념으로 있다
    (`APP_POLICY`의 `auto`/`manual`).
@@ -222,10 +222,10 @@ Study_EZ_Open/
 
 - 공유할 것: 「모델에게 풀려 보고 판정을 받아 수선 고리에 넣는다」의 뼈대
   (세션 띄우기 · 채점표 형식 · 수선 재시도 · 남은 결함을 문지기로 넘기기)
-- 옮겨 갈 것 둘: Spotter → pdf2anki 「사진이 똑같이 받쳐 주는 다른 보기가 있는가」,
-  pdf2anki → Spotter 「축 검사」
+- 옮겨 갈 것 둘: Spotter → quizgen 「사진이 똑같이 받쳐 주는 다른 보기가 있는가」,
+  quizgen → Spotter 「축 검사」
 - **프롬프트 문구를 고치는 것은 이 단계가 아니다.** CLAUDE.md가 잡음을 쟀다 —
-  한 편 돌려서 비교하면 효과가 ±폭에 묻힌다. 문구는 `pdf2anki.judge`로 따로 고른다.
+  한 편 돌려서 비교하면 효과가 ±폭에 묻힌다. 문구는 `quizgen.judge`로 따로 고른다.
 - 끝났다고 아는 법: 같은 카드 묶음에 대해 옮기기 전/후 판정이 같다. 새 검사가
   **새 결함을 찾는 것은 이 단계의 성과가 아니라 다음 과제**다.
 
@@ -266,6 +266,6 @@ Study_EZ_Open/
 - Spotter에 빌드 도구 넣기 (§3)
 - Pages 프로젝트 합치기 (§3)
 - 서버 늘리기
-- `pdf2anki/prequiz/`를 「복제」로 보고 손대기 — 이름만 거울이고 실제로는
+- `quizgen/prequiz/`를 「복제」로 보고 손대기 — 이름만 거울이고 실제로는
   `..build`·`..pack`·`..validate`·`..textutil`을 import한다. **이미 나뉘어 있다.**
 - 프롬프트 문구를 파이프라인 실행으로 비교하기 (`judge`를 쓴다)

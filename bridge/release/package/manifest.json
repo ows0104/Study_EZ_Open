@@ -1,0 +1,69 @@
+{
+  "manifest_version": 3,
+  "name": "Study EZ 예습 브리지",
+  "version": "1.1.0",
+  "description": "Study EZ의 작년 필기와 예습 프롬프트를 ChatGPT, Gemini, Claude 새 대화에 채우고 링크를 강의에 연결합니다.",
+  "permissions": [
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://d0ec59549fea0c13f1b7fe9f724df93b.r2.cloudflarestorage.com/*",
+    "https://chatgpt.com/*",
+    "https://gemini.google.com/*",
+    "https://claude.ai/*",
+    "https://g.co/gemini/share/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://studyez.kr/*"
+      ],
+      "js": [
+        "protocol.js",
+        "studyez-bridge.js"
+      ],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://gemini.google.com/*",
+        "https://claude.ai/*"
+      ],
+      "js": [
+        "protocol.js",
+        "chatgpt-bridge.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://chatgpt.com/*"
+      ],
+      "js": [
+        "chatgpt-share.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://gemini.google.com/*",
+        "https://claude.ai/*"
+      ],
+      "js": [
+        "provider-share.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

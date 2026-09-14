@@ -6,11 +6,11 @@
 사람이 연 Claude Code 세션의 `/quiz`였고, 그 한 편이 53~72분 동안 세션의 컨텍스트를
 통째로 먹었다.
 
-지금은 `pdf2anki`가 모델이 필요한 자리마다 **빈 세션을 스스로 띄운다**
-(`pdf2anki/session.py`). 그래서 워처가 한 편을 끝까지 만든다.
+지금은 `quizgen`가 모델이 필요한 자리마다 **빈 세션을 스스로 띄운다**
+(`quizgen/session.py`). 그래서 워처가 한 편을 끝까지 만든다.
 
     스캔 · 최신 판 고르기 · 큐 쓰기        watch
-    prep → ①② → 검증 → 재현 → 빌드        pdf2anki.run (하위 프로세스)
+    prep → ①② → 검증 → 재현 → 빌드        quizgen.run (하위 프로세스)
     계약 모양으로 옮기기                    studyez.deck.contract
 
 큐는 없어지지 않았다. `--build` 없이 부르면 **무엇을 만들지 보여 주기만** 한다 —
@@ -18,7 +18,7 @@
 
 ## 한 번에 한 편씩 만든다
 
-pdf2anki 한 편이 이미 `--jobs 4`로 빈 세션 넷을 동시에 띄운다. 편을 겹쳐 돌리면
+quizgen 한 편이 이미 `--jobs 4`로 빈 세션 넷을 동시에 띄운다. 편을 겹쳐 돌리면
 그 배수가 되어 노트북이 먼저 무릎을 꿇는다. prep만 돌리던 시절에는 편끼리 겹쳐
 돌렸는데, 그때는 CPU 렌더가 전부였기 때문이다.
 
@@ -64,7 +64,7 @@ MIN_AGE_SECONDS = 10 * 60
 # 당분간 2다. 2026-08-19에 관리자가 토큰이 모자라 내렸다(6 → 3 → 2, 같은 날).
 # 그날 큐는 6편을 잡고 7편을 상한으로 밀어냈는데, 그 6편을 다 돌릴 토큰이 없었다.
 #
-# **그 사정이 pdf2anki로 갈아탄 뒤 어떻게 바뀌었는지는 아직 안 쟀다.** 편당 비용은
+# **그 사정이 quizgen로 갈아탄 뒤 어떻게 바뀌었는지는 아직 안 쟀다.** 편당 비용은
 # 이제 `runs/<run_id>/run.report.json`에 실제 값이 남으므로, 몇 편이 쌓이면 거기서
 # 읽어 정하면 된다. 그 전까지 짐작으로 올리지 않는다.
 DEFAULT_MAX_ITEMS = 2
@@ -144,7 +144,7 @@ def jokbo_state(runs_dir: Path, subject: str,
                 root: Path | None = None, year: str = "") -> str:
     """과목 족보가 어느 상태인가. `JOKBO_*` 중 하나.
 
-    어느 조각을 어느 강의에 물릴지는 **여기서 정하지 않는다.** pdf2anki가 목차
+    어느 조각을 어느 강의에 물릴지는 **여기서 정하지 않는다.** quizgen가 목차
     제목으로 대조한다 — 카드를 만들 때 본 조각과 뒷면에 붙이는 조각이 갈리면 안
     되므로 그 판단은 한 곳에만 있어야 한다. 여기서는 자리가 섰는지만 본다.
 
@@ -355,7 +355,7 @@ def strategy_for(professors) -> str | None:
 def build_extra(item: WorkItem, extra: list[str] | None = None) -> list[str]:
     """이 편에만 붙는 깃발. **판이 갈린 편에는 `--revise` 가 실린다.**
 
-    안 실으면 `pdf2anki.run` 이 산출물이 있는 단계를 전부 건너뛰어(`runbase.step`)
+    안 실으면 `quizgen.run` 이 산출물이 있는 단계를 전부 건너뛰어(`runbase.step`)
     **아무것도 안 만들고 `source.json` 에만 새 판이 찍힌다.** 2026-09-03 에 세 편이
     그 상태였고, 그러면 쓸기는 「이미 만듦」·문지기는 「옛 판이라 못 내보낸다」가 되어
     그 편이 갇힌다.
@@ -380,7 +380,7 @@ def build_one(item: WorkItem, runs_dir: Path, repo_root: Path, *,
     """한 편을 끝까지 만든다. (됐나, 사람이 볼 말)
 
     족보 조각을 손으로 물려 주지 않는다. `studyez jokbo <과목>`이 잘라 둔
-    `runs/_jokbo/`를 pdf2anki가 목차 제목으로 스스로 대조한다 — 카드를 만들 때 본
+    `runs/_jokbo/`를 quizgen가 목차 제목으로 스스로 대조한다 — 카드를 만들 때 본
     조각과 뒷면에 붙이는 조각이 갈리면 안 되기 때문에 그 판단이 한 곳에 있어야 한다.
 
     한 편이 죽어도 나머지는 계속 간다. 하룻밤 분량이 한 편 때문에 통째로
@@ -410,7 +410,7 @@ def build(queue: Queue, runs_dir: Path, repo_root: Path, *, model: str = "",
           announce=print) -> Queue:
     """큐대로 한 편씩 만든다. **겹쳐 돌리지 않는다.**
 
-    pdf2anki 한 편이 이미 빈 세션 넷을 동시에 띄우므로, 편을 겹치면 그 배수가 된다.
+    quizgen 한 편이 이미 빈 세션 넷을 동시에 띄우므로, 편을 겹치면 그 배수가 된다.
     끝난 편만 `queue.items`에 남기고 실패한 편은 사유와 함께 `skipped`로 내린다.
     """
     survivors: list[WorkItem] = []

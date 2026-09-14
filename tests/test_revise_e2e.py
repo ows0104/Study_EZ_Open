@@ -2,13 +2,13 @@
 
 앞의 시험들은 손으로 지은 `prep.json` 을 쓴다. 그러면 **키 이름이 실제와 어긋나도
 전부 통과한다** — 채널을 하나 못 읽으면 그 채널의 갈림은 영원히 안 보이는데,
-가짜 사전으로는 그것을 못 잡는다. 여기서는 `pdf2anki.prep` 이 실제로 낸 것을 쓴다.
+가짜 사전으로는 그것을 못 잡는다. 여기서는 `quizgen.prep` 이 실제로 낸 것을 쓴다.
 """
 
 import fitz
 
-from pdf2anki import prep as prep_mod
-from pdf2anki import revise, slidediff
+from quizgen import prep as prep_mod
+from quizgen import revise, slidediff
 from studyez import fingerprint
 
 BODY = ["Life cycle of Paragonimus", "Excystation in the duodenum",

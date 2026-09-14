@@ -1,4 +1,4 @@
-"""복습·예습이 같이 쓰는 배관(`pdf2anki/runbase.py`)이 양쪽에서 같게 도는가.
+"""복습·예습이 같이 쓰는 배관(`quizgen/runbase.py`)이 양쪽에서 같게 도는가.
 
 **이 파일이 지키는 것은 「합친 것」과 「안 합친 것」의 경계다.**
 
@@ -17,10 +17,10 @@ import types
 
 import pytest
 
-from pdf2anki import run as main_run
-from pdf2anki import runbase
-from pdf2anki.prequiz import run as pre_run
-from pdf2anki.runbase import BaseRunner, Failed
+from quizgen import run as main_run
+from quizgen import runbase
+from quizgen.prequiz import run as pre_run
+from quizgen.runbase import BaseRunner, Failed
 
 # 갈라내기 전 두 `agent()` 가 프롬프트 뒤에 붙이던 머리말. 글자가 바뀌면 모델이
 # 받는 지시가 바뀐다.
@@ -209,9 +209,9 @@ def test_sh는_실패하면_멈추고_예습은_넓힐_수_있다(tmp_path):
     """예습의 validate 는 계약 위반에 2 를 낸다. 그것까지 죽으면 한 줄 실행이 깨진다."""
     m = main_run.Runner(tmp_path, _args())
     with pytest.raises(Failed):
-        m.sh("pdf2anki_없는모듈_확실히")
+        m.sh("quizgen_없는모듈_확실히")
     p = pre_run.Runner(tmp_path, _args())
-    assert p.sh("pdf2anki_없는모듈_확실히", ok=(0, 1)) == 1
+    assert p.sh("quizgen_없는모듈_확실히", ok=(0, 1)) == 1
 
 
 @pytest.mark.parametrize("mod", [main_run, pre_run])

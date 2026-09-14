@@ -11,8 +11,8 @@
 두 갈래가 같은 값을 다르게 본다는 것이 이 파일이 지키는 것이다.
 """
 
-from pdf2anki.prequiz.validate import validate as pre_validate
-from pdf2anki.validate import validate as main_validate
+from quizgen.prequiz.validate import validate as pre_validate
+from quizgen.validate import validate as main_validate
 
 
 def _prep(n_slides=6):

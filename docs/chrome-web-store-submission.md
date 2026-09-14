@@ -107,10 +107,10 @@ PDF와 서비스 API 응답만 받아오며 JavaScript 또는 WebAssembly를 내
 PowerShell에서:
 
 ```powershell
-.\chrome-extension\build-store-package.ps1
+.\bridge\build-store-package.ps1
 ```
 
-결과: `chrome-extension/release/studyez-preview-bridge-1.1.0-web-store.zip`
+결과: `bridge/release/studyez-preview-bridge-1.1.0-web-store.zip`
 
 스토어 항목이 게시된 뒤 Cloudflare Pages 빌드 변수
 `VITE_EXTENSION_STORE_URL`에 실제 스토어 URL을 넣으면 웹앱의 개발자 모드 설치

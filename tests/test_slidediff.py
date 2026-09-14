@@ -8,7 +8,7 @@
   - 슬라이드가 하나 끼면 뒤가 통째로 밀린다. 번호로 맞대면 전부 「갈렸다」가 된다.
 """
 
-from pdf2anki import slidediff
+from quizgen import slidediff
 
 
 def page(no, text="", annotations=(), figures=()):

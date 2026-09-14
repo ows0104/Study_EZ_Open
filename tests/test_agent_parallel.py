@@ -287,7 +287,7 @@ def test_한도로_멈춘_편은_실패가_아니라_줄로_돌아간다(tmp_pat
     client = FakeClient([])
     worker = _agent(tmp_path, client)
     job = agent.Job(id=9, subject="기생충학", run_id="260901_01", kind=deck.MAIN)
-    worker._run = lambda *a, **k: (1, [f"    실패 — pdf2anki가 1로 끝났다 (로그: {child})"])
+    worker._run = lambda *a, **k: (1, [f"    실패 — quizgen가 1로 끝났다 (로그: {child})"])
     worker.handle(job)
 
     last = client.puts[-1][1]
@@ -299,12 +299,12 @@ def test_한도로_멈춘_편은_실패가_아니라_줄로_돌아간다(tmp_pat
 
 def test_한도가_아닌_실패는_그대로_실패다(tmp_path):
     child = tmp_path / "pipeline.log"
-    child.write_text("멈췄다 — 명령 실패: pdf2anki.validate", encoding="utf-8")
+    child.write_text("멈췄다 — 명령 실패: quizgen.validate", encoding="utf-8")
 
     client = FakeClient([])
     worker = _agent(tmp_path, client)
     job = agent.Job(id=9, subject="기생충학", run_id="260901_01", kind=deck.MAIN)
-    worker._run = lambda *a, **k: (1, [f"    실패 — pdf2anki가 1로 끝났다 (로그: {child})"])
+    worker._run = lambda *a, **k: (1, [f"    실패 — quizgen가 1로 끝났다 (로그: {child})"])
     worker.handle(job)
 
     last = client.puts[-1][1]

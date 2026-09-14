@@ -11,7 +11,7 @@
 
 import fitz
 
-from pdf2anki.build import contact_sheet
+from quizgen.build import contact_sheet
 
 
 class FakeMedia:

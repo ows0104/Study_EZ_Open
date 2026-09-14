@@ -8,7 +8,7 @@
 
 import json
 
-from pdf2anki import run as R
+from quizgen import run as R
 
 
 def write_cfg(d, **extra):

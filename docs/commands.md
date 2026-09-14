@@ -2,7 +2,7 @@
 
 **이 문서는 목록이다. 왜 그렇게 도는지는 여기 없다** — 설계는
 [README](../README.md), 판단 기준은 [CLAUDE.md](../CLAUDE.md), 파이프라인 속은
-[docs/pdf2anki.md](pdf2anki.md)에 있다. 여기서는 **하려는 일 → 치는 것**만 적는다.
+[docs/quizgen.md](quizgen.md)에 있다. 여기서는 **하려는 일 → 치는 것**만 적는다.
 
 플래그의 정확한 뜻은 `python -m studyez --help`가 원본이다. 이 표와 어긋나면
 `--help`가 맞다.
@@ -23,7 +23,7 @@ PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m studyez watch
 | 하려는 일 | 명령 | 나오는 것 |
 |---|---|---|
 | 족보를 강의별로 자른다 | `studyez jokbo 병리학` | `runs/_jokbo/<과목>/` 조각 + `index.json`. 문항·정답·이의제기를 짝짓고 연도별 반복률까지 센다 |
-| 족보 PDF를 직접 지정한다 | `pdf2anki.jokbo <족보.pdf> -o out/jokbo` | 위가 부르는 밑단 |
+| 족보 PDF를 직접 지정한다 | `quizgen.jokbo <족보.pdf> -o out/jokbo` | 위가 부르는 밑단 |
 | 올해 강의를 작년 강의에 붙인다 | `studyez match 병리학` · `studyez match --all` | 짝 후보와 「손봐야 할 강의 N편」 보고 |
 | 확인한 짝을 굳힌다 | 명령 없음 — `runs/_pairs/<과목>.json`을 사람이 적는다 | 코드는 읽기만 한다. 블럭 경계(`_block`·`_from`·`_until`)도 이 파일이다 |
 | 시간표를 서버에 넣는다 | `server/`에서 `app.cli seed-timetable [파일]` | 캘린더가 이것만으로 그려진다. 원본은 `data/timetable/` |
@@ -43,7 +43,7 @@ PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m studyez watch
 | 밀린 것을 몰아 만든다 | `--all-dates`, 또는 `--since 2026-08-01 --until 2026-08-31` |
 | 방금 올라온 파일도 잡는다 | `--now` (동기화가 끝나기를 기다리는 10분을 건너뛴다) |
 | 블럭 판정을 확인한다 | `--today 2026-09-10` |
-| PDF 하나를 직접 굽는다 | `pdf2anki.run "<올해 필기.pdf>" --strategy … --resume out/<id>` |
+| PDF 하나를 직접 굽는다 | `quizgen.run "<올해 필기.pdf>" --strategy … --resume out/<id>` |
 
 `--run-id`로 지목한 편은 **블럭 창·하루 상한·이미 만들었다는 표시를 지난다.**
 사람이 그 편을 골랐기 때문이다.
@@ -56,7 +56,7 @@ PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m studyez watch
 들고 있다 — 원본을 실제로 읽어 만든 산출물이라, prep을 다시 안 돌리면 기록이
 산출물을 앞지르지 않는다. `mtime`·`size`로는 판정하지 않는다(`260901_01`이 반례다).
 
-**갈렸으면 카드마다 처분을 정한다** — [pdf2anki/revise.py](../pdf2anki/revise.py).
+**갈렸으면 카드마다 처분을 정한다** — [quizgen/revise.py](../quizgen/revise.py).
 쓸기가 그 편에 `--revise`를 실어 보낸다.
 
     안 갈린 슬라이드   그대로 옮긴다 (모델이 보지도 않는다)
@@ -91,12 +91,12 @@ ventral sucker 라벨링이 반대로 되어있는 듯하여 수정했습니다"
 
 **「너무 많이 갈렸으면 통째로」는 거의 안 쓰는 길이다** (관리자, 2026-09-04:
 *"거의 없을 거야"*). 문턱은 기본이 없음이고 값도 정하지 않는다.
-`pdf2anki.run --full-rebuild-over 0.5`처럼 사람이 줄 때만 그리로 간다.
+`quizgen.run --full-rebuild-over 0.5`처럼 사람이 줄 때만 그리로 간다.
 그 길이 필요한 이유는 비용이 아니라 **갈아 끼우기에는 사람 승인 칸이 없다**는 것이다 —
 ①목표와 ②카드를 한 세션에서 쓴다. 편의 대부분이 갈린 날에는 두 칸을 도로 세우는
 편이 나을 수 있다.
 
-    python -m pdf2anki.slidediff 옛/prep.json 새/prep.json     # 무엇이 갈렸는지만 본다
+    python -m quizgen.slidediff 옛/prep.json 새/prep.json     # 무엇이 갈렸는지만 본다
 
 > ⚠ **두 판의 `prep.json`을 만든 코드가 다르면 한쪽에만 있는 채널은 못 맞댄다.**
 > 2026-09-03에 `lecture_emphasis`가 붙었고, 그 전 편과 대면 「강의는 그대로인데
@@ -114,7 +114,7 @@ ventral sucker 라벨링이 반대로 되어있는 듯하여 수정했습니다"
 | 한 편만 | `studyez prequeue 기생충학 --run-id 260831_01 --build` |
 | 다시 만든다 | 위에 `--force` |
 | 임박한 것만 | `--within-days 3` · 상한 `--max 1` |
-| PDF 하나를 직접 굽는다 | `pdf2anki.prequiz.run "<작년 필기.pdf>" --note <링크\|note.md>` |
+| PDF 하나를 직접 굽는다 | `quizgen.prequiz.run "<작년 필기.pdf>" --note <링크\|note.md>` |
 
 `prequeue`는 멱등이다 — 링크가 그대로면 건너뛰고(`done`), 링크가 바뀌었는데 덱이
 이미 있으면 `stale`로 적어 다시 만든다.
@@ -185,7 +185,7 @@ ventral sucker 라벨링이 반대로 되어있는 듯하여 수정했습니다"
   과목이 이긴다)에 짝 확정(`PUT …/match`) · 체크리스트 `waive` · 예습 링크 · 과목 별칭. 러너가 안 붙었는데 일감이 기다리면
   그 경고만 어느 탭에서든 뜬다
 - **크롬 확장** — 작년 PDF와 예습 프롬프트를 ChatGPT·Gemini·Claude 새 대화에
-  채우고 링크를 회수한다. 스토어용 ZIP은 `chrome-extension\build-store-package.ps1`
+  채우고 링크를 회수한다. 스토어용 ZIP은 `bridge\build-store-package.ps1`
 
 ## 8. 운영
 

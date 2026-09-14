@@ -2,7 +2,7 @@
 
     uv run --python 3.13 python scripts/sync_shared.py
 
-지금은 `session.js` 하나다. 원본은 이 저장소의 `packages/session/` 에 있고 여기
+지금은 `session.js` 하나다. 원본은 이 저장소의 `platform/session/` 에 있고 여기
 있는 것은 사본이다 — **여기서 고치면 다음 동기화에 덮인다.**
 
 **저장소를 합친 뒤에도 사본이 남는 이유**는 이 앱에 빌드 도구가 없어서다.
@@ -31,7 +31,7 @@ WEB = os.path.join(ROOT, "web")
 # 이 되어 「원본 저장소를 못 찾았습니다」로 죽었다. 환경 변수 우선은 그대로 둔다.
 PLATFORM = os.getenv("STUDYEZ_REPO", "").strip() or os.path.dirname(ROOT)
 
-SHARED = [("packages/session/session.js", "session.js")]
+SHARED = [("platform/session/session.js", "session.js")]
 
 
 def digest(path):

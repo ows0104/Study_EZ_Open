@@ -1,8 +1,8 @@
 """Image Occlusion 후보와 카드가 이름 있는 핵심 라벨에 묶이는지 검사한다."""
 
-from pdf2anki.prep import usable_occlusion_label
-from pdf2anki.prequiz.validate import validate as validate_prequiz
-from pdf2anki.validate import validate
+from quizgen.prep import usable_occlusion_label
+from quizgen.prequiz.validate import validate as validate_prequiz
+from quizgen.validate import validate
 
 
 def _prep(label="type II 폐포세포"):

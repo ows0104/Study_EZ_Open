@@ -9,8 +9,8 @@
 
 import json
 
-from pdf2anki.build import AXIS_REASON, DEFECT_REASONS, REPAIR_REASONS
-from pdf2anki.reproduce import build_axis, mark_axis, numbered_front
+from quizgen.build import AXIS_REASON, DEFECT_REASONS, REPAIR_REASONS
+from quizgen.reproduce import build_axis, mark_axis, numbered_front
 
 
 def _cloze(cid, q):

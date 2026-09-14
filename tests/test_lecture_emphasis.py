@@ -13,7 +13,7 @@
 import fitz
 import pytest
 
-from pdf2anki.prep import build_palette, emphasis_of, emphasis_text
+from quizgen.prep import build_palette, emphasis_of, emphasis_text
 
 BLACK, RED, BLUE, GRAY = (0, 0, 0), (1, 0, 0), (0, 0, 1), (0.5, 0.5, 0.5)
 FILLER = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"

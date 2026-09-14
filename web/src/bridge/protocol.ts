@@ -1,7 +1,7 @@
 /**
  * 웹앱 ↔ 크롬 확장(Study_EZ 예습 브리지) 메시지 계약.
  *
- * 값은 여기에서만 정의하고 확장은 같은 값을 복사해 쓴다(`chrome-extension/protocol.js`).
+ * 값은 여기에서만 정의하고 확장은 같은 값을 복사해 쓴다(`bridge/protocol.js`).
  * 한쪽만 고치면 조용히 끊기므로 둘을 같이 고친다.
  */
 
@@ -44,7 +44,7 @@ export const PREVIEW_TIMEOUT_MS = 5000;
 /**
  * 확장 내려받는 곳.
  *
- * `web/scripts/pack-extension.mjs`가 `chrome-extension/`을 묶어 `public/`에
+ * `web/scripts/pack-extension.mjs`가 `bridge/`을 묶어 `public/`에
  * 떨어뜨리고, 빌드마다 다시 만든다. 사용자는 저장소를 갖고 있지 않으므로
  * "폴더를 고르세요"라고 말할 수 없다.
  */

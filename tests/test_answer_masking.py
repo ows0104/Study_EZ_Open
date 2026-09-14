@@ -1,6 +1,6 @@
 """앞면 크롭에 인쇄된 정답을 가린다. 무엇을 가릴지는 **그 카드의 정답**이 정한다."""
 
-from pdf2anki.textutil import answer_runs
+from quizgen.textutil import answer_runs
 
 
 def test_caption_matching_the_answer_is_a_run():

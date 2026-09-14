@@ -186,11 +186,11 @@ def remembered_practical(index: Path) -> tuple[list[Path], list[str]]:
 def run_jokbo(args) -> int:
     """과목 족보 PDF를 강의별 조각으로 자른다. 학기당 과목당 한 번이면 된다.
 
-    자르는 것은 `pdf2anki.jokbo`다. 여기서 하는 것은 **어느 PDF를 줄지 고르는
+    자르는 것은 `quizgen.jokbo`다. 여기서 하는 것은 **어느 PDF를 줄지 고르는
     것**뿐 — 과목 폴더에서 원본을 찾아 `deck.cut_jokbo`에 넘긴다.
 
     강의와 조각을 짝지어 `links.json`을 쓰던 자리가 여기 있었는데 없앴다.
-    지금은 어느 조각을 물릴지 pdf2anki가 카드를 만들 때 목차 제목으로 대조한다.
+    지금은 어느 조각을 물릴지 quizgen가 카드를 만들 때 목차 제목으로 대조한다.
     두 곳에서 각각 짝지으면 **카드가 본 조각과 뒷면에 붙는 조각이 갈릴 수 있다.**
     """
     subject = args.subject
@@ -256,7 +256,7 @@ def run_jokbo(args) -> int:
     return 0
 
 
-# pdf2anki 작업 폴더 이름. `pre_`가 예습, 뒤에 붙는 꼬리는 사람이 시험 삼아
+# quizgen 작업 폴더 이름. `pre_`가 예습, 뒤에 붙는 꼬리는 사람이 시험 삼아
 # 갈라 둔 변형이다(`pre_p250825_01_note`). 꼬리가 달라도 같은 강의다.
 RE_WORK_DIR = re.compile(r"^(?P<pre>pre_)?p(?P<run_id>\d{6}_\d{2}(?:-[0-9a-f]{4})?)(?P<variant>.*)$")
 
@@ -266,7 +266,7 @@ KEEP_ON_IMPORT = {"preview.md", "pre_target.json"}
 
 
 def import_dirs(source: Path) -> dict[str, list[tuple[str, Path]]]:
-    """pdf2anki 작업 폴더를 훑어 `run_id`별로 모은다. `{run_id: [(kind, 폴더)]}`.
+    """quizgen 작업 폴더를 훑어 `run_id`별로 모은다. `{run_id: [(kind, 폴더)]}`.
 
     폴더 이름이 곧 무엇인지 말한다 — `p260812_01`이 복습, `pre_p250825_01`이 예습이다.
     `_`로 시작하는 것(`_bundle`·`_image_check`)과 `jokbo`는 강의가 아니다.
@@ -289,7 +289,7 @@ def import_dirs(source: Path) -> dict[str, list[tuple[str, Path]]]:
 
 
 def run_import(args) -> int:
-    """다른 곳에서 만든 pdf2anki 덱을 `runs/`로 옮긴다. **올리지는 않는다.**
+    """다른 곳에서 만든 quizgen 덱을 `runs/`로 옮긴다. **올리지는 않는다.**
 
     옮긴 자리마다 `HOLD`를 놓는다. 이 사이트의 눈(계약·검문)으로 한 번도 본 적이
     없는 산출물이라, 사람이 보고 `python -m studyez release <run_id>`로 풀기 전에는
@@ -559,7 +559,7 @@ def main() -> int:
     parser.add_argument("--reflag", action="store_true",
                         help="rebuild: 검사 규칙이 늘었을 때 소프트 표시를 다시 계산해 덧붙인다")
     parser.add_argument("--from", dest="source_dir", default=None,
-                        help="import: 덱을 옮겨 올 pdf2anki 작업 폴더 (예: ../PDF2ANKI/out)")
+                        help="import: 덱을 옮겨 올 quizgen 작업 폴더 (예: ../PDF2ANKI/out)")
     args = parser.parse_args()
 
     # 이름을 직접 대도 막는다. 실수로 한 번 돌리면 재고에 섞여 들어가고,

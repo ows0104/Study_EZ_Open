@@ -12,10 +12,10 @@ import json as _json
 import genanki
 import pytest
 
-from pdf2anki.prequiz.build import guid_seed
-from pdf2anki.prequiz.run import Runner, deck_of
-from pdf2anki.prequiz.schema import MAX_CARDS, MIN_CARDS
-from pdf2anki.prequiz.validate import validate
+from quizgen.prequiz.build import guid_seed
+from quizgen.prequiz.run import Runner, deck_of
+from quizgen.prequiz.schema import MAX_CARDS, MIN_CARDS
+from quizgen.prequiz.validate import validate
 
 
 def test_예습_덱은_강의록_기출과_형제다():

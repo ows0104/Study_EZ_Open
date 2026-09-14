@@ -8,10 +8,10 @@
 
 from jsonschema import Draft202012Validator
 
-from pdf2anki.assemble import topic_count
-from pdf2anki.review import render
-from pdf2anki.schema import PLAN_SCHEMA
-from pdf2anki.validate import validate
+from quizgen.assemble import topic_count
+from quizgen.review import render
+from quizgen.schema import PLAN_SCHEMA
+from quizgen.validate import validate
 
 
 def _prep(n_slides=10):

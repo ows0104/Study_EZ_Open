@@ -1,7 +1,7 @@
 """족보를 못 물렸을 때 조용히 넘어가지 않는다.
 
 2026-08-27 배치에서 **7편이 기출 0장으로 나왔는데 아무도 몰랐다.**
-`pdf2anki.run` 의 `--jokbo-dir` 기본값이 `out/jokbo` 인데 그 폴더가 없었고,
+`quizgen.run` 의 `--jokbo-dir` 기본값이 `out/jokbo` 인데 그 폴더가 없었고,
 `slice_for` 가 아무 말 없이 `None` 을 돌려줬다.
 
 그 결과가 조용했던 이유가 중요하다 — **기출 카드는 지워진 것이 아니라 계획 단계부터
@@ -16,7 +16,7 @@ import json
 
 import pytest
 
-from pdf2anki.assemble import slice_for
+from quizgen.assemble import slice_for
 
 
 def _prep(source="[260820_02] 소아질환의 병태생리(1)(김은선)_한태희v1.pdf"):

@@ -15,9 +15,9 @@ Anki 는 **번호 하나에 카드 한 장**을 만들고, 각 카드는 나머�
 
 import genanki
 
-import pdf2anki.build as B
-from pdf2anki.reproduce import front_of
-from pdf2anki.textutil import collapse_cloze, norm_key
+import quizgen.build as B
+from quizgen.reproduce import front_of
+from quizgen.textutil import collapse_cloze, norm_key
 
 LID = "p260904_01"
 Q = "편모충의 발육단계는 {{c1::amastigote}} → {{c2::promastigote}} → {{c3::epimastigote}} 순이다"

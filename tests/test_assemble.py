@@ -5,7 +5,7 @@
 관리자가 막아 달라고 한 것이 그 자리다 — *"어 이거 아까 봤던 거네, 선지만 바뀐듯"*.
 """
 
-from pdf2anki.assemble import (
+from quizgen.assemble import (
     ASK_ANNOTATION,
     STRATEGY_ALIAS,
     apply_confirmed_strategy,
@@ -181,7 +181,7 @@ def test_새로운_확인필요_강의는_저장된_선택을_빌리지_않는�
 def test_읽을_것이_없어도_기본으로_간다():
     """`isatty()` 만으로는 못 가른다 — 윈도우의 `NUL` 은 문자 장치라 러너가
     `stdin=DEVNULL` 로 막아도 참으로 나온다. 2026-09-01 에 그래서 물음이 그대로
-    뜨고 `EOFError` 로 죽었다(기생충학/260831_01, pdf2anki 종료 코드 1)."""
+    뜨고 `EOFError` 로 죽었다(기생충학/260831_01, quizgen 종료 코드 1)."""
     def eof(_):
         raise EOFError
 

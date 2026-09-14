@@ -1,5 +1,5 @@
 /**
- * `chrome-extension/`을 `public/`의 zip 하나로 묶는다.
+ * `bridge/`을 `public/`의 zip 하나로 묶는다.
  *
  * 사용자는 저장소를 갖고 있지 않으므로 "폴더를 고르세요"라고 말할 수 없다.
  * 웹앱이 직접 내려주면 화면에서 설치까지 한 줄로 이어진다.
@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { crc32 } from "node:zlib";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const source = resolve(here, "../../chrome-extension");
+const source = resolve(here, "../../bridge");
 const target = resolve(here, "../public/studyez-extension.zip");
 
 /** 배포에 들어갈 것만. 스토어 자산과 문서는 뺀다. */

@@ -6,8 +6,8 @@
 
 import json
 
-from pdf2anki import assemble, schema, slidediff
-from pdf2anki import prep as prep_mod
+from quizgen import assemble, schema, slidediff
+from quizgen import prep as prep_mod
 
 
 def page(no, text):

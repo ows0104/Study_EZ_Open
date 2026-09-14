@@ -1,13 +1,13 @@
 from pathlib import Path
 
-from pdf2anki.prompting import (
+from quizgen.prompting import (
     CORE_MODULES,
     DEFAULT_DOMAIN,
     lecture_adapters,
     module_names,
     read_modules,
 )
-from pdf2anki.reproduce import build_blind, build_grade
+from quizgen.reproduce import build_blind, build_grade
 
 
 def test_shared_core_is_first_for_both_purposes():
@@ -71,7 +71,7 @@ def test_unknown_prompt_selection_fails_loudly():
 
 
 def test_runtime_prompts_do_not_accumulate_case_history():
-    root = Path(__file__).parents[1] / "pdf2anki"
+    root = Path(__file__).parents[1] / "quizgen"
     paths = list((root / "prompts").rglob("*.md"))
     paths += list((root / "prequiz" / "prompts").rglob("*.md"))
     text = "\n".join(p.read_text(encoding="utf-8") for p in paths)

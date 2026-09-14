@@ -106,7 +106,7 @@ lecture
 
 ## `run.meta.json` — 덱 하나의 요약
 
-`pdf2anki`는 이 파일을 만들지 않는다. 파이프라인 안쪽(`run.config.json`·
+`quizgen`는 이 파일을 만들지 않는다. 파이프라인 안쪽(`run.config.json`·
 `items.reproduced.json`·`suspects.json`)을 읽어 이 모양으로 옮기는 것은
 [studyez/deck.py](../studyez/deck.py)의 `contract()`다. 실물은
 [samples/run.meta.sample.json](samples/run.meta.sample.json)에 있다.
@@ -117,7 +117,7 @@ lecture
   "deck_name": "병리학::소아질환의 병태생리(2) 소아기 특이 질환 1",
   "deck_file": "p260820_03.apkg",
   "built_at": "2026-08-23T00:39:38",
-  "pipeline": "pdf2anki",
+  "pipeline": "quizgen",
   "verified": { "notes": 88, "cards": 92, "media": 46, "decks": 2,
                 "missing_media": [] },
   "item_count": 88,
@@ -149,7 +149,7 @@ lecture
 - `web_items`·`web_excluded`·`slides_exported`·`web_without_explanation`은
   **두 갈래 다** 붙는다(2026-08-31부터. 그 전 편에는 복습 쪽이 없다)
 
-`lecture_id` 필드 이름은 역사적인 것이고 값은 `run_id`다. `deck_id`는 pdf2anki의
+`lecture_id` 필드 이름은 역사적인 것이고 값은 `run_id`다. `deck_id`는 quizgen의
 ID(`p260820_03`)이고 **그쪽이 guid의 씨앗이다** — 바꾸면 Anki가 이미 받아 간
 카드를 전부 새 노트로 본다.
 
@@ -161,7 +161,7 @@ ID(`p260820_03`)이고 **그쪽이 guid의 씨앗이다** — 바꾸면 Anki가 
 ```json
 { "lecture_id": "250825_01",
   "deck_id": "p250825_01",
-  "generated_by": "pdf2anki.prequiz",
+  "generated_by": "quizgen.prequiz",
   "items": [
     { "id": "c001",
       "qtype": "basic",                     // basic | cloze | ox
@@ -197,7 +197,7 @@ ID(`p260820_03`)이고 **그쪽이 guid의 씨앗이다** — 바꾸면 Anki가 
 ### 복습도 같은 모양을 낸다 — 다만 아직 아무도 안 읽는다
 
 2026-08-31부터 복습 run 도 `main_items.final.json`을 낸다(`generated_by`가
-`pdf2anki.main`). 모양은 위와 같고 `focus` 자리만 갈린다 — 예습은 이유(`reason`),
+`quizgen.main`). 모양은 위와 같고 `focus` 자리만 갈린다 — 예습은 이유(`reason`),
 복습은 등급(`importance`)이다.
 
 `publish`가 `PUT …/main-items`로 올리고 서버는 `main_item` 표에 넣는다. 화면은
@@ -259,6 +259,6 @@ preview
 | `run.meta.json` | 고정 |
 | `pre_items.final.json` | 고정. 실물은 [samples/](samples/) |
 | `.apkg` · PDF · `slides/` | 고정 |
-| `run.config.json`·`prep.json`·`items.reproduced.json`·`suspects.json` | **서버가 보지 않는다.** pdf2anki 안쪽이라 자유롭게 바뀐다 |
+| `run.config.json`·`prep.json`·`items.reproduced.json`·`suspects.json` | **서버가 보지 않는다.** quizgen 안쪽이라 자유롭게 바뀐다 |
 
 서버 쪽에서 파이프라인 내부 파일을 읽고 싶어지면 먼저 이 문서에 올려라.

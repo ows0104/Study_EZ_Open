@@ -9,9 +9,9 @@
 import json
 import types
 
-from pdf2anki import revise
-from pdf2anki.build import guid_of
-from pdf2anki.textutil import norm_key
+from quizgen import revise
+from quizgen.build import guid_of
+from quizgen.textutil import norm_key
 
 # 앞에 한 장이 껴서 4·5 가 밀렸고, 3번은 갈렸고, 6번은 새 판에서 없어졌다.
 DIFF = {"carry_map": {"1": 1, "2": 2, "4": 5, "5": 6},

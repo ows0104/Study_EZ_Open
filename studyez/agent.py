@@ -139,7 +139,7 @@ CLAIM = "/api/admin/prequiz-jobs/claim"
 LOCK_NAME = "agent.lock"
 LOCK_STALE = 90          # 이 시간 넘게 안 만져진 표시는 죽은 것이다
 
-# 하위 프로세스가 단계를 알리는 모양. pdf2anki가 `── ① 반드시 알아야 할 것`처럼
+# 하위 프로세스가 단계를 알리는 모양. quizgen가 `── ① 반드시 알아야 할 것`처럼
 # 찍는다. 사람이 그대로 읽을 수 있어서 다시 쓰지 않고 옮기기만 한다.
 RE_STAGE = re.compile(r"^── (.+)$")
 # 건너뛴 단계는 `[건너뜀] 프롬프트 조립  (prompt.cards*.md 이미 있음)` 꼴이다.
@@ -153,7 +153,7 @@ RE_NOTHING = re.compile(r"^\s*만들 것 0편")
 RE_LIMIT = re.compile(r"(?:session|usage) limit\s*(?:·\s*)?([^\"\\]*)", re.IGNORECASE)
 # 하위 로그가 어디 있는지. 실패 줄이 경로를 달고 온다.
 RE_CHILD_LOG = re.compile(r"\(로그: (.+?\.log)\)")
-# `pdf2anki`가 멈출 때 찍는 말. 로그가 덧붙여 쓰이므로 **마지막 것이 이번 것**이다.
+# `quizgen`가 멈출 때 찍는 말. 로그가 덧붙여 쓰이므로 **마지막 것이 이번 것**이다.
 STOPPED = "멈췄다 — "
 # 필기가 너무 갓 올라와서 건드리지 않은 자리(`watch.MIN_AGE_SECONDS`).
 # `— 올라온 지 9분. 동기화 중일 수 있어 다음 차례로` 꼴이다.
@@ -300,7 +300,7 @@ class Agent:
         with log.open("w", encoding="utf-8") as sink:
             # **자식은 물을 자리가 없다**(`stdin`). 안 막으면 러너의 stdin을 그대로
             # 물려받는데, 예약 작업으로 뜬 러너의 그것이 `isatty()`에 참으로 나온다.
-            # 그러면 `pdf2anki`가 「필기 중심으로 만들까요? [Y/n]」에서 `input()`으로
+            # 그러면 `quizgen`가 「필기 중심으로 만들까요? [Y/n]」에서 `input()`으로
             # 잠들고, 답할 사람이 없으니 `BUILD_TIMEOUT`(180분)까지 아무 일도 안 한다.
             # 2026-08-25 병리학/260825_03이 그렇게 죽었고 2026-08-31 기생충학/260831_01이
             # 45분을 그러고 있었다 — CPU 0.2초, 그동안 만들어진 파일 0개.
@@ -474,7 +474,7 @@ class Agent:
 
         if code == KILLED_BY_HUMAN:
             # **여기까지 만든 것은 안 지운다.** 다시 누르면 그 단계를 건너뛰고
-            # 이어 간다(`pdf2anki`가 산출물이 있는 단계를 안 다시 만든다).
+            # 이어 간다(`quizgen`가 산출물이 있는 단계를 안 다시 만든다).
             # 올리지도 않는다 — 반쯤 만든 것을 올리면 학생에게 그것이 간다.
             self.say(f"    멈췄다 — 사람이 눌렀다 ({time.time() - started:.0f}초 만듦)")
             self.report(job, state="canceled", stage="",
@@ -785,7 +785,7 @@ def kill_tree(proc: subprocess.Popen) -> None:
     """하위 프로세스를 **나무째** 내린다. 자식만 죽이면 손자가 남는다.
 
     우리가 띄우는 것은 파이썬 하나(`studyez prequeue` · `studyez watch`)지만, 그
-    아래에 pdf2anki가 띄운 **빈 세션이 넷까지** 있다(`claude -p`). `proc.kill()`은
+    아래에 quizgen가 띄운 **빈 세션이 넷까지** 있다(`claude -p`). `proc.kill()`은
     가운데 하나만 죽이므로, 그 넷은 부모를 잃은 채 계속 돌며 토큰을 쓴다 —
     멈추라고 누른 사람이 막으려던 것이 정확히 그것이다.
 
@@ -875,7 +875,7 @@ def limit_reason(lines: list[str]) -> str:
     """모델 한도에 걸렸나. 걸렸으면 사람이 읽을 한 줄, 아니면 빈 문자열.
 
     **이유가 하위 로그에만 있다.** 러너가 보는 것은 감싼 명령의 출력이라
-    「pdf2anki가 1로 끝났다」까지만 온다. 그래서 그 줄이 달고 오는 경로를 따라가
+    「quizgen가 1로 끝났다」까지만 온다. 그래서 그 줄이 달고 오는 경로를 따라가
     읽는다.
 
     2026-09-02 01:22에 복습 셋과 예습 셋이 이것으로 죽었는데, 화면에는 종료 코드와
@@ -888,7 +888,7 @@ def limit_reason(lines: list[str]) -> str:
         그래서 한 파일에 어제 걸린 한도와 오늘 걸린 한도가 같이 있고, 아침에는
         첫 줄을 집어 이미 지난 시각을 적었다. 마지막 것을 집게 고쳤더니 이번에는
         **한도가 아닌 실패에 한도를 갖다 붙였다** — `260901_01`이 16:13에
-        `pdf2anki.validate` 실패로 죽었는데 화면에는 「세션 한도 · resets 1:40pm」이
+        `quizgen.validate` 실패로 죽었는데 화면에는 「세션 한도 · resets 1:40pm」이
         떴다. 그 편의 로그에 아침의 한도 줄이 남아 있었기 때문이다.
 
         그래서 **마지막 `멈췄다 —` 뒤**만 본다. 그 줄이 이번 실행이 멈춘 자리이고,
@@ -965,9 +965,9 @@ def sync_wait(lines: list[str], now: datetime | None = None) -> datetime | None:
 def child_stop_reason(lines: list[str]) -> str:
     """하위 로그가 **이번에 멈춘 자리**. 한도가 아닐 때 그 자리를 대신 말한다.
 
-    러너가 보는 줄은 「pdf2anki가 1로 끝났다」까지다. 그 말로는 사람이 로그를 열기
+    러너가 보는 줄은 「quizgen가 1로 끝났다」까지다. 그 말로는 사람이 로그를 열기
     전까지 아무것도 모른다 — 어느 단계였는지, 모델이 죽은 것인지 코드가 죽은
-    것인지도. `260901_01`이 `pdf2anki.validate` 실패로 죽었을 때 화면에 그 말이
+    것인지도. `260901_01`이 `quizgen.validate` 실패로 죽었을 때 화면에 그 말이
     한 줄도 없었다.
     """
     for line in lines:
