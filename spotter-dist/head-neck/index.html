@@ -8,10 +8,10 @@
 <!-- 이 파일은 로그인 문이 달려 있다. 과목 앱을 새로 구우면 이 표시가 사라지고,
      그때는 scripts/gate_subject.py 를 다시 돌려야 한다. 안 돌리면 그 과목만
      로그인 없이 열린다. -->
-<script src="../config.js?v=c3103667"></script>
+<script src="../config.js?v=3de3ec6a"></script>
 <script src="../session.js?v=f2620373"></script>
 <script src="../auth.js?v=06ba6b65"></script>
-<script src="../gate.js?v=c12746c4"></script>
+<script src="../gate.js?v=ab55dd58"></script>
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f4f9; margin: 0; padding: 0; height: 100vh; overflow: hidden; user-select: none; }
         #start-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; width: 100vw; background-color: #2c3e50; color: white; }
@@ -221,7 +221,9 @@
 
         function getStructureKey(item) {
             const label = String(item.answer_ko || item.answer_en || item.raw_label || getUniqueQuestionKey(item));
-            return label.normalize('NFKC').toLowerCase()
+            return label
+                .normalize('NFKC')
+                .toLowerCase()
                 .replace(/\b(left|right|lt|rt)\b/g, '')
                 .replace(/(왼쪽|오른쪽|좌측|우측)/g, '')
                 .replace(/[^0-9a-z가-힣]+/g, '');
@@ -386,6 +388,7 @@
                 regionCounts.set(pickedRegion, (regionCounts.get(pickedRegion) || 0) + 1);
                 lastRegion = pickedRegion;
             }
+
             return selected_items;
         }
         // -------------------------------------------------------------------
@@ -464,8 +467,7 @@
             document.getElementById('progress').innerText = `Question ${index + 1} / ${quizData.length}`;
             
             const imgEl = document.getElementById('question-image');
-            imgEl.src = "Spotter_Questions_All/" + data.image_filename;
-            imgEl.style.display = "block";
+            setQuestionImage(imgEl, data);
             
             document.getElementById('region-box').innerText = data.region;
             toggleRegion(); 
