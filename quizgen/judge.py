@@ -15,8 +15,23 @@
 끼어든다. 그래서 섞어서 한 번에 넣는다.
 
 사용:
-    python -m quizgen.judge cloze out/exp_260901_01_v5 out/exp_260901_01_v9
-    python -m quizgen.judge cloze runs/2609* --n 60
+    python -m quizgen.judge cloze runs/260901_01/main/260906-1147                                   runs/260901_01/main/260906-1448
+    python -m quizgen.judge cloze runs/2609*/main/* --n 60
+
+## 그 아홉 판이 어느 자리에 있나
+
+`out/exp_260901_01_v*` 였던 것이 2026-09-15 에 `runs/260901_01/main/<판>/` 으로 접혔다
+(`docs/runs-layout.md` 5단계). 대응은 이렇다 — 각 판의 cloze 수가 첫 판정이 적어 둔
+값과 한 장도 안 다른 것으로 확인했다.
+
+    v2 260905-1208   v3 260905-1729   v4 260905-1829   v5 260905-1950
+    v6 260906-0215   v7 260906-1147   v8 260906-1341   v9 260906-1448
+
+첫 판정(2026-09-06): **v5 11장 91% · v6 16장 56% · v7 16장 94% · v8 11장 82% ·
+v9 6장 83%.** v7 이 이겨서 그 cloze 절을 되살렸다(`b2b4326`).
+
+**지금 프롬프트는 v7 그 자체가 아니다.** v7 의 cloze 절에서 관리자가 뒤집은 넷을
+걷어낸 조합이고, **그 조합은 아직 심판을 안 받았다.** 그것이 이 도구의 남은 숙제다.
 """
 
 from __future__ import annotations
