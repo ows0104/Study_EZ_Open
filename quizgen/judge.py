@@ -57,7 +57,12 @@ from pathlib import Path
 from .reproduce import (PROMPTS, chunks, front_of, numbered_front, run_chunks,
                         task_text)
 
-RUBRICS = {"cloze": ("judge_cloze.md", "cloze")}
+# 잣대마다 `(프롬프트, 판정할 카드 형식)`. **형식마다 볼 것이 다르다** — 빈칸은 끊는
+# 자리를, 기본형은 2026-09-15 관리자가 반려하며 든 넷(형식·질문의 한국어·답 길이·
+# 단순 번역)을 본다. `basic` 이 ㉰ 산출물의 78%(2,169/2,766)라 그전까지는 심판이
+# 카드 넷 중 셋을 아예 안 보고 있었다.
+RUBRICS = {"cloze": ("judge_cloze.md", "cloze"),
+           "basic": ("judge_basic.md", "basic")}
 
 
 def cards_of(d: Path, fmt: str) -> list[dict]:
