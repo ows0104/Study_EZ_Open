@@ -130,15 +130,20 @@ localTestToken   (배포에서는 반드시 비운다)
 # ① 기생충학 문항을 다시 굽는다
 uv run --python 3.13 --with pillow python scripts/build_web.py
 
-# ② 과목 하나를 R2로 올린다 (기생충학은 build/, 나머지는 배포 저장소의 과목 폴더)
+# ② 과목 하나를 R2로 올린다 (기생충학은 build/, 나머지는 배포본의 과목 폴더)
 uv run --python 3.13 --with requests python scripts/upload_subject.py build --subject parasitology
-uv run --python 3.13 --with requests python scripts/upload_subject.py ../Spotter_Quiz_pages/exam1
+uv run --python 3.13 --with requests python scripts/upload_subject.py ../spotter-dist/exam1
 
-# ③ 화면을 배포 저장소에 맞춘다 (해부학 넷에 로그인 문을 달아 준다)
-uv run --python 3.13 python scripts/deploy_pages.py ../Spotter_Quiz_pages
+# ③ 화면을 배포본에 맞춘다
+uv run --python 3.13 python scripts/deploy_pages.py ../spotter-dist
 ```
 
-그리고 배포 저장소에서 커밋·push 하면 Cloudflare Pages가 빌드한다.
+**2026-09-14 에 경로가 바뀌었다.** 배포본이 형제 저장소(`../Spotter_Quiz_pages`)
+였는데 이제 같은 저장소의 `spotter-dist/` 다. 해부학 넷도 이제 원본이 여기
+있어서(`web/anatomy/`) ③이 로그인 문을 다는 것이 아니라 **옮기기만** 한다.
+
+그리고 `spotter-dist/` 를 `ows0104/Spotter_Quiz` 로 밀면 Cloudflare Pages 가
+빌드한다. 미는 법은 [docs/layout.md](../../docs/layout.md) 에 있다.
 
 올리는 쪽은 R2 키를 안 든다. 서버가 서명한 PUT 주소를 받아서 바이트만 붓고,
 인증은 `RUNNER_TOKEN`(없으면 관리자 로그인)으로 한다. 안 바뀐 사진은 ETag를
