@@ -1,0 +1,553 @@
+<title>Study_EZ 지형도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap">
+
+<style>
+:root {
+  --paper:      #F1F4F3;
+  --panel:      #FAFBFB;
+  --ink:        #16201F;
+  --ink-soft:   #4A5957;
+  --ink-faint:  #7C8B89;
+  --rule:       #D3DAD8;
+  --rule-firm:  #AEB9B7;
+  --seam:       #1B6B66;
+  --seam-wash:  #DCEAE8;
+  --warn:       #A8402099;
+  --warn-ink:   #9A3A1C;
+  --warn-wash:  #F6E4DC;
+
+  --f-sans: "IBM Plex Sans KR", "IBM Plex Sans", system-ui, -apple-system, "Malgun Gothic", sans-serif;
+  --f-serif: "IBM Plex Serif", Georgia, "Malgun Gothic", serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+
+  --gut: clamp(18px, 4vw, 52px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:     #101616;
+    --panel:     #17201F;
+    --ink:       #E3EAE8;
+    --ink-soft:  #A6B4B2;
+    --ink-faint: #768482;
+    --rule:      #26312F;
+    --rule-firm: #3A4846;
+    --seam:      #5FBDB4;
+    --seam-wash: #14302E;
+    --warn:      #D2714C99;
+    --warn-ink:  #E0916E;
+    --warn-wash: #2E1C14;
+  }
+}
+:root[data-theme="dark"] {
+  --paper:     #101616;
+  --panel:     #17201F;
+  --ink:       #E3EAE8;
+  --ink-soft:  #A6B4B2;
+  --ink-faint: #768482;
+  --rule:      #26312F;
+  --rule-firm: #3A4846;
+  --seam:      #5FBDB4;
+  --seam-wash: #14302E;
+  --warn:      #D2714C99;
+  --warn-ink:  #E0916E;
+  --warn-wash: #2E1C14;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-sans);
+  font-size: 15px;
+  line-height: 1.62;
+  margin: 0;
+  padding-inline: var(--gut);
+  padding-block: clamp(32px, 6vw, 64px) 72px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 960px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+
+/* ── 머리 ───────────────────────────────────────────── */
+.masthead { display: flex; flex-direction: column; gap: 14px; }
+.eyebrow {
+  font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--seam); font-weight: 500;
+}
+h1 {
+  font-family: var(--f-sans); font-weight: 700; font-size: clamp(30px, 5.2vw, 44px);
+  line-height: 1.12; letter-spacing: -.02em; margin: 0; text-wrap: balance;
+}
+.standfirst {
+  font-family: var(--f-serif); font-size: clamp(16px, 2.1vw, 18px);
+  color: var(--ink-soft); max-width: 60ch; margin: 0;
+}
+.stamp {
+  font-family: var(--f-mono); font-size: 12px; color: var(--ink-faint);
+  border-top: 1px solid var(--rule); padding-top: 10px; margin-top: 4px;
+}
+
+/* ── 절 ─────────────────────────────────────────────── */
+section { display: flex; flex-direction: column; gap: 20px; }
+h2 {
+  font-size: 12px; font-family: var(--f-mono); font-weight: 600;
+  letter-spacing: .15em; text-transform: uppercase; color: var(--ink-faint);
+  margin: 0; padding-bottom: 9px; border-bottom: 1.5px solid var(--rule-firm);
+  display: flex; align-items: baseline; gap: 12px;
+}
+h2 em {
+  font-style: normal; font-family: var(--f-sans); font-size: 16px;
+  letter-spacing: -.01em; text-transform: none; color: var(--ink); font-weight: 600;
+}
+.lede { font-family: var(--f-serif); color: var(--ink-soft); margin: 0; max-width: 64ch; }
+.lede strong { color: var(--ink); font-weight: 500; }
+
+/* ── 덩이 도면 ──────────────────────────────────────── */
+.plan { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.col-head {
+  font-family: var(--f-mono); font-size: 11px; letter-spacing: .13em;
+  text-transform: uppercase; color: var(--ink-faint); padding-bottom: 2px;
+}
+.stack { display: flex; flex-direction: column; gap: 10px; }
+.block {
+  background: var(--panel); border: 1px solid var(--rule);
+  padding: 13px 15px; display: flex; flex-direction: column; gap: 3px;
+}
+.block.wide { grid-column: 1 / -1; }
+.block .name {
+  font-family: var(--f-mono); font-size: 14px; font-weight: 600;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+}
+.block .lines {
+  font-family: var(--f-mono); font-size: 12px; color: var(--ink-faint);
+  font-variant-numeric: tabular-nums; font-weight: 400;
+}
+.block .what { font-size: 13.5px; color: var(--ink-soft); line-height: 1.45; }
+.block.hub { border-color: var(--seam); background: var(--seam-wash); }
+.block.hub .name { color: var(--seam); }
+.block.hub .what { color: var(--ink); }
+.block.derived { border-style: dashed; background: transparent; }
+
+.minor { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.minor .block { padding: 10px 13px; }
+.minor .block .name { font-size: 12.5px; }
+.minor .block .what { font-size: 12.5px; }
+
+/* ── 연결부 ─────────────────────────────────────────── */
+.seams { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0; border: 1px solid var(--rule); }
+.seam { padding: 16px 17px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); display: flex; flex-direction: column; gap: 8px; }
+.seam:last-child { border-right: none; }
+.seam-no {
+  font-family: var(--f-mono); font-size: 11px; color: var(--seam); font-weight: 600;
+  letter-spacing: .08em;
+}
+.seam h3 { margin: 0; font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; }
+.seam .detail { font-family: var(--f-mono); font-size: 12px; color: var(--ink-soft); line-height: 1.72; }
+.seam .detail b { color: var(--ink); font-weight: 600; }
+.seam .note { font-size: 12.5px; color: var(--ink-faint); font-family: var(--f-serif); }
+
+/* ── 일감 색인 ──────────────────────────────────────── */
+.index { border-top: 1.5px solid var(--rule-firm); }
+.row {
+  display: grid; grid-template-columns: minmax(140px, 1.05fr) minmax(0, 1.9fr) auto;
+  gap: 8px 18px; align-items: baseline;
+  padding: 13px 0; border-bottom: 1px solid var(--rule);
+}
+.row .task { font-weight: 600; font-size: 14.5px; letter-spacing: -.01em; }
+.row .task .sub { display: block; font-weight: 400; font-size: 12.5px; color: var(--ink-faint); font-family: var(--f-serif); }
+.row .paths { font-family: var(--f-mono); font-size: 12.5px; color: var(--ink-soft); word-break: break-word; }
+.row .paths b { color: var(--seam); font-weight: 600; }
+.copy {
+  font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em;
+  border: 1px solid var(--rule-firm); background: transparent; color: var(--ink-faint);
+  padding: 4px 9px; cursor: pointer; white-space: nowrap;
+  transition: color .12s, border-color .12s, background .12s;
+}
+.copy:hover, .copy:focus-visible { color: var(--seam); border-color: var(--seam); background: var(--seam-wash); }
+.copy[data-done="1"] { color: var(--seam); border-color: var(--seam); background: var(--seam-wash); }
+:focus-visible { outline: 2px solid var(--seam); outline-offset: 2px; }
+
+.subrow { padding-left: 16px; border-left: 2px solid var(--rule); }
+
+/* ── 프롬프트 조립 ──────────────────────────────────── */
+.assembly { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 12px; align-items: stretch; }
+.stage {
+  border: 1px solid var(--rule); background: var(--panel); padding: 13px 14px;
+  display: flex; flex-direction: column; gap: 7px;
+}
+.stage .cap {
+  font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .13em;
+  text-transform: uppercase; color: var(--seam); font-weight: 600;
+}
+.stage ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.stage li { font-family: var(--f-mono); font-size: 12px; display: flex; justify-content: space-between; gap: 10px; }
+.stage li span { color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.stage .role { font-size: 12px; color: var(--ink-faint); font-family: var(--f-serif); line-height: 1.4; }
+
+.scroller { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 460px; }
+th, td { text-align: left; padding: 9px 14px 9px 0; border-bottom: 1px solid var(--rule); vertical-align: baseline; }
+th { font-family: var(--f-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); font-weight: 500; }
+td { font-size: 13.5px; }
+td.p { font-family: var(--f-mono); font-size: 12.5px; color: var(--seam); }
+
+/* ── 경고·주의 ──────────────────────────────────────── */
+.caution {
+  border-left: 3px solid var(--warn); background: var(--warn-wash);
+  padding: 14px 17px; display: flex; flex-direction: column; gap: 7px;
+}
+.caution .tag {
+  font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .13em;
+  text-transform: uppercase; color: var(--warn-ink); font-weight: 600;
+}
+.caution p { margin: 0; font-family: var(--f-serif); font-size: 14px; color: var(--ink); max-width: 66ch; }
+.caution code { font-family: var(--f-mono); font-size: 12.5px; }
+
+pre {
+  margin: 0; background: var(--panel); border: 1px solid var(--rule);
+  padding: 13px 15px; overflow-x: auto;
+  font-family: var(--f-mono); font-size: 12.5px; line-height: 1.65; color: var(--ink-soft);
+}
+pre b { color: var(--ink); font-weight: 600; }
+code { font-family: var(--f-mono); }
+
+ul.plain { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
+ul.plain li { font-family: var(--f-serif); color: var(--ink-soft); padding-left: 17px; position: relative; max-width: 66ch; }
+ul.plain li::before { content: "—"; position: absolute; left: 0; color: var(--rule-firm); font-family: var(--f-mono); }
+ul.plain li b { color: var(--ink); font-weight: 500; font-family: var(--f-sans); }
+
+.foot { font-family: var(--f-mono); font-size: 12px; color: var(--ink-faint); border-top: 1px solid var(--rule); padding-top: 16px; }
+.foot a { color: var(--seam); }
+
+@media (max-width: 640px) {
+  .plan { grid-template-columns: 1fr; }
+  .row { grid-template-columns: 1fr; gap: 6px; }
+  .copy { justify-self: start; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Study_EZ_Open · 저장소 지형도</div>
+    <h1>무엇을 고치려면<br>어디를 보는가</h1>
+    <p class="standfirst">전체를 읽지 않아도 되게 하는 지도다. 일감을 찾아 그 줄의 경로만 넘기면 된다. 그래도 되는 이유는 덩이끼리 닿는 자리가 넷뿐이고 전부 좁기 때문이다.</p>
+    <div class="stamp">2026-09-14 실측 · 약 48,000줄 · 저장소 하나 · 배포 셋</div>
+  </header>
+
+  <!-- 1. 덩이 ------------------------------------------------------ -->
+  <section>
+    <h2>01 <em>다섯 덩이와 하나의 허브</em></h2>
+    <p class="lede">세로는 제품이 둘이다 — <strong>Study_EZ</strong>(강의 한 편 → 예습·복습 덱)와 <strong>땡시</strong>(과목 하나 → 사진 문항 세트). 둘이 만나는 자리는 서버 하나뿐이다.</p>
+
+    <div class="plan">
+      <div class="stack">
+        <div class="col-head">Study_EZ</div>
+        <div class="block">
+          <div class="name">quizgen/ <span class="lines">11,876</span></div>
+          <div class="what">퀴즈 생성. 강의록 PDF → 카드. 모델이 쓴다</div>
+        </div>
+        <div class="block">
+          <div class="name">runner/ <span class="lines">7,094</span></div>
+          <div class="what">연결부. 이 노트북에서 파이프라인을 돌리고 서버로 민다</div>
+        </div>
+        <div class="block">
+          <div class="name">web/src/ <span class="lines">8,865</span></div>
+          <div class="what">프론트. studyez.kr — Vite + React</div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="col-head">땡시 (Spotter)</div>
+        <div class="block">
+          <div class="name">spotter/scripts/ <span class="lines">6,565</span></div>
+          <div class="what">재료 모으기 · 문항 조합 · 배포</div>
+        </div>
+        <div class="block">
+          <div class="name">spotter/web/ <span class="lines">6,477</span></div>
+          <div class="what">화면. 기생충학 + 해부학 넷(판 하나에서 찍는다)</div>
+        </div>
+        <div class="block derived">
+          <div class="name">spotter-dist/ <span class="lines">6,277</span></div>
+          <div class="what">배포 산출물. 손으로 고치지 마라 — 다음 배포에 덮인다</div>
+        </div>
+      </div>
+
+      <div class="block hub wide">
+        <div class="name">server/app/ <span class="lines">5,885</span></div>
+        <div class="what">FastAPI · Cloud Run. <strong>두 제품이 만나는 유일한 자리.</strong> 계정·인증·R2 서명이 여기 하나다</div>
+      </div>
+    </div>
+
+    <div class="minor">
+      <div class="block"><div class="name">bridge/ <span class="lines">3,113</span></div><div class="what">예습링크 크롬 확장</div></div>
+      <div class="block"><div class="name">platform/ <span class="lines">228</span></div><div class="what">둘이 정말 같이 쓰는 것 — session.js 하나</div></div>
+      <div class="block"><div class="name">tests/ <span class="lines">7,517</span></div><div class="what">606개. <code>pytest tests</code></div></div>
+      <div class="block"><div class="name">docs/ <span class="lines">—</span></div><div class="what">archive/ 는 닫힌 기록이다. 줄수를 안 적는다 — 그 숫자를 적는 파일이 여기 있다</div></div>
+    </div>
+  </section>
+
+  <!-- 2. 연결부 ---------------------------------------------------- -->
+  <section>
+    <h2>02 <em>연결부는 넷뿐이다</em></h2>
+    <p class="lede">이것이 <strong>일부만 봐도 되는 이유</strong>다. 가로로는 아무도 서로를 안 부른다 — 프론트가 러너를 부르지 않고, 땡시가 quizgen 을 부르지 않는다.</p>
+
+    <div class="seams">
+      <div class="seam">
+        <div class="seam-no">① 파이썬 IMPORT</div>
+        <h3>딱 한 파일</h3>
+        <div class="detail"><b>runner/deck.py → quizgen</b><br>3줄이 전부</div>
+        <div class="note">server/app 과 spotter 는 0회. 나머지는 하위 프로세스(<code>python -m quizgen.run</code>)로 간다.</div>
+      </div>
+
+      <div class="seam">
+        <div class="seam-no">② HTTP</div>
+        <h3>전부 서버를 향한다</h3>
+        <div class="detail">runner&nbsp;&nbsp;&nbsp;&nbsp;<b>9</b> 경로<br>web/src&nbsp;&nbsp;<b>16</b><br>spotter&nbsp;&nbsp;<b>10</b><br>bridge&nbsp;&nbsp;&nbsp;<b>2</b></div>
+        <div class="note">계약을 지키는 자: <code>server/tests/test_routes_golden.py</code> — 경로 61줄.</div>
+      </div>
+
+      <div class="seam">
+        <div class="seam-no">③ 파일</div>
+        <h3>runs/&lt;편&gt;/</h3>
+        <div class="detail">prep.json<br>items.raw / checked / reproduced<br>run.meta.json<br>*.apkg</div>
+        <div class="note">quizgen 이 만들고 runner 가 읽는다. 칸 뜻은 artifact-contract.md 에.</div>
+      </div>
+
+      <div class="seam">
+        <div class="seam-no">④ 공유 파일</div>
+        <h3>하나</h3>
+        <div class="detail"><b>platform/session/session.js</b><br>→ web/src/supabase.ts<br>→ spotter/web/session.js</div>
+        <div class="note">땡시 쪽은 사본이다(번들러가 없다). <code>sync_shared.py --check</code> 가 갈라지는 것을 막는다.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 일감 색인 -------------------------------------------------- -->
+  <section>
+    <h2>03 <em>일감 → 넘길 경로</em></h2>
+    <p class="lede">왼쪽 일을 할 때 오른쪽만 주면 된다. <strong>복사</strong>를 누르면 그대로 붙여 넣을 수 있다.</p>
+
+    <div class="index">
+      <div class="row">
+        <div class="task">사이트 화면<span class="sub">캘린더 · 관리 · 풀이 화면</span></div>
+        <div class="paths"><b>web/src/</b> + web/src/types.ts<br><span style="color:var(--ink-faint)">검사: cd web &amp;&amp; npx tsc --noEmit</span></div>
+        <button class="copy" data-copy="web/src/ web/src/types.ts">복사</button>
+      </div>
+      <div class="row subrow">
+        <div class="task">└ 좁히면</div>
+        <div class="paths">calendar/ 2,212 · admin/ 1,161 · lecture/ 818 · styles/ 3,248</div>
+        <button class="copy" data-copy="web/src/calendar/">복사</button>
+      </div>
+
+      <div class="row">
+        <div class="task">퀴즈 생성<span class="sub">카드를 어떻게 쓰는가</span></div>
+        <div class="paths"><b>quizgen/prompts/</b> ← 문구만 바꿀 거면 여기만<br><span style="color:var(--ink-faint)">검사: pytest tests · 고르기: quizgen.judge</span></div>
+        <button class="copy" data-copy="quizgen/prompts/">복사</button>
+      </div>
+      <div class="row subrow">
+        <div class="task">└ 코드까지</div>
+        <div class="paths">run.py 634 · validate.py 647 · reproduce.py 755 · build.py 1,117</div>
+        <button class="copy" data-copy="quizgen/ tests/">복사</button>
+      </div>
+
+      <div class="row">
+        <div class="task">땡시 문항 오류<span class="sub">답·이름표가 틀렸다</span></div>
+        <div class="paths"><b>spotter/data/</b> + spotter/scripts/build_web.py<br><span style="color:var(--ink-faint)">검사: pytest tests/test_spotter_golden.py</span></div>
+        <button class="copy" data-copy="spotter/data/ spotter/scripts/build_web.py">복사</button>
+      </div>
+
+      <div class="row">
+        <div class="task">땡시 화면</div>
+        <div class="paths">spotter/web/ <span style="color:var(--ink-faint)">(기생충학)</span> · spotter/web/anatomy/_template.html <span style="color:var(--ink-faint)">(해부학 셋)</span></div>
+        <button class="copy" data-copy="spotter/web/">복사</button>
+      </div>
+
+      <div class="row">
+        <div class="task">서버 API</div>
+        <div class="paths">server/app/routes/&lt;해당&gt;.py + server/app/models.py<br><span style="color:var(--ink-faint)">검사: cd server &amp;&amp; .venv/Scripts/python -m tests</span></div>
+        <button class="copy" data-copy="server/app/routes/ server/app/models.py">복사</button>
+      </div>
+
+      <div class="row">
+        <div class="task">덱이 안 나온다</div>
+        <div class="paths">runner/watch.py · runner/cycle.py · runner/agent.py</div>
+        <button class="copy" data-copy="runner/watch.py runner/cycle.py runner/agent.py">복사</button>
+      </div>
+
+      <div class="row">
+        <div class="task">덱이 안 올라간다</div>
+        <div class="paths">runner/publish.py · runner/gate.py</div>
+        <button class="copy" data-copy="runner/publish.py runner/gate.py">복사</button>
+      </div>
+
+      <div class="row">
+        <div class="task">예습 링크가 안 붙는다</div>
+        <div class="paths">bridge/ + server/app/preview_links.py + web/src/bridge/</div>
+        <button class="copy" data-copy="bridge/ server/app/preview_links.py web/src/bridge/">복사</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 프롬프트 -------------------------------------------------- -->
+  <section>
+    <h2>04 <em>quizgen/prompts/ 안쪽</em></h2>
+    <p class="lede">「퀴즈 생성을 바꾼다」의 대부분이 이 폴더다. 다만 <strong>읽는 방식이 다른 둘이 섞여 있어서</strong> 파일 목록만으로는 어디를 고칠지 안 보인다.</p>
+
+    <div class="assembly">
+      <div class="stage">
+        <div class="cap">CORE · 항상</div>
+        <ul>
+          <li>quality.md <span>208</span></li>
+          <li>evidence.md <span>21</span></li>
+          <li>media.md <span>35</span></li>
+          <li>language.md <span>13</span></li>
+        </ul>
+        <div class="role">한 파일만 고쳐도 모든 편에 실린다</div>
+      </div>
+      <div class="stage">
+        <div class="cap">PROFILE · 하나</div>
+        <ul>
+          <li>exam_review.md <span>13</span></li>
+          <li>prelecture.md <span>14</span></li>
+        </ul>
+        <div class="role">복습 덱이냐 예습 덱이냐</div>
+      </div>
+      <div class="stage">
+        <div class="cap">ADAPTERS · 자료에 따라</div>
+        <ul>
+          <li>lecture_pdf.md <span>16</span></li>
+          <li>annotations.md <span>8</span></li>
+          <li>past_exam.md <span>21</span></li>
+          <li>medical_past_exam <span>13</span></li>
+        </ul>
+        <div class="role">기출이 있을 때만 뒤의 둘이 붙는다</div>
+      </div>
+      <div class="stage">
+        <div class="cap">DOMAIN · 하나</div>
+        <ul>
+          <li>medical_ko.md <span>95</span></li>
+          <li>generic.md <span>4</span></li>
+        </ul>
+        <div class="role">분야에 매인 말은 전부 여기로</div>
+      </div>
+    </div>
+
+    <pre><b>prompting.py</b> 가 이 순서로 합쳐 한 장으로 만든다
+CORE(4)  →  PROFILE(1)  →  ADAPTERS(2~4)  →  DOMAIN(1)</pre>
+
+    <div class="scroller">
+      <table>
+        <thead><tr><th>단계별 과제문</th><th>하는 일</th><th>부르는 코드</th></tr></thead>
+        <tbody>
+          <tr><td class="p">plan.md <span style="color:var(--ink-faint)">41</span></td><td>① 무엇을 낼지 계획한다</td><td class="p">assemble</td></tr>
+          <tr><td class="p">cards.md <span style="color:var(--ink-faint)">67</span></td><td>② 계획대로 카드를 쓴다</td><td class="p">assemble</td></tr>
+          <tr><td class="p">revise.md <span style="color:var(--ink-faint)">83</span></td><td>갈린 슬라이드만 갈아 끼운다</td><td class="p">revise</td></tr>
+          <tr><td class="p">reproduce_answer.md <span style="color:var(--ink-faint)">24</span></td><td>질문만 주고 다시 풀린다</td><td class="p">reproduce</td></tr>
+          <tr><td class="p">reproduce_grade.md <span style="color:var(--ink-faint)">40</span></td><td>원래 답과 같은지 채점한다</td><td class="p">reproduce</td></tr>
+          <tr><td class="p">reproduce_axis.md <span style="color:var(--ink-faint)">28</span></td><td>빈칸이 무엇을 묻는지 대게 한다</td><td class="p">reproduce</td></tr>
+          <tr><td class="p">repair.md <span style="color:var(--ink-faint)">50</span></td><td>검사에 걸린 카드를 고쳐 쓴다</td><td class="p">run</td></tr>
+          <tr><td class="p">repair_leak.md <span style="color:var(--ink-faint)">14</span></td><td>앞면에 답이 샌 것을 고친다</td><td class="p">run</td></tr>
+          <tr><td class="p">judge_cloze.md <span style="color:var(--ink-faint)">38</span></td><td>두 판을 가려 놓고 판정한다</td><td class="p">judge</td></tr>
+          <tr><td class="p" style="color:var(--ink-faint)">philosophy.md <span>10</span></td><td style="color:var(--ink-faint)">지금은 아무도 안 읽는다 — 조립으로 옮겨 갔다는 안내만</td><td class="p" style="color:var(--ink-faint)">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="caution">
+      <div class="tag">여기서 조심할 것 둘</div>
+      <p><b>예시로 쓴 편으로 그 규칙을 재지 마라.</b> 2026-09-05 에 코어 예시가 한 편에 몰려 있었고, 그 편을 새 프롬프트로 돌려 보니 <b>cloze 14장 중 5장이 예시에서 그대로 나왔다.</b> 「규칙이 작동했다」로 읽을 뻔했다. 어느 편이 예시에 들었는지는 <code>prompting.py</code> 의 <code>DOMAINS</code> 위 주석에 있다 — 주제까지 봐야 한다.</p>
+      <p><b>문구가 나은지는 파이프라인 실행으로 재지 마라.</b> 같은 편 같은 자료인데 판마다 cloze 6~16장 · 재현 78~91% 로 흔들려, 만들려던 효과가 그 폭에 묻힌다. <code>python -m quizgen.judge cloze out/exp_A out/exp_B</code> — 30초 · $0.35.</p>
+    </div>
+  </section>
+
+  <!-- 5. 땡시 데이터 ----------------------------------------------- -->
+  <section>
+    <h2>05 <em>땡시 문항을 고칠 때</em></h2>
+    <p class="lede"><code>spotter/data/</code> 에 파일이 24개 있는데 <strong>대부분은 스크립트가 만드는 것</strong>이다. 손으로 고칠 것은 여섯뿐이다.</p>
+
+    <div class="scroller">
+      <table>
+        <thead><tr><th>손으로 고치는 파일</th><th>언제</th></tr></thead>
+        <tbody>
+          <tr><td class="p">question_corrections.json</td><td>족보 정답표가 틀렸을 때</td></tr>
+          <tr><td class="p">image_overrides.json</td><td>사진에 이름표가 잘못 붙었을 때</td></tr>
+          <tr><td class="p">species.csv</td><td>종 마스터 — 학명 · 감염경로 · 증상 · 치료</td></tr>
+          <tr><td class="p">specimens.csv</td><td>표본 마스터 — 충란 · 성충 · 염색 · 배율</td></tr>
+          <tr><td class="p">glossary.json</td><td>용어 별칭</td></tr>
+          <tr><td class="p">identification_pairs.csv</td><td>사진으로 구별이 불가능한 짝</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="caution">
+      <div class="tag">나머지는 산출물이다</div>
+      <p><code>generated_exams.json</code> · <code>coverage.csv</code> · <code>images.json</code> · <code>past_questions*.json</code> 은 스크립트가 만든다. <b>거기를 고치면 다음 빌드에 덮인다.</b></p>
+    </div>
+
+    <pre>python spotter/scripts/build_master.py   <b># species·specimens csv → json</b>
+python spotter/scripts/build_web.py      <b># → build/quiz_db.json</b>
+python spotter/scripts/upload_web.py     <b># → R2</b></pre>
+  </section>
+
+  <!-- 6. 안 읽어도 되는 것 ----------------------------------------- -->
+  <section>
+    <h2>06 <em>안 겹치는 것</em></h2>
+    <ul class="plain">
+      <li><b>풀이 화면 둘은 다른 제품이다.</b> Study_EZ 는 자기채점 자유회상이고 땡시는 시간 재는 다지선다다. 한쪽을 고칠 때 다른 쪽을 볼 일이 없다.</li>
+      <li><b>quizgen/prequiz/ 는 quizgen/ 의 복제가 아니다.</b> <code>..build</code>·<code>..pack</code>·<code>..validate</code> 를 import 한다 — 이미 나뉘어 있다.</li>
+      <li><b>spotter-dist/ 는 산출물이다.</b> <code>spotter/</code> 를 고치고 <code>deploy_pages.py</code> 를 돌린다.</li>
+      <li><b>docs/archive/ 는 닫힌 기록이다.</b> 현재 상태로 읽지 마라.</li>
+    </ul>
+  </section>
+
+  <!-- 7. 낡았는지 재는 법 ------------------------------------------ -->
+  <section>
+    <h2>07 <em>이 지도를 안 믿어야 할 때</em></h2>
+    <p class="lede">줄수는 금방 낡는다. 하지만 <strong>경계(02절)는 두 명령으로 다시 잴 수 있다.</strong></p>
+    <pre>python scripts/map_numbers.py            <b># 실측과 지도를 나란히</b>
+python scripts/map_numbers.py --check    <b># 다른 줄만 찍고 1 로 끝난다</b>
+
+cd server &amp;&amp; .venv/Scripts/python.exe -m tests.test_routes_golden</pre>
+    <p class="lede">늘었으면 <strong>이 지도가 아니라 구조가 틀린 것이다.</strong> 그 import 를 없앨 수 있는지 먼저 본다.</p>
+  </section>
+
+  <div class="foot">
+    저장소의 정본은 <code>docs/map.md</code> 다 · 구조가 왜 지금 모양인지는 <code>docs/layout.md</code> · 무엇을 합치고 무엇을 두었는지는 <code>docs/refactor-plan.md</code>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll(".copy").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    var text = btn.getAttribute("data-copy") || "";
+    var done = function () {
+      var was = btn.textContent;
+      btn.textContent = "복사됨";
+      btn.setAttribute("data-done", "1");
+      setTimeout(function () {
+        btn.textContent = was;
+        btn.removeAttribute("data-done");
+      }, 1400);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, done);
+    } else {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch (e) { /* 클립보드가 막힌 환경 */ }
+      document.body.removeChild(ta);
+      done();
+    }
+  });
+});
+</script>
