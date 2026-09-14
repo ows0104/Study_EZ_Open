@@ -1,0 +1,136 @@
+# 무엇을 고치려면 어디를 보는가
+
+**이 문서의 목적은 「전체를 읽지 않아도 되게」 하는 것이다.** 아래 표에서 일감을
+찾아 그 줄의 경로만 주면 된다. 왜 그래도 되는지는 §3(연결부)에 있다 — 덩이끼리
+닿는 자리가 넷뿐이고 전부 좁다.
+
+숫자는 2026-09-14 실측이다.
+
+## 1. 다섯 덩이
+
+```
+                                    줄수    한 줄 설명
+  quizgen/        퀴즈 생성        11,876   강의록 PDF → 복습·예습 카드. 모델이 쓴다
+  runner/         연결부            7,094   이 노트북에서 파이프라인을 돌리고 서버로 민다
+  server/app/     서버              5,885   FastAPI · Cloud Run. 두 제품이 만나는 유일한 자리
+  web/src/        프론트            8,865   Vite + React. studyez.kr
+  spotter/        땡시             13,042   과목 하나 → 땡시 문항 세트 (scripts 6,565 + web 6,477)
+
+  bridge/         예습링크          3,113   크롬 확장
+  platform/       공유                228   두 앱이 실제로 같이 쓰는 것 (session.js 하나)
+  tests/          검사              7,482   `pytest tests` — 604개
+  spotter-dist/   땡시 배포본       6,277   **산출물이다. 손으로 고치지 마라**
+```
+
+## 2. 일감 → 읽을 곳
+
+**왼쪽 일을 할 때 오른쪽만 주면 된다.** 나머지는 안 읽어도 된다.
+
+| 하려는 일 | 주면 되는 경로 | 검사 |
+|---|---|---|
+| **사이트 화면**을 고친다 | `web/src/` + `web/src/types.ts` | `cd web && npx tsc --noEmit` |
+| ├ 캘린더 | `web/src/calendar/` (2,212줄) | |
+| ├ 관리 화면 | `web/src/admin/` (1,161줄) | |
+| ├ 문제 푸는 화면 | `web/src/lecture/` (818줄) | |
+| └ 색·여백 | `web/src/styles/` (3,248줄) | |
+| **퀴즈 생성**을 바꾼다 | `quizgen/` + `tests/` | `pytest tests` |
+| ├ 카드를 어떻게 쓰는가 | `quizgen/prompts/` ← **여기가 대부분이다** | `quizgen.judge` |
+| ├ 단계 순서·재시도 | `quizgen/run.py` (634줄) | |
+| ├ 기계 검증 규칙 | `quizgen/validate.py` (647줄) | |
+| ├ 모델에게 풀려 보기 | `quizgen/reproduce.py` (755줄) | |
+| └ 덱 굽기·뒷면 배치 | `quizgen/build.py` (1,117줄) | |
+| **땡시 문항 오류**를 고친다 | `spotter/data/` + `spotter/scripts/build_web.py` | `pytest tests/test_spotter_golden.py` |
+| **땡시 화면**을 고친다 | `spotter/web/` (기생충학) 또는 `spotter/web/anatomy/_template.html` (해부학) | |
+| **서버 API**를 고친다 | `server/app/routes/<해당>.py` + `server/app/models.py` | `cd server && .venv/Scripts/python -m tests` |
+| **덱이 안 만들어진다** | `runner/watch.py` · `runner/cycle.py` · `runner/agent.py` | `pytest tests` |
+| **덱이 안 올라간다** | `runner/publish.py` · `runner/gate.py` | |
+| **예습 링크**가 안 붙는다 | `bridge/` + `server/app/preview_links.py` + `web/src/bridge/` | `pytest tests/test_extension_providers.py` |
+
+### 땡시 문항을 고칠 때 — 손으로 고치는 파일은 여섯뿐이다
+
+`spotter/data/` 에 24개가 있는데 **대부분은 만들어지는 것**이다. 고칠 것은 이것들이다.
+
+```
+  question_corrections.json   족보 정답표가 틀렸을 때
+  image_overrides.json        사진에 이름표가 잘못 붙었을 때
+  species.csv                 종 마스터 (학명·감염경로·증상·치료…)
+  specimens.csv               표본 마스터 (충란·성충·염색·배율…)
+  glossary.json               용어 별칭
+  identification_pairs.csv    사진으로 구별이 불가능한 짝
+```
+
+나머지(`generated_exams.json`·`coverage.csv`·`images.json`·`past_questions*.json`…)는
+스크립트가 만든다. **거기를 고치면 다음 빌드에 덮인다.**
+
+고친 뒤 도는 순서:
+
+```bash
+python spotter/scripts/build_master.py     # species.csv·specimens.csv → .json
+python spotter/scripts/build_web.py        # → build/quiz_db.json
+python spotter/scripts/upload_web.py       # → R2
+```
+
+## 3. 연결부 — 덩이끼리 닿는 자리는 넷뿐이다
+
+**이것이 「전체를 안 읽어도 되는」 이유다.**
+
+### ① 파이썬 import — 딱 한 파일
+
+    runner/deck.py  →  quizgen  (3줄)
+
+전부다. `server/app` 은 `quizgen`·`runner` 를 **하나도 import 하지 않고**, `spotter`
+도 마찬가지다. 나머지 연결은 전부 하위 프로세스(`python -m quizgen.run`)로 간다.
+
+### ② HTTP — 전부 서버를 향한다
+
+    runner/          → 서버 경로 9개    (/api/admin/lectures · prequiz-jobs · local-storage)
+    web/src/         → 서버 경로 16개
+    spotter/scripts/ → 서버 경로 10개   (/api/spotter/admin/…)
+    bridge/          → 서버 경로 2개
+
+**가로로는 아무도 서로를 안 부른다.** 프론트가 러너를 부르지 않고 땡시가
+quizgen 을 부르지 않는다. 그래서 서버 계약(`openapi`)만 안 바뀌면 한쪽만 고쳐도 된다.
+
+계약을 지키는 자: `server/tests/test_routes_golden.py` — 경로 61줄이 그대로인지 본다.
+
+### ③ 파일 — `runs/<편>/` 이 quizgen 과 runner 사이의 계약이다
+
+```
+  prep.json              quizgen.prep 이 만든다 · runner.fingerprint 가 읽는다
+  items.raw.json         ② 모델이 쓴 카드
+  items.checked.json     기계 검증 통과분
+  items.reproduced.json  모델에게 풀려 본 결과
+  run.meta.json          runner.deck.contract 가 만든다 · 서버와 문지기가 읽는다
+  *.apkg                 덱
+```
+
+칸 이름과 뜻은 [artifact-contract.md](artifact-contract.md) 와 [runs-layout.md](runs-layout.md) 에 있다.
+
+### ④ 공유 파일 — 하나
+
+    platform/session/session.js
+      → web/src/supabase.ts   import 한다
+      → spotter/web/session.js  사본 (`spotter/scripts/sync_shared.py --check` 가 지킨다)
+
+## 4. 안 겹치는 것 — 읽을 필요가 없다
+
+- **풀이 화면 둘은 다른 제품이다.** Study_EZ 는 자기채점 자유회상, 땡시는 시간
+  재는 다지선다. 한쪽을 고칠 때 다른 쪽을 볼 일이 없다
+- **`quizgen/prequiz/` 는 `quizgen/` 의 복제가 아니다.** `..build`·`..pack`·
+  `..validate` 를 import 한다 — 이미 나뉘어 있다
+- **`spotter-dist/` 는 산출물이다.** `spotter/` 를 고치고 `spotter/scripts/deploy_pages.py` 를 돌린다
+- **`docs/archive/` 는 닫힌 기록이다.** 현재 상태로 읽지 마라
+
+## 5. 이 문서를 안 믿어야 할 때
+
+숫자는 2026-09-14 실측이고 **줄수는 금방 낡는다.** 경계(§3)가 낡았는지는 이렇게 센다.
+
+```bash
+# 경계를 넘는 파이썬 import 가 늘었나
+grep -rn "^\s*\(from\|import\)\s\+\(quizgen\|runner\)" server/app spotter | wc -l   # 0 이어야 한다
+
+# 서버 경로가 바뀌었나
+cd server && .venv/Scripts/python.exe -m tests.test_routes_golden
+```
+
+**늘었으면 이 지도가 아니라 구조가 틀린 것이다.** 그 import 를 없앨 수 있는지 먼저 본다.
