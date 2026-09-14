@@ -24,6 +24,8 @@ import sys
 
 import requests
 
+import netput
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -146,8 +148,7 @@ def main():
             ext = name.rsplit(".", 1)[-1].lower()
             ctype = {"png": "image/png", "webp": "image/webp"}.get(ext, "image/jpeg")
             with open(local[name], "rb") as fh:
-                put = requests.put(urls[name], data=fh, headers={"Content-Type": ctype}, timeout=600)
-            put.raise_for_status()
+                netput.put(urls[name], fh, ctype)
             sent += 1
             if sent % 50 == 0 or sent == len(todo):
                 print(f"    {sent}/{len(todo)}")
@@ -159,10 +160,7 @@ def main():
     raw = json.dumps(items, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     r = requests.post(f"{base}/uploads", headers=auth, json={"names": [], "db": True}, timeout=60)
     r.raise_for_status()
-    put = requests.put(
-        r.json()["db"], data=raw, headers={"Content-Type": "application/json"}, timeout=600
-    )
-    put.raise_for_status()
+    netput.put(r.json()["db"], raw, "application/json")
     requests.post(f"{base}/db/refresh", headers=auth, timeout=30)
     print(f"  quiz_db.json {len(raw) / 1e6:.2f}MB · 끝")
 

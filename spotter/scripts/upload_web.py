@@ -36,6 +36,7 @@ import sys
 
 import requests
 
+import netput
 from jsonio import read_bytes, read_text
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -173,9 +174,7 @@ def main() -> None:
         urls = r.json()["images"]
         for name in chunk:
             with open(os.path.join(IMG_DIR, name), "rb") as fh:
-                put = requests.put(urls[name], data=fh, headers={"Content-Type": "image/jpeg"},
-                                   timeout=300)
-            put.raise_for_status()
+                netput.put(urls[name], fh, "image/jpeg", timeout=300)
             sent += 1
             if sent % 25 == 0 or sent == len(todo):
                 print(f"  {sent}/{len(todo)}")
@@ -186,9 +185,7 @@ def main() -> None:
         f"{api}/api/spotter/admin/uploads", headers=auth, json={"names": [], "db": True}, timeout=60
     )
     r.raise_for_status()
-    put = requests.put(r.json()["db"], data=raw,
-                       headers={"Content-Type": "application/json"}, timeout=300)
-    put.raise_for_status()
+    netput.put(r.json()["db"], raw, "application/json", timeout=300)
     counts = json.loads(raw)["meta"]["counts"]
     print(f"quiz_db.json {len(raw) / 1e6:.2f}MB  문항 {counts['questions']}개")
 
