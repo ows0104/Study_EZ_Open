@@ -2,12 +2,15 @@
 
     uv run --python 3.13 python scripts/sync_shared.py
 
-지금은 `session.js` 하나다. 원본은 Study_EZ_Open에 있고 여기 있는 것은 사본이다
-— **여기서 고치면 다음 동기화에 덮인다.**
+지금은 `session.js` 하나다. 원본은 이 저장소의 `packages/session/` 에 있고 여기
+있는 것은 사본이다 — **여기서 고치면 다음 동기화에 덮인다.**
 
-저장소를 합치지 않고 사본을 두는 이유는, 이 앱이 빌드 도구가 없는 정적 파일
-넷이라 패키지 매니저로 끌어올 방법이 없어서다. 대신 **사본이 원본과 다르면
-이 스크립트가 그 자리에서 말한다** — 조용히 갈라지는 것만 막으면 된다.
+**저장소를 합친 뒤에도 사본이 남는 이유**는 이 앱에 빌드 도구가 없어서다.
+정적 파일 넷을 그대로 내보내고 `index.html` 이 `<script src="session.js">` 로
+부르므로, 그 이름의 파일이 실제로 그 자리에 있어야 한다. 같은 저장소 안이라
+경로로 가리킬 수는 있지만 그건 번들러가 할 일이고, 여기엔 번들러가 없다.
+대신 **사본이 원본과 다르면 이 스크립트가 그 자리에서 말한다** — 조용히
+갈라지는 것만 막으면 된다.
 
     --check   덮어쓰지 않고 다른지만 본다. 배포 전에 부른다.
 """
@@ -23,10 +26,10 @@ if hasattr(sys.stdout, "reconfigure"):
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB = os.path.join(ROOT, "web")
 
-# 원본이 사는 곳. 환경 변수로 바꿀 수 있다 — 옆에 나란히 두지 않은 사람도 있다.
-PLATFORM = os.getenv("STUDYEZ_REPO", "").strip() or os.path.join(
-    os.path.dirname(ROOT), "Study_EZ_Open"
-)
+# 원본이 사는 곳. **2026-09-14 에 저장소를 합치면서 형제 폴더에서 상위로 바뀌었다** —
+# 그 전에는 `../Study_EZ_Open` 를 봤고, 합친 뒤 그 경로는 `Study_EZ_Open/Study_EZ_Open`
+# 이 되어 「원본 저장소를 못 찾았습니다」로 죽었다. 환경 변수 우선은 그대로 둔다.
+PLATFORM = os.getenv("STUDYEZ_REPO", "").strip() or os.path.dirname(ROOT)
 
 SHARED = [("packages/session/session.js", "session.js")]
 
