@@ -62,7 +62,7 @@ Cloudflare Pages 대시보드가 `web/` 을, `server/Dockerfile` 과 `deploy.ps1
 에 있다 — **하나가 깨져도 나머지가 산다.**
 
     studyez.kr            Cloudflare Pages  ← web/            (push 하면 저절로)
-    spotter.studyez.kr    GitHub Pages      ← spotter-dist/   (아래)
+    spotter.studyez.kr    Cloudflare Pages  ← spotter-dist/   (아래)
     studyez-api           Cloud Run         ← server/         (`server/deploy.ps1` 손으로)
 
 ### 땡시를 배포하는 법
@@ -75,8 +75,14 @@ Cloudflare Pages 대시보드가 `web/` 을, `server/Dockerfile` 과 `deploy.ps1
 `deploy_pages.py` 가 공용 스크립트 넷·기생충학 화면·해부학 넷을 `spotter-dist/` 로
 옮기고 `<script src>` 마다 내용 해시를 붙인다. 여기까지는 배포가 아니다.
 
-**둘째 걸음이 밖으로 나간다.** `ows0104/Spotter_Quiz` 의 Actions 가 그 저장소
-루트를 GitHub Pages 로 낸다. 그래서 `spotter-dist/` 를 거기로 밀어야 한다.
+**둘째 걸음이 밖으로 나간다.** Cloudflare Pages 가 `ows0104/Spotter_Quiz` 를
+지켜보다가 push 하면 그 루트를 그대로 낸다. 그래서 `spotter-dist/` 를 거기로 민다.
+
+> **그 저장소의 `.github/workflows/pages.yml` 은 배포하는 것이 아니다.** GitHub
+> Pages 로 내려는 옛 워크플로인데 그 저장소에 Pages 가 안 켜져 있어서
+> `HttpError: Not Found` 로 **push 마다 실패한다**(2026-09-07 부터 확인됨).
+> 실제 배포는 Cloudflare 가 하므로 사이트는 멀쩡하다 — 다만 push 할 때마다
+> 빨간 X 가 뜨니 그것을 배포 실패로 읽지 마라.
 
     git subtree push --prefix=spotter-dist https://github.com/ows0104/Spotter_Quiz.git main
 
