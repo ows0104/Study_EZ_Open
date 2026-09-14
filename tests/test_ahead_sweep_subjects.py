@@ -11,7 +11,7 @@
 import json
 from pathlib import Path
 
-from studyez import ahead
+from runner import ahead
 
 # 블럭 둘. 이름도 과목 폴더도 다르다.
 TIMETABLE = [

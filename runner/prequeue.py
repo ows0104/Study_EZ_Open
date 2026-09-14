@@ -1,7 +1,7 @@
 """관리자가 저장한 예습 링크를 받아 Pre-Quiz를 만들 자리까지 세운다.
 
-    python -m studyez prequeue              서버의 예습 링크를 훑어 준비한다
-    python -m studyez prequeue --dry-run    무엇이 준비될지만 본다
+    python -m runner prequeue              서버의 예습 링크를 훑어 준비한다
+    python -m runner prequeue --dry-run    무엇이 준비될지만 본다
 
 ## 여기만 방향이 반대다
 
@@ -13,7 +13,7 @@
       → 작년 짝을 찾아 prep + preview.md + pre_target.json
       → runs/prequeue.json
       → 세션이 편마다 /prequiz
-      → python -m studyez done <작년 run_id>   덱·문항·링크가 함께 올라간다
+      → python -m runner done <작년 run_id>   덱·문항·링크가 함께 올라간다
 
 이 명령이 **문항을 만들지는 않는다.** 만드는 것은 `/prequiz`이고 그건 모델이
 하는 일이다. 여기서 하는 것은 그 앞의 결정적인 부분 — 어느 작년 run에서 만들
@@ -38,7 +38,7 @@
 ## 예습이 필요한 강의에는 올해 필기가 없다
 
 예습은 **안 지나간 강의**에 하는 것이라 올해 필기가 아직 없다. 그런 자리는
-`studyez.ahead`가 시간표에서 세우므로 여기서도 시간표를 넘긴다. 안 넘기면
+`runner.ahead`가 시간표에서 세우므로 여기서도 시간표를 넘긴다. 안 넘기면
 정작 필요한 편이 통째로 안 잡힌다.
 
 ## 이미 만든 편을 다시 만들지 않는다
@@ -411,7 +411,7 @@ def build(targets: list[Target], runs_dir: Path, repo_root: Path, *, model: str 
           limit: int = 0, until: str = "", announce=print) -> list[Target]:
     """`READY`·`STALE`인 편을 한 편씩 만든다. 급한 것(강의 날짜가 이른 것)부터.
 
-    겹쳐 돌리지 않는 이유는 `studyez.watch.build`와 같다 — 한 편이 이미 빈 세션
+    겹쳐 돌리지 않는 이유는 `runner.watch.build`와 같다 — 한 편이 이미 빈 세션
     넷을 띄운다.
 
     **미룬 편은 이름을 적어 알린다.** `limit`으로 자르든 `until`(이 날짜까지만)로

@@ -10,7 +10,7 @@ import json
 import types
 from pathlib import Path
 
-from studyez import deck, prequeue
+from runner import deck, prequeue
 
 URL = "https://chatgpt.com/share/abc"
 

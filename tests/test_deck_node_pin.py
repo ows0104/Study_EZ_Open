@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 
-from studyez import deck
+from runner import deck
 
 SUBJECT = "기생충학"
 THIS, PREV = "260831_01", "250915_01"

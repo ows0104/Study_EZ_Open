@@ -317,7 +317,7 @@ def sha256_of(path: Path) -> str:
     **이 자리에 박는 이유**는 여기가 원본을 실제로 읽는 자리이기 때문이다. prep 을
     다시 돌리지 않는 한 이 값은 산출물보다 앞서지 않는다 — 기록이 산출물을 앞지르면
     그 편은 「갱신됨」이 되어 다시는 안 걸린다(2026-09-03 에 세 편이 그랬다).
-    읽는 쪽은 `studyez.fingerprint` 이고, 키 이름 `source_sha256` 이 둘 사이의 계약이다.
+    읽는 쪽은 `runner.fingerprint` 이고, 키 이름 `source_sha256` 이 둘 사이의 계약이다.
     """
     h = hashlib.sha256()
     with Path(path).open("rb") as fp:

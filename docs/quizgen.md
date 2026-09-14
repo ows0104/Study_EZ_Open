@@ -112,7 +112,7 @@ PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m quizgen.<모듈>
 그 밖의 당시 확인 대상 8강은 기본이다. 이 목록에 없는 미래 강의는 다시 묻는다.
 
 ```powershell
-python -m studyez watch 병리학 --run-id 260819_05 --strategy 사진 --build --force
+python -m runner watch 병리학 --run-id 260819_05 --strategy 사진 --build --force
 ```
 
 사진 다수 기준은 한 슬라이드에서 잘게 검출된 도형 수가 아니라, `lecture_figures`가 하나라도 있는

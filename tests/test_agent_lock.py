@@ -8,7 +8,7 @@
 import os
 import time
 
-from studyez import agent
+from runner import agent
 
 
 def an_agent(tmp_path):

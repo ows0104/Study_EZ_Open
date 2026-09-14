@@ -1,13 +1,13 @@
 <#
     ※ 2026-08-23부터 이 작업은 스케줄러에 등록되어 있지 않다.
-      만드는 것은 `/admin`의 「Pre-Quiz 만들기」와 `python -m studyez agent`가 한다
+      만드는 것은 `/admin`의 「Pre-Quiz 만들기」와 `python -m runner agent`가 한다
       (README §만드는 것은 버튼이 시작한다). 배선을 남겨 두는 것은 되돌릴 자리가
       필요할 때를 위해서다 — `install-scheduled-task.ps1`로 다시 걸 수 있다.
 #>
 <#
     예습 링크에서 Pre-Quiz 덱까지, 사람 없이.
 
-        python -m studyez prequeue --build
+        python -m runner prequeue --build
 
     **한 줄이다.** 예전에는 이 자리가 260줄이었다 — `claude -p "/prequiz <경로>"`로
     세션을 대신 띄우고, 권한 목록을 손으로 주고, 잡으로 감싸 시간을 재서 끊고,
@@ -15,7 +15,7 @@
 
     그 전부가 이제 파이프라인 안에 있다. `quizgen`가 모델이 필요한 자리마다 빈
     세션을 스스로 띄우고(`quizgen/session.py`), 상한·순서·시간 제한·성공 판정은
-    `studyez.prequeue`가 든다. 여기 남은 것은 로그와 스케줄러 배선뿐이다.
+    `runner.prequeue`가 든다. 여기 남은 것은 로그와 스케줄러 배선뿐이다.
 
     ## 무엇을 고르나
 
@@ -24,7 +24,7 @@
     `-Max`가 하룻밤 상한, `-WithinDays`가 "이 날짜 안의 강의만"이다.
     **미룬 편은 로그에 이름이 적힌다** — 조용히 자르면 다 만든 줄로 읽힌다.
 
-    올리는 것은 `studyez publish`이고 06:00 쓸기가 받는다.
+    올리는 것은 `runner publish`이고 06:00 쓸기가 받는다.
 
     쓰는 법:
         powershell -File scripts\nightly-prequiz.ps1 -DryRun
@@ -88,7 +88,7 @@ if (-not $Python) {
     exit 2
 }
 
-$arguments = @("-m", "studyez", "prequeue", "--max", "$Max",
+$arguments = @("-m", "runner", "prequeue", "--max", "$Max",
                "--timeout", "$($TimeoutMinutes * 60)")
 if (-not ($DryRun -or $NoBuild)) { $arguments += "--build" }
 if ($DryRun) { $arguments += "--dry-run" }

@@ -30,7 +30,7 @@ def test_족보_폴더가_없으면_크게_알린다(tmp_path, capsys):
     out = capsys.readouterr().out
     assert got == (None, {}, False)              # 돌려주는 값은 예전 그대로다
     assert "기출 카드가 한 장도 안 나온다" in out
-    assert "studyez jokbo" in out                # 어떻게 고치는지도 말한다
+    assert "runner jokbo" in out                # 어떻게 고치는지도 말한다
 
 
 def test_조각을_못_찾으면_그것도_알린다(tmp_path, capsys):

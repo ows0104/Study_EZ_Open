@@ -212,7 +212,7 @@ def main() -> None:
     check("제공자와 다른 개인 링크는 거절한다", mismatch.status_code == 422, mismatch.text)
 
     # 러너가 저장된 링크를 **되읽는** 길. 여기만 방향이 반대다 — 관리자가
-    # 저장한 링크를 보고 로컬이 Pre-Quiz를 만든다(`studyez.prequeue`).
+    # 저장한 링크를 보고 로컬이 Pre-Quiz를 만든다(`runner.prequeue`).
     listed = client.get("/api/admin/previews", headers=RUNNER)
     check("러너 토큰으로 목록을 읽는다", listed.status_code == 200, listed.text)
     rows = listed.json()["previews"]

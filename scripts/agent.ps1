@@ -1,5 +1,5 @@
 ﻿<#
-    러너를 띄운다. `python -m studyez agent`에 파이썬 찾기와 로그만 붙인 것이다.
+    러너를 띄운다. `python -m runner agent`에 파이썬 찾기와 로그만 붙인 것이다.
 
     **출력을 흘려 쓴다.** 예전 야간 스크립트는 자식이 끝난 뒤에야 로그를 썼고,
     그래서 2026-08-23 새벽에 강제 종료된 회차는 로그에 머리글만 남겼다. 러너는
@@ -46,7 +46,7 @@ if (-not $Python) {
     exit 2
 }
 
-$arguments = @("-m", "studyez", "agent")
+$arguments = @("-m", "runner", "agent")
 if ($Subject) { $arguments += $Subject }
 if ($Api) { $arguments += @("--api", $Api) }
 

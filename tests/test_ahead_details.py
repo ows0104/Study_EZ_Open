@@ -11,7 +11,7 @@
 import json
 from pathlib import Path
 
-from studyez import ahead
+from runner import ahead
 
 TIMETABLE = [
     # 실습 — 강의실 줄이 앞에 붙는다. 진짜 이름은 둘째 줄이다.

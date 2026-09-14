@@ -16,8 +16,8 @@ import os
 import re
 import shutil
 import sys
-import zipfile
 import xml.etree.ElementTree as ET
+import zipfile
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")

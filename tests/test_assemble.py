@@ -158,7 +158,7 @@ def test_물을_자리가_없으면_기본으로_간다():
     """전에는 여기서 예외를 올려 「명시적 전략을 요구」했다. 그 길이 실제로 쓰인
     적은 없다 — 러너가 자식의 stdin을 안 막아서 `isatty()`가 참으로 나왔고, 물음이
     사람 없는 자리에 떠서 `input()`이 180분 동안 잠들었다(2026-08-25 병리학/260825_03 ·
-    2026-08-31 기생충학/260831_01). 이제 stdin을 막고(`studyez.agent._run`) 이 갈래가
+    2026-08-31 기생충학/260831_01). 이제 stdin을 막고(`runner.agent._run`) 이 갈래가
     실제로 쓰인다 — 관리자 지시로 실패가 아니라 기본이다(2026-09-01)."""
     strategy, why = resolve_auto_strategy(ASK_ANNOTATION, "낮은 반복률", interactive=False)
     assert strategy == "base"

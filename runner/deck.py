@@ -1,6 +1,6 @@
 """quizgen를 부르고, 그 산출물을 서버가 아는 모양으로 옮긴다.
 
-**로컬 러너와 파이프라인의 유일한 접점이다.** `studyez/`의 다른 모듈은 quizgen를
+**로컬 러너와 파이프라인의 유일한 접점이다.** `runner/`의 다른 모듈은 quizgen를
 직접 부르지 않고 여기를 지난다. 계약이 바뀌면 `docs/artifact-contract.md`와 이
 파일이 함께 움직인다.
 
@@ -317,7 +317,7 @@ def run_main(*, pdf: str | Path, run_id: str, subject: str, lecture: str, title:
              timeout: int = DEFAULT_TIMEOUT, extra: list[str] | None = None) -> Result:
     """복습 덱 한 편. `python -m quizgen.run`을 그대로 부른다.
 
-    `--jokbo-dir`을 `runs/_jokbo`로 주면 `studyez jokbo`가 잘라 둔 조각을 스스로
+    `--jokbo-dir`을 `runs/_jokbo`로 주면 `runner jokbo`가 잘라 둔 조각을 스스로
     찾아 쓴다. 어느 조각을 물릴지는 quizgen가 목차 제목으로 대조한다 —
     로컬 러너가 따로 짝지어 줄 것이 없다.
     """
@@ -623,7 +623,7 @@ def reflag(run_dir: Path) -> dict[str, int]:
     """이미 만들어 둔 카드에 **소프트 플래그만 다시 계산해 덧붙인다.**
 
     검사 규칙이 늘었을 때 쓰는 자리다. 카드를 다시 쓰지 않고 표시만 붙이므로 모델을
-    부르지 않고, 그다음 `studyez rebuild` 가 그 표시를 카드 뒷면 경고 박스로 내보낸다.
+    부르지 않고, 그다음 `runner rebuild` 가 그 표시를 카드 뒷면 경고 박스로 내보낸다.
     관리자가 계수기를 따로 안 보고 **카드 뒷면에서 걸러낸다**고 했기 때문에, 표시가
     가야 할 자리는 `suspects.json` 이 아니라 거기다(CLAUDE.md).
 
@@ -700,7 +700,7 @@ def contract(run_dir: Path, run_id: str, title: str, kind: str) -> dict:
     """quizgen 산출물을 서버 계약으로 옮긴다. 만든 `run.meta`를 돌려준다.
 
     **여기서 아무것도 판정하지 않는다.** 세어서 적을 뿐이고, 올려도 되는지는
-    `studyez.gate`가 이 파일을 읽고 정한다. 문서를 코드보다 세게 적지 않는다는
+    `runner.gate`가 이 파일을 읽고 정한다. 문서를 코드보다 세게 적지 않는다는
     것과 같은 이유로, 세는 자리와 막는 자리를 갈라 둔다.
     """
     prefix = "pre_" if kind == PRE else ""

@@ -1,7 +1,7 @@
 """이름 다루기. 시간표와 필기가 같은 강의를 서로 다르게 부르므로 필요하다.
 
-`studyez/filenames.py`의 `canonical`·`normalize_stem`과 **같은 규칙**이다. 서버는
-따로 배포되고 `studyez/`는 다른 갈래라서 import 대신 규칙을 복제했다. 한쪽을
+`runner/filenames.py`의 `canonical`·`normalize_stem`과 **같은 규칙**이다. 서버는
+따로 배포되고 `runner/`는 다른 갈래라서 import 대신 규칙을 복제했다. 한쪽을
 고치면 다른 쪽도 고쳐야 한다.
 """
 
@@ -55,7 +55,7 @@ def normalize_stem(text: str) -> str:
 
 # 필기 파일명 꼬리의 판 번호. "_최나예v1" · "_고명재 v2" · "_오서연_v3" · "_이채현v.1".
 #
-# `studyez/filenames.py`의 `_AUTHOR_RE`와 **같은 규칙**이다(이 파일 첫머리 참고).
+# `runner/filenames.py`의 `_AUTHOR_RE`와 **같은 규칙**이다(이 파일 첫머리 참고).
 # 필기자 이름은 한글 2~4자이고 판 번호는 없을 수도 있다 — 없으면 v1이다.
 _AUTHOR_RE = re.compile(r"_\s*([가-힣]{2,4})\s*_?\s*[vV]?\s*\.?\s*(\d+)?\s*\.*\s*$")
 

@@ -9,12 +9,12 @@ R2 키를 교체할 때 그대로 따라 할 수 있는 기록이다. 2026-08-17
 | 항목 | 값 |
 |---|---|
 | Cloudflare 계정 ID | `d0ec59549fea0c13f1b7fe9f724df93b` |
-| 버킷 | `studyez` |
+| 버킷 | `runner` |
 | 공개 접근 | Disabled |
 | 위치 | Automatic · Asia Pacific |
 | Account API token | `studyez-service` |
 | 권한 | Object Read & Write |
-| 적용 대상 | `studyez` 버킷만 |
+| 적용 대상 | `runner` 버킷만 |
 | Cloud Run 리비전 | `studyez-api-00003-krf` |
 
 `meddeck-service`는 `meddeck` 버킷 전용 토큰이다. Study_EZ와 파일·키를 공유하지
@@ -30,7 +30,7 @@ Cloudflare → R2 Object Storage → Overview → Manage R2 API Tokens →
 | Token name | `studyez-service` |
 | Permissions | Object Read & Write |
 | Specify bucket(s) | Apply to specific buckets only |
-| Bucket | `studyez` |
+| Bucket | `runner` |
 | TTL | Forever |
 | Client IP filtering | 비움 |
 

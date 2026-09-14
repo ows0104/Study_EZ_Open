@@ -11,7 +11,7 @@
 
     스캔 · 최신 판 고르기 · 큐 쓰기        watch
     prep → ①② → 검증 → 재현 → 빌드        quizgen.run (하위 프로세스)
-    계약 모양으로 옮기기                    studyez.deck.contract
+    계약 모양으로 옮기기                    runner.deck.contract
 
 큐는 없어지지 않았다. `--build` 없이 부르면 **무엇을 만들지 보여 주기만** 한다 —
 한 편이 수십 분이라 밤에 무엇이 돌지 먼저 보는 자리가 있어야 한다.
@@ -24,9 +24,9 @@ quizgen 한 편이 이미 `--jobs 4`로 빈 세션 넷을 동시에 띄운다. �
 
 ## 업로드는 여기서 하지 않는다
 
-`publish`가 따로 한다. 두 자리에서 걸린다 — 편이 끝날 때 `studyez done`이 그
+`publish`가 따로 한다. 두 자리에서 걸린다 — 편이 끝날 때 `runner done`이 그
 편을, 하루 한 번 `scripts/nightly-publish.ps1`이 `publish --all`로 놓친 것을.
-무엇이 나갈지는 `studyez.gate`가 편마다 본다 — 막힌 편은 강의록만 나가고 덱은
+무엇이 나갈지는 `runner.gate`가 편마다 본다 — 막힌 편은 강의록만 나가고 덱은
 미뤄진다. 무엇을 막고 무엇을 적기만 하는지는 그쪽 첫머리에 있다.
 
 ## 이미 만든 것을 다시 만들지 않는 방법
@@ -37,7 +37,7 @@ quizgen 한 편이 이미 `--jobs 4`로 빈 세션 넷을 동시에 띄운다. �
 
 **그 표시를 찍는 길이 큐 밖에도 있어야 한다.** 예전에는 편이 끝날 무렵 `queue.json`이
 이미 다시 쓰여 그 항목이 사라져 있는 일이 잦았고, 만든 13편 중 표시가 남은 것이 한
-편뿐이었다. 지금은 `build_one()`이 끝나는 자리에서 바로 찍지만, `studyez done`이
+편뿐이었다. 지금은 `build_one()`이 끝나는 자리에서 바로 찍지만, `runner done`이
 부르는 길도 남겨 둔다 — 손으로 만든 편과 옆 저장소에서 옮겨 온 편이 그리로 온다.
 """
 
@@ -119,7 +119,7 @@ class Queue:
 
 # 족보 자리의 상태. **「없다」가 두 가지라 셋으로 가른다.**
 #
-# 2026-09-11 에 블럭이 미생물학으로 넘어갔는데 `studyez jokbo 미생물학` 을 아무도
+# 2026-09-11 에 블럭이 미생물학으로 넘어갔는데 `runner jokbo 미생물학` 을 아무도
 # 안 쳤다. 재료(`족보/2026/*.pdf`)는 있었다. 그동안 편마다 경고가 떴고 아무도
 # 안 봤고, 세 편이 기출 0 으로 나갔고, `260911_03` 은 22.9분·$8.53 을 쓴 뒤
 # **마지막 줄**에서 죽었다(`build.py` 가 기출 카드를 만들어 놓고 조각을 못 찾았다).
@@ -134,7 +134,7 @@ JOKBO_ABSENT = "absent"    # 원본이 없다 — 이 과목은 기출 없이 �
 def jokbo_source_dir(root: Path, subject: str, year: str) -> Path:
     """과목 족보 원본이 사는 자리.
 
-    **자르는 쪽과 세는 쪽이 같은 곳을 봐야 한다.** 이 경로가 `studyez jokbo` 안에
+    **자르는 쪽과 세는 쪽이 같은 곳을 봐야 한다.** 이 경로가 `runner jokbo` 안에
     글자로 박혀 있었는데, 「잘렸는가」를 묻는 자리가 늘면서 둘이 갈릴 자리가 됐다.
     """
     return Path(root) / subject / "족보" / year
@@ -164,7 +164,7 @@ def jokbo_note(state: str, subject: str) -> str:
     """그 상태를 사람에게 적어 주는 한 줄. 없으면 빈 문자열."""
     if state == JOKBO_UNCUT:
         return ("과목 족보 원본은 있는데 아직 안 잘렸다 — "
-                f"`python -m studyez jokbo {subject}` 먼저")
+                f"`python -m runner jokbo {subject}` 먼저")
     if state == JOKBO_ABSENT:
         return "이 과목은 족보 원본이 없다 — 기출 카드 없이 만들어진다"
     return ""
@@ -227,7 +227,7 @@ def build_queue(
     until: str | None = None,
     only_run_id: str = "",
 ) -> Queue:
-    """`since`~`until`은 이번 블럭의 구간이다(`studyez.blocks`).
+    """`since`~`until`은 이번 블럭의 구간이다(`runner.blocks`).
 
     이게 없으면 `필기/<올해>` 폴더가 있는 과목을 전부 훑고 날짜 오름차순으로
     자르기 때문에, 학기가 바뀌어도 지난 학기 필기가 먼저 걸린다.
@@ -237,7 +237,7 @@ def build_queue(
     만들었다는 표시(`source.json`). 마지막 것을 지나는 이유는 **표시는 있는데
     덱이 없는 자리가 실제로 있기 때문이다**(빌드가 중간에 죽은 편). 사람이 다시
     누르는 편이 바로 그 편이다. 덱이 이미 있는지는 부르는 쪽이 본다
-    (`studyez.__main__.run_watch_one`).
+    (`runner.__main__.run_watch_one`).
 
     동기화 대기(`min_age_seconds`)는 지나지 않는다. 반쯤 올라온 PDF로 만든 덱은
     지목해서 만들었든 쓸어서 만들었든 똑같이 잘려 있다.
@@ -379,7 +379,7 @@ def build_one(item: WorkItem, runs_dir: Path, repo_root: Path, *,
               extra: list[str] | None = None) -> tuple[bool, str]:
     """한 편을 끝까지 만든다. (됐나, 사람이 볼 말)
 
-    족보 조각을 손으로 물려 주지 않는다. `studyez jokbo <과목>`이 잘라 둔
+    족보 조각을 손으로 물려 주지 않는다. `runner jokbo <과목>`이 잘라 둔
     `runs/_jokbo/`를 quizgen가 목차 제목으로 스스로 대조한다 — 카드를 만들 때 본
     조각과 뒷면에 붙이는 조각이 갈리면 안 되기 때문에 그 판단이 한 곳에 있어야 한다.
 
@@ -437,7 +437,7 @@ def stamp_run(runs_dir: Path, run_id: str, pdf: Path) -> bool:
     """한 편을 표시한다. 찍었으면 True.
 
     큐를 거치지 않는 길이 필요하다. 손으로 만든 편, 옆 저장소에서 옮겨 온 편,
-    빌드가 끝난 뒤 사람이 확인하고 부르는 `studyez done`이 전부 여기로 온다.
+    빌드가 끝난 뒤 사람이 확인하고 부르는 `runner done`이 전부 여기로 온다.
     """
     if not pdf.exists():
         return False

@@ -10,7 +10,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from studyez import agent, deck
+from runner import agent, deck
 
 
 def test_마지막_단계를_줍는다(tmp_path):

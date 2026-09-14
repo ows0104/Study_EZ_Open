@@ -786,7 +786,7 @@ def main():
                 lines.append(f"    해설: {ln}" if ln == q["explanation"].splitlines()[0] else f"          {ln}")
     with open(os.path.join(DATA, "generated_preview.txt"), "w", encoding="utf-8") as fh:
         fh.write("\n".join(lines))
-    print(f"\ndata/generated_exams.json, data/generated_preview.txt 생성")
+    print("\ndata/generated_exams.json, data/generated_preview.txt 생성")
 
 
 if __name__ == "__main__":

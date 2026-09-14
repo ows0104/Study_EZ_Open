@@ -9,7 +9,7 @@ import fitz
 
 from quizgen import prep as prep_mod
 from quizgen import revise, slidediff
-from studyez import fingerprint
+from runner import fingerprint
 
 BODY = ["Life cycle of Paragonimus", "Excystation in the duodenum",
         "Adult worm in the lung"]

@@ -43,10 +43,10 @@ Redirect URLs  https://<pages 주소>/**
 
 ### 2. R2 버킷
 
-이름은 `studyez`. **공개로 열지 않는다** — 버킷이 비공개라는 것이 "로그인
+이름은 `runner`. **공개로 열지 않는다** — 버킷이 비공개라는 것이 "로그인
 필수"를 파일에도 성립시키는 유일한 수단이다.
 
-API 토큰은 **Object Read & Write**, 대상은 `studyez` 버킷만으로 좁힌다.
+API 토큰은 **Object Read & Write**, 대상은 `runner` 버킷만으로 좁힌다.
 실제 대시보드 순서, 비밀키를 로그에 남기지 않는 방법, 키 노출 시 교체 절차는
 [r2-runbook.md](r2-runbook.md)에 있다.
 

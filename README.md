@@ -24,9 +24,9 @@
 
 ```
 studyez/     로컬 러너 — 파일명 파싱, 연도 매칭, 워처, 업로드
-studyez/__main__.py  CLI 껍데기 + 사람이 한 번씩 치는 명령 (import·rebuild·jokbo·match)
-studyez/runner.py    스케줄러가 돌리는 한 사이클 (watch·prequeue·publish·done·agent)
-studyez/deck.py      그 러너와 파이프라인의 유일한 접점
+runner/__main__.py  CLI 껍데기 + 사람이 한 번씩 치는 명령 (import·rebuild·jokbo·match)
+runner/runner.py    스케줄러가 돌리는 한 사이클 (watch·prequeue·publish·done·agent)
+runner/deck.py      그 러너와 파이프라인의 유일한 접점
 quizgen/    덱을 만드는 파이프라인. 명령 하나가 PDF에서 .apkg까지 간다
 data/timetable/  학기 시간표 JSON. 캘린더가 이것만으로 그려지고, 만드는 코드는
              없다 — 요람을 사람이 옮겨 적는다 ([README](data/timetable/README.md))
@@ -65,34 +65,34 @@ python -m quizgen.run "<올해 필기 PDF>"
 ```
 
 로컬 러너가 그 명령을 강의 단위로 부르고, 나온 것을 서버 계약의 모양으로 옮긴다
-([studyez/deck.py](studyez/deck.py)). 파이프라인의 사용법과 설계·실패 기록은
+([runner/deck.py](runner/deck.py)). 파이프라인의 사용법과 설계·실패 기록은
 [docs/quizgen.md](docs/quizgen.md) 한 곳에 있다.
 
 ## 쓰는 법
 
 ```bash
-python -m studyez jokbo 병리학         # 과목 족보를 강의별로 자른다 (학기당 1회)
-python -m studyez match 병리학         # 올해 강의를 작년 강의에 붙인다
-python -m studyez match --all
+python -m runner jokbo 병리학         # 과목 족보를 강의별로 자른다 (학기당 1회)
+python -m runner match 병리학         # 올해 강의를 작년 강의에 붙인다
+python -m runner match --all
 
-python -m studyez watch                # 새 필기를 훑고 무엇을 만들지 보여준다
-python -m studyez watch --build        # 이대로 복습 덱까지 만든다
-python -m studyez watch --all-dates    # 블럭으로 안 좁힌다 (밀린 것을 몰아 만들 때)
+python -m runner watch                # 새 필기를 훑고 무엇을 만들지 보여준다
+python -m runner watch --build        # 이대로 복습 덱까지 만든다
+python -m runner watch --all-dates    # 블럭으로 안 좁힌다 (밀린 것을 몰아 만들 때)
 
-python -m studyez agent                # 러너. /admin의 「Pre-Quiz 만들기」를 기다린다
-python -m studyez agent --once         # 한 바퀴만 — 붙는지 볼 때
+python -m runner agent                # 러너. /admin의 「Pre-Quiz 만들기」를 기다린다
+python -m runner agent --once         # 한 바퀴만 — 붙는지 볼 때
 
-python -m studyez prequeue             # 관리자가 저장한 예습 링크 → 자리 세우기
-python -m studyez prequeue --build     # 이대로 예습 덱까지 만든다
-python -m studyez preview <run_id> --url <공유 링크>   # 예습 대화 하나만 손으로
+python -m runner prequeue             # 관리자가 저장한 예습 링크 → 자리 세우기
+python -m runner prequeue --build     # 이대로 예습 덱까지 만든다
+python -m runner preview <run_id> --url <공유 링크>   # 예습 대화 하나만 손으로
 
-python -m studyez import --from ../PDF2ANKI/out   # 다른 곳에서 만든 덱을 옮긴다
-python -m studyez release <run_id>     # 옮겨 온 덱의 보류를 푼다
-python -m studyez rebuild              # 이미 만든 카드로 덱만 다시 굽는다
-python -m studyez rebuild --reflag     # 검사 규칙이 늘었으면 표시도 다시 센다
+python -m runner import --from ../PDF2ANKI/out   # 다른 곳에서 만든 덱을 옮긴다
+python -m runner release <run_id>     # 옮겨 온 덱의 보류를 푼다
+python -m runner rebuild              # 이미 만든 카드로 덱만 다시 굽는다
+python -m runner rebuild --reflag     # 검사 규칙이 늘었으면 표시도 다시 센다
 
-python -m studyez done <run_id>        # 빌드를 확인한 뒤. 표시하고 그 편을 올린다
-python -m studyez publish --all        # 아직 안 올라간 것을 전부 훑는다
+python -m runner done <run_id>        # 빌드를 확인한 뒤. 표시하고 그 편을 올린다
+python -m runner publish --all        # 아직 안 올라간 것을 전부 훑는다
 ```
 
 플래그까지 다 적은 표는 [docs/commands.md](docs/commands.md)에 있다.
@@ -101,7 +101,7 @@ Python은 PATH에 없다. Anaconda를 직접 부르고 한글 출력이 깨지�
 `PYTHONIOENCODING=utf-8`을 붙인다.
 
 ```bash
-PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m studyez watch
+PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m runner watch
 ```
 
 ### 두 덱은 방향이 반대다
@@ -112,9 +112,9 @@ PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m studyez watch
 
 ```
 관리자가 /admin에 예습 링크 저장
-  → studyez prequeue           작년 짝 고르기 · preview.md
-  → studyez prequeue --build   quizgen.prequiz가 덱을 만든다
-  → studyez publish            덱·문항·링크가 함께 올라간다
+  → runner prequeue           작년 짝 고르기 · preview.md
+  → runner prequeue --build   quizgen.prequiz가 덱을 만든다
+  → runner publish            덱·문항·링크가 함께 올라간다
 ```
 
 **`publish`는 올리기 전에 링크를 서버에서 먼저 당겨 온다.** 이 저장소에서 방향이
@@ -148,7 +148,7 @@ PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m studyez watch
    └ 기출     ← 족보
 ```
 
-**덱 이름과 파일 이름은 같은 꼴이다**(`studyez.deck.deck_node`). 둘이 다르면
+**덱 이름과 파일 이름은 같은 꼴이다**(`runner.deck.deck_node`). 둘이 다르면
 Anki에서 본 것과 받아 둔 파일을 맞춰 보는 일이 사람 몫이 된다.
 
 ### 재료가 도착하면 만들기 시작한다 — 버튼은 안전장치다
@@ -182,7 +182,7 @@ Anki에서 본 것과 받아 둔 파일을 맞춰 보는 일이 사람 몫이 �
 | 예습 링크가 바뀔 때 | 서버가 저절로 | 예습 덱 일감을 세운다 |
 | 사람이 누를 때 | 캘린더 패널의 「… 덱 만들기」 | 그 한 편을 만들고 올린다 |
 | 덱이 이상할 때 | 그 덱 줄 옆의 ⟳ (관리자만) | 이미 있는 것을 버리고 다시 만든다 |
-| 편이 끝날 때 | `studyez done <run_id>` | 그 한 편 |
+| 편이 끝날 때 | `runner done <run_id>` | 그 한 편 |
 | 10분마다 | 러너가 스스로 | 놓친 것을 쓸어 올린다 (`publish`) |
 
 **자동은 하루 6편까지다**(`models.JOB_AUTO_DAILY_CAP`, 관리자 지시). 넘으면 만들지
@@ -284,7 +284,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install-agent-task.ps1 -Remove
 ② 카드 (6/16단계) · 12분째 · 이 단계 9분째 · 남은 약 18분
 ```
 
-남은 시간은 **지난 편들의 실측**에서 온다(`studyez/eta.py`) — `run.report.json`의
+남은 시간은 **지난 편들의 실측**에서 온다(`runner/eta.py`) — `run.report.json`의
 `wall_seconds`·`steps[]`, 로그의 `── ` 줄 차례, 그리고 러너가 스스로 잰 단계별 초
 (`runs/_stage_stats.jsonl`). **표본이 없으면 아무 말도 안 한다** — 지어낸 숫자를
 「예상 18분」이라고 적으면 그 뒤로 아무도 그 값을 안 믿는다.
@@ -299,7 +299,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install-agent-task.ps1 -Remove
 2026-08-17 밤 자동 실행이 조직학 3월 6편을 prep까지 끌고 갔고, 그날 올라온 병리학은
 한 편도 안 잡혔다.
 
-그래서 `studyez/blocks.py`가 **오늘 날짜로 시간표에 물어** 이번 블럭의 구간을 정하고,
+그래서 `runner/blocks.py`가 **오늘 날짜로 시간표에 물어** 이번 블럭의 구간을 정하고,
 그 안에 든 강의만 큐에 세운다. 시간표를 못 읽거나 오늘이 어느 블럭에도 안
 들어가면 **큐를 세우지 않고 2로 끝난다.** 열어 두는 쪽이 훨씬 비싸다.
 사람이 `--since`/`--until`로 구간을 주거나 `--all-dates`로 푼다.
@@ -317,7 +317,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install-agent-task.ps1 -Remove
 [260303_02] 건강과 질병(박영수)
 ```
 
-`studyez/filenames.py`의 `EXCLUDED_SUBJECTS`(정확한 이름)와 `EXCLUDED_PREFIXES`
+`runner/filenames.py`의 `EXCLUDED_SUBJECTS`(정확한 이름)와 `EXCLUDED_PREFIXES`
 (`인간사회의료 1`·`2`처럼 번호가 붙어 늘어나는 것)에 있고, 이름을 직접 대도 막힌다.
 `# 교과서`, `# 족보 오류토의`처럼 `#`·`_`로 시작하는 폴더도 과목이 아니므로 뺀다.
 
@@ -343,7 +343,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install-agent-task.ps1 -Remove
   정규식이 통째로 실패한다
 - 같은 강의의 v1·v3이 공존하고, Synology 충돌 사본과 연도가 어긋난 파일이 섞인다
 
-이 전부를 `studyez/filenames.py`가 처리하고, 읽지 못한 파일은 **반드시 이유와
+이 전부를 `runner/filenames.py`가 처리하고, 읽지 못한 파일은 **반드시 이유와
 함께 보고한다.**
 
 ## 족보
@@ -357,7 +357,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install-agent-task.ps1 -Remove
                  p78~ 실습 시험 블록 (같은 강의 번호를 다시 훑는다)
 ```
 
-`studyez jokbo <과목>`이 `quizgen.jokbo`를 불러 이걸 강의별 조각으로 자르고
+`runner jokbo <과목>`이 `quizgen.jokbo`를 불러 이걸 강의별 조각으로 자르고
 `runs/_jokbo/<과목>/`에 둔다. 문항·정답·이의제기를 짝지어 붙이고 연도별 반복률과
 교수 교체 여부까지 계산해 두므로, 그 판정이 복습 덱의 전략(필기 중심이냐 족보
 중심이냐)을 가른다.
@@ -381,7 +381,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install-agent-task.ps1 -Remove
 
 ## 배포는 검문을 통과한 것만 자동으로 나간다
 
-`publish`가 편마다 [studyez/gate.py](studyez/gate.py)에 물어보고, 막힌 편은
+`publish`가 편마다 [runner/gate.py](runner/gate.py)에 물어보고, 막힌 편은
 **강의록만 내보내고 덱·run-meta·예습은 미룬다.** 통째로 멈추지 않는 이유는
 강의록이 그 검토와 무관한 자료이고, 먼저 나가야 캘린더 칸이 열리기 때문이다.
 

@@ -2,7 +2,7 @@
 
 2026-09-07에 기생충학 실습 5편이 **전부 기출 0장**으로 나간 것을 찾았다. 겹이 둘이었다.
 
-① **재료가 없었다.** `studyez jokbo` 는 올해 폴더의 PDF 한 개만 자른다. 실습 문항은
+① **재료가 없었다.** `runner jokbo` 는 올해 폴더의 PDF 한 개만 자른다. 실습 문항은
    그 안의 실습 구역(2025 회차 40문항)이 전부였고, 해마다 누적되는 별도 실습 족보
    (2023~2015 · 8회차)는 자르는 자리에 아예 안 들어왔다.
 ② **그 40문항마저 안 붙었다.** `find_jokbo` 는 실습 강의에 PRAC 조각만 후보로 남기는데
@@ -243,7 +243,7 @@ def _index_with_sources(tmp_path, sources: list[dict]):
 
 
 def test_지난번_실습_족보를_되살린다(tmp_path):
-    from studyez.__main__ import remembered_practical
+    from runner.__main__ import remembered_practical
 
     pdf = tmp_path / "실습.pdf"
     _two_page_pdf(pdf, ["A"])
@@ -254,7 +254,7 @@ def test_지난번_실습_족보를_되살린다(tmp_path):
 
 
 def test_지난번_실습_족보가_사라졌으면_이름을_돌려준다(tmp_path):
-    from studyez.__main__ import remembered_practical
+    from runner.__main__ import remembered_practical
 
     index = _index_with_sources(
         tmp_path, [{"name": "없어진.pdf", "path": str(tmp_path / "없어진.pdf"), "pages": 1}])

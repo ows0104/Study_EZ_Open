@@ -81,7 +81,7 @@ def _load(path: Path) -> Any | None:
 def hold_reason(run_dir: Path) -> str:
     """이 자리가 보류돼 있으면 사유를, 아니면 빈 문자열.
 
-    `studyez import`가 옆 저장소에서 옮겨 온 덱에 이걸 놓는다 — 다른 곳에서 만든
+    `runner import`가 옆 저장소에서 옮겨 온 덱에 이걸 놓는다 — 다른 곳에서 만든
     것이라 아직 이 사이트의 눈으로 본 적이 없기 때문이다. 사람이 보고 `studyez
     release <run_id>`로 푼다.
     """

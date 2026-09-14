@@ -1,8 +1,8 @@
 """서버에 적힌 일감을 집어 와 한 편씩 만들고 올린다. **야간 스케줄러를 대신한다.**
 
-    python -m studyez agent              계속 돈다 (Ctrl+C로 멈춘다)
-    python -m studyez agent --once       한 바퀴만 — 붙는지 볼 때
-    python -m studyez agent 병리학        쓸기를 이 과목으로 좁힌다
+    python -m runner agent              계속 돈다 (Ctrl+C로 멈춘다)
+    python -m runner agent --once       한 바퀴만 — 붙는지 볼 때
+    python -m runner agent 병리학        쓸기를 이 과목으로 좁힌다
 
 ## 왜 크론을 걷어냈나
 
@@ -26,11 +26,11 @@
 
     일꾼 w1 ─┐
     일꾼 w2 ─┤ POST …/prequiz-jobs/claim?worker=<이름>   일감 하나 (없으면 null)
-             │   → 예습: studyez prequeue <과목> --run-id <올해> --build --max 1
-             │     복습: studyez watch    <과목> --run-id <올해> --build
-             │   → studyez publish  <과목> --run-id <올해>
+             │   → 예습: runner prequeue <과목> --run-id <올해> --build --max 1
+             │     복습: runner watch    <과목> --run-id <올해> --build
+             │   → runner publish  <과목> --run-id <올해>
              │   → PUT …/prequiz-jobs/<id>   queued → running → done|failed
-    쓸기 ────┘ 10분마다 studyez publish — **빌드와 겹쳐 돈다**
+    쓸기 ────┘ 10분마다 runner publish — **빌드와 겹쳐 돈다**
 
 ## 왜 실을 나눴나 (2026-09-01)
 
@@ -63,7 +63,7 @@
 일감이 없으면 `SWEEP_SECONDS`마다 `publish`를 한 번 돌린다. 06:00 쓸기가 받던 것들이
 그대로 여기로 온다 — 강의록, 복습 덱, 끊긴 업로드, `release`로 풀린 편.
 
-**한 번에 한 편이다.** 한 편이 이미 빈 세션 넷을 띄운다(`studyez.watch.build`와
+**한 번에 한 편이다.** 한 편이 이미 빈 세션 넷을 띄운다(`runner.watch.build`와
 같은 이유). 서버도 `running`이 있으면 새 일감을 안 준다.
 
 ## 한도는 실패가 아니다 (2026-09-02)
@@ -361,7 +361,7 @@ class Agent:
     def stage_of(self, wrapper_log: Path, job: Job) -> str:
         """지금 어느 단계인가. 두 곳을 본다 — 감싼 명령의 로그와 빌드의 로그.
 
-        빌드는 자기 출력을 로그 파일로만 흘리므로(`studyez.deck._spawn`), 감싼
+        빌드는 자기 출력을 로그 파일로만 흘리므로(`runner.deck._spawn`), 감싼
         쪽만 보면 15분 동안 빈손이다. **어느 파일인지가 갈래마다 다르다** — 복습은
         올해 자리의 `pipeline.log`, 예습은 작년 자리의 `prequiz.log`다. 작년 짝은
         `prepare`가 적어 둔 `pre_target.json`에서 찾는다.
@@ -403,10 +403,10 @@ class Agent:
         「덱을 못 만들었다」가 적힌다 — 사람은 다시 만들라고 눌렀을 뿐인데 실패로 보인다.
         """
         if job.kind == deck.MAIN:
-            argv = [sys.executable, "-m", "studyez", "watch", job.subject,
+            argv = [sys.executable, "-m", "runner", "watch", job.subject,
                     "--run-id", job.run_id, "--build"]
         else:
-            argv = [sys.executable, "-m", "studyez", "prequeue", job.subject,
+            argv = [sys.executable, "-m", "runner", "prequeue", job.subject,
                     "--run-id", job.run_id, "--build", "--max", "1"]
         if job.force:
             argv.append("--force")
@@ -434,7 +434,7 @@ class Agent:
         """「이 자리는 지금 만드는 중」 표시를 만진다. 쓸기가 이것을 본다.
 
         **프로세스 밖으로 나가는 표시라 파일이다.** 쓸기는 하위 프로세스
-        (`studyez publish`)라 러너의 메모리를 볼 수 없다.
+        (`runner publish`)라 러너의 메모리를 볼 수 없다.
         """
         for target in self.building_seats(job):
             try:
@@ -514,7 +514,7 @@ class Agent:
         up_log = self.runs_dir / f"agent.{job.run_id}.publish.log"
         with self._uploading:
             code, lines = self._run(
-                [sys.executable, "-m", "studyez", "publish", job.subject, "--run-id", job.run_id],
+                [sys.executable, "-m", "runner", "publish", job.subject, "--run-id", job.run_id],
                 up_log)
         if code != 0:
             why = summary(lines) or f"종료 코드 {code}"
@@ -648,7 +648,7 @@ class Agent:
         if note:
             self.say(f"[{stamp()}] 쓸기 — {note}")
         for subject in subjects or [""]:
-            argv = [sys.executable, "-m", "studyez", "publish"]
+            argv = [sys.executable, "-m", "runner", "publish"]
             argv += [subject] if subject else ["--all"]
             # **과목마다 로그를 따로 쓴다.** `_run`이 파일을 덮어쓰기로 열어서,
             # 한 파일에 몰면 마지막 과목 것만 남는다.
@@ -784,7 +784,7 @@ class Agent:
 def kill_tree(proc: subprocess.Popen) -> None:
     """하위 프로세스를 **나무째** 내린다. 자식만 죽이면 손자가 남는다.
 
-    우리가 띄우는 것은 파이썬 하나(`studyez prequeue` · `studyez watch`)지만, 그
+    우리가 띄우는 것은 파이썬 하나(`runner prequeue` · `runner watch`)지만, 그
     아래에 quizgen가 띄운 **빈 세션이 넷까지** 있다(`claude -p`). `proc.kill()`은
     가운데 하나만 죽이므로, 그 넷은 부모를 잃은 채 계속 돌며 토큰을 쓴다 —
     멈추라고 누른 사람이 막으려던 것이 정확히 그것이다.

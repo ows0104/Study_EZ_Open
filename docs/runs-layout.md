@@ -155,7 +155,7 @@ Pre-Quiz는 작년 필기로 만들어서 산출물이 `runs/<작년 run_id>/`�
 
 ## 이행 — 값이 작지 않다
 
-`runs/<id>/<파일>`을 직접 읽는 자리가 **`studyez/` 안에만 62곳, 파일 10개**다
+`runs/<id>/<파일>`을 직접 읽는 자리가 **`runner/` 안에만 62곳, 파일 10개**다
 (`publish`·`gate`·`deck`·`agent`·`prequeue`·`watch`·`ahead`·`preview`·`runner`·
 `__main__`). `CHOSEN`을 거치게 하면 전부 지나간다.
 

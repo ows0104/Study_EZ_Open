@@ -47,7 +47,7 @@ from .textutil import answer_runs, collapse_cloze, norm_key
 DEFECT_REASONS = ("question_ambiguous", "needs_options", "answer_underspecified")
 
 # 축 검사(`reproduce axis`)가 가른 것. **`DEFECT_REASONS` 에 넣지 않는다** —
-# 수선 고리는 태우되 남아도 배포를 막지는 않는다. 문지기(`studyez.gate`)가 보는
+# 수선 고리는 태우되 남아도 배포를 막지는 않는다. 문지기(`runner.gate`)가 보는
 # `reproduce_defects` 는 `DEFECT_REASONS` 로만 서고, 그 자리는 「사람이 열어 봐야
 # 아는 결함」이라는 뜻으로 굳어 있다. 축 검사는 2026-09-06 에 붙었고 **한 편에서만
 # 재 봤다** — 그 값으로 배포를 미루기에는 이르다.
@@ -915,7 +915,7 @@ def counts(apkg: Path) -> dict:
     """.apkg 를 다시 열어 **실제로 든 것**을 센다. 기대값을 받지 않는다.
 
     `verify` 에서 떼어낸 이유는 세는 자리와 판정하는 자리가 다르기 때문이다.
-    배포 직전 검문(`studyez.gate`)은 빌드가 끝난 한참 뒤에 파일만 보고 다시 세야
+    배포 직전 검문(`runner.gate`)은 빌드가 끝난 한참 뒤에 파일만 보고 다시 세야
     하는데, 그때는 기대값이 손에 없고 오히려 **덱이 스스로 주장하는 수와 어긋나는지**
     가 알고 싶은 것이다.
     """
@@ -1080,7 +1080,7 @@ def main(argv=None) -> int:
             for cand in found:
                 print(f"    --jokbo-dir {cand.as_posix()}")
         else:
-            print("  index.json 을 어디서도 못 찾았다 — `python -m studyez jokbo <과목>` 부터.")
+            print("  index.json 을 어디서도 못 찾았다 — `python -m runner jokbo <과목>` 부터.")
         if not args.no_jokbo_images:
             print("  일부러 빼려면 --no-jokbo-images 를 붙여라.")
             return 1

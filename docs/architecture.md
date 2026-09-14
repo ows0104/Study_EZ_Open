@@ -129,7 +129,7 @@ Main-Quiz는 `.apkg` 다운로드뿐이다. SRS와 이미지 오클루전이 Ank
 | | 무엇 | 상태 |
 |---|---|---|
 | 1 | 관리자 화면의 `/share/` 링크 입력 칸 | 됨 |
-| 2 | 공유 페이지 → `preview.md` (`studyez preview`) | 실물 링크로 검증됨 |
+| 2 | 공유 페이지 → `preview.md` (`runner preview`) | 실물 링크로 검증됨 |
 | 3 | `quizgen/prequiz/prompts/must.md` — 무엇을 물을지 | 됨 |
 | 4 | `quizgen.prequiz.run --note preview.md` 가 세 번째 채널로 읽기 | 됨 |
 
@@ -164,13 +164,13 @@ share 페이지는 남의 서비스라 구조가 언제든 바뀐다. **실패 �
                   p78~ 실습 시험 블록
 ```
 
-`studyez jokbo <과목>`이 `quizgen.jokbo`를 불러 이걸 강의별 조각으로 자른다.
+`runner jokbo <과목>`이 `quizgen.jokbo`를 불러 이걸 강의별 조각으로 자른다.
 그러면 족보 채널이 필기 속 캡처 이미지가 아니라 원본 PDF가 되고, 경계 판정이
 필요 없어진다.
 
 **어느 조각을 어느 강의에 물릴지는 로컬 러너가 정하지 않는다.** quizgen가 카드를
 만들 때 목차 제목으로 대조한다 — 두 곳에서 각각 짝지으면 카드가 본 조각과 뒷면에
-붙는 조각이 갈릴 수 있다. 한동안 `studyez/jokbo.py`가 `links.json`으로 따로 짝지어
+붙는 조각이 갈릴 수 있다. 한동안 `runner/jokbo.py`가 `links.json`으로 따로 짝지어
 넘겨줬는데, 그 자리를 없앴다.
 
 작년 자료가 필요한 곳은 이제 **Pre-Quiz뿐**이다. 강의 전에 푸는 퀴즈라 올해
@@ -204,8 +204,8 @@ share 페이지는 남의 서비스라 구조가 언제든 바뀐다. **실패 �
 
 ## 배포는 검문을 통과한 것만 자동으로 나간다
 
-`publish`가 편마다 `studyez.gate`에 물어보고, 막힌 편은 강의록만 내보내고 덱은
-미룬다. 무엇을 막고 무엇을 적기만 하는지는 [studyez/gate.py](../studyez/gate.py)
+`publish`가 편마다 `runner.gate`에 물어보고, 막힌 편은 강의록만 내보내고 덱은
+미룬다. 무엇을 막고 무엇을 적기만 하는지는 [runner/gate.py](../runner/gate.py)
 첫머리에 있다.
 
 **파이프라인이 이미 막는 것은 검문에서 다시 막지 않는다.** quizgen는 재현 검사를

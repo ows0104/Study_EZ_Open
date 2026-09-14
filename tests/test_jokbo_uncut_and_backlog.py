@@ -2,7 +2,7 @@
 
 둘 다 2026-09-12 에 실물에서 나왔다.
 
-**① 두 가지 0.** 블럭이 미생물학으로 넘어갔는데 `studyez jokbo 미생물학` 을
+**① 두 가지 0.** 블럭이 미생물학으로 넘어갔는데 `runner jokbo 미생물학` 을
 아무도 안 쳤다. 원본 PDF 는 `족보/2026/` 에 있었다. 그동안 화면에 뜬 것은
 「족보가 아직 안 잘려 있다」 한 줄이었고 편마다 떴고 아무도 안 봤다. 세 편이
 기출 0 으로 나갔고(그 과목 족보의 반복률은 32~74% 다), `260911_03` 은
@@ -23,7 +23,7 @@
 import types
 from pathlib import Path
 
-from studyez import watch
+from runner import watch
 
 
 def _world(tmp_path: Path, *, cut: bool, source: bool) -> tuple[Path, Path]:
@@ -72,21 +72,21 @@ def test_두_0은_다른_말로_나온다(tmp_path):
     absent = watch.jokbo_note(watch.JOKBO_ABSENT, "미생물학")
     assert uncut != absent
     # 고칠 수 있는 쪽에는 고치는 명령이 실려 있어야 한다.
-    assert "studyez jokbo 미생물학" in uncut
-    assert "studyez jokbo" not in absent
+    assert "runner jokbo 미생물학" in uncut
+    assert "runner jokbo" not in absent
     assert watch.jokbo_note(watch.JOKBO_READY, "미생물학") == ""
 
 
 # ------------------------------------------------------------------ 자르는 쪽과 세는 쪽
 
 def test_자르는_쪽이_세는_쪽과_같은_함수로_폴더를_찾는다(tmp_path, monkeypatch):
-    """`studyez jokbo` 안에 경로가 글자로 박혀 있던 자리다.
+    """`runner jokbo` 안에 경로가 글자로 박혀 있던 자리다.
 
     갈리면 조용히 어긋난다 — 자르는 쪽은 원본을 찾는데 세는 쪽은 못 찾아서
     UNCUT 이 안 뜨고, 그러면 이 검사 전체가 무력해진다. 그래서 **같은 함수를
     부르는지**를 본다. 폴더가 맞는지만 보면 두 곳에 같은 글자를 적어 두어도 통과한다.
     """
-    from studyez import __main__ as cli
+    from runner import __main__ as cli
 
     root, runs = _world(tmp_path, cut=False, source=True)
     asked: list[tuple] = []
@@ -163,53 +163,53 @@ def _watch_one_args(root, runs, **over):
 
 
 def _stub_queue(monkeypatch):
-    from studyez import runner
-    monkeypatch.setattr(runner.watch, "build_queue", lambda **_k: _one_item_queue())
-    return runner
+    from runner import cycle
+    monkeypatch.setattr(cycle.watch, "build_queue", lambda **_k: _one_item_queue())
+    return cycle
 
 
 def test_안_잘린_족보면_시작도_안_한다(tmp_path, monkeypatch, capsys):
     """**22.9분 뒤가 아니라 여기서 멈춘다.** `260911_03` 이 그 값을 실제로 버렸다."""
     root, runs = _world(tmp_path, cut=False, source=True)
-    runner = _stub_queue(monkeypatch)
+    cycle = _stub_queue(monkeypatch)
     # 문이 열렸으면 여기를 지난다. 안 지나는 것이 이 검사의 본문이다.
-    monkeypatch.setattr(runner.deck, "apkg_of", lambda *_a, **_k: pytest_fail())
+    monkeypatch.setattr(cycle.deck, "apkg_of", lambda *_a, **_k: pytest_fail())
 
-    code = runner.run_watch_one(_watch_one_args(root, runs))
+    code = cycle.run_watch_one(_watch_one_args(root, runs))
     out = capsys.readouterr().out
     assert code == 1                                  # 러너가 이 값으로 실패를 적는다
-    assert "studyez jokbo 미생물학" in out             # 한 줄이면 풀린다는 것을 같이 준다
+    assert "runner jokbo 미생물학" in out             # 한 줄이면 풀린다는 것을 같이 준다
     assert "--no-jokbo" in out                        # 넘어갈 길도 같이 준다
 
 
 def test_족보_원본이_없는_과목은_안_막는다(tmp_path, monkeypatch):
     """미생물학 실습 기출이 실제로 이 자리다. 막으면 그 편은 영영 안 만들어진다."""
     root, runs = _world(tmp_path, cut=False, source=False)
-    runner = _stub_queue(monkeypatch)
+    cycle = _stub_queue(monkeypatch)
     reached: list[str] = []
-    monkeypatch.setattr(runner.deck, "apkg_of", lambda *_a, **_k: reached.append("갔다"))
+    monkeypatch.setattr(cycle.deck, "apkg_of", lambda *_a, **_k: reached.append("갔다"))
 
-    runner.run_watch_one(_watch_one_args(root, runs))
+    cycle.run_watch_one(_watch_one_args(root, runs))
     assert reached == ["갔다"]                        # 족보 문에 안 걸렸다
 
 
 def test_no_jokbo면_안_잘려_있어도_간다(tmp_path, monkeypatch):
     root, runs = _world(tmp_path, cut=False, source=True)
-    runner = _stub_queue(monkeypatch)
+    cycle = _stub_queue(monkeypatch)
     reached: list[str] = []
-    monkeypatch.setattr(runner.deck, "apkg_of", lambda *_a, **_k: reached.append("갔다"))
+    monkeypatch.setattr(cycle.deck, "apkg_of", lambda *_a, **_k: reached.append("갔다"))
 
-    runner.run_watch_one(_watch_one_args(root, runs, no_jokbo=True))
+    cycle.run_watch_one(_watch_one_args(root, runs, no_jokbo=True))
     assert reached == ["갔다"]
 
 
 def test_이미_잘려_있으면_안_막는다(tmp_path, monkeypatch):
     root, runs = _world(tmp_path, cut=True, source=True)
-    runner = _stub_queue(monkeypatch)
+    cycle = _stub_queue(monkeypatch)
     reached: list[str] = []
-    monkeypatch.setattr(runner.deck, "apkg_of", lambda *_a, **_k: reached.append("갔다"))
+    monkeypatch.setattr(cycle.deck, "apkg_of", lambda *_a, **_k: reached.append("갔다"))
 
-    runner.run_watch_one(_watch_one_args(root, runs))
+    cycle.run_watch_one(_watch_one_args(root, runs))
     assert reached == ["갔다"]
 
 

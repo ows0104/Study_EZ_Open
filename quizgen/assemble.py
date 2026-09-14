@@ -271,7 +271,7 @@ def resolve_auto_strategy(strategy: str, why: str, *, interactive: bool | None =
     그 길로 실제로 간 실행이 한 번도 없다. 러너가 자식의 stdin을 안 막아서
     `isatty()`가 참으로 나왔고, 그래서 물음이 화면도 사람도 없는 자리에 떠서
     `input()`이 180분 동안 잠들었다(2026-08-25 병리학/260825_03 · 2026-08-31
-    기생충학/260831_01). stdin은 러너 쪽에서 막았고(`studyez.agent._run`), 이제
+    기생충학/260831_01). stdin은 러너 쪽에서 막았고(`runner.agent._run`), 이제
     이 갈래가 실제로 쓰인다 — **그때 실패가 아니라 기본으로 만든다.**
 
     사람이 고르고 싶으면 `--strategy 필기`처럼 명시한다. 고른 값은 폴더에
@@ -301,7 +301,7 @@ def resolve_auto_strategy(strategy: str, why: str, *, interactive: bool | None =
 # 족보를 못 찾았을 때 무슨 말을 하는가. 돌려주는 값은 예전과 같다 — 말만 는다.
 NO_JOKBO_DIR = ("⚠ 족보를 물리지 않았다 — {index} 가 없다.\n"
                 "   이대로 만들면 **기출 카드가 한 장도 안 나온다.**\n"
-                "   과목 족보를 자르려면: python -m studyez jokbo <과목>\n"
+                "   과목 족보를 자르려면: python -m runner jokbo <과목>\n"
                 "   이미 잘라 뒀으면 --jokbo-dir 로 그 폴더를 지정해라.")
 NO_JOKBO_MATCH = ("⚠ 이 강의에 맞는 족보 조각을 못 찾았다 (최고 일치도 {score:.2f} < 0.25).\n"
                   "   기출 카드가 안 나온다. --jokbo 로 조각을 직접 지정할 수 있다.")

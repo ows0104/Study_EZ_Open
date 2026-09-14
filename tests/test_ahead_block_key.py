@@ -13,7 +13,7 @@
 import json
 from pathlib import Path
 
-from studyez import ahead, filenames
+from runner import ahead, filenames
 
 TIMETABLE = [
     # 기생충학 — 블럭 첫날. 올해 필기가 아직 없는 칸이다.

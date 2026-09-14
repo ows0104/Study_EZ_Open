@@ -5,7 +5,7 @@
 있었다 — 폴더를 통째로 지우고 다시 채우는 사이에 업로드가 그 폴더를 읽었다.
 """
 
-from studyez import deck
+from runner import deck
 
 
 def _media(run_dir, numbers):

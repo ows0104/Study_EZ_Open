@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from studyez import deck, gate
+from runner import deck, gate
 
 
 CARDS = [

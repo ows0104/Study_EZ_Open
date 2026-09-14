@@ -93,7 +93,7 @@ export function AdminPage() {
       {queued > 0 && !runnerAlive(overview.runner) ? (
         <p className="notice is-error">
           덱 일감 {queued}개가 기다리는데 <strong>러너가 안 붙어 있습니다.</strong> 만드는 것은
-          노트북이 합니다 — 거기서 <code>python -m studyez agent</code>를 띄우면 이어서 집어 갑니다.
+          노트북이 합니다 — 거기서 <code>python -m runner agent</code>를 띄우면 이어서 집어 갑니다.
         </p>
       ) : null}
 

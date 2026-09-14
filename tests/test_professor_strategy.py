@@ -1,6 +1,6 @@
 """교수별 전략이 붙는지. 표 자체는 관리자 판단이고 여기서는 배선만 본다."""
 
-from studyez import watch
+from runner import watch
 
 
 def item(professors=(), reason="new", **kw):

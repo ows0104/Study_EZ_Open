@@ -4,7 +4,7 @@
 판 번호가 붙어 있다(`[260811_01] 세포 손상_최나예v2.pdf`). 관리 화면의 「퀴즈」 탭이
 그 값을 지금 필기의 판과 견줘 **옛 자료로 구운 덱**을 표시한다.
 
-규칙은 `studyez/filenames.py`의 `_AUTHOR_RE`와 같다. 서버는 따로 배포되어 그쪽을
+규칙은 `runner/filenames.py`의 `_AUTHOR_RE`와 같다. 서버는 따로 배포되어 그쪽을
 import 할 수 없어 복제해 두었고, 한쪽을 고치면 다른 쪽도 고쳐야 한다.
 
     server/.venv/Scripts/python.exe -m tests.test_source_version

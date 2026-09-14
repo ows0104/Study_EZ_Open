@@ -1,6 +1,6 @@
 """공유된 예습 대화를 내려받아 `preview.md`로 만든다.
 
-    python -m studyez preview <run_id> --url https://chatgpt.com/share/...
+    python -m runner preview <run_id> --url https://chatgpt.com/share/...
 
 ## 흐름
 
@@ -357,7 +357,7 @@ def fetch(url: str, timeout: int = 30) -> Preview:
     if not turns:
         raise SystemExit(
             f"공유 페이지에서 대화를 못 찾았다: {url}\n"
-            "구조가 바뀌었을 수 있다. studyez/preview.py의 _extract를 손봐야 한다.\n"
+            "구조가 바뀌었을 수 있다. runner/preview.py의 _extract를 손봐야 한다.\n"
             "임시로는 대화를 직접 복사해 runs/<run_id>/preview.md에 붙여 넣어도 된다.")
     if preview.chars < MIN_CHARS:
         raise SystemExit(

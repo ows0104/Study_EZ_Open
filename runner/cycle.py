@@ -1,6 +1,6 @@
 """야간 러너 한 사이클. `__main__` 이 얹는 CLI 껍데기와 갈라 둔다.
 
-`studyez` 의 서브커맨드는 성격이 둘로 갈린다 — **스케줄러가 돌리는 것**과
+`runner` 의 서브커맨드는 성격이 둘로 갈린다 — **스케줄러가 돌리는 것**과
 **사람이 한 번씩 치는 것**이다. 이 모듈은 앞쪽이다.
 
     watch     새 필기를 스캔해 덱을 만든다            (21:30)
@@ -26,7 +26,7 @@ from datetime import date as Date
 from datetime import timedelta
 from pathlib import Path
 
-from studyez import agent, blocks, deck, filenames, prequeue, publish, watch
+from runner import agent, blocks, deck, filenames, prequeue, publish, watch
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -135,7 +135,7 @@ def run_watch_one(args) -> int:
     jokbo = watch.jokbo_state(runs_dir, item.subject, root, args.this)
     if jokbo == watch.JOKBO_UNCUT and not getattr(args, "no_jokbo", False):
         print(f"[watch] {args.run_id} — 과목 족보를 먼저 자른다.\n"
-              f"  `python -m studyez jokbo {item.subject}`  (몇 분 · LLM 안 씀)\n"
+              f"  `python -m runner jokbo {item.subject}`  (몇 분 · LLM 안 씀)\n"
               "  그 뒤에 이 명령을 다시 부르면 조각이 스스로 물린다.\n"
               "  족보 없이 만들려면 --no-jokbo.")
         return 1
@@ -147,7 +147,7 @@ def run_watch_one(args) -> int:
     changed = item.reason in watch.UPDATED or bool(getattr(args, "slides", ""))
     if made and not args.force and not changed:
         print(f"[watch] {args.run_id} — 이미 덱이 있다: {made.name}\n"
-              f"  안 올라간 것뿐이면 `python -m studyez publish --run-id {args.run_id}`가 민다.\n"
+              f"  안 올라간 것뿐이면 `python -m runner publish --run-id {args.run_id}`가 민다.\n"
               "  덱 자체를 다시 만들려면 --force. 어느 슬라이드가 고쳐졌는지 알면 "
               "`--slides 37` 로 그 자리만 갈아 끼운다.")
         return 0
@@ -184,7 +184,7 @@ def run_watch_one(args) -> int:
         print(f"    실패 — {note} · {minutes:.1f}분")
         return 1
     print(f"    끝났다 — {note} · {minutes:.1f}분")
-    print(f"  `python -m studyez publish --run-id {item.run_id}` — 검문을 지나면 나간다.")
+    print(f"  `python -m runner publish --run-id {item.run_id}` — 검문을 지나면 나간다.")
     return 0
 
 
@@ -232,7 +232,7 @@ def report_watch(args) -> int:
             # 쓸기에는 「이미 만듦」, 문지기에는 「옛 판이라 못 내보낸다」가 되어 갇혔다
             # (2026-09-03 에 세 편이 그랬다).
             #
-            # 2026-09-04 에 둘 다 고쳤다 — 판정은 `studyez.fingerprint` 한 곳에서
+            # 2026-09-04 에 둘 다 고쳤다 — 판정은 `cycle.fingerprint` 한 곳에서
             # 나오고(쓸기·문지기가 같은 값을 본다), 갱신된 편에는 `watch.build_extra`
             # 가 `--revise` 를 실어 보낸다(갈린 슬라이드의 카드만 갈아 끼운다).
             mark = ("새로" if item.reason == "new"
@@ -273,9 +273,9 @@ def report_watch(args) -> int:
     watch.save(queue, queue_path)
     print(f"\n  큐: {queue_path}")
     if queue.items and not args.build:
-        print("  `python -m studyez watch --build` — 이대로 덱까지 만든다.")
+        print("  `python -m runner watch --build` — 이대로 덱까지 만든다.")
     elif queue.items:
-        print("  `python -m studyez publish --all` — 검문을 지난 편이 나간다.")
+        print("  `python -m runner publish --all` — 검문을 지난 편이 나간다.")
     return 0
 
 
@@ -359,14 +359,14 @@ def run_done(args) -> int:
     """빌드를 확인한 뒤 부른다. 표시하고, 이어서 그 편을 올린다.
 
     올리는 것까지 여기서 하는 이유는 **끝난 덱이 손을 기다리지 않게** 하려는
-    것이다. `publish`는 멱등이고(ledger + 서버 HEAD) 편마다 `studyez.gate`가
+    것이다. `publish`는 멱등이고(ledger + 서버 HEAD) 편마다 `cycle.gate`가
     보므로, 여기서 불러도 검문에 걸린 편은 강의록만 나간다. 올리기 싫으면
     `--no-publish`.
     """
     runs_dir = Path(args.runs)
     run_id = args.subject
     if not run_id:
-        print("쓰는 법: python -m studyez done 260814_05")
+        print("쓰는 법: python -m runner done 260814_05")
         return 2
 
     subject = stamp_source(runs_dir, run_id, args.this, dry_run=args.dry_run)
@@ -525,11 +525,11 @@ def report_prequeue(args) -> int:
         prequeue.save_state(target, runs_dir)
     print(f"  큐: {queue_path}")
     if ready and not args.build:
-        print("\n  `python -m studyez prequeue --build` — 이대로 예습 덱까지 만든다:")
+        print("\n  `python -m runner prequeue --build` — 이대로 예습 덱까지 만든다:")
         for target in ready:
             print(f"    {target.prev_run_id}  {Path(target.prev_pdf).name[:52]}")
     elif args.build:
-        print("  `python -m studyez publish --all` — 덱·문항·링크가 함께 올라간다.")
+        print("  `python -m runner publish --all` — 덱·문항·링크가 함께 올라간다.")
     return 0
 
 
@@ -557,14 +557,14 @@ def explain_missing_run(runs_dir: Path, run_id: str, prev_year: str) -> int:
     print(f"[publish] {run_id} — 이 run을 쓰는 강의를 못 찾았다. **올리지 않았다.**\n"
           "  올해 필기가 지워졌거나 파일명이 바뀌었을 수 있다.\n"
           "  Pre-Quiz라면 작년 짝이 확정이 아니어서 안 붙은 것일 수도 있다 —\n"
-          "  `python -m studyez match <과목>`으로 확인하라")
+          "  `python -m runner match <과목>`으로 확인하라")
     return 1
 
 
 def run_agent(args) -> int:
     """서버의 일감을 집어 와 만들고 올린다. **야간 스케줄러 자리에 선 것이다.**
 
-    왜 크론을 걷어냈는지는 `studyez/agent.py` 첫머리에 있다. 요약하면 크론은
+    왜 크론을 걷어냈는지는 `runner/agent.py` 첫머리에 있다. 요약하면 크론은
     닷새 동안 아무것도 안 올리면서 종료 코드 0을 냈고, 아무도 몰랐다.
     """
     api = (args.api or os.getenv("STUDYEZ_API_BASE_URL") or publish.DEFAULT_API_BASE).rstrip("/")

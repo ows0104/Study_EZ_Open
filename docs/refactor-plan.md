@@ -12,7 +12,7 @@
 |---|---|
 | `quizgen/` 파이프라인 | 10,870 |
 | `tests/` | 7,126 |
-| `studyez/` 로컬 러너 | 7,091 |
+| `runner/` 로컬 러너 | 7,091 |
 | `server/app/` | 5,711 |
 | `web/src/` Study_EZ 화면 | 5,617 |
 | `Spotter_Quiz/scripts/` 땡시 파이프라인 | 5,992 |
@@ -72,8 +72,8 @@ Spotter     extract_*.py   generate_exam 793     upload_*.py 366    web/app.js 1
 | 족보 파싱 | `quizgen/jokbo.py` 1035 | `parse_jokbo.py` 365 | **0** — 같은 문서 같은 쪽 |
 | AI로 재기 | `reproduce.py` 755 | `screen_questions.py` 218 | **0** — 같은 착상 |
 | 기계 검증 | `validate.py` 647 | `audit_questions.py` 218 | **0** |
-| R2 올리기 | `studyez/publish.py` 720 | `upload_web`·`upload_subject` 366 | **0** |
-| 나가는 문 | `studyez/gate.py` 205 | `deploy_pages --check`·`gate_subject` | **0** |
+| R2 올리기 | `runner/publish.py` 720 | `upload_web`·`upload_subject` 366 | **0** |
+| 나가는 문 | `runner/gate.py` 205 | `deploy_pages --check`·`gate_subject` | **0** |
 | 로그인·세션 | `web/src/supabase.ts` | `web/auth.js`·`gate.js` | `session.js` **한 파일** |
 
 ### 족보 파싱 — 같은 열한 쪽이다
@@ -177,11 +177,11 @@ Study_EZ_Open/
 - 끝났다고 아는 법: `app.js`를 한 줄도 안 고치고 `scripts/`를 리팩터해도
   `quiz_db.json` 해시가 안 바뀐다.
 
-### Phase 1 — 서버를 `core`/`studyez`/`spotter`로 가른다
+### Phase 1 — 서버를 `core`/`runner`/`spotter`로 가른다
 
 **여기가 제일 싸고 제일 확실하다.** 이유 셋.
 
-1. `server/app`은 `studyez`·`quizgen`를 **하나도 import하지 않는다**(실측). 자를 때
+1. `server/app`은 `runner`·`quizgen`를 **하나도 import하지 않는다**(실측). 자를 때
    딸려 오는 것이 없다.
 2. 이미 두 앱이 만나는 유일한 자리라 경계가 이미 개념으로 있다
    (`APP_POLICY`의 `auto`/`manual`).

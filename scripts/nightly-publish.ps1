@@ -1,13 +1,13 @@
 ﻿<#
     ※ 2026-08-23부터 이 작업은 스케줄러에 등록되어 있지 않다.
-      만드는 것은 `/admin`의 「Pre-Quiz 만들기」와 `python -m studyez agent`가 한다
+      만드는 것은 `/admin`의 「Pre-Quiz 만들기」와 `python -m runner agent`가 한다
       (README §만드는 것은 버튼이 시작한다). 배선을 남겨 두는 것은 되돌릴 자리가
       필요할 때를 위해서다 — `install-scheduled-task.ps1`로 다시 걸 수 있다.
 #>
 <#
     야간 쓸어담기 — 하루 한 번, 아직 안 올라간 것이 남았는지 훑고 민다.
 
-    편이 끝날 때마다 `studyez done`이 그 편을 바로 올린다. 여기는 그것이
+    편이 끝날 때마다 `runner done`이 그 편을 바로 올린다. 여기는 그것이
     놓친 자리를 받는다.
 
         야간 빌드가 만들었지만 아무도 안 올린 편
@@ -19,12 +19,12 @@
     `publish`는 멱등이라 겹쳐 돌아도 다시 안 민다. `runs/published.json`의
     표시와 서버의 HEAD 두 가지를 보고, 바뀐 것과 실제로 없는 것만 올린다.
 
-    검문은 편마다 `studyez.gate`가 본다 — 막힌 편은 강의록만 나가고 덱은 미뤄진다.
-    무엇을 막고 무엇을 적기만 하는지는 studyez/gate.py 첫머리에 있다.
+    검문은 편마다 `runner.gate`가 본다 — 막힌 편은 강의록만 나가고 덱은 미뤄진다.
+    무엇을 막고 무엇을 적기만 하는지는 runner/gate.py 첫머리에 있다.
 
     ## 앞에 `prequeue`가 붙는다
 
-    쓸기 전에 `studyez prequeue`를 한 번 돌린다. 관리자가 그 사이 저장한 예습
+    쓸기 전에 `runner prequeue`를 한 번 돌린다. 관리자가 그 사이 저장한 예습
     링크를 받아 작년 짝을 고르고 `preview.md`까지 세워 두는 일이다.
     **덱은 안 만든다** — `--build`를 안 주기 때문이고, 만드는 것은
     `scripts\nightly-prequiz.ps1`이 04:00에 한다.
@@ -131,7 +131,7 @@ function Invoke-Studyez([string[]]$Arguments) {
 # 쓸기 전에 예습 링크를 받아 자리를 세운다. 실패해도 넘어간다 — 올릴 것이
 # 여기에 걸려 밀리면 안 된다.
 if (-not $NoPrequeue) {
-    $arguments = @("-m", "studyez", "prequeue")
+    $arguments = @("-m", "runner", "prequeue")
     if ($DryRun) { $arguments += "--dry-run" }
     if ($Api) { $arguments += @("--api", $Api) }
 
@@ -142,7 +142,7 @@ if (-not $NoPrequeue) {
 }
 
 foreach ($target in $targets) {
-    $arguments = @("-m", "studyez", "publish")
+    $arguments = @("-m", "runner", "publish")
     if ($target) { $arguments += $target } else { $arguments += "--all" }
     if ($DryRun) { $arguments += "--dry-run" }
     if ($Api) { $arguments += @("--api", $Api) }

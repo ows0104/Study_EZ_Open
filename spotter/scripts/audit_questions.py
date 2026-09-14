@@ -32,7 +32,7 @@ import sys
 from collections import Counter, defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from generate_exam import contains, similar, norm  # noqa: E402
+from generate_exam import contains, norm, similar  # noqa: E402
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -160,6 +160,7 @@ def dump_pairs(qs, path):
 def check_pdf(imeta):
     """실제실습본에서 잘라낸 자리에 남의 것이 섞여 들어왔는지."""
     import pymupdf
+
     import extract_practical_pdf as E
 
     head("실제실습본 크롭 (--pdf)")

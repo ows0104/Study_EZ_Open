@@ -16,7 +16,7 @@
 import json
 from pathlib import Path
 
-from studyez import ahead, filenames
+from runner import ahead, filenames
 
 # 두 과목이 나눠 쓰는 한 블럭. 이름은 셋 다 `감염의 기초`로 모인다
 # (`blocks.base_name`이 뒤 번호를 뗀다).

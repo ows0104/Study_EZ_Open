@@ -22,7 +22,7 @@ import shutil
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from generate_exam import Generator, GROUP_MIX, QTYPE_MIX, GROUP_ORDER  # noqa: E402
+from generate_exam import GROUP_MIX, GROUP_ORDER, QTYPE_MIX, Generator  # noqa: E402
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -76,8 +76,9 @@ def field_box(im):
     덩어리를 이어 붙여서 세는 것도 이유가 있다. 밝은 픽셀의 bbox를 그냥
     쓰면 위쪽에 같이 찍힌 실험실 천장이 bbox를 화면 전체로 벌려 놓는다.
     """
-    from PIL import Image  # noqa: F401  (호출부에서 이미 들여왔다)
     from collections import deque
+
+    from PIL import Image  # noqa: F401  (호출부에서 이미 들여왔다)
 
     g = im.convert("L").copy()
     g.thumbnail((SMALL, SMALL))

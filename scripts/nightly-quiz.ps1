@@ -1,16 +1,16 @@
 <#
     ※ 2026-08-23부터 이 작업은 스케줄러에 등록되어 있지 않다.
-      만드는 것은 `/admin`의 「Pre-Quiz 만들기」와 `python -m studyez agent`가 한다
+      만드는 것은 `/admin`의 「Pre-Quiz 만들기」와 `python -m runner agent`가 한다
       (README §만드는 것은 버튼이 시작한다). 배선을 남겨 두는 것은 되돌릴 자리가
       필요할 때를 위해서다 — `install-scheduled-task.ps1`로 다시 걸 수 있다.
 #>
 <#
     새로 올라온 올해 필기에서 복습 덱까지, 사람 없이.
 
-        python -m studyez watch --build
+        python -m runner watch --build
 
     필기가 올라오는 것에서 시작한다(예습은 반대다 — 사람이 예습하는 것에서 시작한다).
-    스캔·최신 판 고르기·블럭 좁히기는 `studyez.watch`가, prep부터 빌드까지는
+    스캔·최신 판 고르기·블럭 좁히기는 `runner.watch`가, prep부터 빌드까지는
     `quizgen`가 빈 세션을 스스로 띄워 한다.
 
     ## 이 작업은 기본으로 걸리지 않는다
@@ -23,7 +23,7 @@
     상한은 `-Max`(기본 2)다. 넘친 편은 다음 날 다시 잡힌다 — 표시가 `source.json`
     기준이라 만든 편만 빠진다.
 
-    올리는 것은 06:00 쓸기가 받는다. 검문(`studyez.gate`)에 걸린 편은 강의록만
+    올리는 것은 06:00 쓸기가 받는다. 검문(`runner.gate`)에 걸린 편은 강의록만
     나가고 덱은 미뤄진다.
 
     쓰는 법:
@@ -85,7 +85,7 @@ if (-not $Python) {
     exit 2
 }
 
-$arguments = @("-m", "studyez", "watch", "--max", "$Max",
+$arguments = @("-m", "runner", "watch", "--max", "$Max",
                "--timeout", "$($TimeoutMinutes * 60)")
 if ($Subject) { $arguments += $Subject }
 if (-not $DryRun) { $arguments += "--build" }

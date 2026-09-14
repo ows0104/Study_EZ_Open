@@ -22,7 +22,7 @@ uid = "{날짜_교시}#{제목어간}#{교수들}"
 ```
 
 제목어간은 순번 괄호와 교수 괄호를 뗀 뒤 NFKC·소문자·로마자→아라비아 변환을
-거쳐 영숫자·한글만 남긴 것이다(`studyez/filenames.py`의 `canonical`).
+거쳐 영숫자·한글만 남긴 것이다(`runner/filenames.py`의 `canonical`).
 
 교수까지 넣는 이유는 한글 괄호가 늘 교수 이름은 아니기 때문이다.
 `실습 3(연골과 뼈)`와 `실습 3(근육)`은 둘 다 이름으로 잘못 읽히는데, 넣어 두면
@@ -79,7 +79,7 @@ lecture
 | `slides/<run_id>_s042.png` | 예습 빌드 후 | 근거 슬라이드. 웹 훑기가 읽는다 |
 
 **덱 파일 이름은 자료 파일명과 같은 꼴이다.** 받아 보는 사람이 그 자리에서 어느
-강의인지 알아야 한다(`studyez.deck.apkg_name`).
+강의인지 알아야 한다(`runner.deck.apkg_name`).
 
 ```
 [260820_03] 소아질환의 병태생리(2) 소아기 특이 질환 1(김은나).apkg
@@ -108,7 +108,7 @@ lecture
 
 `quizgen`는 이 파일을 만들지 않는다. 파이프라인 안쪽(`run.config.json`·
 `items.reproduced.json`·`suspects.json`)을 읽어 이 모양으로 옮기는 것은
-[studyez/deck.py](../studyez/deck.py)의 `contract()`다. 실물은
+[runner/deck.py](../runner/deck.py)의 `contract()`다. 실물은
 [samples/run.meta.sample.json](samples/run.meta.sample.json)에 있다.
 
 ```json
@@ -135,7 +135,7 @@ lecture
   "strategy": "annotation", "strategy_why": "교수 교체(김은나) → 필기 중심" }
 ```
 
-관리자 화면과 `studyez.gate`가 이걸로 "배포해도 되는가"를 판단한다.
+관리자 화면과 `runner.gate`가 이걸로 "배포해도 되는가"를 판단한다.
 
 - **`verified`는 apkg를 다시 열어 센 값이다.** `item_count`와 어긋나면 덱이 내용과
   다른 것을 담고 있다는 뜻이고, 검문이 막는 몇 안 되는 것 중 하나다
@@ -188,7 +188,7 @@ ID(`p260820_03`)이고 **그쪽이 guid의 씨앗이다** — 바꾸면 Anki가 
 - **`focus`는 등급이 아니라 이유다.** 예습 카드는 전부 「꼭 반드시」이고, 등급을
   두면 그 축이 흐려진다. 「왜 이것이 꼭 반드시인가」를 담는다
 - `cloze`의 `stem`은 이미 빈칸으로 펴져 있다. `{{c1::…}}`은 Anki 문법이라
-  `studyez.deck.contract`가 `[____]`(힌트가 있으면 `[힌트]`)로 바꾼다
+  `runner.deck.contract`가 `[____]`(힌트가 있으면 `[힌트]`)로 바꾼다
 - **그림 카드는 여기 없다.** 앞면이 이미지라 텍스트만으로는 물음이 성립하지 않는다.
   apkg에는 그대로 있고, 몇 장이 빠졌는지는 `pre_run.meta.json`의 `web_excluded`가 든다
 - `slide_no`로 근거 슬라이드를 띄우려면 `slides/`도 함께 올라가야 한다

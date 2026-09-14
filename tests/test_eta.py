@@ -6,7 +6,7 @@
 
 import json
 
-from studyez import eta
+from runner import eta
 
 
 def _run(runs, run_id, kind, wall, steps, stages, finished=True):

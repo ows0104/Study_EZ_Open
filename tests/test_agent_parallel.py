@@ -9,7 +9,7 @@ import json
 import threading
 import time
 
-from studyez import agent, deck, eta, gate, prequeue
+from runner import agent, deck, eta, gate, prequeue
 
 
 class FakeClient:

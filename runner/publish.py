@@ -1,19 +1,19 @@
 """산출물을 서버로 밀어 넣는다. 로컬 러너의 마지막 단계다.
 
-    python -m studyez publish 병리학 --dry-run     무엇이 올라갈지만 본다
-    python -m studyez publish 병리학
-    python -m studyez publish --run-id 260814_05   그 run을 쓰는 한 편만
+    python -m runner publish 병리학 --dry-run     무엇이 올라갈지만 본다
+    python -m runner publish 병리학
+    python -m runner publish --run-id 260814_05   그 run을 쓰는 한 편만
 
 계약은 `docs/artifact-contract.md`, 엔드포인트는 `server/README.md`에 있다.
 여기서는 **아무것도 만들지 않는다.** 이미 만들어 둔 것을 모아 올릴 뿐이다.
 
 ## 사람이 안 불러도 돈다
 
-두 자리에서 걸린다. 편이 끝날 때 `studyez done <run_id>`가 그 편을 밀고, 하루
+두 자리에서 걸린다. 편이 끝날 때 `runner done <run_id>`가 그 편을 밀고, 하루
 한 번 `scripts/nightly-publish.ps1`이 `--all`로 놓친 것을 쓸어담는다. 겹쳐
 돌아도 되는 이유는 아래 「같은 것을 다시 밀지 않는다」다.
 
-사람 없이 나가도 되는지는 `studyez.gate`가 편마다 본다. 막힌 편은 강의록만
+사람 없이 나가도 되는지는 `runner.gate`가 편마다 본다. 막힌 편은 강의록만
 나가고 덱은 미뤄지므로, **자동 실행이 덱을 조용히 내보내는 일은 없다.**
 
 ## 한 강의의 자료가 두 군데서 온다
@@ -23,7 +23,7 @@
 
 Pre-Quiz는 **작년 필기로 만든다**(족보가 정리돼 붙은 쪽이 작년이다). 그래서
 `pre_*`와 `preview.md`는 작년 run 디렉터리에 있는데 붙일 자리는 올해 강의다.
-작년 짝은 `studyez.matching`이 정하고 **확정인 것만 쓴다** — 어긋난 짝을 붙이면
+작년 짝은 `runner.matching`이 정하고 **확정인 것만 쓴다** — 어긋난 짝을 붙이면
 남의 강의 예습이 올라간다.
 
 ## 슬라이드 이미지는 갈래를 갈라서 올린다
@@ -211,7 +211,7 @@ def _owns(run_dir: Path, item: LectureFile) -> tuple[bool, str]:
     # 이름은 `v1` 그대로인데 16:37(5,769,068B)에서 19:52(5,791,054B)로 바뀌었고, 그 사이
     # 18:13 에 만든 덱이 그대로 통과했다.
     #
-    # **쓸기와 같은 함수를 본다**(`studyez.fingerprint`). 서로 다른 파일을 보던 동안에는
+    # **쓸기와 같은 함수를 본다**(`runner.fingerprint`). 서로 다른 파일을 보던 동안에는
     # 「쓸기는 끝났다 / 문지기는 못 내보낸다」로 편이 갇힐 수 있었다.
     verdict = fingerprint.compare(run_dir, item.path, item.version)
     if verdict.stale:
@@ -278,7 +278,7 @@ def _add_prev_year(plan: LecturePlan, run_dir: Path) -> None:
         plan.pre_items = items
         # `media/`가 아니라 `slides/`다. 파이프라인의 media에는 그림 크롭도 섞여
         # 있는데 웹이 읽는 것은 「이 카드의 근거가 몇 번 슬라이드인가」뿐이라,
-        # `studyez.deck.contract`가 슬라이드만 골라 서버가 아는 이름으로 옮겨 둔다.
+        # `runner.deck.contract`가 슬라이드만 골라 서버가 아는 이름으로 옮겨 둔다.
         for image in sorted((run_dir / "slides").glob("*.png")):
             plan.uploads.append(Upload("media", image))
 
@@ -298,7 +298,7 @@ NOTES_KINDS = ("notes_current", "notes_prev")
 def hold_artifacts(plan: LecturePlan, why: str = "--notes-only") -> None:
     """강의록만 남기고 파이프라인 산출물을 다음으로 미룬다.
 
-    `--notes-only`로 사람이 부르거나, `studyez.gate`가 막을 것을 찾았을 때 부른다.
+    `--notes-only`로 사람이 부르거나, `runner.gate`가 막을 것을 찾았을 때 부른다.
     강의록은 그 검토와 무관한 자료라 먼저 나가도 되고, 먼저 나가야 칸이 열린다.
 
     미룬 것은 지우지 않고 **무엇을 미뤘는지 적는다.** 조용히 빠지면 다음 사람이
@@ -419,7 +419,7 @@ def plan_subject(
         elif match and match.prev_year is not None:
             plan.notes.append(
                 f"작년 짝이 확정이 아니다 ({match.score:.2f}, 후보 {match.prev_year.title[:26]}) — "
-                f"작년 강의록·예습을 올리지 않는다. `python -m studyez match {subject}`로 확인하라")
+                f"작년 강의록·예습을 올리지 않는다. `python -m runner match {subject}`로 확인하라")
         else:
             plan.notes.append("작년 짝이 없다 — 작년 강의록·예습 자리는 비워 둔다")
 

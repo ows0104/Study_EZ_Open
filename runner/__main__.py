@@ -1,26 +1,26 @@
 """Study_EZ 로컬 러너 CLI.
 
-    python -m studyez match 병리학          작년 짝 붙이기 리포트
-    python -m studyez match --all
-    python -m studyez watch                 새 필기 스캔 (무엇을 만들지 보여준다)
-    python -m studyez watch --build         스캔 + 덱까지 (21:30 자동 실행용)
-    python -m studyez watch --all-dates     블럭으로 안 좁힌다 (밀린 것 몰아 만들 때)
-    python -m studyez watch <과목> --run-id <올해> --build
+    python -m runner match 병리학          작년 짝 붙이기 리포트
+    python -m runner match --all
+    python -m runner watch                 새 필기 스캔 (무엇을 만들지 보여준다)
+    python -m runner watch --build         스캔 + 덱까지 (21:30 자동 실행용)
+    python -m runner watch --all-dates     블럭으로 안 좁힌다 (밀린 것 몰아 만들 때)
+    python -m runner watch <과목> --run-id <올해> --build
                                             그 강의 하나만 만든다 (캘린더 버튼이 이리로 온다)
-    python -m studyez prequeue              예습 링크 → 자리 세우기
-    python -m studyez prequeue --build      자리 세우고 예습 덱까지 (04:00 자동 실행용)
-    python -m studyez prequeue --dry-run    무엇이 준비될지만 본다
-    python -m studyez prequeue <과목> --run-id <올해> --build --force
+    python -m runner prequeue              예습 링크 → 자리 세우기
+    python -m runner prequeue --build      자리 세우고 예습 덱까지 (04:00 자동 실행용)
+    python -m runner prequeue --dry-run    무엇이 준비될지만 본다
+    python -m runner prequeue <과목> --run-id <올해> --build --force
                                             이미 만든 편도 버리고 다시 만든다
-    python -m studyez jokbo 병리학           과목 족보를 강의별로 자른다 (학기당 1회)
-    python -m studyez import --from <폴더>   다른 곳에서 만든 덱을 옮긴다 (보류로 들어온다)
-    python -m studyez release <run_id>       보류를 푼다
-    python -m studyez rebuild                이미 만든 카드로 덱만 다시 굽는다
-    python -m studyez done <run_id>          빌드 끝. 표시하고 그 편을 올린다
-    python -m studyez publish 병리학 --dry-run   무엇이 올라갈지 본다
-    python -m studyez publish 병리학             서버로 밀어 넣는다
-    python -m studyez publish --run-id <run_id>  그 run을 쓰는 한 편만 올린다
-    python -m studyez publish --all              전부 훑는다 (야간 쓸어담기)
+    python -m runner jokbo 병리학           과목 족보를 강의별로 자른다 (학기당 1회)
+    python -m runner import --from <폴더>   다른 곳에서 만든 덱을 옮긴다 (보류로 들어온다)
+    python -m runner release <run_id>       보류를 푼다
+    python -m runner rebuild                이미 만든 카드로 덱만 다시 굽는다
+    python -m runner done <run_id>          빌드 끝. 표시하고 그 편을 올린다
+    python -m runner publish 병리학 --dry-run   무엇이 올라갈지 본다
+    python -m runner publish 병리학             서버로 밀어 넣는다
+    python -m runner publish --run-id <run_id>  그 run을 쓰는 한 편만 올린다
+    python -m runner publish --all              전부 훑는다 (야간 쓸어담기)
 
 업로드는 두 자리에서 걸린다 — 편이 끝날 때 `done`이 그 편을, 하루 한 번
 `scripts/nightly-publish.ps1`이 `publish --all`로 놓친 것을 쓸어담는다.
@@ -45,16 +45,16 @@ for _stream in (sys.stdout, sys.stderr):
     except Exception:
         pass
 
-from studyez import (  # noqa: E402
+from runner import (  # noqa: E402
     agent,
     blocks,
+    cycle,
     deck,
     filenames,
     gate,
     matching,
     preview,
     publish,
-    runner,
     watch,
 )
 
@@ -132,7 +132,7 @@ def run_preview(args) -> int:
     """공유된 예습 대화를 내려받아 runs/<run_id>/preview.md로 만든다."""
     run_id = args.subject
     if not run_id or not args.url:
-        print("쓰는 법: python -m studyez preview <run_id> --url https://chatgpt.com/share/...")
+        print("쓰는 법: python -m runner preview <run_id> --url https://chatgpt.com/share/...")
         return 2
 
     # 자리가 비어 있어도 받는다. 대화가 먼저 오고 덱이 나중에 오는 순서라,
@@ -143,7 +143,7 @@ def run_preview(args) -> int:
     print(f"[preview] {run_id} ← {args.url}")
     print(f"  발화 {len(result.turns)}개 · {result.chars:,}자 · 추출 {result.strategy}")
     print(f"  → {path}")
-    print("  이제 `python -m studyez prequeue --build`가 이걸 예습 설명본으로 읽는다")
+    print("  이제 `python -m runner prequeue --build`가 이걸 예습 설명본으로 읽는다")
     return 0
 
 
@@ -195,7 +195,7 @@ def run_jokbo(args) -> int:
     """
     subject = args.subject
     if not subject:
-        print("과목명을 주세요: python -m studyez jokbo 병리학")
+        print("과목명을 주세요: python -m runner jokbo 병리학")
         return 2
 
     # 경로는 `watch` 가 들고 있다 — 「잘렸는가」를 묻는 쪽과 자르는 쪽이 같은 곳을
@@ -252,7 +252,7 @@ def run_jokbo(args) -> int:
         print(f"  ⚠ index.json에 원본 경로를 못 적었다 ({cause}) — 지면 이미지가 빠진다")
 
     print(f"\n  → {index}")
-    print("  이제 `python -m studyez watch --build`가 이 조각을 스스로 물린다")
+    print("  이제 `python -m runner watch --build`가 이 조각을 스스로 물린다")
     return 0
 
 
@@ -292,12 +292,12 @@ def run_import(args) -> int:
     """다른 곳에서 만든 quizgen 덱을 `runs/`로 옮긴다. **올리지는 않는다.**
 
     옮긴 자리마다 `HOLD`를 놓는다. 이 사이트의 눈(계약·검문)으로 한 번도 본 적이
-    없는 산출물이라, 사람이 보고 `python -m studyez release <run_id>`로 풀기 전에는
+    없는 산출물이라, 사람이 보고 `python -m runner release <run_id>`로 풀기 전에는
     `publish`가 덱을 내보내지 않는다. 강의록 PDF는 그대로 나간다 — 그건 이 검토와
     무관한 자료다.
     """
     if not args.source_dir:
-        print("쓰는 법: python -m studyez import --from \"../PDF2ANKI/out\"")
+        print("쓰는 법: python -m runner import --from \"../PDF2ANKI/out\"")
         return 2
     source, runs_dir = Path(args.source_dir), Path(args.runs)
     if not source.is_dir():
@@ -355,7 +355,7 @@ def run_import(args) -> int:
                 continue
             (target / gate.HOLD_FILE).write_text(
                 f"{source} 에서 옮겨 왔다. 이 사이트의 눈으로 본 적이 없다.\n"
-                f"확인한 뒤 `python -m studyez release {run_id}` 로 푼다.\n",
+                f"확인한 뒤 `python -m runner release {run_id}` 로 푼다.\n",
                 encoding="utf-8")
             # 표시를 찍어 둔다. 안 찍으면 오늘 밤 워처가 옮겨 온 편을 처음부터
             # 다시 만들고, 사람이 보려던 그 덱이 그 자리에서 덮인다.
@@ -368,7 +368,7 @@ def run_import(args) -> int:
 
     if not args.dry_run:
         print(f"\n  옮긴 것 {moved}편. 전부 보류 상태다 — `publish`가 덱을 안 내보낸다.")
-        print("  확인한 편마다: python -m studyez release <run_id>")
+        print("  확인한 편마다: python -m runner release <run_id>")
     return 0
 
 
@@ -458,7 +458,7 @@ def run_release(args) -> int:
     """보류를 푼다. 사람이 그 편을 보고 괜찮다고 판단했을 때."""
     run_id = args.subject or args.run_id
     if not run_id:
-        print("쓰는 법: python -m studyez release 260812_01")
+        print("쓰는 법: python -m runner release 260812_01")
         return 2
     hold = Path(args.runs) / run_id / gate.HOLD_FILE
     if not hold.is_file():
@@ -504,7 +504,7 @@ def main() -> int:
                         help="watch: 방금 올라온 파일도 포함 (동기화 대기 생략)")
     parser.add_argument("--no-jokbo", action="store_true",
                         help="watch --run-id: 과목 족보가 안 잘려 있어도 그냥 만든다. "
-                             "기본은 멈추고 `studyez jokbo <과목>`을 안내한다")
+                             "기본은 멈추고 `runner jokbo <과목>`을 안내한다")
     parser.add_argument("--since", default=None,
                         help="watch: 이 날짜부터의 강의만 (YYYY-MM-DD). 주면 시간표를 안 본다")
     parser.add_argument("--until", default=None, help="watch: 이 날짜까지의 강의만")
@@ -567,22 +567,22 @@ def main() -> int:
     if args.subject and filenames.is_excluded(args.subject):
         print(f"[{args.subject}] 학생마다 듣는 것이 달라 파이프라인에서 뺀 과목이다.\n"
               "  강의록 연결·예습·복습 어느 것도 만들지 않는다.\n"
-              "  정말 필요하면 studyez/filenames.py의 EXCLUDED_SUBJECTS·"
+              "  정말 필요하면 runner/filenames.py의 EXCLUDED_SUBJECTS·"
               "EXCLUDED_PREFIXES를 고쳐라.")
         return 0
 
     if args.command == "watch":
-        return runner.report_watch(args)
+        return cycle.report_watch(args)
     if args.command == "done":
-        return runner.run_done(args)
+        return cycle.run_done(args)
     if args.command == "jokbo":
         return run_jokbo(args)
     if args.command == "preview":
         return run_preview(args)
     if args.command == "prequeue":
-        return runner.report_prequeue(args)
+        return cycle.report_prequeue(args)
     if args.command == "agent":
-        return runner.run_agent(args)
+        return cycle.run_agent(args)
     if args.command == "import":
         return run_import(args)
     if args.command == "release":
@@ -592,11 +592,11 @@ def main() -> int:
     if args.command == "publish":
         if not args.subject and not args.all and not args.run_id:
             parser.error("과목명을 주거나 --all 또는 --run-id를 쓰세요")
-        return runner.report_publish(args)
+        return cycle.report_publish(args)
 
     root = Path(args.root)
     if args.all:
-        subjects = runner.subjects_with_notes(root, args.this)
+        subjects = cycle.subjects_with_notes(root, args.this)
     elif args.subject:
         subjects = [args.subject]
     else:

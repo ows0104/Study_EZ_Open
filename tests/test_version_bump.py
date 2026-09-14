@@ -10,7 +10,7 @@
 
 import json
 
-from studyez import filenames, fingerprint, publish, watch
+from runner import filenames, fingerprint, publish, watch
 
 NAME_V1 = "[260902_02] 폐흡충증, 장흡충증(신은희)_박준원v1.pdf"
 NAME_V2 = "[260902_02] 폐흡충증, 장흡충증(신은희)_박준원v2.pdf"

@@ -9,7 +9,7 @@
 import sys
 import time
 
-from studyez import agent, deck, publish
+from runner import agent, deck, publish
 
 
 class StopClient:

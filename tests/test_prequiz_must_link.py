@@ -145,7 +145,7 @@ def test_승인본이_아예_없어도_돌아간다():
 # ── 예습은 슬라이드를 다 훑는 덱이 아니다 ──────────────────────────
 
 def test_슬라이드_커버리지는_내지_않는다():
-    """`studyez/deck.py` 가 이 키로 `untouched_slides` 를 채운다. 예습에서는 비어야 하고,
+    """`runner/deck.py` 가 이 키로 `untouched_slides` 를 채운다. 예습에서는 비어야 하고,
     비어 있는 것이 「빠진 슬라이드가 없다」는 뜻이 아니라 「그것을 재지 않는다」는 뜻이다."""
     items = [_item("m01", "용어 A", cards=MIN_CARDS)]
     cards = [_card(f"질문 {i}", must_id="m01") for i in range(MIN_CARDS)]

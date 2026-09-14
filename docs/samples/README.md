@@ -9,7 +9,7 @@
 | `pre_run.meta.sample.json` | 예습 덱의 요약 | 같은 편 (28장 · 웹 풀이 28장) |
 | `run.meta.sample.json` | 복습 덱의 요약. 관리자 화면이 "배포해도 되는가"를 판단하는 값 | 병리학 `260820_03` 소아질환의 병태생리(2) (88장) |
 
-전부 `quizgen` → `studyez.deck.contract`가 낸 것이다.
+전부 `quizgen` → `runner.deck.contract`가 낸 것이다.
 
 ## `pre_items.sample.json`에서 놓치기 쉬운 것
 
@@ -32,7 +32,7 @@
 ## `run.meta.sample.json`에서 볼 것
 
 - `verified`는 **apkg를 다시 열어 센 값**이다. `item_count`와 어긋나면 덱이 내용과
-  다른 것을 담고 있다는 뜻이고, `studyez.gate`가 막는 몇 안 되는 것 중 하나다
+  다른 것을 담고 있다는 뜻이고, `runner.gate`가 막는 몇 안 되는 것 중 하나다
 - `reproduce`는 질문만 보고 다시 푼 결과다. `same`이 아니어도 나쁜 카드는 아니다 —
   눈가리개 세션이 그 지식을 몰랐을 수 있다. **문항 자체의 결함으로 갈린 것은
   파이프라인이 이미 덱에서 뺐고**, 그래도 남아 있으면 `reproduce_defects`에 뜬다
@@ -49,5 +49,5 @@
 `../artifact-contract.md`를 먼저 고치고 그다음 표본을 바꾼다.
 
 ```bash
-python -m studyez import --from ../PDF2ANKI/out --run-id 260820_03
+python -m runner import --from ../PDF2ANKI/out --run-id 260820_03
 ```

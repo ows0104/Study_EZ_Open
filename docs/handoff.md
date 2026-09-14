@@ -14,7 +14,7 @@
 | API 주소 | `https://studyez-api-97999573571.asia-northeast3.run.app` |
 | Supabase | 프로젝트 `dlvruugdigpbtgiwpdgs` · Seoul · 표 9개 · 시간표 369칸 |
 | 로그인 | 이메일+비밀번호. JWKS(ES256)로 검증. Confirm email 켜짐 |
-| R2 | 비공개 버킷 `studyez` · 전용 `studyez-service` 토큰 · 연결 검증 완료 |
+| R2 | 비공개 버킷 `runner` · 전용 `studyez-service` 토큰 · 연결 검증 완료 |
 | 프론트 | `https://study-ez-open.pages.dev` · 배포 및 로그인 화면 확인 완료 |
 
 확인된 것:
@@ -114,8 +114,8 @@ Settings에 외부 발송(Resend 등)을 붙여야 한다.
 
 ## 4. R2 켜기 — 완료
 
-비공개 버킷 `studyez`와 버킷 전용 Account API token `studyez-service`를 만들었다.
-권한은 **Object Read & Write**, 대상은 `studyez` 하나뿐이다. `meddeck-service`와
+비공개 버킷 `runner`와 버킷 전용 Account API token `studyez-service`를 만들었다.
+권한은 **Object Read & Write**, 대상은 `runner` 하나뿐이다. `meddeck-service`와
 공유하지 않는다. 각 서비스가 자기 버킷과 토큰을 따로 가진다.
 
 키는 `server/.env`와 Secret Manager의
@@ -125,20 +125,20 @@ Settings에 외부 발송(Resend 등)을 붙여야 한다.
 
 ## 5. 로컬 러너 붙이기 — 완료
 
-`studyez/publish.py`가 산출물을 밀어 넣는다.
+`runner/publish.py`가 산출물을 밀어 넣는다.
 
 ```bash
-python -m studyez publish 병리학 --dry-run    무엇이 올라갈지만 적는다
-python -m studyez publish 병리학
-python -m studyez publish 병리학 --notes-only  강의록만, 덱은 다음으로
+python -m runner publish 병리학 --dry-run    무엇이 올라갈지만 적는다
+python -m runner publish 병리학
+python -m runner publish 병리학 --notes-only  강의록만, 덱은 다음으로
 ```
 
 무엇을 어디서 모으는지는 그 파일의 머리글에 있다. 요약하면 **한 강의의 자료가
 두 군데서 온다** — 올해 필기와 Main-Quiz는 `runs/<올해 run_id>/`, 작년 필기와
 Pre-Quiz·예습 대화는 `runs/<작년 run_id>/`다. Pre-Quiz를 작년 필기로 만들기
-때문이고, 작년 짝은 `studyez.matching`이 확정한 것만 쓴다.
+때문이고, 작년 짝은 `runner.matching`이 확정한 것만 쓴다.
 
-**아직 필기가 없는 강의도 세운다**(`studyez/ahead.py`). 계획이 올해 필기에서만
+**아직 필기가 없는 강의도 세운다**(`runner/ahead.py`). 계획이 올해 필기에서만
 나오면 예습이 필요한 쪽 — 안 지나간 강의 — 이 통째로 빠진다. 병리학 2026에서
 24칸이 그랬다. 그 자리는 시간표에서 찾아오고 붙는 것은 작년 강의록뿐이다.
 `--no-ahead`로 끈다. 시간표는 `blocks.DEFAULT_SOURCE`(로컬 테스트 DB)를 보므로
@@ -170,8 +170,8 @@ PUT  /api/admin/prequiz-jobs/{id}             진행 적기 + 박동 (몸이 비
 막혀 있다 — 비용이 나가는 일이라 사람이 눌러야 한다.
 
 **일감에는 갈래가 있다**(`?kind=pre|main`, 기본 `pre`). 재료가 다르므로 만드는
-명령이 다르다 — 예습은 예습 대화와 작년 필기로(`studyez prequeue`), 복습은 올해
-필기로(`studyez watch --run-id`) 만든다. 러너가 `kind`를 보고 가른다. 한 갈래가
+명령이 다르다 — 예습은 예습 대화와 작년 필기로(`runner prequeue`), 복습은 올해
+필기로(`runner watch --run-id`) 만든다. 러너가 `kind`를 보고 가른다. 한 갈래가
 다른 갈래를 막지 않으므로 같은 편의 예습과 복습이 나란히 줄을 설 수 있다 — 다만
 러너는 한 번에 하나씩 집어 간다.
 
@@ -224,7 +224,7 @@ cd server; .venv/Scripts/python.exe -m app.cli init-db   # 붙은 칼럼을 적�
 러너가 아무것도 못 집는다. 같은 명령 하나면 된다(`init-db`).
 
 **러너도 같이 나가야 한다.** 멈추라는 말은 서버가 표에 적어 두고 러너가 받아
-가는 것이라(`studyez.agent`), 옛 러너가 도는 동안 누른 「멈추기」는 화면에만
+가는 것이라(`runner.agent`), 옛 러너가 도는 동안 누른 「멈추기」는 화면에만
 남는다. 그때는 한 번 더 눌러 강제로 내릴 수 있지만, 노트북의 프로세스는 그대로
 돈다 — 러너를 새로 띄우는 것이 먼저다.
 

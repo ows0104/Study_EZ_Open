@@ -4,16 +4,16 @@
 [README](../README.md), 판단 기준은 [CLAUDE.md](../CLAUDE.md), 파이프라인 속은
 [docs/quizgen.md](quizgen.md)에 있다. 여기서는 **하려는 일 → 치는 것**만 적는다.
 
-플래그의 정확한 뜻은 `python -m studyez --help`가 원본이다. 이 표와 어긋나면
+플래그의 정확한 뜻은 `python -m runner --help`가 원본이다. 이 표와 어긋나면
 `--help`가 맞다.
 
 Python은 PATH에 없다. 아래에서는 앞머리를 줄여 `studyez …`로 적는다.
 
 ```bash
-PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m studyez watch
+PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m runner watch
 ```
 
-`studyez`의 하위 명령은 열하나다 — `match` `watch` `done` `jokbo` `preview`
+`runner`의 하위 명령은 열하나다 — `match` `watch` `done` `jokbo` `preview`
 `agent` `prequeue` `publish` `import` `release` `rebuild`.
 
 ---
@@ -22,7 +22,7 @@ PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m studyez watch
 
 | 하려는 일 | 명령 | 나오는 것 |
 |---|---|---|
-| 족보를 강의별로 자른다 | `studyez jokbo 병리학` | `runs/_jokbo/<과목>/` 조각 + `index.json`. 문항·정답·이의제기를 짝짓고 연도별 반복률까지 센다 |
+| 족보를 강의별로 자른다 | `runner jokbo 병리학` | `runs/_jokbo/<과목>/` 조각 + `index.json`. 문항·정답·이의제기를 짝짓고 연도별 반복률까지 센다 |
 | 족보 PDF를 직접 지정한다 | `quizgen.jokbo <족보.pdf> -o out/jokbo` | 위가 부르는 밑단 |
 | 올해 강의를 작년 강의에 붙인다 | `studyez match 병리학` · `studyez match --all` | 짝 후보와 「손봐야 할 강의 N편」 보고 |
 | 확인한 짝을 굳힌다 | 명령 없음 — `runs/_pairs/<과목>.json`을 사람이 적는다 | 코드는 읽기만 한다. 블럭 경계(`_block`·`_from`·`_until`)도 이 파일이다 |
@@ -32,9 +32,9 @@ PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m studyez watch
 
 | 하려는 일 | 명령 |
 |---|---|
-| 무엇을 만들지 보기만 한다 | `studyez watch` |
-| 이대로 만든다 | `studyez watch --build` (한 번에 만드는 상한은 `--max`, 기본 2) |
-| 한 편만 지목해 만든다 | `studyez watch 기생충학 --run-id 260831_01 --build` |
+| 무엇을 만들지 보기만 한다 | `runner watch` |
+| 이대로 만든다 | `runner watch --build` (한 번에 만드는 상한은 `--max`, 기본 2) |
+| 한 편만 지목해 만든다 | `runner watch 기생충학 --run-id 260831_01 --build` |
 | 이미 만든 편을 다시 만든다 | 위에 `--force` (`--run-id`가 필요하다) |
 | **필기가 새 판으로 갈렸다** | 그냥 두면 밤 쓸기가 집어 **갈린 슬라이드의 카드만 갈아 끼운다**. 손으로는 `--run-id … --build` |
 | 어디가 고쳐졌는지 사람이 안다 | `--run-id … --build --slides 37` (새 판의 쪽번호. 여러 개면 `37,41`) |
@@ -50,7 +50,7 @@ PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m studyez watch
 
 ### 판이 갈렸을 때 (2026-09-04에 코드가 섰다)
 
-**판이 갈렸는지는 한 곳이 판정한다** — [studyez/fingerprint.py](../studyez/fingerprint.py).
+**판이 갈렸는지는 한 곳이 판정한다** — [runner/fingerprint.py](../runner/fingerprint.py).
 파일명의 `vN`과 **원본의 내용 해시**를 같이 본다. 쓸기와 문지기가 같은 함수를 보므로
 「쓸기는 끝났다 / 문지기는 못 내보낸다」로 편이 갇히지 않는다. 지문은 `prep.json`이
 들고 있다 — 원본을 실제로 읽어 만든 산출물이라, prep을 다시 안 돌리면 기록이
@@ -108,10 +108,10 @@ ventral sucker 라벨링이 반대로 되어있는 듯하여 수정했습니다"
 | 하려는 일 | 명령 / 자리 |
 |---|---|
 | 예습 링크를 저장한다 | 사람이 `/admin`·캘린더에서 저장한다 (`PUT /api/admin/lectures/{과목}/{run_id}/preview`). 대화를 여는 것과 링크를 되가져오는 것은 크롬 확장이 한다 |
-| 대화 하나를 손으로 받아 둔다 | `studyez preview 260831_01 --url https://chatgpt.com/share/...` → `runs/<run_id>/preview.md` |
-| 자리만 세운다 | `studyez prequeue` (작년 짝 고르기 · `preview.md` 굳히기) |
-| 이대로 만든다 | `studyez prequeue --build` |
-| 한 편만 | `studyez prequeue 기생충학 --run-id 260831_01 --build` |
+| 대화 하나를 손으로 받아 둔다 | `runner preview 260831_01 --url https://chatgpt.com/share/...` → `runs/<run_id>/preview.md` |
+| 자리만 세운다 | `runner prequeue` (작년 짝 고르기 · `preview.md` 굳히기) |
+| 이대로 만든다 | `runner prequeue --build` |
+| 한 편만 | `runner prequeue 기생충학 --run-id 260831_01 --build` |
 | 다시 만든다 | 위에 `--force` |
 | 임박한 것만 | `--within-days 3` · 상한 `--max 1` |
 | PDF 하나를 직접 굽는다 | `quizgen.prequiz.run "<작년 필기.pdf>" --note <링크\|note.md>` |
@@ -123,23 +123,23 @@ ventral sucker 라벨링이 반대로 되어있는 듯하여 수정했습니다"
 
 | 하려는 일 | 명령 |
 |---|---|
-| 카드는 그대로 두고 덱만 다시 굽는다 | `studyez rebuild` (뒷면 배치·CSS를 고쳤을 때. guid가 안 바뀌어 복습 이력이 산다) |
-| 검사 규칙이 늘어 표시를 다시 센다 | `studyez rebuild --reflag` |
-| 다른 곳에서 만든 덱을 옮겨 온다 | `studyez import --from "../PDF2ANKI/out"` (옮긴 자리마다 `HOLD`가 붙어 안 나간다) |
+| 카드는 그대로 두고 덱만 다시 굽는다 | `runner rebuild` (뒷면 배치·CSS를 고쳤을 때. guid가 안 바뀌어 복습 이력이 산다) |
+| 검사 규칙이 늘어 표시를 다시 센다 | `runner rebuild --reflag` |
+| 다른 곳에서 만든 덱을 옮겨 온다 | `runner import --from "../PDF2ANKI/out"` (옮긴 자리마다 `HOLD`가 붙어 안 나간다) |
 | 그 보류를 푼다 | `studyez release 260812_01` |
 
 ## 5. 사이트로 올린다 — 강의록·덱·문항·예습 링크
 
 | 하려는 일 | 명령 |
 |---|---|
-| 한 과목을 올린다 | `studyez publish 기생충학` |
-| 아직 안 올라간 것을 전부 훑는다 | `studyez publish --all` |
-| 한 편만 올린다 | `studyez publish --run-id 260831_01` |
+| 한 과목을 올린다 | `runner publish 기생충학` |
+| 아직 안 올라간 것을 전부 훑는다 | `runner publish --all` |
+| 한 편만 올린다 | `runner publish --run-id 260831_01` |
 | 무엇이 올라갈지만 본다 | `--dry-run` |
 | 강의록만 먼저 내보낸다 | `--notes-only` |
 | 문지기를 끄고 민다 | `--no-gate` (사람이 보고 판단했을 때) |
 | 이미 올린 표시를 무시한다 | `--force` |
-| 한 편을 마감한다 | `studyez done 260831_01` (표시하고 그 편을 올린다. `--no-publish`면 표시만) |
+| 한 편을 마감한다 | `runner done 260831_01` (표시하고 그 편을 올린다. `--no-publish`면 표시만) |
 
 한 번에 나가는 것 — `notes_current`·`notes_prev`(강의록 PDF) · `main_apkg`·`pre_apkg`와
 미디어 · `run-meta` · `main-items`·`pre-items`(웹 풀이용 문항) · 예습 링크.
@@ -152,8 +152,8 @@ ventral sucker 라벨링이 반대로 되어있는 듯하여 수정했습니다"
 
 | 하려는 일 | 명령 |
 |---|---|
-| 러너를 띄운다 | `studyez agent` (과목을 좁히려면 `studyez agent 기생충학`) |
-| 붙는지만 본다 | `studyez agent --once` |
+| 러너를 띄운다 | `runner agent` (과목을 좁히려면 `runner agent 기생충학`) |
+| 붙는지만 본다 | `runner agent --once` |
 | 간격을 바꾼다 | `--poll 15` · `--sweep-minutes 10` · `--no-sweep` |
 | 겹쳐 만들 편 수를 바꾼다 | `--workers 2` (기본 2. 서버도 같은 상한을 든다 — 작은 쪽이 실제 상한) |
 | 예약 작업으로 등록한다 | `powershell -ExecutionPolicy Bypass -File scripts\install-agent-task.ps1 [-Subject 병리학]` |
@@ -205,4 +205,4 @@ ventral sucker 라벨링이 반대로 되어있는 듯하여 수정했습니다"
   `scripts/install-scheduled-task.ps1`은 배선만 남아 있고 **등록되어 있지 않다**
 - **`runs/` 자동 청소.** 저기에는 다시 만들 수 없는 것이 섞여 있다
 - **선택교과·인간사회의료.** 이름을 직접 대도 막힌다
-  (`studyez/filenames.py`의 `EXCLUDED_SUBJECTS`·`EXCLUDED_PREFIXES`)
+  (`runner/filenames.py`의 `EXCLUDED_SUBJECTS`·`EXCLUDED_PREFIXES`)

@@ -7,7 +7,7 @@
 
 from pathlib import Path
 
-from studyez import publish
+from runner import publish
 
 
 def a_plan(tmp_path: Path) -> publish.LecturePlan:

@@ -242,7 +242,7 @@ def job_row(job: PrequizJob | None, priority: str = "") -> dict[str, Any] | None
         # 그 사실을 적어야 한다 — 안 적으면 왜 이게 앞인지 아무도 모른다.
         "queueRank": job.queue_rank,
         # 사람이 「멈추기」를 눌렀고 러너가 아직 안 받아 갔다. **러너가 이 값을
-        # 보고 자기 자식을 죽인다**(`studyez.agent`). 화면도 같은 값으로
+        # 보고 자기 자식을 죽인다**(`runner.agent`). 화면도 같은 값으로
         # 「만드는 중」과 「멈추는 중」을 가른다.
         "cancelRequested": bool(job.cancel_requested),
         "createdAt": job.created_at.isoformat() if job.created_at else "",
@@ -587,7 +587,7 @@ class JobUpdate(BaseModel):
     stage: str | None = None
     message: str | None = None
     # 어디까지 왔나·얼마나 남았나. 러너만 아는 값이라 여기로 올라온다
-    # (`studyez.eta`가 지난 편들의 실측으로 셈한다).
+    # (`runner.eta`가 지난 편들의 실측으로 셈한다).
     stage_index: int | None = Field(default=None, alias="stageIndex")
     stage_total: int | None = Field(default=None, alias="stageTotal")
     eta_seconds: int | None = Field(default=None, alias="etaSeconds")

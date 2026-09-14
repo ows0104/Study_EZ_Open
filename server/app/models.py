@@ -502,7 +502,7 @@ class PrequizJob(Base):
     message: Mapped[str] = mapped_column(Text, nullable=False, default="")
     requested_by: Mapped[str] = mapped_column(Text, nullable=False, default="")
     # 사람이 「다시 만들기」를 누른 것인가. **러너가 이걸 봐야 한다** — 안 넘기면
-    # `studyez.prequeue`가 이미 만든 편을 `done`으로 보고 건너뛰고, 그러면 화면에는
+    # `runner.prequeue`가 이미 만든 편을 `done`으로 보고 건너뛰고, 그러면 화면에는
     # 「덱을 못 만들었다」가 적힌다. 만든 것이 있는데 안 만든 것처럼 보이는 자리다.
     force: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     # `button` | `auto`. **상한이 자동에만 걸리므로 갈라 둔다** — 사람이 누른 것은

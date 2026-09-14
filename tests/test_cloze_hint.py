@@ -11,7 +11,7 @@ hard 로 사라진다.
 
 from quizgen.reproduce import front_of, leaks
 from quizgen.textutil import collapse_cloze
-from studyez.deck import plain_stem
+from runner.deck import plain_stem
 
 
 def _card(q):

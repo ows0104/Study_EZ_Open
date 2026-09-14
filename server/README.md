@@ -10,7 +10,7 @@ app/
   models.py     표 14개. 사용자가 쓰는 것은 quiz_attempt·main_attempt·asset_grab 셋뿐이다
   auth.py       Supabase JWT 검증 + is_admin 불리언
   storage.py    R2 서명 URL
-  naming.py     NFC·정규화. studyez/filenames.py와 같은 규칙이다
+  naming.py     NFC·정규화. runner/filenames.py와 같은 규칙이다
   matching.py   시간표 칸 ↔ 필기에서 읽어 낸 강의
   cli.py        init-db · seed-timetable (data/timetable/) · purge-artifacts
   preview_links.py  예습 제공자와 링크 형식의 단일 검증점
@@ -86,7 +86,7 @@ SQLite로 돈다. Postgres 고유 기능을 쓰지 않는다는 것도 같이 �
 
 `GET …/previews`만 방향이 반대다. 예습을 하는 것은 사람이고 사람은 `/admin`
 화면에서 링크를 저장하므로, 그것을 로컬이 되읽어 Pre-Quiz를 만든다
-(`python -m studyez prequeue`). `/api/admin/overview`로 갈음할 수 없다 —
+(`python -m runner prequeue`). `/api/admin/overview`로 갈음할 수 없다 —
 그쪽은 `require_admin`이라 Supabase 세션이 있어야 한다.
 
 **파일은 서버를 거치지 않는다.** Cloud Run의 요청 본문 상한(32MB)이 강의록

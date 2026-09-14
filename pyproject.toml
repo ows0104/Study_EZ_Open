@@ -7,12 +7,17 @@ target-version = "py311"
 
 # `server/` 는 자기 루트다 — `from app.config import ...` 로 임포트한다.
 # 이걸 적어 주지 않으면 isort 가 `app` 을 서드파티로 오해해 순서를 뒤집는다.
-src = [".", "server"]
+# `spotter/scripts/` 도 자기 루트다 — 서로를 `from generate_exam import ...` 로 부른다.
+src = [".", "server", "spotter/scripts"]
 
 exclude = [
     "out", "runs", "필기",
     ".tmp_uv_cache", ".tmp_card_review", ".pytest_cache",
     "node_modules", "web",
+    # 땡시 배포본. 산출물이라 사람이 고칠 자리가 아니다.
+    "spotter-dist",
+    # 땡시 원본 자료가 쌓이는 곳. 추적하지 않는다.
+    "spotter/build", "spotter/images", "spotter/기생충학",
 ]
 
 [tool.ruff.lint]
