@@ -54,6 +54,8 @@ from pathlib import Path
 
 from quizgen import build as quizgen_build
 
+from . import runlayout
+
 # 웹에서 풀 수 있는 카드. 그림 카드는 앞면이 이미지라 텍스트만으로는 물음이
 # 성립하지 않는다("이 조직은 어느 장기이며…"). apkg에는 그대로 들어 있다.
 WEB_FORMATS = ("basic", "cloze", "ox")
@@ -466,9 +468,21 @@ def apkg_of(run_dir: Path, kind: str) -> Path | None:
     return max(decks, key=lambda p: p.stat().st_mtime) if decks else None
 
 
+def _attempt(run_dir: Path, name: str, kind: str = MAIN) -> Path:
+    """시도 것 하나의 자리. **새 모양이면 `main/<판>/` 안이고 옛 모양이면 여기다.**
+
+    `runlayout` 이 그 둘을 가른다(`docs/runs-layout.md` 5단계). 이 함수를 지나지
+    않고 `run_dir / name` 을 쓰면 옮긴 편에서만 조용히 빈 값을 읽는다 — 그러면
+    계약이 `item_count 0` 으로 나가고 문지기가 그것을 막는다(막는 것이 맞지만
+    원인이 엉뚱하게 보인다).
+    """
+    layout_kind = runlayout.PREQUIZ if kind == PRE else runlayout.MAIN
+    return runlayout.find(run_dir, name, layout_kind) or run_dir / name
+
+
 def config_of(run_dir: Path, kind: str) -> dict | None:
     name = "prequiz.config.json" if kind == PRE else "run.config.json"
-    got = _load(run_dir / name)
+    got = _load(_attempt(run_dir, name, kind))
     return got if isinstance(got, dict) else None
 
 
@@ -482,18 +496,18 @@ def source_pdf(run_dir: Path) -> str:
     `*.config.json`이 전체 경로를 들고 있고 `prep.json`은 파일명만 들고 있다.
     둘 다 파일명에서 강의를 읽어내는 데는 충분하지만, 경로가 있는 쪽을 먼저 본다.
     """
-    for name in ("run.config.json", "prequiz.config.json"):
-        cfg = _load(run_dir / name)
+    for name, kind in (("run.config.json", MAIN), ("prequiz.config.json", PRE)):
+        cfg = _load(_attempt(run_dir, name, kind))
         if isinstance(cfg, dict) and (cfg.get("pdf") or cfg.get("pdf_name")):
             return str(cfg.get("pdf") or cfg.get("pdf_name"))
-    prep = _load(run_dir / "prep.json")
+    prep = _load(_attempt(run_dir, "prep.json"))
     if isinstance(prep, dict):
         return str(prep.get("source") or prep.get("source_pdf") or "")
     return ""
 
 
-def cards_of(run_dir: Path) -> list[dict]:
-    got = _load(run_dir / "items.reproduced.json")
+def cards_of(run_dir: Path, kind: str = MAIN) -> list[dict]:
+    got = _load(_attempt(run_dir, "items.reproduced.json", kind))
     cards = (got or {}).get("cards") if isinstance(got, dict) else None
     return cards if isinstance(cards, list) else []
 
@@ -513,8 +527,8 @@ def _slides(run_dir: Path, run_id: str) -> int:
     그 규칙에 안 맞으므로 여기서 한 번 맞춰 둔다. 그림 크롭은 옮기지 않는다 —
     웹이 읽는 것은 「이 카드의 근거가 몇 번 슬라이드인가」뿐이다.
     """
-    out = run_dir / "slides"
-    media = run_dir / "media"
+    out = run_dir / "slides"                      # 강의 것 — 서버가 읽는 자리
+    media = _attempt(run_dir, "media", PRE)       # 시도 것 — quizgen 이 낸 렌더
     if not media.is_dir():
         if out.exists():
             shutil.rmtree(out)
@@ -732,9 +746,9 @@ def contract(run_dir: Path, run_id: str, title: str, kind: str) -> dict:
         raise FileNotFoundError(f"{run_dir.name}: {kind} 덱(.apkg)이 없다")
 
     cfg = config_of(run_dir, kind) or {}
-    cards = cards_of(run_dir)
-    suspects = _load(run_dir / "suspects.json") or {}
-    prep = _load(run_dir / "prep.json") or {}
+    cards = cards_of(run_dir, kind)
+    suspects = _load(_attempt(run_dir, "suspects.json", kind)) or {}
+    prep = _load(_attempt(run_dir, "prep.json", kind)) or {}
 
     got = quizgen_build.counts(apkg)
     used = sorted({c["slide_no"] for c in cards if isinstance(c.get("slide_no"), int)})

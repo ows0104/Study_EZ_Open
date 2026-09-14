@@ -45,7 +45,9 @@ def contract(monkeypatch):
     """apkg를 안 굽고 `contract`만 돌린다. 덱을 여는 부분은 여기 관심이 아니다."""
     monkeypatch.setattr(deck, "apkg_of", lambda run_dir, kind: run_dir / "deck.apkg")
     monkeypatch.setattr(deck, "config_of", lambda run_dir, kind: {"id": "p260820_02"})
-    monkeypatch.setattr(deck, "cards_of", lambda run_dir: CARDS)
+    # `cards_of` 는 2026-09-15 에 `kind` 를 받게 됐다 — 새 모양에서 복습·예습이
+    # 서로 다른 작업 폴더를 보기 때문이다(`runlayout`). 스텁도 그 모양이어야 한다.
+    monkeypatch.setattr(deck, "cards_of", lambda run_dir, kind=deck.MAIN: CARDS)
     monkeypatch.setattr(deck.quizgen_build, "counts", lambda apkg: {})
 
     def run(run_dir: Path, kind: str) -> dict:

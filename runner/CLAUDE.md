@@ -4,7 +4,7 @@
 **저장소에서 유일하게 합법인 경계 넘기가 여기 있다** — `runner/deck.py → quizgen` 3줄.
 
     무엇을 고치면 어느 파일인가    ../docs/map.md §2
-    검사                          pytest tests/runner      218개 · 9초
+    검사                          pytest tests/runner      273개 · 11초
     권한 · 어디서나 미는 함정       ../CLAUDE.md
     카드를 어떻게 쓰는가            ../quizgen/CLAUDE.md
 
@@ -173,3 +173,32 @@ python -m runner chosen                                 어느 편에 기록이 
 (`reproduce.status = "skipped"`) 그것이 분모에 들어 있었다. `260813_01` 이 154장 중
 18장이 그래서 67% 대 72% 로 갈린다. **25편 비교의 결론은 안 바뀌었다**(재현 중앙
 +3.5%p · 24/25 · 잡음 폭 안 15편).
+
+## 강의 것과 시도 것은 `runlayout` 하나가 가른다
+
+2026-09-15, `docs/runs-layout.md` 5단계. **목록을 두 곳에 적은 것이 사고의 모양이었다** —
+`runner import` 가 `runs/<편>/` 을 비울 때 남기는 것을 둘만 알고 있어서(`preview.md`·
+`pre_target.json`) **`HOLD`·`source.json`·`CHOSEN.json` 이 지워질 수 있었다.**
+`.gitignore` 는 `HOLD` 를 두고 *"잃으면 막아 둔 이유를 아무도 모른 채 덱이 나간다"* 고
+적고 있었는데 그 코드는 그걸 몰랐다.
+
+    강의 것   HOLD · CHOSEN.json · preview.md · pre_target.json · note.md
+              run.meta.json · *_items.final.json · source.json · slides/ · *.apkg
+    시도 것   prep.* · items.* · prompt.* · context.* · media/ · run.report.json …
+
+**`runs/<편>/<파일>` 을 직접 조립하지 마라.** 시도 것은 `runlayout.find` 를 지난다 —
+새 모양에서는 `main/<판>/` 안이고 옛 모양에서는 강의 폴더다. 지나지 않으면 옮긴 편에서만
+조용히 빈 값을 읽는다.
+
+### 「제일 새 판」이 아니라 **고른 판**이다
+
+`work_dir` 이 ① `CHOSEN.json` 이 고른 시도 → ② 제일 새 판 → ③ 강의 폴더 순으로 본다.
+①이 없으면 `out/` 시도를 접는 순간 `deck.contract` 가 **배포 중인 덱과 다른 카드**로
+계약을 다시 쓴다(83장 편의 `item_count` 가 58이 됐다). 실제 편을 사본으로 떠서 잡았다.
+
+### 옮기는 것은 아직 막혀 있다
+
+`scripts/migrate_attempts.py` 는 계획을 다 세우지만 `--apply` 가 거부한다 —
+`deck.run_main` 이 `--out` 으로 강의 폴더를 그대로 넘기기 때문이다. 옮긴 편에 새 실행이
+쓰면 그 산출물이 판 폴더에 가려 조용히 무시된다. 풀리는 조건 셋은
+`runlayout.WRITES_ATTEMPT_DIRS` 위에 있다.

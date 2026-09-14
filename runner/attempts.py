@@ -36,6 +36,8 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import runlayout
+
 RUN_ID = re.compile(r"(\d{6}_\d{2})")
 CARDS_FILE = "items.raw.json"
 
@@ -173,8 +175,20 @@ def dedupe(found: list[Attempt]) -> list[Attempt]:
 
 
 def attempts_of(runs_dir: Path, out_dir: Path, run_id: str) -> list[Attempt]:
-    """그 편의 시도 전부, 시각순. `runs/<id>/` 와 `out/` 의 이름에 그 id 가 든 것."""
-    places = [Path(runs_dir) / run_id]
+    """그 편의 시도 전부, 시각순. 세 자리를 본다.
+
+        runs/<id>/main/<판>/     새 모양 (`docs/runs-layout.md` 5단계)
+        runs/<id>/               옛 모양 — 시도 것이 강의 폴더에 널려 있다
+        out/*<id>*/              아직 접히지 않은 시도
+
+    **옛 자리는 판이 있으면 안 본다.** 옮긴 편에서 강의 폴더를 또 재면 옮긴 시도가
+    두 번 세어진다 — `dedupe` 가 카드 해시로 걸러 주지만, 그러면 경로가 옛 자리로
+    찍혀 사람이 「안 옮겨졌다」고 읽는다.
+    """
+    run_dir = Path(runs_dir) / run_id
+    places = [d for _, _, d in runlayout.attempt_dirs(run_dir)]
+    if not places:
+        places = [run_dir]
     if Path(out_dir).is_dir():
         places += sorted(p for p in Path(out_dir).glob(f"*{run_id}*") if p.is_dir())
     found = [got for d in places if d.is_dir() and (got := measure(d))]

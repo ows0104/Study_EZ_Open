@@ -31,7 +31,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import filenames
+from . import filenames, runlayout
 
 KEY = "source_sha256"
 _CHUNK = 1 << 20
@@ -85,13 +85,22 @@ def built_from(run_dir: Path) -> dict | None:
     앞에 있는 것일수록 산출물에 가깝다. `source.json` 은 빌드가 끝난 뒤에 찍는
     표시라 마지막이다 — 그것만 앞서 갱신되는 것이 편을 가두는 모양이었다.
     """
-    prep = _load(run_dir / "prep.json")
+    # **시도 것은 `runlayout` 에게 묻는다.** 새 모양에서는 `prep.json` 이
+    # `runs/<편>/main/<판>/` 안에 있고 옛 모양에서는 강의 폴더에 있다. 여기서
+    # `run_dir / "prep.json"` 을 그대로 쓰면 옮긴 편이 **지문 없음**으로 읽혀
+    # 「아직 안 만들었다」가 되고, 밤 쓸기가 그 편을 다시 만든다.
+    prep = _load(runlayout.find(run_dir, "prep.json") or run_dir / "prep.json")
     if isinstance(prep, dict) and prep.get("source"):
         name = str(prep["source"])
         return {"sha256": str(prep.get(KEY) or ""), "name": name,
                 "version": _version_of(name), "where": "prep.json"}
 
-    cfg = _load(run_dir / "run.config.json") or _load(run_dir / "prequiz.config.json")
+    cfg = None
+    for which, kind in (("run.config.json", runlayout.MAIN),
+                        ("prequiz.config.json", runlayout.PREQUIZ)):
+        found = runlayout.find(run_dir, which, kind)
+        if found and (cfg := _load(found)):
+            break
     if isinstance(cfg, dict) and (cfg.get("pdf") or cfg.get("pdf_name")):
         name = Path(str(cfg.get("pdf") or cfg.get("pdf_name"))).name
         return {"sha256": "", "name": name, "version": _version_of(name),

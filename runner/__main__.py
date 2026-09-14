@@ -63,6 +63,7 @@ from runner import (  # noqa: E402
     matching,
     preview,
     publish,
+    runlayout,
     watch,
 )
 
@@ -271,9 +272,17 @@ def run_jokbo(args) -> int:
 # 갈라 둔 변형이다(`pre_p250825_01_note`). 꼬리가 달라도 같은 강의다.
 RE_WORK_DIR = re.compile(r"^(?P<pre>pre_)?p(?P<run_id>\d{6}_\d{2}(?:-[0-9a-f]{4})?)(?P<variant>.*)$")
 
-# 덮어쓸 때도 안 지우는 것. **사람이 만든 것과 남의 서비스에서 받아 온 것**이다 —
-# 파이프라인은 이 둘을 다시 만들 수 없다.
-KEEP_ON_IMPORT = {"preview.md", "pre_target.json"}
+# 덮어쓸 때도 안 지우는 것. **파이프라인이 다시 만들 수 없는 것 전부**다.
+#
+# 2026-09-15 까지 여기 둘만 있었다(`preview.md`·`pre_target.json`). 그래서 이 자리를
+# 비울 때 **`HOLD` 와 `source.json` 이 같이 지워졌다** — `.gitignore` 는 `HOLD` 를
+# 두고 *"파이프라인이 다시 만들 수 없다 … 잃으면 막아 둔 이유를 아무도 모른 채 덱이
+# 나간다"* 고 적고 있었고, 여기는 그것을 몰랐다. 09-15 에 `CHOSEN.json` 이 같은
+# 자리에 하나 더 놓이면서 그 구멍이 커졌다 — 사람이 고른 판이 조용히 없어진다.
+#
+# **목록을 여기서 늘리지 마라.** 무엇이 강의 것인지는 `runlayout` 하나가 든다 —
+# 두 곳에 적으면 다음에 파일이 늘 때 한쪽만 는다. 그게 이 주석의 사고였다.
+KEEP_ON_IMPORT = runlayout.is_lecture_own
 
 
 def import_dirs(source: Path) -> dict[str, list[tuple[str, Path]]]:
@@ -357,7 +366,7 @@ def run_import(args) -> int:
             # 남기는 것은 사람이 만든 것뿐이다 — 예습 대화는 여기서 다시 못 만든다.
             if target.exists():
                 for entry in target.iterdir():
-                    if entry.name in KEEP_ON_IMPORT:
+                    if KEEP_ON_IMPORT(entry.name):
                         continue
                     shutil.rmtree(entry) if entry.is_dir() else entry.unlink()
             shutil.copytree(folder, target, dirs_exist_ok=True)
