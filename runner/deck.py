@@ -269,10 +269,39 @@ def calendar_deck(run_dir: Path, run_id: str, title: str, kind: str, subject: st
     return f"{name}::예습" if kind == PRE else name
 
 
+MATERIALS = "_materials"      # 과목 공용 재료. 지금은 족보 컷뿐이다
+LEGACY_MATERIALS = "_jokbo"   # 2026-09-15 개명 전 이름
+
+
+def subject_dir(runs_dir: Path, subject: str) -> Path:
+    """그 과목의 재료가 사는 폴더. **판 폴더들의 부모다.**
+
+    과목마다 따로 두는 이유는 quizgen 가 조각을 **강의 제목으로** 대조하기 때문이다 —
+    제목만 보면 과목이 다른 두 강의가 서로의 족보를 물어 갈 수 있다.
+
+    **옛 이름(`_jokbo`)도 본다.** 개명 전에 자른 컷이 아직 거기 있을 수 있고, 편
+    111개의 `run.config.json` 이 그 경로를 적고 있다(`--resume` 이 되살린다).
+    """
+    new = Path(runs_dir) / MATERIALS / subject
+    if new.is_dir():
+        return new
+    old = Path(runs_dir) / LEGACY_MATERIALS / subject
+    return old if old.is_dir() else new
+
+
 def jokbo_dir(runs_dir: Path, subject: str) -> Path:
-    """과목마다 따로 둔다. quizgen는 조각을 **강의 제목으로** 대조하는데, 제목만
-    보면 과목이 다른 두 강의가 서로의 족보를 물어 갈 수 있다."""
-    return runs_dir / "_jokbo" / subject
+    """**지금 쓸 족보 컷의 폴더.** `--jokbo-dir` 로 넘어가는 값이다.
+
+    새 모양에서는 `_materials/<과목>/<판>/` 이고 `current` 가 어느 판인지 말한다.
+    옛 모양에서는 조각이 과목 폴더에 그대로 널려 있어 그 폴더 자신이다 —
+    `cutmark.resolve` 가 둘을 가른다.
+
+    **자르는 쪽은 이 함수를 쓰지 않는다.** 자를 때는 과목 폴더를 줘야 하고
+    (`subject_dir`), 판 폴더는 `quizgen.jokbo` 가 그 아래에 만든다 — 과목 이름을
+    폴더 이름에서 읽기 때문이다.
+    """
+    from quizgen import cutmark
+    return cutmark.resolve(subject_dir(runs_dir, subject))
 
 
 def cut_line(cut_dir: Path) -> str:

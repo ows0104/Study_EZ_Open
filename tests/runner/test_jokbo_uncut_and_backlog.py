@@ -259,3 +259,61 @@ def test_원본이_그대로면_READY에_할_말이_없다(tmp_path):
 def test_runs_dir를_안_주면_안_묻는다(tmp_path):
     """원본 해시를 뜨는 일이라 부르는 쪽이 원할 때만 한다."""
     assert watch.jokbo_note(watch.JOKBO_READY, "병리학") == ""
+
+
+# ── 개명과 판 폴더 (2026-09-15 · 3′) ──────────────────────────────────
+#
+# `_jokbo/<과목>/` → `_materials/<과목>/<판>/`. **옛 이름도 계속 읽힌다** —
+# 편 111개의 `run.config.json` 이 그 경로를 적고 있다.
+
+def test_옛_이름도_읽는다(tmp_path):
+    from runner import deck
+    runs = tmp_path / "runs"
+    old = runs / "_jokbo" / "병리학"
+    old.mkdir(parents=True)
+    (old / "index.json").write_text('{"lectures": []}', encoding="utf-8")
+    assert deck.subject_dir(runs, "병리학") == old
+    assert deck.jokbo_dir(runs, "병리학") == old        # 옛 모양은 그 자리가 컷이다
+    assert watch.jokbo_state(runs, "병리학") == watch.JOKBO_READY
+
+
+def test_새_이름이_옛_이름을_이긴다(tmp_path):
+    """둘이 같이 있으면 새것을 본다 — 옮기다 끊긴 상태다."""
+    from runner import deck
+    runs = tmp_path / "runs"
+    (runs / "_jokbo" / "병리학").mkdir(parents=True)
+    (runs / "_jokbo" / "병리학" / "index.json").write_text("{}", encoding="utf-8")
+    cut = runs / "_materials" / "병리학" / "260823-0221"
+    cut.mkdir(parents=True)
+    (cut / "index.json").write_text('{"lectures": []}', encoding="utf-8")
+
+    assert deck.subject_dir(runs, "병리학") == runs / "_materials" / "병리학"
+    assert deck.jokbo_dir(runs, "병리학") == cut
+
+
+def test_자를_때는_과목_폴더를_준다(tmp_path):
+    """**판 폴더를 주면 실습 조각이 「260915-0037 실습」이 된다.**
+
+    `quizgen.jokbo` 가 과목 이름을 `-o` 폴더의 이름에서 읽는다. 그 이름을
+    `find_jokbo` 가 제목으로 대조하므로 깨지면 실습 편이 기출 0장으로 나간다.
+    """
+    from runner import deck
+    runs = tmp_path / "runs"
+    cut = runs / "_materials" / "기생충학" / "260908-0130"
+    cut.mkdir(parents=True)
+    (cut / "index.json").write_text('{"lectures": []}', encoding="utf-8")
+
+    assert deck.subject_dir(runs, "기생충학").name == "기생충학"   # 자르는 쪽
+    assert deck.jokbo_dir(runs, "기생충학").name == "260908-0130"  # 읽는 쪽
+
+
+def test_판이_여럿이면_current_를_따른다(tmp_path):
+    from quizgen import cutmark
+    from runner import deck
+    runs = tmp_path / "runs"
+    subject = runs / "_materials" / "기생충학"
+    for v in ("260908-0130", "260915-0037"):
+        (subject / v).mkdir(parents=True)
+        (subject / v / "index.json").write_text('{"lectures": []}', encoding="utf-8")
+    cutmark.set_current(subject, "260908-0130")
+    assert deck.jokbo_dir(runs, "기생충학").name == "260908-0130"   # 새것이 아니라 고른 것

@@ -227,9 +227,14 @@ def run_jokbo(args) -> int:
         print(f"[jokbo] --practical {args.practical} 에 PDF가 없습니다")
         return 1
 
-    out_dir = deck.jokbo_dir(Path(args.runs), subject)
+    # **자르는 쪽에는 과목 폴더를 준다.** 판 폴더는 `quizgen.jokbo` 가 그 아래에
+    # 만든다 — 과목 이름을 폴더 이름에서 읽기 때문에 판을 직접 주면 실습 조각이
+    # 「260915-0130 실습」이라는 이름으로 나온다(`deck.jokbo_dir` 주석).
+    out_dir = deck.subject_dir(Path(args.runs), subject)
     if not practical:
-        practical, lost = remembered_practical(out_dir / "index.json")
+        # 지난번 실습 족보는 **지금 판**의 색인에 적혀 있다.
+        practical, lost = remembered_practical(
+            deck.jokbo_dir(Path(args.runs), subject) / "index.json")
         for p in practical:
             print(f"[jokbo] 지난번에 쓴 실습 족보를 그대로 씁니다: {p.name}")
         for name in lost:
@@ -247,7 +252,9 @@ def run_jokbo(args) -> int:
         print(f"  자르지 못했다 (코드 {code})")
         return 1
 
-    index = out_dir / "index.json"
+    # 방금 만들어진 판을 찾는다. `cut_id` 는 자르는 쪽이 정하므로 여기서는 모른다.
+    cut_dir = deck.jokbo_dir(Path(args.runs), subject)
+    index = cut_dir / "index.json"
     if not index.is_file():
         print("  index.json이 안 나왔다 — 다음 빌드가 이 조각을 못 찾는다")
         return 1
@@ -265,7 +272,7 @@ def run_jokbo(args) -> int:
     # **판을 화면에 적는다.** 자른 쪽(`quizgen.cutmark`)이 `cut.json` 에 남긴 것이고,
     # 이 줄이 있어야 사람이 「방금 자른 것이 무엇인가」를 그 자리에서 본다.
     print(f"\n  → {index}")
-    print(f"  {deck.cut_line(out_dir)}")
+    print(f"  {deck.cut_line(cut_dir)}")
     print("  이제 `python -m runner watch --build`가 이 조각을 스스로 물린다")
     return 0
 

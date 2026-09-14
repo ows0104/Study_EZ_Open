@@ -2,7 +2,7 @@
 
 `docs/runs-layout.md` 의 「새로 적어야 하는 것 ①」이다.
 
-> 지금 `runs/_jokbo/<과목>/index.json` 은 `source`·`pages`·`regions`·`lectures`·
+> 지금 `runs/_jokbo/<과목>/index.json` 은      ← 그때 이름. 지금은 `_materials/<과목>/<판>/` `source`·`pages`·`regions`·`lectures`·
 > `source_path` 를 든다. **자른 시각도, 자른 코드의 판도 없다.** 컷팅이 한 번쯤
 > 바뀔 것을 아는 이상, 바뀐 뒤에 「이 덱은 어느 컷으로 만들었나」를 물을 수 없다.
 
@@ -38,14 +38,18 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import json
-import shutil
+import re
 import subprocess
 from pathlib import Path
 
 from .prep import sha256_of
 
 CUT_FILE = "cut.json"
-PREVIOUS = "_previous"          # 다시 자를 때 앞 컷이 들어가는 자리
+CURRENT = "current"             # 어느 판이 지금 것인가. 한 줄에 판 이름만 적는다
+PREVIOUS = "_previous"          # 2026-09-15 전에 밀려난 컷이 든 자리. **이제 안 만든다**
+
+# 판 폴더 이름. `new_cut_id` 가 내는 모양이다.
+RE_CUT_ID = re.compile(r"^\d{6}-\d{4}(\.\d+)?$")
 
 # 컷을 만드는 코드. **이 목록이 곧 「자른 코드의 판」의 정의다.** 파서가 다른
 # 모듈로 번지면 여기도 같이 늘려야 한다 — 안 늘리면 코드가 바뀌었는데 판이 그대로다.
@@ -107,6 +111,52 @@ def source_mark(pdf: Path, pages: int | None = None) -> dict:
     return got
 
 
+def resolve(base: Path) -> Path:
+    """컷을 읽을 자리. **과목 폴더를 줘도 판 폴더를 줘도 맞는 곳을 돌려준다.**
+
+        runs/_materials/기생충학/260908-0130/   ← 판 폴더. 그대로 쓴다
+        runs/_materials/기생충학/              ← 과목 폴더. `current` 를 따라간다
+        runs/_jokbo/기생충학/                  ← 옛 모양. 조각이 그 자리에 널려 있다
+
+    **셋을 다 받는 이유는 기록된 경로가 셋 다 있기 때문이다.** 편 111개의
+    `run.config.json` 이 옛 경로를 적고 있고(`--resume` 이 그것을 되살린다),
+    새로 자른 것은 판 폴더를 적는다.
+
+    `current` 가 가리키는 판이 없으면 **제일 새 판**으로 내려간다. 사람이 그 파일을
+    손으로 지웠거나 판을 지운 경우다 — 조용히 아무것도 안 읽는 것보다 낫다.
+    """
+    base = Path(base)
+    if (base / "index.json").is_file():
+        return base                       # 판 폴더이거나 옛 모양이다
+    pointer = base / CURRENT
+    if pointer.is_file():
+        try:
+            want = pointer.read_text(encoding="utf-8").strip()
+            if want and (base / want / "index.json").is_file():
+                return base / want
+        except OSError:
+            pass
+    found = sorted(d.name for d in base.iterdir()
+                   if d.is_dir() and RE_CUT_ID.match(d.name)) if base.is_dir() else []
+    return base / found[-1] if found else base
+
+
+def set_current(subject_dir: Path, cut_id: str) -> Path:
+    """`current` 를 그 판으로 돌린다. 되돌리려면 이 한 줄만 고치면 된다."""
+    p = Path(subject_dir) / CURRENT
+    p.write_text(cut_id + "\n", encoding="utf-8")
+    return p
+
+
+def cuts(subject_dir: Path) -> list[str]:
+    """그 과목의 판 전부, 이름순(= 시간순). 옛 모양이면 빈 목록."""
+    base = Path(subject_dir)
+    if not base.is_dir():
+        return []
+    return sorted(d.name for d in base.iterdir()
+                  if d.is_dir() and RE_CUT_ID.match(d.name))
+
+
 def read(cut_dir: Path) -> dict | None:
     """그 폴더의 `cut.json`. 없으면 None — **옛 컷은 없는 것이 정상이다.**"""
     p = Path(cut_dir) / CUT_FILE
@@ -119,37 +169,17 @@ def read(cut_dir: Path) -> dict | None:
 
 
 def archive(cut_dir: Path) -> str | None:
-    """지금 있는 컷을 `_previous/<판>/` 으로 밀어 넣는다. 옮긴 판 이름을 돌려준다.
+    """**2026-09-15 부터 아무것도 안 한다.** 늘 None 이다.
 
-    **다시 자르면 앞 컷이 덮인다.** 그러면 그 컷으로 만든 덱이 무엇을 봤는지 물을
-    수 없다 — 이 함수가 있는 이유다. 컷 하나가 0.5~0.9MB 라 남기는 값이 거의 없다.
+    앞 컷을 `_previous/<판>/` 으로 밀어 넣던 함수다. 지금은 컷이 처음부터 판 폴더에
+    들어가므로(`<과목>/<판>/`) 밀어낼 것이 없다 — 판은 서로 형제이고 아무것도 안 덮는다.
 
-    `cut.json` 이 없는 옛 컷도 옮긴다. 판 이름을 모르므로 `index.json` 의 mtime 에서
-    딴 이름에 `-old` 를 붙인다 — **이름으로 판정하지 말라는 뜻이다**(모듈 머리).
+    **이미 `_previous/` 에 있는 것은 그대로 둔다.** `scripts/migrate_materials.py` 가
+    그것을 형제 판으로 끌어올린다.
+
+    함수를 지우지 않은 이유는 부르는 자리가 남아 있는지 검사로 굳혀 두려는 것이다.
     """
-    cut_dir = Path(cut_dir)
-    index = cut_dir / "index.json"
-    if not index.is_file():
-        return None                       # 처음 자르는 것이다. 옮길 것이 없다
-    mark = read(cut_dir)
-    if mark and mark.get("cut_id"):
-        name = str(mark["cut_id"])
-    else:
-        stamp = dt.datetime.fromtimestamp(index.stat().st_mtime)
-        name = f"{new_cut_id(stamp)}-old"
-    dest = cut_dir / PREVIOUS / name
-    if dest.exists():
-        # 같은 분에 두 번 잘렸다. 덮지 않는다 — 덮으면 이 함수의 목적이 없어진다.
-        for n in range(2, 100):
-            if not (alt := cut_dir / PREVIOUS / f"{name}.{n}").exists():
-                dest = alt
-                break
-    dest.mkdir(parents=True, exist_ok=True)
-    for item in cut_dir.iterdir():
-        if item.name == PREVIOUS:
-            continue
-        shutil.move(str(item), str(dest / item.name))
-    return dest.name
+    return None
 
 
 def write(cut_dir: Path, *, source: Path, pages: int | None = None,

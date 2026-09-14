@@ -45,7 +45,10 @@ def cut_time(cut_dir: Path) -> dt.datetime | None:
 
 def main() -> int:
     apply = "--apply" in sys.argv
-    base = ROOT / "runs" / "_jokbo"
+    # 옛 이름(`_jokbo`)과 새 이름(`_materials`) 둘 다 본다. 개명은
+    # `scripts/migrate_materials.py` 가 한다.
+    base = next((ROOT / "runs" / n for n in ("_materials", "_jokbo")
+                 if (ROOT / "runs" / n).is_dir()), ROOT / "runs" / "_materials")
     if not base.is_dir():
         print(f"{base} 가 없다")
         return 1

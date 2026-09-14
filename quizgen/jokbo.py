@@ -917,17 +917,26 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
 
     doc = fitz.open(args.pdf)
-    outdir = Path(args.out)
-    outdir.mkdir(parents=True, exist_ok=True)
 
-    # **앞 컷을 덮지 않는다.** 덮으면 그 컷으로 만든 덱이 무엇을 봤는지 물을 수 없다
-    # (`cutmark` 머리). 컷 하나가 0.5~0.9MB 라 남기는 값이 거의 없다.
+    # **`-o` 는 과목 폴더를 받고 조각은 그 아래 판 폴더로 들어간다.**
+    # `runs/_materials/기생충학/260915-0130/` 같은 자리다.
     #
-    # 자르다 죽으면 앞 컷은 `_previous/` 에 있고 이 폴더는 반쯤 비어 있게 된다.
-    # 그때 `watch.jokbo_state` 는 `index.json` 이 없으므로 `UNCUT` 으로 본다 —
-    # 「안 잘렸다」이고, 그것이 맞는 말이다.
-    if (moved := cutmark.archive(outdir)):
-        print(f"앞 컷을 {cutmark.PREVIOUS}/{moved} 로 옮겼다")
+    # 과목 이름은 **`-o` 로 받은 폴더의 이름**에서 읽는다(아래 `prac_name`). 그래서
+    # 여기에 판 폴더를 직접 받으면 안 된다 — 실습 조각이 「260915-0130 실습」이라는
+    # 이름으로 나온다. 그 이름은 `find_jokbo` 가 제목으로 대조하는 값이다.
+    #
+    # 판마다 폴더가 따로 서므로 **아무것도 덮지 않는다.** 앞 컷을 밀어내던
+    # `cutmark.archive` 가 그래서 할 일이 없어졌다.
+    subject_dir = Path(args.out)
+    subject_dir.mkdir(parents=True, exist_ok=True)
+    cut_id = cutmark.new_cut_id()
+    taken = set(cutmark.cuts(subject_dir))
+    base, n = cut_id, 1
+    while cut_id in taken:
+        n += 1
+        cut_id = f"{base}.{n}"
+    outdir = subject_dir / cut_id
+    outdir.mkdir(parents=True, exist_ok=True)
 
     regions = split_regions(doc)
     lectures, profs, warn = parse_toc(doc)
@@ -954,9 +963,11 @@ def main(argv=None) -> int:
     # 실습은 강의별 헤더가 없어 연도 블록만으로 하나의 풀로 둔다.
     # **과목 이름은 폴더에서 읽는다.** 여기에 "병리학"이 박혀 있었는데, 그러면
     # 기생충학 실습 조각이 「병리학 실습」이라는 이름으로 나온다.
-    prac_name = f"{outdir.name} 실습"
-    prac_keys = {norm(f"{outdir.name}실습"): ("PRAC", prac_name),
-                 norm(f"{outdir.name}실습시험"): ("PRAC", prac_name)}
+    # **판 폴더가 아니라 과목 폴더의 이름이다.** 판을 읽으면 실습 조각이
+    # 「260915-0130 실습」이 되고, 그 이름을 `find_jokbo` 가 제목으로 대조한다.
+    prac_name = f"{subject_dir.name} 실습"
+    prac_keys = {norm(f"{subject_dir.name}실습"): ("PRAC", prac_name),
+                 norm(f"{subject_dir.name}실습시험"): ("PRAC", prac_name)}
     prac_sources: list[dict] = []
     prac_layouts: list[tuple[str, list[dict]]] = []
     if args.practical:
@@ -989,7 +1000,6 @@ def main(argv=None) -> int:
     # `cut_id` 를 `index.json` 에도 넣는다. **이 파일을 이미 읽는 쪽이 여럿이라**
     # (`pack.find_jokbo`·`build.find_jokbo_source`·`prequiz.assemble`) 판을 공짜로
     # 본다. 정본은 `cut.json` 이고 여기 것은 그 사본이다.
-    cut_id = cutmark.new_cut_id()
     index = {"cut_id": cut_id,
              "source": Path(args.pdf).name, "pages": doc.page_count,
              "regions": {k: [p + 1 for p in v] for k, v in regions.items()},
@@ -1039,6 +1049,9 @@ def main(argv=None) -> int:
                       practical=prac_sources or None, cut_id=cut_id,
                       counts={"lectures": len(index["lectures"]),
                               "questions": sum(e["n_questions"] for e in index["lectures"])})
+        # **`current` 는 맨 마지막에 돌린다.** 앞에서 죽으면 지금 판이 그대로
+        # 남아야 한다 — 반쯤 쓰인 판을 가리키면 다음 빌드가 그것을 읽는다.
+        cutmark.set_current(subject_dir, cut_id)
         print(cutmark.describe(outdir))
     except (OSError, ValueError) as cause:
         print(f"⚠ 판({cut_id})을 못 적었다 ({cause}) — 조각은 다 나왔다. "

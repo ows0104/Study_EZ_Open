@@ -4,7 +4,7 @@
 하는 일은 무엇을 쓰라고 말하는 것과 그것이 성립하는지 재는 것이다.**
 
     무엇을 고치면 어느 파일인가    ../docs/map.md §2 · §2-1 (프롬프트 안쪽)
-    검사                          pytest tests/quizgen     400개 · 2초
+    검사                          pytest tests/quizgen     402개 · 2초
     문구가 나은지 재는 자리         python -m quizgen.judge  30초 · $0.35
     권한 · 어디서나 미는 함정       ../CLAUDE.md
     돌리는 쪽                      ../runner/CLAUDE.md

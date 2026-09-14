@@ -81,47 +81,65 @@ def test_되짚어_채운_것은_그렇게_표시된다(tmp_path):
     assert "되짚어 채운 것" in cutmark.describe(d)
 
 
-# ── ② 다시 자르면 앞 컷을 남긴다 ──────────────────────────────────────
-def test_다시_자르면_앞_컷이_previous로_간다(tmp_path):
-    d = _cut(tmp_path / "병리학", slices=3)
-    pdf = tmp_path / "족보.pdf"
-    pdf.write_bytes(b"x")
-    cutmark.write(d, source=pdf, cut_id="260823-0221")
+# ── ② 판은 서로 형제다 (2026-09-15 · 3′) ──────────────────────────────
+#
+# 앞 컷을 `_previous/<판>/` 으로 **밀어내던** 자리다. 밀어내는 것 자체가 문제였다 —
+# 지금 컷만 과목 폴더에 있어서, 다시 자르면 그 컷이 이사를 갔다. 그 컷으로 만든 덱이
+# 적어 둔 `cut_id` 로 폴더를 찾으면 거기 없었다.
+#
+# 지금은 컷이 처음부터 `<과목>/<판>/` 에 들어가므로 아무것도 움직이지 않는다.
 
-    moved = cutmark.archive(d)
-
-    assert moved == "260823-0221"
-    old = d / cutmark.PREVIOUS / "260823-0221"
-    assert (old / "index.json").is_file()
-    assert len(list(old.glob("L*.json"))) == 3
-    # 새 컷이 들어올 자리는 비어 있다 — `_previous` 만 남는다
-    assert [p.name for p in d.iterdir()] == [cutmark.PREVIOUS]
-
-
-def test_처음_자르는_것은_옮길_것이_없다(tmp_path):
-    assert cutmark.archive(tmp_path / "없는폴더") is None
-    assert cutmark.archive(_cut(tmp_path / "빈컷", slices=0, index=False)) is None
-
-
-def test_판이_없는_옛_컷도_옮긴다(tmp_path):
-    """`cut.json` 이 없다고 덮으면 이 장치의 목적이 없어진다."""
+def test_밀어내는_일은_이제_없다(tmp_path):
+    """`archive` 는 늘 None 이다. 부르는 자리가 남아 있으면 이 검사가 말한다."""
     d = _cut(tmp_path / "병리학")
-    moved = cutmark.archive(d)
-    assert moved and moved.endswith("-old")     # 이름으로 판정하지 말라는 표시
-    assert (d / cutmark.PREVIOUS / moved / "index.json").is_file()
+    assert cutmark.archive(d) is None
+    assert (d / "index.json").is_file()              # 아무것도 안 옮겼다
+    assert not (d / cutmark.PREVIOUS).exists()       # 만들지도 않는다
 
 
-def test_같은_분에_두_번_잘려도_앞_것을_안_덮는다(tmp_path):
-    d = _cut(tmp_path / "병리학")
-    pdf = tmp_path / "족보.pdf"
-    pdf.write_bytes(b"x")
-    cutmark.write(d, source=pdf, cut_id="260914-2312")
-    assert cutmark.archive(d) == "260914-2312"
+def test_판을_찾는_길이_셋이다(tmp_path):
+    """기록된 경로가 셋 다 있다 — 판 폴더 · 과목 폴더 · 옛 모양."""
+    subject = tmp_path / "_materials" / "기생충학"
+    cut = _cut(subject / "260908-0130")
+    assert cutmark.resolve(cut) == cut                      # 판 폴더를 그대로
 
-    _cut(d)
-    cutmark.write(d, source=pdf, cut_id="260914-2312")
-    assert cutmark.archive(d) == "260914-2312.2"
-    assert (d / cutmark.PREVIOUS / "260914-2312" / "index.json").is_file()
+    cutmark.set_current(subject, "260908-0130")
+    assert cutmark.resolve(subject) == cut                  # 과목 폴더 → current
+
+    flat = _cut(tmp_path / "_jokbo" / "병리학")
+    assert cutmark.resolve(flat) == flat                    # 옛 모양 — 그 자리다
+
+
+def test_current가_없는_판을_가리키면_제일_새것으로_내려간다(tmp_path):
+    """사람이 그 파일을 손으로 고쳤거나 판을 지운 경우. 조용히 안 읽는 것보다 낫다."""
+    subject = tmp_path / "_materials" / "기생충학"
+    _cut(subject / "260908-0130")
+    new = _cut(subject / "260912-1507")
+    cutmark.set_current(subject, "없는판-0000")
+    assert cutmark.resolve(subject) == new
+
+
+def test_current가_아예_없어도_제일_새것을_준다(tmp_path):
+    subject = tmp_path / "_materials" / "기생충학"
+    _cut(subject / "260908-0130")
+    new = _cut(subject / "260912-1507")
+    assert cutmark.resolve(subject) == new
+    assert cutmark.cuts(subject) == ["260908-0130", "260912-1507"]
+
+
+def test_판_모양이_아닌_폴더는_판이_아니다(tmp_path):
+    subject = tmp_path / "_materials" / "기생충학"
+    (subject / "_previous").mkdir(parents=True)
+    (subject / "임시").mkdir()
+    assert cutmark.cuts(subject) == []
+
+
+def test_current는_한_줄만_든다(tmp_path):
+    """되돌리려면 이 한 줄만 고치면 된다."""
+    subject = tmp_path / "_materials" / "기생충학"
+    subject.mkdir(parents=True)
+    p = cutmark.set_current(subject, "260908-0130")
+    assert p.read_text(encoding="utf-8").strip() == "260908-0130"
 
 
 # ── 원본이 갈렸는지 ──────────────────────────────────────────────────

@@ -994,12 +994,14 @@ def find_jokbo_source(prep_dir: Path, jokbo_dir: Path, slice_arg: str | None,
 def jokbo_dir_candidates(root: Path = Path(".")) -> list[Path]:
     """`index.json` 을 든 족보 폴더를 찾아 준다. 고르지는 않는다.
 
-    `--jokbo-dir` 의 기본값(`out/jokbo`)은 이 저장소의 배치(`runs/_jokbo/<과목>`)와
+    `--jokbo-dir` 의 기본값(`out/jokbo`)은 이 저장소의 배치
+    (`runs/_materials/<과목>/<판>`)와
     다르다. 기본값을 바꾸지 않는 이유는 **어느 쪽이 옳은지 build 가 모르기 때문**이다 —
     과목을 모르고, 폴더가 여럿일 수 있다. 대신 틀렸을 때 어디를 보라고 알려 준다.
     """
     seen = []
     for pat in ("out/jokbo/index.json", "out/jokbo/*/index.json",
+                "runs/_materials/*/*/index.json", "runs/_materials/*/index.json",
                 "runs/_jokbo/index.json", "runs/_jokbo/*/index.json"):
         for hit in sorted(root.glob(pat)):
             if hit.parent not in seen:
@@ -1018,7 +1020,7 @@ def main(argv=None) -> int:
                     help="재현 불가로 갈린 카드를 그대로 덱에 넣는다")
     ap.add_argument("--jokbo", help="족보 조각 json. 생략하면 assemble 과 같은 규칙으로 찾는다")
     ap.add_argument("--jokbo-dir", default="out/jokbo",
-                    help="족보 조각 폴더. 이 저장소는 runs/_jokbo/<과목> 을 쓴다")
+                    help="족보 조각 폴더. 이 저장소는 runs/_materials/<과목>/<판> 을 쓴다")
     ap.add_argument("--no-jokbo-images", action="store_true",
                     help="기출 원본을 못 찾아도 그대로 굽는다 (뒷면 지면 이미지가 빠진다)")
     ap.add_argument("--jokbo-pdf", help="족보 원본 PDF. 생략하면 index.json 의 이름으로 찾는다")

@@ -4,7 +4,7 @@
 **저장소에서 유일하게 합법인 경계 넘기가 여기 있다** — `runner/deck.py → quizgen` 3줄.
 
     무엇을 고치면 어느 파일인가    ../docs/map.md §2
-    검사                          pytest tests/runner      291개 · 11초
+    검사                          pytest tests/runner      295개 · 11초
     권한 · 어디서나 미는 함정       ../CLAUDE.md
     카드를 어떻게 쓰는가            ../quizgen/CLAUDE.md
 
@@ -234,3 +234,21 @@ python -m runner chosen                                 어느 편에 기록이 
 계약의 `attempt` 만이 「올라간 것」을 말한다. `docs/artifact-contract.md` 에 칸을 적어
 두었다. **`contract` 에 판을 줄 때는 `promote` 에 준 것과 같은 값이어야 한다** —
 안 그러면 계약이 올라가지 않은 판을 가리킨다.
+
+## 족보 컷은 `_materials/<과목>/<판>/` 에 있다
+
+2026-09-15 개명(`docs/runs-layout.md` 3′). 전에는 `_jokbo/<과목>/` 에 지금 컷이 널려
+있고 밀려난 컷만 `_previous/` 로 갔는데, **밀어내는 것 자체가 문제였다** — 다시 자르면
+지금 컷이 이사를 가서, 그 컷으로 만든 덱이 적어 둔 `cut_id` 로 폴더를 찾으면 없었다.
+
+    deck.subject_dir(runs, 과목)   _materials/<과목>/        ← **자르는 쪽에 준다**
+    deck.jokbo_dir(runs, 과목)     _materials/<과목>/<판>/   ← `--jokbo-dir` 로 간다
+
+**판 폴더를 자르는 쪽에 주면 안 된다.** `quizgen.jokbo` 가 과목 이름을 `-o` 폴더의
+이름에서 읽어서, 판을 주면 실습 조각이 「260915-0037 실습」이 된다 — 그 이름은
+`find_jokbo` 가 제목으로 대조하는 값이고, 깨지면 실습 편이 기출 0장으로 나간다
+(위 「문이 닫힌 0」이 그 사고다). 판 폴더는 `quizgen.jokbo` 가 자기가 만든다.
+
+**옛 이름도 계속 읽힌다.** 편 111개의 `run.config.json` 이 `_jokbo/<과목>` 을 적고
+있고 `--resume` 이 그것을 되살린다. `cutmark.resolve` 가 판 폴더·과목 폴더·옛 모양
+셋을 다 받는다.
