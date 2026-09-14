@@ -39,6 +39,7 @@ import pymupdf
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import extract_practical_pdf as E  # noqa: E402
 from generate_exam import norm  # noqa: E402
+from jsonio import load_json
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -54,7 +55,7 @@ MIN_DRAW = 20
 
 
 def structures():
-    specs = json.load(open(os.path.join(DATA, "specimens.json"), encoding="utf-8"))
+    specs = load_json(os.path.join(DATA, "specimens.json"))
     return sorted({s for x in specs for s in x.get("structures", [])},
                   key=len, reverse=True)
 
@@ -85,7 +86,7 @@ def main():
         raise SystemExit(f"PDF를 못 찾았습니다: {E.PDF}")
     terms = structures()
     images = {r["path"]: r for r in
-              json.load(open(os.path.join(DATA, "images.json"), encoding="utf-8"))}
+              load_json(os.path.join(DATA, "images.json"))}
 
     os.makedirs(OUT, exist_ok=True)
     for f in os.listdir(OUT):

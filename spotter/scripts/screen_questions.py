@@ -42,6 +42,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 from pydantic import BaseModel
 
+from jsonio import load_json
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -129,7 +131,7 @@ def main():
 
     import anthropic
 
-    db = json.load(open(os.path.join(BUILD, "quiz_db.json"), encoding="utf-8"))
+    db = load_json(os.path.join(BUILD, "quiz_db.json"))
     qs = db["questions"]
     if args.qtype:
         qs = [q for q in qs if q["qtype"] in args.qtype]
@@ -143,8 +145,6 @@ def main():
 
     client = anthropic.Anthropic()
     img_dir = os.path.join(BUILD, "images")
-    lock_out = open(args.out, "a", encoding="utf-8")
-
     def one(q):
         try:
             r = ask(client, q, img_dir)
@@ -158,14 +158,17 @@ def main():
         r["stem"] = q["stem"]
         return r
 
-    with ThreadPoolExecutor(max_workers=args.workers) as pool:
+    # **한 줄 나올 때마다 쓰고 flush 한다.** 이 고리는 문항마다 모델을 부르고
+    # 수백 개가 돈다 — 중간에 죽어도 거기까지는 남아야 다음 실행이 이어 간다
+    # (`todo` 가 이 파일을 읽어 이미 본 것을 뺀다).
+    with open(args.out, "a", encoding="utf-8") as lock_out, \
+            ThreadPoolExecutor(max_workers=args.workers) as pool:
         for n, r in enumerate(pool.map(one, todo), 1):
             lock_out.write(json.dumps(r, ensure_ascii=False) + "\n")
             lock_out.flush()
             done[r["id"]] = r
             if n % 10 == 0:
                 print(f"  {n}/{len(todo)}")
-    lock_out.close()
 
     # ── 추리기
     rows, cost_in, cost_out = [], 0, 0

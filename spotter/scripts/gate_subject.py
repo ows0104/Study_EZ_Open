@@ -25,6 +25,8 @@
 import os
 import sys
 
+from jsonio import read_text, write_text
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -70,7 +72,8 @@ def patch_common(text, subject):
     old_onload = "        window.onload = function() {"
     new_onload = """        window.onload = function() {
             // 로그인 뒤에야 문항이 온다. 그 전에는 GATE 가 화면을 덮고 있다.
-            GATE.start('%s', async (db) => { QUIZ_DB = db; });""" % subject
+            GATE.start('__SUBJECT__', async (db) => { QUIZ_DB = db; });""".replace(
+        "__SUBJECT__", subject)
     if old_onload not in text:
         raise SystemExit(f"[{subject}] window.onload 를 못 찾았다")
     text = text.replace(old_onload, DECL + new_onload, 1)
@@ -111,7 +114,8 @@ def patch_neuro(text, subject):
 
     window.onload = function() {
       // 로그인 뒤에야 문항이 온다. 그 전에는 GATE 가 화면을 덮고 있다.
-      GATE.start('%s', async (db) => { QUIZ_DB = db; });""" % subject
+      GATE.start('__SUBJECT__', async (db) => { QUIZ_DB = db; });""".replace(
+        "__SUBJECT__", subject)
     if old_onload not in text:
         raise SystemExit(f"[{subject}] window.onload 를 못 찾았다")
     text = text.replace(old_onload, new_onload, 1)
@@ -152,7 +156,7 @@ def main():
         path = os.path.join(base, subject, "index.html")
         if not os.path.isfile(path):
             raise SystemExit(f"없는 파일: {path}")
-        text = open(path, encoding="utf-8").read()
+        text = read_text(path)
         if MARK in text:
             print(f"  이미 됨  {subject}")
             continue
@@ -163,7 +167,7 @@ def main():
         text = text.replace(tag, HEAD, 1)
         text = (patch_neuro if subject == "neuro" else patch_common)(text, subject)
 
-        open(path, "w", encoding="utf-8", newline="").write(text)
+        write_text(path, text)
         print(f"  문 달았음 {subject}")
 
 

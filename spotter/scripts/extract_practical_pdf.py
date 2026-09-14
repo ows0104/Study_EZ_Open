@@ -106,10 +106,10 @@ def page_lines(page):
 
 def title_of(lines):
     """페이지 상단의 가장 큰 글씨가 종 이름이다."""
-    top = [l for l in lines if l["bbox"][1] < TITLE_MAX_Y]
+    top = [ln for ln in lines if ln["bbox"][1] < TITLE_MAX_Y]
     if not top:
         return None
-    top.sort(key=lambda l: (-l["size"], l["bbox"][1]))
+    top.sort(key=lambda ln: (-ln["size"], ln["bbox"][1]))
     return top[0]["text"].strip()
 
 
@@ -117,12 +117,12 @@ def captions_for(bbox, lines):
     """사진 안이나 바로 아래 40pt 안에 있는 짧은 텍스트를 캡션으로 본다."""
     x0, y0, x1, y1 = bbox
     out = []
-    for l in lines:
-        lx0, ly0, lx1, ly1 = l["bbox"]
+    for ln in lines:
+        lx0, ly0, lx1, ly1 = ln["bbox"]
         inside = lx0 >= x0 - 5 and lx1 <= x1 + 5 and ly0 >= y0 - 5 and ly1 <= y1 + 5
         below = (y1 <= ly0 <= y1 + 40) and not (lx1 < x0 or lx0 > x1)
-        if (inside or below) and len(l["text"]) < 80 and l["bbox"][1] > TITLE_MAX_Y:
-            out.append(l["text"].strip())
+        if (inside or below) and len(ln["text"]) < 80 and ln["bbox"][1] > TITLE_MAX_Y:
+            out.append(ln["text"].strip())
     return out
 
 
@@ -176,8 +176,8 @@ def main():
         if m:
             latin = f"{m.group(1)} {m.group(2)}"
         # 페이지 머리 설명(감별점)도 함께 남긴다
-        header = " / ".join(l["text"] for l in lines
-                            if TITLE_MAX_Y <= l["bbox"][1] < 115 and len(l["text"]) < 120)
+        header = " / ".join(ln["text"] for ln in lines
+                            if TITLE_MAX_Y <= ln["bbox"][1] < 115 and len(ln["text"]) < 120)
 
         infos = [i for i in page.get_image_info()
                  if (i["bbox"][2] - i["bbox"][0]) >= MIN_SIDE

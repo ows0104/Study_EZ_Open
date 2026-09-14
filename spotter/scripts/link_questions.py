@@ -85,7 +85,7 @@ def build_stage_index(species):
 
 
 def build_structure_index(specimens, glossary):
-    idx, canon = {}, {}
+    idx = {}
     for x in specimens:
         for st in x.get("structures", []):
             idx.setdefault(norm(st), st)
@@ -109,7 +109,7 @@ def qtype_of(stem):
 def head(text):
     """괄호 주석·부연 설명을 떼고 핵심 답만 남긴다."""
     t = re.split(r"[(（]", text or "", maxsplit=1)[0]
-    t = re.split(r"\s*[-–—]\s", t, 1)[0]
+    t = re.split(r"\s*[-–—]\s", t, maxsplit=1)[0]
     return t.strip(" .,:;")
 
 
@@ -156,9 +156,9 @@ def main():
         row["qtype"] = qtype_of(q["stem"])
 
         correct = None
-        if q.get("answer_index") is not None and q["options"]:
-            if 0 <= q["answer_index"] < len(q["options"]):
-                correct = q["options"][q["answer_index"]]
+        if (q.get("answer_index") is not None and q["options"]
+                and 0 <= q["answer_index"] < len(q["options"])):
+            correct = q["options"][q["answer_index"]]
         if not correct:
             correct = q.get("answer_text") or q.get("answer_raw")
         row["correct_text"] = correct

@@ -36,6 +36,8 @@ import sys
 
 import requests
 
+from jsonio import read_bytes, read_text
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -57,7 +59,7 @@ def from_config(name: str) -> str:
     어려운 종류의 고장이다.
     """
     try:
-        text = open(os.path.join(WEB, "config.js"), encoding="utf-8").read()
+        text = read_text(os.path.join(WEB, "config.js"))
     except OSError:
         return ""
     m = re.search(rf"{name}\s*:\s*[\"']([^\"']*)[\"']", text)
@@ -78,16 +80,21 @@ def runner_token() -> str:
     token = os.getenv("RUNNER_TOKEN", "").strip()
     if token:
         return token
+    # **2026-09-14 에 저장소를 합치면서 한 칸 바뀌었다.** 그 전에는 형제 폴더
+    # (`../Study_EZ_Open/server/.env`)였고, 합친 뒤 그 경로는
+    # `Study_EZ_Open/Study_EZ_Open/server/.env` 가 되어 조용히 못 찾는다 —
+    # 못 찾으면 빈 토큰으로 떨어져서 「인증 실패」로만 보인다.
     path = os.getenv("SPOTTER_ENV_FILE", "").strip() or os.path.join(
-        os.path.dirname(ROOT), "Study_EZ_Open", "server", ".env"
+        os.path.dirname(ROOT), "server", ".env"
     )
     if "--env-file" in sys.argv:
         path = sys.argv[sys.argv.index("--env-file") + 1]
     try:
-        for line in open(path, encoding="utf-8"):
-            line = line.strip()
-            if line.startswith("RUNNER_TOKEN=") and not line.startswith("#"):
-                return line.split("=", 1)[1].strip()
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if line.startswith("RUNNER_TOKEN=") and not line.startswith("#"):
+                    return line.split("=", 1)[1].strip()
     except OSError:
         pass
     return ""
@@ -143,7 +150,7 @@ def main() -> None:
         path = os.path.join(IMG_DIR, name)
         # R2의 ETag는 한 번에 올린 객체에 한해 내용의 MD5다. 같으면 건너뛴다 —
         # 555장 중 두 장을 고쳤을 때 30MB를 다시 붓지 않기 위해서다.
-        md5 = hashlib.md5(open(path, "rb").read()).hexdigest()
+        md5 = hashlib.md5(read_bytes(path)).hexdigest()
         if remote.get(name) != md5:
             todo.append(name)
 
@@ -174,7 +181,7 @@ def main() -> None:
                 print(f"  {sent}/{len(todo)}")
 
     # ── 문항 DB
-    raw = open(DB_PATH, "rb").read()
+    raw = read_bytes(DB_PATH)
     r = requests.post(
         f"{api}/api/spotter/admin/uploads", headers=auth, json={"names": [], "db": True}, timeout=60
     )

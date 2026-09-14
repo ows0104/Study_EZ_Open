@@ -18,6 +18,8 @@ import re
 import sys
 from collections import Counter, defaultdict
 
+from jsonio import load_json
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -357,9 +359,9 @@ def pick_type(blob, sheet, topic=None):
 
 
 def main():
-    species = json.load(open(os.path.join(DATA, "species.json"), encoding="utf-8"))
-    specimens = json.load(open(os.path.join(DATA, "specimens.json"), encoding="utf-8"))
-    manifest = json.load(open(os.path.join(DATA, "image_manifest.json"), encoding="utf-8"))
+    species = load_json(os.path.join(DATA, "species.json"))
+    specimens = load_json(os.path.join(DATA, "specimens.json"))
+    manifest = load_json(os.path.join(DATA, "image_manifest.json"))
     # PDF에서 뽑은 것들. `image_manifest.json`(엑셀에서 뽑은 것)과 모양이 같아서
     # 그대로 이어 붙이면 아래 로직이 구분 없이 다룬다. 엑셀에만 있는 칸 몇 개만
     # 채워 준다.
@@ -373,7 +375,7 @@ def main():
         path = os.path.join(DATA, f"{name}_manifest.json")
         if not os.path.exists(path):
             continue
-        extra = json.load(open(path, encoding="utf-8"))
+        extra = load_json(path)
         for r in extra:
             r.setdefault("row", r.get("page", 0))
             r.setdefault("sha1", "")
@@ -386,7 +388,7 @@ def main():
     overrides = {}
     if os.path.exists(ov_path):
         overrides = {k: v for k, v in
-                     json.load(open(ov_path, encoding="utf-8")).items()
+                     load_json(ov_path).items()
                      if not k.startswith("_")}
 
     by_specimen_species = {x["id"]: x["species_id"] for x in specimens}
@@ -493,10 +495,9 @@ def main():
                 hints = STAGE_HINTS.get(x["id"], [])
                 neg = [h[1:] for h in hints if h.startswith("!")]
                 pos = [h for h in hints if not h.startswith("!")]
-                if any(h in blob for h in neg):
-                    score = -1
-                else:
-                    score = sum(1 for h in pos if h in blob)
+                # 금지어가 하나라도 걸리면 후보에서 밀어낸다(-1).
+                score = (-1 if any(h in blob for h in neg)
+                         else sum(1 for h in pos if h in blob))
                 scored.append((score, x))
             scored.sort(key=lambda t: -t[0])
             best, second = scored[0], scored[1] if len(scored) > 1 else (0, None)
@@ -613,7 +614,8 @@ def main():
         raise SystemExit(
             "Pillow 가 없습니다. 이 스크립트는 사진 크기와 선화·정답노출 판정에\n"
             "  Pillow 를 씁니다. 없이 돌리면 그 검사들이 통째로 빠집니다.\n"
-            "  uv run --python 3.13 --with pillow python scripts/map_images.py")
+            "  uv run --python 3.13 --with pillow python scripts/map_images.py"
+        ) from None   # ImportError 의 자취는 여기에 보탤 것이 없다
 
     with open(os.path.join(DATA, "images.json"), "w", encoding="utf-8") as fh:
         json.dump(out, fh, ensure_ascii=False, indent=2)

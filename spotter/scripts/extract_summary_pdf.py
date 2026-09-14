@@ -34,6 +34,7 @@
       images/_rejects/<출처>/...      (버린 것 + 이유)
 """
 
+import contextlib
 import hashlib
 import json
 import os
@@ -43,6 +44,8 @@ import sys
 
 import pymupdf
 from PIL import Image
+
+from jsonio import load_json
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -126,10 +129,10 @@ def page_lines(page):
 
 def title_of(lines):
     """페이지 위쪽에서 가장 큰 글씨. 슬라이드(필기본)에서는 이것이 곧 주제다."""
-    top = [l for l in lines if l["bbox"][1] < TITLE_MAX_Y]
+    top = [ln for ln in lines if ln["bbox"][1] < TITLE_MAX_Y]
     if not top:
         return ""
-    top.sort(key=lambda l: (-l["size"], l["bbox"][1]))
+    top.sort(key=lambda ln: (-ln["size"], ln["bbox"][1]))
     return top[0]["text"].strip()
 
 
@@ -159,9 +162,9 @@ def captions_for(bbox, lines, others=(), above=False):
     """
     x0, y0, x1, y1 = bbox
     near = []
-    for l in lines:
-        lx0, ly0, lx1, ly1 = l["bbox"]
-        if len(l["text"]) > 90:
+    for ln in lines:
+        lx0, ly0, lx1, ly1 = ln["bbox"]
+        if len(ln["text"]) > 90:
             continue
         wide = not (lx1 < x0 or lx0 > x1)          # 가로로 겹친다 = 같은 단
         tall = not (ly1 < y0 or ly0 > y1)
@@ -169,17 +172,17 @@ def captions_for(bbox, lines, others=(), above=False):
             gap = 0.0                              # 사진 안
         elif wide and y1 <= ly0 <= y1 + CAPTION_GAP:
             gap = ly0 - y1                         # 바로 아래 — 설명
-            if _stolen(l["bbox"], gap, others, bbox, below=True):
+            if _stolen(ln["bbox"], gap, others, bbox, below=True):
                 continue
         elif above and wide and y0 - CAPTION_GAP <= ly1 <= y0:
             gap = y0 - ly1                         # 바로 위 — 항목 제목
-            if _stolen(l["bbox"], gap, others, bbox, below=False):
+            if _stolen(ln["bbox"], gap, others, bbox, below=False):
                 continue
         elif tall and x1 <= lx0 <= x1 + CAPTION_GAP:
             gap = lx0 - x1                         # 바로 옆
         else:
             continue
-        near.append((gap, l["text"].strip()))
+        near.append((gap, ln["text"].strip()))
     near.sort(key=lambda t: t[0])
     return [t for _, t in near]
 
@@ -253,7 +256,7 @@ def _species_names():
     path = os.path.join(DATA, "species.json")
     out = set()
     try:
-        for s in json.load(open(path, encoding="utf-8")):
+        for s in load_json(path):
             for k in [s.get("scientific_name"), s.get("name_ko")] + (s.get("aliases") or []):
                 k = (k or "").strip().lower()
                 if len(k) >= 2:
@@ -293,16 +296,16 @@ def row_label(bbox, lines):
     오른쪽이 구체적이다(「두비니구충」, 그 옆이 학명).
     """
     x0, y0, y1 = bbox[0], bbox[1], bbox[3]
-    beside = [l for l in lines
-              if l["bbox"][2] <= x0 + 2                     # 사진 왼쪽에 있고
-              and l["bbox"][3] > y0 and l["bbox"][1] < y1]  # 세로로 겹친다
+    beside = [ln for ln in lines
+              if ln["bbox"][2] <= x0 + 2                     # 사진 왼쪽에 있고
+              and ln["bbox"][3] > y0 and ln["bbox"][1] < y1]  # 세로로 겹친다
     # **종을 못 찾으면 아무 말도 안 한다.** 자리만 맞고 이름이 아닌 글
     # (「<3개의 lip>」)을 돌려주면, 표제로 제대로 붙을 수 있었던 사진까지
     # 그 설명이 이름표가 되어 버린다. 확신이 없을 때는 비켜서는 편이 낫다.
-    named = [l for l in beside if names_species(l["text"])]
+    named = [ln for ln in beside if names_species(ln["text"])]
     if not named:
         return ""
-    return max(named, key=lambda l: l["bbox"][0])["text"].strip()
+    return max(named, key=lambda ln: ln["bbox"][0])["text"].strip()
 
 
 def headings_of(lines):
@@ -317,10 +320,10 @@ def headings_of(lines):
     """
     if not lines:
         return []
-    top = max(l["size"] for l in lines)
-    return [l for l in lines if l["size"] >= top - 0.5
-            and (HEADING_RE.match(l["text"]) or LATIN_RE.search(l["text"])
-                 or KO_NAME_RE.search(l["text"]))]
+    top = max(ln["size"] for ln in lines)
+    return [ln for ln in lines if ln["size"] >= top - 0.5
+            and (HEADING_RE.match(ln["text"]) or LATIN_RE.search(ln["text"])
+                 or KO_NAME_RE.search(ln["text"]))]
 
 
 def heading_for(bbox, heads):
@@ -440,10 +443,10 @@ OCR_CACHE = {}
 
 def load_ocr_cache():
     if os.path.isfile(OCR_CACHE_PATH):
-        try:
-            OCR_CACHE.update(json.load(open(OCR_CACHE_PATH, encoding="utf-8")))
-        except (OSError, ValueError):
-            pass                       # 깨졌으면 그냥 다시 읽는다
+        # 깨졌으면 그냥 다시 읽는다. 캐시가 없는 것과 같은 자리가 된다.
+        with contextlib.suppress(OSError, ValueError), \
+                open(OCR_CACHE_PATH, encoding="utf-8") as fh:
+            OCR_CACHE.update(json.load(fh))
     return len(OCR_CACHE)
 
 
@@ -484,7 +487,7 @@ def baked_text(reader, im):
     except Exception as e:
         raise SystemExit(f"OCR이 실패했습니다: {e}\n"
                          "  --no-ocr 로 끄고 돌릴 수는 있지만, 그러면 사진에 구워진"
-                         " 글자를 못 거릅니다.")
+                         " 글자를 못 거릅니다.") from e
     out = []
     for item in result or []:
         text, score = str(item[1]).strip(), float(item[2])
@@ -590,7 +593,7 @@ def run(key, reader, dry=False):
             lines = page_lines(page)
             title = title_of(lines)
             topic = section_of(title) or file_topic or section_of(" ".join(
-                l["text"] for l in lines[:12]))
+                ln["text"] for ln in lines[:12]))
 
             infos = [i for i in page.get_image_info(xrefs=False)
                      if i["width"] >= 60 and i["height"] >= 60]

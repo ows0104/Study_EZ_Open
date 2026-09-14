@@ -28,6 +28,8 @@ from collections import defaultdict
 
 import pymupdf
 
+from jsonio import load_json
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -104,9 +106,8 @@ def is_list_region(lines):
     bodies = [b for _, b in nums]
     if sum("?" in b for b in bodies) / len(bodies) > 0.2:
         return False
-    if statistics.median(len(b) for b in bodies) > 45:
-        return False
-    return True
+    # 본문이 길면 문항이 아니라 산문이다. 45자는 실측으로 고른 선.
+    return statistics.median(len(b) for b in bodies) <= 45
 
 
 def scan(doc):
@@ -246,7 +247,7 @@ def apply_corrections(questions):
     path = os.path.join(DATA, "question_corrections.json")
     if not os.path.exists(path):
         return
-    table = json.load(open(path, encoding="utf-8")).get("corrections", {})
+    table = load_json(path).get("corrections", {})
     if not table:
         return
     index = {f"{q['year']}/{q['no']}": q for q in questions}
@@ -344,7 +345,9 @@ def main():
     print(f"복원 문항 {len(questions)}개, 복원 목록 {len(payload['recall_lists'])}줄\n")
     print("연도      문항  객관식  단답  미복원  정답  사진")
     def row(label, qs):
-        c = lambda f: sum(1 for q in qs if q["format"] == f)
+        def c(f):
+            return sum(1 for q in qs if q["format"] == f)
+
         print(f"{label:9s} {len(qs):4d}  {c('mcq'):5d}  {c('short_answer'):4d}"
               f"  {c('unrestored'):6d}  {sum(1 for q in qs if q['answer_index'] is not None):4d}"
               f"  {sum(1 for q in qs if q['image_paths']):4d}")

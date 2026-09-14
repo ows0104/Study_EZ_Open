@@ -21,6 +21,8 @@ import os
 import re
 import sys
 
+from jsonio import load_json
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -43,7 +45,7 @@ def main():
         raise SystemExit("build/images 가 없습니다. scripts/build_web.py 를 먼저 돌리세요.")
     label = {}
     if os.path.isfile(DB):
-        db = json.load(open(DB, encoding="utf-8"))
+        db = load_json(DB)
         for q in db["questions"]:
             label.setdefault(q["image"], (q.get("label") or "", db["meta"]["images"]
                                           .get(q["image"], {}).get("src", "")))
@@ -51,7 +53,7 @@ def main():
     cache = {}
     if os.path.isfile(CACHE_PATH):
         try:
-            cache = json.load(open(CACHE_PATH, encoding="utf-8"))
+            cache = load_json(CACHE_PATH)
         except (OSError, ValueError):
             cache = {}
 
@@ -89,7 +91,7 @@ def main():
 
     print(f"\n배포본 {len(names)}장 · 새로 읽은 것 {read}장")
     print(f"글자가 남은 사진 {len(hits)}장 ({len(hits) / max(1, len(names)) * 100:.1f}%)")
-    for name, lab, src, txt in hits[:25]:
+    for _name, lab, src, txt in hits[:25]:
         print(f"  {lab[:18]:20s} {txt[:46]:48s} {src[:30]}")
     print(f"\n전체 목록: {os.path.relpath(OUT, ROOT)}")
 

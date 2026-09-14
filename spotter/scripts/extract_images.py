@@ -32,6 +32,17 @@ NS = {
     "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
 }
 
+
+def qn(prefix, tag):
+    """이름공간이 붙은 태그 이름 하나. ElementTree 는 `{uri}tag` 꼴을 쓴다.
+
+    붙여 쓰는 이유는 읽기 때문이다 — f-string 으로 쓰면 중괄호를 두 겹으로
+    겹쳐야 해서(`f"{{{NS[prefix]}}}{tag}"`) 무엇이 리터럴이고 무엇이 값인지
+    한눈에 안 보인다.
+    """
+    return "{" + NS[prefix] + "}" + tag
+
+
 JMS = os.path.join(SRC, "기생충학 실습 정리본_전민서", "기생충학 실습 정리본_전민서")
 
 # (파일경로, 소스 슬러그, 레이아웃)
@@ -82,12 +93,12 @@ class Book:
         if "xl/sharedStrings.xml" in names:
             root = ET.fromstring(self.z.read("xl/sharedStrings.xml"))
             for si in root.findall("m:si", NS):
-                self.sst.append("".join(t.text or "" for t in si.iter("{%s}t" % NS["m"])))
+                self.sst.append("".join(t.text or "" for t in si.iter(qn("m", "t"))))
         wb = ET.fromstring(self.z.read("xl/workbook.xml"))
         rels = ET.fromstring(self.z.read("xl/_rels/workbook.xml.rels"))
         relmap = {r.get("Id"): r.get("Target") for r in rels}
         self.sheets = [
-            (sh.get("name"), relmap[sh.get("{%s}id" % NS["r"])])
+            (sh.get("name"), relmap[sh.get(qn("r", "id"))])
             for sh in wb.find("m:sheets", NS)
         ]
         self.rel_targets, self.rvlist, self.vm = [], [], []
@@ -96,12 +107,12 @@ class Book:
             rvrels = ET.fromstring(self.z.read("xl/richData/_rels/richValueRel.xml.rels"))
             rvrelmap = {r.get("Id"): r.get("Target") for r in rvrels}
             self.rel_targets = [
-                rvrelmap[e.get("{%s}id" % NS["r"])] for e in rvrel
+                rvrelmap[e.get(qn("r", "id"))] for e in rvrel
             ]
             rv = ET.fromstring(self.z.read("xl/richData/rdrichvalue.xml"))
             self.rvlist = [[v.text for v in item] for item in rv]
             md = ET.fromstring(self.z.read("xl/metadata.xml"))
-            for vmd in md.iter("{%s}valueMetadata" % NS["m"]):
+            for vmd in md.iter(qn("m", "valueMetadata")):
                 for bk in vmd:
                     self.vm.append(int(bk[0].get("v")))
 
@@ -115,7 +126,7 @@ class Book:
     def rows(self, target):
         path = target if target.startswith("xl/") else "xl/" + target
         sx = ET.fromstring(self.z.read(path))
-        for row in sx.iter("{%s}row" % NS["m"]):
+        for row in sx.iter(qn("m", "row")):
             cells = {}
             for c in row:
                 ref = c.get("r")
@@ -216,9 +227,8 @@ def extract_jms(book, slug, records):
                 if kind != "TXT" or letters in ("A", "B", "C", "D"):
                     continue
                 sec = section_of(letters, spans)
-                if sec == "stain":
-                    stain = clean(val)
-                elif sec == "vector_disease":
+                # 두 칸이 같은 자리에 들어간다 — 매개질환은 염색 칸을 빌려 쓴다.
+                if sec in ("stain", "vector_disease"):
                     stain = clean(val)
                 elif sec == "size":
                     size = clean(val)

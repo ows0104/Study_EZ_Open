@@ -23,6 +23,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from generate_exam import GROUP_MIX, GROUP_ORDER, QTYPE_MIX, Generator  # noqa: E402
+from jsonio import load_json, read_bytes
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -101,8 +102,8 @@ def field_box(im):
             while q:
                 x, y = q.popleft()
                 n += 1
-                x0 = min(x0, x); x1 = max(x1, x)
-                y0 = min(y0, y); y1 = max(y1, y)
+                x0, x1 = min(x0, x), max(x1, x)
+                y0, y1 = min(y0, y), max(y1, y)
                 for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
                     nx, ny = x + dx, y + dy
                     if 0 <= nx < w and 0 <= ny < h and not seen[ny][nx] and px[nx, ny] >= thr:
@@ -119,9 +120,9 @@ def field_box(im):
         for x in range(w):
             v = px[x, y]
             if x0 <= x <= x1 and y0 <= y <= y1:
-                inside += v; ni += 1
+                inside, ni = inside + v, ni + 1
             else:
-                outside += v; no += 1
+                outside, no = outside + v, no + 1
     return {
         "box": (x0 / w, y0 / h, (x1 + 1) / w, (y1 + 1) / h),
         "span": min(bw / w, bh / h),
@@ -227,14 +228,14 @@ def past_indicator(gen):
     path = os.path.join(ROOT, "data", "past_questions_linked.json")
     if not os.path.exists(path):
         return []
-    rows = json.load(open(path, encoding="utf-8"))
+    rows = load_json(path)
     if isinstance(rows, dict):
         rows = rows.get("questions", rows)
 
     fix_path = os.path.join(ROOT, "data", "question_corrections.json")
     drop = {}
     if os.path.exists(fix_path):
-        drop = json.load(open(fix_path, encoding="utf-8")).get("drop", {})
+        drop = load_json(fix_path).get("drop", {})
 
     by_struct = {}
     for x in gen.specimens:
@@ -450,7 +451,7 @@ def main():
         print("옛 quiz_db.js 지움 (이제 R2로 올린다)")
 
     size = os.path.getsize(db_path)
-    digest = hashlib.sha1(open(db_path, "rb").read()).hexdigest()[:8]
+    digest = hashlib.sha1(read_bytes(db_path)).hexdigest()[:8]
     print(f"문항 {len(questions)}개  (표본 {meta['counts']['specimens']}건 / "
           f"종 {meta['counts']['species']}종)")
     print(f"이미지 {len(used)}장  {total / 1e6:.1f}MB")

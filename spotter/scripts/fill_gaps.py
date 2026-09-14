@@ -178,12 +178,18 @@ def main():
     print("연도      문항  객관식  단답  미복원  (그중 보기생성)")
     for year in sorted({q["year"] for q in questions}):
         qs = [q for q in questions if q["year"] == year]
-        c = lambda f: sum(1 for q in qs if q["format"] == f)
+
+        def c(f, rows=qs):
+            return sum(1 for q in rows if q["format"] == f)
+
         g = sum(1 for q in qs if q["options_generated"])
         print(f"{year:8s} {len(qs):4d}  {c('mcq'):5d}  {c('short_answer'):4d}"
               f"  {c('unrestored'):6d}   {g:5d}")
     qs = questions
-    c = lambda f: sum(1 for q in qs if q["format"] == f)
+
+    def c(f, rows=qs):
+        return sum(1 for q in rows if q["format"] == f)
+
     print(f"{'합계':8s} {len(qs):4d}  {c('mcq'):5d}  {c('short_answer'):4d}"
           f"  {c('unrestored'):6d}   {sum(1 for q in qs if q['options_generated']):5d}")
     print()

@@ -41,6 +41,8 @@ import re
 import subprocess
 import sys
 
+from jsonio import read_text, write_text
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -123,10 +125,10 @@ def stamp(text, repo, html_dir):
 
 
 def copy(src, dest, check, repo=None):
-    body = open(src, encoding="utf-8").read()
+    body = read_text(src)
     if dest.endswith(".html"):
         body = stamp(rewrite(body), repo, os.path.dirname(dest))
-    same = os.path.isfile(dest) and open(dest, encoding="utf-8").read() == body
+    same = os.path.isfile(dest) and read_text(dest) == body
     name = os.path.relpath(dest, os.path.dirname(os.path.dirname(dest)))
     if same:
         print(f"  같음     {name}")
@@ -135,7 +137,7 @@ def copy(src, dest, check, repo=None):
         print(f"  다름     {name}")
         return True
     os.makedirs(os.path.dirname(dest), exist_ok=True)
-    open(dest, "w", encoding="utf-8", newline="").write(body)
+    write_text(dest, body)
     print(f"  넣었음   {name}")
     return True
 

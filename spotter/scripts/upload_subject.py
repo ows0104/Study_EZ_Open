@@ -28,6 +28,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from jsonio import read_bytes, read_text
 from upload_web import BATCH, runner_token, setting
 
 
@@ -43,7 +44,7 @@ def load_db(folder):
     as_js = os.path.join(folder, "quiz_db.js")
     if not os.path.isfile(as_js):
         raise SystemExit(f"{folder}에 quiz_db.json도 quiz_db.js도 없습니다.")
-    text = open(as_js, encoding="utf-8").read()
+    text = read_text(as_js)
     start, end = text.index("["), text.rindex("]")
     return json.loads(text[start : end + 1])
 
@@ -130,7 +131,7 @@ def main():
     todo = [
         name
         for name, path in sorted(local.items())
-        if remote.get(name) != hashlib.md5(open(path, "rb").read()).hexdigest()
+        if remote.get(name) != hashlib.md5(read_bytes(path)).hexdigest()
     ]
     size = sum(os.path.getsize(local[n]) for n in todo)
     print(f"  올릴 것 {len(todo)}장  {size / 1e6:.1f}MB")

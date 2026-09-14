@@ -17,10 +17,11 @@
 적혀 있다. 브라우저로 여는 로컬 파일이면 그 표시를 지킬 수 있다.
 """
 
-import json
 import os
 import sys
 from collections import defaultdict
+
+from jsonio import load_json
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -55,7 +56,7 @@ def source_of(path):
 def main():
     if not os.path.isfile(DB):
         raise SystemExit("build/quiz_db.json 이 없습니다. scripts/build_web.py 를 먼저 돌리세요.")
-    db = json.load(open(DB, encoding="utf-8"))
+    db = load_json(DB)
     imgs = db["meta"]["images"]
 
     # 사진 한 장이 어느 표본으로 나가는지. 같은 사진을 쓰는 문항은 라벨이

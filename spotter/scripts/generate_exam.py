@@ -410,7 +410,8 @@ class Generator:
         if rnd:
             same = [s for s in pool if s["group"] == group]
             rest = [s for s in pool if s["group"] != group]
-            rnd.shuffle(same); rnd.shuffle(rest)
+            rnd.shuffle(same)
+            rnd.shuffle(rest)
             pool = same + rest
         out = []
         for s in pool:
@@ -521,8 +522,11 @@ class Generator:
             w = self.weight.get(s["id"], 1.0)
             answer_name = x.get("answer_label") or s["scientific_name"]
 
+            # `imgs`·`x`·`s`·`w` 를 기본 인자로 묶는다. **이 함수는 이 회차
+            # 안에서만 불리므로 늦게 읽어도 값이 같지만**, 묶어 두면 그 사실이
+            # 코드에 적히고 나중에 이 함수를 밖으로 빼도 안 깨진다.
             def add(qtype, correct, kind, field=None, image_filter=None,
-                    stem_key=None):
+                    stem_key=None, *, imgs=imgs, x=x, s=s, w=w):
                 pool = [i for i in imgs if not image_filter or image_filter(i)]
                 if not pool or not correct:
                     return
@@ -695,7 +699,8 @@ class Generator:
             if qt is None:
                 want_q = {k: max(1, round(v * n)) for k, v in QTYPE_MIX.items()}
                 continue
-            def ok(c, allow_repeat):
+            # `qt` 를 묶는 이유는 위 `add` 와 같다.
+            def ok(c, allow_repeat, *, qt=qt):
                 if c["specimen"]["id"] in used_spec:
                     return False
                 if used_sp[c["species"]["id"]] >= 2:
