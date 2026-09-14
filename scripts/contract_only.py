@@ -18,6 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 from studyez import deck, filenames  # noqa: E402
+
 RUNS = REPO_ROOT / "runs"
 
 failed = 0

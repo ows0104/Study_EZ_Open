@@ -221,7 +221,9 @@
 
         function getStructureKey(item) {
             const label = String(item.answer_ko || item.answer_en || item.raw_label || getUniqueQuestionKey(item));
-            return label.normalize('NFKC').toLowerCase()
+            return label
+                .normalize('NFKC')
+                .toLowerCase()
                 .replace(/\b(left|right|lt|rt)\b/g, '')
                 .replace(/(왼쪽|오른쪽|좌측|우측)/g, '')
                 .replace(/[^0-9a-z가-힣]+/g, '');
@@ -386,6 +388,7 @@
                 regionCounts.set(pickedRegion, (regionCounts.get(pickedRegion) || 0) + 1);
                 lastRegion = pickedRegion;
             }
+
             return selected_items;
         }
         // -------------------------------------------------------------------
@@ -464,8 +467,7 @@
             document.getElementById('progress').innerText = `Question ${index + 1} / ${quizData.length}`;
             
             const imgEl = document.getElementById('question-image');
-            imgEl.src = "Spotter_Questions_All/" + data.image_filename;
-            imgEl.style.display = "block";
+            setQuestionImage(imgEl, data);
             
             document.getElementById('region-box').innerText = data.region;
             toggleRegion(); 

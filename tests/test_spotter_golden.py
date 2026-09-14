@@ -156,13 +156,57 @@ def _unstamped(path):
     return _STAMP.sub(r"\1\2", Path(path).read_text(encoding="utf-8"))
 
 
-@pytest.mark.parametrize("subject", ANATOMY)
-def test_해부학_원본이_배포본과_한_글자도_안_다르다(subject):
-    """다른 것은 `?v=` 각인뿐이어야 한다. 그건 배포가 그때 계산해 붙인다."""
+# 배포가 아직 안 간 변경. **고친 날과 이유를 적는다** — 배포하면 이 칸이 비고,
+# 안 비면 「고쳤다고 했는데 안 나갔다」가 검사에서 드러난다.
+PENDING_DEPLOY = {
+    "trunk": "2026-09-14 본문 사진이 없는 상대경로를 부르던 것을 고쳤다",
+    "head-neck": "2026-09-14 본문 사진이 없는 상대경로를 부르던 것을 고쳤다",
+}
+
+
+def _anatomy(subject):
     root = Path(__file__).resolve().parents[1]
-    src = root / "spotter" / "web" / "anatomy" / subject / "index.html"
-    dst = root / "spotter-dist" / subject / "index.html"
-    assert _unstamped(src) == _unstamped(dst)
+    return (root / "spotter" / "web" / "anatomy" / subject / "index.html",
+            root / "spotter-dist" / subject / "index.html")
+
+
+@pytest.mark.parametrize("subject", ANATOMY)
+def test_해부학_원본과_배포본이_각인_말고는_같다(subject):
+    """다른 것은 `?v=` 각인뿐이어야 한다 — 그건 배포가 그때 계산해 붙인다.
+
+    **`PENDING_DEPLOY` 에 적힌 과목은 달라야 한다.** 배포하면 같아지고, 그때
+    그 줄을 지운다. 지우는 것을 잊으면 이 검사가 먼저 말한다.
+    """
+    src, dst = _anatomy(subject)
+    same = _unstamped(src) == _unstamped(dst)
+    if subject in PENDING_DEPLOY:
+        assert not same, (
+            f"{subject} 는 배포되어 같아졌다. PENDING_DEPLOY 에서 그 줄을 지워라: "
+            f"{PENDING_DEPLOY[subject]}"
+        )
+    else:
+        assert same
+
+
+@pytest.mark.parametrize("subject", ANATOMY)
+def test_본문_사진은_서명_URL로만_부른다(subject):
+    """**이 검사가 없어서 두 과목이 깨진 채로 나가 있었다.**
+
+    `gate_subject.py` 가 사진 함수를 갈아 끼우는데, `trunk` 과 `head-neck` 은
+    `loadQuestion` 안의 한 줄이 그 갈아 끼우기를 안 탔다 —
+
+        imgEl.src = "Spotter_Questions_All/" + data.image_filename;
+
+    배포본에 그런 폴더가 없다. 사진은 R2 서명 URL 로만 나가고, 그 자리를
+    `GATE.image` 가 만든다. `exam1` 은 `setQuestionImage`, `neuro` 는
+    `imageUrlOf` 를 불러서 멀쩡했고 **둘만 조용히 깨져 있었다.**
+
+    개수를 세는 대신 죽은 경로가 하나도 없는지 본다 — 개수는 앱마다 다르다.
+    """
+    src, _ = _anatomy(subject)
+    body = src.read_text(encoding="utf-8")
+    assert "Spotter_Questions_All/" not in body
+    assert "GATE.image(" in body
 
 
 def test_각인은_줄끝을_안_본다():
@@ -181,3 +225,31 @@ def test_각인은_줄끝을_안_본다():
         lf.write_bytes(body)
         crlf.write_bytes(body.replace(b"\n", b"\r\n"))
         assert deploy_pages.digest(str(lf)) == deploy_pages.digest(str(crlf))
+
+
+# ── 해부학 한 판 ───────────────────────────────────────────────────
+
+def test_해부학_셋이_판에서_그대로_나온다():
+    """`exam1`·`trunk`·`head-neck` 은 `_template.html` 한 장에서 찍는다.
+
+    **사본 셋이던 것을 2026-09-14 에 합쳤다.** trunk 과 head-neck 은 635줄 중
+    네 줄만 달랐고(제목·번호·표제·과목 키), exam1 은 거기에 핀 표시가 붙은
+    것이었다. 합치는 근거는 취향이 아니라 사고다 — 사본 하나만 고쳐서 두 과목이
+    본문 사진 없이 배포돼 있었다(`test_본문_사진은_서명_URL로만_부른다`).
+
+    파일을 손으로 고치면 이 검사가 먼저 말한다. 판을 고치고 다시 찍어야 한다.
+    """
+    r = subprocess.run(
+        [sys.executable, str(SCRIPTS / "build_anatomy.py"), "--check"],
+        capture_output=True, text=True, encoding="utf-8", cwd=str(SPOTTER),
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_neuro_는_판_밖에_있다():
+    """989줄이고 트렁크 계열과 1,586줄이 다르다 — **다른 앱이다.** 억지로 넣으면
+    판이 두 앱을 다 아는 괴물이 된다. 그 선을 검사로 적어 둔다."""
+    subjects = json.loads((SPOTTER / "web" / "anatomy" / "subjects.json")
+                          .read_text(encoding="utf-8"))
+    assert "neuro" not in subjects
+    assert (SPOTTER / "web" / "anatomy" / "neuro" / "index.html").is_file()
