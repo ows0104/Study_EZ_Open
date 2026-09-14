@@ -4,7 +4,7 @@
 중복, 정답 노출. 그 부분은 그대로 가져다 쓴다.
 
 다른 것은 예습에만 있는 계약 셋이다.
-  · **개수 20~30장.** 이것이 이 덱의 품질 장치다.
+  · **개수 상한(`schema.MAX_CARDS`).** 이것이 이 덱의 품질 장치다.
   · **`reason=repeated` 는 교수 유임일 때만.** 바뀌었으면 과거 반복은 이전 교수의 습관이다.
   · **`ox` 는 1/5 이하.** 예습은 알게 하는 것이 목적이라 O/X 는 회수량이 적다.
 
@@ -299,7 +299,7 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
                         f"승인된 항목 {len(by_id)}개와 이을 길이 없다")
 
     coverage = {
-        # 이 이름으로 `studyez/deck.py` 가 읽어 간다 (복습과 같은 칸).
+        # 이 이름으로 `runner/deck.py` 가 읽어 간다 (복습과 같은 칸).
         "objectives_without_card": orphan_objectives,
         "cards_per_item_mismatch": card_budget,
         # **슬라이드 커버리지는 내지 않는다.** 예습은 그것을 목표로 하지 않는다.

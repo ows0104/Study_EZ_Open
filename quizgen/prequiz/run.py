@@ -14,7 +14,7 @@
 세 갈래가 갈렸다. 예습에는 그 축이 없다 — 꼭 알아야 할 의학 지식은 출제자와 무관하다.
 교수 교체는 `reason=repeated` 를 쓸 수 있는지만 가른다.
 
-**③ 재현 검사가 선택이다.** 20~30장이라 싸지만, 예습은 강의 전날 급하게 도는 일이
+**③ 재현 검사가 선택이다.** 10~20장이라 싸지만, 예습은 강의 전날 급하게 도는 일이
 잦다. 기본으로 돌리되 `--skip-reproduce` 로 건너뛸 수 있고 덱은 그래도 나온다.
 """
 
@@ -469,7 +469,9 @@ class Runner(BaseRunner):
                             f"- 질문만 보고 다시 푼 답: "
                             f"{r.get('reproduced_answer') or '(풀 수 없다고 답함)'}\n"
                             f"- 채점 메모: {r.get('note') or ''}")
-            task = (PROMPTS / "repair.md").read_text(encoding="utf-8").replace("{raw}", raw)
+            task = ((PROMPTS / "repair.md").read_text(encoding="utf-8")
+                    .replace("{raw}", raw)
+                    .replace("{dir}", self.out.resolve().as_posix()))
             self.agent(task + "\n\n" + "\n\n".join(body), f"수선{rnd}",
                        resume=bool(self.sid))
             ledger.append(self.out, "수선", seconds=time.time() - t, cost=self.pend_cost,
