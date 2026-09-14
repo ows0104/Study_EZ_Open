@@ -22,6 +22,7 @@ from pathlib import Path
 
 import fitz
 
+from . import cutmark
 from .textutil import norm_key as norm
 from .textutil import word_tokens
 
@@ -919,6 +920,15 @@ def main(argv=None) -> int:
     outdir = Path(args.out)
     outdir.mkdir(parents=True, exist_ok=True)
 
+    # **앞 컷을 덮지 않는다.** 덮으면 그 컷으로 만든 덱이 무엇을 봤는지 물을 수 없다
+    # (`cutmark` 머리). 컷 하나가 0.5~0.9MB 라 남기는 값이 거의 없다.
+    #
+    # 자르다 죽으면 앞 컷은 `_previous/` 에 있고 이 폴더는 반쯤 비어 있게 된다.
+    # 그때 `watch.jokbo_state` 는 `index.json` 이 없으므로 `UNCUT` 으로 본다 —
+    # 「안 잘렸다」이고, 그것이 맞는 말이다.
+    if (moved := cutmark.archive(outdir)):
+        print(f"앞 컷을 {cutmark.PREVIOUS}/{moved} 로 옮겼다")
+
     regions = split_regions(doc)
     lectures, profs, warn = parse_toc(doc)
     title_index = title_aliases(lectures)
@@ -976,7 +986,12 @@ def main(argv=None) -> int:
                 if rec:
                     q.answer, q.objection = rec["answer"], rec["objection"]
 
-    index = {"source": Path(args.pdf).name, "pages": doc.page_count,
+    # `cut_id` 를 `index.json` 에도 넣는다. **이 파일을 이미 읽는 쪽이 여럿이라**
+    # (`pack.find_jokbo`·`build.find_jokbo_source`·`prequiz.assemble`) 판을 공짜로
+    # 본다. 정본은 `cut.json` 이고 여기 것은 그 사본이다.
+    cut_id = cutmark.new_cut_id()
+    index = {"cut_id": cut_id,
+             "source": Path(args.pdf).name, "pages": doc.page_count,
              "regions": {k: [p + 1 for p in v] for k, v in regions.items()},
              "toc_warning": warn, "lectures": []}
     if prac_sources:
@@ -1010,6 +1025,24 @@ def main(argv=None) -> int:
             "may_contain": [k for k, _ in sec.may_contain]})
 
     (outdir / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # **판을 적는다.** `index.json` **뒤에** 써야 한다 — 이 줄에서 죽어도 조각과
+    # 색인은 이미 서 있고, 그때 없는 것은 판뿐이다(`describe` 가 「판이 적혀 있지
+    # 않다」로 읽어 준다). 반대로 두면 판은 있고 색인이 없는 컷이 생긴다.
+    #
+    # **여기서 죽어서는 안 된다.** 조각 37개와 색인이 다 나온 뒤인데 예외가 나가면
+    # 종료 코드가 「안 만들어졌다」고 거짓말을 하고, 그것을 믿는 `run_jokbo` 가
+    # `source_path` 를 안 적어 기출 카드 뒷면의 지면 이미지가 조용히 빠진다
+    # (`runner/CLAUDE.md` 첫 절이 그 사고다). 판을 못 적는 것보다 그게 나쁘다.
+    try:
+        cutmark.write(outdir, source=Path(args.pdf), pages=doc.page_count,
+                      practical=prac_sources or None, cut_id=cut_id,
+                      counts={"lectures": len(index["lectures"]),
+                              "questions": sum(e["n_questions"] for e in index["lectures"])})
+        print(cutmark.describe(outdir))
+    except (OSError, ValueError) as cause:
+        print(f"⚠ 판({cut_id})을 못 적었다 ({cause}) — 조각은 다 나왔다. "
+              f"이 컷으로 만든 덱은 어느 컷인지 물을 수 없다")
 
     # 콘솔 요약
     # **네 구역이 다 있다고 보면 안 된다.** 2026 기생충학 족보는 실습이 통째로

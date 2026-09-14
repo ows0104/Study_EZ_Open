@@ -60,3 +60,40 @@ def test_기본값도_예외가_아니다(tmp_path, capsys, subdir):
     """`out/jokbo` 는 기본값이라 더 조용히 지나가기 쉬웠다. 똑같이 알린다."""
     slice_for(_prep(), tmp_path / subdir)
     assert "족보를 물리지 않았다" in capsys.readouterr().out
+
+
+# ── 왜 안 붙었는지가 남는가 (2026-09-14, `docs/runs-layout.md` 3단계) ──────────
+#
+# 위의 세 갈래는 **화면에는 다르게 찍히는데 파일에는 아무것도 안 남았다.** 그래서
+# 나중에 「이 편은 기출이 왜 0장인가」를 물으면 로그를 찾아야 하고, 로그는 지워진다.
+# `slice_for_recorded` 가 그 사유를 한 장으로 돌려준다.
+
+def test_폴더가_없다는_사유가_기록에_남는다(tmp_path):
+    from quizgen.assemble import slice_for_recorded
+    _, _, _, rec = slice_for_recorded(_prep(), tmp_path / "없는폴더")
+    assert rec["attached"] is False
+    assert "안 잘렸다" in rec["why_not"]
+
+
+def test_문턱에_걸렸다는_사유가_기록에_남는다(tmp_path):
+    """재료가 없는 것과 **다른 사유**다 — 처방이 다르다."""
+    from quizgen.assemble import slice_for_recorded
+    (tmp_path / "index.json").write_text(
+        json.dumps({"lectures": [{"lecture_key": "L01", "title": "전혀 다른 강의",
+                                  "file": "L01_전혀-다른-강의"}]}),
+        encoding="utf-8")
+    _, _, _, rec = slice_for_recorded(_prep(), tmp_path)
+    assert rec["attached"] is False
+    assert "문턱" in rec["why_not"]
+    assert "안 잘렸다" not in rec["why_not"]
+
+
+def test_손으로_지정한_것도_그렇게_적힌다(tmp_path):
+    """점수를 안 적는다 — 대조를 안 했으니 점수가 없다. 0.0 으로 적으면 거짓이다."""
+    from quizgen.assemble import slice_for_recorded
+    p = tmp_path / "조각.json"
+    p.write_text(json.dumps({"stats": {}, "may_contain": []}), encoding="utf-8")
+    _, _, _, rec = slice_for_recorded(_prep(), tmp_path / "없는폴더", str(p))
+    assert rec["attached"] is True
+    assert rec["score"] is None
+    assert "사람이" in rec["by"]

@@ -160,13 +160,22 @@ def jokbo_state(runs_dir: Path, subject: str,
     return JOKBO_ABSENT
 
 
-def jokbo_note(state: str, subject: str) -> str:
-    """그 상태를 사람에게 적어 주는 한 줄. 없으면 빈 문자열."""
+def jokbo_note(state: str, subject: str, runs_dir: Path | None = None) -> str:
+    """그 상태를 사람에게 적어 주는 한 줄. 없으면 빈 문자열.
+
+    **`READY` 에도 할 말이 있을 수 있다** — 컷은 서 있는데 원본이 그 뒤에 갈린 경우다.
+    그때는 알리기만 한다. `jokbo_state` 가 넷째 상태를 만들지 않는 이유는 그것이
+    **막을 일이 아니기** 때문이다. 갈린 원본으로 다시 자를지는 사람이 정한다.
+    """
     if state == JOKBO_UNCUT:
         return ("과목 족보 원본은 있는데 아직 안 잘렸다 — "
                 f"`python -m runner jokbo {subject}` 먼저")
     if state == JOKBO_ABSENT:
         return "이 과목은 족보 원본이 없다 — 기출 카드 없이 만들어진다"
+    if (state == JOKBO_READY and runs_dir is not None
+            and (stale := deck.cut_stale(deck.jokbo_dir(runs_dir, subject)))):
+        return (f"족보 컷이 낡았다 — {stale}. 지금 컷으로도 만들어진다. "
+                f"다시 자르려면 `python -m runner jokbo {subject}`")
     return ""
 
 
@@ -264,6 +273,9 @@ def build_queue(
         this_files = filenames.latest_versions(this_scan.files)
         run_ids = assign_run_ids(this_files)
         jokbo = jokbo_state(runs_dir, subject, root, this_year)
+        # **과목마다 한 번만 묻는다.** `READY` 일 때 원본 해시를 다시 뜨므로
+        # 강의마다 물으면 한 과목 30편이면 30번 뜬다.
+        jokbo_msg = jokbo_note(jokbo, subject, runs_dir)
 
         for item in this_files:
             run_id = run_ids[item.uid]
@@ -293,9 +305,8 @@ def build_queue(
             notes: list[str] = []
             if verdict.note:
                 notes.append(verdict.note)
-            note = jokbo_note(jokbo, subject)
-            if note:
-                notes.append(note)
+            if jokbo_msg:
+                notes.append(jokbo_msg)
 
             items.append(WorkItem(
                 subject=subject, run_id=run_id, key=item.key, date=item.date,

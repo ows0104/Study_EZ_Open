@@ -4,7 +4,7 @@
 **저장소에서 유일하게 합법인 경계 넘기가 여기 있다** — `runner/deck.py → quizgen` 3줄.
 
     무엇을 고치면 어느 파일인가    ../docs/map.md §2
-    검사                          pytest tests/runner      201개 · 9초
+    검사                          pytest tests/runner      204개 · 9초
     권한 · 어디서나 미는 함정       ../CLAUDE.md
     카드를 어떻게 쓰는가            ../quizgen/CLAUDE.md
 

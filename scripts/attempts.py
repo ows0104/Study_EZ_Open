@@ -82,6 +82,10 @@ def measure(d: Path) -> dict | None:
         "cost": None,
         "when": None,
         "cards_hash": None,
+        # 어느 족보 컷을 봤는가. 2026-09-14 이후에 만든 편에만 있다
+        # (`quizgen/cutmark.py` · `docs/runs-layout.md` 3단계).
+        "cut": None,
+        "jokbo_why_not": None,
     }
     stamp = d / "items.raw.json"
     if stamp.is_file():
@@ -90,6 +94,14 @@ def measure(d: Path) -> dict | None:
         # 사본(`exp_prac` ↔ `runs/`). 모델이 쓴 카드가 한 바이트도 안 다르면 같은
         # 시도다 — 그것을 세면 시도 수가 부풀고, 그 표로 「나은 판」을 고르게 된다.
         got["cards_hash"] = hashlib.sha256(stamp.read_bytes()).hexdigest()[:8]
+    used = d / "jokbo.used.json"
+    if used.is_file():
+        try:
+            rec = json.loads(used.read_text(encoding="utf-8"))
+            got["cut"] = rec.get("cut_id") or ("판미기록" if rec.get("attached") else None)
+            got["jokbo_why_not"] = None if rec.get("attached") else rec.get("why_not")
+        except (OSError, json.JSONDecodeError):
+            pass
     report = d / "run.report.json"
     if report.is_file():
         try:
@@ -129,7 +141,11 @@ def fmt(row: dict, newest: bool, dup: bool = False) -> str:
             f"{row['cards']:4}장  기출{row['exam_hit']:3}  족보{row['jokbo_ref']:3}  "
             f"같음{row['same']:4}{rate}  부분{row['partial']:3}  다름{row['different']:3}  "
             f"{(str(row['minutes']) + '분') if row['minutes'] else '—':>7}"
-            f"{('$' + str(row['cost'])) if row['cost'] else '—':>8}")
+            f"{('$' + str(row['cost'])) if row['cost'] else '—':>8}"
+            # **족보참조가 준 이유를 못 갈랐던 자리가 이 칸이다.** 2026-09-14 에
+            # 25편 전부 족보참조가 줄어 있었는데 원인을 물을 수 없었다.
+            + (f"  컷 {row['cut']}" if row["cut"]
+               else (f"  족보 안 붙음: {row['jokbo_why_not']}" if row["jokbo_why_not"] else "")))
 
 
 def main() -> None:
@@ -141,12 +157,13 @@ def main() -> None:
         import csv
         w = csv.writer(sys.stdout, lineterminator="\n")
         w.writerow(["run_id", "path", "when", "cards", "exam_hit", "jokbo_ref",
-                    "same", "partial", "different", "graded", "minutes", "cost_usd"])
+                    "same", "partial", "different", "graded", "minutes", "cost_usd",
+                    "cut", "jokbo_why_not"])
         for rid in ids:
             for r in attempts_of(rid):
                 w.writerow([rid, r["path"], r["when"], r["cards"], r["exam_hit"], r["jokbo_ref"],
                             r["same"], r["partial"], r["different"], r["graded"],
-                            r["minutes"], r["cost"]])
+                            r["minutes"], r["cost"], r["cut"], r["jokbo_why_not"]])
         return
 
     print("시도를 원값으로 나란히 놓는다. `*` 가 카드가 가장 새것인 시도다.")

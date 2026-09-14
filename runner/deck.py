@@ -273,6 +273,29 @@ def jokbo_dir(runs_dir: Path, subject: str) -> Path:
     return runs_dir / "_jokbo" / subject
 
 
+def cut_line(cut_dir: Path) -> str:
+    """그 컷의 판을 사람이 읽는 한 줄. **`runner/` 에서 판을 묻는 자리는 여기다.**
+
+    판을 적는 쪽은 `quizgen.cutmark` 이고, 이 파일이 quizgen 을 부르는 유일한
+    자리라서 (`runner/CLAUDE.md`) 묻는 것도 여기를 지난다.
+    """
+    from quizgen import cutmark
+    return cutmark.describe(cut_dir)
+
+
+def cut_stale(cut_dir: Path) -> str | None:
+    """원본 족보가 그 컷보다 새것이면 사람이 읽을 한 줄, 아니면 None.
+
+    **막는 데 쓰지 마라.** 원본이 갈렸다고 지금 컷이 못 쓰는 것이 아니다 — 다시
+    자르면 되는 일이고 그 판단은 사람이 한다(`quizgen/cutmark.stale_source`).
+    """
+    from quizgen import cutmark
+    try:
+        return cutmark.stale_source(cut_dir)
+    except OSError:
+        return None            # 원본이 네트워크 드라이브에 있다. 못 읽으면 말을 안 한다
+
+
 @dataclass
 class Result:
     ok: bool

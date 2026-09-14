@@ -50,7 +50,7 @@ import time
 import unicodedata
 from pathlib import Path
 
-from . import ledger
+from . import cutmark, ledger
 from .assemble import (
     STRATEGIES,
     STRATEGY_ALIAS,
@@ -60,6 +60,7 @@ from .assemble import (
     photo_profile,
     resolve_auto_strategy,
     slice_for,
+    slice_for_recorded,
 )
 from .pack import lecture_of
 from .prompting import DEFAULT_DOMAIN, DOMAINS
@@ -140,6 +141,9 @@ class Runner(BaseRunner):
         super().__init__(out, args)
         self.strategy: str = "base"
         self.strategy_why: str = ""
+        # 어느 컷의 어느 조각을 봤는가. `plan_strategy` 가 채운다. **재개로 그 단계를
+        # 건너뛰면 비어 있다** — 그때는 폴더의 `jokbo.used.json` 이 정본이다.
+        self.jokbo_used: dict = {}
         # 전략 판정 전까지의 잠정값. 사람이 깃발로 켰으면 그대로 산다.
         self.annotation: bool = bool(getattr(args, "annotation_evidence", False))
 
@@ -208,7 +212,18 @@ class Runner(BaseRunner):
         사진이 많은 실습 → 높은 반복률 → 교수 교체·낮은 반복률 확인 → 기본 순서다.
         """
         prep = json.loads((self.out / "prep.json").read_text(encoding="utf-8"))
-        path, stats, mixed = slice_for(prep, Path(self.args.jokbo_dir), self.args.jokbo)
+        path, stats, mixed, used = slice_for_recorded(
+            prep, Path(self.args.jokbo_dir), self.args.jokbo)
+        # **어느 컷의 어느 조각을 봤는지 여기서 적는다.** 이 단계가 카드보다 앞이라
+        # 뒤에서 죽어도 기록은 남는다. 안 붙었으면 그 이유가 같이 남는다 —
+        # 재료가 없는 것과 문턱에 걸린 것은 처방이 다르고, 카드 수만으로는 안 갈린다
+        # (`cutmark` 머리 · `docs/runs-layout.md` 「새로 적어야 하는 것 ①」).
+        try:
+            cutmark.write_used(self.out, used)
+        except OSError as cause:
+            print(f"   ⚠ 어느 컷을 봤는지 못 적었다 ({cause})", flush=True)
+        self.jokbo_used = used
+        print(f"   족보: {cutmark.used_line(used)}", flush=True)
         profile = photo_profile(prep, self.args.lecture or "")
         auto, why = decide_strategy(stats, mixed, practical=profile["practical"],
                                     image_rich=profile["image_rich"])
@@ -455,10 +470,19 @@ class Runner(BaseRunner):
 
     def report(self, check: Path | None):
         rep = ledger.summarize(self.out, self.run)
+        # **폴더의 것을 먼저 본다.** 재개로 `plan_strategy` 를 건너뛰면 이 실행의
+        # `self.jokbo_used` 는 비어 있는데, 그때도 그 편이 본 컷은 폴더에 적혀 있다.
+        used = self.jokbo_used
+        if not used:
+            try:
+                used = json.loads((self.out / "jokbo.used.json").read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                used = {}
         rep.update({"deck": self.args.deck, "id": self.args.id,
                     "pdf": self.args.pdf_name, "strategy": self.strategy,
                     "strategy_why": self.strategy_why,
                     "domain": self.args.domain,
+                    "jokbo": used or None,
                     "annotation_evidence": self.annotation,
                     "wall_seconds": round(time.time() - self.t0, 1),
                     "image_check": str(check) if check else None})

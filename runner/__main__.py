@@ -251,7 +251,10 @@ def run_jokbo(args) -> int:
     except (OSError, ValueError) as cause:
         print(f"  ⚠ index.json에 원본 경로를 못 적었다 ({cause}) — 지면 이미지가 빠진다")
 
+    # **판을 화면에 적는다.** 자른 쪽(`quizgen.cutmark`)이 `cut.json` 에 남긴 것이고,
+    # 이 줄이 있어야 사람이 「방금 자른 것이 무엇인가」를 그 자리에서 본다.
     print(f"\n  → {index}")
+    print(f"  {deck.cut_line(out_dir)}")
     print("  이제 `python -m runner watch --build`가 이 조각을 스스로 물린다")
     return 0
 

@@ -215,3 +215,47 @@ def test_이미_잘려_있으면_안_막는다(tmp_path, monkeypatch):
 
 def pytest_fail():
     raise AssertionError("족보를 자르기 전에 덱을 만들면 안 된다")
+
+
+# ── 넷째 상태를 만들지 않는다 (2026-09-14, 판 기록) ───────────────────────────
+#
+# 컷은 서 있는데 **원본이 그 뒤에 갈린** 경우가 있다. `jokbo_state` 에 넷째 값을
+# 넣지 않은 이유는 그것이 **막을 일이 아니기** 때문이다 — 갈린 원본으로 다시 자를지는
+# 사람이 정한다. 그래서 상태는 `READY` 그대로 두고 `jokbo_note` 만 말한다.
+
+def _cut(runs_dir, subject, pdf):
+    from quizgen import cutmark
+    d = runs_dir / "_jokbo" / subject
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "index.json").write_text('{"lectures": []}', encoding="utf-8")
+    cutmark.write(d, source=pdf, cut_id="260914-2312")
+    return d
+
+
+def test_원본이_갈려도_상태는_READY다(tmp_path):
+    runs = tmp_path / "runs"
+    pdf = tmp_path / "족보.pdf"
+    pdf.write_bytes(b"AAAA")
+    _cut(runs, "병리학", pdf)
+    pdf.write_bytes(b"BBBB")
+
+    # 막지 않는다 — 상태가 안 바뀌므로 `run_watch_one` 이 그대로 통과시킨다
+    assert watch.jokbo_state(runs, "병리학") == watch.JOKBO_READY
+    # 그러나 말은 한다
+    note = watch.jokbo_note(watch.JOKBO_READY, "병리학", runs)
+    assert "컷이 낡았다" in note
+    assert "지금 컷으로도 만들어진다" in note
+    assert "runner jokbo 병리학" in note
+
+
+def test_원본이_그대로면_READY에_할_말이_없다(tmp_path):
+    runs = tmp_path / "runs"
+    pdf = tmp_path / "족보.pdf"
+    pdf.write_bytes(b"AAAA")
+    _cut(runs, "병리학", pdf)
+    assert watch.jokbo_note(watch.JOKBO_READY, "병리학", runs) == ""
+
+
+def test_runs_dir를_안_주면_안_묻는다(tmp_path):
+    """원본 해시를 뜨는 일이라 부르는 쪽이 원할 때만 한다."""
+    assert watch.jokbo_note(watch.JOKBO_READY, "병리학") == ""

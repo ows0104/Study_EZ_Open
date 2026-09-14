@@ -19,7 +19,7 @@ import re
 import sys
 from pathlib import Path
 
-from . import slidediff
+from . import cutmark, slidediff
 from .pack import (
     READ_TOKEN_CAP,
     estimate_pdf_tokens,
@@ -329,6 +329,9 @@ def slice_for(prep: dict, jokbo_dir: Path, explicit: str | None = None
               ) -> tuple[Path | None, dict, bool]:
     """이 강의의 족보 조각과 그 통계를 찾는다. (조각, stats, 주인이-다른-강의인가)
 
+    **어느 판을 봤는지 남기려면 `slice_for_recorded` 를 불러라.** 여기 것은 판정만
+    한다 — 부르는 자리가 넷이고 그중 둘은 기록할 자리가 아니라서 갈라 두었다.
+
     **없으면 조용히 넘어가지 않는다.** 2026-08-27 배치에서 7편이 기출 0장으로 나왔는데
     아무도 몰랐다. `--jokbo-dir` 기본값이 `out/jokbo` 인데 그 폴더가 없었고, 여기가
     아무 말 없이 `None` 을 돌려줬다. 기출 카드는 **지워진 것이 아니라 계획 단계부터
@@ -337,22 +340,45 @@ def slice_for(prep: dict, jokbo_dir: Path, explicit: str | None = None
     야간 러너도 같은 구멍에 빠진다. `deck.py` 가 `--jokbo-dir` 을 늘 넘기지만 그 과목의
     족보를 아직 안 잘랐으면 없는 경로를 넘기게 된다.
     """
+    path, stats, mixed, _ = slice_for_recorded(prep, jokbo_dir, explicit)
+    return path, stats, mixed
+
+
+def slice_for_recorded(prep: dict, jokbo_dir: Path, explicit: str | None = None
+                       ) -> tuple[Path | None, dict, bool, dict]:
+    """`slice_for` 와 같은 판정에 **기록 한 장**을 덧붙여 돌려준다.
+
+    그 기록이 있어야 나중에 「이 편은 어느 컷의 어느 조각을 봤나」를 물을 수 있다.
+    **특히 안 붙었을 때의 이유가 여기 남는다** — 2026-09-14 에 족보참조 카드가 25편
+    전부 줄어 있는 것을 찾았는데, 재료가 없었던 것인지 문턱에 걸린 것인지 프롬프트가
+    달라진 것인지 **구별할 수 없었다.** 셋의 처방이 전부 다르다.
+    """
     if explicit:
         p = Path(explicit)
         jk = json.loads(p.read_text(encoding="utf-8"))
-        return p, jk.get("stats", {}), bool(jk.get("may_contain"))
+        rec = cutmark.used_record(jokbo_dir, p, 1.0)
+        rec["by"] = "사람이 --jokbo 로 지정했다"
+        rec["score"] = None                    # 대조를 안 했으니 점수가 없다
+        return p, jk.get("stats", {}), bool(jk.get("may_contain")), rec
     index = Path(jokbo_dir) / "index.json"
     if not index.exists():
         print(NO_JOKBO_DIR.format(index=index), flush=True)
-        return None, {}, False
+        return None, {}, False, cutmark.used_record(
+            jokbo_dir, None, 0.0, "족보 폴더에 index.json 이 없다 — 아직 안 잘렸다")
     path, score, top = find_jokbo(prep, Path(jokbo_dir))
     if not path or (score < 0.25 and not only_practice_pool(top)):
         print(NO_JOKBO_MATCH.format(score=score), flush=True)
-        return None, {}, False
+        return None, {}, False, cutmark.used_record(
+            jokbo_dir, None, score,
+            f"제목 일치도 {score:.2f} 가 문턱 0.25 아래다 (조각은 있다)"
+            if top else "후보 조각이 하나도 없다")
     if score < 0.25:
         print(PRACTICE_ONLY_MATCH.format(score=score, name=path.name), flush=True)
     jk = json.loads(path.read_text(encoding="utf-8"))
-    return path, jk.get("stats", {}), top[0][2] is not None
+    rec = cutmark.used_record(jokbo_dir, path, score)
+    if score < 0.25:
+        rec["by"] = "실습 문항 풀이 후보 하나뿐이라 문턱을 지나갔다"
+    return path, jk.get("stats", {}), top[0][2] is not None, rec
 
 
 MAX_REPEAT_CLUSTERS = 12       # 프롬프트에 실을 묶음 수. 실측 최대가 13개다(LPRAC)
