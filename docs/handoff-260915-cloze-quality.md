@@ -65,9 +65,12 @@
 다시 재는 법:
 
 ```bash
-python scripts/attempts.py <run_id>          # 판별 원값
-# 위 표를 다시 뜨는 한 줄은 이 문서의 커밋 메시지에 있다 (e6fcab9 뒤 커밋)
+python scripts/prompt_baseline.py     # 위 표를 그대로 다시 뜬다
+python scripts/attempts.py <run_id>   # 한 편의 판별 원값
 ```
+
+**`prompt_baseline.py` 의 80자·60자 선은 근거가 있어서 그은 것이 아니다** — 지금
+분포를 보려고 잡은 눈금이다. 규칙으로 굳히려면 관리자에게 먼저 물어라.
 
 ④(단순번역)는 **세는 법이 없다.** 사람이 짚어야 한다.
 
