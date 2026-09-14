@@ -61,6 +61,36 @@ Cloudflare Pages 대시보드가 `web/` 을, `server/Dockerfile` 과 `deploy.ps1
 소스는 하나, 배포는 셋. 합치지 않는 이유는 [docs/sibling-apps.md](sibling-apps.md)
 에 있다 — **하나가 깨져도 나머지가 산다.**
 
-    studyez.kr            Cloudflare Pages  ← web/
-    spotter.studyez.kr    Cloudflare Pages  ← spotter-dist/ 를 밀어낸 저장소
-    studyez-api           Cloud Run         ← server/
+    studyez.kr            Cloudflare Pages  ← web/            (push 하면 저절로)
+    spotter.studyez.kr    GitHub Pages      ← spotter-dist/   (아래)
+    studyez-api           Cloud Run         ← server/         (`server/deploy.ps1` 손으로)
+
+### 땡시를 배포하는 법
+
+두 걸음이다. **첫 걸음은 이 저장소 안에서 끝난다.**
+
+    python spotter/scripts/deploy_pages.py spotter-dist      원본 → 배포본
+    python spotter/scripts/deploy_pages.py --check spotter-dist   고치지 않고 보기만
+
+`deploy_pages.py` 가 공용 스크립트 넷·기생충학 화면·해부학 넷을 `spotter-dist/` 로
+옮기고 `<script src>` 마다 내용 해시를 붙인다. 여기까지는 배포가 아니다.
+
+**둘째 걸음이 밖으로 나간다.** `ows0104/Spotter_Quiz` 의 Actions 가 그 저장소
+루트를 GitHub Pages 로 낸다. 그래서 `spotter-dist/` 를 거기로 밀어야 한다.
+
+    git subtree push --prefix=spotter-dist https://github.com/ows0104/Spotter_Quiz.git main
+
+**지금은 이 명령이 그대로 안 통한다.** 들여올 때 그 저장소의 사본이 얕아서
+(shallow) 경계를 뿌리로 접붙여 이력을 되살렸고, 그 과정에서 커밋 해시가 바뀌었다.
+내용은 같지만 원격과 계보가 갈린 상태라 `--force` 가 필요하다.
+
+    git subtree split --prefix=spotter-dist -b _dist
+    git push --force https://github.com/ows0104/Spotter_Quiz.git _dist:main
+    git branch -D _dist
+
+**산출물 저장소라 이력을 다시 써도 잃는 것이 없다** — 내용은 여기서 다시 만들어진다.
+다만 되돌릴 수 없으므로 **사람이 정한다.** 한 번 밀고 나면 그 뒤로는 `subtree push`
+가 그냥 통한다.
+
+대시보드에서 바꿀 것은 **없다.** Pages 설정은 그 저장소 안의
+`.github/workflows/pages.yml` 이 전부이고 그것도 같이 들어와 있다.
