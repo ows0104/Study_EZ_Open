@@ -91,3 +91,32 @@ def test_어디를_봐야_하는지_알려_준다(tmp_path):
 def test_index가_없으면_후보도_없다(tmp_path):
     (tmp_path / "runs" / "_jokbo" / "병리학").mkdir(parents=True)
     assert jokbo_dir_candidates(tmp_path) == []
+
+
+# ── 그림이 필요한 문항을 알아보는가 ────────────────────────────────
+#
+# 2026-09-14 에 `refactor-plan` Phase 3 ①(족보 파서 둘을 맞대 본다)을 하다가
+# 나온 것이다. 옛 규칙은 「그림·사진·현미경」 같은 **낱말만** 찾았는데, 실습
+# 문항은 대개 그 말을 안 쓰고 가리키기만 한다. 땡시가 같은 족보에서 뽑아 둔
+# 사진 유무를 정답으로 놓고 재니 **재현율이 18.6%** 였다(263장 중 49장).
+
+def test_가리키는_말도_그림_문항으로_본다():
+    from quizgen.jokbo import RE_FIGURE_WORD
+    for stem in (
+        "다음충란을가지는기생충은?",              # 2022 — 띄어쓰기가 깨진 판
+        "다음은 어떤 기생충의 충란인가?",
+        "indicator가가리키는기관은?",
+        "화살표로표시된구조물은?",
+        "관찰되는 원충의 이름?",
+        "잉어를 먹고 감염된 환자에서 발견된 기생충이다",
+        "위의 충란에서 indicator가 가리키는 구조물은?",
+    ):
+        assert RE_FIGURE_WORD.search(stem), stem
+
+
+def test_그림이라고_말하는_것도_그대로_본다():
+    """옛 규칙이 잡던 것을 잃지 않았는지 본다."""
+    from quizgen.jokbo import RE_FIGURE_WORD
+    for stem in ("아래 그림을 보고 답하시오", "현미경 소견으로 옳은 것은?",
+                 "다음 사진의 기생충은?", "모식도에서 A가 가리키는 것은?"):
+        assert RE_FIGURE_WORD.search(stem), stem
