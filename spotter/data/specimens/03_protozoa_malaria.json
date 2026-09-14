@@ -1,0 +1,752 @@
+[
+  {
+    "id": "entamoeba_histolytica_trophozoite",
+    "species_id": "entamoeba_histolytica",
+    "specimen_type": "충체",
+    "stage": "trophozoite",
+    "label_ko": "이질아메바 영양형",
+    "label_en": "Entamoeba histolytica, trophozoite",
+    "stain": "iron hematoxylin / trichrome",
+    "magnification": "1000x",
+    "key_features": [
+      "karyosome이 핵 중앙에 작은 점처럼 위치",
+      "peripheral chromatin의 두께가 균일",
+      "위족(pseudopodia)이 관찰되기도 함",
+      "세포질 안에 탐식한 RBC"
+    ],
+    "structures": [
+      "karyosome",
+      "peripheral chromatin",
+      "pseudopodia"
+    ],
+    "confusable_with": [
+      "entamoeba_coli_cyst",
+      "balantidium_coli_section"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "entamoeba_histolytica_cyst",
+    "species_id": "entamoeba_histolytica",
+    "specimen_type": "충체",
+    "stage": "cyst",
+    "label_ko": "이질아메바 포낭",
+    "label_en": "Entamoeba histolytica, cyst",
+    "stain": "trichrome",
+    "magnification": "1000x",
+    "key_features": [
+      "핵이 4개 이하로 듬성듬성",
+      "karyosome 중앙 위치",
+      "peripheral chromatin 균일",
+      "chromatoid body 관찰 가능"
+    ],
+    "structures": [
+      "karyosome",
+      "peripheral chromatin",
+      "chromatoid body"
+    ],
+    "confusable_with": [
+      "entamoeba_coli_cyst",
+      "endolimax_nana_cyst"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "entamoeba_histolytica_colon_section",
+    "species_id": "entamoeba_histolytica",
+    "specimen_type": "조직",
+    "stage": "trophozoite in colon",
+    "label_ko": "이질아메바 조직절편 (대장)",
+    "label_en": "Entamoeba histolytica in colon",
+    "stain": "H&E",
+    "magnification": "100-400x",
+    "key_features": [
+      "flask-shaped ulcer (플라스크 모양 궤양)",
+      "궤양 내부는 괴사 조직이라 충체가 없음",
+      "궤양 경계부에 세포질이 투명한 이질아메바"
+    ],
+    "structures": [
+      "flask-shaped ulcer"
+    ],
+    "confusable_with": [],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "entamoeba_coli_cyst",
+    "species_id": "entamoeba_coli",
+    "specimen_type": "충체",
+    "stage": "cyst",
+    "label_ko": "대장아메바 포낭",
+    "label_en": "Entamoeba coli, cyst",
+    "stain": "trichrome",
+    "magnification": "1000x",
+    "key_features": [
+      "핵이 4-8개로 많음",
+      "karyosome이 크고 한쪽으로 치우침 (붓으로 꾹 누른 모양)",
+      "peripheral chromatin 두께가 불규칙"
+    ],
+    "structures": [
+      "karyosome",
+      "peripheral chromatin",
+      "chromatoid body"
+    ],
+    "confusable_with": [
+      "entamoeba_histolytica_cyst",
+      "endolimax_nana_cyst"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "endolimax_nana_cyst",
+    "species_id": "endolimax_nana",
+    "specimen_type": "충체",
+    "stage": "cyst",
+    "label_ko": "왜소아메바 포낭",
+    "label_en": "Endolimax nana, cyst",
+    "stain": "iron hematoxylin",
+    "magnification": "1000x",
+    "key_features": [
+      "크기가 매우 작음 (RBC보다 조금 큰 수준)",
+      "핵 1-4개",
+      "karyosome이 커서 핵 안에 빈 공간이 없음"
+    ],
+    "structures": [
+      "karyosome"
+    ],
+    "confusable_with": [
+      "entamoeba_histolytica_cyst",
+      "entamoeba_coli_cyst"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "giardia_trophozoite",
+    "species_id": "giardia_lamblia",
+    "specimen_type": "충체",
+    "stage": "trophozoite",
+    "label_ko": "람블편모충 영양형",
+    "label_en": "Giardia lamblia, trophozoite",
+    "stain": "Diff-Quik",
+    "magnification": "1000x",
+    "key_features": [
+      "서양배(pear) 또는 올빼미 얼굴 모양",
+      "눈처럼 보이는 핵 2개",
+      "4쌍(8개)의 편모",
+      "sucking disc"
+    ],
+    "structures": [
+      "nucleus",
+      "flagella",
+      "sucking disc",
+      "axostyle"
+    ],
+    "confusable_with": [
+      "giardia_cyst",
+      "trichomonas_trophozoite"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "giardia_cyst",
+    "species_id": "giardia_lamblia",
+    "specimen_type": "충체",
+    "stage": "cyst",
+    "label_ko": "람블편모충 포낭",
+    "label_en": "Giardia lamblia, cyst",
+    "stain": "trichrome",
+    "magnification": "1000x",
+    "key_features": [
+      "타원형, 10-12um",
+      "핵 2-4개가 한쪽 끝에 몰려 있음",
+      "내부에 axostyle과 그 주변의 fibril",
+      "운동기관 없이 단단한 구조"
+    ],
+    "structures": [
+      "nucleus",
+      "axostyle",
+      "fibril"
+    ],
+    "confusable_with": [
+      "entamoeba_histolytica_cyst"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "trichomonas_trophozoite",
+    "species_id": "trichomonas_vaginalis",
+    "specimen_type": "충체",
+    "stage": "trophozoite",
+    "label_ko": "질편모충 영양형",
+    "label_en": "Trichomonas vaginalis, trophozoite",
+    "stain": "Diff-Quik",
+    "magnification": "1000x",
+    "key_features": [
+      "핵 1개",
+      "앞쪽으로 뻗은 편모 4개",
+      "몸 한쪽에 형성된 undulating membrane (파동막)",
+      "파동막이 있는 방향으로 회전하며 운동"
+    ],
+    "structures": [
+      "undulating membrane",
+      "flagella",
+      "axostyle",
+      "nucleus"
+    ],
+    "confusable_with": [
+      "giardia_trophozoite",
+      "trypanosoma_cruzi_trypomastigote"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "balantidium_coli_section",
+    "species_id": "balantidium_coli",
+    "specimen_type": "조직",
+    "stage": "trophozoite",
+    "label_ko": "대장섬모충",
+    "label_en": "Balantidium coli",
+    "stain": "H&E",
+    "magnification": "400x",
+    "key_features": [
+      "크기가 매우 커서 저배율에서도 바로 눈에 띔",
+      "가장자리에 섬모(cilia)",
+      "콩팥 모양의 큰 macronucleus + 작은 micronucleus"
+    ],
+    "structures": [
+      "cilia",
+      "macronucleus",
+      "micronucleus"
+    ],
+    "confusable_with": [
+      "entamoeba_histolytica_trophozoite"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "leishmania_promastigote",
+    "species_id": "leishmania_major",
+    "specimen_type": "충체",
+    "stage": "promastigote",
+    "label_ko": "리슈만편모충 promastigote",
+    "label_en": "Leishmania major, promastigote",
+    "stain": "Diff-Quik",
+    "magnification": "1000x",
+    "key_features": [
+      "가늘고 긴 방추형에 앞쪽으로 편모 1개",
+      "핵 + 그보다 작은 kinetoplast",
+      "배열이 편모 → kinetoplast → 핵 순서",
+      "배양 슬라이드라 배경에 결정 구조가 보이는 경우가 많음"
+    ],
+    "structures": [
+      "flagella",
+      "kinetoplast",
+      "nucleus"
+    ],
+    "confusable_with": [
+      "trypanosoma_cruzi_trypomastigote"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "leishmania_amastigote_liver",
+    "species_id": "leishmania_donovani",
+    "specimen_type": "조직",
+    "stage": "amastigote",
+    "label_ko": "내장리슈만편모충 amastigote (간·비장)",
+    "label_en": "Leishmania donovani, amastigote in liver section",
+    "stain": "H&E",
+    "magnification": "1000x",
+    "key_features": [
+      "대식세포 안에 점박이처럼 들어 있는 무편모형",
+      "편모가 보이지 않음",
+      "핵과 kinetoplast가 작은 두 점으로 보임"
+    ],
+    "structures": [
+      "amastigote",
+      "kinetoplast"
+    ],
+    "confusable_with": [
+      "trypanosoma_cruzi_heart_section",
+      "toxoplasma_tachyzoite"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "trypanosoma_cruzi_trypomastigote",
+    "species_id": "trypanosoma_cruzi",
+    "specimen_type": "혈액도말",
+    "stage": "trypomastigote",
+    "label_ko": "크루스파동편모충 trypomastigote",
+    "label_en": "Trypanosoma cruzi, trypomastigote",
+    "stain": "Giemsa",
+    "magnification": "1000x",
+    "key_features": [
+      "C 또는 S자 모양",
+      "핵 + 큰 kinetoplast + 편모 + 파동막",
+      "배열이 편모 → 핵 → kinetoplast 순서 (리슈만과 반대)"
+    ],
+    "structures": [
+      "undulating membrane",
+      "kinetoplast",
+      "flagella",
+      "nucleus"
+    ],
+    "confusable_with": [
+      "leishmania_promastigote",
+      "trichomonas_trophozoite"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "trypanosoma_cruzi_heart_section",
+    "species_id": "trypanosoma_cruzi",
+    "specimen_type": "조직",
+    "stage": "amastigote in myocardium",
+    "label_ko": "크루스파동편모충 심근 조직절편",
+    "label_en": "Trypanosoma cruzi, amastigote in heart section",
+    "stain": "H&E",
+    "magnification": "400-1000x",
+    "key_features": [
+      "심근세포 안에 동글동글하게 들어찬 amastigote 무리",
+      "주변 심근염"
+    ],
+    "structures": [
+      "amastigote nest"
+    ],
+    "confusable_with": [
+      "leishmania_amastigote_liver",
+      "toxoplasma_brain_section"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "toxoplasma_tachyzoite",
+    "species_id": "toxoplasma_gondii",
+    "specimen_type": "충체",
+    "stage": "tachyzoite",
+    "label_ko": "톡소포자충 tachyzoite",
+    "label_en": "Toxoplasma gondii, tachyzoite",
+    "stain": "Giemsa",
+    "magnification": "400-1000x",
+    "key_features": [
+      "초승달·활 모양 (arc shaped)",
+      "편모나 섬모가 없음",
+      "대식세포 안에서 관찰"
+    ],
+    "structures": [
+      "tachyzoite"
+    ],
+    "confusable_with": [
+      "leishmania_amastigote_liver",
+      "cryptosporidium_oocyst_maf"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "toxoplasma_brain_section",
+    "species_id": "toxoplasma_gondii",
+    "specimen_type": "조직",
+    "stage": "bradyzoite in tissue cyst",
+    "label_ko": "톡소포자충 tissue cyst (뇌)",
+    "label_en": "Toxoplasma gondii, bradyzoites in mouse brain",
+    "stain": "H&E",
+    "magnification": "400-1000x",
+    "key_features": [
+      "뇌 조직 안에 둥근 tissue cyst",
+      "cyst 내부에 매우 많은 bradyzoite가 빽빽하게 들어참"
+    ],
+    "structures": [
+      "tissue cyst",
+      "bradyzoite"
+    ],
+    "confusable_with": [
+      "paragonimus_brain_section",
+      "trypanosoma_cruzi_heart_section"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "pneumocystis_gms",
+    "species_id": "pneumocystis_jirovecii",
+    "specimen_type": "조직",
+    "stage": "cyst",
+    "label_ko": "폐포자충 (GMS 염색, 폐)",
+    "label_en": "Pneumocystis jirovecii, lung section, GMS stain",
+    "stain": "GMS (Gomori methenamine silver)",
+    "magnification": "400-1000x",
+    "key_features": [
+      "폐포 안이 검게 염색된 cyst로 가득 참",
+      "cyst 벽이 검게 염색되고 안이 비침 (컵·초승달 모양)"
+    ],
+    "structures": [
+      "cyst",
+      "alveolus"
+    ],
+    "confusable_with": [
+      "pneumocystis_diffquik"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "pneumocystis_diffquik",
+    "species_id": "pneumocystis_jirovecii",
+    "specimen_type": "조직",
+    "stage": "cyst",
+    "label_ko": "폐포자충 (Diff-Quik, 폐)",
+    "label_en": "Pneumocystis jirovecii, lung, Diff-Quik stain",
+    "stain": "Diff-Quik",
+    "magnification": "400-1000x",
+    "key_features": [
+      "폐포 안에 거품 같은 exudate",
+      "cyst 안에 매우 작은 8개의 핵 (octa-nucleated cyst)"
+    ],
+    "structures": [
+      "octa-nucleated cyst",
+      "intracystic body"
+    ],
+    "confusable_with": [
+      "pneumocystis_gms"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "cryptosporidium_intestine_section",
+    "species_id": "cryptosporidium_parvum",
+    "specimen_type": "조직",
+    "stage": "developmental stages",
+    "label_ko": "작은와포자충 조직절편 (소장)",
+    "label_en": "Cryptosporidium parvum, intestinal section",
+    "stain": "H&E",
+    "magnification": "400-1000x",
+    "key_features": [
+      "소장 융모 표면 미세융모에 붙은 작은 점들",
+      "세포 안이면서 세포질 밖(intracellular extracytoplasmic)에 위치",
+      "융모 손실, V/C 비 감소"
+    ],
+    "structures": [
+      "microvillus",
+      "villus"
+    ],
+    "confusable_with": [
+      "neodiplostomum_intestine_section"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "cryptosporidium_oocyst_maf",
+    "species_id": "cryptosporidium_parvum",
+    "specimen_type": "충체",
+    "stage": "oocyst",
+    "label_ko": "작은와포자충 oocyst (MAF 염색)",
+    "label_en": "Cryptosporidium parvum, oocyst, MAF stain",
+    "stain": "modified acid-fast (MAF)",
+    "magnification": "400-1000x",
+    "key_features": [
+      "파란 배경에 분홍·붉은색으로 염색된 둥근 oocyst",
+      "크기 4-6um"
+    ],
+    "structures": [
+      "oocyst"
+    ],
+    "confusable_with": [
+      "toxoplasma_tachyzoite"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "pfalciparum_thin_smear",
+    "species_id": "plasmodium_falciparum",
+    "specimen_type": "혈액도말",
+    "stage": "ring form / gametocyte",
+    "label_ko": "열대열원충 얇은 도말",
+    "label_en": "Plasmodium falciparum, thin smear",
+    "stain": "Giemsa",
+    "magnification": "1000x",
+    "key_features": [
+      "RBC 크기 변화 없음",
+      "한 적혈구에 여러 개의 ring (multiple ring form)",
+      "ring이 RBC 지름의 1/4-1/5로 작음",
+      "바나나 모양 gametocyte",
+      "trophozoite·schizont는 말초혈액에서 드묾"
+    ],
+    "structures": [
+      "ring form",
+      "gametocyte",
+      "RBC"
+    ],
+    "confusable_with": [
+      "pvivax_thin_smear",
+      "pmalariae_thin_smear"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "pvivax_thin_smear",
+    "species_id": "plasmodium_vivax",
+    "specimen_type": "혈액도말",
+    "stage": "ring / trophozoite / schizont / gametocyte",
+    "label_ko": "삼일열원충 얇은 도말",
+    "label_en": "Plasmodium vivax, thin smear",
+    "stain": "Giemsa",
+    "magnification": "1000x",
+    "key_features": [
+      "감염된 RBC가 커지고 옅어짐",
+      "multiple ring 없음, ring이 RBC 지름의 1/3",
+      "아메바 모양으로 변하는 amoeboid trophozoite",
+      "merozoite 16개 이하",
+      "gametocyte는 세포질이 꽉 참"
+    ],
+    "structures": [
+      "ring form",
+      "trophozoite",
+      "schizont",
+      "gametocyte",
+      "Schuffner dot"
+    ],
+    "confusable_with": [
+      "pfalciparum_thin_smear",
+      "povale_thin_smear"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "povale_thin_smear",
+    "species_id": "plasmodium_ovale",
+    "specimen_type": "혈액도말",
+    "stage": "trophozoite / schizont",
+    "label_ko": "난형열원충 얇은 도말",
+    "label_en": "Plasmodium ovale, thin smear",
+    "stain": "Giemsa",
+    "magnification": "1000x",
+    "key_features": [
+      "RBC가 커지고 타원형(oval)이 됨",
+      "RBC 가장자리가 술처럼 갈라짐 (fimbriation)",
+      "merozoite 8개 이하",
+      "dot 관찰 가능"
+    ],
+    "structures": [
+      "fimbriation",
+      "trophozoite",
+      "schizont"
+    ],
+    "confusable_with": [
+      "pvivax_thin_smear"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "pmalariae_thin_smear",
+    "species_id": "plasmodium_malariae",
+    "specimen_type": "혈액도말",
+    "stage": "band form / schizont",
+    "label_ko": "사일열원충 얇은 도말",
+    "label_en": "Plasmodium malariae, thin smear",
+    "stain": "Giemsa",
+    "magnification": "1000x",
+    "key_features": [
+      "RBC 크기 변화 없음",
+      "ring이 아닌 띠 모양 band form trophozoite",
+      "daisy flower(국화) 모양 schizont",
+      "세포질에 dot 없음"
+    ],
+    "structures": [
+      "band form",
+      "schizont"
+    ],
+    "confusable_with": [
+      "pfalciparum_thin_smear",
+      "pvivax_thin_smear"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "pfalciparum_thick_smear",
+    "species_id": "plasmodium_falciparum",
+    "specimen_type": "혈액도말",
+    "stage": "mixed",
+    "label_ko": "열대열원충 두꺼운 도말",
+    "label_en": "Plasmodium falciparum, thick smear",
+    "stain": "Giemsa",
+    "magnification": "1000x",
+    "key_features": [
+      "적혈구가 용혈되어 원충만 남음",
+      "선별검사용 — 민감도가 높지만 종 감별은 어려움"
+    ],
+    "structures": [
+      "ring form",
+      "gametocyte"
+    ],
+    "confusable_with": [
+      "pfalciparum_thin_smear"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본"
+    ]
+  },
+  {
+    "id": "malaria_spleen_section",
+    "species_id": "plasmodium_falciparum",
+    "specimen_type": "조직",
+    "stage": "hemosiderosis",
+    "label_ko": "말라리아 비장 조직절편",
+    "label_en": "Malaria, spleen section",
+    "stain": "H&E",
+    "magnification": "100-400x",
+    "key_features": [
+      "감염 RBC는 제거되지만 hemosiderin이 침착",
+      "갈색 과립 (hemosiderosis)"
+    ],
+    "structures": [
+      "hemosiderin"
+    ],
+    "confusable_with": [],
+    "sources": [
+      "전민서",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "malaria_brain_section",
+    "species_id": "plasmodium_falciparum",
+    "specimen_type": "조직",
+    "stage": "cerebral malaria",
+    "label_ko": "뇌말라리아 조직절편",
+    "label_en": "Cerebral malaria, brain section",
+    "stain": "H&E",
+    "magnification": "100-400x",
+    "key_features": [
+      "뇌 모세혈관이 감염 적혈구로 막혀 확장됨",
+      "육안으로는 출혈성 반점"
+    ],
+    "structures": [
+      "capillary"
+    ],
+    "confusable_with": [
+      "toxoplasma_brain_section"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ]
+  },
+  {
+    "id": "pvivax_thick_smear",
+    "species_id": "plasmodium_vivax",
+    "specimen_type": "혈액도말",
+    "stage": "mixed",
+    "label_ko": "삼일열원충 두꺼운 도말",
+    "label_en": "Plasmodium vivax, thick smear",
+    "stain": "Giemsa",
+    "magnification": "1000x",
+    "key_features": [
+      "적혈구가 용혈되어 원충만 남음",
+      "ring form과 schizont가 함께 보임"
+    ],
+    "structures": [
+      "ring form",
+      "schizont"
+    ],
+    "confusable_with": [
+      "pfalciparum_thick_smear",
+      "pvivax_thin_smear"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본"
+    ]
+  }
+]

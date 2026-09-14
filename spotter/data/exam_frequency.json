@@ -1,0 +1,1268 @@
+{
+  "species": [
+    {
+      "id": "clonorchis_sinensis",
+      "answer_count": 12,
+      "years": [
+        "2015",
+        "2015",
+        "2017",
+        "2019",
+        "2019",
+        "2021",
+        "2021",
+        "2022",
+        "2023",
+        "2023",
+        "2023",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 21,
+      "exam_weight": 3.606
+    },
+    {
+      "id": "ancylostoma_duodenale",
+      "answer_count": 7,
+      "years": [
+        "2015",
+        "2016-1",
+        "2017",
+        "2019",
+        "2022",
+        "2023",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 17,
+      "exam_weight": 2.828
+    },
+    {
+      "id": "ascaris_lumbricoides",
+      "answer_count": 6,
+      "years": [
+        "2015",
+        "2016-1",
+        "2017",
+        "2019",
+        "2021",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 17,
+      "exam_weight": 2.646
+    },
+    {
+      "id": "strongyloides_stercoralis",
+      "answer_count": 6,
+      "years": [
+        "2015",
+        "2017",
+        "2019",
+        "2021",
+        "2022",
+        "2023"
+      ],
+      "recent_year": "2023",
+      "option_count": 14,
+      "exam_weight": 2.646
+    },
+    {
+      "id": "cryptosporidium_parvum",
+      "answer_count": 5,
+      "years": [
+        "2015",
+        "2017",
+        "2021",
+        "2021",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 14,
+      "exam_weight": 2.449
+    },
+    {
+      "id": "plasmodium_falciparum",
+      "answer_count": 5,
+      "years": [
+        "2015",
+        "2019",
+        "2022",
+        "2023",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 8,
+      "exam_weight": 2.449
+    },
+    {
+      "id": "pneumocystis_jirovecii",
+      "answer_count": 5,
+      "years": [
+        "2016-1",
+        "2017",
+        "2019",
+        "2023",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 8,
+      "exam_weight": 2.449
+    },
+    {
+      "id": "toxoplasma_gondii",
+      "answer_count": 5,
+      "years": [
+        "2015",
+        "2016-1",
+        "2019",
+        "2023",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 14,
+      "exam_weight": 2.449
+    },
+    {
+      "id": "echinococcus_granulosus",
+      "answer_count": 4,
+      "years": [
+        "2017",
+        "2019",
+        "2023",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 11,
+      "exam_weight": 2.236
+    },
+    {
+      "id": "entamoeba_coli",
+      "answer_count": 4,
+      "years": [
+        "2015",
+        "2016-1",
+        "2023",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 5,
+      "exam_weight": 2.236
+    },
+    {
+      "id": "metagonimus_yokogawai",
+      "answer_count": 4,
+      "years": [
+        "2015",
+        "2017",
+        "2022",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 20,
+      "exam_weight": 2.236
+    },
+    {
+      "id": "trichuris_trichiura",
+      "answer_count": 4,
+      "years": [
+        "2015",
+        "2016-1",
+        "2017",
+        "2022"
+      ],
+      "recent_year": "2022",
+      "option_count": 22,
+      "exam_weight": 2.236
+    },
+    {
+      "id": "diphyllobothrium_latum",
+      "answer_count": 3,
+      "years": [
+        "2015",
+        "2019",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 14,
+      "exam_weight": 2.0
+    },
+    {
+      "id": "entamoeba_histolytica",
+      "answer_count": 3,
+      "years": [
+        "2017",
+        "2019",
+        "2022"
+      ],
+      "recent_year": "2022",
+      "option_count": 11,
+      "exam_weight": 2.0
+    },
+    {
+      "id": "enterobius_vermicularis",
+      "answer_count": 3,
+      "years": [
+        "2023",
+        "2023",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 16,
+      "exam_weight": 2.0
+    },
+    {
+      "id": "necator_americanus",
+      "answer_count": 3,
+      "years": [
+        "2022",
+        "2023",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 10,
+      "exam_weight": 2.0
+    },
+    {
+      "id": "neodiplostomum_seoulense",
+      "answer_count": 3,
+      "years": [
+        "2019",
+        "2022",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 4,
+      "exam_weight": 2.0
+    },
+    {
+      "id": "schistosoma_haematobium",
+      "answer_count": 3,
+      "years": [
+        "2015",
+        "2021",
+        "2022"
+      ],
+      "recent_year": "2022",
+      "option_count": 6,
+      "exam_weight": 2.0
+    },
+    {
+      "id": "taenia_solium",
+      "answer_count": 3,
+      "years": [
+        "2017",
+        "2019",
+        "2022"
+      ],
+      "recent_year": "2022",
+      "option_count": 8,
+      "exam_weight": 2.0
+    },
+    {
+      "id": "anisakis_simplex",
+      "answer_count": 2,
+      "years": [
+        "2019",
+        "2021"
+      ],
+      "recent_year": "2021",
+      "option_count": 3,
+      "exam_weight": 1.732
+    },
+    {
+      "id": "plasmodium_vivax",
+      "answer_count": 2,
+      "years": [
+        "2015",
+        "2016-1"
+      ],
+      "recent_year": "2016-1",
+      "option_count": 5,
+      "exam_weight": 1.732
+    },
+    {
+      "id": "schistosoma_mansoni",
+      "answer_count": 2,
+      "years": [
+        "2019",
+        "2023"
+      ],
+      "recent_year": "2023",
+      "option_count": 10,
+      "exam_weight": 1.732
+    },
+    {
+      "id": "spirometra_erinacei",
+      "answer_count": 2,
+      "years": [
+        "2015",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 11,
+      "exam_weight": 1.732
+    },
+    {
+      "id": "taenia_saginata",
+      "answer_count": 2,
+      "years": [
+        "2015",
+        "2022"
+      ],
+      "recent_year": "2022",
+      "option_count": 9,
+      "exam_weight": 1.732
+    },
+    {
+      "id": "cysticercus_cellulosae",
+      "answer_count": 1,
+      "years": [
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 12,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "giardia_lamblia",
+      "answer_count": 1,
+      "years": [
+        "2016-1"
+      ],
+      "recent_year": "2016-1",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "gymnophalloides_seoi",
+      "answer_count": 1,
+      "years": [
+        "2015"
+      ],
+      "recent_year": "2015",
+      "option_count": 6,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "haemaphysalis_longicornis",
+      "answer_count": 1,
+      "years": [
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 4,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "opisthorchis_viverrini",
+      "answer_count": 1,
+      "years": [
+        "2017"
+      ],
+      "recent_year": "2017",
+      "option_count": 3,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "plasmodium_knowlesi",
+      "answer_count": 1,
+      "years": [
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 2,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "pthirus_pubis",
+      "answer_count": 1,
+      "years": [
+        "2023"
+      ],
+      "recent_year": "2023",
+      "option_count": 1,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "schistosoma_japonicum",
+      "answer_count": 1,
+      "years": [
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 6,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "triatoma_spp",
+      "answer_count": 1,
+      "years": [
+        "2015"
+      ],
+      "recent_year": "2015",
+      "option_count": 1,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "trichinella_spiralis",
+      "answer_count": 1,
+      "years": [
+        "2021"
+      ],
+      "recent_year": "2021",
+      "option_count": 3,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "trypanosoma_cruzi",
+      "answer_count": 1,
+      "years": [
+        "2016-1"
+      ],
+      "recent_year": "2016-1",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "brugia_malayi",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 0,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "wuchereria_bancrofti",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 0,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "toxocara_canis",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 3,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "paragonimus_westermani",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 21,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "fasciola_hepatica",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 6,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "heterophyes_nocens",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 0,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "echinostoma_hortense",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 2,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "schistosoma_mekongi",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 2,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "taenia_asiatica",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 2,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "echinococcus_multilocularis",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 0,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "hymenolepis_nana",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 0,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "endolimax_nana",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 8,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "trichomonas_vaginalis",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 0,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "balantidium_coli",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 6,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "leishmania_donovani",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 2,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "leishmania_major",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 4,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "trypanosoma_brucei",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 1,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "naegleria_fowleri",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 0,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "acanthamoeba_spp",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 1,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "plasmodium_ovale",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 2,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "plasmodium_malariae",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 2,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "sarcoptes_scabiei",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 1,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "dermatophagoides_pteronyssinus",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 2,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "pediculus_humanus",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 1,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "cimex_lectularius",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 0,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "leptotrombidium_spp",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 2,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "culex_tritaeniorhynchus",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 1,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "aedes_spp",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 1,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "anopheles_sinensis",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 0,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "xenopsylla_cheopis",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 0,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "phlebotomus_spp",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 0,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "glossina_spp",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 0,
+      "exam_weight": 1.0
+    },
+    {
+      "id": "simulium_spp",
+      "answer_count": 0,
+      "years": [],
+      "recent_year": null,
+      "option_count": 2,
+      "exam_weight": 1.0
+    }
+  ],
+  "specimens": [
+    {
+      "id": "clonorchis_egg",
+      "answer_count": 5,
+      "years": [
+        "2017",
+        "2019",
+        "2021",
+        "2023",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 2.449
+    },
+    {
+      "id": "ascaris_unfertilized_egg",
+      "answer_count": 4,
+      "years": [
+        "2015",
+        "2017",
+        "2019",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 2.236
+    },
+    {
+      "id": "entamoeba_coli_cyst",
+      "answer_count": 4,
+      "years": [
+        "2015",
+        "2016-1",
+        "2023",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 2.236
+    },
+    {
+      "id": "metagonimus_egg",
+      "answer_count": 4,
+      "years": [
+        "2015",
+        "2017",
+        "2022",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 2.236
+    },
+    {
+      "id": "pfalciparum_thin_smear",
+      "answer_count": 4,
+      "years": [
+        "2019",
+        "2022",
+        "2023",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 2.236
+    },
+    {
+      "id": "trichuris_egg",
+      "answer_count": 4,
+      "years": [
+        "2015",
+        "2016-1",
+        "2017",
+        "2022"
+      ],
+      "recent_year": "2022",
+      "option_count": 0,
+      "exam_weight": 2.236
+    },
+    {
+      "id": "enterobius_egg",
+      "answer_count": 3,
+      "years": [
+        "2023",
+        "2023",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 2.0
+    },
+    {
+      "id": "hookworm_egg",
+      "answer_count": 3,
+      "years": [
+        "2022",
+        "2023",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 2.0
+    },
+    {
+      "id": "necator_wholemount",
+      "answer_count": 3,
+      "years": [
+        "2022",
+        "2023",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 2.0
+    },
+    {
+      "id": "schistosoma_haematobium_egg",
+      "answer_count": 3,
+      "years": [
+        "2015",
+        "2021",
+        "2022"
+      ],
+      "recent_year": "2022",
+      "option_count": 0,
+      "exam_weight": 2.0
+    },
+    {
+      "id": "cryptosporidium_intestine_section",
+      "answer_count": 2,
+      "years": [
+        "2021",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 1.732
+    },
+    {
+      "id": "diphyllobothrium_egg",
+      "answer_count": 2,
+      "years": [
+        "2015",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 1.732
+    },
+    {
+      "id": "schistosoma_mansoni_egg",
+      "answer_count": 2,
+      "years": [
+        "2019",
+        "2023"
+      ],
+      "recent_year": "2023",
+      "option_count": 0,
+      "exam_weight": 1.732
+    },
+    {
+      "id": "taenia_egg",
+      "answer_count": 2,
+      "years": [
+        "2019",
+        "2022"
+      ],
+      "recent_year": "2022",
+      "option_count": 0,
+      "exam_weight": 1.732
+    },
+    {
+      "id": "toxoplasma_brain_section",
+      "answer_count": 2,
+      "years": [
+        "2016-1",
+        "2019"
+      ],
+      "recent_year": "2019",
+      "option_count": 0,
+      "exam_weight": 1.732
+    },
+    {
+      "id": "clonorchis_gross",
+      "answer_count": 1,
+      "years": [
+        "2015"
+      ],
+      "recent_year": "2015",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "cysticercus_muscle_section",
+      "answer_count": 1,
+      "years": [
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "gymnophalloides_adult_wholemount",
+      "answer_count": 1,
+      "years": [
+        "2015"
+      ],
+      "recent_year": "2015",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "haemaphysalis_gross",
+      "answer_count": 1,
+      "years": [
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "pthirus_wholemount",
+      "answer_count": 1,
+      "years": [
+        "2023"
+      ],
+      "recent_year": "2023",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "schistosoma_japonicum_egg",
+      "answer_count": 1,
+      "years": [
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "sparganum_gross",
+      "answer_count": 1,
+      "years": [
+        "2015"
+      ],
+      "recent_year": "2015",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "sparganum_section",
+      "answer_count": 1,
+      "years": [
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "triatoma_wholemount",
+      "answer_count": 1,
+      "years": [
+        "2015"
+      ],
+      "recent_year": "2015",
+      "option_count": 0,
+      "exam_weight": 1.414
+    }
+  ],
+  "structures": [
+    {
+      "id": "conical projection",
+      "answer_count": 7,
+      "years": [
+        "2015",
+        "2016-1",
+        "2017",
+        "2019",
+        "2021",
+        "2021",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 2.828
+    },
+    {
+      "id": "gametocyte",
+      "answer_count": 7,
+      "years": [
+        "2015",
+        "2016-1",
+        "2017",
+        "2019",
+        "2022",
+        "2023",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 2.828
+    },
+    {
+      "id": "amastigote",
+      "answer_count": 6,
+      "years": [
+        "2015",
+        "2016-1",
+        "2019",
+        "2021",
+        "2022",
+        "2023"
+      ],
+      "recent_year": "2023",
+      "option_count": 0,
+      "exam_weight": 2.646
+    },
+    {
+      "id": "ovary",
+      "answer_count": 5,
+      "years": [
+        "2015",
+        "2016-1",
+        "2019",
+        "2023",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 2.449
+    },
+    {
+      "id": "cephalic alae",
+      "answer_count": 4,
+      "years": [
+        "2019",
+        "2021",
+        "2022",
+        "2023"
+      ],
+      "recent_year": "2023",
+      "option_count": 0,
+      "exam_weight": 2.236
+    },
+    {
+      "id": "protoscolex",
+      "answer_count": 4,
+      "years": [
+        "2015",
+        "2016-1",
+        "2019",
+        "2023"
+      ],
+      "recent_year": "2023",
+      "option_count": 0,
+      "exam_weight": 2.236
+    },
+    {
+      "id": "Renette cell",
+      "answer_count": 3,
+      "years": [
+        "2015",
+        "2016-1",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 2.0
+    },
+    {
+      "id": "bothrium",
+      "answer_count": 3,
+      "years": [
+        "2015",
+        "2019",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 2.0
+    },
+    {
+      "id": "schizont",
+      "answer_count": 3,
+      "years": [
+        "2019",
+        "2019",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 2.0
+    },
+    {
+      "id": "stichosome",
+      "answer_count": 3,
+      "years": [
+        "2016-1",
+        "2019",
+        "2025"
+      ],
+      "recent_year": "2025",
+      "option_count": 0,
+      "exam_weight": 2.0
+    },
+    {
+      "id": "calcareous corpuscle",
+      "answer_count": 2,
+      "years": [
+        "2022",
+        "2023"
+      ],
+      "recent_year": "2023",
+      "option_count": 0,
+      "exam_weight": 1.732
+    },
+    {
+      "id": "flagella",
+      "answer_count": 2,
+      "years": [
+        "2016-1",
+        "2023"
+      ],
+      "recent_year": "2023",
+      "option_count": 0,
+      "exam_weight": 1.732
+    },
+    {
+      "id": "gynecophoral canal",
+      "answer_count": 2,
+      "years": [
+        "2019",
+        "2021"
+      ],
+      "recent_year": "2021",
+      "option_count": 0,
+      "exam_weight": 1.732
+    },
+    {
+      "id": "stichocyte",
+      "answer_count": 2,
+      "years": [
+        "2017",
+        "2023"
+      ],
+      "recent_year": "2023",
+      "option_count": 0,
+      "exam_weight": 1.732
+    },
+    {
+      "id": "tribocytic organ",
+      "answer_count": 2,
+      "years": [
+        "2017",
+        "2019"
+      ],
+      "recent_year": "2019",
+      "option_count": 0,
+      "exam_weight": 1.732
+    },
+    {
+      "id": "albumin layer",
+      "answer_count": 1,
+      "years": [
+        "2023"
+      ],
+      "recent_year": "2023",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "boring tooth",
+      "answer_count": 1,
+      "years": [
+        "2022"
+      ],
+      "recent_year": "2022",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "cephalic cone",
+      "answer_count": 1,
+      "years": [
+        "2023"
+      ],
+      "recent_year": "2023",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "chitin layer",
+      "answer_count": 1,
+      "years": [
+        "2022"
+      ],
+      "recent_year": "2022",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "egg",
+      "answer_count": 1,
+      "years": [
+        "2019"
+      ],
+      "recent_year": "2019",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "gelatin layer",
+      "answer_count": 1,
+      "years": [
+        "2019"
+      ],
+      "recent_year": "2019",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "mucron",
+      "answer_count": 1,
+      "years": [
+        "2017"
+      ],
+      "recent_year": "2017",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "nursing cell complex",
+      "answer_count": 1,
+      "years": [
+        "2022"
+      ],
+      "recent_year": "2022",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "pseudopodia",
+      "answer_count": 1,
+      "years": [
+        "2015"
+      ],
+      "recent_year": "2015",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "ring form",
+      "answer_count": 1,
+      "years": [
+        "2022"
+      ],
+      "recent_year": "2022",
+      "option_count": 0,
+      "exam_weight": 1.414
+    },
+    {
+      "id": "terminal spine",
+      "answer_count": 1,
+      "years": [
+        "2016-1"
+      ],
+      "recent_year": "2016-1",
+      "option_count": 0,
+      "exam_weight": 1.414
+    }
+  ]
+}

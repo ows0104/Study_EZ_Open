@@ -1,0 +1,119 @@
+﻿구분,id,이름,정답횟수,보기등장,출제연도,최근,가중치
+종,clonorchis_sinensis,간흡충,12,21,2015 2015 2017 2019 2019 2021 2021 2022 2023 2023 2023 2025,2025,3.606
+종,ancylostoma_duodenale,두비니구충,7,17,2015 2016-1 2017 2019 2022 2023 2025,2025,2.828
+종,ascaris_lumbricoides,회충,6,17,2015 2016-1 2017 2019 2021 2025,2025,2.646
+종,strongyloides_stercoralis,분선충,6,14,2015 2017 2019 2021 2022 2023,2023,2.646
+종,cryptosporidium_parvum,작은와포자충,5,14,2015 2017 2021 2021 2025,2025,2.449
+종,plasmodium_falciparum,열대열원충,5,8,2015 2019 2022 2023 2025,2025,2.449
+종,pneumocystis_jirovecii,폐포자충,5,8,2016-1 2017 2019 2023 2025,2025,2.449
+종,toxoplasma_gondii,톡소포자충,5,14,2015 2016-1 2019 2023 2025,2025,2.449
+종,echinococcus_granulosus,단방조충,4,11,2017 2019 2023 2025,2025,2.236
+종,entamoeba_coli,대장아메바,4,5,2015 2016-1 2023 2025,2025,2.236
+종,metagonimus_yokogawai,요코가와흡충,4,20,2015 2017 2022 2025,2025,2.236
+종,trichuris_trichiura,편충,4,22,2015 2016-1 2017 2022,2022,2.236
+종,diphyllobothrium_latum,광절열두조충,3,14,2015 2019 2025,2025,2.0
+종,entamoeba_histolytica,이질아메바,3,11,2017 2019 2022,2022,2.0
+종,enterobius_vermicularis,요충,3,16,2023 2023 2025,2025,2.0
+종,necator_americanus,아메리카구충,3,10,2022 2023 2025,2025,2.0
+종,neodiplostomum_seoulense,서울주걱흡충,3,4,2019 2022 2025,2025,2.0
+종,schistosoma_haematobium,방광주혈흡충,3,6,2015 2021 2022,2022,2.0
+종,taenia_solium,유구조충,3,8,2017 2019 2022,2022,2.0
+종,anisakis_simplex,고래회충,2,3,2019 2021,2021,1.732
+종,plasmodium_vivax,삼일열원충,2,5,2015 2016-1,2016-1,1.732
+종,schistosoma_mansoni,만손주혈흡충,2,10,2019 2023,2023,1.732
+종,spirometra_erinacei,만손열두조충,2,11,2015 2025,2025,1.732
+종,taenia_saginata,무구조충,2,9,2015 2022,2022,1.732
+종,cysticercus_cellulosae,유구낭미충,1,12,2025,2025,1.414
+종,giardia_lamblia,람블편모충,1,0,2016-1,2016-1,1.414
+종,gymnophalloides_seoi,참굴큰입흡충,1,6,2015,2015,1.414
+종,haemaphysalis_longicornis,작은소피참진드기,1,4,2025,2025,1.414
+종,opisthorchis_viverrini,타이간흡충,1,3,2017,2017,1.414
+종,plasmodium_knowlesi,원숭이열원충,1,2,2025,2025,1.414
+종,pthirus_pubis,사면발이,1,1,2023,2023,1.414
+종,schistosoma_japonicum,일본주혈흡충,1,6,2025,2025,1.414
+종,triatoma_spp,흡혈성 침노린재,1,1,2015,2015,1.414
+종,trichinella_spiralis,선모충,1,3,2021,2021,1.414
+종,trypanosoma_cruzi,크루스파동편모충,1,0,2016-1,2016-1,1.414
+종,brugia_malayi,말레이사상충,0,0,,,1.0
+종,wuchereria_bancrofti,반크롭트사상충,0,0,,,1.0
+종,toxocara_canis,개회충,0,3,,,1.0
+종,paragonimus_westermani,폐흡충,0,21,,,1.0
+종,fasciola_hepatica,간질,0,6,,,1.0
+종,heterophyes_nocens,유해이형흡충,0,0,,,1.0
+종,echinostoma_hortense,호르텐스극구흡충,0,2,,,1.0
+종,schistosoma_mekongi,메콩주혈흡충,0,2,,,1.0
+종,taenia_asiatica,아시아조충,0,2,,,1.0
+종,echinococcus_multilocularis,다방조충,0,0,,,1.0
+종,hymenolepis_nana,왜소조충,0,0,,,1.0
+종,endolimax_nana,왜소아메바,0,8,,,1.0
+종,trichomonas_vaginalis,질편모충,0,0,,,1.0
+종,balantidium_coli,대장섬모충,0,6,,,1.0
+종,leishmania_donovani,내장리슈만편모충,0,2,,,1.0
+종,leishmania_major,큰리슈만편모충,0,4,,,1.0
+종,trypanosoma_brucei,아프리카파동편모충,0,1,,,1.0
+종,naegleria_fowleri,파울러자유아메바,0,0,,,1.0
+종,acanthamoeba_spp,가시아메바,0,1,,,1.0
+종,plasmodium_ovale,난형열원충,0,2,,,1.0
+종,plasmodium_malariae,사일열원충,0,2,,,1.0
+종,sarcoptes_scabiei,옴진드기,0,1,,,1.0
+종,dermatophagoides_pteronyssinus,세로무늬먼지진드기,0,2,,,1.0
+종,pediculus_humanus,머릿니 / 몸니,0,1,,,1.0
+종,cimex_lectularius,빈대,0,0,,,1.0
+종,leptotrombidium_spp,털진드기,0,2,,,1.0
+종,culex_tritaeniorhynchus,작은빨간집모기,0,1,,,1.0
+종,aedes_spp,숲모기,0,1,,,1.0
+종,anopheles_sinensis,중국얼룩날개모기,0,0,,,1.0
+종,xenopsylla_cheopis,열대쥐벼룩,0,0,,,1.0
+종,phlebotomus_spp,모래파리,0,0,,,1.0
+종,glossina_spp,체체파리,0,0,,,1.0
+종,simulium_spp,먹파리 (꼽추파리),0,2,,,1.0
+표본,clonorchis_egg,간흡충 충란,5,,2017 2019 2021 2023 2025,2025,2.449
+표본,ascaris_unfertilized_egg,회충 불수정란,4,,2015 2017 2019 2025,2025,2.236
+표본,entamoeba_coli_cyst,대장아메바 포낭,4,,2015 2016-1 2023 2025,2025,2.236
+표본,metagonimus_egg,요코가와흡충 충란,4,,2015 2017 2022 2025,2025,2.236
+표본,pfalciparum_thin_smear,열대열원충 얇은 도말,4,,2019 2022 2023 2025,2025,2.236
+표본,trichuris_egg,편충 충란,4,,2015 2016-1 2017 2022,2022,2.236
+표본,enterobius_egg,요충 충란,3,,2023 2023 2025,2025,2.0
+표본,hookworm_egg,구충 충란,3,,2022 2023 2025,2025,2.0
+표본,necator_wholemount,아메리카구충 성충,3,,2022 2023 2025,2025,2.0
+표본,schistosoma_haematobium_egg,방광주혈흡충 충란,3,,2015 2021 2022,2022,2.0
+표본,cryptosporidium_intestine_section,작은와포자충 조직절편 (소장),2,,2021 2025,2025,1.732
+표본,diphyllobothrium_egg,광절열두조충 충란,2,,2015 2025,2025,1.732
+표본,schistosoma_mansoni_egg,만손주혈흡충 충란,2,,2019 2023,2023,1.732
+표본,taenia_egg,유무구조충 충란,2,,2019 2022,2022,1.732
+표본,toxoplasma_brain_section,톡소포자충 tissue cyst (뇌),2,,2016-1 2019,2019,1.732
+표본,clonorchis_gross,간흡충 성충 (육안),1,,2015,2015,1.414
+표본,cysticercus_muscle_section,유구낭미충 조직절편 (돼지 근육),1,,2025,2025,1.414
+표본,gymnophalloides_adult_wholemount,참굴큰입흡충 성충,1,,2015,2015,1.414
+표본,haemaphysalis_gross,작은소피참진드기,1,,2025,2025,1.414
+표본,pthirus_wholemount,사면발이,1,,2023,2023,1.414
+표본,schistosoma_japonicum_egg,일본주혈흡충 충란,1,,2025,2025,1.414
+표본,sparganum_gross,고충 (육안),1,,2015,2015,1.414
+표본,sparganum_section,고충 조직절편,1,,2025,2025,1.414
+표본,triatoma_wholemount,흡혈성 침노린재,1,,2015,2015,1.414
+구조물,conical projection,conical projection,7,,2015 2016-1 2017 2019 2021 2021 2025,2025,2.828
+구조물,gametocyte,gametocyte,7,,2015 2016-1 2017 2019 2022 2023 2025,2025,2.828
+구조물,amastigote,amastigote,6,,2015 2016-1 2019 2021 2022 2023,2023,2.646
+구조물,ovary,ovary,5,,2015 2016-1 2019 2023 2025,2025,2.449
+구조물,cephalic alae,cephalic alae,4,,2019 2021 2022 2023,2023,2.236
+구조물,protoscolex,protoscolex,4,,2015 2016-1 2019 2023,2023,2.236
+구조물,Renette cell,Renette cell,3,,2015 2016-1 2025,2025,2.0
+구조물,bothrium,bothrium,3,,2015 2019 2025,2025,2.0
+구조물,schizont,schizont,3,,2019 2019 2025,2025,2.0
+구조물,stichosome,stichosome,3,,2016-1 2019 2025,2025,2.0
+구조물,calcareous corpuscle,calcareous corpuscle,2,,2022 2023,2023,1.732
+구조물,flagella,flagella,2,,2016-1 2023,2023,1.732
+구조물,gynecophoral canal,gynecophoral canal,2,,2019 2021,2021,1.732
+구조물,stichocyte,stichocyte,2,,2017 2023,2023,1.732
+구조물,tribocytic organ,tribocytic organ,2,,2017 2019,2019,1.732
+구조물,albumin layer,albumin layer,1,,2023,2023,1.414
+구조물,boring tooth,boring tooth,1,,2022,2022,1.414
+구조물,cephalic cone,cephalic cone,1,,2023,2023,1.414
+구조물,chitin layer,chitin layer,1,,2022,2022,1.414
+구조물,egg,egg,1,,2019,2019,1.414
+구조물,gelatin layer,gelatin layer,1,,2019,2019,1.414
+구조물,mucron,mucron,1,,2017,2017,1.414
+구조물,nursing cell complex,nursing cell complex,1,,2022,2022,1.414
+구조물,pseudopodia,pseudopodia,1,,2015,2015,1.414
+구조물,ring form,ring form,1,,2022,2022,1.414
+구조물,terminal spine,terminal spine,1,,2016-1,2016-1,1.414

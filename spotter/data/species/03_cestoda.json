@@ -1,0 +1,417 @@
+[
+  {
+    "id": "diphyllobothrium_latum",
+    "scientific_name": "Diphyllobothrium latum",
+    "name_ko": "광절열두조충",
+    "name_en": "broad fish tapeworm",
+    "aliases": [
+      "Diphyllbothrium latum",
+      "Diphyllobthrium latum"
+    ],
+    "group": "조충",
+    "group_en": "Cestoda",
+    "subgroup": "의엽조충 (Pseudophyllidea)",
+    "size": "3-10m, 편절 약 3000개 (충란 60-70um)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "연어·송어·농어 생식",
+    "infective_stage": "의미충 (plerocercoid larva)",
+    "intermediate_host": [
+      "제1 - 물벼룩 (procercoid)",
+      "제2 - 어류 (plerocercoid)"
+    ],
+    "definitive_host": "사람·개·곰",
+    "habitat": "소장",
+    "lung_migration": false,
+    "disease_ko": "광절열두조충증",
+    "disease_en": "diphyllobothriasis",
+    "symptoms": [
+      "대부분 무증상",
+      "비타민 B12 결핍성 거대적혈모구빈혈",
+      "장폐색"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)",
+      "배출 편절"
+    ],
+    "treatment": [
+      "Praziquantel 5-10mg/kg single"
+    ],
+    "epidemiology": "북유럽·동아시아·북미·알래스카. 수명 25-30년",
+    "exam_notes": "충란 - 60um 그룹, 갈색 타원형, operculum + 반대편 terminal knob. 편절 - rosette (꽃모양) uterus, 좌우로 넓음. 두절 - sucker·갈고리 없이 sucking groove (bothrium) 만",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "spirometra_erinacei",
+    "scientific_name": "Spirometra erinacei",
+    "name_ko": "만손열두조충",
+    "name_en": "",
+    "aliases": [
+      "Spirometra erinaceieuropaei",
+      "Spargnum",
+      "Sparganum",
+      "고충",
+      "Sparganum (고충)",
+      "스파르가눔"
+    ],
+    "group": "조충",
+    "group_en": "Cestoda",
+    "subgroup": "의엽조충 (Pseudophyllidea)",
+    "size": "고충 (sparganum) 수 cm ~ 수십 cm",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염 / 상처 접촉",
+    "source": "물벼룩이 든 생수, 뱀·개구리 생식, 개구리 살을 상처에 붙이는 민간요법",
+    "infective_stage": "전미충 (procercoid) / 의미충 (plerocercoid)",
+    "intermediate_host": [
+      "제1 - 물벼룩",
+      "제2 - 뱀·개구리"
+    ],
+    "definitive_host": "개·고양이 (사람은 중간숙주 역할)",
+    "habitat": "피하조직, 근육, 안와, 뇌",
+    "lung_migration": false,
+    "disease_ko": "고충증",
+    "disease_en": "sparganosis",
+    "symptoms": [
+      "이동성 무통성 피하결절",
+      "뇌고충증 (cerebral sparganosis)"
+    ],
+    "diagnosis": [
+      "피하결절 생검",
+      "혈청 ELISA (혈액·CSF)",
+      "영상검사"
+    ],
+    "treatment": [
+      "외과적 적출 (약물치료 없음)"
+    ],
+    "epidemiology": "우리나라가 농후 유행지",
+    "exam_notes": "gross - 하얀 고무줄처럼 쭈굴쭈굴하고 긺. 조직 - 성긴 스폰지 구조 + 보라색 calcium (calcareous) corpuscle",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "taenia_solium",
+    "scientific_name": "Taenia solium",
+    "name_ko": "유구조충",
+    "name_en": "pork tapeworm",
+    "aliases": [
+      "Taniae solium",
+      "Taenia spp",
+      "Taniae spp",
+      "Taenia spp.",
+      "Taneia solium"
+    ],
+    "group": "조충",
+    "group_en": "Cestoda",
+    "subgroup": "원엽조충 (Cyclophyllidea)",
+    "size": "2-4m (충란 30-45um)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "덜 익힌 돼지고기",
+    "infective_stage": "유구낭미충 (Cysticercus cellulosae)",
+    "intermediate_host": [
+      "돼지"
+    ],
+    "definitive_host": "사람",
+    "habitat": "소장 (공장-회장)",
+    "lung_migration": false,
+    "disease_ko": "유구조충증",
+    "disease_en": "taeniasis solium",
+    "symptoms": [
+      "대개 무증상",
+      "대변으로 편절 배출 (운동성 적음)"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)",
+      "배출 편절의 자궁측지 수"
+    ],
+    "treatment": [
+      "Praziquantel 5-10mg/kg single"
+    ],
+    "epidemiology": "과거 제주도 유행. 자유방목 돼지가 인분을 먹는 환경",
+    "exam_notes": "두절이 가장 돌출되고 유일하게 갈고리(rostellum + hook) 있음. 자궁측지 13개 이하. 충란은 무구조충과 구별 불가 (Taenia spp.로 답)",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "taenia_saginata",
+    "scientific_name": "Taenia saginata",
+    "name_ko": "무구조충",
+    "name_en": "beef tapeworm",
+    "aliases": [
+      "Taneia saginata"
+    ],
+    "group": "조충",
+    "group_en": "Cestoda",
+    "subgroup": "원엽조충 (Cyclophyllidea)",
+    "size": "4-10m (충란 30-45um)",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "소고기 육회 등 덜 익힌 소고기",
+    "infective_stage": "무구낭미충 (Cysticercus bovis)",
+    "intermediate_host": [
+      "소"
+    ],
+    "definitive_host": "사람",
+    "habitat": "소장 (공장-회장)",
+    "lung_migration": false,
+    "disease_ko": "무구조충증",
+    "disease_en": "taeniasis saginata",
+    "symptoms": [
+      "대개 무증상",
+      "편절이 스스로 기어나와 항문 소양감",
+      "장폐색",
+      "담관·충수 이행"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)",
+      "배출 편절의 자궁측지 수"
+    ],
+    "treatment": [
+      "Praziquantel 5-10mg/kg single"
+    ],
+    "epidemiology": "아시아. 인분에 오염된 목초를 먹은 소",
+    "exam_notes": "두절이 납작하고 갈고리 없음 (sucker 4개만). 자궁측지 13개 이상, 얇고 많음. 사람에서 낭미충증을 일으키지 않음",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "taenia_asiatica",
+    "scientific_name": "Taenia asiatica",
+    "name_ko": "아시아조충",
+    "name_en": "Asian tapeworm",
+    "aliases": [],
+    "group": "조충",
+    "group_en": "Cestoda",
+    "subgroup": "원엽조충 (Cyclophyllidea)",
+    "size": "4-8m",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염",
+    "source": "돼지 간 생식",
+    "infective_stage": "내장낭미충 (Cysticercus viscerotropica)",
+    "intermediate_host": [
+      "돼지 (간·내장)"
+    ],
+    "definitive_host": "사람",
+    "habitat": "소장",
+    "lung_migration": false,
+    "disease_ko": "아시아조충증",
+    "disease_en": "taeniasis asiatica",
+    "symptoms": [
+      "무구조충증과 유사"
+    ],
+    "diagnosis": [
+      "편절 형태",
+      "항문도말법"
+    ],
+    "treatment": [
+      "Praziquantel 10mg/kg single"
+    ],
+    "epidemiology": "돼지 간 생식 문화권. 국내 농촌 노인층",
+    "exam_notes": "두절 돌출 정도가 중간, 자궁측지 13개 이상 + 자궁세지 많음, 편절 하단에 불규칙 돌기. 낭미충이 가장 작음",
+    "sources": [
+      "서유지",
+      "오민석"
+    ],
+    "distractor_only": true
+  },
+  {
+    "id": "cysticercus_cellulosae",
+    "scientific_name": "Cysticercus cellulosae",
+    "name_ko": "유구낭미충",
+    "name_en": "cysticercus of Taenia solium",
+    "aliases": [
+      "metacestode of Taenia solium",
+      "metacestode of Taneia solium"
+    ],
+    "group": "조충",
+    "group_en": "Cestoda",
+    "subgroup": "원엽조충 (유충기)",
+    "size": "쌀알 크기 (약 1cm)",
+    "transmission_mode": "접촉매개성",
+    "transmission_route": "경구감염 (유구조충 충란 섭취)",
+    "source": "유구조충 충란에 오염된 음식·손 (자가감염 포함)",
+    "infective_stage": "충란",
+    "intermediate_host": [],
+    "definitive_host": "사람이 중간숙주가 됨",
+    "habitat": "피하조직, 근육, 뇌, 눈",
+    "lung_migration": false,
+    "disease_ko": "유구낭미충증",
+    "disease_en": "cysticercosis",
+    "symptoms": [
+      "고정성 무통성 피하결절",
+      "뇌낭미충증 - 두통·구토·간질발작·마비"
+    ],
+    "diagnosis": [
+      "피하결절 생검",
+      "ELISA (혈액·CSF)",
+      "영상검사"
+    ],
+    "treatment": [
+      "외과적 적출",
+      "Praziquantel 25mg/kg/d 2주",
+      "Albendazole 15mg/kg/d",
+      "+ steroid, 항경련제"
+    ],
+    "epidemiology": "아시아·중남미·아프리카",
+    "exam_notes": "gross - 투명한 cyst 안에 하얀 scolex. 조직 - cyst + 양치식물 모양 neck/scolex, 갈고리 진하게 보임. 고충증(sparganosis)과의 감별이 단골",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "echinococcus_granulosus",
+    "scientific_name": "Echinococcus granulosus",
+    "name_ko": "단방조충",
+    "name_en": "dog tapeworm",
+    "aliases": [
+      "Cryptosporidium granulosus",
+      "Enchinococcus granulosus",
+      "Echinococcosis",
+      "포충증",
+      "hydatid disease"
+    ],
+    "group": "조충",
+    "group_en": "Cestoda",
+    "subgroup": "원엽조충 (Cyclophyllidea)",
+    "size": "성충 3-6mm (편절 3개)",
+    "transmission_mode": "접촉매개성",
+    "transmission_route": "경구감염",
+    "source": "개 분변의 충란 (개와 접촉)",
+    "infective_stage": "충란",
+    "intermediate_host": [
+      "양·소 등 초식동물, 사람"
+    ],
+    "definitive_host": "개·여우",
+    "habitat": "간 (66%), 폐 (22%), 신장, 뇌",
+    "lung_migration": false,
+    "disease_ko": "포충증 (단방포충증)",
+    "disease_en": "cystic echinococcosis",
+    "symptoms": [
+      "천천히 커지는 낭종",
+      "낭종 파열 시 아나필락시스"
+    ],
+    "diagnosis": [
+      "유행지·개 접촉 과거력",
+      "혈청 ELISA",
+      "영상검사"
+    ],
+    "treatment": [
+      "PAIR",
+      "외과적 적출 (no touch isolation)",
+      "Albendazole 10-15mg/kg/d 3개월"
+    ],
+    "epidemiology": "목축업 발달 지역",
+    "exam_notes": "성충은 immature·mature·gravid 편절이 1개씩. 포충 내부에 여러 개의 protoscolex, 콧수염 모양 hooklet",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "통합xlsx"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "echinococcus_multilocularis",
+    "scientific_name": "Echinococcus multilocularis",
+    "name_ko": "다방조충",
+    "name_en": "fox tapeworm",
+    "aliases": [],
+    "group": "조충",
+    "group_en": "Cestoda",
+    "subgroup": "원엽조충 (Cyclophyllidea)",
+    "size": "성충 3-6mm (편절 4개)",
+    "transmission_mode": "접촉매개성",
+    "transmission_route": "경구감염",
+    "source": "여우·개 분변의 충란",
+    "infective_stage": "충란",
+    "intermediate_host": [
+      "설치류, 사람"
+    ],
+    "definitive_host": "여우·개",
+    "habitat": "간 (침윤성 성장)",
+    "lung_migration": false,
+    "disease_ko": "포충증 (다방포충증)",
+    "disease_en": "alveolar echinococcosis",
+    "symptoms": [
+      "암처럼 침윤·전이 (폐·뇌)",
+      "예후 불량"
+    ],
+    "diagnosis": [
+      "혈청검사",
+      "영상검사"
+    ],
+    "treatment": [
+      "외과적 절제",
+      "Albendazole 장기 투여"
+    ],
+    "epidemiology": "북반구 한대 지역",
+    "exam_notes": "단방조충보다 gravid 편절이 하나 더 있음 (총 4편절)",
+    "sources": [
+      "서유지",
+      "실습.pdf"
+    ],
+    "distractor_only": true
+  },
+  {
+    "id": "hymenolepis_nana",
+    "scientific_name": "Hymenolepis nana",
+    "name_ko": "왜소조충",
+    "name_en": "dwarf tapeworm",
+    "aliases": [],
+    "group": "조충",
+    "group_en": "Cestoda",
+    "subgroup": "원엽조충 (Cyclophyllidea)",
+    "size": "1-4cm",
+    "transmission_mode": "접촉매개성",
+    "transmission_route": "경구감염",
+    "source": "충란에 오염된 손·음식",
+    "infective_stage": "충란",
+    "intermediate_host": [],
+    "definitive_host": "사람·설치류",
+    "habitat": "소장",
+    "lung_migration": false,
+    "disease_ko": "왜소조충증",
+    "disease_en": "hymenolepiasis",
+    "symptoms": [
+      "대개 무증상",
+      "다수 감염 시 복통·설사"
+    ],
+    "diagnosis": [
+      "대변검사 (충란)"
+    ],
+    "treatment": [
+      "Praziquantel"
+    ],
+    "epidemiology": "소아. 조충 중 유일하게 중간숙주가 필요 없음",
+    "exam_notes": "중간숙주 없이 직접 감염되는 유일한 조충",
+    "sources": [
+      "서유지"
+    ],
+    "distractor_only": true
+  }
+]

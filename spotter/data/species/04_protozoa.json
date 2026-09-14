@@ -1,0 +1,663 @@
+[
+  {
+    "id": "entamoeba_histolytica",
+    "scientific_name": "Entamoeba histolytica",
+    "name_ko": "이질아메바",
+    "name_en": "",
+    "aliases": [
+      "Entameoba histolyca",
+      "Entamoeba histolyca"
+    ],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "아메바",
+    "size": "영양형 20-40um / 포낭 10-20um",
+    "transmission_mode": "수인성",
+    "transmission_route": "경구감염",
+    "source": "포낭에 오염된 물·음식",
+    "infective_stage": "4핵성 포낭 (quadrinucleated cyst)",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "대장 (조직 내 침입)",
+    "lung_migration": false,
+    "disease_ko": "아메바증",
+    "disease_en": "amebiasis",
+    "symptoms": [
+      "혈점액성 설사 (Crohn병과 감별)",
+      "플라스크 모양 궤양",
+      "아메바성 간농양 (우상복부 → 오른쪽 어깨 방사통, 갈색 농)"
+    ],
+    "diagnosis": [
+      "대변검사 - 급성기 영양형, 만성기 포낭",
+      "생검",
+      "혈청·대변 항원검사"
+    ],
+    "treatment": [
+      "Metronidazole 750mg 5-10d (선택약)",
+      "Iodoquinol 650mg 20d"
+    ],
+    "epidemiology": "개발도상국 (방글라데시). 기생충 사망 3위. 위험군 - 남성 동성애자·유행지 여행자·집단수용시설",
+    "exam_notes": "영양형 - karyosome 중앙 + peripheral chromatin 두께 균일, RBC 탐식. 포낭 - 핵 4개 이하. 조직 - flask-shaped ulcer",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "entamoeba_coli",
+    "scientific_name": "Entamoeba coli",
+    "name_ko": "대장아메바",
+    "name_en": "",
+    "aliases": [
+      "Entameoba coli"
+    ],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "아메바",
+    "size": "포낭 15-25um",
+    "transmission_mode": "수인성",
+    "transmission_route": "경구감염",
+    "source": "포낭에 오염된 물·음식",
+    "infective_stage": "포낭",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "대장 lumen (조직 침입 없음)",
+    "lung_migration": false,
+    "disease_ko": "비병원성",
+    "disease_en": "non-pathogenic",
+    "symptoms": [
+      "비병원성 — 증상 없음"
+    ],
+    "diagnosis": [
+      "대변검사 (포낭)"
+    ],
+    "treatment": [
+      "치료 불필요"
+    ],
+    "epidemiology": "전세계",
+    "exam_notes": "핵 4-8개 (최대 8개), karyosome이 크고 한쪽으로 치우침 (붓으로 누른 모양), peripheral chromatin 두께 불규칙 — 이질아메바와의 감별이 핵심",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "endolimax_nana",
+    "scientific_name": "Endolimax nana",
+    "name_ko": "왜소아메바",
+    "name_en": "",
+    "aliases": [
+      "Entamoeba nana",
+      "Entameoba nana"
+    ],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "아메바",
+    "size": "포낭 6-12um (RBC보다 조금 큼)",
+    "transmission_mode": "수인성",
+    "transmission_route": "경구감염",
+    "source": "포낭에 오염된 물·음식",
+    "infective_stage": "포낭",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "대장 lumen",
+    "lung_migration": false,
+    "disease_ko": "비병원성",
+    "disease_en": "non-pathogenic",
+    "symptoms": [
+      "비병원성"
+    ],
+    "diagnosis": [
+      "대변검사 (포낭)"
+    ],
+    "treatment": [
+      "치료 불필요"
+    ],
+    "epidemiology": "전세계",
+    "exam_notes": "크기가 매우 작고 핵 1-4개. karyosome이 커서 핵에 빈 공간이 없음. 족보에 Entamoeba nana로 잘못 표기되어 나온 적 있음 — 정명은 Endolimax nana",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "전민서"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "giardia_lamblia",
+    "scientific_name": "Giardia lamblia",
+    "name_ko": "람블편모충",
+    "name_en": "",
+    "aliases": [
+      "Girardia lambila",
+      "Giardia intestinalis",
+      "Giardia duodenalis"
+    ],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "편모충",
+    "size": "영양형 10-20um / 포낭 10-12um",
+    "transmission_mode": "수인성",
+    "transmission_route": "경구감염",
+    "source": "포낭에 오염된 물·음식",
+    "infective_stage": "4핵성 포낭",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "십이지장 (brush border에 기계적 부착)",
+    "lung_migration": false,
+    "disease_ko": "람블편모충증",
+    "disease_en": "giardiasis",
+    "symptoms": [
+      "지방변 (steatorrhea)",
+      "여행자 설사",
+      "융모 위축 → 영양소 흡수 장애"
+    ],
+    "diagnosis": [
+      "대변검사 (포낭)",
+      "enterotest (십이지장액)",
+      "생검"
+    ],
+    "treatment": [
+      "Metronidazole 250mg 5-10d (선택약)"
+    ],
+    "epidemiology": "전세계 따뜻한 지역. Aspen(Colorado) 스키장 유행 사례",
+    "exam_notes": "영양형 - pear/올빼미 얼굴 모양, 핵 2개, 4쌍 편모, sucking disc. 포낭 - 타원형, 핵 2-4개가 한쪽에 몰림, axostyle 주변 fibril. 조직 파괴는 하지 않음",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "trichomonas_vaginalis",
+    "scientific_name": "Trichomonas vaginalis",
+    "name_ko": "질편모충",
+    "name_en": "",
+    "aliases": [],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "편모충",
+    "size": "10-20um",
+    "transmission_mode": "성접촉",
+    "transmission_route": "성접촉 감염 (STD)",
+    "source": "감염자와의 성접촉",
+    "infective_stage": "영양형 (포낭기 없음)",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "질·요도 lumen",
+    "lung_migration": false,
+    "disease_ko": "질편모충증",
+    "disease_en": "trichomoniasis",
+    "symptoms": [
+      "여성 - 질염, 대하 (leukorrhea)",
+      "남성 - 거의 무증상"
+    ],
+    "diagnosis": [
+      "질 분비물 현미경 관찰"
+    ],
+    "treatment": [
+      "Metronidazole 250mg tid 7d (배우자와 함께)"
+    ],
+    "epidemiology": "전세계",
+    "exam_notes": "핵 1개 + 앞쪽 4개 편모 + 한쪽에 undulating membrane (파동막). 포낭기가 없는 것이 특징",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "balantidium_coli",
+    "scientific_name": "Balantidium coli",
+    "name_ko": "대장섬모충",
+    "name_en": "",
+    "aliases": [],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "섬모충",
+    "size": "50-100um (사람 기생 원충 중 가장 큼)",
+    "transmission_mode": "수인성",
+    "transmission_route": "경구감염",
+    "source": "돼지 분변에 오염된 물·음식",
+    "infective_stage": "포낭",
+    "intermediate_host": [],
+    "definitive_host": "돼지 (사람은 우연숙주)",
+    "habitat": "대장",
+    "lung_migration": false,
+    "disease_ko": "대장섬모충증",
+    "disease_en": "balantidiasis",
+    "symptoms": [
+      "설사·이질",
+      "대장 궤양"
+    ],
+    "diagnosis": [
+      "대변검사",
+      "대장 생검"
+    ],
+    "treatment": [
+      "Tetracycline",
+      "Metronidazole"
+    ],
+    "epidemiology": "양돈 지역",
+    "exam_notes": "운동기관이 섬모 (cilia). 크기가 커서 저배율에서도 바로 보임. 핵이 macronucleus + micronucleus 2종류",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "leishmania_donovani",
+    "scientific_name": "Leishmania donovani",
+    "name_ko": "내장리슈만편모충",
+    "name_en": "",
+    "aliases": [],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "편모충 (혈액·조직)",
+    "size": "amastigote 2-5um",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "모래파리 흡혈",
+    "source": "모래파리 (Phlebotomus spp.)",
+    "infective_stage": "promastigote",
+    "intermediate_host": [
+      "모래파리 (sandfly)"
+    ],
+    "definitive_host": "사람·개·설치류",
+    "habitat": "단핵구·망상내피계 (비장·간·골수)",
+    "lung_migration": false,
+    "disease_ko": "내장리슈만편모충증",
+    "disease_en": "visceral leishmaniasis (Kala-azar)",
+    "symptoms": [
+      "불규칙 고열 (말라리아와 감별)",
+      "간비종대",
+      "범혈구감소증",
+      "흑열병 (Kala-azar)"
+    ],
+    "diagnosis": [
+      "골수·비장 천자 (amastigote)",
+      "항체검출",
+      "배양"
+    ],
+    "treatment": [
+      "pentavalent antimonials",
+      "Amphotericin B",
+      "Miltefosine"
+    ],
+    "epidemiology": "브라질·동아프리카·인도",
+    "exam_notes": "사람 조직 내에서는 amastigote (무편모형, 세포 내 작은 점), 모래파리에서는 promastigote (전편모형). 간·비장 조직에서 세포 내 작은 dot으로 보임",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "leishmania_major",
+    "scientific_name": "Leishmania major",
+    "name_ko": "큰리슈만편모충",
+    "name_en": "",
+    "aliases": [],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "편모충 (혈액·조직)",
+    "size": "promastigote 15-20um",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "모래파리 흡혈",
+    "source": "모래파리 (Phlebotomus spp.)",
+    "infective_stage": "promastigote",
+    "intermediate_host": [
+      "모래파리 (sandfly)"
+    ],
+    "definitive_host": "사람·설치류",
+    "habitat": "피부 대식세포",
+    "lung_migration": false,
+    "disease_ko": "피부리슈만편모충증",
+    "disease_en": "cutaneous leishmaniasis",
+    "symptoms": [
+      "oriental sore (피부 궤양)",
+      "국소 림프절 종대"
+    ],
+    "diagnosis": [
+      "punch biopsy",
+      "배양"
+    ],
+    "treatment": [
+      "pentavalent antimonials",
+      "Paromomycin",
+      "냉동·온열요법"
+    ],
+    "epidemiology": "중동·아프리카·중앙아시아",
+    "exam_notes": "실습 슬라이드는 배양에서 만든 promastigote — 액체가 결정화된 배경이 보이면 리슈만편모충. 배열이 편모 → kinetoplast → 핵 순서",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "전민서"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "trypanosoma_cruzi",
+    "scientific_name": "Trypanosoma cruzi",
+    "name_ko": "크루스파동편모충",
+    "name_en": "",
+    "aliases": [
+      "크루즈파동편모충"
+    ],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "편모충 (혈액·조직)",
+    "size": "trypomastigote 약 20um",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "침노린재 분변이 상처로 침입 / 오염 음식",
+    "source": "침노린재 (Triatoma, kissing bug)",
+    "infective_stage": "trypomastigote",
+    "intermediate_host": [
+      "침노린재"
+    ],
+    "definitive_host": "사람·포유류",
+    "habitat": "혈액·림프절·심근·뇌",
+    "lung_migration": false,
+    "disease_ko": "샤가스병",
+    "disease_en": "Chagas disease (American trypanosomiasis)",
+    "symptoms": [
+      "Romana 징후 (눈꺼풀 부종)",
+      "만성 - 심근병증 (가장 심각)",
+      "거대식도·거대결장"
+    ],
+    "diagnosis": [
+      "혈액도말 Giemsa",
+      "xenodiagnosis",
+      "배양"
+    ],
+    "treatment": [
+      "Benznidazole 또는 Nifurtimox (급성기에만 효과)"
+    ],
+    "epidemiology": "중남미 (미국 남부-아르헨티나). 수혈 감염 위험",
+    "exam_notes": "혈액에서는 trypomastigote (핵 + kinetoplast + 편모 + 파동막), 심근세포 안에서는 amastigote 무리. 배열이 편모 → 핵 → kinetoplast 순서 (리슈만과 반대)",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "trypanosoma_brucei",
+    "scientific_name": "Trypanosoma brucei",
+    "name_ko": "아프리카파동편모충",
+    "name_en": "",
+    "aliases": [
+      "Trypanosoma brucei gambiense",
+      "Trypanosoma brucei rhodesiense"
+    ],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "편모충 (혈액·조직)",
+    "size": "trypomastigote 15-30um",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "체체파리 흡혈",
+    "source": "체체파리 (Glossina spp.)",
+    "infective_stage": "trypomastigote",
+    "intermediate_host": [
+      "체체파리"
+    ],
+    "definitive_host": "사람·동물",
+    "habitat": "혈액·림프절·비장·중추신경계",
+    "lung_migration": false,
+    "disease_ko": "아프리카 수면병",
+    "disease_en": "African trypanosomiasis",
+    "symptoms": [
+      "trypanosomal chancre",
+      "Winterbottom 징후 (목 뒤 림프절 비대)",
+      "수막뇌염기 - 두통·졸림·혼수"
+    ],
+    "diagnosis": [
+      "혈액·림프액 도말 Giemsa",
+      "CATT"
+    ],
+    "treatment": [
+      "Pentamidine (혈액림프기)",
+      "Melarsoprol (CNS기)"
+    ],
+    "epidemiology": "사하라 이남 tsetse fly belt",
+    "exam_notes": "혈액에서 trypomastigote만 관찰됨 (조직 내 amastigote 없음) — T. cruzi와의 감별점. VSG에 의한 항원변이",
+    "sources": [
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": true
+  },
+  {
+    "id": "toxoplasma_gondii",
+    "scientific_name": "Toxoplasma gondii",
+    "name_ko": "톡소포자충",
+    "name_en": "",
+    "aliases": [],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "포자충",
+    "size": "tachyzoite 2x6um",
+    "transmission_mode": "식품매개성",
+    "transmission_route": "경구감염 / 수직감염 / 수혈·장기이식",
+    "source": "고양이 분변에 오염된 채소·식수 (oocyst), 덜 익힌 고기 (tissue cyst)",
+    "infective_stage": "oocyst / tissue cyst",
+    "intermediate_host": [
+      "모든 온혈동물"
+    ],
+    "definitive_host": "고양이",
+    "habitat": "단핵구 → 근육·뇌·눈·심장 (세포 내 기생)",
+    "lung_migration": false,
+    "disease_ko": "톡소포자충증",
+    "disease_en": "toxoplasmosis",
+    "symptoms": [
+      "90% 무증상",
+      "면역저하 시 재활성화 → 괴사성 뇌염",
+      "선천성 톡소포자충증 (TORCH)",
+      "안구톡소포자충증 - 괴사성 망막맥락막염"
+    ],
+    "diagnosis": [
+      "혈청 IgG/IgM",
+      "PCR (양수)",
+      "생검"
+    ],
+    "treatment": [
+      "Pyrimethamine + Sulfadiazine + Folinic acid",
+      "임산부는 Spiramycin",
+      "국내는 TMP-SMX"
+    ],
+    "epidemiology": "국내 감염률 약 25% (경기 북부 높음). 프랑스 43%, 미국 13%",
+    "exam_notes": "tachyzoite는 초승달·활 모양 (편모 없음). 조직에서는 bradyzoite가 가득 든 tissue cyst. 뇌 조직절편 문제 단골",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "pneumocystis_jirovecii",
+    "scientific_name": "Pneumocystis jirovecii",
+    "name_ko": "폐포자충",
+    "name_en": "",
+    "aliases": [
+      "Pneumocystis carinii",
+      "Pnemocystis jirovecii",
+      "Pneumocystic carinii"
+    ],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "포자충 (분류학상 진균)",
+    "size": "cyst 5-8um",
+    "transmission_mode": "공기매개",
+    "transmission_route": "공기감염",
+    "source": "비말·공기",
+    "infective_stage": "cyst",
+    "intermediate_host": [],
+    "definitive_host": "사람",
+    "habitat": "폐포 (type I pneumocyte 외벽)",
+    "lung_migration": false,
+    "disease_ko": "폐포자충폐렴",
+    "disease_en": "Pneumocystis pneumonia (PCP)",
+    "symptoms": [
+      "면역결핍자의 간질성 폐렴·저산소증 (결핵과 감별)",
+      "폐외 침범 3% 미만"
+    ],
+    "diagnosis": [
+      "폐포세척액·객담·생검",
+      "Gomori methenamine silver (GMS) 염색",
+      "PCR"
+    ],
+    "treatment": [
+      "TMP-SMX 3주",
+      "저산소 시 corticosteroid"
+    ],
+    "epidemiology": "CD4 200/mm3 이하 면역결핍자의 주요 사망원인. 성인 20% 보균",
+    "exam_notes": "분류학적으로는 진균이지만 기생충학에서 다룸. 사람 감염종은 jirovecii (carinii는 쥐). GMS에서 폐포 안이 검게 염색된 cyst로 가득. cyst 내 8개의 핵 (octa-nucleated)",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "cryptosporidium_parvum",
+    "scientific_name": "Cryptosporidium parvum",
+    "name_ko": "작은와포자충",
+    "name_en": "",
+    "aliases": [],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "포자충",
+    "size": "oocyst 4-6um",
+    "transmission_mode": "수인성",
+    "transmission_route": "경구감염",
+    "source": "오염된 식수·음식, 가축·애완동물·감염자 접촉",
+    "infective_stage": "oocyst",
+    "intermediate_host": [],
+    "definitive_host": "사람·소",
+    "habitat": "소장 상피세포 미세융모 (intracellular extracytoplasmic)",
+    "lung_migration": false,
+    "disease_ko": "와포자충증",
+    "disease_en": "cryptosporidiosis",
+    "symptoms": [
+      "수양성 설사 (잠복기 2-10일)",
+      "정상인은 1-2주 후 자연치유",
+      "AIDS 환자는 만성 설사"
+    ],
+    "diagnosis": [
+      "대변검사 - modified acid-fast (MAF) 염색"
+    ],
+    "treatment": [
+      "특효약 없음 (대증치료)",
+      "Nitazoxanide",
+      "AIDS는 항레트로바이러스 치료"
+    ],
+    "epidemiology": "개발도상국·여행자 설사·면역억제 기회감염. 국내 주 감염원은 소",
+    "exam_notes": "장 조직에서 미세융모에 붙은 작은 점들. MAF 염색에서 파란 배경에 분홍색 oocyst",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "naegleria_fowleri",
+    "scientific_name": "Naegleria fowleri",
+    "name_ko": "파울러자유아메바",
+    "name_en": "brain-eating amoeba",
+    "aliases": [],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "자유생활아메바",
+    "size": "영양형 10-25um",
+    "transmission_mode": "수인성",
+    "transmission_route": "비강을 통한 침입 (담수 수영)",
+    "source": "따뜻한 담수",
+    "infective_stage": "영양형",
+    "intermediate_host": [],
+    "definitive_host": "자유생활종",
+    "habitat": "뇌",
+    "lung_migration": false,
+    "disease_ko": "원발성 아메바성 수막뇌염",
+    "disease_en": "primary amebic meningoencephalitis (PAM)",
+    "symptoms": [
+      "급속 진행하는 수막뇌염 (거의 사망)",
+      "잠복기 2-15일"
+    ],
+    "diagnosis": [
+      "뇌척수액·뇌생검에서 영양형"
+    ],
+    "treatment": [
+      "Amphotericin B",
+      "Miconazole",
+      "Rifampin"
+    ],
+    "epidemiology": "아프리카·남미 등 따뜻한 지역",
+    "exam_notes": "자유생활종의 병원성 사례로 언급됨",
+    "sources": [
+      "서유지"
+    ],
+    "distractor_only": true
+  },
+  {
+    "id": "acanthamoeba_spp",
+    "scientific_name": "Acanthamoeba spp.",
+    "name_ko": "가시아메바",
+    "name_en": "",
+    "aliases": [
+      "Acanthamoeba culbertsoni",
+      "Acanthamoeba castellanii"
+    ],
+    "group": "원충",
+    "group_en": "Protozoa",
+    "subgroup": "자유생활아메바",
+    "size": "영양형 15-45um",
+    "transmission_mode": "접촉매개성",
+    "transmission_route": "각막 접촉 / 혈행성",
+    "source": "오염된 렌즈 세척액·물",
+    "infective_stage": "영양형·포낭",
+    "intermediate_host": [],
+    "definitive_host": "자유생활종",
+    "habitat": "각막, 뇌",
+    "lung_migration": false,
+    "disease_ko": "가시아메바각막염 / 육아종성 아메바성 뇌염",
+    "disease_en": "Acanthamoeba keratitis / GAE",
+    "symptoms": [
+      "각막염 (렌즈 착용자)",
+      "각막 천공 → 각막이식"
+    ],
+    "diagnosis": [
+      "각막 도말·배양 (진균·herpes 각막염과 감별)"
+    ],
+    "treatment": [
+      "0.02% PHMB 점안"
+    ],
+    "epidemiology": "콘택트렌즈 착용자",
+    "exam_notes": "acanthapodia (뾰족뾰족한 위족) 가 특징",
+    "sources": [
+      "서유지"
+    ],
+    "distractor_only": true
+  }
+]

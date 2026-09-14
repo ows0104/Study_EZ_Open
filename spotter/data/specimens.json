@@ -1,0 +1,2874 @@
+[
+  {
+    "id": "ascaris_fertilized_egg",
+    "species_id": "ascaris_lumbricoides",
+    "specimen_type": "충란",
+    "stage": "fertilized egg",
+    "label_ko": "회충 수정란",
+    "label_en": "Ascaris lumbricoides, fertilized egg",
+    "size_um": "60-70",
+    "size_group": "60um 그룹",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "난원형, 두꺼운 충란벽",
+      "3 layer 구조 (바깥 albumin - chitin - lipoid)",
+      "바깥 albumin layer가 울퉁불퉁하게 요철",
+      "내부에 단일 난세포가 꽉 참"
+    ],
+    "structures": [
+      "albumin layer",
+      "chitin layer",
+      "lipoid layer"
+    ],
+    "confusable_with": [
+      "ascaris_unfertilized_egg",
+      "taenia_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ],
+    "_file": "01_eggs.json"
+  },
+  {
+    "id": "ascaris_unfertilized_egg",
+    "species_id": "ascaris_lumbricoides",
+    "specimen_type": "충란",
+    "stage": "unfertilized egg",
+    "label_ko": "회충 불수정란",
+    "label_en": "Ascaris lumbricoides, unfertilized egg",
+    "size_um": "90",
+    "size_group": "90um 그룹",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "수정란보다 길쭉하고 큼",
+      "충란벽 3 layer가 제대로 형성되지 않음",
+      "내부가 불규칙한 과립으로 차 있음"
+    ],
+    "structures": [
+      "albumin layer"
+    ],
+    "confusable_with": [
+      "ascaris_fertilized_egg",
+      "paragonimus_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ],
+    "_file": "01_eggs.json"
+  },
+  {
+    "id": "trichuris_egg",
+    "species_id": "trichuris_trichiura",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "편충 충란",
+    "label_en": "Trichuris trichiura, egg",
+    "size_um": "45-50",
+    "size_group": "60um 그룹",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "양쪽 끝에 투명한 mucoid plug",
+      "나뭇잎·럭비공·barrel 모양",
+      "갈색의 매끈한 충란벽"
+    ],
+    "structures": [
+      "mucoid plug"
+    ],
+    "confusable_with": [
+      "ascaris_fertilized_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ],
+    "_file": "01_eggs.json"
+  },
+  {
+    "id": "hookworm_egg",
+    "species_id": "ancylostoma_duodenale",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "구충 충란",
+    "label_en": "Hookworm (Ancylostoma duodenale / Necator americanus), egg",
+    "size_um": "60",
+    "size_group": "60um 그룹",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "타원형, 충란벽이 키틴층 하나로 얇고 투명",
+      "내부에 난할된 세포가 여러 개 (4-8 cell stage)",
+      "충란벽과 내용물 사이에 빈 공간"
+    ],
+    "structures": [
+      "chitin layer"
+    ],
+    "confusable_with": [
+      "enterobius_egg",
+      "diphyllobothrium_egg"
+    ],
+    "note": "두비니구충과 아메리카구충의 충란은 구별 불가 — 답은 Hookworm",
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ],
+    "answer_label": "Hookworm",
+    "exclude_distractors": [
+      "necator_americanus"
+    ],
+    "_file": "01_eggs.json"
+  },
+  {
+    "id": "enterobius_egg",
+    "species_id": "enterobius_vermicularis",
+    "specimen_type": "충란",
+    "stage": "embryonated egg",
+    "label_ko": "요충 충란",
+    "label_en": "Enterobius vermicularis, egg",
+    "size_um": "60",
+    "size_group": "60um 그룹",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "한쪽이 편평하고 반대쪽이 볼록한 비대칭 타원형",
+      "커피콩·죠리퐁·감씨 모양",
+      "내부에 반으로 접힌 유충(larva)"
+    ],
+    "structures": [
+      "chitin layer"
+    ],
+    "confusable_with": [
+      "hookworm_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ],
+    "_file": "01_eggs.json"
+  },
+  {
+    "id": "clonorchis_egg",
+    "species_id": "clonorchis_sinensis",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "간흡충 충란",
+    "label_en": "Clonorchis sinensis, egg",
+    "size_um": "30",
+    "size_group": "30um 그룹 (가장 작음)",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "전구·플라스크 모양",
+      "operculum 주변이 어깨처럼 튀어나옴 (shouldering)",
+      "충란벽에 muskmelon appearance (그물무늬)",
+      "operculum 반대쪽에 abopercular knob"
+    ],
+    "structures": [
+      "operculum",
+      "shoulder",
+      "abopercular knob"
+    ],
+    "confusable_with": [
+      "metagonimus_egg",
+      "heterophyes_nocens"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ],
+    "_file": "01_eggs.json"
+  },
+  {
+    "id": "metagonimus_egg",
+    "species_id": "metagonimus_yokogawai",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "요코가와흡충 충란",
+    "label_en": "Metagonimus yokogawai, egg",
+    "size_um": "30",
+    "size_group": "30um 그룹",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "간흡충과 크기가 같으나 충란벽이 매끄러움 (muskmelon 무늬 없음)",
+      "shouldering이 뚜렷하지 않음",
+      "operculum이 떨어져 나간 형태로 보이기도 함"
+    ],
+    "structures": [
+      "operculum"
+    ],
+    "confusable_with": [
+      "clonorchis_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ],
+    "_file": "01_eggs.json"
+  },
+  {
+    "id": "paragonimus_egg",
+    "species_id": "paragonimus_westermani",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "폐흡충 충란",
+    "label_en": "Paragonimus westermani, egg",
+    "size_um": "80-100",
+    "size_group": "90um 그룹",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "황갈색의 큰 난원형",
+      "한쪽 끝에 뚜렷한 operculum",
+      "operculum 반대쪽 충란벽이 두꺼워짐 (abopercular thickening)",
+      "좌우가 약간 비대칭"
+    ],
+    "structures": [
+      "operculum",
+      "abopercular thickening"
+    ],
+    "confusable_with": [
+      "diphyllobothrium_egg",
+      "ascaris_unfertilized_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ],
+    "_file": "01_eggs.json"
+  },
+  {
+    "id": "diphyllobothrium_egg",
+    "species_id": "diphyllobothrium_latum",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "광절열두조충 충란",
+    "label_en": "Diphyllobothrium latum, egg",
+    "size_um": "60-70",
+    "size_group": "60um 그룹",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "갈색 타원형",
+      "한쪽에 operculum, 반대쪽에 작은 terminal knob",
+      "폐흡충란보다 작고 abopercular thickening이 없음"
+    ],
+    "structures": [
+      "operculum",
+      "terminal knob"
+    ],
+    "confusable_with": [
+      "paragonimus_egg",
+      "hookworm_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ],
+    "_file": "01_eggs.json"
+  },
+  {
+    "id": "taenia_egg",
+    "species_id": "taenia_solium",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "유무구조충 충란",
+    "label_en": "Taenia spp., egg",
+    "size_um": "30-45",
+    "size_group": "30-45um",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "원형 또는 타원형",
+      "두껍고 방사상 무늬의 embryophoral block",
+      "내부에 6개의 hooklet을 가진 육구유충 (hexacanth embryo)"
+    ],
+    "structures": [
+      "embryophoral block",
+      "hexacanth embryo",
+      "hooklet"
+    ],
+    "confusable_with": [
+      "clonorchis_egg"
+    ],
+    "note": "유구조충과 무구조충의 충란은 구별 불가 — 답은 Taenia spp.",
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ],
+    "answer_label": "Taenia spp.",
+    "exclude_distractors": [
+      "taenia_saginata",
+      "taenia_asiatica"
+    ],
+    "_file": "01_eggs.json"
+  },
+  {
+    "id": "schistosoma_japonicum_egg",
+    "species_id": "schistosoma_japonicum",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "일본주혈흡충 충란",
+    "label_en": "Schistosoma japonicum, egg",
+    "size_um": "70-100",
+    "size_group": "70-100um",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "둥글고 통통함 (주혈흡충 중 가장 작고 둥금)",
+      "매우 작은 lateral spine — 잘 보이지 않음",
+      "operculum 없음"
+    ],
+    "structures": [
+      "lateral spine"
+    ],
+    "confusable_with": [
+      "schistosoma_mansoni_egg",
+      "schistosoma_haematobium_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ],
+    "_file": "01_eggs.json"
+  },
+  {
+    "id": "schistosoma_mansoni_egg",
+    "species_id": "schistosoma_mansoni",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "만손주혈흡충 충란",
+    "label_en": "Schistosoma mansoni, egg",
+    "size_um": "110-180",
+    "size_group": "100um 이상 (가장 큼)",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "매우 큼 (100um 이상)",
+      "옆구리에 뚜렷하게 돌출된 lateral spine",
+      "operculum 없음"
+    ],
+    "structures": [
+      "lateral spine"
+    ],
+    "confusable_with": [
+      "schistosoma_haematobium_egg",
+      "schistosoma_japonicum_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ],
+    "_file": "01_eggs.json"
+  },
+  {
+    "id": "schistosoma_haematobium_egg",
+    "species_id": "schistosoma_haematobium",
+    "specimen_type": "충란",
+    "stage": "egg",
+    "label_ko": "방광주혈흡충 충란",
+    "label_en": "Schistosoma haematobium, egg",
+    "size_um": "110-170",
+    "size_group": "100um 이상",
+    "stain": null,
+    "magnification": "400x",
+    "key_features": [
+      "큰 방추형",
+      "아래쪽 끝에 돌출된 terminal spine",
+      "operculum 없음"
+    ],
+    "structures": [
+      "terminal spine"
+    ],
+    "confusable_with": [
+      "schistosoma_mansoni_egg",
+      "schistosoma_japonicum_egg"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf",
+      "필기본"
+    ],
+    "_file": "01_eggs.json"
+  },
+  {
+    "id": "pediculus_egg",
+    "species_id": "pediculus_humanus",
+    "specimen_type": "충란",
+    "stage": "nit",
+    "label_ko": "이의 충란 (서캐)",
+    "label_en": "Pediculus humanus, egg (nit)",
+    "size_um": "800",
+    "size_group": "육안 관찰 가능",
+    "stain": null,
+    "magnification": "100x",
+    "key_features": [
+      "모발에 투명한 막(cement)으로 단단히 붙어 있음",
+      "한쪽 끝에 operculum 모양의 뚜껑"
+    ],
+    "structures": [
+      "operculum"
+    ],
+    "confusable_with": [],
+    "sources": [
+      "실습.pdf",
+      "전민서"
+    ],
+    "_file": "01_eggs.json"
+  },
+  {
+    "id": "ascaris_adult_wholemount",
+    "species_id": "ascaris_lumbricoides",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "회충 성충 (현미경)",
+    "label_en": "Ascaris lumbricoides, adult",
+    "stain": null,
+    "magnification": "40x",
+    "key_features": [
+      "머리에 3개의 입술 (three lips)",
+      "수컷은 꼬리가 배쪽으로 말리고 교미침 2개",
+      "암컷은 꼬리가 곧고 genital girdle"
+    ],
+    "structures": [
+      "three lips",
+      "교미침 (spicule)"
+    ],
+    "confusable_with": [
+      "anisakis_larva_wholemount"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "ascaris_section",
+    "species_id": "ascaris_lumbricoides",
+    "specimen_type": "조직",
+    "stage": "adult cross-section",
+    "label_ko": "회충 단면",
+    "label_en": "Ascaris lumbricoides, cross section",
+    "stain": "H&E",
+    "magnification": "40-100x",
+    "key_features": [
+      "소화관 lumen을 단층 원주상피가 둘러쌈",
+      "양 옆에 lateral cord (족보에는 lateral chord 표기도 등장)",
+      "두꺼운 각피와 근육층"
+    ],
+    "structures": [
+      "lateral cord",
+      "intestinal lumen",
+      "cuticle"
+    ],
+    "confusable_with": [
+      "anisakis_section",
+      "trichuris_section"
+    ],
+    "sources": [
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "trichuris_adult_wholemount",
+    "species_id": "trichuris_trichiura",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "편충 성충 (현미경)",
+    "label_en": "Trichuris trichiura, adult",
+    "stain": null,
+    "magnification": "40-100x",
+    "key_features": [
+      "채찍 모양 — 앞 3/5이 가늘고 뒤 2/5가 굵음",
+      "가는 쪽이 머리",
+      "수컷은 꼬리가 말려 있고 암컷은 곧음",
+      "암컷 자궁 내 충란 관찰"
+    ],
+    "structures": [
+      "stichosome",
+      "stichocyte"
+    ],
+    "confusable_with": [
+      "strongyloides_filariform"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "trichuris_section",
+    "species_id": "trichuris_trichiura",
+    "specimen_type": "조직",
+    "stage": "adult in appendix",
+    "label_ko": "편충 조직절편 (충수)",
+    "label_en": "Trichuris trichiura in human appendix",
+    "stain": "H&E",
+    "magnification": "100-400x",
+    "key_features": [
+      "계란후라이 모양의 stichocyte가 쌓여 stichosome을 이룸",
+      "충수 점막에 박힌 여러 개의 단면",
+      "mucoid plug 충란이 함께 보이기도 함"
+    ],
+    "structures": [
+      "stichocyte",
+      "stichosome"
+    ],
+    "confusable_with": [
+      "ascaris_section"
+    ],
+    "sources": [
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "strongyloides_rhabditoid",
+    "species_id": "strongyloides_stercoralis",
+    "specimen_type": "충체",
+    "stage": "rhabditoid larva",
+    "label_ko": "분선충 간상유충",
+    "label_en": "Strongyloides stercoralis, rhabditoid larva",
+    "stain": null,
+    "magnification": "100-400x",
+    "key_features": [
+      "식도 끝이 백열전구처럼 부풀어 있음 (rhabditoid esophagus)",
+      "자유생활형",
+      "구충 유충과는 꼬리 모양으로 감별"
+    ],
+    "structures": [
+      "rhabditoid esophagus"
+    ],
+    "confusable_with": [
+      "strongyloides_filariform"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "strongyloides_filariform",
+    "species_id": "strongyloides_stercoralis",
+    "specimen_type": "충체",
+    "stage": "filariform larva",
+    "label_ko": "분선충 사상유충",
+    "label_en": "Strongyloides stercoralis, filariform larva",
+    "stain": null,
+    "magnification": "100-400x",
+    "key_features": [
+      "식도의 직경이 일정하고 길다",
+      "꼬리 끝이 갈라짐 (notched tail)",
+      "기생형 감염 유충"
+    ],
+    "structures": [
+      "notched tail",
+      "filariform esophagus"
+    ],
+    "confusable_with": [
+      "strongyloides_rhabditoid"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "ancylostoma_wholemount",
+    "species_id": "ancylostoma_duodenale",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "두비니구충 성충",
+    "label_en": "Ancylostoma duodenale",
+    "stain": null,
+    "magnification": "40-400x",
+    "key_features": [
+      "구강에 투명하게 반짝이는 송곳니 2쌍 (hook-like teeth)",
+      "꼬리에 copulatory bursa",
+      "dorsal costa가 얕게 2분지 후 각각 3분지 (2+3)"
+    ],
+    "structures": [
+      "hook-like teeth",
+      "dorsal costa",
+      "copulatory bursa"
+    ],
+    "confusable_with": [
+      "necator_wholemount"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "note": "dorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)",
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "necator_wholemount",
+    "species_id": "necator_americanus",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "아메리카구충 성충",
+    "label_en": "Necator americanus",
+    "stain": null,
+    "magnification": "40-400x",
+    "key_features": [
+      "구강에 칼날 모양 cutting plate 1쌍 (송곳니 아님)",
+      "dorsal costa가 깊게 2분지 후 각각 2분지 (2+2)"
+    ],
+    "structures": [
+      "cutting plate",
+      "dorsal costa",
+      "copulatory bursa"
+    ],
+    "confusable_with": [
+      "ancylostoma_wholemount"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "note": "dorsal costa와 구강 구조는 수컷 표본에서 관찰 (bursa 필요)",
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "enterobius_adult_wholemount",
+    "species_id": "enterobius_vermicularis",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "요충 성충 (현미경)",
+    "label_en": "Enterobius vermicularis, adult",
+    "stain": null,
+    "magnification": "40-100x",
+    "key_features": [
+      "머리쪽에 투명한 키틴성 날개 cephalic alae",
+      "수컷은 꼬리가 나선형으로 말리고 caudal alae",
+      "암컷은 꼬리가 뾰족하고 자궁에 충란이 가득"
+    ],
+    "structures": [
+      "cephalic alae",
+      "caudal alae"
+    ],
+    "confusable_with": [
+      "anisakis_larva_wholemount"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "anisakis_larva_wholemount",
+    "species_id": "anisakis_simplex",
+    "specimen_type": "충체",
+    "stage": "L3 larva",
+    "label_ko": "고래회충 유충 (현미경)",
+    "label_en": "Anisakis simplex, L3 larva",
+    "stain": null,
+    "magnification": "40-400x",
+    "key_features": [
+      "머리에 boring tooth (상어 지느러미처럼 튀어나옴)",
+      "꼬리에 mucron",
+      "머리 근처에 유백색 ventricle"
+    ],
+    "structures": [
+      "boring tooth",
+      "mucron",
+      "ventricle"
+    ],
+    "confusable_with": [
+      "enterobius_adult_wholemount"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "anisakis_section",
+    "species_id": "anisakis_simplex",
+    "specimen_type": "조직",
+    "stage": "larva cross-section",
+    "label_ko": "고래회충 단면 (토끼 위)",
+    "label_en": "Anisakis simplex, larva section in rabbit stomach",
+    "stain": "H&E",
+    "magnification": "40-400x",
+    "key_features": [
+      "Y자 모양 intestinal lumen",
+      "나비 모양 lateral cord",
+      "배설 기능을 하는 Renette cell"
+    ],
+    "structures": [
+      "Y-shaped intestinal lumen",
+      "lateral cord",
+      "Renette cell"
+    ],
+    "confusable_with": [
+      "ascaris_section"
+    ],
+    "sources": [
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "trichinella_larva_wholemount",
+    "species_id": "trichinella_spiralis",
+    "specimen_type": "충체",
+    "stage": "larva",
+    "label_ko": "선모충 유충 (마운트)",
+    "label_en": "Trichinella spiralis, larva",
+    "stain": "AC (acetocarmine)",
+    "magnification": "100-400x",
+    "key_features": [
+      "돌돌 말린 형태의 유충",
+      "근육에서 분리한 표본"
+    ],
+    "structures": [],
+    "confusable_with": [
+      "trichinella_encysted_larva"
+    ],
+    "sources": [
+      "전민서",
+      "통합xlsx"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "trichinella_encysted_larva",
+    "species_id": "trichinella_spiralis",
+    "specimen_type": "조직",
+    "stage": "encysted larva",
+    "label_ko": "선모충 피낭유충 (근육)",
+    "label_en": "Trichinella spiralis, encysted larva in muscle",
+    "stain": "H&E",
+    "magnification": "100-400x",
+    "key_features": [
+      "횡문근 안에 nursing cell complex 형성",
+      "유충이 돌돌 말린 채로 들어 있음",
+      "주변에 염증세포 침윤"
+    ],
+    "structures": [
+      "nursing cell complex"
+    ],
+    "confusable_with": [
+      "cysticercus_muscle_section"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "brugia_microfilaria",
+    "species_id": "brugia_malayi",
+    "specimen_type": "혈액도말",
+    "stage": "microfilaria",
+    "label_ko": "말레이사상충 microfilaria",
+    "label_en": "Brugia malayi, microfilaria",
+    "stain": "Giemsa",
+    "magnification": "400-1000x",
+    "key_features": [
+      "sheath에 싸여 있음",
+      "꼬리 끝에 끊어져 떨어진 terminal nuclei 2개"
+    ],
+    "structures": [
+      "sheath",
+      "terminal nuclei"
+    ],
+    "confusable_with": [
+      "wuchereria_bancrofti"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "paragonimus_adult_wholemount",
+    "species_id": "paragonimus_westermani",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "폐흡충 성충",
+    "label_en": "Paragonimus westermani, adult",
+    "stain": "carmine",
+    "magnification": "40x",
+    "key_features": [
+      "통통한 난원형 (강낭콩 모양), 적갈색",
+      "슬라이드가 두껍게 mounting 되어 있음",
+      "6개의 lobe로 나뉜 산호초 모양 ovary"
+    ],
+    "structures": [
+      "oral sucker",
+      "ventral sucker",
+      "ovary",
+      "testis"
+    ],
+    "confusable_with": [
+      "fasciola_adult_wholemount",
+      "clonorchis_adult_wholemount"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "clonorchis_adult_wholemount",
+    "species_id": "clonorchis_sinensis",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "간흡충 성충",
+    "label_en": "Clonorchis sinensis, adult",
+    "stain": "carmine",
+    "magnification": "40x",
+    "key_features": [
+      "납작한 나뭇잎 모양, 10-25mm",
+      "몸 뒤쪽에 나뭇가지처럼 갈라진 branched testis 2개",
+      "oral sucker > ventral sucker"
+    ],
+    "structures": [
+      "oral sucker",
+      "ventral sucker",
+      "branched testis",
+      "ovary",
+      "uterus"
+    ],
+    "confusable_with": [
+      "opisthorchis_viverrini",
+      "fasciola_adult_wholemount"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "fasciola_adult_wholemount",
+    "species_id": "fasciola_hepatica",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "간질 성충",
+    "label_en": "Fasciola hepatica, adult",
+    "stain": "carmine",
+    "magnification": "40x",
+    "key_features": [
+      "크고 납작한 나뭇잎 모양 (약 3cm)",
+      "머리쪽이 원뿔형으로 돌출 (conical projection = cephalic cone)",
+      "고도로 분지된 intestine·testes·vitellaria"
+    ],
+    "structures": [
+      "conical projection",
+      "cephalic cone",
+      "branched intestine",
+      "testis"
+    ],
+    "confusable_with": [
+      "clonorchis_adult_wholemount",
+      "paragonimus_adult_wholemount"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "metagonimus_adult_wholemount",
+    "species_id": "metagonimus_yokogawai",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "요코가와흡충 성충",
+    "label_en": "Metagonimus yokogawai, adult",
+    "stain": "carmine",
+    "magnification": "100x",
+    "key_features": [
+      "매우 작아 육안으로 잘 안 보임 (1-2mm)",
+      "ventral sucker가 한쪽으로 치우쳐 있음",
+      "몸 끝쪽에 testis 2개"
+    ],
+    "structures": [
+      "oral sucker",
+      "ventral sucker",
+      "testis"
+    ],
+    "confusable_with": [
+      "gymnophalloides_adult_wholemount",
+      "heterophyes_nocens"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "gymnophalloides_adult_wholemount",
+    "species_id": "gymnophalloides_seoi",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "참굴큰입흡충 성충",
+    "label_en": "Gymnophalloides seoi, adult",
+    "stain": "carmine",
+    "magnification": "400x",
+    "key_features": [
+      "몸에 비해 거대한 oral sucker",
+      "ventral sucker 앞쪽에 홈처럼 파인 ventral pit"
+    ],
+    "structures": [
+      "oral sucker",
+      "ventral pit",
+      "ventral sucker"
+    ],
+    "confusable_with": [
+      "metagonimus_adult_wholemount"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "neodiplostomum_adult_wholemount",
+    "species_id": "neodiplostomum_seoulense",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "서울주걱흡충 성충",
+    "label_en": "Neodiplostomum seoulense, adult",
+    "stain": "carmine",
+    "magnification": "100-400x",
+    "key_features": [
+      "앞쪽이 주걱처럼 넓게 퍼진 모양",
+      "tribocytic organ (제2의 입) 이 결정적 감별점",
+      "나비 모양 ovary"
+    ],
+    "structures": [
+      "tribocytic organ",
+      "oral sucker",
+      "ventral sucker"
+    ],
+    "confusable_with": [
+      "gymnophalloides_adult_wholemount"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "schistosoma_pair_wholemount",
+    "species_id": "schistosoma_japonicum",
+    "specimen_type": "충체",
+    "stage": "adult pair",
+    "label_ko": "일본주혈흡충 자웅 합체",
+    "label_en": "Schistosoma japonicum, adult pair",
+    "stain": "carmine",
+    "magnification": "40x",
+    "key_features": [
+      "자웅이체 — 수컷의 gynecophoral canal(포자관)에 가느다란 암컷이 끼어 있음",
+      "수컷 6-10mm"
+    ],
+    "structures": [
+      "gynecophoral canal",
+      "oral sucker",
+      "ventral sucker"
+    ],
+    "confusable_with": [],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "diphyllobothrium_gravid_proglottid",
+    "species_id": "diphyllobothrium_latum",
+    "specimen_type": "충체",
+    "stage": "gravid proglottid",
+    "label_ko": "광절열두조충 편절",
+    "label_en": "Diphyllobothrium latum, gravid proglottid",
+    "stain": "carmine",
+    "magnification": "40x",
+    "key_features": [
+      "좌우로 넓은 사각형 편절",
+      "가운데에 rosette (꽃모양) uterus",
+      "가운데에 uterine pore와 genital pore"
+    ],
+    "structures": [
+      "rosette uterus",
+      "uterine pore",
+      "genital pore",
+      "ovary"
+    ],
+    "confusable_with": [
+      "taenia_solium_gravid_proglottid",
+      "taenia_saginata_gravid_proglottid"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "diphyllobothrium_scolex",
+    "species_id": "diphyllobothrium_latum",
+    "specimen_type": "충체",
+    "stage": "scolex",
+    "label_ko": "광절열두조충 두절",
+    "label_en": "Diphyllobothrium latum, scolex",
+    "stain": "carmine",
+    "magnification": "40x",
+    "key_features": [
+      "흡반(sucker)과 갈고리(hook)가 없음",
+      "길쭉한 홈 모양의 sucking groove (bothrium) 2개만 관찰"
+    ],
+    "structures": [
+      "bothrium",
+      "sucking groove"
+    ],
+    "confusable_with": [
+      "taenia_solium_scolex",
+      "taenia_saginata_scolex"
+    ],
+    "sources": [
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "taenia_solium_gravid_proglottid",
+    "species_id": "taenia_solium",
+    "specimen_type": "충체",
+    "stage": "gravid proglottid",
+    "label_ko": "유구조충 편절",
+    "label_en": "Taenia solium, gravid proglottid",
+    "stain": "carmine",
+    "magnification": "40x",
+    "key_features": [
+      "자궁측지 13개 이하, 두껍고 듬성듬성",
+      "위아래로 긴 사각형",
+      "측면에 genital pore"
+    ],
+    "structures": [
+      "uterine branch",
+      "genital pore"
+    ],
+    "confusable_with": [
+      "taenia_saginata_gravid_proglottid",
+      "diphyllobothrium_gravid_proglottid"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "taenia_solium_scolex",
+    "species_id": "taenia_solium",
+    "specimen_type": "충체",
+    "stage": "scolex",
+    "label_ko": "유구조충 두절",
+    "label_en": "Taenia solium, scolex",
+    "stain": "carmine",
+    "magnification": "40-100x",
+    "key_features": [
+      "흡반 4개 + rostellum에 갈고리(hook) 있음",
+      "두절이 가장 돌출됨"
+    ],
+    "structures": [
+      "sucker",
+      "rostellum",
+      "hook"
+    ],
+    "confusable_with": [
+      "taenia_saginata_scolex",
+      "cysticercus_wholemount"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "taenia_saginata_gravid_proglottid",
+    "species_id": "taenia_saginata",
+    "specimen_type": "충체",
+    "stage": "gravid proglottid",
+    "label_ko": "무구조충 편절",
+    "label_en": "Taenia saginata, gravid proglottid",
+    "stain": "carmine",
+    "magnification": "40x",
+    "key_features": [
+      "자궁측지 13개 이상, 얇고 많음",
+      "위아래로 긴 사각형"
+    ],
+    "structures": [
+      "uterine branch",
+      "genital pore"
+    ],
+    "confusable_with": [
+      "taenia_solium_gravid_proglottid"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "taenia_saginata_scolex",
+    "species_id": "taenia_saginata",
+    "specimen_type": "충체",
+    "stage": "scolex",
+    "label_ko": "무구조충 두절",
+    "label_en": "Taenia saginata, scolex",
+    "stain": "carmine",
+    "magnification": "40-100x",
+    "key_features": [
+      "흡반 4개만 있고 갈고리 없음",
+      "두절이 납작함"
+    ],
+    "structures": [
+      "sucker"
+    ],
+    "confusable_with": [
+      "taenia_solium_scolex"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "cysticercus_wholemount",
+    "species_id": "cysticercus_cellulosae",
+    "specimen_type": "충체",
+    "stage": "cysticercus",
+    "label_ko": "유구낭미충 (현미경)",
+    "label_en": "Cysticercus cellulosae, whole mount",
+    "stain": "carmine",
+    "magnification": "40x",
+    "key_features": [
+      "cyst 안으로 scolex가 말려 들어가 있음",
+      "scolex의 갈고리와 흡반이 진하게 보임",
+      "양치식물 모양의 neck/scolex"
+    ],
+    "structures": [
+      "scolex",
+      "hook",
+      "sucker",
+      "cyst wall"
+    ],
+    "confusable_with": [
+      "sparganum_section",
+      "echinococcus_protoscolex"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "cysticercus_muscle_section",
+    "species_id": "cysticercus_cellulosae",
+    "specimen_type": "조직",
+    "stage": "cysticercus in pork muscle",
+    "label_ko": "유구낭미충 조직절편 (돼지 근육)",
+    "label_en": "Cysticercus cellulosae in pork muscle",
+    "stain": "H&E",
+    "magnification": "40x",
+    "key_features": [
+      "근육 조직 내 cyst",
+      "cyst 안에 함입된 scolex 단면"
+    ],
+    "structures": [
+      "cyst wall",
+      "scolex"
+    ],
+    "confusable_with": [
+      "trichinella_encysted_larva",
+      "sparganum_section"
+    ],
+    "sources": [
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "sparganum_section",
+    "species_id": "spirometra_erinacei",
+    "specimen_type": "조직",
+    "stage": "plerocercoid (sparganum)",
+    "label_ko": "고충 조직절편",
+    "label_en": "Sparganum, tissue section",
+    "stain": "H&E",
+    "magnification": "40x",
+    "key_features": [
+      "성긴 스폰지 모양 실질 구조",
+      "내부에 보라색으로 염색되는 calcium (calcareous) corpuscle",
+      "scolex나 갈고리가 없음"
+    ],
+    "structures": [
+      "calcareous corpuscle"
+    ],
+    "confusable_with": [
+      "cysticercus_muscle_section"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "echinococcus_protoscolex",
+    "species_id": "echinococcus_granulosus",
+    "specimen_type": "충체",
+    "stage": "protoscolex",
+    "label_ko": "단방조충 protoscolex",
+    "label_en": "Echinococcus granulosus, protoscolex",
+    "stain": "carmine",
+    "magnification": "100x",
+    "key_features": [
+      "포충(hydatid cyst) 안에 여러 개의 protoscolex",
+      "콧수염 모양으로 배열된 hooklet",
+      "daughter cyst 관찰"
+    ],
+    "structures": [
+      "protoscolex",
+      "hooklet",
+      "brood capsule",
+      "daughter cyst"
+    ],
+    "confusable_with": [
+      "cysticercus_wholemount"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "echinococcus_hydatid_section",
+    "species_id": "echinococcus_granulosus",
+    "specimen_type": "조직",
+    "stage": "hydatid cyst",
+    "label_ko": "포충 조직절편",
+    "label_en": "Echinococcus granulosus, hydatid cyst section",
+    "stain": "H&E",
+    "magnification": "40-100x",
+    "key_features": [
+      "두꺼운 층상 낭벽 (fibrous - gelatin - germinal layer)",
+      "낭벽 안쪽에 brood capsule과 protoscolex",
+      "낭 안에 daughter cyst"
+    ],
+    "structures": [
+      "cyst wall",
+      "brood capsule",
+      "protoscolex",
+      "daughter cyst"
+    ],
+    "confusable_with": [
+      "cysticercus_muscle_section",
+      "sparganum_section"
+    ],
+    "note": "이미지 검토 중 발견 — 통합xlsx 단방조충 행에 조직절편이 섞여 있었다",
+    "sources": [
+      "통합xlsx"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "echinococcus_adult_wholemount",
+    "species_id": "echinococcus_granulosus",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "단방조충 성충",
+    "label_en": "Echinococcus granulosus, adult",
+    "stain": "carmine",
+    "magnification": "100x",
+    "key_features": [
+      "매우 작음 (3-6mm)",
+      "immature - mature - gravid 편절이 각각 1개씩, 총 3개"
+    ],
+    "structures": [
+      "scolex",
+      "immature proglottid",
+      "mature proglottid",
+      "gravid proglottid"
+    ],
+    "confusable_with": [
+      "echinococcus_multilocularis"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "clonorchis_liver_section",
+    "species_id": "clonorchis_sinensis",
+    "specimen_type": "조직",
+    "stage": "adult in bile duct",
+    "label_ko": "간흡충 조직절편 (간)",
+    "label_en": "Clonorchis sinensis in liver section",
+    "stain": "H&E",
+    "magnification": "40-400x",
+    "key_features": [
+      "담관 직경이 늘어나 있음",
+      "담관 안에 여러 마리의 충체 단면",
+      "담관 상피 증식·주변 섬유화"
+    ],
+    "structures": [
+      "bile duct",
+      "fibrosis"
+    ],
+    "confusable_with": [
+      "fasciola_liver_section",
+      "paragonimus_lung_section"
+    ],
+    "sources": [
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "fasciola_liver_section",
+    "species_id": "fasciola_hepatica",
+    "specimen_type": "조직",
+    "stage": "adult section",
+    "label_ko": "간질 조직절편",
+    "label_en": "Fasciola hepatica, tissue section",
+    "stain": "H&E",
+    "magnification": "40-100x",
+    "key_features": [
+      "충체 내부가 구멍이 송송 뚫린 모양",
+      "간 실질의 괴사·염증"
+    ],
+    "structures": [],
+    "confusable_with": [
+      "clonorchis_liver_section"
+    ],
+    "sources": [
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "paragonimus_lung_section",
+    "species_id": "paragonimus_westermani",
+    "specimen_type": "조직",
+    "stage": "egg/adult in lung",
+    "label_ko": "폐흡충 조직절편 (폐)",
+    "label_en": "Paragonimus westermani in dog lung",
+    "stain": "H&E",
+    "magnification": "40-400x",
+    "key_features": [
+      "폐 조직 내 worm capsule",
+      "주변에 다수의 충란",
+      "육아종성 염증"
+    ],
+    "structures": [
+      "worm capsule",
+      "egg"
+    ],
+    "confusable_with": [
+      "clonorchis_liver_section"
+    ],
+    "sources": [
+      "실제실습본"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "paragonimus_brain_section",
+    "species_id": "paragonimus_westermani",
+    "specimen_type": "조직",
+    "stage": "cerebral paragonimiasis",
+    "label_ko": "뇌폐흡충증 조직절편",
+    "label_en": "Cerebral paragonimiasis",
+    "stain": "H&E",
+    "magnification": "40-100x",
+    "key_features": [
+      "뇌 조직 내 충란과 육아종",
+      "포도송이(grape bunch) 모양 병변"
+    ],
+    "structures": [
+      "egg",
+      "granuloma"
+    ],
+    "confusable_with": [
+      "toxoplasma_brain_section"
+    ],
+    "sources": [
+      "실제실습본"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "neodiplostomum_intestine_section",
+    "species_id": "neodiplostomum_seoulense",
+    "specimen_type": "조직",
+    "stage": "adult in intestine",
+    "label_ko": "서울주걱흡충 조직절편 (소장)",
+    "label_en": "Neodiplostomum seoulense in intestine",
+    "stain": "H&E",
+    "magnification": "100x",
+    "key_features": [
+      "충체가 tribocytic organ으로 융모를 빨아먹는 모습",
+      "융모 위축(fusion, blunting) + 음와 증식 → V/C 비 감소"
+    ],
+    "structures": [
+      "tribocytic organ",
+      "villus",
+      "crypt"
+    ],
+    "confusable_with": [
+      "cryptosporidium_intestine_section"
+    ],
+    "sources": [
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "schistosoma_liver_section",
+    "species_id": "schistosoma_japonicum",
+    "specimen_type": "조직",
+    "stage": "egg granuloma in liver",
+    "label_ko": "주혈흡충 간 조직절편",
+    "label_en": "Schistosoma egg granuloma in liver",
+    "stain": "H&E",
+    "magnification": "100-400x",
+    "key_features": [
+      "간 문맥 주위 충란 육아종",
+      "섬유화 (pipestem fibrosis)"
+    ],
+    "structures": [
+      "egg",
+      "granuloma"
+    ],
+    "confusable_with": [
+      "clonorchis_liver_section"
+    ],
+    "sources": [
+      "실제실습본"
+    ],
+    "_file": "02_helminth_worms.json"
+  },
+  {
+    "id": "entamoeba_histolytica_trophozoite",
+    "species_id": "entamoeba_histolytica",
+    "specimen_type": "충체",
+    "stage": "trophozoite",
+    "label_ko": "이질아메바 영양형",
+    "label_en": "Entamoeba histolytica, trophozoite",
+    "stain": "iron hematoxylin / trichrome",
+    "magnification": "1000x",
+    "key_features": [
+      "karyosome이 핵 중앙에 작은 점처럼 위치",
+      "peripheral chromatin의 두께가 균일",
+      "위족(pseudopodia)이 관찰되기도 함",
+      "세포질 안에 탐식한 RBC"
+    ],
+    "structures": [
+      "karyosome",
+      "peripheral chromatin",
+      "pseudopodia"
+    ],
+    "confusable_with": [
+      "entamoeba_coli_cyst",
+      "balantidium_coli_section"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "entamoeba_histolytica_cyst",
+    "species_id": "entamoeba_histolytica",
+    "specimen_type": "충체",
+    "stage": "cyst",
+    "label_ko": "이질아메바 포낭",
+    "label_en": "Entamoeba histolytica, cyst",
+    "stain": "trichrome",
+    "magnification": "1000x",
+    "key_features": [
+      "핵이 4개 이하로 듬성듬성",
+      "karyosome 중앙 위치",
+      "peripheral chromatin 균일",
+      "chromatoid body 관찰 가능"
+    ],
+    "structures": [
+      "karyosome",
+      "peripheral chromatin",
+      "chromatoid body"
+    ],
+    "confusable_with": [
+      "entamoeba_coli_cyst",
+      "endolimax_nana_cyst"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "entamoeba_histolytica_colon_section",
+    "species_id": "entamoeba_histolytica",
+    "specimen_type": "조직",
+    "stage": "trophozoite in colon",
+    "label_ko": "이질아메바 조직절편 (대장)",
+    "label_en": "Entamoeba histolytica in colon",
+    "stain": "H&E",
+    "magnification": "100-400x",
+    "key_features": [
+      "flask-shaped ulcer (플라스크 모양 궤양)",
+      "궤양 내부는 괴사 조직이라 충체가 없음",
+      "궤양 경계부에 세포질이 투명한 이질아메바"
+    ],
+    "structures": [
+      "flask-shaped ulcer"
+    ],
+    "confusable_with": [],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "entamoeba_coli_cyst",
+    "species_id": "entamoeba_coli",
+    "specimen_type": "충체",
+    "stage": "cyst",
+    "label_ko": "대장아메바 포낭",
+    "label_en": "Entamoeba coli, cyst",
+    "stain": "trichrome",
+    "magnification": "1000x",
+    "key_features": [
+      "핵이 4-8개로 많음",
+      "karyosome이 크고 한쪽으로 치우침 (붓으로 꾹 누른 모양)",
+      "peripheral chromatin 두께가 불규칙"
+    ],
+    "structures": [
+      "karyosome",
+      "peripheral chromatin",
+      "chromatoid body"
+    ],
+    "confusable_with": [
+      "entamoeba_histolytica_cyst",
+      "endolimax_nana_cyst"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "endolimax_nana_cyst",
+    "species_id": "endolimax_nana",
+    "specimen_type": "충체",
+    "stage": "cyst",
+    "label_ko": "왜소아메바 포낭",
+    "label_en": "Endolimax nana, cyst",
+    "stain": "iron hematoxylin",
+    "magnification": "1000x",
+    "key_features": [
+      "크기가 매우 작음 (RBC보다 조금 큰 수준)",
+      "핵 1-4개",
+      "karyosome이 커서 핵 안에 빈 공간이 없음"
+    ],
+    "structures": [
+      "karyosome"
+    ],
+    "confusable_with": [
+      "entamoeba_histolytica_cyst",
+      "entamoeba_coli_cyst"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "giardia_trophozoite",
+    "species_id": "giardia_lamblia",
+    "specimen_type": "충체",
+    "stage": "trophozoite",
+    "label_ko": "람블편모충 영양형",
+    "label_en": "Giardia lamblia, trophozoite",
+    "stain": "Diff-Quik",
+    "magnification": "1000x",
+    "key_features": [
+      "서양배(pear) 또는 올빼미 얼굴 모양",
+      "눈처럼 보이는 핵 2개",
+      "4쌍(8개)의 편모",
+      "sucking disc"
+    ],
+    "structures": [
+      "nucleus",
+      "flagella",
+      "sucking disc",
+      "axostyle"
+    ],
+    "confusable_with": [
+      "giardia_cyst",
+      "trichomonas_trophozoite"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "giardia_cyst",
+    "species_id": "giardia_lamblia",
+    "specimen_type": "충체",
+    "stage": "cyst",
+    "label_ko": "람블편모충 포낭",
+    "label_en": "Giardia lamblia, cyst",
+    "stain": "trichrome",
+    "magnification": "1000x",
+    "key_features": [
+      "타원형, 10-12um",
+      "핵 2-4개가 한쪽 끝에 몰려 있음",
+      "내부에 axostyle과 그 주변의 fibril",
+      "운동기관 없이 단단한 구조"
+    ],
+    "structures": [
+      "nucleus",
+      "axostyle",
+      "fibril"
+    ],
+    "confusable_with": [
+      "entamoeba_histolytica_cyst"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "trichomonas_trophozoite",
+    "species_id": "trichomonas_vaginalis",
+    "specimen_type": "충체",
+    "stage": "trophozoite",
+    "label_ko": "질편모충 영양형",
+    "label_en": "Trichomonas vaginalis, trophozoite",
+    "stain": "Diff-Quik",
+    "magnification": "1000x",
+    "key_features": [
+      "핵 1개",
+      "앞쪽으로 뻗은 편모 4개",
+      "몸 한쪽에 형성된 undulating membrane (파동막)",
+      "파동막이 있는 방향으로 회전하며 운동"
+    ],
+    "structures": [
+      "undulating membrane",
+      "flagella",
+      "axostyle",
+      "nucleus"
+    ],
+    "confusable_with": [
+      "giardia_trophozoite",
+      "trypanosoma_cruzi_trypomastigote"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "balantidium_coli_section",
+    "species_id": "balantidium_coli",
+    "specimen_type": "조직",
+    "stage": "trophozoite",
+    "label_ko": "대장섬모충",
+    "label_en": "Balantidium coli",
+    "stain": "H&E",
+    "magnification": "400x",
+    "key_features": [
+      "크기가 매우 커서 저배율에서도 바로 눈에 띔",
+      "가장자리에 섬모(cilia)",
+      "콩팥 모양의 큰 macronucleus + 작은 micronucleus"
+    ],
+    "structures": [
+      "cilia",
+      "macronucleus",
+      "micronucleus"
+    ],
+    "confusable_with": [
+      "entamoeba_histolytica_trophozoite"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "leishmania_promastigote",
+    "species_id": "leishmania_major",
+    "specimen_type": "충체",
+    "stage": "promastigote",
+    "label_ko": "리슈만편모충 promastigote",
+    "label_en": "Leishmania major, promastigote",
+    "stain": "Diff-Quik",
+    "magnification": "1000x",
+    "key_features": [
+      "가늘고 긴 방추형에 앞쪽으로 편모 1개",
+      "핵 + 그보다 작은 kinetoplast",
+      "배열이 편모 → kinetoplast → 핵 순서",
+      "배양 슬라이드라 배경에 결정 구조가 보이는 경우가 많음"
+    ],
+    "structures": [
+      "flagella",
+      "kinetoplast",
+      "nucleus"
+    ],
+    "confusable_with": [
+      "trypanosoma_cruzi_trypomastigote"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "leishmania_amastigote_liver",
+    "species_id": "leishmania_donovani",
+    "specimen_type": "조직",
+    "stage": "amastigote",
+    "label_ko": "내장리슈만편모충 amastigote (간·비장)",
+    "label_en": "Leishmania donovani, amastigote in liver section",
+    "stain": "H&E",
+    "magnification": "1000x",
+    "key_features": [
+      "대식세포 안에 점박이처럼 들어 있는 무편모형",
+      "편모가 보이지 않음",
+      "핵과 kinetoplast가 작은 두 점으로 보임"
+    ],
+    "structures": [
+      "amastigote",
+      "kinetoplast"
+    ],
+    "confusable_with": [
+      "trypanosoma_cruzi_heart_section",
+      "toxoplasma_tachyzoite"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "trypanosoma_cruzi_trypomastigote",
+    "species_id": "trypanosoma_cruzi",
+    "specimen_type": "혈액도말",
+    "stage": "trypomastigote",
+    "label_ko": "크루스파동편모충 trypomastigote",
+    "label_en": "Trypanosoma cruzi, trypomastigote",
+    "stain": "Giemsa",
+    "magnification": "1000x",
+    "key_features": [
+      "C 또는 S자 모양",
+      "핵 + 큰 kinetoplast + 편모 + 파동막",
+      "배열이 편모 → 핵 → kinetoplast 순서 (리슈만과 반대)"
+    ],
+    "structures": [
+      "undulating membrane",
+      "kinetoplast",
+      "flagella",
+      "nucleus"
+    ],
+    "confusable_with": [
+      "leishmania_promastigote",
+      "trichomonas_trophozoite"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "trypanosoma_cruzi_heart_section",
+    "species_id": "trypanosoma_cruzi",
+    "specimen_type": "조직",
+    "stage": "amastigote in myocardium",
+    "label_ko": "크루스파동편모충 심근 조직절편",
+    "label_en": "Trypanosoma cruzi, amastigote in heart section",
+    "stain": "H&E",
+    "magnification": "400-1000x",
+    "key_features": [
+      "심근세포 안에 동글동글하게 들어찬 amastigote 무리",
+      "주변 심근염"
+    ],
+    "structures": [
+      "amastigote nest"
+    ],
+    "confusable_with": [
+      "leishmania_amastigote_liver",
+      "toxoplasma_brain_section"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "toxoplasma_tachyzoite",
+    "species_id": "toxoplasma_gondii",
+    "specimen_type": "충체",
+    "stage": "tachyzoite",
+    "label_ko": "톡소포자충 tachyzoite",
+    "label_en": "Toxoplasma gondii, tachyzoite",
+    "stain": "Giemsa",
+    "magnification": "400-1000x",
+    "key_features": [
+      "초승달·활 모양 (arc shaped)",
+      "편모나 섬모가 없음",
+      "대식세포 안에서 관찰"
+    ],
+    "structures": [
+      "tachyzoite"
+    ],
+    "confusable_with": [
+      "leishmania_amastigote_liver",
+      "cryptosporidium_oocyst_maf"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "toxoplasma_brain_section",
+    "species_id": "toxoplasma_gondii",
+    "specimen_type": "조직",
+    "stage": "bradyzoite in tissue cyst",
+    "label_ko": "톡소포자충 tissue cyst (뇌)",
+    "label_en": "Toxoplasma gondii, bradyzoites in mouse brain",
+    "stain": "H&E",
+    "magnification": "400-1000x",
+    "key_features": [
+      "뇌 조직 안에 둥근 tissue cyst",
+      "cyst 내부에 매우 많은 bradyzoite가 빽빽하게 들어참"
+    ],
+    "structures": [
+      "tissue cyst",
+      "bradyzoite"
+    ],
+    "confusable_with": [
+      "paragonimus_brain_section",
+      "trypanosoma_cruzi_heart_section"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "pneumocystis_gms",
+    "species_id": "pneumocystis_jirovecii",
+    "specimen_type": "조직",
+    "stage": "cyst",
+    "label_ko": "폐포자충 (GMS 염색, 폐)",
+    "label_en": "Pneumocystis jirovecii, lung section, GMS stain",
+    "stain": "GMS (Gomori methenamine silver)",
+    "magnification": "400-1000x",
+    "key_features": [
+      "폐포 안이 검게 염색된 cyst로 가득 참",
+      "cyst 벽이 검게 염색되고 안이 비침 (컵·초승달 모양)"
+    ],
+    "structures": [
+      "cyst",
+      "alveolus"
+    ],
+    "confusable_with": [
+      "pneumocystis_diffquik"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "pneumocystis_diffquik",
+    "species_id": "pneumocystis_jirovecii",
+    "specimen_type": "조직",
+    "stage": "cyst",
+    "label_ko": "폐포자충 (Diff-Quik, 폐)",
+    "label_en": "Pneumocystis jirovecii, lung, Diff-Quik stain",
+    "stain": "Diff-Quik",
+    "magnification": "400-1000x",
+    "key_features": [
+      "폐포 안에 거품 같은 exudate",
+      "cyst 안에 매우 작은 8개의 핵 (octa-nucleated cyst)"
+    ],
+    "structures": [
+      "octa-nucleated cyst",
+      "intracystic body"
+    ],
+    "confusable_with": [
+      "pneumocystis_gms"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "cryptosporidium_intestine_section",
+    "species_id": "cryptosporidium_parvum",
+    "specimen_type": "조직",
+    "stage": "developmental stages",
+    "label_ko": "작은와포자충 조직절편 (소장)",
+    "label_en": "Cryptosporidium parvum, intestinal section",
+    "stain": "H&E",
+    "magnification": "400-1000x",
+    "key_features": [
+      "소장 융모 표면 미세융모에 붙은 작은 점들",
+      "세포 안이면서 세포질 밖(intracellular extracytoplasmic)에 위치",
+      "융모 손실, V/C 비 감소"
+    ],
+    "structures": [
+      "microvillus",
+      "villus"
+    ],
+    "confusable_with": [
+      "neodiplostomum_intestine_section"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "cryptosporidium_oocyst_maf",
+    "species_id": "cryptosporidium_parvum",
+    "specimen_type": "충체",
+    "stage": "oocyst",
+    "label_ko": "작은와포자충 oocyst (MAF 염색)",
+    "label_en": "Cryptosporidium parvum, oocyst, MAF stain",
+    "stain": "modified acid-fast (MAF)",
+    "magnification": "400-1000x",
+    "key_features": [
+      "파란 배경에 분홍·붉은색으로 염색된 둥근 oocyst",
+      "크기 4-6um"
+    ],
+    "structures": [
+      "oocyst"
+    ],
+    "confusable_with": [
+      "toxoplasma_tachyzoite"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "pfalciparum_thin_smear",
+    "species_id": "plasmodium_falciparum",
+    "specimen_type": "혈액도말",
+    "stage": "ring form / gametocyte",
+    "label_ko": "열대열원충 얇은 도말",
+    "label_en": "Plasmodium falciparum, thin smear",
+    "stain": "Giemsa",
+    "magnification": "1000x",
+    "key_features": [
+      "RBC 크기 변화 없음",
+      "한 적혈구에 여러 개의 ring (multiple ring form)",
+      "ring이 RBC 지름의 1/4-1/5로 작음",
+      "바나나 모양 gametocyte",
+      "trophozoite·schizont는 말초혈액에서 드묾"
+    ],
+    "structures": [
+      "ring form",
+      "gametocyte",
+      "RBC"
+    ],
+    "confusable_with": [
+      "pvivax_thin_smear",
+      "pmalariae_thin_smear"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "pvivax_thin_smear",
+    "species_id": "plasmodium_vivax",
+    "specimen_type": "혈액도말",
+    "stage": "ring / trophozoite / schizont / gametocyte",
+    "label_ko": "삼일열원충 얇은 도말",
+    "label_en": "Plasmodium vivax, thin smear",
+    "stain": "Giemsa",
+    "magnification": "1000x",
+    "key_features": [
+      "감염된 RBC가 커지고 옅어짐",
+      "multiple ring 없음, ring이 RBC 지름의 1/3",
+      "아메바 모양으로 변하는 amoeboid trophozoite",
+      "merozoite 16개 이하",
+      "gametocyte는 세포질이 꽉 참"
+    ],
+    "structures": [
+      "ring form",
+      "trophozoite",
+      "schizont",
+      "gametocyte",
+      "Schuffner dot"
+    ],
+    "confusable_with": [
+      "pfalciparum_thin_smear",
+      "povale_thin_smear"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "povale_thin_smear",
+    "species_id": "plasmodium_ovale",
+    "specimen_type": "혈액도말",
+    "stage": "trophozoite / schizont",
+    "label_ko": "난형열원충 얇은 도말",
+    "label_en": "Plasmodium ovale, thin smear",
+    "stain": "Giemsa",
+    "magnification": "1000x",
+    "key_features": [
+      "RBC가 커지고 타원형(oval)이 됨",
+      "RBC 가장자리가 술처럼 갈라짐 (fimbriation)",
+      "merozoite 8개 이하",
+      "dot 관찰 가능"
+    ],
+    "structures": [
+      "fimbriation",
+      "trophozoite",
+      "schizont"
+    ],
+    "confusable_with": [
+      "pvivax_thin_smear"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "pmalariae_thin_smear",
+    "species_id": "plasmodium_malariae",
+    "specimen_type": "혈액도말",
+    "stage": "band form / schizont",
+    "label_ko": "사일열원충 얇은 도말",
+    "label_en": "Plasmodium malariae, thin smear",
+    "stain": "Giemsa",
+    "magnification": "1000x",
+    "key_features": [
+      "RBC 크기 변화 없음",
+      "ring이 아닌 띠 모양 band form trophozoite",
+      "daisy flower(국화) 모양 schizont",
+      "세포질에 dot 없음"
+    ],
+    "structures": [
+      "band form",
+      "schizont"
+    ],
+    "confusable_with": [
+      "pfalciparum_thin_smear",
+      "pvivax_thin_smear"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "pfalciparum_thick_smear",
+    "species_id": "plasmodium_falciparum",
+    "specimen_type": "혈액도말",
+    "stage": "mixed",
+    "label_ko": "열대열원충 두꺼운 도말",
+    "label_en": "Plasmodium falciparum, thick smear",
+    "stain": "Giemsa",
+    "magnification": "1000x",
+    "key_features": [
+      "적혈구가 용혈되어 원충만 남음",
+      "선별검사용 — 민감도가 높지만 종 감별은 어려움"
+    ],
+    "structures": [
+      "ring form",
+      "gametocyte"
+    ],
+    "confusable_with": [
+      "pfalciparum_thin_smear"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "malaria_spleen_section",
+    "species_id": "plasmodium_falciparum",
+    "specimen_type": "조직",
+    "stage": "hemosiderosis",
+    "label_ko": "말라리아 비장 조직절편",
+    "label_en": "Malaria, spleen section",
+    "stain": "H&E",
+    "magnification": "100-400x",
+    "key_features": [
+      "감염 RBC는 제거되지만 hemosiderin이 침착",
+      "갈색 과립 (hemosiderosis)"
+    ],
+    "structures": [
+      "hemosiderin"
+    ],
+    "confusable_with": [],
+    "sources": [
+      "전민서",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "malaria_brain_section",
+    "species_id": "plasmodium_falciparum",
+    "specimen_type": "조직",
+    "stage": "cerebral malaria",
+    "label_ko": "뇌말라리아 조직절편",
+    "label_en": "Cerebral malaria, brain section",
+    "stain": "H&E",
+    "magnification": "100-400x",
+    "key_features": [
+      "뇌 모세혈관이 감염 적혈구로 막혀 확장됨",
+      "육안으로는 출혈성 반점"
+    ],
+    "structures": [
+      "capillary"
+    ],
+    "confusable_with": [
+      "toxoplasma_brain_section"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "pvivax_thick_smear",
+    "species_id": "plasmodium_vivax",
+    "specimen_type": "혈액도말",
+    "stage": "mixed",
+    "label_ko": "삼일열원충 두꺼운 도말",
+    "label_en": "Plasmodium vivax, thick smear",
+    "stain": "Giemsa",
+    "magnification": "1000x",
+    "key_features": [
+      "적혈구가 용혈되어 원충만 남음",
+      "ring form과 schizont가 함께 보임"
+    ],
+    "structures": [
+      "ring form",
+      "schizont"
+    ],
+    "confusable_with": [
+      "pfalciparum_thick_smear",
+      "pvivax_thin_smear"
+    ],
+    "sources": [
+      "전민서",
+      "실제실습본"
+    ],
+    "_file": "03_protozoa_malaria.json"
+  },
+  {
+    "id": "ascaris_gross",
+    "species_id": "ascaris_lumbricoides",
+    "specimen_type": "gross",
+    "stage": "adult",
+    "label_ko": "회충 성충 (육안)",
+    "label_en": "Ascaris lumbricoides, gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "통통하고 길다 (20-35cm) — 인체 기생 선충 중 독보적으로 큼",
+      "유백색·분홍빛",
+      "암컷이 수컷보다 크고 꼬리가 곧음"
+    ],
+    "structures": [],
+    "confusable_with": [
+      "anisakis_gross"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실습.pdf"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "enterobius_gross",
+    "species_id": "enterobius_vermicularis",
+    "specimen_type": "gross",
+    "stage": "adult",
+    "label_ko": "요충 성충 (육안)",
+    "label_en": "Enterobius vermicularis, gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "1cm 정도로 짧고 유백색 (pin worm)",
+      "머리가 길지 않음"
+    ],
+    "structures": [],
+    "confusable_with": [
+      "trichuris_gross"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실습.pdf"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "trichuris_gross",
+    "species_id": "trichuris_trichiura",
+    "specimen_type": "gross",
+    "stage": "adult",
+    "label_ko": "편충 성충 (육안)",
+    "label_en": "Trichuris trichiura, gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "1-2cm, 채찍 모양",
+      "앞쪽이 실처럼 가늘고 뒤쪽이 굵음"
+    ],
+    "structures": [],
+    "confusable_with": [
+      "enterobius_gross"
+    ],
+    "sources": [
+      "통합xlsx"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "anisakis_gross",
+    "species_id": "anisakis_simplex",
+    "specimen_type": "gross",
+    "stage": "L3 larva",
+    "label_ko": "고래회충 유충 (육안)",
+    "label_en": "Anisakis simplex, gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "약 2cm, 유백색의 실 모양",
+      "생선 내장·근육에 나선형으로 말려 있음"
+    ],
+    "structures": [],
+    "confusable_with": [
+      "ascaris_gross"
+    ],
+    "sources": [
+      "통합xlsx"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "clonorchis_gross",
+    "species_id": "clonorchis_sinensis",
+    "specimen_type": "gross",
+    "stage": "adult",
+    "label_ko": "간흡충 성충 (육안)",
+    "label_en": "Clonorchis sinensis, gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "바질시드 모양의 작고 납작한 나뭇잎형",
+      "10-25mm"
+    ],
+    "structures": [],
+    "confusable_with": [
+      "fasciola_gross"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실습.pdf"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "fasciola_gross",
+    "species_id": "fasciola_hepatica",
+    "specimen_type": "gross",
+    "stage": "adult",
+    "label_ko": "간질 성충 (육안)",
+    "label_en": "Fasciola hepatica, gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "약 3cm의 큰 나뭇잎 모양",
+      "머리쪽 원뿔형 돌출 (conical projection)"
+    ],
+    "structures": [
+      "conical projection"
+    ],
+    "confusable_with": [
+      "clonorchis_gross"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실습.pdf"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "diphyllobothrium_gross",
+    "species_id": "diphyllobothrium_latum",
+    "specimen_type": "gross",
+    "stage": "adult strobila",
+    "label_ko": "광절열두조충 (육안)",
+    "label_en": "Diphyllobothrium latum, gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "중국당면처럼 폭이 넓고 모서리가 매끈함",
+      "각 편절이 좌우로 긴 사각형",
+      "가운데에 노란 띠(자궁)가 보임"
+    ],
+    "structures": [],
+    "confusable_with": [
+      "taenia_gross",
+      "sparganum_gross"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "taenia_gross",
+    "species_id": "taenia_saginata",
+    "specimen_type": "gross",
+    "stage": "adult strobila",
+    "label_ko": "유무구조충 (육안)",
+    "label_en": "Taenia spp., gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "칼국수면처럼 세로가 더 길고 모서리가 울퉁불퉁",
+      "gravid 편절이 위아래로 김"
+    ],
+    "structures": [],
+    "confusable_with": [
+      "diphyllobothrium_gross"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "answer_label": "Taenia spp.",
+    "exclude_distractors": [
+      "taenia_solium",
+      "taenia_asiatica"
+    ],
+    "note": "육안으로는 유구·무구조충을 구별할 수 없다. 광절열두조충(중국당면)과의 감별이 출제 포인트",
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "sparganum_gross",
+    "species_id": "spirometra_erinacei",
+    "specimen_type": "gross",
+    "stage": "plerocercoid",
+    "label_ko": "고충 (육안)",
+    "label_en": "Sparganum, gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "하얀 고무줄처럼 쭈굴쭈굴하고 길다",
+      "편절 구분이 없음"
+    ],
+    "structures": [],
+    "confusable_with": [
+      "diphyllobothrium_gross",
+      "cysticercus_gross"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "cysticercus_gross",
+    "species_id": "cysticercus_cellulosae",
+    "specimen_type": "gross",
+    "stage": "cysticercus",
+    "label_ko": "유구낭미충 (육안)",
+    "label_en": "Cysticercus cellulosae, gross",
+    "stain": null,
+    "magnification": "육안",
+    "key_features": [
+      "쌀알 크기의 투명한 cyst",
+      "cyst 안에 하얀 점처럼 scolex가 보임"
+    ],
+    "structures": [
+      "scolex"
+    ],
+    "confusable_with": [
+      "sparganum_gross"
+    ],
+    "sources": [
+      "통합xlsx",
+      "실제실습본",
+      "실습.pdf"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "sarcoptes_wholemount",
+    "species_id": "sarcoptes_scabiei",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "옴진드기",
+    "label_en": "Sarcoptes scabiei",
+    "stain": null,
+    "magnification": "100-400x",
+    "key_features": [
+      "거북이 모양의 둥근 몸통",
+      "다리 4쌍이 모두 몸 앞쪽에 몰려 있음",
+      "뒷다리는 짧아 몸 밖으로 잘 나오지 않음"
+    ],
+    "structures": [
+      "leg"
+    ],
+    "confusable_with": [
+      "dermatophagoides_wholemount"
+    ],
+    "sources": [
+      "전민서",
+      "실습.pdf"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "sarcoptes_skin_section",
+    "species_id": "sarcoptes_scabiei",
+    "specimen_type": "조직",
+    "stage": "adult in burrow",
+    "label_ko": "옴진드기 피부 조직절편",
+    "label_en": "Sarcoptes scabiei in skin section",
+    "stain": "H&E",
+    "magnification": "100x",
+    "key_features": [
+      "각질층 안의 굴(burrow) 속 충체",
+      "등쪽에 뾰족한 dorsal spine"
+    ],
+    "structures": [
+      "dorsal spine",
+      "burrow"
+    ],
+    "confusable_with": [],
+    "sources": [
+      "전민서",
+      "실습.pdf"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "dermatophagoides_wholemount",
+    "species_id": "dermatophagoides_pteronyssinus",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "세로무늬먼지진드기",
+    "label_en": "Dermatophagoides pteronyssinus",
+    "stain": null,
+    "magnification": "100-400x",
+    "key_features": [
+      "앞쪽 다리 4개 + 옆으로 뻗은 다리 2개",
+      "몸에 세로무늬",
+      "옴진드기보다 다리가 길고 뚜렷"
+    ],
+    "structures": [
+      "leg"
+    ],
+    "confusable_with": [
+      "sarcoptes_wholemount"
+    ],
+    "sources": [
+      "전민서",
+      "실습.pdf"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "pediculus_wholemount",
+    "species_id": "pediculus_humanus",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "이 (머릿니·몸니)",
+    "label_en": "Pediculus humanus",
+    "stain": null,
+    "magnification": "40-100x",
+    "key_features": [
+      "마름모꼴의 길쭉한 몸통",
+      "다리 3쌍에 갈고리 모양 발톱",
+      "암컷은 꽁무니에 집게 모양 구조"
+    ],
+    "structures": [
+      "claw"
+    ],
+    "confusable_with": [
+      "pthirus_wholemount"
+    ],
+    "sources": [
+      "전민서",
+      "실습.pdf"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "pthirus_wholemount",
+    "species_id": "pthirus_pubis",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "사면발이",
+    "label_en": "Pthirus pubis",
+    "stain": null,
+    "magnification": "40-100x",
+    "key_features": [
+      "사다리꼴(게 모양)의 짧고 넓은 몸통",
+      "굵은 앞다리 집게"
+    ],
+    "structures": [
+      "claw"
+    ],
+    "confusable_with": [
+      "pediculus_wholemount"
+    ],
+    "sources": [
+      "전민서",
+      "실습.pdf"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "haemaphysalis_gross",
+    "species_id": "haemaphysalis_longicornis",
+    "specimen_type": "gross",
+    "stage": "adult",
+    "label_ko": "작은소피참진드기",
+    "label_en": "Haemaphysalis longicornis",
+    "stain": null,
+    "magnification": "육안-40x",
+    "key_features": [
+      "단단한 등판(scutum)을 가진 참진드기",
+      "흡혈 후 몸이 콩알처럼 부풀어 오름",
+      "피부에 구기를 박고 수 일간 부착"
+    ],
+    "structures": [
+      "scutum",
+      "capitulum"
+    ],
+    "confusable_with": [
+      "leptotrombidium_wholemount"
+    ],
+    "sources": [
+      "전민서"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "leptotrombidium_wholemount",
+    "species_id": "leptotrombidium_spp",
+    "specimen_type": "충체",
+    "stage": "larva (chigger)",
+    "label_ko": "털진드기 유충",
+    "label_en": "Leptotrombidium spp., larva",
+    "stain": null,
+    "magnification": "100-400x",
+    "key_features": [
+      "몸 전체에 털이 나 있는 주황색 유충",
+      "다리 3쌍 (유충기)",
+      "매우 작음 (0.2mm)"
+    ],
+    "structures": [
+      "stylostome"
+    ],
+    "confusable_with": [
+      "haemaphysalis_gross"
+    ],
+    "sources": [
+      "전민서",
+      "실습.pdf"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "mosquito_wholemount",
+    "species_id": "anopheles_sinensis",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "얼룩날개모기",
+    "label_en": "Anopheles spp., adult",
+    "stain": null,
+    "magnification": "육안-40x",
+    "key_features": [
+      "날개에 얼룩무늬",
+      "앉을 때 몸을 45도로 들어 올림 (엉덩이를 듦)",
+      "촉수가 주둥이만큼 김"
+    ],
+    "structures": [
+      "palpus",
+      "proboscis",
+      "wing"
+    ],
+    "confusable_with": [
+      "culex_wholemount",
+      "aedes_wholemount"
+    ],
+    "sources": [
+      "전민서"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "culex_wholemount",
+    "species_id": "culex_tritaeniorhynchus",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "집모기",
+    "label_en": "Culex spp., adult",
+    "stain": null,
+    "magnification": "육안-40x",
+    "key_features": [
+      "날개에 무늬 없음",
+      "앉을 때 몸이 지면과 평행",
+      "촉수가 짧음"
+    ],
+    "structures": [
+      "palpus",
+      "proboscis",
+      "wing"
+    ],
+    "confusable_with": [
+      "mosquito_wholemount",
+      "aedes_wholemount"
+    ],
+    "sources": [
+      "전민서"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "aedes_wholemount",
+    "species_id": "aedes_spp",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "숲모기",
+    "label_en": "Aedes spp., adult",
+    "stain": null,
+    "magnification": "육안-40x",
+    "key_features": [
+      "다리와 몸에 흰 줄무늬",
+      "주로 낮에 활동"
+    ],
+    "structures": [
+      "leg",
+      "wing"
+    ],
+    "confusable_with": [
+      "culex_wholemount",
+      "mosquito_wholemount"
+    ],
+    "sources": [
+      "전민서"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "cimex_wholemount",
+    "species_id": "cimex_lectularius",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "빈대",
+    "label_en": "Cimex lectularius",
+    "stain": null,
+    "magnification": "40x",
+    "key_features": [
+      "위아래로 납작한 갈색 타원형 몸통",
+      "날개가 퇴화되어 흔적만 남음",
+      "짧은 더듬이"
+    ],
+    "structures": [
+      "proboscis"
+    ],
+    "confusable_with": [
+      "triatoma_wholemount"
+    ],
+    "note": "질병을 매개하지 않는다는 점이 출제 포인트",
+    "sources": [
+      "전민서"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  },
+  {
+    "id": "triatoma_wholemount",
+    "species_id": "triatoma_spp",
+    "specimen_type": "충체",
+    "stage": "adult",
+    "label_ko": "흡혈성 침노린재",
+    "label_en": "Triatomine bug (Triatoma spp.)",
+    "stain": null,
+    "magnification": "육안-40x",
+    "key_features": [
+      "빈대보다 크고 길쭉함 (1-3cm)",
+      "뾰족하고 긴 주둥이",
+      "배 가장자리에 줄무늬"
+    ],
+    "structures": [
+      "proboscis"
+    ],
+    "confusable_with": [
+      "cimex_wholemount"
+    ],
+    "note": "빈대와 감별 — 침노린재는 샤가스병을 매개",
+    "sources": [
+      "전민서"
+    ],
+    "_file": "04_gross_arthropoda.json"
+  }
+]

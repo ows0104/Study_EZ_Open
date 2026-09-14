@@ -1,0 +1,22 @@
+# 생성물. scripts/build_web.py 가 만들고 scripts/upload_web.py 가 R2로 올린다.
+# **배포되지 않는다** — 배포되는 것은 web/ 의 정적 파일 넷뿐이다.
+build/
+
+# 원본 사진 605MB. 리사이즈본만 build/images/ 로 나간다.
+images/
+
+# 원본 자료 2.9GB. **여기 있는 것은 남의 것이다.**
+#
+# 실제실습본 PDF는 표지에 반출금지가 적혀 있고(911MB), 정리본 넷과
+# 실습사진통합(71MB)도 만든 사람이 따로 있다. 저장소에 들어가면 지우기가
+# 어렵고, 한 번 올라가면 되돌릴 수 없다. 스크립트는 이 폴더를 읽기만 하고,
+# 여기서 뽑은 것은 images/ 와 data/*_manifest.json 으로 나간다.
+기생충학/
+
+__pycache__/
+*.pyc
+
+# 검수 실행물. scripts/screen_questions.py 가 돌 때마다 쌓인다.
+data/screen_results.jsonl
+data/screen_flagged.csv
+data/identification_pairs.new.csv

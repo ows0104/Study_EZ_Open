@@ -1,0 +1,65 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "_note": "저장소 루트를 연다. 앱은 /web/ 이고, 로그인 없이 볼 때 읽는 문항 DB와 사진은 /build/ 라서 둘 다 보이는 자리에서 띄워야 한다.",
+      "name": "spotter-web",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": [
+        "run",
+        "--python",
+        "3.13",
+        "python",
+        "-m",
+        "http.server",
+        "8811"
+      ],
+      "port": 8811
+    },
+    {
+      "_note": "8811이 다른 세션에 물려 있을 때 쓰는 두 번째 자리. 여는 곳은 같다 — 저장소 루트.",
+      "name": "spotter-web-8812",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": [
+        "run",
+        "--python",
+        "3.13",
+        "python",
+        "-m",
+        "http.server",
+        "8812"
+      ],
+      "port": 8812
+    },
+    {
+      "_note": "앞의 셋이 다 물려 있을 때 쓰는 네 번째 자리. 여는 곳은 같다 — 저장소 루트.",
+      "name": "spotter-web-8814",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": [
+        "run",
+        "--python",
+        "3.13",
+        "python",
+        "-m",
+        "http.server",
+        "8814"
+      ],
+      "port": 8814
+    },
+    {
+      "_note": "8811·8812가 다 물려 있을 때 쓰는 세 번째 자리. 여는 곳은 같다 — 저장소 루트.",
+      "name": "spotter-web-8813",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": [
+        "run",
+        "--python",
+        "3.13",
+        "python",
+        "-m",
+        "http.server",
+        "8813"
+      ],
+      "port": 8813
+    }
+  ]
+}

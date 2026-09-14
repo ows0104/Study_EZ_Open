@@ -1,0 +1,485 @@
+﻿path,source,sheet,row,name_ko,name_sub,name_en,stage,species_id,specimen_id(추정),사유
+jms_cestoda/조충_Cestodes/003_M3.png,jms_cestoda,조충(Cestodes),3,광절열두조충,,Diphyllobothrium latum,AC stain,diphyllobothrium_latum,,모식도·생활사 그림 (표본 사진 아님)
+jms_cestoda/조충_Cestodes/010_M10.png,jms_cestoda,조충(Cestodes),10,유구낭미충,,metacestode of Taneia solium,section AC stain,cysticercus_cellulosae,,모식도·생활사 그림 (표본 사진 아님)
+jms_cestoda/조충_Cestodes/011_K11.png,jms_cestoda,조충(Cestodes),11,단방조충,,Enchinococcus granulosus,unstained,echinococcus_granulosus,,모식도·생활사 그림 (표본 사진 아님)
+jms_protozoa/원충_Protozoa/014_L14.png,jms_protozoa,원충(Protozoa),14,크루스파동편모충,,Trypanosoma cruzi,trypomastigote & heart section,trypanosoma_cruzi,,모식도·생활사 그림 (표본 사진 아님)
+jms_arthropoda/의용곤충_Anthropods/003_L3.png,jms_arthropoda,의용곤충(Anthropods),3,진드기,옴진드기,Sarcoptes scabiei,,sarcoptes_scabiei,,모식도·생활사 그림 (표본 사진 아님)
+practical/003_1.png,practical,실제실습본,3,"Ascaris lumbricoides (fertilized) [회충, 수정란] 2",,Ascaris lumbricoides,불수정란에 더 가까울거같다,ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/003_2.png,practical,실제실습본,3,"Ascaris lumbricoides (fertilized) [회충, 수정란] 2",,Ascaris lumbricoides,,ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/004_1.png,practical,실제실습본,4,"Ascaris lumbricoides (fertilized) [회충, 수정란] 2",,Ascaris lumbricoides,,ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/004_2.png,practical,실제실습본,4,"Ascaris lumbricoides (fertilized) [회충, 수정란] 2",,Ascaris lumbricoides,,ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/005_1.png,practical,실제실습본,5,"Ascaris lumbricoides (unfertilized) [회충, 불수정란] 4",,Ascaris lumbricoides,,ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/005_2.png,practical,실제실습본,5,"Ascaris lumbricoides (unfertilized) [회충, 불수정란] 4",,Ascaris lumbricoides,,ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/006_1.png,practical,실제실습본,6,"Ascaris lumbricoides (unfertilized) [회충, 불수정란] 4",,Ascaris lumbricoides,cf. 수정란 vs 불수정란,ascaris_lumbricoides,,선화로 판정 (흰 배경 + 무채색)
+practical/006_2.png,practical,실제실습본,6,"Ascaris lumbricoides (unfertilized) [회충, 불수정란] 4",,Ascaris lumbricoides,,ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/006_3.png,practical,실제실습본,6,"Ascaris lumbricoides (unfertilized) [회충, 불수정란] 4",,Ascaris lumbricoides,,ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/007_1.png,practical,실제실습본,7,"Ascaris lumbricoides (unfertilized) [회충, 불수정란] 4",,Ascaris lumbricoides,,ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/007_2.png,practical,실제실습본,7,"Ascaris lumbricoides (unfertilized) [회충, 불수정란] 4",,Ascaris lumbricoides,,ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/007_3.png,practical,실제실습본,7,"Ascaris lumbricoides (unfertilized) [회충, 불수정란] 4",,Ascaris lumbricoides,,ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/008_1.png,practical,실제실습본,8,Trichuris trichiura [편충] 5,,Trichuris trichiura,,trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/008_2.png,practical,실제실습본,8,Trichuris trichiura [편충] 5,,Trichuris trichiura,,trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/008_3.png,practical,실제실습본,8,Trichuris trichiura [편충] 5,,Trichuris trichiura,,trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/009_1.png,practical,실제실습본,9,Trichuris trichiura [편충] 5,,Trichuris trichiura,,trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/009_2.png,practical,실제실습본,9,Trichuris trichiura [편충] 5,,Trichuris trichiura,,trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/010_1.png,practical,실제실습본,10,Trichuris trichiura [편충] 5,,Trichuris trichiura,,trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/010_2.png,practical,실제실습본,10,Trichuris trichiura [편충] 5,,Trichuris trichiura,,trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/011_1.png,practical,실제실습본,11,Hookworm [구충] 1,,,,ancylostoma_duodenale,,실제실습본에서는 말라리아만 쓴다
+practical/011_2.png,practical,실제실습본,11,Hookworm [구충] 1,,,,ancylostoma_duodenale,,실제실습본에서는 말라리아만 쓴다
+practical/012_1.png,practical,실제실습본,12,Hookworm [구충] 1,,,,ancylostoma_duodenale,,실제실습본에서는 말라리아만 쓴다
+practical/012_2.png,practical,실제실습본,12,Hookworm [구충] 1,,,,ancylostoma_duodenale,,실제실습본에서는 말라리아만 쓴다
+practical/013_1.png,practical,실제실습본,13,Enterobius vermicularis [요충] 3,,Enterobius vermicularis,- 60um 그룹,enterobius_vermicularis,,실제실습본에서는 말라리아만 쓴다
+practical/013_2.png,practical,실제실습본,13,Enterobius vermicularis [요충] 3,,Enterobius vermicularis,,enterobius_vermicularis,,실제실습본에서는 말라리아만 쓴다
+practical/014_1.png,practical,실제실습본,14,Enterobius vermicularis [요충] 3,,Enterobius vermicularis,,enterobius_vermicularis,,실제실습본에서는 말라리아만 쓴다
+practical/014_2.png,practical,실제실습본,14,Enterobius vermicularis [요충] 3,,Enterobius vermicularis,,enterobius_vermicularis,,실제실습본에서는 말라리아만 쓴다
+practical/015_1.png,practical,실제실습본,15,Enterobius vermicularis [요충] 3,,Enterobius vermicularis,,enterobius_vermicularis,,실제실습본에서는 말라리아만 쓴다
+practical/016_1.png,practical,실제실습본,16,Clonorchis sinensis [간흡충] 2,,Clonorchis sinensis,,clonorchis_sinensis,,실제실습본에서는 말라리아만 쓴다
+practical/016_2.png,practical,실제실습본,16,Clonorchis sinensis [간흡충] 2,,Clonorchis sinensis,,clonorchis_sinensis,,실제실습본에서는 말라리아만 쓴다
+practical/017_1.png,practical,실제실습본,17,Clonorchis sinensis [간흡충] 2,,Clonorchis sinensis,,clonorchis_sinensis,,실제실습본에서는 말라리아만 쓴다
+practical/017_2.png,practical,실제실습본,17,Clonorchis sinensis [간흡충] 2,,Clonorchis sinensis,,clonorchis_sinensis,,실제실습본에서는 말라리아만 쓴다
+practical/018_1.png,practical,실제실습본,18,Metagonimus yokogawai [요코가와흡충] 2,,Metagonimus yokogawai,- operculum 존재,metagonimus_yokogawai,,실제실습본에서는 말라리아만 쓴다
+practical/018_2.png,practical,실제실습본,18,Metagonimus yokogawai [요코가와흡충] 2,,Metagonimus yokogawai,,metagonimus_yokogawai,,실제실습본에서는 말라리아만 쓴다
+practical/019_1.png,practical,실제실습본,19,Metagonimus yokogawai [요코가와흡충] 2,,Metagonimus yokogawai,,metagonimus_yokogawai,,실제실습본에서는 말라리아만 쓴다
+practical/019_2.png,practical,실제실습본,19,Metagonimus yokogawai [요코가와흡충] 2,,Metagonimus yokogawai,,metagonimus_yokogawai,,실제실습본에서는 말라리아만 쓴다
+practical/020_1.png,practical,실제실습본,20,Paragonimus westermani [폐흡충] 2,,Paragonimus westermani,"- 80-100µm로, 90um그룹",paragonimus_westermani,,실제실습본에서는 말라리아만 쓴다
+practical/020_2.png,practical,실제실습본,20,Paragonimus westermani [폐흡충] 2,,Paragonimus westermani,,paragonimus_westermani,,실제실습본에서는 말라리아만 쓴다
+practical/021_1.png,practical,실제실습본,21,Paragonimus westermani [폐흡충] 2,,Paragonimus westermani,,paragonimus_westermani,,실제실습본에서는 말라리아만 쓴다
+practical/021_2.png,practical,실제실습본,21,Paragonimus westermani [폐흡충] 2,,Paragonimus westermani,,paragonimus_westermani,,실제실습본에서는 말라리아만 쓴다
+practical/022_1.png,practical,실제실습본,22,Taenia sp. [유무구조충] 3,,,,taenia_solium,,실제실습본에서는 말라리아만 쓴다
+practical/022_2.png,practical,실제실습본,22,Taenia sp. [유무구조충] 3,,,,taenia_solium,,실제실습본에서는 말라리아만 쓴다
+practical/023_1.png,practical,실제실습본,23,Taenia sp. [유무구조충] 3,,,,taenia_solium,,실제실습본에서는 말라리아만 쓴다
+practical/023_2.png,practical,실제실습본,23,Taenia sp. [유무구조충] 3,,,,taenia_solium,,실제실습본에서는 말라리아만 쓴다
+practical/023_3.png,practical,실제실습본,23,Taenia sp. [유무구조충] 3,,,,taenia_solium,,실제실습본에서는 말라리아만 쓴다
+practical/023_4.png,practical,실제실습본,23,Taenia sp. [유무구조충] 3,,,,taenia_solium,,실제실습본에서는 말라리아만 쓴다
+practical/024_1.png,practical,실제실습본,24,Diphyllobothrium latum [광절열두조충] 4,,Diphyllobothrium latum,,diphyllobothrium_latum,,실제실습본에서는 말라리아만 쓴다
+practical/024_2.png,practical,실제실습본,24,Diphyllobothrium latum [광절열두조충] 4,,Diphyllobothrium latum,,diphyllobothrium_latum,,실제실습본에서는 말라리아만 쓴다
+practical/025_1.png,practical,실제실습본,25,Diphyllobothrium latum [광절열두조충] 4,,Diphyllobothrium latum,,diphyllobothrium_latum,,실제실습본에서는 말라리아만 쓴다
+practical/025_2.png,practical,실제실습본,25,Diphyllobothrium latum [광절열두조충] 4,,Diphyllobothrium latum,,diphyllobothrium_latum,,실제실습본에서는 말라리아만 쓴다
+practical/026_1.png,practical,실제실습본,26,Diphyllobothrium latum [광절열두조충] 4,,Diphyllobothrium latum,,diphyllobothrium_latum,,실제실습본에서는 말라리아만 쓴다
+practical/026_2.png,practical,실제실습본,26,Diphyllobothrium latum [광절열두조충] 4,,Diphyllobothrium latum,,diphyllobothrium_latum,,실제실습본에서는 말라리아만 쓴다
+practical/026_3.png,practical,실제실습본,26,Diphyllobothrium latum [광절열두조충] 4,,Diphyllobothrium latum,,diphyllobothrium_latum,,실제실습본에서는 말라리아만 쓴다
+practical/026_4.png,practical,실제실습본,26,Diphyllobothrium latum [광절열두조충] 4,,Diphyllobothrium latum,,diphyllobothrium_latum,,실제실습본에서는 말라리아만 쓴다
+practical/027_1.png,practical,실제실습본,27,Schistosoma haematobium [방광주혈흡충] 3,,Schistosoma haematobium,,schistosoma_haematobium,,실제실습본에서는 말라리아만 쓴다
+practical/027_2.png,practical,실제실습본,27,Schistosoma haematobium [방광주혈흡충] 3,,Schistosoma haematobium,,schistosoma_haematobium,,실제실습본에서는 말라리아만 쓴다
+practical/028_1.png,practical,실제실습본,28,Schistosoma haematobium [방광주혈흡충] 3,,Schistosoma haematobium,,schistosoma_haematobium,,실제실습본에서는 말라리아만 쓴다
+practical/028_2.png,practical,실제실습본,28,Schistosoma haematobium [방광주혈흡충] 3,,Schistosoma haematobium,,schistosoma_haematobium,,실제실습본에서는 말라리아만 쓴다
+practical/028_3.png,practical,실제실습본,28,Schistosoma haematobium [방광주혈흡충] 3,,Schistosoma haematobium,,schistosoma_haematobium,,실제실습본에서는 말라리아만 쓴다
+practical/029_1.png,practical,실제실습본,29,Schistosoma mansoni [만손주혈흡충] 3,,Schistosoma mansoni,,schistosoma_mansoni,,실제실습본에서는 말라리아만 쓴다
+practical/029_2.png,practical,실제실습본,29,Schistosoma mansoni [만손주혈흡충] 3,,Schistosoma mansoni,,schistosoma_mansoni,,실제실습본에서는 말라리아만 쓴다
+practical/030_1.png,practical,실제실습본,30,Schistosoma mansoni [만손주혈흡충] 3,,Schistosoma mansoni,,schistosoma_mansoni,,실제실습본에서는 말라리아만 쓴다
+practical/030_2.png,practical,실제실습본,30,Schistosoma mansoni [만손주혈흡충] 3,,Schistosoma mansoni,,schistosoma_mansoni,,실제실습본에서는 말라리아만 쓴다
+practical/030_3.png,practical,실제실습본,30,Schistosoma mansoni [만손주혈흡충] 3,,Schistosoma mansoni,,schistosoma_mansoni,,실제실습본에서는 말라리아만 쓴다
+practical/031_1.png,practical,실제실습본,31,Schistosoma japonicum [일본주혈흡충] 3,,Schistosoma japonicum,- 사이즈가 만손주혈흡충보다 좀 더 작음,schistosoma_japonicum,,실제실습본에서는 말라리아만 쓴다
+practical/031_2.png,practical,실제실습본,31,Schistosoma japonicum [일본주혈흡충] 3,,Schistosoma japonicum,,schistosoma_japonicum,,실제실습본에서는 말라리아만 쓴다
+practical/031_3.png,practical,실제실습본,31,Schistosoma japonicum [일본주혈흡충] 3,,Schistosoma japonicum,,schistosoma_japonicum,,실제실습본에서는 말라리아만 쓴다
+practical/031_4.png,practical,실제실습본,31,Schistosoma japonicum [일본주혈흡충] 3,,Schistosoma japonicum,,schistosoma_japonicum,,실제실습본에서는 말라리아만 쓴다
+practical/033_1.png,practical,실제실습본,33,Trichuris trichiura 편충,,Trichuris trichiura,"female, 4x / male, 40x",trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/033_2.png,practical,실제실습본,33,Trichuris trichiura 편충,,Trichuris trichiura,"female, 40x / male",trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/033_3.png,practical,실제실습본,33,Trichuris trichiura 편충,,Trichuris trichiura,"female, 100x",trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/033_4.png,practical,실제실습본,33,Trichuris trichiura 편충,,Trichuris trichiura,"male, 40x",trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/033_5.png,practical,실제실습본,33,Trichuris trichiura 편충,,Trichuris trichiura,"male, 40x",trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/033_6.png,practical,실제실습본,33,Trichuris trichiura 편충,,Trichuris trichiura,male,trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/034_1.png,practical,실제실습본,34,Trichuris trichiura 편충,,Trichuris trichiura,,trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/034_2.png,practical,실제실습본,34,Trichuris trichiura 편충,,Trichuris trichiura,"female, 100x / (in human appendix)",trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/034_3.png,practical,실제실습본,34,Trichuris trichiura 편충,,Trichuris trichiura,"female, 100x / (in human appendix)",trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/035_1.png,practical,실제실습본,35,Trichuris trichiura 편충,,Trichuris trichiura,"female, 4x / (in human appendix) / 꼬여있는 편충이 잘린 4개의 단면",trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/035_2.png,practical,실제실습본,35,Trichuris trichiura 편충,,Trichuris trichiura,"female, 4x / (in human appendix) / 꼬여있는 편충이 잘린 4개의 단면",trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/035_3.png,practical,실제실습본,35,Trichuris trichiura 편충,,Trichuris trichiura,"female, 400x / (in human appendix)",trichuris_trichiura,,실제실습본에서는 말라리아만 쓴다
+practical/037_1.png,practical,실제실습본,37,Strongyloides stercoralis 분선충,,Strongyloides stercoralis,filariform 400x,strongyloides_stercoralis,,실제실습본에서는 말라리아만 쓴다
+practical/037_2.png,practical,실제실습본,37,Strongyloides stercoralis 분선충,,Strongyloides stercoralis,filariform 100x,strongyloides_stercoralis,,실제실습본에서는 말라리아만 쓴다
+practical/037_3.png,practical,실제실습본,37,Strongyloides stercoralis 분선충,,Strongyloides stercoralis,filariform 400x,strongyloides_stercoralis,,실제실습본에서는 말라리아만 쓴다
+practical/038_1.png,practical,실제실습본,38,Ancylostoma duodenale 두비니구충,,Ancylostoma duodenale,"male, 20x / male, 100x / costa",ancylostoma_duodenale,,실제실습본에서는 말라리아만 쓴다
+practical/038_2.png,practical,실제실습본,38,Ancylostoma duodenale 두비니구충,,Ancylostoma duodenale,"male, 40x / male, 400x / dorsal costa",ancylostoma_duodenale,,실제실습본에서는 말라리아만 쓴다
+practical/038_3.png,practical,실제실습본,38,Ancylostoma duodenale 두비니구충,,Ancylostoma duodenale,,ancylostoma_duodenale,,실제실습본에서는 말라리아만 쓴다
+practical/038_4.png,practical,실제실습본,38,Ancylostoma duodenale 두비니구충,,Ancylostoma duodenale,"male, 100x / costa",ancylostoma_duodenale,,실제실습본에서는 말라리아만 쓴다
+practical/038_5.png,practical,실제실습본,38,Ancylostoma duodenale 두비니구충,,Ancylostoma duodenale,"male, 400x / dorsal costa",ancylostoma_duodenale,,실제실습본에서는 말라리아만 쓴다
+practical/039_1.png,practical,실제실습본,39,Ancylostoma duodenale 두비니구충,,Ancylostoma duodenale,"dorsal costa / tooth / male, 400x / dorsal costa",ancylostoma_duodenale,,실제실습본에서는 말라리아만 쓴다
+practical/039_2.png,practical,실제실습본,39,Ancylostoma duodenale 두비니구충,,Ancylostoma duodenale,tooth,ancylostoma_duodenale,,실제실습본에서는 말라리아만 쓴다
+practical/039_3.png,practical,실제실습본,39,Ancylostoma duodenale 두비니구충,,Ancylostoma duodenale,"male, 400x / dorsal costa",ancylostoma_duodenale,,실제실습본에서는 말라리아만 쓴다
+practical/040_1.png,practical,실제실습본,40,Ancylostoma duodenale 두비니구충,,Ancylostoma duodenale,"female, 40x / tail",ancylostoma_duodenale,,실제실습본에서는 말라리아만 쓴다
+practical/040_2.png,practical,실제실습본,40,Ancylostoma duodenale 두비니구충,,Ancylostoma duodenale,"female, 400x / head",ancylostoma_duodenale,,실제실습본에서는 말라리아만 쓴다
+practical/041_1.png,practical,실제실습본,41,Necator americanus 아메리카구충,,Necator americanus,,necator_americanus,,실제실습본에서는 말라리아만 쓴다
+practical/041_2.png,practical,실제실습본,41,Necator americanus 아메리카구충,,Necator americanus,,necator_americanus,,실제실습본에서는 말라리아만 쓴다
+practical/042_1.png,practical,실제실습본,42,Ascaris lumbricoides 회충,,Ascaris lumbricoides,"tail / female, 40x / midgut level section",ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/042_2.png,practical,실제실습본,42,Ascaris lumbricoides 회충,,Ascaris lumbricoides,head,ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/042_3.png,practical,실제실습본,42,Ascaris lumbricoides 회충,,Ascaris lumbricoides,"female, 40x / midgut level section / female, 20x / midgut level section",ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/042_4.png,practical,실제실습본,42,Ascaris lumbricoides 회충,,Ascaris lumbricoides,"female, 40x / midgut level section",ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/042_5.png,practical,실제실습본,42,Ascaris lumbricoides 회충,,Ascaris lumbricoides,,ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/042_6.png,practical,실제실습본,42,Ascaris lumbricoides 회충,,Ascaris lumbricoides,"female, 40x / midgut level section",ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/043_1.png,practical,실제실습본,43,Ascaris lumbricoides 회충,,Ascaris lumbricoides,"male, 40x / hindgut level section",ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/043_2.png,practical,실제실습본,43,Ascaris lumbricoides 회충,,Ascaris lumbricoides,"male, 100x / hindgut level section / columnar epi 보임",ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/043_3.png,practical,실제실습본,43,Ascaris lumbricoides 회충,,Ascaris lumbricoides,,ascaris_lumbricoides,,실제실습본에서는 말라리아만 쓴다
+practical/045_2.png,practical,실제실습본,45,Trichinella spiralis 선모충,,Trichinella spiralis,,trichinella_spiralis,,실제실습본에서는 말라리아만 쓴다
+practical/045_3.png,practical,실제실습본,45,Trichinella spiralis 선모충,,Trichinella spiralis,,trichinella_spiralis,,실제실습본에서는 말라리아만 쓴다
+practical/046_1.png,practical,실제실습본,46,Trichinella spiralis 선모충,,Trichinella spiralis,40x / muscle section,trichinella_spiralis,,실제실습본에서는 말라리아만 쓴다
+practical/046_2.png,practical,실제실습본,46,Trichinella spiralis 선모충,,Trichinella spiralis,muscle section,trichinella_spiralis,,실제실습본에서는 말라리아만 쓴다
+practical/046_3.png,practical,실제실습본,46,Trichinella spiralis 선모충,,Trichinella spiralis,40x / muscle section,trichinella_spiralis,,실제실습본에서는 말라리아만 쓴다
+practical/046_4.png,practical,실제실습본,46,Trichinella spiralis 선모충,,Trichinella spiralis,100x / muscle section,trichinella_spiralis,,실제실습본에서는 말라리아만 쓴다
+practical/047_1.png,practical,실제실습본,47,Enterobius vermicularis 요충,,Enterobius vermicularis,female / cephalic alae / female / cephalic alae,enterobius_vermicularis,,실제실습본에서는 말라리아만 쓴다
+practical/047_2.png,practical,실제실습본,47,Enterobius vermicularis 요충,,Enterobius vermicularis,female / 뾰족 tail,enterobius_vermicularis,,실제실습본에서는 말라리아만 쓴다
+practical/047_3.png,practical,실제실습본,47,Enterobius vermicularis 요충,,Enterobius vermicularis,female / cephalic alae / (화살표 가리킨 부분의 살짝 / striated 된 부분),enterobius_vermicularis,,실제실습본에서는 말라리아만 쓴다
+practical/047_4.png,practical,실제실습본,47,Enterobius vermicularis 요충,,Enterobius vermicularis,female / cephalic alae,enterobius_vermicularis,,실제실습본에서는 말라리아만 쓴다
+practical/047_5.png,practical,실제실습본,47,Enterobius vermicularis 요충,,Enterobius vermicularis,,enterobius_vermicularis,,실제실습본에서는 말라리아만 쓴다
+practical/048_1.png,practical,실제실습본,48,Anisakis simplex 고래회충,,Anisakis simplex,400x / mucron / 40x / ventricle,anisakis_simplex,,실제실습본에서는 말라리아만 쓴다
+practical/048_2.png,practical,실제실습본,48,Anisakis simplex 고래회충,,Anisakis simplex,400x / boring tooth / 400x / boring tooth,anisakis_simplex,,표본에 정답이 적혀 있어 문제로 쓰지 않음
+practical/048_3.png,practical,실제실습본,48,Anisakis simplex 고래회충,,Anisakis simplex,400x / mucron,anisakis_simplex,,표본에 정답이 적혀 있어 문제로 쓰지 않음
+practical/048_4.png,practical,실제실습본,48,Anisakis simplex 고래회충,,Anisakis simplex,400x / boring tooth,anisakis_simplex,,실제실습본에서는 말라리아만 쓴다
+practical/049_1.png,practical,실제실습본,49,Anisakis simplex 고래회충,,Anisakis simplex,40x / larva section of rabbit stomach,anisakis_simplex,,실제실습본에서는 말라리아만 쓴다
+practical/049_2.png,practical,실제실습본,49,Anisakis simplex 고래회충,,Anisakis simplex,400x / larva section of rabbit stomach,anisakis_simplex,,실제실습본에서는 말라리아만 쓴다
+practical/050_1.png,practical,실제실습본,50,Brugia malayi 말레이사상충,,Brugia malayi,terminal nuclei,brugia_malayi,,실제실습본에서는 말라리아만 쓴다
+practical/050_2.png,practical,실제실습본,50,Brugia malayi 말레이사상충,,Brugia malayi,400x,brugia_malayi,,실제실습본에서는 말라리아만 쓴다
+practical/050_3.png,practical,실제실습본,50,Brugia malayi 말레이사상충,,Brugia malayi,400x,brugia_malayi,,실제실습본에서는 말라리아만 쓴다
+practical/050_4.png,practical,실제실습본,50,Brugia malayi 말레이사상충,,Brugia malayi,terminal nuclei,brugia_malayi,,실제실습본에서는 말라리아만 쓴다
+practical/052_1.png,practical,실제실습본,52,Schistosoma japonicum 일본주혈흡충,,Schistosoma japonicum,40x / 40x / female,schistosoma_japonicum,,실제실습본에서는 말라리아만 쓴다
+practical/052_2.png,practical,실제실습본,52,Schistosoma japonicum 일본주혈흡충,,Schistosoma japonicum,male,schistosoma_japonicum,,실제실습본에서는 말라리아만 쓴다
+practical/052_3.png,practical,실제실습본,52,Schistosoma japonicum 일본주혈흡충,,Schistosoma japonicum,40x / male / female,schistosoma_japonicum,,실제실습본에서는 말라리아만 쓴다
+practical/053_1.png,practical,실제실습본,53,Fasciola hepatica 간질,,Fasciola hepatica,,fasciola_hepatica,,실제실습본에서는 말라리아만 쓴다
+practical/053_2.png,practical,실제실습본,53,Fasciola hepatica 간질,,Fasciola hepatica,,fasciola_hepatica,,실제실습본에서는 말라리아만 쓴다
+practical/054_1.png,practical,실제실습본,54,Fasciola hepatica 간질,,Fasciola hepatica,,fasciola_hepatica,,실제실습본에서는 말라리아만 쓴다
+practical/054_2.png,practical,실제실습본,54,Fasciola hepatica 간질,,Fasciola hepatica,conical projection,fasciola_hepatica,,실제실습본에서는 말라리아만 쓴다
+practical/054_3.png,practical,실제실습본,54,Fasciola hepatica 간질,,Fasciola hepatica,,fasciola_hepatica,,실제실습본에서는 말라리아만 쓴다
+practical/054_4.png,practical,실제실습본,54,Fasciola hepatica 간질,,Fasciola hepatica,conical projection,fasciola_hepatica,,실제실습본에서는 말라리아만 쓴다
+practical/055_1.png,practical,실제실습본,55,Fasciola hepatica 간질,,Fasciola hepatica,육안관찰 / AC stain,fasciola_hepatica,,실제실습본에서는 말라리아만 쓴다
+practical/055_2.png,practical,실제실습본,55,Fasciola hepatica 간질,,Fasciola hepatica,40x / conical projection,fasciola_hepatica,,실제실습본에서는 말라리아만 쓴다
+practical/056_1.png,practical,실제실습본,56,Paragonimus westermani 폐흡충,,Paragonimus westermani,section of dog lung / 육안사진,paragonimus_westermani,,실제실습본에서는 말라리아만 쓴다
+practical/056_2.png,practical,실제실습본,56,Paragonimus westermani 폐흡충,,Paragonimus westermani,lobe 중첩 상태로 / 고정되어 6개로,paragonimus_westermani,,실제실습본에서는 말라리아만 쓴다
+practical/056_3.png,practical,실제실습본,56,Paragonimus westermani 폐흡충,,Paragonimus westermani,400x / section of dog lung,paragonimus_westermani,,실제실습본에서는 말라리아만 쓴다
+practical/056_4.png,practical,실제실습본,56,Paragonimus westermani 폐흡충,,Paragonimus westermani,ovary / lobe 중첩 상태로 / 고정되어 6개로 / 보이지 않음,paragonimus_westermani,,실제실습본에서는 말라리아만 쓴다
+practical/057_1.png,practical,실제실습본,57,Paragonimus westermani 폐흡충,,Paragonimus westermani,,paragonimus_westermani,,실제실습본에서는 말라리아만 쓴다
+practical/057_4.png,practical,실제실습본,57,Paragonimus westermani 폐흡충,,Paragonimus westermani,,paragonimus_westermani,,실제실습본에서는 말라리아만 쓴다
+practical/057_5.png,practical,실제실습본,57,Paragonimus westermani 폐흡충,,Paragonimus westermani,,paragonimus_westermani,,실제실습본에서는 말라리아만 쓴다
+practical/058_1.png,practical,실제실습본,58,Paragonimus westermani 폐흡충,,Paragonimus westermani,,paragonimus_westermani,,실제실습본에서는 말라리아만 쓴다
+practical/058_2.png,practical,실제실습본,58,Paragonimus westermani 폐흡충,,Paragonimus westermani,,paragonimus_westermani,,실제실습본에서는 말라리아만 쓴다
+practical/059_1.png,practical,실제실습본,59,Clonorchis sinensis 간흡충,,Clonorchis sinensis,40x / 40x,clonorchis_sinensis,,실제실습본에서는 말라리아만 쓴다
+practical/059_2.png,practical,실제실습본,59,Clonorchis sinensis 간흡충,,Clonorchis sinensis,40x / liver section / 100x / 400x,clonorchis_sinensis,,실제실습본에서는 말라리아만 쓴다
+practical/059_3.png,practical,실제실습본,59,Clonorchis sinensis 간흡충,,Clonorchis sinensis,100x,clonorchis_sinensis,,실제실습본에서는 말라리아만 쓴다
+practical/059_4.png,practical,실제실습본,59,Clonorchis sinensis 간흡충,,Clonorchis sinensis,40x,clonorchis_sinensis,,실제실습본에서는 말라리아만 쓴다
+practical/059_5.png,practical,실제실습본,59,Clonorchis sinensis 간흡충,,Clonorchis sinensis,400x,clonorchis_sinensis,,실제실습본에서는 말라리아만 쓴다
+practical/060_1.png,practical,실제실습본,60,Clonorchis sinensis 간흡충,,Clonorchis sinensis,fibrosis,clonorchis_sinensis,,실제실습본에서는 말라리아만 쓴다
+practical/060_2.png,practical,실제실습본,60,Clonorchis sinensis 간흡충,,Clonorchis sinensis,400x / 충란,clonorchis_sinensis,,실제실습본에서는 말라리아만 쓴다
+practical/060_3.png,practical,실제실습본,60,Clonorchis sinensis 간흡충,,Clonorchis sinensis,100x / fibrosis,clonorchis_sinensis,,실제실습본에서는 말라리아만 쓴다
+practical/060_4.png,practical,실제실습본,60,Clonorchis sinensis 간흡충,,Clonorchis sinensis,400x / 충란,clonorchis_sinensis,,실제실습본에서는 말라리아만 쓴다
+practical/061_1.png,practical,실제실습본,61,Metogonimus Yokogawai 요코가와흡충,,,치우친 ventral sucker / 끝쪽 2개 testis / ventral / sucker / ventral / sucker / 2개 testis / 2개 testis,metagonimus_yokogawai,,실제실습본에서는 말라리아만 쓴다
+practical/061_2.png,practical,실제실습본,61,Metogonimus Yokogawai 요코가와흡충,,,100x / 400x,metagonimus_yokogawai,,실제실습본에서는 말라리아만 쓴다
+practical/061_3.png,practical,실제실습본,61,Metogonimus Yokogawai 요코가와흡충,,,400x,metagonimus_yokogawai,,실제실습본에서는 말라리아만 쓴다
+practical/061_4.png,practical,실제실습본,61,Metogonimus Yokogawai 요코가와흡충,,,ventral / sucker / 2개 testis,metagonimus_yokogawai,,실제실습본에서는 말라리아만 쓴다
+practical/061_5.png,practical,실제실습본,61,Metogonimus Yokogawai 요코가와흡충,,,ventral / sucker / 2개 testis,metagonimus_yokogawai,,실제실습본에서는 말라리아만 쓴다
+practical/062_1.png,practical,실제실습본,62,Neodiplostomum seoulense 서울주걱흡충,,Neodiplostomum seoulense,oral / 100x,neodiplostomum_seoulense,,실제실습본에서는 말라리아만 쓴다
+practical/062_2.png,practical,실제실습본,62,Neodiplostomum seoulense 서울주걱흡충,,Neodiplostomum seoulense,100x,neodiplostomum_seoulense,,실제실습본에서는 말라리아만 쓴다
+practical/062_3.png,practical,실제실습본,62,Neodiplostomum seoulense 서울주걱흡충,,Neodiplostomum seoulense,400x,neodiplostomum_seoulense,,실제실습본에서는 말라리아만 쓴다
+practical/062_4.png,practical,실제실습본,62,Neodiplostomum seoulense 서울주걱흡충,,Neodiplostomum seoulense,,neodiplostomum_seoulense,,실제실습본에서는 말라리아만 쓴다
+practical/062_5.png,practical,실제실습본,62,Neodiplostomum seoulense 서울주걱흡충,,Neodiplostomum seoulense,,neodiplostomum_seoulense,,실제실습본에서는 말라리아만 쓴다
+practical/062_6.png,practical,실제실습본,62,Neodiplostomum seoulense 서울주걱흡충,,Neodiplostomum seoulense,,neodiplostomum_seoulense,,실제실습본에서는 말라리아만 쓴다
+practical/063_1.png,practical,실제실습본,63,Neodiplostomum seoulense 서울주걱흡충,,Neodiplostomum seoulense,100x,neodiplostomum_seoulense,,실제실습본에서는 말라리아만 쓴다
+practical/064_1.png,practical,실제실습본,64,Gymnophalloides seoi 참굴큰입흡충,,Gymnophalloides seoi,oral sucker / ventral pit,gymnophalloides_seoi,,실제실습본에서는 말라리아만 쓴다
+practical/064_2.png,practical,실제실습본,64,Gymnophalloides seoi 참굴큰입흡충,,Gymnophalloides seoi,400x,gymnophalloides_seoi,,표본에 정답이 적혀 있어 문제로 쓰지 않음
+practical/066_4.png,practical,실제실습본,66,Diphyllobothrium latum,,Diphyllobothrium latum,<Gravid proglottid> / X40,diphyllobothrium_latum,,실제실습본에서는 말라리아만 쓴다
+practical/066_5.png,practical,실제실습본,66,Diphyllobothrium latum,,Diphyllobothrium latum,<Gravid proglottid> / Rosette uterus / X40 / X40,diphyllobothrium_latum,,실제실습본에서는 말라리아만 쓴다
+practical/067_3.png,practical,실제실습본,67,Diphyllobothrium latum,,Diphyllobothrium latum,<Scolex>,diphyllobothrium_latum,,실제실습본에서는 말라리아만 쓴다
+practical/068_1.png,practical,실제실습본,68,Diphyllobothrium latum,,Diphyllobothrium latum,<Gross>,diphyllobothrium_latum,,표본에 정답이 적혀 있어 문제로 쓰지 않음
+practical/068_2.png,practical,실제실습본,68,Diphyllobothrium latum,,Diphyllobothrium latum,X40,diphyllobothrium_latum,,실제실습본에서는 말라리아만 쓴다
+practical/068_3.png,practical,실제실습본,68,Diphyllobothrium latum,,Diphyllobothrium latum,X40,diphyllobothrium_latum,,실제실습본에서는 말라리아만 쓴다
+practical/068_4.png,practical,실제실습본,68,Diphyllobothrium latum,,Diphyllobothrium latum,,diphyllobothrium_latum,,실제실습본에서는 말라리아만 쓴다
+practical/068_5.png,practical,실제실습본,68,Diphyllobothrium latum,,Diphyllobothrium latum,<강의록 사진>,diphyllobothrium_latum,,실제실습본에서는 말라리아만 쓴다
+practical/069_7.png,practical,실제실습본,69,Taenia solium,,Taenia solium,<Gravid proglottid> / X40,taenia_solium,,실제실습본에서는 말라리아만 쓴다
+practical/070_1.png,practical,실제실습본,70,Taenia saginata,,Taenia saginata,<Scolex> / Scolex에,taenia_saginata,,실제실습본에서는 말라리아만 쓴다
+practical/070_4.png,practical,실제실습본,70,Taenia saginata,,Taenia saginata,<Gross>,taenia_saginata,,표본에 정답이 적혀 있어 문제로 쓰지 않음
+practical/070_5.png,practical,실제실습본,70,Taenia saginata,,Taenia saginata,X40 / Uterine brance / 훨씬 많음 / <Gravid proglottid>,taenia_saginata,,실제실습본에서는 말라리아만 쓴다
+practical/070_6.png,practical,실제실습본,70,Taenia saginata,,Taenia saginata,X40 / <Gravid proglottid>,taenia_saginata,,실제실습본에서는 말라리아만 쓴다
+practical/071_1.png,practical,실제실습본,71,Cysticercus cellulosae,,Cysticercus cellulosae,,cysticercus_cellulosae,,모식도·생활사 그림 (표본 사진 아님)
+practical/071_2.png,practical,실제실습본,71,Cysticercus cellulosae,,Cysticercus cellulosae,<Gross> 쌀알 형태,cysticercus_cellulosae,,표본에 정답이 적혀 있어 문제로 쓰지 않음
+practical/071_3.png,practical,실제실습본,71,Cysticercus cellulosae,,Cysticercus cellulosae,X40,cysticercus_cellulosae,,실제실습본에서는 말라리아만 쓴다
+practical/071_4.png,practical,실제실습본,71,Cysticercus cellulosae,,Cysticercus cellulosae,,cysticercus_cellulosae,,실제실습본에서는 말라리아만 쓴다
+practical/071_5.png,practical,실제실습본,71,Cysticercus cellulosae,,Cysticercus cellulosae,,cysticercus_cellulosae,,실제실습본에서는 말라리아만 쓴다
+practical/071_6.png,practical,실제실습본,71,Cysticercus cellulosae,,Cysticercus cellulosae,<Whole mount>,cysticercus_cellulosae,,실제실습본에서는 말라리아만 쓴다
+practical/071_7.png,practical,실제실습본,71,Cysticercus cellulosae,,Cysticercus cellulosae,<Whole mount>,cysticercus_cellulosae,,실제실습본에서는 말라리아만 쓴다
+practical/071_8.png,practical,실제실습본,71,Cysticercus cellulosae,,Cysticercus cellulosae,Scolex를 확대한 사진 / 약간 원숭이를 닮음,cysticercus_cellulosae,,실제실습본에서는 말라리아만 쓴다
+practical/071_9.png,practical,실제실습본,71,Cysticercus cellulosae,,Cysticercus cellulosae,,cysticercus_cellulosae,,실제실습본에서는 말라리아만 쓴다
+practical/072_1.png,practical,실제실습본,72,Cysticercus cellulosae,,Cysticercus cellulosae,<Whole mount>,cysticercus_cellulosae,,실제실습본에서는 말라리아만 쓴다
+practical/072_2.png,practical,실제실습본,72,Cysticercus cellulosae,,Cysticercus cellulosae,X40,cysticercus_cellulosae,,실제실습본에서는 말라리아만 쓴다
+practical/072_4.png,practical,실제실습본,72,Cysticercus cellulosae,,Cysticercus cellulosae,<강의록 사진>,cysticercus_cellulosae,,실제실습본에서는 말라리아만 쓴다
+practical/074_1.png,practical,실제실습본,74,Echinococcus granulosus,,Echinococcus granulosus,목차 / 1. Entameoba histolytica(이질아메바)                  ---p. 2-3,echinococcus_granulosus,,선화로 판정 (흰 배경 + 무채색)
+practical/075_4.png,practical,실제실습본,75,1. Entamoeba histolytica(이질아메바),,Entamoeba histolytica,b. cyst,entamoeba_histolytica,,실제실습본에서는 말라리아만 쓴다
+practical/077_1.png,practical,실제실습본,77,"2. Entamoeba coli(대장아메바), cyst",,Entamoeba coli,핵의 수가 6~8개로 많다 / 구별법: / 1. 단세포이다->원충,entamoeba_coli,,실제실습본에서는 말라리아만 쓴다
+practical/077_2.png,practical,실제실습본,77,"2. Entamoeba coli(대장아메바), cyst",,Entamoeba coli,사진 상에서 핵이 명확하게 / 구별되지는 않지만 수가 많음,entamoeba_coli,,실제실습본에서는 말라리아만 쓴다
+practical/077_3.png,practical,실제실습본,77,"2. Entamoeba coli(대장아메바), cyst",,Entamoeba coli,1. 단세포이다->원충 / 2. 주변의 RBC보다 살짝 큰 정도의 크기에 불규칙하다(뭔지 잘 모르겠다!),entamoeba_coli,,실제실습본에서는 말라리아만 쓴다
+practical/077_4.png,practical,실제실습본,77,"2. Entamoeba coli(대장아메바), cyst",,Entamoeba coli,조금 큰 수준 / 작고 irregular한 모양,entamoeba_coli,,실제실습본에서는 말라리아만 쓴다
+practical/077_5.png,practical,실제실습본,77,"2. Entamoeba coli(대장아메바), cyst",,Entamoeba coli,"RBC, 6~8um / 왜소아메바 cyst",entamoeba_coli,,실제실습본에서는 말라리아만 쓴다
+practical/078_3.png,practical,실제실습본,78,4. Giradia lamblia(람블편모충),,Giradia lamblia,핵 / fibril / b. trophozoite,giardia_lamblia,,실제실습본에서는 말라리아만 쓴다
+practical/079_1.png,practical,실제실습본,79,"5. Trichomonas vaginalis, trophozoite(질편모충)",,Trichomonas vaginalis,원래 질편모충의 모식도를 참고했습니다!,trichomonas_vaginalis,,모식도·생활사 그림 (표본 사진 아님)
+practical/079_2.png,practical,실제실습본,79,"5. Trichomonas vaginalis, trophozoite(질편모충)",,Trichomonas vaginalis,undulating membrane,trichomonas_vaginalis,,실제실습본에서는 말라리아만 쓴다
+practical/079_3.png,practical,실제실습본,79,"5. Trichomonas vaginalis, trophozoite(질편모충)",,Trichomonas vaginalis,undulating membrane / 편모 / 구별법:,trichomonas_vaginalis,,실제실습본에서는 말라리아만 쓴다
+practical/079_4.png,practical,실제실습본,79,"5. Trichomonas vaginalis, trophozoite(질편모충)",,Trichomonas vaginalis,편모 / undulating membrane,trichomonas_vaginalis,,실제실습본에서는 말라리아만 쓴다
+practical/080_1.png,practical,실제실습본,80,"6. Leishmania major, promastigote(리슈만편모충)",,Leishmania major,진하게 보이는 nucleus / 작게 보이는 kineoplast / 편모,leishmania_major,,실제실습본에서는 말라리아만 쓴다
+practical/081_1.png,practical,실제실습본,81,"6. Leishmania major, promastigote(리슈만편모충)",,Leishmania major,,leishmania_major,,표본에 정답이 적혀 있어 문제로 쓰지 않음
+practical/081_2.png,practical,실제실습본,81,"6. Leishmania major, promastigote(리슈만편모충)",,Leishmania major,,leishmania_major,,실제실습본에서는 말라리아만 쓴다
+practical/081_3.png,practical,실제실습본,81,"6. Leishmania major, promastigote(리슈만편모충)",,Leishmania major,주변에 많은 RBC,leishmania_major,,실제실습본에서는 말라리아만 쓴다
+practical/081_4.png,practical,실제실습본,81,"6. Leishmania major, promastigote(리슈만편모충)",,Leishmania major,주변에 많은 RBC,leishmania_major,,실제실습본에서는 말라리아만 쓴다
+practical/081_5.png,practical,실제실습본,81,"6. Leishmania major, promastigote(리슈만편모충)",,Leishmania major,,leishmania_major,,표본에 정답이 적혀 있어 문제로 쓰지 않음
+practical/081_6.png,practical,실제실습본,81,"6. Leishmania major, promastigote(리슈만편모충)",,Leishmania major,+ 편모충과 아메바의 위족운동을 관찰했으니 영상으로 확인해주세요~,leishmania_major,,표본에 정답이 적혀 있어 문제로 쓰지 않음
+practical/081_7.png,practical,실제실습본,81,"6. Leishmania major, promastigote(리슈만편모충)",,Leishmania major,+ 편모충과 아메바의 위족운동을 관찰했으니 영상으로 확인해주세요~,leishmania_major,,실제실습본에서는 말라리아만 쓴다
+practical/086_3.png,practical,실제실습본,86,Plasmodium falciparum,,Plasmodium falciparum,,plasmodium_falciparum,,모식도·생활사 그림 (표본 사진 아님)
+practical/094_1.png,practical,실제실습본,94,Cryptosporidium parvum,,Cryptosporidium parvum,Intestinal section h-e 400x,cryptosporidium_parvum,,실제실습본에서는 말라리아만 쓴다
+practical/094_2.png,practical,실제실습본,94,Cryptosporidium parvum,,Cryptosporidium parvum,Intestinal section h-e 1000x,cryptosporidium_parvum,,실제실습본에서는 말라리아만 쓴다
+practical/094_3.png,practical,실제실습본,94,Cryptosporidium parvum,,Cryptosporidium parvum,"oocyst in stool smear, MAF stain, 400x",cryptosporidium_parvum,,실제실습본에서는 말라리아만 쓴다
+practical/094_4.png,practical,실제실습본,94,Cryptosporidium parvum,,Cryptosporidium parvum,"oocyst in stool smear, MAF stain, 1000x",cryptosporidium_parvum,,실제실습본에서는 말라리아만 쓴다
+practical/095_1.png,practical,실제실습본,95,Cryptosporidium parvum,,Cryptosporidium parvum,"Oocyst in stool smear, MAF stain, 400x",cryptosporidium_parvum,,실제실습본에서는 말라리아만 쓴다
+practical/095_2.png,practical,실제실습본,95,Cryptosporidium parvum,,Cryptosporidium parvum,"Oocyst in stool smear, MAF stain, 1000x",cryptosporidium_parvum,,실제실습본에서는 말라리아만 쓴다
+practical/096_1.png,practical,실제실습본,96,Toxoplasma gondii,,Toxoplasma gondii,,toxoplasma_gondii,,실제실습본에서는 말라리아만 쓴다
+practical/096_2.png,practical,실제실습본,96,Toxoplasma gondii,,Toxoplasma gondii,"Tachizoite in macrophage, Giemsa stain, 400x (왼쪽) 1000x (오른쪽)",toxoplasma_gondii,,실제실습본에서는 말라리아만 쓴다
+practical/096_3.png,practical,실제실습본,96,Toxoplasma gondii,,Toxoplasma gondii,"Tachizoite in macrophage, Giemsa stain, 400x (왼쪽) 1000x (오른쪽)",toxoplasma_gondii,,실제실습본에서는 말라리아만 쓴다
+practical/096_4.png,practical,실제실습본,96,Toxoplasma gondii,,Toxoplasma gondii,"Tachizoite in macrophage, Giemsa stain, 400x (왼쪽) 1000x (오른쪽)",toxoplasma_gondii,,실제실습본에서는 말라리아만 쓴다
+practical/097_1.png,practical,실제실습본,97,Toxoplasma gondii,,Toxoplasma gondii,"Bradyzoites in mouse brain, 400x (왼쪽) 1000x (오른쪽)",toxoplasma_gondii,,실제실습본에서는 말라리아만 쓴다
+practical/097_2.png,practical,실제실습본,97,Toxoplasma gondii,,Toxoplasma gondii,"Bradyzoites in mouse brain, 400x (왼쪽) 1000x (오른쪽)",toxoplasma_gondii,,실제실습본에서는 말라리아만 쓴다
+practical/097_3.png,practical,실제실습본,97,Toxoplasma gondii,,Toxoplasma gondii,Bradyzoites in mouse brain,toxoplasma_gondii,,실제실습본에서는 말라리아만 쓴다
+practical/098_1.png,practical,실제실습본,98,Toxoplasma gondii,,Toxoplasma gondii,"Tachizoite in macrophage, Giemsa stain, 1000x",toxoplasma_gondii,,실제실습본에서는 말라리아만 쓴다
+practical/098_2.png,practical,실제실습본,98,Toxoplasma gondii,,Toxoplasma gondii,"Tachizoite in macrophage, Giemsa stain, 1000x",toxoplasma_gondii,,실제실습본에서는 말라리아만 쓴다
+practical/098_3.png,practical,실제실습본,98,Toxoplasma gondii,,Toxoplasma gondii,"Tachizoite in macrophage, Giemsa stain, 1000x",toxoplasma_gondii,,실제실습본에서는 말라리아만 쓴다
+practical/099_1.png,practical,실제실습본,99,Toxoplasma gondii,,Toxoplasma gondii,"Bradyzoite in mouse brain, H-E stain, x100",toxoplasma_gondii,,실제실습본에서는 말라리아만 쓴다
+practical/099_2.png,practical,실제실습본,99,Toxoplasma gondii,,Toxoplasma gondii,"Bradyzoite in mouse brain, H-E stain, x400",toxoplasma_gondii,,실제실습본에서는 말라리아만 쓴다
+practical/099_3.png,practical,실제실습본,99,Toxoplasma gondii,,Toxoplasma gondii,"Bradyzoite in mouse brain, H-E stain, x1000",toxoplasma_gondii,,실제실습본에서는 말라리아만 쓴다
+jiseok/실습_-_충란+성체_001_6.png,jiseok,실습 정리본(이지석),1,충란 & 유충 or 성체,충란 & 유충 or 성체,,이글루처럼 생김 / 내부에 3쌍의 hook,,,종을 찾지 못함
+jiseok/실습_-_충란+성체_001_8.png,jiseok,실습 정리본(이지석),1,Coffee bean shape,,Coffee bean,반으로 접힌 자국 / Coffee bean shape,,,종을 찾지 못함
+jiseok/실습_-_충란+성체_001_11.png,jiseok,실습 정리본(이지석),1,충란 & 유충 or 성체,충란 & 유충 or 성체,,"Albumin, Chitin, Lipid / 불수정란: 3 layer X / 수정란: 3층 구조의 벽",,,종을 찾지 못함
+jiseok/실습_-_충란+성체_001_12.png,jiseok,실습 정리본(이지석),1,충란 & 유충 or 성체,충란 & 유충 or 성체,,-> 투명하고 얇다 / Chitin 성의 egg shell,,,종을 찾지 못함
+jiseok/실습_-_충란+성체_001_13.png,jiseok,실습 정리본(이지석),1,충란 & 유충 or 성체,충란 & 유충 or 성체,,"찌그러져 길어진 형태 / 식도 단면 -> single / protein granule,",,,종을 찾지 못함
+jiseok/실습_-_충란+성체_001_14.png,jiseok,실습 정리본(이지석),1,Branched testis,,Branched testis,Branched testis,,,종을 찾지 못함
+jiseok/실습_-_충란+성체_001_16.png,jiseok,실습 정리본(이지석),1,Oral sucker 존재,,Oral sucker,치우친 ventral sucker / Oral sucker 존재,,,종을 찾지 못함
+jiseok/실습_-_충란+성체_001_17.png,jiseok,실습 정리본(이지석),1,Oral sucker 존재,,Oral sucker,Oral sucker 존재 / 6개의 ovary,,,종을 찾지 못함
+jiseok/실습_-_충란+성체_001_20.png,jiseok,실습 정리본(이지석),1,Rosette uterus,,Rosette uterus,"Rosette uterus / Sucker, Hook 없는 scolex",,,종을 찾지 못함
+jiseok/실습_-_충란+성체_001_21.png,jiseok,실습 정리본(이지석),1,Female tail: 뾰족,,Female tail,Female tail: 뾰족 / Caudal alae,,,종을 찾지 못함
+jiseok/실습_-_충란+성체_001_24.png,jiseok,실습 정리본(이지석),1,- Dorsal costa: 짧은 2분지,,Dorsal costa,- Dorsal costa: 짧은 2분지 / - 날카로운 이빨 두쌍,,,종을 찾지 못함
+jiseok/실습_-_충란+성체_001_27.png,jiseok,실습 정리본(이지석),1,Taenia saginata,충란 & 유충 or 성체,Taenia saginata,,taenia_saginata,taenia_saginata_gravid_proglottid,"라벨은 충란로 보이나 해당 유형 표본이 없음. 무구조충의 표본 후보 2개 중 라벨만으로는 구분 불가: taenia_saginata_gravid_proglottid, taenia_saginata_scolex"
+jiseok/실습_-_충란+성체_001_29.png,jiseok,실습 정리본(이지석),1,충란 & 유충 or 성체,충란 & 유충 or 성체,,,,,종을 찾지 못함
+jiseok/실습_-_충란+성체_001_30.png,jiseok,실습 정리본(이지석),1,Taenia saginata,충란 & 유충 or 성체,Taenia saginata,,taenia_saginata,taenia_saginata_gravid_proglottid,"라벨은 충란로 보이나 해당 유형 표본이 없음. 무구조충의 표본 후보 2개 중 라벨만으로는 구분 불가: taenia_saginata_gravid_proglottid, taenia_saginata_scolex"
+jiseok/실습_-_충란+성체_001_31.png,jiseok,실습 정리본(이지석),1,Taenia saginata,충란 & 유충 or 성체,Taenia saginata,,taenia_saginata,taenia_saginata_gravid_proglottid,"라벨은 충란로 보이나 해당 유형 표본이 없음. 무구조충의 표본 후보 2개 중 라벨만으로는 구분 불가: taenia_saginata_gravid_proglottid, taenia_saginata_scolex"
+jiseok/실습_-_충란+성체_001_32.png,jiseok,실습 정리본(이지석),1,충란 & 유충 or 성체,충란 & 유충 or 성체,,,,,종을 찾지 못함
+jiseok/실습_-_충란+성체_001_33.png,jiseok,실습 정리본(이지석),1,충란 & 유충 or 성체,충란 & 유충 or 성체,,,,,종을 찾지 못함
+jiseok/실습_-_충란+성체_001_34.png,jiseok,실습 정리본(이지석),1,Taenia saginata,,Taenia saginata,"- 갈고리 X, 4개의 sucker / Taenia saginata",taenia_saginata,taenia_saginata_gravid_proglottid,"라벨은 충란로 보이나 해당 유형 표본이 없음. 무구조충의 표본 후보 2개 중 라벨만으로는 구분 불가: taenia_saginata_gravid_proglottid, taenia_saginata_scolex"
+jiseok/실습_-_충란+성체_001_35.png,jiseok,실습 정리본(이지석),1,충란 & 유충 or 성체,충란 & 유충 or 성체,,,,,종을 찾지 못함
+jiseok/실습_-_충란+성체_001_36.png,jiseok,실습 정리본(이지석),1,충란 & 유충 or 성체,충란 & 유충 or 성체,,,,,종을 찾지 못함
+jiseok/실습_-_충란+성체_001_37.png,jiseok,실습 정리본(이지석),1,- Dorsal costa: 긴 2분지,,Dorsal costa,- Dorsal costa: 긴 2분지 / - Cutting plate,,,종을 찾지 못함
+jiseok/실습_-_충란+성체_001_41.png,jiseok,실습 정리본(이지석),1,충란 & 유충 or 성체,충란 & 유충 or 성체,,,,,종을 찾지 못함
+jiseok/실습_1_001_2.png,jiseok,실습 정리본(이지석),1,실습 1 - 연충란,실습 1 - 연충란,,,,,종을 찾지 못함
+jiseok/실습_1_001_4.png,jiseok,실습 정리본(이지석),1,실습 1 - 연충란,실습 1 - 연충란,,,,,종을 찾지 못함
+jiseok/실습_1_001_5.png,jiseok,실습 정리본(이지석),1,실습 1 - 연충란,실습 1 - 연충란,,,,,종을 찾지 못함
+jiseok/실습_1_001_7.png,jiseok,실습 정리본(이지석),1,실습 1 - 연충란,실습 1 - 연충란,,,,,종을 찾지 못함
+jiseok/실습_1_001_9.png,jiseok,실습 정리본(이지석),1,실습 1 - 연충란,실습 1 - 연충란,,,,,종을 찾지 못함
+jiseok/실습_2_001_1.png,jiseok,실습 정리본(이지석),1,<Male adult worm>,,Male adult,"<Male adult worm> / 3) 형태: 비대칭 -> 얇은 부분이 머리, tail 부분이 두꺼움 / -> 말려 있음 / stichocyte -> stichosome",,,종을 찾지 못함
+jiseok/실습_2_001_3.png,jiseok,실습 정리본(이지석),1,실습 2 - 선충류,실습 2 - 선충류,,"3) 형태: 비대칭 -> 얇은 부분이 머리, tail 부분이 두꺼움 / -> 말려 있음 / stichocyte -> stichosome / 2) Male vs Female: 암컷이 수컷보다 크며 수컷은 말려 있는 형",,,종을 찾지 못함
+jiseok/실습_2_001_5.png,jiseok,실습 정리본(이지석),1,실습 2 - 선충류,실습 2 - 선충류,,<Female in human appendix> / stichocyte -> stichosome,,,종을 찾지 못함
+jiseok/실습_2_001_9.png,jiseok,실습 정리본(이지석),1,- 유의점: 1) notched tail -> hookworm larva와의 구분점,실습 2 - 선충류,,,,,종을 찾지 못함
+jiseok/실습_2_001_10.png,jiseok,실습 정리본(이지석),1,- 유의점: 1) notched tail -> hookworm larva와의 구분점,실습 2 - 선충류,,,,,종을 찾지 못함
+jiseok/실습_3_001_2.png,jiseok,실습 정리본(이지석),1,- 충란이 간 등으로 -> 간경변 (ex. schistosoma mansoni),"실습 3 - 흡충류, 조충류",,,,,종을 찾지 못함
+jiseok/실습_3_001_6.png,jiseok,실습 정리본(이지석),1,Opisthorchis viverrini -> lobular testis,"실습 3 - 흡충류, 조충류",Opisthorchis viverrini,,opisthorchis_viverrini,,타이간흡충에 등록된 표본이 없음
+jiseok/실습_3_001_7.png,jiseok,실습 정리본(이지석),1,Opisthorchis viverrini -> lobular testis,"실습 3 - 흡충류, 조충류",Opisthorchis viverrini,,opisthorchis_viverrini,,타이간흡충에 등록된 표본이 없음
+jiseok/실습_3_004_4.png,jiseok,실습 정리본(이지석),4,(광절열두조충과 차이),4. Taenia saginata / 무구조충,Taenia saginata,<lateral genital pore>,taenia_saginata,taenia_saginata_gravid_proglottid,"무구조충의 표본 후보 2개 중 라벨만으로는 구분 불가: taenia_saginata_gravid_proglottid, taenia_saginata_scolex"
+jiseok/실습_3_004_5.png,jiseok,실습 정리본(이지석),4,Metacestode of Taenia solium / 유구낭미충,4. Taenia saginata / 무구조충,Taenia solium,,taenia_solium,taenia_solium_gravid_proglottid,"유구조충의 표본 후보 2개 중 라벨만으로는 구분 불가: taenia_solium_gravid_proglottid, taenia_solium_scolex"
+jiseok/실습_3_004_7.png,jiseok,실습 정리본(이지석),4,Metacestode of Taenia solium / 유구낭미충,4. Taenia saginata / 무구조충,Taenia solium,,taenia_solium,taenia_solium_gravid_proglottid,"유구조충의 표본 후보 2개 중 라벨만으로는 구분 불가: taenia_solium_gravid_proglottid, taenia_solium_scolex"
+jiseok/실습_3_004_8.png,jiseok,실습 정리본(이지석),4,Metacestode of Taenia solium / 유구낭미충,4. Taenia saginata / 무구조충,Taenia solium,,taenia_solium,taenia_solium_gravid_proglottid,"유구조충의 표본 후보 2개 중 라벨만으로는 구분 불가: taenia_solium_gravid_proglottid, taenia_solium_scolex"
+jiseok/실습_3_004_9.png,jiseok,실습 정리본(이지석),4,Metacestode of Taenia solium / 유구낭미충,4. Taenia saginata / 무구조충,Taenia solium,,taenia_solium,taenia_solium_gravid_proglottid,"유구조충의 표본 후보 2개 중 라벨만으로는 구분 불가: taenia_solium_gravid_proglottid, taenia_solium_scolex"
+jiseok/실습_4_001_1.png,jiseok,실습 정리본(이지석),1,이질아메바,실습 4,,,entamoeba_histolytica,entamoeba_histolytica_trophozoite,"이질아메바의 표본 후보 3개 중 라벨만으로는 구분 불가: entamoeba_histolytica_trophozoite, entamoeba_histolytica_cyst, entamoeba_histolytica_colon_section"
+jiseok/실습_4_001_6.png,jiseok,실습 정리본(이지석),1,이질아메바,실습 4,,,entamoeba_histolytica,entamoeba_histolytica_trophozoite,"이질아메바의 표본 후보 3개 중 라벨만으로는 구분 불가: entamoeba_histolytica_trophozoite, entamoeba_histolytica_cyst, entamoeba_histolytica_colon_section"
+jiseok/실습_4_001_7.png,jiseok,실습 정리본(이지석),1,이질아메바,실습 4,,,entamoeba_histolytica,entamoeba_histolytica_trophozoite,"이질아메바의 표본 후보 3개 중 라벨만으로는 구분 불가: entamoeba_histolytica_trophozoite, entamoeba_histolytica_cyst, entamoeba_histolytica_colon_section"
+jiseok/실습_4_002_9.png,jiseok,실습 정리본(이지석),2,5. Plasmodium spp. (열원충),4. Balantidium coli (대장섬모충),Plasmodium spp,"Gametocyte vs Schizont: Gametocyte는 옅은 보라색으로 RBC 전체가 염색 / Schizont는 진한 보라색으로, 점점점점 형태가 보이면 웬만해선 schizont",,,종을 찾지 못함
+jiseok/실습_4_002_10.png,jiseok,실습 정리본(이지석),2,5. Plasmodium spp. (열원충),4. Balantidium coli (대장섬모충),Plasmodium spp,"Gametocyte vs Schizont: Gametocyte는 옅은 보라색으로 RBC 전체가 염색 / Schizont는 진한 보라색으로, 점점점점 형태가 보이면 웬만해선 schizont",,,종을 찾지 못함
+jiseok/실습_5_001_2.png,jiseok,실습 정리본(이지석),1,실습 5,실습 5,,"<Promastigote> / - 인체감염형: promastigote / - Promastigote: Nucleus, kinetoplast, flagellum",,,종을 찾지 못함
+jiseok/실습_5_001_3.png,jiseok,실습 정리본(이지석),1,실습 5,실습 5,,"- Promastigote: Nucleus, kinetoplast, flagellum / Amastigote / - 인체감염형: promastigote",,,종을 찾지 못함
+jiseok/실습_5_001_5.png,jiseok,실습 정리본(이지석),1,실습 5,실습 5,,<Amastigote> / - Amastigote: RBC보다 작은 점들 / - 인체감염형: Trypomastigote,,,종을 찾지 못함
+jiseok/실습_5_001_7.png,jiseok,실습 정리본(이지석),1,실습 5,실습 5,,"-> 혈액 내에서 C자 모양의 편모형, 파동막&편모가 보임",,,종을 찾지 못함
+jiseok/실습_5_001_8.png,jiseok,실습 정리본(이지석),1,실습 5,실습 5,,<Amastigote in 쥐의 심근> / -> 아주 작은 원형 dot의 형태로 관찰됨,,,종을 찾지 못함
+jiseok/실습_5_001_10.png,jiseok,실습 정리본(이지석),1,실습 5,실습 5,,,,,종을 찾지 못함
+jiseok/실습_5_001_11.png,jiseok,실습 정리본(이지석),1,실습 5,실습 5,,<Tachyzoite>,,,종을 찾지 못함
+jiseok/실습_5_001_12.png,jiseok,실습 정리본(이지석),1,실습 5,실습 5,,,,,종을 찾지 못함
+jiseok/실습_5_002_4.png,jiseok,실습 정리본(이지석),2,5. Pneumocystis carinii,5. Pneumocystis carinii,Pneumocystis carinii,"Octagone 형태의 cyst, / cyst 안에 여러 핵이 들어 있음",pneumocystis_jirovecii,pneumocystis_gms,"라벨은 충체로 보이나 해당 유형 표본이 없음. 폐포자충의 표본 후보 2개 중 라벨만으로는 구분 불가: pneumocystis_gms, pneumocystis_diffquik"
+jiseok/실습_5_002_7.png,jiseok,실습 정리본(이지석),2,"- Intestinal epithelial cell에 붙어 증식, epithelium을 손상시킴",,Intestinal epithelial,"- Intestinal epithelial cell에 붙어 증식, epithelium을 손상시킴",,,종을 찾지 못함
+jiseok/실습_5_002_8.png,jiseok,실습 정리본(이지석),2,5. Pneumocystis carinii,5. Pneumocystis carinii,Pneumocystis carinii,,pneumocystis_jirovecii,pneumocystis_gms,"라벨은 충체로 보이나 해당 유형 표본이 없음. 폐포자충의 표본 후보 2개 중 라벨만으로는 구분 불가: pneumocystis_gms, pneumocystis_diffquik"
+eunju/기생충_실습_(protozoa)_001_1.png,eunju,실습 정리본(신은주),1,Entamoeba histolytica,이름,Entamoeba histolytica,영양형 / cyst,entamoeba_histolytica,entamoeba_histolytica_trophozoite,"이질아메바의 표본 후보 2개 중 라벨만으로는 구분 불가: entamoeba_histolytica_trophozoite, entamoeba_histolytica_cyst"
+eunju/기생충_실습_(protozoa)_001_6.png,eunju,실습 정리본(신은주),1,핵 > 4개면 대장아메바,Entamoeba histolytica,Entamoeba histolytica,핵 > 4개면 대장아메바 / foamy cytosol,entamoeba_histolytica,entamoeba_histolytica_trophozoite,"이질아메바의 표본 후보 2개 중 라벨만으로는 구분 불가: entamoeba_histolytica_trophozoite, entamoeba_histolytica_cyst"
+eunju/기생충_실습_(protozoa)_002_4.png,eunju,실습 정리본(신은주),2,Trypanosoma cruzi,내장리슈만편모충      Leishmania donovani,Trypanosoma cruzi,,trypanosoma_cruzi,trypanosoma_cruzi_trypomastigote,"라벨은 충체로 보이나 해당 유형 표본이 없음. 크루스파동편모충의 표본 후보 2개 중 라벨만으로는 구분 불가: trypanosoma_cruzi_trypomastigote, trypanosoma_cruzi_heart_section"
+eunju/기생충_실습_(선충류)_001_8.png,eunju,실습 정리본(신은주),1,Strongyloides stercoralis,이름,Strongyloides stercoralis,notched tail (M자형) / 뾰족한 이빨 2개 / (송곳니st),strongyloides_stercoralis,strongyloides_rhabditoid,"분선충의 표본 후보 2개 중 라벨만으로는 구분 불가: strongyloides_rhabditoid, strongyloides_filariform"
+eunju/기생충_실습_(선충류)_001_9.png,eunju,실습 정리본(신은주),1,Strongyloides stercoralis,이름,Strongyloides stercoralis,뾰족한 이빨 2개 / (송곳니st),strongyloides_stercoralis,strongyloides_rhabditoid,"분선충의 표본 후보 2개 중 라벨만으로는 구분 불가: strongyloides_rhabditoid, strongyloides_filariform"
+eunju/기생충_실습_(선충류)_001_24.png,eunju,실습 정리본(신은주),1,Trichinella spiralis,이름,Trichinella spiralis,"AC staining / nursing cell / 근육세포의 일부가 nursing cell로 변환되고,",trichinella_spiralis,trichinella_encysted_larva,한 행에 여러 표본 유형이 섞여 있음
+eunju/기생충_실습_(연충란)_001_1.png,eunju,실습 정리본(신은주),1,Ascaris lumbricoides,이름,Ascaris lumbricoides,,ascaris_lumbricoides,ascaris_fertilized_egg,"회충의 표본 후보 2개 중 라벨만으로는 구분 불가: ascaris_fertilized_egg, ascaris_unfertilized_egg"
+eunju/기생충_실습_(연충란)_001_3.png,eunju,실습 정리본(신은주),1,Ascaris lumbricoides,이름,Ascaris lumbricoides,,ascaris_lumbricoides,ascaris_fertilized_egg,"회충의 표본 후보 2개 중 라벨만으로는 구분 불가: ascaris_fertilized_egg, ascaris_unfertilized_egg"
+"eunju/기생충_실습_(조충류,_흡충류)_002_2.png",eunju,실습 정리본(신은주),2,Diphyllobothrium latum,이름,Diphyllobothrium latum,,diphyllobothrium_latum,diphyllobothrium_gravid_proglottid,"광절열두조충의 표본 후보 2개 중 라벨만으로는 구분 불가: diphyllobothrium_gravid_proglottid, diphyllobothrium_scolex"
+"eunju/기생충_실습_(조충류,_흡충류)_002_8.png",eunju,실습 정리본(신은주),2,sparganum의 larva : 내부 구조물 없음 / 성기다,이름,,,,,종을 찾지 못함
+"eunju/기생충_실습_(조충류,_흡충류)_002_18.png",eunju,실습 정리본(신은주),2,Taenia saginata,이름,Taenia saginata,,taenia_saginata,taenia_saginata_gravid_proglottid,"무구조충의 표본 후보 2개 중 라벨만으로는 구분 불가: taenia_saginata_gravid_proglottid, taenia_saginata_scolex"
+"eunju/기생충_실습_(조충류,_흡충류)_002_30.png",eunju,실습 정리본(신은주),2,있으면 다방조충,이름,,stacking / protoscolex (원두절) / (겹겹이 쌓인 느낌),echinococcus_multilocularis,,다방조충에 등록된 표본이 없음
+"eunju/기생충_실습_(조충류,_흡충류)_002_31.png",eunju,실습 정리본(신은주),2,Echinococcus granulosus,이름,Echinococcus granulosus,brood capsule : 내부에 protoscolex / stacking / (겹겹이 쌓인 느낌),echinococcus_granulosus,echinococcus_protoscolex,"단방조충의 표본 후보 2개 중 라벨만으로는 구분 불가: echinococcus_protoscolex, echinococcus_adult_wholemount"
+"eunju/기생충_실습_(조충류,_흡충류)_002_32.png",eunju,실습 정리본(신은주),2,있으면 다방조충,이름,,brood capsule : 내부에 protoscolex / 진하게 보이는 게 hooklet / fibrous layer,echinococcus_multilocularis,,다방조충에 등록된 표본이 없음
+"eunju/기생충_실습_(조충류,_흡충류)_002_33.png",eunju,실습 정리본(신은주),2,있으면 다방조충,이름,,,echinococcus_multilocularis,,다방조충에 등록된 표본이 없음
+"eunju/기생충_실습_(조충류,_흡충류)_002_34.png",eunju,실습 정리본(신은주),2,간흡충의 metacercaria,Echinococcus granulosus,Echinococcus granulosus,간흡충의 metacercaria / - 좀 더 내부가 갈색 / - 동그라미 안에 검은색이 한뭉텅이,echinococcus_granulosus,echinococcus_protoscolex,"단방조충의 표본 후보 2개 중 라벨만으로는 구분 불가: echinococcus_protoscolex, echinococcus_adult_wholemount"
+"eunju/기생충_실습_(조충류,_흡충류)_003_1.png",eunju,실습 정리본(신은주),3,-> Diphyllobothrium latum,,Diphyllobothrium latum,가운데 노란 띠 있는 국수 / -> Diphyllobothrium latum,diphyllobothrium_latum,diphyllobothrium_gravid_proglottid,"광절열두조충의 표본 후보 2개 중 라벨만으로는 구분 불가: diphyllobothrium_gravid_proglottid, diphyllobothrium_scolex"
+"eunju/기생충_실습_(조충류,_흡충류)_003_2.png",eunju,실습 정리본(신은주),3,-> Taenia saginita,,Taenia saginita,가운데 노란 띠 없는 국수 / -> Taenia saginita,taenia_saginata,taenia_saginata_gravid_proglottid,"무구조충의 표본 후보 2개 중 라벨만으로는 구분 불가: taenia_saginata_gravid_proglottid, taenia_saginata_scolex"
+"eunju/기생충_실습_(조충류,_흡충류)_003_6.png",eunju,실습 정리본(신은주),3,# gross,# gross,,,,,종을 찾지 못함
+"eunju/기생충_실습_(포자충류,_말라리아,_의용_001_4.png",eunju,실습 정리본(신은주),1,Toxoplasma gondii,이름,Toxoplasma gondii,cyst wall을 보기 위해 / GMS staining을 한 모습,toxoplasma_gondii,toxoplasma_brain_section,한 행에 여러 표본 유형이 섞여 있음
+"eunju/기생충_실습_(포자충류,_말라리아,_의용_001_5.png",eunju,실습 정리본(신은주),1,Toxoplasma gondii,이름,Toxoplasma gondii,배경은 핑크 / cyst는 보라 / cyst wall을 보기 위해,toxoplasma_gondii,toxoplasma_brain_section,한 행에 여러 표본 유형이 섞여 있음
+"eunju/기생충_실습_(포자충류,_말라리아,_의용_001_6.png",eunju,실습 정리본(신은주),1,Pneumocystic carinii,이름,Pneumocystic carinii,,pneumocystis_jirovecii,pneumocystis_gms,"라벨은 충체로 보이나 해당 유형 표본이 없음. 폐포자충의 표본 후보 2개 중 라벨만으로는 구분 불가: pneumocystis_gms, pneumocystis_diffquik"
+"eunju/기생충_실습_(포자충류,_말라리아,_의용_001_8.png",eunju,실습 정리본(신은주),1,Pneumocystic carinii,이름,Pneumocystic carinii,,pneumocystis_jirovecii,pneumocystis_gms,"라벨은 충체로 보이나 해당 유형 표본이 없음. 폐포자충의 표본 후보 2개 중 라벨만으로는 구분 불가: pneumocystis_gms, pneumocystis_diffquik"
+"eunju/기생충_실습_(포자충류,_말라리아,_의용_001_10.png",eunju,실습 정리본(신은주),1,Pneumocystic carinii,이름,Pneumocystic carinii,,pneumocystis_jirovecii,pneumocystis_gms,"라벨은 충체로 보이나 해당 유형 표본이 없음. 폐포자충의 표본 후보 2개 중 라벨만으로는 구분 불가: pneumocystis_gms, pneumocystis_diffquik"
+"eunju/기생충_실습_(포자충류,_말라리아,_의용_001_18.png",eunju,실습 정리본(신은주),1,Plasmodium vivax,이름,Plasmodium vivax,gametocyte,plasmodium_vivax,pvivax_thin_smear,"라벨은 충체로 보이나 해당 유형 표본이 없음. 삼일열원충의 표본 후보 2개 중 라벨만으로는 구분 불가: pvivax_thin_smear, pvivax_thick_smear"
+"eunju/기생충_실습_(포자충류,_말라리아,_의용_001_20.png",eunju,실습 정리본(신은주),1,Plasmodium vivax,이름,Plasmodium vivax,trophozoite / - RBC보다 크기가 커지고 / 옅어짐(반투명),plasmodium_vivax,pvivax_thin_smear,"라벨은 충체로 보이나 해당 유형 표본이 없음. 삼일열원충의 표본 후보 2개 중 라벨만으로는 구분 불가: pvivax_thin_smear, pvivax_thick_smear"
+"eunju/기생충_실습_(포자충류,_말라리아,_의용_001_24.png",eunju,실습 정리본(신은주),1,Plasmodium vivax,이름,Plasmodium vivax,- RBC 크기 유지한 채로 / 내부에서 뭔 일이 일어남,plasmodium_vivax,pvivax_thin_smear,"라벨은 충체로 보이나 해당 유형 표본이 없음. 삼일열원충의 표본 후보 2개 중 라벨만으로는 구분 불가: pvivax_thin_smear, pvivax_thick_smear"
+"eunju/기생충_실습_(포자충류,_말라리아,_의용_001_27.png",eunju,실습 정리본(신은주),1,Plasmodium falciparum,이름,Plasmodium falciparum,s / t / t,plasmodium_falciparum,pfalciparum_thin_smear,"라벨은 충체로 보이나 해당 유형 표본이 없음. 열대열원충의 표본 후보 4개 중 라벨만으로는 구분 불가: pfalciparum_thin_smear, pfalciparum_thick_smear, malaria_spleen_section, malaria_brain_section"
+"eunju/기생충_실습_(포자충류,_말라리아,_의용_001_28.png",eunju,실습 정리본(신은주),1,Plasmodium falciparum,이름,Plasmodium falciparum,t / 점 콕콕콕이 아님 / t,plasmodium_falciparum,pfalciparum_thin_smear,"라벨은 충체로 보이나 해당 유형 표본이 없음. 열대열원충의 표본 후보 4개 중 라벨만으로는 구분 불가: pfalciparum_thin_smear, pfalciparum_thick_smear, malaria_spleen_section, malaria_brain_section"
+"eunju/기생충_실습_(포자충류,_말라리아,_의용_001_29.png",eunju,실습 정리본(신은주),1,Plasmodium falciparum,이름,Plasmodium falciparum,t / d.r,plasmodium_falciparum,pfalciparum_thin_smear,"라벨은 충체로 보이나 해당 유형 표본이 없음. 열대열원충의 표본 후보 4개 중 라벨만으로는 구분 불가: pfalciparum_thin_smear, pfalciparum_thick_smear, malaria_spleen_section, malaria_brain_section"
+"eunju/기생충_실습_(포자충류,_말라리아,_의용_001_30.png",eunju,실습 정리본(신은주),1,Plasmodium falciparum,이름,Plasmodium falciparum,s / t,plasmodium_falciparum,pfalciparum_thin_smear,"라벨은 충체로 보이나 해당 유형 표본이 없음. 열대열원충의 표본 후보 4개 중 라벨만으로는 구분 불가: pfalciparum_thin_smear, pfalciparum_thick_smear, malaria_spleen_section, malaria_brain_section"
+"eunju/기생충_실습_(포자충류,_말라리아,_의용_001_32.png",eunju,실습 정리본(신은주),1,Plasmodium falciparum,이름,Plasmodium falciparum,t / - RBC 크기 유지한 채로 / - double ring이 보이면,plasmodium_falciparum,pfalciparum_thin_smear,"라벨은 충체로 보이나 해당 유형 표본이 없음. 열대열원충의 표본 후보 4개 중 라벨만으로는 구분 불가: pfalciparum_thin_smear, pfalciparum_thick_smear, malaria_spleen_section, malaria_brain_section"
+"eunju/기생충_실습_(포자충류,_말라리아,_의용_002_4.png",eunju,실습 정리본(신은주),2,열원충 때문에 spleen에 hemosiderin 색소가 침착된 모습,,,"열원충 때문에 spleen에 hemosiderin 색소가 침착된 모습 / (spleen이 열원충 감염 RBC를 clearing하는 과정에서 형성됨, P. falciparum에서 특히 심함)",,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__004_1.png,note,2026 실습 필기본,4,조리개,조리개,,Diaphragm,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__004_2.png,note,2026 실습 필기본,4,조리개,조리개,,오왼 왔다갔다 / Diaphragm,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__005_1.png,note,2026 실습 필기본,5,빠르게 넘어가셨습니다,빠르게 넘어가셨습니다,,(완전히 닫음) / objective lens만 조절하고 diaphragm을 기존의 상태(어두움~최적 사이)로 보면 / 매우 어두운 시야,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__005_2.png,note,2026 실습 필기본,5,빠르게 넘어가셨습니다,빠르게 넘어가셨습니다,,최적의 시야 / objective lens만 조절하고 diaphragm을 기존의 상태(어두움~최적 사이)로 보면,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__005_3.png,note,2026 실습 필기본,5,빠르게 넘어가셨습니다,빠르게 넘어가셨습니다,,= contrast 안 좋음 / 지나치게 열어 빛 너무 많이 투과 / objective lens만 조절하고 diaphragm을 기존의 상태(어두움~최적 사이)로 보면,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__007_1.png,note,2026 실습 필기본,7,빠르게 넘어가셨습니다,빠르게 넘어가셨습니다,,아래로 내린 상태 / condensor를,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__007_3.png,note,2026 실습 필기본,7,빠르게 넘어가셨습니다,빠르게 넘어가셨습니다,,위로 올린 상태 / 고배율(400배 이상): / condensor를,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__010_1.png,note,2026 실습 필기본,10,현미경을 확대해서 보면 사이즈 판단이 상당히 어렵다,현미경을 확대해서 보면 사이즈 판단이 상당히 어렵다,,Size 판단: 누구의알일까?,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__011_2.png,note,2026 실습 필기본,11,다른 것들과 비교하면 뭐가 누구의 알인지 알 수 있게 됨,,,"다른 것들과 비교하면 뭐가 누구의 알인지 알 수 있게 됨 / Size 판단: 누구의알일까? / Source: GiryaGirl, CC BY-SA 3.0",,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__012_1.png,note,2026 실습 필기본,12,같은 알 모양이더라도 사이즈에 따라서 판단할 수 있는게 다양하다.,같은 알 모양이더라도 사이즈에 따라서 판단할 수 있는게 다양하다.,,같은 알 모양이더라도 사이즈에 따라서 판단할 수 있는게 다양하다.,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__015_1.png,note,2026 실습 필기본,15,1. 배율 별로 ocular scale의 눈금 길이 다름 - 측정 후 엑셀 파일에 저장해놓기,1. 배율 별로 ocular scale의 눈금 길이 다름 - 측정 후 엑셀 파일에 저장해놓기,,족보 / -충란 크기 계산,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__016_1.png,note,2026 실습 필기본,16,주변 사물을 이용해 대략 사이즈를 유추할 수 있다,주변 사물을 이용해 대략 사이즈를 유추할 수 있다,,=> 이걸 바탕으로 다른 구조물의 크기를 알 수 있다 / 오늘 관찰하는 연충란에서는 해당 방식 활용이 불가하므로 / => 우리 몸 어느 조직이든 모세혈관이 있기 때문에 웬만한 조직 슬라이드에는 RBC가 존재,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__018_1.png,note,2026 실습 필기본,18,오늘 보는 충란들은 대변 샘플에서 가져온 것,오늘 보는 충란들은 대변 샘플에서 가져온 것,,"장내 기생충의 충란이 배출이 될 때, segmentation과 peristalsis에 의해 대변과 잘 섞여 배출이 된다 / 오늘 보는 충란들은 대변 샘플에서 가져온 것",,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__024_8.png,note,2026 실습 필기본,24,준비물,준비물,,카토-카츠도말법세팅,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__025_1.png,note,2026 실습 필기본,25,망사를 통과한 것들만 나옴,,,망사를 통과한 것들만 나옴 / 충란은 당연히 작으니까 통과할 것 / 저울을 사용할 수 없는 환경에서 검사하는 경우가 많아서,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__027_1.png,note,2026 실습 필기본,27,그렇게 만든 샘플들,그렇게 만든 샘플들,,"이를 바탕으로 어느 worm이 감염되어있는지, 이 사람의 worm burden이 얼마나 되는지 계산할 수 있다 / 한 샘플 당 두 슬라이드를 만들어서 EPG를 확인하고 평균을 낸다",,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__035_1.png,note,2026 실습 필기본,35,같은 Hookworm이지만 Formalin-ether sedimentation로 슬라이드를 만든 경우가 더,,,"깨끗하게 보이고, cell stage를 관찰할 수 있다 / 같은 Hookworm이지만 Formalin-ether sedimentation로 슬라이드를 만든 경우가 더",,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__035_2.png,note,2026 실습 필기본,35,같은 Hookworm이지만 Formalin-ether sedimentation로 슬라이드를 만든 경우가 더,,,"깨끗하게 보이고, cell stage를 관찰할 수 있다 / 농축시켜서 더 clear하게 보임 / 같은 Hookworm이지만 Formalin-ether sedimentation로 슬라이드를 만든 경우가 더",,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__040_1.png,note,2026 실습 필기본,40,Chitin,,,Chitin / Lipid / cell,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__042_1.png,note,2026 실습 필기본,42,<불수정란>,<불수정란>,,<수정란> / 빵빵하고 90μm 정도로 3가지 layer를 갖추고 있음,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__042_2.png,note,2026 실습 필기본,42,<불수정란>,<불수정란>,,풍선의 wall이 온전하게 골고루 형성 안 / 찌그러지면서 길쭉하게 변하게 된다 / 되어서 한쪽이 얇다면 그쪽을 눌렀을 때,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__042_3.png,note,2026 실습 필기본,42,<불수정란>,<불수정란>,,안에 뭐가 있는지 잘 모르겠는 형태가 됨 / 풍선의 wall이 온전하게 골고루 형성 안 / 찌그러지면서 길쭉하게 변하게 된다,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__044_2.png,note,2026 실습 필기본,44,23,23,,atypical / fertillized egg / typical,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__045_1.png,note,2026 실습 필기본,45,모두 회충란이고 이렇게 다양하게 관찰될 수 있다,,,,ascaris_lumbricoides,ascaris_fertilized_egg,"회충의 표본 후보 2개 중 라벨만으로는 구분 불가: ascaris_fertilized_egg, ascaris_unfertilized_egg"
+note/[260831_05]_감염의_기초_실습__046_1.png,note,2026 실습 필기본,46,빠르게 넘어가셨습니다,빠르게 넘어가셨습니다,,이미 내부에 larva 형성,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__046_2.png,note,2026 실습 필기본,46,빠르게 넘어가셨습니다,빠르게 넘어가셨습니다,,,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__048_1.png,note,2026 실습 필기본,48,술통 모양처럼 생겼다,,,술통 모양처럼 생겼다 / Barrel,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__049_1.png,note,2026 실습 필기본,49,이 사진에서는 mucoid plug가 사라진 상태이다,,,이 사진에서는 mucoid plug가 사라진 상태이다,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__051_1.png,note,2026 실습 필기본,51,4-cell stage,,,4-cell stage,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__051_2.png,note,2026 실습 필기본,51,Morula stage,,Morula stage,Morula stage,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__051_3.png,note,2026 실습 필기본,51,Encysted larva,,Encysted larva,= larva stage / Encysted larva,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__052_1.png,note,2026 실습 필기본,52,껍데기가 남아있는 경우가 많아서 지저분하게 잘 안 보이는 경우가 많음,,,껍데기가 남아있는 경우가 많아서 지저분하게 잘 안 보이는 경우가 많음 / (다음 슬라이드) / 화살표를 확대해서 보면,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__053_4.png,note,2026 실습 필기본,53,,,,,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__055_1.png,note,2026 실습 필기본,55,두들두들 해바라기씨,,,두들두들 해바라기씨,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__055_3.png,note,2026 실습 필기본,55,참깨 씨앗 닮았다고 얘기하기도 한다,,,참깨 씨앗 닮았다고 얘기하기도 한다,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__056_1.png,note,2026 실습 필기본,56,"전자현미경으로 보면 이렇게 울퉁불퉁한 구조가 보이는데,","전자현미경으로 보면 이렇게 울퉁불퉁한 구조가 보이는데,",,이를 muskmelon appearance라고 한다,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__056_2.png,note,2026 실습 필기본,56,"전자현미경으로 보면 이렇게 울퉁불퉁한 구조가 보이는데,","전자현미경으로 보면 이렇게 울퉁불퉁한 구조가 보이는데,",,이를 muskmelon appearance라고 한다,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__058_1.png,note,2026 실습 필기본,58,표면이 매끈,,,표면이 매끈 / 전자현미경으로 봐도 표면이 밋밋하고 수박처럼 매끈하게 생겼다,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__058_2.png,note,2026 실습 필기본,58,전자현미경으로 봐도 표면이 밋밋하고 수박처럼 매끈하게 생겼다,,,전자현미경으로 봐도 표면이 밋밋하고 수박처럼 매끈하게 생겼다,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__062_1.png,note,2026 실습 필기본,62,이글루가 연상된다고 하시고 넘어가셨습니다,,,이글루가 연상된다고 하시고 넘어가셨습니다,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__067_1.png,note,2026 실습 필기본,67,terminal spine이 관찰된다,,,terminal spine이 관찰된다 / spine의 형태로 둘을 구분할 수 있음,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__067_2.png,note,2026 실습 필기본,67,terminal spine이 관찰된다,,,terminal spine이 관찰된다 / spine의 형태로 둘을 구분할 수 있음,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__068_1.png,note,2026 실습 필기본,68,Comparative morphology of eggs of Schistosoma sp.,"3가지 주혈흡충을 같이 보면,",Comparative morphology,,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__068_3.png,note,2026 실습 필기본,68,Comparative morphology of eggs of Schistosoma sp.,"3가지 주혈흡충을 같이 보면,",Comparative morphology,spine의 형태로 셋을 구분할 수 있음,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__071_1.png,note,2026 실습 필기본,71,커피 원두 닮았다,,,커피 원두 닮았다,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__072_1.png,note,2026 실습 필기본,72,간혹 Kato-Katz method에서도 관찰되기도 한다,간혹 Kato-Katz method에서도 관찰되기도 한다,,"embryo / => 앞서 대변에 묻어나오는 경우도 있다고 하셨는데, 그 예시인 것 같습니다 / 간혹 Kato-Katz method에서도 관찰되기도 한다",,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__077_9.png,note,2026 실습 필기본,77,2025,2025,,,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__081_3.png,note,2026 실습 필기본,81,2019년,2019년,,,,,종을 찾지 못함
+note/[260831_05]_감염의_기초_실습__084_3.png,note,2026 실습 필기본,84,2015년,2015년,,,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__009_4.png,note,2026 실습 필기본,9,,,,,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__009_5.png,note,2026 실습 필기본,9,대변 검사는,,,대변 검사는 / 음성 떴다. / -> 그럴 수 있다...,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__010_1.png,note,2026 실습 필기본,10,수술로 꺼내보니 3cm 정도의,수술로 꺼내보니 3cm 정도의,,,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__010_2.png,note,2026 실습 필기본,10,수술로 꺼내보니 3cm 정도의,수술로 꺼내보니 3cm 정도의,,,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__022_1.png,note,2026 실습 필기본,22,uterus를 더 자세히 확대한view,uterus를 더 자세히 확대한view,,,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__023_3.png,note,2026 실습 필기본,23,longitudinal한 단면(비스듬하게 잘림),,,"longitudinal한 단면(비스듬하게 잘림) / Pritt, B.S. (2019). Infectious Disorders of the Colon. / Spontaneous Pathology of the Labor",,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__023_4.png,note,2026 실습 필기본,23,"Spontaneous Pathology of the Laboratory Non-Human Primate , 2023",,,"Spontaneous Pathology of the Laboratory Non-Human Primate , 2023",,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__027_3.png,note,2026 실습 필기본,27,H : 뾰족vs S : Notched tail,,Notched tail,buccal cavity가 / 짧고 / esophagus가 전,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__027_4.png,note,2026 실습 필기본,27,strongyloides와hookworm은,,Hookworm larva,strongyloides와hookworm은 / tail 모양으로 구분 가능하다. / 분선충은M자 모양(어제 강의록,ancylostoma_duodenale,,두 종을 나란히 놓고 견주는 사진 (한 종을 묻는 문제로 쓸 수 없음)
+note/[260902_05]_감염의_기초_실습__029_1.png,note,2026 실습 필기본,29,조교님께서 얕게 = 초기 분지가 되자마자 후기 분지 거의 바로 이루어지는 것 / 깊게 = 초기 분지가 좀 진행된 후 후기 분지가 이루어지는 것 이라고 설명해주셨습니다!,조교님께서 얕게 = 초기 분지가 되자마자 후기 분지 거의 바로 이루어지는 것 / 깊게 = 초기 분지가 좀 진행된 후 후기 분지가 이루어지는 것 이라고 설명해주셨습니다!,,수컷에서dorsal costa를 보고 구분한다. Ad : 얕게(초기분지 짧) 두 개의 분지가 나와,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__029_2.png,note,2026 실습 필기본,29,조교님께서 얕게 = 초기 분지가 되자마자 후기 분지 거의 바로 이루어지는 것 / 깊게 = 초기 분지가 좀 진행된 후 후기 분지가 이루어지는 것 이라고 설명해주셨습니다!,조교님께서 얕게 = 초기 분지가 되자마자 후기 분지 거의 바로 이루어지는 것 / 깊게 = 초기 분지가 좀 진행된 후 후기 분지가 이루어지는 것 이라고 설명해주셨습니다!,,수컷에서dorsal costa를 보고 구분한다. Ad : 얕게(초기분지 짧) 두 개의 분지가 나와,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__031_1.png,note,2026 실습 필기본,31,"충란도 마찬가지, 이것만으로는 구분할 수 없다.","충란도 마찬가지, 이것만으로는 구분할 수 없다.",,"충란도 마찬가지, 이것만으로는 구분할 수 없다.",,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__031_2.png,note,2026 실습 필기본,31,"충란도 마찬가지, 이것만으로는 구분할 수 없다.","충란도 마찬가지, 이것만으로는 구분할 수 없다.",,"충란도 마찬가지, 이것만으로는 구분할 수 없다.",,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__031_3.png,note,2026 실습 필기본,31,"충란도 마찬가지, 이것만으로는 구분할 수 없다.","충란도 마찬가지, 이것만으로는 구분할 수 없다.",,,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__032_3.png,note,2026 실습 필기본,32,- 이빨의 형태,- 이빨의 형태,,N. americanus / 이런 형태의 이빨을 / 판 모양이라서,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__033_2.png,note,2026 실습 필기본,33,Dorsal costa,Dorsal costa,Dorsal costa,얕은 두분지에서 각각 세분지 / A. duodenale,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__033_3.png,note,2026 실습 필기본,33,Dorsal costa,Dorsal costa,Dorsal costa,N. americanus,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__034_2.png,note,2026 실습 필기본,34,Dorsal costa,Dorsal costa,Dorsal costa,N. americanus,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__034_3.png,note,2026 실습 필기본,34,Dorsal costa,Dorsal costa,Dorsal costa,,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__036_1.png,note,2026 실습 필기본,36,Lateral cord는,Lateral cord는,,Lateral cord는 / 잘 보이지 않습니다 ㅜ,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__041_1.png,note,2026 실습 필기본,41,*,,,* / * / *,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__041_2.png,note,2026 실습 필기본,41,*,,,"* / 때, 조교님께서도 그건 장담할 수 없다고 하셨 / Male",,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__042_1.png,note,2026 실습 필기본,42,,,,,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__042_2.png,note,2026 실습 필기본,42,,,,,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__045_1.png,note,2026 실습 필기본,45,,,,,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__045_2.png,note,2026 실습 필기본,45,,,,,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__047_1.png,note,2026 실습 필기본,47,암컷,암컷,,끝이 뾰족함 / cephalic / alae,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__047_2.png,note,2026 실습 필기본,47,암컷,암컷,,말려있음. / 수컷 / cephalic alae,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__048_3.png,note,2026 실습 필기본,48,Caudal alae,,Caudal alae,"투명해서 관찰하기 쉽지 않다. / Caudal alae / -> 즉, cephalic alae에 집중하자!",,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__053_1.png,note,2026 실습 필기본,53,장어와 고등어로 실험을 함.,,,장어와 고등어로 실험을 함.,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__053_2.png,note,2026 실습 필기본,53,,,,,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__055_2.png,note,2026 실습 필기본,55,Boring tooth,Boring tooth,Boring tooth,이것,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__055_3.png,note,2026 실습 필기본,55,Boring tooth,Boring tooth,Boring tooth,"tail쪽에 이런 구조물도 있는데, / Mucron / 임상이나 병리 측면에서는 큰 의미가 없음",,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__056_1.png,note,2026 실습 필기본,56,머리쪽에milkish white한ventricle이 보임!,머리쪽에milkish white한ventricle이 보임!,,Ventricle / 머리쪽에milkish white한ventricle이 보임!,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__056_2.png,note,2026 실습 필기본,56,머리쪽에milkish white한ventricle이 보임!,머리쪽에milkish white한ventricle이 보임!,,,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__058_1.png,note,2026 실습 필기본,58,,,,,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__059_2.png,note,2026 실습 필기본,59,Pathological characteristics of anisakiasis,Pathological characteristics of anisakiasis,Pathological characteristics,* / 암인줄 알고 뗀 종괴에서 이러한 양상 보일 수 있다.,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__059_3.png,note,2026 실습 필기본,59,Pathological characteristics of anisakiasis,Pathological characteristics of anisakiasis,Pathological characteristics,* / 암인줄 알고 뗀 종괴에서 이러한 양상 보일 수 있다.,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__060_1.png,note,2026 실습 필기본,60,-> 현미경 상으로 몸을 따라 길게 늘어선nuclear column이 보이면 사상충이라고 판단할,,,-> 현미경 상으로 몸을 따라 길게 늘어선nuclear column이 보이면 사상충이라고 판단할,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__063_1.png,note,2026 실습 필기본,63,,,,,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__063_3.png,note,2026 실습 필기본,63,Terminal nuclei,,Terminal nuclei,Terminal nuclei,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__065_1.png,note,2026 실습 필기본,65,Wuchereria bancrofti에 의한 감염증.,,,,wuchereria_bancrofti,,반크롭트사상충에 등록된 표본이 없음
+note/[260902_05]_감염의_기초_실습__066_1.png,note,2026 실습 필기본,66,우리나라에도 비슷한 사례들이 있다.,우리나라에도 비슷한 사례들이 있다.,,,,,종을 찾지 못함
+note/[260902_05]_감염의_기초_실습__066_2.png,note,2026 실습 필기본,66,우리나라에도 비슷한 사례들이 있다.,우리나라에도 비슷한 사례들이 있다.,,우리나라에도 비슷한 사례들이 있다.,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_001_1.png,note,2026 실습 필기본,1,작년에는 흡충과 조충 실습이 같이 진행되었지만 올해부터 나뉘게 되었습니다.,"안녕하세요, [260903_05] 감염의 기초 실습 3 - 흡충류 필기자 신서환입니다.",,,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_006_1.png,note,2026 실습 필기본,6,1. oral sucker & ventral suckr가 존재한다.,<흡충의  모식도>,,oral sucker / testis / intestine,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_009_1.png,note,2026 실습 필기본,9,암컷이 수컷의gynecophoral canal 속에 들어가 있는 모습,암컷이 수컷의gynecophoral canal 속에 들어가 있는 모습,,암컷 / oral sucker / ventral sucker,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_011_1.png,note,2026 실습 필기본,11,schistosoma이,,,schistosoma이 / 혈관으로 뚫고 들어가서 / 혈관을 통해 폐로,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_013_2.png,note,2026 실습 필기본,13,<주혈흡충증에 감염된 간>,<주혈흡충증에 감염된 간>,,,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_016_3.png,note,2026 실습 필기본,16,B,,,B / 한 번 들어가면 20년까지 살 수 있기 때문에 각각 나이가 다르다 / 동시에 많은 애들을collection할 수 있다.,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_018_2.png,note,2026 실습 필기본,18,제 1 중간숙주인 쇠우렁,제 1 중간숙주인 쇠우렁,,제2 중간수어 = 담수어 / 제 1 중간숙주인 쇠우렁,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_019_2.png,note,2026 실습 필기본,19,안을 들여다보면 충란 안에metacercaria(피낭유충)이 많다,안을 들여다보면 충란 안에metacercaria(피낭유충)이 많다,,실제로 보면 물고기muscle 안에서 살아 움직인다... / 안을 들여다보면 충란 안에metacercaria(피낭유충)이 많다,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_021_1.png,note,2026 실습 필기본,21,<portal triad 구성>,<portal triad 구성>,,http://medcell.med.yale.edu/histology/digesti / Histology of Normal Liver / https://embryology.med.unsw.edu.au/embryolo,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_022_1.png,note,2026 실습 필기본,22,1. hyperplasia,작년필기를 첨부했습니다.,,4. dilation / epithelium이 / multilayer이 됨,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_024_1.png,note,2026 실습 필기본,24,Figure. Histopathological findings of the intrahepatic bile duct in rat clonorchiasis 1,,Histopathological findings,Figure. Histopathological findings of the intrahepatic bile duct in rat clonorchiasis 1 / year after treatment with praz,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_026_1.png,note,2026 실습 필기본,26,Conical projection,Conical projection,Conical projection,,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_026_2.png,note,2026 실습 필기본,26,Conical projection,Conical projection,Conical projection,,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_029_1.png,note,2026 실습 필기본,29,고배율로 보면 안된다,고배율로 보면 안된다,,가장 중요한 구조물 - ovary. / 빨갛게 염색되어 있는ovary보기,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_029_2.png,note,2026 실습 필기본,29,고배율로 보면 안된다,고배율로 보면 안된다,,,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_031_1.png,note,2026 실습 필기본,31,제2 중간숙주 - 갑각류들,제2 중간숙주 - 갑각류들,,제2 중간숙주 - 갑각류들,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_031_2.png,note,2026 실습 필기본,31,제2 중간숙주 - 갑각류들,제2 중간숙주 - 갑각류들,,,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_034_1.png,note,2026 실습 필기본,34,worm이 있음을 확인할 수 있다,worm이 있음을 확인할 수 있다,,,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_035_1.png,note,2026 실습 필기본,35,"조직 슬라이드를 볼 때, 저배율로 봐야함(worm이 상당히 크기 때문)","조직 슬라이드를 볼 때, 저배율로 봐야함(worm이 상당히 크기 때문)",,다른 조직과 다르고 비어있음 / sucker에 해당하는부위 / <폐section>,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_037_2.png,note,2026 실습 필기본,37,운이 좋으면egg를 확인 가능,,,운이 좋으면egg를 확인 가능 / abopercular thickening,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_041_1.png,note,2026 실습 필기본,41,보통 굴에서 발견된다,보통 굴에서 발견된다,,보통 굴에서 발견된다,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_041_2.png,note,2026 실습 필기본,41,보통 굴에서 발견된다,보통 굴에서 발견된다,,,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_043_1.png,note,2026 실습 필기본,43,<section> villi를 잡고 있는 모습을 확인할 수 있음. 장 조직을 녹이게 된다.,,,<section> villi를 잡고 있는 모습을 확인할 수 있음. 장 조직을 녹이게 된다.,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_043_2.png,note,2026 실습 필기본,43,<section> villi를 잡고 있는 모습을 확인할 수 있음. 장 조직을 녹이게 된다.,,,<section> villi를 잡고 있는 모습을 확인할 수 있음. 장 조직을 녹이게 된다.,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_046_1.png,note,2026 실습 필기본,46,실제 장흡충이 박혀있는 모습,,,실제 장흡충이 박혀있는 모습,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_047_3.png,note,2026 실습 필기본,47,12. 2,12. 2,,,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_047_4.png,note,2026 실습 필기본,47,12. 2,12. 2,,,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_052_3.png,note,2026 실습 필기본,52,<2017-흡충>,<2017-흡충>,,,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_053_2.png,note,2026 실습 필기본,53,<2016-흡충>,<2016-흡충>,,,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_053_3.png,note,2026 실습 필기본,53,<2016-흡충>,<2016-흡충>,,,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_053_5.png,note,2026 실습 필기본,53,<2016-흡충>,<2016-흡충>,,,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_053_7.png,note,2026 실습 필기본,53,<2016-흡충>,<2016-흡충>,,,,,종을 찾지 못함
+note/[260903_05]_감염의_기초_실습3_054_3.png,note,2026 실습 필기본,54,<2015-흡충>,<2015-흡충>,,,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__002_1.png,note,2026 실습 필기본,2,"시작에 앞서, 슬라이드 분실과 파손에 관련하여 주의 부탁하셨습니다!","시작에 앞서, 슬라이드 분실과 파손에 관련하여 주의 부탁하셨습니다!",,"시작에 앞서, 슬라이드 분실과 파손에 관련하여 주의 부탁하셨습니다! / cerebral 관련해서 충체는 관찰되지 않고 충란만 확인하면 된다고 말씀하셨습니다. 충체 자체는 흡충류의 특징이 있어서 / figment가 존",,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__010_1.png,note,2026 실습 필기본,10,Sucking groove,#1 광절열두조충 Diphyllobothrium latum,Sucking groove,충 / Sucking groove,diphyllobothrium_latum,diphyllobothrium_gravid_proglottid,"광절열두조충의 표본 후보 2개 중 라벨만으로는 구분 불가: diphyllobothrium_gravid_proglottid, diphyllobothrium_scolex"
+note/[260904_05]_감염의_기초_실습__017_2.png,note,2026 실습 필기본,17,Metacestode of Taenia solium,Metacestode of Taenia solium,Taenia solium,"->쌀알든 돼지라고 생각해서 먹었는데 기생충일 수 있다 ,,하나만 꺼내서 보면 -> 다음 slide",taenia_solium,taenia_solium_gravid_proglottid,"유구조충의 표본 후보 2개 중 라벨만으로는 구분 불가: taenia_solium_gravid_proglottid, taenia_solium_scolex"
+note/[260904_05]_감염의_기초_실습__017_3.png,note,2026 실습 필기본,17,Metacestode of Taenia solium,Metacestode of Taenia solium,Taenia solium,"->쌀알든 돼지라고 생각해서 먹었는데 기생충일 수 있다 ,,하나만 꺼내서 보면 -> 다음 slide",taenia_solium,taenia_solium_gravid_proglottid,"유구조충의 표본 후보 2개 중 라벨만으로는 구분 불가: taenia_solium_gravid_proglottid, taenia_solium_scolex"
+note/[260904_05]_감염의_기초_실습__019_1.png,note,2026 실습 필기본,19,머리부분 구조가 잘려있음,머리부분 구조가 잘려있음,,,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__019_2.png,note,2026 실습 필기본,19,머리부분 구조가 잘려있음,머리부분 구조가 잘려있음,,cyst 안에 들어가있다 / 압축된 neck과 scolex / section 한 모습,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__020_1.png,note,2026 실습 필기본,20,유구낭미충은 cyst안에서만 운동성이 있어서,,,조직에서 존재할 때 = nodule형태로 보임 / 유구낭미충은 cyst안에서만 운동성이 있어서 / -> nodule이 움직이지는 않는다.,cysticercus_cellulosae,cysticercus_muscle_section,한 행에 여러 표본 유형이 섞여 있음
+note/[260904_05]_감염의_기초_실습__021_1.png,note,2026 실습 필기본,21,역시 cyst안에 scolex가 있다.,역시 cyst안에 scolex가 있다.,,증상 2. cerebral cysticercosis @CNS / 머리에 박힌 모습 / brain으로 가서도 cyst 형태를 형성하게 된다. 보통 감염되면 여러 개의 충란이 동시에 들어가기 때문에,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__021_2.png,note,2026 실습 필기본,21,역시 cyst안에 scolex가 있다.,역시 cyst안에 scolex가 있다.,,머리에 박힌 모습 / 증상 2. cerebral cysticercosis @CNS / brain으로 가서도 cyst 형태를 형성하게 된다. 보통 감염되면 여러 개의 충란이 동시에 들어가기 때문에,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__024_1.png,note,2026 실습 필기본,24,꽃뱀이 중간숙주,꽃뱀이 중간숙주,,,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__024_2.png,note,2026 실습 필기본,24,꽃뱀이 중간숙주,꽃뱀이 중간숙주,,"뱀 껍데기 밑에 존재하는 larvae를 바로 볼 수 있다. 뱀 껍데기 밑이나 살의 표면, 근육의 / 표면에 spargarnum이 존재한다.",,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__024_3.png,note,2026 실습 필기본,24,꽃뱀이 중간숙주,꽃뱀이 중간숙주,,"뱀 껍데기 밑에 존재하는 larvae를 바로 볼 수 있다. 뱀 껍데기 밑이나 살의 표면, 근육의 / 표면에 spargarnum이 존재한다.",,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__027_1.png,note,2026 실습 필기본,27,"testis에 가서 운동성을 가진 모습대로 nodule을 형성하고, scrotum mass에서 조충 발견 가능",,,,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__027_2.png,note,2026 실습 필기본,27,"testis에 가서 운동성을 가진 모습대로 nodule을 형성하고, scrotum mass에서 조충 발견 가능",,,scrotum mass를 꺼내았보더니 조충을 발견,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__028_1.png,note,2026 실습 필기본,28,서울대병원 case : CNS에서 발견된 경우,서울대병원 case : CNS에서 발견된 경우,,brain 표면에서 발견 시 surgical / @CNS,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__028_2.png,note,2026 실습 필기본,28,서울대병원 case : CNS에서 발견된 경우,서울대병원 case : CNS에서 발견된 경우,,,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__028_3.png,note,2026 실습 필기본,28,서울대병원 case : CNS에서 발견된 경우,서울대병원 case : CNS에서 발견된 경우,,실질 내로 들어가서 edema가 존재 / 외과적 시술이 treat인데 운이 너무 나쁘다. 실질을 건드리는 건 위험할 수 있기에,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__030_1.png,note,2026 실습 필기본,30,영상으로 어떻게 움직이는지를 직접 보여주심.,영상으로 어떻게 움직이는지를 직접 보여주심.,,몸이 이렇게 당겨짐 / 우리 몸을 잘 침투함 / 충은 머리를 구멍에 넣고 몸 뒷부분을 당겨오면서,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__033_1.png,note,2026 실습 필기본,33,cyst안에 들어있는 protoscolex를 관찰할 수 있음,cyst안에 들어있는 protoscolex를 관찰할 수 있음,,cyst안에 들어있는 protoscolex를 관찰할 수 있음 / Protoscolex (원두절),,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__034_2.png,note,2026 실습 필기본,34,Gross anatomy 사진입니다.,Gross anatomy 사진입니다.,Gross anatomy,중앙에 진하게 갈색 반점이 존재함. 뭔가 칼국수같음,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__035_1.png,note,2026 실습 필기본,35,감사합니다.,감사합니다.,,,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__036_2.png,note,2026 실습 필기본,36,<2025-조충>,<2025-조충>,,,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__036_3.png,note,2026 실습 필기본,36,<2025-조충>,<2025-조충>,,,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__036_4.png,note,2026 실습 필기본,36,<2025-조충>,<2025-조충>,,,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__037_3.png,note,2026 실습 필기본,37,<2023-조충>,2023년 족보부터는 선배님의 필기를 참고하였습니다. 김서연 선배님 감사합니다!,,,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__038_4.png,note,2026 실습 필기본,38,<2022-조충>,<2022-조충>,,,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__038_5.png,note,2026 실습 필기본,38,<2022-조충>,<2022-조충>,,,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__039_3.png,note,2026 실습 필기본,39,<2021-조충>,<2021-조충>,,,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__040_2.png,note,2026 실습 필기본,40,<2019-조충>,<2019-조충>,,,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__041_2.png,note,2026 실습 필기본,41,<2018-조충>,<2018-조충>,,,,,종을 찾지 못함
+note/[260904_05]_감염의_기초_실습__043_3.png,note,2026 실습 필기본,43,<2016-조충>,<2016-조충>,,,,,종을 찾지 못함

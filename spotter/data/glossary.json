@@ -1,0 +1,84 @@
+{
+  "_comment": "indicator 문제(족보 43문항)용 구조물 용어집. aliases는 족보에 나온 표기 변형, fake는 실재하지 않는 오답 전용 용어.",
+  "aliases": {
+    "lateral cord": [
+      "lateral chord"
+    ],
+    "gynecophoral canal": [
+      "gynechophoral canal",
+      "포자관"
+    ],
+    "conical projection": [
+      "cephalic cone"
+    ],
+    "sucking groove": [
+      "bothrium"
+    ],
+    "nursing cell complex": [
+      "nurse cell",
+      "nursing cell"
+    ],
+    "mucoid plug": [
+      "polar plug",
+      "bipolar plug"
+    ],
+    "embryophoral block": [
+      "embryophore"
+    ],
+    "hexacanth embryo": [
+      "육구유충",
+      "oncosphere"
+    ],
+    "abopercular thickening": [
+      "abopercular knob"
+    ],
+    "flagella": [
+      "flagellum",
+      "편모"
+    ],
+    "cilia": [
+      "섬모"
+    ],
+    "pseudopodia": [
+      "위족"
+    ],
+    "undulating membrane": [
+      "파동막"
+    ],
+    "karyosome": [
+      "핵소체"
+    ],
+    "peripheral chromatin": [
+      "주변 염색질"
+    ],
+    "calcareous corpuscle": [
+      "calcium corpuscle",
+      "석회소체"
+    ]
+  },
+  "fake_distractors": [
+    {
+      "term": "gelatin layer",
+      "note": "충란 3-layer 문제의 오답. 실제 층은 albumin-chitin-lipoid"
+    }
+  ],
+  "past_answers": [
+    {
+      "year": 2025,
+      "no": 15,
+      "question": "indicator가 지시하는 구조물",
+      "answer": "Renette cell",
+      "distractors": [
+        "lateral cord"
+      ],
+      "note": "고래회충 단면. lateral cord와 Renette cell을 한 세트로 묻는 패턴"
+    }
+  ],
+  "layer_sets": {
+    "회충 수정란 충란벽": [
+      "albumin layer",
+      "chitin layer",
+      "lipoid layer"
+    ]
+  }
+}

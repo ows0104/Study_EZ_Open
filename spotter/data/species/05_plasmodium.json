@@ -1,0 +1,225 @@
+[
+  {
+    "id": "plasmodium_falciparum",
+    "scientific_name": "Plasmodium falciparum",
+    "name_ko": "열대열원충",
+    "name_en": "",
+    "aliases": [
+      "Plasmoidum flaciparum"
+    ],
+    "group": "말라리아",
+    "group_en": "Plasmodium",
+    "subgroup": "열원충",
+    "size": "ring form이 RBC 지름의 1/4-1/5",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "얼룩날개모기 흡혈 / 수혈 / 수직감염",
+    "source": "Anopheles 모기 (Anopheles gambiae 등)",
+    "infective_stage": "sporozoite",
+    "intermediate_host": [
+      "사람 (무성생식)"
+    ],
+    "definitive_host": "얼룩날개모기 (유성생식)",
+    "habitat": "간세포 → 적혈구",
+    "lung_migration": false,
+    "disease_ko": "열대열말라리아",
+    "disease_en": "falciparum malaria",
+    "symptoms": [
+      "주기적 발열 (36-48시간, 불규칙한 편)",
+      "뇌말라리아 - 모세혈관 폐색 → 저산소·경색",
+      "중증 빈혈·비장종대",
+      "유일하게 치사율 높음"
+    ],
+    "diagnosis": [
+      "혈액도말 (thick/thin smear, Giemsa)",
+      "신속진단키트",
+      "열대지역 여행력"
+    ],
+    "treatment": [
+      "ACT (artemisinin-combined therapy)",
+      "Chloroquine (내성 지역 주의)"
+    ],
+    "epidemiology": "열대·아열대 (아프리카). hypnozoite 없음 → 재발 없음",
+    "exam_notes": "RBC 크기 변화 없음 + multiple ring form + 바나나 모양 gametocyte 가 3대 감별점. merozoite 최대 32개. trophozoite·schizont는 말초혈액에서 드묾",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "plasmodium_vivax",
+    "scientific_name": "Plasmodium vivax",
+    "name_ko": "삼일열원충",
+    "name_en": "",
+    "aliases": [],
+    "group": "말라리아",
+    "group_en": "Plasmodium",
+    "subgroup": "열원충",
+    "size": "ring form이 RBC 지름의 1/3",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "얼룩날개모기 흡혈",
+    "source": "Anopheles 모기 (국내는 Anopheles sinensis)",
+    "infective_stage": "sporozoite",
+    "intermediate_host": [
+      "사람"
+    ],
+    "definitive_host": "얼룩날개모기",
+    "habitat": "간세포 (hypnozoite) → 적혈구",
+    "lung_migration": false,
+    "disease_ko": "삼일열말라리아",
+    "disease_en": "vivax malaria",
+    "symptoms": [
+      "48시간 주기 발열",
+      "빈혈·비장종대",
+      "hypnozoite에 의한 재발"
+    ],
+    "diagnosis": [
+      "혈액도말 (Giemsa)",
+      "신속진단키트"
+    ],
+    "treatment": [
+      "Chloroquine",
+      "Primaquine (hypnozoite 제거)"
+    ],
+    "epidemiology": "온대 지역. 국내에서 유일하게 발생하는 종 (휴전선 인근, 민간인 > 군인). 긴 잠복기",
+    "exam_notes": "RBC가 커지고 옅어짐 + multiple ring 없음 + amoeboid trophozoite + 세포질이 꽉 찬 gametocyte. merozoite 16개 이하. Schuffner dot",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "plasmodium_ovale",
+    "scientific_name": "Plasmodium ovale",
+    "name_ko": "난형열원충",
+    "name_en": "",
+    "aliases": [],
+    "group": "말라리아",
+    "group_en": "Plasmodium",
+    "subgroup": "열원충",
+    "size": "",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "얼룩날개모기 흡혈",
+    "source": "Anopheles 모기",
+    "infective_stage": "sporozoite",
+    "intermediate_host": [
+      "사람"
+    ],
+    "definitive_host": "얼룩날개모기",
+    "habitat": "간세포 (hypnozoite) → 적혈구",
+    "lung_migration": false,
+    "disease_ko": "난형열말라리아",
+    "disease_en": "ovale malaria",
+    "symptoms": [
+      "48시간 주기 발열",
+      "비교적 경증",
+      "hypnozoite에 의한 재발"
+    ],
+    "diagnosis": [
+      "혈액도말 (Giemsa)"
+    ],
+    "treatment": [
+      "Chloroquine",
+      "Primaquine"
+    ],
+    "epidemiology": "서아프리카",
+    "exam_notes": "RBC가 커지고 옅어지며 타원형(oval)이 되고 가장자리가 술처럼 갈라짐 (fimbriation). merozoite 8개 이하. dot 관찰 가능",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "plasmodium_malariae",
+    "scientific_name": "Plasmodium malariae",
+    "name_ko": "사일열원충",
+    "name_en": "",
+    "aliases": [
+      "P. malariae"
+    ],
+    "group": "말라리아",
+    "group_en": "Plasmodium",
+    "subgroup": "열원충",
+    "size": "",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "얼룩날개모기 흡혈",
+    "source": "Anopheles 모기",
+    "infective_stage": "sporozoite",
+    "intermediate_host": [
+      "사람"
+    ],
+    "definitive_host": "얼룩날개모기",
+    "habitat": "적혈구 (hypnozoite 없음)",
+    "lung_migration": false,
+    "disease_ko": "사일열말라리아",
+    "disease_en": "malariae malaria",
+    "symptoms": [
+      "72시간 주기 발열",
+      "신증후군 (면역복합체)"
+    ],
+    "diagnosis": [
+      "혈액도말 (Giemsa)"
+    ],
+    "treatment": [
+      "Chloroquine"
+    ],
+    "epidemiology": "산발적 분포",
+    "exam_notes": "RBC 크기 변화 없음 + ring이 아닌 band form trophozoite + daisy flower(daisy head) 모양 schizont + dot 없음",
+    "sources": [
+      "실습.pdf",
+      "서유지",
+      "오민석",
+      "전민서"
+    ],
+    "distractor_only": false
+  },
+  {
+    "id": "plasmodium_knowlesi",
+    "scientific_name": "Plasmodium knowlesi",
+    "name_ko": "원숭이열원충",
+    "name_en": "",
+    "aliases": [],
+    "group": "말라리아",
+    "group_en": "Plasmodium",
+    "subgroup": "열원충",
+    "size": "",
+    "transmission_mode": "절지동물매개성",
+    "transmission_route": "얼룩날개모기 흡혈",
+    "source": "Anopheles 모기",
+    "infective_stage": "sporozoite",
+    "intermediate_host": [
+      "원숭이·사람"
+    ],
+    "definitive_host": "얼룩날개모기",
+    "habitat": "적혈구",
+    "lung_migration": false,
+    "disease_ko": "원숭이열말라리아",
+    "disease_en": "knowlesi malaria",
+    "symptoms": [
+      "24시간 주기 발열 (가장 짧음)",
+      "중증화 가능"
+    ],
+    "diagnosis": [
+      "혈액도말 (P. malariae와 유사하여 오진 흔함)",
+      "PCR"
+    ],
+    "treatment": [
+      "Chloroquine",
+      "ACT"
+    ],
+    "epidemiology": "동남아 (말레이시아 보르네오)",
+    "exam_notes": "형태가 P. malariae와 유사 — 보기 세트용",
+    "sources": [
+      "오민석"
+    ],
+    "distractor_only": true
+  }
+]
