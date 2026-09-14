@@ -15,6 +15,12 @@
     python -m runner jokbo 병리학           과목 족보를 강의별로 자른다 (학기당 1회)
     python -m runner import --from <폴더>   다른 곳에서 만든 덱을 옮긴다 (보류로 들어온다)
     python -m runner release <run_id>       보류를 푼다
+    python -m runner chosen                 어느 편에 고른 기록이 있나
+    python -m runner chosen <run_id>         그 편의 시도와 고른 기록을 본다
+    python -m runner chosen <run_id> --keep --why "..."
+                                            지금 이 자리 것을 쓴다고 적는다
+    python -m runner chosen <run_id> --pick out/redo_<id> --why "..."
+                                            다른 시도를 골랐다고 적는다 (문지기가 막는다)
     python -m runner rebuild                이미 만든 카드로 덱만 다시 굽는다
     python -m runner done <run_id>          빌드 끝. 표시하고 그 편을 올린다
     python -m runner publish 병리학 --dry-run   무엇이 올라갈지 본다
@@ -47,7 +53,9 @@ for _stream in (sys.stdout, sys.stderr):
 
 from runner import (  # noqa: E402
     agent,
+    attempts,
     blocks,
+    chosen,
     cycle,
     deck,
     filenames,
@@ -318,17 +326,19 @@ def run_import(args) -> int:
     moved = 0
     for run_id, entries in sorted(found.items()):
         # 한 강의에 같은 갈래가 여럿이면 (변형 폴더) 가장 새 것을 쓰되 **말은 한다.**
-        chosen: list[tuple[str, Path]] = []
+        # 이름이 `chosen` 이었는데 그게 `runner.chosen` 모듈을 가렸다. 지금은 이
+        # 함수가 그 모듈을 안 쓰지만, 쓰려는 순간 UnboundLocalError 로 터진다.
+        newest: list[tuple[str, Path]] = []
         for kind in (deck.MAIN, deck.PRE):
             same = sorted((pair for pair in entries if pair[0] == kind),
                           key=lambda pair: deck.apkg_of(pair[1], pair[0]).stat().st_mtime)
             if len(same) > 1:
                 print(f"  ⚠ {run_id} {kind} — 후보가 {len(same)}개다. 가장 새 것을 쓴다: "
                       + " · ".join(folder.name for _, folder in same))
-            chosen += same[-1:]
+            newest += same[-1:]
 
         target = runs_dir / run_id
-        for kind, folder in chosen:
+        for kind, folder in newest:
             source_name = Path(deck.source_pdf(folder)).name
             parsed = filenames.parse(source_name) if source_name else None
             label = f"{run_id} ← {folder.name}"
@@ -472,10 +482,93 @@ def run_release(args) -> int:
     return 0
 
 
+def run_chosen(args) -> int:
+    """어느 시도를 왜 골랐는지 적는다 (`docs/runs-layout.md` 4단계).
+
+    `runs/<편>/CHOSEN.json` 이고 자세한 것은 `runner/chosen.py` 머리에 있다.
+    **`--why` 없이는 적지 않는다** — 왜 골랐는지는 코드가 쓸 수 없다.
+
+    인자를 안 주면 어느 편에 기록이 있고 어느 편에 없는지만 센다.
+    """
+    runs_dir = Path(args.runs)
+    out_dir = REPO_ROOT / "out"
+    run_id = args.subject or args.run_id
+
+    if not run_id:
+        ids = attempts.run_ids_with_alternatives(runs_dir, out_dir)
+        if not ids:
+            print("[chosen] 시도가 둘 이상인 편이 없다 — 고를 것이 없다")
+            return 0
+        have = [r for r in ids if chosen.read(runs_dir / r)]
+        print(f"[chosen] 시도가 둘 이상인 편 {len(ids)}개 · 고른 기록이 있는 편 {len(have)}개")
+        for rid in ids:
+            mark = "▸" if rid in have else " "
+            print(f"  {mark} {rid}  {chosen.summary(runs_dir / rid).splitlines()[0]}")
+        if len(have) < len(ids):
+            print("\n기록이 없는 편은 **지금 이 자리에 있는 것이 어쩌다 정본**인 상태다.")
+            print('    python scripts/attempts.py <run_id>     먼저 재 보고')
+            print('    python -m runner chosen <run_id> --keep --why "..."')
+        return 0
+
+    run_dir = runs_dir / run_id
+    if not run_dir.is_dir():
+        print(f"[chosen] {run_dir} 가 없다")
+        return 1
+
+    found = attempts.attempts_of(runs_dir, out_dir, run_id)
+    if not found:
+        print(f"[chosen] {run_id} 에 시도가 하나도 없다 — 카드 파일을 못 찾았다")
+        return 1
+
+    # 적지 않는 호출이면 지금 상태만 보여 준다.
+    if not (args.keep or args.pick):
+        print(f"[chosen] {run_id} — 시도 {sum(1 for a in found if a.fresh)}개")
+        for a in found:
+            where = a.path.name if a.path.parent != runs_dir else f"runs/{a.path.name}"
+            print(f"  {'=' if not a.fresh else ' '} {where:<30} {a.cards:4}장  "
+                  f"기출{a.exam_hit:3}  족보{a.jokbo_ref:3}  "
+                  f"같음 {'—' if a.same_rate is None else f'{a.same_rate:.0%}'}"
+                  + (f"  컷 {a.cut_id}" if a.cut_id else ""))
+        print(f"  ▸ {chosen.summary(run_dir)}")
+        if (mismatch := chosen.verdict(run_dir)):
+            print(f"  ✋ {mismatch}")
+        print("\n적으려면 --keep (지금 이 자리 것) 또는 --pick <경로> 와 --why 를 같이 주세요")
+        return 0
+
+    if args.keep and args.pick:
+        print("[chosen] --keep 과 --pick 은 같이 못 쓴다")
+        return 2
+    if not (args.why or "").strip():
+        print("[chosen] --why 가 필요하다. **왜 골랐는지는 코드가 쓰지 않는다**")
+        print("         무엇이 좋은 시도인지가 아직 안 정해져 있어서다 "
+              "(docs/runs-layout.md 「아직 안 정한 것」)")
+        return 2
+
+    want = run_dir if args.keep else Path(args.pick)
+    pick = next((a for a in found if a.path.resolve() == want.resolve()), None)
+    if pick is None:
+        print(f"[chosen] {want} 는 이 편의 시도 목록에 없다. 있는 것은:")
+        for a in found:
+            print(f"    {a.path}")
+        return 1
+
+    record = chosen.build(run_id, pick, why=args.why, repo_root=REPO_ROOT,
+                          considered=found, kind=chosen.MAIN,
+                          previous=chosen.read(run_dir))
+    path = chosen.write(run_dir, record)
+    print(f"[chosen] {path}")
+    print(f"  {chosen.summary(run_dir)}")
+    if (mismatch := chosen.verdict(run_dir)):
+        print(f"\n  ✋ {mismatch}")
+        print("     **이 편의 덱은 다음 publish 에서 미뤄진다.** 강의록은 그대로 나간다.")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Study_EZ 로컬 러너")
     parser.add_argument("command", choices=["match", "watch", "done", "jokbo", "preview", "agent",
-                                            "prequeue", "publish", "import", "release", "rebuild"])
+                                            "prequeue", "publish", "import", "release", "rebuild",
+                                            "chosen"])
     parser.add_argument("subject", nargs="?", help="과목 폴더명. --all이면 생략")
     parser.add_argument("--all", action="store_true", help="필기/올해 폴더가 있는 과목 전부")
     parser.add_argument("--this", default="2026", help="올해 폴더명")
@@ -517,6 +610,12 @@ def main() -> int:
                         help="watch: 오늘을 이 날짜로 친다 (블럭 판정 확인용)")
     parser.add_argument("--timetable", default=None,
                         help=f"watch: 시간표 (기본 {blocks.DEFAULT_SOURCE})")
+    parser.add_argument("--keep", action="store_true",
+                        help="chosen: 지금 runs/<편>/ 에 있는 시도를 쓴다고 적는다")
+    parser.add_argument("--pick", default="",
+                        help="chosen: 다른 시도를 골랐다고 적는다 (예: out/redo_260812_01)")
+    parser.add_argument("--why", default="",
+                        help="chosen: 왜 그것을 골랐는가. **없으면 안 적는다**")
     parser.add_argument("--url", default=None,
                         help="preview: 공유된 예습 대화 주소")
     parser.add_argument("--api", default=None,
@@ -588,6 +687,8 @@ def main() -> int:
         return cycle.run_agent(args)
     if args.command == "import":
         return run_import(args)
+    if args.command == "chosen":
+        return run_chosen(args)
     if args.command == "release":
         return run_release(args)
     if args.command == "rebuild":

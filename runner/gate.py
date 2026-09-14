@@ -28,6 +28,7 @@
     막는다    덱에 문항 결함으로 갈린 카드가 남아 있다 (러너가 --allow-defects 로 넘겼다)
     막는다    덱은 있는데 `run.meta.json`이 없다 (무엇으로 만들었는지 모른다)
     막는다    사람이 `HOLD`를 놓아 두었다
+    막는다    사람이 `CHOSEN.json`에 고른 시도가 이 자리에 없다
 
     적기만    soft flag 종류별 개수 — 카드 뒷면 경고 박스로 이미 나간다
     적기만    `different`·`partial` 재현 판정 — 눈가리개 세션이 몰랐을 뿐일 수 있다
@@ -47,6 +48,8 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+from . import chosen
 
 # 사람이 손으로 놓는 보류 표시. 안에 적힌 글이 그대로 사유가 된다.
 HOLD_FILE = "HOLD"
@@ -130,6 +133,16 @@ def inspect(run_dir: Path, deck: Path | None, meta_path: Path | None,
     held = hold_reason(run_dir)
     if held:
         verdict.blocking.append(f"{label} 보류 — {held}")
+
+    # 사람이 고른 시도와 이 자리에 있는 것이 다른가. **기록이 없으면 아무 말도 안
+    # 한다** — 306편 대부분이 그렇고, 그때는 지금과 똑같이 돈다(`chosen.py` 머리).
+    #
+    # 이것을 「적기만」에 두지 않은 이유: 2026-08-27 에 다시 구운 25편이 한 번도 안
+    # 나간 것을 09-14 에야 찾았고, 그때까지 화면에는 아무 말이 없었다. **사람이
+    # 적어 둔 선택과 나가는 것이 다른 것은 산출물이 자기 주장과 다른 것과 같은 급이다.**
+    mismatch = chosen.verdict(run_dir, chosen.PREQUIZ if prefix == "pre_" else chosen.MAIN)
+    if mismatch:
+        verdict.blocking.append(f"{label} {mismatch}")
 
     if meta_path is None or not meta_path.is_file():
         verdict.blocking.append(

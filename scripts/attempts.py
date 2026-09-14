@@ -13,6 +13,22 @@
 
 그래서 여기서는 합계도 점수도 안 낸다. **정렬은 시각순뿐이다.**
 
+## 재는 것은 `runner/attempts.py` 다
+
+**이 파일은 화면에 찍는 일만 한다.** 재는 코드가 여기 있었는데 2026-09-15 에
+`runner/attempts.py` 로 내렸다 — 사람이 고른 것을 적는 쪽(`runner/chosen.py`)이
+같은 값을 봐야 하고, 두 곳에서 각각 재면 표와 기록이 갈릴 자리가 된다.
+
+## 고르고 나면 적어라
+
+이 표는 고르는 데 쓰고, **고른 것은 `CHOSEN.json` 에 적는다.**
+
+    python -m runner chosen 260812_01 --keep --why "..."
+    python -m runner chosen 260812_01 --pick out/redo_260812_01 --why "..."
+
+적어 두지 않으면 다음에 같은 질문을 다시 하게 된다. 그 문서가 「왜 바꾸나」의 ④로
+적어 둔 것이 그것이다 — **어느 시도가 왜 이겼는지 적는 자리가 없었다.**
+
 ## 재현 일치율은 ±4%p 흔들린다
 
 같은 카드를 한 글자도 안 바꾸고 채점만 세 번 돌렸을 때 82.1% · 83.2% · 86.3% 가
@@ -28,171 +44,95 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
-import re
+import csv
+import datetime as dt
 import sys
-from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from runner import attempts as att  # noqa: E402  (경로를 세운 뒤에 불러야 한다)
+from runner import chosen  # noqa: E402
+
 RUNS = ROOT / "runs"
 OUT = ROOT / "out"
-RUN_ID = re.compile(r"(\d{6}_\d{2})")
-
-# 재현 일치율의 흔들림. 한 편(`260820_02`)을 세 번 재서 얻은 값이고 **다른 편에서
-# 같은지는 모른다**(`quizgen/CLAUDE.md` 「아직 실측하지 않은 것」).
-REPRODUCE_NOISE_PP = 4.2
 
 
-def cards(d: Path) -> list[dict]:
-    """그 시도가 낸 카드. 재현까지 간 것이 있으면 그것을, 없으면 검증 통과분을."""
-    for name in ("items.reproduced.json", "items.checked.json", "items.raw.json"):
-        p = d / name
-        if not p.is_file():
-            continue
-        try:
-            got = json.loads(p.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            continue
-        rows = got.get("cards", got) if isinstance(got, dict) else got
-        # 모델이 카드 목록 끝에 `"__MORE__"` 같은 자리표시자를 붙여 낸 편이 있다.
-        # 카드가 아닌 것이 섞일 수 있다는 것을 세는 쪽도 알아야 한다.
-        return [c for c in rows if isinstance(c, dict) and "q" in c]
-    return []
+def rel(p: Path) -> str:
+    try:
+        return p.resolve().relative_to(ROOT).as_posix()
+    except ValueError:
+        return p.as_posix()
 
 
-def measure(d: Path) -> dict | None:
-    rows = cards(d)
-    if not rows:
-        return None
-    verdicts = Counter(
-        (c.get("reproduce") or {}).get("verdict") for c in rows if isinstance(c.get("reproduce"), dict)
-    )
-    got = {
-        "path": d.relative_to(ROOT).as_posix(),
-        "cards": len(rows),
-        "exam_hit": sum(1 for c in rows if c.get("exam_hit")),
-        "jokbo_ref": sum(1 for c in rows if c.get("jokbo_ref")),
-        "same": verdicts.get("same", 0),
-        "partial": verdicts.get("partial", 0),
-        "different": verdicts.get("different", 0),
-        "graded": sum(verdicts.values()),
-        "minutes": None,
-        "cost": None,
-        "when": None,
-        "cards_hash": None,
-        # 어느 족보 컷을 봤는가. 2026-09-14 이후에 만든 편에만 있다
-        # (`quizgen/cutmark.py` · `docs/runs-layout.md` 3단계).
-        "cut": None,
-        "jokbo_why_not": None,
-    }
-    stamp = d / "items.raw.json"
-    if stamp.is_file():
-        got["when"] = stamp.stat().st_mtime
-        # **시도인 척하는 것이 둘 있다.** 채점만 다시 돌린 판(`var1`·`var2`)과 그냥
-        # 사본(`exp_prac` ↔ `runs/`). 모델이 쓴 카드가 한 바이트도 안 다르면 같은
-        # 시도다 — 그것을 세면 시도 수가 부풀고, 그 표로 「나은 판」을 고르게 된다.
-        got["cards_hash"] = hashlib.sha256(stamp.read_bytes()).hexdigest()[:8]
-    used = d / "jokbo.used.json"
-    if used.is_file():
-        try:
-            rec = json.loads(used.read_text(encoding="utf-8"))
-            got["cut"] = rec.get("cut_id") or ("판미기록" if rec.get("attached") else None)
-            got["jokbo_why_not"] = None if rec.get("attached") else rec.get("why_not")
-        except (OSError, json.JSONDecodeError):
-            pass
-    report = d / "run.report.json"
-    if report.is_file():
-        try:
-            cum = (json.loads(report.read_text(encoding="utf-8")) or {}).get("cumulative") or {}
-            got["minutes"] = round(cum["seconds"] / 60, 1) if cum.get("seconds") else None
-            got["cost"] = round(cum["cost_usd"], 2) if cum.get("cost_usd") else None
-        except (OSError, json.JSONDecodeError, TypeError):
-            pass
-    return got
+def fmt(a: att.Attempt, newest: bool) -> str:
+    when = dt.datetime.fromtimestamp(a.when).strftime("%m-%d %H:%M") if a.when else "—"
+    rate = f"{a.same_rate * 100:4.0f}%" if a.same_rate is not None else "   —"
+    mark = "=" if not a.fresh else ("*" if newest else " ")
+    tail = (f"  컷 {a.cut_id}" if a.cut_id
+            else (f"  족보 안 붙음: {a.jokbo_why_not}" if a.jokbo_why_not else ""))
+    return (f"  {mark} {rel(a.path):<34} {when}  "
+            f"{a.cards:4}장  기출{a.exam_hit:3}  족보{a.jokbo_ref:3}  "
+            f"같음{a.same:4}{rate}  부분{a.partial:3}  다름{a.different:3}  "
+            f"{(str(a.minutes) + '분') if a.minutes else '—':>7}"
+            f"{('$' + str(a.cost)) if a.cost else '—':>8}{tail}")
 
 
-def attempts_of(run_id: str) -> list[dict]:
-    """그 편의 시도 전부. `runs/<id>/` 와 `out/` 에서 이름에 그 id 가 든 것."""
-    found = []
-    for d in [RUNS / run_id, *sorted(p for p in OUT.glob(f"*{run_id}*") if p.is_dir())]:
-        if d.is_dir() and (got := measure(d)):
-            found.append(got)
-    return sorted(found, key=lambda r: r["when"] or 0)
-
-
-def run_ids() -> list[str]:
-    """`out/` 에 시도가 있고 `runs/` 에도 있는 편. 없으면 비교할 것이 없다."""
-    ids = set()
-    for d in OUT.iterdir():
-        m = RUN_ID.search(d.name)
-        if d.is_dir() and m and (RUNS / m.group(1)).is_dir():
-            ids.add(m.group(1))
-    return sorted(ids)
-
-
-def fmt(row: dict, newest: bool, dup: bool = False) -> str:
-    import datetime as dt
-    when = dt.datetime.fromtimestamp(row["when"]).strftime("%m-%d %H:%M") if row["when"] else "—"
-    rate = f"{row['same'] / row['graded'] * 100:4.0f}%" if row["graded"] else "   —"
-    mark = "=" if dup else ("*" if newest else " ")
-    return (f"  {mark} {row['path']:<34} {when}  "
-            f"{row['cards']:4}장  기출{row['exam_hit']:3}  족보{row['jokbo_ref']:3}  "
-            f"같음{row['same']:4}{rate}  부분{row['partial']:3}  다름{row['different']:3}  "
-            f"{(str(row['minutes']) + '분') if row['minutes'] else '—':>7}"
-            f"{('$' + str(row['cost'])) if row['cost'] else '—':>8}"
-            # **족보참조가 준 이유를 못 갈랐던 자리가 이 칸이다.** 2026-09-14 에
-            # 25편 전부 족보참조가 줄어 있었는데 원인을 물을 수 없었다.
-            + (f"  컷 {row['cut']}" if row["cut"]
-               else (f"  족보 안 붙음: {row['jokbo_why_not']}" if row["jokbo_why_not"] else "")))
+def as_csv(ids: list[str]) -> None:
+    w = csv.writer(sys.stdout, lineterminator="\n")
+    w.writerow(["run_id", "path", "when", "cards", "cards_sha256", "fresh",
+                "exam_hit", "jokbo_ref", "same", "partial", "different", "graded",
+                "minutes", "cost_usd", "cut_id", "jokbo_why_not"])
+    for rid in ids:
+        for a in att.attempts_of(RUNS, OUT, rid):
+            w.writerow([rid, rel(a.path), a.when, a.cards, a.cards_sha256,
+                        int(a.fresh), a.exam_hit, a.jokbo_ref, a.same, a.partial,
+                        a.different, a.graded, a.minutes, a.cost,
+                        a.cut_id, a.jokbo_why_not])
 
 
 def main() -> None:
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    as_csv = "--csv" in sys.argv
-    ids = args or run_ids()
+    args = [x for x in sys.argv[1:] if not x.startswith("--")]
+    ids = args or att.run_ids_with_alternatives(RUNS, OUT)
 
-    if as_csv:
-        import csv
-        w = csv.writer(sys.stdout, lineterminator="\n")
-        w.writerow(["run_id", "path", "when", "cards", "exam_hit", "jokbo_ref",
-                    "same", "partial", "different", "graded", "minutes", "cost_usd",
-                    "cut", "jokbo_why_not"])
-        for rid in ids:
-            for r in attempts_of(rid):
-                w.writerow([rid, r["path"], r["when"], r["cards"], r["exam_hit"], r["jokbo_ref"],
-                            r["same"], r["partial"], r["different"], r["graded"],
-                            r["minutes"], r["cost"], r["cut"], r["jokbo_why_not"]])
+    if "--csv" in sys.argv:
+        as_csv(ids)
         return
 
     print("시도를 원값으로 나란히 놓는다. `*` 가 카드가 가장 새것인 시도다.")
     print("**등수는 매기지 않는다** — 무엇이 좋은 시도인지가 아직 안 정해졌다"
           " (docs/runs-layout.md 「아직 안 정한 것」).\n")
-    stranded, real = [], 0
+    stranded, real, unrecorded = [], 0, []
     for rid in ids:
-        rows = attempts_of(rid)
+        rows = att.attempts_of(RUNS, OUT, rid)
         if not rows:
             continue
-        seen: dict[str, dict] = {}
-        for r in rows:
-            r["dup_of"] = seen.setdefault(r["cards_hash"] or r["path"], r)
-        fresh = [r for r in rows if r["dup_of"] is r]
-        newest = max(fresh, key=lambda r: r["when"] or 0)
-        print(f"{rid}" + (f"   시도 {len(fresh)}개" if len(fresh) != len(rows)
-                          else f"   시도 {len(rows)}개"))
-        for r in rows:
-            print(fmt(r, r is newest, dup=r["dup_of"] is not r))
+        fresh = [a for a in rows if a.fresh]
+        newest = max(fresh, key=lambda a: a.when)
+        print(f"{rid}   시도 {len(fresh)}개")
+        for a in rows:
+            print(fmt(a, a is newest))
+        # **고른 기록이 있으면 같이 보여 준다.** 표만 보고 또 고르지 않게 —
+        # 그 문서의 ④ 가 「어느 시도가 왜 이겼는지 적는 자리가 없다」였다.
+        run_dir = RUNS / rid
+        if chosen.read(run_dir):
+            print(f"    ▸ 골랐다: {chosen.summary(run_dir)}")
+        else:
+            unrecorded.append(rid)
         real += len(fresh)
-        if newest["path"].startswith("out/"):
-            stranded.append((rid, newest["path"]))
+        if newest.path.parent.resolve() == OUT.resolve():
+            stranded.append(rid)
         print()
 
     print(f"편 {len(ids)}개 · 시도 {real}개 · 가장 새 카드가 out/ 에 있는 편 {len(stranded)}개")
     print("`=` 는 앞 줄과 **카드가 한 바이트도 안 다른** 것이다 — 채점만 다시 돌린 판이거나 사본이다.")
     if stranded:
         print("**`publish` 는 `runs/<run_id>/` 만 읽는다 — 그 편들은 안 나가고 있다.**")
-    print(f"\n재현 같음비율은 채점만 다시 해도 ±{REPRODUCE_NOISE_PP}%p 흔들린다"
+    if unrecorded:
+        print(f"\n고른 기록이 없는 편 {len(unrecorded)}개. **적어 두지 않으면 다음에 또 고른다.**")
+        print(f'    python -m runner chosen {unrecorded[0]} --keep --why "..."')
+    print(f"\n재현 같음비율은 채점만 다시 해도 ±{att.REPRODUCE_NOISE_PP}%p 흔들린다"
           " (한 편을 세 번 재서 얻은 값이다).")
     print("그보다 작은 차이는 표에 그대로 있되 **고르는 근거로 쓰지 마라.**")
 
