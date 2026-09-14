@@ -46,6 +46,7 @@ import json
 from pathlib import Path
 
 from . import attempts as att
+from . import runlayout
 
 CHOSEN_FILE = "CHOSEN.json"
 
@@ -129,6 +130,54 @@ def write(run_dir: Path, record: dict) -> Path:
     return p
 
 
+def published_cards(run_dir: Path, kind: str = MAIN) -> str:
+    """**지금 나가는 덱을 만든** 시도의 카드 해시. 모르면 빈 문자열.
+
+    옛 모양에서는 강의 폴더 자신이 그 시도다. 새 모양에서는 `run.meta.json` 의
+    `attempt` 가 말한다 — 계약을 쓸 때 `deck.contract` 가 적어 둔 값이다.
+
+    **`runlayout.work_dir` 을 쓰면 안 된다.** 그것은 「고른 판」을 주므로, 고른 것과
+    맞대 보면 늘 같다고 나온다 — 검사가 꺼진 것과 같다. 2026-09-15 에 올리기를
+    붙이면서 실제로 그렇게 한 번 꺼졌고, 그 자리를 이 함수가 대신한다.
+    """
+    meta_name = "pre_run.meta.json" if kind == PREQUIZ else "run.meta.json"
+    try:
+        meta = json.loads((Path(run_dir) / meta_name).read_text(encoding="utf-8"))
+        mark = meta.get("attempt")
+    except (OSError, ValueError, AttributeError):
+        mark = None
+    if isinstance(mark, dict) and mark.get("cards_sha256"):
+        return str(mark["cards_sha256"])
+    if isinstance(mark, dict) and mark.get("version"):
+        # 해시를 안 적은 옛 계약. 판 이름으로 그 폴더를 찾아 직접 뜬다.
+        return att.cards_sha256(
+            runlayout.attempt_root(run_dir, kind) / str(mark["version"]))
+    # 계약이 판을 말하지 않는다. 옛 모양이면 강의 폴더 자신이 그 시도다.
+    if not runlayout.is_migrated(Path(run_dir), kind):
+        return att.cards_sha256(run_dir)
+
+    # 옮겨졌는데 계약이 판을 안 말한다 — 2026-09-15 이전에 쓰인 계약이다.
+    # **덱으로 되짚는다.** 강의 폴더에 올라간 덱과 크기가 같은 판이 하나면 그것이다.
+    # 짐작이 아니라 증거이고, 하나로 안 좁혀지면 **모른다고 한다.**
+    return _by_deck(Path(run_dir), kind)
+
+
+def _by_deck(run_dir: Path, kind: str) -> str:
+    """올라간 덱과 같은 덱을 가진 판을 찾아 그 카드 해시를. 못 좁히면 빈 문자열."""
+    decks = sorted(run_dir.glob("*.apkg"))
+    if len(decks) != 1:
+        return ""                      # 덱이 둘이면 어느 것이 이 갈래인지 모른다
+    size = decks[0].stat().st_size
+    hits = []
+    for v in runlayout.versions(run_dir, kind):
+        work = runlayout.attempt_root(run_dir, kind) / v
+        for cand in work.glob("*.apkg"):
+            if cand.stat().st_size == size:
+                hits.append(work)
+                break
+    return att.cards_sha256(hits[0]) if len(hits) == 1 else ""
+
+
 def verdict(run_dir: Path, kind: str = MAIN) -> str:
     """지금 그 자리에 있는 것이 사람이 고른 시도인가. 어긋나면 사람이 읽을 한 줄.
 
@@ -141,7 +190,7 @@ def verdict(run_dir: Path, kind: str = MAIN) -> str:
     want = pick.get("cards_sha256")
     if not want:
         return ""                          # 신원을 안 적은 기록이다. 판정하지 않는다
-    now = att.cards_sha256(run_dir)
+    now = published_cards(run_dir, kind)
     if not now:
         # 카드 파일이 없다. 옆 저장소에서 옮겨 온 편이 이 자리에 온다 —
         # 기록이 가리키는 것과 맞는지 **알 수 없다.** 모르는 것을 틀렸다고 하지 않는다.

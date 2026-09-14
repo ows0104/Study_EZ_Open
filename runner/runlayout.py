@@ -46,18 +46,26 @@ from pathlib import Path
 MAIN = "main"
 PREQUIZ = "prequiz"
 
-# **새 실행이 판 폴더에 쓰는가.** 아직 아니다 — `deck.run_main` 이 `--out` 으로
-# 강의 폴더를 그대로 넘긴다(`runs/<편>/`).
+# **새 실행이 판 폴더에 쓴다.** 2026-09-15 에 켰다.
 #
-# 그래서 **지금은 옮기면 안 된다.** 옮긴 편에 새 실행이 강의 폴더로 쓰면 `find` 가
-# 판 폴더를 먼저 보므로 그 새 산출물이 **조용히 무시된다.** 그 함정을 열어 두지
-# 않으려고 `scripts/migrate_attempts.py` 가 이 값을 보고 `--apply` 를 막는다.
+# 켜기 전까지 `deck.run_main` 이 `--out` 으로 강의 폴더를 그대로 넘겼고, 그래서
+# **옮기면 안 되는 상태**였다 — 옮긴 편에 새 실행이 강의 폴더로 쓰면 `find` 가 판
+# 폴더를 먼저 보므로 그 새 산출물이 **조용히 무시된다.** 그 함정을 열어 두지 않으려고
+# `scripts/migrate_attempts.py` 가 이 값이 거짓인 동안 `--apply` 를 거부했다.
 #
-# 이것을 켜려면 셋이 같이 와야 한다 — ① `--out` 이 새 판 폴더를 가리키고,
-# ② 다 만든 뒤 나가는 것(`.apkg`·`run.meta.json`·`slides/`)을 강의 폴더로 **올리고**,
-# ③ 그 올리기가 `CHOSEN.json` 과 어긋나지 않는지 본다. ②가 4단계에서 「안 만들었다」고
-# 적어 둔 그 명령이다(`docs/runs-layout.md` 4단계 「안 한 것」).
-WRITES_ATTEMPT_DIRS = False
+# 켜는 데 셋이 같이 왔다.
+#
+#   ① `deck.new_work_dir` 이 판 폴더를 정하고 `--out` 이 그것을 가리킨다.
+#      **`--resume` 은 새 판을 안 연다** — 이어 돌리는 것은 그 시도를 계속하는 것이다
+#   ② `deck.promote` 가 그 시도의 덱을 강의 폴더로 올린다. 나머지 계약은
+#      `deck.contract` 가 원래 읽어서 다시 쓰던 것이라 옮길 것이 없었다
+#   ③ `work_dir` 이 `CHOSEN.json` 이 고른 판을 먼저 보고 `chosen.verdict` 도 같은
+#      자리를 본다 — 「고른 것」과 「올라간 것」이 어긋나면 문지기가 막는다
+#
+# **되돌리려면 이 값을 거짓으로 두면 된다.** 이미 옮긴 편은 `find` 가 판 폴더를 먼저
+# 보므로 그대로 읽히고 새 실행만 강의 폴더로 돌아간다 — 다만 그때 그 편에 「가려진
+# 산출물」이 생기므로, 되돌린 뒤 `migrate_attempts` 를 한 번 더 돌려 접어야 한다.
+WRITES_ATTEMPT_DIRS = True
 
 # 판. `cut_id` 와 같은 규칙이다 — 날짜만으로는 하루에 두 번 돌린 것이 겹친다
 # (`quizgen/cutmark.new_cut_id`).
@@ -101,6 +109,12 @@ def is_lecture_own(name: str) -> bool:
 
 
 # ── 시도가 사는 자리 ───────────────────────────────────────────────────
+def new_version(when=None) -> str:
+    """새 판 이름. `cutmark.new_cut_id` 와 같은 규칙이다 — 날짜+시각."""
+    import datetime as dt
+    return f"{when or dt.datetime.now():%y%m%d-%H%M}"
+
+
 def attempt_root(run_dir: Path, kind: str = MAIN) -> Path:
     """그 갈래의 시도들이 들어가는 폴더. 있는지는 안 본다."""
     return Path(run_dir) / kind
@@ -120,9 +134,16 @@ def work_dir(run_dir: Path, kind: str = MAIN, version: str | None = None) -> Pat
 
     `version` 을 안 주면 이 순서로 고른다.
 
-        ① `CHOSEN.json` 이 고른 시도      사람이 적어 둔 것이 제일 세다
-        ② 제일 새 판 (이름순의 끝)        고른 기록이 없으면
-        ③ 강의 폴더 자신                  판이 하나도 없으면 — 옛 모양이다
+        ① `CHOSEN.json` 이 고른 시도       사람이 적어 둔 것이 제일 세다
+        ② `run.meta.json` 의 `attempt`     지금 나가는 덱을 만든 판
+        ③ 제일 새 판 (이름순의 끝)         둘 다 없으면
+        ④ 강의 폴더 자신                   판이 하나도 없으면 — 옛 모양이다
+
+    **②가 없으면 미완성 실험이 정본이 된다.** 2026-09-15 에 실제 트리를 접자마자
+    나왔다 — `260901_01` 은 cloze 프롬프트를 아홉 번 돌린 편이라 판이 11개인데, 그중
+    **이름이 제일 새 것(`260906-1619`)에 `prep.json` 도 `run.config.json` 도 없다.**
+    카드만 남은 실험 폴더다. ③만 있으면 그 판이 작업 폴더가 되어 `deck.source_pdf` 가
+    빈 값을 돌려주고, 그러면 `publish._owns` 가 **주인을 확인할 수 없다**고 본다.
 
     **①이 없으면 틀린다.** 2026-09-14 에 실컷 시험에서 잡았다 — `out/` 의 시도를
     접어 넣으면 그중 제일 새것이 「제일 새 판」이 되고, 그러면 `deck.contract` 가
@@ -140,8 +161,44 @@ def work_dir(run_dir: Path, kind: str = MAIN, version: str | None = None) -> Pat
     found = versions(run_dir, kind)
     if not found:
         return run_dir
-    picked = _chosen_version(run_dir, kind, found)
-    return attempt_root(run_dir, kind) / (picked or found[-1])
+    picked = (_chosen_version(run_dir, kind, found)
+              or _published_version(run_dir, kind, found)
+              or _newest_whole(run_dir, kind, found))
+    return attempt_root(run_dir, kind) / picked
+
+
+def _newest_whole(run_dir: Path, kind: str, found: list[str]) -> str:
+    """제일 새 판. 단 **설정 파일이 있는 판만** 센다.
+
+    `run.config.json` 이 없는 판은 카드만 남은 실험 폴더다 — 그것이 작업 폴더가 되면
+    `deck.source_pdf` 가 빈 값을 내고 `publish` 가 주인을 확인할 수 없게 된다
+    (`work_dir` 머리의 `260901_01` 사례).
+
+    **온전한 판이 하나도 없으면 그냥 제일 새것을 준다.** 모르는 자리에서 골라 주지
+    않는 것보다 무엇이든 주고 위의 계수기가 울게 두는 편이 낫다 — 조용히 빈 값을
+    돌려주면 그 편만 이유 없이 안 나간다.
+    """
+    cfg = "prequiz.config.json" if kind == PREQUIZ else "run.config.json"
+    whole = [v for v in found if (attempt_root(run_dir, kind) / v / cfg).is_file()]
+    return (whole or found)[-1]
+
+
+def _published_version(run_dir: Path, kind: str, found: list[str]) -> str | None:
+    """계약이 「이 덱은 이 판으로 만들었다」고 적어 둔 판. 없으면 None.
+
+    `deck.contract` 가 `run.meta.json` 의 `attempt` 에 적는다(2026-09-15부터).
+    그 전에 쓰인 계약에는 없으므로 `None` 이 정상이다.
+    """
+    import json
+
+    name = "pre_run.meta.json" if kind == PREQUIZ else "run.meta.json"
+    try:
+        meta = json.loads((Path(run_dir) / name).read_text(encoding="utf-8"))
+        mark = meta.get("attempt") or {}
+        v = str(mark.get("version") or "")
+    except (OSError, ValueError, AttributeError):
+        return None
+    return v if v in found else None
 
 
 def _chosen_version(run_dir: Path, kind: str, found: list[str]) -> str | None:

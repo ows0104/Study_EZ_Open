@@ -47,7 +47,8 @@ def contract(monkeypatch):
     monkeypatch.setattr(deck, "config_of", lambda run_dir, kind: {"id": "p260820_02"})
     # `cards_of` 는 2026-09-15 에 `kind` 를 받게 됐다 — 새 모양에서 복습·예습이
     # 서로 다른 작업 폴더를 보기 때문이다(`runlayout`). 스텁도 그 모양이어야 한다.
-    monkeypatch.setattr(deck, "cards_of", lambda run_dir, kind=deck.MAIN: CARDS)
+    monkeypatch.setattr(deck, "cards_of",
+                        lambda run_dir, kind=deck.MAIN, version=None: CARDS)
     monkeypatch.setattr(deck.quizgen_build, "counts", lambda apkg: {})
 
     def run(run_dir: Path, kind: str) -> dict:

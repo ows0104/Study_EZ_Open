@@ -173,3 +173,78 @@ def test_갈래는_폴더_안의_설정이_말한다(tmp_path):
     (pre / "prequiz.config.json").write_text("{}", encoding="utf-8")
     assert L.kind_of(main) == L.MAIN
     assert L.kind_of(pre) == L.PREQUIZ
+
+
+# ── 작업 폴더를 고르는 순서 넷 (2026-09-15) ───────────────────────────
+#
+# ① CHOSEN → ② 계약의 `attempt` → ③ 제일 새 **온전한** 판 → ④ 강의 폴더.
+# ②와 ③의 「온전한」이 실제 트리를 접자마자 필요해졌다.
+
+def _whole(run_dir, kind, version, cards=b'{"cards": []}'):
+    """설정 파일까지 있는 판 — 온전한 시도."""
+    d = run_dir / kind / version
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "items.raw.json").write_bytes(cards)
+    cfg = "prequiz.config.json" if kind == L.PREQUIZ else "run.config.json"
+    (d / cfg).write_text('{"pdf": "C:/필기.pdf"}', encoding="utf-8")
+    return d
+
+
+def test_설정이_없는_판은_작업_폴더로_안_고른다(tmp_path):
+    """**실제 트리를 접자마자 나왔다.**
+
+    `260901_01` 은 cloze 프롬프트를 아홉 번 돌린 편이라 판이 11개인데, 이름이 제일
+    새 것에 `prep.json` 도 `run.config.json` 도 없다 — 카드만 남은 실험 폴더다.
+    그것을 고르면 `deck.source_pdf` 가 빈 값을 내고 `publish` 가 주인을 확인할 수 없다.
+    """
+    run_dir = tmp_path / "260901_01"
+    good = _whole(run_dir, L.MAIN, "260906-1341")
+    scrap = run_dir / L.MAIN / "260906-1619"      # 카드만 있다
+    scrap.mkdir(parents=True)
+    (scrap / "items.raw.json").write_bytes(b'{"cards": []}')
+
+    assert L.versions(run_dir)[-1] == "260906-1619"   # 이름은 이것이 제일 새것
+    assert L.work_dir(run_dir) == good                # 고르는 것은 온전한 쪽
+
+
+def test_온전한_판이_없으면_그냥_제일_새것이다(tmp_path):
+    """모르는 자리에서 조용히 빈 값을 주면 그 편만 이유 없이 안 나간다."""
+    run_dir = tmp_path / "260901_01"
+    for v in ("260906-1341", "260906-1619"):
+        d = run_dir / L.MAIN / v
+        d.mkdir(parents=True)
+        (d / "items.raw.json").write_bytes(b'{"cards": []}')
+    assert L.work_dir(run_dir).name == "260906-1619"
+
+
+def test_계약이_말한_판이_제일_새것을_이긴다(tmp_path):
+    """`run.meta.json` 의 `attempt` — 지금 나가는 덱을 만든 판이다."""
+    run_dir = tmp_path / "260812_01"
+    _whole(run_dir, L.MAIN, "260823-1450")
+    _whole(run_dir, L.MAIN, "260827-2300")
+    (run_dir / "run.meta.json").write_text(
+        '{"attempt": {"kind": "main", "version": "260823-1450"}}', encoding="utf-8")
+    assert L.work_dir(run_dir).name == "260823-1450"
+
+
+def test_CHOSEN이_계약을_이긴다(tmp_path):
+    """사람이 적어 둔 것이 제일 세다."""
+    import hashlib
+    run_dir = tmp_path / "260812_01"
+    a = _whole(run_dir, L.MAIN, "260823-1450", cards=b'{"cards": [1]}')
+    _whole(run_dir, L.MAIN, "260827-2300", cards=b'{"cards": [2]}')
+    want = hashlib.sha256((a / "items.raw.json").read_bytes()).hexdigest()
+    (run_dir / "run.meta.json").write_text(
+        '{"attempt": {"kind": "main", "version": "260827-2300"}}', encoding="utf-8")
+    (run_dir / "CHOSEN.json").write_text(
+        '{"publish": {"main": {"cards_sha256": "' + want + '"}}}', encoding="utf-8")
+    assert L.work_dir(run_dir).name == "260823-1450"
+
+
+def test_계약이_없는_판을_말하면_무시한다(tmp_path):
+    """옮기다 지워졌거나 다른 편의 값이 들어온 경우."""
+    run_dir = tmp_path / "260812_01"
+    _whole(run_dir, L.MAIN, "260827-2300")
+    (run_dir / "run.meta.json").write_text(
+        '{"attempt": {"kind": "main", "version": "없는판-0000"}}', encoding="utf-8")
+    assert L.work_dir(run_dir).name == "260827-2300"

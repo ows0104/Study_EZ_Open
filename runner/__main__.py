@@ -21,6 +21,8 @@
                                             지금 이 자리 것을 쓴다고 적는다
     python -m runner chosen <run_id> --pick out/redo_<id> --why "..."
                                             다른 시도를 골랐다고 적는다 (문지기가 막는다)
+    python -m runner promote <run_id>        고른 시도를 강의 폴더로 올린다
+    python -m runner promote <run_id> --version 260827-2300   판을 지목해서
     python -m runner rebuild                이미 만든 카드로 덱만 다시 굽는다
     python -m runner done <run_id>          빌드 끝. 표시하고 그 편을 올린다
     python -m runner publish 병리학 --dry-run   무엇이 올라갈지 본다
@@ -573,11 +575,67 @@ def run_chosen(args) -> int:
     return 0
 
 
+def run_promote(args) -> int:
+    """고른 시도를 강의 폴더로 올린다 (`docs/runs-layout.md` 5단계).
+
+    강의 폴더의 루트는 「지금 나가는 것」만 들고 시도는 `main/<판>/` 에 산다. 그 둘을
+    잇는 걸음이고, 올리는 일은 `deck.promote` + `deck.contract` 가 한다 —
+    **빌드가 끝날 때 저절로 도는 것과 같은 걸음**이라 여기서 새로 만드는 것이 없다.
+
+    쓸 자리는 둘이다 — 다른 시도를 골라 놓고 그것을 내보낼 때, 그리고 빌드가 계약
+    단계에서 죽어 덱만 판 폴더에 남았을 때.
+    """
+    runs_dir = Path(args.runs)
+    run_id = args.subject or args.run_id
+    if not run_id:
+        print("쓰는 법: python -m runner promote 260812_01")
+        return 2
+    run_dir = runs_dir / run_id
+    if not run_dir.is_dir():
+        print(f"[promote] {run_dir} 가 없다")
+        return 1
+
+    if not runlayout.attempt_dirs(run_dir):
+        print(f"[promote] {run_id} 은 아직 옛 모양이다 — 시도가 강의 폴더에 그대로 있다.")
+        print("          올릴 것이 없다. 접으려면 `python scripts/migrate_attempts.py "
+              f"{run_id} --apply`")
+        return 0
+
+    print(f"[promote] {run_id}")
+    done = 0
+    for kind, layout_kind in ((deck.MAIN, runlayout.MAIN), (deck.PRE, runlayout.PREQUIZ)):
+        want = args.version or None
+        picked = runlayout.work_dir(run_dir, layout_kind, want)
+        if picked == run_dir or not picked.is_dir():
+            continue
+        title = deck.calendar_node(runs_dir, run_id, "", kind) or run_id
+        try:
+            apkg = deck.promote(run_dir, kind, want)
+            meta = deck.contract(run_dir, run_id, title, kind, want)
+        except (FileNotFoundError, OSError, ValueError) as cause:
+            print(f"  ✗ {kind} — 못 올렸다: {cause}")
+            continue
+        done += 1
+        print(f"  {kind}  {picked.name} → {apkg.name}  ({meta['item_count']}장)")
+    if not done:
+        print("  올릴 시도가 없다")
+        return 1
+
+    # **올린 것과 고른 것이 어긋나면 여기서 말한다.** 문지기도 같은 것을 보지만
+    # (`gate.inspect`), 사람이 방금 누른 명령의 자리에서 알아야 고칠 수 있다.
+    if (mismatch := chosen.verdict(run_dir)):
+        print(f"\n  ✋ {mismatch}")
+        print("     **이 편의 덱은 다음 publish 에서 미뤄진다.**")
+        return 1
+    print(f"\n  이제 `python -m runner publish --run-id {run_id}` 로 나간다")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Study_EZ 로컬 러너")
     parser.add_argument("command", choices=["match", "watch", "done", "jokbo", "preview", "agent",
                                             "prequeue", "publish", "import", "release", "rebuild",
-                                            "chosen"])
+                                            "chosen", "promote"])
     parser.add_argument("subject", nargs="?", help="과목 폴더명. --all이면 생략")
     parser.add_argument("--all", action="store_true", help="필기/올해 폴더가 있는 과목 전부")
     parser.add_argument("--this", default="2026", help="올해 폴더명")
@@ -619,6 +677,8 @@ def main() -> int:
                         help="watch: 오늘을 이 날짜로 친다 (블럭 판정 확인용)")
     parser.add_argument("--timetable", default=None,
                         help=f"watch: 시간표 (기본 {blocks.DEFAULT_SOURCE})")
+    parser.add_argument("--version", default="",
+                        help="promote: 올릴 판 (예: 260827-2300). 생략하면 CHOSEN 이 고른 것")
     parser.add_argument("--keep", action="store_true",
                         help="chosen: 지금 runs/<편>/ 에 있는 시도를 쓴다고 적는다")
     parser.add_argument("--pick", default="",
@@ -698,6 +758,8 @@ def main() -> int:
         return run_import(args)
     if args.command == "chosen":
         return run_chosen(args)
+    if args.command == "promote":
+        return run_promote(args)
     if args.command == "release":
         return run_release(args)
     if args.command == "rebuild":

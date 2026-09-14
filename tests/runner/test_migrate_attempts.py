@@ -192,12 +192,30 @@ def test_같은_분에_두_시도면_꼬리를_붙인다(tree):
     assert len(set(got)) == 3
 
 
-# ── 쓰는 쪽이 아직 모르므로 --apply 를 막는다 ─────────────────────────
-def test_쓰는_쪽이_판을_모르면_apply를_막는다():
-    """**함정을 열어 두지 않는다.**
+# ── 쓰는 쪽이 판 폴더를 안다 (2026-09-15 에 켰다) ─────────────────────
+#
+# 켜기 전에는 `--apply` 가 거부했다. **옮긴 편에 새 실행이 강의 폴더로 쓰면 그
+# 산출물이 판 폴더에 가려 조용히 무시된다** — 그 함정을 열어 두지 않으려고 막았다.
+# 지금은 셋이 다 섰으므로(`runlayout.WRITES_ATTEMPT_DIRS` 위 주석) 풀렸다.
 
-    옮긴 편에 새 실행이 강의 폴더로 쓰면 그 산출물이 판 폴더에 가려 조용히 무시된다.
-    `deck.run_main` 이 `--out` 으로 강의 폴더를 넘기는 동안은 옮기면 안 된다.
-    """
-    assert L.WRITES_ATTEMPT_DIRS is False
-    assert "--out" in (ROOT / "runner" / "deck.py").read_text(encoding="utf-8")
+def test_새_실행은_새_판을_연다(tmp_path):
+    run_dir = tmp_path / "260812_01"
+    first = deck.new_work_dir(run_dir, deck.MAIN)
+    assert first.parent.name == L.MAIN
+    assert L.RE_VERSION.match(first.name)
+
+
+def test_resume은_새_판을_열지_않는다(tmp_path):
+    """이어 돌리는 것은 그 시도를 계속하는 것이다. 새 판을 열면 prep 부터 다시 돈다."""
+    run_dir = tmp_path / "260812_01"
+    attempt(run_dir / L.MAIN / "260827-2300", 10, started=1786100000)
+    assert deck.new_work_dir(run_dir, deck.MAIN, resume=True).name == "260827-2300"
+    assert deck.new_work_dir(run_dir, deck.MAIN, resume=False).name != "260827-2300"
+
+
+def test_같은_분에_두_번_돌려도_판을_안_덮는다(tmp_path, monkeypatch):
+    run_dir = tmp_path / "260812_01"
+    monkeypatch.setattr(L, "new_version", lambda when=None: "260915-0100")
+    first = deck.new_work_dir(run_dir, deck.MAIN)
+    attempt(first, 10, started=1786100000)
+    assert deck.new_work_dir(run_dir, deck.MAIN).name == "260915-0100.2"

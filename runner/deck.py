@@ -301,24 +301,56 @@ def cut_stale(cut_dir: Path) -> str | None:
 @dataclass
 class Result:
     ok: bool
-    run_dir: Path
+    run_dir: Path            # 강의 폴더. 계약과 문지기가 보는 자리다
     log: Path
     error: str = ""
     tail: list[str] = field(default_factory=list)
+    # 이번 실행이 실제로 쓴 자리. 옛 모양에서는 `run_dir` 과 같다.
+    work: Path | None = None
 
 
 # ------------------------------------------------------------------ 실행
 
 
+def new_work_dir(run_dir: Path, kind: str = MAIN, resume: bool = False) -> Path:
+    """이번 실행이 쓸 자리. 새 모양이면 판 폴더 하나, 옛 모양이면 강의 폴더.
+
+    **`--resume` 은 새 판을 열지 않는다.** 이어 돌리는 것은 그 시도를 계속하는
+    것이므로 같은 자리를 줘야 한다 — 새 판을 열면 앞 단계 산출물이 안 보여
+    prep 부터 다시 돈다(30분·$12).
+
+    옛 모양(`WRITES_ATTEMPT_DIRS` 가 거짓)에서는 강의 폴더를 그대로 준다. 그래서
+    이 함수를 끼워 두어도 지금 동작이 한 글자도 안 바뀐다.
+    """
+    run_dir = Path(run_dir)
+    layout_kind = runlayout.PREQUIZ if kind == PRE else runlayout.MAIN
+    if not runlayout.WRITES_ATTEMPT_DIRS:
+        return run_dir
+    if resume:
+        return runlayout.work_dir(run_dir, layout_kind)
+    root = runlayout.attempt_root(run_dir, layout_kind)
+    want = runlayout.new_version()
+    taken = set(runlayout.versions(run_dir, layout_kind))
+    base, n = want, 1
+    while want in taken:
+        n += 1
+        want = f"{base}.{n}"
+    return root / want
+
+
 def _spawn(argv: list[str], run_dir: Path, repo_root: Path, timeout: int,
-           log_name: str) -> Result:
+           log_name: str, work: Path | None = None) -> Result:
     """하위 프로세스로 띄우고 출력을 로그로 받는다.
 
     화면으로 흘리지 않는 이유는 한 편이 수십 분이고 밤에도 돌기 때문이다. 끝난
     뒤 꼬리만 사람에게 보여 주고, 전체는 로그에 남는다.
     """
     run_dir.mkdir(parents=True, exist_ok=True)
+    # **로그는 강의 폴더에 둔다.** 판마다 갈라 놓으면 한 편이 왜 죽었는지 찾으려고
+    # 판을 뒤져야 한다. 사람이 보는 것은 「이 편이 어떻게 됐나」다.
     log = run_dir / log_name
+    if work is not None:
+        work.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, PYTHONIOENCODING="utf-8")
 
     with log.open("a", encoding="utf-8") as sink:
@@ -329,12 +361,14 @@ def _spawn(argv: list[str], run_dir: Path, repo_root: Path, timeout: int,
             done = subprocess.run(argv, stdout=sink, stderr=subprocess.STDOUT,
                                   cwd=str(repo_root), env=env, timeout=timeout)
         except subprocess.TimeoutExpired:
-            return Result(False, run_dir, log, f"{timeout // 60}분 안에 끝나지 않았다")
+            return Result(False, run_dir, log, f"{timeout // 60}분 안에 끝나지 않았다",
+                          work=work or run_dir)
 
     tail = log.read_text(encoding="utf-8", errors="replace").splitlines()[-12:]
     if done.returncode != 0:
-        return Result(False, run_dir, log, f"quizgen가 {done.returncode}로 끝났다", tail)
-    return Result(True, run_dir, log, tail=tail)
+        return Result(False, run_dir, log, f"quizgen가 {done.returncode}로 끝났다", tail,
+                      work=work or run_dir)
+    return Result(True, run_dir, log, tail=tail, work=work or run_dir)
 
 
 def run_main(*, pdf: str | Path, run_id: str, subject: str, lecture: str, title: str = "",
@@ -347,8 +381,11 @@ def run_main(*, pdf: str | Path, run_id: str, subject: str, lecture: str, title:
     로컬 러너가 따로 짝지어 줄 것이 없다.
     """
     run_dir = runs_dir / run_id
+    # **이번 시도가 쓸 자리.** 옛 모양에서는 강의 폴더 그대로다(`new_work_dir`).
+    # `--resume` 이 실려 오면 새 판을 열지 않는다 — 그 시도를 계속하는 것이다.
+    work = new_work_dir(run_dir, MAIN, resume=any("--resume" in a for a in (extra or [])))
     argv = [sys.executable, "-m", "quizgen.run", str(pdf),
-            "--out", str(run_dir), "--id", deck_id(run_id),
+            "--out", str(work), "--id", deck_id(run_id),
             "--subject", subject, "--lecture", lecture,
             "--jokbo-dir", str(jokbo_dir(runs_dir, subject)),
             "--check-dir", str(runs_dir / "_image_check"),
@@ -361,7 +398,7 @@ def run_main(*, pdf: str | Path, run_id: str, subject: str, lecture: str, title:
     if model:
         argv += ["--model", model]
     argv += extra or []
-    return _spawn(argv, run_dir, repo_root, timeout, "pipeline.log")
+    return _spawn(argv, run_dir, repo_root, timeout, "pipeline.log", work=work)
 
 
 def run_pre(*, pdf: str | Path, run_id: str, subject: str, lecture: str, note: str,
@@ -373,8 +410,9 @@ def run_pre(*, pdf: str | Path, run_id: str, subject: str, lecture: str, note: s
     작년 파일제목이 되어 복습 덱과 다른 노드에 선다.
     """
     run_dir = runs_dir / run_id
+    work = new_work_dir(run_dir, PRE, resume=any("--resume" in a for a in (extra or [])))
     argv = [sys.executable, "-m", "quizgen.prequiz.run", str(pdf),
-            "--out", str(run_dir), "--id", deck_id(run_id),
+            "--out", str(work), "--id", deck_id(run_id),
             "--subject", subject, "--lecture", lecture, "--note", note,
             "--jokbo-dir", str(jokbo_dir(runs_dir, subject)),
             "--schema-dir", str(runs_dir / "_prequiz_schema"),
@@ -386,7 +424,7 @@ def run_pre(*, pdf: str | Path, run_id: str, subject: str, lecture: str, note: s
     if model:
         argv += ["--model", model]
     argv += extra or []
-    return _spawn(argv, run_dir, repo_root, timeout, "prequiz.log")
+    return _spawn(argv, run_dir, repo_root, timeout, "prequiz.log", work=work)
 
 
 def cut_jokbo(pdf: Path, out_dir: Path, repo_root: Path,
@@ -468,7 +506,8 @@ def apkg_of(run_dir: Path, kind: str) -> Path | None:
     return max(decks, key=lambda p: p.stat().st_mtime) if decks else None
 
 
-def _attempt(run_dir: Path, name: str, kind: str = MAIN) -> Path:
+def _attempt(run_dir: Path, name: str, kind: str = MAIN,
+             version: str | None = None) -> Path:
     """시도 것 하나의 자리. **새 모양이면 `main/<판>/` 안이고 옛 모양이면 여기다.**
 
     `runlayout` 이 그 둘을 가른다(`docs/runs-layout.md` 5단계). 이 함수를 지나지
@@ -477,6 +516,10 @@ def _attempt(run_dir: Path, name: str, kind: str = MAIN) -> Path:
     원인이 엉뚱하게 보인다).
     """
     layout_kind = runlayout.PREQUIZ if kind == PRE else runlayout.MAIN
+    if version:
+        # 판을 지목했으면 그 판만 본다. 없으면 없는 것이다 — 다른 판으로 내려가면
+        # 계약이 한 판의 카드와 다른 판의 통계를 섞어 쓴다.
+        return runlayout.attempt_root(run_dir, layout_kind) / version / name
     return runlayout.find(run_dir, name, layout_kind) or run_dir / name
 
 
@@ -506,8 +549,8 @@ def source_pdf(run_dir: Path) -> str:
     return ""
 
 
-def cards_of(run_dir: Path, kind: str = MAIN) -> list[dict]:
-    got = _load(_attempt(run_dir, "items.reproduced.json", kind))
+def cards_of(run_dir: Path, kind: str = MAIN, version: str | None = None) -> list[dict]:
+    got = _load(_attempt(run_dir, "items.reproduced.json", kind, version))
     cards = (got or {}).get("cards") if isinstance(got, dict) else None
     return cards if isinstance(cards, list) else []
 
@@ -733,7 +776,72 @@ def reflag(run_dir: Path) -> dict[str, int]:
     return added
 
 
-def contract(run_dir: Path, run_id: str, title: str, kind: str) -> dict:
+def _attempt_mark(run_dir: Path, kind: str, version: str | None = None) -> dict | None:
+    """이 계약을 만든 시도. 옛 모양이면 None — 판이라는 것이 없다.
+
+    **`version` 은 올린 쪽이 준 그 값이어야 한다.** 여기서 `work_dir` 에게 다시
+    물으면 「고른 판」이 나오는데, 사람이 다른 판을 지목해 올렸으면 그것과 다르다 —
+    그러면 계약이 **올라가지 않은 판**을 가리키고, `chosen.verdict` 가 고른 것과
+    맞대 보며 늘 같다고 한다. 검사가 꺼진 것과 같다. 2026-09-15 에 그렇게 한 번 꺼졌다.
+    """
+    layout_kind = runlayout.PREQUIZ if kind == PRE else runlayout.MAIN
+    work = runlayout.work_dir(run_dir, layout_kind, version)
+    if work == Path(run_dir):
+        return None
+    return {"kind": layout_kind, "version": work.name,
+            "cards_sha256": _cards_sha256(work)}
+
+
+def _cards_sha256(work: Path) -> str:
+    """그 시도의 신원. `attempts.cards_sha256` 과 같은 값을 낸다."""
+    import hashlib
+    p = Path(work) / "items.raw.json"
+    return hashlib.sha256(p.read_bytes()).hexdigest() if p.is_file() else ""
+
+
+def promote(run_dir: Path, kind: str = MAIN, version: str | None = None) -> Path | None:
+    """그 시도의 덱을 강의 폴더로 **올린다.** 올라간 덱의 자리를 돌려준다.
+
+    `docs/runs-layout.md` 5단계의 마지막 조각이다. 강의 폴더의 루트는 「지금 나가는
+    것」만 들고, 시도는 `main/<판>/` 에 산다 — 그 둘을 잇는 걸음이 이것이다.
+
+    **4단계가 「안 만들었다」고 적어 둔 명령과 같은 것이다.** 고른 시도를 그 자리로
+    올리는 일과 새로 구운 시도를 그 자리로 올리는 일이 같은 걸음이었다. 그래서 하나다.
+
+    올리는 것은 덱 하나뿐이다. 나머지 계약(`run.meta.json`·`*_items.final.json`·
+    `slides/`)은 `contract` 가 **읽어서 다시 쓴다** — 그것이 원래 하던 일이라 옮길
+    것이 없다.
+
+    **옛 모양에서는 아무것도 안 한다.** 시도가 이미 강의 폴더에 있으면 덱도 거기 있다.
+    """
+    run_dir = Path(run_dir)
+    layout_kind = runlayout.PREQUIZ if kind == PRE else runlayout.MAIN
+    work = runlayout.work_dir(run_dir, layout_kind, version)
+    if work == run_dir:
+        return apkg_of(run_dir, kind)
+
+    src = apkg_of(work, kind)
+    if src is None:
+        # **접은 편의 「배포 중인 판」이 이 자리에 온다.** 그 판의 덱은 접을 때
+        # 강의 폴더에 남았으므로(`migrate_attempts` 가 강의 폴더의 `.apkg` 를 지금
+        # 나가는 것으로 보고 안 옮긴다) 판 폴더에는 덱이 없다. **이미 올라가 있는
+        # 것이고 올릴 것이 없는 것이 맞다.**
+        already = apkg_of(run_dir, kind)
+        if already is not None:
+            return already
+        raise FileNotFoundError(f"{work.name}: {kind} 덱(.apkg)이 없다 — 올릴 것이 없다")
+    dest = run_dir / src.name
+    # **같은 내용이면 건드리지 않는다.** `publish` 가 (크기, mtime)으로 다시 밀 것을
+    # 고르므로(`runs/published.json`), 내용이 같은데 mtime 만 새로 찍으면 수백 MB 가
+    # 다시 올라간다.
+    if dest.is_file() and dest.stat().st_size == src.stat().st_size:
+        return dest
+    shutil.copy2(src, dest)
+    return dest
+
+
+def contract(run_dir: Path, run_id: str, title: str, kind: str,
+             version: str | None = None) -> dict:
     """quizgen 산출물을 서버 계약으로 옮긴다. 만든 `run.meta`를 돌려준다.
 
     **여기서 아무것도 판정하지 않는다.** 세어서 적을 뿐이고, 올려도 되는지는
@@ -741,14 +849,16 @@ def contract(run_dir: Path, run_id: str, title: str, kind: str) -> dict:
     것과 같은 이유로, 세는 자리와 막는 자리를 갈라 둔다.
     """
     prefix = "pre_" if kind == PRE else ""
-    apkg = apkg_of(run_dir, kind)
+    # **덱을 먼저 올린다.** 새 모양에서는 덱이 판 폴더 안에 있고, 아래 `apkg_of` 는
+    # 강의 폴더를 훑으므로 올리지 않으면 「덱이 없다」가 된다(`promote`).
+    apkg = promote(run_dir, kind, version)
     if apkg is None:
         raise FileNotFoundError(f"{run_dir.name}: {kind} 덱(.apkg)이 없다")
 
     cfg = config_of(run_dir, kind) or {}
-    cards = cards_of(run_dir, kind)
-    suspects = _load(_attempt(run_dir, "suspects.json", kind)) or {}
-    prep = _load(_attempt(run_dir, "prep.json", kind)) or {}
+    cards = cards_of(run_dir, kind, version)
+    suspects = _load(_attempt(run_dir, "suspects.json", kind, version)) or {}
+    prep = _load(_attempt(run_dir, "prep.json", kind, version)) or {}
 
     got = quizgen_build.counts(apkg)
     used = sorted({c["slide_no"] for c in cards if isinstance(c.get("slide_no"), int)})
@@ -767,6 +877,10 @@ def contract(run_dir: Path, run_id: str, title: str, kind: str) -> dict:
         # 72편이 그렇다. 읽는 쪽이 아무 데도 없어서 고치지 않았다 — 맞추겠다고
         # 옛 산출물을 일괄로 손대면, 그 편들이 「그때 무엇으로 구웠는지」를 잃는다.
         "pipeline": "quizgen",
+        # **어느 시도로 만들었나.** 새 모양에서만 붙는다(`runs/<편>/main/<판>/`).
+        # 이것이 없으면 「사람이 고른 판」과 「실제로 올라간 판」을 맞대 볼 수 없다 —
+        # `chosen.verdict` 가 이 값을 본다. 2026-09-15.
+        "attempt": _attempt_mark(run_dir, kind, version),
         "source_pdf": cfg.get("pdf") or "",
         # 덱을 다시 열어 센 값이다. `item_count`와 어긋나면 덱이 내용과 다른 것을
         # 담고 있다는 뜻이고, 그건 gate가 막는 몇 안 되는 것 중 하나다.

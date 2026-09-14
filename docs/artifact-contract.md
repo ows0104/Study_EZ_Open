@@ -118,6 +118,8 @@ lecture
   "deck_file": "p260820_03.apkg",
   "built_at": "2026-08-23T00:39:38",
   "pipeline": "quizgen",
+  "attempt": { "kind": "main", "version": "260827-2300",
+               "cards_sha256": "a03dd97c…" },
   "verified": { "notes": 88, "cards": 92, "media": 46, "decks": 2,
                 "missing_media": [] },
   "item_count": 88,
@@ -137,6 +139,10 @@ lecture
 
 관리자 화면과 `runner.gate`가 이걸로 "배포해도 되는가"를 판단한다.
 
+- **`attempt`는 이 덱을 만든 시도다**(2026-09-15부터 · `docs/runs-layout.md` 5단계).
+  산출물이 `runs/<편>/main/<판>/` 로 갈린 뒤 생겼다. **`null` 이면 옛 모양**이다 —
+  시도가 강의 폴더에 그대로 있어서 판이라는 것이 없다. 이 값이 있어야 「사람이 고른
+  판」과 「실제로 올라간 판」을 맞대 볼 수 있다(`runner.chosen.verdict`)
 - **`verified`는 apkg를 다시 열어 센 값이다.** `item_count`와 어긋나면 덱이 내용과
   다른 것을 담고 있다는 뜻이고, 검문이 막는 몇 안 되는 것 중 하나다
 - **`reproduce`가 `same`이 아니어도 나쁜 카드는 아니다.** 질문만 보고 다시 푼

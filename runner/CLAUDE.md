@@ -4,7 +4,7 @@
 **저장소에서 유일하게 합법인 경계 넘기가 여기 있다** — `runner/deck.py → quizgen` 3줄.
 
     무엇을 고치면 어느 파일인가    ../docs/map.md §2
-    검사                          pytest tests/runner      273개 · 11초
+    검사                          pytest tests/runner      291개 · 11초
     권한 · 어디서나 미는 함정       ../CLAUDE.md
     카드를 어떻게 쓰는가            ../quizgen/CLAUDE.md
 
@@ -196,9 +196,41 @@ python -m runner chosen                                 어느 편에 기록이 
 ①이 없으면 `out/` 시도를 접는 순간 `deck.contract` 가 **배포 중인 덱과 다른 카드**로
 계약을 다시 쓴다(83장 편의 `item_count` 가 58이 됐다). 실제 편을 사본으로 떠서 잡았다.
 
-### 옮기는 것은 아직 막혀 있다
+### 접었다 — 그리고 올리는 걸음이 하나 생겼다
 
-`scripts/migrate_attempts.py` 는 계획을 다 세우지만 `--apply` 가 거부한다 —
-`deck.run_main` 이 `--out` 으로 강의 폴더를 그대로 넘기기 때문이다. 옮긴 편에 새 실행이
-쓰면 그 산출물이 판 폴더에 가려 조용히 무시된다. 풀리는 조건 셋은
-`runlayout.WRITES_ATTEMPT_DIRS` 위에 있다.
+2026-09-15 에 편 111개 · 시도 160개 · 파일 4,200개를 접었다. `out/` 은 8.3 → 2.6GB 고
+편에 속한 폴더가 하나도 안 남았다(남은 것은 `_bundle`·`_image_check` 같은 작업 자리).
+
+새 실행은 이제 판 폴더에 쓴다(`deck.new_work_dir`). **`--resume` 은 새 판을 안 연다** —
+이어 돌리는 것은 그 시도를 계속하는 것이라 새 판을 열면 prep 부터 다시 돈다.
+
+    python -m runner promote <run_id>                     고른 판을 올린다
+    python -m runner promote <run_id> --version 260827-2300
+
+**올리는 것은 덱 하나뿐이다.** 나머지 계약(`run.meta.json`·`*_items.final.json`·
+`slides/`)은 `deck.contract` 가 원래 읽어서 다시 쓰던 것이라 옮길 것이 없었다.
+그래서 `contract` 가 `promote` 를 스스로 먼저 부른다.
+
+### 작업 폴더를 고르는 순서가 넷이다
+
+    ① CHOSEN.json 이 고른 판          사람이 적어 둔 것이 제일 세다
+    ② run.meta.json 의 attempt        지금 나가는 덱을 만든 판
+    ③ 제일 새 **온전한** 판            설정 파일이 있는 것만 센다
+    ④ 강의 폴더 자신                   판이 하나도 없으면 — 옛 모양이다
+
+**②와 ③의 「온전한」은 접자마자 필요해졌다.** `260901_01` 은 cloze 프롬프트를 아홉 번
+돌린 편이라 판이 11개인데 이름이 제일 새 것에 `run.config.json` 이 없다 — 카드만 남은
+실험 폴더다. 그것을 고르면 `deck.source_pdf` 가 빈 값을 내고 `publish` 가 주인을
+확인할 수 없다고 본다.
+
+### 계약이 「어느 판으로 만들었나」를 적는 이유
+
+`run.meta.json` 의 `attempt` 다. **이것이 없으면 `chosen.verdict` 가 꺼진다** —
+올리기를 붙이면서 두 번 꺼졌다.
+
+    ①  runs/<편>/items.raw.json 을 뜨고 있었다   접으면 그 파일이 없어져 「모른다」
+    ②  work_dir 을 뜨게 고쳤다                  그건 「고른 판」이라 **늘 같다고** 나온다
+
+계약의 `attempt` 만이 「올라간 것」을 말한다. `docs/artifact-contract.md` 에 칸을 적어
+두었다. **`contract` 에 판을 줄 때는 `promote` 에 준 것과 같은 값이어야 한다** —
+안 그러면 계약이 올라가지 않은 판을 가리킨다.
