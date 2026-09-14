@@ -34,7 +34,7 @@
 | ├ 문제 푸는 화면 | `web/src/lecture/` (818줄) | |
 | └ 색·여백 | `web/src/styles/` (3,248줄) | |
 | **퀴즈 생성**을 바꾼다 | `quizgen/` + `tests/` | `pytest tests` |
-| ├ 카드를 어떻게 쓰는가 | `quizgen/prompts/` ← **여기가 대부분이다** | `quizgen.judge` |
+| ├ 카드를 어떻게 쓰는가 | `quizgen/prompts/` ← **여기가 대부분이다. §2-1** | `quizgen.judge` |
 | ├ 단계 순서·재시도 | `quizgen/run.py` (634줄) | |
 | ├ 기계 검증 규칙 | `quizgen/validate.py` (647줄) | |
 | ├ 모델에게 풀려 보기 | `quizgen/reproduce.py` (755줄) | |
@@ -69,6 +69,68 @@ python spotter/scripts/build_master.py     # species.csv·specimens.csv → .jso
 python spotter/scripts/build_web.py        # → build/quiz_db.json
 python spotter/scripts/upload_web.py       # → R2
 ```
+
+## 2-1. `quizgen/prompts/` 안쪽 — 카드 문구를 바꿀 때
+
+**여기가 「퀴즈 생성을 바꾼다」의 대부분이다.** 파이썬을 안 고치고 이 폴더만 고치는
+일이 흔하다. 다만 **두 종류가 섞여 있고 읽는 방식이 다르다.**
+
+### ① 조립되는 모듈 — `prompting.py` 가 합쳐서 한 장으로 만든다
+
+    CORE (항상, 넷)              PROFILE (하나)          ADAPTERS (자료에 따라)      DOMAIN (하나)
+    core/quality.md    208줄     profiles/               adapters/                  domains/
+      무엇이 좋은 카드인가         exam_review.md   13      lecture_pdf.md    16        medical_ko.md  95
+    core/evidence.md    21         시험 복습용            annotations.md     8           한국어 의학
+      근거는 자료에 있어야        prelecture.md    14      past_exam.md      21        generic.md      4
+    core/media.md       35         수업 전 예습           medical_past_exam 13           분야 없음
+      표·그림을 어떻게 읽나
+    core/language.md    13
+      질문 문체
+
+순서가 저 순서다(`prompting.module_names`). **한 파일만 고치면 모든 편에 실린다** —
+`core/` 가 특히 그렇다. 분야에 매인 말은 `domains/` 로 내려야 한다.
+
+| 바꾸고 싶은 것 | 고칠 파일 |
+|---|---|
+| 좋은 카드의 기준, 형식 비율, 금지 | `core/quality.md` ← **제일 자주 고치는 곳** |
+| 근거 없는 카드를 막는 규칙 | `core/evidence.md` |
+| 표·그림·이미지 카드 | `core/media.md` |
+| 질문 말투 | `core/language.md` |
+| 복습 덱만 / 예습 덱만 | `profiles/exam_review.md` / `profiles/prelecture.md` |
+| 의학 용어·번역어·실제 카드 예시 | `domains/medical_ko.md` |
+| 기출을 어떻게 쓰는가 | `adapters/past_exam.md` |
+
+### ② 단계별 과제문 — 코드가 그때그때 직접 읽는다
+
+    plan.md              41   ① 무엇을 낼지 계획한다            assemble.py
+    cards.md             67   ② 계획대로 카드를 쓴다             assemble.py
+    revise.md            83   판이 갈린 슬라이드만 갈아 끼운다     revise.py
+    reproduce_answer.md  24   질문만 주고 다시 풀린다             reproduce.py
+    reproduce_grade.md   40   원래 답과 같은지 채점한다           reproduce.py
+    reproduce_axis.md    28   빈칸이 무엇을 묻는지 대게 한다       reproduce.py
+    repair.md            50   검사에 걸린 카드를 고쳐 쓴다         run.py
+    repair_leak.md       14   앞면에 답이 샌 것을 고친다           run.py
+    judge_cloze.md       38   두 판의 cloze 를 가려 놓고 판정한다   judge.py
+    philosophy.md        10   **지금은 안 쓴다.** 조립으로 옮겨 갔다는 안내만 남았다
+
+예습은 자기 것을 따로 든다 — `quizgen/prequiz/prompts/` 에 `must.md`(꼭 알아야 할
+것 고르기) · `cards.md` · `repair.md` 셋. `core/`·`domains/` 는 같이 쓴다.
+
+### ③ 여기서 조심할 것 둘
+
+**예시로 쓴 편으로는 그 규칙을 재지 마라.** `domains/medical_ko.md` 의 「실제 카드」
+예시가 어느 편에서 왔는지는 `quizgen/prompting.py` 의 `DOMAINS` 위 주석에 있다.
+2026-09-05 에 코어 예시가 한 편에 몰려 있었고, 그 편을 돌려 보니 **cloze 14장 중
+5장이 예시에서 그대로 나왔다.** 「규칙이 작동했다」로 읽을 뻔했다. 주제까지 봐야
+한다 — 작년 말라리아 예시는 올해 말라리아 편에도 닿는다.
+
+**문구가 나은지는 파이프라인 실행으로 재지 마라.** 같은 편 같은 자료인데 판마다
+cloze 6~16장 · 재현 78~91% 로 흔들린다. 만들려던 효과가 그 폭에 묻힌다.
+
+    python -m quizgen.judge cloze out/exp_A out/exp_B    30초 · $0.35
+
+이미 만들어 둔 카드를 판마다 뽑아 섞고 **한 세션에게** 가린 채 판정시킨다.
+근거는 `CLAUDE.md` 의 「프롬프트를 고치고 한 편 돌려서 비교하지 마라」 절에 있다.
 
 ## 3. 연결부 — 덩이끼리 닿는 자리는 넷뿐이다
 

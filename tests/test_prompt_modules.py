@@ -86,3 +86,38 @@ def test_runtime_prompts_do_not_accumulate_case_history():
         "한 번에 3~6개를 가려도",
     ):
         assert historical_patch not in text
+
+
+def test_지도가_가리키는_프롬프트가_다_있다():
+    """`docs/map.md` §2-1 이 프롬프트 폴더 안쪽을 파일 이름으로 안내한다.
+
+    **문서가 없는 파일을 가리키면 그 문서를 믿고 온 사람이 헤맨다.** 프롬프트는
+    이름이 자주 바뀌는 쪽이라(`philosophy.md` 가 조립으로 옮겨 간 것처럼) 여기서
+    잡아 둔다.
+    """
+    import re
+
+    root = Path(__file__).parents[1]
+    text = (root / "docs" / "map.md").read_text(encoding="utf-8")
+    named = set(re.findall(r"`((?:core|profiles|domains|adapters)/[\w.]+\.md)`", text))
+    named |= set(re.findall(r"^\s{4}([\w_]+\.md)\s", text, re.M))
+    assert named, "지도에서 프롬프트 이름을 하나도 못 찾았다 — 정규식이 낡았다"
+    for name in sorted(named):
+        assert ((root / "quizgen" / "prompts" / name).is_file()
+                or (root / "quizgen" / "prequiz" / "prompts" / name).is_file()), name
+
+
+def test_지도의_조립_순서가_코드와_같다():
+    """§2-1 이 CORE → PROFILE → ADAPTERS → DOMAIN 이라고 적었다."""
+    from quizgen.prompting import CORE_MODULES, DOMAINS, PROFILES
+
+    names = module_names_for_test()
+    assert names[:len(CORE_MODULES)] == list(CORE_MODULES)
+    assert names[len(CORE_MODULES)] in PROFILES.values()
+    assert names[-1] in DOMAINS.values()
+
+
+def module_names_for_test():
+    from quizgen.prompting import module_names
+    return list(module_names(profile="exam_review",
+                             adapters=("adapters/lecture_pdf.md",)))
