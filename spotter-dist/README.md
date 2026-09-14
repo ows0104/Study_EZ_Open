@@ -29,15 +29,11 @@
     session.js auth.js gate.js   공용. 다섯 과목이 같이 쓴다
     _headers                Cloudflare 응답 헤더
 
-## `update_exam_trends.py` 만 여기 산다
+## 소스 파일은 여기 두지 마라
 
-해부학 문항의 표집 가중치를 기출빈도 워크북에서 다시 계산하는 도구다.
-**원본이 여기밖에 없다** — 해부학 `index.html` 넷이 그랬던 것과 같은 모양이고
-(2026-09-14 에 그쪽은 `spotter/web/anatomy/` 로 회수했다), 이것은 아직 안 옮겼다.
-옮길 때는 이 줄을 지워라.
+**이 폴더는 공개로 서빙된다.** 2026-09-14까지 `update_exam_trends.py` 가 루트에
+있어서 `spotter.studyez.kr/update_exam_trends.py` 로 누구나 받아 갈 수 있었다.
+그날 `spotter/scripts/` 로 회수했다.
 
-가중치는 `sqrt(n + 1)` 이다(`n` 은 기출 횟수). 영역 편중은 따로 막는다 — 한 영역이
-균등 기준보다 한 문제 넘게 나오지 않고, 이어지는 문항은 가능하면 다른 영역에서
-고른다. 같은 구조물은 한 판에 한 번만 나온다.
-
-    python update_exam_trends.py "C:\path\to\인체해부학_차시별_구조물_기출빈도.xlsx"
+문항 DB 도 같은 이유로 2026-09-06 에 걷어 냈다. 지금은 R2 에 있고 로그인한
+사람에게만 서명 URL 로 간다.
