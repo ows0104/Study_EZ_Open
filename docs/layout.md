@@ -22,11 +22,17 @@ Study_EZ_Open/
   spotter-dist/  땡시 배포본   Pages 가 내는 것과 같은 모양. **손으로 고치지 마라**
   bridge/        예습링크      크롬 확장. 작년 필기를 AI 새 대화에 채우고 링크를 회수
   platform/      공유          두 앱이 **실제로** 같이 쓰는 것만 (`platform/README.md`)
-  tests/         검사          `pytest tests` (개수는 map.md 가 든다)
+  tests/         검사          덩이별로 나뉘어 있다 — `pytest tests/spotter` 처럼 하나만
+                                (개수는 map.md 가 든다)
   scripts/       운영          예약 작업이 부르는 ps1 + 손도구 셋
   docs/          문서          `archive/` 는 닫힌 기록. 현재 상태로 읽지 마라
   runs/  out/    산출물        추적 안 됨. 23GB
 ```
+
+**덩이 여섯은 자기 `CLAUDE.md` 를 든다** — `quizgen` · `runner` · `spotter` · `web` ·
+`server` · `bridge`. 그 덩이의 파일을 열면 그 문서가 실리고, 루트 `CLAUDE.md` 에는
+권한과 덩이 경계와 어디서나 미는 함정만 남았다. 왜 그렇게 했는지는 루트 문서의
+「이 문서에는 셋만 적는다」 절에 있다.
 
 **`server/` 와 `web/` 은 자리를 안 옮겼다.** 저장소 밖 설정이 이 경로를 알고 있다 —
 Cloudflare Pages 대시보드가 `web/` 을, `server/Dockerfile` 과 `deploy.ps1` 이

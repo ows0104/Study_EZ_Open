@@ -2,7 +2,7 @@
 
 > **2026-08-29에 코드를 지웠다.** `doby_is_free/`(812줄)는 참조도 실행도 0이었다.
 > **이 문서는 코드가 아니라 잰 값이라 남긴다** — 관리자의 물음에 답한 기록이고,
-> `quizgen/assemble.py`와 `tests/test_photo_strategy.py`가 지금도 여기를 근거로
+> `quizgen/assemble.py`와 `tests/quizgen/test_photo_strategy.py`가 지금도 여기를 근거로
 > 서 있다. 지워진 코드와 기준선 프롬프트(`prompts/naive.md`·`naive_plus_rule.md`)는
 > 커밋 `526ecfa`에 있다.
 >

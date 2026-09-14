@@ -40,13 +40,13 @@ def pytest_collection_modifyitems(session, config, items):
     있다 — 수집된 것을 손보는 훅으로는 못 잡는다.
 
     `server/` 아래를 겨눈 실행에서만 문다. 저장소 루트에서 `pytest` 를 돌리면
-    `tests/` 의 567개가 걸리므로 이 자리는 지나간다.
+    `tests/` 의 검사가 걸리므로 이 자리는 지나간다.
     """
     if items:
         return
     # 겨눈 자리가 이 폴더를 **품거나 품긴** 실행에서만 문다. `pytest` 를 그냥 친
     # 것(`server/` 전체)도 여기 든다 — 그때가 제일 헷갈리는 자리라 빠지면 안 된다.
-    # 저장소 루트의 `pytest tests` 는 567개가 걸리므로 위에서 이미 돌아갔다.
+    # 저장소 루트의 `pytest tests` 는 수백 개가 걸리므로 위에서 이미 돌아갔다.
     targeted = [Path(str(a).split("::")[0]).resolve() for a in (config.args or [])]
     if targeted and not any(p == HERE or HERE in p.parents or p in HERE.parents
                             for p in targeted):

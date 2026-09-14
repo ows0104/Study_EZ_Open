@@ -23,7 +23,7 @@ from pathlib import Path
 
 import pytest
 
-SPOTTER = Path(__file__).resolve().parents[1] / "spotter"
+SPOTTER = Path(__file__).resolve().parents[2] / "spotter"
 SCRIPTS = SPOTTER / "scripts"
 
 
@@ -164,7 +164,7 @@ PENDING_DEPLOY: dict[str, str] = {}
 
 
 def _anatomy(subject):
-    root = Path(__file__).resolve().parents[1]
+    root = Path(__file__).resolve().parents[2]
     return (root / "spotter" / "web" / "anatomy" / subject / "index.html",
             root / "spotter-dist" / subject / "index.html")
 

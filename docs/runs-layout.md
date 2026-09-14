@@ -119,8 +119,8 @@ Pre-Quiz는 작년 필기로 만들어서 산출물이 `runs/<작년 run_id>/`�
 
 건드릴 자리는 쓰는 곳 하나와 읽는 곳 셋, 그리고 테스트 둘이다 —
 `prequeue.py`가 쓰고, `deck.calendar_of`·`agent.py`의 `runs/*/pre_target.json`
-훑기·`__main__.KEEP_ON_IMPORT`가 읽는다. `tests/test_agent.py`와
-`tests/test_prequeue_force.py`가 그 동작을 지키고 있으니 같이 옮긴다.
+훑기·`__main__.KEEP_ON_IMPORT`가 읽는다. `tests/runner/test_agent.py`와
+`tests/runner/test_prequeue_force.py`가 그 동작을 지키고 있으니 같이 옮긴다.
 
 ## 아직 안 정한 것
 

@@ -4,6 +4,14 @@
 찾아 그 줄의 경로만 주면 된다. 왜 그래도 되는지는 §3(연결부)에 있다 — 덩이끼리
 닿는 자리가 넷뿐이고 전부 좁다.
 
+> **2026-09-14 에 문맥도 같이 갈랐다.** 덩이마다 자기 `CLAUDE.md` 가 있고
+> ([quizgen](../quizgen/CLAUDE.md) · [runner](../runner/CLAUDE.md) ·
+> [spotter](../spotter/CLAUDE.md) · [web](../web/CLAUDE.md) ·
+> [server](../server/CLAUDE.md) · [bridge](../bridge/CLAUDE.md)),
+> 검사도 `tests/<덩이>/` 로 나뉘었다. **이 문서는 「어느 파일」을 적고, 그 문서들은
+> 「그 덩이에서 무엇이 값을 했는지」를 적는다.** 루트 `CLAUDE.md` 에는 권한과
+> 덩이 경계, 그리고 어디서나 미는 함정만 남았다(587줄 → 136줄).
+
 > **같은 지도가 볼 수 있는 페이지로도 있다** —
 > <https://claude.ai/code/artifact/954ece81-76eb-4ca1-ad27-f1f954dbf0f5>
 > 거기서는 일감마다 경로를 복사할 수 있다. **문구는 둘이 같아야 한다.**
@@ -37,7 +45,9 @@
 
   bridge/      3,113   예습링크 크롬 확장
   platform/      228   둘이 정말 같이 쓰는 것 — session.js 하나
-  tests/       7,517   606개. `pytest tests`
+  tests/       7,517   606개. 덩이별로 나뉘어 있다 — 하나만 돌리면 된다
+                         quizgen 379 · runner 201 · spotter 22 · bridge 4
+                         `pytest tests` 27초  ·  `pytest tests/quizgen` 2초
   docs/                `archive/` 는 닫힌 기록이다
                        (줄수를 안 적는다 — 그 숫자를 적는 파일이 여기 있어서
                         적는 순간 틀린다)
@@ -47,25 +57,27 @@
 
 **왼쪽 일을 할 때 오른쪽만 주면 된다.** 나머지는 안 읽어도 된다.
 
+**경로를 줄 때 그 덩이의 `CLAUDE.md` 는 저절로 실린다** — 따로 지목하지 않아도 된다.
+
 | 하려는 일 | 주면 되는 경로 | 검사 |
 |---|---|---|
-| **사이트 화면**을 고친다 | `web/src/` + `web/src/types.ts` | `cd web && npx tsc --noEmit` |
+| **사이트 화면**을 고친다 | `web/src/` + `web/src/types.ts` | `cd web && npm run typecheck` |
 | ├ 캘린더 | `web/src/calendar/` (2,212줄) | |
 | ├ 관리 화면 | `web/src/admin/` (1,161줄) | |
 | ├ 문제 푸는 화면 | `web/src/lecture/` (818줄) | |
 | └ 색·여백 | `web/src/styles/` (3,248줄) | |
-| **퀴즈 생성**을 바꾼다 | `quizgen/` + `tests/` | `pytest tests` |
+| **퀴즈 생성**을 바꾼다 | `quizgen/` + `tests/quizgen/` | `pytest tests/quizgen` (379개·2초) |
 | ├ 카드를 어떻게 쓰는가 | `quizgen/prompts/` ← **여기가 대부분이다. §2-1** | `quizgen.judge` |
 | ├ 단계 순서·재시도 | `quizgen/run.py` (634줄) | |
 | ├ 기계 검증 규칙 | `quizgen/validate.py` (647줄) | |
 | ├ 모델에게 풀려 보기 | `quizgen/reproduce.py` (755줄) | |
 | └ 덱 굽기·뒷면 배치 | `quizgen/build.py` (1,117줄) | |
-| **땡시 문항 오류**를 고친다 | `spotter/data/` + `spotter/scripts/build_web.py` | `pytest tests/test_spotter_golden.py` |
+| **땡시 문항 오류**를 고친다 | `spotter/data/` + `spotter/scripts/build_web.py` | `pytest tests/spotter` (22개·7초) |
 | **땡시 화면**을 고친다 | `spotter/web/` (기생충학) 또는 `spotter/web/anatomy/_template.html` (해부학) | |
 | **서버 API**를 고친다 | `server/app/routes/<해당>.py` + `server/app/models.py` | `cd server && .venv/Scripts/python -m tests` |
-| **덱이 안 만들어진다** | `runner/watch.py` · `runner/cycle.py` · `runner/agent.py` | `pytest tests` |
+| **덱이 안 만들어진다** | `runner/watch.py` · `runner/cycle.py` · `runner/agent.py` | `pytest tests/runner` (201개·9초) |
 | **덱이 안 올라간다** | `runner/publish.py` · `runner/gate.py` | |
-| **예습 링크**가 안 붙는다 | `bridge/` + `server/app/preview_links.py` + `web/src/bridge/` | `pytest tests/test_extension_providers.py` |
+| **예습 링크**가 안 붙는다 | `bridge/` + `server/app/preview_links.py` + `web/src/bridge/` | `pytest tests/bridge` (4개) |
 
 ### 땡시 문항을 고칠 때 — 손으로 고치는 파일은 여섯뿐이다
 
@@ -219,6 +231,14 @@ python scripts/map_numbers.py --check    # 다른 줄만 찍고 1로 끝난다
     경계 넘는 import  0   ← 이 줄이 0 이 아니면
 
 **그때는 이 지도가 아니라 구조가 틀린 것이다.** 그 import 를 없앨 수 있는지 먼저 본다.
+
+같은 도구가 **문맥이 다시 모이는지도** 센다. 셋을 본다.
+
+    검사를 덩이별로       tests/<덩이> 가 비면 옮기다 흘린 것이다
+    덩이 문서            <덩이>/CLAUDE.md 가 없으면 루트를 통째로 읽게 된다
+    루트 CLAUDE.md 줄수   **덩이 하나의 것을 루트에 적으면 이 숫자만 늘어난다**
+
+셋째가 이 갈라 놓기가 되돌아가는 자리다. 2026-09-14 에 136줄에서 시작했다.
 
 서버 경로가 그대로인지는 따로 본다.
 

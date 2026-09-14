@@ -71,7 +71,7 @@ def test_unknown_prompt_selection_fails_loudly():
 
 
 def test_runtime_prompts_do_not_accumulate_case_history():
-    root = Path(__file__).parents[1] / "quizgen"
+    root = Path(__file__).parents[2] / "quizgen"
     paths = list((root / "prompts").rglob("*.md"))
     paths += list((root / "prequiz" / "prompts").rglob("*.md"))
     text = "\n".join(p.read_text(encoding="utf-8") for p in paths)
@@ -97,7 +97,7 @@ def test_지도가_가리키는_프롬프트가_다_있다():
     """
     import re
 
-    root = Path(__file__).parents[1]
+    root = Path(__file__).parents[2]
     text = (root / "docs" / "map.md").read_text(encoding="utf-8")
     named = set(re.findall(r"`((?:core|profiles|domains|adapters)/[\w.]+\.md)`", text))
     named |= set(re.findall(r"^\s{4}([\w_]+\.md)\s", text, re.M))
