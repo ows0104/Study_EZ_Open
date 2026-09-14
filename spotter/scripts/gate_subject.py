@@ -1,6 +1,12 @@
 """해부학 과목의 index.html에 로그인 문을 단다.
 
-    uv run --python 3.13 python scripts/gate_subject.py <Pages 저장소> [과목 …]
+    uv run --python 3.13 python scripts/gate_subject.py [과목 …]
+
+**2026-09-14 부터 원본을 고친다** — `web/anatomy/<과목>/index.html`. 그 전에는
+원본이 배포 저장소에만 있어서 거기를 제자리에서 고쳤고, 그래서 아래 마지막 문단이
+「과목 앱을 누가 새로 구우면 여기를 다시 돌려야 한다」로 끝나 있었다. 지금도
+그 말은 맞지만 **다시 돌릴 자리가 원본**이고, 배포는 그것을 옮기기만 한다.
+경로를 인자로 주면 그 폴더를 본다(옛 방식으로 배포본을 직접 고칠 때).
 
 해부학 넷은 각자 완성된 한 파일짜리 앱이라 다시 쓰지 않는다. **문이 되는
 자리만 갈아 끼운다** — 네 곳이고, 네 과목이 거의 같은 코드라 한 번에 된다.
@@ -129,15 +135,21 @@ def patch_neuro(text, subject):
     return text.replace(old_load, new_load, 1)
 
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ANATOMY = os.path.join(ROOT, "web", "anatomy")
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    if not args:
-        raise SystemExit("Pages 저장소 경로를 주세요.")
-    repo = os.path.abspath(args[0])
-    subjects = args[1:] or ["exam1", "trunk", "head-neck", "neuro"]
+    # 인자를 안 주면 이 저장소의 원본을 본다. **2026-09-14 이전에는 배포 저장소
+    # 경로가 필수였다** — 그때는 원본이 거기밖에 없었기 때문이다.
+    base = os.path.abspath(args[0]) if args and os.path.isdir(args[0]) else ANATOMY
+    subjects = (args[1:] if args and os.path.isdir(args[0]) else args) or [
+        "exam1", "trunk", "head-neck", "neuro"
+    ]
 
     for subject in subjects:
-        path = os.path.join(repo, subject, "index.html")
+        path = os.path.join(base, subject, "index.html")
         if not os.path.isfile(path):
             raise SystemExit(f"없는 파일: {path}")
         text = open(path, encoding="utf-8").read()

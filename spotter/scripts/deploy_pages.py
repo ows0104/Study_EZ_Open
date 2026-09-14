@@ -7,7 +7,7 @@ Cloudflare Pages가 그 저장소의 **루트를 통째로** 내보내고 있어
 
     ① 공용 스크립트 넷을 루트에 둔다 (config·session·auth·gate)
     ② 기생충학 화면을 `parasitology/`에 둔다
-    ③ 해부학 넷의 index.html에 로그인 문을 단다 (`gate_subject.py`)
+    ③ 해부학 넷을 `web/anatomy/<과목>/`에서 그대로 옮긴다
     ④ 모든 `<script src>`에 내용 해시를 붙인다 (`?v=…`)
 
 **④가 없으면 화면이 반만 갱신된다.** 2026-09-06에 실제로 그랬다 — 새 HTML은
@@ -19,9 +19,13 @@ Cloudflare Pages가 그 저장소의 **루트를 통째로** 내보내고 있어
 해시는 **배포될 파일의 내용**에서 뽑는다. 안 바뀐 파일은 주소도 그대로라
 쓸데없이 다시 받게 하지 않는다.
 
-**해부학 넷의 index.html은 이 저장소에 원본이 없다.** 각자 완성된 한 파일짜리
-앱이고 배포 저장소에만 있다 — 여기서는 문만 달아 준다. 그래서 과목 앱을 새로
-구우면 이 스크립트를 다시 돌려야 한다.
+**해부학 넷의 원본이 2026-09-14 부터 이 저장소에 있다**(`web/anatomy/`). 그 전에는
+원본이 배포본밖에 없었고, 이 스크립트가 배포본을 **제자리에서** 고쳐서 로그인 문을
+달았다 — 배포 저장소를 되돌리면 앱이 통째로 사라지는 구조였다. 지금은 기생충학과
+똑같이 **원본에서 배포본으로 옮기기만** 한다.
+
+새로 구운 과목 앱을 들일 때는 `scripts/gate_subject.py` 로 **원본에** 문을 달고
+`web/anatomy/<과목>/index.html` 에 둔다. 배포본은 손대지 않는다.
 
 `config.js`는 **배포본을 안 덮는다.** 이 저장소의 것은 보통 로컬 시험용으로
 비워져 있고, 덮으면 배포에서 apiBase가 사라져 화면이 "설정이 없습니다"에서
@@ -42,6 +46,9 @@ if hasattr(sys.stdout, "reconfigure"):
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB = os.path.join(ROOT, "web")
+# 해부학 넷의 원본. **2026-09-14 에 배포 저장소에서 회수했다** — 그 전에는 원본이
+# 배포본밖에 없어서, 배포 저장소를 되돌리면 앱이 사라지는 구조였다.
+ANATOMY = os.path.join(WEB, "anatomy")
 
 # 루트에 놓이는 공용 스크립트. 과목 다섯이 `../`로 부른다.
 SHARED = ("session.js", "auth.js", "gate.js")
@@ -67,9 +74,23 @@ SCRIPT = re.compile(r'<script src="([^"]+?\.js)(?:\?v=[0-9a-f]+)?"')
 
 
 def digest(path):
-    """파일 내용의 짧은 지문. 내용이 같으면 주소도 같다."""
+    """파일 내용의 짧은 지문. 내용이 같으면 주소도 같다.
+
+    **줄끝은 내용이 아니다.** 날바이트로 해싱하면 CRLF 로 받은 기계와 LF 로 받은
+    기계가 같은 파일에 다른 주소를 붙인다. 그러면 한 글자도 안 바뀐 배포가 모든
+    스크립트를 다시 받게 만들고, 더 나쁘게는 **안 바뀌었다고 착각하게 만든다.**
+
+    2026-09-14 에 저장소를 합치면서 그 증거가 나왔다. 배포본 HTML 이 적고 있는
+    `gate.js?v=c12746c4` 는 **CRLF 로 받은 작업본**에서 뽑은 값이고, 같은 파일의
+    LF 판은 `ab55dd58` 이다. 내용은 한 글자도 안 다른데 주소가 둘이었다.
+
+    `scripts/sync_shared.py` 의 `digest` 가 같은 이유로 이미 이렇게 한다.
+
+    **고친 뒤 첫 배포는 스크립트 주소가 전부 바뀐다.** 한 번 다시 받고 끝이다 —
+    캐시 무효화가 하라는 일을 하는 것이라 해롭지 않다.
+    """
     with open(path, "rb") as f:
-        return hashlib.sha1(f.read()).hexdigest()[:8]
+        return hashlib.sha1(f.read().replace(b"\r\n", b"\n")).hexdigest()[:8]
 
 
 def source_of(repo, html_dir, src):
@@ -154,29 +175,12 @@ def main():
             os.path.join(WEB, name), os.path.join(repo, "parasitology", name), check, repo
         )
 
-    print("\n해부학 — 로그인 문")
-    subprocess.run(
-        [sys.executable, os.path.join(ROOT, "scripts", "gate_subject.py"), repo, *SUBJECTS],
-        check=True,
-    )
-
-    # 해부학 넷은 한 번 문을 달면 다시 안 건드리므로(`gate_subject.py`가
-    # 건너뛴다) 도장은 여기서 따로 찍는다. 안 찍으면 공용 스크립트를 고쳐도
-    # 네 과목은 옛 주소를 계속 불러서 캐시가 그대로 산다.
-    print("\n스크립트 버전 도장")
+    print("\n해부학")
     for subject in SUBJECTS:
-        path = os.path.join(repo, subject, "index.html")
-        text = open(path, encoding="utf-8").read()
-        body = stamp(text, repo, os.path.dirname(path))
-        if body == text:
-            print(f"  같음     {subject}/index.html")
-            continue
-        if check:
-            print(f"  다름     {subject}/index.html")
-            changed = True
-            continue
-        open(path, "w", encoding="utf-8", newline="").write(body)
-        print(f"  찍었음   {subject}/index.html")
+        changed |= copy(
+            os.path.join(ANATOMY, subject, "index.html"),
+            os.path.join(repo, subject, "index.html"), check, repo,
+        )
 
     if check and changed:
         raise SystemExit("\n배포 저장소가 뒤처져 있습니다. 인자 없이 다시 돌리세요.")

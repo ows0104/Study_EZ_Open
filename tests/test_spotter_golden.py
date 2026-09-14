@@ -16,6 +16,7 @@
 
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -135,3 +136,48 @@ def test_구워_둔_문항_DB가_있으면_그것도_안_흔들린다():
     qs = json.loads(p.read_text(encoding="utf-8"))["questions"]
     # 생성 문항 + 족보 indicator 문항. 합계만 본다 — 족보 쪽은 위에서 따로 잰다.
     assert len(qs) == 5606
+
+
+# ── 해부학 원본과 배포본 ───────────────────────────────────────────
+#
+# 2026-09-14 에 회수하기 전까지 **해부학 넷의 원본은 배포 저장소에만 있었다.**
+# `deploy_pages.py` 가 배포본을 제자리에서 고쳐 로그인 문을 달았기 때문에,
+# 배포 저장소를 되돌리면 앱이 통째로 사라지는 구조였다.
+#
+# 지금은 `spotter/web/anatomy/` 가 원본이고 배포는 옮기기만 한다. 아래 둘이
+# 그 관계를 잡아 둔다 — **원본과 배포본이 조용히 갈라지는 것**이 이 앱들의
+# 사고 방식이다(2026-09-06 에 새 HTML 이 옛 `app.js` 를 네 시간 불렀다).
+
+ANATOMY = ("exam1", "trunk", "head-neck", "neuro")
+_STAMP = re.compile(r'(<script src="[^"]+?\.js)\?v=[0-9a-f]+(")')
+
+
+def _unstamped(path):
+    return _STAMP.sub(r"\1\2", Path(path).read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize("subject", ANATOMY)
+def test_해부학_원본이_배포본과_한_글자도_안_다르다(subject):
+    """다른 것은 `?v=` 각인뿐이어야 한다. 그건 배포가 그때 계산해 붙인다."""
+    root = Path(__file__).resolve().parents[1]
+    src = root / "spotter" / "web" / "anatomy" / subject / "index.html"
+    dst = root / "spotter-dist" / subject / "index.html"
+    assert _unstamped(src) == _unstamped(dst)
+
+
+def test_각인은_줄끝을_안_본다():
+    """`digest` 가 날바이트를 해싱하면 CRLF 로 받은 기계와 LF 로 받은 기계가
+    **같은 파일에 다른 주소**를 붙인다. 배포본이 적고 있던 `gate.js?v=c12746c4`
+    가 정확히 그 값이었다 — 내용은 같은데 주소가 둘이었다."""
+    if str(SCRIPTS) not in sys.path:
+        sys.path.insert(0, str(SCRIPTS))
+    import deploy_pages
+
+    body = b"const A = 1;\nconst B = 2;\n"
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        lf = Path(d) / "lf.js"
+        crlf = Path(d) / "crlf.js"
+        lf.write_bytes(body)
+        crlf.write_bytes(body.replace(b"\n", b"\r\n"))
+        assert deploy_pages.digest(str(lf)) == deploy_pages.digest(str(crlf))
