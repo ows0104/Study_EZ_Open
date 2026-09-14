@@ -22,8 +22,8 @@ Study_EZ_Open/
   spotter-dist/  땡시 배포본   Pages 가 내는 것과 같은 모양. **손으로 고치지 마라**
   bridge/        예습링크      크롬 확장. 작년 필기를 AI 새 대화에 채우고 링크를 회수
   platform/      공유          두 앱이 **실제로** 같이 쓰는 것만 (`platform/README.md`)
-  tests/         검사          `pytest tests` — 598개
-  scripts/       운영          예약 작업이 부르는 ps1 + 손도구 둘
+  tests/         검사          `pytest tests` (개수는 map.md 가 든다)
+  scripts/       운영          예약 작업이 부르는 ps1 + 손도구 셋
   docs/          문서          `archive/` 는 닫힌 기록. 현재 상태로 읽지 마라
   runs/  out/    산출물        추적 안 됨. 23GB
 ```
@@ -53,6 +53,10 @@ Cloudflare Pages 대시보드가 `web/` 을, `server/Dockerfile` 과 `deploy.ps1
 
 **과거를 말하는 문장은 안 바꿨다.** 그때 실제로 그 이름이었고, 커밋 메시지와
 로그가 그 이름으로 적혀 있다. 문서를 고쳐 놓으면 `git log` 를 볼 때 짝이 안 맞는다.
+
+**예외가 하나 있다 — [refactor-plan.md](refactor-plan.md) 의 본문은 이름만 고쳤다.**
+그 문서는 「어디를 고칠 계획인가」라서, 지금 트리에 없는 경로를 가리키면 못 쓴다.
+숫자는 09-12 실측 그대로 두고 이름만 옮겼다는 것을 그 문서 §0 머리에 적어 두었다.
 
 - `docs/interview.md` — 관리자 인터뷰 전사
 - `docs/archive/` — 스스로 「닫았다」고 적은 인계 메모 넷

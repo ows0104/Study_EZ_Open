@@ -32,16 +32,22 @@
 
 ## 0. 규모
 
-| | 줄 |
+> **여기부터 아래는 2026-09-12 의 계획 본문이다.** 숫자는 그날 실측이고 **다시
+> 재지 않았다.** 폴더 이름만 09-14 개명(`pdf2anki→quizgen`·`studyez→runner`)에
+> 맞춰 고쳤다 — 안 고치면 지금 트리에 없는 경로를 가리키게 된다.
+>
+> **지금 숫자와 지금 모양은 [map.md](map.md) 에 있다.** 이 절과 어긋나면 그쪽이 맞다.
+
+| | 줄 (2026-09-12) |
 |---|---|
 | `quizgen/` 파이프라인 | 10,870 |
 | `tests/` | 7,126 |
 | `runner/` 로컬 러너 | 7,091 |
 | `server/app/` | 5,711 |
 | `web/src/` Study_EZ 화면 | 5,617 |
-| `Spotter_Quiz/scripts/` 땡시 파이프라인 | 5,992 |
-| `Spotter_Quiz_pages/` 해부학 넷 (원본이 여기만 있다) | 2,937 |
-| `Spotter_Quiz/web/` 기생충학 화면 | 2,593 |
+| `spotter/scripts/` 땡시 파이프라인 <sub>(당시 `Spotter_Quiz/scripts/`)</sub> | 5,992 |
+| `spotter-dist/` 해부학 넷 <sub>(당시 `Spotter_Quiz_pages/` — 원본이 거기만 있었다)</sub> | 2,937 |
+| `spotter/web/` 기생충학 화면 <sub>(당시 `Spotter_Quiz/web/`)</sub> | 2,593 |
 
 합 약 48,000줄, 사람 한 명, 저장소 셋.
 
@@ -55,12 +61,16 @@
 `docs/sibling-apps.md`가 「땡시는 `ows0104/Spotter_Quiz`다」라고 적은 것은 **배포**
 쪽이고 맞다. 로컬에서 그 이름의 폴더를 열면 소스다.
 
+> **2026-09-14 에 이 함정이 없어졌다.** 두 폴더를 `spotter/`·`spotter-dist/` 로
+> 들이고 지웠다. 원격 이름은 그대로라 미는 자리에서는 아직 뒤집혀 있다 —
+> `spotter-dist/` 를 미는 곳이 `ows0104/Spotter_Quiz` 다([layout.md](layout.md) §4).
+
 ## 1. 이 시스템은 세로로 둘, 가로로 넷이다
 
 세로는 제품이다.
 
-    Study_EZ    강의 한 편 → 예습 덱 · 복습 덱 · 강의록        (studyez + quizgen + web)
-    Spotter     과목 하나 → 땡시 문항 세트                     (Spotter_Quiz/scripts + web)
+    Study_EZ    강의 한 편 → 예습 덱 · 복습 덱 · 강의록        (runner + quizgen + web)
+    Spotter     과목 하나 → 땡시 문항 세트                     (spotter/scripts + web)
 
 가로는 층이다. **둘 다 이 넷을 지난다.**
 
@@ -85,7 +95,7 @@ Spotter     extract_*.py   generate_exam 793     upload_*.py 366    web/app.js 1
 ```
 
 **가로줄에서 둘이 만나는 곳은 `server/`뿐이다.** 그리고 파이썬 쪽 의존 방향은 이미
-깨끗하다 — 실측하니 `studyez → quizgen` 3회가 전부이고 `server/app`은 둘 중
+깨끗하다 — 실측하니 `runner → quizgen` 3회가 전부이고 `server/app`은 둘 중
 아무것도 import하지 않는다. **뒤엉킨 것이 아니라 나뉘어 있지 않은 것이다.** 고칠
 것은 실타래가 아니라 빈 자리다.
 
@@ -98,7 +108,7 @@ Spotter     extract_*.py   generate_exam 793     upload_*.py 366    web/app.js 1
 | 기계 검증 | `validate.py` 647 | `audit_questions.py` 218 | **0** |
 | R2 올리기 | `runner/publish.py` 720 | `upload_web`·`upload_subject` 366 | **0** |
 | 나가는 문 | `runner/gate.py` 205 | `deploy_pages --check`·`gate_subject` | **0** |
-| 로그인·세션 | `web/src/supabase.ts` | `web/auth.js`·`gate.js` | `session.js` **한 파일** |
+| 로그인·세션 | `web/src/supabase.ts` | `spotter/web/auth.js`·`gate.js` | `session.js` **한 파일** |
 
 ### 족보 파싱 — 같은 열한 쪽이다
 
@@ -115,7 +125,7 @@ Spotter    Spotter_Quiz/기생충학/족보/…족보.pdf           11쪽   PDFi
 
 **한쪽이 배운 것이 다른 쪽에 안 간다.** `quizgen`가 머리글 함정을 배웠고,
 Spotter는 2단 조판·보기 번호 꼴·「2016-1·2017은 정답이 텍스트로 적혀 있다」를
-배웠다. 교정표도 둘이다(`data/question_corrections.json`은 Spotter에만 있다).
+배웠다. 교정표도 둘이다(`spotter/data/question_corrections.json`은 땡시에만 있다).
 
 ### AI로 재기 — 같은 착상, 다른 구현
 
