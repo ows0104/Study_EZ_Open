@@ -49,13 +49,17 @@ def lines_of(card: dict) -> list[str]:
 def measure(cards: list[dict]) -> dict:
     basic = [c for c in cards if c.get("card_format") == "basic"]
     cloze = [c for c in cards if c.get("card_format") == "cloze"]
-    ql = [len(c.get("q") or "") for c in basic]
+    # **질문 길이는 머리줄로 잰다.** 힌트를 줄로 빼는 규칙(2026-09-15 `350b98a`)이 들면
+    # 그 줄이 `q` 안으로 들어오므로, 문자열 전체로 재면 **규칙이 든 만큼 질문이 길어진
+    # 것처럼 보인다.** 실제로 그렇게 읽혔다 — `260914_03` 이 60자 초과 4장에서 9장으로
+    # 늘어난 줄 알았는데, 머리줄로 다시 재니 4장 그대로였다.
+    ql = [len((c.get("q") or "").split(chr(10))[0]) for c in basic]
     al = [len(l) for c in basic for l in lines_of(c)]
     return {
         "카드": len(cards),
         "cloze": len(cloze),
-        "질문 중앙": st.median(ql) if ql else 0,
-        "질문 60자 초과": sum(1 for x in ql if x > 60),
+        "질문 머리줄 중앙": st.median(ql) if ql else 0,
+        "머리줄 60자 초과": sum(1 for x in ql if x > 60),
         "힌트 줄을 단 질문": sum(1 for c in basic if chr(10) in (c.get("q") or "")),
         "제외를 단 질문": sum(1 for c in basic
                          if any(w in (c.get("q") or "") for w in EXCLUDE)),
