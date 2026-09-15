@@ -631,16 +631,22 @@ def plain_stem(card: dict) -> str:
     return RE_CLOZE.sub(lambda m: f"[{m.group(3) or '____'}]", card.get("q") or "")
 
 
-def _slides(run_dir: Path, run_id: str) -> int:
+def _slides(run_dir: Path, run_id: str, kind: str = MAIN) -> int:
     """카드 뒷면 슬라이드를 서버가 찾을 수 있는 이름으로 옮긴다.
 
     서버는 파일명 끝의 `_s042.png`에서만 슬라이드 번호를 읽는다
     (`server/app/naming.py`). quizgen의 이름은 파이프라인마다 앞머리가 달라
     그 규칙에 안 맞으므로 여기서 한 번 맞춰 둔다. 그림 크롭은 옮기지 않는다 —
     웹이 읽는 것은 「이 카드의 근거가 몇 번 슬라이드인가」뿐이다.
+
+    **`kind` 를 받는 이유는 판 폴더다.** 옛 모양에서는 `media` 가 갈래와 상관없이
+    강의 폴더 하나였고, 그래서 5단계(`862edb4`)가 여기에 `PRE` 를 못 박아도 값이
+    같았다. 판을 가르고 나서는 그것이 **복습 덱을 구우면서 예습 판의 `media` 를
+    찾는 것**이 되고, 없으면 아래에서 `slides/` 를 지운다 — 서버가 읽는 강의 것이
+    복습 빌드마다 날아간다. 2026-09-15 `260831_02` 에서 실제로 날아갔다.
     """
     out = run_dir / "slides"                      # 강의 것 — 서버가 읽는 자리
-    media = _attempt(run_dir, "media", PRE)       # 시도 것 — quizgen 이 낸 렌더
+    media = _attempt(run_dir, "media", kind)      # 시도 것 — quizgen 이 낸 렌더
     if not media.is_dir():
         if out.exists():
             shutil.rmtree(out)
@@ -1011,7 +1017,7 @@ def contract(run_dir: Path, run_id: str, title: str, kind: str,
     # (실측 54%) — Anki는 앞뒤만 보므로 지금까지 아쉬울 일이 없었다. 세어만 둔다.
     meta["web_without_explanation"] = sum(
         1 for item in items if not str(item.get("explanation") or "").strip())
-    meta["slides_exported"] = _slides(run_dir, run_id)
+    meta["slides_exported"] = _slides(run_dir, run_id, kind)
     # 이름은 갈래마다 못 박는다. `prefix`로 만들면 복습이 `items.final.json`이
     # 되는데, 복습 폴더에는 이미 `items.raw/checked/reproduced.json`이 있고 그것들은
     # **모양이 다른 것**(카드 그대로)이라 한 가족처럼 읽히면 안 된다.

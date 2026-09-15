@@ -55,3 +55,43 @@ def test_media가_없으면_슬라이드도_없다(tmp_path):
     (tmp_path / "slides" / "260902_01_s008.png").write_bytes(b"png")
     assert deck._slides(tmp_path, "260902_01") == 0
     assert not (tmp_path / "slides").exists()
+
+
+# ── 판 폴더로 가른 뒤 ──────────────────────────────────────────
+#
+# 5단계(`862edb4`)가 `run_dir / "media"` 를 `_attempt(run_dir, "media", PRE)` 로
+# 바꿨다. 옛 모양에서는 갈래와 상관없이 같은 폴더라 값이 같았지만, 판을 가르고
+# 나서는 **복습 덱을 구우면서 예습 판을 뒤지는 것**이 된다. 못 찾으면 `slides/` 를
+# 지우므로 서버가 읽는 강의 것이 복습 빌드마다 날아간다.
+
+def _attempt_media(run_dir, kind, version, numbers):
+    work = run_dir / kind / version
+    work.mkdir(parents=True, exist_ok=True)
+    (work / "run.config.json").write_text("{}", encoding="utf-8")
+    media = work / "media"
+    media.mkdir()
+    for number in numbers:
+        (media / f"p260902_01_slide{number:02d}.png").write_bytes(b"png")
+    return media
+
+
+def test_복습_빌드는_복습_판의_media_를_본다(tmp_path):
+    _attempt_media(tmp_path, "main", "260915-1017", [8, 12, 79])
+    assert deck._slides(tmp_path, "260902_01", deck.MAIN) == 3
+    names = sorted(p.name for p in (tmp_path / "slides").iterdir())
+    assert names == ["260902_01_s008.png", "260902_01_s012.png", "260902_01_s079.png"]
+
+
+def test_예습_판이_없다고_복습_slides_를_지우지_않는다(tmp_path):
+    """이것이 2026-09-15 `260831_02` 에서 실제로 났다 — 89장을 굽고 `slides/` 를 잃었다."""
+    _attempt_media(tmp_path, "main", "260915-1017", [8, 12])
+    assert deck._slides(tmp_path, "260902_01", deck.MAIN) == 2
+    assert (tmp_path / "slides").is_dir()
+
+
+def test_예습_빌드는_예습_판의_media_를_본다(tmp_path):
+    _attempt_media(tmp_path, "main", "260915-1017", [8, 12, 79])
+    _attempt_media(tmp_path, "prequiz", "260915-0410", [3])
+    assert deck._slides(tmp_path, "260902_01", deck.PRE) == 1
+    names = sorted(p.name for p in (tmp_path / "slides").iterdir())
+    assert names == ["260902_01_s003.png"]
