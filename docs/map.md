@@ -35,7 +35,7 @@
     연결부. 파이프라인을 돌리고
     서버로 민다                          spotter-dist/        6,277
                                           배포 산출물
-  web/src/           9,803                **손으로 고치지 마라**
+  web/src/           9,898                **손으로 고치지 마라**
     프론트. studyez.kr
   ──────────────────────────────        ──────────────────────────────
   ┌──────────────────────────────────────────────────────────────────┐
@@ -64,10 +64,10 @@
 | 하려는 일 | 주면 되는 경로 | 검사 |
 |---|---|---|
 | **사이트 화면**을 고친다 | `web/src/` + `web/src/types.ts` | `cd web && npm run typecheck` |
-| ├ 캘린더 | `web/src/calendar/` (2,323줄) | |
+| ├ 캘린더 | `web/src/calendar/` (2,355줄) | |
 | ├ 관리 화면 | `web/src/admin/` (1,161줄) | |
 | ├ 문제 푸는 화면 | `web/src/lecture/` (818줄) | |
-| ├ 색·여백 | `web/src/styles/` (3,364줄) | |
+| ├ 색·여백 | `web/src/styles/` (3,435줄) | |
 | └ 덱 모아받기 | `web/src/bundle/` + `server/app/routes/bundles.py` | `-m tests.test_bundles` |
 | **퀴즈 생성**을 바꾼다 | `quizgen/` + `tests/quizgen/` | `pytest tests/quizgen` (405개·2초) |
 | ├ 카드를 어떻게 쓰는가 | `quizgen/prompts/` ← **여기가 대부분이다. §2-1** | `quizgen.judge` |
