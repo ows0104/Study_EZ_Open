@@ -27,19 +27,19 @@
 ```
   Study_EZ                              땡시 (Spotter)
   ──────────────────────────────        ──────────────────────────────
-  quizgen/          12,269              spotter/scripts/     6,565
+  quizgen/          12,373              spotter/scripts/     6,565
     퀴즈 생성. 강의록 PDF → 카드          재료 모으기 · 조합 · 배포
     모델이 쓴다
                                         spotter/web/         6,477
-  runner/            8,185                화면. 기생충학 + 해부학 넷
+  runner/            8,267                화면. 기생충학 + 해부학 넷
     연결부. 파이프라인을 돌리고
     서버로 민다                          spotter-dist/        6,277
                                           배포 산출물
-  web/src/           8,865                **손으로 고치지 마라**
+  web/src/           9,803                **손으로 고치지 마라**
     프론트. studyez.kr
   ──────────────────────────────        ──────────────────────────────
   ┌──────────────────────────────────────────────────────────────────┐
-  │  server/app/      5,885   FastAPI · Cloud Run                    │
+  │  server/app/      6,174   FastAPI · Cloud Run                    │
   │    두 제품이 만나는 유일한 자리. 계정·인증·R2 서명이 여기 하나다      │
   └──────────────────────────────────────────────────────────────────┘
 
@@ -47,9 +47,9 @@
                          (3,113 이었던 것은 `release/` 산출물이 섞여 있어서다.
                           .gitignore 가 옛 이름을 보고 있었다 — 2026-09-14 에 뗐다)
   platform/      228   둘이 정말 같이 쓰는 것 — session.js 하나
-  tests/       8,745   723개. 덩이별로 나뉘어 있다 — 하나만 돌리면 된다
-                         quizgen 402 · runner 295 · spotter 22 · bridge 4
-                         `pytest tests` 27초  ·  `pytest tests/quizgen` 2초
+  tests/       8,958   737개. 덩이별로 나뉘어 있다 — 하나만 돌리면 된다
+                         quizgen 405 · runner 306 · spotter 22 · bridge 4
+                         `pytest tests` 19초  ·  `pytest tests/quizgen` 2초
   docs/                `archive/` 는 닫힌 기록이다
                        (줄수를 안 적는다 — 그 숫자를 적는 파일이 여기 있어서
                         적는 순간 틀린다)
@@ -64,12 +64,12 @@
 | 하려는 일 | 주면 되는 경로 | 검사 |
 |---|---|---|
 | **사이트 화면**을 고친다 | `web/src/` + `web/src/types.ts` | `cd web && npm run typecheck` |
-| ├ 캘린더 | `web/src/calendar/` (2,212줄) | |
+| ├ 캘린더 | `web/src/calendar/` (2,323줄) | |
 | ├ 관리 화면 | `web/src/admin/` (1,161줄) | |
 | ├ 문제 푸는 화면 | `web/src/lecture/` (818줄) | |
-| ├ 색·여백 | `web/src/styles/` (3,248줄) | |
+| ├ 색·여백 | `web/src/styles/` (3,364줄) | |
 | └ 덱 모아받기 | `web/src/bundle/` + `server/app/routes/bundles.py` | `-m tests.test_bundles` |
-| **퀴즈 생성**을 바꾼다 | `quizgen/` + `tests/quizgen/` | `pytest tests/quizgen` (402개·2초) |
+| **퀴즈 생성**을 바꾼다 | `quizgen/` + `tests/quizgen/` | `pytest tests/quizgen` (405개·2초) |
 | ├ 카드를 어떻게 쓰는가 | `quizgen/prompts/` ← **여기가 대부분이다. §2-1** | `quizgen.judge` |
 | ├ 단계 순서·재시도 | `quizgen/run.py` (634줄) | |
 | ├ 기계 검증 규칙 | `quizgen/validate.py` (647줄) | |
@@ -78,7 +78,7 @@
 | **땡시 문항 오류**를 고친다 | `spotter/data/` + `spotter/scripts/build_web.py` | `pytest tests/spotter` (22개·7초) |
 | **땡시 화면**을 고친다 | `spotter/web/` (기생충학) 또는 `spotter/web/anatomy/_template.html` (해부학) | |
 | **서버 API**를 고친다 | `server/app/routes/<해당>.py` + `server/app/models.py` | `cd server && .venv/Scripts/python -m tests` |
-| **덱이 안 만들어진다** | `runner/watch.py` · `runner/cycle.py` · `runner/agent.py` | `pytest tests/runner` (295개·11초) |
+| **덱이 안 만들어진다** | `runner/watch.py` · `runner/cycle.py` · `runner/agent.py` | `pytest tests/runner` (306개·11초) |
 | **덱이 안 올라간다** | `runner/publish.py` · `runner/gate.py` | |
 | **예습 링크**가 안 붙는다 | `bridge/` + `server/app/preview_links.py` + `web/src/bridge/` | `pytest tests/bridge` (4개) |
 
