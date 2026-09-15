@@ -367,6 +367,24 @@ def new_work_dir(run_dir: Path, kind: str = MAIN, resume: bool = False) -> Path:
     return root / want
 
 
+def version_of(work: Path | None) -> str | None:
+    """이번 실행이 쓴 판의 이름. 옛 모양이면 `None`.
+
+    **계약을 쓸 때 이것을 넘겨야 한다.** 안 넘기면 `contract` 가 `work_dir` 에게
+    「어느 판이냐」를 되묻고, `work_dir` 은 `run.meta.json` 이 적어 둔 **이미 배포된
+    판**을 먼저 고른다(`_published_version`). 그러면 **한 번 배포된 편은 다시 구워도
+    옛 판이 계속 나간다** — 새 판은 폴더에만 남고 아무도 안 본다.
+
+    2026-09-15 에 `260914_03` 이 그랬다. 두 번 다시 구웠는데 계약은 내내 첫 판
+    (`260915-1303`)을 가리켰고, 그 판의 결함 카드(`c041`)로 문지기에 걸렸다.
+    새 판에는 그 결함이 없었다.
+    """
+    if work is None:
+        return None
+    name = Path(work).name
+    return name if runlayout.RE_VERSION.match(name) else None
+
+
 def revise_from(run_dir: Path, work: Path, extra: list[str] | None) -> list[str]:
     """`--revise` 로 도는 실행에 **옛 판이 어디인지** 알려 준다.
 

@@ -400,7 +400,8 @@ def build_one(target: Target, runs_dir: Path, repo_root: Path, *, model: str = "
 
     try:
         meta = deck.contract(result.run_dir, target.prev_run_id,
-                             target.this_title or target.link.title, deck.PRE)
+                             target.this_title or target.link.title, deck.PRE,
+                             deck.version_of(result.work))
     except (FileNotFoundError, OSError, ValueError) as cause:
         return False, f"산출물을 계약 모양으로 옮기지 못했다: {cause}"
     return True, f"{meta['item_count']}장 (웹 풀이 {meta['web_items']}장)"

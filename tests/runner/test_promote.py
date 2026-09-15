@@ -181,3 +181,43 @@ def test_계약이_올리기를_스스로_한다(tmp_path, monkeypatch):
     assert meta["item_count"] == 7
     assert (run_dir / "[260812_01] 강의.apkg").is_file()
     assert (run_dir / "run.meta.json").is_file()
+
+
+# ── 다시 구운 판이 계약에 오르는가 ────────────────────────────
+#
+# `contract` 에 판을 안 넘기면 `work_dir` 이 `run.meta.json` 의 「이미 배포된 판」을
+# 먼저 고른다. 그러면 **한 번 배포된 편은 다시 구워도 옛 판이 계속 나간다.**
+# 2026-09-15 `260914_03` 이 그랬다 — 두 번 다시 구웠는데 계약은 첫 판을 가리켰고,
+# 그 판의 결함 카드로 문지기에 걸렸다.
+
+def test_이번에_구운_판을_계약에_넘긴다(tmp_path):
+    from runner import deck
+    work = tmp_path / "main" / "260915-1533"
+    assert deck.version_of(work) == "260915-1533"
+
+
+def test_옛_모양이면_판이_없다(tmp_path):
+    """강의 폴더에 그대로 쓰는 편은 넘길 판 이름이 없다 — `None` 이 맞다."""
+    from runner import deck
+    assert deck.version_of(tmp_path / "260812_01") is None
+    assert deck.version_of(None) is None
+
+
+def test_배포된_판이_있어도_새_판을_고른다(tmp_path):
+    """이것이 그 버그다. 판을 지목하면 `run.meta.json` 의 옛 판을 안 따라간다."""
+    import json
+
+    from runner import runlayout as L
+
+    run_dir = tmp_path / "260914_03"
+    for v in ("260915-1303", "260915-1533"):
+        (run_dir / "main" / v).mkdir(parents=True)
+        (run_dir / "main" / v / "run.config.json").write_text("{}", encoding="utf-8")
+    (run_dir / "run.meta.json").write_text(
+        json.dumps({"attempt": {"kind": "main", "version": "260915-1303"}}),
+        encoding="utf-8")
+
+    # 안 지목하면 배포된 판(옛것)이 나온다 — 그래서 재빌드가 묻혔다
+    assert L.work_dir(run_dir, L.MAIN).name == "260915-1303"
+    # 지목하면 그 판이다
+    assert L.work_dir(run_dir, L.MAIN, "260915-1533").name == "260915-1533"

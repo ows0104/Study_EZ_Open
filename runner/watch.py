@@ -406,7 +406,8 @@ def build_one(item: WorkItem, runs_dir: Path, repo_root: Path, *,
         return False, f"{result.error} (로그: {result.log})"
 
     try:
-        meta = deck.contract(result.run_dir, item.run_id, item.title, deck.MAIN)
+        meta = deck.contract(result.run_dir, item.run_id, item.title, deck.MAIN,
+                             deck.version_of(result.work))
     except (FileNotFoundError, OSError, ValueError) as cause:
         return False, f"산출물을 계약 모양으로 옮기지 못했다: {cause}"
 
