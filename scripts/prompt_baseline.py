@@ -28,6 +28,17 @@ SINCE = dt.datetime(2026, 9, 6, 15, 41)
 LONG_ANSWER = 80
 LONG_QUESTION = 60
 
+# **답 전체 길이는 긴 서술과 긴 목록을 뭉갠다.** 2026-09-15 에 `260914_05`(실습)가
+# 「답 80자 초과 53%」로 나왔는데, 까 보니 줄마다는 24자고 항목이 여섯인 카드들이었다.
+# 그건 프롬프트가 허용하는 모양이다(*"함께 기억할 가치가 있는 항목은 한 카드로
+# 묶어도 된다"*). 관리자 불만 ③ 은 **한 줄이 길어 회상이 안 되는 것**이므로 줄로 잰다.
+LONG_LINE = 40
+
+
+def answer_lines(card: dict) -> list[str]:
+    """답을 항목 단위로 가른다. 목록 표시(`- `)는 떼고 센다."""
+    return [l.lstrip("- ").strip()            for l in (card.get("a") or "").splitlines() if l.strip()]
+
 
 def cards_of(work: Path) -> list[dict]:
     for name in ("items.reproduced.json", "items.checked.json", "items.raw.json"):
@@ -104,6 +115,12 @@ def main() -> int:
           f"({sum(x > LONG_ANSWER for x in ab) / len(ab):.0%})   ← ③")
     print(f"  질문이 {LONG_QUESTION}자 넘는 카드      {sum(x > LONG_QUESTION for x in qq):,}장 "
           f"({sum(x > LONG_QUESTION for x in qq) / len(qq):.0%})   ← ②")
+    bs = [c for c in rows if c.get("card_format") == "basic"]
+    ln = [len(l) for c in bs for l in answer_lines(c)]
+    hit = sum(1 for c in bs if any(len(l) > LONG_LINE for l in answer_lines(c)))
+    print(f"  답의 한 줄                 중앙 {st.median(ln):.0f}자 · "
+          f"{LONG_LINE}자 넘는 줄 {sum(x > LONG_LINE for x in ln) / len(ln):.0%}")
+    print(f"  그런 줄을 가진 basic       {hit:,}장 ({hit / len(bs):.0%})   ← ③ 은 여기로 본다")
     print("\n④(단순 번역)는 세지 않는다 — 세는 법이 없다. 사람이 짚는다.")
     return 0
 
