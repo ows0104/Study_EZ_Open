@@ -4,7 +4,7 @@
 하는 일은 무엇을 쓰라고 말하는 것과 그것이 성립하는지 재는 것이다.**
 
     무엇을 고치면 어느 파일인가    ../docs/map.md §2 · §2-1 (프롬프트 안쪽)
-    검사                          pytest tests/quizgen     402개 · 2초
+    검사                          pytest tests/quizgen     404개 · 2초
     문구가 나은지 재는 자리         python -m quizgen.judge  30초 · $0.35
     권한 · 어디서나 미는 함정       ../CLAUDE.md
     돌리는 쪽                      ../runner/CLAUDE.md
@@ -110,7 +110,7 @@ O/X와 이미지 카드는 질문 글자가 짧다. **그래서 글자를 세는
     question_too_long        질문 120자 초과 (cloze 제외)   MAX_Q_CHARS = 120
     cloze_sentence_too_long  빈칸 문장 120자 초과
     recall_load_high         외울 글자 80자 초과            MAX_RECALL_CHARS = 80
-    answer_frame_heavy       뒷면 100자 이상인데 회수 대상이 그 40% 미만
+    answer_frame_heavy       프레임(강조 아닌 글자) 60자 초과  MAX_FRAME_CHARS = 60
     too_many_items           회수 항목 6개 초과             MAX_RECALL_ITEMS = 6
 
 **어긋난 것은 선이 없다는 것이 아니라 세는 자리가 둘이라는 것이다.**
@@ -122,6 +122,14 @@ O/X와 이미지 카드는 질문 글자가 짧다. **그래서 글자를 세는
 
 그리고 그 깃발은 전부 soft 라 카드를 안 떨어뜨린다. 그러니 물을 것은 「선을 그을까」가
 아니라 **「선이 울렸나, 울렸는데 아무도 안 봤나」** 다 — 루트 `CLAUDE.md` 함정 ④.
+
+**2026-09-15 에 `answer_frame_heavy` 를 비율에서 글자로 바꿨다.** 옛 규칙(뒷면 100자
+이상 · 회수 비중 40% 미만)은 `recall_load_high` 와 **강조의 양을 서로 반대편에서 보아
+가운데가 비었다** — 뒷면 150자면 외울 글자 60~80자가 둘 다 안 걸렸고, 그 강조를 치는
+것이 카드를 쓴 모델 자신이라 적당히 치면 둘 다 피했다. 관리자 판정이 근거다 —
+*"basic에서 답안을 그렇게 길게 써놓고 강조만 카운트해서 들어올꺼면 차라리 cloze를 쓰지."*
+**60 은 옛 규칙이 켜지던 경계값 그대로이고**(`100 - 100*0.4`), 그래서 옛 규칙이 걸던
+것을 한 칸도 안 잃는다(격자 전수 검사가 `tests/quizgen/test_recall_load.py` 에 있다).
 
 ### "무해하다"고 적어 둔 것을 믿지 마라
 

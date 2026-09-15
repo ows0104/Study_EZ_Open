@@ -22,8 +22,8 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
-from .schema import (CARD_SCHEMA, FRAME_HEAVY_MIN_CHARS, IMAGE_FORMATS, MAX_Q_CHARS,
-                     MAX_RECALL_CHARS, MAX_RECALL_ITEMS, MIN_RECALL_SHARE,
+from .schema import (CARD_SCHEMA, IMAGE_FORMATS, MAX_FRAME_CHARS, MAX_Q_CHARS,
+                     MAX_RECALL_CHARS, MAX_RECALL_ITEMS,
                      resolve_jokbo_key)
 from .textutil import char_ngrams, containment, jaccard, norm_key
 
@@ -361,13 +361,18 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
         recall, printed = recall_load(a, fmt)
         if recall > MAX_RECALL_CHARS:
             flags[i].append("recall_load_high")
-        # 외울 건 적은데 뒷면이 긴 카드. 프레임이 답에 눌러앉았다는 뜻이라 갈 곳이 있다 —
-        # `explanation` 이거나, 프레임이 회수의 이름이라면 `cloze` 다. cloze 는 프레임이
-        # 이미 앞면에 있으므로 이 검사에 걸릴 수 없다(`recall == printed`).
+        # 뒷면에 눌러앉은 프레임. 갈 곳이 있다 — `explanation` 이거나, 프레임이 회수의
+        # 이름이라면 `cloze` 다. cloze 는 프레임이 이미 앞면에 있으므로 이 검사에 걸릴
+        # 수 없다(`recall == printed` 라 프레임이 0이다).
         #
-        # **뒷면 길이를 같이 무는 이유**는 비율만 보면 짧고 멀쩡한 답이 쓸려 오기
-        # 때문이다 — 「**흡혈**하는 선충」은 비율이 낮아도 읽을 것이 없다.
-        if printed >= FRAME_HEAVY_MIN_CHARS and recall / printed < MIN_RECALL_SHARE:
+        # **비율이 아니라 글자를 센다**(2026-09-15). 비율로 걸면 이 깃발은 비중이 낮을
+        # 때만 서고 위의 것은 외울 글자가 많을 때만 서서 **가운데가 빈다** — 뒷면
+        # 150자면 외울 글자 60~80자가 둘 다 안 걸렸다. 프레임은 **복습할 때마다 다시
+        # 읽는 글자**이므로 비중과 무관하게 그 절대량이 곧 부담이다.
+        #
+        # 짧고 비율만 낮은 답(「**흡혈**하는 선충」)이 안 쓸려 오는 것은 그대로다 —
+        # 뒷면이 짧으면 프레임도 짧다.
+        if printed - recall > MAX_FRAME_CHARS:
             flags[i].append("answer_frame_heavy")
 
         if len(RE_CLOZE.findall(q)) > MAX_RECALL_ITEMS:

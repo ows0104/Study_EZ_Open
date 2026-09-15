@@ -6,11 +6,14 @@
 두 깃발이 잡는 고장이 다르다. `260824` 이후 2083장에서 겹친 것이 9장(3%)뿐이었다.
 
     recall_load_high     외울 것이 많다          → 축을 갈라 나눈다
-    answer_frame_heavy   외울 건 적은데 읽을 게 많다  → 해설로 보내거나 cloze 를 본다
+    answer_frame_heavy   매번 다시 읽는 글자가 많다   → 해설로 보내거나 cloze 를 본다
+
+**2026-09-15 에 뒤엣것을 비율에서 글자로 바꿨다.** 비율로 걸면 두 깃발이 강조의 양을
+서로 반대편에서 보아 **가운데가 빈다** — 뒷면 150자면 외울 글자 60~80자가 둘 다 안
+걸렸고, 그 강조를 치는 것이 카드를 쓴 모델 자신이다.
 """
 
-from quizgen.schema import (FRAME_HEAVY_MIN_CHARS, MAX_RECALL_CHARS,
-                             MIN_RECALL_SHARE)
+from quizgen.schema import MAX_FRAME_CHARS, MAX_RECALL_CHARS
 from quizgen.validate import recall_load, validate
 
 # 화면으로 받은 실제 카드. 강의 `260901_01` 의 c012 — 뒷면 167자 가운데 회수 대상은
@@ -62,12 +65,35 @@ def test_프레임이_눌러앉은_카드가_걸린다():
 
 
 def test_짧고_비율만_낮은_답은_안_걸린다():
-    # 「**흡혈**하는 선충」 꼴. 비율은 낮아도 읽을 것이 없다 — 뒷면 길이를 함께 무는 이유다.
+    # 「**흡혈**하는 선충」 꼴. 비율은 낮아도 읽을 것이 없다 — 글자로 재면 저절로 빠진다.
     short = "주된 기전은 **흡혈**이며 이때 장점막에 단단히 붙어 오래 머문다"
     recall, printed = recall_load(short, "basic")
-    assert recall / printed < MIN_RECALL_SHARE
-    assert printed < FRAME_HEAVY_MIN_CHARS
+    assert recall / printed < 0.40          # 비율로 걸면 쓸려 왔을 카드다
+    assert printed - recall <= MAX_FRAME_CHARS
     assert "answer_frame_heavy" not in _flags(_card(short))[0]
+
+
+def test_강조를_적당히_쳐서_두_깃발을_피하던_구멍이_닫혔다():
+    """옛 규칙의 구멍. 뒷면 150자 · 외울 글자 70자면 비중 47% 라 프레임 깃발이 안 섰고,
+    80자를 안 넘으니 회수 부담 깃발도 안 섰다. **둘 다 안 걸리던 자리다.**
+    """
+    core, frame = "가" * 70, "나" * 80
+    a = f"**{core}**{frame}"
+    recall, printed = recall_load(a, "basic")
+    assert (recall, printed) == (70, 150)
+    assert recall <= MAX_RECALL_CHARS               # 회수 부담 깃발은 여전히 안 선다
+    assert recall / printed >= 0.40                 # 옛 비율 규칙으로도 안 섰다
+    assert "answer_frame_heavy" in _flags(_card(a))[0]
+
+
+def test_옛_규칙이_걸던_것을_하나도_안_잃는다():
+    """`frame > 60` 은 옛 규칙(뒷면 100자 이상 · 비중 40% 미만)의 상위집합이다.
+
+    옛 규칙이 켜지는 경계가 곧 프레임 60자라서다 — `100 - 100*0.4`.
+    """
+    lost = [(p, r) for p in range(1, 400) for r in range(p + 1)
+            if (p >= 100 and r / p < 0.40) and not (p - r > MAX_FRAME_CHARS)]
+    assert lost == []
 
 
 def test_외울_것이_많으면_따로_걸린다():

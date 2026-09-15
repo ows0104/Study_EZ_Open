@@ -27,7 +27,7 @@
 ```
   Study_EZ                              땡시 (Spotter)
   ──────────────────────────────        ──────────────────────────────
-  quizgen/          12,269              spotter/scripts/     6,565
+  quizgen/          12,387              spotter/scripts/     6,565
     퀴즈 생성. 강의록 PDF → 카드          재료 모으기 · 조합 · 배포
     모델이 쓴다
                                         spotter/web/         6,477
@@ -47,7 +47,7 @@
                          (3,113 이었던 것은 `release/` 산출물이 섞여 있어서다.
                           .gitignore 가 옛 이름을 보고 있었다 — 2026-09-14 에 뗐다)
   platform/      228   둘이 정말 같이 쓰는 것 — session.js 하나
-  tests/       8,745   723개. 덩이별로 나뉘어 있다 — 하나만 돌리면 된다
+  tests/       8,771   725개. 덩이별로 나뉘어 있다 — 하나만 돌리면 된다
                          quizgen 402 · runner 295 · spotter 22 · bridge 4
                          `pytest tests` 27초  ·  `pytest tests/quizgen` 2초
   docs/                `archive/` 는 닫힌 기록이다
@@ -68,7 +68,7 @@
 | ├ 관리 화면 | `web/src/admin/` (1,161줄) | |
 | ├ 문제 푸는 화면 | `web/src/lecture/` (818줄) | |
 | └ 색·여백 | `web/src/styles/` (3,248줄) | |
-| **퀴즈 생성**을 바꾼다 | `quizgen/` + `tests/quizgen/` | `pytest tests/quizgen` (402개·2초) |
+| **퀴즈 생성**을 바꾼다 | `quizgen/` + `tests/quizgen/` | `pytest tests/quizgen` (404개·2초) |
 | ├ 카드를 어떻게 쓰는가 | `quizgen/prompts/` ← **여기가 대부분이다. §2-1** | `quizgen.judge` |
 | ├ 단계 순서·재시도 | `quizgen/run.py` (634줄) | |
 | ├ 기계 검증 규칙 | `quizgen/validate.py` (647줄) | |

@@ -10,7 +10,7 @@
     question_too_long        질문 120자 초과 (cloze 제외)      MAX_Q_CHARS
     cloze_sentence_too_long  빈칸 문장 120자 초과              MAX_Q_CHARS
     recall_load_high         외울 글자 80자 초과               MAX_RECALL_CHARS
-    answer_frame_heavy       뒷면 100자 이상인데 회수 대상이 40% 미만
+    answer_frame_heavy       강조가 아닌 글자(프레임) 60자 초과   MAX_FRAME_CHARS
     too_many_items           회수 항목 6개 초과                MAX_RECALL_ITEMS
 
 그래서 물어야 할 것이 바뀐다. 「선을 그을까」가 아니라 **「선이 울렸나, 울렸는데
@@ -36,10 +36,9 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from quizgen.schema import (  # noqa: E402
-    FRAME_HEAVY_MIN_CHARS,
+    MAX_FRAME_CHARS,
     MAX_Q_CHARS,
     MAX_RECALL_CHARS,
-    MIN_RECALL_SHARE,
 )
 from quizgen.validate import recall_load  # noqa: E402
 
@@ -114,9 +113,8 @@ def show_card(run: str, cid: str, root: Path | None = None) -> int:
             print(f"\n{edition}/{version}  {cid}  [{fmt}]")
             print(f"  질문 {len(q)}자 (선 {MAX_Q_CHARS})")
             print(f"  뒷면 {printed}자 · 외울 글자 {recall}자 (선 {MAX_RECALL_CHARS})")
-            if printed:
-                print(f"  회수 비중 {recall / printed:.0%} "
-                      f"(뒷면 {FRAME_HEAVY_MIN_CHARS}자 이상일 때 선 {MIN_RECALL_SHARE:.0%})")
+            print(f"  프레임 {printed - recall}자 — 매번 다시 읽는 글자 "
+                  f"(선 {MAX_FRAME_CHARS})")
             print(f"  깃발 {', '.join(marks) if marks else '없다'}")
     if not hits:
         print(f"{run}:{cid} — ㉰ 이후 판에서 못 찾았다")

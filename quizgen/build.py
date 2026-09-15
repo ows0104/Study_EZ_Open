@@ -288,8 +288,8 @@ WARN_CHORE = {
     "similar_duplicate": "다른 카드와 회수 방향이 겹칠 수 있다",
     "question_too_long": "질문이 길다 — 축을 여럿 물고 있지 않은지 볼 것",
     "recall_load_high": "한 번에 외울 것이 많다 — 축을 갈라 나눌 수 있는지 볼 것",
-    "answer_frame_heavy": "외울 것에 비해 뒷면이 길다 — 부연을 해설로 보내거나 "
-                          "빈칸 형식이 맞는지 볼 것",
+    "answer_frame_heavy": "매번 다시 읽어야 하는 글자가 많다 — 부연을 해설로 "
+                          "보내거나 빈칸 형식이 맞는지 볼 것",
     "cloze_sentence_too_long": "빈칸 문장이 길다 — 정의문을 통째로 옮겨 놓지 않았는지 볼 것",
     "too_many_items": "한 번에 회수할 항목이 많다",
     "too_many_clozes": "가린 곳이 많다",
