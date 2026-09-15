@@ -531,7 +531,8 @@ def cut_jokbo(pdf: Path, out_dir: Path, repo_root: Path,
 
 
 def rebuild(*, run_dir: Path, kind: str, deck_name: str, id: str, jokbo_dir: Path,
-            apkg_name: str, repo_root: Path) -> tuple[bool, list[str]]:
+            apkg_name: str, repo_root: Path,
+            work: Path | None = None) -> tuple[bool, list[str]]:
     """이미 만든 카드로 덱만 다시 굽는다. **모델을 부르지 않는다.**
 
     `run_main`·`run_pre` 가 부르는 `quizgen.run` 은 prep부터 빌드까지 하는
@@ -547,7 +548,9 @@ def rebuild(*, run_dir: Path, kind: str, deck_name: str, id: str, jokbo_dir: Pat
     「고쳤는데 아무 덱에도 안 붙는」 자리가 될 뻔했다. 장수는 빌드가 화면에 찍는다.
     """
     module = "quizgen.prequiz.build" if kind == PRE else "quizgen.build"
-    argv = [sys.executable, "-m", module, str(run_dir),
+    # **카드가 있는 자리를 넘긴다.** 새 모양에서는 `main/<판>/` 안이라 강의 폴더를
+    # 그대로 주면 `build` 가 `items.reproduced.json` 을 못 찾는다. 옛 모양이면 둘이 같다.
+    argv = [sys.executable, "-m", module, str(work or run_dir),
             "--deck", deck_name, "--id", id,
             "--jokbo-dir", str(jokbo_dir), "--apkg-name", apkg_name]
     if kind == PRE:

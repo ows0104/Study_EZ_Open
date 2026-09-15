@@ -423,15 +423,18 @@ def run_rebuild(args) -> int:
             continue
         for kind in (deck.MAIN, deck.PRE):
             cfg = deck.config_of(entry, kind)
-            if cfg and cfg.get("deck") and (entry / "items.reproduced.json").is_file():
-                targets.append((entry, kind, cfg))
+            # **판 폴더를 거쳐 묻는다.** `entry / …` 로 바로 보면 접은 편이 전부
+            # 「카드가 없다」로 읽혀 다시 굽는 길이 막힌다.
+            cards = deck._attempt(entry, "items.reproduced.json", kind)
+            if cfg and cfg.get("deck") and cards.is_file():
+                targets.append((entry, kind, cfg, cards.parent))
     if not targets:
         print("[rebuild] 다시 구울 것이 없다 (카드가 남아 있는 자리가 없다)")
         return 1
 
     print(f"[rebuild] {len(targets)}편")
     done, failed = 0, 0
-    for run_dir, kind, cfg in targets:
+    for run_dir, kind, cfg, work in targets:
         subject = cfg["deck"].split("::")[0]
         parsed = filenames.parse(deck.source_pdf(run_dir))
         title = parsed.title if parsed else run_dir.name
@@ -451,7 +454,7 @@ def run_rebuild(args) -> int:
             run_dir=run_dir, kind=kind, deck_name=deck_name,
             id=cfg.get("id") or deck.deck_id(run_dir.name),
             jokbo_dir=deck.jokbo_dir(runs_dir, subject), apkg_name=name,
-            repo_root=REPO_ROOT)
+            repo_root=REPO_ROOT, work=work)
         if not ok:
             print(f"  ✗ {run_dir.name} {kind} — {tail[-1] if tail else '실패'}")
             failed += 1
