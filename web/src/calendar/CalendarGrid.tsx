@@ -39,11 +39,19 @@ export function CalendarGrid({
   entries: CalendarEntry[];
   renderEntry: (entry: CalendarEntry, compact: boolean) => ReactNode;
   /**
-   * 날짜 머리에 붙는 것. 하루치 모아받기가 여기 선다.
+   * 격자 **맨 아랫줄**에 날짜마다 붙는 것. 하루치 모아받기가 여기 선다.
    *
-   * **주간에만 부른다.** 월간의 머리줄은 요일 이름이고 날짜 칸은 딱지로 이미 찬다 —
-   * 거기에 버튼을 끼우면 한 달치 60개가 화면에 서게 된다. 무엇을 그릴지는 여전히
-   * 부모가 정한다(`renderEntry` 와 같은 규칙이다).
+   * 처음에는 날짜 머리에 알약으로 달았는데 안 예쁘다는 판정이 나왔다
+   * (2026-09-16 관리자 지시 — 시간표 제일 아래에 네모로 넣어라). 자리를 옮기니
+   * 둘이 같이 나아졌다 — 머리줄은 sticky 라 알약이 늘 따라다녔고, 아랫줄은
+   * **다 보고 나서 받는 자리**라 하는 일의 순서와도 맞는다.
+   *
+   * 교시 줄과 같은 열에 서므로 어느 날 것인지는 자리가 말한다. 그래서 이 줄은
+   * 날짜를 다시 안 적는다.
+   *
+   * **주간에만 부른다.** 월간은 날짜 칸이 딱지로 이미 차고, 아랫줄을 붙여 봐야
+   * 그 줄이 어느 날 것인지 가리킬 열이 없다. 무엇을 그릴지는 여전히 부모가
+   * 정한다(`renderEntry` 와 같은 규칙이다).
    */
   renderDay?: (dateKey: string) => ReactNode;
 }) {
@@ -61,8 +69,16 @@ export function CalendarGrid({
     const activeHours = weekEntries.map((entry) => Number(entry.startTime.slice(0, 2))).filter(Number.isFinite);
     const hourSlots = [...new Set([...defaultHourSlots, ...activeHours])].sort((left, right) => left - right);
 
+    // 교시 줄은 남는 높이를 나눠 갖고(`1fr`), 맨 아랫줄은 **든 것만큼만** 선다.
+    // CSS 의 `grid-auto-rows` 는 줄마다 다르게 못 주므로 여기서 통째로 적는다 —
+    // 안 그러면 모아받기 줄이 교시 한 칸만큼 부풀어 빈 자리를 든다.
+    const footRow = hourSlots.length + 2;
+    const rows = renderDay
+      ? { gridTemplateRows: `46px repeat(${hourSlots.length}, minmax(var(--row-min), 1fr)) auto` }
+      : undefined;
+
     return (
-      <section className="week-calendar" aria-label="주간 캘린더">
+      <section className="week-calendar" aria-label="주간 캘린더" style={rows}>
         <div className="week-head is-spacer" style={{ gridColumn: 1, gridRow: 1 }} />
         {weekDates.map((day, index) => {
           const key = toDateKey(day);
@@ -74,7 +90,6 @@ export function CalendarGrid({
             >
               <span>{weekDayLabels[index]}</span>
               <strong>{day.getDate()}</strong>
-              {renderDay?.(key)}
             </div>
           );
         })}
@@ -103,6 +118,23 @@ export function CalendarGrid({
             style={{ gridColumn: "1 / -1", gridRow: hourSlots.indexOf(13) + 2 }}
             aria-hidden="true"
           />
+        ) : null}
+        {renderDay ? (
+          <>
+            {/* 시각 열 자리. 교시 줄의 시각처럼 **이 줄이 무엇인지**를 왼쪽이 적는다. */}
+            <div className="week-foot is-label" style={{ gridColumn: 1, gridRow: footRow }}>
+              <strong>모아받기</strong>
+            </div>
+            {weekDates.map((day, index) => (
+              <div
+                className={`week-foot ${toDateKey(day) === todayKey ? "is-today" : ""}`}
+                key={`foot-${toDateKey(day)}`}
+                style={{ gridColumn: index + 2, gridRow: footRow }}
+              >
+                {renderDay(toDateKey(day))}
+              </div>
+            ))}
+          </>
         ) : null}
         {weekEntries.map((entry) => {
           const dayIndex = weekDates.findIndex((day) => toDateKey(day) === entry.date);

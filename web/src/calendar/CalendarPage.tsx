@@ -167,15 +167,15 @@ export function CalendarPage() {
               isAdmin={isAdmin}
             />
           )}
-          /* 하루치 모아받기. 예습과 복습을 갈라 둔다 — 쓰는 때가 다르고
-             (강의 전 · 강의 후) 덱 나무도 이미 갈라져 있다. 덱이 없는 날에는
-             `BundleButton` 이 스스로 아무것도 안 그린다. */
+          /* 격자 맨 아랫줄의 하루치 모아받기. 예습과 복습을 갈라 둔다 — 쓰는
+             때가 다르고(강의 전 · 강의 후) 덱 나무도 이미 갈라져 있다. 덱이
+             없는 날에는 `BundleButton` 이 스스로 아무것도 안 그린다. */
           renderDay={(dateKey) => {
             const all = bundles.decks;
             if (!all) return null;
             const scope = { kind: "day", date: dateKey } as const;
             return (
-              <span className="week-head-bundle">
+              <span className="day-bundles">
                 {(["pre", "main"] as const).map((kind) => (
                   <BundleButton
                     key={kind}
