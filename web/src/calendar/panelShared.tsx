@@ -20,8 +20,16 @@ export function PanelGroup({
   note,
   children,
 }: {
-  /** `is-preview` · `is-pre` · `is-main`. 색은 CSS 가 고른다. */
-  tone: "preview" | "pre" | "main";
+  /**
+   * `is-preview` · `is-pre` · `is-main`. 색은 CSS 가 고른다.
+   *
+   * `plain` 은 **셋 중 어느 갈래도 아닌 것**이다(모아받기 — 예습과 복습을 같이
+   * 든다). 지금은 기본색이 `--accent` 이고 그 값이 `--fam-main` 과 같아서 화면이
+   * Main-Quiz 와 똑같이 나온다. 그래도 `main` 이라고 적지 않는 것은, 관리자가
+   * 언젠가 갈래 색을 갈 때 **이 칸이 조용히 따라가면 안 되기 때문이다** —
+   * 갈래가 아닌 것이 갈래 색을 얻으면 그때부터 무엇을 뜻하는지 알 수 없다.
+   */
+  tone: "preview" | "pre" | "main" | "plain";
   title: string;
   note?: string;
   children: ReactNode;

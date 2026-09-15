@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, downloadSignedFile, openSignedFile } from "../api";
+import { BundleButton } from "../bundle/BundleButton";
+import { decksIn, type BundleDeck } from "../bundle/decks";
 import { usePreviewVersion } from "../bridge/previewBridge";
 import { lectureHref, quizHref, quizWindow } from "../links";
 import { type LectureDetail, type LectureFile, type LectureRef } from "../types";
@@ -22,7 +24,19 @@ import { PreviewAction } from "./PreviewAction";
  * **위에서부터 할 일, 그 아래가 정보다.** 강의 정보는 열어 볼 일이 드물어서
  * 맨 아래로 내렸다.
  */
-export function EventPanel({ entry, onClose }: { entry: CalendarEntry; onClose: () => void }) {
+export function EventPanel({
+  entry,
+  onClose,
+  bundleDecks,
+  onBundleDone,
+}: {
+  entry: CalendarEntry;
+  onClose: () => void;
+  /** 덱이 어디 있고 무엇을 받아 갔나. **부모가 한 번 받아 내려준다** — 패널마다
+   *  부르면 칸을 갈아탈 때마다 학기 전체를 다시 받는다. 아직 안 왔으면 `null`. */
+  bundleDecks: BundleDeck[] | null;
+  onBundleDone: () => void;
+}) {
   const panel = useRef<HTMLElement>(null);
   const [chosen, setChosen] = useState(0);
   const lecture: LectureRef | undefined = entry.lectures[chosen];
@@ -82,7 +96,12 @@ export function EventPanel({ entry, onClose }: { entry: CalendarEntry; onClose: 
 
         {lecture ? (
           detail ? (
-            <KeyActions lecture={lecture} detail={detail} />
+            <KeyActions
+              lecture={lecture}
+              detail={detail}
+              bundleDecks={bundleDecks}
+              onBundleDone={onBundleDone}
+            />
           ) : error ? null : (
             <p className="event-panel-loading">자료를 불러오는 중…</p>
           )
@@ -181,7 +200,17 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
  * **필기는 그 셋이 아니다.** 한동안 여기 큰 버튼으로 세워 뒀는데 주요 버튼만큼
  * 눈에 걸렸다. 아래 조용한 줄로 돌려보내되, 누르면 열리는 것은 그대로 둔다.
  */
-function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureDetail }) {
+function KeyActions({
+  lecture,
+  detail,
+  bundleDecks,
+  onBundleDone,
+}: {
+  lecture: LectureRef;
+  detail: LectureDetail;
+  bundleDecks: BundleDeck[] | null;
+  onBundleDone: () => void;
+}) {
   const base = `/api/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
   const [error, setError] = useState("");
   const fileOf = (kind: LectureFile["kind"]) => detail.files.find((file) => file.kind === kind);
@@ -273,6 +302,32 @@ function KeyActions({ lecture, detail }: { lecture: LectureRef; detail: LectureD
               : { short: "올해 필기 대기", why: "올해 강의록이 아직 없습니다. Main-Quiz는 올해 필기로 만듭니다." }
           }
         />
+      </PanelGroup>
+
+      {/* **블럭 전체를 한 파일로**(2026-09-15 관리자 지시). 블럭은 과목 하나다 —
+          「감염의 기초」가 기생충학과 미생물학 둘로 갈려 서는 것이 이 학기의
+          실제 모양이고(`runner/ahead.py` 의 `_block_from`·`_block_until`),
+          덱 나무의 맨 위 마디도 과목이다.
+
+          **강의 패널에 두는 것이 억지가 아닌 이유는 여기가 과목을 아는 자리라서다.**
+          캘린더 칸은 시간표 이름(「감염의 기초 7」)을 들고 있고 과목 이름은 강의가
+          든다. 한 번 눌러 연 사람은 이미 그 과목을 보고 있다. */}
+      <PanelGroup tone="plain" title={`${lecture.subject} 블럭`} note="한 파일로 모아받기">
+        <div className="panel-bundles">
+          {bundleDecks ? (
+            (["pre", "main"] as const).map((kind) => (
+              <BundleButton
+                key={kind}
+                scope={{ kind: "subject", subject: lecture.subject }}
+                kind={kind}
+                decks={decksIn(bundleDecks, { kind: "subject", subject: lecture.subject }, kind)}
+                onDone={onBundleDone}
+              />
+            ))
+          ) : (
+            <p className="panel-hint">덱 목록을 불러오는 중…</p>
+          )}
+        </div>
       </PanelGroup>
 
       {/* 강의 정보(일시·담당·과목) 바로 위. 읽는 것에 가깝지만 누르면 열린다. */}

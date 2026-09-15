@@ -1,7 +1,7 @@
 # web — studyez.kr 프론트
 
 Vite + React + TypeScript. **이 폴더는 화면만 든다** — 파이프라인을 부르지 않고
-`runner` 도 `quizgen` 도 모른다. 서버 경로 16개만 부른다.
+`runner` 도 `quizgen` 도 모른다. 서버 경로 19개만 부른다.
 
     무엇을 고치면 어느 파일인가    ../docs/map.md §2
     검사                          cd web && npm run typecheck
@@ -12,6 +12,7 @@ Vite + React + TypeScript. **이 폴더는 화면만 든다** — 파이프라�
     src/admin/      1,161줄   관리 화면
     src/lecture/      818줄   문제 푸는 화면
     src/styles/     3,248줄   색·여백
+    src/bundle/       683줄   덱 여럿을 한 .apkg 로 — 여기서 합친다
     src/types.ts              화면을 고칠 때 거의 항상 같이 본다
 
 **풀이 화면은 자기채점 자유회상이다.** 땡시(`../spotter/`)는 시간 재는 다지선다이고

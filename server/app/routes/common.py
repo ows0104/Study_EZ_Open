@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Asset, AssetGrab, Lecture, PreItem, Preview, QuizAttempt
+from app.models import GRABBABLE_KINDS, Asset, AssetGrab, Lecture, PreItem, Preview, QuizAttempt
 from app.naming import nfc
 from app.storage import ObjectStorage, StorageNotConfigured
 
@@ -190,3 +190,33 @@ def prequiz_progress(
             row["answered"] = min(int(count), row["total"])
 
     return progress
+
+
+def record_grabs(db: Session, user_id: str, keys: list[tuple[str, str, str]]) -> int:
+    """받아 갔다고 적는다. `(subject, run_id, kind)` 여럿을 한 번에.
+
+    **파일이 나간 뒤에만 부른다.** 저장소가 아직 안 붙었으면 부르는 쪽이 먼저
+    503으로 끝나고, 그때는 사용자가 아무것도 못 받았으므로 기록도 남으면 안 된다.
+
+    **여기서 실패해도 파일은 나가야 한다.** 점 하나 때문에 내려받기를 막는 것은
+    바꿔치기가 나쁜 쪽이다. 그래서 예외를 삼키고 롤백만 한다 — 돌려주는 수가
+    0이 되므로 부르는 쪽이 적혔는지 아닌지는 알 수 있다.
+
+    서명 URL은 TTL 동안 재사용되므로 `count`는 내려받은 횟수가 아니라 **버튼을
+    누른 횟수**다. 화면은 안 쓰고, 나중에 "다시 받으러 온 강의"를 볼 때를 위해 센다.
+    """
+    wanted = [(subject, run_id, kind) for subject, run_id, kind in keys if kind in GRABBABLE_KINDS]
+    if not wanted:
+        return 0
+    try:
+        for subject, run_id, kind in wanted:
+            grab = db.get(AssetGrab, (user_id, subject, run_id, kind))
+            if grab is None:
+                grab = AssetGrab(user_id=user_id, subject=subject, run_id=run_id, kind=kind)
+                db.add(grab)
+            grab.count = (grab.count or 0) + 1
+        db.commit()
+        return len(wanted)
+    except Exception:
+        db.rollback()
+        return 0

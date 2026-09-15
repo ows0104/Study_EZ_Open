@@ -32,11 +32,20 @@ export function CalendarGrid({
   anchorDate,
   entries,
   renderEntry,
+  renderDay,
 }: {
   mode: CalendarMode;
   anchorDate: Date;
   entries: CalendarEntry[];
   renderEntry: (entry: CalendarEntry, compact: boolean) => ReactNode;
+  /**
+   * 날짜 머리에 붙는 것. 하루치 모아받기가 여기 선다.
+   *
+   * **주간에만 부른다.** 월간의 머리줄은 요일 이름이고 날짜 칸은 딱지로 이미 찬다 —
+   * 거기에 버튼을 끼우면 한 달치 60개가 화면에 서게 된다. 무엇을 그릴지는 여전히
+   * 부모가 정한다(`renderEntry` 와 같은 규칙이다).
+   */
+  renderDay?: (dateKey: string) => ReactNode;
 }) {
   const now = useNow();
   const todayKey = toDateKey(now);
@@ -65,6 +74,7 @@ export function CalendarGrid({
             >
               <span>{weekDayLabels[index]}</span>
               <strong>{day.getDate()}</strong>
+              {renderDay?.(key)}
             </div>
           );
         })}

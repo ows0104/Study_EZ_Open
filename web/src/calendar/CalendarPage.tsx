@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
+import { BundleButton } from "../bundle/BundleButton";
+import { decksIn, useBundleDecks } from "../bundle/decks";
 import { bumpPreviewVersion, usePreviewLink } from "../bridge/previewBridge";
 import { takeTimetable } from "../firstScreen";
 import { previewProviders, type PreviewProvider, type TimetableEvent } from "../types";
@@ -31,6 +33,12 @@ export function CalendarPage() {
   // 자리 둘이 무엇을 세는지가 이것으로 갈린다. 칸마다 묻지 않고 여기서 한 번
   // 묻는다 — `useMe`는 훅이라 칸 안에서 부르면 강의 수만큼 붙는다.
   const isAdmin = Boolean(useMe()?.isAdmin);
+  /**
+   * 덱이 어디 있고 무엇을 받아 갔나. **여기 한 곳에서만 부른다** — 날짜 머리
+   * 다섯과 열려 있는 패널이 같은 값을 봐야 하고, 칸마다 훅을 걸면 강의 수만큼
+   * 요청이 붙는다(`isAdmin` 을 여기서 한 번 묻는 것과 같은 이유다).
+   */
+  const bundles = useBundleDecks();
 
   /**
    * 확장이 만들어 준 예습 링크를 받아 저장한다. 종류에 따라 주인이 다르다.
@@ -159,6 +167,28 @@ export function CalendarPage() {
               isAdmin={isAdmin}
             />
           )}
+          /* 하루치 모아받기. 예습과 복습을 갈라 둔다 — 쓰는 때가 다르고
+             (강의 전 · 강의 후) 덱 나무도 이미 갈라져 있다. 덱이 없는 날에는
+             `BundleButton` 이 스스로 아무것도 안 그린다. */
+          renderDay={(dateKey) => {
+            const all = bundles.decks;
+            if (!all) return null;
+            const scope = { kind: "day", date: dateKey } as const;
+            return (
+              <span className="week-head-bundle">
+                {(["pre", "main"] as const).map((kind) => (
+                  <BundleButton
+                    key={kind}
+                    compact
+                    scope={scope}
+                    kind={kind}
+                    decks={decksIn(all, scope, kind)}
+                    onDone={bundles.reload}
+                  />
+                ))}
+              </span>
+            );
+          }}
         />
 
         {/* 왼쪽 띠는 범주만 뜻한다. 학습 상태는 점이 말한다 — 띠까지 상태로
@@ -224,7 +254,15 @@ export function CalendarPage() {
       </div>
 
       {/* key로 칸이 바뀔 때 패널 안의 상태(고른 강의·불러온 자료)를 갈아 끼운다. */}
-      {opened ? <EventPanel key={opened.id} entry={opened} onClose={() => setOpened(null)} /> : null}
+      {opened ? (
+        <EventPanel
+          key={opened.id}
+          entry={opened}
+          onClose={() => setOpened(null)}
+          bundleDecks={bundles.decks}
+          onBundleDone={bundles.reload}
+        />
+      ) : null}
     </div>
   );
 }

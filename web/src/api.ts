@@ -104,3 +104,31 @@ export async function openSignedFile(path: string): Promise<void> {
     throw error;
   }
 }
+
+/**
+ * 파일을 **읽어서** 받는다. 저장하는 것이 아니라 코드가 쓰려는 바이트다.
+ *
+ * `downloadSignedFile`과 하는 일이 다르다. 저쪽은 서명 URL을 받아 링크를 눌러
+ * 브라우저에게 맡기고 — 그러면 바이트가 우리 코드에 안 들어온다. 덱을 합치려면
+ * 들어와야 한다(`bundle/apkg.ts`).
+ *
+ * **그래서 R2가 아니라 서버를 부른다.** 서명 URL을 `fetch`로 읽으려면 R2 쪽에
+ * CORS가 있어야 하는데 지금은 없다(2026-09-15 실측). `<a>`와 `<img>`는 CORS를
+ * 안 타므로 이 저장소의 다른 자리는 여기 안 걸렸다. 사정은
+ * `server/app/routes/bundles.py` 첫머리에 있다.
+ */
+export async function apiBytes(path: string): Promise<Uint8Array> {
+  const response = await fetch(`${BASE}${path}`, { headers: await authHeader() });
+  if (!response.ok) {
+    // 본문이 JSON이 아닐 수 있다(스트리밍 경로라 프록시가 끼어들면 HTML이 온다).
+    // 읽다 죽으면 상태 코드마저 잃으므로 감싼다.
+    let detail = "";
+    try {
+      detail = ((await response.json()) as { detail?: string }).detail ?? "";
+    } catch {
+      detail = "";
+    }
+    throw new ApiError(response.status, detail || "파일을 받지 못했습니다.");
+  }
+  return new Uint8Array(await response.arrayBuffer());
+}

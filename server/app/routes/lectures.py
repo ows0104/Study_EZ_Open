@@ -17,9 +17,7 @@ from app.auth import CurrentUser, require_approved_user
 from app.config import get_settings
 from app.database import get_db
 from app.models import (
-    GRABBABLE_KINDS,
     Asset,
-    AssetGrab,
     Lecture,
     Preview,
     RunMeta,
@@ -28,7 +26,7 @@ from app.models import (
 )
 from app.preview_links import conversation_url as valid_conversation_url
 from app.preview_links import provider as valid_provider
-from app.routes.common import lecture_or_404, storage_or_503
+from app.routes.common import lecture_or_404, record_grabs, storage_or_503
 from app.routes import prequiz
 from app.routes.prequiz import missed_items
 
@@ -221,26 +219,11 @@ def _record_grab(db: Session, user_id: str, asset: Asset) -> None:
     **서명을 낸 뒤에만 적는다.** 저장소가 아직 안 붙었으면 위에서 503으로 끝나고,
     그때는 사용자가 아무것도 못 받았으므로 기록도 남으면 안 된다.
 
-    **여기서 실패해도 파일은 나가야 한다.** 점 하나 때문에 내려받기를 막는 것은
-    바꿔치기가 나쁜 쪽이다. 그래서 예외를 삼키고 롤백만 한다.
+    한 편짜리라 서명과 표시가 같은 자리에 있다 — 누르면 곧바로 파일이 나가서
+    둘 사이가 벌어지지 않는다. 모아받기는 그 사이가 몇 분이라 갈라 두었다
+    (`routes/bundles.py`). 적는 일 자체는 둘이 같은 함수를 쓴다.
     """
-    if asset.kind not in GRABBABLE_KINDS:
-        return
-    key = (user_id, asset.subject, asset.run_id, asset.kind)
-    try:
-        grab = db.get(AssetGrab, key)
-        if grab is None:
-            grab = AssetGrab(
-                user_id=user_id, subject=asset.subject, run_id=asset.run_id, kind=asset.kind
-            )
-            db.add(grab)
-        # 서명 URL은 TTL 동안 재사용되므로 이 수는 내려받은 횟수가 아니라
-        # 버튼을 누른 횟수다. 화면은 안 쓰고, 나중에 "다시 받으러 온 강의"를
-        # 볼 때를 위해 센다.
-        grab.count = (grab.count or 0) + 1
-        db.commit()
-    except Exception:
-        db.rollback()
+    record_grabs(db, user_id, [(asset.subject, asset.run_id, asset.kind)])
 
 
 class MyPreviewIn(BaseModel):

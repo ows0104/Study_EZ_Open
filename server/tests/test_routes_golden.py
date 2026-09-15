@@ -36,6 +36,8 @@ GET /api/admin/prequiz-jobs
 GET /api/admin/previews
 GET /api/admin/timetable-events
 GET /api/admin/users
+GET /api/bundles/decks
+GET /api/bundles/decks/{subject}/{run_id}/{kind}
 GET /api/health
 GET /api/lectures/{subject}/{run_id}
 GET /api/lectures/{subject}/{run_id}/files/{asset_id}
@@ -63,6 +65,7 @@ POST /api/admin/lectures/{subject}/{run_id}/uploads/complete
 POST /api/admin/prequiz-jobs/claim
 POST /api/admin/prequiz-jobs/{job_id}/cancel
 POST /api/admin/prequiz-jobs/{job_id}/move
+POST /api/bundles/grabs
 POST /api/lectures/{subject}/{run_id}/mainquiz/grade
 POST /api/lectures/{subject}/{run_id}/mainquiz/reveal
 POST /api/lectures/{subject}/{run_id}/prequiz/grade

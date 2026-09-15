@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import shutil
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -110,6 +111,39 @@ class ObjectStorage:
             if str(exc.response.get("Error", {}).get("Code", "")) in {"404", "NoSuchKey", "NotFound"}:
                 return None
             raise
+
+    def open_stream(self, key: str, *, chunk_size: int = 1 << 20) -> tuple[Iterator[bytes], int] | None:
+        """객체를 조각으로 흘려 보낸다. `(조각들, 바이트 수)` — 없으면 `None`.
+
+        **`get_bytes` 와 달리 통째로 안 올린다.** 덱 하나가 200MB 까지 가는데
+        (`실습` 편), Cloud Run 은 `--memory 512Mi` 다. 조각으로 흘리면 그 값과
+        상관없이 지나간다.
+
+        바이트가 서버를 지나가는 자리가 여기 하나 더 생겼다. 원래는 서명 URL로
+        R2 에서 곧바로 받는데, **브라우저가 `fetch` 로 읽으려면 R2 쪽에 CORS 가
+        있어야 하고 지금은 없다**(2026-09-15 실측 — 서명 GET 에
+        `Access-Control-Allow-Origin` 이 안 붙는다. `<img>`·`<a>` 는 CORS 를 안
+        타므로 지금까지 걸리지 않았다). 버킷에 CORS 규칙이 붙으면 이 자리는
+        없어져도 된다 — 그때는 `routes/bundles.py` 가 서명 URL 을 주면 된다.
+        """
+        if self.local_root is not None:
+            path = self.local_path(key)
+            if not path.is_file():
+                return None
+
+            def _file_chunks() -> Iterator[bytes]:
+                with path.open("rb") as handle:
+                    while chunk := handle.read(chunk_size):
+                        yield chunk
+
+            return _file_chunks(), path.stat().st_size
+        try:
+            answer = self.client.get_object(Bucket=self.bucket, Key=key)
+        except ClientError as exc:
+            if str(exc.response.get("Error", {}).get("Code", "")) in {"404", "NoSuchKey", "NotFound"}:
+                return None
+            raise
+        return answer["Body"].iter_chunks(chunk_size), int(answer["ContentLength"])
 
     def head(self, key: str) -> dict[str, Any] | None:
         if self.local_root is not None:

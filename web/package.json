@@ -12,9 +12,12 @@
   },
   "dependencies": {
     "@supabase/auth-js": "^2.112.3",
+    "@types/sql.js": "^1.4.11",
+    "fflate": "^0.8.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^7.9.0"
+    "react-router-dom": "^7.9.0",
+    "sql.js": "^1.14.2"
   },
   "devDependencies": {
     "@types/react": "^19.2.0",

@@ -7,6 +7,7 @@ from fastapi.responses import PlainTextResponse
 from app.config import get_settings
 from app.routes import (
     admin,
+    bundles,
     lectures,
     local_storage,
     me,
@@ -48,6 +49,9 @@ def health() -> dict[str, str]:
 app.include_router(me.router, prefix="/api")
 app.include_router(timetable.router, prefix="/api")
 app.include_router(lectures.router, prefix="/api")
+# 여러 편의 덱을 한 파일로. **합치는 것은 브라우저다** — 여기는 목록과 서명만 준다
+# (`routes/bundles.py` 첫머리에 왜인지 적혀 있다).
+app.include_router(bundles.router, prefix="/api")
 app.include_router(prequiz.router, prefix="/api")
 app.include_router(admin.router, prefix="/api/admin")
 # 러너 일감 큐. `admin` 에서 갈라 나왔고 붙는 자리는 같다 — 주소가 바뀌면 안 된다.
