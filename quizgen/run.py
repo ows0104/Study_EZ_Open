@@ -555,6 +555,10 @@ def main(argv=None) -> int:
     ap.add_argument("--revise", action="store_true",
                     help="이 폴더는 다른 판으로 이미 만들어졌다. 갈린 슬라이드의 카드만 "
                          "갈아 끼운다 (quizgen.revise)")
+    ap.add_argument("--revise-from", default="", metavar="옛판폴더",
+                    help="옛 판의 산출물이 있는 폴더. 안 주면 --out 자신을 본다 "
+                         "(옛 모양). 판 폴더로 가른 뒤에는 이번 판이 비어 있으므로 "
+                         "러너가 이것을 실어 보낸다 (deck.revise_from)")
     ap.add_argument("--slides", default="",
                     help="사람이 알려준 수정 슬라이드 (새 판 번호, 쉼표 구분). "
                          "코드가 못 보는 갈림을 여기로 넣는다. --revise 와 같이 쓴다")

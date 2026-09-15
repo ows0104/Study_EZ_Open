@@ -238,3 +238,66 @@ def test_고친다고_해_놓고_카드를_안_내면_원본이_남는다(tmp_pa
     merged = json.loads((tmp_path / "items.raw.json").read_text(encoding="utf-8"))["cards"]
     assert [c["q"] for c in merged] == ["원래 질문"]
     assert r.new_ids == []
+
+
+# ── 옛 판이 다른 폴더에 있을 때 ────────────────────────────────
+#
+# 2026-09-15 에 판 폴더로 가르고 나서 **`260831_02` 가 여기서 죽었다.** 이번 판이 빈
+# 폴더라 `compare` 가 「옛 판의 산출물이 없다」로 읽었고, 통째로 만들기로 내려간 뒤에도
+# `assemble` 이 `--revise` 를 그대로 넘겨 없는 `revise.json` 에서 터졌다.
+
+def _prior_runner(tmp_path, prior):
+    args = types.SimpleNamespace(model="", timeout=60, force=False, note="",
+                                 domain=None, jobs=1, annotation_evidence=False,
+                                 revise_from=str(prior) if prior else "")
+    out = tmp_path / "main" / "260915-1008"
+    out.mkdir(parents=True)
+    return revise.ReviseRunner(out, args)
+
+
+def test_옛_판을_이번_판_폴더로_들여온다(tmp_path):
+    """이것이 없으면 `compare` 가 빈 폴더를 보고 통째로 다시 만들기로 내려간다."""
+    prior = tmp_path / "main" / "260906-1147"
+    prior.mkdir(parents=True)
+    (prior / "prep.json").write_text(json.dumps({"source": "그v2.pdf"}), encoding="utf-8")
+    (prior / "items.raw.json").write_text(json.dumps({"cards": [card("c001", 1)]}),
+                                          encoding="utf-8")
+
+    r = _prior_runner(tmp_path, prior)
+    r.carry_in()
+
+    assert _load_json(r.out / "prep.json")["source"] == "그v2.pdf"
+    assert revise.source_cards(r.out)[0]["id"] == "c001"
+
+
+def test_옛_모양이면_들여올_것이_없다(tmp_path):
+    """`--revise-from` 이 없으면 `--out` 자신이 옛 판의 자리다. 자기를 덮지 않는다."""
+    r = _prior_runner(tmp_path, None)
+    (r.out / "prep.json").write_text(json.dumps({"source": "그대로.pdf"}), encoding="utf-8")
+    r.carry_in()
+    assert _load_json(r.out / "prep.json")["source"] == "그대로.pdf"
+
+
+def test_통째로_갈_때는_revise_를_안_넘긴다(tmp_path):
+    """`all()` 이 `super().all()` 로 내려가도 파이썬은 덮어쓴 `assemble` 을 부른다.
+
+    거기서 갈라 주지 않으면 없는 `revise.json` 을 넘겨 `assemble` 이 죽는다.
+    """
+    r = _prior_runner(tmp_path, None)
+    r.args.jokbo_dir, r.args.jokbo, r.args.domain = "족보", "", "medical_ko"
+    r.strategy = "annotation"
+    seen = []
+    r.sh = lambda *a: seen.append(a)
+
+    r.full = True
+    r.assemble()
+    assert "--revise" not in seen[0]
+
+    seen.clear()
+    r.full = False
+    r.assemble()
+    assert "--revise" in seen[0]
+
+
+def _load_json(path):
+    return json.loads(path.read_text(encoding="utf-8"))

@@ -248,3 +248,73 @@ def test_계약이_없는_판을_말하면_무시한다(tmp_path):
     (run_dir / "run.meta.json").write_text(
         '{"attempt": {"kind": "main", "version": "없는판-0000"}}', encoding="utf-8")
     assert L.work_dir(run_dir).name == "260827-2300"
+
+
+# ── `--revise` 는 옛 판이 어디인지 알아야 한다 ────────────────────────
+#
+# 판 폴더로 가르면서 **이번 판이 빈 폴더**가 됐다. 그 사실을 quizgen 에 알려 주지
+# 않으면 갈아 끼우기가 통째로 다시 만들기로 조용히 내려가고 복습 이력이 죽는다
+# (2026-09-15 `260831_02`).
+
+import json
+
+from pathlib import Path
+
+from runner import deck
+
+
+def _attempt(run_dir: Path, version: str, *, cards: bool = False) -> Path:
+    work = run_dir / "main" / version
+    work.mkdir(parents=True)
+    (work / "run.config.json").write_text("{}", encoding="utf-8")
+    if cards:
+        (work / "items.raw.json").write_text(json.dumps({"cards": [{"id": "c001"}]}),
+                                             encoding="utf-8")
+    return work
+
+
+def test_revise_는_지금_나가는_판을_옛_판으로_준다(tmp_path):
+    run_dir = tmp_path / "260831_02"
+    _attempt(run_dir, "260906-1147", cards=True)
+    _attempt(run_dir, "260908-2157", cards=True)
+    # 지금 나가는 덱을 만든 판은 `run.meta.json` 이 안다 — 이름이 제일 새 것이 아니다
+    (run_dir / "run.meta.json").write_text(
+        json.dumps({"attempt": {"kind": "main", "version": "260906-1147"}}),
+        encoding="utf-8")
+    new = run_dir / "main" / "260915-1008"
+
+    got = deck.revise_from(run_dir, new, ["--revise"])
+    assert got == ["--revise-from", str(run_dir / "main" / "260906-1147")]
+
+
+def test_revise_가_없으면_안_붙인다(tmp_path):
+    run_dir = tmp_path / "260831_02"
+    _attempt(run_dir, "260906-1147", cards=True)
+    assert deck.revise_from(run_dir, run_dir / "main" / "260915-1008", []) == []
+
+
+def test_옛_모양이면_안_붙인다(tmp_path):
+    """판이 하나도 없으면 `work_dir` 이 강의 폴더를 준다 — 이미 그 자리다."""
+    run_dir = tmp_path / "260831_02"
+    run_dir.mkdir(parents=True)
+    assert deck.revise_from(run_dir, run_dir, ["--revise"]) == []
+
+
+def test_카드가_없는_판은_옛_판으로_안_준다(tmp_path):
+    """전략 판정까지 갔다 죽은 실행이 `run.config.json` 을 이미 써 놓는다.
+
+    그 폴더가 「제일 새 판」이 되면 들여올 카드가 없어 갈아 끼우기가 헛돈다.
+    """
+    run_dir = tmp_path / "260831_02"
+    good = _attempt(run_dir, "260901-0015", cards=True)
+    _attempt(run_dir, "260915-1008")          # 죽은 판 — 설정만 있고 카드가 없다
+
+    got = deck.revise_from(run_dir, run_dir / "main" / "260915-1100", ["--revise"])
+    assert got == ["--revise-from", str(good)]
+
+
+def test_카드를_가진_판이_하나도_없으면_안_붙인다(tmp_path):
+    """그때는 통째로 만드는 것이 맞다 — `compare` 가 스스로 그렇게 내려간다."""
+    run_dir = tmp_path / "260831_02"
+    _attempt(run_dir, "260915-1008")
+    assert deck.revise_from(run_dir, run_dir / "main" / "260915-1100", ["--revise"]) == []

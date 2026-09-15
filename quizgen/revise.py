@@ -306,9 +306,34 @@ class ReviseRunner(Runner):
         self.diff: dict = {}
         self.new_ids: list[str] = []
         self.carried = 0
+        prior = getattr(args, "revise_from", "") or ""
+        self.prior = Path(prior) if prior else out
+
+    def carry_in(self):
+        """옛 판의 산출물을 이번 판 폴더로 들여온다.
+
+        **이 단계가 있는 이유는 판 폴더다.** 옛 모양에서는 `--out` 이 강의 폴더라
+        옛 판의 `prep.json` 과 카드가 그 자리에 그대로 있었고, `compare` 는 그것을
+        읽으면 됐다. 판마다 폴더를 가르고 나서는 **이번 판이 빈 폴더**라 그대로 두면
+        `compare` 가 「옛 판의 산출물이 없다」로 읽는다.
+
+        그러면 조용히 통째로 다시 만들기로 내려가고, **질문 글자가 달라져 복습 이력이
+        죽는다**(`260903_05` 실측: 53장 중 7장만 살아남았다). `--revise` 가 있는
+        이유가 그것이므로 이 길로 새면 안 된다.
+
+        들여온 뒤로는 옛 모양과 같은 자리가 되어 아래 단계가 한 글자도 안 바뀐다.
+        `--force`(통째로)로 내려가면 `runbase.step` 이 단계마다 지우고 다시 만든다.
+        """
+        if self.prior.resolve() == self.out.resolve():
+            return                      # 옛 모양이거나 --resume — 이미 그 자리다
+        got = [name for name in KEEP if (self.prior / name).exists()]
+        for name in got:
+            shutil.copy2(self.prior / name, self.out / name)
+        print(f"   옛 판을 들여왔다 ← {self.prior.as_posix()} ({len(got)}개)", flush=True)
 
     # ── 판 비교 ────────────────────────────────────────────────
     def compare(self):
+        self.carry_in()
         old_prep = _load(self.out / "prep.json")
         old_cards = source_cards(self.out)
         if not old_prep or not old_cards:
@@ -374,6 +399,14 @@ class ReviseRunner(Runner):
 
     # ── 갈린 자리만 다시 쓴다 ──────────────────────────────────
     def assemble(self):
+        # **통째로 만들기로 했으면 `revise.json` 이 없다.** `all()` 이 `super().all()`
+        # 로 내려가도 파이썬은 이 덮어쓴 메서드를 부르므로, 여기서 갈라 주지 않으면
+        # 없는 파일을 `--revise` 로 넘겨 `assemble` 이 FileNotFoundError 로 죽는다
+        # (2026-09-15 `260831_02`). 클래스 머리가 적어 둔 대로 **새로 만드는 것과
+        # 같아야 한다.**
+        if self.full:
+            super().assemble()
+            return
         argv = ["quizgen.assemble", str(self.out), "--jokbo-dir", self.args.jokbo_dir,
                 "--strategy", self.strategy, "--domain", self.args.domain,
                 "--revise", str(self.out / "revise.json")]

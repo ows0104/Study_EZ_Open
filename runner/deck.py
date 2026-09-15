@@ -367,6 +367,45 @@ def new_work_dir(run_dir: Path, kind: str = MAIN, resume: bool = False) -> Path:
     return root / want
 
 
+def revise_from(run_dir: Path, work: Path, extra: list[str] | None) -> list[str]:
+    """`--revise` 로 도는 실행에 **옛 판이 어디인지** 알려 준다.
+
+    갈아 끼우기는 옛 판의 `prep.json` 과 카드를 읽어야 성립한다. 옛 모양에서는 그것이
+    강의 폴더에 그대로 있어서 `--out` 만 주면 됐는데, **판 폴더로 가르고 나서는 이번
+    판이 빈 폴더다.** 그러면 `revise.compare` 가 「옛 판의 산출물이 없다」로 읽고
+    통째로 다시 만들기로 내려간다 — 2026-09-15 에 `260831_02` 가 그렇게 죽었다.
+
+    통째로 다시 만들면 **질문 글자가 달라져 복습 이력이 죽는다**(`260903_05` 실측:
+    53장 중 7장). `--revise` 가 있는 이유가 그것이므로 조용히 그리로 내려가면 안 된다.
+
+    어느 판을 옛 판으로 삼는가는 `runlayout.work_dir` 이 답한다 — **지금 나가는 덱을
+    만든 시도**다. 이력이 이어져야 할 카드가 그 판의 것이다.
+    """
+    if not any("--revise" in a for a in (extra or ())):
+        return []
+    work = Path(work).resolve()
+    picked = runlayout.work_dir(run_dir, runlayout.MAIN)
+    if picked.resolve() == work:
+        return []                      # 옛 모양이거나 `--resume` — 이미 그 자리다
+    if _has_cards(picked):
+        return ["--revise-from", str(picked)]
+    # **고른 판에 카드가 없을 수 있다.** `work_dir` 의 ③(제일 새 판)은 `run.config.json`
+    # 만 보는데, 전략 판정까지 갔다 죽은 실행이 그 파일을 이미 써 놓는다. 2026-09-15 에
+    # 바로 그런 폴더가 생겼다 — 카드 없이 `prep.json` 과 설정만 있는 판이다.
+    # 그것을 옛 판으로 주면 들여올 것이 없어 갈아 끼우기가 헛돈다.
+    for version in reversed(runlayout.versions(run_dir, runlayout.MAIN)):
+        cand = runlayout.attempt_root(run_dir, runlayout.MAIN) / version
+        if cand.resolve() != work and _has_cards(cand):
+            return ["--revise-from", str(cand)]
+    return []                          # 카드를 가진 판이 없다 — 통째로 만드는 것이 맞다
+
+
+def _has_cards(work: Path) -> bool:
+    """갈아 끼울 카드가 실제로 있는 판인가. `revise.source_cards` 와 같은 자리를 본다."""
+    return any((work / name).exists() for name in
+               ("items.reproduced.json", "items.checked.json", "items.raw.json"))
+
+
 def _spawn(argv: list[str], run_dir: Path, repo_root: Path, timeout: int,
            log_name: str, work: Path | None = None) -> Result:
     """하위 프로세스로 띄우고 출력을 로그로 받는다.
@@ -427,6 +466,7 @@ def run_main(*, pdf: str | Path, run_id: str, subject: str, lecture: str, title:
     if model:
         argv += ["--model", model]
     argv += extra or []
+    argv += revise_from(run_dir, work, extra)
     return _spawn(argv, run_dir, repo_root, timeout, "pipeline.log", work=work)
 
 
