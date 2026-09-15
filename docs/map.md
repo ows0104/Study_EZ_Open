@@ -27,7 +27,7 @@
 ```
   Study_EZ                              땡시 (Spotter)
   ──────────────────────────────        ──────────────────────────────
-  quizgen/          12,387              spotter/scripts/     6,565
+  quizgen/          12,388              spotter/scripts/     6,565
     퀴즈 생성. 강의록 PDF → 카드          재료 모으기 · 조합 · 배포
     모델이 쓴다
                                         spotter/web/         6,477
