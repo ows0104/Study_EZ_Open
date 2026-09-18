@@ -74,6 +74,25 @@ ADDED_COLUMNS = (
     ("prequiz_job", "cancel_requested", "BOOLEAN NOT NULL DEFAULT FALSE"),
     # 2026-09-07 제보를 사진으로도 묶어 세려고. 표시용 `image`와 갈라 둔 값이다.
     ("spotter_report", "images", "TEXT NOT NULL DEFAULT ''"),
+    # 2026-09-18 웹 풀이가 망각곡선으로 돈다. 일곱 칼럼이 카드 한 장의 일정이고
+    # 값을 정하는 것은 `app/srs.py` 하나다. **두 갈래에 똑같이 붙는다** — 한쪽만
+    # 붙이면 그 갈래는 매번 처음부터 익히게 된다.
+    #
+    # 기본값이 「아직 일정이 없다」다. 운영 DB에 이미 쌓인 줄은 그 상태로 읽히고,
+    # 다음에 찍을 때 사다리의 첫 칸에 오른다.
+    *(
+        (table, column, ddl)
+        for table in ("quiz_attempt", "main_attempt")
+        for column, ddl in (
+            ("state", "VARCHAR(10) NOT NULL DEFAULT 'new'"),
+            ("step", "INTEGER NOT NULL DEFAULT 0"),
+            ("interval_days", "INTEGER NOT NULL DEFAULT 0"),
+            ("ease", "DOUBLE PRECISION NOT NULL DEFAULT 2.5"),
+            ("reps", "INTEGER NOT NULL DEFAULT 0"),
+            ("lapses", "INTEGER NOT NULL DEFAULT 0"),
+            ("due_at", "TIMESTAMP WITH TIME ZONE"),
+        )
+    ),
 )
 
 

@@ -4,7 +4,7 @@
 
     무엇을 고치면 어느 파일인가    ../docs/map.md §2
     검사                          .venv/Scripts/python.exe -m tests    (pytest 가 아니다)
-    경로 계약                      tests/test_routes_golden.py          64줄
+    경로 계약                      tests/test_routes_golden.py          66줄
     배포                          deploy.ps1 을 손으로
     권한 · 어디서나 미는 함정       ../CLAUDE.md
 
@@ -38,6 +38,22 @@ cd server && .venv/Scripts/python.exe -m tests.test_routes_golden
 
 땡시 경로는 2026-09-14 에 1,008줄 한 파일에서 `routes/spotter/` 일곱 파일로 갈랐다.
 **그때 경로 목록이 한 줄도 안 달라졌다** — 그것이 갈라도 된다는 증거였다.
+
+## 복습 일정은 `app/srs.py` 하나다
+
+2026-09-18 에 웹 풀이가 망각곡선으로 돌게 되면서 생겼다(관리자 지시). **안키의
+SM-2 를 그대로 옮긴 순수 함수 모듈이다** — DB 도 시계도 안 들고 `now` 를 받는다.
+
+    app/srs.py              간격을 정하는 유일한 자리. 상수까지 안키 기본값이다
+    routes/prequiz.py       그것을 표에 옮겨 적고, 되돌릴 값을 적어 둔다
+    tests/test_srs.py       사다리를 시각을 밀어 가며 잰다 (순수 함수라 된다)
+    tests/test_quiz_srs.py  그것이 표와 경로를 지나 오는가 · 되돌리기
+
+**화면에도 일정 계산을 두지 않았다.** 버튼에 적을 「언제 다시 나오나」까지
+`reveal` 이 `srs.preview` 로 재서 보낸다. 두 언어에 같은 사다리를 적으면 갈라진다.
+
+**칼럼을 늘렸으므로 배포 전에 `init-db` 를 지나야 한다**(`ADDED_COLUMNS`). 안 지나면
+운영 DB 에 `state` 가 없어 웹 풀이가 통째로 500 이다.
 
 ## `.env` 가 프로덕션이다
 

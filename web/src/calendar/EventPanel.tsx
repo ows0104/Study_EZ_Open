@@ -249,8 +249,13 @@ function KeyActions({
           <a className="panel-action-hit" href={quizHref(kind, lecture)} target={quizWindow(kind, lecture)}>
             <strong>웹에서 풀기</strong>
             <small>
-              {progress.itemCount}장
-              {progress.answered ? ` · ${progress.answered}장 풀었습니다` : ""}
+              {/* 일정이 도는 자리라 「몇 장 있나」보다 「오늘 뭘 해야 하나」가
+                  먼저다(2026-09-18). 강의 상세의 그 줄과 같은 규칙이다. */}
+              {progress.answered
+                ? progress.due
+                  ? `오늘 낼 카드 ${progress.due}장`
+                  : `오늘 몫 완료 · ${progress.later}장 대기`
+                : `${progress.itemCount}장`}
             </small>
           </a>
         }

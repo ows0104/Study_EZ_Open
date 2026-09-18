@@ -14,6 +14,7 @@ app/
   matching.py   시간표 칸 ↔ 필기에서 읽어 낸 강의
   cli.py        init-db · seed-timetable (data/timetable/) · purge-artifacts
   preview_links.py  예습 제공자와 링크 형식의 단일 검증점
+  srs.py        망각곡선. 안키의 SM-2 — 간격을 정하는 유일한 자리. DB도 시계도 안 든다
   routes/       me · timetable · lectures · prequiz · admin · prequiz_jobs · local_storage
                 prequiz.py 는 학생이 푸는 문항 — **예습·복습 두 갈래가 이 한 파일이다**.
                 prequiz_jobs.py 는 러너가 집어 가는 일감이다

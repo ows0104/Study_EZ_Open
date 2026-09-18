@@ -127,9 +127,13 @@ export function LecturePage() {
 
         {/* 누르면 웹에서 푼다. 전용 창이 열리므로 이 화면은 그대로 남는다.
 
-            **덱이 기본이던 것을 뒤집었다(2026-08-23 관리자 지시).** 덱은 Anki를
-            깐 자리에서 반복하는 것이고 그 자리는 여기가 아니다. 받을 사람은 아래
-            줄에서 받는다 — 그림 카드까지 들어 있어 덱이 언제나 더 크다. */}
+            **덱이 기본이던 것을 뒤집었다(2026-08-23 관리자 지시).** 받을 사람은
+            아래 줄에서 받는다 — 그림 카드까지 들어 있어 덱이 언제나 더 크다.
+
+            2026-09-18부터 웹에도 망각곡선이 있어서, 이 줄은 **오늘 낼 카드가
+            몇 장인지**를 말한다. 장수만 적던 자리에 그것을 적는 이유는, 일정이
+            도는 제품에서 사람이 묻는 것이 「몇 장이 있나」가 아니라 「오늘 뭘
+            해야 하나」이기 때문이다. */}
         {quiz ? (
           <a
             className="resource is-primary"
@@ -137,17 +141,15 @@ export function LecturePage() {
             target={quizWindow("pre", { subject, runId })}
           >
             <strong>Pre-Quiz 풀기</strong>
-            <small>
-              {quiz.itemCount}장 · 답을 펴 보고 본인이 찍습니다
-              {quiz.answered ? ` · ${quiz.answered}장 봤고 ${quiz.correct}장은 알고 있었습니다` : ""}
-            </small>
+            <small>{quizNote(quiz)}</small>
           </a>
         ) : null}
         {fileButton("pre_apkg", "Pre-Quiz 덱", quiz ? "is-secondary" : "")}
       </section>
 
       {/* 다 푼 직후에는 Pre-Quiz 창에도 같은 목록이 뜬다. 여기 남겨 두는 것은
-          나중에 이 화면을 다시 열었을 때를 위해서다. */}
+          **같은 날** 이 화면을 다시 열었을 때를 위해서다 — 하루가 바뀌면 비고,
+          제목이 「오늘」이라고 적고 있으므로 그것이 맞다. */}
       <Missed items={quiz?.missed ?? []} />
 
       <section className="lecture-section">
@@ -157,6 +159,26 @@ export function LecturePage() {
       </section>
     </article>
   );
+}
+
+/**
+ * 웹 풀이 줄의 한 마디. **0을 갈라서 적는다**(`../../CLAUDE.md` 함정 ③).
+ *
+ *   아직 안 봤다        「20장 · 답을 펴 보고 본인이 찍습니다」
+ *   오늘 낼 것이 있다    「오늘 낼 카드 7장 · 새 카드 5장」
+ *   오늘 몫을 끝냈다    「오늘 몫 완료 · 20장이 일정에 있습니다」
+ *
+ * 마지막 줄이 없으면 오늘 몫을 끝낸 편과 카드가 없는 편이 같아 보인다.
+ */
+function quizNote(quiz: NonNullable<LectureDetail["prequiz"]>): string {
+  if (!quiz.answered) return `${quiz.itemCount}장 · 답을 펴 보고 본인이 찍습니다`;
+  if (quiz.due) {
+    const parts = [`오늘 낼 카드 ${quiz.due}장`];
+    if (quiz.new) parts.push(`새 카드 ${quiz.new}장`);
+    if (quiz.learning) parts.push(`익히는 중 ${quiz.learning}장`);
+    return parts.join(" · ");
+  }
+  return `오늘 몫 완료 · ${quiz.later}장이 일정에 있습니다`;
 }
 
 /**

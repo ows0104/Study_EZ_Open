@@ -28,7 +28,7 @@ from app.preview_links import conversation_url as valid_conversation_url
 from app.preview_links import provider as valid_provider
 from app.routes.common import lecture_or_404, record_grabs, storage_or_503
 from app.routes import prequiz
-from app.routes.prequiz import missed_items
+from app.routes.prequiz import due_counts, missed_items
 
 router = APIRouter()
 
@@ -93,6 +93,11 @@ def _quiz_payload(
         "itemCount": item_count,
         "answered": answered,
         "correct": correct,
+        # **오늘 낼 카드가 몇 장인가**(2026-09-18, 웹 풀이가 망각곡선으로 돌면서).
+        # `answered`는 「이 편을 한 번이라도 훑었나」라서 일정과 다른 것을 말한다 —
+        # 다 훑은 편에도 오늘 낼 카드가 있고, 오늘 낼 것이 없는 편도 안 끝난 것이다.
+        # 그래서 더하지 않고 나란히 둔다. 세는 곳은 `prequiz.due_counts` 하나다.
+        **due_counts(db, user_id, lecture.subject, lecture.run_id, quiz),
         # 다 풀었을 때만 보여 준다. 두 문제 풀고 나온 "놓친 것"은
         # 청취 목표가 아니라 진행 상황일 뿐이다.
         "missed": (

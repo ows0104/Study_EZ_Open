@@ -11,7 +11,6 @@ const LOOK: Record<QuizKind, { title: string; deck: LectureFile["kind"]; deckNot
   pre: {
     title: "Pre-Quiz",
     deck: "pre_apkg",
-    // 웹은 한 번 훑는 자리다. 반복은 Anki가 한다 — 3패스가 그 덱에서 돈다.
     deckNote: "그림 카드까지 들어 있습니다",
     next: "필기와 Main-Quiz 덱",
   },
@@ -33,7 +32,12 @@ const LOOK: Record<QuizKind, { title: string; deck: LectureFile["kind"]; deckNot
  * 다 찍고 나서야 아래가 붙는다 — 놓친 것, 그리고 다음에 할 것(덱·강의 화면).
  * 푸는 동안 그것들이 보이면 답을 펴기 전에 다른 데를 누르게 된다.
  *
- * **복습에서 여기 쌓이는 것은 웹에서 푼 몫뿐이다.** 그 덱의 진행은 Anki가 든다.
+ * **오늘 낼 카드가 없을 때도 아래가 붙는다**(2026-09-18). 그 전까지 「다 찍었다」는
+ * 마지막 카드를 지났다는 뜻이었는데, 일정이 도는 지금은 「오늘 몫을 끝냈다」다.
+ *
+ * **여기 쌓이는 진행과 덱의 진행은 여전히 다른 것이다.** 웹은 웹에서 찍은 것을
+ * 들고, apkg를 받아 간 사람의 안키는 자기 것을 든다 — 둘을 더해 「몇 번 봤다」로
+ * 읽으면 안 된다. 같은 SM-2로 돌지만 두 일정은 서로를 모른다.
  */
 export function QuizPage({ kind }: { kind: QuizKind }) {
   const look = LOOK[kind];
@@ -110,7 +114,8 @@ export function QuizPage({ kind }: { kind: QuizKind }) {
 
           <section className="lecture-section">
             <h2>다음</h2>
-            {/* 웹은 한 번 훑는 자리다. 반복은 Anki가 한다 — 3패스가 그 덱에서 돈다. */}
+            {/* 덱은 안키에서 돌릴 사람의 것이다. 웹에도 일정이 생겼으므로
+                「반복하려면 덱」이 아니라 **「안키에서 보려면 덱」**이다. */}
             {apkg ? (
               <button className="resource is-download" onClick={() => download(apkg)}>
                 <strong>{look.title} 덱 내려받기</strong>

@@ -68,8 +68,10 @@ POST /api/admin/prequiz-jobs/{job_id}/move
 POST /api/bundles/grabs
 POST /api/lectures/{subject}/{run_id}/mainquiz/grade
 POST /api/lectures/{subject}/{run_id}/mainquiz/reveal
+POST /api/lectures/{subject}/{run_id}/mainquiz/undo
 POST /api/lectures/{subject}/{run_id}/prequiz/grade
 POST /api/lectures/{subject}/{run_id}/prequiz/reveal
+POST /api/lectures/{subject}/{run_id}/prequiz/undo
 POST /api/spotter/admin/reports/{question_id}/close
 POST /api/spotter/admin/subjects/{subject}/db/refresh
 POST /api/spotter/admin/subjects/{subject}/uploads

@@ -1,7 +1,8 @@
 """서버가 들고 있는 전부.
 
-읽기 전용이 원칙이다. 로컬 러너가 채우고 웹이 읽는다. 사용자가 쓰는 표는 둘뿐이다 —
-`quiz_attempt`(Pre-Quiz 웹 풀이의 채점 결과)와 `asset_grab`(파일을 받아 갔다).
+읽기 전용이 원칙이다. 로컬 러너가 채우고 웹이 읽는다. 사용자가 쓰는 표는 다섯뿐이다 —
+웹 풀이의 채점과 일정(`quiz_attempt`·`main_attempt`), 그 되돌리기 기록
+(`pre_review_log`·`main_review_log`), 그리고 `asset_grab`(파일을 받아 갔다).
 
 **키는 언제나 `(subject, run_id)` 복합이다.** `run_id`는 `260813_03` 같은
 날짜_교시라서 과목을 포함하지 않는다. 같은 교시에 여러 과목이 열리므로
@@ -17,6 +18,7 @@ from sqlalchemy import (
     JSON,
     Boolean,
     DateTime,
+    Float,
     ForeignKeyConstraint,
     Index,
     Integer,
@@ -338,11 +340,20 @@ class MainItem(_QuizItem, Base):
 
 
 class _Attempt:
-    """웹 풀이의 결과 한 줄. **`correct`는 본인이 찍은 것이다.**
+    """웹 풀이의 카드 한 장. **`correct`는 본인이 찍은 것이다.**
 
     서버가 판정한 것이 아니다. 자유회상 카드라 대조할 문자열이 없고, 그래서
     「답을 펴 보고 맞았다고 했다」가 여기 남는 전부다. 화면이 이 값을 서버
     판정처럼 그리면 안 된다.
+
+    **2026-09-18에 「결과 한 줄」이 「카드 한 장」이 되었다.** 그 전까지 이 줄은
+    `correct` 불리언 하나로 한 번의 채점만 들었고, 반복은 apkg를 받아 간 사람의
+    안키가 들었다. 지금은 일정이 여기 있다 — `state`부터 `due_at`까지가 그것이고
+    값을 정하는 것은 `app/srs.py` 하나다.
+
+    `correct`는 남겨 두었다. 넷 중 `again`이면 거짓이고 나머지면 참이다.
+    「오늘 놓친 것」과 진행 수가 그 값으로 서 있고, 일정이 없던 옛 줄에서도
+    그 둘은 계속 나와야 한다.
 
     문항 표와 같은 이유로 갈래마다 표가 따로다 — `item_id`가 겹친다.
     """
@@ -354,9 +365,29 @@ class _Attempt:
     correct: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     answered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
+    # ── 여기부터가 일정이다(2026-09-18). 값을 정하는 것은 `app/srs.py` 하나뿐이고,
+    # 이름도 그쪽 `Card` 와 같다. **한 줄이 한 카드의 전부라 되돌리기가 이 일곱
+    # 칼럼을 그대로 적어 두면 된다**(`_ReviewLog`).
+    #
+    # 옛 줄에는 이 칼럼이 없다. 기본값이 new·0·2.5 이므로 그런 줄은 「한 번
+    # 찍었지만 일정은 아직 없다」로 읽힌다 — `correct` 는 그대로 있으므로
+    # 「놓친 것」과 진행 수는 옛 줄에서도 계속 나온다.
+    state: Mapped[str] = mapped_column(String(10), nullable=False, default="new")
+    step: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    interval_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    ease: Mapped[float] = mapped_column(Float, nullable=False, default=2.5)
+    reps: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    lapses: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    #: 언제 다시 낼 것인가. `None` 이면 아직 일정이 없는 것이라 바로 낸다.
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     @declared_attr.directive
     def __table_args__(cls) -> tuple:
-        return (Index(f"ix_{cls.__tablename__}_user_lecture", "user_id", "subject", "run_id"),)
+        return (
+            Index(f"ix_{cls.__tablename__}_user_lecture", "user_id", "subject", "run_id"),
+            # 「지금 낼 것」을 고르는 질의가 이 순서로 훑는다.
+            Index(f"ix_{cls.__tablename__}_due", "user_id", "due_at"),
+        )
 
 
 class QuizAttempt(_Attempt, Base):
@@ -381,6 +412,69 @@ class MainAttempt(_Attempt, Base):
     """
 
     __tablename__ = "main_attempt"
+
+
+class _ReviewLog:
+    """찍은 한 번. **찍기 전의 일정을 그대로 적어 둔다.**
+
+    되돌리기(2026-09-18 관리자 지시 — 「이전으로 돌아가는 기능」)를 위해 생겼다.
+    안키의 undo 와 같은 자리이고, 같은 방식이다: 되돌릴 값을 **찍는 쪽이**
+    남겨 둔다.
+
+    ## 왜 다시 계산하지 않는가
+
+    SM-2 는 한쪽으로만 간다. `interval_days` 를 쉬움도로 나누면 반올림한
+    자리가 안 돌아오고, 잊어서 하루로 깎인 카드는 깎기 전 간격이 아예 사라진다.
+    **되돌리기는 계산이 아니라 기억이다.**
+
+    ## 되돌릴 것이 없던 자리까지 적는다
+
+    `had_attempt` 가 거짓이면 그 찍기가 이 카드의 **첫 줄을 만든 것**이다.
+    되돌릴 때 값을 되쓰는 것으로는 안 되고 줄을 지워야 한다 — 안 그러면
+    「몇 장 봤다」가 안 본 카드를 센다.
+
+    문항 표·시도 표와 같은 이유로 갈래마다 표가 따로다(`item_id` 가 겹친다).
+    여기서는 대리키를 쓸 수 있으니 한 표에 `kind` 칼럼을 둘 수도 있었지만,
+    그러면 이 파일에서 갈래를 가르는 방식이 두 가지가 된다.
+    """
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    subject: Mapped[str] = mapped_column(Text, nullable=False)
+    run_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    item_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    #: again | hard | good | easy. `srs.GRADES` 와 같다.
+    grade: Mapped[str] = mapped_column(String(8), nullable=False)
+    reviewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    had_attempt: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    prev_correct: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    prev_state: Mapped[str] = mapped_column(String(10), nullable=False, default="new")
+    prev_step: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    prev_interval_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    prev_ease: Mapped[float] = mapped_column(Float, nullable=False, default=2.5)
+    prev_reps: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    prev_lapses: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    prev_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    @declared_attr.directive
+    def __table_args__(cls) -> tuple:
+        return (
+            # 되돌리기는 언제나 「이 사람 이 강의의 마지막 줄」을 집는다.
+            Index(f"ix_{cls.__tablename__}_undo", "user_id", "subject", "run_id", "id"),
+        )
+
+
+class PreReviewLog(_ReviewLog, Base):
+    """Pre-Quiz 웹 풀이의 되돌리기 기록."""
+
+    __tablename__ = "pre_review_log"
+
+
+class MainReviewLog(_ReviewLog, Base):
+    """Main-Quiz 웹 풀이의 되돌리기 기록."""
+
+    __tablename__ = "main_review_log"
 
 
 class AssetGrab(Base):
