@@ -34,7 +34,7 @@ const adminMainLabels: Record<AdminSlotState, string> = {
  * 자리 둘.
  *
  * **자리는 늘 서 있다.** 아무것도 없는 자리는 작은 점으로 쉬고, 자료가 올라오면
- * 빈 도형이 되고, 하고 나면 채워진다. 도형이 생겼다 사라지면서 폭이 변하면
+ * 빈 도형이 되고, 하고 나면 다시 점으로 쉬다(관리자 화면은 채워진다). 도형이 생겼다 사라지면서 폭이 변하면
  * 강의끼리 점 위치가 어긋나는데, 그러면 여러 칸을 훑을 때 자리로 뜻을 읽을 수
  * 없게 된다. 왼쪽이 예습, 오른쪽이 복습이고 순서는 절대 안 바뀐다.
  *
@@ -81,9 +81,13 @@ function AdminChipSlots({ lecture }: { lecture: LectureRef }) {
 /**
  * 학생이 보는 자리 둘.
  *
- * **강조색은 "네가 열어 볼 것이 있다"는 뜻으로만 쓴다.** 빈 도형만 계열색을
- * 받고, 채운 것은 무채색으로 가라앉고, 쉬는 점은 더 옅다. 끝낸 것을 색으로
- * 두면 다 한 칸이 제일 시끄러워져서 남은 할 일이 묻힌다.
+ * **도형은 할 일이 있을 때만 선다**(2026-09-18 관리자 지시). 올라온 자리만 계열색
+ * 빈 도형이 되고, 안 올라온 자리와 끝낸 자리는 둘 다 점으로 쉰다 — 밝기로만
+ * 갈린다(`.chip-slot.is-user.is-done`). 끝난 것까지 도형으로 서 있으면 다 한 칸이 제일
+ * 시끄러워져서 남은 할 일이 묻힌다.
+ *
+ * **관리자 화면은 이 규칙을 안 따른다.** 거기서 채운 도형은 「내가 올려 놓았다」라
+ * 지우면 진도가 안 보인다 — 갈라지는 자리는 `is-user` 하나다.
  */
 function UserChipSlots({ lecture }: { lecture: LectureRef }) {
   const slots = lectureSlots(lecture);
@@ -96,12 +100,12 @@ function UserChipSlots({ lecture }: { lecture: LectureRef }) {
   return (
     <span className="chip-slots" aria-label={`${preLabel} · 복습 ${stateLabels[slots.main]}`}>
       <i
-        className={`chip-slot is-pre is-${slots.pre}`}
+        className={`chip-slot is-user is-pre is-${slots.pre}`}
         // 채움 비율은 빈 도형 위에만 얹는다. 없으면 0%로 떨어지고, 그건 아직
         // 아무것도 안 푼 것과 같은 그림이라 맞다.
         style={slots.preFill === null ? undefined : { ["--fill" as string]: `${Math.round(slots.preFill * 100)}%` }}
       />
-      <i className={`chip-slot is-main is-${slots.main}`} />
+      <i className={`chip-slot is-user is-main is-${slots.main}`} />
     </span>
   );
 }
