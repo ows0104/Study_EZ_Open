@@ -68,39 +68,34 @@ export function prequizDone(lecture: LectureRef) {
 /**
  * 강의 하나 → 자리 둘.
  *
- * **예습 자리는 기본 예습 링크가 문이다**(2026-08-31 관리자 지시). 관리자 계정이
- * 공유 링크를 실제로 저장해야(`marks.preview` — `preview.share_url`이 비어 있지
- * 않다) 자리가 산다.
+ * **퀴즈가 문이다**(2026-09-18 관리자 지시 — 「예습 퀴즈가 올라왔을 때만 동그라미,
+ * 복습 퀴즈가 올라왔을 때만 네모」). 예습은 `marks.prequiz`, 복습은 `marks.quiz`
+ * 하나씩만 본다.
  *
- * 전에는 예습 셋(작년 필기·예습 링크·Pre-Quiz) 중 하나만 올라와도 켰는데, 그러면
- * **92편 전부가 켜져 있었고 그중 53편이 작년 필기뿐이었다**(2026-08-31 실측).
- * 예습으로 읽을 대화가 아직 없는데 준비된 것으로 보이던 자리다.
- *
- * **Pre-Quiz가 링크 없이 서 있는 강의는 0편이었다.** 그래서 이 문을 세워도 덱이
- * 가려지지 않는다. 그런 강의가 생기면 그때 다시 본다 — 세는 자리는 `preview`와
- * `pre_apkg`·`pre_item`이다.
- *
- * **복습은 그대로 OR다.** 올해 필기와 본덱은 서로를 안 기다린다.
+ * 전에는 예습을 예습 링크(`marks.preview`)로, 복습을 「올해 필기 또는 본덱」 OR로
+ * 열었다. 그러면 도형이 「풀 것이 있다」가 아니라 「무언가 있다」가 되고, 도형을
+ * 보고 누른 사람이 퀴즈 대신 필기를 만난다. 필기와 예습 링크가 사라지는 것은
+ * 아니다 — 칸을 열면 패널에 그대로 있고, 자리 둘은 퀴즈만 센다.
  *
  * **끝냄은 잴 수 있는 것만 본다.** 웹 예습퀴즈를 다 풀었거나, 그 자리의 파일을
  * 받아 갔거나다. 받아 간 것은 엄밀히 "풀었다"가 아니지만 서버가 볼 수 있는
  * 가장 가까운 신호이고, 이것이 없으면 덱만 쓰는 사람은 영영 못 채운다.
+ *
+ * **관리자 자리(`adminLectureSlots`)는 그대로다.** 거기서 링크와 필기는 「다음에
+ * 내가 할 일」을 뜻하므로 지우면 진도가 안 보인다.
  */
 export function lectureSlots(lecture: LectureRef): Slots {
   const { marks, grabbed, prequizProgress: progress } = lecture;
 
-  // 문이 닫혀 있으면 「했다」도 안 그린다. 링크 없이 작년 필기만 받아 간 것이
-  // 채운 동그라미로 서면, 관리자가 아직 안 만든 강의가 다 한 강의로 보인다.
-  const preOpen = marks.preview;
+  const preOpen = marks.prequiz;
   const preDone = preOpen && (grabbed.pre || prequizDone(lecture));
-  const mainReady = marks.notesCurrent || marks.quiz;
 
   return {
     pre: preDone ? "done" : preOpen ? "ready" : "none",
     // 받아 간 사람은 Anki 쪽이라 서버가 진행을 못 본다. 그때는 비율을 안 그리고
     // 꽉 채운다 — 반쯤 찬 점으로 남겨 두면 영영 안 끝나는 자리가 된다.
     preFill: !preOpen || grabbed.pre || !progress ? null : progress.answered / progress.total,
-    main: grabbed.main ? "done" : mainReady ? "ready" : "none",
+    main: marks.quiz ? (grabbed.main ? "done" : "ready") : "none",
   };
 }
 
