@@ -239,13 +239,13 @@ export function CalendarPage() {
             ) : (
               <>
                 <span>
-                  <i className="chip-slot is-user is-pre is-none" /> 아직
+                  <i className="chip-slot is-pre is-none" /> 아직
                 </span>
                 <span>
-                  <i className="chip-slot is-user is-pre is-ready" /> 올라옴
+                  <i className="chip-slot is-pre is-ready" /> 올라옴
                 </span>
                 <span>
-                  <i className="chip-slot is-user is-pre is-done" /> 함
+                  <i className="chip-slot is-pre is-done" /> 함
                 </span>
               </>
             )}
