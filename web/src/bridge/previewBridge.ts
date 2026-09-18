@@ -143,3 +143,24 @@ export function usePreviewLink(save: (input: { lectureId: string; kind: LinkKind
     return () => window.removeEventListener("message", handle);
   }, [save]);
 }
+
+/**
+ * 이 기기에 확장을 설치할 수 있는가.
+ *
+ * **모바일 브라우저에는 크롬 확장이 없다.** 그래서 「설치하세요」 카드는 모바일에서
+ * 갈 데가 없는 곳을 가리킨다 — 스토어를 열어도 설치 단추가 없다.
+ *
+ * 다만 **링크 자체는 그냥 주소라 확장 없이도 열린다.** 컴퓨터에서 만들어 둔 개인
+ * 링크를 폰에서 여는 것은 원래 되던 일이고, 설치 안내가 그 자리를 덮고 있었을
+ * 뿐이다(2026-09-18 관리자 지시).
+ *
+ * UA 로 재는 것은 확실하지 않다 — 틀려도 **카드 하나가 남거나 없어질 뿐**이고
+ * 링크는 어느 쪽이든 그대로 선다. 그 선에서만 쓴다.
+ */
+export function extensionPossible() {
+  const mobile = (navigator as Navigator & { userAgentData?: { mobile?: boolean } }).userAgentData?.mobile;
+  if (typeof mobile === "boolean") return !mobile;
+  if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) return false;
+  // iPadOS 는 데스크톱 UA 를 보낸다. 터치 점이 여럿인 Mac 은 사실상 그것이다.
+  return !(/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+}

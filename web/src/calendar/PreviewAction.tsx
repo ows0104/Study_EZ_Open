@@ -3,6 +3,7 @@ import { api } from "../api";
 import {
   absoluteUrl,
   extensionInstalled,
+  extensionPossible,
   requestPreview,
   watchSharedLink,
 } from "../bridge/previewBridge";
@@ -93,45 +94,74 @@ export function PreviewAction({
     }
   }
 
-  // 확장이 없으면 자동으로 열 수 없다. 기본 링크가 이미 있으면 그건 그냥 주소라
-  // 확장 없이도 열린다 — 그 경우만 먼저 보여 준다.
+  /* 확장이 없으면 새로 **만들** 수는 없다. 다만 이미 있는 링크는 그냥 주소라
+     확장 없이도 열린다 — 기본 링크도, 컴퓨터에서 만들어 둔 개인 링크도.
+
+     전에는 이 갈래가 기본 링크만 보여 주고 개인 링크는 통째로 감췄다. **모바일
+     브라우저에는 크롬 확장이 아예 없으므로 폰에서는 내 대화를 여는 길이 하나도
+     없었다**(2026-09-18 관리자 지시). 저장은 서버에 돼 있는데 화면이 안 꺼내
+     줬을 뿐이다.
+
+     그래서 둘을 나란히 세우는 것은 위와 같고, 다른 것은 만들기 자리에 무엇이
+     서느냐뿐이다 — 설치 안내이거나, 설치조차 못 하는 기기면 한 줄짜리 설명이다. */
   if (!extensionInstalled()) {
+    const canInstall = extensionPossible();
     const storeReady = Boolean(EXTENSION_STORE_URL);
     return (
       <PanelGroup tone="preview" title="예습" note="강의 전에 읽는 대화">
-        {detail.preview?.shareUrl ? (
-          <SharedOpen url={detail.preview.shareUrl} lectureId={lectureId} provider={detail.preview.provider} />
-        ) : null}
-        <ActionCard
-          shape="is-key is-download"
-          hit={
-            <a
-              className="panel-action-hit"
-              href={storeReady ? EXTENSION_STORE_URL : EXTENSION_DOWNLOAD_URL}
-              download={storeReady ? undefined : true}
-              target={storeReady ? "_blank" : undefined}
-              rel={storeReady ? "noreferrer" : undefined}
-            >
-              <Body
-                name={storeReady ? "Chrome 웹스토어에서 설치" : "예습 브리지 내려받기"}
-                note="설치하면 필기와 프롬프트가 자동으로 들어갑니다"
-              />
-            </a>
-          }
-        />
-        {storeReady ? (
-          <p className="panel-steps">설치한 뒤 이 탭을 새로고침해 주세요.</p>
+        <div className="panel-pair">
+          {detail.preview?.shareUrl ? (
+            <SharedOpen url={detail.preview.shareUrl} lectureId={lectureId} provider={detail.preview.provider} />
+          ) : (
+            <Empty name="기본 링크" note="아직 없습니다" />
+          )}
+          {detail.myPreview?.conversationUrl ? (
+            <PersonalOpen url={detail.myPreview.conversationUrl} />
+          ) : (
+            <Empty name="개인 링크" note={canInstall ? "확장을 설치하면 만듭니다" : "컴퓨터에서 만듭니다"} />
+          )}
+        </div>
+        {canInstall ? (
+          <>
+            <ActionCard
+              shape="is-key is-download"
+              hit={
+                <a
+                  className="panel-action-hit"
+                  href={storeReady ? EXTENSION_STORE_URL : EXTENSION_DOWNLOAD_URL}
+                  download={storeReady ? undefined : true}
+                  target={storeReady ? "_blank" : undefined}
+                  rel={storeReady ? "noreferrer" : undefined}
+                >
+                  <Body
+                    name={storeReady ? "Chrome 웹스토어에서 설치" : "예습 브리지 내려받기"}
+                    note="설치하면 필기와 프롬프트가 자동으로 들어갑니다"
+                  />
+                </a>
+              }
+            />
+            {storeReady ? (
+              <p className="panel-steps">설치한 뒤 이 탭을 새로고침해 주세요.</p>
+            ) : (
+              <ol className="panel-steps">
+                <li>받은 zip을 압축 해제합니다.</li>
+                <li>
+                  <code>chrome://extensions</code> → 오른쪽 위 <b>개발자 모드</b>
+                </li>
+                <li>
+                  <b>압축해제된 확장 프로그램을 로드</b> → 압축 푼 폴더
+                </li>
+                <li>이 탭을 새로고침합니다.</li>
+              </ol>
+            )}
+          </>
         ) : (
-          <ol className="panel-steps">
-            <li>받은 zip을 압축 해제합니다.</li>
-            <li>
-              <code>chrome://extensions</code> → 오른쪽 위 <b>개발자 모드</b>
-            </li>
-            <li>
-              <b>압축해제된 확장 프로그램을 로드</b> → 압축 푼 폴더
-            </li>
-            <li>이 탭을 새로고침합니다.</li>
-          </ol>
+          /* 설치 단추를 못 누르는 기기에 설치 카드를 세우지 않는다. 대신 왜 만들기가
+             여기 없는지를 한 줄로 적는다 — 없는 이유를 안 적으면 「고장」으로 읽힌다. */
+          <p className="panel-steps">
+            예습 대화를 <b>만드는</b> 것은 크롬 확장이 하고, 확장은 컴퓨터에만 설치됩니다.
+            여기서는 컴퓨터에서 만들어 둔 링크를 엽니다.
+          </p>
         )}
       </PanelGroup>
     );
@@ -198,7 +228,7 @@ export function PreviewAction({
       tools={sharedTools}
     />
   ) : !canMake ? (
-    <ActionCard shape="is-key is-empty" hit={<span className="panel-action-hit"><Body name="기본 링크" note="작년 필기 대기" /></span>} />
+    <Empty name="기본 링크" note="작년 필기 대기" />
   ) : isAdmin ? (
     <ActionCard
       shape="is-key"
@@ -209,31 +239,12 @@ export function PreviewAction({
       }
     />
   ) : (
-    <ActionCard shape="is-key is-empty" hit={<span className="panel-action-hit"><Body name="기본 링크" note="아직 없습니다" /></span>} />
+    <Empty name="기본 링크" note="아직 없습니다" />
   );
 
   /* 개인 링크 — 사람마다 하나. 프롬프트도 자기 것으로 묻는다. */
   const personal = detail.myPreview?.conversationUrl ? (
-    <ActionCard
-      shape="is-key"
-      hit={
-        /* 저장되면 이 자리가 회색 버튼("개인 링크 만들기")에서 색이 든 카드로
-           바뀐다. 색이 곧 "내 대화가 저장돼 있다"는 표시다.
-
-           주소는 title에 그대로 둔다 — 빈 AI 창이 뜰 때 무엇이 저장돼 있는지
-           볼 데가 여기밖에 없다. */
-        <a
-          className="panel-action-hit"
-          href={detail.myPreview.conversationUrl}
-          title={detail.myPreview.conversationUrl}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <Body name="개인 링크" />
-        </a>
-      }
-      tools={personalTools}
-    />
+    <PersonalOpen url={detail.myPreview.conversationUrl} tools={personalTools} />
   ) : canMake ? (
     <ActionCard
       shape="is-key is-faint"
@@ -245,7 +256,7 @@ export function PreviewAction({
       tools={personalTools}
     />
   ) : (
-    <ActionCard shape="is-key is-empty" hit={<span className="panel-action-hit"><Body name="개인 링크" note="작년 필기 대기" /></span>} />
+    <Empty name="개인 링크" note="작년 필기 대기" />
   );
 
   return (
@@ -305,6 +316,43 @@ function SharedOpen({
         </a>
       }
       tools={tools}
+    />
+  );
+}
+
+/**
+ * 개인 링크 열기. **확장이 있든 없든 같은 카드다.**
+ *
+ * 저장돼 있으면 이 자리가 회색 버튼("만들기")에서 색이 든 카드로 바뀐다. 색이
+ * 곧 "내 대화가 저장돼 있다"는 표시다.
+ *
+ * 주소는 title에 그대로 둔다 — 빈 AI 창이 뜰 때 무엇이 저장돼 있는지 볼 데가
+ * 여기밖에 없다.
+ *
+ * **여는 데는 확장이 필요 없다.** `conversationUrl` 은 그 AI 서비스의 내 대화
+ * 주소라 로그인만 돼 있으면 폰에서도 열린다. 확장이 없는 갈래가 이 카드를 같이
+ * 쓰는 이유다.
+ */
+function PersonalOpen({ url, tools }: { url: string; tools?: React.ReactNode }) {
+  return (
+    <ActionCard
+      shape="is-key"
+      hit={
+        <a className="panel-action-hit" href={url} title={url} target="_blank" rel="noreferrer">
+          <Body name="개인 링크" />
+        </a>
+      }
+      tools={tools}
+    />
+  );
+}
+
+/** 아직 없는 링크 자리. 칸은 그대로 서고 왜 없는지만 적는다. */
+function Empty({ name, note }: { name: string; note: string }) {
+  return (
+    <ActionCard
+      shape="is-key is-empty"
+      hit={<span className="panel-action-hit"><Body name={name} note={note} /></span>}
     />
   );
 }
