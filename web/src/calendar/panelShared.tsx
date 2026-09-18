@@ -13,27 +13,49 @@ import type { ReactNode } from "react";
  * **머리에 이름과 색을 단다.** 전에는 셋이 같은 파랑 버튼으로 이어져 있어서
  * 어디까지가 예습이고 어디부터가 Pre-Quiz인지 글자를 읽어야 알았다. 색은 갈래만
  * 진다 — 있다/없다/만드는 중은 여전히 테두리 꼴과 글이 말한다.
+ *
+ * `fold` 는 **접힌 채로 서는 칸**이다(2026-09-18 관리자 지시 - 모아받기가
+ * 의도보다 눈에 띈다). 머리 줄이 그대로 여닫는 손잡이가 되고, 안의 것은 열어야
+ * 보인다. 갈래 셋은 이 패널이 하라는 일 자체라 접지 않는다.
  */
 export function PanelGroup({
   tone,
   title,
   note,
+  fold = false,
   children,
 }: {
   /**
    * `is-preview` · `is-pre` · `is-main`. 색은 CSS 가 고른다.
    *
    * `plain` 은 **셋 중 어느 갈래도 아닌 것**이다(모아받기 — 예습과 복습을 같이
-   * 든다). 지금은 기본색이 `--accent` 이고 그 값이 `--fam-main` 과 같아서 화면이
-   * Main-Quiz 와 똑같이 나온다. 그래도 `main` 이라고 적지 않는 것은, 관리자가
-   * 언젠가 갈래 색을 갈 때 **이 칸이 조용히 따라가면 안 되기 때문이다** —
-   * 갈래가 아닌 것이 갈래 색을 얻으면 그때부터 무엇을 뜻하는지 알 수 없다.
+   * 든다). 갈래가 아니므로 갈래 색도 안 진다 — 회색이다(2026-09-18 관리자 지시).
+   * 그 전에는 기본색이 `--accent` 라 `--fam-main` 과 값이 같았고, 화면에서 이 칸이
+   * Main-Quiz 와 똑같이 나왔다. **갈래가 아닌 것이 갈래 색을 얻으면 그때부터
+   * 무엇을 뜻하는지 알 수 없다** — 색을 되돌리지 마라.
    */
   tone: "preview" | "pre" | "main" | "plain";
   title: string;
   note?: string;
+  /** 접힌 채로 설 것인가. 머리 줄이 여닫는 손잡이가 된다. */
+  fold?: boolean;
   children: ReactNode;
 }) {
+  /* 접는 쪽은 `<details>` 다. 여닫힌 상태를 React 가 들면 패널이 칸을 갈아탈
+     때마다 「열어 둔 것을 닫을까」를 따로 정해야 하는데, 브라우저의 것을 쓰면
+     칸을 닫을 때 같이 사라지고 다시 열면 접힌 채로 뜬다 - 여기서 바라는 그대로다. */
+  if (fold) {
+    return (
+      <details className={`panel-group is-${tone} is-fold`}>
+        <summary className="panel-group-head">
+          <span>{title}</span>
+          {note ? <small>{note}</small> : null}
+        </summary>
+        {children}
+      </details>
+    );
+  }
+
   return (
     <section className={`panel-group is-${tone}`}>
       <h3 className="panel-group-head">

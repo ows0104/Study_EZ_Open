@@ -1077,6 +1077,51 @@
   --fam: var(--fam-main);
 }
 
+/* 갈래가 아닌 것(모아받기)은 **갈래 색을 안 진다**(2026-09-18 관리자 지시 —
+   의도보다 눈에 띈다). 전에는 기본값 `--accent` 가 `--fam-main` 과 같은 인디고라
+   Main-Quiz 칸과 화면이 똑같았다. 회색으로 눕히고, 무엇의 것인지는 글자가 든다. */
+.panel-group.is-plain {
+  --fam: var(--ink-3);
+}
+
+/* ── 접히는 칸 ─────────────────────────────── */
+/* 머리 줄이 곧 여닫는 손잡이다. 별도의 버튼을 옆에 두면 이 칸이 다시 무거워진다 —
+   접는 이유가 그것이었다. */
+
+.panel-group.is-fold > .panel-group-head {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+/* 사파리는 아직 이 가짜 요소로 세모를 그린다. `display: flex` 로도 안 사라진다. */
+.panel-group.is-fold > .panel-group-head::-webkit-details-marker {
+  display: none;
+}
+
+/* 여닫이 표시. 오른쪽 끝에 세모 하나 — 열려 있으면 돈다. */
+.panel-group.is-fold > .panel-group-head::after {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--ink-3);
+  content: "▾";
+  font-size: 10px;
+  transition: transform 0.12s ease;
+}
+
+.panel-group.is-fold[open] > .panel-group-head::after {
+  transform: rotate(180deg);
+}
+
+.panel-group.is-fold > .panel-group-head:hover {
+  color: var(--ink-2);
+}
+
+/* 접혀 있을 때는 머리 아래 여백이 할 일이 없다. */
+.panel-group.is-fold:not([open]) > .panel-group-head {
+  margin-bottom: 0;
+}
+
 /* 갈래의 이름. 점 하나가 색을 들고 있어서 아래 버튼들이 어느 갈래의 것인지
    이어진다. 오른쪽에 눕는 것은 예습의 AI 고르기뿐이다. */
 .panel-group-head {
@@ -1855,6 +1900,20 @@ button.event-panel-note:hover {
 
 .bundle.is-main {
   --fam: var(--fam-main);
+}
+
+/* **패널 안에서는 갈래 색을 안 쓴다**(2026-09-18 관리자 지시). 바로 위 Pre-Quiz·
+   Main-Quiz 덱 버튼이 같은 teal·indigo 를 칠하고 있어서, 같은 무게로 서면
+   「덱 받기」가 한 화면에 네 번 나온 것처럼 읽혔다. 무엇의 것인지는 글자(예습·
+   복습)가 든다.
+
+   **격자 맨 아랫줄(`is-compact`)은 그대로 갈래 색이다.** 거기는 옆에 경쟁하는
+   덱 버튼이 없고, 왼쪽 띠 색이 예습·복습을 가르는 유일한 표시다.
+
+   **갈래 선언 뒤에 서야 한다** — `.bundle.is-pre` 와 특이도가 같아서 먼저
+   서면 갈래 색이 이것을 덮는다. */
+.panel-bundles .bundle {
+  --fam: var(--ink-3);
 }
 
 .bundle-hit {
