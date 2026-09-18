@@ -31,7 +31,7 @@
     퀴즈 생성. 강의록 PDF → 카드          재료 모으기 · 조합 · 배포
     모델이 쓴다
                                         spotter/web/         6,477
-  runner/            8,267                화면. 기생충학 + 해부학 넷
+  runner/            8,376                화면. 기생충학 + 해부학 넷
     연결부. 파이프라인을 돌리고
     서버로 민다                          spotter-dist/        6,277
                                           배포 산출물
@@ -47,7 +47,7 @@
                          (3,113 이었던 것은 `release/` 산출물이 섞여 있어서다.
                           .gitignore 가 옛 이름을 보고 있었다 — 2026-09-14 에 뗐다)
   platform/      228   둘이 정말 같이 쓰는 것 — session.js 하나
-  tests/       8,958   737개. 덩이별로 나뉘어 있다 — 하나만 돌리면 된다
+  tests/       9,120   748개. 덩이별로 나뉘어 있다 — 하나만 돌리면 된다
                          quizgen 405 · runner 306 · spotter 22 · bridge 4
                          `pytest tests` 19초  ·  `pytest tests/quizgen` 2초
   docs/                `archive/` 는 닫힌 기록이다
@@ -78,7 +78,7 @@
 | **땡시 문항 오류**를 고친다 | `spotter/data/` + `spotter/scripts/build_web.py` | `pytest tests/spotter` (22개·7초) |
 | **땡시 화면**을 고친다 | `spotter/web/` (기생충학) 또는 `spotter/web/anatomy/_template.html` (해부학) | |
 | **서버 API**를 고친다 | `server/app/routes/<해당>.py` + `server/app/models.py` | `cd server && .venv/Scripts/python -m tests` |
-| **덱이 안 만들어진다** | `runner/watch.py` · `runner/cycle.py` · `runner/agent.py` | `pytest tests/runner` (306개·11초) |
+| **덱이 안 만들어진다** | `runner/watch.py` · `runner/cycle.py` · `runner/agent.py` | `pytest tests/runner` (317개·15초) |
 | **덱이 안 올라간다** | `runner/publish.py` · `runner/gate.py` | |
 | **예습 링크**가 안 붙는다 | `bridge/` + `server/app/preview_links.py` + `web/src/bridge/` | `pytest tests/bridge` (4개) |
 

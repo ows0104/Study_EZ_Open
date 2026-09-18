@@ -336,3 +336,73 @@ def test_기다리는_시간은_남은_만큼만이다():
     when = agent.sync_wait(["— 올라온 지 9분. 동기화 중일 수 있어 다음 차례로"], now)
     # 10분 규칙에서 9분이 지났으니 1분 + 여유 1분.
     assert 60 <= (when - now).total_seconds() <= 180
+
+
+# ── 403도 기다림이다. 다만 셋에서 끊는다 (2026-09-18 관리자 지시) ────────
+# 한도는 API가 풀리는 시각을 알려 주는데 403은 안 알려 준다 — 몇 분짜리 블립인지
+# 조직 설정이 정말 꺼진 것인지 그 자리에서 구별할 길이 없다. 뒤엣것이면 끝없이
+# 되돌기만 하므로 상한을 두고, 넘으면 사람이 볼 자리(실패)를 만든다.
+
+_AUTH_LOG = "\n".join([
+    "멈췄다 — ①학습목표: claude 가 1 로 끝났다",
+    '{"is_error":true,"num_turns":1,"api_error_status":403,"result":'
+    '"Your organization has disabled Claude subscription access for Claude Code"}',
+])
+
+
+def _auth_worker(tmp_path, client):
+    child = tmp_path / "pipeline.log"
+    child.write_text(_AUTH_LOG, encoding="utf-8")
+    worker = _agent(tmp_path, client)
+    worker._run = lambda *a, **k: (1, [f"    실패 — quizgen가 1로 끝났다 (로그: {child})"])
+    return worker
+
+
+def test_403으로_멈춘_편은_실패가_아니라_줄로_돌아간다(tmp_path):
+    client = FakeClient([])
+    worker = _auth_worker(tmp_path, client)
+    worker.handle(agent.Job(id=9, subject="미생물학", run_id="260916_01", kind=deck.MAIN))
+
+    last = client.puts[-1][1]
+    assert last["state"] == "queued", "실패로 적었다"
+    assert "인증" in last["stage"]
+    assert last["resumeAt"], "언제 다시 올지를 안 적었다"
+    assert "1/3" in last["message"], last["message"]
+
+
+def test_403이_네_번째면_실패로_떨어진다(tmp_path):
+    """셋까지는 되돌리고, 그래도 그대로면 저절로 풀리는 것이 아니다."""
+    client = FakeClient([])
+    worker = _auth_worker(tmp_path, client)
+    job = agent.Job(id=9, subject="미생물학", run_id="260916_01", kind=deck.MAIN)
+    for _ in range(agent.AUTH_MAX_RETRIES):
+        worker.handle(job)
+    assert all(body.get("state") != "failed" for _, body in client.puts), "너무 일찍 떨어뜨렸다"
+
+    worker.handle(job)
+    last = client.puts[-1][1]
+    assert last["state"] == "failed"
+    # **화면에 403이라고 적혀야 한다.** 이 줄이 없으면 「①학습목표: claude 가 1 로
+    # 끝났다」만 떠서 로그를 열기 전까지 인증 문제인 줄 모른다.
+    assert "403" in last["message"], last["message"]
+    assert "3번 되돌렸는데" in last["message"], last["message"]
+
+
+def test_중간에_성공하면_셈이_풀린다(tmp_path):
+    """이어진 것만 센다. 안 버리면 다음에 한 번만 튕겨도 옛 셈이 남아 상한에 걸린다."""
+    client = FakeClient([])
+    worker = _auth_worker(tmp_path, client)
+    job = agent.Job(id=9, subject="미생물학", run_id="260916_01", kind=deck.MAIN)
+    worker.handle(job)
+    worker.handle(job)
+    assert agent.read_retries(tmp_path)[agent.retry_key(job)] == 2
+
+    worker._run = lambda *a, **k: (0, ["    끝났다 — 72장"])
+    worker.outcome = lambda *a, **k: "72장"
+    worker.handle(job)
+    assert agent.read_retries(tmp_path).get(agent.retry_key(job)) is None
+
+    worker = _auth_worker(tmp_path, client)
+    worker.handle(job)
+    assert client.puts[-1][1]["state"] == "queued"
+    assert "1/3" in client.puts[-1][1]["message"]

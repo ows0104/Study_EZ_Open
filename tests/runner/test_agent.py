@@ -393,3 +393,95 @@ def test_시각을_못_읽으면_잠깐만_기다린다():
     now = datetime(2026, 9, 2, 10, 17).astimezone()
     when = agent.resume_at("세션 한도에 걸렸다", now)
     assert 0 < (when - now).total_seconds() <= agent.BLIND_WAIT
+
+
+# ── 403 인증 거절도 기다림이다 (2026-09-17) ──────────────────────────
+# 09:33에 다섯 편이 1분 안에 전부 이것으로 죽었고 몇 분 뒤 저절로 풀렸다. 그때는
+# 이 갈래가 없어서 다섯 다 「실패」로 적혔다 — 아침까지 그대로 서 있었다.
+# 한도와 다른 점은 **풀리는 시각을 API가 안 알려 준다**는 것뿐이고, 그래서
+# `AUTH_MAX_RETRIES`에서 끊는다(조직 설정이 정말 꺼진 것이면 끝없이 돈다).
+
+AUTH_403 = ('{"is_error":true,"num_turns":1,"api_error_status":403,'
+            '"result":"Your organization has disabled Claude subscription access '
+            'for Claude Code · Use an Anthropic API key instead","type":"result"}')
+
+
+def test_403은_하위_로그에서_읽어_온다(tmp_path):
+    child = tmp_path / "pipeline.log"
+    child.write_text("멈췄다 — ①학습목표: claude 가 1 로 끝났다\n" + AUTH_403,
+                     encoding="utf-8")
+    lines = [f"    실패 — quizgen가 1로 끝났다 (로그: {child}) · 0.1분"]
+    assert agent.auth_reason(lines).startswith("인증이 거절됐다 (403)")
+
+
+def test_403이_아니면_아무_말도_안_한다(tmp_path):
+    child = tmp_path / "pipeline.log"
+    child.write_text("멈췄다 — ②카드: 스키마가 안 맞는다", encoding="utf-8")
+    assert agent.auth_reason([f"실패 — (로그: {child})"]) == ""
+
+
+def test_403이_아닌_실패에_403을_안_갖다_붙인다(tmp_path):
+    """하위 로그는 덧붙여 쓰인다. 어제 튕긴 403이 그 파일에 그대로 남아 있고,
+    앞에서 집으면 오늘의 진짜 실패를 인증 문제로 적는다 — 한도에서 이미 한 번
+    값을 한 함정이다(`260901_01`)."""
+    child = tmp_path / "pipeline.log"
+    child.write_text("\n".join([
+        AUTH_403,
+        "멈췄다 — ①학습목표: claude 가 1 로 끝났다",
+        "── ② 카드",
+        "멈췄다 — 명령 실패: quizgen.validate items.raw.json",
+    ]), encoding="utf-8")
+    lines = [f"    실패 — quizgen가 1로 끝났다 (로그: {child})"]
+    assert agent.auth_reason(lines) == ""
+    assert agent.child_stop_reason(lines).startswith("명령 실패: quizgen.validate")
+
+
+def test_한도가_403을_이긴다(tmp_path):
+    """둘이 같이 있으면 한도로 적는다. 한도는 풀리는 시각을 알려 주므로 그쪽이
+    사람에게 더 쓸모 있고, 되돌리기 셈도 안 먹는다."""
+    child = tmp_path / "pipeline.log"
+    child.write_text("\n".join([
+        "멈췄다 — ②카드: claude 가 1 로 끝났다",
+        '"api_error_status":403',
+        '"result":"session limit · resets 4:30am (Asia/Seoul)"',
+    ]), encoding="utf-8")
+    lines = [f"    실패 — quizgen가 1로 끝났다 (로그: {child})"]
+    assert agent.limit_reason(lines) == "세션 한도에 걸렸다 — resets 4:30am (Asia/Seoul)"
+
+
+def _job(run_id="260916_01", kind=deck.MAIN):
+    return agent.Job(id=1, subject="미생물학", run_id=run_id, kind=kind)
+
+
+def test_되돌린_횟수는_파일에_센다(tmp_path):
+    """러너는 재시작한다(예약 작업이 껐다 켠다). 메모리에 세면 그때마다 0이다."""
+    job = _job()
+    assert agent.bump_auth_retry(tmp_path, job) == 1
+    assert agent.bump_auth_retry(tmp_path, job) == 2
+    assert (tmp_path / agent.RETRY_FILE).is_file()
+    # 다른 프로세스가 읽어도 같은 값이 나온다.
+    assert agent.read_retries(tmp_path)[agent.retry_key(job)] == 2
+
+
+def test_예습과_복습은_따로_센다():
+    assert agent.retry_key(_job(kind=deck.MAIN)) != agent.retry_key(_job(kind=deck.PRE))
+
+
+def test_403이_아닌_결말이_나오면_셈을_버린다(tmp_path):
+    """**이어진 것만 센다.** 어제 한 번 튕기고 오늘 또 한 번은 「두 번 이어졌다」가
+    아니다 — 그렇게 세면 상한이 영영 안 풀린다."""
+    job = _job()
+    agent.bump_auth_retry(tmp_path, job)
+    agent.bump_auth_retry(tmp_path, job)
+    agent.clear_auth_retry(tmp_path, job)
+    assert agent.read_retries(tmp_path).get(agent.retry_key(job)) is None
+    assert agent.bump_auth_retry(tmp_path, job) == 1
+
+
+def test_셈을_못_써도_안_죽는다(tmp_path):
+    """이 값은 판정을 돕는 것이지 산출물이 아니다. 못 쓰면 다음 403이 1번째로
+    세어질 뿐이고, 편이 죽어서는 안 된다."""
+    bad = tmp_path / agent.RETRY_FILE
+    bad.write_text("{{{ 깨진 json", encoding="utf-8")
+    assert agent.read_retries(tmp_path) == {}
+    assert agent.bump_auth_retry(tmp_path, _job()) == 1

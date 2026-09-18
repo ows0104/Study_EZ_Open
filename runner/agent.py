@@ -164,6 +164,25 @@ RE_RESET_AT = re.compile(r"resets\s+(\d{1,2}):(\d{2})\s*(am|pm)?", re.IGNORECASE
 # 너무 길게 자면 이미 풀린 뒤에도 큐가 서 있고, 짧으면 한 번 더 부딪힐 뿐이다.
 BLIND_WAIT = 30 * 60
 
+# 인증이 거절된 자리. `claude -p`가 403으로 **첫 턴에** 끝나고 API가 준 말을 그대로
+# 싣는다(`"api_error_status":403` · "disabled Claude subscription access").
+RE_AUTH = re.compile(r'api_error_status"?\s*:\s*403'
+                     r'|disabled Claude subscription access', re.IGNORECASE)
+# 403을 몇 번까지 되돌려 세우나. **한도와 성격이 같지만 확신의 크기가 다르다** —
+# 한도는 API가 풀리는 시각까지 알려 주는데, 403은 몇 분 뒤 풀릴 블립인지 조직 설정이
+# 정말 꺼진 것인지 그 자리에서 구별할 길이 없다. 뒤엣것이면 끝없이 되돌기만 하므로
+# 셋에서 끊고 실패로 떨어뜨린다. 관리자 지시(2026-09-18).
+#
+# 2026-09-17 09:33에 다섯 편(복습 넷·예습 하나)이 1분 안에 전부 이것으로 죽었다.
+# 앞 단계는 다 끝나 있었고 — 한 편은 슬라이드 27장·필기 163개를 3초에 마친 뒤
+# `①학습목표` 첫 턴에서 476ms 만에 튕겼다 — 몇 분 뒤에는 같은 명령이 그냥 통과했다.
+# 그때는 이 갈래가 없어서 다섯 다 「실패」로 적혔고, 아침까지 그대로 서 있었다.
+AUTH_MAX_RETRIES = 3
+AUTH_WAIT = 30 * 60
+# 403이 몇 번 이어졌나. **프로세스 밖으로 나가야 한다** — 러너는 재시작하고
+# (예약 작업이 껐다 켠다), 세는 값이 메모리에 있으면 그때마다 0으로 돌아간다.
+RETRY_FILE = "agent.retries.json"
+
 # 사람이 멈춰서 끝난 실행. **어떤 프로세스도 이 값을 내지 않는다** — 종료 코드로
 # 「왜 끝났나」를 말해야 하는데, 실제 코드(윈도우에서 죽인 프로세스는 1을 낸다)를
 # 그대로 쓰면 진짜 실패와 구별이 안 된다.
@@ -486,20 +505,38 @@ class Agent:
             # 한도가 먼저다. 기다리면 풀리는 일을 다른 말로 적으면 사람이
             # 고칠 것이 없는 곳을 고치러 간다.
             hit_limit = limit_reason(lines)
-            why = (hit_limit or child_stop_reason(lines)
+            # **403도 화면에 제 이름으로 선다.** 이 줄에 넣기 전에는 상한을 넘겨
+            # 실패로 떨어져도 화면에 「①학습목표: claude 가 1 로 끝났다」만 떴다 —
+            # 그 말로는 로그를 열기 전까지 인증 문제라는 것을 알 길이 없다.
+            hit_auth = "" if hit_limit else auth_reason(lines)
+            why = (hit_limit or hit_auth or child_stop_reason(lines)
                    or blocked_reason(lines, job.run_id)
                    or summary(lines) or f"종료 코드 {code}")
-            # **실패가 아니라 기다림인 것이 둘 있다.** 둘 다 이 편의 잘못이
+            # **실패가 아니라 기다림인 것이 셋 있다.** 셋 다 이 편의 잘못이
             # 아니고 시각이 되면 풀린다. 실패로 적으면 사람이 다시 눌러야 하는데,
             # 걸리는 시각이 대개 사람이 자거나 자리를 비운 때다.
             #
             # 여기까지 온 것은 그대로 남는다 — 다시 집으면 만들어 둔 단계를
             # 건너뛰고 이어 간다.
             waiting = sync_wait(lines)
-            if hit_limit or waiting:
-                when = resume_at(hit_limit) if hit_limit else waiting
-                what = "세션 한도" if hit_limit else "동기화 대기"
-                note = hit_limit or "필기가 올라온 지 얼마 안 됐다 — 동기화를 기다린다"
+            tries = bump_auth_retry(self.runs_dir, job) if hit_auth else 0
+            if not hit_auth:
+                clear_auth_retry(self.runs_dir, job)
+            elif tries > AUTH_MAX_RETRIES:
+                # **셋을 넘겼으면 저절로 풀리는 것이 아니다.** 되돌리기를 그만두고
+                # 실패로 떨어뜨린다 — 사람이 볼 자리가 생겨야 한다.
+                why = f"{hit_auth} · {tries - 1}번 되돌렸는데 그대로다"
+                hit_auth = ""
+            if hit_limit or waiting or hit_auth:
+                if hit_limit:
+                    when, what, note = resume_at(hit_limit), "세션 한도", hit_limit
+                elif hit_auth:
+                    when = datetime.now().astimezone() + timedelta(seconds=AUTH_WAIT)
+                    what = "인증 거절"
+                    note = f"{hit_auth} · {tries}/{AUTH_MAX_RETRIES}번째"
+                else:
+                    when, what = waiting, "동기화 대기"
+                    note = "필기가 올라온 지 얼마 안 됐다 — 동기화를 기다린다"
                 self.say(f"    {what} — {when:%H:%M}에 저절로 이어 간다")
                 self.report(job, state="queued", resumeAt=when.isoformat(),
                             stage=f"{what} — {when:%H:%M}에 다시 시작",
@@ -508,6 +545,9 @@ class Agent:
             self.say(f"    실패 — {why}")
             self.report(job, state="failed", stage="", message=f"덱을 못 만들었다: {why} (로그: {log})")
             return
+        # 만들어졌으면 403 줄은 끊긴 것이다. 안 버리면 다음에 한 번만 튕겨도
+        # 옛 셈이 남아 상한에 걸린다.
+        clear_auth_retry(self.runs_dir, job)
         self.say(f"    {made} — 올리는 중")
         self.report(job, stage=f"{made} · 올리는 중")
 
@@ -901,6 +941,15 @@ def limit_reason(lines: list[str]) -> str:
         when = (found[-1] or "").strip(" ·\t")
         return f"세션 한도에 걸렸다 — {when}" if when else "세션 한도에 걸렸다"
 
+    return scan_logs(lines, said)
+
+
+def scan_logs(lines: list[str], said) -> str:
+    """러너가 본 줄들과 그 줄이 달고 온 하위 로그를 차례로 `said`에 물린다.
+
+    **이유가 하위 로그에만 있다**(`limit_reason` 주석 참조). 이 훑기를 갈라 둔 것은
+    403 검출기가 같은 길을 걷기 때문이다 — 둘이 따로 있으면 한쪽만 고쳐진다.
+    """
     for line in lines:
         if found := said(line):
             return found
@@ -915,6 +964,66 @@ def limit_reason(lines: list[str]) -> str:
         if found := said(text):
             return found
     return ""
+
+
+def auth_reason(lines: list[str]) -> str:
+    """인증이 거절됐나. 거절이면 사람이 읽을 한 줄, 아니면 빈 문자열.
+
+    `limit_reason`과 같은 갈래다 — **이 편의 잘못이 아니고 기다리면 풀린다.** 다른
+    것은 풀리는 시각을 API가 안 알려 준다는 것뿐이고, 그래서 `AUTH_WAIT` 뒤에 다시
+    세우되 `AUTH_MAX_RETRIES`에서 끊는다.
+
+    **마지막 `멈췄다 —` 뒤만 보는 이유도 같다.** 하위 로그는 덧붙여 쓰이므로
+    어제 한 번 튕긴 403이 그 파일에 그대로 남아 있고, 앞에서 집으면 오늘의 진짜
+    실패에 어제의 인증 문제를 갖다 붙인다.
+    """
+    def said(text: str) -> str:
+        cut = text.rfind(STOPPED)
+        if not RE_AUTH.search(text[cut:] if cut >= 0 else text):
+            return ""
+        return "인증이 거절됐다 (403) — Claude Code 로그인이 막혀 있다"
+
+    return scan_logs(lines, said)
+
+
+def retry_key(job: Job) -> str:
+    """되돌린 횟수를 세는 칸. **갈래까지 넣는다** — 같은 편의 예습과 복습은
+    서로 다른 일감이고, 한쪽이 세 번 튕겼다고 다른 쪽을 떨어뜨릴 이유가 없다."""
+    return f"{job.run_id}:{job.kind}"
+
+
+def read_retries(runs_dir: Path) -> dict:
+    try:
+        return json.loads((runs_dir / RETRY_FILE).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def write_retries(runs_dir: Path, counts: dict) -> None:
+    """**세다 실패해도 편을 죽이지 않는다.** 이 값은 판정을 돕는 것이지 산출물이
+    아니다 — 못 쓰면 다음 403이 1번째로 세어질 뿐이다."""
+    try:
+        runs_dir.mkdir(parents=True, exist_ok=True)
+        (runs_dir / RETRY_FILE).write_text(
+            json.dumps(counts, ensure_ascii=False, indent=1), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def bump_auth_retry(runs_dir: Path, job: Job) -> int:
+    counts = read_retries(runs_dir)
+    n = int(counts.get(retry_key(job), 0)) + 1
+    counts[retry_key(job)] = n
+    write_retries(runs_dir, counts)
+    return n
+
+
+def clear_auth_retry(runs_dir: Path, job: Job) -> None:
+    """403이 아닌 결말이 나오면 센 것을 버린다. **이어진 것만 세는 값이다** —
+    어제 한 번 튕기고 오늘 또 한 번 튕긴 것은 「두 번 이어졌다」가 아니다."""
+    counts = read_retries(runs_dir)
+    if counts.pop(retry_key(job), None) is not None:
+        write_retries(runs_dir, counts)
 
 
 def resume_at(reason: str, now: datetime | None = None) -> datetime:
