@@ -149,6 +149,24 @@ def test_내용이_같으면_덱을_다시_안_쓴다(tmp_path):
     assert again.stat().st_mtime_ns == stamp           # 안 건드렸다
 
 
+def test_크기가_같아도_판_폴더가_더_새것이면_다시_쓴다(tmp_path):
+    """**크기만으로는 안 갈린다.** 2026-09-18 에 예습 덱 둘을 카드 하나씩 고쳐 다시
+    구웠는데 둘 다 바이트 수가 이틀 전 것과 같았다. 크기만 보던 때는 새 덱이 강의
+    폴더로 안 올라갔고 **옛 덱이 그대로 나갔다** — 계약은 카드 파일을 읽으므로
+    깨끗해서 화면 어디에도 어긋남이 안 떴다.
+    """
+    run_dir = tmp_path / "260812_01"
+    work = attempt(run_dir / L.MAIN / "260827-2300", 10, started=1786100000, body=b"old deck")
+    first = deck.promote(run_dir)
+    assert first.read_bytes() == b"old deck"
+
+    src = work / "[260812_01] 강의.apkg"
+    src.write_bytes(b"new deck")                       # 같은 길이 · 다른 내용
+    assert src.stat().st_size == first.stat().st_size
+
+    assert deck.promote(run_dir).read_bytes() == b"new deck"
+
+
 def test_크기가_다르면_다시_쓴다(tmp_path):
     run_dir = tmp_path / "260812_01"
     work = attempt(run_dir / L.MAIN / "260827-2300", 10, started=1786100000, body=b"short")
