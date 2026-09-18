@@ -146,3 +146,77 @@ def test_차례는_실제로_있던_한_편의_것이다(tmp_path):
     _aged(_run(tmp_path, "250917_02", eta.PRE, 900, [], ["prep", "누출"]), 2_000)
     order = eta.samples(tmp_path, eta.PRE).order
     assert order in (["prep", "카드", eta.FINAL_STAGE], ["prep", "누출", eta.FINAL_STAGE])
+
+
+# ── 시도가 판 폴더로 내려간 뒤 ────────────────────────────────────────
+# 2026-09-15에 새 실행이 `runs/<편>/<갈래>/<판>/` 에 쓰기 시작했는데
+# (`runlayout.WRITES_ATTEMPT_DIRS`) 보고서를 훑는 글롭이 안 따라갔다. 2026-09-18에
+# 트리의 보고서 226개 중 **1개**만 읽히고 있었다.
+
+
+def _attempt(runs, run_id, kind, version, wall, steps, stages, log_at="attempt"):
+    """새 모양으로 한 판. `log_at="lecture"`면 로그가 강의 폴더에만 있다."""
+    if eta.FINAL_STAGE not in [name for name, _ in steps]:
+        steps = [*steps, (eta.FINAL_STAGE, 5)]
+    if eta.FINAL_STAGE not in stages:
+        stages = [*stages, eta.FINAL_STAGE]
+    folder = eta._KIND_DIRS[kind]
+    work = runs / run_id / folder / version
+    work.mkdir(parents=True, exist_ok=True)
+    (work / "run.report.json").write_text(json.dumps({
+        "wall_seconds": wall,
+        "steps": [{"step": name, "seconds": seconds} for name, seconds in steps],
+    }), encoding="utf-8")
+    log = (work if log_at == "attempt" else runs / run_id) / eta._LOGS[kind]
+    log.write_text("\n".join(f"── {stage}" for stage in stages), encoding="utf-8")
+    return work
+
+
+def test_판_폴더에_있는_보고서를_읽는다(tmp_path):
+    _fresh()
+    _attempt(tmp_path, "260917_05", eta.MAIN, "260917-0410", 1800,
+             [("② 카드", 600)], ["자료 준비 (prep)", "② 카드"])
+    data = eta.samples(tmp_path, eta.MAIN)
+    assert data.totals == [1800]
+    assert data.order == ["자료 준비 (prep)", "② 카드", eta.FINAL_STAGE]
+
+
+def test_갈래는_판_폴더_이름에서_온다(tmp_path):
+    """**한 편에 두 갈래가 다 있는 자리가 흔하다** — 작년 강의록으로 예습을 만들고
+    같은 자리에서 복습도 만든 편들. 옛 모양에서는 로그 시각으로 짐작해야 했고
+    그래서 뒤에 돈 갈래 쪽으로만 세어졌다. 판 폴더는 갈래를 적어 둔다.
+    """
+    _fresh()
+    _attempt(tmp_path, "250904_05", eta.MAIN, "260918-0100", 1700, [], ["② 카드"])
+    _attempt(tmp_path, "250904_05", eta.PRE, "260918-0543", 850, [], ["② 카드"])
+    assert eta.samples(tmp_path, eta.MAIN).totals == [1700]
+    _fresh()
+    assert eta.samples(tmp_path, eta.PRE).totals == [850]
+
+
+def test_수선_회차는_한_편의_시간이_아니다(tmp_path):
+    """`revisions/` 안의 보고서는 그 회차가 걸린 시간이다. 판 폴더 바로 밑만 센다."""
+    _fresh()
+    work = _attempt(tmp_path, "260917_05", eta.MAIN, "260917-0410", 1800, [], ["② 카드"])
+    fix = work / "revisions" / "v1_260918-1838"
+    fix.mkdir(parents=True)
+    (fix / "run.report.json").write_text(json.dumps({"wall_seconds": 400}), encoding="utf-8")
+    assert eta.samples(tmp_path, eta.MAIN).totals == [1800]
+
+
+def test_로그가_강의_폴더에만_있어도_차례를_읽는다(tmp_path):
+    """옮기는 중인 편이 그렇다 — 2026-09-18에 예습 보고서 64개 중 판 폴더에 로그가
+    같이 있는 것은 38개였다."""
+    _fresh()
+    _attempt(tmp_path, "250901_03", eta.PRE, "260916-1456", 960, [],
+             ["자료 준비 (prep)", "① 반드시 알아야 할 것"], log_at="lecture")
+    assert eta.samples(tmp_path, eta.PRE).order[:2] == ["자료 준비 (prep)", "① 반드시 알아야 할 것"]
+
+
+def test_두_모양이_같은_표본에_섞여도_센다(tmp_path):
+    """한 나무에 옛 모양과 새 모양이 같이 있다. `runlayout` 이 둘을 같이 읽는 이유와
+    같다 — **한 번에 안 갈아도 되게** 한다."""
+    _fresh()
+    _run(tmp_path, "260831_01", eta.MAIN, 1500, [], ["② 카드"])
+    _attempt(tmp_path, "260917_05", eta.MAIN, "260917-0410", 1900, [], ["② 카드"])
+    assert sorted(eta.samples(tmp_path, eta.MAIN).totals) == [1500, 1900]

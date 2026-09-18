@@ -5,23 +5,29 @@
 
 세 가지를 읽는다. 셋 다 **이미 있던 것**이고, 이 모듈은 새로 재지 않는다.
 
-    runs/*/run.report.json   `wall_seconds` — 한 편이 걸린 시간
+    <판>/run.report.json     `wall_seconds` — 한 편이 걸린 시간
                              `steps[]`      — 단계별 초. 이름이 로그의 `── ` 줄과
                                               겹치는 것만 쓴다
-    runs/*/pipeline.log      복습의 단계 차례 (`── ` 줄이 나온 순서)
-    runs/*/prequiz.log       예습의 단계 차례
+    <판>/pipeline.log        복습의 단계 차례 (`── ` 줄이 나온 순서)
+    <판>/prequiz.log         예습의 단계 차례
     runs/_stage_stats.jsonl  러너가 자기 눈으로 잰 단계별 초 (`observe`)
+
+`<판>` 이 두 모양이라 찾는 자리도 둘이다 — `_reports` 를 봐라.
 
 **표본이 없으면 아무 말도 안 한다.** 0을 돌려주고 화면은 그 자리를 비운다 —
 지어낸 숫자를 「예상 18분」이라고 적으면 그 뒤로 아무도 그 값을 안 믿는다.
 
-이 저장소에서 처음 셈해 본 값(2026-09-01, 보고서 60개):
+실측값(2026-09-18, 이 모듈이 읽은 표본 — 트리에 있는 보고서는 226개다):
 
-    복습 12편  중앙값 27.6분      예습 17편  중앙값 15.9분
+    복습 141편  중앙값 27.4분      예습 63편  중앙값 16.2분
 
-**복습 표본이 저것뿐인 것은 갈래를 못 가른 자리가 많아서다.** 한 자리에 두 로그가
-다 있는 편이 31편이고(`_run_kind`), 그중 마지막에 돈 것이 대개 예습이라 복습 쪽으로
-안 세어졌다. 표본이 늘면 값이 움직인다 — **이 숫자를 목표나 기준으로 쓰지 마라.**
+    4분위        23.0~33.7분                  14.1~19.9분
+
+**갈래는 이제 경로에서 온다**(`runs/<편>/prequiz/<판>/`). 한 자리에 두 로그가 다
+있어 갈래를 못 가르던 편이 31편이었고 그 때문에 복습 표본이 12편뿐이었는데, 새 모양은
+판 폴더가 갈래를 적어 두므로 그 문제가 없다. **그래도 이 숫자를 목표나 기준으로
+쓰지 마라** — 병렬로 두 편을 돌리면 편당 벽시계가 늘어난다(예습 단독 14편은 중앙값
+15.4분, 겹쳐 돈 49편은 16.8분이고 최대 51.0분이다).
 
 이어 돌린 회차(`--resume`)가 표본에 섞여 있어 `MIN_REAL_SECONDS`로 걸러 낸다 —
 안 거르면 0.0분짜리가 중앙값을 끌어내린다.
@@ -36,6 +42,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import runlayout
+
 MAIN = "main"
 PRE = "pre"
 
@@ -45,7 +53,8 @@ MIN_REAL_SECONDS = 180
 # 단계 차례를 볼 때 몇 편까지 거슬러 보나. **한 편에 걸지 않는다** — 아래 참조.
 ORDER_SAMPLE = 5
 
-# 표본을 다시 읽는 간격. 러너가 20초마다 부르므로 매번 60개 파일을 열 수는 없다.
+# 표본을 다시 읽는 간격. 러너가 20초마다 부르므로 매번 다 열 수는 없다 — 판 폴더까지
+# 읽게 된 뒤로는 보고서가 226개다(2026-09-18).
 CACHE_SECONDS = 600
 
 # `── 수선 1/2  (결함 4장)` 처럼 회차와 개수가 붙는 단계가 있다. 통계는 이름으로
@@ -54,6 +63,10 @@ _TRAILING = re.compile(r"(?:\s{2,}\(.*\)|\s+\d+/\d+)+$")
 _STAGE_LINE = re.compile(r"^── (.+)$")
 
 _LOGS = {MAIN: "pipeline.log", PRE: "prequiz.log"}
+
+# **갈래 이름이 둘이다.** 이 모듈과 러너는 `pre`, 판 폴더는 `prequiz` 다
+# (`runlayout.PREQUIZ`). 여기서만 맞춰 주고 밖으로는 안 내보낸다.
+_KIND_DIRS = {MAIN: runlayout.MAIN, PRE: runlayout.PREQUIZ}
 
 # 두 파이프라인의 마지막 단계. **끝까지 갔는지를 이걸로 안다** — 보고서에 성패를
 # 적는 칸이 없다. 도중에 죽은 편의 보고서에는 이 단계가 없다.
@@ -134,7 +147,9 @@ def _mtime(path: Path) -> float:
 
 
 def _run_kind(run_dir: Path) -> str:
-    """이 자리의 `run.report.json`이 어느 갈래의 것인가.
+    """이 자리의 `run.report.json`이 어느 갈래의 것인가. **옛 모양에만 쓴다.**
+
+    새 모양은 판 폴더 이름이 갈래를 적어 두므로 짐작할 것이 없다(`_reports`).
 
     **보고서는 갈래를 안 적는다.** 그런데 한 자리에 두 로그가 다 있는 편이 흔하다
     (작년 강의록으로 예습을 만들고, 같은 자리에서 복습도 만든 편들 — 60편 중
@@ -170,6 +185,46 @@ def _stage_order(log: Path) -> list[str]:
     return seen
 
 
+def _reports(runs_dir: Path, kind: str) -> list[tuple[Path, Path]]:
+    """그 갈래의 보고서 전부. `(보고서, 그 편의 폴더)`.
+
+    **두 모양을 같이 읽는다** — `runlayout` 이 그러는 이유가 여기서도 같다.
+
+        새  runs/<편>/prequiz/<판>/run.report.json   갈래가 경로에 적혀 있다
+        옛  runs/<편>/run.report.json                갈래를 로그 시각으로 짐작한다
+
+    2026-09-18에 **새 모양을 아예 안 읽고 있던 것**을 고쳤다. `*/run.report.json`
+    하나로 훑고 있었고 그것이 보고서 226개 중 **1개**를 잡았다 — 2026-09-15에 시도가
+    판 폴더로 내려가면서(`runlayout.WRITES_ATTEMPT_DIRS`) 보고서가 한 칸 깊어졌는데
+    글롭이 안 따라갔다. 그래서 `totals` 가 늘 비었고, 「편 전체 중앙값에서 지난
+    시간을 뺀다」는 물러설 자리(`estimate` ②)가 **한 번도 안 쓰였다.** 단계별 초는
+    `_stage_stats.jsonl` 에서 따로 와서 화면의 남은 시간은 그동안도 떴다 — 그래서
+    **아무것도 안 고장 난 것처럼 보였다.**
+
+    **`revisions/` 는 안 센다.** 수선 회차가 낸 보고서는 한 편이 걸린 시간이 아니다.
+    판 폴더 **바로 밑**만 보므로 저절로 빠진다.
+    """
+    folder = _KIND_DIRS[kind]
+    found = [(report, report.parent.parent.parent)
+             for report in runs_dir.glob(f"*/{folder}/*/run.report.json")
+             if runlayout.RE_VERSION.match(report.parent.name)]
+    found += [(report, report.parent)
+              for report in runs_dir.glob("*/run.report.json")
+              if _run_kind(report.parent) == kind]
+    return found
+
+
+def _log_of(report: Path, run_dir: Path, kind: str) -> Path:
+    """그 보고서를 쓴 실행의 로그. **판 폴더 → 강의 폴더** 순.
+
+    `runlayout.find` 가 시도 것을 찾는 순서와 같다. 새 모양으로 옮긴 편에도 로그가
+    강의 폴더에만 있는 것이 있다 — 2026-09-18에 예습 보고서 64개 중 판 폴더에 로그가
+    같이 있는 것은 38개였다.
+    """
+    here = report.parent / _LOGS[kind]
+    return here if here.is_file() else run_dir / _LOGS[kind]
+
+
 def samples(runs_dir: Path, kind: str) -> Samples:
     """한 갈래의 표본. 10분 동안 캐시한다."""
     cached = _cache.get(kind)
@@ -181,10 +236,7 @@ def samples(runs_dir: Path, kind: str) -> Samples:
     per_stage: dict[str, list[float]] = {}
     orders: list[tuple[float, list[str]]] = []
 
-    for report in runs_dir.glob("*/run.report.json"):
-        run_dir = report.parent
-        if _run_kind(run_dir) != kind:
-            continue
+    for report, run_dir in _reports(runs_dir, kind):
         try:
             data = json.loads(report.read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -207,7 +259,7 @@ def samples(runs_dir: Path, kind: str) -> Samples:
             stamp = report.stat().st_mtime
         except OSError:
             continue
-        found = _stage_order(run_dir / _LOGS[kind])
+        found = _stage_order(_log_of(report, run_dir, kind))
         if found:
             orders.append((stamp, found))
 
