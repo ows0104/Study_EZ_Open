@@ -72,7 +72,22 @@ def test_counts() -> dict[str, int]:
     """검사를 덩이별로 센다. **한 번만 수집하고 경로 앞머리로 가른다.**
 
     덩이별 폴더를 만든 이유가 이 숫자다 — 땡시 문항을 고치면 `pytest tests/spotter`
-    22개(7초)만 돌면 된다. 전부는 606개 27초다.
+    22개(7초)만 돌면 된다.
+
+    **수집이 깨졌을 때는 숫자를 내놓지 않는다.** pytest 를 `sys.executable` 로
+    부르므로 **이 스크립트를 무엇으로 돌렸는지가 숫자를 바꾼다.** 2026-09-18 에
+    `server/.venv` 로 돌렸다가 값을 했다 — 그 venv 에는 `quizgen` 의 의존이 없어서
+    pytest 가 이렇게 답했다.
+
+        95 tests collected, 53 errors in 2.28s
+
+    정규식은 `95` 만 집었고 표는 「검사 95」를 태연히 찍었다. 실제로는 748 이다.
+    **그 95 를 지도에 적을 뻔했다** — 세는 도구가 틀린 숫자를 내놓으면 지도 두 곳이
+    같이 틀린다. 그래서 오류 수를 같이 읽고, 있으면 숫자 대신 그것을 돌려준다.
+
+    이 저장소는 anaconda3 의 파이썬을 쓴다. `PATH` 의 것으로는 안 돈다.
+
+        PYTHONIOENCODING=utf-8 ~/anaconda3/python.exe scripts/map_numbers.py
     """
     out = subprocess.run([sys.executable, "-m", "pytest", "tests", "-q", "--collect-only"],
                          cwd=ROOT, capture_output=True, text=True, encoding="utf-8").stdout
@@ -84,6 +99,11 @@ def test_counts() -> dict[str, int]:
         if len(parts) > 2 and parts[0] == "tests":
             key = f"tests/{parts[1]}"
             got[key] = got.get(key, 0) + 1
+    broken = re.search(r"(\d+) errors? (?:during collection|in )", out)
+    if broken:
+        # **부분 수집은 숫자가 아니다.** 갈라 두지 않으면 「적게 세어진 것」이
+        # 「검사가 줄어든 것」과 화면에서 같아 보인다.
+        return {"__all__": -1, "__collect_errors__": int(broken.group(1))}
     m = re.search(r"(\d+) tests? collected", out)
     got["__all__"] = int(m.group(1)) if m else -1
     return got
@@ -144,9 +164,16 @@ def main() -> None:
         print(f"  {area:<18}{got[area]:>9,}{(f'{want:,}' if want else '—'):>9}{mark}")
 
     counts = {k: v for k, v in got.items() if k.startswith("tests/")}
-    print(f"\n  {'검사':<18}{got['__all__']:>9,}")
-    for area, n in sorted(counts.items()):
-        print(f"    {area:<16}{n:>9,}")
+    if got.get("__collect_errors__"):
+        # **숫자를 안 찍는다.** 찍으면 「검사가 이만큼이다」로 읽힌다.
+        print(f"\n  {'검사':<18}{'못 셈':>9}"
+              f"   ← 수집 오류 {got['__collect_errors__']}개. 무엇으로 돌렸는지를 봐라")
+        print(f"    {'돌린 것':<16}{sys.executable}")
+        print(f"    {'써야 하는 것':<16}anaconda3 의 python (PATH 것이 아니다)")
+    else:
+        print(f"\n  {'검사':<18}{got['__all__']:>9,}")
+        for area, n in sorted(counts.items()):
+            print(f"    {area:<16}{n:>9,}")
     print(f"  {'서버 경로':<17}{got['__routes__']:>9,}")
     print(f"  {'경계 넘는 import':<15}{got['__crossing__']:>9,}"
           + ("   ← **0 이어야 한다**" if got["__crossing__"] else ""))
@@ -159,7 +186,14 @@ def main() -> None:
         if area:
             print(f"    {area + '/':<16}{n:>9,}" + ("   ← 없다" if not n else ""))
     missing = [a for a, n in docs.items() if a and n == 0]
-    hollow = [a for a, t in DOCS.items() if t and counts.get(t, 0) == 0]
+    # **못 센 것을 「비었다」로 말하지 않는다.** 수집이 깨진 판에서는 모든 덩이가
+    # 0 으로 보이고, 그러면 화면이 「검사가 통째로 사라졌다」를 찍는다 —
+    # 2026-09-18 에 실제로 그렇게 찍혔다(위 `test_counts` 의 사정).
+    hollow = (
+        []
+        if got.get("__collect_errors__")
+        else [a for a, t in DOCS.items() if t and counts.get(t, 0) == 0]
+    )
 
     if got["__crossing__"]:
         print("\n경계가 늘었다. 지도가 아니라 구조를 본다 — docs/map.md §7.")

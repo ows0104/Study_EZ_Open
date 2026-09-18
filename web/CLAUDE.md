@@ -8,10 +8,10 @@ Vite + React + TypeScript. **이 폴더는 화면만 든다** — 파이프라�
     서버와의 계약                  ../server/CLAUDE.md
     권한 · 어디서나 미는 함정       ../CLAUDE.md
 
-    src/calendar/   2,355줄   달력
+    src/calendar/   2,360줄   달력
     src/admin/      1,161줄   관리 화면
-    src/lecture/      818줄   문제 푸는 화면
-    src/styles/     3,474줄   색·여백
+    src/lecture/    1,330줄   문제 푸는 화면
+    src/styles/     3,622줄   색·여백
     src/bundle/       724줄   덱 여럿을 한 .apkg 로 — 여기서 합친다
     src/types.ts              화면을 고칠 때 거의 항상 같이 본다
 

@@ -17,7 +17,7 @@
 > 거기서는 일감마다 경로를 복사할 수 있다. **문구는 둘이 같아야 한다.**
 > 숫자가 갈라졌는지는 `python scripts/map_numbers.py --check` 로 잰다.
 
-숫자는 2026-09-14 실측이다.
+숫자는 2026-09-18 실측이다.
 
 ## 1. 두 제품과 하나의 허브
 
@@ -35,11 +35,11 @@
     연결부. 파이프라인을 돌리고
     서버로 민다                          spotter-dist/        6,277
                                           배포 산출물
-  web/src/           9,986                **손으로 고치지 마라**
+  web/src/          10,737                **손으로 고치지 마라**
     프론트. studyez.kr
   ──────────────────────────────        ──────────────────────────────
   ┌──────────────────────────────────────────────────────────────────┐
-  │  server/app/      6,174   FastAPI · Cloud Run                    │
+  │  server/app/      6,875   FastAPI · Cloud Run                    │
   │    두 제품이 만나는 유일한 자리. 계정·인증·R2 서명이 여기 하나다      │
   └──────────────────────────────────────────────────────────────────┘
 
@@ -48,7 +48,7 @@
                           .gitignore 가 옛 이름을 보고 있었다 — 2026-09-14 에 뗐다)
   platform/      228   둘이 정말 같이 쓰는 것 — session.js 하나
   tests/       9,120   748개. 덩이별로 나뉘어 있다 — 하나만 돌리면 된다
-                         quizgen 405 · runner 306 · spotter 22 · bridge 4
+                         quizgen 405 · runner 317 · spotter 22 · bridge 4
                          `pytest tests` 19초  ·  `pytest tests/quizgen` 2초
   docs/                `archive/` 는 닫힌 기록이다
                        (줄수를 안 적는다 — 그 숫자를 적는 파일이 여기 있어서
@@ -64,18 +64,18 @@
 | 하려는 일 | 주면 되는 경로 | 검사 |
 |---|---|---|
 | **사이트 화면**을 고친다 | `web/src/` + `web/src/types.ts` | `cd web && npm run typecheck` |
-| ├ 캘린더 | `web/src/calendar/` (2,355줄) | |
+| ├ 캘린더 | `web/src/calendar/` (2,360줄) | |
 | ├ 관리 화면 | `web/src/admin/` (1,161줄) | |
-| ├ 문제 푸는 화면 | `web/src/lecture/` (818줄) | |
+| ├ 문제 푸는 화면 | `web/src/lecture/` (1,330줄) | |
 | ├ 복습 간격·되돌리기 | `server/app/srs.py` + `web/src/lecture/queue.ts` | `-m tests.test_srs` |
-| ├ 색·여백 | `web/src/styles/` (3,474줄) | |
+| ├ 색·여백 | `web/src/styles/` (3,622줄) | |
 | └ 덱 모아받기 | `web/src/bundle/` + `server/app/routes/bundles.py` | `-m tests.test_bundles` |
 | **퀴즈 생성**을 바꾼다 | `quizgen/` + `tests/quizgen/` | `pytest tests/quizgen` (405개·2초) |
 | ├ 카드를 어떻게 쓰는가 | `quizgen/prompts/` ← **여기가 대부분이다. §2-1** | `quizgen.judge` |
-| ├ 단계 순서·재시도 | `quizgen/run.py` (634줄) | |
+| ├ 단계 순서·재시도 | `quizgen/run.py` (662줄) | |
 | ├ 기계 검증 규칙 | `quizgen/validate.py` (647줄) | |
 | ├ 모델에게 풀려 보기 | `quizgen/reproduce.py` (755줄) | |
-| └ 덱 굽기·뒷면 배치 | `quizgen/build.py` (1,117줄) | |
+| └ 덱 굽기·뒷면 배치 | `quizgen/build.py` (1,119줄) | |
 | **땡시 문항 오류**를 고친다 | `spotter/data/` + `spotter/scripts/build_web.py` | `pytest tests/spotter` (22개·7초) |
 | **땡시 화면**을 고친다 | `spotter/web/` (기생충학) 또는 `spotter/web/anatomy/_template.html` (해부학) | |
 | **서버 API**를 고친다 | `server/app/routes/<해당>.py` + `server/app/models.py` | `cd server && .venv/Scripts/python -m tests` |
@@ -85,7 +85,7 @@
 
 ### 땡시 문항을 고칠 때 — 손으로 고치는 파일은 여섯뿐이다
 
-`spotter/data/` 에 24개가 있는데 **대부분은 만들어지는 것**이다. 고칠 것은 이것들이다.
+`spotter/data/` 에 29개가 있는데 **대부분은 만들어지는 것**이다. 고칠 것은 이것들이다.
 
 ```
   question_corrections.json   족보 정답표가 틀렸을 때
@@ -115,13 +115,13 @@ python spotter/scripts/upload_web.py       # → R2
 ### ① 조립되는 모듈 — `prompting.py` 가 합쳐서 한 장으로 만든다
 
     CORE (항상, 넷)              PROFILE (하나)          ADAPTERS (자료에 따라)      DOMAIN (하나)
-    core/quality.md    208줄     profiles/               adapters/                  domains/
+    core/quality.md    242줄     profiles/               adapters/                  domains/
       무엇이 좋은 카드인가         exam_review.md   13      lecture_pdf.md    16        medical_ko.md  95
     core/evidence.md    21         시험 복습용            annotations.md     8           한국어 의학
       근거는 자료에 있어야        prelecture.md    14      past_exam.md      21        generic.md      4
     core/media.md       35         수업 전 예습           medical_past_exam 13           분야 없음
       표·그림을 어떻게 읽나
-    core/language.md    13
+    core/language.md    20
       질문 문체
 
 순서가 저 순서다(`prompting.module_names`). **한 파일만 고치면 모든 편에 실린다** —
