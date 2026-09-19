@@ -26,7 +26,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 # 복습의 하루가 바뀌는 시각. **안키 기본값이 새벽 4시이고 이유가 우리에게도 같다** —
 # 자정을 넘겨 공부하는 사람의 「어제 몫」이 책상에 앉은 채로 사라지면 안 된다.
@@ -96,6 +96,15 @@ def day_start(when: datetime) -> datetime:
         hour=DAY_START_HOUR, minute=0, second=0, microsecond=0
     )
     return start - KST_OFFSET
+
+
+def day_key(when: datetime) -> date:
+    """`when` 이 속한 복습 하루를 **한국 시각의 날짜**로. 표의 열쇠로 쓴다.
+
+    `day_start` 의 값을 그대로 `.date()` 하면 안 된다 — 그것은 UTC 시각이라
+    새벽 4시(KST)는 전날 19시(UTC)이고, 날짜가 하루 어긋난다.
+    """
+    return (day_start(when) + KST_OFFSET).date()
 
 
 def _due_in_days(now: datetime, days: int) -> datetime:

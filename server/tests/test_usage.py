@@ -14,7 +14,9 @@
     ② 손댄 편이 **합쳐서** 세어지는가 — 푼 편과 받기만 한 편이 둘 다 있다
     ③ 0이 갈라지는가 — 안 쓴 사람과 승인이 안 나 못 쓰는 사람
     ④ 자세한 내역이 강의마다 서고 최근 것이 먼저 오는가
-    ⑤ 예습 링크와 프롬프트가 **사람 것만** 세어지는가 — 기본 링크는 사람별이 아니다
+    ⑤ 예습 링크와 프롬프트가 **사람 것만** 세어지는가
+    ⑥ 접속이 날마다 한 줄로 남고 **30분 안에 다시 부르면 안 늘어나는가**
+    ⑦ 「언제부터 남았는가」가 같이 오는가 — 없으면 화면이 0을 「안 했다」로 그린다
 """
 
 from __future__ import annotations
@@ -48,9 +50,11 @@ from app.models import (  # noqa: E402
     MainAttempt,
     PreReviewLog,
     Preview,
+    PreviewOpen,
     Profile,
     QuizAttempt,
     UserPreview,
+    UserVisit,
 )
 
 ADMIN = {"Authorization": "Bearer local-test-token"}
@@ -161,6 +165,11 @@ def seed() -> None:
                            updated_at=early))
         db.add(UserPreview(user_id=BUSY, subject=SUBJECT, run_id=GRABBED,
                            provider="chatgpt", conversation_url="", updated_at=early))
+        # 우리 화면에서 누른 링크. 기본과 개인이 갈려야 한다.
+        db.add(PreviewOpen(user_id=BUSY, subject=SUBJECT, run_id=SOLVED,
+                           kind="share", count=3, first_at=early, last_at=late))
+        db.add(PreviewOpen(user_id=BUSY, subject=SUBJECT, run_id=SOLVED,
+                           kind="mine", count=1, first_at=early, last_at=early))
         # 기본 링크. 강의당 하나이고 **사람별 수에 섞이면 안 된다.**
         db.add(Preview(subject=SUBJECT, run_id=SOLVED, provider="chatgpt",
                        share_url="https://chatgpt.com/share/xyz", conversation_url=""))
@@ -223,7 +232,48 @@ def main() -> None:
     check("받아 간 편 1", busy.get("grabLectures") == 1, busy.get("grabLectures"))
     check("합치면 2편", busy.get("lectures") == 2, busy.get("lectures"))
 
-    print("\n[7] 없는 계정은 404")
+    print("\n[7] 접속은 날마다 한 줄이고 30분 안에는 안 는다")
+    # `/api/me` 를 세 번 부른다. **한 번으로 세어져야 한다** — 화면이 몇 번
+    # 부르는지에 따라 값이 흔들리면 「몇 번 들어왔나」가 화면 고치기에 매인다.
+    for _ in range(3):
+        client.get("/api/me", headers=ADMIN)
+    with SessionLocal() as db:
+        rows = db.query(UserVisit).all()
+        check("날 하나에 줄 하나", len(rows) == 1, [(r.user_id, str(r.day)) for r in rows])
+        check("세 번 불러도 한 번", rows[0].count == 1 if rows else False, rows and rows[0].count)
+        # 30분 넘게 비운 것으로 만들어 두고 다시 부른다.
+        rows[0].last_at = datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=2)
+        db.commit()
+    client.get("/api/me", headers=ADMIN)
+    with SessionLocal() as db:
+        again = db.query(UserVisit).all()
+        check("오래 비었으면 다시 센다", again[0].count == 2, again[0].count)
+
+    fresh = client.get("/api/admin/usage", headers=ADMIN).json()
+    me = next(row for row in fresh["users"] if row["id"] == LOCAL_TEST_USER_ID)
+    check("접속한 날 1", me["visits"]["days"] == 1, me["visits"])
+    check("다시 온 것까지 2", me["visits"]["times"] == 2, me["visits"])
+    check("접속도 마지막 활동이다", bool(me["lastAt"]), me["lastAt"])
+    # **0 이 「안 들어왔다」인지 「기록이 없다」인지를 가르는 값이다.**
+    check("언제부터 남았는지 온다", bool(fresh["visitsSince"]), fresh["visitsSince"])
+    check("링크 열기도 마찬가지", bool(fresh["opensSince"]), fresh["opensSince"])
+
+    print("\n[8] 링크 열기는 기본과 개인이 갈린다")
+    busy2 = next(row for row in fresh["users"] if row["id"] == BUSY)
+    check("기본 3번", busy2["opens"]["share"] == 3, busy2["opens"])
+    check("개인 1번", busy2["opens"]["mine"] == 1, busy2["opens"])
+    detail2 = client.get(f"/api/admin/usage/{BUSY}", headers=ADMIN).json()
+    first2 = detail2["lectures"][0]
+    check("편마다도 갈린다", first2["opens"] == {"share": 3, "mine": 1}, first2["opens"])
+
+    print("\n[9] 최근 7일은 **카드 수**다 — 같은 카드를 다시 봐도 한 장")
+    # 씨앗은 **카드 셋을 다섯 번** 찍었다(c001·c002·c003 을 돌려 가며). 둘이
+    # 달라야 「같은 카드를 다시 봐도 한 장」이 지켜진 것이다 — 같으면 이 검사는
+    # 아무것도 안 막는다.
+    check("카드 3장", busy2["recentCards"] == 3, busy2["recentCards"])
+    check("찍기는 5번", busy2["recentGrades"] == 5, busy2["recentGrades"])
+
+    print("\n[10] 없는 계정은 404")
     check("404", client.get("/api/admin/usage/nobody", headers=ADMIN).status_code == 404)
 
     print(f"\n{'실패 ' + str(len(failures)) if failures else '모두 통과'}")

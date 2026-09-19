@@ -1230,6 +1230,14 @@ button.resource.is-download:hover:not(:disabled)::after {
   background: var(--surface-2);
 }
 
+/* 표 밑에 붙는 한 줄. **언제부터 남았는지**를 적는 자리라 표보다 먼저 온다 —
+ * 그것을 모르고 0을 보면 「안 했다」로 읽힌다. */
+.admin-note {
+  margin: 0 0 10px;
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
 /* 숫자 밑의 한 줄(몇 편·몇 갈래). 숫자와 같은 칸에 있어야 「36장을 3편에서」로
  * 읽힌다 — 칸을 따로 내면 표가 두 배로 넓어지고 눈이 가로질러야 한다. */
 .admin-usage .num small {

@@ -17,6 +17,7 @@ from app.auth import CurrentUser, require_approved_user
 from app.config import get_settings
 from app.database import get_db
 from app.models import (
+    PREVIEW_OPEN_KINDS,
     Asset,
     Lecture,
     Preview,
@@ -26,7 +27,12 @@ from app.models import (
 )
 from app.preview_links import conversation_url as valid_conversation_url
 from app.preview_links import provider as valid_provider
-from app.routes.common import lecture_or_404, record_grabs, storage_or_503
+from app.routes.common import (
+    lecture_or_404,
+    record_grabs,
+    record_preview_open,
+    storage_or_503,
+)
 from app.routes import prequiz
 from app.routes.prequiz import due_counts, missed_items
 
@@ -229,6 +235,36 @@ def _record_grab(db: Session, user_id: str, asset: Asset) -> None:
     (`routes/bundles.py`). 적는 일 자체는 둘이 같은 함수를 쓴다.
     """
     record_grabs(db, user_id, [(asset.subject, asset.run_id, asset.kind)])
+
+
+class PreviewOpenIn(BaseModel):
+    #: share = 반이 같이 읽는 기본 링크 · mine = 내 대화. `PREVIEW_OPEN_KINDS` 와 같다.
+    kind: str
+
+
+@router.post("/lectures/{subject}/{run_id}/preview-open", status_code=204)
+def post_preview_open(
+    subject: str,
+    run_id: str,
+    payload: PreviewOpenIn,
+    user: CurrentUser = Depends(require_approved_user),
+    db: Session = Depends(get_db),
+) -> None:
+    """예습 링크를 눌렀다. **화면이 알려 주지 않으면 서버는 모른다.**
+
+    `share_url` 도 `conversationUrl` 도 AI 서비스의 주소라, 누르면 그 길로 가고
+    여기를 안 지난다. 그래서 누르는 자리가 한 줄 보낸다 — 2026-09-19 관리자
+    질문(「기본링크도 얼마나 클릭했는지 알 수는 없나?」)의 답이 이것이다.
+
+    **본문이 없다(204).** 화면은 이 응답을 안 기다리고 링크를 연다. 여기서 무엇이
+    잘못되든 링크는 열려야 한다.
+
+    없는 갈래는 조용히 버린다(`record_preview_open`). 화면이 오타를 보내도 링크를
+    막지 않기 위해서다 — 대신 그 줄은 아무 데도 안 남는다.
+    """
+    lecture = lecture_or_404(db, subject, run_id)
+    if payload.kind in PREVIEW_OPEN_KINDS:
+        record_preview_open(db, user.id, lecture.subject, lecture.run_id, payload.kind)
 
 
 class MyPreviewIn(BaseModel):

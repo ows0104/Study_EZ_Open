@@ -4,7 +4,7 @@
 
     무엇을 고치면 어느 파일인가    ../docs/map.md §2
     검사                          .venv/Scripts/python.exe -m tests    (pytest 가 아니다)
-    경로 계약                      tests/test_routes_golden.py          68줄
+    경로 계약                      tests/test_routes_golden.py          69줄
     배포                          deploy.ps1 을 손으로
     권한 · 어디서나 미는 함정       ../CLAUDE.md
 
@@ -29,7 +29,7 @@ cd server
 
 ## 경로를 바꾸면 넷이 같이 본다
 
-`web/` 21개 · `runner/` 9개 · `spotter/scripts/` 10개 · `bridge/` 2개가 이 서버를
+`web/` 22개 · `runner/` 9개 · `spotter/scripts/` 10개 · `bridge/` 2개가 이 서버를
 부른다. **가로로는 아무도 서로를 안 부르므로** 경로 목록이 그대로면 한쪽만 고쳐도 된다.
 
 ```bash
@@ -54,6 +54,23 @@ SM-2 를 그대로 옮긴 순수 함수 모듈이다** — DB 도 시계도 안 
 
 **칼럼을 늘렸으므로 배포 전에 `init-db` 를 지나야 한다**(`ADDED_COLUMNS`). 안 지나면
 운영 DB 에 `state` 가 없어 웹 풀이가 통째로 500 이다.
+
+## 표를 새로 세우면 배포 전에 `init-db` 를 지난다
+
+`create_all` 은 **없는 표만** 세운다. 그래서 새 표는 `init-db` 한 번으로 서지만,
+그 전에 코드가 먼저 올라가면 그 표를 읽는 경로가 500 이다. 순서가 있다 —
+**`init-db` 먼저, 배포는 그다음.**
+
+2026-09-19 에 표 둘이 그렇게 섰다(관리자 지시 — 「접속 기록 표도 만들어줘」).
+
+    user_visit     날마다 한 줄. `GET /api/me` 가 적는다(`routes/common.record_visit`)
+    preview_open   예습 링크를 우리 화면에서 눌렀다. 기본·개인을 갈라 센다
+
+**둘 다 선 날부터만 찬다.** 그 전은 아무 데도 안 남아 있어 0으로 보이므로,
+이용현황이 `visitsSince`·`opensSince` 를 같이 내보내 화면이 그 0을 가른다.
+
+적는 쪽은 **실패해도 응답을 막지 않는다.** 접속 한 줄 때문에 로그인이 막히거나
+예습 링크가 안 열리는 것은 바꿔치기가 나쁜 쪽이다.
 
 ## `.env` 가 프로덕션이다
 

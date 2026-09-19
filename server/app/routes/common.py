@@ -1,10 +1,25 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import GRABBABLE_KINDS, Asset, AssetGrab, Lecture, PreItem, Preview, QuizAttempt
+from app import srs
+from app.models import (
+    GRABBABLE_KINDS,
+    PREVIEW_OPEN_KINDS,
+    VISIT_GAP_MINUTES,
+    Asset,
+    AssetGrab,
+    Lecture,
+    PreItem,
+    Preview,
+    PreviewOpen,
+    QuizAttempt,
+    UserVisit,
+)
 from app.naming import nfc
 from app.storage import ObjectStorage, StorageNotConfigured
 
@@ -220,3 +235,53 @@ def record_grabs(db: Session, user_id: str, keys: list[tuple[str, str, str]]) ->
     except Exception:
         db.rollback()
         return 0
+
+
+def record_visit(db: Session, user_id: str, now: datetime | None = None) -> None:
+    """화면을 열었다고 적는다. **날마다 한 줄이고 30분마다 한 번 센다.**
+
+    부르는 자리는 `GET /api/me` 하나다 — 로그인 직후 화면이 무엇을 그릴지 정하려고
+    반드시 지나는 길이라, 거기 한 줄이면 「들어왔다」가 빠짐없이 남는다.
+
+    **여기서 실패해도 화면은 떠야 한다.** `record_grabs` 와 같은 이유이고 더 세다 —
+    이 표가 아직 안 선 서버(배포는 됐고 `init-db` 는 아직)에서도 `/api/me` 는 돌아야
+    한다. 그래서 예외를 삼키고 롤백만 한다.
+    """
+    now = now or datetime.now(UTC)
+    try:
+        day = srs.day_key(now)
+        visit = db.get(UserVisit, (user_id, day))
+        if visit is None:
+            db.add(UserVisit(user_id=user_id, day=day, count=1, first_at=now, last_at=now))
+        else:
+            last = visit.last_at
+            if last and not last.tzinfo:
+                last = last.replace(tzinfo=UTC)
+            # **오래 비었을 때만 는다.** 화면이 `/api/me` 를 몇 번 부르는지에 따라
+            # 값이 흔들리면 「몇 번 들어왔나」가 화면 고치기에 매인다.
+            if last is None or now - last >= timedelta(minutes=VISIT_GAP_MINUTES):
+                visit.count = (visit.count or 0) + 1
+            visit.last_at = now
+        db.commit()
+    except Exception:
+        db.rollback()
+
+
+def record_preview_open(db: Session, user_id: str, subject: str, run_id: str, kind: str) -> None:
+    """예습 링크를 눌렀다고 적는다.
+
+    **링크가 아니라 누른 자리가 남긴다.** 주소는 AI 서비스의 것이라 서버를 안
+    지난다(`PreviewOpen` 의 설명이 그 자리다). 받아 가기와 마찬가지로 여기서
+    실패해도 링크는 열려야 하므로 예외를 삼킨다.
+    """
+    if kind not in PREVIEW_OPEN_KINDS:
+        return
+    try:
+        row = db.get(PreviewOpen, (user_id, subject, run_id, kind))
+        if row is None:
+            row = PreviewOpen(user_id=user_id, subject=subject, run_id=run_id, kind=kind)
+            db.add(row)
+        row.count = (row.count or 0) + 1
+        db.commit()
+    except Exception:
+        db.rollback()

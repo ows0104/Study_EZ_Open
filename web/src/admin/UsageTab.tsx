@@ -48,7 +48,7 @@ export function UsageTab() {
   if (!board) return <p className="notice">불러오는 중…</p>;
 
   const now = new Date(board.now);
-  const active = board.users.filter((row) => row.recentGrades > 0).length;
+  const active = board.users.filter((row) => row.recentCards > 0).length;
   const never = board.users.filter((row) => !row.lastAt).length;
 
   return (
@@ -60,22 +60,32 @@ export function UsageTab() {
         {never ? <> · 한 번도 안 연 사람 {never}명</> : null}
       </p>
 
+      {/* **접속과 링크 열기는 표가 선 날부터만 찬다.** 이 줄이 없으면 그 전의 0이
+          「안 들어왔다」로 읽힌다 — 루트 CLAUDE.md 의 함정 ③ 이 그것이다. */}
+      <p className="admin-note">
+        접속은 {stamp(board.visitsSince)}부터 · 예습 링크 열기는 {stamp(board.opensSince)}부터
+        남습니다. 그 전에 한 것은 어디에도 안 남아 있어 0으로 보입니다.
+      </p>
+
       <table className="admin-table">
         <thead>
           <tr>
             <th>이메일</th>
             <th>마지막</th>
-            {/* **접속 횟수가 아니다.** 저장소에 접속을 남기는 표가 없다 — 이 수는
-                Again·Hard·Good·Easy 를 누른 횟수다. 머리글에도 그렇게 적는다. */}
-            <th title={`최근 ${board.recentDays}일 동안 Again·Hard·Good·Easy 를 누른 횟수. 접속 횟수가 아니다`}>
-              최근 {board.recentDays}일 찍기
+            <th title={`최근 ${board.recentDays}일 중 들어온 날 · 밑은 누적으로 들어온 횟수`}>
+              접속
+            </th>
+            {/* **카드 수다.** 「찍기」로 적었더니 접속 횟수로 읽혔다(2026-09-19).
+                같은 카드를 세 번 봐도 한 장이라, 「이 주에 무엇을 봤나」에 답한다. */}
+            <th title={`최근 ${board.recentDays}일 동안 푼 카드 수. 같은 카드를 여러 번 봐도 한 장이다`}>
+              최근 {board.recentDays}일 카드
             </th>
             <th title="웹에서 푼 카드 수(예습 · 복습). 안키에서 푼 것은 서버에 안 남는다">
               웹 풀이
             </th>
             <th title="받기 버튼을 누른 자료. 받아 간 것이지 푼 것이 아니다">덱 받기</th>
-            <th title="저장해 둔 개인 예습 대화. 기본 링크는 서버를 안 지나므로 누가 열었는지 알 수 없다">
-              개인 대화
+            <th title="우리 화면에서 예습 링크를 누른 횟수(기본 · 개인). 링크를 복사해 받은 사람이 연 것은 안 들어온다">
+              예습 링크
             </th>
             <th title="웹으로 풀었거나 파일을 받아 간 편">편</th>
           </tr>
@@ -126,7 +136,16 @@ function UserRows({
           {row.hasAccess ? null : <span className="tag">승인 대기</span>}
         </td>
         <td>{since(row.lastAt, now)}</td>
-        <td className="num">{row.recentGrades ? `${row.recentGrades}회` : "—"}</td>
+        <td className="num">
+          {row.visits.days ? (
+            <>
+              {row.visits.recentDays}일<small>누적 {row.visits.times}번</small>
+            </>
+          ) : (
+            "—"
+          )}
+        </td>
+        <td className="num">{row.recentCards ? `${row.recentCards}장` : "—"}</td>
         {/* **웹에서 푸는 사람과 받아 가는 사람은 다른 사람이다.** 한 칸에 합쳐
             적으면 그 둘이 안 갈린다 — 편 수를 각자 밑에 붙여 둔다. */}
         <td className="num">
@@ -149,15 +168,30 @@ function UserRows({
           )}
         </td>
         <td className="num">
-          {row.previews || "—"}
-          {/* 프롬프트는 대화와 같은 자리에 산다 — 개인 대화를 열 때 쓰는 문구다. */}
-          {row.prompt.custom ? <small>프롬프트 고침</small> : null}
+          {/* **기본과 개인을 나란히 둔다.** 반이 같이 읽는 대화를 쓰는 사람과 자기
+              대화를 쓰는 사람이 갈리는지가 이 둘을 붙여 놓아야 보인다. */}
+          {row.opens.share || row.opens.mine ? (
+            <>
+              기본 {row.opens.share} · 개인 {row.opens.mine}
+            </>
+          ) : (
+            "—"
+          )}
+          {/* 아무것도 없는 사람 밑에 「저장 0」을 세우지 않는다. 늘 서 있는 0은
+              줄을 채우기만 하고 아무 말도 안 한다. */}
+          {row.previews || row.prompt.custom ? (
+            <small>
+              {row.previews ? `저장 ${row.previews}` : ""}
+              {row.previews && row.prompt.custom ? " · " : ""}
+              {row.prompt.custom ? "프롬프트 고침" : ""}
+            </small>
+          ) : null}
         </td>
         <td className="num">{row.lectures || "—"}</td>
       </tr>
       {isOpen ? (
         <tr className="admin-usage-detail">
-          <td colSpan={7}>
+          <td colSpan={8}>
             {detailError ? <p className="notice is-error">{detailError}</p> : null}
             {!detail && !detailError ? <p className="notice">불러오는 중…</p> : null}
             {detail ? <LectureList detail={detail} now={now} /> : null}
@@ -200,6 +234,7 @@ function LectureTable({ detail, now }: { detail: UsageDetail; now: Date }) {
           <th title="웹에서 푼 카드 · 괄호는 본인이 맞다고 찍은 수(서버 판정이 아니다)">예습</th>
           <th>복습</th>
           <th title="받기 버튼을 누른 자료">받기</th>
+          <th title="우리 화면에서 이 편의 예습 링크를 누른 횟수">링크</th>
           <th>마지막</th>
         </tr>
       </thead>
@@ -219,6 +254,11 @@ function LectureTable({ detail, now }: { detail: UsageDetail; now: Date }) {
             <td className="num">{cards(row.pre)}</td>
             <td className="num">{cards(row.main)}</td>
             <td>{row.grabs.length ? row.grabs.map(grabLabel).join(", ") : "—"}</td>
+            <td className="num">
+              {row.opens.share || row.opens.mine
+                ? `기본 ${row.opens.share} · 개인 ${row.opens.mine}`
+                : "—"}
+            </td>
             <td>{since(row.lastAt, now)}</td>
           </tr>
         ))}
@@ -242,6 +282,15 @@ const GRAB_LABELS: Record<string, string> = {
 
 function grabLabel(kind: string): string {
   return GRAB_LABELS[kind] ?? kind;
+}
+
+/** 「언제부터」 한 줄. 아직 한 줄도 안 쌓였으면 그렇게 적는다 — 날짜 자리를
+ *  비워 두면 문장이 「부터 남습니다」가 된다. */
+function stamp(iso: string | null): string {
+  if (!iso) return "(아직 없음)";
+  const when = new Date(iso);
+  if (Number.isNaN(when.getTime())) return "(아직 없음)";
+  return when.toLocaleDateString("ko-KR", { month: "long", day: "numeric" });
 }
 
 /**

@@ -16,14 +16,15 @@ Study_EZ 몫만 센다(땡시는 여기 없다 — 같은 날 범위를 그렇�
 설명이 그 자리다). `count` 는 서명 URL 이 TTL 동안 재사용되므로 내려받은 횟수가
 아니라 **버튼을 누른 횟수**에 가깝다 — 이름도 `clicks` 로 낸다.
 
-**접속 기록은 이 저장소에 없다.** 로그인도 화면 열기도 남기는 표가 없어서
-「몇 번 들어왔나」는 셀 수 없다. 대신 여기서 세는 것은 **한 일**이다 — 카드를
-찍은 횟수·푼 카드 수·받아 간 파일. 접속 수를 만들려면 표를 하나 새로 세워야 한다.
+**접속과 링크 열기는 2026-09-19 부터만 있다.** 그날 관리자 지시로 표 둘이
+섰고(`user_visit`·`preview_open`), 그 전에 들어온 것은 아무 데도 안 남아 있다.
+**그래서 0 을 「안 들어왔다」로 읽으면 안 된다** — 화면이 가를 수 있게 두 표의
+가장 오래된 줄을 `visitsSince`·`opensSince` 로 같이 내보낸다.
 
-**기본 링크는 사람별로 안 남는다.** 강의당 하나이고(`preview.share_url`) 반 전체가
-같은 것을 읽으며, 누르면 그 길로 AI 쪽으로 간다 — 서버를 안 지나므로 누가 열었는지
-알 자리가 없다. 사람별로 아는 것은 **개인 대화를 저장했나**(`user_preview`)와
-**프롬프트를 고쳐 썼나**(`profile.preview_prompt`) 둘뿐이다.
+**기본 링크를 누가 열었는지는 링크로는 알 수 없다.** 강의당 하나이고
+(`preview.share_url`) 누르면 그 길로 AI 쪽으로 가서 서버를 안 지난다. 세는 것은
+**우리 화면에서 누른 것**뿐이라(`PreviewOpen`), 링크를 복사해 받은 사람이 연 것은
+안 들어온다.
 
 `correct` 는 **본인이 찍은 것**이다(`_Attempt`). 자유회상 카드라 서버가 판정한
 값이 아니므로 `selfCorrect` 로 낸다. 정답률로 그리면 안 되는 값이다.
@@ -49,15 +50,18 @@ from app.auth import CurrentUser, require_admin
 from app.database import get_db
 from app.models import (
     APP_STUDYEZ,
+    PREVIEW_OPEN_KINDS,
     AppGrant,
     AssetGrab,
     Lecture,
     MainAttempt,
     MainReviewLog,
     PreReviewLog,
+    PreviewOpen,
     Profile,
     QuizAttempt,
     UserPreview,
+    UserVisit,
 )
 
 router = APIRouter()
@@ -156,6 +160,44 @@ def usage(
         ).group_by(AssetGrab.user_id)
     ).all()
     grabs = {row[0]: (int(row[1]), int(row[2] or 0), row[3]) for row in grab_rows}
+    # **찍은 횟수가 아니라 카드 수다**(2026-09-19 관리자 지시 — 「차라리 카드 수」).
+    # 같은 카드를 세 번 봐도 한 장이라, 「이 사람이 이 주에 무엇을 봤나」에 답한다.
+    recent_cards = _lecture_counts(
+        db,
+        select(PreReviewLog.user_id, PreReviewLog.subject, PreReviewLog.run_id, PreReviewLog.item_id)
+        .where(PreReviewLog.reviewed_at >= since),
+        select(MainReviewLog.user_id, MainReviewLog.subject, MainReviewLog.run_id, MainReviewLog.item_id)
+        .where(MainReviewLog.reviewed_at >= since),
+    )
+    visits = db.execute(
+        select(
+            UserVisit.user_id,
+            func.count(),  # 들어온 날 수
+            func.sum(UserVisit.count),  # 다시 온 횟수까지
+            func.max(UserVisit.last_at),
+        ).group_by(UserVisit.user_id)
+    ).all()
+    visits = {uid: (int(days), int(times or 0), last) for uid, days, times, last in visits}
+    recent_days = {
+        uid: int(days)
+        for uid, days in db.execute(
+            select(UserVisit.user_id, func.count())
+            .where(UserVisit.day >= srs.day_key(since))
+            .group_by(UserVisit.user_id)
+        ).all()
+    }
+    opens: dict[str, dict[str, int]] = {}
+    open_at: dict[str, datetime] = {}
+    for uid, kind, times, last in db.execute(
+        select(
+            PreviewOpen.user_id,
+            PreviewOpen.kind,
+            func.sum(PreviewOpen.count),
+            func.max(PreviewOpen.last_at),
+        ).group_by(PreviewOpen.user_id, PreviewOpen.kind)
+    ).all():
+        opens.setdefault(uid, dict.fromkeys(PREVIEW_OPEN_KINDS, 0))[kind] = int(times or 0)
+        open_at[uid] = _latest(last, open_at.get(uid))
     web_lectures = _lecture_counts(db, PRE_KEYS, MAIN_KEYS)
     grab_lectures = _lecture_counts(db, GRAB_KEYS)
     touched = _lecture_counts(db, PRE_KEYS, MAIN_KEYS, GRAB_KEYS)
@@ -167,7 +209,8 @@ def usage(
         main_card_count, main_card_at = main_cards.get(uid, (0, None))
         grab_kinds, grab_clicks, grab_at = grabs.get(uid, (0, 0, None))
         preview_count, preview_at = previews.get(uid, (0, None))
-        last_at = _latest(pre_card_at, main_card_at, grab_at, preview_at)
+        visit_days, visit_times, visit_at = visits.get(uid, (0, 0, None))
+        last_at = _latest(pre_card_at, main_card_at, grab_at, preview_at, visit_at, open_at.get(uid))
         rows.append(
             {
                 "id": uid,
@@ -184,7 +227,17 @@ def usage(
                 "pre": {"cards": pre_card_count, "grades": pre_grades.get(uid, (0, None))[0]},
                 "main": {"cards": main_card_count, "grades": main_grades.get(uid, (0, None))[0]},
                 # 「지금 쓰고 있나」. 누적과 갈라 둔다 — 누적은 안 줄어든다.
+                "recentCards": recent_cards.get(uid, 0),
                 "recentGrades": pre_recent.get(uid, (0, None))[0] + main_recent.get(uid, (0, None))[0],
+                # 접속. **0 은 「안 들어왔다」가 아닐 수 있다** — `visitsSince` 를 보라.
+                "visits": {
+                    "days": visit_days,
+                    "times": visit_times,
+                    "recentDays": recent_days.get(uid, 0),
+                    "lastAt": _iso(visit_at),
+                },
+                # 우리 화면에서 예습 링크를 누른 횟수. 갈래로 갈라 둔다.
+                "opens": opens.get(uid, dict.fromkeys(PREVIEW_OPEN_KINDS, 0)),
                 # `clicks` 는 내려받은 횟수가 아니라 누른 횟수다. 위를 보라.
                 "grabs": {"kinds": grab_kinds, "clicks": grab_clicks},
                 # **개인 예습 대화다**(`user_preview`). 기본 링크는 강의당 하나이고
@@ -204,7 +257,14 @@ def usage(
     active = sorted((row for row in rows if row["lastAt"]), key=lambda row: row["lastAt"], reverse=True)
     idle = sorted((row for row in rows if not row["lastAt"]), key=lambda row: row["joinedAt"] or "")
 
-    return {"now": now.isoformat(), "recentDays": RECENT_DAYS, "users": active + idle}
+    return {
+        "now": now.isoformat(),
+        "recentDays": RECENT_DAYS,
+        # **언제부터 남았는가.** 이 값이 없으면 화면이 0을 「안 했다」로 그린다.
+        "visitsSince": _iso(db.scalar(select(func.min(UserVisit.first_at)))),
+        "opensSince": _iso(db.scalar(select(func.min(PreviewOpen.first_at)))),
+        "users": active + idle,
+    }
 
 
 @router.get("/usage/{user_id}")
@@ -230,6 +290,8 @@ def usage_detail(
             "main": {"cards": 0, "selfCorrect": 0, "grades": 0},
             "grabs": [],
             "preview": False,
+            # 우리 화면에서 이 편의 링크를 누른 횟수. 갈래로 갈라 둔다.
+            "opens": dict.fromkeys(PREVIEW_OPEN_KINDS, 0),
             "lastAt": None,
         }
 
@@ -279,6 +341,16 @@ def usage_detail(
     ).all():
         row = slot(subject, run_id)
         row["grabs"].append(kind)
+        row["lastAt"] = _iso(_latest(last, _parse(row["lastAt"])))
+
+    for subject, run_id, kind, times, last in db.execute(
+        select(
+            PreviewOpen.subject, PreviewOpen.run_id, PreviewOpen.kind, PreviewOpen.count, PreviewOpen.last_at
+        ).where(PreviewOpen.user_id == user_id)
+    ).all():
+        row = slot(subject, run_id)
+        if kind in PREVIEW_OPEN_KINDS:
+            row["opens"][kind] = int(times or 0)
         row["lastAt"] = _iso(_latest(last, _parse(row["lastAt"])))
 
     for subject, run_id, last in db.execute(

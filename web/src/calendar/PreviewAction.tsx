@@ -111,12 +111,17 @@ export function PreviewAction({
       <PanelGroup tone="preview" title="예습" note="강의 전에 읽는 대화">
         <div className="panel-pair">
           {detail.preview?.shareUrl ? (
-            <SharedOpen url={detail.preview.shareUrl} lectureId={lectureId} provider={detail.preview.provider} />
+            <SharedOpen
+              url={detail.preview.shareUrl}
+              lectureId={lectureId}
+              base={base}
+              provider={detail.preview.provider}
+            />
           ) : (
             <Empty name="기본 링크" note="아직 없습니다" />
           )}
           {detail.myPreview?.conversationUrl ? (
-            <PersonalOpen url={detail.myPreview.conversationUrl} />
+            <PersonalOpen url={detail.myPreview.conversationUrl} base={base} />
           ) : (
             <Empty name="개인 링크" note={canInstall ? "확장을 설치하면 만듭니다" : "컴퓨터에서 만듭니다"} />
           )}
@@ -224,6 +229,7 @@ export function PreviewAction({
     <SharedOpen
       url={detail.preview.shareUrl}
       lectureId={lectureId}
+      base={base}
       provider={detail.preview.provider}
       tools={sharedTools}
     />
@@ -244,7 +250,7 @@ export function PreviewAction({
 
   /* 개인 링크 — 사람마다 하나. 프롬프트도 자기 것으로 묻는다. */
   const personal = detail.myPreview?.conversationUrl ? (
-    <PersonalOpen url={detail.myPreview.conversationUrl} tools={personalTools} />
+    <PersonalOpen url={detail.myPreview.conversationUrl} base={base} tools={personalTools} />
   ) : canMake ? (
     <ActionCard
       shape="is-key is-faint"
@@ -290,14 +296,32 @@ export function PreviewAction({
  * 여는 김에 확장에 어느 강의인지 일러 둔다. 공유 페이지에서 이어 물으면 새
  * 대화가 갈라져 나오는데, 그것이 그 사람의 개인 링크가 된다.
  */
+/**
+ * 눌렀다고 서버에 한 줄 남긴다.
+ *
+ * **주소가 서버를 안 지나기 때문이다.** 기본 링크도 개인 링크도 AI 서비스의
+ * 주소라, 누르면 그 길로 가고 우리 서버는 아무것도 못 본다 — 그래서 누르는 자리가
+ * 알려 준다(2026-09-19 관리자 질문: 「기본링크도 얼마나 클릭했는지 알 수는 없나?」).
+ *
+ * **기다리지 않는다.** 링크는 그 자리에서 열려야 하고, 이 한 줄이 실패했다고
+ * 열리지 않으면 바꿔치기가 나쁜 쪽이다. 그래서 `void` 로 띄워 보내고 오류도 삼킨다.
+ */
+function noteOpen(base: string, kind: "share" | "mine") {
+  void api(`${base}/preview-open`, { method: "POST", body: JSON.stringify({ kind }) }).catch(
+    () => {},
+  );
+}
+
 function SharedOpen({
   url,
   lectureId,
+  base,
   provider,
   tools,
 }: {
   url: string;
   lectureId: string;
+  base: string;
   provider: PreviewProvider;
   tools?: React.ReactNode;
 }) {
@@ -310,7 +334,10 @@ function SharedOpen({
           href={url}
           target="_blank"
           rel="noreferrer"
-          onClick={() => watchSharedLink(lectureId, provider, url)}
+          onClick={() => {
+            watchSharedLink(lectureId, provider, url);
+            noteOpen(base, "share");
+          }}
         >
           <Body name="기본 링크" />
         </a>
@@ -333,12 +360,19 @@ function SharedOpen({
  * 주소라 로그인만 돼 있으면 폰에서도 열린다. 확장이 없는 갈래가 이 카드를 같이
  * 쓰는 이유다.
  */
-function PersonalOpen({ url, tools }: { url: string; tools?: React.ReactNode }) {
+function PersonalOpen({ url, base, tools }: { url: string; base: string; tools?: React.ReactNode }) {
   return (
     <ActionCard
       shape="is-key"
       hit={
-        <a className="panel-action-hit" href={url} title={url} target="_blank" rel="noreferrer">
+        <a
+          className="panel-action-hit"
+          href={url}
+          title={url}
+          target="_blank"
+          rel="noreferrer"
+          onClick={() => noteOpen(base, "mine")}
+        >
           <Body name="개인 링크" />
         </a>
       }

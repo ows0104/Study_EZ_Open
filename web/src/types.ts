@@ -47,8 +47,24 @@ export type UsageRow = {
   grabLectures: number;
   pre: { cards: number; grades: number };
   main: { cards: number; grades: number };
-  /** 최근 `recentDays`일 동안 찍은 횟수. **누적과 갈라 둔다** — 누적은 안 줄어든다. */
+  /**
+   * 최근 `recentDays`일 동안 **푼 카드 수**. 같은 카드를 여러 번 봐도 한 장이다.
+   *
+   * 화면에 서는 것은 이쪽이다 — 「찍은 횟수」로 적었더니 접속 횟수로 읽혔다
+   * (2026-09-19). `recentGrades`는 같은 창의 **찍은 횟수**이고, 둘이 다르다.
+   */
+  recentCards: number;
   recentGrades: number;
+  /**
+   * 접속. **0이 「안 들어왔다」가 아닐 수 있다** — 표가 2026-09-19에 섰다.
+   * 언제부터 남았는지는 `UsageBoard.visitsSince`가 든다.
+   */
+  visits: { days: number; times: number; recentDays: number; lastAt: string | null };
+  /**
+   * 예습 링크를 **우리 화면에서** 누른 횟수. `share`가 기본 링크, `mine`이 개인 대화다.
+   * 링크를 복사해 받은 사람이 연 것은 안 들어온다 — 그 주소는 서버를 안 지난다.
+   */
+  opens: { share: number; mine: number };
   /** `clicks`는 내려받은 횟수가 아니라 **버튼을 누른 횟수**다. */
   grabs: { kinds: number; clicks: number };
   /**
@@ -67,6 +83,14 @@ export type UsageBoard = {
   now: string;
   /** 「최근」이 며칠인가. 화면이 숫자를 직접 적지 않게 서버가 실어 보낸다. */
   recentDays: number;
+  /**
+   * 접속·링크 열기가 **언제부터 남았는가**. 표가 선 날이다.
+   *
+   * 이 값이 있어야 화면이 0을 「안 했다」와 「기록이 없다」로 가를 수 있다.
+   * 아직 한 줄도 없으면 `null`.
+   */
+  visitsSince: string | null;
+  opensSince: string | null;
   users: UsageRow[];
 };
 
@@ -80,7 +104,10 @@ export type UsageLecture = {
   pre: { cards: number; selfCorrect: number; grades: number };
   main: { cards: number; selfCorrect: number; grades: number };
   grabs: string[];
+  /** 이 편의 개인 대화를 저장해 뒀는가. */
   preview: boolean;
+  /** 이 편의 예습 링크를 우리 화면에서 누른 횟수. */
+  opens: { share: number; mine: number };
   lastAt: string | null;
 };
 

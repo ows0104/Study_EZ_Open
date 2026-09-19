@@ -67,6 +67,7 @@
 | ├ 캘린더 | `web/src/calendar/` (2,360줄) | |
 | ├ 관리 화면 | `web/src/admin/` | |
 | ├ 사람별 이용현황 | `web/src/admin/UsageTab.tsx` + `server/app/routes/usage.py` | `-m tests.test_usage` |
+| ├ 접속·링크 열기 기록 | `server/app/routes/common.py`(`record_visit`) + `models.py` | `-m tests.test_usage` |
 | ├ 문제 푸는 화면 | `web/src/lecture/` (1,330줄) | |
 | ├ 복습 간격·되돌리기 | `server/app/srs.py` + `web/src/lecture/queue.ts` | `-m tests.test_srs` |
 | ├ 색·여백 | `web/src/styles/` (3,622줄) | |
@@ -184,14 +185,14 @@ cloze 6~16장 · 재현 78~91% 로 흔들린다. 만들려던 효과가 그 폭�
 ### ② HTTP — 전부 서버를 향한다
 
     runner/          → 서버 경로 9개    (/api/admin/lectures · prequiz-jobs · local-storage)
-    web/src/         → 서버 경로 21개
+    web/src/         → 서버 경로 22개
     spotter/scripts/ → 서버 경로 10개   (/api/spotter/admin/…)
     bridge/          → 서버 경로 2개
 
 **가로로는 아무도 서로를 안 부른다.** 프론트가 러너를 부르지 않고 땡시가
 quizgen 을 부르지 않는다. 그래서 서버 계약(`openapi`)만 안 바뀌면 한쪽만 고쳐도 된다.
 
-계약을 지키는 자: `server/tests/test_routes_golden.py` — 경로 68줄이 그대로인지 본다.
+계약을 지키는 자: `server/tests/test_routes_golden.py` — 경로 69줄이 그대로인지 본다.
 
 ### ③ 파일 — `runs/<편>/` 이 quizgen 과 runner 사이의 계약이다
 
