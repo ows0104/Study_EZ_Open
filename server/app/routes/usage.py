@@ -32,7 +32,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import Integer, cast, func, select, union
+from sqlalchemy import case, func, select, union
 from sqlalchemy.orm import Session
 
 from app import srs
@@ -213,7 +213,9 @@ def usage_detail(
                 model.subject,
                 model.run_id,
                 func.count(),
-                func.sum(cast(model.correct, Integer)),
+                # **`cast(bool AS int)` 을 쓰지 않는다.** SQLite 는 받지만 표준이
+                # 아니고, 옮겨 갈 DB 마다 되는지 다시 재야 한다. `case` 는 어디서나 같다.
+                func.sum(case((model.correct, 1), else_=0)),
                 func.max(model.answered_at),
             )
             .where(model.user_id == user_id)
