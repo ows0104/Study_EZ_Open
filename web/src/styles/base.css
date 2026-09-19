@@ -1238,6 +1238,31 @@ button.resource.is-download:hover:not(:disabled)::after {
   font-size: 11.5px;
 }
 
+/* 기간 고르는 줄. 탭과 같은 모양을 안 쓴다 — 탭은 화면을 바꾸고 이것은 같은
+ * 화면의 눈금을 바꾼다. 둘이 같아 보이면 무엇이 바뀐 것인지 안 보인다. */
+.admin-window {
+  display: flex;
+  margin-bottom: 10px;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.admin-window button {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-3);
+  background: var(--surface);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.admin-window button.is-active {
+  border-color: var(--ink-2);
+  color: var(--ink);
+  font-weight: 600;
+}
+
 /* 숫자 밑의 한 줄(몇 편·몇 갈래). 숫자와 같은 칸에 있어야 「36장을 3편에서」로
  * 읽힌다 — 칸을 따로 내면 표가 두 배로 넓어지고 눈이 가로질러야 한다. */
 .admin-usage .num small {

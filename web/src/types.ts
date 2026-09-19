@@ -30,6 +30,8 @@ export type AppUser = {
  *
  * apkg로 나간 풀이는 안키가 들고 서버에 안 남는다. 그래서 이 수들을 더해
  * "얼마나 공부했나"로 그리면 안 된다 — 사연은 `server/app/routes/usage.py` 머리에 있다.
+ *
+ * **`cards`·`decks`·`opens`는 고른 기간 안의 값이다.** `lastAt`만 기간을 안 탄다.
  */
 export type UsageRow = {
   id: string;
@@ -38,58 +40,48 @@ export type UsageRow = {
   /** Study_EZ에 들어갈 수 있는가. **0이 「안 썼다」인지 「못 썼다」인지를 가른다.** */
   hasAccess: boolean;
   joinedAt: string | null;
-  /** 마지막으로 무엇이든 한 때. `null`이면 한 번도 안 열었다. */
+  /** 마지막으로 무엇이든 한 때. `null`이면 한 번도 안 열었다. **기간을 안 탄다.** */
   lastAt: string | null;
-  /** 웹으로 풀었거나 파일을 받아 간 편 수. 세 표를 합쳐서 센 값이다. */
-  lectures: number;
-  /** 그중 웹에서 푼 편 · 받아 간 편. **둘은 다른 사람일 수 있다.** */
-  webLectures: number;
-  grabLectures: number;
-  pre: { cards: number; grades: number };
-  main: { cards: number; grades: number };
+  /** 이 기간에 웹에서 푼 카드 수. 한 줄이 한 장이라 같은 카드를 여러 번 봐도 한 장이다. */
+  cards: number;
+  /** 이 기간에 파일을 받아 간 편 수. **받아 간 것이지 푼 것이 아니다.** */
+  decks: number;
   /**
-   * 최근 `recentDays`일 동안 **푼 카드 수**. 같은 카드를 여러 번 봐도 한 장이다.
+   * 이 기간에 예습 링크를 연 편 수. `share`가 기본 링크, `mine`이 개인 대화다.
    *
-   * 화면에 서는 것은 이쪽이다 — 「찍은 횟수」로 적었더니 접속 횟수로 읽혔다
-   * (2026-09-19). `recentGrades`는 같은 창의 **찍은 횟수**이고, 둘이 다르다.
-   */
-  recentCards: number;
-  recentGrades: number;
-  /**
-   * 접속. **0이 「안 들어왔다」가 아닐 수 있다** — 표가 2026-09-19에 섰다.
-   * 언제부터 남았는지는 `UsageBoard.visitsSince`가 든다.
-   */
-  visits: { days: number; times: number; recentDays: number; lastAt: string | null };
-  /**
-   * 예습 링크를 **우리 화면에서** 누른 횟수. `share`가 기본 링크, `mine`이 개인 대화다.
-   * 링크를 복사해 받은 사람이 연 것은 안 들어온다 — 그 주소는 서버를 안 지난다.
+   * **우리 화면에서 누른 것만 든다** — 링크를 복사해 받은 사람이 연 것은 그 주소가
+   * 서버를 안 지나므로 안 들어온다.
    */
   opens: { share: number; mine: number };
-  /** `clicks`는 내려받은 횟수가 아니라 **버튼을 누른 횟수**다. */
-  grabs: { kinds: number; clicks: number };
-  /**
-   * 저장해 둔 **개인** 예습 대화 수(`user_preview`).
-   *
-   * **기본 링크는 여기 없다.** 강의당 하나이고 반 전체가 같은 것을 읽으며, 누르면
-   * 그 길로 AI 쪽으로 가서 서버를 안 지난다 — 누가 열었는지 알 자리가 없다.
-   * 관리자가 기본 링크를 만들면 그 `/c/`가 자기 줄로도 남아 이 수에 섞인다.
-   */
+  /** 저장해 둔 개인 예습 대화 수. 기간을 안 탄다 — 펴서 보는 자리에 쓴다. */
   previews: number;
   /** 예습 프롬프트를 고쳐 썼는가. 비어 있으면 화면의 기본 문구를 쓴다. */
   prompt: { custom: boolean; chars: number };
 };
 
+/** 무엇을 잰 기간인가. `to`가 `null`이면 지금까지다. */
+export type UsageWindow = {
+  key: string;
+  /** 「이번 블럭 · 미생물학」처럼 **무엇인지**를 적어서 온다. */
+  label: string;
+  from: string | null;
+  to: string | null;
+};
+
 export type UsageBoard = {
   now: string;
-  /** 「최근」이 며칠인가. 화면이 숫자를 직접 적지 않게 서버가 실어 보낸다. */
-  recentDays: number;
   /**
-   * 접속·링크 열기가 **언제부터 남았는가**. 표가 선 날이다.
+   * **고른 것이 아니라 실제로 잰 기간이다.** 블럭이 아직 없으면 서버가 최근 7일로
+   * 내려앉히고 그 사실이 여기 온다.
+   */
+  window: UsageWindow;
+  /** 고를 수 있는 기간들. 순서가 화면의 버튼 순서다. */
+  windows: { key: string; label: string }[];
+  /**
+   * 예습 링크 열기가 **언제부터 남았는가**. 표가 선 날이다.
    *
    * 이 값이 있어야 화면이 0을 「안 했다」와 「기록이 없다」로 가를 수 있다.
-   * 아직 한 줄도 없으면 `null`.
    */
-  visitsSince: string | null;
   opensSince: string | null;
   users: UsageRow[];
 };
@@ -106,7 +98,7 @@ export type UsageLecture = {
   grabs: string[];
   /** 이 편의 개인 대화를 저장해 뒀는가. */
   preview: boolean;
-  /** 이 편의 예습 링크를 우리 화면에서 누른 횟수. */
+  /** 이 편의 예습 링크를 우리 화면에서 누른 **횟수**. 요약과 달리 편이 아니다. */
   opens: { share: number; mine: number };
   lastAt: string | null;
 };

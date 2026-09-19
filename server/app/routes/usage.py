@@ -3,28 +3,45 @@
 2026-09-19 관리자 지시 — 「사용자별 사이트 이용현황을 내가 볼 수 있게 하고 싶어.」
 Study_EZ 몫만 센다(땡시는 여기 없다 — 같은 날 범위를 그렇게 정했다).
 
-    GET /api/admin/usage             사람마다 한 줄
-    GET /api/admin/usage/{user_id}   그 사람의 강의별 내역
+    GET /api/admin/usage?window=block   사람마다 한 줄
+    GET /api/admin/usage/{user_id}      그 사람의 강의별 내역 (이쪽은 기간을 안 자른다)
+
+## 기간을 자른다
+
+**누적은 질문에 답을 못 한다.** 한 번 찬 수는 안 줄어서, 두 달 전에 열심히 한
+사람과 이번 주에 하는 사람이 같은 크기로 보인다. 그래서 요약의 수는 전부 **창
+안에서만** 센다(2026-09-19 관리자 지시 — 「너무 오래된 것까지 영향을 주지 않게」).
+
+    block   이번 블럭    지금 도는 블럭이 시작한 날부터 지금까지   ← 기본값
+    prev    지난 블럭    그 앞 블럭의 시작부터 이번 블럭 시작까지
+    week    최근 7일     복습의 하루 경계로 이레
+
+**블럭은 표에서 읽는다**(`_blocks`). 이 저장소에서 블럭은 과목이고(`bundles.py`
+첫 줄), 그 시작과 끝은 `lecture.date` 의 최소·최대다. 따로 적어 두는 자리를
+만들지 않은 것은 그러면 강의가 늘 때마다 두 곳을 고쳐야 하기 때문이다.
+
+**무엇을 쟀는지 같이 내보낸다**(`window.label`·`from`·`to`). 화면이 「이번 블럭」
+이라고만 적으면 보는 사람이 그게 언제부터인지 모른다.
+
+`lastAt` 만 창을 안 탄다. 「마지막으로 무엇이든 한 때」는 창을 자르면 뜻이 없다.
 
 ## 셀 수 있는 것과 없는 것
 
 **apkg 로 나간 풀이는 서버에 없다.** 덱은 안키에서 풀리고 그 진행은 안키가 든다.
 그래서 여기 숫자는 전부 *웹에서 한 것*과 *파일을 받아 간 것*이고, 둘을 더해
-「이 사람이 얼마나 공부했나」로 읽으면 안 된다. 화면도 그렇게 안 그린다.
+「이 사람이 얼마나 공부했나」로 읽으면 안 된다.
 
-같은 이유로 **받아 간 것은 「받아 갔다」지 「풀었다」가 아니다**(`AssetGrab` 의
-설명이 그 자리다). `count` 는 서명 URL 이 TTL 동안 재사용되므로 내려받은 횟수가
-아니라 **버튼을 누른 횟수**에 가깝다 — 이름도 `clicks` 로 낸다.
-
-**접속과 링크 열기는 2026-09-19 부터만 있다.** 그날 관리자 지시로 표 둘이
-섰고(`user_visit`·`preview_open`), 그 전에 들어온 것은 아무 데도 안 남아 있다.
-**그래서 0 을 「안 들어왔다」로 읽으면 안 된다** — 화면이 가를 수 있게 두 표의
-가장 오래된 줄을 `visitsSince`·`opensSince` 로 같이 내보낸다.
+같은 이유로 **받아 간 것은 「받아 갔다」지 「풀었다」가 아니다**(`AssetGrab`).
 
 **기본 링크를 누가 열었는지는 링크로는 알 수 없다.** 강의당 하나이고
 (`preview.share_url`) 누르면 그 길로 AI 쪽으로 가서 서버를 안 지난다. 세는 것은
 **우리 화면에서 누른 것**뿐이라(`PreviewOpen`), 링크를 복사해 받은 사람이 연 것은
-안 들어온다.
+안 들어온다. **2026-09-19 부터만 있다** — 그 전은 0으로 보이므로 그 0을 가르라고
+`opensSince`(그 표의 가장 오래된 줄)를 같이 낸다.
+
+**접속 기록은 두지 않는다.** 표를 하나 세웠다가 같은 날 걷어냈다(관리자 지시 —
+「접속기록표는 없애자. 어차피 마지막 접속으로 알 수 있다」). `lastAt` 이 그 답을
+이미 하고, 표 하나를 덜 이고 간다.
 
 `correct` 는 **본인이 찍은 것**이다(`_Attempt`). 자유회상 카드라 서버가 판정한
 값이 아니므로 `selfCorrect` 로 낸다. 정답률로 그리면 안 되는 값이다.
@@ -38,10 +55,11 @@ Study_EZ 몫만 센다(땡시는 여기 없다 — 같은 날 범위를 그렇�
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, time, timedelta
+from datetime import date as Date
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import case, func, select, union
 from sqlalchemy.orm import Session
 
@@ -61,13 +79,15 @@ from app.models import (
     Profile,
     QuizAttempt,
     UserPreview,
-    UserVisit,
 )
 
 router = APIRouter()
 
-#: 「지금 쓰고 있나」를 보는 창. 누적 수는 한 번 차면 안 줄어서 그 답을 못 준다.
-RECENT_DAYS = 7
+#: 「최근」 창의 크기. 블럭이 아직 없을 때의 기본이기도 하다.
+WEEK_DAYS = 7
+
+#: 화면이 고를 수 있는 창. 순서가 화면의 버튼 순서다.
+WINDOW_KEYS = ("block", "prev", "week")
 
 
 def _as_utc(when: datetime | None) -> datetime | None:
@@ -92,125 +112,154 @@ def _latest(*times: datetime | None) -> datetime | None:
     return max(found) if found else None
 
 
-def _by_user(db: Session, model: Any, stamp: Any, since: datetime | None = None) -> dict[str, tuple[int, datetime | None]]:
-    """사람마다 (줄 수, 마지막 시각). 표 하나를 한 질의로 쓸어 담는다."""
-    stmt = select(model.user_id, func.count(), func.max(stamp)).group_by(model.user_id)
-    if since is not None:
-        stmt = stmt.where(stamp >= since)
-    return {user_id: (int(count), last) for user_id, count, last in db.execute(stmt).all()}
+def _kst_midnight(day: Date) -> datetime:
+    """그 날이 한국에서 시작하는 시각. 표의 시각은 전부 UTC 라 여기서 옮긴다."""
+    return datetime.combine(day, time(), tzinfo=UTC) - srs.KST_OFFSET
 
 
-#: 편 하나를 가리키는 세 칸. 표가 달라도 이름이 같아서 `union` 이 그대로 붙는다.
-PRE_KEYS = select(QuizAttempt.user_id, QuizAttempt.subject, QuizAttempt.run_id)
-MAIN_KEYS = select(MainAttempt.user_id, MainAttempt.subject, MainAttempt.run_id)
-GRAB_KEYS = select(AssetGrab.user_id, AssetGrab.subject, AssetGrab.run_id)
+def _blocks(db: Session) -> list[tuple[str, Date, Date]]:
+    """블럭을 끝난 순으로. **블럭은 과목이고 그 범위는 강의 날짜다.**
+
+    따로 적어 두는 자리를 안 만든 이유는 모듈 첫머리에 있다 — 강의가 늘 때마다
+    두 곳을 고쳐야 하는 값은 한쪽만 고쳐진다.
+    """
+    rows = db.execute(
+        select(Lecture.subject, func.min(Lecture.date), func.max(Lecture.date)).group_by(
+            Lecture.subject
+        )
+    ).all()
+    return sorted(((subject, start, end) for subject, start, end in rows), key=lambda row: row[2])
+
+
+def _window(db: Session, key: str, now: datetime) -> dict[str, Any]:
+    """무엇을 재는 창인가. `from`·`to` 는 UTC 시각이고 `to` 가 `None` 이면 지금까지다.
+
+    **블럭이 없으면 이레로 내려앉는다.** 학기 첫날처럼 강의가 한 편도 없는 날에
+    빈 화면을 주지 않기 위해서다 — 그때는 `key` 가 `week` 로 바뀌어 돌아가므로
+    화면이 고른 것과 잰 것이 어긋나지 않는다.
+    """
+    week = {
+        "key": "week",
+        "label": f"최근 {WEEK_DAYS}일",
+        "from": srs.day_start(now) - timedelta(days=WEEK_DAYS - 1),
+        "to": None,
+    }
+    if key == "week":
+        return week
+
+    blocks = _blocks(db)
+    today = srs.day_key(now)
+    # 이번 블럭 = 이미 시작한 것 중 가장 늦게 끝나는 것. 학기 끝에 서 있으면
+    # 마지막 블럭이 그대로 「이번」이다 — 그 편을 아직 보는 사람이 있다.
+    started = [block for block in blocks if block[1] <= today]
+    if not started:
+        return week
+    current = started[-1]
+    if key == "prev":
+        if len(started) < 2:
+            return week
+        previous = started[-2]
+        return {
+            "key": "prev",
+            "label": f"지난 블럭 · {previous[0]}",
+            "from": _kst_midnight(previous[1]),
+            "to": _kst_midnight(current[1]),
+        }
+    return {
+        "key": "block",
+        "label": f"이번 블럭 · {current[0]}",
+        "from": _kst_midnight(current[1]),
+        "to": None,
+    }
+
+
+def _within(stamp: Any, window: dict[str, Any]) -> list[Any]:
+    """창으로 자르는 조건. `to` 가 없으면 지금까지라 조건이 하나다."""
+    bounds = [stamp >= window["from"]]
+    if window["to"] is not None:
+        bounds.append(stamp < window["to"])
+    return bounds
+
+
+def _count_by_user(db: Session, model: Any, stamp: Any, window: dict[str, Any]) -> dict[str, int]:
+    """창 안의 줄 수를 사람마다. 카드 한 장이 한 줄이다(`_Attempt`)."""
+    rows = db.execute(
+        select(model.user_id, func.count()).where(*_within(stamp, window)).group_by(model.user_id)
+    ).all()
+    return {user_id: int(count) for user_id, count in rows}
 
 
 def _lecture_counts(db: Session, *sources: Any) -> dict[str, int]:
-    """사람마다 편 수. 표가 여럿이면 `union` 이 겹치는 편을 지운다.
-
-    **웹으로 푼 편과 받아 간 편을 따로도, 합쳐서도 센다.** 따로 세야 「웹에서
-    푸는 사람인가 받아 가는 사람인가」가 보이고, 합쳐 세야 「한 편도 안 썼다」가
-    거짓이 되지 않는다. 한쪽만 두면 둘 중 하나를 못 묻는다.
-    """
-    inner = (
-        union(*sources).subquery() if len(sources) > 1 else sources[0].distinct().subquery()
-    )
+    """사람마다 편 수. 표가 여럿이면 `union` 이 겹치는 편을 지운다."""
+    inner = union(*sources).subquery() if len(sources) > 1 else sources[0].distinct().subquery()
     rows = db.execute(select(inner.c.user_id, func.count()).group_by(inner.c.user_id)).all()
     return {user_id: int(count) for user_id, count in rows}
 
 
 @router.get("/usage")
 def usage(
+    window: str = Query("block"),
     user: CurrentUser = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """사람마다 한 줄. **가입한 사람 전부가 온다** — 안 쓴 줄도 답이다.
 
-    정렬은 마지막 활동 최신순이고, 활동이 없는 사람은 뒤에 가입순으로 선다.
-    맨 위가 지금 쓰는 사람, 맨 아래가 한 번도 안 연 사람이다.
+    수는 **창 안에서만** 센다(모듈 첫머리). 정렬만 창을 안 탄다 — 마지막 활동
+    최신순이라 창을 바꿔도 줄 순서가 안 흔들리고, 그래야 같은 사람을 창마다
+    견줄 수 있다.
     """
     now = datetime.now(UTC)
-    # 하루의 경계는 복습이 쓰는 그것이다(한국 시각 새벽 4시). 여기만 자정으로
-    # 재면 「오늘 푼 것」이 두 화면에서 다른 수가 된다.
-    since = srs.day_start(now) - timedelta(days=RECENT_DAYS - 1)
+    if window not in WINDOW_KEYS:
+        raise HTTPException(status_code=422, detail=f"없는 기간입니다: {window}")
+    span = _window(db, window, now)
 
-    granted = set(
-        db.scalars(select(AppGrant.user_id).where(AppGrant.app == APP_STUDYEZ)).all()
-    )
-    pre_cards = _by_user(db, QuizAttempt, QuizAttempt.answered_at)
-    main_cards = _by_user(db, MainAttempt, MainAttempt.answered_at)
-    pre_grades = _by_user(db, PreReviewLog, PreReviewLog.reviewed_at)
-    main_grades = _by_user(db, MainReviewLog, MainReviewLog.reviewed_at)
-    pre_recent = _by_user(db, PreReviewLog, PreReviewLog.reviewed_at, since)
-    main_recent = _by_user(db, MainReviewLog, MainReviewLog.reviewed_at, since)
-    # **개인 대화만 센다.** 빈 줄은 저장했다 지운 자리라 「만든 적 있다」가 아니다.
-    previews = db.execute(
-        select(UserPreview.user_id, func.count(), func.max(UserPreview.updated_at))
-        .where(UserPreview.conversation_url != "")
-        .group_by(UserPreview.user_id)
-    ).all()
-    previews = {uid: (int(count), last) for uid, count, last in previews}
-    grab_rows = db.execute(
-        select(
-            AssetGrab.user_id,
-            func.count(),
-            func.sum(AssetGrab.count),
-            func.max(AssetGrab.last_at),
-        ).group_by(AssetGrab.user_id)
-    ).all()
-    grabs = {row[0]: (int(row[1]), int(row[2] or 0), row[3]) for row in grab_rows}
-    # **찍은 횟수가 아니라 카드 수다**(2026-09-19 관리자 지시 — 「차라리 카드 수」).
-    # 같은 카드를 세 번 봐도 한 장이라, 「이 사람이 이 주에 무엇을 봤나」에 답한다.
-    recent_cards = _lecture_counts(
+    granted = set(db.scalars(select(AppGrant.user_id).where(AppGrant.app == APP_STUDYEZ)).all())
+    # 푼 카드. **한 줄이 한 장이다** — 같은 카드를 세 번 봐도 줄은 하나고,
+    # `answered_at` 은 마지막으로 찍은 때라 그 장이 창 안에 있었는지를 말한다.
+    pre_cards = _count_by_user(db, QuizAttempt, QuizAttempt.answered_at, span)
+    main_cards = _count_by_user(db, MainAttempt, MainAttempt.answered_at, span)
+    # 받은 덱·연 링크는 **편으로 센다.** 횟수는 「다시 받으러 왔다」를 말할 뿐이고,
+    # 관리자가 묻는 것은 「몇 편을 챙겼나」다.
+    grab_lectures = _lecture_counts(
         db,
-        select(PreReviewLog.user_id, PreReviewLog.subject, PreReviewLog.run_id, PreReviewLog.item_id)
-        .where(PreReviewLog.reviewed_at >= since),
-        select(MainReviewLog.user_id, MainReviewLog.subject, MainReviewLog.run_id, MainReviewLog.item_id)
-        .where(MainReviewLog.reviewed_at >= since),
+        select(AssetGrab.user_id, AssetGrab.subject, AssetGrab.run_id).where(
+            *_within(AssetGrab.last_at, span)
+        ),
     )
-    visits = db.execute(
-        select(
-            UserVisit.user_id,
-            func.count(),  # 들어온 날 수
-            func.sum(UserVisit.count),  # 다시 온 횟수까지
-            func.max(UserVisit.last_at),
-        ).group_by(UserVisit.user_id)
-    ).all()
-    visits = {uid: (int(days), int(times or 0), last) for uid, days, times, last in visits}
-    recent_days = {
-        uid: int(days)
-        for uid, days in db.execute(
-            select(UserVisit.user_id, func.count())
-            .where(UserVisit.day >= srs.day_key(since))
-            .group_by(UserVisit.user_id)
+    opens: dict[str, dict[str, int]] = {}
+    for uid, kind, lectures in db.execute(
+        select(PreviewOpen.user_id, PreviewOpen.kind, func.count())
+        .where(*_within(PreviewOpen.last_at, span))
+        .group_by(PreviewOpen.user_id, PreviewOpen.kind)
+    ).all():
+        opens.setdefault(uid, dict.fromkeys(PREVIEW_OPEN_KINDS, 0))[kind] = int(lectures)
+
+    # ── 여기부터는 창을 안 탄다. 「마지막으로 무엇이든 한 때」와 사람의 설정이다.
+    last_seen: dict[str, datetime | None] = {}
+    for model, stamp in (
+        (QuizAttempt, QuizAttempt.answered_at),
+        (MainAttempt, MainAttempt.answered_at),
+        (AssetGrab, AssetGrab.last_at),
+        (PreviewOpen, PreviewOpen.last_at),
+        (UserPreview, UserPreview.updated_at),
+    ):
+        for uid, last in db.execute(
+            select(model.user_id, func.max(stamp)).group_by(model.user_id)
+        ).all():
+            last_seen[uid] = _latest(last, last_seen.get(uid))
+    # **개인 대화만 센다.** 빈 줄은 저장했다 지운 자리라 「만든 적 있다」가 아니다.
+    previews = {
+        uid: int(count)
+        for uid, count in db.execute(
+            select(UserPreview.user_id, func.count())
+            .where(UserPreview.conversation_url != "")
+            .group_by(UserPreview.user_id)
         ).all()
     }
-    opens: dict[str, dict[str, int]] = {}
-    open_at: dict[str, datetime] = {}
-    for uid, kind, times, last in db.execute(
-        select(
-            PreviewOpen.user_id,
-            PreviewOpen.kind,
-            func.sum(PreviewOpen.count),
-            func.max(PreviewOpen.last_at),
-        ).group_by(PreviewOpen.user_id, PreviewOpen.kind)
-    ).all():
-        opens.setdefault(uid, dict.fromkeys(PREVIEW_OPEN_KINDS, 0))[kind] = int(times or 0)
-        open_at[uid] = _latest(last, open_at.get(uid))
-    web_lectures = _lecture_counts(db, PRE_KEYS, MAIN_KEYS)
-    grab_lectures = _lecture_counts(db, GRAB_KEYS)
-    touched = _lecture_counts(db, PRE_KEYS, MAIN_KEYS, GRAB_KEYS)
 
     rows: list[dict[str, Any]] = []
     for profile in db.scalars(select(Profile)).all():
         uid = profile.id
-        pre_card_count, pre_card_at = pre_cards.get(uid, (0, None))
-        main_card_count, main_card_at = main_cards.get(uid, (0, None))
-        grab_kinds, grab_clicks, grab_at = grabs.get(uid, (0, 0, None))
-        preview_count, preview_at = previews.get(uid, (0, None))
-        visit_days, visit_times, visit_at = visits.get(uid, (0, 0, None))
-        last_at = _latest(pre_card_at, main_card_at, grab_at, preview_at, visit_at, open_at.get(uid))
         rows.append(
             {
                 "id": uid,
@@ -219,32 +268,13 @@ def usage(
                 # 0이 「안 썼다」인지 「못 썼다」인지를 가르는 값이다. 위를 보라.
                 "hasAccess": uid in granted,
                 "joinedAt": _iso(profile.created_at),
-                "lastAt": _iso(last_at),
-                "lectures": touched.get(uid, 0),
-                # 편 수를 갈라 둔다 — 웹에서 푸는 사람과 받아 가는 사람은 다른 사람이다.
-                "webLectures": web_lectures.get(uid, 0),
-                "grabLectures": grab_lectures.get(uid, 0),
-                "pre": {"cards": pre_card_count, "grades": pre_grades.get(uid, (0, None))[0]},
-                "main": {"cards": main_card_count, "grades": main_grades.get(uid, (0, None))[0]},
-                # 「지금 쓰고 있나」. 누적과 갈라 둔다 — 누적은 안 줄어든다.
-                "recentCards": recent_cards.get(uid, 0),
-                "recentGrades": pre_recent.get(uid, (0, None))[0] + main_recent.get(uid, (0, None))[0],
-                # 접속. **0 은 「안 들어왔다」가 아닐 수 있다** — `visitsSince` 를 보라.
-                "visits": {
-                    "days": visit_days,
-                    "times": visit_times,
-                    "recentDays": recent_days.get(uid, 0),
-                    "lastAt": _iso(visit_at),
-                },
-                # 우리 화면에서 예습 링크를 누른 횟수. 갈래로 갈라 둔다.
+                "lastAt": _iso(last_seen.get(uid)),
+                # ── 창 안의 값 셋. 화면의 칸과 하나씩 짝이다.
+                "cards": pre_cards.get(uid, 0) + main_cards.get(uid, 0),
+                "decks": grab_lectures.get(uid, 0),
                 "opens": opens.get(uid, dict.fromkeys(PREVIEW_OPEN_KINDS, 0)),
-                # `clicks` 는 내려받은 횟수가 아니라 누른 횟수다. 위를 보라.
-                "grabs": {"kinds": grab_kinds, "clicks": grab_clicks},
-                # **개인 예습 대화다**(`user_preview`). 기본 링크는 강의당 하나이고
-                # 반 전체가 같은 것을 읽으므로 사람별로 셀 수 있는 것이 아니다 — 윗글을 보라.
-                # 관리자가 기본 링크를 만들면 그 `/c/` 가 자기 줄로도 남아 여기 섞인다.
-                "previews": preview_count,
-                # 각자 고쳐 쓰는 예습 프롬프트. 비어 있으면 화면의 기본 문구를 쓴다.
+                # ── 창을 안 타는 것. 펴서 보는 자리에 쓴다.
+                "previews": previews.get(uid, 0),
                 "prompt": {
                     "custom": bool(profile.preview_prompt.strip()),
                     "chars": len(profile.preview_prompt.strip()),
@@ -254,14 +284,22 @@ def usage(
 
     # 쓰는 사람이 위, 한 번도 안 연 사람이 아래. 안 연 사람끼리는 가입 순이라
     # **승인하고 안 들어온 사람이 맨 밑에 모인다.**
-    active = sorted((row for row in rows if row["lastAt"]), key=lambda row: row["lastAt"], reverse=True)
+    active = sorted(
+        (row for row in rows if row["lastAt"]), key=lambda row: row["lastAt"], reverse=True
+    )
     idle = sorted((row for row in rows if not row["lastAt"]), key=lambda row: row["joinedAt"] or "")
 
     return {
         "now": now.isoformat(),
-        "recentDays": RECENT_DAYS,
+        "window": {
+            # 고른 것이 아니라 **실제로 잰 것**이다. 블럭이 없으면 여기가 week 로 온다.
+            "key": span["key"],
+            "label": span["label"],
+            "from": _iso(span["from"]),
+            "to": _iso(span["to"]),
+        },
+        "windows": [{"key": key, "label": _window(db, key, now)["label"]} for key in WINDOW_KEYS],
         # **언제부터 남았는가.** 이 값이 없으면 화면이 0을 「안 했다」로 그린다.
-        "visitsSince": _iso(db.scalar(select(func.min(UserVisit.first_at)))),
         "opensSince": _iso(db.scalar(select(func.min(PreviewOpen.first_at)))),
         "users": active + idle,
     }

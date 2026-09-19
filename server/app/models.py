@@ -543,45 +543,6 @@ class PreviewOpen(Base):
     __table_args__ = (Index("ix_preview_open_user", "user_id", "last_at"),)
 
 
-#: 얼마나 비어야 다시 온 것으로 세나. 30분은 안키의 세션 감각과 같은 눈금이다.
-#: 짧게 잡으면 한 번 앉아 공부한 것이 여러 번으로 세어지고, 길게 잡으면
-#: 아침에 한 번 저녁에 한 번 들어온 사람이 한 번이 된다.
-VISIT_GAP_MINUTES = 30
-
-
-class UserVisit(Base):
-    """이 사람이 이 날 화면을 열었다. **접속을 세는 유일한 표다.**
-
-    2026-09-19 관리자 지시 — 「접속 기록 표도 만들어줘.」 그 전까지 이 저장소에는
-    로그인도 화면 열기도 남기는 자리가 없었고, 그래서 이용현황이 셀 수 있는 것은
-    「한 일」(찍은 카드·받아 간 파일)뿐이었다.
-
-    **날마다 한 줄이다.** 요청마다 한 줄을 남기면 한 학기에 수십만 줄이 되고,
-    그걸로 답하는 질문(「며칠 들어왔나」·「마지막이 언제인가」)은 날 단위로도
-    똑같이 답해진다.
-
-    `count` 는 그 날 **다시 온 횟수**다. `VISIT_GAP_MINUTES` 보다 오래 비었을
-    때만 는다 — 화면이 `/api/me` 를 몇 번 부르는지에 따라 값이 흔들리면 안 된다.
-
-    하루의 경계는 복습이 쓰는 그것이다(한국 시각 새벽 4시). 자정을 넘겨 공부한
-    사람의 접속이 이틀로 갈리면 「며칠 들어왔나」가 실제보다 커진다.
-
-    **표가 선 날부터만 찬다.** 지난 학기는 0으로 보이고, 그 0은 「안 들어왔다」가
-    아니라 「기록이 없다」다 — 화면이 가르도록 이용현황이 `visitsSince` 를 같이 낸다.
-    """
-
-    __tablename__ = "user_visit"
-
-    user_id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    #: 복습 하루의 날짜(한국 시각). `srs.day_key` 가 정한다.
-    day: Mapped[Date] = mapped_column(SADate, primary_key=True)
-    count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    first_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
-    last_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
-
-    __table_args__ = (Index("ix_user_visit_day", "day"),)
-
-
 class LectureWaive(Base):
     """관리자가 "이 강의엔 해당 없음"으로 닫은 체크 칸.
 

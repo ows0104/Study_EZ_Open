@@ -15,26 +15,12 @@ from sqlalchemy.orm import Session
 from app.auth import CurrentUser, get_current_user, require_approved_user
 from app.database import get_db
 from app.models import Profile
-from app.routes.common import record_visit
 
 router = APIRouter()
 
 
 @router.get("/me")
-def read_me(
-    user: CurrentUser = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> dict[str, Any]:
-    """**접속이 남는 유일한 자리다.**
-
-    로그인 직후 화면이 반드시 지나는 길이라 여기 한 줄이면 「들어왔다」가 빠짐없이
-    남는다(`record_visit`). 승인 게이트 앞이므로 **승인을 기다리는 사람이 들여다본
-    것도 남는다** — 그것도 답이다.
-
-    적다가 실패해도 이 응답은 나간다. 접속 한 줄 때문에 로그인이 막히는 것은
-    바꿔치기가 나쁜 쪽이다.
-    """
-    record_visit(db, user.id)
+def read_me(user: CurrentUser = Depends(get_current_user)) -> dict[str, Any]:
     return {
         "id": user.id,
         "email": user.email,

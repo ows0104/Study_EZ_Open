@@ -67,7 +67,7 @@
 | ├ 캘린더 | `web/src/calendar/` (2,360줄) | |
 | ├ 관리 화면 | `web/src/admin/` | |
 | ├ 사람별 이용현황 | `web/src/admin/UsageTab.tsx` + `server/app/routes/usage.py` | `-m tests.test_usage` |
-| ├ 접속·링크 열기 기록 | `server/app/routes/common.py`(`record_visit`) + `models.py` | `-m tests.test_usage` |
+| ├ 예습 링크 열기 기록 | `server/app/routes/common.py`(`record_preview_open`) + `models.py` | `-m tests.test_usage` |
 | ├ 문제 푸는 화면 | `web/src/lecture/` (1,330줄) | |
 | ├ 복습 간격·되돌리기 | `server/app/srs.py` + `web/src/lecture/queue.ts` | `-m tests.test_srs` |
 | ├ 색·여백 | `web/src/styles/` (3,622줄) | |

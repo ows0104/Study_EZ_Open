@@ -8,86 +8,133 @@ import type { UsageBoard, UsageDetail, UsageRow } from "../types";
  * 2026-09-19 관리자 지시 — 「사용자별 사이트 이용현황을 내가 볼 수 있게 하고 싶어.」
  * 한 줄이 한 사람이고, 이름을 누르면 그 사람의 강의별 내역이 아래로 펴진다.
  *
- * **여기 수는 웹에서 한 것과 받아 간 것뿐이다.** 덱은 apkg로 나가 안키에서 풀리고
- * 그 진행은 서버가 못 본다. 그래서 "받기"는 받아 간 것이지 푼 것이 아니고, 그렇게
- * 읽히게 그리지 않는다 — 사연은 `server/app/routes/usage.py` 머리에 있다.
+ * ## 칸은 넷뿐이다
  *
- * **목록을 이 탭 안에서 읽는다.** 계정 탭과 다른 점이다 — 그쪽은 탭 이름 옆에
- * 대기 수를 세워야 해서 위에서 읽어 내려온다. 이 탭에는 그런 숫자가 없다.
- * 늘 서 있는 수(전체 사용자 수 같은 것)를 탭 옆에 달면 곧 아무도 안 읽는다.
+ * 같은 날 관리자가 **못 읽겠다고** 했다 — 「무슨 말인지 모르겠어. 매칭이 안돼.
+ * 직관적으로 중요한 지표만」. 그 전에는 칸이 여덟이었고 칸마다 숫자 밑에 작은
+ * 글씨가 한 줄씩 더 붙어 있었다. **머리글 하나에 값이 둘이면 눈이 짝을 못 짓는다.**
+ *
+ *     마지막     언제 마지막으로 뭔가를 했나
+ *     푼 카드    이 기간에 웹에서 푼 카드      ○장
+ *     받은 덱    이 기간에 파일을 받아 간 편   ○편
+ *     예습 링크  이 기간에 연 편 — 기본·개인
+ *
+ * 나머지(개인 대화 수·프롬프트·강의별 내역)는 **펴야 보인다.** 늘 보일 필요가
+ * 없는 값이 표에 서 있으면 중요한 넷이 안 읽힌다.
+ *
+ * ## 기간을 자른다
+ *
+ * 누적은 「지금 쓰고 있나」에 답을 못 한다 — 한 번 찬 수는 안 줄어서, 두 달 전에
+ * 열심히 한 사람과 이번 주에 하는 사람이 같은 크기로 보인다. 기간은 서버가
+ * 정하고(`?window=`) **무엇을 쟀는지 문장으로 실어 보낸다** — 화면이 「이번 블럭」
+ * 이라고만 적으면 보는 사람이 그게 언제부터인지 모른다.
  */
 export function UsageTab() {
   const [board, setBoard] = useState<UsageBoard | null>(null);
+  const [picked, setPicked] = useState("block");
   const [error, setError] = useState("");
   const [openId, setOpenId] = useState("");
   const [detail, setDetail] = useState<UsageDetail | null>(null);
   const [detailError, setDetailError] = useState("");
 
   useEffect(() => {
-    api<UsageBoard>("/api/admin/usage")
+    setBoard(null);
+    api<UsageBoard>(`/api/admin/usage?window=${picked}`)
       .then(setBoard)
       .catch((cause: Error) => setError(cause.message));
-  }, []);
+  }, [picked]);
 
   // 펼 때마다 다시 읽는다. 사람 수만큼 미리 받아 두면 첫 화면이 느려지고,
   // 관리자가 한 번에 보는 사람은 하나다.
-  const open = useCallback((row: UsageRow) => {
-    if (openId === row.id) {
-      setOpenId("");
-      return;
-    }
-    setOpenId(row.id);
-    setDetail(null);
-    setDetailError("");
-    api<UsageDetail>(`/api/admin/usage/${row.id}`)
-      .then(setDetail)
-      .catch((cause: Error) => setDetailError(cause.message));
-  }, [openId]);
+  const open = useCallback(
+    (row: UsageRow) => {
+      if (openId === row.id) {
+        setOpenId("");
+        return;
+      }
+      setOpenId(row.id);
+      setDetail(null);
+      setDetailError("");
+      api<UsageDetail>(`/api/admin/usage/${row.id}`)
+        .then(setDetail)
+        .catch((cause: Error) => setDetailError(cause.message));
+    },
+    [openId],
+  );
 
   if (error) return <p className="notice is-error">{error}</p>;
-  if (!board) return <p className="notice">불러오는 중…</p>;
-
-  const now = new Date(board.now);
-  const active = board.users.filter((row) => row.recentCards > 0).length;
-  const never = board.users.filter((row) => !row.lastAt).length;
 
   return (
     <section className="admin-usage">
-      {/* 세 수가 서로 다른 것을 말한다 — 얼마나 있나 · 지금 쓰나 · 한 번도 안 왔나. */}
-      <p className="admin-summary">
-        전체 {board.users.length}명 · 최근 {board.recentDays}일에 푼 사람{" "}
-        <strong>{active}명</strong>
-        {never ? <> · 한 번도 안 연 사람 {never}명</> : null}
-      </p>
+      {/* 기간이 먼저 선다. 아래 숫자가 전부 이것에 매여 있어서, 표를 보고 나서
+          기간을 찾게 하면 그 사이에 이미 잘못 읽는다. */}
+      <nav className="admin-window" aria-label="기간">
+        {(board?.windows ?? [{ key: "block", label: "이번 블럭" }]).map((choice) => (
+          <button
+            key={choice.key}
+            className={choice.key === picked ? "is-active" : ""}
+            onClick={() => setPicked(choice.key)}
+          >
+            {choice.label}
+          </button>
+        ))}
+      </nav>
 
-      {/* **접속과 링크 열기는 표가 선 날부터만 찬다.** 이 줄이 없으면 그 전의 0이
-          「안 들어왔다」로 읽힌다 — 루트 CLAUDE.md 의 함정 ③ 이 그것이다. */}
-      <p className="admin-note">
-        접속은 {stamp(board.visitsSince)}부터 · 예습 링크 열기는 {stamp(board.opensSince)}부터
-        남습니다. 그 전에 한 것은 어디에도 안 남아 있어 0으로 보입니다.
+      {board ? (
+        <Board
+          board={board}
+          openId={openId}
+          detail={detail}
+          detailError={detailError}
+          onToggle={open}
+        />
+      ) : (
+        <p className="notice">불러오는 중…</p>
+      )}
+    </section>
+  );
+}
+
+function Board({
+  board,
+  openId,
+  detail,
+  detailError,
+  onToggle,
+}: {
+  board: UsageBoard;
+  openId: string;
+  detail: UsageDetail | null;
+  detailError: string;
+  onToggle: (row: UsageRow) => void;
+}) {
+  const now = new Date(board.now);
+  const active = board.users.filter((row) => row.cards > 0 || row.decks > 0).length;
+  const never = board.users.filter((row) => !row.lastAt).length;
+
+  return (
+    <>
+      {/* **무엇을 쟀는지 문장으로 적는다.** 「이번 블럭」만으로는 언제부터인지 모른다. */}
+      <p className="admin-summary">
+        {board.window.label} · {span(board.window.from, board.window.to)} · 쓴 사람{" "}
+        <strong>{active}명</strong> / {board.users.length}명
+        {never ? <> · 한 번도 안 연 사람 {never}명</> : null}
       </p>
 
       <table className="admin-table">
         <thead>
           <tr>
             <th>이메일</th>
-            <th>마지막</th>
-            <th title={`최근 ${board.recentDays}일 중 들어온 날 · 밑은 누적으로 들어온 횟수`}>
-              접속
+            <th title="마지막으로 웹에서 풀거나 파일을 받아 간 때. 이 칸만 기간을 안 탄다">
+              마지막
             </th>
-            {/* **카드 수다.** 「찍기」로 적었더니 접속 횟수로 읽혔다(2026-09-19).
-                같은 카드를 세 번 봐도 한 장이라, 「이 주에 무엇을 봤나」에 답한다. */}
-            <th title={`최근 ${board.recentDays}일 동안 푼 카드 수. 같은 카드를 여러 번 봐도 한 장이다`}>
-              최근 {board.recentDays}일 카드
+            <th title="이 기간에 웹에서 푼 카드. 같은 카드를 여러 번 봐도 한 장이다">푼 카드</th>
+            <th title="이 기간에 강의록이나 덱을 받아 간 편. 받아 간 것이지 푼 것이 아니다">
+              받은 덱
             </th>
-            <th title="웹에서 푼 카드 수(예습 · 복습). 안키에서 푼 것은 서버에 안 남는다">
-              웹 풀이
-            </th>
-            <th title="받기 버튼을 누른 자료. 받아 간 것이지 푼 것이 아니다">덱 받기</th>
-            <th title="우리 화면에서 예습 링크를 누른 횟수(기본 · 개인). 링크를 복사해 받은 사람이 연 것은 안 들어온다">
+            <th title="이 기간에 예습 링크를 연 편. 기본 링크와 개인 대화를 갈라서 센다">
               예습 링크
             </th>
-            <th title="웹으로 풀었거나 파일을 받아 간 편">편</th>
           </tr>
         </thead>
         <tbody>
@@ -99,12 +146,19 @@ export function UsageTab() {
               isOpen={openId === row.id}
               detail={openId === row.id ? detail : null}
               detailError={openId === row.id ? detailError : ""}
-              onToggle={() => open(row)}
+              onToggle={() => onToggle(row)}
             />
           ))}
         </tbody>
       </table>
-    </section>
+
+      {/* 예습 링크 열기는 표가 선 날부터만 찬다. 이 줄이 없으면 그 전의 0이
+          「안 눌렀다」로 읽힌다 — 루트 CLAUDE.md 의 함정 ③ 이 그것이다. */}
+      <p className="admin-note">
+        예습 링크 열기는 {stamp(board.opensSince)}부터 남습니다 — 그 전에 누른 것은 어디에도 안
+        남아 있어 0으로 보입니다. 덱을 안키에서 푼 것도 서버에 안 남습니다.
+      </p>
+    </>
   );
 }
 
@@ -136,65 +190,22 @@ function UserRows({
           {row.hasAccess ? null : <span className="tag">승인 대기</span>}
         </td>
         <td>{since(row.lastAt, now)}</td>
-        <td className="num">
-          {row.visits.days ? (
-            <>
-              {row.visits.recentDays}일<small>누적 {row.visits.times}번</small>
-            </>
-          ) : (
-            "—"
-          )}
-        </td>
-        <td className="num">{row.recentCards ? `${row.recentCards}장` : "—"}</td>
-        {/* **웹에서 푸는 사람과 받아 가는 사람은 다른 사람이다.** 한 칸에 합쳐
-            적으면 그 둘이 안 갈린다 — 편 수를 각자 밑에 붙여 둔다. */}
-        <td className="num">
-          {row.pre.cards || row.main.cards ? (
-            <>
-              {row.pre.cards} · {row.main.cards}
-              <small>{row.webLectures}편</small>
-            </>
-          ) : (
-            "—"
-          )}
-        </td>
-        <td className="num">
-          {row.grabLectures ? (
-            <>
-              {row.grabLectures}편<small>{row.grabs.kinds}갈래</small>
-            </>
-          ) : (
-            "—"
-          )}
-        </td>
+        <td className="num">{row.cards ? `${row.cards}장` : "—"}</td>
+        <td className="num">{row.decks ? `${row.decks}편` : "—"}</td>
         <td className="num">
           {/* **기본과 개인을 나란히 둔다.** 반이 같이 읽는 대화를 쓰는 사람과 자기
               대화를 쓰는 사람이 갈리는지가 이 둘을 붙여 놓아야 보인다. */}
-          {row.opens.share || row.opens.mine ? (
-            <>
-              기본 {row.opens.share} · 개인 {row.opens.mine}
-            </>
-          ) : (
-            "—"
-          )}
-          {/* 아무것도 없는 사람 밑에 「저장 0」을 세우지 않는다. 늘 서 있는 0은
-              줄을 채우기만 하고 아무 말도 안 한다. */}
-          {row.previews || row.prompt.custom ? (
-            <small>
-              {row.previews ? `저장 ${row.previews}` : ""}
-              {row.previews && row.prompt.custom ? " · " : ""}
-              {row.prompt.custom ? "프롬프트 고침" : ""}
-            </small>
-          ) : null}
+          {row.opens.share || row.opens.mine
+            ? `기본 ${row.opens.share} · 개인 ${row.opens.mine}`
+            : "—"}
         </td>
-        <td className="num">{row.lectures || "—"}</td>
       </tr>
       {isOpen ? (
         <tr className="admin-usage-detail">
-          <td colSpan={8}>
+          <td colSpan={5}>
             {detailError ? <p className="notice is-error">{detailError}</p> : null}
             {!detail && !detailError ? <p className="notice">불러오는 중…</p> : null}
-            {detail ? <LectureList detail={detail} now={now} /> : null}
+            {detail ? <LectureList row={row} detail={detail} now={now} /> : null}
           </td>
         </tr>
       ) : null}
@@ -202,13 +213,14 @@ function UserRows({
   );
 }
 
-function LectureList({ detail, now }: { detail: UsageDetail; now: Date }) {
+function LectureList({ row, detail, now }: { row: UsageRow; detail: UsageDetail; now: Date }) {
   return (
     <>
-      {/* 고쳐 쓴 사람의 문구는 그대로 보여 준다 — 「고쳤다」만으로는 어떻게 쓰는지
-          알 수 없고, 그것이 이 칸을 보는 이유다. */}
+      {/* 펴야 보이는 것 둘 — 저장해 둔 개인 대화 수와, 고쳐 쓴 프롬프트 문구.
+          「고쳤다」만으로는 어떻게 쓰는지 알 수 없고, 그것이 이 칸을 보는 이유다.
+          **여기는 기간을 안 자른다** — 펴는 것은 그 사람의 전부를 보려는 것이다. */}
       <p className="admin-summary">
-        예습 프롬프트{" "}
+        전체 기간 · 저장한 개인 대화 {row.previews}개 · 예습 프롬프트{" "}
         {detail.user.previewPrompt ? (
           <q>{detail.user.previewPrompt}</q>
         ) : (
@@ -234,7 +246,7 @@ function LectureTable({ detail, now }: { detail: UsageDetail; now: Date }) {
           <th title="웹에서 푼 카드 · 괄호는 본인이 맞다고 찍은 수(서버 판정이 아니다)">예습</th>
           <th>복습</th>
           <th title="받기 버튼을 누른 자료">받기</th>
-          <th title="우리 화면에서 이 편의 예습 링크를 누른 횟수">링크</th>
+          <th title="이 편의 예습 링크를 누른 횟수">링크</th>
           <th>마지막</th>
         </tr>
       </thead>
@@ -247,7 +259,6 @@ function LectureTable({ detail, now }: { detail: UsageDetail; now: Date }) {
               {row.title || row.runId}
               <small>
                 {row.subject} · {row.date ?? row.runId}
-                {/* 기본 링크가 아니라 이 사람이 저장해 둔 개인 대화다. */}
                 {row.preview ? " · 개인 대화" : ""}
               </small>
             </td>
@@ -284,13 +295,19 @@ function grabLabel(kind: string): string {
   return GRAB_LABELS[kind] ?? kind;
 }
 
-/** 「언제부터」 한 줄. 아직 한 줄도 안 쌓였으면 그렇게 적는다 — 날짜 자리를
- *  비워 두면 문장이 「부터 남습니다」가 된다. */
+/** 날짜 하나. 아직 한 줄도 안 쌓였으면 그렇게 적는다 — 자리를 비워 두면 문장이
+ *  「부터 남습니다」가 된다. */
 function stamp(iso: string | null): string {
   if (!iso) return "(아직 없음)";
   const when = new Date(iso);
   if (Number.isNaN(when.getTime())) return "(아직 없음)";
   return when.toLocaleDateString("ko-KR", { month: "long", day: "numeric" });
+}
+
+/** 잰 구간을 한 마디로. 끝이 없으면 지금까지다. */
+function span(from: string | null, to: string | null): string {
+  if (!from) return "전체 기간";
+  return to ? `${stamp(from)} ~ ${stamp(to)}` : `${stamp(from)}부터 지금까지`;
 }
 
 /**
