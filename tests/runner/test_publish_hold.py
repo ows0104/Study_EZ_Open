@@ -98,3 +98,54 @@ def test_사라진_한_장은_건너뛰고_나머지를_올린다(tmp_path):
 
     assert client.put == ["s025.png"], "남은 것을 안 올렸다"
     assert any("사라졌다" in line and "s008.png" in line for line in report.failures)
+
+
+# ── 걸린 갈래만 미룬다 ────────────────────────────────────────────────
+# 2026-09-19. `blocking`이 문자열 한 뭉치라 **올해 필기가 v2로 갈렸다는 사유
+# 하나가 작년 폴더의 예습 덱까지 붙들었다.** 예습은 작년 자료로 만들고 올해
+# 필기를 읽지도 않는다. 그때 재 보니 검문에 걸린 10편 중 7편이 자기와 무관한
+# 갈래 때문에 같이 묶여 있었다.
+
+
+def test_main_사유는_예습을_안_붙든다(tmp_path):
+    plan = a_plan(tmp_path)
+    plan.main_items = tmp_path / "main_items.final.json"
+    plan.blocking.append(publish.Block(
+        publish.MAIN, "260911_02의 산출물이 지금 필기와 다르다 — 산출물은 v1 로 만들었는데 필기는 v2 이다"))
+    publish.hold_blocked(plan)
+
+    assert [u.kind for u in plan.uploads] == ["notes_current", "notes_prev", "pre_apkg", "media", "media"]
+    assert plan.pre_items is not None, "예습 문항이 같이 미뤄졌다"
+    assert plan.run_meta == {"pre": tmp_path / "pre_run.meta.json"}
+    assert plan.preview_url, "예습 링크가 같이 미뤄졌다"
+    assert plan.main_items is None
+
+
+def test_pre_사유는_복습을_안_붙든다(tmp_path):
+    plan = a_plan(tmp_path)
+    plan.main_items = tmp_path / "main_items.final.json"
+    plan.blocking.append(publish.Block(
+        publish.PRE, "Pre-Quiz 문항 결함으로 갈린 카드가 덱에 1장 남아 있다 (c016)"))
+    publish.hold_blocked(plan)
+
+    assert "main_apkg" in [u.kind for u in plan.uploads]
+    assert plan.main_items is not None, "복습 문항이 같이 미뤄졌다"
+    assert plan.pre_items is None
+
+
+def test_둘_다_걸리면_통째로_미룬다(tmp_path):
+    plan = a_plan(tmp_path)
+    plan.main_items = tmp_path / "main_items.final.json"
+    plan.blocking += [publish.Block(publish.MAIN, "Main-Quiz 보류"),
+                      publish.Block(publish.PRE, "Pre-Quiz 보류")]
+    publish.hold_blocked(plan)
+
+    assert [u.kind for u in plan.uploads] == ["notes_current", "notes_prev"]
+    assert plan.pre_items is None and plan.main_items is None
+    assert plan.preview_url == ""
+
+
+def test_사유는_문자열로_찍힌다(tmp_path):
+    """`cycle`이 `f"✋ {reason}"`으로 찍는다 — 갈래를 붙이면서 깨지면 안 된다."""
+    block = publish.Block(publish.MAIN, "산출물이 지금 필기와 다르다")
+    assert f"{block}" == "산출물이 지금 필기와 다르다"

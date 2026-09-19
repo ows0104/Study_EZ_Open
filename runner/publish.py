@@ -131,6 +131,30 @@ class Upload:
         }
 
 
+MAIN, PRE = "main", "pre"
+
+
+@dataclass(frozen=True)
+class Block:
+    """올리면 안 될 이유 하나 — **어느 갈래 것인지 같이 들고 다닌다.**
+
+    갈래를 안 붙이던 동안 `blocking` 은 문자열 한 뭉치였고, 미루는 쪽은 그 뭉치가
+    비었는지만 봤다. 그래서 **올해 필기가 v2 로 갈렸다는 사유 하나가 작년 폴더의
+    예습 덱까지 붙들었다** — 예습은 작년 자료로 만들고 올해 필기를 읽지도 않는다.
+
+    2026-09-19 에 재 봤다. 검문에 걸린 10편 중 **7편이 자기와 무관한 갈래 때문에
+    같이 묶여 있었다**(6편은 main 사유에 예습이, 1편은 pre 사유에 복습이).
+
+    `__str__` 이 사유만 돌려주므로 찍는 쪽(`cycle`)은 고치지 않아도 된다.
+    """
+
+    kind: str        # MAIN | PRE
+    reason: str
+
+    def __str__(self) -> str:
+        return self.reason
+
+
 @dataclass
 class LecturePlan:
     """한 편이 서버에 밀어 넣을 것 전부."""
@@ -147,7 +171,7 @@ class LecturePlan:
     main_items: Path | None = None
     preview_url: str = ""
     notes: list[str] = field(default_factory=list)            # 사람이 봐야 할 것
-    blocking: list[str] = field(default_factory=list)         # 사람 없이 올리면 안 될 이유
+    blocking: list[Block] = field(default_factory=list)       # 사람 없이 올리면 안 될 이유
     # 아직 필기가 없는 강의. 시간표 칸에서 세운 자리다. **올해 필기만 없을 뿐
     # Pre-Quiz는 다 붙는다** — 예습이 필요한 쪽이 이쪽이라 그러라고 세운 자리다.
     ahead: bool = False
@@ -248,7 +272,7 @@ def _add_this_year(plan: LecturePlan, run_dir: Path) -> None:
         plan.run_meta["main"] = meta
     verdict = gate.inspect(run_dir, apkg, meta if meta.is_file() else None, "Main-Quiz")
     plan.notes += verdict.notes
-    plan.blocking += verdict.blocking
+    plan.blocking += [Block(MAIN, reason) for reason in verdict.blocking]
 
     items = run_dir / "main_items.final.json"
     if items.is_file():
@@ -271,7 +295,7 @@ def _add_prev_year(plan: LecturePlan, run_dir: Path) -> None:
         plan.run_meta["pre"] = meta
     verdict = gate.inspect(run_dir, apkg, meta if meta.is_file() else None, "Pre-Quiz", "pre_")
     plan.notes += verdict.notes
-    plan.blocking += verdict.blocking
+    plan.blocking += [Block(PRE, reason) for reason in verdict.blocking]
 
     items = run_dir / "pre_items.final.json"
     if items.is_file():
@@ -358,6 +382,50 @@ def hold_pre(plan: LecturePlan, why: str) -> None:
         plan.notes.append(f"미룬 것 ({why}): {' · '.join(held)}")
 
 
+# Main-Quiz 산출물의 upload kind. 예습 슬라이드는 `media`라 안 걸린다 —
+# `_add_this_year`가 복습 슬라이드를 `main_media`로 가른 것이 여기서 값을 한다.
+MAIN_KINDS = ("main_apkg", "main_media")
+
+
+def hold_main(plan: LecturePlan, why: str) -> None:
+    """Main-Quiz 산출물만 미룬다. **예습 덱·문항·링크는 그대로 내보낸다.**
+
+    `hold_pre`의 거울이다. 올해 필기가 새 판으로 갈렸을 때 쓴다 — 낡은 복습 덱은
+    붙들어야 하지만, 예습은 작년 자료로 만든 것이라 이 갈림과 무관하다.
+    """
+    counts: dict[str, int] = {}
+    for upload in plan.uploads:
+        if upload.kind in MAIN_KINDS:
+            counts[upload.kind] = counts.get(upload.kind, 0) + 1
+    held = [kind if n == 1 else f"{kind}×{n}" for kind, n in counts.items()]
+    if "main" in plan.run_meta:
+        held.append("run-meta main")
+    if plan.main_items:
+        held.append("main-items")
+
+    plan.uploads = [upload for upload in plan.uploads if upload.kind not in MAIN_KINDS]
+    plan.run_meta.pop("main", None)
+    plan.main_items = None
+    if held:
+        plan.notes.append(f"미룬 것 ({why}): {' · '.join(held)}")
+
+
+def hold_blocked(plan: LecturePlan, why: str = "검문") -> None:
+    """걸린 갈래만 미룬다. 둘 다 걸렸으면 예전처럼 통째로 미룬다.
+
+    **갈래를 모르면 통째로 미루는 쪽이 맞다.** 여기서 갈라도 되는 것은 사유가
+    자기 갈래를 스스로 밝혔을 때뿐이고, 그렇지 않은 사유가 생기면 그것은 새 갈래를
+    붙일 자리이지 조용히 내보낼 자리가 아니다.
+    """
+    kinds = {block.kind for block in plan.blocking}
+    if kinds == {MAIN}:
+        hold_main(plan, why)
+    elif kinds == {PRE}:
+        hold_pre(plan, why)
+    else:
+        hold_artifacts(plan, why=why)
+
+
 def plan_subject(
     root: Path,
     subject: str,
@@ -401,7 +469,14 @@ def plan_subject(
         if note:
             # 판이 어긋난 것(v1로 만든 덱, v3 필기)은 낡은 덱이 올라간다는 뜻이라
             # 사람 없이 내보내면 안 된다. 남의 자리인 경우는 애초에 안 붙는다.
-            (plan.blocking if owned else plan.notes).append(note)
+            #
+            # **갈래는 MAIN 이다.** 이 자리가 재는 것은 올해 run 디렉터리와 올해
+            # 필기이고, 거기 있는 산출물은 Main-Quiz 다. 예습 덱은 작년 폴더에서
+            # 오고 올해 필기를 읽지도 않는다 — 그런데도 한동안 같이 묶였다.
+            if owned:
+                plan.blocking.append(Block(MAIN, note))
+            else:
+                plan.notes.append(note)
         if owned:
             _add_this_year(plan, run_dir)
 
@@ -426,7 +501,7 @@ def plan_subject(
         if notes_only:
             hold_artifacts(plan)
         elif gated and plan.blocking:
-            hold_artifacts(plan, why="검문")
+            hold_blocked(plan)
         plans.append(plan)
 
     if timetable is not None:
@@ -460,7 +535,7 @@ def plan_subject(
             if notes_only:
                 hold_artifacts(plan)
             elif gated and plan.blocking:
-                hold_artifacts(plan, why="검문")
+                hold_blocked(plan)
             plans.append(plan)
 
     # 필기가 있는 편과 아직 없는 편이 날짜순으로 섞여야 진도 순서로 읽힌다.
