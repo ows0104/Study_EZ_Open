@@ -35,6 +35,8 @@ GET /api/admin/overview
 GET /api/admin/prequiz-jobs
 GET /api/admin/previews
 GET /api/admin/timetable-events
+GET /api/admin/usage
+GET /api/admin/usage/{user_id}
 GET /api/admin/users
 GET /api/bundles/decks
 GET /api/bundles/decks/{subject}/{run_id}/{kind}

@@ -1,7 +1,7 @@
 # web — studyez.kr 프론트
 
 Vite + React + TypeScript. **이 폴더는 화면만 든다** — 파이프라인을 부르지 않고
-`runner` 도 `quizgen` 도 모른다. 서버 경로 19개만 부른다.
+`runner` 도 `quizgen` 도 모른다. 서버 경로 21개만 부른다.
 
     무엇을 고치면 어느 파일인가    ../docs/map.md §2
     검사                          cd web && npm run typecheck

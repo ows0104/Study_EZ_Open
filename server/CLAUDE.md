@@ -4,7 +4,7 @@
 
     무엇을 고치면 어느 파일인가    ../docs/map.md §2
     검사                          .venv/Scripts/python.exe -m tests    (pytest 가 아니다)
-    경로 계약                      tests/test_routes_golden.py          66줄
+    경로 계약                      tests/test_routes_golden.py          68줄
     배포                          deploy.ps1 을 손으로
     권한 · 어디서나 미는 함정       ../CLAUDE.md
 
@@ -29,7 +29,7 @@ cd server
 
 ## 경로를 바꾸면 넷이 같이 본다
 
-`web/` 19개 · `runner/` 9개 · `spotter/scripts/` 10개 · `bridge/` 2개가 이 서버를
+`web/` 21개 · `runner/` 9개 · `spotter/scripts/` 10개 · `bridge/` 2개가 이 서버를
 부른다. **가로로는 아무도 서로를 안 부르므로** 경로 목록이 그대로면 한쪽만 고쳐도 된다.
 
 ```bash

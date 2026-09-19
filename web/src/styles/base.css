@@ -1195,6 +1195,47 @@ button.resource.is-download:hover:not(:disabled)::after {
   font-size: 12px;
 }
 
+/* ── 이용현황. 표 하나에 숫자가 여섯 칸이라 **자리를 맞춰야 훑힌다** — 자리가
+ * 안 맞으면 목록을 읽는 것이 아니라 한 줄씩 읽게 된다. */
+.admin-usage .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* 이름이 곧 펼치는 버튼이다. 따로 「보기」를 두면 줄마다 버튼이 하나씩 늘어선다. */
+.admin-usage-name {
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-usage-name:hover {
+  text-decoration: underline;
+}
+
+/* 한 번도 안 연 줄. **경고가 아니다** — 승인하고 안 들어온 사람은 흔하다.
+ * 색을 주면 고장으로 읽힌다. 글자만 죽인다. */
+.admin-usage tr.is-idle td {
+  color: var(--ink-3);
+}
+
+/* 펴진 내역. 바깥 표와 같은 색이면 어느 줄에 딸린 것인지 안 보인다. */
+.admin-usage-detail > td {
+  padding: 4px 8px 12px 20px;
+  background: var(--surface-2);
+}
+
+/* 안쪽 표는 넓은 화면에서 끝까지 늘리지 않는다. 늘리면 강의 이름과 그 편의
+ * 숫자가 화면 양 끝으로 갈라져, 한 줄을 읽는 데 눈이 가로질러야 한다. */
+.admin-usage-detail .admin-table {
+  max-width: 720px;
+}
+
 /* 예습 링크 입력 묶음. 링크 한 줄이 남는 가로를 다 가져가지 않게 한다. */
 .admin-preview {
   max-width: 380px;

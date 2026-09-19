@@ -4,6 +4,7 @@ import { api } from "../api";
 import type { AdminOverview, AppUser, JobBoard } from "../types";
 import { jobMoving, jobOpen } from "../jobProgress";
 import { LectureTab } from "./LectureTab";
+import { UsageTab } from "./UsageTab";
 import { QuizTab } from "./QuizTab";
 import { UsersTab } from "./UsersTab";
 import { isUnconfirmed, isUnmatched, pending, runnerAlive } from "./rows";
@@ -18,6 +19,11 @@ import { isUnconfirmed, isUnmatched, pending, runnerAlive } from "./rows";
  *     퀴즈   위는 지금 도는 것과 진행도, 아래는 지금까지 만들어진 퀴즈들
  *     계정   신청이 들어온 계정 — 승인
  *     강의   매칭 · 과목 이름 잇기 · 편별 자료 체크리스트와 예습 링크
+ *     이용   누가 쓰고 있나 (2026-09-19 관리자 지시로 넷째가 되었다)
+ *
+ * **「이용」에는 탭 옆 숫자가 없다.** 다른 셋의 숫자는 남은 일이거나 도는 일이라
+ * 0이 되면 사라지는데, 이용현황에 적을 수 있는 수(사용자 수·쓰는 사람 수)는 늘
+ * 서 있다. 늘 서 있는 숫자는 곧 안 읽힌다.
  *
  * **일감 판이 겉틀에서 「퀴즈」 탭 안으로 내려갔다.** 표보다 먼저 서라는
  * 2026-09-01 지시는 그 탭 안에서 지켜진다(맨 위). 다른 탭에서는 안 보이게
@@ -111,12 +117,18 @@ export function AdminPage() {
           강의
           {lectureTodo ? <span className="admin-tab-count">{lectureTodo}</span> : null}
         </NavLink>
+        <NavLink to="/admin/usage" className={tabClass} title="사람마다 무엇을 얼마나 했나">
+          이용
+        </NavLink>
       </nav>
 
       <Routes>
         <Route index element={<QuizTab overview={overview} board={board} onBoard={setBoard} />} />
         <Route path="users" element={<UsersTab users={users} onChanged={loadUsers} />} />
         <Route path="lectures" element={<LectureTab overview={overview} onChanged={load} />} />
+        {/* 목록을 자기가 읽는다. 다른 탭에 있는 동안 도는 폴링에 얹지 않는다 —
+            집계 질의가 여덟 개라 10초마다 돌 이유가 없다. */}
+        <Route path="usage" element={<UsageTab />} />
         {/* 하루 나가 있던 주소다(2026-09-04). 눌러 둔 사람이 빈 화면을 보지 않게
             제자리로 보낸다. */}
         <Route path="match" element={<Navigate to="/admin/lectures" replace />} />

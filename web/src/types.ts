@@ -25,6 +25,59 @@ export type AppUser = {
   createdAt: string | null;
 };
 
+/**
+ * 사람 하나의 이용현황. **서버가 세는 것은 웹에서 한 것과 받아 간 것뿐이다.**
+ *
+ * apkg로 나간 풀이는 안키가 들고 서버에 안 남는다. 그래서 이 수들을 더해
+ * "얼마나 공부했나"로 그리면 안 된다 — 사연은 `server/app/routes/usage.py` 머리에 있다.
+ */
+export type UsageRow = {
+  id: string;
+  email: string;
+  isAdmin: boolean;
+  /** Study_EZ에 들어갈 수 있는가. **0이 「안 썼다」인지 「못 썼다」인지를 가른다.** */
+  hasAccess: boolean;
+  joinedAt: string | null;
+  /** 마지막으로 무엇이든 한 때. `null`이면 한 번도 안 열었다. */
+  lastAt: string | null;
+  /** 웹으로 풀었거나 파일을 받아 간 편 수. 세 표를 합쳐서 센 값이다. */
+  lectures: number;
+  pre: { cards: number; grades: number };
+  main: { cards: number; grades: number };
+  /** 최근 `recentDays`일 동안 찍은 횟수. **누적과 갈라 둔다** — 누적은 안 줄어든다. */
+  recentGrades: number;
+  /** `clicks`는 내려받은 횟수가 아니라 **버튼을 누른 횟수**다. */
+  grabs: { kinds: number; clicks: number };
+  previews: number;
+};
+
+export type UsageBoard = {
+  now: string;
+  /** 「최근」이 며칠인가. 화면이 숫자를 직접 적지 않게 서버가 실어 보낸다. */
+  recentDays: number;
+  users: UsageRow[];
+};
+
+/** 한 사람이 강의 하나에서 한 것. `title`이 비면 지워진 편이다. */
+export type UsageLecture = {
+  subject: string;
+  runId: string;
+  title: string;
+  date: string | null;
+  /** `selfCorrect`는 **본인이 맞다고 찍은 것**이다. 서버 판정이 아니다. */
+  pre: { cards: number; selfCorrect: number; grades: number };
+  main: { cards: number; selfCorrect: number; grades: number };
+  grabs: string[];
+  preview: boolean;
+  lastAt: string | null;
+};
+
+export type UsageDetail = {
+  user: { id: string; email: string };
+  now: string;
+  lectures: UsageLecture[];
+};
+
 export type EventCategory = "lecture" | "practice" | "exam" | "holiday" | "elective" | "study";
 
 /**

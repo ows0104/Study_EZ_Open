@@ -8,6 +8,13 @@
       "port": 5173
     },
     {
+      "_note": "로컬 전용 API. 이것 없이는 `web` 이 빈 화면이다 — 프록시가 8000으로 간다. **환경을 명령줄에 박는 것은 `server/.env` 가 프로덕션이기 때문이다**(server/CLAUDE.md): 그냥 띄우면 운영 DB 를 읽는다. DB 와 저장소는 .gitignore 안의 local_test_data/ 이고, 통하는 토큰은 `local-test-token` 하나다(배포 서버에서는 안 통한다).",
+      "name": "api-local-test",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd server && set ENVIRONMENT=local-test&& set DATABASE_URL=sqlite:///local_test_data/studyez.db&& set STUDYEZ_LOCAL_STORAGE_DIR=local_test_data/storage&& set PUBLIC_API_BASE_URL=http://localhost:8000&& set RUNNER_TOKEN=runner-token&& .venv\\Scripts\\python.exe -m uvicorn app.main:app --port 8000"],
+      "port": 8000
+    },
+    {
       "_note": "땡시는 빌드 도구가 없다. spotter/ 를 통째로 낸다 — 앱은 /web/ 이고 로그인 없이 볼 때 읽는 문항 DB·사진이 /build/ 라 둘 다 보여야 한다.",
       "name": "spotter-web",
       "runtimeExecutable": "uv",
