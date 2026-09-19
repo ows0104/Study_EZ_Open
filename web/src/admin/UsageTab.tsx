@@ -65,12 +65,19 @@ export function UsageTab() {
           <tr>
             <th>이메일</th>
             <th>마지막</th>
-            <th title={`최근 ${board.recentDays}일 동안 카드를 찍은 횟수`}>
-              최근 {board.recentDays}일
+            {/* **접속 횟수가 아니다.** 저장소에 접속을 남기는 표가 없다 — 이 수는
+                Again·Hard·Good·Easy 를 누른 횟수다. 머리글에도 그렇게 적는다. */}
+            <th title={`최근 ${board.recentDays}일 동안 Again·Hard·Good·Easy 를 누른 횟수. 접속 횟수가 아니다`}>
+              최근 {board.recentDays}일 찍기
             </th>
-            <th title="웹에서 푼 카드 수. 안키에서 푼 것은 서버에 안 남는다">예습 · 복습</th>
+            <th title="웹에서 푼 카드 수(예습 · 복습). 안키에서 푼 것은 서버에 안 남는다">
+              웹 풀이
+            </th>
+            <th title="받기 버튼을 누른 자료. 받아 간 것이지 푼 것이 아니다">덱 받기</th>
+            <th title="저장해 둔 개인 예습 대화. 기본 링크는 서버를 안 지나므로 누가 열었는지 알 수 없다">
+              개인 대화
+            </th>
             <th title="웹으로 풀었거나 파일을 받아 간 편">편</th>
-            <th title="받기 버튼을 누른 자료의 갈래 수. 받아 간 것이지 푼 것이 아니다">받기</th>
           </tr>
         </thead>
         <tbody>
@@ -119,16 +126,38 @@ function UserRows({
           {row.hasAccess ? null : <span className="tag">승인 대기</span>}
         </td>
         <td>{since(row.lastAt, now)}</td>
-        <td className="num">{row.recentGrades || "—"}</td>
+        <td className="num">{row.recentGrades ? `${row.recentGrades}회` : "—"}</td>
+        {/* **웹에서 푸는 사람과 받아 가는 사람은 다른 사람이다.** 한 칸에 합쳐
+            적으면 그 둘이 안 갈린다 — 편 수를 각자 밑에 붙여 둔다. */}
         <td className="num">
-          {row.pre.cards || 0} · {row.main.cards || 0}
+          {row.pre.cards || row.main.cards ? (
+            <>
+              {row.pre.cards} · {row.main.cards}
+              <small>{row.webLectures}편</small>
+            </>
+          ) : (
+            "—"
+          )}
+        </td>
+        <td className="num">
+          {row.grabLectures ? (
+            <>
+              {row.grabLectures}편<small>{row.grabs.kinds}갈래</small>
+            </>
+          ) : (
+            "—"
+          )}
+        </td>
+        <td className="num">
+          {row.previews || "—"}
+          {/* 프롬프트는 대화와 같은 자리에 산다 — 개인 대화를 열 때 쓰는 문구다. */}
+          {row.prompt.custom ? <small>프롬프트 고침</small> : null}
         </td>
         <td className="num">{row.lectures || "—"}</td>
-        <td className="num">{row.grabs.kinds || "—"}</td>
       </tr>
       {isOpen ? (
         <tr className="admin-usage-detail">
-          <td colSpan={6}>
+          <td colSpan={7}>
             {detailError ? <p className="notice is-error">{detailError}</p> : null}
             {!detail && !detailError ? <p className="notice">불러오는 중…</p> : null}
             {detail ? <LectureList detail={detail} now={now} /> : null}
@@ -140,8 +169,29 @@ function UserRows({
 }
 
 function LectureList({ detail, now }: { detail: UsageDetail; now: Date }) {
-  // 손댄 편이 하나도 없는 것도 답이다. 빈 표로 두면 못 불러온 것과 같아 보인다.
-  if (!detail.lectures.length) return <p className="notice">아직 손댄 편이 없습니다.</p>;
+  return (
+    <>
+      {/* 고쳐 쓴 사람의 문구는 그대로 보여 준다 — 「고쳤다」만으로는 어떻게 쓰는지
+          알 수 없고, 그것이 이 칸을 보는 이유다. */}
+      <p className="admin-summary">
+        예습 프롬프트{" "}
+        {detail.user.previewPrompt ? (
+          <q>{detail.user.previewPrompt}</q>
+        ) : (
+          <span className="tag">기본 문구</span>
+        )}
+      </p>
+      {detail.lectures.length ? (
+        <LectureTable detail={detail} now={now} />
+      ) : (
+        // 손댄 편이 없는 것도 답이다. 빈 표로 두면 못 불러온 것과 같아 보인다.
+        <p className="notice">아직 손댄 편이 없습니다.</p>
+      )}
+    </>
+  );
+}
+
+function LectureTable({ detail, now }: { detail: UsageDetail; now: Date }) {
   return (
     <table className="admin-table">
       <thead>
@@ -162,7 +212,8 @@ function LectureList({ detail, now }: { detail: UsageDetail; now: Date }) {
               {row.title || row.runId}
               <small>
                 {row.subject} · {row.date ?? row.runId}
-                {row.preview ? " · 예습 대화" : ""}
+                {/* 기본 링크가 아니라 이 사람이 저장해 둔 개인 대화다. */}
+                {row.preview ? " · 개인 대화" : ""}
               </small>
             </td>
             <td className="num">{cards(row.pre)}</td>

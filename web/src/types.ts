@@ -42,13 +42,25 @@ export type UsageRow = {
   lastAt: string | null;
   /** 웹으로 풀었거나 파일을 받아 간 편 수. 세 표를 합쳐서 센 값이다. */
   lectures: number;
+  /** 그중 웹에서 푼 편 · 받아 간 편. **둘은 다른 사람일 수 있다.** */
+  webLectures: number;
+  grabLectures: number;
   pre: { cards: number; grades: number };
   main: { cards: number; grades: number };
   /** 최근 `recentDays`일 동안 찍은 횟수. **누적과 갈라 둔다** — 누적은 안 줄어든다. */
   recentGrades: number;
   /** `clicks`는 내려받은 횟수가 아니라 **버튼을 누른 횟수**다. */
   grabs: { kinds: number; clicks: number };
+  /**
+   * 저장해 둔 **개인** 예습 대화 수(`user_preview`).
+   *
+   * **기본 링크는 여기 없다.** 강의당 하나이고 반 전체가 같은 것을 읽으며, 누르면
+   * 그 길로 AI 쪽으로 가서 서버를 안 지난다 — 누가 열었는지 알 자리가 없다.
+   * 관리자가 기본 링크를 만들면 그 `/c/`가 자기 줄로도 남아 이 수에 섞인다.
+   */
   previews: number;
+  /** 예습 프롬프트를 고쳐 썼는가. 비어 있으면 화면의 기본 문구를 쓴다. */
+  prompt: { custom: boolean; chars: number };
 };
 
 export type UsageBoard = {
@@ -73,7 +85,8 @@ export type UsageLecture = {
 };
 
 export type UsageDetail = {
-  user: { id: string; email: string };
+  /** `previewPrompt`는 고쳐 쓴 사람만 값이 있다. 빈 문자열이 곧 「기본 문구」다. */
+  user: { id: string; email: string; previewPrompt: string };
   now: string;
   lectures: UsageLecture[];
 };

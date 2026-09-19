@@ -14,6 +14,7 @@
     ② 손댄 편이 **합쳐서** 세어지는가 — 푼 편과 받기만 한 편이 둘 다 있다
     ③ 0이 갈라지는가 — 안 쓴 사람과 승인이 안 나 못 쓰는 사람
     ④ 자세한 내역이 강의마다 서고 최근 것이 먼저 오는가
+    ⑤ 예습 링크와 프롬프트가 **사람 것만** 세어지는가 — 기본 링크는 사람별이 아니다
 """
 
 from __future__ import annotations
@@ -46,8 +47,10 @@ from app.models import (  # noqa: E402
     Lecture,
     MainAttempt,
     PreReviewLog,
+    Preview,
     Profile,
     QuizAttempt,
+    UserPreview,
 )
 
 ADMIN = {"Authorization": "Bearer local-test-token"}
@@ -91,7 +94,8 @@ def seed() -> None:
         db.add(a_lecture(GRABBED, 17, "아메바"))
         # 관리자 자신. `local-test` 토큰이 이 줄로 들어온다.
         db.add(Profile(id=LOCAL_TEST_USER_ID, email=LOCAL_TEST_EMAIL, is_admin=True))
-        db.add(Profile(id=BUSY, email="busy@studyez.test"))
+        # 프롬프트를 고쳐 쓴 사람. 안 고친 사람과 갈라져야 한다.
+        db.add(Profile(id=BUSY, email="busy@studyez.test", preview_prompt="내 방식대로 물어봐"))
         db.add(Profile(id=IDLE, email="idle@studyez.test"))
         db.add(Profile(id=WAITING, email="waiting@studyez.test"))
         for uid in (LOCAL_TEST_USER_ID, BUSY, IDLE):
@@ -150,6 +154,16 @@ def seed() -> None:
                     last_at=early,
                 )
             )
+        # 개인 예습 대화 하나. **빈 줄도 하나 넣는다** — 저장했다 지운 자리이고,
+        # 그것까지 세면 「만든 적 있다」가 거짓으로 부풀어 오른다.
+        db.add(UserPreview(user_id=BUSY, subject=SUBJECT, run_id=SOLVED,
+                           provider="chatgpt", conversation_url="https://chatgpt.com/c/abc",
+                           updated_at=early))
+        db.add(UserPreview(user_id=BUSY, subject=SUBJECT, run_id=GRABBED,
+                           provider="chatgpt", conversation_url="", updated_at=early))
+        # 기본 링크. 강의당 하나이고 **사람별 수에 섞이면 안 된다.**
+        db.add(Preview(subject=SUBJECT, run_id=SOLVED, provider="chatgpt",
+                       share_url="https://chatgpt.com/share/xyz", conversation_url=""))
         db.commit()
 
 
@@ -195,7 +209,21 @@ def main() -> None:
     check("받기만 한 편도 선다", grabbed.get("grabs") == ["notes_prev", "pre_apkg"], grabbed.get("grabs"))
     check("그 편은 푼 것이 0이다", grabbed.get("pre", {}).get("cards") == 0, grabbed.get("pre"))
 
-    print("\n[5] 없는 계정은 404")
+    print("\n[5] 예습 링크와 프롬프트는 사람 것만 센다")
+    check("개인 대화 1개 — 빈 줄은 안 센다", busy.get("previews") == 1, busy.get("previews"))
+    # 기본 링크는 강의당 하나라 사람별 수에 없다. 섞였으면 개인 대화가 2가 됐을 것이다.
+    check("기본 링크는 안 섞인다", busy.get("previews") == 1, busy.get("previews"))
+    check("프롬프트를 고쳤다", busy.get("prompt", {}).get("custom") is True, busy.get("prompt"))
+    check("안 고친 사람은 기본", idle.get("prompt", {}).get("custom") is False, idle.get("prompt"))
+    check("고친 프롬프트가 내역에 온다",
+          detail["user"].get("previewPrompt") == "내 방식대로 물어봐", detail["user"])
+
+    print("\n[6] 웹에서 푼 편과 받아 간 편이 갈린다")
+    check("웹으로 푼 편 1", busy.get("webLectures") == 1, busy.get("webLectures"))
+    check("받아 간 편 1", busy.get("grabLectures") == 1, busy.get("grabLectures"))
+    check("합치면 2편", busy.get("lectures") == 2, busy.get("lectures"))
+
+    print("\n[7] 없는 계정은 404")
     check("404", client.get("/api/admin/usage/nobody", headers=ADMIN).status_code == 404)
 
     print(f"\n{'실패 ' + str(len(failures)) if failures else '모두 통과'}")

@@ -16,6 +16,15 @@ Study_EZ 몫만 센다(땡시는 여기 없다 — 같은 날 범위를 그렇�
 설명이 그 자리다). `count` 는 서명 URL 이 TTL 동안 재사용되므로 내려받은 횟수가
 아니라 **버튼을 누른 횟수**에 가깝다 — 이름도 `clicks` 로 낸다.
 
+**접속 기록은 이 저장소에 없다.** 로그인도 화면 열기도 남기는 표가 없어서
+「몇 번 들어왔나」는 셀 수 없다. 대신 여기서 세는 것은 **한 일**이다 — 카드를
+찍은 횟수·푼 카드 수·받아 간 파일. 접속 수를 만들려면 표를 하나 새로 세워야 한다.
+
+**기본 링크는 사람별로 안 남는다.** 강의당 하나이고(`preview.share_url`) 반 전체가
+같은 것을 읽으며, 누르면 그 길로 AI 쪽으로 간다 — 서버를 안 지나므로 누가 열었는지
+알 자리가 없다. 사람별로 아는 것은 **개인 대화를 저장했나**(`user_preview`)와
+**프롬프트를 고쳐 썼나**(`profile.preview_prompt`) 둘뿐이다.
+
 `correct` 는 **본인이 찍은 것**이다(`_Attempt`). 자유회상 카드라 서버가 판정한
 값이 아니므로 `selfCorrect` 로 낸다. 정답률로 그리면 안 되는 값이다.
 
@@ -87,20 +96,23 @@ def _by_user(db: Session, model: Any, stamp: Any, since: datetime | None = None)
     return {user_id: (int(count), last) for user_id, count, last in db.execute(stmt).all()}
 
 
-def _touched_lectures(db: Session) -> dict[str, int]:
-    """사람마다 손댄 편 수.
+#: 편 하나를 가리키는 세 칸. 표가 달라도 이름이 같아서 `union` 이 그대로 붙는다.
+PRE_KEYS = select(QuizAttempt.user_id, QuizAttempt.subject, QuizAttempt.run_id)
+MAIN_KEYS = select(MainAttempt.user_id, MainAttempt.subject, MainAttempt.run_id)
+GRAB_KEYS = select(AssetGrab.user_id, AssetGrab.subject, AssetGrab.run_id)
 
-    **세 표를 합쳐서 센다** — 웹으로 풀기만 한 편과 덱만 받아 간 편이 둘 다 있고,
-    한쪽만 세면 「한 편도 안 썼다」가 거짓이 된다. `union` 이 겹치는 편을 지운다.
+
+def _lecture_counts(db: Session, *sources: Any) -> dict[str, int]:
+    """사람마다 편 수. 표가 여럿이면 `union` 이 겹치는 편을 지운다.
+
+    **웹으로 푼 편과 받아 간 편을 따로도, 합쳐서도 센다.** 따로 세야 「웹에서
+    푸는 사람인가 받아 가는 사람인가」가 보이고, 합쳐 세야 「한 편도 안 썼다」가
+    거짓이 되지 않는다. 한쪽만 두면 둘 중 하나를 못 묻는다.
     """
-    touched = union(
-        select(QuizAttempt.user_id, QuizAttempt.subject, QuizAttempt.run_id),
-        select(MainAttempt.user_id, MainAttempt.subject, MainAttempt.run_id),
-        select(AssetGrab.user_id, AssetGrab.subject, AssetGrab.run_id),
-    ).subquery()
-    rows = db.execute(
-        select(touched.c.user_id, func.count()).group_by(touched.c.user_id)
-    ).all()
+    inner = (
+        union(*sources).subquery() if len(sources) > 1 else sources[0].distinct().subquery()
+    )
+    rows = db.execute(select(inner.c.user_id, func.count()).group_by(inner.c.user_id)).all()
     return {user_id: int(count) for user_id, count in rows}
 
 
@@ -128,7 +140,13 @@ def usage(
     main_grades = _by_user(db, MainReviewLog, MainReviewLog.reviewed_at)
     pre_recent = _by_user(db, PreReviewLog, PreReviewLog.reviewed_at, since)
     main_recent = _by_user(db, MainReviewLog, MainReviewLog.reviewed_at, since)
-    previews = _by_user(db, UserPreview, UserPreview.updated_at)
+    # **개인 대화만 센다.** 빈 줄은 저장했다 지운 자리라 「만든 적 있다」가 아니다.
+    previews = db.execute(
+        select(UserPreview.user_id, func.count(), func.max(UserPreview.updated_at))
+        .where(UserPreview.conversation_url != "")
+        .group_by(UserPreview.user_id)
+    ).all()
+    previews = {uid: (int(count), last) for uid, count, last in previews}
     grab_rows = db.execute(
         select(
             AssetGrab.user_id,
@@ -138,7 +156,9 @@ def usage(
         ).group_by(AssetGrab.user_id)
     ).all()
     grabs = {row[0]: (int(row[1]), int(row[2] or 0), row[3]) for row in grab_rows}
-    touched = _touched_lectures(db)
+    web_lectures = _lecture_counts(db, PRE_KEYS, MAIN_KEYS)
+    grab_lectures = _lecture_counts(db, GRAB_KEYS)
+    touched = _lecture_counts(db, PRE_KEYS, MAIN_KEYS, GRAB_KEYS)
 
     rows: list[dict[str, Any]] = []
     for profile in db.scalars(select(Profile)).all():
@@ -158,13 +178,24 @@ def usage(
                 "joinedAt": _iso(profile.created_at),
                 "lastAt": _iso(last_at),
                 "lectures": touched.get(uid, 0),
+                # 편 수를 갈라 둔다 — 웹에서 푸는 사람과 받아 가는 사람은 다른 사람이다.
+                "webLectures": web_lectures.get(uid, 0),
+                "grabLectures": grab_lectures.get(uid, 0),
                 "pre": {"cards": pre_card_count, "grades": pre_grades.get(uid, (0, None))[0]},
                 "main": {"cards": main_card_count, "grades": main_grades.get(uid, (0, None))[0]},
                 # 「지금 쓰고 있나」. 누적과 갈라 둔다 — 누적은 안 줄어든다.
                 "recentGrades": pre_recent.get(uid, (0, None))[0] + main_recent.get(uid, (0, None))[0],
                 # `clicks` 는 내려받은 횟수가 아니라 누른 횟수다. 위를 보라.
                 "grabs": {"kinds": grab_kinds, "clicks": grab_clicks},
+                # **개인 예습 대화다**(`user_preview`). 기본 링크는 강의당 하나이고
+                # 반 전체가 같은 것을 읽으므로 사람별로 셀 수 있는 것이 아니다 — 윗글을 보라.
+                # 관리자가 기본 링크를 만들면 그 `/c/` 가 자기 줄로도 남아 여기 섞인다.
                 "previews": preview_count,
+                # 각자 고쳐 쓰는 예습 프롬프트. 비어 있으면 화면의 기본 문구를 쓴다.
+                "prompt": {
+                    "custom": bool(profile.preview_prompt.strip()),
+                    "chars": len(profile.preview_prompt.strip()),
+                },
             }
         )
 
@@ -280,7 +311,12 @@ def usage_detail(
     out.sort(key=lambda row: (row["lastAt"] or "", row["runId"]), reverse=True)
 
     return {
-        "user": {"id": profile.id, "email": profile.email},
+        "user": {
+            "id": profile.id,
+            "email": profile.email,
+            # 고쳐 쓴 사람만 값이 있다. 빈 문자열은 「기본 문구를 쓴다」는 뜻이다.
+            "previewPrompt": profile.preview_prompt.strip(),
+        },
         "now": datetime.now(UTC).isoformat(),
         "lectures": out,
     }
