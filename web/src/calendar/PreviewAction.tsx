@@ -81,13 +81,14 @@ export function PreviewAction({
      **확장이 없는 갈래에도 선다.** 손으로 넣는 것은 확장이 하는 일이 아니고,
      확장이 못 서는 기기(폰)야말로 붙여넣기로 고치는 자리다.
 
-     쓰는 길은 `/admin` 과 같은 `PUT /api/admin/…/preview` 하나다 — 검증도
-     일감 세우기도 서버의 그 자리에 있다. */
+     **칸 둘이 카드 둘과 같은 자리를 쓴다** — 기본 링크는 `preview`, 개인 링크는
+     `user_preview` 다. 검증도 일감 세우기도 서버의 그 자리에 있다(`LinkEditor`). */
+  const hasLink = Boolean(detail.preview?.shareUrl || detail.myPreview?.conversationUrl);
   const linkTool = isAdmin ? (
     <PanelTool
       icon="🔗"
-      label={showLinks ? "링크 접기" : detail.preview?.shareUrl ? "링크 고치기" : "링크 넣기"}
-      hint={`기본 링크 ${showLinks ? "접기" : detail.preview?.shareUrl ? "고치기" : "넣기"} (관리자)`}
+      label={showLinks ? "링크 접기" : hasLink ? "링크 고치기" : "링크 넣기"}
+      hint={`예습 링크 ${showLinks ? "접기" : hasLink ? "고치기" : "넣기"} (관리자)`}
       active={showLinks}
       expanded={showLinks}
       onClick={() =>
@@ -104,6 +105,7 @@ export function PreviewAction({
       <LinkEditor
         lecture={lecture}
         preview={detail.preview}
+        myPreview={detail.myPreview}
         onSaved={(note) => {
           setSaved(note);
           setShowLinks(false);
@@ -467,59 +469,88 @@ function Body({ name, note }: { name: string; note?: string }) {
 }
 
 /**
- * 기본 링크를 손으로 넣고 고치는 칸. **관리자만 본다.**
+ * 위의 카드 둘을 손으로 넣고 고치는 칸. **관리자만 본다.**
  *
- * 확장이 만들어 주는 길(`start("shared")`)과 **하는 일이 다르다.** 저쪽은 대화를
- * 새로 열어 만드는 것이고 여기는 **이미 있는 주소를 붙여넣는 것**이다. 남이 만든
+ * 확장이 만들어 주는 길(`start(...)`)과 **하는 일이 다르다.** 저쪽은 대화를 새로
+ * 열어 만드는 것이고 여기는 **이미 있는 주소를 붙여넣는 것**이다. 남이 만든
  * 대화를 반의 기본 링크로 세우거나, 잘못 저장된 주소를 바로잡거나, 비워서
  * 지우는 자리다.
  *
- * 세 칸이 `/admin` 의 강의 카드와 같다. **쓰는 길도 같은 하나다** —
- * `PUT /api/admin/lectures/…/preview`. 주소 꼴을 재는 것도, 링크가 바뀌었을 때
- * Pre-Quiz 일감을 세우는 것도 서버의 그 자리에 있고 여기서 되풀이하지 않는다.
+ * **칸 둘이 카드 둘과 1:1 이고, 그래서 쓰는 길도 둘이다.**
  *
- * **안 준 칸은 안 바꾸는 API 지만 여기서는 둘 다 보낸다.** 사람이 칸을 비워 둔
- * 것은 "손대지 마라"가 아니라 "지워라"다 — 확장이 두 링크를 따로 들고 오는
- * 사정과 반대다.
+ *     기본 링크   preview        PUT /api/admin/lectures/…/preview
+ *     개인 링크   user_preview   PUT /api/lectures/…/my-preview
+ *
+ * **처음에는 두 번째 칸이 `preview.conversation_url` 을 썼고, 그것이 틀렸다**
+ * (2026-09-21 관리자 — 「관리자 개인링크가 안 나타나는데?」). 그 값은 「기본
+ * 링크를 누가 만들었나」의 흔적이라 패널의 어느 카드도 안 읽는다. 로컬에서 넣어
+ * 보니 저장은 되는데 화면에는 아무 데도 안 나왔다 — 개인 링크 카드가 읽는 것은
+ * `user_preview` 이고, 그것은 사람마다 다른 자리다. `/admin` 의 그 칸은 흔적을
+ * 고치는 것이라 그대로 둔다.
+ *
+ * 주소 꼴을 재는 것도, 기본 링크가 바뀌었을 때 Pre-Quiz 일감을 세우는 것도
+ * 서버의 그 두 자리에 있고 여기서 되풀이하지 않는다.
+ *
+ * `my-preview` 에는 관리자 문이 없다 — 자기 것이라서다. 여기서만 관리자에게
+ * 보이는 이유는 이 칸이 **기본 링크와 같이 서기 때문**이지 개인 링크가 관리자
+ * 것이라서가 아니다.
  */
 function LinkEditor({
   lecture,
   preview,
+  myPreview,
   onSaved,
 }: {
   lecture: LectureRef;
   preview: LectureDetail["preview"];
+  myPreview: LectureDetail["myPreview"];
   /** 저장이 끝났다. 무엇이 됐는지 한 줄로 알린다. */
   onSaved: (note: string) => void;
 }) {
-  const [provider, setProvider] = useState<PreviewProvider>(preview?.provider ?? "chatgpt");
+  const [provider, setProvider] = useState<PreviewProvider>(
+    preview?.provider ?? myPreview?.provider ?? "chatgpt",
+  );
   const [share, setShare] = useState(preview?.shareUrl ?? "");
-  const [conversation, setConversation] = useState(preview?.conversationUrl ?? "");
+  const [mine, setMine] = useState(myPreview?.conversationUrl ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const path = `${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
+  /* **바뀐 것만 보낸다.** 기본 링크는 같은 주소를 되밀어도 서버가 일감을 안
+     세우지만, 개인 링크까지 늘 같이 보내면 안 건드린 칸이 제공자 바뀜에 휩쓸린다.
+     제공자는 두 주소에 다 걸리므로 그것이 바뀌어도 그 칸은 다시 쓴다. */
+  const sharedDirty =
+    share.trim() !== (preview?.shareUrl ?? "") || (Boolean(preview) && provider !== preview?.provider);
+  const mineDirty =
+    mine.trim() !== (myPreview?.conversationUrl ?? "") ||
+    (Boolean(myPreview) && provider !== myPreview?.provider);
 
   async function save() {
     setSaving(true);
     setError("");
+    const done: string[] = [];
     try {
-      const result = await api<{ shareUrl: string; queued: unknown }>(
-        `/api/admin/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}/preview`,
-        {
+      if (sharedDirty) {
+        const result = await api<{ shareUrl: string; queued: unknown }>(
+          `/api/admin/lectures/${path}/preview`,
+          { method: "PUT", body: JSON.stringify({ provider, shareUrl: share.trim() }) },
+        );
+        done.push(
+          !result.shareUrl
+            ? "기본 링크를 지웠습니다"
+            : result.queued
+              ? "기본 링크를 저장했습니다 · Pre-Quiz를 만들 일감이 섰습니다"
+              : "기본 링크를 저장했습니다",
+        );
+      }
+      if (mineDirty) {
+        const result = await api<{ conversationUrl: string }>(`/api/lectures/${path}/my-preview`, {
           method: "PUT",
-          body: JSON.stringify({
-            provider,
-            shareUrl: share.trim(),
-            conversationUrl: conversation.trim(),
-          }),
-        },
-      );
-      onSaved(
-        !result.shareUrl
-          ? "기본 링크를 지웠습니다."
-          : result.queued
-            ? "기본 링크를 저장했습니다 · Pre-Quiz를 만들 일감이 섰습니다."
-            : "기본 링크를 저장했습니다.",
-      );
+          body: JSON.stringify({ provider, conversationUrl: mine.trim() }),
+        });
+        done.push(result.conversationUrl ? "개인 링크를 저장했습니다" : "개인 링크를 지웠습니다");
+      }
+      onSaved(done.length ? `${done.join(" · ")}.` : "바뀐 것이 없습니다.");
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -557,15 +588,17 @@ function LinkEditor({
         />
       </label>
 
-      {/* 만든 계정에서만 열리는 주소다. 사람이 자기 대화를 여는 자리는 개인
-          링크 카드이고, 이 칸은 "기본 링크를 누가 만들었나"의 흔적이다. */}
+      {/* **위 칸의 개인 링크 카드가 여는 바로 그 주소다.** 처음에는 여기가
+          `preview.conversation_url`(「기본 링크를 누가 만들었나」의 흔적)을
+          썼는데, 그 값은 패널 어디에도 안 나온다 — 넣어 보고 확인했다. 카드가
+          읽는 것은 `user_preview` 이고 그것은 사람마다 다르다. */}
       <label className="link-editor-field">
-        <span>만든 사람의 대화 — 관리자만 보인다</span>
+        <span>개인 링크 — 나만 연다</span>
         <input
-          value={conversation}
+          value={mine}
           placeholder="개인 대화 주소"
           spellCheck={false}
-          onChange={(event) => setConversation(event.target.value)}
+          onChange={(event) => setMine(event.target.value)}
         />
       </label>
 
