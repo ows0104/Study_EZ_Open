@@ -1569,6 +1569,73 @@ button.panel-action-hit:active:not(:disabled) {
   gap: 7px;
 }
 
+/* 관리자가 기본 링크를 손으로 넣는 칸(2026-09-21 관리자 지시). 프롬프트 편집칸과
+   같은 자리에 같은 모양으로 펼쳐진다 — 둘 다 갈래의 아래에서 열리는 것이고,
+   생김새가 다르면 어느 쪽이 열렸는지를 글씨로 읽어야 한다. */
+.link-editor {
+  display: grid;
+  margin: 4px 0 10px;
+  gap: 7px;
+}
+
+.link-editor-model {
+  display: flex;
+  margin: 0 0 2px;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--ink-2);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.link-editor-model select {
+  min-height: 26px;
+  padding: 0 24px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-1);
+  color: var(--ink-2);
+  background: var(--surface);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* 칸마다 무엇을 넣는 자리인지 위에 적는다. 주소 둘은 생김새가 같아서
+   자리표시자만으로는 어느 것이 반의 것인지 안 갈린다. */
+.link-editor-field {
+  display: grid;
+  gap: 3px;
+}
+
+.link-editor-field span {
+  color: var(--ink-3);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.link-editor-field input {
+  min-height: 30px;
+  font-size: 11.5px;
+}
+
+.link-editor-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.link-editor-actions button {
+  min-height: 28px;
+  font-size: 12px;
+}
+
+.link-editor-actions small {
+  color: var(--ink-3);
+  font-size: 10.5px;
+}
+
 /* 필기 둘. 강조하는 셋 아래, 강의 정보 위에 눕는다.
  *
  * 누르면 열리지만 **주요 버튼만큼 눈에 걸리면 안 된다.** 한동안 큰 버튼으로

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api } from "../api";
 import {
   absoluteUrl,
+  bumpPreviewVersion,
   extensionInstalled,
   extensionPossible,
   requestPreview,
@@ -62,6 +63,8 @@ export function PreviewAction({
   const [busy, setBusy] = useState<"shared" | "personal" | "">("");
   const [askingRemake, setAskingRemake] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [showLinks, setShowLinks] = useState(false);
+  const [saved, setSaved] = useState("");
   const [provider, setProvider] = useState<PreviewProvider>(() =>
     detail.myPreview?.provider || detail.preview?.provider || "chatgpt"
   );
@@ -69,6 +72,52 @@ export function PreviewAction({
   const isAdmin = Boolean(useMe()?.isAdmin);
   const lectureId = `${lecture.subject}/${lecture.runId}`;
   const notesPrev = detail.files.find((file) => file.kind === "notes_prev");
+
+  /* **관리자는 여기서 링크를 손으로 넣고 고친다(2026-09-21 관리자 지시).** 그
+     전까지 이 자리는 확장이 만들어 준 것만 받았고, 손으로 넣는 칸은 `/admin` 의
+     강의 카드에만 있었다 — 링크 하나를 바로잡으려고 캘린더를 떠나 300편이 선
+     화면에서 그 편을 다시 찾아야 했다.
+
+     **확장이 없는 갈래에도 선다.** 손으로 넣는 것은 확장이 하는 일이 아니고,
+     확장이 못 서는 기기(폰)야말로 붙여넣기로 고치는 자리다.
+
+     쓰는 길은 `/admin` 과 같은 `PUT /api/admin/…/preview` 하나다 — 검증도
+     일감 세우기도 서버의 그 자리에 있다. */
+  const linkTool = isAdmin ? (
+    <PanelTool
+      icon="🔗"
+      label={showLinks ? "링크 접기" : detail.preview?.shareUrl ? "링크 고치기" : "링크 넣기"}
+      hint={`기본 링크 ${showLinks ? "접기" : detail.preview?.shareUrl ? "고치기" : "넣기"} (관리자)`}
+      active={showLinks}
+      expanded={showLinks}
+      onClick={() =>
+        setShowLinks((open) => {
+          if (!open) setSaved("");
+          return !open;
+        })
+      }
+    />
+  ) : null;
+
+  const linkEditor =
+    isAdmin && showLinks ? (
+      <LinkEditor
+        lecture={lecture}
+        preview={detail.preview}
+        onSaved={(note) => {
+          setSaved(note);
+          setShowLinks(false);
+          // 패널이 들고 있는 상세는 이 저장을 모른다. 확장이 밀어 줄 때와 같은
+          // 신호로 다시 받아 온다 — 안 그러면 카드가 옛 링크를 그대로 가리킨다.
+          bumpPreviewVersion();
+        }}
+      />
+    ) : null;
+
+  /* 저장한 뒤 편집칸은 닫히고 카드가 새 값으로 바뀐다. 그것만으로는 **일감이
+     섰는지**가 안 보여서 한 줄을 남긴다 — 기본 링크가 바뀌면 서버가 Pre-Quiz를
+     다시 만들 일감을 세운다. */
+  const savedNote = saved && !showLinks ? <p className="panel-hint">{saved}</p> : null;
 
   /**
    * 확장이 자료를 첨부하고 프롬프트를 채운다. 여기서는 어느 자료를 어느 강의로,
@@ -126,6 +175,9 @@ export function PreviewAction({
             <Empty name="개인 링크" note={canInstall ? "확장을 설치하면 만듭니다" : "컴퓨터에서 만듭니다"} />
           )}
         </div>
+        {linkTool ? <div className="panel-aside">{linkTool}</div> : null}
+        {linkEditor}
+        {savedNote}
         {canInstall ? (
           <>
             <ActionCard
@@ -208,19 +260,20 @@ export function PreviewAction({
   /* **프롬프트 고치기는 카드 밖, 갈래의 오른쪽 아래에 선다(2026-08-31 관리자
      지시).** 개인 링크에만 듣는 것이라 그 카드 안에 넣어 두었는데, 카드 안은
      그 카드를 여는 자리라 「고치기」가 「열기」와 같은 무게로 붙어 있었다.
-     펼쳐지는 편집칸이 바로 아래에 오므로 그 문이 편집칸 옆에 서는 것이 맞다. */
+     펼쳐지는 편집칸이 바로 아래에 오므로 그 문이 편집칸 옆에 서는 것이 맞다.
+
+     **줄 자체는 이제 둘이 같이 쓴다** — 관리자의 「링크 고치기」가 왼쪽에
+     선다(2026-09-21). 둘 다 이 갈래의 것이지 어느 카드 하나의 것이 아니다. */
   const promptTool = (
-    <div className="panel-aside">
-      <PanelTool
-        icon="✎"
-        label={showPrompt ? "프롬프트 접기" : "프롬프트 수정"}
-        hint={`내 예습 프롬프트 ${showPrompt ? "접기" : "고치기"}`}
-        active={showPrompt}
-        dot={promptStore.isCustom}
-        expanded={showPrompt}
-        onClick={() => setShowPrompt((open) => !open)}
-      />
-    </div>
+    <PanelTool
+      icon="✎"
+      label={showPrompt ? "프롬프트 접기" : "프롬프트 수정"}
+      hint={`내 예습 프롬프트 ${showPrompt ? "접기" : "고치기"}`}
+      active={showPrompt}
+      dot={promptStore.isCustom}
+      expanded={showPrompt}
+      onClick={() => setShowPrompt((open) => !open)}
+    />
   );
 
   /* 기본 링크 — 강의당 하나, 반 전체가 같은 것을 읽는다. 문구가 고정이라
@@ -271,7 +324,12 @@ export function PreviewAction({
         {shared}
         {personal}
       </div>
-      {promptTool}
+      <div className="panel-aside">
+        {linkTool}
+        {promptTool}
+      </div>
+      {linkEditor}
+      {savedNote}
 
       {askingRemake ? (
         <RemakeConfirm
@@ -405,6 +463,120 @@ function Body({ name, note }: { name: string; note?: string }) {
       <strong>{name}</strong>
       {note ? <small>{note}</small> : null}
     </>
+  );
+}
+
+/**
+ * 기본 링크를 손으로 넣고 고치는 칸. **관리자만 본다.**
+ *
+ * 확장이 만들어 주는 길(`start("shared")`)과 **하는 일이 다르다.** 저쪽은 대화를
+ * 새로 열어 만드는 것이고 여기는 **이미 있는 주소를 붙여넣는 것**이다. 남이 만든
+ * 대화를 반의 기본 링크로 세우거나, 잘못 저장된 주소를 바로잡거나, 비워서
+ * 지우는 자리다.
+ *
+ * 세 칸이 `/admin` 의 강의 카드와 같다. **쓰는 길도 같은 하나다** —
+ * `PUT /api/admin/lectures/…/preview`. 주소 꼴을 재는 것도, 링크가 바뀌었을 때
+ * Pre-Quiz 일감을 세우는 것도 서버의 그 자리에 있고 여기서 되풀이하지 않는다.
+ *
+ * **안 준 칸은 안 바꾸는 API 지만 여기서는 둘 다 보낸다.** 사람이 칸을 비워 둔
+ * 것은 "손대지 마라"가 아니라 "지워라"다 — 확장이 두 링크를 따로 들고 오는
+ * 사정과 반대다.
+ */
+function LinkEditor({
+  lecture,
+  preview,
+  onSaved,
+}: {
+  lecture: LectureRef;
+  preview: LectureDetail["preview"];
+  /** 저장이 끝났다. 무엇이 됐는지 한 줄로 알린다. */
+  onSaved: (note: string) => void;
+}) {
+  const [provider, setProvider] = useState<PreviewProvider>(preview?.provider ?? "chatgpt");
+  const [share, setShare] = useState(preview?.shareUrl ?? "");
+  const [conversation, setConversation] = useState(preview?.conversationUrl ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function save() {
+    setSaving(true);
+    setError("");
+    try {
+      const result = await api<{ shareUrl: string; queued: unknown }>(
+        `/api/admin/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}/preview`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            provider,
+            shareUrl: share.trim(),
+            conversationUrl: conversation.trim(),
+          }),
+        },
+      );
+      onSaved(
+        !result.shareUrl
+          ? "기본 링크를 지웠습니다."
+          : result.queued
+            ? "기본 링크를 저장했습니다 · Pre-Quiz를 만들 일감이 섰습니다."
+            : "기본 링크를 저장했습니다.",
+      );
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="link-editor">
+      {/* 어느 AI의 주소인가. 고르는 것이 아니라 **재는 잣대다** — 서버가 이것으로
+          주소 꼴을 맞춰 보고, 틀리면 422로 돌려보낸다. 위 프롬프트 편집칸의
+          고르개("어느 AI로 물을까")는 앞으로 만들 것을 정하는 자리라 다르다. */}
+      <label className="link-editor-model">
+        <span>어느 AI의 링크인가</span>
+        <select
+          aria-label="기본 링크의 AI"
+          value={provider}
+          onChange={(event) => setProvider(event.target.value as PreviewProvider)}
+        >
+          {previewProviders.map((item) => (
+            <option value={item} key={item}>
+              {previewProviderLabels[item]}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="link-editor-field">
+        <span>기본 링크 — 반 전체가 읽는다</span>
+        <input
+          value={share}
+          placeholder="공개 공유 주소"
+          spellCheck={false}
+          onChange={(event) => setShare(event.target.value)}
+        />
+      </label>
+
+      {/* 만든 계정에서만 열리는 주소다. 사람이 자기 대화를 여는 자리는 개인
+          링크 카드이고, 이 칸은 "기본 링크를 누가 만들었나"의 흔적이다. */}
+      <label className="link-editor-field">
+        <span>만든 사람의 대화 — 관리자만 보인다</span>
+        <input
+          value={conversation}
+          placeholder="개인 대화 주소"
+          spellCheck={false}
+          onChange={(event) => setConversation(event.target.value)}
+        />
+      </label>
+
+      <div className="link-editor-actions">
+        <button className="is-primary" onClick={save} disabled={saving}>
+          {saving ? "저장 중…" : "저장"}
+        </button>
+        <small>비우고 저장하면 지워집니다.</small>
+      </div>
+      {error ? <p className="prompt-editor-error">{error}</p> : null}
+    </div>
   );
 }
 
