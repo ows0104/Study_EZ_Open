@@ -29,7 +29,7 @@ cd server
 
 ## 경로를 바꾸면 넷이 같이 본다
 
-`web/` 22개 · `runner/` 9개 · `spotter/scripts/` 10개 · `bridge/` 2개가 이 서버를
+`web/` 23개 · `runner/` 9개 · `spotter/scripts/` 10개 · `bridge/` 2개가 이 서버를
 부른다. **가로로는 아무도 서로를 안 부르므로** 경로 목록이 그대로면 한쪽만 고쳐도 된다.
 
 ```bash
@@ -38,6 +38,13 @@ cd server && .venv/Scripts/python.exe -m tests.test_routes_golden
 
 땡시 경로는 2026-09-14 에 1,008줄 한 파일에서 `routes/spotter/` 일곱 파일로 갈랐다.
 **그때 경로 목록이 한 줄도 안 달라졌다** — 그것이 갈라도 된다는 증거였다.
+
+2026-09-21 에 한 줄이 늘었다 — `GET /api/lectures/…/deck-job`. **관리자 경로를
+학생에게 열어 주는 대신 주는 칸을 덜어 낸 경로를 세웠다.** 같은 표를 읽지만
+`job_row` 는 누가 눌렀는지(남의 이메일) · 어느 일꾼이 잡았는지 · 왜 실패했는지 ·
+줄에서 몇 번째인지까지 싣는다. 덜어 낸 것은 `watch_row` 고, **덜어 냈다는 것은
+세어 봐야 사실이 된다**(`tests/test_deck_watch.py` — 화면에서 안 그리는 것과
+응답에 안 싣는 것은 다른 일이다).
 
 ## 복습 일정은 `app/srs.py` 하나다
 

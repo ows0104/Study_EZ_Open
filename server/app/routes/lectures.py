@@ -17,11 +17,15 @@ from app.auth import CurrentUser, require_approved_user
 from app.config import get_settings
 from app.database import get_db
 from app.models import (
+    JOB_KINDS,
+    JOB_PRE,
     PREVIEW_OPEN_KINDS,
     Asset,
     Lecture,
+    PrequizJob,
     Preview,
     RunMeta,
+    RunnerBeat,
     TimetableEvent,
     UserPreview,
 )
@@ -35,6 +39,7 @@ from app.routes.common import (
 )
 from app.routes import prequiz
 from app.routes.prequiz import due_counts, missed_items
+from app.routes.prequiz_jobs import RUNNER_NAME, watch_row, watch_runner_row
 
 router = APIRouter()
 
@@ -190,6 +195,46 @@ def read_lecture(
             )
         }
     return payload
+
+
+@router.get("/lectures/{subject}/{run_id}/deck-job")
+def lecture_deck_job(
+    subject: str,
+    run_id: str,
+    kind: str = JOB_PRE,
+    user: CurrentUser = Depends(require_approved_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """덱을 지금 만들고 있는가. **학생이 보는 쪽이다.**
+
+    2026-09-21 관리자 지시 — 관리자가 아닌 사람도 몇 단계에 몇 분 남았는지를
+    보게 해달라. 관리자가 보는 것(`GET /api/admin/…/prequiz-job`)과 **같은 표를
+    읽지만 주는 칸이 다르다**(`watch_row`) — 저쪽은 누가 눌렀고 어느 일꾼이
+    잡았고 왜 실패했는지까지 든다. 그래서 경로를 같이 쓰지 않고 하나 더 세웠다 —
+    `/api/admin` 아래의 것을 학생에게 열어 주는 것과는 다른 일이다.
+
+    **강의 상세(`GET /api/lectures/…`)에 실어 보내지 않는다.** 한 편에 15분이라
+    진행은 **다시 읽어야 보이는 값**이고, 상세를 10초마다 다시 읽게 하면 풀이
+    진행과 문항까지 같이 딸려온다.
+
+    러너 상태를 같이 준다. **일감이 안 움직이는 이유가 둘이라 가른다** —
+    노트북이 꺼져 있거나, 켜져 있는데 차례를 기다리거나. 학생이 그 둘에 대해
+    할 수 있는 일은 같지만, 「곧 됩니다」와 「멈춰 있습니다」를 섞어 말하면 그 줄을
+    믿을 이유가 없어진다.
+    """
+    if kind not in JOB_KINDS:
+        raise HTTPException(400, f"모르는 일감 종류입니다: {kind}")
+    lecture = lecture_or_404(db, subject, run_id)
+    job = db.scalars(
+        select(PrequizJob)
+        .where(
+            PrequizJob.subject == lecture.subject,
+            PrequizJob.run_id == lecture.run_id,
+            PrequizJob.kind == kind,
+        )
+        .order_by(PrequizJob.created_at.desc())
+    ).first()
+    return {"job": watch_row(job), "runner": watch_runner_row(db.get(RunnerBeat, RUNNER_NAME))}
 
 
 @router.get("/lectures/{subject}/{run_id}/files/{asset_id}")

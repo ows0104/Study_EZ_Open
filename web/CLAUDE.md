@@ -1,7 +1,7 @@
 # web — studyez.kr 프론트
 
 Vite + React + TypeScript. **이 폴더는 화면만 든다** — 파이프라인을 부르지 않고
-`runner` 도 `quizgen` 도 모른다. 서버 경로 22개만 부른다.
+`runner` 도 `quizgen` 도 모른다. 서버 경로 23개만 부른다.
 
     무엇을 고치면 어느 파일인가    ../docs/map.md §2
     검사                          cd web && npm run typecheck
@@ -38,6 +38,23 @@ Vite + React + TypeScript. **이 폴더는 화면만 든다** — 파이프라�
 **「0장」을 갈라서 그린다.** 카드가 없는 것과, 오늘 몫을 끝낸 것과, 몰아보기를 한
 바퀴 돈 것은 다음에 할 일이 다르다(`queue.ts` 의 `EmptyReason`). 한 문구로 덮으면
 사람이 고장으로 읽는다 — 루트 `CLAUDE.md` 의 함정 ③ 이 그것이다.
+
+## 덱이 만들어지는 진행은 학생도 본다 (2026-09-21)
+
+**관리자 지시** — 「퀴즈를 만들고 있을 때 관리자가 아닌 사용자도 사이드패널 현황을
+볼 수 있게. 몇 단계 몇 분 남았는지.」 그 전까지 학생의 덱 칸은 파일 하나만 보고
+그려서, **15분 뒤에 오면 되는 편과 아무도 안 만들고 있는 편이 똑같이 「아직
+없습니다」였다.**
+
+    src/calendar/DeckSlot.tsx   `DeckWatchSlot` 이 학생, `DeckMake` 가 관리자
+    src/jobProgress.ts          줄을 짓는 곳. `watchLine` 이 학생 쪽이다
+
+**줄을 두 벌로 짓는 이유는 할 수 있는 일이 달라서다.** 관리자의 줄은 진행 위에
+「무엇을 해야 하는가」를 얹는다(노트북을 띄워라 · 다시 눌러도 소용없다). 학생은
+그 어느 것도 못 하므로 그 말을 그대로 보여 주면 자기가 뭘 잘못한 줄 안다.
+
+**부르는 경로가 다르다**(`GET /api/lectures/…/deck-job`). 관리자 경로를 열어 준
+것이 아니다 — 저쪽은 남의 이메일까지 싣는다(`../server/CLAUDE.md`).
 
 `src/supabase.ts` 가 `../platform/session/session.js` 를 import 한다. 저장소에서
 둘이 정말 같이 쓰는 파일은 그것 하나다(땡시는 사본을 쓴다 — `../spotter/CLAUDE.md`).

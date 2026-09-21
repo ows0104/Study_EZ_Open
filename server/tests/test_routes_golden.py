@@ -26,6 +26,10 @@ os.environ.setdefault("ENVIRONMENT", "local-test")
 from app.main import app  # noqa: E402
 
 # 2026-09-14 의 목록. 가르기 전과 후가 한 줄도 다르지 않은 것을 확인한 값이다.
+#
+# 2026-09-21 에 한 줄이 늘었다 — `GET …/deck-job`. 관리자가 아닌 사람도 덱이
+# 만들어지는 진행을 보게 하라는 지시였고, 관리자 경로(`/api/admin/…/prequiz-job`)를
+# 열어 주는 대신 **주는 칸을 덜어 낸 경로를 따로 세웠다**(`routes/lectures.py`).
 GOLDEN = """
 DELETE /api/lectures/{subject}/{run_id}/mainquiz/attempts
 DELETE /api/lectures/{subject}/{run_id}/prequiz/attempts
@@ -42,6 +46,7 @@ GET /api/bundles/decks
 GET /api/bundles/decks/{subject}/{run_id}/{kind}
 GET /api/health
 GET /api/lectures/{subject}/{run_id}
+GET /api/lectures/{subject}/{run_id}/deck-job
 GET /api/lectures/{subject}/{run_id}/files/{asset_id}
 GET /api/lectures/{subject}/{run_id}/mainquiz
 GET /api/lectures/{subject}/{run_id}/prequiz

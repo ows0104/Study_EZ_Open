@@ -250,6 +250,63 @@ def job_row(job: PrequizJob | None, priority: str = "") -> dict[str, Any] | None
     }
 
 
+def watch_row(job: PrequizJob | None) -> dict[str, Any] | None:
+    """학생이 보는 일감 한 줄. **`job_row` 에서 덜어 낸 것이지 다른 값이 아니다.**
+
+    2026-09-21 관리자 지시 — 「퀴즈를 만들고 있을 때 관리자가 아닌 사용자도
+    사이드패널 현황을 볼 수 있게. 몇 단계 몇 분 남았는지.」 그 전까지 학생의 덱
+    칸이 말할 수 있는 것은 「아직 없습니다」뿐이었고, **15분 뒤에 오면 되는 편과
+    아무도 안 만들고 있는 편이 같은 모양이었다.**
+
+    덜어 낸 것은 전부 **운영의 것**이다 — 누가 눌렀는지(`requestedBy`), 어느
+    일꾼이 잡고 있는지(`worker`), 실패 사유(`message`), 줄 순서(`priority` ·
+    `queueRank`), 멈추기 표시(`cancelRequested`). 학생이 그것으로 할 수 있는
+    일이 없고, `requestedBy` 는 남의 이메일이다.
+
+    **끝난 일감은 안 내보낸다.** `done` 이면 덱이 그 자리에 있고, `failed` ·
+    `canceled` 는 사람이 손대야 할 것이 남았다는 뜻이라 학생에게는 「아직 없습니다」가
+    그대로 참이다. 여는 것은 열린 일감뿐이다(`JOB_OPEN`).
+
+    `stage` 와 시간들은 **`running` 일 때만 채운다** — `job_row` 와 같은 규칙이다.
+    줄 서 있는 일감의 `stage` 는 러너가 올린 진행이 아니라 서버가 넣어 둔 안내문
+    이라, 그대로 내보내면 화면이 그것을 단계 이름으로 읽는다.
+    """
+    if job is None or job.state not in JOB_OPEN:
+        return None
+    running = job.state == JOB_RUNNING
+    return {
+        "kind": job.kind,
+        "state": job.state,
+        "stage": job.stage if running else "",
+        "stageIndex": job.stage_index if running else 0,
+        "stageTotal": job.stage_total if running else 0,
+        "elapsedSeconds": _seconds_since(job.started_at) if running else 0,
+        "stageSeconds": _seconds_since(job.stage_started_at) if running else 0,
+        "etaSeconds": job.eta_seconds if running else 0,
+        # 받아 간 덱이 곧 새것으로 바뀐다는 뜻이다. 학생에게도 뜻이 있다 —
+        # 덱이 이미 있는데 「만드는 중」만 뜨면 무엇이 만들어지는지 모른다.
+        "force": bool(job.force),
+        # 모델 한도로 멈춘 편. 시각을 안 주면 「차례를 기다립니다」와 같은
+        # 모양이 되고, 그러면 기다려도 안 오는 줄로 읽힌다.
+        "resumeAt": job.resume_at.isoformat() if job.resume_at else "",
+    }
+
+
+def watch_runner_row(beat: RunnerBeat | None) -> dict[str, Any] | None:
+    """학생이 보는 러너. **살아 있는지만 말한다.**
+
+    `busy` 와 `note` 를 뺀 것은 `note` 가 **다른 편의 이름**이기 때문이다
+    (`_busy_note` — 「기생충학/260910_03 외 1편」). 이 편을 보러 온 사람에게
+    남의 편 이름이 갈 자리가 아니다.
+
+    살아 있는지를 서버가 판정하지 않고 시각만 준다 — 그 자를 두 곳에 두면
+    화면과 서버가 다른 말을 한다(`web/src/jobProgress.ts` 의 `runnerAlive`).
+    """
+    if beat is None:
+        return None
+    return {"lastSeen": beat.last_seen.isoformat() if beat.last_seen else ""}
+
+
 def runner_row(beat: RunnerBeat | None) -> dict[str, Any] | None:
     if beat is None:
         return None

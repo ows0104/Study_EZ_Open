@@ -1,4 +1,4 @@
-import { checklistItems, type AdminRow, type RunnerBeat } from "../types";
+import { checklistItems, type AdminRow } from "../types";
 
 /**
  * 관리 화면의 여러 탭이 같이 쓰는 셈들.
@@ -28,15 +28,8 @@ export function isUnconfirmed(row: AdminRow) {
 }
 
 /**
- * 러너가 이 시간 안에 안 보이면 안 붙은 것으로 친다.
- *
- * 러너는 15초마다 서버에 물어보므로 2분은 넉넉하다. 넉넉하게 잡는 이유는 —
- * 짧게 잡으면 노트북이 잠깐 버벅인 것을 "꺼졌다"고 말하고, 그런 경고는 곧
- * 아무도 안 본다.
+ * 러너가 살아 있는가. **자는 `jobProgress`로 옮겼다**(2026-09-21) — 학생의
+ * 덱 칸까지 세 화면이 쓰게 되면서다. 여기 있던 값과 `DeckSlot`이 따로 들고
+ * 있던 값이 우연히 같았다.
  */
-export const RUNNER_STALE_MS = 120_000;
-
-export function runnerAlive(runner: RunnerBeat | null | undefined): boolean {
-  if (!runner?.lastSeen) return false;
-  return Date.now() - new Date(runner.lastSeen).getTime() < RUNNER_STALE_MS;
-}
+export { RUNNER_STALE_MS, runnerAlive } from "../jobProgress";

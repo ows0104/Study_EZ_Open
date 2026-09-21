@@ -71,7 +71,8 @@
 | ├ 문제 푸는 화면 | `web/src/lecture/` (1,330줄) | |
 | ├ 복습 간격·되돌리기 | `server/app/srs.py` + `web/src/lecture/queue.ts` | `-m tests.test_srs` |
 | ├ 색·여백 | `web/src/styles/` (3,622줄) | |
-| └ 덱 모아받기 | `web/src/bundle/` + `server/app/routes/bundles.py` | `-m tests.test_bundles` |
+| ├ 덱 모아받기 | `web/src/bundle/` + `server/app/routes/bundles.py` | `-m tests.test_bundles` |
+| └ 덱 만드는 진행 | `web/src/calendar/DeckSlot.tsx` + `web/src/jobProgress.ts` + `server/app/routes/prequiz_jobs.py` | `-m tests.test_deck_watch` |
 | **퀴즈 생성**을 바꾼다 | `quizgen/` + `tests/quizgen/` | `pytest tests/quizgen` (405개·2초) |
 | ├ 카드를 어떻게 쓰는가 | `quizgen/prompts/` ← **여기가 대부분이다. §2-1** | `quizgen.judge` |
 | ├ 단계 순서·재시도 | `quizgen/run.py` (662줄) | |
@@ -185,14 +186,14 @@ cloze 6~16장 · 재현 78~91% 로 흔들린다. 만들려던 효과가 그 폭�
 ### ② HTTP — 전부 서버를 향한다
 
     runner/          → 서버 경로 9개    (/api/admin/lectures · prequiz-jobs · local-storage)
-    web/src/         → 서버 경로 22개
+    web/src/         → 서버 경로 23개
     spotter/scripts/ → 서버 경로 10개   (/api/spotter/admin/…)
     bridge/          → 서버 경로 2개
 
 **가로로는 아무도 서로를 안 부른다.** 프론트가 러너를 부르지 않고 땡시가
 quizgen 을 부르지 않는다. 그래서 서버 계약(`openapi`)만 안 바뀌면 한쪽만 고쳐도 된다.
 
-계약을 지키는 자: `server/tests/test_routes_golden.py` — 경로 69줄이 그대로인지 본다.
+계약을 지키는 자: `server/tests/test_routes_golden.py` — 경로 70줄이 그대로인지 본다.
 
 ### ③ 파일 — `runs/<편>/` 이 quizgen 과 runner 사이의 계약이다
 

@@ -3,28 +3,26 @@ import { api } from "../api";
 import { bumpPreviewVersion } from "../bridge/previewBridge";
 import {
   type DeckKind,
+  type DeckWatch,
+  type DeckWatchRunner,
   type LectureFile,
   type LectureRef,
   type PrequizJob,
   type RunnerBeat,
 } from "../types";
-import { jobMoving, progressLine, waitingUntil } from "../jobProgress";
+import { jobMoving, progressLine, runnerAlive, waitingUntil, watchLine } from "../jobProgress";
 import { useMe } from "../useMe";
 import { ActionCard, fileSize, Remake, RemakeConfirm } from "./panelShared";
 
 /**
  * 덱 한 칸. 만들어졌으면 내려받고, 아니면 러너에게 일감을 건다.
  *
- * 일감의 진행은 `/api/admin/prequiz-jobs` 가 알려 준다(서버의 `prequiz_jobs.py`).
+ * 일감의 진행은 서버가 알려 준다(`prequiz_jobs.py`). **보는 사람에 따라 경로가
+ * 다르다** — 관리자는 `/api/admin/…/prequiz-job`, 학생은 `/api/lectures/…/deck-job`.
+ * 뒤의 것은 주는 칸을 덜어 낸 것이라 남의 이메일도 실패 사유도 안 싣는다.
+ *
  * `EventPanel` 에서 갈라 나왔다.
  */
-/** 러너가 이 시간 안에 안 보이면 안 붙은 것으로 친다(`AdminPage`와 같은 값). */
-const RUNNER_STALE_MS = 120_000;
-
-function runnerAlive(runner: RunnerBeat | null): boolean {
-  return runner?.lastSeen ? Date.now() - new Date(runner.lastSeen).getTime() < RUNNER_STALE_MS : false;
-}
-
 /**
  * 좁은 칸에 들어가는 한 마디. **긴 줄은 안 줄이고 아래에 그대로 둔다** — 여기서
  * 자르면 「러너가 안 붙어 있습니다」가 「만드는 중」으로 바뀐다. 그 거짓말을
@@ -141,11 +139,7 @@ export function DeckSlot({
 }) {
   const isAdmin = Boolean(useMe()?.isAdmin);
   if (!isAdmin) {
-    return (
-      <Combo before={before?.(null)}>
-        <DeckAction file={file} label={label} onDownload={onDownload} merged={Boolean(before)} />
-      </Combo>
-    );
+    return <DeckWatchSlot label={label} file={file} lecture={lecture} kind={kind} onDownload={onDownload} before={before} />;
   }
   return (
     <DeckMake
@@ -158,6 +152,106 @@ export function DeckSlot({
       blocked={blocked}
     />
   );
+}
+
+/**
+ * 학생이 보는 덱 줄. **받는 것은 그대로고, 만들어지는 중이면 그 사실이 붙는다.**
+ *
+ * 2026-09-21 관리자 지시 — 「퀴즈를 만들고 있을 때 관리자가 아닌 사용자도
+ * 사이드패널 현황을 볼 수 있게. 몇 단계 몇 분 남았는지.」
+ *
+ * 그 전까지 이 자리는 파일 하나만 보고 그렸다. 그래서 **15분 뒤에 오면 되는
+ * 편과 아무도 안 만들고 있는 편이 똑같이 「아직 없습니다」였다** — 관리자
+ * 화면에는 단계도 남은 시간도 이미 떠 있는데.
+ *
+ * **누를 자리는 안 준다.** 만드는 것은 관리자의 일이고(`DeckMake`), 여기 있는
+ * 것은 읽을 줄 하나다. 그래서 실패도 안 적는다 — 학생이 할 수 있는 일이 없고,
+ * 빨간 줄만 남으면 고장으로 읽힌다.
+ *
+ * 부르는 곳은 학생에게 열린 경로다(`GET /api/lectures/…/deck-job`). 관리자
+ * 경로를 열어 준 것이 아니라 **주는 칸을 덜어 낸 경로를 따로 세웠다** — 저쪽은
+ * 누가 눌렀는지(남의 이메일)까지 싣는다.
+ */
+function DeckWatchSlot({
+  kind,
+  label,
+  file,
+  lecture,
+  onDownload,
+  before,
+}: {
+  kind: DeckKind;
+  label: string;
+  file: LectureFile | undefined;
+  lecture: LectureRef;
+  onDownload: (file: LectureFile) => void;
+  before?: (tools: ReactNode) => ReactNode;
+}) {
+  const [job, setJob] = useState<DeckWatch | null>(null);
+  const [runner, setRunner] = useState<DeckWatchRunner | null>(null);
+  const merged = Boolean(before);
+
+  const load = useCallback(() => {
+    const base = `/api/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
+    api<{ job: DeckWatch | null; runner: DeckWatchRunner | null }>(`${base}/deck-job?kind=${kind}`)
+      .then((answer) => {
+        setJob(answer.job);
+        setRunner(answer.runner);
+      })
+      // **조용히 접는다.** 이 줄은 덤이라, 못 읽었다고 받는 자리까지 시끄러워질
+      // 이유가 없다. 관리자 쪽과 같은 규칙이다.
+      .catch(() => {});
+  }, [lecture.subject, lecture.runId, kind]);
+
+  useEffect(load, [load]);
+
+  const moving = jobMoving(job);
+  useEffect(() => {
+    // 도는 동안만 다시 읽는다(관리자 쪽과 같은 10초). 한 편에 15분이라 패널을
+    // 닫았다 열어야 진행이 바뀌면, 그 진행은 없는 것과 같다.
+    if (!moving) return;
+    const timer = window.setInterval(load, 10_000);
+    return () => window.clearInterval(timer);
+  }, [moving, load]);
+
+  // 다 되면 강의 상세를 다시 읽는다 — **덱이 도착했는데 이 줄은 「아직
+  // 없습니다」를 들고 있다.** 기다린 사람에게 새로고침을 가르칠 자리가 아니다.
+  const wasMoving = useRef(false);
+  useEffect(() => {
+    if (wasMoving.current && !moving) bumpPreviewVersion();
+    wasMoving.current = moving;
+  }, [moving]);
+
+  const line = job ? watchLine(job, runner) : "";
+  return (
+    <>
+      <Combo before={before?.(null)}>
+        {/* 덱이 없고 만드는 중이면 「아직 없습니다」 자리를 그 말이 받는다.
+            좁은 칸(`merged`)에는 한 마디만 들고, 사정은 아래 줄이 통째로 말한다. */}
+        {job && !file && line ? (
+          <span className={`panel-action is-line is-empty${merged ? " is-compact" : " is-key"}`}>
+            {merged ? watchShort(job, runner) : `${label} — ${line}`}
+          </span>
+        ) : (
+          <DeckAction file={file} label={label} onDownload={onDownload} merged={merged} />
+        )}
+      </Combo>
+      {/* 덱이 있는데 다시 만드는 중이면 아래에 붙는다 — 지금 받는 것이 옛것이라는
+          뜻이라, 받는 칸을 가리지 않고 사실만 더한다. */}
+      {line && (file || merged) ? <p className="panel-hint">{label} — {line}</p> : null}
+    </>
+  );
+}
+
+/**
+ * 좁은 칸에 드는 한 마디. **긴 줄은 안 줄이고 아래에 그대로 둔다.**
+ *
+ * `watchLine` 이 빈 문자열을 돌려준 줄에는 안 불린다 — 부르는 쪽이 그 줄을 아예
+ * 안 그린다. 그래서 여기에 「기다려도 안 오는 줄」(`held`)의 갈래가 없다.
+ */
+function watchShort(job: DeckWatch, runner: DeckWatchRunner | null): string {
+  if (job.state === "running") return runnerAlive(runner) ? "만드는 중" : "멈춤";
+  return waitingUntil(job) ? "이어서 만듭니다" : "곧 만듭니다";
 }
 
 /**

@@ -400,6 +400,42 @@ export type DeckKind = "pre" | "main";
  * `stage`는 러너가 하위 프로세스의 `── ` 줄을 그대로 올려 준 것이다. 한 편에
  * 15분이 걸려서, 「도는 중」만으로는 멈춘 것과 구별이 안 된다.
  */
+/**
+ * `GET /api/lectures/{subject}/{runId}/deck-job` — **학생이 보는 진행.**
+ *
+ * 2026-09-21 관리자 지시로 생겼다. `PrequizJob`에서 운영의 칸을 덜어 낸 것이고
+ * (누가 눌렀나 · 어느 일꾼이 잡았나 · 왜 실패했나 · 줄 순서), **서버가 덜어서
+ * 준다**(`routes/prequiz_jobs.watch_row`). 화면에서 가리는 것이 아니다 —
+ * 가리기만 하면 남의 이메일이 응답에는 그대로 실려 온다.
+ *
+ * 열린 일감만 온다. `done`이면 덱이 그 자리에 있고, `failed`·`canceled`는
+ * 학생이 할 일이 없어 「아직 없습니다」가 그대로 참이다.
+ *
+ * **`PrequizJob`이 이것을 통째로 품고 있다.** 그래서 `progressLine`·`stageLabel`
+ * 같은 셈은 이 좁은 쪽을 받고, 관리자의 일감도 그대로 넣을 수 있다.
+ */
+export type DeckWatch = {
+  kind: DeckKind;
+  state: PrequizJobState;
+  /** 러너가 올린 진행(`② 카드`). **`running`이 아니면 빈 문자열이다** — 줄 서 있는
+   *  일감의 `stage`는 서버가 넣어 둔 안내문이라 단계 이름이 아니다. */
+  stage: string;
+  stageIndex: number;
+  stageTotal: number;
+  elapsedSeconds: number;
+  stageSeconds: number;
+  /** 0이면 아직 모른다는 뜻이고, 그때 화면은 그 자리를 비운다. */
+  etaSeconds: number;
+  /** 이미 있는 덱을 버리고 다시 만드는 중인가. 받아 간 덱이 곧 바뀐다는 뜻이다. */
+  force: boolean;
+  /** 모델 한도로 멈춘 편이 언제 저절로 이어지는가(ISO 시각). */
+  resumeAt: string;
+};
+
+/** `deck-job`이 같이 주는 러너. **살아 있는지만 말한다** — `busy`·`note`는
+ *  다른 편의 이름이라 이 편을 보러 온 사람에게 갈 자리가 아니다. */
+export type DeckWatchRunner = { lastSeen: string };
+
 export type PrequizJob = {
   id: number;
   subject: string;
