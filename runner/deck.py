@@ -61,7 +61,9 @@ from . import runlayout
 WEB_FORMATS = ("basic", "cloze", "ox")
 
 # `{{c1::답::힌트}}`. 웹은 Anki가 아니므로 빈칸으로 펴서 보여 준다.
-RE_CLOZE = re.compile(r"\{\{c(\d+)::(.+?)(?:::(.+?))?\}\}", re.S)
+# 빈칸 표기는 `quizgen.site_edits.RE_CLOZE` 하나다 — 사이트에서 고친 빈칸 카드를
+# 덱으로 되돌리려면 펴는 규칙이 두 곳에 살면 안 된다.
+RE_CLOZE = quizgen_build.site_edits.RE_CLOZE
 
 # quizgen가 media/에 남기는 슬라이드 렌더. 앞머리는 파이프라인마다 달라서
 # (복습은 강의 ID, 예습은 `lecture`) 번호만 본다.
@@ -548,6 +550,7 @@ def rebuild(*, run_dir: Path, kind: str, deck_name: str, id: str, jokbo_dir: Pat
     「고쳤는데 아무 덱에도 안 붙는」 자리가 될 뻔했다. 장수는 빌드가 화면에 찍는다.
     """
     module = "quizgen.prequiz.build" if kind == PRE else "quizgen.build"
+    edits = site_edits_path(run_dir, kind)
     # **카드가 있는 자리를 넘긴다.** 새 모양에서는 `main/<판>/` 안이라 강의 폴더를
     # 그대로 주면 `build` 가 `items.reproduced.json` 을 못 찾는다. 옛 모양이면 둘이 같다.
     argv = [sys.executable, "-m", module, str(work or run_dir),
@@ -555,13 +558,47 @@ def rebuild(*, run_dir: Path, kind: str, deck_name: str, id: str, jokbo_dir: Pat
             "--jokbo-dir", str(jokbo_dir), "--apkg-name", apkg_name]
     if kind == PRE:
         argv.append("--allow-size")
+    else:
+        # **결함 카드가 있어도 굽는다**(2026-09-23). 문지기가 더는 그것으로 막지 않고
+        # 사이트의 「카드 검토」로 보낸다 — 여기서 거부하면 바로 그 편들, 사람이 사이트에서
+        # 고친 편들이 다시 구워지지 않는다. `quizgen.run` 은 이미 같은 것을 붙인다.
+        argv.append("--allow-defects")
+    if edits.is_file():
+        argv += ["--site-edits", str(edits)]
     done = subprocess.run(argv, cwd=str(repo_root), capture_output=True, text=True,
                           encoding="utf-8", errors="replace",
                           env=dict(os.environ, PYTHONIOENCODING="utf-8"))
     if done.returncode != 0:
         tail = (done.stderr or done.stdout or "").strip().splitlines()
         return False, tail or [str(done.returncode)]
+    built = apkg_of(Path(work or run_dir), kind)
+    mark = site_edits_mark(run_dir, kind)
+    if edits.is_file() and built is not None:
+        mark.write_text(json.dumps({"sha256": _sha(edits), "apkg": built.name,
+                                    "mtime_ns": built.stat().st_mtime_ns}), encoding="utf-8")
+    elif mark.is_file():
+        mark.unlink()
     return True, []
+
+
+def site_edits_stale(run_dir: Path, kind: str) -> str:
+    """사이트 판정과 지금 덱이 어긋났으면 그 까닭, 아니면 빈 문자열.
+
+    어긋나는 길은 셋이다 — 판정이 바뀌었다, 판정이 다 거둬졌는데 덱은 그것으로
+    구운 것이다, 파이프라인이 덱을 새로 구웠다(표시가 가리키는 덱과 지금 덱이 다르다).
+    """
+    edits, mark = site_edits_path(run_dir, kind), site_edits_mark(run_dir, kind)
+    got = _load(mark) if mark.is_file() else None
+    if not edits.is_file():
+        return "판정이 다 거둬졌다" if got else ""
+    if not isinstance(got, dict):
+        return "판정으로 구운 덱이 없다"
+    if got.get("sha256") != _sha(edits):
+        return "판정이 바뀌었다"
+    now = apkg_of(Path(run_dir), kind)
+    if now is None or now.name != got.get("apkg") or now.stat().st_mtime_ns != got.get("mtime_ns"):
+        return "덱이 판정 없이 새로 구워졌다"
+    return ""
 
 
 # ------------------------------------------------------------------ 산출물 옮기기
@@ -647,9 +684,33 @@ def cards_of(run_dir: Path, kind: str = MAIN, version: str | None = None) -> lis
 
 def plain_stem(card: dict) -> str:
     """빈칸 카드의 앞면을 웹에서 읽히게 편다. 힌트가 있으면 힌트를 남긴다."""
-    if card.get("card_format") != "cloze":
-        return card.get("q") or ""
-    return RE_CLOZE.sub(lambda m: f"[{m.group(3) or '____'}]", card.get("q") or "")
+    return quizgen_build.site_edits.web_stem(card)
+
+
+# ------------------------------------------------------------------ 사이트 판정
+#
+# 관리자가 「카드 검토」에서 고치거나 뺀 카드(2026-09-23). 러너가 서버에서 당겨
+# 여기 적고(`runner/site_edits.py`), 덱을 구울 때와 계약을 쓸 때 **둘 다** 얹는다 —
+# 한쪽만 얹으면 apkg 노트 수와 `item_count` 가 갈라져 문지기가 막는다.
+
+
+def site_edits_path(run_dir: Path, kind: str) -> Path:
+    return Path(run_dir) / f"site_edits.{kind}.json"
+
+
+def site_edits_mark(run_dir: Path, kind: str) -> Path:
+    """그 판정으로 **어느 덱을** 구웠나. 파이프라인이 새로 구우면 덱이 바뀌어 어긋난다."""
+    return Path(run_dir) / f"site_edits.{kind}.built.json"
+
+
+def site_edits_of(run_dir: Path, kind: str) -> list[dict]:
+    path = site_edits_path(run_dir, kind)
+    return quizgen_build.site_edits.load(path) if path.is_file() else []
+
+
+def _sha(path: Path) -> str:
+    import hashlib
+    return hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else ""
 
 
 def _slides(run_dir: Path, run_id: str, kind: str = MAIN) -> int:
@@ -717,6 +778,9 @@ def _web_items(cards: list[dict]) -> list[dict]:
             "id": card.get("id") or "",
             "qtype": card.get("card_format"),
             "stem": plain_stem(card),
+            # 빈칸 카드의 원문. 사이트가 이것을 고쳐야 덱으로 되돌릴 수 있다 —
+            # 답이 질문 안(`{{c1::…}}`)에 있어서다(`quizgen/site_edits.py`).
+            "source_stem": (card.get("q") or "") if card.get("card_format") == "cloze" else "",
             "answer": card.get("a") or "",
             "explanation": card.get("explanation") or "",
             # 예습은 `reason`(spine·vocabulary·mechanism·clinical·repeated),
@@ -979,6 +1043,8 @@ def contract(run_dir: Path, run_id: str, title: str, kind: str,
 
     cfg = config_of(run_dir, kind) or {}
     cards = cards_of(run_dir, kind, version)
+    # 사이트 판정을 덱과 **같이** 얹는다. 덱은 `rebuild` 가 `--site-edits` 로 얹었다.
+    cards, site_applied = quizgen_build.site_edits.apply(cards, site_edits_of(run_dir, kind))
     suspects = _load(_attempt(run_dir, "suspects.json", kind, version)) or {}
     prep = _load(_attempt(run_dir, "prep.json", kind, version)) or {}
 
@@ -1043,6 +1109,8 @@ def contract(run_dir: Path, run_id: str, title: str, kind: str,
         # 축 검사가 잡았는데 수선 고리(`--repair-rounds`)를 다 쓰고도 남은 빈칸 카드.
         # 배포는 안 막는다 — 다만 남은 것이 어디에도 안 적히면 세어 볼 자리가 없다.
         "axis_unresolved": _axis_unresolved(cards),
+        # 사이트 「카드 검토」에서 고치거나 뺀 것 중 이 덱에 얹힌 것(2026-09-23).
+        "site_edits": {k: v for k, v in site_applied.items() if v},
     }
 
     if kind == MAIN:

@@ -299,6 +299,10 @@ class _QuizItem:
     # basic | cloze | ox. 푸는 방식은 셋 다 같고 화면이 꼴만 달리 그린다.
     qtype: Mapped[str] = mapped_column(String(16), nullable=False)
     stem: Mapped[str] = mapped_column(Text, nullable=False)
+    # 빈칸 카드의 원문(`{{c1::…}}`). 웹은 `stem`(편 것)을 그리고, 사이트에서 고칠 때는
+    # 이것을 고친다 — 답이 질문 안에 있어서 편 것을 고쳐서는 덱으로 못 되돌린다
+    # (`quizgen/site_edits.py`). 빈칸이 아니면 빈 문자열. 2026-09-23.
+    source_stem: Mapped[str] = mapped_column(Text, nullable=False, default="")
     answer: Mapped[str] = mapped_column(Text, nullable=False)
     # 예습은 **왜 이것이 「꼭 반드시」인가**(spine·vocabulary·mechanism·clinical·
     # repeated), 복습은 등급(`importance`)이 온다. 파이프라인이 그 갈림을 안다.
@@ -373,6 +377,8 @@ class CardEdit(Base):
     action: Mapped[str] = mapped_column(String(8), nullable=False)  # CARD_ACTIONS
     # 고친 칸만 찬다. None 이면 원본 그대로다.
     stem: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # 빈칸 카드는 원문을 고친다. `stem` 에는 그것을 편 것이 같이 찬다.
+    source_stem: Mapped[str | None] = mapped_column(Text, nullable=True)
     answer: Mapped[str | None] = mapped_column(Text, nullable=True)
     explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
     # 파이프라인이 마지막으로 올린 카드 그대로(`ord` 포함). 되돌리기와 「바꿔 올렸나」

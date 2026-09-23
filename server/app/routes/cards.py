@@ -30,23 +30,35 @@ rebuild` 를 지나면 채워진다 — 모델을 안 부르니 공짜다.
 문항을 통째로 갈아 끼우기 때문이다(`admin._put_items`) — 거기서 이 표를 다시
 얹는다. 이유와 「파이프라인이 바꿔 올리면 판정을 버린다」는 `models.CardEdit`.
 
-## `.apkg` 는 안 바뀐다
+## 덱(`.apkg`)에도 간다 — 다음 publish 에서
 
-여기서 고치는 것은 **웹 풀이**다. 내려받는 덱(`.apkg`)과 모아받기(`bundle/`)는
-R2 의 파일을 그대로 준다. 덱까지 고치려면 `items.checked.json` 을 고쳐서
-다시 굽는다(`quizgen/CLAUDE.md`).
+웹 풀이는 누르는 즉시 바뀐다. 덱은 러너가 publish 앞머리에 판정을 당겨 가서
+(`GET /card-edits` · `runner/site_edits.py`) 그 편만 다시 굽고 올린다. **그래서
+누르고 나서 다음 publish(야간 쓸기나 `done`)까지는 덱이 옛 카드다.**
+
+러너가 얹어 구운 문항이 다시 올라오면 그것은 「고친 모양」과 같다 — `_put_items` 가
+그것을 알아보고 판정을 지킨다(`edited`). 모르고 원본과만 맞대면, 러너가 판정을
+구워 올리는 순간 서버가 그 판정을 「파이프라인이 바꿨다」로 읽고 버린다.
+
+## 빈칸 카드는 원문을 고친다
+
+빈칸 카드의 답은 질문 안(`{{c1::동물}}`)에 있고 웹은 그것을 `[____]` 로 편
+`stem` 을 보여 준다. 편 것을 고쳐서는 덱으로 못 되돌리므로 원문(`source_stem`)을
+고치게 하고, 편 것은 여기서 다시 편다(`plain_stem`). 원문은 2026-09-23 이후
+러너가 올린 문항에만 있다 — 없으면 질문 칸을 못 고친다.
 """
 
 from __future__ import annotations
 
+import re
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth import CurrentUser, require_admin
+from app.auth import CurrentUser, require_admin, require_runner
 from app.database import get_db
 from app.models import (
     CARD_ACTIONS,
@@ -64,11 +76,19 @@ router = APIRouter()
 QUIZZES: dict[str, Quiz] = {"pre": PRE, "main": MAIN}
 
 # 사람이 고칠 수 있는 칸. 나머지(`qtype`·`slide_no`…)는 파이프라인의 것이다.
-EDITABLE = ("stem", "answer", "explanation")
+EDITABLE = ("stem", "source_stem", "answer", "explanation")
+
+# 빈칸 표기. **`quizgen/site_edits.py` 의 `RE_CLOZE`·`web_stem` 과 같아야 한다** —
+# 서버는 그 폴더를 import 하지 않는다(`server/CLAUDE.md`). 바꾸면 둘 다 바꾼다.
+RE_CLOZE = re.compile(r"\{\{c(\d+)::(.+?)(?:::(.+?))?\}\}", re.S)
+
+
+def plain_stem(source: str) -> str:
+    return RE_CLOZE.sub(lambda m: f"[{m.group(3) or '____'}]", source)
 
 # 원본을 들고 있을 칸. **「바꿔 올렸나」를 이것으로 잰다.**
 _CARD_FIELDS = (
-    "qtype", "stem", "answer", "focus", "card_type", "exam_hit", "slide_no",
+    "qtype", "stem", "source_stem", "answer", "focus", "card_type", "exam_hit", "slide_no",
     "source_type", "source_anchor", "explanation", "flags",
 )
 # 이 칸이 같으면 같은 카드다. `flags` 는 뺀다 — `reflag` 가 표시만 바꿔 다시
@@ -90,6 +110,16 @@ def snapshot(row: Any) -> dict[str, Any]:
 
 def same_card(original: dict[str, Any], incoming: dict[str, Any]) -> bool:
     return all(original.get(name) == incoming.get(name) for name in _SAME_CARD)
+
+
+def edited(edit: CardEdit) -> dict[str, Any]:
+    """판정을 원본에 얹은 모양. 러너가 구워 올린 것이 이것과 같으면 이미 얹힌 것이다."""
+    out = dict(edit.original)
+    for name in EDITABLE:
+        value = getattr(edit, name)
+        if value is not None:
+            out[name] = value
+    return out
 
 
 def apply(row: Any, edit: CardEdit) -> None:
@@ -160,12 +190,16 @@ def _card_payload(
         "ord": shown.get("ord", 0),
         "qtype": shown.get("qtype", ""),
         "stem": shown.get("stem", ""),
+        "sourceStem": shown.get("source_stem") or "",
         "answer": shown.get("answer", ""),
         "explanation": shown.get("explanation", ""),
         "slideNo": shown.get("slide_no"),
         "slideUrl": slide_url(db, lecture.subject, lecture.run_id, shown.get("slide_no"), quiz),
         "flags": shown.get("flags") or [],
-        "original": {name: original.get(name, "") for name in EDITABLE},
+        "original": {"stem": original.get("stem") or "",
+                     "sourceStem": original.get("source_stem") or "",
+                     "answer": original.get("answer") or "",
+                     "explanation": original.get("explanation") or ""},
         "flag": flag,
         "edit": (
             {
@@ -235,6 +269,37 @@ def _quiz_or_404(kind: str) -> Quiz:
     return quiz
 
 
+@router.get("/card-edits")
+def card_edits(
+    user: CurrentUser = Depends(require_runner),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """러너가 덱에 얹을 판정. **고침과 뺌만** — 괜찮음은 덱에 할 일이 없다.
+
+    원본(`original`)을 같이 싣는 이유는 러너가 그것과 지금 카드를 맞대 보고 같을
+    때만 얹기 때문이다(`quizgen/site_edits.py` 머리).
+    """
+    rows = db.scalars(select(CardEdit).where(CardEdit.action.in_((CARD_EDIT, CARD_DELETE))))
+    return {
+        "edits": [
+            {
+                "subject": e.subject,
+                "runId": e.run_id,
+                "kind": e.quiz_kind,
+                "itemId": e.item_id,
+                "action": e.action,
+                "stem": e.stem,
+                "sourceStem": e.source_stem,
+                "answer": e.answer,
+                "explanation": e.explanation,
+                "original": {name: (e.original or {}).get(name) or ""
+                             for name in ("qtype", "stem", "answer", "explanation")},
+            }
+            for e in rows
+        ]
+    }
+
+
 @router.get("/lectures/{subject}/{run_id}/cards/{kind}")
 def lecture_cards(
     subject: str,
@@ -273,6 +338,10 @@ class CardDecision(BaseModel):
 
     action: Literal["ok", "edit", "delete"]
     stem: str | None = None
+    # 빈칸 카드는 이쪽을 준다. `stem` 은 서버가 편다.
+    source_stem: str | None = Field(default=None, alias="sourceStem")
+
+    model_config = {"populate_by_name": True}
     answer: str | None = None
     explanation: str | None = None
 
@@ -321,6 +390,18 @@ def decide_card(
     row, original = _row_and_original(db, quiz, lecture, item_id, edit)
 
     if decision.action == CARD_EDIT:
+        if original.get("qtype") == "cloze":
+            if decision.stem is not None and decision.stem != original.get("stem"):
+                raise HTTPException(status_code=422, detail="빈칸 카드는 원문(sourceStem)을 고칩니다.")
+            if decision.source_stem is not None:
+                if not original.get("source_stem"):
+                    raise HTTPException(status_code=422, detail=(
+                        "이 빈칸 카드는 원문이 아직 안 올라왔습니다 — 다음 publish 뒤에 고칠 수 있습니다."))
+                if not RE_CLOZE.search(decision.source_stem):
+                    raise HTTPException(status_code=422, detail="빈칸({{c1::…}})이 하나는 있어야 합니다.")
+                decision.stem = plain_stem(decision.source_stem)
+        else:
+            decision.source_stem = None
         changes = {name: getattr(decision, name) for name in EDITABLE}
         changes = {k: v for k, v in changes.items() if v is not None and v != original.get(k)}
         if "answer" in changes and not changes["answer"].strip():

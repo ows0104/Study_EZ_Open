@@ -37,6 +37,7 @@ from pathlib import Path
 import fitz
 import genanki
 
+from . import site_edits
 from .schema import resolve_jokbo_key
 from .textutil import answer_runs, collapse_cloze, norm_key
 
@@ -758,7 +759,7 @@ def check_guids(cards: list[dict], seed: str, qkey=norm_key) -> tuple[list[dict]
     """
     order: dict[str, list[dict]] = {}
     for c in cards:
-        order.setdefault(guid_of(seed, qkey(c["q"]), c), []).append(c)
+        order.setdefault(guid_of(seed, qkey(site_edits.guid_q(c)), c), []).append(c)
 
     folded, bad = 0, []
     for g, group in order.items():
@@ -796,10 +797,13 @@ def reproduce_gate(cards: list[dict]) -> tuple[Counter, list[dict]]:
 
 def build(prep_dir: Path, deck_name: str, lecture_id: str,
           src: Path | None = None, jokbo_slice: Path | None = None,
-          jokbo_pdf: Path | None = None, apkg_name: str | None = None) -> dict:
+          jokbo_pdf: Path | None = None, apkg_name: str | None = None,
+          edits: list[dict] | None = None) -> dict:
     prep = json.loads((prep_dir / "prep.json").read_text(encoding="utf-8"))
     src = src or (prep_dir / "items.checked.json")
     cards = json.loads(src.read_text(encoding="utf-8"))["cards"]
+    if edits:
+        cards, _ = site_edits.apply(cards, edits)
     cards, folded = check_guids(cards, lecture_id)
     if folded:
         print(f"  같은 카드 {folded}장을 접었다 (질문·답·그림이 전부 같다)")
@@ -817,7 +821,8 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str,
 
     for c in cards:
         fmt, src = c["card_format"], c["source_type"]
-        guid = guid_of(lecture_id, norm_key(c["q"]), c)
+        # 사이트에서 질문을 고친 카드는 원래 질문으로 씨앗을 잡는다(`site_edits` 머리).
+        guid = guid_of(lecture_id, norm_key(site_edits.guid_q(c)), c)
         warn, srctxt, tags = warning_of(c), source_of(c, title), tags_of(c, lecture_id)
         exp = html.escape(c.get("explanation") or "").replace("\n", "<br>")
         images = (f'<div class="slide"><img src="{media.slide(c["slide_no"])}"></div>'
@@ -1009,6 +1014,13 @@ def jokbo_dir_candidates(root: Path = Path(".")) -> list[Path]:
     return seen
 
 
+def print_site_edits(applied: dict[str, list[str]]) -> None:
+    """사이트 판정을 얹은 결과. **못 얹은 것(`stale`)을 조용히 넘기지 않는다.**"""
+    print(f"사이트 판정: 고침 {len(applied['edited'])}장 · 뺌 {len(applied['deleted'])}장"
+          + (f" · 원본이 달라 건너뜀 {len(applied['stale'])}장 ({', '.join(applied['stale'])})"
+             if applied["stale"] else ""))
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="검증된 카드를 .apkg 로 만든다")
     ap.add_argument("prep_dir")
@@ -1025,6 +1037,7 @@ def main(argv=None) -> int:
                     help="기출 원본을 못 찾아도 그대로 굽는다 (뒷면 지면 이미지가 빠진다)")
     ap.add_argument("--jokbo-pdf", help="족보 원본 PDF. 생략하면 index.json 의 이름으로 찾는다")
     ap.add_argument("--apkg-name", help="덱 파일 이름 (확장자 없이). 기본은 강의 ID")
+    ap.add_argument("--site-edits", help="사이트 「카드 검토」의 판정. runner 가 적는다 (quizgen/site_edits.py)")
     args = ap.parse_args(argv)
 
     prep_dir = Path(args.prep_dir)
@@ -1039,6 +1052,10 @@ def main(argv=None) -> int:
         return 1
 
     cards = json.loads(src.read_text(encoding="utf-8"))["cards"]
+    edits = site_edits.load(args.site_edits)
+    if edits:
+        cards, applied = site_edits.apply(cards, edits)
+        print_site_edits(applied)
     tally, bad = reproduce_gate(cards)
     print(f"입력 {src.name} — {how}")
     if not args.skip_reproduce:
@@ -1090,7 +1107,8 @@ def main(argv=None) -> int:
 
     try:
         res = build(prep_dir, args.deck, lecture_id, src=src,
-                    jokbo_slice=jslice, jokbo_pdf=jpdf, apkg_name=args.apkg_name)
+                    jokbo_slice=jslice, jokbo_pdf=jpdf, apkg_name=args.apkg_name,
+                    edits=edits)
     except GuidClash as e:
         print(f"\n{e}")
         return 1

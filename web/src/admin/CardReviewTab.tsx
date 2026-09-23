@@ -11,8 +11,12 @@ import type { CardAction, CardReview, LectureCards, ReviewCard } from "../types"
  * 그 전까지 문지기(`runner/gate.py`)는 결함 카드 한 장 때문에 덱 전체를 미뤘다.
  * 이제 덱은 나가고, 그 카드가 여기 뜬다.
  *
- * **여기서 고치는 것은 웹 풀이다.** 내려받는 `.apkg` 는 구운 그대로다 — 그 말을
- * 화면 위에 적어 둔다. 모르고 고치면 안키로 푸는 사람은 옛 카드를 계속 본다.
+ * **웹 풀이는 누르는 즉시, 덱(`.apkg`)은 다음 publish 에서 바뀐다**(2026-09-23 —
+ * 「사이트에서 고친 카드가 apkg에도 반영되게 해줘」). 러너가 판정을 당겨 가 그 편만
+ * 다시 굽는다(`runner/site_edits.py`). 그 사이의 틈을 화면 위에 적어 둔다.
+ *
+ * **빈칸 카드는 원문을 고친다.** 답이 질문 안(`{{c1::…}}`)에 있어서 편 문장을
+ * 고쳐서는 덱으로 못 되돌린다(`quizgen/site_edits.py`).
  *
  * 목록은 위(`AdminPage`)에서 읽어 내려온다. 안 본 카드 수가 탭 이름 옆에 서야
  * 하기 때문이다 — 탭을 열어야 보이는 수는 없는 수다.
@@ -101,8 +105,9 @@ export function CardReviewTab({ review, onChanged }: { review: CardReview | null
 function ApkgNote() {
   return (
     <p className="card-review-note">
-      여기서 고치거나 뺀 것은 <strong>웹 풀이</strong>에 바로 반영되고, 다음 쓸기에도 유지됩니다.
-      내려받는 덱(.apkg)은 구운 그대로입니다.
+      고치거나 뺀 것은 <strong>웹 풀이</strong>에 바로, <strong>덱(.apkg)</strong>에는 다음 publish(야간 쓸기)에서
+      반영됩니다. 고친 카드는 Anki에서 다시 받으면 같은 카드로 갱신되고, 뺀 카드는 이미 받아 간 사람의 Anki에서는
+      지워지지 않습니다.
     </p>
   );
 }
@@ -140,7 +145,10 @@ function CardRow({
   onOpenLecture?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState({ stem: card.stem, answer: card.answer, explanation: card.explanation });
+  // 빈칸 카드는 원문을 고친다. 원문이 아직 안 올라온 옛 카드는 질문 칸을 잠근다.
+  const cloze = card.qtype === "cloze";
+  const front = cloze ? card.sourceStem : card.stem;
+  const [draft, setDraft] = useState({ stem: front, answer: card.answer, explanation: card.explanation });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [slideOpen, setSlideOpen] = useState(false);
@@ -163,8 +171,15 @@ function CardRow({
   const decide = (action: CardAction, body: Record<string, string> = {}) =>
     send({ method: "PUT", body: JSON.stringify({ action, ...body }) });
 
+  function save() {
+    const { stem, ...rest } = draft;
+    if (!cloze) return decide("edit", draft);
+    // 원문이 없으면 질문은 안 보낸다 — 서버가 편 문장으로는 덱을 못 고친다.
+    return decide("edit", card.sourceStem ? { sourceStem: stem, ...rest } : rest);
+  }
+
   function startEdit() {
-    setDraft({ stem: card.stem, answer: card.answer, explanation: card.explanation });
+    setDraft({ stem: front, answer: card.answer, explanation: card.explanation });
     setEditing(true);
   }
 
@@ -201,8 +216,14 @@ function CardRow({
       {editing ? (
         <div className="card-review-edit">
           <label>
-            질문
-            <textarea rows={3} value={draft.stem} onChange={(e) => setDraft({ ...draft, stem: e.target.value })} />
+            {cloze ? "질문 (빈칸은 {{c1::답}})" : "질문"}
+            <textarea
+              rows={3}
+              value={draft.stem}
+              disabled={cloze && !card.sourceStem}
+              placeholder={cloze && !card.sourceStem ? "이 빈칸 카드는 원문이 아직 안 올라왔습니다 — 다음 publish 뒤에 고칠 수 있습니다" : ""}
+              onChange={(e) => setDraft({ ...draft, stem: e.target.value })}
+            />
           </label>
           <label>
             답
@@ -217,7 +238,7 @@ function CardRow({
             />
           </label>
           <div className="card-review-actions">
-            <button className="is-primary" disabled={busy} onClick={() => decide("edit", draft)}>
+            <button className="is-primary" disabled={busy} onClick={save}>
               저장
             </button>
             <button className="is-quiet" disabled={busy} onClick={() => setEditing(false)}>

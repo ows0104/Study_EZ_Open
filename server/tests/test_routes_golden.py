@@ -33,11 +33,13 @@ from app.main import app  # noqa: E402
 #
 # 2026-09-23 에 넷이 늘었다 — `…/card-review` 와 `…/cards/…`. 문지기가 결함 카드를
 # 막는 대신 올리고, 관리자가 사이트에서 고치거나 빼게 하라는 지시였다(`routes/cards.py`).
+# 같은 날 하나 더 — `GET …/card-edits`. 러너가 그 판정을 당겨 가 덱에도 얹는다.
 GOLDEN = """
 DELETE /api/admin/lectures/{subject}/{run_id}/cards/{kind}/{item_id}
 DELETE /api/lectures/{subject}/{run_id}/mainquiz/attempts
 DELETE /api/lectures/{subject}/{run_id}/prequiz/attempts
 DELETE /api/spotter/comments/{comment_id}
+GET /api/admin/card-edits
 GET /api/admin/card-review
 GET /api/admin/lectures/{subject}/{run_id}/cards/{kind}
 GET /api/admin/lectures/{subject}/{run_id}/prequiz-job

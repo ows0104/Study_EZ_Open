@@ -17,8 +17,8 @@
 `reproduce_defects`·`reproduce_defect_notes` 가 그대로 서버로 가고, 관리자 화면의
 「카드 검토」가 그것을 목록으로 세운다(`server/app/routes/cards.py`).
 
-**사이트에서 고치는 것은 웹 풀이다.** `.apkg` 는 여기서 구운 그대로 나간다. 덱까지
-고치려면 `items.checked.json` 을 고쳐 다시 굽는다.
+사이트에서 고친 것은 웹 풀이에 바로 가고, **덱에는 다음 publish 에서 간다** — 러너가
+판정을 당겨 그 편만 다시 굽는다(`runner/site_edits.py`, 같은 날 둘째 지시).
 
 `.apkg`가 있다고 재현 검사를 지난 것이 아니라는 사정은 그대로다 — `quizgen.build`
 는 결함 카드가 남으면 굽기를 거부하고, `quizgen.run` 이 수선 두 번 뒤

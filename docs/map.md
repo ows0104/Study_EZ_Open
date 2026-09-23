@@ -85,6 +85,7 @@
 | **덱이 안 만들어진다** | `runner/watch.py` · `runner/cycle.py` · `runner/agent.py` | `pytest tests/runner` (317개·15초) |
 | **덱이 안 올라간다** | `runner/publish.py` · `runner/gate.py` | |
 | **걸린 카드**를 사이트에서 고친다 | `web/src/admin/CardReviewTab.tsx` + `server/app/routes/cards.py` | `-m tests.test_card_edits` |
+| └ 고친 것이 덱(.apkg)에 가는 길 | `runner/site_edits.py` + `quizgen/site_edits.py` + `runner/rebuild.py` | `pytest tests/runner/test_site_edits_sync.py tests/quizgen/test_site_edits.py` |
 | **예습 링크**가 안 붙는다 | `bridge/` + `server/app/preview_links.py` + `web/src/bridge/` | `pytest tests/bridge` (4개) |
 
 ### 땡시 문항을 고칠 때 — 손으로 고치는 파일은 여섯뿐이다

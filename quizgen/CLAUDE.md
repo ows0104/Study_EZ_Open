@@ -310,8 +310,9 @@ v1은 그 취지를 프롬프트에만 적었고(`answer_leak`·`compound_questi
 > **2026-09-23 에 문지기가 이것을 막지 않게 됐다**(관리자 지시 — 「일단 업로드를 하고,
 > 사이트에서 이상한 카드를 검토/수정/삭제할 수 있도록 하자」). 결함 id 와 사유
 > (`reproduce_defect_notes`)가 run.meta 로 올라가고 관리 화면 「카드 검토」에 뜬다.
-> 거기서 고치는 것은 **웹 풀이**이고 `.apkg` 는 구운 그대로다. 자세한 것은
-> `runner/gate.py` 머리와 `server/app/routes/cards.py`.
+> 거기서 고친 것은 웹 풀이에 바로, `.apkg` 에는 다음 publish 에서 간다 — 러너가
+> 판정을 당겨 `--site-edits` 로 다시 굽는다(`quizgen/site_edits.py`). 질문을 고쳐도
+> guid 는 원래 질문으로 잡는다. 자세한 것은 `runner/gate.py` 머리와 `server/app/routes/cards.py`.
 
 같은 오해가 `gate.py`의 설명에도 있었다(*"`.apkg`가 있다는 것 자체가 그 검사를 지났다는
 뜻"*). **두 겹을 하나로 세어 「검사를 지났다」고 읽지 마라** — 지난 것은 빌드가 아니라

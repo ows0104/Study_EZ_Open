@@ -589,13 +589,16 @@ export type ReviewCard = {
   ord: number;
   qtype: string;
   stem: string;
+  /** 빈칸 카드의 원문(`{{c1::…}}`). 빈칸 카드는 이것을 고친다 — 답이 질문 안에 있다.
+   *  2026-09-23 전에 올라온 카드는 비어 있고, 그때는 질문을 못 고친다. */
+  sourceStem: string;
   answer: string;
   explanation: string;
   slideNo: number | null;
   slideUrl: string | null;
   flags: string[];
   /** 파이프라인이 올린 그대로. 고친 칸과 맞대 보려고 있다. */
-  original: { stem: string; answer: string; explanation: string };
+  original: { stem: string; sourceStem: string; answer: string; explanation: string };
   flag: { why: "defect" | "axis"; reason: string; note: string; reproduced: string } | null;
   edit: { action: CardAction; editedBy: string; editedAt: string | null } | null;
 };

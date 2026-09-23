@@ -288,6 +288,8 @@ class PreItemIn(BaseModel):
     id: str
     qtype: Literal["basic", "cloze", "ox"]
     stem: str
+    # 빈칸 카드의 원문. 2026-09-23 전 러너는 안 보낸다.
+    source_stem: str = ""
     answer: str
     focus: str = ""
     card_type: str = ""
@@ -334,6 +336,7 @@ def _put_items(
             ord=order,
             qtype=item.qtype,
             stem=item.stem,
+            source_stem=item.source_stem,
             answer=item.answer,
             focus=item.focus,
             card_type=item.card_type,
@@ -347,7 +350,12 @@ def _put_items(
         edit = edits.get(item.id)
         if edit is not None:
             incoming = cards.snapshot(row)
-            if not cards.same_card(edit.original, incoming):
+            if cards.same_card(cards.edited(edit), incoming) and edit.action == CARD_EDIT:
+                # **러너가 이미 얹어 구운 것이다**(2026-09-23 — 덱에도 판정이 간다).
+                # 원본은 그대로 둔다. 되돌리기가 거기로 간다.
+                cards.apply(row, edit)
+                edited += 1
+            elif not cards.same_card(edit.original, incoming):
                 db.delete(edit)
                 dropped += 1
             else:

@@ -29,6 +29,7 @@ from pathlib import Path
 
 import genanki
 
+from .. import site_edits
 from ..build import (
     ANCHOR,
     CSS,
@@ -44,6 +45,7 @@ from ..build import (
     contact_sheet,
     find_jokbo_source,
     guid_of,
+    print_site_edits,
     render_answer,
     verify,
 )
@@ -222,10 +224,13 @@ def source_of(c: dict, title: str) -> str:
 
 def build(prep_dir: Path, deck_name: str, lecture_id: str, src: Path | None = None,
           apkg_name: str | None = None,
-          jokbo_slice: Path | None = None, jokbo_pdf: Path | None = None) -> dict:
+          jokbo_slice: Path | None = None, jokbo_pdf: Path | None = None,
+          edits: list[dict] | None = None) -> dict:
     prep = json.loads((prep_dir / "prep.json").read_text(encoding="utf-8"))
     src = src or (prep_dir / "items.checked.json")
     cards = json.loads(src.read_text(encoding="utf-8"))["cards"]
+    if edits:
+        cards, _ = site_edits.apply(cards, edits)
     cards, folded = check_guids(cards, guid_seed(lecture_id), qkey=lambda q: q)
     if folded:
         print(f"  같은 카드 {folded}장을 접었다 (질문·답·그림이 전부 같다)")
@@ -243,7 +248,8 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str, src: Path | None = No
 
     for c in cards:
         fmt = c["card_format"]
-        guid = guid_of(seed, c["q"], c)
+        # 사이트에서 질문을 고친 카드는 원래 질문으로 씨앗을 잡는다(`site_edits` 머리).
+        guid = guid_of(seed, site_edits.guid_q(c), c)
         warn, srctxt, tags = warning_of(c), source_of(c, title), tags_of(c, lecture_id)
         notes = fold_notes_of(c)
         exp = html.escape(c.get("explanation") or "").replace("\n", "<br>")
@@ -305,6 +311,7 @@ def main(argv=None) -> int:
                     help="재현 검사 결과가 없으면 덱을 만들지 않는다")
     ap.add_argument("--allow-size", action="store_true",
                     help=f"{MIN_CARDS}~{MAX_CARDS}장 계약을 어겨도 만든다")
+    ap.add_argument("--site-edits", help="사이트 「카드 검토」의 판정. runner 가 적는다 (quizgen/site_edits.py)")
     args = ap.parse_args(argv)
 
     prep_dir = Path(args.prep_dir)
@@ -321,6 +328,10 @@ def main(argv=None) -> int:
     print(f"입력 {src.name} — {how}")
 
     cards = json.loads(src.read_text(encoding="utf-8"))["cards"]
+    edits = site_edits.load(args.site_edits)
+    if edits:
+        cards, applied = site_edits.apply(cards, edits)
+        print_site_edits(applied)
     n = len(cards)
     if not MIN_CARDS <= n <= MAX_CARDS:
         msg = f"카드가 {n}장이다 — 예습 덱의 계약은 {MIN_CARDS}~{MAX_CARDS}장이다"
@@ -340,7 +351,7 @@ def main(argv=None) -> int:
 
     try:
         res = build(prep_dir, args.deck, lecture_id, src, args.apkg_name,
-                    slice_path, pdf_path)
+                    slice_path, pdf_path, edits=edits)
     except GuidClash as e:
         print(f"\n{e}")
         return 1

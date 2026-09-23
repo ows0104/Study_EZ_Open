@@ -26,7 +26,7 @@ from datetime import date as Date
 from datetime import timedelta
 from pathlib import Path
 
-from runner import agent, blocks, deck, filenames, prequeue, publish, watch
+from runner import agent, blocks, deck, filenames, prequeue, publish, site_edits, watch
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -627,6 +627,26 @@ def sync_previews(args, subjects: list[str], runs_dir: Path, api: str) -> set[tu
     return stale
 
 
+def sync_site_edits(args, subjects: list[str], runs_dir: Path, api: str) -> None:
+    """사이트 「카드 검토」의 판정을 당겨 덱을 다시 굽는다(`runner/site_edits.py`).
+
+    실패해도 올리기는 계속 간다 — 그 편은 옛 덱으로 나가고, 웹 풀이는 서버가 이미
+    고쳐 두었다. `--run-id` 로 한 편만 밀 때도 과목 전체를 본다: 판정 몇 건에 편당
+    몇 초라 좁힐 값이 없다.
+    """
+    token = runner_token(args.token)
+    if not token:
+        return
+    try:
+        lines = site_edits.sync(publish.Client(api, token), runs_dir,
+                                subjects=tuple(subjects), dry_run=args.dry_run)
+    except publish.PublishError as cause:
+        print(f"  ⚠ 사이트 판정을 못 읽었다 — {cause}. 덱은 판정 없이 나간다")
+        return
+    for index, line in enumerate(lines):
+        print(f"  {'' if index == 0 else '  '}{line}")
+
+
 def report_publish(args) -> int:
     """산출물을 서버로. 무엇이 올라갈지 먼저 다 적고 나서 민다.
 
@@ -647,6 +667,9 @@ def report_publish(args) -> int:
         print("  --dry-run — 예습 링크도 안 맞춘다 (남의 서비스를 두들기는 일이다)")
     else:
         stale = sync_previews(args, subjects, runs_dir, api)
+    # 사이트에서 고친 카드를 덱에 얹는다(2026-09-23). **계획보다 먼저다** — 계획이
+    # 덱 파일의 크기·시각을 읽으므로, 뒤에 구우면 이번 실행은 옛 덱을 민다.
+    sync_site_edits(args, subjects, runs_dir, api)
 
     plans: list[publish.LecturePlan] = []
     warnings: list[str] = []

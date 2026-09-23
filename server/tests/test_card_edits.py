@@ -195,6 +195,55 @@ def main() -> None:
     check("없는 카드는 404", client.put(f"{ADMIN}/cards/pre/c999", json={"action": "ok"},
                                        headers=USER).status_code == 404)
 
+    덱으로_가는_길(client)
+
+
+def 덱으로_가는_길(client: TestClient) -> None:
+    """2026-09-23 둘째 지시 — 「사이트에서 고친 카드가 apkg에도 반영되게 해줘.」
+
+    러너가 판정을 당겨 가 덱을 다시 굽고, **얹어 구운 문항을 다시 올린다.** 그때
+    서버가 그것을 「파이프라인이 바꿨다」로 읽으면 판정이 사라진다 — 여기가 요점이다.
+    """
+    print("\n  ── 덱으로 가는 길")
+    cloze = dict(an_item("c004", "먼저 [____]의 이동을 부른다", "동물"),
+                 qtype="cloze", source_stem="먼저 {{c1::동물}}의 이동을 부른다")
+    base = [i for i in ITEMS if i["id"] != "c002"] + [cloze]
+    client.put(f"{ADMIN}/pre-items", json={"items": base}, headers=RUNNER)
+
+    bad = client.put(f"{ADMIN}/cards/pre/c004", json={"action": "edit", "stem": "딴 문장"},
+                     headers=USER)
+    check("빈칸 카드는 편 질문을 못 고친다", bad.status_code == 422, bad.status_code)
+    noblank = client.put(f"{ADMIN}/cards/pre/c004",
+                         json={"action": "edit", "sourceStem": "빈칸 없는 문장"}, headers=USER)
+    check("빈칸이 없는 원문은 받지 않는다", noblank.status_code == 422, noblank.status_code)
+    good = client.put(f"{ADMIN}/cards/pre/c004",
+                      json={"action": "edit", "sourceStem": "댐 건설은 먼저 {{c1::동물}}의 이동을 부른다",
+                            "answer": "동물"}, headers=USER)
+    check("빈칸 카드는 원문을 고친다", good.status_code == 200, good.text)
+    check("웹 질문은 서버가 편다", stem(client, "c004") == "댐 건설은 먼저 [____]의 이동을 부른다",
+          stem(client, "c004"))
+
+    listed = client.get("/api/admin/card-edits", headers=RUNNER).json()["edits"]
+    mine = {(e["kind"], e["itemId"]): e for e in listed}
+    check("러너가 고침·뺌만 받는다 (괜찮음은 덱에 할 일이 없다)",
+          sorted(mine) == [("pre", "c004")],
+          sorted(mine))
+    c004 = mine.get(("pre", "c004")) or {}
+    check("원문과 원본을 같이 준다",
+          c004.get("sourceStem") == "댐 건설은 먼저 {{c1::동물}}의 이동을 부른다"
+          and c004.get("original", {}).get("stem") == "먼저 [____]의 이동을 부른다", c004)
+
+    # 러너가 얹어 구운 문항 — 질문이 고친 모양으로 올라온다.
+    baked = [dict(cloze, stem="댐 건설은 먼저 [____]의 이동을 부른다",
+                  source_stem="댐 건설은 먼저 {{c1::동물}}의 이동을 부른다") if i["id"] == "c004" else i
+             for i in base]
+    again = client.put(f"{ADMIN}/pre-items", json={"items": baked}, headers=RUNNER).json()
+    check("얹어 구운 것이 올라와도 판정을 지킨다", again["editsDropped"] == 0, again)
+    undone = client.delete(f"{ADMIN}/cards/pre/c004", headers=USER)
+    check("그 뒤에 되돌려도 파이프라인 원본으로 간다",
+          undone.status_code == 200 and stem(client, "c004") == "먼저 [____]의 이동을 부른다",
+          stem(client, "c004"))
+
     print(f"\n{'모두 통과' if not failures else f'실패 {len(failures)}'}")
     if failures:
         raise SystemExit(1)

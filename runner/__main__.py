@@ -65,6 +65,7 @@ from runner import (  # noqa: E402
     matching,
     preview,
     publish,
+    rebuild,
     runlayout,
     watch,
 )
@@ -417,70 +418,30 @@ def run_rebuild(args) -> int:
     이미 만든 덱에도 그 표시가 카드 뒷면 경고 박스로 뜨게 하는 길이다.
     """
     runs_dir = Path(args.runs)
-    targets = []
-    for entry in sorted(runs_dir.iterdir() if runs_dir.is_dir() else []):
-        if not entry.is_dir() or (args.run_id and entry.name != args.run_id):
-            continue
-        for kind in (deck.MAIN, deck.PRE):
-            cfg = deck.config_of(entry, kind)
-            # **판 폴더를 거쳐 묻는다.** `entry / …` 로 바로 보면 접은 편이 전부
-            # 「카드가 없다」로 읽혀 다시 굽는 길이 막힌다.
-            cards = deck._attempt(entry, "items.reproduced.json", kind)
-            if cfg and cfg.get("deck") and cards.is_file():
-                targets.append((entry, kind, cfg, cards.parent))
+    targets = rebuild.targets(runs_dir, args.run_id or "")
     if not targets:
         print("[rebuild] 다시 구울 것이 없다 (카드가 남아 있는 자리가 없다)")
         return 1
 
     print(f"[rebuild] {len(targets)}편")
     done, failed = 0, 0
-    for run_dir, kind, cfg, work in targets:
-        subject = cfg["deck"].split("::")[0]
-        parsed = filenames.parse(deck.source_pdf(run_dir))
-        title = parsed.title if parsed else run_dir.name
-        professors = parsed.professors if parsed else ()
-        name = deck.calendar_name(run_dir, run_dir.name, title, kind, professors,
-                                  subject=subject)
-        # **덱 이름도 다시 세운다.** `run.config.json`의 것을 그대로 쓰면 이름 규칙이
-        # 바뀌어도 Anki 안에서 보이는 이름만 옛것으로 남는다 — 파일만 바뀌고 덱은
-        # 그대로였던 것이 실제로 그 이유였다.
-        deck_name = deck.calendar_deck(run_dir, run_dir.name, title, kind, subject, professors)
+    for t in targets:
         if args.dry_run:
-            moved = "" if deck_name == cfg["deck"] else f"\n      덱 {cfg['deck']} → {deck_name}"
-            print(f"  → {run_dir.name} {kind}  {name}.apkg{moved}")
+            _, name, deck_name = rebuild.names(t)
+            moved = "" if deck_name == t.cfg["deck"] else f"\n      덱 {t.cfg['deck']} → {deck_name}"
+            print(f"  → {t.run_dir.name} {t.kind}  {name}.apkg{moved}")
             continue
-        marks = deck.reflag(run_dir) if args.reflag else {}
-        ok, tail = deck.rebuild(
-            run_dir=run_dir, kind=kind, deck_name=deck_name,
-            id=cfg.get("id") or deck.deck_id(run_dir.name),
-            jokbo_dir=deck.jokbo_dir(runs_dir, subject), apkg_name=name,
-            repo_root=REPO_ROOT, work=work)
+        marks = deck.reflag(t.run_dir) if args.reflag else {}
+        ok, got = rebuild.one(t, runs_dir)
         if not ok:
-            print(f"  ✗ {run_dir.name} {kind} — {tail[-1] if tail else '실패'}")
+            print(f"  ✗ {t.run_dir.name} {t.kind} — {got[-1] if got else '실패'}")
             failed += 1
             continue
-        # 이름 규칙이 바뀌면 옛 이름의 덱이 옆에 남는다. 같은 갈래의 낡은 것은
-        # 지우고 간다 — 남겨 두면 어느 것이 참인지 파일만 봐서는 모른다.
-        #
-        # **굽기가 성공한 뒤에 지운다.** 먼저 지우던 때가 있었는데, 빌드가 결함을
-        # 이유로 거부하면 그 편에 덱이 하나도 안 남았다. `runs/` 는 gitignore 라
-        # 되돌릴 데가 없다 — 2026-08-23 에 `260821_05` 가 실제로 그렇게 날아갔다.
-        for stale in run_dir.glob("*.apkg"):
-            if deck.is_pre(stale) == (kind == deck.PRE) and stale.stem != name:
-                stale.unlink()
-        # 폴더가 기억하는 이름도 새것으로 바꾼다. 안 바꾸면 `--resume`이나 다음
-        # rebuild가 옛 이름으로 되돌린다 — 그 자리가 정본이기 때문이다.
-        if deck_name != cfg["deck"]:
-            cfg["deck"] = deck_name
-            (run_dir / ("prequiz.config.json" if kind == deck.PRE else "run.config.json")
-             ).write_text(json.dumps(cfg, ensure_ascii=False, indent=1), encoding="utf-8")
-
-        meta = deck.contract(run_dir, run_dir.name, title, kind)
         done += 1
         added = (" · 새 표시 " + " ".join(f"{k} {v}장" for k, v in sorted(marks.items()))
                  if marks else "")
-        print(f"  ✓ {run_dir.name} {kind} — {meta['item_count']}장 · "
-              f"미디어 {meta['verified']['media']}개{added}")
+        print(f"  ✓ {t.run_dir.name} {t.kind} — {got['item_count']}장 · "
+              f"미디어 {got['verified']['media']}개{added}")
 
     if not args.dry_run:
         print(f"\n  다시 구운 것 {done}편" + (f" · 실패 {failed}편" if failed else ""))
