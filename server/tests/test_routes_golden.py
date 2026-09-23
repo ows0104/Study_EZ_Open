@@ -30,10 +30,16 @@ from app.main import app  # noqa: E402
 # 2026-09-21 에 한 줄이 늘었다 — `GET …/deck-job`. 관리자가 아닌 사람도 덱이
 # 만들어지는 진행을 보게 하라는 지시였고, 관리자 경로(`/api/admin/…/prequiz-job`)를
 # 열어 주는 대신 **주는 칸을 덜어 낸 경로를 따로 세웠다**(`routes/lectures.py`).
+#
+# 2026-09-23 에 넷이 늘었다 — `…/card-review` 와 `…/cards/…`. 문지기가 결함 카드를
+# 막는 대신 올리고, 관리자가 사이트에서 고치거나 빼게 하라는 지시였다(`routes/cards.py`).
 GOLDEN = """
+DELETE /api/admin/lectures/{subject}/{run_id}/cards/{kind}/{item_id}
 DELETE /api/lectures/{subject}/{run_id}/mainquiz/attempts
 DELETE /api/lectures/{subject}/{run_id}/prequiz/attempts
 DELETE /api/spotter/comments/{comment_id}
+GET /api/admin/card-review
+GET /api/admin/lectures/{subject}/{run_id}/cards/{kind}
 GET /api/admin/lectures/{subject}/{run_id}/prequiz-job
 GET /api/admin/overview
 GET /api/admin/prequiz-jobs
@@ -90,6 +96,7 @@ POST /api/spotter/state/merge
 POST /api/spotter/subjects/{subject}/images/sign
 POST /api/spotter/threads/{kind}/{subject}/comments
 PUT /api/admin/course-aliases
+PUT /api/admin/lectures/{subject}/{run_id}/cards/{kind}/{item_id}
 PUT /api/admin/lectures/{subject}/{run_id}/main-items
 PUT /api/admin/lectures/{subject}/{run_id}/match
 PUT /api/admin/lectures/{subject}/{run_id}/pre-items

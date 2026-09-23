@@ -70,7 +70,7 @@ class BaseRunner:
         """재현 검사가 **카드 결함**으로 가른 것만. lecture_specific·genuinely_wrong 은 아니다.
 
         **문지기가 보는 것이 이쪽이다.** 남으면 `run.meta.json` 의 `reproduce_defects`
-        에 실려 그 편의 배포가 미뤄진다.
+        에 실린다. 2026-09-23 부터 배포는 안 미루고, 관리 화면 「카드 검토」에 뜬다.
         """
         return [c for c in self._reproduced()
                 if (c.get("reproduce") or {}).get("reason") in DEFECT_REASONS]

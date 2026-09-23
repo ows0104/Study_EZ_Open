@@ -26,6 +26,8 @@ from app.database import get_db
 from app.matching import relink
 from app.models import (
     APP_POLICY,
+    CARD_DELETE,
+    CARD_EDIT,
     APP_STUDYEZ,
     ASSET_KINDS,
     CHECKLIST_ITEMS,
@@ -50,6 +52,7 @@ from app.naming import nfc, object_key, slide_no_from_filename, version_from_fil
 from app.preview_links import conversation_url as valid_conversation_url
 from app.preview_links import provider as valid_provider
 from app.preview_links import share_url as valid_share_url
+from app.routes import cards
 from app.routes.common import lecture_or_404, storage_or_503
 from app.routes.prequiz_jobs import RUNNER_NAME, ensure_auto_job, job_row, runner_row
 
@@ -301,42 +304,64 @@ class PreItemsIn(BaseModel):
     items: list[PreItemIn]
 
 
-def _put_items(table, payload: PreItemsIn, db: Session, subject: str, run_id: str) -> dict[str, Any]:
+def _put_items(
+    table, kind: str, payload: PreItemsIn, db: Session, subject: str, run_id: str
+) -> dict[str, Any]:
     """문항 파일 통째로. **부분 갱신이 아니라 교체다.**
 
     갈래는 표로만 갈린다(`pre_item` / `main_item`). 모양도 규칙도 같다 —
     자세한 것은 `app/models.py`의 `_QuizItem`에 있다.
+
+    **사람이 사이트에서 내린 판정을 다시 얹는다**(`card_edit`, 2026-09-23). 안 얹으면
+    다음 쓸기가 고친 문구를 도로 덮고 뺀 카드를 도로 세운다. 파이프라인이 그 카드를
+    바꿔 올렸으면 판정을 버린다 — 이유는 `models.CardEdit`.
     """
     lecture = lecture_or_404(db, subject, run_id)
     for item in payload.items:
         if not item.answer.strip():
             # 답이 없는 카드는 펴 봐야 빈 칸이 뜬다. 그 자리에서 막는다.
             raise HTTPException(status_code=422, detail=f"{item.id}: 답이 비어 있습니다.")
+    edits = cards.edits_for(db, lecture.subject, lecture.run_id, kind)
     db.execute(
         delete(table).where(table.subject == lecture.subject, table.run_id == lecture.run_id)
     )
+    kept = edited = deleted = dropped = 0
     for order, item in enumerate(payload.items):
-        db.add(
-            table(
-                subject=lecture.subject,
-                run_id=lecture.run_id,
-                item_id=item.id,
-                ord=order,
-                qtype=item.qtype,
-                stem=item.stem,
-                answer=item.answer,
-                focus=item.focus,
-                card_type=item.card_type,
-                exam_hit=item.exam_hit,
-                slide_no=item.slide_no,
-                source_type=item.source_type,
-                source_anchor=item.source_anchor,
-                explanation=item.explanation,
-                flags=item.flags,
-            )
+        row = table(
+            subject=lecture.subject,
+            run_id=lecture.run_id,
+            item_id=item.id,
+            ord=order,
+            qtype=item.qtype,
+            stem=item.stem,
+            answer=item.answer,
+            focus=item.focus,
+            card_type=item.card_type,
+            exam_hit=item.exam_hit,
+            slide_no=item.slide_no,
+            source_type=item.source_type,
+            source_anchor=item.source_anchor,
+            explanation=item.explanation,
+            flags=item.flags,
         )
+        edit = edits.get(item.id)
+        if edit is not None:
+            incoming = cards.snapshot(row)
+            if not cards.same_card(edit.original, incoming):
+                db.delete(edit)
+                dropped += 1
+            else:
+                # 표시(`flags`)·순서만 바뀐 것은 같은 카드다. 원본은 새 것으로 갈아 둔다.
+                edit.original = incoming
+                if edit.action == CARD_DELETE:
+                    deleted += 1
+                    continue
+                cards.apply(row, edit)
+                edited += edit.action == CARD_EDIT
+        db.add(row)
+        kept += 1
     db.commit()
-    return {"itemCount": len(payload.items)}
+    return {"itemCount": kept, "edited": edited, "deleted": deleted, "editsDropped": dropped}
 
 
 @router.put("/lectures/{subject}/{run_id}/pre-items")
@@ -348,7 +373,7 @@ def put_pre_items(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """`pre_items.final.json` 통째로."""
-    return _put_items(PreItem, payload, db, subject, run_id)
+    return _put_items(PreItem, "pre", payload, db, subject, run_id)
 
 
 @router.put("/lectures/{subject}/{run_id}/main-items")
@@ -360,7 +385,7 @@ def put_main_items(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """`main_items.final.json` 통째로. 2026-08-31에 생긴 자리다."""
-    return _put_items(MainItem, payload, db, subject, run_id)
+    return _put_items(MainItem, "main", payload, db, subject, run_id)
 
 
 # ---------------------------------------------------------------- 예습 링크

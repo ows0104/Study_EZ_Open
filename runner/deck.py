@@ -758,16 +758,34 @@ def _flag_counts(cards: list[dict]) -> dict[str, int]:
 
 
 def _reproduce_defects(cards: list[dict]) -> list[str]:
-    """덱에 들어와서는 안 될 카드. 여기 뭔가 있으면 빌드가 자기 규칙을 어긴 것이다."""
+    """재현 검사가 문항 결함으로 가른 카드. 막지는 않고 올린다(`gate.py` 머리)."""
     return [str(c.get("id") or "?") for c in cards
             if (c.get("reproduce") or {}).get("reason") in quizgen_build.DEFECT_REASONS]
+
+
+def _reproduce_defect_notes(cards: list[dict]) -> dict[str, dict[str, str]]:
+    """결함 카드마다 **왜** 갈렸는가. 사이트의 「카드 검토」가 그대로 보여 준다.
+
+    2026-09-23 에 붙었다 — 문지기가 결함 카드를 막는 대신 올리게 되면서, 고치는
+    사람이 서버에서 사유를 읽어야 했다. 그 전의 run.meta 에는 id 만 있다.
+    """
+    out: dict[str, dict[str, str]] = {}
+    for c in cards:
+        r = c.get("reproduce") or {}
+        if r.get("reason") in quizgen_build.DEFECT_REASONS:
+            out[str(c.get("id") or "?")] = {
+                "reason": str(r.get("reason") or ""),
+                "note": str(r.get("note") or ""),
+                "reproduced": str(r.get("reproduced_answer") or ""),
+            }
+    return out
 
 
 def _axis_unresolved(cards: list[dict]) -> list[str]:
     """축 검사가 「무엇을 묻는지 모르겠다」고 한 채로 덱에 남은 빈칸 카드.
 
-    `_reproduce_defects`와 갈라 둔다. 저쪽은 문지기가 배포를 미루는 값이고 이쪽은
-    아니다 — 축 검사는 2026-09-06에 붙었고 한 편에서만 재 봤다(`build.AXIS_REASON`
+    `_reproduce_defects`와 갈라 둔다. 저쪽은 문지기가 배포를 미루던 값이고(2026-09-23
+    부터는 둘 다 안 미룬다) 이쪽은 처음부터 아니었다 — 축 검사는 2026-09-06에 붙었고 한 편에서만 재 봤다(`build.AXIS_REASON`
     주석). 세어서 적기만 하고, 사람이 보는 자리는 카드 뒷면이다(`build.warning_of`).
     """
     return [str(c.get("id") or "?") for c in cards
@@ -1003,6 +1021,7 @@ def contract(run_dir: Path, run_id: str, title: str, kind: str,
         "review_flags": _flag_counts(cards),
         "reproduce": _reproduce_mix(cards),
         "reproduce_defects": _reproduce_defects(cards),
+        "reproduce_defect_notes": _reproduce_defect_notes(cards),
         "dropped": len(suspects.get("dropped") or []),
         "similar_pairs": len(suspects.get("similar_pairs") or []),
         "slides_total": total,

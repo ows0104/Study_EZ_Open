@@ -430,12 +430,12 @@ class Runner(BaseRunner):
             argv += ["--jokbo", self.args.jokbo]
         if self.defects():
             # 여기서 멈추지 않는 이유는 사람이 덱을 열어 봐야 무엇이 문제인지 알기
-            # 때문이다. 대신 결함 id 가 run.meta.json 의 `reproduce_defects` 에 남고,
-            # runner.gate 가 그걸 읽어 **배포를 막는다.** 나가는 것을 막는 자리는
-            # 빌드가 아니라 거기다 — 문서가 한동안 반대로 적고 있었다.
+            # 때문이다. 대신 결함 id 가 run.meta.json 의 `reproduce_defects` 에 남는다.
+            # **배포는 안 막는다**(2026-09-23 관리자 지시) — 올리고, 관리 화면의
+            # 「카드 검토」에서 고치거나 뺀다(`runner/gate.py` 머리).
             print(f"⚠ 재현 불가 {len(self.defects())}장이 남았다. 그대로 덱에 넣는다.\n"
-                  "   이 덱은 배포가 막힌다 (runner.gate 의 reproduce_defects 검사). "
-                  "고쳐 다시 굽거나, 사람이 보고 괜찮으면 publish 를 --no-gate 로 민다.",
+                  "   올라간 뒤 관리 화면 「카드 검토」에 뜬다. 덱(.apkg)까지 고치려면 "
+                  "items.checked.json 을 고쳐 다시 굽는다.",
                   flush=True)
             argv += ["--allow-defects"]
         self.sh(*argv)

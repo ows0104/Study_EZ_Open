@@ -339,6 +339,55 @@ class MainItem(_QuizItem, Base):
     __tablename__ = "main_item"
 
 
+# 사람이 사이트에서 카드 한 장에 내린 판정.
+CARD_OK = "ok"  # 보고 괜찮다고 했다 — 내용은 파이프라인이 올린 그대로
+CARD_EDIT = "edit"  # 문구를 고쳤다
+CARD_DELETE = "delete"  # 뺐다
+CARD_ACTIONS = (CARD_OK, CARD_EDIT, CARD_DELETE)
+
+
+class CardEdit(Base):
+    """관리자가 사이트에서 카드 한 장을 보고 내린 판정.
+
+    2026-09-23 관리자 지시 — 「이상한 카드가 있으면 업로드 단계에서 막히고 있어.
+    그러지 말고 일단 업로드를 하고, 사이트에서 검토/수정/삭제할 수 있도록 하자.」
+    그 전까지는 문지기(`runner/gate.py`)가 결함 카드 한 장 때문에 덱 전체를 미뤘다.
+
+    **문항 표에 바로 쓰고, 여기에도 적는다.** 러너는 문항을 통째로 갈아 끼운다
+    (`admin._put_items`) — 여기 적어 두지 않으면 다음 쓸기가 고친 것을 도로 덮는다.
+    그래서 갈아 끼울 때마다 이 표를 다시 얹는다.
+
+    **파이프라인이 그 카드를 바꿔 올리면 판정을 버린다.** 같은 `c002` 라도 다시
+    만든 편에서는 다른 카드일 수 있다 — 옛 카드에 고친 문구를 새 카드에 덮으면
+    멀쩡한 카드를 망친다. 그래서 파이프라인이 올린 원본(`original`)을 들고 있다가,
+    다음에 올라온 것이 그것과 다르면 판정을 지운다. 새 카드가 또 걸렸으면 검토
+    목록에 다시 뜬다.
+    """
+
+    __tablename__ = "card_edit"
+
+    subject: Mapped[str] = mapped_column(Text, primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    quiz_kind: Mapped[str] = mapped_column(String(8), primary_key=True)  # main|pre
+    item_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    action: Mapped[str] = mapped_column(String(8), nullable=False)  # CARD_ACTIONS
+    # 고친 칸만 찬다. None 이면 원본 그대로다.
+    stem: Mapped[str | None] = mapped_column(Text, nullable=True)
+    answer: Mapped[str | None] = mapped_column(Text, nullable=True)
+    explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # 파이프라인이 마지막으로 올린 카드 그대로(`ord` 포함). 되돌리기와 「바꿔 올렸나」
+    # 둘 다 이것을 본다.
+    original: Mapped[dict] = mapped_column(JSON, nullable=False)
+    edited_by: Mapped[str] = mapped_column(String(320), nullable=False, default="")
+    edited_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["subject", "run_id"], ["lecture.subject", "lecture.run_id"], ondelete="CASCADE"
+        ),
+    )
+
+
 class _Attempt:
     """웹 풀이의 카드 한 장. **`correct`는 본인이 찍은 것이다.**
 

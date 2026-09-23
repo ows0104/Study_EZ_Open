@@ -568,3 +568,44 @@ export type AdminOverview = {
   subjects: string[];
   runner: RunnerBeat | null;
 };
+
+/** 사이트에서 카드 한 장에 내린 판정(`server/app/routes/cards.py`). */
+export type CardAction = "ok" | "edit" | "delete";
+
+/**
+ * 관리자가 보는 카드 한 장 — **답까지 있다.**
+ *
+ * `flag` 는 걸린 까닭이다. `defect` 는 재현 검사가 문항 결함으로 가른 것이고
+ * 2026-09-23 전까지 덱째로 배포를 막던 것, `axis` 는 빈칸이 무엇을 묻는지 안
+ * 선 것이고 막은 적은 없다. 그날 전에 만든 편은 사유(`reason`)가 빈다.
+ */
+export type ReviewCard = {
+  subject: string;
+  runId: string;
+  title: string;
+  date: string;
+  kind: "pre" | "main";
+  itemId: string;
+  ord: number;
+  qtype: string;
+  stem: string;
+  answer: string;
+  explanation: string;
+  slideNo: number | null;
+  slideUrl: string | null;
+  flags: string[];
+  /** 파이프라인이 올린 그대로. 고친 칸과 맞대 보려고 있다. */
+  original: { stem: string; answer: string; explanation: string };
+  flag: { why: "defect" | "axis"; reason: string; note: string; reproduced: string } | null;
+  edit: { action: CardAction; editedBy: string; editedAt: string | null } | null;
+};
+
+export type CardReview = { cards: ReviewCard[]; open: number; done: number };
+
+export type LectureCards = {
+  subject: string;
+  runId: string;
+  title: string;
+  kind: "pre" | "main";
+  cards: ReviewCard[];
+};

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { api } from "../api";
-import type { AdminOverview, AppUser, JobBoard } from "../types";
+import type { AdminOverview, AppUser, CardReview, JobBoard } from "../types";
 import { jobMoving, jobOpen } from "../jobProgress";
+import { CardReviewTab } from "./CardReviewTab";
 import { LectureTab } from "./LectureTab";
 import { UsageTab } from "./UsageTab";
 import { QuizTab } from "./QuizTab";
@@ -20,6 +21,7 @@ import { isUnconfirmed, isUnmatched, pending, runnerAlive } from "./rows";
  *     계정   신청이 들어온 계정 — 승인
  *     강의   매칭 · 과목 이름 잇기 · 편별 자료 체크리스트와 예습 링크
  *     이용   누가 쓰고 있나 (2026-09-19 관리자 지시로 넷째가 되었다)
+ *     카드   걸린 카드를 보고 고치거나 뺀다 (2026-09-23 — 문지기가 막던 것을 여기로 옮겼다)
  *
  * **「이용」에는 탭 옆 숫자가 없다.** 다른 셋의 숫자는 남은 일이거나 도는 일이라
  * 0이 되면 사라지는데, 이용현황에 적을 수 있는 수(사용자 수·쓰는 사람 수)는 늘
@@ -38,6 +40,7 @@ export function AdminPage() {
   const [overview, setOverview] = useState<AdminOverview | null>(null);
   const [board, setBoard] = useState<JobBoard | null>(null);
   const [users, setUsers] = useState<AppUser[] | null>(null);
+  const [review, setReview] = useState<CardReview | null>(null);
   const [error, setError] = useState("");
 
   const load = useCallback(() => {
@@ -59,8 +62,17 @@ export function AdminPage() {
       .catch(() => {});
   }, []);
 
+  // 걸린 카드도 폴링에서 뺀다. 늘어나는 것은 쓸기가 돌 때뿐이고, 줄어드는 것은
+  // 이 화면에서 누를 때뿐이다 — 누른 뒤에 다시 읽는다.
+  const loadReview = useCallback(() => {
+    api<CardReview>("/api/admin/card-review")
+      .then(setReview)
+      .catch(() => {});
+  }, []);
+
   useEffect(load, [load]);
   useEffect(loadUsers, [loadUsers]);
+  useEffect(loadReview, [loadReview]);
 
   // 도는 일감이 있는 동안만 다시 읽는다. 한 편에 15분이 걸리는데 사람이 새로고침을
   // 눌러야 진행이 보이면, 그 진행은 없는 것과 같다. 끝나면 폴링도 멈춘다.
@@ -120,6 +132,10 @@ export function AdminPage() {
         <NavLink to="/admin/usage" className={tabClass} title="사람마다 무엇을 얼마나 했나">
           이용
         </NavLink>
+        <NavLink to="/admin/cards" className={tabClass} title="재현 검사에 걸린 카드 — 고치거나 뺀다">
+          카드 검토
+          {review?.open ? <span className="admin-tab-count">{review.open}</span> : null}
+        </NavLink>
       </nav>
 
       <Routes>
@@ -129,6 +145,7 @@ export function AdminPage() {
         {/* 목록을 자기가 읽는다. 다른 탭에 있는 동안 도는 폴링에 얹지 않는다 —
             집계 질의가 여덟 개라 10초마다 돌 이유가 없다. */}
         <Route path="usage" element={<UsageTab />} />
+        <Route path="cards" element={<CardReviewTab review={review} onChanged={loadReview} />} />
         {/* 하루 나가 있던 주소다(2026-09-04). 눌러 둔 사람이 빈 화면을 보지 않게
             제자리로 보낸다. */}
         <Route path="match" element={<Navigate to="/admin/lectures" replace />} />
