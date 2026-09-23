@@ -188,7 +188,8 @@ function useLectureDetail(lecture: LectureRef | undefined) {
  * 줄로 고치는 일이라 패널 폭에서는 한 카드도 한눈에 안 들어온다. 강의 화면 전체
  * 보기와 같은 길(새 탭)로 가서 캘린더는 그대로 남는다.
  *
- * 안 본 걸린 카드가 있으면 그 수를 먼저 적는다. 없으면 카드 수만.
+ * **검토 표시된 카드가 있는 갈래에만 선다**(같은 날 관리자 — 「카드 검토할때
+ * 검토표시된것만 확인하고 고치려고 하는 거였어」). 안 본 것이 있으면 경고색이다.
  */
 function CardFixLinks({
   lecture,
@@ -197,7 +198,7 @@ function CardFixLinks({
   lecture: LectureRef;
   counts: LectureDetail["cardReview"];
 }) {
-  const kinds = (["pre", "main"] as const).filter((kind) => counts?.[kind]);
+  const kinds = (["pre", "main"] as const).filter((kind) => (counts?.[kind]?.flagged ?? 0) > 0);
   if (!counts || !kinds.length) return null;
   return (
     <div className="card-fix-links">
@@ -213,8 +214,7 @@ function CardFixLinks({
           >
             {kind === "pre" ? "예습" : "복습"} 카드 고치기
             <small>
-              {count.open ? `걸린 카드 ${count.open}장 안 봄` : `${count.cards}장`}
-              {count.decided ? ` · 판정 ${count.decided}건` : ""}
+              검토 표시 {count.flagged}장{count.open ? ` · 안 봄 ${count.open}장` : " · 다 봤음"}
             </small>
           </a>
         );

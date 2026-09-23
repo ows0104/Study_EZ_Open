@@ -6,9 +6,10 @@ import type { CardAction, ReviewCard } from "../types";
 /**
  * 카드 한 장을 보고 괜찮다 · 고친다 · 뺀다 · 되돌린다.
  *
- * **두 자리가 같이 쓴다** — 관리 화면의 「카드 검토」 탭(편을 가로질러 걸린 것만)과
- * 강의 화면의 「카드 검토」 절(그 편의 카드 전부, 2026-09-23 관리자 지시 — 「관리
- * 패널 말고 그 강의 패널에서 고칠 수 있게 해줘」). 두 곳에 적으면 한쪽에만 빈칸
+ * **두 자리가 같이 쓴다** — 관리 화면의 「카드 검토」 탭(편을 가로질러)과 강의 화면의
+ * 「카드 검토」 절(그 편, 2026-09-23 관리자 지시 — 「관리 패널 말고 그 강의 패널에서
+ * 고칠 수 있게 해줘」). 둘 다 **검토 표시된 카드만** 든다. 표시 없는 카드가 여기 오는
+ * 길은 풀이 화면의 「이 카드 고치기」 하나다(`focus`). 두 곳에 적으면 한쪽에만 빈칸
  * 원문 처리가 붙는 날이 온다.
  *
  * 규칙은 서버에 있다(`server/app/routes/cards.py`). 웹 풀이는 누르는 즉시, 덱은
@@ -50,12 +51,10 @@ export function kindLabel(kind: "pre" | "main") {
 export function CardRow({
   card,
   onChanged,
-  onOpenLecture,
   focus = false,
 }: {
   card: ReviewCard;
   onChanged: (next: ReviewCard) => void;
-  onOpenLecture?: () => void;
   /** 풀이 화면에서 이 카드를 지목해 왔다. 내려와서 고치는 상태로 연다. */
   focus?: boolean;
 }) {
@@ -122,11 +121,6 @@ export function CardRow({
           </span>
         ) : null}
         {card.edit ? <span className="tag is-ok">{ACTIONS[card.edit.action]}</span> : null}
-        {onOpenLecture ? (
-          <button className="is-quiet" onClick={onOpenLecture}>
-            이 편 카드 전부
-          </button>
-        ) : null}
       </header>
 
       {flag?.note ? <p className="card-review-why">{flag.note}</p> : null}

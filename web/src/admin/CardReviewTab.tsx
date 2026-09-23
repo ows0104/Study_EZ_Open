@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { api } from "../api";
-import { ApkgNote, CardRow, kindLabel } from "../cards/CardRow";
-import type { CardReview, LectureCards, ReviewCard } from "../types";
+import { ApkgNote, CardRow } from "../cards/CardRow";
+import type { CardReview } from "../types";
 
 /**
  * 걸린 카드를 보고 괜찮다 · 고친다 · 뺀다.
@@ -23,50 +22,12 @@ import type { CardReview, LectureCards, ReviewCard } from "../types";
  */
 export function CardReviewTab({ review, onChanged }: { review: CardReview | null; onChanged: () => void }) {
   const [showDone, setShowDone] = useState(false);
-  const [lecture, setLecture] = useState<LectureCards | null>(null);
-  const [lectureError, setLectureError] = useState("");
 
   if (!review) return <p className="notice">불러오는 중…</p>;
   const shown = showDone ? review.cards : review.cards.filter((card) => !card.edit);
 
-  async function openLecture(card: ReviewCard) {
-    setLectureError("");
-    try {
-      setLecture(
-        await api<LectureCards>(
-          `/api/admin/lectures/${encodeURIComponent(card.subject)}/${card.runId}/cards/${card.kind}`,
-        ),
-      );
-    } catch (cause) {
-      setLectureError((cause as Error).message);
-    }
-  }
-
-  // 한 편 목록에서 판정하면 그 편 목록도, 위의 검토 목록도 다시 읽는다.
-  function changedInLecture(next: ReviewCard) {
-    setLecture((prev) =>
-      prev ? { ...prev, cards: prev.cards.map((c) => (c.itemId === next.itemId ? next : c)) } : prev,
-    );
-    onChanged();
-  }
-
-  if (lecture) {
-    return (
-      <section className="card-review">
-        <p className="admin-summary">
-          <button className="is-quiet" onClick={() => setLecture(null)}>
-            ← 검토 목록
-          </button>{" "}
-          {lecture.subject} · {lecture.title} · {kindLabel(lecture.kind)} · 카드 {lecture.cards.length}장
-        </p>
-        <ApkgNote />
-        {lecture.cards.map((card) => (
-          <CardRow key={card.itemId} card={card} onChanged={changedInLecture} />
-        ))}
-      </section>
-    );
-  }
-
+  // 「이 편 카드 전부」는 걷어냈다(2026-09-23 관리자 — 「카드 검토할때 검토표시된것만
+  // 확인하고 고치려고 하는 거였어」). 표시가 없는 카드는 풀이 화면에서 고친다.
   return (
     <section className="card-review">
       {/* 0장도 답이다. 빈 화면으로 두면 못 불러온 것과 같다. */}
@@ -89,14 +50,8 @@ export function CardReviewTab({ review, onChanged }: { review: CardReview | null
         ) : null}
       </p>
       <ApkgNote />
-      {lectureError ? <p className="notice is-error">{lectureError}</p> : null}
       {shown.map((card) => (
-        <CardRow
-          key={`${card.subject}/${card.runId}/${card.kind}/${card.itemId}`}
-          card={card}
-          onChanged={onChanged}
-          onOpenLecture={() => openLecture(card)}
-        />
+        <CardRow key={`${card.subject}/${card.runId}/${card.kind}/${card.itemId}`} card={card} onChanged={onChanged} />
       ))}
     </section>
   );
