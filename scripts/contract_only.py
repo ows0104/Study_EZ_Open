@@ -34,5 +34,5 @@ for run_id in sys.argv[1:]:
     meta = deck.contract(run_dir, run_id, title, deck.MAIN)
     defects = meta.get("reproduce_defects") or []
     print(f"  ✓ {run_id} — {meta['item_count']}장 · 미디어 {meta['verified']['media']}개"
-          + (f" · 결함 {len(defects)}건 → 문지기가 잡는다" if defects else ""))
+          + (f" · 결함 {len(defects)}건 → 올라가면 「카드 검토」에 뜬다" if defects else ""))
 sys.exit(1 if failed else 0)
