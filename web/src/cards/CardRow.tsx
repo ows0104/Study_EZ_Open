@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { Stem } from "../lecture/Stem";
 import type { CardAction, ReviewCard } from "../types";
@@ -51,12 +51,20 @@ export function CardRow({
   card,
   onChanged,
   onOpenLecture,
+  focus = false,
 }: {
   card: ReviewCard;
   onChanged: (next: ReviewCard) => void;
   onOpenLecture?: () => void;
+  /** 풀이 화면에서 이 카드를 지목해 왔다. 내려와서 고치는 상태로 연다. */
+  focus?: boolean;
 }) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(focus && card.edit?.action !== "delete");
+  const self = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (focus) self.current?.scrollIntoView({ block: "center" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // 빈칸 카드는 원문을 고친다. 원문이 아직 안 올라온 옛 카드는 질문 칸을 잠근다.
   const cloze = card.qtype === "cloze";
   const front = cloze ? card.sourceStem : card.stem;
@@ -99,7 +107,10 @@ export function CardRow({
   const flag = card.flag;
 
   return (
-    <article className={`card-review-row${deleted ? " is-deleted" : ""}`}>
+    <article
+      ref={self}
+      className={`card-review-row${deleted ? " is-deleted" : ""}${focus ? " is-focus" : ""}`}
+    >
       <header className="card-review-head">
         <span className="card-review-where">
           {card.subject} · {card.date.slice(5)} · {card.title} · {kindLabel(card.kind)} · {card.itemId}

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
-import { quizPath } from "../links";
+import { lectureHref, quizPath } from "../links";
+import { useMe } from "../useMe";
+import { cardsHash } from "./LectureCards";
 import {
   quizGrades,
   type GradeResult,
@@ -63,6 +65,7 @@ export function Quiz({
   const [undoable, setUndoable] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const isAdmin = Boolean(useMe()?.isAdmin);
 
   /**
    * 되돌리기가 세운 카드. 순서를 무시하고 이것을 먼저 낸다.
@@ -302,6 +305,19 @@ export function Quiz({
           <QueueCounts tally={tally} cram={cram} crammed={crammed.size} />
           <FocusBadge item={item} />
           <UndoButton busy={busy} undoable={undoable} onUndo={undo} />
+          {/* 관리자만. 풀다가 이상한 카드를 만나면 그 자리에서 고치기로 간다
+              (2026-09-23 관리자 지시). 새 탭이라 풀던 자리는 그대로 남는다. */}
+          {isAdmin ? (
+            <a
+              className="quiz-fix"
+              href={lectureHref({ subject, runId }) + cardsHash(kind, item.itemId)}
+              target="_blank"
+              rel="noreferrer"
+              title="강의 화면에서 이 카드를 고친다 — 웹 풀이는 바로, 덱은 다음 publish 에서 바뀐다"
+            >
+              이 카드 고치기
+            </a>
+          ) : null}
         </p>
 
         <p className="quiz-stem">

@@ -5,9 +5,17 @@ import type { CardReviewCount, LectureCards as LectureCardList, ReviewCard } fro
 
 type Kind = "pre" | "main";
 
-/** 사이드 패널이 여기로 보내는 주소의 꼬리. `#cards-main` 이면 복습 갈래를 펴고 내려온다. */
-export function cardsHash(kind: Kind) {
-  return `#cards-${kind}`;
+/**
+ * 여기로 보내는 주소의 꼬리. `#cards-main` 이면 복습 갈래를 펴고 내려온다(사이드 패널).
+ * `#cards-main-c002` 면 그 카드를 고치는 상태로 연다(웹 풀이 화면, 2026-09-23).
+ */
+export function cardsHash(kind: Kind, itemId = "") {
+  return `#cards-${kind}${itemId ? `-${encodeURIComponent(itemId)}` : ""}`;
+}
+
+function readHash(): { kind: Kind; itemId: string } | null {
+  const m = /^#cards-(pre|main)(?:-(.+))?$/.exec(window.location.hash);
+  return m ? { kind: m[1] as Kind, itemId: m[2] ? decodeURIComponent(m[2]) : "" } : null;
 }
 
 /**
@@ -31,16 +39,20 @@ export function LectureCards({
   counts: Partial<Record<Kind, CardReviewCount>>;
 }) {
   const kinds = (["pre", "main"] as const).filter((kind) => counts[kind]);
-  const fromHash = kinds.find((kind) => window.location.hash === cardsHash(kind));
+  const target = readHash();
+  const fromHash = target && kinds.includes(target.kind) ? target.kind : undefined;
+  // 풀이 화면에서 한 장을 지목해 왔으면 그 카드. 걸리지 않은 카드일 수 있으므로
+  // 그때는 「걸린 것만」을 끈다.
+  const focusId = fromHash ? target!.itemId : "";
   const [kind, setKind] = useState<Kind | null>(fromHash ?? null);
   const [list, setList] = useState<LectureCardList | null>(null);
   const [error, setError] = useState("");
   // 걸린 카드가 있으면 그것부터. 없으면 전부.
-  const [onlyFlagged, setOnlyFlagged] = useState(true);
+  const [onlyFlagged, setOnlyFlagged] = useState(!focusId);
   const section = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (fromHash) section.current?.scrollIntoView({ block: "start" });
+    if (fromHash && !focusId) section.current?.scrollIntoView({ block: "start" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -100,8 +112,16 @@ export function LectureCards({
               </button>
             </p>
           ) : null}
+          {list && focusId && !list.cards.some((card) => card.itemId === focusId) ? (
+            <p className="notice is-warning">{focusId} 카드가 이 편에 없습니다 — 그 사이 다시 만들어졌을 수 있습니다.</p>
+          ) : null}
           {shown.map((card) => (
-            <CardRow key={card.itemId} card={card} onChanged={changed} />
+            <CardRow
+              key={card.itemId}
+              card={card}
+              onChanged={changed}
+              focus={kind === fromHash && card.itemId === focusId}
+            />
           ))}
         </>
       ) : null}

@@ -1826,3 +1826,22 @@ button.resource.is-download:hover:not(:disabled)::after {
 .card-fix-link.is-flagged small {
   color: var(--warn);
 }
+
+/* 풀이 화면의 「이 카드 고치기」(관리자만). 찍는 버튼과 무게가 겹치지 않게 글자만. */
+.quiz-fix {
+  margin-left: 10px;
+  color: var(--ink-3);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-decoration: underline dotted;
+}
+
+.quiz-fix:hover {
+  color: var(--ink);
+}
+
+/* 풀이 화면에서 지목해 온 카드. */
+.card-review-row.is-focus {
+  border-color: var(--accent-line);
+  box-shadow: var(--ring);
+}
