@@ -214,6 +214,30 @@ def _card_payload(
     }
 
 
+def review_counts(db: Session, lecture: Lecture) -> dict[str, dict[str, int]]:
+    """갈래마다 카드 몇 장 · 걸린 것 몇 장 · 그중 안 본 것 몇 장 · 판정 몇 건.
+
+    강의 상세가 관리자에게 싣는다 — 캘린더 사이드 패널의 「카드 고치기」가 이 수를
+    적는다(2026-09-23). 웹 문항이 없는 갈래는 뺀다: 고칠 것이 없는 링크를 안 세운다.
+    """
+    out: dict[str, dict[str, int]] = {}
+    for kind, quiz in QUIZZES.items():
+        ids = set(db.scalars(select(quiz.item.item_id).where(
+            quiz.item.subject == lecture.subject, quiz.item.run_id == lecture.run_id)))
+        edits = edits_for(db, lecture.subject, lecture.run_id, kind)
+        if not ids and not edits:
+            continue
+        meta = db.get(RunMeta, (lecture.subject, lecture.run_id, kind))
+        marks = [i for i in flagged(meta.payload if meta else None) if i in ids or i in edits]
+        out[kind] = {
+            "cards": len(ids),
+            "flagged": len(marks),
+            "open": sum(1 for i in marks if i not in edits),
+            "decided": len(edits),
+        }
+    return out
+
+
 # ---------------------------------------------------------------- 경로
 
 

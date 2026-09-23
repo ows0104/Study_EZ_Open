@@ -37,7 +37,7 @@ from app.routes.common import (
     record_preview_open,
     storage_or_503,
 )
-from app.routes import prequiz
+from app.routes import cards, prequiz
 from app.routes.prequiz import due_counts, missed_items
 from app.routes.prequiz_jobs import RUNNER_NAME, watch_row, watch_runner_row
 
@@ -194,6 +194,9 @@ def read_lecture(
                 )
             )
         }
+        # 사이드 패널의 「카드 고치기」가 적는 수(2026-09-23). 답까지 든 카드 목록은
+        # 여기 안 싣는다 — 고치는 자리가 `…/cards/{kind}` 로 따로 읽는다.
+        payload["cardReview"] = cards.review_counts(db, lecture)
     return payload
 
 

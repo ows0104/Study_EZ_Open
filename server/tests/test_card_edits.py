@@ -196,6 +196,11 @@ def main() -> None:
                                        headers=USER).status_code == 404)
 
     덱으로_가는_길(client)
+    패널이_세는_수(client)
+
+    print(f"\n{'모두 통과' if not failures else f'실패 {len(failures)}'}")
+    if failures:
+        raise SystemExit(1)
 
 
 def 덱으로_가는_길(client: TestClient) -> None:
@@ -244,9 +249,18 @@ def 덱으로_가는_길(client: TestClient) -> None:
           undone.status_code == 200 and stem(client, "c004") == "먼저 [____]의 이동을 부른다",
           stem(client, "c004"))
 
-    print(f"\n{'모두 통과' if not failures else f'실패 {len(failures)}'}")
-    if failures:
-        raise SystemExit(1)
+
+def 패널이_세는_수(client: TestClient) -> None:
+    """캘린더 사이드 패널의 「카드 고치기」가 적는 수(2026-09-23 셋째 지시)."""
+    print("\n  ── 패널이 세는 수")
+    got = client.get(BASE, headers=USER).json().get("cardReview") or {}
+    check("관리자에게 갈래마다 수가 간다", set(got) == {"pre", "main"}, got)
+    # 이때 올라와 있는 것은 c001·c003·c004 다(c002 는 바로 앞에서 빠졌다). 걸린 것은
+    # 축이 안 선 c003 하나이고 판정이 없다. **올라오지 않은 걸린 id 는 안 센다.**
+    check("걸린 것과 안 본 것을 갈라 센다",
+          (got["pre"]["flagged"], got["pre"]["open"]) == (1, 1), got.get("pre"))
+    check("판정 건수", got["pre"]["decided"] == 1, got.get("pre"))
+    check("run-meta 가 없는 갈래는 걸린 것이 0이다", got["main"]["flagged"] == 0, got.get("main"))
 
 
 if __name__ == "__main__":

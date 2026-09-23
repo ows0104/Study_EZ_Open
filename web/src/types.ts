@@ -254,6 +254,9 @@ export type LectureDetail = {
    */
   mainquiz: QuizProgress | null;
   runMeta?: Record<string, RunMetaBrief>;
+  /** 관리자에게만. 갈래마다 카드 수 · 걸린 것 · 그중 안 본 것 · 판정 건수.
+   *  사이드 패널의 「카드 고치기」가 적는다. 웹 문항이 없는 갈래는 빠져 있다. */
+  cardReview?: Partial<Record<"pre" | "main", CardReviewCount>>;
 };
 
 /**
@@ -612,3 +615,5 @@ export type LectureCards = {
   kind: "pre" | "main";
   cards: ReviewCard[];
 };
+
+export type CardReviewCount = { cards: number; flagged: number; open: number; decided: number };

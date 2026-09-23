@@ -10,6 +10,7 @@ import {
   type LectureFile,
   type PreviewProvider,
 } from "../types";
+import { LectureCards } from "./LectureCards";
 import { Missed } from "./Missed";
 
 /**
@@ -157,6 +158,12 @@ export function LecturePage() {
         {fileButton("notes_current", "올해 필기")}
         {fileButton("main_apkg", "Main-Quiz 덱")}
       </section>
+
+      {/* 관리자에게만 온다(`cardReview`). 사이드 패널의 「카드 고치기」가 여기로
+          보낸다 — 2026-09-23 관리자 지시. */}
+      {detail.cardReview ? (
+        <LectureCards subject={subject} runId={runId} counts={detail.cardReview} />
+      ) : null}
     </article>
   );
 }

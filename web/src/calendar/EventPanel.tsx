@@ -7,6 +7,7 @@ import { lectureHref, quizHref, quizWindow } from "../links";
 import { type LectureDetail, type LectureFile, type LectureRef } from "../types";
 import { categoryLabel, type CalendarEntry } from "./entries";
 import { DeckSlot } from "./DeckSlot";
+import { cardsHash } from "../lecture/LectureCards";
 import { ActionCard, fileSize, PanelGroup } from "./panelShared";
 import { PreviewAction } from "./PreviewAction";
 
@@ -178,6 +179,50 @@ function useLectureDetail(lecture: LectureRef | undefined) {
   return { detail, error };
 }
 
+/**
+ * 「카드 고치기」 — 강의 화면의 「카드 검토」 절로 곧장 간다. **관리자에게만 선다**
+ * (`cardReview` 가 관리자 응답에만 있다).
+ *
+ * 2026-09-23 관리자 지시 — 「사이드 패널에서도 고치기로 넘어갈 수 있게 해줘.」
+ * 고치는 화면을 패널 안에 들이지 않은 이유는 폭이다 — 질문·답·해설 세 칸을 여러
+ * 줄로 고치는 일이라 패널 폭에서는 한 카드도 한눈에 안 들어온다. 강의 화면 전체
+ * 보기와 같은 길(새 탭)로 가서 캘린더는 그대로 남는다.
+ *
+ * 안 본 걸린 카드가 있으면 그 수를 먼저 적는다. 없으면 카드 수만.
+ */
+function CardFixLinks({
+  lecture,
+  counts,
+}: {
+  lecture: LectureRef;
+  counts: LectureDetail["cardReview"];
+}) {
+  const kinds = (["pre", "main"] as const).filter((kind) => counts?.[kind]);
+  if (!counts || !kinds.length) return null;
+  return (
+    <div className="card-fix-links">
+      {kinds.map((kind) => {
+        const count = counts[kind]!;
+        return (
+          <a
+            key={kind}
+            className={`card-fix-link${count.open ? " is-flagged" : ""}`}
+            href={lectureHref(lecture) + cardsHash(kind)}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {kind === "pre" ? "예습" : "복습"} 카드 고치기
+            <small>
+              {count.open ? `걸린 카드 ${count.open}장 안 봄` : `${count.cards}장`}
+              {count.decided ? ` · 판정 ${count.decided}건` : ""}
+            </small>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="event-panel-fact">
@@ -308,6 +353,8 @@ function KeyActions({
           }
         />
       </PanelGroup>
+
+      <CardFixLinks lecture={lecture} counts={detail.cardReview} />
 
       {/* **블럭 전체를 한 파일로**(2026-09-15 관리자 지시). 블럭은 과목 하나다 —
           「감염의 기초」가 기생충학과 미생물학 둘로 갈려 서는 것이 이 학기의
