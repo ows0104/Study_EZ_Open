@@ -521,6 +521,37 @@ def main() -> None:
     client.put(f"/api/admin/prequiz-jobs/{fresh.json()['job']['id']}", headers=RUNNER,
                json={"state": "done"})
 
+    # 러너가 만들기 전에 사람에게 전략을 묻는다(2026-09-24 관리자 지시 — 「표시해뒀다가
+    # 돌리게 될 때 알림이 뜨고 선택하게」). 러너는 집은 줄을 `held`로 되돌리며 묻는
+    # 말을 적고, 사람이 고르면 그 전략을 싣고 다시 줄에 선다.
+    asked = client.post(f"{base14}/prequiz-job", headers=USER).json()["job"]
+    client.post("/api/admin/prequiz-jobs/claim", headers=RUNNER)
+    held_ask = client.put(f"/api/admin/prequiz-jobs/{asked['id']}", headers=RUNNER, json={
+        "state": "held", "ask": "족보 교수가 바뀌었다.", "stage": "전략을 골라 주세요"}).json()["job"]
+    check("러너가 물으면 held 로 선다", held_ask["state"] == "held" and held_ask["ask"], held_ask)
+    check("묻는 줄은 아무도 못 집는다",
+          client.post("/api/admin/prequiz-jobs/claim", headers=RUNNER).json()["job"] is None)
+    check("묻는 줄을 캘린더 버튼으로 풀지 않는다 — 답 없이 풀면 러너가 또 묻는다",
+          client.post(f"{base14}/prequiz-job", headers=USER).status_code == 409)
+    check("러너 토큰으로는 못 고른다",
+          client.post(f"/api/admin/prequiz-jobs/{asked['id']}/choose", headers=RUNNER,
+                      json={"strategy": "기본"}).status_code in (401, 403))
+    check("모르는 전략은 못 고른다",
+          client.post(f"/api/admin/prequiz-jobs/{asked['id']}/choose", headers=USER,
+                      json={"strategy": "아무거나"}).status_code == 422)
+    chose = client.post(f"/api/admin/prequiz-jobs/{asked['id']}/choose", headers=USER,
+                        json={"strategy": "기본"})
+    chosen = next(r for r in chose.json()["waiting"] if r["id"] == asked["id"])
+    check("고르면 그 전략을 싣고 다시 줄에 선다",
+          chosen["state"] == "queued" and chosen["strategy"] == "기본" and not chosen["ask"], chosen)
+    retaken = client.post("/api/admin/prequiz-jobs/claim", headers=RUNNER).json()["job"]
+    check("러너가 고른 전략을 받아 간다",
+          retaken["id"] == asked["id"] and retaken["strategy"] == "기본", retaken)
+    check("묻고 있지 않은 줄에는 못 고른다",
+          client.post(f"/api/admin/prequiz-jobs/{asked['id']}/choose", headers=USER,
+                      json={"strategy": "기본"}).status_code == 400)
+    client.put(f"/api/admin/prequiz-jobs/{asked['id']}", headers=RUNNER, json={"state": "done"})
+
     # 링크가 없는 강의는 거절한다. Pre-Quiz 는 그 대화를 들고 들어가는지 묻는 것이다.
     client.post("/api/admin/lectures", headers=RUNNER, json=[{
         "subject": "병리학", "runId": "260813_01", "uid": "260813_01#링크없음#김혜령",

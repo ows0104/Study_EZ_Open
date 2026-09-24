@@ -722,6 +722,14 @@ class PrequizJob(Base):
     # 러너가 안 붙어 있으면 이 값은 그대로 남는다 — 그때는 사람이 한 번 더 눌러
     # 강제로 내린다(`move`가 아니라 `cancel`이 그것을 판정한다).
     cancel_requested: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # 러너가 만들기 전에 사람에게 묻는 말. **비어 있지 않으면 이 줄은 `held` 로 서서
+    # 사람의 답을 기다린다.** 2026-09-24 관리자 지시 — 「표시해뒀다가 돌리게 될 때
+    # 알림이 뜨고 선택하게」. 무엇을 물을지는 러너가 안다(`runner.watch.strategy_question`)
+    # — 족보·교수 분석이 노트북에 있어서다.
+    ask: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    # 사람이 고른 전략(`기본`·`족보`·`필기`·`사진`). 빈 문자열이면 자동 판정이다.
+    # 러너가 이 값을 `--strategy` 로 넘긴다.
+    strategy: Mapped[str] = mapped_column(String(16), nullable=False, default="", server_default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

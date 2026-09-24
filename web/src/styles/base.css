@@ -1106,6 +1106,31 @@ button.resource.is-download:hover:not(:disabled)::after {
   font-size: 11px;
 }
 
+/* 러너가 전략을 묻는 줄. 고르기 전에는 안 움직이므로 판 위에서 눈에 띄어야 한다.
+   버튼이 셋 더 붙어 좁은 화면에서는 아래로 내려간다. */
+.runner-ask {
+  flex-wrap: wrap;
+  margin: 0 -8px;
+  padding: 8px;
+  border-radius: var(--r-3);
+  background: var(--warn-soft);
+}
+
+.runner-ask small {
+  color: var(--ink-2);
+}
+
+.runner-ask .runner-move {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.runner-ask .runner-move button:not(.is-quiet):not(.is-danger) {
+  border: 1px solid var(--warn-line);
+  color: var(--ink);
+  background: var(--surface);
+}
+
 /* 줄 세우는 규칙. 줄마다 붙는 「내일 예습」이 순위라는 것을 여기서 한 번 말한다. */
 .runner-rule {
   margin: 0;

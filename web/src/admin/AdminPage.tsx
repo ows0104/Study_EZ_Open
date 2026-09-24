@@ -99,6 +99,7 @@ export function AdminPage() {
     (row) => pending(row).length > 0 || isUnmatched(row) || isUnconfirmed(row),
   ).length;
   const queued = overview.lectures.filter((row) => jobOpen(row.prequizJob)).length;
+  const asking = (board?.held ?? []).filter((job) => job.ask);
 
   return (
     <div className="admin">
@@ -112,6 +113,17 @@ export function AdminPage() {
         <p className="notice is-error">
           덱 일감 {queued}개가 기다리는데 <strong>러너가 안 붙어 있습니다.</strong> 만드는 것은
           노트북이 합니다 — 거기서 <code>python -m runner agent</code>를 띄우면 이어서 집어 갑니다.
+        </p>
+      ) : null}
+
+      {/* **어느 탭에 있든 뜬다.** 러너가 표시해 둔 편을 집었다가 사람의 답을 기다리며
+          멈춰 선 줄이다(2026-09-24 관리자 지시 — 「돌리게 될 때 알림이 뜨고 선택하게」).
+          고르기 전에는 그 편이 영영 안 만들어진다. */}
+      {asking.length ? (
+        <p className="notice is-warning">
+          <strong>덱 {asking.length}편이 전략을 골라 주기를 기다립니다</strong> —{" "}
+          {asking.map((job) => `${job.subject}/${job.runId}`).join(", ")}.{" "}
+          <NavLink to="/admin">퀴즈 탭</NavLink>에서 고르면 그대로 만듭니다.
         </p>
       ) : null}
 

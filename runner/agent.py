@@ -202,6 +202,9 @@ class Job:
     # 사람이 「멈추기」를 눌렀는가. 집어 오는 순간에도 켜져 있을 수 있다 — 러너가
     # 만드는 중에 재시작하면 그 편을 다시 집는데, 그때 표시가 그대로 온다.
     cancel_requested: bool = False
+    # 사람이 고른 전략(`기본`·`족보`·`필기`·`사진`). 빈 문자열이면 자동이다.
+    # 러너가 물어서(`watch.strategy_question`) 사람이 관리 화면에서 고른 값이 온다.
+    strategy: str = ""
 
     @property
     def label(self) -> str:
@@ -267,7 +270,8 @@ class Agent:
             return None
         return Job(id=int(row["id"]), subject=str(row["subject"]), run_id=str(row["runId"]),
                    kind=str(row.get("kind") or deck.PRE), force=bool(row.get("force")),
-                   cancel_requested=bool(row.get("cancelRequested")))
+                   cancel_requested=bool(row.get("cancelRequested")),
+                   strategy=str(row.get("strategy") or ""))
 
     def report(self, job: Job, **fields) -> dict:
         """진행을 적는다. **실패해도 하던 일은 계속한다.**
@@ -429,6 +433,8 @@ class Agent:
                     "--run-id", job.run_id, "--build", "--max", "1"]
         if job.force:
             argv.append("--force")
+        if job.kind == deck.MAIN and job.strategy:
+            argv += ["--strategy", job.strategy]
         return argv
 
     def building_seats(self, job: Job) -> set[Path]:
@@ -476,6 +482,16 @@ class Agent:
             self.say(f"[{stamp()}] {job.label} — 멈추라고 적혀 있다. 만들지 않는다")
             self.report(job, state="canceled", stage="",
                         message="사람이 멈췄다 — 집어 오기 전에 걸려 있었다")
+            return
+        question = (watch.strategy_question(self.runs_dir, job.subject, job.run_id)
+                    if job.kind == deck.MAIN and not job.strategy else "")
+        if question:
+            # **만들지 않고 묻는다.** 사람이 표시해 둔 편이다(`_pairs` 의
+            # `_ask_strategy`). 줄을 `held` 로 되돌리면 아무도 못 집고, 관리 화면이
+            # 버튼을 띄운다. 고르면 그 전략을 싣고 다시 온다.
+            self.say(f"[{stamp()}] {job.label} {job.what} — 전략을 묻는다: {question}")
+            self.report(job, state="held", ask=question,
+                        stage="전략을 골라 주세요 — 관리 화면 퀴즈 탭")
             return
         again = "다시 " if job.force else ""
         self.say(f"[{stamp()}] {job.label} {job.what} — {again}만드는 중")

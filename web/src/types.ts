@@ -480,6 +480,14 @@ export type PrequizJob = {
    * 사람이 안 눌린 줄 알고 다시 누른다.
    */
   cancelRequested: boolean;
+  /**
+   * 러너가 만들기 전에 사람에게 묻는 말. **비어 있지 않으면 이 줄은 `held`로 서서
+   * 전략을 고르기를 기다린다**(2026-09-24 관리자 지시 — 표시해 둔 편은 돌릴 때
+   * 알림을 띄워 고르게). 고르는 자리는 `POST /api/admin/prequiz-jobs/{id}/choose`.
+   */
+  ask: string;
+  /** 사람이 고른 전략(`기본`·`족보`·`필기`·`사진`). 빈 문자열이면 자동 판정이다. */
+  strategy: string;
   /** **서버가 셈해서 준다.** 화면마다 시계를 맞추면 시차만큼 어긋난다. */
   elapsedSeconds: number;
   stageSeconds: number;

@@ -76,6 +76,9 @@ ADDED_COLUMNS = (
     ("prequiz_job", "queue_rank", "INTEGER NOT NULL DEFAULT 0"),
     # 2026-09-03 「멈추기」. 도는 편을 서버가 못 죽이므로 여기 적어 두고 러너가 받아 간다.
     ("prequiz_job", "cancel_requested", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    # 2026-09-24 러너가 만들기 전에 사람에게 전략을 묻는다. 묻는 말과 고른 답.
+    ("prequiz_job", "ask", "TEXT NOT NULL DEFAULT ''"),
+    ("prequiz_job", "strategy", "VARCHAR(16) NOT NULL DEFAULT ''"),
     # 2026-09-07 제보를 사진으로도 묶어 세려고. 표시용 `image`와 갈라 둔 값이다.
     ("spotter_report", "images", "TEXT NOT NULL DEFAULT ''"),
     # 2026-09-18 웹 풀이가 망각곡선으로 돈다. 일곱 칼럼이 카드 한 장의 일정이고

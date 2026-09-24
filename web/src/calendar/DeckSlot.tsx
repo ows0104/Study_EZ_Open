@@ -29,7 +29,7 @@ import { ActionCard, fileSize, Remake, RemakeConfirm } from "./panelShared";
  * 막으려고 아래 `jobLine`을 갈랐던 것이라 같은 함정을 여기서 다시 판다.
  */
 function jobShort(job: PrequizJob, runner: RunnerBeat | null): string {
-  if (job.state === "held") return "상한";
+  if (job.state === "held") return job.ask ? "전략 선택" : "상한";
   if (!runnerAlive(runner)) return "멈춤";
   // 한도로 기다리는 줄은 「대기」와 다르다 — 저쪽은 곧 집어 가고 이쪽은 시각을 기다린다.
   if (waitingUntil(job)) return "한도 대기";
@@ -55,6 +55,11 @@ function jobShort(job: PrequizJob, runner: RunnerBeat | null): string {
  */
 function jobLine(job: PrequizJob, runner: RunnerBeat | null): string {
   const alive = runnerAlive(runner);
+  if (job.state === "held" && job.ask) {
+    // 러너가 묻고 있다. 여기서 「지금 만들기」를 눌러도 서버가 거절한다(409) —
+    // 답 없이 풀면 러너가 집자마자 또 묻기 때문이다. 고르는 자리를 말해 준다.
+    return `${job.ask} — 관리 화면 퀴즈 탭에서 전략을 고르세요`;
+  }
   if (job.state === "held") {
     // 재료는 도착했는데 그날 자동 상한을 넘겼다. **누르면 그 줄이 그대로 풀린다** —
     // 새 줄이 서는 것이 아니라 이미 선 줄이 큐로 들어간다.

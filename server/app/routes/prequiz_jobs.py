@@ -245,6 +245,11 @@ def job_row(job: PrequizJob | None, priority: str = "") -> dict[str, Any] | None
         # 보고 자기 자식을 죽인다**(`runner.agent`). 화면도 같은 값으로
         # 「만드는 중」과 「멈추는 중」을 가른다.
         "cancelRequested": bool(job.cancel_requested),
+        # 러너가 만들기 전에 사람에게 묻는 말. 비어 있지 않으면 이 줄은 `held` 로
+        # 서서 답을 기다린다(`choose_strategy`). 화면은 이 값으로 버튼을 그린다.
+        "ask": job.ask,
+        # 사람이 고른 전략. 빈 문자열이면 자동 판정이다.
+        "strategy": job.strategy,
         "createdAt": job.created_at.isoformat() if job.created_at else "",
         "updatedAt": job.updated_at.isoformat() if job.updated_at else "",
     }
@@ -483,6 +488,11 @@ def request_prequiz(
         raise HTTPException(400, blocked)
 
     open_job = open_job_of(db, lecture.subject, lecture.run_id, kind)
+    if open_job is not None and open_job.state == JOB_HELD and open_job.ask:
+        # 러너가 물어 놓은 줄이다. 여기서 풀면 답 없이 다시 줄에 서고, 러너가
+        # 집자마자 같은 것을 또 묻는다 — 누른 사람에게는 아무 일도 안 난 것으로 보인다.
+        raise HTTPException(409, f"러너가 먼저 묻고 있습니다 — {open_job.ask} "
+                                 "관리 화면의 퀴즈 탭에서 전략을 고르세요.")
     if open_job is not None and open_job.state == JOB_HELD:
         # 상한에 걸려 서 있던 줄을 사람이 푼 것이다. **새 줄을 세우지 않는다** —
         # 세우면 같은 편이 두 줄이 되고, 하나는 영영 `held`로 남는다.
@@ -638,7 +648,9 @@ class JobUpdate(BaseModel):
     # 자는 시각에 걸리는 일이 잦다(2026-09-02에 01:32과 10:17 두 번).
     # `canceled`는 **러너가 멈춤을 받아 갔다고 알리는 자리다** — 사람이 누른 것을
     # 서버가 표에 적어 두면(`cancel_requested`) 러너가 자식을 죽이고 여기로 온다.
-    state: Literal["running", "done", "failed", "queued", "canceled"] | None = None
+    # `held`는 **러너가 사람에게 물을 때** 쓴다 — 그때 `ask`가 같이 온다.
+    state: Literal["running", "done", "failed", "queued", "canceled", "held"] | None = None
+    ask: str | None = None
     # 그때까지는 아무도 못 집어 간다. ISO 시각.
     resume_at: str | None = Field(default=None, alias="resumeAt")
     stage: str | None = None
@@ -683,6 +695,8 @@ def update_prequiz_job(
         job.stage = payload.stage[:500]
     if payload.message is not None:
         job.message = payload.message[:2000]
+    if payload.ask is not None:
+        job.ask = payload.ask[:2000]
     if payload.stage_index is not None:
         job.stage_index = max(0, payload.stage_index)
     if payload.stage_total is not None:
@@ -702,7 +716,7 @@ def update_prequiz_job(
             # 러너가 받아 갔다. 표시를 지운다 — 남겨 두면 화면이 끝난 줄을
             # 「멈추는 중」으로 읽는다.
             job.cancel_requested = False
-        if payload.state == JOB_QUEUED:
+        if payload.state in (JOB_QUEUED, JOB_HELD):
             # **줄 앞으로 되돌린다.** 일꾼 이름을 지우지 않으면 그 일꾼만 다시
             # 집을 수 있고(claim ①), 러너가 재시작해 이름이 바뀌면 아무도 못 집는다.
             job.worker = ""
@@ -802,6 +816,39 @@ def move_prequiz_job(
     # 0을 같이 넣는다. **안 건드린 줄이 전부 0이라** 그것보다 앞이거나 뒤여야 한다.
     ranks = [0, *others]
     job.queue_rank = min(ranks) - 1 if payload.to == "front" else max(ranks) + 1
+    db.commit()
+    return board(db)
+
+
+class JobChoice(BaseModel):
+    # `runner watch --strategy` 가 받는 이름 그대로다.
+    strategy: Literal["기본", "족보", "필기", "사진"]
+
+
+@router.post("/prequiz-jobs/{job_id}/choose")
+def choose_strategy(
+    job_id: int,
+    payload: JobChoice,
+    user: CurrentUser = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """러너가 물어 놓은 줄에 답한다. 고른 전략을 싣고 **다시 줄에 선다.**
+
+    2026-09-24 관리자 지시 — 「표시해뒀다가 돌리게 될 때 알림이 뜨고 선택하게」.
+    무엇을 물을지는 러너가 정하고(`runner.watch.strategy_question`), 여기는 답을
+    받아 적을 뿐이다. 러너는 다음에 이 줄을 집을 때 `strategy` 가 차 있으면
+    묻지 않고 그대로 `--strategy` 로 넘긴다.
+    """
+    job = db.get(PrequizJob, job_id)
+    if job is None:
+        raise HTTPException(404, "그런 일감이 없습니다.")
+    if job.state != JOB_HELD or not job.ask:
+        raise HTTPException(400, "묻고 있는 일감이 아닙니다.")
+    job.strategy = payload.strategy
+    job.ask = ""
+    job.state = JOB_QUEUED
+    job.stage = f"러너를 기다리는 중 — 고른 전략: {payload.strategy}"
+    job.requested_by = user.email
     db.commit()
     return board(db)
 

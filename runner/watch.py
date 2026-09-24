@@ -373,6 +373,31 @@ def strategy_for(professors) -> str | None:
     return None
 
 
+# 만들기 전에 사람에게 전략을 물을 편. `runs/_pairs/<과목>.json` 에 적는다.
+#
+#     "_ask_strategy": {"261012_02": "족보 문항은 이형기(~2023), 지금은 윤성혜다."}
+#
+# 2026-09-24 관리자 지시 — 「표시해뒀다가 돌리게 될 때 알림이 뜨고 선택하게」.
+# 러너가 그 편의 복습 일감을 집으면 만들지 않고 `held` 로 되돌리며 이 말을 적는다.
+# 관리 화면이 버튼을 띄우고, 고른 전략이 일감에 실려 다시 온다(`agent.handle`).
+# **표(`PROFESSOR_STRATEGY`)와 다른 점은 답을 미리 정하지 않는다는 것이다.**
+ASK_STRATEGY_KEY = "_ask_strategy"
+
+
+def strategy_question(runs_dir: Path, subject: str, run_id: str) -> str:
+    """이 편에 사람이 적어 둔 물음. 없으면 빈 문자열.
+
+    못 읽으면 빈 문자열이다 — 묻지 않고 자동 판정으로 만든다. 파일이 깨졌다고
+    덱을 안 만들면, 묻지도 않은 편이 조용히 멈춘다.
+    """
+    path = Path(runs_dir) / "_pairs" / f"{subject}.json"
+    try:
+        asks = json.loads(path.read_text(encoding="utf-8")).get(ASK_STRATEGY_KEY) or {}
+    except (OSError, ValueError, AttributeError):
+        return ""
+    return str(asks.get(run_id) or "") if isinstance(asks, dict) else ""
+
+
 def build_extra(item: WorkItem, extra: list[str] | None = None) -> list[str]:
     """이 편에만 붙는 깃발. **판이 갈린 편에는 `--revise` 가 실린다.**
 

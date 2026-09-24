@@ -64,6 +64,27 @@ export function RunnerBoard({ board, onBoard }: { board: JobBoard | null; onBoar
     );
   }
 
+  /**
+   * 러너가 물어 놓은 줄에 답한다. 고른 전략을 싣고 다시 줄에 선다.
+   *
+   * 2026-09-24 관리자 지시 — 표시해 둔 편은 돌릴 때 알림을 띄워 고르게. 무엇을
+   * 묻는지는 러너가 정하고(`runner.watch.strategy_question`) 여기는 답만 보낸다.
+   */
+  async function choose(job: PrequizJob, strategy: string) {
+    setMoving(job.id);
+    setMoveError("");
+    try {
+      onBoard(await api<JobBoard>(`/api/admin/prequiz-jobs/${job.id}/choose`, {
+        method: "POST",
+        body: JSON.stringify({ strategy }),
+      }));
+    } catch (cause) {
+      setMoveError((cause as Error).message);
+    } finally {
+      setMoving(0);
+    }
+  }
+
   async function move(job: PrequizJob, to: "front" | "back") {
     setMoving(job.id);
     setMoveError("");
@@ -82,16 +103,49 @@ export function RunnerBoard({ board, onBoard }: { board: JobBoard | null; onBoar
   }
 
   if (!board) return null;
-  const { running, waiting, held } = board;
-  if (!running.length && !waiting.length && !held.length) return null;
+  const { running, waiting } = board;
+  // 러너가 묻는 줄과 상한에 걸린 줄은 **사람이 할 일이 다르다** — 앞의 것은 골라야
+  // 움직이고, 뒤의 것은 캘린더에서 누르면 풀린다. 한 무더기로 두면 앞의 것이 묻힌다.
+  const asking = board.held.filter((job) => job.ask);
+  const held = board.held.filter((job) => !job.ask);
+  if (!running.length && !waiting.length && !board.held.length) return null;
   return (
     <section className="runner-board">
       <h2>
         지금 도는 것 {running.length}/{board.maxRunning}
         {waiting.length ? ` · 기다리는 것 ${waiting.length}` : ""}
+        {asking.length ? ` · 전략을 골라야 할 것 ${asking.length}` : ""}
         {held.length ? ` · 상한에 걸린 것 ${held.length}` : ""}
         {` · 오늘 자동 ${board.autoUsedToday}/${board.autoDailyCap}편`}
       </h2>
+
+      {/* **맨 위에 선다.** 사람이 고르기 전에는 아무것도 안 움직이는 줄이다. */}
+      {asking.map((job) => (
+        <div key={job.id} className="runner-job runner-ask">
+          <span>
+            <strong>
+              {job.subject}/{job.runId}
+            </strong>{" "}
+            {job.kind === "main" ? "Main-Quiz" : "Pre-Quiz"} · 전략을 골라 주세요
+            <br />
+            <small>{job.ask}</small>
+          </span>
+          <span className="runner-move">
+            {/* 이름은 `runner watch --strategy` 가 받는 그대로다. 「사진」은 실습용이라
+                뺐다 — 표시해 두는 편이 강의이기 때문이다. */}
+            {[
+              ["기본", "기본"],
+              ["족보", "족보 중심"],
+              ["필기", "필기 중심"],
+            ].map(([value, label]) => (
+              <button key={value} disabled={moving === job.id} onClick={() => void choose(job, value)}>
+                {label}
+              </button>
+            ))}
+            {cancelButton(job)}
+          </span>
+        </div>
+      ))}
 
       {running.map((job) => (
         <div key={job.id} className="runner-job">
