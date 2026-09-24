@@ -262,10 +262,59 @@ def _score(name: set[str], title: str) -> float:
     return max(jaccard(name, t), containment(t, name), containment(name, t))
 
 
+# 사람이 편마다 조각을 지정하는 자리. 판 폴더가 아니라 **과목 폴더**에 둔다 —
+# 다시 자르면 판 폴더가 새로 서므로 거기 두면 지정이 조용히 사라진다.
+#
+#     _materials/<과목>/pins.json     {"261014_02": "유전자 표적 항암 약리", "261002_05": null}
+#
+# 값은 조각의 제목이나 `lecture_key` 다. `null` 은 「이 편에는 족보가 없다」.
+# 2026-09-24 약리학에서 필요해졌다. 족보(2025판)가 항암을 `유전자 표적 항암 약리` ·
+# `항암 약리학의 원리` 로 묶는데 올해 시간표는 `알킬화합물/유사분열억제 항암제` ·
+# `항대사/항호르몬 항암제` 로 가른다. 제목이 안 겹쳐 앞의 것은 0.20 으로 떨어지고,
+# 뒤의 것은 `갑상선 및 부갑상선 호르몬 약리` 에 0.33 으로 **붙는다** — 틀린 조각이 붙은
+# 편은 안 붙은 편보다 나쁘다. PBL·CBL 은 족보가 없는데 `약물대사` 에 0.40 으로 붙었다.
+PINS_FILE = "pins.json"
+RE_RUN_ID = re.compile(r"\[(\d{6}_\d{2})")
+
+
+def jokbo_pin(stem: str, jokbo_dir: Path) -> tuple[bool, str | None]:
+    """이 편에 사람이 지정한 조각. (지정이 있는가, 조각 제목 또는 None)"""
+    m = RE_RUN_ID.search(unicodedata.normalize("NFC", stem))
+    path = Path(jokbo_dir).parent / PINS_FILE
+    if not m or not path.is_file():
+        return False, None
+    try:
+        pins = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as cause:
+        print(f"⚠ {path} 를 못 읽었다 ({cause}) — 지정 없이 제목으로 대조한다", flush=True)
+        return False, None
+    if m.group(1) not in pins:
+        return False, None
+    value = pins[m.group(1)]
+    return True, (unicodedata.normalize("NFC", str(value)) if value else None)
+
+
 def find_jokbo(prep: dict, jokbo_dir: Path) -> tuple[Path | None, float, list]:
-    """강의 파일명과 족보 목차 제목을 대조해 조각을 고른다."""
+    """강의 파일명과 족보 목차 제목을 대조해 조각을 고른다.
+
+    **사람이 지정해 둔 편은 대조하지 않는다**(`jokbo_pin`). 카드를 만드는 쪽과 뒷면을
+    굽는 쪽이 둘 다 여기를 지나므로 지정도 여기 한 곳에서 먹는다.
+    """
     index = json.loads((jokbo_dir / "index.json").read_text(encoding="utf-8"))
     stem = unicodedata.normalize("NFC", Path(prep["source"]).stem)
+    pinned, want = jokbo_pin(stem, jokbo_dir)
+    if pinned and want is None:
+        print(f"족보 조각: {PINS_FILE} 가 이 편에는 족보가 없다고 적었다", flush=True)
+        return None, 0.0, []
+    if pinned:
+        for e in index["lectures"]:
+            if want in (unicodedata.normalize("NFC", e["title"]), e["lecture_key"]):
+                print(f"족보 조각: {PINS_FILE} 가 지정 — {e['lecture_key']} {e['title']}", flush=True)
+                return jokbo_dir / f"{e['file']}.json", 1.0, [(1.0, e, None)]
+        # 다시 자르면서 제목이 바뀌었을 수 있다. 조용히 대조로 넘어가면 사람은 지정이
+        # 먹은 줄 안다.
+        print(f"⚠ {PINS_FILE} 가 지정한 조각 「{want}」이 이 판에 없다 — 제목으로 대조한다",
+              flush=True)
     name = char_ngrams(clean_lecture_name(stem))
     # 실습 강의는 실습 문항 조각(PRAC)만 상대한다. 필기 조각과 섞으면 양쪽 다 오염된다 —
     # 실습 97문항은 한 덩어리라 어느 실습 소관인지는 모델이 골라야 한다(may_contain 과 같은 처지).

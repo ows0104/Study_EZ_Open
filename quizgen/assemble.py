@@ -23,7 +23,9 @@ from . import cutmark, slidediff
 from .pack import (
     READ_TOKEN_CAP,
     estimate_pdf_tokens,
+    PINS_FILE,
     find_jokbo,
+    jokbo_pin,
     needs_clean,
     read_instructions,
     write_parts,
@@ -366,6 +368,11 @@ def slice_for_recorded(prep: dict, jokbo_dir: Path, explicit: str | None = None
         return None, {}, False, cutmark.used_record(
             jokbo_dir, None, 0.0, "족보 폴더에 index.json 이 없다 — 아직 안 잘렸다")
     path, score, top = find_jokbo(prep, Path(jokbo_dir))
+    pinned, _ = jokbo_pin(Path(prep["source"]).stem, Path(jokbo_dir))
+    if pinned and not path:
+        # 사람이 「족보 없음」으로 적은 편. 문턱 미달과 섞이면 안 된다 — 처방이 다르다.
+        return None, {}, False, cutmark.used_record(
+            jokbo_dir, None, 0.0, f"{PINS_FILE} 가 이 편에는 족보가 없다고 적었다")
     if not path or (score < 0.25 and not only_practice_pool(top)):
         print(NO_JOKBO_MATCH.format(score=score), flush=True)
         return None, {}, False, cutmark.used_record(
@@ -376,7 +383,9 @@ def slice_for_recorded(prep: dict, jokbo_dir: Path, explicit: str | None = None
         print(PRACTICE_ONLY_MATCH.format(score=score, name=path.name), flush=True)
     jk = json.loads(path.read_text(encoding="utf-8"))
     rec = cutmark.used_record(jokbo_dir, path, score)
-    if score < 0.25:
+    if pinned:
+        rec["by"] = f"사람이 {PINS_FILE} 로 지정했다"
+    elif score < 0.25:
         rec["by"] = "실습 문항 풀이 후보 하나뿐이라 문턱을 지나갔다"
     return path, jk.get("stats", {}), top[0][2] is not None, rec
 
