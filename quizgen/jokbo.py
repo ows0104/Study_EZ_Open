@@ -219,14 +219,88 @@ def split_regions(doc: fitz.Document) -> dict[str, list[int]]:
 
     wq, wa = cut(written)
     pq, pa = cut(practical)
-    # 목차/표지는 문항 구역에서 뺀다
+    # 목차/표지는 문항 구역에서 뺀다.
+    #
+    # **1쪽이 늘 표지인 것은 아니다.** 약리학 2026판은 목차도 표지도 없이 1쪽부터
+    # `1 약리학 소개` · `2-4 약동학` 문항이 시작한다. 1쪽을 무조건 빼면 그 두 섹션의
+    # 머리가 사라진다. 문항 줄이 둘 이상 있으면 본문으로 둔다.
     front = [p for p in wq if "목차" in doc[p].get_text()[:40] or "교수님 목록" in doc[p].get_text()[:60]]
-    wq = [p for p in wq if p not in front and p != 0]
-    return {"front": [0] + front, "written_q": wq, "written_a": wa,
+    cover = [] if wq and wq[0] == 0 and _has_questions(doc[0]) else [0]
+    wq = [p for p in wq if p not in front and p not in cover]
+    return {"front": cover + front, "written_q": wq, "written_a": wa,
             "practical_q": pq, "practical_a": pa}
 
 
+def _has_questions(page: fitz.Page) -> bool:
+    lines = [d["text"] for d in page_lines(page)]
+    return sum(1 for t in lines if RE_QSTART.match(t) and not RE_ANSWER.match(t)) >= 2
+
+
 # ─────────────────────────────────────────────────────────────── 목차 / 교수표
+
+
+# 본문의 강의 머리 — `2-4 약동학 (1)~(3)` · `★ 표적 항암 약리`, 또는 번호만 한 줄
+# (`7` / `약물대사`). 제목이 `)`·`:`·`.` 로 시작하면 보기 줄이다(`5) Labetalol`).
+RE_BODY_HEAD = re.compile(r"^(★|\d{1,2}(?:\s*-\s*\d{1,2})?)(?:\s+([^\s):.,\]].*))?$")
+MAX_TITLE_LINES = 2       # 본문 머리의 제목이 몇 줄까지 접히는가(`중추신경계 … 약리` / `학`)
+
+
+def headers_as_toc(doc: fitz.Document, pages: list[int]) -> list[tuple[str, str]]:
+    """목차가 없는 족보에서 **본문의 강의 머리로** 강의 목록을 세운다.
+
+    약리학 2026판(2026-09-30)이 처음이다. 목차 쪽도 교수 목록 쪽도 없이 1쪽부터
+    본문이고, 머리가 올해 시간표 순서로 다시 매겨져 있다. 목차로만 강의를 세우던
+    때라 **강의 0개**로 잘렸다 — 그 빈 판이 `current` 가 되어 블럭 한가운데서 모든
+    편의 족보가 떨어질 뻔했다.
+
+    머리는 두 모양이다 — `번호 제목` 한 줄, 또는 번호만 한 줄에 제목이 따라오는 것.
+    제목은 두 줄까지 접힌다(`25 아미노글라이코사이드계,` / `설파계/퀴놀론 항생제`).
+    **머리로 인정하는 것은 제목 바로 뒤가 연도(`2025`)인 것뿐이다.** 본문의 보기나
+    문항이 여기 걸리지 않는 까닭이 그 연도다. 쪽번호(맨 아래의 번호만 있는 줄)는
+    처음부터 뺀다.
+
+    **같은 번호가 두 번 나오면 뒤의 것에 번호를 붙인다**(`★` · `★2`). 2026판에는
+    `★ 항암 항체 치료제` 와 `★ 표적 항암 약리` 가 따로 있다. 키가 같으면 섹션이
+    하나로 합쳐진다(`open_section` 이 키로 찾는다).
+    """
+    header = running_header(doc, pages)
+    lines = []
+    for pno in pages:
+        height = doc[pno].rect.height
+        for ln in page_lines(doc[pno]):
+            t = ln["text"].strip()
+            if not t or t == header:
+                continue
+            if RE_BARE_NUM.match(t) and ln["y0"] > height - 60:
+                continue                  # 쪽번호
+            lines.append(t)
+
+    def is_title(t: str) -> bool:
+        return not (RE_YEAR.match(t) or RE_QSTART.match(t) or RE_OPTION.match(t)
+                    or RE_BODY_HEAD.match(t))
+
+    found: list[tuple[str, str]] = []
+    seen: dict[str, int] = {}
+    for i, t in enumerate(lines):
+        m = RE_BODY_HEAD.match(t)
+        if not m or RE_QSTART.match(t):
+            continue
+        parts = [m.group(2).strip()] if m.group(2) else []
+        j = i + 1
+        while j < len(lines) and len(parts) < MAX_TITLE_LINES + 1 and is_title(lines[j]):
+            parts.append(lines[j])
+            j += 1
+        if not parts or j >= len(lines) or not RE_YEAR.match(lines[j]):
+            continue
+        if len(parts) > MAX_TITLE_LINES:
+            continue
+        title = " ".join(parts)
+        key = m.group(1).replace(" ", "")
+        seen[key] = seen.get(key, 0) + 1
+        if seen[key] > 1:
+            key = f"{key}{seen[key]}"
+        found.append((key, title))
+    return found
 
 
 def parse_toc(doc: fitz.Document) -> tuple[list[tuple[str, str]], dict, str | None]:
@@ -940,6 +1014,13 @@ def main(argv=None) -> int:
 
     regions = split_regions(doc)
     lectures, profs, warn = parse_toc(doc)
+    if not lectures:
+        # 목차가 없는 판. 본문 머리로 세운다(`headers_as_toc`). 교수 목록도 없으므로
+        # 교수 교체 판정은 이 판에서 안 선다 — 그것을 경고로 남긴다.
+        lectures = headers_as_toc(doc, regions["written_q"])
+        if lectures:
+            warn = (f"{warn} — 본문 머리로 강의 {len(lectures)}개를 세웠다. "
+                    f"교수 목록이 없어 교수 교체 판정은 이 판에서 안 선다")
     title_index = title_aliases(lectures)
 
     sections = parse_question_region(doc, regions["written_q"], title_index)
@@ -1051,7 +1132,12 @@ def main(argv=None) -> int:
                               "questions": sum(e["n_questions"] for e in index["lectures"])})
         # **`current` 는 맨 마지막에 돌린다.** 앞에서 죽으면 지금 판이 그대로
         # 남아야 한다 — 반쯤 쓰인 판을 가리키면 다음 빌드가 그것을 읽는다.
-        cutmark.set_current(subject_dir, cut_id)
+        #
+        # **강의가 하나도 안 잡힌 판으로는 안 돌린다.** 2026-09-30 약리학 2026판이
+        # 목차가 없어 강의 0개로 잘렸는데 `current` 가 그 판으로 넘어갔다 — 블럭
+        # 한가운데서 모든 편의 족보가 떨어질 뻔했다. 빈 판은 남겨 두되 가리키지 않는다.
+        if sections:
+            cutmark.set_current(subject_dir, cut_id)
         print(cutmark.describe(outdir))
     except (OSError, ValueError) as cause:
         print(f"⚠ 판({cut_id})을 못 적었다 ({cause}) — 조각은 다 나왔다. "
@@ -1110,6 +1196,12 @@ def main(argv=None) -> int:
         print(f"\n정답을 못 찾은 문항 {len(noans)}개:")
         for k, v in sorted(by_sec.items(), key=lambda x: -len(x[1])):
             print(f"   [{k}] {len(v)}개  {v[:12]}{' …' if len(v) > 12 else ''}")
+    if not sections:
+        # 조각은 나왔지만 쓸 것이 없다. **성공으로 끝내면 부르는 쪽이 「잘렸다」고 믿는다**
+        # (`run_jokbo` 가 「이 조각을 스스로 물린다」를 찍는다). 지금 판은 그대로다.
+        print(f"\n⚠ 필기 섹션을 하나도 못 잡았다 — 지금 판({cutmark.resolve(subject_dir).name})을 "
+              f"그대로 둔다. 이 판({cut_id})은 가리키지 않는다")
+        return 1
     return 0
 
 
