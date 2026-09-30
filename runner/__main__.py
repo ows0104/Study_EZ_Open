@@ -55,6 +55,7 @@ for _stream in (sys.stdout, sys.stderr):
 
 from runner import (  # noqa: E402
     agent,
+    ahead,
     attempts,
     blocks,
     chosen,
@@ -78,7 +79,8 @@ def notes_dir(root: Path, subject: str, year: str) -> Path:
     return root / subject / "필기" / year
 
 
-def report_subject(root: Path, subject: str, this_year: str, prev_year: str) -> int:
+def report_subject(root: Path, subject: str, this_year: str, prev_year: str,
+                   runs_dir: Path | None = None) -> int:
     this_dir, prev_dir = notes_dir(root, subject, this_year), notes_dir(root, subject, prev_year)
     if not this_dir.is_dir():
         print(f"[{subject}] {this_year} 폴더 없음 — 건너뜀")
@@ -112,7 +114,9 @@ def report_subject(root: Path, subject: str, this_year: str, prev_year: str) -> 
         for item in group:
             print(f"             · {item.title[:56]}")
 
-    matches = matching.match_years(this_files, prev_files)
+    # 사람이 확인한 짝(`_pairs`)을 먼저 앉힌다 — `publish` 가 올리는 짝과 같아야 한다.
+    confirmed = ahead.load_pairs(runs_dir, subject) if runs_dir else {}
+    matches = matching.match_with_confirmed(this_files, prev_files, confirmed)
     counts = {"확정": 0, "확인": 0, "없음": 0}
 
     print(f"\n  {'올해':<10} {'상태':<4} {'점수':>5} {'작년':<10}  제목")
@@ -750,7 +754,7 @@ def main() -> int:
 
     needs_review = 0
     for subject in subjects:
-        needs_review += report_subject(root, subject, args.this, args.prev)
+        needs_review += report_subject(root, subject, args.this, args.prev, Path(args.runs))
 
     print(f"\n손봐야 할 강의 {needs_review}편")
     return 0

@@ -457,7 +457,9 @@ def plan_subject(
     prev_files = filenames.latest_versions(prev_scan.files)
     run_ids = assign_run_ids(this_files)
     prev_run_ids = assign_run_ids(prev_files)
-    matches = {m.this_year.uid: m for m in matching.match_years(this_files, prev_files)}
+    # 사람이 확인한 짝이 먼저다(`_pairs`). 올해 필기가 올라온 뒤에도 그렇다.
+    matches = {m.this_year.uid: m for m in matching.match_with_confirmed(
+        this_files, prev_files, ahead.load_pairs(runs_dir, subject))}
 
     plans: list[LecturePlan] = []
     for item in this_files:

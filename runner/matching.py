@@ -142,3 +142,36 @@ def match_years(this_year: list[LectureFile], prev_year: list[LectureFile]) -> l
         matches.append(Match(this, prev, value, margin, runner_up))
 
     return matches
+
+
+def match_with_confirmed(this_year: list[LectureFile], prev_year: list[LectureFile],
+                         confirmed: dict[str, str]) -> list[Match]:
+    """사람이 확인한 짝을 먼저 앉히고, 나머지를 `match_years` 로 붙인다.
+
+    `confirmed` 는 `runs/_pairs/<과목>.json` 이다 — `{올해 run_id: 작년 run_id 또는
+    파일 어간}`. `_` 로 시작하는 키는 주석이다.
+
+    **2026-09-30 까지 이 짝은 올해 필기가 없는 칸에만 먹었다**(`ahead.plan`). 필기가
+    올라오는 순간 자동 짝으로 바뀌어서, 사람이 본문까지 열어 확인한 짝이 조용히
+    사라졌다 — 약리학 「약물의 이해 소개(조정현)」가 작년 「약리학 소개(예상규)」를
+    잃고 사이트에 작년 필기가 안 붙었다. 적어 둔 짝은 필기가 있든 없든 짝이다.
+    """
+    by_key: dict[str, LectureFile | None] = {}
+    for item in prev_year:
+        # 한 교시에 작년 강의가 둘이면 키로는 못 가린다. 그때는 어간으로 적는다.
+        by_key[item.key] = None if item.key in by_key else item
+    by_stem = {item.path.stem: item for item in prev_year}
+
+    fixed: list[Match] = []
+    taken: set[str] = set()
+    rest: list[LectureFile] = []
+    for this in this_year:
+        wanted = confirmed.get(this.key, "") if not this.key.startswith("_") else ""
+        prev = (by_key.get(wanted) or by_stem.get(wanted)) if wanted else None
+        if prev is None or prev.uid in taken:
+            rest.append(this)
+            continue
+        fixed.append(Match(this, prev, 1.0, 1.0, None))
+        taken.add(prev.uid)
+    pool = [item for item in prev_year if item.uid not in taken]
+    return fixed + match_years(rest, pool)

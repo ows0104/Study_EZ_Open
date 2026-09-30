@@ -375,7 +375,9 @@ def plan(
         return [], warnings
 
     # 올해 필기가 이미 가져간 작년 파일은 후보에서 뺀다.
-    claimed = {m.prev_year.uid for m in matching.match_years(this_files, prev_files) if m.prev_year}
+    claimed = {m.prev_year.uid
+               for m in matching.match_with_confirmed(this_files, prev_files, confirmed)
+               if m.prev_year}
     free = [item for item in prev_files if item.uid not in claimed]
 
     by_stem = {item.path.stem: item for item in free}
@@ -402,8 +404,11 @@ def plan(
     # 어느 칸에도 안 걸린 줄. 교시를 잘못 적었거나 그 사이 올해 필기가 올라온
     # 것이다. 조용히 넘기면 사람은 자기가 적어 둔 짝이 붙은 줄 안다.
     # `_`로 시작하는 키는 주석 자리다.
+    # 올해 필기가 앉은 칸은 여기가 아니라 `publish` 가 그 짝을 쓴다
+    # (`matching.match_with_confirmed`) — 그 칸은 빈 칸이 아니어도 된다.
+    filled = {f.key for f in this_files}
     for key in sorted(confirmed):
-        if not key.startswith("_") and key not in {cell.key for cell in empty}:
+        if not key.startswith("_") and key not in {cell.key for cell in empty} | filled:
             warnings.append(f"{subject}: 확인해 준 짝 {key}에 해당하는 빈 칸이 없다 — "
                             f"교시를 잘못 적었거나 올해 필기가 이미 올라왔다")
 
