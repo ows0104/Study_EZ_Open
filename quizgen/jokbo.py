@@ -394,6 +394,16 @@ def parse_toc(doc: fitz.Document) -> tuple[list[tuple[str, str]], dict, str | No
     return lectures, profs, warn
 
 
+def _crowded(key: str, cells: dict) -> bool:
+    """한 칸에 강의 수보다 많은 이름이 잡혔는가. 이웃 행에서 흘러든 것이다."""
+    n_lect = 1
+    if "-" in key:
+        a, b = key.split("-")
+        if a.isdigit() and b.isdigit():
+            n_lect = int(b) - int(a) + 1
+    return any(len(v) > n_lect for v in cells.values())
+
+
 # ─────────────────────────────────────────────────────────────── 문항 파싱
 
 
@@ -1014,13 +1024,29 @@ def main(argv=None) -> int:
 
     regions = split_regions(doc)
     lectures, profs, warn = parse_toc(doc)
+    body = headers_as_toc(doc, regions["written_q"])
     if not lectures:
         # 목차가 없는 판. 본문 머리로 세운다(`headers_as_toc`). 교수 목록도 없으므로
         # 교수 교체 판정은 이 판에서 안 선다 — 그것을 경고로 남긴다.
-        lectures = headers_as_toc(doc, regions["written_q"])
+        lectures = body
         if lectures:
             warn = (f"{warn} — 본문 머리로 강의 {len(lectures)}개를 세웠다. "
                     f"교수 목록이 없어 교수 교체 판정은 이 판에서 안 선다")
+    elif len(body) > len(lectures):
+        # **목차 표가 본문보다 적게 잡혔다.** 약리학 2026 완전판(2026-10-01)이 그랬다 —
+        # 표가 두 쪽에 걸쳐 둘째 쪽(35·36)을 못 읽었고, 줄 간격이 좁은 행이 이웃 행에
+        # 붙었다(9→10 · 29·★→28). 그러면 놓친 강의의 문항이 앞 강의에 흡수되고
+        # (10 에 46문항 · 34 에 57문항), 섞인 교수 이름으로 「교수 교체」가 잘못 선다.
+        # 강의 목록은 본문 머리를 따르고, 표에서는 **깨끗한 칸의 교수만** 가져온다.
+        missed = [k for k, _ in body if k not in {key for key, _ in lectures}]
+        crowded = [k for k, cells in profs.items() if _crowded(k, cells)]
+        keep = {k for k, _ in body}
+        profs = {k: v for k, v in profs.items() if k in keep and k not in crowded
+                 and not k.startswith("★")}
+        warn = (f"목차 표에서 강의 {len(lectures)}개만 잡혀 본문 머리 {len(body)}개로 세웠다 "
+                f"(표에서 놓친 것 {missed}). 교수가 섞인 칸 {crowded} 과 ★ 는 교수를 버렸다 — "
+                f"그 강의는 교수 교체 판정이 안 선다")
+        lectures = body
     title_index = title_aliases(lectures)
 
     sections = parse_question_region(doc, regions["written_q"], title_index)

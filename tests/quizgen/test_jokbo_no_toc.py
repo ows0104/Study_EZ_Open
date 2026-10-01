@@ -100,3 +100,13 @@ def test_섹션을_못_잡은_판으로는_current를_안_돌린다(tmp_path):
     before = cutmark.resolve(subject).name
     assert main([str(empty), "-o", str(subject)]) == 1
     assert cutmark.resolve(subject).name == before
+
+
+def test_한_칸에_이름이_넘치면_섞인_칸이다():
+    """목차 표의 행이 이웃 행에 붙으면 한 해에 이름이 둘 셋 잡힌다(약리학 2026 완전판의
+    10 · 28). 그 칸의 교수로 「교수 교체」를 세우면 안 된다."""
+    from quizgen.jokbo import _crowded
+
+    assert _crowded("10", {"26": ["성지혜", "성지혜"]})
+    assert not _crowded("12-13", {"26": ["이철환", "이철환"]})
+    assert not _crowded("7", {"26": ["조주연"], "25": ["조주연"]})
