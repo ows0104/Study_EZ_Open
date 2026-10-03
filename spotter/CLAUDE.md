@@ -13,22 +13,30 @@
 
 ## 손으로 고치는 파일은 여섯이다
 
-`data/` 에 29개가 있는데 **대부분은 만들어지는 것**이다. 고칠 것은 이것들이다.
+`data/` 에 37개가 있는데 **대부분은 만들어지는 것**이다. 고칠 것은 이것들이다.
 
     question_corrections.json   족보 정답표가 틀렸을 때
     image_overrides.json        사진에 이름표가 잘못 붙었을 때
-    species.csv                 종 마스터 (학명·감염경로·증상·치료…)
-    specimens.csv               표본 마스터 (충란·성충·염색·배율…)
+    species/*.json              종 마스터 (학명·감염경로·증상·치료…) — 군별 여섯 파일
+    specimens/*.json            표본 마스터 (충란·성충·염색·배율…) — 네 파일
     glossary.json               용어 별칭
     identification_pairs.csv    사진으로 구별이 불가능한 짝
 
 나머지(`generated_exams.json`·`coverage.csv`·`images.json`·`past_questions*.json`…)는
 스크립트가 만든다. **거기를 고치면 다음 빌드에 덮인다.**
 
+`species.csv`·`specimens.csv`·`species.json`·`specimens.json` 도 `build_master.py` 가
+위 두 폴더에서 **써 내는 것**이다(csv 는 엑셀 검토용). `identification_pairs.csv` 는
+`audit_questions.py` 가 만들지만 사람이 쳐 둔 표시는 덮지 않는다 — 그래서 손 파일로 센다.
+
+**생성 파일은 검색에서 빠져 있다**(루트 `.ignore`). `spotter/data/` 를 폴더로 찍어도
+안 나온다 — 생성 파일 안을 찾을 때는 **파일 이름을 찍는다**
+(`past_questions_linked.json` 처럼). `spotter-dist/` 도 같다.
+
 고친 뒤 도는 순서:
 
 ```bash
-python spotter/scripts/build_master.py     # species.csv·specimens.csv → .json
+python spotter/scripts/build_master.py     # species/·specimens/ → .json + .csv
 python spotter/scripts/build_web.py        # → build/quiz_db.json
 python spotter/scripts/upload_web.py       # → R2
 ```

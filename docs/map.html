@@ -470,7 +470,7 @@ CORE(4)  →  PROFILE(1)  →  ADAPTERS(2~4)  →  DOMAIN(1)</pre>
   <!-- 5. 땡시 데이터 ----------------------------------------------- -->
   <section>
     <h2>05 <em>땡시 문항을 고칠 때</em></h2>
-    <p class="lede"><code>spotter/data/</code> 에 파일이 24개 있는데 <strong>대부분은 스크립트가 만드는 것</strong>이다. 손으로 고칠 것은 여섯뿐이다.</p>
+    <p class="lede"><code>spotter/data/</code> 에 파일이 37개 있는데 <strong>대부분은 스크립트가 만드는 것</strong>이다. 손으로 고칠 것은 여섯뿐이다.</p>
 
     <div class="scroller">
       <table>
@@ -478,8 +478,8 @@ CORE(4)  →  PROFILE(1)  →  ADAPTERS(2~4)  →  DOMAIN(1)</pre>
         <tbody>
           <tr><td class="p">question_corrections.json</td><td>족보 정답표가 틀렸을 때</td></tr>
           <tr><td class="p">image_overrides.json</td><td>사진에 이름표가 잘못 붙었을 때</td></tr>
-          <tr><td class="p">species.csv</td><td>종 마스터 — 학명 · 감염경로 · 증상 · 치료</td></tr>
-          <tr><td class="p">specimens.csv</td><td>표본 마스터 — 충란 · 성충 · 염색 · 배율</td></tr>
+          <tr><td class="p">species/*.json</td><td>종 마스터 — 학명 · 감염경로 · 증상 · 치료 (군별 여섯 파일)</td></tr>
+          <tr><td class="p">specimens/*.json</td><td>표본 마스터 — 충란 · 성충 · 염색 · 배율 (네 파일)</td></tr>
           <tr><td class="p">glossary.json</td><td>용어 별칭</td></tr>
           <tr><td class="p">identification_pairs.csv</td><td>사진으로 구별이 불가능한 짝</td></tr>
         </tbody>
@@ -488,10 +488,10 @@ CORE(4)  →  PROFILE(1)  →  ADAPTERS(2~4)  →  DOMAIN(1)</pre>
 
     <div class="caution">
       <div class="tag">나머지는 산출물이다</div>
-      <p><code>generated_exams.json</code> · <code>coverage.csv</code> · <code>images.json</code> · <code>past_questions*.json</code> 은 스크립트가 만든다. <b>거기를 고치면 다음 빌드에 덮인다.</b></p>
+      <p><code>generated_exams.json</code> · <code>coverage.csv</code> · <code>images.json</code> · <code>past_questions*.json</code>, 그리고 <code>species.csv</code> · <code>specimens.csv</code> 는 스크립트가 만든다. <b>거기를 고치면 다음 빌드에 덮인다.</b></p>
     </div>
 
-    <pre>python spotter/scripts/build_master.py   <b># species·specimens csv → json</b>
+    <pre>python spotter/scripts/build_master.py   <b># species/·specimens/ → json + csv</b>
 python spotter/scripts/build_web.py      <b># → build/quiz_db.json</b>
 python spotter/scripts/upload_web.py     <b># → R2</b></pre>
   </section>
