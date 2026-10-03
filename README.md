@@ -23,9 +23,9 @@
 ## 이 저장소만으로 돌아간다
 
 ```
-studyez/     로컬 러너 — 파일명 파싱, 연도 매칭, 워처, 업로드
+runner/      로컬 러너 — 파일명 파싱, 연도 매칭, 쓸기, 업로드
 runner/__main__.py  CLI 껍데기 + 사람이 한 번씩 치는 명령 (import·rebuild·jokbo·match)
-runner/runner.py    스케줄러가 돌리는 한 사이클 (watch·prequeue·publish·done·agent)
+runner/cycle.py     러너가 돌리는 한 사이클 (watch·prequeue·publish·done·agent)
 runner/deck.py      그 러너와 파이프라인의 유일한 접점
 quizgen/    덱을 만드는 파이프라인. 명령 하나가 PDF에서 .apkg까지 간다
 data/timetable/  학기 시간표 JSON. 캘린더가 이것만으로 그려지고, 만드는 코드는

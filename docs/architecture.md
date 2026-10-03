@@ -121,8 +121,12 @@ Main-Quiz는 `.apkg` 다운로드뿐이다. SRS와 이미지 오클루전이 Ank
 |---|---|---|
 | 캘린더 | 학기 초 1회 | 시간표 JSON → 과목·강의 생성 |
 | 족보 분할 | 학기 초 1회 | 과목 족보 PDF → 강의별 조각 + 필기 연결 |
-| Main-Quiz | 매일 21:30 | 새 필기 감지 → `quizgen.run` → 업로드 |
-| 예습 → Pre-Quiz | 강의 며칠 전 | 예습 대화 → `quizgen.prequiz.run` → 업로드 |
+| Main-Quiz | 올해 필기가 처음 올라올 때 | 새 필기 감지 → 서버 일감 → `quizgen.run` → 업로드 |
+| 예습 → Pre-Quiz | 예습 링크가 바뀔 때 | 예습 대화 → 서버 일감 → `quizgen.prequiz.run` → 업로드 |
+
+뒤의 둘은 종일 떠 있는 러너(`python -m runner agent`)가 서버의 일감을 집어 가서
+만든다. 시각에 맞춰 도는 크론은 2026-08-23 에 걷어냈다 — 왜인지는 README 「재료가
+도착하면 만들기 시작한다」.
 
 ## 예습 링크 → Pre-Quiz
 
