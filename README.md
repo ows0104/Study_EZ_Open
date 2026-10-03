@@ -6,19 +6,62 @@
 관리자 한 명이 만들고 결과물은 모두에게 똑같다. 그래서 작업 큐도 과금도 사용자별
 생성도 없다.
 
+## 한 장 그림
+
+**전체를 머리에 넣을 때는 이 절만 읽는다.** 지금 도는 모양만 적고 이력은 안 적는다.
+같은 내용을 그림으로 낸 페이지가
+[Artifact](https://claude.ai/artifact/8CfCDAohjKP6AivnXKGwqH)에 있다 — **정본은 이 절이고**
+페이지는 따라간다.
+
+복습 덱과 예습 덱 두 줄이 같은 러너 하나로 돈다. `*` 은 사람이 해야 움직이는 자리다.
+
 ```
- SynologyDrive/{과목}/필기/{2025,2026}/     시간표 JSON
-        │                                      │
-        └──────────────┬───────────────────────┘
-                       ▼
-            로컬 러너 (이 저장소)
-            · 강의 인덱싱 · 작년 짝 붙이기
-            · quizgen 실행 (덱을 만드는 자리)
-            · 산출물 업로드
-                       │
-                       ▼
-            Study_EZ 서버 → 웹 (캘린더가 홈)
+① 재료 ─ 저장소 밖
+   복습  올해 필기 · 족보 PDF                     Synology/{과목}/필기/2026 · /족보
+   예습  작년 필기 + 관리자의 예습 대화 *          bridge 확장이 대화를 열고 링크를 /admin 에 적는다
+
+② 만든다 ─ 노트북 · runner + quizgen
+   복습  쓸기가 새 필기를 서버에 알린다  ┐
+   예습  예습 링크가 바뀐다              ┘→ 서버가 일감을 세운다 (자동은 하루 6편)
+         일꾼 둘이 15초마다 일감을 집어 quizgen 을 돌린다 — 모델 자리는 claude -p 빈 세션
+         runs/<편>/ → 문지기(runner/gate.py) → publish     10분마다 쓸기가 남은 것을 올린다
+
+③ 나눠 준다 ─ server/ · Cloud Run
+         Postgres(Supabase)  강의 · 카드 · 문항 · 일감 상태
+         R2                  강의록 PDF · .apkg — 로그인한 사람에게 서명 URL 로
+
+④ 학생이 본다 ─ web/ · studyez.kr
+         캘린더 → 강의 화면 → 웹 풀이(/mainquiz · /prequiz, 본인 채점) · .apkg 받기
 ```
+
+러너는 Windows 예약 작업 `StudyEZ Agent` 가 로그온 5분 뒤에 띄운다. **노트북이 자면
+같이 멈춘다.**
+
+**사람이 손대는 자리**
+
+    예습 대화 저장      /admin               예습 덱은 여기서 시작한다
+    덱 만들기 · ⟳       캘린더 강의 패널      자동이 안 걸린 편 · 상한에 걸린 편 · 다시 만들 편
+    카드 검토           /admin/cards         문지기는 결함 카드를 막지 않고 표시만 한다
+    막기               runs/<편>/HOLD
+    API 배포           server/deploy.ps1    init-db 먼저. 자동이 아니다
+
+**나가는 곳은 셋**
+
+    studyez.kr           web/            Cloudflare Pages   master 에 push 하면 저절로
+    studyez-api          server/         Cloud Run          deploy.ps1 을 손으로
+    spotter.studyez.kr   spotter-dist/   Cloudflare Pages   옆집 땡시 (아래)
+
+**저장소 밖에만 있는 것** — 코드를 읽어서는 안 보인다.
+Synology Drive(재료) · Supabase(로그인 + Postgres, `server/.env` 가 운영 DB) ·
+R2(CORS 규칙 없음) · Cloud Scheduler(5분마다 `/api/health` 로 서버를 깨워 둔다) ·
+예약 작업 `StudyEZ Agent` · 로그인된 `claude` CLI(API 는 안 쓴다).
+
+**옆집 · 땡시.** `spotter/` 는 같은 저장소에 사는 별개의 사이트다. Study_EZ 파이프라인과
+아무것도 주고받지 않고, 겹치는 것은 로그인(`platform/session/session.js`)과 같은
+`server/` 안의 `/api/spotter/…` 경로뿐이다. 생성 데이터는 검색에서 빠져 있다(루트 `.ignore`).
+자세한 것은 [spotter/CLAUDE.md](spotter/CLAUDE.md).
+
+고칠 때 어느 파일을 보는지는 [docs/map.md](docs/map.md)다.
 
 ## 이 저장소만으로 돌아간다
 
