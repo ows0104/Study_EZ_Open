@@ -238,27 +238,27 @@ ul.plain li b { color: var(--ink); font-weight: 500; font-family: var(--f-sans);
     <h1>무엇을 고치려면<br>어디를 보는가</h1>
     <p class="standfirst">전체를 읽지 않아도 되게 하는 지도다. 일감을 찾아 그 줄의 경로만 넘기면 된다. 그래도 되는 이유는 덩이끼리 닿는 자리가 넷뿐이고 전부 좁기 때문이다.</p>
     <p class="standfirst" style="margin-top:1em"><strong>문맥도 같이 갈라 놓았다.</strong> 덩이마다 자기 <code>CLAUDE.md</code> 가 있다 — quizgen · runner · spotter · web · server · bridge. 그 덩이의 파일을 열면 그 문서가 실리고, 루트에는 권한과 덩이 경계와 어디서나 미는 함정만 남았다(587줄 → 136줄).</p>
-    <div class="stamp">2026-09-14 실측 · 약 48,000줄 · 저장소 하나 · 배포 셋</div>
+    <div class="stamp">2026-09-18 실측 · 약 69,000줄 · 저장소 하나 · 배포 셋</div>
   </header>
 
   <!-- 1. 덩이 ------------------------------------------------------ -->
   <section>
-    <h2>01 <em>다섯 덩이와 하나의 허브</em></h2>
+    <h2>01 <em>두 제품과 하나의 허브</em></h2>
     <p class="lede">세로는 제품이 둘이다 — <strong>Study_EZ</strong>(강의 한 편 → 예습·복습 덱)와 <strong>땡시</strong>(과목 하나 → 사진 문항 세트). 둘이 만나는 자리는 서버 하나뿐이다.</p>
 
     <div class="plan">
       <div class="stack">
         <div class="col-head">Study_EZ</div>
         <div class="block">
-          <div class="name">quizgen/ <span class="lines">12,269</span></div>
+          <div class="name">quizgen/ <span class="lines">12,373</span></div>
           <div class="what">퀴즈 생성. 강의록 PDF → 카드. 모델이 쓴다</div>
         </div>
         <div class="block">
-          <div class="name">runner/ <span class="lines">8,185</span></div>
+          <div class="name">runner/ <span class="lines">8,376</span></div>
           <div class="what">연결부. 이 노트북에서 파이프라인을 돌리고 서버로 민다</div>
         </div>
         <div class="block">
-          <div class="name">web/src/ <span class="lines">8,865</span></div>
+          <div class="name">web/src/ <span class="lines">10,737</span></div>
           <div class="what">프론트. studyez.kr — Vite + React</div>
         </div>
       </div>
@@ -280,7 +280,7 @@ ul.plain li b { color: var(--ink); font-weight: 500; font-family: var(--f-sans);
       </div>
 
       <div class="block hub wide">
-        <div class="name">server/app/ <span class="lines">5,885</span></div>
+        <div class="name">server/app/ <span class="lines">6,875</span></div>
         <div class="what">FastAPI · Cloud Run. <strong>두 제품이 만나는 유일한 자리.</strong> 계정·인증·R2 서명이 여기 하나다</div>
       </div>
     </div>
@@ -288,7 +288,7 @@ ul.plain li b { color: var(--ink); font-weight: 500; font-family: var(--f-sans);
     <div class="minor">
       <div class="block"><div class="name">bridge/ <span class="lines">1,814</span></div><div class="what">예습링크 크롬 확장</div></div>
       <div class="block"><div class="name">platform/ <span class="lines">228</span></div><div class="what">둘이 정말 같이 쓰는 것 — session.js 하나</div></div>
-      <div class="block"><div class="name">tests/ <span class="lines">8,745</span></div><div class="what">723개. <strong>덩이별로 나뉘어 있다</strong> — quizgen 402 · runner 295 · spotter 22 · bridge 4. <code>pytest tests/spotter</code> 7초, 전부는 27초</div></div>
+      <div class="block"><div class="name">tests/ <span class="lines">9,120</span></div><div class="what">748개. <strong>덩이별로 나뉘어 있다</strong> — quizgen 405 · runner 317 · spotter 22 · bridge 4. <code>pytest tests/spotter</code> 7초, 전부는 19초</div></div>
       <div class="block"><div class="name">docs/ <span class="lines">—</span></div><div class="what">archive/ 는 닫힌 기록이다. 줄수를 안 적는다 — 그 숫자를 적는 파일이 여기 있다</div></div>
     </div>
   </section>
@@ -309,8 +309,8 @@ ul.plain li b { color: var(--ink); font-weight: 500; font-family: var(--f-sans);
       <div class="seam">
         <div class="seam-no">② HTTP</div>
         <h3>전부 서버를 향한다</h3>
-        <div class="detail">runner&nbsp;&nbsp;&nbsp;&nbsp;<b>9</b> 경로<br>web/src&nbsp;&nbsp;<b>16</b><br>spotter&nbsp;&nbsp;<b>10</b><br>bridge&nbsp;&nbsp;&nbsp;<b>2</b></div>
-        <div class="note">계약을 지키는 자: <code>server/tests/test_routes_golden.py</code> — 경로 61줄.</div>
+        <div class="detail">runner&nbsp;&nbsp;&nbsp;&nbsp;<b>9</b> 경로<br>web/src&nbsp;&nbsp;<b>19</b><br>spotter&nbsp;&nbsp;<b>10</b><br>bridge&nbsp;&nbsp;&nbsp;<b>2</b></div>
+        <div class="note">계약을 지키는 자: <code>server/tests/test_routes_golden.py</code> — 경로 66줄.</div>
       </div>
 
       <div class="seam">
@@ -342,8 +342,14 @@ ul.plain li b { color: var(--ink); font-weight: 500; font-family: var(--f-sans);
       </div>
       <div class="row subrow">
         <div class="task">└ 좁히면</div>
-        <div class="paths">calendar/ 2,212 · admin/ 1,161 · lecture/ 818 · styles/ 3,248</div>
+        <div class="paths">calendar/ 2,360 · admin/ 1,161 · lecture/ 1,330 · styles/ 3,622</div>
         <button class="copy" data-copy="web/src/calendar/">복사</button>
+      </div>
+
+      <div class="row">
+        <div class="task">복습 간격 · 되돌리기<span class="sub">웹 풀이의 망각곡선</span></div>
+        <div class="paths"><b>server/app/srs.py</b> + web/src/lecture/queue.ts<br><span style="color:var(--ink-faint)">검사: cd server &amp;&amp; .venv/Scripts/python -m tests.test_srs</span></div>
+        <button class="copy" data-copy="server/app/srs.py web/src/lecture/queue.ts">복사</button>
       </div>
 
       <div class="row">
@@ -353,7 +359,7 @@ ul.plain li b { color: var(--ink); font-weight: 500; font-family: var(--f-sans);
       </div>
       <div class="row subrow">
         <div class="task">└ 코드까지</div>
-        <div class="paths">run.py 634 · validate.py 647 · reproduce.py 755 · build.py 1,117</div>
+        <div class="paths">run.py 662 · validate.py 647 · reproduce.py 755 · build.py 1,119</div>
         <button class="copy" data-copy="quizgen/ tests/">복사</button>
       </div>
 
@@ -404,10 +410,10 @@ ul.plain li b { color: var(--ink); font-weight: 500; font-family: var(--f-sans);
       <div class="stage">
         <div class="cap">CORE · 항상</div>
         <ul>
-          <li>quality.md <span>208</span></li>
+          <li>quality.md <span>242</span></li>
           <li>evidence.md <span>21</span></li>
           <li>media.md <span>35</span></li>
-          <li>language.md <span>13</span></li>
+          <li>language.md <span>20</span></li>
         </ul>
         <div class="role">한 파일만 고쳐도 모든 편에 실린다</div>
       </div>
@@ -500,7 +506,7 @@ python spotter/scripts/upload_web.py     <b># → R2</b></pre>
   <section>
     <h2>06 <em>안 겹치는 것</em></h2>
     <ul class="plain">
-      <li><b>풀이 화면 둘은 다른 제품이다.</b> Study_EZ 는 자기채점 자유회상이고 땡시는 시간 재는 다지선다다. 한쪽을 고칠 때 다른 쪽을 볼 일이 없다.</li>
+      <li><b>풀이 화면 둘은 다른 제품이다.</b> Study_EZ 는 자기채점 자유회상이고 <strong>2026-09-18 부터 망각곡선으로 돈다</strong>(안키의 SM-2 — <code>server/app/srs.py</code>). 땡시는 시간 재는 다지선다다. 한쪽을 고칠 때 다른 쪽을 볼 일이 없다.</li>
       <li><b>quizgen/prequiz/ 는 quizgen/ 의 복제가 아니다.</b> <code>..build</code>·<code>..pack</code>·<code>..validate</code> 를 import 한다 — 이미 나뉘어 있다.</li>
       <li><b>spotter-dist/ 는 산출물이다.</b> <code>spotter/</code> 를 고치고 <code>deploy_pages.py</code> 를 돌린다.</li>
       <li><b>docs/archive/ 는 닫힌 기록이다.</b> 현재 상태로 읽지 마라.</li>
@@ -511,10 +517,12 @@ python spotter/scripts/upload_web.py     <b># → R2</b></pre>
   <section>
     <h2>07 <em>이 지도를 안 믿어야 할 때</em></h2>
     <p class="lede">줄수는 금방 낡는다. 하지만 <strong>경계(02절)는 두 명령으로 다시 잴 수 있다.</strong></p>
-    <pre>python scripts/map_numbers.py            <b># 실측과 지도를 나란히</b>
+    <pre><b># 이 저장소는 anaconda3 의 파이썬을 쓴다 — PATH 의 것으로는 안 돈다</b>
+python scripts/map_numbers.py            <b># 실측과 지도를 나란히</b>
 python scripts/map_numbers.py --check    <b># 다른 줄만 찍고 1 로 끝난다</b>
 
 cd server &amp;&amp; .venv/Scripts/python.exe -m tests.test_routes_golden</pre>
+    <p class="lede"><strong>검사 수는 무엇으로 돌렸는지에 달렸다.</strong> pytest 를 그 파이썬으로 부르므로, 의존이 없는 venv 로 돌리면 수집이 깨지고 적게 세어진다 — 2026-09-18 에 <code>server/.venv</code> 로 돌렸더니 <code>95 tests collected, 53 errors</code> 였고 표는 「검사 95」를 태연히 찍었다(실제 748). 지금은 그 판에서 숫자 대신 <b>못 셈</b>이라고 찍는다.</p>
     <p class="lede">늘었으면 <strong>이 지도가 아니라 구조가 틀린 것이다.</strong> 그 import 를 없앨 수 있는지 먼저 본다.</p>
     <p class="lede">같은 도구가 <strong>문맥이 다시 모이는지도</strong> 센다 — 덩이별 검사가 비었는지, 덩이에 <code>CLAUDE.md</code> 가 있는지, 그리고 <strong>루트 <code>CLAUDE.md</code> 의 줄수</strong>. 덩이 하나의 것을 루트에 적으면 그 숫자만 늘어난다. 2026-09-14 에 136줄에서 시작했다.</p>
   </section>
@@ -553,3 +561,4 @@ document.querySelectorAll(".copy").forEach(function (btn) {
   });
 });
 </script>
+
