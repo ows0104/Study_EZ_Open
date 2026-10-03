@@ -88,6 +88,12 @@ def run_blind(prompt: str, *, model: str | None = None, timeout: int = 1800,
     argv = [exe, "-p", "--output-format", "json",
             # 설정을 하나도 읽지 않는다. 허용 규칙이 아래 차단 목록을 이기기 때문이다.
             "--setting-sources", "",
+            # 계정의 claude.ai 커넥터(MCP)를 안 싣는다. `--setting-sources ""` 로는 안
+            # 빠진다 — 2026-10-03 (claude 2.1.282) 이 argv 그대로 재니 커넥터 5개·도구
+            # 102개가 실려 있었고, 한 줄 프롬프트 입력이 33,008 → 28,766 토큰이 됐다.
+            # ToolSearch 가 살아 있어 이름만 실리므로 차이가 이 정도다 (`--tools ""` 로
+            # ToolSearch 까지 끄면 스키마가 다 실려 131,232 였다). 이 세션은 MCP 를 안 쓴다.
+            "--strict-mcp-config",
             "--allowed-tools", "",
             "--disallowed-tools", ",".join(BLIND_DENY)]
     if model:
@@ -145,6 +151,9 @@ def run_agent(prompt: str, *, cwd: Path, model: str | None = None,
         raise SessionError("claude CLI 를 찾지 못했다. PATH 를 확인해라.")
     argv = [exe, "-p", "--output-format", "json",
             "--permission-mode", "acceptEdits",
+            # 커넥터(MCP)를 안 싣는다 — run_blind 의 같은 줄 참고. 이쪽은 같은 날
+            # 41,293 → 36,834 토큰. 저작 세션은 턴마다 이 머리를 다시 읽는다.
+            "--strict-mcp-config",
             "--allowed-tools", ",".join(AUTHOR_TOOLS),
             "--add-dir", str(Path(cwd).resolve())]
     if resume:
