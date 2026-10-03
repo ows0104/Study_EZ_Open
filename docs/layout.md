@@ -26,7 +26,7 @@ Study_EZ_Open/
                                 (개수는 map.md 가 든다)
   scripts/       운영          예약 작업이 부르는 ps1 + 손도구 셋
   docs/          문서          `archive/` 는 닫힌 기록. 현재 상태로 읽지 마라
-  runs/  out/    산출물        추적 안 됨. 23GB
+  runs/  out/    산출물        추적 안 됨. 블럭이 끝나면 scripts/prune_runs.py
 ```
 
 **덩이 여섯은 자기 `CLAUDE.md` 를 든다** — `quizgen` · `runner` · `spotter` · `web` ·
