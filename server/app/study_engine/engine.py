@@ -277,5 +277,45 @@ def record_review(bank: dict, previous: dict, question_id: str, rating: str, now
     return state
 
 
+_DIRECTION_ORDER = ("direct", "reverse", "discrimination", "trap", "mechanism", "sequence", "integration")
+
+
+def concept_map(bank: dict, state: dict, policy: dict = DEFAULT) -> list[dict]:
+    """개념 지도 — 개념마다 은행이 적은 것과, 이 사람의 방향별 숙련도를 목표와 나란히.
+
+    **방향은 문항이 있는 것만 싣는다.** 회상 계획(`retrieval_plan`)에 적혔어도 문항이 없는 방향은
+    엔진이 낼 수 없어 숙련도가 영영 0이다 — 그걸 그리면 학생이 못 채우는 칸을 본다.
+    목표는 `target_for` 그대로다(정책 상한을 씌운 값). 화면이 다시 계산하면 갈라진다.
+
+    `progress` 는 방향마다 목표 대비 비율(1에서 자른다)의 평균 — 그래프의 색 하나로 쓰는 값이다.
+    """
+    ids = {c["concept_id"] for c in bank["concepts"]}
+    out = []
+    for concept in bank["concepts"]:
+        cid = concept["concept_id"]
+        by_direction: dict[str, list[dict]] = {}
+        for q in bank["questions"]:
+            if q["concept_id"] == cid:
+                by_direction.setdefault(q["retrieval_direction"], []).append(q)
+        directions = []
+        for direction in sorted(by_direction, key=lambda d: _DIRECTION_ORDER.index(d)
+                                if d in _DIRECTION_ORDER else len(_DIRECTION_ORDER)):
+            questions = by_direction[direction]
+            dim = state["dimensions"].get(dimension_key(questions[0])) or {}
+            target = max(target_for(bank, q, policy)["effective"] for q in questions)
+            directions.append({"direction": direction, "mastery": dim.get("mastery", 0), "target": target,
+                               "reviews": dim.get("reviews", 0), "questions": len(questions)})
+        progress = _average([min(d["mastery"] / d["target"], 1) if d["target"] else 1 for d in directions])
+        out.append({
+            "concept_id": cid, "title": concept["title"], "core_facts": concept.get("core_facts", []),
+            "importance": concept["importance"], "importance_rationale": concept.get("importance_rationale", ""),
+            "concept_difficulty": concept["concept_difficulty"], "tier": concept["tier"],
+            "exam_signal_strength": concept.get("exam_signal_strength", ""),
+            "related_concepts": [r for r in concept.get("related_concepts", []) if r in ids and r != cid],
+            "directions": directions, "progress": progress,
+        })
+    return out
+
+
 def now_ms() -> int:
     return int(datetime.now(UTC).timestamp() * 1000)

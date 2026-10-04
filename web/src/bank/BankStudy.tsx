@@ -1,7 +1,9 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../api";
+import { ConceptMap } from "./ConceptMap";
 import { FEEDBACK } from "./feedback";
+import { DIRECTION_LABEL } from "./labels";
 import { lectureHref } from "../links";
 import { Stem } from "../lecture/Stem";
 import type { BankAnswer, BankNext, BankQuestion, BankRating, BankRead, BankSession } from "../types";
@@ -126,14 +128,10 @@ function BankStart({ base, info, finished, lecture, onStarted }: {
         </p>
       ) : null}
       {error ? <p className="notice is-error">{error}</p> : null}
+      {info.conceptMap.length ? <ConceptMap concepts={info.conceptMap} /> : null}
     </div>
   );
 }
-
-const DIRECTION_LABEL: Record<string, string> = {
-  direct: "직접", reverse: "역방향", mechanism: "기전", discrimination: "구별",
-  integration: "통합", sequence: "순서", trap: "함정",
-};
 
 const FORMAT_LABEL: Record<string, string> = {
   basic: "서술", cloze: "빈칸", list: "나열", ox: "O/X", mcq: "객관식", multi_select: "복수 선택",

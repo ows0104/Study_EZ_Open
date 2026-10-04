@@ -168,6 +168,9 @@ def main() -> None:
     fb = client.post(f"{BASE}/bank/feedback", json={"questionId": q["question_id"], "category": "content",
                                                      "comment": "답이 이상하다"})
     check("피드백이 남는다", fb.status_code == 201, fb.text)
+    cmap = client.get(f"{BASE}/bank").json()["conceptMap"]
+    direct = next(d for d in cmap[0]["directions"] if d["direction"] == "direct")
+    check("개념 지도가 이 사람의 숙련도를 싣는다", direct["mastery"] > 0 and direct["reviews"] == 1, cmap)
 
     print("⑥ 다시 만들기")
     as_admin()

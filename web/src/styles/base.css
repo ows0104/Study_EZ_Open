@@ -2713,3 +2713,173 @@ button.notice-title:hover:not(:disabled) {
   }
 }
 
+
+/* 개념 지도(2026-10-04) — Quiz Bank 첫 화면 아래. 그래프 위, 카드 아래.
+ * 색은 토큰만 쓴다 — 다크 모드에서 점의 진척 색(`--ok` 섞기)이 저절로 바뀐다. */
+.bank-cmap {
+  margin: 28px 0 8px;
+  /* 풀이 화면(`.quiz`)은 가운데 정렬이다. 사실 목록이 가운데로 서면 못 읽는다. */
+  text-align: left;
+}
+
+.bank-cmap h3 {
+  margin: 0 0 4px;
+}
+
+.bank-cmap-graph {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 8px 0 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  background: var(--surface);
+}
+
+.bank-cmap-graph line {
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+}
+
+.bank-cmap-graph line.is-focus {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+.bank-cmap-node {
+  cursor: pointer;
+}
+
+.bank-cmap-node circle {
+  stroke: var(--ink-3);
+  stroke-width: 1.5;
+}
+
+.bank-cmap-node.is-optional circle {
+  stroke-dasharray: 3 3;
+}
+
+.bank-cmap-node.is-focus circle,
+.bank-cmap-node:focus-visible circle {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.bank-cmap-node:focus {
+  outline: none;
+}
+
+.bank-cmap-id {
+  fill: var(--ink);
+  font-size: 11px;
+  font-weight: 650;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.bank-cmap-label {
+  fill: var(--ink-2);
+  font-size: 12px;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.bank-cmap-cards {
+  display: grid;
+  gap: 10px;
+}
+
+.bank-cmap-card {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  background: var(--surface);
+  scroll-margin-top: 80px;
+}
+
+.bank-cmap-card.is-focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.bank-cmap-card header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  align-items: baseline;
+}
+
+.bank-cmap-meta {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.bank-cmap-facts {
+  margin: 8px 0 4px;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.bank-cmap-why {
+  margin: 4px 0;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.bank-cmap-dirs {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 2px;
+}
+
+.bank-cmap-dir {
+  display: grid;
+  grid-template-columns: 48px 1fr 84px;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.bank-cmap-dir small {
+  color: var(--ink-3);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.bank-cmap-bar {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.bank-cmap-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 4px;
+  background: var(--ok);
+}
+
+/* 목표 눈금. 막대가 여기를 넘으면 엔진이 그 방향을 약점으로 안 본다. */
+.bank-cmap-target {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink-2);
+}
+
+.bank-cmap-related {
+  margin: 6px 0 0;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.bank-cmap-related button {
+  padding: 0 4px;
+  font-size: 12px;
+}

@@ -790,6 +790,24 @@ export type BankRead = {
   defaultSize: number;
   session: BankSession | null;
   previousSessions: BankSession[];
+  /** 개념 지도. 첫 회차 전에도 온다(숙련도가 다 0). 계산은 서버 엔진(`concept_map`)이 한다. */
+  conceptMap: BankConcept[];
+};
+
+/** 개념 하나와 이 사람의 방향별 숙련도. 방향은 문항이 있는 것만 온다. */
+export type BankConcept = {
+  concept_id: string;
+  title: string;
+  core_facts: string[];
+  importance: number;
+  importance_rationale: string;
+  concept_difficulty: number;
+  tier: "Core" | "Advanced" | "Optional";
+  exam_signal_strength: string;
+  related_concepts: string[];
+  directions: { direction: string; mastery: number; target: number; reviews: number; questions: number }[];
+  /** 방향마다 목표 대비 비율(1에서 자름)의 평균. 그래프의 색이다. */
+  progress: number;
 };
 
 export type BankNext = {

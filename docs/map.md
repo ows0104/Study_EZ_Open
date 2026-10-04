@@ -95,6 +95,7 @@
 | ├ ChatGPT 에 가는 프롬프트 | `web/src/bank/bankPrompt.md` ← **정본. 머리 주석의 Version 을 올린다** | |
 | ├ 정리·검증·외부지식 검토 | `quizbank/` (`organize` · `validate` · `review` · `slides`) | `pytest tests/quizbank` |
 | ├ 다음 문항 고르기·숙련도 | `server/app/study_engine/` (`policy.json` 이 수치) | `-m tests.test_study_engine` |
+| ├ 개념 지도 (학생) | `web/src/bank/ConceptMap.tsx` + `study_engine/engine.py`(`concept_map`) | `-m tests.test_study_engine` |
 | ├ 러너가 받아 정리해 올리기 | `runner/bank.py` + `runner/agent.py`(`BANK`) | `pytest tests/runner/test_bank.py` |
 | ├ 학생 「문제 있음」 보기 | `web/src/admin/BankReportTab.tsx` + `routes/bank.py`(`/bank-feedback`) | `-m tests.test_bank` |
 | └ 확장이 답 본문을 가져오기 | `bridge/chatgpt-share.js`(`answerText`) + `bridge/background.js`(`STUDYEZ_BANK_ANSWER`) | `pytest tests/bridge` |

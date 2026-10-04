@@ -19,7 +19,7 @@ os.environ.setdefault("DATABASE_URL", "sqlite://")
 
 from app.study_engine import (DEFAULT, days_until, empty_state, end_session, rank_questions,  # noqa: E402
                               record_review, select_question, session_summary, start_session, upgrade_state)
-from app.study_engine.engine import concept_readiness, target_for  # noqa: E402
+from app.study_engine.engine import concept_map, concept_readiness, target_for  # noqa: E402
 from app.study_engine.policy import validate_policy  # noqa: E402
 from tests.bank_fixtures import example_bank, simulation_bank  # noqa: E402
 
@@ -169,6 +169,25 @@ migrated = upgrade_state(example_bank(), old, DEFAULT, NOW)
 check("기록과 숙련도를 지킨다", migrated["history"] == old["history"] and migrated["dimensions"] == old["dimensions"])
 check("남은 보충에 상한", migrated["remediations"][0]["remaining"] == DEFAULT["remediation"]["maxReviews"])
 check("내주던 문항을 거둔다", migrated["served"] is None and old["served"]["question_id"] == "Q2")
+
+print("개념 지도")
+bank = example_bank()
+bank["concepts"][0]["related_concepts"] = ["C1", "C9"]  # 자기 자신 · 없는 개념
+bank["retrieval_plan"][0]["directions"].append("trap")  # 계획엔 있고 문항은 없는 방향
+fresh = concept_map(bank, empty_state())
+check("개념마다 한 줄", [c["concept_id"] for c in fresh] == ["C1"])
+check("방향은 문항이 있는 것만 · direct 가 먼저", [d["direction"] for d in fresh[0]["directions"]]
+      == ["direct", "reverse", "integration"], fresh[0]["directions"])
+check("목표는 정책 상한을 씌운 값", all(d["target"] == target_for(bank, bank["questions"][0])["effective"]
+                                    for d in fresh[0]["directions"]))
+check("처음엔 숙련도 0 · 진척 0", fresh[0]["progress"] == 0 and all(d["mastery"] == 0 for d in fresh[0]["directions"]))
+check("관련 개념은 있는 것만, 자기 자신은 빼고", fresh[0]["related_concepts"] == [])
+studied = record_review(bank, empty_state(), "Q1", "Good", NOW)
+after = {d["direction"]: d for d in concept_map(bank, studied)[0]["directions"]}
+check("푼 방향만 오른다", after["direct"]["mastery"] > 0 and after["direct"]["reviews"] == 1
+      and after["reverse"]["mastery"] == 0, after)
+check("진척은 목표 대비 평균", abs(concept_map(bank, studied)[0]["progress"]
+                              - min(after["direct"]["mastery"] / after["direct"]["target"], 1) / 3) < 1e-9)
 
 print("정책 검사")
 changes = [lambda p: p["mastery"].__setitem__("alpha", 2), lambda p: p["mastery"].__setitem__("maxTarget", 1),

@@ -5,7 +5,7 @@
              GET|PUT /api/admin/bank-feedback                 학생 신고 — 편을 가로질러 문항별로 · 상태
     러너     GET  /api/admin/lectures/{s}/{r}/bank-response   원문 + 자료 목록
              PUT  /api/admin/lectures/{s}/{r}/bank            정리·검증·검토 결과
-    학생     GET  /api/lectures/{s}/{r}/bank                  요약 · 현재 회차
+    학생     GET  /api/lectures/{s}/{r}/bank                  요약 · 현재 회차 · 개념 지도
              POST /api/lectures/{s}/{r}/bank/session/start|end · next · reveal · rate · feedback
 
 답·채점 단위는 reveal 전에 안 나간다. 다음 문항은 서버가 고른다(`app/study_engine/`) —
@@ -381,12 +381,15 @@ def read_bank(subject: str, run_id: str, user: CurrentUser = Depends(require_app
     row = _bank_or_404(db, lecture, user)
     out = {"summary": summary(db, lecture, row, is_admin=user.is_admin), "examDate": exam_date_for(db, lecture),
            "sizes": engine.DEFAULT["session"]["sizes"], "defaultSize": engine.DEFAULT["session"]["defaultSize"],
-           "session": None, "previousSessions": []}
+           "session": None, "previousSessions": [], "conceptMap": []}
     if row.bank and (row.validation or {}).get("pass"):
         state = db.get(BankState, (user.id, row.subject, row.run_id))
+        current = state.state if state and state.build_id == row.build_id else engine.empty_state()
         if state and state.build_id == row.build_id:
             out["session"] = engine.session_summary(row.bank, state.state)
             out["previousSessions"] = state.state.get("sessions", [])[-5:]
+        # 개념 지도는 첫 회차 전에도 그린다 — 숙련도가 다 0인 지도가 「무엇을 공부할지」의 답이다.
+        out["conceptMap"] = engine.concept_map(row.bank, current)
     return out
 
 
