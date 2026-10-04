@@ -7,9 +7,9 @@
 
 그래서 여기서는 **경로와 메서드의 목록**만 본다. 응답의 내용은 다른 검사들이 본다.
 
-    server/.venv/Scripts/python.exe -m tests.test_routes_golden
+    server/.venv/Scripts/python.exe -m tests.test_route_contract
 
-목록이 바뀌면 먼저 **왜 바뀌었는지 답하고**, 의도한 것이면 그때 `GOLDEN` 을 고친다.
+목록이 바뀌면 먼저 **왜 바뀌었는지 답하고**, 의도한 것이면 그때 `ROUTES` 를 고친다.
 숫자를 먼저 맞추면 이 검사는 아무것도 안 막는다.
 """
 
@@ -40,7 +40,7 @@ from app.main import app  # noqa: E402
 #
 # 2026-10-04 에 넷이 늘었다 — 공지사항. 읽기 `GET /api/notices` 와 관리자의
 # 쓰기·고치기·지우기(`routes/notices.py`). 운영을 시작하며 관리자가 세우라고 했다.
-GOLDEN = """
+ROUTES = """
 DELETE /api/admin/lectures/{subject}/{run_id}/cards/{kind}/{item_id}
 DELETE /api/admin/notices/{notice_id}
 DELETE /api/lectures/{subject}/{run_id}/mainquiz/attempts
@@ -132,7 +132,7 @@ def current() -> list[str]:
 
 
 def main() -> None:
-    want = sorted(line for line in GOLDEN.strip().split("\n") if line)
+    want = sorted(line for line in ROUTES.strip().split("\n") if line)
     got = current()
     missing = [r for r in want if r not in got]
     extra = [r for r in got if r not in want]

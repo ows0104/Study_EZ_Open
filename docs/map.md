@@ -197,7 +197,7 @@ cloze 6~16장 · 재현 78~91% 로 흔들린다. 만들려던 효과가 그 폭�
 **가로로는 아무도 서로를 안 부른다.** 프론트가 러너를 부르지 않고 땡시가
 quizgen 을 부르지 않는다. 그래서 서버 계약(`openapi`)만 안 바뀌면 한쪽만 고쳐도 된다.
 
-계약을 지키는 자: `server/tests/test_routes_golden.py` — 경로 70줄이 그대로인지 본다.
+계약을 지키는 자: `server/tests/test_route_contract.py` — 경로 70줄이 그대로인지 본다.
 
 ### ③ 파일 — `runs/<편>/` 이 quizgen 과 runner 사이의 계약이다
 
@@ -254,7 +254,7 @@ python scripts/map_numbers.py --check    # 다른 줄만 찍고 1로 끝난다
 서버 경로가 그대로인지는 따로 본다.
 
 ```bash
-cd server && .venv/Scripts/python.exe -m tests.test_routes_golden
+cd server && .venv/Scripts/python.exe -m tests.test_route_contract
 ```
 
 ## 6. 이 지도는 두 곳에 있다

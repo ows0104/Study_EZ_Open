@@ -119,8 +119,8 @@ def module_docs() -> dict[str, int]:
 
 
 def route_count() -> int:
-    p = ROOT / "server" / "tests" / "test_routes_golden.py"
-    m = re.search(r'GOLDEN = """(.*?)"""', p.read_text(encoding="utf-8"), re.S)
+    p = ROOT / "server" / "tests" / "test_route_contract.py"
+    m = re.search(r'ROUTES = """(.*?)"""', p.read_text(encoding="utf-8"), re.S)
     return len([ln for ln in m.group(1).split("\n") if ln.strip()]) if m else -1
 
 
