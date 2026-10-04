@@ -71,6 +71,20 @@ Vite + React + TypeScript. **이 폴더는 화면만 든다** — 파이프라�
 **이용방법은 화면 문구를 옮겨 적은 글이다.** 버튼 이름·단축키·칸의 도형을 고치면
 `GuidePage.tsx` 도 찾아 고친다 — 머리 주석에 어느 파일에서 옮겼는지 적혀 있다.
 
+## Quiz Bank (2026-10-04)
+
+**관리자 지시** — 「파일 직접 넣는 게 귀찮아. 우리 웹사이트에서 연결되게」 · 「공부까지 사이트로」.
+ChatGPT 가 만든 문제은행을 사이트에서 만들고 푼다. Main-Quiz 옆에 나란히 선다.
+
+    src/bank/bankPrompt.md   ChatGPT 에 가는 프롬프트의 **정본**. 머리 주석의 Version 을 올린다
+    src/bank/BankPanel.tsx   캘린더 패널의 칸. 관리자 = 만들기·다시 정리·학생에게 열기
+    src/bank/bankBridge.ts   확장이 가져온 답 본문을 서버에 저장한다(예습 링크와 같은 규칙)
+    src/bank/BankStudy.tsx   /bank/:과목/:run 풀이 창. 형식 여덟 · 슬라이드 여러 장 · 외부지식 검토
+
+**다음 문항을 화면이 고르지 않는다.** 서버의 `app/study_engine/` 이 숙련도·선행 문항·시험까지
+남은 날로 고른다(`POST …/bank/next`). Main-Quiz 의 `queue.ts` 와 다르다 — 고르는 데 쓰는 값이
+다 서버에 있다. **학생에게는 관리자가 연 은행만 보인다**(`open_to_students`).
+
 ## push 하면 이것만 배포된다
 
 Cloudflare Pages 가 `web/` 을 보고 있어서 **프론트는 push 로 저절로 나간다.**

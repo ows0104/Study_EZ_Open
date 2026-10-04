@@ -9,6 +9,11 @@
     권한 · 어디서나 미는 함정       ../CLAUDE.md
     카드를 어떻게 쓰는가            ../quizgen/CLAUDE.md
 
+**Quiz Bank(2026-10-04)도 여기서 돈다** — 일감 `kind=bank` 를 받아 `runner bank` 가 서버에서
+ChatGPT 응답을 받고 `python -m quizbank.run` 으로 정리·검토한 뒤 결과와 인용 쪽 PNG 를 스스로
+올린다(뒤의 publish 를 안 지난다). 쓸기는 올해 필기 옆에 그 편의 족보 조각(.md)을 `jokbo` 로 올린다
+— 관리자가 캘린더에서 「Quiz Bank 만들기」를 누를 때 확장이 그것을 붙인다. `runner/bank.py`.
+
 **이 문서는 규칙과 지금 작동하는 방식만 적는다.** 앞의 넷이 어느 날 무엇 때문에
 생겼는지는 [../docs/runner-cases.md](../docs/runner-cases.md) 의 같은 이름 절에 줄
 그대로 있다(2026-10-03 에 옮겼다). 넷이 같은 모양이다 — **화면에 뜬 0 이나 종료 코드가

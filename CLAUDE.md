@@ -7,6 +7,7 @@
 |---|---|---|
 | 퀴즈 생성 · 프롬프트 | [quizgen/CLAUDE.md](quizgen/CLAUDE.md) | `pytest tests/quizgen` (405개 · 2초) |
 | 파이프라인을 돌리는 쪽 | [runner/CLAUDE.md](runner/CLAUDE.md) | `pytest tests/runner` (317개 · 15초) |
+| Quiz Bank 정리·검토 | [quizbank/CLAUDE.md](quizbank/CLAUDE.md) | `pytest tests/quizbank` (25개 · 1초) |
 | 땡시 (Spotter) | [spotter/CLAUDE.md](spotter/CLAUDE.md) | `pytest tests/spotter` (22개 · 7초) |
 | 사이트 화면 | [web/CLAUDE.md](web/CLAUDE.md) | `cd web && npm run typecheck` |
 | 서버 API | [server/CLAUDE.md](server/CLAUDE.md) | `cd server && .venv/Scripts/python -m tests` |

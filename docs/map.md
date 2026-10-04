@@ -37,6 +37,9 @@
                                           배포 산출물
   web/src/          10,737                **손으로 고치지 마라**
     프론트. studyez.kr
+  quizbank/            770
+    Quiz Bank(2026-10-04). ChatGPT 응답 →
+    정리·검증·외부지식 검토 → 쪽 PNG
   ──────────────────────────────        ──────────────────────────────
   ┌──────────────────────────────────────────────────────────────────┐
   │  server/app/      6,875   FastAPI · Cloud Run                    │
@@ -88,6 +91,12 @@
 | **걸린 카드**를 사이트에서 고친다 | `web/src/cards/CardRow.tsx`(한 장) · `web/src/admin/CardReviewTab.tsx`(편을 가로질러) · `web/src/lecture/LectureCards.tsx`(강의 화면) + `server/app/routes/cards.py` | `-m tests.test_card_edits` |
 | └ 고친 것이 덱(.apkg)에 가는 길 | `runner/site_edits.py` + `quizgen/site_edits.py` + `runner/rebuild.py` | `pytest tests/runner/test_site_edits_sync.py tests/quizgen/test_site_edits.py` |
 | **예습 링크**가 안 붙는다 | `bridge/` + `server/app/preview_links.py` + `web/src/bridge/` | `pytest tests/bridge` (4개) |
+| **Quiz Bank** — 만들기 버튼·풀이 창 | `web/src/bank/` (`BankPanel` · `BankStudy`) + `server/app/routes/bank.py` | `-m tests.test_bank` |
+| ├ ChatGPT 에 가는 프롬프트 | `web/src/bank/bankPrompt.md` ← **정본. 머리 주석의 Version 을 올린다** | |
+| ├ 정리·검증·외부지식 검토 | `quizbank/` (`organize` · `validate` · `review` · `slides`) | `pytest tests/quizbank` |
+| ├ 다음 문항 고르기·숙련도 | `server/app/study_engine/` (`policy.json` 이 수치) | `-m tests.test_study_engine` |
+| ├ 러너가 받아 정리해 올리기 | `runner/bank.py` + `runner/agent.py`(`BANK`) | `pytest tests/runner/test_bank.py` |
+| └ 확장이 답 본문을 가져오기 | `bridge/chatgpt-share.js`(`answerText`) + `bridge/background.js`(`STUDYEZ_BANK_ANSWER`) | `pytest tests/bridge` |
 
 ### 땡시 문항을 고칠 때 — 손으로 고치는 파일은 여섯뿐이다
 
@@ -186,6 +195,10 @@ cloze 6~16장 · 재현 78~91% 로 흔들린다. 만들려던 효과가 그 폭�
 
 전부다. `server/app` 은 `quizgen`·`runner` 를 **하나도 import 하지 않고**, `spotter`
 도 마찬가지다. 나머지 연결은 전부 하위 프로세스(`python -m quizgen.run`)로 간다.
+
+**Quiz Bank(2026-10-04)도 이 선을 안 넘는다.** 러너는 `quizbank` 를 import 하지 않고
+`python -m quizbank.run` 으로, 족보 조각 판정은 `python -m quizgen.slicefor` 로 부른다.
+`quizbank` 도 `quizgen` 을 import 하지 않는다 — 눈먼 `claude -p` 30줄을 따로 둔 이유다.
 
 ### ② HTTP — 전부 서버를 향한다
 

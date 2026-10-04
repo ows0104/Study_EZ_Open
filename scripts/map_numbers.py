@@ -31,7 +31,7 @@ MAP = ROOT / "docs" / "map.md"
 
 # 지도 §1 이 적는 덩이. 이름은 지도에 쓰인 그대로다.
 AREAS = [
-    "quizgen", "runner", "server/app", "web/src",
+    "quizgen", "quizbank", "runner", "server/app", "web/src",
     "spotter/scripts", "spotter/web", "spotter-dist",
     "bridge", "platform", "tests",
 ]

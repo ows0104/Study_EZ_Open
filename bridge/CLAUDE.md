@@ -17,6 +17,11 @@
 검사다.** 확장과 서버가 같은 제공자 목록을 보는지 재기 때문이다 — 갈라지면 링크가
 조용히 안 붙는다.
 
+**Quiz Bank(2026-10-04, 1.2.0)** — `mode: "bank"` 로 연 ChatGPT 탭은 링크가 아니라 **답 본문**을
+돌려준다(`chatgpt-share.js` 의 `answerText` → `STUDYEZ_BANK_ANSWER` → 웹의 `bankReady`). 관리자만 쓰는
+갈래다. **스토어판에는 아직 없다** — 관리자는 압축 해제한 이 폴더를 올리거나 스토어에 새 판을
+낸 뒤에 쓴다. bank 탭의 대화 주소는 예습 링크에 안 붙는다(`background.js`).
+
 확장 zip 은 `web/` 이 싼다(`../web/scripts/pack-extension.mjs`). `npm run dev` 가
 매번 돌리므로 **고친 것이 사이트 개발 서버에는 저절로 반영된다.** 스토어에 올리는
 것은 `build-store-package.ps1` 이고 `audit-store-package.py` 가 그것을 본다.
