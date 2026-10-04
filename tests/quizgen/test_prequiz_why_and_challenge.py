@@ -114,3 +114,43 @@ def test_도전_문제는_태그로도_갈린다():
     c = _card(0, challenge=True)
     assert "도전문제" in tags_of(c, "p251004_01")
     assert "도전문제" not in tags_of(_card(1), "p251004_01")
+
+
+# ── 「왜 냈나」의 재료는 ① 단계가 모은다 ────────────────────────────
+#
+# ② 단계에서 새로 지으면 근거 없는 이유가 끼어든다. ① 단계가 자료를 다 읽은 채로
+# 항목마다 `signals` 를 적고, ② 는 거기서 뽑는다(2026-10-04 관리자와 정했다).
+
+def _must(signals):
+    return {"items": [{"item": f"항목{i}", "reason": "spine", "why": "막힌다",
+                       "slides": [1], "cards": 1, **({"signals": signals} if i == 0 else {})}
+                      for i in range(10)]}
+
+
+def test_항목에_근거를_적을_수_있다():
+    from jsonschema import Draft202012Validator
+
+    from quizgen.prequiz.schema import MUST_KNOW_SCHEMA
+    ok = _must([{"kind": "exam", "detail": "2024·2025 연달아", "ref": "2025-19"},
+                {"kind": "clinical", "detail": "심근경색 진단에 쓴다"}])
+    assert not list(Draft202012Validator(MUST_KNOW_SCHEMA).iter_errors(ok))
+    # 근거가 없는 항목도 된다 — 용어 항목은 비는 것이 보통이다.
+    assert not list(Draft202012Validator(MUST_KNOW_SCHEMA).iter_errors(_must([])))
+    bad = _must([{"kind": "important", "detail": "중요하다"}])
+    assert list(Draft202012Validator(MUST_KNOW_SCHEMA).iter_errors(bad))
+
+
+def test_검토_문서에_근거가_보인다():
+    from quizgen.prequiz.run import render_must
+    doc = render_must(_must([{"kind": "exam", "detail": "2024·2025 연달아", "ref": "2025-19"}]))
+    assert "근거·exam: 2024·2025 연달아 (2025-19)" in doc
+
+
+def test_계약이_왜_냈나를_근거에서_뽑게_한다(tmp_path):
+    from quizgen.prequiz.schema import dump
+    dump(tmp_path)
+    contract = (tmp_path / "contract.md").read_text(encoding="utf-8")
+    assert "`signals` 에서 뽑는다" in contract
+    # 도전 문제는 「어려운 문제」가 아니라 「수업이 답해 줄 질문」이다.
+    assert "수업이 답해 줄 질문" in contract
+    assert "대목에서 풀린다" in contract

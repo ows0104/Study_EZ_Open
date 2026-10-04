@@ -223,6 +223,9 @@ def render_must(must: dict) -> str:
         lines.append(f"   └ {it['why']}")
         if it.get("jokbo_refs"):
             lines.append(f"   └ 기출 {', '.join(it['jokbo_refs'])}")
+        for sig in it.get("signals") or []:
+            ref = f" ({sig['ref']})" if sig.get("ref") else ""
+            lines.append(f"   └ 근거·{sig['kind']}: {sig['detail']}{ref}")
         lines.append("")
     lines.append(f"— 항목 {len(must.get('items', []))}개 · 카드 합계 **{total}장** "
                  f"(계약 {MIN_CARDS}~{MAX_CARDS})")
