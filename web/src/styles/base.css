@@ -2134,38 +2134,6 @@ button.notice-title:hover:not(:disabled) {
   color: var(--ink);
 }
 
-/* 세 단계. 칸으로 세워서 순서가 눈에 먼저 들어오게 한다. */
-.guide-page .guide-flow {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 14px 0 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: flow;
-}
-
-.guide-flow li {
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-3);
-  background: var(--surface);
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.guide-flow li b {
-  display: block;
-  font-size: 15px;
-}
-
-.guide-flow li span {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--ink-3);
-  font-size: 12px;
-}
-
 .guide-marks {
   display: grid;
   gap: 6px;
@@ -2243,7 +2211,225 @@ button.notice-title:hover:not(:disabled) {
     display: none;
   }
 
-  .guide-page .guide-flow {
-    grid-template-columns: 1fr;
+}
+
+/* 공부 흐름 한 장(`GuidePage` 의 `StudyFlow`). 색은 패널의 갈래 색이다.
+ *
+ * 넓을 때는 단계 넷이 가로로 서고 사이에 화살표가 선다. 폰에서는 세로로 쌓이고
+ * 같은 화살표가 아래를 본다 — 화살표를 단계 안이 아니라 사이 칸에 둔 이유다. */
+/* 그림만 글보다 넓게 선다 — 단계 넷이 760px 에서는 한 칸에 170px 이라 접혔다. */
+.guide-page .flow-map {
+  margin: 16px -60px 0;
+}
+
+@media (max-width: 900px) {
+  .guide-page .flow-map {
+    margin-inline: 0;
+  }
+}
+
+.flow-map {
+  margin: 16px 0 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-4);
+  background: var(--surface);
+}
+
+.flow-phases {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18px minmax(0, 0.8fr) 18px minmax(0, 1.15fr) 18px minmax(0, 1fr);
+  align-items: stretch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guide-page .flow-phases li {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.flow-phase {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.flow-when {
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.flow-step {
+  --fam: var(--ink-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, var(--fam) 35%, var(--line));
+  border-left: 3px solid var(--fam);
+  border-radius: var(--r-2);
+  background: color-mix(in srgb, var(--fam) 7%, var(--surface));
+}
+
+.flow-step.is-preview {
+  --fam: var(--fam-preview);
+}
+
+.flow-step.is-pre {
+  --fam: var(--fam-pre);
+}
+
+.flow-step.is-main {
+  --fam: var(--fam-main);
+}
+
+.flow-step.is-exam {
+  --fam: var(--cat-exam);
+}
+
+.flow-step.is-class {
+  border-style: dashed;
+  border-left-style: solid;
+  background: var(--surface-2);
+}
+
+.guide-page .flow-step b {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: color-mix(in srgb, var(--fam) 75%, var(--ink));
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.flow-step > span {
+  color: var(--ink-2);
+}
+
+.flow-step small {
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+/* 칸의 7px 도형을 그대로 키워서 쓴다 — 그림에서 본 모양을 캘린더에서 다시 찾게. */
+.flow-map .chip-slot {
+  display: inline-block;
+  zoom: 1.5;
+  vertical-align: middle;
+}
+
+.flow-step .chip-slot {
+  --cat: var(--fam);
+}
+
+.flow-loop {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 999px;
+  color: var(--fam-main);
+  background: color-mix(in srgb, var(--fam-main) 12%, var(--surface));
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.flow-loop svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.flow-source {
+  margin-top: auto;
+  padding-top: 4px;
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+/* 단계 사이의 화살표. 선 하나와 촉 하나를 그린다. 높이는 첫 상자의 가운데다 —
+ * 단계마다 상자 수가 달라서 칸의 가운데에 두면 빈자리를 가리킨다. */
+.flow-arrow {
+  position: relative;
+}
+
+.flow-arrow::before {
+  position: absolute;
+  top: 52px;
+  left: 3px;
+  right: 3px;
+  height: 1.5px;
+  background: var(--line-strong);
+  content: "";
+}
+
+.flow-arrow::after {
+  position: absolute;
+  top: 48.5px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
+  border-top: 1.5px solid var(--line-strong);
+  border-right: 1.5px solid var(--line-strong);
+  transform: rotate(45deg);
+  content: "";
+}
+
+/* 한 단계 안에서 아래로 이어지는 것(예습 → Pre-Quiz). */
+.flow-down {
+  align-self: center;
+  width: 1.5px;
+  height: 8px;
+  background: var(--line-strong);
+}
+
+.flow-map figcaption {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+@media (max-width: 720px) {
+  .flow-phases {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .flow-arrow {
+    height: 22px;
+  }
+
+  .flow-arrow::before {
+    top: 3px;
+    bottom: 3px;
+    left: calc(50% - 0.75px);
+    right: auto;
+    width: 1.5px;
+    height: auto;
+  }
+
+  .flow-arrow::after {
+    top: auto;
+    bottom: 3px;
+    right: auto;
+    left: calc(50% - 3.5px);
+    transform: rotate(135deg);
+  }
+
+  .flow-source {
+    margin-top: 0;
   }
 }

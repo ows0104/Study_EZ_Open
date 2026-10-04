@@ -9,6 +9,7 @@
  *     패널의 세 덩이            calendar/EventPanel.tsx · PreviewAction.tsx
  *     풀이 단축키               lecture/Quiz.tsx (`onKey`)
  *     모아받기                  bundle/BundleButton.tsx
+ *     공부 흐름 그림의 색        styles/base.css `--fam-*` — 패널의 갈래 색 그대로
  */
 const SECTIONS = [
   ["flow", "한눈에"],
@@ -39,22 +40,9 @@ export function GuidePage() {
         <h2>한눈에</h2>
         <p>
           Study_EZ는 강의 한 편마다 <b>강의 전 예습</b>과 <b>강의 후 복습</b>을 준비해 둡니다. 출발점은 언제나
-          캘린더입니다.
+          캘린더이고, 강의 칸을 누르면 아래 단계들이 같은 색으로 서 있습니다.
         </p>
-        <ol className="guide-flow">
-          <li>
-            <b>예습</b> <span>강의 전</span>
-            작년 필기로 만든 AI 대화를 읽습니다.
-          </li>
-          <li>
-            <b>Pre-Quiz</b> <span>강의 전</span>
-            예습 대화로 만든 문제를 풉니다.
-          </li>
-          <li>
-            <b>Main-Quiz</b> <span>강의 후</span>
-            올해 필기로 만든 문제를 날짜를 두고 반복합니다.
-          </li>
-        </ol>
+        <StudyFlow />
       </section>
 
       <section id="calendar">
@@ -214,5 +202,93 @@ export function GuidePage() {
         </p>
       </section>
     </div>
+  );
+}
+
+/**
+ * 공부 흐름 한 장(2026-10-04 관리자 — 「이용방법에는 우리의 공부 Flow를
+ * 도식화해서 넣어줘.」).
+ *
+ * **색은 패널의 갈래 색을 그대로 쓴다**(예습 violet · Pre-Quiz teal · Main-Quiz
+ * indigo). 그림에서 본 색을 패널에서 다시 만나야 그림이 지도가 된다. 칸의
+ * ○ □ 도 같은 이유로 그림 안에 넣었다.
+ *
+ * 넓은 화면에서는 왼쪽에서 오른쪽으로, 폰에서는 위에서 아래로 흐른다 — 화살표가
+ * 같이 돈다(`.flow-arrow`).
+ */
+function StudyFlow() {
+  return (
+    <figure className="flow-map">
+      <ol className="flow-phases">
+        <li className="flow-phase">
+          <span className="flow-when">강의 전</span>
+          <div className="flow-step is-preview">
+            <b>예습</b>
+            <span>AI 대화를 읽는다</span>
+            <small>기본 링크 · 개인 링크</small>
+          </div>
+          <span className="flow-down" aria-hidden="true" />
+          <div className="flow-step is-pre">
+            <b>
+              Pre-Quiz <i className="chip-slot is-pre is-ready" aria-label="칸의 동그라미" />
+            </b>
+            <span>예습 대화로 만든 문제</span>
+            <small>웹에서 풀기 · 덱</small>
+          </div>
+          <span className="flow-source">재료 · 작년 필기</span>
+        </li>
+
+        <li className="flow-arrow" aria-hidden="true" />
+
+        <li className="flow-phase">
+          <span className="flow-when">수업</span>
+          <div className="flow-step is-class">
+            <b>강의</b>
+            <span>수업을 듣는다</span>
+          </div>
+          <span className="flow-source">올해 필기가 올라오면 Main-Quiz가 만들어진다</span>
+        </li>
+
+        <li className="flow-arrow" aria-hidden="true" />
+
+        <li className="flow-phase">
+          <span className="flow-when">강의 후 · 매일</span>
+          <div className="flow-step is-main">
+            <b>
+              Main-Quiz <i className="chip-slot is-main is-ready" aria-label="칸의 네모" />
+            </b>
+            <span>올해 필기로 만든 문제</span>
+            <small>웹에서 풀기 · 덱</small>
+            <span className="flow-loop">
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M13 8a5 5 0 1 1-1.6-3.7" />
+                <path d="M11.8 1.8v2.8H9" />
+              </svg>
+              오늘 낼 카드만 · 잊을 때쯤 다시
+            </span>
+          </div>
+          <span className="flow-source">재료 · 올해 필기</span>
+        </li>
+
+        <li className="flow-arrow" aria-hidden="true" />
+
+        <li className="flow-phase">
+          <span className="flow-when">시험 전</span>
+          <div className="flow-step is-exam">
+            <b>몰아보기</b>
+            <span>일정과 상관없이 한 바퀴</span>
+          </div>
+          <span className="flow-down" aria-hidden="true" />
+          <div className="flow-step is-exam">
+            <b>블럭 덱</b>
+            <span>지금까지 나온 덱을 한 파일로</span>
+          </div>
+        </li>
+      </ol>
+      <figcaption>
+        캘린더 칸의 <i className="chip-slot is-pre is-ready" /> 는 Pre-Quiz, <i className="chip-slot is-main is-ready" /> 는
+        Main-Quiz 자리입니다. 웹에서 풀든 덱으로 Anki에서 풀든 같은 문제입니다.
+      </figcaption>
+    </figure>
   );
 }
