@@ -12,6 +12,7 @@ from app.routes import (
     lectures,
     local_storage,
     me,
+    notices,
     prequiz,
     prequiz_jobs,
     spotter,
@@ -62,6 +63,9 @@ app.include_router(prequiz_jobs.router, prefix="/api/admin")
 app.include_router(usage.router, prefix="/api/admin")
 # 걸린 카드를 사이트에서 고친다(2026-09-23). 붙는 자리는 같다.
 app.include_router(cards.router, prefix="/api/admin")
+# 공지사항(2026-10-04). 읽기는 `/api`, 쓰기는 `/api/admin` — 한 파일에 둘이다.
+app.include_router(notices.router, prefix="/api")
+app.include_router(notices.admin_router, prefix="/api/admin")
 # 기생충학 땡시. **승인 게이트를 안 지난다** — 가입하면 열린다.
 # 이유는 `routes/spotter/__init__.py` 첫머리에 있다.
 app.include_router(spotter.router, prefix="/api")

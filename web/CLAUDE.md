@@ -59,6 +59,18 @@ Vite + React + TypeScript. **이 폴더는 화면만 든다** — 파이프라�
 `src/supabase.ts` 가 `../platform/session/session.js` 를 import 한다. 저장소에서
 둘이 정말 같이 쓰는 파일은 그것 하나다(땡시는 사본을 쓴다 — `../spotter/CLAUDE.md`).
 
+## 공지사항 · 이용방법 (2026-10-04)
+
+**관리자 지시** — 「슬슬 운영을 시작해서 공지사항하고 이용방법 탭을 만들어야할 것
+같아.」 머리줄의 탭이 「관리」 하나에서 셋이 됐다.
+
+    src/notices/NoticesPage.tsx   공지. 관리자는 같은 화면에서 쓰고 고치고 지운다
+    src/notices/GuidePage.tsx     이용방법. **화면에 박은 고정 글이다**
+    src/notices/seen.ts           「새 공지」 점 — 이 브라우저가 본 마지막 번호
+
+**이용방법은 화면 문구를 옮겨 적은 글이다.** 버튼 이름·단축키·칸의 도형을 고치면
+`GuidePage.tsx` 도 찾아 고친다 — 머리 주석에 어느 파일에서 옮겼는지 적혀 있다.
+
 ## push 하면 이것만 배포된다
 
 Cloudflare Pages 가 `web/` 을 보고 있어서 **프론트는 push 로 저절로 나간다.**

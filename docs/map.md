@@ -72,7 +72,8 @@
 | ├ 복습 간격·되돌리기 | `server/app/srs.py` + `web/src/lecture/queue.ts` | `-m tests.test_srs` |
 | ├ 색·여백 | `web/src/styles/` (3,622줄) | |
 | ├ 덱 모아받기 | `web/src/bundle/` + `server/app/routes/bundles.py` | `-m tests.test_bundles` |
-| └ 덱 만드는 진행 | `web/src/calendar/DeckSlot.tsx` + `web/src/jobProgress.ts` + `server/app/routes/prequiz_jobs.py` | `-m tests.test_deck_watch` |
+| ├ 덱 만드는 진행 | `web/src/calendar/DeckSlot.tsx` + `web/src/jobProgress.ts` + `server/app/routes/prequiz_jobs.py` | `-m tests.test_deck_watch` |
+| └ 공지사항 · 이용방법 | `web/src/notices/` + `server/app/routes/notices.py` | `-m tests.test_notices` |
 | **퀴즈 생성**을 바꾼다 | `quizgen/` + `tests/quizgen/` | `pytest tests/quizgen` (405개·2초) |
 | ├ 카드를 어떻게 쓰는가 | `quizgen/prompts/` ← **여기가 대부분이다. §2-1** | `quizgen.judge` |
 | ├ 단계 순서·재시도 | `quizgen/run.py` (662줄) | |

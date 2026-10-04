@@ -1007,3 +1007,25 @@ class AppGrant(Base):
     granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     __table_args__ = (Index("ix_app_grant_app", "app", "role"),)
+
+
+class Notice(Base):
+    """공지사항. 관리자가 사이트에서 쓰고 승인된 사람이 읽는다.
+
+    2026-10-04 관리자 — 「슬슬 운영을 시작해서 공지사항하고 이용방법 탭을
+    만들어야할 것 같아.」 이용방법은 고정 문서라 화면에 박았고(`web/src/GuidePage.tsx`),
+    공지는 쓸 때마다 코드를 고치고 밀 일이 아니라서 표로 세웠다.
+
+    **고정(`pinned`)은 목록 맨 위에 붙이는 것뿐이다.** 읽음 표시는 서버에 두지
+    않는다 — 브라우저가 마지막으로 본 공지 번호를 들고 「새 글」 점만 찍는다.
+    """
+
+    __tablename__ = "notice"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_by: Mapped[str] = mapped_column(String(320), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)

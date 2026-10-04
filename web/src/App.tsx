@@ -1,9 +1,11 @@
-import { Suspense, lazy, useEffect, useState } from "react";
-import { BrowserRouter, Link, Route, Routes, useLocation } from "react-router-dom";
+import { Suspense, lazy, useCallback, useEffect, useState } from "react";
+import { BrowserRouter, Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
+import { api } from "./api";
 import { AuthProvider, LoginPage, PendingApproval, useAuth } from "./auth";
 import { CalendarPage } from "./calendar/CalendarPage";
 import { getMe, resetFirstScreen, startFirstScreen } from "./firstScreen";
-import type { Me } from "./types";
+import { seenNotice } from "./notices/seen";
+import type { Me, Notice } from "./types";
 
 /**
  * 캘린더만 첫 번들에 둔다.
@@ -18,6 +20,12 @@ const LecturePage = lazy(() => import("./lecture/LecturePage").then((m) => ({ de
 const QuizPage = lazy(() => import("./lecture/QuizPage").then((m) => ({ default: m.QuizPage })));
 const AdminPage = lazy(() => import("./admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 const PrivacyPage = lazy(() => import("./PrivacyPage").then((m) => ({ default: m.PrivacyPage })));
+// 공지·이용방법(2026-10-04). 둘 다 가끔 여는 글이라 첫 번들에 안 싣는다.
+const NoticesPage = lazy(() => import("./notices/NoticesPage").then((m) => ({ default: m.NoticesPage })));
+const GuidePage = lazy(() => import("./notices/GuidePage").then((m) => ({ default: m.GuidePage })));
+
+/** 고른 탭에 표시를 남긴다. NavLink 기본값(`active`)은 이 앱의 이름이 아니다. */
+const tabClass = ({ isActive }: { isActive: boolean }) => (isActive ? "is-active" : "");
 
 const Loading = <p className="notice">불러오는 중…</p>;
 
@@ -26,6 +34,9 @@ function Shell() {
   const location = useLocation();
   const [me, setMe] = useState<Me | null>(null);
   const [meError, setMeError] = useState("");
+  // 이 브라우저가 아직 안 본 공지가 있는가 — 머리줄 「공지사항」 옆의 점.
+  const [unseenNotice, setUnseenNotice] = useState(false);
+  const onNoticeSeen = useCallback(() => setUnseenNotice(false), []);
 
   useEffect(() => {
     if (!session) {
@@ -41,6 +52,16 @@ function Shell() {
       .then(setMe)
       .catch((cause: Error) => setMeError(cause.message));
   }, [session]);
+
+  // **첫 화면을 기다리게 하지 않는다.** 캘린더가 `me` 와 시간표를 받고 선 뒤에
+  // 따로 묻는다. 실패해도 점이 안 찍힐 뿐이다.
+  const approved = Boolean(me?.isApproved);
+  useEffect(() => {
+    if (!approved) return;
+    api<Notice[]>("/api/notices")
+      .then((rows) => setUnseenNotice(rows.some((row) => row.id > seenNotice())))
+      .catch(() => {});
+  }, [approved]);
 
   // 개인정보처리방침은 로그인이나 관리자 승인 없이 심사팀과 사용자 모두가
   // 항상 열 수 있어야 한다. Hook 호출 뒤에 갈라야 경로 전환 때 호출 순서도 같다.
@@ -78,10 +99,25 @@ function Shell() {
           <Link className="app-brand" to="/">
             Study_EZ
           </Link>
-          <nav>{me.isAdmin ? <Link to="/admin">관리</Link> : null}</nav>
+          <nav>
+            <NavLink to="/notices" className={tabClass}>
+              공지사항
+              {unseenNotice ? <i className="nav-dot" aria-label="새 공지" /> : null}
+            </NavLink>
+            <NavLink to="/guide" className={tabClass}>
+              이용방법
+            </NavLink>
+            {me.isAdmin ? (
+              <NavLink to="/admin" className={tabClass}>
+                관리
+              </NavLink>
+            ) : null}
+          </nav>
           <span className="app-user">
-            {me.email || email}
-            <button className="is-quiet" onClick={signOut}>
+            {/* 폰에서는 이메일을 접는다 — 탭이 셋이 되면서 375px 에 다 안 들어간다.
+                누구로 들어와 있는지는 로그아웃 버튼의 title 이 말한다. */}
+            <span className="app-email">{me.email || email}</span>
+            <button className="is-quiet" onClick={signOut} title={`${me.email || email} 로그아웃`}>
               로그아웃
             </button>
           </span>
@@ -98,6 +134,8 @@ function Shell() {
             <Route path="/lectures/:subject/:runId" element={<LecturePage />} />
             {/* 갈래마다 주소가 따로다. 창 이름도 갈래를 물고 있어서
                 (`links.quizWindow`) 예습 창과 복습 창이 서로를 안 밀어낸다. */}
+            <Route path="/notices" element={<NoticesPage isAdmin={me.isAdmin} onSeen={onNoticeSeen} />} />
+            <Route path="/guide" element={<GuidePage />} />
             <Route path="/prequiz/:subject/:runId" element={<QuizPage kind="pre" />} />
             <Route path="/mainquiz/:subject/:runId" element={<QuizPage kind="main" />} />
             {/* 관리 화면은 탭을 갈래로 들고 있다(`/admin/match` 등). 그 갈래는

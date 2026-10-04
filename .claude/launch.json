@@ -8,6 +8,13 @@
       "port": 5173
     },
     {
+      "_note": "5173이 다른 것에 물려 있을 때 쓰는 두 번째 자리. 프록시는 같은 8000으로 간다.",
+      "name": "web-5174",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "web", "--", "--port", "5174", "--strictPort"],
+      "port": 5174
+    },
+    {
       "_note": "로컬 전용 API. 이것 없이는 `web` 이 빈 화면이다 — 프록시가 8000으로 간다. **환경을 명령줄에 박는 것은 `server/.env` 가 프로덕션이기 때문이다**(server/CLAUDE.md): 그냥 띄우면 운영 DB 를 읽는다. DB 와 저장소는 .gitignore 안의 local_test_data/ 이고, 통하는 토큰은 `local-test-token` 하나다(배포 서버에서는 안 통한다).",
       "name": "api-local-test",
       "runtimeExecutable": "cmd",

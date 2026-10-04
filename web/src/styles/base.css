@@ -1870,3 +1870,380 @@ button.resource.is-download:hover:not(:disabled)::after {
   border-color: var(--accent-line);
   box-shadow: var(--ring);
 }
+
+/* ------------------------------------------------------------ 공지 · 이용방법 */
+
+/* 머리줄의 탭. 고른 탭은 글자만 진하게 — 탭 셋이 다 글자뿐이라 바탕까지 깔면
+ * 이 줄에서 그것만 버튼처럼 떠 보인다. */
+.app-bar nav a.is-active {
+  color: var(--ink);
+  background: var(--surface-3);
+}
+
+.app-bar nav a {
+  position: relative;
+  white-space: nowrap;
+}
+
+/* 이 브라우저가 아직 안 본 공지가 있다(`notices/seen.ts`). */
+.nav-dot {
+  position: absolute;
+  top: 4px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.doc-page {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.doc-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 0 20px;
+}
+
+.doc-head h1 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+
+.doc-empty {
+  padding: 40px 0;
+  color: var(--ink-3);
+  font-size: 14px;
+  text-align: center;
+}
+
+.notice-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+
+.notice-list > li {
+  border-bottom: 1px solid var(--line);
+}
+
+.notice-item.is-pinned {
+  background: var(--surface-2);
+}
+
+/* 줄 전체가 누르는 자리다. 버튼 기본 모양(테두리·가운데 정렬)을 걷는다. */
+button.notice-title {
+  display: flex;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 10px;
+  gap: 8px;
+  justify-content: flex-start;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  text-align: left;
+}
+
+button.notice-title:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.notice-title .badge {
+  margin: 0;
+  border-color: var(--accent-line);
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+
+.notice-title strong {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.notice-title time {
+  flex: none;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.notice-body {
+  padding: 2px 10px 16px;
+}
+
+.notice-text {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.notice-text a {
+  color: var(--accent-ink);
+  text-decoration: underline;
+}
+
+.notice-admin {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.notice-admin small {
+  margin-right: auto;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.notice-editor {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 14px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-3);
+  background: var(--surface);
+}
+
+.notice-list .notice-editor {
+  margin: 10px 0;
+}
+
+.notice-editor input {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.notice-editor textarea {
+  min-height: 160px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  color: inherit;
+  background: var(--surface);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.notice-editor textarea:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+
+.notice-editor-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.notice-pin {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  margin-right: auto;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.notice-pin input {
+  min-height: 0;
+}
+
+/* 이용방법. 정책 문서와 같은 읽는 글이다. */
+.guide-page section {
+  padding: 4px 0 8px;
+  scroll-margin-top: 64px;
+}
+
+.guide-page h2 {
+  margin: 28px 0 10px;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.guide-page p,
+.guide-page li,
+.guide-page dd,
+.guide-page td {
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.guide-page b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.guide-page ul,
+.guide-page ol {
+  padding-left: 20px;
+}
+
+.guide-page a {
+  color: var(--accent-ink);
+  text-decoration: underline;
+}
+
+.guide-page code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface-3);
+  font-size: 12px;
+}
+
+.guide-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.guide-page .guide-toc a {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.guide-page .guide-toc a:hover {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+/* 세 단계. 칸으로 세워서 순서가 눈에 먼저 들어오게 한다. */
+.guide-page .guide-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: flow;
+}
+
+.guide-flow li {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  background: var(--surface);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.guide-flow li b {
+  display: block;
+  font-size: 15px;
+}
+
+.guide-flow li span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.guide-marks {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+}
+
+.guide-marks > div {
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+}
+
+/* 칸의 7px 도형을 그대로 쓰되 크게 — 글 옆에서는 7px이 안 읽힌다. */
+.guide-marks dt {
+  display: flex;
+  flex: none;
+  gap: 5px;
+  width: 44px;
+  justify-content: center;
+  zoom: 1.7;
+}
+
+.guide-marks dd {
+  margin: 0;
+}
+
+.guide-keys {
+  margin: 12px 0;
+  border-collapse: collapse;
+}
+
+.guide-keys th,
+.guide-keys td {
+  padding: 6px 14px 6px 0;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.guide-keys th {
+  white-space: nowrap;
+}
+
+.guide-keys kbd {
+  display: inline-block;
+  min-width: 20px;
+  padding: 1px 6px;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  color: var(--ink);
+  background: var(--surface);
+  font-family: inherit;
+  font-size: 12px;
+  text-align: center;
+}
+
+.guide-note {
+  padding: 10px 12px;
+  border-radius: var(--r-2);
+  background: var(--surface-2);
+}
+
+@media (max-width: 560px) {
+  .app-bar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .app-bar nav a {
+    padding: 5px 6px;
+  }
+
+  .app-email {
+    display: none;
+  }
+
+  .guide-page .guide-flow {
+    grid-template-columns: 1fr;
+  }
+}

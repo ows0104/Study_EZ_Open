@@ -37,8 +37,12 @@ from app.main import app  # noqa: E402
 #
 # 2026-09-24 에 하나가 늘었다 — `POST …/prequiz-jobs/{job_id}/choose`. 러너가 만들기
 # 전에 전략을 물으면 관리자가 거기서 고른다(표시해 둔 편만 묻는다).
+#
+# 2026-10-04 에 넷이 늘었다 — 공지사항. 읽기 `GET /api/notices` 와 관리자의
+# 쓰기·고치기·지우기(`routes/notices.py`). 운영을 시작하며 관리자가 세우라고 했다.
 GOLDEN = """
 DELETE /api/admin/lectures/{subject}/{run_id}/cards/{kind}/{item_id}
+DELETE /api/admin/notices/{notice_id}
 DELETE /api/lectures/{subject}/{run_id}/mainquiz/attempts
 DELETE /api/lectures/{subject}/{run_id}/prequiz/attempts
 DELETE /api/spotter/comments/{comment_id}
@@ -64,6 +68,7 @@ GET /api/lectures/{subject}/{run_id}/prequiz
 GET /api/local-storage/{object_key}
 GET /api/me
 GET /api/me/preview-prompt
+GET /api/notices
 GET /api/spotter/admin/reports
 GET /api/spotter/admin/subjects/{subject}/manifest
 GET /api/spotter/db
@@ -77,6 +82,7 @@ GET /api/timetable
 PATCH /api/spotter/admin/reports/{report_id}
 PATCH /api/spotter/admin/threads/{kind}/{subject}
 POST /api/admin/lectures
+POST /api/admin/notices
 POST /api/admin/lectures/{subject}/{run_id}/prequiz-job
 POST /api/admin/lectures/{subject}/{run_id}/uploads
 POST /api/admin/lectures/{subject}/{run_id}/uploads/complete
@@ -109,6 +115,7 @@ PUT /api/admin/lectures/{subject}/{run_id}/pre-items
 PUT /api/admin/lectures/{subject}/{run_id}/preview
 PUT /api/admin/lectures/{subject}/{run_id}/run-meta/{quiz_kind}
 PUT /api/admin/lectures/{subject}/{run_id}/waive
+PUT /api/admin/notices/{notice_id}
 PUT /api/admin/prequiz-jobs/{job_id}
 PUT /api/admin/users/{user_id}/approval
 PUT /api/lectures/{subject}/{run_id}/my-preview
