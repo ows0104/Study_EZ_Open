@@ -128,7 +128,7 @@ function BankStart({ base, info, finished, lecture, onStarted }: {
         </p>
       ) : null}
       {error ? <p className="notice is-error">{error}</p> : null}
-      {info.conceptMap.length ? <ConceptMap concepts={info.conceptMap} /> : null}
+      {info.conceptMap?.length ? <ConceptMap concepts={info.conceptMap} /> : null}
     </div>
   );
 }

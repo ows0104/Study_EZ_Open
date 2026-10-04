@@ -790,8 +790,11 @@ export type BankRead = {
   defaultSize: number;
   session: BankSession | null;
   previousSessions: BankSession[];
-  /** 개념 지도. 첫 회차 전에도 온다(숙련도가 다 0). 계산은 서버 엔진(`concept_map`)이 한다. */
-  conceptMap: BankConcept[];
+  /**
+   * 개념 지도. 첫 회차 전에도 온다(숙련도가 다 0). 계산은 서버 엔진(`concept_map`)이 한다.
+   * **없을 수 있다** — 푸시는 화면만 내고 API 는 손으로 올려서, 이 칸이 없는 API 가 뜬 채일 때가 있다.
+   */
+  conceptMap?: BankConcept[];
 };
 
 /** 개념 하나와 이 사람의 방향별 숙련도. 방향은 문항이 있는 것만 온다. */
