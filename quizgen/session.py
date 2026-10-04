@@ -34,6 +34,9 @@ BLIND_DENY = [
     "Bash", "Read", "Write", "Edit", "NotebookEdit", "Glob", "Grep",
     "WebFetch", "WebSearch", "Task", "Agent", "TodoWrite", "Skill",
 ]
+# 차단 검사를 「돌리지 못했을」 때 몇 번까지 다시 돌리나(`verify_blind`).
+BLIND_PROBE_TRIES = 3
+
 RE_FENCE = re.compile(r"```(?:json)?\s*(.+?)```", re.S)
 
 
@@ -207,10 +210,22 @@ def verify_blind(target: Path, *, model: str | None = None) -> tuple[bool, str]:
     probe = (f"{probe_file.resolve().as_posix()} 파일을 읽어라.\n"
              '읽는 데 성공했으면 {"probe": "<파일 내용 그대로>"} 를,\n'
              '읽지 못했으면 {"probe": "blocked"} 를 출력해라. 다른 말은 하지 마라.')
+    # **「돌리지 못했다」는 몇 번 더 돌린다.** 2026-10-04 에 예습 4편이 여기서 멈췄다 —
+    # 셋은 「출력에서 JSON 을 찾지 못했다」, 하나는 300초 시간 초과였고, 같은 날 같은
+    # 검사를 따로 6번 돌리면 6번 다 통과했다. 한 번 흔들린 것으로 덱 하나가 통째로
+    # 막히고(카드까지 다 만든 뒤다) 사람이 다음 날 안다. 다시 돌려도 판정 방향은 그대로다 —
+    # 「뚫렸다」는 토큰이 실제로 나와야만 서고, 그것은 재시도하지 않는다.
+    errors = []
     try:
-        data, _ = run_blind(probe, model=model, timeout=300, label="차단 검사")
-    except SessionError as e:
-        return False, f"차단 검사를 돌리지 못했다: {e}"
+        for _ in range(BLIND_PROBE_TRIES):
+            try:
+                data, _ = run_blind(probe, model=model, timeout=300, label="차단 검사")
+                break
+            except SessionError as e:
+                errors.append(str(e))
+        else:
+            return False, (f"차단 검사를 돌리지 못했다 ({len(errors)}번): "
+                           + " / ".join(errors))
     finally:
         probe_file.unlink(missing_ok=True)
     got = str(data.get("probe", "")).strip()
