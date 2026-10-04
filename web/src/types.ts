@@ -314,8 +314,10 @@ export type QuizItem = {
    * 그 전에 만든 카드·복습 카드·옛 서버는 비거나 없다.
    */
   whyAsked?: string;
-  /** 도전 문제 — 중요하지만 어려운 것. 덱마다 두 장까지. */
+  /** 도전 문제 — 수업이 답해 줄 질문. 덱마다 두 장까지. */
   challenge?: boolean;
+  /** 「왜 냈나」의 유형 — exam·clinical·later·annotation·basis. 앞면에 배지로 뜬다. */
+  whyTags?: string[];
   attempt: QuizSchedule | null;
 };
 

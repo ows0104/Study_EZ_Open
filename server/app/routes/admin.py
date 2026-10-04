@@ -302,6 +302,7 @@ class PreItemIn(BaseModel):
     # 2026-10-04 전 러너는 안 보낸다. 예습만 채운다.
     why_asked: str = ""
     challenge: bool = False
+    why_tags: list[str] = Field(default_factory=list)
 
 
 class PreItemsIn(BaseModel):
@@ -351,6 +352,7 @@ def _put_items(
             flags=item.flags,
             why_asked=item.why_asked,
             challenge=item.challenge,
+            why_tags=item.why_tags,
         )
         edit = edits.get(item.id)
         if edit is not None:

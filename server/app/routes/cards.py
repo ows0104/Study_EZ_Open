@@ -90,6 +90,7 @@ def plain_stem(source: str) -> str:
 _CARD_FIELDS = (
     "qtype", "stem", "source_stem", "answer", "focus", "card_type", "exam_hit", "slide_no",
     "source_type", "source_anchor", "explanation", "flags", "why_asked", "challenge",
+    "why_tags",
 )
 # 이 칸이 같으면 같은 카드다. `flags` 는 뺀다 — `reflag` 가 표시만 바꿔 다시
 # 올리는 일이 흔하고, 그때 사람의 판정까지 날아가면 안 된다.

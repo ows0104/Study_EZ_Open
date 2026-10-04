@@ -795,6 +795,7 @@ def _web_items(cards: list[dict]) -> list[dict]:
             # 예습만 쓴다(2026-10-04). 왜 이 문제를 냈나 · 도전 문제인가 — 앞면에 뜬다.
             # 복습 카드와 그 전에 만든 예습 카드에는 없으므로 빈 값이 간다.
             "why_asked": card.get("why_asked") or "",
+            "why_tags": list(card.get("why_tags") or []),
             "challenge": bool(card.get("challenge")),
         })
     return items

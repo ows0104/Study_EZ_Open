@@ -546,17 +546,43 @@ const FOCUS_LABEL: Record<string, string> = {
  */
 function WhyAsked({ item }: { item: QuizItem }) {
   const why = item.whyAsked?.trim();
-  if (!why && !item.challenge) return null;
+  const tags = whyTags(item);
+  if (!why && !item.challenge && !tags.length) return null;
   return (
     <p className="quiz-why">
       {item.challenge ? <span className="badge is-challenge">도전 문제</span> : null}
+      {tags.map((tag) => (
+        <span key={tag} className={`badge why-${tag}`}>
+          {WHY_TAG_LABEL[tag]}
+        </span>
+      ))}
       {why ? <span>{why}</span> : null}
     </p>
   );
 }
 
+/**
+ * 「왜 냈나」의 유형 배지(2026-10-04 관리자 — 「유형별로 정리해서 뱃지를」).
+ *
+ * **파이프라인의 `quizgen/prequiz/schema.py` 의 `WHY_TAG_LABEL` 과 같아야 한다** —
+ * 화면은 그 폴더를 모른다. 바꾸면 둘 다 바꾼다. 모르는 값은 그리지 않는다.
+ */
+const WHY_TAG_LABEL: Record<string, string> = {
+  exam: "기출",
+  clinical: "임상",
+  later: "또 나옴",
+  annotation: "필기 강조",
+  basis: "기본 개념",
+};
+
+function whyTags(item: QuizItem): string[] {
+  return (item.whyTags ?? []).filter((tag) => tag in WHY_TAG_LABEL);
+}
+
 function FocusBadge({ item }: { item: QuizItem }) {
-  const label = FOCUS_LABEL[item.focus];
+  // 「왜 냈나」 배지가 있는 카드는 그쪽이 이유를 말한다. 여기서 또 말하면 이유가
+  // 진행 줄과 질문 위 두 곳에 갈라져 선다.
+  const label = whyTags(item).length ? undefined : FOCUS_LABEL[item.focus];
   const state = stateOf(item);
   // 잊어서 돌아온 카드는 그것을 말한다. 안키가 빨강으로 말하는 자리다 —
   // 같은 카드가 왜 또 나왔는지 알 수 있어야 한다.

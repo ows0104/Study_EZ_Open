@@ -97,7 +97,7 @@ def test_도전_문제가_넘치면_계약_위반이다():
 
 def test_새_표시는_전부_사람이_읽을_말이_있다():
     for f in ("missing_why_asked", "answer_leaked_in_why", "why_asked_too_long",
-              "why_cites_exam_without_ref"):
+              "why_cites_exam_without_ref", "missing_why_tags", "why_tag_not_in_signals"):
         assert f in FLAG_LABEL, f
 
 
@@ -153,4 +153,68 @@ def test_계약이_왜_냈나를_근거에서_뽑게_한다(tmp_path):
     assert "`signals` 에서 뽑는다" in contract
     # 도전 문제는 「어려운 문제」가 아니라 「수업이 답해 줄 질문」이다.
     assert "수업이 답해 줄 질문" in contract
-    assert "대목에서 풀린다" in contract
+    # 어디서 풀리는지는 말하되 답을 드러내지 않게 — 슬라이드 제목이 답의 절반을 알려 줬다.
+    assert "답을 드러내지 않게 가리킨다" in contract
+    # 글은 배지를 되풀이하지 않는다 — 기출 이유만 몰리지 않게.
+    assert "글은 배지를 되풀이하지 않는다" in contract
+
+
+# ── 「왜 냈나」의 유형 배지 ───────────────────────────────────────────
+
+def _linked(signals, **card):
+    """승인본 항목 m01 에 근거가 있고, 카드 열둘이 m01..m12 에 붙는다."""
+    must = {"items": [{"id": f"m{i + 1:02d}", "item": f"항목{i}", "reason": "spine",
+                       "why": "막힌다", "slides": [i + 1], "cards": 1,
+                       **({"signals": signals} if i == 0 else {"signals": []})}
+                      for i in range(12)]}
+    cards = [_card(i, must_id=f"m{i + 1:02d}", why_tags=["basis"]) for i in range(12)]
+    cards[0].update(card)
+    return {"cards": cards, "must_know": must}
+
+
+def test_배지가_근거에_있으면_표시가_없다():
+    raw = _linked([{"kind": "clinical", "detail": "진단에 쓴다"}], why_tags=["clinical"])
+    kept, _ = _flags(raw)
+    assert "why_tag_not_in_signals" not in kept[0]["review_flags"]
+    assert "missing_why_tags" not in kept[0]["review_flags"]
+
+
+def test_근거에_없는_배지는_표시가_선다():
+    raw = _linked([{"kind": "clinical", "detail": "진단에 쓴다"}], why_tags=["later"])
+    kept, _ = _flags(raw)
+    assert "why_tag_not_in_signals" in kept[0]["review_flags"]
+
+
+def test_기본_개념_배지는_언제나_된다():
+    kept, _ = _flags(_linked([]))
+    assert all("why_tag_not_in_signals" not in c["review_flags"] for c in kept)
+
+
+def test_기출_배지는_문항이_있어야_한다():
+    raw = _linked([{"kind": "exam", "detail": "2025 기출", "ref": "2025-28"}],
+                  why_tags=["exam"], why_asked="강의 후반 약물 비교가 이것을 기준으로 선다")
+    kept, _ = _flags(raw)
+    assert "why_cites_exam_without_ref" in kept[0]["review_flags"]
+
+
+def test_배지가_없으면_표시가_선다():
+    raw = _linked([], why_tags=[])
+    kept, _ = _flags(raw)
+    assert "missing_why_tags" in kept[0]["review_flags"]
+
+
+def test_근거_칸이_없던_승인본은_배지를_안_잰다():
+    """10-04 전 승인본에는 `signals` 칸이 없다. 재면 모든 배지가 「근거 밖」이 된다."""
+    raw = _linked([], why_tags=["clinical"])
+    for it in raw["must_know"]["items"]:
+        it.pop("signals")
+    kept, _ = _flags(raw)
+    assert "why_tag_not_in_signals" not in kept[0]["review_flags"]
+
+
+def test_앞면에_유형_배지가_붙는다():
+    from quizgen.prequiz.schema import WHY_TAG_LABEL
+    head = why_of({"why_asked": "강의 후반 감별 내내 쓴다", "why_tags": ["exam", "later", "bogus"]})
+    assert '<span class="tag exam">기출</span>' in head
+    assert f'<span class="tag later">{WHY_TAG_LABEL["later"]}</span>' in head
+    assert "bogus" not in head                      # 모르는 값은 안 그린다

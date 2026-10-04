@@ -69,7 +69,8 @@ def main() -> None:
 
     client = TestClient(app)
     items = [
-        an_item("c001", why_asked="심근경색 진단에서 가장 먼저 오르는 표지자다", challenge=True),
+        an_item("c001", why_asked="심근경색 진단에서 가장 먼저 오르는 표지자다", challenge=True,
+                why_tags=["exam", "clinical"]),
         an_item("c002", why_asked="강의 후반 감별 내내 이 축으로 가른다"),
         an_item("c003"),  # 2026-10-04 전 러너 — 두 칸이 없다
     ]
@@ -81,8 +82,10 @@ def main() -> None:
           got["c001"]["whyAsked"] == "심근경색 진단에서 가장 먼저 오르는 표지자다", got["c001"])
     check("도전 문제 표시가 온다",
           (got["c001"]["challenge"], got["c002"]["challenge"]) == (True, False))
+    check("배지 유형이 순서대로 온다", got["c001"]["whyTags"] == ["exam", "clinical"], got["c001"])
     check("두 칸이 없던 문항은 빈 값이다",
-          (got["c003"]["whyAsked"], got["c003"]["challenge"]) == ("", False), got["c003"])
+          (got["c003"]["whyAsked"], got["c003"]["challenge"], got["c003"]["whyTags"])
+          == ("", False, []), got["c003"])
     check("답은 여전히 앞면 목록에 없다", "answer" not in got["c001"], sorted(got["c001"]))
 
     # ── 뺐다가 되돌려도 두 칸이 산다. 되돌리기는 원본 사본에서 칸을 하나씩 옮겨 적는다.
@@ -94,7 +97,8 @@ def main() -> None:
           (gone.status_code, gone.text[:120], back.status_code, back.text[:120]))
     got = {i["itemId"]: i for i in client.get(f"{BASE}/prequiz", headers=USER).json()["items"]}
     check("되돌린 카드가 두 칸을 잃지 않는다",
-          "c001" in got and got["c001"]["challenge"] and got["c001"]["whyAsked"],
+          "c001" in got and got["c001"]["challenge"] and got["c001"]["whyAsked"]
+          and got["c001"]["whyTags"] == ["exam", "clinical"],
           got.get("c001"))
 
     print()

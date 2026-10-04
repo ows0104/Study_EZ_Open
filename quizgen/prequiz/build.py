@@ -49,7 +49,7 @@ from ..build import (
     render_answer,
     verify,
 )
-from .schema import MAX_CARDS, MIN_CARDS
+from .schema import MAX_CARDS, MIN_CARDS, WHY_TAG_LABEL
 
 # ── 노트 모델 — 복습과 뒷면 구조가 다르다 ─────────────────────────
 #
@@ -79,6 +79,14 @@ PRE_CSS = CSS + """
 .why .tag { display: inline-block; margin-right: 6px; padding: 1px 7px; border-radius: 9px;
             background: #eef1f6; color: #4a5568; font-size: 12px; font-weight: 600; }
 .why .tag.challenge { background: #fff1e0; color: #a0521a; }
+.why .tag.exam { background: #fdecec; color: #b42318; }
+.why .tag.clinical { background: #e6f6f2; color: #0f766e; }
+.why .tag.later { background: #edf2fe; color: #3a5bc7; }
+.why .tag.annotation { background: #f3eefe; color: #6d3fc0; }
+.nightMode .why .tag.exam { background: #46201f; color: #f4a3a0; }
+.nightMode .why .tag.clinical { background: #133b36; color: #7fd8c7; }
+.nightMode .why .tag.later { background: #1d2a52; color: #a9bcff; }
+.nightMode .why .tag.annotation { background: #33255a; color: #c9b2fa; }
 .nightMode .why { color: #a8a8a8; }
 .nightMode .why .tag { background: #2e3440; color: #c9d1dc; }
 .nightMode .why .tag.challenge { background: #4a3420; color: #f2c089; }
@@ -143,6 +151,9 @@ def why_of(c: dict) -> str:
     """
     why = (c.get("why_asked") or "").strip()
     tags = '<span class="tag challenge">도전 문제</span>' if c.get("challenge") else ""
+    # 「왜 냈나」의 유형 배지(2026-10-04). 모르는 값은 안 그린다.
+    tags += "".join(f'<span class="tag {t}">{WHY_TAG_LABEL[t]}</span>'
+                    for t in c.get("why_tags") or [] if t in WHY_TAG_LABEL)
     if not why and not tags:
         return ""
     return f'<div class="why">{tags}{html.escape(why)}</div>'
@@ -167,6 +178,7 @@ WARN_MINOR = {
     "missing_bridge_to_lecture": "수업으로 잇는 해설이 없다",
     "answer_leaked_in_why": "「왜 냈나」에 정답 단서가 들어 있을 수 있다",
     "missing_why_asked": "왜 이 문제를 냈는지가 비어 있다",
+    "why_tag_not_in_signals": "「왜 냈나」 배지가 승인된 근거에 없는 유형이다",
 }
 
 WARN_CHORE = {
@@ -175,6 +187,7 @@ WARN_CHORE = {
     "too_many_clozes": "가린 곳이 많다",
     "question_too_long": "질문이 길다",
     "why_asked_too_long": "「왜 냈나」가 길다",
+    "missing_why_tags": "「왜 냈나」의 유형 배지가 없다",
     "off_must": "승인된 must-know 항목 어디에도 안 붙는 카드다",
     "media_on_text_card": "그림이 붙지 않는 형식인데 media 가 있었다 (제거됨)",
     "jokbo_ref_outside_slice": "족보 조각에 없는 연도의 기출이다",

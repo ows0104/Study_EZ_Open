@@ -57,6 +57,7 @@ from .schema import (
     MIN_CARDS,
     OX_SHARE_MAX,
     WHY_CITES_EXAM,
+    WHY_TAGS,
 )
 
 
@@ -239,8 +240,12 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
                 flags[i].append("why_asked_too_long")
             if fmt != "ox" and containment(char_ngrams(a), char_ngrams(why)) >= LEAK_THRESHOLD:
                 flags[i].append("answer_leaked_in_why")
-            if any(w in why for w in WHY_CITES_EXAM) and not c.get("jokbo_ref"):
+            tags = c.get("why_tags") or []
+            cites = any(w in why for w in WHY_CITES_EXAM) or "exam" in tags
+            if cites and not c.get("jokbo_ref"):
                 flags[i].append("why_cites_exam_without_ref")
+            if not tags:
+                flags[i].append("missing_why_tags")
         if len(RE_CLOZE.findall(q)) > MAX_RECALL_ITEMS:
             flags[i].append("too_many_clozes")
         if c["card_type"] == "sequence" or len(RE_BULLET_LINE.findall(a)) >= 2:
@@ -311,6 +316,16 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
         method = "not_written"      # 승인본에는 id 가 있는데 카드가 아무도 안 적었다
     else:
         method = "unlinked"         # 2026-08-30 이전에 만든 편이다. 잴 것이 없다
+
+    # 배지가 근거에서 왔는가(2026-10-04). 항목이 `signals` 칸을 갖고 있을 때만 잰다 —
+    # 그 전에 만든 승인본은 칸이 없어서, 재면 모든 배지가 「근거 밖」으로 찍힌다.
+    for c in kept:
+        it = by_id.get(c.get("must_id") or "")
+        if not it or "signals" not in it:
+            continue
+        have = {s.get("kind") for s in it.get("signals") or []} | {"basis"}
+        if any(t in WHY_TAGS and t not in have for t in c.get("why_tags") or []):
+            flags[c["_idx"]].append("why_tag_not_in_signals")
 
     orphan_objectives, card_budget = [], []
     if method == "must_id":

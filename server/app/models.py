@@ -322,6 +322,9 @@ class _QuizItem:
     # 답이 아니므로 `answer`·`explanation` 과 달리 `reveal` 전에 준다.
     why_asked: Mapped[str] = mapped_column(Text, nullable=False, default="")
     challenge: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # 「왜 냈나」의 유형 — exam·clinical·later·annotation·basis. 앞면에 배지로 뜬다.
+    # 이름표는 화면이 든다(`web/src/lecture/Quiz.tsx`). 모르는 값은 화면이 안 그린다.
+    why_tags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
 
     @declared_attr.directive
     def __table_args__(cls) -> tuple:
