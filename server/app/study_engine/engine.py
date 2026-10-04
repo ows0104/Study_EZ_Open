@@ -1,0 +1,281 @@
+"""다음에 풀 문항을 고르고, 평가로 숙련도를 고친다. **DB 도 시계도 없다** — `now`(ms)를 받는다.
+
+AdaptiveStudy3/study_engine/engine.mjs 를 줄 단위로 옮겼다(2026-10-04). SM-2(`app/srs.py`)와
+다른 점: 카드 하나가 아니라 **개념 × 회상 방향** 마다 숙련도(0–1, EMA)를 두고, 중요도·약점·
+시험까지 남은 날·단계·선행 문항을 곱해 다음 문항을 서버가 고른다.
+
+시각은 시제품과 같이 **epoch 밀리초 정수**다. 학습 상태 JSON 이 시제품과 같은 꼴이어야
+옮겨 온 검사가 같은 값을 낸다.
+"""
+
+from __future__ import annotations
+
+import copy
+from datetime import UTC, datetime, timedelta
+
+from .policy import DEFAULT, policy_hash
+
+DAY_MS = 86_400_000
+KST = timedelta(hours=9)
+_DIRECTION_STAGE = {"reverse": 2, "discrimination": 2, "trap": 2, "mechanism": 3, "sequence": 3, "integration": 4}
+
+
+def empty_state() -> dict:
+    return {"version": 2, "dimensions": {}, "items": {}, "history": [], "remediations": [],
+            "remediation_events": [], "served": None, "session": None, "sessions": []}
+
+
+def dimension_key(q: dict) -> str:
+    return f"{q['concept_id']}:{q['retrieval_direction']}"
+
+
+def mastery(state: dict, q: dict | None) -> float:
+    if not q:
+        return 0
+    return (state["dimensions"].get(dimension_key(q)) or {}).get("mastery", 0)
+
+
+def _average(values: list[float]) -> float:
+    return sum(values) / len(values) if values else 0
+
+
+def _korea_midnight_ms(now: int) -> int:
+    """`now` 가 속한 한국 날짜의 0시."""
+    local = datetime.fromtimestamp(now / 1000, UTC) + KST
+    return int((datetime(local.year, local.month, local.day, tzinfo=UTC) - KST).timestamp() * 1000)
+
+
+def days_until(date: str, now: int) -> int:
+    exam = int((datetime.fromisoformat(date).replace(tzinfo=UTC) - KST).timestamp() * 1000)
+    return round((exam - _korea_midnight_ms(now)) / DAY_MS)
+
+
+def _plan(bank: dict, concept_id: str) -> dict | None:
+    return next((p for p in bank["retrieval_plan"] if p["concept_id"] == concept_id), None)
+
+
+def target_for(bank: dict, q: dict, policy: dict = DEFAULT) -> dict:
+    plan = _plan(bank, q["concept_id"])
+    requested = plan["target_mastery"] if plan else policy["mastery"]["targets"][str(q["importance"])]
+    return {"requested": requested, "effective": min(requested, policy["mastery"]["maxTarget"])}
+
+
+def question_stage(q: dict) -> int:
+    if q["retrieval_direction"] == "direct" or (q["format"] == "ox" and q["item_difficulty"] <= 2):
+        return 1
+    return _DIRECTION_STAGE[q["retrieval_direction"]]
+
+
+def concept_readiness(bank: dict, state: dict, concept_id: str, policy: dict = DEFAULT) -> int:
+    questions = [q for q in bank["questions"] if q["concept_id"] == concept_id]
+    stages = sorted({question_stage(q) for q in questions})
+    ready = stages[0] if stages else 1
+    for stage in stages:
+        ready = stage
+        dims = {dimension_key(q): q for q in questions if question_stage(q) == stage}.values()
+        if stage == 4 or any(mastery(state, q) < policy["progression"]["thresholds"][str(stage)] for q in dims):
+            break
+    return ready
+
+
+def core_mastery(bank: dict, state: dict, concept_id: str | None = None) -> float:
+    by_concept: dict[str, dict[str, float]] = {}
+    for q in bank["questions"]:
+        if q["tier"] == "Core" and (not concept_id or q["concept_id"] == concept_id):
+            by_concept.setdefault(q["concept_id"], {})[q["retrieval_direction"]] = mastery(state, q)
+    return _average([_average(list(ds.values())) for ds in by_concept.values()])
+
+
+def weak_high_core(bank: dict, state: dict, policy: dict = DEFAULT) -> list[dict]:
+    concepts = {c["concept_id"]: c for c in bank["concepts"]}
+    high = policy["progression"]["highImportance"]
+    return [q for q in bank["questions"]
+            if q["tier"] == "Core"
+            and max(q["importance"], (concepts.get(q["concept_id"]) or {}).get("importance", 0)) >= high
+            and mastery(state, q) < target_for(bank, q, policy)["effective"]]
+
+
+def _weakest(bank: dict, state: dict, ids: list[str]) -> dict | None:
+    found = [q for qid in ids if (q := next((x for x in bank["questions"] if x["question_id"] == qid), None))]
+    found.sort(key=lambda q: (mastery(state, q), q["question_id"]))
+    return found[0] if found else None
+
+
+def upgrade_state(bank: dict, previous: dict, policy: dict = DEFAULT, now: int = 0) -> dict:
+    state = {**empty_state(), **copy.deepcopy(previous)}
+    if previous.get("version") != 2 or "remediation" in state:
+        target = (state.get("remediation") or {}).get("target")
+        parent = next((q for q in bank["questions"] if q["question_id"] == target), None)
+        prerequisite = _weakest(bank, state, parent["prerequisites"]) if parent else None
+        if prerequisite:
+            state["remediations"] = [{"parent_id": parent["question_id"], "prerequisite_id": prerequisite["question_id"],
+                                      "remaining": policy["remediation"]["maxReviews"], "started_at": now}]
+        state.pop("remediation", None)
+        state["version"] = 2
+        state["served"] = None
+        state["migrated_at"] = now
+        state["migration_note"] = "기존 숙련도와 평가 기록은 유지하고 새 정책은 이후 평가부터 적용합니다."
+    return state
+
+
+def rank_questions(bank: dict, state: dict, exam_date: str, now: int, policy: dict = DEFAULT) -> list[dict]:
+    days = days_until(exam_date, now)
+    by_id = {q["question_id"]: q for q in bank["questions"]}
+    midnight = _korea_midnight_ms(now)
+    rec, ex, prog, w = policy["recency"], policy["exam"], policy["progression"], policy["weights"]
+    today = [h for h in state["history"] if midnight <= h["timestamp"] <= now]
+    recent = today[-rec["window"]:]
+    last = today[-1] if today else None
+    weak_core = weak_high_core(bank, state, policy)
+    core = core_mastery(bank, state)
+    remediations = state.get("remediations") or []
+    readiness = {c["concept_id"]: concept_readiness(bank, state, c["concept_id"], policy) for c in bank["concepts"]}
+    any_core = any(o["tier"] == "Core" for o in bank["questions"])
+    last_q = by_id.get(last["question_id"]) if last else None
+    recent_directions = [(by_id.get(h["question_id"]) or {}).get("retrieval_direction")
+                         for h in today[-rec["diversityWindow"]:]]
+
+    rows = []
+    for q in bank["questions"]:
+        qid = q["question_id"]
+        m = mastery(state, q)
+        item = state["items"].get(qid)
+        target = target_for(bank, q, policy)
+        stage = question_stage(q)
+        ready = readiness.get(q["concept_id"], stage)
+        prereq_ready = all(mastery(state, by_id.get(pid)) >= prog["prerequisiteMastery"] for pid in q["prerequisites"])
+        has_core = any(o["concept_id"] == q["concept_id"] and o["tier"] == "Core" for o in bank["questions"])
+        remediation = any(r["prerequisite_id"] == qid for r in remediations)
+        reasons: list[str] = []
+        notes: list[str] = []
+        if target["requested"] != target["effective"]:
+            notes.append(f"요청 목표 {target['requested']}를 도달 가능한 정책 상한 {target['effective']}로 적용")
+        if q["tier"] == "Optional" and weak_core:
+            reasons.append("중요한 Core의 약점을 먼저 복습합니다.")
+        elif q["tier"] == "Optional" and core < prog["optionalCore"] and days > ex["closeDays"] and any_core:
+            reasons.append("Core 숙련도가 Optional 진입 기준보다 낮습니다.")
+        if (q["tier"] == "Advanced" and has_core and core_mastery(bank, state, q["concept_id"]) < prog["advancedCore"]
+                and not (q["prerequisites"] and prereq_ready)):
+            reasons.append("기초 Core 또는 선행 문항의 숙련도를 더 쌓아야 합니다.")
+        if stage > ready + prog["maxStageAhead"] and not remediation:
+            reasons.append("현재 회상 단계보다 너무 앞선 문제입니다.")
+        if q["prerequisites"] and not prereq_ready and not remediation:
+            reasons.append("선행 문항을 먼저 복습해야 합니다.")
+        if any(r["parent_id"] == qid for r in remediations):
+            reasons.append("실패한 문제의 선행 문항을 보충 중입니다.")
+        if last and last["question_id"] == qid and now - last["timestamp"] < rec["minimumRepeatMs"] and not remediation:
+            reasons.append("직전 문제의 즉시 반복을 잠시 쉬고 있습니다.")
+
+        high = q["importance"] >= prog["highImportance"]
+        weak = m < target["effective"]
+        urgency, direction = 1, 1
+        if days > ex["farDays"]:
+            direction = ex["earlyDirect"] if stage == 1 else ex["earlyHigher"] if stage >= 3 else 1
+        elif days > ex["middleDays"]:
+            direction = ex["middleReverseMechanism"] if q["retrieval_direction"] in ("reverse", "mechanism") else 1
+        else:
+            direction = ex["lateExamDirections"] if q["retrieval_direction"] in ("discrimination", "integration") else 1
+            if days <= ex["closeDays"]:
+                urgency = (ex["closeHigh"] if high and weak else ex["closeNewLow"] if not high and not item
+                           else ex["closeLow"] if not high else 1)
+            else:
+                urgency = ex["nearHigh"] if high and weak else ex["nearLow"] if not high else 1
+
+        plan = _plan(bank, q["concept_id"])
+        components = {
+            "importance": w["importance"][str(q["importance"])],
+            "weakness": max(policy["mastery"]["weaknessFloor"], target["effective"] - m),
+            "examUrgency": urgency, "examDirection": direction,
+            "progression": prog["stageMatch"] if stage <= ready else prog["stageAhead"] if stage == ready + 1 else prog["stageFar"],
+            "tier": w["tier"][q["tier"]],
+            "novelty": w["novelty"] if not item else w["due"] if item["due_at"] <= now else w["notDue"],
+            "budget": (w["budgetExceeded"] if (item or {}).get("reviews", 0) >= (plan["repetition_budget"] if plan else 1)
+                       and m >= target["effective"] else 1),
+            "remediation": policy["remediation"]["boost"] if remediation else 1,
+            "diversity": ((rec["sameConceptPenalty"] if last_q and last_q["concept_id"] == q["concept_id"] else 1)
+                          * (rec["newDirectionBonus"] if recent_directions and q["retrieval_direction"] not in recent_directions else 1)),
+            "recent": rec["recentPenalty"] if any(h["question_id"] == qid for h in recent) and not remediation else 1,
+        }
+        raw_score = 1.0
+        for value in components.values():
+            raw_score *= value
+        rows.append({"question_id": qid, "concept_id": q["concept_id"], "direction": q["retrieval_direction"],
+                     "tier": q["tier"], "eligible": not reasons, "reasons": reasons, "notes": notes,
+                     "raw_score": raw_score, "score": 0 if reasons else raw_score, "components": components,
+                     "mastery": m, "target": target, "stage": stage, "ready_stage": ready, "remediation": remediation})
+
+    queued = [r for r in rows if r["eligible"] and r["remediation"]]
+    if queued:
+        for row in rows:
+            if row["eligible"] and not row["remediation"]:
+                row["eligible"], row["score"] = False, 0
+                row["reasons"].append("지정된 선행 문항 보충이 우선입니다.")
+    last_id = last["question_id"] if last else None
+    alternative = any(r["eligible"] and r["question_id"] != last_id for r in rows)
+    if not queued and alternative:
+        for row in rows:
+            if row["eligible"] and row["question_id"] == last_id:
+                row["eligible"], row["score"] = False, 0
+                row["reasons"].append("다른 문제를 먼저 풀어 연속 반복을 피합니다.")
+    rows.sort(key=lambda r: r["question_id"])
+    rows.sort(key=lambda r: r["score"], reverse=True)
+    return rows
+
+
+def select_question(bank: dict, state: dict, exam_date: str, now: int, policy: dict = DEFAULT) -> dict:
+    ranked = rank_questions(bank, state, exam_date, now, policy)
+    chosen = next((r for r in ranked if r["eligible"] and r["score"] > 0), None)
+    question = next((q for q in bank["questions"] if chosen and q["question_id"] == chosen["question_id"]), None)
+    last = state["history"][-1]["timestamp"] if state["history"] else now
+    return {"question": question, "ranked": ranked, "days": days_until(exam_date, now),
+            "reason": None if chosen else "지금 풀 수 있는 문제가 없습니다. 기초 문제의 반복 대기나 진입 조건을 확인하세요.",
+            "retry_at": None if chosen else last + policy["recency"]["minimumRepeatMs"]}
+
+
+def record_review(bank: dict, previous: dict, question_id: str, rating: str, now: int, policy: dict = DEFAULT) -> dict:
+    if rating not in policy["mastery"]["ratings"]:
+        raise ValueError("잘못된 평가입니다.")
+    q = next((x for x in bank["questions"] if x["question_id"] == question_id), None)
+    if not q:
+        raise ValueError("문항을 찾을 수 없습니다.")
+    state = upgrade_state(bank, previous, policy, now)
+    dim = dimension_key(q)
+    before = mastery(state, q)
+    alpha = policy["mastery"]["alpha"]
+    after = (1 - alpha) * before + alpha * policy["mastery"]["ratings"][rating]
+    state["dimensions"][dim] = {"mastery": after, "reviews": (state["dimensions"].get(dim) or {}).get("reviews", 0) + 1,
+                                "updated_at": now}
+    old = state["items"].get(question_id) or {"reviews": 0, "interval": 0}
+    iv = policy["intervals"]
+    interval = (iv["againMs"] if rating == "Again"
+                else max(iv["hardMs"], old["interval"] * iv["hardMultiplier"]) if rating == "Hard"
+                else max(iv["goodMs"], old["interval"] * iv["goodMultiplier"]) if rating == "Good"
+                else max(iv["easyMs"], old["interval"] * iv["easyMultiplier"]))
+    state["items"][question_id] = {"reviews": old["reviews"] + 1, "interval": interval, "due_at": now + interval}
+
+    events, remaining = [], []
+    for r in state["remediations"]:
+        success = r["prerequisite_id"] == question_id and rating in policy["remediation"]["successRatings"]
+        if success or r["remaining"] <= 1:
+            events.append({**r, "action": "recovered" if success else "expired", "timestamp": now})
+        else:
+            remaining.append({**r, "remaining": r["remaining"] - 1})
+    state["remediations"] = remaining
+    if rating == "Again" and q["prerequisites"] and (question_stage(q) >= 3 or q["tier"] == "Advanced"):
+        weakest = _weakest(bank, state, q["prerequisites"])
+        if weakest:
+            entry = {"parent_id": question_id, "prerequisite_id": weakest["question_id"],
+                     "remaining": policy["remediation"]["maxReviews"], "started_at": now}
+            state["remediations"] = [r for r in state["remediations"] if r["parent_id"] != question_id] + [entry]
+            events.append({**entry, "action": "queued", "timestamp": now})
+    state["remediation_events"].extend(events)
+    state["history"].append({
+        "question_id": question_id, "rating": rating, "timestamp": now, "mastery_before": before,
+        "mastery_after": after, "dimension": dim, "session_id": (state.get("session") or {}).get("id"),
+        "policy_version": policy["version"], "policy_hash": policy_hash(policy), "remediation_events": events})
+    state["served"] = None
+    return state
+
+
+def now_ms() -> int:
+    return int(datetime.now(UTC).timestamp() * 1000)

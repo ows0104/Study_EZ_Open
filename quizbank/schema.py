@@ -1,0 +1,114 @@
+"""문제은행 JSON 의 모양. 정리 세션에 `--json-schema` 로 주고, 같은 것으로 다시 잰다.
+
+AdaptiveStudy3/bank_builder/schema.mjs 를 옮겼다(2026-10-04). 서버도 같은 모양을 받으므로
+필드를 바꿀 때는 server/app/bank.py 의 읽는 쪽과 web/src/types.ts 를 같이 본다.
+"""
+
+from __future__ import annotations
+
+FORMATS = ["basic", "cloze", "list", "ox", "mcq", "multi_select", "matching", "sequence"]
+DIRECTIONS = ["direct", "reverse", "mechanism", "discrimination", "integration", "sequence", "trap"]
+TIERS = ["Core", "Advanced", "Optional"]
+SCHEMA_VERSION = "3.0"
+
+_STR = {"type": "string"}
+_NUM = {"type": "number"}
+_INT = {"type": "integer"}
+_STRS = {"type": "array", "items": _STR}
+
+
+def _enum(values: list[str]) -> dict:
+    return {"type": "string", "enum": values}
+
+
+def _array(items: dict) -> dict:
+    return {"type": "array", "items": items}
+
+
+def _object(properties: dict) -> dict:
+    return {"type": "object", "properties": properties,
+            "required": list(properties), "additionalProperties": False}
+
+
+SOURCE_REF = _object({"source_id": _STR, "locator": _STR})
+
+QUESTION = _object({
+    "question_id": _STR, "concept_id": _STR, "tier": _enum(TIERS), "importance": _INT,
+    "concept_difficulty": _INT, "item_difficulty": _INT,
+    "format": _enum(FORMATS), "cognitive_type": _enum(DIRECTIONS),
+    "retrieval_direction": _enum(DIRECTIONS),
+    "question": _STR, "answer": _STR, "answer_units": _STRS, "prerequisites": _STRS,
+    "source_refs": _array(SOURCE_REF), "source_strength": _STRS, "exam_rationale": _STR,
+    "conflict_id": _STR, "options": _array(_object({"id": _STR, "text": _STR})),
+    "correct_option_ids": _STRS,
+    # matching 은 왼쪽·오른쪽을 따로 보여 주고 짝은 답을 볼 때만 준다.
+    "matching_left": _STRS, "matching_right": _STRS,
+    "answer_pairs": _array(_object({"left": _STR, "right": _STR})),
+    "sequence_items": _STRS, "correct_order": _STRS,
+})
+
+BANK = _object({
+    "build_meta": _object({"schema_version": _STR, "lecture_title": _STR}),
+    "source_summary": _array(_object({"source_id": _STR, "summary": _STR})),
+    "source_conflicts": _array(_object({
+        "conflict_id": _STR, "description": _STR, "source_refs": _array(SOURCE_REF),
+        "unresolved": {"type": "boolean"}})),
+    "concepts": _array(_object({
+        "concept_id": _STR, "title": _STR, "core_facts": _STRS, "source_refs": _array(SOURCE_REF),
+        "importance": _INT, "importance_rationale": _STR, "concept_difficulty": _INT,
+        "tier": _enum(TIERS), "exam_signal_strength": _enum(["low", "medium", "high"]),
+        "related_concepts": _STRS})),
+    "retrieval_plan": _array(_object({
+        "concept_id": _STR, "directions": _array(_enum(DIRECTIONS)), "rationale": _STR,
+        "repetition_budget": _INT, "target_mastery": _NUM})),
+    "questions": _array(QUESTION),
+    "audit_summary": _object({"summary": _STR, "rejected_candidate_count": _INT, "changes": _STRS}),
+    "warnings": _STRS,
+})
+
+VERDICTS = ["ok", "doubt", "wrong"]
+
+REVIEW = {
+    "type": "object", "additionalProperties": False, "required": ["summary", "reviews"],
+    "properties": {
+        "summary": _STR,
+        "reviews": _array({
+            "type": "object", "additionalProperties": False,
+            "required": ["question_id", "verdict", "note", "suggested_answer"],
+            "properties": {"question_id": _STR, "verdict": _enum(VERDICTS),
+                           "note": _STR, "suggested_answer": _STR}}),
+    },
+}
+
+_TYPES = {"string": str, "boolean": bool, "object": dict, "array": list}
+
+
+def _type_ok(value, kind: str) -> bool:
+    if kind == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if kind == "number":
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    return isinstance(value, _TYPES[kind])
+
+
+def schema_errors(value, schema: dict = BANK, path: str = "$", errors: list[str] | None = None) -> list[str]:
+    """`schema` 에 어긋난 자리를 사람이 읽을 말로 모은다. 첫 어긋남에서 멈추지 않는다."""
+    errors = [] if errors is None else errors
+    if not _type_ok(value, schema["type"]):
+        errors.append(f"{path}: {schema['type']} 형식이 필요합니다.")
+        return errors
+    if "enum" in schema and value not in schema["enum"]:
+        errors.append(f"{path}: 허용 값 {', '.join(schema['enum'])}")
+    if schema["type"] == "object":
+        for key in schema["required"]:
+            if key not in value:
+                errors.append(f"{path}.{key}: 필수 필드 누락")
+        for key, item in value.items():
+            if key not in schema["properties"]:
+                errors.append(f"{path}.{key}: 알 수 없는 필드")
+            else:
+                schema_errors(item, schema["properties"][key], f"{path}.{key}", errors)
+    if schema["type"] == "array":
+        for i, item in enumerate(value):
+            schema_errors(item, schema["items"], f"{path}[{i}]", errors)
+    return errors

@@ -1,0 +1,11 @@
+{
+  "version": "3.1.0",
+  "mastery": { "alpha": 0.35, "ratings": { "Again": 0, "Hard": 0.45, "Good": 0.95, "Easy": 1 }, "maxTarget": 0.9, "targets": { "1": 0.4, "2": 0.55, "3": 0.7, "4": 0.78, "5": 0.85 }, "weaknessFloor": 0.08 },
+  "progression": { "thresholds": { "1": 0.6, "2": 0.6, "3": 0.6 }, "prerequisiteMastery": 0.6, "advancedCore": 0.6, "optionalCore": 0.8, "highImportance": 4, "stageMatch": 1.3, "stageAhead": 0.65, "stageFar": 0.2, "maxStageAhead": 1 },
+  "weights": { "importance": { "1": 0.65, "2": 0.85, "3": 1.1, "4": 1.3, "5": 1.5 }, "tier": { "Core": 1.3, "Advanced": 1, "Optional": 0.5 }, "novelty": 1.2, "due": 1.4, "notDue": 0.25, "budgetExceeded": 0.5 },
+  "exam": { "farDays": 14, "middleDays": 7, "closeDays": 3, "earlyDirect": 1.35, "earlyHigher": 0.75, "middleReverseMechanism": 1.3, "lateExamDirections": 1.4, "nearHigh": 1.5, "nearLow": 0.8, "closeHigh": 2.2, "closeLow": 0.5, "closeNewLow": 0.12 },
+  "recency": { "window": 3, "diversityWindow": 5, "recentPenalty": 0.15, "sameConceptPenalty": 0.55, "newDirectionBonus": 1.15, "minimumRepeatMs": 60000 },
+  "remediation": { "maxReviews": 3, "boost": 6, "successRatings": ["Good", "Easy"] },
+  "intervals": { "againMs": 60000, "hardMs": 300000, "goodMs": 86400000, "easyMs": 172800000, "hardMultiplier": 1.2, "goodMultiplier": 2, "easyMultiplier": 3 },
+  "session": { "defaultSize": 25, "sizes": [10, 20, 25, 30] }
+}

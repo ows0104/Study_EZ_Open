@@ -1,0 +1,2207 @@
+{
+  "build_meta": {
+    "schema_version": "3.0",
+    "lecture_title": "약리학_콜린성약리학2"
+  },
+  "source_summary": [
+    {
+      "source_id": "S1",
+      "summary": "slides | [261002_02] 콜린성 약리학(2)(이철환)_한준우v1.pdf: 23쪽. p2–3에 족보 약물 요약/약물정리표, p4 AChE 억제제, p6 학습목표, p7–10 수용체 복습, p11–18 항무스카린·중독, p20 신경절 약물, p21–22 신경근 차단제가 있다. 학습목표에는 항무스카린 약물의 장기 효과, 콜린성 중독 치료, 임상 약물, 신경근차단제의 기전·부작용이 들어 있다."
+    },
+    {
+      "source_id": "S2",
+      "summary": "past_exam | L12-13_콜린성-약리학-1-2.md: 2019–2025 족보 31문항이 실려 있다. 연도 간 반복률은 12%, 족보 가중치 권고는 normal로 적혀 있다. 일부 2021 문항(예: Q24, Q26)은 '정답 미확인'으로 표시되어 있다."
+    }
+  ],
+  "source_conflicts": [
+    {
+      "conflict_id": "CF-01",
+      "description": "Atropine의 receptor action: S1은 atropine을 항무스카린 약물로 제시하고, 콜린성 중독에서 muscarinic receptor 차단 치료에 쓴다고 설명한다. S2 2025 Q18 정답표는 ①,②를 정답으로 표시해 ② 'Atropine - adrenergic receptor 효현제'까지 정답으로 처리했다. Q033/Q034로 출처별로 나누었고, 어느 쪽도 외부지식으로 교정하지 않았다.",
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p11"
+        },
+        {
+          "source_id": "S1",
+          "locator": "p18"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2025 Q18"
+        }
+      ],
+      "unresolved": true
+    },
+    {
+      "conflict_id": "CF-02",
+      "description": "탈분극성 Phase 1 block: S2 2019 Q57은 'rocuronium에 의해서도 발생'을 틀린 선택지로 처리했고, 지속 탈분극 진술은 틀렸다고 처리하지 않았다. S2 2020 Q29는 정답을 ①로 기록해 '지속적인 탈분극 효과 때문이다'를 틀린 진술로 처리했다. Q031/Q032로 나누었고 미해결로 둔다.",
+      "source_refs": [
+        {
+          "source_id": "S2",
+          "locator": "2019 Q57"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2020 Q29"
+        }
+      ],
+      "unresolved": true
+    },
+    {
+      "conflict_id": "CF-03",
+      "description": "교감신경 작동기관의 muscarinic receptor 예외: S1 p7은 교감 작동기관의 전달물질/수용체에 'rarely acetylcholine'과 'rarely Muscarinic receptor'를 명시한다. S2 2023 Q14 정답 ④는 '교감신경계의 작동세포에는 무스카린 수용체가 없다'를 옳다고 처리했다. Q029/Q030으로 나누었고 미해결로 둔다.",
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p7"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2023 Q14"
+        }
+      ],
+      "unresolved": true
+    },
+    {
+      "conflict_id": "CF-04",
+      "description": "Nicotine의 분류/기전 표현: S1 p20 본문은 Nicotine을 '신경절 흥분 약물'로 분류하지만, S1 p3 필기 정리표의 nicotine 기전 칸에는 '니코틴 수용체 차단'이라고 적혀 있다. Q035/Q036으로 나누었고, 같은 파일 안의 충돌이라 미해결로 둔다.",
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p20"
+        },
+        {
+          "source_id": "S1",
+          "locator": "p3 약물 정리 표"
+        }
+      ],
+      "unresolved": true
+    }
+  ],
+  "concepts": [
+    {
+      "concept_id": "C01",
+      "title": "콜린성 수용체 분포·신호전달",
+      "core_facts": [
+        "Nm=NMJ, Nn=신경절/부신수질/CNS",
+        "M1/3/5→PLC, M2/4→AC 억제"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p7–9 Nm/Nn 및 M1–M5 기전·분포"
+        }
+      ],
+      "importance": 4,
+      "importance_rationale": "차단약 기전을 이해하는 전제이며, 슬라이드 복습표로 명시되어 있음",
+      "concept_difficulty": 3,
+      "tier": "Core",
+      "exam_signal_strength": "medium",
+      "related_concepts": [
+        "C02",
+        "C05",
+        "C10"
+      ]
+    },
+    {
+      "concept_id": "C02",
+      "title": "항무스카린 약물·BBB",
+      "core_facts": [
+        "atropine/scopolamine",
+        "3차 amine은 eyes/CNS, 4차 ammonium은 말초 효과↑ CNS↓",
+        "scopolamine은 atropine보다 BBB 통과 용이"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p11"
+        },
+        {
+          "source_id": "S1",
+          "locator": "p13"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2022 Q11"
+        }
+      ],
+      "importance": 5,
+      "importance_rationale": "BBB 문제가 족보에서 직접 반복되고, 여러 임상응용의 기반임",
+      "concept_difficulty": 3,
+      "tier": "Core",
+      "exam_signal_strength": "high",
+      "related_concepts": [
+        "C03",
+        "C04",
+        "C05"
+      ]
+    },
+    {
+      "concept_id": "C03",
+      "title": "눈: 산동·조절마비·녹내장",
+      "core_facts": [
+        "antimuscarinic→mydriasis+cycloplegia",
+        "tropicamide 가장 짧은 효과기간",
+        "녹내장 주의/금기"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p14"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2025 Q23"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2023 Q12"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2020 Q28"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2019 Q61"
+        }
+      ],
+      "importance": 5,
+      "importance_rationale": "2020·2022·2023·2025 족보에서 반복 출제",
+      "concept_difficulty": 3,
+      "tier": "Core",
+      "exam_signal_strength": "high",
+      "related_concepts": [
+        "C02",
+        "C12"
+      ]
+    },
+    {
+      "concept_id": "C04",
+      "title": "중추·위장관·분비 임상응용",
+      "core_facts": [
+        "scopolamine=멀미",
+        "benztropine 등=파킨슨 떨림",
+        "GI 운동·분비 억제",
+        "땀/눈물/침 감소"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p13"
+        }
+      ],
+      "importance": 4,
+      "importance_rationale": "학습목표와 슬라이드 표에서 직접 강조",
+      "concept_difficulty": 3,
+      "tier": "Core",
+      "exam_signal_strength": "medium",
+      "related_concepts": [
+        "C02",
+        "C12"
+      ]
+    },
+    {
+      "concept_id": "C05",
+      "title": "심혈관 M2 기전과 차단 효과",
+      "core_facts": [
+        "ACh→M2/Gi→AC↓→cAMP↓, K⁺ channel open/Ca²⁺ channel 이용↓→HR↓",
+        "항무스카린은 HR·전도속도↑"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p15"
+        }
+      ],
+      "importance": 4,
+      "importance_rationale": "'핵심 기전'으로 별도 제시됨",
+      "concept_difficulty": 4,
+      "tier": "Core",
+      "exam_signal_strength": "medium",
+      "related_concepts": [
+        "C01",
+        "C02"
+      ]
+    },
+    {
+      "concept_id": "C06",
+      "title": "폐: ipratropium·tiotropium",
+      "core_facts": [
+        "기관지 근육 이완",
+        "두 약은 4차 amine",
+        "COPD/천식 사용, 슬라이드상 β2 agonist가 더 유용"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p16"
+        }
+      ],
+      "importance": 4,
+      "importance_rationale": "임상응용 및 학습목표에 포함",
+      "concept_difficulty": 2,
+      "tier": "Core",
+      "exam_signal_strength": "medium",
+      "related_concepts": [
+        "C02"
+      ]
+    },
+    {
+      "concept_id": "C07",
+      "title": "과민성 방광",
+      "core_facts": [
+        "detrusor 이완·배뇨 느려짐",
+        "oxybutynin, tolterodine, darifenacin, solifenacin, trospium, fesoterodine"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p17"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2022 Q39"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2023 Q11"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2025 Q18"
+        }
+      ],
+      "importance": 5,
+      "importance_rationale": "2022·2023·2025 족보에서 반복 출제",
+      "concept_difficulty": 3,
+      "tier": "Core",
+      "exam_signal_strength": "high",
+      "related_concepts": [
+        "C02"
+      ]
+    },
+    {
+      "concept_id": "C08",
+      "title": "유기인계 콜린성 중독·치료",
+      "core_facts": [
+        "malathion/parathion/VX/sarin/soman→비가역 AChE 억제",
+        "aging",
+        "atropine + pralidoxime"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p18"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2019 Q60"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2020 Q27"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2021 Q24"
+        }
+      ],
+      "importance": 5,
+      "importance_rationale": "학습목표에 포함되고 2019/2020/2021에 반복 출제",
+      "concept_difficulty": 4,
+      "tier": "Core",
+      "exam_signal_strength": "high",
+      "related_concepts": [
+        "C11",
+        "C02"
+      ]
+    },
+    {
+      "concept_id": "C09",
+      "title": "자율신경절 작용약",
+      "core_facts": [
+        "nicotine, varenicline, cytisine",
+        "ganglion blockers의 제한"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p20"
+        }
+      ],
+      "importance": 2,
+      "importance_rationale": "강의 후반부에 있으나 족보 신호가 낮고, S1 내부 충돌이 있음",
+      "concept_difficulty": 2,
+      "tier": "Optional",
+      "exam_signal_strength": "low",
+      "related_concepts": [
+        "C01",
+        "C10"
+      ]
+    },
+    {
+      "concept_id": "C10",
+      "title": "신경근 차단제",
+      "core_facts": [
+        "비탈분극성=경쟁적 antagonist",
+        "탈분극성 succinylcholine=지속 탈분극/desensitization",
+        "호흡마비·고K혈증"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p21–22"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2019"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2020"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2021"
+        }
+      ],
+      "importance": 5,
+      "importance_rationale": "학습목표에 직접 명시되고 2019~2021 족보에서 반복 출제",
+      "concept_difficulty": 4,
+      "tier": "Core",
+      "exam_signal_strength": "high",
+      "related_concepts": [
+        "C01"
+      ]
+    },
+    {
+      "concept_id": "C11",
+      "title": "AChE 억제제 분류",
+      "core_facts": [
+        "edrophonium 등 비공유결합 2–10분",
+        "carbamate 30분–6시간",
+        "organophosphorus 수백 시간·aging"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p4"
+        }
+      ],
+      "importance": 3,
+      "importance_rationale": "이번 자료 첫 슬라이드에서 복습하며, 중독 기전과 연결됨",
+      "concept_difficulty": 4,
+      "tier": "Advanced",
+      "exam_signal_strength": "medium",
+      "related_concepts": [
+        "C08"
+      ]
+    },
+    {
+      "concept_id": "C12",
+      "title": "침 분비: 항무스카린 vs 콜린성 약물",
+      "core_facts": [
+        "atropine/scopolamine→분비 감소",
+        "pilocarpine/cevimeline은 대조적으로 침 분비 유도"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p13–14"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2019 Q58"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2020 Q25"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2022 Q39"
+        }
+      ],
+      "importance": 4,
+      "importance_rationale": "슬라이드와 2019/2020/2022 족보에서 반복",
+      "concept_difficulty": 2,
+      "tier": "Core",
+      "exam_signal_strength": "high",
+      "related_concepts": [
+        "C03",
+        "C04"
+      ]
+    }
+  ],
+  "retrieval_plan": [
+    {
+      "concept_id": "C01",
+      "directions": [
+        "direct",
+        "discrimination",
+        "mechanism"
+      ],
+      "rationale": "약물명을 외우기 전에 수용체 위치와 G protein 축을 바로 떠올릴 수 있어야 이후 기전 문제를 풀 수 있음",
+      "repetition_budget": 65,
+      "target_mastery": 0.9
+    },
+    {
+      "concept_id": "C02",
+      "directions": [
+        "direct",
+        "reverse",
+        "discrimination"
+      ],
+      "rationale": "약물→특성뿐 아니라 BBB 특성→약물 역방향 출제가 실제 족보에 있음",
+      "repetition_budget": 88,
+      "target_mastery": 0.97
+    },
+    {
+      "concept_id": "C03",
+      "directions": [
+        "direct",
+        "reverse",
+        "discrimination",
+        "sequence"
+      ],
+      "rationale": "금기, 대표약, 지속시간이 서로 다른 방향으로 반복 출제됨",
+      "repetition_budget": 96,
+      "target_mastery": 0.99
+    },
+    {
+      "concept_id": "C04",
+      "directions": [
+        "direct",
+        "discrimination"
+      ],
+      "rationale": "용도와 약물의 연결이 핵심이며, 지나친 통합은 필요 없음",
+      "repetition_budget": 62,
+      "target_mastery": 0.9
+    },
+    {
+      "concept_id": "C05",
+      "directions": [
+        "direct",
+        "mechanism",
+        "sequence"
+      ],
+      "rationale": "효과 암기와 M2 신호전달의 단계적 설명을 모두 요구할 수 있음",
+      "repetition_budget": 70,
+      "target_mastery": 0.92
+    },
+    {
+      "concept_id": "C06",
+      "directions": [
+        "direct",
+        "reverse",
+        "discrimination"
+      ],
+      "rationale": "ipratropium/tiotropium과 COPD·천식을 양방향으로 연결하는 것이 효율적",
+      "repetition_budget": 58,
+      "target_mastery": 0.9
+    },
+    {
+      "concept_id": "C07",
+      "directions": [
+        "direct",
+        "reverse",
+        "discrimination"
+      ],
+      "rationale": "약물군이 반복 출제되며 '다른 기전'을 고르는 선택형도 나옴",
+      "repetition_budget": 92,
+      "target_mastery": 0.98
+    },
+    {
+      "concept_id": "C08",
+      "directions": [
+        "direct",
+        "mechanism",
+        "integration"
+      ],
+      "rationale": "원인→aging→치료를 임상 사례(vignette)와 연결해야 함",
+      "repetition_budget": 100,
+      "target_mastery": 0.99
+    },
+    {
+      "concept_id": "C09",
+      "directions": [
+        "direct"
+      ],
+      "rationale": "중요도가 낮고 출처 충돌이 있어 최소 반복만 배정",
+      "repetition_budget": 25,
+      "target_mastery": 0.75
+    },
+    {
+      "concept_id": "C10",
+      "directions": [
+        "direct",
+        "discrimination",
+        "mechanism",
+        "integration"
+      ],
+      "rationale": "두 차단 방식 비교와 succinylcholine 기전·부작용이 반복 출제됨",
+      "repetition_budget": 100,
+      "target_mastery": 0.99
+    },
+    {
+      "concept_id": "C11",
+      "directions": [
+        "direct",
+        "discrimination"
+      ],
+      "rationale": "중독 기전의 배경이지만, 이번 강의에서 자주 나오는 주축은 아님",
+      "repetition_budget": 48,
+      "target_mastery": 0.85
+    },
+    {
+      "concept_id": "C12",
+      "directions": [
+        "direct",
+        "reverse",
+        "discrimination"
+      ],
+      "rationale": "pilocarpine/cevimeline ↔ atropine/scopolamine 대비가 실제 선택지의 경쟁축임",
+      "repetition_budget": 78,
+      "target_mastery": 0.95
+    }
+  ],
+  "questions": [
+    {
+      "question_id": "Q001",
+      "concept_id": "C01",
+      "tier": "Core",
+      "importance": 4,
+      "concept_difficulty": 3,
+      "item_difficulty": 2,
+      "format": "basic",
+      "cognitive_type": "direct",
+      "retrieval_direction": "direct",
+      "question": "니코틴 수용체 Nm과 Nn의 대표 분포를 각각 쓰라.",
+      "answer": "Nm = neuromuscular junction; Nn = 신경절, 부신수질, 중추신경",
+      "answer_units": [
+        "Nm–neuromuscular junction",
+        "Nn–신경절/부신수질/중추신경"
+      ],
+      "prerequisites": [],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p9"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "신경근 차단과 자율신경절 약물의 전제",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q002",
+      "concept_id": "C01",
+      "tier": "Core",
+      "importance": 4,
+      "concept_difficulty": 3,
+      "item_difficulty": 3,
+      "format": "matching",
+      "cognitive_type": "direct",
+      "retrieval_direction": "direct",
+      "question": "무스카린 수용체와 슬라이드에 제시된 분자기전을 연결하라.",
+      "answer": "M1/M3/M5→PLC 활성화; M2/M4→AC 억제",
+      "answer_units": [
+        "M1-R1",
+        "M2-R2",
+        "M3-R1",
+        "M4-R2",
+        "M5-R1"
+      ],
+      "prerequisites": [],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p8–9"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "항무스카린 효과와 M2 기전 이해의 토대",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [
+        "L1: M1",
+        "L2: M2",
+        "L3: M3",
+        "L4: M4",
+        "L5: M5"
+      ],
+      "matching_right": [
+        "R1: PLC 활성화",
+        "R2: Adenylyl cyclase 억제"
+      ],
+      "answer_pairs": [
+        {
+          "left": "L1: M1",
+          "right": "R1: PLC 활성화"
+        },
+        {
+          "left": "L2: M2",
+          "right": "R2: Adenylyl cyclase 억제"
+        },
+        {
+          "left": "L3: M3",
+          "right": "R1: PLC 활성화"
+        },
+        {
+          "left": "L4: M4",
+          "right": "R2: Adenylyl cyclase 억제"
+        },
+        {
+          "left": "L5: M5",
+          "right": "R1: PLC 활성화"
+        }
+      ],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q003",
+      "concept_id": "C02",
+      "tier": "Core",
+      "importance": 5,
+      "concept_difficulty": 3,
+      "item_difficulty": 2,
+      "format": "cloze",
+      "cognitive_type": "discrimination",
+      "retrieval_direction": "discrimination",
+      "question": "항무스카린성 congeners 중 {{c1}} amine은 eyes/CNS 분포가 강조되고, {{c2}} ammonium은 말초 효과가 더 크고 CNS 효과가 감소한다.",
+      "answer": "tertiary; quaternary",
+      "answer_units": [
+        "tertiary",
+        "quaternary"
+      ],
+      "prerequisites": [],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p11"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "BBB 문제의 구조적 단서",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q004",
+      "concept_id": "C02",
+      "tier": "Core",
+      "importance": 5,
+      "concept_difficulty": 3,
+      "item_difficulty": 3,
+      "format": "mcq",
+      "cognitive_type": "reverse",
+      "retrieval_direction": "reverse",
+      "question": "S2 2022 문항의 선택지 중 BBB를 가장 잘 통과하는 것으로 제시된 약물은?",
+      "answer": "scopolamine",
+      "answer_units": [
+        "scopolamine"
+      ],
+      "prerequisites": [
+        "Q003"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p13"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2022 Q11"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "실제 족보에서 직접 반복된 축",
+      "conflict_id": "",
+      "options": [
+        {
+          "id": "A",
+          "text": "tiotropium"
+        },
+        {
+          "id": "B",
+          "text": "edrophonium"
+        },
+        {
+          "id": "C",
+          "text": "scopolamine"
+        },
+        {
+          "id": "D",
+          "text": "neostigmine"
+        },
+        {
+          "id": "E",
+          "text": "atropine"
+        }
+      ],
+      "correct_option_ids": [
+        "C"
+      ],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q005",
+      "concept_id": "C03",
+      "tier": "Core",
+      "importance": 5,
+      "concept_difficulty": 3,
+      "item_difficulty": 2,
+      "format": "basic",
+      "cognitive_type": "direct",
+      "retrieval_direction": "direct",
+      "question": "항무스카린 약물이 눈에서 유발하는 두 핵심 효과를 쓰라.",
+      "answer": "동공확대(mydriasis), 섬모체근마비(cycloplegia)",
+      "answer_units": [
+        "mydriasis",
+        "cycloplegia"
+      ],
+      "prerequisites": [],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p14"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "학습목표 및 반복 족보 내용",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q006",
+      "concept_id": "C03",
+      "tier": "Core",
+      "importance": 5,
+      "concept_difficulty": 3,
+      "item_difficulty": 2,
+      "format": "basic",
+      "cognitive_type": "reverse",
+      "retrieval_direction": "reverse",
+      "question": "안과검사에서 효과기간이 짧아 주로 사용한다고 슬라이드에 제시된 항무스카린 약물은?",
+      "answer": "Tropicamide",
+      "answer_units": [
+        "Tropicamide"
+      ],
+      "prerequisites": [
+        "Q005"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p14"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "약물↔용도 역방향 회상",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q007",
+      "concept_id": "C03",
+      "tier": "Core",
+      "importance": 5,
+      "concept_difficulty": 3,
+      "item_difficulty": 3,
+      "format": "mcq",
+      "cognitive_type": "discrimination",
+      "retrieval_direction": "discrimination",
+      "question": "안과검진에서 tropicamide 사용을 피해야 할 병력으로 S1/S2 모두 강조한 것은?",
+      "answer": "녹내장",
+      "answer_units": [
+        "녹내장"
+      ],
+      "prerequisites": [
+        "Q005"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p14"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2025 Q23"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "족보에 직접 출제됨",
+      "conflict_id": "",
+      "options": [
+        {
+          "id": "A",
+          "text": "위염"
+        },
+        {
+          "id": "B",
+          "text": "녹내장"
+        },
+        {
+          "id": "C",
+          "text": "저혈압"
+        },
+        {
+          "id": "D",
+          "text": "파킨슨병"
+        },
+        {
+          "id": "E",
+          "text": "천식"
+        }
+      ],
+      "correct_option_ids": [
+        "B"
+      ],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q008",
+      "concept_id": "C04",
+      "tier": "Core",
+      "importance": 4,
+      "concept_difficulty": 3,
+      "item_difficulty": 2,
+      "format": "basic",
+      "cognitive_type": "direct",
+      "retrieval_direction": "direct",
+      "question": "멀미약으로 사용되며 atropine보다 BBB 통과가 더 수월하다고 설명된 약물은?",
+      "answer": "Scopolamine",
+      "answer_units": [
+        "Scopolamine"
+      ],
+      "prerequisites": [
+        "Q003"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p13"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "임상응용과 BBB 특성을 함께 고정",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q009",
+      "concept_id": "C04",
+      "tier": "Core",
+      "importance": 4,
+      "concept_difficulty": 3,
+      "item_difficulty": 3,
+      "format": "list",
+      "cognitive_type": "direct",
+      "retrieval_direction": "direct",
+      "question": "슬라이드에 제시된 파킨슨병 떨림 완화용 항무스카린 약물을 2개 이상 쓰라.",
+      "answer": "Benztropine, Trihexyphenidyl, Orphenadrine, Procyclidine 중 2개 이상",
+      "answer_units": [
+        "Benztropine/Trihexyphenidyl/Orphenadrine/Procyclidine 중 2개"
+      ],
+      "prerequisites": [],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p13"
+        }
+      ],
+      "source_strength": [
+        "medium"
+      ],
+      "exam_rationale": "학습목표의 임상 약물 열거 요구",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q010",
+      "concept_id": "C12",
+      "tier": "Core",
+      "importance": 4,
+      "concept_difficulty": 2,
+      "item_difficulty": 3,
+      "format": "matching",
+      "cognitive_type": "discrimination",
+      "retrieval_direction": "discrimination",
+      "question": "각 약물이 침 분비를 늘리는지 줄이는지 연결하라.",
+      "answer": "항무스카린 약물→감소; Pilocarpine/Cevimeline→유도",
+      "answer_units": [
+        "L1-R1",
+        "L2-R2"
+      ],
+      "prerequisites": [],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p13–14"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "2019·2020·2022 족보에서 반복된 경쟁축",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [
+        "L1: Atropine/Scopolamine",
+        "L2: Pilocarpine/Cevimeline"
+      ],
+      "matching_right": [
+        "R1: 침 분비 감소",
+        "R2: 침 분비 유도"
+      ],
+      "answer_pairs": [
+        {
+          "left": "L1: Atropine/Scopolamine",
+          "right": "R1: 침 분비 감소"
+        },
+        {
+          "left": "L2: Pilocarpine/Cevimeline",
+          "right": "R2: 침 분비 유도"
+        }
+      ],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q011",
+      "concept_id": "C05",
+      "tier": "Core",
+      "importance": 4,
+      "concept_difficulty": 4,
+      "item_difficulty": 2,
+      "format": "basic",
+      "cognitive_type": "direct",
+      "retrieval_direction": "direct",
+      "question": "심혈관계에서 항무스카린 약물의 두 반응을 쓰라.",
+      "answer": "심박수 증가, 전도속도 증가",
+      "answer_units": [
+        "심박수 증가",
+        "전도속도 증가"
+      ],
+      "prerequisites": [],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p15"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "장기별 효과의 핵심",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q012",
+      "concept_id": "C05",
+      "tier": "Core",
+      "importance": 4,
+      "concept_difficulty": 4,
+      "item_difficulty": 4,
+      "format": "sequence",
+      "cognitive_type": "mechanism",
+      "retrieval_direction": "sequence",
+      "question": "슬라이드의 심장 M2 기전을 올바른 순서로 배열하라.",
+      "answer": "M2 결합 → AC 억제 → cAMP 감소 → K⁺ open/Ca²⁺ 이용 감소 → 심박수 감소",
+      "answer_units": [
+        "B",
+        "D",
+        "A",
+        "E",
+        "C"
+      ],
+      "prerequisites": [
+        "Q002"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p15"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "'핵심 기전' 슬라이드의 단계적 회상",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [
+        "A: cAMP 감소",
+        "B: M2 receptor 결합",
+        "C: 심장박동수 감소",
+        "D: adenylyl cyclase 억제",
+        "E: K⁺ channel open 및 Ca²⁺ channel 이용 감소"
+      ],
+      "correct_order": [
+        "B: M2 receptor 결합",
+        "D: adenylyl cyclase 억제",
+        "A: cAMP 감소",
+        "E: K⁺ channel open 및 Ca²⁺ channel 이용 감소",
+        "C: 심장박동수 감소"
+      ]
+    },
+    {
+      "question_id": "Q013",
+      "concept_id": "C06",
+      "tier": "Core",
+      "importance": 4,
+      "concept_difficulty": 2,
+      "item_difficulty": 2,
+      "format": "list",
+      "cognitive_type": "direct",
+      "retrieval_direction": "direct",
+      "question": "COPD 또는 천식 환자에서 기관지 근육 이완을 위해 제시된 항무스카린 약물 2개를 쓰라.",
+      "answer": "Ipratropium, Tiotropium",
+      "answer_units": [
+        "Ipratropium",
+        "Tiotropium"
+      ],
+      "prerequisites": [],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p16"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "강의 임상응용의 대표약",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q014",
+      "concept_id": "C06",
+      "tier": "Core",
+      "importance": 4,
+      "concept_difficulty": 2,
+      "item_difficulty": 2,
+      "format": "basic",
+      "cognitive_type": "direct",
+      "retrieval_direction": "direct",
+      "question": "Ipratropium과 Tiotropium은 슬라이드에서 몇 차 amine으로 제시되는가?",
+      "answer": "4차 amine",
+      "answer_units": [
+        "4차 amine"
+      ],
+      "prerequisites": [
+        "Q013"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p16"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "BBB/말초성 개념과 연결",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q015",
+      "concept_id": "C07",
+      "tier": "Core",
+      "importance": 5,
+      "concept_difficulty": 3,
+      "item_difficulty": 3,
+      "format": "list",
+      "cognitive_type": "direct",
+      "retrieval_direction": "direct",
+      "question": "과민성 방광에 제시된 항무스카린 약물을 4개 쓰라.",
+      "answer": "Oxybutynin, Tolterodine, Darifenacin, Solifenacin, Trospium, Fesoterodine 중 4개",
+      "answer_units": [
+        "목록 중 4개"
+      ],
+      "prerequisites": [],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p17"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "족보에서 약물군이 반복 출제",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q016",
+      "concept_id": "C07",
+      "tier": "Core",
+      "importance": 5,
+      "concept_difficulty": 3,
+      "item_difficulty": 2,
+      "format": "cloze",
+      "cognitive_type": "direct",
+      "retrieval_direction": "direct",
+      "question": "항무스카린 약물은 방광의 {{c1}}을 이완시키고 {{c2}}을 느리게 한다.",
+      "answer": "배뇨근; 배뇨",
+      "answer_units": [
+        "배뇨근",
+        "배뇨"
+      ],
+      "prerequisites": [],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p17"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "약물명 암기와 장기 효과를 연결",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q017",
+      "concept_id": "C07",
+      "tier": "Core",
+      "importance": 5,
+      "concept_difficulty": 3,
+      "item_difficulty": 4,
+      "format": "mcq",
+      "cognitive_type": "discrimination",
+      "retrieval_direction": "reverse",
+      "question": "S2 2023 과민성 방광 문항에서 나머지와 '치료 기전이 다른 약물'로 정답 처리된 것은?",
+      "answer": "mirabegron",
+      "answer_units": [
+        "mirabegron"
+      ],
+      "prerequisites": [
+        "Q015"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S2",
+          "locator": "2023 Q11"
+        }
+      ],
+      "source_strength": [
+        "high-for-exam-key"
+      ],
+      "exam_rationale": "실제 족보의 구별형",
+      "conflict_id": "",
+      "options": [
+        {
+          "id": "A",
+          "text": "oxybutynin"
+        },
+        {
+          "id": "B",
+          "text": "tolterodine"
+        },
+        {
+          "id": "C",
+          "text": "solifenacin"
+        },
+        {
+          "id": "D",
+          "text": "mirabegron"
+        },
+        {
+          "id": "E",
+          "text": "trospium"
+        }
+      ],
+      "correct_option_ids": [
+        "D"
+      ],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q018",
+      "concept_id": "C08",
+      "tier": "Core",
+      "importance": 5,
+      "concept_difficulty": 4,
+      "item_difficulty": 2,
+      "format": "list",
+      "cognitive_type": "direct",
+      "retrieval_direction": "direct",
+      "question": "슬라이드에 제시된 비가역적 cholinesterase 억제성 콜린성 중독 원인을 살충제 2개와 신경가스 3개로 나누어 쓰라.",
+      "answer": "살충제 Malathion, Parathion; 신경가스 VX, Sarin, Soman",
+      "answer_units": [
+        "Malathion",
+        "Parathion",
+        "VX",
+        "Sarin",
+        "Soman"
+      ],
+      "prerequisites": [],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p18"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "중독의 원인 축",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q019",
+      "concept_id": "C08",
+      "tier": "Core",
+      "importance": 5,
+      "concept_difficulty": 4,
+      "item_difficulty": 3,
+      "format": "basic",
+      "cognitive_type": "mechanism",
+      "retrieval_direction": "mechanism",
+      "question": "유기인계 중독에서 aging이 진행되면 S1에서는 인-AChE 결합을 어떻게 설명하는가?",
+      "answer": "결합이 더 강해져 효소 불활성이 지속된다.",
+      "answer_units": [
+        "인-AChE 결합 강화",
+        "효소 불활성"
+      ],
+      "prerequisites": [
+        "Q018"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p18"
+        },
+        {
+          "source_id": "S1",
+          "locator": "p4"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "pralidoxime 관련 기전 이해의 핵심",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q020",
+      "concept_id": "C08",
+      "tier": "Core",
+      "importance": 5,
+      "concept_difficulty": 4,
+      "item_difficulty": 2,
+      "format": "list",
+      "cognitive_type": "direct",
+      "retrieval_direction": "direct",
+      "question": "S1이 제시한 콜린성 중독 치료 두 축과 대표 약물을 쓰라.",
+      "answer": "항무스카린성 요법–Atropine; cholinesterase 재생–Pralidoxime(2-PAM)",
+      "answer_units": [
+        "Atropine",
+        "Pralidoxime/2-PAM"
+      ],
+      "prerequisites": [
+        "Q019"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p18"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "2019·2020·2021 족보에서 반복된 핵심",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q021",
+      "concept_id": "C08",
+      "tier": "Core",
+      "importance": 5,
+      "concept_difficulty": 4,
+      "item_difficulty": 4,
+      "format": "mcq",
+      "cognitive_type": "integration",
+      "retrieval_direction": "integration",
+      "question": "농부가 혼수, 저혈압, 서맥, 과다한 침 분비를 보인다. S2에서 반복적으로 정답 처리된 약물은?",
+      "answer": "Atropine",
+      "answer_units": [
+        "Atropine"
+      ],
+      "prerequisites": [
+        "Q018",
+        "Q020"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S2",
+          "locator": "2019 Q60"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2020 Q27"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2021 Q24"
+        }
+      ],
+      "source_strength": [
+        "very_high"
+      ],
+      "exam_rationale": "같은 임상 사례(vignette)가 반복 출제됨",
+      "conflict_id": "",
+      "options": [
+        {
+          "id": "A",
+          "text": "Atropine"
+        },
+        {
+          "id": "B",
+          "text": "Carbachol"
+        },
+        {
+          "id": "C",
+          "text": "Physostigmine"
+        },
+        {
+          "id": "D",
+          "text": "Norepinephrine"
+        },
+        {
+          "id": "E",
+          "text": "Scopolamine"
+        }
+      ],
+      "correct_option_ids": [
+        "A"
+      ],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q022",
+      "concept_id": "C10",
+      "tier": "Core",
+      "importance": 5,
+      "concept_difficulty": 4,
+      "item_difficulty": 3,
+      "format": "matching",
+      "cognitive_type": "discrimination",
+      "retrieval_direction": "discrimination",
+      "question": "신경근 봉쇄 유형과 핵심 기전을 연결하라.",
+      "answer": "비탈분극성→경쟁적 antagonist; 탈분극성→지속 탈분극",
+      "answer_units": [
+        "L1-R1",
+        "L2-R2"
+      ],
+      "prerequisites": [
+        "Q001"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p21–22"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "학습목표가 직접 요구",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [
+        "L1: 비탈분극성",
+        "L2: 탈분극성"
+      ],
+      "matching_right": [
+        "R1: ACh 작용부위의 경쟁적 길항",
+        "R2: 운동종판 니코틴 수용체 결합 후 탈분극 지속"
+      ],
+      "answer_pairs": [
+        {
+          "left": "L1: 비탈분극성",
+          "right": "R1: ACh 작용부위의 경쟁적 길항"
+        },
+        {
+          "left": "L2: 탈분극성",
+          "right": "R2: 운동종판 니코틴 수용체 결합 후 탈분극 지속"
+        }
+      ],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q023",
+      "concept_id": "C10",
+      "tier": "Core",
+      "importance": 5,
+      "concept_difficulty": 4,
+      "item_difficulty": 3,
+      "format": "basic",
+      "cognitive_type": "mechanism",
+      "retrieval_direction": "mechanism",
+      "question": "Succinylcholine이 신경근 봉쇄를 일으키는 과정을 S1 표현에 맞춰 짧게 설명하라.",
+      "answer": "운동종판 니코틴 수용체에 결합하고 접합부에서 빨리 파괴되지 않아 탈분극이 지속되며 desensitization이 나타난다.",
+      "answer_units": [
+        "니코틴 수용체 결합",
+        "탈분극 지속",
+        "desensitization"
+      ],
+      "prerequisites": [
+        "Q022"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p21–22"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "탈분극성 차단 기전의 핵심",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q024",
+      "concept_id": "C10",
+      "tier": "Core",
+      "importance": 5,
+      "concept_difficulty": 4,
+      "item_difficulty": 3,
+      "format": "mcq",
+      "cognitive_type": "reverse",
+      "retrieval_direction": "reverse",
+      "question": "S1/S2에서 고칼륨혈증과 반복 연결되는 신경근 봉쇄 약물은?",
+      "answer": "Succinylcholine",
+      "answer_units": [
+        "Succinylcholine"
+      ],
+      "prerequisites": [
+        "Q023"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p22"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2021 Q26"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2020 Q30"
+        },
+        {
+          "source_id": "S2",
+          "locator": "2019 Q56"
+        }
+      ],
+      "source_strength": [
+        "very_high"
+      ],
+      "exam_rationale": "여러 연도에 반복된 세부 사실",
+      "conflict_id": "",
+      "options": [
+        {
+          "id": "A",
+          "text": "Tubocurarine"
+        },
+        {
+          "id": "B",
+          "text": "Rocuronium"
+        },
+        {
+          "id": "C",
+          "text": "Succinylcholine"
+        },
+        {
+          "id": "D",
+          "text": "Scopolamine"
+        },
+        {
+          "id": "E",
+          "text": "Trospium"
+        }
+      ],
+      "correct_option_ids": [
+        "C"
+      ],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q025",
+      "concept_id": "C03",
+      "tier": "Advanced",
+      "importance": 5,
+      "concept_difficulty": 3,
+      "item_difficulty": 4,
+      "format": "sequence",
+      "cognitive_type": "sequence",
+      "retrieval_direction": "sequence",
+      "question": "S1 p14 표에서 산동·조절마비 효과기간이 긴 순서로 배열하라.",
+      "answer": "Atropine → Scopolamine → Homatropine → Cyclopentolate → Tropicamide",
+      "answer_units": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "prerequisites": [
+        "Q005",
+        "Q006"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p14"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "반복 출제된 '장기간 산동/조절마비' 세부를 순서로 회상",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [
+        "A: Atropine",
+        "B: Scopolamine",
+        "C: Homatropine",
+        "D: Cyclopentolate",
+        "E: Tropicamide"
+      ],
+      "correct_order": [
+        "A: Atropine",
+        "B: Scopolamine",
+        "C: Homatropine",
+        "D: Cyclopentolate",
+        "E: Tropicamide"
+      ]
+    },
+    {
+      "question_id": "Q026",
+      "concept_id": "C10",
+      "tier": "Advanced",
+      "importance": 5,
+      "concept_difficulty": 4,
+      "item_difficulty": 3,
+      "format": "list",
+      "cognitive_type": "direct",
+      "retrieval_direction": "direct",
+      "question": "S1에 제시된 신경근 봉쇄제의 임상응용을 3개 쓰라.",
+      "answer": "전신마취 중 근육이완, 탈구 교정/골절 맞추기, 내시경 삽입, 파상풍 전신경련 완화 중 3개",
+      "answer_units": [
+        "목록 중 3개"
+      ],
+      "prerequisites": [
+        "Q022"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p22"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "기전을 익힌 뒤 임상 적용 회상",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q027",
+      "concept_id": "C10",
+      "tier": "Advanced",
+      "importance": 5,
+      "concept_difficulty": 4,
+      "item_difficulty": 3,
+      "format": "list",
+      "cognitive_type": "direct",
+      "retrieval_direction": "direct",
+      "question": "S1 p22의 비탈분극성 신경근 봉쇄 약물을 모두 쓰라.",
+      "answer": "Tubocurarine, vecuronium, rocuronium, mivacurium",
+      "answer_units": [
+        "Tubocurarine",
+        "vecuronium",
+        "rocuronium",
+        "mivacurium"
+      ],
+      "prerequisites": [
+        "Q022"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p22"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "학습목표의 '예들을 열거' 요구",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q028",
+      "concept_id": "C11",
+      "tier": "Advanced",
+      "importance": 3,
+      "concept_difficulty": 4,
+      "item_difficulty": 4,
+      "format": "matching",
+      "cognitive_type": "discrimination",
+      "retrieval_direction": "discrimination",
+      "question": "AChE 억제제 분류와 특징을 연결하라.",
+      "answer": "위 answer_pairs와 같음",
+      "answer_units": [
+        "L1-R1",
+        "L2-R2",
+        "L3-R3"
+      ],
+      "prerequisites": [],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p4"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "중독 기전의 선행 분류",
+      "conflict_id": "",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [
+        "L1: 비공유결합 제제",
+        "L2: 가역성 carbamate",
+        "L3: 불가역성 organophosphorus"
+      ],
+      "matching_right": [
+        "R1: 2분~10분",
+        "R2: 30분~6시간",
+        "R3: 수백 시간/활성부위 인산화·aging"
+      ],
+      "answer_pairs": [
+        {
+          "left": "L1: 비공유결합 제제",
+          "right": "R1: 2분~10분"
+        },
+        {
+          "left": "L2: 가역성 carbamate",
+          "right": "R2: 30분~6시간"
+        },
+        {
+          "left": "L3: 불가역성 organophosphorus",
+          "right": "R3: 수백 시간/활성부위 인산화·aging"
+        }
+      ],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q029",
+      "concept_id": "C01",
+      "tier": "Advanced",
+      "importance": 4,
+      "concept_difficulty": 3,
+      "item_difficulty": 4,
+      "format": "ox",
+      "cognitive_type": "trap",
+      "retrieval_direction": "discrimination",
+      "question": "[S1 p7 기준] \"교감신경계 작동기관에는 무스카린 수용체가 전혀 없다.\"",
+      "answer": "X",
+      "answer_units": [
+        "X",
+        "S1은 일부 교감 작동기관에서 ACh–muscarinic 경로를 예외로 표시"
+      ],
+      "prerequisites": [
+        "Q001"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p7"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "예외를 빼버린 과도한 일반화를 구별",
+      "conflict_id": "CF-03",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q030",
+      "concept_id": "C01",
+      "tier": "Advanced",
+      "importance": 4,
+      "concept_difficulty": 3,
+      "item_difficulty": 4,
+      "format": "ox",
+      "cognitive_type": "trap",
+      "retrieval_direction": "discrimination",
+      "question": "[S2 2023 Q14 정답표 기준] \"교감신경계의 작동세포에는 무스카린 수용체가 없다.\"",
+      "answer": "O",
+      "answer_units": [
+        "O"
+      ],
+      "prerequisites": [
+        "Q001"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S2",
+          "locator": "2023 Q14"
+        }
+      ],
+      "source_strength": [
+        "high-for-exam-key"
+      ],
+      "exam_rationale": "S1과 충돌하는 족보 내용을 삭제하지 않고 출처별로 보존",
+      "conflict_id": "CF-03",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q031",
+      "concept_id": "C10",
+      "tier": "Advanced",
+      "importance": 5,
+      "concept_difficulty": 4,
+      "item_difficulty": 5,
+      "format": "ox",
+      "cognitive_type": "trap",
+      "retrieval_direction": "discrimination",
+      "question": "[S2 2019 Q57 기준] \"Rocuronium에 의해서도 탈분극성 phase 1 block이 발생한다.\"",
+      "answer": "X",
+      "answer_units": [
+        "X"
+      ],
+      "prerequisites": [
+        "Q022",
+        "Q023"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S2",
+          "locator": "2019 Q57"
+        }
+      ],
+      "source_strength": [
+        "high-for-exam-key"
+      ],
+      "exam_rationale": "2019 정답 ⑤에 따라 이 진술이 '옳지 않은 것'으로 처리됨",
+      "conflict_id": "CF-02",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q032",
+      "concept_id": "C10",
+      "tier": "Advanced",
+      "importance": 5,
+      "concept_difficulty": 4,
+      "item_difficulty": 5,
+      "format": "ox",
+      "cognitive_type": "trap",
+      "retrieval_direction": "discrimination",
+      "question": "[S2 2020 Q29 정답표 기준] \"Phase 1 block은 nicotine성 수용체의 지속적 탈분극 효과 때문이다.\"",
+      "answer": "X",
+      "answer_units": [
+        "X"
+      ],
+      "prerequisites": [
+        "Q022",
+        "Q023"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S2",
+          "locator": "2020 Q29"
+        }
+      ],
+      "source_strength": [
+        "high-for-exam-key"
+      ],
+      "exam_rationale": "2020 정답표가 ①을 '옳지 않은 것'으로 표시해 S1 및 2019 문항과 충돌",
+      "conflict_id": "CF-02",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q033",
+      "concept_id": "C02",
+      "tier": "Advanced",
+      "importance": 5,
+      "concept_difficulty": 3,
+      "item_difficulty": 5,
+      "format": "basic",
+      "cognitive_type": "direct",
+      "retrieval_direction": "direct",
+      "question": "[S2 2025 Q18 정답표 기준] Atropine의 receptor action으로 정답 처리된 표현은?",
+      "answer": "adrenergic receptor agonist",
+      "answer_units": [
+        "adrenergic receptor agonist"
+      ],
+      "prerequisites": [],
+      "source_refs": [
+        {
+          "source_id": "S2",
+          "locator": "2025 Q18"
+        }
+      ],
+      "source_strength": [
+        "high-for-exam-key"
+      ],
+      "exam_rationale": "족보 정답표의 원문을 별도 회상 대상으로 보존",
+      "conflict_id": "CF-01",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q034",
+      "concept_id": "C02",
+      "tier": "Advanced",
+      "importance": 5,
+      "concept_difficulty": 3,
+      "item_difficulty": 4,
+      "format": "basic",
+      "cognitive_type": "direct",
+      "retrieval_direction": "direct",
+      "question": "[S1 기준] Atropine은 어떤 수용체 작용을 차단하는 약물로 제시되는가?",
+      "answer": "muscarinic receptor 차단",
+      "answer_units": [
+        "muscarinic receptor 차단"
+      ],
+      "prerequisites": [],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p11"
+        },
+        {
+          "source_id": "S1",
+          "locator": "p18"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "S2 2025 Q18 정답표와의 충돌을 자료별로 분리",
+      "conflict_id": "CF-01",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q035",
+      "concept_id": "C09",
+      "tier": "Optional",
+      "importance": 2,
+      "concept_difficulty": 2,
+      "item_difficulty": 3,
+      "format": "basic",
+      "cognitive_type": "direct",
+      "retrieval_direction": "direct",
+      "question": "[S1 p20 기준] Nicotine은 자율신경절 작용약물 중 어느 범주로 분류되는가?",
+      "answer": "신경절 흥분 약물",
+      "answer_units": [
+        "신경절 흥분 약물"
+      ],
+      "prerequisites": [
+        "Q001"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p20"
+        }
+      ],
+      "source_strength": [
+        "high"
+      ],
+      "exam_rationale": "강의 본문의 분류",
+      "conflict_id": "CF-04",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    },
+    {
+      "question_id": "Q036",
+      "concept_id": "C09",
+      "tier": "Optional",
+      "importance": 2,
+      "concept_difficulty": 2,
+      "item_difficulty": 3,
+      "format": "basic",
+      "cognitive_type": "direct",
+      "retrieval_direction": "direct",
+      "question": "[S1 p3 약물정리표 기준] Nicotine의 기전 칸에 적힌 표현은?",
+      "answer": "니코틴 수용체 차단",
+      "answer_units": [
+        "니코틴 수용체 차단"
+      ],
+      "prerequisites": [
+        "Q001"
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "locator": "p3 약물 정리 표"
+        }
+      ],
+      "source_strength": [
+        "medium"
+      ],
+      "exam_rationale": "같은 S1의 p20 분류와 합치지 않고 별도로 보존",
+      "conflict_id": "CF-04",
+      "options": [],
+      "correct_option_ids": [],
+      "matching_left": [],
+      "matching_right": [],
+      "answer_pairs": [],
+      "sequence_items": [],
+      "correct_order": []
+    }
+  ],
+  "audit_summary": {
+    "summary": "원 응답의 self-audit 결과: source_fidelity는 경고와 함께 통과. conflict_preservation, clarity, gradeability, answer_burden, answer_leakage, retrieval_value, format_suitability, prerequisite_validity, importance_scope는 통과. distractor_quality는 선택형 문항에서 통과. 총 36문항(Core 24, Advanced 10, Optional 2)이며, 충돌 문항은 4개 Conflict ID에 걸쳐 8개다.",
+    "rejected_candidate_count": 0,
+    "changes": [
+      "clarity: 모든 문항에서 약물명, 장기 효과, 기전, 출처 기준 등 답의 축을 발문에 명시했다. 충돌 문항에는 [S1 기준], [S2 연도·문항 기준]을 붙였다.",
+      "gradeability: 모든 문항에 answer_units를 두고 list는 요구 개수를 제한했다. Matching/Sequence는 정답쌍·순서를 별도 필드로 분리했다.",
+      "answer burden: 파킨슨 약물은 '2개 이상', OAB 약물은 '4개', 임상응용은 '3개'로 제한해 장문 회상을 피했다.",
+      "redundancy: atropine/scopolamine 등을 이름만 바꿔 반복하지 않고 BBB, 눈, 중독, 심혈관 등 회상 축을 나누었다.",
+      "reverse coverage: scopolamine BBB, tropicamide, mirabegron, succinylcholine을 '특성/부작용→약물' 역방향으로 포함했다.",
+      "discrimination: tertiary vs quaternary, 침 분비 증가 vs 감소, 비탈분극 vs 탈분극, OAB 약물군 경쟁을 별도 문항으로 만들었다.",
+      "integration: 반복 출제된 농부 콜린성 중독 사례(vignette)를 기초 원인·치료 문항 뒤인 Q021에 배치했다.",
+      "low-yield: nicotine/신경절 약물은 Optional 2문항으로 제한했다.",
+      "source conflicts: 4개 Conflict ID로 출처별 문항 8개로 분리했다. 자료 비중으로 정답을 덮어쓰지 않았다.",
+      "prerequisites: 실제 앞선 기초 문항만 연결했다. 자기참조, 없는 ID, 순환 참조는 없다."
+    ]
+  },
+  "warnings": [
+    "[원응답] RULE_HASH_UNRESOLVED — 규칙 3.1.0 원본 바이트열이 아니라 채팅 텍스트만 제공되어 재현 가능한 SHA-256을 기록하지 않았다(rules_sha256: NOT_REPRODUCIBLE_FROM_CHAT_BYTE_STREAM).",
+    "[원응답] CF-01 — S2 2025 Q18 정답표와 S1의 atropine 설명이 충돌한다.",
+    "[원응답] CF-02 — S2 2019/2020 Phase 1 block 문항의 정답 처리가 서로 충돌한다.",
+    "[원응답] CF-03 — S1의 교감 muscarinic 예외와 S2 2023 Q14 정답표가 충돌한다.",
+    "[원응답] CF-04 — S1 p3 정리표의 nicotine 표현과 p20 본문 분류가 충돌한다.",
+    "[원응답] S2의 일부 2021 문항은 '정답 미확인'이다. 그 표시를 보존했고 단독 정답 근거로 쓰지 않았다고 한다.",
+    "[정리] 원 응답의 concept tier 'Core/Advanced'(C05, C10)는 schema enum에 없다. C05는 문항이 모두 Core이고, C10은 Core·Advanced 문항이 섞여 있어 'Core'로 기록했다. 확인이 필요하다.",
+    "[정리] audit_summary.rejected_candidate_count는 원 응답에 없어 0으로 기록했다.",
+    "[정리] exam_date(2026-10-19), rules_version(3.1.0), source_weight 설정은 schema에 해당 필드가 없어 이 경고에만 남긴다.",
+    "[정리/source_fidelity] Q021은 S2 2021 Q24를, Q024는 S2 2021 Q26을 근거로 인용한다. 그런데 원 응답 스스로 이 두 문항을 '정답 미확인'으로 표시하며 독립 정답 근거로 쓰지 않았다고 해서 서로 맞지 않는다.",
+    "[정리/conflict_preservation] CF-02의 2019 측(지속 탈분극 진술을 틀렸다고 처리하지 않음)을 직접 묻는 문항이 없다. Q031은 rocuronium 진술만 묻기 때문에 충돌 쟁점을 출처별로 맞대응하지 못한다.",
+    "[정리/conflict_preservation] CF-01: 충돌 설명은 S2 2025 Q18 정답표를 'Atropine - adrenergic receptor 효현제'로 인용하지만 Q033 정답은 'adrenergic receptor agonist'로 영문화되어 있다. 원문 표현인지 확인이 필요하다. 또 C07 개념 출처에도 S2 2025 Q18이 들어 있어 같은 문항의 주제가 일관적인지 확인이 필요하다.",
+    "[정리/gradeability] Q009, Q015, Q026의 answer_units는 '…중 2개', '목록 중 4개', '목록 중 3개' 같은 단일 단위여서 정답 후보가 answer에만 있다. Q028의 answer는 '위 answer_pairs와 같음'으로, 자체 정답 문구가 없다.",
+    "[정리/gradeability] Q030, Q031, Q032의 OX answer_units에는 O/X만 있고 근거 설명 단위가 없다.",
+    "[정리] matching 문항의 answer_units(L1-R1 등)와 sequence 문항의 answer_units(B,D,A,E,C 등)는 원문 그대로 라벨 ID로 두었다. matching_left/right·sequence_items에는 라벨을 붙여 대응을 유지했다.",
+    "[정리/retrieval_value] Retrieval Plan에는 있지만 해당 방향의 문항이 없는 경우: C01 mechanism, C04 discrimination, C06 reverse·discrimination, C10 integration, C12 direct·reverse.",
+    "[정리] C06의 회상 방향이 Concept Map(direct, discrimination)과 Retrieval Plan(direct, reverse, discrimination)에서 다르다. Retrieval Plan 값을 따랐다.",
+    "[정리/source_fidelity] C10 개념 출처 'S2 2019/2020/2021'은 문항 번호가 없어 locator를 연도만으로 기록했다.",
+    "[정리/source_fidelity] Q017의 mirabegron은 S2 2023 Q11에만 근거하며, S1에서는 확인되지 않는다."
+  ]
+}
