@@ -51,6 +51,7 @@ from app.database import get_db
 from app.models import (
     JOB_AUTO,
     JOB_AUTO_DAILY_CAP,
+    JOB_BANK,
     JOB_BUTTON,
     JOB_CANCELED,
     JOB_DONE,
@@ -66,6 +67,7 @@ from app.models import (
     Lecture,
     PrequizJob,
     Preview,
+    QuizBank,
     RunnerBeat,
 )
 from app.routes.common import lecture_or_404
@@ -435,6 +437,10 @@ def _no_material(db: Session, lecture: Lecture, kind: str) -> str:
     Pre-Quiz의 본체다), 복습은 **올해 필기**로 만든다. 올해 필기는 러너가 쓸기마다
     올리므로 서버에 없으면 노트북에도 아직 없다.
     """
+    if kind == JOB_BANK:
+        bank = db.get(QuizBank, (lecture.subject, lecture.run_id))
+        return "" if bank is not None and bank.raw_response else (
+            "ChatGPT 응답이 아직 없습니다. Quiz Bank는 캘린더 패널에서 ChatGPT로 만들고 시작합니다.")
     if kind == JOB_MAIN:
         notes = db.scalars(
             select(Asset.id).where(

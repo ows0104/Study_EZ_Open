@@ -7,6 +7,7 @@ from fastapi.responses import PlainTextResponse
 from app.config import get_settings
 from app.routes import (
     admin,
+    bank,
     bundles,
     cards,
     lectures,
@@ -65,6 +66,9 @@ app.include_router(usage.router, prefix="/api/admin")
 app.include_router(cards.router, prefix="/api/admin")
 # 공지사항(2026-10-04). 읽기는 `/api`, 쓰기는 `/api/admin` — 한 파일에 둘이다.
 app.include_router(notices.router, prefix="/api")
+# Quiz Bank(2026-10-04) — 학생 풀이와 관리자·러너의 넣고 받기.
+app.include_router(bank.router, prefix="/api")
+app.include_router(bank.admin_router, prefix="/api/admin")
 app.include_router(notices.admin_router, prefix="/api/admin")
 # 기생충학 땡시. **승인 게이트를 안 지난다** — 가입하면 열린다.
 # 이유는 `routes/spotter/__init__.py` 첫머리에 있다.

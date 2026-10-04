@@ -38,7 +38,7 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
-# 산출물 계약이 정한 다섯 가지. 여기 없는 종류가 필요해지면 계약을 먼저 고친다.
+# 산출물 계약이 정한 종류. 여기 없는 종류가 필요해지면 계약을 먼저 고친다.
 ASSET_KINDS = frozenset(
     {
         "notes_current",  # 올해 필기 PDF
@@ -47,6 +47,8 @@ ASSET_KINDS = frozenset(
         "pre_apkg",  # <강의>_예습.apkg
         "media",  # 예습 슬라이드 렌더. 이름이 갈래를 안 말하는 것은 역사다
         "main_media",  # 복습 슬라이드 렌더
+        "jokbo",  # 이 강의의 족보 조각(.md). Quiz Bank 를 만들 때 ChatGPT 에 붙인다
+        "bank_media",  # Quiz Bank 가 인용한 필기 쪽 렌더
     }
 )
 
@@ -60,7 +62,7 @@ ASSET_KINDS = frozenset(
 # 예습 쪽 이름을 `pre_media` 로 못 바꾼 것은 운영 DB 에 이미 `media` 로 쌓여
 # 있어서다. 이 저장소의 마이그레이션은 칼럼을 붙일 뿐 값을 옮기지 않는다
 # (`app/cli.py`). 이름이 갈래를 안 말하는 자리가 여기 하나 남는다.
-SLIDE_KINDS = {"pre": "media", "main": "main_media"}
+SLIDE_KINDS = {"pre": "media", "main": "main_media", "bank": "bank_media"}
 
 # 관리자가 강의마다 채우는 다섯 칸. 사용자 화면의 점 둘이 이것을 두 갈래로 묶는다 —
 # 앞 셋이 예습, 뒤 둘이 복습이다.
@@ -650,7 +652,10 @@ JOB_AUTO = "auto"
 # 무엇을 만드는 일감인가. 예습(작년 필기 + 예습 대화)과 복습(올해 필기).
 JOB_PRE = "pre"
 JOB_MAIN = "main"
-JOB_KINDS = frozenset({JOB_PRE, JOB_MAIN})
+# Quiz Bank(2026-10-04). 재료는 관리자가 ChatGPT 에서 받아 온 응답이고(`quiz_bank.raw_response`),
+# 러너는 그것을 정리·검증·검토만 한다 — 만드는 것은 ChatGPT 다.
+JOB_BANK = "bank"
+JOB_KINDS = frozenset({JOB_PRE, JOB_MAIN, JOB_BANK})
 
 
 class PrequizJob(Base):
@@ -1029,3 +1034,100 @@ class Notice(Base):
     created_by: Mapped[str] = mapped_column(String(320), nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+# ---------------------------------------------------------------- Quiz Bank (2026-10-04)
+#
+# 복습 줄 개편: ChatGPT 가 Concept map·Quiz bank 를 만들고, 러너가 claude -p 로 정리·외부지식
+# 검토를 하고, 학생은 Study Engine(`app/study_engine/`)으로 공부한다. Main-Quiz 표들과 섞지 않는다 —
+# 문항의 꼴(형식 여덟, 채점 단위, 선행 문항)도 일정의 꼴(개념 × 방향 숙련도)도 다르다.
+
+BANK_RESPONDED = "responded"  # 관리자가 ChatGPT 응답을 저장했다 — 러너를 기다린다
+BANK_BUILDING = "building"
+BANK_READY = "ready"  # 검증 통과. 학생에게 여는 것은 `open_to_students` 가 따로 정한다
+BANK_INVALID = "invalid"  # 정리는 됐는데 검증 오류가 있다 — 관리자가 오류를 본다
+BANK_FAILED = "failed"
+
+
+class QuizBank(Base):
+    """강의 하나의 문제은행. 한 편에 한 줄이고 다시 만들면 덮는다(build_id 가 바뀐다)."""
+
+    __tablename__ = "quiz_bank"
+
+    subject: Mapped[str] = mapped_column(Text, primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    build_id: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default=BANK_RESPONDED)
+    prompt_version: Mapped[str] = mapped_column(String(16), nullable=False, default="")
+    # ChatGPT 응답 원문. **지우지 않는다** — 정리를 다시 돌릴 때 이것만 있으면 된다.
+    raw_response: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    conversation_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    responded_by: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    bank: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    validation: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # 외부지식 검토(`quizbank/review.py`). 막지 않고 표시만 한다.
+    review: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # 문항 ID → 인용한 필기 쪽들. 답을 볼 때 그 쪽들의 서명 URL 을 낸다.
+    pages: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    usage: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    message: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # **처음엔 관리자에게만 보인다.** 관리자가 보고 연다 — 새 파이프라인의 첫 은행들이다.
+    open_to_students: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    built_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["subject", "run_id"], ["lecture.subject", "lecture.run_id"], ondelete="CASCADE"
+        ),
+    )
+
+
+class BankState(Base):
+    """한 사람이 한 강의의 문제은행으로 공부한 상태 — 엔진 상태(JSON)를 통째로 둔다.
+
+    숙련도·문항별 간격·기록·회차가 한 덩어리다. 엔진이 상태 전체를 받아 새 상태를 돌려주는
+    순수 함수라, 칼럼으로 쪼개면 옮겨 적는 코드만 는다. `build_id` 가 은행과 다르면 새 은행이다 —
+    옛 상태는 `previous` 로 밀어 두고 새로 시작한다(시제품과 같다).
+    """
+
+    __tablename__ = "bank_state"
+
+    user_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    subject: Mapped[str] = mapped_column(Text, primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    build_id: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    state: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    previous: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["subject", "run_id"], ["lecture.subject", "lecture.run_id"], ondelete="CASCADE"
+        ),
+    )
+
+
+class BankFeedback(Base):
+    """학생이 푸는 중에 누른 「문제 있음」·「좋은 문제」."""
+
+    __tablename__ = "bank_feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    subject: Mapped[str] = mapped_column(Text, nullable=False)
+    run_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    build_id: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    question_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    category: Mapped[str] = mapped_column(String(16), nullable=False)
+    comment: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["subject", "run_id"], ["lecture.subject", "lecture.run_id"], ondelete="CASCADE"
+        ),
+        Index("ix_bank_feedback_lecture", "subject", "run_id"),
+    )

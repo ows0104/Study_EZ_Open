@@ -88,6 +88,11 @@ SM-2 를 그대로 옮긴 순수 함수 모듈이다** — DB 도 시계도 안 
 승인된 사람, 쓰기는 관리자. 읽음 표시는 서버에 없다 — 브라우저가 마지막으로 본
 번호만 든다(`web/src/notices/seen.ts`).
 
+같은 날 Quiz Bank 의 표 셋이 섰다 — `quiz_bank`(강의마다 은행 하나 · ChatGPT 응답 원문 ·
+정리·검증·외부지식 검토), `bank_state`(사람마다 엔진 상태 JSON 통째), `bank_feedback`.
+경로는 `routes/bank.py`, 다음 문항을 고르는 것은 **`app/study_engine/`** 이다 — Main-Quiz 의
+`srs.py` 와 서로 안 부른다. 은행은 **처음엔 관리자에게만 보이고** 관리자가 연다(`open_to_students`).
+
 ## `.env` 가 프로덕션이다
 
 `config.py` 는 `DATABASE_URL` 이 환경에 없을 때만 `.env` 를 읽는다. 그래서

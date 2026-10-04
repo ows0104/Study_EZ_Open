@@ -40,6 +40,10 @@ from app.main import app  # noqa: E402
 #
 # 2026-10-04 에 넷이 늘었다 — 공지사항. 읽기 `GET /api/notices` 와 관리자의
 # 쓰기·고치기·지우기(`routes/notices.py`). 운영을 시작하며 관리자가 세우라고 했다.
+#
+# 같은 날 열둘이 늘었다 — Quiz Bank(`routes/bank.py`). 관리자는 ChatGPT 응답을 넣고 열고,
+# 러너는 그것을 받아 정리한 결과를 올리고, 학생은 서버 Study Engine 으로 푼다. 복습 줄 개편을
+# 「공부까지 사이트로」 옮기라는 관리자 지시였다.
 ROUTES = """
 DELETE /api/admin/lectures/{subject}/{run_id}/cards/{kind}/{item_id}
 DELETE /api/admin/notices/{notice_id}
@@ -48,6 +52,8 @@ DELETE /api/lectures/{subject}/{run_id}/prequiz/attempts
 DELETE /api/spotter/comments/{comment_id}
 GET /api/admin/card-edits
 GET /api/admin/card-review
+GET /api/admin/lectures/{subject}/{run_id}/bank
+GET /api/admin/lectures/{subject}/{run_id}/bank-response
 GET /api/admin/lectures/{subject}/{run_id}/cards/{kind}
 GET /api/admin/lectures/{subject}/{run_id}/prequiz-job
 GET /api/admin/overview
@@ -61,6 +67,7 @@ GET /api/bundles/decks
 GET /api/bundles/decks/{subject}/{run_id}/{kind}
 GET /api/health
 GET /api/lectures/{subject}/{run_id}
+GET /api/lectures/{subject}/{run_id}/bank
 GET /api/lectures/{subject}/{run_id}/deck-job
 GET /api/lectures/{subject}/{run_id}/files/{asset_id}
 GET /api/lectures/{subject}/{run_id}/mainquiz
@@ -82,22 +89,28 @@ GET /api/timetable
 PATCH /api/spotter/admin/reports/{report_id}
 PATCH /api/spotter/admin/threads/{kind}/{subject}
 POST /api/admin/lectures
-POST /api/admin/notices
 POST /api/admin/lectures/{subject}/{run_id}/prequiz-job
 POST /api/admin/lectures/{subject}/{run_id}/uploads
 POST /api/admin/lectures/{subject}/{run_id}/uploads/complete
+POST /api/admin/notices
 POST /api/admin/prequiz-jobs/claim
 POST /api/admin/prequiz-jobs/{job_id}/cancel
 POST /api/admin/prequiz-jobs/{job_id}/choose
 POST /api/admin/prequiz-jobs/{job_id}/move
 POST /api/bundles/grabs
+POST /api/lectures/{subject}/{run_id}/bank/feedback
+POST /api/lectures/{subject}/{run_id}/bank/next
+POST /api/lectures/{subject}/{run_id}/bank/rate
+POST /api/lectures/{subject}/{run_id}/bank/reveal
+POST /api/lectures/{subject}/{run_id}/bank/session/end
+POST /api/lectures/{subject}/{run_id}/bank/session/start
 POST /api/lectures/{subject}/{run_id}/mainquiz/grade
 POST /api/lectures/{subject}/{run_id}/mainquiz/reveal
 POST /api/lectures/{subject}/{run_id}/mainquiz/undo
-POST /api/lectures/{subject}/{run_id}/preview-open
 POST /api/lectures/{subject}/{run_id}/prequiz/grade
 POST /api/lectures/{subject}/{run_id}/prequiz/reveal
 POST /api/lectures/{subject}/{run_id}/prequiz/undo
+POST /api/lectures/{subject}/{run_id}/preview-open
 POST /api/spotter/admin/reports/{question_id}/close
 POST /api/spotter/admin/subjects/{subject}/db/refresh
 POST /api/spotter/admin/subjects/{subject}/uploads
@@ -108,6 +121,9 @@ POST /api/spotter/state/merge
 POST /api/spotter/subjects/{subject}/images/sign
 POST /api/spotter/threads/{kind}/{subject}/comments
 PUT /api/admin/course-aliases
+PUT /api/admin/lectures/{subject}/{run_id}/bank
+PUT /api/admin/lectures/{subject}/{run_id}/bank-response
+PUT /api/admin/lectures/{subject}/{run_id}/bank/open
 PUT /api/admin/lectures/{subject}/{run_id}/cards/{kind}/{item_id}
 PUT /api/admin/lectures/{subject}/{run_id}/main-items
 PUT /api/admin/lectures/{subject}/{run_id}/match

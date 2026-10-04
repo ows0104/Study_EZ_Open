@@ -24,6 +24,7 @@ from app.models import (
     Lecture,
     PrequizJob,
     Preview,
+    QuizBank,
     RunMeta,
     RunnerBeat,
     TimetableEvent,
@@ -37,6 +38,7 @@ from app.routes.common import (
     record_preview_open,
     storage_or_503,
 )
+from app.routes import bank as quiz_bank
 from app.routes import cards, prequiz
 from app.routes.prequiz import due_counts, missed_items
 from app.routes.prequiz_jobs import RUNNER_NAME, watch_row, watch_runner_row
@@ -177,6 +179,9 @@ def read_lecture(
         # **2026-08-31에 생겼고 그 전에 구운 편에는 없다.** 문항이 없으면 `null`이라
         # 화면이 웹 풀이를 아예 안 그린다 — 덱만 있는 편과 같은 자리다.
         "mainquiz": main_quiz,
+        # Quiz Bank 요약(2026-10-04). 학생에게는 관리자가 연 은행만 나간다.
+        "bank": quiz_bank.summary(db, lecture, db.get(QuizBank, (lecture.subject, lecture.run_id)),
+                                  is_admin=user.is_admin),
     }
 
     if user.is_admin:
@@ -197,6 +202,8 @@ def read_lecture(
         # 사이드 패널의 「카드 고치기」가 적는 수(2026-09-23). 답까지 든 카드 목록은
         # 여기 안 싣는다 — 고치는 자리가 `…/cards/{kind}` 로 따로 읽는다.
         payload["cardReview"] = cards.review_counts(db, lecture)
+        # ChatGPT 에 붙일 자료(S1 올해 필기 · S2 족보 조각). 확장이 이 순서·이 ID 로 붙인다.
+        payload["bankSources"] = quiz_bank.bank_sources(db, lecture)
     return payload
 
 

@@ -60,7 +60,7 @@ router = APIRouter()
 
 # 강의당 하나뿐인 것들. 새 판이 올라오면 앞의 것을 지운다 — 러너가 최신 판만
 # 고르므로 서버에 v1과 v3이 같이 남아 있을 이유가 없다.
-SINGULAR_KINDS = frozenset({"notes_current", "notes_prev", "main_apkg", "pre_apkg"})
+SINGULAR_KINDS = frozenset({"notes_current", "notes_prev", "main_apkg", "pre_apkg", "jokbo"})
 
 
 # ---------------------------------------------------------------- 강의 등록
