@@ -4,6 +4,10 @@ const { WEBAPP_SOURCE, MESSAGES, LINK_KINDS } = globalThis.STUDYEZ_PROTOCOL;
 
 const TAB_PAYLOAD = "studyez-tab:";
 const PENDING_LINK = "studyez-pending:";
+/** Quiz Bank 답 본문. 웹앱이 저장했다고 회신할 때까지 둔다(링크와 같은 규칙). */
+const PENDING_BANK = "studyez-bank:";
+const BANK_MARK = "STUDYEZ_BANK_COMPLETE";
+const BANK_MAX_CHARS = 2_000_000;
 /**
  * AI 서비스 탭 → `{ lectureId, provider, mode, webappTabId }`.
  *
@@ -119,6 +123,7 @@ function bytesToBase64(bytes) {
 }
 
 const pendingKey = (webappTabId, lectureId, kind) => `${PENDING_LINK}${webappTabId}:${lectureId}:${kind}`;
+const bankKey = (webappTabId, lectureId) => `${PENDING_BANK}${webappTabId}:${lectureId}`;
 
 /**
  * 이 탭으로 갈 링크를 전부 밀어 준다.
@@ -129,7 +134,18 @@ const pendingKey = (webappTabId, lectureId, kind) => `${PENDING_LINK}${webappTab
 async function deliverPending(webappTabId) {
   const stored = await chrome.storage.session.get(null);
   const prefix = `${PENDING_LINK}${webappTabId}:`;
+  const bankPrefix = `${PENDING_BANK}${webappTabId}:`;
   for (const [key, entry] of Object.entries(stored)) {
+    if (key.startsWith(bankPrefix)) {
+      try {
+        await chrome.tabs.sendMessage(webappTabId, {
+          type: MESSAGES.bankReady, lectureId: entry.lectureId, raw: entry.raw, url: entry.url,
+        });
+      } catch {
+        // 지금은 닿지 않는다. 남겨 두고 다음 기회에 다시 보낸다.
+      }
+      continue;
+    }
     if (!key.startsWith(prefix)) continue;
     try {
       await chrome.tabs.sendMessage(webappTabId, {
@@ -197,7 +213,9 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   void chrome.storage.session
     .get(null)
     .then((stored) => {
-      const stale = Object.keys(stored).filter((key) => key.startsWith(`${PENDING_LINK}${tabId}:`));
+      const stale = Object.keys(stored).filter(
+        (key) => key.startsWith(`${PENDING_LINK}${tabId}:`) || key.startsWith(`${PENDING_BANK}${tabId}:`),
+      );
       return chrome.storage.session.remove([`${TAB_PAYLOAD}${tabId}`, `${TAB_WATCH}${tabId}`, ...stale]);
     })
     .catch(() => undefined);
@@ -220,6 +238,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         webappTabId: sender.tab.id,
       },
     });
+    return false;
+  }
+
+  if (message?.type === MESSAGES.bankSaved) {
+    if (!fromWebapp(sender) || !sender.tab?.id || !message.lectureId) return false;
+    void chrome.storage.session.remove(bankKey(sender.tab.id, message.lectureId));
+    return false;
+  }
+
+  // Quiz Bank 탭이 끝난 답의 본문을 보낸다. **강의 id 는 감시 기록에서 읽는다** — 링크와 같다.
+  // bank 로 연 ChatGPT 탭에서 온 것만, 완료 표시가 있는 것만 받는다.
+  if (message?.type === "STUDYEZ_BANK_ANSWER") {
+    if (providerForSender(sender) !== "chatgpt" || !sender.tab?.id) return false;
+    const raw = typeof message.raw === "string" ? message.raw : "";
+    if (!raw.includes(BANK_MARK) || raw.length > BANK_MAX_CHARS) return false;
+    const key = `${TAB_WATCH}${sender.tab.id}`;
+    void chrome.storage.session
+      .get(key)
+      .then(async (stored) => {
+        const watch = stored[key];
+        if (!watch || watch.mode !== "bank") return;
+        const url = isConversationUrl("chatgpt", message.url || "") ? message.url : "";
+        await chrome.storage.session.set({
+          [bankKey(watch.webappTabId, watch.lectureId)]: { lectureId: watch.lectureId, raw, url },
+        });
+        await deliverPending(watch.webappTabId);
+      })
+      .catch(() => undefined);
     return false;
   }
 
@@ -264,6 +310,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .then(async (stored) => {
         const watch = stored[key];
         if (!watch || watch.provider !== provider) return;
+        // Quiz Bank 로 연 대화는 예습 링크가 아니다. 저장하면 관리자의 개인 예습 자리를 덮는다.
+        if (watch.mode === "bank") return;
         // 공유는 기본 링크를 만들 때만 낸다.
         //
         // 개인 예습까지 공개 `/share/`를 발행하면 두 가지가 잘못된다 — 남이
@@ -361,7 +409,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
   // 안 주면 개인으로 본다. 공유는 명시적으로 시킬 때만 만든다.
-  const mode = payload.mode === "shared" ? "shared" : "personal";
+  // `bank` 는 Quiz Bank — 답 본문을 읽는 것이 ChatGPT 쪽(`chatgpt-share.js`)에만 있다.
+  const mode = ["shared", "bank"].includes(payload.mode) ? payload.mode : "personal";
+  if (mode === "bank" && payload.provider !== "chatgpt") {
+    sendResponse({ ok: false, error: "Quiz Bank는 ChatGPT로만 만듭니다." });
+    return false;
+  }
   if (!payload.files.length || !payload.files.every((file) => file?.filename && allowedDownload(file.downloadUrl))) {
     sendResponse({ ok: false, error: "허용되지 않은 자료 주소가 포함되어 있습니다." });
     return false;

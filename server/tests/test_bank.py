@@ -116,6 +116,7 @@ def main() -> None:
           [(s["id"], s["kind"]) for s in detail.get("bankSources", [])] == [("S1", "notes_current"), ("S2", "jokbo")],
           detail.get("bankSources"))
     check("족보는 text/markdown 으로", detail["bankSources"][1]["contentType"] == "text/markdown")
+    check("프롬프트용 시험일", detail.get("bankExamDate") == "2026-10-20", detail.get("bankExamDate"))
 
     print("② 러너")
     got = client.get(f"{ADMIN}/bank-response", headers=RUNNER).json()

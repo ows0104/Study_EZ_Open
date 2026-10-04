@@ -42,3 +42,15 @@ export function quizHref(kind: QuizKind, lecture: { subject: string; runId: stri
 export function quizWindow(kind: QuizKind, lecture: { subject: string; runId: string }) {
   return `${quizPath(kind)}:${lecture.subject}/${lecture.runId}`;
 }
+
+/**
+ * Quiz Bank 풀이 창(2026-10-04). 웹 풀이와 같은 까닭으로 전용 창이다 — 문항·답·슬라이드만 있으면 된다.
+ * 다음 문항은 서버가 고른다(`server/app/study_engine/`).
+ */
+export function bankHref(lecture: { subject: string; runId: string }) {
+  return `/bank/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
+}
+
+export function bankWindow(lecture: { subject: string; runId: string }) {
+  return `bank:${lecture.subject}/${lecture.runId}`;
+}

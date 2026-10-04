@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
+import { useBankLink } from "../bank/bankBridge";
 import { BundleButton } from "../bundle/BundleButton";
 import { decksIn, useBundleDecks } from "../bundle/decks";
 import { bumpPreviewVersion, usePreviewLink } from "../bridge/previewBridge";
@@ -51,6 +52,8 @@ export function CalendarPage() {
    * 보내게 되면 403을 받고 조용히 지나간다 — 대화 자체는 이미 열렸으므로 그
    * 사람에게는 아무것도 실패하지 않았다.
    */
+  // Quiz Bank 답 본문도 같은 자리에서 받는다(관리자). 확장이 이 탭으로 밀어 준다.
+  useBankLink();
   usePreviewLink(
     useCallback(async ({ lectureId, kind, url }) => {
       const [subject, runId] = lectureId.split("/");

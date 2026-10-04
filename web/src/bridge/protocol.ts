@@ -20,6 +20,10 @@ export const MESSAGES = {
   checkPending: "STUDYEZ_CHECK_PENDING_LINKS",
   /** 기본 링크를 여는 중이니 그 뒤에 갈라져 나올 대화를 지켜봐 달라. */
   watchShare: "STUDYEZ_WATCH_SHARE",
+  /** Quiz Bank 를 만든 ChatGPT 답 본문(마크다운). 관리자만 쓰는 갈래다. */
+  bankReady: "STUDYEZ_BANK_READY",
+  /** 그 본문을 서버에 저장했다. 저장 전에는 확장이 지우지 않는다. */
+  bankSaved: "STUDYEZ_BANK_SAVED",
 } as const;
 
 /**

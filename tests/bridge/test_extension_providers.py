@@ -38,6 +38,25 @@ class ExtensionProviderTests(unittest.TestCase):
         self.assertEqual(set(re.findall(r'"([a-z_]+)"', web_block.group(1))), expected)
         self.assertEqual(set(re.findall(r'"([a-z_]+)"', extension_block.group(1))), expected)
 
+    def test_web_and_extension_messages_do_not_drift(self) -> None:
+        """메시지 이름이 한쪽만 바뀌면 조용히 끊긴다 — Quiz Bank 의 둘이 붙은 날(2026-10-04) 세웠다."""
+        web = (ROOT / "web" / "src" / "bridge" / "protocol.ts").read_text(encoding="utf-8")
+        extension = (EXTENSION / "protocol.js").read_text(encoding="utf-8")
+        web_block = re.search(r"export const MESSAGES = \{(.*?)\} as const", web, re.S)
+        extension_block = re.search(r"MESSAGES: \{(.*?)\n  \},", extension, re.S)
+        pairs = lambda block: dict(re.findall(r'(\w+): "([A-Z_]+)"', block.group(1)))  # noqa: E731
+        self.assertEqual(pairs(web_block), pairs(extension_block))
+        self.assertEqual(pairs(web_block)["bankReady"], "STUDYEZ_BANK_READY")
+
+    def test_bank_answer_only_from_a_bank_tab(self) -> None:
+        """답 본문은 bank 로 연 ChatGPT 탭에서, 완료 표시가 있을 때만 받는다. 그 탭의 링크는 예습에 안 붙는다."""
+        source = (EXTENSION / "background.js").read_text(encoding="utf-8")
+        handler = source[source.index('"STUDYEZ_BANK_ANSWER"'):]
+        self.assertIn('providerForSender(sender) !== "chatgpt"', handler[:400])
+        self.assertIn("raw.includes(BANK_MARK)", handler[:600])
+        self.assertIn('watch.mode !== "bank"', handler[:1200])
+        self.assertIn('if (watch.mode === "bank") return;', source)
+
     def test_background_knows_each_conversation_shape(self) -> None:
         source = (EXTENSION / "background.js").read_text(encoding="utf-8")
         for marker in ("app\\/", "chat\\/", "c\\/"):

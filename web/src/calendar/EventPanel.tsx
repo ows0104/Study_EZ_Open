@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { BankPanel } from "../bank/BankPanel";
 import { api, downloadSignedFile, openSignedFile } from "../api";
 import { BundleButton } from "../bundle/BundleButton";
 import { decksIn, type BundleDeck } from "../bundle/decks";
@@ -353,6 +354,9 @@ function KeyActions({
           }
         />
       </PanelGroup>
+
+      {/* Quiz Bank(2026-10-04). 복습 줄 개편의 새 갈래 — Main-Quiz 옆에 나란히 선다. */}
+      <BankPanel lecture={lecture} detail={detail} />
 
       <CardFixLinks lecture={lecture} counts={detail.cardReview} />
 

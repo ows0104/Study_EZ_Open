@@ -29,6 +29,12 @@ window.addEventListener("message", (event) => {
     return;
   }
 
+  if (message.type === MESSAGES.bankSaved) {
+    if (typeof message.lectureId !== "string") return;
+    chrome.runtime.sendMessage({ type: MESSAGES.bankSaved, lectureId: message.lectureId });
+    return;
+  }
+
   if (message.type === MESSAGES.linkSaved) {
     if (typeof message.lectureId !== "string" || typeof message.kind !== "string") return;
     chrome.runtime.sendMessage({ type: MESSAGES.linkSaved, lectureId: message.lectureId, kind: message.kind });
@@ -55,6 +61,10 @@ window.addEventListener("message", (event) => {
 chrome.runtime.sendMessage({ type: MESSAGES.checkPending }, () => void chrome.runtime.lastError);
 
 chrome.runtime.onMessage.addListener((message) => {
+  if (message?.type === MESSAGES.bankReady) {
+    reply({ type: MESSAGES.bankReady, lectureId: message.lectureId, raw: message.raw, url: message.url });
+    return false;
+  }
   if (message?.type !== MESSAGES.linkReady) return false;
   reply({ type: MESSAGES.linkReady, lectureId: message.lectureId, kind: message.kind, url: message.url });
   return false;

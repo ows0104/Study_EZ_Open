@@ -18,6 +18,8 @@ import type { Me, Notice } from "./types";
  */
 const LecturePage = lazy(() => import("./lecture/LecturePage").then((m) => ({ default: m.LecturePage })));
 const QuizPage = lazy(() => import("./lecture/QuizPage").then((m) => ({ default: m.QuizPage })));
+// Quiz Bank 풀이(2026-10-04). 웹 풀이와 같은 전용 창이다.
+const BankStudyPage = lazy(() => import("./bank/BankStudy").then((m) => ({ default: m.BankStudyPage })));
 const AdminPage = lazy(() => import("./admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 const PrivacyPage = lazy(() => import("./PrivacyPage").then((m) => ({ default: m.PrivacyPage })));
 // 공지·이용방법(2026-10-04). 둘 다 가끔 여는 글이라 첫 번들에 안 싣는다.
@@ -82,7 +84,10 @@ function Shell() {
 
   // 강의 상세와 Pre-Quiz는 새 창으로 열린다. 그 창에는 네비게이션이 없는 편이
   // 낫다 — 자료를 보거나 풀러 온 창이고, 돌아갈 캘린더는 원래 창에 그대로 있다.
-  const bare = location.pathname.startsWith("/lectures/") || location.pathname.startsWith("/prequiz/");
+  const bare =
+    location.pathname.startsWith("/lectures/") ||
+    location.pathname.startsWith("/prequiz/") ||
+    location.pathname.startsWith("/bank/");
   // 캘린더는 격자다. 읽기 좋은 폭으로 가둘 이유가 없고, 패널이 340px을 가져가는
   // 만큼 가로가 곧 요일 칸의 폭이 된다. 글을 읽는 화면들만 좁게 둔다.
   const wide = location.pathname === "/";
@@ -90,7 +95,7 @@ function Shell() {
   // 쓴다 — 문항·답·슬라이드가 다 이 폭을 쓰고, 답 버튼은 아래에 못 박힌다.
   // 문항 중앙값 43자·답 63자라 넓혀도 대개 한두 줄이고, 슬라이드는 원본이
   // 1152~1536px이라 700px 안에서는 절반으로 누웠다.
-  const solving = location.pathname.startsWith("/prequiz/");
+  const solving = location.pathname.startsWith("/prequiz/") || location.pathname.startsWith("/bank/");
 
   return (
     <>
@@ -138,6 +143,7 @@ function Shell() {
             <Route path="/guide" element={<GuidePage />} />
             <Route path="/prequiz/:subject/:runId" element={<QuizPage kind="pre" />} />
             <Route path="/mainquiz/:subject/:runId" element={<QuizPage kind="main" />} />
+            <Route path="/bank/:subject/:runId" element={<BankStudyPage />} />
             {/* 관리 화면은 탭을 갈래로 들고 있다(`/admin/match` 등). 그 갈래는
                 안에서 고르므로 여기서는 통째로 넘긴다. */}
             <Route

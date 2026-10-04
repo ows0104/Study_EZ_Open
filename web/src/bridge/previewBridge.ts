@@ -10,7 +10,8 @@ import {
   type LinkKind,
 } from "./protocol";
 
-export type PreviewFile = { id: string; filename: string; downloadUrl: string };
+/** `contentType` 은 PDF 가 아닌 것(Quiz Bank 의 족보 조각 .md)에만 준다. 안 주면 확장이 PDF 로 붙인다. */
+export type PreviewFile = { id: string; filename: string; downloadUrl: string; contentType?: string };
 
 /** 확장이 설치돼 있는가. 없으면 안내를 띄우고 자동 열기를 하지 않는다. */
 export function extensionInstalled() {
@@ -45,8 +46,10 @@ export function requestPreview(input: {
    * `shared`일 때만 확장이 공개 `/share/` 링크를 만든다. 개인 예습에 공유가
    * 붙으면 남이 물은 것이 링크만으로 열리고, 관리자가 개인 예습을 하는 순간
    * 그 공유가 반 전체의 기본 링크를 덮는다.
+   *
+   * `bank` 는 Quiz Bank(관리자)다. 링크 대신 끝난 답의 본문이 돌아온다(`bank/bankBridge.ts`).
    */
-  mode: "shared" | "personal";
+  mode: "shared" | "personal" | "bank";
   prompt: string;
   files: PreviewFile[];
 }) {

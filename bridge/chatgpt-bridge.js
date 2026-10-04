@@ -12,17 +12,20 @@ function escapeHtml(value) {
 
 function createOverlay(payload, remembered) {
   const shared = payload.mode === "shared";
+  // Quiz Bank(관리자): 필기 PDF 와 족보 조각을 붙이고, 답이 끝나면 그 **본문**을 강의에 저장한다.
+  const bank = payload.mode === "bank";
   const providerLabel = { chatgpt: "ChatGPT", gemini: "Gemini", claude: "Claude" }[payload.provider] || "AI";
-  const modeLabel = shared ? "공개 공유 링크" : "개인 대화 링크";
+  const modeLabel = bank ? "Quiz Bank 답 저장" : shared ? "공개 공유 링크" : "개인 대화 링크";
+  const title = bank ? "Study EZ Quiz Bank" : "Study EZ 예습 자료";
   const fileList = payload.files
     .map((file) => `<li title="${escapeHtml(file.filename)}">${escapeHtml(file.filename)}</li>`)
     .join("");
   const disclosure = `
     <p class="studyez-disclosure">
-      동의하면 선택한 PDF 내용과 프롬프트를 ${providerLabel}에 넣습니다. 확장은 답변 완료 상태와 링크를
-      확인합니다. ChatGPT 기본 링크 모드에서는 로그인 토큰을 메모리에서 잠깐 사용하지만, 토큰을 저장하거나
-      Study EZ로 보내지 않습니다.
-      ${shared ? "이 모드는 링크를 가진 누구나 볼 수 있는 공개 공유 링크를 만들고 Study EZ 강의에 저장합니다." : "이 모드는 내 계정에서만 열리는 대화 주소를 Study EZ 강의에 저장합니다."}
+      동의하면 선택한 자료 내용과 프롬프트를 ${providerLabel}에 넣습니다. 확장은 답변 완료 상태와 링크를
+      확인합니다. ChatGPT 기본 링크·Quiz Bank 모드에서는 로그인 토큰을 메모리에서 잠깐 사용하지만, 토큰을
+      저장하거나 Study EZ로 보내지 않습니다.
+      ${bank ? "이 모드는 답변이 끝나면 그 답변 본문을 Study EZ 강의에 저장합니다. 공유 링크는 만들지 않습니다." : shared ? "이 모드는 링크를 가진 누구나 볼 수 있는 공개 공유 링크를 만들고 Study EZ 강의에 저장합니다." : "이 모드는 내 계정에서만 열리는 대화 주소를 Study EZ 강의에 저장합니다."}
       <a href="https://studyez.kr/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a>
     </p>`;
   const root = document.createElement("aside");
@@ -30,55 +33,58 @@ function createOverlay(payload, remembered) {
   root.innerHTML = `
     <style>
       #studyez-bridge { position: fixed; right: 20px; bottom: 20px; z-index: 2147483647; box-sizing: border-box; width: min(360px, calc(100vw - 40px)); max-height: calc(100vh - 40px); padding: 16px; overflow: auto; border: 1px solid #e4e6ea; border-radius: 14px; color: #16181d; background: #fff; box-shadow: 0 18px 50px rgba(16, 18, 29, .22); font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif; }
-      #studyez-bridge h2 { margin: 0 0 5px; font-size: 15px; font-weight: 650; }
+      #studyez-bridge h2 { margin: 0 0 5px; padding-right: 26px; font-size: 15px; font-weight: 650; }
       #studyez-bridge p { margin: 0 0 10px; color: #878d97; font-size: 12px; }
       #studyez-bridge .studyez-disclosure { padding: 10px; border: 1px solid #dfe4f5; border-radius: 9px; color: #414754; background: #f5f7ff; }
       #studyez-bridge .studyez-consent { display: flex; align-items: flex-start; margin: 0 0 12px; gap: 8px; color: #30343b; font-size: 12px; cursor: pointer; }
       #studyez-bridge .studyez-consent input { width: 16px; height: 16px; margin: 1px 0 0; accent-color: #3e63dd; }
       #studyez-bridge .studyez-remembered { margin: 0 0 12px; color: #30343b; font-size: 12px; }
       #studyez-bridge .studyez-remembered button { min-height: 0; padding: 0; border: 0; color: #3155c6; background: none; font: inherit; font-weight: 400; text-decoration: underline; cursor: pointer; }
-      #studyez-bridge .studyez-compact { margin-bottom: 12px; }
-      #studyez-bridge .studyez-file-line { margin: 0; overflow: hidden; color: #30343b; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+      #studyez-bridge .studyez-file-line { margin: 0 0 10px; overflow: hidden; color: #30343b; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
       #studyez-bridge details { margin-top: 8px; color: #5d6470; font-size: 12px; }
-      #studyez-bridge summary { width: max-content; color: #3155c6; cursor: pointer; }
+      #studyez-bridge summary { width: max-content; color: #a0a5ae; font-size: 11px; cursor: pointer; }
       #studyez-bridge details .studyez-disclosure { margin-top: 8px; }
       #studyez-bridge details ul { margin-bottom: 8px; }
       #studyez-bridge a { color: #3155c6; }
       #studyez-bridge ul { max-height: 120px; margin: 0 0 12px; padding: 9px 9px 9px 26px; overflow: auto; border-radius: 9px; background: #f6f7f9; }
       #studyez-bridge li { margin: 3px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      #studyez-bridge .studyez-actions { display: flex; justify-content: flex-end; gap: 7px; }
+      #studyez-bridge .studyez-actions { display: flex; align-items: center; gap: 8px; }
       #studyez-bridge button { min-height: 34px; padding: 0 12px; border: 1px solid #e4e6ea; border-radius: 8px; color: #565b64; background: #fff; font: inherit; font-weight: 650; cursor: pointer; }
-      #studyez-bridge button[data-action="confirm"] { border-color: #3e63dd; color: #fff; background: #3e63dd; }
+      #studyez-bridge button[data-action="confirm"] { flex: none; border-color: #3e63dd; color: #fff; background: #3e63dd; }
+      #studyez-bridge button[data-action="cancel"] { position: absolute; top: 10px; right: 10px; width: 26px; min-height: 26px; height: 26px; padding: 0; border: 0; border-radius: 6px; color: #878d97; background: none; font-size: 18px; font-weight: 400; line-height: 1; }
+      #studyez-bridge button[data-action="cancel"]:hover { color: #30343b; background: #f2f3f5; }
       #studyez-bridge button:disabled { opacity: .55; cursor: not-allowed; }
-      #studyez-bridge .studyez-status { min-height: 18px; margin-top: 9px; color: #3a5bc7; font-size: 11px; }
+      #studyez-bridge .studyez-status { flex: 1; min-width: 0; color: #3a5bc7; font-size: 11px; }
       #studyez-bridge .studyez-status.is-error { color: #9a3412; }
     </style>
+    <button type="button" data-action="cancel" aria-label="닫기" title="닫기">×</button>
     ${
       remembered
-        ? `<h2>Study EZ 예습 자료</h2>
-    <div class="studyez-compact">
-      <p class="studyez-file-line" title="${escapeHtml(payload.files.map((file) => file.filename).join(", "))}">PDF ${payload.files.length}개 · ${modeLabel} · ${escapeHtml(payload.files[0]?.filename || "자료")}</p>
-      <details>
-        <summary>첨부 자료와 개인정보 처리 자세히</summary>
-        ${disclosure}
-        <ul>${fileList}</ul>
-        <p class="studyez-remembered">이 모드에 이미 동의했습니다. <button type="button" data-action="revoke">동의 해제</button></p>
-      </details>
-    </div>`
-        : `<h2>Study EZ 예습 자료</h2>
-    <p>${providerLabel}에 넣을 필기와 프롬프트입니다. 전송은 직접 눌러야 합니다.</p>
+        ? `<h2>${title}</h2>
+    <p class="studyez-file-line" title="${escapeHtml(payload.files.map((file) => file.filename).join(", "))}">자료 ${payload.files.length}개 · ${modeLabel} · ${escapeHtml(payload.files[0]?.filename || "자료")}</p>`
+        : `<h2>${title}</h2>
+    <p>${providerLabel}에 넣을 ${bank ? "필기·족보" : "필기"}와 프롬프트입니다. 전송은 직접 눌러야 합니다.</p>
     ${disclosure}
     <ul>${fileList}</ul>
     <label class="studyez-consent">
       <input type="checkbox" data-action="consent">
-      <span>위의 데이터 처리와 ${shared ? "공개 공유 링크 생성" : "개인 대화 주소 저장"}에 동의합니다.</span>
+      <span>위의 데이터 처리와 ${bank ? "답변 본문 저장" : shared ? "공개 공유 링크 생성" : "개인 대화 주소 저장"}에 동의합니다.</span>
     </label>`
     }
     <div class="studyez-actions">
-      <button type="button" data-action="cancel">취소</button>
+      <div class="studyez-status" role="status"></div>
       <button type="button" data-action="confirm"${remembered ? "" : " disabled"}>${remembered ? "" : "동의하고 "}자료 ${payload.files.length}개 넣기</button>
     </div>
-    <div class="studyez-status" role="status"></div>
+    ${
+      remembered
+        ? `<details>
+      <summary>첨부 자료와 개인정보 처리 자세히</summary>
+      ${disclosure}
+      <ul>${fileList}</ul>
+      <p class="studyez-remembered">이 모드에 이미 동의했습니다. <button type="button" data-action="revoke">동의 해제</button></p>
+    </details>`
+        : ""
+    }
   `;
   document.body.append(root);
   return root;
@@ -106,7 +112,9 @@ function fetchFile(file, status) {
       }
       if (message.type === "FILE_END") {
         port.disconnect();
-        resolve(new File(chunks, file.filename, { type: "application/pdf" }));
+        // 족보 조각은 마크다운이다(Quiz Bank). 형식을 안 주면 PDF 로 붙는다.
+        const type = file.contentType || (/\.md$/i.test(file.filename) ? "text/markdown" : "application/pdf");
+        resolve(new File(chunks, file.filename, { type }));
       }
     });
     port.postMessage({ type: "DOWNLOAD_FILE", fileId: file.id, filename: file.filename, downloadUrl: file.downloadUrl });
@@ -228,7 +236,7 @@ async function initialize() {
   }
   if (!payload) return;
 
-  const mode = payload.mode === "shared" ? "shared" : "personal";
+  const mode = ["shared", "bank"].includes(payload.mode) ? payload.mode : "personal";
   const provider = ["chatgpt", "gemini", "claude"].includes(payload.provider) ? payload.provider : "chatgpt";
   const consentKey = `${CONSENT_KEY}${provider}:${mode}`;
 
@@ -265,7 +273,9 @@ async function initialize() {
         status.textContent = "자료를 첨부하고 프롬프트를 넣는 중…";
         await attachFiles(files, provider);
         fillPrompt(payload.prompt);
-        status.textContent = "넣었습니다. 확인한 뒤 전송 버튼을 눌러 주세요.";
+        // 다 넣은 뒤에는 버튼이 할 일이 없다. 그 자리를 안내문에 준다.
+        confirm.hidden = true;
+        status.textContent = "자료를 넣었습니다. 확인하고 전송을 눌러 주세요.";
         setTimeout(() => overlay.remove(), 5000);
       } catch (error) {
         status.classList.add("is-error");

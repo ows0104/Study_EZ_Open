@@ -12,6 +12,10 @@
 // 공유는 만든 시점의 스냅숏이라, 답이 다 나오기를 기다렸다가 처음 만들고 이후
 // 턴마다 다시 낸다. 같은 대화를 다시 공개하면 share id가 그대로라 저장된 주소는
 // 안 바뀌고 내용만 따라온다.
+//
+// **Quiz Bank(`mode === "bank"`, 2026-10-04)는 링크가 아니라 답 본문을 낸다.** 관리자가
+// 캘린더에서 연 대화다. 답이 끝나고 완료 표시가 있으면 마크다운 원문을 배경에 넘기고,
+// 웹앱이 서버에 저장한다. 공유도 대화 주소 저장도 하지 않는다.
 
 const LOG = "[Study_EZ preview]";
 const POLL_INTERVAL_MS = 4000;
@@ -23,6 +27,8 @@ let bound = "";
 let lastConversationUrl = "";
 let lastShareUrl = "";
 let lastSharedNode = "";
+let lastBankNode = "";
+const BANK_MARK = "STUDYEZ_BANK_COMPLETE";
 
 function conversationId() {
   const match = /^\/(?:g\/[^/]+\/)?c\/([A-Za-z0-9_:-]+)/.exec(location.pathname);
@@ -60,7 +66,33 @@ async function conversationState(conversation, token) {
       message?.author?.role === "assistant" &&
       message?.status === "finished_successfully" &&
       message?.end_turn === true,
+    answer: answerText(body),
   };
+}
+
+/**
+ * 마지막 사람 말 뒤의 답 전부. 「계속 생성」으로 이어 붙은 답이 여러 메시지일 수 있어
+ * 현재 마디에서 사람 말까지 거슬러 올라가며 모은다. 도구 호출(recipient 가 all 이 아닌 것)과
+ * 생각 과정(content_type 이 text 가 아닌 것)은 뺀다.
+ */
+function answerText(body) {
+  const parts = [];
+  let node = body?.mapping?.[body?.current_node];
+  for (let hops = 0; node && hops < 200; hops += 1) {
+    const message = node.message;
+    if (message?.author?.role === "user") break;
+    const content = message?.content;
+    if (
+      message?.author?.role === "assistant" &&
+      (message.recipient ?? "all") === "all" &&
+      ["text", "multimodal_text"].includes(content?.content_type)
+    ) {
+      const text = (content.parts || []).filter((part) => typeof part === "string").join("");
+      if (text) parts.unshift(text);
+    }
+    node = node.parent ? body.mapping[node.parent] : null;
+  }
+  return parts.join("\n\n");
 }
 
 /** 이미 만들어 둔 공유가 있는지. 생성이 실패로 보고됐지만 실제로는 됐을 때의 복구로도 쓴다. */
@@ -232,6 +264,23 @@ async function publish() {
     if (!state.finished || !state.currentNode) return "pending";
     bound = conversation;
 
+    if (watch.mode === "bank") {
+      if (state.currentNode === lastBankNode) return "settled";
+      // 끝났는데 완료 표시가 없으면 잘린 답이다. 내지 않는다 — 「계속 생성」을 누르면
+      // 화면이 움직이고 다시 여기로 온다.
+      if (!state.answer.includes(BANK_MARK)) {
+        console.info(LOG, "답이 끝났지만 완료 표시가 없습니다. 이어서 생성되기를 기다립니다.");
+        return "settled";
+      }
+      lastBankNode = state.currentNode;
+      chrome.runtime.sendMessage(
+        { type: "STUDYEZ_BANK_ANSWER", raw: state.answer, url: `https://chatgpt.com/c/${conversation}` },
+        () => void chrome.runtime.lastError,
+      );
+      console.info(LOG, `Quiz Bank 답 본문을 넘겼습니다 (${state.answer.length}자).`);
+      return "published";
+    }
+
     // **대화 주소는 여기서 처음 낸다.**
     //
     // 주소창에 `/c/<id>`가 뜬 것은 그 대화가 있다는 뜻이 아니다. 보내기 전에도
@@ -284,7 +333,7 @@ function watchForCompletedTurns() {
 
 function startWatching(lectureId, mode) {
   if (watch) return;
-  watch = { lectureId, mode: mode === "shared" ? "shared" : "personal" };
+  watch = { lectureId, mode: ["shared", "bank"].includes(mode) ? mode : "personal" };
   console.info(LOG, `이 대화의 링크를 자동으로 저장합니다 (${watch.mode}).`);
   watchForCompletedTurns();
 }

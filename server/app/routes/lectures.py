@@ -204,6 +204,8 @@ def read_lecture(
         payload["cardReview"] = cards.review_counts(db, lecture)
         # ChatGPT 에 붙일 자료(S1 올해 필기 · S2 족보 조각). 확장이 이 순서·이 ID 로 붙인다.
         payload["bankSources"] = quiz_bank.bank_sources(db, lecture)
+        # 프롬프트의 「시험일」 칸. 서버가 시간표에서 고르는 것과 같은 날이어야 한다.
+        payload["bankExamDate"] = quiz_bank.exam_date_for(db, lecture)
     return payload
 
 

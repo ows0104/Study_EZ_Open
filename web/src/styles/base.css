@@ -69,6 +69,8 @@
   --fam-preview: #6e56cf; /* violet 9 */
   --fam-pre: #12a594; /* teal 9 */
   --fam-main: #3e63dd; /* indigo 9 */
+  /* Quiz Bank(2026-10-04). 세 갈래와 겹치지 않는 색 — 복습 줄 개편의 새 갈래다. */
+  --fam-bank: #f76b15; /* orange 9 */
 
   --warn: #9a3412;
   --warn-soft: #fdf3ec;
@@ -2450,3 +2452,217 @@ button.notice-title:hover:not(:disabled) {
     margin-top: 0;
   }
 }
+
+/* ── Quiz Bank 풀이 (2026-10-04) ─────────────────────────────
+   틀은 웹 풀이(`.quiz`·`.quiz-bar`)를 그대로 쓰고, 형식 여덟 가지에 필요한 것만 더한다. */
+
+.bank-progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bank-note {
+  margin: 8px 0;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.bank-start-row select {
+  margin-left: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-2);
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+}
+
+.bank-tags {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.bank-conflict {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--warn-line);
+  border-radius: var(--r-2);
+  color: var(--warn);
+  background: var(--warn-soft);
+  font-size: 13px;
+}
+
+.bank-blank {
+  display: inline-block;
+  min-width: 3.5em;
+  margin: 0 2px;
+  padding: 0 6px;
+  border-bottom: 2px solid var(--fam-bank);
+  color: var(--ink-3);
+  text-align: center;
+}
+
+.bank-blank.is-filled {
+  color: var(--ink);
+  font-weight: 650;
+  background: color-mix(in srgb, var(--fam-bank) 10%, var(--surface));
+}
+
+.bank-options {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bank-option {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  color: var(--ink);
+  background: var(--surface);
+  text-align: left;
+}
+
+.bank-option b {
+  margin-right: 8px;
+  color: var(--ink-3);
+}
+
+.bank-option.is-picked {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+/* 답을 편 뒤에는 고를 수 없을 뿐 읽혀야 한다 — 전역 `button:disabled` 의 흐림을 걷는다. */
+.bank-option:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.bank-option.is-correct {
+  border-color: var(--ok);
+  color: var(--ok);
+  font-weight: 650;
+  background: var(--ok-soft);
+}
+
+.bank-option.is-correct::after {
+  content: " ✓";
+}
+
+.bank-match {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+/* 풀이 창은 가운데 정렬이다. 글머리표를 달면 점만 왼쪽 끝에 떨어진다 — 점 없이 가운데로 쌓는다.
+   짝짓기 두 칸만 왼쪽 정렬이다(번호와 줄이 맞아야 짝을 찾는다). */
+.bank-items,
+.bank-units {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  line-height: 1.8;
+}
+
+.bank-match ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  line-height: 1.8;
+}
+
+.bank-units {
+  margin-top: 8px;
+  color: var(--ink-2);
+}
+
+.bank-order {
+  color: var(--ink-2);
+}
+
+.bank-review {
+  margin: 14px 0;
+  padding: 10px 14px;
+  border-radius: var(--r-2);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.bank-review.is-doubt {
+  border: 1px solid var(--warn-line);
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+
+.bank-review.is-wrong {
+  border: 1px solid color-mix(in srgb, var(--cat-exam) 40%, var(--line));
+  color: color-mix(in srgb, var(--cat-exam) 75%, var(--ink));
+  background: color-mix(in srgb, var(--cat-exam) 9%, var(--surface));
+}
+
+.bank-feedback {
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.bank-feedback-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.bank-start h2 {
+  margin: 18px 0 6px;
+}
+
+.bank-start-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin: 18px 0;
+}
+
+.bank-start-row .quiz-submit {
+  width: auto;
+  padding: 0 28px;
+}
+
+.bank-summary {
+  margin: 16px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  background: var(--surface-2);
+}
+
+.bank-summary h3,
+.bank-summary h4 {
+  margin: 0 0 6px;
+}
+
+.bank-summary ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  line-height: 1.8;
+}
+
+@media (max-width: 640px) {
+  .bank-match {
+    grid-template-columns: 1fr;
+  }
+}
+

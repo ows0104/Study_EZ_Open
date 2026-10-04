@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, downloadSignedFile, openSignedFile } from "../api";
+import { useBankLink } from "../bank/bankBridge";
 import { bumpPreviewVersion, usePreviewLink, watchSharedLink } from "../bridge/previewBridge";
 import { quizHref, quizWindow } from "../links";
 import {
@@ -36,6 +37,8 @@ export function LecturePage() {
 
   useEffect(load, [load]);
 
+  // Quiz Bank 답 본문도 같은 자리에서 받는다(관리자). 확장이 이 탭으로 밀어 준다.
+  useBankLink();
   usePreviewLink(
     useCallback(async ({ lectureId, kind, url }) => {
       const [linkSubject, linkRunId] = lectureId.split("/");

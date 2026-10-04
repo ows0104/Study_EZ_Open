@@ -257,6 +257,12 @@ export type LectureDetail = {
   /** 관리자에게만. 갈래마다 카드 수 · 걸린 것 · 그중 안 본 것 · 판정 건수.
    *  사이드 패널의 「카드 고치기」가 적는다. 웹 문항이 없는 갈래는 빠져 있다. */
   cardReview?: Partial<Record<"pre" | "main", CardReviewCount>>;
+  /** Quiz Bank 요약(2026-10-04). 학생에게는 관리자가 연 은행만 온다 — 아니면 `null`. */
+  bank: BankSummary | null;
+  /** 관리자에게만. ChatGPT 에 붙일 자료와 그 ID(S1 올해 필기 · S2 족보 조각). */
+  bankSources?: BankSource[];
+  /** 관리자에게만. 프롬프트의 시험일 — 서버가 시간표에서 고른 날이다. */
+  bankExamDate?: string;
 };
 
 /**
@@ -403,7 +409,7 @@ export type JobOrigin = "button" | "auto";
 
 /** 무엇을 만드는 일감인가. 재료도 명령도 갈린다 — 예습은 예습 대화와 작년 필기로,
  *  복습은 올해 필기로 만든다. */
-export type DeckKind = "pre" | "main";
+export type DeckKind = "pre" | "main" | "bank";
 
 /**
  * 「덱 만들기」를 누른 것. 만드는 곳은 노트북이라 여기서는 상태만 본다.
@@ -643,3 +649,120 @@ export type Notice = {
   createdAt: string | null;
   updatedAt: string | null;
 };
+
+// ---------------------------------------------------------------- Quiz Bank (2026-10-04)
+//
+// ChatGPT 가 만든 문제은행을 서버 Study Engine 으로 푼다(`server/app/routes/bank.py`).
+// 문항 필드 이름은 서버가 저장한 꼴 그대로(snake_case)다 — 은행 JSON 을 옮겨 적지 않고 싣는다.
+
+export type BankSummary = {
+  status: "responded" | "building" | "ready" | "invalid" | "failed";
+  open: boolean;
+  buildId: string;
+  questionCount: number;
+  conceptCount: number;
+  builtAt: string | null;
+  /** 검증을 통과해 공부할 수 있는가. */
+  usable: boolean;
+  /** 아래는 관리자에게만. */
+  respondedAt?: string | null;
+  promptVersion?: string;
+  message?: string;
+  reviewCounts?: { ok: number; doubt: number; wrong: number } | null;
+  errorCount?: number;
+};
+
+export type BankSource = {
+  id: string;
+  kind: "notes_current" | "jokbo";
+  assetId: string;
+  filename: string;
+  contentType: string;
+};
+
+export type BankFormat = "basic" | "cloze" | "list" | "ox" | "mcq" | "multi_select" | "matching" | "sequence";
+export type BankRating = "Again" | "Hard" | "Good" | "Easy";
+
+/** 답이 빠진 문항. 답·채점 단위는 `reveal` 로만 온다. */
+export type BankQuestion = {
+  question_id: string;
+  concept_id: string;
+  tier: "Core" | "Advanced" | "Optional";
+  importance: number;
+  format: BankFormat;
+  cognitive_type: string;
+  retrieval_direction: string;
+  question: string;
+  source_refs: { source_id: string; locator: string }[];
+  conflict_id: string;
+  options: { id: string; text: string }[];
+  matching_left: string[];
+  matching_right: string[];
+  sequence_items: string[];
+};
+
+export type BankReview = {
+  question_id: string;
+  verdict: "ok" | "doubt" | "wrong";
+  note: string;
+  suggested_answer: string;
+};
+
+export type BankAnswer = {
+  answer: string;
+  answerUnits: string[];
+  correctOptionIds: string[];
+  answerPairs: { left: string; right: string }[];
+  correctOrder: string[];
+  /** 문항이 인용한 필기 쪽들. 한 문항이 여러 장일 수 있다. */
+  slides: { page: number; url: string }[];
+  /** 외부지식 검토. 막지 않고 표시만 한다. */
+  medicalReview: BankReview | null;
+};
+
+export type BankDimension = {
+  concept_id: string;
+  title: string;
+  direction: string;
+  before: number;
+  after: number;
+  target: number;
+};
+
+export type BankSession = {
+  session_id: string;
+  status: "active" | "complete";
+  reason: string | null;
+  size: number;
+  reviewed: number;
+  ratings: Record<BankRating, number>;
+  core_before: number;
+  core_after: number;
+  improved: BankDimension[];
+  weaknesses: BankDimension[];
+  started_at: number;
+  ended_at: number | null;
+};
+
+export type BankRead = {
+  summary: BankSummary;
+  examDate: string;
+  sizes: number[];
+  defaultSize: number;
+  session: BankSession | null;
+  previousSessions: BankSession[];
+};
+
+export type BankNext = {
+  question: BankQuestion | null;
+  reviewToken?: string;
+  days?: number;
+  examDate?: string;
+  session?: BankSession | null;
+  answer?: BankAnswer | null;
+  /** 회차가 끝났거나 지금 낼 것이 없을 때. */
+  summary?: BankSession | null;
+  reason?: string;
+  retryAt?: number;
+};
+

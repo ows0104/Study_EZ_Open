@@ -277,6 +277,8 @@ function Combo({ before, children }: { before?: ReactNode; children: ReactNode }
 const REMAKE_MESSAGE: Record<DeckKind, string> = {
   pre: "지금 있는 문항을 버리고, 저장된 예습 링크로 처음부터 다시 만듭니다. 15분쯤 걸리고 다 되면 이 자리의 덱이 새것으로 바뀝니다. 이미 받아 간 사람의 덱은 그대로 남습니다.",
   main: "지금 있는 문항을 버리고, 올해 강의록으로 처음부터 다시 만듭니다. 15분쯤 걸리고 다 되면 이 자리의 덱이 새것으로 바뀝니다. 이미 받아 간 사람의 덱은 그대로 남습니다.",
+  // Quiz Bank 는 이 부품을 안 쓴다(`bank/BankPanel.tsx`). 갈래 이름이 같은 표를 쓰므로 칸만 채운다.
+  bank: "저장된 ChatGPT 응답을 다시 정리하고 검토합니다. 몇 분 걸립니다.",
 };
 
 /**

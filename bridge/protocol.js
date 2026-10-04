@@ -13,7 +13,7 @@ globalThis.STUDYEZ_PROTOCOL = {
   READY_ATTRIBUTE: "data-studyez-ai-extension",
   // `<html>`에 그대로 붙는다. 어느 빌드가 실려 있는지 개발자 도구에서 보인다 —
   // 소스를 고쳐도 `chrome://extensions`에서 새로고침하지 않으면 옛것이 돈다.
-  VERSION: "1.1.0",
+  VERSION: "1.2.0",
 
   MESSAGES: {
     /** 웹앱 → 확장: 이 자료로 예습 대화를 열어 달라. */
@@ -34,6 +34,13 @@ globalThis.STUDYEZ_PROTOCOL = {
      * 아니라서 지금까지는 놓쳤다.
      */
     watchShare: "STUDYEZ_WATCH_SHARE",
+    /**
+     * 확장 → 웹앱: Quiz Bank 를 만든 ChatGPT 답 **본문**(2026-10-04). 관리자만 쓰는 갈래다 —
+     * 링크가 아니라 마크다운 원문이 가고, 웹앱이 서버에 저장한다.
+     */
+    bankReady: "STUDYEZ_BANK_READY",
+    /** 웹앱 → 확장: 그 본문을 저장했다. 저장 전에는 지우지 않는다(linkSaved 와 같은 규칙). */
+    bankSaved: "STUDYEZ_BANK_SAVED",
   },
 
   /**

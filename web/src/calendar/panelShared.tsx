@@ -34,7 +34,7 @@ export function PanelGroup({
    * Main-Quiz 와 똑같이 나왔다. **갈래가 아닌 것이 갈래 색을 얻으면 그때부터
    * 무엇을 뜻하는지 알 수 없다** — 색을 되돌리지 마라.
    */
-  tone: "preview" | "pre" | "main" | "plain";
+  tone: "preview" | "pre" | "main" | "bank" | "plain";
   title: string;
   note?: string;
   /** 접힌 채로 설 것인가. 머리 줄이 여닫는 손잡이가 된다. */
