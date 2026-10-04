@@ -29,7 +29,7 @@ from pathlib import Path
 
 from . import ledger
 
-# 끄는 도구 목록. --allowed-tools 에 빈 값을 넘기는 것보다 이쪽이 확실하다.
+# 끄는 도구 목록. 주 차단은 run_blind 의 `--tools ""` 이고 이것은 두 번째 겹이다.
 BLIND_DENY = [
     "Bash", "Read", "Write", "Edit", "NotebookEdit", "Glob", "Grep",
     "WebFetch", "WebSearch", "Task", "Agent", "TodoWrite", "Skill",
@@ -94,7 +94,11 @@ def run_blind(prompt: str, *, model: str | None = None, timeout: int = 1800,
             # ToolSearch 가 살아 있어 이름만 실리므로 차이가 이 정도다 (`--tools ""` 로
             # ToolSearch 까지 끄면 스키마가 다 실려 131,232 였다). 이 세션은 MCP 를 안 쓴다.
             "--strict-mcp-config",
-            "--allowed-tools", "",
+            # 도구를 아예 안 싣는다. `--allowed-tools ""` 는 허용만 비울 뿐 도구는 그대로
+            # 실려서, 차단 목록에 없는 19개(Artifact·SendMessage·Workflow·ToolSearch …)가
+            # 살아 있었다. 2026-10-04 같은 조건에서 29,109 → 3,153 토큰.
+            "--tools", "",
+            # 두 번째 겹. `--tools` 가 어느 판에서 뜻이 바뀌어도 이 목록은 막는다.
             "--disallowed-tools", ",".join(BLIND_DENY)]
     if model:
         argv += ["--model", model]
