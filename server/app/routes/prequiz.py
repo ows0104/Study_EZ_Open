@@ -287,8 +287,8 @@ def _read(quiz: Quiz, db: Session, user_id: str, subject: str, run_id: str) -> d
                 "focus": row.focus,
                 "cardType": row.card_type,
                 "examHit": row.exam_hit,
-                # 왜 냈나 · 도전 문제인가. 답이 아니라서 앞면과 같이 준다.
-                "whyAsked": row.why_asked,
+                # 도전 문제인가 · 「왜 냈나」의 유형 배지. 앞면에 뜬다.
+                # **「왜 냈나」 글은 여기 없다** — 답을 편 뒤에 보인다(`reveal`).
                 "challenge": row.challenge,
                 "whyTags": list(row.why_tags or []),
                 # `answer`·`explanation`은 여기 없다. `reveal`이 준다.
@@ -427,6 +427,9 @@ def _reveal(
         "itemId": item.item_id,
         "answer": item.answer,
         "explanation": item.explanation,
+        # 왜 냈나(2026-10-04 관리자 — 「문제 풀기 전에는 배지만, 풀고 나서 이유가」).
+        # 도전 문제의 「강의의 ‘○○’ 대목에서 풀린다」가 앞면에 있으면 답의 절반을 알려 준다.
+        "whyAsked": item.why_asked,
         "sourceAnchor": item.source_anchor,
         "slideNo": item.slide_no,
         "slideUrl": slide_url(db, item.subject, item.run_id, item.slide_no, quiz),

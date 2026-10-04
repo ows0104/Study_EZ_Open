@@ -152,8 +152,8 @@ export function GuidePage() {
             것도 똑같이 일정에 반영됩니다.
           </li>
           <li>
-            10월 4일 이후 만든 Pre-Quiz는 질문 위에 <b>이 문제를 왜 냈는지</b>가 한 줄 붙습니다. 앞의 배지가 그
-            유형입니다 — <span className="badge why-exam">기출</span> <span className="badge why-clinical">임상</span>{" "}
+            10월 4일 이후 만든 Pre-Quiz는 질문 위에 <b>이 문제를 왜 냈는지</b>의 유형이 배지로 붙고, 답을 펴면
+            이유가 한 줄로 나옵니다 — <span className="badge why-exam">기출</span> <span className="badge why-clinical">임상</span>{" "}
             <span className="badge why-later">또 나옴</span> <span className="badge why-annotation">필기 강조</span>{" "}
             <span className="badge why-basis">기본 개념</span>.{" "}
             <span className="badge is-challenge">도전 문제</span> 는 수업에서 답이 나오는 질문이니 못 풀어도 괜찮습니다 —

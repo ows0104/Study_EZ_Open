@@ -333,6 +333,12 @@ export function Quiz({
             <p className="quiz-answer">
               <Stem text={revealed.answer} />
             </p>
+            {revealed.whyAsked?.trim() ? (
+              <p className="quiz-why-back">
+                <span className="quiz-why-label">왜 냈나</span>
+                {revealed.whyAsked}
+              </p>
+            ) : null}
             {revealed.explanation ? <p className="quiz-explanation">{revealed.explanation}</p> : null}
             {revealed.slideUrl ? (
               <img
@@ -537,17 +543,16 @@ const FOCUS_LABEL: Record<string, string> = {
 };
 
 /**
- * 왜 이 문제를 냈나 — 질문 바로 위에 한 줄(2026-10-04 관리자).
+ * 왜 이 문제를 냈나 — 앞면에는 **유형 배지만** 질문 위에 선다(2026-10-04 관리자).
  *
  * 생소한 문제를 본 학생이 「이것까지 알아야 하나? 과한 거 아니야?」 싶지 않게
- * 한다. 위 `FocusBadge` 는 다섯 갈래 중 하나라 「임상적 의미」까지만 말하고,
- * 이 줄은 무엇에 왜 쓰이는지를 말한다. 도전 문제 표시도 여기 붙는다 —
- * 어렵다는 것을 풀기 전에 알아야 못 풀어도 덜 꺾인다.
+ * 한다. 이유를 적은 글은 답을 편 뒤에 답 아래로 온다(`quiz-why-back`) — 도전
+ * 문제의 「강의의 ‘○○’ 대목에서 풀린다」가 앞면에 있으면 답의 절반을 알려 줬다.
+ * 도전 문제 표시도 여기 붙는다 — 어렵다는 것을 풀기 전에 알아야 못 풀어도 덜 꺾인다.
  */
 function WhyAsked({ item }: { item: QuizItem }) {
-  const why = item.whyAsked?.trim();
   const tags = whyTags(item);
-  if (!why && !item.challenge && !tags.length) return null;
+  if (!item.challenge && !tags.length) return null;
   return (
     <p className="quiz-why">
       {item.challenge ? <span className="badge is-challenge">도전 문제</span> : null}
@@ -556,7 +561,6 @@ function WhyAsked({ item }: { item: QuizItem }) {
           {WHY_TAG_LABEL[tag]}
         </span>
       ))}
-      {why ? <span>{why}</span> : null}
     </p>
   );
 }

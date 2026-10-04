@@ -230,16 +230,14 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
         if fmt != "cloze" and containment(char_ngrams(a), char_ngrams(q)) >= LEAK_THRESHOLD:
             flags[i].append("answer_leaked_in_question")
 
-        # 「왜 냈나」는 앞면에 뜬다(2026-10-04). 비면 학생이 「이것까지?」를 그대로 겪고,
-        # 답이 들어 있으면 질문 위에서 답을 알려 준다. O/X 는 답이 한 글자라 안 잰다.
+        # 「왜 냈나」(2026-10-04). 비면 학생이 「이것까지?」를 그대로 겪는다. 답 뒤에 보이므로
+        # 답이 들어 있어도 된다 — 앞면에 서던 동안 재던 노출은 같은 날 걷어 냈다.
         why = (c.get("why_asked") or "").strip()
         if not why:
             flags[i].append("missing_why_asked")
         else:
             if len(why) > MAX_WHY_CHARS:
                 flags[i].append("why_asked_too_long")
-            if fmt != "ox" and containment(char_ngrams(a), char_ngrams(why)) >= LEAK_THRESHOLD:
-                flags[i].append("answer_leaked_in_why")
             tags = c.get("why_tags") or []
             cites = any(w in why for w in WHY_CITES_EXAM) or "exam" in tags
             if cites and not c.get("jokbo_ref"):

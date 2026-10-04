@@ -725,13 +725,29 @@ button.resource.is-download:hover:not(:disabled)::after {
   word-break: keep-all;
 }
 
-/* 왜 이 문제를 냈나(2026-10-04). 질문 위에 작게 — 질문보다 크면 질문을 가린다. */
+/* 왜 이 문제를 냈나(2026-10-04). 앞면에는 유형 배지만 질문 위에 선다. */
 .quiz-why {
   margin: 0 0 10px;
+  line-height: 1.55;
+}
+
+/* 답을 편 뒤의 「왜 냈나」 글. 해설 바로 위 — 해설보다 조금 옅게. */
+.quiz-why-back {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 8px;
   color: var(--ink-2);
   font-size: 14px;
-  line-height: 1.55;
+  line-height: 1.6;
+  text-align: left;
   word-break: keep-all;
+}
+
+.quiz-why-label {
+  margin-right: 8px;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 /* 도전 문제. 빨강(`is-relearn`)은 「틀려서 돌아왔다」라 겹치지 않는 주황을 쓴다. */

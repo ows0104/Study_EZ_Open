@@ -78,14 +78,18 @@ def main() -> None:
     check("두 칸이 실린 문항을 받는다", put.status_code == 200, put.text)
 
     got = {i["itemId"]: i for i in client.get(f"{BASE}/prequiz", headers=USER).json()["items"]}
-    check("왜 냈나가 앞면 목록에 온다",
-          got["c001"]["whyAsked"] == "심근경색 진단에서 가장 먼저 오르는 표지자다", got["c001"])
+    # 앞면에는 배지만 — 글은 답을 편 뒤다. 도전 문제의 「어디서 풀린다」가 답을 흘린다.
+    check("왜 냈나 글은 앞면 목록에 없다", "whyAsked" not in got["c001"], sorted(got["c001"]))
+    revealed = client.post(f"{BASE}/prequiz/reveal", json={"itemId": "c001"}, headers=USER).json()
+    check("왜 냈나 글은 답을 펴면 온다",
+          revealed.get("whyAsked") == "심근경색 진단에서 가장 먼저 오르는 표지자다", revealed)
+    old = client.post(f"{BASE}/prequiz/reveal", json={"itemId": "c003"}, headers=USER).json()
+    check("두 칸이 없던 문항은 편 뒤에도 빈 값이다", old.get("whyAsked") == "", old)
     check("도전 문제 표시가 온다",
           (got["c001"]["challenge"], got["c002"]["challenge"]) == (True, False))
     check("배지 유형이 순서대로 온다", got["c001"]["whyTags"] == ["exam", "clinical"], got["c001"])
     check("두 칸이 없던 문항은 빈 값이다",
-          (got["c003"]["whyAsked"], got["c003"]["challenge"], got["c003"]["whyTags"])
-          == ("", False, []), got["c003"])
+          (got["c003"]["challenge"], got["c003"]["whyTags"]) == (False, []), got["c003"])
     check("답은 여전히 앞면 목록에 없다", "answer" not in got["c001"], sorted(got["c001"]))
 
     # ── 뺐다가 되돌려도 두 칸이 산다. 되돌리기는 원본 사본에서 칸을 하나씩 옮겨 적는다.
@@ -96,10 +100,11 @@ def main() -> None:
     check("카드를 빼고 되돌릴 수 있다", (gone.status_code, back.status_code) == (200, 200),
           (gone.status_code, gone.text[:120], back.status_code, back.text[:120]))
     got = {i["itemId"]: i for i in client.get(f"{BASE}/prequiz", headers=USER).json()["items"]}
+    back_ = client.post(f"{BASE}/prequiz/reveal", json={"itemId": "c001"}, headers=USER).json()
     check("되돌린 카드가 두 칸을 잃지 않는다",
-          "c001" in got and got["c001"]["challenge"] and got["c001"]["whyAsked"]
+          "c001" in got and got["c001"]["challenge"] and back_.get("whyAsked")
           and got["c001"]["whyTags"] == ["exam", "clinical"],
-          got.get("c001"))
+          (got.get("c001"), back_.get("whyAsked")))
 
     print()
     if failures:

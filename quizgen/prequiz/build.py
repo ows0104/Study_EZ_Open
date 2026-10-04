@@ -79,6 +79,10 @@ PRE_CSS = CSS + """
 .why .tag { display: inline-block; margin-right: 6px; padding: 1px 7px; border-radius: 9px;
             background: #eef1f6; color: #4a5568; font-size: 12px; font-weight: 600; }
 .why .tag.challenge { background: #fff1e0; color: #a0521a; }
+.why-back { margin-bottom: 8px; font-size: 15px; color: #555; }
+.why-back .lbl { margin-right: 8px; font-size: 12px; font-weight: 700; color: #888; }
+.nightMode .why-back { color: #b8b8b8; }
+.nightMode .why-back .lbl { color: #8a8a8a; }
 .why .tag.exam { background: #fdecec; color: #b42318; }
 .why .tag.clinical { background: #e6f6f2; color: #0f766e; }
 .why .tag.later { background: #edf2fe; color: #3a5bc7; }
@@ -143,20 +147,29 @@ CLOZE_MODEL = genanki.Model(
     css=PRE_CSS, model_type=genanki.Model.CLOZE)
 
 def why_of(c: dict) -> str:
-    """앞면 질문 위에 붙는 한 줄 — 도전 문제 표시와 「왜 냈나」(2026-10-04 관리자).
+    """앞면 질문 위에 붙는 배지 줄 — 도전 문제 표시와 「왜 냈나」의 유형(2026-10-04 관리자).
+
+    **이유를 적은 글은 여기 없다** — 답 뒤로 간다(`why_back`). 관리자: 「문제 풀기 전에는
+    배지만 보이고, 풀고 나서 이유가 보이는 건 어때」. 도전 문제의 「강의의 ‘○○’ 대목에서
+    풀린다」가 앞면에 있으면 답의 절반을 알려 줬다.
 
     **필드를 새로 두지 않고 질문 칸 머리에 넣는다.** 노트 모델에 칸을 늘리면 이미 예습
-    덱을 받은 사람의 Anki 가 같은 이름의 노트 타입을 하나 더 만든다. 질문 칸에 넣으면
-    뒷면도 앞면을 다시 그리므로 양쪽에 다 보인다. guid 는 `q` 로 잡으므로 안 바뀐다.
+    덱을 받은 사람의 Anki 가 같은 이름의 노트 타입을 하나 더 만든다. guid 는 `q` 로
+    잡으므로 안 바뀐다.
     """
-    why = (c.get("why_asked") or "").strip()
     tags = '<span class="tag challenge">도전 문제</span>' if c.get("challenge") else ""
-    # 「왜 냈나」의 유형 배지(2026-10-04). 모르는 값은 안 그린다.
+    # 모르는 값은 안 그린다.
     tags += "".join(f'<span class="tag {t}">{WHY_TAG_LABEL[t]}</span>'
                     for t in c.get("why_tags") or [] if t in WHY_TAG_LABEL)
-    if not why and not tags:
+    return f'<div class="why">{tags}</div>' if tags else ""
+
+
+def why_back(c: dict) -> str:
+    """답 뒤 해설 칸 머리에 붙는 「왜 냈나」 글. 해설 칸은 뒷면에만 그려진다."""
+    why = (c.get("why_asked") or "").strip()
+    if not why:
         return ""
-    return f'<div class="why">{tags}{html.escape(why)}</div>'
+    return f'<div class="why-back"><span class="lbl">왜 냈나</span>{html.escape(why)}</div>'
 
 
 # 층은 복습과 같은 축으로 가른다(`build.WARN_TRUST` 첫머리). 예습에만 있는 셋의 자리:
@@ -164,7 +177,7 @@ def why_of(c: dict) -> str:
 #   `missing_bridge_to_lecture`  → ②  답은 맞는데 수업으로 잇는 다리가 없다
 #   `off_must`                   → ③  승인본과 안 맞는 것은 덱을 다시 만들 때 볼 일이다
 # 「왜 냈나」(2026-10-04)의 넷도 같은 축이다 — 기출을 말하는데 문항이 없으면 ①
-# (근거 없는 이유를 학생에게 보인 것), 비었거나 답이 샜으면 ②, 길면 ③.
+# (근거 없는 이유를 학생에게 보인 것), 비었으면 ②, 길면 ③.
 WARN_TRUST = {
     "repeated_without_jokbo_ref": "반복 출제를 이유로 들었는데 근거 문항이 없다",
     "why_cites_exam_without_ref": "「왜 냈나」가 기출을 말하는데 근거 문항이 없다",
@@ -176,7 +189,6 @@ WARN_MINOR = {
     "occlusion_answer_leaked_in_question": "가린 라벨이 질문에 그대로 나온다",
     "ox_is_question_not_statement": "O/X 카드인데 진술문이 아니다",
     "missing_bridge_to_lecture": "수업으로 잇는 해설이 없다",
-    "answer_leaked_in_why": "「왜 냈나」에 정답 단서가 들어 있을 수 있다",
     "missing_why_asked": "왜 이 문제를 냈는지가 비어 있다",
     "why_tag_not_in_signals": "「왜 냈나」 배지가 승인된 근거에 없는 유형이다",
 }
@@ -295,7 +307,7 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str, src: Path | None = No
         guid = guid_of(seed, site_edits.guid_q(c), c)
         warn, srctxt, tags = warning_of(c), source_of(c, title), tags_of(c, lecture_id)
         notes = fold_notes_of(c)
-        exp = html.escape(c.get("explanation") or "").replace("\n", "<br>")
+        exp = why_back(c) + html.escape(c.get("explanation") or "").replace("\n", "<br>")
         origin = (f'<div class="slide"><img src="{media.slide(c["slide_no"])}"></div>'
                   if c.get("slide_no") else "")
         if c.get("jokbo_ref"):

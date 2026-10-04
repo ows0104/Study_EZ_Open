@@ -318,8 +318,8 @@ class _QuizItem:
     explanation: Mapped[str] = mapped_column(Text, nullable=False, default="")
     flags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     # 예습만 채운다(2026-10-04 관리자). **왜 이 문제를 냈나** — 생소한 문제를 본 학생이
-    # 「이것까지 알아야 하나?」 싶지 않게 앞면에 보인다. 그리고 도전 문제인가.
-    # 답이 아니므로 `answer`·`explanation` 과 달리 `reveal` 전에 준다.
+    # 「이것까지 알아야 하나?」 싶지 않게 한다. 그리고 도전 문제인가.
+    # 앞면에는 유형 배지(`why_tags`)만 뜨고 글은 답을 편 뒤에 온다(`reveal`).
     why_asked: Mapped[str] = mapped_column(Text, nullable=False, default="")
     challenge: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     # 「왜 냈나」의 유형 — exam·clinical·later·annotation·basis. 앞면에 배지로 뜬다.

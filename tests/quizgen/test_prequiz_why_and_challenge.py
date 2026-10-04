@@ -53,12 +53,13 @@ def test_왜_냈나가_비면_표시가_선다():
     assert "missing_why_asked" not in kept[1]["review_flags"]
 
 
-def test_왜_냈나에_답이_들면_표시가_선다():
+def test_왜_냈나에_답이_들어도_된다():
+    """답 뒤에 보이므로(같은 날 관리자 — 「풀고 나서 이유가 보이는 건 어때」) 재지 않는다."""
     cards = [_card(i) for i in range(12)]
     cards[0]["a"] = "트로포닌"
     cards[0]["why_asked"] = "트로포닌은 진단에서 가장 먼저 오른다"
     kept, _ = _flags({"cards": cards})
-    assert "answer_leaked_in_why" in kept[0]["review_flags"]
+    assert not any("leak" in f and "why" in f for f in kept[0]["review_flags"])
 
 
 def test_왜_냈나가_길면_표시가_선다():
@@ -96,18 +97,22 @@ def test_도전_문제가_넘치면_계약_위반이다():
 
 
 def test_새_표시는_전부_사람이_읽을_말이_있다():
-    for f in ("missing_why_asked", "answer_leaked_in_why", "why_asked_too_long",
+    for f in ("missing_why_asked", "why_asked_too_long",
               "why_cites_exam_without_ref", "missing_why_tags", "why_tag_not_in_signals"):
         assert f in FLAG_LABEL, f
 
 
-def test_앞면에_왜_냈나와_도전_표시가_붙는다():
-    head = why_of({"why_asked": "심근경색 진단에서 <먼저> 오른다", "challenge": True})
-    assert "도전 문제" in head
-    assert "&lt;먼저&gt;" in head          # 이스케이프한다
+def test_앞면에는_배지만_뒷면에_글이_붙는다():
+    from quizgen.prequiz.build import why_back
+    c = {"why_asked": "심근경색 진단에서 <먼저> 오른다", "challenge": True, "why_tags": ["clinical"]}
+    head = why_of(c)
+    assert "도전 문제" in head and "임상" in head
+    assert "심근경색" not in head          # 글은 앞면에 없다
+    back = why_back(c)
+    assert "왜 냈나" in back and "&lt;먼저&gt;" in back   # 이스케이프한다
     assert why_of({"why_asked": "", "challenge": False}) == ""
     # 예전 카드(칸이 없다)는 아무것도 안 붙는다.
-    assert why_of({}) == ""
+    assert why_of({}) == "" and why_back({}) == ""
 
 
 def test_도전_문제는_태그로도_갈린다():
@@ -153,8 +158,9 @@ def test_계약이_왜_냈나를_근거에서_뽑게_한다(tmp_path):
     assert "`signals` 에서 뽑는다" in contract
     # 도전 문제는 「어려운 문제」가 아니라 「수업이 답해 줄 질문」이다.
     assert "수업이 답해 줄 질문" in contract
-    # 어디서 풀리는지는 말하되 답을 드러내지 않게 — 슬라이드 제목이 답의 절반을 알려 줬다.
-    assert "답을 드러내지 않게 가리킨다" in contract
+    # 「왜 냈나」는 답 뒤에 보인다 — 도전 문제가 풀리는 대목을 이름으로 적어도 된다.
+    assert "답을 편 뒤" in contract
+    assert "대목에서 풀린다" in contract
     # 글은 배지를 되풀이하지 않는다 — 기출 이유만 몰리지 않게.
     assert "글은 배지를 되풀이하지 않는다" in contract
 
