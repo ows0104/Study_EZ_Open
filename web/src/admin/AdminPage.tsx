@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { api } from "../api";
-import type { AdminOverview, AppUser, CardReview, JobBoard } from "../types";
+import type { AdminOverview, AppUser, BankReportBoard, CardReview, JobBoard } from "../types";
 import { jobMoving, jobOpen } from "../jobProgress";
+import { BankReportTab } from "./BankReportTab";
 import { CardReviewTab } from "./CardReviewTab";
 import { LectureTab } from "./LectureTab";
 import { UsageTab } from "./UsageTab";
@@ -22,6 +23,7 @@ import { isUnconfirmed, isUnmatched, pending, runnerAlive } from "./rows";
  *     강의   매칭 · 과목 이름 잇기 · 편별 자료 체크리스트와 예습 링크
  *     이용   누가 쓰고 있나 (2026-09-19 관리자 지시로 넷째가 되었다)
  *     카드   걸린 카드를 보고 고치거나 뺀다 (2026-09-23 — 문지기가 막던 것을 여기로 옮겼다)
+ *     신고   학생이 Quiz Bank 를 풀다 누른 「문제 있음」 (2026-10-04)
  *
  * **「이용」에는 탭 옆 숫자가 없다.** 다른 셋의 숫자는 남은 일이거나 도는 일이라
  * 0이 되면 사라지는데, 이용현황에 적을 수 있는 수(사용자 수·쓰는 사람 수)는 늘
@@ -41,6 +43,7 @@ export function AdminPage() {
   const [board, setBoard] = useState<JobBoard | null>(null);
   const [users, setUsers] = useState<AppUser[] | null>(null);
   const [review, setReview] = useState<CardReview | null>(null);
+  const [reports, setReports] = useState<BankReportBoard | null>(null);
   const [error, setError] = useState("");
 
   const load = useCallback(() => {
@@ -70,9 +73,18 @@ export function AdminPage() {
       .catch(() => {});
   }, []);
 
+  // 신고도 폴링에서 뺀다 — 카드와 같은 이유다. 학생이 누르는 사이에 이 화면을 10초마다
+  // 다시 읽을 일은 없고, 줄어드는 것은 여기서 누를 때뿐이다.
+  const loadReports = useCallback(() => {
+    api<BankReportBoard>("/api/admin/bank-feedback")
+      .then(setReports)
+      .catch(() => {});
+  }, []);
+
   useEffect(load, [load]);
   useEffect(loadUsers, [loadUsers]);
   useEffect(loadReview, [loadReview]);
+  useEffect(loadReports, [loadReports]);
 
   // 도는 일감이 있는 동안만 다시 읽는다. 한 편에 15분이 걸리는데 사람이 새로고침을
   // 눌러야 진행이 보이면, 그 진행은 없는 것과 같다. 끝나면 폴링도 멈춘다.
@@ -148,6 +160,10 @@ export function AdminPage() {
           카드 검토
           {review?.open ? <span className="admin-tab-count">{review.open}</span> : null}
         </NavLink>
+        <NavLink to="/admin/bank-reports" className={tabClass} title="학생이 Quiz Bank 를 풀다 누른 「문제 있음」 — 문항별로">
+          Quiz Bank 신고
+          {reports?.open ? <span className="admin-tab-count">{reports.open}</span> : null}
+        </NavLink>
       </nav>
 
       <Routes>
@@ -158,6 +174,7 @@ export function AdminPage() {
             집계 질의가 여덟 개라 10초마다 돌 이유가 없다. */}
         <Route path="usage" element={<UsageTab />} />
         <Route path="cards" element={<CardReviewTab review={review} onChanged={loadReview} />} />
+        <Route path="bank-reports" element={<BankReportTab board={reports} onChanged={loadReports} />} />
         {/* 하루 나가 있던 주소다(2026-09-04). 눌러 둔 사람이 빈 화면을 보지 않게
             제자리로 보낸다. */}
         <Route path="match" element={<Navigate to="/admin/lectures" replace />} />

@@ -80,6 +80,7 @@ ChatGPT 가 만든 문제은행을 사이트에서 만들고 푼다. Main-Quiz �
     src/bank/BankPanel.tsx   캘린더 패널의 칸. 관리자 = 만들기·다시 정리·학생에게 열기
     src/bank/bankBridge.ts   확장이 가져온 답 본문을 서버에 저장한다(예습 링크와 같은 규칙)
     src/bank/BankStudy.tsx   /bank/:과목/:run 풀이 창. 형식 여덟 · 슬라이드 여러 장 · 외부지식 검토
+    src/admin/BankReportTab.tsx   관리 「Quiz Bank 신고」. 학생의 「문제 있음」을 문항별로 — 고치는 곳은 아니다
 
 **다음 문항을 화면이 고르지 않는다.** 서버의 `app/study_engine/` 이 숙련도·선행 문항·시험까지
 남은 날로 고른다(`POST …/bank/next`). Main-Quiz 의 `queue.ts` 와 다르다 — 고르는 데 쓰는 값이

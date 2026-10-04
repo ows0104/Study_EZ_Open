@@ -44,12 +44,16 @@ from app.main import app  # noqa: E402
 # 같은 날 열둘이 늘었다 — Quiz Bank(`routes/bank.py`). 관리자는 ChatGPT 응답을 넣고 열고,
 # 러너는 그것을 받아 정리한 결과를 올리고, 학생은 서버 Study Engine 으로 푼다. 복습 줄 개편을
 # 「공부까지 사이트로」 옮기라는 관리자 지시였다.
+#
+# 같은 날 둘이 더 — `GET|PUT /api/admin/bank-feedback`. 학생이 누른 「문제 있음」을 관리자가
+# 편을 가로질러 보고 반영했다·그대로 둔다를 적는다(관리 화면 「Quiz Bank 신고」 탭).
 ROUTES = """
 DELETE /api/admin/lectures/{subject}/{run_id}/cards/{kind}/{item_id}
 DELETE /api/admin/notices/{notice_id}
 DELETE /api/lectures/{subject}/{run_id}/mainquiz/attempts
 DELETE /api/lectures/{subject}/{run_id}/prequiz/attempts
 DELETE /api/spotter/comments/{comment_id}
+GET /api/admin/bank-feedback
 GET /api/admin/card-edits
 GET /api/admin/card-review
 GET /api/admin/lectures/{subject}/{run_id}/bank
@@ -120,6 +124,7 @@ POST /api/spotter/reports
 POST /api/spotter/state/merge
 POST /api/spotter/subjects/{subject}/images/sign
 POST /api/spotter/threads/{kind}/{subject}/comments
+PUT /api/admin/bank-feedback
 PUT /api/admin/course-aliases
 PUT /api/admin/lectures/{subject}/{run_id}/bank
 PUT /api/admin/lectures/{subject}/{run_id}/bank-response

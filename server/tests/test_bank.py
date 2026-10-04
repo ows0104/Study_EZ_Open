@@ -8,6 +8,7 @@
     ④ 답은 reveal 전에 안 나가고, 평가는 reveal 뒤 한 번만
     ⑤ reveal 이 인용 쪽 슬라이드와 외부지식 검토를 같이 준다
     ⑥ 은행을 다시 만들면 학생 상태가 새로 시작하고 옛것은 밀려 남는다
+    ⑦ 관리자는 신고를 편을 가로질러 문항별로 보고 닫는다 · 옛 빌드의 신고는 갈라 둔다
 
     server/.venv/Scripts/python.exe -m tests.test_bank
 """
@@ -35,7 +36,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from app.auth import APP_POLICY, ROLE_ADMIN, CurrentUser, get_current_user  # noqa: E402
 from app.database import Base, SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
-from app.models import Asset, BankState, Lecture, PrequizJob, TimetableEvent  # noqa: E402
+from app.models import Asset, BankState, Lecture, PrequizJob, Profile, TimetableEvent  # noqa: E402
 from tests.bank_fixtures import example_bank  # noqa: E402
 
 ADMIN_H = {"Authorization": "Bearer local-test-token"}
@@ -184,6 +185,36 @@ def main() -> None:
     as_admin()
     admin_view = client.get(f"{ADMIN}/bank", headers=ADMIN_H).json()
     check("관리자는 피드백을 본다", admin_view["feedback"][0]["comment"] == "답이 이상하다")
+
+    print("⑦ 신고 탭 — 편을 가로질러 문항별로")
+    # 의존성을 덮어 쓴 학생은 로그인을 안 지나서 profile 이 없다. 운영에서는 로그인이 세운다.
+    with SessionLocal() as db:
+        db.add(Profile(id=STUDENT.id, email=STUDENT.email))
+        db.commit()
+    as_student()
+    client.post(f"{BASE}/bank/feedback", json={"questionId": q["question_id"], "category": "wording"})
+    client.post(f"{BASE}/bank/feedback", json={"questionId": q["question_id"], "category": "good"})
+    as_admin()
+    board = client.get("/api/admin/bank-feedback", headers=ADMIN_H).json()
+    check("같은 문항의 신고는 한 묶음", len(board["questions"]) == 1 and len(board["questions"][0]["reports"]) == 2,
+          board)
+    group = board["questions"][0]
+    check("좋은 문제는 신고가 아니다", all(r["category"] != "good" for r in group["reports"]))
+    check("문면이 같이 온다", (group["question"] or {}).get("question_id") == q["question_id"])
+    check("누가 신고했나", {r["email"] for r in group["reports"]} == {"s@example.com"}, group["reports"])
+    stale = {r["category"]: r["stale"] for r in group["reports"]}
+    check("옛 빌드의 신고는 갈라 둔다", stale == {"content": True, "wording": False}, stale)
+    check("열린 묶음 하나", board["open"] == 1 and board["done"] == 0)
+    ids = [r["id"] for r in group["reports"]]
+    done = client.put("/api/admin/bank-feedback", json={"ids": ids, "status": "resolved"}, headers=ADMIN_H)
+    check("반영했다로 닫는다", done.status_code == 200 and done.json()["updated"] == 2, done.text)
+    board = client.get("/api/admin/bank-feedback", headers=ADMIN_H).json()
+    check("닫으면 열린 것 0", board["open"] == 0 and board["done"] == 1)
+    missing = client.put("/api/admin/bank-feedback", json={"ids": [*ids, 99999], "status": "open"}, headers=ADMIN_H)
+    check("없는 신고가 섞이면 404 · 아무것도 안 바꾼다", missing.status_code == 404
+          and client.get("/api/admin/bank-feedback", headers=ADMIN_H).json()["open"] == 0)
+    as_student()
+    check("학생은 못 본다", client.get("/api/admin/bank-feedback").status_code == 403)
 
 
 if __name__ == "__main__":

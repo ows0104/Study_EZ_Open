@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../api";
+import { FEEDBACK } from "./feedback";
 import { lectureHref } from "../links";
 import { Stem } from "../lecture/Stem";
 import type { BankAnswer, BankNext, BankQuestion, BankRating, BankRead, BankSession } from "../types";
@@ -390,12 +391,6 @@ function AnswerBody({ question: q, answer }: { question: BankQuestion; answer: B
     </>
   );
 }
-
-const FEEDBACK = [
-  ["content", "내용 오류"], ["wording", "발문 애매"], ["leak", "정답 누설"], ["format", "형식 부적절"],
-  ["burden", "답이 너무 많다"], ["easy", "너무 쉬움"], ["hard", "너무 어려움"], ["duplicate", "중복"],
-  ["other", "기타"],
-] as const;
 
 function FeedbackForm({ base, questionId, onDone }: { base: string; questionId: string; onDone: () => void }) {
   const [category, setCategory] = useState<string>("content");

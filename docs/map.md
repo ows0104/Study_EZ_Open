@@ -96,6 +96,7 @@
 | ├ 정리·검증·외부지식 검토 | `quizbank/` (`organize` · `validate` · `review` · `slides`) | `pytest tests/quizbank` |
 | ├ 다음 문항 고르기·숙련도 | `server/app/study_engine/` (`policy.json` 이 수치) | `-m tests.test_study_engine` |
 | ├ 러너가 받아 정리해 올리기 | `runner/bank.py` + `runner/agent.py`(`BANK`) | `pytest tests/runner/test_bank.py` |
+| ├ 학생 「문제 있음」 보기 | `web/src/admin/BankReportTab.tsx` + `routes/bank.py`(`/bank-feedback`) | `-m tests.test_bank` |
 | └ 확장이 답 본문을 가져오기 | `bridge/chatgpt-share.js`(`answerText`) + `bridge/background.js`(`STUDYEZ_BANK_ANSWER`) | `pytest tests/bridge` |
 
 ### 땡시 문항을 고칠 때 — 손으로 고치는 파일은 여섯뿐이다

@@ -720,6 +720,43 @@ export type BankAnswer = {
   medicalReview: BankReview | null;
 };
 
+/** 관리자가 보는 문항 — 은행 JSON 그대로라 답 칸도 snake_case 다. */
+export type BankFullQuestion = BankQuestion & {
+  answer: string;
+  answer_units: string[];
+  correct_option_ids: string[];
+  answer_pairs: { left: string; right: string }[];
+  correct_order: string[];
+};
+
+export type BankReportStatus = "open" | "resolved" | "wontfix";
+
+/** 학생 신고 한 건(`GET /api/admin/bank-feedback`). */
+export type BankReport = {
+  id: number;
+  category: string;
+  comment: string;
+  status: BankReportStatus;
+  email: string;
+  createdAt: string | null;
+  /** 지금 은행보다 옛 빌드에서 온 신고. 같은 ID 에 다른 문항이 앉았을 수 있다. */
+  stale: boolean;
+};
+
+/** 같은 문항에 모인 신고들. `question` 은 **지금 은행의 것**이고, 지금 은행에 없으면 `null`. */
+export type BankReportGroup = {
+  subject: string;
+  runId: string;
+  questionId: string;
+  title: string;
+  date: string;
+  question: BankFullQuestion | null;
+  medicalReview: BankReview | null;
+  reports: BankReport[];
+};
+
+export type BankReportBoard = { questions: BankReportGroup[]; open: number; done: number };
+
 export type BankDimension = {
   concept_id: string;
   title: string;
