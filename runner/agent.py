@@ -121,6 +121,10 @@ from pathlib import Path
 
 from . import ahead, deck, eta, gate, prequeue, publish, watch
 
+# Quiz Bank(2026-10-04). 만드는 것은 ChatGPT 이고 러너는 받은 응답을 정리·검토해 올린다 —
+# `runner bank` 가 업로드까지 스스로 끝내므로 뒤의 publish 를 안 지난다.
+BANK = "bank"
+
 POLL_SECONDS = 15         # 일감을 물어보는 간격
 STAGE_SECONDS = 20        # 하위 로그를 훑어 단계를 올리는 간격
 SWEEP_SECONDS = 600       # 남은 것을 쓸어 올리는 간격
@@ -213,6 +217,8 @@ class Job:
     @property
     def what(self) -> str:
         """사람이 읽는 갈래 이름. 화면에도 로그에도 같은 말이 서야 한다."""
+        if self.kind == BANK:
+            return "Quiz Bank"
         return "Main-Quiz" if self.kind == deck.MAIN else "Pre-Quiz"
 
 
@@ -393,6 +399,8 @@ class Agent:
         만들어 둔 편이 그렇다 — `pre_target.json`이 그대로 남아 있어서, 지난번
         예습의 마지막 단계가 지금 하는 일인 것처럼 화면에 뜬다.
         """
+        if job.kind == BANK:
+            return last_stage(wrapper_log) or ""   # quizbank 가 표준 출력으로 `── ` 을 찍는다
         if job.kind == deck.MAIN:
             return last_stage(self.runs_dir / job.run_id / "pipeline.log") or last_stage(wrapper_log)
 
@@ -425,6 +433,8 @@ class Agent:
         「이미 있는 것」으로 세어지고, 아무것도 안 만든 채 돌아온다. 그러면 화면에는
         「덱을 못 만들었다」가 적힌다 — 사람은 다시 만들라고 눌렀을 뿐인데 실패로 보인다.
         """
+        if job.kind == BANK:
+            return [sys.executable, "-m", "runner", "bank", job.subject, "--run-id", job.run_id]
         if job.kind == deck.MAIN:
             argv = [sys.executable, "-m", "runner", "watch", job.subject,
                     "--run-id", job.run_id, "--build"]
@@ -449,7 +459,7 @@ class Agent:
         쓸기가 반쯤 쓰인 예습 덱을 올린다.
         """
         seats = {self.runs_dir / job.run_id}
-        if job.kind != deck.MAIN:
+        if job.kind not in (deck.MAIN, BANK):
             prev = self.prev_run_of(job)
             if prev:
                 seats.add(self.runs_dir / prev)
@@ -514,6 +524,10 @@ class Agent:
             self.say(f"    멈췄다 — 사람이 눌렀다 ({time.time() - started:.0f}초 만듦)")
             self.report(job, state="canceled", stage="",
                         message=f"사람이 멈췄다. 만들던 것은 그대로 뒀다 (로그: {log})")
+            return
+
+        if job.kind == BANK:
+            self.finish_bank(job, code, lines, log)
             return
 
         made = self.outcome(job, lines, code, started)
@@ -595,6 +609,26 @@ class Agent:
         total = len(eta.samples(self.runs_dir, job.kind).order)
         closed = {"stageIndex": total, "stageTotal": total} if total else {}
         self.report(job, state="done", stage="", message=message, **closed)
+
+    def finish_bank(self, job: Job, code: int, lines: list[str], log: Path) -> None:
+        """Quiz Bank 일감의 끝. **성공은 마지막 요약 줄로 본다** — `runner bank` 가 결과를
+        서버에 올린 뒤에야 그 줄을 찍는다. 검증에 떨어진 은행도 올라간 것이라 성공이다
+        (관리자가 사이트에서 오류를 본다). 모델 한도는 다른 갈래처럼 기다렸다 잇는다."""
+        done = first_match(lines, r"(Quiz Bank \S+: .+)$")
+        if code == 0 and done:
+            self.say(f"    끝났다 — {done}")
+            self.report(job, state="done", stage="", message=done)
+            return
+        hit_limit = limit_reason(lines)
+        if hit_limit:
+            when = resume_at(hit_limit)
+            self.say(f"    세션 한도 — {when:%H:%M}에 저절로 이어 간다")
+            self.report(job, state="queued", resumeAt=when.isoformat(), stage=f"세션 한도 — {when:%H:%M}에 다시 시작",
+                        message=f"{hit_limit} · 그때까지 줄에서 기다린다 (로그: {log})")
+            return
+        why = child_stop_reason(lines) or summary(lines) or f"종료 코드 {code}"
+        self.say(f"    실패 — {why}")
+        self.report(job, state="failed", stage="", message=f"Quiz Bank 를 못 만들었다: {why} (로그: {log})")
 
     def outcome(self, job: Job, lines: list[str], code: int, since: float) -> str:
         """이번 실행에서 무엇이 나왔나. 빈 문자열이면 못 만든 것이다.

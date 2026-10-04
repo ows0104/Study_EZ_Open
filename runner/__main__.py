@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import sys
@@ -57,6 +58,7 @@ from runner import (  # noqa: E402
     agent,
     ahead,
     attempts,
+    bank,
     blocks,
     chosen,
     cycle,
@@ -606,11 +608,24 @@ def run_promote(args) -> int:
     return 0
 
 
+def run_bank(args, parser) -> int:
+    """`bank <과목> --run-id …` — 관리자가 넣은 ChatGPT 응답을 정리·검토해 올린다(`runner/bank.py`)."""
+    if not args.subject or not args.run_id:
+        parser.error("bank 는 과목명과 --run-id 가 필요합니다")
+    api = (args.api or os.getenv("STUDYEZ_API_BASE_URL") or publish.DEFAULT_API_BASE).rstrip("/")
+    token = cycle.runner_token(args.token)
+    if not token:
+        print("러너 토큰이 없다. server/.env의 RUNNER_TOKEN이나 STUDYEZ_RUNNER_TOKEN 환경 변수, 또는 --token")
+        return 2
+    return bank.run(publish.Client(api, token), Path(args.root), args.subject, args.run_id,
+                    args.this, args.prev, Path(args.runs), model=args.model)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Study_EZ 로컬 러너")
     parser.add_argument("command", choices=["match", "watch", "done", "jokbo", "preview", "agent",
                                             "prequeue", "publish", "import", "release", "rebuild",
-                                            "chosen", "promote"])
+                                            "chosen", "promote", "bank"])
     parser.add_argument("subject", nargs="?", help="과목 폴더명. --all이면 생략")
     parser.add_argument("--all", action="store_true", help="필기/올해 폴더가 있는 과목 전부")
     parser.add_argument("--this", default="2026", help="올해 폴더명")
@@ -739,6 +754,8 @@ def main() -> int:
         return run_release(args)
     if args.command == "rebuild":
         return run_rebuild(args)
+    if args.command == "bank":
+        return run_bank(args, parser)
     if args.command == "publish":
         if not args.subject and not args.all and not args.run_id:
             parser.error("과목명을 주거나 --all 또는 --run-id를 쓰세요")

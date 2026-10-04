@@ -63,7 +63,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from . import ahead, deck, filenames, fingerprint, gate, matching
+from . import ahead, bank, deck, filenames, fingerprint, gate, matching
 from . import preview as preview_mod
 from .filenames import LectureFile
 from .watch import assign_run_ids
@@ -75,7 +75,8 @@ LEDGER_NAME = "published.json"
 
 # 서명 URL은 content-type까지 서명한다(botocore가 SignedHeaders에 넣는다).
 # 여기서 정한 값과 PUT의 헤더가 다르면 R2가 SignatureDoesNotMatch로 막는다.
-CONTENT_TYPES = {".pdf": "application/pdf", ".png": "image/png"}
+# `.md` 는 Quiz Bank 의 족보 조각이다(2026-10-04). 확장이 이 형식 그대로 ChatGPT 에 붙인다.
+CONTENT_TYPES = {".pdf": "application/pdf", ".png": "image/png", ".md": "text/markdown"}
 DEFAULT_CONTENT_TYPE = "application/octet-stream"
 
 UPLOAD_RETRIES = 3
@@ -316,7 +317,9 @@ def _add_prev_year(plan: LecturePlan, run_dir: Path) -> None:
 
 
 # 강의록. 파이프라인이 없어도 존재하고, 덱과 무관하게 학생에게 필요하다.
-NOTES_KINDS = ("notes_current", "notes_prev")
+# 강의록과 같은 「재료」. 검문이 덱을 붙들어도 이것들은 나간다 — 족보 조각도 덱이 아니라
+# Quiz Bank 를 만들 재료라서 여기 든다(2026-10-04).
+NOTES_KINDS = ("notes_current", "notes_prev", "jokbo")
 
 
 def hold_artifacts(plan: LecturePlan, why: str = "--notes-only") -> None:
@@ -539,6 +542,13 @@ def plan_subject(
             elif gated and plan.blocking:
                 hold_blocked(plan)
             plans.append(plan)
+
+    # Quiz Bank 재료 — 올해 필기가 있는 편에 그 편의 족보 조각을 붙인다(`runner/bank.py`).
+    with_notes = {p.run_id: p.item.path for p in plans if not p.ahead}
+    slices = bank.jokbo_slices(runs_dir, subject, with_notes)
+    for plan in plans:
+        if plan.run_id in slices and not plan.ahead:
+            plan.uploads.append(Upload("jokbo", slices[plan.run_id]))
 
     # 필기가 있는 편과 아직 없는 편이 날짜순으로 섞여야 진도 순서로 읽힌다.
     plans.sort(key=lambda plan: (plan.item.date, plan.run_id))
