@@ -299,6 +299,9 @@ class PreItemIn(BaseModel):
     source_anchor: str = ""
     explanation: str = ""
     flags: list[str] = Field(default_factory=list)
+    # 2026-10-04 전 러너는 안 보낸다. 예습만 채운다.
+    why_asked: str = ""
+    challenge: bool = False
 
 
 class PreItemsIn(BaseModel):
@@ -346,6 +349,8 @@ def _put_items(
             source_anchor=item.source_anchor,
             explanation=item.explanation,
             flags=item.flags,
+            why_asked=item.why_asked,
+            challenge=item.challenge,
         )
         edit = edits.get(item.id)
         if edit is not None:

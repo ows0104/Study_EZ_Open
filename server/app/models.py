@@ -317,6 +317,11 @@ class _QuizItem:
     source_anchor: Mapped[str] = mapped_column(Text, nullable=False, default="")
     explanation: Mapped[str] = mapped_column(Text, nullable=False, default="")
     flags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    # 예습만 채운다(2026-10-04 관리자). **왜 이 문제를 냈나** — 생소한 문제를 본 학생이
+    # 「이것까지 알아야 하나?」 싶지 않게 앞면에 보인다. 그리고 도전 문제인가.
+    # 답이 아니므로 `answer`·`explanation` 과 달리 `reveal` 전에 준다.
+    why_asked: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    challenge: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     @declared_attr.directive
     def __table_args__(cls) -> tuple:

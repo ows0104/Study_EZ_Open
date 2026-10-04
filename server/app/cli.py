@@ -51,6 +51,11 @@ from app.storage import ObjectStorage, StorageNotConfigured
 # 마이그레이션 도구를 두지 않은 사정은 이 파일 첫머리에 있다. 그 대신 **붙인 칼럼을
 # 여기 한 줄로 남긴다** — 다음 사람이 운영 DB와 모델이 어디서 갈라졌는지 볼 자리다.
 ADDED_COLUMNS = (
+    # 2026-10-04 예습 카드가 「왜 냈나」와 도전 문제 표시를 갖는다. 복습 표도 모양을 같이 쓴다.
+    ("pre_item", "why_asked", "TEXT NOT NULL DEFAULT ''"),
+    ("main_item", "why_asked", "TEXT NOT NULL DEFAULT ''"),
+    ("pre_item", "challenge", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("main_item", "challenge", "BOOLEAN NOT NULL DEFAULT FALSE"),
     # 2026-09-23 사이트에서 고친 빈칸 카드를 덱으로 되돌리려면 원문이 있어야 한다.
     ("pre_item", "source_stem", "TEXT NOT NULL DEFAULT ''"),
     ("main_item", "source_stem", "TEXT NOT NULL DEFAULT ''"),

@@ -320,6 +320,8 @@ export function Quiz({
           ) : null}
         </p>
 
+        <WhyAsked item={item} />
+
         <p className="quiz-stem">
           <Stem text={item.stem} />
         </p>
@@ -533,6 +535,25 @@ const FOCUS_LABEL: Record<string, string> = {
   clinical: "임상적 의미",
   repeated: "여러 해 반복 출제",
 };
+
+/**
+ * 왜 이 문제를 냈나 — 질문 바로 위에 한 줄(2026-10-04 관리자).
+ *
+ * 생소한 문제를 본 학생이 「이것까지 알아야 하나? 과한 거 아니야?」 싶지 않게
+ * 한다. 위 `FocusBadge` 는 다섯 갈래 중 하나라 「임상적 의미」까지만 말하고,
+ * 이 줄은 무엇에 왜 쓰이는지를 말한다. 도전 문제 표시도 여기 붙는다 —
+ * 어렵다는 것을 풀기 전에 알아야 못 풀어도 덜 꺾인다.
+ */
+function WhyAsked({ item }: { item: QuizItem }) {
+  const why = item.whyAsked?.trim();
+  if (!why && !item.challenge) return null;
+  return (
+    <p className="quiz-why">
+      {item.challenge ? <span className="badge is-challenge">도전 문제</span> : null}
+      {why ? <span>{why}</span> : null}
+    </p>
+  );
+}
 
 function FocusBadge({ item }: { item: QuizItem }) {
   const label = FOCUS_LABEL[item.focus];

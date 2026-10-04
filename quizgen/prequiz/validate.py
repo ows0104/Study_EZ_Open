@@ -3,10 +3,14 @@
 복습 쪽(`quizgen.validate`)과 **기계적 검사는 같다** — 스키마, cloze 문법, 그림 id,
 중복, 정답 노출. 그 부분은 그대로 가져다 쓴다.
 
-다른 것은 예습에만 있는 계약 셋이다.
+다른 것은 예습에만 있는 계약 넷이다.
   · **개수 상한(`schema.MAX_CARDS`).** 이것이 이 덱의 품질 장치다.
   · **`reason=repeated` 는 교수 유임일 때만.** 바뀌었으면 과거 반복은 이전 교수의 습관이다.
   · **`ox` 는 1/5 이하.** 예습은 알게 하는 것이 목적이라 O/X 는 회수량이 적다.
+  · **도전 문제는 `schema.MAX_CHALLENGE` 장 이하**(2026-10-04).
+
+「왜 냈나」(`why_asked`)는 표시만 단다 — 비었는가 · 긴가 · 답이 들었는가 · 기출을
+말하는데 문항이 없는가.
 
 그리고 **커버리지의 뜻이 복습과 다르다.** 예습은 슬라이드를 다 훑는 덱이 아니다 —
 중요한 것만 가져간다. 그래서 여기서는 슬라이드를 세지 않고, 사람이 승인한 must-know
@@ -43,7 +47,17 @@ from ..validate import (
     count_items,
     occlusion_answer_matches,
 )
-from .schema import CARD_SCHEMA, IMAGE_FORMATS, MAX_CARDS, MAX_RECALL_ITEMS, MIN_CARDS, OX_SHARE_MAX
+from .schema import (
+    CARD_SCHEMA,
+    IMAGE_FORMATS,
+    MAX_CARDS,
+    MAX_CHALLENGE,
+    MAX_RECALL_ITEMS,
+    MAX_WHY_CHARS,
+    MIN_CARDS,
+    OX_SHARE_MAX,
+    WHY_CITES_EXAM,
+)
 
 
 def _fail(card, code, detail=""):
@@ -214,6 +228,19 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
 
         if fmt != "cloze" and containment(char_ngrams(a), char_ngrams(q)) >= LEAK_THRESHOLD:
             flags[i].append("answer_leaked_in_question")
+
+        # 「왜 냈나」는 앞면에 뜬다(2026-10-04). 비면 학생이 「이것까지?」를 그대로 겪고,
+        # 답이 들어 있으면 질문 위에서 답을 알려 준다. O/X 는 답이 한 글자라 안 잰다.
+        why = (c.get("why_asked") or "").strip()
+        if not why:
+            flags[i].append("missing_why_asked")
+        else:
+            if len(why) > MAX_WHY_CHARS:
+                flags[i].append("why_asked_too_long")
+            if fmt != "ox" and containment(char_ngrams(a), char_ngrams(why)) >= LEAK_THRESHOLD:
+                flags[i].append("answer_leaked_in_why")
+            if any(w in why for w in WHY_CITES_EXAM) and not c.get("jokbo_ref"):
+                flags[i].append("why_cites_exam_without_ref")
         if len(RE_CLOZE.findall(q)) > MAX_RECALL_ITEMS:
             flags[i].append("too_many_clozes")
         if c["card_type"] == "sequence" or len(RE_BULLET_LINE.findall(a)) >= 2:
@@ -260,6 +287,10 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
                         f"넘치는 것은 '꼭 반드시'가 아니었다는 뜻이다")
     if n and ox / n > OX_SHARE_MAX:
         contract.append(f"O/X 가 {ox}/{n} ({ox / n:.0%}) 이다. 상한 {OX_SHARE_MAX:.0%}")
+    challenge = sum(1 for c in kept if c.get("challenge"))
+    if challenge > MAX_CHALLENGE:
+        contract.append(f"도전 문제가 {challenge}장이다. 상한 {MAX_CHALLENGE}장 — "
+                        f"가장 덜 중요한 것부터 `challenge` 를 false 로 돌린다")
 
     # ── 승인된 목록과 카드를 잇는 끈 ────────────────────────────────
     #
@@ -342,6 +373,7 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
         "format_mix": dict(Counter(c["card_format"] for c in kept)),
         "type_mix": dict(Counter(c["card_type"] for c in kept)),
         "reason_mix": dict(Counter(c["reason"] for c in kept)),
+        "challenge": challenge,
         "source_mix": dict(Counter(c["source_type"] for c in kept)),
         "must_know_items": len(must.get("items", [])),
         "rejected_candidates": len(must.get("rejected_candidates", [])),

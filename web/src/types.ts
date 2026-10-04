@@ -302,6 +302,14 @@ export type QuizItem = {
   focus: string;
   cardType: string;
   examHit: boolean;
+  /**
+   * 왜 이 문제를 냈나 — 예습만(2026-10-04). 생소한 문제를 보고 「이것까지
+   * 알아야 하나?」 싶지 않게 앞면에 보인다. 답이 아니라서 `reveal` 전에 온다.
+   * 그 전에 만든 카드·복습 카드·옛 서버는 비거나 없다.
+   */
+  whyAsked?: string;
+  /** 도전 문제 — 중요하지만 어려운 것. 덱마다 두 장까지. */
+  challenge?: boolean;
   attempt: QuizSchedule | null;
 };
 

@@ -287,6 +287,9 @@ def _read(quiz: Quiz, db: Session, user_id: str, subject: str, run_id: str) -> d
                 "focus": row.focus,
                 "cardType": row.card_type,
                 "examHit": row.exam_hit,
+                # 왜 냈나 · 도전 문제인가. 답이 아니라서 앞면과 같이 준다.
+                "whyAsked": row.why_asked,
+                "challenge": row.challenge,
                 # `answer`·`explanation`은 여기 없다. `reveal`이 준다.
                 "attempt": (
                     _schedule(attempts[row.item_id]) if row.item_id in attempts else None

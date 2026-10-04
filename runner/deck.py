@@ -792,6 +792,10 @@ def _web_items(cards: list[dict]) -> list[dict]:
             "source_type": card.get("source_type") or "lecture",
             "source_anchor": card.get("evidence_type") or "",
             "flags": list(card.get("review_flags") or []),
+            # 예습만 쓴다(2026-10-04). 왜 이 문제를 냈나 · 도전 문제인가 — 앞면에 뜬다.
+            # 복습 카드와 그 전에 만든 예습 카드에는 없으므로 빈 값이 간다.
+            "why_asked": card.get("why_asked") or "",
+            "challenge": bool(card.get("challenge")),
         })
     return items
 

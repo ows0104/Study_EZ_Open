@@ -9,7 +9,7 @@
     쓰이는지」를 잇는 다리이고 목적의 절반이라, 접어 두면 아무도 안 누른다.
     그래서 노트 모델을 따로 뒀다 (`PDF2ANKI Prequiz *`).
   · 덱이 하나다. `<과목>::<강의>::예습`. 복습처럼 강의록/기출로 가르지 않는다 —
-    예습 덱은 10~20장이라 나누면 조각만 남고, 출처는 태그로 이미 갈린다.
+    예습 덱은 10~15장이라 나누면 조각만 남고, 출처는 태그로 이미 갈린다.
   · guid 씨앗에 `::pre` 를 붙인다. 복습 카드와 질문이 같아져도 Anki 가 한 노트로
     보지 않게 하기 위해서다. **이것이 없으면 한쪽이 다른 쪽을 덮는다.**
   · 재현 검사 결과가 있으면 반영하되, 없다고 덱을 막지는 않는다 (`--require-reproduce` 로 켠다).
@@ -74,6 +74,14 @@ PRE_CSS = CSS + """
           text-align: left; max-width: 100%;
           display: block; width: -webkit-fit-content; width: fit-content; }
 .nightMode .bridge { color: #c6c6c6; border-top-color: #3a3a3a; }
+.why { display: block; margin: 0 auto 12px; font-size: 14px; line-height: 1.5;
+       color: #6a6a6a; font-weight: normal; }
+.why .tag { display: inline-block; margin-right: 6px; padding: 1px 7px; border-radius: 9px;
+            background: #eef1f6; color: #4a5568; font-size: 12px; font-weight: 600; }
+.why .tag.challenge { background: #fff1e0; color: #a0521a; }
+.nightMode .why { color: #a8a8a8; }
+.nightMode .why .tag { background: #2e3440; color: #c9d1dc; }
+.nightMode .why .tag.challenge { background: #4a3420; color: #f2c089; }
 """
 
 # 답 다음에 다리, 그다음 원본 슬라이드. 출처만 접는다.
@@ -126,12 +134,29 @@ CLOZE_MODEL = genanki.Model(
                         '</details>'}],
     css=PRE_CSS, model_type=genanki.Model.CLOZE)
 
+def why_of(c: dict) -> str:
+    """앞면 질문 위에 붙는 한 줄 — 도전 문제 표시와 「왜 냈나」(2026-10-04 관리자).
+
+    **필드를 새로 두지 않고 질문 칸 머리에 넣는다.** 노트 모델에 칸을 늘리면 이미 예습
+    덱을 받은 사람의 Anki 가 같은 이름의 노트 타입을 하나 더 만든다. 질문 칸에 넣으면
+    뒷면도 앞면을 다시 그리므로 양쪽에 다 보인다. guid 는 `q` 로 잡으므로 안 바뀐다.
+    """
+    why = (c.get("why_asked") or "").strip()
+    tags = '<span class="tag challenge">도전 문제</span>' if c.get("challenge") else ""
+    if not why and not tags:
+        return ""
+    return f'<div class="why">{tags}{html.escape(why)}</div>'
+
+
 # 층은 복습과 같은 축으로 가른다(`build.WARN_TRUST` 첫머리). 예습에만 있는 셋의 자리:
 #   `repeated_without_jokbo_ref` → ①  「반복 출제라서 냈다」는 근거가 없다는 말이다
 #   `missing_bridge_to_lecture`  → ②  답은 맞는데 수업으로 잇는 다리가 없다
 #   `off_must`                   → ③  승인본과 안 맞는 것은 덱을 다시 만들 때 볼 일이다
+# 「왜 냈나」(2026-10-04)의 넷도 같은 축이다 — 기출을 말하는데 문항이 없으면 ①
+# (근거 없는 이유를 학생에게 보인 것), 비었거나 답이 샜으면 ②, 길면 ③.
 WARN_TRUST = {
     "repeated_without_jokbo_ref": "반복 출제를 이유로 들었는데 근거 문항이 없다",
+    "why_cites_exam_without_ref": "「왜 냈나」가 기출을 말하는데 근거 문항이 없다",
 }
 
 WARN_MINOR = {
@@ -140,6 +165,8 @@ WARN_MINOR = {
     "occlusion_answer_leaked_in_question": "가린 라벨이 질문에 그대로 나온다",
     "ox_is_question_not_statement": "O/X 카드인데 진술문이 아니다",
     "missing_bridge_to_lecture": "수업으로 잇는 해설이 없다",
+    "answer_leaked_in_why": "「왜 냈나」에 정답 단서가 들어 있을 수 있다",
+    "missing_why_asked": "왜 이 문제를 냈는지가 비어 있다",
 }
 
 WARN_CHORE = {
@@ -147,6 +174,7 @@ WARN_CHORE = {
     "too_many_items": "한 번에 회수할 항목이 많다 — 예습 카드는 하루에 외워져야 한다",
     "too_many_clozes": "가린 곳이 많다",
     "question_too_long": "질문이 길다",
+    "why_asked_too_long": "「왜 냈나」가 길다",
     "off_must": "승인된 must-know 항목 어디에도 안 붙는 카드다",
     "media_on_text_card": "그림이 붙지 않는 형식인데 media 가 있었다 (제거됨)",
     "jokbo_ref_outside_slice": "족보 조각에 없는 연도의 기출이다",
@@ -180,6 +208,8 @@ def tags_of(c: dict, lecture_id: str) -> list[str]:
         t.append(f"슬라이드::{c['slide_no']:02d}")
     if c.get("jokbo_ref"):
         t.append(f"기출::{c['jokbo_ref']['year']}-{c['jokbo_ref']['no']}")
+    if c.get("challenge"):
+        t.append("도전문제")
     if c.get("review_flags"):
         t.append("검토필요")
     r = c.get("reproduce") or {}
@@ -269,7 +299,8 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str, src: Path | None = No
         if fmt == "cloze":
             # 복습과 같은 자리에서 번호를 모은다 (`build.collapse_cloze` 주석).
             note = genanki.Note(model=CLOZE_MODEL, guid=guid, tags=tags,
-                                fields=[collapse_cloze(c["q"]), exp, warn, srctxt, origin])
+                                fields=[why_of(c) + collapse_cloze(c["q"]), exp, warn,
+                                        srctxt, origin])
         else:
             img, answer = "", render_answer(c["a"])
             if fmt == "image_basic":
@@ -281,7 +312,7 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str, src: Path | None = No
                 rendered[id(c)] = (front, back)
                 img, answer = f'<img src="{front}">', f'<img src="{back}">'
             note = genanki.Note(model=MODELS[fmt], guid=guid, tags=tags,
-                                fields=[html.escape(c["q"]), answer, exp, warn,
+                                fields=[why_of(c) + html.escape(c["q"]), answer, exp, warn,
                                         srctxt, img, origin])
         deck.add_note(note)
         stats[fmt] += 1

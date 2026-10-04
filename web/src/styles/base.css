@@ -723,6 +723,23 @@ button.resource.is-download:hover:not(:disabled)::after {
   word-break: keep-all;
 }
 
+/* 왜 이 문제를 냈나(2026-10-04). 질문 위에 작게 — 질문보다 크면 질문을 가린다. */
+.quiz-why {
+  margin: 0 0 10px;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+/* 도전 문제. 빨강(`is-relearn`)은 「틀려서 돌아왔다」라 겹치지 않는 주황을 쓴다. */
+.badge.is-challenge {
+  border-color: transparent;
+  color: #ea580c;
+  background: color-mix(in srgb, #f97316 14%, var(--surface));
+  font-weight: 700;
+}
+
 /* 앞면과 답 사이의 가로줄. 안키의 `hr id=answer` 자리다. */
 .quiz-line {
   width: 100%;
