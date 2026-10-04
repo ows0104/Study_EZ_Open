@@ -1,12 +1,12 @@
 # Study EZ 예습 브리지 — Chrome Web Store 등록표
 
-기준 버전: 1.1.0
-작성일: 2026-08-25
+기준 버전: 1.2.0
+작성일: 2026-08-25 · 1.2.0 개정 2026-10-04 (관리자용 Quiz Bank 모드 — 답변 본문을 강의에 저장)
 
 ## 새 항목
 
 - 이름: **Study EZ 예습 브리지**
-- 요약: **Study EZ 강의 자료와 예습 프롬프트를 ChatGPT, Gemini 또는 Claude에 준비하고, 완성된 대화 링크를 해당 강의에 연결합니다.**
+- 요약: **Study EZ 강의 자료와 프롬프트를 ChatGPT, Gemini 또는 Claude에 준비하고, 완성된 대화의 결과를 해당 강의에 연결합니다.**
 - 카테고리: 교육
 - 언어: 한국어
 - 공개 범위: 미등록(링크가 있는 사용자만) 권장
@@ -32,12 +32,13 @@ Study EZ 예습 브리지는 Study EZ에서 선택한 작년 강의 필기와 �
 - 전송 전 파일 목록과 데이터 처리 내용을 확인하고 명시적으로 동의
 - 완성된 개인 대화 주소를 Study EZ 강의에 연결
 - 관리자 기본 링크 모드에서 공개 공유 주소 생성 및 연결
+- 관리자 Quiz Bank 모드에서 강의 필기·족보 조각을 ChatGPT에 준비하고, 완성된 답변 본문을 해당 강의의 문제은행으로 저장(공유 주소는 만들지 않음)
 - Study EZ, ChatGPT, Gemini, Claude, 지정된 Cloudflare R2 주소에서만 작동
 
 ## 단일 목적
 
-사용자가 Study EZ에서 선택한 강의 자료와 예습 프롬프트로 선택한 AI 서비스의 예습 대화를
-만들고, 완성된 대화 링크를 해당 강의에 연결하는 기능만 제공합니다.
+사용자가 Study EZ에서 선택한 강의 자료와 프롬프트로 선택한 AI 서비스의 대화를 준비하고,
+완성된 대화의 결과(대화 링크, 또는 관리자의 Quiz Bank 답변 본문)를 해당 강의에 연결하는 기능만 제공합니다.
 
 ## 권한 사유
 
@@ -110,7 +111,7 @@ PowerShell에서:
 .\bridge\build-store-package.ps1
 ```
 
-결과: `bridge/release/studyez-preview-bridge-1.1.0-web-store.zip`
+결과: `bridge/release/studyez-preview-bridge-<manifest version>-web-store.zip` (지금은 1.2.0)
 
 스토어 항목이 게시된 뒤 Cloudflare Pages 빌드 변수
 `VITE_EXTENSION_STORE_URL`에 실제 스토어 URL을 넣으면 웹앱의 개발자 모드 설치

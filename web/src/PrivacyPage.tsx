@@ -1,4 +1,4 @@
-const UPDATED_AT = "2026년 8월 25일";
+const UPDATED_AT = "2026년 10월 4일";
 
 export function PrivacyPage() {
   return (
@@ -13,8 +13,9 @@ export function PrivacyPage() {
       <article>
         <h1>개인정보처리방침</h1>
         <p className="policy-lead">
-          Study EZ 예습 브리지는 사용자가 선택한 강의 필기와 예습 프롬프트를 ChatGPT, Gemini 또는 Claude에 준비하고, 완성된 대화
-          링크를 해당 Study EZ 강의에 연결하는 단일 목적으로 작동합니다.
+          Study EZ 예습 브리지는 사용자가 선택한 강의 자료와 프롬프트를 ChatGPT, Gemini 또는 Claude에 준비하고, 완성된 대화의
+          결과를 해당 Study EZ 강의에 연결하는 단일 목적으로 작동합니다. 결과는 보통 대화 링크이고, 관리자가 Quiz Bank를
+          만들 때는 완성된 답변 본문입니다.
         </p>
 
         <h2>처리하는 정보</h2>
@@ -22,6 +23,7 @@ export function PrivacyPage() {
           <li>사용자가 선택한 PDF의 파일명·임시 다운로드 주소·파일 내용, 예습 프롬프트, 강의 식별자</li>
           <li>선택한 AI 서비스의 대화 주소와, 기본 링크를 만들 때 생성되는 공개 공유 주소</li>
           <li>대화 링크와 응답 완료 여부를 확인하는 동안 일시적으로 처리하는 AI 대화 내용과 상태 정보</li>
+          <li>관리자의 Quiz Bank 모드에서 완성된 ChatGPT 답변 본문(문제은행)</li>
           <li>ChatGPT 공유 요청을 수행할 때 메모리에서 일시적으로 읽는 로그인 액세스 토큰</li>
         </ul>
 
@@ -36,6 +38,11 @@ export function PrivacyPage() {
           이 공유 주소는 링크를 가진 누구나 볼 수 있습니다. “개인 링크” 모드에서는 공개 공유 주소를 만들지
           않습니다.
         </p>
+        <p>
+          관리자 전용 “Quiz Bank” 모드에서는 강의 필기와 족보 조각을 ChatGPT에 준비하고, 사용자가 직접 보낸 질문의 답변이
+          완성되면 그 답변 본문을 Study EZ에 저장해 해당 강의의 문제은행을 만듭니다. 이 모드는 공유 주소를 만들지 않고
+          대화 주소를 예습 링크로 저장하지 않습니다.
+        </p>
 
         <h2>로그인 정보</h2>
         <p>
@@ -48,7 +55,8 @@ export function PrivacyPage() {
         <p>
           확장은 진행 중인 요청과 아직 Study EZ에 저장되지 않은 링크를 Chrome의 세션 저장소에 임시로 보관합니다.
           저장 확인 뒤 삭제되며, 브라우저 세션이 끝나면 세션 데이터도 사라집니다. Study EZ 서버에는 강의 식별자와
-          완성된 대화·공유 주소가 계정 및 강의 기록의 일부로 보관됩니다.
+          완성된 대화·공유 주소가 계정 및 강의 기록의 일부로 보관됩니다. Quiz Bank 답변 본문은 해당 강의의 문제은행 원문으로
+          보관됩니다.
         </p>
         <p>
           개인 링크와 공개 공유 링크 모드의 동의 여부는 각각 한 번 받은 뒤 Chrome 로컬 저장소에 보관합니다. 저장되는
@@ -75,9 +83,9 @@ export function PrivacyPage() {
         <ul>
           <li><code>storage</code>: 진행 중인 요청과 전달 대기 링크를 세션 동안 보관합니다.</li>
           <li><code>scripting</code>: Gemini가 동적으로 만드는 파일 입력을 사용자가 확인한 뒤 준비합니다.</li>
-          <li>Study EZ: 사용자가 누른 강의와 파일 정보를 받고 완성된 링크를 돌려줍니다.</li>
+          <li>Study EZ: 사용자가 누른 강의와 파일 정보를 받고 완성된 링크 또는 Quiz Bank 답변 본문을 돌려줍니다.</li>
           <li>ChatGPT·Gemini·Claude: 사용자가 확인한 PDF·프롬프트를 준비하고 대화·공유 링크를 확인합니다.</li>
-          <li>Cloudflare R2: 사용자가 선택한 PDF 한 건을 임시 서명 주소로 내려받습니다.</li>
+          <li>Cloudflare R2: 사용자가 선택한 자료(PDF, Quiz Bank에서는 족보 조각 문서 포함)를 임시 서명 주소로 내려받습니다.</li>
         </ul>
 
         <h2>문의</h2>
