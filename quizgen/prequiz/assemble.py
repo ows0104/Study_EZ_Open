@@ -218,10 +218,7 @@ def main(argv=None) -> int:
                      else f"{via['lecture_key']} {via['title']}  "
                           f"(조각은 {e['lecture_key']} 안에 섞여 있음)")
             print(f"   {sc:.2f}  {label}{mark}")
-        prof_note = top[0][1].get("professor_filter") if top else None
-        if not jokbo_file and prof_note and prof_note.get("dropped_all") and score >= 0.25:
-            pass        # 올해 교수가 낸 해가 없다 — `find_jokbo` 가 이미 그 이유를 찍었다
-        elif not jokbo_file or score < 0.25:
+        if not jokbo_file or score < 0.25:
             print(NO_JOKBO_MATCH.format(score=score), flush=True)
             jokbo_file = None
 

@@ -370,12 +370,6 @@ def slice_for_recorded(prep: dict, jokbo_dir: Path, explicit: str | None = None
     path, score, top = find_jokbo(prep, Path(jokbo_dir))
     pinned, want = jokbo_pin(Path(prep["source"]).stem, Path(jokbo_dir))
     prof = top[0][1].get("professor_filter") if top else None
-    if not path and prof and prof.get("dropped_all") and (pinned or score >= 0.25):
-        # 조각은 맞았는데 올해 교수가 낸 해가 없다. 문턱 미달 · 재료 없음과 처방이 다르다 —
-        # 조각을 다시 고를 일이 아니라 그 교수의 기출이 없는 것이다.
-        rec = cutmark.used_record(jokbo_dir, None, score, prof["why"])
-        rec["professor_filter"] = prof
-        return None, {}, False, rec
     if pinned and want is None:
         # 사람이 「족보 없음」으로 적은 편. 문턱 미달과 섞이면 안 된다 — 처방이 다르다.
         return None, {}, False, cutmark.used_record(
@@ -605,8 +599,9 @@ def assemble(prep_dir: Path, jokbo_file: Path | None, schema_dir: Path,
                                   jk.get("may_contain"), strategy,
                                   shared_bank=jk["lecture_key"] == "PRAC",
                                   questions=jk.get("questions"))
-        whole = ("이 단원의 과거 기출 중 **올해 담당 교수가 낸 해의 것**이다"
-                 if (jk.get("stats") or {}).get("professor_filter") else
+        whole = ("이 단원의 과거 기출 전량이다. **올해 담당 교수가 낸 해가 앞에**, 다른 교수가 "
+                 "냈거나 출제자를 모르는 해가 맨 뒤 「참고」에 있다"
+                 if ((jk.get("stats") or {}).get("professor_filter") or {}).get("n_total") else
                  "이 단원의 과거 기출 전량이다")
         jokbo_block = (f"# 기출 조각 — {jk['lecture_key']} {jk['title']}\n\n"
                        f"{whole}. 정답과 이의제기 답변이 결합돼 있다.\n\n"

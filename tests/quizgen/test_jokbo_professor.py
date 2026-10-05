@@ -1,15 +1,16 @@
-"""족보는 올해 그 강의 교수가 낸 해만 쓴다 · 옛 판(2020판)을 덧붙여 2015년까지 덮는다.
+"""족보는 올해 그 강의 교수가 낸 해를 앞에 둔다 · 옛 판(2020판)을 덧붙여 2015년까지 덮는다.
 
 2026-10-05 관리자 — *"족보를 2026, 2020년꺼를 써서, 2026-2015까지를 커버할 수 있도록
-하자. 그리고 이제 부터 올해 실제 강의교수가 낸 족보만을 근거로 하자."*
+하자. 그리고 이제 부터 올해 실제 강의교수가 낸 족보만을 근거로 하자."* 같은 날 고쳤다 —
+*"본인 족보를 우선시하는거로. 다른 족보도 참고 정도는 해도 될듯."*
 
 여기서 재는 것:
 
-- 거르는 규칙(`filter_by_professor`) — 그 해 칸에 올해 교수가 있으면 남기고, 없거나
-  모르면 뺀다. 옛 판 문항은 제 칸(`by`)을 따른다.
+- 가르는 규칙(`split_by_professor`) — 그 해 칸에 올해 교수가 있으면 앞, 없거나 모르면
+  뒤 「참고」. **빼지 않는다.** 옛 판 문항은 제 칸(`by`)을 따른다.
 - 올해 교수를 어디서 읽는가(`lecture_professors`) — 예습 자리는 **작년 필기**로
   만들므로 파일명의 교수가 작년 교수다.
-- `find_jokbo` 가 거른 조각을 돌려주고, 남는 것이 없을 때 그 이유가 기록에 남는가.
+- `find_jokbo` 가 가른 조각을 돌려주고, 그 기록이 `jokbo.used.json` 에 남는가.
 - 옛 판을 잇는 규칙(`merge_older`) — 번호가 아니라 목차 제목으로 잇는다.
 - 교수 표의 색 글씨 메모와 다음 쪽으로 넘어간 행(`parse_toc`).
 """
@@ -36,64 +37,86 @@ def payload(questions: list[dict], by_year: dict, key: str = "24-25",
             "questions": questions}
 
 
-# ────────────────────────────────────────────────── 거르는 규칙
+def own_of(new: dict) -> list[str]:
+    return [x["no"] for x in new["questions"] if not x.get("reference")]
 
 
-def test_올해_교수가_낸_해만_남긴다():
-    p = payload([q("2025", "1"), q("2023", "2"), q("2022", "3"), q("2019", "4")],
+def ref_of(new: dict) -> list[str]:
+    return [x["no"] for x in new["questions"] if x.get("reference")]
+
+
+# ────────────────────────────────────────────────── 가르는 규칙
+
+
+def test_올해_교수가_낸_해는_앞에_나머지는_참고로_뒤에_둔다():
+    p = payload([q("2022", "3"), q("2025", "1"), q("2019", "4"), q("2023", "2")],
                 {"25": ["강경훈"], "23": ["강경훈"], "22": ["김정호"]})
-    new, note = J.filter_by_professor(p, ["강경훈"])
-    assert [x["year"] for x in new["questions"]] == ["2025", "2023"]
-    assert note["kept_years"] == ["2025", "2023"]
-    # 표에 없는 해(2019)는 「출제자 모름」으로 빠진다
-    assert {r["year"]: r["by"] for r in note["dropped"]} == {"2022": ["김정호"], "2019": None}
+    new, note = J.split_by_professor(p, ["강경훈"])
+    assert own_of(new) == ["1", "2"] and ref_of(new) == ["3", "4"]
+    assert [x["no"] for x in new["questions"]] == ["1", "2", "3", "4"]   # 빼지 않는다
+    assert note["own_years"] == ["2025", "2023"]
+    # 표에 없는 해(2019)는 「출제자 모름」으로 참고에 간다
+    assert {r["year"]: r["by"] for r in note["reference"]} == {"2022": ["김정호"], "2019": None}
 
 
-def test_남은_문항은_올해_교수의_것이라_교수_교체를_끈다():
-    p = payload([q("2023", "1")], {"23": ["강경훈"], "25": ["김정호"], "26": ["강경훈"]},
+def test_통계는_올해_교수의_해로만_잰다():
+    p = payload([q("2023", "1"), q("2022", "2")],
+                {"23": ["강경훈"], "22": ["김정호"], "25": ["김정호"], "26": ["강경훈"]},
                 professor_changed_2026=True)
-    new, _ = J.filter_by_professor(p, ["강경훈"])
+    new, _ = J.split_by_professor(p, ["강경훈"])
+    assert new["stats"]["n_questions"] == 1 and new["stats"]["n_reference"] == 1
     assert new["stats"]["professor_changed_2026"] is False
     assert new["stats"]["professor_2026"] == ["강경훈"]
-    # 남긴 해와 올해만 적는다 — 뺀 해의 교수를 「담당 교수」로 보이지 않게
+    # 앞에 둔 해와 올해만 적는다 — 참고 해의 교수를 「담당 교수」로 보이지 않게
     assert new["stats"]["professors_by_year"] == {"23": ["강경훈"], "26": ["강경훈"]}
 
 
-def test_함께_맡은_해는_통째로_남긴다():
+def test_올해_교수가_낸_해가_없으면_전부_참고이고_교수_교체로_친다():
+    """새로 맡은 교수. 지금까지의 「교수 교체」 지침(기출은 신호로만)이 그대로 이 경우다."""
+    p = payload([q("2025", "1"), q("2023", "2")], {"25": ["박성혜"], "23": ["박성혜"]})
+    new, note = J.split_by_professor(p, ["김은나"])
+    assert own_of(new) == [] and ref_of(new) == ["1", "2"]
+    assert new["stats"]["professor_changed_2026"] is True
+    assert new["stats"]["n_questions"] == 2
+
+
+def test_함께_맡은_해는_통째로_앞에_둔다():
     p = payload([q("2025", "1"), q("2025", "2")], {"25": ["고지원", "이철"]})
-    new, _ = J.filter_by_professor(p, ["고지원"])
-    assert len(new["questions"]) == 2
+    new, _ = J.split_by_professor(p, ["고지원"])
+    assert own_of(new) == ["1", "2"]
 
 
 def test_파일명이_이름을_붙여_써도_같은_사람이다():
     p = payload([q("2025", "1")], {"25": ["문경철"]})
-    new, _ = J.filter_by_professor(p, ["문경철김혜령"])
-    assert len(new["questions"]) == 1
+    new, _ = J.split_by_professor(p, ["문경철김혜령"])
+    assert own_of(new) == ["1"]
 
 
 def test_옛_판_문항은_제_칸을_따른다():
     """흡수된 섹션에서는 섹션의 그 해 칸이 이 문항의 출제자가 아니다."""
     p = payload([q("2018", "1", by=["문경철"]), q("2018", "2"), q("2017", "3", by=[])],
                 {"18": ["정경천"], "17": ["문경철"]})
-    new, note = J.filter_by_professor(p, ["문경철"])
-    assert [x["no"] for x in new["questions"]] == ["1"]
-    assert note["n_after"] == 1
+    new, note = J.split_by_professor(p, ["문경철"])
+    assert own_of(new) == ["1"] and ref_of(new) == ["2", "3"]
+    assert note["n_own"] == 1
 
 
 def test_흡수한_섹션은_흡수된_강의의_교수도_본다():
     p = payload([q("2025", "1")], {"25": ["배정모"]},
                 absorbed_professors_by_year={"25": ["박수경"]})
-    new, _ = J.filter_by_professor(p, ["박수경"])
-    assert len(new["questions"]) == 1
+    new, _ = J.split_by_professor(p, ["박수경"])
+    assert own_of(new) == ["1"]
 
 
-def test_조각_머리에_거른_것이_적힌다():
-    p = payload([q("2025", "1"), q("2022", "2")], {"25": ["강경훈"], "22": ["김정호"]})
-    new, note = J.filter_by_professor(p, ["강경훈"])
+def test_조각_md_는_올해_교수_해를_앞에_참고를_뒤에_싣는다():
+    p = payload([q("2022", "2"), q("2025", "1")], {"25": ["강경훈"], "22": ["김정호"]})
+    new, _ = J.split_by_professor(p, ["강경훈"])
     sec = J.Section(lecture_key=new["lecture_key"], title=new["title"])
+    sec.questions = [J.Question(**{k: v for k, v in x.items()}) for x in new["questions"]]
     md = J.to_markdown(sec, new["stats"])
-    assert "올해 교수(강경훈)가 낸 해만 남겼다" in md
-    assert "2022(김정호)" in md
+    assert "올해 교수(강경훈)가 낸 해 1문항(2025)을 앞에 두었다" in md
+    assert "올해 담당 교수가 낸 문항을 우선한다" in md
+    assert md.index("## 2025") < md.index("## 참고 — 올해 교수가 내지 않은 해") < md.index("## 참고 · 2022")
 
 
 # ────────────────────────────────────────────────── 올해 교수를 어디서 읽나
@@ -142,7 +165,7 @@ def test_pre_target_이_비었으면_작년_교수로_내려가지_않는다(tmp
     assert lecture_professors({"source": f"{stem}.pdf"}, edition)[0] == []
 
 
-# ────────────────────────────────────────────────── find_jokbo 가 거른 조각을 준다
+# ────────────────────────────────────────────────── find_jokbo 가 가른 조각을 준다
 
 ONCO = payload([q("2025", "1"), q("2023", "2"), q("2022", "3")],
                {"25": ["이혜승"], "23": ["이혜승"], "22": ["다른이"]})
@@ -150,32 +173,39 @@ INFLAM = payload([q("2025", "9"), q("2023", "8")], {"25": ["고재문"], "23": [
                  key="7", title="급성염증의 병태생리")
 
 
-def test_거른_조각을_교수별_자리에_세워_돌려준다(tmp_path):
+def test_가른_조각을_교수별_자리에_세워_돌려준다(tmp_path):
     edition = cut(tmp_path, [ONCO])
     stem = "[260825_01] 종양의 생물학적 특성, 발암의 원인(이혜승)_김솔립"
     path, score, top = find_jokbo({"source": f"{stem}.pdf"}, edition)
     assert path.parent == edition / PROFESSOR_DIR / "이혜승"
     got = json.loads(path.read_text(encoding="utf-8"))
-    assert [x["year"] for x in got["questions"]] == ["2025", "2023"]
+    assert own_of(got) == ["1", "2"] and ref_of(got) == ["3"]
     # 카드를 만드는 쪽은 .md 를 읽는다(`assemble`) — 같은 자리에 같이 선다
     assert "올해 교수(이혜승)" in path.with_suffix(".md").read_text(encoding="utf-8")
-    assert top[0][1]["professor_filter"]["n_after"] == 2
+    assert top[0][1]["professor_filter"]["n_own"] == 2
 
 
-def test_올해_교수가_낸_해가_없으면_족보없음이고_이유가_남는다(tmp_path):
+def test_올해_교수가_낸_해가_없어도_조각은_붙고_전부_참고다(tmp_path):
     edition = cut(tmp_path, [ONCO])
     stem = "[260825_01] 종양의 생물학적 특성, 발암의 원인(새교수)_김솔립"
     path, stats, _, rec = slice_for_recorded({"source": f"{stem}.pdf"}, edition)
-    assert path is None and not rec["attached"]
-    assert "올해 교수(새교수)가 낸 해가 이 조각에 없다" in rec["why_not"]
-    assert rec["professor_filter"]["n_before"] == 3
+    assert rec["attached"] and stats["professor_changed_2026"] is True
+    assert rec["professor_filter"]["n_own"] == 0 and rec["professor_filter"]["n_reference"] == 3
 
 
-def test_붙은_편의_기록에도_거른_것이_남는다(tmp_path):
+def test_올해_교수를_모르면_가르지_않는다(tmp_path):
+    edition = cut(tmp_path, [ONCO])
+    stem = "[260825_01] 종양의 생물학적 특성, 발암의 원인_김솔립"
+    path, _, _, rec = slice_for_recorded({"source": f"{stem}.pdf"}, edition)
+    assert path.parent == edition
+    assert "가르지 않았다" in rec["professor_filter"]["skipped"]
+
+
+def test_붙은_편의_기록에도_가른_것이_남는다(tmp_path):
     edition = cut(tmp_path, [ONCO])
     stem = "[260825_01] 종양의 생물학적 특성, 발암의 원인(이혜승)_김솔립"
     _, _, _, rec = slice_for_recorded({"source": f"{stem}.pdf"}, edition)
-    assert rec["attached"] and rec["professor_filter"]["kept_years"] == ["2025", "2023"]
+    assert rec["attached"] and rec["professor_filter"]["own_years"] == ["2025", "2023"]
 
 
 def test_제목이_엇비슷하면_올해_교수가_낸_조각을_고른다(tmp_path):

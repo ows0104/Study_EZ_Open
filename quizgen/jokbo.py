@@ -104,6 +104,8 @@ class Question:
     # 옛 판에서 덧붙인 문항만 든다 — 옛 판의 섹션이 이번 판의 다른 섹션에 흡수되면
     # (2020판 `세포의 손상 (3)~(4)` → 2026판 `2-3`) 그 해 칸의 교수가 이 문항의 것이 아니다.
     by: list[str] | None = None
+    # 올해 교수가 낸 해가 아니다 — 조각 뒤 「참고」로 간다(`split_by_professor`)
+    reference: bool | None = None
     # 파싱 중에만 쓰는 작업 영역 (finalize에서 stem/options로 접힌다)
     body: list[dict] = field(default_factory=list, repr=False)
     span: list[tuple] = field(default_factory=list, repr=False)
@@ -337,7 +339,7 @@ def parse_toc(doc: fitz.Document) -> tuple[list[tuple[str, str]], dict, str | No
     page = doc[tp]
     words = _table_words(page)
     # **표가 다음 쪽으로 넘어간다.** 약리학 2026판은 35·36 행이 p3 머리에 머리글 없이
-    # 이어진다. 못 읽으면 그 두 강의는 교수가 비어 올해 교수로 거를 때 통째로 빠진다.
+    # 이어진다. 못 읽으면 그 두 강의는 교수가 비어 올해 교수로 가를 때 통째로 「참고」로 간다.
     # 다음 쪽이 행 번호로 시작하면 같은 열 위치로 이어 읽는다(y 는 쪽 높이만큼 내린다).
     if tp + 1 < doc.page_count:
         nxt = doc[tp + 1]
@@ -994,9 +996,13 @@ def repeat_stats(sec: Section, profs: dict) -> dict:
             "jokbo_weight_hint": "low" if changed else ("high" if rate >= 0.35 else "normal")}
 
 
-# ─────────────────────────────────────────────────────────────── 올해 교수로 거르기
+# ─────────────────────────────────────────────────────────────── 올해 교수 것을 앞에
 #
-# 2026-10-05 관리자 — *"이제부터 올해 실제 강의교수가 낸 족보만을 근거로 하자."*
+# 2026-10-05 관리자 — 처음에는 *"이제부터 올해 실제 강의교수가 낸 족보만을 근거로
+# 하자"* 였고, 같은 날 고쳤다 — *"본인 족보를 우선시하는거로. 다른 족보도 참고 정도는
+# 해도 될듯."* 그래서 **빼지 않고 가른다.** 올해 교수가 낸 해를 앞에 두고 통계(반복률 ·
+# 교수 유임)는 그것으로만 재며, 나머지는 조각 뒤 「참고」로 간다. 참고를 얼마나 쓸지는
+# 정하지 않았다 — 「참고 정도는 해도 될듯」은 허용이지 규칙이 아니다.
 #
 # **올해 교수는 족보 표의 26년 열에서 읽지 않는다.** 그 열은 시간표에서 옮겨 적은
 # 것이라 실제와 다르다(약리학 약동학 — 표는 유경상·이승환, 실제 허기영). 올해 교수는
@@ -1011,24 +1017,25 @@ def same_person(a: str, b: str) -> bool:
     return len(a) >= 2 and len(b) >= 2 and (a in b or b in a)
 
 
-def filter_by_professor(payload: dict, professors: list[str]) -> tuple[dict, dict]:
-    """조각에서 **올해 교수가 낸 해의 문항만** 남긴다. (새 조각, 무엇을 뺐는가)
+def split_by_professor(payload: dict, professors: list[str]) -> tuple[dict, dict]:
+    """조각을 **올해 교수가 낸 해(앞)** 와 **참고(뒤)** 로 가른다. (새 조각, 가른 기록)
 
     한 해의 출제자는 족보 표의 그 해 칸이다. 칸이 비었거나(표에 없는 해 · 표를 못
-    읽은 강의) 해를 모르는 문항은 **뺀다** — 올해 교수가 냈다고 확인되지 않는다.
+    읽은 강의) 해를 모르는 문항은 참고로 간다 — 올해 교수가 냈다고 확인되지 않는다.
+    참고 문항에는 `reference: true` 가 붙는다.
 
     한 칸에 교수가 둘이면(함께 맡은 강의) 올해 교수가 그 안에 있을 때 그 해를 통째로
-    남긴다. 족보는 문항마다 출제자를 적지 않아서 그 해 안에서는 가를 수 없다.
-    다른 강의를 흡수한 섹션(`may_contain`)도 같다 — 흡수된 강의의 칸까지 같이 보고,
-    섞인 문항을 골라내는 일은 지금처럼 조각 머리의 경고가 모델에게 맡긴다.
+    앞에 둔다. 족보는 문항마다 출제자를 적지 않아서 그 해 안에서는 가를 수 없다.
+    다른 강의를 흡수한 섹션(`may_contain`)도 같다 — 흡수된 강의의 칸까지 같이 본다.
 
-    남은 문항은 올해 교수가 낸 해의 것이므로 `professor_changed_2026` 은 끈다. 반복률도
-    남은 문항으로 다시 잰다 — 그 교수가 무엇을 되풀이해 냈는가가 이제 그 값의 뜻이다.
+    통계는 앞의 것으로만 다시 잰다 — 그 교수가 무엇을 되풀이해 냈는가가 이제 반복률의
+    뜻이다. 앞이 비면(올해 처음 맡은 교수) 통계는 전체로 재고 `professor_changed_2026`
+    을 켠다 — 지금까지의 「교수 교체」 지침이 그대로 그 경우다.
     """
     stats = payload.get("stats") or {}
     by_year = stats.get("professors_by_year") or {}
     absorbed = stats.get("absorbed_professors_by_year") or {}
-    kept, dropped = [], {}
+    own, ref, rows = [], [], {}
     for q in payload.get("questions") or []:
         year = str(q.get("year", ""))
         if q.get("by") is not None:
@@ -1037,37 +1044,51 @@ def filter_by_professor(payload: dict, professors: list[str]) -> tuple[dict, dic
             cell = ((by_year.get(year[2:]) or []) + (absorbed.get(year[2:]) or [])
                     if RE_YEAR.match(year) else None)
         if cell and any(same_person(a, b) for a in cell for b in professors):
-            kept.append(q)
+            own.append({k: v for k, v in q.items() if k != "reference"})
             continue
-        row = dropped.setdefault(year, {"year": year, "n": 0, "by": cell or None})
+        ref.append({**q, "reference": True})
+        row = rows.setdefault(year, {"year": year, "n": 0, "by": cell or None})
         row["n"] += 1
-    kept_years = sorted({str(q["year"]) for q in kept}, reverse=True)
-    sec = Section(lecture_key=payload.get("lecture_key", ""), title=payload.get("title", ""))
+    own_years = sorted({str(q["year"]) for q in own}, reverse=True)
     fields = {f for f in Question.__dataclass_fields__ if f not in ("body", "span", "bank")}
-    sec.questions = [Question(**{k: v for k, v in q.items() if k in fields}) for q in kept]
-    cells = {y[2:]: by_year[y[2:]] for y in kept_years if y[2:] in by_year}
-    new_stats = repeat_stats(sec, {sec.lecture_key: cells})
-    new_stats["professors_by_year"] = {**cells, "26": list(professors)}
+    sec = Section(lecture_key=payload.get("lecture_key", ""), title=payload.get("title", ""))
+    sec.questions = [Question(**{k: v for k, v in q.items() if k in fields}) for q in (own or ref)]
+    if own:
+        cells = {y[2:]: by_year[y[2:]] for y in own_years if y[2:] in by_year}
+        new_stats = repeat_stats(sec, {sec.lecture_key: cells})
+        new_stats["professors_by_year"] = {**cells, "26": list(professors)}
+        new_stats["professor_changed_2026"] = False
+        new_stats["jokbo_weight_hint"] = "high" if new_stats["repeat_rate"] >= 0.35 else "normal"
+    else:
+        new_stats = repeat_stats(sec, {sec.lecture_key: by_year})
+        new_stats["professors_by_year"] = {**by_year, "26": list(professors)}
+        new_stats["professor_changed_2026"] = True
+        new_stats["jokbo_weight_hint"] = "low"
     new_stats["professor_2026"] = list(professors)
-    new_stats["professor_changed_2026"] = False
-    new_stats["jokbo_weight_hint"] = "high" if new_stats["repeat_rate"] >= 0.35 else "normal"
-    note = {"professors": list(professors),
-            "n_before": len(payload.get("questions") or []), "n_after": len(kept),
-            "kept_years": kept_years,
-            "dropped": sorted(dropped.values(), key=lambda r: r["year"], reverse=True)}
+    new_stats["n_reference"] = len(ref)
+    if absorbed:
+        new_stats["absorbed_professors_by_year"] = absorbed
+    note = {"professors": list(professors), "n_total": len(own) + len(ref),
+            "n_own": len(own), "n_reference": len(ref), "own_years": own_years,
+            "reference": sorted(rows.values(), key=lambda r: r["year"], reverse=True)}
     new_stats["professor_filter"] = note
-    return {**payload, "stats": new_stats, "questions": kept}, note
+    return {**payload, "stats": new_stats, "questions": own + ref}, note
 
 
-def filter_line(note: dict) -> str:
-    """거른 것을 사람이 읽는 한 줄. 조각 머리와 화면이 같은 말을 한다."""
+def split_line(note: dict) -> str:
+    """가른 것을 사람이 읽는 한 줄. 조각 머리와 화면이 같은 말을 한다."""
     who = "·".join(note.get("professors") or []) or "미상"
-    kept = " · ".join(note.get("kept_years") or []) or "없음"
-    gone = " · ".join(f"{r['year']}({'/'.join(r['by']) if r.get('by') else '출제자 모름'})"
-                      for r in note.get("dropped") or [])
-    line = (f"올해 교수({who})가 낸 해만 남겼다 — 문항 {note.get('n_before', 0)} → "
-            f"{note.get('n_after', 0)} · 남긴 해 {kept}")
-    return line + (f" · 뺀 해 {gone}" if gone else "")
+    own = " · ".join(note.get("own_years") or []) or "없음"
+    ref = " · ".join(f"{r['year']}({'/'.join(r['by']) if r.get('by') else '출제자 모름'})"
+                     for r in note.get("reference") or [])
+    line = f"올해 교수({who})가 낸 해 {note.get('n_own', 0)}문항({own})을 앞에 두었다"
+    return line + (f" · 참고 {note.get('n_reference', 0)}문항 {ref}" if ref else "")
+
+
+PRIORITY_NOTE = (
+    "**올해 담당 교수가 낸 문항을 우선한다.** 기출 카드와 `jokbo_ref` 는 앞쪽(올해 교수가 "
+    "낸 해)에서 먼저 고른다. 맨 뒤 「참고」는 다른 교수가 냈거나 출제자를 모르는 해다 — "
+    "이 단원에서 무엇이 시험에 나올 만한 지식인지 보는 데 참고로 써도 된다.")
 
 
 # ─────────────────────────────────────────────────────────────── 출력
@@ -1084,7 +1105,7 @@ def to_markdown(sec: Section, stats: dict) -> str:
     if yr:
         L.append("담당 교수: " + " | ".join(f"20{y} {'·'.join(v)}" for y, v in sorted(yr.items(), reverse=True)))
     if stats.get("professor_filter"):
-        L.append(filter_line(stats["professor_filter"]))
+        L.append(split_line(stats["professor_filter"]))
     if stats["professor_changed_2026"]:
         L.append("⚠ 2026년 교수 교체 — 족보 신뢰도를 낮춰 사용할 것")
     L.append(f"문항 {stats['n_questions']}개 · 연도간 반복률 {stats['repeat_rate']:.0%} "
@@ -1095,10 +1116,26 @@ def to_markdown(sec: Section, stats: dict) -> str:
                  "없어 문항이 이 섹션으로 흘러들어왔다. 이번 강의 소관이 아닌 문항은 골라내라.")
         for k, t in sec.may_contain:
             L.append(f"- {k} {t}")
+    own = [q for q in sec.questions if not q.reference]
+    ref = [q for q in sec.questions if q.reference]
+    if ref and own:
+        L += ["", PRIORITY_NOTE]
     L.append("")
-    for year in sorted({q.year for q in sec.questions}, reverse=True):
-        L.append(f"## {year}")
-        for q in [q for q in sec.questions if q.year == year]:
+    _year_blocks(L, own, "")
+    if ref:
+        L += ["## 참고 — 올해 교수가 내지 않은 해", "",
+              "아래는 다른 교수가 냈거나 출제자를 모르는 해의 문항이다. 앞의 문항이 우선이다."
+              if own else
+              "올해 교수가 낸 해가 이 단원 족보에 없다. 아래는 다른 교수가 냈거나 출제자를 "
+              "모르는 해의 문항이다 — 참고로 써도 된다.", ""]
+        _year_blocks(L, ref, "참고 · ")
+    return "\n".join(L)
+
+
+def _year_blocks(L: list[str], questions: list[Question], prefix: str) -> None:
+    for year in sorted({q.year for q in questions}, reverse=True):
+        L.append(f"## {prefix}{year}")
+        for q in [q for q in questions if q.year == year]:
             head = f"### {q.no}번"
             if q.answer:
                 head += f"  [정답 {q.answer}]"
@@ -1113,7 +1150,6 @@ def to_markdown(sec: Section, stats: dict) -> str:
             if q.objection:
                 L.append("> 이의제기: " + q.objection)
             L.append("")
-    return "\n".join(L)
 
 
 def _caught(doc: fitz.Document, regions: dict, lectures: list[tuple[str, str]]) -> int:
@@ -1234,7 +1270,7 @@ def _names_of(cells: dict) -> set[str]:
 
 
 def _older_author(old: Section, old_profs: dict, yy: str, n_lect: int) -> list[str]:
-    """옛 판 문항 하나의 출제 교수. 모르면 빈 목록 — 거르는 쪽이 뺀다.
+    """옛 판 문항 하나의 출제 교수. 모르면 빈 목록 — 가르는 쪽이 「참고」로 보낸다.
 
     **옛 판 섹션이 다른 강의를 흡수했으면 그 해 칸이 문항마다의 출제자가 아니다.**
     병리학 2020판 `유전질환` 섹션에 `소아질환` 문항이 섞여 있다(본문에 소아질환
@@ -1447,7 +1483,7 @@ def main(argv=None) -> int:
         stats = repeat_stats(sec, profs)
         if sec.may_contain:
             # 흡수된 강의의 교수. 이 섹션의 문항은 해마다 누가 냈는지 못 가르므로 올해
-            # 교수로 거를 때 이 칸도 같이 본다(`filter_by_professor`). 흡수된 강의 쪽에서
+            # 교수로 가를 때 이 칸도 같이 본다(`split_by_professor`). 흡수된 강의 쪽에서
             # 이 조각을 받을 때 제 해가 남아야 한다 — 받는 것은 그쪽도 이 조각이다.
             absorbed: dict[str, list[str]] = {}
             for key, _ in sec.may_contain:
@@ -1458,7 +1494,7 @@ def main(argv=None) -> int:
         name = slug(sec.lecture_key, sec.title)
         drop = ("body", "span", "bank")
         qs = [{k: v for k, v in asdict(q).items()
-               if k not in drop and not (k in ("src", "by") and v is None)}
+               if k not in drop and not (k in ("src", "by", "reference") and v is None)}
               for q in sec.questions]
         payload = {"lecture_key": sec.lecture_key, "title": sec.title,
                    "may_contain": [{"lecture_key": k, "title": t} for k, t in sec.may_contain],
