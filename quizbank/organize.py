@@ -93,6 +93,44 @@ def tidy_labels(bank: dict) -> list[str]:
     return fixed
 
 
+# `AD10–AD14` · `C3-C5` — ChatGPT 가 관련 개념을 범위로 적는다.
+_RANGE_RE = re.compile(r"^\s*([A-Za-z]+)(\d+)\s*[–—~-]\s*(?:[A-Za-z]+)?(\d+)\s*$")
+
+
+def tidy_related(bank: dict) -> list[str]:
+    """관련 개념의 범위 표기를 풀고, 없는 개념을 가리키는 연결은 뺀다. 고친 내용을 돌려준다.
+
+    261002_03 의 같은 응답(6-sol)을 두 번 정리했더니 한 번은 `AD10–AD14` 를 풀고 한 번은 그대로 두었다
+    (2026-10-05) — 그대로 둔 쪽은 「related_concepts 오류」로 은행 전체가 막혔다. 모델에 맡기지 않는다.
+    관련 개념은 개념 지도의 선으로만 쓰는 값이라, 못 찾는 연결은 그 하나만 뺀다.
+    """
+    concepts = bank.get("concepts") or []
+    ids = {c.get("concept_id") for c in concepts if isinstance(c, dict)}
+    notes = []
+    for c in concepts:
+        if not isinstance(c, dict) or not isinstance(c.get("related_concepts"), list):
+            continue
+        out: list[str] = []
+        for ref in c["related_concepts"]:
+            found = _RANGE_RE.match(ref) if isinstance(ref, str) and ref not in ids else None
+            if found:
+                prefix, lo, hi = found.group(1), found.group(2), found.group(3)
+                width = len(lo)
+                expanded = [f"{prefix}{n:0{width}d}" for n in range(int(lo), int(hi) + 1)]
+                if expanded and all(x in ids for x in expanded):
+                    out += expanded
+                    notes.append(f"{c['concept_id']}: {ref} → {', '.join(expanded)}")
+                    continue
+            if ref in ids and ref != c.get("concept_id"):
+                out.append(ref)
+            else:
+                notes.append(f"{c['concept_id']}: 없는 관련 개념 {ref} 를 뺐다")
+        deduped = list(dict.fromkeys(out))
+        if deduped != c["related_concepts"]:
+            c["related_concepts"] = deduped
+    return notes
+
+
 def organize(raw: str, lecture: dict, *, model: str | None = None) -> tuple[dict, dict]:
     """`(bank, info)`. lecture = {title, sources: [{id, kind, filename}]}."""
     bank, info = session.run_structured(organizer_prompt(raw, lecture), BANK, system=SYSTEM,
@@ -101,4 +139,7 @@ def organize(raw: str, lecture: dict, *, model: str | None = None) -> tuple[dict
     fixed = tidy_labels(bank)
     if fixed and isinstance(bank.get("warnings"), list):
         bank["warnings"].append(f"[정리] 짝짓기·순서 라벨을 떼고 본문으로 맞췄다: {', '.join(fixed)}")
+    related = tidy_related(bank)
+    if related and isinstance(bank.get("warnings"), list):
+        bank["warnings"].append(f"[정리] 관련 개념을 맞췄다: {'; '.join(related)}")
     return bank, info

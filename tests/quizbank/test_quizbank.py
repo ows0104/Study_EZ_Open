@@ -220,8 +220,9 @@ def _fake_sessions(monkeypatch, bank):
 
 
 def test_검증에_떨어지면_검토와_슬라이드를_건너뛰고_0으로_끝난다(monkeypatch, tmp_path, bank, capsys):
-    """문항 하나의 탓이 아닌 오류(개념의 관련 개념이 없는 ID)가 있으면 걸린 문항을 빼지 않고 통째로 막는다."""
-    bank["concepts"][0]["related_concepts"] = ["C99"]
+    """문항 하나의 탓이 아닌 오류(회상 계획의 목표 숙련도 범위)가 있으면 걸린 문항을 빼지 않고 통째로 막는다.
+    (관련 개념 오류는 정리가 코드로 고치므로 예로 못 쓴다 — organize.tidy_related)"""
+    bank["retrieval_plan"][0]["target_mastery"] = 5
     _fake_sessions(monkeypatch, bank)
     out = tmp_path / "build"
     code = run.main([str(RAW), "--title", "콜린성", "--run-id", "261002_02", "--out", str(out),
@@ -282,6 +283,17 @@ def test_짝은_꼬리표로_찾는다_글을_줄여_써도():
     bad = {"question_id": "Q9", "format": "matching", "matching_left": ["1. 가"], "matching_right": ["A. 나"],
            "answer_pairs": [{"left": "1. 가", "right": "C. 없는 보기"}]}
     assert organize.tidy_labels({"questions": [bad]}) == [] and bad["matching_left"] == ["1. 가"]   # 못 찾으면 그대로
+
+
+def test_관련_개념의_범위를_풀고_없는_연결은_뺀다():
+    """261002_03 6-sol 응답(2026-10-05): `AD10–AD14` 를 그대로 둔 정리가 은행 전체를 막았다."""
+    bank = {"concepts": [{"concept_id": f"AD{n:02d}", "related_concepts": []} for n in range(1, 15)]}
+    bank["concepts"][4]["related_concepts"] = ["AD03", "AD10–AD14", "AD99", "AD05", "AD03"]
+    bank["concepts"][0]["related_concepts"] = ["AD02-AD03"]
+    notes = organize.tidy_related(bank)
+    assert bank["concepts"][4]["related_concepts"] == ["AD03", "AD10", "AD11", "AD12", "AD13", "AD14"]
+    assert bank["concepts"][0]["related_concepts"] == ["AD02", "AD03"]
+    assert any("AD99" in n for n in notes) and any("AD10–AD14" in n for n in notes)
 
 
 def test_라벨만_가리키는_정답을_본문으로_맞춘다():
