@@ -1,208 +1,99 @@
-# 명령 목록 — 무엇을 하려는가에서 명령으로
+# 명령 안내
 
-**이 문서는 목록이다. 왜 그렇게 도는지는 여기 없다** — 설계는
-[README](../README.md), 판단 기준은 [CLAUDE.md](../CLAUDE.md), 파이프라인 속은
-[docs/quizgen.md](quizgen.md)에 있다. 여기서는 **하려는 일 → 치는 것**만 적는다.
+저장소 루트에서 실행한다. Python이 PATH에 없으면 아래 `python`을
+`.venv/Scripts/python.exe` 또는 설치된 Python의 절대 경로로 바꾼다.
+PowerShell에서 한글 출력이 깨지면 먼저 `$env:PYTHONIOENCODING = "utf-8"`을 설정한다.
 
-플래그의 정확한 뜻은 `python -m runner --help`가 원본이다. 이 표와 어긋나면
-`--help`가 맞다.
+옵션의 정본은 `python -m runner --help`다. 생성·업로드 명령은 로컬 산출물이나
+운영 서버를 변경하므로 단순 코드 점검에는 아래 검사 명령을 사용한다.
 
-Python은 PATH에 없다. 아래에서는 앞머리를 줄여 `studyez …`로 적는다.
+## 검사
 
-```bash
-PYTHONIOENCODING=utf-8 "$USERPROFILE/anaconda3/python.exe" -m runner watch
+| 대상 | 명령 |
+|---|---|
+| 루트 Python 전체 | `python -m pytest tests` |
+| 컴포넌트 하나 | `python -m pytest tests/runner` (또는 `quizgen`·`quizbank`·`spotter`·`bridge`) |
+| 서버 | `server/`에서 `.venv/Scripts/python.exe -m tests` |
+| 서버 검사 선택 | `server/`에서 `.venv/Scripts/python.exe -m tests bank` |
+| 웹 타입 | `npm --prefix web run typecheck` |
+| 웹 빌드 | `npm --prefix web run build` |
+| 코드 경계·문서 구조 | `python scripts/map_numbers.py --check` |
+| 땡시 세션 동기화 | `python spotter/scripts/sync_shared.py --check` |
+| 땡시 배포본 일치 | `python spotter/scripts/deploy_pages.py --check spotter-dist` |
+
+서버 검사는 파일별로 독립 프로세스를 띄운다. `pytest server/tests`로 대신하지 않는다.
+로컬 서버 실행은 [서버 README](../server/README.md), 웹은 [웹 README](../web/README.md)를 본다.
+
+## 자료 준비
+
+```powershell
+python -m runner jokbo 병리학
+python -m runner match 병리학
+python -m runner match --all
 ```
 
-`runner`의 하위 명령은 열하나다 — `match` `watch` `done` `jokbo` `preview`
-`agent` `prequeue` `publish` `import` `release` `rebuild`.
+족보 컷은 `runs/_materials/<과목>/<판>/`에 저장된다.
+확인한 연도별 매칭은 `runs/_pairs/<과목>.json`, 시간표 원본은 `data/timetable/`에 있다.
+족보의 옛 판은 `jokbo --older`, 실습 원본은 `--practical`로 지정한다.
 
----
+## 덱 만들기
 
-## 1. 학기 준비 — 과목당 한 번
-
-| 하려는 일 | 명령 | 나오는 것 |
-|---|---|---|
-| 족보를 강의별로 자른다 | `runner jokbo 병리학` | `runs/_jokbo/<과목>/` 조각 + `index.json`. 문항·정답·이의제기를 짝짓고 연도별 반복률까지 센다 |
-| 족보 PDF를 직접 지정한다 | `quizgen.jokbo <족보.pdf> -o out/jokbo` | 위가 부르는 밑단 |
-| 올해 강의를 작년 강의에 붙인다 | `studyez match 병리학` · `studyez match --all` | 짝 후보와 「손봐야 할 강의 N편」 보고 |
-| 확인한 짝을 굳힌다 | 명령 없음 — `runs/_pairs/<과목>.json`을 사람이 적는다 | 코드는 읽기만 한다. 블럭 경계(`_block`·`_from`·`_until`)도 이 파일이다 |
-| 시간표를 서버에 넣는다 | `server/`에서 `app.cli seed-timetable [파일]` | 캘린더가 이것만으로 그려진다. 원본은 `data/timetable/` |
-
-## 2. 복습 덱 (Main-Quiz) — 올해 필기로 만든다
-
-| 하려는 일 | 명령 |
+| 할 일 | 명령 |
 |---|---|
-| 무엇을 만들지 보기만 한다 | `runner watch` |
-| 이대로 만든다 | `runner watch --build` (한 번에 만드는 상한은 `--max`, 기본 2) |
-| 한 편만 지목해 만든다 | `runner watch 기생충학 --run-id 260831_01 --build` |
-| 이미 만든 편을 다시 만든다 | 위에 `--force` (`--run-id`가 필요하다) |
-| **필기가 새 판으로 갈렸다** | 그냥 두면 밤 쓸기가 집어 **갈린 슬라이드의 카드만 갈아 끼운다**. 손으로는 `--run-id … --build` |
-| 어디가 고쳐졌는지 사람이 안다 | `--run-id … --build --slides 37` (새 판의 쪽번호. 여러 개면 `37,41`) |
-| 갈아 끼우지 말고 통째로 | 위에 `--force` — 그 편 카드의 복습 이력이 대부분 죽는다 |
-| 전략을 정한다 | `--strategy 기본\|필기\|족보\|사진` (기본은 `auto`. 실습 사진 중심이면 `사진`) |
-| 밀린 것을 몰아 만든다 | `--all-dates`, 또는 `--since 2026-08-01 --until 2026-08-31` |
-| 방금 올라온 파일도 잡는다 | `--now` (동기화가 끝나기를 기다리는 10분을 건너뛴다) |
-| 블럭 판정을 확인한다 | `--today 2026-09-10` |
-| PDF 하나를 직접 굽는다 | `quizgen.run "<올해 필기.pdf>" --strategy … --resume out/<id>` |
+| 복습 대상 확인 | `python -m runner watch` |
+| 복습 생성 | `python -m runner watch --build` |
+| 올해 강의 한 편 생성 | `python -m runner watch 병리학 --run-id 261005_01 --build` |
+| 같은 편 전체 재생성 | 위 명령에 `--force` |
+| 수정 슬라이드 지정 | 위 명령에 `--slides 37,41` |
+| 기간을 직접 선택 | `watch --since 2026-10-01 --until 2026-10-06` |
+| 블럭 제한 해제 | `watch --all-dates` |
+| 예습 링크 대상만 확인 | `python -m runner prequeue --dry-run` |
+| 예습 대화 동기화·생성 | `python -m runner prequeue --build` |
+| 공유 링크 직접 연결 | `python -m runner preview 251005_01 --url <공유주소>` |
 
-`--run-id`로 지목한 편은 **블럭 창·하루 상한·이미 만들었다는 표시를 지난다.**
-사람이 그 편을 골랐기 때문이다.
+`watch`의 `--run-id`는 올해 강의를 지정한다.
+예습은 올해 강의와 매칭한 작년 자료를 사용한다.
+`--force`와 증분 수정의 차이, PDF를 직접 처리하는 명령은 [quizgen 안내](quizgen.md)를 본다.
 
-### 판이 갈렸을 때 (2026-09-04에 코드가 섰다)
+## Quiz Bank
 
-**판이 갈렸는지는 한 곳이 판정한다** — [runner/fingerprint.py](../runner/fingerprint.py).
-파일명의 `vN`과 **원본의 내용 해시**를 같이 본다. 쓸기와 문지기가 같은 함수를 보므로
-「쓸기는 끝났다 / 문지기는 못 내보낸다」로 편이 갇히지 않는다. 지문은 `prep.json`이
-들고 있다 — 원본을 실제로 읽어 만든 산출물이라, prep을 다시 안 돌리면 기록이
-산출물을 앞지르지 않는다. `mtime`·`size`로는 판정하지 않는다(`260901_01`이 반례다).
+```powershell
+python -m runner bank 병리학 --run-id 261005_01
+```
 
-**갈렸으면 카드마다 처분을 정한다** — [quizgen/revise.py](../quizgen/revise.py).
-쓸기가 그 편에 `--revise`를 실어 보낸다.
+웹에서 저장한 ChatGPT 답을 정리·검토하고 바로 업로드한다.
+덱의 `publish` 흐름과 별도다. 최초 답 생성과 학생 공개는 캘린더의 Quiz Bank 패널에서 한다.
 
-    안 갈린 슬라이드   그대로 옮긴다 (모델이 보지도 않는다)
-    갈린 슬라이드      무엇이 어떻게 갈렸는지 + 그 자리 카드를 모델에게 보이고
-                      카드마다 keep / revise / drop 을 받는다. **기본은 keep**
-    없어진 슬라이드    근거가 사라졌으므로 뺀다
+## 선택·재빌드·업로드
 
-갈림의 성격을 먼저 이름 붙인다(`typo` · `jokbo_answer` · `content` · `addition` · `none`).
-오타와 족보답 수정은 **확인만** 하고, 내용 정정이면 어긋난 카드를 고치고, 필기·표시가
-늘었으면 카드를 더 낼지 본다. 무엇을 왜 그렇게 했는지는 `revise.report.json`에 남는다.
-
-통째로 다시 만들지 않는 이유는 돈이 아니라 **복습 이력**이다. `260903_05`의 v1→v2에서:
-
-    자료가 갈린 슬라이드    54장 중 2장 (4%)
-    갈아 끼우기            카드 53장 중 52장을 그대로 옮긴다 (다시 쓰는 것은 1장)
-    통째 재빌드            같은 쌍에서 guid가 살아남은 카드가 7장 (46장의 이력이 죽는다)
-
-그 1장이 슬라이드 9의 이미지 카드이고, 필기자가 v2에 *"p9 사진의 oral sucker와
-ventral sucker 라벨링이 반대로 되어있는 듯하여 수정했습니다"*라고 적어 둔 바로 그 자리다.
-
-**여섯 쌍을 재 봤다** (2026-09-04, 기생충학 9/1~9/3). 갈린 슬라이드는 편마다 1~6장,
-비율로 **2~7%**다. 카드 469장 중 처분을 물을 것이 16장이고 나머지 453장은 글자
-그대로 남는다. 갈림의 성격은 대개 넷이다 — 필기자가 slide 1에 적는 **수정 메모**,
-**오타**, **족보 답 수정**, 그리고 진짜 **내용 정정**(여섯 쌍에서 두 건).
-
-**사람이 알려줄 수 있다.** `--slides 37`을 주면 그 슬라이드는 무조건 다시 쓴다.
-그림 픽셀만 바뀐 것처럼 코드가 못 보는 갈림이 그리로 들어온다.
-
-**슬라이드가 늘어나도 된다.** 새 판에 한 장이 끼면 그 자리만 새로 쓰고, 뒤로 밀린
-슬라이드의 카드는 `slide_no`와 그림 id(`fig_p02_01` → `fig_p03_01`)를 같이 밀어서
-옮긴다. 번호로 맞대지 않고 본문으로 짝을 짓기 때문이다.
-
-**「너무 많이 갈렸으면 통째로」는 거의 안 쓰는 길이다** (관리자, 2026-09-04:
-*"거의 없을 거야"*). 문턱은 기본이 없음이고 값도 정하지 않는다.
-`quizgen.run --full-rebuild-over 0.5`처럼 사람이 줄 때만 그리로 간다.
-그 길이 필요한 이유는 비용이 아니라 **갈아 끼우기에는 사람 승인 칸이 없다**는 것이다 —
-①목표와 ②카드를 한 세션에서 쓴다. 편의 대부분이 갈린 날에는 두 칸을 도로 세우는
-편이 나을 수 있다.
-
-    python -m quizgen.slidediff 옛/prep.json 새/prep.json     # 무엇이 갈렸는지만 본다
-
-> ⚠ **두 판의 `prep.json`을 만든 코드가 다르면 한쪽에만 있는 채널은 못 맞댄다.**
-> 2026-09-03에 `lecture_emphasis`가 붙었고, 그 전 편과 대면 「강의는 그대로인데
-> 5장이 갈렸다」가 나온다. 지금은 그런 채널을 빼고 재며 뺐다는 것을 보고에 적는다 —
-> **그 채널에 숨은 갈림은 못 본다.**
-
-## 3. 예습 덱 (Pre-Quiz) — 예습 대화 + 작년 필기로 만든다
-
-| 하려는 일 | 명령 / 자리 |
+| 할 일 | 명령 |
 |---|---|
-| 예습 링크를 저장한다 | 사람이 `/admin`·캘린더에서 저장한다 (`PUT /api/admin/lectures/{과목}/{run_id}/preview`). 대화를 여는 것과 링크를 되가져오는 것은 크롬 확장이 한다 |
-| 대화 하나를 손으로 받아 둔다 | `runner preview 260831_01 --url https://chatgpt.com/share/...` → `runs/<run_id>/preview.md` |
-| 자리만 세운다 | `runner prequeue` (작년 짝 고르기 · `preview.md` 굳히기) |
-| 이대로 만든다 | `runner prequeue --build` |
-| 한 편만 | `runner prequeue 기생충학 --run-id 260831_01 --build` |
-| 다시 만든다 | 위에 `--force` |
-| 임박한 것만 | `--within-days 3` · 상한 `--max 1` |
-| PDF 하나를 직접 굽는다 | `quizgen.prequiz.run "<작년 필기.pdf>" --note <링크\|note.md>` |
+| 시도 비교 | `python scripts/attempts.py 261005_01` |
+| 현재 시도 선택 기록 | `python -m runner chosen 261005_01 --keep --why "선택 이유"` |
+| 다른 시도 선택 | `python -m runner chosen 261005_01 --pick <시도폴더> --why "선택 이유"` |
+| 선택한 시도를 배포 위치로 승격 | `python -m runner promote 261005_01` |
+| 기존 카드로 덱만 다시 빌드 | `python -m runner rebuild` |
+| 표시 규칙도 다시 계산 | `python -m runner rebuild --reflag` |
+| 다른 작업 폴더 가져오기 | `python -m runner import --from <작업폴더> --dry-run` |
+| 가져온 덱의 보류 해제 | `python -m runner release 261005_01` |
+| 업로드 대상만 확인 | `python -m runner publish --all --dry-run` |
+| 한 편 업로드 | `python -m runner publish --run-id 261005_01` |
+| 전체 업로드 | `python -m runner publish --all` |
+| 완료 표시 후 업로드 | `python -m runner done 261005_01` |
 
-`prequeue`는 멱등이다 — 링크가 그대로면 건너뛰고(`done`), 링크가 바뀌었는데 덱이
-이미 있으면 `stale`로 적어 다시 만든다.
+`publish`는 먼저 서버의 예습 링크를 동기화한다. 서버가 링크의 원본이다.
+`--no-prequeue`는 이 단계를 생략하므로 오래된 로컬 링크를 올릴 수 있다.
+`--notes-only`는 강의록만, `--no-gate`는 배포 보류 검사를 건너뛴다.
+산출물 구조·보존 대상은 [runs 구조](runs-layout.md)를 따른다.
 
-## 4. 덱을 손본다 — 모델을 안 부르는 것들
+## 상시 러너
 
-| 하려는 일 | 명령 |
-|---|---|
-| 카드는 그대로 두고 덱만 다시 굽는다 | `runner rebuild` (뒷면 배치·CSS를 고쳤을 때. guid가 안 바뀌어 복습 이력이 산다) |
-| 검사 규칙이 늘어 표시를 다시 센다 | `runner rebuild --reflag` |
-| 다른 곳에서 만든 덱을 옮겨 온다 | `runner import --from "../PDF2ANKI/out"` (옮긴 자리마다 `HOLD`가 붙어 안 나간다) |
-| 그 보류를 푼다 | `studyez release 260812_01` |
+```powershell
+python -m runner agent
+python -m runner agent --once
+powershell -ExecutionPolicy Bypass -File scripts/install-agent-task.ps1
+```
 
-## 5. 사이트로 올린다 — 강의록·덱·문항·예습 링크
-
-| 하려는 일 | 명령 |
-|---|---|
-| 한 과목을 올린다 | `runner publish 기생충학` |
-| 아직 안 올라간 것을 전부 훑는다 | `runner publish --all` |
-| 한 편만 올린다 | `runner publish --run-id 260831_01` |
-| 무엇이 올라갈지만 본다 | `--dry-run` |
-| 강의록만 먼저 내보낸다 | `--notes-only` |
-| 문지기를 끄고 민다 | `--no-gate` (사람이 보고 판단했을 때) |
-| 이미 올린 표시를 무시한다 | `--force` |
-| 한 편을 마감한다 | `runner done 260831_01` (표시하고 그 편을 올린다. `--no-publish`면 표시만) |
-
-한 번에 나가는 것 — `notes_current`·`notes_prev`(강의록 PDF) · `main_apkg`·`pre_apkg`와
-미디어 · `run-meta` · `main-items`·`pre-items`(웹 풀이용 문항) · 예습 링크.
-
-**`publish`는 올리기 전에 예습 링크를 서버에서 먼저 당겨 온다.** 이 저장소에서
-방향이 반대인 것이 그것 하나뿐이라, 안 당기면 방금 바꾼 링크를 옛 주소로
-덮어쓴다. `--no-prequeue`로 끈다.
-
-## 6. 러너 — 종일 도는 것
-
-| 하려는 일 | 명령 |
-|---|---|
-| 러너를 띄운다 | `runner agent` (과목을 좁히려면 `runner agent 기생충학`) |
-| 붙는지만 본다 | `runner agent --once` |
-| 간격을 바꾼다 | `--poll 15` · `--sweep-minutes 10` · `--no-sweep` |
-| 겹쳐 만들 편 수를 바꾼다 | `--workers 2` (기본 2. 서버도 같은 상한을 든다 — 작은 쪽이 실제 상한) |
-| 예약 작업으로 등록한다 | `powershell -ExecutionPolicy Bypass -File scripts\install-agent-task.ps1 [-Subject 병리학]` |
-| 등록을 뺀다 | 위에 `-Remove` |
-| 도는지 본다 | `Get-ScheduledTask -TaskName 'StudyEZ Agent'` |
-| 무엇을 하는지 본다 | `runs/agent.log` · 편별 `runs/agent.<run_id>.log` · 쓸기 `runs/agent.sweep.<과목>.log` |
-| 얼마나 남았는지 본다 | `/admin` 맨 위(단계·몇 분째·남은 시간) · 캘린더의 그 덱 줄 |
-
-일감은 **재료가 도착하면 저절로 선다**(2026-09-01) — 올해 필기가 처음 올라오면
-복습이, 예습 링크가 바뀌면 예습이. 캘린더의 「… 덱 만들기」와 덱 옆의 ⟳는 그
-안전장치다(`POST …/prequiz-job?kind=pre|main`, ⟳는 `force`).
-
-자동은 **하루 6편**까지고 넘으면 `held`로 서서 사람을 기다린다. 쓸기(`publish`)는
-빌드와 **겹쳐 돈다** — 앞의 편이 막혀도 올릴 것은 올라간다.
-
-## 7. 사이트에서 하는 것 — 여기에 명령이 없는 기능
-
-- **강의록 내려받기** — `GET /api/lectures/{과목}/{run_id}/files/{asset_id}`. 로컬
-  명령은 없다. 원본은 Synology에 있고 사이트로는 `publish`가 밀어 올린다
-- **웹 풀이(자기채점)** — Pre-Quiz·Main-Quiz의 `reveal`·`grade`, 기록 지우기는
-  `DELETE …/attempts`
-- **관리자 화면** — 탭 셋으로 갈라져 있다(2026-09-04). 왼쪽부터 `/admin` **퀴즈**는
-  위가 도는 일감 판(`/api/admin/prequiz-jobs` — 순서 옮기기·멈추기)이고 아래가
-  만들어진 덱 목록이다 — 최신순 열 줄씩, 문항 수·만든 때·검토 표시와 **무슨 판으로
-  구웠나**(`run.meta.json`의 `source_pdf`에서 읽는다. 필기 판이 그 뒤로 올라갔으면
-  「옛 판」으로 뜬다). `/admin/users` **계정**은 승인(대기가 위로 선다),
-  `/admin/lectures` **강의**는 과목별 블록(진행 중 → 예정 → 지난 것 순. **미래 날짜로
-  세우지 않는다** — 시간표가 몇 주 앞까지 들어와 있어서 그러면 아직 시작도 안 한
-  과목이 이긴다)에 짝 확정(`PUT …/match`) · 체크리스트 `waive` · 예습 링크 · 과목 별칭. 러너가 안 붙었는데 일감이 기다리면
-  그 경고만 어느 탭에서든 뜬다
-- **크롬 확장** — 작년 PDF와 예습 프롬프트를 ChatGPT·Gemini·Claude 새 대화에
-  채우고 링크를 회수한다. 스토어용 ZIP은 `bridge\build-store-package.ps1`
-
-## 8. 운영
-
-| 하려는 일 | 명령 |
-|---|---|
-| API를 배포한다 | `server\deploy.ps1` (손으로. 푸시로는 프론트만 나간다) |
-| 표를 세우고 빠진 칼럼을 붙인다 | `server/`에서 `app.cli init-db` |
-| 고아 산출물을 지운다 | `app.cli purge-artifacts` → 정말 지우려면 `--apply` |
-| 한 학기 지난 작업 폴더를 버린다 | 자동이 없다. `out/`에서 180일 지난 것을 손으로 지운다 |
-
-**`server/app/cli.py`는 `server/.env`를 읽고, 그것은 원격 DB를 가리킨다.** 로컬
-사본을 치려면 `DATABASE_URL`을 덮어써라.
-
-## 없는 것
-
-- **야간 크론.** 2026-08-23에 걷어냈다. `scripts/nightly-*.ps1`과
-  `scripts/install-scheduled-task.ps1`은 배선만 남아 있고 **등록되어 있지 않다**
-- **`runs/` 자동 청소.** 저기에는 다시 만들 수 없는 것이 섞여 있다
-- **선택교과·인간사회의료.** 이름을 직접 대도 막힌다
-  (`runner/filenames.py`의 `EXCLUDED_SUBJECTS`·`EXCLUDED_PREFIXES`)
+`agent --once`도 실제 서버 작업을 처리할 수 있다. 연결만 확인하는 명령은 아니다.
+Windows 예약 작업은 `StudyEZ Agent`, 로그는 `runs/agent.log`다.
+러너 동시성·대기·재시도 정책은 [runner 안내](../runner/CLAUDE.md)를 본다.

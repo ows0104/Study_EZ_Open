@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import os
 import tempfile
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 _TMP = Path(tempfile.mkdtemp(prefix="studyez-bundles-"))
@@ -29,9 +29,9 @@ os.environ.update(
 
 from fastapi.testclient import TestClient  # noqa: E402
 
+from app.auth import LOCAL_TEST_USER_ID  # noqa: E402
 from app.database import Base, SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
-from app.auth import LOCAL_TEST_USER_ID  # noqa: E402
 from app.models import Asset, AssetGrab, Lecture  # noqa: E402
 
 USER = {"Authorization": "Bearer local-test-token"}
@@ -53,6 +53,7 @@ LECTURES = [
     ("병리학", "260813_01", date(2026, 8, 13), 1),
     ("기생충학", "260812_03", date(2026, 8, 12), 3),
 ]
+UPLOADED_AT = datetime(2026, 8, 13, tzinfo=UTC)
 
 
 def seed() -> None:
@@ -80,6 +81,7 @@ def seed() -> None:
                         id=f"{subject}-{run_id}-{kind}", subject=subject, run_id=run_id,
                         kind=kind, filename=f"{run_id} {kind}.apkg", object_key=key,
                         size_bytes=path.stat().st_size, content_type="application/octet-stream",
+                        uploaded_at=UPLOADED_AT,
                     )
                 )
         # **같은 자리에 파일이 둘.** 이름이 달라진 채로 다시 구워지면 표에 두 줄이
@@ -94,6 +96,8 @@ def seed() -> None:
                 id="병리학-260813_01-main_apkg-2", subject="병리학", run_id="260813_01",
                 kind="main_apkg", filename="다시 구운 것.apkg", object_key=twin_key,
                 size_bytes=twin.stat().st_size, content_type="application/octet-stream",
+                # 같은 flush의 기본 시각은 같을 수 있다. 시계 해상도에 의존하지 않는다.
+                uploaded_at=UPLOADED_AT,
             )
         )
         # 덱이 아닌 자산도 하나 둔다. 목록에 섞여 들면 「12편」이 거짓이 된다.
@@ -119,7 +123,7 @@ def main() -> None:
     check("크기를 말한다", all(d["sizeBytes"] > 0 for d in decks))
     twin = [d for d in decks if d["runId"] == "260813_01" and d["kind"] == "main"]
     check("한 자리에 파일이 둘이어도 한 줄이다", len(twin) == 1, twin)
-    check("늦게 올라온 것을 쓴다", twin and twin[0]["filename"] == "다시 구운 것.apkg", twin)
+    check("업로드 시각이 같으면 ID로 순서를 정한다", twin and twin[0]["filename"] == "다시 구운 것.apkg", twin)
     served = client.get("/api/bundles/decks/병리학/260813_01/main", headers=USER)
     check("바이트도 같은 것을 준다", served.content == b"newer deck", served.content)
     check("센 크기와 실제 길이가 같다", twin and twin[0]["sizeBytes"] == len(served.content),

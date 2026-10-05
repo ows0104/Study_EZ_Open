@@ -1,137 +1,46 @@
-# Study_EZ
+# Study_EZ 작업 안내
 
-제품 둘과 서버 하나다. **덩이마다 자기 `CLAUDE.md` 가 있다 — 고칠 덩이의 것만
-읽으면 된다.**
+이 문서는 공통 작업 규칙만 담는다. [README](README.md)는 프로젝트 입구,
+[작업 지도](docs/map.md)는 수정 위치를 찾는 곳이다.
 
-| 고칠 곳 | 읽을 것 | 검사 |
+## 읽는 범위
+
+일감과 관계있는 컴포넌트의 `CLAUDE.md`와 코드부터 읽는다.
+생성 데이터와 과거 기록을 처음부터 모두 읽을 필요는 없다.
+
+| 작업 | 안내 | 기본 검사 |
 |---|---|---|
-| 퀴즈 생성 · 프롬프트 | [quizgen/CLAUDE.md](quizgen/CLAUDE.md) | `pytest tests/quizgen` (405개 · 2초) |
-| 파이프라인을 돌리는 쪽 | [runner/CLAUDE.md](runner/CLAUDE.md) | `pytest tests/runner` (317개 · 15초) |
-| Quiz Bank 정리·검토 | [quizbank/CLAUDE.md](quizbank/CLAUDE.md) | `pytest tests/quizbank` (25개 · 1초) |
-| 땡시 (Spotter) | [spotter/CLAUDE.md](spotter/CLAUDE.md) | `pytest tests/spotter` (22개 · 7초) |
-| 사이트 화면 | [web/CLAUDE.md](web/CLAUDE.md) | `cd web && npm run typecheck` |
-| 서버 API | [server/CLAUDE.md](server/CLAUDE.md) | `cd server && .venv/Scripts/python -m tests` |
-| 예습링크 확장 | [bridge/CLAUDE.md](bridge/CLAUDE.md) | `pytest tests/bridge` (4개) |
+| 퀴즈·프롬프트 | [quizgen](quizgen/CLAUDE.md) | `python -m pytest tests/quizgen` |
+| 러너·업로드 | [runner](runner/CLAUDE.md) | `python -m pytest tests/runner` |
+| Quiz Bank 정리 | [quizbank](quizbank/CLAUDE.md) | `python -m pytest tests/quizbank` |
+| 웹 화면 | [web](web/CLAUDE.md) | `npm --prefix web run typecheck` |
+| API·DB | [server](server/CLAUDE.md) | 서버 폴더에서 `.venv/Scripts/python.exe -m tests` |
+| 땡시 | [spotter](spotter/CLAUDE.md) | `python -m pytest tests/spotter` |
+| Chrome 확장 | [bridge](bridge/CLAUDE.md) | `python -m pytest tests/bridge` |
 
-일감별로 **어느 파일**을 보는지는 [docs/map.md](docs/map.md) 에 있다.
-**왜 지금 모양인지**(무엇이 무엇으로 개명됐는지 · 배포 셋이 어떻게 나가는지)는
-[docs/layout.md](docs/layout.md) 다 — 2026-09-14 에 저장소 셋을 하나로 합치고
-폴더 이름을 하는 일로 바꿨으므로 **옛 이름으로 적힌 문서·커밋이 많다.**
+## 경계와 원본
 
-## 이 문서에는 셋만 적는다
+- 서버는 로컬 생성기를 import하지 않는다. 클라이언트는 HTTP로 서버에 연결된다.
+- 러너의 quizgen 접점은 `runner/deck.py`, quizbank 실행 접점은 `runner/bank.py`다.
+- `runs/` 계약은 [산출물 계약](docs/artifact-contract.md)과 [폴더 구조](docs/runs-layout.md)를 따른다.
+- 공용 세션 원본은 `platform/session/session.js`다.
+- 프롬프트는 실행 입력이다. 문서 정리를 이유로 출제 규칙을 바꾸지 않는다.
+- `spotter-dist/`와 생성 JSON은 원본을 수정한 뒤 다시 만든다.
 
-권한 · 덩이 경계 · **어디서나 미는 함정.** 한 덩이에만 해당하는 것은 그 덩이로 내린다.
+## 작업 원칙
 
-**내리기 전에 재 봤다.** 이 문서는 587줄 38KB였고 그중 **89%가 `quizgen`·`runner`
-이야기**였다(quizgen 413줄 · runner 111줄 · 나머지 63줄). `web`·`server`·`spotter`·
-`bridge` 를 말하는 줄은 **0** 이었다. 그래서 땡시 문항 하나를 고치는 세션이 재현
-검사 이력 27KB를 읽고 **땡시에 대해서는 한 줄도 안 읽었다.**
+현재 사용자 요청의 범위 안에서 진행한다. 기존 관리자 지시(2026-09-14)는
+커밋·push·배포·force-push·파일 삭제를 허용했다. 해당 작업을 할 때는 대상과 영향을
+먼저 확인하고, 다른 세션의 미커밋 변경을 섞지 않는다. 커밋할 파일은 경로로 지정한다.
 
-여기에 무엇을 더 적으려 할 때는 그것이 **덩이 하나의 것인지** 먼저 본다.
+`server/.env`는 운영 DB를 가리킬 수 있다. 테스트는 명시적인 로컬 DB로 실행한다.
+`runs/`에는 재생성할 수 없는 사용자 기록도 있다. 삭제·이동 전에는 보존 대상을 확인한다.
 
-## 어디까지 해도 되는가
+산출물 존재와 이번 실행 성공을 구별한다. 실패·대기·입력 없음은 별도 상태로 보고하고,
+부분 성공 뒤의 요약 출력도 실패할 수 있음을 고려한다.
 
-> **2026-09-14 관리자 지시** — 두 번에 걸쳐 올렸다.
->
-> ① *"권한을 좀 더 올려서, 커밋, 푸시, 배포까지 다 ok"*
-> ② *"force-push랑 파일 삭제도 ok로 올려줘"*
+새 규칙은 확인된 실패나 사용자의 명시적 결정에 근거한다. 허용을 의무로 바꾸거나
+불확실한 추측을 고정 정책으로 적지 않는다. 임시 규칙은 해제 조건을 함께 적는다.
 
-묻지 않고 한다.
-
-    커밋          경로를 찍어서 (아래)
-    푸시          origin/master
-    배포          studyez.kr · spotter.studyez.kr · studyez-api
-    force-push
-    파일·폴더 삭제
-
-### 묻지 않는다고 그냥 하는 것은 아니다
-
-**되돌릴 수 없는 것은 먼저 본다.** 이건 허락을 다시 받는 절차가 아니라 일하는
-방법이다. 2026-09-14 에 둘 다 실제로 값을 했다.
-
-**지우기 전에 무엇이 없어지는지 센다.** 그날 형제 폴더 둘을 지웠는데, 그 전에
-추적 파일 352개를 **내용으로** 맞대 봤다 — 이쪽에만 있는 것은 `.claude/launch.json`
-하나였고(이미 합쳐 둔 것) 내용이 다른 10개는 전부 내가 고친 파일이었다. 세어 보지
-않았으면 「아마 다 들어왔겠지」로 398MB 를 지웠을 것이다.
-
-**force-push 전에 무엇을 버리는지 본다.** 그날 배포 저장소를 되밀 때
-`git subtree split` 결과가 `spotter-dist/` 와 같은지 확인하고, 원격 머리가
-무엇인지 보고, 그러고 나서 밀었다. 밀고 나서는 **라이브를 확인했다** — 거기서
-GitHub Actions 워크플로가 push 마다 실패하고 있던 것이 나왔다(09-07 부터).
-
-**커밋은 경로를 찍는다.** 이 저장소는 세션 둘이 같은 브랜치·같은 작업 트리를 쓸 수
-있다. 같은 날 한 파일 안에서 실제로 섞였다 — 내 개명 편집과 남의 커밋 안 된 변경이
-같은 다섯 파일에 있었다. `git add -A` 는 그것까지 쓸어 담는다.
-
-### 그래도 멈추는 자리 하나
-
-    남의 커밋 안 된 작업을 담는다
-
-**관리자가 허락한 목록에 이것은 없다.** 내 것이 아니고, 무엇인지 보여 주면 판단이
-1분이면 끝난다 — 같은 날 예습 상한 30→20 변경이 그랬다. 작업 트리에 엿새 있었고,
-보여 드리니 바로 「커밋해라」였다.
-
-### 일감은 경로로 받는다
-
-무엇을 고치려면 어디를 보는지는 [docs/map.md](docs/map.md) 에 있다. 관리자가 경로를
-찍어 주면 그것만 읽고, 안 찍으면 그 지도에서 고른다. **전체를 훑는 것은 지도가
-답을 못 줄 때만 한다.**
-
-## 덩이끼리 닿는 자리는 넷뿐이다
-
-**이것이 「한 덩이만 읽어도 되는」 이유다.** 자세한 것은 [docs/map.md](docs/map.md) §3.
-
-    ① 파이썬 import   runner/deck.py → quizgen  **3줄이 전부다**
-    ② HTTP            전부 서버를 향한다. 가로로는 아무도 서로를 안 부른다
-    ③ 파일            runs/<편>/ 이 quizgen 과 runner 사이의 계약이다
-    ④ 공유 파일       platform/session/session.js 하나
-
-세는 것은 한 명령이다. **경계를 넘는 import 가 0 이 아니면 2로 끝난다.**
-
-```bash
-python scripts/map_numbers.py --check
-```
-
-**그때는 지도가 아니라 구조가 틀린 것이다.** 그 import 를 없앨 수 있는지 먼저 본다.
-
-## 어디서나 미는 함정 일곱
-
-전부 이 저장소에서 실제로 값을 한 것이다. **사례는 한 곳에만 두고 여기서는 한 줄씩
-가리킨다** — 두 곳에 적으면 갈라진다.
-
-**① 산출물을 쓴 뒤에 도는 요약문도 실패할 수 있는 코드다.** 거기서 죽으면 종료 코드가
-「안 만들어졌다」고 거짓말을 하고, 그 거짓말을 믿는 쪽이 뒷정리를 건너뛴다. 세 번 났다
-→ [runner/CLAUDE.md](runner/CLAUDE.md)
-
-**② 지난 실행이 남긴 파일을 이번 실행 것으로 보지 마라.** 「다시 만들라」고 누른 사람에게
-「다시 만들었는데 그대로다」를 돌려준다. 같은 폴더를 반복해서 쓰는 자리를 새로 만들 때
-이것부터 봐라 → [quizgen/CLAUDE.md](quizgen/CLAUDE.md)
-
-**③ 「없다」로 읽히는 0을 갈라라.** 재료가 없어서 0인 것과 문이 닫혀서 0인 것과 자를 수
-있는데 안 잘라서 0인 것이 화면에는 같은 0으로 나온다. **코드가 구별하지 못하면 사람도
-못 한다** → [runner/CLAUDE.md](runner/CLAUDE.md)
-
-**④ 로그는 말하고 있었고 아무도 안 봤다.** 편마다 한 줄씩 뜨는 경고는 다른 사유와 섞여
-**세어지지 않는다.** 세어서 쓸기 끝에 한 줄로 찍어야 보인다 → [runner/CLAUDE.md](runner/CLAUDE.md)
-
-**⑤ 「아직 안 나왔다」는 시간이 지나면 저절로 틀리는 문장이다.** 쓸 때 **무엇을 세면
-확인되는지**를 같이 적어라 → [quizgen/CLAUDE.md](quizgen/CLAUDE.md)
-
-**⑥ 어긋난 것을 적을 때 영향까지 짐작해 적지 마라.** 「지금은 무해하다」고 적어 두면
-그 짐작이 확인을 막는다. 어긋남은 어긋남으로만 적고, 무해한지는 재고 나서 적는다
-→ [quizgen/CLAUDE.md](quizgen/CLAUDE.md)
-
-**⑦ 하나로 전체를 말하지 마라.** 한 슬라이드로 편을, 한 편으로 파이프라인을 말하지 않는다.
-문서에 쓰기 전에 **세는 스크립트를 돌린다.**
-
-## 문서를 쓰는 법 — 넷
-
-`quizgen/prompts/` 는 다음 실행부터 빈 세션이 **그대로 읽는 지시**이고, 이제 `CLAUDE.md`
-도 여섯 장이다. 잘못 적힌 규칙은 매번 그대로 반복된다.
-
-    ① 근거 없는 규칙은 쓰지 않는다      실측 실패나 관리자의 명시적 지시가 없으면 안 넣는다
-    ② 허용이 기본이다                  금지형은 실측 실패가 있거나 관리자가 명시했을 때만
-    ③ 확신 수준을 올리지 않는다         「~일거야」는 관찰이거나 허용이다. 굳히려면 먼저 묻는다
-    ④ 임시는 임시로 적는다             「당분간」을 붙이고 무엇이 충족되면 풀리는지 같이 적는다
-
-넷의 이유와 사례는 [quizgen/CLAUDE.md](quizgen/CLAUDE.md) 「규칙 문서를 쓰는 법」에 있다.
+문서는 현재 사용법·계약 중심으로 짧게 유지한다. 실패 사례·실측·결정 이력은
+[archive](docs/archive/README.md)에 두고 필요할 때만 연결한다.

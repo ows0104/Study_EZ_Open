@@ -729,8 +729,8 @@ def main() -> None:
     # 관리자 지시(2026-09-03) — (1) 내일 예습 (2) 오늘 복습 (3) 나머지는 선 순서대로.
     # 선 순서대로만 주면 낮에 올라온 필기의 복습이 밤에 저장된 내일 예습을
     # 앞지른다. 복습은 하루 늦어도 되지만 예습은 강의가 끝나면 쓸모가 없어진다.
+    from app.jobs.queue import study_today  # noqa: PLC0415
     from app.models import PrequizJob  # noqa: PLC0415
-    from app.routes.prequiz_jobs import study_today  # noqa: PLC0415
 
     for row in client.get("/api/admin/prequiz-jobs", headers=USER).json()["jobs"]:
         if row["state"] in ("queued", "running", "held"):
@@ -808,7 +808,7 @@ def main() -> None:
     # 기다리는 줄은 그 자리에서 끝나고, 도는 편은 **서버가 못 죽인다** — 만드는
     # 것은 노트북의 하위 프로세스이고 서버는 그것을 모른다. 표시를 남기고 러너가
     # 받아 가게 한다. 그 갈래를 안 만들면 화면만 멈추고 빈 세션 넷은 계속 돈다.
-    from app.routes.prequiz_jobs import ensure_auto_job  # noqa: PLC0415
+    from app.jobs.queue import ensure_auto_job  # noqa: PLC0415
 
     for row in client.get("/api/admin/prequiz-jobs", headers=USER).json()["jobs"]:
         if row["state"] in ("queued", "running", "held"):

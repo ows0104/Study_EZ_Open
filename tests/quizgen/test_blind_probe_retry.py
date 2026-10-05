@@ -9,9 +9,7 @@
 
 from __future__ import annotations
 
-import re
-
-import pytest
+from pathlib import Path
 
 from quizgen import session
 
@@ -26,8 +24,8 @@ def _fake(answers):
         if isinstance(a, Exception):
             raise a
         if a == "TOKEN":
-            path = re.match(r"(\S+) 파일을 읽어라", prompt).group(1)
-            return {"probe": open(path, encoding="utf-8").read().strip()}, {}
+            path = Path(prompt.split(" 파일을 읽어라", 1)[0])
+            return {"probe": path.read_text(encoding="utf-8").strip()}, {}
         return {"probe": a}, {}
 
     return run_blind, calls

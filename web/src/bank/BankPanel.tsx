@@ -9,7 +9,9 @@ import {
 import { ActionCard, PanelGroup, PanelTool } from "../calendar/panelShared";
 import { jobMoving, progressLine, runnerAlive } from "../jobProgress";
 import { bankHref, bankWindow } from "../links";
-import type { BankSummary, LectureDetail, LectureRef, PrequizJob, RunnerBeat } from "../types";
+import type { BankSummary } from "../types/bank";
+import type { LectureDetail, LectureRef } from "../types/lectures";
+import type { PrequizJob, RunnerBeat } from "../types/jobs";
 import { useMe } from "../useMe";
 import { BANK_PROMPT_VERSION, renderBankPrompt } from "./prompt";
 

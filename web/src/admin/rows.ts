@@ -1,4 +1,4 @@
-import { checklistItems, type AdminRow } from "../types";
+import { checklistItems, type AdminRow } from "../types/admin";
 
 /**
  * 관리 화면의 여러 탭이 같이 쓰는 셈들.

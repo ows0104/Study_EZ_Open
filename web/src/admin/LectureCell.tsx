@@ -1,4 +1,4 @@
-import type { AdminRow } from "../types";
+import type { AdminRow } from "../types/admin";
 import { lectureHref } from "../links";
 
 /**

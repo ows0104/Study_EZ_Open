@@ -2,7 +2,7 @@
 
     python scripts/cloze_axis_probe.py [편]        기본값 260901_01
 
-`docs/handoff-260915-cloze-quality.md` 가 D 를 **가장 중요한 단서**로 적으면서
+`docs/archive/handoff-260915-cloze-quality.md` 가 D 를 **가장 중요한 단서**로 적으면서
 *"이것은 아직 확인되지 않은 가설이다 — 프롬프트를 고치기 전에 그것부터 봐라"* 라고
 남겼다. 그것을 재는 자리다.
 
@@ -111,12 +111,14 @@ def main() -> int:
         enum = sum(1 for c in basic if RE_ENUM.search(c.get("q") or ""))
         text, why = prompt_of(work)
         marks = " ".join(lab for key, lab in RULES if key in text) if text else f"— {why}"
-        row = dict(ver=work.name, n=len(cards), cloze=cloze,
-                   cloze_pct=100 * cloze / len(cards),
-                   q60=sum(1 for c in cards if len(c.get("q") or "") > LONG_QUESTION),
-                   a80=sum(1 for x in alen if x > LONG_ANSWER),
-                   enum=enum, amed=st.median(alen) if alen else 0,
-                   axis="축" in marks, trusted=bool(text))
+        row = {
+            "ver": work.name, "n": len(cards), "cloze": cloze,
+            "cloze_pct": 100 * cloze / len(cards),
+            "q60": sum(1 for card in cards if len(card.get("q") or "") > LONG_QUESTION),
+            "a80": sum(1 for length in alen if length > LONG_ANSWER),
+            "enum": enum, "amed": st.median(alen) if alen else 0,
+            "axis": "축" in marks, "trusted": bool(text),
+        }
         rows.append(row)
         print(f"{row['ver']:<14}{row['n']:>5}{row['cloze']:>4}{row['cloze_pct']:>3.0f}%"
               f"{row['q60']:>6}{row['a80']:>6}{row['enum']:>5}{row['amed']:>7.0f}   {marks}")

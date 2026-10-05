@@ -1,6 +1,6 @@
 # 배포
 
-운영 지점 셋. Supabase(로그인·DB) · R2(파일) · Cloud Run(API) + Cloudflare
+Supabase(로그인·DB) · R2(파일) · Cloud Run(API) + Cloudflare
 Pages(정적 프론트).
 
 ```
@@ -101,7 +101,7 @@ cd server
 ```
 
 로컬에서 실 DB를 향해 돌린다. 학기 초에 한 번이다. 경로를 안 주면
-[data/timetable/](../data/timetable/)의 최신 학기 파일을 먹는다.
+[data/timetable/](../data/timetable)의 최신 학기 파일을 먹는다.
 
 **그 JSON을 만드는 코드는 이 저장소에 없다.** 학사 요람의 주별 시간표(이미지 PDF)를
 사람이 옮겨 적은 것이다. 손으로 나온 것이라 **칸마다 `details`의 어디까지가 제목이고
@@ -190,13 +190,12 @@ cd server; ./deploy.ps1
 
 ## 같이 얹혀 있는 것 — 기생충학 땡시
 
-`Spotter_Quiz`가 **이 서버와 이 Supabase를 같이 쓴다.** 코드는
-`server/app/routes/spotter.py` 하나이고, R2 키는 `spotter/` 아래로 모인다.
+`spotter/`가 **이 서버와 이 Supabase를 같이 쓴다.** 서버 코드는
+`server/app/routes/spotter/`에 있고, R2 키는 `spotter/` 아래로 모인다.
 학생이 두 앱에 각각 가입하지 않게 하려는 것이라 계정 표(`profile`)를 공유한다.
 
-**문은 다르다.** 땡시 경로는 `require_approved_user`를 안 지나고
-`get_current_user`만 지난다 — 가입하면 열린다. 승인 게이트는 강의 필기가
-남이 만든 것이기 때문에 있는 것이고, 땡시 문항은 우리가 만들었다.
+**앱별 권한 정책은 다르다.** 땡시는 `require_spotter`를 통해 자동 권한을 받고,
+Study_EZ는 관리자 승인이 필요하다. 정책은 `server/app/models/accounts.py`에 있다.
 
 배포할 때 이것 때문에 더 할 일:
 
@@ -204,12 +203,16 @@ cd server; ./deploy.ps1
 |---|---|
 | `CORS_ALLOWED_ORIGINS` | 땡시가 올라간 주소도 넣는다 (쉼표로 이어서) |
 | Supabase **Redirect URLs** | 땡시 주소도 넣는다. 빠지면 비번 재설정 링크가 죽는다 |
-| `init-db` | `spotter_record`·`spotter_wrong`·`spotter_report` 셋을 세운다 |
-| 문항 DB·사진 | `Spotter_Quiz/scripts/upload_web.py`가 서명 URL로 올린다 |
+| `init-db` | 필요한 땡시 표를 세운다. 모델 정본은 `server/app/models/spotter.py` |
+| 문항 DB·사진 | `spotter/scripts/upload_web.py`가 서명 URL로 올린다 |
 
 형제 앱을 어떻게 운영하는지, 세 번째를 어떻게 붙이는지는
 [sibling-apps.md](sibling-apps.md)에 있다. 땡시 앱 자체의 문서는
-`Spotter_Quiz/web/README.md`다.
+[spotter/web/README.md](../spotter/web/README.md)다.
+
+정적 배포본은 `python spotter/scripts/deploy_pages.py spotter-dist`로 만든다.
+Cloudflare Pages가 연결된 배포 저장소에 `spotter-dist/` 내용을 반영하는 단계는 별도다.
+원격 이력의 상태를 확인하고 배포하며, 과거 문서의 force-push 예시를 기본 절차로 쓰지 않는다.
 
 ## 확인
 

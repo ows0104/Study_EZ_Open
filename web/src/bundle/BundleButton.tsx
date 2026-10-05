@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { fileSize } from "../calendar/panelShared";
-import type { DeckKind } from "../types";
+import type { DeckKind } from "../types/jobs";
 import { bundleName, tally, type BundleDeck, type BundleScope } from "./decks";
 import type { BundleProgress, BundleResult } from "./run";
 

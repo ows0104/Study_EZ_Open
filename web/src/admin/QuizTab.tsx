@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import type { AdminOverview, AdminRow, JobBoard } from "../types";
+import type { AdminOverview, AdminRow } from "../types/admin";
+import type { JobBoard } from "../types/jobs";
 import { LectureCell } from "./LectureCell";
 import { RunnerBoard } from "./RunnerBoard";
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api";
-import type { UsageBoard, UsageDetail, UsageRow } from "../types";
+import type { UsageBoard, UsageDetail, UsageRow } from "../types/account";
 
 /**
  * 누가 이 사이트를 쓰고 있는가.

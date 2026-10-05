@@ -1,215 +1,130 @@
-"""지도(`docs/map.md`)가 적는 숫자를 다시 뜬다.
+"""현재 코드·검사·작업 안내의 크기를 측정한다.
 
-    python scripts/map_numbers.py            사람이 읽는 표
-    python scripts/map_numbers.py --check    지도와 다른 줄만 찍고 1로 끝난다
+    python scripts/map_numbers.py           현재 수치
+    python scripts/map_numbers.py --check   문서 누락·빈 검사·잘못된 의존도 확인
 
-**이 도구가 있는 이유는 지도가 두 곳에 있기 때문이다.** 저장소의 `docs/map.md` 와
-관리자가 보는 Artifact 페이지가 같은 숫자를 적는데, 2026-09-14 에 벌써 갈라졌다
-(검사 604 대 606). 손으로 맞추면 또 갈라진다.
-
-**줄수는 낡으라고 두는 값이다.** 지도 §5 가 그렇게 적고 있다 — 낡았는지가 중요한
-것은 줄수가 아니라 **경계**(§3)다. 그래서 `--check` 는 숫자가 다르면 알려만 주고,
-막지 않는다. 고칠지는 사람이 정한다.
-
-**2026-09-14 에 두 가지를 더 센다.** 문맥을 덩이별로 가른 날이라 그것이 다시
-모이는지를 봐야 한다.
-
-    검사를 덩이별로       tests/<덩이> 가 몇 개인가. 비면 옮기다 흘린 것이다
-    덩이 문서            <덩이>/CLAUDE.md 가 있는가. 없으면 루트를 통째로 읽게 된다
-
-루트 CLAUDE.md 줄수도 같이 찍는다 — **덩이 하나의 것을 루트에 적으면 그 숫자만
-늘고 덩이 것은 그대로다.** 다시 자라는 것은 그 자리에서 보인다.
+수치는 여기서 계산하고 docs/map.md에는 파일 안내만 남긴다.
+Git 추적 파일과 커밋 전 새 파일을 모두 세며 무시된 산출물은 뺀다.
 """
 
-import re
+from __future__ import annotations
+
+import argparse
+import ast
 import subprocess
 import sys
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-MAP = ROOT / "docs" / "map.md"
-
-# 지도 §1 이 적는 덩이. 이름은 지도에 쓰인 그대로다.
-AREAS = [
+AREAS = (
     "quizgen", "quizbank", "runner", "server/app", "web/src",
-    "spotter/scripts", "spotter/web", "spotter-dist",
-    "bridge", "platform", "tests",
-]
-# `docs` 는 일부러 뺐다. **그 숫자를 적는 파일이 `docs/` 안에 있어서** 적는 순간
-# 틀린다 — 2026-09-14 에 실제로 그랬다. 수렴하지 않는 값은 지도에 안 적는다.
-SUB = ["web/src/calendar", "web/src/admin", "web/src/lecture", "web/src/styles"]
-
-# 덩이마다 자기 `CLAUDE.md` 를 든다. **없으면 그 덩이를 고치는 세션이 루트를 통째로
-# 읽게 되고, 그것이 나누기 전 상태다** — 2026-09-14 에 루트가 587줄이었고 그 89%가
-# `quizgen`·`runner` 이야기였다. 값은 그 덩이의 검사 폴더이고, 없는 것은 pytest 가
-# 아니라 자기 명령으로 돈다(`web` 은 `npm run typecheck`, `server` 는 `-m tests`).
-DOCS = {
-    "quizgen": "tests/quizgen", "runner": "tests/runner",
-    "spotter": "tests/spotter", "bridge": "tests/bridge",
+    "spotter/scripts", "spotter/web", "bridge", "platform", "tests",
+)
+MODULE_TESTS = {
+    "quizgen": "tests/quizgen", "quizbank": "tests/quizbank",
+    "runner": "tests/runner", "spotter": "tests/spotter", "bridge": "tests/bridge",
     "web": None, "server": None,
 }
-CODE = re.compile(r"\.(py|ts|tsx|js|css|html|md|ps1)$")
+CODE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".css", ".html", ".ps1"}
+GENERATOR_PACKAGES = {"quizgen", "quizbank", "runner"}
 
 
-def lines_in(area: str) -> int:
-    out = subprocess.run(["git", "ls-files", area], cwd=ROOT,
-                         capture_output=True, text=True, encoding="utf-8").stdout
-    total = 0
-    for name in out.split("\n"):
-        if not name.strip() or not CODE.search(name):
-            continue
-        # 덩이의 `CLAUDE.md` 는 `module_docs()` 가 따로 센다. 여기서도 세면 같은 줄이
-        # 두 번 들어가고 **「덩이 줄수」가 코드 크기를 뜻하지 않게 된다.**
-        if name.endswith("/CLAUDE.md"):
-            continue
-        p = ROOT / name
-        if p.is_file():
-            total += len(p.read_bytes().split(b"\n")) - 1
-    return total
-
-
-def test_counts() -> dict[str, int]:
-    """검사를 덩이별로 센다. **한 번만 수집하고 경로 앞머리로 가른다.**
-
-    덩이별 폴더를 만든 이유가 이 숫자다 — 땡시 문항을 고치면 `pytest tests/spotter`
-    22개(7초)만 돌면 된다.
-
-    **수집이 깨졌을 때는 숫자를 내놓지 않는다.** pytest 를 `sys.executable` 로
-    부르므로 **이 스크립트를 무엇으로 돌렸는지가 숫자를 바꾼다.** 2026-09-18 에
-    `server/.venv` 로 돌렸다가 값을 했다 — 그 venv 에는 `quizgen` 의 의존이 없어서
-    pytest 가 이렇게 답했다.
-
-        95 tests collected, 53 errors in 2.28s
-
-    정규식은 `95` 만 집었고 표는 「검사 95」를 태연히 찍었다. 실제로는 748 이다.
-    **그 95 를 지도에 적을 뻔했다** — 세는 도구가 틀린 숫자를 내놓으면 지도 두 곳이
-    같이 틀린다. 그래서 오류 수를 같이 읽고, 있으면 숫자 대신 그것을 돌려준다.
-
-    이 저장소는 anaconda3 의 파이썬을 쓴다. `PATH` 의 것으로는 안 돈다.
-
-        PYTHONIOENCODING=utf-8 ~/anaconda3/python.exe scripts/map_numbers.py
-    """
-    out = subprocess.run([sys.executable, "-m", "pytest", "tests", "-q", "--collect-only"],
-                         cwd=ROOT, capture_output=True, text=True, encoding="utf-8").stdout
-    got: dict[str, int] = {}
-    for line in out.split("\n"):
-        if "::" not in line:
-            continue
-        parts = line.split("/")
-        if len(parts) > 2 and parts[0] == "tests":
-            key = f"tests/{parts[1]}"
-            got[key] = got.get(key, 0) + 1
-    broken = re.search(r"(\d+) errors? (?:during collection|in )", out)
-    if broken:
-        # **부분 수집은 숫자가 아니다.** 갈라 두지 않으면 「적게 세어진 것」이
-        # 「검사가 줄어든 것」과 화면에서 같아 보인다.
-        return {"__all__": -1, "__collect_errors__": int(broken.group(1))}
-    m = re.search(r"(\d+) tests? collected", out)
-    got["__all__"] = int(m.group(1)) if m else -1
-    return got
-
-
-def module_docs() -> dict[str, int]:
-    """덩이별 `CLAUDE.md` 의 줄수. 빈 문자열 칸이 루트다. **없으면 0 이다.**"""
-    got = {"": len((ROOT / "CLAUDE.md").read_text(encoding="utf-8").split("\n")) - 1}
-    for area in DOCS:
-        p = ROOT / area / "CLAUDE.md"
-        got[area] = len(p.read_text(encoding="utf-8").split("\n")) - 1 if p.is_file() else 0
-    return got
-
-
-def route_count() -> int:
-    p = ROOT / "server" / "tests" / "test_route_contract.py"
-    m = re.search(r'ROUTES = """(.*?)"""', p.read_text(encoding="utf-8"), re.S)
-    return len([ln for ln in m.group(1).split("\n") if ln.strip()]) if m else -1
-
-
-def crossing_imports() -> int:
-    """경계를 넘는 파이썬 import. **0 이 아니면 지도가 아니라 구조가 틀린 것이다.**"""
-    out = subprocess.run(
-        ["git", "grep", "-cE", r"^\s*(from|import)\s+(quizgen|runner)\b",
-         "--", "server/app", "spotter"],
-        cwd=ROOT, capture_output=True, text=True, encoding="utf-8").stdout
-    return sum(int(ln.rsplit(":", 1)[1]) for ln in out.split("\n") if ":" in ln)
-
-
-def measured() -> dict[str, int]:
-    got = {a: lines_in(a) for a in AREAS}
-    got |= {s: lines_in(s) for s in SUB}
-    got |= test_counts()
-    got["__routes__"] = route_count()
-    got["__crossing__"] = crossing_imports()
-    return got
-
-
-def in_map(text: str, area: str) -> int | None:
-    """지도에서 그 덩이 옆에 적힌 숫자. 못 찾으면 None."""
-    m = re.search(re.escape(area) + r"/?\s*\|?[^|\n]*?([\d,]{3,})", text)
-    return int(m.group(1).replace(",", "")) if m else None
-
-
-def main() -> None:
-    check = "--check" in sys.argv
-    got = measured()
-    text = MAP.read_text(encoding="utf-8")
-
-    print(f"{'덩이':<20}{'실측':>9}{'지도':>9}")
-    drift = []
-    for area in AREAS + SUB:
-        want = in_map(text, area)
-        mark = ""
-        if want is not None and want != got[area]:
-            mark = "  ← 다르다"
-            drift.append((area, got[area], want))
-        print(f"  {area:<18}{got[area]:>9,}{(f'{want:,}' if want else '—'):>9}{mark}")
-
-    counts = {k: v for k, v in got.items() if k.startswith("tests/")}
-    if got.get("__collect_errors__"):
-        # **숫자를 안 찍는다.** 찍으면 「검사가 이만큼이다」로 읽힌다.
-        print(f"\n  {'검사':<18}{'못 셈':>9}"
-              f"   ← 수집 오류 {got['__collect_errors__']}개. 무엇으로 돌렸는지를 봐라")
-        print(f"    {'돌린 것':<16}{sys.executable}")
-        print(f"    {'써야 하는 것':<16}anaconda3 의 python (PATH 것이 아니다)")
-    else:
-        print(f"\n  {'검사':<18}{got['__all__']:>9,}")
-        for area, n in sorted(counts.items()):
-            print(f"    {area:<16}{n:>9,}")
-    print(f"  {'서버 경로':<17}{got['__routes__']:>9,}")
-    print(f"  {'경계 넘는 import':<15}{got['__crossing__']:>9,}"
-          + ("   ← **0 이어야 한다**" if got["__crossing__"] else ""))
-
-    # 덩이 문서. **루트가 다시 자라는 것이 여기서 보인다** — 덩이 하나의 것을 루트에
-    # 적으면 루트 줄수만 늘고 덩이 것은 그대로다.
-    docs = module_docs()
-    print(f"\n  {'CLAUDE.md 루트':<17}{docs['']:>9,}")
-    for area, n in docs.items():
-        if area:
-            print(f"    {area + '/':<16}{n:>9,}" + ("   ← 없다" if not n else ""))
-    missing = [a for a, n in docs.items() if a and n == 0]
-    # **못 센 것을 「비었다」로 말하지 않는다.** 수집이 깨진 판에서는 모든 덩이가
-    # 0 으로 보이고, 그러면 화면이 「검사가 통째로 사라졌다」를 찍는다 —
-    # 2026-09-18 에 실제로 그렇게 찍혔다(위 `test_counts` 의 사정).
-    hollow = (
-        []
-        if got.get("__collect_errors__")
-        else [a for a, t in DOCS.items() if t and counts.get(t, 0) == 0]
+def source_files() -> list[Path]:
+    result = subprocess.run(
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", *AREAS],
+        cwd=ROOT, capture_output=True, text=True, encoding="utf-8", check=True,
     )
+    return sorted({ROOT / name for name in result.stdout.split("\0")
+                   if name and (ROOT / name).is_file()})
 
-    if got["__crossing__"]:
-        print("\n경계가 늘었다. 지도가 아니라 구조를 본다 — docs/map.md §7.")
-        raise SystemExit(2)
+
+def line_count(path: Path) -> int:
+    return len(path.read_text(encoding="utf-8-sig").splitlines())
+
+
+def test_counts() -> Counter[str]:
+    result = subprocess.run(
+        [sys.executable, "-m", "pytest", "tests", "-q", "--collect-only", "-p", "no:cacheprovider"],
+        cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
+    )
+    if result.returncode:
+        raise RuntimeError(
+            f"검사 수집 실패 ({sys.executable})\n{result.stdout[-3000:]}\n{result.stderr[-1000:]}"
+        )
+    counts: Counter[str] = Counter()
+    for line in result.stdout.splitlines():
+        if line.startswith("tests/") and "::" in line:
+            counts["/".join(line.split("/")[:2])] += 1
+    if not counts:
+        raise RuntimeError("pytest가 검사 목록을 반환하지 않았습니다.")
+    return counts
+
+
+def crossing_imports(files: list[Path]) -> list[str]:
+    """서버·Spotter는 로컬 생성기를 import하지 않고 HTTP/파일로 연결한다."""
+    found = []
+    for path in files:
+        relative = path.relative_to(ROOT).as_posix()
+        if path.suffix != ".py" or not relative.startswith(("server/app/", "spotter/")):
+            continue
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8-sig"), filename=relative)):
+            if isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.level == 0:
+                modules = [node.module or ""]
+            else:
+                continue
+            for module in modules:
+                if module.split(".")[0] in GENERATOR_PACKAGES:
+                    found.append(f"{relative}:{node.lineno} → {module}")
+    return sorted(found)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check", action="store_true", help="안내·검사·의존 경계를 검사한다")
+    args = parser.parse_args()
+    try:
+        files = source_files()
+        counts = test_counts()
+        crossings = crossing_imports(files)
+    except (OSError, ValueError, SyntaxError, RuntimeError, subprocess.CalledProcessError) as error:
+        print(f"측정 실패: {error}", file=sys.stderr)
+        return 1
+
+    print("영역                    코드 줄 수")
+    for area in AREAS:
+        lines = sum(line_count(path) for path in files
+                    if path.suffix in CODE_SUFFIXES
+                    and path.relative_to(ROOT).as_posix().startswith(f"{area}/"))
+        print(f"  {area:<23}{lines:>7,}")
+    print(f"\nPython 검사: {sum(counts.values()):,}")
+    for area, count in sorted(counts.items()):
+        print(f"  {area:<23}{count:>7,}")
+
+    missing = []
+    print("\n작업 안내 줄 수")
+    for area in ("", *MODULE_TESTS):
+        path = ROOT / area / "CLAUDE.md"
+        count = line_count(path) if path.is_file() else 0
+        label = f"{area}/CLAUDE.md" if area else "CLAUDE.md"
+        print(f"  {label:<23}{count:>7,}")
+        if not count:
+            missing.append(label)
+    empty = [area for area, tests in MODULE_TESTS.items() if tests and not counts[tests]]
+    if crossings:
+        print("\n서버·Spotter가 로컬 생성기를 import합니다:\n  " + "\n  ".join(crossings))
+        return 2
     if missing:
-        print(f"\n덩이 {len(missing)}개에 CLAUDE.md 가 없다 — {' · '.join(missing)}")
-        print("그 덩이를 고치는 세션은 루트를 통째로 읽게 된다. 그게 나누기 전 상태다.")
-        drift.append(("CLAUDE.md", 0, len(missing)))
-    if hollow:
-        print(f"\n검사가 빈 덩이 — {' · '.join(hollow)}. 옮기다 흘린 것이 아닌지 본다.")
-        drift.append(("tests", 0, len(hollow)))
-    if check and drift:
-        print(f"\n지도의 숫자 {len(drift)}개가 낡았다. "
-              "줄수는 낡으라고 둔 값이니 고칠지는 사람이 정한다.")
-        raise SystemExit(1)
+        print("\n작업 안내 없음: " + ", ".join(missing))
+    if empty:
+        print("\n검사 없음: " + ", ".join(empty))
+    if args.check and (missing or empty):
+        return 1
+    print("\n의존 경계 정상" + (" · 작업 안내와 검사 확인" if args.check else ""))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

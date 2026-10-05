@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api";
 import { FEEDBACK_LABEL } from "../bank/feedback";
 import { Stem } from "../lecture/Stem";
-import type { BankReportBoard, BankReportGroup, BankReportStatus } from "../types";
+import type { BankReportBoard, BankReportGroup, BankReportStatus } from "../types/bank";
 
 /**
  * 학생이 Quiz Bank 를 풀다 누른 「문제 있음」을 본다.

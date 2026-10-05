@@ -1,4 +1,4 @@
-import type { MissedItem } from "../types";
+import type { MissedItem } from "../types/quiz";
 import { Stem } from "./Stem";
 
 /**

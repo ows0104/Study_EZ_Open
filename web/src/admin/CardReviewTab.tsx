@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ApkgNote, CardRow } from "../cards/CardRow";
-import type { CardReview } from "../types";
+import type { CardReview } from "../types/admin";
 
 /**
  * 걸린 카드를 보고 괜찮다 · 고친다 · 뺀다.

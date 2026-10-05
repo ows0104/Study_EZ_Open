@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { PreviewProvider } from "../types";
+import type { PreviewProvider } from "../types/lectures";
 import {
   EXTENSION_SOURCE,
   LINK_KINDS,

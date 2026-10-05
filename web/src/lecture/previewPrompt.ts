@@ -1,4 +1,4 @@
-import type { LectureDetail } from "../types";
+import type { LectureDetail } from "../types/lectures";
 
 /**
  * 개인 링크를 처음 열 때 채워지는 프롬프트.

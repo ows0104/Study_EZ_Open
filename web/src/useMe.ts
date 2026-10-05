@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getMe, peekMe } from "./firstScreen";
-import type { Me } from "./types";
+import type { Me } from "./types/account";
 
 /**
  * 지금 로그인한 사람.

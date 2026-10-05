@@ -30,16 +30,13 @@ from pathlib import Path
 import genanki
 
 from .. import site_edits
+from ..anki_models import ANCHOR, CSS, FIELDS, _mid
 from ..build import (
-    ANCHOR,
-    CSS,
     DEFECT_REASONS,
-    FIELDS,
     GuidClash,
     Jokbo,
     Media,
     _labels,
-    _mid,
     check_guids,
     collapse_cloze,
     contact_sheet,

@@ -77,7 +77,7 @@ RE_BARE_NUM = re.compile(r"^\s*(\d{1,3}(?:\s*-\s*\d{1,3})?)\s*$")
 # 것이라 실제로 헛친 것은 아마 없다. 남은 3개는 「…충체이다」처럼 지문이 잘렸다.
 #
 # 잰 자가 땡시의 사진 유무라는 것이 이 값의 한계다. **그쪽도 완전하지 않다.**
-# `docs/refactor-plan.md` Phase 3 ① 의 산출물이고, 거기 표가 더 있다.
+# `docs/archive/refactor-plan.md` Phase 3 ① 의 산출물이고, 거기 표가 더 있다.
 #
 # 읽는 쪽은 `quizgen/validate.py` 의 `jokbo_figure_dropped` 하나이고 **세기만
 # 한다.** 그래서 이 값을 고치면 그 표시가 실습 편에서 는다 — 늘어난 것이

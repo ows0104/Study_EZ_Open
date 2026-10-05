@@ -1,14 +1,7 @@
 import { useMemo, useState } from "react";
 import { api } from "../api";
-import {
-  checklistItems,
-  previewProviderLabels,
-  previewProviders,
-  type AdminOverview,
-  type AdminRow,
-  type ChecklistItem,
-  type PreviewProvider,
-} from "../types";
+import { checklistItems, type AdminOverview, type AdminRow, type ChecklistItem } from "../types/admin";
+import { previewProviderLabels, previewProviders, type PreviewProvider } from "../types/lectures";
 import { CourseAliases } from "./CourseAliases";
 import { isUnconfirmed, isUnmatched, pending } from "./rows";
 import { lectureHref } from "../links";

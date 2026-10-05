@@ -1,0 +1,234 @@
+import { useCallback, useEffect, useState } from "react";
+import { api } from "../api";
+import type { BankAnswer, BankNext, BankRating, BankRead, BankSession } from "../types/bank";
+import { ConceptMap } from "./ConceptMap";
+import { FEEDBACK } from "./feedback";
+import { daysLabel, DIRECTION_LABEL } from "./labels";
+import { QuestionBody, AnswerBody } from "./BankQuestion";
+
+const FORMAT_LABEL: Record<string, string> = {
+  basic: "서술", cloze: "빈칸", list: "나열", ox: "O/X", mcq: "객관식", multi_select: "복수 선택",
+  matching: "짝짓기", sequence: "순서",
+};
+
+const RATINGS: { rating: BankRating; grade: string }[] = [
+  { rating: "Again", grade: "again" },
+  { rating: "Hard", grade: "hard" },
+  { rating: "Good", grade: "good" },
+  { rating: "Easy", grade: "easy" },
+];
+
+export function BankSolve({ base, onFinished }: { base: string; onFinished: (summary: BankSession | null) => void }) {
+  const [current, setCurrent] = useState<BankNext | null>(null);
+  const [answer, setAnswer] = useState<BankAnswer | null>(null);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [reporting, setReporting] = useState(false);
+  // 회차를 끝내지 않고 지도와 진행도를 본다. 열 때마다 새로 읽는다 — 방금 매긴 평가가 숙련도에 들어가 있다.
+  const [peek, setPeek] = useState<BankRead | null>(null);
+
+  const next = useCallback(async () => {
+    setBusy(true);
+    setError("");
+    try {
+      const got = await api<BankNext>(`${base}/next`, { method: "POST" });
+      if (!got.question) {
+        onFinished(got.summary ?? null);
+        return;
+      }
+      setCurrent(got);
+      setAnswer(got.answer ?? null);
+      setPicked(new Set());
+      setReporting(false);
+      window.scrollTo(0, 0);
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }, [base, onFinished]);
+  useEffect(() => void next(), [next]);
+
+  const reveal = useCallback(async () => {
+    if (!current?.reviewToken || answer) return;
+    setBusy(true);
+    try {
+      setAnswer(await api<BankAnswer>(`${base}/reveal`, {
+        method: "POST", body: JSON.stringify({ reviewToken: current.reviewToken }),
+      }));
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }, [base, current, answer]);
+
+  const rate = useCallback(async (rating: BankRating) => {
+    if (!current?.reviewToken || !answer || busy) return;
+    setBusy(true);
+    try {
+      await api(`${base}/rate`, { method: "POST", body: JSON.stringify({ reviewToken: current.reviewToken, rating }) });
+    } catch (cause) {
+      setError((cause as Error).message);
+      setBusy(false);
+      return;
+    }
+    setBusy(false);
+    await next();
+  }, [base, current, answer, busy, next]);
+
+  async function end() {
+    if (!current?.session) return;
+    try {
+      const summary = await api<BankSession>(`${base}/session/end`, {
+        method: "POST", body: JSON.stringify({ sessionId: current.session.session_id }),
+      });
+      onFinished(summary);
+    } catch (cause) {
+      setError((cause as Error).message);
+    }
+  }
+
+  async function openPeek() {
+    try {
+      setPeek(await api<BankRead>(base));
+      window.scrollTo(0, 0);
+    } catch (cause) {
+      setError((cause as Error).message);
+    }
+  }
+
+  // 키보드 — 기존 웹 풀이와 같다. Space·Enter 로 펴고, 1–4 로 찍는다. 지도를 보는 동안은 안 받는다.
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (peek) return;
+      if (event.target instanceof HTMLElement && ["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName)) return;
+      if ((event.key === " " || event.key === "Enter") && !answer) {
+        event.preventDefault();
+        void reveal();
+      } else if (answer && ["1", "2", "3", "4"].includes(event.key)) {
+        event.preventDefault();
+        void rate(RATINGS[Number(event.key) - 1].rating);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [answer, reveal, rate, peek]);
+
+  if (!current?.question) return error ? <p className="notice is-error">{error}</p> : <p className="notice">불러오는 중…</p>;
+  const q = current.question;
+  const session = current.session;
+
+  if (peek) {
+    const live = peek.session ?? session;
+    return (
+      <div className="quiz bank-start">
+        <p className="quiz-progress bank-progress">
+          <button className="is-quiet" onClick={() => setPeek(null)}>← 문제로 돌아가기</button>
+          <span>{current.examDate ? daysLabel(current.examDate) : ""}</span>
+        </p>
+        {live ? (
+          <p className="bank-note">
+            이번 회차 {live.reviewed} / {live.size}문항 · Again {live.ratings.Again} · Hard {live.ratings.Hard} · Good{" "}
+            {live.ratings.Good} · Easy {live.ratings.Easy} — Core 숙련 {Math.round(live.core_before * 100)}% →{" "}
+            {Math.round(live.core_after * 100)}%
+          </p>
+        ) : null}
+        {peek.conceptMap?.length ? <ConceptMap concepts={peek.conceptMap} /> : null}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="quiz">
+        <p className="quiz-progress bank-progress">
+          <span>
+            {session ? `${session.reviewed + 1} / ${session.size}` : ""}
+            {current.examDate ? ` · ${daysLabel(current.examDate)}` : ""}
+          </span>
+          <span className="bank-tags">
+            {q.tier} · {DIRECTION_LABEL[q.retrieval_direction] ?? q.retrieval_direction} ·{" "}
+            {FORMAT_LABEL[q.format] ?? q.format}
+          </span>
+          <span className="bank-progress-actions">
+            <button className="is-quiet" onClick={() => void openPeek()}>개념 지도</button>
+            <button className="is-quiet" onClick={() => void end()}>회차 마치기</button>
+          </span>
+        </p>
+
+        {q.conflict_id ? (
+          <p className="bank-conflict">강의자료와 족보가 어긋나는 대목입니다. 답을 보면 무엇이 어떻게 다른지 나옵니다.</p>
+        ) : null}
+
+        <QuestionBody question={q} answer={answer} picked={picked} onPick={(id) => {
+          if (answer) return;
+          setPicked((old) => {
+            const fresh = new Set(q.format === "mcq" ? [] : old);
+            if (old.has(id) && q.format !== "mcq") fresh.delete(id);
+            else fresh.add(id);
+            return fresh;
+          });
+        }} />
+
+        {answer ? (
+          <>
+            <hr className="quiz-line" />
+            <AnswerBody question={q} answer={answer} />
+            <div className="bank-feedback">
+              {reporting ? (
+                <FeedbackForm base={base} questionId={q.question_id} onDone={() => setReporting(false)} />
+              ) : (
+                <button className="is-quiet" onClick={() => setReporting(true)}>⚑ 문제 있음</button>
+              )}
+            </div>
+          </>
+        ) : null}
+        {error ? <p className="notice is-error">{error}</p> : null}
+      </div>
+
+      <div className="quiz-bar">
+        {answer ? (
+          RATINGS.map(({ rating, grade }, index) => (
+            <button key={rating} className={`quiz-grade is-${grade}`} disabled={busy} onClick={() => void rate(rating)}>
+              <span className="quiz-grade-name">
+                {rating}
+                <kbd>{index + 1}</kbd>
+              </span>
+            </button>
+          ))
+        ) : (
+          <button className="quiz-submit" disabled={busy} onClick={() => void reveal()}>
+            {busy ? "펴는 중…" : <>답 보기 <kbd>space</kbd></>}
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
+function FeedbackForm({ base, questionId, onDone }: { base: string; questionId: string; onDone: () => void }) {
+  const [category, setCategory] = useState<string>("content");
+  const [comment, setComment] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function send() {
+    setBusy(true);
+    try {
+      await api(`${base}/feedback`, { method: "POST", body: JSON.stringify({ questionId, category, comment }) });
+      onDone();
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <span className="bank-feedback-form">
+      <select value={category} onChange={(event) => setCategory(event.target.value)}>
+        {FEEDBACK.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+      </select>
+      <input value={comment} maxLength={2000} placeholder="메모 (선택)" onChange={(e) => setComment(e.target.value)} />
+      <button disabled={busy} onClick={() => void send()}>보내기</button>
+      <button className="is-quiet" onClick={onDone}>취소</button>
+    </span>
+  );
+}

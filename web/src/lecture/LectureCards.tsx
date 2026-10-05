@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { ApkgNote, CardRow } from "../cards/CardRow";
-import type { CardReviewCount, LectureCards as LectureCardList, ReviewCard } from "../types";
+import type { CardReviewCount, LectureCards as LectureCardList, ReviewCard } from "../types/admin";
 
 type Kind = "pre" | "main";
 

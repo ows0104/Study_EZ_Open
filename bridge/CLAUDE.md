@@ -1,27 +1,26 @@
-# bridge — 예습링크 크롬 확장
+# bridge 작업 안내
 
-작년 필기를 AI 새 대화에 채우고, 생긴 대화 링크를 회수해 서버에 적는다.
+PDF를 AI 대화에 붙이고 예습 링크 또는 Quiz Bank 답 본문을 회수하는 Chrome 확장이다.
 
-    무엇을 고치면 어느 파일인가    ../docs/map.md §2
-    검사                          pytest tests/bridge      4개
-    스토어 제출                    ../docs/chrome-web-store-submission.md
-    권한 · 어디서나 미는 함정       ../CLAUDE.md
+| 책임 | 파일 |
+|---|---|
+| 확장 권한·연결 | `manifest.json`, `background.js` |
+| ChatGPT 링크·답 본문 | `chatgpt-share.js` |
+| 다른 제공자 | 해당 `*-share.js` |
+| 서버 링크 검증 | `../server/app/preview_links.py` |
+| 사이트 연결 | `../web/src/bridge/`, `../web/src/bank/bankBridge.ts` |
 
-**혼자 고쳐지는 일이 드물다.** 세 자리를 같이 본다.
+검사: `python -m pytest tests/bridge`.
+설치·동작 안내는 [README](README.md), 스토어 제출은
+[제출 문서](../docs/chrome-web-store-submission.md)를 본다.
 
-    bridge/                      확장. manifest · background.js · provider-share.js
-    ../server/app/preview_links.py   서버 쪽 짝. 경로 2개
-    ../web/src/bridge/               사이트에서 확장을 잡는 자리
+제공자 목록은 확장과 서버가 같아야 한다. 대응 검사는
+`tests/bridge/test_extension_providers.py`가 담당한다.
 
-`tests/bridge/test_extension_providers.py` 가 **`server/app` 을 import 하는 유일한
-검사다.** 확장과 서버가 같은 제공자 목록을 보는지 재기 때문이다 — 갈라지면 링크가
-조용히 안 붙는다.
+`mode: "bank"`는 관리자용 답 본문 회수다.
+`answerText` → `STUDYEZ_BANK_ANSWER` → 웹 저장 흐름을 유지하고,
+이 대화 주소를 예습 링크로 저장하지 않는다.
 
-**Quiz Bank(2026-10-04, 1.2.0)** — `mode: "bank"` 로 연 ChatGPT 탭은 링크가 아니라 **답 본문**을
-돌려준다(`chatgpt-share.js` 의 `answerText` → `STUDYEZ_BANK_ANSWER` → 웹의 `bankReady`). 관리자만 쓰는
-갈래다. **스토어판에는 아직 없다** — 관리자는 압축 해제한 이 폴더를 올리거나 스토어에 새 판을
-낸 뒤에 쓴다. bank 탭의 대화 주소는 예습 링크에 안 붙는다(`background.js`).
-
-확장 zip 은 `web/` 이 싼다(`../web/scripts/pack-extension.mjs`). `npm run dev` 가
-매번 돌리므로 **고친 것이 사이트 개발 서버에는 저절로 반영된다.** 스토어에 올리는
-것은 `build-store-package.ps1` 이고 `audit-store-package.py` 가 그것을 본다.
+개발·다운로드 ZIP은 `../web/scripts/pack-extension.mjs`,
+스토어 ZIP은 `build-store-package.ps1`로 만든다.
+스토어 게시 여부는 소스 버전으로 추정하지 말고 실제 게시 상태를 확인한다.

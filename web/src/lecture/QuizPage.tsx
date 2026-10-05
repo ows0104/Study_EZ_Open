@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, downloadSignedFile } from "../api";
 import { lectureHref } from "../links";
-import type { LectureDetail, LectureFile, QuizKind } from "../types";
+import type { LectureDetail, LectureFile } from "../types/lectures";
+import type { QuizKind } from "../types/quiz";
 import { Missed } from "./Missed";
 import { Quiz } from "./Quiz";
 

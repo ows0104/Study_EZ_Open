@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api";
-import type { DeckKind } from "../types";
+import type { DeckKind } from "../types/jobs";
 
 /**
  * 어느 편에 덱이 있고 무엇을 받아 갔나. **모아받기 버튼이 보는 유일한 값이다.**

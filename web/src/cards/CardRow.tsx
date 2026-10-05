@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { Stem } from "../lecture/Stem";
-import type { CardAction, ReviewCard } from "../types";
+import type { CardAction, ReviewCard } from "../types/admin";
 
 /**
  * 카드 한 장을 보고 괜찮다 · 고친다 · 뺀다 · 되돌린다.

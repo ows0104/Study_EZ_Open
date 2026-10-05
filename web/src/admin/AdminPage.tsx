@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { api } from "../api";
-import type { AdminOverview, AppUser, BankReportBoard, CardReview, JobBoard } from "../types";
+import type { AdminOverview, CardReview } from "../types/admin";
+import type { AppUser } from "../types/account";
+import type { BankReportBoard } from "../types/bank";
+import type { JobBoard } from "../types/jobs";
 import { jobMoving, jobOpen } from "../jobProgress";
 import { BankReportTab } from "./BankReportTab";
 import { CardReviewTab } from "./CardReviewTab";

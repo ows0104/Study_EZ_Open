@@ -1,44 +1,11 @@
-"""러너의 덱 일감 큐. `/api/admin/prequiz-jobs` 와 강의별 일감 요청.
+"""덱·Quiz Bank 생성 일감 API (/api/admin).
 
-`routes/prequiz.py` 와 헷갈리지 마라 — 그쪽은 **학생이 푸는** 예습 문항
-(`/api/lectures/.../prequiz`)이고, 여기는 **러너가 집어 가는 일감**이다.
-소비자가 다르다. 웹의 관리자 화면이 일감을 걸고, 로컬 러너가 `claim` 으로
-가져가 `PUT` 으로 진행을 알린다.
-
-`admin.py` 에서 갈라 나왔다. 붙는 자리는 그대로 `/api/admin` 이라 주소는
-바뀌지 않았다. `job_row`·`runner_row`·`RUNNER_NAME` 은 `/admin/overview` 도
-쓰기 때문에 밑줄 없는 이름이다.
-
-## 줄은 선 순서가 아니라 급한 순서다 (2026-09-03)
-
-한동안 `created_at` 순이었다. 그러면 **낮에 올라온 필기의 복습이 밤에 저장된
-내일 예습 링크를 앞지른다** — 복습은 하루 늦어도 되지만 예습은 강의가 끝나면
-쓸모가 없어지는데.
-
-    ① 내일 예습   ② 오늘 복습   ③ 나머지는 선 순서대로
-
-관리자 지시(2026-09-03)이고, `queue_priority`가 그 셋을 매긴다. 그 위에 사람이
-옮긴 자리(`queue_rank`)가 한 겹 더 있다 — 날짜에 안 적힌 사정은 자동 순위가
-모른다. **집어 가는 쪽(`claim`)과 보여 주는 쪽(`board`)이 같은 함수로 줄을
-세운다**(`queue_order`). 갈라 두면 화면의 「차례 1번째」와 러너가 집는 편이
-어긋나고, 둘 다 그럴듯해 보여서 아무도 그 어긋남을 못 본다.
-
-## 지우는 것과 멈추는 것은 다른 일이다 (2026-09-03)
-
-버튼은 하나지만(`cancel`) 상태에 따라 하는 일이 갈린다.
-
-    queued·held   그 자리에서 끝난다. 아직 아무도 안 만들었다
-    running       표에 「멈춰라」를 적고, **러너가 받아 가 자기 자식을 죽인다**
-
-둘째 줄이 이 파일에서 제일 조심할 자리다 — **서버는 그 프로세스를 모른다.**
-만드는 것은 노트북이고, 여기서 상태만 `canceled`로 바꾸면 화면은 멈췄는데
-빈 세션 넷은 그대로 돈다. 그래서 표시(`cancel_requested`)를 두고 러너가
-20초마다 진행을 적으러 올 때 받아 가게 했다.
-"""
+학생 풀이 API는 prequiz.py에 있다. 큐 정책은 app.jobs.queue, 응답은 app.jobs.views.
+running 취소는 cancel_requested로 러너에게 전달한다. 서버는 러너 프로세스를 종료하지 않는다."""
 
 from __future__ import annotations
 
-from datetime import UTC, date as Date, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -48,9 +15,9 @@ from sqlalchemy.orm import Session
 
 from app.auth import CurrentUser, require_admin, require_runner
 from app.database import get_db
+from app.jobs.queue import MAX_RUNNING, RUNNER_NAME, open_job_of, queue_order
+from app.jobs.views import board, job_row, runner_row
 from app.models import (
-    JOB_AUTO,
-    JOB_AUTO_DAILY_CAP,
     JOB_BANK,
     JOB_BUTTON,
     JOB_CANCELED,
@@ -59,7 +26,6 @@ from app.models import (
     JOB_HELD,
     JOB_KINDS,
     JOB_MAIN,
-    JOB_OPEN,
     JOB_PRE,
     JOB_QUEUED,
     JOB_RUNNING,
@@ -73,255 +39,6 @@ from app.models import (
 from app.routes.common import lecture_or_404
 
 router = APIRouter()
-
-
-# 러너는 지금 한 대뿐이다. 여러 대가 되면 이름을 나눠야 하는데, 그때는 일감을
-# 집어 가는 쪽도 같이 고쳐야 하므로 상수 하나로 묶어 둔다.
-RUNNER_NAME = "local"
-
-# 한 번에 몇 편까지 도는가(관리자 지시, 2026-09-01). **러너의 일꾼 수와 같은 값을
-# 여기도 든다** — 러너가 몇이든 서버가 이보다 많이 내주지 않으면 겹쳐 도는 편이
-# 이 수를 넘지 않는다. 편당 비용은 안 변하고 벽시계만 줄어든다.
-MAX_RUNNING = 2
-
-# 하루가 언제 바뀌는가. 표는 UTC로 적히고 사람은 한국 시각으로 센다.
-KST_OFFSET = timedelta(hours=9)
-
-
-def _kst_day_start() -> datetime:
-    """오늘(한국 시각) 0시를 UTC로. 자동 상한을 세는 창이다."""
-    now_kst = datetime.now(UTC) + KST_OFFSET
-    return now_kst.replace(hour=0, minute=0, second=0, microsecond=0) - KST_OFFSET
-
-
-# 큐가 세는 하루는 **새벽 5시에 바뀐다.** 자정으로 두면, 01시에 도는 러너에게는
-# 몇 시간 뒤 강의의 예습이 「오늘 예습」(= 늦은 것)이 되어 뒤로 밀리고, 그 자리를
-# 하루 더 남은 편이 가져간다. 5시로 두면 그 편이 새벽 내내 「내일 예습」으로 남는다.
-#
-# **이 값이 서는 근거는 짐작이 아니라 자리다** — 러너가 밤새 돈다는 것과, 강의가
-# 아무리 일러도 9시라는 것. 그 사이 어디를 잘라도 같지만 5시를 골랐다.
-QUEUE_DAY_START_HOUR = 5
-
-# 자동 순위(관리자 지시, 2026-09-03). **작을수록 먼저다.**
-#
-#   ① 내일 예습 — 강의 전에 없으면 그 편의 쓸모가 통째로 없어진다
-#   ② 오늘 복습 — 강의 직후 한 바퀴가 3패스의 첫 패스다
-#   ③ 나머지  — 선 순서대로(id)
-#
-# 사람이 옮긴 자리(`queue_rank`)가 이보다 먼저 갈린다.
-RANK_PRE_TOMORROW = 0
-RANK_MAIN_TODAY = 1
-RANK_REST = 2
-
-# 화면이 「왜 이게 앞인가」를 그대로 말하는 자리. 없는 것은 빈 문자열이다 —
-# 「보통」이라고 적으면 세 갈래가 다 뭔가 정해진 것처럼 보인다.
-PRIORITY_LABELS = {RANK_PRE_TOMORROW: "내일 예습", RANK_MAIN_TODAY: "오늘 복습", RANK_REST: ""}
-
-
-def auto_used_today(db: Session) -> int:
-    """오늘 자동으로 **돌린** 일감 수. 상한이 무는 값이다.
-
-    사람이 누른 것은 안 센다. 상한에 걸려 `held`로 선 것도 안 센다 — 그것은 아직
-    아무것도 안 쓴 줄이고, 세어 버리면 일곱 번째 필기부터는 화면에 아무 자국도
-    안 남는다.
-    """
-    rows = db.scalars(
-        select(PrequizJob.id).where(
-            PrequizJob.origin == JOB_AUTO,
-            PrequizJob.state != JOB_HELD,
-            PrequizJob.created_at >= _kst_day_start(),
-        )
-    ).all()
-    return len(rows)
-
-
-def _seconds_since(when: datetime | None) -> int:
-    if when is None:
-        return 0
-    if when.tzinfo is None:
-        when = when.replace(tzinfo=UTC)
-    return max(0, int((datetime.now(UTC) - when).total_seconds()))
-
-
-def study_today(now: datetime | None = None) -> Date:
-    """큐가 세는 「오늘」. 한국 시각이고, 하루가 새벽 `QUEUE_DAY_START_HOUR`에 바뀐다."""
-    now = now or datetime.now(UTC)
-    return ((now + KST_OFFSET) - timedelta(hours=QUEUE_DAY_START_HOUR)).date()
-
-
-def queue_priority(kind: str, lecture_date: Date | None, today: Date) -> int:
-    """이 일감의 자동 순위. 강의 날짜를 모르면 나머지로 친다.
-
-    **날짜만 본다.** 「내일 예습」은 내일 열리는 강의의 예습이지, 내일 만들 예습이
-    아니다 — 만드는 것은 오늘 밤이다.
-    """
-    if lecture_date is None:
-        return RANK_REST
-    if kind == JOB_PRE and lecture_date == today + timedelta(days=1):
-        return RANK_PRE_TOMORROW
-    if kind == JOB_MAIN and lecture_date == today:
-        return RANK_MAIN_TODAY
-    return RANK_REST
-
-
-def _lecture_days(db: Session, jobs: list[PrequizJob]) -> dict[tuple[str, str], tuple[Date, int]]:
-    """일감이 가리키는 강의의 (날짜, 교시). 순위를 매기려면 이 둘이 있어야 한다."""
-    if not jobs:
-        return {}
-    rows = db.execute(
-        select(Lecture.subject, Lecture.run_id, Lecture.date, Lecture.slot).where(
-            Lecture.run_id.in_({job.run_id for job in jobs})
-        )
-    ).all()
-    return {(row.subject, row.run_id): (row.date, row.slot) for row in rows}
-
-
-def queue_order(
-    db: Session, jobs: list[PrequizJob], today: Date | None = None
-) -> list[tuple[PrequizJob, int]]:
-    """집어 갈 순서대로. 줄마다 자동 순위를 같이 준다.
-
-    **집어 가는 쪽과 보여 주는 쪽이 이 한 함수를 같이 쓴다.** 갈라 두면 화면이
-    말하는 「차례 1번째」와 러너가 실제로 집는 편이 어긋나고, 그 어긋남은 아무도
-    안 본다 — 둘 다 그럴듯하게 보이기 때문이다.
-
-    가르는 값은 넷이다.
-
-        queue_rank   사람이 옮긴 자리. 0이 안 건드린 것
-        rank         자동 순위(내일 예습 → 오늘 복습 → 나머지)
-        slot         같은 순위 안에서는 이른 교시부터. 나머지 갈래에서는 안 본다
-        id           그래도 같으면 선 순서대로
-
-    `slot`을 나머지 갈래에서 빼는 까닭은 그쪽이 **「순서대로」**이기 때문이다 —
-    거기서 교시를 보면 어제 3교시가 오늘 1교시를 앞지른다.
-    """
-    today = today or study_today()
-    days = _lecture_days(db, jobs)
-    ranked = []
-    for job in jobs:
-        day, slot = days.get((job.subject, job.run_id), (None, 0))
-        rank = queue_priority(job.kind, day, today)
-        ranked.append((job, rank, slot if rank != RANK_REST else 0))
-    ranked.sort(key=lambda row: (row[0].queue_rank, row[1], row[2], row[0].id))
-    return [(job, rank) for job, rank, _slot in ranked]
-
-
-def job_row(job: PrequizJob | None, priority: str = "") -> dict[str, Any] | None:
-    if job is None:
-        return None
-    running = job.state == JOB_RUNNING
-    return {
-        "id": job.id,
-        "subject": job.subject,
-        "runId": job.run_id,
-        "kind": job.kind,
-        "state": job.state,
-        "stage": job.stage,
-        "message": job.message,
-        "requestedBy": job.requested_by,
-        # 버튼인가 자동인가. 화면이 「내가 누른 것」과 「저절로 선 것」을 갈라
-        # 보여 주지 않으면, 누른 적 없는 편이 도는 것을 보고 사람이 놀란다.
-        "origin": job.origin,
-        "worker": job.worker,
-        # **서버가 셈해서 준다.** 화면마다 시계를 맞추면 시차만큼 어긋난다.
-        "elapsedSeconds": _seconds_since(job.started_at) if running else 0,
-        "stageSeconds": _seconds_since(job.stage_started_at) if running else 0,
-        "stageIndex": job.stage_index,
-        "stageTotal": job.stage_total,
-        # 러너가 지난 편들의 실측으로 셈한 남은 시간. 0이면 아직 모른다.
-        "etaSeconds": job.eta_seconds if running else 0,
-        # 러너가 이것을 보고 이미 만든 편도 버리고 다시 만든다. 화면도 같은 값으로
-        # 「만드는 중」과 「다시 만드는 중」을 가른다.
-        "force": bool(job.force),
-        # 이 시각까지 줄에서 기다린다(모델 한도). 화면이 「멈춰 있다」와 「기다리는
-        # 중이다」를 갈라 말하려면 이 값이 필요하다.
-        "resumeAt": job.resume_at.isoformat() if job.resume_at else "",
-        # **왜 이 줄이 거기 섰나.** 「내일 예습」·「오늘 복습」이거나 빈 문자열이다.
-        # 줄 세우는 쪽만 아는 값이라 여기서 실어 보낸다 — 화면이 날짜를 다시
-        # 세면 하루가 바뀌는 시각이 두 자리에서 갈린다(`QUEUE_DAY_START_HOUR`).
-        "priority": priority,
-        # 사람이 옮긴 자리. 0이 아니면 자동 순위를 덮고 있다는 뜻이고, 화면은
-        # 그 사실을 적어야 한다 — 안 적으면 왜 이게 앞인지 아무도 모른다.
-        "queueRank": job.queue_rank,
-        # 사람이 「멈추기」를 눌렀고 러너가 아직 안 받아 갔다. **러너가 이 값을
-        # 보고 자기 자식을 죽인다**(`runner.agent`). 화면도 같은 값으로
-        # 「만드는 중」과 「멈추는 중」을 가른다.
-        "cancelRequested": bool(job.cancel_requested),
-        # 러너가 만들기 전에 사람에게 묻는 말. 비어 있지 않으면 이 줄은 `held` 로
-        # 서서 답을 기다린다(`choose_strategy`). 화면은 이 값으로 버튼을 그린다.
-        "ask": job.ask,
-        # 사람이 고른 전략. 빈 문자열이면 자동 판정이다.
-        "strategy": job.strategy,
-        "createdAt": job.created_at.isoformat() if job.created_at else "",
-        "updatedAt": job.updated_at.isoformat() if job.updated_at else "",
-    }
-
-
-def watch_row(job: PrequizJob | None) -> dict[str, Any] | None:
-    """학생이 보는 일감 한 줄. **`job_row` 에서 덜어 낸 것이지 다른 값이 아니다.**
-
-    2026-09-21 관리자 지시 — 「퀴즈를 만들고 있을 때 관리자가 아닌 사용자도
-    사이드패널 현황을 볼 수 있게. 몇 단계 몇 분 남았는지.」 그 전까지 학생의 덱
-    칸이 말할 수 있는 것은 「아직 없습니다」뿐이었고, **15분 뒤에 오면 되는 편과
-    아무도 안 만들고 있는 편이 같은 모양이었다.**
-
-    덜어 낸 것은 전부 **운영의 것**이다 — 누가 눌렀는지(`requestedBy`), 어느
-    일꾼이 잡고 있는지(`worker`), 실패 사유(`message`), 줄 순서(`priority` ·
-    `queueRank`), 멈추기 표시(`cancelRequested`). 학생이 그것으로 할 수 있는
-    일이 없고, `requestedBy` 는 남의 이메일이다.
-
-    **끝난 일감은 안 내보낸다.** `done` 이면 덱이 그 자리에 있고, `failed` ·
-    `canceled` 는 사람이 손대야 할 것이 남았다는 뜻이라 학생에게는 「아직 없습니다」가
-    그대로 참이다. 여는 것은 열린 일감뿐이다(`JOB_OPEN`).
-
-    `stage` 와 시간들은 **`running` 일 때만 채운다** — `job_row` 와 같은 규칙이다.
-    줄 서 있는 일감의 `stage` 는 러너가 올린 진행이 아니라 서버가 넣어 둔 안내문
-    이라, 그대로 내보내면 화면이 그것을 단계 이름으로 읽는다.
-    """
-    if job is None or job.state not in JOB_OPEN:
-        return None
-    running = job.state == JOB_RUNNING
-    return {
-        "kind": job.kind,
-        "state": job.state,
-        "stage": job.stage if running else "",
-        "stageIndex": job.stage_index if running else 0,
-        "stageTotal": job.stage_total if running else 0,
-        "elapsedSeconds": _seconds_since(job.started_at) if running else 0,
-        "stageSeconds": _seconds_since(job.stage_started_at) if running else 0,
-        "etaSeconds": job.eta_seconds if running else 0,
-        # 받아 간 덱이 곧 새것으로 바뀐다는 뜻이다. 학생에게도 뜻이 있다 —
-        # 덱이 이미 있는데 「만드는 중」만 뜨면 무엇이 만들어지는지 모른다.
-        "force": bool(job.force),
-        # 모델 한도로 멈춘 편. 시각을 안 주면 「차례를 기다립니다」와 같은
-        # 모양이 되고, 그러면 기다려도 안 오는 줄로 읽힌다.
-        "resumeAt": job.resume_at.isoformat() if job.resume_at else "",
-    }
-
-
-def watch_runner_row(beat: RunnerBeat | None) -> dict[str, Any] | None:
-    """학생이 보는 러너. **살아 있는지만 말한다.**
-
-    `busy` 와 `note` 를 뺀 것은 `note` 가 **다른 편의 이름**이기 때문이다
-    (`_busy_note` — 「기생충학/260910_03 외 1편」). 이 편을 보러 온 사람에게
-    남의 편 이름이 갈 자리가 아니다.
-
-    살아 있는지를 서버가 판정하지 않고 시각만 준다 — 그 자를 두 곳에 두면
-    화면과 서버가 다른 말을 한다(`web/src/jobProgress.ts` 의 `runnerAlive`).
-    """
-    if beat is None:
-        return None
-    return {"lastSeen": beat.last_seen.isoformat() if beat.last_seen else ""}
-
-
-def runner_row(beat: RunnerBeat | None) -> dict[str, Any] | None:
-    if beat is None:
-        return None
-    return {
-        "lastSeen": beat.last_seen.isoformat() if beat.last_seen else "",
-        "busy": beat.busy,
-        "note": beat.note,
-    }
 
 
 def _busy_note(running: list[PrequizJob]) -> str:
@@ -353,72 +70,6 @@ class JobRequest(BaseModel):
     """「다시 만들기」인가. 몸이 없으면 처음 만드는 것이다."""
 
     force: bool = False
-
-
-def open_job_of(db: Session, subject: str, run_id: str, kind: str) -> PrequizJob | None:
-    """이 편·이 갈래에 아직 안 끝난 일감. **중복을 막는 자리는 여기 하나다.**"""
-    return db.scalars(
-        select(PrequizJob)
-        .where(
-            PrequizJob.subject == subject,
-            PrequizJob.run_id == run_id,
-            PrequizJob.kind == kind,
-            PrequizJob.state.in_(tuple(JOB_OPEN)),
-        )
-        .order_by(PrequizJob.created_at.desc())
-    ).first()
-
-
-def ensure_auto_job(db: Session, subject: str, run_id: str, kind: str, why: str) -> PrequizJob | None:
-    """재료가 도착해서 저절로 서는 일감. 이미 서 있으면 아무것도 안 한다.
-
-    **버튼은 이제 안전장치다**(관리자 지시, 2026-09-01). 필기가 올라오면 복습이,
-    예습 링크가 저장되면 예습이 여기서 큐로 들어간다 — 사람이 누르기를 기다리는
-    동안 노트북이 놀고 있었다.
-
-    하루 상한(`JOB_AUTO_DAILY_CAP`)을 넘으면 `held`로 세운다. 만들지는 않지만
-    **화면에는 남는다** — 안 세우면 「자동이 안 걸린 편」과 「상한에 걸린 편」이
-    같은 모양이 되고, 그 둘을 가르려면 사람이 노트북을 열어 봐야 한다.
-
-    커밋은 부르는 쪽이 한다. 업로드·링크 저장과 **한 트랜잭션에 묶여야** 해서다 —
-    따로 커밋하면 링크는 저장됐는데 일감은 안 선 상태가 남을 수 있다.
-    """
-    if kind not in JOB_KINDS:
-        return None
-    if open_job_of(db, subject, run_id, kind) is not None:
-        return None
-    # **사람이 지운 편은 다시 안 세운다.** 재료가 도착했다는 신호는 쓸기마다
-    # 다시 온다(`publish`가 회차마다 `uploads/complete`를 두드린다) — 그러면
-    # 지운 줄이 10분 뒤에 되살아나고, 지운 사람은 자기가 뭘 잘못 눌렀는지
-    # 알 길이 없다. 다시 만들려면 그 덱 칸의 버튼을 누른다(그 길은 여기를
-    # 안 지난다).
-    canceled = db.scalars(
-        select(PrequizJob.id).where(
-            PrequizJob.subject == subject,
-            PrequizJob.run_id == run_id,
-            PrequizJob.kind == kind,
-            PrequizJob.state == JOB_CANCELED,
-        )
-    ).first()
-    if canceled:
-        return None
-
-    over = auto_used_today(db) >= JOB_AUTO_DAILY_CAP
-    job = PrequizJob(
-        subject=subject,
-        run_id=run_id,
-        kind=kind,
-        state=JOB_HELD if over else JOB_QUEUED,
-        stage=(f"오늘 자동 상한 {JOB_AUTO_DAILY_CAP}편을 다 썼다 — 만들려면 눌러라"
-               if over else f"{why} — 러너를 기다리는 중"),
-        requested_by="",
-        origin=JOB_AUTO,
-    )
-    db.add(job)
-    # **부르는 쪽이 이 줄을 그대로 응답에 싣는다.** flush 를 안 하면 id 도 기본값도
-    # 아직 없어서 `{"id": null}` 이 화면까지 간다.
-    db.flush()
-    return job
 
 
 def _job_kind(kind: str) -> str:
@@ -741,36 +392,6 @@ def update_prequiz_job(
     _touch_runner(db, busy=bool(running), note=_busy_note(list(running)))
     db.commit()
     return {"job": job_row(job), "applied": True}
-
-
-def board(db: Session) -> dict[str, Any]:
-    """지금 큐가 어떻게 서 있나. **화면 하나가 통째로 이 응답으로 그려진다.**
-
-    도는 것과 기다리는 것을 여기서 갈라 준다 — 화면이 50줄을 받아 스스로 갈라도
-    되지만, 「지금 몇 편이 돌고 몇 편이 남았나」는 화면마다 같은 답이어야 한다.
-
-    순서를 바꾸는 자리도 이걸 그대로 돌려준다. 바꾼 뒤에 다시 읽게 하면 그 사이에
-    러너가 한 편 집어 가고, 화면은 자기가 방금 옮긴 줄이 어디로 갔는지 못 말한다.
-    """
-    jobs = db.scalars(select(PrequizJob).order_by(PrequizJob.created_at.desc()).limit(50)).all()
-    rows = [job_row(job) for job in jobs]
-    # 기다리는 줄은 **집어 갈 순서대로** 준다(`queue_order`). 화면이 「차례 2번째」라고
-    # 말하려면 최신순이 아니라 이 순서여야 하고, 그 순서가 러너의 것과 같아야 한다.
-    waiting = [
-        job_row(job, priority=PRIORITY_LABELS[rank])
-        for job, rank in queue_order(db, [job for job in jobs if job.state == JOB_QUEUED])
-    ]
-    return {
-        "jobs": rows,
-        "running": [row for row in rows if row and row["state"] == JOB_RUNNING],
-        "waiting": waiting,
-        "held": [row for row in rows if row and row["state"] == JOB_HELD],
-        # 자동이 오늘 몇 편을 썼나. 상한에 걸린 이유를 화면이 그대로 말할 수 있게.
-        "autoUsedToday": auto_used_today(db),
-        "autoDailyCap": JOB_AUTO_DAILY_CAP,
-        "maxRunning": MAX_RUNNING,
-        "runner": runner_row(db.get(RunnerBeat, RUNNER_NAME)),
-    }
 
 
 @router.get("/prequiz-jobs")

@@ -3,3 +3,8 @@ export const DIRECTION_LABEL: Record<string, string> = {
   direct: "직접", reverse: "역방향", mechanism: "기전", discrimination: "구별",
   integration: "통합", sequence: "순서", trap: "함정",
 };
+
+export function daysLabel(examDate: string) {
+  const days = Math.round((Date.parse(`${examDate}T00:00:00+09:00`) - Date.now()) / 86_400_000);
+  return days > 0 ? `시험까지 D-${days}` : days === 0 ? "오늘 시험" : "시험일 지남";
+}

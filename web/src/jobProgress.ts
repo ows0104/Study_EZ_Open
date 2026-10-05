@@ -1,4 +1,4 @@
-import type { DeckWatch, PrequizJob } from "./types";
+import type { DeckWatch, PrequizJob } from "./types/jobs";
 
 /**
  * 「지금 무엇을, 몇 분째, 어디까지, 얼마나 남았나」를 한 줄로.

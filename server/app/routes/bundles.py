@@ -104,13 +104,15 @@ def read_decks(
         query = query.where(Lecture.date >= start)
     if end is not None:
         query = query.where(Lecture.date <= end)
-    rows = db.execute(query.order_by(Lecture.date, Lecture.slot, Asset.kind, Asset.uploaded_at)).all()
+    rows = db.execute(
+        query.order_by(Lecture.date, Lecture.slot, Asset.kind, Asset.uploaded_at, Asset.id)
+    ).all()
 
     # **한 자리에 파일이 둘일 수 있다.** 표의 유일 조건이 파일명까지 포함해서
     # (`uq_asset_slot`), 이름이 달라진 채로 다시 구워지면 같은 (편, 갈래)에 두 줄이
     # 남는다. 그대로 두면 화면이 「12편」이라 적고 같은 덱을 두 번 받으며(합칠 때
     # guid 가 겹쳐 접히므로 파일은 멀쩡하다) **수만 거짓이 된다.** 늦게 올라온
-    # 것을 쓴다 — `read_deck_bytes` 도 같은 것을 집는다.
+    # 것을 쓴다. 시각이 같으면 ID로 순서를 고정해 `read_deck_bytes`와 같은 것을 집는다.
     latest: dict[tuple[str, str, str], tuple[Asset, Lecture]] = {}
     for asset, lecture in rows:
         latest[(asset.subject, asset.run_id, asset.kind)] = (asset, lecture)
@@ -164,7 +166,7 @@ def read_deck_bytes(
     asset = db.scalars(
         select(Asset)
         .where(Asset.subject == nfc(subject), Asset.run_id == run_id, Asset.kind == DECK_KINDS[kind])
-        .order_by(Asset.uploaded_at.desc())
+        .order_by(Asset.uploaded_at.desc(), Asset.id.desc())
     ).first()
     if asset is None:
         raise HTTPException(status_code=404, detail="덱을 찾을 수 없습니다.")

@@ -36,7 +36,7 @@
 > 재지 않았다.** 폴더 이름만 09-14 개명(`pdf2anki→quizgen`·`studyez→runner`)에
 > 맞춰 고쳤다 — 안 고치면 지금 트리에 없는 경로를 가리키게 된다.
 >
-> **지금 숫자와 지금 모양은 [map.md](map.md) 에 있다.** 이 절과 어긋나면 그쪽이 맞다.
+> **지금 숫자와 지금 모양은 [map.md](2026-10-06-originals/docs/map.md) 에 있다.** 이 절과 어긋나면 그쪽이 맞다.
 
 | | 줄 (2026-09-12) |
 |---|---|
@@ -63,7 +63,7 @@
 
 > **2026-09-14 에 이 함정이 없어졌다.** 두 폴더를 `spotter/`·`spotter-dist/` 로
 > 들이고 지웠다. 원격 이름은 그대로라 미는 자리에서는 아직 뒤집혀 있다 —
-> `spotter-dist/` 를 미는 곳이 `ows0104/Spotter_Quiz` 다([layout.md](layout.md) §4).
+> `spotter-dist/` 를 미는 곳이 `ows0104/Spotter_Quiz` 다([layout.md](2026-10-06-originals/docs/layout.md) §4).
 
 ## 1. 이 시스템은 세로로 둘, 가로로 넷이다
 

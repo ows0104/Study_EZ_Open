@@ -1,5 +1,6 @@
 import { api } from "./api";
-import type { Me, TimetableEvent } from "./types";
+import type { Me } from "./types/account";
+import type { TimetableEvent } from "./types/lectures";
 
 /**
  * 첫 화면에 필요한 두 요청을 같이 띄운다.

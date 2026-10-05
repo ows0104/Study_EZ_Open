@@ -1,17 +1,8 @@
-# 이 파일은 패키지 빌드용이 아니다. 린터 설정 한 곳으로만 쓴다.
-# (`[build-system]` 이 없으므로 빌드 도구가 이 저장소를 패키지로 보지 않는다.)
+# 검사·린터 설정. 실행 의존성은 requirements.txt와 server/requirements.txt에 있다.
 
 [tool.pytest.ini_options]
-# 검사가 덩이별 폴더로 나뉘어 있다 — `tests/quizgen/` · `runner/` · `spotter/` · `bridge/`.
-# 덩이 하나만 돌릴 수 있게 하는 것이 나눈 이유다.
-#
-#     pytest tests                전부 (606개)
-#     pytest tests/spotter        땡시만
-#
-# `pythonpath` 가 없으면 **`pytest tests` 가 57개 수집 오류로 죽는다.** 검사들이
-# `import quizgen` 을 하는데 pytest 는 테스트 파일의 폴더만 sys.path 에 넣고
-# 저장소 루트는 안 넣기 때문이다. `python -m pytest` 로는 되고(cwd 가 들어간다)
-# 맨 `pytest` 로는 안 되는 차이였고, 문서는 맨 `pytest tests` 라고 적고 있었다.
+# python -m pytest tests/<컴포넌트>로 필요한 영역만 검사한다.
+# pytest 직접 실행에서도 저장소 패키지를 찾도록 루트를 추가한다.
 pythonpath = ["."]
 testpaths = ["tests"]
 

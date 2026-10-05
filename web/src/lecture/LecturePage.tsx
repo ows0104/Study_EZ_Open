@@ -4,13 +4,7 @@ import { api, downloadSignedFile, openSignedFile } from "../api";
 import { useBankLink } from "../bank/bankBridge";
 import { bumpPreviewVersion, usePreviewLink, watchSharedLink } from "../bridge/previewBridge";
 import { quizHref, quizWindow } from "../links";
-import {
-  previewProviderLabels,
-  previewProviders,
-  type LectureDetail,
-  type LectureFile,
-  type PreviewProvider,
-} from "../types";
+import { previewProviderLabels, previewProviders, type LectureDetail, type LectureFile, type PreviewProvider } from "../types/lectures";
 import { LectureCards } from "./LectureCards";
 import { Missed } from "./Missed";
 

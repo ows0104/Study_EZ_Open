@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../api";
-import type { AdminOverview } from "../types";
+import type { AdminOverview } from "../types/admin";
 
 /**
  * 시간표의 과목 이름과 필기 폴더 이름을 잇는다.

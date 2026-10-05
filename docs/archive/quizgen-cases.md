@@ -1,6 +1,6 @@
 # quizgen — 사례
 
-[quizgen/CLAUDE.md](../quizgen/CLAUDE.md) 의 규칙이 **어디서 나왔는지**를 적는다.
+[quizgen/CLAUDE.md](2026-10-06-originals/quizgen/CLAUDE.md) 의 규칙이 **어디서 나왔는지**를 적는다.
 2026-10-03 에 그 문서에서 **줄 그대로** 옮겼다(옛 86~491줄, 링크 경로만 이 폴더 기준으로).
 그래서 「이 문서가 한동안 …라고 적고 있었다」의 「이 문서」는 그 시절의 `CLAUDE.md` 다.
 
@@ -50,7 +50,7 @@ O/X와 이미지 카드는 질문 글자가 짧다. **그래서 글자를 세는
 
 **같은 모양이 `runner` 에서 먼저 한 번 났고 거기가 더 나빴다** — 종료 코드가
 「안 만들어졌다」고 거짓말을 했다. 두 사례와 그래서 무엇을 고쳤는지는
-[../runner/CLAUDE.md](../runner/CLAUDE.md) 의 첫 절에 있다.
+[../runner/CLAUDE.md](2026-10-06-originals/runner/CLAUDE.md) 의 첫 절에 있다.
 
 
 ### 화면은 「물렸다」고 하는데 모델은 옛 프롬프트를 읽고 있었다
@@ -185,7 +185,7 @@ O/X와 이미지 카드는 질문 글자가 짧다. **그래서 글자를 세는
 >
 > 그러니 **이 값으로 덱이나 시도를 탈락시키지 마라. 방향을 보는 데만 쓴다.**
 > 바꾸는 것은 여전히 관리자만 한다 — 확신이 없다는 것이 아무 값이나 써도 된다는
-> 뜻은 아니다. 다시 재는 일은 [docs/runs-layout.md](runs-layout.md)에 걸려 있다.
+> 뜻은 아니다. 다시 재는 일은 [docs/runs-layout.md](2026-10-06-originals/docs/runs-layout.md)에 걸려 있다.
 
 | | 목표 | 예전(v1 파이프라인) |
 |---|---|---|
@@ -409,6 +409,6 @@ v1은 그 취지를 프롬프트에만 적었고(`answer_leak`·`compound_questi
       runs/_jokbo/<과목>/cut.json    판 · 자른 시각 · 자른 코드 해시 · 원본 지문
       runs/<편>/jokbo.used.json      어느 판의 어느 조각을 봤나 · **안 붙었으면 이유**
 
-  `quizgen/cutmark.py` 이고 근거와 설계는 [../docs/runs-layout.md](runs-layout.md)
+  `quizgen/cutmark.py` 이고 근거와 설계는 [../docs/runs-layout.md](2026-10-06-originals/docs/runs-layout.md)
   「3단계」에 있다. `scripts/attempts.py` 표에 컷 칸으로 뜬다. **이 기록이 붙는 편부터
   갈린다 — 이미 쌓인 306편은 못 갈린다.**

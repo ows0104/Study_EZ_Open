@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api } from "../api";
-import type { Notice } from "../types";
+import type { Notice } from "../types/notices";
 import { markNoticeSeen } from "./seen";
 
 /**

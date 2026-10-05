@@ -49,6 +49,9 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+.pytest_cache/
+.ruff_cache/
+.tmp_uv_cache/
 
 # 서버 — local-test 모드가 R2 대신 쓰는 디렉터리. 강의 자료가 들어간다.
 server/local_test_data/

@@ -1,15 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "../api";
 import { bumpPreviewVersion } from "../bridge/previewBridge";
-import {
-  type DeckKind,
-  type DeckWatch,
-  type DeckWatchRunner,
-  type LectureFile,
-  type LectureRef,
-  type PrequizJob,
-  type RunnerBeat,
-} from "../types";
+import { type DeckKind, type DeckWatch, type DeckWatchRunner, type PrequizJob, type RunnerBeat } from "../types/jobs";
+import { type LectureFile, type LectureRef } from "../types/lectures";
 import { jobMoving, progressLine, runnerAlive, waitingUntil, watchLine } from "../jobProgress";
 import { useMe } from "../useMe";
 import { ActionCard, fileSize, Remake, RemakeConfirm } from "./panelShared";

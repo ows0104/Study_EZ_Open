@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../api";
-import type { JobBoard, PrequizJob } from "../types";
+import type { JobBoard, PrequizJob } from "../types/jobs";
 import { progressLine, waitingUntil } from "../jobProgress";
 
 /**

@@ -1,4 +1,4 @@
-import type { NextInterval, QuizItem, QuizSchedule } from "../types";
+import type { NextInterval, QuizItem, QuizSchedule } from "../types/quiz";
 
 /**
  * 다음에 낼 카드를 고른다. **안키의 큐다.**

@@ -1,4 +1,4 @@
-import type { LectureRef } from "../types";
+import type { LectureRef } from "../types/lectures";
 import {
   adminLectureSlots,
   hasSlots,

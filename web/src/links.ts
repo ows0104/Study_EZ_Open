@@ -1,4 +1,4 @@
-import type { QuizKind } from "./types";
+import type { QuizKind } from "./types/quiz";
 
 /**
  * 새 창으로 여는 화면들의 주소.

@@ -5,7 +5,7 @@ import { BundleButton } from "../bundle/BundleButton";
 import { decksIn, type BundleDeck } from "../bundle/decks";
 import { usePreviewVersion } from "../bridge/previewBridge";
 import { lectureHref, quizHref, quizWindow } from "../links";
-import { type LectureDetail, type LectureFile, type LectureRef } from "../types";
+import { type LectureDetail, type LectureFile, type LectureRef } from "../types/lectures";
 import { categoryLabel, type CalendarEntry } from "./entries";
 import { DeckSlot } from "./DeckSlot";
 import { cardsHash } from "../lecture/LectureCards";

@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 from app import study_engine as engine
 from app.auth import CurrentUser, require_admin, require_approved_user, require_runner
 from app.database import get_db
+from app.jobs.queue import open_job_of
 from app.models import (
     BANK_BUILDING,
     BANK_FAILED,
@@ -49,7 +50,6 @@ from app.models import (
     TimetableEvent,
 )
 from app.routes.common import lecture_or_404
-from app.routes.prequiz_jobs import open_job_of
 from app.storage import ObjectStorage, StorageNotConfigured
 
 router = APIRouter()

@@ -1,0 +1,179 @@
+// ---------------------------------------------------------------- Quiz Bank (2026-10-04)
+//
+// ChatGPT 가 만든 문제은행을 서버 Study Engine 으로 푼다(`server/app/routes/bank.py`).
+// 문항 필드 이름은 서버가 저장한 꼴 그대로(snake_case)다 — 은행 JSON 을 옮겨 적지 않고 싣는다.
+
+export type BankSummary = {
+  status: "responded" | "building" | "ready" | "invalid" | "failed";
+  open: boolean;
+  buildId: string;
+  questionCount: number;
+  conceptCount: number;
+  builtAt: string | null;
+  /** 검증을 통과해 공부할 수 있는가. */
+  usable: boolean;
+  /** 아래는 관리자에게만. */
+  respondedAt?: string | null;
+  promptVersion?: string;
+  message?: string;
+  reviewCounts?: { ok: number; doubt: number; wrong: number } | null;
+  errorCount?: number;
+  /** 검증에 걸려 빼고 연 문항(2026-10-05 — 「걸린 문항만 빼고 연다」). */
+  dropped?: { questionId: string; errors: string[] }[];
+};
+
+export type BankSource = {
+  id: string;
+  kind: "notes_current" | "jokbo";
+  assetId: string;
+  filename: string;
+  contentType: string;
+};
+
+export type BankFormat = "basic" | "cloze" | "list" | "ox" | "mcq" | "multi_select" | "matching" | "sequence";
+
+export type BankRating = "Again" | "Hard" | "Good" | "Easy";
+
+/** 답이 빠진 문항. 답·채점 단위는 `reveal` 로만 온다. */
+export type BankQuestion = {
+  question_id: string;
+  concept_id: string;
+  tier: "Core" | "Advanced" | "Optional";
+  importance: number;
+  format: BankFormat;
+  retrieval_direction: string;
+  question: string;
+  source_refs: { source_id: string; locator: string }[];
+  conflict_id: string;
+  options: { id: string; text: string }[];
+  matching_left: string[];
+  matching_right: string[];
+  sequence_items: string[];
+};
+
+export type BankReview = {
+  question_id: string;
+  verdict: "ok" | "doubt" | "wrong";
+  note: string;
+  suggested_answer: string;
+};
+
+export type BankAnswer = {
+  answer: string;
+  answerUnits: string[];
+  correctOptionIds: string[];
+  answerPairs: { left: string; right: string }[];
+  correctOrder: string[];
+  /** 문항이 인용한 필기 쪽들. 한 문항이 여러 장일 수 있다. */
+  slides: { page: number; url: string }[];
+  /** 외부지식 검토. 막지 않고 표시만 한다. */
+  medicalReview: BankReview | null;
+  /** 충돌 문항이면 각 출처의 말과 고른 근거(프롬프트 v1.2). 옛 API 에는 없다. */
+  conflict?: string;
+  /** 자료 밖 내용을 외부 의학지식으로 썼다(출처 `EXT`). */
+  external?: boolean;
+};
+
+/** 관리자가 보는 문항 — 은행 JSON 그대로라 답 칸도 snake_case 다. */
+export type BankFullQuestion = BankQuestion & {
+  answer: string;
+  answer_units: string[];
+  correct_option_ids: string[];
+  answer_pairs: { left: string; right: string }[];
+  correct_order: string[];
+};
+
+export type BankReportStatus = "open" | "resolved" | "wontfix";
+
+/** 학생 신고 한 건(`GET /api/admin/bank-feedback`). */
+export type BankReport = {
+  id: number;
+  category: string;
+  comment: string;
+  status: BankReportStatus;
+  email: string;
+  createdAt: string | null;
+  /** 지금 은행보다 옛 빌드에서 온 신고. 같은 ID 에 다른 문항이 앉았을 수 있다. */
+  stale: boolean;
+};
+
+/** 같은 문항에 모인 신고들. `question` 은 **지금 은행의 것**이고, 지금 은행에 없으면 `null`. */
+export type BankReportGroup = {
+  subject: string;
+  runId: string;
+  questionId: string;
+  title: string;
+  date: string;
+  question: BankFullQuestion | null;
+  medicalReview: BankReview | null;
+  reports: BankReport[];
+};
+
+export type BankReportBoard = { questions: BankReportGroup[]; open: number; done: number };
+
+export type BankDimension = {
+  concept_id: string;
+  title: string;
+  direction: string;
+  before: number;
+  after: number;
+  target: number;
+};
+
+export type BankSession = {
+  session_id: string;
+  status: "active" | "complete";
+  reason: string | null;
+  size: number;
+  reviewed: number;
+  ratings: Record<BankRating, number>;
+  core_before: number;
+  core_after: number;
+  improved: BankDimension[];
+  weaknesses: BankDimension[];
+  started_at: number;
+  ended_at: number | null;
+};
+
+export type BankRead = {
+  summary: BankSummary;
+  examDate: string;
+  sizes: number[];
+  defaultSize: number;
+  session: BankSession | null;
+  previousSessions: BankSession[];
+  /**
+   * 개념 지도. 첫 회차 전에도 온다(숙련도가 다 0). 계산은 서버 엔진(`concept_map`)이 한다.
+   * **없을 수 있다** — 푸시는 화면만 내고 API 는 손으로 올려서, 이 칸이 없는 API 가 뜬 채일 때가 있다.
+   */
+  conceptMap?: BankConcept[];
+};
+
+/** 개념 하나와 이 사람의 방향별 숙련도. 방향은 문항이 있는 것만 온다. */
+export type BankConcept = {
+  concept_id: string;
+  title: string;
+  core_facts: string[];
+  importance: number;
+  importance_rationale: string;
+  concept_difficulty: number;
+  tier: "Core" | "Advanced" | "Optional";
+  exam_signal_strength: string;
+  related_concepts: string[];
+  directions: { direction: string; mastery: number; target: number; reviews: number; questions: number }[];
+  /** 방향마다 목표 대비 비율(1에서 자름)의 평균. 그래프의 색이다. */
+  progress: number;
+};
+
+export type BankNext = {
+  question: BankQuestion | null;
+  reviewToken?: string;
+  days?: number;
+  examDate?: string;
+  session?: BankSession | null;
+  answer?: BankAnswer | null;
+  /** 회차가 끝났거나 지금 낼 것이 없을 때. */
+  summary?: BankSession | null;
+  reason?: string;
+  retryAt?: number;
+};

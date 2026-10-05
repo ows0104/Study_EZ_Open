@@ -3,17 +3,7 @@ import { api } from "../api";
 import { lectureHref, quizPath } from "../links";
 import { useMe } from "../useMe";
 import { cardsHash } from "./LectureCards";
-import {
-  quizGrades,
-  type GradeResult,
-  type QuizGrade,
-  type QuizItem,
-  type QuizKind,
-  type QuizPayload,
-  type QuizSchedule,
-  type RevealResult,
-  type UndoResult,
-} from "../types";
+import { quizGrades, type GradeResult, type QuizGrade, type QuizItem, type QuizKind, type QuizPayload, type QuizSchedule, type RevealResult, type UndoResult } from "../types/quiz";
 import { counts, dayLabel, daysFromNow, intervalLabel, pick, stateOf } from "./queue";
 import { Stem } from "./Stem";
 

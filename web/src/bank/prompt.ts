@@ -1,5 +1,6 @@
 import template from "./bankPrompt.md?raw";
-import type { BankSource, LectureDetail } from "../types";
+import type { BankSource } from "../types/bank";
+import type { LectureDetail } from "../types/lectures";
 
 /**
  * Quiz Bank 를 만드는 ChatGPT 프롬프트. **정본은 `bankPrompt.md` 하나다**(2026-10-04 관리자 —

@@ -15,13 +15,7 @@ import {
   renderPreviewPrompt,
 } from "../lecture/previewPrompt";
 import { usePreviewPrompt } from "../lecture/usePreviewPrompt";
-import {
-  previewProviderLabels,
-  previewProviders,
-  type LectureDetail,
-  type LectureRef,
-  type PreviewProvider,
-} from "../types";
+import { previewProviderLabels, previewProviders, type LectureDetail, type LectureRef, type PreviewProvider } from "../types/lectures";
 import { useMe } from "../useMe";
 import { ActionCard, PanelGroup, PanelTool, Remake, RemakeConfirm } from "./panelShared";
 

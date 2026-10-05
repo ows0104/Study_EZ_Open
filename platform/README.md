@@ -1,44 +1,24 @@
-# 두 앱이 **실제로** 같이 쓰는 것
+# 공용 세션 코드
 
-여기 들어오는 조건은 하나다.
+Study_EZ와 Spotter가 함께 사용하는 로그인 세션 코드다.
+현재 공용 원본은 `session/session.js` 하나다.
 
-> **Study_EZ 와 땡시(Spotter)가 둘 다 이것을 부른다.**
+| 사용하는 곳 | 연결 방식 |
+|---|---|
+| `web/src/supabase.ts` | Vite import |
+| `spotter/web/session.js` | 정적 앱용 사본 |
 
-「나중에 쓸 것 같다」·「비슷하니까 여기 두자」는 안 들어온다. 공유 폴더가 아무것도
-거절하지 않으면 웅덩이가 된다 — 저장소가 이미 그 경고를
-[docs/refactor-plan.md](../docs/refactor-plan.md) §6 에 적어 두었다.
+`Domain=.studyez.kr` 쿠키로 형제 서브도메인이 세션을 공유한다.
+쿠키를 사용할 수 없는 환경에서는 각 앱의 localStorage로 돌아간다.
 
-## 지금 사는 것
+원본을 수정한 뒤 Spotter 사본을 동기화하고 검사한다.
 
-    session/    한 번 로그인하면 두 앱이 다 열린다
+```powershell
+python spotter/scripts/sync_shared.py
+python spotter/scripts/sync_shared.py --check
+```
 
-`session.js` 하나다. `Domain=.studyez.kr` 쿠키에 세션을 담아 형제 서브도메인이
-같이 읽는다. **두 앱이 실제로 이 파일을 읽는다** —
-
-    web/src/supabase.ts          import 해서 전역을 세운다 (Vite)
-    spotter/web/session.js       사본. `spotter/scripts/sync_shared.py` 가 가져간다
-
-땡시 쪽이 사본인 것은 **거기에 번들러가 없어서**다. 정적 파일을 그대로 내보내고
-`<script src="session.js">` 로 부르므로 그 이름의 파일이 실제로 그 자리에 있어야
-한다. 사본이 원본과 갈라지면 `sync_shared.py --check` 가 배포 전에 말한다.
-
-## 안 들어온 것 — 그리고 **왜 안 들어오는지 이제 잰 값이 있다**
-
-계획(§4)은 여기에 `jokbo/`·`publish/`·`quality/` 도 그렸다. 2026-09-14 에 셋을
-**각각 재 봤고, 셋 다 「합치지 말고 하나만 옮겨라」로 끝났다.**
-
-| | 잰 것 | 결론 |
-|---|---|---|
-| 족보 파싱 | 같은 실습 족보에서 문항 277/279 · 짝지음 275 · 정답 269/270 | 합칠 값이 **문항 2개**다. 갈리던 그림 29장은 판정 규칙 하나를 고쳐 메웠다 |
-| R2 올리기 | 엔드포인트가 다르고 720줄 중 대부분이 Study_EZ 전용 | 겹치는 것은 **열 줄**. 땡시에 없던 재시도만 옮겼다(`spotter/scripts/netput.py`) |
-| 모델로 재기 | 카드 형식이 다르다 — 다지선다 vs 자유회상 | 옮기려던 둘이 **둘 다 안 맞는다**. 합칠 것이 없다 |
-
-표와 근거는 [docs/refactor-plan.md](../docs/refactor-plan.md) 의 Phase 2~4 절에 있다.
-
-**세 번 다 같은 모양이었다.** 맞대 보면 「합치면 크게 좋아진다」가 아니라
-**「값이 한 결함에 몰려 있고 그건 따로 고칠 수 있다」**가 나온다. 그래서 폴더를
-안 만든다 — 빈 폴더를 먼저 만들면 「합쳤다」고 착각하게 되고, 그 착각이 이런
-측정을 막는다.
-
-**다시 볼 조건**도 각 절에 적어 두었다. 족보는 다른 과목에서 표를 한 번 더 뜨는
-것, quality 는 땡시에 자유회상이나 빈칸 카드가 생기는 것이다.
+공유 모듈은 두 앱이 실제로 사용하는 코드만 둔다.
+과거 족보·업로드·품질 코드를 합치지 않은 이유는
+[통합 검토 기록](../docs/archive/refactor-plan.md)에 있다.
+앱별 권한과 도메인 연결은 [형제 앱 안내](../docs/sibling-apps.md)를 본다.

@@ -1,6 +1,6 @@
 # runner — 사례
 
-[runner/CLAUDE.md](../runner/CLAUDE.md) 앞쪽 규칙들이 **어디서 나왔는지**를 적는다.
+[runner/CLAUDE.md](2026-10-06-originals/runner/CLAUDE.md) 앞쪽 규칙들이 **어디서 나왔는지**를 적는다.
 2026-10-03 에 그 문서에서 **줄 그대로** 옮겼다(옛 20~157줄). 「이 문서가 한동안
 …라고 적고 있었다」의 「이 문서」는 2026-09-14 이전의 루트 `CLAUDE.md` 다.
 

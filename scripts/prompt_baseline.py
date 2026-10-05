@@ -2,7 +2,7 @@
 
     python scripts/prompt_baseline.py
 
-`docs/handoff-260915-cloze-quality.md` 의 표를 만드는 한 줄이다. **고친 뒤 이 값과
+`docs/archive/handoff-260915-cloze-quality.md` 의 표를 만드는 한 줄이다. **고친 뒤 이 값과
 견주려고 있다** — 관리자가 2026-09-15 에 넷을 반려했고(cloze 로 낼 것이 basic 으로 ·
 질문의 한국어 · 답 길이 · 단순 번역) 그중 셋이 여기서 수치로 선다.
 
@@ -37,7 +37,7 @@ LONG_LINE = 40
 
 def answer_lines(card: dict) -> list[str]:
     """답을 항목 단위로 가른다. 목록 표시(`- `)는 떼고 센다."""
-    return [l.lstrip("- ").strip()            for l in (card.get("a") or "").splitlines() if l.strip()]
+    return [line.lstrip("- ").strip() for line in (card.get("a") or "").splitlines() if line.strip()]
 
 
 def cards_of(work: Path) -> list[dict]:
@@ -116,8 +116,8 @@ def main() -> int:
     print(f"  질문이 {LONG_QUESTION}자 넘는 카드      {sum(x > LONG_QUESTION for x in qq):,}장 "
           f"({sum(x > LONG_QUESTION for x in qq) / len(qq):.0%})   ← ②")
     bs = [c for c in rows if c.get("card_format") == "basic"]
-    ln = [len(l) for c in bs for l in answer_lines(c)]
-    hit = sum(1 for c in bs if any(len(l) > LONG_LINE for l in answer_lines(c)))
+    ln = [len(line) for card in bs for line in answer_lines(card)]
+    hit = sum(1 for card in bs if any(len(line) > LONG_LINE for line in answer_lines(card)))
     print(f"  답의 한 줄                 중앙 {st.median(ln):.0f}자 · "
           f"{LONG_LINE}자 넘는 줄 {sum(x > LONG_LINE for x in ln) / len(ln):.0%}")
     print(f"  그런 줄을 가진 basic       {hit:,}장 ({hit / len(bs):.0%})   ← ③ 은 여기로 본다")

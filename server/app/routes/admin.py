@@ -23,13 +23,15 @@ from sqlalchemy.orm import Session
 from app.auth import CurrentUser, require_admin, require_runner
 from app.config import get_settings
 from app.database import get_db
+from app.jobs.queue import RUNNER_NAME, ensure_auto_job
+from app.jobs.views import job_row, runner_row
 from app.matching import relink
 from app.models import (
     APP_POLICY,
-    CARD_DELETE,
-    CARD_EDIT,
     APP_STUDYEZ,
     ASSET_KINDS,
+    CARD_DELETE,
+    CARD_EDIT,
     CHECKLIST_ITEMS,
     POLICY_AUTO,
     ROLE_MEMBER,
@@ -54,7 +56,6 @@ from app.preview_links import provider as valid_provider
 from app.preview_links import share_url as valid_share_url
 from app.routes import cards
 from app.routes.common import lecture_or_404, storage_or_503
-from app.routes.prequiz_jobs import RUNNER_NAME, ensure_auto_job, job_row, runner_row
 
 router = APIRouter()
 
@@ -316,7 +317,7 @@ def _put_items(
     """문항 파일 통째로. **부분 갱신이 아니라 교체다.**
 
     갈래는 표로만 갈린다(`pre_item` / `main_item`). 모양도 규칙도 같다 —
-    자세한 것은 `app/models.py`의 `_QuizItem`에 있다.
+    자세한 것은 `app/models/quiz.py`의 `_QuizItem`에 있다.
 
     **사람이 사이트에서 내린 판정을 다시 얹는다**(`card_edit`, 2026-09-23). 안 얹으면
     다음 쓸기가 고친 문구를 도로 덮고 뺀 카드를 도로 세운다. 파이프라인이 그 카드를

@@ -1,4 +1,4 @@
-import type { LectureRef, TimetableEvent } from "../types";
+import type { LectureRef, TimetableEvent } from "../types/lectures";
 
 export type CalendarMode = "week" | "month";
 

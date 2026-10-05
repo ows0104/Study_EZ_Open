@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { BankConcept } from "../types";
+import type { BankConcept } from "../types/bank";
 import { DIRECTION_LABEL } from "./labels";
 
 /**

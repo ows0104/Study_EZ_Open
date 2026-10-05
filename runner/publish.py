@@ -35,7 +35,7 @@ Pre-Quiz는 **작년 필기로 만든다**(족보가 정리돼 붙은 쪽이 작
 자리는 같은 강의다.** 한 kind 에 몰면 한 강의에 같은 번호가 둘이 되고 `db.scalar`
 가 아무거나 집는다 — 아무 데서도 안 터지고 예습 해설이 조용히 엉뚱한 슬라이드를
 띄운다. 그래서 kind 로 가른다: 예습이 `media`, 복습이 `main_media`
-(`server/app/models.py`의 `SLIDE_KINDS`).
+(`server/app/models/lectures.py`의 `SLIDE_KINDS`).
 
 **문항이 없는 갈래의 슬라이드는 안 올린다.** 읽을 사람이 없고 편당 12~27MB다.
 
@@ -68,7 +68,7 @@ from . import preview as preview_mod
 from .filenames import LectureFile
 from .watch import assign_run_ids
 
-# 배포된 API. `docs/handoff.md`의 주소이고 --api나 STUDYEZ_API_BASE_URL로 바꾼다.
+# 배포된 API. --api나 STUDYEZ_API_BASE_URL로 바꾼다. 운영 안내는 docs/deployment.md.
 DEFAULT_API_BASE = "https://studyez-api-97999573571.asia-northeast3.run.app"
 
 LEDGER_NAME = "published.json"
@@ -260,7 +260,7 @@ def _add_this_year(plan: LecturePlan, run_dir: Path) -> None:
     올해 강의의 이름으로 올라가 있어서, 같은 `media`로 얹으면 한 강의에 같은
     `slide_no`가 둘이 된다 — `prequiz.slide_url`의 `db.scalar`가 아무거나 집어
     예습 오답 해설이 조용히 엉뚱한 슬라이드를 띄운다. 갈래를 kind로 가르는 것이
-    그것을 막는 자리다(`server/app/models.py`의 `SLIDE_KINDS`).
+    그것을 막는 자리다(`server/app/models/lectures.py`의 `SLIDE_KINDS`).
 
     문항은 `pre_items`와 같은 이유로 있을 때만 올린다 — 2026-08-31 이전에 구운
     편에는 이 파일이 없고, 없으면 화면이 웹 풀이를 아예 안 그린다.

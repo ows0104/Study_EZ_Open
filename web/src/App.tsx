@@ -5,7 +5,8 @@ import { AuthProvider, LoginPage, PendingApproval, useAuth } from "./auth";
 import { CalendarPage } from "./calendar/CalendarPage";
 import { getMe, resetFirstScreen, startFirstScreen } from "./firstScreen";
 import { seenNotice } from "./notices/seen";
-import type { Me, Notice } from "./types";
+import type { Me } from "./types/account";
+import type { Notice } from "./types/notices";
 
 /**
  * 캘린더만 첫 번들에 둔다.

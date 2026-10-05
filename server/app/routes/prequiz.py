@@ -87,7 +87,7 @@ class Quiz(NamedTuple):
     """한 갈래가 쓰는 표 셋. 라우트는 이것만 골라 넘긴다.
 
     **표가 갈린 이유는 `item_id`가 겹치기 때문이다** — 두 갈래 다 `c001`부터
-    센다. 자세한 것은 `app/models.py`의 `_QuizItem`에 있다.
+    센다. 자세한 것은 `app/models/quiz.py`의 `_QuizItem`에 있다.
     """
 
     name: str

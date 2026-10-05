@@ -89,7 +89,7 @@ def test_runtime_prompts_do_not_accumulate_case_history():
 
 
 def test_지도가_가리키는_프롬프트가_다_있다():
-    """`docs/map.md` §2-1 이 프롬프트 폴더 안쪽을 파일 이름으로 안내한다.
+    """`docs/prompt-architecture.md`가 프롬프트 폴더 안쪽을 파일 이름으로 안내한다.
 
     **문서가 없는 파일을 가리키면 그 문서를 믿고 온 사람이 헤맨다.** 프롬프트는
     이름이 자주 바뀌는 쪽이라(`philosophy.md` 가 조립으로 옮겨 간 것처럼) 여기서
@@ -98,7 +98,7 @@ def test_지도가_가리키는_프롬프트가_다_있다():
     import re
 
     root = Path(__file__).parents[2]
-    text = (root / "docs" / "map.md").read_text(encoding="utf-8")
+    text = (root / "docs" / "prompt-architecture.md").read_text(encoding="utf-8")
     named = set(re.findall(r"`((?:core|profiles|domains|adapters)/[\w.]+\.md)`", text))
     named |= set(re.findall(r"^\s{4}([\w_]+\.md)\s", text, re.M))
     assert named, "지도에서 프롬프트 이름을 하나도 못 찾았다 — 정규식이 낡았다"
@@ -108,7 +108,7 @@ def test_지도가_가리키는_프롬프트가_다_있다():
 
 
 def test_지도의_조립_순서가_코드와_같다():
-    """§2-1 이 CORE → PROFILE → ADAPTERS → DOMAIN 이라고 적었다."""
+    """프롬프트 안내의 CORE → PROFILE → ADAPTERS → DOMAIN 순서."""
     from quizgen.prompting import CORE_MODULES, DOMAINS, PROFILES
 
     names = module_names_for_test()

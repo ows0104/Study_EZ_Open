@@ -2,8 +2,8 @@
 
 2026-08-17 기준으로 **API·DB·프론트 배포와 인증 URL/CORS 연결까지 끝났다.**
 실제 작업 순서와 복구 절차는
-[Cloudflare Pages 배포 실행서](cloudflare-pages-runbook.md)와
-[R2 설정·키 교체 실행서](r2-runbook.md)에 기록했다. 로컬 러너도 붙었다(§5).
+[Cloudflare Pages 배포 실행서](../cloudflare-pages-runbook.md)와
+[R2 설정·키 교체 실행서](../r2-runbook.md)에 기록했다. 로컬 러너도 붙었다(§5).
 남은 큰 일은 노출된 DB 비밀번호 교체다.
 
 ## 지금 상태
@@ -121,7 +121,7 @@ Settings에 외부 발송(Resend 등)을 붙여야 한다.
 키는 `server/.env`와 Secret Manager의
 `studyez-r2-access-key-id`·`studyez-r2-secret-access-key`에 반영했다. 실제 R2에
 없는 객체를 HEAD해 인증 성공 뒤 404가 오는 것까지 확인했다. 생성·교체·노출 시
-복구 방법은 [R2 설정·키 교체 실행서](r2-runbook.md)를 그대로 따른다.
+복구 방법은 [R2 설정·키 교체 실행서](../r2-runbook.md)를 그대로 따른다.
 
 ## 5. 로컬 러너 붙이기 — 완료
 

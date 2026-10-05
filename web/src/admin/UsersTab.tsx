@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { api } from "../api";
-import type { AppUser } from "../types";
+import type { AppUser } from "../types/account";
 
 /**
  * 계정 승인.

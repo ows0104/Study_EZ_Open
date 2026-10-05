@@ -5,7 +5,7 @@ import { BundleButton } from "../bundle/BundleButton";
 import { decksIn, useBundleDecks } from "../bundle/decks";
 import { bumpPreviewVersion, usePreviewLink } from "../bridge/previewBridge";
 import { takeTimetable } from "../firstScreen";
-import { previewProviders, type PreviewProvider, type TimetableEvent } from "../types";
+import { previewProviders, type PreviewProvider, type TimetableEvent } from "../types/lectures";
 import { useMe } from "../useMe";
 import { CalendarGrid } from "./CalendarGrid";
 import { EventChip } from "./EventChip";
