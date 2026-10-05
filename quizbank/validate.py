@@ -15,7 +15,7 @@ import re
 import unicodedata
 from datetime import UTC, datetime
 
-from .schema import SCHEMA_VERSION, schema_errors
+from .schema import SCHEMA_VERSION, schema_errors, without_retired
 
 
 # 외부 의학지식으로 쓴 자리(프롬프트 v1.2, 2026-10-05). 첨부 자료가 아니라서 출처 요약에는 안 서지만
@@ -37,6 +37,7 @@ def _in_range(value, lo: float, hi: float) -> bool:
 
 def validate_bank(bank: dict, source_ids: list[str]) -> dict:
     """`{pass, errors, warnings, checked_at}`. `source_ids` 는 첨부한 자료의 ID(S1, S2…)."""
+    bank = without_retired(bank)   # v1.6 에서 뺀 칸은 옛 은행에 있어도 형식 오류가 아니다
     errors = schema_errors(bank)
     warnings: list[str] = []
 
@@ -97,7 +98,7 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
     unique([p["concept_id"] for p in bank["retrieval_plan"]], "retrieval_plan")
     for p in bank["retrieval_plan"]:
         cid = p["concept_id"]
-        fail(cid in concepts and bool(p["directions"]) and _nonempty(p["rationale"]), f"{cid}: 회상 계획 오류")
+        fail(cid in concepts and bool(p["directions"]), f"{cid}: 회상 계획 오류")
         unique(p["directions"], f"{cid} directions")
         fail(_in_range(p["target_mastery"], 0.1, 1) and _in_range(p["repetition_budget"], 1, 100),
              f"{cid}: 학습 예산/목표 범위 오류")
@@ -112,11 +113,10 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
         label = q["question_id"]
         fail(_nonempty(label) and _nonempty(q["question"]) and _nonempty(q["answer"]), f"{label}: 발문/정답/ID 누락")
         fail(q["concept_id"] in concepts, f"{label}: 존재하지 않는 concept_id")
-        fail(all(_in_range(n, 1, 5) for n in (q["importance"], q["concept_difficulty"], q["item_difficulty"])),
+        fail(all(_in_range(n, 1, 5) for n in (q["importance"], q["item_difficulty"])),
              f"{label}: 중요도/난이도는 1–5")
         fail(bool(q["answer_units"]) and all(_nonempty(u) for u in q["answer_units"]), f"{label}: 채점 단위 필요")
         refs(q["source_refs"], label)
-        fail(bool(q["source_strength"]) and all(_nonempty(s) for s in q["source_strength"]), f"{label}: 출처 강도 필요")
         unique(q["prerequisites"], f"{label} prerequisites")
         for pid in q["prerequisites"]:
             fail(pid in questions and pid != label, f"{label}: 잘못된 prerequisite {pid}")

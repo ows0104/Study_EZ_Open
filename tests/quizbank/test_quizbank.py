@@ -151,7 +151,12 @@ def test_정리는_스키마를_넘겨_세션을_부른다(monkeypatch, bank):
 
     monkeypatch.setattr(session, "run_structured", fake)
     out, _ = organize.organize("응답", {"title": "t", "sources": []})
-    assert out is bank and seen["schema"] is BANK and seen["label"] == "정리"
+    assert seen["schema"] is BANK and seen["label"] == "정리"
+    # 프롬프트 v1.6 에서 뺀 칸은 옛 응답을 정리해도 남기지 않는다(받은 은행은 그대로).
+    assert len(out["questions"]) == len(bank["questions"])
+    assert not any(k in q for q in out["questions"] for k in ("concept_difficulty", "cognitive_type", "source_strength"))
+    assert not any("rationale" in p for p in out["retrieval_plan"])
+    assert "cognitive_type" in bank["questions"][0]
 
 
 # ── 외부지식 검토 ──────────────────────────────────────────────────

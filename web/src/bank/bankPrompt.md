@@ -1,10 +1,15 @@
 <!--
 Bank Builder 프롬프트 — 정본
-Version: 1.5
+Version: 1.6
 
 이 파일이 ChatGPT에 가는 프롬프트의 정본이다. 이 주석은 보내지 않는다.
 {{…}} 자리는 web/src/bank/prompt.ts 가 강의마다 채운다. {{c1}} 같은 cloze 표기는 그대로 간다.
 고치면 아래에 판을 하나 올리고 Version 을 같이 올린다. 서버에 응답이 저장될 때 이 Version 이 같이 남는다.
+
+1.6 (2026-10-05)  앱이 읽지 않는 칸을 뺐다(관리자): 문항마다 적던 concept_difficulty(개념 표에 이미 있다) ·
+                   cognitive_type(retrieval_direction 과 거의 같고 앱은 그쪽만 쓴다) · source_strength, 그리고
+                   Retrieval Plan 의 rationale. 자료 밖 표시는 `EXT` 하나로 한다. §5 필드 목록을 §9 출력 형식과
+                   맞췄다(§5 에만 있던 「Concept」·「Source conflict 여부」가 두 지시를 어긋나게 했다).
 
 1.5 (2026-10-05)  출력 끝의 「자료 요약」과 「Quality Audit」 보고를 뺐다(관리자). 앱이 읽지 않는다 — 검증기가 있는지만
                    봤다. 점검(§7)은 그대로 시키고 결과만 낸다. Final Statistics 는 중요한 값만 남겼다(관리자 —
@@ -36,7 +41,7 @@ Version: 1.5
 -->
 첨부한 **올해 필기/강의자료와 족보**를 중심으로 의대 시험 대비용 question bank를 만들어줘.
 
-외부 의학지식은 충분히 써도 된다. 단 **자료에 없거나 자료와 다른 내용**을 문항에 쓰면 그 문항에 표시해라(§5 Source page/slide의 `EXT`, Source strength의 `external_knowledge`).
+외부 의학지식은 충분히 써도 된다. 단 **자료에 없거나 자료와 다른 내용**을 문항에 쓰면 그 문항에 표시해라(§5 Source page/slide의 `EXT`).
 
 강의자료와 족보가 서로 충돌하면 외부 의학지식으로 맞는 답을 정해 **한 문항으로 합치고, source conflict로 표시**해라(§6).
 
@@ -210,22 +215,17 @@ Optional이 과도하게 많아지지 않게 해라.
 
 - ID
 - Concept ID
-- Concept
 - Tier
 - Importance
-- Concept difficulty
 - Item difficulty
 - Format
-- Cognitive type
 - Retrieval direction
 - Question
 - Answer
 - Answer units
 - Prerequisites
 - Source page/slide
-- Source strength
 - 교수 강조 또는 족보 근거
-- Source conflict 여부
 - Conflict ID, 해당되는 경우
 
 ## Answer units
@@ -274,37 +274,13 @@ Prerequisites는 단순히 같은 concept의 이전 문제를 넣는 것이 아�
 
 자료에 없는 내용을 외부 의학지식으로 쓴 문항은 `EXT 외부 의학지식`을 같이 적어라(자료 쪽 근거가 있으면 그것도 함께).
 
-## Source strength
-
-다음 중 적절한 값을 사용해라.
-
-- professor_emphasis
-- repeated_past_exam
-- recent_past_exam
-- lecture_core
-- lecture_only
-- lecture_low_emphasis
-- past_exam_only
-- source_conflict
-- external_knowledge — 자료에 없거나 자료와 다른 내용을 외부 의학지식으로 썼다
-
-필요하면 복수 값을 허용한다.
-
-예:
-
-```text
-Source strength:
-- professor_emphasis
-- repeated_past_exam
-```
-
 # 6. Source Conflict 처리
 
 강의자료와 족보(또는 자료 안의 두 자리)가 서로 다른 표현이나 정답을 제시하면:
 
 1. 출처별로 문항을 나누지 말고 **한 문항으로 합쳐라.**
 2. 정답은 외부 의학지식으로 맞는 쪽을 정해라. 둘 다 맞는 표현이면 그렇게 답하고, 둘 다 틀렸으면 맞는 답을 써라.
-3. 그 문항에 Conflict ID를 붙이고, Source page/slide에 충돌한 자리를 모두 적어라. 외부 의학지식으로 정했으면 `EXT`와 `external_knowledge`도 함께 적는다.
+3. 그 문항에 Conflict ID를 붙이고, Source page/slide에 충돌한 자리를 모두 적어라. 외부 의학지식으로 정했으면 `EXT`도 함께 적는다.
 4. Source Conflicts 표의 description에 **각 출처가 무엇이라고 하는지, 문항의 정답이 무엇이고 왜 그쪽인지**를 적어라. 학생이 답을 본 뒤 이 설명을 읽는다.
 
 예:
@@ -319,7 +295,7 @@ description: 강의자료(S1 p22)는 α2 활성화가 norepinephrine 유리를 �
 「α2 억제 시 epinephrine 증가」다. 교감신경 말단의 전달물질은 norepinephrine이라 문항은 강의자료 쪽으로 답한다.
 ```
 
-자료만으로 정답을 복원할 수 없는 족보 문항(정답 미확인 등)은 외부 의학지식으로 정답을 정하고 `external_knowledge`로 표시해라. 외부 지식으로도 정할 수 없으면 제외해라.
+자료만으로 정답을 복원할 수 없는 족보 문항(정답 미확인 등)은 외부 의학지식으로 정답을 정하고 `EXT`로 표시해라. 외부 지식으로도 정할 수 없으면 제외해라.
 
 # 7. Quality Audit
 
@@ -350,7 +326,7 @@ description: 강의자료(S1 p22)는 α2 활성화가 norepinephrine 유리를 �
 - prerequisite 없이 너무 높은 단계의 integration 문제
 - 자료 근거 없이 생성된 distractor
 - 충돌을 합치면서 어느 쪽이 왜 맞는지 설명하지 않은 문제
-- 자료에 없는 내용을 썼는데 `EXT` · `external_knowledge` 표시가 없는 문제
+- 자료에 없는 내용을 썼는데 `EXT` 표시가 없는 문제
 
 # 8. Final Audit에서 확인할 추가 원칙
 
@@ -407,7 +383,7 @@ atomic direct
 
 표. 열은 이 순서:
 
-`concept_id | directions | rationale | repetition_budget | target_mastery`
+`concept_id | directions | repetition_budget | target_mastery`
 
 - repetition_budget: 1–100. 시험까지 이 concept에 줄 반복량
 - target_mastery: 0.1–1. 시험 전 도달할 숙련도
@@ -422,17 +398,14 @@ Core → Advanced → Optional 순서. 문제마다 아래 블록 하나.
 - concept_id:
 - tier:
 - importance:
-- concept_difficulty:
 - item_difficulty:          1–5
 - format:                   basic / cloze / list / ox / mcq / multi_select / matching / sequence
-- cognitive_type:           direct / reverse / mechanism / discrimination / integration / sequence / trap
-- retrieval_direction:      위와 같은 일곱 값
+- retrieval_direction:      direct / reverse / mechanism / discrimination / integration / sequence / trap
 - question:
 - answer:
 - answer_units:             [ ... ]
 - prerequisites:            [ ... ]
 - source_refs:
-- source_strength:
 - exam_rationale:           교수 강조 또는 족보 근거
 - conflict_id:              없으면 비워 둔다
 ```

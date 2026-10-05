@@ -694,7 +694,6 @@ export type BankQuestion = {
   tier: "Core" | "Advanced" | "Optional";
   importance: number;
   format: BankFormat;
-  cognitive_type: string;
   retrieval_direction: string;
   question: string;
   source_refs: { source_id: string; locator: string }[];

@@ -34,11 +34,9 @@ SOURCE_REF = _object({"source_id": _STR, "locator": _STR})
 
 QUESTION = _object({
     "question_id": _STR, "concept_id": _STR, "tier": _enum(TIERS), "importance": _INT,
-    "concept_difficulty": _INT, "item_difficulty": _INT,
-    "format": _enum(FORMATS), "cognitive_type": _enum(DIRECTIONS),
-    "retrieval_direction": _enum(DIRECTIONS),
+    "item_difficulty": _INT, "format": _enum(FORMATS), "retrieval_direction": _enum(DIRECTIONS),
     "question": _STR, "answer": _STR, "answer_units": _STRS, "prerequisites": _STRS,
-    "source_refs": _array(SOURCE_REF), "source_strength": _STRS, "exam_rationale": _STR,
+    "source_refs": _array(SOURCE_REF), "exam_rationale": _STR,
     "conflict_id": _STR, "options": _array(_object({"id": _STR, "text": _STR})),
     "correct_option_ids": _STRS,
     # matching 은 왼쪽·오른쪽을 따로 보여 주고 짝은 답을 볼 때만 준다.
@@ -59,12 +57,32 @@ BANK = _object({
         "tier": _enum(TIERS), "exam_signal_strength": _enum(["low", "medium", "high"]),
         "related_concepts": _STRS})),
     "retrieval_plan": _array(_object({
-        "concept_id": _STR, "directions": _array(_enum(DIRECTIONS)), "rationale": _STR,
+        "concept_id": _STR, "directions": _array(_enum(DIRECTIONS)),
         "repetition_budget": _INT, "target_mastery": _NUM})),
     "questions": _array(QUESTION),
     "audit_summary": _object({"summary": _STR, "rejected_candidate_count": _INT, "changes": _STRS}),
     "warnings": _STRS,
 })
+
+# 프롬프트 v1.6(2026-10-05, 관리자)에서 뺀 칸. 앱이 읽지 않았다. 옛 응답·옛 은행에는 남아 있으므로
+# 형식을 잴 때와 정리할 때 걷어 낸다(`without_retired`) — 「모르는 칸」 오류로 옛 은행이 막히지 않게.
+RETIRED_QUESTION = ("concept_difficulty", "cognitive_type", "source_strength")
+RETIRED_PLAN = ("rationale",)
+
+
+def without_retired(bank: dict) -> dict:
+    """뺀 칸을 걷은 사본(얕게). 받은 은행은 그대로 둔다."""
+    if not isinstance(bank, dict):
+        return bank
+    out = dict(bank)
+    if isinstance(bank.get("questions"), list):
+        out["questions"] = [{k: v for k, v in q.items() if k not in RETIRED_QUESTION} if isinstance(q, dict) else q
+                            for q in bank["questions"]]
+    if isinstance(bank.get("retrieval_plan"), list):
+        out["retrieval_plan"] = [{k: v for k, v in p.items() if k not in RETIRED_PLAN} if isinstance(p, dict) else p
+                                 for p in bank["retrieval_plan"]]
+    return out
+
 
 VERDICTS = ["ok", "doubt", "wrong"]
 

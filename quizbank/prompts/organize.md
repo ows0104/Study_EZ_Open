@@ -12,7 +12,6 @@
 - Cloze는 발문에 `{{c1}}` 같은 자리만 두고, 답은 answer_units에만 순서대로 둔다.
 - OX의 answer는 `O` 또는 `X`다. 원문의 설명은 answer_units로 옮긴다.
 - 짝짓기·순서 항목에 붙은 번호(`1.` · `A.`)와 정답 짝의 번호는 떼지 말고 원문 그대로 둔다. 정답 짝은 원문의 `1. … - A. …`를 left·right로 나누기만 한다 — 번호로 맞추는 것은 코드가 한다.
-- cognitive_type과 retrieval_direction은 서로 독립이다. 한쪽에서 다른 쪽을 채우지 마라.
 - source_refs의 locator에는 원문의 쪽·문항 표기를 그대로 둔다(예: `p13`, `p13–14`, `2023 Q11`).
 - build_meta.schema_version은 `{{schema_version}}`, build_meta.lecture_title은 강의 제목이다.
 
