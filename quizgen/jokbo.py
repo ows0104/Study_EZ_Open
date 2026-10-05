@@ -29,7 +29,23 @@ from .textutil import word_tokens
 # ─────────────────────────────────────────────────────────────── 정규식/상수
 
 CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮"
-RE_YEAR = re.compile(r"^\s*(19|20)\d{2}\s*$")
+# 연도 머리글. **한 해에 시험이 둘이면 `2016-1` · `2016-2` 로 적는다** — 약리학·기생충학
+# 2020판이 그렇다. 맨 `2016` 만 받던 동안 두 회차의 문항이 앞 머리글(2017)에 붙어
+# 약리학 2020판의 「2017」이 310문항(다른 해 100 안팎)이었고, 정답도 같은 열쇠
+# (2017, 번호)로 들어가 번호가 겹치는 20개는 서로 덮였다(2026-10-05).
+RE_YEAR = re.compile(r"^\s*(19|20)\d{2}(\s*-\s*\d)?\s*$")
+
+
+def year_key(text: str) -> str:
+    """머리글을 회차 이름으로. `2016 - 1` → `2016-1`. 실습 족보의 회차 이름과 같은 꼴이다."""
+    return re.sub(r"\s", "", text)
+
+
+def yy(year: str) -> str:
+    """교수 표의 열 이름. `2016-1` 도 `16` 열을 본다 — 표는 회차를 가르지 않는다."""
+    return year[2:4]
+
+
 RE_QSTART = re.compile(r"^\s*(R?\d{1,3})\s*\.\s*(\S.*)$")
 RE_ANSWER = re.compile(r"^\s*(R?\d{1,3})\s*\.\s*([\d]+(?:\s*,\s*\d+)*)\s*$")
 RE_OPTION = re.compile(rf"^\s*([{CIRCLED}])\s*(.*)$")
@@ -688,7 +704,7 @@ def parse_question_region(doc, pages, title_index, *, lines_of=None,
 
             if RE_YEAR.match(t):
                 close_q()
-                cur_year = t.strip()
+                cur_year = year_key(t)
                 bank, last_no = None, None
                 continue
 
@@ -756,6 +772,26 @@ def parse_question_region(doc, pages, title_index, *, lines_of=None,
 # ─────────────────────────────────────────────────────────────── 정답 파싱
 
 
+class AnswerTable(dict):
+    """`{(연도, 번호): 기록}` 에 **강의 섹션별 기록**을 덧붙인 것.
+
+    정답표는 (연도, 번호)로 전역 결합한다(아래 `parse_answer_region` 머리). 그런데 한
+    해 안에서 번호가 겹치는 판이 있다 — 2026-10-05 에 세어 보니 약리학 2026판 70문항 ·
+    기생충학 2026판 141문항 · 약리학 2020판 272문항이 다른 섹션의 문항과 (연도, 번호)가
+    같았다. 전역 열쇠 하나에 정답이 둘이면 나중 것이 앞 것을 덮어, 한쪽 문항이 남의
+    정답을 받는다.
+
+    그래서 정답표에서 **같은 열쇠가 두 번 이상 나온 것만** 섹션 머리로 갈라 다시 찾는다
+    (`by_section` · `repeated`). 한 번만 나온 열쇠는 전처럼 전역으로 붙는다 — 정답 구역의
+    섹션 경계가 문항 구역과 어긋나도 깨지지 않던 성질을 그대로 둔다.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.by_section: dict[tuple, dict] = {}
+        self.repeated: set[tuple] = set()
+
+
 def parse_answer_region(doc, pages, title_index) -> dict:
     """{(year, no): {'answer':..., 'objection':...}}
 
@@ -763,18 +799,22 @@ def parse_answer_region(doc, pages, title_index) -> dict:
     정답 구역의 섹션 경계가 문항 구역과 한 블록 어긋나도 결합이 깨지지 않는다.
     섹션 제목은 연도 상태를 초기화하는 용도로만 읽는다.
     """
-    out: dict = {}
+    out = AnswerTable()
     cur_year = "unknown"
+    cur_sec: str | None = None
     tail: list[str] = []
     obj_target: tuple | None = None
+    obj_sec: str | None = None
     obj_buf: list[str] = []
 
     def flush_obj():
         nonlocal obj_target, obj_buf
         if obj_target and obj_buf:
-            rec = out.setdefault(obj_target, {"answer": None, "objection": None})
             txt = re.sub(r"\s+", " ", " ".join(obj_buf)).strip()
-            rec["objection"] = (rec["objection"] + "\n" + txt) if rec["objection"] else txt
+            for rec in (out.setdefault(obj_target, {"answer": None, "objection": None}),
+                        out.by_section.setdefault((obj_sec, *obj_target),
+                                                  {"answer": None, "objection": None})):
+                rec["objection"] = (rec["objection"] + "\n" + txt) if rec["objection"] else txt
         obj_target, obj_buf = None, []
 
     for pno in pages:
@@ -797,26 +837,31 @@ def parse_answer_region(doc, pages, title_index) -> dict:
             if hit:
                 flush_obj()
                 cur_year = "unknown"
+                cur_sec = hit[0]
                 tail.clear()
                 continue
 
             if RE_YEAR.match(t):
                 flush_obj()
-                cur_year = t.strip()
+                cur_year = year_key(t)
                 continue
 
             mo = RE_OBJECTION.search(t)
             if mo:
                 flush_obj()
-                obj_target = (cur_year, mo.group(1))
+                obj_target, obj_sec = (cur_year, mo.group(1)), cur_sec
                 continue
 
             ma = RE_ANSWER.match(t)
             if ma:
                 flush_obj()
                 k = (cur_year, ma.group(1))
-                rec = out.setdefault(k, {"answer": None, "objection": None})
-                rec["answer"] = re.sub(r"\s+", "", ma.group(2))
+                answer = re.sub(r"\s+", "", ma.group(2))
+                if k in out and out[k].get("answer") is not None:
+                    out.repeated.add(k)
+                out.setdefault(k, {"answer": None, "objection": None})["answer"] = answer
+                out.by_section.setdefault((cur_sec, *k),
+                                          {"answer": None, "objection": None})["answer"] = answer
                 continue
 
             if obj_target:
@@ -946,7 +991,7 @@ def parse_practical(doc, title: str) -> tuple[list[Question], list[dict]]:
     return questions, layout
 
 
-def join_answer(answers: dict, q: Question) -> dict | None:
+def join_answer(answers: dict, q: Question, section: str | None = None) -> dict | None:
     """정답표에서 이 문항의 기록을 찾는다.
 
     연결형은 번호가 1부터 다시 시작해 정답표에서 `R` 을 달고 나온다(`R7. 3,10`).
@@ -956,7 +1001,13 @@ def join_answer(answers: dict, q: Question) -> dict | None:
     keys = [q.no]
     if q.grouped:
         keys.append(q.no[1:] if q.no.startswith("R") else f"R{q.no}")
+    repeated = getattr(answers, "repeated", set())
     for no in keys:
+        # 정답표에 같은 열쇠가 둘 이상이면 이 섹션 머리 아래 것을 쓴다(`AnswerTable`).
+        if section is not None and (q.year, no) in repeated:
+            rec = answers.by_section.get((section, q.year, no))
+            if rec:
+                return rec
         rec = answers.get((q.year, no))
         if rec:
             return rec
@@ -1041,7 +1092,7 @@ def split_by_professor(payload: dict, professors: list[str]) -> tuple[dict, dict
         if q.get("by") is not None:
             cell = q["by"]          # 옛 판에서 온 문항 — 그 판의 칸 (`merge_older`)
         else:
-            cell = ((by_year.get(year[2:]) or []) + (absorbed.get(year[2:]) or [])
+            cell = ((by_year.get(yy(year)) or []) + (absorbed.get(yy(year)) or [])
                     if RE_YEAR.match(year) else None)
         if cell and any(same_person(a, b) for a in cell for b in professors):
             own.append({k: v for k, v in q.items() if k != "reference"})
@@ -1054,7 +1105,7 @@ def split_by_professor(payload: dict, professors: list[str]) -> tuple[dict, dict
     sec = Section(lecture_key=payload.get("lecture_key", ""), title=payload.get("title", ""))
     sec.questions = [Question(**{k: v for k, v in q.items() if k in fields}) for q in (own or ref)]
     if own:
-        cells = {y[2:]: by_year[y[2:]] for y in own_years if y[2:] in by_year}
+        cells = {yy(y): by_year[yy(y)] for y in own_years if yy(y) in by_year}
         new_stats = repeat_stats(sec, {sec.lecture_key: cells})
         new_stats["professors_by_year"] = {**cells, "26": list(professors)}
         new_stats["professor_changed_2026"] = False
@@ -1210,7 +1261,7 @@ def parse_edition(doc: fitz.Document) -> dict:
     answers = parse_answer_region(doc, regions["written_a"], title_index)
     for sec in sections:
         for q in sec.questions:
-            rec = join_answer(answers, q)
+            rec = join_answer(answers, q, sec.lecture_key)
             if rec:
                 q.answer, q.objection = rec["answer"], rec["objection"]
     return {"regions": regions, "lectures": lectures, "profs": profs, "warn": warn,
@@ -1362,15 +1413,15 @@ def merge_older(sections: list[Section], lectures: list[tuple[str, str]], profs:
                 if q.year not in have[sec.lecture_key] and RE_YEAR.match(q.year)]
         for q in took:
             q.src = src
-            q.by = _older_author(old, older["profs"], q.year[2:], n_lect)
+            q.by = _older_author(old, older["profs"], yy(q.year), n_lect)
         sec.questions += took
         filled = []
         if sec.lecture_key == key:
             cells = profs.setdefault(key, {})
-            for yy, names in sorted(old_cells.items()):
-                if yy not in cells and len(names) <= n_lect:
-                    cells[yy] = names
-                    filled.append(yy)
+            for col, names in sorted(old_cells.items()):
+                if col not in cells and len(names) <= n_lect:
+                    cells[col] = names
+                    filled.append(col)
         rows.append({"old_key": old.lecture_key, "old_title": old.title,
                      "lecture_key": sec.lecture_key, "matched": key, "how": how,
                      "score": round(best, 2), "took": len(took),
@@ -1487,9 +1538,9 @@ def main(argv=None) -> int:
             # 이 조각을 받을 때 제 해가 남아야 한다 — 받는 것은 그쪽도 이 조각이다.
             absorbed: dict[str, list[str]] = {}
             for key, _ in sec.may_contain:
-                for yy, names in (profs.get(key) or {}).items():
-                    absorbed.setdefault(yy, [])
-                    absorbed[yy] += [n for n in names if n not in absorbed[yy]]
+                for col, names in (profs.get(key) or {}).items():
+                    absorbed.setdefault(col, [])
+                    absorbed[col] += [n for n in names if n not in absorbed[col]]
             stats["absorbed_professors_by_year"] = absorbed
         name = slug(sec.lecture_key, sec.title)
         drop = ("body", "span", "bank")
@@ -1578,7 +1629,7 @@ def main(argv=None) -> int:
         print(f"옛 판 {merged['source']}: 섹션 {len(merged['matched'])}개를 이어 문항 {took}개를 "
               f"덧붙였다 (이번 판에 이미 있는 해 · 해 모름은 안 가져왔다)")
         for r in merged["matched"]:
-            years = ",".join(y[2:] for y in r["years"]) or "-"
+            years = ",".join(y[2:] for y in r["years"]) or "-"   # 16-1 처럼 회차까지 보인다
             print(f"   {r['old_key']:>6} {r['old_title'][:24]:<24} → {r['matched']:<6} "
                   f"{r['score']:.2f}  +{r['took']:<3} ({years})  교수칸 +{len(r['prof_years'])}"
                   + (f"  [{r['how']}]" if r['how'] != "제목" else ""))
