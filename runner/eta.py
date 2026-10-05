@@ -214,6 +214,11 @@ def _reports(runs_dir: Path, kind: str) -> list[tuple[Path, Path]]:
     **`revisions/` 는 안 센다.** 수선 회차가 낸 보고서는 한 편이 걸린 시간이 아니다.
     판 폴더 **바로 밑**만 보므로 저절로 빠진다.
     """
+    # **표본 자리가 없는 갈래는 「모른다」다** — 예외가 아니다. Quiz Bank(`bank`)는 판 폴더도
+    # `run.report.json` 도 없어서, 여기서 `KeyError` 가 나자 러너의 일꾼이 통째로 넘어졌다
+    # (2026-10-05). 단계 시간은 `observe` 가 갈래 이름으로 따로 적으므로 그쪽 표본은 쌓인다.
+    if kind not in _KIND_DIRS:
+        return []
     folder = _KIND_DIRS[kind]
     found = [(report, report.parent.parent.parent)
              for report in runs_dir.glob(f"*/{folder}/*/run.report.json")

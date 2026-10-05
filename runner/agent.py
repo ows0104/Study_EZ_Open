@@ -338,52 +338,61 @@ class Agent:
             proc = subprocess.Popen(argv, stdout=sink, stderr=subprocess.STDOUT,
                                     stdin=subprocess.DEVNULL,
                                     cwd=str(self.repo_root), env=env)
-            while proc.poll() is None:
-                time.sleep(STAGE_SECONDS)
-                now = time.time()
-                if now > deadline:
-                    kill_tree(proc)
-                    return 124, [f"{self.timeout // 60}분 안에 끝나지 않아 끊었다"]
-                if job is None:
-                    continue
-                # 그 편을 만드는 동안 계속 만진다. 쓸기가 이 표시를 보고 이번
-                # 회차에서 그 자리를 뺀다(`gate.building_reason`).
-                self.mark_building(job)
-                stage = self.stage_of(log, job)
-                if stage and stage != posted:
-                    if posted:
-                        # **지난 단계가 얼마나 걸렸는지 여기서만 알 수 있다.**
-                        # 다음 편의 「남은 시간」이 이 값에서 나온다.
-                        eta.observe(self.runs_dir, job.kind, posted, now - stage_at)
-                    posted, stage_at = stage, now
-                    guess = eta.estimate(self.runs_dir, job.kind, stage,
-                                         elapsed=now - started, stage_elapsed=0)
-                    answer = self.report(job, stage=stage_prefix + stage,
-                                         stageIndex=guess.index, stageTotal=guess.total,
-                                         etaSeconds=guess.eta_seconds)
-                elif posted:
-                    # 단계가 그대로여도 한 번은 말을 건다. **이것이 박동이다** —
-                    # 한 편을 잡으면 15분 동안 `claim`을 안 부르므로, 여기서 안
-                    # 두드리면 화면이 도는 중인 러너를 죽었다고 말한다.
-                    #
-                    # 남은 시간만 다시 셈해 얹는다. 단계 글이 그대로라 서버는 단계
-                    # 시계를 안 건드리고(`update_prequiz_job`), 화면의 「남은 약
-                    # N분」이 20초마다 줄어든다.
-                    live = eta.estimate(self.runs_dir, job.kind, posted,
-                                        elapsed=now - started, stage_elapsed=now - stage_at)
-                    answer = self.report(job, etaSeconds=live.eta_seconds)
-                else:
-                    # 아직 첫 단계도 안 찍혔다. 살아 있다는 것만 알린다.
-                    answer = self.report(job)
+            try:
+                while proc.poll() is None:
+                    time.sleep(STAGE_SECONDS)
+                    now = time.time()
+                    if now > deadline:
+                        kill_tree(proc)
+                        return 124, [f"{self.timeout // 60}분 안에 끝나지 않아 끊었다"]
+                    if job is None:
+                        continue
+                    # 그 편을 만드는 동안 계속 만진다. 쓸기가 이 표시를 보고 이번
+                    # 회차에서 그 자리를 뺀다(`gate.building_reason`).
+                    self.mark_building(job)
+                    stage = self.stage_of(log, job)
+                    if stage and stage != posted:
+                        if posted:
+                            # **지난 단계가 얼마나 걸렸는지 여기서만 알 수 있다.**
+                            # 다음 편의 「남은 시간」이 이 값에서 나온다.
+                            eta.observe(self.runs_dir, job.kind, posted, now - stage_at)
+                        posted, stage_at = stage, now
+                        guess = eta.estimate(self.runs_dir, job.kind, stage,
+                                             elapsed=now - started, stage_elapsed=0)
+                        answer = self.report(job, stage=stage_prefix + stage,
+                                             stageIndex=guess.index, stageTotal=guess.total,
+                                             etaSeconds=guess.eta_seconds)
+                    elif posted:
+                        # 단계가 그대로여도 한 번은 말을 건다. **이것이 박동이다** —
+                        # 한 편을 잡으면 15분 동안 `claim`을 안 부르므로, 여기서 안
+                        # 두드리면 화면이 도는 중인 러너를 죽었다고 말한다.
+                        #
+                        # 남은 시간만 다시 셈해 얹는다. 단계 글이 그대로라 서버는 단계
+                        # 시계를 안 건드리고(`update_prequiz_job`), 화면의 「남은 약
+                        # N분」이 20초마다 줄어든다.
+                        live = eta.estimate(self.runs_dir, job.kind, posted,
+                                            elapsed=now - started, stage_elapsed=now - stage_at)
+                        answer = self.report(job, etaSeconds=live.eta_seconds)
+                    else:
+                        # 아직 첫 단계도 안 찍혔다. 살아 있다는 것만 알린다.
+                        answer = self.report(job)
 
-                # **멈추라는 말이 여기로 온다.** 서버는 이 프로세스를 모르므로
-                # 표에 적어 두고, 진행을 적으러 온 이 자리에서 우리가 받아 간다.
-                # 나무째 죽이는 까닭은 `kill_tree`에 적혀 있다 — 자식만 죽이면
-                # 빈 세션 넷이 남아 토큰을 계속 쓴다.
-                if self.stop_asked(answer):
-                    self.say(f"    사람이 멈췄다 — {job.label} 하위 프로세스를 내린다")
-                    kill_tree(proc)
-                    return KILLED_BY_HUMAN, tail(log)
+                    # **멈추라는 말이 여기로 온다.** 서버는 이 프로세스를 모르므로
+                    # 표에 적어 두고, 진행을 적으러 온 이 자리에서 우리가 받아 간다.
+                    # 나무째 죽이는 까닭은 `kill_tree`에 적혀 있다 — 자식만 죽이면
+                    # 빈 세션 넷이 남아 토큰을 계속 쓴다.
+                    if self.stop_asked(answer):
+                        self.say(f"    사람이 멈췄다 — {job.label} 하위 프로세스를 내린다")
+                        kill_tree(proc)
+                        return KILLED_BY_HUMAN, tail(log)
+            except BaseException:
+                # **감시하다 넘어져도 자식은 내린다.** 안 내리면 일꾼이 넘어질 때마다 하위
+                # 프로세스가 고아로 남고, 서버의 일감은 「도는 중」이라 다음 일꾼이 같은
+                # 편을 또 띄운다. 2026-10-05 Quiz Bank 첫 실물에서 진행 추정(`eta`)이
+                # `KeyError: 'bank'` 로 20초마다 넘어져 정리 세션(`claude -p`)이 35초마다
+                # 하나씩 쌓였다 — 끊을 때 14개였다.
+                kill_tree(proc)
+                raise
 
         return proc.returncode, tail(log)
 
