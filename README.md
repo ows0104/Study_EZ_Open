@@ -13,31 +13,46 @@
 [Artifact](https://claude.ai/artifact/8CfCDAohjKP6AivnXKGwqH)에 있다 — **정본은 이 절이고**
 페이지는 따라간다.
 
-복습 덱과 예습 덱 두 줄이 같은 러너 하나로 돈다. `*` 은 사람이 해야 움직이는 자리다.
+세 줄이 같은 러너 하나로 돈다. `*` 은 사람이 해야 움직이는 자리다.
+
+    복습 덱     올해 필기 → quizgen → Main-Quiz · .apkg
+    예습 덱     작년 필기 + 예습 대화 → quizgen → Pre-Quiz · .apkg
+    Quiz Bank   올해 필기 + 족보 조각 → ChatGPT → quizbank 정리 → Study Engine
+
+**Quiz Bank 는 복습 덱을 바꿀 줄이다.** 지금은 둘이 나란히 돌고, Quiz Bank 가 검증되면
+복습 덱을 끈다(`web/src/bank/BankPanel.tsx` 머리 주석). 은행은 관리자가 연 편만 학생에게 보인다.
 
 ```
 ① 재료 ─ 저장소 밖
    복습  올해 필기 · 족보 PDF                     Synology/{과목}/필기/2026 · /족보
    예습  작년 필기 + 관리자의 예습 대화 *          bridge 확장이 대화를 열고 링크를 /admin 에 적는다
+   은행  관리자의 ChatGPT 대화 *                  캘린더 「Quiz Bank 만들기」 → 확장이 필기와 족보 조각을
+                                                  붙여 ChatGPT 를 연다 → 답이 끝나면 본문을 서버에 저장
+                                                  (확장이 못 읽는 학교 계정은 「답 붙여넣기」)
 
-② 만든다 ─ 노트북 · runner + quizgen
+② 만든다 ─ 노트북 · runner + quizgen · quizbank
    복습  쓸기가 새 필기를 서버에 알린다  ┐
    예습  예습 링크가 바뀐다              ┘→ 서버가 일감을 세운다 (자동은 하루 6편)
-         일꾼 둘이 15초마다 일감을 집어 quizgen 을 돌린다 — 모델 자리는 claude -p 빈 세션
-         runs/<편>/ → 문지기(runner/gate.py) → publish     10분마다 쓸기가 남은 것을 올린다
+   은행  ChatGPT 답이 저장된다            → 서버가 일감(kind=bank)을 세운다
+         일꾼 둘이 15초마다 일감을 집는다 — 모델 자리는 claude -p 빈 세션
+         덱    quizgen → runs/<편>/ → 문지기(runner/gate.py) → publish    10분마다 쓸기가 남은 것을 올린다
+         은행  python -m quizbank.run — 정리 → 검증(걸린 문항만 뺀다) → 외부지식 검토(표시만)
+               → 인용 쪽 PNG → 서버에 올린다
+         족보 조각은 쓸기가 미리 올려 둔다 — 「Quiz Bank 만들기」 때 확장이 붙이는 것이 이것이다
 
 ③ 나눠 준다 ─ server/ · Cloud Run
-         Postgres(Supabase)  강의 · 카드 · 문항 · 일감 상태
-         R2                  강의록 PDF · .apkg — 로그인한 사람에게 서명 URL 로
+         Postgres(Supabase)  강의 · 카드 · 문항 · 은행 · 학생별 숙련도 · 일감 상태
+         R2                  강의록 PDF · .apkg · 은행 슬라이드 PNG — 로그인한 사람에게 서명 URL 로
+         Study Engine        은행의 다음 문항을 서버가 고른다(server/app/study_engine/)
 
 ④ 학생이 본다 ─ web/ · studyez.kr
          캘린더 → 강의 화면 → 웹 풀이(/mainquiz · /prequiz, 본인 채점) · .apkg 받기
+                           → Quiz Bank 「공부하기」(/bank/…) — 관리자가 「학생에게 열기」한 편만
 ```
 
 ![블럭마다 도는 예습 줄과 수업마다 도는 복습 줄](docs/img/restructure-quizbank.png)
 
-2026-10-03 에 정한 개편 그림이다. 오른쪽 복습 줄은 quizgen 대신 ChatGPT 가 Concept map ·
-Quiz bank 를 만들고 정리를 거쳐 웹 Study Engine 으로 푼다(`quizbank/` · `web/src/bank/`).
+2026-10-03 에 정한 개편 그림이다. 오른쪽이 Quiz Bank 줄, 왼쪽이 예습 줄이다(예습은 그대로 간다).
 
 러너는 Windows 예약 작업 `StudyEZ Agent` 가 로그온 5분 뒤에 띄운다. **노트북이 자면
 같이 멈춘다.**
@@ -47,6 +62,9 @@ Quiz bank 를 만들고 정리를 거쳐 웹 Study Engine 으로 푼다(`quizban
     예습 대화 저장      /admin               예습 덱은 여기서 시작한다
     덱 만들기 · ⟳       캘린더 강의 패널      자동이 안 걸린 편 · 상한에 걸린 편 · 다시 만들 편
     카드 검토           /admin/cards         문지기는 결함 카드를 막지 않고 표시만 한다
+    Quiz Bank 만들기    캘린더 강의 패널      ChatGPT 에서 전송은 사람이 누른다
+    학생에게 열기       캘린더 강의 패널      검토 결과를 보고 편마다 연다
+    Quiz Bank 신고      /admin               학생의 「문제 있음」을 문항별로 본다
     막기               runs/<편>/HOLD
     API 배포           server/deploy.ps1    init-db 먼저. 자동이 아니다
 
