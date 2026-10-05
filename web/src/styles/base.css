@@ -2609,11 +2609,31 @@ button.notice-title:hover:not(:disabled) {
   content: " ✓";
 }
 
+/* 두 열을 가운데로 모은다. `1fr 1fr` 이면 넓은 화면에서 왼쪽 열이 왼쪽 끝에, 오른쪽 열이 한가운데 서서
+   짝을 눈으로 잇기 어려웠다(2026-10-05 관리자). */
 .bank-match {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-top: 12px;
+  grid-template-columns: auto auto;
+  justify-content: center;
+  gap: 4px 56px;
+  max-width: 760px;
+  margin: 16px auto 0;
+}
+
+.bank-progress-actions {
+  display: inline-flex;
+  gap: 10px;
+}
+
+.bank-match li {
+  overflow-wrap: anywhere;
+}
+
+.bank-match b,
+.bank-units b {
+  display: inline-block;
+  min-width: 1.4em;
+  color: var(--accent-ink);
 }
 
 /* 풀이 창은 가운데 정렬이다. 글머리표를 달면 점만 왼쪽 끝에 떨어진다 — 점 없이 가운데로 쌓는다.

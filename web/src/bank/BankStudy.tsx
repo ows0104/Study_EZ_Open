@@ -152,6 +152,8 @@ function BankSolve({ base, onFinished }: { base: string; onFinished: (summary: B
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [reporting, setReporting] = useState(false);
+  // 회차를 끝내지 않고 지도와 진행도를 본다. 열 때마다 새로 읽는다 — 방금 매긴 평가가 숙련도에 들어가 있다.
+  const [peek, setPeek] = useState<BankRead | null>(null);
 
   const next = useCallback(async () => {
     setBusy(true);
@@ -215,9 +217,19 @@ function BankSolve({ base, onFinished }: { base: string; onFinished: (summary: B
     }
   }
 
-  // 키보드 — 기존 웹 풀이와 같다. Space·Enter 로 펴고, 1–4 로 찍는다.
+  async function openPeek() {
+    try {
+      setPeek(await api<BankRead>(base));
+      window.scrollTo(0, 0);
+    } catch (cause) {
+      setError((cause as Error).message);
+    }
+  }
+
+  // 키보드 — 기존 웹 풀이와 같다. Space·Enter 로 펴고, 1–4 로 찍는다. 지도를 보는 동안은 안 받는다.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
+      if (peek) return;
       if (event.target instanceof HTMLElement && ["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName)) return;
       if ((event.key === " " || event.key === "Enter") && !answer) {
         event.preventDefault();
@@ -229,11 +241,31 @@ function BankSolve({ base, onFinished }: { base: string; onFinished: (summary: B
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [answer, reveal, rate]);
+  }, [answer, reveal, rate, peek]);
 
   if (!current?.question) return error ? <p className="notice is-error">{error}</p> : <p className="notice">불러오는 중…</p>;
   const q = current.question;
   const session = current.session;
+
+  if (peek) {
+    const live = peek.session ?? session;
+    return (
+      <div className="quiz bank-start">
+        <p className="quiz-progress bank-progress">
+          <button className="is-quiet" onClick={() => setPeek(null)}>← 문제로 돌아가기</button>
+          <span>{current.examDate ? daysLabel(current.examDate) : ""}</span>
+        </p>
+        {live ? (
+          <p className="bank-note">
+            이번 회차 {live.reviewed} / {live.size}문항 · Again {live.ratings.Again} · Hard {live.ratings.Hard} · Good{" "}
+            {live.ratings.Good} · Easy {live.ratings.Easy} — Core 숙련 {Math.round(live.core_before * 100)}% →{" "}
+            {Math.round(live.core_after * 100)}%
+          </p>
+        ) : null}
+        {peek.conceptMap?.length ? <ConceptMap concepts={peek.conceptMap} /> : null}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -247,7 +279,10 @@ function BankSolve({ base, onFinished }: { base: string; onFinished: (summary: B
             {q.tier} · {DIRECTION_LABEL[q.retrieval_direction] ?? q.retrieval_direction} ·{" "}
             {FORMAT_LABEL[q.format] ?? q.format}
           </span>
-          <button className="is-quiet" onClick={() => void end()}>회차 마치기</button>
+          <span className="bank-progress-actions">
+            <button className="is-quiet" onClick={() => void openPeek()}>개념 지도</button>
+            <button className="is-quiet" onClick={() => void end()}>회차 마치기</button>
+          </span>
         </p>
 
         {q.conflict_id ? (
@@ -300,6 +335,30 @@ function BankSolve({ base, onFinished }: { base: string; onFinished: (summary: B
   );
 }
 
+/**
+ * 문항 ID 를 씨로 삼아 섞는다 — 다시 불러도, 답을 펴도 같은 순서다. 섞은 결과가 원래와 같으면 한 칸 민다.
+ *
+ * 짝짓기 오른쪽 목록을 위한 것이다. 261002_03 의 짝짓기 5문항 중 4문항이 오른쪽을 정답 순서 그대로 냈다
+ * (2026-10-05) — 줄만 맞춰 읽으면 답이 된다.
+ */
+export function shuffled<T>(items: T[], seed: string): T[] {
+  let h = 2166136261;
+  for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
+    h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0;
+    const j = h % (i + 1);
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  if (out.length > 1 && out.every((x, i) => x === items[i])) out.push(out.shift() as T);
+  return out;
+}
+
+const letter = (index: number) => String.fromCharCode(65 + index);
+
+/** ChatGPT 가 항목에 스스로 붙인 꼬리표(`L1:` · `R2:`). 화면의 1·2·A·B 와 겹치므로 보일 때만 뗀다 — 짝은 원문으로 맞춘다. */
+const bare = (item: string) => item.replace(/^[LR]\d+\s*[:.)]\s*/, "");
+
 /** 발문. cloze 빈칸은 답을 보면 채운다. */
 function QuestionBody({ question: q, answer, picked, onPick }: {
   question: BankQuestion;
@@ -341,8 +400,12 @@ function QuestionBody({ question: q, answer, picked, onPick }: {
       ) : null}
       {q.format === "matching" ? (
         <div className="bank-match">
-          <ul>{q.matching_left.map((item) => <li key={item}>{item}</li>)}</ul>
-          <ul>{q.matching_right.map((item) => <li key={item}>{item}</li>)}</ul>
+          <ul>{q.matching_left.map((item, index) => <li key={item}><b>{index + 1}</b> {bare(item)}</li>)}</ul>
+          <ul>
+            {shuffled(q.matching_right, q.question_id).map((item, index) => (
+              <li key={item}><b>{letter(index)}</b> {bare(item)}</li>
+            ))}
+          </ul>
         </div>
       ) : null}
       {q.format === "sequence" ? (
@@ -354,11 +417,15 @@ function QuestionBody({ question: q, answer, picked, onPick }: {
 
 function AnswerBody({ question: q, answer }: { question: BankQuestion; answer: BankAnswer }) {
   const review = answer.medicalReview;
+  const right = q.format === "matching" ? shuffled(q.matching_right, q.question_id) : [];
   return (
     <>
-      <p className="quiz-answer">
-        <Stem text={answer.answer} />
-      </p>
+      {/* 짝짓기는 아래 짝이 곧 답이다. 답 줄은 같은 말을 한 번 더 하거나 「각 pairing」 같은 빈말이다. */}
+      {q.format === "matching" && answer.answerPairs.length ? null : (
+        <p className="quiz-answer">
+          <Stem text={answer.answer} />
+        </p>
+      )}
       {/* 짝짓기·순서·빈칸은 채점 단위가 아래 짝·순서·빈칸과 같은 말이라 또 적지 않는다. */}
       {answer.answerUnits.length > 1 && !["cloze", "matching", "sequence"].includes(q.format) ? (
         <ul className="bank-units">{answer.answerUnits.map((unit) => <li key={unit}>{unit}</li>)}</ul>
@@ -366,7 +433,10 @@ function AnswerBody({ question: q, answer }: { question: BankQuestion; answer: B
       {answer.answerPairs.length ? (
         <ul className="bank-units">
           {answer.answerPairs.map((pair) => (
-            <li key={`${pair.left}-${pair.right}`}>{pair.left} → {pair.right}</li>
+            <li key={`${pair.left}-${pair.right}`}>
+              {bare(pair.left)} → {right.includes(pair.right) ? <b>{letter(right.indexOf(pair.right))}</b> : null}{" "}
+              {bare(pair.right)}
+            </li>
           ))}
         </ul>
       ) : null}
