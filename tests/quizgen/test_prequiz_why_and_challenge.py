@@ -248,3 +248,17 @@ def test_앞면에_유형_배지가_붙는다():
     assert '<span class="tag exam">기출</span>' in head
     assert f'<span class="tag later">{WHY_TAG_LABEL["later"]}</span>' in head
     assert "bogus" not in head                      # 모르는 값은 안 그린다
+
+
+def test_다른_근거가_있으면_필기_강조_배지를_뗀다():
+    """2026-10-05 관리자 — 「필기 강조는 다른 근거 있으면 빼줘」."""
+    from quizgen.prequiz.validate import prune_annotation
+    assert prune_annotation(["exam", "annotation"]) == ["exam"]
+    assert prune_annotation(["annotation", "later", "clinical"]) == ["later", "clinical"]
+    assert prune_annotation(["annotation"]) == ["annotation"]          # 그것뿐이면 남긴다
+    assert prune_annotation(["annotation", "basis"]) == ["annotation", "basis"]
+    raw = _linked([{"kind": "annotation", "detail": "별표"}, {"kind": "clinical", "detail": "진단"}],
+                  why_tags=["annotation", "clinical"])
+    kept, s = _flags(raw)
+    assert kept[0]["why_tags"] == ["clinical"]
+    assert s["autofixed"].get("annotation_tag_dropped") == 1

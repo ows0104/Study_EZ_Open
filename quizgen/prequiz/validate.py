@@ -63,6 +63,19 @@ from .schema import (
 )
 
 
+# 「필기 강조」보다 앞서는 근거. 하나라도 있으면 `annotation` 배지를 뗀다.
+STRONGER_THAN_ANNOTATION = ("exam", "clinical", "later")
+
+
+def prune_annotation(tags: list) -> list:
+    """다른 근거가 있으면 「필기 강조」 배지를 뗀다(2026-10-05 관리자 — 「필기 강조는 다른
+    근거 있으면 빼줘」). 그날 수업 전 6편 90장 중 69장이 필기 강조를 다른 배지와 같이
+    달고 있었다 — 덱마다 15장 중 8~13장이라 배지가 아무것도 가르지 못했다."""
+    if "annotation" in tags and any(t in STRONGER_THAN_ANNOTATION for t in tags):
+        return [t for t in tags if t != "annotation"]
+    return list(tags)
+
+
 # 근거의 기출 문항 표기 — `2025-28` · `2025-28번` · `2025년 28`.
 RE_EXAM_REF = re.compile(r"^\s*(\d{4})\D+(\d+)")
 
@@ -344,6 +357,13 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
         # 위의 「기출을 말하는데 문항이 없다」 표시는 채우기 전에 섰다. 채웠으면 걷는다.
         if c.get("jokbo_ref"):
             flags[c["_idx"]] = [f for f in flags[c["_idx"]] if f != "why_cites_exam_without_ref"]
+
+    for c in kept:
+        tags = list(c.get("why_tags") or [])
+        pruned = prune_annotation(tags)
+        if pruned != tags:
+            c["why_tags"] = pruned
+            autofix["annotation_tag_dropped"] += 1
 
     # 배지가 근거에서 왔는가(2026-10-04). 항목이 `signals` 칸을 갖고 있을 때만 잰다 —
     # 그 전에 만든 승인본은 칸이 없어서, 재면 모든 배지가 「근거 밖」으로 찍힌다.
