@@ -34,6 +34,11 @@
          캘린더 → 강의 화면 → 웹 풀이(/mainquiz · /prequiz, 본인 채점) · .apkg 받기
 ```
 
+![블럭마다 도는 예습 줄과 수업마다 도는 복습 줄](docs/img/restructure-quizbank.png)
+
+2026-10-03 에 정한 개편 그림이다. 오른쪽 복습 줄은 quizgen 대신 ChatGPT 가 Concept map ·
+Quiz bank 를 만들고 정리를 거쳐 웹 Study Engine 으로 푼다(`quizbank/` · `web/src/bank/`).
+
 러너는 Windows 예약 작업 `StudyEZ Agent` 가 로그온 5분 뒤에 띄운다. **노트북이 자면
 같이 멈춘다.**
 
