@@ -136,7 +136,7 @@ WHY_TAGS = (*SIGNAL_KINDS, "basis")
 WHY_TAG_LABEL = {
     "exam": "기출",
     "clinical": "임상",
-    "later": "또 나옴",
+    "later": "연결 개념",  # 2026-10-05 「또 나옴」 → 관리자 「이름이 너무 별로」
     "annotation": "필기 강조",
     "basis": "기본 개념",
 }

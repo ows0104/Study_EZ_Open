@@ -574,7 +574,7 @@ function WhyAsked({ item }: { item: QuizItem }) {
 const WHY_TAG_LABEL: Record<string, string> = {
   exam: "기출",
   clinical: "임상",
-  later: "또 나옴",
+  later: "연결 개념",
   annotation: "필기 강조",
   basis: "기본 개념",
 };
