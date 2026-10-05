@@ -1,4 +1,4 @@
-"""문제은행 JSON 의 모양. 정리 세션에 `--json-schema` 로 주고, 같은 것으로 다시 잰다.
+"""문제은행 JSON 의 모양. 정리 세션에 `--output-schema` 로 주고, 같은 것으로 다시 잰다.
 
 AdaptiveStudy3/bank_builder/schema.mjs 를 옮겼다(2026-10-04). 서버도 같은 모양을 받으므로
 필드를 바꿀 때는 server/app/routes/bank.py와 web/src/types/bank.ts를 같이 본다.

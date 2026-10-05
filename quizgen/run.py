@@ -27,7 +27,7 @@
 수선이 카드를 다시 쓰면 누출이 새로 생길 수 있어 빌드 직전에 한 번 더 본다.
 
 **장부.** 단계마다 시간·비용·토큰을 `usage.jsonl` 에 적고 끝에 표로 낸다.
-값은 `claude -p` 봉투가 이미 주는 것이라 재느라 토큰을 더 쓰지 않는다.
+값은 `codex exec --json` 이벤트가 이미 주는 것이라 재느라 토큰을 더 쓰지 않는다.
 
 사람이 꼭 봐야 하는 것은 둘뿐이다.
   - 학습목표 목록 (빠진 게 있는지) — 기본은 출력만 하고 지나간다. --stop-at-review 로 세운다.
@@ -533,7 +533,7 @@ def main(argv=None) -> int:
                          "auto(기본)면 실습 사진·반복률·교수 교체 순으로 판정한다")
     ap.add_argument("--domain", choices=sorted(DOMAINS),
                     help=f"퀴즈 도메인 정책 (기본 {DEFAULT_DOMAIN}; 범용은 generic)")
-    ap.add_argument("--model", help="빈 세션에 쓸 모델. 생략하면 CLI 기본값")
+    ap.add_argument("--model", help="GPT 모델. 기본 STUDYEZ_MODEL 또는 gpt-6.1-sol")
     ap.add_argument("--timeout", type=int, default=3600, help="세션 하나의 제한 시간(초)")
     ap.add_argument("--jobs", type=int, default=4,
                     help="재현 검사에서 동시에 띄울 빈 세션 수")

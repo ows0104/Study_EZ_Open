@@ -1,8 +1,32 @@
 # quizgen 사용·수정 안내
 
 강의 PDF를 예습·복습 카드와 Anki 덱으로 변환한다.
-모델 단계는 로그인된 `claude` CLI의 빈 세션으로 실행하며, 로컬 파일 처리와 검증은 Python이 맡는다.
+모델 단계는 ChatGPT 계정으로 로그인된 `codex` CLI의 빈 세션으로 실행하며, 로컬 파일 처리와 검증은 Python이 맡는다.
 원본 자료를 서버에 배급하는 작업은 `runner`의 책임이다.
+
+## GPT 실행 설정
+
+`codex login`으로 ChatGPT 계정에 로그인한다. CLI 0.160.0에서 검증했으며
+`exec --ignore-user-config`·`--ignore-rules`·`--output-schema`를 지원해야 한다.
+CLI 옵션과 JSONL 이벤트는 [공식 비대화형 실행 문서](https://learn.chatgpt.com/docs/non-interactive-mode)를 참고한다.
+
+- 기본 모델: `gpt-6.1-sol`. `--model` 또는 `STUDYEZ_MODEL`로 바꾼다.
+- 재현 의미 채점: `gpt-6.1-sol`. `--judge-model`로 바꾸며, 명시적 `--model`이 우선한다.
+- 실행 파일이 PATH에 없으면 Windows Codex 앱의 번들 CLI를 자동으로 찾는다.
+  다른 설치 위치는 `STUDYEZ_CODEX_BIN`에 Codex 실행 파일 경로를 지정한다.
+- 기존 `opus`·`sonnet`·`STUDYEZ_CLAUDE_BIN` 설정은 사용하지 않는다.
+- 사용자 설정·MCP·브라우저·메모리를 끄고 실행한다. 재현 검사는 shell·이미지 도구도 끄며
+  매번 별도 임시 폴더에서 실행한다. 기존 canary 파일 차단 검사를 유지한다.
+- 저작은 workspace-write sandbox에서 shell·view_image로 자료를 읽고 파일을 쓴다.
+  Windows에서는 Codex의 elevated sandbox 구현을 명시한다.
+  PDF는 `studyez_llm/pdf.py`로 지정한 쪽을 렌더한다. 기존 `Read(...)` 표기는
+  `quizgen/session.py`가 Codex용 읽기 지시로 해석하도록 안내한다.
+- 토큰과 모델은 기존 사용량 원장에 기록한다. Codex CLI가 달러 비용을 제공하지 않으므로
+  비용은 미상이며 기존 표의 `·`/0은 실제 무료 또는 청구액 0을 뜻하지 않는다.
+
+Quiz Bank 정리·외부지식 검토도 같은 Codex 실행 어댑터를 사용한다.
+로그인 계정·CLI 경로를 바꾼 뒤에는 실행 중인 `runner agent`를 다시 시작한다.
+기존 생성물은 유지되며 새로 실행하는 모델 단계부터 GPT가 사용된다.
 
 ## 직접 실행
 

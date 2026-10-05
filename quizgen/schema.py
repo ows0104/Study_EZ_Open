@@ -33,8 +33,8 @@ EVIDENCE_TYPES = (
     # 본문도 정답도 복원 과정에서 어긋날 수 있다. 관리자 판정으로 이 자리에서는
     # 모델의 의학 지식을 근거로 쓸 수 있다.
     #
-    # 다만 **웹은 아니다.** 저작 세션의 도구는 `session.AUTHOR_TOOLS` 뿐이고
-    # 검색이 없다. 여기서 말하는 외부 지식은 모델 자신의 것이다.
+    # 다만 **웹은 아니다.** 저작 세션은 웹·커넥터를 끈다(`studyez_llm.codex`).
+    # 여기서 말하는 외부 지식은 모델 자신의 것이다.
     "medical_knowledge",
 )
 IMAGE_FORMATS = ("image_basic", "image_occlusion")

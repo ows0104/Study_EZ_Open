@@ -154,7 +154,9 @@ RE_PREV = re.compile(r"작년 (\d{6}_\d{2})")
 # 걸린다(2026-09-02).
 RE_NOTHING = re.compile(r"^\s*만들 것 0편")
 # 모델 쪽 한도에 걸린 자리. `claude -p`가 이 말을 그대로 싣고 429로 끝난다.
-RE_LIMIT = re.compile(r"(?:session|usage) limit\s*(?:·\s*)?([^\"\\]*)", re.IGNORECASE)
+RE_LIMIT = re.compile(r"(?:(?:session|usage|rate) limit(?: reached| exceeded)?|"
+                      r"you(?:'ve| have) hit your usage limit|insufficient_quota)"
+                      r"\s*(?:·\s*)?([^\"\\]*)", re.IGNORECASE)
 # 하위 로그가 어디 있는지. 실패 줄이 경로를 달고 온다.
 RE_CHILD_LOG = re.compile(r"\(로그: (.+?\.log)\)")
 # `quizgen`가 멈출 때 찍는 말. 로그가 덧붙여 쓰이므로 **마지막 것이 이번 것**이다.
@@ -171,7 +173,10 @@ BLIND_WAIT = 30 * 60
 # 인증이 거절된 자리. `claude -p`가 403으로 **첫 턴에** 끝나고 API가 준 말을 그대로
 # 싣는다(`"api_error_status":403` · "disabled Claude subscription access").
 RE_AUTH = re.compile(r'api_error_status"?\s*:\s*403'
-                     r'|disabled Claude subscription access', re.IGNORECASE)
+                     r'|disabled Claude subscription access'
+                     r'|not logged in|authentication (?:failed|required)'
+                     r'|(?:401|403)\s*(?:unauthorized|forbidden)'
+                     r'|token_expired|refresh_token_reused', re.IGNORECASE)
 # 403을 몇 번까지 되돌려 세우나. **한도와 성격이 같지만 확신의 크기가 다르다** —
 # 한도는 API가 풀리는 시각까지 알려 주는데, 403은 몇 분 뒤 풀릴 블립인지 조직 설정이
 # 정말 꺼진 것인지 그 자리에서 구별할 길이 없다. 뒤엣것이면 끝없이 되돌기만 하므로
@@ -1038,9 +1043,11 @@ def auth_reason(lines: list[str]) -> str:
     """
     def said(text: str) -> str:
         cut = text.rfind(STOPPED)
-        if not RE_AUTH.search(text[cut:] if cut >= 0 else text):
+        current = text[cut:] if cut >= 0 else text
+        if not RE_AUTH.search(current):
             return ""
-        return "인증이 거절됐다 (403) — Claude Code 로그인이 막혀 있다"
+        status = " (403)" if "403" in current else ""
+        return f"인증이 거절됐다{status} — 모델 CLI 로그인을 확인해라 (Codex: codex login)"
 
     return scan_logs(lines, said)
 

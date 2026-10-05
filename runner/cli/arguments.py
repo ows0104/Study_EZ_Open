@@ -27,7 +27,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--build", action="store_true",
                         help="watch·prequeue: 자리만 세우지 말고 덱까지 만든다")
     parser.add_argument("--model", default="",
-                        help="watch·prequeue: 빈 세션에 쓸 모델 (기본: CLI 기본값)")
+                        help="생성 작업의 GPT 모델 (기본: STUDYEZ_MODEL 또는 gpt-6.1-sol)")
     parser.add_argument("--strategy", default="auto",
                         choices=("auto", "기본", "필기", "필기 중심", "족보", "족보 중심",
                                  "사진", "사진 중심",

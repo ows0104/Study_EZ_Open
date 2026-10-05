@@ -4,7 +4,7 @@
 reproduce.py 가 하위 프로세스에서 띄우는 것(풀이·채점)도 있다. 그래서 합계를 메모리에
 들고 있을 수 없다 — 각자 작업 폴더의 `usage.jsonl` 에 적고, 끝에 모아 읽는다.
 
-**세는 값은 전부 `claude -p --output-format json` 봉투가 이미 주는 것이다.**
+**세는 값은 전부 모델 실행 어댑터의 사용량가 이미 주는 것이다.**
 따로 재느라 세션을 더 띄우거나 토큰을 더 쓰지 않는다.
 
 한 번의 run.py 실행은 `run` 표로 묶인다. 하위 프로세스는 환경변수 `PDF2ANKI_RUN`
@@ -32,7 +32,7 @@ SHORT = {"input_tokens": "입력", "output_tokens": "출력",
 
 
 def usage_of(env: dict | None) -> dict:
-    """`claude -p` 봉투에서 토큰만 뽑는다. 없으면 0으로 채운다."""
+    """이전 Claude 봉투에서 토큰만 뽑는다. 없으면 0으로 채운다."""
     u = (env or {}).get("usage") or {}
     return {k: int(u.get(k) or 0) for k in TOKEN_KEYS}
 

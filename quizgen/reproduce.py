@@ -12,7 +12,7 @@
 
 두 가지 방법이 있다. 결과는 같은 파일로 모인다.
 
-  자동  solve / judge — 빈 세션(`claude -p`)을 코드가 직접 띄운다. 도구를 다 꺼서
+  자동  solve / judge — 빈 세션(`codex exec`)을 코드가 직접 띄운다. 도구를 다 꺼서
         정답 파일에 접근할 수 없게 한다. 사람 손이 필요 없으니 매번 돌릴 수 있다.
   수동  prepare / grade — 프롬프트를 파일로 내보내 사람이 새 대화에 붙여넣는다.
         자동이 막혔을 때나 결과를 눈으로 따라가고 싶을 때 쓴다.
@@ -44,13 +44,14 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from studyez_llm.codex import JUDGE_MODEL
+
 from . import ledger
+from .build import AXIS_REASON, DEFECT_REASONS
 from .prompting import DEFAULT_DOMAIN, DOMAINS
 from .schema import IMAGE_FORMATS
 from .session import SessionError, run_blind, verify_blind
 from .textutil import answer_runs, norm_key
-
-from .build import AXIS_REASON, DEFECT_REASONS
 
 PROMPTS = Path(__file__).parent / "prompts"
 # 프롬프트 파일은 "파일에 써라"라고 지시한다. 자동 모드는 도구가 없으니 stdout 으로 돌린다.
@@ -547,7 +548,7 @@ def cmd_axis(d: Path, *, model=None, chunk=25, timeout=1800, retries=1,
     return 0
 
 
-def cmd_judge(d: Path, *, model=None, judge_model="sonnet", chunk=25, timeout=1800,
+def cmd_judge(d: Path, *, model=None, judge_model=JUDGE_MODEL, chunk=25, timeout=1800,
               retries=1, force=False, skip_canary=False, canary_done=False,
               only=None, jobs=4, domain=None, **_) -> int:
     out = d / "reproduce.grades.json"
@@ -721,14 +722,14 @@ def main(argv=None) -> int:
     ap.add_argument("step", choices=["check", "solve", "judge", "apply", "prepare",
                                  "grade", "axis"])
     ap.add_argument("prep_dir")
-    ap.add_argument("--model", help="빈 세션에 쓸 모델 (예: opus, sonnet). 생략하면 CLI 기본값")
+    ap.add_argument("--model", help="GPT 모델 (기본: STUDYEZ_MODEL 또는 gpt-6.1-sol)")
     ap.add_argument("--chunk", type=int, default=25,
                     help="한 세션에 넣을 카드 수. 0 이면 전부 한 번에 (기본 25)")
     ap.add_argument("--timeout", type=int, default=1800, help="세션 하나의 제한 시간(초)")
     ap.add_argument("--retries", type=int, default=1, help="세션 실패 시 재시도 횟수")
     ap.add_argument("--force", action="store_true", help="이미 있는 결과 파일을 덮어쓴다")
-    ap.add_argument("--judge-model", default="sonnet",
-                    help="채점에 쓸 모델. 의미 비교라 작은 모델로 충분하다 (기본 sonnet). "
+    ap.add_argument("--judge-model", default=JUDGE_MODEL,
+                    help=f"채점에 쓸 GPT 모델 (기본 {JUDGE_MODEL}). "
                          "--model 을 주면 그쪽이 이긴다")
     ap.add_argument("--jobs", type=int, default=4, help="동시에 띄울 빈 세션 수")
     ap.add_argument("--only", help="이 카드들만 다시 검사한다 (id 쉼표 구분). "

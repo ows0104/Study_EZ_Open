@@ -43,6 +43,7 @@ Quiz Bank는 관리자가 학생에게 연 강의만 공개됩니다. 로컬 PC�
 | `runner/` | 자료 탐색, 작업 실행, 검증 후 업로드 |
 | `quizgen/` | PDF → 예습·복습 카드와 Anki 덱 |
 | `quizbank/` | ChatGPT 답 → 구조화·검증·검토 |
+| `studyez_llm/` | 생성기 공용 Codex CLI·GPT 실행과 PDF 렌더링 |
 | `bridge/` | PDF를 AI 대화에 붙이고 링크·답을 회수하는 Chrome 확장 |
 | `spotter/` | 땡시 원본 코드와 수동 관리 데이터 |
 | `platform/` | 앱 공용 세션 코드 |
@@ -69,7 +70,8 @@ python -m pytest tests/runner tests/quizbank
 
 서버와 웹은 별도로 실행합니다. 환경 설정과 로컬 실행 명령은
 [서버 README](server/README.md)와 [웹 README](web/README.md)를 따릅니다.
-덱을 생성하려면 원본 PDF와 로그인된 `claude` CLI도 필요합니다.
+덱을 생성하려면 원본 PDF와 ChatGPT 계정으로 로그인된 `codex` CLI도 필요합니다.
+모델 선택과 실행 파일 설정은 [GPT 실행 설정](docs/quizgen.md#gpt-실행-설정)을 봅니다.
 
 컴포넌트를 고칠 때는 해당 폴더의 `CLAUDE.md`와 관련 파일부터 읽습니다.
 문서의 고정 줄 수·검사 수 대신 코드와 실행 결과를 기준으로 판단합니다.

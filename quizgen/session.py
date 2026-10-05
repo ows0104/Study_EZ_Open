@@ -1,52 +1,18 @@
-"""빈 세션을 하나 띄워 프롬프트를 던지고 JSON 을 받아 온다.
-
-재현 검사가 성립하려면 푸는 쪽이 답을 몰라야 한다. 사람이 새 대화를 여는 대신
-`claude -p` 를 쓰면 그 성질을 코드가 보장할 수 있다.
-
-  - 대화 이력이 없다. 카드를 만든 세션의 기억이 넘어가지 않는다.
-  - 작업 디렉터리를 빈 임시 폴더로 둔다. 프로젝트의 CLAUDE.md·메모리가 딸려오지 않는다.
-  - 도구를 전부 끈다. 강의 자료도 items.checked.json 도 열어볼 수 없다.
-    이게 핵심이다. 도구가 살아 있으면 푸는 쪽이 정답 파일을 읽어 버릴 수 있고,
-    그러면 전원 정답이 나오면서 검사는 조용히 무의미해진다.
-
-`--disallowed-tools` 만으로는 부족하다. 프로젝트·사용자 설정에 허용 규칙이 있으면
-그쪽이 이겨서 Read 가 살아난다(실제로 그랬다). 그래서 `--setting-sources ""` 로
-설정을 통째로 안 읽는다. 그리고 정말 막혔는지 실제로 파일을 읽혀 보고 확인한다 —
-차단을 믿지 않고 잰다. 이 검사가 없으면 검사기가 고장 난 채로 통과 도장만 찍는다.
-
-API 키는 필요 없다. 이미 로그인된 CLI 를 그대로 쓴다.
-"""
+"""Codex GPT 세션: 저작은 파일 접근, 재현 검사는 도구를 끈 독립 세션."""
 
 from __future__ import annotations
 
 import json
 import re
 import secrets
-import shutil
-import subprocess
-import tempfile
+import sys
 from pathlib import Path
 
-from . import ledger
+from studyez_llm import codex
+from studyez_llm.codex import SessionError
 
-# 끄는 도구 목록. 주 차단은 run_blind 의 `--tools ""` 이고 이것은 두 번째 겹이다.
-BLIND_DENY = [
-    "Bash", "Read", "Write", "Edit", "NotebookEdit", "Glob", "Grep",
-    "WebFetch", "WebSearch", "Task", "Agent", "TodoWrite", "Skill",
-]
-# 차단 검사를 「돌리지 못했을」 때 몇 번까지 다시 돌리나(`verify_blind`).
 BLIND_PROBE_TRIES = 3
-
 RE_FENCE = re.compile(r"```(?:json)?\s*(.+?)```", re.S)
-
-
-# 저작 세션이 쓸 수 있는 도구. 실행(Bash)과 검색(Web)은 주지 않는다 —
-# 자료는 프롬프트가 지정한 파일 안에 다 있고, 밖을 뒤지면 근거 위계가 깨진다.
-AUTHOR_TOOLS = ["Read", "Write", "Edit", "Glob"]
-
-
-class SessionError(RuntimeError):
-    pass
 
 
 def extract_json(text: str) -> dict:
@@ -83,110 +49,29 @@ def extract_json(text: str) -> dict:
 
 def run_blind(prompt: str, *, model: str | None = None, timeout: int = 1800,
               label: str = "") -> tuple[dict, dict]:
-    """빈 세션에 프롬프트를 주고 JSON 을 받는다. (내용, 실행정보) 를 돌려준다."""
-    exe = shutil.which("claude")
-    if not exe:
-        raise SessionError("claude CLI 를 찾지 못했다. PATH 를 확인해라.")
-
-    argv = [exe, "-p", "--output-format", "json",
-            # 설정을 하나도 읽지 않는다. 허용 규칙이 아래 차단 목록을 이기기 때문이다.
-            "--setting-sources", "",
-            # 계정의 claude.ai 커넥터(MCP)를 안 싣는다. `--setting-sources ""` 로는 안
-            # 빠진다 — 2026-10-03 (claude 2.1.282) 이 argv 그대로 재니 커넥터 5개·도구
-            # 102개가 실려 있었고, 한 줄 프롬프트 입력이 33,008 → 28,766 토큰이 됐다.
-            # ToolSearch 가 살아 있어 이름만 실리므로 차이가 이 정도다 (`--tools ""` 로
-            # ToolSearch 까지 끄면 스키마가 다 실려 131,232 였다). 이 세션은 MCP 를 안 쓴다.
-            "--strict-mcp-config",
-            # 도구를 아예 안 싣는다. `--allowed-tools ""` 는 허용만 비울 뿐 도구는 그대로
-            # 실려서, 차단 목록에 없는 19개(Artifact·SendMessage·Workflow·ToolSearch …)가
-            # 살아 있었다. 2026-10-04 같은 조건에서 29,109 → 3,153 토큰.
-            "--tools", "",
-            # 두 번째 겹. `--tools` 가 어느 판에서 뜻이 바뀌어도 이 목록은 막는다.
-            "--disallowed-tools", ",".join(BLIND_DENY)]
-    if model:
-        argv += ["--model", model]
-
-    # **뒷정리 실패로 편을 죽이지 않는다.** `claude` 가 이 폴더를 cwd 로 잡고 끝나면
-    # 윈도우에서는 핸들이 곧바로 안 놓여서 `rmdir` 이 WinError 32 로 튄다. 혼자 돌 때는
-    # 거의 안 나는데 2026-09-06 에 4편을 나란히 돌리자 **1파 넷이 전부 여기서 죽었다** —
-    # 죽은 자리가 세션의 산출물을 다 받은 뒤라 ①② 20여 분이 「실패」로 보고됐다.
-    # 안 지워진 폴더는 빈 껍데기이고 윈도우가 나중에 치운다.
-    with tempfile.TemporaryDirectory(prefix="quizgen-blind-",
-                                     ignore_cleanup_errors=True) as cwd:
-        try:
-            proc = subprocess.run(argv, input=prompt, cwd=cwd, timeout=timeout,
-                                  capture_output=True, text=True,
-                                  encoding="utf-8", errors="replace")
-        except subprocess.TimeoutExpired as cause:
-            raise SessionError(f"{label or '세션'}: {timeout}초 안에 끝나지 않았다") from cause
-
-    if proc.returncode != 0:
-        tail = (proc.stderr or proc.stdout or "").strip()[-400:]
-        raise SessionError(f"{label or '세션'}: claude 가 {proc.returncode} 로 끝났다\n{tail}")
-
-    try:
-        env = json.loads(proc.stdout)
-        body, meta = env["result"], env
-    except (json.JSONDecodeError, KeyError, TypeError):
-        body, meta = proc.stdout, {}
-
-    if isinstance(meta, dict) and meta.get("is_error"):
-        raise SessionError(f"{label or '세션'}: {str(body)[:400]}")
-
-    info = {"cost_usd": (meta or {}).get("total_cost_usd"),
-            "turns": (meta or {}).get("num_turns"),
-            "session_id": (meta or {}).get("session_id"),
-            "duration_ms": (meta or {}).get("duration_ms"),
-            "usage": ledger.usage_of(meta),
-            "models": ledger.models_of(meta)}
-    return extract_json(body), info
+    """답·자료를 읽는 도구 없이 프롬프트만 전달한다."""
+    info = codex.run(prompt, blind=True, model=model, timeout=timeout, label=label)
+    return extract_json(info["text"]), info
 
 
 def run_agent(prompt: str, *, cwd: Path, model: str | None = None,
-              timeout: int = 3600, label: str = "", resume: str | None = None) -> dict:
-    """자료를 읽고 파일을 쓰는 세션. ①학습목표·②카드·수선 단계가 쓴다.
-
-    눈가리개 세션(run_blind)과 정반대의 물건이다. 이쪽은 강의 PDF와 사이드카를
-    **읽어야** 하고 결과 JSON을 **써야** 한다.
-
-    resume 을 주면 그 세션을 이어서 쓴다. ②가 ①을 이어받으면 46쪽 PDF와 사이드카를
-    다시 읽지 않는다 — 사람이 한 대화에서 ①②를 이어 하던 것과 같은 조건이고,
-    ②는 자기가 세운 목표를 이미 알고 있다.
-    """
-    exe = shutil.which("claude")
-    if not exe:
-        raise SessionError("claude CLI 를 찾지 못했다. PATH 를 확인해라.")
-    argv = [exe, "-p", "--output-format", "json",
-            "--permission-mode", "acceptEdits",
-            # 커넥터(MCP)를 안 싣는다 — run_blind 의 같은 줄 참고. 이쪽은 같은 날
-            # 41,293 → 36,834 토큰. 저작 세션은 턴마다 이 머리를 다시 읽는다.
-            "--strict-mcp-config",
-            "--allowed-tools", ",".join(AUTHOR_TOOLS),
-            "--add-dir", str(Path(cwd).resolve())]
-    if resume:
-        argv += ["--resume", resume]
-    if model:
-        argv += ["--model", model]
-    try:
-        proc = subprocess.run(argv, input=prompt, cwd=str(cwd), timeout=timeout,
-                              capture_output=True, text=True,
-                              encoding="utf-8", errors="replace")
-    except subprocess.TimeoutExpired as cause:
-        raise SessionError(f"{label or '세션'}: {timeout}초 안에 끝나지 않았다") from cause
-    if proc.returncode != 0:
-        tail = (proc.stderr or proc.stdout or "").strip()[-400:]
-        raise SessionError(f"{label or '세션'}: claude 가 {proc.returncode} 로 끝났다\n{tail}")
-    try:
-        env = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        return {"text": proc.stdout, "cost_usd": None,
-                "usage": ledger.usage_of(None), "models": {}}
-    if env.get("is_error"):
-        raise SessionError(f"{label or '세션'}: {str(env.get('result'))[:400]}")
-    return {"text": env.get("result", ""), "cost_usd": env.get("total_cost_usd"),
-            "turns": env.get("num_turns"), "session_id": env.get("session_id"),
-            "duration_ms": env.get("duration_ms"), "usage": ledger.usage_of(env),
-            "models": ledger.models_of(env)}
+              timeout: int = 3600, label: str = "", resume: str | None = None,
+              previous_usage: dict | None = None) -> dict:
+    """자료를 읽고 결과 파일을 쓰며, 같은 Codex 세션에서 다음 단계를 이어 간다."""
+    renderer = Path(__file__).resolve().parents[1] / "studyez_llm" / "pdf.py"
+    adapter = (
+        "이것은 Study_EZ 자료 생성 작업이다. 프롬프트에서 지정한 자료와 출력 경로를 사용한다.\n"
+        "웹·외부 커넥터를 사용하지 않는다. 프로젝트 코드나 지침을 수정하지 않는다.\n"
+        "본문의 Read(path, pages=...)는 읽어야 할 자료·쪽 범위 표기다.\n"
+        "텍스트 파일은 shell로 UTF-8 전체를 나눠 읽는다. PDF는 텍스트 추출로 대신하지 말고 "
+        "아래 Python 도구로 해당 쪽을 PNG로 렌더한 다음 view_image로 빠짐없이 본다.\n"
+        f"Python: {sys.executable}\nPDF 도구: {renderer}\n"
+        "명령 인자: <PDF 경로> --pages <1-20 또는 1,3-5> --out <작업폴더 안 PDF별 임시 이미지 폴더>\n"
+        "쪽 번호는 1부터 센다. 도구가 출력하는 각 이미지 경로를 view_image에 전달한다.\n"
+        "최종 JSON은 본문이 지정한 경로에 UTF-8로 쓴다.\n\n"
+    )
+    return codex.run(adapter + prompt, blind=False, cwd=cwd, model=model,
+                     timeout=timeout, label=label, resume=resume, previous_usage=previous_usage)
 
 
 def verify_blind(target: Path, *, model: str | None = None) -> tuple[bool, str]:

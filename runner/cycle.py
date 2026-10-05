@@ -336,7 +336,7 @@ def report_cost(run_dir: Path) -> None:
     """이 편이 얼마나 들었는지 적는다. 세는 것은 파이프라인이 한다.
 
     예전에는 여기서 세션 트랜스크립트를 뒤져 토큰을 셈했다. 지금은 quizgen가
-    `claude -p --output-format json` 봉투에 이미 실려 오는 값을 단계마다
+    모델 실행 어댑터의 결과에 이미 실려 오는 값을 단계마다
     `usage.jsonl`에 적고 `run.report.json`으로 모으므로, 읽어 보여 주기만 한다.
 
     **`watch.DEFAULT_MAX_ITEMS`를 정할 근거가 여기서 쌓인다.**

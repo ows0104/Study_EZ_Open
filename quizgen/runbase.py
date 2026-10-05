@@ -43,6 +43,7 @@ class BaseRunner:
         self.cost = 0.0
         self.t0 = time.time()
         self.sid: str | None = None      # ① 세션. ②·수선이 이어받아 자료를 다시 안 읽는다
+        self.session_usage: dict | None = None  # Codex 재개 누적값에서 이번 단계만 계산
         # 이번 실행의 표를 한 번만 정하고 환경에 박는다. 이 프로세스가 적는 줄도,
         # 하위 프로세스(reproduce)가 적는 줄도 같은 표를 달아야 '이번 실행'이 묶인다.
         self.run = ledger.run_id()
@@ -149,7 +150,8 @@ class BaseRunner:
         prompt += self.prompt_extra()
         res = run_agent(prompt, cwd=Path.cwd(), model=self.args.model,
                         timeout=self.args.timeout, label=label,
-                        resume=self.sid if resume else None)
+                        resume=self.sid if resume else None,
+                        previous_usage=self.session_usage if resume else None)
         self.cost += res.get("cost_usd") or 0.0
         self.pend_cost += res.get("cost_usd") or 0.0
         self.pend_sessions += 1
@@ -157,6 +159,7 @@ class BaseRunner:
         ledger.add_models(self.pend_models, res.get("models"))
         if res.get("session_id"):
             self.sid = res["session_id"]
+            self.session_usage = res.get("session_usage")
         for line in (res.get("text") or "").strip().splitlines()[-6:]:
             print(f"   {line[:110]}", flush=True)
         return res
