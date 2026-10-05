@@ -212,6 +212,18 @@ function BankAdmin({ lecture, detail }: { lecture: LectureRef; detail: LectureDe
           {bank.status === "failed" && bank.message ? ` — ${bank.message}` : ""}
         </p>
       ) : null}
+      {/* 걸린 문항만 빼고 열었다(2026-10-05 관리자 지시). 무엇을 왜 뺐는지 남긴다 — 빠진 줄 모르면
+          학생 화면의 문항 수가 응답보다 적은 것을 고장으로 읽는다. */}
+      {bank?.dropped?.length ? (
+        <details className="panel-hint">
+          <summary>검증에 걸려 뺀 문항 {bank.dropped.length}개 — {bank.dropped.map((d) => d.questionId).join(", ")}</summary>
+          <ul>
+            {bank.dropped.map((d) => (
+              <li key={d.questionId}>{d.errors.join(" · ")}</li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
       {moving && job ? (
         <p className="panel-hint">
           정리 — {progressLine(job)}

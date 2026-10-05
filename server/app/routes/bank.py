@@ -125,7 +125,10 @@ def summary(db: Session, lecture: Lecture, row: QuizBank | None, *, is_admin: bo
     if is_admin:
         review = row.review or {}
         out.update(respondedAt=_iso(row.responded_at), promptVersion=row.prompt_version, message=row.message,
-                   reviewCounts=review.get("counts"), errorCount=len((row.validation or {}).get("errors", [])))
+                   reviewCounts=review.get("counts"), errorCount=len((row.validation or {}).get("errors", [])),
+                   # 검증에 걸려 뺀 문항(`quizbank.validate.validate_dropping`). 원문은 `GET …/bank` 의 validation 에 있다.
+                   dropped=[{"questionId": d["question_id"], "errors": d["errors"]}
+                            for d in (row.validation or {}).get("dropped", [])])
     return out
 
 

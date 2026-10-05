@@ -1,7 +1,8 @@
 """정리된 문제은행의 구조를 기계로 잰다. 의미가 맞는지는 재지 않는다 — 그건 review.py 다.
 
 AdaptiveStudy3/bank_builder/validate.mjs 를 그대로 옮겼다(2026-10-04). **errors 가 하나라도
-있으면 학생에게 열지 않는다.** warnings 는 보여 주기만 한다.
+있으면 학생에게 열지 않는다.** warnings 는 보여 주기만 한다. 단 문항 하나의 탓인 오류는 그 문항만
+빼고 다시 잰다(`validate_dropping`, 2026-10-05).
 
 경고로 내린 셋 (2026-10-04 관리자 지시): 계획↔문항 대응 두 방향과 「한 자료 안의 충돌」.
 261002_02 실측에서 오류 16건 중 13건이 이것이었고, 프롬프트가 요구하지 않는 것이며,
@@ -198,3 +199,58 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
          "audit_summary 누락/범위 오류")
     warnings.extend(bank["warnings"])
     return result()
+
+
+# 문항 하나의 탓인 오류는 그 문항 ID 로 시작한다 — `Q046: matching 참조 오류`,
+# `Q046 pairs: ID/값 중복`. 개념(`C03: …`)·충돌(`IFN_…: …`)·전체 구조 오류는 여기 안 걸린다.
+_LEAD = re.compile(r"^(\S+?)(?: [a-z]+)?: ")
+
+
+def _question_of(error: str, qids: set[str]) -> str | None:
+    match = _LEAD.match(error)
+    return match.group(1) if match and match.group(1) in qids else None
+
+
+def _without(bank: dict, drop: set[str]) -> dict:
+    """그 문항들을 뺀 은행. 남은 문항이 선행으로 들던 것도 지운다."""
+    kept = []
+    for q in bank["questions"]:
+        if q["question_id"] in drop:
+            continue
+        kept.append({**q, "prerequisites": [p for p in q["prerequisites"] if p not in drop]})
+    return {**bank, "questions": kept}
+
+
+def validate_dropping(bank: dict, source_ids: list[str], max_rounds: int = 5) -> tuple[dict, dict]:
+    """검증에 걸린 **문항만 빼고** 다시 잰다. `(은행, 검증)` — 검증에 `dropped` 가 붙는다.
+
+    2026-10-05 관리자 지시 — 「걸린 문항만 빼고 연다」. 261002_03 이 56문항 중 2문항(짝짓기 정답 쌍이
+    보기 글과 다름 · 충돌 표시가 엉뚱한 문항에 붙음) 때문에 통째로 막혔다.
+
+    **문항 하나의 탓이 아닌 오류가 하나라도 있으면 지금처럼 통째로 막는다.** 그때는 원래 은행과
+    첫 검증을 그대로 돌려준다 — 관리자가 전체 그림을 봐야 한다. 빼서 생긴 오류(통합 문항이 기초를
+    잃음 등)는 다음 회차에서 그 문항도 빼고 같이 적는다.
+    """
+    first = validate_bank(bank, source_ids)
+    current, validation, dropped = bank, first, []
+    for _ in range(max_rounds):
+        if validation["pass"]:
+            break
+        qids = {q["question_id"] for q in current["questions"]}
+        by_question: dict[str, list[str]] = {}
+        for error in validation["errors"]:
+            qid = _question_of(error, qids)
+            if qid is None:
+                return bank, {**first, "dropped": []}
+            by_question.setdefault(qid, []).append(error)
+        originals = {q["question_id"]: q for q in current["questions"]}
+        dropped += [{"question_id": qid, "errors": errors, "question": originals[qid]}
+                    for qid, errors in by_question.items()]
+        current = _without(current, set(by_question))
+        validation = validate_bank(current, source_ids)
+    if not validation["pass"]:
+        return bank, {**first, "dropped": []}
+    if dropped:
+        validation["warnings"].insert(0, f"검증에 걸려 뺀 문항 {len(dropped)}개: "
+                                         + ", ".join(d["question_id"] for d in dropped))
+    return current, {**validation, "dropped": dropped}

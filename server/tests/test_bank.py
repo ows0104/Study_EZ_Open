@@ -70,7 +70,10 @@ def as_admin() -> None:
 def result(respondedAt: str, bank: dict | None = None) -> dict:
     bank = bank or example_bank()
     return {"respondedAt": respondedAt, "bank": bank,
-            "validation": {"pass": True, "errors": [], "warnings": []},
+            # 걸려서 뺀 문항이 하나 있었던 은행이다(`quizbank.validate.validate_dropping`).
+            "validation": {"pass": True, "errors": [], "warnings": [],
+                           "dropped": [{"question_id": "Q9", "errors": ["Q9: matching 참조 오류"],
+                                        "question": {"question_id": "Q9"}}]},
             "review": {"summary": "s", "missing": [], "counts": {"ok": 2, "doubt": 0, "wrong": 1},
                        "reviews": [{"question_id": "Q1", "verdict": "wrong", "note": "교과서와 다르다",
                                     "suggested_answer": "고친 답"}]},
@@ -127,6 +130,9 @@ def main() -> None:
     ok = client.put(f"{ADMIN}/bank", json=result(got["respondedAt"]), headers=RUNNER)
     check("결과를 받고 ready", ok.status_code == 200 and ok.json()["status"] == "ready", ok.text)
     build1 = ok.json()["buildId"]
+    dropped = client.get(f"{ADMIN}/bank", headers=ADMIN_H).json()["summary"]["dropped"]
+    check("관리자는 뺀 문항과 이유를 본다", dropped == [{"questionId": "Q9", "errors": ["Q9: matching 참조 오류"]}],
+          dropped)
 
     print("③ 열기")
     as_student()
@@ -137,7 +143,8 @@ def main() -> None:
     check("열린다", client.put(f"{ADMIN}/bank/open", json={"open": True}, headers=ADMIN_H).json()["open"] is True)
     as_student()
     summary = client.get(f"{BASE}/bank").json()
-    check("학생 요약", summary["summary"]["questionCount"] == 3 and "reviewCounts" not in summary["summary"],
+    check("학생 요약", summary["summary"]["questionCount"] == 3 and "reviewCounts" not in summary["summary"]
+          and "dropped" not in summary["summary"],
           summary["summary"])
     check("시험일은 같은 과목의 시험", summary["examDate"] == "2026-10-20", summary["examDate"])
 

@@ -672,6 +672,8 @@ export type BankSummary = {
   message?: string;
   reviewCounts?: { ok: number; doubt: number; wrong: number } | null;
   errorCount?: number;
+  /** 검증에 걸려 빼고 연 문항(2026-10-05 — 「걸린 문항만 빼고 연다」). */
+  dropped?: { questionId: string; errors: string[] }[];
 };
 
 export type BankSource = {

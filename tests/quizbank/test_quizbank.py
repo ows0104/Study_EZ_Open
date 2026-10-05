@@ -14,7 +14,7 @@ import pytest
 
 from quizbank import organize, review, run, session, slides
 from quizbank.schema import BANK, schema_errors
-from quizbank.validate import validate_bank
+from quizbank.validate import validate_bank, validate_dropping
 
 FIX = Path(__file__).parent / "fixtures"
 RAW = FIX / "response_261002_02.md"
@@ -56,6 +56,41 @@ def test_cloze_빈칸과_채점단위_수가_같아야_한다(bank):
     q = next(x for x in bank["questions"] if x["format"] == "cloze")
     q["answer_units"] = q["answer_units"][:1]
     assert any("cloze는" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
+
+
+def test_걸린_문항만_빼고_다시_잰다(bank):
+    """2026-10-05 관리자 — 「걸린 문항만 빼고 연다」. 실물의 list 셋이 빠지고 나머지 33이 통과한다."""
+    kept, v = validate_dropping(bank, ["S1", "S2"])
+    assert v["pass"] is True and len(kept["questions"]) == 33
+    assert [d["question_id"] for d in v["dropped"]] == ["Q009", "Q015", "Q026"]
+    assert v["dropped"][0]["errors"] == ["Q009: list는 채점 단위 2–5개"]
+    assert v["dropped"][0]["question"]["question_id"] == "Q009"   # 관리자가 원문을 본다
+    assert v["warnings"][0] == "검증에 걸려 뺀 문항 3개: Q009, Q015, Q026"
+    gone = {"Q009", "Q015", "Q026"}
+    assert not any(gone & set(q["prerequisites"]) for q in kept["questions"])
+    assert len(bank["questions"]) == 36                              # 받은 은행은 그대로
+
+
+def test_문항_탓이_아닌_오류가_있으면_통째로_막는다(bank):
+    bank["source_summary"] = [s for s in bank["source_summary"] if s["source_id"] != "S2"]
+    kept, v = validate_dropping(bank, ["S1", "S2"])
+    assert kept is bank and v["pass"] is False and v["dropped"] == []
+    assert "S2: 출처 요약 누락" in v["errors"] and "Q009: list는 채점 단위 2–5개" in v["errors"]
+
+
+def test_뺀_문항_때문에_기초를_잃은_통합_문항도_뺀다(bank):
+    q = {x["question_id"]: x for x in bank["questions"]}
+    base = next(x for x in bank["questions"] if x["retrieval_direction"] == "direct" and not x["conflict_id"]
+                and "[" not in x["question"])
+    top = next(x for x in bank["questions"] if x["retrieval_direction"] == "integration")
+    top["prerequisites"] = [base["question_id"]]
+    base["conflict_id"] = bank["source_conflicts"][0]["conflict_id"]  # 기준 표시 없는 충돌 문항 → 걸린다
+    kept, v = validate_dropping(bank, ["S1", "S2"])
+    gone = [d["question_id"] for d in v["dropped"]]
+    assert v["pass"] is True and base["question_id"] in gone and top["question_id"] in gone
+    assert any("integration의 기초 문항 필요" in e for d in v["dropped"] for e in d["errors"])
+    assert top["question_id"] not in {x["question_id"] for x in kept["questions"]}
+    assert q  # 픽스처가 그대로 읽혔다
 
 
 # ── 정리 ──────────────────────────────────────────────────────────
@@ -146,14 +181,16 @@ def _fake_sessions(monkeypatch, bank):
 
 
 def test_검증에_떨어지면_검토와_슬라이드를_건너뛰고_0으로_끝난다(monkeypatch, tmp_path, bank, capsys):
+    """문항 하나의 탓이 아닌 오류(출처 요약 누락)가 있으면 걸린 문항을 빼지 않고 통째로 막는다."""
+    bank["source_summary"] = [s for s in bank["source_summary"] if s["source_id"] != "S2"]
     _fake_sessions(monkeypatch, bank)
     out = tmp_path / "build"
     code = run.main([str(RAW), "--title", "콜린성", "--run-id", "261002_02", "--out", str(out),
                      "--source", "S1|notes_current|a.pdf", "--source", "S2|jokbo|b.md"])
     assert code == 0
     result = json.loads((out / "result.json").read_text(encoding="utf-8"))
-    assert result["pass"] is False and result["errors"] == 3
-    assert not (out / "review.json").exists()
+    assert result["pass"] is False and result["errors"] == 4 and result["dropped"] == 0
+    assert not (out / "review.json").exists() and not (out / "bank.raw.json").exists()
     assert "── 정리\n── 검증\n" in capsys.readouterr().out
 
 
@@ -170,6 +207,16 @@ def test_통과하면_검토하고_쪽을_모은다(monkeypatch, tmp_path, bank)
     assert json.loads((out / "pages.json").read_text(encoding="utf-8"))["Q002"] == [8, 9]
     assert not (out / "slides" / "stale.png").exists()
     assert len((out / "usage.jsonl").read_text(encoding="utf-8").splitlines()) == 2
+
+
+def test_걸린_문항을_빼면_뺀_은행으로_검토하고_원본을_남긴다(monkeypatch, tmp_path, bank):
+    _fake_sessions(monkeypatch, bank)
+    out = tmp_path / "build"
+    result = run.run(RAW, None, "콜린성", "261002_02", [{"id": "S1"}, {"id": "S2"}], out)
+    assert result["pass"] is True and result["questions"] == 33 and result["dropped"] == 3
+    assert len(json.loads((out / "bank.json").read_text(encoding="utf-8"))["questions"]) == 33
+    assert len(json.loads((out / "bank.raw.json").read_text(encoding="utf-8"))["questions"]) == 36
+    assert result["review"]["ok"] == 33                             # 뺀 문항은 검토하지 않는다
 
 
 def test_세션이_죽으면_멈췄다를_찍고_1로_끝난다(monkeypatch, tmp_path, capsys):

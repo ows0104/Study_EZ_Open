@@ -28,9 +28,9 @@ from pathlib import Path
 
 from . import organize, review, slides
 from .session import SessionError
-from .validate import validate_bank
+from .validate import validate_dropping
 
-OUTPUTS = ("bank.json", "validation.json", "review.json", "pages.json", "result.json", "usage.jsonl")
+OUTPUTS = ("bank.json", "bank.raw.json", "validation.json", "review.json", "pages.json", "result.json", "usage.jsonl")
 
 
 def _write(path: Path, data) -> None:
@@ -68,10 +68,17 @@ def run(raw_path: Path, pdf: Path | None, title: str, run_id: str, sources: list
     _usage(out, "정리", info)
 
     _stage("검증")
-    validation = validate_bank(bank, [s["id"] for s in sources])
+    # 걸린 문항만 빼고 다시 잰다 — 뺀 은행을 `bank.json` 에 다시 쓴다. 빼기 전 것은 `bank.raw.json`.
+    full_count = len(bank.get("questions", []))
+    kept, validation = validate_dropping(bank, [s["id"] for s in sources])
+    if kept is not bank:
+        _write(out / "bank.raw.json", bank)
+        bank = kept
+        _write(out / "bank.json", bank)
     _write(out / "validation.json", validation)
 
     result: dict = {"pass": validation["pass"], "questions": len(bank.get("questions", [])),
+                    "dropped": full_count - len(bank.get("questions", [])),
                     "errors": len(validation["errors"]), "warnings": len(validation["warnings"]),
                     "review": None, "slides": 0, "missing_pages": []}
     if validation["pass"]:
@@ -115,6 +122,8 @@ def main(argv: list[str] | None = None) -> int:
     # 산출물을 다 쓴 뒤의 요약도 실패할 수 있는 코드다 (루트 CLAUDE.md 함정 ①) — 종료 코드를 바꾸지 않는다.
     try:
         verdict = "통과" if result["pass"] else f"검증 오류 {result['errors']}건"
+        if result.get("dropped"):
+            verdict += f" (걸린 문항 {result['dropped']}개를 뺐다)"
         print(f"문항 {result['questions']} · {verdict} · 검토 {result['review']} · 슬라이드 {result['slides']}장"
               + (f" · PDF에 없는 쪽 {result['missing_pages']}" if result["missing_pages"] else ""), flush=True)
     except Exception:  # noqa: BLE001
