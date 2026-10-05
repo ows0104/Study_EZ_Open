@@ -843,13 +843,18 @@ button.resource.is-download:hover:not(:disabled)::after {
   word-break: keep-all;
 }
 
+/* 해설. **상자에 담아 본문 글자로 세운다**(2026-10-04 관리자 — 「해설이 좀 더 눈에 잘
+ * 보이게」). 회색 14px 이던 동안 답 아래 흐린 주석처럼 읽혔다. */
 .quiz-explanation {
   width: fit-content;
   max-width: 100%;
-  margin: 0 auto 8px;
-  color: var(--ink-2);
-  font-size: 14px;
-  line-height: 1.62;
+  margin: 4px auto 10px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--surface-2);
+  font-size: 16px;
+  line-height: 1.65;
   white-space: pre-wrap;
   text-align: left;
   word-break: keep-all;

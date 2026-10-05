@@ -69,11 +69,12 @@ from .schema import MAX_CARDS, MIN_CARDS, WHY_TAG_LABEL
 # 간격은 공용 CSS 와 같은 규칙을 탄다 — `.a` 아래쪽이 0 이므로 **여기 위쪽 하나가**
 # 답과의 사이를 정한다. 12+14 로 더해지던 26px 을 그대로 적는다.
 PRE_CSS = CSS + """
-.bridge { border-top: 1px solid #e2e2e2; margin: 26px auto 0; padding-top: 10px;
-          font-size: 17px; line-height: 1.55; color: #3a3a3a;
+.bridge { margin: 26px auto 0; padding: 12px 16px; border-radius: 10px;
+          background: #f4f5f7;
+          font-size: 17px; line-height: 1.6; color: #1f2329;
           text-align: left; max-width: 100%;
           display: block; width: -webkit-fit-content; width: fit-content; }
-.nightMode .bridge { color: #c6c6c6; border-top-color: #3a3a3a; }
+.nightMode .bridge { color: #e4e6ea; background: #23262b; }
 .why { display: block; margin: 0 auto 12px; font-size: 14px; line-height: 1.5;
        color: #6a6a6a; font-weight: normal; }
 .why .tag { display: inline-block; margin-right: 6px; padding: 1px 7px; border-radius: 9px;

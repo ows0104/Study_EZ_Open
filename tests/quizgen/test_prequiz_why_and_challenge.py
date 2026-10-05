@@ -160,7 +160,9 @@ def test_계약이_왜_냈나를_근거에서_뽑게_한다(tmp_path):
     assert "수업이 답해 줄 질문" in contract
     # 「왜 냈나」는 답 뒤에 보인다 — 도전 문제가 풀리는 대목을 이름으로 적어도 된다.
     assert "답을 편 뒤" in contract
-    assert "대목에서 풀린다" in contract
+    assert "부분에서 답이 나온다" in contract
+    # 학생에게 하는 말 — 관리자가 「한국어가 좀 어색하다」고 짚은 꼴을 계약이 적고 있다.
+    assert "자연스러운 한국어 한 문장" in contract
     # 글은 배지를 되풀이하지 않는다 — 기출 이유만 몰리지 않게.
     assert "글은 배지를 되풀이하지 않는다" in contract
 
@@ -196,11 +198,33 @@ def test_기본_개념_배지는_언제나_된다():
     assert all("why_tag_not_in_signals" not in c["review_flags"] for c in kept)
 
 
-def test_기출_배지는_문항이_있어야_한다():
+def test_기출_배지는_근거에서_문항을_채운다():
     raw = _linked([{"kind": "exam", "detail": "2025 기출", "ref": "2025-28"}],
-                  why_tags=["exam"], why_asked="강의 후반 약물 비교가 이것을 기준으로 선다")
+                  why_tags=["exam"], why_asked="강의 후반 약물 비교의 기준이다")
+    kept, s = _flags(raw)
+    assert kept[0]["jokbo_ref"] == {"year": "2025", "no": "28"}
+    assert "why_cites_exam_without_ref" not in kept[0]["review_flags"]
+    assert s["autofixed"].get("jokbo_ref_from_signals") == 1
+
+
+def test_문항을_못_채우면_표시가_남는다():
+    raw = _linked([{"kind": "exam", "detail": "여러 해 나왔다"}],
+                  why_tags=["exam"], why_asked="강의 후반 약물 비교의 기준이다")
     kept, _ = _flags(raw)
     assert "why_cites_exam_without_ref" in kept[0]["review_flags"]
+
+
+def test_기출_근거가_있으면_글이_달라도_기출_배지가_붙는다():
+    """2026-10-04 — 배지를 글의 유형으로 고르게 했더니 6편에서 16장이 기출 배지를 잃었다."""
+    raw = _linked([{"kind": "exam", "detail": "2025 기출", "ref": "2025-28"},
+                   {"kind": "later", "detail": "뒤에서 또"}],
+                  why_tags=["later", "annotation"], why_asked="뒤의 약물 비교의 기준이다")
+    kept, s = _flags(raw)
+    assert kept[0]["why_tags"][0] == "exam"
+    assert "later" in kept[0]["why_tags"]          # 있던 배지는 그대로 남는다
+    assert s["autofixed"].get("exam_tag_from_signals") == 1
+    # 기출 근거가 없는 항목의 카드는 손대지 않는다.
+    assert "exam" not in kept[1]["why_tags"]
 
 
 def test_배지가_없으면_표시가_선다():

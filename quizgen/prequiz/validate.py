@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -53,12 +54,17 @@ from .schema import (
     MAX_CARDS,
     MAX_CHALLENGE,
     MAX_RECALL_ITEMS,
+    MAX_WHY_TAGS,
     MAX_WHY_CHARS,
     MIN_CARDS,
     OX_SHARE_MAX,
     WHY_CITES_EXAM,
     WHY_TAGS,
 )
+
+
+# 근거의 기출 문항 표기 — `2025-28` · `2025-28번` · `2025년 28`.
+RE_EXAM_REF = re.compile(r"^\s*(\d{4})\D+(\d+)")
 
 
 def _fail(card, code, detail=""):
@@ -314,6 +320,30 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
         method = "not_written"      # 승인본에는 id 가 있는데 카드가 아무도 안 적었다
     else:
         method = "unlinked"         # 2026-08-30 이전에 만든 편이다. 잴 것이 없다
+
+    # 기출 배지는 근거에서 채운다(2026-10-04 관리자 — 「기출 배지가 생각보다 적다」).
+    # 모델에게 맡겼더니 글이 기출 아닌 이유를 쓰면 기출 배지도 같이 빠졌다 — 6편에서
+    # 기출 근거가 있는 항목의 카드 16장. 배지는 「이 주제가 기출에 나왔다」는 사실이고
+    # 그 사실은 승인본에 있으니 코드가 붙인다. 근거 문항(`jokbo_ref`)도 같이 채운다.
+    for c in kept:
+        it = by_id.get(c.get("must_id") or "")
+        exam = [s for s in (it or {}).get("signals") or [] if s.get("kind") == "exam"]
+        if not exam:
+            continue
+        tags = list(c.get("why_tags") or [])
+        if "exam" not in tags:
+            c["why_tags"] = ["exam", *tags][:MAX_WHY_TAGS]
+            autofix["exam_tag_from_signals"] += 1
+        if not c.get("jokbo_ref"):
+            for s in exam:
+                m = RE_EXAM_REF.match(str(s.get("ref") or ""))
+                if m:
+                    c["jokbo_ref"] = {"year": m.group(1), "no": m.group(2)}
+                    autofix["jokbo_ref_from_signals"] += 1
+                    break
+        # 위의 「기출을 말하는데 문항이 없다」 표시는 채우기 전에 섰다. 채웠으면 걷는다.
+        if c.get("jokbo_ref"):
+            flags[c["_idx"]] = [f for f in flags[c["_idx"]] if f != "why_cites_exam_without_ref"]
 
     # 배지가 근거에서 왔는가(2026-10-04). 항목이 `signals` 칸을 갖고 있을 때만 잰다 —
     # 그 전에 만든 승인본은 칸이 없어서, 재면 모든 배지가 「근거 밖」으로 찍힌다.
