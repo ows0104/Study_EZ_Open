@@ -517,7 +517,8 @@ def run_pre(*, pdf: str | Path, run_id: str, subject: str, lecture: str, note: s
 
 
 def cut_jokbo(pdf: Path, out_dir: Path, repo_root: Path,
-              practical: list[Path] | None = None) -> int:
+              practical: list[Path] | None = None,
+              older: list[Path] | None = None) -> int:
     """과목 족보 PDF를 강의별 조각으로 자른다. `quizgen.jokbo` 를 그대로 부른다.
 
     학기당 과목당 한 번이라 사람이 지켜보는 명령이다. 그래서 `_spawn` 과 달리
@@ -527,6 +528,8 @@ def cut_jokbo(pdf: Path, out_dir: Path, repo_root: Path,
     argv = [sys.executable, "-m", "quizgen.jokbo", str(pdf), "-o", str(out_dir)]
     if practical:
         argv += ["--practical", *[str(p) for p in practical]]
+    if older:
+        argv += ["--older", *[str(p) for p in older]]
     done = subprocess.run(argv, cwd=str(repo_root),
                           env=dict(os.environ, PYTHONIOENCODING="utf-8"))
     return done.returncode

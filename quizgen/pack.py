@@ -294,11 +294,175 @@ def jokbo_pin(stem: str, jokbo_dir: Path) -> tuple[bool, str | None]:
     return True, (unicodedata.normalize("NFC", str(value)) if value else None)
 
 
+# ── 올해 교수 ──────────────────────────────────────────────────────
+# 족보는 **올해 그 강의를 맡은 교수가 낸 해만** 쓴다(2026-10-05 관리자). 걸러 주는 것은
+# `jokbo.filter_by_professor` 이고, 여기서는 「올해 교수가 누구인가」만 읽는다.
+#
+# 족보 표의 26년 열은 쓰지 않는다 — 시간표에서 옮긴 것이라 실제와 다르다.
+PROF_GROUP = re.compile(r"\(([^()]*[가-힣][^()]*)\)")
+PROF_TOKEN = re.compile(r"[가-힣]+")
+PROFESSOR_DIR = "교수별"       # 거른 조각이 서는 자리. 판 폴더 아래다
+FILTER_MIN_SCORE = 0.2         # 부르는 쪽 문턱 중 낮은 것(`build.find_jokbo_source`)
+
+
+def _names(text: str) -> list[str]:
+    """괄호 안 글에서 사람 이름만. 2~4자, 또는 3자 이름을 붙여 쓴 것(`문경철김혜령`)."""
+    return [t for t in PROF_TOKEN.findall(text)
+            if 2 <= len(t) <= 4 or (len(t) % 3 == 0 and len(t) <= 12)]
+
+
+def _runs_dir(jokbo_dir: Path) -> Path | None:
+    for parent in Path(jokbo_dir).resolve().parents:
+        if parent.name in ("_materials", "_jokbo"):
+            return parent.parent
+    return None
+
+
+def lecture_professors(prep: dict, jokbo_dir: Path) -> tuple[list[str], str]:
+    """이 편의 **올해** 담당 교수와 그것을 어디서 읽었는가.
+
+    1. `prep["professors"]` — 부르는 쪽이 이미 안다면
+    2. `runs/<편>/pre_target.json` — **예습 자리.** 예습은 작년 필기로 만들므로 파일명의
+       교수는 작년 교수다. 그 자리가 어느 올해 강의를 위해 도는지는 이 파일만 안다
+       (`runner/prequeue.write_target`). 파일이 있으면 비어 있어도 파일명으로 내려가지
+       않는다 — 작년 교수를 올해 교수로 쓰게 된다.
+    3. 필기 파일명의 마지막 괄호 — `[260812_02] 세포의 손상(1)(고지원)_필기자v1`
+    """
+    if prep.get("professors"):
+        return [str(p) for p in prep["professors"]], "prep.json"
+    stem = unicodedata.normalize("NFC", Path(prep.get("source", "")).stem)
+    m = RE_RUN_ID.search(stem)
+    runs = _runs_dir(jokbo_dir)
+    if m and runs:
+        target = runs / m.group(1) / "pre_target.json"
+        if target.is_file():
+            try:
+                got = json.loads(target.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                got = {}
+            names = [n for p in got.get("professors") or [] for n in _names(str(p))]
+            return names, f"{target.parent.name}/pre_target.json ({got.get('run_id', '?')})"
+    groups = PROF_GROUP.findall(NAME_WRITER.sub("", NAME_PREFIX.sub("", stem)))
+    for group in reversed(groups):
+        names = _names(group)
+        if names:
+            return names, "필기 파일명"
+    return [], "필기 파일명에 교수가 없다"
+
+
+def professor_slice(slice_path: Path, prep: dict, jokbo_dir: Path
+                    ) -> tuple[Path | None, dict | None]:
+    """조각을 올해 교수가 낸 해만 남긴 것으로 바꾼다. (쓸 조각, 거른 기록)
+
+    거른 조각은 `<판>/교수별/<교수>/` 에 원래 이름 그대로 선다(.json 과 .md). **카드를
+    만드는 쪽과 뒷면을 굽는 쪽이 같은 파일을 본다** — 둘 다 `find_jokbo` 를 지나기 때문이다.
+
+    - 실습 조각은 거르지 않는다. 족보에 실습 회차별 출제 교수가 적혀 있지 않다.
+    - 원래 문항이 0 이면 그대로 둔다(거를 것이 없다).
+    - 남는 것이 없으면 `None` — **부르는 쪽은 「족보 없음」으로 받는다.** 그 이유는
+      기록(`dropped_all`)에 있다. 재료 없음 · 문턱 미달과 섞이면 안 된다.
+    """
+    from . import jokbo
+
+    payload = json.loads(Path(slice_path).read_text(encoding="utf-8"))
+    if payload.get("lecture_key") == "PRAC":
+        return slice_path, {"skipped": "실습 조각은 회차별 출제 교수가 없어 거르지 않았다"}
+    if not payload.get("questions"):
+        return slice_path, None
+    professors, how = lecture_professors(prep, jokbo_dir)
+    if not professors:
+        return None, {"dropped_all": True, "how": how,
+                      "why": f"올해 담당 교수를 모른다 ({how}) — 누가 낸 해를 남길지 못 정한다",
+                      "n_before": len(payload["questions"]), "n_after": 0}
+    new, note = jokbo.filter_by_professor(payload, professors)
+    note["how"] = how
+    if not new["questions"]:
+        note["dropped_all"] = True
+        note["why"] = (f"올해 교수({'·'.join(professors)})가 낸 해가 이 조각에 없다 — "
+                       f"{jokbo.filter_line(note)}")
+        return None, note
+    out = Path(jokbo_dir) / PROFESSOR_DIR / "·".join(professors)
+    out.mkdir(parents=True, exist_ok=True)
+    target = out / Path(slice_path).name
+    sec = jokbo.Section(lecture_key=new["lecture_key"], title=new["title"],
+                        may_contain=[(m["lecture_key"], m["title"])
+                                     for m in new.get("may_contain") or []])
+    fields = {f for f in jokbo.Question.__dataclass_fields__ if f not in ("body", "span", "bank")}
+    sec.questions = [jokbo.Question(**{k: v for k, v in q.items() if k in fields})
+                     for q in new["questions"]]
+    # 두 세션이 같은 편을 동시에 부를 수 있다. 반쯤 쓰인 파일을 읽지 않게 바꿔 끼운다.
+    for path, text in ((target, json.dumps(new, ensure_ascii=False, indent=2)),
+                       (target.with_suffix(".md"), jokbo.to_markdown(sec, new["stats"]))):
+        tmp = path.with_name(f".{path.name}.{id(text)}.tmp")
+        tmp.write_text(text, encoding="utf-8")
+        tmp.replace(path)
+    return target, note
+
+
+def _filtered(path: Path, score: float, top: list, prep: dict, jokbo_dir: Path
+              ) -> tuple[Path | None, float, list]:
+    """고른 조각을 올해 교수로 거르고, 거른 기록을 1등 후보에 얹어 돌려준다."""
+    got, note = professor_slice(path, prep, jokbo_dir)
+    if note is not None and top:
+        first = (top[0][0], {**top[0][1], "professor_filter": note}, top[0][2])
+        top = [first, *top[1:]]
+    if note and note.get("dropped_all"):
+        print(f"족보 조각: {note['why']}", flush=True)
+    elif note and note.get("n_before"):
+        from .jokbo import filter_line
+        print(f"족보 조각: {filter_line(note)}", flush=True)
+    return got, score, top
+
+
+PROF_TIE_MARGIN = 0.1         # 제목 점수가 이만큼 안에서는 올해 교수가 낸 조각을 고른다
+
+
+def _prefer_professor(scored: list, prep: dict, jokbo_dir: Path) -> list:
+    """제목 점수가 엇비슷한 후보 중 **올해 교수가 낸 해가 있는 조각**을 앞에 세운다.
+
+    제목 대조는 겹치는 낱말에 끌린다. 병리학 `종양의 병태생리(5) 발암의 원인(이혜승)` 이
+    `7 급성염증의 병태생리` 에 0.50, `24-25 종양의 생물학적 특성, 발암의 원인` 에 0.46 이었다
+    (「병태생리」). 올해 교수로 거르기 시작하면 틀린 쪽은 남는 문항이 0 이라 기출이 통째로
+    빠진다. 이혜승이 낸 해는 24-25 에만 있다.
+
+    1등이 이미 올해 교수의 해를 가졌거나, 올해 교수를 모르면 그대로 둔다.
+    """
+    if len(scored) < 2 or scored[0][0] < FILTER_MIN_SCORE:
+        return scored
+    professors, _ = lecture_professors(prep, jokbo_dir)
+    if not professors:
+        return scored
+    from .jokbo import filter_by_professor
+
+    def has_years(entry: dict) -> bool:
+        try:
+            payload = json.loads((jokbo_dir / f"{entry['file']}.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return False
+        return filter_by_professor(payload, professors)[1]["n_after"] > 0
+
+    if has_years(scored[0][1]):
+        return scored
+    for i, cand in enumerate(scored[1:], start=1):
+        if cand[0] < scored[0][0] - PROF_TIE_MARGIN:
+            break
+        if has_years(cand[1]):
+            print(f"족보 조각: 제목은 {scored[0][1]['lecture_key']}({scored[0][0]:.2f}) 쪽이 조금 "
+                  f"닮았지만 올해 교수({'·'.join(professors)})가 낸 해는 "
+                  f"{cand[1]['lecture_key']}({cand[0]:.2f}) 에 있다 — 그쪽을 쓴다", flush=True)
+            return [cand, *scored[:i], *scored[i + 1:]]
+    return scored
+
+
 def find_jokbo(prep: dict, jokbo_dir: Path) -> tuple[Path | None, float, list]:
     """강의 파일명과 족보 목차 제목을 대조해 조각을 고른다.
 
     **사람이 지정해 둔 편은 대조하지 않는다**(`jokbo_pin`). 카드를 만드는 쪽과 뒷면을
     굽는 쪽이 둘 다 여기를 지나므로 지정도 여기 한 곳에서 먹는다.
+
+    **고른 조각은 올해 교수가 낸 해만 남겨서 돌려준다**(`professor_slice`). 같은 이유로
+    여기 한 곳에서 먹는다. 남는 것이 없으면 조각이 `None` 이고, 왜인지는 1등 후보의
+    `professor_filter` 에 있다.
     """
     index = json.loads((jokbo_dir / "index.json").read_text(encoding="utf-8"))
     stem = unicodedata.normalize("NFC", Path(prep["source"]).stem)
@@ -310,7 +474,8 @@ def find_jokbo(prep: dict, jokbo_dir: Path) -> tuple[Path | None, float, list]:
         for e in index["lectures"]:
             if want in (unicodedata.normalize("NFC", e["title"]), e["lecture_key"]):
                 print(f"족보 조각: {PINS_FILE} 가 지정 — {e['lecture_key']} {e['title']}", flush=True)
-                return jokbo_dir / f"{e['file']}.json", 1.0, [(1.0, e, None)]
+                return _filtered(jokbo_dir / f"{e['file']}.json", 1.0, [(1.0, e, None)],
+                                 prep, jokbo_dir)
         # 다시 자르면서 제목이 바뀌었을 수 있다. 조용히 대조로 넘어가면 사람은 지정이
         # 먹은 줄 안다.
         print(f"⚠ {PINS_FILE} 가 지정한 조각 「{want}」이 이 판에 없다 — 제목으로 대조한다",
@@ -336,5 +501,11 @@ def find_jokbo(prep: dict, jokbo_dir: Path) -> tuple[Path | None, float, list]:
     scored.sort(key=lambda x: -x[0])
     if not scored:
         return None, 0.0, []
+    scored = _prefer_professor(scored, prep, jokbo_dir)
     best, entry, via = scored[0]
-    return jokbo_dir / f"{entry['file']}.json", best, scored[:3]
+    path = jokbo_dir / f"{entry['file']}.json"
+    if best < FILTER_MIN_SCORE:
+        # 부르는 쪽이 어차피 안 붙인다(문턱 0.2 · 0.25). 거른 파일을 세우고 「남겼다」를
+        # 찍으면 붙은 줄 안다.
+        return path, best, scored[:3]
+    return _filtered(path, best, scored[:3], prep, jokbo_dir)

@@ -183,7 +183,8 @@ def archive(cut_dir: Path) -> str | None:
 
 
 def write(cut_dir: Path, *, source: Path, pages: int | None = None,
-          practical: list[dict] | None = None, counts: dict | None = None,
+          practical: list[dict] | None = None, older: list[dict] | None = None,
+          counts: dict | None = None,
           cut_id: str | None = None, cut_at: dt.datetime | None = None,
           backfilled: bool = False) -> dict:
     """`cut.json` 을 쓰고 그 내용을 돌려준다.
@@ -199,6 +200,8 @@ def write(cut_dir: Path, *, source: Path, pages: int | None = None,
     }
     if practical:
         mark["practical_sources"] = practical
+    if older:
+        mark["older_sources"] = older
     if counts:
         mark["counts"] = counts
     if backfilled:

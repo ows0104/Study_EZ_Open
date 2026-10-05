@@ -298,8 +298,11 @@ class Runner(BaseRunner):
             print(NO_JOKBO_DIR.format(index=jd / "index.json"), flush=True)
             slice_path = None
         else:
-            slice_path, score, _ = find_jokbo(prep, jd)
-            if not slice_path or score < 0.25:
+            slice_path, score, top = find_jokbo(prep, jd)
+            prof = top[0][1].get("professor_filter") if top else None
+            if not slice_path and prof and prof.get("dropped_all") and score >= 0.25:
+                pass        # 올해 교수가 낸 해가 없다 — `find_jokbo` 가 이미 그 이유를 찍었다
+            elif not slice_path or score < 0.25:
                 print(NO_JOKBO_MATCH.format(score=score), flush=True)
                 slice_path = None
         self.slice_path = slice_path

@@ -34,6 +34,7 @@ RE_QSTART = re.compile(r"^\s*(R?\d{1,3})\s*\.\s*(\S.*)$")
 RE_ANSWER = re.compile(r"^\s*(R?\d{1,3})\s*\.\s*([\d]+(?:\s*,\s*\d+)*)\s*$")
 RE_OPTION = re.compile(rf"^\s*([{CIRCLED}])\s*(.*)$")
 RE_OBJECTION = re.compile(r"\[?\s*(R?\d{1,3})\s*번?\s*이의제기\s*\]?")
+RE_TOC_NOTE = re.compile(r"\s*\((?:변경|신설|폐지|추가)\)\s*$")
 RE_BARE_NUM = re.compile(r"^\s*(\d{1,3}(?:\s*-\s*\d{1,3})?)\s*$")
 # 이 기출이 **그림을 보고 푸는 문항인가.** 실습 족보는 거의 전부가 그렇다.
 #
@@ -99,6 +100,10 @@ class Question:
     # `pages`가 가리키는 PDF. None이면 과목 족보 원본(`index.source_path`)이고,
     # 정수면 조각의 `sources[src]`다 — 실습 족보는 파일이 여럿이라 문항마다 다르다.
     src: int | None = None
+    # 이 문항을 낸 교수. None 이면 조각의 `professors_by_year` 에서 그 해 칸을 본다.
+    # 옛 판에서 덧붙인 문항만 든다 — 옛 판의 섹션이 이번 판의 다른 섹션에 흡수되면
+    # (2020판 `세포의 손상 (3)~(4)` → 2026판 `2-3`) 그 해 칸의 교수가 이 문항의 것이 아니다.
+    by: list[str] | None = None
     # 파싱 중에만 쓰는 작업 영역 (finalize에서 stem/options로 접힌다)
     body: list[dict] = field(default_factory=list, repr=False)
     span: list[tuple] = field(default_factory=list, repr=False)
@@ -303,6 +308,24 @@ def headers_as_toc(doc: fitz.Document, pages: list[int]) -> list[tuple[str, str]
     return found
 
 
+def _table_words(page: fitz.Page) -> list[tuple]:
+    """교수 표 쪽의 낱말. **표 밖 여백에 색 글씨로 적은 메모는 뺀다.**
+
+    약리학 2026판은 표 왼쪽에 파란 글씨로 `26년도 14-15강` · `알킬화합물/유사분열억제
+    항암제` 를 적어 두었다. 그 글자가 제목 열로 들어가 9·10·11 행이 번호를 잃었고
+    (9·10·11·28 의 교수가 비었다) 29·★ 행이 이웃에 붙었다. 표 본문은 검정이다.
+    """
+    words = page.get_text("words")
+    notes = [fitz.Rect(s["bbox"]) for b in page.get_text("dict")["blocks"]
+             for line in b.get("lines", []) for s in line["spans"]
+             if s.get("color", 0) != 0 and s["text"].strip()]
+    if not notes:
+        return words
+    return [w for w in words
+            if not any(r.contains(fitz.Point((w[0] + w[2]) / 2, (w[1] + w[3]) / 2))
+                       for r in notes)]
+
+
 def parse_toc(doc: fitz.Document) -> tuple[list[tuple[str, str]], dict, str | None]:
     """(강의목록, 교수표, 경고) 반환. 교수표 파싱이 미덥지 않으면 경고를 채운다."""
     # 목차 안내 페이지에도 "교수님 목록"이 나오므로 표 머리글("수업제목")로 특정한다
@@ -312,12 +335,26 @@ def parse_toc(doc: fitz.Document) -> tuple[list[tuple[str, str]], dict, str | No
         return [], {}, "교수님 목록 표 페이지를 찾지 못했다"
 
     page = doc[tp]
-    words = page.get_text("words")
+    words = _table_words(page)
+    # **표가 다음 쪽으로 넘어간다.** 약리학 2026판은 35·36 행이 p3 머리에 머리글 없이
+    # 이어진다. 못 읽으면 그 두 강의는 교수가 비어 올해 교수로 거를 때 통째로 빠진다.
+    # 다음 쪽이 행 번호로 시작하면 같은 열 위치로 이어 읽는다(y 는 쪽 높이만큼 내린다).
+    if tp + 1 < doc.page_count:
+        nxt = doc[tp + 1]
+        if "수업제목" not in nxt.get_text() and re.match(r"\s*(\d{1,2}(-\d{1,2})?|★)\s*\n",
+                                                        nxt.get_text()):
+            off = page.rect.height
+            words += [(w[0], w[1] + off, w[2], w[3] + off, *w[4:]) for w in _table_words(nxt)]
 
     # 머리글 행에서 연도 열의 x 중심을 얻는다
     head_y = min((w[1] for w in words if w[4] == "수업제목"), default=None)
     if head_y is None:
         return [], {}, "표 머리글 행을 찾지 못했다"
+    # **표 아래 「문제 출처」 행부터는 강의가 아니다.** 그 행의 칸(`학생 복원` · `학습부`)이
+    # 가장 가까운 마지막 강의 행에 교수 이름으로 붙는다.
+    foot_y = min((w[1] for w in words if w[1] > head_y + 8 and w[4] == "출처"), default=None)
+    if foot_y is not None:
+        words = [w for w in words if w[1] < foot_y - 2]
     year_cols: dict[str, float] = {}
     for w in words:
         if re.fullmatch(r"\d{2}", w[4]) and abs(w[1] - head_y) < 8:
@@ -346,6 +383,7 @@ def parse_toc(doc: fitz.Document) -> tuple[list[tuple[str, str]], dict, str | No
     low_conf: list[str] = []
 
     entries = []
+    seen_keys: dict[str, int] = {}
     for r in rows:
         joined = " ".join(r["parts"]).strip()
         if not joined or "문제 출처" in joined or "답안 출처" in joined or joined.startswith("★ 실습"):
@@ -359,8 +397,16 @@ def parse_toc(doc: fitz.Document) -> tuple[list[tuple[str, str]], dict, str | No
             name = " ".join(p for p in r["parts"] if p.strip() != key).strip()
         else:
             key, name = m.group(1).replace(" ", ""), m.group(2).strip()
+        # 표가 제목 뒤에 다는 표시는 본문 머리에 없다 — `29 유전자 표적 항암 약리 (변경)`.
+        # 남기면 본문 머리와 안 맞아 그 강의 문항이 앞 섹션에 흡수된다.
+        name = RE_TOC_NOTE.sub("", name).strip()
         if not name:
             continue
+        # 같은 번호가 또 나오면 `★2` 처럼 센다. 본문 머리(`headers_as_toc`)와 같은 규칙이다 —
+        # 안 세면 두 행의 교수가 한 칸에 섞이고, 조각 이름이 본문 머리로 세운 판과 갈린다.
+        seen_keys[key] = seen_keys.get(key, 0) + 1
+        if seen_keys[key] > 1:
+            key = f"{key}{seen_keys[key]}"
         entries.append({"key": key, "name": name, "center": sum(r["ys"]) / len(r["ys"])})
 
     # 연도 열의 이름을 가장 가까운 제목 행에 붙인다
@@ -948,6 +994,82 @@ def repeat_stats(sec: Section, profs: dict) -> dict:
             "jokbo_weight_hint": "low" if changed else ("high" if rate >= 0.35 else "normal")}
 
 
+# ─────────────────────────────────────────────────────────────── 올해 교수로 거르기
+#
+# 2026-10-05 관리자 — *"이제부터 올해 실제 강의교수가 낸 족보만을 근거로 하자."*
+#
+# **올해 교수는 족보 표의 26년 열에서 읽지 않는다.** 그 열은 시간표에서 옮겨 적은
+# 것이라 실제와 다르다(약리학 약동학 — 표는 유경상·이승환, 실제 허기영). 올해 교수는
+# 부르는 쪽이 필기 파일명이나 `pre_target.json` 에서 읽어 넘긴다(`pack.lecture_professors`).
+# **해마다의 출제 교수는 표에서 읽는다** — 그것 말고는 적힌 곳이 없다.
+
+
+def same_person(a: str, b: str) -> bool:
+    """두 이름이 같은 사람인가. 파일명이 이름을 붙여 쓰는 일이 있다 — `(문경철김혜령)`."""
+    if a == b:
+        return True
+    return len(a) >= 2 and len(b) >= 2 and (a in b or b in a)
+
+
+def filter_by_professor(payload: dict, professors: list[str]) -> tuple[dict, dict]:
+    """조각에서 **올해 교수가 낸 해의 문항만** 남긴다. (새 조각, 무엇을 뺐는가)
+
+    한 해의 출제자는 족보 표의 그 해 칸이다. 칸이 비었거나(표에 없는 해 · 표를 못
+    읽은 강의) 해를 모르는 문항은 **뺀다** — 올해 교수가 냈다고 확인되지 않는다.
+
+    한 칸에 교수가 둘이면(함께 맡은 강의) 올해 교수가 그 안에 있을 때 그 해를 통째로
+    남긴다. 족보는 문항마다 출제자를 적지 않아서 그 해 안에서는 가를 수 없다.
+    다른 강의를 흡수한 섹션(`may_contain`)도 같다 — 흡수된 강의의 칸까지 같이 보고,
+    섞인 문항을 골라내는 일은 지금처럼 조각 머리의 경고가 모델에게 맡긴다.
+
+    남은 문항은 올해 교수가 낸 해의 것이므로 `professor_changed_2026` 은 끈다. 반복률도
+    남은 문항으로 다시 잰다 — 그 교수가 무엇을 되풀이해 냈는가가 이제 그 값의 뜻이다.
+    """
+    stats = payload.get("stats") or {}
+    by_year = stats.get("professors_by_year") or {}
+    absorbed = stats.get("absorbed_professors_by_year") or {}
+    kept, dropped = [], {}
+    for q in payload.get("questions") or []:
+        year = str(q.get("year", ""))
+        if q.get("by") is not None:
+            cell = q["by"]          # 옛 판에서 온 문항 — 그 판의 칸 (`merge_older`)
+        else:
+            cell = ((by_year.get(year[2:]) or []) + (absorbed.get(year[2:]) or [])
+                    if RE_YEAR.match(year) else None)
+        if cell and any(same_person(a, b) for a in cell for b in professors):
+            kept.append(q)
+            continue
+        row = dropped.setdefault(year, {"year": year, "n": 0, "by": cell or None})
+        row["n"] += 1
+    kept_years = sorted({str(q["year"]) for q in kept}, reverse=True)
+    sec = Section(lecture_key=payload.get("lecture_key", ""), title=payload.get("title", ""))
+    fields = {f for f in Question.__dataclass_fields__ if f not in ("body", "span", "bank")}
+    sec.questions = [Question(**{k: v for k, v in q.items() if k in fields}) for q in kept]
+    cells = {y[2:]: by_year[y[2:]] for y in kept_years if y[2:] in by_year}
+    new_stats = repeat_stats(sec, {sec.lecture_key: cells})
+    new_stats["professors_by_year"] = {**cells, "26": list(professors)}
+    new_stats["professor_2026"] = list(professors)
+    new_stats["professor_changed_2026"] = False
+    new_stats["jokbo_weight_hint"] = "high" if new_stats["repeat_rate"] >= 0.35 else "normal"
+    note = {"professors": list(professors),
+            "n_before": len(payload.get("questions") or []), "n_after": len(kept),
+            "kept_years": kept_years,
+            "dropped": sorted(dropped.values(), key=lambda r: r["year"], reverse=True)}
+    new_stats["professor_filter"] = note
+    return {**payload, "stats": new_stats, "questions": kept}, note
+
+
+def filter_line(note: dict) -> str:
+    """거른 것을 사람이 읽는 한 줄. 조각 머리와 화면이 같은 말을 한다."""
+    who = "·".join(note.get("professors") or []) or "미상"
+    kept = " · ".join(note.get("kept_years") or []) or "없음"
+    gone = " · ".join(f"{r['year']}({'/'.join(r['by']) if r.get('by') else '출제자 모름'})"
+                      for r in note.get("dropped") or [])
+    line = (f"올해 교수({who})가 낸 해만 남겼다 — 문항 {note.get('n_before', 0)} → "
+            f"{note.get('n_after', 0)} · 남긴 해 {kept}")
+    return line + (f" · 뺀 해 {gone}" if gone else "")
+
+
 # ─────────────────────────────────────────────────────────────── 출력
 
 
@@ -961,6 +1083,8 @@ def to_markdown(sec: Section, stats: dict) -> str:
     yr = stats["professors_by_year"]
     if yr:
         L.append("담당 교수: " + " | ".join(f"20{y} {'·'.join(v)}" for y, v in sorted(yr.items(), reverse=True)))
+    if stats.get("professor_filter"):
+        L.append(filter_line(stats["professor_filter"]))
     if stats["professor_changed_2026"]:
         L.append("⚠ 2026년 교수 교체 — 족보 신뢰도를 낮춰 사용할 것")
     L.append(f"문항 {stats['n_questions']}개 · 연도간 반복률 {stats['repeat_rate']:.0%} "
@@ -992,36 +1116,18 @@ def to_markdown(sec: Section, stats: dict) -> str:
     return "\n".join(L)
 
 
-def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="족보 PDF를 강의별 조각으로 미리 자른다")
-    ap.add_argument("pdf")
-    ap.add_argument("-o", "--out", default="out/jokbo")
-    ap.add_argument("--practical", nargs="+", metavar="PDF",
-                    help="실습 족보 PDF (여러 개 가능). 주면 PRAC 조각을 이것으로만 만든다")
-    args = ap.parse_args(argv)
+def _caught(doc: fitz.Document, regions: dict, lectures: list[tuple[str, str]]) -> int:
+    """이 강의 목록으로 섹션을 세우면 해를 아는 문항이 몇 개 잡히는가."""
+    sections = parse_question_region(doc, regions["written_q"], title_aliases(lectures))
+    return sum(1 for s in sections for q in s.questions if RE_YEAR.match(q.year))
 
-    doc = fitz.open(args.pdf)
 
-    # **`-o` 는 과목 폴더를 받고 조각은 그 아래 판 폴더로 들어간다.**
-    # `runs/_materials/기생충학/260915-0130/` 같은 자리다.
-    #
-    # 과목 이름은 **`-o` 로 받은 폴더의 이름**에서 읽는다(아래 `prac_name`). 그래서
-    # 여기에 판 폴더를 직접 받으면 안 된다 — 실습 조각이 「260915-0130 실습」이라는
-    # 이름으로 나온다. 그 이름은 `find_jokbo` 가 제목으로 대조하는 값이다.
-    #
-    # 판마다 폴더가 따로 서므로 **아무것도 덮지 않는다.** 앞 컷을 밀어내던
-    # `cutmark.archive` 가 그래서 할 일이 없어졌다.
-    subject_dir = Path(args.out)
-    subject_dir.mkdir(parents=True, exist_ok=True)
-    cut_id = cutmark.new_cut_id()
-    taken = set(cutmark.cuts(subject_dir))
-    base, n = cut_id, 1
-    while cut_id in taken:
-        n += 1
-        cut_id = f"{base}.{n}"
-    outdir = subject_dir / cut_id
-    outdir.mkdir(parents=True, exist_ok=True)
+def parse_edition(doc: fitz.Document) -> dict:
+    """족보 한 권의 필기 구역을 강의별 섹션으로 읽는다. 정답·이의제기까지 붙인다.
 
+    `main` 이 자르는 판과 `--older` 로 덧붙이는 옛 판이 **같은 길을 지난다.** 두 길로
+    두면 한쪽에만 고친 것(목차가 없는 판 · 두 쪽짜리 목차 표)이 다른 쪽에서 다시 난다.
+    """
     regions = split_regions(doc)
     lectures, profs, warn = parse_toc(doc)
     body = headers_as_toc(doc, regions["written_q"])
@@ -1032,7 +1138,12 @@ def main(argv=None) -> int:
         if lectures:
             warn = (f"{warn} — 본문 머리로 강의 {len(lectures)}개를 세웠다. "
                     f"교수 목록이 없어 교수 교체 판정은 이 판에서 안 선다")
-    elif len(body) > len(lectures):
+    elif len(body) > len(lectures) or (
+            len(body) == len(lectures) and _caught(doc, regions, body) >= _caught(doc, regions, lectures)):
+        # 같은 수면 **본문 문항을 덜 잃는 쪽**이다. 2026-10-05 에 표를 끝까지 읽게 되자
+        # (`_table_words` · 다음 쪽 이어 읽기) 약리학 2026판이 표 31 · 본문 31 로 같아졌다.
+        # 표로 세우면 `★ 항암 항체 치료제` 행이 29 에 붙어 있어 그 6문항이 29 로 흡수됐다.
+        # 기생충학 2026판은 같은 18 · 18 인데 본문으로 세우면 568 문항 중 128 을 잃는다.
         # **목차 표가 본문보다 적게 잡혔다.** 약리학 2026 완전판(2026-10-01)이 그랬다 —
         # 표가 두 쪽에 걸쳐 둘째 쪽(35·36)을 못 읽었고, 줄 간격이 좁은 행이 이웃 행에
         # 붙었다(9→10 · 29·★→28). 그러면 놓친 강의의 문항이 앞 강의에 흡수되고
@@ -1066,6 +1177,221 @@ def main(argv=None) -> int:
             rec = join_answer(answers, q)
             if rec:
                 q.answer, q.objection = rec["answer"], rec["objection"]
+    return {"regions": regions, "lectures": lectures, "profs": profs, "warn": warn,
+            "title_index": title_index, "sections": sections, "answers": answers}
+
+
+# ─────────────────────────────────────────────────────────────── 옛 판 덧붙이기
+#
+# 2026-10-05 관리자 — *"족보를 2026, 2020년꺼를 써서, 2026-2015까지를 커버할 수
+# 있도록 하자."* 2026판은 2020·2021·2022·2023·2025 시험을, 2020판은 2015~2019
+# 시험을 싣는다(병리학·미생물학 실측 — 약리학 2026판은 2017~2019 도 일부 싣는다).
+#
+# **강의 번호로 잇지 않고 제목으로 잇는다.** 두 판의 번호가 다르다 — 병리학
+# `조직 재생 및 수복` 이 2020판 6-7 · 2026판 5-6 이다.
+
+OLDER_MATCH_MIN = 0.5      # 제목 글자쌍 자카드. 이 아래면 잇지 않는다
+OLDER_MATCH_GAP = 0.05     # 1등과 2등이 이만큼도 안 벌어지면 어느 쪽인지 모른다
+
+
+# 두 판이 같은 것을 달리 적은 말. 약리학 2020판 `유전자 타겟 항암약리` = 2026판 `유전자 표적 항암 약리`.
+TITLE_SYNONYMS = {"타겟": "표적"}
+
+
+def _title_grams(title: str) -> set[str]:
+    k = norm(title).lower()
+    for a, b in TITLE_SYNONYMS.items():
+        k = k.replace(a, b)
+    return {k[i:i + 2] for i in range(len(k) - 1)} or {k}
+
+
+def _title_sim(old: str, new: str, contained: bool = False) -> float:
+    """옛 판 제목과 이번 판 목차 제목의 닮은 정도 (글자쌍 자카드).
+
+    `contained` 면 **이번 판 제목이 옛 제목 안에 통째로 들었을 때** 0.9 로 친다. 옛 판
+    제목에 덧붙은 말이 있다 — 약리학 2020판 `항염증 약리 2019년도 기준 “NSAIDs …`.
+    자카드로 아무것도 못 이었을 때만 쓴다(`merge_older`). 처음부터 쓰면 `신호전달 타겟
+    항암약리` 가 `31 신호전달 표적항암제`(0.70)를 두고 묶음 섹션 `★2 표적 항암 약리` 로
+    갔다. 짧은 제목이 아무 데나 들어가지 않게 글자쌍 넷 이상일 때만 본다.
+    """
+    go, gn = _title_grams(old), _title_grams(new)
+    jac = len(go & gn) / len(go | gn) if go | gn else 0.0
+    if contained and len(gn) >= 4 and gn <= go:
+        return max(jac, 0.9)
+    return jac
+
+
+def _n_lectures(key: str) -> int:
+    if "-" in key:
+        a, b = key.split("-", 1)
+        if a.isdigit() and b.isdigit():
+            return int(b) - int(a) + 1
+    return 1
+
+
+def _names_of(cells: dict) -> set[str]:
+    return {n for names in (cells or {}).values() for n in names}
+
+
+def _older_author(old: Section, old_profs: dict, yy: str, n_lect: int) -> list[str]:
+    """옛 판 문항 하나의 출제 교수. 모르면 빈 목록 — 거르는 쪽이 뺀다.
+
+    **옛 판 섹션이 다른 강의를 흡수했으면 그 해 칸이 문항마다의 출제자가 아니다.**
+    병리학 2020판 `유전질환` 섹션에 `소아질환` 문항이 섞여 있다(본문에 소아질환
+    머리가 없다). 그해 두 강의 교수가 같을 때만 그 이름을 쓴다.
+    """
+    cell = (old_profs.get(old.lecture_key) or {}).get(yy) or []
+    if not cell or len(cell) > n_lect:
+        return []
+    for key, _ in old.may_contain:
+        other = (old_profs.get(key) or {}).get(yy) or []
+        if set(other) != set(cell):
+            return []
+    return list(cell)
+
+
+def merge_older(sections: list[Section], lectures: list[tuple[str, str]], profs: dict,
+                older: dict, src: int) -> dict:
+    """옛 판(`parse_edition` 결과)의 문항과 교수 칸을 이번 판에 덧붙인다.
+
+    **잇는 상대는 이번 판의 섹션이 아니라 목차 강의다.** 이번 판 본문에 문항이 없는
+    강의가 있다 — 병리학 2026판 `4 세포의 손상 및 적응 (3)~(4)` 는 목차에만 있다.
+    섹션끼리만 대조하면 2020판의 그 강의가 제일 닮은 `2-3` 에 0.64 로 붙었다.
+
+        목차 강의에 섹션이 있다          그 섹션에 붙인다
+        다른 섹션에 흡수돼 있다          그 섹션에 붙인다 (`may_contain` — 이번 판과 같은 처지)
+        섹션이 없다                     섹션을 새로 세운다
+
+    - 문항은 **이번 판 그 섹션에 없는 해만** 가져온다. 약리학처럼 두 판이 같은 해를
+      싣는 과목에서 한 문항이 두 번 들어가지 않게 한다. 해를 모르는 문항은 안 가져온다.
+    - 가져온 문항마다 **그 해 옛 판 칸의 교수**(`by`)를 단다. 흡수된 섹션에서는 섹션의
+      칸이 이 문항의 출제자가 아니기 때문이다. 칸이 비었거나 한 칸에 강의 수보다 많은
+      이름이 잡혔으면(`_crowded` — 이웃 행에서 흘러든 것) 빈 목록으로 둔다 — 모른다.
+    - 섹션의 교수 칸은 **바로 이은 경우에만**, 이번 판에 없는 해만 채운다.
+    - 1등과 2등이 `OLDER_MATCH_GAP` 안이면 **교수가 겹치는 쪽**을 고른다. 병리학
+      2020판 `분자면역병리 (3)`(배정모)은 2026판 (1)·(2) 와 제목으로는 똑같이 닮았다.
+      그래도 못 가르면 잇지 않는다.
+    - 가져온 문항에는 `src` 를 단다. 지면 이미지를 그 판에서 찾게 하는 표시다.
+
+    돌려주는 것은 사람이 읽을 대조표다. 잇지 못한 옛 섹션은 **버리지 않고 적는다.**
+    """
+    by_key = {s.lecture_key: s for s in sections if s.lecture_key != "PRAC"}
+    absorbed = {k: s for s in by_key.values() for k, _ in s.may_contain}
+    titles = dict(lectures)
+    for s in by_key.values():
+        titles.setdefault(s.lecture_key, s.title)
+    titles.pop("PRAC", None)
+    have = {k: {q.year for q in s.questions} for k, s in by_key.items()}
+    main_names = {k: _names_of(profs.get(k)) for k in titles}
+    rows, unmatched = [], []
+    for old in older["sections"]:
+        scored = sorted(((_title_sim(old.title, t), k) for k, t in titles.items()),
+                        key=lambda x: -x[0])
+        if scored and scored[0][0] < OLDER_MATCH_MIN:
+            scored = sorted(((_title_sim(old.title, t, contained=True), k)
+                             for k, t in titles.items()), key=lambda x: -x[0])
+        best = scored[0][0] if scored else 0.0
+        near = [k for sc, k in scored if sc >= max(best - OLDER_MATCH_GAP, OLDER_MATCH_MIN)]
+        old_cells = older["profs"].get(old.lecture_key) or {}
+        how = "제목"
+        if len(near) > 1:
+            shared = [k for k in near if main_names[k] & _names_of(old_cells)]
+            if len(shared) == 1:
+                near, how = shared, "제목 + 교수"
+        years = sorted({q.year for q in old.questions})
+        if len(near) != 1:
+            why = ("닮은 제목이 없다" if not near else
+                   f"제목이 비슷한 강의가 여럿이고 교수로도 못 가른다 ({' · '.join(near)})")
+            unmatched.append({"lecture_key": old.lecture_key, "title": old.title,
+                              "n_questions": len(old.questions), "years": years,
+                              "best": round(best, 2), "why": why})
+            continue
+        key = near[0]
+        sec = by_key.get(key) or absorbed.get(key)
+        if sec is None and not any(RE_YEAR.match(q.year) for q in old.questions):
+            unmatched.append({"lecture_key": old.lecture_key, "title": old.title,
+                              "n_questions": len(old.questions), "years": years,
+                              "best": round(best, 2), "why": f"{key} 와 이었지만 해를 아는 문항이 없다"})
+            continue
+        if sec is None:
+            sec = Section(lecture_key=key, title=titles[key])
+            sections.append(sec)
+            by_key[key] = sec
+            have[key] = set()
+            how += " · 이번 판에 섹션이 없어 새로 세웠다"
+        elif sec.lecture_key != key:
+            how += f" · 이번 판에서 {sec.lecture_key} 에 흡수된 강의"
+        n_lect = _n_lectures(old.lecture_key)
+        took = [q for q in old.questions
+                if q.year not in have[sec.lecture_key] and RE_YEAR.match(q.year)]
+        for q in took:
+            q.src = src
+            q.by = _older_author(old, older["profs"], q.year[2:], n_lect)
+        sec.questions += took
+        filled = []
+        if sec.lecture_key == key:
+            cells = profs.setdefault(key, {})
+            for yy, names in sorted(old_cells.items()):
+                if yy not in cells and len(names) <= n_lect:
+                    cells[yy] = names
+                    filled.append(yy)
+        rows.append({"old_key": old.lecture_key, "old_title": old.title,
+                     "lecture_key": sec.lecture_key, "matched": key, "how": how,
+                     "score": round(best, 2), "took": len(took),
+                     "skipped": len(old.questions) - len(took),
+                     "years": sorted({q.year for q in took}), "prof_years": filled})
+    return {"matched": rows, "unmatched": unmatched}
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description="족보 PDF를 강의별 조각으로 미리 자른다")
+    ap.add_argument("pdf")
+    ap.add_argument("-o", "--out", default="out/jokbo")
+    ap.add_argument("--practical", nargs="+", metavar="PDF",
+                    help="실습 족보 PDF (여러 개 가능). 주면 PRAC 조각을 이것으로만 만든다")
+    ap.add_argument("--older", nargs="+", metavar="PDF",
+                    help="옛 판 과목 족보 (예: 2020판). 이번 판에 없는 해의 필기 문항과 "
+                         "교수 칸을 제목이 맞는 섹션에 덧붙인다")
+    args = ap.parse_args(argv)
+
+    doc = fitz.open(args.pdf)
+
+    # **`-o` 는 과목 폴더를 받고 조각은 그 아래 판 폴더로 들어간다.**
+    # `runs/_materials/기생충학/260915-0130/` 같은 자리다.
+    #
+    # 과목 이름은 **`-o` 로 받은 폴더의 이름**에서 읽는다(아래 `prac_name`). 그래서
+    # 여기에 판 폴더를 직접 받으면 안 된다 — 실습 조각이 「260915-0130 실습」이라는
+    # 이름으로 나온다. 그 이름은 `find_jokbo` 가 제목으로 대조하는 값이다.
+    #
+    # 판마다 폴더가 따로 서므로 **아무것도 덮지 않는다.** 앞 컷을 밀어내던
+    # `cutmark.archive` 가 그래서 할 일이 없어졌다.
+    subject_dir = Path(args.out)
+    subject_dir.mkdir(parents=True, exist_ok=True)
+    cut_id = cutmark.new_cut_id()
+    taken = set(cutmark.cuts(subject_dir))
+    base, n = cut_id, 1
+    while cut_id in taken:
+        n += 1
+        cut_id = f"{base}.{n}"
+    outdir = subject_dir / cut_id
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    ed = parse_edition(doc)
+    regions, lectures, profs, warn = ed["regions"], ed["lectures"], ed["profs"], ed["warn"]
+    sections, answers = ed["sections"], ed["answers"]
+
+    # 옛 판. 문항이 가리키는 지면이 그 판에 있으므로 `src` 로 원본을 가른다 —
+    # 필기 조각의 `sources` 가 이 목록이다(실습 조각은 실습 족보 목록을 든다).
+    older_sources: list[dict] = []
+    older_merges: list[dict] = []
+    for path in args.older or []:
+        odoc = fitz.open(path)
+        merged = merge_older(sections, lectures, profs, parse_edition(odoc),
+                             src=len(older_sources))
+        older_sources.append({"name": Path(path).name, "path": str(Path(path).resolve()),
+                              "pages": odoc.page_count})
+        older_merges.append({"source": Path(path).name, **merged})
+        odoc.close()
 
     # 실습은 강의별 헤더가 없어 연도 블록만으로 하나의 풀로 둔다.
     # **과목 이름은 폴더에서 읽는다.** 여기에 "병리학"이 박혀 있었는데, 그러면
@@ -1113,13 +1439,26 @@ def main(argv=None) -> int:
              "toc_warning": warn, "lectures": []}
     if prac_sources:
         index["practical_sources"] = prac_sources
+    if older_sources:
+        index["older_sources"] = older_sources
+        index["older_merge"] = older_merges
 
     for sec in sections + prac:
         stats = repeat_stats(sec, profs)
+        if sec.may_contain:
+            # 흡수된 강의의 교수. 이 섹션의 문항은 해마다 누가 냈는지 못 가르므로 올해
+            # 교수로 거를 때 이 칸도 같이 본다(`filter_by_professor`). 흡수된 강의 쪽에서
+            # 이 조각을 받을 때 제 해가 남아야 한다 — 받는 것은 그쪽도 이 조각이다.
+            absorbed: dict[str, list[str]] = {}
+            for key, _ in sec.may_contain:
+                for yy, names in (profs.get(key) or {}).items():
+                    absorbed.setdefault(yy, [])
+                    absorbed[yy] += [n for n in names if n not in absorbed[yy]]
+            stats["absorbed_professors_by_year"] = absorbed
         name = slug(sec.lecture_key, sec.title)
         drop = ("body", "span", "bank")
         qs = [{k: v for k, v in asdict(q).items()
-               if k not in drop and not (k == "src" and v is None)}
+               if k not in drop and not (k in ("src", "by") and v is None)}
               for q in sec.questions]
         payload = {"lecture_key": sec.lecture_key, "title": sec.title,
                    "may_contain": [{"lecture_key": k, "title": t} for k, t in sec.may_contain],
@@ -1128,6 +1467,10 @@ def main(argv=None) -> int:
             # 조각이 자기 원본을 들고 다닌다. 빌드는 조각만 받으므로
             # (`build.Jokbo`) 여기 없으면 지면 이미지가 조용히 빠진다.
             payload["sources"] = prac_sources
+        elif sec.lecture_key != "PRAC" and older_sources:
+            # 옛 판에서 온 문항(`src` 가 정수)의 지면은 그 판에 있다. 이번 판 문항은
+            # `src` 가 없고 지금처럼 `index.source_path` 를 본다.
+            payload["sources"] = older_sources
         (outdir / f"{name}.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         (outdir / f"{name}.md").write_text(to_markdown(sec, stats), encoding="utf-8")
         index["lectures"].append({
@@ -1136,6 +1479,7 @@ def main(argv=None) -> int:
             "n_with_answer": sum(1 for q in sec.questions if q.answer),
             "n_with_objection": sum(1 for q in sec.questions if q.objection),
             "n_with_figure": sum(1 for q in sec.questions if q.figures),
+            "years": sorted({q.year for q in sec.questions}),
             "repeat_rate": stats["repeat_rate"],
             "professor_changed_2026": stats["professor_changed_2026"],
             "jokbo_weight_hint": stats["jokbo_weight_hint"],
@@ -1153,7 +1497,8 @@ def main(argv=None) -> int:
     # (`runner/CLAUDE.md` 첫 절이 그 사고다). 판을 못 적는 것보다 그게 나쁘다.
     try:
         cutmark.write(outdir, source=Path(args.pdf), pages=doc.page_count,
-                      practical=prac_sources or None, cut_id=cut_id,
+                      practical=prac_sources or None, older=older_sources or None,
+                      cut_id=cut_id,
                       counts={"lectures": len(index["lectures"]),
                               "questions": sum(e["n_questions"] for e in index["lectures"])})
         # **`current` 는 맨 마지막에 돌린다.** 앞에서 죽으면 지금 판이 그대로
@@ -1192,6 +1537,18 @@ def main(argv=None) -> int:
         if regions["practical_q"]:
             print(f"   과목 족보의 실습 구역 {_span(regions['practical_q'])} 는 "
                   f"이것과 겹쳐 쓰지 않았다")
+    for merged in older_merges:
+        took = sum(r["took"] for r in merged["matched"])
+        print(f"옛 판 {merged['source']}: 섹션 {len(merged['matched'])}개를 이어 문항 {took}개를 "
+              f"덧붙였다 (이번 판에 이미 있는 해 · 해 모름은 안 가져왔다)")
+        for r in merged["matched"]:
+            years = ",".join(y[2:] for y in r["years"]) or "-"
+            print(f"   {r['old_key']:>6} {r['old_title'][:24]:<24} → {r['matched']:<6} "
+                  f"{r['score']:.2f}  +{r['took']:<3} ({years})  교수칸 +{len(r['prof_years'])}"
+                  + (f"  [{r['how']}]" if r['how'] != "제목" else ""))
+        for u in merged["unmatched"]:
+            print(f"   {u['lecture_key']:>6} {u['title'][:24]:<24} → 잇지 못함 "
+                  f"({u['why']}) — 문항 {u['n_questions']}개를 안 가져왔다")
     if warn:
         print(f"경고: {warn}")
     print(f"목차 강의 {len(lectures)}개 / 본문에서 잡힌 섹션 {len(sections)}개\n")

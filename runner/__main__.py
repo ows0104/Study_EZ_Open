@@ -182,6 +182,29 @@ def practical_pdfs(spec: str | None) -> list[Path]:
     return [p] if p.is_file() else []
 
 
+# 옛 판 과목 족보. 2026-10-05 관리자 — *"족보를 2026, 2020년꺼를 써서, 2026-2015까지를
+# 커버할 수 있도록 하자."* 2026판이 2020~2025 시험을, 2020판이 2015~2019 시험을 싣는다.
+OLDER_JOKBO_YEARS = ("2020",)
+
+
+def older_pdfs(root: Path, subject: str, years: str) -> list[Path]:
+    """옛 판 과목 족보를 해 폴더마다 하나씩 고른다. 실습 족보·표지는 뺀다.
+
+    폴더에 PDF 가 여럿이면 가장 큰 것이다 — 올해 판을 고르는 규칙과 같다. 병리학·
+    기생충학 2020 폴더는 본문과 `_실습` 이 따로 있다.
+    """
+    picked = []
+    for year in [y.strip() for y in (years or "").split(",") if y.strip()]:
+        folder = watch.jokbo_source_dir(root, subject, year)
+        pdfs = [p for p in (sorted(folder.glob("*.pdf")) if folder.is_dir() else [])
+                if "실습" not in p.stem and "표지" not in p.stem]
+        if not pdfs:
+            print(f"[jokbo] ⚠ 옛 판 {folder} 에 과목 족보 PDF가 없다 — {year}판 없이 자른다")
+            continue
+        picked.append(max(pdfs, key=lambda p: p.stat().st_size))
+    return picked
+
+
 def remembered_practical(index: Path) -> tuple[list[Path], list[str]]:
     """지난번에 쓴 실습 족보를 되살린다. (아직 있는 것, 없어진 것의 이름)
 
@@ -248,13 +271,17 @@ def run_jokbo(args) -> int:
             print(f"[jokbo] ⚠ 지난번 실습 족보 {name} 이 그 자리에 없습니다")
         if lost:
             print("        이대로 자르면 그 회차 문항이 빠집니다. --practical 로 새 자리를 주세요.")
+    older = older_pdfs(Path(args.root), subject,
+                       getattr(args, "older", ",".join(OLDER_JOKBO_YEARS)))
     print(f"[jokbo] {pdfs[0].name} → {out_dir}")
+    for p in older:
+        print(f"        옛 판: {p.name}")
     for p in practical:
         print(f"        실습 족보: {p.name}")
     # 자르는 쪽은 자기 출력을 화면으로 바로 흘린다(`cut_jokbo`). 여기 것을 안 밀어내면
     # 어느 PDF를 골랐는지가 그 뒤에 찍혀 순서가 뒤집힌다.
     sys.stdout.flush()
-    code = deck.cut_jokbo(pdfs[0], out_dir, REPO_ROOT, practical=practical)
+    code = deck.cut_jokbo(pdfs[0], out_dir, REPO_ROOT, practical=practical, older=older)
     if code != 0:
         print(f"  자르지 못했다 (코드 {code})")
         return 1
@@ -634,6 +661,8 @@ def main() -> int:
     parser.add_argument("--practical", default="",
                         help="jokbo: 실습 족보 PDF 또는 그 PDF들이 든 폴더. "
                              "주면 실습 조각(PRAC)을 이것으로만 만든다")
+    parser.add_argument("--older", default=",".join(OLDER_JOKBO_YEARS),
+                        help="jokbo: 덧붙일 옛 판 족보의 해 폴더 (쉼표 구분). 빈 값이면 안 붙인다")
     parser.add_argument("--runs", default=str(REPO_ROOT / "runs"), help="산출물 루트")
     parser.add_argument("--build", action="store_true",
                         help="watch·prequeue: 자리만 세우지 말고 덱까지 만든다")
