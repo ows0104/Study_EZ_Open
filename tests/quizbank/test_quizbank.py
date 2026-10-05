@@ -98,10 +98,18 @@ def test_걸린_문항만_빼고_다시_잰다(bank):
 
 
 def test_문항_탓이_아닌_오류가_있으면_통째로_막는다(bank):
-    bank["source_summary"] = [s for s in bank["source_summary"] if s["source_id"] != "S2"]
+    bank["concepts"][0]["related_concepts"] = ["C99"]
     kept, v = validate_dropping(bank, ["S1", "S2"])
     assert kept is bank and v["pass"] is False and v["dropped"] == []
-    assert "S2: 출처 요약 누락" in v["errors"] and "Q009: list는 채점 단위 2–5개" in v["errors"]
+    assert "C01: related_concepts 오류" in v["errors"] and "Q009: list는 채점 단위 2–5개" in v["errors"]
+
+
+def test_자료_요약과_점검_보고는_없어도_된다(bank):
+    """프롬프트 v1.5(2026-10-05): 자료 요약·Quality Audit 보고를 안 받는다. 앱이 읽지 않던 출력이다."""
+    _fix_lists(bank)
+    bank["source_summary"] = []
+    bank["audit_summary"] = {"summary": "", "rejected_candidate_count": 0, "changes": []}
+    assert validate_bank(bank, ["S1", "S2"])["errors"] == []
 
 
 def test_뺀_문항_때문에_기초를_잃은_통합_문항도_뺀다(bank):
@@ -207,8 +215,8 @@ def _fake_sessions(monkeypatch, bank):
 
 
 def test_검증에_떨어지면_검토와_슬라이드를_건너뛰고_0으로_끝난다(monkeypatch, tmp_path, bank, capsys):
-    """문항 하나의 탓이 아닌 오류(출처 요약 누락)가 있으면 걸린 문항을 빼지 않고 통째로 막는다."""
-    bank["source_summary"] = [s for s in bank["source_summary"] if s["source_id"] != "S2"]
+    """문항 하나의 탓이 아닌 오류(개념의 관련 개념이 없는 ID)가 있으면 걸린 문항을 빼지 않고 통째로 막는다."""
+    bank["concepts"][0]["related_concepts"] = ["C99"]
     _fake_sessions(monkeypatch, bank)
     out = tmp_path / "build"
     code = run.main([str(RAW), "--title", "콜린성", "--run-id", "261002_02", "--out", str(out),

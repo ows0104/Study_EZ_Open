@@ -82,8 +82,8 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
     unique([s["source_id"] for s in bank["source_summary"]], "source_summary")
     for s in bank["source_summary"]:
         fail(s["source_id"] in ids and _nonempty(s["summary"]), "source_summary: 잘못된 출처/빈 요약")
-    for source_id in source_ids:   # 첨부 자료만 — EXT 는 요약할 자료가 없다
-        fail(any(s["source_id"] == source_id for s in bank["source_summary"]), f"{source_id}: 출처 요약 누락")
+    # 자료마다 요약이 있어야 한다는 검사는 걷었다 — 프롬프트 v1.5(2026-10-05) 부터 자료 요약을 안 받는다.
+    # 앱이 읽지 않는 출력이었다. 옛 응답에 있으면 위에서 형식만 본다.
 
     for c in bank["concepts"]:
         cid = c["concept_id"]
@@ -200,8 +200,8 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
             if indegree[nxt] == 0:
                 queue.append(nxt)
     fail(len(queue) == len(questions), "prerequisite 순환 참조가 있습니다.")
-    fail(bank["audit_summary"]["rejected_candidate_count"] >= 0 and _nonempty(bank["audit_summary"]["summary"]),
-         "audit_summary 누락/범위 오류")
+    # 점검 보고(audit_summary)도 v1.5 부터 안 받는다 — 비어 있어도 된다. 개수가 음수면 정리가 망가진 것이다.
+    fail(bank["audit_summary"]["rejected_candidate_count"] >= 0, "audit_summary 범위 오류")
     warnings.extend(bank["warnings"])
     return result()
 

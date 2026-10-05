@@ -1,10 +1,14 @@
 <!--
 Bank Builder 프롬프트 — 정본
-Version: 1.4
+Version: 1.5
 
 이 파일이 ChatGPT에 가는 프롬프트의 정본이다. 이 주석은 보내지 않는다.
 {{…}} 자리는 web/src/bank/prompt.ts 가 강의마다 채운다. {{c1}} 같은 cloze 표기는 그대로 간다.
 고치면 아래에 판을 하나 올리고 Version 을 같이 올린다. 서버에 응답이 저장될 때 이 Version 이 같이 남는다.
+
+1.5 (2026-10-05)  출력 끝의 「자료 요약」과 「Quality Audit」 보고를 뺐다(관리자). 앱이 읽지 않는다 — 검증기가 있는지만
+                   봤다. 점검(§7)은 그대로 시키고 결과만 낸다. Final Statistics 는 중요한 값만 남겼다(관리자 —
+                   「최종 통계도 중요한 값만 뽑기는 하자」): 총 문제 수 · tier별 · 충돌 · 외부 의학지식.
 
 1.4 (2026-10-05)  §7 Final Statistics 끝의 「가장 높은 학습 우선순위 concept 5–10개를 따로 요약해라」를 뺐다(관리자).
                    앱이 읽지 않는 출력이다 — 우선순위는 개념 지도가 중요도·진척으로 보여 준다.
@@ -321,7 +325,7 @@ description: 강의자료(S1 p22)는 α2 활성화가 norepinephrine 유리를 �
 
 최종 출력 전 전체 question bank를 다시 검사해라.
 
-다음을 확인해서 문제가 있으면 스스로 수정해라.
+다음을 확인해서 문제가 있으면 스스로 수정해라. 점검 결과를 따로 보고하지는 말고, 고친 결과만 내라.
 
 - source grounding
 - 발문 명확성
@@ -450,37 +454,12 @@ Core → Advanced → Optional 순서. 문제마다 아래 블록 하나.
 - description: 각 출처의 말 · 문항의 정답 · 그쪽인 근거(§6)
 - unresolved: 외부 의학지식으로도 어느 쪽인지 정하지 못했으면 true
 
-## 5. 자료 요약
-
-첨부 자료마다 한 줄: `source_id | 무엇이 들어 있는지`
-
-## 6. Quality Audit
-
-다음 항목별로 실제로 무엇을 수정했는지 짧게 보고한다.
-
-- clarity
-- gradeability
-- answer burden
-- redundancy
-- reverse coverage
-- discrimination
-- integration
-- low-yield
-- source conflicts
-- prerequisites
-
-걸러 낸 후보 문제 수와 남은 경고도 적는다.
-
-## 7. Final Statistics
+## 5. Final Statistics
 
 - 총 문제 수
-- Core 수
-- Advanced 수
-- Optional 수
-- Format별 문제 수
-- Cognitive type별 문제 수
-- Importance 5 문제 수
+- Core · Advanced · Optional 수
 - Source conflict 문제 수
+- 외부 의학지식(`EXT`)을 쓴 문제 수
 
 
 마지막 줄에 `STUDYEZ_BANK_COMPLETE`를 적어라. 응답이 끝나지 않았으면 적지 마라.
