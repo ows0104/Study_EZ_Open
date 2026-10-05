@@ -11,7 +11,7 @@ import { jobMoving, progressLine, runnerAlive } from "../jobProgress";
 import { bankHref, bankWindow } from "../links";
 import type { BankSummary, LectureDetail, LectureRef, PrequizJob, RunnerBeat } from "../types";
 import { useMe } from "../useMe";
-import { renderBankPrompt } from "./prompt";
+import { BANK_PROMPT_VERSION, renderBankPrompt } from "./prompt";
 
 /**
  * 캘린더 패널의 Quiz Bank 칸(2026-10-04).
@@ -21,6 +21,10 @@ import { renderBankPrompt } from "./prompt";
  *   학생     열린 은행이면 「공부하기」
  *
  * Main-Quiz 는 그대로 옆에 선다 — 둘이 나란히 돌다가 Quiz Bank 가 검증되면 그때 끈다.
+ *
+ * **「답 붙여넣기」는 확장이 못 읽는 자리를 위한 길이다**(2026-10-05 관리자 지시). 학교 계정(내부 워크스페이스)
+ * ChatGPT 로 만든 답은 확장이 가져오지 못해 저장되지 않았다. 같은 저장 경로(`PUT …/bank-response`)로 넣으므로
+ * 그 뒤는 확장으로 들어온 답과 똑같이 러너가 정리한다.
  */
 export function BankPanel({ lecture, detail }: { lecture: LectureRef; detail: LectureDetail }) {
   const isAdmin = Boolean(useMe()?.isAdmin);
@@ -73,6 +77,8 @@ function BankAdmin({ lecture, detail }: { lecture: LectureRef; detail: LectureDe
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
+  const [pasting, setPasting] = useState(false);
+  const [pasted, setPasted] = useState("");
 
   const load = useCallback(() => {
     api<{ job: PrequizJob | null; runner: RunnerBeat | null }>(`${adminBase}/prequiz-job?kind=bank`)
@@ -124,6 +130,32 @@ function BankAdmin({ lecture, detail }: { lecture: LectureRef; detail: LectureDe
         files,
       });
       setNote("ChatGPT 탭을 열었다. 자료를 넣고 전송하면, 답이 끝날 때 저절로 가져온다.");
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setBusy("");
+    }
+  }
+
+  /** 붙여 넣은 답을 저장한다 — 확장이 하던 저장과 같다. 끝 표시가 없으면 서버도 안 받으므로 먼저 말한다. */
+  async function savePasted() {
+    const raw = pasted.trim();
+    if (!raw.includes("STUDYEZ_BANK_COMPLETE")) {
+      setError("마지막 줄의 STUDYEZ_BANK_COMPLETE 가 없습니다. 답이 끝까지 나온 뒤 전체를 붙여 넣으세요.");
+      return;
+    }
+    setBusy("paste");
+    setError("");
+    try {
+      await api(`${adminBase}/bank-response`, {
+        method: "PUT",
+        body: JSON.stringify({ raw, conversationUrl: "", promptVersion: BANK_PROMPT_VERSION }),
+      });
+      setPasting(false);
+      setPasted("");
+      setNote("붙여 넣은 답을 저장했다. 러너가 정리·검토한다.");
+      load();
+      bumpPreviewVersion();
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -190,18 +222,39 @@ function BankAdmin({ lecture, detail }: { lecture: LectureRef; detail: LectureDe
           </button>
         }
         tools={
-          bank ? (
-            <>
+          <>
+            <PanelTool icon="⎘" label="답 붙여넣기" hint="확장이 못 가져온 ChatGPT 답을 직접 붙여 넣는다"
+                       active={pasting} expanded={pasting} disabled={Boolean(busy) || moving}
+                       onClick={() => setPasting((v) => !v)} />
+            {bank ? (
               <PanelTool icon="⟳" label="다시 정리" hint="저장된 응답으로 정리·검토만 다시 한다"
                          busy={busy === "again"} disabled={Boolean(busy) || moving} onClick={() => void reorganize()} />
-              {bank.usable ? (
-                <PanelTool icon={bank.open ? "◉" : "○"} label={bank.open ? "학생에게 닫기" : "학생에게 열기"}
-                           busy={busy === "open"} disabled={Boolean(busy)} onClick={() => void setOpen(!bank.open)} />
-              ) : null}
-            </>
-          ) : undefined
+            ) : null}
+            {bank?.usable ? (
+              <PanelTool icon={bank.open ? "◉" : "○"} label={bank.open ? "학생에게 닫기" : "학생에게 열기"}
+                         busy={busy === "open"} disabled={Boolean(busy)} onClick={() => void setOpen(!bank.open)} />
+            ) : null}
+          </>
         }
       />
+      {pasting ? (
+        <div className="bank-paste">
+          <textarea
+            rows={8}
+            value={pasted}
+            placeholder="ChatGPT 답 전체를 붙여 넣으세요 — 「## 1. Concept Map」부터 마지막 줄 STUDYEZ_BANK_COMPLETE 까지"
+            onChange={(event) => setPasted(event.target.value)}
+          />
+          <div className="bank-paste-actions">
+            <small>{pasted ? `${Math.round(pasted.length / 1024)}KB` : ""}</small>
+            <button className="is-quiet" disabled={busy === "paste"} onClick={() => setPasting(false)}>취소</button>
+            <button disabled={busy === "paste" || !pasted.trim()} onClick={() => void savePasted()}>
+              {busy === "paste" ? "저장하는 중…" : "저장하고 정리"}
+            </button>
+          </div>
+          {bank ? <small className="panel-hint">저장하면 지금 은행을 이 답으로 새로 만든다.</small> : null}
+        </div>
+      ) : null}
       {bank ? (
         <p className="panel-hint">
           {STATUS_LINE[bank.status]}

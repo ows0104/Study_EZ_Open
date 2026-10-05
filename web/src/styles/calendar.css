@@ -2186,3 +2186,34 @@ button.event-panel-note:hover {
   font-size: 10px;
   line-height: 1.35;
 }
+
+/* Quiz Bank 「답 붙여넣기」(2026-10-05). 확장이 못 가져온 ChatGPT 답을 직접 넣는 칸이다. */
+.bank-paste {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 8px;
+}
+
+.bank-paste textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-1);
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+  font-size: 12px;
+  resize: vertical;
+}
+
+.bank-paste-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.bank-paste-actions small {
+  margin-right: auto;
+  color: var(--ink-3);
+}
