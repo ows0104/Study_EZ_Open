@@ -55,6 +55,19 @@ def _unlabel(items: list[str]) -> dict[str, str] | None:
     return labels if len(labels) == len(items) else None
 
 
+def _resolve(side: str, labels: dict[str, str]) -> str | None:
+    """정답 짝의 한쪽을 항목 본문으로. 꼬리표만(`1`·`A`)이어도, 꼬리표+글(`A. 과거 비만 사용`)이어도 꼬리표로 찾는다.
+
+    **글은 보지 않는다.** 261002_03 Q046 은 정답 짝에 보기 글을 줄여 써서(「과거 비만 사용/중독」) 글로는
+    짝이 안 맞았다. 프롬프트 v1.3 부터 왼쪽 1·2·3, 오른쪽 A·B·C 를 붙이고 짝을 `1. … - A. …` 로 적게 했다
+    (2026-10-05 관리자 제안 — 「컴퓨터, 인간 모두 읽을 수 있게」).
+    """
+    if side in labels:
+        return labels[side]
+    found = _LABEL_RE.match(side)
+    return labels.get(found.group(1)) if found else None
+
+
 def tidy_labels(bank: dict) -> list[str]:
     """정답이 라벨(`L1`·`B`)만 가리키면 라벨을 떼고 본문으로 맞춘다. 고친 문항 ID 를 돌려준다.
 
@@ -66,9 +79,10 @@ def tidy_labels(bank: dict) -> list[str]:
         if q.get("format") == "matching":
             left, right = _unlabel(q["matching_left"]), _unlabel(q["matching_right"])
             pairs = q["answer_pairs"]
-            if left and right and all(p["left"] in left and p["right"] in right for p in pairs):
+            resolved = [(_resolve(p["left"], left), _resolve(p["right"], right)) for p in pairs] if left and right else []
+            if resolved and all(a and b for a, b in resolved):
                 q["matching_left"], q["matching_right"] = list(left.values()), list(right.values())
-                q["answer_pairs"] = [{"left": left[p["left"]], "right": right[p["right"]]} for p in pairs]
+                q["answer_pairs"] = [{"left": a, "right": b} for a, b in resolved]
                 fixed.append(q["question_id"])
         if q.get("format") == "sequence":
             items = _unlabel(q["sequence_items"])

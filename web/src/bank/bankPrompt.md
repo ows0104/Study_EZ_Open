@@ -1,10 +1,14 @@
 <!--
 Bank Builder 프롬프트 — 정본
-Version: 1.2
+Version: 1.3
 
 이 파일이 ChatGPT에 가는 프롬프트의 정본이다. 이 주석은 보내지 않는다.
 {{…}} 자리는 web/src/bank/prompt.ts 가 강의마다 채운다. {{c1}} 같은 cloze 표기는 그대로 간다.
 고치면 아래에 판을 하나 올리고 Version 을 같이 올린다. 서버에 응답이 저장될 때 이 Version 이 같이 남는다.
+
+1.3 (2026-10-05)  짝짓기 왼쪽에 1. 2. 3., 오른쪽에 A. B. C. 를 붙이고 정답 짝을 `1. 왼쪽 - A. 오른쪽` 으로 적는다
+                   (관리자 제안 — 「컴퓨터, 인간 모두 읽을 수 있게」). 261002_03 Q046 이 정답 짝에 보기 글을 줄여 써서
+                   짝을 못 찾고 빠졌다. 이제 정리가 꼬리표로 찾는다(quizbank/organize.py `_resolve`).
 
 1.2 (2026-10-05)  관리자 지시 — 「외부 의학지식을 충분히 이용해도 되는데, 자료에 없거나 다른 경우에 표시만
                    해 주면 돼. 강의록·족보가 충돌할 때는 외부 의학지식이 필요하겠지. 충돌이 있는 문제들은 합치고
@@ -431,7 +435,7 @@ Core → Advanced → Optional 순서. 문제마다 아래 블록 하나.
 - **cloze**: question에 빈칸을 `{{c1}}`, `{{c2}}`, `{{c3}}`로만 표시하고, 답은 answer_units에 순서대로 둔다.
 - **ox**: answer는 `O` 또는 `X`. 설명은 answer_units에 둔다.
 - **mcq / multi_select**: `options: [A: ..., B: ...]` 와 `correct_option_ids: [ ... ]`
-- **matching**: `matching_left: [ ... ]` · `matching_right: [ ... ]` · `answer_pairs: [왼쪽-오른쪽, ...]`
+- **matching**: `matching_left: [1. ..., 2. ..., ...]` · `matching_right: [A. ..., B. ..., ...]` · `answer_pairs: [1. 왼쪽 - A. 오른쪽, ...]` — 왼쪽은 숫자, 오른쪽은 알파벳으로 번호를 붙이고, 정답 짝에는 번호와 글을 같이 적는다.
 - **sequence**: `sequence_items: [A: ..., B: ...]` · `correct_order: [ ... ]`
 
 ## 4. Source Conflicts

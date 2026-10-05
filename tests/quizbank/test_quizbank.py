@@ -254,6 +254,23 @@ def test_세션이_죽으면_멈췄다를_찍고_1로_끝난다(monkeypatch, tmp
     assert capsys.readouterr().out.strip().splitlines()[-1].startswith("멈췄다 — 정리:")
 
 
+def test_짝은_꼬리표로_찾는다_글을_줄여_써도():
+    """프롬프트 v1.3(2026-10-05): 왼쪽 1·2·3, 오른쪽 A·B·C, 정답 `1. … - A. …`. 261002_03 Q046 처럼 정답 쪽 글을
+    줄여 써도 꼬리표로 찾아 보기 글로 맞춘다."""
+    q = {"question_id": "Q046", "format": "matching",
+         "matching_left": ["1. Amphetamine", "2. Ephedrine"],
+         "matching_right": ["A. 과거 식욕저하 효과로 비만에 사용됐으나 중독 문제", "B. 과거 천식에 사용됐으나 대체"],
+         "answer_pairs": [{"left": "1. Amphetamine", "right": "A. 과거 비만 사용/중독"},
+                          {"left": "2", "right": "B"}]}
+    assert organize.tidy_labels({"questions": [q]}) == ["Q046"]
+    assert q["matching_left"] == ["Amphetamine", "Ephedrine"]
+    assert q["answer_pairs"] == [{"left": "Amphetamine", "right": "과거 식욕저하 효과로 비만에 사용됐으나 중독 문제"},
+                                 {"left": "Ephedrine", "right": "과거 천식에 사용됐으나 대체"}]
+    bad = {"question_id": "Q9", "format": "matching", "matching_left": ["1. 가"], "matching_right": ["A. 나"],
+           "answer_pairs": [{"left": "1. 가", "right": "C. 없는 보기"}]}
+    assert organize.tidy_labels({"questions": [bad]}) == [] and bad["matching_left"] == ["1. 가"]   # 못 찾으면 그대로
+
+
 def test_라벨만_가리키는_정답을_본문으로_맞춘다():
     """261002_02 두 번째 정리에서 matching 4 · sequence 2 문항이 이 모양으로 떨어졌다(2026-10-04)."""
     m = {"question_id": "Q002", "format": "matching", "matching_left": ["L1:M1", "L2:M2"],
