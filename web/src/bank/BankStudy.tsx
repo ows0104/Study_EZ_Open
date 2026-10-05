@@ -251,7 +251,7 @@ function BankSolve({ base, onFinished }: { base: string; onFinished: (summary: B
         </p>
 
         {q.conflict_id ? (
-          <p className="bank-conflict">출처끼리 어긋나는 문항입니다. 발문에 적힌 출처 기준으로 답하세요.</p>
+          <p className="bank-conflict">강의자료와 족보가 어긋나는 대목입니다. 답을 보면 무엇이 어떻게 다른지 나옵니다.</p>
         ) : null}
 
         <QuestionBody question={q} answer={answer} picked={picked} onPick={(id) => {
@@ -376,6 +376,14 @@ function AnswerBody({ question: q, answer }: { question: BankQuestion; answer: B
             <Fragment key={item}>{index ? " → " : ""}{item}</Fragment>
           ))}
         </p>
+      ) : null}
+      {answer.conflict ? (
+        <p className="bank-conflict">
+          <b>자료 충돌</b> {answer.conflict}
+        </p>
+      ) : null}
+      {answer.external ? (
+        <p className="bank-note">이 문항에는 강의자료·족보에 없는 내용(외부 의학지식)이 들어 있습니다.</p>
       ) : null}
       {review && review.verdict !== "ok" ? (
         <p className={`bank-review is-${review.verdict}`}>

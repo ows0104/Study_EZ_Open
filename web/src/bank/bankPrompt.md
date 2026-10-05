@@ -1,10 +1,18 @@
 <!--
 Bank Builder 프롬프트 — 정본
-Version: 1.1
+Version: 1.2
 
 이 파일이 ChatGPT에 가는 프롬프트의 정본이다. 이 주석은 보내지 않는다.
 {{…}} 자리는 web/src/bank/prompt.ts 가 강의마다 채운다. {{c1}} 같은 cloze 표기는 그대로 간다.
 고치면 아래에 판을 하나 올리고 Version 을 같이 올린다. 서버에 응답이 저장될 때 이 Version 이 같이 남는다.
+
+1.2 (2026-10-05)  관리자 지시 — 「외부 의학지식을 충분히 이용해도 되는데, 자료에 없거나 다른 경우에 표시만
+                   해 주면 돼. 강의록·족보가 충돌할 때는 외부 의학지식이 필요하겠지. 충돌이 있는 문제들은 합치고
+                   표시만 해줘.」 머리의 「외부 의학지식은 사용하지 말고…」를 걷었다. 자료 밖 내용은 출처 `EXT` 와
+                   source strength `external_knowledge` 로 표시한다. §6 충돌은 출처별로 가르지 않고 **한 문항으로
+                   합쳐** 외부 의학지식으로 정답을 정하고, 충돌 표에 무엇이 어떻게 다른지와 고른 근거를 적는다.
+                   첫 실물 261002_03(v1.1)에서 갈라 낸 두 문항 중 족보 쪽(Q009)을 외부지식 검토가 wrong 으로 잡았다
+                   — 갈라 두면 틀린 답을 그대로 가르치는 문항이 하나 생긴다.
 
 1.1 이사 (2026-10-04)  AdaptiveStudy3/bank_builder/bank_prompt.md 에서 이리로 옮겼다 — 사이트에서
                    만들게 되면서. 내용은 그대로다. 그쪽 파일은 「이사했다」만 남긴다.
@@ -15,11 +23,11 @@ Version: 1.1
                    §5에 「Source page/slide」 — PDF 실제 쪽 번호, 여러 쪽이면 각각(슬라이드 이미지를 붙이려고).
                    §9를 앱이 읽는 열·필드 이름으로 고정하고, 강의 설정 칸을 넣었다.
 -->
-첨부한 **올해 필기/강의자료와 족보만**을 근거로 의대 시험 대비용 question bank를 만들어줘.
+첨부한 **올해 필기/강의자료와 족보**를 중심으로 의대 시험 대비용 question bank를 만들어줘.
 
-외부 의학지식은 사용하지 말고, 자료에 없는 내용을 보충하거나 교정하지 마.
+외부 의학지식은 충분히 써도 된다. 단 **자료에 없거나 자료와 다른 내용**을 문항에 쓰면 그 문항에 표시해라(§5 Source page/slide의 `EXT`, Source strength의 `external_knowledge`).
 
-강의자료와 족보가 서로 충돌하면 임의로 하나를 고르지 말고, **source conflict로 표시해서 각각 따로 보존**해.
+강의자료와 족보가 서로 충돌하면 외부 의학지식으로 맞는 답을 정해 **한 문항으로 합치고, source conflict로 표시**해라(§6).
 
 목표는 강의의 모든 사실을 카드화하는 것이 아니라,
 
@@ -253,6 +261,8 @@ Prerequisites는 단순히 같은 concept의 이전 문제를 넣는 것이 아�
 
 예: `S1 p13; S1 p14` · `S2 2023 11번`
 
+자료에 없는 내용을 외부 의학지식으로 쓴 문항은 `EXT 외부 의학지식`을 같이 적어라(자료 쪽 근거가 있으면 그것도 함께).
+
 ## Source strength
 
 다음 중 적절한 값을 사용해라.
@@ -265,6 +275,7 @@ Prerequisites는 단순히 같은 concept의 이전 문제를 넣는 것이 아�
 - lecture_low_emphasis
 - past_exam_only
 - source_conflict
+- external_knowledge — 자료에 없거나 자료와 다른 내용을 외부 의학지식으로 썼다
 
 필요하면 복수 값을 허용한다.
 
@@ -278,27 +289,26 @@ Source strength:
 
 # 6. Source Conflict 처리
 
-강의자료와 족보가 서로 다른 표현이나 정답을 제시하면:
+강의자료와 족보(또는 자료 안의 두 자리)가 서로 다른 표현이나 정답을 제시하면:
 
-1. 외부 지식으로 어느 쪽을 교정하지 마라.
-2. 하나의 카드에 섞지 마라.
-3. 각각 source-specific question으로 분리해라.
-4. 같은 Conflict ID를 부여해라.
-5. 각 문항에 어떤 출처 기준인지 발문에 명확히 써라.
+1. 출처별로 문항을 나누지 말고 **한 문항으로 합쳐라.**
+2. 정답은 외부 의학지식으로 맞는 쪽을 정해라. 둘 다 맞는 표현이면 그렇게 답하고, 둘 다 틀렸으면 맞는 답을 써라.
+3. 그 문항에 Conflict ID를 붙이고, Source page/slide에 충돌한 자리를 모두 적어라. 외부 의학지식으로 정했으면 `EXT`와 `external_knowledge`도 함께 적는다.
+4. Source Conflicts 표의 description에 **각 출처가 무엇이라고 하는지, 문항의 정답이 무엇이고 왜 그쪽인지**를 적어라. 학생이 답을 본 뒤 이 설명을 읽는다.
 
 예:
 
 ```text
-Conflict ID: IFN_HOST_NUCLEIC_ACID_01
+Conflict ID: ALPHA2_TRANSMITTER_01
+Question: Presynaptic α2 수용체를 차단하면 교감신경 말단에서 유리가 증가하는 전달물질은?
+Answer: norepinephrine
+Source page/slide: S1 p22; S2 2023 18번; EXT 외부 의학지식
 
-Question A:
-[2026 강의자료 기준] ...
-
-Question B:
-[반복 족보 기준] ...
+description: 강의자료(S1 p22)는 α2 활성화가 norepinephrine 유리를 억제한다고 쓰고, 2023 족보 18번 정답은
+「α2 억제 시 epinephrine 증가」다. 교감신경 말단의 전달물질은 norepinephrine이라 문항은 강의자료 쪽으로 답한다.
 ```
 
-자료만으로 정답을 복원할 수 없는 족보 문항은 추정하지 말고 제외하거나 unresolved로 표시해라.
+자료만으로 정답을 복원할 수 없는 족보 문항(정답 미확인 등)은 외부 의학지식으로 정답을 정하고 `external_knowledge`로 표시해라. 외부 지식으로도 정할 수 없으면 제외해라.
 
 # 7. Quality Audit
 
@@ -315,7 +325,7 @@ Question B:
 - discrimination coverage
 - integration coverage
 - low-yield overproduction
-- source conflict preservation
+- source conflict 표시 (합친 문항 · 설명)
 - prerequisite validity
 - answer-unit clarity
 
@@ -328,7 +338,8 @@ Question B:
 - 여러 독립 사실을 한꺼번에 요구해 self-grading이 어려운 문제
 - prerequisite 없이 너무 높은 단계의 integration 문제
 - 자료 근거 없이 생성된 distractor
-- source conflict를 하나의 정답으로 합쳐버린 문제
+- 충돌을 합치면서 어느 쪽이 왜 맞는지 설명하지 않은 문제
+- 자료에 없는 내용을 썼는데 `EXT` · `external_knowledge` 표시가 없는 문제
 
 # 8. Final Audit에서 확인할 추가 원칙
 
@@ -363,7 +374,7 @@ atomic direct
 - 첨부 자료:
 {{sources}}
 
-자료 중요도 비중은 **중요도 판단 비중**이다. 정답의 권위나 충돌 해결 우선순위로 사용하지 마라.
+자료 중요도 비중은 **중요도 판단 비중**이다. 충돌 해결 우선순위로 사용하지 마라 — 충돌은 외부 의학지식으로 판단한다(§6).
 
 `sequence`는 retrieval direction과 문제 형식 양쪽에서 쓸 수 있다. 두 필드는 독립적으로 기록하고, 한쪽이 sequence라고 다른 쪽도 자동 지정하지 마라.
 
@@ -428,6 +439,9 @@ Core → Advanced → Optional 순서. 문제마다 아래 블록 하나.
 표. 열은 이 순서:
 
 `conflict_id | description | source_refs | unresolved`
+
+- description: 각 출처의 말 · 문항의 정답 · 그쪽인 근거(§6)
+- unresolved: 외부 의학지식으로도 어느 쪽인지 정하지 못했으면 true
 
 ## 5. 자료 요약
 

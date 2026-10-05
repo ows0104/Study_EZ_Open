@@ -58,6 +58,32 @@ def test_cloze_빈칸과_채점단위_수가_같아야_한다(bank):
     assert any("cloze는" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
 
 
+def _fix_lists(bank):
+    for q in bank["questions"]:                     # 실물의 list 셋을 고쳐 다른 오류가 없게 한다
+        if q["question_id"] in ("Q009", "Q015", "Q026"):
+            q["answer_units"] = ["가", "나"]
+
+
+def test_충돌은_한_문항으로_합쳐도_통과한다(bank):
+    """프롬프트 v1.2(2026-10-05 관리자): 충돌은 출처별로 가르지 않고 합쳐 외부 의학지식으로 답을 정한다.
+    「[출처 기준] 머리말」·「출처 하나」 규칙이 없어졌다 — 두 출처와 EXT 를 같이 적은 합친 문항이 통과한다."""
+    _fix_lists(bank)
+    conflict = bank["source_conflicts"][0]
+    q = next(x for x in bank["questions"] if not x["conflict_id"] and "[" not in x["question"])
+    q["conflict_id"] = conflict["conflict_id"]
+    q["source_refs"] = [*conflict["source_refs"], {"source_id": "EXT", "locator": "외부 의학지식"}]
+    assert validate_bank(bank, ["S1", "S2"])["errors"] == []
+
+
+def test_EXT_출처는_허용하되_출처_요약은_요구하지_않는다(bank):
+    _fix_lists(bank)
+    bank["questions"][0]["source_refs"].append({"source_id": "EXT", "locator": "외부 의학지식"})
+    v = validate_bank(bank, ["S1", "S2"])
+    assert v["errors"] == []
+    bank["questions"][0]["source_refs"].append({"source_id": "S9", "locator": "p1"})   # 모르는 출처는 여전히 걸린다
+    assert any("유효한 source_id" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
+
+
 def test_걸린_문항만_빼고_다시_잰다(bank):
     """2026-10-05 관리자 — 「걸린 문항만 빼고 연다」. 실물의 list 셋이 빠지고 나머지 33이 통과한다."""
     kept, v = validate_dropping(bank, ["S1", "S2"])
@@ -84,7 +110,7 @@ def test_뺀_문항_때문에_기초를_잃은_통합_문항도_뺀다(bank):
                 and "[" not in x["question"])
     top = next(x for x in bank["questions"] if x["retrieval_direction"] == "integration")
     top["prerequisites"] = [base["question_id"]]
-    base["conflict_id"] = bank["source_conflicts"][0]["conflict_id"]  # 기준 표시 없는 충돌 문항 → 걸린다
+    base["conflict_id"] = "CF-없음"                                   # 없는 충돌 ID → 그 문항이 걸린다
     kept, v = validate_dropping(bank, ["S1", "S2"])
     gone = [d["question_id"] for d in v["dropped"]]
     assert v["pass"] is True and base["question_id"] in gone and top["question_id"] in gone

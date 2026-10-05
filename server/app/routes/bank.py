@@ -372,9 +372,15 @@ def _slides(db: Session, row: QuizBank, question_id: str) -> list[dict[str, Any]
 
 def _answer(db: Session, row: QuizBank, q: dict) -> dict[str, Any]:
     review = next((r for r in (row.review or {}).get("reviews", []) if r["question_id"] == q["question_id"]), None)
+    # 프롬프트 v1.2(2026-10-05): 충돌은 한 문항으로 합치고 외부 의학지식으로 답을 정한다. 학생은 답을 본 뒤
+    # 각 출처가 무엇이라고 하는지와 고른 근거(충돌 기록의 설명)를 읽는다. 자료 밖 내용은 출처 `EXT` 로 표시된다.
+    conflict = next((c for c in (row.bank or {}).get("source_conflicts", [])
+                     if q["conflict_id"] and c["conflict_id"] == q["conflict_id"]), None)
     return {"answer": q["answer"], "answerUnits": q["answer_units"], "correctOptionIds": q["correct_option_ids"],
             "answerPairs": q["answer_pairs"], "correctOrder": q["correct_order"],
-            "slides": _slides(db, row, q["question_id"]), "medicalReview": review}
+            "slides": _slides(db, row, q["question_id"]), "medicalReview": review,
+            "conflict": conflict["description"] if conflict else "",
+            "external": any(r["source_id"] == "EXT" for r in q["source_refs"])}
 
 
 @router.get("/lectures/{subject}/{run_id}/bank")

@@ -18,6 +18,11 @@ from datetime import UTC, datetime
 from .schema import SCHEMA_VERSION, schema_errors
 
 
+# 외부 의학지식으로 쓴 자리(프롬프트 v1.2, 2026-10-05). 첨부 자료가 아니라서 출처 요약에는 안 서지만
+# 문항·개념·충돌의 근거로는 적을 수 있다.
+EXTERNAL = "EXT"
+
+
 def _nonempty(value) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
@@ -53,7 +58,7 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
     def unique(items: list, label: str) -> None:
         fail(len(set(items)) == len(items), f"{label}: ID/값 중복")
 
-    ids = set(source_ids)
+    ids = set(source_ids) | {EXTERNAL}
     concepts = {c["concept_id"]: c for c in bank["concepts"]}
     questions = {q["question_id"]: q for q in bank["questions"]}
     conflicts = {c["conflict_id"]: c for c in bank["source_conflicts"]}
@@ -77,7 +82,7 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
     unique([s["source_id"] for s in bank["source_summary"]], "source_summary")
     for s in bank["source_summary"]:
         fail(s["source_id"] in ids and _nonempty(s["summary"]), "source_summary: 잘못된 출처/빈 요약")
-    for source_id in source_ids:
+    for source_id in source_ids:   # 첨부 자료만 — EXT 는 요약할 자료가 없다
         fail(any(s["source_id"] == source_id for s in bank["source_summary"]), f"{source_id}: 출처 요약 누락")
 
     for c in bank["concepts"]:
@@ -122,11 +127,11 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
         seen.add(key)
 
         if q["conflict_id"]:
+            # 충돌은 v1.2 부터 한 문항으로 합치고 외부 의학지식으로 답을 정한다(관리자 지시, 2026-10-05).
+            # 그래서 「[출처 기준] 머리말」과 「출처 하나로 분리」를 걷었다 — 갈라 낸 옛 판 문항도 그대로 통과한다.
             fail(q["conflict_id"] in conflicts, f"{label}: Conflict ID 없음")
-            fail(bool(re.search(r"\[[^\]]+\]", q["question"])), f"{label}: 충돌 문항에 [출처 기준] 표시 필요")
-            fail(len({r["source_id"] for r in q["source_refs"]}) == 1, f"{label}: 충돌 문항은 하나의 출처 기준으로 분리해야 합니다.")
             if q["conflict_id"] in conflicts:
-                allowed = {r["source_id"] for r in conflicts[q["conflict_id"]]["source_refs"]}
+                allowed = {r["source_id"] for r in conflicts[q["conflict_id"]]["source_refs"]} | {EXTERNAL}
                 fail(all(r["source_id"] in allowed for r in q["source_refs"]), f"{label}: 충돌 기록과 출처 불일치")
 
         option_ids = [o["id"] for o in q["options"]]

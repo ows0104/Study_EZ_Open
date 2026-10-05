@@ -127,7 +127,13 @@ def main() -> None:
     check("원문과 자료를 준다", got["raw"] == RAW and [s["id"] for s in got["sources"]] == ["S1", "S2"])
     stale = client.put(f"{ADMIN}/bank", json=result("2020-01-01T00:00:00+00:00"), headers=RUNNER)
     check("옛 응답의 정리는 409", stale.status_code == 409, stale.status_code)
-    ok = client.put(f"{ADMIN}/bank", json=result(got["respondedAt"]), headers=RUNNER)
+    # 프롬프트 v1.2 꼴의 합친 충돌 문항 — Q1 이 강의자료·족보 충돌을 외부 의학지식으로 정했다.
+    merged = example_bank()
+    merged["source_conflicts"] = [{"conflict_id": "CF-1", "description": "강의자료는 A, 족보는 B — 교과서대로 A",
+                                   "source_refs": [{"source_id": "S1", "locator": "p1"}], "unresolved": False}]
+    merged["questions"][0]["conflict_id"] = "CF-1"
+    merged["questions"][0]["source_refs"].append({"source_id": "EXT", "locator": "외부 의학지식"})
+    ok = client.put(f"{ADMIN}/bank", json=result(got["respondedAt"], merged), headers=RUNNER)
     check("결과를 받고 ready", ok.status_code == 200 and ok.json()["status"] == "ready", ok.text)
     build1 = ok.json()["buildId"]
     dropped = client.get(f"{ADMIN}/bank", headers=ADMIN_H).json()["summary"]["dropped"]
@@ -161,6 +167,8 @@ def main() -> None:
     check("답을 보기 전 평가는 409", early.status_code == 409)
     shown = client.post(f"{BASE}/bank/reveal", json={"reviewToken": first["reviewToken"]}).json()
     check("답이 나온다", shown["answer"] == "예시 정답" and shown["answerUnits"] == ["예시 정답"])
+    check("충돌 설명과 자료 밖 표시가 답과 같이 온다",
+          shown["conflict"] == "강의자료는 A, 족보는 B — 교과서대로 A" and shown["external"] is True, shown)
     # 예시 은행에서 처음 나갈 수 있는 것은 Q1(direct·Core)뿐이다 — Q2 는 Core 숙련도, Q3 는 선행에 막힌다.
     # 조건문으로 감싸면 다른 문항이 나왔을 때 아래 둘이 조용히 안 돈다.
     check("처음 문항은 Q1", q["question_id"] == "Q1", q["question_id"])
