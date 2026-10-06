@@ -4,7 +4,7 @@ import { api, downloadSignedFile, openSignedFile } from "../api";
 import { BundleButton } from "../bundle/BundleButton";
 import { decksIn, type BundleDeck } from "../bundle/decks";
 import { usePreviewVersion } from "../bridge/previewBridge";
-import { lectureHref, quizHref, quizWindow } from "../links";
+import { lectureHref, legacyMainHref, quizHref, quizWindow } from "../links";
 import { type LectureDetail, type LectureFile, type LectureRef } from "../types/lectures";
 import { categoryLabel, type CalendarEntry } from "./entries";
 import { DeckSlot } from "./DeckSlot";
@@ -336,27 +336,16 @@ function KeyActions({
         />
       </PanelGroup>
 
-      {/* **복습도 같은 자리를 얻었다(2026-08-31 관리자 지시).** 문항은
-          2026-08-31 이후에 구운 편에만 있어서, 그 전 편에서는 `mainquiz`가
-          `null`이고 이 줄이 예전처럼 덱 하나로만 선다. */}
-      <PanelGroup tone="main" title="Main-Quiz" note="강의 후 반복">
-        <DeckSlot
-          kind="main"
-          label="덱"
-          file={fileOf("main_apkg")}
-          lecture={lecture}
-          onDownload={download}
-          before={webSolve("main", detail.mainquiz)}
-          blocked={
-            fileOf("notes_current")
-              ? undefined
-              : { short: "올해 필기 대기", why: "올해 강의록이 아직 없습니다. Main-Quiz는 올해 필기로 만듭니다." }
-          }
-        />
-      </PanelGroup>
-
-      {/* Quiz Bank(2026-10-04). 복습 줄 개편의 새 갈래 — Main-Quiz 옆에 나란히 선다. */}
       <BankPanel lecture={lecture} detail={detail} />
+      {detail.mainquiz || fileOf("main_apkg") ? (
+        <details className="panel-hint">
+          <summary>기존 Main-Quiz 자료</summary>
+          {detail.mainquiz ? <a href={legacyMainHref(lecture)} target="_blank" rel="noreferrer">기존 카드 풀기</a> : null}
+          {fileOf("main_apkg") ? (
+            <button className="is-quiet" onClick={() => void download(fileOf("main_apkg")!)}>기존 Anki 덱 받기</button>
+          ) : null}
+        </details>
+      ) : null}
 
       <CardFixLinks lecture={lecture} counts={detail.cardReview} />
 

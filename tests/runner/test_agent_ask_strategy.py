@@ -46,7 +46,7 @@ def test_파일이_깨졌으면_묻지_않고_만든다(tmp_path):
     assert watch.strategy_question(tmp_path, "약리학", "261012_02") == ""
 
 
-def test_표시한_편은_만들지_않고_held로_되돌린다(tmp_path):
+def test_기존_main은_전략을_묻지_않고_종료한다(tmp_path):
     _mark(tmp_path, "약리학", {"261012_02": "족보 교수가 바뀌었다."})
     client = Recorder()
     worker = _agent(tmp_path, client)
@@ -55,7 +55,7 @@ def test_표시한_편은_만들지_않고_held로_되돌린다(tmp_path):
     worker.handle(agent.Job(id=7, subject="약리학", run_id="261012_02", kind=deck.MAIN))
     assert ran == []
     method, path, body = client.calls[-1]
-    assert path.endswith("/7") and body["state"] == "held" and body["ask"] == "족보 교수가 바뀌었다."
+    assert path.endswith("/7") and body["state"] == "canceled" and "Quizbank" in body["message"]
 
 
 def test_고른_전략이_오면_묻지_않고_그대로_넘긴다(tmp_path):

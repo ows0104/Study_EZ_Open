@@ -12,7 +12,7 @@ const checklistLabels: Record<ChecklistItem, string> = {
   preview: "예습링크",
   pre_apkg: "Pre덱",
   notes_current: "26강의록",
-  main_apkg: "Main덱",
+  bank: "Main 공개",
 };
 
 type Candidate = {

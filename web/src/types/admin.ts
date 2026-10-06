@@ -1,5 +1,6 @@
 import type { PrequizJob, RunnerBeat } from "./jobs";
 import type { PreviewProvider, RunMetaBrief } from "./lectures";
+import type { BankSummary } from "./bank";
 
 /** 관리자가 강의마다 채우는 다섯 칸. 서버의 `CHECKLIST_ITEMS`와 순서까지 같다. */
 export const checklistItems = [
@@ -7,7 +8,7 @@ export const checklistItems = [
   "preview",
   "pre_apkg",
   "notes_current",
-  "main_apkg",
+  "bank",
 ] as const;
 
 export type ChecklistItem = (typeof checklistItems)[number];
@@ -34,6 +35,7 @@ export type AdminRow = {
   /** 관리자가 채우는 다섯 칸. `done` | `waived` | `todo`. */
   checklist: Record<ChecklistItem, ChecklistState>;
   preItemCount: number;
+  bank?: BankSummary | null;
   /** 이 편의 가장 최근 일감. **갈래를 안 가린다** — 관리 화면은 「러너가 안 붙었는데
    *  기다리는 일감이 있다」만 세므로, 그 수에는 예습도 복습도 같이 들어간다.
    *  끝난 것도 남는다 — 실패가 조용히 사라지면 안 된다. */

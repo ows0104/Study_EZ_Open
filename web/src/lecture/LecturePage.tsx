@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, downloadSignedFile, openSignedFile } from "../api";
 import { useBankLink } from "../bank/bankBridge";
+import { BankPanel } from "../bank/BankPanel";
 import { bumpPreviewVersion, usePreviewLink, watchSharedLink } from "../bridge/previewBridge";
-import { quizHref, quizWindow } from "../links";
+import { legacyMainHref, quizHref, quizWindow } from "../links";
 import { previewProviderLabels, previewProviders, type LectureDetail, type LectureFile, type PreviewProvider } from "../types/lectures";
 import { LectureCards } from "./LectureCards";
 import { Missed } from "./Missed";
@@ -153,7 +154,19 @@ export function LecturePage() {
       <section className="lecture-section">
         <h2>강의 후</h2>
         {fileButton("notes_current", "올해 필기")}
-        {fileButton("main_apkg", "Main-Quiz 덱")}
+        <BankPanel lecture={{ subject, runId }} detail={detail} />
+        {detail.mainquiz || detail.files.some((file) => file.kind === "main_apkg") ? (
+          <details>
+            <summary>기존 Main-Quiz 자료</summary>
+            {detail.mainquiz ? (
+              <a className="resource" href={legacyMainHref({ subject, runId })} target="_blank" rel="noreferrer">
+                <strong>기존 카드 풀기</strong>
+                <small>이전에 학습한 일정과 기록을 이어갑니다.</small>
+              </a>
+            ) : null}
+            {fileButton("main_apkg", "기존 Main-Quiz Anki 덱")}
+          </details>
+        ) : null}
       </section>
 
       {/* 관리자에게만 온다(`cardReview`). 사이드 패널의 「카드 고치기」가 여기로

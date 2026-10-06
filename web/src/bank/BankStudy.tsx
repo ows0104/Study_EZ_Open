@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { api } from "../api";
+import { api, ApiError } from "../api";
+import { lectureHref } from "../links";
 import type { BankRead, BankSession } from "../types/bank";
 import { BankStart } from "./BankStart";
 import { BankSolve } from "./BankSolve";
@@ -23,6 +24,7 @@ export function BankStudyPage() {
   const [error, setError] = useState("");
   const [solving, setSolving] = useState(false);
   const [finished, setFinished] = useState<BankSession | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
 
   const load = useCallback(() => {
     api<BankRead>(base)
@@ -30,13 +32,23 @@ export function BankStudyPage() {
         setInfo(answer);
         setSolving(answer.session?.status === "active");
       })
-      .catch((cause) => setError((cause as Error).message));
+      .catch((cause) => {
+        if (cause instanceof ApiError && cause.status === 404) setUnavailable(true);
+        else setError((cause as Error).message);
+      });
   }, [base]);
   useEffect(load, [load]);
+  useEffect(() => { document.title = "Main-Quiz · Study_EZ"; }, []);
 
   if (error) return <p className="notice is-error">{error}</p>;
+  if (unavailable || (info && !info.summary.usable)) return (
+    <section className="quiz bank-start">
+      <h2>Main-Quiz</h2>
+      <p>아직 공개된 문제가 없습니다.</p>
+      <a href={lectureHref({ subject, runId })}>강의 자료와 기존 Main-Quiz 보기</a>
+    </section>
+  );
   if (!info) return <p className="notice">불러오는 중…</p>;
-  if (!info.summary.usable) return <p className="notice">이 강의의 Quiz Bank 는 아직 공부할 수 없습니다.</p>;
 
   if (solving) {
     return (

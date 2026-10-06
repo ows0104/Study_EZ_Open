@@ -35,7 +35,7 @@ export function BankStart({ base, info, finished, lecture, onStarted }: {
         <a href={lectureHref(lecture)} target="_blank" rel="noreferrer">강의로</a>
         <span>{daysLabel(info.examDate)} · {info.examDate}</span>
       </p>
-      <h2>Quiz Bank</h2>
+      <h2>Main-Quiz</h2>
       <p className="bank-note">
         {info.summary.questionCount}문항 · 개념 {info.summary.conceptCount}개. 다음 문항은 지금의 숙련도와 시험까지
         남은 날로 고릅니다.

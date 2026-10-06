@@ -45,7 +45,7 @@ def read_timetable(
         else []
     )
     keys = [(lecture.subject, lecture.run_id) for lecture in lectures]
-    marks = material_marks(db, keys)
+    marks = material_marks(db, keys, is_admin=user.is_admin)
     progress = prequiz_progress(db, user.id, keys)
     grabs = asset_grabs(db, user.id, keys)
 

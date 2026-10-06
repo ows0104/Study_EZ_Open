@@ -88,6 +88,8 @@ function Shell() {
   const bare =
     location.pathname.startsWith("/lectures/") ||
     location.pathname.startsWith("/prequiz/") ||
+    location.pathname.startsWith("/mainquiz/") ||
+    location.pathname.startsWith("/legacy-mainquiz/") ||
     location.pathname.startsWith("/bank/");
   // 캘린더는 격자다. 읽기 좋은 폭으로 가둘 이유가 없고, 패널이 340px을 가져가는
   // 만큼 가로가 곧 요일 칸의 폭이 된다. 글을 읽는 화면들만 좁게 둔다.
@@ -96,7 +98,7 @@ function Shell() {
   // 쓴다 — 문항·답·슬라이드가 다 이 폭을 쓰고, 답 버튼은 아래에 못 박힌다.
   // 문항 중앙값 43자·답 63자라 넓혀도 대개 한두 줄이고, 슬라이드는 원본이
   // 1152~1536px이라 700px 안에서는 절반으로 누웠다.
-  const solving = location.pathname.startsWith("/prequiz/") || location.pathname.startsWith("/bank/");
+  const solving = bare && !location.pathname.startsWith("/lectures/");
 
   return (
     <>
@@ -143,7 +145,8 @@ function Shell() {
             <Route path="/notices" element={<NoticesPage isAdmin={me.isAdmin} onSeen={onNoticeSeen} />} />
             <Route path="/guide" element={<GuidePage />} />
             <Route path="/prequiz/:subject/:runId" element={<QuizPage kind="pre" />} />
-            <Route path="/mainquiz/:subject/:runId" element={<QuizPage kind="main" />} />
+            <Route path="/mainquiz/:subject/:runId" element={<BankStudyPage />} />
+            <Route path="/legacy-mainquiz/:subject/:runId" element={<QuizPage kind="main" />} />
             <Route path="/bank/:subject/:runId" element={<BankStudyPage />} />
             {/* 관리 화면은 탭을 갈래로 들고 있다(`/admin/match` 등). 그 갈래는
                 안에서 고르므로 여기서는 통째로 넘긴다. */}

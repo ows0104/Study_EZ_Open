@@ -139,6 +139,8 @@ def request_prequiz(
     """
     kind = _job_kind(kind)
     force = bool(payload and payload.force)
+    if kind == JOB_MAIN:
+        raise HTTPException(410, "Main Quiz는 Quizbank로 전환되었습니다. 강의 패널에서 ChatGPT 답을 저장하세요.")
     lecture = lecture_or_404(db, subject, run_id)
     blocked = _no_material(db, lecture, kind)
     if blocked:
@@ -245,6 +247,17 @@ def claim_prequiz_job(
     slot = (worker or "w1")[:16]
     now = datetime.now(UTC)
 
+    # 전환 전에 남은 대기 작업은 기록을 보존하며 종료한다.
+    db.execute(update(PrequizJob).where(
+        PrequizJob.kind == JOB_MAIN,
+        PrequizJob.state.in_([JOB_QUEUED, JOB_HELD]),
+    ).values(state=JOB_CANCELED, stage="", finished_at=now,
+             message="Main Quiz를 Quizbank로 전환하여 기존 생성 대기를 종료했습니다."))
+    # 이미 실행 중인 구버전 러너는 다음 진행 보고에서 중단 요청을 받는다.
+    db.execute(update(PrequizJob).where(
+        PrequizJob.kind == JOB_MAIN, PrequizJob.state == JOB_RUNNING,
+    ).values(cancel_requested=True))
+
     running = db.scalars(
         select(PrequizJob).where(PrequizJob.state == JOB_RUNNING).order_by(PrequizJob.created_at)
     ).all()
@@ -342,6 +355,10 @@ def update_prequiz_job(
         # 내린 줄도 여기서 막힌다** — 러너가 그 뒤에 올리는 진행이 그 줄을
         # 되살리면, 사람이 멈춘 편이 화면에서 다시 돌기 시작한다.
         return {"job": job_row(job), "applied": False}
+
+    if job.kind == JOB_MAIN:
+        # claim 호출이 없어도 기존 러너의 다음 박동에서 전환을 알린다.
+        job.cancel_requested = True
 
     if payload.stage is not None:
         # **단계가 바뀔 때만 시계를 다시 잡는다.** 러너는 단계가 그대로여도

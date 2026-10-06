@@ -21,7 +21,7 @@ export type EventCategory = "lecture" | "practice" | "exam" | "holiday" | "elect
  * **다섯 칸이 관리자 체크리스트와 하나씩 짝이다.** 앞 셋이 예습 자리로, 뒤 둘이
  * 복습 자리로 묶여 칸의 점 둘이 된다.
  *
- * `quiz`는 본덱(`main_apkg`)만이다. 예습덱은 `prequiz`가 따로 든다 — 둘은
+ * `quiz`는 학습 가능한 Main Quiz(Quizbank)다. 예습덱은 `prequiz`가 따로 든다 — 둘은
  * 쓰는 시점이 달라서 같은 점으로 그리면 어느 쪽도 안 뜻한다.
  */
 export type Marks = {

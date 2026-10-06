@@ -14,6 +14,7 @@ from app.models import (
     Preview,
     PreviewOpen,
     QuizAttempt,
+    QuizBank,
 )
 from app.naming import nfc
 from app.storage import ObjectStorage, StorageNotConfigured
@@ -44,7 +45,7 @@ def lecture_or_404(db: Session, subject: str, run_id: str) -> Lecture:
     return lecture
 
 
-def material_marks(db: Session, keys: list[LectureKey]) -> dict[LectureKey, dict[str, bool]]:
+def material_marks(db: Session, keys: list[LectureKey], *, is_admin: bool = False) -> dict[LectureKey, dict[str, bool]]:
     """강의마다 무엇이 올라와 있는가. 캘린더 한 화면치를 한 번에 센다.
 
     **다섯 칸이 `CHECKLIST_ITEMS`와 하나씩 짝이다.** 관리자가 채우는 칸과 사용자가
@@ -55,8 +56,8 @@ def material_marks(db: Session, keys: list[LectureKey]) -> dict[LectureKey, dict
     작년 필기는 강의 전에 예습으로 읽는 것이고 올해 필기는 강의 후에 복습으로
     받는 것이라 쓰이는 자리가 아예 다르다.
 
-    **`quiz`는 본덱(`main_apkg`)만이다.** 두 덱은 목적 함수도 쓰는 시점도 달라서
-    한 점에 겹치면 어느 쪽도 안 뜻하게 된다.
+    `quiz`는 검증된 Quizbank다. 학생에게는 공개한 것만 센다.
+    기존 main_apkg는 보관 자료이며 새 Main Quiz 준비 상태에 포함하지 않는다.
 
     파일이 실제로 무엇인지는 상세 화면이 보여 준다. 여기서는 "있다/없다"만
     알면 되므로 종류별 개수를 세고 버린다.
@@ -81,7 +82,6 @@ def material_marks(db: Session, keys: list[LectureKey]) -> dict[LectureKey, dict
         "notes_prev": "notesPrev",
         "notes_current": "notesCurrent",
         "pre_apkg": "prequiz",
-        "main_apkg": "quiz",
     }
     asset_rows = db.execute(
         select(Asset.subject, Asset.run_id, Asset.kind)
@@ -110,6 +110,13 @@ def material_marks(db: Session, keys: list[LectureKey]) -> dict[LectureKey, dict
     for subject, run_id, share_url in preview_rows:
         if share_url:
             _touch((subject, run_id), "preview")
+
+    banks = db.scalars(select(QuizBank).where(
+        QuizBank.subject.in_(subjects), QuizBank.run_id.in_(run_ids),
+    )).all()
+    for bank in banks:
+        if (is_admin or bank.open_to_students) and bank.bank and (bank.validation or {}).get("pass"):
+            _touch((bank.subject, bank.run_id), "quiz")
 
     return marks
 

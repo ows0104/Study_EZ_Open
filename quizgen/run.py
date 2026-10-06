@@ -515,7 +515,7 @@ class Runner(BaseRunner):
         self.step("덱 빌드", None, self.build)
 
 
-def main(argv=None) -> int:
+def _legacy_main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="강의 하나를 명령 한 줄로 덱까지 굽는다")
     ap.add_argument("pdf", nargs="?", help="필기 PDF. --resume 이면 생략할 수 있다")
     ap.add_argument("--deck", help='덱 전체 이름. 주면 --subject·--lecture 를 덮는다')
@@ -656,6 +656,11 @@ def main(argv=None) -> int:
         print("\n이미지 카드가 없어 접촉 시트는 만들지 않았다.", flush=True)
     r.report(chk)
     return 0
+
+
+def main(argv=None) -> int:
+    print("Main Quiz는 Quizbank로 전환되었습니다. 웹에서 ChatGPT 답을 저장하세요.", flush=True)
+    return 2
 
 
 if __name__ == "__main__":

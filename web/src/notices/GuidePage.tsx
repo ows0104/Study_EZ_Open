@@ -78,11 +78,9 @@ export function GuidePage() {
           <div>
             <dt>
               <i className="chip-slot is-pre is-done" />
-              <i className="chip-slot is-main is-done" />
             </dt>
             <dd>
-              <b>채운 도형</b> — 했습니다. 예습은 웹에서 다 풀었거나 덱을 받았을 때, 복습은 덱을 받았을 때
-              채워집니다.
+              <b>채운 동그라미</b> — 예습을 웹에서 다 풀었거나 덱을 받았습니다.
             </dd>
           </div>
         </dl>
@@ -100,8 +98,11 @@ export function GuidePage() {
             만든 대화입니다.
           </li>
           <li>
-            <b>Pre-Quiz</b> · <b>Main-Quiz</b> — 각각 <b>웹에서 풀기</b>와 <b>덱</b>(Anki 파일)이 나란히
-            있습니다. 둘 중 편한 쪽을 쓰면 됩니다.
+            <b>Pre-Quiz</b> — 웹에서 풀거나 Anki 덱으로 학습합니다.
+          </li>
+          <li>
+            <b>Main-Quiz</b> — 공개된 Quizbank 문제를 웹에서 풉니다. 회차마다 개념별 숙련도와 시험일까지
+            남은 날에 따라 다음 문제가 선택됩니다. 예전 카드와 Anki 덱은 <b>기존 Main-Quiz 자료</b>에서 열 수 있습니다.
           </li>
           <li>
             <b>필기</b> — 작년 · 올해 필기 PDF가 새 탭에서 열립니다.
@@ -111,11 +112,17 @@ export function GuidePage() {
             있습니다.
           </li>
         </ul>
-        <p className="guide-note">자료가 하나도 없는 칸은 「아직 올라온 자료가 없습니다」라고 나옵니다. 고장이 아닙니다.</p>
+        <p className="guide-note">Main-Quiz의 빈 네모는 공개된 문제은행이 있다는 뜻입니다. 회차별 학습 결과는 풀이 화면에서 확인합니다.</p>
       </section>
 
       <section id="quiz">
         <h2>웹에서 풀기</h2>
+        <p>
+          <b>Main-Quiz</b>는 이번 회차의 문항 수를 고르고 시작합니다. 답과 근거 슬라이드를 확인한 뒤
+          Again · Hard · Good · Easy로 평가합니다. 회차가 끝나면 개념별 숙련도와 남은 약점을 확인하고
+          한 회차 더 풀 수 있습니다.
+        </p>
+        <h3>Pre-Quiz와 기존 Main-Quiz 카드</h3>
         <p>
           Anki와 같은 방식입니다. 질문을 보고 떠올린 뒤 답을 펴고, 얼마나 잘 기억했는지 스스로 고릅니다. 고른 것에
           따라 그 카드가 다음에 언제 다시 나올지 정해집니다.
@@ -164,6 +171,7 @@ export function GuidePage() {
 
       <section id="anki">
         <h2>Anki 덱 받기</h2>
+        <p>Pre-Quiz와 이전에 만들어 둔 Main-Quiz 덱을 받을 수 있습니다. 새 Main-Quiz는 웹에서 풉니다.</p>
         <ul>
           <li>
             패널의 <b>덱</b>을 누르면 <code>.apkg</code> 파일이 받아집니다. 그 파일을 더블클릭하거나 Anki의{" "}
@@ -254,7 +262,7 @@ function StudyFlow() {
             <b>강의</b>
             <span>수업을 듣는다</span>
           </div>
-          <span className="flow-source">올해 필기가 올라오면 Main-Quiz가 만들어진다</span>
+          <span className="flow-source">올해 필기로 출제하고 검증한 문제를 관리자가 공개한다</span>
         </li>
 
         <li className="flow-arrow" aria-hidden="true" />
@@ -266,13 +274,13 @@ function StudyFlow() {
               Main-Quiz <i className="chip-slot is-main is-ready" aria-label="칸의 네모" />
             </b>
             <span>올해 필기로 만든 문제</span>
-            <small>웹에서 풀기 · 덱</small>
+            <small>Quizbank · 웹에서 풀기</small>
             <span className="flow-loop">
               <svg viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M13 8a5 5 0 1 1-1.6-3.7" />
                 <path d="M11.8 1.8v2.8H9" />
               </svg>
-              오늘 낼 카드만 · 잊을 때쯤 다시
+              개념별 숙련도에 따라 다음 문제
             </span>
           </div>
           <span className="flow-source">재료 · 올해 필기</span>
@@ -295,7 +303,7 @@ function StudyFlow() {
       </ol>
       <figcaption>
         캘린더 칸의 <i className="chip-slot is-pre is-ready" /> 는 Pre-Quiz, <i className="chip-slot is-main is-ready" /> 는
-        Main-Quiz 자리입니다. 웹에서 풀든 덱으로 Anki에서 풀든 같은 문제입니다.
+        Main-Quiz 자리입니다. Main-Quiz는 공개된 Quizbank가 있으면 표시됩니다.
       </figcaption>
     </figure>
   );

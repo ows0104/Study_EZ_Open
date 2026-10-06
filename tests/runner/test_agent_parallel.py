@@ -286,7 +286,7 @@ def test_한도로_멈춘_편은_실패가_아니라_줄로_돌아간다(tmp_pat
 
     client = FakeClient([])
     worker = _agent(tmp_path, client)
-    job = agent.Job(id=9, subject="기생충학", run_id="260901_01", kind=deck.MAIN)
+    job = agent.Job(id=9, subject="기생충학", run_id="260901_01", kind=deck.PRE)
     worker._run = lambda *a, **k: (1, [f"    실패 — quizgen가 1로 끝났다 (로그: {child})"])
     worker.handle(job)
 
@@ -303,7 +303,7 @@ def test_한도가_아닌_실패는_그대로_실패다(tmp_path):
 
     client = FakeClient([])
     worker = _agent(tmp_path, client)
-    job = agent.Job(id=9, subject="기생충학", run_id="260901_01", kind=deck.MAIN)
+    job = agent.Job(id=9, subject="기생충학", run_id="260901_01", kind=deck.PRE)
     worker._run = lambda *a, **k: (1, [f"    실패 — quizgen가 1로 끝났다 (로그: {child})"])
     worker.handle(job)
 
@@ -318,7 +318,7 @@ def test_갓_올라온_필기는_기다렸다_다시_한다(tmp_path):
     그렇게 복습 없이 남았다."""
     client = FakeClient([])
     worker = _agent(tmp_path, client)
-    job = agent.Job(id=9, subject="기생충학", run_id="260902_03", kind=deck.MAIN)
+    job = agent.Job(id=9, subject="기생충학", run_id="260902_03", kind=deck.PRE)
     worker._run = lambda *a, **k: (0, [
         "  · 기생충학/260902_03 간흡충증(송현범) — 올라온 지 9분. 동기화 중일 수 있어 다음 차례로"])
     worker.handle(job)
@@ -361,7 +361,7 @@ def _auth_worker(tmp_path, client):
 def test_403으로_멈춘_편은_실패가_아니라_줄로_돌아간다(tmp_path):
     client = FakeClient([])
     worker = _auth_worker(tmp_path, client)
-    worker.handle(agent.Job(id=9, subject="미생물학", run_id="260916_01", kind=deck.MAIN))
+    worker.handle(agent.Job(id=9, subject="미생물학", run_id="260916_01", kind=deck.PRE))
 
     last = client.puts[-1][1]
     assert last["state"] == "queued", "실패로 적었다"
@@ -374,7 +374,7 @@ def test_403이_네_번째면_실패로_떨어진다(tmp_path):
     """셋까지는 되돌리고, 그래도 그대로면 저절로 풀리는 것이 아니다."""
     client = FakeClient([])
     worker = _auth_worker(tmp_path, client)
-    job = agent.Job(id=9, subject="미생물학", run_id="260916_01", kind=deck.MAIN)
+    job = agent.Job(id=9, subject="미생물학", run_id="260916_01", kind=deck.PRE)
     for _ in range(agent.AUTH_MAX_RETRIES):
         worker.handle(job)
     assert all(body.get("state") != "failed" for _, body in client.puts), "너무 일찍 떨어뜨렸다"
@@ -392,7 +392,7 @@ def test_중간에_성공하면_셈이_풀린다(tmp_path):
     """이어진 것만 센다. 안 버리면 다음에 한 번만 튕겨도 옛 셈이 남아 상한에 걸린다."""
     client = FakeClient([])
     worker = _auth_worker(tmp_path, client)
-    job = agent.Job(id=9, subject="미생물학", run_id="260916_01", kind=deck.MAIN)
+    job = agent.Job(id=9, subject="미생물학", run_id="260916_01", kind=deck.PRE)
     worker.handle(job)
     worker.handle(job)
     assert agent.read_retries(tmp_path)[agent.retry_key(job)] == 2

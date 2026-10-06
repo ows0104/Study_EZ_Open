@@ -1,6 +1,8 @@
 # quizgen 사용·수정 안내
 
-강의 PDF를 예습·복습 카드와 Anki 덱으로 변환한다.
+현재는 Pre-Quiz 카드와 Anki 덱을 생성한다. Main Quiz는 Quizbank로 전환했으며
+`quizgen.run`과 `runner watch --build`의 기존 Main 생성은 중단한다.
+아래 Main 관련 설명은 기존 산출물과 내부 코드의 유지보수 참고다.
 모델 단계는 ChatGPT 계정으로 로그인된 `codex` CLI의 빈 세션으로 실행하며, 로컬 파일 처리와 검증은 Python이 맡는다.
 원본 자료를 서버에 배급하는 작업은 `runner`의 책임이다.
 

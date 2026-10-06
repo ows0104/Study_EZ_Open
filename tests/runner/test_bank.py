@@ -24,7 +24,7 @@ def _job(**kw) -> agent.Job:
 def test_bank_갈래는_runner_bank_를_부른다(tmp_path):
     argv = _agent(tmp_path).make_argv(_job())
     assert argv[2:] == ["runner", "bank", "약리학", "--run-id", "261002_02"]
-    assert _job().what == "Quiz Bank"
+    assert _job().what == "Main-Quiz"
 
 
 def test_bank_는_작년_자리를_막지_않는다(tmp_path):

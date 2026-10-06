@@ -111,14 +111,7 @@ def main() -> None:
     ).json()
     check("두 파일 다 확인됨",
           (completed["stored"], completed["missing"]) == (2, []), completed)
-    # **올해 필기가 처음 올라오면 복습 덱이 저절로 큐에 선다**(2026-09-01). 버튼은
-    # 이제 안전장치다 — 사람이 누르기를 기다리는 동안 노트북이 놀고 있었다.
-    check("필기가 올라오면 복습 일감이 선다",
-          completed["queued"] is not None
-          and completed["queued"]["kind"] == "main"
-          and completed["queued"]["state"] == "queued"
-          and completed["queued"]["origin"] == "auto"
-          and isinstance(completed["queued"]["id"], int), completed)
+    check("필기 업로드는 기존 quizgen 작업을 만들지 않는다", completed["queued"] is None, completed)
 
     # 러너는 쓸기마다 같은 강의록을 다시 밀어 본다. 그때마다 서면 10분에 한 번씩
     # 같은 편을 만든다.
@@ -564,40 +557,13 @@ def main() -> None:
         "/api/admin/lectures/병리학/999999_09/prequiz-job", headers=USER).status_code == 404)
 
     print()
-    print("[14-1] 복습 일감 — 같은 우편함, 다른 갈래")
-    # 재료가 다르므로 갈래가 있다. 예습은 예습 대화로, 복습은 올해 필기로 만든다.
-    # 260813_03에는 [3]에서 올해 필기를 올려 두었다.
+    print("[14-1] Main Quiz 생성 전환")
     pre_open = client.get(f"{base14}/prequiz-job", headers=USER).json()["job"]
-    main = client.post(f"{base14}/prequiz-job?kind=main", headers=USER)
-    check("복습도 누르면 만들어진다",
-          main.status_code == 200 and main.json()["created"] is True, main.text)
-    check("갈래가 실려 온다", main.json()["job"]["kind"] == "main", main.json())
-    # 예습 일감이 열려 있어도 복습은 따로 선다. 한 갈래가 다른 갈래를 막지 않는다.
-    check("예습 일감이 열려 있어도 새로 선다",
-          main.json()["job"]["id"] != pre_open["id"], (main.json(), pre_open))
+    response = client.post(f"{base14}/prequiz-job?kind=main", headers=USER)
+    check("기존 Main 생성은 전환 안내와 410", response.status_code == 410, response.text)
+    check("Pre 작업은 유지", client.get(f"{base14}/prequiz-job", headers=USER).json()["job"]["id"] == pre_open["id"])
+    check("모르는 갈래는 거절", client.post(f"{base14}/prequiz-job?kind=quiz", headers=USER).status_code == 400)
 
-    check("두 번 눌러도 두 번 만들지 않는다 — 갈래 안에서",
-          client.post(f"{base14}/prequiz-job?kind=main", headers=USER).json()["created"] is False)
-
-    # 캘린더 패널이 갈래로 묻는다. 섞어 주면 복습을 만드는 중이라는 말이 예습
-    # 자리에 떠서, 사람이 누르지 않은 것을 기다리게 된다.
-    read_main = client.get(f"{base14}/prequiz-job?kind=main", headers=USER).json()["job"]
-    read_pre = client.get(f"{base14}/prequiz-job?kind=pre", headers=USER).json()["job"]
-    check("갈래를 섞어 주지 않는다",
-          read_main["id"] == main.json()["job"]["id"] and read_pre["id"] == pre_open["id"],
-          (read_main, read_pre))
-    check("갈래를 안 주면 예습이다", client.get(
-        f"{base14}/prequiz-job", headers=USER).json()["job"]["id"] == pre_open["id"])
-
-    # 올해 필기가 없는 강의(260813_01)는 만들 재료가 없다. 여기서 안 가르면
-    # 러너가 15분 뒤에 「만들 자리를 못 찾았다」로 실패한다.
-    nonotes = client.post(
-        "/api/admin/lectures/병리학/260813_01/prequiz-job?kind=main", headers=USER)
-    check("올해 강의록이 없으면 거절한다", nonotes.status_code == 400, nonotes.text)
-    check("모르는 갈래는 거절한다", client.post(
-        f"{base14}/prequiz-job?kind=quiz", headers=USER).status_code == 400)
-
-    print()
     print("[14-2] 저절로 서는 줄 — 재료가 도착하면 만든다")
     # 2026-09-01. 버튼을 기다리는 동안 노트북이 놀고 있었다. 이제 재료가 도착하는
     # 자리에서 큐가 선다 — 필기 업로드([3])와 예습 링크 저장이 그 둘이다.
@@ -755,7 +721,7 @@ def main() -> None:
     # 순서뿐이다. 줄을 표에 바로 세운다 — **선 순서를 내가 정해야** 급한 순서가
     # 그것을 뒤집는지 볼 수 있다.
     with SessionLocal() as db:
-        for run_id, kind in (("990101_01", "main"), ("990102_03", "main"), ("990103_02", "pre")):
+        for run_id, kind in (("990101_01", "bank"), ("990102_03", "bank"), ("990103_02", "pre")):
             db.add(PrequizJob(subject="병리학", run_id=run_id, kind=kind,
                               state="queued", stage="", requested_by="", origin="auto"))
         db.commit()
@@ -763,7 +729,7 @@ def main() -> None:
     waiting_now = client.get("/api/admin/prequiz-jobs", headers=USER).json()["waiting"]
     order = [f"{row['runId']}/{row['kind']}" for row in waiting_now]
     check("내일 예습 · 오늘 복습 · 나머지 순으로 선다",
-          order == ["990103_02/pre", "990102_03/main", "990101_01/main"], order)
+          order == ["990103_02/pre", "990102_03/bank", "990101_01/bank"], order)
     check("왜 앞인지가 화면까지 온다",
           [row["priority"] for row in waiting_now] == ["내일 예습", "오늘 복습", ""],
           [row["priority"] for row in waiting_now])

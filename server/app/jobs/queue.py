@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.models import (
     JOB_AUTO,
     JOB_AUTO_DAILY_CAP,
+    JOB_BANK,
     JOB_CANCELED,
     JOB_HELD,
     JOB_KINDS,
@@ -100,7 +101,7 @@ def queue_priority(kind: str, lecture_date: Date | None, today: Date) -> int:
         return RANK_REST
     if kind == JOB_PRE and lecture_date == today + timedelta(days=1):
         return RANK_PRE_TOMORROW
-    if kind == JOB_MAIN and lecture_date == today:
+    if kind in (JOB_MAIN, JOB_BANK) and lecture_date == today:
         return RANK_MAIN_TODAY
     return RANK_REST
 
@@ -154,7 +155,8 @@ def ensure_auto_job(db: Session, subject: str, run_id: str, kind: str, why: str)
 
     자동 상한을 넘으면 held로 기록해 관리자에게 표시한다. 등록된 행은 flush만 하고
     업로드·링크와 한 트랜잭션이 되도록 호출자가 commit한다."""
-    if kind not in JOB_KINDS:
+    # Main Quiz는 ChatGPT 답을 저장할 때 bank 작업으로 접수한다.
+    if kind not in JOB_KINDS or kind == JOB_MAIN:
         return None
     if open_job_of(db, subject, run_id, kind) is not None:
         return None

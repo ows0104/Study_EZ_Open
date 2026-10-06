@@ -14,7 +14,7 @@ import { RunnerBoard } from "./RunnerBoard";
  * **한 번에 열 줄만 편다**(같은 지시). 학기가 가면 수백 줄이 되는 목록인데 그
  * 아래에는 아무것도 없어서, 다 펴 두면 최신 열 줄을 보려고 매번 위를 찾아야 한다.
  */
-type Filter = "all" | "pre" | "main" | "flagged" | "stale";
+type Filter = "all" | "pre" | "bank" | "main" | "flagged" | "stale";
 
 /** 처음에 펴는 줄 수. 나머지는 눌러서 펼친다. */
 const FIRST_PAGE = 10;
@@ -25,7 +25,7 @@ const MORE = 20;
 /** 만들어진 퀴즈 한 줄. 편과 갈래가 짝이다 — 한 편에서 예습·복습 둘이 나온다. */
 type Deck = {
   row: AdminRow;
-  kind: "pre" | "main";
+  kind: "pre" | "main" | "bank";
   itemCount: number;
   reviewFlagged: number;
   slidesUnused: number;
@@ -40,7 +40,8 @@ type Deck = {
   webItems: number;
 };
 
-const kindLabels = { pre: "Pre-Quiz", main: "Main-Quiz" } as const;
+const kindLabels = { pre: "Pre-Quiz", bank: "Main-Quiz", main: "기존 Main-Quiz" } as const;
+const bankStatus = { responded: "정리 대기", building: "정리 중", ready: "준비됨", invalid: "검증 오류", failed: "생성 실패" } as const;
 
 /**
  * **옛 판으로 구운 덱인가.** 판을 둘 다 알 때만 말한다.
@@ -62,6 +63,13 @@ function stale(deck: Deck): boolean {
 function decks(lectures: AdminRow[]): Deck[] {
   const out: Deck[] = [];
   for (const row of lectures) {
+    if (row.bank) {
+      const bank = row.bank;
+      out.push({ row, kind: "bank", itemCount: bank.questionCount,
+        reviewFlagged: (bank.reviewCounts?.wrong ?? 0) + (bank.reviewCounts?.doubt ?? 0),
+        slidesUnused: 0, builtAt: bank.builtAt, sourceVersion: null,
+        lectureVersion: row.version, hasFile: false, webItems: bank.questionCount });
+    }
     for (const kind of ["pre", "main"] as const) {
       const meta = row.runMeta[kind];
       const hasFile = Boolean(row.has[`${kind}_apkg`]);
@@ -134,7 +142,8 @@ export function QuizTab({
           [
             ["all", `전체 ${all.length}`],
             ["pre", "Pre-Quiz"],
-            ["main", "Main-Quiz"],
+            ["bank", "Main-Quiz"],
+            ["main", "기존 Main-Quiz"],
             ["flagged", "검토 표시"],
             // 옛 판으로 구운 덱이 없으면 그 갈래도 안 그린다. 늘 서 있는 0은
             // 곧 안 읽힌다.
@@ -182,7 +191,11 @@ export function QuizTab({
                   </span>
                 ) : null}
                 {/* 기록은 있는데 덱 파일이 없다. 사람이 받을 것이 없다는 뜻이다. */}
-                {deck.hasFile ? null : <span className="tag is-warn">덱 파일 없음</span>}
+                {deck.kind === "bank" && deck.row.bank ? (
+                  <span className="tag">{deck.row.bank.usable
+                    ? deck.row.bank.open ? "공개됨" : "공개 대기"
+                    : bankStatus[deck.row.bank.status]}</span>
+                ) : deck.hasFile ? null : <span className="tag is-warn">덱 파일 없음</span>}
                 {/* 검토 표시가 남은 덱은 사람이 카드 뒷면 경고 박스를 보기 전까지
                     배포해서는 안 된다. */}
                 {deck.reviewFlagged ? <span className="tag is-warn">검토 {deck.reviewFlagged}</span> : null}

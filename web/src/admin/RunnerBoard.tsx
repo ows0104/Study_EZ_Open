@@ -126,7 +126,7 @@ export function RunnerBoard({ board, onBoard }: { board: JobBoard | null; onBoar
             <strong>
               {job.subject}/{job.runId}
             </strong>{" "}
-            {job.kind === "main" ? "Main-Quiz" : "Pre-Quiz"} · 전략을 골라 주세요
+            {job.kind === "bank" ? "Main-Quiz" : job.kind === "main" ? "기존 Main-Quiz" : "Pre-Quiz"} · 전략을 골라 주세요
             <br />
             <small>{job.ask}</small>
           </span>
@@ -153,7 +153,7 @@ export function RunnerBoard({ board, onBoard }: { board: JobBoard | null; onBoar
             <strong>
               {job.subject}/{job.runId}
             </strong>{" "}
-            {job.kind === "main" ? "Main-Quiz" : "Pre-Quiz"}
+            {job.kind === "bank" ? "Main-Quiz" : job.kind === "main" ? "기존 Main-Quiz" : "Pre-Quiz"}
             {job.origin === "auto" ? " · 자동" : ""}
             <small> {job.worker}</small>
             <br />
@@ -193,7 +193,7 @@ export function RunnerBoard({ board, onBoard }: { board: JobBoard | null; onBoar
             <strong>
               {job.subject}/{job.runId}
             </strong>{" "}
-            {job.kind === "main" ? "Main-Quiz" : "Pre-Quiz"}
+            {job.kind === "bank" ? "Main-Quiz" : job.kind === "main" ? "기존 Main-Quiz" : "Pre-Quiz"}
             {/* 한도로 멈춘 줄은 차례를 기다리는 것이 아니라 **시각**을 기다린다.
                 그 자리에 「차례 1번째」만 적으면 곧 시작할 것으로 읽힌다. */}
             {waitingUntil(job) ? (
@@ -244,7 +244,7 @@ export function RunnerBoard({ board, onBoard }: { board: JobBoard | null; onBoar
             <strong>
               {job.subject}/{job.runId}
             </strong>{" "}
-            {job.kind === "main" ? "Main-Quiz" : "Pre-Quiz"}
+            {job.kind === "bank" ? "Main-Quiz" : job.kind === "main" ? "기존 Main-Quiz" : "Pre-Quiz"}
             <br />
             {/* 상한에 걸린 줄은 **왜 안 만드는지**를 그대로 적는다. 만드는 버튼은
                 캘린더의 그 덱 칸이다 — 여기서 또 누르게 하면 같은 버튼이 둘이 된다.

@@ -22,31 +22,35 @@ import { BANK_PROMPT_VERSION, renderBankPrompt } from "./prompt";
  *            → 검토 결과를 보고 「학생에게 열기」
  *   학생     열린 은행이면 「공부하기」
  *
- * Main-Quiz 는 그대로 옆에 선다 — 둘이 나란히 돌다가 Quiz Bank 가 검증되면 그때 끈다.
+ * Main Quiz의 생성과 학습은 이 패널에서 처리한다.
  *
  * **「답 붙여넣기」는 확장이 못 읽는 자리를 위한 길이다**(2026-10-05 관리자 지시). 학교 계정(내부 워크스페이스)
  * ChatGPT 로 만든 답은 확장이 가져오지 못해 저장되지 않았다. 같은 저장 경로(`PUT …/bank-response`)로 넣으므로
  * 그 뒤는 확장으로 들어온 답과 똑같이 러너가 정리한다.
  */
-export function BankPanel({ lecture, detail }: { lecture: LectureRef; detail: LectureDetail }) {
+export function BankPanel({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | "runId">; detail: LectureDetail }) {
   const isAdmin = Boolean(useMe()?.isAdmin);
   const bank = detail.bank;
   if (!isAdmin) {
-    if (!bank?.usable) return null;
+    if (!bank?.usable) return (
+      <PanelGroup tone="main" title="Main-Quiz" note="강의 후 반복">
+        <p className="panel-hint">아직 공개된 문제가 없습니다.</p>
+      </PanelGroup>
+    );
     return (
-      <PanelGroup tone="bank" title="Quiz Bank" note="개념·방향별 반복">
+      <PanelGroup tone="main" title="Main-Quiz" note="개념·방향별 반복">
         <StudyCard lecture={lecture} bank={bank} />
       </PanelGroup>
     );
   }
   return (
-    <PanelGroup tone="bank" title="Quiz Bank" note="ChatGPT로 만들고 여기서 푼다">
+    <PanelGroup tone="main" title="Main-Quiz" note="ChatGPT로 만들고 여기서 푼다">
       <BankAdmin lecture={lecture} detail={detail} />
     </PanelGroup>
   );
 }
 
-function StudyCard({ lecture, bank }: { lecture: LectureRef; bank: BankSummary }) {
+function StudyCard({ lecture, bank }: { lecture: Pick<LectureRef, "subject" | "runId">; bank: BankSummary }) {
   return (
     <ActionCard
       shape="is-lead"
@@ -68,7 +72,7 @@ const STATUS_LINE: Record<BankSummary["status"], string> = {
   failed: "정리에 실패했다",
 };
 
-function BankAdmin({ lecture, detail }: { lecture: LectureRef; detail: LectureDetail }) {
+function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | "runId">; detail: LectureDetail }) {
   const path = `${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
   const adminBase = `/api/admin/lectures/${path}`;
   const bank = detail.bank;
@@ -106,7 +110,7 @@ function BankAdmin({ lecture, detail }: { lecture: LectureRef; detail: LectureDe
     wasMoving.current = moving;
   }, [moving]);
 
-  /** 확장이 ChatGPT 새 대화에 필기·족보를 붙이고 프롬프트를 채운다. 전송은 사람이 누른다. */
+  /** 확장이 동의 후 ChatGPT 새 대화에 필기·족보를 첨부하고 프롬프트를 자동 전송한다. */
   async function make() {
     if (!notes) return;
     if (!extensionInstalled()) {
@@ -201,7 +205,7 @@ function BankAdmin({ lecture, detail }: { lecture: LectureRef; detail: LectureDe
         shape="is-empty is-key"
         hit={
           <span className="panel-action-hit" title="Quiz Bank 는 올해 필기로 만든다">
-            <strong>Quiz Bank</strong>
+            <strong>Main-Quiz</strong>
             <small>올해 필기 대기</small>
           </span>
         }

@@ -48,9 +48,13 @@ export function quizWindow(kind: QuizKind, lecture: { subject: string; runId: st
  * 다음 문항은 서버가 고른다(`server/app/study_engine/`).
  */
 export function bankHref(lecture: { subject: string; runId: string }) {
-  return `/bank/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
+  return quizHref("main", lecture);
 }
 
 export function bankWindow(lecture: { subject: string; runId: string }) {
-  return `bank:${lecture.subject}/${lecture.runId}`;
+  return quizWindow("main", lecture);
+}
+
+export function legacyMainHref(lecture: { subject: string; runId: string }) {
+  return `/legacy-mainquiz/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
 }

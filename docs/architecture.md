@@ -27,9 +27,16 @@ runner: 탐색·매칭 → 서버의 생성 작업 수신
 
 | 자료 | 입력 | 생성·처리 | 이용 |
 |---|---|---|---|
-| Main-Quiz | 올해 필기·족보 | `quizgen.run` | 웹 자기채점·Anki |
+| Main-Quiz (Quizbank) | 올해 필기·족보로 만든 ChatGPT 답 | `quizbank.run` | Study Engine이 다음 문항 선택 |
 | Pre-Quiz | 작년 필기·예습 대화 | `quizgen.prequiz.run` | 웹 자기채점·Anki |
-| Quiz Bank | 관리자의 ChatGPT 답·필기 PDF | `quizbank.run` | Study Engine이 다음 문항 선택 |
+| 기존 Main-Quiz | 전환 전에 생성한 카드·덱 | 새 생성 중단 | 기존 웹 기록·Anki 덱 보관 |
+
+2026-10-06부터 Main Quiz는 Quizbank로 생성한다. 필기 업로드만으로 quizgen 작업을
+등록하지 않는다. ChatGPT에서 출제한 완성 답을 저장하면 `kind=bank` 작업으로 정리·검증한다.
+공개는 관리자가 결정하며, Pre-Quiz의 생성과 기존 카드·학습 기록은 유지한다.
+관리자의 완료 체크는 Quizbank 검증·학생 공개를 기준으로 한다. 기존 Main 덱의
+해당 없음 표시는 새 문제은행에 승계하지 않는다. DB 스키마 변경은 없으며 배포는
+서버 → 웹 → 로컬 러너 재시작 순서로 적용한다.
 
 Quiz Bank의 최초 문항 생성 프롬프트는 `web/src/bank/bankPrompt.md`다.
 확장은 PDF와 족보 조각을 대화에 붙이고 답을 회수한다. `quizbank`는 받은 답을
@@ -54,8 +61,9 @@ Cloudflare Pages는 웹을 담당한다. 서버는 승인·관리자 권한을 �
 서명 URL을 발급한다. 업로드 본문은 서명 URL을 통해 R2로 직접 전달된다.
 
 Main-Quiz와 Pre-Quiz는 각각 `/mainquiz/:subject/:runId`와
-`/prequiz/:subject/:runId`에서 풀 수 있다. Quiz Bank는
-`/bank/:subject/:runId`에서 열고, 관리자가 공개한 강의만 학생에게 보인다.
+`/prequiz/:subject/:runId`에서 풀 수 있다. `/bank/:subject/:runId`도 같은 Quizbank를 연다.
+Main Quiz는 관리자가 공개한 강의만 학생에게 보인다. 기존 카드 풀이는
+`/legacy-mainquiz/:subject/:runId`에서 이어간다. 기존 `/api/…/mainquiz`는 보관 카드 API다.
 강의 키는 서버에서 `(subject, run_id)`로 다룬다.
 
 ## 배포와 검토

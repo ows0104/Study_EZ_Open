@@ -95,7 +95,8 @@ export function lectureSlots(lecture: LectureRef): Slots {
     // 받아 간 사람은 Anki 쪽이라 서버가 진행을 못 본다. 그때는 비율을 안 그리고
     // 꽉 채운다 — 반쯤 찬 점으로 남겨 두면 영영 안 끝나는 자리가 된다.
     preFill: !preOpen || grabbed.pre || !progress ? null : progress.answered / progress.total,
-    main: marks.quiz ? (grabbed.main ? "done" : "ready") : "none",
+    // 옛 덱·필기를 받은 기록은 Quizbank 학습 완료를 뜻하지 않는다.
+    main: marks.quiz ? "ready" : "none",
   };
 }
 

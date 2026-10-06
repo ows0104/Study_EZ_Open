@@ -223,8 +223,8 @@ class Job:
     def what(self) -> str:
         """사람이 읽는 갈래 이름. 화면에도 로그에도 같은 말이 서야 한다."""
         if self.kind == BANK:
-            return "Quiz Bank"
-        return "Main-Quiz" if self.kind == deck.MAIN else "Pre-Quiz"
+            return "Main-Quiz"
+        return "기존 Main-Quiz" if self.kind == deck.MAIN else "Pre-Quiz"
 
 
 class Agent:
@@ -499,6 +499,10 @@ class Agent:
 
     def handle(self, job: Job) -> None:
         """일감 하나를 끝까지. 만들고, 올리고, 무엇이 됐는지 적는다."""
+        if job.kind == deck.MAIN:
+            self.report(job, state="canceled", stage="",
+                        message="Main Quiz는 Quizbank로 전환되었습니다. ChatGPT 답을 저장하세요.")
+            return
         if job.cancel_requested:
             # 집어 오는 순간에 이미 멈춤이 걸려 있다. 러너가 만드는 중에
             # 재시작하면 그 편을 다시 집는데, 그때 표시가 그대로 온다 —

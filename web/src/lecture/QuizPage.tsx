@@ -16,7 +16,7 @@ const LOOK: Record<QuizKind, { title: string; deck: LectureFile["kind"]; deckNot
     next: "필기와 Main-Quiz 덱",
   },
   main: {
-    title: "Main-Quiz",
+    title: "기존 Main-Quiz",
     deck: "main_apkg",
     deckNote: "그림 카드까지 들어 있습니다",
     next: "필기와 예습 링크",

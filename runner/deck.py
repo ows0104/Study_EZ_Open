@@ -462,32 +462,10 @@ def _spawn(argv: list[str], run_dir: Path, repo_root: Path, timeout: int,
 def run_main(*, pdf: str | Path, run_id: str, subject: str, lecture: str, title: str = "",
              runs_dir: Path, repo_root: Path, note: str = "", model: str = "",
              timeout: int = DEFAULT_TIMEOUT, extra: list[str] | None = None) -> Result:
-    """복습 덱 한 편. `python -m quizgen.run`을 그대로 부른다.
-
-    `--jokbo-dir`을 `runs/_jokbo`로 주면 `runner jokbo`가 잘라 둔 조각을 스스로
-    찾아 쓴다. 어느 조각을 물릴지는 quizgen가 목차 제목으로 대조한다 —
-    로컬 러너가 따로 짝지어 줄 것이 없다.
-    """
+    """기존 호출자에게 전환을 알리고 새 quizgen 생성을 막는다."""
     run_dir = runs_dir / run_id
-    # **이번 시도가 쓸 자리.** 옛 모양에서는 강의 폴더 그대로다(`new_work_dir`).
-    # `--resume` 이 실려 오면 새 판을 열지 않는다 — 그 시도를 계속하는 것이다.
-    work = new_work_dir(run_dir, MAIN, resume=any("--resume" in a for a in (extra or [])))
-    argv = [sys.executable, "-m", "quizgen.run", str(pdf),
-            "--out", str(work), "--id", deck_id(run_id),
-            "--subject", subject, "--lecture", lecture,
-            "--jokbo-dir", str(jokbo_dir(runs_dir, subject)),
-            "--check-dir", str(runs_dir / "_image_check"),
-            # 덱 마디와 **같은 자리에서** 이름을 딴다. 여기만 `apkg_name` 을 직접
-            # 부르던 동안, 예습 짝이 있는 편에서 파일 이름만 파일명 제목으로 남았다.
-            "--apkg-name", calendar_name(runs_dir / run_id, run_id,
-                                         title or lecture, MAIN, subject=subject)]
-    if note:
-        argv += ["--note", note]
-    if model:
-        argv += ["--model", model]
-    argv += extra or []
-    argv += revise_from(run_dir, work, extra)
-    return _spawn(argv, run_dir, repo_root, timeout, "pipeline.log", work=work)
+    return Result(False, run_dir, run_dir / "pipeline.log",
+                  "Main Quiz는 Quizbank로 전환되었습니다. 웹에서 ChatGPT 답을 저장하세요.")
 
 
 def run_pre(*, pdf: str | Path, run_id: str, subject: str, lecture: str, note: str,

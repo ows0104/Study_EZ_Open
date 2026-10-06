@@ -46,6 +46,7 @@ from app.models import (
     PrequizJob,
     Preview,
     Profile,
+    QuizBank,
     RunMeta,
     RunnerBeat,
     TimetableEvent,
@@ -54,7 +55,7 @@ from app.naming import nfc, object_key, slide_no_from_filename, version_from_fil
 from app.preview_links import conversation_url as valid_conversation_url
 from app.preview_links import provider as valid_provider
 from app.preview_links import share_url as valid_share_url
-from app.routes import cards
+from app.routes import bank as quiz_bank, cards
 from app.routes.common import lecture_or_404, storage_or_503
 
 router = APIRouter()
@@ -227,29 +228,8 @@ def complete_uploads(
 
 
 def _auto_main_job(db: Session, lecture: Lecture, fresh: set[str]) -> dict[str, Any] | None:
-    """올해 필기가 처음 올라왔으면 복습 덱을 큐에 세운다.
-
-    **덱이 이미 있으면 안 세운다.** 두 자리가 이 조건으로 걸러진다.
-
-    ① 방금 만든 편. `watch --build`는 덱을 만들고 나서 강의록과 덱을 **같이**
-       올리므로, 안 걸러 내면 만들자마자 같은 편을 또 만든다.
-    ② 필기의 새 판(v1 → v3). 파일이 새로 온 것은 맞지만 15분과 $12를 다시 쓸지는
-       사람이 정할 일이다 — 그 자리가 덱 옆의 ⟳다.
-    """
-    if "notes_current" not in fresh:
-        return None
-    if "main_apkg" in fresh:
-        return None
-    built = db.scalars(
-        select(Asset.id).where(
-            Asset.subject == lecture.subject,
-            Asset.run_id == lecture.run_id,
-            Asset.kind == "main_apkg",
-        )
-    ).first()
-    if built:
-        return None
-    return job_row(ensure_auto_job(db, lecture.subject, lecture.run_id, "main", "올해 필기가 올라왔다"))
+    """Main Quiz는 bank-response 저장으로 접수한다. PDF 업로드는 자료만 등록한다."""
+    return None
 
 
 # ---------------------------------------------------------------- 산출물 JSON
@@ -569,7 +549,7 @@ def set_waive(
     신설 강의에는 작년 필기가 없다. 그런 칸을 영영 미완으로 두면 화면이 미완으로
     가득 차고, 그러면 정말 밀린 강의가 안 보인다.
     """
-    if payload.item not in CHECKLIST_ITEMS:
+    if payload.item not in (*CHECKLIST_ITEMS, "main_apkg"):
         raise HTTPException(status_code=400, detail=f"모르는 체크 항목입니다: {payload.item}")
     lecture = lecture_or_404(db, subject, run_id)
     key = (lecture.subject, lecture.run_id, payload.item)
@@ -624,7 +604,7 @@ def put_course_aliases(
 # ---------------------------------------------------------------- /admin 화면
 
 
-def _checklist(kinds: set[str], preview: Preview | None, waived: set[str]) -> dict[str, str]:
+def _checklist(kinds: set[str], preview: Preview | None, waived: set[str], bank: dict | None = None) -> dict[str, str]:
     """다섯 칸의 상태. 올라온 것이 닫아 둔 것을 이긴다.
 
     닫아 둔 칸에 나중에 자료가 올라오면 `done`으로 돌아온다 — 자료가 있는데
@@ -636,7 +616,7 @@ def _checklist(kinds: set[str], preview: Preview | None, waived: set[str]) -> di
         "preview": bool(preview and preview.share_url),
         "pre_apkg": "pre_apkg" in kinds,
         "notes_current": "notes_current" in kinds,
-        "main_apkg": "main_apkg" in kinds,
+        "bank": bool(bank and bank["usable"] and bank["open"]),
     }
     return {
         item: "done" if done[item] else "waived" if item in waived else "todo"
@@ -670,6 +650,7 @@ def overview(
         )
     }
     previews = {(row.subject, row.run_id): row for row in db.scalars(select(Preview))}
+    banks = {(row.subject, row.run_id): row for row in db.scalars(select(QuizBank))}
     # 편마다 **가장 최근** 일감 하나. 끝난 것도 보여 준다 — 실패한 채로 사라지면
     # 화면이 "아직 아무도 안 눌렀다"와 같은 모양이 된다.
     #
@@ -692,6 +673,7 @@ def overview(
         event = events.get(lecture.timetable_event_id) if lecture.timetable_event_id else None
         preview = previews.get(key)
         meta = metas.get(key, {})
+        bank = quiz_bank.summary(db, lecture, banks.get(key), is_admin=True)
         rows.append(
             {
                 "subject": lecture.subject,
@@ -712,8 +694,9 @@ def overview(
                 # 관리자가 채우는 다섯 칸. `done`은 올라왔다, `waived`는 이 강의엔
                 # 해당 없다고 닫았다, `todo`는 아직 관리자 몫으로 남았다.
                 "checklist": _checklist(
-                    kinds.get(key, set()), previews.get(key), waived.get(key, set())
+                    kinds.get(key, set()), previews.get(key), waived.get(key, set()), bank
                 ),
+                "bank": bank,
                 "preItemCount": item_counts.get(key, 0),
                 "prequizJob": job_row(jobs.get(key)),
                 "preview": (

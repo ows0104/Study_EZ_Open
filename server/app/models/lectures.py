@@ -42,7 +42,7 @@ SLIDE_KINDS = {"pre": "media", "main": "main_media", "bank": "bank_media"}
 
 # 관리자가 강의마다 채우는 다섯 칸. 사용자 화면의 점 둘이 이것을 두 갈래로 묶는다 —
 # 앞 셋이 예습, 뒤 둘이 복습이다.
-CHECKLIST_ITEMS = ("notes_prev", "preview", "pre_apkg", "notes_current", "main_apkg")
+CHECKLIST_ITEMS = ("notes_prev", "preview", "pre_apkg", "notes_current", "bank")
 
 # "받아 갔다"로 셀 종류. `media`는 뺀다 — 오답 해설이 근거 슬라이드를 띄울 때
 # 서명이 자동으로 나가므로, 세면 사용자가 받은 것이 아니라 해설을 본 것이 된다.
