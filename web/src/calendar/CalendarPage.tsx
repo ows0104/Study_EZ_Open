@@ -169,9 +169,6 @@ export function CalendarPage() {
           </div>
         </div>
 
-        <StudyPlanBoard />
-        <MasteryBoard events={events} />
-
         <CalendarGrid
           mode={mode}
           anchorDate={anchorDate}
@@ -282,6 +279,13 @@ export function CalendarPage() {
           onBundleDone={bundles.reload}
         />
       ) : null}
+
+      {/* 학습 현황은 캘린더의 고정 높이 밖에 둔다. 시험·강의가 늘어나도
+          첫 화면의 격자 높이를 빼앗지 않고 아래로 스크롤해서 볼 수 있다. */}
+      <div className="calendar-overview">
+        <StudyPlanBoard />
+        <MasteryBoard events={events} />
+      </div>
     </div>
   );
 }
