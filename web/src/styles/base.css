@@ -2725,6 +2725,33 @@ button.notice-title:hover:not(:disabled) {
   font-weight: 700;
 }
 
+.bank-core-answer {
+  padding-left: 1.25em;
+}
+
+.bank-core-answer li + li {
+  margin-top: 6px;
+}
+
+.bank-answer-context {
+  max-width: 760px;
+  margin: 12px auto;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.bank-answer-context summary {
+  width: fit-content;
+  margin: 0 auto;
+  cursor: pointer;
+}
+
+.bank-answer-context p {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+}
+
 .bank-ox-explanation {
   width: min(100%, 720px);
   margin-top: 16px;

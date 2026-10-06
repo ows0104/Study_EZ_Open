@@ -23,9 +23,35 @@ function load(file) {
 const { AnswerBody, QuestionBody } = load(path.join(__dirname, '../src/bank/BankQuestion.tsx'));
 const question = { format: 'basic', question_id: 'q1', question: '', options: [], matching_left: [], matching_right: [] };
 const answer = { answer: '', answerUnits: [], answerPairs: [], correctOrder: [], correctOptionIds: [], medicalReview: null, slides: [] };
-const render = (changes, format = 'basic') => renderToStaticMarkup(React.createElement(AnswerBody, {
-  question: { ...question, format }, answer: { ...answer, ...changes },
+const render = (changes, format = 'basic', tier = 'Advanced') => renderToStaticMarkup(React.createElement(AnswerBody, {
+  question: { ...question, format, tier }, answer: { ...answer, ...changes },
 }));
+
+test('Core basic shows the two scoring items as the answer, with prose collapsed', () => {
+  const sentence = '시간에 따른 약물 농도 변화인 약동학과 농도에 따른 반응인 약력학을 함께 알아야 한다.';
+  const units = ['시간→농도인 약동학', '농도→반응인 약력학'];
+  const html = render({ answer: sentence, answerUnits: units }, 'basic', 'Core');
+  const mainAnswer = html.split('<details')[0];
+  assert.equal(mainAnswer, '<ul class="quiz-answer bank-core-answer"><li><strong class="bank-answer-point">시간→농도인 약동학</strong></li><li><strong class="bank-answer-point">농도→반응인 약력학</strong></li></ul>');
+  assert.ok(!mainAnswer.includes(sentence));
+  assert.ok(html.includes('<details class="bank-answer-context"><summary>설명 보기</summary>'));
+  assert.ok(html.includes(sentence));
+  assert.ok(!html.includes('bank-units'));
+});
+
+test('Core single-item answers do not repeat identical prose; blank units use the original answer', () => {
+  const single = render({ answer: '**AADC**', answerUnits: ['AADC', '  '] }, 'basic', 'Core');
+  assert.ok(single.includes('bank-core-answer'));
+  assert.ok(!single.includes('<details'));
+  const fallback = render({ answer: '원래 정답', answerUnits: ['  '] }, 'basic', 'Core');
+  assert.equal(fallback, '<p class="quiz-answer">원래 정답</p>');
+});
+
+test('concise Core answers do not replace O/X explanations, cloze sentences, or choice answers', () => {
+  for (const format of ['ox', 'cloze', 'matching', 'sequence', 'mcq', 'list']) {
+    assert.ok(!render({ answer: 'O', answerUnits: ['판단 기준'] }, format, 'Core').includes('bank-core-answer'));
+  }
+});
 
 test('points are blue inline, preserve context, and do not repeat below the answer', () => {
   const html = render({ answer: 'AChE를 억제하여 전달을 개선한다.', answerUnits: ['AChE'] });
