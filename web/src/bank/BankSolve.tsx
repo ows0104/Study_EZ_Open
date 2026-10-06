@@ -6,6 +6,7 @@ import { FEEDBACK } from "./feedback";
 import { daysLabel, DIRECTION_LABEL } from "./labels";
 import { QuestionBody, AnswerBody } from "./BankQuestion";
 import { SlidePreloader } from "../slidePreload";
+import { DailyGoal } from "./DailyGoal";
 
 const FORMAT_LABEL: Record<string, string> = {
   basic: "서술", cloze: "빈칸", list: "나열", ox: "O/X", mcq: "객관식", multi_select: "복수 선택",
@@ -36,7 +37,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
     setError("");
     try {
       const got = await api<BankNext>(`${base}/next`, { method: "POST" });
-      if (!got.question) {
+      if (!got.question && !got.waiting) {
         onFinished(got.summary ?? null);
         return;
       }
@@ -52,6 +53,11 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
     }
   }, [base, onFinished]);
   useEffect(() => void next(), [next]);
+  useEffect(() => {
+    if (!current?.waiting || !current.retryAt) return;
+    const timer = window.setTimeout(() => void next(), Math.max(1000, current.retryAt - Date.now()));
+    return () => window.clearTimeout(timer);
+  }, [current, next]);
 
   const reveal = useCallback(async () => {
     if (!current?.reviewToken || answer) return;
@@ -82,7 +88,8 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
   }, [base, current, answer, busy, next]);
 
   async function end() {
-    if (!current?.session) return;
+    if (!current?.session || busy) return;
+    setBusy(true);
     try {
       const summary = await api<BankSession>(`${base}/session/end`, {
         method: "POST", body: JSON.stringify({ sessionId: current.session.session_id }),
@@ -90,6 +97,8 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
       onFinished(summary);
     } catch (cause) {
       setError((cause as Error).message);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -106,7 +115,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (peek) return;
-      if (event.target instanceof HTMLElement && ["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName)) return;
+      if (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, button, a, summary")) return;
       if ((event.key === " " || event.key === "Enter") && !answer) {
         event.preventDefault();
         void reveal();
@@ -119,6 +128,17 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
     return () => window.removeEventListener("keydown", onKey);
   }, [answer, reveal, rate, peek]);
 
+  if (current?.waiting) return <div className="quiz bank-start">
+    <DailyGoal plan={current.lectureGoal} />
+    <h2>잠시 뒤 다시 확인해요</h2>
+    <p>남은 학습 단위는 복습 간격을 기다리고 있습니다. 아직 오늘 학습이 완료된 것은 아닙니다.</p>
+    {current.retryAt ? <p>다음 확인: {new Intl.DateTimeFormat("ko-KR", {
+      timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+    }).format(current.retryAt)} · 시간이 되면 자동으로 이어집니다.</p> : null}
+    <button disabled={busy} onClick={() => void next()}>다시 확인</button>{" "}
+    <button className="is-quiet" disabled={busy} onClick={() => void end()}>잠시 멈추기</button>
+    {error ? <p className="notice is-error">{error}</p> : null}
+  </div>;
   if (!current?.question) return error ? <p className="notice is-error">{error}</p> : <p className="notice">불러오는 중…</p>;
   const q = current.question;
   const session = current.session;
@@ -133,7 +153,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
         </p>
         {live ? (
           <p className="bank-note">
-            이번 회차 {live.reviewed} / {live.size}문항 · Again {live.ratings.Again} · Hard {live.ratings.Hard} · Good{" "}
+            이번 회차 {live.reviewed}{live.size == null ? "" : ` / ${live.size}`}문항 · Again {live.ratings.Again} · Hard {live.ratings.Hard} · Good{" "}
             {live.ratings.Good} · Easy {live.ratings.Easy} — Core 숙련 {Math.round(live.core_before * 100)}% →{" "}
             {Math.round(live.core_after * 100)}%
           </p>
@@ -146,9 +166,10 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
   return (
     <>
       <div className="quiz">
+        <DailyGoal plan={current.lectureGoal} />
         <p className="quiz-progress bank-progress">
           <span>
-            {session ? `${session.reviewed + 1} / ${session.size}` : ""}
+            {session ? session.size == null ? `${session.reviewed}문항 완료` : `${session.reviewed + 1} / ${session.size}` : ""}
             {current.examDate ? ` · ${daysLabel(current.examDate)}` : ""}
           </span>
           <span className="bank-tags">

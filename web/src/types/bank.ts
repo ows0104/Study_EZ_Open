@@ -124,7 +124,7 @@ export type BankSession = {
   session_id: string;
   status: "active" | "complete";
   reason: string | null;
-  size: number;
+  size: number | null;
   reviewed: number;
   ratings: Record<BankRating, number>;
   core_before: number;
@@ -136,6 +136,8 @@ export type BankSession = {
 };
 
 export type BankRead = {
+  lectureGoal?: import("./studyPlan").LectureGoal | null;
+  mastery?: import("./mastery").LectureMastery | null;
   summary: BankSummary;
   examDate: string;
   sizes: number[];
@@ -168,6 +170,8 @@ export type BankConcept = {
 };
 
 export type BankNext = {
+  waiting?: boolean;
+  lectureGoal?: import("./studyPlan").LectureGoal | null;
   question: BankQuestion | null;
   /** Warm the current question's images without recording a reveal. Older APIs omit this. */
   preloadSlides?: { page: number; url: string }[];

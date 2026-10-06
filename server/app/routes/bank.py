@@ -21,7 +21,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 from app import study_engine as engine
 from app.auth import CurrentUser, require_admin, require_approved_user, require_runner
 from app.database import get_db
+from app.lecture_mastery import for_bank
 from app.jobs.queue import open_job_of
 from app.models import (
     BANK_BUILDING,
@@ -50,6 +51,8 @@ from app.models import (
     TimetableEvent,
 )
 from app.routes.common import lecture_or_404
+from app.study_engine.daily_queue import lecture_goal, select_daily_question
+from app.study_engine.planning import day_start
 from app.storage import ObjectStorage, StorageNotConfigured
 
 router = APIRouter()
@@ -385,25 +388,29 @@ def _answer(db: Session, row: QuizBank, q: dict) -> dict[str, Any]:
 
 @router.get("/lectures/{subject}/{run_id}/bank")
 def read_bank(subject: str, run_id: str, user: CurrentUser = Depends(require_approved_user),
-              db: Session = Depends(get_db)) -> dict[str, Any]:
+              db: Session = Depends(get_db), target: int = Query(90, ge=50, le=100)) -> dict[str, Any]:
     lecture = lecture_or_404(db, subject, run_id)
     row = _bank_or_404(db, lecture, user)
     out = {"summary": summary(db, lecture, row, is_admin=user.is_admin), "examDate": exam_date_for(db, lecture),
            "sizes": engine.DEFAULT["session"]["sizes"], "defaultSize": engine.DEFAULT["session"]["defaultSize"],
-           "session": None, "previousSessions": [], "conceptMap": []}
+           "session": None, "previousSessions": [], "conceptMap": [], "mastery": None}
     if row.bank and (row.validation or {}).get("pass"):
+        now = engine.now_ms()
         state = db.get(BankState, (user.id, row.subject, row.run_id))
         current = state.state if state and state.build_id == row.build_id else engine.empty_state()
         if state and state.build_id == row.build_id:
-            out["session"] = engine.session_summary(row.bank, state.state)
+            out["session"] = engine.session_summary(row.bank, state.state, now=now)
             out["previousSessions"] = state.state.get("sessions", [])[-5:]
         # 개념 지도는 첫 회차 전에도 그린다 — 숙련도가 다 0인 지도가 「무엇을 공부할지」의 답이다.
-        out["conceptMap"] = engine.concept_map(row.bank, current)
+        out["conceptMap"] = engine.concept_map(row.bank, current, now=now)
+        out["mastery"] = for_bank(row, state, is_admin=user.is_admin, now=now)
+        out["lectureGoal"] = lecture_goal(row.bank, current, lecture.title, now)
     return out
 
 
 class StartIn(BaseModel):
-    size: int
+    size: int | None = None
+    continue_after_goal: bool = Field(False, alias="continueAfterGoal")
 
 
 @router.post("/lectures/{subject}/{run_id}/bank/session/start")
@@ -414,11 +421,15 @@ def start_bank_session(subject: str, run_id: str, payload: StartIn,
     bank = _usable(row)
     state = _load_state(db, user, row)
     try:
-        _save(state, engine.start_session(bank, state.state, payload.size, engine.now_ms()))
+        started = engine.start_session(bank, state.state, payload.size, engine.now_ms())
+        # 재개 요청으로 진행 중 회차의 종료 방식을 덮어쓰지 않는다.
+        if (state.state.get("session") or {}).get("status") != "active":
+            started["session"]["continue_after_goal"] = payload.continue_after_goal
+        _save(state, started)
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
     db.commit()
-    return engine.session_summary(bank, state.state)
+    return engine.session_summary(bank, state.state, now=engine.now_ms())
 
 
 class EndIn(BaseModel):
@@ -439,12 +450,12 @@ def end_bank_session(subject: str, run_id: str, payload: EndIn,
         raise HTTPException(409, "현재 학습 회차가 아닙니다.")
     _save(state, engine.end_session(bank, state.state, "user_finished", engine.now_ms()))
     db.commit()
-    return engine.session_summary(bank, state.state)
+    return engine.session_summary(bank, state.state, now=engine.now_ms())
 
 
 @router.post("/lectures/{subject}/{run_id}/bank/next")
 def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(require_approved_user),
-                       db: Session = Depends(get_db)) -> dict[str, Any]:
+                       db: Session = Depends(get_db), target: int = Query(90, ge=50, le=100)) -> dict[str, Any]:
     """다음 문항. **이미 내준 문항이 있으면 그것을 다시 준다** — 새로고침이 문항을 넘기지 않는다."""
     lecture = lecture_or_404(db, subject, run_id)
     row = _bank_or_404(db, lecture, user)
@@ -453,25 +464,41 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
     now = engine.now_ms()
     state = engine.upgrade_state(bank, state_row.state, engine.DEFAULT, now)
     if not state.get("session"):
-        state = engine.start_session(bank, state, engine.DEFAULT["session"]["defaultSize"], now)
+        state = engine.start_session(bank, state, None, now)
     if state["session"]["status"] == "complete":
         _save(state_row, state)
         db.commit()
-        return {"question": None, "summary": engine.session_summary(bank, state)}
+        return {"question": None, "summary": engine.session_summary(bank, state, now=now)}
     exam = exam_date_for(db, lecture)
     by_id = {q["question_id"]: q for q in bank["questions"]}
     served = state.get("served")
+    goal = lecture_goal(bank, state, lecture.title, now)
     if served and served["question_id"] in by_id:
         question = by_id[served["question_id"]]
         days = engine.days_until(exam, now)
     else:
-        picked = engine.select_question(bank, state, exam, now)
+        extra_today = state["session"].get("continue_after_goal") and day_start(
+            state["session"]["started_at"]) == day_start(now)
+        if goal and goal["met"] and not extra_today:
+            state = engine.end_session(bank, state, "lecture_goal_met", now)
+            _save(state_row, state)
+            db.commit()
+            return {"question": None, "summary": engine.session_summary(bank, state, now=now),
+                    "lectureGoal": goal, "reason": "lecture_goal_met"}
+        picked = (engine.select_question(bank, state, exam, now) if goal["met"] and extra_today
+                  else select_daily_question(bank, state, exam, now))
         question, days = picked["question"], picked["days"]
         if question is None:
+            if not goal["met"]:
+                _save(state_row, state)
+                db.commit()
+                return {"question": None, "waiting": True, "lectureGoal": goal,
+                        "session": engine.session_summary(bank, state, now=now),
+                        "reason": picked["reason"], "retryAt": picked["retry_at"]}
             state = engine.end_session(bank, state, "no_eligible_question", now)
             _save(state_row, state)
             db.commit()
-            return {"question": None, "summary": engine.session_summary(bank, state),
+            return {"question": None, "summary": engine.session_summary(bank, state, now=now),
                     "reason": picked["reason"], "retryAt": picked["retry_at"]}
         score = next((r for r in picked["ranked"] if r["question_id"] == question["question_id"]), None)
         served = {"question_id": question["question_id"], "token": uuid.uuid4().hex, "revealed": False,
@@ -481,8 +508,9 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
     _save(state_row, state)
     db.commit()
     return {"question": _public(question), "reviewToken": served["token"], "days": days, "examDate": exam,
+            "lectureGoal": goal,
             "preloadSlides": _slides(db, row, question["question_id"]),
-            "session": engine.session_summary(bank, state),
+            "session": engine.session_summary(bank, state, now=now),
             "answer": _answer(db, row, question) if served.get("revealed") else None}
 
 
@@ -538,12 +566,13 @@ def rate_bank_answer(subject: str, run_id: str, payload: RateIn,
     last["selection_policy_version"] = served.get("policy_version")
     presented = served.get("presented_at")
     last["response_time_sec"] = max(0, (served.get("revealed_at", now) - presented) / 1000) if presented else None
-    summary_now = engine.session_summary(bank, nxt)
-    if summary_now and summary_now["reviewed"] >= nxt["session"]["size"]:
+    summary_now = engine.session_summary(bank, nxt, now=now)
+    limit = nxt["session"]["size"]
+    if summary_now and limit is not None and summary_now["reviewed"] >= limit:
         nxt = engine.end_session(bank, nxt, "size_reached", now)
     _save(state_row, nxt)
     db.commit()
-    return {"reviews": len(nxt["history"]), "session": engine.session_summary(bank, nxt)}
+    return {"reviews": len(nxt["history"]), "session": engine.session_summary(bank, nxt, now=now)}
 
 
 class FeedbackIn(BaseModel):

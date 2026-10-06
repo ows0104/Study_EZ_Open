@@ -9,7 +9,7 @@ import { BankSolve } from "./BankSolve";
 /**
  * Quiz Bank 풀이 창(2026-10-04).
  *
- *   회차를 연다(10·20·25·30문항) → 서버가 고른 문항 → 「답 보기」 → Again·Hard·Good·Easy → 다음
+ *   학습을 시작한다(기본 개수 제한 없음) → 서버가 고른 문항 → 「답 보기」 → Again·Hard·Good·Easy → 다음
  *
  * **고르는 것도 일정도 서버다**(`server/app/study_engine/`). 개념 × 회상 방향마다 숙련도를 두고
  * 중요도·약점·시험까지 남은 날·선행 문항으로 다음 문항을 정한다. 화면은 그리기만 한다 —
@@ -38,7 +38,19 @@ export function BankStudyPage() {
       });
   }, [base]);
   useEffect(load, [load]);
+  useEffect(() => {
+    // 장시간 뒤 돌아온 시작 화면은 현재 기억 추정을 다시 읽는다. 풀이 중 문항은 유지한다.
+    if (solving) return;
+    window.addEventListener("focus", load);
+    return () => window.removeEventListener("focus", load);
+  }, [load, solving]);
   useEffect(() => { document.title = "Main-Quiz · Study_EZ"; }, []);
+  const onFinished = useCallback((summary: BankSession | null) => {
+    setFinished(summary);
+    setSolving(false);
+    setInfo(null);
+    load();
+  }, [load]);
 
   if (error) return <p className="notice is-error">{error}</p>;
   if (unavailable || (info && !info.summary.usable)) return (
@@ -54,11 +66,7 @@ export function BankStudyPage() {
     return (
       <BankSolve
         base={base}
-        onFinished={(summary) => {
-          setFinished(summary);
-          setSolving(false);
-          load();
-        }}
+        onFinished={onFinished}
       />
     );
   }

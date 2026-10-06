@@ -11,6 +11,7 @@ import { DeckSlot } from "./DeckSlot";
 import { cardsHash } from "../lecture/LectureCards";
 import { ActionCard, fileSize, PanelGroup } from "./panelShared";
 import { PreviewAction } from "./PreviewAction";
+import { LectureMastery } from "../lecture/LectureMastery";
 
 /**
  * 칸 하나를 눌렀을 때 옆에 서는 패널.
@@ -95,6 +96,7 @@ export function EventPanel({
         ) : null}
 
         {error ? <p className="notice is-error">{error}</p> : null}
+        {detail ? <LectureMastery value={detail.mastery} /> : null}
 
         {lecture ? (
           detail ? (
@@ -163,11 +165,19 @@ function useLectureDetail(lecture: LectureRef | undefined) {
     // 링크가 저장돼 다시 부르는 경우에는 비우지 않는다. 화면이 깜빡이고, 그
     // 사이에 버튼이 사라졌다 나타난다.
     setError("");
-    api<LectureDetail>(`/api/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`)
-      .then((next) => live && setDetail(next))
-      .catch((cause: Error) => live && setError(cause.message));
+    const path = `/api/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
+    let request = 0;
+    function refresh() {
+      const current = ++request;
+      api<LectureDetail>(path)
+        .then(next => { if (live && current === request) { setDetail(next); setError(""); } })
+        .catch((cause: Error) => { if (live && current === request) setError(cause.message); });
+    }
+    refresh();
+    window.addEventListener("focus", refresh);
     return () => {
       live = false;
+      window.removeEventListener("focus", refresh);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, version]);

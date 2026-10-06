@@ -11,6 +11,7 @@
 | 코드 수정 위치 찾기 | [작업 지도](docs/map.md) |
 | 실행·검사 명령 확인 | [명령 안내](docs/commands.md) |
 | 데이터 흐름 이해 | [현재 구조](docs/architecture.md) |
+| 생성부터 학생 풀이까지 도식 | [현재 파이프라인](docs/pipeline.md) |
 | 산출물·작업 폴더 확인 | [산출물 계약](docs/artifact-contract.md), [runs 구조](docs/runs-layout.md) |
 | 배포·운영 | [배포 안내](docs/deployment.md) |
 | 이전 결정의 이유 찾기 | [기록 보관함](docs/archive/README.md) |

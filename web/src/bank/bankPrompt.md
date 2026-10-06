@@ -1,10 +1,16 @@
 <!--
 Bank Builder 프롬프트 — 정본
-Version: 1.10
+Version: 1.12
 
 이 파일이 ChatGPT에 가는 프롬프트의 정본이다. 이 주석은 보내지 않는다.
 {{…}} 자리는 web/src/bank/prompt.ts 가 강의마다 채운다. {{c1}} 같은 cloze 표기는 그대로 간다.
 고치면 아래에 판을 하나 올리고 Version 을 같이 올린다. 서버에 응답이 저장될 때 이 Version 이 같이 남는다.
+
+1.12 (2026-10-06) Optional 문항 수를 억제하는 지시를 뺀다. 학습 가치가 있는 세부사항은 보존하고,
+                   낮은 중요도는 tier·importance에 반영해 앱에서 노출과 학습률 비중을 조절한다.
+
+1.11 (2026-10-06) Question Bank를 공통 표와 형식별 상세 표로 출력한다. 필드 이름의 반복을 줄이되
+                   문항·채점 단위·메타데이터는 보존한다. 배열은 셀 안에서 <br>로 구분한다.
 
 1.10 (2026-10-06) Phase I 예시의 작용기도 빈칸으로 바꾼다. Cloze의 answer는 각 빈칸을 채우고
                    정답 부분을 굵게 강조한 전체 문장으로 쓴다.
@@ -93,7 +99,7 @@ Importance를 판단할 때 특히 다음을 반영해라.
 
 단, 슬라이드에 존재한다는 이유만으로 모든 세부사항을 같은 비중으로 문제화하지 마라.
 
-낮은 중요도의 내용은 삭제할 필요는 없지만, 필요한 경우 Optional로 보내라.
+학습 가치가 있는 낮은 중요도의 내용도 문제은행에 보존하고, Optional과 해당 중요도로 표시해라.
 
 # 2. Retrieval Plan
 
@@ -223,9 +229,9 @@ Core atomic fact가 어느 정도 회수된 뒤 풀 가치가 있는 문제.
 ## Optional
 자료에는 있지만 상대적으로 낮은 yield의 세부사항.
 
-Optional이 과도하게 많아지지 않게 해라.
-
-자료에 있다는 이유만으로 모든 세부 내용을 Optional로 보존하려고 하지 마라.
+Optional이라는 이유로 문항 수나 비율을 줄이지 마라. 학습 가치가 있는 세부사항은 문제은행에 보존해라.
+개념과 문항의 tier·importance는 실제 중요도에 맞게 표시해라.
+낮은 중요도의 문항을 덜 보여주고 전체 학습률에 적게 반영하는 것은 앱의 학습 정책에서 처리한다.
 
 # 5. 각 문제 Metadata
 
@@ -410,33 +416,56 @@ atomic direct
 
 ## 3. Question Bank
 
-Core → Advanced → Optional 순서. 문제마다 아래 블록 하나.
+문항별 필드 블록 대신 아래 마크다운 표로 출력한다. 내용을 줄이지 말고 필드 이름의 반복만 줄여라.
 
-```text
-### Q001
-- question_id:
-- concept_id:
-- tier:
-- importance:
-- item_difficulty:          1–5
-- format:                   basic / cloze / list / ox / mcq / multi_select / matching / sequence
-- retrieval_direction:      direct / reverse / mechanism / discrimination / integration / sequence / trap
-- question:
-- answer:
-- answer_units:             [ ... ]
-- prerequisites:            [ ... ]
-- source_refs:
-- exam_rationale:           교수 강조 또는 족보 근거
-- conflict_id:              없으면 비워 둔다
-```
+### 3.1 Questions
 
-형식별로 이 줄을 더한다.
+Core → Advanced → Optional 순서로 **문항당 한 행**. 모든 문항을 이 표에 넣는다. 열은 이 순서:
 
-- **cloze**: question의 빈칸 1–3개를 모두 `{{c1}}`로 표시하고, 답은 answer_units에 빈칸 등장 순서대로 하나씩 둔다. question에는 답을 넣지 않는다. answer에는 빈칸을 해당 정답으로 채운 전체 문장을 쓰고, 채운 정답 부분만 `**굵게**` 강조한다.
+`question_id | concept_id | tier | importance | item_difficulty | format | retrieval_direction | question | answer | answer_units | prerequisites | source_refs | exam_rationale | conflict_id`
+
+- question_id는 은행 전체에서 유일하며 상세 표와 prerequisites에서도 같은 ID를 쓴다.
+- importance·item_difficulty: 1–5. concept의 값으로 자동 대체하지 말고 문항별로 평가한다.
+- format: basic / cloze / list / ox / mcq / multi_select / matching / sequence
+- retrieval_direction: direct / reverse / mechanism / discrimination / integration / sequence / trap. `matching`은 형식이며 회수 방향이 아니다.
+- answer_units·prerequisites는 항목 사이를 `<br>`로 구분한다. 대괄호로 감싸지 않는다. 쉼표·세미콜론은 항목 내부에도 쓰이므로 배열 구분자로 쓰지 않는다.
+- prerequisites가 없으면 `—`, conflict_id가 없으면 `—`. 그 외 필수 값은 생략하지 않는다.
+- source_refs는 기존처럼 `S1 p13; S1 p14; EXT 외부 의학지식`으로 쓴다. exam_rationale에는 해당 문항의 교수 강조 또는 족보 근거를 남긴다.
+- **cloze**: question의 빈칸 1–3개를 모두 `{{c1}}`로 표시한다. answer_units는 빈칸 등장 순서대로 하나씩 두고, question에는 답을 넣지 않는다. answer에는 정답을 채운 전체 문장을 쓰고 채운 정답 부분만 `**굵게**` 강조한다.
 - **ox**: answer는 `O` 또는 `X`. 설명은 answer_units에 둔다.
-- **mcq / multi_select**: `options: [A: ..., B: ...]` 와 `correct_option_ids: [ ... ]`
-- **matching**: `matching_left: [1. ..., 2. ..., ...]` · `matching_right: [A. ..., B. ..., ...]` · `answer_pairs: [1. 왼쪽 - A. 오른쪽, ...]` — 왼쪽은 숫자, 오른쪽은 알파벳으로 번호를 붙이고, 정답 짝에는 번호와 글을 같이 적는다.
-- **sequence**: `sequence_items: [A: ..., B: ...]` · `correct_order: [ ... ]`
+
+### 3.2 Choice Details
+
+mcq / multi_select 문항만 한 행씩. 해당 문항이 없으면 이 절을 생략한다.
+
+`question_id | options | correct_option_ids`
+
+- options: `A: 선택지<br>B: 선택지`처럼 각 선택지를 구분한다.
+- correct_option_ids: `A` 또는 `A<br>C`처럼 정답 ID만 적는다.
+
+### 3.3 Matching Details
+
+matching 문항만 한 행씩. 해당 문항이 없으면 이 절을 생략한다.
+
+`question_id | matching_left | matching_right | answer_pairs`
+
+- matching_left: `1. 항목<br>2. 항목`, matching_right: `A. 항목<br>B. 항목`.
+- answer_pairs: `1. 왼쪽 - B. 오른쪽<br>2. 왼쪽 - A. 오른쪽`처럼 번호와 글을 함께 쓴다.
+
+### 3.4 Sequence Details
+
+sequence 문항만 한 행씩. 해당 문항이 없으면 이 절을 생략한다.
+
+`question_id | sequence_items | correct_order`
+
+- sequence_items: `A: 항목<br>B: 항목`, correct_order: `B<br>A`처럼 순서대로 ID를 적는다.
+
+Question Bank 표 공통 규칙:
+
+- 한 행을 실제 줄바꿈으로 나누지 않는다. 문장 안의 줄바꿈도 `<br>`로 표시한다. 배열 필드에서는 `<br>` 하나가 항목 경계이므로 항목 내부의 줄바꿈은 공백으로 바꾼다.
+- 셀 본문에 필요한 `|`는 `&#124;`로 쓴다. 셀 경계의 `|`와 구분한다.
+- 셀 폭을 맞추는 공백, 문항별 제목·필드 목록, 같은 문항의 재출력은 넣지 않는다. 긴 문장·정답·출처를 줄임표로 줄이지 마라.
+- 상세 표는 Questions의 해당 문항과 question_id로 연결한다. 필요한 상세 행을 빠뜨리거나 같은 ID를 두 번 넣지 마라.
 
 ## 4. Source Conflicts
 

@@ -14,6 +14,7 @@ import copy
 from datetime import UTC, datetime, timedelta
 
 from .policy import DEFAULT, policy_hash
+from .memory import memory_snapshot, next_stability, stability_days
 
 DAY_MS = 86_400_000
 KST = timedelta(hours=9)
@@ -106,7 +107,7 @@ def upgrade_state(bank: dict, previous: dict, policy: dict = DEFAULT, now: int =
     if previous.get("version") != 2 or "remediation" in state:
         target = (state.get("remediation") or {}).get("target")
         parent = next((q for q in bank["questions"] if q["question_id"] == target), None)
-        prerequisite = _weakest(bank, state, parent["prerequisites"]) if parent else None
+        prerequisite = _weakest(bank, memory_snapshot(state, now, policy), parent["prerequisites"]) if parent else None
         if prerequisite:
             state["remediations"] = [{"parent_id": parent["question_id"], "prerequisite_id": prerequisite["question_id"],
                                       "remaining": policy["remediation"]["maxReviews"], "started_at": now}]
@@ -119,6 +120,7 @@ def upgrade_state(bank: dict, previous: dict, policy: dict = DEFAULT, now: int =
 
 
 def rank_questions(bank: dict, state: dict, exam_date: str, now: int, policy: dict = DEFAULT) -> list[dict]:
+    state = memory_snapshot(state, now, policy)
     days = days_until(exam_date, now)
     by_id = {q["question_id"]: q for q in bank["questions"]}
     midnight = _korea_midnight_ms(now)
@@ -140,6 +142,11 @@ def rank_questions(bank: dict, state: dict, exam_date: str, now: int, policy: di
         qid = q["question_id"]
         m = mastery(state, q)
         item = state["items"].get(qid)
+        dim = state["dimensions"].get(dimension_key(q)) or {}
+        due_at = (item or {}).get("due_at", now)
+        if dim.get("updated_at") is not None:
+            # 옛 일정도 현재 기억 유지 기간보다 멀리 밀린 경우 복습 대상으로 돌아온다.
+            due_at = min(due_at, dim["updated_at"] + stability_days(dim, policy) * DAY_MS)
         target = target_for(bank, q, policy)
         stage = question_stage(q)
         ready = readiness.get(q["concept_id"], stage)
@@ -188,7 +195,7 @@ def rank_questions(bank: dict, state: dict, exam_date: str, now: int, policy: di
             "examUrgency": urgency, "examDirection": direction,
             "progression": prog["stageMatch"] if stage <= ready else prog["stageAhead"] if stage == ready + 1 else prog["stageFar"],
             "tier": w["tier"][q["tier"]],
-            "novelty": w["novelty"] if not item else w["due"] if item["due_at"] <= now else w["notDue"],
+            "novelty": w["novelty"] if not item else w["due"] if due_at <= now else w["notDue"],
             "budget": (w["budgetExceeded"] if (item or {}).get("reviews", 0) >= (plan["repetition_budget"] if plan else 1)
                        and m >= target["effective"] else 1),
             "remediation": policy["remediation"]["boost"] if remediation else 1,
@@ -240,17 +247,24 @@ def record_review(bank: dict, previous: dict, question_id: str, rating: str, now
         raise ValueError("문항을 찾을 수 없습니다.")
     state = upgrade_state(bank, previous, policy, now)
     dim = dimension_key(q)
-    before = mastery(state, q)
+    dimension_before = copy.deepcopy(state["dimensions"].get(dim))
+    current = memory_snapshot(state, now, policy)
+    before = mastery(current, q)
+    stability = next_stability(state["dimensions"].get(dim) or {}, rating, now, policy)
     alpha = policy["mastery"]["alpha"]
-    after = (1 - alpha) * before + alpha * policy["mastery"]["ratings"][rating]
+    # 성공적으로 회상하면 이전에 쌓은 수준을 회복한다. 감쇠한 값에만 EMA를
+    # 적용하면 일정대로 계속 Good이어도 목표에 도달하지 못하는 고정점이 생긴다.
+    baseline = mastery(state, q) if rating in ("Good", "Easy") else before
+    after = (1 - alpha) * baseline + alpha * policy["mastery"]["ratings"][rating]
     state["dimensions"][dim] = {"mastery": after, "reviews": (state["dimensions"].get(dim) or {}).get("reviews", 0) + 1,
-                                "updated_at": now}
+                                "updated_at": now, "stability_days": stability}
     old = state["items"].get(question_id) or {"reviews": 0, "interval": 0}
     iv = policy["intervals"]
     interval = (iv["againMs"] if rating == "Again"
                 else max(iv["hardMs"], old["interval"] * iv["hardMultiplier"]) if rating == "Hard"
                 else max(iv["goodMs"], old["interval"] * iv["goodMultiplier"]) if rating == "Good"
                 else max(iv["easyMs"], old["interval"] * iv["easyMultiplier"]))
+    interval = min(interval, round(stability * DAY_MS))
     state["items"][question_id] = {"reviews": old["reviews"] + 1, "interval": interval, "due_at": now + interval}
 
     events, remaining = [], []
@@ -262,7 +276,7 @@ def record_review(bank: dict, previous: dict, question_id: str, rating: str, now
             remaining.append({**r, "remaining": r["remaining"] - 1})
     state["remediations"] = remaining
     if rating == "Again" and q["prerequisites"] and (question_stage(q) >= 3 or q["tier"] == "Advanced"):
-        weakest = _weakest(bank, state, q["prerequisites"])
+        weakest = _weakest(bank, memory_snapshot(state, now, policy), q["prerequisites"])
         if weakest:
             entry = {"parent_id": question_id, "prerequisite_id": weakest["question_id"],
                      "remaining": policy["remediation"]["maxReviews"], "started_at": now}
@@ -272,6 +286,9 @@ def record_review(bank: dict, previous: dict, question_id: str, rating: str, now
     state["history"].append({
         "question_id": question_id, "rating": rating, "timestamp": now, "mastery_before": before,
         "mastery_after": after, "dimension": dim, "session_id": (state.get("session") or {}).get("id"),
+        "stability_after": stability,
+        "next_due_at": now + interval,
+        "dimension_before": dimension_before,
         "policy_version": policy["version"], "policy_hash": policy_hash(policy), "remediation_events": events})
     state["served"] = None
     return state
@@ -280,7 +297,7 @@ def record_review(bank: dict, previous: dict, question_id: str, rating: str, now
 _DIRECTION_ORDER = ("direct", "reverse", "discrimination", "trap", "mechanism", "sequence", "integration")
 
 
-def concept_map(bank: dict, state: dict, policy: dict = DEFAULT) -> list[dict]:
+def concept_map(bank: dict, state: dict, policy: dict = DEFAULT, *, now: int | None = None) -> list[dict]:
     """개념 지도 — 개념마다 은행이 적은 것과, 이 사람의 방향별 숙련도를 목표와 나란히.
 
     **방향은 문항이 있는 것만 싣는다.** 회상 계획(`retrieval_plan`)에 적혔어도 문항이 없는 방향은
@@ -289,6 +306,7 @@ def concept_map(bank: dict, state: dict, policy: dict = DEFAULT) -> list[dict]:
 
     `progress` 는 방향마다 목표 대비 비율(1에서 자른다)의 평균 — 그래프의 색 하나로 쓰는 값이다.
     """
+    state = memory_snapshot(state, now, policy)
     ids = {c["concept_id"] for c in bank["concepts"]}
     out = []
     for concept in bank["concepts"]:

@@ -48,6 +48,7 @@ from app.main import app  # noqa: E402
 # 같은 날 둘이 더 — `GET|PUT /api/admin/bank-feedback`. 학생이 누른 「문제 있음」을 관리자가
 # 편을 가로질러 보고 반영했다·그대로 둔다를 적는다(관리 화면 「Quiz Bank 신고」 탭).
 ROUTES = """
+GET /api/study-plan
 POST /api/lectures/{subject}/{run_id}/prequiz/slides
 POST /api/lectures/{subject}/{run_id}/mainquiz/slides
 POST /api/lectures/{subject}/{run_id}/prequiz/check

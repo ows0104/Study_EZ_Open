@@ -10,6 +10,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import math
 from functools import lru_cache
 from pathlib import Path
 
@@ -32,7 +33,7 @@ def _shape(value, expected, key: str = "policy") -> None:
     if isinstance(expected, bool) or isinstance(value, bool):
         ok = isinstance(value, bool) and isinstance(expected, bool)
     elif isinstance(expected, (int, float)):
-        ok = isinstance(value, (int, float)) and value >= 0
+        ok = isinstance(value, (int, float)) and math.isfinite(value) and value >= 0
     else:
         ok = isinstance(value, type(expected))
     if not ok:
@@ -53,6 +54,16 @@ def validate_policy(p: dict, template: dict | None = None) -> dict:
         raise ValueError("평가 목표는 Again < Hard < Good < Easy=1 순서여야 합니다.")
     if m["maxTarget"] >= r["Good"] or any(not unit(n) or n > m["maxTarget"] for n in m["targets"].values()):
         raise ValueError("목표 숙련도는 Good 목표보다 낮아야 합니다.")
+    f = p["forgetting"]
+    if not (0 < f["minDays"] <= f["legacyDays"] <= f["maxDays"]
+            and f["minDays"] <= f["lapseMaxDays"] <= f["maxDays"]
+            and 0 < f["lapseMultiplier"] < 1 and 0 < f["minSpacingDays"] <= f["maxDays"]):
+        raise ValueError("망각 정책 범위 오류")
+    initial = f["initialDays"]
+    growth = f["growth"]
+    if not (f["minDays"] <= initial["Again"] <= initial["Hard"] <= initial["Good"] <= initial["Easy"] <= f["maxDays"]
+            and 1 <= growth["Hard"] <= growth["Good"] <= growth["Easy"]):
+        raise ValueError("평가별 기억 유지 기간 순서 오류")
     pr = p["progression"]
     gates = [*pr["thresholds"].values(), pr["prerequisiteMastery"], pr["advancedCore"], pr["optionalCore"]]
     if any(not unit(n) or n >= r["Good"] for n in gates):

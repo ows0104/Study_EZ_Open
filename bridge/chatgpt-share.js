@@ -29,6 +29,48 @@ let lastShareUrl = "";
 let lastSharedNode = "";
 let lastBankNode = "";
 const BANK_MARK = "STUDYEZ_BANK_COMPLETE";
+let contextInvalidated = false;
+let turnObserver = null;
+let pollTimer = null;
+let retryAfter = 0;
+let failures = 0;
+
+function invalidateShareContext() {
+  if (contextInvalidated) return;
+  contextInvalidated = true;
+  turnObserver?.disconnect();
+  if (pollTimer !== null) window.clearInterval(pollTimer);
+  console.info(LOG, "확장 연결이 끊겼습니다. 확장을 다시 로드한 뒤 이 대화 탭을 새로고침해 주세요.");
+}
+
+function shareContextAvailable() {
+  try {
+    if (!contextInvalidated && chrome.runtime?.id) return true;
+  } catch {}
+  invalidateShareContext();
+  return false;
+}
+
+function sendShareMessage(message, done = () => {}) {
+  if (!shareContextAvailable()) return false;
+  try {
+    chrome.runtime.sendMessage(message, (response) => {
+      let error = "";
+      try {
+        error = chrome.runtime.lastError?.message || "";
+      } catch (failure) {
+        error = failure?.message || String(failure);
+      }
+      if (/extension context invalidated/i.test(error)) invalidateShareContext();
+      done(error ? null : response);
+    });
+    return true;
+  } catch (error) {
+    if (/extension context invalidated/i.test(error?.message || "")) invalidateShareContext();
+    done(null);
+    return false;
+  }
+}
 
 function conversationId() {
   const match = /^\/(?:g\/[^/]+\/)?c\/([A-Za-z0-9_:-]+)/.exec(location.pathname);
@@ -179,41 +221,93 @@ function visible(element) {
   return rect.width > 0 && rect.height > 0;
 }
 
-function clickByLabel(pattern, root = document) {
+function buttonByLabel(pattern, root = document) {
   const button = [...root.querySelectorAll('button, [role="button"], [role="menuitem"]')].find((candidate) => {
-    const label = `${candidate.getAttribute("aria-label") || ""} ${candidate.getAttribute("title") || ""} ${candidate.textContent || ""}`;
-    return visible(candidate) && !candidate.disabled && pattern.test(label);
+    const labels = [candidate.getAttribute("aria-label") || "", candidate.getAttribute("title") || "", candidate.textContent || ""];
+    return visible(candidate) && !candidate.disabled && candidate.getAttribute("aria-disabled") !== "true" && labels.some((label) => pattern.test(label.trim()));
   });
+  return button;
+}
+
+function clickByLabel(pattern, root = document) {
+  const button = buttonByLabel(pattern, root);
   button?.click();
   return Boolean(button);
 }
 
-function shareUrlOnScreen() {
-  const fromInput = [...document.querySelectorAll("input, textarea")]
-    .map((field) => field.value || "")
-    .find((value) => /^https:\/\/chatgpt\.com\/share\//.test(value.trim()));
-  if (fromInput) return fromInput.trim();
-  const fromText = /https:\/\/chatgpt\.com\/share\/[A-Za-z0-9_/:-]+/.exec(document.body.innerText || "");
-  return fromText ? fromText[0] : "";
+function normalizedShareUrl(value) {
+  try {
+    const url = new URL(value.trim(), "https://chatgpt.com");
+    if (url.origin !== "https://chatgpt.com" || url.username || url.password) return "";
+    if (!/^\/share\/(?:e\/)?[A-Za-z0-9_-]+\/?$/.test(url.pathname)) return "";
+    return `${url.origin}${url.pathname.replace(/\/$/, "")}`;
+  } catch {
+    return "";
+  }
+}
+
+function shareDialog() {
+  return [...document.querySelectorAll('[role="dialog"], [aria-modal="true"]')]
+    .find((dialog) => visible(dialog) && /(share|공유)/i.test(`${dialog.getAttribute("aria-label") || ""} ${dialog.innerText || ""}`));
+}
+
+function shareUrlOnScreen(root = shareDialog()) {
+  if (!root) return "";
+  for (const field of root.querySelectorAll("input, textarea, a[href]")) {
+    const value = field.value || field.getAttribute("href") || "";
+    const url = normalizedShareUrl(value);
+    if (url) return url;
+  }
+  const matches = (root.innerText || "").match(/https:\/\/chatgpt\.com\/share\/(?:e\/)?[A-Za-z0-9_-]+/g) || [];
+  return matches.map(normalizedShareUrl).find(Boolean) || "";
 }
 
 // 백엔드 계약이 바뀌었을 때의 대비책: 사람이 하듯 공유 대화상자를 몬다. 느리고
 // 화면 구조에 묶여 있으므로 API 경로가 실패했을 때만 돈다.
-async function publishViaDialog() {
-  if (!clickByLabel(/(share|공유)/i)) throw new Error("공유 버튼을 찾지 못했습니다.");
-  for (let attempt = 0; attempt < 40; attempt += 1) {
+async function publishViaDialog(conversation = conversationId(), token = "") {
+  if (!shareDialog()) {
+    const header = document.querySelector("header");
+    if (!(header && clickByLabel(/(share|공유)/i, header)) && !clickByLabel(/^(\s*)(share|공유)(\s*)$/i)) {
+      throw new Error("공유 버튼을 찾지 못했습니다.");
+    }
+  }
+  const clicked = new Set();
+  let actionStarted = false;
+  let actionAttempt = -1;
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    if (!shareContextAvailable()) throw new Error("Extension context invalidated.");
+    if (conversationId() !== conversation) throw new Error("공유 중 대화가 바뀌었습니다.");
     await new Promise((resolve) => setTimeout(resolve, 250));
-    const dialog = document.querySelector('[role="dialog"]');
+    if (conversationId() !== conversation) throw new Error("공유 중 대화가 바뀌었습니다.");
+    const dialog = shareDialog();
     if (!dialog) continue;
-    const onScreen = shareUrlOnScreen();
+    // 기존 링크가 보여도 업데이트 버튼이 있으면 먼저 새 답까지 공유한다.
+    const update = buttonByLabel(/(update(?: (?:public )?link)?|링크 업데이트|업데이트)/i, dialog);
+    const action = update || buttonByLabel(/(create (?:public )?link|copy link|^copy$|링크 만들기|링크 생성|(?:공유 )?링크 복사|^복사$)/i, dialog);
+    const actionKind = update ? "update" : "create-or-copy";
+    if (action && !clicked.has(actionKind)) {
+      clicked.add(actionKind);
+      action.click();
+      actionStarted = true;
+      actionAttempt = attempt;
+      continue;
+    }
+    if (actionStarted && attempt - actionAttempt < 4) continue;
+    const onScreen = shareUrlOnScreen(dialog);
     if (onScreen) return onScreen;
-    clickByLabel(/(create link|create public link|링크 만들기|링크 생성|공유 링크 복사)/i, dialog);
+    // 복사 버튼만 있고 주소가 DOM에 없는 화면도 있다. 클립보드 대신
+    // 이 대화 id와 정확히 일치하는 공유 기록을 읽는다.
+    if (actionStarted && token && attempt % 8 === 7) {
+      const recovered = normalizedShareUrl(await existingShareUrl(conversation, token));
+      if (conversationId() !== conversation) throw new Error("공유 중 대화가 바뀌었습니다.");
+      if (recovered) return recovered;
+    }
   }
   throw new Error("공유 대화상자에서 링크를 읽지 못했습니다.");
 }
 
 function sendLink(type, url) {
-  chrome.runtime.sendMessage({ type, url }, () => void chrome.runtime.lastError);
+  return sendShareMessage({ type, url });
 }
 
 /**
@@ -224,16 +318,18 @@ function sendLink(type, url) {
  * 못 연다.
  */
 async function settleShare(url) {
-  if (url && !(await isPubliclyReadable(url))) {
+  url = normalizedShareUrl(url || "");
+  if (!url) throw new Error("유효한 공유 주소를 읽지 못했습니다.");
+  if (!(await isPubliclyReadable(url))) {
     console.error(LOG, "공개되지 않은 주소라 저장하지 않습니다:", url);
     lastSharedNode = "";
-    return "settled";
+    throw new Error("공유 주소의 공개 여부를 확인하지 못했습니다.");
   }
   // share id는 다시 내도 그대로다. 웹앱에 알릴 것은 처음 하나뿐이고 이후 턴은
   // 같은 주소가 보여 주는 내용만 갱신된다.
   if (url && url !== lastShareUrl) {
+    if (!sendLink("STUDYEZ_SHARE_LINK", url)) return "pending";
     lastShareUrl = url;
-    sendLink("STUDYEZ_SHARE_LINK", url);
     console.info(LOG, "공유 링크를 저장했습니다:", url);
   }
   return "published";
@@ -241,6 +337,8 @@ async function settleShare(url) {
 
 /** "settled": 새로 낼 것이 없다. "published": 새 스냅숏을 냈다. "pending": 아직 생성 중. */
 async function publish() {
+  if (!shareContextAvailable()) return "settled";
+  if (Date.now() < retryAfter) return "pending";
   const conversation = conversationId();
   if (!watch || publishing || !conversation) return "settled";
   // 한 번 확인한 대화만 따라간다. 같은 탭에서 옛 대화로 건너뛰어도 그것이 이
@@ -259,7 +357,12 @@ async function publish() {
       // 낸 것 자체가 저장 조건이므로 다음 차례에 다시 본다.
       if (watch.mode !== "shared") return "pending";
       lastSharedNode = "";
-      return await settleShare(await publishViaDialog());
+      const result = await settleShare(await publishViaDialog(conversation, token));
+      if (result === "published") {
+        failures = 0;
+        retryAfter = 0;
+      }
+      return result;
     }
     if (!state.finished || !state.currentNode) return "pending";
     bound = conversation;
@@ -272,11 +375,8 @@ async function publish() {
         console.info(LOG, "답이 끝났지만 완료 표시가 없습니다. 이어서 생성되기를 기다립니다.");
         return "settled";
       }
+      if (!sendShareMessage({ type: "STUDYEZ_BANK_ANSWER", raw: state.answer, url: `https://chatgpt.com/c/${conversation}` })) return "pending";
       lastBankNode = state.currentNode;
-      chrome.runtime.sendMessage(
-        { type: "STUDYEZ_BANK_ANSWER", raw: state.answer, url: `https://chatgpt.com/c/${conversation}` },
-        () => void chrome.runtime.lastError,
-      );
       console.info(LOG, `Quiz Bank 답 본문을 넘겼습니다 (${state.answer.length}자).`);
       return "published";
     }
@@ -292,8 +392,8 @@ async function publish() {
     // 대화만 여기까지 온다.
     const url = `https://chatgpt.com/c/${conversation}`;
     if (url !== lastConversationUrl) {
+      if (!sendLink("STUDYEZ_CONVERSATION_LINK", url)) return "pending";
       lastConversationUrl = url;
-      sendLink("STUDYEZ_CONVERSATION_LINK", url);
       console.info(LOG, "대화 주소를 저장했습니다:", url);
     }
 
@@ -301,16 +401,30 @@ async function publish() {
     if (state.currentNode === lastSharedNode) return "settled";
     try {
       const shareUrl = await publishViaApi(conversation, token, state);
-      lastSharedNode = state.currentNode;
-      return await settleShare(shareUrl);
+      const result = await settleShare(shareUrl);
+      if (result === "published") {
+        lastSharedNode = state.currentNode;
+        failures = 0;
+        retryAfter = 0;
+      }
+      return result;
     } catch (error) {
       console.info(LOG, "백엔드 공유 실패, 대화상자로 재시도합니다:", error);
       lastSharedNode = "";
-      return await settleShare(await publishViaDialog());
+      const result = await settleShare(await publishViaDialog(conversation, token));
+      if (result === "published") {
+        lastSharedNode = state.currentNode;
+        failures = 0;
+        retryAfter = 0;
+      }
+      return result;
     }
   } catch (error) {
+    if (contextInvalidated) return "settled";
+    failures += 1;
+    retryAfter = Date.now() + Math.min(120_000, 30_000 * 2 ** Math.min(failures - 1, 2));
     console.warn(LOG, "예습 링크를 만들지 못했습니다:", error);
-    return "settled";
+    return "pending";
   } finally {
     publishing = false;
   }
@@ -320,14 +434,17 @@ async function publish() {
 // DOM 변화는 "뭔가 움직였으니 볼 만하다"까지만 말하고, 낼 턴이 있는지는 대화의
 // end_turn이 정한다.
 function watchForCompletedTurns() {
-  let dirty = true;
-  new MutationObserver(() => {
-    dirty = true;
-  }).observe(document.body, { childList: true, subtree: true });
+  let revision = 1;
+  let checkedRevision = 0;
+  turnObserver = new MutationObserver(() => {
+    revision += 1;
+  });
+  turnObserver.observe(document.body, { childList: true, subtree: true });
 
-  window.setInterval(async () => {
-    if (!dirty || publishing || document.hidden) return;
-    if ((await publish()) !== "pending") dirty = false;
+  pollTimer = window.setInterval(async () => {
+    if (!shareContextAvailable() || revision === checkedRevision || publishing || document.hidden) return;
+    const startedRevision = revision;
+    if ((await publish()) !== "pending") checkedRevision = startedRevision;
   }, POLL_INTERVAL_MS);
 }
 
@@ -339,10 +456,11 @@ function startWatching(lectureId, mode) {
 }
 
 async function initialize() {
+  if (!shareContextAvailable()) return;
   // 배경은 탭을 열 때 감시를 건다 — 사람이 확인 카드를 보고 전송을 누르기까지
   // 걸리는 시간이라 폴링으로 기다리기엔 길다. 그래서 밀어 준다.
   chrome.runtime.onMessage.addListener((message) => {
-    if (message?.type === "STUDYEZ_WATCH_READY" && typeof message.lectureId === "string") {
+    if (!contextInvalidated && message?.type === "STUDYEZ_WATCH_READY" && typeof message.lectureId === "string") {
       startWatching(message.lectureId, message.mode);
     }
     return false;
@@ -352,13 +470,15 @@ async function initialize() {
   // 링크 페이지에서 이어 물어 갈라져 나온 대화가 그렇다.
   for (let attempt = 0; attempt < 10 && !watch; attempt += 1) {
     const existing = await new Promise((resolve) => {
-      chrome.runtime.sendMessage({ type: "STUDYEZ_GET_WATCH" }, (response) => {
-        resolve(chrome.runtime.lastError || !response?.ok ? null : response);
-      });
+      if (!sendShareMessage({ type: "STUDYEZ_GET_WATCH" }, (response) => resolve(response?.ok ? response : null))) resolve(null);
     });
+    if (contextInvalidated) return;
     if (existing) return startWatching(existing.lectureId, existing.mode);
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 }
 
-void initialize();
+void initialize().catch((error) => {
+  if (/extension context invalidated/i.test(error?.message || "")) invalidateShareContext();
+  else console.warn(LOG, "링크 감시를 시작하지 못했습니다:", error);
+});

@@ -10,6 +10,8 @@ import { useMe } from "../useMe";
 import { CalendarGrid } from "./CalendarGrid";
 import { EventChip } from "./EventChip";
 import { EventPanel } from "./EventPanel";
+import { MasteryBoard } from "./MasteryBoard";
+import { StudyPlanBoard } from "./StudyPlanBoard";
 import {
   addDays,
   formatWeekTitle,
@@ -82,9 +84,20 @@ export function CalendarPage() {
   );
 
   useEffect(() => {
-    takeTimetable()
-      .then((payload) => setEvents(payload.events))
-      .catch((cause: Error) => setError(cause.message));
+    let live = true;
+    let request = 0;
+    function load(initial = false) {
+      const current = ++request;
+      (initial ? takeTimetable() : api<{ events: TimetableEvent[] }>("/api/timetable"))
+        .then(payload => {
+          if (live && current === request) { setEvents(payload.events); setError(""); }
+        })
+        .catch((cause: Error) => { if (live && current === request) setError(cause.message); });
+    }
+    const refresh = () => load();
+    load(true);
+    window.addEventListener("focus", refresh);
+    return () => { live = false; window.removeEventListener("focus", refresh); };
   }, []);
 
   /**
@@ -155,6 +168,9 @@ export function CalendarPage() {
             </div>
           </div>
         </div>
+
+        <StudyPlanBoard />
+        <MasteryBoard events={events} />
 
         <CalendarGrid
           mode={mode}

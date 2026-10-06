@@ -33,7 +33,8 @@ export function ConceptMap({ concepts }: { concepts: BankConcept[] }) {
       <p className="bank-note">
         원 안 숫자는 목표 대비 학습률(%), 크기는 중요도입니다. ✓는 모든 방향의 목표 달성·초과를 뜻합니다.
         개념을 누르면 자세한 카드로 갑니다.
-        숙련도는 스스로 매긴 평가로 쌓은 지수이고 정답 확률이 아닙니다.
+        숙련도는 회상 평가와 망각 추정으로 계산한 현재 지수이며 정답 확률이 아닙니다.
+        복습 없이 시간이 지나면 낮아지고, 간격을 두고 잘 떠올리면 더 오래 유지됩니다.
       </p>
       <p className="bank-cmap-legend">
         <span><i className="is-new" />미학습</span>

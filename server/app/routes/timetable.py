@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import CurrentUser, require_approved_user
 from app.database import get_db
+from app.lecture_mastery import lecture_masteries
 from app.models import Lecture, TimetableEvent
 from app.routes.common import asset_grabs, grab_tracks, material_marks, prequiz_progress
 
@@ -48,6 +49,7 @@ def read_timetable(
     marks = material_marks(db, keys, is_admin=user.is_admin)
     progress = prequiz_progress(db, user.id, keys)
     grabs = asset_grabs(db, user.id, keys)
+    mastery = lecture_masteries(db, user.id, keys, is_admin=user.is_admin)
 
     by_event: dict[str, list[dict[str, Any]]] = {}
     for lecture in lectures:
@@ -59,6 +61,7 @@ def read_timetable(
                 "title": lecture.title,
                 "professors": lecture.professors,
                 "marks": marks.get(key, {}),
+                "mastery": mastery.get(key),
                 # 웹에서 풀 문항이 없는 강의는 null이다. "안 풀었다"와 "잴 것이
                 # 없다"는 화면에서 다르게 그려야 한다.
                 "prequizProgress": progress.get(key),

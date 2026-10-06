@@ -8,6 +8,7 @@ import { legacyMainHref, quizHref, quizWindow } from "../links";
 import { previewProviderLabels, previewProviders, type LectureDetail, type LectureFile, type PreviewProvider } from "../types/lectures";
 import { LectureCards } from "./LectureCards";
 import { Missed } from "./Missed";
+import { LectureMastery } from "./LectureMastery";
 
 /**
  * 강의 상세. 순서가 공부 순서다.
@@ -31,6 +32,10 @@ export function LecturePage() {
   }, [subject, runId]);
 
   useEffect(load, [load]);
+  useEffect(() => {
+    window.addEventListener("focus", load);
+    return () => window.removeEventListener("focus", load);
+  }, [load]);
 
   // Quiz Bank 답 본문도 같은 자리에서 받는다(관리자). 확장이 이 탭으로 밀어 준다.
   useBankLink();
@@ -118,6 +123,7 @@ export function LecturePage() {
       </header>
 
       {detail.runMeta ? <AdminNotice runMeta={detail.runMeta} /> : null}
+      <LectureMastery value={detail.mastery} />
 
       <section className="lecture-section">
         <h2>강의 전</h2>

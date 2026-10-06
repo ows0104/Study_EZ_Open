@@ -7,6 +7,7 @@
 | 수정할 파일 찾기 | [작업 지도](map.md) |
 | 실행·검사 | [명령 안내](commands.md) |
 | 데이터 흐름·책임 | [현재 구조](architecture.md) |
+| 파이프라인 한눈에 보기 | [현재 파이프라인 도식](pipeline.md) |
 | 폴더와 옛 이름 대응 | [폴더 안내](layout.md) |
 | 파일·서버 계약 | [산출물 계약](artifact-contract.md), [표본](samples/README.md) |
 | 실행 시도와 배포본 | [runs 구조](runs-layout.md) |

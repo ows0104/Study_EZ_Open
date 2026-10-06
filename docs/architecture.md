@@ -5,6 +5,8 @@ Study_EZ는 예습·복습 덱과 Quiz Bank를 제공한다. Spotter는 사진 �
 
 ## 역할과 데이터 흐름
 
+전체 운영 흐름과 Main / Pre / Bank의 단계별 도식은 [현재 파이프라인](pipeline.md)을 본다.
+
 ```text
 로컬 자료: Synology PDF · 시간표 · 예습 대화
                     ↓

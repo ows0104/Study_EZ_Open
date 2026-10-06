@@ -1,0 +1,55 @@
+export type ExamPlan = {
+  examId: string;
+  title: string;
+  examDate: string;
+  examTime: string;
+  lectureCount: number;
+  newToday: number;
+  upcomingLectures: number;
+  unassessedLectures: number;
+  daysLeft: number;
+  studyDeadline: number;
+  learningDaysLeft: number;
+  bufferDays: number;
+  bufferPhase: boolean;
+  assumedDailyRetention: number;
+  lateLectures: number;
+  dayStart: number;
+  horizon: number;
+  target: number;
+  morningScore: number;
+  currentScore: number;
+  projectedScore: number;
+  endTarget: number;
+  netGain: number;
+  forgettingLoss: number;
+  requiredGain: number;
+  earnedGain: number;
+  remainingGain: number;
+  met: boolean;
+  progressPercent: number;
+  reviewedToday: number;
+  availableCeiling: number;
+  limitedByMaterials: boolean;
+};
+
+export type LectureGoal = {
+  title: string;
+  dayStart: number;
+  scope: "core" | "all";
+  total: number;
+  completed: number;
+  remaining: number;
+  newRemaining: number;
+  reviewRemaining: number;
+  relearningRemaining: number;
+  waiting: number;
+  retryAt: number | null;
+  met: boolean;
+  progressPercent: number;
+  reviewedToday: number;
+  firstPassSeen: number;
+  firstPassTotal: number;
+};
+
+export type StudyPlan = { asOf: number; plans: ExamPlan[]; lectureGoal?: LectureGoal | null; unmatchedExams: string[]; unassignedLectures: number };

@@ -30,6 +30,7 @@ os.environ.update(
 
 import datetime  # noqa: E402
 import sys  # noqa: E402
+from unittest.mock import patch  # noqa: E402
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -243,6 +244,33 @@ def main() -> None:
           and client.get("/api/admin/bank-feedback", headers=ADMIN_H).json()["open"] == 0)
     as_student()
     check("학생은 못 본다", client.get("/api/admin/bank-feedback").status_code == 403)
+
+    print("⑧ 개수 제한 없는 학습과 선택한 상한")
+    current = client.get(f"{BASE}/bank").json()["session"]
+    check("next로 바로 시작해도 제한 없음", current["size"] is None)
+    client.post(f"{BASE}/bank/session/end", json={"sessionId": current["session_id"]})
+    for payload, count, status in (({}, 31, "active"), ({"size": 10}, 10, "complete")):
+        opened = client.post(f"{BASE}/bank/session/start", json={**payload, "continueAfterGoal": True}).json()
+        check("선택한 경우에만 상한 저장", opened["size"] == payload.get("size"))
+        # 출제 정책과 독립적으로 실제 next/reveal/rate 경로의 종료 조건을 검증한다.
+        picked = {"question": example_bank()["questions"][0], "days": 14, "ranked": []}
+        with patch("app.routes.bank.engine.select_question", return_value=picked):
+            for _ in range(count):
+                next_item = client.post(f"{BASE}/bank/next").json()
+                token = next_item["reviewToken"]
+                client.post(f"{BASE}/bank/reveal", json={"reviewToken": token})
+                rated = client.post(f"{BASE}/bank/rate", json={"reviewToken": token, "rating": "Good"})
+                assert rated.status_code == 200, rated.text
+        session = rated.json()["session"]
+        check(f"{count}문항 뒤 상태 {status}", session["reviewed"] == count and session["status"] == status)
+        ended = client.post(f"{BASE}/bank/session/end", json={"sessionId": opened["session_id"]}).json()
+        check("종료 요약에 풀이 수 보존", ended["status"] == "complete" and ended["reviewed"] == count)
+    client.post(f"{BASE}/bank/session/start", json={"size": None, "continueAfterGoal": True})
+    with patch("app.routes.bank.engine.select_question", return_value={
+            "question": None, "days": 14, "reason": "waiting", "retry_at": None}):
+        exhausted = client.post(f"{BASE}/bank/next").json()
+    check("제한 없어도 출제할 문항이 없으면 종료", exhausted["question"] is None
+          and exhausted["summary"]["reason"] == "no_eligible_question")
 
 
 if __name__ == "__main__":
