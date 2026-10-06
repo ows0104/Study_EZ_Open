@@ -21,12 +21,14 @@ def check(cards, text="범주는 기준으로\n구분한다."):
     return validate({"cards": deepcopy(cards)}, {"slides": 1, "pages": []}, None, preview_text=text)
 
 
-def test_five_core_and_optional_challenge():
-    core = [card(i) for i in range(5)]
-    assert not check(core)[1]["contract_violations"]
-    assert not check(core + [card(5, challenge=True)])[1]["contract_violations"]
-    assert check(core + [card(5)])[1]["contract_violations"]
-    assert check(core[:4] + [card(5, challenge=True)])[1]["contract_violations"]
+def test_ten_total_includes_one_or_two_challenges():
+    for total in (8, 10, 12):
+        for challenges in (1, 2):
+            cards = [card(i, challenge=i >= total - challenges) for i in range(total)]
+            assert not check(cards)[1]["contract_violations"]
+    for total, challenges in ((7, 1), (13, 2), (10, 0), (10, 3)):
+        cards = [card(i, challenge=i >= total - challenges) for i in range(total)]
+        assert check(cards)[1]["contract_violations"]
 
 
 def test_preview_excerpt_must_exist_and_core_must_have_it():

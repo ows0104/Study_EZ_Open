@@ -14,7 +14,7 @@
 세 갈래가 갈렸다. 예습에는 그 축이 없다 — 꼭 알아야 할 의학 지식은 출제자와 무관하다.
 교수 교체는 `reason=repeated` 를 쓸 수 있는지만 가른다.
 
-**③ 재현 검사가 선택이다.** 5~6장이라 싸지만, 예습은 강의 전날 급하게 도는 일이
+**③ 재현 검사가 선택이다.** 예습은 강의 전날 급하게 도는 일이
 잦다. 기본으로 돌리되 `--skip-reproduce` 로 건너뛸 수 있고 덱은 그래도 나온다.
 """
 
@@ -540,6 +540,7 @@ class Runner(BaseRunner):
              "pdf_name": self.args.pdf_name, "note": self.args.note or "",
              "subject": self.args.subject, "lecture": self.args.lecture,
              "domain": self.args.domain,
+             "simple": getattr(self.args, "simple", False),
              "professor_stayed": self.stayed, "professors": self.prof},
             ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -547,6 +548,9 @@ class Runner(BaseRunner):
         # **이름부터 적는다.** 뒤에 적으면 그 전에 끊긴 실행이 --resume 에서 이름을 잃는다
         # (덱이 `병리학::lecture::예습`, ID 가 `lecture` 로 떨어진다). 실제로 그렇게 됐다.
         self.save_config()
+        if getattr(self.args, "simple", False):
+            from .simple import run
+            return run(self)
         self.step("자료 준비 (prep)", "prep.json", self.prep)
         self.step("예습 설명본", None, self.note)
         self.step("교수 확인", None, self.read_professor)
@@ -595,6 +599,8 @@ def main(argv=None) -> int:
     ap.add_argument("--stop-at-review", action="store_true",
                     help="반드시 알아야 할 것을 보여준 뒤 멈춘다")
     ap.add_argument("--skip-reproduce", action="store_true")
+    ap.add_argument("--simple", action="store_true",
+                    help="설명본에서 목표·문항을 함께 만들고 독립 세션으로 묶음 검수한다")
     ap.add_argument("--repair-rounds", type=int, default=2,
                     help="걸린 카드를 다시 쓰게 할 최대 횟수 (0이면 안 고친다)")
     ap.add_argument("--check-dir", default="out/_image_check",
@@ -613,6 +619,7 @@ def main(argv=None) -> int:
         args.pdf = args.pdf or saved.get("pdf") or None
         args.note = args.note or saved.get("note") or None
         args.domain = args.domain or saved.get("domain") or None
+        args.simple = args.simple or saved.get("simple", False)
 
     if not args.resume and not args.pdf:
         print("작년 필기 PDF 경로가 필요하다 (또는 --resume <폴더>).")

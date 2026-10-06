@@ -57,6 +57,9 @@ from .schema import (
     MAX_WHY_TAGS,
     MAX_WHY_CHARS,
     MIN_CARDS,
+    MIN_CHALLENGE,
+    MIN_CORE,
+    MAX_CORE,
     OX_SHARE_MAX,
     WHY_CITES_EXAM,
     WHY_TAGS,
@@ -326,11 +329,11 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
     if n and ox / n > OX_SHARE_MAX:
         contract.append(f"O/X 가 {ox}/{n} ({ox / n:.0%}) 이다. 상한 {OX_SHARE_MAX:.0%}")
     challenge = sum(1 for c in kept if c.get("challenge"))
-    if n - challenge != MIN_CARDS:
-        contract.append(f"핵심 문항은 {MIN_CARDS}장이어야 한다. 현재 {n - challenge}장")
-    if challenge > MAX_CHALLENGE:
-        contract.append(f"도전 문제가 {challenge}장이다. 상한 {MAX_CHALLENGE}장 — "
-                        "핵심 5장을 유지하고 선택 도전은 1장만 남긴다")
+    if not MIN_CORE <= n - challenge <= MAX_CORE:
+        contract.append(f"핵심 문항은 {MIN_CORE}~{MAX_CORE}장이어야 한다. 현재 {n - challenge}장")
+    if not MIN_CHALLENGE <= challenge <= MAX_CHALLENGE:
+        contract.append(f"도전 문제가 {challenge}장이다. 총 8~12장 안에 "
+                        f"{MIN_CHALLENGE}~{MAX_CHALLENGE}장이어야 한다")
 
     # ── 승인된 목록과 카드를 잇는 끈 ────────────────────────────────
     #

@@ -79,7 +79,7 @@ def test_기출을_이유로_들면_문항이_있어야_한다():
 
 
 def test_도전_문제는_상한까지는_위반이_아니다():
-    cards = [_card(i) for i in range(5 + MAX_CHALLENGE)]
+    cards = [_card(i) for i in range(10)]
     for c in cards[:MAX_CHALLENGE]:
         c["challenge"] = True
     _, s = _flags({"cards": cards})
@@ -129,7 +129,7 @@ def test_도전_문제는_태그로도_갈린다():
 def _must(signals):
     return {"items": [{"item": f"항목{i}", "reason": "spine", "why": "막힌다",
                        "slides": [1], "cards": 1, **({"signals": signals} if i == 0 else {})}
-                      for i in range(5)]}
+                      for i in range(8)]}
 
 
 def test_항목에_근거를_적을_수_있다():

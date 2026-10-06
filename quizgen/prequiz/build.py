@@ -9,7 +9,7 @@
     쓰이는지」를 잇는 다리이고 목적의 절반이라, 접어 두면 아무도 안 누른다.
     그래서 노트 모델을 따로 뒀다 (`PDF2ANKI Prequiz *`).
   · 덱이 하나다. `<과목>::<강의>::예습`. 복습처럼 강의록/기출로 가르지 않는다 —
-    예습 덱은 5~6장이고, 출처와 선택 도전은 태그로 구분한다.
+    예습 덱은 10장을 기준으로 8~12장이고, 출처와 선택 도전은 태그로 구분한다.
   · guid 씨앗에 `::pre` 를 붙인다. 복습 카드와 질문이 같아져도 Anki 가 한 노트로
     보지 않게 하기 위해서다. **이것이 없으면 한쪽이 다른 쪽을 덮는다.**
   · 재현 검사 결과가 있으면 반영하되, 없다고 덱을 막지는 않는다 (`--require-reproduce` 로 켠다).
@@ -46,7 +46,7 @@ from ..build import (
     render_answer,
     verify,
 )
-from .schema import MAX_CARDS, MIN_CARDS, WHY_TAG_LABEL
+from .schema import MAX_CARDS, MIN_CARDS, MIN_CHALLENGE, MAX_CHALLENGE, WHY_TAG_LABEL
 
 # ── 노트 모델 — 복습과 뒷면 구조가 다르다 ─────────────────────────
 #
@@ -407,8 +407,8 @@ def main(argv=None) -> int:
         print_site_edits(applied)
     n = len(cards)
     challenge = sum(bool(c.get("challenge")) for c in cards)
-    if n - challenge != MIN_CARDS or challenge > MAX_CARDS - MIN_CARDS:
-        msg = f"핵심 {n - challenge}장·도전 {challenge}장이다 — 예습은 핵심 5장·선택 도전 0~1장이다"
+    if not MIN_CARDS <= n <= MAX_CARDS or not MIN_CHALLENGE <= challenge <= MAX_CHALLENGE:
+        msg = f"핵심 {n - challenge}장·도전 {challenge}장이다 — 예습은 총 8~12장 안에 선택 도전 1~2장이다"
         if not args.allow_size:
             print(f"{msg}. 그대로 만들려면 --allow-size")
             return 1

@@ -41,6 +41,7 @@ quizgen가 남기는 것(`run.config.json`·`items.reproduced.json`·`suspects.j
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -658,6 +659,24 @@ def source_pdf(run_dir: Path) -> str:
 
 
 def cards_of(run_dir: Path, kind: str = MAIN, version: str | None = None) -> list[dict]:
+    cfg = _load(_attempt(run_dir, "prequiz.config.json", kind, version)) if kind == PRE else None
+    if isinstance(cfg, dict) and cfg.get("simple"):
+        checked = _load(_attempt(run_dir, "items.checked.json", kind, version)) or {}
+        review = _load(_attempt(run_dir, "batch_review.json", kind, version)) or {}
+        cards, rows = checked.get("cards"), review.get("cards")
+        if not isinstance(cards, list) or not cards or not isinstance(rows, list):
+            raise ValueError("간소화 예습의 문항 또는 묶음 검수 결과가 없다")
+        digest = hashlib.sha256(json.dumps(cards, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+        ids = [c.get("id") for c in cards]
+        if (review.get("method") != "answer_visible_batch_review"
+                or review.get("cards_sha256") != digest
+                or any(not isinstance(id, str) or not id for id in ids)
+                or len(set(ids)) != len(ids)
+                or len(rows) != len(cards)
+                or any(not isinstance(r, dict) or r.get("ok") is not True or r.get("issues") != [] for r in rows)
+                or {r.get("id") for r in rows} != set(ids)):
+            raise ValueError("간소화 예습의 묶음 검수가 미완료이거나 검수한 문항과 다르다")
+        return cards
     got = _load(_attempt(run_dir, "items.reproduced.json", kind, version))
     cards = (got or {}).get("cards") if isinstance(got, dict) else None
     return cards if isinstance(cards, list) else []

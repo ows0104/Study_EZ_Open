@@ -96,12 +96,10 @@ REJECT_REASONS = (
 # **자료 결함을 못 본다** — 실제로 분자생물학(1)에서 p53·Warburg 등 6건이 다음 강의
 # 소관인데 unsupported 로 찍혔다. 그 상태로는 진짜 unsupported 가 나와도 묻힌다.
 
-# 2026-10-06: 핵심 5문항 + 선택 도전 1문항으로 변경.
-# validate는 총수뿐 아니라 핵심 문항이 정확히 5장인지도 확인한다.
-MIN_CARDS, MAX_CARDS = 5, 6
-
-# 적절한 질문이 없으면 도전은 생략한다.
-MAX_CHALLENGE = 1
+# 2026-10-06: 10문항을 기준으로 8~12문항 안에 선택 도전 1~2문항을 포함한다.
+MIN_CARDS, MAX_CARDS = 8, 12
+MIN_CHALLENGE, MAX_CHALLENGE = 1, 2
+MIN_CORE, MAX_CORE = 6, 11
 
 # 「왜 냈나」는 답 뒤에 짧게 표시한다.
 # 실측이 아니라 화면 한 줄(모바일 약 30자 × 2줄)에서 잡은 값이라 넘으면 표시만 단다.
@@ -232,7 +230,7 @@ MUST_KNOW_SCHEMA = {
             # 상한은 카드 수 상한을 따라간다. 항목 하나에 카드가 최소 한 장이라
             # 항목이 카드보다 많으면 배정이 성립하지 않는다 — 25 로 굳어 있던 동안
             # 카드 상한이 20 으로 내려오면서 그 자리가 어긋났다.
-            "type": "array", "minItems": MIN_CARDS, "maxItems": MIN_CARDS,
+            "type": "array", "minItems": MIN_CORE, "maxItems": MAX_CORE,
             "items": {
                 "type": "object", "additionalProperties": False,
                 "required": ["item", "reason", "why", "slides"],
@@ -435,7 +433,7 @@ def dump(outdir: Path) -> None:
               "",
               "## `challenge` — 도전 문제",
               "",
-              f"덱마다 **{MAX_CHALLENGE}장까지** 도전 문제를 넣을 수 있다. 어렵기만 한 문제가 "
+              f"덱마다 총 8~12장 안에 **{MIN_CHALLENGE}~{MAX_CHALLENGE}장** 도전 문제를 넣는다. 어렵기만 한 문제가 "
               "아니라 **수업이 답해 줄 질문**이다 — 수업 전에 받아 두면 틀려도 그 대목을 들을 "
               "때 귀가 열린다. 노리는 것은 「오, 아까 그 문제다. 교수님이 딱 말씀하시네」다.",
               "",
@@ -453,7 +451,7 @@ def dump(outdir: Path) -> None:
               "도전 문제로 쓰고, 카드 총수 계약도 그대로다.",
               "- 도전 문제가 아닌 카드는 `challenge` 를 `false` 로 둔다."]
     lines += ["", "## 학습 지원", "",
-              "핵심은 정확히 5장, 선택 도전은 0~1장이다. 도전은 마지막에 둔다.",
+              "10장을 기준으로 총 8~12장, 그 안에 선택 도전 1~2장이다. 도전은 마지막에 둔다.",
               "`learning_support`의 hint·scope·lecture_focus를 카드마다 쓴다. "
               "hint는 답을 노출하지 않는 접근 단서, scope는 지금 알아둘 범위, "
               "lecture_focus는 수업에서 들을 질문이다. scope와 lecture_focus는 답 뒤에 보인다.",
@@ -497,7 +495,7 @@ def dump(outdir: Path) -> None:
               "- `source_type` 이 `lecture`·`annotation` 이면 `slide_no` 필수, "
               "`jokbo` 면 `jokbo_ref` 필수",
               "- `ox` 의 답은 `O` 또는 `X` 하나",
-              f"- `challenge: true` 는 {MAX_CHALLENGE}장 이하",
+              f"- `challenge: true` 는 총 8~12장 안에 {MIN_CHALLENGE}~{MAX_CHALLENGE}장",
               "- hint·scope·lecture_focus가 빠지면 표시가 붙는다. 힌트에 정답이 그대로 "
               "들어가거나 핵심 문항의 preview_excerpt가 설명본에 없으면 검토 표시가 붙는다.",
               f"- `why_asked` 가 비었거나 {MAX_WHY_CHARS}자를 넘으면 표시가 붙는다",

@@ -138,7 +138,7 @@ def assemble(prep_dir: Path, jokbo_file: Path | None, schema_dir: Path,
     if note_file and note_file.exists():
         note_block = ("# 예습 설명본\n\n"
                       "작년 필기를 예습용으로 풀어 쓴 글이다. **이미 예습의 관점으로 고른 것**이라 "
-                      "핵심 5문항은 이 글을 읽으면 풀 수 있어야 한다. 질문은 자기 말로 쓰고 "
+                      "도전을 제외한 핵심 문항은 이 글을 읽으면 풀 수 있어야 한다. 질문은 자기 말로 쓰고 "
                       "preview_excerpt만 원문 그대로 발췌한다. 이 글에 없는 강의 세부는 "
                       "핵심에 넣지 않는다. 선택 도전의 답은 강의 자료에서 확인한다.\n\n"
                       + note_file.read_text(encoding="utf-8").strip())
