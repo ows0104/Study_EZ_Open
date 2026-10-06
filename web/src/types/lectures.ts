@@ -84,10 +84,11 @@ export type TimetableEvent = {
 
 export type LectureFile = {
   id: string;
-  kind: "notes_prev" | "notes_current" | "pre_apkg" | "main_apkg";
+  kind: "notes_prev" | "notes_current" | "jokbo" | "pre_apkg" | "main_apkg";
   label: string;
   filename: string;
   sizeBytes: number;
+  contentType?: string;
 };
 
 export type LectureDetail = {

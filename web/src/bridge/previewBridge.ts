@@ -10,7 +10,7 @@ import {
   type LinkKind,
 } from "./protocol";
 
-/** `contentType` 은 PDF 가 아닌 것(Quiz Bank 의 족보 조각 .md)에만 준다. 안 주면 확장이 PDF 로 붙인다. */
+/** 족보 조각 .md를 PDF로 처리하지 않도록 원본 contentType을 함께 전달한다. */
 export type PreviewFile = { id: string; filename: string; downloadUrl: string; contentType?: string };
 
 /** 확장이 설치돼 있는가. 없으면 안내를 띄우고 자동 열기를 하지 않는다. */
@@ -52,7 +52,14 @@ export function requestPreview(input: {
   mode: "shared" | "personal" | "bank";
   prompt: string;
   files: PreviewFile[];
+  /** 수동입력은 첨부·입력까지만, 자동입력은 전송까지 한다. */
+  autoSend: boolean;
 }) {
+  const version = document.documentElement.getAttribute(READY_ATTRIBUTE) || "";
+  const parts = version.split(".").map(Number);
+  if (!(parts[0] > 1 || (parts[0] === 1 && (parts[1] > 3 || (parts[1] === 3 && parts[2] >= 3))))) {
+    return Promise.reject(new Error("수동·자동입력을 선택하려면 예습 브리지 1.3.3 이상으로 업데이트하고 확장과 이 페이지를 새로고침해 주세요."));
+  }
   return new Promise<void>((resolve, reject) => {
     const timeout = window.setTimeout(() => {
       window.removeEventListener("message", handle);

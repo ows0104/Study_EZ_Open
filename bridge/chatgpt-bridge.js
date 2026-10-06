@@ -1,7 +1,7 @@
 // 선택한 AI 새 대화에 작년 필기를 붙이고 프롬프트를 채운다.
 //
-// **전송은 누르지 않는다.** 무엇이 들어갔는지 사람이 보고 직접 보낸다 — 남의
-// 계정으로 대화를 만드는 일이라 마지막 한 번은 사람의 손이어야 한다.
+// 자동 첨부·전송에 동의한 모드만 실행한다. 첨부 준비를 확인할 수 없으면 멈추고,
+// 전송 클릭은 한 번만 한다. 전송 여부가 불명확해도 자동 재시도하지 않는다.
 
 function escapeHtml(value) {
   return String(value).replace(
@@ -11,6 +11,8 @@ function escapeHtml(value) {
 }
 
 function createOverlay(payload, remembered) {
+  const automatic = payload.autoSend === true;
+  const inputLabel = automatic ? "자동 첨부·전송" : "자료 첨부·프롬프트 입력";
   const shared = payload.mode === "shared";
   // Quiz Bank(관리자): 필기 PDF 와 족보 조각을 붙이고, 답이 끝나면 그 **본문**을 강의에 저장한다.
   const bank = payload.mode === "bank";
@@ -22,7 +24,8 @@ function createOverlay(payload, remembered) {
     .join("");
   const disclosure = `
     <p class="studyez-disclosure">
-      동의하면 선택한 자료 내용과 프롬프트를 ${providerLabel}에 넣습니다. 확장은 답변 완료 상태와 링크를
+      동의하면 선택한 자료 내용과 프롬프트를 ${providerLabel}에 ${automatic ? "첨부하고 자동 전송합니다" : "입력합니다. 전송 버튼은 직접 눌러 주세요"}.
+      동의는 같은 서비스·모드·입력 방식별로 기억합니다. ×로 중지할 수 있습니다. 확장은 답변 완료 상태와 링크를
       확인합니다. ChatGPT 기본 링크·Quiz Bank 모드에서는 로그인 토큰을 메모리에서 잠깐 사용하지만, 토큰을
       저장하거나 Study EZ로 보내지 않습니다.
       ${bank ? "이 모드는 답변이 끝나면 그 답변 본문을 Study EZ 강의에 저장합니다. 공유 링크는 만들지 않습니다." : shared ? "이 모드는 링크를 가진 누구나 볼 수 있는 공개 공유 링크를 만들고 Study EZ 강의에 저장합니다." : "이 모드는 내 계정에서만 열리는 대화 주소를 Study EZ 강의에 저장합니다."}
@@ -57,23 +60,23 @@ function createOverlay(payload, remembered) {
       #studyez-bridge .studyez-status { flex: 1; min-width: 0; color: #3a5bc7; font-size: 11px; }
       #studyez-bridge .studyez-status.is-error { color: #9a3412; }
     </style>
-    <button type="button" data-action="cancel" aria-label="닫기" title="닫기">×</button>
+    <button type="button" data-action="cancel" aria-label="자동 진행 중지" title="자동 진행 중지">×</button>
     ${
       remembered
         ? `<h2>${title}</h2>
     <p class="studyez-file-line" title="${escapeHtml(payload.files.map((file) => file.filename).join(", "))}">자료 ${payload.files.length}개 · ${modeLabel} · ${escapeHtml(payload.files[0]?.filename || "자료")}</p>`
         : `<h2>${title}</h2>
-    <p>${providerLabel}에 넣을 ${bank ? "필기·족보" : "필기"}와 프롬프트입니다. 전송은 직접 눌러야 합니다.</p>
+    <p>${providerLabel} ${automatic ? "자동입력 · 전송까지 진행" : "수동입력 · 직접 전송"}에 사용할 자료와 프롬프트입니다.</p>
     ${disclosure}
-    <ul>${fileList}</ul>
-    <label class="studyez-consent">
-      <input type="checkbox" data-action="consent">
-      <span>위의 데이터 처리와 ${bank ? "답변 본문 저장" : shared ? "공개 공유 링크 생성" : "개인 대화 주소 저장"}에 동의합니다.</span>
-    </label>`
+    <ul>${fileList}</ul>`
     }
+    <label class="studyez-consent">
+      <input type="checkbox" data-action="consent"${remembered ? " checked disabled" : ""}>
+      <span>${inputLabel}과 ${bank ? "답변 본문 저장" : shared ? "공개 공유 링크 생성" : "개인 대화 주소 저장"}에 동의합니다.</span>
+    </label>
     <div class="studyez-actions">
       <div class="studyez-status" role="status"></div>
-      <button type="button" data-action="confirm"${remembered ? "" : " disabled"}>${remembered ? "" : "동의하고 "}자료 ${payload.files.length}개 넣기</button>
+      <button type="button" data-action="confirm"${remembered && automatic ? " hidden" : remembered ? "" : " disabled"}>${automatic ? "동의하고 자동 시작" : remembered ? "자료·프롬프트 넣기" : "동의하고 입력"}</button>
     </div>
     ${
       remembered
@@ -98,26 +101,40 @@ function base64ToBytes(value) {
 }
 
 /** 자료는 배경이 받아 조각으로 넘겨준다. 콘텐츠 스크립트는 R2에 직접 못 간다. */
-function fetchFile(file, status) {
+function fetchFile(file, status, signal) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     const port = chrome.runtime.connect({ name: "studyez-file-stream" });
+    let settled = false;
+    const timer = setTimeout(() => finish(new Error("자료 다운로드 시간이 초과되었습니다. Study EZ에서 새 대화로 시작해 주세요.")), 120000);
+    const abort = () => finish(new Error("자동 진행을 중지했습니다."));
+    function finish(error, result) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      signal.removeEventListener("abort", abort);
+      port.disconnect();
+      if (error) reject(error);
+      else resolve(result);
+    }
+    signal.addEventListener("abort", abort, { once: true });
+    port.onDisconnect.addListener(() => finish(new Error("자료 다운로드 연결이 끊겼습니다. Study EZ에서 새 대화로 시작해 주세요.")));
     port.onMessage.addListener((message) => {
+      if (settled) return;
       if (message.fileId !== file.id) return;
       if (message.type === "FILE_START") status.textContent = `${file.filename} 받는 중…`;
       if (message.type === "FILE_CHUNK") chunks.push(base64ToBytes(message.chunk));
       if (message.type === "FILE_ERROR") {
-        port.disconnect();
-        reject(new Error(message.error));
+        finish(new Error(message.error));
       }
       if (message.type === "FILE_END") {
-        port.disconnect();
         // 족보 조각은 마크다운이다(Quiz Bank). 형식을 안 주면 PDF 로 붙는다.
         const type = file.contentType || (/\.md$/i.test(file.filename) ? "text/markdown" : "application/pdf");
-        resolve(new File(chunks, file.filename, { type }));
+        finish(null, new File(chunks, file.filename, { type }));
       }
     });
-    port.postMessage({ type: "DOWNLOAD_FILE", fileId: file.id, filename: file.filename, downloadUrl: file.downloadUrl });
+    if (signal.aborted) abort();
+    else port.postMessage({ type: "DOWNLOAD_FILE", fileId: file.id, filename: file.filename, downloadUrl: file.downloadUrl });
   });
 }
 
@@ -171,7 +188,7 @@ async function findFileInput(provider) {
     const inputs = [...document.querySelectorAll('input[type="file"]')];
     const input =
       inputs.find((candidate) => !candidate.disabled && (candidate.accept || "").toLowerCase().includes("pdf")) ||
-      inputs.find((candidate) => !candidate.disabled);
+      inputs.find((candidate) => !candidate.disabled && !(candidate.accept || "").trim());
     if (input) return input;
     if (attempt === 4 || attempt === 10) revealFileInput();
     await new Promise((resolve) => setTimeout(resolve, 150));
@@ -179,8 +196,9 @@ async function findFileInput(provider) {
   throw new Error("AI 서비스의 파일 첨부 입력창을 찾지 못했습니다. 화면이 바뀌었을 수 있습니다.");
 }
 
-async function attachFiles(files, provider) {
+async function attachFiles(files, provider, active) {
   const input = await findFileInput(provider);
+  active();
   const transfer = new DataTransfer();
   files.forEach((file) => transfer.items.add(file));
   input.files = transfer.files;
@@ -188,20 +206,137 @@ async function attachFiles(files, provider) {
 }
 
 /** 입력창은 textarea일 때도 contenteditable(ProseMirror)일 때도 있다. */
-function fillPrompt(prompt) {
-  const textarea = [...document.querySelectorAll("textarea")].find(visible);
-  if (textarea) {
+function fillPrompt(prompt, editor) {
+  if (editor.tagName === "TEXTAREA") {
     const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
-    setter?.call(textarea, prompt);
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    setter?.call(editor, prompt);
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
     return;
   }
-  const editor = [...document.querySelectorAll('[contenteditable="true"]')].find(visible);
-  if (!editor) throw new Error("AI 서비스의 프롬프트 입력창을 찾지 못했습니다. 화면이 바뀌었을 수 있습니다.");
   editor.focus();
   document.execCommand("selectAll", false);
   document.execCommand("insertText", false, prompt);
   editor.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: prompt }));
+}
+
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const normalized = (value) => String(value || "").replace(/\r\n/g, "\n").replace(/\u00a0/g, " ").trim();
+
+/** innerText는 <p> 사이에 CSS 문단 간격을 반영한 \n\n을 넣는다.
+ * 입력한 줄바꿈은 블록 경계 하나당 \n 하나로 읽고, 빈 문단은 그대로 보존한다.
+ * textContent만 쓰면 문단 경계가 사라져 서로 다른 프롬프트가 같아질 수 있다.
+ */
+function editorNodeText(node) {
+  if (node.nodeType === 3) return node.nodeValue || "";
+  if (node.nodeType !== 1) return "";
+  if (node.tagName === "BR") return node.classList.contains("ProseMirror-trailingBreak") ? "" : "\n";
+  const children = [...node.childNodes];
+  if (children.length === 1 && children[0].nodeName === "BR") return "";
+  const block = (child) => /^(P|DIV|LI|PRE|BLOCKQUOTE|H[1-6])$/.test(child.nodeName);
+  return children.map((child, index) => {
+    const separator = index > 0 && (block(child) || block(children[index - 1])) ? "\n" : "";
+    return separator + editorNodeText(child);
+  }).join("");
+}
+
+const editorText = (editor) => normalized(editor.value ?? editorNodeText(editor));
+
+function promptUnchanged(provider, prompt) {
+  // React/ProseMirror가 입력창 DOM을 교체할 수 있으므로 예전 요소를 붙잡지 않는다.
+  const current = findEditor(provider);
+  return Boolean(current && editorText(current) === normalized(prompt));
+}
+
+function findEditor(provider) {
+  const selectors = {
+    chatgpt: '#prompt-textarea, textarea[data-id="root"], [data-chatgpt-composer] [data-composer-markdown][contenteditable="true"]',
+    gemini: 'rich-textarea [contenteditable="true"], textarea',
+    claude: '[contenteditable="true"].ProseMirror, textarea',
+  };
+  const candidates = [...document.querySelectorAll(selectors[provider])].filter(visible);
+  // 입력창이 모호하면 다른 검색창이나 대화에 쓰지 않는다.
+  return candidates.length === 1 ? candidates[0] : null;
+}
+
+function sendButton(root, provider) {
+  const known = {
+    chatgpt: 'button[data-testid="send-button"]',
+    gemini: 'button.send-button',
+    claude: 'button[data-testid="send-button"]',
+  };
+  const candidates = [...root.querySelectorAll("button")].filter((button) => {
+    if (!visible(button) || button.closest("#studyez-bridge")) return false;
+    const label = `${button.getAttribute("aria-label") || button.getAttribute("title") || button.textContent || ""}`.trim();
+    // Gemini 등은 생성 중에도 같은 버튼 클래스를 쓴다.
+    if (/(stop|cancel|중지|취소)/i.test(label)) return false;
+    return button.matches(known[provider]) || /^(send(?: message| prompt)?|메시지 (?:보내기|전송)|프롬프트 (?:보내기|전송)|보내기|전송|제출)(?:\s*\([^)]*\))?$/i.test(label);
+  });
+  return candidates.length === 1 ? candidates[0] : null;
+}
+
+function composerRoot(editor, provider) {
+  // 업로드 상태와 파일명은 입력창 주변에서만 읽는다. 과거 대화나 확인 카드의
+  // 파일명을 업로드 성공으로 오인하지 않도록 body까지 확장하지 않는다.
+  const form = editor.closest("form");
+  if (form) return form;
+  let root = editor.parentElement;
+  for (let depth = 0; root && root !== document.body && depth < 8; depth += 1, root = root.parentElement) {
+    if (sendButton(root, provider)) return root;
+  }
+  return null;
+}
+
+function attachmentStatus(root, files) {
+  const copy = root.cloneNode(true);
+  copy.querySelectorAll('textarea, [contenteditable], #studyez-bridge').forEach((node) => node.remove());
+  const labels = [copy.textContent, ...[...copy.querySelectorAll("[title], [aria-label]")]
+    .flatMap((node) => [node.getAttribute("title"), node.getAttribute("aria-label")])].join("\n");
+  const busy = [...root.querySelectorAll('[role="progressbar"], progress, [aria-busy="true"], .animate-spin, [data-state="uploading"]')].some(visible)
+    || /(?:uploading|processing file|업로드 중|업로드하는 중|파일 처리 중)/i.test(labels);
+  const failed = /(?:upload failed|failed to upload|error uploading|unsupported file|file too large|업로드 실패|업로드할 수 없|지원하지 않는 파일|파일이 너무)/i.test(labels);
+  return { ready: files.every((file) => labels.includes(file.filename)) && !busy, failed };
+}
+
+/** 준비 상태가 안정적으로 유지될 때만 클릭한다. 타임아웃/불명확한 전송은 재시도하지 않는다. */
+async function autoSend(payload, status, active, dependencies = {}) {
+  const sleep = dependencies.sleep || pause;
+  const now = dependencies.now || Date.now;
+  const getEditor = dependencies.findEditor || findEditor;
+  const getRoot = dependencies.composerRoot || composerRoot;
+  const getButton = dependencies.sendButton || sendButton;
+  const getAttachments = dependencies.attachmentStatus || attachmentStatus;
+  let readySince = null;
+  const deadline = now() + 120000;
+  while (now() < deadline) {
+    active();
+    const editor = getEditor(payload.provider);
+    if (!editor || editorText(editor) !== normalized(payload.prompt)) {
+      throw new Error("입력 내용이 바뀌었거나 이미 전송되었습니다. 중복 전송을 막기 위해 자동 진행을 멈췄습니다.");
+    }
+    const root = getRoot(editor, payload.provider);
+    const attachment = root && getAttachments(root, payload.files);
+    if (attachment?.failed) throw new Error("파일 업로드에 실패했습니다. AI 화면에서 첨부 상태를 확인해 주세요.");
+    const button = root && getButton(root, payload.provider);
+    if (attachment?.ready && button && !button.disabled && button.getAttribute("aria-disabled") !== "true") {
+      if (readySince === null) readySince = now();
+      if (now() - readySince >= 1500) {
+        active();
+        button.click(); // 이 실행에서 유일한 전송 시도. 이후에는 확인만 한다.
+        status.textContent = "전송 확인 중…";
+        const confirmationDeadline = now() + 15000;
+        while (now() < confirmationDeadline) {
+          await sleep(250);
+          // 전송 후에는 URL이 새 대화 주소로 바뀌는 것이 정상이다.
+          const current = getEditor(payload.provider);
+          if (current && !editorText(current)) return;
+        }
+        throw new Error("전송 버튼을 눌렀지만 접수 여부를 확인하지 못했습니다. 자동으로 다시 보내지 않습니다. AI 화면을 확인해 주세요.");
+      }
+    } else readySince = null;
+    status.textContent = "파일 업로드 완료와 전송 준비를 확인하는 중… (×로 중지)";
+    await sleep(250);
+  }
+  throw new Error("2분 안에 모든 파일의 업로드 완료를 확인하지 못했습니다. 첨부 상태를 확인한 뒤 직접 전송해 주세요.");
 }
 
 function requestPayload() {
@@ -218,6 +353,21 @@ function requestPayload() {
  * 동의한 것으로 그것까지 동의한 셈 칠 수 없다.
  */
 const CONSENT_KEY = "studyez-consent:";
+// 이전 동의는 수동 전송용이다. 자동 전송에 대한 동의는 별도로 받는다.
+const AUTO_CONSENT_VERSION = "auto-v1:";
+
+function consentScopeFor(payload) {
+  return `${payload.autoSend === true ? AUTO_CONSENT_VERSION : "manual-v1:"}${payload.provider}:${payload.mode}`;
+}
+
+async function finishInput(payload, status, active, send = autoSend) {
+  if (payload.autoSend === true) {
+    await send(payload, status, active);
+    status.textContent = "전송했습니다. 답변이 끝나면 결과를 Study EZ에 저장합니다.";
+  } else {
+    status.textContent = "자료와 프롬프트를 넣었습니다. 확인·수정한 뒤 직접 전송해 주세요.";
+  }
+}
 
 function readConsent(mode) {
   return new Promise((resolve) => {
@@ -238,55 +388,106 @@ async function initialize() {
 
   const mode = ["shared", "bank"].includes(payload.mode) ? payload.mode : "personal";
   const provider = ["chatgpt", "gemini", "claude"].includes(payload.provider) ? payload.provider : "chatgpt";
-  const consentKey = `${CONSENT_KEY}${provider}:${mode}`;
+  payload.provider = provider;
+  payload.mode = mode;
+  const automatic = payload.autoSend === true;
+  const consentScope = consentScopeFor(payload);
+  const consentKey = `${CONSENT_KEY}${consentScope}`;
 
   function mount(remembered) {
     const overlay = createOverlay(payload, remembered);
     const status = overlay.querySelector(".studyez-status");
     const confirm = overlay.querySelector('[data-action="confirm"]');
     const consent = overlay.querySelector('[data-action="consent"]');
-    overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => overlay.remove());
+    let cancelled = false;
+    let started = false;
+    const downloads = new AbortController();
+    const startUrl = location.href;
+    const active = () => {
+      if (cancelled || !overlay.isConnected) throw new Error("자동 진행을 중지했습니다.");
+      if (location.href !== startUrl) throw new Error("대화 화면이 바뀌어 자동 진행을 중지했습니다.");
+    };
+    overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => {
+      cancelled = true;
+      downloads.abort();
+      overlay.remove();
+    });
     consent?.addEventListener("change", () => {
       confirm.disabled = !consent.checked;
     });
     // 기억한 동의를 되돌릴 자리. 이것이 없으면 확장 저장소를 통째로 지우는 수밖에 없다.
     overlay.querySelector('[data-action="revoke"]')?.addEventListener("click", async () => {
+      cancelled = true;
+      downloads.abort();
       try {
         await chrome.storage.local.remove(consentKey);
       } catch {
-        // 저장소 오류가 나도 현재 카드에서는 다시 동의를 받는 상태로 돌아간다.
+        status.classList.add("is-error");
+        status.textContent = "자동 진행은 중지했지만 동의 해제를 저장하지 못했습니다. 동의 해제를 다시 눌러 주세요.";
+        return;
       }
-      overlay.remove();
-      mount(false);
+      status.textContent = "자동 진행을 중지하고 동의를 해제했습니다. 다시 실행하려면 Study EZ에서 새 대화로 시작해 주세요.";
+      consent.checked = false;
+      confirm.hidden = true;
+      overlay.querySelector('[data-action="revoke"]').disabled = true;
     });
 
-    confirm.addEventListener("click", async () => {
+    async function start() {
+      if (started || (!remembered && !consent?.checked)) return;
+      started = true;
       confirm.disabled = true;
       // 동의는 누른 그 순간에 남긴다. 첨부가 실패해도 사람이 동의한 것은 사실이다.
       // 못 남기는 것은 다음에 한 번 더 묻는다는 뜻일 뿐이라 전송을 막지 않는다.
-      await chrome.storage.local.set({ [consentKey]: true }).catch(() => {});
+      if (!remembered) await chrome.storage.local.set({ [consentKey]: true }).catch(() => {});
       if (consent) consent.disabled = true;
       status.classList.remove("is-error");
       try {
+        // 기억된 동의로 시작해도 취소/동의 해제를 누를 시간을 준다.
+        if (remembered && automatic) {
+          status.textContent = "3초 후 자동으로 첨부·전송합니다. (×로 중지)";
+          await pause(3000);
+        }
+        active();
         const files = [];
-        for (const file of payload.files) files.push(await fetchFile(file, status));
+        for (const file of payload.files) {
+          files.push(await fetchFile(file, status, downloads.signal));
+          active();
+        }
+        let editor = null;
+        for (let attempt = 0; attempt < 60 && !editor; attempt += 1) {
+          active();
+          editor = findEditor(provider);
+          if (!editor) await pause(500);
+        }
+        if (!editor) throw new Error("입력창을 찾지 못했습니다. AI 서비스 로그인과 화면을 확인해 주세요.");
+        if (editorText(editor)) throw new Error("입력창에 작성 중인 내용이 있어 자동 진행을 멈췄습니다. 새 대화로 다시 시작해 주세요.");
         status.textContent = "자료를 첨부하고 프롬프트를 넣는 중…";
-        await attachFiles(files, provider);
-        fillPrompt(payload.prompt);
-        // 다 넣은 뒤에는 버튼이 할 일이 없다. 그 자리를 안내문에 준다.
+        // 먼저 입력한다. 파일 입력을 찾는 동안 사용자가 전송/이동했으면 덮어쓰지 않는다.
+        fillPrompt(payload.prompt, editor);
+        active();
+        await attachFiles(files, provider, () => {
+          active();
+          if (!promptUnchanged(provider, payload.prompt)) {
+            throw new Error("입력 내용이 바뀌어 자동 첨부·전송을 중지했습니다.");
+          }
+        });
+        active();
         confirm.hidden = true;
-        status.textContent = "자료를 넣었습니다. 확인하고 전송을 눌러 주세요.";
+        await finishInput(payload, status, active);
         setTimeout(() => overlay.remove(), 5000);
       } catch (error) {
+        if (cancelled) return;
         status.classList.add("is-error");
         status.textContent = error instanceof Error ? error.message : String(error);
-        if (consent) consent.disabled = false;
-        confirm.disabled = consent ? !consent.checked : false;
+        // 일부 첨부/전송이 성공했을 수 있으므로 같은 요청에 재시도 버튼을 주지 않는다.
+        confirm.hidden = true;
       }
-    });
+    }
+    confirm.addEventListener("click", () => void start());
+    if (remembered && automatic) void start();
   }
 
-  mount(await readConsent(`${provider}:${mode}`));
+  mount(await readConsent(consentScope));
 }
 
 void initialize();

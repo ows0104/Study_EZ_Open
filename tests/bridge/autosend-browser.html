@@ -1,0 +1,275 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Bridge automatic submission — browser regression</title>
+<style>body {font:16px system-ui;margin:40px} form {border:1px solid #ccc;padding:16px} [contenteditable], textarea {display:block;min-height:40px;width:500px} button {padding:8px} .pass {color:green} .fail {color:crimson}</style>
+<h1>Bridge browser regression</h1>
+<p>Local fixtures only. No requests are sent to AI services.</p>
+<ol id="results"></ol>
+<div id="fixture"></div>
+<script>
+  // Shorten only UI countdowns; readiness deadlines still use real elapsed time.
+  const nativeTimeout = window.setTimeout.bind(window);
+  window.setTimeout = (fn, ms, ...args) => nativeTimeout(fn, ms === 3000 ? 30 : ms, ...args);
+  const stored = {};
+  let queued = null;
+  let downloadCount = 0;
+  window.chrome = {
+    storage: { local: {
+      get(key, callback) { callback({...stored}); },
+      async set(values) { Object.assign(stored, values); },
+      async remove(key) { delete stored[key]; },
+    }},
+    runtime: {
+      sendMessage(message, callback) {
+        if (message.type === 'STUDYEZ_GET_PAYLOAD') {
+          const payload = queued;
+          queued = null;
+          callback({ok:true,payload});
+        } else callback({ok:true});
+      },
+      connect() {
+        let onMessage, onDisconnect;
+        return {
+          onMessage: {addListener(fn) {onMessage=fn;}},
+          onDisconnect: {addListener(fn) {onDisconnect=fn;}},
+          disconnect() {onDisconnect?.();},
+          postMessage(request) {
+            downloadCount++;
+            queueMicrotask(() => {
+              onMessage({type:'FILE_START',fileId:request.fileId});
+              onMessage({type:'FILE_CHUNK',fileId:request.fileId,chunk:btoa('Synthetic local test fixture')});
+              onMessage({type:'FILE_END',fileId:request.fileId});
+            });
+          },
+        };
+      },
+    },
+  };
+</script>
+<script src="../../bridge/chatgpt-bridge.js"></script>
+<script>
+  // All cases use the real extension code, browser DOM and DataTransfer implementation.
+  const results = document.querySelector('#results');
+  const fixture = document.querySelector('#fixture');
+  let failures = 0;
+  const check = (value, message) => { if (!value) throw new Error(message); };
+  const delay = ms => new Promise(resolve => nativeTimeout(resolve, ms));
+  async function until(predicate, message) {
+    for (let i=0;i<120;i++) { if (predicate()) return; await delay(50); }
+    throw new Error(message);
+  }
+  function reset(kind='modern') {
+    document.querySelector('#studyez-bridge')?.remove();
+    for (const key of Object.keys(stored)) delete stored[key];
+    fixture.innerHTML = `<form data-chatgpt-composer>
+      <input type="file" accept="image/*" hidden><input type="file" multiple hidden>
+      <div data-composer-attachments></div>
+      ${kind === 'legacy' ? '<div id="prompt-textarea" contenteditable="true"></div>' : '<div data-composer-markdown contenteditable="true"></div>'}
+      <button type="button" aria-label="보내기" disabled>Send</button>
+    </form>`;
+    const form = fixture.querySelector('form');
+    const editor = findEditor('chatgpt');
+    const input = form.querySelector('input:not([accept])');
+    const attachments = form.querySelector('[data-composer-attachments]');
+    const send = form.querySelector('button');
+    const state = {clicks:0, attached:0, uploadDone:false};
+    input.addEventListener('change', () => {
+      state.attached++;
+      attachments.replaceChildren();
+      for (const file of input.files) {
+        const card = document.createElement('div');
+        card.textContent = file.name;
+        attachments.append(card);
+      }
+      const progress = document.createElement('div');
+      progress.setAttribute('role','progressbar');
+      progress.textContent='Uploading';
+      attachments.append(progress);
+      send.disabled = false; // Deliberately enabled BEFORE upload finishes.
+      nativeTimeout(() => { progress.remove(); state.uploadDone = true; }, 450);
+    });
+    send.addEventListener('click', () => {
+      state.clicks++;
+      check(state.uploadDone, 'sent before upload finished');
+      editor.textContent = '';
+    });
+    return {form, editor, input, attachments, send, state};
+  }
+  const payload = () => ({provider:'chatgpt',mode:'personal',autoSend:true,prompt:'Explain these synthetic lecture files.',files:[
+    {id:'pdf',filename:'lecture.pdf',downloadUrl:'fixture:pdf'},
+    {id:'md',filename:'exam.md',contentType:'text/markdown',downloadUrl:'fixture:md'},
+  ]});
+  async function start(request=payload()) {queued=request;await initialize();}
+  async function run(name, fn) {
+    const row = document.createElement('li');
+    results.append(row);
+    try {await fn();row.className='pass';row.textContent='PASS '+name;}
+    catch(error) {failures++;row.className='fail';row.textContent='FAIL '+name+': '+error.message;}
+  }
+  async function suite() {
+    // Finish the script's initial no-payload request loop before queueing fixtures.
+    await delay(10100);
+    await run('Manual input attaches PDF and exam Markdown but never sends, despite automatic consent', async () => {
+      const {state,input} = reset();
+      stored['studyez-consent:auto-v1:chatgpt:personal']=true;
+      stored['studyez-consent:manual-v1:chatgpt:personal']=true;
+      await start({...payload(),autoSend:false});
+      await delay(100);
+      check(state.attached===0 && state.clicks===0,'manual mode started automatically');
+      document.querySelector('[data-action=confirm]').click();
+      await until(()=>state.uploadDone,'manual input did not attach');
+      await delay(2000);
+      check(input.files.length===2 && input.files[1].type==='text/markdown','manual lost exam attachment');
+      check(state.clicks===0,'manual input submitted');
+    });
+    await run('Old consent does not authorize auto-send; first consent starts once', async () => {
+      const {state,input} = reset();
+      stored['studyez-consent:chatgpt:personal']=true;
+      await start();
+      await delay(100);
+      check(state.attached===0,'old consent triggered attachment');
+      const consent=document.querySelector('[data-action=consent]');
+      check(consent,'new consent missing');
+      consent.click();
+      const confirm=document.querySelector('[data-action=confirm]');
+      confirm.click();confirm.click();
+      await until(()=>state.clicks===1,'no automatic send');
+      check(input.files.length===2,'not all files attached');
+      check(input.files[1].type==='text/markdown','markdown type lost');
+      check(state.attached===1,'attached twice');
+      await until(()=>document.querySelector('.studyez-status')?.textContent.includes('전송했습니다'),'no confirmation');
+    });
+    await run('Remembered automatic consent needs no click (legacy editor)', async () => {
+      const {state}=reset('legacy');
+      stored['studyez-consent:auto-v1:chatgpt:personal']=true;
+      await start();
+      const rememberedConsent=document.querySelector('[data-action=consent]');
+      check(rememberedConsent?.checked && rememberedConsent.disabled,'remembered consent is not visibly checked');
+      await until(()=>state.clicks===1,'remembered consent did not start');
+      await until(()=>document.querySelector('.studyez-status')?.textContent.includes('전송했습니다'),'no confirmation');
+    });
+    await run('ChatGPT paragraph spacing preserves the original single newline', async () => {
+      const {editor}=reset();
+      editor.innerHTML='<p>lecture.pdf</p><p>수업 전 예습용으로 설명해줘.</p>';
+      check(editor.innerText.includes('\n\n'),'fixture must reproduce rendered paragraph spacing');
+      check(editorText(editor)==='lecture.pdf\n수업 전 예습용으로 설명해줘.','paragraph separator mismatch');
+      editor.innerHTML='<p>one</p><p><br class="ProseMirror-trailingBreak"></p><p>two<br>three<br class="ProseMirror-trailingBreak"></p>';
+      check(editorText(editor)==='one\n\ntwo\nthree','blank lines or hard breaks lost');
+    });
+    await run('Multiple paragraphs and editor replacement proceed through attachment and send', async () => {
+      const {editor,state}=reset();
+      const request=payload();
+      request.prompt='lecture.pdf\n수업 전 예습용으로 설명해줘.';
+      let replaced=false;
+      editor.addEventListener('input',()=>{
+        if (replaced) return;
+        replaced=true;
+        const replacement=editor.cloneNode(false);
+        replacement.innerHTML='<p>lecture.pdf</p><p>수업 전 예습용으로 설명해줘.</p>';
+        editor.replaceWith(replacement);
+      });
+      // The mock send handler also follows the current editor after a React remount.
+      fixture.querySelector('button').addEventListener('click',()=>{findEditor('chatgpt').textContent='';});
+      stored['studyez-consent:auto-v1:chatgpt:personal']=true;
+      await start(request);
+      await until(()=>state.clicks===1,'multiline/remounted editor did not send');
+      check(state.attached===1 && !editor.isConnected,'replacement not exercised');
+      await until(()=>document.querySelector('.studyez-status')?.textContent.includes('전송했습니다'),'no confirmation');
+    });
+    await run('Changed words and missing blank lines are still detected', async () => {
+      const {editor}=reset();
+      editor.innerHTML='<p>one</p><p>two</p>';
+      check(!promptUnchanged('chatgpt','one\n\ntwo'),'blank line deletion ignored');
+      check(!promptUnchanged('chatgpt','one\nthree'),'changed words ignored');
+      check(!promptUnchanged('chatgpt','onetwo'),'line boundary ignored');
+    });
+    await run('Cancel during countdown stops attachment and send', async () => {
+      const {state}=reset();
+      stored['studyez-consent:auto-v1:chatgpt:personal']=true;
+      await start();
+      document.querySelector('[data-action=cancel]').click();
+      await delay(100);
+      check(state.attached===0 && state.clicks===0,'cancel was ignored');
+    });
+    await run('Revoking consent stops the current request', async () => {
+      const {state}=reset();
+      stored['studyez-consent:auto-v1:chatgpt:personal']=true;
+      await start();
+      document.querySelector('[data-action=revoke]').click();
+      await delay(100);
+      check(state.attached===0 && state.clicks===0,'revoke was ignored');
+      check(!stored['studyez-consent:auto-v1:chatgpt:personal'],'consent retained');
+      check(!document.querySelector('[data-action=consent]').checked,'revoked consent still displayed as checked');
+    });
+    await run('Existing draft is preserved', async () => {
+      const {state,editor}=reset();
+      editor.textContent='My draft';
+      stored['studyez-consent:auto-v1:chatgpt:personal']=true;
+      await start();
+      await until(()=>document.querySelector('.is-error'),'missing draft warning');
+      check(state.attached===0 && state.clicks===0 && editor.textContent==='My draft','draft overwritten');
+    });
+    await run('Cancel after attaching stops send without attaching twice', async () => {
+      const {state}=reset();
+      stored['studyez-consent:auto-v1:chatgpt:personal']=true;
+      await start();
+      await until(()=>state.attached===1,'files not attached');
+      document.querySelector('[data-action=cancel]').click();
+      await delay(2000);
+      check(state.attached===1 && state.clicks===0,'cancel after attachment ignored');
+    });
+    await run('Consent remains separate for public sharing and other providers', async () => {
+      const {state}=reset();
+      stored['studyez-consent:auto-v1:chatgpt:shared']=true;
+      stored['studyez-consent:auto-v1:claude:personal']=true;
+      await start();
+      await delay(100);
+      check(!document.querySelector('[data-action=consent]')?.checked,'consent leaked across modes/providers');
+      check(state.attached===0 && state.clicks===0,'other consent authorized send');
+    });
+    await run('Textarea prompts are filled through native setter', async () => {
+      reset();
+      fixture.innerHTML='<textarea data-id="root"></textarea>';
+      const editor=findEditor('chatgpt');
+      let inputs=0;
+      editor.addEventListener('input',()=>inputs++);
+      fillPrompt('line one\nline two',editor);
+      check(editor.value==='line one\nline two' && inputs===1,'textarea input failed');
+    });
+    await run('File names in the prompt are not attachment evidence', async () => {
+      const {form,editor}=reset();
+      editor.textContent='lecture.pdf exam.md';
+      check(!attachmentStatus(form,payload().files).ready,'prompt treated as uploaded files');
+    });
+    await run('Spinner, missing files and upload errors block readiness', async () => {
+      const {form,attachments}=reset();
+      attachments.innerHTML='<div>lecture.pdf</div>';
+      check(!attachmentStatus(form,payload().files).ready,'missing file accepted');
+      attachments.innerHTML+='<div>exam.md</div><div role="progressbar">Uploading</div>';
+      check(!attachmentStatus(form,payload().files).ready,'upload accepted too early');
+      attachments.innerHTML='<div>lecture.pdf exam.md 업로드 실패</div>';
+      check(attachmentStatus(form,payload().files).failed,'failed upload accepted');
+    });
+    await run('Gemini and Claude selectors identify one composer and never Stop', async () => {
+      for (const provider of ['gemini','claude']) {
+        reset();
+        fixture.innerHTML=provider==='gemini'
+          ? '<section><rich-textarea><div contenteditable="true">prompt</div></rich-textarea><button class="send-button" aria-label="Send message">Send</button></section>'
+          : '<section><div contenteditable="true" class="ProseMirror">prompt</div><button aria-label="Send Message">Send</button></section>';
+        const editor=findEditor(provider);
+        check(editor,'editor not found: '+provider);
+        const root=composerRoot(editor,provider);
+        check(root && sendButton(root,provider),'send not found: '+provider);
+        root.querySelector('button').setAttribute('aria-label','Stop response');
+        check(!sendButton(root,provider),'Stop treated as send: '+provider);
+      }
+    });
+    document.querySelector('#studyez-bridge')?.remove();
+    document.title=failures ? 'FAIL Bridge browser tests' : 'PASS Bridge browser tests';
+    const summary=document.createElement('p');
+    summary.id='summary';
+    summary.textContent=`${results.children.length-failures}/${results.children.length} passed`;
+    results.after(summary);
+  }
+  suite();
+</script>

@@ -543,11 +543,16 @@ def plan_subject(
                 hold_blocked(plan)
             plans.append(plan)
 
-    # Quiz Bank 재료 — 올해 필기가 있는 편에 그 편의 족보 조각을 붙인다(`runner/bank.py`).
-    with_notes = {p.run_id: p.item.path for p in plans if not p.ahead}
+    # 예습도 올해 강의의 족보를 쓴다. slicefor는 PDF 본문 없이 파일명으로 대조하므로
+    # 아직 올해 필기가 없는 편은 시간표의 제목·교수를 같은 식별 형태로 전달한다.
+    with_notes = {
+        p.run_id: (p.item.path if not p.ahead else
+                   Path(f"[{p.run_id}] {p.item.title.replace('/', ' ')}({','.join(p.item.professors)}).pdf"))
+        for p in plans if any(u.kind in ("notes_prev", "notes_current") for u in p.uploads)
+    }
     slices = bank.jokbo_slices(runs_dir, subject, with_notes)
     for plan in plans:
-        if plan.run_id in slices and not plan.ahead:
+        if plan.run_id in slices:
             plan.uploads.append(Upload("jokbo", slices[plan.run_id]))
 
     # 필기가 있는 편과 아직 없는 편이 날짜순으로 섞여야 진도 순서로 읽힌다.

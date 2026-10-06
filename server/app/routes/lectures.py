@@ -51,6 +51,7 @@ router = APIRouter()
 DOWNLOADABLE = {
     "notes_prev": "작년 강의록",
     "notes_current": "올해 강의록",
+    "jokbo": "올해 강의 족보",
     "pre_apkg": "Pre-Quiz 덱",
     "main_apkg": "Main-Quiz 덱",
 }
@@ -170,6 +171,7 @@ def read_lecture(
                 "label": DOWNLOADABLE[asset.kind],
                 "filename": asset.filename,
                 "sizeBytes": asset.size_bytes,
+                "contentType": asset.content_type,
             }
             for asset in assets
         ],

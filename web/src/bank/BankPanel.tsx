@@ -110,11 +110,11 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
     wasMoving.current = moving;
   }, [moving]);
 
-  /** 확장이 동의 후 ChatGPT 새 대화에 필기·족보를 첨부하고 프롬프트를 자동 전송한다. */
-  async function make() {
+  /** 확장이 필기·족보를 첨부하고, 자동입력을 선택했을 때만 전송까지 한다. */
+  async function make(autoSend: boolean) {
     if (!notes) return;
     if (!extensionInstalled()) {
-      setError("확장 프로그램이 없습니다. 크롬 확장(1.2.0 이상)을 설치하고 이 페이지를 새로고침하세요.");
+      setError("확장 프로그램이 없습니다. 크롬 확장(1.3.3 이상)을 설치하고 이 페이지를 새로고침하세요.");
       return;
     }
     setBusy("make");
@@ -134,8 +134,9 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
         mode: "bank",
         prompt: renderBankPrompt(detail, sources),
         files,
+        autoSend,
       });
-      setNote("ChatGPT 탭을 열었다. 자료를 넣고 전송하면, 답이 끝날 때 저절로 가져온다.");
+      setNote(autoSend ? "ChatGPT 탭을 열었다. 첨부·전송 후 답이 끝나면 가져온다." : "ChatGPT 탭을 열었다. 첨부된 자료와 프롬프트를 확인하고 직접 전송하면 답을 가져온다.");
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -220,15 +221,19 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
       <ActionCard
         shape={bank ? "is-compact" : "is-key"}
         hit={
-          <button className="panel-action-hit" disabled={Boolean(busy) || moving} onClick={() => void make()}>
+          <span className="panel-action-hit">
             <strong>{bank ? "ChatGPT로 다시 만들기" : "ChatGPT로 만들기"}</strong>
             <small>
               {sources.some((s) => s.kind === "jokbo") ? "필기 + 족보 조각" : "필기만 — 족보 조각이 아직 없다"}
             </small>
-          </button>
+          </span>
         }
         tools={
           <>
+            <PanelTool icon="↗" label="수동입력" hint="복습 수동입력 · 첨부 후 직접 전송"
+                       disabled={Boolean(busy) || moving} onClick={() => void make(false)} />
+            <PanelTool icon="↗" label="자동입력" hint="복습 자동입력 · 첨부 후 자동 전송"
+                       disabled={Boolean(busy) || moving} onClick={() => void make(true)} />
             <PanelTool icon="⎘" label="답 붙여넣기" hint="확장이 못 가져온 ChatGPT 답을 직접 붙여 넣는다"
                        active={pasting} expanded={pasting} disabled={Boolean(busy) || moving}
                        onClick={() => setPasting((v) => !v)} />

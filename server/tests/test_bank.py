@@ -120,6 +120,8 @@ def main() -> None:
           [(s["id"], s["kind"]) for s in detail.get("bankSources", [])] == [("S1", "notes_current"), ("S2", "jokbo")],
           detail.get("bankSources"))
     check("족보는 text/markdown 으로", detail["bankSources"][1]["contentType"] == "text/markdown")
+    check("예습 첨부 목록에도 올해 강의 족보와 MIME 형식이 온다",
+          any(f["id"] == "a-jokbo" and f["contentType"] == "text/markdown" for f in detail["files"]))
     check("프롬프트용 시험일", detail.get("bankExamDate") == "2026-10-20", detail.get("bankExamDate"))
 
     print("② 러너")
@@ -145,6 +147,8 @@ def main() -> None:
     check("열기 전 학생에게는 없다", client.get(f"{BASE}/bank").status_code == 404)
     check("상세에도 안 실린다", client.get(BASE).json()["bank"] is None)
     check("학생은 자료 목록을 못 본다", "bankSources" not in client.get(BASE).json())
+    check("학생도 개인 예습에 족보를 첨부할 수 있다",
+          any(f["id"] == "a-jokbo" for f in client.get(BASE).json()["files"]))
     as_admin()
     check("열린다", client.put(f"{ADMIN}/bank/open", json={"open": True}, headers=ADMIN_H).json()["open"] is True)
     as_student()

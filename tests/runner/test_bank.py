@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
-from runner import agent, bank, publish
+from runner import agent, ahead, bank, filenames, publish
 
 
 def _agent(tmp_path: Path) -> agent.Agent:
@@ -94,6 +94,32 @@ def test_족보를_안_잘랐으면_조용히_빈손(tmp_path, monkeypatch):
 
 
 # ── runner bank ───────────────────────────────────────────────────
+
+def test_올해_필기_전에도_시간표_교수의_족보를_예습에_올린다(tmp_path, monkeypatch):
+    root, runs = tmp_path / "data", tmp_path / "runs"
+    folder = root / "약리학" / "필기" / "2025"
+    folder.mkdir(parents=True)
+    pdf = folder / "[251002_02] 콜린성 약리학(2)(김작년)_홍길동v1.pdf"
+    pdf.write_bytes(b"%PDF")
+    prev = filenames.parse(pdf)
+    cell = ahead.Cell(date="2026-10-02", slot=2, start_time="10:00", title="약물의 이해",
+                      heading="콜린성 약리학(2)", body=("콜린성 약리학(2)",),
+                      professors=("이올해",), course="약물의 이해")
+    monkeypatch.setattr(ahead, "plan", lambda *a: ([SimpleNamespace(cell=cell, prev=prev, source="confirmed")], []))
+    seen = {}
+    md = tmp_path / "올해족보.md"
+    md.write_text("# 올해 교수 족보", encoding="utf-8")
+
+    def slices(runs_dir, subject, sources):
+        seen.update(sources)
+        return {cell.key: md}
+
+    monkeypatch.setattr(bank, "jokbo_slices", slices)
+    plans, _ = publish.plan_subject(root, "약리학", "2026", "2025", runs,
+                                    notes_only=True, timetable=tmp_path / "timetable.json")
+    assert "이올해" in seen[cell.key].name and "김작년" not in seen[cell.key].name
+    assert [(u.kind, u.path) for u in plans[0].uploads] == [("notes_prev", pdf), ("jokbo", md)]
+
 
 class FakeClient:
     def __init__(self):

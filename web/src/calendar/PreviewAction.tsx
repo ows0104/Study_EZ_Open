@@ -17,7 +17,7 @@ import {
 import { usePreviewPrompt } from "../lecture/usePreviewPrompt";
 import { previewProviderLabels, previewProviders, type LectureDetail, type LectureRef, type PreviewProvider } from "../types/lectures";
 import { useMe } from "../useMe";
-import { ActionCard, PanelGroup, PanelTool, Remake, RemakeConfirm } from "./panelShared";
+import { ActionCard, PanelGroup, PanelTool, RemakeConfirm } from "./panelShared";
 
 /**
  * 예습 링크 한 칸. 확장이 대화를 열고, 공유 링크가 돌아오면 그것을 붙든다.
@@ -55,7 +55,7 @@ export function PreviewAction({
   onError: (message: string) => void;
 }) {
   const [busy, setBusy] = useState<"shared" | "personal" | "">("");
-  const [askingRemake, setAskingRemake] = useState(false);
+  const [askingRemake, setAskingRemake] = useState<boolean | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [showLinks, setShowLinks] = useState(false);
   const [saved, setSaved] = useState("");
@@ -119,18 +119,23 @@ export function PreviewAction({
    * 확장이 자료를 첨부하고 프롬프트를 채운다. 여기서는 어느 자료를 어느 강의로,
    * 어느 몫으로 여는지만 넘긴다 — 서명 URL은 수명이 짧아 누른 순간에 받는다.
    */
-  async function start(mode: "shared" | "personal") {
+  async function start(mode: "shared" | "personal", autoSend: boolean) {
     if (!notesPrev) return;
     setBusy(mode);
     try {
-      const { url } = await api<{ url: string }>(`${base}/files/${notesPrev.id}`);
+      const sources = [notesPrev, ...detail.files.filter((file) => file.kind === "jokbo")];
+      const files = await Promise.all(sources.map(async (file) => {
+        const { url } = await api<{ url: string }>(`${base}/files/${file.id}`);
+        return { id: file.id, filename: file.filename, downloadUrl: absoluteUrl(url), contentType: file.contentType };
+      }));
       await requestPreview({
         requestId: `${lecture.runId}-${performance.now()}`,
         lectureId,
         provider,
         mode,
         prompt: renderPreviewPrompt(mode === "shared" ? SHARED_PREVIEW_PROMPT : promptStore.template, detail),
-        files: [{ id: notesPrev.id, filename: notesPrev.filename, downloadUrl: absoluteUrl(url) }],
+        files,
+        autoSend,
       });
     } catch (cause) {
       onError((cause as Error).message);
@@ -223,35 +228,22 @@ export function PreviewAction({
   // 작년 필기가 없으면 새로 만들 수는 없다. 다만 이미 만들어진 링크는 그대로
   // 열려야 하므로 여기서 통째로 돌려보내지 않는다.
   const canMake = Boolean(notesPrev);
-  const hasPersonal = Boolean(detail.myPreview?.conversationUrl);
-
-  /* 기본 링크를 다시 만드는 것은 관리자뿐이다. **그 버튼은 기본 링크 카드
-     안에 든다** — 아래 따로 줄을 세우면 무엇이 다시 만들어지는지 글씨로만
-     알 수 있었다(2026-08-31 관리자 지시). */
-  const sharedTools =
-    isAdmin && canMake && detail.preview?.shareUrl ? (
-      <Remake
-        label="다시 만들기"
-        hint="기본 링크 다시 만들기"
-        busy={busy === "shared"}
-        disabled={Boolean(busy)}
-        onClick={() => setAskingRemake(true)}
-      />
-    ) : null;
-
-  /* 개인 링크 카드에 드는 것. 카드가 무엇을 다시 만드는지를 자리로 말한다. */
-  const personalTools =
-    hasPersonal && canMake ? (
-      // 자기 것이라 묻지 않는다. 옛 대화는 해당 AI 서비스에 그대로 남아 있고
-      // 여기서 가리키는 주소만 새것으로 바뀐다.
-      <Remake
-        label="다시 만들기"
-        hint="개인 링크를 새 대화로 다시 만들기"
-        busy={busy === "personal"}
-        disabled={Boolean(busy)}
-        onClick={() => void start("personal")}
-      />
-    ) : null;
+  function inputTools(mode: "shared" | "personal") {
+    if (!canMake || (mode === "shared" && !isAdmin)) return null;
+    return <>
+      {([false, true] as const).map((autoSend) => (
+        <PanelTool key={String(autoSend)} icon="↗" label={autoSend ? "자동입력" : "수동입력"}
+          hint={(mode === "shared" ? "기본" : "개인") + " 링크 " + (autoSend ? "자동입력 · 첨부 후 자동 전송" : "수동입력 · 첨부 후 직접 전송")}
+          disabled={Boolean(busy)}
+          onClick={() => {
+            if (mode === "shared" && detail.preview?.shareUrl) setAskingRemake(autoSend);
+            else void start(mode, autoSend);
+          }} />
+      ))}
+    </>;
+  }
+  const sharedTools = inputTools("shared");
+  const personalTools = inputTools("personal");
 
   /* **프롬프트 고치기는 카드 밖, 갈래의 오른쪽 아래에 선다(2026-08-31 관리자
      지시).** 개인 링크에만 듣는 것이라 그 카드 안에 넣어 두었는데, 카드 안은
@@ -288,10 +280,11 @@ export function PreviewAction({
     <ActionCard
       shape="is-key"
       hit={
-        <button className="panel-action-hit" onClick={() => start("shared")} disabled={Boolean(busy)}>
+        <span className="panel-action-hit">
           <Body name="기본 링크" note={busy === "shared" ? "여는 중…" : "만들기"} />
-        </button>
+        </span>
       }
+      tools={sharedTools}
     />
   ) : (
     <Empty name="기본 링크" note="아직 없습니다" />
@@ -304,9 +297,9 @@ export function PreviewAction({
     <ActionCard
       shape="is-key is-faint"
       hit={
-        <button className="panel-action-hit" onClick={() => start("personal")} disabled={Boolean(busy)}>
+        <span className="panel-action-hit">
           <Body name="개인 링크" note={busy === "personal" ? "여는 중…" : "만들기"} />
-        </button>
+        </span>
       }
       tools={personalTools}
     />
@@ -327,14 +320,19 @@ export function PreviewAction({
       {linkEditor}
       {savedNote}
 
-      {askingRemake ? (
+      {canMake ? <p className="panel-hint">
+        {detail.files.some((file) => file.kind === "jokbo") ? "작년 필기 + 올해 강의 족보" : "작년 필기만 · 올해 강의 족보가 아직 없습니다"}
+        {" · 수동입력은 직접 전송, 자동입력은 전송까지 진행합니다."}
+      </p> : null}
+      {askingRemake !== null ? (
         <RemakeConfirm
           message="모두가 보는 링크가 새 대화로 바뀝니다. 옛 링크는 기존 AI 서비스에 그대로 남지만 여기서는 안 보입니다."
           onConfirm={() => {
-            setAskingRemake(false);
-            void start("shared");
+            const autoSend = askingRemake;
+            setAskingRemake(null);
+            void start("shared", autoSend);
           }}
-          onCancel={() => setAskingRemake(false)}
+          onCancel={() => setAskingRemake(null)}
         />
       ) : null}
       {showPrompt ? (
