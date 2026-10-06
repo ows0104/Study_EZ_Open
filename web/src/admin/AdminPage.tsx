@@ -7,6 +7,7 @@ import type { BankReportBoard } from "../types/bank";
 import type { JobBoard } from "../types/jobs";
 import { jobMoving, jobOpen } from "../jobProgress";
 import { BankReportTab } from "./BankReportTab";
+import { FeedbackTab } from "./FeedbackTab";
 import { CardReviewTab } from "./CardReviewTab";
 import { LectureTab } from "./LectureTab";
 import { UsageTab } from "./UsageTab";
@@ -167,6 +168,7 @@ export function AdminPage() {
           Quiz Bank 신고
           {reports?.open ? <span className="admin-tab-count">{reports.open}</span> : null}
         </NavLink>
+        <NavLink to="/admin/feedback" className={tabClass}>피드백함</NavLink>
       </nav>
 
       <Routes>
@@ -178,6 +180,7 @@ export function AdminPage() {
         <Route path="usage" element={<UsageTab />} />
         <Route path="cards" element={<CardReviewTab review={review} onChanged={loadReview} />} />
         <Route path="bank-reports" element={<BankReportTab board={reports} onChanged={loadReports} />} />
+        <Route path="feedback" element={<FeedbackTab />} />
         {/* 하루 나가 있던 주소다(2026-09-04). 눌러 둔 사람이 빈 화면을 보지 않게
             제자리로 보낸다. */}
         <Route path="match" element={<Navigate to="/admin/lectures" replace />} />

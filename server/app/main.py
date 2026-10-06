@@ -10,6 +10,7 @@ from app.routes import (
     bank,
     bundles,
     cards,
+    feedback,
     lectures,
     local_storage,
     me,
@@ -52,6 +53,7 @@ def health() -> dict[str, str]:
 
 
 app.include_router(me.router, prefix="/api")
+app.include_router(feedback.router, prefix="/api")
 app.include_router(timetable.router, prefix="/api")
 app.include_router(study_plan.router, prefix="/api")
 app.include_router(lectures.router, prefix="/api")

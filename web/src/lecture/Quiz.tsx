@@ -128,6 +128,7 @@ export function Quiz({
    */
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
+      if (document.querySelector("dialog[open]")) return;
       if (event.repeat || event.metaKey || event.altKey) return;
       const key = event.key.toLowerCase();
       if (key === "z") {

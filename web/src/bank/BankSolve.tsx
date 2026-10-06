@@ -114,6 +114,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
   // 키보드 — 기존 웹 풀이와 같다. Space·Enter 로 펴고, 1–4 로 찍는다. 지도를 보는 동안은 안 받는다.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
+      if (document.querySelector("dialog[open]")) return;
       if (peek) return;
       if (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, button, a, summary")) return;
       if ((event.key === " " || event.key === "Enter") && !answer) {

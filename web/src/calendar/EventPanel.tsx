@@ -52,6 +52,7 @@ export function EventPanel({
     const restore = document.activeElement as HTMLElement | null;
     panel.current?.focus({ preventScroll: true });
     function onKey(event: KeyboardEvent) {
+      if (document.querySelector("dialog[open]")) return;
       if (event.key === "Escape") onClose();
     }
     window.addEventListener("keydown", onKey);

@@ -62,6 +62,8 @@ DELETE /api/spotter/comments/{comment_id}
 GET /api/admin/bank-feedback
 GET /api/admin/card-edits
 GET /api/admin/card-review
+GET /api/admin/feedback
+GET /api/admin/feedback/{feedback_id}/screenshots/{index}
 GET /api/admin/lectures/{subject}/{run_id}/bank
 GET /api/admin/lectures/{subject}/{run_id}/bank-response
 GET /api/admin/lectures/{subject}/{run_id}/cards/{kind}
@@ -97,6 +99,7 @@ GET /api/spotter/threads
 GET /api/spotter/threads/{kind}/{subject}
 GET /api/timetable
 PATCH /api/spotter/admin/reports/{report_id}
+PATCH /api/admin/feedback/{feedback_id}
 PATCH /api/spotter/admin/threads/{kind}/{subject}
 POST /api/admin/lectures
 POST /api/admin/lectures/{subject}/{run_id}/prequiz-job
@@ -125,6 +128,7 @@ POST /api/spotter/admin/reports/{question_id}/close
 POST /api/spotter/admin/subjects/{subject}/db/refresh
 POST /api/spotter/admin/subjects/{subject}/uploads
 POST /api/spotter/finish
+POST /api/feedback
 POST /api/spotter/images/sign
 POST /api/spotter/reports
 POST /api/spotter/state/merge

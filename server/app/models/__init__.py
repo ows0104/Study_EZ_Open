@@ -5,6 +5,7 @@
 강의 식별자는 언제나 ``(subject, run_id)`` 복합 키다."""
 
 from app.database import Base
+from app.models.feedback import SiteFeedback
 from app.models.accounts import (
     APP_POLICY,
     APP_SPOTTER,
@@ -100,6 +101,7 @@ from app.models.spotter import (
 )
 
 __all__ = [
+    "SiteFeedback",
     "Base", "APP_POLICY", "APP_SPOTTER", "APP_STUDYEZ", "POLICY_AUTO", "POLICY_MANUAL",
     "ROLE_ADMIN", "ROLE_MEMBER", "AppGrant", "Notice", "Profile", "BANK_BUILDING",
     "BANK_FAILED", "BANK_INVALID", "BANK_READY", "BANK_RESPONDED", "BankFeedback", "BankState",

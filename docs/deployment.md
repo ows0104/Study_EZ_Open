@@ -94,6 +94,11 @@ RS256 검증을 하고, 요즘 Supabase는 비대칭 키가 기본이라 그 편
 
 ### 4. 스키마와 시간표
 
+피드백 기능 적용 시 `init-db`로 `site_feedback` 표를 만든 다음 API와 웹을 배포한다.
+새 표에는 RLS가 자동 적용되어 Supabase 공개 API에서 직접 읽을 수 없다.
+첨부는 비공개 R2의 `feedback/`에 저장하고 관리자 인증 API로만 제공한다.
+피드백함은 최근 200건을 표시하며, 열어 둔 동안 15초마다 갱신한다.
+
 ```bash
 cd server
 .venv/Scripts/python.exe -m app.cli init-db

@@ -5,6 +5,7 @@ import { AuthProvider, LoginPage, PendingApproval, useAuth } from "./auth";
 import { CalendarPage } from "./calendar/CalendarPage";
 import { getMe, resetFirstScreen, startFirstScreen } from "./firstScreen";
 import { seenNotice } from "./notices/seen";
+import { FeedbackButton } from "./feedback/FeedbackButton";
 import type { Me } from "./types/account";
 import type { Notice } from "./types/notices";
 
@@ -135,6 +136,7 @@ function Shell() {
           </span>
         </header>
       )}
+      <div className="feedback-toolbar"><FeedbackButton /></div>
       <main
         className={`app-main${bare ? " is-bare" : ""}${wide ? " is-wide" : ""}${
           solving ? " is-solving" : ""
