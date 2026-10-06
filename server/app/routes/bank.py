@@ -8,7 +8,8 @@
     학생     GET  /api/lectures/{s}/{r}/bank                  요약 · 현재 회차 · 개념 지도
              POST /api/lectures/{s}/{r}/bank/session/start|end · next · reveal · rate · feedback
 
-답·채점 단위는 reveal 전에 안 나간다. 다음 문항은 서버가 고른다(`app/study_engine/`) —
+답·채점 단위는 문항 목록에 넣지 않는다. prepare는 현재 문항의 답을 미리 읽고,
+reveal은 실제 클릭 시각을 기록한다. 다음 문항은 서버가 고른다(`app/study_engine/`) —
 Main-Quiz 처럼 목록을 통째로 보내고 화면이 고르는 방식이 아니다. 고르는 데 숙련도·선행 문항·
 시험까지 남은 날이 다 필요하고, 그 계산이 두 곳에 살면 갈라진다.
 
@@ -537,6 +538,23 @@ class TokenIn(BaseModel):
     review_token: str = Field(alias="reviewToken")
 
     model_config = {"populate_by_name": True}
+
+
+@router.post("/lectures/{subject}/{run_id}/bank/prepare")
+def prepare_bank_answer(subject: str, run_id: str, payload: TokenIn,
+                        user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)) -> dict:
+    """Read-only warmup for the served question; /reveal still records the actual click."""
+    lecture = lecture_or_404(db, subject, run_id)
+    row = _bank_or_404(db, lecture, user)
+    bank = _usable(row)
+    state_row = db.get(BankState, (user.id, row.subject, row.run_id))
+    if state_row is None or state_row.build_id != row.build_id:
+        raise HTTPException(409, "현재 학습 문항이 아닙니다.")
+    served = state_row.state.get("served") or {}
+    if served.get("token") != payload.review_token:
+        raise HTTPException(409, "현재 학습 문항이 아닙니다.")
+    question = next(q for q in bank["questions"] if q["question_id"] == served["question_id"])
+    return _answer(db, row, question)
 
 
 @router.post("/lectures/{subject}/{run_id}/bank/reveal")

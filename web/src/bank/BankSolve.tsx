@@ -6,6 +6,7 @@ import { FEEDBACK } from "./feedback";
 import { daysLabel, DIRECTION_LABEL } from "./labels";
 import { QuestionBody, AnswerBody } from "./BankQuestion";
 import { SlidePreloader } from "../slidePreload";
+import { usePreparedBankAnswer } from "./usePreparedBankAnswer";
 import { DailyGoal } from "./DailyGoal";
 import { useBankUndo } from "./useBankUndo";
 
@@ -36,6 +37,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
   }, []);
   const { undo, undoBusy, pending } = useBankUndo(base, current?.undoToken, restore, setError, busy || Boolean(peek));
   const slides = useMemo(() => new SlidePreloader(), [base]);
+  const prepared = usePreparedBankAnswer(base, current?.reviewToken, slides);
   useEffect(() => { slides.warm(current?.preloadSlides?.map((slide) => slide.url) ?? []); }, [current, slides]);
 
   const next = useCallback(async () => {
@@ -73,17 +75,20 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
     pending.current = true;
     setBusy(true);
     setError("");
+    // Display immediately; grading stays disabled until the click is recorded.
+    if (prepared.answer) setAnswer(prepared.answer);
     try {
       setAnswer(await api<BankAnswer>(`${base}/reveal`, {
         method: "POST", body: JSON.stringify({ reviewToken: current.reviewToken }),
       }));
     } catch (cause) {
+      setAnswer(null);
       setError((cause as Error).message);
     } finally {
       pending.current = false;
       setBusy(false);
     }
-  }, [base, current, answer, busy]);
+  }, [base, current, answer, busy, prepared]);
 
   const rate = useCallback(async (rating: BankRating) => {
     if (!current?.reviewToken || !answer || busy || pending.current) return;

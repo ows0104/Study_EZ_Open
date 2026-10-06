@@ -3,6 +3,12 @@
 export class SlidePreloader {
   private images = new Map<string, { image: HTMLImageElement; at: number }>();
 
+  private reusable(entry: { image: HTMLImageElement; at: number }): boolean {
+    // Downloaded pixels do not expire with the signed URL. Keep the actual node
+    // so attaching it never starts another request, even with Cache-Control: no-store.
+    return (entry.image.complete && entry.image.naturalWidth > 0) || Date.now() - entry.at < 45_000;
+  }
+
   private key(url: string): string {
     // Ignore S3 signing parameters, but preserve resource/transform parameters.
     const parsed = new URL(url, window.location.href);
@@ -17,7 +23,7 @@ export class SlidePreloader {
     for (const url of urls) {
       const key = this.key(url);
       const old = this.images.get(key);
-      if (old && Date.now() - old.at < 45_000) continue;
+      if (old && this.reusable(old)) continue;
       const image = new Image();
       image.decoding = "async";
       image.fetchPriority = "low";
@@ -36,7 +42,11 @@ export class SlidePreloader {
 
   resolve(url: string): string {
     const entry = this.images.get(this.key(url));
-    // The server permits signed lifetimes as short as 60 seconds.
-    return entry && Date.now() - entry.at < 45_000 ? entry.image.src : url;
+    return entry && this.reusable(entry) ? entry.image.src : url;
+  }
+
+  get(url: string): HTMLImageElement | undefined {
+    const entry = this.images.get(this.key(url));
+    return entry && this.reusable(entry) && !entry.image.isConnected ? entry.image : undefined;
   }
 }

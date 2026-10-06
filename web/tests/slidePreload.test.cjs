@@ -57,6 +57,19 @@ test('retained images are bounded and different resources never share a preload'
   assert.equal(cache.resolve(url(12, 'fresh') + '&version=2'), url(12, 'fresh') + '&version=2');
 });
 
+test('a loaded image survives long thinking time and reuses the same DOM node', () => {
+  const { cache, images, advance } = setup();
+  cache.warm([url(1, 'old')]);
+  images[0].complete = true;
+  images[0].naturalWidth = 800;
+  advance(600_000);
+  cache.warm([url(1, 'fresh')]);
+  assert.equal(images.length, 1);
+  assert.equal(cache.get(url(1, 'fresh')), images[0]);
+  images[0].isConnected = true;
+  assert.equal(cache.get(url(1, 'fresh')), undefined, 'do not steal an image from another mounted view');
+});
+
 test('lookahead follows review order, forced undo cards, and cram exclusions', () => {
   const { upcoming } = load('lecture/queue.ts');
   const item = (itemId, state, dueAt) => ({ itemId, attempt: state ? { state, dueAt } : null });
