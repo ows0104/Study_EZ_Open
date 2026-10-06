@@ -235,9 +235,7 @@ export function CalendarPage() {
                 복습 <i className="legend-shape is-main" />
               </span>
             </b>
-            {/* 관리자는 같은 모양으로 다른 것을 읽는다 — 자기가 어디까지 올려
-                놨는가다. 범례도 같이 갈지 않으면 채운 도형이 「내가 했음」으로
-                읽혀서, 아무것도 안 푼 강의가 다 한 것으로 보인다. */}
+            {/* 웹 문항이 없는 관리자 칸은 자료 준비 상태, 웹 문항은 내 풀이 비율이다. */}
             {isAdmin ? (
               <>
                 <span>
@@ -247,9 +245,10 @@ export function CalendarPage() {
                   <i className="chip-slot is-pre is-ready" /> 덱 없음
                 </span>
                 <span>
-                  <i className="chip-slot is-pre is-done" /> 덱 있음
+                  <i className="chip-slot is-pre is-done" /> 웹 문항 없음 · 덱 있음
                 </span>
                 <span>빈칸 — 작년 필기 없음</span>
+                <span>웹 예습 동그라미 — 내 풀이 비율만큼 차오름</span>
               </>
             ) : (
               <>
@@ -260,8 +259,9 @@ export function CalendarPage() {
                   <i className="chip-slot is-pre is-ready" /> 올라옴
                 </span>
                 <span>
-                  <i className="chip-slot is-pre is-done" /> 함
+                  <i className="chip-slot is-pre is-done" /> 완료
                 </span>
+                <span>예습 동그라미 — 풀이 비율만큼 차오름</span>
               </>
             )}
           </span>

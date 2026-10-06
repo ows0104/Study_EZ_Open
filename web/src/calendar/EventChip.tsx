@@ -62,17 +62,20 @@ export function ChipSlots({ lecture, isAdmin }: { lecture: LectureRef; isAdmin: 
  * **빈칸이 한 단계 는다.** 작년 필기가 없으면 관리자가 예습으로 할 수 있는 일이
  * 없으므로 점도 안 찍는다. 그래도 자리는 잡는다(`.chip-slot.is-absent`).
  *
- * **채움 비율(`--fill`)은 안 얹는다.** 그것은 이 사람이 웹 예습퀴즈를 얼마나
- * 풀었는지라 관리자가 여기서 묻는 것이 아니다. 안 얹으면 0%로 떨어져 빈 원이 된다.
+ * 웹 예습 문항이 있는 칸의 동그라미는 관리자도 자신의 풀이 진행률을 본다.
+ * 웹 문항이 없는 칸과 복습 네모는 자료 준비 상태를 표시한다.
  */
 function AdminChipSlots({ lecture }: { lecture: LectureRef }) {
   const slots = adminLectureSlots(lecture);
+  const progress = lecture.marks.prequiz && lecture.prequizProgress?.total
+    ? lecture.prequizProgress : null;
   return (
     <span
       className="chip-slots"
-      aria-label={`예습 ${adminPreLabels[slots.pre]} · 복습 ${adminMainLabels[slots.main]}`}
+      aria-label={`${progress ? `예습 ${progress.answered}/${progress.total}문항 완료` : `예습 ${adminPreLabels[slots.pre]}`} · 복습 ${adminMainLabels[slots.main]}`}
     >
-      <i className={`chip-slot is-pre is-${slots.pre}`} />
+      {progress ? <PreQuizMoon answered={progress.answered} total={progress.total} />
+        : <i className={`chip-slot is-pre is-${slots.pre}`} />}
       <i className={`chip-slot is-main is-${slots.main}`} />
     </span>
   );
@@ -89,21 +92,30 @@ function UserChipSlots({ lecture }: { lecture: LectureRef }) {
   const slots = lectureSlots(lecture);
   const progress = lecture.prequizProgress;
   const preLabel =
-    slots.pre === "ready" && progress
-      ? `예습 ${progress.answered}/${progress.total}`
+    lecture.marks.prequiz && progress && progress.total > 0
+      ? `예습 ${progress.answered}/${progress.total}문항 완료`
       : `예습 ${stateLabels[slots.pre]}`;
 
   return (
     <span className="chip-slots" aria-label={`${preLabel} · 복습 ${stateLabels[slots.main]}`}>
-      <i
-        className={`chip-slot is-pre is-${slots.pre}`}
-        // 채움 비율은 빈 도형 위에만 얹는다. 없으면 0%로 떨어지고, 그건 아직
-        // 아무것도 안 푼 것과 같은 그림이라 맞다.
-        style={slots.preFill === null ? undefined : { ["--fill" as string]: `${Math.round(slots.preFill * 100)}%` }}
-      />
+      {slots.preFill !== null && progress ? <PreQuizMoon answered={progress.answered} total={progress.total} />
+        : <i className={`chip-slot is-pre is-${slots.pre}`} />}
       <i className={`chip-slot is-main is-${slots.main}`} />
     </span>
   );
+}
+
+/** 오른쪽 초승달 → 반달 → 보름달. 밝은 면적이 완료 비율과 같다. */
+function PreQuizMoon({ answered, total }: { answered: number; total: number }) {
+  const fill = Math.max(0, Math.min(1, answered / total));
+  const terminator = Math.abs(1 - 2 * fill) * 4.5;
+  const path = `M 5 .5 A 4.5 4.5 0 0 1 5 9.5 A ${terminator} 4.5 0 0 ${fill <= .5 ? 0 : 1} 5 .5 Z`;
+  return <svg className={`chip-slot is-pre is-moon is-${fill >= 1 ? "done" : "ready"}`}
+    viewBox="0 0 10 10" aria-hidden="true">
+    <title>Pre-Quiz {answered}/{total}문항 완료</title>
+    <circle cx="5" cy="5" r="4.5" fill={fill >= 1 ? "currentColor" : "none"} stroke="currentColor" />
+    {fill > 0 && fill < 1 ? <path d={path} fill="currentColor" /> : null}
+  </svg>;
 }
 
 /**

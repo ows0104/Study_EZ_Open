@@ -46,7 +46,8 @@ export function ReviewAction({ lecture, detail, base, onError }: {
   }
 
   return (
-    <PanelGroup tone="preview" title="복습" note="오늘 강의록을 다시 읽는 대화">
+    <PanelGroup tone="preview" title="복습" fold={!saved}
+      note={saved ? "오늘 강의록을 다시 읽는 대화" : "개인 링크 만들기"}>
       <ActionCard shape={`is-key${notes ? " is-review" : " is-faint"}${saved || notes && installed ? "" : " is-empty"}`}
         hit={saved ? (
           <a className="panel-action-hit" href={saved.conversationUrl} target="_blank" rel="noreferrer">

@@ -77,24 +77,23 @@ export function prequizDone(lecture: LectureRef) {
  * 보고 누른 사람이 퀴즈 대신 필기를 만난다. 필기와 예습 링크가 사라지는 것은
  * 아니다 — 칸을 열면 패널에 그대로 있고, 자리 둘은 퀴즈만 센다.
  *
- * **끝냄은 잴 수 있는 것만 본다.** 웹 예습퀴즈를 다 풀었거나, 그 자리의 파일을
- * 받아 갔거나다. 받아 간 것은 엄밀히 "풀었다"가 아니지만 서버가 볼 수 있는
- * 가장 가까운 신호이고, 이것이 없으면 덱만 쓰는 사람은 영영 못 채운다.
+ * 웹 문항이 있으면 그 풀이 비율로 채운다. 파일을 받아 갔어도 웹 문항의
+ * 진행률을 대신하지 않는다. 웹 문항이 없는 덱만 다운로드 기록을 사용한다.
  *
- * **관리자 자리(`adminLectureSlots`)는 그대로다.** 거기서 링크와 필기는 「다음에
- * 내가 할 일」을 뜻하므로 지우면 진도가 안 보인다.
+ * 관리자도 웹 문항이 있으면 자신의 예습 풀이 비율을 본다. 문항이 없는 칸은
+ * `adminLectureSlots`의 자료 준비 상태를 유지한다.
  */
 export function lectureSlots(lecture: LectureRef): Slots {
   const { marks, grabbed, prequizProgress: progress } = lecture;
 
   const preOpen = marks.prequiz;
-  const preDone = preOpen && (grabbed.pre || prequizDone(lecture));
+  const hasProgress = Boolean(progress && progress.total > 0);
+  const preDone = preOpen && (hasProgress ? prequizDone(lecture) : grabbed.pre);
 
   return {
     pre: preDone ? "done" : preOpen ? "ready" : "none",
-    // 받아 간 사람은 Anki 쪽이라 서버가 진행을 못 본다. 그때는 비율을 안 그리고
-    // 꽉 채운다 — 반쯤 찬 점으로 남겨 두면 영영 안 끝나는 자리가 된다.
-    preFill: !preOpen || grabbed.pre || !progress ? null : progress.answered / progress.total,
+    preFill: !preOpen || !progress || progress.total <= 0 ? null
+      : Math.max(0, Math.min(1, progress.answered / progress.total)),
     // 옛 덱·필기를 받은 기록은 Quizbank 학습 완료를 뜻하지 않는다.
     main: marks.quiz ? "ready" : "none",
   };

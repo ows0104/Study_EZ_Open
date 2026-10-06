@@ -726,6 +726,8 @@
   border-radius: 50%;
 }
 
+.chip-slot.is-pre { width: 9px; height: 9px; }
+
 .chip-slot.is-main.is-ready,
 .chip-slot.is-main.is-done {
   border-radius: 1px;
@@ -735,13 +737,9 @@
   border-color: var(--cat, var(--accent));
 }
 
-/* 예습 자리만 얼마나 했는지까지 말한다. 채운 만큼이 웹 예습퀴즈를 푼 비율이다.
- *
- * `--fill`이 안 붙으면 0%다 — 웹에서 풀 문항이 없는 강의이고, 그때는 그냥
- * 빈 원으로 떨어진다. */
-.chip-slot.is-pre.is-ready {
-  background: conic-gradient(var(--cat, var(--accent)) var(--fill, 0%), transparent 0);
-}
+/* 웹 예습은 부채꼴 대신 달의 밝은 면적이 차오른다. */
+.chip-slot.is-pre.is-moon { border: 0; background: none; color: var(--cat, var(--accent)); }
+.chip-slot.is-pre.is-moon.is-done { color: var(--ink-3); }
 
 /* ③ 했다. 무채색으로 가라앉힌다 — 색은 "지금 네 차례"라는 뜻이고, 끝낸 것은
  * 더 이상 열 것이 아니다. 다 한 칸이 제일 시끄러우면 남은 할 일이 묻힌다. */

@@ -86,8 +86,7 @@ export function PreQuiz({ subject, runId, onDone }: {
   const undoButton = payload?.undoable ? <button className="quiz-undo" disabled={busy} onClick={undo}>이전 선택 되돌리기</button> : null;
   if (!payload) return <p className={`notice${error ? " is-error" : ""}`}>{error || "예습 문항을 불러오는 중…"}</p>;
   const progress = <PreQuizProgress title={mode === "reread" ? "다시 훑어보기" : "예습"}
-    items={ordered.map((entry) => ({ id: entry.itemId, done: completed(entry.itemId) }))}
-    current={item?.itemId} />;
+    done={ordered.filter((entry) => completed(entry.itemId)).length} total={ordered.length} />;
   if (!item) {
     const targets = ordered.filter((entry) => entry.attempt && !entry.attempt.correct);
     return <div className="quiz-done prequiz-narrow">
@@ -148,18 +147,11 @@ export function PreQuiz({ subject, runId, onDone }: {
   </>;
 }
 
-function PreQuizProgress({ title, items, current }: {
-  title: string; items: { id: string; done: boolean }[]; current?: string;
+function PreQuizProgress({ title, done, total }: {
+  title: string; done: number; total: number;
 }) {
-  const done = items.filter((entry) => entry.done).length;
-  if (!items.length) return null;
+  if (!total) return null;
   return <div className="prequiz-progress" aria-live="polite">
-    <p><span>{title}</span><strong>{done} / {items.length}문항 완료</strong></p>
-    <div className="prequiz-dots" role="progressbar" aria-label={`${title} 완료 문항`}
-      aria-valuemin={0} aria-valuemax={items.length} aria-valuenow={done}>
-      {items.map((entry, index) => <span key={entry.id} aria-hidden="true"
-        title={`${index + 1}번 문항 · ${entry.done ? "완료" : entry.id === current ? "풀이 중" : "대기"}`}
-        className={`prequiz-dot${entry.done ? " is-done" : entry.id === current ? " is-current" : ""}`} />)}
-    </div>
+    <p><span>{title}</span><strong>{done} / {total}문항 완료</strong></p>
   </div>;
 }
