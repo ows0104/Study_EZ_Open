@@ -166,7 +166,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
   return (
     <>
       <div className="quiz">
-        <DailyGoal plan={current.lectureGoal} />
+        <DailyGoal plan={current.lectureGoal} collapsible />
         <p className="quiz-progress bank-progress">
           <span>
             {session ? session.size == null ? `${session.reviewed}문항 완료` : `${session.reviewed + 1} / ${session.size}` : ""}

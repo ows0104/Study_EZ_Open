@@ -45,6 +45,11 @@
 .daily-goal small { display: block; font-size: 11px; }
 .daily-goal details { margin-top: 10px; }
 .daily-goal summary { cursor: pointer; }
+.daily-goal-collapsible > summary { display: flex; align-items: center; gap: 12px; list-style: none; }
+.daily-goal-collapsible > summary::-webkit-details-marker { display: none; }
+.daily-goal-collapsible > summary .mastery-heading { flex: 1; }
+.daily-goal-chevron { width: 16px; height: 16px; flex-shrink: 0; color: var(--ink-2); transition: transform 160ms ease; }
+.daily-goal-collapsible[open] > summary .daily-goal-chevron { transform: rotate(180deg); }
 .daily-goal button { margin-top: 12px; }
 .daily-goal-main { display: inline-block; border-radius: 6px; padding: 10px 16px; background: #176d55; color: white; font-weight: 600; text-decoration: none; }
 .daily-goal.is-complete .mastery-heading h2 { font-size: 22px; line-height: 1.5; }

@@ -5,6 +5,7 @@ import type { LectureGoal } from "../src/types/studyPlan";
 import "../src/styles/base.css";
 
 function Preview() {
+  const folded = new URLSearchParams(location.search).has("folded");
   const [value, setValue] = useState("progress");
   const plan: LectureGoal = {
     title: "콜린성 약리학", dayStart: 0, scope: "core",
@@ -20,7 +21,7 @@ function Preview() {
       <option value="progress">진행 중</option><option value="complete">강의 완료</option>
       <option value="missing">시험 미연결</option>
     </select></label>
-    <div style={{ marginTop: 20 }}><DailyGoal plan={value === "missing" ? null : plan} showMain /></div>
+    <div style={{ marginTop: 20 }}><DailyGoal plan={value === "missing" ? null : plan} showMain={!folded} collapsible={folded} /></div>
   </main>;
 }
 
