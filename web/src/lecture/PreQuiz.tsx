@@ -6,6 +6,8 @@ import { cardsHash } from "./LectureCards";
 import type { GradeResult, QuizPayload, QuizSchedule, RevealResult, UndoResult } from "../types/quiz";
 import { WhyAsked } from "./Quiz";
 import { Stem } from "./Stem";
+import { SlideImage } from "../SlideImage";
+import { useQuizSlidePreload } from "./useQuizSlidePreload";
 
 /** 예습은 한 번 이해를 확인하고, 수업에서 들을 질문을 남긴다. */
 export function PreQuiz({ subject, runId, onDone }: {
@@ -34,6 +36,11 @@ export function PreQuiz({ subject, runId, onDone }: {
     ?? (mode === "challenge" ? challenges.find((entry) => !seen.has(entry.itemId))
       : core.find((entry) => mode === "reread" ? !seen.has(entry.itemId) : !entry.attempt));
   const finished = Boolean(payload && !item);
+  const candidates = (mode === "challenge" ? challenges : core).filter((entry) =>
+    mode === "core" ? !entry.attempt : !seen.has(entry.itemId));
+  const slides = useQuizSlidePreload(base, item
+    ? [item, ...candidates.filter((entry) => entry.itemId !== item.itemId)].slice(0, 3).map((entry) => entry.itemId)
+    : []);
   useEffect(() => { onDone(finished); }, [finished, onDone]);
 
   function patch(itemId: string, attempt: QuizSchedule | null, feedback: RevealResult, undoable: boolean) {
@@ -117,7 +124,7 @@ export function PreQuiz({ subject, runId, onDone }: {
         {feedback.whyAsked ? <p className="quiz-why-back"><span className="quiz-why-label">왜 냈나요?</span>{feedback.whyAsked}</p> : null}
         {feedback.learningScope ? <p className="quiz-support-note"><strong>지금은 여기까지</strong><br />{feedback.learningScope}</p> : null}
         {feedback.lectureFocus ? <p className="quiz-support-note"><strong>수업에서 들어볼 질문</strong><br />{feedback.lectureFocus}</p> : null}
-        {feedback.slideUrl ? <img className="quiz-slide" src={feedback.slideUrl} alt={`슬라이드 ${feedback.slideNo}`} loading="lazy" /> : null}
+        {feedback.slideUrl ? <SlideImage preload={slides} src={feedback.slideUrl} alt={`슬라이드 ${feedback.slideNo}`} /> : null}
       </> : null}
       {error ? <p role="alert" className="notice is-error">{error}</p> : null}
     </div>

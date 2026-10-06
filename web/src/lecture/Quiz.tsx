@@ -4,8 +4,10 @@ import { lectureHref, quizPath } from "../links";
 import { useMe } from "../useMe";
 import { cardsHash } from "./LectureCards";
 import { quizGrades, type GradeResult, type QuizGrade, type QuizItem, type QuizKind, type QuizPayload, type QuizSchedule, type RevealResult, type UndoResult } from "../types/quiz";
-import { counts, dayLabel, daysFromNow, intervalLabel, pick, stateOf } from "./queue";
+import { counts, dayLabel, daysFromNow, intervalLabel, pick, stateOf, upcoming } from "./queue";
 import { Stem } from "./Stem";
+import { SlideImage } from "../SlideImage";
+import { useQuizSlidePreload } from "./useQuizSlidePreload";
 
 /**
  * 웹 풀이 — 자기채점 플래시카드. 기존 Main 카드의 반복 학습. 예습은 PreQuiz.tsx를 쓴다.
@@ -103,6 +105,8 @@ export function Quiz({
     ? pick(payload.items, now, { forcedId, cram, seen: crammed })
     : null;
   const item = next?.kind === "card" ? next.item : undefined;
+  const slides = useQuizSlidePreload(base,
+    upcoming(payload?.items ?? [], now, { forcedId, cram, seen: crammed }).map((entry) => entry.itemId));
 
   // 지금 낼 카드가 없는가. 화면이 이 신호를 받아 놓친 것을 부른다 — 그 목록은
   // 서버가 고르는 것이라 마지막 카드를 찍기 전에는 채워지지 않는다.
@@ -331,11 +335,10 @@ export function Quiz({
             ) : null}
             {revealed.explanation ? <p className="quiz-explanation">{revealed.explanation}</p> : null}
             {revealed.slideUrl ? (
-              <img
-                className="quiz-slide"
+              <SlideImage
+                preload={slides}
                 src={revealed.slideUrl}
                 alt={`슬라이드 ${revealed.slideNo}`}
-                loading="lazy"
               />
             ) : null}
           </>

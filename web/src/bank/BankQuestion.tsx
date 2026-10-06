@@ -1,6 +1,8 @@
 import { Fragment } from "react";
 import { Stem } from "../lecture/Stem";
 import type { BankAnswer, BankQuestion } from "../types/bank";
+import { SlideImage } from "../SlideImage";
+import type { SlidePreloader } from "../slidePreload";
 
 /**
  * 문항 ID 를 씨로 삼아 섞는다 — 다시 불러도, 답을 펴도 같은 순서다. 섞은 결과가 원래와 같으면 한 칸 민다.
@@ -83,7 +85,9 @@ export function QuestionBody({ question: q, answer, picked, onPick }: {
   );
 }
 
-export function AnswerBody({ question: q, answer }: { question: BankQuestion; answer: BankAnswer }) {
+export function AnswerBody({ question: q, answer, preload }: {
+  question: BankQuestion; answer: BankAnswer; preload?: SlidePreloader;
+}) {
   const review = answer.medicalReview;
   const right = q.format === "matching" ? shuffled(q.matching_right, q.question_id) : [];
   return (
@@ -130,7 +134,7 @@ export function AnswerBody({ question: q, answer }: { question: BankQuestion; an
         </p>
       ) : null}
       {answer.slides.map((slide) => (
-        <img key={slide.page} className="quiz-slide" src={slide.url} alt={`필기 ${slide.page}쪽`} loading="lazy" />
+        <SlideImage key={slide.page} preload={preload} src={slide.url} alt={`필기 ${slide.page}쪽`} />
       ))}
     </>
   );

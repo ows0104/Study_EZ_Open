@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import type { BankAnswer, BankNext, BankRating, BankRead, BankSession } from "../types/bank";
 import { ConceptMap } from "./ConceptMap";
 import { FEEDBACK } from "./feedback";
 import { daysLabel, DIRECTION_LABEL } from "./labels";
 import { QuestionBody, AnswerBody } from "./BankQuestion";
+import { SlidePreloader } from "../slidePreload";
 
 const FORMAT_LABEL: Record<string, string> = {
   basic: "서술", cloze: "빈칸", list: "나열", ox: "O/X", mcq: "객관식", multi_select: "복수 선택",
@@ -27,6 +28,8 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
   const [reporting, setReporting] = useState(false);
   // 회차를 끝내지 않고 지도와 진행도를 본다. 열 때마다 새로 읽는다 — 방금 매긴 평가가 숙련도에 들어가 있다.
   const [peek, setPeek] = useState<BankRead | null>(null);
+  const slides = useMemo(() => new SlidePreloader(), [base]);
+  useEffect(() => { slides.warm(current?.preloadSlides?.map((slide) => slide.url) ?? []); }, [current, slides]);
 
   const next = useCallback(async () => {
     setBusy(true);
@@ -175,7 +178,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
         {answer ? (
           <>
             <hr className="quiz-line" />
-            <AnswerBody question={q} answer={answer} />
+            <AnswerBody question={q} answer={answer} preload={slides} />
             <div className="bank-feedback">
               {reporting ? (
                 <FeedbackForm base={base} questionId={q.question_id} onDone={() => setReporting(false)} />

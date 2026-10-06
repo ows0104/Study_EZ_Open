@@ -54,6 +54,19 @@ export type Counts = {
   nextDueAt: number | null;
 };
 
+/** Current card and the next two candidates, using the same queue policy. */
+export function upcoming(items: QuizItem[], now: number, options: Parameters<typeof pick>[2]): QuizItem[] {
+  const result: QuizItem[] = [];
+  let remaining = items;
+  while (result.length < 3) {
+    const next = pick(remaining, now, result.length ? { ...options, forcedId: undefined } : options);
+    if (next.kind !== "card") break;
+    result.push(next.item);
+    remaining = remaining.filter((entry) => entry.itemId !== next.item.itemId);
+  }
+  return result;
+}
+
 export function stateOf(item: QuizItem): CardState {
   return item.attempt?.state ?? "new";
 }

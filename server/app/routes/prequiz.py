@@ -423,6 +423,36 @@ class ItemRef(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class SlideRefs(BaseModel):
+    item_ids: list[str] = Field(alias="itemIds", min_length=1, max_length=3)
+
+
+def _preload_slides(quiz: Quiz, db: Session, subject: str, run_id: str, payload: SlideRefs) -> dict:
+    lecture = lecture_or_404(db, subject, run_id)
+    items = db.scalars(select(quiz.item).where(
+        quiz.item.subject == lecture.subject, quiz.item.run_id == lecture.run_id,
+        quiz.item.item_id.in_(payload.item_ids),
+    )).all()
+    # No reveal/attempt writes and no answer text: only this small window's images.
+    pages = dict.fromkeys(item.slide_no for item in items if item.slide_no is not None)
+    return {"urls": [url for page in pages
+                     if (url := slide_url(db, lecture.subject, lecture.run_id, page, quiz))]}
+
+
+@router.post("/lectures/{subject}/{run_id}/prequiz/slides")
+def preload_pre_slides(subject: str, run_id: str, payload: SlideRefs,
+                       user: CurrentUser = Depends(require_approved_user),
+                       db: Session = Depends(get_db)) -> dict:
+    return _preload_slides(PRE, db, subject, run_id, payload)
+
+
+@router.post("/lectures/{subject}/{run_id}/mainquiz/slides")
+def preload_main_slides(subject: str, run_id: str, payload: SlideRefs,
+                        user: CurrentUser = Depends(require_approved_user),
+                        db: Session = Depends(get_db)) -> dict:
+    return _preload_slides(MAIN, db, subject, run_id, payload)
+
+
 class PreviewCheck(ItemRef):
     understood: bool
 

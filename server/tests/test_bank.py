@@ -159,6 +159,12 @@ def main() -> None:
     check("회차가 열린다", start.status_code == 200 and start.json()["size"] == 10, start.text)
     first = client.post(f"{BASE}/bank/next").json()
     q = first["question"]
+    check("문제를 읽는 동안 이미지 미리 받기", [s["page"] for s in first["preloadSlides"]] == [1])
+    check("미리 받기는 답을 펼치지 않는다", first["answer"] is None)
+    with SessionLocal() as db:
+        served = db.get(BankState, ("student-1", SUBJECT, RUN)).state["served"]
+        check("미리 받아도 정답 열람 시각을 기록하지 않는다",
+              not served["revealed"] and "revealed_at" not in served)
     check("답 칸이 없다", q and not any(k in q for k in ("answer", "answer_units", "correct_option_ids",
                                                          "answer_pairs", "correct_order")), q)
     again = client.post(f"{BASE}/bank/next").json()

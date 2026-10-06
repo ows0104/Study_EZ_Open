@@ -169,6 +169,8 @@ export type BankConcept = {
 
 export type BankNext = {
   question: BankQuestion | null;
+  /** Warm the current question's images without recording a reveal. Older APIs omit this. */
+  preloadSlides?: { page: number; url: string }[];
   reviewToken?: string;
   days?: number;
   examDate?: string;

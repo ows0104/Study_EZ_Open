@@ -159,6 +159,19 @@ def main() -> None:
           "pre_s012" in (pre_answer["slideUrl"] or "") and "main_s012" in (main_answer["slideUrl"] or ""),
           (pre_answer["slideUrl"], main_answer["slideUrl"]))
 
+    for kind, marker in (("prequiz", "pre_s012"), ("mainquiz", "main_s012")):
+        warm = client.post(f"{BASE}/{kind}/slides", json={"itemIds": ["c001", "c001"]}, headers=USER)
+        check(f"{kind} 미리 받기는 자기 갈래 이미지 하나만",
+              warm.status_code == 200 and set(warm.json()) == {"urls"}
+              and len(warm.json()["urls"]) == 1 and marker in warm.json()["urls"][0], warm.text)
+        untouched = client.get(f"{BASE}/{kind}", headers=USER).json()
+        check(f"{kind} 미리 받아도 시도·되돌리기 기록 없음",
+              untouched["answered"] == 0 and not untouched["undoable"])
+        check(f"{kind} 없는 문항은 이미지 없음",
+              client.post(f"{BASE}/{kind}/slides", json={"itemIds": ["missing"]}, headers=USER).json() == {"urls": []})
+        check(f"{kind} 한 번에 세 문항까지",
+              client.post(f"{BASE}/{kind}/slides", json={"itemIds": ["c001"] * 4}, headers=USER).status_code == 422)
+
     # ── 채점이 안 섞인다. 같은 id 라 표가 하나였으면 뒤엣것이 앞엣것을 덮는다.
     client.post(f"{BASE}/prequiz/grade", json={"itemId": "c001", "correct": False}, headers=USER)
     client.post(f"{BASE}/mainquiz/grade", json={"itemId": "c001", "correct": True}, headers=USER)

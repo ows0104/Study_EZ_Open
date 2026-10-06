@@ -481,6 +481,7 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
     _save(state_row, state)
     db.commit()
     return {"question": _public(question), "reviewToken": served["token"], "days": days, "examDate": exam,
+            "preloadSlides": _slides(db, row, question["question_id"]),
             "session": engine.session_summary(bank, state),
             "answer": _answer(db, row, question) if served.get("revealed") else None}
 
