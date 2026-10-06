@@ -130,13 +130,14 @@ function Shell() {
             {/* 폰에서는 이메일을 접는다 — 탭과 계정 버튼에 자리를 내준다.
                 누구로 들어와 있는지는 로그아웃 버튼의 title 이 말한다. */}
             <span className="app-email">{me.email || email}</span>
+            <FeedbackButton />
             <button className="is-quiet" onClick={signOut} title={`${me.email || email} 로그아웃`}>
               로그아웃
             </button>
           </span>
         </header>
       )}
-      <div className="feedback-toolbar"><FeedbackButton /></div>
+      {bare ? <div className="feedback-toolbar"><FeedbackButton /></div> : null}
       <main
         className={`app-main${bare ? " is-bare" : ""}${wide ? " is-wide" : ""}${
           solving ? " is-solving" : ""

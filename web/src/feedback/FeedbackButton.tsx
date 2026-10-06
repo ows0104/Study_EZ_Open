@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
 import { api } from "../api";
 import "../styles/feedback.css";
@@ -74,7 +75,7 @@ export function FeedbackButton() {
       setPage(location.pathname); setSent(false); setError(""); dialog.current?.showModal();
       window.requestAnimationFrame(() => input.current?.focus());
     }}>피드백</button>
-    <dialog ref={dialog} className="feedback-dialog" aria-labelledby="feedback-title"
+    {createPortal(<dialog ref={dialog} className="feedback-dialog" aria-labelledby="feedback-title"
       onCancel={(event) => { event.preventDefault(); close(); }}
       onPaste={(event) => {
         const files = Array.from(event.clipboardData.files);
@@ -105,6 +106,6 @@ export function FeedbackButton() {
         <footer><button type="button" className="is-quiet" disabled={busy} onClick={close}>나중에</button>
           <button type="submit" disabled={busy || !message.trim()}>{busy ? "보내는 중…" : "보내기"}</button></footer>
       </form>}
-    </dialog>
+    </dialog>, document.body)}
   </>;
 }
