@@ -3,6 +3,7 @@ import { Stem } from "../lecture/Stem";
 import type { BankAnswer, BankQuestion } from "../types/bank";
 import { SlideImage } from "../SlideImage";
 import type { SlidePreloader } from "../slidePreload";
+import { AnswerPoints, answerPoints } from "./AnswerPoints";
 
 /**
  * 문항 ID 를 씨로 삼아 섞는다 — 다시 불러도, 답을 펴도 같은 순서다. 섞은 결과가 원래와 같으면 한 칸 민다.
@@ -44,7 +45,7 @@ export function QuestionBody({ question: q, answer, picked, onPick }: {
           if (!/^\{\{c\d+\}\}$/.test(part)) return <Stem key={index} text={part} />;
           const unit = answer?.answerUnits[blank];
           blank += 1;
-          if (unit !== undefined) return <strong key={index}><Stem text={unit} /></strong>;
+          if (unit !== undefined) return <strong key={index} className="bank-answer-point"><Stem text={unit} /></strong>;
           return (
             <span key={index} className="bank-blank">
               {`[ ${blank} ]`}
@@ -90,22 +91,23 @@ export function AnswerBody({ question: q, answer, preload }: {
 }) {
   const review = answer.medicalReview;
   const right = q.format === "matching" ? shuffled(q.matching_right, q.question_id) : [];
+  const remainingPoints = answerPoints(answer.answer, answer.answerUnits).remaining;
   return (
     <>
       {/* Cloze는 위 발문에 정답을 채워 보여 준다. 짝짓기는 아래 짝이 곧 답이다. */}
       {q.format === "cloze" || (q.format === "matching" && answer.answerPairs.length) ? null : (
         <p className="quiz-answer">
-          <Stem text={answer.answer} />
+          <AnswerPoints text={answer.answer} units={answer.answerUnits} />
         </p>
       )}
-      {/* 짝짓기·순서·빈칸은 채점 단위가 아래 짝·순서·빈칸과 같은 말이라 또 적지 않는다. */}
-      {answer.answerUnits.length > 1 && !["cloze", "matching", "sequence"].includes(q.format) ? (
-        <ul className="bank-units">{answer.answerUnits.map((unit) => <li key={unit}>{unit}</li>)}</ul>
+      {/* 답에서 강조한 포인트는 반복하지 않는다. 답과 표현이 다른 설명은 보존한다. */}
+      {remainingPoints.length > 0 && !["cloze", "matching", "sequence"].includes(q.format) ? (
+        <ul className="bank-units">{remainingPoints.map((unit) => <li key={unit} className="bank-answer-point"><Stem text={unit} /></li>)}</ul>
       ) : null}
       {answer.answerPairs.length ? (
         <ul className="bank-units">
           {answer.answerPairs.map((pair) => (
-            <li key={`${pair.left}-${pair.right}`}>
+            <li key={`${pair.left}-${pair.right}`} className="bank-answer-point">
               {bare(pair.left)} → {right.includes(pair.right) ? <b>{letter(right.indexOf(pair.right))}</b> : null}{" "}
               {bare(pair.right)}
             </li>
@@ -113,7 +115,7 @@ export function AnswerBody({ question: q, answer, preload }: {
         </ul>
       ) : null}
       {answer.correctOrder.length ? (
-        <p className="bank-order">
+        <p className="bank-order bank-answer-point">
           {answer.correctOrder.map((item, index) => (
             <Fragment key={item}>{index ? " → " : ""}{item}</Fragment>
           ))}

@@ -2720,6 +2720,11 @@ button.notice-title:hover:not(:disabled) {
   color: var(--ink-2);
 }
 
+.bank-answer-point {
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+
 .bank-review {
   margin: 14px 0;
   padding: 10px 14px;
