@@ -3081,14 +3081,26 @@ button.notice-title:hover:not(:disabled) {
 .prequiz-bar .quiz-grade { max-width: 280px; font-size: 15px; padding: 14px 10px; }
 .prequiz-bar .is-listen { color: var(--ink-2); border-color: var(--line); }
 
-.prequiz-intro { text-align: center; }
+.prequiz-page-head { max-width: 42rem; margin: 0 auto 14px; }
+.prequiz-page-head h1 { margin: 0; font-size: 14px; font-weight: 550; line-height: 1.5; overflow-wrap: anywhere; }
+.prequiz-page-head a { color: var(--ink-3); text-decoration: none; }
+.prequiz-page-head a:hover { color: var(--ink); text-decoration: underline; }
+.prequiz-page > .lecture-section { margin-top: 0; }
+.prequiz-status { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 16px; max-width: 42rem; margin: 0 auto 18px; text-align: left; }
+.prequiz-status .prequiz-progress { margin: 0; }
+.prequiz-status .prequiz-progress > p { margin: 0; justify-content: flex-start; font-size: 12px; }
+.prequiz-status .quiz-why { margin: 0; }
+.prequiz-status .badge { font-size: 11px; }
+.prequiz-tools { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 12px; max-width: 42rem; margin: 24px auto 0; font-size: 12px; }
+.prequiz-tools:empty { display: none; }
+.prequiz-tools .quiz-undo, .prequiz-tools .quiz-fix { margin: 0; }
 .prequiz-text { display: block; white-space: pre-line; word-break: keep-all; overflow-wrap: anywhere; text-wrap: pretty; text-align: left; }
 .prequiz-text-paragraph { display: block; }
 .prequiz-text-paragraph + .prequiz-text-paragraph { margin-top: 0.65em; }
 .prequiz .quiz-stem { max-width: 42rem; margin: 0 auto 20px; line-height: 1.75; text-align: left; }
 .prequiz .quiz-answer,
 .prequiz .quiz-explanation,
-.prequiz .quiz-support-note:not(.prequiz-intro),
+.prequiz .quiz-support-note,
 .prequiz .quiz-why-back,
 .prequiz .quiz-hint { width: 100%; max-width: 42rem; margin-inline: auto; text-align: left; }
 .prequiz .quiz-support-note > strong { display: block; margin-bottom: 6px; }

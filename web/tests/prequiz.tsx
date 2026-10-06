@@ -1,6 +1,7 @@
 // Vite에서 /tests/prequiz.html을 연다. 모든 API를 메모리로 대체하는 수동 회귀 확인용.
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import "../src/styles/base.css";
 
 const concepts = ["핵심 용어", "설명의 중심", "두 개념의 차이", "간단한 적용", "오늘의 큰 그림", "다음 설명 예상"];
@@ -28,7 +29,9 @@ window.fetch = async (input, init) => {
   });
   let result: object;
   if (path === "/api/me") result = { isAdmin: false };
-  else if (path === "/api/lectures/local/demo") result = { prequiz: { missed: items.filter((entry) =>
+  else if (path === "/api/lectures/local/demo") result = {
+    title: "핵심 개념과 기전: 예습으로 준비하는 강의", subject: "local", course: "예시 과목", date: "2026-10-07", files: [],
+    prequiz: { missed: items.filter((entry) =>
     entry.attempt && !(entry.attempt as { correct: boolean }).correct).map((entry) => ({ ...entry, ...reveal(entry) })) } };
   else if (path.endsWith("/reveal") && item) result = reveal(item);
   else if (path.endsWith("/check") && item) {
@@ -46,5 +49,9 @@ window.fetch = async (input, init) => {
   return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
 };
 
-const { PreQuiz } = await import("../src/lecture/PreQuiz");
-createRoot(document.getElementById("root")!).render(<PreQuiz subject="local" runId="demo" onDone={() => {}} />);
+const { QuizPage } = await import("../src/lecture/QuizPage");
+createRoot(document.getElementById("root")!).render(
+  <MemoryRouter initialEntries={["/prequiz/local/demo"]}>
+    <Routes><Route path="/prequiz/:subject/:runId" element={<QuizPage kind="pre" />} /></Routes>
+  </MemoryRouter>,
+);

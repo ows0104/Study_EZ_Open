@@ -167,6 +167,13 @@ export function GuidePage() {
             캘린더의 예습 동그라미가 완료한 비율만큼 달처럼 차오릅니다.
             Anki에서는 도전 문제 태그와 안내를 확인하고 필요할 때 풀면 됩니다.
           </p>
+        <table className="guide-keys">
+          <tbody>
+            <tr><th><kbd>Space</kbd> · <kbd>Enter</kbd></th><td>답과 설명 보기 · 편 뒤에는 이해했어요</td></tr>
+            <tr><th><kbd>1</kbd> · <kbd>2</kbd></th><td>아직 헷갈려요 · 이해했어요</td></tr>
+            <tr><th><kbd>Z</kbd> · <kbd>Ctrl</kbd>+<kbd>Z</kbd></th><td>이전 선택 되돌리기</td></tr>
+          </tbody>
+        </table>
         <h3>기존 Main-Quiz 카드</h3>
         <p>
           Anki와 같은 방식입니다. 질문을 보고 떠올린 뒤 답을 펴고, 얼마나 잘 기억했는지 스스로 고릅니다. 고른 것에

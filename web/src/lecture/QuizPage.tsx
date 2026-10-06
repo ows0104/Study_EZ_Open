@@ -86,9 +86,13 @@ export function QuizPage({ kind }: { kind: QuizKind }) {
   const quiz = kind === "pre" ? detail?.prequiz : detail?.mainquiz;
 
   return (
-    <article className="lecture">
+    <article className={`lecture${kind === "pre" ? " prequiz-page" : ""}`}>
       {/* 강의 정보는 머리글 한 줄로 족하다. 여기는 푸는 창이다. */}
-      {detail ? (
+      {detail && kind === "pre" ? (
+        <header className="prequiz-page-head">
+          <h1><a href={lectureHref({ subject, runId })}>{detail.title}</a></h1>
+        </header>
+      ) : detail ? (
         <header className="lecture-head prequiz-narrow">
           <p className="lecture-crumb">
             <span>{detail.course || detail.subject}</span>

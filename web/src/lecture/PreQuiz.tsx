@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { lectureHref } from "../links";
 import { useMe } from "../useMe";
@@ -19,6 +19,7 @@ export function PreQuiz({ subject, runId, onDone }: {
   const [revealed, setRevealed] = useState<RevealResult | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const actionPending = useRef(false);
   const [forcedId, setForcedId] = useState("");
   const [mode, setMode] = useState<"core" | "reread" | "difficult">("core");
   const [seen, setSeen] = useState<Set<string>>(() => new Set());
@@ -53,7 +54,8 @@ export function PreQuiz({ subject, runId, onDone }: {
         lectureFocus: feedback.lectureFocus } : entry) }));
   }
   async function reveal() {
-    if (!item || busy) return;
+    if (!item || busy || actionPending.current) return;
+    actionPending.current = true;
     setBusy(true); setError("");
     try {
       const result = await api<RevealResult>(`${base}/reveal`, {
@@ -62,10 +64,11 @@ export function PreQuiz({ subject, runId, onDone }: {
       setRevealed(result);
       setAnswers((old) => ({ ...old, [result.itemId]: result }));
     } catch (cause) { setError((cause as Error).message); }
-    finally { setBusy(false); }
+    finally { actionPending.current = false; setBusy(false); }
   }
   async function check(understood: boolean) {
-    if (!item || !revealed || busy) return;
+    if (!item || !revealed || busy || actionPending.current) return;
+    actionPending.current = true;
     setBusy(true); setError("");
     try {
       const result = await api<GradeResult>(`${base}/check`, {
@@ -75,10 +78,11 @@ export function PreQuiz({ subject, runId, onDone }: {
       setSeen((old) => new Set(old).add(item.itemId));
       setForcedId(""); setRevealed(null);
     } catch (cause) { setError((cause as Error).message); }
-    finally { setBusy(false); }
+    finally { actionPending.current = false; setBusy(false); }
   }
   async function undo() {
-    if (!payload?.undoable || busy) return;
+    if (!canUndo || busy || actionPending.current) return;
+    actionPending.current = true;
     setBusy(true); setError("");
     try {
       const result = await api<UndoResult>(`${base}/undo`, { method: "POST" });
@@ -87,14 +91,41 @@ export function PreQuiz({ subject, runId, onDone }: {
       setForcedId(result.itemId); setRevealed(result);
       setAnswers((old) => ({ ...old, [result.itemId]: result }));
     } catch (cause) { setError((cause as Error).message); }
-    finally { setBusy(false); }
+    finally { actionPending.current = false; setBusy(false); }
   }
   function start(ids?: string[]) {
     setMode(ids ? "difficult" : "reread"); setReviewIds(ids ?? []);
     setSeen(new Set()); setForcedId(""); setRevealed(null); setError("");
   }
-  const undoButton = payload?.undoable && (mode !== "difficult" || seen.size > 0)
-    ? <button className="quiz-undo" disabled={busy} onClick={undo}>이전 선택 되돌리기</button> : null;
+  const canUndo = Boolean(payload?.undoable && (mode !== "difficult" || seen.size > 0));
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.repeat || event.isComposing || event.metaKey || event.altKey
+        || document.querySelector("dialog[open], [role='dialog'][aria-modal='true']")) return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (target?.closest("input, textarea, select, [contenteditable]:not([contenteditable='false']), [role='textbox']")) return;
+      const key = event.key.toLowerCase();
+      if (key === "z" && !event.shiftKey && canUndo) {
+        event.preventDefault();
+        void undo();
+        return;
+      }
+      if (event.ctrlKey || event.shiftKey || !item) return;
+      const feedback = revealed?.itemId === item.itemId;
+      if ((key === " " || key === "enter") && !target?.closest("button, a, summary, [role='button']")) {
+        event.preventDefault();
+        if (feedback) void check(true);
+        else void reveal();
+      } else if (feedback && (key === "1" || key === "2")) {
+        event.preventDefault();
+        void check(key === "2");
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [item, revealed, busy, canUndo]);
+  const undoButton = canUndo
+    ? <button className="quiz-undo" disabled={busy} onClick={undo}>이전 선택 되돌리기 <kbd>Z</kbd></button> : null;
   if (!payload) return <p className={`notice${error ? " is-error" : ""}`}>{error || "예습 문항을 불러오는 중…"}</p>;
   const progress = <PreQuizProgress title={mode === "difficult" ? "어려웠던 문제 다시 보기" : mode === "reread" ? "다시 훑어보기" : "예습"}
     done={round.filter((entry) => completed(entry.itemId)).length} total={round.length} />;
@@ -120,12 +151,7 @@ export function PreQuiz({ subject, runId, onDone }: {
   const feedback = revealed?.itemId === item.itemId ? revealed : null;
   return <>
     <div className="quiz prequiz">
-      {progress}
-      <p className="quiz-progress">{undoButton}
-        {isAdmin ? <a className="quiz-fix" href={lectureHref({ subject, runId }) + cardsHash("pre", item.itemId)} target="_blank" rel="noreferrer">이 카드 고치기</a> : null}
-      </p>
-      <p className="quiz-support-note prequiz-intro">떠오르는 만큼 생각해 보세요. 답을 읽고 이해하면 충분해요.</p>
-      <WhyAsked item={item} />
+      <div className="prequiz-status">{progress}<WhyAsked item={item} /></div>
       <p className="quiz-stem"><PreQuizText text={item.stem} /></p>
       {!feedback && item.hint ? <details className="quiz-hint" key={item.itemId}>
         <summary>
@@ -148,11 +174,15 @@ export function PreQuiz({ subject, runId, onDone }: {
         {feedback.slideUrl ? <SlideImage preload={slides} src={feedback.slideUrl} alt={`슬라이드 ${feedback.slideNo}`} /> : null}
       </> : null}
       {error ? <p role="alert" className="notice is-error">{error}</p> : null}
+      <div className="prequiz-tools">
+        {undoButton}
+        {isAdmin ? <a className="quiz-fix" href={lectureHref({ subject, runId }) + cardsHash("pre", item.itemId)} target="_blank" rel="noreferrer">이 카드 고치기</a> : null}
+      </div>
     </div>
     <div className="quiz-bar prequiz-bar">
-      {!feedback ? <button className="quiz-submit" disabled={busy} onClick={reveal}>{busy ? "불러오는 중…" : "답과 설명 보기"}</button>
-        : <><button className="quiz-grade prequiz-choice" disabled={busy} onClick={() => check(false)}><span className="quiz-grade-name">아직 헷갈려요</span></button>
-          <button className="quiz-grade prequiz-choice" disabled={busy} onClick={() => check(true)}><span className="quiz-grade-name">이해했어요</span></button></>}
+      {!feedback ? <button className="quiz-submit" disabled={busy} onClick={reveal} aria-keyshortcuts="Space Enter">{busy ? "불러오는 중…" : <>답과 설명 보기 <kbd>Space</kbd></>}</button>
+        : <><button className="quiz-grade prequiz-choice" disabled={busy} onClick={() => check(false)} aria-keyshortcuts="1"><span className="quiz-grade-name">아직 헷갈려요 <kbd>1</kbd></span></button>
+          <button className="quiz-grade prequiz-choice" disabled={busy} onClick={() => check(true)} aria-keyshortcuts="2 Space Enter"><span className="quiz-grade-name">이해했어요 <kbd>2 / Space</kbd></span></button></>}
     </div>
   </>;
 }
