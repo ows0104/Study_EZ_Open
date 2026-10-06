@@ -8,6 +8,7 @@ import { WhyAsked } from "./Quiz";
 import { Stem } from "./Stem";
 import { SlideImage } from "../SlideImage";
 import { useQuizSlidePreload } from "./useQuizSlidePreload";
+import { PreQuizDifficult } from "./PreQuizDifficult";
 
 /** 예습은 한 번 이해를 확인하고, 수업에서 들을 질문을 남긴다. */
 export function PreQuiz({ subject, runId, onDone }: {
@@ -19,8 +20,10 @@ export function PreQuiz({ subject, runId, onDone }: {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [forcedId, setForcedId] = useState("");
-  const [mode, setMode] = useState<"core" | "reread">("core");
+  const [mode, setMode] = useState<"core" | "reread" | "difficult">("core");
   const [seen, setSeen] = useState<Set<string>>(() => new Set());
+  const [reviewIds, setReviewIds] = useState<string[]>([]);
+  const [answers, setAnswers] = useState<Record<string, RevealResult>>({});
   const isAdmin = Boolean(useMe()?.isAdmin);
 
   useEffect(() => {
@@ -31,9 +34,10 @@ export function PreQuiz({ subject, runId, onDone }: {
   }, [base]);
 
   const ordered = payload?.items ?? [];
-  const completed = (itemId: string) => mode === "reread"
+  const round = mode === "difficult" ? ordered.filter((entry) => reviewIds.includes(entry.itemId)) : ordered;
+  const completed = (itemId: string) => mode !== "core"
     ? seen.has(itemId) : Boolean(ordered.find((entry) => entry.itemId === itemId)?.attempt);
-  const candidates = ordered.filter((entry) =>
+  const candidates = round.filter((entry) =>
     !completed(entry.itemId));
   const item = payload?.items.find((entry) => entry.itemId === forcedId)
     ?? candidates[0];
@@ -51,9 +55,13 @@ export function PreQuiz({ subject, runId, onDone }: {
   async function reveal() {
     if (!item || busy) return;
     setBusy(true); setError("");
-    try { setRevealed(await api<RevealResult>(`${base}/reveal`, {
-      method: "POST", body: JSON.stringify({ itemId: item.itemId }),
-    })); } catch (cause) { setError((cause as Error).message); }
+    try {
+      const result = await api<RevealResult>(`${base}/reveal`, {
+        method: "POST", body: JSON.stringify({ itemId: item.itemId }),
+      });
+      setRevealed(result);
+      setAnswers((old) => ({ ...old, [result.itemId]: result }));
+    } catch (cause) { setError((cause as Error).message); }
     finally { setBusy(false); }
   }
   async function check(understood: boolean) {
@@ -77,32 +85,34 @@ export function PreQuiz({ subject, runId, onDone }: {
       patch(result.itemId, result.attempt, result, result.undoable);
       setSeen((old) => { const next = new Set(old); next.delete(result.itemId); return next; });
       setForcedId(result.itemId); setRevealed(result);
+      setAnswers((old) => ({ ...old, [result.itemId]: result }));
     } catch (cause) { setError((cause as Error).message); }
     finally { setBusy(false); }
   }
-  function start() {
-    setMode("reread"); setSeen(new Set()); setForcedId(""); setRevealed(null); setError("");
+  function start(ids?: string[]) {
+    setMode(ids ? "difficult" : "reread"); setReviewIds(ids ?? []);
+    setSeen(new Set()); setForcedId(""); setRevealed(null); setError("");
   }
-  const undoButton = payload?.undoable ? <button className="quiz-undo" disabled={busy} onClick={undo}>이전 선택 되돌리기</button> : null;
+  const undoButton = payload?.undoable && (mode !== "difficult" || seen.size > 0)
+    ? <button className="quiz-undo" disabled={busy} onClick={undo}>이전 선택 되돌리기</button> : null;
   if (!payload) return <p className={`notice${error ? " is-error" : ""}`}>{error || "예습 문항을 불러오는 중…"}</p>;
-  const progress = <PreQuizProgress title={mode === "reread" ? "다시 훑어보기" : "예습"}
-    done={ordered.filter((entry) => completed(entry.itemId)).length} total={ordered.length} />;
+  const progress = <PreQuizProgress title={mode === "difficult" ? "어려웠던 문제 다시 보기" : mode === "reread" ? "다시 훑어보기" : "예습"}
+    done={round.filter((entry) => completed(entry.itemId)).length} total={round.length} />;
   if (!item) {
     const targets = ordered.filter((entry) => entry.attempt && !entry.attempt.correct);
     return <div className="quiz-done prequiz-narrow">
       {progress}
-      <h2>{ordered.length ? `예습 ${ordered.length}문항 확인 완료` : "아직 예습 문항이 없습니다"}</h2>
+      <h2>{ordered.length ? mode === "difficult" ? `어려웠던 ${round.length}문항 다시 보기 완료` : `예습 ${ordered.length}문항 확인 완료` : "아직 예습 문항이 없습니다"}</h2>
       {ordered.length > 0 ? <p>수업을 들을 준비가 됐어요. 세부 내용은 수업에서 연결하면 됩니다.</p> : null}
-      {targets.length ? <section className="quiz-takeaways">
-        <h3>수업에서 확인할 질문 {targets.length}개</h3>
-        <ul>{targets.map((entry) => <li key={entry.itemId}><Stem text={entry.lectureFocus || entry.stem} /></li>)}</ul>
-      </section> : ordered.length > 0 ? <p className="quiz-done-note">모든 문항을 이해했어요. 수업에서 어떻게 확장되는지 들어보세요.</p> : null}
+      {targets.length ? <PreQuizDifficult base={base} items={targets} answers={answers}
+        onReview={() => start(targets.map((entry) => entry.itemId))} />
+        : ordered.length > 0 ? <p className="quiz-done-note">모든 문항을 이해했어요. 수업에서 어떻게 확장되는지 들어보세요.</p> : null}
       {ordered.some((entry) => entry.learningScope) ? <details className="quiz-takeaways">
         <summary>오늘 챙긴 핵심</summary>
         <ul>{ordered.filter((entry) => entry.learningScope).map((entry) => <li key={entry.itemId}>{entry.learningScope}</li>)}</ul>
       </details> : null}
       <a className="resource" href={lectureHref({ subject, runId })}><strong>예습 마치기</strong></a>
-      {ordered.length ? <button className="quiz-undo" onClick={start}>다시 훑어보기</button> : null}
+      {ordered.length ? <button className="quiz-undo" onClick={() => start()}>전체 다시 훑어보기</button> : null}
       {undoButton}
       {error ? <p role="alert" className="notice is-error">{error}</p> : null}
     </div>;

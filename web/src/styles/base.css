@@ -3089,6 +3089,20 @@ button.notice-title:hover:not(:disabled) {
 .prequiz-bar .prequiz-choice { border-color: var(--line-strong); color: var(--ink); background: var(--surface-2); border-radius: var(--r-3); }
 .prequiz-bar .prequiz-choice:hover:not(:disabled) { border-color: var(--ink-3); background: var(--surface-3); }
 
+.prequiz-difficult { margin: 24px 0; text-align: left; }
+.prequiz-difficult h3 { margin: 0 0 6px; font-size: 18px; }
+.prequiz-review-note { margin: 0 0 16px; color: var(--ink-2); font-size: 13px; line-height: 1.6; }
+.prequiz-review-list { display: grid; gap: 14px; }
+.prequiz-review-card { padding: 20px; border: 1px solid var(--line); border-radius: var(--r-3); background: var(--surface); }
+.prequiz-review-number { display: block; margin-bottom: 8px; color: var(--ink-3); font-size: 11px; }
+.prequiz-review-card .quiz-why { margin-bottom: 10px; }
+.prequiz-review-card h4 { margin: 0 0 16px; font-size: 16px; font-weight: 650; line-height: 1.6; overflow-wrap: anywhere; }
+.prequiz-review-answer, .prequiz-review-explanation, .prequiz-review-focus { margin: 12px 0 0; font-size: 14px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.prequiz-review-explanation, .prequiz-review-focus { color: var(--ink-2); }
+.prequiz-review-card b { display: block; margin-bottom: 4px; color: var(--ink-3); font-size: 11px; font-weight: 600; }
+.prequiz-review-start { display: block; width: 100%; margin-top: 16px; min-height: 44px; border-color: var(--accent-line); color: var(--ink); background: var(--accent-soft); font-weight: 650; }
+.prequiz-review-start:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+
 .bank-cmap-related button {
   padding: 0 4px;
   font-size: 12px;

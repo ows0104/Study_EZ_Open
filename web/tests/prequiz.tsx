@@ -4,11 +4,12 @@ import { createRoot } from "react-dom/client";
 import "../src/styles/base.css";
 
 const concepts = ["핵심 용어", "설명의 중심", "두 개념의 차이", "간단한 적용", "오늘의 큰 그림", "다음 설명 예상"];
+const completedPreview = new URLSearchParams(location.search).has("completed");
 const items = concepts.map((name, index) => ({
   itemId: `c00${index + 1}`, qtype: "basic", stem: `한 문장으로 설명해 보세요: ${name}`,
   focus: "spine", cardType: "comparison", examHit: false, whyTags: ["basis"],
   hint: `예습의 ‘${name}’ 부분에서 사용한 기준을 떠올려 보세요.`, challenge: index === 5,
-  attempt: null as object | null,
+  attempt: (completedPreview ? { correct: index !== 0 && index !== 5, state: "review", dueAt: null } : null) as object | null,
 }));
 const next = Object.fromEntries(["again", "hard", "good", "easy"].map((g) => [g, { days: 1, seconds: 86400 }]));
 const history: { itemId: string; attempt: object | null }[] = [];
@@ -27,6 +28,8 @@ window.fetch = async (input, init) => {
   });
   let result: object;
   if (path === "/api/me") result = { isAdmin: false };
+  else if (path === "/api/lectures/local/demo") result = { prequiz: { missed: items.filter((entry) =>
+    entry.attempt && !(entry.attempt as { correct: boolean }).correct).map((entry) => ({ ...entry, ...reveal(entry) })) } };
   else if (path.endsWith("/reveal") && item) result = reveal(item);
   else if (path.endsWith("/check") && item) {
     history.push({ itemId: item.itemId, attempt: item.attempt });
