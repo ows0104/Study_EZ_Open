@@ -2725,6 +2725,33 @@ button.notice-title:hover:not(:disabled) {
   font-weight: 700;
 }
 
+.bank-ox-explanation {
+  width: min(100%, 720px);
+  margin-top: 16px;
+  padding: 18px 22px;
+  border: 1px solid var(--line-strong);
+}
+
+.bank-ox-explanation h2 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.bank-ox-explanation ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bank-ox-explanation li + li {
+  margin-top: 10px;
+}
+
+.bank-ox-explanation p {
+  margin: 0;
+}
+
 .bank-review {
   margin: 14px 0;
   padding: 10px 14px;

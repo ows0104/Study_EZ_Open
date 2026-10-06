@@ -48,7 +48,28 @@ test('overlapping and repeated points retain all answer text without duplicating
 
 test('single O/X explanations and paraphrased points remain visible in blue', () => {
   const html = render({ answer: 'X', answerUnits: ['말초에서만 작용한다.'] }, 'ox');
+  assert.ok(html.includes('aria-label="해설"><h2>해설</h2>'));
   assert.ok(html.includes('<li class="bank-answer-point">말초에서만 작용한다.</li>'));
+});
+
+test('O and X show every explanation once, including a single or multiline unit', () => {
+  for (const binary of ['O', 'X']) {
+    const units = ['판단의 **기준**이다.\n조건도 확인한다.', '예외를 구분한다.'];
+    const html = render({ answer: binary, answerUnits: units }, 'ox');
+    assert.ok(html.includes('<strong>기준</strong>이다.\n조건도 확인한다.'));
+    assert.equal(html.split('예외를 구분한다.').length - 1, 1);
+    assert.ok(!html.includes('bank-units'));
+  }
+});
+
+test('O/X does not hide explanations that also occur in the answer', () => {
+  const html = render({ answer: 'O', answerUnits: ['O'] }, 'ox');
+  assert.ok(html.includes('<h2>해설</h2><ul><li class="bank-answer-point">O</li></ul>'));
+});
+
+test('missing O/X explanation is explicit, without an empty panel for other formats', () => {
+  assert.ok(render({ answer: 'X', answerUnits: ['  '] }, 'ox').includes('등록된 해설이 없습니다.'));
+  assert.ok(!render({ answer: '답' }).includes('bank-ox-explanation'));
 });
 
 test('short terms do not match inside other English words and text is escaped', () => {

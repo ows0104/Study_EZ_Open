@@ -100,8 +100,19 @@ export function AnswerBody({ question: q, answer, preload }: {
           <AnswerPoints text={answer.answer} units={answer.answerUnits} />
         </p>
       )}
+      {/* O/X의 채점 단위는 판단의 이유다. 한 항목이어도 해설 전체를 보여 준다. */}
+      {q.format === "ox" ? (
+        <section className="quiz-explanation bank-ox-explanation" aria-label="해설">
+          <h2>해설</h2>
+          {answer.answerUnits.some((unit) => unit.trim()) ? (
+            <ul>{answer.answerUnits.filter((unit) => unit.trim()).map((unit, index) => (
+              <li key={index} className="bank-answer-point"><Stem text={unit} /></li>
+            ))}</ul>
+          ) : <p>이 문항에 등록된 해설이 없습니다.</p>}
+        </section>
+      ) : null}
       {/* 답에서 강조한 포인트는 반복하지 않는다. 답과 표현이 다른 설명은 보존한다. */}
-      {remainingPoints.length > 0 && !["cloze", "matching", "sequence"].includes(q.format) ? (
+      {remainingPoints.length > 0 && !["ox", "cloze", "matching", "sequence"].includes(q.format) ? (
         <ul className="bank-units">{remainingPoints.map((unit) => <li key={unit} className="bank-answer-point"><Stem text={unit} /></li>)}</ul>
       ) : null}
       {answer.answerPairs.length ? (
