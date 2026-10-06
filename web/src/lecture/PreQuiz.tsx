@@ -141,7 +141,7 @@ export function PreQuiz({ subject, runId, onDone }: {
     </div>
     <div className="quiz-bar prequiz-bar">
       {!feedback ? <button className="quiz-submit" disabled={busy} onClick={reveal}>{busy ? "불러오는 중…" : "답과 설명 보기"}</button>
-        : <><button className="quiz-grade prequiz-choice" disabled={busy} onClick={() => check(false)}><span className="quiz-grade-name">수업에서 확인할게요</span></button>
+        : <><button className="quiz-grade prequiz-choice" disabled={busy} onClick={() => check(false)}><span className="quiz-grade-name">아직 헷갈려요</span></button>
           <button className="quiz-grade prequiz-choice" disabled={busy} onClick={() => check(true)}><span className="quiz-grade-name">이해했어요</span></button></>}
     </div>
   </>;

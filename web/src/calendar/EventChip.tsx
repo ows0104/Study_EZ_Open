@@ -84,9 +84,7 @@ function AdminChipSlots({ lecture }: { lecture: LectureRef }) {
 /**
  * 학생이 보는 자리 둘.
  *
- * **강조색은 "네가 열어 볼 것이 있다"는 뜻으로만 쓴다.** 빈 도형만 계열색을
- * 받고, 채운 것은 무채색으로 가라앉고, 쉬는 점은 더 옅다. 끝낸 것을 색으로
- * 두면 다 한 칸이 제일 시끄러워져서 남은 할 일이 묻힌다.
+ * 예습 달은 내 풀이 비율을 표시하고, 완료 뒤에도 파란색을 유지한다.
  */
 function UserChipSlots({ lecture }: { lecture: LectureRef }) {
   const slots = lectureSlots(lecture);
@@ -105,11 +103,11 @@ function UserChipSlots({ lecture }: { lecture: LectureRef }) {
   );
 }
 
-/** 오른쪽 초승달 → 반달 → 보름달. 밝은 면적이 완료 비율과 같다. */
+/** 왼쪽 초승달 → 반달 → 보름달. 밝은 면적이 완료 비율과 같다. */
 function PreQuizMoon({ answered, total }: { answered: number; total: number }) {
   const fill = Math.max(0, Math.min(1, answered / total));
   const terminator = Math.abs(1 - 2 * fill) * 4.5;
-  const path = `M 5 .5 A 4.5 4.5 0 0 1 5 9.5 A ${terminator} 4.5 0 0 ${fill <= .5 ? 0 : 1} 5 .5 Z`;
+  const path = `M 5 .5 A 4.5 4.5 0 0 0 5 9.5 A ${terminator} 4.5 0 0 ${fill <= .5 ? 1 : 0} 5 .5 Z`;
   return <svg className={`chip-slot is-pre is-moon is-${fill >= 1 ? "done" : "ready"}`}
     viewBox="0 0 10 10" aria-hidden="true">
     <title>Pre-Quiz {answered}/{total}문항 완료</title>

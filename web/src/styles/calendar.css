@@ -738,14 +738,18 @@
 }
 
 /* 웹 예습은 부채꼴 대신 달의 밝은 면적이 차오른다. */
-.chip-slot.is-pre.is-moon { border: 0; background: none; color: var(--cat, var(--accent)); }
-.chip-slot.is-pre.is-moon.is-done { color: var(--ink-3); }
+.chip-slot.is-pre.is-moon { border: 0; background: none; color: var(--accent); }
 
 /* ③ 했다. 무채색으로 가라앉힌다 — 색은 "지금 네 차례"라는 뜻이고, 끝낸 것은
  * 더 이상 열 것이 아니다. 다 한 칸이 제일 시끄러우면 남은 할 일이 묻힌다. */
 .chip-slot.is-done {
   border-color: var(--ink-3);
   background: var(--ink-3);
+}
+
+.chip-slot.is-pre.is-done:not(.is-moon) {
+  border-color: var(--accent);
+  background: var(--accent);
 }
 
 /* 한 교시에 여러 강의가 열릴 때(선택형 과목)의 개수. */
