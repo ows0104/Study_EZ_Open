@@ -80,6 +80,7 @@ GET /api/bundles/decks/{subject}/{run_id}/{kind}
 GET /api/health
 GET /api/lectures/{subject}/{run_id}
 GET /api/lectures/{subject}/{run_id}/bank
+GET /api/lectures/{subject}/{run_id}/bank/anki
 GET /api/lectures/{subject}/{run_id}/deck-job
 GET /api/lectures/{subject}/{run_id}/files/{asset_id}
 GET /api/lectures/{subject}/{run_id}/mainquiz

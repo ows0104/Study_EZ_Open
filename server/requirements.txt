@@ -6,3 +6,4 @@ pydantic==2.13.1
 pyjwt[crypto]==2.11.0
 boto3==1.42.6
 python-dotenv==1.2.1
+genanki==0.13.1

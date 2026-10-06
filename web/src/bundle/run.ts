@@ -59,7 +59,8 @@ export async function runBundle(
       onProgress({ phase: "fetching", done: index, total: decks.length, label, bytes });
       const path =
         `/api/bundles/decks/${encodeURIComponent(deck.subject)}` +
-        `/${encodeURIComponent(deck.runId)}/${deck.kind}`;
+        `/${encodeURIComponent(deck.runId)}/${deck.kind}` +
+        (deck.exportId ? `?exportId=${encodeURIComponent(deck.exportId)}` : "");
       let payload: Uint8Array;
       try {
         payload = await apiBytes(path);
@@ -89,7 +90,7 @@ export async function runBundle(
     await api("/api/bundles/grabs", {
       method: "POST",
       body: JSON.stringify({
-        decks: included.map((deck) => ({ subject: deck.subject, runId: deck.runId, kind: deck.kind })),
+        decks: included.map((deck) => ({ subject: deck.subject, runId: deck.runId, kind: deck.kind, exportId: deck.exportId })),
       }),
     });
   } catch {

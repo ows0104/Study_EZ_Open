@@ -48,7 +48,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import CurrentUser, require_approved_user
 from app.database import get_db
-from app.models import Asset, AssetGrab, Lecture
+from app.models import Asset, AssetGrab, Lecture, QuizBank
 from app.naming import nfc
 from app.routes.common import record_grabs, storage_or_503
 
@@ -70,6 +70,7 @@ class DeckRef(BaseModel):
     subject: str
     run_id: str = Field(alias="runId")
     kind: str
+    export_id: str | None = Field(default=None, alias="exportId")
 
     model_config = {"populate_by_name": True}
 
@@ -126,8 +127,7 @@ def read_decks(
         ).all()
     }
 
-    return {
-        "decks": [
+    decks = [
             {
                 "subject": lecture.subject,
                 "runId": lecture.run_id,
@@ -141,7 +141,41 @@ def read_decks(
             }
             for asset, lecture in latest.values()
         ]
-    }
+    # A usable published Quiz Bank takes the Main slot. Existing Anki assets
+    # remain a fallback for lectures that only have legacy materials.
+    from app.bank_anki import describe
+
+    bank_query = select(QuizBank, Lecture).join(Lecture,
+        (QuizBank.subject == Lecture.subject) & (QuizBank.run_id == Lecture.run_id))
+    if not user.is_admin:
+        bank_query = bank_query.where(QuizBank.open_to_students.is_(True))
+    if start is not None:
+        bank_query = bank_query.where(Lecture.date >= start)
+    if end is not None:
+        bank_query = bank_query.where(Lecture.date <= end)
+    bank_grabs = {(g.subject, g.run_id, g.kind) for g in db.scalars(
+        select(AssetGrab).where(AssetGrab.user_id == user.id, AssetGrab.kind.like("bank_%")))}
+    bank_rows = db.execute(bank_query).all()
+    bank_media: dict[tuple[str, str], list[Asset]] = {}
+    if bank_rows:
+        media_query = select(Asset).where(Asset.kind == "bank_media",
+            Asset.subject.in_({b.subject for b, _ in bank_rows}),
+            Asset.run_id.in_({b.run_id for b, _ in bank_rows})).order_by(Asset.uploaded_at, Asset.id)
+        for asset in db.scalars(media_query):
+            bank_media.setdefault((asset.subject, asset.run_id), []).append(asset)
+    for bank, lecture in bank_rows:
+        if not bank.bank or not (bank.validation or {}).get("pass") or not bank.bank.get("questions"):
+            continue
+        export = describe(db, lecture, bank, media_assets=bank_media.get((bank.subject, bank.run_id), []))
+        decks = [d for d in decks if (d["subject"], d["runId"], d["kind"]) != (lecture.subject, lecture.run_id, "main")]
+        decks.append({"subject": lecture.subject, "runId": lecture.run_id,
+                      "date": lecture.date.isoformat(), "slot": lecture.slot, "title": lecture.title,
+                      "kind": "main", "filename": export.filename, "exportId": export.revision,
+                      # Export is built on demand. Do not claim an exact file size before it exists.
+                      "sizeBytes": 0,
+                      "grabbed": (lecture.subject, lecture.run_id, export.grab_kind) in bank_grabs})
+    decks.sort(key=lambda d: (d["date"], d["slot"], d["kind"], d["subject"]))
+    return {"decks": decks}
 
 
 @router.get("/bundles/decks/{subject}/{run_id}/{kind}")
@@ -149,6 +183,7 @@ def read_deck_bytes(
     subject: str,
     run_id: str,
     kind: str,
+    export_id: str | None = Query(None, alias="exportId"),
     user: CurrentUser = Depends(require_approved_user),
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
@@ -161,6 +196,30 @@ def read_deck_bytes(
     """
     if kind not in DECK_KINDS:
         raise HTTPException(status_code=404, detail="모르는 갈래입니다.")
+    if kind == "main":
+        from app.bank_anki import ensure_export
+        from app.routes.bank import _bank_or_404, _usable
+
+        lecture = db.get(Lecture, (nfc(subject), run_id))
+        bank = db.get(QuizBank, (nfc(subject), run_id))
+        visible = bank is not None and (user.is_admin or bank.open_to_students)
+        usable = visible and bank.bank and (bank.validation or {}).get("pass") and bank.bank.get("questions")
+        if export_id or usable:
+            if lecture is None:
+                raise HTTPException(404, "강의를 찾을 수 없습니다.")
+            bank = _bank_or_404(db, lecture, user)
+            _usable(bank)
+            # Refuse a stale selection rather than merge a different revision silently.
+            from app.bank_anki import describe
+            if export_id and describe(db, lecture, bank).revision != export_id:
+                raise HTTPException(409, "문제은행이 바뀌었습니다. 페이지를 새로고침한 뒤 다시 받아 주세요.")
+            export = ensure_export(db, lecture, bank)
+            opened = storage_or_503().open_stream(export.key)
+            if opened is None:
+                raise HTTPException(404, "덱 파일이 저장소에 없습니다.")
+            chunks, size = opened
+            return StreamingResponse(chunks, media_type="application/octet-stream",
+                                     headers={"Content-Length": str(size), "Cache-Control": "private, max-age=0"})
     # 한 자리에 파일이 둘이면 늦게 올라온 것. **목록과 같은 것을 집어야 한다** —
     # 어긋나면 화면이 센 크기와 실제로 오는 바이트가 다르다.
     asset = db.scalars(
@@ -201,8 +260,24 @@ def put_grabs(
     keys = [
         (asset.subject, asset.run_id, asset.kind)
         for ref in refs
+        if ref.export_id is None
         if (asset := found.get((nfc(ref.subject), ref.run_id, DECK_KINDS[ref.kind]))) is not None
     ]
+    from app.bank_anki import describe
+    for ref in refs:
+        if ref.kind != "main":
+            continue
+        lecture = db.get(Lecture, (nfc(ref.subject), ref.run_id))
+        bank = db.get(QuizBank, (nfc(ref.subject), ref.run_id))
+        if not lecture or not bank or (not user.is_admin and not bank.open_to_students):
+            continue
+        if not bank.bank or not (bank.validation or {}).get("pass") or not bank.bank.get("questions"):
+            continue
+        # An old legacy bundle must never mark a new Quiz Bank export as downloaded.
+        keys = [key for key in keys if key != (bank.subject, bank.run_id, "main_apkg")]
+        export = describe(db, lecture, bank)
+        if ref.export_id == export.revision:
+            keys.append((bank.subject, bank.run_id, export.grab_kind))
     return {"recorded": record_grabs(db, user.id, keys)}
 
 

@@ -50,7 +50,7 @@ from app.models import (
     QuizBank,
     TimetableEvent,
 )
-from app.routes.common import lecture_or_404
+from app.routes.common import lecture_or_404, record_grabs, storage_or_503
 from app.study_engine.daily_queue import lecture_goal, select_daily_question
 from app.study_engine.planning import day_start
 from app.storage import ObjectStorage, StorageNotConfigured
@@ -329,6 +329,21 @@ def set_bank_feedback_status(payload: FeedbackStatusIn, user: CurrentUser = Depe
 
 
 # ---------------------------------------------------------------- 학생
+
+
+@router.get("/lectures/{subject}/{run_id}/bank/anki")
+def download_bank_anki(subject: str, run_id: str, user: CurrentUser = Depends(require_approved_user),
+                       db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Explicit offline export; use the same publication gate as web study."""
+    from app.bank_anki import ensure_export
+
+    lecture = lecture_or_404(db, subject, run_id)
+    row = _bank_or_404(db, lecture, user)
+    _usable(row)
+    export = ensure_export(db, lecture, row)
+    url = storage_or_503().presign_download(export.key, filename=export.filename)
+    record_grabs(db, user.id, [(lecture.subject, lecture.run_id, export.grab_kind)])
+    return {"url": url, "filename": export.filename}
 
 
 def _load_state(db: Session, user: CurrentUser, row: QuizBank) -> BankState:

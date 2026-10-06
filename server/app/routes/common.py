@@ -224,7 +224,9 @@ def record_grabs(db: Session, user_id: str, keys: list[tuple[str, str, str]]) ->
     서명 URL은 TTL 동안 재사용되므로 `count`는 내려받은 횟수가 아니라 **버튼을
     누른 횟수**다. 화면은 안 쓰고, 나중에 "다시 받으러 온 강의"를 볼 때를 위해 센다.
     """
-    wanted = [(subject, run_id, kind) for subject, run_id, kind in keys if kind in GRABBABLE_KINDS]
+    wanted = [(subject, run_id, kind) for subject, run_id, kind in keys
+              if kind in GRABBABLE_KINDS or (kind.startswith("bank_") and len(kind) == 21
+                                            and all(c in "0123456789abcdef" for c in kind[5:]))]
     if not wanted:
         return 0
     try:

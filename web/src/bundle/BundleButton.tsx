@@ -152,8 +152,8 @@ function detail(
 ): [main: string, size: string] {
   if (!total) return [compact ? "없음" : "아직 없습니다", ""];
   if (!fresh) return [compact ? "다 받음" : `${total}편 다시 받기`, ""];
-  if (compact) return [`${fresh < total ? `+${fresh}` : total}편`, shortSize(bytes)];
-  return ["한 파일로 받기", fileSize(bytes)];
+  if (compact) return [`${fresh < total ? `+${fresh}` : total}편`, bytes ? shortSize(bytes) : ""];
+  return ["한 파일로 받기", bytes ? fileSize(bytes) : ""];
 }
 
 /**

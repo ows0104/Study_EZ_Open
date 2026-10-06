@@ -216,11 +216,12 @@ export function GuidePage() {
 
       <section id="anki">
         <h2>Anki 덱 받기</h2>
-        <p>Pre-Quiz와 이전에 만들어 둔 Main-Quiz 덱을 받을 수 있습니다. 새 Main-Quiz는 웹에서 풉니다.</p>
+        <p>Pre-Quiz와 Quiz Bank 기반 Main-Quiz를 Anki 덱으로 받을 수 있습니다.</p>
         <ul>
           <li>
             패널의 <b>덱</b>을 누르면 <code>.apkg</code> 파일이 받아집니다. 그 파일을 더블클릭하거나 Anki의{" "}
-            <b>파일 → 가져오기</b>로 엽니다. 웹 문제에는 없는 그림 카드까지 들어 있습니다.
+            <b>파일 → 가져오기</b>로 엽니다. Main-Quiz의 <b>Anki 덱 받기</b>는 Quiz Bank 전체 문항과 정답,
+            근거 슬라이드를 담습니다. Anki와 웹의 학습 기록·복습 일정은 각각 관리됩니다.
           </li>
           <li>
             캘린더 맨 아랫줄의 모아받기 버튼은 <b>그날 덱을 한 파일로</b> 받습니다. 예습과 복습이 따로 있습니다.

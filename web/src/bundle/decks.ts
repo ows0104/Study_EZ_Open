@@ -23,6 +23,8 @@ export type BundleDeck = {
   kind: DeckKind;
   filename: string;
   sizeBytes: number;
+  /** Quiz Bank export revision. Legacy APKG files do not have this field. */
+  exportId?: string;
   /** 이 사람이 이 덱을 받아 갔는가. 「안 받은 것만」이 이 값을 읽는다. */
   grabbed: boolean;
 };
@@ -52,6 +54,10 @@ export function useBundleDecks() {
   }, []);
 
   useEffect(reload, [reload]);
+  useEffect(() => {
+    window.addEventListener("studyez:bank-downloaded", reload);
+    return () => window.removeEventListener("studyez:bank-downloaded", reload);
+  }, [reload]);
   return { decks, error, reload };
 }
 
@@ -84,7 +90,8 @@ export function tally(decks: BundleDeck[]): BundleTally {
   return {
     total: decks.length,
     fresh: fresh.length,
-    freshBytes: fresh.reduce((sum, deck) => sum + deck.sizeBytes, 0),
+    freshBytes: fresh.some((deck) => deck.exportId && !deck.sizeBytes)
+      ? 0 : fresh.reduce((sum, deck) => sum + deck.sizeBytes, 0),
   };
 }
 

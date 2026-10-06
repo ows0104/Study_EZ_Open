@@ -6,6 +6,7 @@ import { ConceptMap } from "./ConceptMap";
 import { DailyGoal } from "./DailyGoal";
 import { LectureMastery } from "../lecture/LectureMastery";
 import { daysLabel, DIRECTION_LABEL } from "./labels";
+import { BankDownload } from "./BankDownload";
 
 export function BankStart({ base, info, finished, lecture, onStarted }: {
   base: string;
@@ -40,6 +41,7 @@ export function BankStart({ base, info, finished, lecture, onStarted }: {
       <button className="is-quiet" disabled={busy} onClick={() => void start()}>
         {busy ? "여는 중…" : "이 강의 더 공부하기"}
       </button>
+      <BankDownload lecture={lecture} count={info.summary.questionCount} />
       {error ? <p className="notice is-error">{error}</p> : null}
     </div>
   );
@@ -51,6 +53,7 @@ export function BankStart({ base, info, finished, lecture, onStarted }: {
         <span>{daysLabel(info.examDate)} · {info.examDate}</span>
       </p>
       <h2>Main-Quiz</h2>
+      <BankDownload lecture={lecture} count={info.summary.questionCount} />
       <DailyGoal plan={info.lectureGoal} />
       <p className="bank-note">
         {info.summary.questionCount}문항 · 개념 {info.summary.conceptCount}개. 다음 문항은 지금의 숙련도와 시험까지

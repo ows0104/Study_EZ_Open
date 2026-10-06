@@ -46,10 +46,10 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
  * 다른 출처(R2)에서는 그 헤더가 대신 일을 한다.
  */
 export async function downloadSignedFile(path: string, filename: string): Promise<void> {
-  const { url } = await api<{ url: string }>(path);
+  const { url, filename: signedName } = await api<{ url: string; filename?: string }>(path);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = filename;
+  anchor.download = signedName || filename;
   anchor.rel = "noreferrer";
   document.body.append(anchor);
   anchor.click();

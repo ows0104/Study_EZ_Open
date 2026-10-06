@@ -14,6 +14,7 @@ import type { LectureDetail, LectureRef } from "../types/lectures";
 import type { PrequizJob, RunnerBeat } from "../types/jobs";
 import { useMe } from "../useMe";
 import { BANK_PROMPT_VERSION, renderBankPrompt } from "./prompt";
+import { BankDownload } from "./BankDownload";
 
 /**
  * 캘린더 패널의 Quiz Bank 칸(2026-10-04).
@@ -52,15 +53,18 @@ export function BankPanel({ lecture, detail }: { lecture: Pick<LectureRef, "subj
 
 function StudyCard({ lecture, bank }: { lecture: Pick<LectureRef, "subject" | "runId">; bank: BankSummary }) {
   return (
-    <ActionCard
-      shape="is-key"
-      hit={
-        <a className="panel-action-hit" href={bankHref(lecture)} target={bankWindow(lecture)}>
-          <strong>공부하기</strong>
-          <small>{bank.questionCount}문항 · 개념 {bank.conceptCount}개</small>
-        </a>
-      }
-    />
+    <>
+      <ActionCard
+        shape="is-key"
+        hit={
+          <a className="panel-action-hit" href={bankHref(lecture)} target={bankWindow(lecture)}>
+            <strong>공부하기</strong>
+            <small>{bank.questionCount}문항 · 개념 {bank.conceptCount}개</small>
+          </a>
+        }
+      />
+      <BankDownload lecture={lecture} count={bank.questionCount} />
+    </>
   );
 }
 
