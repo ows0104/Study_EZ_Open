@@ -318,7 +318,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // 물은 것이 링크만 있으면 열리게 되고, 관리자가 개인 예습을 하는 순간
         // 그 공유가 반 전체의 기본 링크를 덮는다.
         if (share && watch.mode !== "shared") return;
-        const kind = share ? `${provider}_share` : provider;
+        const kind = share ? `${provider}_share` : watch.mode === "review" ? `${provider}_review` : provider;
         await chrome.storage.session.set({
           [pendingKey(watch.webappTabId, watch.lectureId, kind)]: { lectureId: watch.lectureId, kind, url },
         });
@@ -410,7 +410,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   // 안 주면 개인으로 본다. 공유는 명시적으로 시킬 때만 만든다.
   // `bank` 는 Quiz Bank — 답 본문을 읽는 것이 ChatGPT 쪽(`chatgpt-share.js`)에만 있다.
-  const mode = ["shared", "bank"].includes(payload.mode) ? payload.mode : "personal";
+  const mode = ["shared", "bank", "review"].includes(payload.mode) ? payload.mode : "personal";
   if (mode === "bank" && payload.provider !== "chatgpt") {
     sendResponse({ ok: false, error: "Quiz Bank는 ChatGPT로만 만듭니다." });
     return false;

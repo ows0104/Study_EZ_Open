@@ -65,6 +65,7 @@ from app.models.previews import (
     Preview,
     PreviewOpen,
     UserPreview,
+    UserReview,
 )
 from app.models.quiz import (
     CARD_ACTIONS,
@@ -107,7 +108,7 @@ __all__ = [
     "JOB_QUEUED", "JOB_RUNNING", "PrequizJob", "RunnerBeat", "ASSET_KINDS", "CHECKLIST_ITEMS",
     "GRABBABLE_KINDS", "SLIDE_KINDS", "Asset", "AssetGrab", "CourseAlias", "Lecture",
     "LectureWaive", "RunMeta", "TimetableEvent", "PREVIEW_OPEN_KINDS", "PREVIEW_OPEN_MINE",
-    "PREVIEW_OPEN_SHARE", "Preview", "PreviewOpen", "UserPreview", "CARD_ACTIONS",
+    "PREVIEW_OPEN_SHARE", "Preview", "PreviewOpen", "UserPreview", "UserReview", "CARD_ACTIONS",
     "CARD_DELETE", "CARD_EDIT", "CARD_OK", "CardEdit", "MainAttempt", "MainItem",
     "MainReviewLog", "PreItem", "PreReviewLog", "QuizAttempt", "SPOTTER_ALERT_MIN",
     "SPOTTER_COMMENT_MAX", "SPOTTER_RECORD_KEEP", "SPOTTER_REPORT_KINDS", "SPOTTER_REPORT_OPEN",

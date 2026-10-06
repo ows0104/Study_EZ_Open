@@ -49,16 +49,19 @@ export function requestPreview(input: {
    *
    * `bank` 는 Quiz Bank(관리자)다. 링크 대신 끝난 답의 본문이 돌아온다(`bank/bankBridge.ts`).
    */
-  mode: "shared" | "personal" | "bank";
+  mode: "shared" | "personal" | "review" | "bank";
   prompt: string;
   files: PreviewFile[];
-  /** 수동입력은 첨부·입력까지만, 자동입력은 전송까지 한다. */
+  /** 기본 링크의 자동전송만 true. 개인 링크와 문제 생성은 확인 후 직접 전송한다. */
   autoSend: boolean;
 }) {
   const version = document.documentElement.getAttribute(READY_ATTRIBUTE) || "";
   const parts = version.split(".").map(Number);
+  if (input.mode === "review" && !(parts[0] > 1 || (parts[0] === 1 && (parts[1] > 3 || (parts[1] === 3 && parts[2] >= 5))))) {
+    return Promise.reject(new Error("복습 개인 링크를 만들려면 브리지 1.3.5 이상으로 업데이트하고 확장과 이 페이지를 새로고침해 주세요."));
+  }
   if (!(parts[0] > 1 || (parts[0] === 1 && (parts[1] > 3 || (parts[1] === 3 && parts[2] >= 3))))) {
-    return Promise.reject(new Error("수동·자동입력을 선택하려면 예습 브리지 1.3.3 이상으로 업데이트하고 확장과 이 페이지를 새로고침해 주세요."));
+    return Promise.reject(new Error("자료를 넣으려면 예습 브리지 1.3.3 이상으로 업데이트하고 확장과 이 페이지를 새로고침해 주세요."));
   }
   return new Promise<void>((resolve, reject) => {
     const timeout = window.setTimeout(() => {

@@ -1,3 +1,11 @@
+.mastery-page {
+  max-width: 960px;
+  margin: 0 auto;
+}
+.mastery-page > h1 {
+  margin: 0 0 18px;
+  font-size: 22px;
+}
 .mastery-board, .lecture-mastery {
   border: 1px solid var(--line);
   border-radius: 10px;

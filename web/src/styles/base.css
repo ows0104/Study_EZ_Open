@@ -290,10 +290,14 @@ input:focus-visible {
 
 .app-bar nav {
   display: flex;
+  min-width: 0;
   gap: 2px;
+  overflow-x: auto;
 }
 
 .app-bar nav a {
+  flex-shrink: 0;
+  white-space: nowrap;
   padding: 5px 9px;
   border-radius: var(--r-1);
   color: var(--ink-3);

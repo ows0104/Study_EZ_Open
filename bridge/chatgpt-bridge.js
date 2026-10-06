@@ -386,7 +386,7 @@ async function initialize() {
   }
   if (!payload) return;
 
-  const mode = ["shared", "bank"].includes(payload.mode) ? payload.mode : "personal";
+  const mode = ["shared", "bank", "review"].includes(payload.mode) ? payload.mode : "personal";
   const provider = ["chatgpt", "gemini", "claude"].includes(payload.provider) ? payload.provider : "chatgpt";
   payload.provider = provider;
   payload.mode = mode;

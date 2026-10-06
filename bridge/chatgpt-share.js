@@ -450,7 +450,7 @@ function watchForCompletedTurns() {
 
 function startWatching(lectureId, mode) {
   if (watch) return;
-  watch = { lectureId, mode: ["shared", "bank"].includes(mode) ? mode : "personal" };
+  watch = { lectureId, mode: ["shared", "bank", "review"].includes(mode) ? mode : "personal" };
   console.info(LOG, `이 대화의 링크를 자동으로 저장합니다 (${watch.mode}).`);
   watchForCompletedTurns();
 }

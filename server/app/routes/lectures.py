@@ -32,6 +32,7 @@ from app.models import (
     RunnerBeat,
     TimetableEvent,
     UserPreview,
+    UserReview,
 )
 from app.preview_links import conversation_url as valid_conversation_url
 from app.preview_links import provider as valid_provider
@@ -145,6 +146,7 @@ def read_lecture(
     ).all()
     preview = db.get(Preview, (lecture.subject, lecture.run_id))
     my_preview = db.get(UserPreview, (user.id, lecture.subject, lecture.run_id))
+    my_review = db.get(UserReview, (user.id, lecture.subject, lecture.run_id))
     pre_quiz = _quiz_payload(db, user.id, lecture, prequiz.PRE)
     main_quiz = _quiz_payload(db, user.id, lecture, prequiz.MAIN)
 
@@ -182,6 +184,11 @@ def read_lecture(
         "myPreview": (
             {"provider": my_preview.provider, "conversationUrl": my_preview.conversation_url}
             if my_preview and my_preview.conversation_url
+            else None
+        ),
+        "myReview": (
+            {"provider": my_review.provider, "conversationUrl": my_review.conversation_url}
+            if my_review and my_review.conversation_url
             else None
         ),
         "prequiz": pre_quiz,
@@ -367,6 +374,32 @@ def put_my_preview(
     mine = db.get(UserPreview, (user.id, lecture.subject, lecture.run_id))
     if mine is None:
         mine = UserPreview(user_id=user.id, subject=lecture.subject, run_id=lecture.run_id)
+        db.add(mine)
+    mine.provider = selected_provider
+    mine.conversation_url = payload.conversation_url.strip()
+    db.commit()
+    return {"provider": mine.provider, "conversationUrl": mine.conversation_url}
+
+
+@router.put("/lectures/{subject}/{run_id}/my-review")
+def put_my_review(
+    subject: str,
+    run_id: str,
+    payload: MyPreviewIn,
+    user: CurrentUser = Depends(require_approved_user),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    """로그인한 본인의 복습 링크를 예습·공유 링크와 별도로 저장한다."""
+    lecture = lecture_or_404(db, subject, run_id)
+    try:
+        selected_provider = valid_provider(payload.provider)
+    except ValueError as cause:
+        raise HTTPException(status_code=422, detail=str(cause)) from cause
+    if not valid_conversation_url(payload.conversation_url, selected_provider):
+        raise HTTPException(status_code=422, detail="선택한 AI의 개인 대화 주소가 아닙니다.")
+    mine = db.get(UserReview, (user.id, lecture.subject, lecture.run_id))
+    if mine is None:
+        mine = UserReview(user_id=user.id, subject=lecture.subject, run_id=lecture.run_id)
         db.add(mine)
     mine.provider = selected_provider
     mine.conversation_url = payload.conversation_url.strip()

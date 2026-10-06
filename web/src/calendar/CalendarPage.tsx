@@ -10,8 +10,6 @@ import { useMe } from "../useMe";
 import { CalendarGrid } from "./CalendarGrid";
 import { EventChip } from "./EventChip";
 import { EventPanel } from "./EventPanel";
-import { MasteryBoard } from "./MasteryBoard";
-import { StudyPlanBoard } from "./StudyPlanBoard";
 import {
   addDays,
   formatWeekTitle,
@@ -62,7 +60,8 @@ export function CalendarPage() {
       if (!subject || !runId) return;
       const path = `${encodeURIComponent(subject)}/${encodeURIComponent(runId)}`;
       const shared = kind.endsWith("_share");
-      const provider = (shared ? kind.slice(0, -6) : kind) as PreviewProvider;
+      const review = kind.endsWith("_review");
+      const provider = (shared ? kind.slice(0, -6) : review ? kind.slice(0, -7) : kind) as PreviewProvider;
       if (!previewProviders.includes(provider)) return;
       if (shared) {
         await api(`/api/admin/lectures/${path}/preview`, {
@@ -70,7 +69,7 @@ export function CalendarPage() {
           body: JSON.stringify({ provider, shareUrl: url }),
         });
       } else {
-        await api(`/api/lectures/${path}/my-preview`, {
+        await api(`/api/lectures/${path}/${review ? "my-review" : "my-preview"}`, {
           method: "PUT",
           body: JSON.stringify({ provider, conversationUrl: url }),
         });
@@ -280,12 +279,6 @@ export function CalendarPage() {
         />
       ) : null}
 
-      {/* 학습 현황은 캘린더의 고정 높이 밖에 둔다. 시험·강의가 늘어나도
-          첫 화면의 격자 높이를 빼앗지 않고 아래로 스크롤해서 볼 수 있다. */}
-      <div className="calendar-overview">
-        <StudyPlanBoard />
-        <MasteryBoard events={events} />
-      </div>
     </div>
   );
 }

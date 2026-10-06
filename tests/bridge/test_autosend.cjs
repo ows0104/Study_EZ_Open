@@ -8,7 +8,7 @@ const source = fs.readFileSync(path.join(__dirname, '../../bridge/chatgpt-bridge
 const context = vm.createContext({ setTimeout, console });
 vm.runInContext(source.replace('void initialize();', ''), context);
 
-for (const mode of ['personal', 'shared', 'bank']) {
+for (const mode of ['personal', 'shared', 'bank', 'review']) {
   test(`${mode}: manual input never submits, including requests without a flag`, async () => {
     for (const autoSend of [false, undefined]) {
       await context.finishInput({mode, autoSend}, {}, () => {}, async () => assert.fail('manual submitted'));

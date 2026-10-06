@@ -95,7 +95,7 @@ test('web bridge retains live marker on unrelated failure and supports success',
   s.runtime.sendMessage = () => { throw new Error('Temporary failure'); };
   s.request();
   assert.equal(s.posted[1].error, 'Temporary failure');
-  assert.equal(s.attributes.get(s.protocol.READY_ATTRIBUTE), '1.3.4');
+  assert.equal(s.attributes.get(s.protocol.READY_ATTRIBUTE), s.protocol.VERSION);
 });
 
 test('web bridge rejects foreign origins and malformed payloads', () => {
@@ -284,4 +284,48 @@ test('invalidation stops share observer/timer and initialization handles synchro
   other.runtime.sendMessage = () => { throw new Error('Extension context invalidated.'); };
   await assert.doesNotReject(other.context.initialize());
   assert.equal(vm.runInContext('contextInvalidated', other.context), true);
+});
+
+test('review links keep their own pending kind and never publish a shared link', async () => {
+  const stored = {};
+  const delivered = [];
+  let receive;
+  const context = vm.createContext({ URL, console, importScripts() {}, chrome: {
+    runtime: { onMessage: { addListener(fn) { receive = fn; } }, onConnect: { addListener() {} } },
+    storage: { session: {
+      async get(key) { return key === null ? { ...stored } : { [key]: stored[key] }; },
+      async set(values) { Object.assign(stored, values); },
+      async remove(key) { delete stored[key]; },
+    } },
+    tabs: {
+      onUpdated: { addListener() {} }, onRemoved: { addListener() {} }, onActivated: { addListener() {} },
+      async create() { return { id: 10 }; },
+      async sendMessage(tab, message) { delivered.push({ tab, ...message }); },
+    },
+  } });
+  vm.runInContext(read('protocol.js'), context);
+  vm.runInContext(read('background.js'), context);
+  const protocol = context.STUDYEZ_PROTOCOL;
+  const request = { requestId: 'review', lectureId: '약리학/261006_01', provider: 'chatgpt',
+    mode: 'review', prompt: 'Review today', autoSend: false,
+    files: [{ filename: 'today.pdf', downloadUrl: 'http://localhost:8000/api/local-storage/lectures/today.pdf' }] };
+  const response = await new Promise(resolve => receive({ type: protocol.MESSAGES.openPreview, payload: request },
+    { tab: { id: 1, url: 'http://localhost:5173' } }, resolve));
+  assert.equal(response.ok, true);
+  assert.equal(stored['studyez-watch:10'].mode, 'review');
+  const sender = { tab: { id: 10, url: 'https://chatgpt.com/c/review' } };
+  receive({ type: 'STUDYEZ_CONVERSATION_LINK', lectureId: 'wrong', url: sender.tab.url }, sender, () => {});
+  await new Promise(resolve => setImmediate(resolve));
+  const link = delivered.find(message => message.type === protocol.MESSAGES.linkReady);
+  assert.equal(link.kind, 'chatgpt_review');
+  assert.equal(link.lectureId, request.lectureId);
+  assert.equal(stored[`studyez-pending:1:${request.lectureId}:chatgpt`], undefined);
+  const count = delivered.length;
+  receive({ type: 'STUDYEZ_SHARE_LINK', url: 'https://chatgpt.com/share/review' }, sender, () => {});
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(delivered.length, count);
+  receive({ type: protocol.MESSAGES.linkSaved, lectureId: request.lectureId, kind: 'chatgpt_review' },
+    { tab: { id: 1, url: 'http://localhost:5173' } }, () => {});
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(stored[`studyez-pending:1:${request.lectureId}:chatgpt_review`], undefined);
 });

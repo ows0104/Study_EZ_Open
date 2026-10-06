@@ -52,17 +52,6 @@
   flex-direction: column;
 }
 
-.calendar-overview {
-  display: grid;
-  grid-column: 1 / -1;
-  min-width: 0;
-  gap: 12px;
-}
-
-.calendar-overview > .mastery-board {
-  margin: 0;
-}
-
 /* 좁아진 캘린더. 시각 칸만 줄인다 — 요일 칸은 아래에서 이미 바닥이 없다. */
 .calendar-page.is-split .week-calendar {
   grid-template-columns: var(--time-col-split) repeat(5, minmax(0, 1fr));
@@ -1086,6 +1075,31 @@
 
 .panel-group.is-main {
   --fam: var(--fam-main);
+}
+
+.panel-group.is-main .panel-action.is-key strong {
+  color: var(--fam-main);
+}
+
+/* 기존 카드와 덱은 회색으로 구분한다. */
+.legacy-main {
+  color: var(--ink-3);
+}
+
+.legacy-main.panel-hint {
+  color: var(--ink-3);
+  background: var(--surface-2);
+}
+
+.legacy-main a,
+.legacy-main button,
+.legacy-main .resource strong {
+  color: var(--ink-2);
+}
+
+.legacy-main .resource {
+  border-color: var(--line);
+  background: var(--surface-2);
 }
 
 .panel-group.is-bank {

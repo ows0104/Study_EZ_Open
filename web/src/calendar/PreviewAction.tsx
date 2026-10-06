@@ -228,22 +228,14 @@ export function PreviewAction({
   // 작년 필기가 없으면 새로 만들 수는 없다. 다만 이미 만들어진 링크는 그대로
   // 열려야 하므로 여기서 통째로 돌려보내지 않는다.
   const canMake = Boolean(notesPrev);
-  function inputTools(mode: "shared" | "personal") {
-    if (!canMake || (mode === "shared" && !isAdmin)) return null;
-    return <>
-      {([false, true] as const).map((autoSend) => (
-        <PanelTool key={String(autoSend)} icon="↗" label={autoSend ? "자동입력" : "수동입력"}
-          hint={(mode === "shared" ? "기본" : "개인") + " 링크 " + (autoSend ? "자동입력 · 첨부 후 자동 전송" : "수동입력 · 첨부 후 직접 전송")}
-          disabled={Boolean(busy)}
-          onClick={() => {
-            if (mode === "shared" && detail.preview?.shareUrl) setAskingRemake(autoSend);
-            else void start(mode, autoSend);
-          }} />
-      ))}
-    </>;
-  }
-  const sharedTools = inputTools("shared");
-  const personalTools = inputTools("personal");
+  const sharedTools = canMake && isAdmin ? (
+    <PanelTool icon="↗" label="자동전송" hint="기본 링크 생성 · 첨부 후 자동 전송 (관리자)"
+      disabled={Boolean(busy)}
+      onClick={() => {
+        if (detail.preview?.shareUrl) setAskingRemake(true);
+        else void start("shared", true);
+      }} />
+  ) : null;
 
   /* **프롬프트 고치기는 카드 밖, 갈래의 오른쪽 아래에 선다(2026-08-31 관리자
      지시).** 개인 링크에만 듣는 것이라 그 카드 안에 넣어 두었는데, 카드 안은
@@ -292,16 +284,15 @@ export function PreviewAction({
 
   /* 개인 링크 — 사람마다 하나. 프롬프트도 자기 것으로 묻는다. */
   const personal = detail.myPreview?.conversationUrl ? (
-    <PersonalOpen url={detail.myPreview.conversationUrl} base={base} tools={personalTools} />
+    <PersonalOpen url={detail.myPreview.conversationUrl} base={base} />
   ) : canMake ? (
     <ActionCard
       shape="is-key is-faint"
       hit={
-        <span className="panel-action-hit">
+        <button className="panel-action-hit" disabled={Boolean(busy)} onClick={() => void start("personal", false)}>
           <Body name="개인 링크" note={busy === "personal" ? "여는 중…" : "만들기"} />
-        </span>
+        </button>
       }
-      tools={personalTools}
     />
   ) : (
     <Empty name="개인 링크" note="작년 필기 대기" />
@@ -322,7 +313,7 @@ export function PreviewAction({
 
       {canMake ? <p className="panel-hint">
         {detail.files.some((file) => file.kind === "jokbo") ? "작년 필기 + 올해 강의 족보" : "작년 필기만 · 올해 강의 족보가 아직 없습니다"}
-        {" · 수동입력은 직접 전송, 자동입력은 전송까지 진행합니다."}
+        {" · 개인 링크는 자료와 프롬프트를 확인한 뒤 직접 전송합니다."}
       </p> : null}
       {askingRemake !== null ? (
         <RemakeConfirm

@@ -29,7 +29,8 @@ class ExtensionProviderTests(unittest.TestCase):
         web = (ROOT / "web" / "src" / "bridge" / "protocol.ts").read_text(encoding="utf-8")
         extension = (EXTENSION / "protocol.js").read_text(encoding="utf-8")
         expected = {
-            "chatgpt", "chatgpt_share", "gemini", "gemini_share", "claude", "claude_share"
+            "chatgpt", "chatgpt_share", "gemini", "gemini_share", "claude", "claude_share",
+            "chatgpt_review", "gemini_review", "claude_review",
         }
         web_block = re.search(r"export const LINK_KINDS = \[(.*?)\] as const", web, re.S)
         extension_block = re.search(r"LINK_KINDS: \[(.*?)\]", extension, re.S)

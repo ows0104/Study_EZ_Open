@@ -149,7 +149,7 @@
 
   function startWatching(lectureId, watchedProvider, mode) {
     if (watch || watchedProvider !== provider) return;
-    watch = { lectureId, mode: mode === "shared" ? "shared" : "personal" };
+    watch = { lectureId, mode: ["shared", "review"].includes(mode) ? mode : "personal" };
     new MutationObserver(() => { dirty = true; }).observe(document.body, { childList: true, subtree: true });
     window.setInterval(async () => {
       if (!dirty || publishing || document.hidden) return;

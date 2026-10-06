@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { api, downloadSignedFile, openSignedFile } from "../api";
 import { useBankLink } from "../bank/bankBridge";
 import { BankPanel } from "../bank/BankPanel";
+import { ReviewAction } from "../calendar/ReviewAction";
 import { bumpPreviewVersion, usePreviewLink, watchSharedLink } from "../bridge/previewBridge";
 import { legacyMainHref, quizHref, quizWindow } from "../links";
 import { previewProviderLabels, previewProviders, type LectureDetail, type LectureFile, type PreviewProvider } from "../types/lectures";
@@ -44,10 +45,11 @@ export function LecturePage() {
       const [linkSubject, linkRunId] = lectureId.split("/");
       if (!linkSubject || !linkRunId) return;
       const shared = kind.endsWith("_share");
-      const provider = (shared ? kind.slice(0, -6) : kind) as PreviewProvider;
+      const review = kind.endsWith("_review");
+      const provider = (shared ? kind.slice(0, -6) : review ? kind.slice(0, -7) : kind) as PreviewProvider;
       if (!previewProviders.includes(provider)) return;
       const path = `${encodeURIComponent(linkSubject)}/${encodeURIComponent(linkRunId)}`;
-      await api(shared ? `/api/admin/lectures/${path}/preview` : `/api/lectures/${path}/my-preview`, {
+      await api(shared ? `/api/admin/lectures/${path}/preview` : `/api/lectures/${path}/${review ? "my-review" : "my-preview"}`, {
         method: "PUT",
         body: JSON.stringify(shared ? { provider, shareUrl: url } : { provider, conversationUrl: url }),
       });
@@ -158,9 +160,11 @@ export function LecturePage() {
       <section className="lecture-section">
         <h2>강의 후</h2>
         {fileButton("notes_current", "올해 필기")}
+        <ReviewAction lecture={{ subject, runId }} detail={detail}
+          base={`/api/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}`} onError={setError} />
         <BankPanel lecture={{ subject, runId }} detail={detail} />
         {detail.mainquiz || detail.files.some((file) => file.kind === "main_apkg") ? (
-          <details>
+          <details className="legacy-main">
             <summary>기존 Main-Quiz 자료</summary>
             {detail.mainquiz ? (
               <a className="resource" href={legacyMainHref({ subject, runId })} target="_blank" rel="noreferrer">

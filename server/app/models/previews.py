@@ -58,6 +58,25 @@ class UserPreview(Base):
     )
 
 
+class UserReview(Base):
+    """오늘 강의록으로 만든 개인 복습 대화. 예습 링크와 별도로 소유자에게만 제공한다."""
+
+    __tablename__ = "user_review"
+
+    user_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    subject: Mapped[str] = mapped_column(Text, primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    provider: Mapped[str] = mapped_column(String(32), nullable=False, default="chatgpt")
+    conversation_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["subject", "run_id"], ["lecture.subject", "lecture.run_id"], ondelete="CASCADE"
+        ),
+    )
+
+
 # 예습 링크는 둘이다. **같은 표에 갈래로 둔다** — 「기본을 읽는 사람과 자기
 # 대화를 쓰는 사람이 갈리나」가 이 둘을 나란히 놓아야만 보인다.
 PREVIEW_OPEN_SHARE = "share"  # 반 전체가 읽는 기본 링크

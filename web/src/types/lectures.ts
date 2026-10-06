@@ -115,6 +115,8 @@ export type LectureDetail = {
   preview: { provider: PreviewProvider; shareUrl: string; conversationUrl?: string } | null;
   /** 내 개인 예습 대화. 만든 AI 계정에서만 열리므로 남의 것은 안 내려온다. */
   myPreview: { provider: PreviewProvider; conversationUrl: string } | null;
+  /** 올해 강의록으로 만든 내 복습 대화. 개인 예습과 별도로 저장한다. */
+  myReview?: { provider: PreviewProvider; conversationUrl: string } | null;
   prequiz: QuizProgress | null;
   /**
    * 복습 웹 풀이. **2026-08-31에 생겼고 그 전에 구운 편에는 없다.**

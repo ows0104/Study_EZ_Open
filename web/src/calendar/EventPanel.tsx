@@ -11,6 +11,7 @@ import { DeckSlot } from "./DeckSlot";
 import { cardsHash } from "../lecture/LectureCards";
 import { ActionCard, fileSize, PanelGroup } from "./panelShared";
 import { PreviewAction } from "./PreviewAction";
+import { ReviewAction } from "./ReviewAction";
 import { LectureMastery } from "../lecture/LectureMastery";
 
 /**
@@ -96,7 +97,6 @@ export function EventPanel({
         ) : null}
 
         {error ? <p className="notice is-error">{error}</p> : null}
-        {detail ? <LectureMastery value={detail.mastery} /> : null}
 
         {lecture ? (
           detail ? (
@@ -117,6 +117,8 @@ export function EventPanel({
             <small>예습·퀴즈가 준비되면 이 칸에 점이 붙습니다.</small>
           </p>
         )}
+
+        {detail ? <LectureMastery value={detail.mastery} /> : null}
 
         {/* 여기부터는 읽을 것이지 누를 것이 아니다. */}
         <dl className="event-panel-facts">
@@ -346,9 +348,10 @@ function KeyActions({
         />
       </PanelGroup>
 
+      <ReviewAction lecture={lecture} detail={detail} base={base} onError={setError} />
       <BankPanel lecture={lecture} detail={detail} />
       {detail.mainquiz || fileOf("main_apkg") ? (
-        <details className="panel-hint">
+        <details className="panel-hint legacy-main">
           <summary>기존 Main-Quiz 자료</summary>
           {detail.mainquiz ? <a href={legacyMainHref(lecture)} target="_blank" rel="noreferrer">기존 카드 풀기</a> : null}
           {fileOf("main_apkg") ? (

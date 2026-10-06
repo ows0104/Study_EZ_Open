@@ -26,6 +26,7 @@ const PrivacyPage = lazy(() => import("./PrivacyPage").then((m) => ({ default: m
 // 공지·이용방법(2026-10-04). 둘 다 가끔 여는 글이라 첫 번들에 안 싣는다.
 const NoticesPage = lazy(() => import("./notices/NoticesPage").then((m) => ({ default: m.NoticesPage })));
 const GuidePage = lazy(() => import("./notices/GuidePage").then((m) => ({ default: m.GuidePage })));
+const MasteryPage = lazy(() => import("./calendar/MasteryPage").then((m) => ({ default: m.MasteryPage })));
 
 /** 고른 탭에 표시를 남긴다. NavLink 기본값(`active`)은 이 앱의 이름이 아니다. */
 const tabClass = ({ isActive }: { isActive: boolean }) => (isActive ? "is-active" : "");
@@ -108,6 +109,9 @@ function Shell() {
             Study_EZ
           </Link>
           <nav>
+            <NavLink to="/mastery" className={tabClass}>
+              학습도
+            </NavLink>
             <NavLink to="/notices" className={tabClass}>
               공지사항
               {unseenNotice ? <i className="nav-dot" aria-label="새 공지" /> : null}
@@ -122,7 +126,7 @@ function Shell() {
             ) : null}
           </nav>
           <span className="app-user">
-            {/* 폰에서는 이메일을 접는다 — 탭이 셋이 되면서 375px 에 다 안 들어간다.
+            {/* 폰에서는 이메일을 접는다 — 탭과 계정 버튼에 자리를 내준다.
                 누구로 들어와 있는지는 로그아웃 버튼의 title 이 말한다. */}
             <span className="app-email">{me.email || email}</span>
             <button className="is-quiet" onClick={signOut} title={`${me.email || email} 로그아웃`}>
@@ -139,6 +143,7 @@ function Shell() {
         <Suspense fallback={Loading}>
           <Routes>
             <Route path="/" element={<CalendarPage />} />
+            <Route path="/mastery" element={<MasteryPage />} />
             <Route path="/lectures/:subject/:runId" element={<LecturePage />} />
             {/* 갈래마다 주소가 따로다. 창 이름도 갈래를 물고 있어서
                 (`links.quizWindow`) 예습 창과 복습 창이 서로를 안 밀어낸다. */}
