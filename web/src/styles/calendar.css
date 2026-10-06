@@ -1371,7 +1371,7 @@ button.panel-action-hit:active:not(:disabled) {
 }
 
 .panel-action.is-key.is-review strong {
-  color: var(--fam);
+  color: var(--ink);
 }
 
 /* 한 줄로만 적는 자리(일감의 진행). 과녁이 없으므로 격자도 없다. */
