@@ -1364,7 +1364,7 @@ button.panel-action-hit:active:not(:disabled) {
   font-weight: 600;
 }
 
-/* 올해 필기가 있는 복습 개인링크는 생성 전부터 보라색을 유지한다. */
+/* 복습 개인링크는 생성 전과 자료 대기 상태에도 보라색을 유지한다. */
 .panel-action.is-key.is-review {
   border-color: var(--fam-line);
   background: var(--fam-soft);
