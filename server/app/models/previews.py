@@ -5,12 +5,14 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import (
+    DDL,
     DateTime,
     ForeignKeyConstraint,
     Index,
     Integer,
     String,
     Text,
+    event,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -75,6 +77,15 @@ class UserReview(Base):
             ["subject", "run_id"], ["lecture.subject", "lecture.run_id"], ondelete="CASCADE"
         ),
     )
+
+
+# Supabase의 공개 API에서는 직접 읽지 못한다. 서버의 DB 역할은 RLS를 우회하고,
+# HTTP 경로에서 로그인한 소유자를 확인한다. SQLite 로컬 검사에는 적용하지 않는다.
+event.listen(
+    UserReview.__table__,
+    "after_create",
+    DDL("ALTER TABLE user_review ENABLE ROW LEVEL SECURITY").execute_if(dialect="postgresql"),
+)
 
 
 # 예습 링크는 둘이다. **같은 표에 갈래로 둔다** — 「기본을 읽는 사람과 자기
