@@ -1,4 +1,4 @@
-"""실제 남은 학습 단위, 재학습 대기, 날짜 경계, 동일 개념 변형문항 검증."""
+"""오늘 한 번 평가한 단위는 완료. 등급·추가 학습·날짜 경계·변형문항 검증."""
 
 import copy
 from datetime import datetime
@@ -30,10 +30,11 @@ def main():
     assert select_daily_question(bank, state, EXAM, NOW)["question"]["question_id"] == "Q2"
     state = record_review(bank, state, "Q2", "Again", NOW + 1000)
     goal = lecture_goal(bank, state, "검증", NOW + 1000)
-    assert goal["completed"] == 1 and goal["remaining"] == goal["relearningRemaining"] == 1
-    assert goal["firstPassSeen"] == 2 and not goal["met"]  # 1회 확인과 오늘 완료는 다르다.
+    assert goal["completed"] == 2 and goal["remaining"] == goal["relearningRemaining"] == 0
+    assert goal["firstPassSeen"] == 2 and goal["met"]
+    assert goal["waiting"] == 0 and goal["retryAt"] is None
     assert select_daily_question(bank, state, EXAM, NOW + 1001)["question"] is None
-    assert select_daily_question(bank, state, EXAM, NOW + 61_000)["question"]["question_id"] == "Q2"
+    assert select_daily_question(bank, state, EXAM, NOW + 61_000)["question"] is None
     state = record_review(bank, state, "Q2", "Hard", NOW + 61_000)
     assert select_daily_question(bank, state, EXAM, NOW + 61_001)["question"] is None
     state = record_review(bank, state, "Q2", "Good", NOW + 361_000)
@@ -46,9 +47,11 @@ def main():
     fresh = lecture_goal(bank, state, "검증", tomorrow)
     assert fresh["reviewRemaining"] == 2 and fresh["newRemaining"] == fresh["reviewedToday"] == 0
     assert select_daily_question(bank, state, EXAM, tomorrow)["question"] is not None
-    # 완료한 뒤 추가 학습에서 틀리면 해당 단위가 다시 남는다.
+    # 완료한 뒤 추가 학습에서 틀려도 달성한 할당량을 취소하지 않는다.
     failed_extra = record_review(bank, state, "Q1", "Again", NOW + 400_000)
-    assert lecture_goal(bank, failed_extra, "검증", NOW + 400_000)["remaining"] == 1
+    assert lecture_goal(bank, failed_extra, "검증", NOW + 400_000)["remaining"] == 0
+    assert lecture_goal(bank, failed_extra, "검증", NOW + 400_000)["met"]
+    assert lecture_goal(bank, failed_extra, "검증", tomorrow)["reviewRemaining"] == 2
     # 미래 복습은 오늘 분량에 포함하지 않는다. 시험일/숙련도는 완료 여부를 바꾸지 않는다.
     easy = record_review(bank, empty_state(), "Q1", "Easy", NOW - DAY_MS)
     assert lecture_goal(example_bank(), easy, "검증", NOW)["total"] == 0
@@ -67,11 +70,17 @@ def main():
     assert select_daily_question(prerequisite_bank, empty_state(), EXAM, NOW)["question"]["question_id"] == "Q1"
     started = record_review(prerequisite_bank, empty_state(), "Q1", "Good", NOW)
     assert select_daily_question(prerequisite_bank, started, EXAM, NOW)["question"]["question_id"] == "Q3"
-    # 자정을 넘는 재학습은 완료로 오인하지 않는다.
+    # 자정 직전 어려웠던 내용도 다음날 바로 복습할 수 있다.
     late = record_review(example_bank(), empty_state(), "Q1", "Again", tomorrow - 10_000)
     assert not lecture_goal(example_bank(), late, "검증", tomorrow)["met"]
-    assert lecture_goal(example_bank(), late, "검증", tomorrow)["relearningRemaining"] == 1
-    print("PASS: 학습 단위 집계, 변형 중복 제거, 실제 완료, 재학습 대기, 다음날 복습, 선행·옛 기록 호환")
+    assert lecture_goal(example_bank(), late, "검증", tomorrow)["reviewRemaining"] == 1
+    assert select_daily_question(example_bank(), late, EXAM, tomorrow)["question"] is not None
+    for rating in ("Again", "Hard", "Good", "Easy"):
+        rated = record_review(example_bank(), empty_state(), "Q1", rating, NOW)
+        assert lecture_goal(example_bank(), rated, "검증", NOW)["met"]
+        assert lecture_goal(example_bank(), rated, "검증", NOW)["progressPercent"] == 100
+        assert select_daily_question(example_bank(), rated, EXAM, NOW)["question"] is None
+    print("PASS: 모든 평가 등급의 오늘 완료, 추가 학습 후 완료 유지, 다음날 복습, 선행·옛 기록 호환")
 
 
 if __name__ == "__main__":

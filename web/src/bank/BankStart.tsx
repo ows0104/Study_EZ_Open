@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api";
 import { lectureHref } from "../links";
 import type { BankRead, BankSession } from "../types/bank";
@@ -6,7 +7,6 @@ import { ConceptMap } from "./ConceptMap";
 import { DailyGoal } from "./DailyGoal";
 import { LectureMastery } from "../lecture/LectureMastery";
 import { daysLabel, DIRECTION_LABEL } from "./labels";
-import { BankDownload } from "./BankDownload";
 
 export function BankStart({ base, info, finished, lecture, onStarted, onUndo, undoBusy }: {
   base: string;
@@ -36,43 +36,30 @@ export function BankStart({ base, info, finished, lecture, onStarted, onUndo, un
     }
   }
 
-  if (info.lectureGoal?.met) return (
-    <div className="quiz bank-start bank-complete">
-      <DailyGoal plan={info.lectureGoal} showMain />
-      {finished ? <details><summary>이번 학습 기록 보기</summary><SessionSummary summary={finished} /></details> : null}
-      {onUndo ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={onUndo} aria-keyshortcuts="Z Control+Z">마지막 평가 되돌리기 <kbd>Z</kbd></button> : null}
-      <button className="is-quiet" disabled={busy} onClick={() => void start()}>
-        {busy ? "여는 중…" : "이 강의 더 공부하기"}
-      </button>
-      <BankDownload lecture={lecture} count={info.summary.questionCount} />
-      {error ? <p className="notice is-error">{error}</p> : null}
-    </div>
-  );
-
   return (
-    <div className="quiz bank-start">
+    <div className={`quiz bank-start${info.lectureGoal?.met ? " bank-complete" : ""}`}>
       <p className="quiz-progress bank-progress">
-        <a href={lectureHref(lecture)} target="_blank" rel="noreferrer">강의로</a>
-        <span>{daysLabel(info.examDate)} · {info.examDate}</span>
+        <Link to={lectureHref(lecture)}>강의로</Link>
+        <span>{daysLabel(info.examDate)}</span>
       </p>
-      <h2>Main-Quiz</h2>
-      <BankDownload lecture={lecture} count={info.summary.questionCount} />
-      <DailyGoal plan={info.lectureGoal} />
-      <p className="bank-note">
-        {info.summary.questionCount}문항 · 개념 {info.summary.conceptCount}개. 다음 문항은 지금의 숙련도와 시험까지
-        남은 날로 고릅니다.
-      </p>
-      {finished ? <SessionSummary summary={finished} /> : null}
-      {onUndo ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={onUndo} aria-keyshortcuts="Z Control+Z">마지막 평가 되돌리기 <kbd>Z</kbd></button> : null}
-      <LectureMastery value={info.mastery} />
-      <div className="bank-start-row">
-        <button className="quiz-submit" disabled={busy} onClick={() => void start()}>
-          {busy ? "여는 중…" : info.lectureGoal?.met ? "이 강의 더 공부하기" : finished ? "계속 공부하기" : "시작"}
-        </button>
-        <details>
-          <summary>문항 수 제한 (선택)</summary>
+      <header className="bank-start-heading">
+        <h2>Main-Quiz</h2>
+        {!info.lectureGoal?.met ? <button className="quiz-submit" disabled={busy} onClick={() => void start()}>
+          {busy ? "여는 중…" : finished ? "계속 공부하기" : "학습 시작"}
+        </button> : null}
+      </header>
+      <DailyGoal plan={info.lectureGoal} showMain={info.lectureGoal?.met} />
+      {error ? <p className="notice is-error">{error}</p> : null}
+      {info.conceptMap?.length ? <ConceptMap concepts={info.conceptMap} /> : <LectureMastery value={info.mastery} />}
+      <div className="bank-start-row bank-secondary-actions">
+        {info.lectureGoal?.met ? <button className="is-quiet" disabled={busy} onClick={() => void start()}>
+          {busy ? "여는 중…" : "이 강의 더 공부하기"}
+        </button> : null}
+        {onUndo ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={onUndo} aria-keyshortcuts="Z Control+Z">마지막 평가 되돌리기 <kbd>Z</kbd></button> : null}
+        <details className="bank-options">
+          <summary>학습 설정</summary>
           <label>
-            최대 문항 수{" "}
+            문항 수 제한{" "}
             <select value={size ?? ""} onChange={(event) => setSize(event.target.value ? Number(event.target.value) : null)}>
               <option value="">제한 없음</option>
               {info.sizes.map((n) => (
@@ -82,14 +69,7 @@ export function BankStart({ base, info, finished, lecture, onStarted, onUndo, un
           </label>
         </details>
       </div>
-      {!finished && info.previousSessions.length ? (
-        <p className="bank-note">
-          지난 회차 {info.previousSessions.length}번 ·
-          마지막 Core 숙련 {Math.round((info.previousSessions.at(-1)?.core_after ?? 0) * 100)}%
-        </p>
-      ) : null}
-      {error ? <p className="notice is-error">{error}</p> : null}
-      {info.conceptMap?.length ? <ConceptMap concepts={info.conceptMap} /> : null}
+      {finished ? <details className="bank-session-details"><summary>이번 학습 기록 보기</summary><SessionSummary summary={finished} /></details> : null}
     </div>
   );
 }

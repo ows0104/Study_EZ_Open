@@ -137,7 +137,8 @@ export function DeckSlot({
 }) {
   const isAdmin = Boolean(useMe()?.isAdmin);
   if (!isAdmin) {
-    return <DeckWatchSlot label={label} file={file} lecture={lecture} kind={kind} onDownload={onDownload} before={before} />;
+    if (before) return <>{before(null)}</>;
+    return <DeckWatchSlot lecture={lecture} kind={kind} />;
   }
   return (
     <DeckMake
@@ -172,22 +173,13 @@ export function DeckSlot({
  */
 function DeckWatchSlot({
   kind,
-  label,
-  file,
   lecture,
-  onDownload,
-  before,
 }: {
   kind: DeckKind;
-  label: string;
-  file: LectureFile | undefined;
   lecture: LectureRef;
-  onDownload: (file: LectureFile) => void;
-  before?: (tools: ReactNode) => ReactNode;
 }) {
   const [job, setJob] = useState<DeckWatch | null>(null);
   const [runner, setRunner] = useState<DeckWatchRunner | null>(null);
-  const merged = Boolean(before);
 
   const load = useCallback(() => {
     const base = `/api/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
@@ -196,8 +188,7 @@ function DeckWatchSlot({
         setJob(answer.job);
         setRunner(answer.runner);
       })
-      // **조용히 접는다.** 이 줄은 덤이라, 못 읽었다고 받는 자리까지 시끄러워질
-      // 이유가 없다. 관리자 쪽과 같은 규칙이다.
+      // 준비 현황을 읽지 못하면 기본 안내를 유지한다.
       .catch(() => {});
   }, [lecture.subject, lecture.runId, kind]);
 
@@ -221,35 +212,10 @@ function DeckWatchSlot({
   }, [moving]);
 
   const line = job ? watchLine(job, runner) : "";
-  return (
-    <>
-      <Combo before={before?.(null)}>
-        {/* 덱이 없고 만드는 중이면 「아직 없습니다」 자리를 그 말이 받는다.
-            좁은 칸(`merged`)에는 한 마디만 들고, 사정은 아래 줄이 통째로 말한다. */}
-        {job && !file && line ? (
-          <span className={`panel-action is-line is-empty${merged ? " is-compact" : " is-key"}`}>
-            {merged ? watchShort(job, runner) : `${label} — ${line}`}
-          </span>
-        ) : (
-          <DeckAction file={file} label={label} onDownload={onDownload} merged={merged} />
-        )}
-      </Combo>
-      {/* 덱이 있는데 다시 만드는 중이면 아래에 붙는다 — 지금 받는 것이 옛것이라는
-          뜻이라, 받는 칸을 가리지 않고 사실만 더한다. */}
-      {line && (file || merged) ? <p className="panel-hint">{label} — {line}</p> : null}
-    </>
-  );
-}
-
-/**
- * 좁은 칸에 드는 한 마디. **긴 줄은 안 줄이고 아래에 그대로 둔다.**
- *
- * `watchLine` 이 빈 문자열을 돌려준 줄에는 안 불린다 — 부르는 쪽이 그 줄을 아예
- * 안 그린다. 그래서 여기에 「기다려도 안 오는 줄」(`held`)의 갈래가 없다.
- */
-function watchShort(job: DeckWatch, runner: DeckWatchRunner | null): string {
-  if (job.state === "running") return runnerAlive(runner) ? "만드는 중" : "멈춤";
-  return waitingUntil(job) ? "이어서 만듭니다" : "곧 만듭니다";
+  return <ActionCard shape="is-empty is-key" hit={<span className="panel-action-hit">
+    <strong>웹 문항 준비 중</strong>
+    <small>{line || "문항이 공개되면 여기서 바로 풀 수 있어요."}</small>
+  </span>} />;
 }
 
 /**

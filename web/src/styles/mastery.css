@@ -29,6 +29,9 @@
 .mastery-badge.is-mastered { color: #176d55; background: #e4f5ec; }
 .lecture-mastery progress { width: 100%; height: 7px; accent-color: var(--cat-lecture); margin-top: 12px; }
 .lecture-mastery small { display: block; font-size: 11px; line-height: 1.6; }
+.mastery-details { margin-top: 10px; font-size: 12px; color: var(--ink-2); }
+.mastery-details summary { cursor: pointer; }
+.mastery-details small { margin-top: 8px; }
 .exam-plan { border-top: 1px solid var(--line); padding: 14px 0; }
 .exam-plan > .mastery-heading > strong { font-size: 14px; }
 .study-plan-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
@@ -53,6 +56,14 @@
 .daily-goal button { margin-top: 12px; }
 .daily-goal-main { display: inline-block; border-radius: 6px; padding: 10px 16px; background: #176d55; color: white; font-weight: 600; text-decoration: none; }
 .daily-goal.is-complete .mastery-heading h2 { font-size: 22px; line-height: 1.5; }
+.daily-goal.is-complete:has(.daily-goal-celebration) { padding: 24px; text-align: center; }
+.daily-goal.is-complete:has(.daily-goal-celebration) .mastery-heading { justify-content: center; }
+.daily-goal.is-complete:has(.daily-goal-celebration) .mastery-heading span { display: none; }
+.daily-goal-celebration { margin: 18px 0; }
+.daily-goal-celebration .daily-goal-check { display: grid; place-items: center; width: 56px; height: 56px; margin: 0 auto 12px; border-radius: 50%; background: #176d55; color: white; font-size: 32px; }
+.daily-goal-celebration p { margin: 8px 0; font-size: 16px; }
+.daily-goal-celebration .daily-goal-message { font-size: 14px; }
+.daily-goal-celebration .daily-goal-main { margin-top: 12px; }
 .bank-complete > details { margin: 16px 0; font-size: 13px; }
 .bank-complete > details > summary { cursor: pointer; }
 .daily-goal-progress { display: block; width: 100%; height: 9px; margin: 12px 0; accent-color: #238563; }

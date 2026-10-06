@@ -1,25 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { api, downloadSignedFile } from "../api";
+import { api } from "../api";
 import { lectureHref } from "../links";
-import type { LectureDetail, LectureFile } from "../types/lectures";
+import type { LectureDetail } from "../types/lectures";
 import type { QuizKind } from "../types/quiz";
 import { Missed } from "./Missed";
 import { Quiz } from "./Quiz";
 import { PreQuiz } from "./PreQuiz";
 
-/** 갈래마다 다른 것은 이름과 덱과 「다음」의 문구뿐이다. */
-const LOOK: Record<QuizKind, { title: string; deck: LectureFile["kind"]; deckNote: string; next: string }> = {
+/** 갈래마다 다른 것은 이름과 다음에 확인할 자료뿐이다. */
+const LOOK: Record<QuizKind, { title: string; next: string }> = {
   pre: {
     title: "Pre-Quiz",
-    deck: "pre_apkg",
-    deckNote: "그림 카드까지 들어 있습니다",
-    next: "필기와 Main-Quiz 덱",
+    next: "필기와 Main-Quiz",
   },
   main: {
     title: "기존 Main-Quiz",
-    deck: "main_apkg",
-    deckNote: "그림 카드까지 들어 있습니다",
     next: "필기와 예습 링크",
   },
 };
@@ -71,18 +67,6 @@ export function QuizPage({ kind }: { kind: QuizKind }) {
     [load],
   );
 
-  async function download(file: LectureFile) {
-    try {
-      await downloadSignedFile(
-        `/api/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}/files/${file.id}`,
-        file.filename,
-      );
-    } catch (cause) {
-      setError((cause as Error).message);
-    }
-  }
-
-  const apkg = detail?.files.find((file) => file.kind === look.deck);
   const quiz = kind === "pre" ? detail?.prequiz : detail?.mainquiz;
 
   return (
@@ -122,17 +106,7 @@ export function QuizPage({ kind }: { kind: QuizKind }) {
 
           <section className="lecture-section">
             <h2>다음</h2>
-            {/* 덱은 안키에서 돌릴 사람의 것이다. 웹에도 일정이 생겼으므로
-                「반복하려면 덱」이 아니라 **「안키에서 보려면 덱」**이다. */}
-            {apkg ? (
-              <button className="resource is-download" onClick={() => download(apkg)}>
-                <strong>{look.title} 덱 내려받기</strong>
-                <small>
-                  {apkg.filename} · {(apkg.sizeBytes / 1024 / 1024).toFixed(1)}MB · {look.deckNote}
-                </small>
-              </button>
-            ) : null}
-            <a className="resource" href={lectureHref({ subject, runId })} target="_blank" rel="noreferrer">
+            <a className="resource" href={lectureHref({ subject, runId })}>
               <strong>강의 화면 열기</strong>
               <small>{look.next}</small>
             </a>

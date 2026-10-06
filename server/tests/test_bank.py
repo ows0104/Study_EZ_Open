@@ -304,6 +304,26 @@ def main() -> None:
     check("제한 없어도 출제할 문항이 없으면 종료", exhausted["question"] is None
           and exhausted["summary"]["reason"] == "no_eligible_question")
 
+    print("⑨ 오늘 할당량은 모든 평가 등급에서 즉시 완료")
+    from app import study_engine as study
+    for rating in ("Again", "Hard", "Good", "Easy"):
+        with SessionLocal() as db:
+            saved = db.get(BankState, (STUDENT.id, SUBJECT, RUN))
+            saved.state = study.empty_state()
+            db.commit()
+        client.post(f"{BASE}/bank/session/start", json={})
+        first = client.post(f"{BASE}/bank/next").json()
+        token = first["reviewToken"]
+        client.post(f"{BASE}/bank/reveal", json={"reviewToken": token})
+        client.post(f"{BASE}/bank/rate", json={"reviewToken": token, "rating": rating})
+        done = client.post(f"{BASE}/bank/next").json()
+        check(f"{rating}: 대기 없이 오늘 목표 달성과 회차 종료", done.get("reason") == "lecture_goal_met"
+              and done.get("lectureGoal", {}).get("met") is True and not done.get("waiting")
+              and done.get("summary", {}).get("status") == "complete", done)
+        restored = client.post(f"{BASE}/bank/undo", json={"reviewToken": token}).json()
+        check(f"{rating}: 완료 뒤 되돌리면 할당량도 복원", restored.get("lectureGoal", {}).get("remaining") == 1
+              and restored.get("answer") is not None, restored)
+
 
 if __name__ == "__main__":
     main()

@@ -11,7 +11,7 @@ import {
 
 const stateLabels: Record<SlotState, string> = {
   none: "아직 없음",
-  ready: "받을 것 있음",
+  ready: "학습 가능",
   done: "했음",
 };
 

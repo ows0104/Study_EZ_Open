@@ -6,6 +6,7 @@ import { CalendarPage } from "./calendar/CalendarPage";
 import { getMe, resetFirstScreen, startFirstScreen } from "./firstScreen";
 import { seenNotice } from "./notices/seen";
 import { FeedbackButton } from "./feedback/FeedbackButton";
+import { StudyNav } from "./StudyNav";
 import type { Me } from "./types/account";
 import type { Notice } from "./types/notices";
 
@@ -13,14 +14,14 @@ import type { Notice } from "./types/notices";
  * 캘린더만 첫 번들에 둔다.
  *
  * 나머지 넷은 착륙 화면이 아니다 — 관리는 관리자만, 개인정보처리방침은 심사팀과
- * 가끔 누르는 사람만, 강의 상세와 Pre-Quiz는 캘린더에서 새 창으로 연다. 앱 코드
+ * 가끔 누르는 사람만, 강의 상세와 Pre-Quiz는 캘린더에서 같은 탭으로 연다. 앱 코드
  * 전체가 40KB뿐이라 여기서 빠지는 것은 20KB 남짓이고, **이 조각들이 따로 오는
  * 값은 왕복 한 번이다.** 지금 그 왕복이 비싼 곳(LAX)에서 오고 있어서 이득이 크지
  * 않다 — PoP가 제자리로 오면 그대로 이득만 남는다.
  */
 const LecturePage = lazy(() => import("./lecture/LecturePage").then((m) => ({ default: m.LecturePage })));
 const QuizPage = lazy(() => import("./lecture/QuizPage").then((m) => ({ default: m.QuizPage })));
-// Quiz Bank 풀이(2026-10-04). 웹 풀이와 같은 전용 창이다.
+// Quiz Bank 풀이 화면. 같은 탭에서 강의·캘린더와 오간다.
 const BankStudyPage = lazy(() => import("./bank/BankStudy").then((m) => ({ default: m.BankStudyPage })));
 const AdminPage = lazy(() => import("./admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 const PrivacyPage = lazy(() => import("./PrivacyPage").then((m) => ({ default: m.PrivacyPage })));
@@ -85,8 +86,7 @@ function Shell() {
   // 가입은 됐지만 아직 승인 전. 자료를 부르는 화면으로 보내지 않는다.
   if (!me.isApproved) return <PendingApproval email={me.email || email} onSignOut={signOut} />;
 
-  // 강의 상세와 Pre-Quiz는 새 창으로 열린다. 그 창에는 네비게이션이 없는 편이
-  // 낫다 — 자료를 보거나 풀러 온 창이고, 돌아갈 캘린더는 원래 창에 그대로 있다.
+  // 학습 화면은 넓은 본문과 간단한 이동 메뉴를 사용한다.
   const bare =
     location.pathname.startsWith("/lectures/") ||
     location.pathname.startsWith("/prequiz/") ||
@@ -137,7 +137,7 @@ function Shell() {
           </span>
         </header>
       )}
-      {bare ? <div className="feedback-toolbar"><FeedbackButton /></div> : null}
+      {bare ? <StudyNav /> : null}
       <main
         className={`app-main${bare ? " is-bare" : ""}${wide ? " is-wide" : ""}${
           solving ? " is-solving" : ""
@@ -148,8 +148,7 @@ function Shell() {
             <Route path="/" element={<CalendarPage />} />
             <Route path="/mastery" element={<MasteryPage />} />
             <Route path="/lectures/:subject/:runId" element={<LecturePage />} />
-            {/* 갈래마다 주소가 따로다. 창 이름도 갈래를 물고 있어서
-                (`links.quizWindow`) 예습 창과 복습 창이 서로를 안 밀어낸다. */}
+            {/* 예습·복습은 같은 탭 안에서 서로 다른 주소로 이동한다. */}
             <Route path="/notices" element={<NoticesPage isAdmin={me.isAdmin} onSeen={onNoticeSeen} />} />
             <Route path="/guide" element={<GuidePage />} />
             <Route path="/prequiz/:subject/:runId" element={<QuizPage kind="pre" />} />

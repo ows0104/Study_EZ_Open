@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { api, downloadSignedFile, openSignedFile } from "../api";
 import { useBankLink } from "../bank/bankBridge";
 import { BankPanel } from "../bank/BankPanel";
 import { ReviewAction } from "../calendar/ReviewAction";
 import { bumpPreviewVersion, usePreviewLink, watchSharedLink } from "../bridge/previewBridge";
-import { legacyMainHref, quizHref, quizWindow } from "../links";
+import { legacyMainHref, quizHref } from "../links";
 import { previewProviderLabels, previewProviders, type LectureDetail, type LectureFile, type PreviewProvider } from "../types/lectures";
 import { LectureCards } from "./LectureCards";
 import { Missed } from "./Missed";
 import { LectureMastery } from "./LectureMastery";
+import { useMe } from "../useMe";
 
 /**
  * 강의 상세. 순서가 공부 순서다.
@@ -23,6 +24,7 @@ export function LecturePage() {
   const params = useParams<{ subject: string; runId: string }>();
   const subject = params.subject ?? "";
   const runId = params.runId ?? "";
+  const isAdmin = Boolean(useMe()?.isAdmin);
   const [detail, setDetail] = useState<LectureDetail | null>(null);
   const [error, setError] = useState("");
 
@@ -132,7 +134,7 @@ export function LecturePage() {
         {fileButton("notes_prev", "작년 필기")}
         <PreviewResource detail={detail} />
 
-        {/* 누르면 웹에서 푼다. 전용 창이 열리므로 이 화면은 그대로 남는다.
+        {/* 같은 탭에서 웹 풀이 화면으로 이동한다.
 
             **덱이 기본이던 것을 뒤집었다(2026-08-23 관리자 지시).** 받을 사람은
             아래 줄에서 받는다 — 그림 카드까지 들어 있어 덱이 언제나 더 크다.
@@ -142,16 +144,15 @@ export function LecturePage() {
             도는 제품에서 사람이 묻는 것이 「몇 장이 있나」가 아니라 「오늘 뭘
             해야 하나」이기 때문이다. */}
         {quiz ? (
-          <a
+          <Link
             className="resource is-primary"
-            href={quizHref("pre", { subject, runId })}
-            target={quizWindow("pre", { subject, runId })}
+            to={quizHref("pre", { subject, runId })}
           >
             <strong>Pre-Quiz 풀기</strong>
             <small>{quizNote(quiz)}</small>
-          </a>
+          </Link>
         ) : null}
-        {fileButton("pre_apkg", "Pre-Quiz 덱", quiz ? "is-secondary" : "")}
+        {isAdmin ? fileButton("pre_apkg", "Pre-Quiz 덱", "is-secondary") : null}
       </section>
 
       {/* 예습에서 표시한 질문은 수업 때 다시 열어볼 수 있도록 남긴다. */}
@@ -163,16 +164,16 @@ export function LecturePage() {
         <ReviewAction lecture={{ subject, runId }} detail={detail}
           base={`/api/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}`} onError={setError} />
         <BankPanel lecture={{ subject, runId }} detail={detail} />
-        {detail.mainquiz || detail.files.some((file) => file.kind === "main_apkg") ? (
+        {detail.mainquiz || isAdmin && detail.files.some((file) => file.kind === "main_apkg") ? (
           <details className="legacy-main">
             <summary>기존 Main-Quiz 자료</summary>
             {detail.mainquiz ? (
-              <a className="resource" href={legacyMainHref({ subject, runId })} target="_blank" rel="noreferrer">
+              <Link className="resource" to={legacyMainHref({ subject, runId })}>
                 <strong>기존 카드 풀기</strong>
                 <small>이전에 학습한 일정과 기록을 이어갑니다.</small>
-              </a>
+              </Link>
             ) : null}
-            {fileButton("main_apkg", "기존 Main-Quiz Anki 덱")}
+            {isAdmin ? fileButton("main_apkg", "기존 Main-Quiz Anki 덱") : null}
           </details>
         ) : null}
       </section>

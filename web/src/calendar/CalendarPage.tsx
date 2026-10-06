@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../api";
 import { useBankLink } from "../bank/bankBridge";
 import { BundleButton } from "../bundle/BundleButton";
@@ -14,6 +15,7 @@ import {
   addDays,
   formatWeekTitle,
   startOfWeek,
+  toDateKey,
   toCalendarEntries,
   type CalendarEntry,
   type CalendarMode,
@@ -28,9 +30,23 @@ import {
 export function CalendarPage() {
   const [events, setEvents] = useState<TimetableEvent[] | null>(null);
   const [error, setError] = useState("");
-  const [mode, setMode] = useState<CalendarMode>("week");
-  const [anchorDate, setAnchorDate] = useState(() => new Date());
-  const [opened, setOpened] = useState<CalendarEntry | null>(null);
+  const [params, setParams] = useSearchParams();
+  const mode: CalendarMode = params.get("view") === "month" ? "month" : "week";
+  const savedDate = params.get("date") ?? "";
+  const parsedDate = /^\d{4}-\d{2}-\d{2}$/.test(savedDate) ? new Date(`${savedDate}T12:00:00`) : new Date();
+  const anchorDate = Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+  // 방문 기록에 날짜·보기·열린 패널을 남겨 퀴즈에서 뒤로 와도 같은 자리로 돌아온다.
+  function remember(name: string, value: string | null) {
+    setParams(current => {
+      const next = new URLSearchParams(current);
+      if (value === null) next.delete(name);
+      else next.set(name, value);
+      return next;
+    }, { replace: true });
+  }
+  const setMode = (value: CalendarMode) => remember("view", value);
+  const setAnchorDate = (value: Date) => remember("date", toDateKey(value));
+  const setOpened = (value: CalendarEntry | null) => remember("event", value?.id ?? null);
   // 자리 둘이 무엇을 세는지가 이것으로 갈린다. 칸마다 묻지 않고 여기서 한 번
   // 묻는다 — `useMe`는 훅이라 칸 안에서 부르면 강의 수만큼 붙는다.
   const isAdmin = Boolean(useMe()?.isAdmin);
@@ -102,15 +118,14 @@ export function CalendarPage() {
   /**
    * 강의 상세 조각을 미리 받아 둔다.
    *
-   * 강의 상세는 **새 창**에서 열린다. 그 창은 문서가 따로라 이 창의 메모리를
-   * 물려받지 않지만 HTTP 캐시는 같이 쓴다. 여기서 한 번 받아 두면 새 창은
-   * 디스크에서 꺼내 쓴다 — 쪼갠 대가인 왕복 한 번이 칸을 누르기 전에 끝나 있다.
+   * 같은 탭에서 강의 화면으로 이동할 때 필요한 번들을 미리 받는다.
    */
   useEffect(() => {
     void import("../lecture/LecturePage");
   }, []);
 
   const entries = useMemo(() => toCalendarEntries(events ?? []), [events]);
+  const opened = entries.find(entry => entry.id === params.get("event")) ?? null;
 
   const heading =
     mode === "week"
@@ -118,10 +133,10 @@ export function CalendarPage() {
       : `${anchorDate.getFullYear()}년 ${anchorDate.getMonth() + 1}월`;
 
   function step(direction: -1 | 1) {
-    setAnchorDate((current) =>
+    setAnchorDate(
       mode === "week"
-        ? addDays(current, 7 * direction)
-        : new Date(current.getFullYear(), current.getMonth() + direction, 1),
+        ? addDays(anchorDate, 7 * direction)
+        : new Date(anchorDate.getFullYear(), anchorDate.getMonth() + direction, 1),
     );
   }
 
@@ -186,6 +201,7 @@ export function CalendarPage() {
              때가 다르고(강의 전 · 강의 후) 덱 나무도 이미 갈라져 있다. 덱이
              없는 날에는 `BundleButton` 이 스스로 아무것도 안 그린다. */
           renderDay={(dateKey) => {
+            if (!isAdmin) return null;
             const all = bundles.decks;
             if (!all) return null;
             const scope = { kind: "day", date: dateKey } as const;

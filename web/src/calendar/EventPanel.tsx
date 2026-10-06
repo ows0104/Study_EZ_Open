@@ -4,7 +4,9 @@ import { api, downloadSignedFile, openSignedFile } from "../api";
 import { BundleButton } from "../bundle/BundleButton";
 import { decksIn, type BundleDeck } from "../bundle/decks";
 import { usePreviewVersion } from "../bridge/previewBridge";
-import { lectureHref, legacyMainHref, quizHref, quizWindow } from "../links";
+import { Link } from "react-router-dom";
+import { useMe } from "../useMe";
+import { lectureHref, legacyMainHref, quizHref } from "../links";
 import { type LectureDetail, type LectureFile, type LectureRef } from "../types/lectures";
 import { categoryLabel, type CalendarEntry } from "./entries";
 import { DeckSlot } from "./DeckSlot";
@@ -141,9 +143,9 @@ export function EventPanel({
         </dl>
 
         {lecture ? (
-          <a className="event-panel-more" href={lectureHref(lecture)} target="_blank" rel="noreferrer">
+          <Link className="event-panel-more" to={lectureHref(lecture)}>
             강의 화면 전체 보기 →
-          </a>
+          </Link>
         ) : null}
       </aside>
     </>
@@ -271,6 +273,7 @@ function KeyActions({
   onBundleDone: () => void;
 }) {
   const base = `/api/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
+  const isAdmin = Boolean(useMe()?.isAdmin);
   const [error, setError] = useState("");
   const fileOf = (kind: LectureFile["kind"]) => detail.files.find((file) => file.kind === kind);
 
@@ -295,7 +298,7 @@ function KeyActions({
   /**
    * 덩어리의 앞칸 — 「웹에서 풀기」. 문항이 없으면 아예 안 세운다(덱만 남는다).
    *
-   * 누르면 그 갈래의 전용 창이 열린다. 캘린더도 이 패널도 그대로 남는다.
+   * 같은 탭에서 해당 퀴즈로 이동한다. 뒤로 가면 캘린더와 이 패널로 돌아온다.
    * 문항 수는 이름 옆이 말한다 — 덱 칸에서 되풀이하면 덱의 장수처럼 읽히는데,
    * 덱에는 그림 카드까지 들어 있어 언제나 더 많다.
    */
@@ -305,7 +308,7 @@ function KeyActions({
       <ActionCard
         shape="is-lead"
         hit={
-          <a className="panel-action-hit" href={quizHref(kind, lecture)} target={quizWindow(kind, lecture)}>
+          <Link className="panel-action-hit" to={quizHref(kind, lecture)}>
             <strong>웹에서 풀기</strong>
             <small>
               {/* 일정이 도는 자리라 「몇 장 있나」보다 「오늘 뭘 해야 하나」가
@@ -316,7 +319,7 @@ function KeyActions({
                   : `오늘 몫 완료 · ${progress.later}장 대기`
                 : `${progress.itemCount}장`}
             </small>
-          </a>
+          </Link>
         }
         tools={tools}
       />
@@ -351,11 +354,11 @@ function KeyActions({
 
       <BankPanel lecture={lecture} detail={detail} />
       <ReviewAction lecture={lecture} detail={detail} base={base} onError={setError} />
-      {detail.mainquiz || fileOf("main_apkg") ? (
+      {detail.mainquiz || isAdmin && fileOf("main_apkg") ? (
         <details className="panel-hint legacy-main">
           <summary>기존 Main-Quiz 자료</summary>
-          {detail.mainquiz ? <a href={legacyMainHref(lecture)} target="_blank" rel="noreferrer">기존 카드 풀기</a> : null}
-          {fileOf("main_apkg") ? (
+          {detail.mainquiz ? <Link to={legacyMainHref(lecture)}>기존 카드 풀기</Link> : null}
+          {isAdmin && fileOf("main_apkg") ? (
             <button className="is-quiet" onClick={() => void download(fileOf("main_apkg")!)}>기존 Anki 덱 받기</button>
           ) : null}
         </details>
@@ -380,7 +383,7 @@ function KeyActions({
           **이름이 「블럭 전체」에서 「현재까지」로 바뀐 것도 같은 지시다.**
           담기는 것은 처음부터 지금까지 구워진 편이고 — 블럭이 끝나기 전이면
           「전체」가 아직 없다 — 앞으로 나올 편은 다시 눌러야 온다. */}
-      <PanelGroup
+      {isAdmin ? <PanelGroup
         tone="plain"
         title={`${lecture.subject} 블럭 덱 받기`}
         note="현재까지 나온 것 한 파일로"
@@ -401,7 +404,7 @@ function KeyActions({
             <p className="panel-hint">덱 목록을 불러오는 중…</p>
           )}
         </div>
-      </PanelGroup>
+      </PanelGroup> : null}
 
       {/* 강의 정보(일시·담당·과목) 바로 위. 읽는 것에 가깝지만 누르면 열린다. */}
       <Notes detail={detail} onOpen={open} />

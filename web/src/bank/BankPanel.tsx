@@ -8,13 +8,13 @@ import {
 } from "../bridge/previewBridge";
 import { ActionCard, PanelGroup, PanelTool } from "../calendar/panelShared";
 import { jobMoving, progressLine, runnerAlive } from "../jobProgress";
-import { bankHref, bankWindow } from "../links";
+import { Link } from "react-router-dom";
+import { bankHref } from "../links";
 import type { BankSummary } from "../types/bank";
 import type { LectureDetail, LectureRef } from "../types/lectures";
 import type { PrequizJob, RunnerBeat } from "../types/jobs";
 import { useMe } from "../useMe";
 import { BANK_PROMPT_VERSION, renderBankPrompt } from "./prompt";
-import { BankDownload } from "./BankDownload";
 
 /**
  * 캘린더 패널의 Quiz Bank 칸(2026-10-04).
@@ -57,13 +57,12 @@ function StudyCard({ lecture, bank }: { lecture: Pick<LectureRef, "subject" | "r
       <ActionCard
         shape="is-key"
         hit={
-          <a className="panel-action-hit" href={bankHref(lecture)} target={bankWindow(lecture)}>
+          <Link className="panel-action-hit" to={bankHref(lecture)}>
             <strong>공부하기</strong>
             <small>{bank.questionCount}문항 · 개념 {bank.conceptCount}개</small>
-          </a>
+          </Link>
         }
       />
-      <BankDownload lecture={lecture} count={bank.questionCount} />
     </>
   );
 }

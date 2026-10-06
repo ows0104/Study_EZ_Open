@@ -348,6 +348,12 @@ input:focus-visible {
   padding-bottom: 96px;
 }
 
+.study-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.study-nav nav { display: flex; align-items: center; gap: 18px; font-size: 13px; }
+.study-nav a { color: var(--ink-2); text-decoration: none; }
+.study-nav a:hover { color: var(--ink); }
+.study-nav + .app-main.is-bare { padding-top: 24px; }
+
 /* 그래도 머리글과 다 찍은 뒤의 목록은 글이다. 이것들만 원래 폭에 남는다. */
 .prequiz-narrow {
   max-width: 700px;
@@ -2815,6 +2821,59 @@ button.notice-title:hover:not(:disabled) {
   margin: 18px 0 6px;
 }
 
+.bank-start {
+  text-align: left;
+}
+
+.bank-start-heading,
+.bank-cmap-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.bank-start-heading {
+  margin: 16px 0;
+}
+
+.bank-start-heading h2 {
+  margin: 0;
+}
+
+.bank-start-heading .quiz-submit {
+  width: auto;
+  min-width: 130px;
+  padding: 0 24px;
+}
+
+.bank-secondary-actions,
+.bank-download-details,
+.bank-session-details,
+.bank-cmap-details {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.bank-start summary {
+  cursor: pointer;
+}
+
+.bank-options label {
+  display: block;
+  margin-top: 10px;
+}
+
+.bank-session-details,
+.bank-download-details {
+  margin-top: 16px;
+}
+
+.bank-download-details .resource {
+  margin-top: 12px;
+}
+
 .bank-start-row {
   display: flex;
   flex-wrap: wrap;
@@ -2865,7 +2924,7 @@ button.notice-title:hover:not(:disabled) {
   --cmap-blue-fill: #e1e9f6;
   --cmap-blue-line: #7c91ae;
   --cmap-blue-badge: #526f96;
-  margin: 28px 0 8px;
+  margin: 20px 0 8px;
   /* 풀이 화면(`.quiz`)은 가운데 정렬이다. 사실 목록이 가운데로 서면 못 읽는다. */
   text-align: left;
 }
@@ -2922,7 +2981,35 @@ button.notice-title:hover:not(:disabled) {
 }
 
 .bank-cmap h3 {
-  margin: 0 0 4px;
+  margin: 0;
+  font-size: 16px;
+}
+
+.bank-cmap-heading > span,
+.bank-cmap-hint {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.bank-cmap-hint {
+  margin: 8px 0;
+}
+
+.bank-cmap-details {
+  margin: 12px 0;
+}
+
+.bank-cmap-details summary {
+  cursor: pointer;
+}
+
+.bank-cmap-details p {
+  line-height: 1.7;
+}
+
+.bank-cmap-details .bank-cmap-cards {
+  margin-top: 12px;
+  color: var(--ink);
 }
 
 .bank-cmap-graph {

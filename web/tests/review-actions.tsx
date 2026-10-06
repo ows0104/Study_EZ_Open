@@ -1,6 +1,7 @@
 // Vite /tests/review-actions.html: 실제 생성/전송 없이 관리자·학생 UI와 요청 자료를 확인한다.
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
+import { MemoryRouter } from "react-router-dom";
 import { PreviewAction } from "../src/calendar/PreviewAction";
 import { ReviewAction } from "../src/calendar/ReviewAction";
 import { BankPanel } from "../src/bank/BankPanel";
@@ -51,4 +52,4 @@ function Harness() {
     {error ? <p>{error}</p> : null}<pre id="request" style={{ whiteSpace: "pre-wrap" }} />
   </main>;
 }
-createRoot(document.getElementById("root")!).render(<Harness />);
+createRoot(document.getElementById("root")!).render(<MemoryRouter><Harness /></MemoryRouter>);

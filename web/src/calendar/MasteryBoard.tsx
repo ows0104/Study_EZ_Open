@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { bankHref, bankWindow, lectureHref } from "../links";
+import { Link } from "react-router-dom";
+import { bankHref, lectureHref } from "../links";
 import { MasteryBadge } from "../lecture/LectureMastery";
 import type { TimetableEvent } from "../types/lectures";
 
@@ -34,13 +35,13 @@ export function MasteryBoard({ events }: { events: TimetableEvent[] }) {
     {filtered.length ? <ul className="mastery-list">
       {(expanded ? filtered : filtered.slice(0, 5)).map(({ lecture, event }) => <li key={JSON.stringify([lecture.subject, lecture.runId])}>
         <div>
-          <a href={lectureHref(lecture)} target="_blank" rel="noreferrer">{lecture.title}</a>
+          <Link to={lectureHref(lecture)}>{lecture.title}</Link>
           <small>{event.date} · {lecture.subject}
             {lecture.mastery ? ` · 부족한 개념 ${lecture.mastery.weakConcepts}/${lecture.mastery.conceptCount}개` : ""}</small>
         </div>
         <div className="mastery-row-actions">
           <MasteryBadge value={lecture.mastery} />
-          {lecture.mastery ? <a href={bankHref(lecture)} target={bankWindow(lecture)}>학습하기</a> : null}
+          {lecture.mastery ? <Link to={bankHref(lecture)}>학습하기</Link> : null}
         </div>
       </li>)}
     </ul> : <p>{rows.length > pending ? "평가 가능한 강의의 학습 목표를 모두 달성했습니다." : "평가할 문제가 아직 준비되지 않았습니다."}</p>}

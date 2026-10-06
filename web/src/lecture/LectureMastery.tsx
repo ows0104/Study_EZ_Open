@@ -20,13 +20,15 @@ export function LectureMastery({ value }: { value: Mastery | null | undefined })
     <div className="mastery-heading"><strong>내 강의 학습도</strong><MasteryBadge value={value} /></div>
     {value ? <>
       <progress max={100} value={value.score} aria-label={`강의 학습도 ${value.score}%`} />
-      <p>{value.scope === "core" ? "핵심" : "전체"} 개념 {value.masteredConcepts}/{value.conceptCount}개 목표 달성
-        {value.weakConcepts > 0 ? ` · 부족한 개념 ${value.weakConcepts}개` : ""}</p>
-      {value.weakest.length > 0 ? <p>먼저 복습할 개념: {value.weakest.map(c => c.title).join(" · ")}</p> : null}
-      <small>Quiz Bank 회상 평가 기준 · 회상 방향 {value.assessedDirections}/{value.totalDirections}개 평가.
-        마지막 학습 이후의 시간과 복습 이력을 반영한 추정 학습도이며, 시간이 지나면 감소합니다.
-        학습이 부족한 개념을 더 크게 반영해, 여러 개념을 고르게 익힐수록 높아집니다.
-        Anki·기존 카드 기록은 포함하지 않습니다.</small>
+      <p>{value.scope === "core" ? "핵심" : "전체"} 개념 {value.masteredConcepts}/{value.conceptCount}개 목표 달성</p>
+      <details className="mastery-details">
+        <summary>학습도 자세히</summary>
+        {value.weakest.length > 0 ? <p>먼저 복습할 개념: {value.weakest.map(c => c.title).join(" · ")}</p> : null}
+        <small>Quiz Bank 회상 평가 기준 · 회상 방향 {value.assessedDirections}/{value.totalDirections}개 평가.
+          마지막 학습 이후의 시간과 복습 이력을 반영한 추정 학습도이며, 시간이 지나면 감소합니다.
+          학습이 부족한 개념을 더 크게 반영해, 여러 개념을 고르게 익힐수록 높아집니다.
+          Anki·기존 카드 기록은 포함하지 않습니다.</small>
+      </details>
     </> : <p>Quiz Bank 문제가 준비되면 풀이 기록으로 평가합니다.</p>}
   </section>;
 }

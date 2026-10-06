@@ -196,19 +196,13 @@ def main():
             token = first_question["reviewToken"]
             client.post(f"{base}/reveal", json={"reviewToken": token})
             client.post(f"{base}/rate", json={"reviewToken": token, "rating": "Again"})
-            waiting = client.post(f"{base}/next").json()
-            assert waiting["waiting"] and waiting["session"]["status"] == "active"
-            assert waiting["lectureGoal"]["relearningRemaining"] == 1 and not waiting["lectureGoal"]["met"]
-            with patch("app.routes.bank.engine.now_ms", return_value=NOW + 60_000):
-                retry = client.post(f"{base}/next").json()
-                assert retry["question"]["question_id"] == first_question["question"]["question_id"]
-                client.post(f"{base}/reveal", json={"reviewToken": retry["reviewToken"]})
-                client.post(f"{base}/rate", json={"reviewToken": retry["reviewToken"], "rating": "Good"})
-            # 이후 관측도 마지막 평가보다 뒤여야 한다.
+            completed = client.post(f"{base}/next").json()
+            assert completed["lectureGoal"]["met"] and not completed.get("waiting")
+            assert completed["lectureGoal"]["relearningRemaining"] == 0
         with patch("app.routes.bank.engine.now_ms", return_value=NOW + 60_001):
             stopped = client.post(f"{base}/next").json()
             assert stopped["question"] is None and stopped["summary"]["reason"] == "lecture_goal_met"
-            assert stopped["summary"]["reviewed"] == 2
+            assert stopped["summary"]["reviewed"] == 1
             # 추가 학습은 사용자가 선택한 새 회차에만 허용한다.
             client.post(f"{base}/session/start", json={"continueAfterGoal": True})
             picked = {"question": bank["questions"][0], "days": 4, "ranked": []}

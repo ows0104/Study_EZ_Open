@@ -1,10 +1,14 @@
 // Local-only API fixture: exercises the real start, solve, waiting and completion screens.
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Link, MemoryRouter, Route, Routes } from "react-router-dom";
+import { StudyNav } from "../src/StudyNav";
+import { CalendarPage } from "../src/calendar/CalendarPage";
 import "../src/styles/base.css";
+import "../src/styles/calendar.css";
 
-let active = true, revealed = false, index = 0, serial = 1, requests = 0;
+const navigation = new URLSearchParams(location.search).has("navigation");
+let active = !navigation, revealed = false, index = 0, serial = 1, requests = 0;
 let token = "token-1";
 const history: { index: number; token: string; rating: string }[] = [];
 const waiting = new URLSearchParams(location.search).has("waiting");
@@ -26,7 +30,21 @@ window.fetch = async (input, init) => {
   const path = new URL(String(input), location.origin).pathname;
   const body = init?.body ? JSON.parse(String(init.body)) : {};
   let result: object;
-  if (path.endsWith("/undo")) {
+  if (path === "/api/me") result = { isAdmin: false, isApproved: true, email: "preview@example.com" };
+  else if (path === "/api/bundles/decks") result = { decks: [] };
+  else if (path === "/api/timetable") result = { events: [{
+    id: "demo-event", date: "2026-10-07", startTime: "09:00", endTime: "10:00", title: "약동학", details: "", professor: "담당 교수",
+    category: "lecture", course: "약리학", slot: 1, lectures: [{ subject: "local", runId: "demo", title: "약동학", professors: [],
+      marks: { notesPrev: false, preview: false, prequiz: false, notesCurrent: true, quiz: true }, grabbed: { pre: false, main: false } }],
+  }] };
+  else if (path.endsWith("/lectures/local/demo")) result = {
+    subject: "local", runId: "demo", title: "약동학", date: "2026-10-07", subjectLabel: "약리학", professors: [], files: [],
+    preview: null, myPreview: null, myReview: null, prequiz: null, mainquiz: null,
+    bank: { status: "ready", usable: true, open: true, questionCount: 2, conceptCount: 1 },
+  };
+  else if (path.endsWith("/session/start")) { active = true; result = session(); }
+  else if (path.endsWith("/session/end")) { active = false; result = session(); }
+  else if (path.endsWith("/undo")) {
     await new Promise(resolve => setTimeout(resolve, 150));
     if (body.reviewToken !== history.at(-1)?.token) return new Response(JSON.stringify({ detail: "stale token" }), { status: 409 });
     const last = history.pop()!;
@@ -47,7 +65,13 @@ window.fetch = async (input, init) => {
   return new Response(JSON.stringify(result), { headers: { "Content-Type": "application/json" } });
 };
 const { BankStudyPage } = await import("../src/bank/BankStudy");
-createRoot(document.getElementById("root")!).render(
+const root = createRoot(document.getElementById("root")!);
+if (navigation) root.render(<BrowserRouter><StudyNav /><Routes>
+  <Route path="/mainquiz/:subject/:runId" element={<BankStudyPage />} />
+  <Route path="/mastery" element={<p>학습도 확인 <Link to="/">캘린더</Link></p>} />
+  <Route path="*" element={<CalendarPage />} />
+</Routes></BrowserRouter>);
+else root.render(
   <MemoryRouter initialEntries={["/mainquiz/local/demo"]}><Routes>
     <Route path="/mainquiz/:subject/:runId" element={<BankStudyPage />} />
   </Routes></MemoryRouter>,

@@ -1,7 +1,8 @@
 """강의별 오늘 할 일. 핵심 개념×회상 방향과 필요한 선행 단위를 한 번씩 확인한다.
 
 숙련도 점수와 독립적이다. 이력에서 재구성하므로 조회는 저장 상태를 바꾸지 않는다.
-Good/Easy는 오늘 완료, Again/Hard는 재학습 대기다. 성공한 단위는 빨라도 다음 날 복습한다.
+평가한 단위는 등급에 관계없이 오늘 완료다. 어려웠던 단위는 다음날부터 복습한다.
+추가 학습의 평가는 숙련도에 반영하지만 오늘 달성한 분량을 되돌리지 않는다.
 """
 
 from .engine import dimension_key, question_stage, rank_questions, days_until
@@ -29,8 +30,8 @@ def learning_groups(bank: dict) -> dict[str, list[dict]]:
 def _due(review: dict, state: dict, *, latest: bool, policy: dict) -> int:
     rating, at = review["rating"], review["timestamp"]
     if rating in ("Again", "Hard"):
-        # 재학습은 짧은 간격으로 확인한다. 과거에 길어진 Hard 간격은 사용하지 않는다.
-        return at + policy["intervals"]["againMs" if rating == "Again" else "hardMs"]
+        return max(day_start(at) + DAY_MS,
+                   at + policy["intervals"]["againMs" if rating == "Again" else "hardMs"])
     item = state.get("items", {}).get(review["question_id"], {}) if latest else {}
     scheduled = review.get("next_due_at", item.get("due_at", at + policy["intervals"]["goodMs" if rating == "Good" else "easyMs"]))
     return max(day_start(at) + DAY_MS, scheduled)
@@ -63,12 +64,12 @@ def daily_units(bank: dict, state: dict, now: int, policy: dict = DEFAULT) -> li
             units.append({"key": key, "questions": questions, "status": "later", "due": due,
                           "kind": kind, "seen": known, "today": 0, "last": None})
             continue
-        if not today and (not before or before["rating"] in ("Good", "Easy")):
-            # 장기 복습은 예정된 날짜에 풀 수 있다. 분 단위 대기는 재학습에만 적용한다.
+        if not today:
+            # 오늘 예정된 복습은 바로 풀 수 있다. 할당량 도중 분 단위 대기는 없다.
             due = start
-        status = "relearning" if before and before["rating"] in ("Again", "Hard") else "pending"
+        status = "pending"
         if last:
-            status = "done" if last["rating"] in ("Good", "Easy") else "relearning"
+            status = "done"
             due = _due(last, state, latest=True, policy=policy)
         units.append({"key": key, "questions": questions, "status": status, "due": due,
                       "kind": kind, "seen": known, "today": len(today), "last": last or before})
@@ -107,12 +108,9 @@ def select_daily_question(bank: dict, state: dict, exam: str, now: int, policy: 
         if unit["due"] > now:
             continue
         questions = unit["questions"]
-        if unit["status"] == "relearning":
-            questions = [q for q in questions if q["question_id"] == unit["last"]["question_id"]]
         for q in questions:
             dependencies = sum(dimension_key(by_id[qid]) in pending_keys for qid in q["prerequisites"] if qid in by_id)
             candidates.append((dependencies, question_stage(q), -scores[q["question_id"]], q["question_id"], q))
     candidates.sort(key=lambda row: row[:4])
     return {"question": candidates[0][-1] if candidates else None, "ranked": ranked,
-            "days": days_until(exam, now), "reason": "learning_wait" if remaining and not candidates else None,
-            "retry_at": min((u["due"] for u in remaining if u["due"] > now), default=None)}
+            "days": days_until(exam, now), "reason": None, "retry_at": None}

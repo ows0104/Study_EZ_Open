@@ -4,7 +4,7 @@ import { DIRECTION_LABEL } from "./labels";
 import { graphLabel } from "./graphLabel";
 
 /**
- * 개념 지도 — Quiz Bank 첫 화면 아래(2026-10-04 관리자 — 「학생 · 풀이 창 안」 · 「그래프와 카드 둘 다」).
+ * 개념 지도 — Quiz Bank 상단에 그래프, 아래에 펼쳐 보는 개념 카드.
  *
  *   위   관계 그래프. 점 = 개념(크기 = 중요도 · 색 = 내 진척), 선 = 은행의 `related_concepts`
  *   아래 개념 카드. 핵심 사실 · 방향별 숙련도(목표 눈금과 나란히) · 관련 개념
@@ -17,6 +17,7 @@ import { graphLabel } from "./graphLabel";
  */
 export function ConceptMap({ concepts }: { concepts: BankConcept[] }) {
   const [focus, setFocus] = useState<string | null>(null);
+  const cards = useRef<HTMLDetailsElement>(null);
   const sorted = useMemo(
     () => [...concepts].sort((a, b) => TIER_ORDER[a.tier] - TIER_ORDER[b.tier] || b.importance - a.importance),
     [concepts],
@@ -24,30 +25,39 @@ export function ConceptMap({ concepts }: { concepts: BankConcept[] }) {
 
   function pick(id: string) {
     setFocus(id);
-    document.getElementById(`concept-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (cards.current) cards.current.open = true;
+    requestAnimationFrame(() => {
+      document.getElementById(`concept-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
   }
 
   return (
     <section className="bank-cmap">
-      <h3>개념 지도</h3>
-      <p className="bank-note">
-        원 안 숫자는 목표 대비 학습률(%), 크기는 중요도입니다. ✓는 모든 방향의 목표 달성·초과를 뜻합니다.
-        개념을 누르면 자세한 카드로 갑니다.
-        숙련도는 회상 평가와 망각 추정으로 계산한 현재 지수이며 정답 확률이 아닙니다.
-        복습 없이 시간이 지나면 낮아지고, 간격을 두고 잘 떠올리면 더 오래 유지됩니다.
-      </p>
+      <div className="bank-cmap-heading">
+        <h3>개념별 학습 현황</h3>
+        <span>{concepts.filter(c => c.progress >= 1).length} / {concepts.length}개 목표 달성</span>
+      </div>
+      <p className="bank-cmap-hint">숫자는 목표 대비 학습률(%) · 개념을 누르면 자세히 볼 수 있어요.</p>
       <p className="bank-cmap-legend">
         <span><i className="is-new" />미학습</span>
-        <span><i className="is-attention" />노랑부터 복습</span>
-        <span><i className="is-growing" />초록: 목표에 가까워짐</span>
-        <span><i className="is-reached" />파랑 ✓: 목표 달성</span>
+        <span><i className="is-attention" />복습 필요</span>
+        <span><i className="is-growing" />학습 중</span>
+        <span><i className="is-reached" />목표 달성 ✓</span>
       </p>
       <ConceptGraph concepts={concepts} focus={focus} onPick={pick} />
-      <div className="bank-cmap-cards">
-        {sorted.map((c) => (
-          <ConceptCard key={c.concept_id} concept={c} focused={focus === c.concept_id} onPick={pick} />
-        ))}
-      </div>
+      <details ref={cards} className="bank-cmap-details">
+        <summary>개념별 자세히 보기</summary>
+        <div className="bank-cmap-cards">
+          {sorted.map((c) => (
+            <ConceptCard key={c.concept_id} concept={c} focused={focus === c.concept_id} onPick={pick} />
+          ))}
+        </div>
+      </details>
+      <details className="bank-cmap-details">
+        <summary>그래프 읽는 법</summary>
+        <p>원의 크기는 중요도, 선은 개념 사이의 연결입니다. ✓는 모든 회상 방향의 목표를 달성했다는 뜻입니다.
+          학습률은 회상 평가와 시간 경과를 반영하며, 복습 없이 시간이 지나면 낮아질 수 있습니다.</p>
+      </details>
     </section>
   );
 }

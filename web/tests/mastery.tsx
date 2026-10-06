@@ -1,6 +1,7 @@
 // /tests/mastery.html — 실제 API 없이 상태별 표시·정렬·필터·좁은 화면 확인.
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { MemoryRouter } from "react-router-dom";
 import { MasteryBoard } from "../src/calendar/MasteryBoard";
 import { StudyPlanBoard } from "../src/calendar/StudyPlanBoard";
 import { LectureMastery } from "../src/lecture/LectureMastery";
@@ -39,9 +40,9 @@ const events: TimetableEvent[] = values.map((mastery, i) => ({
     professors: [], mastery, prequizProgress: null, grabbed: { pre: false, main: false },
     marks: { notesPrev: false, preview: false, prequiz: false, notesCurrent: true, quiz: true } }],
 }));
-createRoot(document.getElementById("root")!).render(<main style={{ maxWidth: 900, margin: "30px auto", padding: 16 }}>
+createRoot(document.getElementById("root")!).render(<MemoryRouter><main style={{ maxWidth: 900, margin: "30px auto", padding: 16 }}>
   <StudyPlanBoard />
   <MasteryBoard events={events} />
   <LectureMastery value={weak} />
   <LectureMastery value={null} />
-</main>);
+</main></MemoryRouter>);

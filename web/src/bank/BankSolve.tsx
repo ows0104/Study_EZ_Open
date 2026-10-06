@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api";
 import type { BankAnswer, BankNext, BankRating, BankRead, BankSession } from "../types/bank";
 import { ConceptMap } from "./ConceptMap";
@@ -64,11 +65,6 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
     }
   }, [base, onFinished]);
   useEffect(() => void next(), [next]);
-  useEffect(() => {
-    if (!current?.waiting || !current.retryAt) return;
-    const timer = window.setTimeout(() => void next(), Math.max(1000, current.retryAt - Date.now()));
-    return () => window.clearTimeout(timer);
-  }, [current, next]);
 
   const reveal = useCallback(async () => {
     if (!current?.reviewToken || answer || busy || pending.current) return;
@@ -153,14 +149,10 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
   }, [answer, reveal, rate, peek]);
 
   if (current?.waiting) return <div className="quiz bank-start">
-    <DailyGoal plan={current.lectureGoal} />
-    <h2>잠시 뒤 다시 확인해요</h2>
-    <p>남은 학습 단위는 복습 간격을 기다리고 있습니다. 아직 오늘 학습이 완료된 것은 아닙니다.</p>
-    {current.retryAt ? <p>다음 확인: {new Intl.DateTimeFormat("ko-KR", {
-      timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
-    }).format(current.retryAt)} · 시간이 되면 자동으로 이어집니다.</p> : null}
-    <button disabled={busy} onClick={() => void next()}>다시 확인</button>{" "}
-    <button className="is-quiet" disabled={busy} onClick={() => void end()}>잠시 멈추기</button>
+    <h2>지금 풀 수 있는 분량을 마쳤어요!</h2>
+    <p>어려웠던 내용은 복습으로 이어갈게요. 수고했어요!</p>
+    <Link className="daily-goal-main" to="/">다른 강의 학습하기</Link>{" "}
+    <button className="is-quiet" disabled={busy} onClick={() => void end()}>학습 기록 보기</button>
     {current.undoToken ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={() => void undo()} aria-keyshortcuts="Z Control+Z">되돌리기 <kbd>Z</kbd></button> : null}
     {error ? <p className="notice is-error">{error}</p> : null}
   </div>;
@@ -176,14 +168,17 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
           <button className="is-quiet" onClick={() => setPeek(null)}>← 문제로 돌아가기</button>
           <span>{current.examDate ? daysLabel(current.examDate) : ""}</span>
         </p>
+        <DailyGoal plan={peek.lectureGoal} />
+        {peek.conceptMap?.length ? <ConceptMap concepts={peek.conceptMap} /> : null}
         {live ? (
+          <details className="bank-session-details"><summary>이번 학습 기록 보기</summary>
           <p className="bank-note">
             이번 회차 {live.reviewed}{live.size == null ? "" : ` / ${live.size}`}문항 · Again {live.ratings.Again} · Hard {live.ratings.Hard} · Good{" "}
             {live.ratings.Good} · Easy {live.ratings.Easy} — Core 숙련 {Math.round(live.core_before * 100)}% →{" "}
             {Math.round(live.core_after * 100)}%
           </p>
+          </details>
         ) : null}
-        {peek.conceptMap?.length ? <ConceptMap concepts={peek.conceptMap} /> : null}
       </div>
     );
   }

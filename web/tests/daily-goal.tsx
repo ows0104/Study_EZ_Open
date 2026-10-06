@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
+import { MemoryRouter } from "react-router-dom";
 import { DailyGoal } from "../src/bank/DailyGoal";
 import type { LectureGoal } from "../src/types/studyPlan";
 import "../src/styles/base.css";
@@ -25,4 +26,4 @@ function Preview() {
   </main>;
 }
 
-createRoot(document.getElementById("root")!).render(<Preview />);
+createRoot(document.getElementById("root")!).render(<MemoryRouter><Preview /></MemoryRouter>);
