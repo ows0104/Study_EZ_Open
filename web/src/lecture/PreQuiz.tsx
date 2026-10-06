@@ -19,7 +19,7 @@ export function PreQuiz({ subject, runId, onDone }: {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [forcedId, setForcedId] = useState("");
-  const [mode, setMode] = useState<"core" | "reread" | "challenge">("core");
+  const [mode, setMode] = useState<"core" | "reread">("core");
   const [seen, setSeen] = useState<Set<string>>(() => new Set());
   const isAdmin = Boolean(useMe()?.isAdmin);
 
@@ -32,12 +32,12 @@ export function PreQuiz({ subject, runId, onDone }: {
 
   const core = payload?.items.filter((entry) => !entry.challenge) ?? [];
   const challenges = payload?.items.filter((entry) => entry.challenge) ?? [];
+  const ordered = [...core, ...challenges];
+  const candidates = ordered.filter((entry) =>
+    entry.challenge || mode === "reread" ? !seen.has(entry.itemId) : !entry.attempt);
   const item = payload?.items.find((entry) => entry.itemId === forcedId)
-    ?? (mode === "challenge" ? challenges.find((entry) => !seen.has(entry.itemId))
-      : core.find((entry) => mode === "reread" ? !seen.has(entry.itemId) : !entry.attempt));
+    ?? candidates[0];
   const finished = Boolean(payload && !item);
-  const candidates = (mode === "challenge" ? challenges : core).filter((entry) =>
-    mode === "core" ? !entry.attempt : !seen.has(entry.itemId));
   const slides = useQuizSlidePreload(base, item
     ? [item, ...candidates.filter((entry) => entry.itemId !== item.itemId)].slice(0, 3).map((entry) => entry.itemId)
     : []);
@@ -79,16 +79,16 @@ export function PreQuiz({ subject, runId, onDone }: {
     } catch (cause) { setError((cause as Error).message); }
     finally { setBusy(false); }
   }
-  function start(next: "reread" | "challenge") {
-    setMode(next); setSeen(new Set()); setForcedId(""); setRevealed(null); setError("");
+  function start() {
+    setMode("reread"); setSeen(new Set()); setForcedId(""); setRevealed(null); setError("");
   }
   const undoButton = payload?.undoable ? <button className="quiz-undo" disabled={busy} onClick={undo}>이전 선택 되돌리기</button> : null;
   if (!payload) return <p className={`notice${error ? " is-error" : ""}`}>{error || "예습 문항을 불러오는 중…"}</p>;
   if (!item) {
     const targets = core.filter((entry) => entry.attempt && !entry.attempt.correct);
     return <div className="quiz-done prequiz-narrow">
-      <h2>{core.length ? `핵심 ${core.length}문항 확인 완료` : "아직 예습 문항이 없습니다"}</h2>
-      {core.length > 0 ? <p>수업을 들을 준비가 됐어요. 세부 내용은 수업에서 연결하면 됩니다.</p> : null}
+      <h2>{ordered.length ? `예습 ${ordered.length}문항 확인 완료` : "아직 예습 문항이 없습니다"}</h2>
+      {ordered.length > 0 ? <p>수업을 들을 준비가 됐어요. 세부 내용은 수업에서 연결하면 됩니다.</p> : null}
       {targets.length ? <section className="quiz-takeaways">
         <h3>수업에서 확인할 질문 {targets.length}개</h3>
         <ul>{targets.map((entry) => <li key={entry.itemId}><Stem text={entry.lectureFocus || entry.stem} /></li>)}</ul>
@@ -97,11 +97,8 @@ export function PreQuiz({ subject, runId, onDone }: {
         <summary>오늘 챙긴 핵심</summary>
         <ul>{core.filter((entry) => entry.learningScope).map((entry) => <li key={entry.itemId}>{entry.learningScope}</li>)}</ul>
       </details> : null}
-      {challenges.length ? <button className="resource" onClick={() => start("challenge")}>
-        <strong>선택 도전 {challenges.length}문항 살펴보기</strong><small>수업에서 배울 내용을 미리 궁금해 보는 질문이에요.</small>
-      </button> : null}
       <a className="resource" href={lectureHref({ subject, runId })}><strong>예습 마치기</strong></a>
-      {core.length ? <button className="quiz-undo" onClick={() => start("reread")}>다시 훑어보기</button> : null}
+      {ordered.length ? <button className="quiz-undo" onClick={start}>다시 훑어보기</button> : null}
       {undoButton}
       {error ? <p role="alert" className="notice is-error">{error}</p> : null}
     </div>;
@@ -110,7 +107,7 @@ export function PreQuiz({ subject, runId, onDone }: {
   const position = (item.challenge ? challenges : core).findIndex((entry) => entry.itemId === item.itemId) + 1;
   return <>
     <div className="quiz">
-      <p className="quiz-progress"><span>{item.challenge ? "선택 도전" : mode === "reread" ? "다시 훑어보기" : "핵심"} {position} / {item.challenge ? challenges.length : core.length}</span>{undoButton}
+      <p className="quiz-progress"><span>{item.challenge ? "도전" : mode === "reread" ? "다시 훑어보기" : "핵심"} {position} / {item.challenge ? challenges.length : core.length}</span>{undoButton}
         {isAdmin ? <a className="quiz-fix" href={lectureHref({ subject, runId }) + cardsHash("pre", item.itemId)} target="_blank" rel="noreferrer">이 카드 고치기</a> : null}
       </p>
       <p className="quiz-support-note">{item.challenge ? "지금 맞히지 않아도 괜찮아요. 수업에서 답을 찾아보세요." : "떠오르는 만큼 생각해 보세요. 답을 읽고 이해하면 충분해요."}</p>
@@ -130,10 +127,9 @@ export function PreQuiz({ subject, runId, onDone }: {
     </div>
     <div className="quiz-bar prequiz-bar">
       {!feedback ? <button className="quiz-submit" disabled={busy} onClick={reveal}>{busy ? "불러오는 중…" : "답과 설명 보기"}</button>
-        : item.challenge ? <button className="quiz-submit" onClick={() => { setSeen((old) => new Set(old).add(item.itemId)); setRevealed(null); }}>확인했어요 →</button>
-          : <><button className="quiz-grade is-good" disabled={busy} onClick={() => check(true)}>이해했어요 →</button>
-            <button className="quiz-grade is-listen" disabled={busy} onClick={() => check(false)}>수업에서 확인할게요 →</button></>}
-      {item.challenge ? <button className="quiz-undo" disabled={busy} onClick={() => { setMode("core"); setRevealed(null); }}>도전 마치기</button> : null}
+        : item.challenge ? <button className="quiz-submit" disabled={busy} onClick={() => { setSeen((old) => new Set(old).add(item.itemId)); setRevealed(null); }}>Okay!</button>
+          : <><button className="quiz-grade is-again" disabled={busy} onClick={() => check(false)}><span className="quiz-grade-name">Again!</span></button>
+            <button className="quiz-grade is-good" disabled={busy} onClick={() => check(true)}><span className="quiz-grade-name">Okay!</span></button></>}
     </div>
   </>;
 }

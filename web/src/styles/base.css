@@ -756,7 +756,44 @@ button.resource.is-download:hover:not(:disabled)::after {
   text-align: left;
   overflow-wrap: anywhere;
 }
-.quiz-hint summary { cursor: pointer; font-weight: 600; }
+.quiz-hint summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: fit-content;
+  min-height: 42px;
+  margin: 0 auto;
+  padding: 8px 18px;
+  border: 1px solid color-mix(in srgb, var(--fam-pre) 35%, var(--line));
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--fam-pre) 65%, var(--ink));
+  background: color-mix(in srgb, var(--fam-pre) 9%, var(--surface));
+  font-size: 13px;
+  font-weight: 650;
+  list-style: none;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.quiz-hint summary::-webkit-details-marker { display: none; }
+.quiz-hint summary:hover {
+  border-color: var(--fam-pre);
+  background: color-mix(in srgb, var(--fam-pre) 16%, var(--surface));
+}
+.quiz-hint summary:focus-visible { outline: 2px solid var(--fam-pre); outline-offset: 4px; }
+.quiz-hint-icon { width: 18px; height: 18px; flex-shrink: 0; }
+.quiz-hint-chevron { width: 14px; height: 14px; flex-shrink: 0; }
+.quiz-hint-open, .quiz-hint[open] .quiz-hint-closed { display: none; }
+.quiz-hint[open] .quiz-hint-open { display: inline; }
+.quiz-hint[open] .quiz-hint-chevron { transform: rotate(180deg); }
+.quiz-hint > p {
+  margin: 12px 0 0;
+  padding: 16px 20px;
+  border: 1px solid color-mix(in srgb, var(--fam-pre) 25%, var(--line));
+  border-radius: var(--r-2);
+  background: color-mix(in srgb, var(--fam-pre) 6%, var(--surface));
+  white-space: pre-wrap;
+}
 .quiz-takeaways { padding-bottom: 24px; }
 .quiz-takeaways li { margin-bottom: 12px; }
 .quiz-takeaways li p { margin: 4px 0; }
