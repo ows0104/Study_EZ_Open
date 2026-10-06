@@ -113,7 +113,17 @@ export function PreQuiz({ subject, runId, onDone }: {
       <p className="quiz-support-note">{item.challenge ? "지금 맞히지 않아도 괜찮아요. 수업에서 답을 찾아보세요." : "떠오르는 만큼 생각해 보세요. 답을 읽고 이해하면 충분해요."}</p>
       <WhyAsked item={item} />
       <p className="quiz-stem"><Stem text={item.stem} /></p>
-      {!feedback && item.hint ? <details className="quiz-hint" key={item.itemId}><summary>힌트</summary><p>{item.hint}</p></details> : null}
+      {!feedback && item.hint ? <details className="quiz-hint" key={item.itemId}>
+        <summary>
+          <svg className="quiz-hint-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M9 18h6m-5 3h4M9 15c0-2-3-3-3-7a6 6 0 0 1 12 0c0 4-3 5-3 7" />
+          </svg>
+          <span className="quiz-hint-closed">힌트 보기</span>
+          <span className="quiz-hint-open">힌트 접기</span>
+          <svg className="quiz-hint-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg>
+        </summary>
+        <p>{item.hint}</p>
+      </details> : null}
       {feedback ? <>
         <hr className="quiz-line" />
         <p className="quiz-answer"><Stem text={feedback.answer} /></p>
