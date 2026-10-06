@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from quizbank import organize, review, run, session, slides
-from quizbank.schema import BANK, schema_errors
+from quizbank.schema import BANK, schema_errors, without_retired
 from quizbank.validate import validate_bank, validate_dropping
 
 FIX = Path(__file__).parent / "fixtures"
@@ -26,6 +26,20 @@ def bank():
 
 
 # ── 검증 ──────────────────────────────────────────────────────────
+
+def test_그래프_요약은_선택적이고_전체_제목을_보존한다(bank):
+    old_errors = validate_bank(bank, ["S1", "S2"])["errors"]
+    original_title = bank["concepts"][0]["title"]
+    compatible = without_retired(bank)
+    assert compatible["concepts"][0]["graph_title"] == ""
+    assert "graph_title" not in bank["concepts"][0]
+    bank["concepts"][0]["graph_title"] = "콜린성 수용체"
+    assert validate_bank(bank, ["S1", "S2"])["errors"] == old_errors
+    assert without_retired(bank)["concepts"][0]["graph_title"] == "콜린성 수용체"
+    assert bank["concepts"][0]["title"] == original_title
+    bank["concepts"][0]["graph_title"] = 123
+    assert "$.concepts[0].graph_title: string 형식이 필요합니다." in validate_bank(bank, ["S1", "S2"])["errors"]
+
 
 def test_실물_은행은_list_채점단위_셋만_오류다(bank):
     """「목록 중 4개」처럼 후보를 한 줄로 적은 list 셋. 나머지 13건은 2026-10-04 에 경고로 내렸다."""

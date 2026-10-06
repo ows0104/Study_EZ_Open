@@ -2755,7 +2755,7 @@ button.notice-title:hover:not(:disabled) {
   display: block;
   width: 100%;
   height: auto;
-  margin: 8px 0 16px;
+  margin: 12px 0 20px;
   border: 1px solid var(--line);
   border-radius: var(--r-3);
   background: var(--surface);
@@ -2763,50 +2763,76 @@ button.notice-title:hover:not(:disabled) {
 
 .bank-cmap-graph line {
   stroke: var(--line-strong);
-  stroke-width: 1.5;
+  stroke-width: 1;
+  stroke-opacity: 0.45;
+  transition: stroke-opacity 160ms, stroke 160ms;
+  pointer-events: none;
 }
 
 .bank-cmap-graph line.is-focus {
   stroke: var(--accent);
-  stroke-width: 2.5;
+  stroke-width: 1.5;
+  stroke-opacity: 0.85;
+}
+
+.bank-cmap-graph line.is-muted {
+  stroke-opacity: 0.12;
 }
 
 .bank-cmap-node {
   cursor: pointer;
+  transition: opacity 160ms;
 }
 
-.bank-cmap-node circle {
+.bank-cmap-node.is-muted {
+  opacity: 0.4;
+}
+
+.bank-cmap-hit {
+  fill: transparent;
+  stroke: none;
+}
+
+.bank-cmap-dot {
   stroke: var(--ink-3);
-  stroke-width: 1.5;
+  stroke-width: 1;
 }
 
-.bank-cmap-node.is-optional circle {
+.bank-cmap-node.is-optional .bank-cmap-dot {
   stroke-dasharray: 3 3;
 }
 
-.bank-cmap-node.is-focus circle,
-.bank-cmap-node:focus-visible circle {
+.bank-cmap-node.is-focus .bank-cmap-dot,
+.bank-cmap-node:focus-visible .bank-cmap-dot {
   stroke: var(--accent);
-  stroke-width: 3;
+  stroke-width: 2;
+}
+
+.bank-cmap-node.is-focus .bank-cmap-hit,
+.bank-cmap-node:focus-visible .bank-cmap-hit {
+  fill: var(--accent-soft);
 }
 
 .bank-cmap-node:focus {
   outline: none;
 }
 
-.bank-cmap-id {
-  fill: var(--ink);
-  font-size: 11px;
-  font-weight: 650;
-  text-anchor: middle;
-  pointer-events: none;
-}
-
 .bank-cmap-label {
   fill: var(--ink-2);
-  font-size: 12px;
+  font-size: 10.5px;
+  font-weight: 500;
   text-anchor: middle;
-  pointer-events: none;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bank-cmap-node,
+  .bank-cmap-graph line {
+    transition: none;
+  }
 }
 
 .bank-cmap-cards {

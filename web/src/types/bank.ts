@@ -153,6 +153,8 @@ export type BankRead = {
 export type BankConcept = {
   concept_id: string;
   title: string;
+  /** 그래프용 요약. 옛 은행·API에는 없으므로 전체 제목으로 대체한다. */
+  graph_title?: string;
   core_facts: string[];
   importance: number;
   importance_rationale: string;

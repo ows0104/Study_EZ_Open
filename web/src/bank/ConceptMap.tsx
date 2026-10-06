@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { BankConcept } from "../types/bank";
 import { DIRECTION_LABEL } from "./labels";
+import { graphLabel } from "./graphLabel";
 
 /**
  * 개념 지도 — Quiz Bank 첫 화면 아래(2026-10-04 관리자 — 「학생 · 풀이 창 안」 · 「그래프와 카드 둘 다」).
@@ -12,8 +13,7 @@ import { DIRECTION_LABEL } from "./labels";
  * 같은 값이어야 한다 — 여기서 다시 계산하면 「목표에 닿았다」는 지도와 「아직 약하다」는
  * 엔진이 서로 다른 말을 한다.
  *
- * 그래프 배치는 화면이 한다(점 10~20개라 힘 배치 300번이면 된다). 같은 은행이면 같은
- * 모양이 나오게 원 위에서 시작하고 난수를 안 쓴다.
+ * 그래프 배치는 화면이 한다. 같은 은행과 화면 폭이면 같은 모양이 나오게 난수를 안 쓴다.
  */
 export function ConceptMap({ concepts }: { concepts: BankConcept[] }) {
   const [focus, setFocus] = useState<string | null>(null);
@@ -31,7 +31,7 @@ export function ConceptMap({ concepts }: { concepts: BankConcept[] }) {
     <section className="bank-cmap">
       <h3>개념 지도</h3>
       <p className="bank-note">
-        점의 크기는 중요도, 색은 목표까지 얼마나 왔는지입니다. 점을 누르면 아래 카드로 갑니다.
+        크기는 중요도, 색은 학습 진척입니다. 개념을 누르면 자세한 카드로 갑니다.
         숙련도는 스스로 매긴 평가로 쌓은 지수이고 정답 확률이 아닙니다.
       </p>
       <ConceptGraph concepts={concepts} focus={focus} onPick={pick} />
@@ -51,24 +51,26 @@ const pct = (n: number) => `${Math.round(n * 100)}%`;
 /** 진척(0–1)을 색으로. 0 은 빈 면, 1 은 `--ok`. 다크 모드는 토큰이 알아서 바뀐다. */
 const fill = (progress: number) => `color-mix(in srgb, var(--ok) ${Math.round(progress * 85)}%, var(--surface-2))`;
 
-/**
- * 판의 크기. **좁은 화면은 세로로 긴 판을 쓴다** — 640×380 을 폰 폭(335px)에 줄이면 이름표가
- * 6px 가 됐다(2026-10-04 실측). 세로 판이면 줄어드는 비율이 0.9 쯤이라 읽힌다.
- */
-const WIDE = { W: 640, H: 380, label: 10 };
-const NARROW = { W: 360, H: 480, label: 7 };
-type Board = typeof WIDE;
+type Board = { W: number; H: number };
 
-function useBoard(): Board {
-  const query = "(max-width: 560px)";
-  const [narrow, setNarrow] = useState(() => window.matchMedia(query).matches);
+function useBoard(count: number) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(640);
   useEffect(() => {
-    const media = window.matchMedia(query);
-    const update = () => setNarrow(media.matches);
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
+    if (!ref.current) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width > 0) setWidth(Math.round(entry.contentRect.width));
+    });
+    observer.observe(ref.current);
+    return () => observer.disconnect();
   }, []);
-  return narrow ? NARROW : WIDE;
+  const board = useMemo(() => {
+    const W = Math.max(280, width);
+    const columns = Math.max(2, Math.floor((W - 32) / 100));
+    // 개념이 많거나 컨테이너가 좁으면 세로 공간을 늘려 글씨 크기를 유지한다.
+    return { W, H: Math.max(380, Math.ceil(count / columns) * 100 + 48) };
+  }, [width, count]);
+  return { ref, board };
 }
 
 type Point = { x: number; y: number };
@@ -114,15 +116,65 @@ function layout(n: number, edges: [number, number][], { W, H }: Board): Point[] 
       move[i].y += (H / 2 - pos[i].y) * 0.6;
       const len = Math.max(Math.hypot(move[i].x, move[i].y), 1e-9);
       const s = Math.min(len, step) / len;
-      pos[i].x = Math.min(W - 56, Math.max(56, pos[i].x + move[i].x * s));
-      pos[i].y = Math.min(H - 34, Math.max(24, pos[i].y + move[i].y * s));
+      pos[i].x = Math.min(W - 54, Math.max(54, pos[i].x + move[i].x * s));
+      pos[i].y = Math.min(H - 62, Math.max(30, pos[i].y + move[i].y * s));
     }
   }
-  return pos;
-}
+  // 원뿐 아니라 최대 세 줄 이름표와 여백을 포함한 96×84 영역을 분리한다.
+  for (let round = 0; round < 160; round++) {
+    let overlap = false;
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const dx = pos[j].x - pos[i].x;
+        const dy = pos[j].y - pos[i].y;
+        const ox = 96 - Math.abs(dx);
+        const oy = 84 - Math.abs(dy);
+        if (ox <= 0 || oy <= 0) continue;
+        overlap = true;
+        if (ox < oy) {
+          const shift = (Math.sign(dx) || 1) * (ox / 2 + 0.1);
+          pos[i].x -= shift;
+          pos[j].x += shift;
+        } else {
+          const shift = (Math.sign(dy) || 1) * (oy / 2 + 0.1);
+          pos[i].y -= shift;
+          pos[j].y += shift;
+        }
+      }
+    }
+    for (const p of pos) {
+      p.x = Math.min(W - 54, Math.max(54, p.x));
+      p.y = Math.min(H - 62, Math.max(30, p.y));
+    }
+    if (!overlap) break;
+  }
+  const crowded = pos.some((p, i) => pos.slice(i + 1).some((q) =>
+    Math.abs(p.x - q.x) < 94 && Math.abs(p.y - q.y) < 82,
+  ));
+  if (!crowded) return pos;
 
-function short(title: string, max: number) {
-  return title.length > max ? `${title.slice(0, max - 1)}…` : title;
+  // 연결이 매우 빽빽하면 경계에서 충돌 해소가 멈출 수 있다. 이때는 원래 위치에
+  // 가까운 빈 자리부터 배정해 이름표 간격이 보장되는 엇갈린 격자에 정돈한다.
+  const columns = Math.max(2, Math.floor((W - 32) / 100));
+  const rows = Math.ceil(n / columns);
+  const slots = Array.from({ length: columns * rows }, (_, i) => ({
+    x: 54 + (i % columns) * (W - 108) / (columns - 1),
+    y: rows === 1 ? H / 2 : 34 + (Math.floor(i / columns) + (i % 2) * 0.15) * (H - 104) / (rows - 0.85),
+  }));
+  const placed: Point[] = new Array(n);
+  const pending = new Set(pos.map((_, i) => i));
+  while (pending.size) {
+    let nearest = { node: 0, slot: 0, distance: Infinity };
+    for (const node of pending) {
+      slots.forEach((slot, i) => {
+        const distance = Math.hypot(pos[node].x - slot.x, pos[node].y - slot.y);
+        if (distance < nearest.distance) nearest = { node, slot: i, distance };
+      });
+    }
+    placed[nearest.node] = slots.splice(nearest.slot, 1)[0];
+    pending.delete(nearest.node);
+  }
+  return placed;
 }
 
 function ConceptGraph({ concepts, focus, onPick }: {
@@ -130,8 +182,19 @@ function ConceptGraph({ concepts, focus, onPick }: {
   focus: string | null;
   onPick: (id: string) => void;
 }) {
-  const board = useBoard();
+  const { ref, board } = useBoard(concepts.length);
+  const [hovered, setHovered] = useState<string | null>(null);
   const { W, H } = board;
+  const labels = useMemo(() => {
+    const context = document.createElement("canvas").getContext("2d");
+    if (context) context.font = `500 10.5px ${getComputedStyle(document.body).fontFamily}`;
+    const measure = (text: string) => context?.measureText(text).width ?? Array.from(text).length * 10.5;
+    // 같은 요약이 생기면 전체 제목을 써서 서로 다른 개념이 같은 이름으로 보이지 않게 한다.
+    const titles = concepts.map((c) => c.graph_title?.trim() || c.title);
+    return concepts.map((c, i) => graphLabel(
+      titles.some((title, j) => j !== i && title === titles[i]) ? c.title : titles[i], measure,
+    ));
+  }, [concepts]);
   const { edges, pos } = useMemo(() => {
     const index = new Map(concepts.map((c, i) => [c.concept_id, i]));
     const seen = new Set<string>();
@@ -139,7 +202,7 @@ function ConceptGraph({ concepts, focus, onPick }: {
     concepts.forEach((c, i) => {
       for (const r of c.related_concepts) {
         const j = index.get(r);
-        if (j === undefined) continue;
+        if (j === undefined || j === i) continue;
         const key = i < j ? `${i}-${j}` : `${j}-${i}`;
         if (seen.has(key)) continue;
         seen.add(key);
@@ -149,46 +212,64 @@ function ConceptGraph({ concepts, focus, onPick }: {
     return { edges, pos: layout(concepts.length, edges, board) };
   }, [concepts, board]);
 
-  const focusIndex = concepts.findIndex((c) => c.concept_id === focus);
+  const active = hovered ?? focus;
+  const focusIndex = concepts.findIndex((c) => c.concept_id === active);
+  const neighbors = new Set([focusIndex]);
+  for (const [i, j] of edges) {
+    if (i === focusIndex) neighbors.add(j);
+    if (j === focusIndex) neighbors.add(i);
+  }
 
   return (
-    <svg className="bank-cmap-graph" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="개념 관계 그래프">
-      {edges.map(([i, j]) => (
-        <line
-          key={`${i}-${j}`}
-          x1={pos[i].x}
-          y1={pos[i].y}
-          x2={pos[j].x}
-          y2={pos[j].y}
-          className={focusIndex === i || focusIndex === j ? "is-focus" : ""}
-        />
-      ))}
-      {concepts.map((c, i) => {
-        const r = 7 + c.importance * 2.6;
-        return (
-          <g
-            key={c.concept_id}
-            className={`bank-cmap-node${focus === c.concept_id ? " is-focus" : ""}${c.tier === "Optional" ? " is-optional" : ""}`}
-            transform={`translate(${pos[i].x} ${pos[i].y})`}
-            onClick={() => onPick(c.concept_id)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(event) => (event.key === "Enter" || event.key === " ") && onPick(c.concept_id)}
-          >
-            <title>
-              {c.concept_id} {c.title} · 중요도 {c.importance} · 진척 {pct(c.progress)}
-            </title>
-            <circle r={r} style={{ fill: fill(c.progress) }} />
-            <text className="bank-cmap-id" dy="0.35em">
-              {c.concept_id}
-            </text>
-            <text className="bank-cmap-label" y={r + 13}>
-              {short(c.title, board.label)}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
+    <div ref={ref} className="bank-cmap-canvas">
+      <svg className="bank-cmap-graph" viewBox={`0 0 ${W} ${H}`} role="group" aria-label="개념 관계 그래프">
+        {edges.map(([i, j]) => (
+          <line
+            key={`${i}-${j}`}
+            x1={pos[i].x}
+            y1={pos[i].y}
+            x2={pos[j].x}
+            y2={pos[j].y}
+            className={focusIndex === i || focusIndex === j ? "is-focus" : focusIndex >= 0 ? "is-muted" : ""}
+          />
+        ))}
+        {concepts.map((c, i) => {
+          const r = 6 + Math.min(5, Math.max(0, c.importance)) * 1.5;
+          return (
+            <g
+              key={c.concept_id}
+              className={`bank-cmap-node${active === c.concept_id ? " is-focus" : ""}${focusIndex >= 0 && !neighbors.has(i) ? " is-muted" : ""}${c.tier === "Optional" ? " is-optional" : ""}`}
+              transform={`translate(${pos[i].x} ${pos[i].y})`}
+              onClick={() => onPick(c.concept_id)}
+              onMouseEnter={() => setHovered(c.concept_id)}
+              onMouseLeave={() => setHovered(null)}
+              onFocus={() => setHovered(c.concept_id)}
+              onBlur={() => setHovered(null)}
+              role="button"
+              aria-label={`${c.concept_id} ${c.title} · 중요도 ${c.importance} · 진척 ${pct(c.progress)}`}
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onPick(c.concept_id);
+                }
+              }}
+            >
+              <title>
+                {c.concept_id} {c.title} · 중요도 {c.importance} · 진척 {pct(c.progress)}
+              </title>
+              <circle className="bank-cmap-hit" r={22} />
+              <circle className="bank-cmap-dot" r={r} style={{ fill: fill(c.progress) }} />
+              <text className="bank-cmap-label" y={r + 16}>
+                {labels[i].map((line, index) => (
+                  <tspan key={index} x={0} dy={index === 0 ? 0 : 12}>{line}</tspan>
+                ))}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
   );
 }
 

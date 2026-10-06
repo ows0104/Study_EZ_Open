@@ -1,7 +1,8 @@
 """ChatGPT 의 표·블록 응답 → 스키마에 맞는 문제은행 JSON.
 
 정리는 모델이 한다(2026-10-03 관리자: 「정리는 LLM이 하긴 해야 할 것 같아」). 이 단계는
-옮기기만 하고 고치지 않는다 — 고칠 만한 것은 warnings 로, 의학적 정오는 review.py 로.
+문항과 전체 제목을 옮기고 고치지 않는다 — 고칠 만한 것은 warnings 로, 의학적 정오는 review.py 로.
+graph_title만 원래 제목을 근거로 짧게 요약할 수 있다. 그래프 표시용이며 학습 내용은 그대로다.
 """
 
 from __future__ import annotations

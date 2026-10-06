@@ -308,6 +308,7 @@ def concept_map(bank: dict, state: dict, policy: dict = DEFAULT) -> list[dict]:
         progress = _average([min(d["mastery"] / d["target"], 1) if d["target"] else 1 for d in directions])
         out.append({
             "concept_id": cid, "title": concept["title"], "core_facts": concept.get("core_facts", []),
+            "graph_title": concept.get("graph_title", ""),
             "importance": concept["importance"], "importance_rationale": concept.get("importance_rationale", ""),
             "concept_difficulty": concept["concept_difficulty"], "tier": concept["tier"],
             "exam_signal_strength": concept.get("exam_signal_strength", ""),

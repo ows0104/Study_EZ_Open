@@ -1,10 +1,12 @@
 <!--
 Bank Builder 프롬프트 — 정본
-Version: 1.6
+Version: 1.8
 
 이 파일이 ChatGPT에 가는 프롬프트의 정본이다. 이 주석은 보내지 않는다.
 {{…}} 자리는 web/src/bank/prompt.ts 가 강의마다 채운다. {{c1}} 같은 cloze 표기는 그대로 간다.
 고치면 아래에 판을 하나 올리고 Version 을 같이 올린다. 서버에 응답이 저장될 때 이 Version 이 같이 남는다.
+
+1.8 (2026-10-06)  개념 그래프에 표시할 짧은 요약 이름 graph_title을 전체 title과 별도로 만든다.
 
 1.6 (2026-10-05)  앱이 읽지 않는 칸을 뺐다(관리자): 문항마다 적던 concept_difficulty(개념 표에 이미 있다) ·
                    cognitive_type(retrieval_direction 과 거의 같고 앱은 그쪽만 쓴다) · source_strength, 그리고
@@ -373,11 +375,12 @@ atomic direct
 
 표. 열은 이 순서:
 
-`concept_id | title | core_facts | importance | importance_rationale | concept_difficulty | tier | exam_signal_strength | related_concepts | source_refs`
+`concept_id | title | graph_title | core_facts | importance | importance_rationale | concept_difficulty | tier | exam_signal_strength | related_concepts | source_refs`
 
 - tier: Core / Advanced / Optional 중 하나
 - exam_signal_strength: low / medium / high
 - core_facts·related_concepts는 `;`로 구분
+- graph_title: 그래프에서 한눈에 알아볼 짧은 이름. title의 핵심 명사 2–3개를 한글 기준 8–14자 정도로 요약하고 줄임표는 쓰지 마라. 약물명·수용체명·비교 대상·긍정/부정 등 개념을 구분하는 정보는 남겨라. 임의의 약어는 만들지 말고 필요하면 권장 길이를 넘어도 된다. 같은 은행에서 이름만 보고 개념을 구분할 수 있어야 한다. 예: `심혈관 M2 기전과 차단 효과` → `M2 기전과 차단`. 전체 title과 core_facts는 그대로 상세하게 쓴다.
 
 ## 2. Retrieval Plan
 

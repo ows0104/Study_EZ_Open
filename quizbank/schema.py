@@ -52,7 +52,7 @@ BANK = _object({
         "conflict_id": _STR, "description": _STR, "source_refs": _array(SOURCE_REF),
         "unresolved": {"type": "boolean"}})),
     "concepts": _array(_object({
-        "concept_id": _STR, "title": _STR, "core_facts": _STRS, "source_refs": _array(SOURCE_REF),
+        "concept_id": _STR, "title": _STR, "graph_title": _STR, "core_facts": _STRS, "source_refs": _array(SOURCE_REF),
         "importance": _INT, "importance_rationale": _STR, "concept_difficulty": _INT,
         "tier": _enum(TIERS), "exam_signal_strength": _enum(["low", "medium", "high"]),
         "related_concepts": _STRS})),
@@ -71,10 +71,13 @@ RETIRED_PLAN = ("rationale",)
 
 
 def without_retired(bank: dict) -> dict:
-    """뺀 칸을 걷은 사본(얕게). 받은 은행은 그대로 둔다."""
+    """뺀 칸을 걷고 새 표시 필드의 기본값을 채운 사본. 받은 은행은 그대로 둔다."""
     if not isinstance(bank, dict):
         return bank
     out = dict(bank)
+    # 그래프용 요약이 없던 은행도 유효하다. 원래 제목은 바꾸지 않는다.
+    if isinstance(bank.get("concepts"), list):
+        out["concepts"] = [{"graph_title": "", **c} if isinstance(c, dict) else c for c in bank["concepts"]]
     if isinstance(bank.get("questions"), list):
         out["questions"] = [{k: v for k, v in q.items() if k not in RETIRED_QUESTION} if isinstance(q, dict) else q
                             for q in bank["questions"]]

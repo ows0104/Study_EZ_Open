@@ -175,6 +175,11 @@ bank = example_bank()
 bank["concepts"][0]["related_concepts"] = ["C1", "C9"]  # 자기 자신 · 없는 개념
 bank["retrieval_plan"][0]["directions"].append("trap")  # 계획엔 있고 문항은 없는 방향
 fresh = concept_map(bank, empty_state())
+check("옛 은행은 그래프 요약 없이도 열린다", fresh[0]["graph_title"] == "")
+bank["concepts"][0]["graph_title"] = "그래프용 이름"
+with_label = concept_map(bank, empty_state())[0]
+check("그래프 요약과 전체 제목을 따로 전달한다", with_label["graph_title"] == "그래프용 이름"
+      and with_label["title"] == bank["concepts"][0]["title"])
 check("개념마다 한 줄", [c["concept_id"] for c in fresh] == ["C1"])
 check("방향은 문항이 있는 것만 · direct 가 먼저", [d["direction"] for d in fresh[0]["directions"]]
       == ["direct", "reverse", "integration"], fresh[0]["directions"])
