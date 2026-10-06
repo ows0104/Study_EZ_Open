@@ -14,7 +14,10 @@ import type { LectureDetail } from "../types/lectures";
  * `.claude/skills/prequiz/references/preview-rules.md` §0.1에 있다. 고쳐 쓸
  * 사람이 참고할 자리다.
  */
-export const DEFAULT_PREVIEW_PROMPT = ["{파일명}", "수업 전 예습용으로 설명해줘."].join("\n");
+export const DEFAULT_PREVIEW_PROMPT = [
+  "{파일명}",
+  "강의의 큰 흐름과 낯선 용어를 이해하는 데 필요한 만큼만 간략히 설명해줘. 미리 알아둘 핵심은 왜 필요한지 수업 내용과 연결하고, 세부 설명은 수업에 남겨둬. 족보는 중요한 개념과 출제 스타일을 판단하는 데 참고해줘.",
+].join("\n");
 
 /**
  * 기본 링크의 프롬프트. **고정이다.**
@@ -26,7 +29,7 @@ export const DEFAULT_PREVIEW_PROMPT = ["{파일명}", "수업 전 예습용으�
  * 지금은 개인 링크의 기본값과 문구가 같지만 같아야 하는 것은 아니다 — 이쪽은
  * 고정이고 저쪽은 출발점이라 각자 움직인다.
  */
-export const SHARED_PREVIEW_PROMPT = ["{파일명}", "수업 전 예습용으로 설명해줘."].join("\n");
+export const SHARED_PREVIEW_PROMPT = DEFAULT_PREVIEW_PROMPT;
 
 /**
  * 자리표시자.
