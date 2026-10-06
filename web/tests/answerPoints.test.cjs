@@ -32,6 +32,29 @@ test('points are blue inline, preserve context, and do not repeat below the answ
   assert.equal(html, '<p class="quiz-answer"><strong class="bank-answer-point">AChE</strong>를 억제하여 전달을 개선한다.</p>');
 });
 
+test('shorthand points highlight only the keywords in the user-provided answer', () => {
+  const sentence = '지용성 약물을 더 극성·수용성인 대사체로 바꾸어 배설하기 쉽게 만드는 것이다.';
+  for (const text of [sentence, `**${sentence}**`]) {
+    const html = render({ answer: text, answerUnits: ['**지용성→더 극성/수용성**', '**배설 용이**'] });
+    const blue = [...html.matchAll(/<strong class="bank-answer-point">([^<]+)<\/strong>/g)].map((match) => match[1]);
+    assert.deepEqual(blue, ['지용성', '더 극성·수용성', '배설하기 쉽게']);
+    assert.ok(!html.includes('bank-units'));
+    assert.equal(html.replace(/<[^>]+>/g, ''), sentence);
+  }
+});
+
+test('full-answer bold does not color surrounding prose or unrelated words', () => {
+  const html = render({ answer: '**표적은 AADC이며 말초에서 작용한다.**', answerUnits: ['AADC'] });
+  assert.ok(html.includes('<strong>표적은 </strong><strong class="bank-answer-point">AADC</strong><strong>이며 말초에서 작용한다.</strong>'));
+});
+
+test('compound points can highlight separated keywords while preserving absent information', () => {
+  const html = render({ answer: 'NMDA 수용체를 차단한다.', answerUnits: ['NMDA 차단', '강의 밖 조건'] });
+  assert.ok(html.includes('<strong class="bank-answer-point">NMDA</strong> 수용체를 <strong class="bank-answer-point">차단</strong>한다.'));
+  assert.ok(!html.includes('<li>NMDA 차단</li>'));
+  assert.ok(html.includes('<li>강의 밖 조건</li>'));
+});
+
 test('case, spacing, and bold markup do not prevent an inline match', () => {
   const html = render({ answer: '**Viral DNA** polymerase가 중요하다.', answerUnits: ['viral DNA polymerase'] });
   assert.ok(!html.includes('bank-units'));
@@ -75,7 +98,7 @@ test('missing O/X explanation is explicit, without an empty panel for other form
 test('short terms do not match inside other English words and text is escaped', () => {
   const html = render({ answer: '<script>scopolamine</script>', answerUnits: ['O'] });
   assert.ok(html.includes('&lt;script&gt;scopolamine&lt;/script&gt;'));
-  assert.ok(html.includes('<li class="bank-answer-point">O</li>'));
+  assert.ok(html.includes('<li>O</li>'));
   assert.ok(!html.includes('<script>'));
 });
 

@@ -113,7 +113,7 @@ export function AnswerBody({ question: q, answer, preload }: {
       ) : null}
       {/* 답에서 강조한 포인트는 반복하지 않는다. 답과 표현이 다른 설명은 보존한다. */}
       {remainingPoints.length > 0 && !["ox", "cloze", "matching", "sequence"].includes(q.format) ? (
-        <ul className="bank-units">{remainingPoints.map((unit) => <li key={unit} className="bank-answer-point"><Stem text={unit} /></li>)}</ul>
+        <ul className="bank-units">{remainingPoints.map((unit) => <li key={unit}><Stem text={unit} /></li>)}</ul>
       ) : null}
       {answer.answerPairs.length ? (
         <ul className="bank-units">
