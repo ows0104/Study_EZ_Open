@@ -1,0 +1,46 @@
+"""Undo a review using its saved values, including schedules and remediation."""
+
+import copy
+
+
+def undo_token(state: dict) -> str | None:
+    history = state.get("history") or []
+    session = state.get("session") or {}
+    last = history[-1] if history else {}
+    saved = last.get("undo")
+    if not saved or last.get("session_id") != session.get("id"):
+        return None
+    return saved["served"]["token"]
+
+
+def remember_review(previous: dict, reviewed: dict) -> None:
+    last = reviewed["history"][-1]
+    last["undo"] = copy.deepcopy({
+        "served": previous["served"],
+        "item": previous["items"].get(last["question_id"]),
+        "remediations": previous["remediations"],
+        "event_count": len(previous["remediation_events"]),
+    })
+
+
+def undo_review(previous: dict, token: str) -> dict:
+    if not token or undo_token(previous) != token:
+        raise ValueError("되돌릴 수 있는 마지막 평가가 아닙니다.")
+    state = copy.deepcopy(previous)
+    last = state["history"].pop()
+    saved = last["undo"]
+    for field, key, value in (("dimensions", last["dimension"], last["dimension_before"]),
+                              ("items", last["question_id"], saved["item"])):
+        if value is None:
+            state[field].pop(key, None)
+        else:
+            state[field][key] = value
+    state["remediations"] = saved["remediations"]
+    state["remediation_events"] = state["remediation_events"][:saved["event_count"]]
+    state["served"] = saved["served"]
+    session = state["session"]
+    session["status"] = "active"
+    session.pop("reason", None)
+    session.pop("ended_at", None)
+    state["sessions"] = [s for s in state["sessions"] if s["session_id"] != session["id"]]
+    return state

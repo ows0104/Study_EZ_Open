@@ -136,6 +136,7 @@ export type BankSession = {
 };
 
 export type BankRead = {
+  undoToken?: string | null;
   lectureGoal?: import("./studyPlan").LectureGoal | null;
   mastery?: import("./mastery").LectureMastery | null;
   summary: BankSummary;
@@ -170,6 +171,7 @@ export type BankConcept = {
 };
 
 export type BankNext = {
+  undoToken?: string | null;
   waiting?: boolean;
   lectureGoal?: import("./studyPlan").LectureGoal | null;
   question: BankQuestion | null;

@@ -5,6 +5,7 @@ import { lectureHref } from "../links";
 import type { BankRead, BankSession } from "../types/bank";
 import { BankStart } from "./BankStart";
 import { BankSolve } from "./BankSolve";
+import { useBankUndo } from "./useBankUndo";
 
 /**
  * Quiz Bank 풀이 창(2026-10-04).
@@ -22,9 +23,12 @@ export function BankStudyPage() {
   const base = `/api/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}/bank`;
   const [info, setInfo] = useState<BankRead | null>(null);
   const [error, setError] = useState("");
+  const [undoError, setUndoError] = useState("");
   const [solving, setSolving] = useState(false);
   const [finished, setFinished] = useState<BankSession | null>(null);
   const [unavailable, setUnavailable] = useState(false);
+  const restore = useCallback(() => { setFinished(null); setSolving(true); }, []);
+  const { undo, undoBusy } = useBankUndo(base, info?.undoToken, restore, setUndoError, solving);
 
   const load = useCallback(() => {
     api<BankRead>(base)
@@ -71,6 +75,8 @@ export function BankStudyPage() {
     );
   }
   return (
+    <>
+    {undoError ? <p role="alert" className="notice is-error">{undoError}</p> : null}
     <BankStart
       base={base}
       info={info}
@@ -80,6 +86,9 @@ export function BankStudyPage() {
         setFinished(null);
         setSolving(true);
       }}
+      onUndo={info.undoToken ? () => void undo() : undefined}
+      undoBusy={undoBusy}
     />
+    </>
   );
 }

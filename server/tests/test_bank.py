@@ -29,6 +29,7 @@ os.environ.update(
 )
 
 import datetime  # noqa: E402
+import copy  # noqa: E402
 import sys  # noqa: E402
 from unittest.mock import patch  # noqa: E402
 
@@ -185,12 +186,32 @@ def main() -> None:
     check("처음 문항은 Q1", q["question_id"] == "Q1", q["question_id"])
     check("⑤ 외부지식 검토가 같이 온다", (shown["medicalReview"] or {}).get("verdict") == "wrong")
     check("⑤ 인용 쪽 중 올라간 것만 슬라이드로", [s["page"] for s in shown["slides"]] == [1], shown["slides"])
+    with SessionLocal() as db:
+        before_rating = copy.deepcopy(db.get(BankState, ("student-1", SUBJECT, RUN)).state)
     rate = client.post(f"{BASE}/bank/rate", json={"reviewToken": first["reviewToken"], "rating": "Good"})
     check("평가가 들어간다", rate.status_code == 200 and rate.json()["session"]["reviewed"] == 1, rate.text)
     twice = client.post(f"{BASE}/bank/rate", json={"reviewToken": first["reviewToken"], "rating": "Good"})
     check("두 번은 안 된다", twice.status_code == 409)
     nxt = client.post(f"{BASE}/bank/next").json()
     check("다음 문항은 다른 것", nxt["question"] is None or nxt["question"]["question_id"] != q["question_id"], nxt)
+    check("평가 후 되돌리기 토큰 제공", nxt["undoToken"] == first["reviewToken"])
+    check("잘못된 되돌리기 토큰 거절", client.post(f"{BASE}/bank/undo", json={"reviewToken": "wrong"}).status_code == 409)
+    other = CurrentUser(id="student-2", email="other@example.com", is_admin=False, apps=dict.fromkeys(APP_POLICY, ROLE_ADMIN))
+    app.dependency_overrides[get_current_user] = lambda: other
+    check("다른 사람의 평가는 되돌리지 못한다", client.post(f"{BASE}/bank/undo", json={"reviewToken": first["reviewToken"]}).status_code == 409)
+    as_student()
+    undone = client.post(f"{BASE}/bank/undo", json={"reviewToken": first["reviewToken"]})
+    restored = undone.json()
+    check("이전 문제와 답 복원", undone.status_code == 200 and restored["question"]["question_id"] == q["question_id"]
+          and restored["answer"]["answer"] == shown["answer"] and restored["session"]["reviewed"] == 0, restored)
+    with SessionLocal() as db:
+        after_undo = copy.deepcopy(db.get(BankState, ("student-1", SUBJECT, RUN)).state)
+        after_undo["served"]["token"] = before_rating["served"]["token"]
+        check("숙련도·일정·이력·보충·회차 전체 원상복구", after_undo == before_rating)
+    check("중복 되돌리기 거절", client.post(f"{BASE}/bank/undo", json={"reviewToken": first["reviewToken"]}).status_code == 409)
+    check("예전 문항 토큰 무효", client.post(f"{BASE}/bank/rate", json={"reviewToken": first["reviewToken"], "rating": "Easy"}).status_code == 409)
+    check("새로고침 시 복원한 문항 유지", client.post(f"{BASE}/bank/next").json()["reviewToken"] == restored["reviewToken"])
+    client.post(f"{BASE}/bank/rate", json={"reviewToken": restored["reviewToken"], "rating": "Good"})
     fb = client.post(f"{BASE}/bank/feedback", json={"questionId": q["question_id"], "category": "content",
                                                      "comment": "답이 이상하다"})
     check("피드백이 남는다", fb.status_code == 201, fb.text)
@@ -265,7 +286,18 @@ def main() -> None:
         check(f"{count}문항 뒤 상태 {status}", session["reviewed"] == count and session["status"] == status)
         ended = client.post(f"{BASE}/bank/session/end", json={"sessionId": opened["session_id"]}).json()
         check("종료 요약에 풀이 수 보존", ended["status"] == "complete" and ended["reviewed"] == count)
+        undo_token = client.get(f"{BASE}/bank").json()["undoToken"]
+        reopened = client.post(f"{BASE}/bank/undo", json={"reviewToken": undo_token}).json()
+        check("완료 회차 되돌리기 시 재개", reopened["session"]["status"] == "active"
+              and reopened["session"]["reviewed"] == count - 1 and reopened["answer"] is not None)
+        reread = client.get(f"{BASE}/bank").json()
+        check("완료 기록 제거와 회차별 집계 복원", not any(
+            s["session_id"] == opened["session_id"] for s in reread["previousSessions"])
+              and reread["session"]["ratings"]["Good"] == count - 1)
+        client.post(f"{BASE}/bank/session/end", json={"sessionId": opened["session_id"]})
     client.post(f"{BASE}/bank/session/start", json={"size": None, "continueAfterGoal": True})
+    check("새 회차는 이전 회차를 되돌리지 못한다", client.post(
+        f"{BASE}/bank/undo", json={"reviewToken": undo_token}).status_code == 409)
     with patch("app.routes.bank.engine.select_question", return_value={
             "question": None, "days": 14, "reason": "waiting", "retry_at": None}):
         exhausted = client.post(f"{BASE}/bank/next").json()

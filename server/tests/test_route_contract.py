@@ -115,6 +115,7 @@ POST /api/bundles/grabs
 POST /api/lectures/{subject}/{run_id}/bank/feedback
 POST /api/lectures/{subject}/{run_id}/bank/next
 POST /api/lectures/{subject}/{run_id}/bank/rate
+POST /api/lectures/{subject}/{run_id}/bank/undo
 POST /api/lectures/{subject}/{run_id}/bank/reveal
 POST /api/lectures/{subject}/{run_id}/bank/session/end
 POST /api/lectures/{subject}/{run_id}/bank/session/start

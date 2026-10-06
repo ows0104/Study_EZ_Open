@@ -53,6 +53,7 @@ from app.models import (
 from app.routes.common import lecture_or_404, record_grabs, storage_or_503
 from app.study_engine.daily_queue import lecture_goal, select_daily_question
 from app.study_engine.planning import day_start
+from app.study_engine.review_undo import remember_review, undo_review, undo_token
 from app.storage import ObjectStorage, StorageNotConfigured
 
 router = APIRouter()
@@ -348,7 +349,9 @@ def download_bank_anki(subject: str, run_id: str, user: CurrentUser = Depends(re
 
 def _load_state(db: Session, user: CurrentUser, row: QuizBank) -> BankState:
     """이 사람의 상태. 은행이 새로 만들어졌으면 옛 상태를 밀어 두고 새로 시작한다."""
-    state = db.get(BankState, (user.id, row.subject, row.run_id))
+    state = db.scalars(select(BankState).where(
+        BankState.user_id == user.id, BankState.subject == row.subject, BankState.run_id == row.run_id
+    ).with_for_update()).first()
     if state is None:
         state = BankState(user_id=user.id, subject=row.subject, run_id=row.run_id, build_id=row.build_id,
                           state=engine.empty_state())
@@ -408,7 +411,7 @@ def read_bank(subject: str, run_id: str, user: CurrentUser = Depends(require_app
     row = _bank_or_404(db, lecture, user)
     out = {"summary": summary(db, lecture, row, is_admin=user.is_admin), "examDate": exam_date_for(db, lecture),
            "sizes": engine.DEFAULT["session"]["sizes"], "defaultSize": engine.DEFAULT["session"]["defaultSize"],
-           "session": None, "previousSessions": [], "conceptMap": [], "mastery": None}
+           "session": None, "previousSessions": [], "conceptMap": [], "mastery": None, "undoToken": None}
     if row.bank and (row.validation or {}).get("pass"):
         now = engine.now_ms()
         state = db.get(BankState, (user.id, row.subject, row.run_id))
@@ -416,6 +419,7 @@ def read_bank(subject: str, run_id: str, user: CurrentUser = Depends(require_app
         if state and state.build_id == row.build_id:
             out["session"] = engine.session_summary(row.bank, state.state, now=now)
             out["previousSessions"] = state.state.get("sessions", [])[-5:]
+            out["undoToken"] = undo_token(state.state)
         # 개념 지도는 첫 회차 전에도 그린다 — 숙련도가 다 0인 지도가 「무엇을 공부할지」의 답이다.
         out["conceptMap"] = engine.concept_map(row.bank, current, now=now)
         out["mastery"] = for_bank(row, state, is_admin=user.is_admin, now=now)
@@ -483,7 +487,7 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
     if state["session"]["status"] == "complete":
         _save(state_row, state)
         db.commit()
-        return {"question": None, "summary": engine.session_summary(bank, state, now=now)}
+        return {"question": None, "summary": engine.session_summary(bank, state, now=now), "undoToken": undo_token(state)}
     exam = exam_date_for(db, lecture)
     by_id = {q["question_id"]: q for q in bank["questions"]}
     served = state.get("served")
@@ -499,7 +503,7 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
             _save(state_row, state)
             db.commit()
             return {"question": None, "summary": engine.session_summary(bank, state, now=now),
-                    "lectureGoal": goal, "reason": "lecture_goal_met"}
+                    "lectureGoal": goal, "reason": "lecture_goal_met", "undoToken": undo_token(state)}
         picked = (engine.select_question(bank, state, exam, now) if goal["met"] and extra_today
                   else select_daily_question(bank, state, exam, now))
         question, days = picked["question"], picked["days"]
@@ -509,12 +513,12 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
                 db.commit()
                 return {"question": None, "waiting": True, "lectureGoal": goal,
                         "session": engine.session_summary(bank, state, now=now),
-                        "reason": picked["reason"], "retryAt": picked["retry_at"]}
+                        "reason": picked["reason"], "retryAt": picked["retry_at"], "undoToken": undo_token(state)}
             state = engine.end_session(bank, state, "no_eligible_question", now)
             _save(state_row, state)
             db.commit()
             return {"question": None, "summary": engine.session_summary(bank, state, now=now),
-                    "reason": picked["reason"], "retryAt": picked["retry_at"]}
+                    "reason": picked["reason"], "retryAt": picked["retry_at"], "undoToken": undo_token(state)}
         score = next((r for r in picked["ranked"] if r["question_id"] == question["question_id"]), None)
         served = {"question_id": question["question_id"], "token": uuid.uuid4().hex, "revealed": False,
                   "presented_at": now, "policy_version": engine.DEFAULT["version"],
@@ -523,7 +527,7 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
     _save(state_row, state)
     db.commit()
     return {"question": _public(question), "reviewToken": served["token"], "days": days, "examDate": exam,
-            "lectureGoal": goal,
+            "lectureGoal": goal, "undoToken": undo_token(state),
             "preloadSlides": _slides(db, row, question["question_id"]),
             "session": engine.session_summary(bank, state, now=now),
             "answer": _answer(db, row, question) if served.get("revealed") else None}
@@ -576,6 +580,7 @@ def rate_bank_answer(subject: str, run_id: str, payload: RateIn,
         raise HTTPException(409, "정답 공개 후 한 번만 평가할 수 있습니다.")
     now = engine.now_ms()
     nxt = engine.record_review(bank, state, served["question_id"], payload.rating, now)
+    remember_review(state, nxt)
     last = nxt["history"][-1]
     last["score_breakdown"] = served.get("score")
     last["selection_policy_version"] = served.get("policy_version")
@@ -588,6 +593,31 @@ def rate_bank_answer(subject: str, run_id: str, payload: RateIn,
     _save(state_row, nxt)
     db.commit()
     return {"reviews": len(nxt["history"]), "session": engine.session_summary(bank, nxt, now=now)}
+
+
+@router.post("/lectures/{subject}/{run_id}/bank/undo")
+def undo_bank_answer(subject: str, run_id: str, payload: TokenIn,
+                     user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)) -> dict:
+    lecture = lecture_or_404(db, subject, run_id)
+    row = _bank_or_404(db, lecture, user)
+    bank = _usable(row)
+    state_row = _load_state(db, user, row)
+    try:
+        state = undo_review(state_row.state, payload.review_token)
+    except ValueError as cause:
+        raise HTTPException(409, str(cause)) from cause
+    served = state["served"]
+    served["token"] = uuid.uuid4().hex  # Discard any tokens held by other tabs before undo.
+    question = next(q for q in bank["questions"] if q["question_id"] == served["question_id"])
+    now = engine.now_ms()
+    _save(state_row, state)
+    db.commit()
+    exam = exam_date_for(db, lecture)
+    return {"question": _public(question), "reviewToken": served["token"], "undoToken": undo_token(state),
+            "days": engine.days_until(exam, now), "examDate": exam,
+            "lectureGoal": lecture_goal(bank, state, lecture.title, now),
+            "session": engine.session_summary(bank, state, now=now), "answer": _answer(db, row, question),
+            "preloadSlides": _slides(db, row, question["question_id"])}
 
 
 class FeedbackIn(BaseModel):

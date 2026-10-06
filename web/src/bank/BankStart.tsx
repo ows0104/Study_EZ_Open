@@ -8,12 +8,14 @@ import { LectureMastery } from "../lecture/LectureMastery";
 import { daysLabel, DIRECTION_LABEL } from "./labels";
 import { BankDownload } from "./BankDownload";
 
-export function BankStart({ base, info, finished, lecture, onStarted }: {
+export function BankStart({ base, info, finished, lecture, onStarted, onUndo, undoBusy }: {
   base: string;
   info: BankRead;
   finished: BankSession | null;
   lecture: { subject: string; runId: string };
   onStarted: () => void;
+  onUndo?: () => void;
+  undoBusy?: boolean;
 }) {
   const [size, setSize] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -38,6 +40,7 @@ export function BankStart({ base, info, finished, lecture, onStarted }: {
     <div className="quiz bank-start bank-complete">
       <DailyGoal plan={info.lectureGoal} showMain />
       {finished ? <details><summary>이번 학습 기록 보기</summary><SessionSummary summary={finished} /></details> : null}
+      {onUndo ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={onUndo} aria-keyshortcuts="Z Control+Z">마지막 평가 되돌리기 <kbd>Z</kbd></button> : null}
       <button className="is-quiet" disabled={busy} onClick={() => void start()}>
         {busy ? "여는 중…" : "이 강의 더 공부하기"}
       </button>
@@ -60,6 +63,7 @@ export function BankStart({ base, info, finished, lecture, onStarted }: {
         남은 날로 고릅니다.
       </p>
       {finished ? <SessionSummary summary={finished} /> : null}
+      {onUndo ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={onUndo} aria-keyshortcuts="Z Control+Z">마지막 평가 되돌리기 <kbd>Z</kbd></button> : null}
       <LectureMastery value={info.mastery} />
       <div className="bank-start-row">
         <button className="quiz-submit" disabled={busy} onClick={() => void start()}>

@@ -7,6 +7,7 @@ import { daysLabel, DIRECTION_LABEL } from "./labels";
 import { QuestionBody, AnswerBody } from "./BankQuestion";
 import { SlidePreloader } from "../slidePreload";
 import { DailyGoal } from "./DailyGoal";
+import { useBankUndo } from "./useBankUndo";
 
 const FORMAT_LABEL: Record<string, string> = {
   basic: "서술", cloze: "빈칸", list: "나열", ox: "O/X", mcq: "객관식", multi_select: "복수 선택",
@@ -29,10 +30,17 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
   const [reporting, setReporting] = useState(false);
   // 회차를 끝내지 않고 지도와 진행도를 본다. 열 때마다 새로 읽는다 — 방금 매긴 평가가 숙련도에 들어가 있다.
   const [peek, setPeek] = useState<BankRead | null>(null);
+  const restore = useCallback((got: BankNext) => {
+    setCurrent(got); setAnswer(got.answer ?? null); setPicked(new Set()); setReporting(false);
+    window.scrollTo(0, 0);
+  }, []);
+  const { undo, undoBusy, pending } = useBankUndo(base, current?.undoToken, restore, setError, busy || Boolean(peek));
   const slides = useMemo(() => new SlidePreloader(), [base]);
   useEffect(() => { slides.warm(current?.preloadSlides?.map((slide) => slide.url) ?? []); }, [current, slides]);
 
   const next = useCallback(async () => {
+    if (pending.current) return;
+    pending.current = true;
     setBusy(true);
     setError("");
     try {
@@ -49,6 +57,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
+      pending.current = false;
       setBusy(false);
     }
   }, [base, onFinished]);
@@ -60,8 +69,10 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
   }, [current, next]);
 
   const reveal = useCallback(async () => {
-    if (!current?.reviewToken || answer) return;
+    if (!current?.reviewToken || answer || busy || pending.current) return;
+    pending.current = true;
     setBusy(true);
+    setError("");
     try {
       setAnswer(await api<BankAnswer>(`${base}/reveal`, {
         method: "POST", body: JSON.stringify({ reviewToken: current.reviewToken }),
@@ -69,26 +80,31 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
+      pending.current = false;
       setBusy(false);
     }
-  }, [base, current, answer]);
+  }, [base, current, answer, busy]);
 
   const rate = useCallback(async (rating: BankRating) => {
-    if (!current?.reviewToken || !answer || busy) return;
+    if (!current?.reviewToken || !answer || busy || pending.current) return;
+    pending.current = true;
     setBusy(true);
+    setError("");
     try {
       await api(`${base}/rate`, { method: "POST", body: JSON.stringify({ reviewToken: current.reviewToken, rating }) });
     } catch (cause) {
       setError((cause as Error).message);
+      pending.current = false;
       setBusy(false);
       return;
     }
-    setBusy(false);
+    pending.current = false;
     await next();
   }, [base, current, answer, busy, next]);
 
   async function end() {
-    if (!current?.session || busy) return;
+    if (!current?.session || busy || pending.current) return;
+    pending.current = true;
     setBusy(true);
     try {
       const summary = await api<BankSession>(`${base}/session/end`, {
@@ -98,6 +114,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
+      pending.current = false;
       setBusy(false);
     }
   }
@@ -114,9 +131,10 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
   // 키보드 — 기존 웹 풀이와 같다. Space·Enter 로 펴고, 1–4 로 찍는다. 지도를 보는 동안은 안 받는다.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.repeat || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
       if (document.querySelector("dialog[open]")) return;
       if (peek) return;
-      if (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, button, a, summary")) return;
+      if (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, button, a, summary, [contenteditable]:not([contenteditable='false'])")) return;
       if ((event.key === " " || event.key === "Enter") && !answer) {
         event.preventDefault();
         void reveal();
@@ -138,6 +156,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
     }).format(current.retryAt)} · 시간이 되면 자동으로 이어집니다.</p> : null}
     <button disabled={busy} onClick={() => void next()}>다시 확인</button>{" "}
     <button className="is-quiet" disabled={busy} onClick={() => void end()}>잠시 멈추기</button>
+    {current.undoToken ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={() => void undo()} aria-keyshortcuts="Z Control+Z">되돌리기 <kbd>Z</kbd></button> : null}
     {error ? <p className="notice is-error">{error}</p> : null}
   </div>;
   if (!current?.question) return error ? <p className="notice is-error">{error}</p> : <p className="notice">불러오는 중…</p>;
@@ -178,6 +197,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
             {FORMAT_LABEL[q.format] ?? q.format}
           </span>
           <span className="bank-progress-actions">
+            {current.undoToken ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={() => void undo()} aria-keyshortcuts="Z Control+Z">되돌리기 <kbd>Z</kbd></button> : null}
             <button className="is-quiet" onClick={() => void openPeek()}>개념 지도</button>
             <button className="is-quiet" onClick={() => void end()}>회차 마치기</button>
           </span>
@@ -216,7 +236,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
       <div className="quiz-bar">
         {answer ? (
           RATINGS.map(({ rating, grade }, index) => (
-            <button key={rating} className={`quiz-grade is-${grade}`} disabled={busy} onClick={() => void rate(rating)}>
+            <button key={rating} className={`quiz-grade is-${grade}`} disabled={busy || undoBusy} onClick={() => void rate(rating)}>
               <span className="quiz-grade-name">
                 {rating}
                 <kbd>{index + 1}</kbd>
@@ -224,7 +244,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
             </button>
           ))
         ) : (
-          <button className="quiz-submit" disabled={busy} onClick={() => void reveal()}>
+          <button className="quiz-submit" disabled={busy || undoBusy} onClick={() => void reveal()}>
             {busy ? "펴는 중…" : <>답 보기 <kbd>space</kbd></>}
           </button>
         )}
