@@ -756,6 +756,7 @@ button.resource.is-download:hover:not(:disabled)::after {
   text-align: left;
   overflow-wrap: anywhere;
 }
+.quiz-hint { text-align: center; }
 .quiz-hint summary {
   display: flex;
   align-items: center;
