@@ -70,8 +70,5 @@ export function renderPreviewPrompt(template: string, detail: LectureDetail) {
     .replace(/\{파일명\}|\{강의\}|\{과목\}|\{교수\}|\{날짜\}/g, (token) => values[token] ?? "")
     .replace(/[ \t]+\n/g, "\n")
     .trim();
-  const exams = detail.files.filter((file) => file.kind === "jokbo");
-  return exams.length
-    ? `${prompt}\n\n함께 첨부한 올해 강의 족보(${exams.map((file) => file.filename).join(", ")})도 참고해줘.`
-    : prompt;
+  return prompt;
 }
