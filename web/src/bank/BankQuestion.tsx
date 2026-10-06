@@ -92,20 +92,20 @@ export function AnswerBody({ question: q, answer, preload }: {
   const review = answer.medicalReview;
   const right = q.format === "matching" ? shuffled(q.matching_right, q.question_id) : [];
   const remainingPoints = answerPoints(answer.answer, answer.answerUnits).remaining;
-  const coreUnits = q.tier === "Core" && q.format === "basic"
+  const shortUnits = q.format === "basic"
     ? answer.answerUnits.filter((unit) => unit.replace(/\*\*/g, "").trim()) : [];
-  const conciseCore = coreUnits.length > 0;
-  const coreExplanation = conciseCore && answer.answer.trim().length > 0
-    && answerPoints(answer.answer, []).text.trim() !== coreUnits.map((unit) => answerPoints(unit, []).text.trim()).join("\n");
+  const conciseAnswer = shortUnits.length > 0;
+  const shortExplanation = conciseAnswer && answer.answer.trim().length > 0
+    && answerPoints(answer.answer, []).text.trim() !== shortUnits.map((unit) => answerPoints(unit, []).text.trim()).join("\n");
   return (
     <>
-      {/* Core 서술은 채점 항목 자체가 답이다. 산문은 필요할 때만 펼쳐 읽는다. */}
-      {conciseCore ? (
+      {/* 단답은 모든 tier에서 채점 항목 자체가 답이다. 부연설명은 필요할 때만 펼친다. */}
+      {conciseAnswer ? (
         <>
-          <ul className="quiz-answer bank-core-answer">
-            {coreUnits.map((unit, index) => <li key={index}><AnswerPoints text={unit} units={[unit]} /></li>)}
+          <ul className="quiz-answer bank-short-answer">
+            {shortUnits.map((unit, index) => <li key={index}><AnswerPoints text={unit} units={[unit]} /></li>)}
           </ul>
-          {coreExplanation ? (
+          {shortExplanation ? (
             <details className="bank-answer-context">
               <summary>설명 보기</summary>
               <p><Stem text={answer.answer} /></p>
@@ -114,7 +114,7 @@ export function AnswerBody({ question: q, answer, preload }: {
         </>
       ) : null}
       {/* Cloze는 위 발문에 정답을 채워 보여 준다. 짝짓기는 아래 짝이 곧 답이다. */}
-      {conciseCore || q.format === "cloze" || (q.format === "matching" && answer.answerPairs.length) ? null : (
+      {conciseAnswer || q.format === "cloze" || (q.format === "matching" && answer.answerPairs.length) ? null : (
         <p className="quiz-answer">
           <AnswerPoints text={answer.answer} units={answer.answerUnits} />
         </p>
@@ -131,7 +131,7 @@ export function AnswerBody({ question: q, answer, preload }: {
         </section>
       ) : null}
       {/* 답에서 강조한 포인트는 반복하지 않는다. 답과 표현이 다른 설명은 보존한다. */}
-      {!conciseCore && remainingPoints.length > 0 && !["ox", "cloze", "matching", "sequence"].includes(q.format) ? (
+      {!conciseAnswer && remainingPoints.length > 0 && !["ox", "cloze", "matching", "sequence"].includes(q.format) ? (
         <ul className="bank-units">{remainingPoints.map((unit) => <li key={unit}><Stem text={unit} /></li>)}</ul>
       ) : null}
       {answer.answerPairs.length ? (

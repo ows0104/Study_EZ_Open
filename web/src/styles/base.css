@@ -2725,11 +2725,11 @@ button.notice-title:hover:not(:disabled) {
   font-weight: 700;
 }
 
-.bank-core-answer {
+.bank-short-answer {
   padding-left: 1.25em;
 }
 
-.bank-core-answer li + li {
+.bank-short-answer li + li {
   margin-top: 6px;
 }
 

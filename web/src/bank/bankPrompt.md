@@ -1,10 +1,13 @@
 <!--
 Bank Builder 프롬프트 — 정본
-Version: 1.13
+Version: 1.15
 
 이 파일이 ChatGPT에 가는 프롬프트의 정본이다. 이 주석은 보내지 않는다.
 {{…}} 자리는 web/src/bank/prompt.ts 가 강의마다 채운다. {{c1}} 같은 cloze 표기는 그대로 간다.
 고치면 아래에 판을 하나 올리고 Version 을 같이 올린다. 서버에 응답이 저장될 때 이 Version 이 같이 남는다.
+
+1.15 (2026-10-07) 서술형을 단답형으로 바꾼다. 모든 tier의 basic은 용어·수치·짧은 관계로 답하고,
+                   문장형 설명이 필요한 문항은 Cloze·List·Matching·Sequence 등으로 설계한다.
 
 1.13 (2026-10-07) Core 서술은 짧은 용어·관계·채점 항목으로 회수하게 한다. 긴 문장 재현을 요구하지 않고,
                    answer와 answer_units를 같은 최소 정답 단위로 쓴다. 넓은 설명은 회수 축을 나눈다.
@@ -139,7 +142,7 @@ Concept Map과 Retrieval Plan을 바탕으로 문제를 만들어라.
 
 사용 가능한 형식:
 
-- Basic
+- 단답형 (Basic, `basic`)
 - Cloze
 - List
 - O/X
@@ -152,6 +155,9 @@ Concept Map과 Retrieval Plan을 바탕으로 문제를 만들어라.
 
 ## 문제 설계 원칙
 
+- **서술형은 사용하지 않는다.** 모든 tier에서 `basic`은 단답형이다. 정답은 용어·수치·짧은 관계로 직접 회상할 수 있어야 하며, 문장 표현·조사·연결어를 재현하게 하지 마라.
+- 단답형은 한 가지 명확한 정답을 기본으로 한다. 같은 축의 짧은 짝은 함께 물어도 되지만, 여러 독립 항목은 List, 대응 관계는 Matching, 과정은 Sequence, 문맥 속 핵심 개념은 Cloze를 사용해라.
+- 긴 설명이나 기전의 전체 서술이 필요하면 적합한 다른 형식으로 바꾸거나 좁은 단답 문항으로 나눠라. Advanced·Optional이라는 이유로 문장형 답을 단답형에 넣지 마라.
 - 한 문제는 **하나의 명확한 retrieval act**를 중심으로 한다.
 - 질문을 읽었을 때 무엇을 회상해야 하는지 즉시 알 수 있어야 한다.
 - 발문은 **출처가 아니라 개념 자체**를 묻는다. 「강의에서 제시한」, 「자료에 따르면」, 「2016-2 족보에서」 같은 출처 수식어는 쓰지 않는다. 출처·출제 연도는 `source_refs`·`exam_rationale`에 기록한다. 출처 수식어를 빼면 답의 범위가 모호해지는 경우, 필요한 조건·분류 기준·단계의 범위를 발문에 직접 명시한다.
@@ -212,7 +218,7 @@ answer: Phase I 반응은 **(-OH, -NH2, -SH)** 같은 **functional group**를 **
 
 **짧게 회상하고 항목별로 바로 채점할 수 있게 만든다.** Core는 긴 서술문을 재현하는 형식으로 만들지 마라.
 - 한 용어·한 관계·한 판단을 묻는 atomic recall을 기본으로 한다. 서로 짝을 이루는 두 관계는 함께 물어도 된다.
-- Basic의 답은 용어, `A → B`, 짧은 원인–결과처럼 최소 정답으로 쓴다. 여러 항목이면 항목별로 분리하고, 이를 하나의 긴 문장으로 다시 합치지 마라.
+- 단답형(Basic)의 답은 용어, `A → B`, 짧은 원인–결과처럼 최소 정답으로 쓴다. 여러 항목이면 항목별로 분리하고, 이를 하나의 긴 문장으로 다시 합치지 마라.
 - 발문은 무엇을 몇 개 답해야 하는지 명확히 한다. 「전체를 설명하라」처럼 회수 범위가 넓으면 축별로 나누거나 List·Matching·Cloze로 바꾼다.
 - 기전이 중요해서 Core인 경우에도 핵심 표적·작용·결과를 짧은 관계로 묻는다. 여러 독립 사실을 한꺼번에 요구하는 부담은 문항을 나누어 줄인다.
 - 문장 표현·조사·연결어를 기억할 필요 없이 핵심 항목을 맞히면 정답이어야 한다.
@@ -278,15 +284,15 @@ Optional이라는 이유로 문항 수나 비율을 줄이지 마라. 학습 가
 예:
 
 Question:
-Acyclovir selectivity를 activation 단계와 polymerase 단계로 나누어 설명하라.
+Acyclovir 선택성의 activation 단계와 polymerase 단계를 각 특징과 짝지어라(Matching).
 
 Answer units:
-- virus가 drug를 phosphorylate
-- viral DNA polymerase가 더 sensitive
+- activation → virus가 drug를 phosphorylate
+- polymerase → viral DNA polymerase가 더 sensitive
 
 단순 한 단어 정답이면 answer unit은 하나만 둔다.
 
-Core Basic은 `answer`와 `answer_units`를 같은 짧은 정답 항목으로 쓴다. 부연설명이나 별도의 회수 내용을 채점 항목에 끼워 넣지 마라.
+모든 tier의 단답형(Basic)은 `answer`와 `answer_units`를 같은 짧은 정답 항목으로 쓴다. 부연설명이나 별도의 회수 내용을 채점 항목에 끼워 넣지 마라.
 
 ## Prerequisites
 
@@ -454,7 +460,7 @@ Core → Advanced → Optional 순서로 **문항당 한 행**. 모든 문항을
 - source_refs는 기존처럼 `S1 p13; S1 p14; EXT 외부 의학지식`으로 쓴다. exam_rationale에는 해당 문항의 교수 강조 또는 족보 근거를 남긴다.
 - **cloze**: question의 빈칸 1–3개를 모두 `{{c1}}`로 표시한다. answer_units는 빈칸 등장 순서대로 하나씩 두고, question에는 답을 넣지 않는다. answer에는 정답을 채운 전체 문장을 쓰고 채운 정답 부분만 `**굵게**` 강조한다.
 - **ox**: answer는 `O` 또는 `X`. 설명은 answer_units에 둔다.
-- **Core basic**: answer는 짧은 정답 항목만 쓴다. 여러 항목이면 `<br>`로 구분하고 answer_units에도 같은 항목을 같은 순서로 적는다. 긴 서술문으로 다시 합치지 않는다.
+- **basic (단답형, 모든 tier)**: answer는 용어·수치·짧은 관계만 쓴다. 같은 축의 짧은 짝이면 `<br>`로 구분하고 answer_units에도 같은 항목을 같은 순서로 적는다. 문장형 답이나 부연설명을 쓰지 않는다. 여러 독립 항목은 List 등으로 설계한다.
 
 ### 3.2 Choice Details
 

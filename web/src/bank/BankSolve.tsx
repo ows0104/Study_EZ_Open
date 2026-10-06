@@ -11,7 +11,7 @@ import { DailyGoal } from "./DailyGoal";
 import { useBankUndo } from "./useBankUndo";
 
 const FORMAT_LABEL: Record<string, string> = {
-  basic: "서술", cloze: "빈칸", list: "나열", ox: "O/X", mcq: "객관식", multi_select: "복수 선택",
+  basic: "단답", cloze: "빈칸", list: "나열", ox: "O/X", mcq: "객관식", multi_select: "복수 선택",
   matching: "짝짓기", sequence: "순서",
 };
 
