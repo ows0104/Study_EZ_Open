@@ -82,7 +82,7 @@ export type QuizItem = {
   focus: string;
   cardType: string;
   examHit: boolean;
-  /** 선택 도전 — 수업이 답해 줄 질문. 새 덱은 한 장까지. */
+  /** 도전 문항 뱃지. 일반 문항과 같은 진행·이해 확인을 사용한다. */
   challenge?: boolean;
   hint?: string;
   learningScope?: string;

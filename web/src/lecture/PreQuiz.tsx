@@ -30,11 +30,11 @@ export function PreQuiz({ subject, runId, onDone }: {
     return () => { active = false; };
   }, [base]);
 
-  const core = payload?.items.filter((entry) => !entry.challenge) ?? [];
-  const challenges = payload?.items.filter((entry) => entry.challenge) ?? [];
-  const ordered = [...core, ...challenges];
+  const ordered = payload?.items ?? [];
+  const completed = (itemId: string) => mode === "reread"
+    ? seen.has(itemId) : Boolean(ordered.find((entry) => entry.itemId === itemId)?.attempt);
   const candidates = ordered.filter((entry) =>
-    entry.challenge || mode === "reread" ? !seen.has(entry.itemId) : !entry.attempt);
+    !completed(entry.itemId));
   const item = payload?.items.find((entry) => entry.itemId === forcedId)
     ?? candidates[0];
   const finished = Boolean(payload && !item);
@@ -57,7 +57,7 @@ export function PreQuiz({ subject, runId, onDone }: {
     finally { setBusy(false); }
   }
   async function check(understood: boolean) {
-    if (!item || !revealed || busy || item.challenge) return;
+    if (!item || !revealed || busy) return;
     setBusy(true); setError("");
     try {
       const result = await api<GradeResult>(`${base}/check`, {
@@ -75,7 +75,8 @@ export function PreQuiz({ subject, runId, onDone }: {
     try {
       const result = await api<UndoResult>(`${base}/undo`, { method: "POST" });
       patch(result.itemId, result.attempt, result, result.undoable);
-      setForcedId(result.itemId); setRevealed(result); setMode("core");
+      setSeen((old) => { const next = new Set(old); next.delete(result.itemId); return next; });
+      setForcedId(result.itemId); setRevealed(result);
     } catch (cause) { setError((cause as Error).message); }
     finally { setBusy(false); }
   }
@@ -84,18 +85,22 @@ export function PreQuiz({ subject, runId, onDone }: {
   }
   const undoButton = payload?.undoable ? <button className="quiz-undo" disabled={busy} onClick={undo}>이전 선택 되돌리기</button> : null;
   if (!payload) return <p className={`notice${error ? " is-error" : ""}`}>{error || "예습 문항을 불러오는 중…"}</p>;
+  const progress = <PreQuizProgress title={mode === "reread" ? "다시 훑어보기" : "예습"}
+    items={ordered.map((entry) => ({ id: entry.itemId, done: completed(entry.itemId) }))}
+    current={item?.itemId} />;
   if (!item) {
-    const targets = core.filter((entry) => entry.attempt && !entry.attempt.correct);
+    const targets = ordered.filter((entry) => entry.attempt && !entry.attempt.correct);
     return <div className="quiz-done prequiz-narrow">
+      {progress}
       <h2>{ordered.length ? `예습 ${ordered.length}문항 확인 완료` : "아직 예습 문항이 없습니다"}</h2>
       {ordered.length > 0 ? <p>수업을 들을 준비가 됐어요. 세부 내용은 수업에서 연결하면 됩니다.</p> : null}
       {targets.length ? <section className="quiz-takeaways">
         <h3>수업에서 확인할 질문 {targets.length}개</h3>
         <ul>{targets.map((entry) => <li key={entry.itemId}><Stem text={entry.lectureFocus || entry.stem} /></li>)}</ul>
-      </section> : core.length > 0 ? <p className="quiz-done-note">핵심을 모두 이해했어요. 수업에서 어떻게 확장되는지 들어보세요.</p> : null}
-      {core.some((entry) => entry.learningScope) ? <details className="quiz-takeaways">
+      </section> : ordered.length > 0 ? <p className="quiz-done-note">모든 문항을 이해했어요. 수업에서 어떻게 확장되는지 들어보세요.</p> : null}
+      {ordered.some((entry) => entry.learningScope) ? <details className="quiz-takeaways">
         <summary>오늘 챙긴 핵심</summary>
-        <ul>{core.filter((entry) => entry.learningScope).map((entry) => <li key={entry.itemId}>{entry.learningScope}</li>)}</ul>
+        <ul>{ordered.filter((entry) => entry.learningScope).map((entry) => <li key={entry.itemId}>{entry.learningScope}</li>)}</ul>
       </details> : null}
       <a className="resource" href={lectureHref({ subject, runId })}><strong>예습 마치기</strong></a>
       {ordered.length ? <button className="quiz-undo" onClick={start}>다시 훑어보기</button> : null}
@@ -104,13 +109,13 @@ export function PreQuiz({ subject, runId, onDone }: {
     </div>;
   }
   const feedback = revealed?.itemId === item.itemId ? revealed : null;
-  const position = (item.challenge ? challenges : core).findIndex((entry) => entry.itemId === item.itemId) + 1;
   return <>
     <div className="quiz">
-      <p className="quiz-progress"><span>{item.challenge ? "도전" : mode === "reread" ? "다시 훑어보기" : "핵심"} {position} / {item.challenge ? challenges.length : core.length}</span>{undoButton}
+      {progress}
+      <p className="quiz-progress">{undoButton}
         {isAdmin ? <a className="quiz-fix" href={lectureHref({ subject, runId }) + cardsHash("pre", item.itemId)} target="_blank" rel="noreferrer">이 카드 고치기</a> : null}
       </p>
-      <p className="quiz-support-note">{item.challenge ? "지금 맞히지 않아도 괜찮아요. 수업에서 답을 찾아보세요." : "떠오르는 만큼 생각해 보세요. 답을 읽고 이해하면 충분해요."}</p>
+      <p className="quiz-support-note prequiz-intro">떠오르는 만큼 생각해 보세요. 답을 읽고 이해하면 충분해요.</p>
       <WhyAsked item={item} />
       <p className="quiz-stem"><Stem text={item.stem} /></p>
       {!feedback && item.hint ? <details className="quiz-hint" key={item.itemId}>
@@ -137,9 +142,24 @@ export function PreQuiz({ subject, runId, onDone }: {
     </div>
     <div className="quiz-bar prequiz-bar">
       {!feedback ? <button className="quiz-submit" disabled={busy} onClick={reveal}>{busy ? "불러오는 중…" : "답과 설명 보기"}</button>
-        : item.challenge ? <button className="quiz-submit" disabled={busy} onClick={() => { setSeen((old) => new Set(old).add(item.itemId)); setRevealed(null); }}>Okay!</button>
-          : <><button className="quiz-grade is-again" disabled={busy} onClick={() => check(false)}><span className="quiz-grade-name">Again!</span></button>
-            <button className="quiz-grade is-good" disabled={busy} onClick={() => check(true)}><span className="quiz-grade-name">Okay!</span></button></>}
+        : <><button className="quiz-grade prequiz-choice" disabled={busy} onClick={() => check(false)}><span className="quiz-grade-name">수업에서 확인할게요</span></button>
+          <button className="quiz-grade prequiz-choice" disabled={busy} onClick={() => check(true)}><span className="quiz-grade-name">이해했어요</span></button></>}
     </div>
   </>;
+}
+
+function PreQuizProgress({ title, items, current }: {
+  title: string; items: { id: string; done: boolean }[]; current?: string;
+}) {
+  const done = items.filter((entry) => entry.done).length;
+  if (!items.length) return null;
+  return <div className="prequiz-progress" aria-live="polite">
+    <p><span>{title}</span><strong>{done} / {items.length}문항 완료</strong></p>
+    <div className="prequiz-dots" role="progressbar" aria-label={`${title} 완료 문항`}
+      aria-valuemin={0} aria-valuemax={items.length} aria-valuenow={done}>
+      {items.map((entry, index) => <span key={entry.id} aria-hidden="true"
+        title={`${index + 1}번 문항 · ${entry.done ? "완료" : entry.id === current ? "풀이 중" : "대기"}`}
+        className={`prequiz-dot${entry.done ? " is-done" : entry.id === current ? " is-current" : ""}`} />)}
+    </div>
+  </div>;
 }

@@ -29,11 +29,10 @@ window.fetch = async (input, init) => {
   if (path === "/api/me") result = { isAdmin: false };
   else if (path.endsWith("/reveal") && item) result = reveal(item);
   else if (path.endsWith("/check") && item) {
-    if (item.challenge) throw new Error("도전 문항이 채점 API로 전송됨");
     history.push({ itemId: item.itemId, attempt: item.attempt });
     item.attempt = { correct: body.understood, state: "review", dueAt: null };
     result = { itemId: item.itemId, attempt: item.attempt, undoable: true, now: new Date().toISOString() };
-    document.getElementById("requests")!.textContent = `핵심 채점 요청 ${++grades}회 · 도전 채점 요청 0회`;
+    document.getElementById("requests")!.textContent = `이해 확인 요청 ${++grades}회`;
   } else if (path.endsWith("/undo")) {
     const last = history.pop()!;
     const restored = items.find((entry) => entry.itemId === last.itemId)!;

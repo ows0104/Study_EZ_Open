@@ -3081,6 +3081,18 @@ button.notice-title:hover:not(:disabled) {
 .prequiz-bar .quiz-grade { max-width: 280px; font-size: 15px; padding: 14px 10px; }
 .prequiz-bar .is-listen { color: var(--ink-2); border-color: var(--line); }
 
+.prequiz-intro { text-align: center; }
+.prequiz-progress { margin: 0 auto 16px; text-align: center; }
+.prequiz-progress > p { display: flex; gap: 10px; justify-content: center; align-items: baseline; margin: 0 0 10px; font-size: 13px; }
+.prequiz-progress > p > span { color: var(--ink-3); }
+.prequiz-progress strong { color: var(--ink); font-weight: 650; font-variant-numeric: tabular-nums; }
+.prequiz-dots { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.prequiz-dot { width: 12px; height: 12px; border: 1px solid var(--line-strong); border-radius: 50%; background: var(--surface-2); }
+.prequiz-dot.is-done { border-color: var(--fam-pre); background: var(--fam-pre); }
+.prequiz-dot.is-current { border: 2px solid var(--fam-pre); }
+.prequiz-bar .prequiz-choice { border-color: var(--line-strong); color: var(--ink); background: var(--surface-2); border-radius: var(--r-3); }
+.prequiz-bar .prequiz-choice:hover:not(:disabled) { border-color: var(--ink-3); background: var(--surface-3); }
+
 .bank-cmap-related button {
   padding: 0 4px;
   font-size: 12px;

@@ -108,18 +108,13 @@ PRE = Quiz("pre", PreItem, QuizAttempt, SLIDE_KINDS["pre"], PreReviewLog)
 MAIN = Quiz("main", MainItem, MainAttempt, SLIDE_KINDS["main"], MainReviewLog)
 
 
-def core_filter(quiz: Quiz):
-    """선택 도전은 예습의 평가·진행·복습 대상에서 제외한다."""
-    return quiz.item.challenge.is_(False) if quiz.name == "pre" else True
-
-
-def core_log_filter(quiz: Quiz, subject: str, run_id: str):
-    # 이전 버전이 채점한 도전 기록을 되돌리며 핵심 카드에 그 답을 붙이지 않는다.
+def item_log_filter(quiz: Quiz, subject: str, run_id: str):
+    # 지워진 문항의 기록은 되돌리지 않는다. 도전 뱃지는 진행 방식에 영향을 주지 않는다.
     if quiz.name != "pre":
         return True
     item = quiz.item
     return quiz.log.item_id.in_(select(item.item_id).where(
-        item.subject == subject, item.run_id == run_id, core_filter(quiz),
+        item.subject == subject, item.run_id == run_id,
     ))
 
 
@@ -262,7 +257,6 @@ def missed_items(
                 item.subject == subject,
                 item.run_id == run_id,
                 item.item_id.in_(missed_ids),
-                core_filter(quiz),
             )
         ).all()
     )
@@ -333,8 +327,8 @@ def _read(quiz: Quiz, db: Session, user_id: str, subject: str, run_id: str) -> d
             }
             for row in items
         ],
-        "answered": sum(1 for row in items if row.item_id in attempts and (quiz.name != "pre" or not row.challenge)),
-        "correct": sum(1 for row in items if row.item_id in attempts and attempts[row.item_id].correct and (quiz.name != "pre" or not row.challenge)),
+        "answered": sum(1 for row in items if row.item_id in attempts),
+        "correct": sum(1 for row in items if row.item_id in attempts and attempts[row.item_id].correct),
         # **화면의 시계를 믿지 않는다.** 익히는 단계는 분 단위라, 기계 시각이
         # 몇 분 틀어져 있으면 「1분 뒤」가 이미 지난 일이 되거나 영영 안 온다.
         # 화면은 이 값으로 차이를 재서 자기 시계를 보정한다.
@@ -352,7 +346,7 @@ def _undo_depth(quiz: Quiz, db: Session, user_id: str, subject: str, run_id: str
             select(func.count())
             .select_from(log)
             .where(log.user_id == user_id, log.subject == subject, log.run_id == run_id,
-                   core_log_filter(quiz, subject, run_id))
+                   item_log_filter(quiz, subject, run_id))
         )
         or 0
     )
@@ -382,7 +376,7 @@ def due_counts(
             & (attempt.item_id == item.item_id)
             & (attempt.user_id == user_id),
         )
-        .where(item.subject == subject, item.run_id == run_id, core_filter(quiz))
+        .where(item.subject == subject, item.run_id == run_id)
     ).all()
 
     counts = {"new": 0, "learning": 0, "review": 0, "later": 0}
@@ -532,8 +526,6 @@ def _grade(
     """
     grade = payload.resolved()
     item = _item_or_404(quiz, db, subject, run_id, payload.item_id)
-    if quiz.name == "pre" and item.challenge:
-        raise HTTPException(status_code=409, detail="선택 도전은 평가하거나 복습 일정에 넣지 않습니다.")
     now = datetime.now(UTC)
 
     attempt = _attempt_row(quiz, db, user_id, item)
@@ -601,7 +593,7 @@ def _undo(quiz: Quiz, db: Session, user_id: str, subject: str, run_id: str) -> d
     row = db.scalars(
         select(log)
         .where(log.user_id == user_id, log.subject == subject, log.run_id == run_id,
-               core_log_filter(quiz, subject, run_id))
+               item_log_filter(quiz, subject, run_id))
         .order_by(log.id.desc())
         .limit(1)
     ).first()

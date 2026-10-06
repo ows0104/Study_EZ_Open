@@ -100,9 +100,11 @@ def main() -> None:
     check("관리자용 발췌는 학생에게 오지 않는다", "관리자용 원문" not in str(got) + str(revealed))
     check("옛 카드의 지원 칸은 빈 값이다", old.get("learningScope") == "" and got["c003"].get("hint") == "")
     grade = client.post(f"{BASE}/prequiz/grade", json={"itemId": "c001", "grade": "again"}, headers=USER)
-    check("도전은 오답과 복습 일정에 들어가지 않는다", grade.status_code == 409, grade.text)
+    check("도전도 이해 확인을 저장하고 복습 일정은 만들지 않는다", grade.status_code == 200
+          and grade.json()["correct"] is False and grade.json()["attempt"]["dueAt"] is None, grade.text)
     progress = client.get(BASE, headers=USER).json()["prequiz"]
-    check("진행률은 핵심만 센다", progress["itemCount"] == 2 and progress["due"] == 2, progress)
+    check("진행률은 도전 뱃지 문항도 포함한다", progress["itemCount"] == 3
+          and progress["answered"] == 1 and progress["due"] == 2, progress)
 
     # ── 뺐다가 되돌려도 두 칸이 산다. 되돌리기는 원본 사본에서 칸을 하나씩 옮겨 적는다.
     admin = {"Authorization": "Bearer local-test-token"}
