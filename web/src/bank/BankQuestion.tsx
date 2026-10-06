@@ -42,9 +42,10 @@ export function QuestionBody({ question: q, answer, picked, onPick }: {
           if (!/^\{\{c\d+\}\}$/.test(part)) return <Stem key={index} text={part} />;
           const unit = answer?.answerUnits[blank];
           blank += 1;
+          if (unit !== undefined) return <strong key={index}><Stem text={unit} /></strong>;
           return (
-            <span key={index} className={`bank-blank${unit ? " is-filled" : ""}`}>
-              {unit ?? `[ ${blank} ]`}
+            <span key={index} className="bank-blank">
+              {`[ ${blank} ]`}
             </span>
           );
         })}
@@ -87,8 +88,8 @@ export function AnswerBody({ question: q, answer }: { question: BankQuestion; an
   const right = q.format === "matching" ? shuffled(q.matching_right, q.question_id) : [];
   return (
     <>
-      {/* 짝짓기는 아래 짝이 곧 답이다. 답 줄은 같은 말을 한 번 더 하거나 「각 pairing」 같은 빈말이다. */}
-      {q.format === "matching" && answer.answerPairs.length ? null : (
+      {/* Cloze는 위 발문에 정답을 채워 보여 준다. 짝짓기는 아래 짝이 곧 답이다. */}
+      {q.format === "cloze" || (q.format === "matching" && answer.answerPairs.length) ? null : (
         <p className="quiz-answer">
           <Stem text={answer.answer} />
         </p>
