@@ -47,7 +47,7 @@ export function ReviewAction({ lecture, detail, base, onError }: {
 
   return (
     <PanelGroup tone="preview" title="복습" note="오늘 강의록을 다시 읽는 대화">
-      <ActionCard shape={`is-key${saved ? "" : notes && installed ? " is-faint" : " is-empty"}`}
+      <ActionCard shape={`is-key is-review${saved || notes && installed ? "" : " is-empty"}`}
         hit={saved ? (
           <a className="panel-action-hit" href={saved.conversationUrl} target="_blank" rel="noreferrer">
             <strong>개인 링크</strong><small>복습 대화 열기</small>
@@ -62,9 +62,7 @@ export function ReviewAction({ lecture, detail, base, onError }: {
             <small>{!notes ? "올해 강의록 대기" : extensionPossible() ? "확장을 설치하면 만듭니다" : "컴퓨터에서 만듭니다"}</small>
           </span>
         )} />
-      {notes && installed && !saved ? (
-        <p className="panel-hint">올해 강의록과 복습 프롬프트를 확인한 뒤 직접 전송합니다.</p>
-      ) : notes && !installed && !saved && extensionPossible() ? (
+      {notes && !installed && !saved && extensionPossible() ? (
         <p className="panel-hint">
           <a href={EXTENSION_STORE_URL || EXTENSION_DOWNLOAD_URL} target="_blank" rel="noreferrer">브리지 설치</a> 후 이 탭을 새로고침해 주세요.
         </p>

@@ -311,10 +311,6 @@ export function PreviewAction({
       {linkEditor}
       {savedNote}
 
-      {canMake ? <p className="panel-hint">
-        {detail.files.some((file) => file.kind === "jokbo") ? "작년 필기 + 올해 강의 족보" : "작년 필기만 · 올해 강의 족보가 아직 없습니다"}
-        {" · 개인 링크는 자료와 프롬프트를 확인한 뒤 직접 전송합니다."}
-      </p> : null}
       {askingRemake !== null ? (
         <RemakeConfirm
           message="모두가 보는 링크가 새 대화로 바뀝니다. 옛 링크는 기존 AI 서비스에 그대로 남지만 여기서는 안 보입니다."
