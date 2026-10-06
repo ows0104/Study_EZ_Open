@@ -333,7 +333,7 @@ function KeyActions({
 
           「다시 만들기」는 덱의 것이지만 넓은 왼쪽 칸이 든다 — 덱 칸은 이름과
           용량으로 한 줄이 찬다(관리자 지시도 그 자리였다). */}
-      <PanelGroup tone="pre" title="Pre-Quiz" note="강의 전 예습">
+      <PanelGroup tone="pre" title="Pre-Quiz">
         <DeckSlot
           kind="pre"
           label="덱"
@@ -349,8 +349,8 @@ function KeyActions({
         />
       </PanelGroup>
 
-      <ReviewAction lecture={lecture} detail={detail} base={base} onError={setError} />
       <BankPanel lecture={lecture} detail={detail} />
+      <ReviewAction lecture={lecture} detail={detail} base={base} onError={setError} />
       {detail.mainquiz || fileOf("main_apkg") ? (
         <details className="panel-hint legacy-main">
           <summary>기존 Main-Quiz 자료</summary>

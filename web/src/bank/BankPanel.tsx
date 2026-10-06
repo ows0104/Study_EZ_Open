@@ -45,7 +45,7 @@ export function BankPanel({ lecture, detail }: { lecture: Pick<LectureRef, "subj
     );
   }
   return (
-    <PanelGroup tone="main" title="Main-Quiz" note="ChatGPT로 만들고 여기서 푼다">
+    <PanelGroup tone="main" title="Main-Quiz">
       <BankAdmin lecture={lecture} detail={detail} />
     </PanelGroup>
   );

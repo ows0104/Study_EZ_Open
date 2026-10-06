@@ -45,8 +45,8 @@ function Harness() {
   return <main style={{ maxWidth: 470, padding: 24, margin: "0 auto" }}>
     <h2>{admin ? "관리자" : "학생"} · 약동학</h2>
     <PreviewAction lecture={lecture} detail={detail} base="/api/lectures/약리학/261006_01" onError={setError} />
-    <ReviewAction lecture={lecture} detail={detail} base="/api/lectures/약리학/261006_01" onError={setError} />
     <BankPanel lecture={lecture} detail={detail} />
+    <ReviewAction lecture={lecture} detail={detail} base="/api/lectures/약리학/261006_01" onError={setError} />
     <details className="panel-hint legacy-main"><summary>기존 Main-Quiz 자료</summary><a href="#legacy">기존 카드 풀기</a></details>
     {error ? <p>{error}</p> : null}<pre id="request" style={{ whiteSpace: "pre-wrap" }} />
   </main>;

@@ -1071,6 +1071,10 @@
   --fam: var(--fam-preview);
 }
 
+.panel-group.is-review {
+  --fam: var(--fam-review);
+}
+
 .panel-group.is-pre {
   --fam: var(--fam-pre);
 }
@@ -1366,7 +1370,7 @@ button.panel-action-hit:active:not(:disabled) {
   font-weight: 600;
 }
 
-/* 올해 필기가 있는 복습 개인링크는 생성 전부터 보라색을 유지한다. */
+/* 올해 필기가 있는 복습 개인링크는 생성 전부터 복습 색을 유지한다. */
 .panel-action.is-key.is-review {
   border-color: var(--fam-line);
   background: var(--fam-soft);

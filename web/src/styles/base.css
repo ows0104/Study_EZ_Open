@@ -69,6 +69,7 @@
   --fam-preview: #6e56cf; /* violet 9 */
   --fam-pre: #12a594; /* teal 9 */
   --fam-main: #3e63dd; /* indigo 9 */
+  --fam-review: var(--ink-3); /* 복습 대화 — 차분한 회색 */
   /* Quiz Bank(2026-10-04). 세 갈래와 겹치지 않는 색 — 복습 줄 개편의 새 갈래다. */
   --fam-bank: #f76b15; /* orange 9 */
 

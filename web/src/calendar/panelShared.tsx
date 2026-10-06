@@ -26,7 +26,7 @@ export function PanelGroup({
   children,
 }: {
   /**
-   * `is-preview` · `is-pre` · `is-main`. 색은 CSS 가 고른다.
+   * `is-preview` · `is-pre` · `is-main` · `is-review`. 색은 CSS 가 고른다.
    *
    * `plain` 은 **셋 중 어느 갈래도 아닌 것**이다(모아받기 — 예습과 복습을 같이
    * 든다). 갈래가 아니므로 갈래 색도 안 진다 — 회색이다(2026-09-18 관리자 지시).
@@ -34,7 +34,7 @@ export function PanelGroup({
    * Main-Quiz 와 똑같이 나왔다. **갈래가 아닌 것이 갈래 색을 얻으면 그때부터
    * 무엇을 뜻하는지 알 수 없다** — 색을 되돌리지 마라.
    */
-  tone: "preview" | "pre" | "main" | "bank" | "plain";
+  tone: "preview" | "pre" | "main" | "review" | "bank" | "plain";
   title: string;
   note?: string;
   /** 접힌 채로 설 것인가. 머리 줄이 여닫는 손잡이가 된다. */
