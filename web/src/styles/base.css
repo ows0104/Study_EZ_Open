@@ -2753,12 +2753,70 @@ button.notice-title:hover:not(:disabled) {
 }
 
 
-/* 개념 지도(2026-10-04) — Quiz Bank 첫 화면 아래. 그래프 위, 카드 아래.
- * 색은 토큰만 쓴다 — 다크 모드에서 점의 진척 색(`--ok` 섞기)이 저절로 바뀐다. */
+/* 개념 지도 — 미학습 회색 → 복습할 노랑 → 진척 초록 → 달성 파랑. */
 .bank-cmap {
+  --cmap-yellow-fill: #f8d65a;
+  --cmap-yellow-line: #977316;
+  --cmap-yellow-halo: #fcf1ce;
+  --cmap-green-fill: #d1e5d8;
+  --cmap-green-line: #63846e;
+  --cmap-blue-fill: #e1e9f6;
+  --cmap-blue-line: #7c91ae;
+  --cmap-blue-badge: #526f96;
   margin: 28px 0 8px;
   /* 풀이 화면(`.quiz`)은 가운데 정렬이다. 사실 목록이 가운데로 서면 못 읽는다. */
   text-align: left;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bank-cmap {
+    --cmap-yellow-fill: #705719;
+    --cmap-yellow-line: #edc751;
+    --cmap-yellow-halo: #362d17;
+    --cmap-green-fill: #203e31;
+    --cmap-green-line: #578166;
+    --cmap-blue-fill: #26374d;
+    --cmap-blue-line: #66819f;
+    --cmap-blue-badge: #86a5cc;
+  }
+}
+
+.bank-cmap-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 10px 0 0;
+  color: var(--ink-2);
+  font-size: 11px;
+}
+
+.bank-cmap-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.bank-cmap-legend i {
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--ink-3);
+  border-radius: 50%;
+  background: var(--surface-2);
+}
+
+.bank-cmap-legend .is-attention {
+  background: var(--cmap-yellow-fill);
+  border-color: var(--cmap-yellow-line);
+}
+
+.bank-cmap-legend .is-growing {
+  background: var(--cmap-green-fill);
+  border-color: var(--cmap-green-line);
+}
+
+.bank-cmap-legend .is-reached {
+  background: var(--cmap-blue-fill);
+  border-color: var(--cmap-blue-line);
 }
 
 .bank-cmap h3 {
@@ -2808,8 +2866,15 @@ button.notice-title:hover:not(:disabled) {
 }
 
 .bank-cmap-dot {
-  stroke: var(--ink-3);
   stroke-width: 1;
+}
+
+.bank-cmap-node.is-attention .bank-cmap-dot {
+  stroke-width: 1.8;
+}
+
+.bank-cmap-node.is-attention .bank-cmap-hit {
+  fill: var(--cmap-yellow-halo);
 }
 
 .bank-cmap-node.is-optional .bank-cmap-dot {
@@ -2840,17 +2905,12 @@ button.notice-title:hover:not(:disabled) {
   pointer-events: none;
 }
 
-.bank-cmap-node.is-reached:not(.is-focus):not(:focus-visible) .bank-cmap-dot {
-  stroke: var(--ok);
-  stroke-width: 1.5;
-}
-
 .bank-cmap-achieved {
   pointer-events: none;
 }
 
 .bank-cmap-achieved circle {
-  fill: var(--ok);
+  fill: var(--cmap-blue-badge);
   stroke: var(--surface);
   stroke-width: 2;
 }

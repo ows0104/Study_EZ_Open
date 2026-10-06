@@ -35,6 +35,12 @@ export function ConceptMap({ concepts }: { concepts: BankConcept[] }) {
         개념을 누르면 자세한 카드로 갑니다.
         숙련도는 스스로 매긴 평가로 쌓은 지수이고 정답 확률이 아닙니다.
       </p>
+      <p className="bank-cmap-legend">
+        <span><i className="is-new" />미학습</span>
+        <span><i className="is-attention" />노랑부터 복습</span>
+        <span><i className="is-growing" />초록: 목표에 가까워짐</span>
+        <span><i className="is-reached" />파랑 ✓: 목표 달성</span>
+      </p>
       <ConceptGraph concepts={concepts} focus={focus} onPick={pick} />
       <div className="bank-cmap-cards">
         {sorted.map((c) => (
@@ -49,8 +55,13 @@ const TIER_ORDER: Record<BankConcept["tier"], number> = { Core: 0, Advanced: 1, 
 const SIGNAL_LABEL: Record<string, string> = { high: "족보 신호 높음", medium: "족보 신호 보통", low: "족보 신호 낮음" };
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 
-/** 숫자 대비를 위해 목표 달성 때도 배경색은 옅게 유지한다. */
-const fill = (progress: number) => `color-mix(in srgb, var(--ok) ${Math.round(Math.min(1, Math.max(0, progress)) * 45)}%, var(--surface-2))`;
+/** 초반 노랑에 시선을 모으고, 진척에 따라 초록으로 옅어지며 달성 때만 차분한 파랑이 된다. */
+function progressColor(progress: number, part: "fill" | "line") {
+  if (progress <= 0) return part === "fill" ? "var(--surface-2)" : "var(--ink-3)";
+  if (progress >= 1) return `var(--cmap-blue-${part})`;
+  const green = Math.round(Math.min(1, Math.max(0, (progress - 0.25) / 0.5)) * 100);
+  return `color-mix(in srgb, var(--cmap-green-${part}) ${green}%, var(--cmap-yellow-${part}))`;
+}
 
 type Board = { W: number; H: number };
 
@@ -244,7 +255,7 @@ function ConceptGraph({ concepts, focus, onPick }: {
           return (
             <g
               key={c.concept_id}
-              className={`bank-cmap-node${active === c.concept_id ? " is-focus" : ""}${focusIndex >= 0 && !neighbors.has(i) ? " is-muted" : ""}${c.tier === "Optional" ? " is-optional" : ""}${reached ? " is-reached" : ""}`}
+              className={`bank-cmap-node${active === c.concept_id ? " is-focus" : ""}${focusIndex >= 0 && !neighbors.has(i) ? " is-muted" : ""}${c.tier === "Optional" ? " is-optional" : ""}${reached ? " is-reached" : c.progress > 0 && c.progress < 0.5 ? " is-attention" : ""}`}
               transform={`translate(${pos[i].x} ${pos[i].y})`}
               onClick={() => onPick(c.concept_id)}
               onMouseEnter={() => setHovered(c.concept_id)}
@@ -265,7 +276,7 @@ function ConceptGraph({ concepts, focus, onPick }: {
                 {c.concept_id} {c.title} · 중요도 {c.importance} · {progressLabel}
               </title>
               <circle className="bank-cmap-hit" r={22} />
-              <circle className="bank-cmap-dot" r={r} style={{ fill: fill(c.progress) }} />
+              <circle className="bank-cmap-dot" r={r} fill={progressColor(c.progress, "fill")} stroke={progressColor(c.progress, "line")} />
               <text className="bank-cmap-percent" dy="0.35em" aria-hidden="true">{percent}</text>
               {reached ? (
                 <g className="bank-cmap-achieved" transform={`translate(${r - 2} ${-r + 2})`} aria-hidden="true">
