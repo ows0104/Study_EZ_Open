@@ -58,6 +58,7 @@ class _QuizItem:
     # 「왜 냈나」의 유형 — exam·clinical·later·annotation·basis. 앞면에 배지로 뜬다.
     # 이름표는 화면이 든다(`web/src/lecture/Quiz.tsx`). 모르는 값은 화면이 안 그린다.
     why_tags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    learning_support: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
 
     @declared_attr.directive
     def __table_args__(cls) -> tuple:

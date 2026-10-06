@@ -6,6 +6,7 @@ import type { LectureDetail, LectureFile } from "../types/lectures";
 import type { QuizKind } from "../types/quiz";
 import { Missed } from "./Missed";
 import { Quiz } from "./Quiz";
+import { PreQuiz } from "./PreQuiz";
 
 /** 갈래마다 다른 것은 이름과 덱과 「다음」의 문구뿐이다. */
 const LOOK: Record<QuizKind, { title: string; deck: LectureFile["kind"]; deckNote: string; next: string }> = {
@@ -38,7 +39,7 @@ const LOOK: Record<QuizKind, { title: string; deck: LectureFile["kind"]; deckNot
  *
  * **여기 쌓이는 진행과 덱의 진행은 여전히 다른 것이다.** 웹은 웹에서 찍은 것을
  * 들고, apkg를 받아 간 사람의 안키는 자기 것을 든다 — 둘을 더해 「몇 번 봤다」로
- * 읽으면 안 된다. 같은 SM-2로 돌지만 두 일정은 서로를 모른다.
+ * 읽으면 안 된다. 예습 웹은 1회 확인이며, 기존 Main 웹의 반복 일정도 Anki와 별개다.
  */
 export function QuizPage({ kind }: { kind: QuizKind }) {
   const look = LOOK[kind];
@@ -104,12 +105,14 @@ export function QuizPage({ kind }: { kind: QuizKind }) {
 
       {/* 강의 상세를 기다리지 않는다. 카드는 자기 요청으로 따로 온다. */}
       <section className="lecture-section">
-        <Quiz kind={kind} subject={subject} runId={runId} onDone={onDone} />
+        {kind === "pre"
+          ? <PreQuiz key={`${subject}/${runId}`} subject={subject} runId={runId} onDone={onDone} />
+          : <Quiz key={`${subject}/${runId}`} kind="main" subject={subject} runId={runId} onDone={onDone} />}
       </section>
 
       {/* 다 찍은 뒤에 붙는 것들은 읽는 글이다. 푸는 창이 넓어졌다고 이것까지
           늘리면 한 줄이 길어져서 읽기만 나빠진다. */}
-      {finished ? (
+      {finished && kind === "main" ? (
         <div className="prequiz-narrow">
           <Missed items={quiz?.missed ?? []} />
 

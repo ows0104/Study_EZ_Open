@@ -284,6 +284,7 @@ class PreItemIn(BaseModel):
     why_asked: str = ""
     challenge: bool = False
     why_tags: list[str] = Field(default_factory=list)
+    learning_support: dict[str, str] = Field(default_factory=dict)
 
 
 class PreItemsIn(BaseModel):
@@ -334,6 +335,7 @@ def _put_items(
             why_asked=item.why_asked,
             challenge=item.challenge,
             why_tags=item.why_tags,
+            learning_support=item.learning_support,
         )
         edit = edits.get(item.id)
         if edit is not None:

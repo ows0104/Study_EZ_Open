@@ -13,18 +13,18 @@ import { Stem } from "./Stem";
  *
  * 두 자리에 선다. 다 푼 직후의 Pre-Quiz 창과, 같은 날 다시 여는 강의 화면.
  */
-export function Missed({ items }: { items: MissedItem[] }) {
+export function Missed({ items, preview = false }: { items: MissedItem[]; preview?: boolean }) {
   if (!items.length) return null;
   return (
     <section className="missed">
-      <h2>오늘 놓친 것 {items.length}개</h2>
+      <h2>{preview ? "수업에서 확인할 질문" : "오늘 놓친 것"} {items.length}개</h2>
       <ol>
         {items.map((entry) => (
           <li key={entry.itemId}>
             <p className="missed-stem">
-              <Stem text={entry.stem} />
+              <Stem text={preview ? entry.lectureFocus || entry.stem : entry.stem} />
             </p>
-            <p className="missed-target">{entry.answer}</p>
+            {!preview ? <p className="missed-target">{entry.answer}</p> : null}
             {entry.examHit ? <span className="badge">기출</span> : null}
           </li>
         ))}

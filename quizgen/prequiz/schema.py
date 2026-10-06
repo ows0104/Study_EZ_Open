@@ -96,29 +96,14 @@ REJECT_REASONS = (
 # **자료 결함을 못 본다** — 실제로 분자생물학(1)에서 p53·Warburg 등 6건이 다음 강의
 # 소관인데 unsupported 로 찍혔다. 그 상태로는 진짜 unsupported 가 나와도 묻힌다.
 
-# 덱 크기. **이것이 품질 장치다.**
-#
-# 상한이 없으면 "꼭 반드시"가 슬그머니 "알면 좋은"으로 넘어간다. 실제로 복습 덱은
-# 한 강의가 77장까지 갔다. 예습은 강의 전날 한 번에 끝나야 하고, 상한을 넘는 순간
-# 사용자가 막으려던 바로 그 느낌 — 「외워야 될 게 너무 많은데?」 — 을 예습이 만든다.
-#
-# **2026-09-03 에 관리자가 상한을 30 에서 20 으로 내렸다** — 「지금 약간 부담돼」.
-# **2026-10-04 에 다시 15 로 내렸다** — 「15개 정도? (필수는 아님)」. 같은 날
-# 도전 문제(`challenge`)가 생겼는데, 그것도 이 15 장 안에 든다.
-# 하한 10 도 관리자가 정한 값이다. 짐작으로 바꾸지 마라.
-#
-# 하한을 상한 바로 밑에 두지 않은 이유가 있다. 모델은 상한을 목표로 읽는다 — 상한
-# 30 일 때 31 편이 전부 24~29 장이었고, 20 으로 내린 뒤 79 편 중 19~20 장이 32 편으로
-# 가장 많았다. 그러니 실제 산출은 15 장 근처가 될 것이고, 하한은 「몇 장 모자란 편을
-# 빌드가 거부하고 수선 고리를 한 번 더 돌리는 일」을 막는 자리로만 선다.
-MIN_CARDS, MAX_CARDS = 10, 15
+# 2026-10-06: 핵심 5문항 + 선택 도전 1문항으로 변경.
+# validate는 총수뿐 아니라 핵심 문항이 정확히 5장인지도 확인한다.
+MIN_CARDS, MAX_CARDS = 5, 6
 
-# 도전 문제 상한. 2026-10-04 관리자 — 「흥미를 유발할 정도의 중요하지만 어려운 문제도
-# 한 두개 쯤 넣어 봐도 좋을듯. 도전문제! 해서」. 「한 두개」를 상한으로 옮겼다.
-# 0 장도 계약 위반이 아니다 — 「넣어 봐도 좋을듯」이라 하한은 두지 않았다.
-MAX_CHALLENGE = 2
+# 적절한 질문이 없으면 도전은 생략한다.
+MAX_CHALLENGE = 1
 
-# 「왜 냈나」 한 줄의 길이. 앞면에 질문 위로 뜨므로 질문보다 길면 질문을 가린다.
+# 「왜 냈나」는 답 뒤에 짧게 표시한다.
 # 실측이 아니라 화면 한 줄(모바일 약 30자 × 2줄)에서 잡은 값이라 넘으면 표시만 단다.
 MAX_WHY_CHARS = 60
 
@@ -217,6 +202,15 @@ CARD_SCHEMA = {
                                     "있는 kind 만 쓰고, signals 가 비어 why 를 옮겼으면 basis."},
         "challenge": {"type": "boolean",
                       "description": f"도전 문제면 true. 한 덱에 {MAX_CHALLENGE}장 이하."},
+        "learning_support": {
+            "type": "object", "additionalProperties": False,
+            "properties": {
+                "hint": {"type": "string", "description": "정답을 말하지 않는 접근 단서. 예습 설명의 어느 개념을 다시 볼지 안내한다."},
+                "scope": {"type": "string", "description": "지금 알아둘 범위 한 문장. 세부 암기와 구분하고 이 카드로 확인한 내용을 구체적으로 쓴다."},
+                "lecture_focus": {"type": "string", "description": "수업에서 집중해 들을 질문 하나. 제공된 강의 자료에 답이 있어야 한다."},
+                "preview_excerpt": {"type": "string", "description": "핵심 문항을 풀 근거가 되는 예습 설명본의 짧은 원문 발췌. 지어내거나 바꿔 쓰지 않는다. 관리자 검토용."},
+            },
+        },
         # **이 카드가 어느 must-know 항목을 위한 것인가.** 승인본의 `items[].id` 를 적는다.
         # 이 끈이 없으면 「승인한 항목에 카드가 갔는가」도 「항목에 배정한 수를 지켰는가」도
         # 글자 유사도로 추측해야 한다 — 실측에서 문턱 0.05~0.20 사이에 미달 항목이
@@ -238,7 +232,7 @@ MUST_KNOW_SCHEMA = {
             # 상한은 카드 수 상한을 따라간다. 항목 하나에 카드가 최소 한 장이라
             # 항목이 카드보다 많으면 배정이 성립하지 않는다 — 25 로 굳어 있던 동안
             # 카드 상한이 20 으로 내려오면서 그 자리가 어긋났다.
-            "type": "array", "minItems": 8, "maxItems": MAX_CARDS,
+            "type": "array", "minItems": MIN_CARDS, "maxItems": MIN_CARDS,
             "items": {
                 "type": "object", "additionalProperties": False,
                 "required": ["item", "reason", "why", "slides"],
@@ -252,6 +246,7 @@ MUST_KNOW_SCHEMA = {
                     "why": {"type": "string", "minLength": 1,
                             "description": "**이걸 모르면 수업에서 무엇이 막히는가**를 한 줄로. "
                                            "'중요하다'는 이유가 아니다."},
+                    "preview_excerpt": {"type": "string", "description": "이 목표를 설명하는 예습 설명본의 짧은 원문 발췌. 설명본이 없으면 빈 문자열."},
                     "slides": {"type": "array", "items": {"type": "integer", "minimum": 1}},
                     "jokbo_refs": {"type": "array", "items": {"type": "string"},
                                    "description": "reason=repeated 의 근거 (예: '2025-19')"},
@@ -271,7 +266,7 @@ MUST_KNOW_SCHEMA = {
                         "description": "이 항목을 중요하게 들어야 하는 근거. 카드의 why_asked 가 "
                                        "여기서 나온다. 자료에서 확인되는 것만 — 없으면 비운다.",
                     },
-                    "cards": {"type": "integer", "minimum": 1, "maximum": 3,
+                    "cards": {"type": "integer", "minimum": 1, "maximum": 2,
                               "description": f"이 항목에 배정할 카드 수. "
                                              f"합이 {MIN_CARDS}~{MAX_CARDS} 이어야 한다."},
                 },
@@ -457,6 +452,13 @@ def dump(outdir: Path) -> None:
               "- 승인된 must-know 항목 안에서 고른다. 그 항목에 배정된 카드 수 안에서 한 장을 "
               "도전 문제로 쓰고, 카드 총수 계약도 그대로다.",
               "- 도전 문제가 아닌 카드는 `challenge` 를 `false` 로 둔다."]
+    lines += ["", "## 학습 지원", "",
+              "핵심은 정확히 5장, 선택 도전은 0~1장이다. 도전은 마지막에 둔다.",
+              "`learning_support`의 hint·scope·lecture_focus를 카드마다 쓴다. "
+              "hint는 답을 노출하지 않는 접근 단서, scope는 지금 알아둘 범위, "
+              "lecture_focus는 수업에서 들을 질문이다. scope와 lecture_focus는 답 뒤에 보인다.",
+              "설명본이 있으면 핵심 카드의 preview_excerpt에 답을 도출할 짧은 원문을 "
+              "그대로 발췌한다. 이 칸은 관리자만 본다. 설명본이 없으면 빈칸으로 둔다."]
     lines += ["", "## 코드가 기계적으로 검사하는 것", "",
               "네가 낸 JSON 은 아래 검사를 그대로 통과해야 한다. **값은 여기 적힌 것이 전부다 —**",
               "**저장소의 코드를 찾아 읽지 마라.** 검사기 소스에는 이보다 더 알 것이 없고,",
@@ -496,6 +498,8 @@ def dump(outdir: Path) -> None:
               "`jokbo` 면 `jokbo_ref` 필수",
               "- `ox` 의 답은 `O` 또는 `X` 하나",
               f"- `challenge: true` 는 {MAX_CHALLENGE}장 이하",
+              "- hint·scope·lecture_focus가 빠지면 표시가 붙는다. 힌트에 정답이 그대로 "
+              "들어가거나 핵심 문항의 preview_excerpt가 설명본에 없으면 검토 표시가 붙는다.",
               f"- `why_asked` 가 비었거나 {MAX_WHY_CHARS}자를 넘으면 표시가 붙는다",
               "- `why_tags` 가 비었거나, 항목의 `signals` 에 없는 유형이면 표시가 붙는다 "
               "(`basis` 는 언제나 된다)",

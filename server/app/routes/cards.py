@@ -90,7 +90,7 @@ def plain_stem(source: str) -> str:
 _CARD_FIELDS = (
     "qtype", "stem", "source_stem", "answer", "focus", "card_type", "exam_hit", "slide_no",
     "source_type", "source_anchor", "explanation", "flags", "why_asked", "challenge",
-    "why_tags",
+    "why_tags", "learning_support",
 )
 # 이 칸이 같으면 같은 카드다. `flags` 는 뺀다 — `reflag` 가 표시만 바꿔 다시
 # 올리는 일이 흔하고, 그때 사람의 판정까지 날아가면 안 된다.
@@ -194,6 +194,8 @@ def _card_payload(
         "sourceStem": shown.get("source_stem") or "",
         "answer": shown.get("answer", ""),
         "explanation": shown.get("explanation", ""),
+        "learningSupport": shown.get("learning_support") or {},
+        "whyAsked": shown.get("why_asked") or "",
         "slideNo": shown.get("slide_no"),
         "slideUrl": slide_url(db, lecture.subject, lecture.run_id, shown.get("slide_no"), quiz),
         "flags": shown.get("flags") or [],

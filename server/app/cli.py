@@ -59,6 +59,8 @@ ADDED_COLUMNS = (
     # 같은 날 「왜 냈나」를 유형별 배지로.
     ("pre_item", "why_tags", "JSON NOT NULL DEFAULT '[]'"),
     ("main_item", "why_tags", "JSON NOT NULL DEFAULT '[]'"),
+    ("pre_item", "learning_support", "JSON NOT NULL DEFAULT '{}'"),
+    ("main_item", "learning_support", "JSON NOT NULL DEFAULT '{}'"),
     # 2026-09-23 사이트에서 고친 빈칸 카드를 덱으로 되돌리려면 원문이 있어야 한다.
     ("pre_item", "source_stem", "TEXT NOT NULL DEFAULT ''"),
     ("main_item", "source_stem", "TEXT NOT NULL DEFAULT ''"),

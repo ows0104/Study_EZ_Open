@@ -70,7 +70,9 @@ def main() -> None:
     client = TestClient(app)
     items = [
         an_item("c001", why_asked="심근경색 진단에서 가장 먼저 오르는 표지자다", challenge=True,
-                why_tags=["exam", "clinical"]),
+                why_tags=["exam", "clinical"], learning_support={
+                    "hint": "분류 기준을 떠올려 보자", "scope": "기준 하나만 알면 충분하다",
+                    "lecture_focus": "기준의 적용을 들어보자", "preview_excerpt": "관리자용 원문"}),
         an_item("c002", why_asked="강의 후반 감별 내내 이 축으로 가른다"),
         an_item("c003"),  # 2026-10-04 전 러너 — 두 칸이 없다
     ]
@@ -91,6 +93,16 @@ def main() -> None:
     check("두 칸이 없던 문항은 빈 값이다",
           (got["c003"]["challenge"], got["c003"]["whyTags"]) == (False, []), got["c003"])
     check("답은 여전히 앞면 목록에 없다", "answer" not in got["c001"], sorted(got["c001"]))
+    check("앞면에는 접근 힌트만 온다", got["c001"].get("hint") == "분류 기준을 떠올려 보자"
+          and not got["c001"].get("learningScope") and "learning_support" not in got["c001"])
+    check("답 뒤에는 범위와 수업 질문이 온다", revealed.get("learningScope") == "기준 하나만 알면 충분하다"
+          and revealed.get("lectureFocus") == "기준의 적용을 들어보자")
+    check("관리자용 발췌는 학생에게 오지 않는다", "관리자용 원문" not in str(got) + str(revealed))
+    check("옛 카드의 지원 칸은 빈 값이다", old.get("learningScope") == "" and got["c003"].get("hint") == "")
+    grade = client.post(f"{BASE}/prequiz/grade", json={"itemId": "c001", "grade": "again"}, headers=USER)
+    check("도전은 오답과 복습 일정에 들어가지 않는다", grade.status_code == 409, grade.text)
+    progress = client.get(BASE, headers=USER).json()["prequiz"]
+    check("진행률은 핵심만 센다", progress["itemCount"] == 2 and progress["due"] == 2, progress)
 
     # ── 뺐다가 되돌려도 두 칸이 산다. 되돌리기는 원본 사본에서 칸을 하나씩 옮겨 적는다.
     admin = {"Authorization": "Bearer local-test-token"}
@@ -105,6 +117,8 @@ def main() -> None:
           "c001" in got and got["c001"]["challenge"] and back_.get("whyAsked")
           and got["c001"]["whyTags"] == ["exam", "clinical"],
           (got.get("c001"), back_.get("whyAsked")))
+    check("되돌려도 학습 지원이 보존된다", got["c001"].get("hint") == "분류 기준을 떠올려 보자"
+          and back_.get("learningScope") == "기준 하나만 알면 충분하다")
 
     print()
     if failures:

@@ -146,10 +146,8 @@ export function LecturePage() {
         {fileButton("pre_apkg", "Pre-Quiz 덱", quiz ? "is-secondary" : "")}
       </section>
 
-      {/* 다 푼 직후에는 Pre-Quiz 창에도 같은 목록이 뜬다. 여기 남겨 두는 것은
-          **같은 날** 이 화면을 다시 열었을 때를 위해서다 — 하루가 바뀌면 비고,
-          제목이 「오늘」이라고 적고 있으므로 그것이 맞다. */}
-      <Missed items={quiz?.missed ?? []} />
+      {/* 예습에서 표시한 질문은 수업 때 다시 열어볼 수 있도록 남긴다. */}
+      <Missed preview items={quiz?.missed ?? []} />
 
       <section className="lecture-section">
         <h2>강의 후</h2>
@@ -178,24 +176,11 @@ export function LecturePage() {
   );
 }
 
-/**
- * 웹 풀이 줄의 한 마디. **0을 갈라서 적는다**(`../../CLAUDE.md` 함정 ③).
- *
- *   아직 안 봤다        「20장 · 답을 펴 보고 본인이 찍습니다」
- *   오늘 낼 것이 있다    「오늘 낼 카드 7장 · 새 카드 5장」
- *   오늘 몫을 끝냈다    「오늘 몫 완료 · 20장이 일정에 있습니다」
- *
- * 마지막 줄이 없으면 오늘 몫을 끝낸 편과 카드가 없는 편이 같아 보인다.
- */
+/** 예습은 한 번 확인한 핵심 문항 수만 표시한다. */
 function quizNote(quiz: NonNullable<LectureDetail["prequiz"]>): string {
-  if (!quiz.answered) return `${quiz.itemCount}장 · 답을 펴 보고 본인이 찍습니다`;
-  if (quiz.due) {
-    const parts = [`오늘 낼 카드 ${quiz.due}장`];
-    if (quiz.new) parts.push(`새 카드 ${quiz.new}장`);
-    if (quiz.learning) parts.push(`익히는 중 ${quiz.learning}장`);
-    return parts.join(" · ");
-  }
-  return `오늘 몫 완료 · ${quiz.later}장이 일정에 있습니다`;
+  if (!quiz.answered) return `핵심 ${quiz.itemCount}문항 · 답과 설명을 읽고 이해를 확인해요`;
+  if (quiz.answered < quiz.itemCount) return `${quiz.answered}/${quiz.itemCount}문항 확인 · 이어서 예습하기`;
+  return `예습 완료 · 핵심 ${quiz.itemCount}문항 확인`;
 }
 
 /**

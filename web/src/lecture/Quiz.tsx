@@ -8,7 +8,7 @@ import { counts, dayLabel, daysFromNow, intervalLabel, pick, stateOf } from "./q
 import { Stem } from "./Stem";
 
 /**
- * 웹 풀이 — 자기채점 플래시카드. **예습과 복습이 이 하나를 쓴다.**
+ * 웹 풀이 — 자기채점 플래시카드. 기존 Main 카드의 반복 학습. 예습은 PreQuiz.tsx를 쓴다.
  *
  *   질문을 본다 → 「답 보기」 → 답과 해설이 펴진다 → 넷 중 하나를 찍는다
  *
@@ -540,7 +540,7 @@ const FOCUS_LABEL: Record<string, string> = {
  * 문제의 「강의의 ‘○○’ 대목에서 풀린다」가 앞면에 있으면 답의 절반을 알려 줬다.
  * 도전 문제 표시도 여기 붙는다 — 어렵다는 것을 풀기 전에 알아야 못 풀어도 덜 꺾인다.
  */
-function WhyAsked({ item }: { item: QuizItem }) {
+export function WhyAsked({ item }: { item: QuizItem }) {
   const tags = whyTags(item);
   if (!item.challenge && !tags.length) return null;
   return (

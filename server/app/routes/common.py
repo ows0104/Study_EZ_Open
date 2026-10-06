@@ -95,7 +95,7 @@ def material_marks(db: Session, keys: list[LectureKey], *, is_admin: bool = Fals
 
     item_rows = db.execute(
         select(PreItem.subject, PreItem.run_id, func.count())
-        .where(PreItem.subject.in_(subjects), PreItem.run_id.in_(run_ids))
+        .where(PreItem.subject.in_(subjects), PreItem.run_id.in_(run_ids), PreItem.challenge.is_(False))
         .group_by(PreItem.subject, PreItem.run_id)
     ).all()
     for subject, run_id, count in item_rows:
@@ -180,7 +180,7 @@ def prequiz_progress(
 
     total_rows = db.execute(
         select(PreItem.subject, PreItem.run_id, func.count())
-        .where(PreItem.subject.in_(subjects), PreItem.run_id.in_(run_ids))
+        .where(PreItem.subject.in_(subjects), PreItem.run_id.in_(run_ids), PreItem.challenge.is_(False))
         .group_by(PreItem.subject, PreItem.run_id)
     ).all()
     for subject, run_id, count in total_rows:
@@ -193,10 +193,13 @@ def prequiz_progress(
 
     answered_rows = db.execute(
         select(QuizAttempt.subject, QuizAttempt.run_id, func.count())
+        .join(PreItem, (PreItem.subject == QuizAttempt.subject)
+              & (PreItem.run_id == QuizAttempt.run_id) & (PreItem.item_id == QuizAttempt.item_id))
         .where(
             QuizAttempt.user_id == user_id,
             QuizAttempt.subject.in_(subjects),
             QuizAttempt.run_id.in_(run_ids),
+            PreItem.challenge.is_(False),
         )
         .group_by(QuizAttempt.subject, QuizAttempt.run_id)
     ).all()

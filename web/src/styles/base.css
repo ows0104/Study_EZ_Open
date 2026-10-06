@@ -743,6 +743,20 @@ button.resource.is-download:hover:not(:disabled)::after {
   word-break: keep-all;
 }
 
+.quiz-support-note, .quiz-hint, .quiz-takeaways {
+  max-width: 640px;
+  margin: 16px auto;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.65;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.quiz-hint summary { cursor: pointer; font-weight: 600; }
+.quiz-takeaways { padding-bottom: 24px; }
+.quiz-takeaways li { margin-bottom: 12px; }
+.quiz-takeaways li p { margin: 4px 0; }
+
 .quiz-why-label {
   margin-right: 8px;
   color: var(--ink-3);
@@ -2929,6 +2943,9 @@ button.notice-title:hover:not(:disabled) {
   color: var(--ink-3);
   font-size: 12px;
 }
+
+.prequiz-bar .quiz-grade { max-width: 280px; font-size: 15px; padding: 14px 10px; }
+.prequiz-bar .is-listen { color: var(--ink-2); border-color: var(--line); }
 
 .bank-cmap-related button {
   padding: 0 4px;

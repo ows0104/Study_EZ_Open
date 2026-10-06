@@ -194,6 +194,14 @@ export function CardRow({
         </dl>
       )}
 
+      {card.kind === "pre" ? (
+        <dl className="card-review-support">
+          {card.whyAsked ? <><dt>왜 냈나</dt><dd>{card.whyAsked}</dd></> : null}
+          {Object.entries({ hint: "힌트", scope: "지금은 여기까지", lecture_focus: "수업에서 들어보자", preview_excerpt: "예습 원문 근거" }).map(([key, label]) =>
+            card.learningSupport?.[key] ? <div key={key}><dt>{label}</dt><dd>{card.learningSupport[key]}</dd></div> : null,
+          )}
+        </dl>
+      ) : null}
       {card.slideUrl ? (
         <div className="card-review-slide">
           <button className="is-quiet" onClick={() => setSlideOpen((v) => !v)}>

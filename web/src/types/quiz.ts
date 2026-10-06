@@ -1,4 +1,5 @@
 export type MissedItem = {
+  lectureFocus?: string;
   itemId: string;
   stem: string;
   answer: string;
@@ -81,8 +82,11 @@ export type QuizItem = {
   focus: string;
   cardType: string;
   examHit: boolean;
-  /** 도전 문제 — 수업이 답해 줄 질문. 덱마다 두 장까지. */
+  /** 선택 도전 — 수업이 답해 줄 질문. 새 덱은 한 장까지. */
   challenge?: boolean;
+  hint?: string;
+  learningScope?: string;
+  lectureFocus?: string;
   /** 「왜 냈나」의 유형 — exam·clinical·later·annotation·basis. 앞면에 배지로 뜬다. */
   whyTags?: string[];
   attempt: QuizSchedule | null;
@@ -124,6 +128,8 @@ export type RevealResult = {
    * 만든 카드·복습 카드·옛 서버는 비거나 없다.
    */
   whyAsked?: string;
+  learningScope?: string;
+  lectureFocus?: string;
   sourceAnchor: string;
   slideNo: number | null;
   slideUrl: string | null;

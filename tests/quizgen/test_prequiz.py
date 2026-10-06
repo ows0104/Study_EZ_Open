@@ -62,9 +62,9 @@ def test_카드가_넘치면_계약_위반으로_잡힌다():
 
 
 def test_계약_안이면_위반이_없다():
-    raw = {"cards": [_card(f"질문 {i}") for i in range(MIN_CARDS + 2)]}
+    raw = {"cards": [_card(f"질문 {i}") for i in range(MIN_CARDS)]}
     kept, s = validate(raw, _prep(), None)
-    assert len(kept) == MIN_CARDS + 2
+    assert len(kept) == MIN_CARDS
     assert s["contract_violations"] == []
 
 

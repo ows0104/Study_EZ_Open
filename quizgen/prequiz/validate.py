@@ -95,7 +95,7 @@ def _figure_index(prep: dict) -> tuple[dict, dict]:
 
 
 def validate(raw: dict, prep: dict, jokbo: dict | None,
-             professor_stayed: bool = True) -> tuple[list, dict]:
+             professor_stayed: bool = True, preview_text: str | None = None) -> tuple[list, dict]:
     cards = list(raw.get("cards", []))
     must = raw.get("must_know") or {}
     n_slides = prep["slides"]
@@ -246,6 +246,22 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
         if not (c.get("explanation") or "").strip():
             flags[i].append("missing_bridge_to_lecture")
 
+        support = c.get("learning_support") or {}
+        # 옛 카드의 재검토에는 새 칸을 강제하지 않는다. 새 생성은 note 입력을 전달한다.
+        if "learning_support" in c or preview_text is not None:
+            if any(not (support.get(k) or "").strip() for k in ("hint", "scope", "lecture_focus")):
+                flags[i].append("missing_learning_support")
+        excerpt = (support.get("preview_excerpt") or "").strip()
+        hint = norm_key(support.get("hint") or "")
+        answer = norm_key(a)
+        if len(answer) >= 2 and answer in hint:
+            flags[i].append("answer_leaked_in_hint")
+        if preview_text is not None:
+            if preview_text.strip() and not c.get("challenge") and not excerpt:
+                flags[i].append("missing_preview_evidence")
+            if excerpt and re.sub(r"\s+", "", excerpt) not in re.sub(r"\s+", "", preview_text):
+                flags[i].append("preview_excerpt_not_found")
+
         if fmt != "cloze" and containment(char_ngrams(a), char_ngrams(q)) >= LEAK_THRESHOLD:
             flags[i].append("answer_leaked_in_question")
 
@@ -310,9 +326,11 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
     if n and ox / n > OX_SHARE_MAX:
         contract.append(f"O/X 가 {ox}/{n} ({ox / n:.0%}) 이다. 상한 {OX_SHARE_MAX:.0%}")
     challenge = sum(1 for c in kept if c.get("challenge"))
+    if n - challenge != MIN_CARDS:
+        contract.append(f"핵심 문항은 {MIN_CARDS}장이어야 한다. 현재 {n - challenge}장")
     if challenge > MAX_CHALLENGE:
         contract.append(f"도전 문제가 {challenge}장이다. 상한 {MAX_CHALLENGE}장 — "
-                        f"가장 덜 중요한 것부터 `challenge` 를 false 로 돌린다")
+                        "핵심 5장을 유지하고 선택 도전은 1장만 남긴다")
 
     # ── 승인된 목록과 카드를 잇는 끈 ────────────────────────────────
     #
@@ -450,6 +468,7 @@ def main(argv=None) -> int:
     ap.add_argument("--prep", required=True)
     ap.add_argument("--jokbo")
     ap.add_argument("--must", help="must_know.approved.json (reason 대조용)")
+    ap.add_argument("--note", help="예습 설명본. 핵심 문항의 발췌 근거를 대조한다")
     ap.add_argument("--professor-changed", action="store_true",
                     help="담당 교수가 바뀌었다 — reason=repeated 를 금지한다")
     ap.add_argument("-o", "--out", help="기본은 raw 옆의 items.checked.json")
@@ -462,7 +481,10 @@ def main(argv=None) -> int:
     if args.must and Path(args.must).exists() and "must_know" not in raw:
         raw["must_know"] = json.loads(Path(args.must).read_text(encoding="utf-8"))
 
-    kept, suspects = validate(raw, prep, jokbo, professor_stayed=not args.professor_changed)
+    note = Path(args.note) if args.note else raw_path.with_name("note.md")
+    preview_text = note.read_text(encoding="utf-8") if note.exists() else None
+    kept, suspects = validate(raw, prep, jokbo, professor_stayed=not args.professor_changed,
+                              preview_text=preview_text)
 
     out = Path(args.out) if args.out else raw_path.with_name("items.checked.json")
     out.write_text(json.dumps({"cards": kept}, ensure_ascii=False, indent=2), encoding="utf-8")

@@ -14,7 +14,7 @@
 세 갈래가 갈렸다. 예습에는 그 축이 없다 — 꼭 알아야 할 의학 지식은 출제자와 무관하다.
 교수 교체는 `reason=repeated` 를 쓸 수 있는지만 가른다.
 
-**③ 재현 검사가 선택이다.** 10~15장이라 싸지만, 예습은 강의 전날 급하게 도는 일이
+**③ 재현 검사가 선택이다.** 5~6장이라 싸지만, 예습은 강의 전날 급하게 도는 일이
 잦다. 기본으로 돌리되 `--skip-reproduce` 로 건너뛸 수 있고 덱은 그래도 나온다.
 """
 
@@ -221,6 +221,8 @@ def render_must(must: dict) -> str:
                      + (f" · Slide {', '.join(str(s) for s in it['slides'])}"
                         if it.get("slides") else ""))
         lines.append(f"   └ {it['why']}")
+        if it.get("preview_excerpt"):
+            lines.append(f"   └ 예습 원문: {it['preview_excerpt']}")
         if it.get("jokbo_refs"):
             lines.append(f"   └ 기출 {', '.join(it['jokbo_refs'])}")
         for sig in it.get("signals") or []:

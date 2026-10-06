@@ -161,8 +161,8 @@ def _write(tmp_path, obj):
     return p
 
 
-def _must(n=8):
-    """스키마가 요구하는 최소 항목 수(8)를 채운 승인 전 산출물."""
+def _must(n=MIN_CARDS):
+    """핵심 목표 5개를 채운 승인 전 산출물."""
     return {"items": [_item(None, f"용어 {i}") for i in range(n)],
             "rejected_candidates": []}
 
@@ -170,7 +170,7 @@ def _must(n=8):
 def test_한_겹_감싸여_나와도_풀어서_읽는다(tmp_path):
     """2026-08-27 에 한 편이 그렇게 나왔다. 승인이 항목을 0개로 읽었고 아무도 몰랐다."""
     got = load_must(_write(tmp_path, {"must_know": _must()}))
-    assert len(got["items"]) == 8
+    assert len(got["items"]) == MIN_CARDS
 
 
 def test_스키마를_어기면_거기서_멈춘다(tmp_path):

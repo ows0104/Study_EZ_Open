@@ -86,7 +86,8 @@ def _quiz_payload(
     item_count = int(
         db.scalar(
             select(func.count()).select_from(item).where(
-                item.subject == lecture.subject, item.run_id == lecture.run_id
+                item.subject == lecture.subject, item.run_id == lecture.run_id,
+                prequiz.core_filter(quiz),
             )
         )
         or 0
@@ -97,6 +98,10 @@ def _quiz_payload(
         attempt.user_id == user_id,
         attempt.subject == lecture.subject,
         attempt.run_id == lecture.run_id,
+        attempt.item_id.in_(select(item.item_id).where(
+            item.subject == lecture.subject, item.run_id == lecture.run_id,
+            prequiz.core_filter(quiz),
+        )),
     )
     answered = int(db.scalar(select(func.count()).select_from(attempt).where(*mine)) or 0)
     correct = int(

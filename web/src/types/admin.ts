@@ -78,6 +78,8 @@ export type ReviewCard = {
   sourceStem: string;
   answer: string;
   explanation: string;
+  whyAsked?: string;
+  learningSupport?: Record<string, string>;
   slideNo: number | null;
   slideUrl: string | null;
   flags: string[];

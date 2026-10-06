@@ -1,4 +1,8 @@
-"""웹 풀이. **예습과 복습 두 갈래가 이 한 파일을 쓴다.**
+"""웹 풀이. 예습은 1회 이해 확인, 기존 Main 카드는 간격 반복이다.
+
+2026-10-06: 예습 /check는 이해 여부와 청취 목표만 저장한다.
+기존 일정은 예습에서 무시하며 /grade는 옛 클라이언트 호환용이다.
+아래 간격 반복 설명은 기존 Main 카드에 해당한다.
 
 **웹 풀이가 기본이다**(2026-08-23 관리자 지시). 화면에서 Pre-Quiz를 누르면 전용
 창에 이 문항들이 뜨고, apkg는 그 옆의 내려받기 버튼으로 내려갔다. 강의 직전 한
@@ -104,6 +108,21 @@ PRE = Quiz("pre", PreItem, QuizAttempt, SLIDE_KINDS["pre"], PreReviewLog)
 MAIN = Quiz("main", MainItem, MainAttempt, SLIDE_KINDS["main"], MainReviewLog)
 
 
+def core_filter(quiz: Quiz):
+    """선택 도전은 예습의 평가·진행·복습 대상에서 제외한다."""
+    return quiz.item.challenge.is_(False) if quiz.name == "pre" else True
+
+
+def core_log_filter(quiz: Quiz, subject: str, run_id: str):
+    # 이전 버전이 채점한 도전 기록을 되돌리며 핵심 카드에 그 답을 붙이지 않는다.
+    if quiz.name != "pre":
+        return True
+    item = quiz.item
+    return quiz.log.item_id.in_(select(item.item_id).where(
+        item.subject == subject, item.run_id == run_id, core_filter(quiz),
+    ))
+
+
 # ---------------------------------------------------------------- 일정 ↔ 표
 #
 # `srs.Card`와 표의 칼럼은 이름까지 같다. 그래도 옮겨 적는 함수를 두는 이유는,
@@ -193,7 +212,9 @@ def slide_url(
 def missed_items(
     db: Session, user_id: str, subject: str, run_id: str, limit: int = 3, quiz: Quiz = PRE
 ) -> list[dict[str, Any]]:
-    """"오늘 놓친 것 N개". 웹에서 푼 사람에게만 나온다.
+    """예습은 마지막 청취 목표 전부, Main은 오늘 놓친 것 N개.
+
+    아래 일일 Again 기록 설명은 Main에 해당한다.
 
     틀린 카드가 그 강의에서 특히 귀 기울일 곳이라는 생각으로 고른다. 그래서
     순서는 `focus`가 뼈대·용어인 것부터이고, 그 안에서는 출제 순서다.
@@ -214,17 +235,25 @@ def missed_items(
     그것이 맞다.
     """
     item, log = quiz.item, quiz.log
-    missed_ids = set(
-        db.scalars(
-            select(log.item_id).where(
-                log.user_id == user_id,
-                log.subject == subject,
-                log.run_id == run_id,
-                log.grade == "again",
-                log.reviewed_at >= srs.day_start(datetime.now(UTC)),
-            )
-        ).all()
-    )
+    if quiz.name == "pre":
+        # 예습은 마지막에 고른 청취 목표를 유지한다. 다음 날 다시 낼 오답이 아니다.
+        attempt = quiz.attempt
+        missed_ids = set(db.scalars(select(attempt.item_id).where(
+            attempt.user_id == user_id, attempt.subject == subject,
+            attempt.run_id == run_id, attempt.correct.is_(False),
+        )).all())
+    else:
+        missed_ids = set(
+            db.scalars(
+                select(log.item_id).where(
+                    log.user_id == user_id,
+                    log.subject == subject,
+                    log.run_id == run_id,
+                    log.grade == "again",
+                    log.reviewed_at >= srs.day_start(datetime.now(UTC)),
+                )
+            ).all()
+        )
     if not missed_ids:
         return []
     rows = list(
@@ -233,6 +262,7 @@ def missed_items(
                 item.subject == subject,
                 item.run_id == run_id,
                 item.item_id.in_(missed_ids),
+                core_filter(quiz),
             )
         ).all()
     )
@@ -251,8 +281,9 @@ def missed_items(
             "explanation": row.explanation,
             "slideNo": row.slide_no,
             "examHit": row.exam_hit,
+            "lectureFocus": (row.learning_support or {}).get("lecture_focus", ""),
         }
-        for row in rows[:limit]
+        for row in (rows if quiz.name == "pre" else rows[:limit])
     ]
 
 
@@ -291,6 +322,10 @@ def _read(quiz: Quiz, db: Session, user_id: str, subject: str, run_id: str) -> d
                 # **「왜 냈나」 글은 여기 없다** — 답을 편 뒤에 보인다(`reveal`).
                 "challenge": row.challenge,
                 "whyTags": list(row.why_tags or []),
+                "hint": (row.learning_support or {}).get("hint", ""),
+                # 한 번 확인한 카드만 완료 요약에 필요한 범위를 돌려준다.
+                "learningScope": (row.learning_support or {}).get("scope", "") if row.item_id in attempts else "",
+                "lectureFocus": (row.learning_support or {}).get("lecture_focus", "") if row.item_id in attempts else "",
                 # `answer`·`explanation`은 여기 없다. `reveal`이 준다.
                 "attempt": (
                     _schedule(attempts[row.item_id]) if row.item_id in attempts else None
@@ -298,8 +333,8 @@ def _read(quiz: Quiz, db: Session, user_id: str, subject: str, run_id: str) -> d
             }
             for row in items
         ],
-        "answered": len(attempts),
-        "correct": sum(1 for row in attempts.values() if row.correct),
+        "answered": sum(1 for row in items if row.item_id in attempts and (quiz.name != "pre" or not row.challenge)),
+        "correct": sum(1 for row in items if row.item_id in attempts and attempts[row.item_id].correct and (quiz.name != "pre" or not row.challenge)),
         # **화면의 시계를 믿지 않는다.** 익히는 단계는 분 단위라, 기계 시각이
         # 몇 분 틀어져 있으면 「1분 뒤」가 이미 지난 일이 되거나 영영 안 온다.
         # 화면은 이 값으로 차이를 재서 자기 시계를 보정한다.
@@ -316,7 +351,8 @@ def _undo_depth(quiz: Quiz, db: Session, user_id: str, subject: str, run_id: str
         db.scalar(
             select(func.count())
             .select_from(log)
-            .where(log.user_id == user_id, log.subject == subject, log.run_id == run_id)
+            .where(log.user_id == user_id, log.subject == subject, log.run_id == run_id,
+                   core_log_filter(quiz, subject, run_id))
         )
         or 0
     )
@@ -346,12 +382,16 @@ def due_counts(
             & (attempt.item_id == item.item_id)
             & (attempt.user_id == user_id),
         )
-        .where(item.subject == subject, item.run_id == run_id)
+        .where(item.subject == subject, item.run_id == run_id, core_filter(quiz))
     ).all()
 
     counts = {"new": 0, "learning": 0, "review": 0, "later": 0}
     next_due: datetime | None = None
     for _, row in rows:
+        if quiz.name == "pre":
+            if row is None:
+                counts["new"] += 1
+            continue
         card = _card(row)
         if row is None or card.state == srs.STATE_NEW:
             counts["new"] += 1
@@ -381,6 +421,10 @@ class ItemRef(BaseModel):
     item_id: str = Field(alias="itemId")
 
     model_config = {"populate_by_name": True}
+
+
+class PreviewCheck(ItemRef):
+    understood: bool
 
 
 class GradeRequest(ItemRef):
@@ -430,13 +474,17 @@ def _reveal(
         # 왜 냈나(2026-10-04 관리자 — 「문제 풀기 전에는 배지만, 풀고 나서 이유가」).
         # 도전 문제의 「강의의 ‘○○’ 대목에서 풀린다」가 앞면에 있으면 답의 절반을 알려 준다.
         "whyAsked": item.why_asked,
+        "learningScope": (item.learning_support or {}).get("scope", ""),
+        "lectureFocus": (item.learning_support or {}).get("lecture_focus", ""),
         "sourceAnchor": item.source_anchor,
         "slideNo": item.slide_no,
         "slideUrl": slide_url(db, item.subject, item.run_id, item.slide_no, quiz),
         # **버튼에 적을 「언제 다시 나오나」를 서버가 잰다.** 화면이 자기
         # 계산으로 적으면 사다리가 파이썬과 타입스크립트 두 곳에 산다.
         # 여기서도 아무것도 저장하지 않는다 — `srs.preview`는 순수 함수다.
-        "next": srs.preview(_card(_attempt_row(quiz, db, user_id, item)), datetime.now(UTC)),
+        # API가 먼저 배포되므로 옛 화면이 기대하는 네 키는 유지한다.
+        "next": (srs.preview(_card(_attempt_row(quiz, db, user_id, item)), datetime.now(UTC))
+                 if quiz.name != "pre" else {grade: {"days": 0, "seconds": 0} for grade in srs.GRADES}),
     }
 
 
@@ -454,6 +502,8 @@ def _grade(
     """
     grade = payload.resolved()
     item = _item_or_404(quiz, db, subject, run_id, payload.item_id)
+    if quiz.name == "pre" and item.challenge:
+        raise HTTPException(status_code=409, detail="선택 도전은 평가하거나 복습 일정에 넣지 않습니다.")
     now = datetime.now(UTC)
 
     attempt = _attempt_row(quiz, db, user_id, item)
@@ -489,7 +539,11 @@ def _grade(
     # `correct`는 남는다. 「오늘 놓친 것」과 진행 수가 이 값으로 서 있다.
     attempt.correct = grade != "again"
     attempt.answered_at = now
-    _write_card(attempt, srs.review(before, grade, now))
+    if quiz.name == "pre":
+        # 기존 표와 undo 기록은 보존하지만 예습의 다음 복습 날짜를 만들지 않는다.
+        _write_card(attempt, srs.Card(state=srs.STATE_REVIEW, reps=before.reps + 1))
+    else:
+        _write_card(attempt, srs.review(before, grade, now))
     db.commit()
     return {
         "itemId": item.item_id,
@@ -516,7 +570,8 @@ def _undo(quiz: Quiz, db: Session, user_id: str, subject: str, run_id: str) -> d
     log = quiz.log
     row = db.scalars(
         select(log)
-        .where(log.user_id == user_id, log.subject == subject, log.run_id == run_id)
+        .where(log.user_id == user_id, log.subject == subject, log.run_id == run_id,
+               core_log_filter(quiz, subject, run_id))
         .order_by(log.id.desc())
         .limit(1)
     ).first()
@@ -606,6 +661,18 @@ def grade_answer(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     return _grade(PRE, db, user.id, subject, run_id, payload)
+
+
+@router.post("/lectures/{subject}/{run_id}/prequiz/check")
+def check_preview(
+    subject: str,
+    run_id: str,
+    payload: PreviewCheck,
+    user: CurrentUser = Depends(require_approved_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    return _grade(PRE, db, user.id, subject, run_id,
+                  GradeRequest(itemId=payload.item_id, grade="good" if payload.understood else "again"))
 
 
 @router.post("/lectures/{subject}/{run_id}/prequiz/undo")

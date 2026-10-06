@@ -9,7 +9,7 @@
     쓰이는지」를 잇는 다리이고 목적의 절반이라, 접어 두면 아무도 안 누른다.
     그래서 노트 모델을 따로 뒀다 (`PDF2ANKI Prequiz *`).
   · 덱이 하나다. `<과목>::<강의>::예습`. 복습처럼 강의록/기출로 가르지 않는다 —
-    예습 덱은 10~15장이라 나누면 조각만 남고, 출처는 태그로 이미 갈린다.
+    예습 덱은 5~6장이고, 출처와 선택 도전은 태그로 구분한다.
   · guid 씨앗에 `::pre` 를 붙인다. 복습 카드와 질문이 같아져도 Anki 가 한 노트로
     보지 않게 하기 위해서다. **이것이 없으면 한쪽이 다른 쪽을 덮는다.**
   · 재현 검사 결과가 있으면 반영하되, 없다고 덱을 막지는 않는다 (`--require-reproduce` 로 켠다).
@@ -159,7 +159,13 @@ def why_of(c: dict) -> str:
     # 모르는 값은 안 그린다.
     tags += "".join(f'<span class="tag {t}">{WHY_TAG_LABEL[t]}</span>'
                     for t in c.get("why_tags") or [] if t in WHY_TAG_LABEL)
-    return f'<div class="why">{tags}</div>' if tags else ""
+    head = f'<div class="why">{tags}</div>' if tags else ""
+    if c.get("challenge"):
+        head += '<p class="why-back">선택 도전 · 지금 맞히지 않아도 된다. 수업에서 답을 찾아보자.</p>'
+    hint = (c.get("learning_support") or {}).get("hint", "").strip()
+    if hint:
+        head += f'<details class="why-back"><summary>막히면 힌트</summary>{html.escape(hint)}</details>'
+    return head
 
 
 def why_back(c: dict) -> str:
@@ -170,6 +176,15 @@ def why_back(c: dict) -> str:
     return f'<div class="why-back"><span class="lbl">왜 냈나</span>{html.escape(why)}</div>'
 
 
+def support_back(c: dict) -> str:
+    support = c.get("learning_support") or {}
+    return "".join(
+        f'<div class="why-back"><span class="lbl">{label}</span>{html.escape(support[key])}</div>'
+        for key, label in (("scope", "지금은 여기까지"), ("lecture_focus", "수업에서 들어보자"))
+        if support.get(key)
+    )
+
+
 # 층은 복습과 같은 축으로 가른다(`build.WARN_TRUST` 첫머리). 예습에만 있는 셋의 자리:
 #   `repeated_without_jokbo_ref` → ①  「반복 출제라서 냈다」는 근거가 없다는 말이다
 #   `missing_bridge_to_lecture`  → ②  답은 맞는데 수업으로 잇는 다리가 없다
@@ -177,11 +192,15 @@ def why_back(c: dict) -> str:
 # 「왜 냈나」(2026-10-04)의 넷도 같은 축이다 — 기출을 말하는데 문항이 없으면 ①
 # (근거 없는 이유를 학생에게 보인 것), 비었으면 ②, 길면 ③.
 WARN_TRUST = {
+    "preview_excerpt_not_found": "예습 설명본에서 문항의 근거 발췌를 찾을 수 없다",
+    "missing_preview_evidence": "핵심 문항을 풀 예습 설명본의 근거가 없다",
     "repeated_without_jokbo_ref": "반복 출제를 이유로 들었는데 근거 문항이 없다",
     "why_cites_exam_without_ref": "「왜 냈나」가 기출을 말하는데 근거 문항이 없다",
 }
 
 WARN_MINOR = {
+    "answer_leaked_in_hint": "접근 힌트에 정답이 그대로 들어 있다",
+    "missing_learning_support": "힌트·지금 알아둘 범위·수업 집중 질문이 빠져 있다",
     "points_at_source": "질문이 원본 자료를 가리킨다",
     "answer_leaked_in_question": "정답 단서가 질문에 노출됐을 수 있다",
     "occlusion_answer_leaked_in_question": "가린 라벨이 질문에 그대로 나온다",
@@ -305,7 +324,7 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str, src: Path | None = No
         guid = guid_of(seed, site_edits.guid_q(c), c)
         warn, srctxt, tags = warning_of(c), source_of(c, title), tags_of(c, lecture_id)
         notes = fold_notes_of(c)
-        exp = why_back(c) + html.escape(c.get("explanation") or "").replace("\n", "<br>")
+        exp = why_back(c) + html.escape(c.get("explanation") or "").replace("\n", "<br>") + support_back(c)
         origin = (f'<div class="slide"><img src="{media.slide(c["slide_no"])}"></div>'
                   if c.get("slide_no") else "")
         if c.get("jokbo_ref"):
@@ -387,8 +406,9 @@ def main(argv=None) -> int:
         cards, applied = site_edits.apply(cards, edits)
         print_site_edits(applied)
     n = len(cards)
-    if not MIN_CARDS <= n <= MAX_CARDS:
-        msg = f"카드가 {n}장이다 — 예습 덱의 계약은 {MIN_CARDS}~{MAX_CARDS}장이다"
+    challenge = sum(bool(c.get("challenge")) for c in cards)
+    if n - challenge != MIN_CARDS or challenge > MAX_CARDS - MIN_CARDS:
+        msg = f"핵심 {n - challenge}장·도전 {challenge}장이다 — 예습은 핵심 5장·선택 도전 0~1장이다"
         if not args.allow_size:
             print(f"{msg}. 그대로 만들려면 --allow-size")
             return 1

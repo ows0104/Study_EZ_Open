@@ -778,6 +778,7 @@ def _web_items(cards: list[dict]) -> list[dict]:
             "why_asked": card.get("why_asked") or "",
             "why_tags": list(card.get("why_tags") or []),
             "challenge": bool(card.get("challenge")),
+            "learning_support": dict(card.get("learning_support") or {}),
         })
     return items
 
