@@ -1,5 +1,6 @@
 import type { MissedItem } from "../types/quiz";
 import { Stem } from "./Stem";
+import { PreQuizText } from "./PreQuizText";
 
 /**
  * 오늘 놓친 것.
@@ -22,7 +23,7 @@ export function Missed({ items, preview = false }: { items: MissedItem[]; previe
         {items.map((entry) => (
           <li key={entry.itemId}>
             <p className="missed-stem">
-              <Stem text={preview ? entry.lectureFocus || entry.stem : entry.stem} />
+              {preview ? <PreQuizText text={entry.lectureFocus || entry.stem} /> : <Stem text={entry.stem} />}
             </p>
             {!preview ? <p className="missed-target">{entry.answer}</p> : null}
             {entry.examHit ? <span className="badge">기출</span> : null}

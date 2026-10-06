@@ -5,7 +5,7 @@ import { useMe } from "../useMe";
 import { cardsHash } from "./LectureCards";
 import type { GradeResult, QuizPayload, QuizSchedule, RevealResult, UndoResult } from "../types/quiz";
 import { WhyAsked } from "./Quiz";
-import { Stem } from "./Stem";
+import { PreQuizText } from "./PreQuizText";
 import { SlideImage } from "../SlideImage";
 import { useQuizSlidePreload } from "./useQuizSlidePreload";
 import { PreQuizDifficult } from "./PreQuizDifficult";
@@ -109,7 +109,7 @@ export function PreQuiz({ subject, runId, onDone }: {
         : ordered.length > 0 ? <p className="quiz-done-note">모든 문항을 이해했어요. 수업에서 어떻게 확장되는지 들어보세요.</p> : null}
       {ordered.some((entry) => entry.learningScope) ? <details className="quiz-takeaways">
         <summary>오늘 챙긴 핵심</summary>
-        <ul>{ordered.filter((entry) => entry.learningScope).map((entry) => <li key={entry.itemId}>{entry.learningScope}</li>)}</ul>
+        <ul>{ordered.filter((entry) => entry.learningScope).map((entry) => <li key={entry.itemId}><PreQuizText text={entry.learningScope!} /></li>)}</ul>
       </details> : null}
       <a className="resource" href={lectureHref({ subject, runId })}><strong>예습 마치기</strong></a>
       {ordered.length ? <button className="quiz-undo" onClick={() => start()}>전체 다시 훑어보기</button> : null}
@@ -119,14 +119,14 @@ export function PreQuiz({ subject, runId, onDone }: {
   }
   const feedback = revealed?.itemId === item.itemId ? revealed : null;
   return <>
-    <div className="quiz">
+    <div className="quiz prequiz">
       {progress}
       <p className="quiz-progress">{undoButton}
         {isAdmin ? <a className="quiz-fix" href={lectureHref({ subject, runId }) + cardsHash("pre", item.itemId)} target="_blank" rel="noreferrer">이 카드 고치기</a> : null}
       </p>
       <p className="quiz-support-note prequiz-intro">떠오르는 만큼 생각해 보세요. 답을 읽고 이해하면 충분해요.</p>
       <WhyAsked item={item} />
-      <p className="quiz-stem"><Stem text={item.stem} /></p>
+      <p className="quiz-stem"><PreQuizText text={item.stem} /></p>
       {!feedback && item.hint ? <details className="quiz-hint" key={item.itemId}>
         <summary>
           <svg className="quiz-hint-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -136,15 +136,15 @@ export function PreQuiz({ subject, runId, onDone }: {
           <span className="quiz-hint-open">힌트 접기</span>
           <svg className="quiz-hint-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg>
         </summary>
-        <p>{item.hint}</p>
+        <p><PreQuizText text={item.hint} /></p>
       </details> : null}
       {feedback ? <>
         <hr className="quiz-line" />
-        <p className="quiz-answer"><Stem text={feedback.answer} /></p>
-        {feedback.explanation ? <p className="quiz-explanation">{feedback.explanation}</p> : null}
-        {feedback.whyAsked ? <p className="quiz-why-back"><span className="quiz-why-label">왜 냈나요?</span>{feedback.whyAsked}</p> : null}
-        {feedback.learningScope ? <p className="quiz-support-note"><strong>지금은 여기까지</strong><br />{feedback.learningScope}</p> : null}
-        {feedback.lectureFocus ? <p className="quiz-support-note"><strong>수업에서 들어볼 질문</strong><br />{feedback.lectureFocus}</p> : null}
+        <p className="quiz-answer"><PreQuizText text={feedback.answer} /></p>
+        {feedback.explanation ? <p className="quiz-explanation"><PreQuizText text={feedback.explanation} /></p> : null}
+        {feedback.whyAsked ? <p className="quiz-why-back"><span className="quiz-why-label">왜 냈나요?</span><PreQuizText text={feedback.whyAsked} /></p> : null}
+        {feedback.learningScope ? <p className="quiz-support-note"><strong>지금은 여기까지</strong><PreQuizText text={feedback.learningScope} /></p> : null}
+        {feedback.lectureFocus ? <p className="quiz-support-note"><strong>수업에서 들어볼 질문</strong><PreQuizText text={feedback.lectureFocus} /></p> : null}
         {feedback.slideUrl ? <SlideImage preload={slides} src={feedback.slideUrl} alt={`슬라이드 ${feedback.slideNo}`} /> : null}
       </> : null}
       {error ? <p role="alert" className="notice is-error">{error}</p> : null}

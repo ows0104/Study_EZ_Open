@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { MissedItem, QuizItem, RevealResult } from "../types/quiz";
-import { Stem } from "./Stem";
+import { PreQuizText } from "./PreQuizText";
 import { WhyAsked } from "./Quiz";
 
 type Answer = Pick<RevealResult, "answer" | "explanation" | "lectureFocus">;
@@ -37,11 +37,11 @@ export function PreQuizDifficult({ base, items, answers, onReview }: {
         return <article className="prequiz-review-card" key={entry.itemId}>
           <small className="prequiz-review-number">문제 {index + 1}</small>
           <WhyAsked item={entry} />
-          <h4><Stem text={entry.stem} /></h4>
+          <h4><PreQuizText text={entry.stem} /></h4>
           {answer ? <>
-            <p className="prequiz-review-answer"><b>답</b><Stem text={answer.answer} /></p>
-            {answer.explanation ? <p className="prequiz-review-explanation"><b>설명</b>{answer.explanation}</p> : null}
-            {answer.lectureFocus ? <p className="prequiz-review-focus"><b>수업에서 확인할 내용</b>{answer.lectureFocus}</p> : null}
+            <p className="prequiz-review-answer"><b>답</b><PreQuizText text={answer.answer} /></p>
+            {answer.explanation ? <p className="prequiz-review-explanation"><b>설명</b><PreQuizText text={answer.explanation} /></p> : null}
+            {answer.lectureFocus ? <p className="prequiz-review-focus"><b>수업에서 확인할 내용</b><PreQuizText text={answer.lectureFocus} /></p> : null}
           </> : <p className="prequiz-review-note">답과 설명을 불러오는 중…</p>}
         </article>;
       })}

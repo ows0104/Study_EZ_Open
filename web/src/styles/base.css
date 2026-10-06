@@ -3082,6 +3082,16 @@ button.notice-title:hover:not(:disabled) {
 .prequiz-bar .is-listen { color: var(--ink-2); border-color: var(--line); }
 
 .prequiz-intro { text-align: center; }
+.prequiz-text { display: block; white-space: pre-line; word-break: keep-all; overflow-wrap: anywhere; text-wrap: pretty; text-align: left; }
+.prequiz-text-paragraph { display: block; }
+.prequiz-text-paragraph + .prequiz-text-paragraph { margin-top: 0.65em; }
+.prequiz .quiz-stem { max-width: 42rem; margin: 0 auto 20px; line-height: 1.75; text-align: left; }
+.prequiz .quiz-answer,
+.prequiz .quiz-explanation,
+.prequiz .quiz-support-note:not(.prequiz-intro),
+.prequiz .quiz-why-back,
+.prequiz .quiz-hint { width: 100%; max-width: 42rem; margin-inline: auto; text-align: left; }
+.prequiz .quiz-support-note > strong { display: block; margin-bottom: 6px; }
 .prequiz-progress { margin: 0 auto 16px; text-align: center; }
 .prequiz-progress > p { display: flex; gap: 10px; justify-content: center; align-items: baseline; margin: 0 0 10px; font-size: 13px; }
 .prequiz-progress > p > span { color: var(--ink-3); }
