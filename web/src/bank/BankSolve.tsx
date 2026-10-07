@@ -11,6 +11,7 @@ import { usePreparedBankAnswer } from "./usePreparedBankAnswer";
 import { DailyGoal } from "./DailyGoal";
 import { useBankUndo } from "./useBankUndo";
 import { MatchingQuestion, matchingScore, type MatchingPicks } from "./MatchingQuestion";
+import { SequenceQuestion, sequenceComplete, sequenceScore } from "./SequenceQuestion";
 
 const FORMAT_LABEL: Record<string, string> = {
   basic: "단답", cloze: "빈칸", list: "나열", ox: "O/X", mcq: "객관식", multi_select: "복수 선택",
@@ -30,6 +31,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [matches, setMatches] = useState<MatchingPicks>({});
   const [activeMatch, setActiveMatch] = useState(0);
+  const [order, setOrder] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [reporting, setReporting] = useState(false);
@@ -38,6 +40,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
   const restore = useCallback((got: BankNext) => {
     setCurrent(got); setAnswer(got.answer ?? null); setPicked(new Set()); setReporting(false);
     setMatches({}); setActiveMatch(0);
+    setOrder([]);
     window.scrollTo(0, 0);
   }, []);
   const { undo, undoBusy, pending } = useBankUndo(base, current?.undoToken, restore, setError, busy || Boolean(peek));
@@ -60,6 +63,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
       setAnswer(got.answer ?? null);
       setPicked(new Set());
       setMatches({}); setActiveMatch(0);
+      setOrder([]);
       setReporting(false);
       window.scrollTo(0, 0);
     } catch (cause) {
@@ -75,6 +79,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
     if (!current?.reviewToken || answer || busy || pending.current) return;
     if (current.question?.format === "matching"
       && !current.question.matching_left.every(left => current.question!.matching_right.includes(matches[left]))) return;
+    if (current.question?.format === "sequence" && !sequenceComplete(current.question, order)) return;
     pending.current = true;
     setBusy(true);
     setError("");
@@ -91,9 +96,10 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
       pending.current = false;
       setBusy(false);
     }
-  }, [base, current, answer, busy, prepared, matches]);
+  }, [base, current, answer, busy, prepared, matches, order]);
 
-  const matchResult = current?.question ? matchingScore(current.question, answer, matches) : null;
+  const autoResult = current?.question ? matchingScore(current.question, answer, matches)
+    ?? sequenceScore(current.question, answer, order) : null;
 
   const rate = useCallback(async (rating: BankRating) => {
     if (!current?.reviewToken || !answer || busy || pending.current) return;
@@ -148,17 +154,17 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
       if ((event.key === " " || event.key === "Enter") && !answer) {
         event.preventDefault();
         void reveal();
-      } else if (answer && matchResult && (event.key === " " || event.key === "Enter")) {
+      } else if (answer && autoResult && (event.key === " " || event.key === "Enter")) {
         event.preventDefault();
-        void rate(matchResult.rating);
-      } else if (answer && !matchResult && ["1", "2", "3", "4"].includes(event.key)) {
+        void rate(autoResult.rating);
+      } else if (answer && !autoResult && ["1", "2", "3", "4"].includes(event.key)) {
         event.preventDefault();
         void rate(RATINGS[Number(event.key) - 1].rating);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [answer, reveal, rate, peek, matchResult]);
+  }, [answer, reveal, rate, peek, autoResult]);
 
   if (current?.waiting) return <div className="quiz bank-start">
     <h2>지금 풀 수 있는 분량을 마쳤어요!</h2>
@@ -220,6 +226,14 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
         ) : null}
 
         <QuestionBody question={q} answer={answer} picked={picked}
+          sequence={q.format === "sequence" ? <SequenceQuestion question={q} answer={answer} order={order}
+            disabled={busy || undoBusy} onSelect={item => {
+              if (answer || busy || undoBusy) return;
+              setOrder(old => old.includes(item) ? old : [...old, item]);
+            }} onRemove={index => {
+              if (answer || busy || undoBusy) return;
+              setOrder(old => old.filter((_, position) => position !== index));
+            }} onReset={() => { if (!answer && !busy && !undoBusy) setOrder([]); }} /> : undefined}
           matching={q.format === "matching" ? <MatchingQuestion question={q} answer={answer} picks={matches}
             active={activeMatch} disabled={busy || undoBusy} onActive={setActiveMatch} onMatch={(right) => {
               if (answer || busy || undoBusy) return;
@@ -256,8 +270,8 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
       </div>
 
       <div className="quiz-bar">
-        {answer && matchResult ? (
-          <button className="quiz-submit" disabled={busy || undoBusy} onClick={() => void rate(matchResult.rating)}>
+        {answer && autoResult ? (
+          <button className="quiz-submit" disabled={busy || undoBusy} onClick={() => void rate(autoResult.rating)}>
             {busy ? "기록 중…" : <>다음 문제 <kbd>space</kbd></>}
           </button>
         ) : answer ? (
@@ -271,8 +285,9 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
           ))
         ) : (
           <button className="quiz-submit" disabled={busy || undoBusy || (q.format === "matching"
-            && !q.matching_left.every(left => q.matching_right.includes(matches[left])))} onClick={() => void reveal()}>
-            {busy ? "펴는 중…" : <>{q.format === "matching" ? "채점하기" : "답 보기"} <kbd>space</kbd></>}
+            && !q.matching_left.every(left => q.matching_right.includes(matches[left])))
+            || (q.format === "sequence" && !sequenceComplete(q, order))} onClick={() => void reveal()}>
+            {busy ? "펴는 중…" : <>{q.format === "matching" || q.format === "sequence" ? "채점하기" : "답 보기"} <kbd>space</kbd></>}
           </button>
         )}
       </div>

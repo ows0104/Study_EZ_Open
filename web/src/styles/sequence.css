@@ -1,0 +1,43 @@
+.bank-sequence { max-width: 760px; margin: 16px auto 0; }
+.bank-sequence-options,
+.bank-sequence-order { margin: 0; padding: 0; list-style: none; }
+.bank-sequence-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.bank-sequence-choice {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.bank-sequence-choice > span:not(.bank-sequence-position) { min-width: 0; }
+.bank-sequence-choice b { color: var(--accent-ink); }
+.bank-sequence-choice.is-picked { border-color: var(--accent-line); background: var(--accent-soft); }
+.bank-sequence-choice:disabled { opacity: 1; cursor: default; }
+.bank-sequence-choice:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
+.bank-sequence-position { margin-left: auto; flex-shrink: 0; font-size: 13px; color: var(--ink-2); }
+.bank-sequence-selection { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.bank-sequence-heading { margin: 0 0 10px; font-weight: 650; }
+.bank-sequence-order li + li { margin-top: 8px; }
+.bank-sequence-reset { margin-top: 10px; }
+.bank-sequence-choice.is-correct,
+.bank-sequence-score.is-correct { color: var(--ok); }
+.bank-sequence-choice.is-correct { border-color: var(--ok); background: var(--ok-soft); }
+.bank-sequence-choice.is-wrong,
+.bank-sequence-score.is-wrong { color: var(--warn); }
+.bank-sequence-choice.is-wrong { border-color: var(--warn-line); background: var(--warn-soft); }
+.bank-sequence-score { margin: 16px 0; text-align: center; font-weight: 650; }
+.bank-sequence-score .bank-note { display: block; font-weight: 400; }
+.bank-correct-order { max-width: 760px; margin: 16px auto; }
+.bank-correct-order .bank-order { margin: 8px 0; padding-left: 2em; text-align: left; overflow-wrap: anywhere; }
+.bank-correct-order li + li { margin-top: 6px; }
+@media (max-width: 520px) {
+  .bank-sequence-options { grid-template-columns: minmax(0, 1fr); }
+}
