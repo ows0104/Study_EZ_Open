@@ -21,6 +21,7 @@ function progressFor(lecture: LectureRef, phase: Phase): Progress {
     const score = clampScore(100 * answered / progress.total);
     return { score, description: `예습 ${formatScore(score)}% · ${answered}/${progress.total}문항 완료` };
   }
+  if (!lecture.marks.quiz) return { score: null, description: "복습: 측정할 웹 문항 없음" };
   const value = lecture.mastery;
   if (value === undefined) return { score: null, unknown: true, description: "복습: 학습도 정보 없음" };
   if (value === null) return { score: null, description: "복습: 평가 준비 전" };
@@ -31,7 +32,7 @@ function progressFor(lecture: LectureRef, phase: Phase): Progress {
 function formatScore(score: number) { return score >= 100 ? 100 : Math.floor(score); }
 function progressClass(progress: Progress) {
   return progress.score === null ? progress.unknown ? "is-unknown" : "is-unavailable"
-    : progress.score >= 100 ? "is-complete" : progress.score >= 50 ? "is-half" : "is-start";
+    : progress.score >= 100 ? "is-complete" : "is-progress";
 }
 
 export function learningDescription(lecture: LectureRef) {
@@ -45,8 +46,9 @@ export function ChipLearning({ lectures }: { lectures: LectureRef[] }) {
     {(["pre", "main"] as const).map(phase => {
       const progress = lectures.map(lecture => progressFor(lecture, phase));
       const single = lectures.length === 1 ? progress[0] : null;
+      const unavailable = progress.every(value => value.score === null && !value.unknown);
       const description = lectures.map((lecture, index) => `${lecture.title}: ${progress[index].description}`).join(" · ");
-      return <span className={`chip-learning is-${phase}`} key={phase} title={description} aria-label={description}>
+      return <span className={`chip-learning is-${phase}${unavailable ? " is-unavailable" : ""}`} key={phase} title={description} aria-label={description}>
         <span className="chip-learning-value" aria-hidden="true">
           <span className="chip-learning-label">{phaseLabels[phase]} </span>
           {single ? single.score === null ? "—" : `${formatScore(single.score)}%` : null}
