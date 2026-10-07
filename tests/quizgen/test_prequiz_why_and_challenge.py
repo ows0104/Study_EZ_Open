@@ -107,6 +107,7 @@ def test_앞면에는_배지만_뒷면에_글이_붙는다():
     c = {"why_asked": "심근경색 진단에서 <먼저> 오른다", "challenge": True, "why_tags": ["clinical"]}
     head = why_of(c)
     assert "도전 문제" in head and "임상" in head
+    assert "선택 도전" not in head
     assert "심근경색" not in head          # 글은 앞면에 없다
     back = why_back(c)
     assert "왜 냈나" in back and "&lt;먼저&gt;" in back   # 이스케이프한다

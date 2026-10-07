@@ -29,6 +29,12 @@ STOPWORDS = {
 RE_CLOZE_NUM = re.compile(r"\{\{c\d+::")
 
 
+def strip_prequiz_label(text: str) -> str:
+    """예습 질문의 중복 표기를 지운다. 카드 식별에 쓰는 원문은 유지한다."""
+    text = re.sub(r"(?:\*\*)?[\[［]\s*선택\s*도전\s*[\]］](?:\*\*)?\s*[:：]?\s*", "", text)
+    return re.sub(r"^\s*(?:\*\*)?선택\s*도전(?:\*\*)?\s*[:：]\s*(?:\*\*)?\s*", "", text).strip()
+
+
 def collapse_cloze(q: str) -> str:
     """빈칸 번호를 전부 `c1` 로 모은다 — 한 노트가 카드 한 장이 되게.
 

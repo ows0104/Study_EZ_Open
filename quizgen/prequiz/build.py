@@ -30,6 +30,7 @@ from pathlib import Path
 import genanki
 
 from .. import site_edits
+from ..textutil import strip_prequiz_label
 from ..anki_models import ANCHOR, CSS, FIELDS, _mid
 from ..build import (
     DEFECT_REASONS,
@@ -161,7 +162,7 @@ def why_of(c: dict) -> str:
                     for t in c.get("why_tags") or [] if t in WHY_TAG_LABEL)
     head = f'<div class="why">{tags}</div>' if tags else ""
     if c.get("challenge"):
-        head += '<p class="why-back">선택 도전 · 지금 맞히지 않아도 된다. 수업에서 답을 찾아보자.</p>'
+        head += '<p class="why-back">지금 맞히지 않아도 된다. 수업에서 답을 찾아보자.</p>'
     hint = (c.get("learning_support") or {}).get("hint", "").strip()
     if hint:
         head += f'<details class="why-back"><summary>막히면 힌트</summary>{html.escape(hint)}</details>'
@@ -322,6 +323,7 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str, src: Path | None = No
         fmt = c["card_format"]
         # 사이트에서 질문을 고친 카드는 원래 질문으로 씨앗을 잡는다(`site_edits` 머리).
         guid = guid_of(seed, site_edits.guid_q(c), c)
+        question = strip_prequiz_label(c["q"])
         warn, srctxt, tags = warning_of(c), source_of(c, title), tags_of(c, lecture_id)
         notes = fold_notes_of(c)
         exp = why_back(c) + html.escape(c.get("explanation") or "").replace("\n", "<br>") + support_back(c)
@@ -341,7 +343,7 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str, src: Path | None = No
         if fmt == "cloze":
             # 복습과 같은 자리에서 번호를 모은다 (`build.collapse_cloze` 주석).
             note = genanki.Note(model=CLOZE_MODEL, guid=guid, tags=tags,
-                                fields=[why_of(c) + collapse_cloze(c["q"]), exp, warn,
+                                fields=[why_of(c) + collapse_cloze(question), exp, warn,
                                         srctxt, origin])
         else:
             img, answer = "", render_answer(c["a"])
@@ -354,7 +356,7 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str, src: Path | None = No
                 rendered[id(c)] = (front, back)
                 img, answer = f'<img src="{front}">', f'<img src="{back}">'
             note = genanki.Note(model=MODELS[fmt], guid=guid, tags=tags,
-                                fields=[why_of(c) + html.escape(c["q"]), answer, exp, warn,
+                                fields=[why_of(c) + html.escape(question), answer, exp, warn,
                                         srctxt, img, origin])
         deck.add_note(note)
         stats[fmt] += 1
