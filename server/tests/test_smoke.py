@@ -111,7 +111,8 @@ def main() -> None:
     ).json()
     check("두 파일 다 확인됨",
           (completed["stored"], completed["missing"]) == (2, []), completed)
-    check("필기 업로드는 기존 quizgen 작업을 만들지 않는다", completed["queued"] is None, completed)
+    check("필기 업로드는 Quiz Bank 자동 출제를 접수한다",
+          completed["queued"]["kind"] == "bank" and completed["queued"]["origin"] == "auto", completed)
 
     # 러너는 쓸기마다 같은 강의록을 다시 밀어 본다. 그때마다 서면 10분에 한 번씩
     # 같은 편을 만든다.

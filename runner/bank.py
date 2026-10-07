@@ -17,7 +17,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from . import deck, publish
+from . import deck, publish, watch
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SLICE_CACHE = "jokbo.json"
@@ -133,6 +133,36 @@ def run(client: publish.Client, root: Path, subject: str, run_id: str, this_year
     out = runs_dir / run_id / "bank" / time.strftime("%y%m%d-%H%M%S")
     out.mkdir(parents=True, exist_ok=True)
     raw = out / "raw.md"
+    generation_usage = []
+    if not got.get("raw"):
+        # 동기화 중인 PDF로 출제하지 않는다. 부모 러너가 대기 중에도 취소를 받는다.
+        left = watch.MIN_AGE_SECONDS - (time.time() - pdf.stat().st_mtime)
+        if left > 0:
+            _stage("동기화 대기")
+        while left > 0:
+            time.sleep(min(30, left))
+            left = watch.MIN_AGE_SECONDS - (time.time() - pdf.stat().st_mtime)
+        _stage("출제")
+        context = out / "context.json"
+        context.write_text(json.dumps(got, ensure_ascii=False), encoding="utf-8")
+        argv = [sys.executable, "-m", "quizbank.generate", "--pdf", str(pdf),
+                "--context", str(context), "--out", str(out)]
+        if any(s["kind"] == "jokbo" for s in got.get("sources", [])):
+            slices = jokbo_slices(runs_dir, subject, {run_id: pdf})
+            if run_id not in slices:
+                return fail("등록된 족보 조각을 노트북에서 못 찾았다")
+            argv += ["--jokbo", str(slices[run_id])]
+        if model:
+            argv += ["--model", model]
+        code = subprocess.run(argv, cwd=REPO_ROOT).returncode
+        generated = _read(out / "generation.json")
+        if code != 0 or generated is None or not raw.is_file():
+            return fail(f"자동 출제가 {code} 로 끝났다 (로그: {out})")
+        got["raw"] = raw.read_text(encoding="utf-8")
+        client.call("PUT", f"{base}/bank-generated-response", {
+            "raw": got["raw"], "respondedAt": responded,
+            "promptVersion": generated["promptVersion"]})
+        generation_usage = generated.get("usage", [])
     raw.write_text(got["raw"], encoding="utf-8")
     argv = [sys.executable, "-m", "quizbank.run", str(raw), "--pdf", str(pdf), "--title", got["title"],
             "--run-id", run_id, "--out", str(out)]
@@ -153,7 +183,7 @@ def run(client: publish.Client, root: Path, subject: str, run_id: str, this_year
              if line.strip()] if (out / "usage.jsonl").is_file() else []
     answer = client.call("PUT", f"{base}/bank", {
         "respondedAt": responded, "bank": _read(out / "bank.json"), "validation": _read(out / "validation.json"),
-        "review": _read(out / "review.json"), "pages": _read(out / "pages.json") or {}, "usage": usage,
+        "review": _read(out / "review.json"), "pages": _read(out / "pages.json") or {}, "usage": generation_usage + usage,
         "message": "" if result["pass"] else f"검증 오류 {result['errors']}건"})
     print(f"Quiz Bank {run_id}: {answer.get('status')} · 문항 {result['questions']} · 검토 {result['review']}"
           f" · 슬라이드 {len(slides)}장(새로 {sent})", flush=True)

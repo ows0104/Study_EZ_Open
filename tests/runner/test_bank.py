@@ -4,6 +4,7 @@
 """
 
 import json
+import os
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
@@ -186,3 +187,35 @@ def test_필기를_못_찾으면_서버에_실패를_적는다(tmp_path, monkeyp
 def test_md_는_text_markdown_으로_올라간다():
     assert publish.content_type(Path("L12-13.md")) == "text/markdown"
     assert "jokbo" in publish.NOTES_KINDS
+
+
+def test_응답이_없으면_자동_출제_후_기존_정리와_업로드(tmp_path, monkeypatch):
+    pdf = tmp_path / "a.pdf"
+    pdf.write_bytes(b"%PDF")
+    os.utime(pdf, (1, 1))
+    monkeypatch.setattr(bank, "_notes_pdf", lambda *args: pdf)
+    monkeypatch.setattr(bank, "jokbo_slices", lambda *args: {"261002_02": tmp_path / "j.md"})
+    client = FakeClient()
+    original_call = client.call
+    def call(method, path, payload=None):
+        answer = original_call(method, path, payload)
+        if method == "GET":
+            answer["raw"] = ""
+        return answer
+    monkeypatch.setattr(client, "call", call)
+    seen = []
+    def fake_run(argv, **kwargs):
+        seen.append(argv[2])
+        out = Path(argv[argv.index("--out") + 1])
+        if argv[2] == "quizbank.generate":
+            (out / "raw.md").write_text("문항 " * 100 + "STUDYEZ_BANK_COMPLETE", encoding="utf-8")
+            (out / "generation.json").write_text(json.dumps({"promptVersion": "1.15",
+                                                               "usage": [{"step": "출제"}]}))
+            return SimpleNamespace(returncode=0)
+        return _fake_quizbank(True)(argv, **kwargs)
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    assert bank.run(client, tmp_path, "약리학", "261002_02", "2026", "2025", tmp_path) == 0
+    assert seen == ["quizbank.generate", "quizbank.run"]
+    puts = [c for c in client.calls if c[0] == "PUT"]
+    assert puts[0][1].endswith("bank-generated-response")
+    assert puts[-1][2]["usage"][0]["step"] == "출제"

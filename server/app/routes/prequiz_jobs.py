@@ -90,7 +90,7 @@ def _no_material(db: Session, lecture: Lecture, kind: str) -> str:
     """
     if kind == JOB_BANK:
         bank = db.get(QuizBank, (lecture.subject, lecture.run_id))
-        return "" if bank is not None and bank.raw_response else (
+        return "" if bank is not None and (bank.raw_response or bank.responded_at) else (
             "ChatGPT 응답이 아직 없습니다. Quiz Bank는 캘린더 패널에서 ChatGPT로 만들고 시작합니다.")
     if kind == JOB_MAIN:
         notes = db.scalars(

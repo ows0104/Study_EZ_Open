@@ -185,14 +185,39 @@ def get_bank_response(subject: str, run_id: str, user: CurrentUser = Depends(req
     """러너가 정리할 재료. 집어 가면 `building` 으로 적는다."""
     lecture = lecture_or_404(db, subject, run_id)
     row = db.get(QuizBank, (lecture.subject, lecture.run_id))
-    if row is None or not row.raw_response:
+    if row is None:
         raise HTTPException(404, "저장된 ChatGPT 응답이 없습니다.")
     row.status = BANK_BUILDING
     row.message = "러너가 정리하는 중"
     db.commit()
     return {"raw": row.raw_response, "respondedAt": _iso(row.responded_at), "promptVersion": row.prompt_version,
+            "examDate": exam_date_for(db, lecture),
             "title": lecture.title, "sources": [{k: s[k] for k in ("id", "kind", "filename")}
                                                 for s in bank_sources(db, lecture)]}
+
+
+class GeneratedResponseIn(ResponseIn):
+    responded_at: str = Field(alias="respondedAt")
+
+
+@admin_router.put("/lectures/{subject}/{run_id}/bank-generated-response")
+def put_generated_response(subject: str, run_id: str, payload: GeneratedResponseIn,
+                           user: CurrentUser = Depends(require_runner),
+                           db: Session = Depends(get_db)) -> dict[str, Any]:
+    """자동 출제의 원문을 저장한다. 그 사이 저장된 관리자 응답은 덮지 않는다."""
+    lecture = lecture_or_404(db, subject, run_id)
+    row = db.scalars(select(QuizBank).where(QuizBank.subject == lecture.subject,
+                                          QuizBank.run_id == lecture.run_id).with_for_update()).first()
+    if row is None or _iso(row.responded_at) != payload.responded_at or row.raw_response:
+        raise HTTPException(409, "그 사이 새 응답이 저장됐습니다. 새 응답으로 다시 정리하세요.")
+    if COMPLETE_MARK not in payload.raw:
+        raise HTTPException(422, "완료 표시가 없는 응답입니다.")
+    row.raw_response = payload.raw
+    row.prompt_version = payload.prompt_version
+    row.responded_by = "runner:auto"
+    row.message = "자동 출제 완료 — 정리·검증 중"
+    db.commit()
+    return {"respondedAt": _iso(row.responded_at)}
 
 
 class BankIn(BaseModel):
