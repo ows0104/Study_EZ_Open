@@ -637,7 +637,7 @@
 
 .legend-group.is-learning { flex-wrap: wrap; }
 .learning-legend-track { display: inline-block; width: 18px; height: 5px; border-radius: 99px; }
-.learning-legend-track.is-start { background: #d3a31e; }
+.learning-legend-track.is-start { background: var(--ink-3); }
 .learning-legend-track.is-half { background: #238563; }
 .learning-legend-track.is-complete { background: #3984d5; }
 
@@ -660,9 +660,9 @@
   height: 6px;
   overflow: hidden;
   border-radius: 99px;
-  background: color-mix(in srgb, var(--learning-color) 22%, var(--surface));
+  background: transparent;
 }
-.chip-learning-track.is-start { --learning-color: #d3a31e; }
+.chip-learning-track.is-start { --learning-color: var(--ink-3); }
 .chip-learning-track.is-half { --learning-color: #238563; }
 .chip-learning-track.is-complete { --learning-color: #3984d5; }
 .chip-learning-track.is-unavailable {

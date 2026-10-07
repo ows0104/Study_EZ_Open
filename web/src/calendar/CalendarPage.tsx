@@ -224,7 +224,8 @@ export function CalendarPage() {
         <div className="calendar-legend">
           <span className="legend-group is-learning" aria-label="학습률 표시 안내">
             <b>왼쪽 예습 · 오른쪽 복습</b>
-            <span><i className="learning-legend-track is-start" /> 50% 미만</span>
+            <span>0%: 투명</span>
+            <span><i className="learning-legend-track is-start" /> 0% 초과 · 50% 미만</span>
             <span><i className="learning-legend-track is-half" /> 50% 이상</span>
             <span><i className="learning-legend-track is-complete" /> 100%</span>
             <span>빗금: 측정할 문항 없음</span>
