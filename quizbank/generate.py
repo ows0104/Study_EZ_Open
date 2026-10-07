@@ -12,6 +12,7 @@ from studyez_llm import codex
 from studyez_llm.pdf import render
 
 TEMPLATE = Path(__file__).resolve().parents[1] / "web" / "src" / "bank" / "bankPrompt.md"
+LECTURE_SCOPES = TEMPLATE.with_name("lectureScopes.json")
 HEADER = re.compile(r"^\s*<!--([\s\S]*?)-->\s*")
 COMPLETE_MARK = "STUDYEZ_BANK_COMPLETE"
 
@@ -21,10 +22,15 @@ def prompt_for(title: str, exam_date: str, sources: list[dict]) -> tuple[str, st
     header = HEADER.match(template)
     version = re.search(r"Version:\s*(\S+)", header[1] if header else "")
     labels = {"notes_current": "강의자료(필기 포함)", "jokbo": "족보"}
+    scopes = json.loads(LECTURE_SCOPES.read_text(encoding="utf-8"))
+    scope = next((s["instruction"] for s in scopes if s["title"] == title and any(
+        source["kind"] == "notes_current" and source["filename"].startswith(s["sourcePrefix"])
+        for source in sources)), "별도 지정 없음. 자료의 교수 강조·출제 범위를 먼저 판단한다.")
     values = {"title": title, "exam_date": exam_date or "미정",
+              "lecture_scope": scope,
               "weighting": "강의슬라이드 > 족보 > 필기", "output": "이 응답 본문에 바로 쓴다.",
               "sources": "\n".join(f"  - {s['id']} | {labels[s['kind']]} | {s['filename']}" for s in sources)}
-    body = re.sub(r"\{\{(title|exam_date|weighting|sources|output)\}\}",
+    body = re.sub(r"\{\{(title|exam_date|weighting|sources|output|lecture_scope)\}\}",
                   lambda match: values[match[1]], HEADER.sub("", template))
     return body, version[1] if version else "unknown"
 
