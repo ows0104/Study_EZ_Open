@@ -47,16 +47,16 @@ export function ChipLearning({ lectures }: { lectures: LectureRef[] }) {
       const single = lectures.length === 1 ? progress[0] : null;
       const description = lectures.map((lecture, index) => `${lecture.title}: ${progress[index].description}`).join(" · ");
       return <span className={`chip-learning is-${phase}`} key={phase} title={description} aria-label={description}>
+        <span className="chip-learning-value" aria-hidden="true">
+          <span className="chip-learning-label">{phaseLabels[phase]} </span>
+          {single ? single.score === null ? "—" : `${formatScore(single.score)}%` : null}
+        </span>
         <span className="chip-learning-bars" aria-hidden="true">
           {progress.map((value, index) => <span key={JSON.stringify([lectures[index].subject, lectures[index].runId])}
             className={`chip-learning-track ${progressClass(value)}`}>
             {value.score !== null ? <span className="chip-learning-fill" style={{ width: `${value.score}%` }} /> : null}
           </span>)}
         </span>
-        {single ? <span className="chip-learning-value" aria-hidden="true">
-          <span className="chip-learning-label">{phaseLabels[phase]} </span>
-          {single.score === null ? "—" : `${formatScore(single.score)}%`}
-        </span> : null}
       </span>;
     })}
   </span>;

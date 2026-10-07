@@ -156,7 +156,7 @@
 .month-calendar {
   /* 줄이 이 높이 아래로는 안 줄어든다. 화면이 너무 낮으면 그때는 스크롤한다 —
      읽을 수 없을 만큼 납작해지는 것보다 낫다. */
-  --row-min: 54px;
+  --row-min: 62px;
 
   min-height: 0;
   flex: 1;
@@ -641,17 +641,17 @@
 .learning-legend-track.is-half { background: #238563; }
 .learning-legend-track.is-complete { background: #3984d5; }
 
-.calendar-event.has-learning { padding-bottom: 24px; }
+.calendar-event.has-learning { padding-bottom: 32px; }
 .calendar-event-footer {
   position: absolute;
   bottom: 5px;
   left: 12px;
-  right: 9px;
+  right: 12px;
 }
 
 /* 비어 있는 쪽도 폭을 유지한다. 예습은 항상 왼쪽 절반, 복습은 오른쪽 절반이다. */
 .chip-learning-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.chip-learning { display: flex; min-width: 0; gap: 5px; align-items: center; }
+.chip-learning { display: grid; min-width: 0; gap: 3px; align-items: center; }
 .chip-learning-bars { display: flex; flex: 1; min-width: 0; gap: 3px; }
 .chip-learning-track {
   --learning-color: var(--ink-3);
@@ -670,29 +670,27 @@
 }
 .chip-learning-fill { display: block; height: 100%; border-radius: inherit; background: var(--learning-color); }
 .chip-learning-value {
-  flex: none;
-  width: 70px;
-  text-align: right;
+  /* 글씨는 위에, 막대는 아래에 놓아 각 절반의 폭을 모두 쓴다. */
+  min-width: 0;
+  text-align: left;
   font-size: 10px;
   font-weight: 650;
-  line-height: 14px;
+  line-height: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--ink-2);
   white-space: nowrap;
 }
 .chip-learning-label { font-weight: 500; color: var(--ink-3); }
-.calendar-event.is-compact.has-learning { padding-bottom: 21px; }
+.calendar-event.is-compact.has-learning { padding-bottom: 29px; }
 .calendar-event.is-compact.has-learning .calendar-event-footer { left: 7px; right: 7px; bottom: 3px; }
 .calendar-event.is-compact.has-learning .chip-learning-label { display: none; }
-.calendar-event.is-compact.has-learning .chip-learning-value { width: 31px; }
 .month-day { container: month-cell / inline-size; }
 
 @container cell (max-width: 240px) {
   .chip-learning-label { display: none; }
-  .chip-learning-value { width: 31px; }
 }
 @container cell (max-width: 120px) {
-  .calendar-event-footer { left: 8px; right: 7px; }
+  .calendar-event-footer { left: 8px; right: 8px; }
   .chip-learning-pair { gap: 6px; }
 }
 /* 아주 좁은 칸에서는 두 막대를 남긴다. 정확한 수치는 툴팁과 강의 패널에서 읽는다. */
@@ -705,23 +703,23 @@
 }
 
 /* 낮은 칸에서도 학습도는 남기고 제목·부가정보의 줄 수를 줄인다. */
-@container cell (max-height: 90px) {
+@container cell (max-height: 106px) {
   .calendar-event.has-learning .calendar-event-primary { -webkit-line-clamp: 2; }
   .calendar-event.has-learning .calendar-event-meta { display: block; }
   .calendar-event.has-learning .calendar-event-series { display: none; }
 }
 
-@container cell (max-height: 75px) {
+@container cell (max-height: 85px) {
   .calendar-event.has-learning { padding-top: 4px; }
   .calendar-event.has-learning .calendar-event-primary { -webkit-line-clamp: 1; padding-right: 0; }
 }
 
-@container cell (max-width: 90px) and (min-height: 59px) {
+@container cell (max-width: 90px) and (min-height: 66px) {
   .calendar-event.has-learning .calendar-event-primary { -webkit-line-clamp: 2; }
   .calendar-event.has-learning .calendar-event-meta { display: none; }
 }
 
-@container cell (max-height: 58px) {
+@container cell (max-height: 66px) {
   .calendar-event.has-learning .calendar-event-meta { display: none; }
 }
 
