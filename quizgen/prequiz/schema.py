@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from copy import deepcopy
 from pathlib import Path
 
 # 기계 검사의 임계값. **계약에 실려야 하는 값이다** —
@@ -100,6 +101,19 @@ REJECT_REASONS = (
 MIN_CARDS, MAX_CARDS = 8, 12
 MIN_CHALLENGE, MAX_CHALLENGE = 1, 2
 MIN_CORE, MAX_CORE = 6, 11
+
+DIFFICULTY_LABELS = {"basic": "기본", "advanced": "심화", "challenge": "도전"}
+DIFFICULTY_GUIDANCE = """예습 난도는 기본·심화·도전 세 단계로 다양하게 구성한다.
+기본(basic): 핵심 용어·정의·구조·직접적인 관계를 확인한다. 설명을 읽으면 바로 풀 수 있다.
+심화(advanced): 왜 그런지 설명하거나 개념을 비교하고, 한 가지 원리를 짧은 새 상황에
+한 단계 적용한다. 단순한 정의 회상보다 생각이 필요하지만 여러 관계를 엮지는 않는다.
+도전(challenge): 두 관계나 조건을 연결하여 중간 판단을 거쳐 결론을 추론한다.
+10문항이면 기본 5·심화 3·도전 2를 출발점으로 삼고 자료에 맞춰 조정한다.
+총 8~12문항과 도전 1~2문항 계약은 유지하며, 세 난도를 모두 포함한다.
+기본→심화→도전 순서로 배치하되 난도를 채우려고 같은 질문을 반복하지 않는다.
+각 카드 learning_support.difficulty에 basic·advanced·challenge 중 하나를 쓴다.
+challenge=true는 difficulty=challenge일 때만 쓴다. basic은 카드 형식 이름과 다른 난도다.
+질문에 [기본]·[심화]·[도전] 같은 접두어를 붙이지 않는다. 표시는 화면이 담당한다."""
 
 # 일반 생성·간소화 생성·묶음 검수가 같은 난도 기준을 사용한다.
 CHALLENGE_GUIDANCE = """도전은 핵심보다 분명히 어려워야 한다. 용어 회상, 정의 바꿔 말하기,
@@ -214,6 +228,8 @@ CARD_SCHEMA = {
         "learning_support": {
             "type": "object", "additionalProperties": False,
             "properties": {
+                "difficulty": {"enum": list(DIFFICULTY_LABELS),
+                               "description": "학습 난도: basic=핵심 확인, advanced=기전·비교·한 단계 적용, challenge=여러 관계를 연결한 추론."},
                 "hint": {"type": "string", "description": "정답을 말하지 않는 접근 단서. 예습 설명의 어느 개념을 다시 볼지 안내한다."},
                 "scope": {"type": "string", "description": "지금 알아둘 범위 한 문장. 세부 암기와 구분하고 이 카드로 확인한 내용을 구체적으로 쓴다."},
                 "lecture_focus": {"type": "string", "description": "수업에서 집중해 들을 질문 하나. 제공된 강의 자료에 답이 있어야 한다."},
@@ -297,6 +313,11 @@ MUST_KNOW_SCHEMA = {
     },
 }
 
+# 새 생성은 난도를 반드시 기록하고, 기존 카드의 검증 계약은 그대로 호환한다.
+GENERATION_CARD_SCHEMA = deepcopy(CARD_SCHEMA)
+GENERATION_CARD_SCHEMA["required"] += ["learning_support"]
+GENERATION_CARD_SCHEMA["properties"]["learning_support"]["required"] = ["difficulty"]
+
 GENERATE_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "PrequizOutput",
@@ -306,7 +327,7 @@ GENERATE_SCHEMA = {
     "properties": {
         "must_know": MUST_KNOW_SCHEMA,
         "cards": {"type": "array", "minItems": MIN_CARDS, "maxItems": MAX_CARDS,
-                  "items": CARD_SCHEMA},
+                  "items": GENERATION_CARD_SCHEMA},
     },
 }
 
@@ -442,6 +463,7 @@ def dump(outdir: Path) -> None:
               "문제를 냈나**, `explanation` 은 **왜 이 답이고** 수업 어디에 쓰이는지다. 같은 말을 "
               "두 번 하지 않는다.",
               "",
+              "## 난도 — 기본·심화·도전", "", DIFFICULTY_GUIDANCE, "",
               "## `challenge` — 도전 문제",
               "",
               f"덱마다 총 8~12장 안에 **{MIN_CHALLENGE}~{MAX_CHALLENGE}장** 도전 문제를 넣는다. 어렵기만 한 문제가 "

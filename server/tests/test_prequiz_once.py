@@ -33,12 +33,15 @@ def main():
     client = TestClient(app)
     items = [{"id": f"c{i}", "qtype": "basic", "stem": f"Question {i}", "answer": f"Answer {i}",
               "challenge": i == 6, "learning_support": {"hint": "A clue", "scope": f"Scope {i}",
-              "lecture_focus": f"Listen for {i}"}} for i in range(1, 7)]
+              "lecture_focus": f"Listen for {i}",
+              **({"difficulty": "basic"} if i == 1 else {"difficulty": "advanced"} if i == 2
+                 else {"difficulty": "challenge"} if i == 6 else {})}} for i in range(1, 7)]
     assert client.put(f"/api/admin/lectures/{SUBJECT}/{RUN}/pre-items", json={"items": items}, headers=RUNNER).status_code == 200
     assert client.post(f"{BASE}/prequiz/check", json={"itemId": "c1", "understood": True}).status_code == 401
     front = client.get(f"{BASE}/prequiz", headers=USER).json()
     assert len(front["items"]) == 6 and not front["items"][0]["learningScope"]
     assert "answer" not in front["items"][0]
+    assert [entry["difficulty"] for entry in front["items"]] == ["basic", "advanced", None, None, None, "challenge"]
     reveal = client.post(f"{BASE}/prequiz/reveal", json={"itemId": "c1"}, headers=USER).json()
     assert reveal["learningScope"] == "Scope 1"
     assert all(value == {"days": 0, "seconds": 0} for value in reveal["next"].values())
@@ -56,6 +59,7 @@ def main():
     assert detail["due"] == detail["learning"] == detail["review"] == detail["later"] == 0
     assert len(detail["missed"]) == 5  # includes the challenge; no old three-card cap
     assert detail["missed"][0]["lectureFocus"] == "Listen for 2"
+    assert detail["missed"][0]["difficulty"] == "advanced"
     with SessionLocal() as db:
         attempt = db.scalar(select(QuizAttempt))
         user_id = attempt.user_id
@@ -72,6 +76,7 @@ def main():
     assert persisted["answered"] == 6
     assert persisted["items"][5]["attempt"]["correct"] is False
     assert persisted["items"][5]["lectureFocus"] == "Listen for 6"
+    assert persisted["items"][5]["difficulty"] == "challenge"
     # Rereading changes the chosen target without clearing other completed cards.
     client.post(f"{BASE}/prequiz/check", json={"itemId": "c2", "understood": True}, headers=USER)
     assert len(client.get(BASE, headers=USER).json()["prequiz"]["missed"]) == 4

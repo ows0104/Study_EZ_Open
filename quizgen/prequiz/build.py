@@ -47,7 +47,7 @@ from ..build import (
     render_answer,
     verify,
 )
-from .schema import MAX_CARDS, MIN_CARDS, MIN_CHALLENGE, MAX_CHALLENGE, WHY_TAG_LABEL
+from .schema import MAX_CARDS, MIN_CARDS, MIN_CHALLENGE, MAX_CHALLENGE, WHY_TAG_LABEL, DIFFICULTY_LABELS
 
 # ── 노트 모델 — 복습과 뒷면 구조가 다르다 ─────────────────────────
 #
@@ -78,6 +78,7 @@ PRE_CSS = CSS + """
 .why .tag { display: inline-block; margin-right: 6px; padding: 1px 7px; border-radius: 9px;
             background: #eef1f6; color: #4a5568; font-size: 12px; font-weight: 600; }
 .why .tag.challenge { background: #fff1e0; color: #a0521a; }
+.why .tag.advanced { background: #ede9fe; color: #6d28d9; }
 .why-back { margin-bottom: 8px; font-size: 15px; color: #555; }
 .why-back .lbl { margin-right: 8px; font-size: 12px; font-weight: 700; color: #888; }
 .nightMode .why-back { color: #b8b8b8; }
@@ -93,6 +94,7 @@ PRE_CSS = CSS + """
 .nightMode .why { color: #a8a8a8; }
 .nightMode .why .tag { background: #2e3440; color: #c9d1dc; }
 .nightMode .why .tag.challenge { background: #4a3420; color: #f2c089; }
+.nightMode .why .tag.advanced { background: #35274a; color: #d4bfff; }
 """
 
 # 답 다음에 다리, 그다음 원본 슬라이드. 출처만 접는다.
@@ -156,7 +158,11 @@ def why_of(c: dict) -> str:
     덱을 받은 사람의 Anki 가 같은 이름의 노트 타입을 하나 더 만든다. guid 는 `q` 로
     잡으므로 안 바뀐다.
     """
-    tags = '<span class="tag challenge">도전 문제</span>' if c.get("challenge") else ""
+    difficulty = (c.get("learning_support") or {}).get("difficulty")
+    if difficulty in DIFFICULTY_LABELS:
+        tags = f'<span class="tag {difficulty}">{DIFFICULTY_LABELS[difficulty]}</span>'
+    else:
+        tags = '<span class="tag challenge">도전 문제</span>' if c.get("challenge") else ""
     # 모르는 값은 안 그린다.
     tags += "".join(f'<span class="tag {t}">{WHY_TAG_LABEL[t]}</span>'
                     for t in c.get("why_tags") or [] if t in WHY_TAG_LABEL)
@@ -200,6 +206,8 @@ WARN_TRUST = {
 }
 
 WARN_MINOR = {
+    "missing_difficulty": "기본·심화·도전 난도가 빠져 있다",
+    "difficulty_challenge_mismatch": "난도와 도전 여부가 서로 다르다",
     "answer_leaked_in_hint": "접근 힌트에 정답이 그대로 들어 있다",
     "missing_learning_support": "힌트·지금 알아둘 범위·수업 집중 질문이 빠져 있다",
     "points_at_source": "질문이 원본 자료를 가리킨다",
@@ -253,6 +261,9 @@ def tags_of(c: dict, lecture_id: str) -> list[str]:
         t.append(f"기출::{c['jokbo_ref']['year']}-{c['jokbo_ref']['no']}")
     if c.get("challenge"):
         t.append("도전문제")
+    difficulty = (c.get("learning_support") or {}).get("difficulty")
+    if difficulty in DIFFICULTY_LABELS:
+        t.append(f"난도::{DIFFICULTY_LABELS[difficulty]}")
     if c.get("review_flags"):
         t.append("검토필요")
     r = c.get("reproduce") or {}

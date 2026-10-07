@@ -3,6 +3,9 @@
 `{raw}`에서 검사에 걸린 카드만 고치고 다른 카드의 내용·순서·ID는 유지한다.
 고치는 카드의 `must_id` 도 그대로 둔다 — 그것이 승인된 목록과 이어 주는 끈이다.
 분량 계약 위반은 예외다. 총 8~12장 안에 선택 도전 1~2장을 포함하되 승인 목표와 연결을 유지한다.
+난도는 기본·심화·도전을 모두 포함한다. `missing_difficulty`는 learning_support.difficulty를
+실제 사고 부담에 맞춰 채우고, `difficulty_challenge_mismatch`는 도전만 challenge=true가 되게 고친다.
+심화는 기전·비교·한 단계 적용, 도전은 여러 관계를 연결한 추론이어야 한다. 이름만 바꾸지 않는다.
 `missing_preview_evidence`·`preview_excerpt_not_found`는 예습 설명본을 다시 읽고
 문항에 답할 실제 원문을 발췌해 고친다. 발췌만 맞추려고 질문과 무관한 문장을 넣지 않는다.
 `missing_learning_support`는 정답을 노출하지 않는 힌트·학습 범위·수업 질문을 채운다.

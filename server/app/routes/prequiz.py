@@ -87,6 +87,11 @@ from app.storage import ObjectStorage, StorageNotConfigured
 router = APIRouter()
 
 
+def _difficulty(row: Any) -> str | None:
+    level = (row.learning_support or {}).get("difficulty")
+    return level if level in ("basic", "advanced", "challenge") else None
+
+
 class Quiz(NamedTuple):
     """한 갈래가 쓰는 표 셋. 라우트는 이것만 골라 넘긴다.
 
@@ -276,6 +281,7 @@ def missed_items(
             "slideNo": row.slide_no,
             "examHit": row.exam_hit,
             "lectureFocus": (row.learning_support or {}).get("lecture_focus", ""),
+            "difficulty": _difficulty(row),
         }
         for row in (rows if quiz.name == "pre" else rows[:limit])
     ]
@@ -315,6 +321,7 @@ def _read(quiz: Quiz, db: Session, user_id: str, subject: str, run_id: str) -> d
                 # 도전 문제인가 · 「왜 냈나」의 유형 배지. 앞면에 뜬다.
                 # **「왜 냈나」 글은 여기 없다** — 답을 편 뒤에 보인다(`reveal`).
                 "challenge": row.challenge,
+                "difficulty": _difficulty(row),
                 "whyTags": list(row.why_tags or []),
                 "hint": (row.learning_support or {}).get("hint", ""),
                 # 한 번 확인한 카드만 완료 요약에 필요한 범위를 돌려준다.

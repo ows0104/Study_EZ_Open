@@ -50,6 +50,7 @@ from ..validate import (
 )
 from .schema import (
     CARD_SCHEMA,
+    DIFFICULTY_LABELS,
     IMAGE_FORMATS,
     MAX_CARDS,
     MAX_CHALLENGE,
@@ -237,6 +238,7 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
         kept.append(c)
 
     # ── soft flag ────────────────────────────────────────────────────
+    has_difficulty = any("difficulty" in (c.get("learning_support") or {}) for c in kept)
     for c in kept:
         i = c["_idx"]
         q, a, fmt = c["q"], c["a"], c["card_format"]
@@ -250,6 +252,11 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
             flags[i].append("missing_bridge_to_lecture")
 
         support = c.get("learning_support") or {}
+        difficulty = support.get("difficulty")
+        if has_difficulty and not difficulty:
+            flags[i].append("missing_difficulty")
+        if difficulty and bool(c.get("challenge")) != (difficulty == "challenge"):
+            flags[i].append("difficulty_challenge_mismatch")
         # 옛 카드의 재검토에는 새 칸을 강제하지 않는다. 새 생성은 note 입력을 전달한다.
         if "learning_support" in c or preview_text is not None:
             if any(not (support.get(k) or "").strip() for k in ("hint", "scope", "lecture_focus")):
@@ -334,6 +341,11 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
     if not MIN_CHALLENGE <= challenge <= MAX_CHALLENGE:
         contract.append(f"도전 문제가 {challenge}장이다. 총 8~12장 안에 "
                         f"{MIN_CHALLENGE}~{MAX_CHALLENGE}장이어야 한다")
+    difficulty_mix = Counter((c.get("learning_support") or {}).get("difficulty") for c in kept)
+    if has_difficulty:
+        for level, label in DIFFICULTY_LABELS.items():
+            if not difficulty_mix[level]:
+                contract.append(f"{label} 난도 문항이 없다. 기본·심화·도전을 모두 포함한다")
 
     # ── 승인된 목록과 카드를 잇는 끈 ────────────────────────────────
     #
@@ -458,6 +470,7 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
         "type_mix": dict(Counter(c["card_type"] for c in kept)),
         "reason_mix": dict(Counter(c["reason"] for c in kept)),
         "challenge": challenge,
+        "difficulty_mix": {level: difficulty_mix[level] for level in DIFFICULTY_LABELS},
         "source_mix": dict(Counter(c["source_type"] for c in kept)),
         "must_know_items": len(must.get("items", [])),
         "rejected_candidates": len(must.get("rejected_candidates", [])),

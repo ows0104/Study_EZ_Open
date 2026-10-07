@@ -546,10 +546,14 @@ const FOCUS_LABEL: Record<string, string> = {
  */
 export function WhyAsked({ item }: { item: QuizItem }) {
   const tags = whyTags(item);
-  if (!item.challenge && !tags.length) return null;
+  const level = item.difficulty;
+  const difficulty = level === "basic" ? "기본" : level === "advanced" ? "심화"
+    : level === "challenge" ? "도전" : "";
+  if (!difficulty && !item.challenge && !tags.length) return null;
   return (
     <p className="quiz-why">
-      {item.challenge ? <span className="badge is-challenge">도전 문제</span> : null}
+      {difficulty ? <span className={`badge is-${level}`}>{difficulty}</span>
+        : item.challenge ? <span className="badge is-challenge">도전 문제</span> : null}
       {tags.map((tag) => (
         <span key={tag} className={`badge why-${tag}`}>
           {WHY_TAG_LABEL[tag]}

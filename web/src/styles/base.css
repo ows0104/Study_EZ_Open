@@ -814,6 +814,18 @@ button.resource.is-download:hover:not(:disabled)::after {
 }
 
 /* 도전 문제. 빨강(`is-relearn`)은 「틀려서 돌아왔다」라 겹치지 않는 주황을 쓴다. */
+.badge.is-basic {
+  border-color: transparent;
+  color: var(--ink-2);
+  background: var(--surface-2);
+  font-weight: 700;
+}
+.badge.is-advanced {
+  border-color: transparent;
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  font-weight: 700;
+}
 .badge.is-challenge {
   border-color: transparent;
   color: #ea580c;

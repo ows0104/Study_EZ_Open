@@ -84,6 +84,8 @@ export type QuizItem = {
   examHit: boolean;
   /** 도전 문항 뱃지. 일반 문항과 같은 진행·이해 확인을 사용한다. */
   challenge?: boolean;
+  /** 생성 시 판정한 학습 난도. 기존 문항은 미분류 상태를 유지한다. */
+  difficulty?: "basic" | "advanced" | "challenge" | null;
   hint?: string;
   learningScope?: string;
   lectureFocus?: string;

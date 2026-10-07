@@ -14,7 +14,7 @@ from jsonschema import Draft202012Validator
 from .. import ledger
 from ..runbase import Failed
 from ..session import run_blind
-from .schema import CHALLENGE_GUIDANCE, GENERATE_SCHEMA
+from .schema import CHALLENGE_GUIDANCE, DIFFICULTY_GUIDANCE, GENERATE_SCHEMA
 
 
 def dump(path, value):
@@ -71,6 +71,7 @@ def generate(runner, feedback=None):
 reason=repeated, 기출·필기 강조 배지/주장, 이미지, 외부 지식을 쓰지 않는다.
 basic 위주, cloze 가능, ox는 최대 2개. 한 문항 한 개념, 답은 짧고 명확하게.
 {CHALLENGE_GUIDANCE}
+{DIFFICULTY_GUIDANCE}
 모든 문항에 explanation, why_asked(60자 이하), challenge, learning_support를 쓴다.
 learning_support: hint(답이 들어 있지 않은 접근 단서), scope(지금 알아둘 범위),
 lecture_focus(수업에서 집중할 질문), preview_excerpt(답의 근거인 설명본의 정확한 원문).
@@ -105,7 +106,10 @@ def review(runner, cards):
 재현 풀이 시험이 아닌 답을 보는 검수이다. 문항마다 정확히 한 행을 출력한다.
 JSON만: {"cards":[{"id":"원래 id","ok":true,"issues":[]}]}
 문제가 있으면 ok=false와 구체적인 issues 문자열 목록을 쓴다.
-""" + "\n" + CHALLENGE_GUIDANCE + "\n도전 기준에 못 미치는 문항은 ok=false로 판정하고, " \
+""" + "\n" + DIFFICULTY_GUIDANCE + "\n" + CHALLENGE_GUIDANCE \
+        + "\n기본·심화·도전의 실제 사고 부담이 표기와 맞는지 확인한다. " \
+        "심화가 정의 회상에 그치거나 도전이 한 단계 대입에 그치면 ok=false로 판정한다.\n" \
+        + "\n도전 기준에 못 미치는 문항은 ok=false로 판정하고, " \
         "어느 중간 판단이 빠져 자명해졌는지와 고칠 방향을 issues에 쓴다.\n" \
         + "\n<preview_note>\n" + note + "\n</preview_note>\n<cards>\n" + json.dumps(cards, ensure_ascii=False) + "\n</cards>"
     (runner.out / "prompt.batch_review.md").write_text(prompt, encoding="utf-8")

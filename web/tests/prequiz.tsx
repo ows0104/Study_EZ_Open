@@ -10,6 +10,7 @@ const items = concepts.map((name, index) => ({
   itemId: `c00${index + 1}`, qtype: "basic", stem: `한 문장으로 설명해 보세요: ${name}`,
   focus: "spine", cardType: "comparison", examHit: false, whyTags: ["basis"],
   hint: `예습의 ‘${name}’ 부분에서 사용한 기준을 떠올려 보세요.`, challenge: index === 5,
+  difficulty: index < 3 ? "basic" : index < 5 ? "advanced" : "challenge",
   attempt: (completedPreview ? { correct: index !== 0 && index !== 5, state: "review", dueAt: null } : null) as object | null,
 }));
 const next = Object.fromEntries(["again", "hard", "good", "easy"].map((g) => [g, { days: 1, seconds: 86400 }]));
