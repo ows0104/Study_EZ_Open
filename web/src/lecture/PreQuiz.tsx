@@ -142,7 +142,7 @@ export function PreQuiz({ subject, runId, onDone }: {
         <summary>오늘 챙긴 핵심</summary>
         <ul>{ordered.filter((entry) => entry.learningScope).map((entry) => <li key={entry.itemId}><PreQuizText text={entry.learningScope!} /></li>)}</ul>
       </details> : null}
-      <a className="resource" href={lectureHref({ subject, runId })}><strong>예습 마치기</strong></a>
+      <a className="resource" href="/"><strong>예습 마치기</strong></a>
       {ordered.length ? <button className="quiz-undo" onClick={() => start()}>전체 다시 훑어보기</button> : null}
       {undoButton}
       {error ? <p role="alert" className="notice is-error">{error}</p> : null}
