@@ -132,6 +132,34 @@ def tidy_related(bank: dict) -> list[str]:
     return notes
 
 
+def tidy_prerequisites(bank: dict) -> list[str]:
+    """합쳐 옮긴 선행 ID를 실제로 존재하는 ID들로만 분리한다.
+
+    약물수송체 은행에서 `DT-C20; DT-C17`을 하나의 ID로 옮겨 정상 문항까지
+    검증에서 빠졌다. 본문 추정 없이 모든 조각이 실제 ID일 때만 복원한다.
+    """
+    questions = bank.get("questions") or []
+    ids = {q.get("question_id") for q in questions if isinstance(q, dict)}
+    notes = []
+    for q in questions:
+        if not isinstance(q, dict) or not isinstance(q.get("prerequisites"), list):
+            continue
+        out = []
+        changed = False
+        for ref in q["prerequisites"]:
+            if isinstance(ref, str) and ref not in ids:
+                parts = [p.strip() for p in re.split(r";|<br\s*/?>", ref)]
+                if len(parts) > 1 and all(p in ids for p in parts):
+                    out.extend(parts)
+                    changed = True
+                    notes.append(f"{q['question_id']}: {ref} → {', '.join(parts)}")
+                    continue
+            out.append(ref)
+        if changed:
+            q["prerequisites"] = list(dict.fromkeys(out))
+    return notes
+
+
 def organize(raw: str, lecture: dict, *, model: str | None = None) -> tuple[dict, dict]:
     """`(bank, info)`. lecture = {title, sources: [{id, kind, filename}]}."""
     bank, info = session.run_structured(organizer_prompt(raw, lecture), BANK, system=SYSTEM,
@@ -143,4 +171,7 @@ def organize(raw: str, lecture: dict, *, model: str | None = None) -> tuple[dict
     related = tidy_related(bank)
     if related and isinstance(bank.get("warnings"), list):
         bank["warnings"].append(f"[정리] 관련 개념을 맞췄다: {'; '.join(related)}")
+    prerequisites = tidy_prerequisites(bank)
+    if prerequisites and isinstance(bank.get("warnings"), list):
+        bank["warnings"].append(f"[정리] 합쳐진 선행 문항 ID를 분리했다: {'; '.join(prerequisites)}")
     return bank, info

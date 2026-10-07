@@ -173,6 +173,38 @@ def test_정리는_스키마를_넘겨_세션을_부른다(monkeypatch, bank):
     assert "cognitive_type" in bank["questions"][0]
 
 
+def test_합쳐진_선행_ID_때문에_정상_통합_문항이_빠지지_않는다(monkeypatch, bank):
+    _fix_lists(bank)
+    top = next(q for q in bank["questions"] if q["retrieval_direction"] == "integration")
+    bases = [q["question_id"] for q in bank["questions"] if q["retrieval_direction"] == "direct"][:2]
+    top["prerequisites"] = ["; ".join(bases)]
+    assert any("잘못된 prerequisite" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
+
+    monkeypatch.setattr(session, "run_structured", lambda *args, **kwargs: (bank, {}))
+    organized, _ = organize.organize("응답", {"title": "t", "sources": []})
+    kept, validation = validate_dropping(organized, ["S1", "S2"])
+    assert validation["pass"] and validation["dropped"] == []
+    assert next(q for q in kept["questions"] if q["question_id"] == top["question_id"])["prerequisites"] == bases
+    assert top["prerequisites"] == ["; ".join(bases)]  # 입력 원본은 보존
+
+
+def test_선행_ID는_전부_확인된_경우에만_분리한다():
+    bank = {"questions": [
+        {"question_id": "A", "prerequisites": []},
+        {"question_id": "B", "prerequisites": []},
+        {"question_id": "C", "prerequisites": ["A<br />B", "A"]},
+        {"question_id": "D", "prerequisites": ["A; UNKNOWN"]},
+        {"question_id": "E", "prerequisites": ["A;B;"]},
+        {"question_id": "A;B", "prerequisites": []},
+        {"question_id": "F", "prerequisites": ["A;B"]},
+    ]}
+    assert len(organize.tidy_prerequisites(bank)) == 1
+    assert bank["questions"][2]["prerequisites"] == ["A", "B"]
+    assert bank["questions"][3]["prerequisites"] == ["A; UNKNOWN"]
+    assert bank["questions"][4]["prerequisites"] == ["A;B;"]
+    assert bank["questions"][6]["prerequisites"] == ["A;B"]
+
+
 # ── 외부지식 검토 ──────────────────────────────────────────────────
 
 def test_검토는_모르는_ID를_버리고_빠진_ID를_남긴다(bank):

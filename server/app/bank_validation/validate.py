@@ -108,7 +108,7 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
     for c in bank["concepts"]:
         fail(any(p["concept_id"] == c["concept_id"] for p in bank["retrieval_plan"]), f"{c['concept_id']}: 회상 계획 누락")
 
-    seen: set[str] = set()
+    seen: set[tuple[str, str, tuple[str, ...]]] = set()
     for q in bank["questions"]:
         label = q["question_id"]
         fail(_nonempty(label) and _nonempty(q["question"]) and _nonempty(q["answer"]), f"{label}: 발문/정답/ID 누락")
@@ -122,7 +122,11 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
             fail(pid in questions and pid != label, f"{label}: 잘못된 prerequisite {pid}")
         if q["retrieval_direction"] == "integration" and not q["prerequisites"]:
             errors.append(f"{label}: integration의 기초 문항 필요")
-        key = _normalized(q["question"]) + "|" + q["conflict_id"]
+        # 객관식은 같은 발문에도 다른 오개념을 시험하는 보기 변형이 있다.
+        # 보기 문자·순서나 정답표만 바뀐 것은 같은 문항으로 본다.
+        option_content = tuple(sorted(_normalized(o["text"]) for o in q["options"])) \
+            if q["format"] in ("mcq", "multi_select") else ()
+        key = (_normalized(q["question"]), q["conflict_id"], option_content)
         fail(key not in seen, f"{label}: 중복 발문")
         seen.add(key)
 
