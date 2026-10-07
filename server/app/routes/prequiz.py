@@ -81,7 +81,7 @@ from app.models import (
     PreReviewLog,
     QuizAttempt,
 )
-from app.routes.common import lecture_or_404
+from app.routes.common import lecture_or_404, prequiz_core_filter
 from app.storage import ObjectStorage, StorageNotConfigured
 
 router = APIRouter()
@@ -210,7 +210,8 @@ def slide_url(
 
 
 def missed_items(
-    db: Session, user_id: str, subject: str, run_id: str, limit: int = 3, quiz: Quiz = PRE
+    db: Session, user_id: str, subject: str, run_id: str, limit: int = 3, quiz: Quiz = PRE,
+    study_track: str = "core",
 ) -> list[dict[str, Any]]:
     """예습은 마지막 청취 목표 전부, Main은 오늘 놓친 것 N개.
 
@@ -262,6 +263,7 @@ def missed_items(
                 item.subject == subject,
                 item.run_id == run_id,
                 item.item_id.in_(missed_ids),
+                (prequiz_core_filter(item) if study_track == "core" else ~prequiz_core_filter(item)) if quiz.name == "pre" else True,
             )
         ).all()
     )
@@ -305,6 +307,7 @@ def _read(quiz: Quiz, db: Session, user_id: str, subject: str, run_id: str) -> d
             )
         )
     }
+    core_items = [row for row in items if quiz.name != "pre" or (row.learning_support or {}).get("study_track") != "extra"]
     return {
         "subject": lecture.subject,
         "runId": lecture.run_id,
@@ -322,6 +325,7 @@ def _read(quiz: Quiz, db: Session, user_id: str, subject: str, run_id: str) -> d
                 # **「왜 냈나」 글은 여기 없다** — 답을 편 뒤에 보인다(`reveal`).
                 "challenge": row.challenge,
                 "difficulty": _difficulty(row),
+                "studyTrack": "extra" if quiz.name == "pre" and (row.learning_support or {}).get("study_track") == "extra" else "core",
                 "whyTags": list(row.why_tags or []),
                 "hint": (row.learning_support or {}).get("hint", ""),
                 # 한 번 확인한 카드만 완료 요약에 필요한 범위를 돌려준다.
@@ -334,8 +338,8 @@ def _read(quiz: Quiz, db: Session, user_id: str, subject: str, run_id: str) -> d
             }
             for row in items
         ],
-        "answered": sum(1 for row in items if row.item_id in attempts),
-        "correct": sum(1 for row in items if row.item_id in attempts and attempts[row.item_id].correct),
+        "answered": sum(1 for row in core_items if row.item_id in attempts),
+        "correct": sum(1 for row in core_items if row.item_id in attempts and attempts[row.item_id].correct),
         # **화면의 시계를 믿지 않는다.** 익히는 단계는 분 단위라, 기계 시각이
         # 몇 분 틀어져 있으면 「1분 뒤」가 이미 지난 일이 되거나 영영 안 온다.
         # 화면은 이 값으로 차이를 재서 자기 시계를 보정한다.
@@ -383,7 +387,8 @@ def due_counts(
             & (attempt.item_id == item.item_id)
             & (attempt.user_id == user_id),
         )
-        .where(item.subject == subject, item.run_id == run_id)
+        .where(item.subject == subject, item.run_id == run_id,
+               prequiz_core_filter(item) if quiz.name == "pre" else True)
     ).all()
 
     counts = {"new": 0, "learning": 0, "review": 0, "later": 0}

@@ -40,6 +40,7 @@ from app.routes import bank as quiz_bank
 from app.routes import cards, prequiz
 from app.routes.common import (
     lecture_or_404,
+    prequiz_core_filter,
     record_grabs,
     record_preview_open,
     storage_or_503,
@@ -90,6 +91,7 @@ def _quiz_payload(
         db.scalar(
             select(func.count()).select_from(item).where(
                 item.subject == lecture.subject, item.run_id == lecture.run_id,
+                prequiz_core_filter(item) if quiz.name == "pre" else True,
             )
         )
         or 0
@@ -102,6 +104,7 @@ def _quiz_payload(
         attempt.run_id == lecture.run_id,
         attempt.item_id.in_(select(item.item_id).where(
             item.subject == lecture.subject, item.run_id == lecture.run_id,
+            prequiz_core_filter(item) if quiz.name == "pre" else True,
         )),
     )
     answered = int(db.scalar(select(func.count()).select_from(attempt).where(*mine)) or 0)
@@ -113,6 +116,7 @@ def _quiz_payload(
         "itemCount": item_count,
         "answered": answered,
         "correct": correct,
+        "extraMissed": missed_items(db, user_id, lecture.subject, lecture.run_id, quiz=quiz, study_track="extra") if quiz.name == "pre" else [],
         # **오늘 낼 카드가 몇 장인가**(2026-09-18, 웹 풀이가 망각곡선으로 돌면서).
         # `answered`는 「이 편을 한 번이라도 훑었나」라서 일정과 다른 것을 말한다 —
         # 다 훑은 편에도 오늘 낼 카드가 있고, 오늘 낼 것이 없는 편도 안 끝난 것이다.

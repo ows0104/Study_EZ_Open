@@ -22,6 +22,7 @@ export function PreQuiz({ subject, runId, onDone }: {
   const actionPending = useRef(false);
   const [forcedId, setForcedId] = useState("");
   const [mode, setMode] = useState<"core" | "reread" | "difficult">("core");
+  const [studyTrack, setStudyTrack] = useState<"core" | "extra">("core");
   const [seen, setSeen] = useState<Set<string>>(() => new Set());
   const [reviewIds, setReviewIds] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<string, RevealResult>>({});
@@ -34,15 +35,17 @@ export function PreQuiz({ subject, runId, onDone }: {
     return () => { active = false; };
   }, [base]);
 
-  const ordered = payload?.items ?? [];
+  const coreItems = (payload?.items ?? []).filter((entry) => entry.studyTrack !== "extra");
+  const extraItems = (payload?.items ?? []).filter((entry) => entry.studyTrack === "extra");
+  const ordered = studyTrack === "extra" ? extraItems : coreItems;
   const round = mode === "difficult" ? ordered.filter((entry) => reviewIds.includes(entry.itemId)) : ordered;
   const completed = (itemId: string) => mode !== "core"
     ? seen.has(itemId) : Boolean(ordered.find((entry) => entry.itemId === itemId)?.attempt);
   const candidates = round.filter((entry) =>
     !completed(entry.itemId));
-  const item = payload?.items.find((entry) => entry.itemId === forcedId)
+  const item = ordered.find((entry) => entry.itemId === forcedId)
     ?? candidates[0];
-  const finished = Boolean(payload && !item);
+  const finished = Boolean(payload && coreItems.length && coreItems.every((entry) => entry.attempt));
   const slides = useQuizSlidePreload(base, item
     ? [item, ...candidates.filter((entry) => entry.itemId !== item.itemId)].slice(0, 3).map((entry) => entry.itemId)
     : []);
@@ -86,6 +89,9 @@ export function PreQuiz({ subject, runId, onDone }: {
     setBusy(true); setError("");
     try {
       const result = await api<UndoResult>(`${base}/undo`, { method: "POST" });
+      const restoredTrack = payload?.items.find((entry) => entry.itemId === result.itemId)?.studyTrack === "extra" ? "extra" : "core";
+      if (restoredTrack !== studyTrack) setMode("core");
+      setStudyTrack(restoredTrack);
       patch(result.itemId, result.attempt, result, result.undoable);
       setSeen((old) => { const next = new Set(old); next.delete(result.itemId); return next; });
       setForcedId(result.itemId); setRevealed(result);
@@ -96,6 +102,10 @@ export function PreQuiz({ subject, runId, onDone }: {
   function start(ids?: string[]) {
     setMode(ids ? "difficult" : "reread"); setReviewIds(ids ?? []);
     setSeen(new Set()); setForcedId(""); setRevealed(null); setError("");
+  }
+  function switchTrack(track: "core" | "extra") {
+    setStudyTrack(track); setMode(track === "extra" && extraItems.every((entry) => entry.attempt) ? "reread" : "core"); setSeen(new Set());
+    setForcedId(""); setRevealed(null); setError("");
   }
   const canUndo = Boolean(payload?.undoable && (mode !== "difficult" || seen.size > 0));
   useEffect(() => {
@@ -127,15 +137,20 @@ export function PreQuiz({ subject, runId, onDone }: {
   const undoButton = canUndo
     ? <button className="quiz-undo" disabled={busy} onClick={undo}>이전 선택 되돌리기 <kbd>Z</kbd></button> : null;
   if (!payload) return <p className={`notice${error ? " is-error" : ""}`}>{error || "예습 문항을 불러오는 중…"}</p>;
-  const progress = <PreQuizProgress title={mode === "difficult" ? "어려웠던 문제 다시 보기" : mode === "reread" ? "다시 훑어보기" : "예습"}
+  const progress = <PreQuizProgress title={mode === "difficult" ? "어려웠던 문제 다시 보기" : mode === "reread" ? "다시 훑어보기" : studyTrack === "extra" ? "추가 학습 · 선택" : "예습"}
     done={round.filter((entry) => completed(entry.itemId)).length} total={round.length} />;
   if (!item) {
     const targets = ordered.filter((entry) => entry.attempt && !entry.attempt.correct);
     return <div className="quiz-done prequiz-narrow">
       {progress}
-      <h2>{ordered.length ? mode === "difficult" ? `어려웠던 ${round.length}문항 다시 보기 완료` : `예습 ${ordered.length}문항 확인 완료` : "아직 예습 문항이 없습니다"}</h2>
-      {ordered.length > 0 ? <p>수업을 들을 준비가 됐어요. 세부 내용은 수업에서 연결하면 됩니다.</p> : null}
-      {targets.length ? <PreQuizDifficult base={base} items={targets} answers={answers}
+      <h2>{ordered.length ? mode === "difficult" ? `어려웠던 ${round.length}문항 다시 보기 완료` : `${studyTrack === "extra" ? "추가 학습" : "예습"} ${ordered.length}문항 확인 완료` : "아직 예습 문항이 없습니다"}</h2>
+      {ordered.length > 0 ? <p>{studyTrack === "extra" ? "외워두면 유용한 내용을 더 확인했어요. 필수 예습은 이미 완료됐습니다." : "수업을 들을 준비가 됐어요. 세부 내용은 수업에서 연결하면 됩니다."}</p> : null}
+      {studyTrack === "core" && finished && extraItems.length > 0 ? <div className="quiz-takeaways">
+        <p>외워두면 좋은 핵심 구분과 암기사항을 더 확인해 보세요. 추가 학습은 건너뛰어도 예습 완료가 유지됩니다.</p>
+        <button className="quiz-submit" onClick={() => switchTrack("extra")}>추가 학습 {extraItems.length}문항 {extraItems.every((entry) => entry.attempt) ? "다시 보기" : "풀기"}</button>
+        <p className="quiz-done-note">{extraItems.filter((entry) => entry.attempt).length} / {extraItems.length}문항 확인 · 선택</p>
+      </div> : null}
+      {targets.length ? <PreQuizDifficult base={base} studyTrack={studyTrack} items={targets} answers={answers}
         onReview={() => start(targets.map((entry) => entry.itemId))} />
         : ordered.length > 0 ? <p className="quiz-done-note">모든 문항을 이해했어요. 수업에서 어떻게 확장되는지 들어보세요.</p> : null}
       {ordered.some((entry) => entry.learningScope) ? <details className="quiz-takeaways">
@@ -143,6 +158,7 @@ export function PreQuiz({ subject, runId, onDone }: {
         <ul>{ordered.filter((entry) => entry.learningScope).map((entry) => <li key={entry.itemId}><PreQuizText text={entry.learningScope!} /></li>)}</ul>
       </details> : null}
       <a className="resource" href="/"><strong>예습 마치기</strong></a>
+      {studyTrack === "extra" ? <button className="quiz-undo" onClick={() => switchTrack("core")}>예습 완료 화면으로</button> : null}
       {ordered.length ? <button className="quiz-undo" onClick={() => start()}>전체 다시 훑어보기</button> : null}
       {undoButton}
       {error ? <p role="alert" className="notice is-error">{error}</p> : null}
@@ -175,6 +191,7 @@ export function PreQuiz({ subject, runId, onDone }: {
       </> : null}
       {error ? <p role="alert" className="notice is-error">{error}</p> : null}
       <div className="prequiz-tools">
+        {studyTrack === "extra" ? <button className="quiz-undo" disabled={busy} onClick={() => switchTrack("core")}>추가 학습 그만하기</button> : null}
         {undoButton}
         {isAdmin ? <a className="quiz-fix" href={lectureHref({ subject, runId }) + cardsHash("pre", item.itemId)} target="_blank" rel="noreferrer">이 카드 고치기</a> : null}
       </div>

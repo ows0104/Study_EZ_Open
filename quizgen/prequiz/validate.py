@@ -51,6 +51,8 @@ from ..validate import (
 from .schema import (
     CARD_SCHEMA,
     DIFFICULTY_LABELS,
+    MAX_EXTRA_CARDS,
+    is_extra,
     IMAGE_FORMATS,
     MAX_CARDS,
     MAX_CHALLENGE,
@@ -101,6 +103,12 @@ def _figure_index(prep: dict) -> tuple[dict, dict]:
 def validate(raw: dict, prep: dict, jokbo: dict | None,
              professor_stayed: bool = True, preview_text: str | None = None) -> tuple[list, dict]:
     cards = list(raw.get("cards", []))
+    for card in raw.get("extra_cards", []):
+        card = dict(card)
+        support = card.get("learning_support")
+        if support is None or isinstance(support, dict):
+            card["learning_support"] = {**(support or {}), "study_track": "extra"}
+        cards.append(card)
     must = raw.get("must_know") or {}
     n_slides = prep["slides"]
     figs, occs = _figure_index(prep)
@@ -252,6 +260,11 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
             flags[i].append("missing_bridge_to_lecture")
 
         support = c.get("learning_support") or {}
+        if is_extra(c) and c.get("must_id"):
+            flags[i].append("extra_linked_to_must")
+        if is_extra(c) and c.get("jokbo_ref") and (not jokbo_keys or
+                _ref_status(c["jokbo_ref"], jokbo_keys, jokbo_years) != "ok"):
+            flags[i].append("extra_exam_unverified")
         difficulty = support.get("difficulty")
         if has_difficulty and not difficulty:
             flags[i].append("missing_difficulty")
@@ -267,7 +280,7 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
         if len(answer) >= 2 and answer in hint:
             flags[i].append("answer_leaked_in_hint")
         if preview_text is not None:
-            if preview_text.strip() and not c.get("challenge") and not excerpt:
+            if preview_text.strip() and not is_extra(c) and not c.get("challenge") and not excerpt:
                 flags[i].append("missing_preview_evidence")
             if excerpt and re.sub(r"\s+", "", excerpt) not in re.sub(r"\s+", "", preview_text):
                 flags[i].append("preview_excerpt_not_found")
@@ -326,23 +339,27 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
 
     # ── 예습 고유의 계약 ─────────────────────────────────────────────
     n = len(kept)
-    ox = sum(1 for c in kept if c["card_format"] == "ox")
+    core_cards = [c for c in kept if not is_extra(c)]
+    core_n, extra_n = len(core_cards), n - len(core_cards)
+    ox = sum(1 for c in core_cards if c["card_format"] == "ox")
     contract = []
-    if n < MIN_CARDS:
-        contract.append(f"카드가 {n}장이다. 최소 {MIN_CARDS}장 — 강의를 덜 훑었을 수 있다")
-    if n > MAX_CARDS:
-        contract.append(f"카드가 {n}장이다. 상한 {MAX_CARDS}장 — "
+    if core_n < MIN_CARDS:
+        contract.append(f"필수 카드가 {core_n}장이다. 최소 {MIN_CARDS}장 — 강의를 덜 훑었을 수 있다")
+    if core_n > MAX_CARDS:
+        contract.append(f"필수 카드가 {core_n}장이다. 상한 {MAX_CARDS}장 — "
                         f"넘치는 것은 '꼭 반드시'가 아니었다는 뜻이다")
-    if n and ox / n > OX_SHARE_MAX:
-        contract.append(f"O/X 가 {ox}/{n} ({ox / n:.0%}) 이다. 상한 {OX_SHARE_MAX:.0%}")
-    challenge = sum(1 for c in kept if c.get("challenge"))
-    if not MIN_CORE <= n - challenge <= MAX_CORE:
-        contract.append(f"핵심 문항은 {MIN_CORE}~{MAX_CORE}장이어야 한다. 현재 {n - challenge}장")
+    if extra_n > MAX_EXTRA_CARDS:
+        contract.append(f"추가 카드가 {extra_n}장이다. 최대 {MAX_EXTRA_CARDS}장이다")
+    if core_n and ox / core_n > OX_SHARE_MAX:
+        contract.append(f"O/X 가 {ox}/{core_n} ({ox / core_n:.0%}) 이다. 상한 {OX_SHARE_MAX:.0%}")
+    challenge = sum(1 for c in core_cards if c.get("challenge"))
+    if not MIN_CORE <= core_n - challenge <= MAX_CORE:
+        contract.append(f"핵심 문항은 {MIN_CORE}~{MAX_CORE}장이어야 한다. 현재 {core_n - challenge}장")
     if not MIN_CHALLENGE <= challenge <= MAX_CHALLENGE:
         contract.append(f"도전 문제가 {challenge}장이다. 총 8~12장 안에 "
                         f"{MIN_CHALLENGE}~{MAX_CHALLENGE}장이어야 한다")
-    difficulty_mix = Counter((c.get("learning_support") or {}).get("difficulty") for c in kept)
-    if has_difficulty:
+    difficulty_mix = Counter((c.get("learning_support") or {}).get("difficulty") for c in core_cards)
+    if any("difficulty" in (c.get("learning_support") or {}) for c in core_cards):
         for level, label in DIFFICULTY_LABELS.items():
             if not difficulty_mix[level]:
                 contract.append(f"{label} 난도 문항이 없다. 기본·심화·도전을 모두 포함한다")
@@ -359,7 +376,7 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
     # 것이 아니다. 하나로 뭉치면 「안 쟀다」로 읽히고 그대로 지나간다.
     items = must.get("items") or []
     by_id = {it["id"]: it for it in items if it.get("id")}
-    linked = Counter(c.get("must_id") for c in kept if c.get("must_id"))
+    linked = Counter(c.get("must_id") for c in core_cards if c.get("must_id"))
     if by_id and linked:
         method = "must_id"          # 끈이 있다. 사실로 센다
     elif by_id:
@@ -410,7 +427,7 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
 
     orphan_objectives, card_budget = [], []
     if method == "must_id":
-        for c in kept:
+        for c in core_cards:
             mid = c.get("must_id")
             if not mid or mid not in by_id:
                 flags[c["_idx"]].append("off_must")
@@ -459,6 +476,7 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
 
     suspects = {
         "n_input": len(cards), "n_kept": n, "n_dropped": len(dropped),
+        "core_count": core_n, "extra_count": extra_n,
         "dropped": dropped,
         "autofixed": dict(autofix),
         "flag_counts": dict(Counter(f for c in kept for f in c["review_flags"])),

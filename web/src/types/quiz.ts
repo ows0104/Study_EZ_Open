@@ -86,6 +86,7 @@ export type QuizItem = {
   challenge?: boolean;
   /** 생성 시 판정한 학습 난도. 기존 문항은 미분류 상태를 유지한다. */
   difficulty?: "basic" | "advanced" | "challenge" | null;
+  studyTrack?: "core" | "extra";
   hint?: string;
   learningScope?: string;
   lectureFocus?: string;

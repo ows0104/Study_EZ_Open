@@ -7,8 +7,9 @@ import { WhyAsked } from "./Quiz";
 type Answer = Pick<RevealResult, "answer" | "explanation" | "lectureFocus">;
 
 /** 마지막 선택이 '아직 헷갈려요'인 문제를 완료 직후 펼쳐 보여 준다. */
-export function PreQuizDifficult({ base, items, answers, onReview }: {
+export function PreQuizDifficult({ base, items, answers, onReview, studyTrack = "core" }: {
   base: string; items: QuizItem[]; answers: Record<string, Answer>; onReview: () => void;
+  studyTrack?: "core" | "extra";
 }) {
   const [saved, setSaved] = useState<Record<string, Answer>>({});
   const [error, setError] = useState("");
@@ -21,12 +22,13 @@ export function PreQuizDifficult({ base, items, answers, onReview }: {
     if (items.every((entry) => answers[entry.itemId])) return;
     let active = true;
     setError("");
-    api<{ prequiz: { missed: MissedItem[] } | null }>(base.replace(/\/prequiz$/, ""))
+    api<{ prequiz: { missed: MissedItem[]; extraMissed?: MissedItem[] } | null }>(base.replace(/\/prequiz$/, ""))
       .then((detail) => {
-        if (active) setSaved(Object.fromEntries((detail.prequiz?.missed ?? []).map((entry) => [entry.itemId, entry])));
+        const missed = studyTrack === "extra" ? detail.prequiz?.extraMissed : detail.prequiz?.missed;
+        if (active) setSaved(Object.fromEntries((missed ?? []).map((entry) => [entry.itemId, entry])));
       }).catch((cause: Error) => { if (active) setError(cause.message); });
     return () => { active = false; };
-  }, [base, ids, answers, retry]);
+  }, [base, ids, answers, retry, studyTrack]);
 
   return <section className="prequiz-difficult">
     <h3>어려웠던 문제 {items.length}개</h3>

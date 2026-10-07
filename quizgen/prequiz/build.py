@@ -8,8 +8,8 @@
     해설을 펼치면 회독이 느려지기 때문이다. 예습은 그 해설이 「이것이 수업에서 어디에
     쓰이는지」를 잇는 다리이고 목적의 절반이라, 접어 두면 아무도 안 누른다.
     그래서 노트 모델을 따로 뒀다 (`PDF2ANKI Prequiz *`).
-  · 덱이 하나다. `<과목>::<강의>::예습`. 복습처럼 강의록/기출로 가르지 않는다 —
-    예습 덱은 10장을 기준으로 8~12장이고, 출처와 선택 도전은 태그로 구분한다.
+  · 필수 덱은 `<과목>::<강의>::예습` 8~12장이다. 선택 추가는 같은 강의의
+    `추가 학습` 덱으로 분리한다. 출처와 난도는 태그로 구분한다.
   · guid 씨앗에 `::pre` 를 붙인다. 복습 카드와 질문이 같아져도 Anki 가 한 노트로
     보지 않게 하기 위해서다. **이것이 없으면 한쪽이 다른 쪽을 덮는다.**
   · 재현 검사 결과가 있으면 반영하되, 없다고 덱을 막지는 않는다 (`--require-reproduce` 로 켠다).
@@ -47,7 +47,7 @@ from ..build import (
     render_answer,
     verify,
 )
-from .schema import MAX_CARDS, MIN_CARDS, MIN_CHALLENGE, MAX_CHALLENGE, WHY_TAG_LABEL, DIFFICULTY_LABELS
+from .schema import MAX_CARDS, MIN_CARDS, MIN_CHALLENGE, MAX_CHALLENGE, WHY_TAG_LABEL, DIFFICULTY_LABELS, MAX_EXTRA_CARDS, is_extra
 
 # ── 노트 모델 — 복습과 뒷면 구조가 다르다 ─────────────────────────
 #
@@ -232,6 +232,8 @@ WARN_CHORE = {
     "jokbo_ref_not_found": "인용한 기출 문항을 족보에서 찾지 못했다",
 }
 
+WARN_TRUST["extra_exam_unverified"] = "추가 학습의 기출 근거를 제공된 족보에서 확인하지 못했다"
+WARN_CHORE["extra_linked_to_must"] = "추가 학습이 필수 목표 예산에 연결돼 있다"
 FLAG_LABEL = {**WARN_TRUST, **WARN_MINOR, **WARN_CHORE}
 
 REASON_TAG = {
@@ -261,6 +263,8 @@ def tags_of(c: dict, lecture_id: str) -> list[str]:
         t.append(f"기출::{c['jokbo_ref']['year']}-{c['jokbo_ref']['no']}")
     if c.get("challenge"):
         t.append("도전문제")
+    if is_extra(c):
+        t.append("추가학습")
     difficulty = (c.get("learning_support") or {}).get("difficulty")
     if difficulty in DIFFICULTY_LABELS:
         t.append(f"난도::{DIFFICULTY_LABELS[difficulty]}")
@@ -323,6 +327,8 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str, src: Path | None = No
     jokbo = Jokbo(jokbo_slice, jokbo_pdf, lecture_id, prep_dir / "media")
 
     deck = genanki.Deck(_mid(deck_name), deck_name)
+    extra_name = f"{deck_name.rsplit('::', 1)[0]}::추가 학습"
+    extra_deck = genanki.Deck(_mid(extra_name), extra_name)
     seed = guid_seed(lecture_id)
     stats = Counter()
     # **그림을 만든 자리가 이름을 넘긴다.** 검수 PDF 가 `figure_id` 와 crop 으로 이름을
@@ -369,13 +375,13 @@ def build(prep_dir: Path, deck_name: str, lecture_id: str, src: Path | None = No
             note = genanki.Note(model=MODELS[fmt], guid=guid, tags=tags,
                                 fields=[why_of(c) + html.escape(question), answer, exp, warn,
                                         srctxt, img, origin])
-        deck.add_note(note)
+        (extra_deck if is_extra(c) else deck).add_note(note)
         stats[fmt] += 1
         stats["이유:" + c["reason"]] += 1
 
     contact = contact_sheet(prep_dir, cards, media, lecture_id, rendered)
     apkg = prep_dir / f"{apkg_name or lecture_id + '_pre'}.apkg"
-    pkg = genanki.Package([deck])
+    pkg = genanki.Package([deck, extra_deck] if extra_deck.notes else [deck])
     pkg.media_files = ([str(p) for p in media.files.values()]
                        + [str(p) for p in jokbo.files.values()])
     pkg.write_to_file(apkg)
@@ -418,10 +424,11 @@ def main(argv=None) -> int:
     if edits:
         cards, applied = site_edits.apply(cards, edits)
         print_site_edits(applied)
-    n = len(cards)
-    challenge = sum(bool(c.get("challenge")) for c in cards)
-    if not MIN_CARDS <= n <= MAX_CARDS or not MIN_CHALLENGE <= challenge <= MAX_CHALLENGE:
-        msg = f"핵심 {n - challenge}장·도전 {challenge}장이다 — 예습은 총 8~12장 안에 선택 도전 1~2장이다"
+    core_cards = [c for c in cards if not is_extra(c)]
+    n, extra_n = len(core_cards), sum(is_extra(c) for c in cards)
+    challenge = sum(bool(c.get("challenge")) for c in core_cards)
+    if not MIN_CARDS <= n <= MAX_CARDS or not MIN_CHALLENGE <= challenge <= MAX_CHALLENGE or extra_n > MAX_EXTRA_CARDS:
+        msg = f"필수 {n}장·도전 {challenge}장·추가 {extra_n}장이다 — 필수 8~12장에 도전 1~2장, 추가 최대 5장이다"
         if not args.allow_size:
             print(f"{msg}. 그대로 만들려면 --allow-size")
             return 1

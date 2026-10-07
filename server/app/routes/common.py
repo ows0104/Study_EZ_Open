@@ -22,6 +22,11 @@ from app.storage import ObjectStorage, StorageNotConfigured
 LectureKey = tuple[str, str]
 
 
+def prequiz_core_filter(item=PreItem):
+    """기존 문항은 필수다. 선택 추가 학습은 완료·캘린더 진행에서 제외한다."""
+    return func.coalesce(item.learning_support["study_track"].as_string(), "core") != "extra"
+
+
 def storage_or_503() -> ObjectStorage:
     """R2를 쓰는 경로에서만 부른다.
 
@@ -180,7 +185,7 @@ def prequiz_progress(
 
     total_rows = db.execute(
         select(PreItem.subject, PreItem.run_id, func.count())
-        .where(PreItem.subject.in_(subjects), PreItem.run_id.in_(run_ids))
+        .where(PreItem.subject.in_(subjects), PreItem.run_id.in_(run_ids), prequiz_core_filter())
         .group_by(PreItem.subject, PreItem.run_id)
     ).all()
     for subject, run_id, count in total_rows:
@@ -199,6 +204,7 @@ def prequiz_progress(
             QuizAttempt.user_id == user_id,
             QuizAttempt.subject.in_(subjects),
             QuizAttempt.run_id.in_(run_ids),
+            prequiz_core_filter(),
         )
         .group_by(QuizAttempt.subject, QuizAttempt.run_id)
     ).all()

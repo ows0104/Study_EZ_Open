@@ -11,8 +11,8 @@
 
 축이 다르니 계약도 다르다 —
   · `trap`(함정) 유형이 없다. 수업 전날 함정은 장애물을 하나 더 세우는 것이다.
-  · `importance` 축이 없다. 예습 덱은 **전부** '꼭 반드시'다. 등급이 있으면 축이 흐려진다.
-  · 대신 **개수 상한이 계약이다.** 상한을 넘기는 순간 '꼭 반드시'가 아니게 된다.
+  · `importance` 축이 없다. 필수 예습은 '꼭 반드시'다. 난도는 사고 부담을 나타낸다.
+  · 필수는 개수 상한을 지키며 선택 추가 학습은 별도 최대 5문항으로 분리한다.
 
 사용:
     python -m quizgen.prequiz.schema -o out/prequiz_schema
@@ -101,15 +101,34 @@ REJECT_REASONS = (
 MIN_CARDS, MAX_CARDS = 8, 12
 MIN_CHALLENGE, MAX_CHALLENGE = 1, 2
 MIN_CORE, MAX_CORE = 6, 11
+MAX_EXTRA_CARDS = 5
+
+
+def is_extra(card: dict) -> bool:
+    return (card.get("learning_support") or {}).get("study_track") == "extra"
+
+
+EXTRA_GUIDANCE = """필수 예습 cards(8~12문항, 기본·심화·도전) 뒤에 선택적인 추가 학습
+extra_cards를 5문항 정도 만든다(최대 5문항). 필수 문항과 내용이 겹치지 않게 한다.
+추가는 더 어려운 도전이 아니라 외워두면 유용한 핵심 구분·대응·대표 수치·기출 개념이다.
+제공된 족보에서 반복되는 개념을 우선하고, 올해 교수의 출제 자료를 먼저 참고한다.
+기출은 보기 없이 핵심 개념을 회상하는 질문으로 바꾸며, 정답은 제공 자료로 확인한다.
+실제 족보를 사용한 카드만 why_tags에 exam과 검증할 수 있는 jokbo_ref를 쓴다.
+족보가 없으면 설명본의 기억해둘 만한 내용에서 고르고 기출이라고 주장하지 않는다.
+자료가 부족하면 적게 만들거나 빈 목록으로 둔다. 숫자를 채우려고 지어내지 않는다.
+추가 카드도 difficulty·힌트·해설을 채우고, why_asked에는 왜 기억해두면 유용한지 쓴다.
+추가는 승인된 필수 목표의 카드 예산·필수 난도 비율에 포함하지 않는다. must_id는 null이다.
+learning_support.study_track은 필수 카드에 core, 추가 카드에 extra로 쓴다.
+추가 학습은 예습 완료 기준에서 제외하며, 기본·심화 위주로 만든다."""
 
 DIFFICULTY_LABELS = {"basic": "기본", "advanced": "심화", "challenge": "도전"}
-DIFFICULTY_GUIDANCE = """예습 난도는 기본·심화·도전 세 단계로 다양하게 구성한다.
+DIFFICULTY_GUIDANCE = """필수 예습 난도는 기본·심화·도전 세 단계로 다양하게 구성한다.
 기본(basic): 핵심 용어·정의·구조·직접적인 관계를 확인한다. 설명을 읽으면 바로 풀 수 있다.
 심화(advanced): 왜 그런지 설명하거나 개념을 비교하고, 한 가지 원리를 짧은 새 상황에
 한 단계 적용한다. 단순한 정의 회상보다 생각이 필요하지만 여러 관계를 엮지는 않는다.
 도전(challenge): 두 관계나 조건을 연결하여 중간 판단을 거쳐 결론을 추론한다.
 10문항이면 기본 5·심화 3·도전 2를 출발점으로 삼고 자료에 맞춰 조정한다.
-총 8~12문항과 도전 1~2문항 계약은 유지하며, 세 난도를 모두 포함한다.
+필수 8~12문항과 도전 1~2문항 계약은 유지하며, 세 난도를 모두 포함한다.
 기본→심화→도전 순서로 배치하되 난도를 채우려고 같은 질문을 반복하지 않는다.
 각 카드 learning_support.difficulty에 basic·advanced·challenge 중 하나를 쓴다.
 challenge=true는 difficulty=challenge일 때만 쓴다. basic은 카드 형식 이름과 다른 난도다.
@@ -228,6 +247,7 @@ CARD_SCHEMA = {
         "learning_support": {
             "type": "object", "additionalProperties": False,
             "properties": {
+                "study_track": {"enum": ["core", "extra"], "description": "core=필수 예습, extra=선택적인 추가 암기·기출 학습."},
                 "difficulty": {"enum": list(DIFFICULTY_LABELS),
                                "description": "학습 난도: basic=핵심 확인, advanced=기전·비교·한 단계 적용, challenge=여러 관계를 연결한 추론."},
                 "hint": {"type": "string", "description": "정답을 말하지 않는 접근 단서. 예습 설명의 어느 개념을 다시 볼지 안내한다."},
@@ -328,6 +348,9 @@ GENERATE_SCHEMA = {
         "must_know": MUST_KNOW_SCHEMA,
         "cards": {"type": "array", "minItems": MIN_CARDS, "maxItems": MAX_CARDS,
                   "items": GENERATION_CARD_SCHEMA},
+        "extra_cards": {"type": "array", "maxItems": MAX_EXTRA_CARDS,
+                        "items": GENERATION_CARD_SCHEMA,
+                        "description": "필수 예습 뒤에 선택해서 풀 추가 암기·기출 문항. 5문항 정도, 자료가 부족하면 적게 만든다."},
     },
 }
 
@@ -464,9 +487,10 @@ def dump(outdir: Path) -> None:
               "두 번 하지 않는다.",
               "",
               "## 난도 — 기본·심화·도전", "", DIFFICULTY_GUIDANCE, "",
+              "## 선택적인 추가 학습", "", EXTRA_GUIDANCE, "",
               "## `challenge` — 도전 문제",
               "",
-              f"덱마다 총 8~12장 안에 **{MIN_CHALLENGE}~{MAX_CHALLENGE}장** 도전 문제를 넣는다. 어렵기만 한 문제가 "
+              f"필수 예습 8~12장 안에 **{MIN_CHALLENGE}~{MAX_CHALLENGE}장** 도전 문제를 넣는다. 어렵기만 한 문제가 "
               "아니라 **수업이 답해 줄 질문**이다 — 수업 전에 받아 두면 틀려도 그 대목을 들을 "
               "때 귀가 열린다. 노리는 것은 「오, 아까 그 문제다. 교수님이 딱 말씀하시네」다.",
               "",
@@ -485,7 +509,7 @@ def dump(outdir: Path) -> None:
               "도전 문제로 쓰고, 카드 총수 계약도 그대로다.",
               "- 도전 문제가 아닌 카드는 `challenge` 를 `false` 로 둔다."]
     lines += ["", "## 학습 지원", "",
-              "10장을 기준으로 총 8~12장, 그 안에 선택 도전 1~2장이다. 도전은 마지막에 둔다.",
+              "필수는 10장을 기준으로 8~12장, 그 안에 도전 1~2장이다. 도전은 필수의 마지막에 둔다. 추가 학습은 별도로 최대 5장이다.",
               "`learning_support`의 hint·scope·lecture_focus를 카드마다 쓴다. "
               "hint는 답을 노출하지 않는 접근 단서, scope는 지금 알아둘 범위, "
               "lecture_focus는 수업에서 들을 질문이다. scope와 lecture_focus는 답 뒤에 보인다.",
@@ -495,7 +519,7 @@ def dump(outdir: Path) -> None:
               "네가 낸 JSON 은 아래 검사를 그대로 통과해야 한다. **값은 여기 적힌 것이 전부다 —**",
               "**저장소의 코드를 찾아 읽지 마라.** 검사기 소스에는 이보다 더 알 것이 없고,",
               "찾아다니는 동안 근거 위계가 흐려진다.", "",
-              f"- 카드 수 {MIN_CARDS}~{MAX_CARDS}장 (벗어나면 덱을 만들지 않는다)",
+              f"- 필수 카드 수 {MIN_CARDS}~{MAX_CARDS}장, 추가 카드는 별도로 최대 {MAX_EXTRA_CARDS}장",
               f"- `ox` 형식은 전체의 {OX_SHARE_MAX:.0%} 이하",
               # 힌트 칸은 코드·렌더·Anki 가 이미 다 다루는데 **계약에 없어서 모델이
               # 쓸 줄 몰랐다**(2026-09-06 에 관리자가 손으로 그 꼴을 다시 발명했다).
@@ -529,7 +553,7 @@ def dump(outdir: Path) -> None:
               "- `source_type` 이 `lecture`·`annotation` 이면 `slide_no` 필수, "
               "`jokbo` 면 `jokbo_ref` 필수",
               "- `ox` 의 답은 `O` 또는 `X` 하나",
-              f"- `challenge: true` 는 총 8~12장 안에 {MIN_CHALLENGE}~{MAX_CHALLENGE}장",
+              f"- 필수의 `challenge: true` 는 필수 8~12장 안에 {MIN_CHALLENGE}~{MAX_CHALLENGE}장",
               "- hint·scope·lecture_focus가 빠지면 표시가 붙는다. 힌트에 정답이 그대로 "
               "들어가거나 핵심 문항의 preview_excerpt가 설명본에 없으면 검토 표시가 붙는다.",
               f"- `why_asked` 가 비었거나 {MAX_WHY_CHARS}자를 넘으면 표시가 붙는다",
