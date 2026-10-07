@@ -10,6 +10,7 @@ import { SlidePreloader } from "../slidePreload";
 import { usePreparedBankAnswer } from "./usePreparedBankAnswer";
 import { DailyGoal } from "./DailyGoal";
 import { useBankUndo } from "./useBankUndo";
+import { MatchingQuestion, matchingScore, type MatchingPicks } from "./MatchingQuestion";
 
 const FORMAT_LABEL: Record<string, string> = {
   basic: "단답", cloze: "빈칸", list: "나열", ox: "O/X", mcq: "객관식", multi_select: "복수 선택",
@@ -27,6 +28,8 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
   const [current, setCurrent] = useState<BankNext | null>(null);
   const [answer, setAnswer] = useState<BankAnswer | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [matches, setMatches] = useState<MatchingPicks>({});
+  const [activeMatch, setActiveMatch] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [reporting, setReporting] = useState(false);
@@ -34,6 +37,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
   const [peek, setPeek] = useState<BankRead | null>(null);
   const restore = useCallback((got: BankNext) => {
     setCurrent(got); setAnswer(got.answer ?? null); setPicked(new Set()); setReporting(false);
+    setMatches({}); setActiveMatch(0);
     window.scrollTo(0, 0);
   }, []);
   const { undo, undoBusy, pending } = useBankUndo(base, current?.undoToken, restore, setError, busy || Boolean(peek));
@@ -55,6 +59,7 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
       setCurrent(got);
       setAnswer(got.answer ?? null);
       setPicked(new Set());
+      setMatches({}); setActiveMatch(0);
       setReporting(false);
       window.scrollTo(0, 0);
     } catch (cause) {
@@ -68,6 +73,8 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
 
   const reveal = useCallback(async () => {
     if (!current?.reviewToken || answer || busy || pending.current) return;
+    if (current.question?.format === "matching"
+      && !current.question.matching_left.every(left => current.question!.matching_right.includes(matches[left]))) return;
     pending.current = true;
     setBusy(true);
     setError("");
@@ -84,7 +91,9 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
       pending.current = false;
       setBusy(false);
     }
-  }, [base, current, answer, busy, prepared]);
+  }, [base, current, answer, busy, prepared, matches]);
+
+  const matchResult = current?.question ? matchingScore(current.question, answer, matches) : null;
 
   const rate = useCallback(async (rating: BankRating) => {
     if (!current?.reviewToken || !answer || busy || pending.current) return;
@@ -139,14 +148,17 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
       if ((event.key === " " || event.key === "Enter") && !answer) {
         event.preventDefault();
         void reveal();
-      } else if (answer && ["1", "2", "3", "4"].includes(event.key)) {
+      } else if (answer && matchResult && (event.key === " " || event.key === "Enter")) {
+        event.preventDefault();
+        void rate(matchResult.rating);
+      } else if (answer && !matchResult && ["1", "2", "3", "4"].includes(event.key)) {
         event.preventDefault();
         void rate(RATINGS[Number(event.key) - 1].rating);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [answer, reveal, rate, peek]);
+  }, [answer, reveal, rate, peek, matchResult]);
 
   if (current?.waiting) return <div className="quiz bank-start">
     <h2>지금 풀 수 있는 분량을 마쳤어요!</h2>
@@ -207,7 +219,17 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
           <p className="bank-conflict">강의자료와 족보가 어긋나는 대목입니다. 답을 보면 무엇이 어떻게 다른지 나옵니다.</p>
         ) : null}
 
-        <QuestionBody question={q} answer={answer} picked={picked} onPick={(id) => {
+        <QuestionBody question={q} answer={answer} picked={picked}
+          matching={q.format === "matching" ? <MatchingQuestion question={q} answer={answer} picks={matches}
+            active={activeMatch} disabled={busy || undoBusy} onActive={setActiveMatch} onMatch={(right) => {
+              if (answer || busy || undoBusy) return;
+              const fresh = { ...matches, [q.matching_left[activeMatch]]: right };
+              setMatches(fresh);
+              const following = q.matching_left.findIndex((left, index) => index > activeMatch && !fresh[left]);
+              const unfilled = q.matching_left.findIndex(left => !fresh[left]);
+              setActiveMatch(following >= 0 ? following : unfilled >= 0 ? unfilled : activeMatch);
+            }} /> : undefined}
+          onPick={(id) => {
           if (answer) return;
           setPicked((old) => {
             const fresh = new Set(q.format === "mcq" ? [] : old);
@@ -234,7 +256,11 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
       </div>
 
       <div className="quiz-bar">
-        {answer ? (
+        {answer && matchResult ? (
+          <button className="quiz-submit" disabled={busy || undoBusy} onClick={() => void rate(matchResult.rating)}>
+            {busy ? "기록 중…" : <>다음 문제 <kbd>space</kbd></>}
+          </button>
+        ) : answer ? (
           RATINGS.map(({ rating, grade }, index) => (
             <button key={rating} className={`quiz-grade is-${grade}`} disabled={busy || undoBusy} onClick={() => void rate(rating)}>
               <span className="quiz-grade-name">
@@ -244,8 +270,9 @@ export function BankSolve({ base, onFinished }: { base: string; onFinished: (sum
             </button>
           ))
         ) : (
-          <button className="quiz-submit" disabled={busy || undoBusy} onClick={() => void reveal()}>
-            {busy ? "펴는 중…" : <>답 보기 <kbd>space</kbd></>}
+          <button className="quiz-submit" disabled={busy || undoBusy || (q.format === "matching"
+            && !q.matching_left.every(left => q.matching_right.includes(matches[left])))} onClick={() => void reveal()}>
+            {busy ? "펴는 중…" : <>{q.format === "matching" ? "채점하기" : "답 보기"} <kbd>space</kbd></>}
           </button>
         )}
       </div>

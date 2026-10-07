@@ -30,11 +30,12 @@ const letter = (index: number) => String.fromCharCode(65 + index);
 const bare = (item: string) => item.replace(/^[LR]\d+\s*[:.)]\s*/, "");
 
 /** 발문. cloze 빈칸은 답을 보면 채운다. */
-export function QuestionBody({ question: q, answer, picked, onPick }: {
+export function QuestionBody({ question: q, answer, picked, onPick, matching }: {
   question: BankQuestion;
   answer: BankAnswer | null;
   picked: Set<string>;
   onPick: (id: string) => void;
+  matching?: import("react").ReactNode;
 }) {
   const parts = q.format === "cloze" ? q.question.split(/(\{\{c\d+\}\})/g) : [q.question];
   let blank = 0;
@@ -70,6 +71,7 @@ export function QuestionBody({ question: q, answer, picked, onPick }: {
         </ul>
       ) : null}
       {q.format === "matching" ? (
+        matching ?? (
         <div className="bank-match">
           <ul>{q.matching_left.map((item, index) => <li key={item}><b>{index + 1}</b> {bare(item)}</li>)}</ul>
           <ul>
@@ -78,6 +80,7 @@ export function QuestionBody({ question: q, answer, picked, onPick }: {
             ))}
           </ul>
         </div>
+        )
       ) : null}
       {q.format === "sequence" ? (
         <ul className="bank-items">{q.sequence_items.map((item) => <li key={item}>{item}</li>)}</ul>

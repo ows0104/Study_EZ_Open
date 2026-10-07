@@ -1,0 +1,68 @@
+import { Stem } from "../lecture/Stem";
+import type { BankAnswer, BankQuestion } from "../types/bank";
+import { shuffled } from "./BankQuestion";
+import "../styles/matching.css";
+
+export type MatchingPicks = Record<string, string>;
+const letter = (index: number) => String.fromCharCode(65 + index);
+const bare = (item: string) => item.replace(/^[LR]\d+\s*[:.)]\s*/, "");
+
+export function matchingScore(q: BankQuestion, answer: BankAnswer | null, picks: MatchingPicks) {
+  if (!answer || q.format !== "matching" || !q.matching_left.length
+    || !q.matching_left.every(left => q.matching_right.includes(picks[left]))) return null;
+  const expected = new Map(answer.answerPairs.map(pair => [pair.left, pair.right]));
+  if (!q.matching_left.every(left => q.matching_right.includes(expected.get(left) ?? ""))) return null;
+  const correct = q.matching_left.filter(left => picks[left] === expected.get(left)).length;
+  return { correct, total: q.matching_left.length, rating: correct === q.matching_left.length ? "Good" as const : "Again" as const };
+}
+
+export function MatchingQuestion({ question: q, answer, picks, active, disabled, onActive, onMatch }: {
+  question: BankQuestion;
+  answer: BankAnswer | null;
+  picks: MatchingPicks;
+  active: number;
+  disabled: boolean;
+  onActive: (index: number) => void;
+  onMatch: (right: string) => void;
+}) {
+  const right = shuffled(q.matching_right, q.question_id);
+  const score = matchingScore(q, answer, picks);
+  const expected = new Map(answer?.answerPairs.map(pair => [pair.left, pair.right]));
+  return <>
+    <p className="bank-note">
+      {answer ? "선택한 짝과 정답을 확인하세요." : "오른쪽 항목을 누르면 1번부터 연결됩니다. 수정할 번호를 왼쪽에서 선택하세요."}
+    </p>
+    <div className="bank-match">
+      <ul aria-label="짝짓기 번호">
+        {q.matching_left.map((left, index) => {
+          const selected = right.indexOf(picks[left]);
+          const result = score ? picks[left] === expected.get(left) ? "is-correct" : "is-wrong" : "";
+          return <li key={left}>
+            <button type="button" className={`bank-match-choice ${!answer && active === index ? "is-active" : ""} ${result}`}
+              disabled={disabled || Boolean(answer)} aria-pressed={!answer && active === index}
+              aria-label={`${index + 1}번 ${bare(left)}, 선택 ${selected >= 0 ? letter(selected) : "없음"}`}
+              onClick={() => onActive(index)}>
+              <b>{index + 1}</b>
+              <span className="bank-match-picked">{selected >= 0 ? letter(selected) : "—"}</span>
+              <span><Stem text={bare(left)} /></span>
+              {score ? <span className="bank-match-result">{result === "is-correct" ? "✓" : `✕ 정답 ${letter(right.indexOf(expected.get(left)!))}`}</span> : null}
+            </button>
+          </li>;
+        })}
+      </ul>
+      <ul aria-label="짝짓기 보기">
+        {right.map((item, index) => <li key={item}>
+          <button type="button" className={`bank-match-choice ${picks[q.matching_left[active]] === item ? "is-picked" : ""}`}
+            disabled={disabled || Boolean(answer)} aria-pressed={picks[q.matching_left[active]] === item}
+            onClick={() => onMatch(item)}>
+            <b>{letter(index)}</b> <span><Stem text={bare(item)} /></span>
+          </button>
+        </li>)}
+      </ul>
+    </div>
+    {score ? <p className={`bank-match-score ${score.rating === "Good" ? "is-correct" : "is-wrong"}`} role="status">
+      {score.correct} / {score.total}개 정답 · {score.rating === "Good" ? "모두 맞았어요!" : "틀린 짝을 확인하세요."}
+      <span className="bank-note"> 다음 문제로 넘어가면 {score.rating}으로 자동 기록됩니다.</span>
+    </p> : null}
+  </>;
+}

@@ -16,7 +16,7 @@ import { useBankUndo } from "./useBankUndo";
  * 중요도·약점·시험까지 남은 날·선행 문항으로 다음 문항을 정한다. 화면은 그리기만 한다 —
  * 두 곳에서 고르면 갈라진다(Main-Quiz 가 `srs.py` 를 화면에 안 두는 것과 같은 까닭).
  *
- * 채점은 스스로 한다(자유회상). 객관식은 골라 볼 수 있지만 그것도 채점이 아니라 회상을 돕는 것이다.
+ * 자유회상은 스스로 평가한다. 짝짓기는 선택한 짝을 비교해 전부 맞으면 Good, 틀린 짝이 있으면 Again으로 기록한다.
  */
 export function BankStudyPage() {
   const { subject = "", runId = "" } = useParams();
