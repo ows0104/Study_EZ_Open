@@ -16,6 +16,7 @@
 | Quiz Bank 정리·검증 | [quizbank/CLAUDE.md](../quizbank/CLAUDE.md) |
 | 다음 문항·숙련도 | [server/app/study_engine](../server/app/study_engine) |
 | 관리 화면·사용 현황 | [web/src/admin](../web/src/admin), [usage.py](../server/app/routes/usage.py) |
+| 오류 제보·사이트 개선 루프 | [운영 안내](feedback-loop.md), [runner/feedback.py](../runner/feedback.py) |
 | 공지·이용방법 | [web/src/notices](../web/src/notices), [notices.py](../server/app/routes/notices.py) |
 | 카드 수정과 덱 반영 | [cards.py](../server/app/routes/cards.py), [runner/site_edits.py](../runner/site_edits.py), [quizgen/site_edits.py](../quizgen/site_edits.py) |
 | 로그인·API 요청 | [web/src/auth.tsx](../web/src/auth.tsx), [web/src/api.ts](../web/src/api.ts), [server/app/auth.py](../server/app/auth.py) |
