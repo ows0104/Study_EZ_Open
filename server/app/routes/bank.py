@@ -28,6 +28,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import study_engine as engine
+from app import bank_edits
+from app.bank_validation.pages import cited_pages
+from app.bank_validation.schema import QUESTION, schema_errors, without_retired
 from app.auth import CurrentUser, require_admin, require_approved_user, require_runner
 from app.database import get_db
 from app.lecture_mastery import for_bank
@@ -210,7 +213,8 @@ def put_bank(subject: str, run_id: str, payload: BankIn, user: CurrentUser = Dep
     """러너의 결과. **그 사이 관리자가 응답을 다시 저장했으면 거절한다** — 옛 응답의 정리가
     새 응답을 덮으면, 다시 만들라고 누른 사람에게 다시 만들었는데 그대로인 것을 돌려준다."""
     lecture = lecture_or_404(db, subject, run_id)
-    row = db.get(QuizBank, (lecture.subject, lecture.run_id))
+    row = db.scalars(select(QuizBank).where(QuizBank.subject == subject, QuizBank.run_id == run_id)
+                     .with_for_update()).first()
     if row is None or _iso(row.responded_at) != payload.responded_at:
         raise HTTPException(409, "그 사이 새 응답이 저장됐습니다. 새 응답으로 다시 정리하세요.")
     if payload.bank is None or payload.validation is None:
@@ -218,11 +222,16 @@ def put_bank(subject: str, run_id: str, payload: BankIn, user: CurrentUser = Dep
         row.message = payload.message or "정리에 실패했다"
         db.commit()
         return {"status": row.status}
-    row.bank, row.validation, row.review = payload.bank, payload.validation, payload.review
+    source_ids = [s["id"] for s in bank_sources(db, lecture)]
+    row.bank, row.validation = bank_edits.reapply(
+        payload.bank, payload.validation, row.validation or {}, source_ids)
+    row.review = payload.review
     row.pages, row.usage = payload.pages or {}, payload.usage or []
+    if (row.validation or {}).get("edits"):
+        row.pages = cited_pages(row.bank, "S1")
     row.build_id = uuid.uuid4().hex[:16]
     row.built_at = datetime.now(UTC)
-    row.status = BANK_READY if payload.validation.get("pass") else BANK_INVALID
+    row.status = BANK_READY if row.validation.get("pass") else BANK_INVALID
     row.message = payload.message or (
         "" if row.status == BANK_READY else f"검증 오류 {len(payload.validation.get('errors', []))}건")
     db.commit()
@@ -266,6 +275,130 @@ def get_bank_admin(subject: str, run_id: str, user: CurrentUser = Depends(requir
 
 
 FEEDBACK_STATUSES = ("open", "resolved", "wontfix")
+
+
+@admin_router.get("/bank-review")
+def bank_review(subject: str | None = None, run_id: str | None = Query(None, alias="runId"),
+                all_questions: bool = Query(False, alias="all"),
+                user: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)) -> dict:
+    query = select(QuizBank).join(Lecture)
+    if subject is not None:
+        query = query.where(QuizBank.subject == subject)
+    if run_id is not None:
+        query = query.where(QuizBank.run_id == run_id)
+    groups = []
+    for row in db.scalars(query.order_by(Lecture.date.desc(), Lecture.slot)).all():
+        if not row.bank:
+            continue
+        lecture = db.get(Lecture, (row.subject, row.run_id))
+        validation = row.validation or {}
+        dropped = {d["question_id"]: d["errors"] for d in validation.get("dropped", [])}
+        reviews = {r["question_id"]: r for r in (row.review or {}).get("reviews", [])}
+        edits = validation.get("edits", {})
+        questions = bank_edits.candidates(row.bank, validation)
+        cards = []
+        for qid, q in questions.items():
+            review = reviews.get(qid)
+            if not all_questions and qid not in dropped and qid not in edits and (
+                not review or review["verdict"] == "ok"
+            ):
+                continue
+            cards.append({"question": q, "errors": dropped.get(qid, []),
+                          "medicalReview": review, "edit": edits.get(qid)})
+        if cards:
+            groups.append({"subject": row.subject, "runId": row.run_id, "title": lecture.title,
+                           "date": lecture.date.isoformat(), "buildId": row.build_id, "cards": cards,
+                           "sources": bank_sources(db, lecture),
+                           "conflicts": [{"id": c["conflict_id"], "description": c["description"]}
+                                         for c in row.bank.get("source_conflicts", [])],
+                           "concepts": [{"id": c["concept_id"], "title": c["title"]}
+                                        for c in row.bank.get("concepts", [])],
+                           "questions": [{"id": qid, "question": q.get("question", ""),
+                                          "available": any(x["question_id"] == qid for x in row.bank["questions"])}
+                                         for qid, q in questions.items()]})
+    cards = [c for g in groups for c in g["cards"]]
+    done = sum(bool(c["edit"]) for c in cards)
+    return {"banks": groups, "open": len(cards) - done, "done": done}
+
+
+class BankCardIn(BaseModel):
+    build_id: str = Field(alias="buildId", max_length=64)
+    expected_question: dict = Field(alias="expectedQuestion")
+    action: Literal["edit", "accept", "delete", "reset"]
+    question: dict | None = None
+
+
+@admin_router.put("/lectures/{subject}/{run_id}/bank/cards/{question_id}")
+def edit_bank_card(subject: str, run_id: str, question_id: str, payload: BankCardIn,
+                   user: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)) -> dict:
+    import copy
+
+    lecture = lecture_or_404(db, subject, run_id)
+    row = db.scalars(select(QuizBank).where(QuizBank.subject == subject, QuizBank.run_id == run_id)
+                     .with_for_update()).first()
+    if row is None or not row.bank:
+        raise HTTPException(404, "문제은행이 없습니다.")
+    if row.status in (BANK_RESPONDED, BANK_BUILDING):
+        raise HTTPException(409, "정리가 끝난 뒤 수정하세요.")
+    validation = row.validation or {}
+    current = bank_edits.candidates(row.bank, validation).get(question_id)
+    if current is None:
+        raise HTTPException(404, "문항을 찾을 수 없습니다.")
+    if row.build_id != payload.build_id or current != payload.expected_question:
+        raise HTTPException(409, "문항이 바뀌었습니다. 새로 불러온 뒤 수정하세요.")
+    edits = copy.deepcopy(validation.get("edits", {}))
+    original = edits.get(question_id, {}).get("original") or without_retired({"questions": [current]})["questions"][0]
+    source_ids = [s["id"] for s in bank_sources(db, lecture)]
+    candidate_bank = copy.deepcopy(row.bank)
+    candidate_validation = copy.deepcopy(validation)
+    if payload.action == "reset":
+        edits.pop(question_id, None)
+        # Restore the original before applying all remaining decisions.
+        candidate_bank["questions"] = [q for q in candidate_bank["questions"] if q["question_id"] != question_id]
+        candidate_validation["dropped"] = [d for d in validation.get("dropped", []) if d["question_id"] != question_id]
+        candidate_validation["edits"] = edits
+        candidate_bank["questions"].append(original)
+    else:
+        question = without_retired({"questions": [current]})["questions"][0]
+        if payload.action == "edit":
+            if payload.question is None:
+                raise HTTPException(422, "수정한 문항이 필요합니다.")
+            question = without_retired({"questions": [payload.question]})["questions"][0]
+            errors = schema_errors(question, QUESTION)
+            if errors:
+                raise HTTPException(422, "\n".join(errors))
+            if question["question_id"] != question_id:
+                raise HTTPException(422, "문항 ID는 바꿀 수 없습니다.")
+            if question == without_retired({"questions": [current]})["questions"][0]:
+                raise HTTPException(422, "수정한 내용이 없습니다.")
+        edits[question_id] = {"action": payload.action, "original": original, "question": question,
+                              "by": user.email or user.id, "at": datetime.now(UTC).isoformat()}
+        if payload.action in ("edit", "accept"):
+            errors = bank_edits.question_errors(candidate_bank, candidate_validation, edits, question_id, source_ids)
+            if errors:
+                raise HTTPException(422, "\n".join(errors))
+    clean, checked = bank_edits.with_edits(candidate_bank, candidate_validation, edits, source_ids)
+    if not checked["pass"]:
+        raise HTTPException(422, "\n".join(checked["errors"]))
+    before_questions = {q["question_id"]: q for q in without_retired(row.bank)["questions"]}
+    after_questions = {q["question_id"]: q for q in clean["questions"]}
+    affected = {qid for qid in before_questions.keys() | after_questions.keys()
+                if before_questions.get(qid) != after_questions.get(qid)}
+    row.bank, row.validation = clean, checked
+    row.pages = cited_pages(clean, "S1")
+    row.status = BANK_READY
+    # Preserve unrelated mastery; invalidate in-flight questions and undo snapshots.
+    for state in db.scalars(select(BankState).where(BankState.subject == subject, BankState.run_id == run_id,
+                                                   BankState.build_id == row.build_id)).all():
+        value = copy.deepcopy(state.state)
+        if (value.get("served") or {}).get("question_id") in affected:
+            value["served"] = None
+        if affected:
+            for entry in value.get("history", []):
+                entry.pop("undo", None)
+        state.state = value
+    db.commit()
+    return {"summary": summary(db, lecture, row, is_admin=True), "action": payload.action}
 
 
 @admin_router.get("/bank-feedback")
@@ -393,7 +526,8 @@ def _slides(db: Session, row: QuizBank, question_id: str) -> list[dict[str, Any]
 
 
 def _answer(db: Session, row: QuizBank, q: dict) -> dict[str, Any]:
-    review = next((r for r in (row.review or {}).get("reviews", []) if r["question_id"] == q["question_id"]), None)
+    review = next((r for r in bank_edits.current_review(row.review, row.validation)["reviews"]
+                   if r["question_id"] == q["question_id"]), None)
     # 프롬프트 v1.2(2026-10-05): 충돌은 한 문항으로 합치고 외부 의학지식으로 답을 정한다. 학생은 답을 본 뒤
     # 각 출처가 무엇이라고 하는지와 고른 근거(충돌 기록의 설명)를 읽는다. 자료 밖 내용은 출처 `EXT` 로 표시된다.
     conflict = next((c for c in (row.bank or {}).get("source_conflicts", [])

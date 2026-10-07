@@ -15,6 +15,9 @@
 검사: `python -m pytest tests/quizbank`.
 운영 실행·업로드는 `runner/bank.py`가 맡는다.
 
+스키마·검증의 정본은 `server/app/bank_validation/`의 의존성 없는 모듈이다.
+`schema.py`·`validate.py`는 이를 재공개한다. 관리자 수정과 생성 결과에 같은 검증을 적용한다.
+
 ## 유지할 계약
 
 - `validate_dropping`은 문항 ID에 귀속되는 오류만 해당 문항 제거로 처리한다.

@@ -76,12 +76,38 @@ export type BankAnswer = {
 
 /** 관리자가 보는 문항 — 은행 JSON 그대로라 답 칸도 snake_case 다. */
 export type BankFullQuestion = BankQuestion & {
+  item_difficulty: number;
+  prerequisites: string[];
+  exam_rationale: string;
   answer: string;
   answer_units: string[];
   correct_option_ids: string[];
   answer_pairs: { left: string; right: string }[];
   correct_order: string[];
 };
+
+export type BankCardDecision = {
+  action: "edit" | "accept" | "delete";
+  original: BankFullQuestion;
+  question: BankFullQuestion;
+  by: string;
+  at: string;
+};
+export type BankReviewCard = {
+  question: BankFullQuestion;
+  errors: string[];
+  medicalReview: BankReview | null;
+  edit: BankCardDecision | null;
+};
+export type BankReviewGroup = {
+  subject: string; runId: string; title: string; date: string; buildId: string;
+  cards: BankReviewCard[];
+  concepts: { id: string; title: string }[];
+  sources?: BankSource[];
+  conflicts?: { id: string; description: string }[];
+  questions: { id: string; question: string; available: boolean }[];
+};
+export type BankReviewBoard = { banks: BankReviewGroup[]; open: number; done: number };
 
 export type BankReportStatus = "open" | "resolved" | "wontfix";
 

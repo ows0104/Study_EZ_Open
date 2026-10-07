@@ -11,9 +11,7 @@ import type { BankReportBoard, BankReportGroup, BankReportStatus } from "../type
  * **같은 문항의 신고는 한 묶음이다.** 여럿이 같은 자리에서 멈췄다는 것이 그 자체로 정보다.
  * 편을 가로질러 서버가 묶어 준다(`GET /api/admin/bank-feedback`).
  *
- * **여기서 문항을 고치지는 못한다.** 은행은 ChatGPT 응답을 러너가 정리한 것이라 고치는
- * 길이 그 둘이다 — 강의 패널의 「다시 정리」 또는 「ChatGPT로 만들기」. 여기서 하는 일은
- * 신고를 읽고 반영했다 · 그대로 둔다를 적는 것까지다.
+ * 문항 검토 화면으로 연결해 수정하고, 여기서 신고 처리 상태를 기록한다.
  *
  * **보이는 문항은 지금 은행의 것이다.** 신고 줄에 문면이 없어서다. 다시 만들면 ChatGPT 가
  * 같은 ID 에 다른 문항을 낼 수 있으므로, 옛 빌드에서 온 신고는 「옛 판」으로 갈라 적는다.
@@ -49,8 +47,7 @@ export function BankReportTab({ board, onChanged }: { board: BankReportBoard | n
         ) : null}
       </p>
       <p className="card-review-note">
-        문항은 여기서 고치지 않습니다. 고치려면 그 강의 패널에서 <strong>다시 정리</strong>(같은 ChatGPT 응답을
-        다시 정리) 또는 <strong>ChatGPT로 만들기</strong>(새로 만들기)를 누르세요.
+        각 문항의 <strong>문항 검토·수정</strong>을 눌러 고친 뒤 신고 처리 상태를 기록하세요.
       </p>
       {shown.map((group) => (
         <ReportGroup key={`${group.subject}/${group.runId}/${group.questionId}`} group={group} onChanged={onChanged} />
@@ -164,6 +161,7 @@ function ReportGroup({ group, onChanged }: { group: BankReportGroup; onChanged: 
       </ul>
 
       <div className="card-review-actions">
+        <Link to={`/admin/bank-cards/${encodeURIComponent(group.subject)}/${encodeURIComponent(group.runId)}`}>문항 검토·수정</Link>
         <Link className="card-review-by" to={`/bank/${encodeURIComponent(group.subject)}/${group.runId}`}>
           풀이 창 열기
         </Link>

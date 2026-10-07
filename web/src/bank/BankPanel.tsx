@@ -266,6 +266,14 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
         </div>
       ) : null}
       {bank ? (
+        <div className="panel-hint">
+          <Link to={`/admin/bank-cards/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`}>
+            문항 검토·수정{bank.dropped?.length ? ` · 제외 ${bank.dropped.length}개` : ""}
+            {review ? ` · 틀림 ${review.wrong} · 의심 ${review.doubt}` : ""}
+          </Link>
+        </div>
+      ) : null}
+      {bank ? (
         <p className="panel-hint">
           {STATUS_LINE[bank.status]}
           {bank.usable ? ` · ${bank.questionCount}문항` : ""}
@@ -285,6 +293,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
               <li key={d.questionId}>{d.errors.join(" · ")}</li>
             ))}
           </ul>
+          <Link to={`/admin/bank-cards/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`}>제외된 문항 열고 수정하기</Link>
         </details>
       ) : null}
       {moving && job ? (

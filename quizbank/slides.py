@@ -9,41 +9,13 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
-ZOOM = 1.6          # quizgen/build.py SLIDE_ZOOM 과 같다 — 같은 화면에 같은 크기로 뜬다
-MAX_RANGE = 8       # `p3–40` 같은 넓은 범위는 문항 근거가 아니라 개념 범위다. 그만큼은 안 그린다
+from server.app.bank_validation.pages import (
+    MAX_RANGE as MAX_RANGE, cited_pages as cited_pages, pages_of as pages_of,
+)
 
-# p13 · p 13 · p13–14 · p13-p14 · 13쪽 · slide 13. `S1` 의 1 을 쪽으로 읽지 않도록 접두가 꼭 있어야 한다.
-_PAGE_RE = re.compile(r"(?:\bp\.?\s*|\bslide\s*)(\d{1,4})(?:\s*[–\-~]\s*(?:p\.?\s*)?(\d{1,4}))?|(\d{1,4})\s*쪽", re.I)
-
-
-def pages_of(locator: str) -> list[int]:
-    """locator 한 줄에서 쪽 번호들. 범위는 펼치되 MAX_RANGE 를 넘으면 양 끝만."""
-    pages: list[int] = []
-    for m in _PAGE_RE.finditer(locator):
-        if m.group(3):
-            pages.append(int(m.group(3)))
-            continue
-        a = int(m.group(1))
-        b = int(m.group(2)) if m.group(2) else a
-        lo, hi = min(a, b), max(a, b)
-        pages.extend(range(lo, hi + 1) if hi - lo < MAX_RANGE else (lo, hi))
-    return sorted(set(pages))
-
-
-def cited_pages(bank: dict, pdf_source: str) -> dict[str, list[int]]:
-    """문항 ID → 그 문항이 `pdf_source`(필기 PDF 의 source_id)에서 인용한 쪽들."""
-    out: dict[str, list[int]] = {}
-    for q in bank["questions"]:
-        pages: set[int] = set()
-        for ref in q["source_refs"]:
-            if ref["source_id"] == pdf_source:
-                pages.update(pages_of(ref["locator"]))
-        if pages:
-            out[q["question_id"]] = sorted(pages)
-    return out
+ZOOM = 1.6
 
 
 def render(pdf: Path, pages: set[int] | list[int], out_dir: Path, run_id: str) -> tuple[list[Path], list[int]]:

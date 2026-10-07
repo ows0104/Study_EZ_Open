@@ -49,6 +49,8 @@ from app.main import app  # noqa: E402
 # 편을 가로질러 보고 반영했다·그대로 둔다를 적는다(관리 화면 「Quiz Bank 신고」 탭).
 # 2026-10-06: 개인 복습 대화를 예습과 별도로 저장하는 my-review 경로.
 ROUTES = """
+GET /api/admin/bank-review
+PUT /api/admin/lectures/{subject}/{run_id}/bank/cards/{question_id}
 POST /api/lectures/{subject}/{run_id}/bank/prepare
 PUT /api/lectures/{subject}/{run_id}/my-review
 GET /api/study-plan
