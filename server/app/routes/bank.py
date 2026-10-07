@@ -13,7 +13,7 @@ reveal은 실제 클릭 시각을 기록한다. 다음 문항은 서버가 고�
 Main-Quiz 처럼 목록을 통째로 보내고 화면이 고르는 방식이 아니다. 고르는 데 숙련도·선행 문항·
 시험까지 남은 날이 다 필요하고, 그 계산이 두 곳에 살면 갈라진다.
 
-**처음엔 관리자에게만 보인다**(`open_to_students`). 새 파이프라인의 첫 은행들이다.
+검증을 통과한 업로드는 학생에게 자동 공개한다(`open_to_students`). 관리자는 다시 닫을 수 있다.
 """
 
 from __future__ import annotations
@@ -257,6 +257,7 @@ def put_bank(subject: str, run_id: str, payload: BankIn, user: CurrentUser = Dep
     row.build_id = uuid.uuid4().hex[:16]
     row.built_at = datetime.now(UTC)
     row.status = BANK_READY if row.validation.get("pass") else BANK_INVALID
+    row.open_to_students = row.status == BANK_READY
     row.message = payload.message or (
         "" if row.status == BANK_READY else f"검증 오류 {len(payload.validation.get('errors', []))}건")
     db.commit()

@@ -50,7 +50,7 @@ class QuizBank(Base):
     pages: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     usage: Mapped[list | None] = mapped_column(JSON, nullable=True)
     message: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    # **처음엔 관리자에게만 보인다.** 관리자가 보고 연다 — 새 파이프라인의 첫 은행들이다.
+    # 생성 중에는 비공개이며, 검증을 통과한 업로드는 자동으로 공개한다.
     open_to_students: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     built_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)

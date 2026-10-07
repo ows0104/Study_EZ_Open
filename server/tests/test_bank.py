@@ -146,6 +146,11 @@ def main() -> None:
 
     print("③ 열기")
     as_student()
+    check("검증을 통과한 업로드는 학생에게 자동 공개", client.get(f"{BASE}/bank").status_code == 200)
+    as_admin()
+    check("관리자는 자동 공개된 은행을 닫을 수 있다",
+          client.put(f"{ADMIN}/bank/open", json={"open": False}, headers=ADMIN_H).json()["open"] is False)
+    as_student()
     check("열기 전 학생에게는 없다", client.get(f"{BASE}/bank").status_code == 404)
     check("상세에도 안 실린다", client.get(BASE).json()["bank"] is None)
     check("학생은 자료 목록을 못 본다", "bankSources" not in client.get(BASE).json())

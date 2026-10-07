@@ -16,6 +16,7 @@ from app.database import Base, SessionLocal, engine
 from app.main import app
 from app.models import Asset, Lecture, PrequizJob, QuizBank
 from app.routes.admin import _auto_main_job
+from tests.bank_fixtures import example_bank
 
 ADMIN = {"Authorization": "Bearer local-test-token"}
 RUNNER = {"Authorization": "Bearer runner-token"}
@@ -74,6 +75,19 @@ def main():
         assert len(db.scalars(select(PrequizJob).where(PrequizJob.run_id == "261008_01")).all()) == 1
         row = db.get(QuizBank, ("test", "261008_01"))
         assert row.raw_response == RAW + "手動" and not row.open_to_students
+    token = client.get(base + "/bank-response", headers=RUNNER).json()["respondedAt"]
+    result = {"respondedAt": token, "bank": example_bank(),
+              "validation": {"pass": True, "errors": [], "warnings": []}}
+    assert client.put(base + "/bank", headers=RUNNER, json=result).json()["status"] == "ready"
+    assert client.get(base + "/bank", headers=ADMIN).json()["summary"]["open"] is True
+    # 업로드의 검증 실패는 공개 상태로 남기지 않는다.
+    result["validation"] = {"pass": False, "errors": ["invalid"], "warnings": []}
+    assert client.put(base + "/bank", headers=RUNNER, json=result).json()["status"] == "invalid"
+    assert client.get(base + "/bank", headers=ADMIN).json()["summary"]["open"] is False
+    assert client.put(base + "/bank/open", headers=ADMIN, json={"open": True}).status_code == 409
+    assert client.put(base + "/bank", headers=RUNNER,
+                      json={"respondedAt": token, "message": "출제 실패"}).json()["status"] == "failed"
+    assert client.get(base + "/bank", headers=ADMIN).json()["summary"]["open"] is False
     print("Quiz Bank 자동 출제 검사 통과")
 
 
