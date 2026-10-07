@@ -6,6 +6,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from datetime import date as Date
+import re
+import unicodedata
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -22,7 +24,9 @@ from app.models import (
     JOB_PRE,
     JOB_QUEUED,
     Lecture,
+    Asset,
     PrequizJob,
+    TimetableEvent,
 )
 
 # 러너는 지금 한 대뿐이다. 여러 대가 되면 이름을 나눠야 하는데, 그때는 일감을
@@ -150,6 +154,26 @@ def open_job_of(db: Session, subject: str, run_id: str, kind: str) -> PrequizJob
     ).first()
 
 
+def auto_review_excluded(db: Session, subject: str, run_id: str) -> bool:
+    """실습·CBL·PBL 복습은 관리자 직접 생성만 허용한다."""
+    lecture = db.get(Lecture, (subject, run_id))
+    if lecture is None:
+        return False
+    texts = [lecture.title]
+    event = db.get(TimetableEvent, lecture.timetable_event_id) if lecture.timetable_event_id else None
+    if event is not None:
+        if event.category == "practice":
+            return True
+        texts.extend([event.title, event.details])
+    texts.extend(db.scalars(select(Asset.filename).where(
+        Asset.subject == subject, Asset.run_id == run_id, Asset.kind == "notes_current")).all())
+    for text in texts:
+        normalized = unicodedata.normalize("NFKC", text or "").casefold()
+        if "실습" in normalized or re.search(r"(?<![a-z])(?:c[\s.·_-]*b[\s.·_-]*l|p[\s.·_-]*b[\s.·_-]*l)(?![a-z])", normalized):
+            return True
+    return False
+
+
 def ensure_auto_job(db: Session, subject: str, run_id: str, kind: str, why: str) -> PrequizJob | None:
     """자료 업로드·예습 링크 저장에 따라 일감을 등록한다. 이미 열렸거나 취소된 편은 건너뛴다.
 
@@ -157,6 +181,8 @@ def ensure_auto_job(db: Session, subject: str, run_id: str, kind: str, why: str)
     업로드·링크와 한 트랜잭션이 되도록 호출자가 commit한다."""
     # Main Quiz는 ChatGPT 답을 저장할 때 bank 작업으로 접수한다.
     if kind not in JOB_KINDS or kind == JOB_MAIN:
+        return None
+    if kind == JOB_BANK and auto_review_excluded(db, subject, run_id):
         return None
     if open_job_of(db, subject, run_id, kind) is not None:
         return None
