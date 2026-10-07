@@ -2,7 +2,7 @@
  *
  * 칸의 색 규칙은 base.css 머리에 적어 두었다 — 왼쪽 띠의 색상이 범주다.
  * 여기서는 그 값을 `--cat`으로 받아 칠한다. 학습 상태는 띠가 아니라 칸 아래
- * 점이 말한다.
+ * 학습도 막대와 자료 상태 도형이 말한다.
  *
  * 격자 자체의 층은 밝기로 만든다. 바닥(--bg) 위에 격자 카드(--surface)가 뜨고,
  * 그 위 칸이 계열색을 옅게 얹는다. 선을 굵게 하는 대신 밝기를 쓰면 조밀해도
@@ -156,7 +156,7 @@
 .month-calendar {
   /* 줄이 이 높이 아래로는 안 줄어든다. 화면이 너무 낮으면 그때는 스크롤한다 —
      읽을 수 없을 만큼 납작해지는 것보다 낫다. */
-  --row-min: 46px;
+  --row-min: 54px;
 
   min-height: 0;
   flex: 1;
@@ -378,9 +378,7 @@
  *   --cat   계열 = 범주 (강의·실습·시험)     → 띠의 색상
  *   --rail  짙기. 범주가 없는 칸만 낮춘다
  *
- * **학습 상태는 여기 안 싣는다.** 띠의 짙기로도 말하고 점으로도 말하면 같은
- * 것을 두 번 말하는 것이고, 어디까지 했는지는 점이 훨씬 정확하다 — 무엇이
- * 얼마나 남았는지까지 말한다.
+ * 학습률은 칸 아래의 예습·복습 막대로 표시한다.
  *
  * 칸 안은 안 채운다. 채우면 한 주에 스물이 동시에 물든다. 채워지는 것은
  * 마우스가 올라간 칸과 열어 둔 칸뿐이다.
@@ -416,7 +414,7 @@
   border: 1px solid color-mix(in srgb, var(--cat) 16%, var(--line));
   border-radius: var(--r-2);
   color: var(--ink);
-  /* 쉬고 있을 때는 안 채운다. 어디까지 했는지는 아래 점이 말한다. */
+  /* 어디까지 학습했는지는 아래 두 막대가 말한다. */
   background: var(--surface);
   text-align: left;
   cursor: pointer;
@@ -535,13 +533,6 @@
   font-size: 9.5px;
 }
 
-/* 점은 오른쪽 아래에 떠 있다. 바닥 줄만 그만큼 비켜 준다 — 제목은 위에서
- * 차므로 점과 만나지 않고, 그래서 폭을 뺏기지 않는다. 점이 없는 칸에는 물릴
- * 것이 없으니 걸지 않는다. */
-.calendar-event:has(.chip-slots, .chip-count) .calendar-event-meta {
-  padding-right: 18px;
-}
-
 /* 칸이 좁으면 여백이 글자보다 많아진다. 375px에서 다섯 칸을 세우면 칸이
  * 55px인데 좌우 여백만 21px이라 제목에 남는 것이 26px(두 글자)이었다. */
 @container cell (max-width: 120px) {
@@ -549,13 +540,6 @@
     padding-inline: 8px 7px;
   }
 
-  .chip-slots {
-    right: 4px;
-  }
-
-  .chip-count {
-    right: 3px;
-  }
 }
 
 /* ── 칸에 다 안 들어갈 때 무엇을 버리는가 ──
@@ -593,10 +577,6 @@
     display: block;
   }
 
-  .calendar-event:has(.chip-slots, .chip-count) .calendar-event-professor,
-  .calendar-event:has(.chip-slots, .chip-count) .calendar-event-series {
-    padding-right: 18px;
-  }
 }
 
 /* 더 낮으면 여백을 먼저 줄인다. **겹을 버리기 전에 할 일이 이것이다** —
@@ -615,11 +595,7 @@
     display: none;
   }
 
-  /* 남은 것이 제목뿐이면 제목이 바닥 줄이 된다. 점을 비켜설 차례가 여기로
-     넘어온다. */
-  .calendar-event-primary {
-    padding-right: 18px;
-  }
+
 }
 
 /* 실습은 띠 모양을 강의와 같이 둔다. 계열색(틸)만으로 가른다는 뜻이고,
@@ -657,123 +633,96 @@
   -webkit-line-clamp: 1;
 }
 
-/* 월간 칸은 한 줄이라 점이 제목의 오른쪽 끝에 그대로 얹힌다. 점이 있는 칸만
- * 자리를 낸다 — 없는 칸까지 비워 두면 짧은 달력에서 제목이 먼저 잘린다. */
-.calendar-event.is-compact:has(.chip-slots, .chip-count) .calendar-event-primary {
-  padding-right: 14px;
-}
+/* ---------------------------------------------------------- 예습·복습 학습률 */
 
-/* --------------------------------------------------------------- 자리 둘 */
+.legend-group.is-learning { flex-wrap: wrap; }
+.learning-legend-track { display: inline-block; width: 18px; height: 5px; border-radius: 99px; }
+.learning-legend-track.is-start { background: #d3a31e; }
+.learning-legend-track.is-half { background: #238563; }
+.learning-legend-track.is-complete { background: #3984d5; }
 
-/* 오른쪽 아래 구석에 띄운다.
- *
- * 위 구석에 두면 제목이 두세 줄로 접힐 때 글자와 겹쳤다. 그렇다고 글 아래
- * 흐름에 넣으면 행을 하나 차지해서 제목이 밀려 올라간다. 띄우되 아래로 내리는
- * 것이 둘 다 피하는 자리다 — 제목은 위에서부터 차고 자리는 바닥에 남는다.
- *
- * **폭이 상수다.** 자리 둘이 늘 서 있으므로 강의 칸마다 같은 x에 같은 것이
- * 온다 — 왼쪽이 예습, 오른쪽이 복습. 여러 칸을 훑을 때 자리로 뜻을 읽으려면
- * 이것이 안 흔들려야 한다. */
-.chip-slots {
+.calendar-event.has-learning { padding-bottom: 24px; }
+.calendar-event-footer {
   position: absolute;
-  right: 7px;
-  bottom: 6px;
-  display: flex;
-  gap: 3px;
-  align-items: center;
-}
-
-/* 월간 칸은 한 줄짜리다. 바닥이 곧 가운데다. */
-.calendar-event.is-compact .chip-slots {
-  top: 50%;
-  bottom: auto;
-  right: 6px;
-  transform: translateY(-50%);
-}
-
-/* 자리 하나. 세 단계가 다 이 상자 안에서 그려진다 — 크기가 상수라 점이
- * 도형이 되어도 이웃이 안 밀린다. */
-.chip-slot {
-  width: 7px;
-  height: 7px;
-  flex: none;
-  box-sizing: border-box;
-  border: 1px solid transparent;
-}
-
-/* ① 아직 아무것도 안 올라왔다. 자리만 잡는 작은 점이다.
- *
- * **크기가 아니라 밝기로 가른다.** 이 점과 채운 도형은 둘 다 꽉 찬 모양이라,
- * 7px과 3px 차이만 두면 월간 칸에서 헷갈린다. 배경에 거의 붙는 회색으로 두어
- * "여기 자리가 있다"까지만 말하게 한다. */
-.chip-slot.is-none {
-  background: radial-gradient(circle at 50% 50%, var(--line-strong) 0 1.5px, transparent 1.6px);
-}
-
-/* ①′ 관리자 화면에만 있는 단계 — 이 자리에 관리자가 할 수 있는 일이
- * 아직 없다(작년 필기가 안 올라왔다). 점조차 안 찍지만 **자리는 그대로
- * 잡는다** — 도형이 생기고 사라지면서 폭이 변하면 강의끼리 x가 어긋나서
- * 여러 칸을 훑을 때 자리로 뜻을 읽을 수 없게 된다. */
-.chip-slot.is-absent {
-  background: none;
-}
-
-/* ② 올라왔다 — 네가 열어 볼 것이 있다. 이 화면에서 색은 이 뜻으로만 쓴다.
- *
- * 모양이 여기서 처음 생긴다. 예습이 원, 복습이 네모다. */
-.chip-slot.is-pre.is-ready,
-.chip-slot.is-pre.is-done {
-  border-radius: 50%;
-}
-
-.chip-slot.is-pre { width: 9px; height: 9px; }
-
-.chip-slot.is-main.is-ready,
-.chip-slot.is-main.is-done {
-  border-radius: 1px;
-}
-
-.chip-slot.is-ready {
-  border-color: var(--cat, var(--accent));
-}
-
-/* 웹 예습은 부채꼴 대신 달의 밝은 면적이 차오른다. */
-.chip-slot.is-pre.is-moon { border: 0; background: none; color: var(--accent); }
-
-/* ③ 했다. 무채색으로 가라앉힌다 — 색은 "지금 네 차례"라는 뜻이고, 끝낸 것은
- * 더 이상 열 것이 아니다. 다 한 칸이 제일 시끄러우면 남은 할 일이 묻힌다. */
-.chip-slot.is-done {
-  border-color: var(--ink-3);
-  background: var(--ink-3);
-}
-
-.chip-slot.is-pre.is-done:not(.is-moon) {
-  border-color: var(--accent);
-  background: var(--accent);
-}
-
-/* 한 교시에 여러 강의가 열릴 때(선택형 과목)의 개수. */
-.chip-count {
-  position: absolute;
-  right: 6px;
   bottom: 5px;
-  display: grid;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  place-items: center;
-  border-radius: 999px;
-  color: #fff;
-  background: var(--cat, var(--accent));
-  font-size: 9.5px;
-  font-weight: 700;
+  left: 12px;
+  right: 9px;
 }
 
-.calendar-event.is-compact .chip-count {
-  top: 50%;
-  bottom: auto;
-  right: 5px;
-  transform: translateY(-50%);
+/* 비어 있는 쪽도 폭을 유지한다. 예습은 항상 왼쪽 절반, 복습은 오른쪽 절반이다. */
+.chip-learning-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.chip-learning { display: flex; min-width: 0; gap: 5px; align-items: center; }
+.chip-learning-bars { display: flex; flex: 1; min-width: 0; gap: 3px; }
+.chip-learning-track {
+  --learning-color: var(--ink-3);
+  display: block;
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--learning-color) 22%, var(--surface));
+}
+.chip-learning-track.is-start { --learning-color: #d3a31e; }
+.chip-learning-track.is-half { --learning-color: #238563; }
+.chip-learning-track.is-complete { --learning-color: #3984d5; }
+.chip-learning-track.is-unavailable {
+  background: repeating-linear-gradient(110deg, var(--line) 0 3px, transparent 3px 6px);
+}
+.chip-learning-fill { display: block; height: 100%; border-radius: inherit; background: var(--learning-color); }
+.chip-learning-value {
+  flex: none;
+  width: 70px;
+  text-align: right;
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.chip-learning-label { font-weight: 500; color: var(--ink-3); }
+.calendar-event.is-compact.has-learning { padding-bottom: 21px; }
+.calendar-event.is-compact.has-learning .calendar-event-footer { left: 7px; right: 7px; bottom: 3px; }
+.calendar-event.is-compact.has-learning .chip-learning-label { display: none; }
+.calendar-event.is-compact.has-learning .chip-learning-value { width: 31px; }
+.month-day { container: month-cell / inline-size; }
+
+@container cell (max-width: 240px) {
+  .chip-learning-label { display: none; }
+  .chip-learning-value { width: 31px; }
+}
+@container cell (max-width: 120px) {
+  .calendar-event-footer { left: 8px; right: 7px; }
+  .chip-learning-pair { gap: 6px; }
+}
+/* 아주 좁은 칸에서는 두 막대를 남긴다. 정확한 수치는 툴팁과 강의 패널에서 읽는다. */
+@container cell (max-width: 110px) {
+  .chip-learning-value { display: none; }
+}
+@container month-cell (max-width: 110px) {
+  .chip-learning-value { display: none; }
+  .chip-learning-pair { gap: 6px; }
+}
+
+/* 낮은 칸에서도 학습도는 남기고 제목·부가정보의 줄 수를 줄인다. */
+@container cell (max-height: 90px) {
+  .calendar-event.has-learning .calendar-event-primary { -webkit-line-clamp: 2; }
+  .calendar-event.has-learning .calendar-event-meta { display: block; }
+  .calendar-event.has-learning .calendar-event-series { display: none; }
+}
+
+@container cell (max-height: 75px) {
+  .calendar-event.has-learning { padding-top: 4px; }
+  .calendar-event.has-learning .calendar-event-primary { -webkit-line-clamp: 1; padding-right: 0; }
+}
+
+@container cell (max-width: 90px) and (min-height: 59px) {
+  .calendar-event.has-learning .calendar-event-primary { -webkit-line-clamp: 2; }
+  .calendar-event.has-learning .calendar-event-meta { display: none; }
+}
+
+@container cell (max-height: 58px) {
+  .calendar-event.has-learning .calendar-event-meta { display: none; }
 }
 
 .calendar-legend {
@@ -797,44 +746,6 @@
   display: flex;
   gap: 5px;
   align-items: center;
-}
-
-/* 모양 딱지. 뒤따르는 세 단계가 어느 자리의 것인지를 모양으로 말한다. */
-.legend-group.is-phase {
-  gap: 8px;
-}
-
-.legend-group.is-phase b {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  color: var(--ink-2);
-  font-size: 10.5px;
-  font-weight: 650;
-}
-
-/* 예습이 동그라미, 복습이 네모.
- *
- * **글자표(○·□)로 적지 않는다.** 글꼴마다 둘의 크기와 밑선이 안 맞아서 나란히
- * 놓으면 한쪽이 작고 내려앉는다. 칸에 실제로 서는 것과 같은 상자로 그려야
- * 둘이 정확히 같은 크기가 된다.
- *
- * **세 단계 중 어느 것도 아닌 회색이다.** 색은 「올라옴」이, 채움은 「함」이
- * 이미 쓰고 있다 — 딱지가 그중 하나를 빌리면 네 번째 단계로 읽힌다. */
-.legend-shape {
-  width: 7px;
-  height: 7px;
-  flex: none;
-  box-sizing: border-box;
-  border: 1px solid var(--ink-3);
-}
-
-.legend-shape.is-pre {
-  border-radius: 50%;
-}
-
-.legend-shape.is-main {
-  border-radius: 1px;
 }
 
 /* 계열 견본. 칸의 왼쪽 띠를 그대로 축소한 모양이다. */

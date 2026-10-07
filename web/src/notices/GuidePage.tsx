@@ -74,39 +74,14 @@ export function GuidePage() {
           </li>
           <li>칸 왼쪽의 색 띠는 강의 · 실습 · 시험 · 휴일을 구분합니다.</li>
           <li>
-            강의 칸에는 자리가 둘 있습니다. <b>왼쪽 동그라미가 예습</b>, <b>오른쪽 네모가 복습</b>입니다.
+            칸 아래의 <b>왼쪽 절반은 예습</b>, <b>오른쪽 절반은 복습</b> 막대입니다.
+            예습은 웹 문항 완료 비율, 복습은 내 Quiz Bank 학습도를 표시합니다.
+            두 막대 모두 <b>50% 미만은 노랑</b>, <b>50% 이상은 초록</b>, <b>100%는 파랑</b>입니다.
+            빗금은 측정할 문항이 없다는 뜻입니다. 덱 다운로드는 학습률에 포함하지 않습니다.
+            여러 강의가 붙은 칸은 각 절반 안에서 강의별 막대를 나누며, 마우스를 올리면 각 강의의 수치를 확인할 수 있습니다.
+            좁은 화면에서는 숫자를 접고 두 막대를 유지합니다.
           </li>
         </ul>
-        <dl className="guide-marks">
-          <div>
-            <dt>
-              <i className="chip-slot is-pre is-none" />
-              <i className="chip-slot is-main is-none" />
-            </dt>
-            <dd>
-              <b>작은 점</b> — 아직 준비되지 않았습니다.
-            </dd>
-          </div>
-          <div>
-            <dt>
-              <i className="chip-slot is-pre is-ready" />
-              <i className="chip-slot is-main is-ready" />
-            </dt>
-            <dd>
-              <b>빈 도형</b> — 올라왔습니다. 지금 할 수 있는 일입니다. 예습 동그라미는 도전문제를 포함한
-              풀이 비율에 따라 왼쪽부터 초승달 · 반달 · 보름달처럼 차오르며, 다 풀어도 파란색을 유지합니다.
-              관리자도 자신의 예습 진행률을 봅니다.
-            </dd>
-          </div>
-          <div>
-            <dt>
-              <i className="chip-slot is-pre is-done" />
-            </dt>
-            <dd>
-              <b>채운 동그라미</b> — 예습을 웹에서 다 풀었습니다. 웹 문항이 없는 덱은 내려받으면 채워집니다.
-            </dd>
-          </div>
-        </dl>
       </section>
 
       <section id="panel">
@@ -134,7 +109,7 @@ export function GuidePage() {
             아직 만드는 중인 웹 문항은 준비 현황을 표시합니다. 공개되면 같은 자리에서 바로 풀 수 있습니다.
           </li>
         </ul>
-        <p className="guide-note">Main-Quiz의 빈 네모는 공개된 문제은행이 있다는 뜻입니다. 회차별 학습 결과는 풀이 화면에서 확인합니다.</p>
+        <p className="guide-note">복습 막대는 공개된 문제은행의 학습도를 표시합니다. 회차별 학습 결과는 풀이 화면에서 확인합니다.</p>
       </section>
 
       <section id="quiz">
@@ -172,7 +147,7 @@ export function GuidePage() {
             「어려웠던 문제만 다시 풀기」로 그 문제들만 다시 확인할 수 있으며, 수업에서 확인할 내용도 함께 표시합니다.
             예습에는 다음 복습 일정을 잡지 않습니다.
             도전 문제는 문항 뱃지로 표시하며 같은 방식으로 풉니다. 전체 문제 수와 완료 수에도 포함되고,
-            캘린더의 예습 동그라미가 완료한 비율만큼 달처럼 차오릅니다.
+            캘린더 왼쪽의 예습 막대가 완료한 비율만큼 채워집니다.
             Anki에서는 도전 문제 태그와 안내를 확인하고 필요할 때 풀면 됩니다.
           </p>
         <table className="guide-keys">
@@ -293,7 +268,7 @@ function StudyFlow() {
           <span className="flow-down" aria-hidden="true" />
           <div className="flow-step is-pre">
             <b>
-              Pre-Quiz <i className="chip-slot is-pre is-ready" aria-label="칸의 동그라미" />
+              Pre-Quiz
             </b>
             <span>예습 대화로 만든 문제</span>
             <small>웹에서 바로 예습하기</small>
@@ -318,7 +293,7 @@ function StudyFlow() {
           <span className="flow-when">강의 후 · 매일</span>
           <div className="flow-step is-main">
             <b>
-              Main-Quiz <i className="chip-slot is-main is-ready" aria-label="칸의 네모" />
+              Main-Quiz
             </b>
             <span>올해 필기로 만든 문제</span>
             <small>Quizbank · 웹에서 풀기</small>
@@ -344,8 +319,7 @@ function StudyFlow() {
         </li>
       </ol>
       <figcaption>
-        캘린더 칸의 <i className="chip-slot is-pre is-ready" /> 는 Pre-Quiz, <i className="chip-slot is-main is-ready" /> 는
-        Main-Quiz 자리입니다. Main-Quiz는 공개된 Quizbank가 있으면 표시됩니다.
+        캘린더 칸의 왼쪽 막대는 Pre-Quiz 풀이율, 오른쪽 막대는 Quizbank 복습 학습도입니다.
       </figcaption>
     </figure>
   );
