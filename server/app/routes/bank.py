@@ -874,11 +874,15 @@ def save_personal_question(subject: str, run_id: str, question_id: str, payload:
         edit.comment = payload.comment.strip()
     if payload.action == "save":
         comment = payload.comment.strip()
+        correction = None
         if changed:
             comment += f"\n\n[개인 수정 제안]\n발문: {question}\n정답: {answer}"
+            correction = {"original": original, "proposed": {"question": question, "answer": answer},
+                          "changedFields": [key for key, value in (("question", question), ("answer", answer))
+                                            if value != original[key]]}
         db.add(BankFeedback(user_id=user.id, subject=subject, run_id=run_id, build_id=row.build_id,
                             question_id=question_id, category=payload.category, comment=comment.strip(),
-                            highlighted=payload.report))
+                            highlighted=payload.report, correction=correction))
     db.commit()
     current = bank_personal.apply(db, row, user.id, original)
     return {"question": _public(current), "answer": _answer(db, row, current),

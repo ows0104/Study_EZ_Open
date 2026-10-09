@@ -52,6 +52,7 @@ from app.storage import ObjectStorage, StorageNotConfigured
 # 여기 한 줄로 남긴다** — 다음 사람이 운영 DB와 모델이 어디서 갈라졌는지 볼 자리다.
 ADDED_COLUMNS = (
     ("bank_feedback", "highlighted", "BOOLEAN NOT NULL DEFAULT TRUE"),
+    ("bank_feedback", "correction", "JSON"),
     # 2026-10-04 예습 카드가 「왜 냈나」와 도전 문제 표시를 갖는다. 복습 표도 모양을 같이 쓴다.
     ("pre_item", "why_asked", "TEXT NOT NULL DEFAULT ''"),
     ("main_item", "why_asked", "TEXT NOT NULL DEFAULT ''"),

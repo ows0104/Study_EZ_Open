@@ -17,7 +17,7 @@ from sqlalchemy.exc import OperationalError  # noqa: E402
 from app.database import Base, SessionLocal, engine  # noqa: E402
 from app.models import BankFeedback, Lecture, QuizBank, SiteFeedback  # noqa: E402
 from app.storage import ObjectStorage  # noqa: E402
-from runner.feedback import collect  # noqa: E402
+from runner.feedback import collect, reconcile  # noqa: E402
 
 
 def main():
@@ -30,7 +30,11 @@ def main():
                         bank={"questions": [{"question_id": "Q1", "question": "현재 문항"}]}))
         for build_id in ("new", "old"):
             db.add(BankFeedback(user_id="private-user", subject="검증", run_id="261008_01",
-                                build_id=build_id, question_id="Q1", category="wording", comment="제보"))
+                                build_id=build_id, question_id="Q1", category="wording", comment="제보",
+                                highlighted=build_id == "old",
+                                correction={"original": {"question": f"{build_id} 원문", "answer": "원래 정답"},
+                                            "proposed": {"question": "수정 발문", "answer": "수정 정답"},
+                                            "changedFields": ["question", "answer"]}))
         db.add(BankFeedback(user_id="private-user", subject="검증", run_id="261008_01",
                             build_id="new", question_id="Q1", category="good"))
         for i in range(205):
@@ -43,6 +47,12 @@ def main():
     bank = [item for item in items if item["kind"] == "question"]
     assert bank[0]["question"]["question"] == "현재 문항"
     assert bank[1]["stale"] and bank[1]["question"] is None
+    assert not bank[0]["highlighted"] and bank[1]["highlighted"]
+    assert bank[0]["correction"]["proposed"]["answer"] == "수정 정답"
+    assert bank[1]["correction"]["original"]["question"] == "old 원문"
+    ledger = reconcile({}, items)
+    assert all(ledger["items"][item["id"]]["state"] == "pending" for item in bank)
+    assert ledger["items"][bank[0]["id"]]["source"]["correction"] == bank[0]["correction"]
     assert "private@example.com" not in str(items) and "private-user" not in str(items)
     with engine.connect() as connection:
         try:

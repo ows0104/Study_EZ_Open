@@ -55,12 +55,16 @@ with SessionLocal() as db:
     feedback = db.query(BankFeedback).one()
     check("feedback includes proposal and comment", feedback.user_id == "a" and "내 정답" in feedback.comment
           and "문장을 명확히" in feedback.comment)
+    check("feedback preserves original and proposed text for the improvement loop",
+          feedback.correction["original"] == next(q for q in bank["questions"] if q["question_id"] == qid)
+          and feedback.correction["proposed"] == {"question": "내 발문", "answer": "내 정답"}
+          and feedback.correction["changedFields"] == ["question", "answer"])
 user("b")
 check("another user reads the original", client.get(path).json()["draft"] == snapshot["original"])
 check("another user cannot read a private comment", client.get(path).json()["comment"] == "")
 other = client.post(base + "/next").json()
 check("another user's displayed question is unchanged", other["question"]["question"] != "내 발문")
-response = client.put(path, json={**draft, "report": False, "question": "B 발문", "answer": "B 정답"})
+response = client.put(path, json={**draft, "report": False, "comment": "", "question": "B 발문", "answer": "B 정답"})
 check("another user has an independent edit", response.status_code == 200 and client.get(path).json()["draft"]["answer"] == "B 정답")
 user("a")
 revealed = client.post(base + "/reveal", json={"reviewToken": token})
@@ -77,12 +81,15 @@ check("reset restores shared text only for this user", reset.status_code == 200
       and reset.json()["question"]["question"] == snapshot["original"]["question"])
 user("b")
 check("A's reset does not reset B", client.get(path).json()["draft"]["answer"] == "B 정답")
-check("private comment survives reopening", client.get(path).json()["comment"] == draft["comment"])
+check("a correction needs no comment", client.get(path).json()["comment"] == "")
 with SessionLocal() as db:
     reports = db.query(BankFeedback).order_by(BankFeedback.id).all()
     check("unchecked save still reaches the administrator", len(reports) == 2
           and reports[1].user_id == "b" and "B 정답" in reports[1].comment)
     check("explicit report is highlighted; automatic feedback is ordinary", reports[0].highlighted and not reports[1].highlighted)
+    check("unchecked uncommented correction retains both users' distinct proposals",
+          reports[1].correction["proposed"]["answer"] == "B 정답"
+          and reports[0].correction["proposed"]["answer"] == "내 정답")
 other_id = next(q["question_id"] for q in bank["questions"] if q["question_id"] != qid)
 other_path = base + f"/questions/{other_id}/personal"
 other_snapshot = client.get(other_path).json()
@@ -95,6 +102,7 @@ check("administrator receives ordinary feedback metadata", any(not r["highlighte
       for g in board["questions"] for r in g["reports"]))
 user("b")
 with SessionLocal() as db:
+    check("note-only feedback is not a text correction", db.query(BankFeedback).order_by(BankFeedback.id.desc()).first().correction is None)
     row = db.get(QuizBank, ("test", "demo")); updated = copy.deepcopy(row.bank)
     original = next(q for q in updated["questions"] if q["question_id"] == qid)
     original["answer"] = "공용 정답 업데이트"; row.bank = updated; db.commit()

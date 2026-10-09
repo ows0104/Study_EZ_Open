@@ -28,6 +28,9 @@ def now() -> str:
 
 
 def fingerprint(value: dict) -> str:
+    # Priority and an absent correction do not change the evidence under review.
+    value = {key: item for key, item in value.items()
+             if key != "highlighted" and not (key == "correction" and item is None)}
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True,
                                     separators=(",", ":")).encode()).hexdigest()
 
@@ -193,6 +196,7 @@ def collect(home: Path) -> list[dict]:
                               "title": lecture.title if lecture else "", "buildId": row.build_id,
                               "questionId": row.question_id, "category": row.category,
                               "message": row.comment, "createdAt": row.created_at.isoformat(),
+                              "highlighted": row.highlighted, "correction": row.correction,
                               "stale": stale, "bankStatus": bank.status if bank else None,
                               "question": question, "assets": assets[key]})
     if attachments:

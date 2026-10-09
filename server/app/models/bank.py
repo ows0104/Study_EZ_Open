@@ -87,7 +87,7 @@ class BankState(Base):
 
 
 class BankFeedback(Base):
-    """학생이 푸는 중에 누른 「문제 있음」·「좋은 문제」."""
+    """Student reports and personal corrections for administrator review."""
 
     __tablename__ = "bank_feedback"
 
@@ -100,6 +100,7 @@ class BankFeedback(Base):
     category: Mapped[str] = mapped_column(String(16), nullable=False)
     comment: Mapped[str] = mapped_column(Text, nullable=False, default="")
     highlighted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    correction: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 

@@ -80,3 +80,17 @@ def test_duplicate_ids_fail_before_modifying_ledger():
     with pytest.raises(ValueError, match="Duplicate"):
         reconcile(ledger, [item(), item()])
     assert ledger == before
+
+
+def test_priority_metadata_preserves_review_but_changed_correction_requires_review():
+    source = item(kind="question")
+    ledger = reconcile({}, [source])
+    record(ledger, decision(ledger, "deferred"))
+    revision = ledger["items"]["site:1"]["fingerprint"]
+    reconcile(ledger, [{**source, "highlighted": False, "correction": None}])
+    assert ledger["items"]["site:1"]["state"] == "deferred"
+    assert ledger["items"]["site:1"]["fingerprint"] == revision
+    correction = {"original": {"answer": "원문"}, "proposed": {"answer": "수정"}}
+    reconcile(ledger, [{**source, "highlighted": False, "correction": correction}])
+    assert ledger["items"]["site:1"]["state"] == "pending"
+    assert ledger["items"]["site:1"]["history"][-1]["decision"]["state"] == "deferred"
