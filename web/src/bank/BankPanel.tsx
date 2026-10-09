@@ -60,7 +60,7 @@ function StudyCard({ lecture, bank }: { lecture: Pick<LectureRef, "subject" | "r
         hit={
           <Link className="panel-action-hit" to={bankHref(lecture)}>
             <strong>공부하기</strong>
-            <small>{bank.questionCount}문항 · 개념 {bank.conceptCount}개</small>
+            <small>{bank.seenQuestionCount}/{bank.studyQuestionCount}문항 봄 · 개념 {bank.conceptCount}개</small>
           </Link>
         }
       />
@@ -278,7 +278,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
       {bank ? (
         <p className="panel-hint">
           {STATUS_LINE[bank.status]}
-          {bank.usable ? ` · ${bank.questionCount}문항` : ""}
+          {bank.usable ? ` · ${bank.seenQuestionCount}/${bank.studyQuestionCount}문항 봄` : ""}
           {bank.status === "invalid" && bank.errorCount ? ` (${bank.errorCount}건)` : ""}
           {review ? ` · 외부지식 검토 틀림 ${review.wrong} · 의심 ${review.doubt}` : ""}
           {bank.usable ? (bank.open ? " · 학생에게 열림" : " · 아직 관리자만 본다") : ""}

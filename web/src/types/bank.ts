@@ -8,6 +8,9 @@ export type BankSummary = {
   open: boolean;
   buildId: string;
   questionCount: number;
+  /** Optional을 제외한 분모와 현재 은행에서 본 고유 문항 수. */
+  studyQuestionCount: number;
+  seenQuestionCount: number;
   conceptCount: number;
   builtAt: string | null;
   /** 검증을 통과해 공부할 수 있는가. */

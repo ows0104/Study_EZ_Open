@@ -56,6 +56,7 @@ from app.models import (
 )
 from app.routes.common import lecture_or_404, record_grabs, storage_or_503
 from app.study_engine.daily_queue import lecture_goal, select_daily_question
+from app.study_engine.progress import mark_seen, panel_progress
 from app.study_engine.planning import day_start
 from app.study_engine.review_undo import remember_review, undo_review, undo_token
 from app.storage import ObjectStorage, StorageNotConfigured
@@ -120,15 +121,19 @@ def _usable(row: QuizBank) -> dict:
     return row.bank
 
 
-def summary(db: Session, lecture: Lecture, row: QuizBank | None, *, is_admin: bool) -> dict[str, Any] | None:
+def summary(db: Session, lecture: Lecture, row: QuizBank | None, *, is_admin: bool,
+            user_id: str | None = None) -> dict[str, Any] | None:
     """강의 상세에 싣는 요약. 학생에게는 열린 은행만."""
     if row is None or (not is_admin and not row.open_to_students):
         return None
     bank = row.bank or {}
+    state = db.get(BankState, (user_id, row.subject, row.run_id)) if user_id else None
+    current = state.state if state and state.build_id == row.build_id else {}
     out: dict[str, Any] = {
         "status": row.status, "open": row.open_to_students, "buildId": row.build_id,
         "questionCount": len(bank.get("questions", [])), "conceptCount": len(bank.get("concepts", [])),
         "builtAt": _iso(row.built_at), "usable": bool(row.bank and (row.validation or {}).get("pass")),
+        **panel_progress(bank, current),
     }
     if is_admin:
         review = row.review or {}
@@ -293,7 +298,7 @@ def get_bank_admin(subject: str, run_id: str, user: CurrentUser = Depends(requir
     feedback = db.scalars(select(BankFeedback).where(BankFeedback.subject == lecture.subject,
                                                      BankFeedback.run_id == lecture.run_id)
                           .order_by(BankFeedback.created_at.desc())).all()
-    return {"summary": summary(db, lecture, row, is_admin=True), "bank": row.bank, "validation": row.validation,
+    return {"summary": summary(db, lecture, row, is_admin=True, user_id=user.id), "bank": row.bank, "validation": row.validation,
             "review": row.review, "pages": row.pages, "usage": row.usage,
             "feedback": [{"id": f.id, "questionId": f.question_id, "category": f.category, "comment": f.comment,
                           "status": f.status, "buildId": f.build_id, "createdAt": _iso(f.created_at)}
@@ -424,7 +429,7 @@ def edit_bank_card(subject: str, run_id: str, question_id: str, payload: BankCar
                 entry.pop("undo", None)
         state.state = value
     db.commit()
-    return {"summary": summary(db, lecture, row, is_admin=True), "action": payload.action}
+    return {"summary": summary(db, lecture, row, is_admin=True, user_id=user.id), "action": payload.action}
 
 
 @admin_router.get("/bank-feedback")
@@ -570,7 +575,7 @@ def read_bank(subject: str, run_id: str, user: CurrentUser = Depends(require_app
               db: Session = Depends(get_db), target: int = Query(90, ge=50, le=100)) -> dict[str, Any]:
     lecture = lecture_or_404(db, subject, run_id)
     row = _bank_or_404(db, lecture, user)
-    out = {"summary": summary(db, lecture, row, is_admin=user.is_admin), "examDate": exam_date_for(db, lecture),
+    out = {"summary": summary(db, lecture, row, is_admin=user.is_admin, user_id=user.id), "examDate": exam_date_for(db, lecture),
            "sizes": engine.DEFAULT["session"]["sizes"], "defaultSize": engine.DEFAULT["session"]["defaultSize"],
            "session": None, "previousSessions": [], "conceptMap": [], "mastery": None, "undoToken": None}
     if row.bank and (row.validation or {}).get("pass"):
@@ -685,6 +690,7 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
                   "presented_at": now, "policy_version": engine.DEFAULT["version"],
                   "policy_hash": engine.policy_hash(engine.DEFAULT), "score": score}
         state["served"] = served
+    mark_seen(state, question["question_id"])
     _save(state_row, state)
     db.commit()
     return {"question": _public(question), "reviewToken": served["token"], "days": days, "examDate": exam,

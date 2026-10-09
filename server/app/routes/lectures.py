@@ -200,7 +200,7 @@ def read_lecture(
         "mastery": lecture_masteries(db, user.id, [(subject, run_id)], is_admin=user.is_admin).get((subject, run_id)),
         # Quiz Bank 요약(2026-10-04). 학생에게는 관리자가 연 은행만 나간다.
         "bank": quiz_bank.summary(db, lecture, db.get(QuizBank, (lecture.subject, lecture.run_id)),
-                                  is_admin=user.is_admin),
+                                  is_admin=user.is_admin, user_id=user.id),
     }
 
     if user.is_admin:

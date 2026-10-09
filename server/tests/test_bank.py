@@ -163,6 +163,8 @@ def main() -> None:
     check("학생 요약", summary["summary"]["questionCount"] == 3 and "reviewCounts" not in summary["summary"]
           and "dropped" not in summary["summary"],
           summary["summary"])
+    check("보기 전 패널 진행 0/3", summary["summary"]["studyQuestionCount"] == 3
+          and summary["summary"]["seenQuestionCount"] == 0)
     check("시험일은 같은 과목의 시험", summary["examDate"] == "2026-10-20", summary["examDate"])
 
     print("④ 풀기")
@@ -180,6 +182,9 @@ def main() -> None:
                                                          "answer_pairs", "correct_order")), q)
     again = client.post(f"{BASE}/bank/next").json()
     check("새로고침해도 같은 문항", again["reviewToken"] == first["reviewToken"])
+    progress = client.get(BASE).json()["bank"]
+    check("강의 패널은 고유 문항 열람 1/3", progress["studyQuestionCount"] == 3
+          and progress["seenQuestionCount"] == 1, progress)
     early = client.post(f"{BASE}/bank/rate", json={"reviewToken": first["reviewToken"], "rating": "Good"})
     check("답을 보기 전 평가는 409", early.status_code == 409)
     shown = client.post(f"{BASE}/bank/reveal", json={"reviewToken": first["reviewToken"]}).json()
@@ -216,6 +221,7 @@ def main() -> None:
     check("중복 되돌리기 거절", client.post(f"{BASE}/bank/undo", json={"reviewToken": first["reviewToken"]}).status_code == 409)
     check("예전 문항 토큰 무효", client.post(f"{BASE}/bank/rate", json={"reviewToken": first["reviewToken"], "rating": "Easy"}).status_code == 409)
     check("새로고침 시 복원한 문항 유지", client.post(f"{BASE}/bank/next").json()["reviewToken"] == restored["reviewToken"])
+    check("평가 되돌리기도 본 문항 수는 유지", client.get(BASE).json()["bank"]["seenQuestionCount"] == 1)
     client.post(f"{BASE}/bank/rate", json={"reviewToken": restored["reviewToken"], "rating": "Good"})
     fb = client.post(f"{BASE}/bank/feedback", json={"questionId": q["question_id"], "category": "content",
                                                      "comment": "답이 이상하다"})
