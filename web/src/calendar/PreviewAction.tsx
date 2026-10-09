@@ -3,12 +3,13 @@ import { api } from "../api";
 import {
   absoluteUrl,
   bumpPreviewVersion,
+  extensionCompatible,
   extensionInstalled,
   extensionPossible,
   requestPreview,
   watchSharedLink,
 } from "../bridge/previewBridge";
-import { EXTENSION_DOWNLOAD_URL, EXTENSION_STORE_URL } from "../bridge/protocol";
+import { ExtensionSetup } from "../bridge/ExtensionSetup";
 import {
   PROMPT_TOKENS,
   SHARED_PREVIEW_PROMPT,
@@ -156,7 +157,6 @@ export function PreviewAction({
      서느냐뿐이다 — 설치 안내이거나, 설치조차 못 하는 기기면 한 줄짜리 설명이다. */
   if (!extensionInstalled()) {
     const canInstall = extensionPossible();
-    const storeReady = Boolean(EXTENSION_STORE_URL);
     return (
       <PanelGroup tone="preview" title="예습" note="강의 전에 읽는 대화">
         <div className="panel-pair">
@@ -180,39 +180,7 @@ export function PreviewAction({
         {linkEditor}
         {savedNote}
         {canInstall ? (
-          <>
-            <ActionCard
-              shape="is-key is-download"
-              hit={
-                <a
-                  className="panel-action-hit"
-                  href={storeReady ? EXTENSION_STORE_URL : EXTENSION_DOWNLOAD_URL}
-                  download={storeReady ? undefined : true}
-                  target={storeReady ? "_blank" : undefined}
-                  rel={storeReady ? "noreferrer" : undefined}
-                >
-                  <Body
-                    name={storeReady ? "Chrome 웹스토어에서 설치" : "예습 브리지 내려받기"}
-                    note="설치하면 필기와 프롬프트가 자동으로 들어갑니다"
-                  />
-                </a>
-              }
-            />
-            {storeReady ? (
-              <p className="panel-steps">설치한 뒤 이 탭을 새로고침해 주세요.</p>
-            ) : (
-              <ol className="panel-steps">
-                <li>받은 zip을 압축 해제합니다.</li>
-                <li>
-                  <code>chrome://extensions</code> → 오른쪽 위 <b>개발자 모드</b>
-                </li>
-                <li>
-                  <b>압축해제된 확장 프로그램을 로드</b> → 압축 푼 폴더
-                </li>
-                <li>이 탭을 새로고침합니다.</li>
-              </ol>
-            )}
-          </>
+          <ExtensionSetup />
         ) : (
           /* 설치 단추를 못 누르는 기기에 설치 카드를 세우지 않는다. 대신 왜 만들기가
              여기 없는지를 한 줄로 적는다 — 없는 이유를 안 적으면 「고장」으로 읽힌다. */
@@ -228,9 +196,10 @@ export function PreviewAction({
   // 작년 필기가 없으면 새로 만들 수는 없다. 다만 이미 만들어진 링크는 그대로
   // 열려야 하므로 여기서 통째로 돌려보내지 않는다.
   const canMake = Boolean(notesPrev);
+  const compatible = extensionCompatible();
   const sharedTools = canMake && isAdmin ? (
     <PanelTool icon="↗" label="자동전송" hint="기본 링크 생성 · 첨부 후 자동 전송 (관리자)"
-      disabled={Boolean(busy)}
+      disabled={Boolean(busy) || !compatible}
       onClick={() => {
         if (detail.preview?.shareUrl) setAskingRemake(true);
         else void start("shared", true);
@@ -289,7 +258,7 @@ export function PreviewAction({
     <ActionCard
       shape="is-key is-faint"
       hit={
-        <button className="panel-action-hit" disabled={Boolean(busy)} onClick={() => void start("personal", false)}>
+        <button className="panel-action-hit" disabled={Boolean(busy) || !compatible} onClick={() => void start("personal", false)}>
           <Body name="개인 링크" note={busy === "personal" ? "여는 중…" : "만들기"} />
         </button>
       }
@@ -310,6 +279,8 @@ export function PreviewAction({
       </div>
       {linkEditor}
       {savedNote}
+
+      {canMake ? <ExtensionSetup /> : null}
 
       {askingRemake !== null ? (
         <RemakeConfirm

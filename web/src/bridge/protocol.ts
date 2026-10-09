@@ -62,3 +62,7 @@ const DEFAULT_EXTENSION_STORE_URL =
   "https://chromewebstore.google.com/detail/elblkdejfejkopjlcfpmmmimpjnhkebd";
 export const EXTENSION_STORE_URL =
   (import.meta.env.VITE_EXTENSION_STORE_URL as string | undefined)?.trim() || DEFAULT_EXTENSION_STORE_URL;
+
+/** 스토어에서 공개된 버전. 심사 완료와 실제 공개를 확인한 뒤 빌드 변수를 갱신한다. */
+export const EXTENSION_STORE_VERSION =
+  (import.meta.env.VITE_EXTENSION_STORE_VERSION as string | undefined)?.trim() || "1.2.0";

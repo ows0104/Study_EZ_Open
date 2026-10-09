@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { PreviewProvider } from "../types/lectures";
+import { PREVIEW_MIN_VERSION, REVIEW_MIN_VERSION, versionAtLeast } from "./version";
 import {
   EXTENSION_SOURCE,
   LINK_KINDS,
@@ -16,6 +17,14 @@ export type PreviewFile = { id: string; filename: string; downloadUrl: string; c
 /** 확장이 설치돼 있는가. 없으면 안내를 띄우고 자동 열기를 하지 않는다. */
 export function extensionInstalled() {
   return Boolean(document.documentElement.getAttribute(READY_ATTRIBUTE));
+}
+
+export function extensionVersion() {
+  return document.documentElement.getAttribute(READY_ATTRIBUTE) || "";
+}
+
+export function extensionCompatible(minimum = PREVIEW_MIN_VERSION) {
+  return versionAtLeast(extensionVersion(), minimum);
 }
 
 function sameWindow(event: MessageEvent) {
@@ -55,13 +64,9 @@ export function requestPreview(input: {
   /** 기본 링크의 자동전송만 true. 개인 링크와 문제 생성은 확인 후 직접 전송한다. */
   autoSend: boolean;
 }) {
-  const version = document.documentElement.getAttribute(READY_ATTRIBUTE) || "";
-  const parts = version.split(".").map(Number);
-  if (input.mode === "review" && !(parts[0] > 1 || (parts[0] === 1 && (parts[1] > 3 || (parts[1] === 3 && parts[2] >= 5))))) {
-    return Promise.reject(new Error("복습 개인 링크를 만들려면 브리지 1.3.5 이상으로 업데이트하고 확장과 이 페이지를 새로고침해 주세요."));
-  }
-  if (!(parts[0] > 1 || (parts[0] === 1 && (parts[1] > 3 || (parts[1] === 3 && parts[2] >= 3))))) {
-    return Promise.reject(new Error("자료를 넣으려면 예습 브리지 1.3.3 이상으로 업데이트하고 확장과 이 페이지를 새로고침해 주세요."));
+  const minimum = input.mode === "review" ? REVIEW_MIN_VERSION : PREVIEW_MIN_VERSION;
+  if (!extensionCompatible(minimum)) {
+    return Promise.reject(new Error(`이 기능에는 브리지 ${minimum} 이상이 필요합니다. 아래 브리지 설치·업데이트 안내에서 최신 버전을 설치한 뒤 Study EZ와 AI 대화 탭을 새로고침해 주세요.`));
   }
   return new Promise<void>((resolve, reject) => {
     const timeout = window.setTimeout(() => {

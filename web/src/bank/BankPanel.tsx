@@ -3,9 +3,10 @@ import { api } from "../api";
 import {
   absoluteUrl,
   bumpPreviewVersion,
-  extensionInstalled,
+  extensionCompatible,
   requestPreview,
 } from "../bridge/previewBridge";
+import { ExtensionSetup } from "../bridge/ExtensionSetup";
 import { ActionCard, PanelGroup, PanelTool } from "../calendar/panelShared";
 import { jobMoving, progressLine, runnerAlive } from "../jobProgress";
 import { Link } from "react-router-dom";
@@ -116,8 +117,8 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
   /** 확장이 필기·족보와 프롬프트를 채우면 관리자가 확인하고 전송한다. */
   async function make() {
     if (!notes) return;
-    if (!extensionInstalled()) {
-      setError("확장 프로그램이 없습니다. 크롬 확장(1.3.3 이상)을 설치하고 이 페이지를 새로고침하세요.");
+    if (!extensionCompatible()) {
+      setError("아래 브리지 설치·업데이트 안내에서 최신 버전을 설치하고 이 페이지를 새로고침하세요.");
       return;
     }
     setBusy("make");
@@ -224,7 +225,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
       <ActionCard
         shape="is-key"
         hit={
-          <button className="panel-action-hit" disabled={Boolean(busy) || moving} onClick={() => void make()}>
+          <button className="panel-action-hit" disabled={Boolean(busy) || moving || !extensionCompatible()} onClick={() => void make()}>
             <strong>{bank ? "ChatGPT로 다시 만들기" : "ChatGPT로 만들기"}</strong>
             <small>
               {sources.some((s) => s.kind === "jokbo") ? "필기 + 족보 조각" : "필기만 — 족보 조각이 아직 없다"}
@@ -247,6 +248,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
           </>
         }
       />
+      <ExtensionSetup />
       {pasting ? (
         <div className="bank-paste">
           <textarea

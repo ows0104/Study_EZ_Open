@@ -1,7 +1,13 @@
 # Study EZ 예습 브리지 — Chrome Web Store 등록표
 
-기준 버전: 1.3.2
-작성일: 2026-08-25 · 1.3.0 개정 2026-10-06 (동의 후 자동 첨부·전송)
+기준 버전: 1.3.5
+작성일: 2026-08-25 · 개정 2026-10-09 (예습 수동·자동 입력, 개인 복습, 링크 복구)
+
+웹스토어 공개판은 1.2.0으로 관리한다. 1.3.5 제출·심사만으로 공개판이 갱신된 것으로
+취급하지 않는다. 스토어에 새 버전이 실제 공개된 것을 확인한 뒤 Pages 빌드 변수
+`VITE_EXTENSION_STORE_VERSION`을 해당 버전으로 변경하고 웹을 다시 빌드한다.
+웹은 필요한 버전(예습·문제은행 1.3.3, 복습 1.3.5)을 스토어 공개판이 제공하지
+못하면 빌드에 포함된 최신 ZIP과 설치·업데이트 방법을 안내한다.
 
 ## 새 항목
 
@@ -112,8 +118,12 @@ PowerShell에서:
 .\bridge\build-store-package.ps1
 ```
 
-결과: `bridge/release/studyez-preview-bridge-<manifest version>-web-store.zip` (지금은 1.3.2)
+결과: `bridge/release/studyez-preview-bridge-<manifest version>-web-store.zip` (지금은 1.3.5)
 
-스토어 항목이 게시된 뒤 Cloudflare Pages 빌드 변수
-`VITE_EXTENSION_STORE_URL`에 실제 스토어 URL을 넣으면 웹앱의 개발자 모드 설치
-안내가 웹스토어 설치 버튼으로 바뀝니다.
+```powershell
+.\server\.venv\Scripts\python.exe .\bridge\audit-store-package.py
+```
+
+스토어 항목의 실제 공개 버전을 확인한 뒤 Cloudflare Pages 빌드 변수
+`VITE_EXTENSION_STORE_URL`에 실제 스토어 URL을, `VITE_EXTENSION_STORE_VERSION`에
+공개된 버전을 넣습니다. 해당 기능에 필요한 버전 이상일 때 웹스토어 설치 버튼을 표시합니다.
