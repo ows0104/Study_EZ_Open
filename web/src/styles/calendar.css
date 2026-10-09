@@ -978,7 +978,7 @@
 }
 
 .panel-group.is-review {
-  --fam: var(--fam-review);
+  --fam: var(--fam-preview);
 }
 
 .panel-group.is-pre {
