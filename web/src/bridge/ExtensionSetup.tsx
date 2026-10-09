@@ -1,10 +1,10 @@
 import manifest from "../../../bridge/manifest.json";
 import { EXTENSION_DOWNLOAD_URL, EXTENSION_STORE_URL, EXTENSION_STORE_VERSION } from "./protocol";
-import { extensionCompatible, extensionPossible, extensionVersion } from "./previewBridge";
-import { PREVIEW_MIN_VERSION, versionAtLeast } from "./version";
+import { extensionCompatible, extensionInputMinimum, extensionPossible, extensionVersion } from "./previewBridge";
+import { versionAtLeast } from "./version";
 
 /** 스토어 공개판이 필요한 버전에 못 미치면 빌드에 포함된 최신판을 안내한다. */
-export function ExtensionSetup({ minimum = PREVIEW_MIN_VERSION }: { minimum?: string }) {
+export function ExtensionSetup({ minimum = extensionInputMinimum() }: { minimum?: string }) {
   if (!extensionPossible() || extensionCompatible(minimum)) return null;
   const installed = extensionVersion();
   const storeReady = Boolean(EXTENSION_STORE_URL) && versionAtLeast(EXTENSION_STORE_VERSION, minimum);

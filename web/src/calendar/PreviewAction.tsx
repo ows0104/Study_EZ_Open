@@ -10,6 +10,7 @@ import {
   watchSharedLink,
 } from "../bridge/previewBridge";
 import { ExtensionSetup } from "../bridge/ExtensionSetup";
+import { AUTO_SEND_MIN_VERSION } from "../bridge/version";
 import {
   PROMPT_TOKENS,
   SHARED_PREVIEW_PROMPT,
@@ -197,12 +198,14 @@ export function PreviewAction({
   // 열려야 하므로 여기서 통째로 돌려보내지 않는다.
   const canMake = Boolean(notesPrev);
   const compatible = extensionCompatible();
+  const automatic = extensionCompatible(AUTO_SEND_MIN_VERSION);
   const sharedTools = canMake && isAdmin ? (
-    <PanelTool icon="↗" label="자동전송" hint="기본 링크 생성 · 첨부 후 자동 전송 (관리자)"
+    <PanelTool icon="↗" label={automatic ? "자동전송" : "직접전송"}
+      hint={automatic ? "기본 링크 생성 · 첨부 후 자동 전송 (관리자)" : "기본 링크 생성 · 첨부 후 직접 전송 (관리자)"}
       disabled={Boolean(busy) || !compatible}
       onClick={() => {
-        if (detail.preview?.shareUrl) setAskingRemake(true);
-        else void start("shared", true);
+        if (detail.preview?.shareUrl) setAskingRemake(automatic);
+        else void start("shared", automatic);
       }} />
   ) : null;
 
@@ -281,6 +284,9 @@ export function PreviewAction({
       {savedNote}
 
       {canMake ? <ExtensionSetup /> : null}
+      {canMake && compatible && !automatic ? (
+        <p className="panel-hint">자료와 프롬프트를 넣은 뒤 AI 화면에서 직접 전송해 주세요.</p>
+      ) : null}
 
       {askingRemake !== null ? (
         <RemakeConfirm

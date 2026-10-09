@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { PreviewProvider } from "../types/lectures";
-import { PREVIEW_MIN_VERSION, REVIEW_MIN_VERSION, versionAtLeast } from "./version";
+import { minimumVersionForInput, versionAtLeast, type BridgeMode } from "./version";
 import {
   EXTENSION_SOURCE,
   LINK_KINDS,
@@ -23,7 +23,11 @@ export function extensionVersion() {
   return document.documentElement.getAttribute(READY_ATTRIBUTE) || "";
 }
 
-export function extensionCompatible(minimum = PREVIEW_MIN_VERSION) {
+export function extensionInputMinimum(mode: BridgeMode = "personal", autoSend = false) {
+  return minimumVersionForInput(extensionVersion(), mode, autoSend);
+}
+
+export function extensionCompatible(minimum = extensionInputMinimum()) {
   return versionAtLeast(extensionVersion(), minimum);
 }
 
@@ -58,13 +62,13 @@ export function requestPreview(input: {
    *
    * `bank` 는 Quiz Bank(관리자)다. 링크 대신 끝난 답의 본문이 돌아온다(`bank/bankBridge.ts`).
    */
-  mode: "shared" | "personal" | "review" | "bank";
+  mode: BridgeMode;
   prompt: string;
   files: PreviewFile[];
   /** 기본 링크의 자동전송만 true. 개인 링크와 문제 생성은 확인 후 직접 전송한다. */
   autoSend: boolean;
 }) {
-  const minimum = input.mode === "review" ? REVIEW_MIN_VERSION : PREVIEW_MIN_VERSION;
+  const minimum = extensionInputMinimum(input.mode, input.autoSend);
   if (!extensionCompatible(minimum)) {
     return Promise.reject(new Error(`이 기능에는 브리지 ${minimum} 이상이 필요합니다. 아래 브리지 설치·업데이트 안내에서 최신 버전을 설치한 뒤 Study EZ와 AI 대화 탭을 새로고침해 주세요.`));
   }
