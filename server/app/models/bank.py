@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import (
+    DDL,
     JSON,
     Boolean,
     DateTime,
@@ -13,6 +14,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    event,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -106,3 +108,26 @@ class BankFeedback(Base):
         ),
         Index("ix_bank_feedback_lecture", "subject", "run_id"),
     )
+
+
+class BankPersonalEdit(Base):
+    """A user's wording and answer, applied only while the shared source is unchanged."""
+
+    __tablename__ = "bank_personal_edit"
+    user_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    subject: Mapped[str] = mapped_column(Text, primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    question_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    original: Mapped[dict] = mapped_column(JSON, nullable=False)
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    answer: Mapped[str] = mapped_column(Text, nullable=False)
+    comment: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    __table_args__ = (
+        ForeignKeyConstraint(["subject", "run_id"], ["lecture.subject", "lecture.run_id"], ondelete="CASCADE"),
+    )
+
+
+event.listen(BankPersonalEdit.__table__, "after_create",
+             DDL("ALTER TABLE bank_personal_edit ENABLE ROW LEVEL SECURITY").execute_if(dialect="postgresql"))

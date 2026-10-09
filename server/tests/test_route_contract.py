@@ -117,6 +117,8 @@ POST /api/admin/prequiz-jobs/{job_id}/choose
 POST /api/admin/prequiz-jobs/{job_id}/move
 POST /api/bundles/grabs
 POST /api/lectures/{subject}/{run_id}/bank/feedback
+GET /api/lectures/{subject}/{run_id}/bank/questions/{question_id}/personal
+PUT /api/lectures/{subject}/{run_id}/bank/questions/{question_id}/personal
 POST /api/lectures/{subject}/{run_id}/bank/next
 POST /api/lectures/{subject}/{run_id}/bank/rate
 POST /api/lectures/{subject}/{run_id}/bank/undo

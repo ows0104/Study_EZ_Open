@@ -117,13 +117,13 @@ export function AnswerBody({ question: q, answer, preload }: {
         </>
       ) : null}
       {/* Cloze는 위 발문에 정답을 채워 보여 준다. 짝짓기는 아래 짝이 곧 답이다. */}
-      {conciseAnswer || q.format === "cloze" || (q.format === "matching" && answer.answerPairs.length) ? null : (
+      {conciseAnswer || (q.format === "cloze" && !answer.personalAnswer) || (q.format === "matching" && answer.answerPairs.length) ? null : (
         <p className="quiz-answer">
           <AnswerPoints text={answer.answer} units={answer.answerUnits} />
         </p>
       )}
       {/* O/X의 채점 단위는 판단의 이유다. 한 항목이어도 해설 전체를 보여 준다. */}
-      {q.format === "ox" ? (
+      {q.format === "ox" && !answer.personalAnswer ? (
         <section className="quiz-explanation bank-ox-explanation" aria-label="해설">
           <h2>해설</h2>
           {answer.answerUnits.some((unit) => unit.trim()) ? (

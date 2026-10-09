@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import { useMe } from "../useMe";
 import type { BankAnswer, BankNext, BankRating, BankRead, BankSession } from "../types/bank";
 import { ConceptMap } from "./ConceptMap";
-import { FEEDBACK } from "./feedback";
+import { PersonalQuestionDialog } from "./PersonalQuestionDialog";
 import { daysLabel, DIRECTION_LABEL } from "./labels";
 import { QuestionBody, AnswerBody } from "./BankQuestion";
 import { SlidePreloader } from "../slidePreload";
@@ -33,6 +32,7 @@ export function BankSolve({ base, lecture, onFinished }: {
   const isAdmin = Boolean(useMe()?.isAdmin);
   const [current, setCurrent] = useState<BankNext | null>(null);
   const [answer, setAnswer] = useState<BankAnswer | null>(null);
+  const [answerRevision, setAnswerRevision] = useState(0);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [matches, setMatches] = useState<MatchingPicks>({});
   const [activeMatch, setActiveMatch] = useState(0);
@@ -40,18 +40,18 @@ export function BankSolve({ base, lecture, onFinished }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [reporting, setReporting] = useState(false);
-  const [reported, setReported] = useState(false);
+  const [actionMessage, setActionMessage] = useState("");
   // 회차를 끝내지 않고 지도와 진행도를 본다. 열 때마다 새로 읽는다 — 방금 매긴 평가가 숙련도에 들어가 있다.
   const [peek, setPeek] = useState<BankRead | null>(null);
   const restore = useCallback((got: BankNext) => {
-    setCurrent(got); setAnswer(got.answer ?? null); setPicked(new Set()); setReporting(false); setReported(false);
+    setCurrent(got); setAnswer(got.answer ?? null); setPicked(new Set()); setReporting(false); setActionMessage("");
     setMatches({}); setActiveMatch(0);
     setOrder([]);
     window.scrollTo(0, 0);
   }, []);
   const { undo, undoBusy, pending } = useBankUndo(base, current?.undoToken, restore, setError, busy || Boolean(peek));
   const slides = useMemo(() => new SlidePreloader(), [base]);
-  const prepared = usePreparedBankAnswer(base, current?.reviewToken, slides);
+  const prepared = usePreparedBankAnswer(base, current?.reviewToken, slides, answerRevision);
   useEffect(() => { slides.warm(current?.preloadSlides?.map((slide) => slide.url) ?? []); }, [current, slides]);
 
   const next = useCallback(async () => {
@@ -71,7 +71,7 @@ export function BankSolve({ base, lecture, onFinished }: {
       setMatches({}); setActiveMatch(0);
       setOrder([]);
       setReporting(false);
-      setReported(false);
+      setActionMessage("");
       window.scrollTo(0, 0);
     } catch (cause) {
       setError((cause as Error).message);
@@ -261,14 +261,22 @@ export function BankSolve({ base, lecture, onFinished }: {
         }} />
 
         <div className="bank-question-actions">
-          {reported ? <span role="status">제보를 보냈습니다.</span> : null}
+          {q.personalEdited ? <span className="tag">내 수정본</span> : null}
+          {actionMessage ? <span role="status">{actionMessage}</span> : null}
           {isAdmin ? <a className="quiz-fix"
             href={`/admin/bank-cards/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}?question=${encodeURIComponent(q.question_id)}`}
-            target="_blank" rel="noreferrer">이 문제 수정</a> : null}
-          <button className="is-quiet" onClick={() => setReporting(true)}>⚑ 문제 있음</button>
+            target="_blank" rel="noreferrer">공용 문제 수정</a> : null}
+          <button className="is-quiet" onClick={() => setReporting(true)}>⚑ 수정·제보</button>
         </div>
-        {reporting ? <FeedbackForm base={base} questionId={q.question_id}
-          onClose={() => setReporting(false)} onSent={() => { setReporting(false); setReported(true); }} /> : null}
+        {reporting ? <PersonalQuestionDialog base={base} questionId={q.question_id} answerVisible={Boolean(answer)}
+          onClose={() => setReporting(false)} onSaved={(result, reset) => {
+            setCurrent(old => old ? { ...old, question: result.question } : old);
+            setAnswerRevision(value => value + 1);
+            if (answer) setAnswer(result.answer);
+            setReporting(false);
+            setActionMessage(reset ? "원본으로 되돌렸습니다." : result.reported
+              ? "제보를 보냈습니다." + (result.question.personalEdited ? " 내 수정본을 저장했습니다." : "") : "내 수정본을 저장했습니다.");
+          }} /> : null}
 
         {answer ? (
           <>
@@ -302,50 +310,5 @@ export function BankSolve({ base, lecture, onFinished }: {
         )}
       </div>
     </>
-  );
-}
-
-function FeedbackForm({ base, questionId, onClose, onSent }: {
-  base: string; questionId: string; onClose: () => void; onSent: () => void;
-}) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const [category, setCategory] = useState<string>("content");
-  const [comment, setComment] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  useEffect(() => {
-    dialog.current?.showModal();
-    dialog.current?.querySelector("textarea")?.focus();
-  }, []);
-  async function send() {
-    if (busy) return;
-    setBusy(true);
-    setError("");
-    try {
-      await api(`${base}/feedback`, { method: "POST", body: JSON.stringify({ questionId, category, comment }) });
-      onSent();
-    } catch (cause) {
-      setError((cause as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  return createPortal(
-    <dialog ref={dialog} className="bank-feedback-dialog" aria-labelledby="bank-feedback-title"
-      onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}>
-      <form onSubmit={event => { event.preventDefault(); void send(); }}>
-      <header><h2 id="bank-feedback-title">문제 제보</h2>
-        <button type="button" className="is-quiet" aria-label="제보창 닫기" disabled={busy} onClick={onClose}>×</button></header>
-      <p className="bank-feedback-id">문항 {questionId}</p>
-      <label>제보 유형<select disabled={busy} value={category} onChange={(event) => setCategory(event.target.value)}>
-        {FEEDBACK.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-      </select></label>
-      <label>제보 내용 (선택)<textarea autoFocus disabled={busy} rows={6} value={comment} maxLength={2000}
-        placeholder="어떤 부분에 문제가 있는지 적어 주세요." onChange={(e) => setComment(e.target.value)} /></label>
-      {error ? <p className="notice is-error" role="alert">{error}</p> : null}
-      <footer><button type="button" className="is-quiet" disabled={busy} onClick={onClose}>취소</button>
-        <button type="submit" disabled={busy}>{busy ? "보내는 중…" : "제보 보내기"}</button></footer>
-      </form>
-    </dialog>, document.body,
   );
 }

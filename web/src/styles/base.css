@@ -2872,6 +2872,12 @@ button.notice-title:hover:not(:disabled) {
 }
 .bank-feedback-dialog textarea { min-height: 150px; resize: vertical; line-height: 1.6; }
 .bank-feedback-dialog footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.bank-personal-hint { font-size: 14px; color: var(--ink-2); }
+.bank-personal-answer, .bank-personal-original { margin-top: 16px; }
+.bank-personal-original p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
+.bank-feedback-dialog small { display: block; margin-top: 6px; color: var(--ink-3); }
+.bank-feedback-dialog .bank-personal-report { display: flex; gap: 8px; align-items: center; }
+.bank-feedback-dialog footer { flex-wrap: wrap; }
 .bank-feedback-dialog button[type="submit"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 @media (max-width: 600px) { .bank-feedback-dialog { padding: 18px; } }
 

@@ -19,6 +19,7 @@ from app.models.accounts import (
     Profile,
 )
 from app.models.bank import (
+    BankPersonalEdit,
     BANK_BUILDING,
     BANK_FAILED,
     BANK_INVALID,
@@ -101,6 +102,7 @@ from app.models.spotter import (
 )
 
 __all__ = [
+    "BankPersonalEdit",
     "SiteFeedback",
     "Base", "APP_POLICY", "APP_SPOTTER", "APP_STUDYEZ", "POLICY_AUTO", "POLICY_MANUAL",
     "ROLE_ADMIN", "ROLE_MEMBER", "AppGrant", "Notice", "Profile", "BANK_BUILDING",

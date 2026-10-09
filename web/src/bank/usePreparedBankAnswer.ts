@@ -4,8 +4,8 @@ import type { BankAnswer } from "../types/bank";
 import type { SlidePreloader } from "../slidePreload";
 
 /** Preparation never records a reveal. Each served token owns its own cache. */
-export function usePreparedBankAnswer(base: string, token: string | undefined, slides: SlidePreloader) {
-  const prepared = useMemo<{ answer: BankAnswer | null }>(() => ({ answer: null }), [base, token]);
+export function usePreparedBankAnswer(base: string, token: string | undefined, slides: SlidePreloader, revision = 0) {
+  const prepared = useMemo<{ answer: BankAnswer | null }>(() => ({ answer: null }), [base, token, revision]);
   useEffect(() => {
     if (!token) return;
     const controller = new AbortController();

@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 
 from app import study_engine as engine
 from app import bank_edits
+from app import bank_personal
 from app.bank_validation.pages import cited_pages
 from app.bank_validation.schema import QUESTION, schema_errors, without_retired
 from app.auth import CurrentUser, require_admin, require_approved_user, require_runner
@@ -48,6 +49,7 @@ from app.models import (
     Asset,
     BankFeedback,
     BankState,
+    BankPersonalEdit,
     Lecture,
     PrequizJob,
     Profile,
@@ -559,11 +561,14 @@ def _slides(db: Session, row: QuizBank, question_id: str) -> list[dict[str, Any]
 def _answer(db: Session, row: QuizBank, q: dict) -> dict[str, Any]:
     review = next((r for r in bank_edits.current_review(row.review, row.validation)["reviews"]
                    if r["question_id"] == q["question_id"]), None)
+    if q.get("personalAnswer"):
+        review = None
     # 프롬프트 v1.2(2026-10-05): 충돌은 한 문항으로 합치고 외부 의학지식으로 답을 정한다. 학생은 답을 본 뒤
     # 각 출처가 무엇이라고 하는지와 고른 근거(충돌 기록의 설명)를 읽는다. 자료 밖 내용은 출처 `EXT` 로 표시된다.
     conflict = next((c for c in (row.bank or {}).get("source_conflicts", [])
                      if q["conflict_id"] and c["conflict_id"] == q["conflict_id"]), None)
     return {"answer": q["answer"], "answerUnits": q["answer_units"], "correctOptionIds": q["correct_option_ids"],
+            "personalEdited": q.get("personalEdited", False), "personalAnswer": q.get("personalAnswer", False),
             "answerPairs": q["answer_pairs"], "correctOrder": q["correct_order"],
             "slides": _slides(db, row, q["question_id"]), "medicalReview": review,
             "conflict": conflict["description"] if conflict else "",
@@ -693,6 +698,7 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
     mark_seen(state, question["question_id"])
     _save(state_row, state)
     db.commit()
+    question = bank_personal.apply(db, row, user.id, question)
     return {"question": _public(question), "reviewToken": served["token"], "days": days, "examDate": exam,
             "lectureGoal": goal, "undoToken": undo_token(state),
             "preloadSlides": _slides(db, row, question["question_id"]),
@@ -720,7 +726,7 @@ def prepare_bank_answer(subject: str, run_id: str, payload: TokenIn,
     if served.get("token") != payload.review_token:
         raise HTTPException(409, "현재 학습 문항이 아닙니다.")
     question = next(q for q in bank["questions"] if q["question_id"] == served["question_id"])
-    return _answer(db, row, question)
+    return _answer(db, row, bank_personal.apply(db, row, user.id, question))
 
 
 @router.post("/lectures/{subject}/{run_id}/bank/reveal")
@@ -740,7 +746,7 @@ def reveal_bank_answer(subject: str, run_id: str, payload: TokenIn,
     _save(state_row, state)
     db.commit()
     question = next(q for q in bank["questions"] if q["question_id"] == served["question_id"])
-    return _answer(db, row, question)
+    return _answer(db, row, bank_personal.apply(db, row, user.id, question))
 
 
 class RateIn(BaseModel):
@@ -797,6 +803,7 @@ def undo_bank_answer(subject: str, run_id: str, payload: TokenIn,
     _save(state_row, state)
     db.commit()
     exam = exam_date_for(db, lecture)
+    question = bank_personal.apply(db, row, user.id, question)
     return {"question": _public(question), "reviewToken": served["token"], "undoToken": undo_token(state),
             "days": engine.days_until(exam, now), "examDate": exam,
             "lectureGoal": lecture_goal(bank, state, lecture.title, now),
@@ -810,6 +817,69 @@ class FeedbackIn(BaseModel):
     comment: str = Field(default="", max_length=2000)
 
     model_config = {"populate_by_name": True}
+
+
+def _personal_source(db: Session, subject: str, run_id: str, question_id: str, user: CurrentUser):
+    row = _bank_or_404(db, lecture_or_404(db, subject, run_id), user)
+    bank = _usable(row)
+    question = next((q for q in bank["questions"] if q["question_id"] == question_id), None)
+    if question is None:
+        raise HTTPException(404, "문항을 찾을 수 없습니다.")
+    return row, question
+
+
+@router.get("/lectures/{subject}/{run_id}/bank/questions/{question_id}/personal")
+def read_personal_question(subject: str, run_id: str, question_id: str,
+                          user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)) -> dict:
+    row, original = _personal_source(db, subject, run_id, question_id, user)
+    current = bank_personal.apply(db, row, user.id, original)
+    edit = db.get(BankPersonalEdit, (user.id, subject, run_id, question_id))
+    valid = edit is not None and edit.original == original
+    return {"original": {"question": original["question"], "answer": original["answer"]},
+            "draft": {"question": current["question"], "answer": current["answer"]},
+            "edited": valid, "comment": edit.comment if valid else "", "revision": bank_personal.revision(original)}
+
+
+class PersonalEditIn(BaseModel):
+    action: Literal["save", "reset"] = "save"
+    revision: str = Field(min_length=64, max_length=64)
+    question: str = Field(min_length=1, max_length=12000)
+    answer: str = Field(min_length=1, max_length=12000)
+    report: bool = False
+    category: Literal[FEEDBACK_CATEGORIES] = "content"  # type: ignore[valid-type]
+    comment: str = Field(default="", max_length=2000)
+
+
+@router.put("/lectures/{subject}/{run_id}/bank/questions/{question_id}/personal")
+def save_personal_question(subject: str, run_id: str, question_id: str, payload: PersonalEditIn,
+                          user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)) -> dict:
+    row, original = _personal_source(db, subject, run_id, question_id, user)
+    if payload.revision != bank_personal.revision(original):
+        raise HTTPException(409, "공용 문항이 바뀌었습니다. 수정창을 다시 열어 주세요.")
+    question, answer = payload.question.strip(), payload.answer.strip()
+    if not question or not answer:
+        raise HTTPException(422, "발문과 정답을 비워 둘 수 없습니다.")
+    edit = db.get(BankPersonalEdit, (user.id, subject, run_id, question_id))
+    changed = question != original["question"] or answer != original["answer"]
+    if payload.action == "reset" or (not changed and not payload.comment.strip()):
+        if edit:
+            db.delete(edit)
+    else:
+        if edit is None:
+            edit = BankPersonalEdit(user_id=user.id, subject=subject, run_id=run_id, question_id=question_id)
+            db.add(edit)
+        edit.original, edit.question, edit.answer = original, question, answer
+        edit.comment = payload.comment.strip()
+    if payload.report and payload.action == "save":
+        comment = payload.comment.strip()
+        if changed:
+            comment += f"\n\n[개인 수정 제안]\n발문: {question}\n정답: {answer}"
+        db.add(BankFeedback(user_id=user.id, subject=subject, run_id=run_id, build_id=row.build_id,
+                            question_id=question_id, category=payload.category, comment=comment.strip()))
+    db.commit()
+    current = bank_personal.apply(db, row, user.id, original)
+    return {"question": _public(current), "answer": _answer(db, row, current),
+            "reported": payload.report and payload.action == "save"}
 
 
 @router.post("/lectures/{subject}/{run_id}/bank/feedback", status_code=201)

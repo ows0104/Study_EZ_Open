@@ -39,6 +39,7 @@ export type BankRating = "Again" | "Hard" | "Good" | "Easy";
 
 /** 답이 빠진 문항. 답·채점 단위는 `reveal` 로만 온다. */
 export type BankQuestion = {
+  personalEdited?: boolean;
   question_id: string;
   concept_id: string;
   tier: "Core" | "Advanced" | "Optional";
@@ -62,6 +63,8 @@ export type BankReview = {
 };
 
 export type BankAnswer = {
+  personalEdited?: boolean;
+  personalAnswer?: boolean;
   answer: string;
   answerUnits: string[];
   correctOptionIds: string[];
