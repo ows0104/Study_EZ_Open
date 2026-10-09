@@ -119,6 +119,7 @@ export type BankReportStatus = "open" | "resolved" | "wontfix";
 
 /** 학생 신고 한 건(`GET /api/admin/bank-feedback`). */
 export type BankReport = {
+  highlighted?: boolean;
   id: number;
   category: string;
   comment: string;

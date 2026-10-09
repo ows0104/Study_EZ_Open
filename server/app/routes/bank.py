@@ -470,10 +470,12 @@ def bank_feedback(user: CurrentUser = Depends(require_admin), db: Session = Depe
             }
         group["reports"].append({
             "id": f.id, "category": f.category, "comment": f.comment, "status": f.status,
+            "highlighted": f.highlighted,
             "email": emails.get(f.user_id, ""), "createdAt": _iso(f.created_at),
             "stale": bank is None or f.build_id != bank.build_id,
         })
     out = list(groups.values())
+    out.sort(key=lambda g: any(r["highlighted"] and r["status"] == "open" for r in g["reports"]), reverse=True)
     open_count = sum(1 for g in out if any(r["status"] == "open" for r in g["reports"]))
     return {"questions": out, "open": open_count, "done": len(out) - open_count}
 
@@ -870,16 +872,17 @@ def save_personal_question(subject: str, run_id: str, question_id: str, payload:
             db.add(edit)
         edit.original, edit.question, edit.answer = original, question, answer
         edit.comment = payload.comment.strip()
-    if payload.report and payload.action == "save":
+    if payload.action == "save":
         comment = payload.comment.strip()
         if changed:
             comment += f"\n\n[개인 수정 제안]\n발문: {question}\n정답: {answer}"
         db.add(BankFeedback(user_id=user.id, subject=subject, run_id=run_id, build_id=row.build_id,
-                            question_id=question_id, category=payload.category, comment=comment.strip()))
+                            question_id=question_id, category=payload.category, comment=comment.strip(),
+                            highlighted=payload.report))
     db.commit()
     current = bank_personal.apply(db, row, user.id, original)
     return {"question": _public(current), "answer": _answer(db, row, current),
-            "reported": payload.report and payload.action == "save"}
+            "reported": payload.action == "save", "highlighted": payload.report and payload.action == "save"}
 
 
 @router.post("/lectures/{subject}/{run_id}/bank/feedback", status_code=201)

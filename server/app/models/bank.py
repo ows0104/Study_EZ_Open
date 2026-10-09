@@ -99,6 +99,7 @@ class BankFeedback(Base):
     question_id: Mapped[str] = mapped_column(String(64), nullable=False)
     category: Mapped[str] = mapped_column(String(16), nullable=False)
     comment: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    highlighted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 

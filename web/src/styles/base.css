@@ -2873,6 +2873,9 @@ button.notice-title:hover:not(:disabled) {
 .bank-feedback-dialog textarea { min-height: 150px; resize: vertical; line-height: 1.6; }
 .bank-feedback-dialog footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 .bank-personal-hint { font-size: 14px; color: var(--ink-2); }
+.bank-report-highlighted { border-color: var(--accent-line); border-left: 4px solid var(--accent); }
+.bank-report-entry { white-space: pre-wrap; overflow-wrap: anywhere; }
+.bank-report-entry.is-highlighted { padding: 10px 12px; border-radius: 8px; background: var(--accent-soft); }
 .bank-personal-answer, .bank-personal-original { margin-top: 16px; }
 .bank-personal-original p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
 .bank-feedback-dialog small { display: block; margin-top: 6px; color: var(--ink-3); }

@@ -28,9 +28,9 @@ with SessionLocal() as db:
 client = TestClient(app)
 base = "/api/lectures/test/demo/bank"
 
-def user(uid):
+def user(uid, admin=False):
     app.dependency_overrides[get_current_user] = lambda: CurrentUser(
-        id=uid, email=f"{uid}@example.com", is_admin=False, apps=dict.fromkeys(APP_POLICY, ROLE_ADMIN))
+        id=uid, email=f"{uid}@example.com", is_admin=admin, apps=dict.fromkeys(APP_POLICY, ROLE_ADMIN))
 
 def check(label, ok):
     assert ok, label
@@ -79,7 +79,22 @@ user("b")
 check("A's reset does not reset B", client.get(path).json()["draft"]["answer"] == "B 정답")
 check("private comment survives reopening", client.get(path).json()["comment"] == draft["comment"])
 with SessionLocal() as db:
-    check("private save creates no extra report", db.query(BankFeedback).count() == 1)
+    reports = db.query(BankFeedback).order_by(BankFeedback.id).all()
+    check("unchecked save still reaches the administrator", len(reports) == 2
+          and reports[1].user_id == "b" and "B 정답" in reports[1].comment)
+    check("explicit report is highlighted; automatic feedback is ordinary", reports[0].highlighted and not reports[1].highlighted)
+other_id = next(q["question_id"] for q in bank["questions"] if q["question_id"] != qid)
+other_path = base + f"/questions/{other_id}/personal"
+other_snapshot = client.get(other_path).json()
+client.put(other_path, json={"revision": other_snapshot["revision"], **other_snapshot["draft"],
+                            "comment": "일반 피드백", "report": False})
+user("admin", True)
+board = client.get("/api/admin/bank-feedback").json()
+check("highlighted open reports precede newer ordinary feedback", board["questions"][0]["questionId"] == qid)
+check("administrator receives ordinary feedback metadata", any(not r["highlighted"]
+      for g in board["questions"] for r in g["reports"]))
+user("b")
+with SessionLocal() as db:
     row = db.get(QuizBank, ("test", "demo")); updated = copy.deepcopy(row.bank)
     original = next(q for q in updated["questions"] if q["question_id"] == qid)
     original["answer"] = "공용 정답 업데이트"; row.bank = updated; db.commit()

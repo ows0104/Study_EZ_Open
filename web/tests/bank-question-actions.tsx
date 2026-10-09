@@ -37,7 +37,7 @@ window.fetch = async (input, init) => {
         const changed = personal?.answer !== undefined && personal.answer !== answer.answer;
         body = { question: { ...next.question, question: personal?.question ?? original.question, personalEdited: Boolean(personal) },
           answer: { ...answer, answer: personal?.answer ?? answer.answer, answerUnits: changed ? [] : answer.answerUnits,
-            personalEdited: Boolean(personal), personalAnswer: changed }, reported: sent.report };
+            personalEdited: Boolean(personal), personalAnswer: changed }, reported: sent.action !== "reset", highlighted: sent.report };
       }
     }
   }

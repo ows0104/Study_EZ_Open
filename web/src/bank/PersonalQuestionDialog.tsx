@@ -11,7 +11,7 @@ type Snapshot = {
   revision: string;
   comment: string;
 };
-export type PersonalQuestionResult = { question: BankQuestion; answer: BankAnswer; reported: boolean };
+export type PersonalQuestionResult = { question: BankQuestion; answer: BankAnswer; reported: boolean; highlighted?: boolean };
 
 export function PersonalQuestionDialog({ base, questionId, answerVisible, onClose, onSaved }: {
   base: string; questionId: string; answerVisible: boolean; onClose: () => void;
@@ -60,6 +60,7 @@ export function PersonalQuestionDialog({ base, questionId, answerVisible, onClos
         <button type="button" className="is-quiet" aria-label="수정창 닫기" disabled={busy} onClick={onClose}>×</button></header>
       <p className="bank-feedback-id">문항 {questionId}</p>
       <p className="bank-personal-hint">수정 내용은 내 계정에만 적용됩니다. 다른 사람의 문제는 바뀌지 않습니다.</p>
+      <p className="bank-personal-hint">수정 내용과 피드백은 관리자에게 전달됩니다. 제보 강조를 선택하면 더 눈에 띄게 표시됩니다.</p>
       {!snapshot && !error ? <p role="status">문항을 불러오는 중…</p> : null}
       {snapshot ? <>
         <label>발문<textarea disabled={busy} required rows={3} maxLength={12000} value={question} onChange={e => setQuestion(e.target.value)} /></label>
@@ -70,12 +71,12 @@ export function PersonalQuestionDialog({ base, questionId, answerVisible, onClos
         </details>
         <details className="bank-personal-original"><summary>공용 원문 보기</summary>
           <p>{snapshot.original.question}</p><p>{snapshot.original.answer}</p></details>
-        <label>{report ? "피드백 (선택)" : "개인 메모 (선택)"}<textarea disabled={busy} rows={3} maxLength={2000} value={comment}
+        <label>피드백 (선택)<textarea disabled={busy} rows={3} maxLength={2000} value={comment}
           placeholder="수정 이유나 문제점을 적어 주세요." onChange={e => setComment(e.target.value)} /></label>
-        <label className="bank-personal-report"><input type="checkbox" disabled={busy} checked={report} onChange={e => setReport(e.target.checked)} />관리자에게도 제보</label>
+        <label className="bank-personal-report"><input type="checkbox" disabled={busy} checked={report} onChange={e => setReport(e.target.checked)} />제보 강조</label>
         {report ? <label>제보 유형<select disabled={busy} value={category} onChange={e => setCategory(e.target.value)}>
           {FEEDBACK.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-        </select><small>피드백과 수정 제안을 함께 보냅니다. 공용 문제에는 자동 반영되지 않습니다.</small></label> : null}
+        </select><small>관리자 피드백함에 강조 표시하고 우선 노출합니다.</small></label> : null}
       </> : null}
       {error ? <p className="notice is-error" role="alert">{error}</p> : null}
       <footer>

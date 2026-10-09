@@ -275,7 +275,7 @@ export function BankSolve({ base, lecture, onFinished }: {
             if (answer) setAnswer(result.answer);
             setReporting(false);
             setActionMessage(reset ? "원본으로 되돌렸습니다." : result.reported
-              ? "제보를 보냈습니다." + (result.question.personalEdited ? " 내 수정본을 저장했습니다." : "") : "내 수정본을 저장했습니다.");
+              ? (result.highlighted ? "강조 제보를 보냈습니다." : "관리자에게 전달했습니다.") + (result.question.personalEdited ? " 내 수정본을 저장했습니다." : "") : "내 수정본을 저장했습니다.");
           }} /> : null}
 
         {answer ? (

@@ -47,7 +47,8 @@ export function BankReportTab({ board, onChanged }: { board: BankReportBoard | n
         ) : null}
       </p>
       <p className="card-review-note">
-        각 문항의 <strong>문항 검토·수정</strong>을 눌러 고친 뒤 신고 처리 상태를 기록하세요.
+        개인 수정과 피드백은 모두 여기에 도착합니다. 강조 제보는 먼저 표시됩니다.
+        각 문항의 <strong>문항 검토·수정</strong>을 눌러 고친 뒤 처리 상태를 기록하세요.
       </p>
       {shown.map((group) => (
         <ReportGroup key={`${group.subject}/${group.runId}/${group.questionId}`} group={group} onChanged={onChanged} />
@@ -72,6 +73,7 @@ function ReportGroup({ group, onChanged }: { group: BankReportGroup; onChanged: 
   const open = group.reports.filter((r) => r.status === "open");
   const closed = open.length === 0 ? group.reports[0]?.status : null;
   const stale = group.reports.filter((r) => r.stale).length;
+  const highlighted = open.filter(r => r.highlighted !== false).length;
   const verdict = group.medicalReview && group.medicalReview.verdict !== "ok" ? group.medicalReview : null;
 
   async function decide(status: BankReportStatus) {
@@ -91,13 +93,14 @@ function ReportGroup({ group, onChanged }: { group: BankReportGroup; onChanged: 
 
   return (
     // 닫은 묶음은 흐리게만 한다. 「카드 검토」의 `is-deleted` 는 취소선을 그어 문항이 지워진 것처럼 읽힌다.
-    <article className="card-review-row" style={closed ? { opacity: 0.7 } : undefined}>
+    <article className={`card-review-row${highlighted ? " bank-report-highlighted" : ""}`} style={closed ? { opacity: 0.7 } : undefined}>
       <header className="card-review-head">
         <span className="card-review-where">
           {group.subject} · {group.date.slice(5)} · {group.title} · {group.questionId}
           {q ? ` · ${q.format}` : ""}
         </span>
-        <span className="tag is-warn">신고 {group.reports.length}건</span>
+        <span className="tag">피드백 {group.reports.length}건</span>
+        {highlighted ? <span className="tag is-warn">강조 제보 {highlighted}건</span> : null}
         {stale ? <span className="tag">옛 판 신고 {stale}건</span> : null}
         {verdict ? <span className="tag is-warn">{VERDICT_LABEL[verdict.verdict] ?? verdict.verdict}</span> : null}
         {closed ? <span className="tag is-ok">{STATUS_LABEL[closed]}</span> : null}
@@ -147,9 +150,9 @@ function ReportGroup({ group, onChanged }: { group: BankReportGroup; onChanged: 
       ) : null}
 
       <ul className="card-review-why">
-        {group.reports.map((r) => (
-          <li key={r.id} style={r.status === "open" ? undefined : { opacity: 0.6 }}>
-            <strong>{FEEDBACK_LABEL[r.category] ?? r.category}</strong>
+        {[...group.reports].sort((a, b) => Number(b.highlighted !== false) - Number(a.highlighted !== false)).map((r) => (
+          <li key={r.id} className={`bank-report-entry${r.highlighted !== false ? " is-highlighted" : ""}`} style={r.status === "open" ? undefined : { opacity: 0.6 }}>
+            <strong>{r.highlighted !== false ? `강조 제보 · ${FEEDBACK_LABEL[r.category] ?? r.category}` : "일반 수정·피드백"}</strong>
             {r.comment ? <> — {r.comment}</> : null}
             <small>
               {" "}
