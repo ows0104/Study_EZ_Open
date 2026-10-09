@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { PreviewProvider } from "../types/lectures";
 import { minimumVersionForInput, versionAtLeast, type BridgeMode } from "./version";
+import { bridgeRequest, linkDestination } from "./linkRouting";
 import {
   EXTENSION_SOURCE,
   LINK_KINDS,
@@ -90,7 +91,7 @@ export function requestPreview(input: {
     }
 
     window.addEventListener("message", handle);
-    window.postMessage({ source: WEBAPP_SOURCE, type: MESSAGES.openPreview, payload: input }, window.location.origin);
+    window.postMessage({ source: WEBAPP_SOURCE, type: MESSAGES.openPreview, payload: bridgeRequest(input, extensionVersion()) }, window.location.origin);
   });
 }
 
@@ -153,13 +154,16 @@ export function usePreviewLink(save: (input: { lectureId: string; kind: LinkKind
       const url = typeof data.url === "string" ? data.url : "";
       const kind = typeof data.kind === "string" ? data.kind : "";
       if (!lectureId || !url || !LINK_KINDS.includes(kind as LinkKind)) return;
+      const destination = linkDestination(lectureId, kind as LinkKind);
+      if (!destination) return;
 
-      void save({ lectureId, kind: kind as LinkKind, url }).then(() => {
+      void save({ ...destination, url }).then(() => {
+        // 저장 위치를 바꿔도 확장의 대기 목록은 원래 식별자·종류로 지워야 한다.
         window.postMessage(
           { source: WEBAPP_SOURCE, type: MESSAGES.linkSaved, lectureId, kind },
           window.location.origin,
         );
-      });
+      }).catch(() => {});
     }
     window.addEventListener("message", handle);
     return () => window.removeEventListener("message", handle);

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { api } from "../api";
 import { absoluteUrl, extensionCompatible, extensionInstalled, extensionPossible, requestPreview } from "../bridge/previewBridge";
 import { ExtensionSetup } from "../bridge/ExtensionSetup";
-import { REVIEW_MIN_VERSION } from "../bridge/version";
 import type { LectureDetail, LectureRef } from "../types/lectures";
 import { ActionCard, PanelGroup } from "./panelShared";
 
@@ -17,7 +16,7 @@ export function ReviewAction({ lecture, detail, base, onError }: {
   const notes = detail.files.find((file) => file.kind === "notes_current");
   const saved = detail.myReview;
   const installed = extensionInstalled();
-  const compatible = extensionCompatible(REVIEW_MIN_VERSION);
+  const compatible = extensionCompatible();
 
   async function start() {
     if (!notes || busy) return;
@@ -65,7 +64,8 @@ export function ReviewAction({ lecture, detail, base, onError }: {
             <small>{!notes ? "올해 강의록 대기" : extensionPossible() ? "확장을 설치하면 만듭니다" : "컴퓨터에서 만듭니다"}</small>
           </span>
         )} />
-      {notes && !saved ? <ExtensionSetup minimum={REVIEW_MIN_VERSION} /> : null}
+      {notes && !saved ? <ExtensionSetup /> : null}
+      {notes && !saved && compatible ? <p className="panel-hint">자료와 프롬프트를 넣은 뒤 AI 화면에서 직접 전송해 주세요.</p> : null}
     </PanelGroup>
   );
 }
