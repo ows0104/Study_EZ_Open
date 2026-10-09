@@ -82,7 +82,7 @@ export function PersonalQuestionDialog({ base, questionId, answerVisible, onClos
         {snapshot?.edited ? <button type="button" disabled={busy} onClick={() => void save(true)}>원본으로 되돌리기</button> : null}
         <button type="button" className="is-quiet" disabled={busy} onClick={onClose}>취소</button>
         {snapshot ? <button type="submit" disabled={busy || (!changed && !noteChanged && !report)}>
-          {busy ? "저장하는 중…" : changed || noteChanged ? report ? "내 수정본 저장·제보" : "내 수정본 저장" : "제보 보내기"}
+          {busy ? "저장하는 중…" : report ? changed || noteChanged ? "내 수정본 저장·제보" : "제보 보내기" : "내 수정본 저장"}
         </button> : null}
       </footer>
     </form>
