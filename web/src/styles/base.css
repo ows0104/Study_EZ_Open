@@ -2825,17 +2825,55 @@ button.notice-title:hover:not(:disabled) {
   background: color-mix(in srgb, var(--cat-exam) 9%, var(--surface));
 }
 
-.bank-feedback {
+.bank-question-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
   margin-top: 12px;
   font-size: 13px;
 }
 
-.bank-feedback-form {
+.bank-question-actions .quiz-fix { margin: 0; }
+.bank-question-actions [role="status"] { color: var(--ink-3); }
+
+.bank-feedback-dialog {
+  width: min(640px, calc(100vw - 28px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 24px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.bank-feedback-dialog::backdrop { background: #0006; }
+.bank-feedback-dialog header {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  justify-content: space-between;
   align-items: center;
 }
+.bank-feedback-dialog h2 { margin: 0; font-size: 20px; }
+.bank-feedback-id { color: var(--ink-3); font-size: 13px; }
+.bank-feedback-dialog label { display: block; margin-top: 16px; font-size: 14px; }
+.bank-feedback-dialog select, .bank-feedback-dialog textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+.bank-feedback-dialog textarea { min-height: 150px; resize: vertical; line-height: 1.6; }
+.bank-feedback-dialog footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.bank-feedback-dialog button[type="submit"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+@media (max-width: 600px) { .bank-feedback-dialog { padding: 18px; } }
 
 .bank-start h2 {
   margin: 18px 0 6px;

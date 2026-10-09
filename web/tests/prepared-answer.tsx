@@ -48,7 +48,7 @@ window.fetch = async (input, init) => {
 
 try {
   const { BankSolve } = await import("../src/bank/BankSolve");
-  createRoot(document.getElementById("root")!).render(<BankSolve base="/api/test/bank" onFinished={() => {}} />);
+  createRoot(document.getElementById("root")!).render(<BankSolve base="/api/test/bank" lecture={{ subject: "테스트", runId: "demo" }} onFinished={() => {}} />);
   await waitFor(() => prepared && images.some((image) => image.complete && image.naturalWidth));
   check(!document.body.textContent?.includes("ANSWER-1"), "answer stays hidden before click");
   document.querySelector<HTMLButtonElement>(".quiz-submit")!.click();

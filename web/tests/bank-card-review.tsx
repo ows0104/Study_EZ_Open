@@ -12,13 +12,15 @@ const base: BankFullQuestion = {
   exam_rationale: "테스트", conflict_id: "", options: [], correct_option_ids: [], matching_left: [],
   matching_right: [], answer_pairs: [], sequence_items: [], correct_order: [],
 };
-const board: BankReviewBoard = { open: 3, done: 0, banks: [{
+const board: BankReviewBoard = { open: 3, done: 1, banks: [{
   subject: "테스트", runId: "demo", title: "중추신경계 · 문항 검토 예시", date: "2026-10-07", buildId: "demo-build",
   concepts: [{ id: "C1", title: "기초·통합 개념" }],
   questions: [{ id: "CNS-C01", question: base.question, available: true },
     { id: "CNS-C05", question: "두 개념을 연결해 설명하세요.", available: false },
     { id: "CNS-C36", question: "항목을 짝지으세요.", available: false }],
   cards: [
+    { question: { ...structuredClone(base), question_id: "CNS-C99" }, errors: [], medicalReview: null,
+      edit: { action: "accept", original: base, question: base, by: "관리자", at: "2026-10-09T00:00:00Z" } },
     { question: structuredClone(base), errors: [], edit: null, medicalReview: { question_id: base.question_id,
       verdict: "wrong", note: "정답의 표현을 확인하세요.", suggested_answer: "수정된 기초 개념의 답" } },
     { question: { ...structuredClone(base), question_id: "CNS-C05", question: "두 개념을 연결해 설명하세요.", retrieval_direction: "integration" },
@@ -42,11 +44,12 @@ window.fetch = async (input, init) => {
     card.edit = { action: body.action, original: structuredClone(card.question), question: q, by: "관리자", at: new Date().toISOString() };
     card.question = q; card.errors = [];
     board.open--; board.done++;
-    board.banks[0].questions.find(p => p.id === qid)!.available = true;
+    const listed = board.banks[0].questions.find(p => p.id === qid);
+    if (listed) listed.available = true;
     return new Response(JSON.stringify({ action: body.action }), { status: 200 });
   }
   return new Response(JSON.stringify(board), { status: 200 });
 };
-createRoot(document.getElementById("root")!).render(<MemoryRouter initialEntries={["/admin/bank-cards/테스트/demo"]}>
+createRoot(document.getElementById("root")!).render(<MemoryRouter initialEntries={["/admin/bank-cards/테스트/demo" + location.search]}>
   <Routes><Route path="/admin/bank-cards/:subject/:runId" element={<BankCardReview />} /></Routes>
 </MemoryRouter>);

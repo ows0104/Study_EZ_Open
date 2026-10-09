@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, openSignedFile } from "../api";
 import { bumpPreviewVersion } from "../bridge/previewBridge";
 import { Stem } from "../lecture/Stem";
@@ -18,6 +18,8 @@ const directionLabels: Record<string, string> = {
 
 export function BankCardReview() {
   const { subject, runId } = useParams();
+  const [search] = useSearchParams();
+  const focusId = subject && runId ? search.get("question") ?? "" : "";
   const [board, setBoard] = useState<BankReviewBoard | null>(null);
   const [error, setError] = useState("");
   const [showDone, setShowDone] = useState(false);
@@ -26,19 +28,21 @@ export function BankCardReview() {
     const query = new URLSearchParams();
     if (subject) query.set("subject", subject);
     if (runId) query.set("runId", runId);
-    if (subject && showAll) query.set("all", "true");
+    if (subject && (showAll || focusId)) query.set("all", "true");
     try {
       const next = await api<BankReviewBoard>(`/api/admin/bank-review?${query}`);
       setBoard(next);
       setError("");
     } catch (cause) { setError((cause as Error).message); }
-  }, [subject, runId, showAll]);
+  }, [subject, runId, showAll, focusId]);
   useEffect(() => { setBoard(null); void load(); }, [load]);
   async function changed() { bumpPreviewVersion(); await load(); }
   async function openSource(group: BankReviewGroup, assetId: string) {
     try { await openSignedFile(`/api/lectures/${encodeURIComponent(group.subject)}/${encodeURIComponent(group.runId)}/files/${encodeURIComponent(assetId)}`); }
     catch (cause) { setError((cause as Error).message); }
   }
+  const visible = (card: BankReviewCard) => focusId && !showAll
+    ? card.question.question_id === focusId : showDone || showAll || !card.edit;
   return <section className="card-review bank-card-review">
     <h2>Main-Quiz 문항 검토</h2>
     <p className="card-review-note">검증으로 제외된 문항과 외부지식 검토에서 틀림·의심으로 표시된 문항을 확인합니다.
@@ -51,22 +55,27 @@ export function BankCardReview() {
     </div>
     {error ? <p className="notice is-error" role="alert">{error}</p> : null}
     {!board && !error ? <p>불러오는 중…</p> : null}
-    {board && !board.banks.some(g => g.cards.some(c => showDone || showAll || !c.edit)) ? <p>검토할 문항이 없습니다.</p> : null}
+    {board && !board.banks.some(g => g.cards.some(visible)) ? <p>{focusId && !showAll
+      ? "이 문항이 없습니다. 다시 생성되었거나 제외되었을 수 있습니다." : "검토할 문항이 없습니다."}</p> : null}
     {board?.banks.map(group => <div key={`${group.subject}/${group.runId}`}>
-      {group.cards.some(c => showDone || showAll || !c.edit) ? <>
+      {group.cards.some(visible) ? <>
         <h3>{group.subject} · {group.date} · {group.title}</h3>
         {group.sources?.length ? <div className="card-review-actions">{group.sources.map(s =>
           <button key={s.id} onClick={() => void openSource(group, s.assetId)}>{s.id} · {s.kind === "notes_current" ? "강의 필기" : "족보"} 열기</button>)}</div> : null}
       </> : null}
-      {group.cards.filter(c => showDone || showAll || !c.edit).map(card => <ReviewRow
-        key={`${group.buildId}/${card.question.question_id}/${card.edit?.at ?? "new"}`}
-        group={group} card={card} onChanged={changed} />)}
+      {group.cards.filter(visible).map(card => <ReviewRow
+        key={`${group.buildId}/${card.question.question_id}`}
+        group={group} card={card} onChanged={changed} focus={card.question.question_id === focusId} />)}
     </div>)}
   </section>;
 }
 
-function ReviewRow({ group, card, onChanged }: { group: BankReviewGroup; card: BankReviewCard; onChanged: () => Promise<void> }) {
-  const [editing, setEditing] = useState(false);
+function ReviewRow({ group, card, onChanged, focus }: {
+  group: BankReviewGroup; card: BankReviewCard; onChanged: () => Promise<void>; focus: boolean;
+}) {
+  const [editing, setEditing] = useState(focus);
+  const row = useRef<HTMLElement>(null);
+  useEffect(() => { if (focus) row.current?.scrollIntoView({ block: "start" }); }, [focus]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const q = card.question;
@@ -81,7 +90,7 @@ function ReviewRow({ group, card, onChanged }: { group: BankReviewGroup; card: B
     finally { setBusy(false); }
   }
   const review = card.medicalReview;
-  return <article className="card-review-row">
+  return <article ref={row} className="card-review-row">
     <header className="card-review-head">
       <strong>{q.question_id}</strong><span>{formatLabels[q.format] ?? q.format} · {directionLabels[q.retrieval_direction] ?? q.retrieval_direction}</span>
       {card.errors.length ? <span className="tag is-warn">검증으로 제외됨</span> : null}

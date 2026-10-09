@@ -54,7 +54,7 @@ const pickRight = async (text: string) => {
 };
 try {
   const { BankSolve } = await import("../src/bank/BankSolve");
-  createRoot(document.getElementById("root")!).render(<MemoryRouter><BankSolve base="/api/test/bank" onFinished={() => {}} /></MemoryRouter>);
+  createRoot(document.getElementById("root")!).render(<MemoryRouter><BankSolve base="/api/test/bank" lecture={{ subject: "테스트", runId: "demo" }} onFinished={() => {}} /></MemoryRouter>);
   await waitFor(() => buttons().length === 4);
   check(submit().disabled, "incomplete matching cannot be submitted");
   window.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));

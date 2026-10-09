@@ -54,7 +54,7 @@ try {
   const { BankSolve } = await import("../src/bank/BankSolve");
   const { sequenceScore } = await import("../src/bank/SequenceQuestion");
   createRoot(document.getElementById("root")!).render(<MemoryRouter><main className="app-main is-bare is-solving">
-    <BankSolve base="/api/test/bank" onFinished={() => {}} />
+    <BankSolve base="/api/test/bank" lecture={{ subject: "테스트", runId: "demo" }} onFinished={() => {}} />
   </main></MemoryRouter>);
   await waitFor(() => options().length === 4);
   check(submit().disabled, "incomplete sequence cannot be graded");

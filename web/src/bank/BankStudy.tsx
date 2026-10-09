@@ -70,6 +70,7 @@ export function BankStudyPage() {
     return (
       <BankSolve
         base={base}
+        lecture={{ subject, runId }}
         onFinished={onFinished}
       />
     );
