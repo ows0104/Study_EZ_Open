@@ -40,15 +40,17 @@ function createOverlay(payload, remembered) {
       #studyez-bridge p { margin: 0 0 10px; color: #878d97; font-size: 12px; }
       #studyez-bridge .studyez-disclosure { padding: 10px; border: 1px solid #dfe4f5; border-radius: 9px; color: #414754; background: #f5f7ff; }
       #studyez-bridge .studyez-consent { display: flex; align-items: flex-start; margin: 0 0 12px; gap: 8px; color: #30343b; font-size: 12px; cursor: pointer; }
-      #studyez-bridge .studyez-consent input { width: 16px; height: 16px; margin: 1px 0 0; accent-color: #3e63dd; }
+      #studyez-bridge input[data-action="consent"] { all: revert !important; appearance: auto !important; -webkit-appearance: checkbox !important; display: inline-block !important; position: static !important; flex: 0 0 18px !important; width: 18px !important; height: 18px !important; margin: 1px 0 0 !important; opacity: 1 !important; accent-color: #3e63dd !important; cursor: pointer !important; }
+      #studyez-bridge .studyez-consent-help { color: #3155c6; font-size: 12px; font-weight: 600; }
+      #studyez-bridge .studyez-consent-state { display: block; margin-bottom: 3px; color: #3155c6; font-weight: 700; }
       #studyez-bridge .studyez-remembered { margin: 0 0 12px; color: #30343b; font-size: 12px; }
       #studyez-bridge .studyez-remembered button { min-height: 0; padding: 0; border: 0; color: #3155c6; background: none; font: inherit; font-weight: 400; text-decoration: underline; cursor: pointer; }
       #studyez-bridge .studyez-file-line { margin: 0 0 10px; overflow: hidden; color: #30343b; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
       #studyez-bridge details { margin-top: 8px; color: #5d6470; font-size: 12px; }
-      #studyez-bridge summary { width: max-content; color: #a0a5ae; font-size: 11px; cursor: pointer; }
+      #studyez-bridge summary { display: list-item; width: max-content; color: #3155c6; font-size: 12px; text-decoration: underline !important; text-underline-offset: 3px; cursor: pointer; }
       #studyez-bridge details .studyez-disclosure { margin-top: 8px; }
       #studyez-bridge details ul { margin-bottom: 8px; }
-      #studyez-bridge a { color: #3155c6; }
+      #studyez-bridge a { color: #3155c6; text-decoration: underline !important; text-underline-offset: 3px; }
       #studyez-bridge ul { max-height: 120px; margin: 0 0 12px; padding: 9px 9px 9px 26px; overflow: auto; border-radius: 9px; background: #f6f7f9; }
       #studyez-bridge li { margin: 3px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       #studyez-bridge .studyez-actions { display: flex; align-items: center; gap: 8px; }
@@ -72,8 +74,9 @@ function createOverlay(payload, remembered) {
     }
     <label class="studyez-consent">
       <input type="checkbox" data-action="consent"${remembered ? " checked disabled" : ""}>
-      <span>${inputLabel}과 ${bank ? "답변 본문 저장" : shared ? "공개 공유 링크 생성" : "개인 대화 주소 저장"}에 동의합니다.</span>
+      <span>${remembered ? '<span class="studyez-consent-state">동의 완료 · 다시 체크할 필요 없습니다</span>' : ""}${inputLabel}과 ${bank ? "답변 본문 저장" : shared ? "공개 공유 링크 생성" : "개인 대화 주소 저장"}에 동의합니다.</span>
     </label>
+    <p class="studyez-consent-help">${remembered ? automatic ? "이전에 동의한 설정으로 자동 시작합니다." : "아래 ‘자료·프롬프트 넣기’ 버튼을 눌러 주세요." : "체크박스를 선택한 뒤 아래 버튼을 눌러 주세요."}</p>
     <div class="studyez-actions">
       <div class="studyez-status" role="status"></div>
       <button type="button" data-action="confirm"${remembered && automatic ? " hidden" : remembered ? "" : " disabled"}>${automatic ? "동의하고 자동 시작" : remembered ? "자료·프롬프트 넣기" : "동의하고 입력"}</button>

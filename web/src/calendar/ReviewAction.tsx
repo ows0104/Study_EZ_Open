@@ -65,7 +65,6 @@ export function ReviewAction({ lecture, detail, base, onError }: {
           </span>
         )} />
       {notes && !saved ? <ExtensionSetup /> : null}
-      {notes && !saved && compatible ? <p className="panel-hint">자료와 프롬프트를 넣은 뒤 AI 화면에서 직접 전송해 주세요.</p> : null}
     </PanelGroup>
   );
 }
