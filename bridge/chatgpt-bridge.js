@@ -44,7 +44,6 @@ function createOverlay(payload, remembered) {
       #studyez-bridge .studyez-consent { display: flex; align-items: flex-start; margin: 0 0 12px; gap: 8px; color: #30343b; font-size: 12px; cursor: pointer; }
       #studyez-bridge input[data-action="consent"] { all: revert !important; appearance: auto !important; -webkit-appearance: checkbox !important; display: inline-block !important; position: static !important; flex: 0 0 18px !important; width: 18px !important; height: 18px !important; margin: 1px 0 0 !important; opacity: 1 !important; accent-color: #3e63dd !important; cursor: pointer !important; }
       #studyez-bridge .studyez-consent-help { color: #3155c6; font-size: 12px; font-weight: 600; }
-      #studyez-bridge .studyez-consent-state { margin: 7px 0 0; color: #878d97; font-size: 10px; font-weight: 400; }
       #studyez-bridge .studyez-remembered { margin: 0 0 12px; color: #30343b; font-size: 12px; }
       #studyez-bridge .studyez-remembered button { min-height: 0; padding: 0; border: 0; color: #3155c6; background: none; font: inherit; font-weight: 400; text-decoration: underline; cursor: pointer; }
       #studyez-bridge .studyez-file-line { margin: 0 0 10px; overflow: hidden; color: #30343b; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
@@ -86,8 +85,7 @@ function createOverlay(payload, remembered) {
     </div>
     ${
       remembered
-        ? `<p class="studyez-consent-state">동의 완료</p>
-    <details>
+        ? `<details>
       <summary>첨부 자료와 개인정보 처리 자세히</summary>
       ${disclosure}
       <ul>${fileList}</ul>
