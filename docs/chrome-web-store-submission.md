@@ -1,9 +1,9 @@
 # Study EZ 예습 브리지 — Chrome Web Store 등록표
 
-기준 버전: 1.3.6
+기준 버전: 1.3.7
 작성일: 2026-08-25 · 개정 2026-10-09 (예습 수동·자동 입력, 개인 복습, 링크 복구)
 
-웹스토어 공개판은 1.2.0으로 관리한다. 1.3.6 제출·심사만으로 공개판이 갱신된 것으로
+웹스토어 공개판은 1.2.0으로 관리한다. 1.3.7 제출·심사만으로 공개판이 갱신된 것으로
 취급하지 않는다. 스토어에 새 버전이 실제 공개된 것을 확인한 뒤 Pages 빌드 변수
 `VITE_EXTENSION_STORE_VERSION`을 해당 버전으로 변경하고 웹을 다시 빌드한다.
 웹은 필요한 버전(직접 전송하는 예습·복습·문제은행 1.2.0, 자동전송 1.3.3)을 스토어 공개판이 제공하지
@@ -128,7 +128,7 @@ PowerShell에서:
 .\bridge\build-store-package.ps1
 ```
 
-결과: `bridge/release/studyez-preview-bridge-<manifest version>-web-store.zip` (지금은 1.3.6)
+결과: `bridge/release/studyez-preview-bridge-<manifest version>-web-store.zip` (지금은 1.3.7)
 
 ```powershell
 .\server\.venv\Scripts\python.exe .\bridge\audit-store-package.py

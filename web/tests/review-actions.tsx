@@ -12,11 +12,15 @@ import "../src/styles/calendar.css";
 const query = new URLSearchParams(location.search);
 const admin = !query.has("student");
 if (!query.has("noextension")) document.documentElement.setAttribute("data-studyez-ai-extension", "1.3.5");
-window.fetch = async (input) => {
+const prompts: Record<string, string> = {};
+window.fetch = async (input, init) => {
   const path = new URL(String(input), location.origin).pathname;
   let payload: object = {};
   if (path.endsWith("/me")) payload = { isAdmin: admin, isApproved: true };
-  else if (path.endsWith("/preview-prompt")) payload = { template: null };
+  else if (path.endsWith("/preview-prompt") || path.endsWith("/review-prompt")) {
+    if (init?.method === "PUT") prompts[path] = JSON.parse(String(init.body)).prompt;
+    payload = { prompt: prompts[path] ?? "" };
+  }
   else if (path.endsWith("/timetable")) payload = { events: [] };
   else if (path.includes("/files/")) payload = { url: `http://localhost:8000/api/local-storage/lectures/${path.split("/").at(-1)}` };
   else if (path.endsWith("/prequiz-job")) payload = { job: null, runner: null };

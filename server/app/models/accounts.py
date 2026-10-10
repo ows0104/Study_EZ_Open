@@ -34,6 +34,7 @@ class Profile(Base):
     # 각자 고쳐 쓴다. **비어 있으면 화면의 기본값을 쓴다** — 여기에 기본 문구를
     # 복사해 두면 기본이 바뀌어도 옛 문구를 든 사람만 남는다.
     preview_prompt: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    review_prompt: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
 
 # ─────────────────────────────────────────────────────────────────────

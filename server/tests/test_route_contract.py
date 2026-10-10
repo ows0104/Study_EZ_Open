@@ -92,6 +92,7 @@ GET /api/lectures/{subject}/{run_id}/prequiz
 GET /api/local-storage/{object_key}
 GET /api/me
 GET /api/me/preview-prompt
+GET /api/me/review-prompt
 GET /api/notices
 GET /api/spotter/admin/reports
 GET /api/spotter/admin/subjects/{subject}/manifest
@@ -160,6 +161,7 @@ PUT /api/admin/users/{user_id}/approval
 PUT /api/lectures/{subject}/{run_id}/my-preview
 PUT /api/local-storage/{object_key}
 PUT /api/me/preview-prompt
+PUT /api/me/review-prompt
 """
 
 
