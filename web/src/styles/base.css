@@ -1005,22 +1005,6 @@ button.resource.is-download:hover:not(:disabled)::after {
   font-variant-numeric: tabular-nums;
 }
 
-/* **넷을 색으로 가르지 않는다.** 왼쪽이 못 한 쪽, 오른쪽이 아는 쪽이라는
- * 순서가 이미 말하고 있고, 네 버튼에 네 색을 칠하면 그 줄이 신호등이 된다.
- * 칠하는 것은 둘뿐이다 — 잊었다고 말하는 Again의 글자색과, 기본값인 Good. */
-.quiz-grade.is-again .quiz-grade-name {
-  color: var(--cat-exam);
-}
-
-.quiz-grade.is-good {
-  border-color: var(--accent-line);
-  background: var(--accent-soft);
-}
-
-.quiz-grade.is-good:hover:not(:disabled) {
-  border-color: var(--accent);
-}
-
 /* 눌러야 할 자판을 버튼에 적어 둔다. 안키에서 하던 손이 그대로 통한다. */
 .quiz-bar kbd {
   margin-left: 7px;
@@ -2778,31 +2762,41 @@ button.notice-title:hover:not(:disabled) {
   white-space: pre-wrap;
 }
 
-.bank-ox-explanation {
+.bank-ox-explanation,
+.bank-choice-explanation {
   width: min(100%, 720px);
   margin-top: 16px;
   padding: 18px 22px;
   border: 1px solid var(--line-strong);
 }
 
-.bank-ox-explanation h2 {
+.bank-ox-explanation h2,
+.bank-choice-explanation h2 {
   margin: 0 0 10px;
   font-size: 16px;
   line-height: 1.5;
 }
 
-.bank-ox-explanation ul {
+.bank-ox-explanation ul,
+.bank-choice-explanation ul {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.bank-ox-explanation li + li {
+.bank-ox-explanation li + li,
+.bank-choice-explanation li + li {
   margin-top: 10px;
 }
 
-.bank-ox-explanation p {
+.bank-ox-explanation p,
+.bank-choice-explanation p {
   margin: 0;
+}
+
+.bank-choice-explanation p + p {
+  margin-top: 4px;
+  white-space: pre-wrap;
 }
 
 .bank-review {

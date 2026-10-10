@@ -15,6 +15,7 @@
 - 외부 의학지식을 근거로 적은 자리(`EXT`, 「외부 의학지식」)는 source_id `EXT`로 옮긴다.
 - Cloze는 발문에 `{{c1}}` 같은 자리만 두고, 답은 answer_units에 빈칸 등장 순서대로 하나씩 둔다. 같은 `{{c1}}`이 여러 번 나와도 합치거나 번호를 바꾸지 마라. 과거 응답의 `{{c2}}`·`{{c3}}` 표기도 보존한다.
 - OX의 answer는 `O` 또는 `X`다. 원문의 설명은 answer_units로 옮긴다.
+- MCQ·Multi-select의 선지별 해설은 정답이 아닌 선지까지 모두 answer_units에 `A: 참 — 근거` 또는 `B: 거짓 — 정정과 근거`처럼 원문의 선지 ID와 연결해 보존한다. 별도 해설 표가 있으면 같은 question_id의 answer_units로 합친다. 원문에 없는 해설을 만들지 말고 빠진 선지 ID를 warnings에 적는다.
 - 짝짓기·순서 항목에 붙은 번호(`1.` · `A.`)와 정답 짝의 번호는 떼지 말고 원문 그대로 둔다. 정답 짝은 원문의 `1. … - A. …`를 left·right로 나누기만 한다 — 번호로 맞추는 것은 코드가 한다.
 - source_refs의 locator에는 원문의 쪽·문항 표기를 그대로 둔다(예: `p13`, `p13–14`, `2023 Q11`).
 - build_meta.schema_version은 `{{schema_version}}`, build_meta.lecture_title은 강의 제목이다.

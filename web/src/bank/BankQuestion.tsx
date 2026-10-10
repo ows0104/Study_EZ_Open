@@ -100,6 +100,19 @@ export function AnswerBody({ question: q, answer, preload }: {
   const conciseAnswer = shortUnits.length > 0;
   const shortExplanation = conciseAnswer && answer.answer.trim().length > 0
     && answerPoints(answer.answer, []).text.trim() !== shortUnits.map((unit) => answerPoints(unit, []).text.trim()).join("\n");
+  const choice = ["mcq", "multi_select"].includes(q.format) && !answer.personalAnswer;
+  const choiceUnits = new Map<string, string[]>();
+  const linkedUnits = new Set<string>();
+  if (choice) for (const unit of answer.answerUnits) {
+    const match = unit.match(/^\s*(\*\*)?([^:：.)\s*]+)(?:\*\*)?\s*[:：.)]\s*(.+)$/s);
+    const id = match?.[2];
+    if (!id || !q.options.some(option => option.id === id)) continue;
+    const text = (match![1] ? match![3].replace(/^\*\*\s*/, "") : match![3]).trim();
+    if (!text) continue;
+    choiceUnits.set(id, [...(choiceUnits.get(id) ?? []), text]);
+    linkedUnits.add(unit);
+  }
+  const extraChoiceUnits = remainingPoints.filter(unit => !linkedUnits.has(unit));
   return (
     <>
       {/* 단답은 모든 tier에서 채점 항목 자체가 답이다. 부연설명은 필요할 때만 펼친다. */}
@@ -133,8 +146,26 @@ export function AnswerBody({ question: q, answer, preload }: {
           ) : <p>이 문항에 등록된 해설이 없습니다.</p>}
         </section>
       ) : null}
+      {choice ? (
+        <section className="quiz-explanation bank-choice-explanation" aria-label="선지별 해설">
+          <h2>선지별 해설</h2>
+          <ul>
+            {q.options.map(option => (
+              <li key={option.id}>
+                <p><b>{option.id}</b> <Stem text={option.text} />
+                  <span className="bank-note"> · {answer.correctOptionIds.includes(option.id) ? "정답 선지" : "정답이 아닌 선지"}</span>
+                </p>
+                {choiceUnits.has(option.id) ? choiceUnits.get(option.id)!.map((text, index) => (
+                  <p key={index}><Stem text={text} /></p>
+                )) : <p className="bank-note">이 선지에 등록된 해설이 없습니다.</p>}
+              </li>
+            ))}
+            {extraChoiceUnits.map(unit => <li key={unit}><Stem text={unit} /></li>)}
+          </ul>
+        </section>
+      ) : null}
       {/* 답에서 강조한 포인트는 반복하지 않는다. 답과 표현이 다른 설명은 보존한다. */}
-      {!conciseAnswer && remainingPoints.length > 0 && !["ox", "cloze", "matching", "sequence"].includes(q.format) ? (
+      {!conciseAnswer && !choice && remainingPoints.length > 0 && !["ox", "cloze", "matching", "sequence"].includes(q.format) ? (
         <ul className="bank-units">{remainingPoints.map((unit) => <li key={unit}><Stem text={unit} /></li>)}</ul>
       ) : null}
       {answer.answerPairs.length ? (

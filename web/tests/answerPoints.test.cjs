@@ -123,6 +123,51 @@ test('missing O/X explanation is explicit, without an empty panel for other form
   assert.ok(!render({ answer: '답' }).includes('bank-ox-explanation'));
 });
 
+test('choice explanations include every distractor, preserve emphasis, and follow option order', () => {
+  for (const format of ['mcq', 'multi_select']) {
+    const html = renderToStaticMarkup(React.createElement(AnswerBody, {
+      question: { ...question, format, options: [{ id: 'A', text: '표적 A' }, { id: 'B', text: '표적 B' }] },
+      answer: { ...answer, answer: 'A: 참 — 수용체를 억제한다.', correctOptionIds: ['A'],
+        answerUnits: ['B: 거짓 — **효소**를 억제하며 수용체에는 작용하지 않는다.', 'A: 참 — 수용체를 억제한다.'] },
+    }));
+    const section = html.slice(html.indexOf('<section'));
+    assert.ok(section.includes('aria-label="선지별 해설"><h2>선지별 해설</h2>'));
+    assert.ok(section.includes('거짓 — <strong>효소</strong>를 억제하며 수용체에는 작용하지 않는다.'));
+    assert.ok(section.indexOf('<b>A</b>') < section.indexOf('<b>B</b>'));
+    assert.ok(section.includes('참 — 수용체를 억제한다.'));
+    assert.equal(section.split('효소').length - 1, 1);
+    assert.ok(!html.includes('bank-units'));
+  }
+});
+
+test('negative choice stems keep truth explanations separate from the answer key', () => {
+  const html = renderToStaticMarkup(React.createElement(AnswerBody, {
+    question: { ...question, format: 'mcq', question: '옳지 않은 것은?', options: [{ id: 'A', text: '명제 A' }, { id: 'AA', text: '명제 AA' }] },
+    answer: { ...answer, correctOptionIds: ['AA'], answerUnits: ['**A:** 참 — 조건을 충족한다.', 'AA: 거짓 — 조건을 충족하지 않는다.'] },
+  }));
+  assert.ok(html.includes('<b>A</b> 명제 A<span class="bank-note"> · 정답이 아닌 선지</span>'));
+  assert.ok(html.includes('<b>AA</b> 명제 AA<span class="bank-note"> · 정답 선지</span>'));
+  assert.ok(html.includes('<p>참 — 조건을 충족한다.</p>'));
+  assert.ok(html.includes('<p>거짓 — 조건을 충족하지 않는다.</p>'));
+});
+
+test('legacy choices retain unlinked explanation text and explicitly show missing explanations', () => {
+  const html = renderToStaticMarkup(React.createElement(AnswerBody, {
+    question: { ...question, format: 'mcq', options: [{ id: '1', text: '보기 1' }, { id: '2', text: '보기 2' }] },
+    answer: { ...answer, answer: '원래 정답', answerUnits: ['1：참 — 기존 근거', '기존의 추가 설명'] },
+  }));
+  assert.ok(html.includes('원래 정답'));
+  assert.ok(html.includes('참 — 기존 근거'));
+  assert.equal(html.split('이 선지에 등록된 해설이 없습니다.').length - 1, 1);
+  assert.equal(html.split('기존의 추가 설명').length - 1, 1);
+});
+
+test('personal choice answers do not show stale original option explanations', () => {
+  const html = render({ answer: '개인 수정한 정답', personalAnswer: true }, 'mcq');
+  assert.ok(html.includes('개인 수정한 정답'));
+  assert.ok(!html.includes('bank-choice-explanation'));
+});
+
 test('short terms do not match inside other English words and text is escaped', () => {
   const html = render({ answer: '<script>scopolamine</script>', answerUnits: ['O'] });
   assert.ok(html.includes('&lt;script&gt;scopolamine&lt;/script&gt;'));

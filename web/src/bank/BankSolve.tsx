@@ -11,8 +11,8 @@ import { SlidePreloader } from "../slidePreload";
 import { usePreparedBankAnswer } from "./usePreparedBankAnswer";
 import { DailyGoal } from "./DailyGoal";
 import { useBankUndo } from "./useBankUndo";
-import { MatchingQuestion, matchingScore, type MatchingPicks } from "./MatchingQuestion";
-import { SequenceQuestion, sequenceComplete, sequenceScore } from "./SequenceQuestion";
+import { MatchingQuestion, type MatchingPicks } from "./MatchingQuestion";
+import { SequenceQuestion, sequenceComplete } from "./SequenceQuestion";
 
 const FORMAT_LABEL: Record<string, string> = {
   basic: "단답", cloze: "빈칸", list: "나열", ox: "O/X", mcq: "객관식", multi_select: "복수 선택",
@@ -105,9 +105,6 @@ export function BankSolve({ base, lecture, onFinished }: {
     }
   }, [base, current, answer, busy, prepared, matches, order]);
 
-  const autoResult = current?.question ? matchingScore(current.question, answer, matches)
-    ?? sequenceScore(current.question, answer, order) : null;
-
   const rate = useCallback(async (rating: BankRating) => {
     if (!current?.reviewToken || !answer || busy || pending.current) return;
     pending.current = true;
@@ -161,17 +158,14 @@ export function BankSolve({ base, lecture, onFinished }: {
       if ((event.key === " " || event.key === "Enter") && !answer) {
         event.preventDefault();
         void reveal();
-      } else if (answer && autoResult && (event.key === " " || event.key === "Enter")) {
-        event.preventDefault();
-        void rate(autoResult.rating);
-      } else if (answer && !autoResult && ["1", "2", "3", "4"].includes(event.key)) {
+      } else if (answer && ["1", "2", "3", "4"].includes(event.key)) {
         event.preventDefault();
         void rate(RATINGS[Number(event.key) - 1].rating);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [answer, reveal, rate, peek, autoResult]);
+  }, [answer, reveal, rate, peek]);
 
   if (current?.waiting) return <div className="quiz bank-start">
     <h2>지금 풀 수 있는 분량을 마쳤어요!</h2>
@@ -288,11 +282,7 @@ export function BankSolve({ base, lecture, onFinished }: {
       </div>
 
       <div className="quiz-bar">
-        {answer && autoResult ? (
-          <button className="quiz-submit" disabled={busy || undoBusy} onClick={() => void rate(autoResult.rating)}>
-            {busy ? "기록 중…" : <>다음 문제 <kbd>space</kbd></>}
-          </button>
-        ) : answer ? (
+        {answer ? (
           RATINGS.map(({ rating, grade }, index) => (
             <button key={rating} className={`quiz-grade is-${grade}`} disabled={busy || undoBusy} onClick={() => void rate(rating)}>
               <span className="quiz-grade-name">
