@@ -4,6 +4,7 @@ import { api } from "../api";
 import { invalidateTimetable } from "../firstScreen";
 import { Stem } from "../lecture/Stem";
 import { shuffled } from "../bank/BankQuestion";
+import { LearningOverview } from "./LearningOverview";
 import type { LearningAnswer, LearningDashboard, LearningFeedback, LearningSession, SourceRef } from "../types/learning";
 import "../styles/learning.css";
 
@@ -58,7 +59,7 @@ export function LearningPage() {
   if (!available) return <section className="learning"><h1>학습</h1><p>새 학습 기능이 현재 꺼져 있습니다.</p><Link to={legacy}>기존 학습으로</Link></section>;
   return <section className="learning">
     <header className="learning-header"><div><span className="learning-eyebrow">Study EZ</span><h1>{session?.mode === "exam" ? "시험 연습" : subject ? "강의 학습" : "오늘의 학습"}</h1></div>
-      <nav><Link to="/study">전체 학습</Link><Link to="/">캘린더</Link>{subject ? <Link to={legacy}>기존 풀이</Link> : null}</nav></header>
+      <nav><Link to="/study">전체 학습</Link><Link to="/">캘린더</Link><Link to="/guide#learning">학습 방법</Link>{subject ? <Link to={legacy}>기존 풀이</Link> : null}</nav></header>
     {error ? <p role="alert" className="notice is-error">{error} <button onClick={() => void run(load)}>다시 불러오기</button></p> : null}
     {sid && session ? <LearningRun key={session.sessionId} session={session} busy={busy}
       act={(action, body) => void run(() => mutation(action, body))} home={() => setParams({})} /> : sid ? <p>학습을 불러오는 중…</p> : dashboard ? <>
@@ -66,20 +67,27 @@ export function LearningPage() {
         <div><span className="learning-eyebrow">오늘의 약속</span><h2>{dashboard.plan.complete ? "오늘 계획을 마쳤어요" : `${Math.round(dashboard.plan.budgetSeconds / 60)}분 안에서 한 걸음씩`}</h2>
           <p>전체 계획 {dashboard.plan.completed.length} / {dashboard.plan.entries.length}개 활동 완료 · {fmt(dashboard.plan.activeSeconds)} 학습</p>
           <progress aria-label="오늘 활동 완료" max={Math.max(1, dashboard.plan.entries.length)} value={dashboard.plan.completed.length} /></div>
+        <p className="learning-start-hint">{dashboard.activeSession ? "진행 중인 학습을 이어가세요. 마친 뒤 다음 공부를 선택할 수 있어요."
+          : dashboard.plan.complete ? "오늘 분량은 끝났어요. 더 공부하거나 시험 연습으로 확인할 수 있어요."
+          : dashboard.plan.remaining > 0 ? "처음이라면 ‘오늘 학습 시작’을 누르세요. 새 내용과 복습을 순서대로 안내합니다."
+          : "이 강의를 더 공부하려면 추가 학습을, 오늘 배정된 분량을 보려면 전체 학습을 선택하세요."}</p>
         <div className="learning-actions">
           {dashboard.activeSession ? <button className="primary" onClick={() => setParams({ session: dashboard.activeSession! })}>진행 중 학습 이어가기</button> : null}
           {!dashboard.plan.complete && dashboard.plan.remaining > 0 ? <button className="primary" disabled={busy || !dashboard.enabled} onClick={() => void start("daily")}>오늘 학습 시작 · {dashboard.plan.remaining}개 활동</button> : null}
-          <button disabled={busy || !dashboard.enabled || !dashboard.progress.total} onClick={() => void start("extra")}>원하는 만큼 더 공부하기</button>
-          <button disabled={busy || !dashboard.enabled || dashboard.examQuestions === 0} onClick={() => void start("exam")}>처음 보는 객관식 · {dashboard.examQuestions}개 요점</button>
+        </div>
+        <div className="learning-optional-modes">
+          <div><button disabled={busy || !dashboard.enabled || !dashboard.progress.total} onClick={() => void start("extra")}>추가 학습 · 더 공부하기</button><p>오늘 분량과 별도로 더 공부해요. 중간에 마쳐도 됩니다.</p></div>
+          <div><button disabled={busy || !dashboard.enabled || dashboard.examQuestions === 0} onClick={() => void start("exam")}>시험 연습 · 처음 보는 객관식</button><p>배운 범위에서 아직 안 본 시험 문제가 있는 {dashboard.examQuestions}개 요점으로 실력을 확인해요.</p></div>
         </div>
         {subject && !dashboard.plan.remaining && !dashboard.plan.complete ? <p>이 강의는 오늘 배정된 활동이 없습니다. <Link to="/study">전체 계획</Link>에서 이어가거나 추가 학습을 선택하세요.</p> : null}
         {dashboard.examQuestions === 0 ? <p className="learning-muted">배운 범위에 아직 보지 않은 시험용 객관식이 준비되면 시험 연습을 시작할 수 있습니다.</p> : null}
         {dashboard.plan.infeasible ? <p className="learning-warning">첫 회독 목표일까지 새 범위에 하루 약 {dashboard.plan.newRequiredMinutes}분이 필요합니다. 가용시간이나 첫 회독 여유일을 조정해 주세요.</p> : null}
       </section>
+      <LearningOverview />
       <div className="learning-metrics">
-        <article><strong>{dashboard.progress.covered} / {dashboard.progress.total}</strong><span>처음 학습한 요점</span></article>
-        <article><strong>{dashboard.progress.delayedRecall}</strong><span>간격을 두고 두 번 확인한 요점</span></article>
-        <article><strong>{dashboard.progress.questionGaps}</strong><span>학습 문항이 필요한 요점</span></article>
+        <article><strong>{dashboard.progress.covered} / {dashboard.progress.total}</strong><span>한 번 공부한 범위</span><small>정답이나 설명을 확인한 범위예요. 전부 외웠다는 뜻은 아니에요.</small></article>
+        <article><strong>{dashboard.progress.delayedRecall}</strong><span>시간을 두고 기억한 요점</span><small>자동채점 문항을 간격을 두고 두 번, 도움 없이 확실하게 맞힌 요점이에요.</small></article>
+        <article><strong>{dashboard.progress.questionGaps}</strong><span>학습 문제 준비 중</span><small>학습용 문제가 없어 설명으로 공부하는 요점이에요.</small></article>
       </div>
       {dashboard.progress.legacyObjectives ? <p className="learning-muted">기존 자료는 문항별로 집계합니다. 전체 강의 범위 확인은 새 학습요점 목록이 준비된 뒤 가능합니다. 과거 자기평가는 새 문항 정답률로 환산하지 않습니다.</p> : null}
       {dashboard.scopeOnlyLectures?.length ? <details className="learning-panel"><summary>학습 대상 요점이 없는 강의 · {dashboard.scopeOnlyLectures.length}개</summary>
@@ -116,12 +124,14 @@ function SourceRefs({ refs }: { refs?: SourceRef[] }) {
 }
 
 function Feedback({ value, picked = [] }: { value: LearningFeedback; picked?: string[] }) {
+  const explanationOnly = value.correct === undefined && value.answer === undefined;
   const explanations = value.optionExplanations ?? [];
   const distractor = explanations.find(e => !value.correctOptionIds?.includes(e.option_id)
     && picked.includes(e.option_id)) ?? explanations.find(e => !value.correctOptionIds?.includes(e.option_id));
   const focused = explanations.filter(e => value.correctOptionIds?.includes(e.option_id)
     || picked.includes(e.option_id) || e === distractor);
-  return <section className="learning-feedback" aria-label="정답과 해설">
+  return <section className="learning-feedback" aria-label={explanationOnly ? "학습 설명" : "정답과 해설"}>
+    <h3>{explanationOnly ? "학습 설명" : "정답과 해설"}</h3>
     {value.correct !== undefined && value.correct !== null ? <p className="learning-verdict">{value.correct ? "맞았습니다" : "차이를 확인해 볼까요"}{value.confidence === "guess" ? " · 찍은 답은 다시 확인합니다" : ""}</p> : null}
     {value.answer ? <p><Stem text={value.answer} /></p> : null}
     {focused.map(e => <p key={e.option_id}><b>{e.option_id}</b> <Stem text={e.text} /></p>)}
@@ -129,7 +139,8 @@ function Feedback({ value, picked = [] }: { value: LearningFeedback; picked?: st
     {value.answerPairs?.length ? <ul>{value.answerPairs.map((p, i) => <li key={i}>{p.left} → {p.right}</li>)}</ul> : null}
     {value.correctOrder?.length ? <p>{value.correctOrder.join(" → ")}</p> : null}
     {explanations.length > focused.length ? <details><summary>모든 선지 해설</summary>{explanations.map(e => <p key={e.option_id}><b>{e.option_id}</b> <Stem text={e.text} /></p>)}</details> : null}
-    {value.explanation ? <details><summary>맥락과 설명</summary><p><Stem text={value.explanation} /></p><p><b>기억할 내용</b> <Stem text={value.minimum} /></p></details> : null}
+    {value.explanation ? explanationOnly ? <><p><Stem text={value.explanation} /></p><p><b>기억할 내용</b> <Stem text={value.minimum} /></p></>
+      : <details><summary>맥락과 설명</summary><p><Stem text={value.explanation} /></p><p><b>기억할 내용</b> <Stem text={value.minimum} /></p></details> : null}
     {value.sourceConflict ? <p className="learning-warning">자료 충돌: {value.sourceConflict}</p> : null}
     {value.medicalReview && value.medicalReview.verdict !== "ok" ? <p className="learning-warning">정답 검토 · {value.medicalReview.note}<br />{value.medicalReview.suggested_answer}</p> : null}
     <SourceRefs refs={value.sourceRefs} />
@@ -190,31 +201,48 @@ function LearningRun({ session: s, busy, act, home }: { session: LearningSession
   const ready = !q || (q.options.length ? picked.length > 0 : q.format === "ox" ? Boolean(answer.text)
     : q.format === "matching" ? q.matching_left.every(l => answer.pairs?.[l]) : true);
   const showRecall = !s.optionsShown && Boolean(s.recallPrompt);
+  const textRecall = Boolean(q && ["basic", "cloze", "list"].includes(q.format));
+  const selfCheck = Boolean(s.submitted && q && s.feedback?.correct == null && s.mode !== "exam");
+  const answerTask = q?.format === "matching" ? "짝 연결하기" : q?.format === "sequence" ? "순서 맞추기" : "답 선택하기";
+  const steps = s.mode === "exam" ? ["답 선택하기", "자신감과 답 저장", "다음 문제로"]
+    : [textRecall || showRecall ? "답 떠올리기" : q ? answerTask : "요점 살펴보기", q ? "자신감 선택 · 정답 보기" : "설명 보기", textRecall ? "비교하고 다음으로" : "확인하고 다음으로"];
   return <>
-    <div className="learning-run-bar"><span>{LANES[s.lane ?? ""]} · {s.index + 1} / {s.total}</span><span>{fmt(elapsed)}</span></div>
+    <div className="learning-run-bar"><span>{LANES[s.lane ?? ""]} · 이번 학습 {s.index + 1} / {s.total}개 활동</span><span>이 활동 {fmt(elapsed)}</span></div>
+    {s.mode === "extra" ? <p className="learning-muted">오늘 분량과 별도로 더 공부하는 중이에요. 원하는 때 ‘여기서 마치기’를 눌러도 됩니다.</p> : null}
     {s.mode !== "exam" ? <p className="learning-context">{s.lecture}</p> : null}
     <article className="learning-question">
+      <ol className="learning-question-steps" aria-label="이 문항의 학습 순서">{steps.map((step, index) => <li key={index} aria-current={index === (s.submitted ? 2 : 0) ? "step" : undefined}><span aria-hidden="true">{index + 1}</span>{step}</li>)}</ol>
       <h2><Stem text={promptText(showRecall ? s.recallPrompt! : q?.question ?? s.objective ?? "설명 학습")} /></h2>
-      {showRecall ? <><p className="learning-muted">잠깐 떠올려 본 뒤 보기를 확인하세요. 바로 펼쳐도 됩니다.</p><button disabled={busy} onClick={() => act("action", { token: s.token, action: "options" })}>보기 펼치기</button></> : null}
+      {!s.submitted ? <p className="learning-instruction">{s.mode === "exam" ? "답을 고르고 자신감을 선택해 저장하세요. 정답과 해설은 시험 연습을 마친 뒤 공개됩니다."
+        : showRecall ? "먼저 답을 잠깐 떠올려 보세요. 생각이 안 나면 바로 보기를 펼쳐도 됩니다."
+        : textRecall ? "머릿속으로 답을 떠올려 보세요. 떠오르지 않으면 도움을 보거나 ‘모르겠어요 · 정답 보기’를 누르세요."
+        : q?.format === "matching" ? "각 항목의 짝을 연결한 뒤 아래에서 자신감을 고르면 정답이 열립니다."
+        : q?.format === "sequence" ? "화살표로 순서를 맞춘 뒤 아래에서 자신감을 고르면 정답이 열립니다."
+        : q ? "답을 선택한 뒤 아래에서 자신감을 고르면 정답이 열립니다."
+        : "학습요점을 살펴보고 아래의 ‘설명 보기’를 눌러 기억할 내용을 확인하세요."}</p> : null}
+      {showRecall ? <button disabled={busy} onClick={() => act("action", { token: s.token, action: "options" })}>보기 펼치기</button> : null}
       {q?.options.length ? <div className="learning-options">{q.options.map(o => <button key={o.id} aria-pressed={picked.includes(o.id)} disabled={busy || s.submitted} onClick={() => choose(o.id)}><b>{o.id}</b><Stem text={o.text} /></button>)}</div> : null}
       {q?.format === "ox" ? <div className="learning-actions">{["O", "X"].map(v => <button key={v} disabled={busy || s.submitted} aria-pressed={answer.text === v} onClick={() => setAnswer({ text: v })}>{v}</button>)}</div> : null}
       {q?.format === "matching" ? <div className="learning-matching">{q.matching_left.map(l => <label key={l}>{l}<select aria-label={`${l}의 짝`} disabled={busy || s.submitted} value={answer.pairs?.[l] ?? ""} onChange={e => setAnswer({ pairs: { ...answer.pairs, [l]: e.target.value } })}><option value="">선택</option>{shuffled(q.matching_right, s.token ?? "").map(r => <option key={r}>{r}</option>)}</select></label>)}</div> : null}
       {q?.format === "sequence" ? <ol>{(answer.order ?? []).map((item, i) => <li key={item} className="learning-sequence">{item}<button disabled={busy || s.submitted || i === 0} aria-label={`${item} 위로`} onClick={() => {
         const order = [...(answer.order ?? [])]; [order[i - 1], order[i]] = [order[i], order[i - 1]]; setAnswer({ order });
       }}>↑</button></li>)}</ol> : null}
-      {q && ["basic", "cloze", "list"].includes(q.format) && !s.submitted ? <label className="learning-recall">떠올린 답 <small>입력은 선택 사항입니다</small><textarea value={answer.text ?? ""} onChange={e => setAnswer({ text: e.target.value })} placeholder="머릿속으로 답해도 됩니다" /></label> : null}
-      {s.mode !== "exam" && !s.submitted && !s.help ? <div className="learning-actions learning-help-actions"><button disabled={busy} onClick={() => act("action", { token: s.token, action: "help" })}>이해가 안 돼요</button><button disabled={busy} onClick={() => act("action", { token: s.token, action: "help" })}>무엇을 외워야 하나요?</button></div> : null}
-      {s.help ? <aside className="learning-help"><p>{s.help.context}</p><p><Stem text={s.help.explanation || "이 기존 문항에는 별도의 이해 설명이 없습니다. 정답과 원본을 확인한 뒤 다음 범위로 넘어갈 수 있습니다."} /></p><p><b>기억할 내용</b> <Stem text={s.help.minimum} /></p><p className="learning-muted">{s.help.rationale}</p><SourceRefs refs={s.help.source_refs} /></aside> : null}
+      {textRecall && !s.submitted ? <label className="learning-recall">떠올린 답 메모 (선택)<small>메모는 자동채점하지 않아요. 정답을 본 뒤 떠올린 내용과 직접 비교합니다.</small><textarea value={answer.text ?? ""} onChange={e => setAnswer({ text: e.target.value })} placeholder="적지 않고 머릿속으로만 답해도 돼요" /></label> : null}
+      {s.mode !== "exam" && !s.submitted && !s.help ? <div className="learning-actions learning-help-actions"><button disabled={busy} onClick={() => act("action", { token: s.token, action: "help" })}>막혔나요? 설명·기억할 내용 보기</button></div> : null}
+      {s.help ? <aside className="learning-help"><h3>이해 설명과 기억할 내용</h3><p>{s.help.context}</p><p><Stem text={s.help.explanation || "이 기존 문항에는 별도의 이해 설명이 없습니다. 정답과 원본을 확인한 뒤 다음 범위로 넘어갈 수 있습니다."} /></p><p><b>기억할 내용</b> <Stem text={s.help.minimum} /></p><p className="learning-muted">{s.help.rationale}</p><SourceRefs refs={s.help.source_refs} /></aside> : null}
       {s.assisted ? <p className="learning-muted">도움을 받은 학습으로 기록합니다. 다음에는 도움 없이 확인합니다.</p> : null}
+      {selfCheck && answer.text?.trim() ? <aside className="learning-answer-memo"><h3>내가 떠올린 답</h3><p>{answer.text}</p></aside> : null}
       {s.feedback ? <Feedback value={s.feedback} picked={picked} /> : null}
       {s.subject && s.runId && (s.feedback || s.help) ? <p><Link target="_blank" to={`/lectures/${encodeURIComponent(s.subject)}/${encodeURIComponent(s.runId)}`}>원본 강의 자료 열기 ↗</Link></p> : null}
     </article>
     <footer className="learning-controls">
-      {!s.submitted && !showRecall ? <><p>{q ? "정답을 보기 전, 얼마나 확신하나요?" : "설명을 확인하고 다음으로 이어가세요."}</p><div className="learning-actions">
-        {q ? ([["sure", "확실함"], ["unsure", "헷갈림"], ["guess", "찍음"]] as const).map(([value, label]) => <button className={value === "sure" ? "primary" : ""} disabled={busy || !ready} key={value} onClick={() => act("submit", { token: s.token, confidence: value, answer, activeSeconds: Math.floor(seconds.current) })}>{label} · 제출</button>)
-          : <button className="primary" disabled={busy} onClick={() => act("submit", { token: s.token, confidence: "unsure", answer: {}, activeSeconds: Math.floor(seconds.current) })}>설명 확인</button>}
+      {!s.submitted && !showRecall ? <><p>{q ? s.mode === "exam" ? "답에 얼마나 확신하나요? 선택하면 답변이 저장됩니다." : "정답을 보기 전, 얼마나 확신하나요? 선택하면 정답이 열립니다." : "설명을 확인하고 다음으로 이어가세요."}</p><div className="learning-actions learning-confidence-actions">
+        {q ? ([["sure", "확실해요"], ["unsure", "헷갈려요"], ["guess", textRecall ? "모르겠어요" : "찍었어요"]] as const).map(([value, label]) => <button disabled={busy || !ready} key={value} onClick={() => act("submit", { token: s.token, confidence: value, answer, activeSeconds: Math.floor(seconds.current) })}>{label} · {s.mode === "exam" ? "답변 저장" : "정답 보기"}</button>)
+          : <button className="primary" disabled={busy} onClick={() => act("submit", { token: s.token, confidence: "unsure", answer: {}, activeSeconds: Math.floor(seconds.current) })}>설명 보기</button>}
       </div></> : null}
-      {s.submitted ? <div className="learning-actions">{s.mode !== "exam" && q && s.feedback?.correct == null ? <><button disabled={busy} onClick={() => ack(false)}>기억하지 못했어요</button><button className="primary" disabled={busy} onClick={() => ack(true)}>스스로 맞혔어요</button></> : <button className="primary" disabled={busy} onClick={() => ack()}>{s.mode === "exam" ? "답변 저장 · 다음" : "확인했어요 · 다음"}</button>}</div> : null}
+      {s.submitted ? <><p>{selfCheck ? "정답과 떠올린 답을 비교하세요. 도움을 보기 전 스스로 기억한 내용으로 평가하면 다음으로 넘어갑니다."
+        : s.mode === "exam" ? "답변을 저장했어요. 다음 문제로 넘어가세요. 정답은 연습을 마친 뒤 확인합니다."
+        : q ? "정답과 설명을 확인했으면 다음으로 넘어가세요." : "설명을 확인했으면 다음으로 넘어가세요."}</p><div className="learning-actions">{selfCheck ? <><button disabled={busy} onClick={() => ack(false)}>기억하지 못했어요 · 다음</button><button className="primary" disabled={busy} onClick={() => ack(true)}>스스로 맞혔어요 · 다음</button></> : <button className="primary" disabled={busy} onClick={() => ack()}>{s.mode === "exam" ? "다음 문제로" : "확인했어요 · 다음"}</button>}</div></> : null}
       <div className="learning-actions">{s.canUndo && !s.submitted ? <button disabled={busy} onClick={() => act("undo", {})}>이전 평가 되돌리기</button> : null}<button disabled={busy} onClick={() => act("end", { token: s.token, activeSeconds: Math.floor(seconds.current) })}>여기서 마치기</button></div>
     </footer>
   </>;
