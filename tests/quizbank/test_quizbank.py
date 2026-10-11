@@ -44,8 +44,8 @@ def test_그래프_요약은_선택적이고_전체_제목을_보존한다(bank)
 def test_실물_은행은_list_채점단위_셋만_오류다(bank):
     """「목록 중 4개」처럼 후보를 한 줄로 적은 list 셋. 나머지 13건은 2026-10-04 에 경고로 내렸다."""
     v = validate_bank(bank, ["S1", "S2"])
-    assert v["errors"] == ["Q009: list는 채점 단위 2–5개", "Q015: list는 채점 단위 2–5개",
-                           "Q026: list는 채점 단위 2–5개"]
+    assert v["errors"] == ["Q009: list는 개별 채점 단위 2개 이상 필요", "Q015: list는 개별 채점 단위 2개 이상 필요",
+                           "Q026: list는 개별 채점 단위 2개 이상 필요"]
     assert "C01/mechanism: 계획에 대응하는 문항 누락" in v["warnings"]
     assert "CF-04: 한 자료 안의 충돌" in v["warnings"]
     assert "Q024: 회상 계획에 없는 방향" in v["warnings"]
@@ -92,6 +92,35 @@ def _fix_lists(bank):
             q["answer_units"] = ["가", "나"]
 
 
+def test_list_부분_회상의_정답_후보를_다섯개로_제한하지_않는다(bank):
+    _fix_lists(bank)
+    q = next(q for q in bank["questions"] if q["format"] == "list")
+    q["question"] = "강의에 제시된 예를 네 가지 이상 쓰라."
+    q["answer_units"] = [f"예시 {i}" for i in range(8)]
+    kept, validation = validate_dropping(bank, ["S1", "S2"])
+    assert validation["pass"] and validation["dropped"] == []
+    assert q in kept["questions"] and len(q["answer_units"]) == 8
+    q["answer_units"] = ["네 가지 이상"]
+    _, validation = validate_dropping(bank, ["S1", "S2"])
+    assert q["question_id"] in [d["question_id"] for d in validation["dropped"]]
+
+
+def test_동일_짝짓기_보기는_합치고_다대일_정답은_보존한다(monkeypatch, bank):
+    _fix_lists(bank)
+    q = next(q for q in bank["questions"] if q["format"] == "basic")
+    q.update(format="matching", matching_left=["유형 1", "유형 2", "유형 3"],
+             matching_right=["A", "B", "A"],
+             answer_pairs=[{"left": "유형 1", "right": "A"}, {"left": "유형 2", "right": "B"},
+                           {"left": "유형 3", "right": "A"}])
+    original_pairs = list(q["answer_pairs"])
+    monkeypatch.setattr(session, "run_structured", lambda *args, **kwargs: (bank, {}))
+    organized, _ = organize.organize("응답", {"title": "t", "sources": []})
+    fixed = next(x for x in organized["questions"] if x["question_id"] == q["question_id"])
+    assert fixed["matching_right"] == ["A", "B"] and fixed["answer_pairs"] == original_pairs
+    assert q["matching_right"] == ["A", "B", "A"]
+    assert validate_bank(organized, ["S1", "S2"])["pass"]
+
+
 def test_충돌은_한_문항으로_합쳐도_통과한다(bank):
     """프롬프트 v1.2(2026-10-05 관리자): 충돌은 출처별로 가르지 않고 합쳐 외부 의학지식으로 답을 정한다.
     「[출처 기준] 머리말」·「출처 하나」 규칙이 없어졌다 — 두 출처와 EXT 를 같이 적은 합친 문항이 통과한다."""
@@ -117,7 +146,7 @@ def test_걸린_문항만_빼고_다시_잰다(bank):
     kept, v = validate_dropping(bank, ["S1", "S2"])
     assert v["pass"] is True and len(kept["questions"]) == 33
     assert [d["question_id"] for d in v["dropped"]] == ["Q009", "Q015", "Q026"]
-    assert v["dropped"][0]["errors"] == ["Q009: list는 채점 단위 2–5개"]
+    assert v["dropped"][0]["errors"] == ["Q009: list는 개별 채점 단위 2개 이상 필요"]
     assert v["dropped"][0]["question"]["question_id"] == "Q009"   # 관리자가 원문을 본다
     assert v["warnings"][0] == "검증에 걸려 뺀 문항 3개: Q009, Q015, Q026"
     gone = {"Q009", "Q015", "Q026"}
@@ -129,7 +158,7 @@ def test_문항_탓이_아닌_오류가_있으면_통째로_막는다(bank):
     bank["concepts"][0]["related_concepts"] = ["C99"]
     kept, v = validate_dropping(bank, ["S1", "S2"])
     assert kept is bank and v["pass"] is False and v["dropped"] == []
-    assert "C01: related_concepts 오류" in v["errors"] and "Q009: list는 채점 단위 2–5개" in v["errors"]
+    assert "C01: related_concepts 오류" in v["errors"] and "Q009: list는 개별 채점 단위 2개 이상 필요" in v["errors"]
 
 
 def test_자료_요약과_점검_보고는_없어도_된다(bank):

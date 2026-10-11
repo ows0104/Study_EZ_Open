@@ -157,7 +157,7 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
                  f"{label}: cloze는 {{{{c1}}}} 형식의 빈칸 1–4개와 등장 순서에 대응하는 answer_units 필요")
             fail("{{" not in re.sub(r"\{\{c\d+\}\}", "", q["question"]), f"{label}: 잘못된 cloze 표기")
         if q["format"] == "list":
-            fail(_in_range(len(q["answer_units"]), 2, 5), f"{label}: list는 채점 단위 2–5개")
+            fail(len(q["answer_units"]) >= 2, f"{label}: list는 개별 채점 단위 2개 이상 필요")
         if q["format"] == "matching":
             unique(q["matching_left"], f"{label} left")
             unique(q["matching_right"], f"{label} right")

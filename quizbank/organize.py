@@ -160,12 +160,29 @@ def tidy_prerequisites(bank: dict) -> list[str]:
     return notes
 
 
+def tidy_matching_choices(bank: dict) -> list[str]:
+    """Remove identical right-hand choices while preserving many-to-one answers."""
+    fixed = []
+    for q in bank.get("questions", []):
+        if q.get("format") != "matching":
+            continue
+        right = q.get("matching_right", [])
+        unique = list(dict.fromkeys(right))
+        if unique != right:
+            q["matching_right"] = unique
+            fixed.append(q["question_id"])
+    return fixed
+
+
 def organize(raw: str, lecture: dict, *, model: str | None = None) -> tuple[dict, dict]:
     """`(bank, info)`. lecture = {title, sources: [{id, kind, filename}]}."""
     bank, info = session.run_structured(organizer_prompt(raw, lecture), BANK, system=SYSTEM,
                                         label="정리", timeout=1200, model=model)
     bank = without_retired(bank)   # 옛 응답을 다시 정리해도 뺀 칸은 남기지 않는다
     fixed = tidy_labels(bank)
+    matching = tidy_matching_choices(bank)
+    if matching and isinstance(bank.get("warnings"), list):
+        bank["warnings"].append(f"[정리] 동일한 짝짓기 보기를 합쳤다: {', '.join(matching)}")
     if fixed and isinstance(bank.get("warnings"), list):
         bank["warnings"].append(f"[정리] 짝짓기·순서 라벨을 떼고 본문으로 맞췄다: {', '.join(fixed)}")
     related = tidy_related(bank)

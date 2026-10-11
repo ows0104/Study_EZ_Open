@@ -1,10 +1,13 @@
 <!--
 Bank Builder 프롬프트 — 정본
-Version: 1.24
+Version: 1.25
 
 이 파일이 ChatGPT에 가는 프롬프트의 정본이다. 이 주석은 보내지 않는다.
 {{…}} 자리는 web/src/bank/prompt.ts 가 강의마다 채운다. {{c1}} 같은 cloze 표기는 그대로 간다.
 고치면 아래에 판을 하나 올리고 Version 을 같이 올린다. 서버에 응답이 저장될 때 이 Version 이 같이 남는다.
+
+1.25 (2026-10-11) 나열형의 정답 후보를 다섯 개로 자르지 않고 요구 개수와 분리한다.
+                   같은 답을 재사용하는 짝짓기는 중복 보기 없이 정답 짝을 보존한다.
 
 1.24 (2026-10-11) 문장 구조상 필요한 cloze 빈칸을 4개까지 허용한다. 빈칸 등장 순서와
                    answer_units의 일대일 대응은 유지한다.
@@ -551,6 +554,7 @@ Core → Advanced → Optional 순서로 **문항당 한 행**. 모든 문항을
 - retrieval_direction: direct / reverse / mechanism / discrimination / integration / sequence / trap. `matching`은 형식이며 회수 방향이 아니다.
 - answer_units·prerequisites는 항목 사이를 `<br>`로 구분한다. 대괄호로 감싸지 않는다. 쉼표·세미콜론은 항목 내부에도 쓰이므로 배열 구분자로 쓰지 않는다.
 - prerequisites가 없으면 `—`, conflict_id가 없으면 `—`. 그 외 필수 값은 생략하지 않는다.
+- list의 answer_units에는 원문에서 허용한 정답 후보를 각각 적고, 후보가 5개보다 많아도 보존한다. "4개 이상" 같은 요구 개수는 발문·정답에 유지하며 약물명 항목과 섞지 않는다. 단일 표의 사실을 직접 회수하는 문항은 direct로 분류하고, integration 문항에는 실제 기초 문항 ID를 연결한다.
 - source_refs는 기존처럼 `S1 p13; S1 p14; EXT 외부 의학지식`으로 쓴다. exam_rationale에는 해당 문항의 교수 강조 또는 족보 근거를 남긴다.
 - **cloze**: question의 빈칸 1–4개를 모두 `{{c1}}`로 표시한다. answer_units는 빈칸 등장 순서대로 하나씩 두고, question에는 답을 넣지 않는다. answer에는 정답을 채운 전체 문장을 쓰고 채운 정답 부분만 `**굵게**` 강조한다.
 - **ox**: answer는 `O` 또는 `X`. 설명은 answer_units에 둔다.
@@ -575,6 +579,7 @@ matching 문항만 한 행씩. 해당 문항이 없으면 이 절을 생략한�
 
 - matching_left: `1. 항목<br>2. 항목`, matching_right: `A. 항목<br>B. 항목`.
 - answer_pairs: `1. 왼쪽 - B. 오른쪽<br>2. 왼쪽 - A. 오른쪽`처럼 번호와 글을 함께 쓴다.
+- 여러 왼쪽 항목이 같은 오른쪽 답을 가질 수 있다. 동일한 오른쪽 보기는 하나만 적고 각 왼쪽의 정답 짝은 모두 보존한다.
 
 ### 3.4 Sequence Details
 
