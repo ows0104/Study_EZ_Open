@@ -10,6 +10,9 @@ import unicodedata
 from collections import Counter
 
 CHOICE = ("mcq", "multi_select")
+# Repeated causal verbs do not disclose which process changes or why.
+# "Na 통로 억제 → 활동전위 생성은? / 억제" still requires a causal judgment.
+GENERIC_PREDICATES = {"억제", "촉진", "차단", "증가", "감소", "상승", "하강", "활성화", "비활성화"}
 
 
 def _text(value: str) -> str:
@@ -26,7 +29,7 @@ def leaked_units(question: dict) -> list[str]:
     for unit in question["answer_units"]:
         answer = _text(unit)
         # A one-letter symbol or a one-syllable suffix is not useful evidence.
-        if len(answer) < 2:
+        if len(answer) < 2 or answer in GENERIC_PREDICATES:
             continue
         boundary = (r"(?<![a-z0-9])" if answer[0].isascii() and answer[0].isalnum() else "")
         boundary_end = (r"(?![a-z0-9])" if answer[-1].isascii() and answer[-1].isalnum() else "")

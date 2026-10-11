@@ -49,6 +49,8 @@ def main():
     assert not leaked_units({"format": "basic", "question": "ABCG2의 기질은?", "answer_units": ["ABC"]})
     assert not leaked_units({"format": "basic", "question": "A는 무엇인가?", "answer_units": ["A"]})
     assert leaked_units({"format": "basic", "question": "**Valproate**를 쓰세요", "answer_units": ["Valproate"]})
+    assert not leaked_units({"format": "basic", "question": "전압개폐 Na 통로를 억제하면 활동전위 생성은 어떻게 변하는가?",
+                             "answer_units": ["억제"]})
     leaking = copy.deepcopy(bank)
     basic(leaking["questions"][3], fmt="list", question=disclosure["question"], units=disclosure["answer_units"])
     result = validate_bank(leaking, ["S1"])
