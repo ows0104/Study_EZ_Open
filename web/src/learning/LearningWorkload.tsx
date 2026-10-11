@@ -38,8 +38,6 @@ export function LectureWorkload({ lectures, scoped }: { lectures: LearningDashbo
       : filter === "unseen" ? l.covered < l.total : (l.workload?.dueReviews ?? 0) > 0)));
   return <section className="learning-panel learning-lecture-workload" aria-label="강의별 남은 학습량">
     <h2>{scoped ? "이 강의의 목표와 남은 분량" : "강의별 목표와 남은 분량"}</h2>
-    <p className="learning-muted">첫 목표는 제공된 학습 범위를 한 번씩 공부하는 거예요. 첫 회독 뒤에도 간격에 맞춰 복습합니다.
-      같은 내용을 반복해도 첫 회독 수는 늘지 않아요.</p>
     {!scoped ? <div className="learning-lecture-tools"><label>강의 찾기 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="강의명이나 과목" /></label>
       <div className="learning-actions" aria-label="강의 목록 필터">{([["all", "전체"], ["today", "오늘 남음"], ["unseen", "첫 회독 남음"], ["review", "복습 필요"]] as const).map(([key, label]) =>
         <button key={key} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}</button>)}</div></div> : null}
@@ -56,7 +54,6 @@ export function LectureWorkload({ lectures, scoped }: { lectures: LearningDashbo
         <footer><span>{l.workload ? `지금 복습할 ${w.dueReviews}${unit}` : "복습 일정 확인 중"}{w.nextReviewAt ? ` · 다음 복습 ${date(w.nextReviewAt)}` : ""}</span>
           {!scoped ? <Link to={`/bank/${encodeURIComponent(l.subject)}/${encodeURIComponent(l.runId)}`}>강의 공부하기 →</Link> : null}</footer>
         {l.questionGaps ? <small className="learning-muted">{l.questionGaps}{unit}은 문제가 준비되지 않아 설명으로 공부해요.</small> : null}
-        {l.legacyObjectives ? <small className="learning-muted">기존 자료는 문항별로 셉니다. 강의 전체 범위는 새 요점 목록이 준비되면 확인할 수 있어요.</small> : null}
       </article>;
     })}</div>
     {!visible.length ? <p>{lectures.length ? "이 조건에 맞는 강의가 없어요." : "공개된 학습 자료가 준비되면 강의별 분량을 보여 드려요."}</p> : null}

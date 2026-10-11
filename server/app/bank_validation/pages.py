@@ -21,7 +21,9 @@ def pages_of(locator: str) -> list[int]:
 def cited_pages(bank: dict, pdf_source: str) -> dict[str, list[int]]:
     out = {}
     for q in bank["questions"]:
-        pages = {p for ref in q["source_refs"] if ref["source_id"] == pdf_source for p in pages_of(ref["locator"])}
+        refs = q["source_refs"] + [ref for pool in q.get("option_pools", [])
+                                   for candidate in pool["candidates"] for ref in candidate["source_refs"]]
+        pages = {p for ref in refs if ref["source_id"] == pdf_source for p in pages_of(ref["locator"])}
         if pages:
             out[q["question_id"]] = sorted(pages)
     return out

@@ -13,9 +13,10 @@ const question = { question_id: "Q1", concept_id: "C1", format: scenario === "re
 const response = { answer: "A. 두 개념의 차이를 만드는 조건", answerUnits: [], correctOptionIds: ["A"], answerPairs: [], correctOrder: [], optionExplanations: [{ option_id: "A", text: "조건에 따라 결과가 달라지는 이유를 구별합니다." }, { option_id: "B", text: "보기 순서는 지식의 차이를 설명하지 않습니다." }], sourceRefs: question.source_refs, correct: true, confidence: "sure", explanation: "같은 결과처럼 보여도 발생하는 조건이 다를 수 있습니다. 그 차이를 기준으로 묶어 보세요.", minimum: "구별 조건 → 결과" };
 if (scenario === "recall") Object.assign(response, { answer: "목표, 공부할 범위, 쓸 수 있는 시간", answerUnits: ["목표", "공부할 범위", "쓸 수 있는 시간"], correctOptionIds: [], optionExplanations: [], explanation: "목표와 범위를 먼저 정한 뒤 쓸 수 있는 시간 안에 분량을 배정합니다.", minimum: "목표 · 범위 · 시간" });
 const round = () => choiceRounds[count % choiceRounds.length];
+const media = { slides: [{ page: 12, url: "/tests/reference-slide.svg" }, { page: 13, url: "/tests/reference-slide.svg" }], missingSlidePages: [], sourceDocument: { filename: "참고 강의록.pdf", url: "/tests/reference-slide.svg" } };
 const isCorrect = () => scenario === "choices" ? submittedAnswer.selected?.join() === round().feedback.correctOptionIds.join() : submittedAnswer.selected?.[0] === "A";
 const feedback = () => scenario === "explanation" ? { explanation: response.explanation, minimum: response.minimum }
-  : ({ ...(scenario === "choices" ? round().feedback : response), confidence, correct: scenario === "recall" ? null : isCorrect() });
+  : ({ ...(scenario === "choices" ? round().feedback : response), ...media, confidence, correct: scenario === "recall" ? null : isCorrect() });
 const view = (): LearningSession => ({
   sessionId: "demo", mode, status: complete ? "complete" : "active", index: count, total: 2,
   seconds: 60 * count, canUndo: count > 0 && mode !== "exam", token: `token-${count}`,
@@ -77,4 +78,4 @@ window.fetch = async (input, init) => {
 };
 const { LearningPage } = await import("../src/learning/LearningPage");
 const { GuidePage } = await import("../src/notices/GuidePage");
-createRoot(document.getElementById("root")!).render(<MemoryRouter initialEntries={[scenario === "guide" ? "/guide#learning" : scenario === "recall" || scenario === "explanation" ? "/bank/local/demo?session=demo" : scenario === "exam" || scenario === "choices" ? "/study?session=demo" : "/study"]}><Routes><Route path="/study" element={<LearningPage />} /><Route path="/bank/:subject/:runId" element={<LearningPage />} /><Route path="/guide" element={<GuidePage />} /></Routes></MemoryRouter>);
+createRoot(document.getElementById("root")!).render(<MemoryRouter initialEntries={[scenario === "guide" ? "/guide#learning" : scenario === "recall" || scenario === "explanation" ? "/bank/local/demo?session=demo" : scenario === "exam" || scenario === "choices" || scenario === "layout" ? "/study?session=demo" : "/study"]}><Routes><Route path="/study" element={<LearningPage />} /><Route path="/bank/:subject/:runId" element={<LearningPage />} /><Route path="/guide" element={<GuidePage />} /></Routes></MemoryRouter>);

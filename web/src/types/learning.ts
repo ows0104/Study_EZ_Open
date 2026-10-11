@@ -25,6 +25,8 @@ export type LearningQuestion = {
 export type LearningAnswer = { selected?: string[]; text?: string; pairs?: Record<string, string>; order?: string[] };
 export type RecallRating = "Again" | "Hard" | "Good" | "Easy";
 export type LearningFeedback = {
+  slides?: { page: number; url: string }[]; missingSlidePages?: number[]; slideStatus?: string;
+  sourceDocument?: { filename: string; url: string } | null;
   answer?: string; answerUnits?: string[]; correctOptionIds?: string[];
   answerPairs?: { left: string; right: string }[]; correctOrder?: string[];
   optionExplanations?: { option_id: string; text: string }[];

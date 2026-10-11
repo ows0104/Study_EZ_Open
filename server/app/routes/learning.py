@@ -20,6 +20,7 @@ from app.models import BankState, Lecture, QuizBank, TimetableEvent
 from app.models.learning import LearningAttempt, LearningBankVersion, LearningDay, LearningLegacyState, LearningProfile, LearningSession
 from app.bank_validation.learning import fingerprint, learning_content, question_identity, scope_only
 from app.learning_versions import snapshot
+from app.learning_media import references
 from app.naming import normalize_stem
 from app.study_engine import now_ms
 from app.study_engine.learning import POLICY_VERSION, apply_attempt, build_plan, catalog_unit, choose_question, grade, progress, workload
@@ -276,15 +277,17 @@ def public_question(q):
     return {k: q[k] for k in fields}
 
 
-def feedback(unit, served, attempt):
+def feedback(db, unit, served, attempt):
     q = served["question"]
-    if q is None: return {"explanation": unit["objective"]["explanation"], "minimum": unit["objective"]["minimum"]}
+    media = references(db, unit, q)
+    if q is None: return {"explanation": unit["objective"]["explanation"], "minimum": unit["objective"]["minimum"],
+                          "sourceRefs": unit["objective"]["source_refs"], **media}
     return {"answer": q["answer"], "answerUnits": q["answer_units"], "correctOptionIds": q["correct_option_ids"],
             "answerPairs": q["answer_pairs"], "correctOrder": q["correct_order"],
             "optionExplanations": q.get("option_explanations", []), "sourceRefs": q["source_refs"],
             "medicalReview": q.get("medicalReview"), "sourceConflict": q.get("sourceConflict"),
             "correct": attempt.get("correct"), "confidence": attempt.get("confidence"),
-            "explanation": unit["objective"]["explanation"], "minimum": unit["objective"]["minimum"]}
+            "explanation": unit["objective"]["explanation"], "minimum": unit["objective"]["minimum"], **media}
 
 
 def serve(db, person, session, now):
@@ -353,7 +356,7 @@ def session_view(db, person, session, now):
             for a in attempts:
                 unit = data["units"][a.objective_key]; authorized_unit(db, unit)
                 out["results"].append({"title": unit["title"], "question": public_question(a.data["served"]["question"]),
-                    "submittedAnswer": a.data["answer"], **feedback(unit, a.data["served"], a.data)})
+                    "submittedAnswer": a.data["answer"], **feedback(db, unit, a.data["served"], a.data)})
         return out
     served = serve(db, person, session, now); data = session.data
     if served is None: return out
@@ -374,7 +377,7 @@ def session_view(db, person, session, now):
         out["submittedAnswer"] = attempt.data["answer"]
         out["activeSeconds"] = attempt.data["seconds"]
         if session.mode != "exam":
-            out["feedback"] = feedback(unit, served, attempt.data)
+            out["feedback"] = feedback(db, unit, served, attempt.data)
             if q:
                 old = person.state.get("objectives", {}).get(unit["key"], {})
                 out["reviewChoices"] = []
