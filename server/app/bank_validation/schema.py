@@ -9,7 +9,7 @@ from __future__ import annotations
 FORMATS = ["basic", "cloze", "list", "ox", "mcq", "multi_select", "matching", "sequence"]
 DIRECTIONS = ["direct", "reverse", "mechanism", "discrimination", "integration", "sequence", "trap"]
 TIERS = ["Core", "Advanced", "Optional"]
-SCHEMA_VERSION = "4.0"
+SCHEMA_VERSION = "4.1"
 
 _STR = {"type": "string"}
 _NUM = {"type": "number"}
@@ -76,6 +76,11 @@ BANK = _object({
         "status": _enum(["target", "explanation", "excluded", "uncertain"]),
         "reason": _STR, "objective_ids": _STRS,
     })),
+    "exam_design": _array(_object({
+        "question_id": _STR, "basis_refs": _array(SOURCE_REF),
+        "changed_dimension": _enum(["condition", "direction", "contrast", "integration"]),
+        "novelty": _STR,
+    })),
     "audit_summary": _object({"summary": _STR, "rejected_candidate_count": _INT, "changes": _STRS}),
     "warnings": _STRS,
 })
@@ -93,6 +98,7 @@ def without_retired(bank: dict) -> dict:
     out = dict(bank)
     out.setdefault("learning_objectives", [])
     out.setdefault("coverage_inventory", [])
+    out.setdefault("exam_design", [])
     # 그래프용 요약이 없던 은행도 유효하다. 원래 제목은 바꾸지 않는다.
     if isinstance(bank.get("concepts"), list):
         out["concepts"] = [{"graph_title": "", **c} if isinstance(c, dict) else c for c in bank["concepts"]]

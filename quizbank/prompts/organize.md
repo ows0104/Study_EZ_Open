@@ -24,6 +24,9 @@
 - Learning Question Links의 primary_objective_id·supporting_objective_ids·role·recall_prompt를 question_id로 문항에 연결한다.
 - 새 학습 표의 ID 배열 셀에서 `—`는 빈 배열이다. recall_prompt의 `—`·`–`·`-`는 빈 문자열로 옮긴다. 선택적 회상 질문이 비어 있는 것은 오류가 아니다.
 - Option Explanations의 option_id·text를 문항의 option_explanations 배열에 보존한다. 없는 해설을 만들지 않는다.
+- Exam Design은 exam_design으로 옮긴다. basis_refs는 source_refs와 같은 형식이며 `—`는 빈 배열이다.
+  changed_dimension·novelty를 그대로 보존하고 원문에 없는 새로움 근거를 만들지 않는다.
+  Exam Design이 없는 옛 응답은 exam_design=[]로 둔다. 이 표가 없어도 옛 문항을 바꾸지 않는다.
 - 새 학습 표가 없는 과거 응답은 learning_objectives·coverage_inventory를 빈 배열로 두고 문항의 새 필드는
   primary_objective_id="", supporting_objective_ids=[], role="learning", recall_prompt="", option_explanations=[]로 둔다.
   표가 있는 응답에서 일부 행이 빠졌으면 추정해 채우지 말고 warnings에 기록한다.

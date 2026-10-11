@@ -159,6 +159,7 @@ def run(client: publish.Client, root: Path, subject: str, run_id: str, this_year
         if code != 0 or generated is None or not raw.is_file():
             return fail(f"자동 출제가 {code} 로 끝났다 (로그: {out})")
         got["raw"] = raw.read_text(encoding="utf-8")
+        got["promptVersion"] = generated["promptVersion"]
         client.call("PUT", f"{base}/bank-generated-response", {
             "raw": got["raw"], "respondedAt": responded,
             "promptVersion": generated["promptVersion"]})
@@ -166,6 +167,8 @@ def run(client: publish.Client, root: Path, subject: str, run_id: str, this_year
     raw.write_text(got["raw"], encoding="utf-8")
     argv = [sys.executable, "-m", "quizbank.run", str(raw), "--pdf", str(pdf), "--title", got["title"],
             "--run-id", run_id, "--out", str(out)]
+    if got.get("promptVersion"):
+        argv += ["--prompt-version", got["promptVersion"]]
     for s in got.get("sources") or [{"id": "S1", "kind": "notes_current", "filename": pdf.name}]:
         argv += ["--source", f"{s['id']}|{s['kind']}|{s['filename']}"]
     if model:

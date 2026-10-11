@@ -34,9 +34,19 @@ def clean_response(raw: str) -> str:
     return text
 
 
+def expected_schema(raw: str, lecture: dict) -> str:
+    """Bind new obligations to generation metadata, not an optional model heading."""
+    version = re.fullmatch(r"v?(\d+)\.(\d+)(?:\.\d+)?", lecture.get("prompt_version", ""))
+    if version:
+        return SCHEMA_VERSION if tuple(map(int, version.groups())) >= (2, 1) else "4.0"
+    return SCHEMA_VERSION if re.search(r"^#{1,6}\s+Exam Design\s*$", raw, re.M | re.I) else "4.0"
+
+
 def organizer_prompt(raw: str, lecture: dict) -> str:
     meta = {"title": lecture["title"], "sources": lecture["sources"]}
-    fill = {"schema_version": SCHEMA_VERSION,
+    # Old v2.0 replies must not acquire new obligations when reorganized.
+    version = expected_schema(raw, lecture)
+    fill = {"schema_version": version,
             "lecture": json.dumps(meta, ensure_ascii=False),
             "raw": json.dumps(clean_response(raw), ensure_ascii=False)}
     return re.sub(r"\{\{(schema_version|lecture|raw)\}\}", lambda m: fill[m.group(1)],
@@ -179,6 +189,8 @@ def organize(raw: str, lecture: dict, *, model: str | None = None) -> tuple[dict
     bank, info = session.run_structured(organizer_prompt(raw, lecture), BANK, system=SYSTEM,
                                         label="정리", timeout=1200, model=model)
     bank = without_retired(bank)   # 옛 응답을 다시 정리해도 뺀 칸은 남기지 않는다
+    if expected_schema(raw, lecture) == SCHEMA_VERSION:
+        bank["build_meta"]["schema_version"] = SCHEMA_VERSION
     fixed = tidy_labels(bank)
     matching = tidy_matching_choices(bank)
     if matching and isinstance(bank.get("warnings"), list):

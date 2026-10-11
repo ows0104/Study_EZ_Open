@@ -48,8 +48,8 @@
 
 ## 새 규칙을 둘 곳
 
-Quiz Bank의 별도 출제 정본은 `web/src/bank/bankPrompt.md` v2.0이다.
-v4 JSON 계약은 `server/app/bank_validation/schema.py`와 `learning.py`에서 검증한다.
+Quiz Bank의 별도 출제 정본은 `web/src/bank/bankPrompt.md` v2.1이다.
+v4.1 JSON 계약은 `server/app/bank_validation/schema.py`·`learning.py`·`quality.py`에서 검증한다.
 `coverage_inventory`는 자료 범위를 target/explanation/excluded/uncertain으로 분류하며,
 `learning_objectives`는 회독·복습을 집계하는 단위다. 각 문항은 주 요점 하나와
 learning/variant/exam 역할, 선택적 `recall_prompt`, 객관식 선지별 해설을 가진다.
@@ -58,6 +58,16 @@ learning/variant/exam 역할, 선택적 `recall_prompt`, 객관식 선지별 해
 시험 제외가 명시된 강의는 근거·출처가 있는 범위 목록을 보존한 v4 빈 은행으로 검증할 수 있다.
 빈 목록이나 학습 대상 요점이 누락된 은행은 허용하지 않으며, 범위 제외는 학습 완료로 집계하지 않는다.
 시험용 통합 문항은 주 요점과 보조 요점을 모두 처음 학습한 뒤에만 출제한다.
+
+v4.1은 요점마다 완전한 대표 learning 문항 하나를 요구한다. 독립 사실을 한 요점에 묶어
+대표 하나만 보고 회독 처리하지 않도록 출제 단계에서 분리한다. 비교·구별 요점의 대표는
+객관식이며, 단순 사실을 억지로 객관식으로 늘리거나 일률적인 객관식 비율을 강제하지 않는다.
+시험용 객관식만 있고 평소 대표 객관식이 없는 새 은행은 통과하지 않는다.
+`exam_design`은 시험 문항별 비교 기출 위치·바꾼 판단 축·새로움 설명을 보존한다.
+이 설명은 출제자의 주장이다. 의미상 기출 재탕 여부는 원본과 별도 대조해야 한다.
+정답을 발문에 모두 노출한 비선택형 문항은 오류, 일부 노출은 검토 경고로 처리한다.
+러너는 출제 프롬프트 버전을 정리 단계에 전달한다. v2.1 이후 응답은 표 누락으로
+v4.0 검증으로 내려갈 수 없다. 기존 v3/v4.0 은행의 계약은 유지한다.
 
 일일 계획은 모든 강의의 공통 시간 예산을 사용한다. 기본 배분은 새 범위 50%,
 복습 25%, 단순 암기 12.5%, 누적 확인 12.5%이며 목표일까지 새 범위가 많으면

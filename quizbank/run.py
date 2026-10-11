@@ -52,7 +52,8 @@ def parse_source(text: str) -> dict:
 
 
 def run(raw_path: Path, pdf: Path | None, title: str, run_id: str, sources: list[dict], out: Path,
-        *, pdf_source: str = "S1", do_review: bool = True, model: str | None = None) -> dict:
+        *, pdf_source: str = "S1", do_review: bool = True, model: str | None = None,
+        prompt_version: str = "") -> dict:
     out.mkdir(parents=True, exist_ok=True)
     # 지난 실행이 남긴 것을 이번 것으로 읽지 않는다 (루트 CLAUDE.md 함정 ②).
     for name in OUTPUTS:
@@ -60,7 +61,7 @@ def run(raw_path: Path, pdf: Path | None, title: str, run_id: str, sources: list
     shutil.rmtree(out / "slides", ignore_errors=True)
 
     raw = raw_path.read_text(encoding="utf-8")
-    lecture = {"title": title, "sources": sources}
+    lecture = {"title": title, "sources": sources, "prompt_version": prompt_version}
 
     _stage("정리")
     bank, info = organize.organize(raw, lecture, model=model)
@@ -111,11 +112,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--no-review", action="store_true")
     ap.add_argument("--model")
+    ap.add_argument("--prompt-version", default="")
     args = ap.parse_args(argv)
     sources = [parse_source(s) for s in args.source] or [{"id": "S1", "kind": "notes_current", "filename": ""}]
     try:
         result = run(args.raw, args.pdf, args.title, args.run_id, sources, args.out,
-                     pdf_source=args.pdf_source, do_review=not args.no_review, model=args.model)
+                     pdf_source=args.pdf_source, do_review=not args.no_review, model=args.model,
+                     prompt_version=args.prompt_version)
     except SessionError as e:
         print(f"멈췄다 — {e}", flush=True)
         return 1
