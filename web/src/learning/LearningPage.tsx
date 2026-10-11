@@ -89,7 +89,7 @@ export function LearningPage() {
         </div>
         {subject && !dashboard.plan.remaining && !dashboard.plan.complete ? <p>이 강의는 오늘 배정된 활동이 없습니다. <Link to="/study">전체 계획</Link>에서 이어가거나 추가 학습을 선택하세요.</p> : null}
         {dashboard.examQuestions === 0 ? <p className="learning-muted">배운 범위에 아직 보지 않은 시험용 객관식이 준비되면 시험 연습을 시작할 수 있습니다.</p> : null}
-        {dashboard.plan.infeasible ? <p className="learning-warning">첫 회독 목표일까지 새 범위에 하루 약 {dashboard.plan.newRequiredMinutes}분이 필요합니다. 가용시간이나 첫 회독 여유일을 조정해 주세요.</p> : null}
+        {dashboard.plan.infeasible ? <p className="learning-warning">전체 강의의 첫 회독 목표일까지 새 범위에 하루 약 {dashboard.plan.newRequiredMinutes}분이 필요합니다. 모든 강의가 하루 공부 시간을 함께 사용해요. 가용시간이나 첫 회독 여유일을 조정해 주세요.</p> : null}
       </section>
       <LectureWorkload lectures={dashboard.lectures} scoped={Boolean(subject)} />
       <details className="learning-panel"><summary>기억 확인과 자료 준비 현황</summary>

@@ -54,7 +54,7 @@ export function LectureWorkload({ lectures, scoped }: { lectures: LearningDashbo
           <div><span>오늘 할 분량</span><Today value={w.today} /></div></div>
         <p className="learning-lecture-goal">{w.firstPassTargetAt ? `첫 회독 목표 ${date(w.firstPassTargetAt)}${w.examAt ? ` · 시험 ${date(w.examAt)}` : ""}` : "첫 회독 목표 · 전체 범위를 한 번씩 공부하기"}</p>
         <footer><span>{l.workload ? `지금 복습할 ${w.dueReviews}${unit}` : "복습 일정 확인 중"}{w.nextReviewAt ? ` · 다음 복습 ${date(w.nextReviewAt)}` : ""}</span>
-          <Link to={`/bank/${encodeURIComponent(l.subject)}/${encodeURIComponent(l.runId)}`}>강의 공부하기 →</Link></footer>
+          {!scoped ? <Link to={`/bank/${encodeURIComponent(l.subject)}/${encodeURIComponent(l.runId)}`}>강의 공부하기 →</Link> : null}</footer>
         {l.questionGaps ? <small className="learning-muted">{l.questionGaps}{unit}은 문제가 준비되지 않아 설명으로 공부해요.</small> : null}
         {l.legacyObjectives ? <small className="learning-muted">기존 자료는 문항별로 셉니다. 강의 전체 범위는 새 요점 목록이 준비되면 확인할 수 있어요.</small> : null}
       </article>;
