@@ -302,7 +302,8 @@ def serve(db, person, session, now):
                 q = {**q, **edited, "identity": fingerprint([unit["subject"], unit["runId"], question_identity(edited)])}
     fresh = bool(q) and q["identity"] not in person.state.get("exposures", {})
     served = {"token": uuid.uuid4().hex, "question": q, "at": now, "assisted": q is None,
-              "optionsShown": session.mode == "exam" or not q or not q.get("recall_prompt"),
+              "optionsShown": session.mode == "exam" or not q or q["format"] not in ("mcq", "multi_select")
+                              or not q.get("recall_prompt"),
               "fresh": fresh, "submitted": False}
     if q:
         state = copy.deepcopy(person.state); state.setdefault("exposures", {})[q["identity"]] = now

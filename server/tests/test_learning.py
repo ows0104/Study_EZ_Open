@@ -85,6 +85,10 @@ def main():
     cycle["learning_objectives"][1]["prerequisites"] = ["U0"]
     assert not validate_bank(cycle, ["S1"])["pass"]
     units = catalog_unit("course", "lecture", "제목", bank, "v", NOW + 10 * DAY_MS)
+    dash_prompt = copy.deepcopy(bank)
+    dash_prompt["questions"][0]["recall_prompt"] = " — "
+    assert catalog_unit("course", "lecture", "제목", dash_prompt, "v")[0]["questions"][0]["recall_prompt"] == ""
+    assert dash_prompt["questions"][0]["recall_prompt"] == " — "  # original bank is unchanged
     integrated = copy.deepcopy(bank)
     next(q for q in integrated["questions"] if q["question_id"] == "U0-exam")["supporting_objective_ids"] = ["U1", "U2"]
     integrated_units = catalog_unit("course", "lecture", "제목", integrated, "v")
@@ -229,6 +233,24 @@ def main():
             row = db.get(QuizBank, ("course", "lecture")); row.open_to_students = False; db.commit()
         assert client.get(f"/api/learning/sessions/{exam}").status_code == 404
         print("PASS rebuild preservation, version archive, user isolation and revoked publication")
+        # Real generation puts recall prompts on basic/matching questions too.
+        # Only actual choice questions receive the optional pre-choice step.
+        for fmt, recall in (("basic", "먼저 떠올려 보세요"), ("mcq", " — ")):
+            with SessionLocal() as db:
+                row = db.get(QuizBank, ("course", "lecture"))
+                candidate = copy.deepcopy(bank)
+                for q in candidate["questions"]:
+                    q["recall_prompt"] = recall
+                    if fmt == "basic":
+                        q.update(format="basic", options=[], correct_option_ids=[], option_explanations=[])
+                row.bank, row.build_id, row.open_to_students = candidate, f"recall-{fmt}", True
+                db.commit()
+            recall_sid = post("/sessions", {"mode": "extra", "subject": "course", "runId": "lecture", "count": 1})["sessionId"]
+            shown = get(f"/sessions/{recall_sid}")
+            assert shown["optionsShown"] is True and shown["question"]["format"] == fmt
+            if fmt == "mcq": assert shown["recallPrompt"] == "" and len(shown["question"]["options"]) == 2
+            post(f"/sessions/{recall_sid}/end", {"token": shown["token"], "activeSeconds": 0})
+        print("PASS optional recall only hides actual choices, never an empty-cell marker")
     print("ALL LEARNING CHECKS PASSED")
 
 

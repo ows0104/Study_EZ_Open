@@ -36,10 +36,17 @@ def question_identity(q: dict) -> str:
                         normalized(q["answer"]), q["answer_units"], q["answer_pairs"], q["correct_order"]])
 
 
+def recall_text(value: str) -> str:
+    """Markdown empty-cell markers must never become recall questions."""
+    text = value.strip()
+    return "" if text in ("—", "–", "-") else text
+
+
 def learning_content(bank: dict) -> tuple[list[dict], list[dict]]:
     """Read adapter. Original bank and its question IDs are never rewritten."""
     if bank.get("learning_objectives"):
-        return bank["learning_objectives"], bank["questions"]
+        return bank["learning_objectives"], [
+            {**q, "recall_prompt": recall_text(q.get("recall_prompt", ""))} for q in bank["questions"]]
     objectives, questions = [], []
     for q in bank.get("questions", []):
         oid = "legacy-" + question_identity(q)[:24]
@@ -49,7 +56,7 @@ def learning_content(bank: dict) -> tuple[list[dict], list[dict]]:
             "context": "", "explanation": "", "minimum": q["answer"], "prerequisites": [], "legacy": True}
         if not any(o["objective_id"] == oid for o in objectives): objectives.append(objective)
         questions.append({**q, "primary_objective_id": oid, "supporting_objective_ids": [],
-                          "role": q.get("role", "learning"), "recall_prompt": q.get("recall_prompt", ""),
+                          "role": q.get("role", "learning"), "recall_prompt": recall_text(q.get("recall_prompt", "")),
                           "option_explanations": q.get("option_explanations", [])})
     return objectives, questions
 

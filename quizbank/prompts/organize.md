@@ -22,6 +22,7 @@
 - source_refs의 locator에는 원문의 쪽·문항 표기를 그대로 둔다(예: `p13`, `p13–14`, `2023 Q11`).
 - Coverage Inventory와 Learning Objectives가 있으면 coverage_inventory·learning_objectives로 원문 그대로 옮긴다.
 - Learning Question Links의 primary_objective_id·supporting_objective_ids·role·recall_prompt를 question_id로 문항에 연결한다.
+- 새 학습 표의 ID 배열 셀에서 `—`는 빈 배열이다. recall_prompt의 `—`·`–`·`-`는 빈 문자열로 옮긴다. 선택적 회상 질문이 비어 있는 것은 오류가 아니다.
 - Option Explanations의 option_id·text를 문항의 option_explanations 배열에 보존한다. 없는 해설을 만들지 않는다.
 - 새 학습 표가 없는 과거 응답은 learning_objectives·coverage_inventory를 빈 배열로 두고 문항의 새 필드는
   primary_objective_id="", supporting_objective_ids=[], role="learning", recall_prompt="", option_explanations=[]로 둔다.
