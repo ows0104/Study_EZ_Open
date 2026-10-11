@@ -6,8 +6,11 @@
 .feedback-dialog h2 { margin: 0 0 12px; font-size: 20px; }
 .feedback-dialog textarea { display: block; width: 100%; box-sizing: border-box; margin-top: 10px; resize: vertical; }
 .feedback-context, .feedback-hint { color: var(--ink-2); font-size: 12px; overflow-wrap: anywhere; }
-.feedback-attach { display: grid; gap: 8px; margin-top: 20px; }
-.feedback-attach input { max-width: 100%; }
+.feedback-question { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
+.feedback-category { display: grid; gap: 6px; margin: 16px 0; }
+.feedback-category select { width: 100%; box-sizing: border-box; }
+.feedback-attach { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 20px; }
+.feedback-attach input { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
 .feedback-dialog footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 .feedback-shots { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
 .feedback-shots figure { margin: 0; width: 140px; }

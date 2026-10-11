@@ -9,6 +9,7 @@ import { PreQuizText } from "./PreQuizText";
 import { SlideImage } from "../SlideImage";
 import { useQuizSlidePreload } from "./useQuizSlidePreload";
 import { PreQuizDifficult } from "./PreQuizDifficult";
+import { FeedbackButton } from "../feedback/FeedbackButton";
 
 /** 예습은 한 번 이해를 확인하고, 수업에서 들을 질문을 남긴다. */
 export function PreQuiz({ subject, runId, onDone }: {
@@ -151,6 +152,7 @@ export function PreQuiz({ subject, runId, onDone }: {
         <p className="quiz-done-note">{extraItems.filter((entry) => entry.attempt).length} / {extraItems.length}문항 확인 · 선택</p>
       </div> : null}
       {targets.length ? <PreQuizDifficult base={base} studyTrack={studyTrack} items={targets} answers={answers}
+        reportContext={{ subject, runId, title: payload.title }}
         onReview={() => start(targets.map((entry) => entry.itemId))} />
         : ordered.length > 0 ? <p className="quiz-done-note">모든 문항을 이해했어요. 수업에서 어떻게 확장되는지 들어보세요.</p> : null}
       {ordered.some((entry) => entry.learningScope) ? <details className="quiz-takeaways">
@@ -191,6 +193,8 @@ export function PreQuiz({ subject, runId, onDone }: {
       </> : null}
       {error ? <p role="alert" className="notice is-error">{error}</p> : null}
       <div className="prequiz-tools">
+        <FeedbackButton key={item.itemId} prequiz={{ subject, runId, title: payload.title, itemId: item.itemId,
+          stem: item.stem, ...(feedback ? { answer: feedback.answer, explanation: feedback.explanation } : {}) }} />
         {studyTrack === "extra" ? <button className="quiz-undo" disabled={busy} onClick={() => switchTrack("core")}>추가 학습 그만하기</button> : null}
         {undoButton}
         {isAdmin ? <a className="quiz-fix" href={lectureHref({ subject, runId }) + cardsHash("pre", item.itemId)} target="_blank" rel="noreferrer">이 카드 고치기</a> : null}

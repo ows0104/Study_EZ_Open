@@ -138,6 +138,7 @@ POST /api/spotter/admin/subjects/{subject}/db/refresh
 POST /api/spotter/admin/subjects/{subject}/uploads
 POST /api/spotter/finish
 POST /api/feedback
+POST /api/feedback/prequiz
 POST /api/spotter/images/sign
 POST /api/spotter/reports
 POST /api/spotter/state/merge

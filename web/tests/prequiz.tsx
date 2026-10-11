@@ -18,6 +18,7 @@ const items = concepts.map((name, index) => ({
 }));
 const next = Object.fromEntries(["again", "hard", "good", "easy"].map((g) => [g, { days: 1, seconds: 86400 }]));
 const history: { itemId: string; attempt: object | null }[] = [];
+const reports: object[] = [];
 let grades = 0;
 window.fetch = async (input, init) => {
   const path = new URL(String(input), location.origin).pathname;
@@ -33,6 +34,13 @@ window.fetch = async (input, init) => {
   });
   let result: object;
   if (path === "/api/me") result = { isAdmin: false };
+  else if (path === "/api/feedback/prequiz") {
+    reports.push(body);
+    document.getElementById("requests")!.textContent = JSON.stringify({ grades, reports });
+    if (new URLSearchParams(location.search).has("report-error") && reports.length === 1)
+      return new Response(JSON.stringify({ detail: "테스트: 저장하지 못했습니다. 다시 보내 주세요." }), { status: 503 });
+    result = { id: reports.length };
+  }
   else if (path === "/api/lectures/local/demo") result = {
     title: "핵심 개념과 기전: 예습으로 준비하는 강의", subject: "local", course: "예시 과목", date: "2026-10-07", files: [],
     prequiz: { missed: items.filter((entry) => entry.studyTrack === "core" &&
@@ -50,7 +58,7 @@ window.fetch = async (input, init) => {
     const restored = items.find((entry) => entry.itemId === last.itemId)!;
     restored.attempt = last.attempt;
     result = { ...reveal(restored), attempt: last.attempt, undoable: history.length > 0, now: new Date().toISOString() };
-  } else if (path.endsWith("/prequiz")) result = { items, now: new Date().toISOString(), undoable: history.length > 0 };
+  } else if (path.endsWith("/prequiz")) result = { subject: "local", runId: "demo", title: "예시 예습 강의", items, now: new Date().toISOString(), undoable: history.length > 0 };
   else throw new Error(`예상하지 못한 API: ${path}`);
   return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
 };

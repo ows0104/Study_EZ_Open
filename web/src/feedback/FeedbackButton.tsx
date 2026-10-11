@@ -1,10 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
 import { api } from "../api";
 import "../styles/feedback.css";
 
 type Attachment = { file: File; url: string };
+type PreQuizContext = {
+  subject: string; runId: string; itemId: string; title: string; stem: string;
+  answer?: string; explanation?: string;
+};
+const prequizCategories = [
+  ["content", "답·설명 오류"], ["wording", "질문이 모호해요"],
+  ["difficulty", "난이도가 맞지 않아요"], ["scope", "강의 범위와 달라요"], ["other", "기타"],
+] as const;
 function readImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -14,8 +22,10 @@ function readImage(file: File): Promise<string> {
   });
 }
 
-export function FeedbackButton() {
+export function FeedbackButton({ prequiz }: { prequiz?: PreQuizContext } = {}) {
   const location = useLocation();
+  const id = useId();
+  const pending = useRef(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
@@ -26,6 +36,8 @@ export function FeedbackButton() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
+  const [report, setReport] = useState<PreQuizContext | null>(null);
+  const [category, setCategory] = useState("content");
   useEffect(() => () => {
     attachments.current.forEach((shot) => URL.revokeObjectURL(shot.url));
   }, []);
@@ -50,46 +62,59 @@ export function FeedbackButton() {
     updateShots(next);
   }
   function close() {
-    if (busy) return;
+    if (pending.current) return;
     dialog.current?.close();
     opener.current?.focus();
   }
   async function submit() {
-    if (busy || !message.trim()) return;
+    if (pending.current || !message.trim()) return;
+    pending.current = true;
     setBusy(true); setError("");
     try {
       const screenshots = await Promise.all(shots.map(async ({ file }) => ({
         name: file.name.slice(0, 200), data: await readImage(file),
       })));
-      await api<{ id: number }>("/api/feedback", {
-        method: "POST", body: JSON.stringify({ message: message.trim(), page, screenshots }),
+      await api<{ id: number }>(report ? "/api/feedback/prequiz" : "/api/feedback", {
+        method: "POST", body: JSON.stringify({ message: message.trim(), page, screenshots,
+          ...(report ? { ...report, category } : {}),
+        }),
       });
       attachments.current.forEach((shot) => URL.revokeObjectURL(shot.url));
       updateShots([]); setMessage(""); setSent(true);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "보내지 못했습니다. 다시 시도해 주세요.");
-    } finally { setBusy(false); }
+    } finally { pending.current = false; setBusy(false); }
   }
   return <>
     <button ref={opener} className="feedback-launch" onClick={() => {
-      setPage(location.pathname); setSent(false); setError(""); dialog.current?.showModal();
+      setReport(prequiz ?? null); setPage(location.pathname); setSent(false); setError(""); dialog.current?.showModal();
       window.requestAnimationFrame(() => input.current?.focus());
-    }}>피드백</button>
-    {createPortal(<dialog ref={dialog} className="feedback-dialog" aria-labelledby="feedback-title"
+    }}>{prequiz ? "문제 제보" : "피드백"}</button>
+    {createPortal(<dialog ref={dialog} className="feedback-dialog" aria-labelledby={`${id}-title`}
       onCancel={(event) => { event.preventDefault(); close(); }}
       onPaste={(event) => {
         const files = Array.from(event.clipboardData.files);
         if (files.length) { event.preventDefault(); add(files); }
       }} onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => { event.preventDefault(); add(Array.from(event.dataTransfer.files)); }}>
-      <header><h2 id="feedback-title">피드백 보내기</h2>
+      <header><h2 id={`${id}-title`}>{prequiz ? "예습 문제 제보" : "피드백 보내기"}</h2>
         <button className="is-quiet" disabled={busy} onClick={close} aria-label="피드백 닫기">닫기</button>
       </header>
-      {sent ? <div role="status"><p>피드백을 보냈습니다. 관리자가 확인하겠습니다.</p>
+      {sent ? <div role="status"><p>{prequiz ? "제보를 보냈습니다. 관리자가 확인하겠습니다." : "피드백을 보냈습니다. 관리자가 확인하겠습니다."}</p>
         <button onClick={close}>확인</button></div> :
       <form onSubmit={(event) => { event.preventDefault(); void submit(); }}>
-        <label htmlFor="feedback-message">불편한 점이나 원하는 기능을 알려 주세요.</label>
-        <textarea ref={input} id="feedback-message" required maxLength={4000} rows={5}
+        {report ? <>
+          <p className="feedback-context">{report.title} · {report.itemId}</p>
+          <p className="feedback-question">{report.stem}</p>
+          <p className="feedback-hint">질문·답·설명과 근거가 관리자에게 함께 전달됩니다.</p>
+          <label className="feedback-category" htmlFor={`${id}-category`}>제보 유형
+            <select id={`${id}-category`} disabled={busy} value={category} onChange={(event) => setCategory(event.target.value)}>
+              {prequizCategories.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </label>
+        </> : null}
+        <label htmlFor={`${id}-message`}>{report ? "어떤 부분을 확인하면 될까요?" : "불편한 점이나 원하는 기능을 알려 주세요."}</label>
+        <textarea ref={input} id={`${id}-message`} required maxLength={4000} rows={5}
           disabled={busy} value={message} onChange={(event) => setMessage(event.target.value)} />
         <p className="feedback-context">보고 있던 화면: {page}</p>
         <label className="feedback-attach">화면 캡처 첨부
@@ -104,7 +129,7 @@ export function FeedbackButton() {
           }}>삭제</button></figure>)}</div>
         {error ? <p className="notice is-error" role="alert">{error}</p> : null}
         <footer><button type="button" className="is-quiet" disabled={busy} onClick={close}>나중에</button>
-          <button type="submit" disabled={busy || !message.trim()}>{busy ? "보내는 중…" : "보내기"}</button></footer>
+          <button type="submit" disabled={busy || !message.trim()}>{busy ? "보내는 중…" : report ? "제보 보내기" : "보내기"}</button></footer>
       </form>}
     </dialog>, document.body)}
   </>;

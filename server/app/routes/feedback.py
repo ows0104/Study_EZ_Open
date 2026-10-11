@@ -5,6 +5,7 @@ import binascii
 import io
 import logging
 from typing import Literal
+from urllib.parse import quote
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -15,6 +16,8 @@ from sqlalchemy.orm import Session
 from app.auth import CurrentUser, require_admin, require_approved_user
 from app.database import get_db
 from app.models.feedback import SiteFeedback
+from app.models import PreItem
+from app.routes.common import lecture_or_404
 from app.storage import ObjectStorage, StorageNotConfigured
 
 router = APIRouter()
@@ -30,6 +33,22 @@ class FeedbackIn(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     page: str = Field(default="", max_length=1000)
     screenshots: list[ScreenshotIn] = Field(default_factory=list, max_length=3)
+
+
+PREQUIZ_CATEGORIES = {
+    "content": "답·설명 오류", "wording": "질문이 모호해요",
+    "difficulty": "난이도가 맞지 않아요", "scope": "강의 범위와 달라요", "other": "기타",
+}
+
+
+class PreQuizFeedbackIn(FeedbackIn):
+    subject: str = Field(min_length=1, max_length=200)
+    run_id: str = Field(alias="runId", min_length=1, max_length=32)
+    item_id: str = Field(alias="itemId", min_length=1, max_length=32)
+    category: Literal["content", "wording", "difficulty", "scope", "other"]
+    stem: str = Field(min_length=1, max_length=20000)
+    answer: str | None = Field(default=None, max_length=20000)
+    explanation: str | None = Field(default=None, max_length=20000)
 
 
 class StatusIn(BaseModel):
@@ -68,6 +87,48 @@ def submit_feedback(
     message = payload.message.strip()
     if not message:
         raise HTTPException(422, "의견을 입력해 주세요.")
+    return _save_feedback(payload, message, user, db)
+
+
+@router.post("/feedback/prequiz", status_code=201)
+def submit_prequiz_feedback(
+    payload: PreQuizFeedbackIn,
+    user: CurrentUser = Depends(require_approved_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    comment = payload.message.strip()
+    if not comment:
+        raise HTTPException(422, "제보 내용을 입력해 주세요.")
+    lecture = lecture_or_404(db, payload.subject, payload.run_id)
+    item = db.get(PreItem, (lecture.subject, lecture.run_id, payload.item_id))
+    if item is None:
+        raise HTTPException(404, "예습 문항을 찾을 수 없습니다.")
+    # 화면에 보인 문항이 수정됐으면 다른 내용에 제보를 붙이지 않는다.
+    if (payload.stem != item.stem
+            or (payload.answer is not None and payload.answer != item.answer)
+            or (payload.explanation is not None and payload.explanation != item.explanation)):
+        raise HTTPException(409, "문항이 수정되었습니다. 제보 내용을 복사해 두고 새로고침한 뒤 다시 보내 주세요.")
+    support = item.learning_support or {}
+    message = "\n".join([
+        "[예습 퀴즈 문항 제보]",
+        f"강의: {lecture.title}", f"과목: {lecture.subject}",
+        f"강의 ID: {lecture.run_id}", f"문항 ID: {item.item_id}",
+        f"유형: {PREQUIZ_CATEGORIES[payload.category]}",
+        f"학습 구분: {'추가 학습' if support.get('study_track') == 'extra' else '필수 예습'}",
+        "", "제보 내용:", comment,
+        "", "접수 당시 문항:", f"질문: {item.stem}", f"답: {item.answer}",
+        f"설명: {item.explanation}", f"힌트: {support.get('hint', '')}",
+        f"출제 이유: {item.why_asked}", f"지금 알아둘 범위: {support.get('scope', '')}",
+        f"수업에서 확인할 내용: {support.get('lecture_focus', '')}",
+        f"근거: {item.source_anchor}", f"슬라이드: {item.slide_no if item.slide_no is not None else ''}",
+    ])
+    # 기존 피드백함과 수집 루프에서 원문 스냅샷을 그대로 읽는다. DB 변경은 없다.
+    page = f"/prequiz/{quote(lecture.subject, safe='')}/{quote(lecture.run_id, safe='')}"
+    saved_payload = FeedbackIn(message=comment, page=page, screenshots=payload.screenshots)
+    return _save_feedback(saved_payload, message, user, db)
+
+
+def _save_feedback(payload: FeedbackIn, message: str, user: CurrentUser, db: Session) -> dict:
     images = [(screenshot, _image(screenshot)) for screenshot in payload.screenshots]
     storage = _storage() if images else None
     attachments = []
