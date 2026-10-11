@@ -9,7 +9,7 @@ from __future__ import annotations
 FORMATS = ["basic", "cloze", "list", "ox", "mcq", "multi_select", "matching", "sequence"]
 DIRECTIONS = ["direct", "reverse", "mechanism", "discrimination", "integration", "sequence", "trap"]
 TIERS = ["Core", "Advanced", "Optional"]
-SCHEMA_VERSION = "4.1"
+SCHEMA_VERSION = "4.2"
 
 _STR = {"type": "string"}
 _NUM = {"type": "number"}
@@ -32,6 +32,17 @@ def _object(properties: dict) -> dict:
 
 SOURCE_REF = _object({"source_id": _STR, "locator": _STR})
 
+# Both forms are authored and medically reviewed. The service never invents a
+# negation or infers truth from an existing distractor.
+OPTION_POOL = _object({
+    "pool_id": _STR, "select_count": _INT, "correct_when": _enum(["true", "false"]),
+    "candidates": _array(_object({
+        "candidate_id": _STR, "true_text": _STR, "false_text": _STR,
+        "true_explanation": _STR, "false_explanation": _STR,
+        "source_refs": _array(SOURCE_REF),
+    })),
+})
+
 OBJECTIVE = _object({
     "objective_id": _STR, "concept_id": _STR, "title": _STR, "target": _STR,
     "kind": _enum(["fact", "mechanism", "discrimination", "sequence"]),
@@ -53,6 +64,7 @@ QUESTION = _object({
     "primary_objective_id": _STR, "supporting_objective_ids": _STRS,
     "role": _enum(["learning", "variant", "exam"]), "recall_prompt": _STR,
     "option_explanations": _array(_object({"option_id": _STR, "text": _STR})),
+    "option_pools": _array(OPTION_POOL),
 })
 
 BANK = _object({
@@ -104,7 +116,7 @@ def without_retired(bank: dict) -> dict:
         out["concepts"] = [{"graph_title": "", **c} if isinstance(c, dict) else c for c in bank["concepts"]]
     if isinstance(bank.get("questions"), list):
         out["questions"] = [{"primary_objective_id": "", "supporting_objective_ids": [],
-                             "role": "learning", "recall_prompt": "", "option_explanations": [],
+                             "role": "learning", "recall_prompt": "", "option_explanations": [], "option_pools": [],
                              **{k: v for k, v in q.items() if k not in RETIRED_QUESTION}} if isinstance(q, dict) else q
                             for q in bank["questions"]]
     if isinstance(bank.get("retrieval_plan"), list):

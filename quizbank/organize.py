@@ -38,8 +38,11 @@ def expected_schema(raw: str, lecture: dict) -> str:
     """Bind new obligations to generation metadata, not an optional model heading."""
     version = re.fullmatch(r"v?(\d+)\.(\d+)(?:\.\d+)?", lecture.get("prompt_version", ""))
     if version:
-        return SCHEMA_VERSION if tuple(map(int, version.groups())) >= (2, 1) else "4.0"
-    return SCHEMA_VERSION if re.search(r"^#{1,6}\s+Exam Design\s*$", raw, re.M | re.I) else "4.0"
+        number = tuple(map(int, version.groups()))
+        return SCHEMA_VERSION if number >= (2, 3) else "4.1" if number >= (2, 1) else "4.0"
+    if re.search(r"^#{1,6}\s+Option Pools\s*$", raw, re.M | re.I):
+        return SCHEMA_VERSION
+    return "4.1" if re.search(r"^#{1,6}\s+Exam Design\s*$", raw, re.M | re.I) else "4.0"
 
 
 def organizer_prompt(raw: str, lecture: dict) -> str:
@@ -189,8 +192,9 @@ def organize(raw: str, lecture: dict, *, model: str | None = None) -> tuple[dict
     bank, info = session.run_structured(organizer_prompt(raw, lecture), BANK, system=SYSTEM,
                                         label="정리", timeout=1200, model=model)
     bank = without_retired(bank)   # 옛 응답을 다시 정리해도 뺀 칸은 남기지 않는다
-    if expected_schema(raw, lecture) == SCHEMA_VERSION:
-        bank["build_meta"]["schema_version"] = SCHEMA_VERSION
+    expected = expected_schema(raw, lecture)
+    if expected in ("4.1", "4.2"):
+        bank["build_meta"]["schema_version"] = expected
     fixed = tidy_labels(bank)
     matching = tidy_matching_choices(bank)
     if matching and isinstance(bank.get("warnings"), list):

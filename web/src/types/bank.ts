@@ -82,7 +82,14 @@ export type BankAnswer = {
 };
 
 /** 관리자가 보는 문항 — 은행 JSON 그대로라 답 칸도 snake_case 다. */
+export type BankOptionPool = {
+  pool_id: string; select_count: number; correct_when: "true" | "false";
+  candidates: { candidate_id: string; true_text: string; false_text: string;
+    true_explanation: string; false_explanation: string;
+    source_refs: { source_id: string; locator: string }[] }[];
+};
 export type BankFullQuestion = BankQuestion & {
+  option_pools?: BankOptionPool[];
   item_difficulty: number;
   prerequisites: string[];
   exam_rationale: string;

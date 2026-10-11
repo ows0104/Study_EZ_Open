@@ -18,6 +18,7 @@ from datetime import UTC, datetime
 from .schema import SCHEMA_VERSION, schema_errors, without_retired
 from .learning import learning_errors, scope_only
 from .quality import quality_errors
+from .choices import option_pool_errors
 
 
 # 외부 의학지식으로 쓴 자리(프롬프트 v1.2, 2026-10-05). 첨부 자료가 아니라서 출처 요약에는 안 서지만
@@ -72,7 +73,7 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
             fail(ref["source_id"] in ids and _nonempty(ref["locator"]),
                  f"{label}: 유효한 source_id 및 page/slide/section 필요")
 
-    fail(bank["build_meta"]["schema_version"] in ("3.0", "4.0", SCHEMA_VERSION), f"지원 schema_version: 3.0, 4.0, {SCHEMA_VERSION}")
+    fail(bank["build_meta"]["schema_version"] in ("3.0", "4.0", "4.1", SCHEMA_VERSION), f"지원 schema_version: 3.0, 4.0, 4.1, {SCHEMA_VERSION}")
     fail(_nonempty(bank["build_meta"]["lecture_title"]), "강의 제목 누락")
     fail((bool(bank["concepts"]) and bool(bank["questions"])) or scope_only(bank), "개념과 문항이 비어 있습니다.")
     fail(len(bank["questions"]) <= 5000 and len(bank["concepts"]) <= 2000, "단일 문제은행의 지원 크기를 초과했습니다.")
@@ -120,6 +121,9 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
     seen: set[tuple[str, str, tuple[str, ...]]] = set()
     for q in bank["questions"]:
         label = q["question_id"]
+        errors.extend(option_pool_errors(q, ids))
+        if bank["build_meta"]["schema_version"] == "4.2" and q["format"] in ("mcq", "multi_select") and q.get("role") != "exam" and len(q["option_pools"]) < 2:
+            warnings.append(f"{label}: 선지 풀 2개 미준비 — 검토된 고정 선지만 사용")
         fail(_nonempty(label) and _nonempty(q["question"]) and _nonempty(q["answer"]), f"{label}: 발문/정답/ID 누락")
         fail(q["concept_id"] in concepts, f"{label}: 존재하지 않는 concept_id")
         fail(all(_in_range(n, 1, 5) for n in (q["importance"], q["item_difficulty"])),

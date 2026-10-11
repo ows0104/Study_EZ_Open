@@ -156,7 +156,7 @@ def main():
         before_entries = dash["plan"]["entries"]
         sid = post("/sessions", {"mode": "daily"})["sessionId"]
         first = get(f"/sessions/{sid}"); token = first["token"]
-        assert first["question"]["options"] == [] and "answer" not in first["question"] and not first["feedback"]
+        assert len(first["question"]["options"]) == 2 and first["optionsShown"] and "answer" not in first["question"] and not first["feedback"]
         assert get(f"/sessions/{sid}")["token"] == token
         first = post(f"/sessions/{sid}/action", {"token": token, "action": "options"})
         assert len(first["question"]["options"]) == 2
@@ -164,7 +164,8 @@ def main():
             assert client.post(f"/api/learning/sessions/{sid}/submit", json={"token": token,
                 "confidence": "sure", "answer": {"selected": malformed}}).status_code == 422
         clock[0] += 30_000
-        submission = {"token": token, "confidence": "guess", "answer": {"selected": ["A"]}, "activeSeconds": 30}
+        correct_id = next(o["id"] for o in first["question"]["options"] if o["text"] == "관계 A")
+        submission = {"token": token, "confidence": "guess", "answer": {"selected": [correct_id]}, "activeSeconds": 30}
         answer = post(f"/sessions/{sid}/submit", submission)
         assert answer["feedback"]["correct"] is True and answer["feedback"]["confidence"] == "guess"
         assert [c["rating"] for c in answer["reviewChoices"]] == ["Again"]
@@ -199,10 +200,11 @@ def main():
         assert shown["optionsShown"] and len(shown["question"]["options"]) == 2
         assert client.post(f"/api/learning/sessions/{exam}/action", json={"token": shown["token"], "action": "help"}).status_code == 409
         clock[0] += 30_000
-        tested = post(f"/sessions/{exam}/submit", {"token": shown["token"], "confidence": "sure", "answer": {"selected": ["A"]}, "activeSeconds": 30})
+        correct_id = next(o["id"] for o in shown["question"]["options"] if o["text"] == "관계 A")
+        tested = post(f"/sessions/{exam}/submit", {"token": shown["token"], "confidence": "sure", "answer": {"selected": [correct_id]}, "activeSeconds": 30})
         assert tested["feedback"] is None
         result = post(f"/sessions/{exam}/acknowledge", {"token": shown["token"], "activeSeconds": 30})
-        assert result["status"] == "complete" and result["summary"]["freshCorrect"] == 1 and result["results"][0]["answer"] == "A"
+        assert result["status"] == "complete" and result["summary"]["freshCorrect"] == 1 and result["results"][0]["answer"] == f"{correct_id}. 관계 A"
         assert get("/dashboard")["examQuestions"] == 0
         # Classic direct question endpoints must not reveal held-out questions.
         reserved_id = bank["questions"][2]["question_id"]
@@ -245,8 +247,8 @@ def main():
         assert client.get(f"/api/learning/sessions/{exam}").status_code == 404
         print("PASS rebuild preservation, version archive, user isolation and revoked publication")
         # Real generation puts recall prompts on basic/matching questions too.
-        # Only actual choice questions receive the optional pre-choice step.
-        for fmt, recall in (("basic", "먼저 떠올려 보세요"), ("mcq", " — ")):
+        # Choices remain visible even when older banks carry a recall prompt.
+        for fmt, recall in (("basic", "먼저 떠올려 보세요"), ("mcq", " — "), ("mcq", "관계를 떠올려 보세요")):
             with SessionLocal() as db:
                 row = db.get(QuizBank, ("course", "lecture"))
                 candidate = copy.deepcopy(bank)
@@ -259,9 +261,9 @@ def main():
             recall_sid = post("/sessions", {"mode": "extra", "subject": "course", "runId": "lecture", "count": 1})["sessionId"]
             shown = get(f"/sessions/{recall_sid}")
             assert shown["optionsShown"] is True and shown["question"]["format"] == fmt
-            if fmt == "mcq": assert shown["recallPrompt"] == "" and len(shown["question"]["options"]) == 2
+            if fmt == "mcq": assert len(shown["question"]["options"]) == 2
             post(f"/sessions/{recall_sid}/end", {"token": shown["token"], "activeSeconds": 0})
-        print("PASS optional recall only hides actual choices, never an empty-cell marker")
+        print("PASS choices visible immediately, including older recall prompts")
         # New clients may omit confidence. Post-answer ratings, not certainty,
         # drive review scheduling; preview/reload cannot advance the memory model.
         for confidence, selected, rating, assisted in (
@@ -275,7 +277,8 @@ def main():
             if assisted:
                 post(f"/sessions/{review_sid}/action", {"token": review_token, "action": "help"})
             clock[0] += 30_000
-            payload = {"token": review_token, "answer": {"selected": [selected]}, "activeSeconds": 30}
+            selected_id = next(o["id"] for o in shown["question"]["options"] if o["text"] == f"관계 {selected}")
+            payload = {"token": review_token, "answer": {"selected": [selected_id]}, "activeSeconds": 30}
             if confidence is not None: payload["confidence"] = confidence
             feedback = post(f"/sessions/{review_sid}/submit", payload)
             with SessionLocal() as db:

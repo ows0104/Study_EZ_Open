@@ -64,7 +64,7 @@ def learning_content(bank: dict) -> tuple[list[dict], list[dict]]:
 def scope_only(bank: dict) -> bool:
     """An explicitly excluded lecture still needs a validated source inventory."""
     inventory = bank.get("coverage_inventory", [])
-    return (bank.get("build_meta", {}).get("schema_version") in ("4.0", "4.1")
+    return (bank.get("build_meta", {}).get("schema_version") in ("4.0", "4.1", "4.2")
             and not any(bank.get(k) for k in ("learning_objectives", "concepts", "questions"))
             and bool(inventory) and any(e["status"] == "excluded" for e in inventory)
             and all(e["status"] != "target" for e in inventory))
@@ -75,7 +75,7 @@ def learning_errors(bank: dict, source_ids: set[str]) -> tuple[list[str], list[s
     objectives = bank.get("learning_objectives", [])
     inventory = bank.get("coverage_inventory", [])
     if not objectives and not scope_only(bank):
-        if bank.get("build_meta", {}).get("schema_version") in ("4.0", "4.1"):
+        if bank.get("build_meta", {}).get("schema_version") in ("4.0", "4.1", "4.2"):
             errors.append("learning_objectives: 새 은행의 학습요점 필요")
         return errors, warnings
     if scope_only(bank):

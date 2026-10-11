@@ -116,6 +116,12 @@ function ReviewRow({ group, card, onChanged, focus }: {
           {q.correct_order?.length ? <p>{q.correct_order.join(" → ")}</p> : null}
         </dd>
         <dt>채점 단위</dt><dd>{q.answer_units?.join(" · ")}</dd>
+        {q.option_pools?.length ? <><dt>선지 변형</dt><dd>{q.option_pools.map(pool => <details key={pool.pool_id}>
+          <summary>{pool.pool_id} · 후보 {pool.candidates.length}개 중 {pool.select_count}개 · {pool.correct_when === "true" ? "참" : "거짓"} 선택</summary>
+          {pool.candidates.map(c => <div key={c.candidate_id}><b>{c.candidate_id}</b>
+            <p>참: {c.true_text}<br />{c.true_explanation}</p><p>거짓: {c.false_text}<br />{c.false_explanation}</p>
+            <small>{c.source_refs.map(r => `${r.source_id} ${r.locator}`).join(" · ")}</small></div>)}
+        </details>)}</dd></> : null}
         <dt>선행 문항</dt><dd>{q.prerequisites?.join(", ") || "없음"}</dd>
         <dt>출처</dt><dd>{q.source_refs?.map((r, i) => <div key={i}>{r.source_id} · {r.locator}</div>)}</dd>
       </dl>
@@ -168,6 +174,7 @@ function QuestionEditor({ question, group, busy, onSave, onCancel }: {
     setQ(prev => ({ ...prev, format: value,
       options: value === "mcq" || value === "multi_select" ? prev.options : [],
       correct_option_ids: value === "mcq" || value === "multi_select" ? prev.correct_option_ids : [],
+      option_pools: value === "mcq" || value === "multi_select" ? prev.option_pools : [],
       matching_left: value === "matching" ? prev.matching_left : [], matching_right: value === "matching" ? prev.matching_right : [],
       answer_pairs: value === "matching" ? prev.answer_pairs : [],
       sequence_items: value === "sequence" ? prev.sequence_items : [], correct_order: value === "sequence" ? prev.correct_order : [],

@@ -39,7 +39,7 @@ def leaked_units(question: dict) -> list[str]:
 
 
 def quality_errors(bank: dict, source_ids: set[str]) -> tuple[list[str], list[str]]:
-    if bank["build_meta"]["schema_version"] != "4.1":
+    if bank["build_meta"]["schema_version"] not in ("4.1", "4.2"):
         return [], []
     errors, warnings = [], []
     questions = bank["questions"]

@@ -69,7 +69,7 @@ admin_router = APIRouter()
 COMPLETE_MARK = "STUDYEZ_BANK_COMPLETE"
 # 첨부 순서가 곧 자료 ID 다 — 웹이 프롬프트에 이 순서로 적고 확장이 이 순서로 붙인다.
 SOURCE_KINDS = (("notes_current", "S1"), ("jokbo", "S2"))
-ANSWER_FIELDS = ("answer", "answer_units", "correct_option_ids", "answer_pairs", "correct_order", "option_explanations")
+ANSWER_FIELDS = ("answer", "answer_units", "correct_option_ids", "answer_pairs", "correct_order", "option_explanations", "option_pools")
 FEEDBACK_CATEGORIES = ("good", "wording", "easy", "hard", "leak", "format", "burden", "importance",
                        "content", "duplicate", "sequencing", "other")
 

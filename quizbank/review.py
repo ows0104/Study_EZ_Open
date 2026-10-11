@@ -19,6 +19,7 @@ from pathlib import Path
 
 from . import session
 from .schema import REVIEW, VERDICTS
+from server.app.bank_validation.choices import pool_review_identity
 
 PROMPT = Path(__file__).parent / "prompts" / "review.md"
 SYSTEM = "You are a meticulous medical fact checker for Korean medical-school exam questions. Answer only with the requested JSON."
@@ -26,7 +27,7 @@ SYSTEM = "You are a meticulous medical fact checker for Korean medical-school ex
 # 검토에 보이는 필드. 난이도·중요도는 뺀다 — 정오만 보게 한다.
 FIELDS = ("question_id", "concept_id", "format", "question", "answer", "answer_units", "options",
           "correct_option_ids", "matching_left", "matching_right", "answer_pairs", "sequence_items",
-          "correct_order", "source_refs", "exam_rationale", "conflict_id")
+          "correct_order", "source_refs", "exam_rationale", "conflict_id", "option_explanations", "option_pools")
 
 
 def review_prompt(bank: dict, title: str) -> str:
@@ -45,7 +46,8 @@ def shape(output: dict, bank: dict) -> dict:
     for r in output["reviews"]:
         if r["question_id"] in known and r["question_id"] not in seen:
             seen.add(r["question_id"])
-            reviews.append(r)
+            question = next(q for q in bank["questions"] if q["question_id"] == r["question_id"])
+            reviews.append({**r, **({"option_pool_hash": pool_review_identity(question)} if question.get("option_pools") else {})})
     counts = Counter(r["verdict"] for r in reviews)
     return {"summary": output["summary"], "reviews": reviews,
             "missing": [qid for qid in known if qid not in seen],

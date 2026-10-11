@@ -24,6 +24,7 @@ from app.naming import normalize_stem
 from app.study_engine import now_ms
 from app.study_engine.learning import POLICY_VERSION, apply_attempt, build_plan, catalog_unit, choose_question, grade, progress, workload
 from app.study_engine.learning_srs import RATINGS, delayed_recall, recall_rating, schedule_review
+from app.study_engine.choices import realize_choices
 from app.study_engine.planning import KOREA
 from app.study_engine.memory import DAY_MS
 from .study_plan import exam_time
@@ -83,11 +84,13 @@ def catalog(db: Session, user: CurrentUser, now: int, scope_only_lectures: list 
                 "ranges": row.bank["coverage_inventory"]})
         version = snapshot(db, row, now)
         new_units = catalog_unit(row.subject, row.run_id, lecture.title, row.bank, version, deadline)
+        from app.bank_edits import current_review
+        reviews = current_review(row.review, row.validation)["reviews"]
         for unit in new_units:
             unit["examId"] = exam.id if exam else None
             unit["current"] = deadline is None or deadline > now
             for q in unit["questions"]:
-                q["medicalReview"] = next((r for r in (row.review or {}).get("reviews", []) if r["question_id"] == q["question_id"]), None)
+                q["medicalReview"] = next((r for r in reviews if r["question_id"] == q["question_id"]), None)
                 q["sourceConflict"] = next((c["description"] for c in row.bank.get("source_conflicts", []) if c["conflict_id"] == q.get("conflict_id")), "")
         units.extend(new_units)
         uncertain += sum(e["status"] == "uncertain" for e in row.bank.get("coverage_inventory", []))
@@ -288,7 +291,14 @@ def serve(db, person, session, now):
     data = copy.deepcopy(session.data)
     if session.status != "active" or data["index"] >= len(data["entries"]):
         return None
-    if data.get("served"): return data["served"]
+    if data.get("served"):
+        # Existing sessions retain their frozen choices/answer mapping, while
+        # the retired pre-choice hiding step is removed immediately.
+        frozen = data["served"]
+        if frozen.get("question") and frozen["question"]["format"] in ("mcq", "multi_select") and not frozen["optionsShown"]:
+            frozen["optionsShown"] = True
+            session.data = data
+        return frozen
     entry = data["entries"][data["index"]]; unit = data["units"][entry["key"]]
     authorized_unit(db, unit)
     q = choose_question(unit, person.state, exam=session.mode == "exam")
@@ -303,13 +313,20 @@ def serve(db, person, session, now):
             edited = bank_personal.apply(db, row, person.user_id, original)
             if edited.get("personalEdited"):
                 q = {**q, **edited, "identity": fingerprint([unit["subject"], unit["runId"], question_identity(edited)])}
+    base_identity = q["identity"] if q else None
+    if q:
+        q = realize_choices(q, uuid.uuid4().hex, person.state.get("choiceHistory", {}).get(base_identity),
+                            use_pools=session.mode != "exam")
+        q["identity"] = fingerprint([unit["subject"], unit["runId"], question_identity(q)])
     fresh = bool(q) and q["identity"] not in person.state.get("exposures", {})
     served = {"token": uuid.uuid4().hex, "question": q, "at": now, "assisted": q is None,
-              "optionsShown": session.mode == "exam" or not q or q["format"] not in ("mcq", "multi_select")
-                              or not q.get("recall_prompt"),
+              "optionsShown": True,
               "fresh": fresh, "submitted": False}
     if q:
         state = copy.deepcopy(person.state); state.setdefault("exposures", {})[q["identity"]] = now
+        state["exposures"][base_identity] = now
+        if q.get("choice_variant"):
+            state.setdefault("choiceHistory", {})[base_identity] = q["choice_variant"]
         person.state = state
     data["served"] = served; session.data = data
     return served

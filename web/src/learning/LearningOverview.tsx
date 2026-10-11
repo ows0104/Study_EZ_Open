@@ -6,6 +6,7 @@ export function LearningOverview() {
     <span className="learning-eyebrow">공부는 이렇게 이어져요</span>
     <h2>오늘 학습 → 간격 복습 → 시험 연습</h2>
     <p>강의에서 알아야 할 내용을 ‘학습요점’으로 나눠 공부합니다. 학습요점은 기억해야 할 내용 하나예요.</p>
+    <p>객관식은 보기를 바로 보고 풉니다. 보기 순서는 섞이고, 선지 풀이 준비된 문항은 조합과 참·거짓 문장도 바뀝니다. 같은 요점의 변형은 남은 학습량을 늘리지 않아요.</p>
     <ol className="learning-roadmap">
       <li><span className="learning-step-number" aria-hidden="true">1</span><div><h3>오늘 학습부터 시작</h3><p>하루 공부 시간 안에서 여러 강의의 새 내용과 복습을 함께 공부해요.</p></div></li>
       <li><span className="learning-step-number" aria-hidden="true">2</span><div><h3>시간을 두고 다시 기억</h3><p>정답을 확인한 뒤 실제로 기억한 정도를 평가해요. 어렵게 맞힌 답도 성공이며, 평가에 따라 다음 복습을 잡습니다.</p></div></li>
