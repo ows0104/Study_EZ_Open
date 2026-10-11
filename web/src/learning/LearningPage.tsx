@@ -5,6 +5,7 @@ import { invalidateTimetable } from "../firstScreen";
 import { Stem } from "../lecture/Stem";
 import { shuffled } from "../bank/BankQuestion";
 import { LearningOverview } from "./LearningOverview";
+import { LectureWorkload, WorkloadSummary } from "./LearningWorkload";
 import type { LearningAnswer, LearningDashboard, LearningFeedback, LearningSession, RecallRating, SourceRef } from "../types/learning";
 import "../styles/learning.css";
 
@@ -57,18 +58,24 @@ export function LearningPage() {
     invalidateTimetable();
   };
   const legacy = subject && runId ? `/bank/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}?classic=1` : "/";
+  const timeLimitReached = dashboard && dashboard.plan.activeSeconds >= dashboard.plan.budgetSeconds
+    && dashboard.plan.completed.length < dashboard.plan.entries.length;
   if (!available) return <section className="learning"><h1>학습</h1><p>새 학습 기능이 현재 꺼져 있습니다.</p><Link to={legacy}>기존 학습으로</Link></section>;
   return <section className="learning">
-    <header className="learning-header"><div><span className="learning-eyebrow">Study EZ</span><h1>{session?.mode === "exam" ? "시험 연습" : subject ? "강의 학습" : "오늘의 학습"}</h1></div>
+    <header className="learning-header"><div><span className="learning-eyebrow">Study EZ{subject ? " · 강의 학습" : ""}</span><h1>{session?.mode === "exam" ? "시험 연습" : subject ? dashboard?.lectures[0]?.title ?? "강의 학습" : "오늘의 학습"}</h1></div>
       <nav><Link to="/study">전체 학습</Link><Link to="/">캘린더</Link><Link to="/guide#learning">학습 방법</Link>{subject ? <Link to={legacy}>기존 풀이</Link> : null}</nav></header>
     {error ? <p role="alert" className="notice is-error">{error} <button onClick={() => void run(load)}>다시 불러오기</button></p> : null}
     {sid && session ? <LearningRun key={session.sessionId} session={session} busy={busy}
       act={(action, body) => void run(() => mutation(action, body))} home={() => setParams({})} /> : sid ? <p>학습을 불러오는 중…</p> : dashboard ? <>
+      <WorkloadSummary dashboard={dashboard} />
+      <p className="learning-muted">공부한 범위는 정답·해설을 확인하고 평가한 수예요. 설명만 있는 내용은 확인한 뒤 포함합니다.
+        {dashboard.missingLectures.length ? ` 자료 미준비 ${dashboard.missingLectures.length}강의는 위 숫자에 포함되지 않아요.` : ""}</p>
       <section className="learning-plan">
-        <div><span className="learning-eyebrow">오늘의 약속</span><h2>{dashboard.plan.complete ? "오늘 계획을 마쳤어요" : `${Math.round(dashboard.plan.budgetSeconds / 60)}분 안에서 한 걸음씩`}</h2>
+        <div><span className="learning-eyebrow">오늘의 약속</span><h2>{timeLimitReached ? "오늘 공부 시간을 채웠어요" : dashboard.plan.complete ? "오늘 계획을 마쳤어요" : `${Math.round(dashboard.plan.budgetSeconds / 60)}분 안에서 한 걸음씩`}</h2>
           <p>전체 계획 {dashboard.plan.completed.length} / {dashboard.plan.entries.length}개 활동 완료 · {fmt(dashboard.plan.activeSeconds)} 학습</p>
           <progress aria-label="오늘 활동 완료" max={Math.max(1, dashboard.plan.entries.length)} value={dashboard.plan.completed.length} /></div>
         <p className="learning-start-hint">{dashboard.activeSession ? "진행 중인 학습을 이어가세요. 마친 뒤 다음 공부를 선택할 수 있어요."
+          : timeLimitReached ? "미완료 분량은 남아 있어요. 남은 계획을 조정하거나 추가 학습으로 이어갈 수 있어요."
           : dashboard.plan.complete ? "오늘 분량은 끝났어요. 더 공부하거나 시험 연습으로 확인할 수 있어요."
           : dashboard.plan.remaining > 0 ? "처음이라면 ‘오늘 학습 시작’을 누르세요. 새 내용과 복습을 순서대로 안내합니다."
           : "이 강의를 더 공부하려면 추가 학습을, 오늘 배정된 분량을 보려면 전체 학습을 선택하세요."}</p>
@@ -84,12 +91,11 @@ export function LearningPage() {
         {dashboard.examQuestions === 0 ? <p className="learning-muted">배운 범위에 아직 보지 않은 시험용 객관식이 준비되면 시험 연습을 시작할 수 있습니다.</p> : null}
         {dashboard.plan.infeasible ? <p className="learning-warning">첫 회독 목표일까지 새 범위에 하루 약 {dashboard.plan.newRequiredMinutes}분이 필요합니다. 가용시간이나 첫 회독 여유일을 조정해 주세요.</p> : null}
       </section>
+      <LectureWorkload lectures={dashboard.lectures} scoped={Boolean(subject)} />
+      <details className="learning-panel"><summary>기억 확인과 자료 준비 현황</summary>
+        <p>시간을 두고 기억한 요점 {dashboard.progress.delayedRecall}개 · 학습 문제 준비 중 {dashboard.progress.questionGaps}개</p>
+        <p className="learning-muted">기억한 요점은 자동채점 문항을 간격을 두고 두 번, 도움이나 찍음 없이 맞힌 수예요.</p></details>
       <LearningOverview />
-      <div className="learning-metrics">
-        <article><strong>{dashboard.progress.covered} / {dashboard.progress.total}</strong><span>한 번 공부한 범위</span><small>정답이나 설명을 확인한 범위예요. 전부 외웠다는 뜻은 아니에요.</small></article>
-        <article><strong>{dashboard.progress.delayedRecall}</strong><span>시간을 두고 기억한 요점</span><small>자동채점 문항을 간격을 두고 두 번, 도움이나 찍음 없이 맞힌 요점이에요.</small></article>
-        <article><strong>{dashboard.progress.questionGaps}</strong><span>학습 문제 준비 중</span><small>학습용 문제가 없어 설명으로 공부하는 요점이에요.</small></article>
-      </div>
       {dashboard.progress.legacyObjectives ? <p className="learning-muted">기존 자료는 문항별로 집계합니다. 전체 강의 범위 확인은 새 학습요점 목록이 준비된 뒤 가능합니다. 과거 자기평가는 새 문항 정답률로 환산하지 않습니다.</p> : null}
       {dashboard.scopeOnlyLectures?.length ? <details className="learning-panel"><summary>학습 대상 요점이 없는 강의 · {dashboard.scopeOnlyLectures.length}개</summary>
         <p>범위 제외 근거가 등록된 강의입니다. 학습 완료나 기억한 요점 수에 포함하지 않습니다.</p>
@@ -109,8 +115,6 @@ export function LearningPage() {
           await api(`${ROOT}/settings`, { method: "PUT", body: JSON.stringify({ minutes, bufferDays: buffer, enabled: true, replan: true }) }); await load();
         })}>오늘 남은 계획도 조정</button></div>
       </details>
-      <details className="learning-panel"><summary>강의별 범위 보기</summary><div className="learning-lectures">{dashboard.lectures.map(l => <Link key={`${l.subject}/${l.runId}`} to={`/bank/${encodeURIComponent(l.subject)}/${encodeURIComponent(l.runId)}`}>
-        <span>{l.title}</span><strong>{l.covered} / {l.total}</strong></Link>)}</div></details>
       <details className="learning-panel"><summary>학습요점과 강의 흐름 찾기</summary><label>학습요점 검색 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="개념이나 강의 이름" /></label>
         <ul className="learning-objectives">{dashboard.objectives.filter(o => `${o.title} ${o.lecture}`.toLocaleLowerCase().includes(search.toLocaleLowerCase())).slice(0, 100).map(o => <li key={o.key}>
           <strong>{o.covered ? "✓ " : "○ "}{o.title}</strong><p>{o.lecture}</p><SourceRefs refs={o.sourceRefs} />

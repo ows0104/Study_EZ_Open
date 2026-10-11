@@ -170,3 +170,34 @@ def progress(units: list[dict], state: dict) -> dict:
             "delayedRecall": sum(states.get(u["key"], {}).get("delayedSuccesses", 0) >= 2 for u in units),
             "questionGaps": sum(not choose_question(u, state) for u in units),
             "legacyObjectives": sum(bool(u["objective"].get("legacy")) for u in units)}
+
+
+def workload(units: list[dict], state: dict, plan: dict | None, now: int, buffer_days: int) -> dict:
+    """Count distinct objectives, scoped to one lecture or the whole dashboard.
+
+    Today's count follows the fixed plan, not the number of variants/attempts.
+    Time-budget closure defers unfinished entries; it never marks them studied.
+    A missing plan is unknown in the read-only calendar projection.
+    """
+    unique = {u["key"]: u for u in units}
+    states = state.get("objectives", {})
+    unseen = sum(not states.get(key, {}).get("covered") for key in unique)
+    review_dates = [states[key].get("dueAt", 0) for key, u in unique.items()
+                    if states.get(key, {}).get("covered") and choose_question(u, state)]
+    deadlines = [u["deadline"] for u in unique.values() if u.get("deadline")]
+    exam = min(deadlines) if deadlines else None
+    daily = None
+    if plan is not None:
+        entries = {e["key"]: e for e in plan["entries"] if e["key"] in unique}
+        done = set(plan["completed"]) & entries.keys()
+        pending = [e for key, e in entries.items() if key not in done]
+        stopped = plan["activeSeconds"] >= plan["budgetSeconds"]
+        remaining = [] if stopped else pending
+        daily = {"total": len(entries), "completed": len(done), "remaining": len(remaining),
+                 "new": sum(e["lane"] == "new" for e in remaining),
+                 "review": sum(e["lane"] != "new" for e in remaining),
+                 "deferred": len(pending) if stopped else 0}
+    return {"unseen": unseen, "dueReviews": sum(at <= now for at in review_dates),
+            "nextReviewAt": min((at for at in review_dates if at > now), default=None),
+            "firstPassTargetAt": exam - buffer_days * DAY_MS if exam else None,
+            "examAt": exam, "today": daily}

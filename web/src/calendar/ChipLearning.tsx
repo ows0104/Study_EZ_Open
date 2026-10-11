@@ -24,7 +24,7 @@ function progressFor(lecture: LectureRef, phase: Phase): Progress {
   if (!lecture.marks.quiz) return { score: null, description: "복습: 측정할 웹 문항 없음" };
   const learned = lecture.learningProgress;
   if (learned && learned.total > 0) return { score: clampScore(100 * learned.covered / learned.total),
-    description: `학습 범위 ${learned.covered}/${learned.total}${learned.legacyObjectives ? "문항" : "요점"} · 지연 회상 ${learned.delayedRecall}요점` };
+    description: `첫 회독 ${learned.covered}/${learned.total}${learned.legacyObjectives ? "문항" : "요점"} · 아직 안 본 ${learned.workload?.unseen ?? Math.max(0, learned.total - learned.covered)}개${learned.workload?.today ? ` · 오늘 남은 ${learned.workload.today.remaining}개` : ""}` };
   const value = lecture.mastery;
   if (value === undefined) return { score: null, unknown: true, description: "복습: 학습도 정보 없음" };
   if (value === null) return { score: null, description: "복습: 평가 준비 전" };

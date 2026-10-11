@@ -1,6 +1,10 @@
-export type LearningProgress = { total: number; covered: number; delayedRecall: number; questionGaps: number; legacyObjectives: number };
+export type LearningWorkload = {
+  unseen: number; dueReviews: number; nextReviewAt: number | null; firstPassTargetAt: number | null; examAt: number | null;
+  today: { total: number; completed: number; remaining: number; new: number; review: number; deferred: number } | null;
+};
+export type LearningProgress = { total: number; covered: number; delayedRecall: number; questionGaps: number; legacyObjectives: number; workload?: LearningWorkload };
 export type LearningDashboard = {
-  enabled: boolean; minutes: number; bufferDays: number; progress: LearningProgress;
+  enabled: boolean; minutes: number; bufferDays: number; progress: LearningProgress; workload?: LearningWorkload;
   missingLectures: { title: string; date: string }[]; uncertainRanges: number;
   scopeOnlyLectures?: { subject: string; runId: string; title: string;
     ranges: { title: string; status: string; reason: string; source_refs: SourceRef[] }[] }[];

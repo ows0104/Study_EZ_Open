@@ -22,7 +22,7 @@ from app.bank_validation.learning import fingerprint, learning_content, question
 from app.learning_versions import snapshot
 from app.naming import normalize_stem
 from app.study_engine import now_ms
-from app.study_engine.learning import POLICY_VERSION, apply_attempt, build_plan, catalog_unit, choose_question, grade, progress
+from app.study_engine.learning import POLICY_VERSION, apply_attempt, build_plan, catalog_unit, choose_question, grade, progress, workload
 from app.study_engine.learning_srs import RATINGS, delayed_recall, recall_rating, schedule_review
 from app.study_engine.planning import KOREA
 from app.study_engine.memory import DAY_MS
@@ -169,13 +169,15 @@ def dashboard(subject: str | None = None, runId: str | None = None, examId: str 
     out = {"enabled": person.enabled, "minutes": person.minutes, "bufferDays": person.buffer_days,
            "scopeOnlyLectures": [l for l in scope_units(scope_only_lectures, subject, runId, examId)
                                  if subject or examId or l["current"]],
-           "progress": progress(scoped, person.state), "missingLectures": missing, "uncertainRanges": uncertain,
+           "progress": progress(scoped, person.state), "workload": workload(scoped, person.state, plan, now, person.buffer_days),
+           "missingLectures": missing, "uncertainRanges": uncertain,
            "plan": {**plan, "remaining": sum(e["key"] in keys and e["key"] not in plan["completed"] for e in plan["entries"]),
                     "complete": len(plan["completed"]) >= len(plan["entries"]) or plan["activeSeconds"] >= plan["budgetSeconds"]},
            "activeSession": active.id if active else None,
            "examQuestions": sum(choose_question(u, person.state, exam=True) is not None for u in scoped
                                 if person.state.get("objectives", {}).get(u["key"], {}).get("covered")),
-           "lectures": [{"subject": k[0], "runId": k[1], "title": us[0]["title"], **progress(us, person.state)} for k, us in lessons.items()],
+           "lectures": [{"subject": k[0], "runId": k[1], "title": us[0]["title"], **progress(us, person.state),
+                         "workload": workload(us, person.state, plan, now, person.buffer_days)} for k, us in lessons.items()],
            "objectives": [{"key": u["key"], "subject": u["subject"], "runId": u["runId"],
                 "lecture": u["title"], "title": u["objective"]["title"], "kind": u["objective"]["kind"],
                 "sourceRefs": u["objective"]["source_refs"], "covered": bool(person.state.get("objectives", {}).get(u["key"], {}).get("covered")),
@@ -446,7 +448,6 @@ def complete_attempt(db, person, session, attempt, self_correct, seconds, now, r
     event["delayed"] = delayed_recall(old or {}, event)
     if event["reviewRating"]:
         event["fsrsReview"] = schedule_review(old or {}, event, event["reviewRating"])["fsrsReview"]
-    attempt.data = event
     if session.mode != "exam": person.state = apply_attempt(person.state, event)
     day = db.get(LearningDay, (person.user_id, data["day"]))
     event["dayBefore"] = copy.deepcopy(day.plan) if day and session.mode == "daily" else None
@@ -454,6 +455,9 @@ def complete_attempt(db, person, session, attempt, self_correct, seconds, now, r
         plan = copy.deepcopy(day.plan)
         if unit["key"] not in plan["completed"]: plan["completed"].append(unit["key"])
         plan["activeSeconds"] += event["seconds"]; day.plan = plan
+    # Assign after loading the day: that query can autoflush JSON, so the
+    # undo snapshot must already be included in the newly assigned value.
+    attempt.data = event
     data["index"] += 1; data["seconds"] += event["seconds"]
     data["lastAttempt"] = attempt.id; data["served"] = None
     if data["index"] >= len(data["entries"]) or (day and session.mode == "daily" and day.plan["activeSeconds"] >= day.plan["budgetSeconds"]):

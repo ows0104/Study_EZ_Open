@@ -38,8 +38,31 @@
 .learning input, .learning select, .learning textarea { border: 1px solid var(--line-strong); padding: 10px; border-radius: 8px; color: var(--ink); background: var(--surface); }
 .learning-settings input { width: 80px; }
 .learning summary { cursor: pointer; font-weight: 600; }
-.learning-lectures { display: grid; margin-top: 15px; }
-.learning-lectures a { display: flex; justify-content: space-between; gap: 15px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.learning-workload-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 20px 0; }
+.learning-workload-summary article { display: grid; align-content: start; gap: 10px; padding: 20px; border: 1px solid var(--line); background: var(--surface-2); border-radius: 14px; }
+.learning-workload-summary strong { font-size: 24px; }
+.learning-workload-summary small, .learning-lecture-card small { color: var(--ink-2); line-height: 1.7; }
+.learning-workload-summary progress, .learning-lecture-counts progress { width: 100%; accent-color: var(--accent); }
+.learning-lecture-workload h2 { font-size: 22px; margin-top: 0; }
+.learning-lecture-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 20px 0; }
+.learning-lecture-tools label { display: grid; gap: 8px; font-size: 14px; }
+.learning-lecture-tools .learning-actions { margin: 0; }
+.learning-lecture-list { display: grid; gap: 14px; }
+.learning-lecture-card { padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.learning-lecture-card header { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
+.learning-lecture-card h3 { margin: 5px 0 0; font-size: 18px; line-height: 1.5; }
+.learning-lecture-card h3 a { color: var(--ink); text-decoration: none; }
+.learning-first-pass-status { flex-shrink: 0; color: var(--accent-ink); background: var(--accent-soft); border-radius: 6px; padding: 5px 9px; font-size: 12px; }
+.learning-first-pass-status.is-complete { color: var(--ink-2); background: var(--surface-2); }
+.learning-lecture-counts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px; margin: 20px 0 12px; }
+.learning-lecture-counts > div { display: grid; align-content: start; gap: 9px; }
+.learning-lecture-counts strong { font-size: 22px; }
+.learning-lecture-counts > div > span, .learning-workload-summary article > span { color: var(--ink-2); font-size: 13px; }
+.learning-counts { display: flex; gap: 9px; }
+.learning-counts span { background: var(--surface-2); padding: 4px 8px; border-radius: 6px; font-size: 13px; color: var(--ink); }
+.learning-lecture-goal { font-size: 13px; color: var(--ink-2); }
+.learning-lecture-card footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; font-size: 13px; border-top: 1px solid var(--line); padding-top: 12px; margin-bottom: 9px; }
+.learning-lecture-card > small { display: block; }
 .learning-objectives { padding-left: 20px; }
 .learning-objectives li { margin: 22px 0; }
 .learning-objectives p { margin: 7px 0; }
@@ -70,6 +93,12 @@
 .learning-sequence { margin: 12px 0; }
 .learning-sequence button { margin-left: 15px; }
 @media (max-width: 600px) {
+  .learning-workload-summary { grid-template-columns: 1fr; }
+  .learning-lecture-card { padding: 16px; }
+  .learning-lecture-card header { flex-direction: column; gap: 8px; }
+  .learning-lecture-counts { gap: 16px; }
+  .learning-lecture-counts strong { font-size: 19px; }
+  .learning-lecture-tools input { width: 100%; min-width: 0; }
   .learning { padding: 12px 12px 60px; }
   .learning-plan, .learning-panel, .learning-question, .learning-overview, .guide-page .learning-overview { padding: 18px; }
   .learning-question h2, .learning-overview h2 { font-size: 19px; }

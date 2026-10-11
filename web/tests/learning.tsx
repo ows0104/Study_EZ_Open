@@ -36,6 +36,21 @@ const view = (): LearningSession => ({
 });
 const progress = { total: 24, covered: 12, delayedRecall: 4, questionGaps: 1, legacyObjectives: 0 };
 const dash: LearningDashboard = { enabled: true, minutes: 60, bufferDays: 3, progress, missingLectures: [{ title: "다음 강의", date: "2026-10-12" }], uncertainRanges: 1, activeSession: null, examQuestions: 6, plan: { budgetSeconds: 3600, estimatedSeconds: 2400, activeSeconds: 600, remaining: 2, complete: false, completed: ["done"], entries: [{ key: "done", lane: "review", seconds: 60 }, { key: "a", lane: "new", seconds: 120 }, { key: "b", lane: "review", seconds: 60 }], infeasible: false, newRequiredMinutes: 20, revision: 1 }, lectures: [{ ...progress, subject: "local", runId: "demo", title: "강의 흐름과 개념 구별" }], objectives: [{ key: "a", title: "두 개념의 구별", lecture: "강의 흐름과 개념 구별", subject: "local", runId: "demo", kind: "discrimination", sourceRefs: question.source_refs, covered: false, related: [] }] };
+dash.workload = { unseen: 12, dueReviews: 3, nextReviewAt: Date.UTC(2026, 9, 13), firstPassTargetAt: Date.UTC(2026, 9, 17),
+  examAt: Date.UTC(2026, 9, 20), today: { total: 3, completed: 1, remaining: 2, new: 1, review: 1, deferred: 0 } };
+dash.lectures[0].workload = dash.workload;
+if (scenario === "workload" || scenario === "budget") {
+  dash.lectures.push({ subject: "약리학", runId: "done", title: "약물 대사와 배설", total: 16, covered: 16,
+    delayedRecall: 3, questionGaps: 0, legacyObjectives: 16, workload: { ...dash.workload, unseen: 0, dueReviews: 0,
+      today: { total: 2, completed: 2, remaining: 0, new: 0, review: 0, deferred: 0 } } });
+  dash.progress = { total: 40, covered: 28, delayedRecall: 7, questionGaps: 1, legacyObjectives: 16 };
+  dash.workload = { ...dash.workload, today: { ...dash.workload.today!, total: 5, completed: 3 } };
+}
+if (scenario === "budget") {
+  dash.workload!.today = { total: 5, completed: 3, remaining: 0, new: 0, review: 0, deferred: 2 };
+  dash.lectures[0].workload = { ...dash.workload!, today: { total: 3, completed: 1, remaining: 0, new: 0, review: 0, deferred: 2 } };
+  dash.plan.complete = true; dash.plan.activeSeconds = dash.plan.budgetSeconds;
+}
 window.fetch = async (input, init) => {
   const path = new URL(String(input), location.origin).pathname;
   const body = init?.body ? JSON.parse(String(init.body)) : {};

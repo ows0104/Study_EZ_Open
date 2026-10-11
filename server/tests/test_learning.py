@@ -146,6 +146,8 @@ def main():
     with patch("app.routes.learning.now_ms", side_effect=lambda: clock[0]):
         dash = get("/dashboard")
         assert dash["progress"]["total"] == 4 and dash["examQuestions"] == 0
+        assert dash["workload"]["unseen"] == 4
+        assert dash["lectures"][0]["workload"]["today"]["remaining"] == dash["plan"]["remaining"]
         assert len(dash["scopeOnlyLectures"]) == 1
         assert get("/dashboard?subject=course&runId=lecture")["scopeOnlyLectures"] == []
         excluded_dash = get("/dashboard?subject=course&runId=excluded")
@@ -174,12 +176,18 @@ def main():
         post(f"/sessions/{sid}/acknowledge", {"token": token})
         dash = get("/dashboard")
         assert dash["progress"]["covered"] == 1 and dash["plan"]["entries"] == before_entries
+        assert dash["workload"]["unseen"] == 3 and dash["workload"]["today"]["completed"] == 1
+        assert dash["workload"]["today"]["remaining"] == len(before_entries) - 1
+        scoped_work = get("/dashboard?subject=course&runId=lecture")
+        assert scoped_work["workload"] == dash["lectures"][0]["workload"]
         assert dash["plan"]["activeSeconds"] == 30 and dash["examQuestions"] == 1
         with SessionLocal() as db:
             assert len(list(db.query(LearningAttempt))) == 1
         undone = post(f"/sessions/{sid}/undo")
         assert undone["token"] != token and undone["assisted"]
         assert get("/dashboard")["progress"]["covered"] == 0
+        assert get("/dashboard")["workload"]["unseen"] == 4
+        assert get("/dashboard")["workload"]["today"]["completed"] == 0
         replay = post(f"/sessions/{sid}/submit", {**submission, "token": undone["token"]})
         post(f"/sessions/{sid}/acknowledge", {"token": replay["token"]})
         end = post(f"/sessions/{sid}/end")
