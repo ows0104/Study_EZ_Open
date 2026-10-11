@@ -48,7 +48,7 @@
 
 ## 새 규칙을 둘 곳
 
-Quiz Bank의 별도 출제 정본은 `web/src/bank/bankPrompt.md` v2.1이다.
+Quiz Bank의 별도 출제 정본은 `web/src/bank/bankPrompt.md` v2.2이다.
 v4.1 JSON 계약은 `server/app/bank_validation/schema.py`·`learning.py`·`quality.py`에서 검증한다.
 `coverage_inventory`는 자료 범위를 target/explanation/excluded/uncertain으로 분류하며,
 `learning_objectives`는 회독·복습을 집계하는 단위다. 각 문항은 주 요점 하나와
