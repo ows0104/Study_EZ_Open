@@ -58,7 +58,6 @@ export type PrequizProgress = {
 };
 
 export type LectureRef = {
-  learningProgress?: import("./learning").LearningProgress | null;
   mastery?: LectureMastery | null;
   subject: string;
   runId: string;

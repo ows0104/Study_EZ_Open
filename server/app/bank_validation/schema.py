@@ -9,7 +9,7 @@ from __future__ import annotations
 FORMATS = ["basic", "cloze", "list", "ox", "mcq", "multi_select", "matching", "sequence"]
 DIRECTIONS = ["direct", "reverse", "mechanism", "discrimination", "integration", "sequence", "trap"]
 TIERS = ["Core", "Advanced", "Optional"]
-SCHEMA_VERSION = "4.2"
+SCHEMA_VERSION = "3.1"
 
 _STR = {"type": "string"}
 _NUM = {"type": "number"}
@@ -43,13 +43,6 @@ OPTION_POOL = _object({
     })),
 })
 
-OBJECTIVE = _object({
-    "objective_id": _STR, "concept_id": _STR, "title": _STR, "target": _STR,
-    "kind": _enum(["fact", "mechanism", "discrimination", "sequence"]),
-    "importance": _INT, "rationale": _STR, "source_refs": _array(SOURCE_REF),
-    "context": _STR, "explanation": _STR, "minimum": _STR, "prerequisites": _STRS,
-})
-
 QUESTION = _object({
     "question_id": _STR, "concept_id": _STR, "tier": _enum(TIERS), "importance": _INT,
     "item_difficulty": _INT, "format": _enum(FORMATS), "retrieval_direction": _enum(DIRECTIONS),
@@ -61,8 +54,6 @@ QUESTION = _object({
     "matching_left": _STRS, "matching_right": _STRS,
     "answer_pairs": _array(_object({"left": _STR, "right": _STR})),
     "sequence_items": _STRS, "correct_order": _STRS,
-    "primary_objective_id": _STR, "supporting_objective_ids": _STRS,
-    "role": _enum(["learning", "variant", "exam"]), "recall_prompt": _STR,
     "option_explanations": _array(_object({"option_id": _STR, "text": _STR})),
     "option_pools": _array(OPTION_POOL),
 })
@@ -82,17 +73,6 @@ BANK = _object({
         "concept_id": _STR, "directions": _array(_enum(DIRECTIONS)),
         "repetition_budget": _INT, "target_mastery": _NUM})),
     "questions": _array(QUESTION),
-    "learning_objectives": _array(OBJECTIVE),
-    "coverage_inventory": _array(_object({
-        "title": _STR, "source_refs": _array(SOURCE_REF),
-        "status": _enum(["target", "explanation", "excluded", "uncertain"]),
-        "reason": _STR, "objective_ids": _STRS,
-    })),
-    "exam_design": _array(_object({
-        "question_id": _STR, "basis_refs": _array(SOURCE_REF),
-        "changed_dimension": _enum(["condition", "direction", "contrast", "integration"]),
-        "novelty": _STR,
-    })),
     "audit_summary": _object({"summary": _STR, "rejected_candidate_count": _INT, "changes": _STRS}),
     "warnings": _STRS,
 })
@@ -108,15 +88,11 @@ def without_retired(bank: dict) -> dict:
     if not isinstance(bank, dict):
         return bank
     out = dict(bank)
-    out.setdefault("learning_objectives", [])
-    out.setdefault("coverage_inventory", [])
-    out.setdefault("exam_design", [])
     # 그래프용 요약이 없던 은행도 유효하다. 원래 제목은 바꾸지 않는다.
     if isinstance(bank.get("concepts"), list):
         out["concepts"] = [{"graph_title": "", **c} if isinstance(c, dict) else c for c in bank["concepts"]]
     if isinstance(bank.get("questions"), list):
-        out["questions"] = [{"primary_objective_id": "", "supporting_objective_ids": [],
-                             "role": "learning", "recall_prompt": "", "option_explanations": [], "option_pools": [],
+        out["questions"] = [{"option_explanations": [], "option_pools": [],
                              **{k: v for k, v in q.items() if k not in RETIRED_QUESTION}} if isinstance(q, dict) else q
                             for q in bank["questions"]]
     if isinstance(bank.get("retrieval_plan"), list):

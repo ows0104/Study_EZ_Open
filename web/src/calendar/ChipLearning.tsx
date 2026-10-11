@@ -22,9 +22,6 @@ function progressFor(lecture: LectureRef, phase: Phase): Progress {
     return { score, description: `예습 ${formatScore(score)}% · ${answered}/${progress.total}문항 완료` };
   }
   if (!lecture.marks.quiz) return { score: null, description: "복습: 측정할 웹 문항 없음" };
-  const learned = lecture.learningProgress;
-  if (learned && learned.total > 0) return { score: clampScore(100 * learned.covered / learned.total),
-    description: `첫 회독 ${learned.covered}/${learned.total}${learned.legacyObjectives ? "문항" : "요점"} · 아직 안 본 ${learned.workload?.unseen ?? Math.max(0, learned.total - learned.covered)}개${learned.workload?.today ? ` · 오늘 남은 ${learned.workload.today.remaining}개` : ""}` };
   const value = lecture.mastery;
   if (value === undefined) return { score: null, unknown: true, description: "복습: 학습도 정보 없음" };
   if (value === null) return { score: null, description: "복습: 평가 준비 전" };
@@ -53,7 +50,7 @@ export function ChipLearning({ lectures }: { lectures: LectureRef[] }) {
       const description = lectures.map((lecture, index) => `${lecture.title}: ${progress[index].description}`).join(" · ");
       return <span className={`chip-learning is-${phase}${unavailable ? " is-unavailable" : ""}`} key={phase} title={description} aria-label={description}>
         <span className="chip-learning-value" aria-hidden="true">
-          <span className="chip-learning-label">{phase === "main" && lectures.some(l => l.learningProgress) ? "범위" : phaseLabels[phase]} </span>
+          <span className="chip-learning-label">{phaseLabels[phase]} </span>
           {single ? single.score === null ? "—" : `${formatScore(single.score)}%` : null}
         </span>
         <span className="chip-learning-bars" aria-hidden="true">

@@ -59,6 +59,7 @@ from app.models import (
 from app.routes.common import lecture_or_404, record_grabs, storage_or_503
 from app.study_engine.daily_queue import lecture_goal, select_daily_question
 from app.study_engine.progress import mark_seen, panel_progress
+from app.study_engine.choices import realize_choices
 from app.study_engine.planning import day_start
 from app.study_engine.review_undo import remember_review, undo_review, undo_token
 from app.storage import ObjectStorage, StorageNotConfigured
@@ -69,7 +70,7 @@ admin_router = APIRouter()
 COMPLETE_MARK = "STUDYEZ_BANK_COMPLETE"
 # 첨부 순서가 곧 자료 ID 다 — 웹이 프롬프트에 이 순서로 적고 확장이 이 순서로 붙인다.
 SOURCE_KINDS = (("notes_current", "S1"), ("jokbo", "S2"))
-ANSWER_FIELDS = ("answer", "answer_units", "correct_option_ids", "answer_pairs", "correct_order", "option_explanations", "option_pools")
+ANSWER_FIELDS = ("answer", "answer_units", "correct_option_ids", "answer_pairs", "correct_order", "option_explanations", "option_pools", "choice_variant")
 FEEDBACK_CATEGORIES = ("good", "wording", "easy", "hard", "leak", "format", "burden", "importance",
                        "content", "duplicate", "sequencing", "other")
 
@@ -120,7 +121,7 @@ def _usable(row: QuizBank) -> dict:
     """학습에 쓸 수 있는 은행. 검증을 통과한 것만."""
     if not row.bank or not (row.validation or {}).get("pass"):
         raise HTTPException(409, "검증을 통과한 문제은행이 아직 없습니다.")
-    return {**row.bank, "questions": [q for q in row.bank["questions"] if q.get("role") != "exam"]}
+    return row.bank
 
 
 def summary(db: Session, lecture: Lecture, row: QuizBank | None, *, is_admin: bool,
@@ -144,9 +145,6 @@ def summary(db: Session, lecture: Lecture, row: QuizBank | None, *, is_admin: bo
                    # 검증에 걸려 뺀 문항(`quizbank.validate.validate_dropping`). 원문은 `GET …/bank` 의 validation 에 있다.
                    dropped=[{"questionId": d["question_id"], "errors": d["errors"]}
                             for d in (row.validation or {}).get("dropped", [])])
-    if user_id:
-        from app.learning_progress import lecture_progress
-        out["learningProgress"] = lecture_progress(db, user_id, [(row.subject, row.run_id)]).get((row.subject, row.run_id))
     return out
 
 
@@ -258,8 +256,6 @@ def put_bank(subject: str, run_id: str, payload: BankIn, user: CurrentUser = Dep
         db.commit()
         return {"status": row.status}
     source_ids = [s["id"] for s in bank_sources(db, lecture)]
-    from app.learning_versions import archive_bank
-    archive_bank(db, row, engine.now_ms())
     row.bank, row.validation = bank_edits.reapply(
         payload.bank, payload.validation, row.validation or {}, source_ids)
     row.review = payload.review
@@ -422,8 +418,6 @@ def edit_bank_card(subject: str, run_id: str, question_id: str, payload: BankCar
     after_questions = {q["question_id"]: q for q in clean["questions"]}
     affected = {qid for qid in before_questions.keys() | after_questions.keys()
                 if before_questions.get(qid) != after_questions.get(qid)}
-    from app.learning_versions import archive_bank
-    archive_bank(db, row, engine.now_ms())
     row.bank, row.validation = clean, checked
     row.pages = cited_pages(clean, "S1")
     row.status = BANK_READY
@@ -546,6 +540,17 @@ def _save(state: BankState, value: dict) -> None:
 
 def _public(q: dict) -> dict:
     return {k: v for k, v in q.items() if k not in ANSWER_FIELDS}
+
+
+def _served_question(db: Session, row: QuizBank, user_id: str, bank: dict, served: dict) -> dict:
+    original = next(q for q in bank["questions"] if q["question_id"] == served["question_id"])
+    personal = bank_personal.apply(db, row, user_id, original)
+    snapshot = served.get("question_snapshot") or {}
+    # Explicit private corrections take effect immediately and disable pools.
+    # A reset during the same exposure restores the original authored options.
+    if personal.get("personalEdited") or snapshot.get("personalEdited"):
+        return personal
+    return snapshot or personal
 
 
 def _slides(db: Session, row: QuizBank, question_id: str) -> list[dict[str, Any]]:
@@ -704,10 +709,20 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
                   "presented_at": now, "policy_version": engine.DEFAULT["version"],
                   "policy_hash": engine.policy_hash(engine.DEFAULT), "score": score}
         state["served"] = served
+    if "question_snapshot" not in served:
+        question = bank_personal.apply(db, row, user.id, question)
+        review = next((r for r in bank_edits.current_review(row.review, row.validation)["reviews"]
+                       if r["question_id"] == question["question_id"]), None)
+        previous = state.setdefault("choice_variants", {}).get(question["question_id"])
+        question = realize_choices({**question, "medicalReview": review}, served["token"], previous)
+        question.pop("medicalReview", None)
+        served["question_snapshot"] = question
+        if question.get("choice_variant"):
+            state["choice_variants"][question["question_id"]] = question["choice_variant"]
+    question = _served_question(db, row, user.id, bank, served)
     mark_seen(state, question["question_id"])
     _save(state_row, state)
     db.commit()
-    question = bank_personal.apply(db, row, user.id, question)
     return {"question": _public(question), "reviewToken": served["token"], "days": days, "examDate": exam,
             "lectureGoal": goal, "undoToken": undo_token(state),
             "preloadSlides": _slides(db, row, question["question_id"]),
@@ -734,8 +749,8 @@ def prepare_bank_answer(subject: str, run_id: str, payload: TokenIn,
     served = state_row.state.get("served") or {}
     if served.get("token") != payload.review_token:
         raise HTTPException(409, "현재 학습 문항이 아닙니다.")
-    question = next(q for q in bank["questions"] if q["question_id"] == served["question_id"])
-    return _answer(db, row, bank_personal.apply(db, row, user.id, question))
+    question = _served_question(db, row, user.id, bank, served)
+    return _answer(db, row, question)
 
 
 @router.post("/lectures/{subject}/{run_id}/bank/reveal")
@@ -754,8 +769,8 @@ def reveal_bank_answer(subject: str, run_id: str, payload: TokenIn,
     state["served"] = served
     _save(state_row, state)
     db.commit()
-    question = next(q for q in bank["questions"] if q["question_id"] == served["question_id"])
-    return _answer(db, row, bank_personal.apply(db, row, user.id, question))
+    question = _served_question(db, row, user.id, bank, served)
+    return _answer(db, row, question)
 
 
 class RateIn(BaseModel):
@@ -807,12 +822,11 @@ def undo_bank_answer(subject: str, run_id: str, payload: TokenIn,
         raise HTTPException(409, str(cause)) from cause
     served = state["served"]
     served["token"] = uuid.uuid4().hex  # Discard any tokens held by other tabs before undo.
-    question = next(q for q in bank["questions"] if q["question_id"] == served["question_id"])
+    question = _served_question(db, row, user.id, bank, served)
     now = engine.now_ms()
     _save(state_row, state)
     db.commit()
     exam = exam_date_for(db, lecture)
-    question = bank_personal.apply(db, row, user.id, question)
     return {"question": _public(question), "reviewToken": served["token"], "undoToken": undo_token(state),
             "days": engine.days_until(exam, now), "examDate": exam,
             "lectureGoal": lecture_goal(bank, state, lecture.title, now),

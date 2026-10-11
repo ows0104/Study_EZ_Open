@@ -65,9 +65,6 @@ def main() -> None:
         if form == "sequence":
             q.update(sequence_items=["단계1", "단계2", "단계3"], correct_order=["단계1", "단계2", "단계3"])
         bank["questions"].append(q)
-    reserved = copy.deepcopy(bank["questions"][4])
-    reserved.update(question_id="Q-exam", role="exam", question="HELD_OUT_EXAM_SENTINEL")
-    bank["questions"].append(reserved)
     bank["questions"][0].update(conflict_id="CF1", source_refs=[{"source_id": "EXT", "locator": "외부 근거"}])
     bank["source_conflicts"] = [{"conflict_id": "CF1", "description": "충돌 이유"}]
     with SessionLocal() as db:
@@ -105,7 +102,6 @@ def main() -> None:
         Path(fixture_dir).mkdir(parents=True, exist_ok=True)
         (Path(fixture_dir) / "first.apkg").write_bytes(fetched.content)
     assert len(notes) == count == 8 and len(media) == 1
-    assert all("HELD_OUT_EXAM_SENTINEL" not in fields for _, fields in notes)
     assert len(models) == 1 and all("<script>" not in fields for _, fields in notes)
     front, back, meta = notes[1][1].split("\x1f")
     assert "비밀하나" not in front and "비밀둘" not in front and "[ 1 ]" in front

@@ -3,7 +3,6 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, openSignedFile } from "../api";
 import { bumpPreviewVersion } from "../bridge/previewBridge";
 import { Stem } from "../lecture/Stem";
-import { LearningAudit } from "./LearningAudit";
 import type { BankFormat, BankFullQuestion, BankReviewBoard, BankReviewCard, BankReviewGroup } from "../types/bank";
 
 const decisionLabel = { edit: "수정함", accept: "검토 완료", delete: "제외함" };
@@ -46,7 +45,6 @@ export function BankCardReview() {
     ? card.question.question_id === focusId : showDone || showAll || !card.edit;
   return <section className="card-review bank-card-review">
     <h2>Main-Quiz 문항 검토</h2>
-    {subject && runId ? <LearningAudit subject={subject} runId={runId} /> : null}
     <p className="card-review-note">검증으로 제외된 문항과 외부지식 검토에서 틀림·의심으로 표시된 문항을 확인합니다.
       수정 후 검증을 통과하면 바로 학습에 반영됩니다. 같은 원문을 다시 정리해도 수정 내용이 유지됩니다.</p>
     <div className="card-review-actions">

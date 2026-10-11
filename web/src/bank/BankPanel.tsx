@@ -53,7 +53,6 @@ export function BankPanel({ lecture, detail }: { lecture: Pick<LectureRef, "subj
 }
 
 function StudyCard({ lecture, bank }: { lecture: Pick<LectureRef, "subject" | "runId">; bank: BankSummary }) {
-  const p = bank.learningProgress, w = p?.workload;
   return (
     <>
       <ActionCard
@@ -61,8 +60,7 @@ function StudyCard({ lecture, bank }: { lecture: Pick<LectureRef, "subject" | "r
         hit={
           <Link className="panel-action-hit" to={bankHref(lecture)}>
             <strong>공부하기</strong>
-            <small>{p ? `첫 회독 ${p.covered}/${p.total}${p.legacyObjectives ? "문항" : "요점"} · 아직 안 본 ${w?.unseen ?? Math.max(0, p.total - p.covered)}개` : `${bank.seenQuestionCount}/${bank.studyQuestionCount}문항 봄 · 개념 ${bank.conceptCount}개`}</small>
-            {w ? <small>{w.today ? `오늘 남은 ${w.today.remaining}개 · 새 내용 ${w.today.new} + 복습 ${w.today.review}` : "오늘 분량은 학습 화면에서 확인"} · 지금 복습할 {w.dueReviews}개</small> : null}
+            <small>{bank.seenQuestionCount}/{bank.studyQuestionCount}문항 봄 · 개념 {bank.conceptCount}개</small>
           </Link>
         }
       />

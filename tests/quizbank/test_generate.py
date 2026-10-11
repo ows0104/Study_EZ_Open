@@ -4,7 +4,6 @@ import fitz
 import pytest
 
 from quizbank import generate
-from quizbank.organize import organizer_prompt
 from studyez_llm.codex import SessionError
 
 
@@ -54,20 +53,3 @@ def test_generate_reads_pdf_and_continues_without_completion(tmp_path, monkeypat
 def test_registered_jokbo_must_be_available(tmp_path):
     with pytest.raises(SessionError, match="족보"):
         generate.generate(tmp_path / "missing.pdf", {"sources": [{"kind": "jokbo"}]}, tmp_path / "out")
-
-
-def test_new_contract_is_only_requested_for_replies_with_exam_design():
-    lecture = {"title": "강의", "sources": []}
-    old = organizer_prompt("## Learning Objectives\n기존 학습 표", lecture)
-    new = organizer_prompt("## Learning Objectives\n학습 표\n## Exam Design\n| question_id | basis_refs |", lecture)
-    assert "`4.0`" in old and "`4.1`" in new
-
-
-def test_new_generation_cannot_downgrade_when_tables_are_missing(monkeypatch):
-    from quizbank import organize
-    lecture = {"title": "강의", "sources": [], "prompt_version": "2.1"}
-    assert "`4.1`" in organizer_prompt("필수 표 누락", lecture)
-    monkeypatch.setattr(organize.session, "run_structured", lambda *a, **k: (
-        {"build_meta": {"schema_version": "3.0"}, "questions": [], "concepts": []}, {}))
-    bank, _ = organize.organize("필수 표 누락", lecture)
-    assert bank["build_meta"]["schema_version"] == "4.1"

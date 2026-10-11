@@ -31,7 +31,6 @@ def with_edits(bank: dict, validation: dict, edits: dict, source_ids: list[str])
     # Removing a question also removes edges pointing to it. Dependent integration
     # questions without a foundation are quarantined by the normal validator.
     deleted = {qid for qid, e in edits.items() if e["action"] == "delete"}
-    draft["exam_design"] = [d for d in draft.get("exam_design", []) if d["question_id"] not in deleted]
     for q in draft["questions"]:
         if isinstance(q.get("prerequisites"), list):
             q["prerequisites"] = [p for p in q["prerequisites"] if p not in deleted]
@@ -44,9 +43,9 @@ def reapply(bank: dict, validation: dict, previous: dict, source_ids: list[str])
     edits = {}
     for qid, edit in previous.get("edits", {}).items():
         question = incoming.get(qid)
-        comparable = [without_retired({"questions": [q]})["questions"][0]
-                      for q in (edit["original"], edit.get("question")) if q]
-        if question and without_retired({"questions": [question]})["questions"][0] in comparable:
+        if question and without_retired({"questions": [question]})["questions"][0] in (
+            edit["original"], edit.get("question")
+        ):
             edits[qid] = edit
     if not edits:
         return bank, validation

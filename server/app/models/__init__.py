@@ -18,7 +18,6 @@ from app.models.accounts import (
     Notice,
     Profile,
 )
-from app.models.learning import LearningBankVersion, LearningLegacyState, LearningProfile, LearningDay, LearningSession, LearningAttempt
 from app.models.bank import (
     BankPersonalEdit,
     BANK_BUILDING,

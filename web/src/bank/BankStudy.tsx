@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
-import { LearningPage } from "../learning/LearningPage";
+import { useParams } from "react-router-dom";
 import { api, ApiError } from "../api";
 import { lectureHref } from "../links";
 import type { BankRead, BankSession } from "../types/bank";
@@ -20,11 +19,6 @@ import { useBankUndo } from "./useBankUndo";
  * 짝짓기·순서형의 정오답은 자동채점하고, 모든 형식의 학습 평가는 사용자가 직접 고른다.
  */
 export function BankStudyPage() {
-  const [params] = useSearchParams();
-  return params.get("classic") === "1" ? <ClassicBankStudyPage /> : <LearningPage />;
-}
-
-function ClassicBankStudyPage() {
   const { subject = "", runId = "" } = useParams();
   const base = `/api/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}/bank`;
   const [info, setInfo] = useState<BankRead | null>(null);

@@ -20,23 +20,7 @@
 - 원문 뒤의 「문항·선지 해설 보완」 표는 기존 question_id에 대한 후속 보완 기록이다. question·source_refs는 보완 표의 값을 적용한다. answer 열이 있으면 answer와 answer_units를 해당 표의 값으로 적용하고, answer 열이 없으면 answer_units를 원래 항목에 중복 없이 추가한다. 별도 문항으로 만들거나 기존 선택 정답표를 바꾸지 마라.
 - 짝짓기·순서 항목에 붙은 번호(`1.` · `A.`)와 정답 짝의 번호는 떼지 말고 원문 그대로 둔다. 정답 짝은 원문의 `1. … - A. …`를 left·right로 나누기만 한다 — 번호로 맞추는 것은 코드가 한다.
 - source_refs의 locator에는 원문의 쪽·문항 표기를 그대로 둔다(예: `p13`, `p13–14`, `2023 Q11`).
-- Coverage Inventory와 Learning Objectives가 있으면 coverage_inventory·learning_objectives로 원문 그대로 옮긴다.
-- Learning Question Links의 primary_objective_id·supporting_objective_ids·role·recall_prompt를 question_id로 문항에 연결한다.
-- 새 학습 표의 ID 배열 셀에서 `—`는 빈 배열이다. recall_prompt의 `—`·`–`·`-`는 빈 문자열로 옮긴다. 선택적 회상 질문이 비어 있는 것은 오류가 아니다.
-- Option Explanations의 option_id·text를 문항의 option_explanations 배열에 보존한다. 없는 해설을 만들지 않는다.
-- Option Pools의 question_id·pool_id로 문항의 option_pools를 연결하고 select_count(정수)·correct_when(true/false 문자열)을 보존한다.
-  Option Pool Candidates는 같은 question_id·pool_id의 candidates 배열이다. candidate_id·true_text·false_text·true_explanation·false_explanation·source_refs를 그대로 옮긴다.
-  true_text와 false_text는 각각 완성된 참·거짓 명제다. 새 문장·부정어·해설을 만들거나 참·거짓을 추정하지 않는다.
-  후보는 별도 문항·학습요점으로 만들지 않는다. 풀 또는 후보 행이 빠지거나 중복되면 warnings에 남겨 검증이 잡게 한다.
-  선지 풀 표가 없는 과거 응답은 모든 문항의 option_pools=[]로 두며 warnings에 적지 않는다.
-- Exam Design은 exam_design으로 옮긴다. basis_refs는 source_refs와 같은 형식이며 `—`는 빈 배열이다.
-  changed_dimension·novelty를 그대로 보존하고 원문에 없는 새로움 근거를 만들지 않는다.
-  Exam Design이 없는 옛 응답은 exam_design=[]로 둔다. 이 표가 없어도 옛 문항을 바꾸지 않는다.
-- 새 학습 표가 없는 과거 응답은 learning_objectives·coverage_inventory를 빈 배열로 두고 문항의 새 필드는
-  primary_objective_id="", supporting_objective_ids=[], role="learning", recall_prompt="", option_explanations=[]로 둔다.
-  표가 있는 응답에서 일부 행이 빠졌으면 추정해 채우지 말고 warnings에 기록한다.
-- build_meta.schema_version은 새 Learning Objectives가 있으면 `{{schema_version}}`, 과거 응답이면 `3.0`이다.
-  build_meta.lecture_title은 강의 제목이다.
+- build_meta.schema_version은 `{{schema_version}}`, build_meta.lecture_title은 강의 제목이다.
 
 정리하면서 아래 항목에 어긋나 보이는 문항이 있으면 고치지 말고 warnings에 `[항목] 문항ID — 이유`로 적어라.
 
@@ -46,6 +30,11 @@
 - 정답과 answer_units로 스스로 채점할 수 있는가
 - 발문·선택지·빈칸 표기에 정답이 드러나지 않는가
 - 선행 문항이 실제 문항으로 연결되는가
+
+- Option Explanations는 문항별 option_explanations로 보존한다. 별도 표가 없으면 기존 answer_units의 각 보기 ID별 해설을 옮기고, 없는 해설은 만들지 않는다.
+- Option Pools의 question_id·pool_id로 option_pools를 연결하고 select_count(정수)·correct_when(true/false 문자열)을 보존한다.
+- Option Pool Candidates는 같은 question_id·pool_id의 candidates에 candidate_id·true_text·false_text·true_explanation·false_explanation·source_refs를 그대로 옮긴다. 참·거짓을 추론하거나 쌍을 만들지 않는다.
+- 위 표가 없는 과거 응답은 option_pools=[]다. 출력 형식을 맞추려고 새 후보를 만들지 않는다.
 
 LECTURE_METADATA_DATA
 {{lecture}}

@@ -16,9 +16,8 @@ import unicodedata
 from datetime import UTC, datetime
 
 from .schema import SCHEMA_VERSION, schema_errors, without_retired
-from .learning import learning_errors, scope_only
-from .quality import quality_errors
 from .choices import option_pool_errors
+from .quality import quality_errors
 
 
 # 외부 의학지식으로 쓴 자리(프롬프트 v1.2, 2026-10-05). 첨부 자료가 아니라서 출처 요약에는 안 서지만
@@ -73,17 +72,14 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
             fail(ref["source_id"] in ids and _nonempty(ref["locator"]),
                  f"{label}: 유효한 source_id 및 page/slide/section 필요")
 
-    fail(bank["build_meta"]["schema_version"] in ("3.0", "4.0", "4.1", SCHEMA_VERSION), f"지원 schema_version: 3.0, 4.0, 4.1, {SCHEMA_VERSION}")
+    fail(bank["build_meta"]["schema_version"] in ("3.0", SCHEMA_VERSION), f"지원 schema_version: 3.0, {SCHEMA_VERSION}")
     fail(_nonempty(bank["build_meta"]["lecture_title"]), "강의 제목 누락")
-    fail((bool(bank["concepts"]) and bool(bank["questions"])) or scope_only(bank), "개념과 문항이 비어 있습니다.")
+    fail(bool(bank["concepts"]) and bool(bank["questions"]), "개념과 문항이 비어 있습니다.")
     fail(len(bank["questions"]) <= 5000 and len(bank["concepts"]) <= 2000, "단일 문제은행의 지원 크기를 초과했습니다.")
     if errors:
         return result()
 
-    learning_invalid, learning_warnings = learning_errors(bank, ids)
-    errors.extend(learning_invalid)
-    warnings.extend(learning_warnings)
-    quality_invalid, quality_warnings = quality_errors(bank, ids)
+    quality_invalid, quality_warnings = quality_errors(bank)
     errors.extend(quality_invalid)
     warnings.extend(quality_warnings)
 
@@ -122,8 +118,12 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
     for q in bank["questions"]:
         label = q["question_id"]
         errors.extend(option_pool_errors(q, ids))
-        if bank["build_meta"]["schema_version"] == "4.2" and q["format"] in ("mcq", "multi_select") and q.get("role") != "exam" and len(q["option_pools"]) < 2:
-            warnings.append(f"{label}: 선지 풀 2개 미준비 — 검토된 고정 선지만 사용")
+        explanations = q["option_explanations"]
+        if explanations:
+            fail(q["format"] in ("mcq", "multi_select"), f"{label}: 선지 해설은 객관식에만 허용")
+            unique([e["option_id"] for e in explanations], f"{label} option_explanations")
+            fail({e["option_id"] for e in explanations} == {o["id"] for o in q["options"]}
+                 and all(_nonempty(e["text"]) for e in explanations), f"{label}: 모든 선지의 해설 필요")
         fail(_nonempty(label) and _nonempty(q["question"]) and _nonempty(q["answer"]), f"{label}: 발문/정답/ID 누락")
         fail(q["concept_id"] in concepts, f"{label}: 존재하지 않는 concept_id")
         fail(all(_in_range(n, 1, 5) for n in (q["importance"], q["item_difficulty"])),
@@ -240,8 +240,7 @@ def _without(bank: dict, drop: set[str]) -> dict:
         if q["question_id"] in drop:
             continue
         kept.append({**q, "prerequisites": [p for p in q["prerequisites"] if p not in drop]})
-    return {**bank, "questions": kept,
-            "exam_design": [d for d in bank.get("exam_design", []) if d["question_id"] not in drop]}
+    return {**bank, "questions": kept}
 
 
 def validate_dropping(bank: dict, source_ids: list[str], max_rounds: int = 5) -> tuple[dict, dict]:

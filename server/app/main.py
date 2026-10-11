@@ -8,7 +8,6 @@ from app.config import get_settings
 from app.routes import (
     admin,
     bank,
-    learning,
     bundles,
     cards,
     feedback,
@@ -73,7 +72,6 @@ app.include_router(cards.router, prefix="/api/admin")
 app.include_router(notices.router, prefix="/api")
 # Quiz Bank(2026-10-04) — 학생 풀이와 관리자·러너의 넣고 받기.
 app.include_router(bank.router, prefix="/api")
-app.include_router(learning.router, prefix="/api")
 app.include_router(bank.admin_router, prefix="/api/admin")
 app.include_router(notices.admin_router, prefix="/api/admin")
 # 기생충학 땡시. **승인 게이트를 안 지난다** — 가입하면 열린다.

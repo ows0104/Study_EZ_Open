@@ -3,7 +3,7 @@
 Medical truth and the stem's selection criterion are checked by review.py.
 An invalid pool rejects its owning question, never the lecture's objectives.
 """
-from .learning import fingerprint, normalized
+from .content import fingerprint, normalized
 
 
 def pool_review_identity(q: dict) -> str:

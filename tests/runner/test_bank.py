@@ -209,10 +209,9 @@ def test_응답이_없으면_자동_출제_후_기존_정리와_업로드(tmp_pa
         out = Path(argv[argv.index("--out") + 1])
         if argv[2] == "quizbank.generate":
             (out / "raw.md").write_text("문항 " * 100 + "STUDYEZ_BANK_COMPLETE", encoding="utf-8")
-            (out / "generation.json").write_text(json.dumps({"promptVersion": "2.1",
+            (out / "generation.json").write_text(json.dumps({"promptVersion": "1.15",
                                                                "usage": [{"step": "출제"}]}))
             return SimpleNamespace(returncode=0)
-        assert argv[argv.index("--prompt-version") + 1] == "2.1"
         return _fake_quizbank(True)(argv, **kwargs)
     monkeypatch.setattr(subprocess, "run", fake_run)
     assert bank.run(client, tmp_path, "약리학", "261002_02", "2026", "2025", tmp_path) == 0
