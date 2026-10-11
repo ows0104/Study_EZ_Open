@@ -677,7 +677,7 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
             db.commit()
             return {"question": None, "summary": engine.session_summary(bank, state, now=now),
                     "lectureGoal": goal, "reason": "lecture_goal_met", "undoToken": undo_token(state)}
-        picked = (engine.select_question(bank, state, exam, now) if goal["met"] and extra_today
+        picked = (engine.select_question(bank, state, exam, now, prefer_unseen=True) if goal["met"] and extra_today
                   else select_daily_question(bank, state, exam, now))
         question, days = picked["question"], picked["days"]
         if question is None:

@@ -354,6 +354,26 @@ def main() -> None:
         client.post(f"{BASE}/bank/session/end", json={"sessionId": extra["session"]["session_id"]})
         check("추가 회차를 끝내도 열람 수 유지", client.get(BASE).json()["bank"]["seenQuestionCount"] == before + 1)
 
+    print("⑪ 추가 학습 API는 실제 출제기로 안 본 변형·심화 문항을 먼저 낸다")
+    from app.models import QuizBank
+    with SessionLocal() as db:
+        bank = example_bank()
+        bank["questions"].append({**copy.deepcopy(bank["questions"][0]), "question_id": "Q1-variant"})
+        db.get(QuizBank, (SUBJECT, RUN)).bank = bank
+        saved = db.get(BankState, (STUDENT.id, SUBJECT, RUN))
+        saved.state = study.record_review(bank, study.empty_state(), "Q1", "Again", study.now_ms())
+        db.commit()
+    client.post(f"{BASE}/bank/session/start", json={"continueAfterGoal": True})
+    for qid, count in (("Q1-variant", 2), ("Q2", 3), ("Q3", 4)):
+        extra = client.post(f"{BASE}/bank/next").json()
+        check("신규 우선 출제: " + qid, extra["question"]["question_id"] == qid, extra)
+        check("새 문항은 패널 열람 수 증가", client.get(BASE).json()["bank"]["seenQuestionCount"] == count)
+        repeated = client.post(f"{BASE}/bank/next").json()
+        check("새로고침 시 현재 문항 유지", repeated["reviewToken"] == extra["reviewToken"])
+        client.post(f"{BASE}/bank/reveal", json={"reviewToken": extra["reviewToken"]})
+        client.post(f"{BASE}/bank/rate", json={"reviewToken": extra["reviewToken"], "rating": "Again"})
+        check("신규 문항 Again 평가도 오늘 완료 유지", client.get(f"{BASE}/bank").json()["lectureGoal"]["met"])
+
 
 if __name__ == "__main__":
     main()
