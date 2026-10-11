@@ -146,6 +146,7 @@ def main():
     with patch("app.routes.learning.now_ms", side_effect=lambda: clock[0]):
         dash = get("/dashboard")
         assert dash["progress"]["total"] == 4 and dash["examQuestions"] == 0
+        assert dash["activeSessionInfo"] is None
         assert dash["workload"]["unseen"] == 4
         assert dash["lectures"][0]["workload"]["today"]["remaining"] == dash["plan"]["remaining"]
         assert len(dash["scopeOnlyLectures"]) == 1
@@ -156,6 +157,8 @@ def main():
         before_entries = dash["plan"]["entries"]
         sid = post("/sessions", {"mode": "daily"})["sessionId"]
         first = get(f"/sessions/{sid}"); token = first["token"]
+        info = get("/dashboard?subject=course&runId=excluded")["activeSessionInfo"]
+        assert info == {"lecture": "제목", "subject": "course", "runId": "lecture"}
         assert len(first["question"]["options"]) == 2 and first["optionsShown"] and "answer" not in first["question"] and not first["feedback"]
         assert get(f"/sessions/{sid}")["token"] == token
         first = post(f"/sessions/{sid}/action", {"token": token, "action": "options"})

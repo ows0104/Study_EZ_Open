@@ -6,7 +6,7 @@ import "../src/styles/base.css";
 import choiceRounds from "./choice-pools.fixture.json";
 
 const scenario = new URLSearchParams(location.search).get("scenario");
-const mode = scenario === "exam" ? "exam" : scenario === "recall" || scenario === "explanation" ? "extra" : "daily";
+let mode: LearningSession["mode"] = scenario === "exam" ? "exam" : scenario === "recall" || scenario === "explanation" ? "extra" : "daily";
 let submitted = false, options = true, assisted = false, complete = false, count = 0;
 let submittedAnswer: LearningAnswer = {}, confidence: string | null = null;
 const question = { question_id: "Q1", concept_id: "C1", format: scenario === "recall" ? "list" : "mcq", question: scenario === "recall" ? "학습 계획을 세울 때 먼저 확인할 세 가지는?" : "두 개념을 구별할 때 가장 먼저 확인할 것은?", options: scenario === "recall" ? [] : [{ id: "A", text: "두 개념의 차이를 만드는 조건" }, { id: "B", text: "문제에 사용된 보기의 순서" }], matching_left: [], matching_right: [], sequence_items: [], source_refs: [{ source_id: "S1", locator: "p12" }] };
@@ -55,6 +55,32 @@ if (scenario === "budget") {
   dash.lectures[0].workload = { ...dash.workload!, today: { total: 3, completed: 1, remaining: 0, new: 0, review: 0, deferred: 2 } };
   dash.plan.complete = true; dash.plan.activeSeconds = dash.plan.budgetSeconds;
 }
+const scopedScenario = Boolean(scenario?.startsWith("scoped"));
+if (scopedScenario) {
+  dash.progress = { total: 80, covered: 0, delayedRecall: 0, questionGaps: 0, legacyObjectives: 80 };
+  dash.workload = { ...dash.workload!, unseen: 80, dueReviews: 0, nextReviewAt: null,
+    today: { total: 1, completed: 0, remaining: 1, new: 1, review: 0, deferred: 0 } };
+  dash.lectures = [{ ...dash.progress, subject: "local", runId: "demo", title: "강의 흐름과 개념 구별", workload: dash.workload }];
+  dash.plan.remaining = 1; dash.plan.infeasible = true; dash.plan.newRequiredMinutes = 471;
+  dash.examQuestions = 0;
+  if (scenario === "scoped-active") { dash.activeSession = "demo"; dash.activeSessionInfo = { lecture: "이전에 공부하던 강의", subject: "other", runId: "earlier" }; }
+  if (scenario === "scoped-unassigned") { dash.plan.remaining = 0; dash.workload.today = { total: 0, completed: 0, remaining: 0, new: 0, review: 0, deferred: 0 }; }
+  if (scenario === "scoped-complete") {
+    dash.progress.covered = 80; dash.workload.unseen = 0; dash.workload.dueReviews = 3;
+    dash.workload.today = { total: 2, completed: 2, remaining: 0, new: 0, review: 0, deferred: 0 };
+    dash.plan.complete = true; dash.plan.remaining = 0; dash.examQuestions = 3;
+  }
+  if (scenario === "scoped-budget") {
+    dash.workload.today = { total: 3, completed: 1, remaining: 0, new: 0, review: 0, deferred: 2 };
+    dash.plan.complete = true; dash.plan.activeSeconds = dash.plan.budgetSeconds;
+  }
+  if (scenario === "scoped-empty" || scenario === "scoped-excluded") {
+    dash.progress = { total: 0, covered: 0, delayedRecall: 0, questionGaps: 0, legacyObjectives: 0 };
+    dash.workload = { ...dash.workload, unseen: 0, dueReviews: 0, today: null }; dash.lectures = [];
+    dash.plan.remaining = 0;
+    if (scenario === "scoped-excluded") dash.scopeOnlyLectures = [{ subject: "local", runId: "demo", title: "도입 강의", ranges: [{ title: "도입", status: "excluded", reason: "시험 범위 제외", source_refs: question.source_refs }] }];
+  } else { dash.lectures[0] = { ...dash.lectures[0], ...dash.progress, workload: dash.workload }; }
+}
 window.fetch = async (input, init) => {
   const path = new URL(String(input), location.origin).pathname;
   const body = init?.body ? JSON.parse(String(init.body)) : {};
@@ -62,7 +88,12 @@ window.fetch = async (input, init) => {
   if (path.endsWith("/availability")) result = { enabled: true };
   else if (path.endsWith("/dashboard")) result = dash;
   else if (path.endsWith("/settings")) result = {};
-  else if (path.endsWith("/sessions")) result = { sessionId: "demo" };
+  else if (path.endsWith("/sessions")) {
+    if (scopedScenario && (body.subject !== "local" || body.runId !== "demo")) throw Error("scope lost");
+    if (scenario === "scoped-unassigned" && body.mode !== "extra") throw Error("unassigned lecture must use extra");
+    if (scenario === "scoped-budget" && body.mode !== "extra") throw Error("time budget must use extra");
+    mode = body.mode; result = { sessionId: "demo" };
+  }
   else if (path.endsWith("/action")) { options ||= body.action === "options"; assisted ||= body.action === "help"; result = view(); }
   else if (path.endsWith("/submit")) { if (scenario !== "recall" && scenario !== "explanation" && !body.answer.selected?.length) throw Error("missing answer"); submittedAnswer = body.answer; confidence = body.confidence ?? null; submitted = true; result = view(); }
   else if (path.endsWith("/acknowledge")) {
@@ -78,4 +109,4 @@ window.fetch = async (input, init) => {
 };
 const { LearningPage } = await import("../src/learning/LearningPage");
 const { GuidePage } = await import("../src/notices/GuidePage");
-createRoot(document.getElementById("root")!).render(<MemoryRouter initialEntries={[scenario === "guide" ? "/guide#learning" : scenario === "recall" || scenario === "explanation" ? "/bank/local/demo?session=demo" : scenario === "exam" || scenario === "choices" || scenario === "layout" ? "/study?session=demo" : "/study"]}><Routes><Route path="/study" element={<LearningPage />} /><Route path="/bank/:subject/:runId" element={<LearningPage />} /><Route path="/guide" element={<GuidePage />} /></Routes></MemoryRouter>);
+createRoot(document.getElementById("root")!).render(<MemoryRouter initialEntries={[scenario === "guide" ? "/guide#learning" : scopedScenario ? "/bank/local/demo" : scenario === "recall" || scenario === "explanation" ? "/bank/local/demo?session=demo" : scenario === "exam" || scenario === "choices" || scenario === "layout" ? "/study?session=demo" : "/study"]}><Routes><Route path="/study" element={<LearningPage />} /><Route path="/bank/:subject/:runId" element={<LearningPage />} /><Route path="/guide" element={<GuidePage />} /></Routes></MemoryRouter>);

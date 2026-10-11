@@ -160,9 +160,68 @@
 .learning-exam-result { margin: 28px 0; padding: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
 .learning-exam-result .learning-feedback { margin: 0; }
 .learning-recall textarea { display: block; width: 100%; box-sizing: border-box; margin-top: 12px; }
+.learning-dashboard-top { display: grid; grid-template-columns: 1.1fr 1fr; gap: 22px; }
+.learning-goal-card, .learning-today-card { min-width: 0; padding: 28px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.learning-goal-card h2, .learning-today-card h2 { font-size: 14px; color: var(--ink-2); margin: 0 0 18px; font-weight: 500; }
+.learning-goal-number { display: flex; align-items: baseline; gap: 10px; margin: 0 0 18px; }
+.learning-goal-number strong { font-size: 48px; line-height: 1.15; font-weight: 700; letter-spacing: -.04em; }
+.learning-goal-number > span { font-size: 22px; color: var(--ink-2); }
+.learning-goal-card progress { display: block; width: 100%; height: 7px; accent-color: var(--accent); margin-bottom: 24px; }
+.learning-remaining-counts { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.learning-remaining-counts > div { display: grid; gap: 8px; }
+.learning-remaining-counts > div + div { border-left: 1px solid var(--line); padding-left: 22px; }
+.learning-remaining-counts span { color: var(--ink-2); font-size: 14px; }
+.learning-remaining-counts strong { font-size: 26px; color: var(--accent-ink); }
+.learning-remaining-counts small { font-size: 14px; font-weight: 400; margin-left: 4px; }
+.learning-goal-date { color: var(--ink-2); font-size: 13px; margin: 22px 0 8px; line-height: 1.7; }
+.learning-today-card { background: var(--accent-soft); border-color: var(--accent-line); }
+.learning-today-number { font-size: 23px; line-height: 1.5; font-weight: 600; margin: 0 0 10px; }
+.learning-today-number strong { font-size: 32px; }
+.learning-today-breakdown { font-size: 14px; margin: 0 0 10px; }
+.learning-today-breakdown span { margin: 0 8px; color: var(--ink-3); }
+.learning-today-card > .learning-muted { margin: 8px 0; font-size: 13px; }
+.learning button.learning-start-button, .learning-start-link { display: block; width: 100%; box-sizing: border-box; margin-top: 24px; padding: 14px 18px; min-height: 52px; font-size: 16px; font-weight: 650; text-align: center; }
+.learning-start-link { background: var(--accent); border-radius: 10px; color: var(--on-accent); text-decoration: none; }
+.learning-action-hint { margin: 10px 0 0; font-size: 13px; color: var(--ink-2); }
+.learning-other-actions { display: flex; align-items: start; flex-wrap: wrap; gap: 12px 18px; margin-top: 16px; }
+.learning-other-actions button { background: transparent; border: 0; padding: 5px 0; min-height: 36px; font-size: 14px; color: var(--accent-ink); text-decoration: underline; text-underline-offset: 4px; }
+.learning-other-actions small { display: block; color: var(--ink-2); font-size: 12px; line-height: 1.6; }
+.learning-plan-note { color: var(--ink-2); font-size: 13px; line-height: 1.7; margin: 16px 0 0; }
+.learning-plan-note button { border: 0; padding: 0; min-height: 24px; background: transparent; color: var(--accent-ink); font-size: inherit; text-decoration: underline; }
+.learning-empty-goal { font-size: 22px; font-weight: 600; line-height: 1.6; }
+.learning-material-links { display: flex; flex-wrap: wrap; gap: 14px 24px; padding: 20px 4px; font-size: 14px; }
+.learning-lecture-picker { margin-top: 36px; }
+.learning-lecture-picker > header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+.learning-lecture-picker h2 { font-size: 21px; margin: 0; }
+.learning-lecture-picker label input { width: 230px; max-width: 100%; box-sizing: border-box; font-size: 14px; }
+.learning-lecture-picker .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.learning-filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
+.learning-filters button { min-height: 36px; padding: 6px 12px; font-size: 13px; border-radius: 20px; }
+.learning-lecture-rows { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); overflow: hidden; }
+.learning-lecture-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; gap: 24px; padding: 20px; align-items: center; }
+.learning-lecture-row + .learning-lecture-row { border-top: 1px solid var(--line); }
+.learning-lecture-row > div { min-width: 0; }
+.learning-lecture-name small { color: var(--ink-2); font-size: 12px; }
+.learning-lecture-name h3 { margin: 5px 0 0; font-size: 16px; line-height: 1.6; overflow-wrap: anywhere; }
+.learning-lecture-name a { color: var(--ink); text-decoration: none; }
+.learning-lecture-name a:hover { text-decoration: underline; }
+.learning-lecture-progress { display: grid; gap: 9px; font-size: 13px; }
+.learning-lecture-progress > span { color: var(--ink-2); }
+.learning-lecture-progress b { color: var(--ink); margin-left: 6px; }
+.learning-lecture-progress progress { width: 100%; height: 5px; accent-color: var(--accent); }
+.learning-lecture-progress small { color: var(--ink-2); font-size: 12px; }
+.learning-lecture-open { display: grid; justify-items: end; gap: 10px; }
+.learning-lecture-open small { color: var(--accent-ink); font-size: 12px; }
+.learning-lecture-open a { font-size: 13px; white-space: nowrap; text-decoration: none; border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; }
+.learning-dashboard-details { margin-top: 24px; }
+.learning-dashboard-details > .learning-panel { padding: 18px 20px; margin: 10px 0; border-radius: 12px; }
+.learning-dashboard-details > .learning-panel > summary { font-size: 14px; }
+.learning-dashboard-help { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-top: 24px; font-size: 12px; color: var(--ink-2); line-height: 1.7; }
+.learning-settings label { line-height: 1.8; }
 @media (max-width: 950px) {
   .learning-study-layout.has-references { grid-template-columns: 1fr; max-width: 800px; }
   .learning-references { position: static; }
+  .learning-lecture-row { gap: 16px; }
 }
 @media (max-width: 600px) {
   .learning-workload-summary { grid-template-columns: 1fr; }
@@ -198,4 +257,18 @@
   .learning-options button { gap: 10px; padding: 14px 12px; }
   .learning-options button.is-correct { padding: 13px 11px; }
   .learning-options button > small { white-space: nowrap; font-size: 11px; }
+  .learning-dashboard-top { grid-template-columns: 1fr; gap: 14px; }
+  .learning-goal-card, .learning-today-card { padding: 22px; }
+  .learning-goal-number strong { font-size: 40px; }
+  .learning-goal-card progress { margin-bottom: 20px; }
+  .learning-remaining-counts strong { font-size: 24px; }
+  .learning-goal-date { margin-top: 18px; }
+  .learning-lecture-picker > header { align-items: stretch; }
+  .learning-lecture-picker label, .learning-lecture-picker label input { width: 100%; }
+  .learning-filters { gap: 6px; }
+  .learning-filters button { font-size: 12px; padding: 6px 10px; }
+  .learning-lecture-row { grid-template-columns: 1fr auto; padding: 18px; gap: 14px; }
+  .learning-lecture-name { grid-column: 1 / -1; }
+  .learning-lecture-open { align-self: end; }
+  .learning-settings { gap: 14px; }
 }

@@ -9,6 +9,7 @@ export type LearningDashboard = {
   scopeOnlyLectures?: { subject: string; runId: string; title: string;
     ranges: { title: string; status: string; reason: string; source_refs: SourceRef[] }[] }[];
   activeSession: string | null; examQuestions: number;
+  activeSessionInfo?: { lecture: string; subject: string; runId: string } | null;
   plan: { budgetSeconds: number; estimatedSeconds: number; activeSeconds: number; remaining: number;
     complete: boolean; completed: string[]; entries: { key: string; lane: string; seconds: number }[];
     infeasible: boolean; newRequiredMinutes: number; revision: number };

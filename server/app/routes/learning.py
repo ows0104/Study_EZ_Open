@@ -166,6 +166,12 @@ def dashboard(subject: str | None = None, runId: str | None = None, examId: str 
     keys = {u["key"] for u in scoped}; plan = day.plan
     active = db.scalars(select(LearningSession).where(LearningSession.user_id == user.id,
         LearningSession.status == "active").order_by(LearningSession.created_at.desc())).first()
+    active_unit = None
+    if active:
+        active_entries = active.data.get("entries", [])
+        active_index = active.data.get("index", 0)
+        if 0 <= active_index < len(active_entries):
+            active_unit = active.data.get("units", {}).get(active_entries[active_index]["key"])
     lessons = {}
     for unit in scoped:
         key = (unit["subject"], unit["runId"])
@@ -178,6 +184,8 @@ def dashboard(subject: str | None = None, runId: str | None = None, examId: str 
            "plan": {**plan, "remaining": sum(e["key"] in keys and e["key"] not in plan["completed"] for e in plan["entries"]),
                     "complete": len(plan["completed"]) >= len(plan["entries"]) or plan["activeSeconds"] >= plan["budgetSeconds"]},
            "activeSession": active.id if active else None,
+           "activeSessionInfo": {"lecture": active_unit["title"], "subject": active_unit["subject"],
+                                 "runId": active_unit["runId"]} if active_unit else None,
            "examQuestions": sum(choose_question(u, person.state, exam=True) is not None for u in scoped
                                 if person.state.get("objectives", {}).get(u["key"], {}).get("covered")),
            "lectures": [{"subject": k[0], "runId": k[1], "title": us[0]["title"], **progress(us, person.state),
