@@ -186,3 +186,17 @@ test('revealed cloze blanks, matching pairs, and sequence answers are highlighte
   assert.ok(render({ correctOrder: ['흡수', '분포'] }, 'sequence')
     .includes('class="bank-order bank-answer-point"'));
 });
+
+test('four repeated cloze markers reveal four answers in their original order', () => {
+  const props = {
+    question: { ...question, format: 'cloze', question: '흡수 {{c1}}, F {{c1}}; 흡수 {{c1}}, F {{c1}}.' },
+    picked: new Set(), onPick: () => {},
+  };
+  const hidden = renderToStaticMarkup(React.createElement(QuestionBody, { ...props, answer: null }));
+  assert.equal((hidden.match(/class="bank-blank"/g) || []).length, 4);
+  const revealed = renderToStaticMarkup(React.createElement(QuestionBody, {
+    ...props, answer: { ...answer, answerUnits: ['감소', '감소', '증가', '증가'] },
+  }));
+  assert.deepEqual([...revealed.matchAll(/class="bank-answer-point">([^<]+)</g)].map(match => match[1]),
+    ['감소', '감소', '증가', '증가']);
+});

@@ -72,6 +72,20 @@ def test_cloze_빈칸과_채점단위_수가_같아야_한다(bank):
     assert any("cloze는" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
 
 
+def test_cloze_빈칸_네개를_보존하고_정답_누락은_거른다(bank):
+    _fix_lists(bank)
+    q = next(x for x in bank["questions"] if x["format"] == "cloze")
+    q["question"] = "장 유입 억제: 흡수 {{c1}}, F {{c1}}. 장 유출 억제: 흡수 {{c1}}, F {{c1}}."
+    q["answer_units"] = ["감소", "감소", "증가", "증가"]
+    kept, validation = validate_dropping(bank, ["S1", "S2"])
+    assert validation["pass"] and validation["dropped"] == []
+    assert q in kept["questions"]
+    q["answer_units"].pop()
+    _, validation = validate_dropping(bank, ["S1", "S2"])
+    assert [d["question_id"] for d in validation["dropped"]] == [q["question_id"]]
+    assert any("cloze는" in error for error in validation["dropped"][0]["errors"])
+
+
 def _fix_lists(bank):
     for q in bank["questions"]:                     # 실물의 list 셋을 고쳐 다른 오류가 없게 한다
         if q["question_id"] in ("Q009", "Q015", "Q026"):
