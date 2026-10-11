@@ -23,6 +23,7 @@ from app.learning_versions import snapshot
 from app.naming import normalize_stem
 from app.study_engine import now_ms
 from app.study_engine.learning import POLICY_VERSION, apply_attempt, build_plan, catalog_unit, choose_question, grade, progress
+from app.study_engine.learning_srs import RATINGS, delayed_recall, recall_rating, schedule_review
 from app.study_engine.planning import KOREA
 from app.study_engine.memory import DAY_MS
 from .study_plan import exam_time
@@ -353,7 +354,17 @@ def session_view(db, person, session, now):
         attempt = db.get(LearningAttempt, served["token"])
         out["submittedAnswer"] = attempt.data["answer"]
         out["activeSeconds"] = attempt.data["seconds"]
-        if session.mode != "exam": out["feedback"] = feedback(unit, served, attempt.data)
+        if session.mode != "exam":
+            out["feedback"] = feedback(unit, served, attempt.data)
+            if q:
+                old = person.state.get("objectives", {}).get(unit["key"], {})
+                out["reviewChoices"] = []
+                for rating in RATINGS:
+                    candidate = {**attempt.data, "selfCorrect": rating != "Again", "reviewRating": rating}
+                    if recall_rating(candidate) == rating:
+                        scheduled = schedule_review(old, candidate, rating)
+                        out["reviewChoices"].append({"rating": rating, "dueAt": scheduled["dueAt"],
+                            "intervalDays": scheduled["intervalDays"]})
     return out
 
 
@@ -384,7 +395,7 @@ def action(session_id: str, payload: ActionIn, user: CurrentUser = Depends(requi
 
 class SubmitIn(BaseModel):
     token: str
-    confidence: Literal["sure", "unsure", "guess"]
+    confidence: Literal["sure", "unsure", "guess"] | None = None
     answer: dict = Field(default_factory=dict)
     activeSeconds: int = Field(0, ge=0, le=3600)
 
@@ -420,18 +431,21 @@ def submit(session_id: str, payload: SubmitIn, user: CurrentUser = Depends(requi
 class AcknowledgeIn(BaseModel):
     token: str
     selfCorrect: bool | None = None
+    reviewRating: Literal["Again", "Hard", "Good", "Easy"] | None = None
     activeSeconds: int = Field(0, ge=0, le=3600)
 
 
-def complete_attempt(db, person, session, attempt, self_correct, seconds, now):
+def complete_attempt(db, person, session, attempt, self_correct, seconds, now, review_rating=None):
     data = copy.deepcopy(session.data); event = copy.deepcopy(attempt.data)
     unit = data["units"][attempt.objective_key]
     old = person.state.get("objectives", {}).get(unit["key"])
-    event.update(selfCorrect=self_correct, acknowledged=True,
+    event.update(selfCorrect=self_correct, reviewRating=review_rating, acknowledged=True,
         seconds=min(900, max(event["seconds"], seconds)), wasNew=not old or not old.get("covered"),
-        delayed=bool(old and old.get("lastAt") and now - old["lastAt"] >= 20 * 3_600_000
-                     and event["correct"] is True and event["confidence"] == "sure" and not event["assisted"]),
         before=copy.deepcopy(old))
+    event["reviewRating"] = recall_rating(event)
+    event["delayed"] = delayed_recall(old or {}, event)
+    if event["reviewRating"]:
+        event["fsrsReview"] = schedule_review(old or {}, event, event["reviewRating"])["fsrsReview"]
     attempt.data = event
     if session.mode != "exam": person.state = apply_attempt(person.state, event)
     day = db.get(LearningDay, (person.user_id, data["day"]))
@@ -466,10 +480,16 @@ def acknowledge(session_id: str, payload: AcknowledgeIn, user: CurrentUser = Dep
         if (session.data.get("served") or {}).get("token") != payload.token or session.status != "active":
             raise HTTPException(409, "현재 문항이 아닙니다.")
         authorized_unit(db, session.data["units"][attempt.objective_key])
-        if attempt.data["correct"] is None and attempt.data["kind"] != "explanation" and payload.selfCorrect is None:
+        self_correct = payload.selfCorrect
+        if attempt.data["correct"] is None and payload.reviewRating and self_correct is None:
+            self_correct = payload.reviewRating != "Again"
+        if attempt.data["correct"] is None and attempt.data["kind"] != "explanation" and self_correct is None:
             raise HTTPException(422, "정답과 비교한 자기평가가 필요합니다.")
+        if payload.reviewRating and payload.reviewRating != "Again" and recall_rating({
+                **attempt.data, "selfCorrect": self_correct, "reviewRating": payload.reviewRating}) == "Again":
+            raise HTTPException(422, "오답·찍음·도움을 받은 답은 ‘다시’로 평가하세요.")
         seconds = min(payload.activeSeconds, max(0, (now - attempt.data["served"]["at"]) // 1000))
-        complete_attempt(db, person, session, attempt, payload.selfCorrect, seconds, now)
+        complete_attempt(db, person, session, attempt, self_correct, seconds, now, payload.reviewRating)
         db.flush(); release_exam(db, person, session)
     out = session_view(db, person, session, now); db.commit(); return out
 

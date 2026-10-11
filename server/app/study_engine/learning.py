@@ -1,6 +1,6 @@
 """Time-bounded, objective-based learning. Pure functions; no DB or wall clock.
 
-Intervals below are explicit starting heuristics, not calibrated probabilities.
+Review intervals use FSRS defaults, not personalized or exam probabilities.
 Coverage, delayed recall and unfamiliar-question performance remain separate.
 """
 
@@ -9,8 +9,9 @@ import math
 
 from app.bank_validation.learning import fingerprint, learning_content, objective_identity, question_identity
 from .memory import DAY_MS
+from .learning_srs import delayed_recall, recall_rating, schedule_review
 
-POLICY_VERSION = "learning-1"
+POLICY_VERSION = "learning-2-fsrs"
 SHARES = {"new": .5, "review": .25, "drill": .125, "mixed": .125}
 
 
@@ -150,17 +151,13 @@ def apply_attempt(previous: dict, attempt: dict) -> dict:
     old = objectives.get(key, {})
     correct = attempt.get("correct")
     if correct is None: correct = attempt.get("selfCorrect")
-    independent = not attempt.get("assisted") and attempt.get("kind") != "explanation"
-    spaced = bool(old.get("lastAt")) and at - old["lastAt"] >= 20 * 3_600_000
-    strong = correct is True and attempt.get("confidence") == "sure" and independent
-    interval = old.get("intervalDays", 1)
-    if not strong: interval = 1
-    elif spaced: interval = min(90, max(1, interval) * 2)
-    successes = old.get("delayedSuccesses", 0) + int(strong and spaced and attempt.get("correct") is True)
-    if correct is False: successes = 0
+    rating = recall_rating(attempt)
+    schedule = schedule_review(old, attempt, rating) if rating else {
+        "dueAt": min(old.get("dueAt", at + DAY_MS), at + DAY_MS)}
+    successes = old.get("delayedSuccesses", 0) + int(delayed_recall(old, attempt))
+    if rating == "Again": successes = 0
     objectives[key] = {**old, "covered": True, "lastAt": at, "lastCorrect": correct,
-                       "confidence": attempt.get("confidence"), "intervalDays": interval,
-                       "dueAt": at + round(interval * DAY_MS), "delayedSuccesses": successes,
+                       "confidence": attempt.get("confidence"), **schedule, "delayedSuccesses": successes,
                        "assessments": old.get("assessments", 0) + int(correct is not None),
                        "seconds": round(.7 * old.get("seconds", attempt["seconds"]) + .3 * attempt["seconds"]),
                        "evidence": "self_report" if attempt.get("correct") is None else "graded"}

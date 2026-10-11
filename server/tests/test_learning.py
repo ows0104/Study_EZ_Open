@@ -165,6 +165,9 @@ def main():
         submission = {"token": token, "confidence": "guess", "answer": {"selected": ["A"]}, "activeSeconds": 30}
         answer = post(f"/sessions/{sid}/submit", submission)
         assert answer["feedback"]["correct"] is True and answer["feedback"]["confidence"] == "guess"
+        assert [c["rating"] for c in answer["reviewChoices"]] == ["Again"]
+        assert client.post(f"/api/learning/sessions/{sid}/acknowledge", json={
+            "token": token, "reviewRating": "Good"}).status_code == 422
         post(f"/sessions/{sid}/submit", submission)
         assert get("/dashboard")["progress"]["covered"] == 0  # exposure alone != coverage
         second = post(f"/sessions/{sid}/acknowledge", {"token": token, "activeSeconds": 30})
@@ -251,6 +254,45 @@ def main():
             if fmt == "mcq": assert shown["recallPrompt"] == "" and len(shown["question"]["options"]) == 2
             post(f"/sessions/{recall_sid}/end", {"token": shown["token"], "activeSeconds": 0})
         print("PASS optional recall only hides actual choices, never an empty-cell marker")
+        # New clients may omit confidence. Post-answer ratings, not certainty,
+        # drive review scheduling; preview/reload cannot advance the memory model.
+        for confidence, selected, rating, assisted in (
+            (None, "A", "Good", False), ("unsure", "A", "Hard", False),
+            ("sure", "B", "Again", False), ("sure", "A", "Again", True),
+        ):
+            clock[0] += DAY_MS
+            review_sid = post("/sessions", {"mode": "extra", "subject": "course", "runId": "lecture", "count": 1})["sessionId"]
+            shown = get(f"/sessions/{review_sid}")
+            review_token = shown["token"]
+            if assisted:
+                post(f"/sessions/{review_sid}/action", {"token": review_token, "action": "help"})
+            clock[0] += 30_000
+            payload = {"token": review_token, "answer": {"selected": [selected]}, "activeSeconds": 30}
+            if confidence is not None: payload["confidence"] = confidence
+            feedback = post(f"/sessions/{review_sid}/submit", payload)
+            with SessionLocal() as db:
+                before_review = copy.deepcopy(db.get(LearningProfile, USER.id).state["objectives"])
+            expected = ["Again", "Hard", "Good", "Easy"] if selected == "A" and not assisted else ["Again"]
+            assert [c["rating"] for c in feedback["reviewChoices"]] == expected
+            assert get(f"/sessions/{review_sid}")["reviewChoices"] == feedback["reviewChoices"]
+            with SessionLocal() as db:
+                assert db.get(LearningProfile, USER.id).state["objectives"] == before_review
+            if expected == ["Again"]:
+                assert client.post(f"/api/learning/sessions/{review_sid}/acknowledge", json={
+                    "token": review_token, "reviewRating": "Easy"}).status_code == 422
+            finished = post(f"/sessions/{review_sid}/acknowledge", {"token": review_token, "reviewRating": rating})
+            assert finished["status"] == "complete"
+            with SessionLocal() as db:
+                recorded = db.get(LearningAttempt, review_token)
+                memory = db.get(LearningProfile, USER.id).state["objectives"][recorded.objective_key]
+                assert recorded.data["reviewRating"] == rating and recorded.data["fsrsReview"]
+                assert memory["reviewRating"] == rating and memory["fsrs"]
+                assert memory["dueAt"] == next(c["dueAt"] for c in feedback["reviewChoices"] if c["rating"] == rating)
+        post(f"/sessions/{review_sid}/undo")
+        with SessionLocal() as db:
+            assert db.get(LearningProfile, USER.id).state["objectives"] == before_review
+        post(f"/sessions/{review_sid}/end")
+        print("PASS optional confidence, uncertain correct success, guarded ratings, immutable previews and FSRS undo")
     print("ALL LEARNING CHECKS PASSED")
 
 

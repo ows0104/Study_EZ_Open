@@ -19,11 +19,12 @@ export type LearningQuestion = {
   sequence_items: string[]; source_refs: SourceRef[];
 };
 export type LearningAnswer = { selected?: string[]; text?: string; pairs?: Record<string, string>; order?: string[] };
+export type RecallRating = "Again" | "Hard" | "Good" | "Easy";
 export type LearningFeedback = {
   answer?: string; answerUnits?: string[]; correctOptionIds?: string[];
   answerPairs?: { left: string; right: string }[]; correctOrder?: string[];
   optionExplanations?: { option_id: string; text: string }[];
-  sourceRefs?: SourceRef[]; correct?: boolean | null; confidence?: string;
+  sourceRefs?: SourceRef[]; correct?: boolean | null; confidence?: string | null;
   explanation: string; minimum: string;
   medicalReview?: { verdict: string; note: string; suggested_answer: string } | null; sourceConflict?: string;
 };
@@ -35,6 +36,7 @@ export type LearningSession = {
   question?: LearningQuestion | null; recallPrompt?: string; objective?: string;
   help?: { context: string; explanation: string; minimum: string; rationale: string; source_refs: SourceRef[] } | null;
   feedback?: LearningFeedback | null; submittedAnswer?: LearningAnswer | null;
+  reviewChoices?: { rating: RecallRating; dueAt: number; intervalDays: number }[];
   summary?: { completed: number; graded: number; correct: number; freshGraded: number; freshCorrect: number;
     newObjectives: number; delayedRecall: number; burden: string | null };
   results?: (LearningFeedback & { title: string; question: LearningQuestion; submittedAnswer: LearningAnswer })[];

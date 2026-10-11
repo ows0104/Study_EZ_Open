@@ -5,13 +5,14 @@ import { invalidateTimetable } from "../firstScreen";
 import { Stem } from "../lecture/Stem";
 import { shuffled } from "../bank/BankQuestion";
 import { LearningOverview } from "./LearningOverview";
-import type { LearningAnswer, LearningDashboard, LearningFeedback, LearningSession, SourceRef } from "../types/learning";
+import type { LearningAnswer, LearningDashboard, LearningFeedback, LearningSession, RecallRating, SourceRef } from "../types/learning";
 import "../styles/learning.css";
 
 const ROOT = "/api/learning";
 const LANES: Record<string, string> = { new: "새 범위", review: "기억 되살리기", drill: "짧은 암기", mixed: "누적 확인", extra: "추가 학습", exam: "시험 연습" };
 const fmt = (seconds: number) => `${Math.floor(seconds / 60)}분 ${seconds % 60}초`;
 const promptText = (text: string) => text.replace(/\{\{c(\d+)\}\}/g, "[빈칸 $1]");
+const RATING_LABELS: Record<RecallRating, string> = { Again: "다시 · 못 기억함/찍음", Hard: "어려웠지만 맞힘", Good: "맞힘", Easy: "쉽게 맞힘" };
 
 export function LearningPage() {
   const { subject, runId } = useParams();
@@ -86,7 +87,7 @@ export function LearningPage() {
       <LearningOverview />
       <div className="learning-metrics">
         <article><strong>{dashboard.progress.covered} / {dashboard.progress.total}</strong><span>한 번 공부한 범위</span><small>정답이나 설명을 확인한 범위예요. 전부 외웠다는 뜻은 아니에요.</small></article>
-        <article><strong>{dashboard.progress.delayedRecall}</strong><span>시간을 두고 기억한 요점</span><small>자동채점 문항을 간격을 두고 두 번, 도움 없이 확실하게 맞힌 요점이에요.</small></article>
+        <article><strong>{dashboard.progress.delayedRecall}</strong><span>시간을 두고 기억한 요점</span><small>자동채점 문항을 간격을 두고 두 번, 도움이나 찍음 없이 맞힌 요점이에요.</small></article>
         <article><strong>{dashboard.progress.questionGaps}</strong><span>학습 문제 준비 중</span><small>학습용 문제가 없어 설명으로 공부하는 요점이에요.</small></article>
       </div>
       {dashboard.progress.legacyObjectives ? <p className="learning-muted">기존 자료는 문항별로 집계합니다. 전체 강의 범위 확인은 새 학습요점 목록이 준비된 뒤 가능합니다. 과거 자기평가는 새 문항 정답률로 환산하지 않습니다.</p> : null}
@@ -133,6 +134,8 @@ function Feedback({ value, picked = [] }: { value: LearningFeedback; picked?: st
   return <section className="learning-feedback" aria-label={explanationOnly ? "학습 설명" : "정답과 해설"}>
     <h3>{explanationOnly ? "학습 설명" : "정답과 해설"}</h3>
     {value.correct !== undefined && value.correct !== null ? <p className="learning-verdict">{value.correct ? "맞았습니다" : "차이를 확인해 볼까요"}{value.confidence === "guess" ? " · 찍은 답은 다시 확인합니다" : ""}</p> : null}
+    {value.correct === false && value.confidence === "sure" ? <p>확신했던 답과 정답이 갈리는 조건을 확인하세요. 내가 고른 선지의 해설부터 비교해 보세요.</p> : null}
+    {value.correct === true && value.confidence === "unsure" ? <p>헷갈렸어도 스스로 맞혔다면 기억 성공입니다. 답을 고른 근거를 해설과 비교해 보세요.</p> : null}
     {value.answer ? <p><Stem text={value.answer} /></p> : null}
     {focused.map(e => <p key={e.option_id}><b>{e.option_id}</b> <Stem text={e.text} /></p>)}
     {!explanations.length && value.answerUnits?.length ? <ul>{value.answerUnits.map((a, i) => <li key={i}><Stem text={a} /></li>)}</ul> : null}
@@ -150,6 +153,7 @@ function Feedback({ value, picked = [] }: { value: LearningFeedback; picked?: st
 function LearningRun({ session: s, busy, act, home }: { session: LearningSession; busy: boolean;
   act: (action: string, body: object) => void; home: () => void }) {
   const [answer, setAnswer] = useState<LearningAnswer>({});
+  const [confidence, setConfidence] = useState<"sure" | "unsure" | "guess" | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const seconds = useRef(0);
   const answerRef = useRef(answer);
@@ -157,10 +161,11 @@ function LearningRun({ session: s, busy, act, home }: { session: LearningSession
   const draftKey = `studyez-learning-${s.sessionId}`;
   const q = s.question;
   useEffect(() => {
-    let draft: { token?: string; seconds?: number; answer?: LearningAnswer } = {};
+    let draft: { token?: string; seconds?: number; answer?: LearningAnswer; confidence?: "sure" | "unsure" | "guess" | null } = {};
     try { draft = JSON.parse(sessionStorage.getItem(draftKey) || "{}"); } catch { /* Storage is optional. */ }
     const resumed = draft.token === s.token;
     setAnswer(s.submittedAnswer ?? (resumed ? draft.answer : null) ?? { order: q ? shuffled(q.sequence_items, s.token ?? "") : [] });
+    setConfidence(resumed ? draft.confidence ?? null : null);
     seconds.current = Math.max(s.activeSeconds ?? 0, resumed ? Math.min(900, Math.max(0, draft.seconds ?? 0)) : 0);
     setElapsed(Math.floor(seconds.current));
     window.scrollTo(0, 0);
@@ -182,7 +187,13 @@ function LearningRun({ session: s, busy, act, home }: { session: LearningSession
     }, 1000);
     return () => window.clearInterval(timer);
   }, [s.token, s.status]);
-  const ack = (selfCorrect?: boolean) => act("acknowledge", { token: s.token, selfCorrect, activeSeconds: Math.floor(seconds.current) });
+  const ack = (selfCorrect?: boolean, reviewRating?: RecallRating) => act("acknowledge", { token: s.token, selfCorrect, reviewRating, activeSeconds: Math.floor(seconds.current) });
+  useEffect(() => {
+    if (!s.token) return;
+    try { const draft = JSON.parse(sessionStorage.getItem(draftKey) || "{}");
+      sessionStorage.setItem(draftKey, JSON.stringify({ ...draft, token: s.token, confidence }));
+    } catch { /* Storage is optional. */ }
+  }, [confidence, s.token]);
   if (s.status === "complete") return <>
     <section className="learning-plan"><span className="learning-eyebrow">이번 학습</span><h2>여기까지 공부했어요</h2>
       <p>활동 {s.summary?.completed ?? 0}개 · {fmt(s.seconds)}</p>
@@ -204,8 +215,8 @@ function LearningRun({ session: s, busy, act, home }: { session: LearningSession
   const textRecall = Boolean(q && ["basic", "cloze", "list"].includes(q.format));
   const selfCheck = Boolean(s.submitted && q && s.feedback?.correct == null && s.mode !== "exam");
   const answerTask = q?.format === "matching" ? "짝 연결하기" : q?.format === "sequence" ? "순서 맞추기" : "답 선택하기";
-  const steps = s.mode === "exam" ? ["답 선택하기", "자신감과 답 저장", "다음 문제로"]
-    : [textRecall || showRecall ? "답 떠올리기" : q ? answerTask : "요점 살펴보기", q ? "자신감 선택 · 정답 보기" : "설명 보기", textRecall ? "비교하고 다음으로" : "확인하고 다음으로"];
+  const steps = s.mode === "exam" ? ["답 선택하기", "답 저장", "다음 문제로"]
+    : [textRecall || showRecall ? "답 떠올리기" : q ? answerTask : "요점 살펴보기", q ? "정답·해설 확인" : "설명 보기", q ? "기억 평가 · 다음 복습" : "확인하고 다음으로"];
   return <>
     <div className="learning-run-bar"><span>{LANES[s.lane ?? ""]} · 이번 학습 {s.index + 1} / {s.total}개 활동</span><span>이 활동 {fmt(elapsed)}</span></div>
     {s.mode === "extra" ? <p className="learning-muted">오늘 분량과 별도로 더 공부하는 중이에요. 원하는 때 ‘여기서 마치기’를 눌러도 됩니다.</p> : null}
@@ -213,12 +224,12 @@ function LearningRun({ session: s, busy, act, home }: { session: LearningSession
     <article className="learning-question">
       <ol className="learning-question-steps" aria-label="이 문항의 학습 순서">{steps.map((step, index) => <li key={index} aria-current={index === (s.submitted ? 2 : 0) ? "step" : undefined}><span aria-hidden="true">{index + 1}</span>{step}</li>)}</ol>
       <h2><Stem text={promptText(showRecall ? s.recallPrompt! : q?.question ?? s.objective ?? "설명 학습")} /></h2>
-      {!s.submitted ? <p className="learning-instruction">{s.mode === "exam" ? "답을 고르고 자신감을 선택해 저장하세요. 정답과 해설은 시험 연습을 마친 뒤 공개됩니다."
+      {!s.submitted ? <p className="learning-instruction">{s.mode === "exam" ? "답을 고르고 저장하세요. 정답과 해설은 시험 연습을 마친 뒤 공개됩니다."
         : showRecall ? "먼저 답을 잠깐 떠올려 보세요. 생각이 안 나면 바로 보기를 펼쳐도 됩니다."
-        : textRecall ? "머릿속으로 답을 떠올려 보세요. 떠오르지 않으면 도움을 보거나 ‘모르겠어요 · 정답 보기’를 누르세요."
-        : q?.format === "matching" ? "각 항목의 짝을 연결한 뒤 아래에서 자신감을 고르면 정답이 열립니다."
-        : q?.format === "sequence" ? "화살표로 순서를 맞춘 뒤 아래에서 자신감을 고르면 정답이 열립니다."
-        : q ? "답을 선택한 뒤 아래에서 자신감을 고르면 정답이 열립니다."
+        : textRecall ? "머릿속으로 답을 떠올린 뒤 정답을 확인하세요. 떠오르지 않아도 확인하고 다음으로 넘어갈 수 있어요."
+        : q?.format === "matching" ? "각 항목의 짝을 연결한 뒤 정답을 확인하세요."
+        : q?.format === "sequence" ? "화살표로 순서를 맞춘 뒤 정답을 확인하세요."
+        : q ? "답을 선택한 뒤 정답과 해설을 확인하세요."
         : "학습요점을 살펴보고 아래의 ‘설명 보기’를 눌러 기억할 내용을 확인하세요."}</p> : null}
       {showRecall ? <button disabled={busy} onClick={() => act("action", { token: s.token, action: "options" })}>보기 펼치기</button> : null}
       {q?.options.length ? <div className="learning-options">{q.options.map(o => <button key={o.id} aria-pressed={picked.includes(o.id)} disabled={busy || s.submitted} onClick={() => choose(o.id)}><b>{o.id}</b><Stem text={o.text} /></button>)}</div> : null}
@@ -236,13 +247,14 @@ function LearningRun({ session: s, busy, act, home }: { session: LearningSession
       {s.subject && s.runId && (s.feedback || s.help) ? <p><Link target="_blank" to={`/lectures/${encodeURIComponent(s.subject)}/${encodeURIComponent(s.runId)}`}>원본 강의 자료 열기 ↗</Link></p> : null}
     </article>
     <footer className="learning-controls">
-      {!s.submitted && !showRecall ? <><p>{q ? s.mode === "exam" ? "답에 얼마나 확신하나요? 선택하면 답변이 저장됩니다." : "정답을 보기 전, 얼마나 확신하나요? 선택하면 정답이 열립니다." : "설명을 확인하고 다음으로 이어가세요."}</p><div className="learning-actions learning-confidence-actions">
-        {q ? ([["sure", "확실해요"], ["unsure", "헷갈려요"], ["guess", textRecall ? "모르겠어요" : "찍었어요"]] as const).map(([value, label]) => <button disabled={busy || !ready} key={value} onClick={() => act("submit", { token: s.token, confidence: value, answer, activeSeconds: Math.floor(seconds.current) })}>{label} · {s.mode === "exam" ? "답변 저장" : "정답 보기"}</button>)
-          : <button className="primary" disabled={busy} onClick={() => act("submit", { token: s.token, confidence: "unsure", answer: {}, activeSeconds: Math.floor(seconds.current) })}>설명 보기</button>}
-      </div></> : null}
-      {s.submitted ? <><p>{selfCheck ? "정답과 떠올린 답을 비교하세요. 도움을 보기 전 스스로 기억한 내용으로 평가하면 다음으로 넘어갑니다."
+      {!s.submitted && !showRecall ? <>{q ? <details><summary>답할 때의 확신 기록 (선택)</summary><p>정답을 보기 전의 상태를 남겨요. 헷갈려도 스스로 맞혔다면 실패로 처리하지 않습니다.</p><div className="learning-actions learning-confidence-actions">
+        {([["sure", "확실해요"], ["unsure", "헷갈려요"], ["guess", textRecall ? "모르겠어요" : "찍었어요"]] as const).map(([value, label]) => <button disabled={busy} aria-pressed={confidence === value} key={value} onClick={() => setConfidence(confidence === value ? null : value)}>{label}</button>)}
+      </div></details> : null}<div className="learning-actions"><button className="primary" disabled={busy || !ready} onClick={() => act("submit", { token: s.token, confidence, answer: q ? answer : {}, activeSeconds: Math.floor(seconds.current) })}>{q ? s.mode === "exam" ? "답변 저장" : "정답 보기" : "설명 보기"}</button></div></> : null}
+      {s.submitted ? <><p>{selfCheck ? "정답과 떠올린 답을 비교하고, 정답을 보기 전에 실제로 기억했던 정도로 평가하세요."
         : s.mode === "exam" ? "답변을 저장했어요. 다음 문제로 넘어가세요. 정답은 연습을 마친 뒤 확인합니다."
-        : q ? "정답과 설명을 확인했으면 다음으로 넘어가세요." : "설명을 확인했으면 다음으로 넘어가세요."}</p><div className="learning-actions">{selfCheck ? <><button disabled={busy} onClick={() => ack(false)}>기억하지 못했어요 · 다음</button><button className="primary" disabled={busy} onClick={() => ack(true)}>스스로 맞혔어요 · 다음</button></> : <button className="primary" disabled={busy} onClick={() => ack()}>{s.mode === "exam" ? "다음 문제로" : "확인했어요 · 다음"}</button>}</div></> : null}
+        : q ? "해설을 확인하고, 답할 때 실제로 기억한 정도를 평가하세요. 오답·찍음·도움을 받은 답은 ‘다시’입니다." : "설명을 확인했으면 다음으로 넘어가세요."}</p>
+        {q && s.mode !== "exam" && s.reviewChoices ? <><p className="learning-muted">버튼에 표시된 간격으로 다음 복습을 잡아요. 어렵게 맞힌 답도 기억 성공입니다.</p><div className="learning-actions">{s.reviewChoices.map(choice => <button disabled={busy} key={choice.rating} onClick={() => ack(selfCheck ? choice.rating !== "Again" : undefined, choice.rating)}>{RATING_LABELS[choice.rating]} · {Math.round(choice.intervalDays)}일 뒤</button>)}</div></>
+          : <div className="learning-actions">{selfCheck ? <><button disabled={busy} onClick={() => ack(false)}>기억하지 못했어요 · 다음</button><button className="primary" disabled={busy} onClick={() => ack(true)}>스스로 맞혔어요 · 다음</button></> : <button className="primary" disabled={busy} onClick={() => ack()}>{s.mode === "exam" ? "다음 문제로" : "확인했어요 · 다음"}</button>}</div>}</> : null}
       <div className="learning-actions">{s.canUndo && !s.submitted ? <button disabled={busy} onClick={() => act("undo", {})}>이전 평가 되돌리기</button> : null}<button disabled={busy} onClick={() => act("end", { token: s.token, activeSeconds: Math.floor(seconds.current) })}>여기서 마치기</button></div>
     </footer>
   </>;
