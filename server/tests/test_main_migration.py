@@ -20,6 +20,7 @@ from app.main import app
 from app.models import Asset, Lecture, PrequizJob, QuizBank
 from app.routes.common import material_marks
 from app.routes.admin import _checklist
+from tests.bank_fixtures import example_bank
 
 ADMIN = {"Authorization": "Bearer local-test-token"}
 RUNNER = {"Authorization": "Bearer runner-token"}
@@ -39,7 +40,7 @@ def main():
         assert _checklist({"main_apkg"}, None, {"main_apkg"})["bank"] == "todo"
         assert _checklist(set(), None, set(), {"usable": True, "open": False})["bank"] == "todo"
         assert _checklist(set(), None, set(), {"usable": True, "open": True})["bank"] == "done"
-        bank = QuizBank(subject=KEY[0], run_id=KEY[1], bank={"questions": [{"question_id": "Q1"}]},
+        bank = QuizBank(subject=KEY[0], run_id=KEY[1], bank=example_bank(),
                         validation={"pass": True}, open_to_students=False)
         db.add(bank)
         db.commit()

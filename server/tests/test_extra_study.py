@@ -18,7 +18,7 @@ def main():
     bank["questions"][2]["prerequisites"] = ["Q1", "Q2"]
     bank["questions"].append({**copy.deepcopy(bank["questions"][0]), "question_id": "optional", "tier": "Optional"})
     state = record_review(bank, empty_state(), "Q1", "Again", NOW)
-    assert lecture_goal(bank, state, "test", NOW)["met"]  # Same-direction variants do not add daily units.
+    assert lecture_goal(bank, state, "test", NOW)["remaining"] == 4
     assert select_question(example_bank(), state, EXAM, NOW + 61_000)["question"]["question_id"] == "Q1"
     for qid in ("variant", "Q2", "Q3", "optional"):
         before = copy.deepcopy(state)
@@ -33,6 +33,9 @@ def main():
             assert not blocked["eligible"]  # Unseen prerequisites come first.
         mark_seen(state, qid)  # A viewed but ungraded question also counts as seen.
     assert select_question(bank, state, EXAM, NOW + 61_000, prefer_unseen=True) == select_question(bank, state, EXAM, NOW + 61_000)
+    assert not lecture_goal(bank, state, "test", NOW + 61_000)["met"]
+    for qid in ("variant", "Q2", "Q3", "optional"):
+        state = record_review(bank, state, qid, "Again", NOW + 61_000)
     assert lecture_goal(bank, state, "test", NOW + 61_000)["met"]
     # Old review records and an already served question must also prevent duplicate first views.
     legacy = record_review(bank, empty_state(), "Q1", "Good", NOW)

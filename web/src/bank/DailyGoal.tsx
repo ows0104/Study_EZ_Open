@@ -10,14 +10,14 @@ export function DailyGoal({ plan, showMain = false, collapsible = false, onConti
   if (!plan) return null;
   const heading = <div className="mastery-heading" role="status">
       {plan.met && showMain ? <h2>오늘 목표 달성!</h2>
-        : <strong>{plan.met ? "✓ 오늘 학습 완료" : `오늘 ${plan.remaining}개 남았어요`}</strong>}
+        : <strong>{plan.met ? "✓ 오늘 학습 완료" : `오늘 ${plan.remaining}문항 남았어요`}</strong>}
       <span>{plan.completed} / {plan.total} 완료</span>
     </div>;
   const contents = <>
     <progress className="daily-goal-progress" max={100} value={plan.progressPercent} aria-label="이 강의의 오늘 목표 진행률" />
     {plan.met && showMain ? <div className="daily-goal-celebration">
       <div className="daily-goal-check" aria-hidden="true">✓</div>
-      <p>{plan.total > 0 ? `오늘 분량 ${plan.total}개를 모두 해냈어요.` : "오늘 예정된 학습을 모두 마쳤어요."}</p>
+      <p>{plan.total > 0 ? `오늘 분량 ${plan.total}문항을 모두 해냈어요.` : "오늘 예정된 학습을 모두 마쳤어요."}</p>
       <p className="daily-goal-message">다른 강의를 선택하거나 이 강의를 이어서 공부할 수 있어요.</p>
       <div className="daily-goal-actions">
         <Link className="daily-goal-main" to="/">다른 강의 학습하러 가기 <small>Main 캘린더로</small></Link>
@@ -28,13 +28,13 @@ export function DailyGoal({ plan, showMain = false, collapsible = false, onConti
     </div> : null}
     <details>
       <summary>학습 현황 자세히</summary>
-      <p>처음 학습 {plan.newRemaining}개 · 복습 {plan.reviewRemaining}개 · 다시 확인 {plan.relearningRemaining}개</p>
-      <small>오늘 응답 {plan.reviewedToday}회 · 처음 확인한 범위 {plan.firstPassSeen} / {plan.firstPassTotal}개</small>
-      <p>핵심 개념과 회상 방향이 같으면 한 학습 단위로 셉니다. 필요한 선행 내용도 포함합니다.
-        핵심 문항이 없는 강의는 전체 문항의 학습 단위를 사용합니다.</p>
-      <p>오늘 예정된 내용을 한 번씩 확인하고 평가하면 완료입니다.
+      <p>처음 학습 {plan.newRemaining}문항 · 복습 {plan.reviewRemaining}문항</p>
+      <small>오늘 응답 {plan.reviewedToday}회 · 한 번 이상 학습한 문항 {plan.firstPassSeen} / {plan.firstPassTotal}</small>
+      <p>미학습 문항과 복습 예정 문항을 번갈아 제시합니다. 같은 개념의 변형·심화·선택 문항도 각각 셉니다.
+        아직 학습하지 않은 선행 문제가 있으면 먼저 확인합니다.</p>
+      <p>각 문항을 확인하고 평가하면 오늘 분량에 반영합니다. 미학습 문항이 남아 있으면 오늘 학습을 마치지 않습니다.
         Again·Hard로 평가한 내용은 다음날부터 복습에 반영합니다.</p>
-      <p>모든 오늘 학습 단위를 처리하면 완료됩니다. 반복 응답 횟수와 남은 학습 단위 수는 다릅니다.
+      <p>미학습 문항과 오늘 복습할 문항을 모두 처리하면 완료됩니다. 같은 문항을 반복해도 다른 문항의 남은 수가 줄지는 않습니다.
         추가 학습에서 어려운 내용이 나와도 오늘 달성한 분량은 유지됩니다.
         숙련도와 시험 대비 계획은 별도 지표이며, 한국 자정을 기준으로 오늘 분량을 갱신합니다.</p>
     </details>

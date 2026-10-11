@@ -1,12 +1,11 @@
-"""오늘 한 번 평가한 단위는 완료. 등급·추가 학습·날짜 경계·변형문항 검증."""
-
+"""Per-question coverage, new/review mixing, prerequisites and day boundaries."""
 import copy
 from datetime import datetime
-
 from app.study_engine import empty_state, record_review
 from app.study_engine.daily_queue import lecture_goal, select_daily_question
 from app.study_engine.planning import KOREA, day_start
 from app.study_engine.memory import DAY_MS
+from app.study_engine.progress import mark_seen
 from tests.bank_fixtures import example_bank
 
 NOW = int(datetime(2026, 10, 6, 10, tzinfo=KOREA).timestamp() * 1000)
@@ -15,72 +14,71 @@ EXAM = "2026-10-20"
 
 def main():
     bank = example_bank()
-    # 서로 다른 두 핵심 단위, 같은 단위의 변형 한 개. 심화 문항은 별도 추가 학습이다.
-    bank["questions"].append({**copy.deepcopy(bank["questions"][0]), "question_id": "Q1-variant"})
-    bank["questions"][1]["tier"] = "Core"
-    state = empty_state()
-    original = copy.deepcopy(state)
-    goal = lecture_goal(bank, state, "검증", NOW)
-    assert goal["total"] == goal["remaining"] == goal["newRemaining"] == 2
-    assert goal["firstPassSeen"] == 0 and not goal["met"]
-    state = record_review(bank, state, "Q1", "Good", NOW)
-    goal = lecture_goal(bank, state, "검증", NOW)
-    assert goal["total"] == 2 and goal["completed"] == goal["remaining"] == 1
-    assert goal["progressPercent"] == 50 and goal["firstPassSeen"] == 1
-    assert select_daily_question(bank, state, EXAM, NOW)["question"]["question_id"] == "Q2"
-    state = record_review(bank, state, "Q2", "Again", NOW + 1000)
-    goal = lecture_goal(bank, state, "검증", NOW + 1000)
-    assert goal["completed"] == 2 and goal["remaining"] == goal["relearningRemaining"] == 0
-    assert goal["firstPassSeen"] == 2 and goal["met"]
-    assert goal["waiting"] == 0 and goal["retryAt"] is None
-    assert select_daily_question(bank, state, EXAM, NOW + 1001)["question"] is None
+    bank["questions"].append({**copy.deepcopy(bank["questions"][0]), "question_id": "variant"})
+    bank["questions"].append({**copy.deepcopy(bank["questions"][0]), "question_id": "optional", "tier": "Optional"})
+    original = empty_state()
+    assert lecture_goal(bank, original, "test", NOW)["newRemaining"] == 5
+    # Two due reviews coexist with three unseen questions: both kinds must actually appear.
+    state = record_review(bank, original, "Q1", "Again", NOW - DAY_MS)
+    state = record_review(bank, state, "Q2", "Again", NOW - DAY_MS)
+    goal = lecture_goal(bank, state, "test", NOW)
+    assert goal["total"] == 5 and goal["reviewRemaining"] == 2 and goal["newRemaining"] == 3
+    selected = []
+    for i in range(5):
+        before = copy.deepcopy(state)
+        got = select_daily_question(bank, state, EXAM, NOW + i)
+        qid = got["question"]["question_id"]
+        assert state == before and qid not in selected
+        selected.append(qid)
+        row = next(r for r in got["ranked"] if r["question_id"] == qid)
+        assert row["eligible"] and not row["reasons"]
+        state = record_review(bank, state, qid, "Again", NOW + i)
+        goal = lecture_goal(bank, state, "test", NOW + i)
+        assert goal["completed"] == i + 1 and goal["total"] == 5
+        assert goal["met"] == (i == 4)
+    assert selected[0] == "variant" and selected[2] == "Q3" and selected[4] == "optional"
+    assert set(selected[1::2]) == {"Q1", "Q2"}
     assert select_daily_question(bank, state, EXAM, NOW + 61_000)["question"] is None
-    state = record_review(bank, state, "Q2", "Hard", NOW + 61_000)
-    assert select_daily_question(bank, state, EXAM, NOW + 61_001)["question"] is None
-    state = record_review(bank, state, "Q2", "Good", NOW + 361_000)
-    goal = lecture_goal(bank, state, "검증", NOW + 361_000)
-    assert goal["met"] and goal["remaining"] == 0 and goal["completed"] == 2
-    assert goal["reviewedToday"] == 4 and goal["progressPercent"] == 100
-    # 당일 다시 열어도 완료를 유지하고, 다음날은 예정된 복습 단위로 돌아온다.
-    assert lecture_goal(bank, state, "검증", NOW + 7 * 3_600_000)["met"]
+    repeated = record_review(bank, state, "Q1", "Again", NOW + 61_000)
+    assert lecture_goal(bank, repeated, "test", NOW + 61_000)["met"]
+    assert lecture_goal(bank, repeated, "test", NOW + 61_000)["reviewedToday"] == 6
     tomorrow = day_start(NOW) + DAY_MS
-    fresh = lecture_goal(bank, state, "검증", tomorrow)
-    assert fresh["reviewRemaining"] == 2 and fresh["newRemaining"] == fresh["reviewedToday"] == 0
-    assert select_daily_question(bank, state, EXAM, tomorrow)["question"] is not None
-    # 완료한 뒤 추가 학습에서 틀려도 달성한 할당량을 취소하지 않는다.
-    failed_extra = record_review(bank, state, "Q1", "Again", NOW + 400_000)
-    assert lecture_goal(bank, failed_extra, "검증", NOW + 400_000)["remaining"] == 0
-    assert lecture_goal(bank, failed_extra, "검증", NOW + 400_000)["met"]
-    assert lecture_goal(bank, failed_extra, "검증", tomorrow)["reviewRemaining"] == 2
-    # 미래 복습은 오늘 분량에 포함하지 않는다. 시험일/숙련도는 완료 여부를 바꾸지 않는다.
-    easy = record_review(bank, empty_state(), "Q1", "Easy", NOW - DAY_MS)
-    assert lecture_goal(example_bank(), easy, "검증", NOW)["total"] == 0
-    assert lecture_goal(example_bank(), easy, "검증", NOW)["met"]
-    # GET 계산은 원본을 바꾸지 않는다. 오래된 이력은 items의 예정일로 호환한다.
+    assert lecture_goal(bank, repeated, "test", tomorrow)["reviewRemaining"] == 5
+    # A same-concept repeat and viewing without grading cannot complete other questions.
+    partial = record_review(bank, original, "Q1", "Good", NOW)
+    partial = record_review(bank, partial, "Q1", "Good", NOW + 1)
+    for q in bank["questions"]:
+        mark_seen(partial, q["question_id"])
+    assert lecture_goal(bank, partial, "test", NOW + 1)["remaining"] == 4
+    assert select_daily_question(bank, partial, EXAM, NOW + 1)["question"]["question_id"] == "variant"
+    # Scheduled future reviews are excluded; unseen advanced questions stay in the daily task.
+    easy = record_review(bank, original, "Q1", "Easy", NOW - DAY_MS)
+    assert lecture_goal(bank, easy, "test", NOW)["total"] == 4
+    assert lecture_goal(bank, easy, "test", NOW)["newRemaining"] == 4
     legacy = copy.deepcopy(easy)
-    legacy["history"][0].pop("next_due_at")
-    before_read = copy.deepcopy(legacy)
-    assert lecture_goal(example_bank(), legacy, "검증", NOW)["total"] == 0
-    assert legacy == before_read and original == empty_state()
-    # 선행 문항은 일감에 포함하고, 적응형 숙련도 진입 제한 때문에 학습이 막히지 않는다.
-    prerequisite_bank = example_bank()
-    prerequisite_bank["questions"][0]["tier"] = "Advanced"
-    prerequisite_bank["questions"][2]["tier"] = "Core"
-    assert lecture_goal(prerequisite_bank, empty_state(), "검증", NOW)["total"] == 2
-    assert select_daily_question(prerequisite_bank, empty_state(), EXAM, NOW)["question"]["question_id"] == "Q1"
-    started = record_review(prerequisite_bank, empty_state(), "Q1", "Good", NOW)
-    assert select_daily_question(prerequisite_bank, started, EXAM, NOW)["question"]["question_id"] == "Q3"
-    # 자정 직전 어려웠던 내용도 다음날 바로 복습할 수 있다.
-    late = record_review(example_bank(), empty_state(), "Q1", "Again", tomorrow - 10_000)
-    assert not lecture_goal(example_bank(), late, "검증", tomorrow)["met"]
-    assert lecture_goal(example_bank(), late, "검증", tomorrow)["reviewRemaining"] == 1
-    assert select_daily_question(example_bank(), late, EXAM, tomorrow)["question"] is not None
+    legacy["history"] = []
+    before = copy.deepcopy(legacy)
+    assert lecture_goal(bank, legacy, "test", NOW)["total"] == 4
+    assert legacy == before and original == empty_state()
+    # First-pass prerequisites use individual evaluated questions, not shared mastery gates.
+    prereq = example_bank()
+    prereq["questions"][0]["tier"] = "Advanced"
+    prereq["questions"][2]["tier"] = "Core"
+    assert lecture_goal(prereq, original, "test", NOW)["total"] == 3
+    picked = select_daily_question(prereq, original, EXAM, NOW)["question"]
+    assert picked["question_id"] == "Q1"
+    unlocked = record_review(prereq, original, "Q1", "Again", NOW)
+    assert select_daily_question(prereq, unlocked, EXAM, NOW)["question"]["question_id"] == "Q3"
+    # Every grade counts once today, and a late difficult review returns the following day.
+    single = example_bank()
+    single["questions"] = single["questions"][:1]
     for rating in ("Again", "Hard", "Good", "Easy"):
-        rated = record_review(example_bank(), empty_state(), "Q1", rating, NOW)
-        assert lecture_goal(example_bank(), rated, "검증", NOW)["met"]
-        assert lecture_goal(example_bank(), rated, "검증", NOW)["progressPercent"] == 100
-        assert select_daily_question(example_bank(), rated, EXAM, NOW)["question"] is None
-    print("PASS: 모든 평가 등급의 오늘 완료, 추가 학습 후 완료 유지, 다음날 복습, 선행·옛 기록 호환")
+        rated = record_review(single, original, "Q1", rating, NOW)
+        assert lecture_goal(single, rated, "test", NOW)["met"]
+        assert select_daily_question(single, rated, EXAM, NOW)["question"] is None
+    late = record_review(single, original, "Q1", "Again", tomorrow - 10_000)
+    assert lecture_goal(single, late, "test", tomorrow)["reviewRemaining"] == 1
+    print("PASS: individual question coverage, alternating new/review, no duplicate completion, prerequisites, all tiers, future reviews, legacy, KST")
 
 
 if __name__ == "__main__":

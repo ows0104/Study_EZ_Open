@@ -1,30 +1,14 @@
-"""강의별 오늘 할 일. 핵심 개념×회상 방향과 필요한 선행 단위를 한 번씩 확인한다.
+"""문항별 오늘 할 일. 미학습 문항과 복습 예정 문항을 섞어 빠짐없이 확인한다.
 
 숙련도 점수와 독립적이다. 이력에서 재구성하므로 조회는 저장 상태를 바꾸지 않는다.
-평가한 단위는 등급에 관계없이 오늘 완료다. 어려웠던 단위는 다음날부터 복습한다.
+평가한 문항은 등급에 관계없이 오늘 완료다. 어려웠던 문항은 다음날부터 복습한다.
 추가 학습의 평가는 숙련도에 반영하지만 오늘 달성한 분량을 되돌리지 않는다.
 """
 
-from .engine import dimension_key, question_stage, rank_questions, days_until
+from .engine import question_stage, rank_questions, days_until
 from .planning import day_start
 from .memory import DAY_MS
 from .policy import DEFAULT
-
-
-def learning_groups(bank: dict) -> dict[str, list[dict]]:
-    by_id = {q["question_id"]: q for q in bank["questions"]}
-    seeds = [q for q in bank["questions"] if q["tier"] == "Core"] or bank["questions"]
-    selected = {q["question_id"]: q for q in seeds}
-    pending = list(seeds)
-    while pending:
-        for qid in pending.pop()["prerequisites"]:
-            if qid in by_id and qid not in selected:
-                selected[qid] = by_id[qid]
-                pending.append(by_id[qid])
-    groups = {}
-    for q in selected.values():
-        groups.setdefault(dimension_key(q), []).append(q)
-    return groups
 
 
 def _due(review: dict, state: dict, *, latest: bool, policy: dict) -> int:
@@ -39,12 +23,11 @@ def _due(review: dict, state: dict, *, latest: bool, policy: dict) -> int:
 
 def daily_units(bank: dict, state: dict, now: int, policy: dict = DEFAULT) -> list[dict]:
     start, end = day_start(now), day_start(now) + DAY_MS
-    groups = learning_groups(bank)
-    keys = {q["question_id"]: key for key, qs in groups.items() for q in qs}
+    groups = {q["question_id"]: [q] for q in bank["questions"]}
     reviews = {key: [] for key in groups}
     for h in state.get("history", []):
-        key = keys.get(h["question_id"])
-        if key is not None and h["timestamp"] <= now:
+        key = h["question_id"]
+        if key in reviews and h["timestamp"] <= now:
             reviews[key].append(h)
     units = []
     for key, questions in groups.items():
@@ -82,8 +65,7 @@ def lecture_goal(bank: dict, state: dict, title: str, now: int, policy: dict = D
     completed = sum(u["status"] == "done" for u in today)
     pending = [u for u in today if u["status"] != "done"]
     waiting = [u for u in pending if u["due"] > now]
-    return {"title": title, "dayStart": day_start(now), "scope": "core" if any(
-                q["tier"] == "Core" for q in bank["questions"]) else "all",
+    return {"title": title, "dayStart": day_start(now), "scope": "all",
             "total": len(today), "completed": completed, "remaining": len(pending),
             "newRemaining": sum(u["status"] == "pending" and u["kind"] == "new" for u in pending),
             "reviewRemaining": sum(u["status"] == "pending" and u["kind"] == "review" for u in pending),
@@ -98,19 +80,29 @@ def lecture_goal(bank: dict, state: dict, title: str, now: int, policy: dict = D
 def select_daily_question(bank: dict, state: dict, exam: str, now: int, policy: dict = DEFAULT) -> dict:
     units = daily_units(bank, state, now, policy)
     remaining = [u for u in units if u["status"] not in ("done", "later")]
-    pending_keys = {u["key"] for u in remaining}
-    by_id = {q["question_id"]: q for q in bank["questions"]}
-    # 기존 적응형 점수는 순서를 정하는 데 쓴다. 숙련도 진입 장벽으로 오늘 할 일을 막지 않는다.
+    unlearned = {u["key"] for u in units if not u["seen"]}
+    # 미학습·복습을 번갈아 고른다. 이미 완료한 문항으로 다른 문항의 할 일을 대신하지 않는다.
     ranked = rank_questions(bank, state, exam, now, policy)
     scores = {r["question_id"]: r["raw_score"] for r in ranked}
     candidates = []
     for unit in remaining:
         if unit["due"] > now:
             continue
-        questions = unit["questions"]
-        for q in questions:
-            dependencies = sum(dimension_key(by_id[qid]) in pending_keys for qid in q["prerequisites"] if qid in by_id)
-            candidates.append((dependencies, question_stage(q), -scores[q["question_id"]], q["question_id"], q))
-    candidates.sort(key=lambda row: row[:4])
-    return {"question": candidates[0][-1] if candidates else None, "ranked": ranked,
+        q = unit["questions"][0]
+        if any(qid in unlearned for qid in q["prerequisites"]):
+            continue  # 아직 평가하지 않은 선행 문항부터 확인한다.
+        candidates.append(unit)
+    by_key = {u["key"]: u for u in units}
+    last = next((h for h in reversed(state.get("history", []))
+                 if day_start(now) <= h["timestamp"] <= now and h["question_id"] in by_key), None)
+    preferred = "review" if last and by_key[last["question_id"]]["kind"] == "new" else "new"
+    mixed = [u for u in candidates if u["kind"] == preferred] or candidates
+    mixed.sort(key=lambda u: ({"Core": 0, "Advanced": 1, "Optional": 2}[u["questions"][0]["tier"]],
+                              question_stage(u["questions"][0]), -scores[u["key"]], u["key"]))
+    question = mixed[0]["questions"][0] if mixed else None
+    if question:
+        row = next(r for r in ranked if r["question_id"] == question["question_id"])
+        row["notes"] += ["문항별 미학습·복습 혼합 순서로 오늘 할 일을 확인합니다."] + row["reasons"]
+        row.update(eligible=True, score=row["raw_score"], reasons=[])
+    return {"question": question, "ranked": ranked,
             "days": days_until(exam, now), "reason": None, "retry_at": None}

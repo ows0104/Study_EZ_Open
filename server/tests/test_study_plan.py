@@ -157,7 +157,7 @@ def main():
         assert client.get("/api/study-plan?target=80").json()["plans"][0]["target"] == 80
         goal_url = "/api/study-plan?subject=subject&runId=run"
         goal_before = client.get(goal_url).json()["lectureGoal"]
-        assert goal_before["remaining"] == 1 and not goal_before["met"]
+        assert goal_before["remaining"] == 3 and not goal_before["met"]
         with SessionLocal() as db:
             db.add(Lecture(subject="subject", run_id="following", uid="next-test", date=date(2026, 10, 6), slot=1,
                            slot_end=1, start_time="09:00", title="다음 강의", timetable_event_id="new"))
@@ -174,11 +174,11 @@ def main():
         with SessionLocal() as db:
             db.get(BankState, ("one", "subject", "following")).state = empty_state()
             db.commit()
-        assert client.get(goal_url).json()["lectureGoal"]["remaining"] == 1
+        assert client.get(goal_url).json()["lectureGoal"]["remaining"] == 3
         with SessionLocal() as db:
             db.get(QuizBank, ("subject", "following")).open_to_students = False
             db.commit()
-        assert client.get(goal_url).json()["lectureGoal"]["remaining"] == 1
+        assert client.get(goal_url).json()["lectureGoal"]["remaining"] == 3
         login("two")
         assert client.get("/api/study-plan").json()["plans"][0]["currentScore"] == 0
         login("one")
@@ -192,17 +192,19 @@ def main():
         with patch("app.routes.bank.engine.now_ms", return_value=NOW):
             assert not client.get(base).json()["lectureGoal"]["met"]  # 숙련도가 높아도 미확인 단위는 남는다.
             assert client.post(f"{base}/session/start", json={}).status_code == 200
-            first_question = client.post(f"{base}/next").json()
-            token = first_question["reviewToken"]
-            client.post(f"{base}/reveal", json={"reviewToken": token})
-            client.post(f"{base}/rate", json={"reviewToken": token, "rating": "Again"})
+            for i in range(3):
+                first_question = client.post(f"{base}/next").json()
+                assert first_question["lectureGoal"]["remaining"] == 3 - i
+                token = first_question["reviewToken"]
+                client.post(f"{base}/reveal", json={"reviewToken": token})
+                client.post(f"{base}/rate", json={"reviewToken": token, "rating": "Again"})
             completed = client.post(f"{base}/next").json()
             assert completed["lectureGoal"]["met"] and not completed.get("waiting")
             assert completed["lectureGoal"]["relearningRemaining"] == 0
         with patch("app.routes.bank.engine.now_ms", return_value=NOW + 60_001):
             stopped = client.post(f"{base}/next").json()
             assert stopped["question"] is None and stopped["summary"]["reason"] == "lecture_goal_met"
-            assert stopped["summary"]["reviewed"] == 1
+            assert stopped["summary"]["reviewed"] == 3
             # 추가 학습은 사용자가 선택한 새 회차에만 허용한다.
             client.post(f"{base}/session/start", json={"continueAfterGoal": True})
             picked = {"question": bank["questions"][0], "days": 4, "ranked": []}

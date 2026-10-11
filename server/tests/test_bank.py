@@ -217,11 +217,12 @@ def main() -> None:
     with SessionLocal() as db:
         after_undo = copy.deepcopy(db.get(BankState, ("student-1", SUBJECT, RUN)).state)
         after_undo["served"]["token"] = before_rating["served"]["token"]
+        before_rating["seen_question_ids"] = after_undo["seen_question_ids"]
         check("숙련도·일정·이력·보충·회차 전체 원상복구", after_undo == before_rating)
     check("중복 되돌리기 거절", client.post(f"{BASE}/bank/undo", json={"reviewToken": first["reviewToken"]}).status_code == 409)
     check("예전 문항 토큰 무효", client.post(f"{BASE}/bank/rate", json={"reviewToken": first["reviewToken"], "rating": "Easy"}).status_code == 409)
     check("새로고침 시 복원한 문항 유지", client.post(f"{BASE}/bank/next").json()["reviewToken"] == restored["reviewToken"])
-    check("평가 되돌리기도 본 문항 수는 유지", client.get(BASE).json()["bank"]["seenQuestionCount"] == 1)
+    check("평가 되돌리기도 본 문항 수는 유지", client.get(BASE).json()["bank"]["seenQuestionCount"] == 2)
     client.post(f"{BASE}/bank/rate", json={"reviewToken": restored["reviewToken"], "rating": "Good"})
     fb = client.post(f"{BASE}/bank/feedback", json={"questionId": q["question_id"], "category": "content",
                                                      "comment": "답이 이상하다"})
@@ -315,7 +316,7 @@ def main() -> None:
     check("제한 없어도 출제할 문항이 없으면 종료", exhausted["question"] is None
           and exhausted["summary"]["reason"] == "no_eligible_question")
 
-    print("⑨ 오늘 할당량은 모든 평가 등급에서 즉시 완료")
+    print("9. Every individual daily question must be evaluated")
     from app import study_engine as study
     for rating in ("Again", "Hard", "Good", "Easy"):
         with SessionLocal() as db:
@@ -323,38 +324,43 @@ def main() -> None:
             saved.state = study.empty_state()
             db.commit()
         client.post(f"{BASE}/bank/session/start", json={})
-        first = client.post(f"{BASE}/bank/next").json()
-        token = first["reviewToken"]
-        client.post(f"{BASE}/bank/reveal", json={"reviewToken": token})
-        client.post(f"{BASE}/bank/rate", json={"reviewToken": token, "rating": rating})
+        seen = set()
+        for i in range(3):
+            first = client.post(f"{BASE}/bank/next").json()
+            check("Pending questions remain before completion", first["lectureGoal"]["remaining"] == 3 - i)
+            qid = first["question"]["question_id"]
+            check("Daily study does not repeat completed questions", qid not in seen)
+            seen.add(qid)
+            check("New questions increment calendar count immediately", client.get(BASE).json()["bank"]["seenQuestionCount"] == i + 1)
+            token = first["reviewToken"]
+            client.post(f"{BASE}/bank/reveal", json={"reviewToken": token})
+            client.post(f"{BASE}/bank/rate", json={"reviewToken": token, "rating": rating})
         done = client.post(f"{BASE}/bank/next").json()
-        check(f"{rating}: 대기 없이 오늘 목표 달성과 회차 종료", done.get("reason") == "lecture_goal_met"
-              and done.get("lectureGoal", {}).get("met") is True and not done.get("waiting")
-              and done.get("summary", {}).get("status") == "complete", done)
+        check(f"{rating}: completion after all questions", done.get("reason") == "lecture_goal_met"
+              and done["lectureGoal"]["met"] and not done.get("waiting")
+              and done["summary"]["status"] == "complete", done)
         restored = client.post(f"{BASE}/bank/undo", json={"reviewToken": token}).json()
-        check(f"{rating}: 완료 뒤 되돌리면 할당량도 복원", restored.get("lectureGoal", {}).get("remaining") == 1
+        check(f"{rating}: undo restores one daily question", restored["lectureGoal"]["remaining"] == 1
               and restored.get("answer") is not None, restored)
 
-    print("⑩ 추가 학습의 새 문항은 본 문제 수에 반영하고 반복은 중복 집계하지 않는다")
+    print("10. Extra study preserves daily completion and distinct view counts")
     client.post(f"{BASE}/bank/rate", json={"reviewToken": restored["reviewToken"], "rating": "Good"})
     client.post(f"{BASE}/bank/next")
-    for question in example_bank()["questions"][1:]:
+    for question in example_bank()["questions"]:
         before = client.get(BASE).json()["bank"]["seenQuestionCount"]
         client.post(f"{BASE}/bank/session/start", json={"continueAfterGoal": True})
         picked = {"question": question, "days": 14, "ranked": []}
         with patch("app.routes.bank.engine.select_question", return_value=picked):
             extra = client.post(f"{BASE}/bank/next").json()
-        check("추가 학습에서도 오늘 목표 달성 유지", extra["lectureGoal"]["met"])
-        check("새 문항 제시 즉시 패널의 본 문제 수 +1", client.get(BASE).json()["bank"]["seenQuestionCount"] == before + 1)
+        check("Extra study preserves completion", extra["lectureGoal"]["met"])
         repeated = client.post(f"{BASE}/bank/next").json()
-        check("같은 문제 다시 보기에서는 증가하지 않는다", repeated["reviewToken"] == extra["reviewToken"]
-              and client.get(BASE).json()["bank"]["seenQuestionCount"] == before + 1)
+        check("Previously viewed questions do not increment distinct count", repeated["reviewToken"] == extra["reviewToken"]
+              and client.get(BASE).json()["bank"]["seenQuestionCount"] == before)
         client.post(f"{BASE}/bank/reveal", json={"reviewToken": extra["reviewToken"]})
         client.post(f"{BASE}/bank/rate", json={"reviewToken": extra["reviewToken"], "rating": "Good"})
         client.post(f"{BASE}/bank/session/end", json={"sessionId": extra["session"]["session_id"]})
-        check("추가 회차를 끝내도 열람 수 유지", client.get(BASE).json()["bank"]["seenQuestionCount"] == before + 1)
 
-    print("⑪ 추가 학습 API는 실제 출제기로 안 본 변형·심화 문항을 먼저 낸다")
+    print("11. Ordinary study includes unseen variants and advanced questions")
     from app.models import QuizBank
     with SessionLocal() as db:
         bank = example_bank()
@@ -363,16 +369,21 @@ def main() -> None:
         saved = db.get(BankState, (STUDENT.id, SUBJECT, RUN))
         saved.state = study.record_review(bank, study.empty_state(), "Q1", "Again", study.now_ms())
         db.commit()
-    client.post(f"{BASE}/bank/session/start", json={"continueAfterGoal": True})
+    client.post(f"{BASE}/bank/session/start", json={})
     for qid, count in (("Q1-variant", 2), ("Q2", 3), ("Q3", 4)):
         extra = client.post(f"{BASE}/bank/next").json()
-        check("신규 우선 출제: " + qid, extra["question"]["question_id"] == qid, extra)
-        check("새 문항은 패널 열람 수 증가", client.get(BASE).json()["bank"]["seenQuestionCount"] == count)
+        check("Unseen ordinary question: " + qid, extra["question"]["question_id"] == qid, extra)
+        check("Each unseen question updates panel count", client.get(BASE).json()["bank"]["seenQuestionCount"] == count)
         repeated = client.post(f"{BASE}/bank/next").json()
-        check("새로고침 시 현재 문항 유지", repeated["reviewToken"] == extra["reviewToken"])
+        check("Refresh preserves current question", repeated["reviewToken"] == extra["reviewToken"])
         client.post(f"{BASE}/bank/reveal", json={"reviewToken": extra["reviewToken"]})
         client.post(f"{BASE}/bank/rate", json={"reviewToken": extra["reviewToken"], "rating": "Again"})
-        check("신규 문항 Again 평가도 오늘 완료 유지", client.get(f"{BASE}/bank").json()["lectureGoal"]["met"])
+        check("No premature completion with unseen questions", client.get(f"{BASE}/bank").json()["lectureGoal"]["met"] == (count == 4))
+    done = client.post(f"{BASE}/bank/next").json()
+    check("Ordinary study completes with all variants evaluated", done["question"] is None and done["lectureGoal"]["met"])
+    client.post(f"{BASE}/bank/session/start", json={"continueAfterGoal": True})
+    extra = client.post(f"{BASE}/bank/next").json()
+    check("Real extra study can continue after full daily coverage", extra["question"] is not None and extra["lectureGoal"]["met"])
 
 
 if __name__ == "__main__":
