@@ -48,13 +48,11 @@ export function BankStart({ base, info, finished, lecture, onStarted, onUndo, un
           {busy ? "여는 중…" : finished ? "계속 공부하기" : "학습 시작"}
         </button> : null}
       </header>
-      <DailyGoal plan={info.lectureGoal} showMain={info.lectureGoal?.met} />
+      <DailyGoal plan={info.lectureGoal} showMain={info.lectureGoal?.met}
+        onContinue={() => void start()} busy={busy} />
       {error ? <p className="notice is-error">{error}</p> : null}
       {info.conceptMap?.length ? <ConceptMap concepts={info.conceptMap} /> : <LectureMastery value={info.mastery} />}
       <div className="bank-start-row bank-secondary-actions">
-        {info.lectureGoal?.met ? <button className="is-quiet" disabled={busy} onClick={() => void start()}>
-          {busy ? "여는 중…" : "이 강의 더 공부하기"}
-        </button> : null}
         {onUndo ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={onUndo} aria-keyshortcuts="Z Control+Z">마지막 평가 되돌리기 <kbd>Z</kbd></button> : null}
         <details className="bank-options">
           <summary>학습 설정</summary>

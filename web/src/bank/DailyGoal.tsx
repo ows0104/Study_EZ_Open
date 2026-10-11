@@ -3,8 +3,9 @@ import { Link } from "react-router-dom";
 import "../styles/mastery.css";
 
 /** 현재 강의만의 마침점. 달력의 시험 전체 목표와 구별한다. */
-export function DailyGoal({ plan, showMain = false, collapsible = false }: {
+export function DailyGoal({ plan, showMain = false, collapsible = false, onContinue, busy = false }: {
   plan?: LectureGoal | null; showMain?: boolean; collapsible?: boolean;
+  onContinue?: () => void; busy?: boolean;
 }) {
   if (!plan) return null;
   const heading = <div className="mastery-heading" role="status">
@@ -17,8 +18,13 @@ export function DailyGoal({ plan, showMain = false, collapsible = false }: {
     {plan.met && showMain ? <div className="daily-goal-celebration">
       <div className="daily-goal-check" aria-hidden="true">✓</div>
       <p>{plan.total > 0 ? `오늘 분량 ${plan.total}개를 모두 해냈어요.` : "오늘 예정된 학습을 모두 마쳤어요."}</p>
-      <p className="daily-goal-message">오늘 학습은 여기까지. 수고했어요!</p>
-      <Link className="daily-goal-main" to="/">다른 강의 학습하기</Link>
+      <p className="daily-goal-message">다른 강의를 선택하거나 이 강의를 이어서 공부할 수 있어요.</p>
+      <div className="daily-goal-actions">
+        <Link className="daily-goal-main" to="/">다른 강의 학습하러 가기 <small>Main 캘린더로</small></Link>
+        {onContinue ? <button className="daily-goal-continue" disabled={busy} onClick={onContinue}>
+          {busy ? "여는 중…" : "이 강의 더 공부하기"}
+        </button> : null}
+      </div>
     </div> : null}
     <details>
       <summary>학습 현황 자세히</summary>

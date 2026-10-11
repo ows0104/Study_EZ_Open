@@ -335,6 +335,25 @@ def main() -> None:
         check(f"{rating}: 완료 뒤 되돌리면 할당량도 복원", restored.get("lectureGoal", {}).get("remaining") == 1
               and restored.get("answer") is not None, restored)
 
+    print("⑩ 추가 학습의 새 문항은 본 문제 수에 반영하고 반복은 중복 집계하지 않는다")
+    client.post(f"{BASE}/bank/rate", json={"reviewToken": restored["reviewToken"], "rating": "Good"})
+    client.post(f"{BASE}/bank/next")
+    for question in example_bank()["questions"][1:]:
+        before = client.get(BASE).json()["bank"]["seenQuestionCount"]
+        client.post(f"{BASE}/bank/session/start", json={"continueAfterGoal": True})
+        picked = {"question": question, "days": 14, "ranked": []}
+        with patch("app.routes.bank.engine.select_question", return_value=picked):
+            extra = client.post(f"{BASE}/bank/next").json()
+        check("추가 학습에서도 오늘 목표 달성 유지", extra["lectureGoal"]["met"])
+        check("새 문항 제시 즉시 패널의 본 문제 수 +1", client.get(BASE).json()["bank"]["seenQuestionCount"] == before + 1)
+        repeated = client.post(f"{BASE}/bank/next").json()
+        check("같은 문제 다시 보기에서는 증가하지 않는다", repeated["reviewToken"] == extra["reviewToken"]
+              and client.get(BASE).json()["bank"]["seenQuestionCount"] == before + 1)
+        client.post(f"{BASE}/bank/reveal", json={"reviewToken": extra["reviewToken"]})
+        client.post(f"{BASE}/bank/rate", json={"reviewToken": extra["reviewToken"], "rating": "Good"})
+        client.post(f"{BASE}/bank/session/end", json={"sessionId": extra["session"]["session_id"]})
+        check("추가 회차를 끝내도 열람 수 유지", client.get(BASE).json()["bank"]["seenQuestionCount"] == before + 1)
+
 
 if __name__ == "__main__":
     main()

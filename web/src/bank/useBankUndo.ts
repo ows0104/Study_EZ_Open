@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api";
+import { invalidateTimetable } from "../firstScreen";
 import type { BankNext } from "../types/bank";
 
 export function useBankUndo(base: string, token: string | null | undefined,
@@ -12,9 +13,11 @@ export function useBankUndo(base: string, token: string | null | undefined,
     setUndoBusy(true);
     onError("");
     try {
-      onRestore(await api<BankNext>(`${base}/undo`, {
+      const restored = await api<BankNext>(`${base}/undo`, {
         method: "POST", body: JSON.stringify({ reviewToken: token }),
-      }));
+      });
+      invalidateTimetable();
+      onRestore(restored);
     } catch (cause) { onError((cause as Error).message); }
     finally { pending.current = false; setUndoBusy(false); }
   }, [base, token, onRestore, onError, disabled]);

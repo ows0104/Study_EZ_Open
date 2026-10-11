@@ -21,6 +21,7 @@ type Timetable = { events: TimetableEvent[] };
 let mePending: Promise<Me> | null = null;
 let meValue: Me | null = null;
 let timetablePending: Promise<Timetable> | null = null;
+let timetableStarted = false;
 
 export function startFirstScreen(): void {
   if (!mePending) {
@@ -32,7 +33,8 @@ export function startFirstScreen(): void {
     // 한 번 받아 두어도 원래 promise는 거절된 채 남아 호출부가 다시 받는다.
     mePending.catch(() => {});
   }
-  if (!timetablePending) {
+  if (!timetableStarted) {
+    timetableStarted = true;
     timetablePending = api<Timetable>("/api/timetable");
     timetablePending.catch(() => {});
   }
@@ -62,6 +64,11 @@ export function takeTimetable(): Promise<Timetable> {
   return pending ?? api<Timetable>("/api/timetable");
 }
 
+/** 퀴즈에서 바로 시작한 경우에도 학습 전 미리 받은 시간표를 다시 쓰지 않는다. */
+export function invalidateTimetable(): void {
+  timetablePending = null;
+}
+
 /**
  * 로그아웃하면 버린다.
  *
@@ -72,4 +79,5 @@ export function resetFirstScreen(): void {
   mePending = null;
   meValue = null;
   timetablePending = null;
+  timetableStarted = false;
 }

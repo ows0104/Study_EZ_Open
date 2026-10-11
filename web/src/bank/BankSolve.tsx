@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import { useMe } from "../useMe";
+import { invalidateTimetable } from "../firstScreen";
 import type { BankAnswer, BankNext, BankRating, BankRead, BankSession } from "../types/bank";
 import { ConceptMap } from "./ConceptMap";
 import { PersonalQuestionDialog } from "./PersonalQuestionDialog";
@@ -61,6 +62,7 @@ export function BankSolve({ base, lecture, onFinished }: {
     setError("");
     try {
       const got = await api<BankNext>(`${base}/next`, { method: "POST" });
+      invalidateTimetable();
       if (!got.question && !got.waiting) {
         onFinished(got.summary ?? null);
         return;
@@ -112,6 +114,7 @@ export function BankSolve({ base, lecture, onFinished }: {
     setError("");
     try {
       await api(`${base}/rate`, { method: "POST", body: JSON.stringify({ reviewToken: current.reviewToken, rating }) });
+      invalidateTimetable();
     } catch (cause) {
       setError((cause as Error).message);
       pending.current = false;
