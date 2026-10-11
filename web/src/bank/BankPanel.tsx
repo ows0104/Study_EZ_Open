@@ -60,7 +60,7 @@ function StudyCard({ lecture, bank }: { lecture: Pick<LectureRef, "subject" | "r
         hit={
           <Link className="panel-action-hit" to={bankHref(lecture)}>
             <strong>공부하기</strong>
-            <small>{bank.seenQuestionCount}/{bank.studyQuestionCount}문항 봄 · 개념 {bank.conceptCount}개</small>
+            <small>{bank.learningProgress ? `${bank.learningProgress.covered}/${bank.learningProgress.total}${bank.learningProgress.legacyObjectives ? "문항" : "요점"} 학습 · 지연 회상 ${bank.learningProgress.delayedRecall}요점` : `${bank.seenQuestionCount}/${bank.studyQuestionCount}문항 봄 · 개념 ${bank.conceptCount}개`}</small>
           </Link>
         }
       />

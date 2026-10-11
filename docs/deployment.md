@@ -208,6 +208,24 @@ cd server; ./deploy.ps1
 
 ## 다시 배포할 때
 
+학습요점 기반 학습(`/study`, `/api/learning`)을 처음 배포할 때는 **DB → API → 웹** 순서다.
+서버 환경에서 `python -m app.cli init-db`를 먼저 실행하여 `learning_bank_version`,
+`learning_legacy_state`, `learning_profile`, `learning_day`, `learning_session`,
+`learning_attempt` 표를 만든다. 기존 은행·학습 상태를 삭제하거나 다시 생성하지 않는다.
+테스트용 SQLite가 아닌 의도한 배포 DB인지 확인한 뒤 실행한다.
+
+`STUDYEZ_LEARNING_ENABLED=0`은 새 학습 API를 끄는 복귀 스위치이며 기본값은 `1`이다.
+기존 강의별 풀이는 `/bank/<subject>/<runId>?classic=1`로 접근한다.
+기능을 꺼도 은행 버전 보존 코드는 동작하므로 위 표는 먼저 준비해야 한다.
+기존 은행은 문항 단위의 보수적 범위로 읽고, v4 은행의 학습요점·범위 목록이 준비되면
+그 목록을 사용한다. 과거 자기평가를 새 객관식 정답률로 바꾸지 않는다.
+
+배포 후 공개된 강의의 `/study`에서 시작·재접속·해설 확인·되돌리기를 확인하고,
+시험용 문항이 일반 풀이와 Anki 내보내기에 섞이지 않는지 점검한다.
+실제 강의 3개(이해하기 쉬운 2개, 어려운 1개)에서 v2.0 생성 프롬프트로 새 은행을 만든 뒤
+관리자 범위 검사로 자료 누락, 설명/최소 암기, 원본 근거, 변형·시험 문항을 검토한다.
+생성된 범위 목록 자체가 원문을 빠짐없이 덮는지는 구조 검사만으로 보증되지 않는다.
+
 | 무엇이 바뀌었나 | 할 일 |
 |---|---|
 | `server/` 코드 | `cd server; ./deploy.ps1` |

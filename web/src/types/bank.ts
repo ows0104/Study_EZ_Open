@@ -4,6 +4,7 @@
 // 문항 필드 이름은 서버가 저장한 꼴 그대로(snake_case)다 — 은행 JSON 을 옮겨 적지 않고 싣는다.
 
 export type BankSummary = {
+  learningProgress?: import("./learning").LearningProgress | null;
   status: "responded" | "building" | "ready" | "invalid" | "failed";
   open: boolean;
   buildId: string;

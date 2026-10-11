@@ -25,7 +25,7 @@ from app.models import Asset, Lecture, QuizBank
 from app.bank_edits import current_review
 from app.routes.common import storage_or_503
 
-EXPORT_VERSION = 1
+EXPORT_VERSION = 2
 MODEL_ID = 1867040701
 CSS = """
 .card { font-family: Arial, sans-serif; font-size: 20px; line-height: 1.65;
@@ -140,7 +140,7 @@ class Export:
 
 def page_map(row: QuizBank) -> dict[str, list[int]]:
     return {q["question_id"]: list(dict.fromkeys((row.pages or {}).get(q["question_id"], [])))
-            for q in (row.bank or {}).get("questions", [])}
+            for q in (row.bank or {}).get("questions", []) if q.get("role") != "exam"}
 
 
 def describe(db: Session, lecture: Lecture, row: QuizBank, *, media_assets: list[Asset] | None = None) -> Export:
@@ -193,6 +193,8 @@ def ensure_export(db: Session, lecture: Lecture, row: QuizBank) -> Export:
         deck_name = f"{subject}::{lecture.run_id} {title} QuizBank"
         deck = genanki.Deck(stable_id(f"bank/{lecture.subject}/{lecture.run_id}"), deck_name)
         for index, q in enumerate(bank["questions"]):
+            if q.get("role") == "exam":
+                continue  # Reserved assessment items must stay unexposed.
             # Q1 can name an entirely different question after regeneration. Content is
             # part of the identity; answer-only corrections retain the original GUID.
             identity = json.dumps({k: q.get(k) for k in ("question", "format", "options", "matching_left", "matching_right", "sequence_items")},

@@ -1,10 +1,13 @@
 <!--
 Bank Builder 프롬프트 — 정본
-Version: 1.25
+Version: 2.0
 
 이 파일이 ChatGPT에 가는 프롬프트의 정본이다. 이 주석은 보내지 않는다.
 {{…}} 자리는 web/src/bank/prompt.ts 가 강의마다 채운다. {{c1}} 같은 cloze 표기는 그대로 간다.
 고치면 아래에 판을 하나 올리고 Version 을 같이 올린다. 서버에 응답이 저장될 때 이 Version 이 같이 남는다.
+
+2.0 (2026-10-11) 원본 범위 목록·학습요점·이해 도움·문항 역할을 생성한다. 변형은 같은 학습요점에
+                  연결하고, 시험용 문항과 보기 없는 회상 질문·구조화 선지 해설을 별도 기록한다.
 
 1.25 (2026-10-11) 나열형의 정답 후보를 다섯 개로 자르지 않고 요구 개수와 분리한다.
                    같은 답을 재사용하는 짝짓기는 중복 보기 없이 정답 짝을 보존한다.
@@ -124,6 +127,57 @@ Concept Map을 만들기 전에 **출제 범위 선정표**를 작성한다. 포
 문항의 exam_rationale은 선정표의 포함 포인트와 근거를 연결한다. 문항 수를 미리 정하거나 맞추지는 않는다.
 
 다음 순서로 작업해줘.
+
+# 학습요점과 범위 목록
+
+문항보다 먼저 원본의 모든 의미 있는 구간을 대조해 범위 목록을 작성한다. 범위를 먼저 고르는 위 지시는 유지한다.
+단, 제외하거나 설명으로만 다룬 구간도 이유와 원본 위치를 기록한다. 페이지를 확인한 것과 의미상 누락이 없는 것은
+다르므로 불확실한 범위는 `uncertain`으로 남긴다. 그림·표·손글씨의 독립 학습요점도 확인한다.
+
+기존 Concept Map·Question Bank·Retrieval Plan 표와 함께 다음 세 표를 반드시 출력한다.
+
+## Coverage Inventory
+
+| title | source_refs | status | reason | objective_ids |
+|---|---|---|---|---|
+
+status는 `target`(학습 대상), `explanation`(이해 도움), `excluded`(범위 밖), `uncertain`(검토 필요).
+target 행은 학습요점 ID를 연결하고 모든 학습요점은 적어도 한 target 행에 연결한다. 설명 문장을 모두 암기 과제로
+만들지 않는다. 낮은 중요도라는 이유만으로 지정된 시험 범위의 독립 학습요점을 누락하지 않는다.
+
+## Learning Objectives
+
+| objective_id | concept_id | title | target | kind | importance | rationale | source_refs | context | explanation | minimum | prerequisites |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+
+objective_id는 `U001` 형태. 한 요점은 독립적으로 기억·구별할 최소 내용이다. 같은 개념 안의 다른 사실은 별개이고,
+같은 사실을 질문 방향만 바꾸는 변형은 동일 요점이다. target에는 정확히 무엇을 알면 되는지 쓴다.
+kind는 `fact / mechanism / discrimination / sequence`. context는 강의 흐름 속 위치, explanation은 2–4문장 이내의
+이해 설명, minimum은 지금 기억해야 할 최소 내용, rationale은 원본에 근거한 학습 필요성이다.
+prerequisites는 필요한 선행 **학습요점 ID**이며 순환을 만들지 않는다. 중요도와 어려움을 혼동하지 않는다.
+제공받은 이전 학습요점 목록이 있으면 내용이 같은 ID를 재사용하되, 의미가 바뀐 요점에는 새 ID를 준다.
+
+## Learning Question Links
+
+| question_id | primary_objective_id | supporting_objective_ids | role | recall_prompt |
+|---|---|---|---|---|
+
+모든 문항을 정확히 한 primary 요점에 연결한다. supporting은 이해에 필요한 보조 요점으로 한 번의 정답으로
+함께 숙달했다고 처리하지 않는다. role은 `learning / variant / exam`. 필요한 요점에는 대표 학습문항을 제공한다.
+모든 요점에 일정 개수의 변형을 강제하지 않는다. variant는 새로 확인하는 구별·오개념을 exam_rationale에 명시한다.
+exam은 객관식(mcq 또는 multi_select)이며 평소 풀이에서 보류할 문항이다. exam에만 등장하는 필수 학습내용을
+만들지 않는다. 시험 범위의 대표성을 고려해 따로 구성하며 이름·보기 순서만 바꾼 복제 문항은 만들지 않는다.
+recall_prompt는 보기 없이도 정확히 답할 수 있는 짧은 질문이 있을 때만 쓴다. 없으면 비운다.
+"옳지 않은 것은?"처럼 보기가 발문의 일부인 질문에 억지로 회상 질문을 붙이지 않는다.
+
+## Option Explanations
+
+| question_id | option_id | text |
+|---|---|---|
+
+객관식의 모든 선지에 정오 판단 근거를 쓴다. 오답에는 발문 조건에 맞지 않는 이유와 올바른 관계를 함께 쓴다.
+기존 answer_units의 선지 해설도 유지한다. 모든 표의 배열은 `<br>`로 구분하며, 없는 값은 `—`로 둔다.
+이 표들은 앱이 사용하는 데이터다. 문항이 검증에서 빠져도 Coverage Inventory와 Learning Objectives는 보존한다.
 
 # 1. Concept Map
 

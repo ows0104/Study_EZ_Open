@@ -69,7 +69,7 @@ admin_router = APIRouter()
 COMPLETE_MARK = "STUDYEZ_BANK_COMPLETE"
 # 첨부 순서가 곧 자료 ID 다 — 웹이 프롬프트에 이 순서로 적고 확장이 이 순서로 붙인다.
 SOURCE_KINDS = (("notes_current", "S1"), ("jokbo", "S2"))
-ANSWER_FIELDS = ("answer", "answer_units", "correct_option_ids", "answer_pairs", "correct_order")
+ANSWER_FIELDS = ("answer", "answer_units", "correct_option_ids", "answer_pairs", "correct_order", "option_explanations")
 FEEDBACK_CATEGORIES = ("good", "wording", "easy", "hard", "leak", "format", "burden", "importance",
                        "content", "duplicate", "sequencing", "other")
 
@@ -120,7 +120,7 @@ def _usable(row: QuizBank) -> dict:
     """학습에 쓸 수 있는 은행. 검증을 통과한 것만."""
     if not row.bank or not (row.validation or {}).get("pass"):
         raise HTTPException(409, "검증을 통과한 문제은행이 아직 없습니다.")
-    return row.bank
+    return {**row.bank, "questions": [q for q in row.bank["questions"] if q.get("role") != "exam"]}
 
 
 def summary(db: Session, lecture: Lecture, row: QuizBank | None, *, is_admin: bool,
@@ -144,6 +144,9 @@ def summary(db: Session, lecture: Lecture, row: QuizBank | None, *, is_admin: bo
                    # 검증에 걸려 뺀 문항(`quizbank.validate.validate_dropping`). 원문은 `GET …/bank` 의 validation 에 있다.
                    dropped=[{"questionId": d["question_id"], "errors": d["errors"]}
                             for d in (row.validation or {}).get("dropped", [])])
+    if user_id:
+        from app.learning_progress import lecture_progress
+        out["learningProgress"] = lecture_progress(db, user_id, [(row.subject, row.run_id)]).get((row.subject, row.run_id))
     return out
 
 
@@ -255,6 +258,8 @@ def put_bank(subject: str, run_id: str, payload: BankIn, user: CurrentUser = Dep
         db.commit()
         return {"status": row.status}
     source_ids = [s["id"] for s in bank_sources(db, lecture)]
+    from app.learning_versions import archive_bank
+    archive_bank(db, row, engine.now_ms())
     row.bank, row.validation = bank_edits.reapply(
         payload.bank, payload.validation, row.validation or {}, source_ids)
     row.review = payload.review
@@ -417,6 +422,8 @@ def edit_bank_card(subject: str, run_id: str, question_id: str, payload: BankCar
     after_questions = {q["question_id"]: q for q in clean["questions"]}
     affected = {qid for qid in before_questions.keys() | after_questions.keys()
                 if before_questions.get(qid) != after_questions.get(qid)}
+    from app.learning_versions import archive_bank
+    archive_bank(db, row, engine.now_ms())
     row.bank, row.validation = clean, checked
     row.pages = cited_pages(clean, "S1")
     row.status = BANK_READY

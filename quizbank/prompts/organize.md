@@ -20,7 +20,14 @@
 - 원문 뒤의 「문항·선지 해설 보완」 표는 기존 question_id에 대한 후속 보완 기록이다. question·source_refs는 보완 표의 값을 적용한다. answer 열이 있으면 answer와 answer_units를 해당 표의 값으로 적용하고, answer 열이 없으면 answer_units를 원래 항목에 중복 없이 추가한다. 별도 문항으로 만들거나 기존 선택 정답표를 바꾸지 마라.
 - 짝짓기·순서 항목에 붙은 번호(`1.` · `A.`)와 정답 짝의 번호는 떼지 말고 원문 그대로 둔다. 정답 짝은 원문의 `1. … - A. …`를 left·right로 나누기만 한다 — 번호로 맞추는 것은 코드가 한다.
 - source_refs의 locator에는 원문의 쪽·문항 표기를 그대로 둔다(예: `p13`, `p13–14`, `2023 Q11`).
-- build_meta.schema_version은 `{{schema_version}}`, build_meta.lecture_title은 강의 제목이다.
+- Coverage Inventory와 Learning Objectives가 있으면 coverage_inventory·learning_objectives로 원문 그대로 옮긴다.
+- Learning Question Links의 primary_objective_id·supporting_objective_ids·role·recall_prompt를 question_id로 문항에 연결한다.
+- Option Explanations의 option_id·text를 문항의 option_explanations 배열에 보존한다. 없는 해설을 만들지 않는다.
+- 새 학습 표가 없는 과거 응답은 learning_objectives·coverage_inventory를 빈 배열로 두고 문항의 새 필드는
+  primary_objective_id="", supporting_objective_ids=[], role="learning", recall_prompt="", option_explanations=[]로 둔다.
+  표가 있는 응답에서 일부 행이 빠졌으면 추정해 채우지 말고 warnings에 기록한다.
+- build_meta.schema_version은 새 Learning Objectives가 있으면 `{{schema_version}}`, 과거 응답이면 `3.0`이다.
+  build_meta.lecture_title은 강의 제목이다.
 
 정리하면서 아래 항목에 어긋나 보이는 문항이 있으면 고치지 말고 warnings에 `[항목] 문항ID — 이유`로 적어라.
 
