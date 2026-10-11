@@ -6,6 +6,7 @@ from app.study_engine.daily_queue import lecture_goal, select_daily_question
 from app.study_engine.planning import KOREA, day_start
 from app.study_engine.memory import DAY_MS
 from app.study_engine.progress import mark_seen
+from app.study_engine.policy import DEFAULT, validate_policy
 from tests.bank_fixtures import example_bank
 
 NOW = int(datetime(2026, 10, 6, 10, tzinfo=KOREA).timestamp() * 1000)
@@ -78,7 +79,73 @@ def main():
         assert select_daily_question(single, rated, EXAM, NOW)["question"] is None
     late = record_review(single, original, "Q1", "Again", tomorrow - 10_000)
     assert lecture_goal(single, late, "test", tomorrow)["reviewRemaining"] == 1
-    print("PASS: individual question coverage, alternating new/review, no duplicate completion, prerequisites, all tiers, future reviews, legacy, KST")
+    # A large new pool is capped while every due review remains in today's target.
+    large = example_bank()
+    large["questions"] += [{**copy.deepcopy(large["questions"][0]), "question_id": f"N{i:02d}"}
+                           for i in range(24)]
+    state = record_review(large, original, "Q1", "Again", NOW - DAY_MS)
+    state = record_review(large, state, "Q2", "Again", NOW - DAY_MS)
+    target = lecture_goal(large, state, "test", NOW)
+    assert target["total"] == 12 and target["newRemaining"] == 10 and target["reviewRemaining"] == 2
+    assert target["unlearnedRemaining"] == 25
+    kinds, first_pass = [], set()
+    for i in range(12):
+        q = select_daily_question(large, state, EXAM, NOW + i)["question"]
+        qid = q["question_id"]
+        kinds.append("review" if qid in ("Q1", "Q2") else "new")
+        if kinds[-1] == "new":
+            assert qid not in first_pass
+            first_pass.add(qid)
+        state = record_review(large, state, qid, "Again", NOW + i)
+        goal = lecture_goal(large, state, "test", NOW + i)
+        assert goal["total"] == 12 and goal["completed"] == i + 1
+        assert goal["met"] == (i == 11)
+    assert kinds[:5] == ["new", "review", "new", "review", "new"]
+    assert len(first_pass) == 10 and goal["unlearnedRemaining"] == 15
+    assert select_daily_question(large, state, EXAM, NOW + 12)["question"] is None
+    from app.study_engine import select_question
+    extra = select_question(large, state, EXAM, NOW + 12, prefer_unseen=True)["question"]
+    assert extra["question_id"] not in first_pass | {"Q1", "Q2"}
+    state = record_review(large, state, extra["question_id"], "Again", NOW + 12)
+    extra_goal = lecture_goal(large, state, "test", NOW + 12)
+    assert extra_goal["met"] and extra_goal["total"] == extra_goal["completed"] == 12
+    assert extra_goal["reviewedToday"] == 13 and extra_goal["unlearnedRemaining"] == 14
+    next_goal = lecture_goal(large, state, "test", tomorrow)
+    assert next_goal["newRemaining"] == 10 and next_goal["reviewRemaining"] == 13
+    # Repetition cannot fill the new quota; pre-deployment study beyond the cap is credited.
+    repeated = original
+    for i in range(15):
+        repeated = record_review(large, repeated, "Q1", "Again", NOW + i)
+    assert lecture_goal(large, repeated, "test", NOW + 15)["newRemaining"] == 9
+    for i, q in enumerate(large["questions"][1:16]):
+        repeated = record_review(large, repeated, q["question_id"], "Again", NOW + 20 + i)
+    assert lecture_goal(large, repeated, "test", NOW + 40)["met"]
+    assert lecture_goal(large, repeated, "test", NOW + 40)["total"] == 10
+    # Extra review before its due date cannot expand the daily goal.
+    future = record_review(single, original, "Q1", "Easy", NOW - DAY_MS)
+    before_goal = lecture_goal(single, future, "test", NOW)
+    future = record_review(single, future, "Q1", "Again", NOW)
+    after_goal = lecture_goal(single, future, "test", NOW)
+    assert before_goal["total"] == after_goal["total"] == 0 and after_goal["met"]
+    assert after_goal["reviewedToday"] == 1
+    # A known review remains available after the new cap, even with an unseen prerequisite.
+    guarded = example_bank()
+    guarded["questions"][2]["prerequisites"] = ["Q2"]
+    guarded_state = record_review(guarded, original, "Q3", "Again", NOW - DAY_MS)
+    guarded_state = record_review(guarded, guarded_state, "Q1", "Again", NOW)
+    small_cap = copy.deepcopy(DEFAULT)
+    small_cap["daily"]["newLimit"] = 1
+    assert select_daily_question(guarded, guarded_state, EXAM, NOW, small_cap)["question"]["question_id"] == "Q3"
+    for value in (0, 1.5, True, 1001):
+        invalid = copy.deepcopy(DEFAULT)
+        invalid["daily"]["newLimit"] = value
+        try:
+            validate_policy(invalid)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"Accepted invalid daily cap: {value}")
+    print("PASS: capped new quota, due reviews, mixing, distinct completion, carryover, stable extras, prerequisites, legacy, KST, policy validation")
 
 
 if __name__ == "__main__":

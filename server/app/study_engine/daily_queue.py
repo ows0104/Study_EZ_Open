@@ -1,4 +1,4 @@
-"""문항별 오늘 할 일. 미학습 문항과 복습 예정 문항을 섞어 빠짐없이 확인한다.
+"""문항별 오늘 할 일. 예정된 복습과 한도 내 신규 문항을 섞어 확인한다.
 
 숙련도 점수와 독립적이다. 이력에서 재구성하므로 조회는 저장 상태를 바꾸지 않는다.
 평가한 문항은 등급에 관계없이 오늘 완료다. 어려웠던 문항은 다음날부터 복습한다.
@@ -42,10 +42,10 @@ def daily_units(bank: dict, state: dict, now: int, policy: dict = DEFAULT) -> li
         kind = "review" if before or legacy and not history else "new"
         due = _due(before, state, latest=not today, policy=policy) if before else min(
             (item.get("due_at", start) for item in legacy), default=start)
-        scheduled = bool(today) or not known or due < end
+        scheduled = kind == "new" or due < end
         if not scheduled:
             units.append({"key": key, "questions": questions, "status": "later", "due": due,
-                          "kind": kind, "seen": known, "today": 0, "last": None})
+                          "kind": kind, "seen": known, "today": len(today), "last": last or before})
             continue
         if not today:
             # 오늘 예정된 복습은 바로 풀 수 있다. 할당량 도중 분 단위 대기는 없다.
@@ -59,27 +59,41 @@ def daily_units(bank: dict, state: dict, now: int, policy: dict = DEFAULT) -> li
     return units
 
 
+def _new_quota(units: list[dict], policy: dict) -> tuple[int, int]:
+    # 오늘 처음 평가한 문항도 신규 풀에 남아 있어 목표가 풀이할 때마다 늘지 않는다.
+    new = [u for u in units if u["kind"] == "new"]
+    total = min(policy["daily"]["newLimit"], len(new))
+    completed = min(total, sum(u["status"] == "done" for u in new))
+    return total, completed
+
+
 def lecture_goal(bank: dict, state: dict, title: str, now: int, policy: dict = DEFAULT) -> dict:
     units = daily_units(bank, state, now, policy)
-    today = [u for u in units if u["status"] != "later"]
-    completed = sum(u["status"] == "done" for u in today)
-    pending = [u for u in today if u["status"] != "done"]
+    reviews = [u for u in units if u["kind"] == "review" and u["status"] != "later"]
+    new_total, new_completed = _new_quota(units, policy)
+    total = len(reviews) + new_total
+    completed = sum(u["status"] == "done" for u in reviews) + new_completed
+    pending = [u for u in reviews if u["status"] != "done"]
     waiting = [u for u in pending if u["due"] > now]
     return {"title": title, "dayStart": day_start(now), "scope": "all",
-            "total": len(today), "completed": completed, "remaining": len(pending),
-            "newRemaining": sum(u["status"] == "pending" and u["kind"] == "new" for u in pending),
-            "reviewRemaining": sum(u["status"] == "pending" and u["kind"] == "review" for u in pending),
+            "total": total, "completed": completed, "remaining": total - completed,
+            "newRemaining": new_total - new_completed,
+            "reviewRemaining": len(pending),
+            "dailyNewLimit": policy["daily"]["newLimit"],
+            "unlearnedRemaining": sum(not u["seen"] for u in units),
             "relearningRemaining": sum(u["status"] == "relearning" for u in pending),
             "waiting": len(waiting), "retryAt": min((u["due"] for u in waiting), default=None),
-            "met": bool(units) and not pending,
-            "progressPercent": completed * 100 // len(today) if today else 100 if units else 0,
-            "reviewedToday": sum(u["today"] for u in today),
+            "met": bool(units) and completed == total,
+            "progressPercent": completed * 100 // total if total else 100 if units else 0,
+            "reviewedToday": sum(u["today"] for u in units),
             "firstPassSeen": sum(u["seen"] for u in units), "firstPassTotal": len(units)}
 
 
 def select_daily_question(bank: dict, state: dict, exam: str, now: int, policy: dict = DEFAULT) -> dict:
     units = daily_units(bank, state, now, policy)
-    remaining = [u for u in units if u["status"] not in ("done", "later")]
+    new_total, new_completed = _new_quota(units, policy)
+    remaining = [u for u in units if u["status"] not in ("done", "later")
+                 and (u["kind"] == "review" or new_completed < new_total)]
     unlearned = {u["key"] for u in units if not u["seen"]}
     # 미학습·복습을 번갈아 고른다. 이미 완료한 문항으로 다른 문항의 할 일을 대신하지 않는다.
     ranked = rank_questions(bank, state, exam, now, policy)
@@ -89,7 +103,7 @@ def select_daily_question(bank: dict, state: dict, exam: str, now: int, policy: 
         if unit["due"] > now:
             continue
         q = unit["questions"][0]
-        if any(qid in unlearned for qid in q["prerequisites"]):
+        if unit["kind"] == "new" and any(qid in unlearned for qid in q["prerequisites"]):
             continue  # 아직 평가하지 않은 선행 문항부터 확인한다.
         candidates.append(unit)
     by_key = {u["key"]: u for u in units}

@@ -42,6 +42,8 @@ export type LectureGoal = {
   remaining: number;
   newRemaining: number;
   reviewRemaining: number;
+  dailyNewLimit?: number;
+  unlearnedRemaining?: number;
   relearningRemaining: number;
   waiting: number;
   retryAt: number | null;
