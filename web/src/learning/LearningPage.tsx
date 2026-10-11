@@ -82,6 +82,12 @@ export function LearningPage() {
         <article><strong>{dashboard.progress.questionGaps}</strong><span>학습 문항이 필요한 요점</span></article>
       </div>
       {dashboard.progress.legacyObjectives ? <p className="learning-muted">기존 자료는 문항별로 집계합니다. 전체 강의 범위 확인은 새 학습요점 목록이 준비된 뒤 가능합니다. 과거 자기평가는 새 문항 정답률로 환산하지 않습니다.</p> : null}
+      {dashboard.scopeOnlyLectures?.length ? <details className="learning-panel"><summary>학습 대상 요점이 없는 강의 · {dashboard.scopeOnlyLectures.length}개</summary>
+        <p>범위 제외 근거가 등록된 강의입니다. 학습 완료나 기억한 요점 수에 포함하지 않습니다.</p>
+        {dashboard.scopeOnlyLectures.map(l => <details key={`${l.subject}/${l.runId}`}><summary>{l.title}</summary>
+          {l.ranges.map((r, i) => <p key={i}><b>{r.status === "uncertain" ? "검토 필요 · " : ""}{r.title}</b> · {r.reason}<br /><SourceRefs refs={r.source_refs} /></p>)}
+          <Link to={`/lectures/${encodeURIComponent(l.subject)}/${encodeURIComponent(l.runId)}`}>원본 강의 자료 확인</Link>
+        </details>)}</details> : null}
       {dashboard.missingLectures.length || dashboard.uncertainRanges ? <details className="learning-panel"><summary>자료 미준비 {dashboard.missingLectures.length}강의 · 범위 확인 필요 {dashboard.uncertainRanges}개</summary>
         <ul>{dashboard.missingLectures.map((l, i) => <li key={i}>{l.date} · {l.title}</li>)}</ul><p>자료가 준비되지 않은 범위는 학습 완료로 처리하지 않습니다.</p></details> : null}
       <details className="learning-panel"><summary>공부 시간과 계획 설정</summary>

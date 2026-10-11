@@ -134,7 +134,7 @@ Concept Map을 만들기 전에 **출제 범위 선정표**를 작성한다. 포
 단, 제외하거나 설명으로만 다룬 구간도 이유와 원본 위치를 기록한다. 페이지를 확인한 것과 의미상 누락이 없는 것은
 다르므로 불확실한 범위는 `uncertain`으로 남긴다. 그림·표·손글씨의 독립 학습요점도 확인한다.
 
-기존 Concept Map·Question Bank·Retrieval Plan 표와 함께 다음 세 표를 반드시 출력한다.
+기존 Concept Map·Question Bank·Retrieval Plan 표와 함께 다음 네 표를 반드시 출력한다.
 
 ## Coverage Inventory
 

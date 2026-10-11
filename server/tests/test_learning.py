@@ -19,7 +19,7 @@ from app.bank_validation.schema import without_retired
 from app.bank_validation.learning import question_identity
 from app.bank_validation.validate import validate_bank, validate_dropping
 from app.learning_versions import archive_bank
-from app.study_engine.learning import apply_attempt, build_plan, catalog_unit
+from app.study_engine.learning import apply_attempt, build_plan, catalog_unit, choose_question
 from app.study_engine.memory import DAY_MS
 from app.study_engine.progress import panel_progress
 from tests.bank_fixtures import example_bank
@@ -58,6 +58,20 @@ def main():
     assert result["pass"], result
     assert panel_progress(bank, {})["studyQuestionCount"] == 8
     assert validate_bank(example_bank(), ["S1"])["pass"]
+    excluded = copy.deepcopy(bank)
+    for field in ("concepts", "questions", "learning_objectives", "retrieval_plan"):
+        excluded[field] = []
+    excluded["coverage_inventory"] = [{"title": "도입 강의", "source_refs": [{"source_id": "S1", "locator": "p10"}],
+        "status": "excluded", "reason": "교수가 이 시간은 시험 문제가 없다고 명시", "objective_ids": []}]
+    assert validate_bank(excluded, ["S1"])["pass"]
+    assert catalog_unit("course", "excluded", "도입 강의", excluded, "v") == []
+    for field, value in (("source_refs", []), ("reason", ""), ("status", "target"),
+                         ("source_refs", [{"source_id": "missing", "locator": "p10"}]),
+                         ("objective_ids", ["missing"])):
+        invalid = copy.deepcopy(excluded); invalid["coverage_inventory"][0][field] = value
+        assert not validate_bank(invalid, ["S1"])["pass"], (field, value)
+    invalid = copy.deepcopy(excluded); invalid["coverage_inventory"] = []
+    assert not validate_bank(invalid, ["S1"])["pass"]
     bad = copy.deepcopy(bank); bad["questions"][0]["correct_option_ids"] = ["Z"]
     cleaned, result = validate_dropping(bad, ["S1"])
     assert result["pass"] and len(cleaned["learning_objectives"]) == 4 and len(cleaned["questions"]) == 11
@@ -71,6 +85,14 @@ def main():
     cycle["learning_objectives"][1]["prerequisites"] = ["U0"]
     assert not validate_bank(cycle, ["S1"])["pass"]
     units = catalog_unit("course", "lecture", "제목", bank, "v", NOW + 10 * DAY_MS)
+    integrated = copy.deepcopy(bank)
+    next(q for q in integrated["questions"] if q["question_id"] == "U0-exam")["supporting_objective_ids"] = ["U1", "U2"]
+    integrated_units = catalog_unit("course", "lecture", "제목", integrated, "v")
+    partial = {"objectives": {u["key"]: {"covered": True} for u in integrated_units[:2]}}
+    assert choose_question(integrated_units[0], partial, exam=True) is None
+    partial["objectives"][integrated_units[2]["key"]] = {"covered": True}
+    assert choose_question(integrated_units[0], partial, exam=True)["question_id"] == "U0-exam"
+    assert choose_question(integrated_units[0], {}, exam=False)["role"] == "learning"
     plan = build_plan(units, {}, NOW, 5)
     assert plan["estimatedSeconds"] <= 300 and len({e["key"] for e in plan["entries"]}) == len(plan["entries"])
     assert any(e["lane"] == "new" for e in plan["entries"])
@@ -100,6 +122,11 @@ def main():
                        start_time="09:00", title="제목", date=date(2026, 10, 1)))
         db.flush()
         db.add(QuizBank(subject="course", run_id="lecture", build_id="v1", bank=bank, validation={"pass": True}, open_to_students=True))
+        db.add(Lecture(subject="course", run_id="excluded", uid="excluded#도입", slot=2, slot_end=2,
+                       start_time="10:00", title="도입 강의", date=date(2026, 10, 1)))
+        db.flush()
+        db.add(QuizBank(subject="course", run_id="excluded", build_id="excluded-v1", bank=excluded,
+                       validation={"pass": True}, open_to_students=True))
         db.commit()
     app.dependency_overrides[get_current_user] = lambda: USER
     client = TestClient(app)
@@ -115,6 +142,11 @@ def main():
     with patch("app.routes.learning.now_ms", side_effect=lambda: clock[0]):
         dash = get("/dashboard")
         assert dash["progress"]["total"] == 4 and dash["examQuestions"] == 0
+        assert len(dash["scopeOnlyLectures"]) == 1
+        assert get("/dashboard?subject=course&runId=lecture")["scopeOnlyLectures"] == []
+        excluded_dash = get("/dashboard?subject=course&runId=excluded")
+        assert excluded_dash["progress"]["total"] == 0 and excluded_dash["progress"]["covered"] == 0
+        assert excluded_dash["scopeOnlyLectures"][0]["ranges"][0]["source_refs"][0]["locator"] == "p10"
         before_entries = dash["plan"]["entries"]
         sid = post("/sessions", {"mode": "daily"})["sessionId"]
         first = get(f"/sessions/{sid}"); token = first["token"]
@@ -187,7 +219,7 @@ def main():
         dash = get("/dashboard")
         assert dash["progress"]["covered"] == 1
         with SessionLocal() as db:
-            assert db.query(LearningBankVersion).count() == 2
+            assert db.query(LearningBankVersion).filter_by(run_id="lecture").count() == 2
         other = CurrentUser(id="other", email="other@example.com", is_admin=False, apps=dict.fromkeys(APP_POLICY, ROLE_ADMIN))
         app.dependency_overrides[get_current_user] = lambda: other
         assert client.get(f"/api/learning/sessions/{sid}").status_code == 404

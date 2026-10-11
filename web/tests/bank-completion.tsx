@@ -48,7 +48,7 @@ function CalendarResult() {
 }
 startFirstScreen();
 const { BankStudyPage } = await import("../src/bank/BankStudy");
-createRoot(document.getElementById("root")!).render(<MemoryRouter initialEntries={["/mainquiz/local/demo"]}><Routes>
+createRoot(document.getElementById("root")!).render(<MemoryRouter initialEntries={["/mainquiz/local/demo?classic=1"]}><Routes>
   <Route path="/mainquiz/:subject/:runId" element={<BankStudyPage />} />
   <Route path="/" element={<CalendarResult />} />
 </Routes></MemoryRouter>);

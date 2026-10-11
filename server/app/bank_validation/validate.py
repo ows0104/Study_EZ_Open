@@ -16,7 +16,7 @@ import unicodedata
 from datetime import UTC, datetime
 
 from .schema import SCHEMA_VERSION, schema_errors, without_retired
-from .learning import learning_errors
+from .learning import learning_errors, scope_only
 
 
 # 외부 의학지식으로 쓴 자리(프롬프트 v1.2, 2026-10-05). 첨부 자료가 아니라서 출처 요약에는 안 서지만
@@ -73,7 +73,7 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
 
     fail(bank["build_meta"]["schema_version"] in ("3.0", SCHEMA_VERSION), f"지원 schema_version: 3.0, {SCHEMA_VERSION}")
     fail(_nonempty(bank["build_meta"]["lecture_title"]), "강의 제목 누락")
-    fail(bool(bank["concepts"]) and bool(bank["questions"]), "개념과 문항이 비어 있습니다.")
+    fail((bool(bank["concepts"]) and bool(bank["questions"])) or scope_only(bank), "개념과 문항이 비어 있습니다.")
     fail(len(bank["questions"]) <= 5000 and len(bank["concepts"]) <= 2000, "단일 문제은행의 지원 크기를 초과했습니다.")
     if errors:
         return result()

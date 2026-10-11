@@ -18,7 +18,7 @@ from app.auth import CurrentUser, require_approved_user
 from app.database import get_db
 from app.models import BankState, Lecture, QuizBank, TimetableEvent
 from app.models.learning import LearningAttempt, LearningBankVersion, LearningDay, LearningLegacyState, LearningProfile, LearningSession
-from app.bank_validation.learning import fingerprint, learning_content, question_identity
+from app.bank_validation.learning import fingerprint, learning_content, question_identity, scope_only
 from app.learning_versions import snapshot
 from app.naming import normalize_stem
 from app.study_engine import now_ms
@@ -59,7 +59,7 @@ def today(now):
     return datetime.fromtimestamp(now / 1000, KOREA).date().isoformat()
 
 
-def catalog(db: Session, user: CurrentUser, now: int):
+def catalog(db: Session, user: CurrentUser, now: int, scope_only_lectures: list | None = None):
     rows = db.scalars(select(QuizBank).where(QuizBank.open_to_students.is_(True))).all()
     lectures = {(l.subject, l.run_id): l for l in db.scalars(select(Lecture))}
     events = list(db.scalars(select(TimetableEvent).order_by(TimetableEvent.date, TimetableEvent.start_time)))
@@ -76,6 +76,10 @@ def catalog(db: Session, user: CurrentUser, now: int):
         exam = next((e for e in exams if course and normalize_stem(e.title).startswith(course)
                      and e.date >= lecture.date), None)
         deadline = exam_time(exam) if exam else None
+        if scope_only_lectures is not None and scope_only(row.bank):
+            scope_only_lectures.append({"subject": row.subject, "runId": row.run_id, "title": lecture.title,
+                "examId": exam.id if exam else None, "current": deadline is None or deadline > now,
+                "ranges": row.bank["coverage_inventory"]})
         version = snapshot(db, row, now)
         new_units = catalog_unit(row.subject, row.run_id, lecture.title, row.bank, version, deadline)
         for unit in new_units:
@@ -148,7 +152,8 @@ def scope_units(units, subject=None, run_id=None, exam_id=None):
 def dashboard(subject: str | None = None, runId: str | None = None, examId: str | None = None,
               user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
     now = now_ms(); person = profile(db, user)
-    units, missing, uncertain = catalog(db, user, now)
+    scope_only_lectures = []
+    units, missing, uncertain = catalog(db, user, now, scope_only_lectures)
     migrate_legacy(db, user, person, units)
     day = day_plan(db, user, person, units, now)
     scoped = scope_units(units, subject, runId, examId)
@@ -161,6 +166,8 @@ def dashboard(subject: str | None = None, runId: str | None = None, examId: str 
         key = (unit["subject"], unit["runId"])
         lessons.setdefault(key, []).append(unit)
     out = {"enabled": person.enabled, "minutes": person.minutes, "bufferDays": person.buffer_days,
+           "scopeOnlyLectures": [l for l in scope_units(scope_only_lectures, subject, runId, examId)
+                                 if subject or examId or l["current"]],
            "progress": progress(scoped, person.state), "missingLectures": missing, "uncertainRanges": uncertain,
            "plan": {**plan, "remaining": sum(e["key"] in keys and e["key"] not in plan["completed"] for e in plan["entries"]),
                     "complete": len(plan["completed"]) >= len(plan["entries"]) or plan["activeSeconds"] >= plan["budgetSeconds"]},

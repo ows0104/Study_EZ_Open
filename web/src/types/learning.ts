@@ -2,6 +2,8 @@ export type LearningProgress = { total: number; covered: number; delayedRecall: 
 export type LearningDashboard = {
   enabled: boolean; minutes: number; bufferDays: number; progress: LearningProgress;
   missingLectures: { title: string; date: string }[]; uncertainRanges: number;
+  scopeOnlyLectures?: { subject: string; runId: string; title: string;
+    ranges: { title: string; status: string; reason: string; source_refs: SourceRef[] }[] }[];
   activeSession: string | null; examQuestions: number;
   plan: { budgetSeconds: number; estimatedSeconds: number; activeSeconds: number; remaining: number;
     complete: boolean; completed: string[]; entries: { key: string; lane: string; seconds: number }[];

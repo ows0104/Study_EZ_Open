@@ -21,7 +21,8 @@ def catalog_unit(subject: str, run_id: str, title: str, bank: dict, version: str
     return [{"key": keys[o["objective_id"]], "subject": subject, "runId": run_id, "title": title,
              "objective": o, "version": version, "deadline": deadline,
              "prerequisites": [keys[p] for p in o.get("prerequisites", []) if p in keys],
-             "questions": [{**q, "identity": fingerprint([subject, run_id, question_identity(q)])}
+             "questions": [{**q, "identity": fingerprint([subject, run_id, question_identity(q)]),
+                            "supportingKeys": [keys[p] for p in q.get("supporting_objective_ids", []) if p in keys]}
                            for q in questions if q["primary_objective_id"] == o["objective_id"]]}
             for o in objectives]
 
@@ -36,7 +37,9 @@ def choose_question(unit: dict, state: dict, *, exam: bool = False) -> dict | No
     exposures = state.get("exposures", {})
     questions = [q for q in unit["questions"] if (q.get("role") == "exam") == exam]
     if exam:
-        questions = [q for q in questions if q["identity"] not in exposures]
+        questions = [q for q in questions if q["identity"] not in exposures
+                     and all(state.get("objectives", {}).get(k, {}).get("covered")
+                             for k in q.get("supportingKeys", []))]
     questions.sort(key=lambda q: (q["identity"] in exposures,
                                   exposures.get(q["identity"], 0),
                                   q.get("role") != "learning", q["item_difficulty"], q["question_id"]))
