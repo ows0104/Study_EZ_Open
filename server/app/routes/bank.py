@@ -24,7 +24,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import and_, select, tuple_
 from sqlalchemy.orm import Session
 
 from app import study_engine as engine
@@ -34,6 +34,7 @@ from app.bank_validation.pages import cited_pages
 from app.bank_validation.schema import QUESTION, schema_errors, without_retired
 from app.bank_validation.coverage import coverage_summary
 from app.bank_validation.validate import validate_bank
+from app.bank_validation.choice_mode import choice_mode
 from app.auth import CurrentUser, require_admin, require_approved_user, require_runner
 from app.database import get_db
 from app.lecture_mastery import for_bank
@@ -59,11 +60,12 @@ from app.models import (
     TimetableEvent,
 )
 from app.routes.common import lecture_or_404, record_grabs, storage_or_503
-from app.study_engine.daily_queue import lecture_goal, select_daily_question
+from app.study_engine.daily_queue import daily_units, lecture_goal, select_daily_question
 from app.study_engine.progress import mark_seen, panel_progress
 from app.study_engine.choices import realize_choices
 from app.study_engine.planning import day_start
 from app.study_engine.review_undo import remember_review, undo_review, undo_token
+from app.study_engine.batch import aggregate_goal, choose_lecture
 from app.storage import ObjectStorage, StorageNotConfigured
 
 router = APIRouter()
@@ -593,8 +595,11 @@ def _save(state: BankState, value: dict) -> None:
     state.state = value
 
 
-def _public(q: dict) -> dict:
-    return {k: v for k, v in q.items() if k not in ANSWER_FIELDS}
+def _public(q: dict, *, show_choices: bool = True) -> dict:
+    out = {**{k: v for k, v in q.items() if k not in ANSWER_FIELDS}, "mcq_mode": choice_mode(q)}
+    if not show_choices and out["mcq_mode"] == "recall_first":
+        out["options"] = []
+    return out
 
 
 def _served_question(db: Session, row: QuizBank, user_id: str, bank: dict, served: dict) -> dict:
@@ -718,7 +723,8 @@ def end_bank_session(subject: str, run_id: str, payload: EndIn,
 
 @router.post("/lectures/{subject}/{run_id}/bank/next")
 def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(require_approved_user),
-                       db: Session = Depends(get_db), target: int = Query(90, ge=50, le=100)) -> dict[str, Any]:
+                       db: Session = Depends(get_db), target: int = Query(90, ge=50, le=100),
+                       shuffle: bool = False, choice_protocol: bool = Query(False, alias="choiceProtocol")) -> dict[str, Any]:
     """다음 문항. **이미 내준 문항이 있으면 그것을 다시 준다** — 새로고침이 문항을 넘기지 않는다."""
     lecture = lecture_or_404(db, subject, run_id)
     row = _bank_or_404(db, lecture, user)
@@ -749,7 +755,7 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
             return {"question": None, "summary": engine.session_summary(bank, state, now=now),
                     "lectureGoal": goal, "reason": "lecture_goal_met", "undoToken": undo_token(state)}
         picked = (engine.select_question(bank, state, exam, now, prefer_unseen=True) if goal["met"] and extra_today
-                  else select_daily_question(bank, state, exam, now))
+                  else select_daily_question(bank, state, exam, now, shuffle=shuffle))
         question, days = picked["question"], picked["days"]
         if question is None:
             if not goal["met"]:
@@ -765,9 +771,13 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
                     "reason": picked["reason"], "retryAt": picked["retry_at"], "undoToken": undo_token(state)}
         score = next((r for r in picked["ranked"] if r["question_id"] == question["question_id"]), None)
         served = {"question_id": question["question_id"], "token": uuid.uuid4().hex, "revealed": False,
+                  "choice_protocol": bool(choice_protocol),
                   "presented_at": now, "policy_version": engine.DEFAULT["version"],
                   "policy_hash": engine.policy_hash(engine.DEFAULT), "score": score}
         state["served"] = served
+    if choice_protocol and not served.get("choice_protocol"):
+        # 구 화면에서 이미 보던 선지는 숨기지 않는다. 새 문항부터 인출 단계를 적용한다.
+        served.update(choice_protocol=True, choices_shown=True)
     if "question_snapshot" not in served:
         question = bank_personal.apply(db, row, user.id, question)
         review = next((r for r in bank_edits.current_review(row.review, row.validation)["reviews"]
@@ -782,7 +792,9 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
     mark_seen(state, question["question_id"])
     _save(state_row, state)
     db.commit()
-    return {"question": _public(question), "reviewToken": served["token"], "days": days, "examDate": exam,
+    choices_shown = not served.get("choice_protocol") or choice_mode(question) != "recall_first" or served.get("choices_shown", False) or served.get("revealed", False)
+    return {"question": _public(question, show_choices=choices_shown), "choicesShown": choices_shown,
+            "reviewToken": served["token"], "days": days, "examDate": exam,
             "lectureGoal": goal, "undoToken": undo_token(state),
             "preloadSlides": _slides(db, row, question["question_id"]),
             "session": engine.session_summary(bank, state, now=now),
@@ -793,6 +805,25 @@ class TokenIn(BaseModel):
     review_token: str = Field(alias="reviewToken")
 
     model_config = {"populate_by_name": True}
+
+
+@router.post("/lectures/{subject}/{run_id}/bank/options")
+def show_bank_options(subject: str, run_id: str, payload: TokenIn,
+                      user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)) -> dict:
+    row = _bank_or_404(db, lecture_or_404(db, subject, run_id), user)
+    bank = _usable(row)
+    state_row = _load_state(db, user, row)
+    state = dict(state_row.state)
+    served = dict(state.get("served") or {})
+    if served.get("token") != payload.review_token:
+        raise HTTPException(409, "현재 학습 문항이 아닙니다.")
+    question = _served_question(db, row, user.id, bank, served)
+    served["choices_shown"] = True
+    served.setdefault("choices_shown_at", engine.now_ms())
+    state["served"] = served
+    _save(state_row, state)
+    db.commit()
+    return {"question": _public(question), "choicesShown": True}
 
 
 @router.post("/lectures/{subject}/{run_id}/bank/prepare")
@@ -823,6 +854,9 @@ def reveal_bank_answer(subject: str, run_id: str, payload: TokenIn,
     served = dict(state.get("served") or {})
     if served.get("token") != payload.review_token:
         raise HTTPException(409, "현재 학습 문항이 아닙니다.")
+    question = _served_question(db, row, user.id, bank, served)
+    if served.get("choice_protocol") and choice_mode(question) == "recall_first" and not served.get("choices_shown") and not served.get("revealed"):
+        raise HTTPException(409, "먼저 답을 떠올린 뒤 선지를 공개하세요.")
     served["revealed"] = True
     served.setdefault("revealed_at", engine.now_ms())
     state["served"] = served
@@ -916,7 +950,7 @@ def read_personal_question(subject: str, run_id: str, question_id: str,
     row, original = _personal_source(db, subject, run_id, question_id, user)
     current = bank_personal.apply(db, row, user.id, original)
     edit = db.get(BankPersonalEdit, (user.id, subject, run_id, question_id))
-    valid = edit is not None and edit.original == original
+    valid = edit is not None and bank_personal.same_source(edit.original, original)
     return {"original": {"question": original["question"], "answer": original["answer"]},
             "draft": {"question": current["question"], "answer": current["answer"]},
             "edited": valid, "comment": edit.comment if valid else "", "revision": bank_personal.revision(original)}
@@ -982,3 +1016,119 @@ def post_bank_feedback(subject: str, run_id: str, payload: FeedbackIn,
     db.add(entry)
     db.commit()
     return {"id": entry.id}
+
+
+class BatchLectureIn(BaseModel):
+    subject: str = Field(min_length=1, max_length=200)
+    run_id: str = Field(alias="runId", min_length=1, max_length=32)
+
+
+class BatchIn(BaseModel):
+    lectures: list[BatchLectureIn] = Field(min_length=1, max_length=100)
+    resume_lecture: BatchLectureIn | None = Field(None, alias="resumeLecture")
+
+
+class BatchUndoIn(BatchIn):
+    review_token: str = Field(alias="reviewToken")
+
+
+def _batch_entries(payload: BatchIn, user: CurrentUser, db: Session) -> list[dict]:
+    now, entries = engine.now_ms(), []
+    keys = list(dict.fromkeys((ref.subject, ref.run_id) for ref in payload.lectures))
+    rows = db.execute(select(Lecture, QuizBank, BankState).outerjoin(QuizBank, and_(
+        QuizBank.subject == Lecture.subject, QuizBank.run_id == Lecture.run_id)).outerjoin(BankState, and_(
+        BankState.subject == Lecture.subject, BankState.run_id == Lecture.run_id, BankState.user_id == user.id))
+        .where(tuple_(Lecture.subject, Lecture.run_id).in_(keys))).all()
+    by_key = {(lecture.subject, lecture.run_id): (lecture, row, state_row) for lecture, row, state_row in rows}
+    for key in keys:
+        if key not in by_key:
+            raise HTTPException(404, "선택한 강의를 찾을 수 없습니다.")
+        lecture, row, state_row = by_key[key]
+        if row is None or not user.is_admin and not row.open_to_students:
+            raise HTTPException(404, "선택한 강의에 공개된 문제은행이 없습니다.")
+        bank = _usable(row)
+        state = state_row.state if state_row and state_row.build_id == row.build_id else engine.empty_state()
+        entries.append({"key": key, "lecture": lecture, "row": row, "bank": bank, "state": state,
+                        "goal": lecture_goal(bank, state, lecture.title, now)})
+    return entries
+
+
+def _refresh_batch_entry(entry: dict, user: CurrentUser, db: Session) -> None:
+    state_row = db.get(BankState, (user.id, *entry["key"]))
+    entry["state"] = state_row.state if state_row else engine.empty_state()
+    entry["goal"] = lecture_goal(entry["bank"], entry["state"], entry["lecture"].title, engine.now_ms())
+
+
+def _batch_undo(entries: list[dict]) -> tuple[dict | None, str | None]:
+    available = [(entry, undo_token(entry["state"])) for entry in entries]
+    available = [(entry, token) for entry, token in available if token]
+    if not available:
+        return None, None
+    return max(available, key=lambda pair: pair[0]["state"]["history"][-1]["timestamp"])
+
+
+def _batch_reply(next_question: dict, entries: list[dict], chosen: dict | None) -> dict:
+    previous, token = _batch_undo(entries)
+    lecture = chosen["lecture"] if chosen else None
+    return {**next_question, "undoToken": token,
+            "lecture": {"subject": lecture.subject, "runId": lecture.run_id, "title": lecture.title} if lecture else None,
+            "batchGoal": aggregate_goal(entries, day_start(engine.now_ms())),
+            "undoLecture": {"subject": previous["key"][0], "runId": previous["key"][1]} if previous else None}
+
+
+@router.post("/bank/batch/next")
+def next_batch_question(payload: BatchIn, user: CurrentUser = Depends(require_approved_user),
+                         db: Session = Depends(get_db)) -> dict:
+    entries = _batch_entries(payload, user, db)
+    goal = aggregate_goal(entries, day_start(engine.now_ms()))
+    if goal["met"]:
+        for entry in entries:
+            state_row = db.get(BankState, (user.id, *entry["key"]))
+            if state_row and state_row.build_id == entry["row"].build_id:
+                _save(state_row, engine.end_session(entry["bank"], state_row.state, "lecture_goal_met", engine.now_ms()))
+        db.commit()
+        for entry in entries:
+            _refresh_batch_entry(entry, user, db)
+        return _batch_reply({"question": None, "summary": None, "reason": "lecture_goal_met"}, entries, None)
+    resume = (payload.resume_lecture.subject, payload.resume_lecture.run_id) if payload.resume_lecture else None
+    chosen = next((entry for entry in entries if entry["key"] == resume and entry["goal"]["remaining"]
+                   and (entry["state"].get("served") or {}).get("question_id") in {
+                       u["key"] for u in daily_units(entry["bank"], entry["state"], engine.now_ms()) if u["status"] == "pending"}), None)
+    chosen = chosen or choose_lecture(entries, resume)
+    if chosen is None:
+        raise HTTPException(409, "남은 문항을 선택할 수 없습니다. 강의 목록을 다시 확인하세요.")
+    state_row = _load_state(db, user, chosen["row"])
+    state = engine.start_session(chosen["bank"], state_row.state, None, engine.now_ms())
+    state["session"].update(size=None, continue_after_goal=False)
+    pending = {u["key"] for u in daily_units(chosen["bank"], state, engine.now_ms()) if u["status"] == "pending"}
+    if state.get("served") and state["served"]["question_id"] not in pending:
+        state["served"] = None
+    _save(state_row, state)
+    db.commit()
+    got = next_bank_question(*chosen["key"], user=user, db=db, target=90, shuffle=True, choice_protocol=True)
+    _refresh_batch_entry(chosen, user, db)
+    return _batch_reply(got, entries, chosen)
+
+
+@router.post("/bank/batch/undo")
+def undo_batch_question(payload: BatchUndoIn, user: CurrentUser = Depends(require_approved_user),
+                         db: Session = Depends(get_db)) -> dict:
+    entries = _batch_entries(payload, user, db)
+    chosen, token = _batch_undo(entries)
+    if chosen is None or token != payload.review_token:
+        raise HTTPException(409, "모아 풀기의 마지막 평가가 아닙니다.")
+    got = undo_bank_answer(*chosen["key"], TokenIn(reviewToken=token), user=user, db=db)
+    _refresh_batch_entry(chosen, user, db)
+    return _batch_reply(got, entries, chosen)
+
+
+@router.post("/bank/batch/session/end")
+def end_batch_session(payload: BatchIn, user: CurrentUser = Depends(require_approved_user),
+                       db: Session = Depends(get_db)) -> dict:
+    entries = _batch_entries(payload, user, db)
+    for entry in entries:
+        state_row = db.get(BankState, (user.id, *entry["key"]))
+        if state_row and state_row.build_id == entry["row"].build_id:
+            _save(state_row, engine.end_session(entry["bank"], state_row.state, "user_finished", engine.now_ms()))
+    db.commit()
+    return {"batchGoal": aggregate_goal(entries, day_start(engine.now_ms()))}

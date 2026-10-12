@@ -29,13 +29,14 @@ const letter = (index: number) => String.fromCharCode(65 + index);
 const bare = (item: string) => item.replace(/^[LR]\d+\s*[:.)]\s*/, "");
 
 /** 발문. cloze 빈칸은 답을 보면 채운다. */
-export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence }: {
+export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true }: {
   question: BankQuestion;
   answer: BankAnswer | null;
   picked: Set<string>;
   onPick: (id: string) => void;
   matching?: import("react").ReactNode;
   sequence?: import("react").ReactNode;
+  showOptions?: boolean;
 }) {
   const parts = q.format === "cloze" ? q.question.split(/(\{\{c\d+\}\})/g) : [q.question];
   let blank = 0;
@@ -55,7 +56,8 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
         })}
       </p>
       {q.format === "ox" && !answer ? <p className="bank-note">O 인가 X 인가, 그리고 왜인가</p> : null}
-      {q.options.length ? (
+      {q.mcq_mode === "recall_first" && !showOptions ? <p className="bank-note">기억 확인형 · 먼저 답을 떠올린 뒤 선지를 공개하세요.</p> : null}
+      {q.options.length && showOptions ? (
         <ul className="bank-options">
           {q.options.map((option) => {
             const correct = answer?.correctOptionIds.includes(option.id);

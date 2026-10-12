@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import { useMe } from "../useMe";
@@ -27,11 +27,21 @@ const RATINGS: { rating: BankRating; grade: string }[] = [
   { rating: "Easy", grade: "easy" },
 ];
 
-export function BankSolve({ base, lecture, onFinished }: {
+export type BatchStudy = {
+  lectures: { subject: string; runId: string }[];
+  resumeLecture?: { subject: string; runId: string };
+  onProgress: (next: BankNext) => void;
+};
+
+export function BankSolve({ base: initialBase, lecture: initialLecture, onFinished, batch }: {
   base: string; lecture: { subject: string; runId: string }; onFinished: (summary: BankSession | null) => void;
+  batch?: BatchStudy;
 }) {
   const isAdmin = Boolean(useMe()?.isAdmin);
   const [current, setCurrent] = useState<BankNext | null>(null);
+  const activeLecture = useRef(batch ? batch.resumeLecture ?? null : initialLecture);
+  const lecture = current?.lecture ?? initialLecture;
+  const base = batch ? `/api/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}/bank` : initialBase;
   const [answer, setAnswer] = useState<BankAnswer | null>(null);
   const [answerRevision, setAnswerRevision] = useState(0);
   const [picked, setPicked] = useState<Set<string>>(new Set());
@@ -45,12 +55,17 @@ export function BankSolve({ base, lecture, onFinished }: {
   // 회차를 끝내지 않고 지도와 진행도를 본다. 열 때마다 새로 읽는다 — 방금 매긴 평가가 숙련도에 들어가 있다.
   const [peek, setPeek] = useState<BankRead | null>(null);
   const restore = useCallback((got: BankNext) => {
+    if (got.lecture) activeLecture.current = got.lecture;
+    batch?.onProgress(got);
     setCurrent(got); setAnswer(got.answer ?? null); setPicked(new Set()); setReporting(false); setActionMessage("");
     setMatches({}); setActiveMatch(0);
     setOrder([]);
     window.scrollTo(0, 0);
-  }, []);
-  const { undo, undoBusy, pending } = useBankUndo(base, current?.undoToken, restore, setError, busy || Boolean(peek));
+  }, [batch]);
+  const batchUndo = useCallback((token: string) => api<BankNext>("/api/bank/batch/undo", {
+    method: "POST", body: JSON.stringify({ lectures: batch?.lectures, reviewToken: token }),
+  }), [batch]);
+  const { undo, undoBusy, pending } = useBankUndo(base, current?.undoToken, restore, setError, busy || Boolean(peek), batch ? batchUndo : undefined);
   const slides = useMemo(() => new SlidePreloader(), [base]);
   const prepared = usePreparedBankAnswer(base, current?.reviewToken, slides, answerRevision);
   useEffect(() => { slides.warm(current?.preloadSlides?.map((slide) => slide.url) ?? []); }, [current, slides]);
@@ -61,7 +76,11 @@ export function BankSolve({ base, lecture, onFinished }: {
     setBusy(true);
     setError("");
     try {
-      const got = await api<BankNext>(`${base}/next`, { method: "POST" });
+      const got = await api<BankNext>(batch ? "/api/bank/batch/next" : `${initialBase}/next?choiceProtocol=true`, {
+        method: "POST", ...(batch ? { body: JSON.stringify({ lectures: batch.lectures, resumeLecture: activeLecture.current }) } : {}),
+      });
+      if (got.lecture) activeLecture.current = got.lecture;
+      batch?.onProgress(got);
       invalidateTimetable();
       if (!got.question && !got.waiting) {
         onFinished(got.summary ?? null);
@@ -81,8 +100,20 @@ export function BankSolve({ base, lecture, onFinished }: {
       pending.current = false;
       setBusy(false);
     }
-  }, [base, onFinished]);
+  }, [initialBase, batch, onFinished]);
   useEffect(() => void next(), [next]);
+
+  const showChoices = useCallback(async () => {
+    if (!current?.reviewToken || busy || pending.current) return;
+    pending.current = true; setBusy(true); setError("");
+    try {
+      const got = await api<Pick<BankNext, "question" | "choicesShown">>(`${base}/options`, {
+        method: "POST", body: JSON.stringify({ reviewToken: current.reviewToken }),
+      });
+      setCurrent(old => old ? { ...old, ...got } : old);
+    } catch (cause) { setError((cause as Error).message); }
+    finally { pending.current = false; setBusy(false); }
+  }, [base, current, busy]);
 
   const reveal = useCallback(async () => {
     if (!current?.reviewToken || answer || busy || pending.current) return;
@@ -130,6 +161,11 @@ export function BankSolve({ base, lecture, onFinished }: {
     pending.current = true;
     setBusy(true);
     try {
+      if (batch) {
+        await api("/api/bank/batch/session/end", { method: "POST", body: JSON.stringify({ lectures: batch.lectures }) });
+        onFinished({ ...current.session, reason: "user_finished" });
+        return;
+      }
       const summary = await api<BankSession>(`${base}/session/end`, {
         method: "POST", body: JSON.stringify({ sessionId: current.session.session_id }),
       });
@@ -160,7 +196,8 @@ export function BankSolve({ base, lecture, onFinished }: {
       if (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, button, a, summary, [contenteditable]:not([contenteditable='false'])")) return;
       if ((event.key === " " || event.key === "Enter") && !answer) {
         event.preventDefault();
-        void reveal();
+        if (current?.question?.mcq_mode === "recall_first" && !current.choicesShown) void showChoices();
+        else void reveal();
       } else if (answer && ["1", "2", "3", "4"].includes(event.key)) {
         event.preventDefault();
         void rate(RATINGS[Number(event.key) - 1].rating);
@@ -168,7 +205,7 @@ export function BankSolve({ base, lecture, onFinished }: {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [answer, reveal, rate, peek]);
+  }, [answer, reveal, rate, peek, current, showChoices]);
 
   if (current?.waiting) return <div className="quiz bank-start">
     <h2>지금 풀 수 있는 분량을 마쳤어요!</h2>
@@ -178,8 +215,10 @@ export function BankSolve({ base, lecture, onFinished }: {
     {current.undoToken ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={() => void undo()} aria-keyshortcuts="Z Control+Z">되돌리기 <kbd>Z</kbd></button> : null}
     {error ? <p className="notice is-error">{error}</p> : null}
   </div>;
-  if (!current?.question) return error ? <p className="notice is-error">{error}</p> : <p className="notice">불러오는 중…</p>;
+  if (!current?.question) return error ? <div className="quiz"><p className="notice is-error">{error}</p>
+    <button onClick={() => void next()}>다시 시도</button></div> : <p className="notice">불러오는 중…</p>;
   const q = current.question;
+  const hiddenChoices = q.mcq_mode === "recall_first" && !current.choicesShown && !answer;
   const session = current.session;
 
   if (peek) {
@@ -190,7 +229,7 @@ export function BankSolve({ base, lecture, onFinished }: {
           <button className="is-quiet" onClick={() => setPeek(null)}>← 문제로 돌아가기</button>
           <span>{current.examDate ? daysLabel(current.examDate) : ""}</span>
         </p>
-        <DailyGoal plan={peek.lectureGoal} />
+        <DailyGoal plan={current.batchGoal ?? peek.lectureGoal} />
         {peek.conceptMap?.length ? <ConceptMap concepts={peek.conceptMap} /> : null}
         {live ? (
           <details className="bank-session-details"><summary>이번 학습 기록 보기</summary>
@@ -208,7 +247,7 @@ export function BankSolve({ base, lecture, onFinished }: {
   return (
     <>
       <div className="quiz">
-        <DailyGoal plan={current.lectureGoal} collapsible />
+        <DailyGoal plan={current.batchGoal ?? current.lectureGoal} collapsible />
         <p className="quiz-progress bank-progress">
           <span>
             {session ? session.size == null ? `${session.reviewed}문항 완료` : `${session.reviewed + 1} / ${session.size}` : ""}
@@ -216,12 +255,12 @@ export function BankSolve({ base, lecture, onFinished }: {
           </span>
           <span className="bank-tags">
             {q.tier} · {DIRECTION_LABEL[q.retrieval_direction] ?? q.retrieval_direction} ·{" "}
-            {FORMAT_LABEL[q.format] ?? q.format}
+            {q.mcq_mode === "recall_first" ? "기억 확인형 객관식" : q.mcq_mode === "comparison" ? "구별·판단형 객관식" : FORMAT_LABEL[q.format] ?? q.format}
           </span>
           <span className="bank-progress-actions">
             {current.undoToken ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={() => void undo()} aria-keyshortcuts="Z Control+Z">되돌리기 <kbd>Z</kbd></button> : null}
             <button className="is-quiet" onClick={() => void openPeek()}>개념 지도</button>
-            <button className="is-quiet" onClick={() => void end()}>회차 마치기</button>
+            <button className="is-quiet" onClick={() => void end()}>{batch ? "쉬기" : "회차 마치기"}</button>
           </span>
         </p>
 
@@ -229,7 +268,7 @@ export function BankSolve({ base, lecture, onFinished }: {
           <p className="bank-conflict">강의자료와 족보가 어긋나는 대목입니다. 답을 보면 무엇이 어떻게 다른지 나옵니다.</p>
         ) : null}
 
-        <QuestionBody question={q} answer={answer} picked={picked}
+        <QuestionBody question={q} answer={answer} picked={picked} showOptions={!hiddenChoices}
           sequence={q.format === "sequence" ? <SequenceQuestion question={q} answer={answer} order={order}
             disabled={busy || undoBusy} onSelect={item => {
               if (answer || busy || undoBusy) return;
@@ -297,8 +336,8 @@ export function BankSolve({ base, lecture, onFinished }: {
         ) : (
           <button className="quiz-submit" disabled={busy || undoBusy || (q.format === "matching"
             && !q.matching_left.every(left => q.matching_right.includes(matches[left])))
-            || (q.format === "sequence" && !sequenceComplete(q, order))} onClick={() => void reveal()}>
-            {busy ? "펴는 중…" : <>{q.format === "matching" || q.format === "sequence" ? "채점하기" : "답 보기"} <kbd>space</kbd></>}
+            || (q.format === "sequence" && !sequenceComplete(q, order))} onClick={() => void (hiddenChoices ? showChoices() : reveal())}>
+            {busy ? "펴는 중…" : <>{hiddenChoices ? "선지 보기" : q.format === "matching" || q.format === "sequence" ? "채점하기" : "답 보기"} <kbd>space</kbd></>}
           </button>
         )}
       </div>

@@ -9,7 +9,7 @@ export function DailyGoal({ plan, showMain = false, collapsible = false, onConti
 }) {
   if (!plan) return null;
   const heading = <div className="mastery-heading" role="status">
-      {plan.met && showMain ? <h2>오늘 목표 달성!</h2>
+      {plan.met && showMain ? <h2>새 카드와 오늘 복습 완료!</h2>
         : <strong>{plan.met ? "✓ 오늘 학습 완료" : `오늘 ${plan.remaining}문항 남았어요`}</strong>}
       <span>{plan.completed} / {plan.total} 완료</span>
     </div>;

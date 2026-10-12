@@ -5,6 +5,8 @@
 추가 학습의 평가는 숙련도에 반영하지만 오늘 달성한 분량을 되돌리지 않는다.
 """
 
+import random
+
 from .engine import question_stage, rank_questions, days_until
 from .planning import day_start
 from .memory import DAY_MS
@@ -86,7 +88,7 @@ def lecture_goal(bank: dict, state: dict, title: str, now: int, policy: dict = D
             "firstPassSeen": sum(u["seen"] for u in units), "firstPassTotal": len(units)}
 
 
-def select_daily_question(bank: dict, state: dict, exam: str, now: int, policy: dict = DEFAULT) -> dict:
+def select_daily_question(bank: dict, state: dict, exam: str, now: int, policy: dict = DEFAULT, *, shuffle: bool = False) -> dict:
     units = daily_units(bank, state, now, policy)
     remaining = [u for u in units if u["status"] not in ("done", "later")]
     unlearned = {u["key"] for u in units if not u["seen"]}
@@ -104,7 +106,8 @@ def select_daily_question(bank: dict, state: dict, exam: str, now: int, policy: 
     prioritized = [u for u in candidates if u["kind"] == "new"] or candidates
     prioritized.sort(key=lambda u: ({"Core": 0, "Advanced": 1, "Optional": 2}[u["questions"][0]["tier"]],
                               question_stage(u["questions"][0]), -scores[u["key"]], u["key"]))
-    question = prioritized[0]["questions"][0] if prioritized else None
+    chosen = random.choice(prioritized) if shuffle and prioritized else prioritized[0] if prioritized else None
+    question = chosen["questions"][0] if chosen else None
     if question:
         row = next(r for r in ranked if r["question_id"] == question["question_id"])
         row["notes"] += ["미학습 문항을 모두 먼저 확인한 뒤 예정된 복습을 진행합니다."] + row["reasons"]

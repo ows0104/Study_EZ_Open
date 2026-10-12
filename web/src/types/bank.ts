@@ -27,6 +27,8 @@ export type BankSummary = {
 };
 
 export type BankCoverage = {
+  pointCount?: number | null;
+  coveredPointCount?: number | null;
   status: "verified" | "partial" | "stale";
   totalPages: number;
   checkedPages: number;
@@ -54,6 +56,7 @@ export type BankRating = "Again" | "Hard" | "Good" | "Easy";
 
 /** 답이 빠진 문항. 답·채점 단위는 `reveal` 로만 온다. */
 export type BankQuestion = {
+  mcq_mode?: "recall_first" | "comparison" | "none";
   personalEdited?: boolean;
   question_id: string;
   concept_id: string;
@@ -226,6 +229,10 @@ export type BankConcept = {
 };
 
 export type BankNext = {
+  choicesShown?: boolean;
+  lecture?: { subject: string; runId: string; title?: string } | null;
+  batchGoal?: import("./studyPlan").LectureGoal | null;
+  undoLecture?: { subject: string; runId: string } | null;
   undoToken?: string | null;
   waiting?: boolean;
   lectureGoal?: import("./studyPlan").LectureGoal | null;

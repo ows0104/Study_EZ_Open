@@ -13,7 +13,7 @@ def coverage_summary(bank: dict, validation: dict) -> dict | None:
         return None
     current = report.get("bankHash") == bank_hash(bank)
     keys = ("status", "totalPages", "checkedPages", "excludedPages", "unreadablePages", "gapCount",
-            "addedQuestions", "addedMcq", "checkedAt", "sourceFilename")
+            "addedQuestions", "addedMcq", "checkedAt", "sourceFilename", "pointCount", "coveredPointCount", "extractedAt")
     issues = [{"page": row["page"], "note": row["note"],
                "facts": [point["fact"] for point in row.get("points", []) if point.get("status") == "gap"]}
               for row in report.get("pages", []) if row.get("status") == "unreadable"

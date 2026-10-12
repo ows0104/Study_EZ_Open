@@ -15,6 +15,9 @@ questions는 기존·새 개념 모두 참조할 수 있고 prerequisites는 현
 기존 단답형을 유지하면서 선지 판별이 필요한 내용을 더한다. 중복 표현이나 보기 순서만 바꾼 문항은 추가하지 않는다.
 mcq는 4~5개의 그럴듯한 보기, 정답 정확히 한 개를 갖는다. multi_select는 실제 정답 수와 correct_option_ids를 맞춘다.
 모든 선지에 option_explanations를 쓴다. 틀린 선지는 틀린 부분과 올바른 내용을 알려준다.
+mcq_mode는 학습 목표로 구분한다. 선지 없이 먼저 용어·약물·관계를 인출하는 기억 확인형은 recall_first,
+여러 선지를 비교하거나 참·거짓을 판단하는 과정이 목표인 구별·판단형은 comparison이다. 다른 형식은 none이다.
+두 유형 모두 실제 보기·정답·해설을 작성한다. 앱이 기억 확인형의 선지 공개를 늦춘다.
 옳지 않은 것을 고르면 거짓 선지가 정답이다. answer, answer_units, correct_option_ids, 해설을 서로 대조한다.
 option_pools는 비워도 된다. 안전한 참·거짓 쌍을 만들 수 있을 때만 원본에 근거해 추가한다.
 source_refs는 context의 source ID와 정확한 PDF 물리 쪽 번호(p.N)를 사용한다.

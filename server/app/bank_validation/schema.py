@@ -6,6 +6,8 @@ AdaptiveStudy3/bank_builder/schema.mjs 를 옮겼다(2026-10-04). 서버도 같�
 
 from __future__ import annotations
 
+from .choice_mode import choice_mode
+
 FORMATS = ["basic", "cloze", "list", "ox", "mcq", "multi_select", "matching", "sequence"]
 DIRECTIONS = ["direct", "reverse", "mechanism", "discrimination", "integration", "sequence", "trap"]
 TIERS = ["Core", "Advanced", "Optional"]
@@ -46,6 +48,7 @@ OPTION_POOL = _object({
 QUESTION = _object({
     "question_id": _STR, "concept_id": _STR, "tier": _enum(TIERS), "importance": _INT,
     "item_difficulty": _INT, "format": _enum(FORMATS), "retrieval_direction": _enum(DIRECTIONS),
+    "mcq_mode": _enum(["recall_first", "comparison", "none"]),
     "question": _STR, "answer": _STR, "answer_units": _STRS, "prerequisites": _STRS,
     "source_refs": _array(SOURCE_REF), "exam_rationale": _STR,
     "conflict_id": _STR, "options": _array(_object({"id": _STR, "text": _STR})),
@@ -92,8 +95,9 @@ def without_retired(bank: dict) -> dict:
     if isinstance(bank.get("concepts"), list):
         out["concepts"] = [{"graph_title": "", **c} if isinstance(c, dict) else c for c in bank["concepts"]]
     if isinstance(bank.get("questions"), list):
-        out["questions"] = [{"option_explanations": [], "option_pools": [],
-                             **{k: v for k, v in q.items() if k not in RETIRED_QUESTION}} if isinstance(q, dict) else q
+        out["questions"] = [{"option_explanations": [], "option_pools": [], "mcq_mode": choice_mode(q),
+                             **{k: v for k, v in q.items() if k not in RETIRED_QUESTION},
+                             "mcq_mode": choice_mode(q) if q.get("mcq_mode") in (None, "none") else q["mcq_mode"]} if isinstance(q, dict) else q
                             for q in bank["questions"]]
     if isinstance(bank.get("retrieval_plan"), list):
         out["retrieval_plan"] = [{k: v for k, v in p.items() if k not in RETIRED_PLAN} if isinstance(p, dict) else p

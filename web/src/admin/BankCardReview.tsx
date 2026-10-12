@@ -170,6 +170,7 @@ function QuestionEditor({ question, group, busy, onSave, onCancel }: {
   function field<K extends keyof BankFullQuestion>(key: K, value: BankFullQuestion[K]) { setQ(prev => ({ ...prev, [key]: value })); }
   function format(value: BankFormat) {
     setQ(prev => ({ ...prev, format: value,
+      mcq_mode: value === "mcq" || value === "multi_select" ? (prev.mcq_mode === "recall_first" ? "recall_first" : "comparison") : "none",
       options: value === "mcq" || value === "multi_select" ? prev.options : [],
       correct_option_ids: value === "mcq" || value === "multi_select" ? prev.correct_option_ids : [],
       option_pools: value === "mcq" || value === "multi_select" ? prev.option_pools : [],
@@ -203,6 +204,11 @@ function QuestionEditor({ question, group, busy, onSave, onCancel }: {
         </label>)}</div>
       </fieldset>
       {q.format === "mcq" || q.format === "multi_select" ? <>
+        <label>객관식 학습 유형<select value={q.mcq_mode === "recall_first" ? "recall_first" : "comparison"}
+          onChange={e => field("mcq_mode", e.target.value as BankFullQuestion["mcq_mode"])}>
+          <option value="recall_first">기억 확인형 · 먼저 인출 후 선지 공개</option>
+          <option value="comparison">구별·판단형 · 선지 처음부터 공개</option>
+        </select></label>
         <Pairs label="선택지" values={q.options.map(o => [o.id, o.text])} leftLabel="선택지 ID" rightLabel="선택지 내용" onChange={v => field("options", v.map(([id, text]) => ({ id, text })))} />
         <Lines label="정답 선택지 ID" values={q.correct_option_ids} onChange={v => field("correct_option_ids", v)} />
       </> : null}

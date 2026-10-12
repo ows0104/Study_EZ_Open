@@ -7,12 +7,17 @@ from app.models import BankPersonalEdit, QuizBank
 
 
 def revision(question: dict) -> str:
-    return hashlib.sha256(json.dumps(question, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+    content = {k: v for k, v in question.items() if k != "mcq_mode"}
+    return hashlib.sha256(json.dumps(content, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+
+def same_source(first: dict, second: dict) -> bool:
+    return {k: v for k, v in first.items() if k != "mcq_mode"} == {k: v for k, v in second.items() if k != "mcq_mode"}
 
 
 def apply(db: Session, row: QuizBank, user_id: str, question: dict) -> dict:
     edit = db.get(BankPersonalEdit, (user_id, row.subject, row.run_id, question["question_id"]))
-    if not edit or edit.original != question:
+    if not edit or not same_source(edit.original, question):
         return question
     answer_changed = edit.answer != question["answer"]
     out = {**question, "question": edit.question, "answer": edit.answer,

@@ -15,25 +15,9 @@ from studyez_llm.pdf import render
 from .generate import lecture_scope
 from .schema import BANK, without_retired
 from .validate import validate_bank
+from .points import PLAN, MATCH_REPORT, shape_plan, match_report
 
 PROMPTS = Path(__file__).parent / "prompts"
-
-
-def _object(fields: dict) -> dict:
-    return {"type": "object", "properties": fields, "required": list(fields), "additionalProperties": False}
-
-
-def _array(item: dict) -> dict:
-    return {"type": "array", "items": item}
-
-
-STR = {"type": "string"}
-POINT = _object({"fact": STR, "status": {"type": "string", "enum": ["covered", "gap"]},
-                 "question_ids": _array(STR)})
-REPORT = _object({"summary": STR, "pages": _array(_object({
-    "page": {"type": "integer"}, "status": {"type": "string", "enum": ["checked", "excluded", "unreadable"]},
-    "note": STR, "points": _array(POINT)})),
-    "mcq_opportunities": _array(_object({"page": {"type": "integer"}, "fact": STR, "reason": STR}))})
 
 
 def bank_hash(bank: dict) -> str:
@@ -126,7 +110,9 @@ def audit_and_supplement(bank: dict, pdf: Path, title: str, sources: list[dict],
             raise codex.SessionError("원본 대조: PDF가 비어 있습니다.")
         text = "\n\n".join(f"## {pdf_source} PDF p.{i + 1}\n{page.get_text()}" for i, page in enumerate(doc))
     (work / "source-text.md").write_text(text, encoding="utf-8")
-    images = render(pdf, f"1-{count}", work / "source-pages")
+    plan_work = work / "point-extraction"
+    plan_work.mkdir(exist_ok=True)
+    images = render(pdf, f"1-{count}", plan_work / "source-pages")
     (work / "source-pages.json").write_text(json.dumps([str(p.resolve()) for p in images]), encoding="utf-8")
     context = {"title": title, "sources": sources, "pdf_source": pdf_source, "page_count": count,
                "scope": lecture_scope(title, sources), "has_jokbo": jokbo is not None}
@@ -136,11 +122,25 @@ def audit_and_supplement(bank: dict, pdf: Path, title: str, sources: list[dict],
     bank = without_retired(bank)
     usage = []
 
+    # 이 작업 폴더에는 문제은행을 두지 않는다. 원본에서 포인트를 먼저 추출한다.
+    for name in ("context.json", "source-text.md", "source-pages.json", "jokbo.md"):
+        source = work / name
+        if source.is_file():
+            (plan_work / name).write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+    raw_plan, info = _call((PROMPTS / "points.md").read_text(encoding="utf-8"), PLAN, plan_work, model, "① 出제 포인트 추출")
+    plan = shape_plan(raw_plan, count)
+    usage.append({"step": "출제 포인트 추출", **info})
+    (work / "point-plan.json").write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
+
     def inspect(current: dict, label: str) -> dict:
         (work / "bank.json").write_text(json.dumps(current, ensure_ascii=False), encoding="utf-8")
-        report, info = _call((PROMPTS / "coverage.md").read_text(encoding="utf-8"), REPORT, work, model, label)
+        (work / "point-plan.json").write_text(json.dumps(plan, ensure_ascii=False), encoding="utf-8")
+        output, info = _call((PROMPTS / "coverage.md").read_text(encoding="utf-8"), MATCH_REPORT, work, model, label)
+        report = match_report(output, current, plan, count)
         usage.append({"step": label, **info})
-        return shape_report(report, current, count)
+        shaped = shape_report(report, current, count)
+        shaped["gapCount"] = report["gapCount"]
+        return shaped
 
     initial = inspect(bank, "원본 누락 검증")
     (work / "before.json").write_text(json.dumps(initial, ensure_ascii=False, indent=2), encoding="utf-8")

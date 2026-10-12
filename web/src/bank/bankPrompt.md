@@ -1,10 +1,12 @@
 <!--
 Bank Builder 프롬프트 — 정본
-Version: 1.26
+Version: 1.27
 
 이 파일이 ChatGPT에 가는 프롬프트의 정본이다. 이 주석은 보내지 않는다.
 {{…}} 자리는 web/src/bank/prompt.ts 가 강의마다 채운다. {{c1}} 같은 cloze 표기는 그대로 간다.
 고치면 아래에 판을 하나 올리고 Version 을 같이 올린다. 서버에 응답이 저장될 때 이 Version 이 같이 남는다.
+
+1.27 (2026-10-13) 객관식의 기억 확인형·구별 판단형을 학습 목표에 따라 명시한다.
 
 1.26 (2026-10-12) V1 풀이·복습 계산을 복원하고 문항 품질 검사와 검토된 보기 조합 변형을 유지한다.
 
@@ -251,6 +253,13 @@ Concept Map과 Retrieval Plan을 바탕으로 문제를 만들어라.
 - 고난도 문제는 comparison, reverse retrieval, mechanism, integration에서 만들어라.
 
 ## 객관식 보기와 참·거짓 변형
+
+객관식과 복수 선택에는 `mcq_mode`를 반드시 지정한다.
+- `recall_first` (기억 확인형): 선지 없이도 질문만 보고 용어·약물·표적·관계를 먼저 인출할 수 있고, 선지는 기억을 확인하는 역할이다. 먼저 발문만 보여 주고 「선지 보기」 후 선택·정답을 확인한다.
+- `comparison` (구별·판단형): 여러 약물·조건·예외를 비교하거나 선지별 참·거짓을 판단하는 과정 자체가 학습 목표다. 선지를 처음부터 공개한다.
+어휘 하나로 분류하지 말고 무엇을 학습시키는지 판단한다. 「어떤 약물이 DNA gyrase를 억제하는가」는 기억 확인형이고, 「다음 항생제 중 신독성이 가장 문제 되는 것은」처럼 대상을 비교하는 발문은 구별·판단형이다.
+두 유형 모두 실제 선지와 정답·모든 선지의 해설을 작성한다. 선지를 숨기는 것은 앱의 역할이며 출제 응답에서 보기를 생략하지 않는다.
+객관식이 아닌 형식은 `mcq_mode=none`으로 쓴다.
 
 구분할 가치가 있는 약물·표적·기전·효과·적응증·부작용·예외에는 짧은 atomic 문항에 더해 **객관식 변형을 적극적으로 추가**해라.
 하나의 대표 객관식으로 끝내지 말고, 같은 개념에서도 다른 오개념·비교 대상·조건을 시험할 수 있으면 여러 문항을 은행에 보존한다.
@@ -581,7 +590,7 @@ Retrieval Plan에 적은 각 direction에도 대응하는 문항이 있어야 �
 
 Core → Advanced → Optional 순서로 **문항당 한 행**. 모든 문항을 이 표에 넣는다. 열은 이 순서:
 
-`question_id | concept_id | tier | importance | item_difficulty | format | retrieval_direction | question | answer | answer_units | prerequisites | source_refs | exam_rationale | conflict_id`
+`question_id | concept_id | tier | importance | item_difficulty | format | retrieval_direction | mcq_mode | question | answer | answer_units | prerequisites | source_refs | exam_rationale | conflict_id`
 
 - question_id는 은행 전체에서 유일하며 상세 표와 prerequisites에서도 같은 ID를 쓴다.
 - importance·item_difficulty: 1–5. concept의 값으로 자동 대체하지 말고 문항별로 평가한다.

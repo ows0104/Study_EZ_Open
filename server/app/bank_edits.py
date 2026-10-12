@@ -44,7 +44,8 @@ def reapply(bank: dict, validation: dict, previous: dict, source_ids: list[str])
     for qid, edit in previous.get("edits", {}).items():
         question = incoming.get(qid)
         if question and without_retired({"questions": [question]})["questions"][0] in (
-            edit["original"], edit.get("question")
+            without_retired({"questions": [edit["original"]]})["questions"][0],
+            without_retired({"questions": [edit["question"]]})["questions"][0] if edit.get("question") else None
         ):
             edits[qid] = edit
     if not edits:

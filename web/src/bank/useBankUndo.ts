@@ -4,7 +4,8 @@ import { invalidateTimetable } from "../firstScreen";
 import type { BankNext } from "../types/bank";
 
 export function useBankUndo(base: string, token: string | null | undefined,
-  onRestore: (next: BankNext) => void, onError: (error: string) => void, disabled = false) {
+  onRestore: (next: BankNext) => void, onError: (error: string) => void, disabled = false,
+  requestUndo?: (token: string) => Promise<BankNext>) {
   const [undoBusy, setUndoBusy] = useState(false);
   const pending = useRef(false);
   const undo = useCallback(async () => {
@@ -13,14 +14,14 @@ export function useBankUndo(base: string, token: string | null | undefined,
     setUndoBusy(true);
     onError("");
     try {
-      const restored = await api<BankNext>(`${base}/undo`, {
+      const restored = requestUndo ? await requestUndo(token) : await api<BankNext>(`${base}/undo`, {
         method: "POST", body: JSON.stringify({ reviewToken: token }),
       });
       invalidateTimetable();
       onRestore(restored);
     } catch (cause) { onError((cause as Error).message); }
     finally { pending.current = false; setUndoBusy(false); }
-  }, [base, token, onRestore, onError, disabled]);
+  }, [base, token, onRestore, onError, disabled, requestUndo]);
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (!token || disabled || event.defaultPrevented || event.repeat || event.isComposing

@@ -117,6 +117,8 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
     seen: set[tuple[str, str, tuple[str, ...]]] = set()
     for q in bank["questions"]:
         label = q["question_id"]
+        fail(q["mcq_mode"] in ("recall_first", "comparison") if q["format"] in ("mcq", "multi_select")
+             else q["mcq_mode"] == "none", f"{label}: 객관식 학습 유형이 문항 형식과 맞지 않습니다.")
         errors.extend(option_pool_errors(q, ids))
         explanations = q["option_explanations"]
         if explanations:
