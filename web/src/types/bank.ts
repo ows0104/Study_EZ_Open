@@ -4,6 +4,7 @@
 // 문항 필드 이름은 서버가 저장한 꼴 그대로(snake_case)다 — 은행 JSON 을 옮겨 적지 않고 싣는다.
 
 export type BankSummary = {
+  coverage?: BankCoverage | null;
   status: "responded" | "building" | "ready" | "invalid" | "failed";
   open: boolean;
   buildId: string;
@@ -23,6 +24,20 @@ export type BankSummary = {
   errorCount?: number;
   /** 검증에 걸려 빼고 연 문항(2026-10-05 — 「걸린 문항만 빼고 연다」). */
   dropped?: { questionId: string; errors: string[] }[];
+};
+
+export type BankCoverage = {
+  status: "verified" | "partial" | "stale";
+  totalPages: number;
+  checkedPages: number;
+  excludedPages: number;
+  unreadablePages: number;
+  gapCount: number;
+  addedQuestions: number;
+  addedMcq: number;
+  checkedAt: string;
+  sourceFilename: string;
+  issues?: { page: number; note: string; facts: string[] }[];
 };
 
 export type BankSource = {

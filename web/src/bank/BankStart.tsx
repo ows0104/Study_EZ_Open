@@ -5,6 +5,7 @@ import { lectureHref } from "../links";
 import type { BankRead, BankSession } from "../types/bank";
 import { ConceptMap } from "./ConceptMap";
 import { DailyGoal } from "./DailyGoal";
+import { BankCoverage } from "./BankCoverage";
 import { LectureMastery } from "../lecture/LectureMastery";
 import { daysLabel, DIRECTION_LABEL } from "./labels";
 
@@ -48,8 +49,10 @@ export function BankStart({ base, info, finished, lecture, onStarted, onUndo, un
           {busy ? "여는 중…" : finished ? "계속 공부하기" : "학습 시작"}
         </button> : null}
       </header>
+      <p className="bank-note">이 강의의 새 카드를 먼저 보고 예정된 복습을 이어갑니다. <Link to="/study">여러 강의 모아 풀기</Link></p>
       <DailyGoal plan={info.lectureGoal} showMain={info.lectureGoal?.met}
         onContinue={() => void start()} busy={busy} />
+      <BankCoverage value={info.summary.coverage} />
       {error ? <p className="notice is-error">{error}</p> : null}
       {info.conceptMap?.length ? <ConceptMap concepts={info.conceptMap} /> : <LectureMastery value={info.mastery} />}
       <div className="bank-start-row bank-secondary-actions">

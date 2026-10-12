@@ -16,6 +16,7 @@ import type { LectureDetail, LectureRef } from "../types/lectures";
 import type { PrequizJob, RunnerBeat } from "../types/jobs";
 import { useMe } from "../useMe";
 import { BANK_PROMPT_VERSION, renderBankPrompt } from "./prompt";
+import { BankCoverage } from "./BankCoverage";
 
 /**
  * 캘린더 패널의 Quiz Bank 칸(2026-10-04).
@@ -191,6 +192,18 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
     }
   }
 
+  async function audit() {
+    setBusy("audit");
+    setError("");
+    try {
+      await api(`${adminBase}/bank/audit`, { method: "POST" });
+      setNote("원본 누락 검증·객관식 보강을 요청했습니다. 현재 카드로 계속 공부할 수 있습니다.");
+      load();
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally { setBusy(""); }
+  }
+
   async function setOpen(open: boolean) {
     setBusy("open");
     setError("");
@@ -222,6 +235,12 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
   return (
     <>
       {bank?.usable ? <StudyCard lecture={lecture} bank={bank} /> : null}
+      {bank?.usable ? <>
+        <button disabled={Boolean(busy) || moving} onClick={() => void audit()}>
+          {busy === "audit" ? "요청 중…" : "누락 검증·객관식 보강"}
+        </button>
+        <BankCoverage value={bank.coverage} />
+      </> : null}
       <ActionCard
         shape="is-key"
         hit={

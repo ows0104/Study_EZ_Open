@@ -117,10 +117,12 @@ def run(client: publish.Client, root: Path, subject: str, run_id: str, this_year
     _stage("응답 받기")
     got = client.call("GET", f"{base}/bank-response")
     responded = got["respondedAt"]
+    maintenance = got.get("existingBank") is not None
 
     def fail(why: str) -> int:
         try:
-            client.call("PUT", f"{base}/bank", {"respondedAt": responded, "message": why})
+            client.call("PUT", f"{base}/bank", {"respondedAt": responded, "message": why,
+                        **({"baseBuildId": got["baseBuildId"]} if maintenance else {})})
         except publish.PublishError as e:
             print(f"  (실패를 서버에 적지 못했다: {e})", flush=True)
         print(f"멈췄다 — {why}", flush=True)
@@ -129,12 +131,18 @@ def run(client: publish.Client, root: Path, subject: str, run_id: str, this_year
     pdf = _notes_pdf(root, subject, this_year, prev_year, runs_dir, run_id)
     if pdf is None:
         return fail(f"{run_id} 의 올해 필기 PDF 를 노트북에서 못 찾았다")
+    current_source = next((s for s in got.get("sources", []) if s["kind"] == "notes_current"), None)
+    if current_source and current_source["filename"] != pdf.name:
+        return fail("서버의 올해 필기와 로컬 PDF 파일명이 다릅니다. 자료 동기화 후 다시 요청하세요.")
 
     out = runs_dir / run_id / "bank" / time.strftime("%y%m%d-%H%M%S")
     out.mkdir(parents=True, exist_ok=True)
     raw = out / "raw.md"
+    existing = out / "existing-bank.json"
+    if maintenance:
+        existing.write_text(json.dumps(got["existingBank"], ensure_ascii=False), encoding="utf-8")
     generation_usage = []
-    if not got.get("raw"):
+    if not got.get("raw") and not maintenance:
         # 동기화 중인 PDF로 출제하지 않는다. 부모 러너가 대기 중에도 취소를 받는다.
         left = watch.MIN_AGE_SECONDS - (time.time() - pdf.stat().st_mtime)
         if left > 0:
@@ -164,11 +172,18 @@ def run(client: publish.Client, root: Path, subject: str, run_id: str, this_year
             "raw": got["raw"], "respondedAt": responded,
             "promptVersion": generated["promptVersion"]})
         generation_usage = generated.get("usage", [])
-    raw.write_text(got["raw"], encoding="utf-8")
+    raw.write_text(got.get("raw") or "", encoding="utf-8")
     argv = [sys.executable, "-m", "quizbank.run", str(raw), "--pdf", str(pdf), "--title", got["title"],
             "--run-id", run_id, "--out", str(out)]
     if got.get("promptVersion"):
         argv += ["--prompt-version", got["promptVersion"]]
+    if maintenance:
+        argv += ["--existing-bank", str(existing)]
+    if any(s["kind"] == "jokbo" for s in got.get("sources", [])):
+        slices = jokbo_slices(runs_dir, subject, {run_id: pdf})
+        if run_id not in slices:
+            return fail("등록된 족보 조각을 노트북에서 못 찾았다")
+        argv += ["--jokbo", str(slices[run_id])]
     for s in got.get("sources") or [{"id": "S1", "kind": "notes_current", "filename": pdf.name}]:
         argv += ["--source", f"{s['id']}|{s['kind']}|{s['filename']}"]
     if model:
@@ -186,6 +201,7 @@ def run(client: publish.Client, root: Path, subject: str, run_id: str, this_year
              if line.strip()] if (out / "usage.jsonl").is_file() else []
     answer = client.call("PUT", f"{base}/bank", {
         "respondedAt": responded, "bank": _read(out / "bank.json"), "validation": _read(out / "validation.json"),
+        **({"baseBuildId": got["baseBuildId"]} if maintenance else {}),
         "review": _read(out / "review.json"), "pages": _read(out / "pages.json") or {}, "usage": generation_usage + usage,
         "message": "" if result["pass"] else f"검증 오류 {result['errors']}건"})
     print(f"Quiz Bank {run_id}: {answer.get('status')} · 문항 {result['questions']} · 검토 {result['review']}"

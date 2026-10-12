@@ -35,7 +35,7 @@ def with_edits(bank: dict, validation: dict, edits: dict, source_ids: list[str])
         if isinstance(q.get("prerequisites"), list):
             q["prerequisites"] = [p for p in q["prerequisites"] if p not in deleted]
     clean, checked = validate_dropping(draft, source_ids)
-    return clean, {**checked, "edits": edits}
+    return clean, {**{k: v for k, v in validation.items() if k not in ("maintenance", "dropped")}, **checked, "edits": edits}
 
 
 def reapply(bank: dict, validation: dict, previous: dict, source_ids: list[str]) -> tuple[dict, dict]:

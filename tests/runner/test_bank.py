@@ -165,6 +165,7 @@ def test_정리해서_슬라이드와_결과를_올린다(tmp_path, monkeypatch,
     monkeypatch.setattr(publish, "plan_subject", lambda *a, **k: ([SimpleNamespace(run_id="261002_02",
                                                                                    item=SimpleNamespace(path=pdf))], []))
     monkeypatch.setattr(subprocess, "run", _fake_quizbank(True))
+    monkeypatch.setattr(bank, "jokbo_slices", lambda *args: {"261002_02": tmp_path / "j.md"})
     client = FakeClient()
     assert bank.run(client, tmp_path, "약리학", "261002_02", "2026", "2025", tmp_path) == 0
     puts = [c for c in client.calls if c[0] == "PUT"]

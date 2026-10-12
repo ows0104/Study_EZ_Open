@@ -26,11 +26,11 @@ import sys
 import time
 from pathlib import Path
 
-from . import organize, review, slides
+from . import coverage, organize, review, slides
 from .session import SessionError
 from .validate import validate_dropping
 
-OUTPUTS = ("bank.json", "bank.raw.json", "validation.json", "review.json", "pages.json", "result.json", "usage.jsonl")
+OUTPUTS = ("bank.json", "bank.raw.json", "validation.json", "review.json", "coverage.json", "pages.json", "result.json", "usage.jsonl")
 
 
 def _write(path: Path, data) -> None:
@@ -53,7 +53,8 @@ def parse_source(text: str) -> dict:
 
 def run(raw_path: Path, pdf: Path | None, title: str, run_id: str, sources: list[dict], out: Path,
         *, pdf_source: str = "S1", do_review: bool = True, model: str | None = None,
-        prompt_version: str = "") -> dict:
+        prompt_version: str = "", existing_bank: Path | None = None,
+        do_coverage: bool = True, jokbo: Path | None = None) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     # 지난 실행이 남긴 것을 이번 것으로 읽지 않는다 (루트 CLAUDE.md 함정 ②).
     for name in OUTPUTS:
@@ -64,9 +65,12 @@ def run(raw_path: Path, pdf: Path | None, title: str, run_id: str, sources: list
     lecture = {"title": title, "sources": sources, "prompt_version": prompt_version}
 
     _stage("정리")
-    bank, info = organize.organize(raw, lecture, model=model)
+    if existing_bank is None:
+        bank, info = organize.organize(raw, lecture, model=model)
+        _usage(out, "정리", info)
+    else:
+        bank = json.loads(existing_bank.read_text(encoding="utf-8"))
     _write(out / "bank.json", bank)
-    _usage(out, "정리", info)
 
     _stage("검증")
     # 걸린 문항만 빼고 다시 잰다 — 뺀 은행을 `bank.json` 에 다시 쓴다. 빼기 전 것은 `bank.raw.json`.
@@ -83,6 +87,18 @@ def run(raw_path: Path, pdf: Path | None, title: str, run_id: str, sources: list
                     "errors": len(validation["errors"]), "warnings": len(validation["warnings"]),
                     "review": None, "slides": 0, "missing_pages": []}
     if validation["pass"]:
+        if pdf is not None and do_coverage:
+            _stage("원본 누락 검증·객관식 보강")
+            bank, checked, usage = coverage.audit_and_supplement(
+                bank, pdf, title, sources, out, model=model, pdf_source=pdf_source, jokbo=jokbo)
+            # 보강은 validate_bank를 통과한 추가분만 합친다. 원본 대조 결과는 형식 통과와 별도다.
+            validation["coverage"] = checked
+            _write(out / "bank.json", bank)
+            _write(out / "validation.json", validation)
+            for entry in usage:
+                _usage(out, entry["step"], {key: value for key, value in entry.items() if key != "step"})
+            result["questions"] = len(bank["questions"])
+            result["coverage"] = {key: checked[key] for key in ("status", "gapCount", "unreadablePages", "addedQuestions", "addedMcq")}
         if do_review:
             _stage("외부지식 검토")
             checked, info = review.review(bank, title, model=model)
@@ -111,6 +127,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pdf-source", default="S1")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--no-review", action="store_true")
+    ap.add_argument("--no-coverage", action="store_true", help="원본 대조·보강 생략 (검증 완료로 표시하지 않음)")
+    ap.add_argument("--existing-bank", type=Path, help="기존 문항을 재정리하지 않고 원본 대조·추가만 수행")
+    ap.add_argument("--jokbo", type=Path, help="범위에 해당하는 족보 조각")
     ap.add_argument("--model")
     ap.add_argument("--prompt-version", default="")
     args = ap.parse_args(argv)
@@ -118,7 +137,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         result = run(args.raw, args.pdf, args.title, args.run_id, sources, args.out,
                      pdf_source=args.pdf_source, do_review=not args.no_review, model=args.model,
-                     prompt_version=args.prompt_version)
+                     prompt_version=args.prompt_version, existing_bank=args.existing_bank,
+                     do_coverage=not args.no_coverage, jokbo=args.jokbo)
     except SessionError as e:
         print(f"멈췄다 — {e}", flush=True)
         return 1

@@ -32,6 +32,8 @@ from app import bank_edits
 from app import bank_personal
 from app.bank_validation.pages import cited_pages
 from app.bank_validation.schema import QUESTION, schema_errors, without_retired
+from app.bank_validation.coverage import coverage_summary
+from app.bank_validation.validate import validate_bank
 from app.auth import CurrentUser, require_admin, require_approved_user, require_runner
 from app.database import get_db
 from app.lecture_mastery import for_bank
@@ -137,7 +139,13 @@ def summary(db: Session, lecture: Lecture, row: QuizBank | None, *, is_admin: bo
         "questionCount": len(bank.get("questions", [])), "conceptCount": len(bank.get("concepts", [])),
         "builtAt": _iso(row.built_at), "usable": bool(row.bank and (row.validation or {}).get("pass")),
         **panel_progress(bank, current),
+        "coverage": coverage_summary(bank, row.validation or {}),
     }
+    if out["coverage"]:
+        source = db.scalars(select(Asset).where(Asset.subject == lecture.subject, Asset.run_id == lecture.run_id,
+                                              Asset.kind == "notes_current")).first()
+        if source is None or source.filename != out["coverage"].get("sourceFilename"):
+            out["coverage"]["status"] = "stale"
     if is_admin:
         review = row.review or {}
         out.update(respondedAt=_iso(row.responded_at), promptVersion=row.prompt_version, message=row.message,
@@ -171,6 +179,9 @@ def put_bank_response(subject: str, run_id: str, payload: ResponseIn,
         row = QuizBank(subject=lecture.subject, run_id=lecture.run_id)
         db.add(row)
     row.raw_response = payload.raw
+    # 새 원문에는 이전 보강 요청을 이어 붙이지 않는다.
+    if (row.validation or {}).get("maintenance"):
+        row.validation = {k: v for k, v in row.validation.items() if k != "maintenance"}
     row.conversation_url = payload.conversation_url
     row.prompt_version = payload.prompt_version
     row.responded_by = user.email or user.id
@@ -198,7 +209,9 @@ def get_bank_response(subject: str, run_id: str, user: CurrentUser = Depends(req
     row.status = BANK_BUILDING
     row.message = "러너가 정리하는 중"
     db.commit()
+    maintenance = (row.validation or {}).get("maintenance")
     return {"raw": row.raw_response, "respondedAt": _iso(row.responded_at), "promptVersion": row.prompt_version,
+            **({"existingBank": row.bank, "baseBuildId": row.build_id} if maintenance else {}),
             "examDate": exam_date_for(db, lecture),
             "title": lecture.title, "sources": [{k: s[k] for k in ("id", "kind", "filename")}
                                                 for s in bank_sources(db, lecture)]}
@@ -236,6 +249,7 @@ class BankIn(BaseModel):
     pages: dict[str, list[int]] | None = None
     usage: list[dict] | None = None
     message: str = Field(default="", max_length=2000)
+    base_build_id: str | None = Field(None, alias="baseBuildId")
 
     model_config = {"populate_by_name": True}
 
@@ -250,26 +264,67 @@ def put_bank(subject: str, run_id: str, payload: BankIn, user: CurrentUser = Dep
                      .with_for_update()).first()
     if row is None or _iso(row.responded_at) != payload.responded_at:
         raise HTTPException(409, "그 사이 새 응답이 저장됐습니다. 새 응답으로 다시 정리하세요.")
+    maintenance = payload.base_build_id is not None
+    if (row.validation or {}).get("maintenance") and not maintenance:
+        raise HTTPException(409, "보강 요청에는 현재 은행을 유지하는 새 러너의 결과가 필요합니다.")
+    if maintenance and (row.build_id != payload.base_build_id or not (row.validation or {}).get("maintenance")):
+        raise HTTPException(409, "보강 대상이 바뀌었습니다. 현재 은행으로 다시 요청하세요.")
     if payload.bank is None or payload.validation is None:
-        row.status = BANK_FAILED
+        row.status = BANK_READY if maintenance else BANK_FAILED
+        if maintenance:
+            row.validation = {k: v for k, v in (row.validation or {}).items() if k != "maintenance"}
         row.message = payload.message or "정리에 실패했다"
         db.commit()
         return {"status": row.status}
     source_ids = [s["id"] for s in bank_sources(db, lecture)]
-    row.bank, row.validation = bank_edits.reapply(
+    incoming, checked = bank_edits.reapply(
         payload.bank, payload.validation, row.validation or {}, source_ids)
+    if maintenance:
+        old_questions = without_retired(row.bank)["questions"]
+        incoming_questions = {q["question_id"]: q for q in without_retired(incoming)["questions"]}
+        if any(incoming_questions.get(q["question_id"]) != q for q in old_questions):
+            raise HTTPException(422, "보강은 기존 질문과 정답을 그대로 유지해야 합니다.")
+        if not validate_bank(incoming, source_ids)["pass"] or not checked.get("pass"):
+            raise HTTPException(422, "보강본의 문항 검증을 통과해야 합니다.")
+    row.bank, row.validation = incoming, checked
     row.review = payload.review
     row.pages, row.usage = payload.pages or {}, payload.usage or []
     if (row.validation or {}).get("edits"):
         row.pages = cited_pages(row.bank, "S1")
-    row.build_id = uuid.uuid4().hex[:16]
+    if not maintenance:
+        row.build_id = uuid.uuid4().hex[:16]
     row.built_at = datetime.now(UTC)
     row.status = BANK_READY if row.validation.get("pass") else BANK_INVALID
-    row.open_to_students = row.status == BANK_READY
+    if not maintenance:
+        row.open_to_students = row.status == BANK_READY
     row.message = payload.message or (
         "" if row.status == BANK_READY else f"검증 오류 {len(payload.validation.get('errors', []))}건")
     db.commit()
     return {"status": row.status, "buildId": row.build_id}
+
+
+@admin_router.post("/lectures/{subject}/{run_id}/bank/audit")
+def request_bank_audit(subject: str, run_id: str, user: CurrentUser = Depends(require_admin),
+                       db: Session = Depends(get_db)) -> dict:
+    lecture = lecture_or_404(db, subject, run_id)
+    row = db.scalars(select(QuizBank).where(QuizBank.subject == subject, QuizBank.run_id == run_id)
+                     .with_for_update()).first()
+    if row is None:
+        raise HTTPException(404, "먼저 문제은행을 준비하세요.")
+    _usable(row)
+    job = open_job_of(db, subject, run_id, JOB_BANK)
+    if job:
+        if (row.validation or {}).get("maintenance"):
+            return {"jobId": job.id, "created": False}
+        raise HTTPException(409, "진행 중인 생성 작업이 끝난 뒤 검증하세요.")
+    if not any(s["kind"] == "notes_current" for s in bank_sources(db, lecture)):
+        raise HTTPException(400, "원본 올해 필기 PDF가 필요합니다.")
+    row.validation = {**(row.validation or {}), "maintenance": {"buildId": row.build_id}}
+    job = PrequizJob(subject=subject, run_id=run_id, kind=JOB_BANK, state=JOB_QUEUED, force=True,
+                     stage="원본 누락 검증·객관식 보강 대기", requested_by=user.email or user.id, origin=JOB_BUTTON)
+    db.add(job)
+    db.commit()
+    return {"jobId": job.id, "created": True}
 
 
 class OpenIn(BaseModel):
@@ -372,7 +427,7 @@ def edit_bank_card(subject: str, run_id: str, question_id: str, payload: BankCar
                      .with_for_update()).first()
     if row is None or not row.bank:
         raise HTTPException(404, "문제은행이 없습니다.")
-    if row.status in (BANK_RESPONDED, BANK_BUILDING):
+    if row.status in (BANK_RESPONDED, BANK_BUILDING) or (row.validation or {}).get("maintenance"):
         raise HTTPException(409, "정리가 끝난 뒤 수정하세요.")
     validation = row.validation or {}
     current = bank_edits.candidates(row.bank, validation).get(question_id)
@@ -615,6 +670,7 @@ def read_bank(subject: str, run_id: str, user: CurrentUser = Depends(require_app
 class StartIn(BaseModel):
     size: int | None = None
     continue_after_goal: bool = Field(False, alias="continueAfterGoal")
+    daily_only: bool = Field(False, alias="dailyOnly")
 
 
 @router.post("/lectures/{subject}/{run_id}/bank/session/start")
@@ -629,6 +685,9 @@ def start_bank_session(subject: str, run_id: str, payload: StartIn,
         # 재개 요청으로 진행 중 회차의 종료 방식을 덮어쓰지 않는다.
         if (state.state.get("session") or {}).get("status") != "active":
             started["session"]["continue_after_goal"] = payload.continue_after_goal
+        if payload.daily_only:
+            # 모아 풀기는 열린 회차도 문항 수 제한 없이 오늘 분량까지만 이어간다.
+            started["session"].update(size=None, continue_after_goal=False)
         _save(state, started)
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
