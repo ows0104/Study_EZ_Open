@@ -72,7 +72,7 @@ def validate_policy(p: dict, template: dict | None = None) -> dict:
     if not e["closeDays"] < e["middleDays"] < e["farDays"]:
         raise ValueError("시험 단계 경계 순서 오류")
     counts = [p["remediation"]["maxReviews"], p["recency"]["window"], p["recency"]["diversityWindow"],
-              p["session"]["defaultSize"], *p["session"]["sizes"], p["daily"]["newLimit"]]
+              p["session"]["defaultSize"], *p["session"]["sizes"]]
     if any(not isinstance(n, int) or not 1 <= n <= 1000 for n in counts):
         raise ValueError("횟수/회차 크기 범위 오류")
     if p["session"]["defaultSize"] not in p["session"]["sizes"] or any(

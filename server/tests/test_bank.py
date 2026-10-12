@@ -385,7 +385,7 @@ def main() -> None:
     extra = client.post(f"{BASE}/bank/next").json()
     check("Real extra study can continue after full daily coverage", extra["question"] is not None and extra["lectureGoal"]["met"])
 
-    print("12. Daily quota completes before the unseen pool is exhausted")
+    print("12. Daily goal includes all unseen questions without a ten-question cap")
     with SessionLocal() as db:
         bank = example_bank()
         bank["questions"] = [{**copy.deepcopy(bank["questions"][0]), "question_id": f"NEW-{i:02d}"}
@@ -395,33 +395,33 @@ def main() -> None:
         db.commit()
     client.post(f"{BASE}/bank/session/start", json={})
     viewed = set()
-    for i in range(10):
+    for i in range(15):
         picked = client.post(f"{BASE}/bank/next").json()
-        check("Daily new quota stays at ten", picked["lectureGoal"]["total"] == 10
-              and picked["lectureGoal"]["newRemaining"] == 10 - i)
+        check("All unseen questions remain in the daily goal", picked["lectureGoal"]["total"] == 15
+              and picked["lectureGoal"]["newRemaining"] == 15 - i)
         qid = picked["question"]["question_id"]
-        check("A repeated question cannot fill new quota", qid not in viewed)
+        check("Every new question is distinct", qid not in viewed)
         viewed.add(qid)
         token = picked["reviewToken"]
         client.post(f"{BASE}/bank/reveal", json={"reviewToken": token})
         client.post(f"{BASE}/bank/rate", json={"reviewToken": token, "rating": "Again"})
     done = client.post(f"{BASE}/bank/next").json()
-    check("Daily session ends with five unlearned questions remaining", done["question"] is None
-          and done["lectureGoal"]["met"] and done["lectureGoal"]["unlearnedRemaining"] == 5)
+    check("Daily session ends after every unseen question is evaluated", done["question"] is None
+          and done["lectureGoal"]["met"] and done["lectureGoal"]["unlearnedRemaining"] == 0)
     restored = client.post(f"{BASE}/bank/undo", json={"reviewToken": done["undoToken"]}).json()
-    check("Undo restores one capped new task", restored["lectureGoal"]["remaining"] == 1
-          and restored["lectureGoal"]["total"] == 10 and not restored["lectureGoal"]["met"])
+    check("Undo restores one new task beyond the former cap", restored["lectureGoal"]["remaining"] == 1
+          and restored["lectureGoal"]["total"] == 15 and not restored["lectureGoal"]["met"])
     client.post(f"{BASE}/bank/rate", json={"reviewToken": restored["reviewToken"], "rating": "Again"})
     client.post(f"{BASE}/bank/next")
     client.post(f"{BASE}/bank/session/start", json={"continueAfterGoal": True})
     extra = client.post(f"{BASE}/bank/next").json()
-    check("Extra study prioritizes a remaining unseen question", extra["question"]["question_id"] not in viewed)
-    check("Extra unseen question updates calendar count", client.get(BASE).json()["bank"]["seenQuestionCount"] == 11)
+    check("Extra study reviews known questions after full coverage", extra["question"]["question_id"] in viewed)
+    check("Extra review preserves distinct calendar count", client.get(BASE).json()["bank"]["seenQuestionCount"] == 15)
     client.post(f"{BASE}/bank/reveal", json={"reviewToken": extra["reviewToken"]})
     client.post(f"{BASE}/bank/rate", json={"reviewToken": extra["reviewToken"], "rating": "Again"})
     goal = client.get(f"{BASE}/bank").json()["lectureGoal"]
-    check("Extra study keeps the same completed daily quota", goal["met"] and goal["total"] == goal["completed"] == 10
-          and goal["unlearnedRemaining"] == 4 and goal["reviewedToday"] == 11)
+    check("Extra study keeps the same completed daily goal", goal["met"] and goal["total"] == goal["completed"] == 15
+          and goal["unlearnedRemaining"] == 0 and goal["reviewedToday"] == 16)
 
 
 if __name__ == "__main__":

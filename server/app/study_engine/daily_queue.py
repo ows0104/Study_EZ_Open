@@ -1,4 +1,4 @@
-"""문항별 오늘 할 일. 예정된 복습과 한도 내 신규 문항을 섞어 확인한다.
+"""문항별 오늘 할 일. 미학습 문항을 제한 없이 먼저 확인한 뒤 예정된 복습을 진행한다.
 
 숙련도 점수와 독립적이다. 이력에서 재구성하므로 조회는 저장 상태를 바꾸지 않는다.
 평가한 문항은 등급에 관계없이 오늘 완료다. 어려웠던 문항은 다음날부터 복습한다.
@@ -59,18 +59,16 @@ def daily_units(bank: dict, state: dict, now: int, policy: dict = DEFAULT) -> li
     return units
 
 
-def _new_quota(units: list[dict], policy: dict) -> tuple[int, int]:
+def _new_progress(units: list[dict]) -> tuple[int, int]:
     # 오늘 처음 평가한 문항도 신규 풀에 남아 있어 목표가 풀이할 때마다 늘지 않는다.
     new = [u for u in units if u["kind"] == "new"]
-    total = min(policy["daily"]["newLimit"], len(new))
-    completed = min(total, sum(u["status"] == "done" for u in new))
-    return total, completed
+    return len(new), sum(u["status"] == "done" for u in new)
 
 
 def lecture_goal(bank: dict, state: dict, title: str, now: int, policy: dict = DEFAULT) -> dict:
     units = daily_units(bank, state, now, policy)
     reviews = [u for u in units if u["kind"] == "review" and u["status"] != "later"]
-    new_total, new_completed = _new_quota(units, policy)
+    new_total, new_completed = _new_progress(units)
     total = len(reviews) + new_total
     completed = sum(u["status"] == "done" for u in reviews) + new_completed
     pending = [u for u in reviews if u["status"] != "done"]
@@ -79,7 +77,6 @@ def lecture_goal(bank: dict, state: dict, title: str, now: int, policy: dict = D
             "total": total, "completed": completed, "remaining": total - completed,
             "newRemaining": new_total - new_completed,
             "reviewRemaining": len(pending),
-            "dailyNewLimit": policy["daily"]["newLimit"],
             "unlearnedRemaining": sum(not u["seen"] for u in units),
             "relearningRemaining": sum(u["status"] == "relearning" for u in pending),
             "waiting": len(waiting), "retryAt": min((u["due"] for u in waiting), default=None),
@@ -91,11 +88,9 @@ def lecture_goal(bank: dict, state: dict, title: str, now: int, policy: dict = D
 
 def select_daily_question(bank: dict, state: dict, exam: str, now: int, policy: dict = DEFAULT) -> dict:
     units = daily_units(bank, state, now, policy)
-    new_total, new_completed = _new_quota(units, policy)
-    remaining = [u for u in units if u["status"] not in ("done", "later")
-                 and (u["kind"] == "review" or new_completed < new_total)]
+    remaining = [u for u in units if u["status"] not in ("done", "later")]
     unlearned = {u["key"] for u in units if not u["seen"]}
-    # 미학습·복습을 번갈아 고른다. 이미 완료한 문항으로 다른 문항의 할 일을 대신하지 않는다.
+    # 미학습 문항을 모두 먼저 확인한다. 완료 문항은 다시 고르지 않는다.
     ranked = rank_questions(bank, state, exam, now, policy)
     scores = {r["question_id"]: r["raw_score"] for r in ranked}
     candidates = []
@@ -106,17 +101,13 @@ def select_daily_question(bank: dict, state: dict, exam: str, now: int, policy: 
         if unit["kind"] == "new" and any(qid in unlearned for qid in q["prerequisites"]):
             continue  # 아직 평가하지 않은 선행 문항부터 확인한다.
         candidates.append(unit)
-    by_key = {u["key"]: u for u in units}
-    last = next((h for h in reversed(state.get("history", []))
-                 if day_start(now) <= h["timestamp"] <= now and h["question_id"] in by_key), None)
-    preferred = "review" if last and by_key[last["question_id"]]["kind"] == "new" else "new"
-    mixed = [u for u in candidates if u["kind"] == preferred] or candidates
-    mixed.sort(key=lambda u: ({"Core": 0, "Advanced": 1, "Optional": 2}[u["questions"][0]["tier"]],
+    prioritized = [u for u in candidates if u["kind"] == "new"] or candidates
+    prioritized.sort(key=lambda u: ({"Core": 0, "Advanced": 1, "Optional": 2}[u["questions"][0]["tier"]],
                               question_stage(u["questions"][0]), -scores[u["key"]], u["key"]))
-    question = mixed[0]["questions"][0] if mixed else None
+    question = prioritized[0]["questions"][0] if prioritized else None
     if question:
         row = next(r for r in ranked if r["question_id"] == question["question_id"])
-        row["notes"] += ["문항별 미학습·복습 혼합 순서로 오늘 할 일을 확인합니다."] + row["reasons"]
+        row["notes"] += ["미학습 문항을 모두 먼저 확인한 뒤 예정된 복습을 진행합니다."] + row["reasons"]
         row.update(eligible=True, score=row["raw_score"], reasons=[])
     return {"question": question, "ranked": ranked,
             "days": days_until(exam, now), "reason": None, "retry_at": None}

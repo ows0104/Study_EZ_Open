@@ -1,6 +1,5 @@
 {
-  "version": "3.3.0",
-  "daily": { "newLimit": 10 },
+  "version": "3.5.0",
   "forgetting": { "minDays": 0.25, "maxDays": 365, "legacyDays": 1, "initialDays": { "Again": 0.25, "Hard": 0.5, "Good": 1, "Easy": 2 }, "growth": { "Hard": 1.1, "Good": 2, "Easy": 3 }, "lapseMultiplier": 0.5, "lapseMaxDays": 1, "minSpacingDays": 0.16666666666666666 },
   "mastery": { "alpha": 0.35, "ratings": { "Again": 0, "Hard": 0.45, "Good": 0.95, "Easy": 1 }, "maxTarget": 0.9, "targets": { "1": 0.4, "2": 0.55, "3": 0.7, "4": 0.78, "5": 0.85 }, "weaknessFloor": 0.08 },
   "progression": { "thresholds": { "1": 0.6, "2": 0.6, "3": 0.6 }, "prerequisiteMastery": 0.6, "advancedCore": 0.6, "optionalCore": 0.8, "highImportance": 4, "stageMatch": 1.3, "stageAhead": 0.65, "stageFar": 0.2, "maxStageAhead": 1 },
