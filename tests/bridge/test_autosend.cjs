@@ -30,7 +30,7 @@ function scenario(options = {}) {
     getAttribute: () => null,
     click() { clicks.push(time); if (!options.unconfirmed) editor.value = ''; },
   };
-  const payload = { provider: 'chatgpt', prompt: editor.value, files: [{ filename: 'lecture.pdf' }] };
+  const payload = { provider: 'chatgpt', prompt: editor.value, files: [{ filename: 'lecture.pdf', size: options.fileSize || 0 }] };
   const dependencies = {
     now: () => time,
     sleep: async (ms) => { time += ms; options.tick?.({ time, editor, button }); },
@@ -49,6 +49,28 @@ test('waits for all attachments, then sends exactly once', async () => {
   const s = scenario({ attachments: time => ({ ready: time >= 4000 }) });
   await s.run();
   assert.deepEqual(s.clicks, [5500]);
+});
+
+test('reattached filenames accept provider numeric suffixes but reject different files', () => {
+  const name = '[261012_01] 지혈과 혈전증 약리(조정현)_강태우v2.pdf';
+  for (const label of [name, name.replace('.pdf', '(1).pdf'), name.replace('.pdf', ' (12).pdf')]) {
+    assert.equal(context.attachmentFilenameVisible(label, name), true, label);
+  }
+  for (const label of [name.replace('v2', 'v3'), name + '.backup', 'other' + name]) {
+    assert.equal(context.attachmentFilenameVisible(label, name), false, label);
+  }
+});
+
+test('large lecture upload can finish after two minutes and submits once', async () => {
+  const s = scenario({fileSize: 90 * 1024 * 1024, attachments: time => ({ready: time >= 180000})});
+  await s.run();
+  assert.deepEqual(s.clicks, [181500]);
+});
+
+test('large missing attachment still has a bounded timeout without submitting', async () => {
+  const s = scenario({fileSize: 90 * 1024 * 1024, attachments: () => ({ready: false})});
+  await assert.rejects(s.run(), /10분/);
+  assert.equal(s.clicks.length, 0);
 });
 
 test('readiness must stay stable after upload state changes', async () => {

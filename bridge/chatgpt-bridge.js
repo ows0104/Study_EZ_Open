@@ -291,6 +291,16 @@ function composerRoot(editor, provider) {
   return null;
 }
 
+function attachmentFilenameVisible(labels, filename) {
+  const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const name = filename.normalize("NFC");
+  const dot = name.lastIndexOf(".");
+  const pattern = dot > 0
+    ? `${escape(name.slice(0, dot))}(?:\\s*\\(\\d+\\))*${escape(name.slice(dot))}`
+    : escape(name);
+  return new RegExp(`(?:^|[\\s"'])${pattern}(?![\\w.])`, "m").test(labels.normalize("NFC"));
+}
+
 function attachmentStatus(root, files) {
   const copy = root.cloneNode(true);
   copy.querySelectorAll('textarea, [contenteditable], #studyez-bridge').forEach((node) => node.remove());
@@ -299,7 +309,7 @@ function attachmentStatus(root, files) {
   const busy = [...root.querySelectorAll('[role="progressbar"], progress, [aria-busy="true"], .animate-spin, [data-state="uploading"]')].some(visible)
     || /(?:uploading|processing file|업로드 중|업로드하는 중|파일 처리 중)/i.test(labels);
   const failed = /(?:upload failed|failed to upload|error uploading|unsupported file|file too large|업로드 실패|업로드할 수 없|지원하지 않는 파일|파일이 너무)/i.test(labels);
-  return { ready: files.every((file) => labels.includes(file.filename)) && !busy, failed };
+  return { ready: files.every((file) => attachmentFilenameVisible(labels, file.filename)) && !busy, failed };
 }
 
 /** 준비 상태가 안정적으로 유지될 때만 클릭한다. 타임아웃/불명확한 전송은 재시도하지 않는다. */
@@ -311,7 +321,9 @@ async function autoSend(payload, status, active, dependencies = {}) {
   const getButton = dependencies.sendButton || sendButton;
   const getAttachments = dependencies.attachmentStatus || attachmentStatus;
   let readySince = null;
-  const deadline = now() + 120000;
+  const largeUpload = payload.files.reduce((sum, file) => sum + (file.size || 0), 0) >= 32 * 1024 * 1024;
+  const uploadTimeout = largeUpload ? 600000 : 120000;
+  const deadline = now() + uploadTimeout;
   while (now() < deadline) {
     active();
     const editor = getEditor(payload.provider);
@@ -341,7 +353,7 @@ async function autoSend(payload, status, active, dependencies = {}) {
     status.textContent = "파일 업로드 완료와 전송 준비를 확인하는 중… (×로 중지)";
     await sleep(250);
   }
-  throw new Error("2분 안에 모든 파일의 업로드 완료를 확인하지 못했습니다. 첨부 상태를 확인한 뒤 직접 전송해 주세요.");
+  throw new Error(`${uploadTimeout / 60000}분 안에 모든 파일의 업로드 완료를 확인하지 못했습니다. 자동 전송은 하지 않았습니다. 첨부 상태를 확인해 주세요.`);
 }
 
 function requestPayload() {
@@ -478,7 +490,7 @@ async function initialize() {
         });
         active();
         confirm.hidden = true;
-        await finishInput(payload, status, active);
+        await finishInput({ ...payload, files: payload.files.map((file, index) => ({ ...file, size: files[index].size })) }, status, active);
         setTimeout(() => overlay.remove(), 5000);
       } catch (error) {
         if (cancelled) return;

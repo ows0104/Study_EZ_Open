@@ -273,7 +273,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
           </>
         }
       />
-      <ExtensionSetup />
+      <ExtensionSetup minimum={extensionInputMinimum("bank", true)} />
       {pasting ? (
         <div className="bank-paste">
           <textarea
