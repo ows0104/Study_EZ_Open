@@ -13,6 +13,30 @@ def test_prompt_uses_canonical_template_and_preserves_cloze():
     assert version != "unknown" and "Version:" not in body
     assert "{{title}}" not in body and "a.pdf" in body and "{{c1}}" in body
     assert "{{lecture_scope}}" not in body
+    assert generate.item_quality_guidance() in body
+
+
+def test_cli_quality_reads_only_the_current_authoring_rules(tmp_path, monkeypatch):
+    template = tmp_path / "bankPrompt.md"
+    template.write_text("<!-- Version: 1.33 -->\n강의: {{title}}\n\n문항 품질 원칙\n"
+                        "새로 승인한 인출 규칙\n\n출력 형식\n웹에서만 표를 출력\n", encoding="utf-8")
+    monkeypatch.setattr(generate, "TEMPLATE", template)
+    guidance = generate.item_quality_guidance()
+    assert "새로 승인한 인출 규칙" in guidance
+    assert "{{title}}" not in guidance and "Version:" not in guidance
+    assert "웹에서만 표를 출력" not in guidance
+    template.write_text(template.read_text(encoding="utf-8").replace(
+        "새로 승인한 인출 규칙", "수정된 인출 규칙"), encoding="utf-8")
+    assert "수정된 인출 규칙" in generate.item_quality_guidance()
+
+
+@pytest.mark.parametrize("body", ["출력 형식\n본문", "문항 품질 원칙\n규칙", "문항 품질 원칙\n\n출력 형식\n"])
+def test_missing_quality_rules_cannot_be_silently_omitted(tmp_path, monkeypatch, body):
+    template = tmp_path / "bankPrompt.md"
+    template.write_text("소개\n" + body, encoding="utf-8")
+    monkeypatch.setattr(generate, "TEMPLATE", template)
+    with pytest.raises(SessionError, match="문항 품질 원칙"):
+        generate.item_quality_guidance()
 
 
 @pytest.mark.parametrize("title,filename,scoped", [

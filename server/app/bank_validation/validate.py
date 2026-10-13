@@ -168,8 +168,8 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
             fail(bool(re.fullmatch(r"[OX]", q["answer"].strip(), re.I)), f"{label}: OX 정답은 O 또는 X")
         if q["format"] == "cloze":
             blanks = re.findall(r"\{\{c\d+\}\}", q["question"])
-            fail(_in_range(len(blanks), 1, 4) and len(blanks) == len(q["answer_units"]),
-                 f"{label}: cloze는 {{{{c1}}}} 형식의 빈칸 1–4개와 등장 순서에 대응하는 answer_units 필요")
+            fail(bool(blanks) and len(blanks) == len(q["answer_units"]),
+                 f"{label}: cloze는 {{{{c1}}}} 형식의 빈칸 1개 이상과 등장 순서에 대응하는 answer_units 필요")
             fail("{{" not in re.sub(r"\{\{c\d+\}\}", "", q["question"]), f"{label}: 잘못된 cloze 표기")
         if q["format"] == "list":
             fail(len(q["answer_units"]) >= 2, f"{label}: list는 개별 채점 단위 2개 이상 필요")

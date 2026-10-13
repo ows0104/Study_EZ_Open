@@ -12,6 +12,7 @@ import fitz
 
 from studyez_llm.pdf import render
 from .coverage import _call, bank_hash
+from .generate import item_quality_guidance
 from .points import _array, _object, STR, INT
 from .session import SessionError
 
@@ -158,7 +159,7 @@ def inspect(bank: dict, raw: str, pdf: Path, title: str, sources: list[dict], ou
     (work / "web-response.md").write_text(raw, encoding="utf-8")
     if jokbo:
         (work / "jokbo.md").write_text(jokbo.read_text(encoding="utf-8"), encoding="utf-8")
-    prompt = PROMPT.read_text(encoding="utf-8") + "\n\n작업 파일: context.json, source-text.md, source-pages.json, " \
+    prompt = item_quality_guidance() + "\n\n" + PROMPT.read_text(encoding="utf-8") + "\n\n작업 파일: context.json, source-text.md, source-pages.json, " \
         "point-plan.json, web-response.md, bank.json, 있으면 jokbo.md. 원본 이미지도 view_image로 확인한다. " \
         "파일을 변경하지 말고 지정 JSON 스키마로 최종 검수 결과를 반환한다. pages는 PDF의 모든 물리 쪽, " \
         "checks는 모든 point_id, classifications는 모든 mcq·multi_select question_id를 정확히 한 번 포함한다. " \

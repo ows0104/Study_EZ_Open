@@ -12,7 +12,7 @@ questions는 기존·새 개념 모두 참조할 수 있고 prerequisites는 현
 새 충돌 기록만 source_conflicts에 넣는다. 불필요한 필드는 빈 배열 또는 빈 문자열로 채운다.
 
 누락 사실은 각각 짧은 atomic 회상 문항으로 보완한다. basic은 답이 용어·수치·짧은 관계 한 가지다.
-나열은 list, 대응은 matching, 단계는 sequence로 작성한다. cloze는 빈칸 수와 answer_units 수를 맞춘다.
+하나의 축에 속하는 닫힌 나열은 list, 대응은 matching, 단계는 sequence로 작성한다. cloze는 빈칸 수와 answer_units 수를 맞춘다.
 객관식은 실제 혼동·비교·조건·예외마다 적극적으로 만든다. 정답 한 개인 mcq와 복수 선택 multi_select를 적절히 쓴다.
 기존 단답형을 유지하면서 선지 판별이 필요한 내용을 더한다. 중복 표현이나 보기 순서만 바꾼 문항은 추가하지 않는다.
 mcq는 4~5개의 그럴듯한 보기, 정답 정확히 한 개를 갖는다. multi_select는 실제 정답 수와 correct_option_ids를 맞춘다.

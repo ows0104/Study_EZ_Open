@@ -2,6 +2,8 @@
 
 관리자가 만든 ChatGPT 답을 서버에서 쓸 문제은행으로 정리한다.
 최초 문항 생성 프롬프트는 `../web/src/bank/bankPrompt.md`다.
+공통 문항 품질 원칙은 이 정본에서 수정한다. `generate.item_quality_guidance()`가
+같은 절을 CLI 원본 검토·보강에 전달한다.
 
 | 단계 | 코드 | 역할 |
 |---|---|---|

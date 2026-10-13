@@ -95,6 +95,7 @@ def test_new_web_flow_keeps_questions_and_never_calls_supplement(bank, tmp_path,
     monkeypatch.setattr(run.coverage, "audit_and_supplement", forbid)
     monkeypatch.setattr(run, "validate_dropping", forbid)
     def fake_call(prompt, schema, work, model, label):
+        assert web_audit.item_quality_guidance() in prompt
         assert len(json.loads((work / "source-pages.json").read_text(encoding="utf-8"))) == 1
         assert "P001" in (work / "point-plan.json").read_text(encoding="utf-8")
         return report(bank), {}

@@ -112,6 +112,7 @@ def test_file_supplement_requires_a_fresh_complete_bank(bank, tmp_path, monkeypa
     patch = patch_for(bank)
     def write(prompt, schema, work, model, label):
         assert schema == coverage.WRITTEN
+        assert coverage.item_quality_guidance() in prompt
         assert (work / "addition-schema.json").is_file()
         (work / "supplement-bank.json").write_text(json.dumps(patch), encoding="utf-8")
         return {"written": True}, {"seconds": 1}

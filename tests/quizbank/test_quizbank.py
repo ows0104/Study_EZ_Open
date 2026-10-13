@@ -86,6 +86,24 @@ def test_cloze_빈칸_네개를_보존하고_정답_누락은_거른다(bank):
     assert any("cloze는" in error for error in validation["dropped"][0]["errors"])
 
 
+@pytest.mark.parametrize("blank_count", [1, 4, 5, 8])
+def test_cloze_고정_상한_없이_빈칸별_정답을_검증한다(bank, blank_count):
+    q = next(x for x in bank["questions"] if x["format"] == "cloze")
+    q["question"] = " ".join("{{c1}}" for _ in range(blank_count))
+    q["answer_units"] = [f"정답{i}" for i in range(blank_count)]
+    q["answer"] = " ".join(q["answer_units"])
+    assert not any("cloze는" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
+    q["answer_units"].append("빈칸이 없는 정답")
+    assert any("cloze는" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
+
+
+def test_cloze_빈칸이_없는_문장은_허용하지_않는다(bank):
+    q = next(x for x in bank["questions"] if x["format"] == "cloze")
+    q["question"] = "빈칸 없는 문장"
+    q["answer_units"] = []
+    assert any("cloze는" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
+
+
 def _fix_lists(bank):
     for q in bank["questions"]:                     # 실물의 list 셋을 고쳐 다른 오류가 없게 한다
         if q["question_id"] in ("Q009", "Q015", "Q026"):

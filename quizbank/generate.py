@@ -17,6 +17,16 @@ HEADER = re.compile(r"^\s*<!--([\s\S]*?)-->\s*")
 COMPLETE_MARK = "STUDYEZ_BANK_COMPLETE"
 
 
+def item_quality_guidance() -> str:
+    """Read the authoring rules from the canonical web prompt for CLI stages."""
+    body = HEADER.sub("", TEMPLATE.read_text(encoding="utf-8"))
+    _, start, section = body.partition("\n문항 품질 원칙\n")
+    quality, end, _ = section.partition("\n출력 형식\n")
+    if not start or not end or not quality.strip():
+        raise codex.SessionError("출제 정본의 문항 품질 원칙을 찾지 못했습니다.")
+    return "문항 품질 원칙\n\n" + quality.strip()
+
+
 def lecture_scope(title: str, sources: list[dict]) -> str:
     scopes = json.loads(LECTURE_SCOPES.read_text(encoding="utf-8"))
     return next((s["instruction"] for s in scopes if s["title"] == title and any(

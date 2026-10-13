@@ -12,7 +12,7 @@ import jsonschema
 
 from studyez_llm import codex
 from studyez_llm.pdf import render
-from .generate import lecture_scope
+from .generate import item_quality_guidance, lecture_scope
 from .schema import BANK, without_retired
 from .validate import validate_bank
 from .points import PLAN, MATCH_REPORT, shape_plan, match_report
@@ -57,7 +57,7 @@ def _supplement(work: Path, model: str | None) -> tuple[dict, dict]:
     target = work / "supplement-bank.json"
     target.unlink(missing_ok=True)
     (work / "addition-schema.json").write_text(json.dumps(BANK, ensure_ascii=False), encoding="utf-8")
-    prompt = (PROMPTS / "supplement.md").read_text(encoding="utf-8") + "\n\n" + (
+    prompt = item_quality_guidance() + "\n\n" + (PROMPTS / "supplement.md").read_text(encoding="utf-8") + "\n\n" + (
         "이번 작업은 파일 출력 방식이다. addition-schema.json의 BANK schema를 읽고, 추가분 전체를 "
         "이 작업 폴더의 supplement-bank.json에 UTF-8 JSON으로 저장한다. Python 등으로 공통 빈 필드를 "
         "구성해도 된다. 모든 실제 문항·정답·선지·해설과 근거는 직접 작성한다. 기존 bank.json과 "
