@@ -85,6 +85,7 @@ def test_audit_uses_all_pdf_pages_and_independent_post_supplement_check(bank, tm
         assert json.loads((work / "point-plan.json").read_text(encoding="utf-8"))["objectives"] == plan["objectives"]
         return (initial if len(calls) == 2 else patch_for(bank) if len(calls) == 3 else final), {}
     monkeypatch.setattr(coverage, "_call", fake)
+    monkeypatch.setattr(coverage, "_supplement", lambda work, model: fake("", {}, work, model, "누락·객관식 보강"))
     sources = [{"id": "S1", "kind": "notes_current", "filename": pdf.name}, {"id": "S2", "kind": "jokbo", "filename": "j.md"}]
     enriched, checked, usage = coverage.audit_and_supplement(bank, pdf, "강의", sources, tmp_path / "out")
     assert len(calls) == 5 and len(usage) == 5
@@ -107,6 +108,21 @@ def test_classification_is_complete_and_preserves_question_content(bank):
         apply_classifications(bank, {"classifications": raw["classifications"] + raw["classifications"][:1]})
 
 
+def test_file_supplement_requires_a_fresh_complete_bank(bank, tmp_path, monkeypatch):
+    patch = patch_for(bank)
+    def write(prompt, schema, work, model, label):
+        assert schema == coverage.WRITTEN
+        assert (work / "addition-schema.json").is_file()
+        (work / "supplement-bank.json").write_text(json.dumps(patch), encoding="utf-8")
+        return {"written": True}, {"seconds": 1}
+    monkeypatch.setattr(coverage, "_call", write)
+    output, info = coverage._supplement(tmp_path, None)
+    assert output == patch and info["seconds"] == 1
+    monkeypatch.setattr(coverage, "_call", lambda *a: ({"written": True}, {}))
+    with pytest.raises(SessionError, match="파일이 없거나"):
+        coverage._supplement(tmp_path, None)
+
+
 def test_fixed_point_plan_cannot_be_shrunk_by_missing_matches(bank):
     plan = shape_plan({"summary": "", "objectives": [{"objective_id": "O1", "objective": "식별한다", "slides": [1],
         "retrieval_targets": [{"point_id": "P1", "target": "첫 사실"}, {"point_id": "P2", "target": "둘째 사실"}]}],
@@ -116,6 +132,17 @@ def test_fixed_point_plan_cannot_be_shrunk_by_missing_matches(bank):
                            "mcq_opportunities": []}, bank, plan, 2)
     assert checked["pointCount"] == 2 and checked["coveredPointCount"] == 1 and checked["gapCount"] == 1
     assert checked["pages"][0]["points"][1]["status"] == "gap"
+
+
+def test_points_keep_their_actual_pages_and_tasks_do_not_duplicate(bank):
+    plan = shape_plan({"summary": "", "objectives": [{"objective_id": "O1", "objective": "구분", "slides": [1, 2],
+        "retrieval_targets": [{"point_id": "P1", "target": "첫 쪽 사실", "slides": [1]}, {"point_id": "P2", "target": "양쪽 사실", "slides": [1, 2]}]}],
+        "rejected_candidates": [], "unreadable_pages": []}, 2)
+    report = match_report({"summary": "", "checks": [], "mcq_opportunities": []}, bank, plan, 2)
+    assert [p["point_id"] for p in report["pages"][1]["points"]] == ["P2"]
+    tasks = coverage.supplement_tasks(report)
+    assert len(tasks["gaps"]) == 2
+    assert tasks["gaps"][0]["slides"] == [1] and tasks["gaps"][1]["slides"] == [1, 2]
 
 
 def test_existing_bank_bypasses_reorganization_and_retains_audit_report(bank, tmp_path, monkeypatch):

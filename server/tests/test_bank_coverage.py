@@ -13,6 +13,7 @@ from app.auth import APP_POLICY, ROLE_ADMIN, CurrentUser, get_current_user
 from app.database import Base, SessionLocal, engine
 from app.main import app
 from app.models import Asset, BankState, Lecture, QuizBank
+from app.bank_edits import current_review
 from app.bank_validation.coverage import bank_hash
 from app.bank_validation.schema import without_retired
 from app.study_engine import empty_state, now_ms, record_review
@@ -72,6 +73,8 @@ def main():
         assert current.state == state and current.build_id == "old-build"
         assert db.get(QuizBank, ("local", "demo")).bank["questions"][1]["mcq_mode"] == "recall_first"
         assert db.get(QuizBank, ("local", "demo")).validation["edits"]["Q2"]["question"]["mcq_mode"] == "recall_first"
+        review = {"reviews": [{"question_id": "Q2", "verdict": "ok"}]}
+        assert current_review(review, db.get(QuizBank, ("local", "demo")).validation)["reviews"] == review["reviews"]
     student_read = client.get("/api/lectures/local/demo/bank").json()
     assert student_read["summary"]["coverage"]["status"] == "verified"
     assert student_read["lectureGoal"]["unlearnedRemaining"] == 3

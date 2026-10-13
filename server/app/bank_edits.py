@@ -11,6 +11,13 @@ from app.bank_validation.choice_mode import choice_mode
 from app.bank_validation.validate import validate_dropping
 
 
+def _content(question):
+    if question is None:
+        return None
+    normalized = without_retired({"questions": [question]})["questions"][0]
+    return {k: v for k, v in normalized.items() if k != "mcq_mode"}
+
+
 def candidates(bank: dict, validation: dict) -> dict[str, dict]:
     out = {q["question_id"]: q for q in bank.get("questions", [])}
     for d in validation.get("dropped", []):
@@ -42,15 +49,10 @@ def with_edits(bank: dict, validation: dict, edits: dict, source_ids: list[str])
 def reapply(bank: dict, validation: dict, previous: dict, source_ids: list[str]) -> tuple[dict, dict]:
     incoming = candidates(bank, validation)
     edits = {}
-    def content(question):
-        if question is None:
-            return None
-        normalized = without_retired({"questions": [question]})["questions"][0]
-        return {k: v for k, v in normalized.items() if k != "mcq_mode"}
     for qid, edit in previous.get("edits", {}).items():
         question = incoming.get(qid)
-        if (question is None and edit["action"] == "delete") or (question and content(question) in (
-            content(edit["original"]), content(edit.get("question"))
+        if (question is None and edit["action"] == "delete") or (question and _content(question) in (
+            _content(edit["original"]), _content(edit.get("question"))
         )):
             carried = copy.deepcopy(edit)
             if question and carried.get("question"):
@@ -75,6 +77,6 @@ def question_errors(bank: dict, validation: dict, edits: dict, qid: str, source_
 def current_review(review: dict | None, validation: dict | None) -> dict:
     """Keep old verdicts in the admin record; expose only current ones to students."""
     changed = {qid for qid, e in (validation or {}).get("edits", {}).items()
-               if e.get("question") != e.get("original")}
+               if _content(e.get("question")) != _content(e.get("original"))}
     return {**(review or {}), "reviews": [r for r in (review or {}).get("reviews", [])
                                          if r["question_id"] not in changed]}

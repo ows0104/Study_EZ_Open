@@ -19,7 +19,7 @@ STR = {"type": "string"}
 INT = {"type": "integer"}
 PLAN = _object({"summary": STR, "objectives": _array(_object({
     "objective_id": STR, "objective": STR, "slides": _array(INT),
-    "retrieval_targets": _array(_object({"point_id": STR, "target": STR}))})),
+    "retrieval_targets": _array(_object({"point_id": STR, "target": STR, "slides": _array(INT)}))})),
     "rejected_candidates": _array(_object({"slides": _array(INT), "reason": STR})),
     "unreadable_pages": _array(INT)})
 MATCH_REPORT = _object({"summary": STR, "checks": _array(_object({
@@ -38,12 +38,17 @@ def shape_plan(raw: dict, count: int) -> dict:
         objectives.add(oid)
         if not objective["slides"] or not objective["retrieval_targets"]:
             raise SessionError(f"출제 포인트 계획: {oid} 근거 쪽과 회수 대상이 필요합니다.")
-        pages.update(objective["slides"])
+        if any(page < 1 or page > count for page in objective["slides"]):
+            raise SessionError("출제 포인트 계획: PDF에 없는 근거 쪽")
         for target in objective["retrieval_targets"]:
             pid = target["point_id"]
             if not pid.strip() or pid in points or not target["target"].strip():
                 raise SessionError("출제 포인트 계획: 포인트 ID 중복·누락")
             points.add(pid)
+            refs = target.get("slides", objective["slides"])
+            if not refs or not set(refs).issubset(objective["slides"]):
+                raise SessionError("출제 포인트 계획: 포인트의 실제 근거 쪽이 필요합니다.")
+            pages.update(refs)
     for rejected in plan["rejected_candidates"]:
         if not rejected["slides"] or not rejected["reason"].strip():
             raise SessionError("출제 포인트 계획: 의도적 제외의 쪽과 근거가 필요합니다.")
@@ -56,7 +61,7 @@ def shape_plan(raw: dict, count: int) -> dict:
 
 
 def match_report(raw: dict, bank: dict, plan: dict, count: int) -> dict:
-    targets = {target["point_id"]: {**target, "slides": objective["slides"]}
+    targets = {target["point_id"]: {**target, "slides": target.get("slides", objective["slides"])}
                for objective in plan["objectives"] for target in objective["retrieval_targets"]}
     known = {q["question_id"] for q in bank["questions"]}
     checks = {}

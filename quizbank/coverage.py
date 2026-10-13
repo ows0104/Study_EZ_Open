@@ -19,10 +19,24 @@ from .points import PLAN, MATCH_REPORT, shape_plan, match_report
 from .classify import CLASSIFICATION, apply_classifications
 
 PROMPTS = Path(__file__).parent / "prompts"
+WRITTEN = {"type": "object", "properties": {"written": {"type": "boolean", "enum": [True]}},
+           "required": ["written"], "additionalProperties": False}
 
 
 def bank_hash(bank: dict) -> str:
     return hashlib.sha256(json.dumps(bank, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+
+
+def supplement_tasks(report: dict) -> dict:
+    """쪽별 UI 보고서의 중복 포인트를 모델 입력에서는 한 번만 보낸다."""
+    gaps = {}
+    for row in report["pages"]:
+        for point in row["points"]:
+            if point["status"] != "gap":
+                continue
+            task = gaps.setdefault(point["point_id"], {**point, "slides": []})
+            task["slides"].append(row["page"])
+    return {"summary": report["summary"], "gaps": list(gaps.values()), "mcq_opportunities": report["mcq_opportunities"]}
 
 
 def _call(prompt: str, schema: dict, work: Path, model: str | None, label: str) -> tuple[dict, dict]:
@@ -36,6 +50,26 @@ def _call(prompt: str, schema: dict, work: Path, model: str | None, label: str) 
     return output, {"seconds": round(result["duration_ms"] / 1000, 1), "cost_usd": result["cost_usd"],
                     "input_tokens": usage["input_tokens"] + usage["cache_read_input_tokens"],
                     "output_tokens": usage["output_tokens"], "models": sorted(result["models"])}
+
+
+def _supplement(work: Path, model: str | None) -> tuple[dict, dict]:
+    """큰 보강본을 파일로 생성한다. 전체 JSON을 최종 응답에 중복 출력하지 않는다."""
+    target = work / "supplement-bank.json"
+    target.unlink(missing_ok=True)
+    (work / "addition-schema.json").write_text(json.dumps(BANK, ensure_ascii=False), encoding="utf-8")
+    prompt = (PROMPTS / "supplement.md").read_text(encoding="utf-8") + "\n\n" + (
+        "이번 작업은 파일 출력 방식이다. addition-schema.json의 BANK schema를 읽고, 추가분 전체를 "
+        "이 작업 폴더의 supplement-bank.json에 UTF-8 JSON으로 저장한다. Python 등으로 공통 빈 필드를 "
+        "구성해도 된다. 모든 실제 문항·정답·선지·해설과 근거는 직접 작성한다. 기존 bank.json과 "
+        "point-plan.json 및 원본 파일은 변경하지 않는다. 저장한 JSON을 스키마에 대조한다. "
+        '최종 응답에는 전체 은행을 다시 출력하지 않고 {"written":true}만 반환한다.')
+    _, info = _call(prompt, WRITTEN, work, model, "누락·객관식 보강")
+    try:
+        patch = json.loads(target.read_text(encoding="utf-8"))
+        jsonschema.validate(patch, BANK)
+    except (OSError, ValueError, jsonschema.ValidationError) as cause:
+        raise codex.SessionError(f"보강 파일이 없거나 BANK 형식에 맞지 않습니다: {cause}") from cause
+    return patch, info
 
 
 def shape_report(report: dict, bank: dict, count: int) -> dict:
@@ -151,8 +185,9 @@ def audit_and_supplement(bank: dict, pdf: Path, title: str, sources: list[dict],
         if not final["gapCount"] and not final["mcq_opportunities"]:
             break
         (work / "before.json").write_text(json.dumps(final, ensure_ascii=False, indent=2), encoding="utf-8")
+        (work / "tasks.json").write_text(json.dumps(supplement_tasks(final), ensure_ascii=False), encoding="utf-8")
         (work / f"before-{round_number}.json").write_text(json.dumps(final, ensure_ascii=False, indent=2), encoding="utf-8")
-        patch, info = _call((PROMPTS / "supplement.md").read_text(encoding="utf-8"), BANK, work, model, "누락·객관식 보강")
+        patch, info = _supplement(work, model)
         usage.append({"step": "누락·객관식 보강", **info})
         (work / "additions.json").write_text(json.dumps(patch, ensure_ascii=False, indent=2), encoding="utf-8")
         (work / f"additions-{round_number}.json").write_text(json.dumps(patch, ensure_ascii=False, indent=2), encoding="utf-8")
