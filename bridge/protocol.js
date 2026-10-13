@@ -13,7 +13,7 @@ globalThis.STUDYEZ_PROTOCOL = {
   READY_ATTRIBUTE: "data-studyez-ai-extension",
   // `<html>`에 그대로 붙는다. 어느 빌드가 실려 있는지 개발자 도구에서 보인다 —
   // 소스를 고쳐도 `chrome://extensions`에서 새로고침하지 않으면 옛것이 돈다.
-  VERSION: "1.3.11",
+  VERSION: "1.3.13",
 
   MESSAGES: {
     /** 웹앱 → 확장: 이 자료로 예습 대화를 열어 달라. */
@@ -50,5 +50,5 @@ globalThis.STUDYEZ_PROTOCOL = {
    *   <provider>        → conversation_url  (만든 계정에서만 열린다)
    *   <provider>_share  → share_url         (서비스 정책에 따라 공유되는 기본 링크)
    */
-  LINK_KINDS: ["chatgpt", "chatgpt_share", "gemini", "gemini_share", "claude", "claude_share", "chatgpt_review", "gemini_review", "claude_review"],
+  LINK_KINDS: ["chatgpt", "chatgpt_share", "gemini", "gemini_share", "claude", "claude_share", "chatgpt_review", "gemini_review", "claude_review", "chatgpt_bank", "chatgpt_bank_share"],
 };

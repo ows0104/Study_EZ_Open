@@ -13,8 +13,7 @@
 // 턴마다 다시 낸다. 같은 대화를 다시 공개하면 share id가 그대로라 저장된 주소는
 // 안 바뀌고 내용만 따라온다.
 //
-// Quiz Bank는 완료된 답 본문과 공개 공유 주소·생성자의 개인 주소를 함께 낸다.
-// 예습 저장 경로와 섞지 않고 은행의 링크로 보관한다.
+// Quiz Bank도 공유·개인 주소를 각각 낸다. 본문·CLI 검증과 무관하게 링크를 보관한다.
 
 const LOG = "[Study_EZ preview]";
 const POLL_INTERVAL_MS = 4000;
@@ -26,8 +25,6 @@ let bound = "";
 let lastConversationUrl = "";
 let lastShareUrl = "";
 let lastSharedNode = "";
-let lastBankNode = "";
-const BANK_MARK = "STUDYEZ_BANK_COMPLETE";
 let contextInvalidated = false;
 let turnObserver = null;
 let pollTimer = null;
@@ -343,6 +340,9 @@ async function publish() {
   // 한 번 확인한 대화만 따라간다. 같은 탭에서 옛 대화로 건너뛰어도 그것이 이
   // 강의의 예습이 되지는 않는다.
   if (bound && bound !== conversation) return "settled";
+  // 생성 중에는 상태 API를 반복해서 읽지 않는다. UI는 확인을 미루는 신호만
+  // 주고, 저장 허용은 아래 finished_successfully/end_turn 검사로 결정한다.
+  if (buttonByLabel(/^(?:stop generating|stop|중지|생성 중지)$/i)) return "pending";
   publishing = true;
   try {
     let token = "";
@@ -354,7 +354,9 @@ async function publish() {
       console.info(LOG, "대화 상태를 읽지 못했습니다:", error);
       // 공유에는 백엔드 계약이 바뀌었을 때의 대비책이 있다. 대화 주소는 읽어
       // 낸 것 자체가 저장 조건이므로 다음 차례에 다시 본다.
-      if (watch.mode !== "shared") return "pending";
+      // 이 실패도 바깥 재시도 간격을 적용한다. 여기서 pending으로 삼키면
+      // 429 응답에도 4초마다 같은 요청을 보내 한도가 풀리지 않는다.
+      if (!["shared", "bank"].includes(watch.mode)) throw error;
       lastSharedNode = "";
       const result = await settleShare(await publishViaDialog(conversation, token));
       if (result === "published") {
@@ -365,30 +367,6 @@ async function publish() {
     }
     if (!state.finished || !state.currentNode) return "pending";
     bound = conversation;
-
-    if (watch.mode === "bank") {
-      if (state.currentNode === lastBankNode) return "settled";
-      // 끝났는데 완료 표시가 없으면 잘린 답이다. 내지 않는다 — 「계속 생성」을 누르면
-      // 화면이 움직이고 다시 여기로 온다.
-      if (!state.answer.includes(BANK_MARK)) {
-        console.info(LOG, "답이 끝났지만 완료 표시가 없습니다. 이어서 생성되기를 기다립니다.");
-        return "settled";
-      }
-      let shareUrl;
-      try {
-        shareUrl = await publishViaApi(conversation, token, state);
-      } catch (error) {
-        console.info(LOG, "Quiz Bank 공유를 대화상자로 재시도합니다:", error);
-        shareUrl = await publishViaDialog(conversation, token);
-      }
-      shareUrl = normalizedShareUrl(shareUrl || "");
-      if (!shareUrl || !(await isPubliclyReadable(shareUrl))) throw new Error("Quiz Bank 공유 주소의 공개 여부를 확인하지 못했습니다.");
-      if (!sendShareMessage({ type: "STUDYEZ_BANK_ANSWER", raw: state.answer,
-        url: `https://chatgpt.com/c/${conversation}`, shareUrl })) return "pending";
-      lastBankNode = state.currentNode;
-      console.info(LOG, `Quiz Bank 답 본문을 넘겼습니다 (${state.answer.length}자).`);
-      return "published";
-    }
 
     // **대화 주소는 여기서 처음 낸다.**
     //
@@ -406,7 +384,7 @@ async function publish() {
       console.info(LOG, "대화 주소를 저장했습니다:", url);
     }
 
-    if (watch.mode !== "shared") return "published";
+    if (!["shared", "bank"].includes(watch.mode)) return "published";
     if (state.currentNode === lastSharedNode) return "settled";
     try {
       const shareUrl = await publishViaApi(conversation, token, state);

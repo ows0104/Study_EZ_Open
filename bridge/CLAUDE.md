@@ -1,6 +1,6 @@
 # bridge 작업 안내
 
-PDF를 AI 대화에 붙이고 예습 링크 또는 Quiz Bank 답 본문을 회수하는 Chrome 확장이다.
+PDF를 AI 대화에 붙이고 예습·복습·문제은행 링크를 회수하는 Chrome 확장이다.
 
 | 책임 | 파일 |
 |---|---|
@@ -17,9 +17,10 @@ PDF를 AI 대화에 붙이고 예습 링크 또는 Quiz Bank 답 본문을 회�
 제공자 목록은 확장과 서버가 같아야 한다. 대응 검사는
 `tests/bridge/test_extension_providers.py`가 담당한다.
 
-`mode: "bank"`는 관리자용 답 본문 회수다.
-`answerText` → `STUDYEZ_BANK_ANSWER` → 웹 저장 흐름을 유지하고,
-이 대화 주소를 예습 링크로 저장하지 않는다.
+`mode: "bank"`는 관리자용 문제은행 링크 생성이다. 공유·개인 주소는
+`chatgpt_bank_share`·`chatgpt_bank`로 각각 전달하고 `/bank/links`에 저장한다.
+Main-Quiz CLI 생성·검증과 독립적이며 예습 링크 자리를 덮지 않는다.
+구버전의 `STUDYEZ_BANK_ANSWER` 대기 메시지는 웹에서 링크만 회수한다.
 
 개발·다운로드 ZIP은 `../web/scripts/pack-extension.mjs`,
 스토어 ZIP은 `build-store-package.ps1`로 만든다.

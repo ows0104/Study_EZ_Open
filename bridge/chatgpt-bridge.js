@@ -14,10 +14,10 @@ function createOverlay(payload, remembered) {
   const automatic = payload.autoSend === true;
   const inputLabel = automatic ? "자동 첨부·전송" : "자료 첨부·프롬프트 입력";
   const shared = payload.mode === "shared";
-  // Quiz Bank(관리자): 필기 PDF 와 족보 조각을 붙이고, 답이 끝나면 그 **본문**을 강의에 저장한다.
+  // 문제은행 링크 생성은 Main-Quiz CLI 생성과 별도다.
   const bank = payload.mode === "bank";
   const providerLabel = { chatgpt: "ChatGPT", gemini: "Gemini", claude: "Claude" }[payload.provider] || "AI";
-  const modeLabel = bank ? "Quiz Bank 답 저장" : shared ? "공개 공유 링크" : "개인 대화 링크";
+  const modeLabel = bank ? "문제은행 링크 저장" : shared ? "공개 공유 링크" : "개인 대화 링크";
   const title = bank ? "Study EZ Quiz Bank" : payload.mode === "review" ? "Study EZ 복습 자료" : "Study EZ 예습 자료";
   const fileList = payload.files
     .map((file) => `<li title="${escapeHtml(file.filename)}">${escapeHtml(file.filename)}</li>`)
@@ -28,7 +28,7 @@ function createOverlay(payload, remembered) {
       동의는 같은 서비스·모드·입력 방식별로 기억합니다. ×로 중지할 수 있습니다. 확장은 답변 완료 상태와 링크를
       확인합니다. ChatGPT 기본 링크·Quiz Bank 모드에서는 로그인 토큰을 메모리에서 잠깐 사용하지만, 토큰을
       저장하거나 Study EZ로 보내지 않습니다.
-      ${bank ? "이 모드는 답변이 끝나면 공개 공유 링크를 만들고, 답변 본문·공유 링크·개인 대화 주소를 Study EZ 강의에 저장합니다." : shared ? "이 모드는 링크를 가진 누구나 볼 수 있는 공개 공유 링크를 만들고 Study EZ 강의에 저장합니다." : "이 모드는 내 계정에서만 열리는 대화 주소를 Study EZ 강의에 저장합니다."}
+      ${bank ? "이 모드는 답변이 끝나면 공개 공유 링크와 개인 대화 주소를 Study EZ 강의에 각각 저장합니다. Main-Quiz 생성은 별도로 요청합니다." : shared ? "이 모드는 링크를 가진 누구나 볼 수 있는 공개 공유 링크를 만들고 Study EZ 강의에 저장합니다." : "이 모드는 내 계정에서만 열리는 대화 주소를 Study EZ 강의에 저장합니다."}
       <a href="https://studyez.kr/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a>
     </p>`;
   const root = document.createElement("aside");
@@ -76,7 +76,7 @@ function createOverlay(payload, remembered) {
     ${remembered ? "" : `
     <label class="studyez-consent">
       <input type="checkbox" data-action="consent">
-      <span>${inputLabel}과 ${bank ? "답변 본문 저장" : shared ? "공개 공유 링크 생성" : "개인 대화 주소 저장"}에 동의합니다.</span>
+      <span>${inputLabel}과 ${bank ? "공개 공유 링크·개인 대화 주소 저장" : shared ? "공개 공유 링크 생성" : "개인 대화 주소 저장"}에 동의합니다.</span>
     </label>
     <p class="studyez-consent-help">체크박스를 선택한 뒤 아래 버튼을 눌러 주세요.</p>`}
     <div class="studyez-actions">

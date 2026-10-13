@@ -61,7 +61,7 @@ export function requestPreview(input: {
    * 붙으면 남이 물은 것이 링크만으로 열리고, 관리자가 개인 예습을 하는 순간
    * 그 공유가 반 전체의 기본 링크를 덮는다.
    *
-   * `bank` 는 Quiz Bank(관리자)다. 링크 대신 끝난 답의 본문이 돌아온다(`bank/bankBridge.ts`).
+   * `bank`는 문제은행(관리자)이다. 공유·개인 링크를 bankBridge가 별도로 저장한다.
    */
   mode: BridgeMode;
   prompt: string;
@@ -153,6 +153,8 @@ export function usePreviewLink(save: (input: { lectureId: string; kind: LinkKind
       const lectureId = typeof data.lectureId === "string" ? data.lectureId : "";
       const url = typeof data.url === "string" ? data.url : "";
       const kind = typeof data.kind === "string" ? data.kind : "";
+      // 문제은행 링크는 bankBridge가 저장한다. 예습 자리를 덮지 않는다.
+      if (kind === "chatgpt_bank" || kind === "chatgpt_bank_share") return;
       if (!lectureId || !url || !LINK_KINDS.includes(kind as LinkKind)) return;
       const destination = linkDestination(lectureId, kind as LinkKind);
       if (!destination) return;

@@ -168,7 +168,10 @@ def main() -> None:
           client.put(f"{ADMIN}/bank/open", json={"open": False}, headers=ADMIN_H).json()["open"] is False)
     as_student()
     check("열기 전 학생에게는 없다", client.get(f"{BASE}/bank").status_code == 404)
-    check("상세에도 안 실린다", client.get(BASE).json()["bank"] is None)
+    private_summary = client.get(BASE).json()["bank"]
+    check("닫힌 Main-Quiz와 독립적으로 공유 링크만 실린다", private_summary["shareUrl"] == shared
+          and not private_summary["usable"] and private_summary["questionCount"] == 0
+          and "conversationUrl" not in private_summary)
     check("학생은 자료 목록을 못 본다", "bankSources" not in client.get(BASE).json())
     check("학생도 개인 예습에 족보를 첨부할 수 있다",
           any(f["id"] == "a-jokbo" for f in client.get(BASE).json()["files"]))

@@ -31,6 +31,7 @@ class ExtensionProviderTests(unittest.TestCase):
         expected = {
             "chatgpt", "chatgpt_share", "gemini", "gemini_share", "claude", "claude_share",
             "chatgpt_review", "gemini_review", "claude_review",
+            "chatgpt_bank", "chatgpt_bank_share",
         }
         web_block = re.search(r"export const LINK_KINDS = \[(.*?)\] as const", web, re.S)
         extension_block = re.search(r"LINK_KINDS: \[(.*?)\]", extension, re.S)
@@ -56,7 +57,7 @@ class ExtensionProviderTests(unittest.TestCase):
         self.assertIn('providerForSender(sender) !== "chatgpt"', handler[:400])
         self.assertIn("raw.includes(BANK_MARK)", handler[:600])
         self.assertIn('watch.mode !== "bank"', handler[:1200])
-        self.assertIn('if (watch.mode === "bank") return;', source)
+        self.assertIn('watch.mode === "bank" ? (share ? "chatgpt_bank_share" : "chatgpt_bank")', source)
 
     def test_background_knows_each_conversation_shape(self) -> None:
         source = (EXTENSION / "background.js").read_text(encoding="utf-8")

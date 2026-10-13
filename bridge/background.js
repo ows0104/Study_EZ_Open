@@ -314,14 +314,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const watch = stored[key];
         if (!watch || watch.provider !== provider) return;
         // Quiz Bank 로 연 대화는 예습 링크가 아니다. 저장하면 관리자의 개인 예습 자리를 덮는다.
-        if (watch.mode === "bank") return;
         // 공유는 기본 링크를 만들 때만 낸다.
         //
         // 개인 예습까지 공개 `/share/`를 발행하면 두 가지가 잘못된다 — 남이
         // 물은 것이 링크만 있으면 열리게 되고, 관리자가 개인 예습을 하는 순간
         // 그 공유가 반 전체의 기본 링크를 덮는다.
-        if (share && watch.mode !== "shared") return;
-        const kind = share ? `${provider}_share` : watch.mode === "review" ? `${provider}_review` : provider;
+        if (share && !["shared", "bank"].includes(watch.mode)) return;
+        const kind = watch.mode === "bank" ? (share ? "chatgpt_bank_share" : "chatgpt_bank")
+          : share ? `${provider}_share` : watch.mode === "review" ? `${provider}_review` : provider;
         await chrome.storage.session.set({
           [pendingKey(watch.webappTabId, watch.lectureId, kind)]: { lectureId: watch.lectureId, kind, url },
         });

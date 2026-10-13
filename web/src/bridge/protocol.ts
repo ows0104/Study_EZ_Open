@@ -42,6 +42,8 @@ export const LINK_KINDS = [
   "chatgpt_review",
   "gemini_review",
   "claude_review",
+  "chatgpt_bank",
+  "chatgpt_bank_share",
 ] as const;
 export type LinkKind = (typeof LINK_KINDS)[number];
 

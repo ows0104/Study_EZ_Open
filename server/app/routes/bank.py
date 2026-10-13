@@ -131,9 +131,14 @@ def _usable(row: QuizBank) -> dict:
 
 def summary(db: Session, lecture: Lecture, row: QuizBank | None, *, is_admin: bool,
             user_id: str | None = None) -> dict[str, Any] | None:
-    """강의 상세에 싣는 요약. 학생에게는 열린 은행만."""
-    if row is None or (not is_admin and not row.open_to_students):
+    """공유 링크는 검증과 독립적이다. 학생 문항은 공개된 은행만 싣는다."""
+    if row is None or (not is_admin and not row.open_to_students and not row.share_url):
         return None
+    if not is_admin and not row.open_to_students:
+        # 공유 대화는 CLI 생성·검증 상태와 독립적이다. 비공개 문항과 개인 주소는 내보내지 않는다.
+        return {"status": "linked", "open": False, "buildId": "", "shareUrl": row.share_url,
+                "questionCount": 0, "conceptCount": 0, "studyQuestionCount": 0,
+                "seenQuestionCount": 0, "builtAt": None, "usable": False, "coverage": None}
     bank = row.bank or {}
     state = db.get(BankState, (user_id, row.subject, row.run_id)) if user_id else None
     current = state.state if state and state.build_id == row.build_id else {}
@@ -195,9 +200,8 @@ def put_bank_response(subject: str, run_id: str, payload: ResponseIn,
         row.validation = {k: v for k, v in row.validation.items() if k != "maintenance"}
     if payload.share_url is not None:
         row.share_url = payload.share_url.strip()
-    elif row.conversation_url != payload.conversation_url:
-        row.share_url = ""
-    row.conversation_url = payload.conversation_url.strip()
+    if "conversation_url" in payload.model_fields_set:
+        row.conversation_url = payload.conversation_url.strip()
     row.prompt_version = payload.prompt_version
     row.responded_by = user.email or user.id
     row.responded_at = datetime.now(UTC)
@@ -233,8 +237,8 @@ def get_bank_response(subject: str, run_id: str, user: CurrentUser = Depends(req
 
 
 class BankLinksIn(BaseModel):
-    share_url: str = Field(alias="shareUrl", max_length=500)
-    conversation_url: str = Field(alias="conversationUrl", max_length=500)
+    share_url: str | None = Field(default=None, alias="shareUrl", max_length=500)
+    conversation_url: str | None = Field(default=None, alias="conversationUrl", max_length=500)
     model_config = {"populate_by_name": True}
 
 
@@ -242,13 +246,21 @@ class BankLinksIn(BaseModel):
 def put_bank_links(subject: str, run_id: str, payload: BankLinksIn,
                    user: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)) -> dict:
     lecture = lecture_or_404(db, subject, run_id)
-    row = db.get(QuizBank, (lecture.subject, lecture.run_id))
-    if row is None:
-        raise HTTPException(404, "먼저 문제은행 대화를 생성하세요.")
-    if not valid_share_url(payload.share_url, "chatgpt") or not valid_conversation_url(payload.conversation_url, "chatgpt"):
+    if (payload.share_url is not None and not valid_share_url(payload.share_url, "chatgpt")) or (
+            payload.conversation_url is not None and not valid_conversation_url(payload.conversation_url, "chatgpt")):
         raise HTTPException(422, "ChatGPT 공유 링크와 개인 대화 주소를 확인하세요.")
-    row.share_url = payload.share_url.strip()
-    row.conversation_url = payload.conversation_url.strip()
+    # 첫 두 링크가 동시에 도착해도 같은 강의의 은행을 한 번만 만든다.
+    db.refresh(lecture, with_for_update=True)
+    row = db.scalars(select(QuizBank).where(QuizBank.subject == subject, QuizBank.run_id == run_id)
+                     .with_for_update()).first()
+    if row is None:
+        row = QuizBank(subject=lecture.subject, run_id=lecture.run_id, status="linked")
+        db.add(row)
+    # 독립적으로 도착하는 두 링크가 서로 덮어쓰지 않는다. 빈 문자열은 명시적 삭제다.
+    if payload.share_url is not None:
+        row.share_url = payload.share_url.strip()
+    if payload.conversation_url is not None:
+        row.conversation_url = payload.conversation_url.strip()
     db.commit()
     return {"shareUrl": row.share_url, "conversationUrl": row.conversation_url}
 

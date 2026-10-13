@@ -150,23 +150,23 @@ function shareFixture({ fields = [], buttons = [], text = 'Share conversation', 
   return { context, root, runtime, sent, state, document };
 }
 
-test('bank publishes verified shared and private URLs with its response, without preview link messages', async () => {
+test('bank saves shared and private URLs separately without a response or completion marker', async () => {
   const s = shareFixture();
   vm.runInContext('watch = { mode: "bank" };', s.context);
   s.context.accessToken = async () => 'test-token';
-  s.context.conversationState = async () => ({ finished: true, currentNode: 'bank-answer', answer: 'Bank STUDYEZ_BANK_COMPLETE' });
+  s.context.conversationState = async () => ({ finished: true, currentNode: 'bank-answer', answer: 'Bank without a completion marker' });
   s.context.publishViaApi = async () => 'https://chatgpt.com/share/bank-test';
   s.context.isPubliclyReadable = async () => true;
   assert.equal(await s.context.publish(), 'published');
-  const messages = s.sent.filter(m => m.type === 'STUDYEZ_BANK_ANSWER');
-  assert.equal(messages.length, 1);
+  const messages = s.sent.filter(m => ['STUDYEZ_SHARE_LINK', 'STUDYEZ_CONVERSATION_LINK'].includes(m.type));
+  assert.equal(messages.length, 2);
   assert.equal(messages[0].url, 'https://chatgpt.com/c/our-conversation');
-  assert.equal(messages[0].shareUrl, 'https://chatgpt.com/share/bank-test');
-  assert.equal(s.sent.some(m => ['STUDYEZ_SHARE_LINK', 'STUDYEZ_CONVERSATION_LINK'].includes(m.type)), false);
+  assert.equal(messages[1].url, 'https://chatgpt.com/share/bank-test');
+  assert.equal(s.sent.some(m => m.type === 'STUDYEZ_BANK_ANSWER'), false);
   assert.equal(await s.context.publish(), 'settled');
 });
 
-test('bank does not emit a response with an unverified public link', async () => {
+test('bank retains its private URL even when public sharing fails', async () => {
   const s = shareFixture();
   vm.runInContext('watch = { mode: "bank" };', s.context);
   s.context.accessToken = async () => 'test-token';
@@ -175,6 +175,38 @@ test('bank does not emit a response with an unverified public link', async () =>
   s.context.isPubliclyReadable = async () => false;
   assert.equal(await s.context.publish(), 'pending');
   assert.equal(s.sent.some(m => m.type === 'STUDYEZ_BANK_ANSWER'), false);
+  assert.equal(s.sent.filter(m => m.type === 'STUDYEZ_CONVERSATION_LINK').length, 1);
+  assert.equal(s.sent.some(m => m.type === 'STUDYEZ_SHARE_LINK'), false);
+});
+
+test('bank defers state API calls while the answer is generating', async () => {
+  const s = shareFixture();
+  vm.runInContext('watch = { mode: "bank" };', s.context);
+  const stop = element('중지');
+  s.document.querySelectorAll = () => [stop];
+  s.context.accessToken = async () => assert.fail('generation must not poll the backend');
+  assert.equal(await s.context.publish(), 'pending');
+  assert.equal(s.sent.length, 0);
+});
+
+test('bank state 429 backs off, then resumes and clears the delay after saving', async () => {
+  const s = shareFixture();
+  vm.runInContext('watch = { mode: "bank" };', s.context);
+  let calls = 0;
+  s.context.accessToken = async () => 'test-token';
+  s.context.conversationState = async () => { calls++; throw new Error('HTTP 429'); };
+  assert.equal(await s.context.publish(), 'pending');
+  assert.equal(await s.context.publish(), 'pending');
+  assert.equal(calls, 1);
+  assert.ok(vm.runInContext('retryAfter > Date.now()', s.context));
+  vm.runInContext('retryAfter = 0;', s.context);
+  s.context.conversationState = async () => ({ finished: true, currentNode: 'recovered', answer: 'Bank STUDYEZ_BANK_COMPLETE' });
+  s.context.publishViaApi = async () => 'https://chatgpt.com/share/recovered';
+  s.context.isPubliclyReadable = async () => true;
+  assert.equal(await s.context.publish(), 'published');
+  assert.equal(vm.runInContext('failures', s.context), 0);
+  assert.equal(vm.runInContext('retryAfter', s.context), 0);
+  assert.equal(s.sent.filter(m => m.type === 'STUDYEZ_SHARE_LINK').length, 1);
 });
 
 test('reads anchor href inside sharing dialog and ignores answer links', () => {
@@ -313,7 +345,7 @@ test('invalidation stops share observer/timer and initialization handles synchro
   assert.equal(vm.runInContext('contextInvalidated', other.context), true);
 });
 
-test('review links keep their own pending kind and never publish a shared link', async () => {
+for (const mode of ['review', 'bank']) test(`${mode} links keep their own pending keys until each save is acknowledged`, async () => {
   const stored = {};
   const delivered = [];
   let receive;
@@ -334,25 +366,38 @@ test('review links keep their own pending kind and never publish a shared link',
   vm.runInContext(read('background.js'), context);
   const protocol = context.STUDYEZ_PROTOCOL;
   const request = { requestId: 'review', lectureId: '약리학/261006_01', provider: 'chatgpt',
-    mode: 'review', prompt: 'Review today', autoSend: false,
+    mode, prompt: 'Review today', autoSend: false,
     files: [{ filename: 'today.pdf', downloadUrl: 'http://localhost:8000/api/local-storage/lectures/today.pdf' }] };
   const response = await new Promise(resolve => receive({ type: protocol.MESSAGES.openPreview, payload: request },
     { tab: { id: 1, url: 'http://localhost:5173' } }, resolve));
   assert.equal(response.ok, true);
-  assert.equal(stored['studyez-watch:10'].mode, 'review');
+  assert.equal(stored['studyez-watch:10'].mode, mode);
   const sender = { tab: { id: 10, url: 'https://chatgpt.com/c/review' } };
   receive({ type: 'STUDYEZ_CONVERSATION_LINK', lectureId: 'wrong', url: sender.tab.url }, sender, () => {});
   await new Promise(resolve => setImmediate(resolve));
   const link = delivered.find(message => message.type === protocol.MESSAGES.linkReady);
-  assert.equal(link.kind, 'chatgpt_review');
+  const privateKind = mode === 'bank' ? 'chatgpt_bank' : 'chatgpt_review';
+  assert.equal(link.kind, privateKind);
   assert.equal(link.lectureId, request.lectureId);
   assert.equal(stored[`studyez-pending:1:${request.lectureId}:chatgpt`], undefined);
   const count = delivered.length;
   receive({ type: 'STUDYEZ_SHARE_LINK', url: 'https://chatgpt.com/share/review' }, sender, () => {});
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(delivered.length, count);
-  receive({ type: protocol.MESSAGES.linkSaved, lectureId: request.lectureId, kind: 'chatgpt_review' },
+  if (mode === 'review') assert.equal(delivered.length, count);
+  else {
+    assert.ok(delivered.some(message => message.kind === 'chatgpt_bank_share'));
+    assert.equal(stored[`studyez-pending:1:${request.lectureId}:chatgpt_bank_share`].url, 'https://chatgpt.com/share/review');
+    assert.equal(stored[`studyez-pending:1:${request.lectureId}:chatgpt_share`], undefined);
+  }
+  receive({ type: protocol.MESSAGES.linkSaved, lectureId: request.lectureId, kind: privateKind },
     { tab: { id: 1, url: 'http://localhost:5173' } }, () => {});
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(stored[`studyez-pending:1:${request.lectureId}:chatgpt_review`], undefined);
+  assert.equal(stored[`studyez-pending:1:${request.lectureId}:${privateKind}`], undefined);
+  if (mode === 'bank') {
+    assert.ok(stored[`studyez-pending:1:${request.lectureId}:chatgpt_bank_share`]);
+    receive({type: protocol.MESSAGES.linkSaved, lectureId: request.lectureId, kind: 'chatgpt_bank_share'},
+      {tab: {id: 1, url: 'http://localhost:5173'}}, () => {});
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(stored[`studyez-pending:1:${request.lectureId}:chatgpt_bank_share`], undefined);
+  }
 });

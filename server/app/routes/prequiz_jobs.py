@@ -90,8 +90,11 @@ def _no_material(db: Session, lecture: Lecture, kind: str) -> str:
     """
     if kind == JOB_BANK:
         bank = db.get(QuizBank, (lecture.subject, lecture.run_id))
-        return "" if bank is not None and (bank.raw_response or bank.responded_at) else (
-            "ChatGPT 응답이 아직 없습니다. Quiz Bank는 캘린더 패널에서 ChatGPT로 만들고 시작합니다.")
+        if bank is not None and (bank.raw_response or bank.responded_at):
+            return ""
+        notes = db.scalars(select(Asset.id).where(
+            Asset.subject == lecture.subject, Asset.run_id == lecture.run_id, Asset.kind == "notes_current")).first()
+        return "" if notes else "올해 강의록이 아직 없습니다. Main-Quiz는 올해 필기로 만듭니다."
     if kind == JOB_MAIN:
         notes = db.scalars(
             select(Asset.id).where(
@@ -185,6 +188,16 @@ def request_prequiz(
         origin=JOB_BUTTON,
     )
     db.add(job)
+    if kind == JOB_BANK:
+        bank = db.get(QuizBank, (lecture.subject, lecture.run_id))
+        if bank is None:
+            bank = QuizBank(subject=lecture.subject, run_id=lecture.run_id)
+            db.add(bank)
+        if bank.responded_at is None:
+            bank.responded_at = datetime.now(UTC)
+            bank.responded_by = user.email or user.id
+            bank.status = "responded"
+            bank.message = "Main-Quiz 생성 대기 — 올해 강의록으로 별도 출제"
     db.commit()
     return {"job": job_row(job), "created": True}
 
