@@ -301,6 +301,28 @@ function attachmentFilenameVisible(labels, filename) {
   return new RegExp(`(?:^|[\\s"'])${pattern}(?![\\w.])`, "m").test(labels.normalize("NFC"));
 }
 
+function reusableDraft(text, prompt) {
+  return !normalized(text) || normalized(text) === normalized(prompt);
+}
+
+async function clearOwnDraftAttachments(editor, payload, active) {
+  const root = composerRoot(editor, payload.provider);
+  if (!root) throw new Error("이전 첨부 상태를 확인하지 못했습니다. 새 대화로 다시 시작해 주세요.");
+  const buttons = [...root.querySelectorAll("button")].filter((button) => {
+    const label = button.getAttribute("aria-label") || "";
+    return visible(button) && /(?:제거|remove)/i.test(label);
+  });
+  if (buttons.some((button) => !payload.files.some((file) =>
+    attachmentFilenameVisible(button.getAttribute("aria-label") || "", file.filename)))) {
+    throw new Error("이전 작성 내용에 다른 자료가 첨부되어 있어 자동 진행을 멈췄습니다.");
+  }
+  for (const button of buttons) {
+    active();
+    button.click();
+  }
+  if (buttons.length) await pause(300);
+}
+
 function attachmentStatus(root, files) {
   const copy = root.cloneNode(true);
   copy.querySelectorAll('textarea, [contenteditable], #studyez-bridge').forEach((node) => node.remove());
@@ -477,7 +499,12 @@ async function initialize() {
           if (!editor) await pause(500);
         }
         if (!editor) throw new Error("입력창을 찾지 못했습니다. AI 서비스 로그인과 화면을 확인해 주세요.");
-        if (editorText(editor)) throw new Error("입력창에 작성 중인 내용이 있어 자동 진행을 멈췄습니다. 새 대화로 다시 시작해 주세요.");
+        if (!reusableDraft(editorText(editor), payload.prompt)) throw new Error("입력창에 작성 중인 다른 내용이 있어 자동 진행을 멈췄습니다. 새 대화로 다시 시작해 주세요.");
+        if (editorText(editor)) {
+          await clearOwnDraftAttachments(editor, payload, active);
+          editor = findEditor(provider);
+          if (!editor || !reusableDraft(editorText(editor), payload.prompt)) throw new Error("이전 작업을 정리하는 동안 입력 내용이 바뀌어 자동 진행을 멈췄습니다.");
+        }
         status.textContent = "자료를 첨부하고 프롬프트를 넣는 중…";
         // 먼저 입력한다. 파일 입력을 찾는 동안 사용자가 전송/이동했으면 덮어쓰지 않는다.
         fillPrompt(payload.prompt, editor);

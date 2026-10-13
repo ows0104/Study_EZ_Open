@@ -61,6 +61,28 @@ test('reattached filenames accept provider numeric suffixes but reject different
   }
 });
 
+test('only an empty or identical Study EZ draft can be reused', () => {
+  assert.equal(context.reusableDraft('', 'Study EZ prompt'), true);
+  assert.equal(context.reusableDraft('Study EZ prompt', 'Study EZ prompt'), true);
+  assert.equal(context.reusableDraft('User is writing something else', 'Study EZ prompt'), false);
+});
+
+test('identical draft cleanup removes only expected study attachments and leaves unknown ones untouched', async () => {
+  const clicks = [];
+  const buttons = names => names.map(name => ({getAttribute: () => name,
+    getBoundingClientRect: () => ({width: 10, height: 10}), click: () => clicks.push(name)}));
+  let attached = buttons(['lecture (2).pdf 제거', 'jokbo.md 제거']);
+  context.composerRoot = () => ({querySelectorAll: () => attached});
+  context.pause = async () => {};
+  const payload = {provider: 'chatgpt', files: [{filename: 'lecture.pdf'}, {filename: 'jokbo.md'}]};
+  await context.clearOwnDraftAttachments({}, payload, () => {});
+  assert.deepEqual(clicks, ['lecture (2).pdf 제거', 'jokbo.md 제거']);
+  clicks.length = 0;
+  attached = buttons(['lecture.pdf 제거', '사진 제거']);
+  await assert.rejects(context.clearOwnDraftAttachments({}, payload, () => {}), /다른 자료/);
+  assert.equal(clicks.length, 0);
+});
+
 test('large lecture upload can finish after two minutes and submits once', async () => {
   const s = scenario({fileSize: 90 * 1024 * 1024, attachments: time => ({ready: time >= 180000})});
   await s.run();
