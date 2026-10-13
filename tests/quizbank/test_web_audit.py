@@ -53,6 +53,19 @@ def test_report_requires_complete_source_point_and_mcq_checks(bank):
     with pytest.raises(SessionError, match="문항 ID"):
         web_audit.shape_report(invalid, bank, points, 1)
 
+
+def test_pdf_point_locations_expand_ranges_and_never_invent_page_one(bank):
+    assert web_audit.authored_pages("S1 pp.3–7,10; S2 p.1") == [3, 4, 5, 6, 7, 10]
+    assert web_audit.authored_pages("S3 p.2-3; S1 p.1", "S3") == [2, 3]
+    valid = report(bank)
+    valid["pages"] = [{"page": p, "status": "checked", "note": ""} for p in range(1, 8)]
+    points = [{"point_id": "P001", "point": "근거 범위", "source_refs": "S1 pp.3–7; S2 p.1"}]
+    checked = web_audit.shape_report(valid, bank, points, 7)
+    assert [p["page"] for p in checked["pages"] if p["points"]] == [3, 4, 5, 6, 7]
+    points[0]["source_refs"] = "S2 2025-1"
+    checked = web_audit.shape_report(valid, bank, points, 7)
+    assert not any(p["points"] for p in checked["pages"])
+
 def test_missing_condition_duplicates_or_wrong_mode_require_web_revision(bank):
     original = copy.deepcopy(bank)
     points = web_audit.parse_points(RAW)

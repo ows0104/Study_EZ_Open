@@ -62,7 +62,24 @@ def parse_points(raw: str) -> list[dict]:
         raise SessionError("Exam Point Plan이 없습니다. 웹에서 출제 포인트 표를 포함해 다시 출력하세요.")
     return result
 
-def shape_report(raw: dict, bank: dict, points: list[dict], count: int) -> dict:
+def authored_pages(refs: str, pdf_source: str = "S1") -> list[int]:
+    """Read PDF ranges and comma lists without treating jokbo pages as PDF pages."""
+    pages = set()
+    for section in re.split(r";|<br\s*/?>", refs, flags=re.I):
+        source = re.match(r"\s*([A-Za-z]+\d*|EXT)\b", section)
+        if not source or source[1] != pdf_source:
+            continue
+        for match in re.finditer(r"\b(?:pp?\.?|slides?)\s*(\d+(?:\s*(?:[–—~\-]\s*\d+|,\s*\d+))*)", section, re.I):
+            for span in match[1].split(","):
+                bounds = re.split(r"[–—~\-]", span)
+                first, last = int(bounds[0]), int(bounds[-1])
+                if abs(last - first) > 1000:
+                    raise SessionError("웹 출제 포인트의 근거 쪽 범위가 너무 큽니다.")
+                pages.update(range(min(first, last), max(first, last) + 1))
+    return sorted(pages)
+
+
+def shape_report(raw: dict, bank: dict, points: list[dict], count: int, *, pdf_source: str = "S1") -> dict:
     known = {q["question_id"] for q in bank["questions"]}
     point_ids = {p["point_id"] for p in points}
     mcqs = {q["question_id"]: q for q in bank["questions"] if q["format"] in ("mcq", "multi_select")}
@@ -102,10 +119,8 @@ def shape_report(raw: dict, bank: dict, points: list[dict], count: int) -> dict:
         row["points"] = []
     for point in points:
         check = checks[point["point_id"]]
-        refs = [int(n) for n in re.findall(r"(?:p\.?\s*|쪽\s*)(\d+)", point["source_refs"], re.I)]
+        refs = authored_pages(point["source_refs"], pdf_source)
         refs = [p for p in refs if p in pages]
-        if not refs:
-            refs = [1]
         for p in set(refs):
             pages[p]["points"].append({**check, "fact": point["point"],
                 "status": "covered" if check["status"] == "covered" else "gap"})
@@ -149,7 +164,8 @@ def inspect(bank: dict, raw: str, pdf: Path, title: str, sources: list[dict], ou
         "checks는 모든 point_id, classifications는 모든 mcq·multi_select question_id를 정확히 한 번 포함한다. " \
         "읽지 못한 쪽은 unreadable로 기록한다. note·reason은 간결하게 쓴다."
     raw_report, info = _call(prompt, REPORT, work, model, "웹 출제 원본·포인트·중복 검수")
-    report = shape_report(raw_report, bank, points, count)
+    pdf_source = next((s["id"] for s in sources if s.get("filename") == pdf.name), "S1")
+    report = shape_report(raw_report, bank, points, count, pdf_source=pdf_source)
     report.update(sourceFilename=pdf.name, sourceSha256=hashlib.sha256(pdf.read_bytes()).hexdigest())
     (out / "coverage.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "web-audit.json").write_text(json.dumps(raw_report, ensure_ascii=False, indent=2), encoding="utf-8")
