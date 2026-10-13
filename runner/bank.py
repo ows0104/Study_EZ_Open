@@ -193,6 +193,8 @@ def run(client: publish.Client, root: Path, subject: str, run_id: str, this_year
     result = _read(out / "result.json")
     if code != 0 or result is None:
         return fail(f"quizbank 가 {code} 로 끝났다 (로그: {out})")
+    if result.get("requiresRevision"):
+        return fail(f"CLI 검수에서 웹 수정이 필요합니다. 검수 기록: {out}")
 
     _stage("업로드")
     slides = sorted((out / "slides").glob("*.png")) if (out / "slides").is_dir() else []

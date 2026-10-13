@@ -11,7 +11,7 @@ def test_prompt_uses_canonical_template_and_preserves_cloze():
     body, version = generate.prompt_for("강의", "2026-10-20", [
         {"id": "S1", "kind": "notes_current", "filename": "a.pdf"}])
     assert version != "unknown" and "Version:" not in body
-    assert "{{title}}" not in body and "a.pdf" in body and "{{c1::" in body
+    assert "{{title}}" not in body and "a.pdf" in body and "{{c1}}" in body
     assert "{{lecture_scope}}" not in body
 
 
@@ -23,7 +23,9 @@ def test_prompt_uses_canonical_template_and_preserves_cloze():
 def test_endocrine_scope_is_tied_to_the_confirmed_lecture(title, filename, scoped):
     body, _ = generate.prompt_for(title, "2026-10-20", [
         {"id": "S1", "kind": "notes_current", "filename": filename}])
-    assert ("관리자 지정 범위: 2026-10-07 내분비" in body) is scoped
+    scope = generate.lecture_scope(title, [{"id": "S1", "kind": "notes_current", "filename": filename}])
+    assert ("관리자 지정 범위: 2026-10-07 내분비" in scope) is scoped
+    assert "관리자 지정 범위:" not in body
     assert "{{lecture_scope}}" not in body
 
 

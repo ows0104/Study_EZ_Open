@@ -220,3 +220,24 @@ def test_응답이_없으면_자동_출제_후_기존_정리와_업로드(tmp_pa
     puts = [c for c in client.calls if c[0] == "PUT"]
     assert puts[0][1].endswith("bank-generated-response")
     assert puts[-1][2]["usage"][0]["step"] == "출제"
+
+
+def test_web_revision_blocks_upload_of_unreviewed_bank(tmp_path, monkeypatch):
+    pdf = tmp_path / "a.pdf"
+    pdf.write_bytes(b"%PDF")
+    monkeypatch.setattr(bank, "_notes_pdf", lambda *a: pdf)
+    fake = _fake_quizbank(True)
+    def pending(argv, **kwargs):
+        result = fake(argv, **kwargs)
+        out = Path(argv[argv.index("--out") + 1])
+        data = json.loads((out / "result.json").read_text(encoding="utf-8"))
+        data["requiresRevision"] = True
+        (out / "result.json").write_text(json.dumps(data), encoding="utf-8")
+        return result
+    monkeypatch.setattr(subprocess, "run", pending)
+    monkeypatch.setattr(bank, "jokbo_slices", lambda *a: {"261002_02": tmp_path / "j.md"})
+    client = FakeClient()
+    assert bank.run(client, tmp_path, "약리학", "261002_02", "2026", "2025", tmp_path) == 1
+    assert not any(row[0] == "FILE" for row in client.calls)
+    puts = [row for row in client.calls if row[0] == "PUT"]
+    assert "bank" not in puts[-1][2] and "CLI 검수" in puts[-1][2]["message"]

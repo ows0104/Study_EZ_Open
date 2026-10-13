@@ -26,11 +26,11 @@ import sys
 import time
 from pathlib import Path
 
-from . import coverage, organize, review, slides
+from . import coverage, organize, review, slides, web_audit
 from .session import SessionError
-from .validate import validate_dropping
+from .validate import validate_bank, validate_dropping
 
-OUTPUTS = ("bank.json", "bank.raw.json", "validation.json", "review.json", "coverage.json", "classification.json", "pages.json", "result.json", "usage.jsonl")
+OUTPUTS = ("bank.json", "bank.raw.json", "validation.json", "review.json", "coverage.json", "classification.json", "web-audit.json", "pages.json", "result.json", "usage.jsonl")
 
 
 def _write(path: Path, data) -> None:
@@ -75,7 +75,11 @@ def run(raw_path: Path, pdf: Path | None, title: str, run_id: str, sources: list
     _stage("검증")
     # 걸린 문항만 빼고 다시 잰다 — 뺀 은행을 `bank.json` 에 다시 쓴다. 빼기 전 것은 `bank.raw.json`.
     full_count = len(bank.get("questions", []))
-    kept, validation = validate_dropping(bank, [s["id"] for s in sources])
+    web_authored = web_audit.enabled(prompt_version)
+    if web_authored:
+        kept, validation = bank, validate_bank(bank, [s["id"] for s in sources])
+    else:
+        kept, validation = validate_dropping(bank, [s["id"] for s in sources])
     if kept is not bank:
         _write(out / "bank.raw.json", bank)
         bank = kept
@@ -86,11 +90,18 @@ def run(raw_path: Path, pdf: Path | None, title: str, run_id: str, sources: list
                     "dropped": full_count - len(bank.get("questions", [])),
                     "errors": len(validation["errors"]), "warnings": len(validation["warnings"]),
                     "review": None, "slides": 0, "missing_pages": []}
+    if web_authored:
+        result["requiresRevision"] = not validation["pass"] or pdf is None or not do_coverage
     if validation["pass"]:
         if pdf is not None and do_coverage:
-            _stage("원본 누락 검증·객관식 보강")
-            bank, checked, usage = coverage.audit_and_supplement(
-                bank, pdf, title, sources, out, model=model, pdf_source=pdf_source, jokbo=jokbo)
+            if web_authored:
+                _stage("웹 출제 원본·포인트·중복 검수")
+                checked, usage = web_audit.inspect(bank, raw, pdf, title, sources, out, model=model, jokbo=jokbo)
+                result["requiresRevision"] = checked["requiresRevision"]
+            else:
+                _stage("원본 누락 검증·객관식 보강")
+                bank, checked, usage = coverage.audit_and_supplement(
+                    bank, pdf, title, sources, out, model=model, pdf_source=pdf_source, jokbo=jokbo)
             # 보강은 validate_bank를 통과한 추가분만 합친다. 원본 대조 결과는 형식 통과와 별도다.
             validation["coverage"] = checked
             _write(out / "bank.json", bank)
@@ -105,6 +116,8 @@ def run(raw_path: Path, pdf: Path | None, title: str, run_id: str, sources: list
             _write(out / "review.json", checked)
             _usage(out, "외부지식 검토", info)
             result["review"] = checked["counts"]
+            if web_authored and checked["counts"].get("wrong", 0):
+                result["requiresRevision"] = True
 
         _stage("슬라이드")
         pages = slides.cited_pages(bank, pdf_source)

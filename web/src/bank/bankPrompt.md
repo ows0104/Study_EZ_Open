@@ -1,676 +1,78 @@
 <!--
 Bank Builder 프롬프트 — 정본
-Version: 1.27
-
-이 파일이 ChatGPT에 가는 프롬프트의 정본이다. 이 주석은 보내지 않는다.
-{{…}} 자리는 web/src/bank/prompt.ts 가 강의마다 채운다. {{c1}} 같은 cloze 표기는 그대로 간다.
-고치면 아래에 판을 하나 올리고 Version 을 같이 올린다. 서버에 응답이 저장될 때 이 Version 이 같이 남는다.
-
-1.27 (2026-10-13) 객관식의 기억 확인형·구별 판단형을 학습 목표에 따라 명시한다.
-
-1.26 (2026-10-12) V1 풀이·복습 계산을 복원하고 문항 품질 검사와 검토된 보기 조합 변형을 유지한다.
-
-1.25 (2026-10-11) 나열형의 정답 후보를 다섯 개로 자르지 않고 요구 개수와 분리한다.
-                   같은 답을 재사용하는 짝짓기는 중복 보기 없이 정답 짝을 보존한다.
-
-1.24 (2026-10-11) 문장 구조상 필요한 cloze 빈칸을 4개까지 허용한다. 빈칸 등장 순서와
-                   answer_units의 일대일 대응은 유지한다.
-
-1.22 (2026-10-11) 객관식·복수 선택의 모든 선지에 해설을 붙인다. 정답이 아닌 선지에도
-                   발문의 조건에 맞지 않는 이유와 올바른 관계를 명시한다.
-
-1.20 (2026-10-09) 표적·용어의 약어를 답으로 묻는 발문에 그 뜻이나 전체 이름을 미리 제공하지 않는다.
-                   약물–표적 관계의 기초 회수는 보존하고, 정답을 풀어 쓴 단서만 제거한다.
-
-1.19 (2026-10-09) 출제 포인트별 포함 근거를 먼저 확정한다. 약물명·세부 분류를 나열한 표의 각 항목이나
-                   같은 사실의 역방향·보기 변형을 기계적으로 문항화하지 않는다.
-1.18 (2026-10-08) 교수 강조·족보·학습목표로 출제 범위를 먼저 고르고, 선택한 범위 안에서 문제은행을 확장한다.
-                   낮은 출제 근거의 세부사항을 모두 Optional로 문항화하던 지시를 수정한다.
-                   강의별 관리자 지정 범위를 웹과 자동 출제에 함께 적용한다.
-                   261007_01 내분비는 교수 강조 중심으로 제한한다. 고정 문항 수는 두지 않는다.
-
-1.17 (2026-10-08) 출제 포인트를 넓게 보존하고 앱에서 골라 쓰는 문제은행으로 목적을 명시한다.
-                   저중요도 문항 감축 지시를 없애고 독립 출제 포인트와 계획한 회수 방향의 누락을 점검한다.
-                   중요도·반복량은 저장할 문항 수의 상한이 아니다.
-                   같은 개념의 참·거짓 보기와 오개념을 바꾸는 객관식 변형을 추가한다.
-                   옳은 것·옳지 않은 것·복수 선택을 활용하고, 변형마다 정답과 보기별 판정 근거를 검토한다.
-                   같은 회수 방향에서도 다른 구분·오개념을 시험하는 변형은 보존한다.
-
-1.16 (2026-10-08) 의학 지식 없이 일반 추론·산술·범위 비교만으로 풀리는 문항을 수정한다.
-                   판단에 필요한 의학적 기준·기전·지표를 회수하게 하며, 기초 사실 회수 문항은 보존한다.
-
-1.15 (2026-10-07) 서술형을 단답형으로 바꾼다. 모든 tier의 basic은 용어·수치·짧은 관계로 답하고,
-                   문장형 설명이 필요한 문항은 Cloze·List·Matching·Sequence 등으로 설계한다.
-
-1.13 (2026-10-07) Core 서술은 짧은 용어·관계·채점 항목으로 회수하게 한다. 긴 문장 재현을 요구하지 않고,
-                   answer와 answer_units를 같은 최소 정답 단위로 쓴다. 넓은 설명은 회수 축을 나눈다.
-
-1.12 (2026-10-06) Optional 문항 수를 억제하는 지시를 뺀다. 학습 가치가 있는 세부사항은 보존하고,
-                   낮은 중요도는 tier·importance에 반영해 앱에서 노출과 학습률 비중을 조절한다.
-
-1.11 (2026-10-06) Question Bank를 공통 표와 형식별 상세 표로 출력한다. 필드 이름의 반복을 줄이되
-                   문항·채점 단위·메타데이터는 보존한다. 배열은 셀 안에서 <br>로 구분한다.
-
-1.10 (2026-10-06) Phase I 예시의 작용기도 빈칸으로 바꾼다. Cloze의 answer는 각 빈칸을 채우고
-                   정답 부분을 굵게 강조한 전체 문장으로 쓴다.
-
-1.9 (2026-10-06)  한 문항의 빈칸은 모두 c1로 묶고, 답은 빈칸 등장 순서대로 대응한다.
-                   Omeprazole 예시에서 작용 세포와 표적을 함께 비운다. 점검 결과의 별도 보고를 금지하는 문장을 뺐다.
-
-1.8 (2026-10-06)  개념 그래프에 표시할 짧은 요약 이름 graph_title을 전체 title과 별도로 만든다.
-
-1.7 (2026-10-06)  발문에서 「강의에서 제시한」·「2016-2 족보에서」 같은 출처 수식어를 빼고 개념 자체를 묻는다.
-                   출처는 메타데이터에 남기며, 답을 한정하는 데 필요한 조건·분류 기준은 발문에 명시한다.
-
-1.6 (2026-10-05)  앱이 읽지 않는 칸을 뺐다(관리자): 문항마다 적던 concept_difficulty(개념 표에 이미 있다) ·
-                   cognitive_type(retrieval_direction 과 거의 같고 앱은 그쪽만 쓴다) · source_strength, 그리고
-                   Retrieval Plan 의 rationale. 자료 밖 표시는 `EXT` 하나로 한다. §5 필드 목록을 §9 출력 형식과
-                   맞췄다(§5 에만 있던 「Concept」·「Source conflict 여부」가 두 지시를 어긋나게 했다).
-
-1.5 (2026-10-05)  출력 끝의 「자료 요약」과 「Quality Audit」 보고를 뺐다(관리자). 앱이 읽지 않는다 — 검증기가 있는지만
-                   봤다. 점검(§7)은 그대로 시키고 결과만 낸다. Final Statistics 는 중요한 값만 남겼다(관리자 —
-                   「최종 통계도 중요한 값만 뽑기는 하자」): 총 문제 수 · tier별 · 충돌 · 외부 의학지식.
-
-1.4 (2026-10-05)  §7 Final Statistics 끝의 「가장 높은 학습 우선순위 concept 5–10개를 따로 요약해라」를 뺐다(관리자).
-                   앱이 읽지 않는 출력이다 — 우선순위는 개념 지도가 중요도·진척으로 보여 준다.
-
-1.3 (2026-10-05)  짝짓기 왼쪽에 1. 2. 3., 오른쪽에 A. B. C. 를 붙이고 정답 짝을 `1. 왼쪽 - A. 오른쪽` 으로 적는다
-                   (관리자 제안 — 「컴퓨터, 인간 모두 읽을 수 있게」). 261002_03 Q046 이 정답 짝에 보기 글을 줄여 써서
-                   짝을 못 찾고 빠졌다. 이제 정리가 꼬리표로 찾는다(quizbank/organize.py `_resolve`).
-
-1.2 (2026-10-05)  관리자 지시 — 「외부 의학지식을 충분히 이용해도 되는데, 자료에 없거나 다른 경우에 표시만
-                   해 주면 돼. 강의록·족보가 충돌할 때는 외부 의학지식이 필요하겠지. 충돌이 있는 문제들은 합치고
-                   표시만 해줘.」 머리의 「외부 의학지식은 사용하지 말고…」를 걷었다. 자료 밖 내용은 출처 `EXT` 와
-                   source strength `external_knowledge` 로 표시한다. §6 충돌은 출처별로 가르지 않고 **한 문항으로
-                   합쳐** 외부 의학지식으로 정답을 정하고, 충돌 표에 무엇이 어떻게 다른지와 고른 근거를 적는다.
-                   첫 실물 261002_03(v1.1)에서 갈라 낸 두 문항 중 족보 쪽(Q009)을 외부지식 검토가 wrong 으로 잡았다
-                   — 갈라 두면 틀린 답을 그대로 가르치는 문항이 하나 생긴다.
-
-1.1 이사 (2026-10-04)  AdaptiveStudy3/bank_builder/bank_prompt.md 에서 이리로 옮겼다 — 사이트에서
-                   만들게 되면서. 내용은 그대로다. 그쪽 파일은 「이사했다」만 남긴다.
-
-1.1 (2026-10-04)  v1.0(저장소 루트 Bankbuilder_v1.0.md, 기록으로 둔다)의 §1–8을 옮겨 왔다.
-                   §3에 「Cloze 작성법」 — 빈칸 여럿 허용, 핵심 개념을 비운다, 축은 남기고 답은 남기지 않는다,
-                   나열은 List로. quizgen/prompts/core/quality.md의 cloze 규칙에서 골랐다.
-                   §5에 「Source page/slide」 — PDF 실제 쪽 번호, 여러 쪽이면 각각(슬라이드 이미지를 붙이려고).
-                   §9를 앱이 읽는 열·필드 이름으로 고정하고, 강의 설정 칸을 넣었다.
+Version: 1.29
+1.29 (2026-10-13) 출제 규칙을 간결하게 정리하고 웹 출제 포인트 계획과 CLI 검수를 연결한다.
 -->
-첨부한 **올해 필기/강의자료와 족보**를 중심으로 의대 시험 대비용 question bank를 만들어줘.
-
-외부 의학지식은 충분히 써도 된다. 단 **자료에 없거나 자료와 다른 내용**을 문항에 쓰면 그 문항에 표시해라(§5 Source page/slide의 `EXT`).
-
-강의자료와 족보가 서로 충돌하면 외부 의학지식으로 맞는 답을 정해 **한 문항으로 합치고, source conflict로 표시**해라(§6).
-
-목표는 **출제 가능한 내용을 넓게 담고, 그중에서 학습자에게 필요한 문제를 골라 쓸 수 있는 question bank를 만드는 것**이다.
-
-이 은행은 한 번에 모두 풀 짧은 퀴즈가 아니다. 강의자료와 족보의 출제 포인트를 충분히 생성하고,
-중요도·tier·선행 관계를 표시해라. 어떤 문항을 얼마나 자주 풀지는 앱이 학습자의 상태와 시험일까지의 시간에 따라 고른다.
-시험일까지 전부 풀기 어렵다는 이유로 생성 단계에서 문항을 줄이지 마라.
-다만 자료에 적힌 모든 문장을 문항화하는 것은 아니다. **출제 범위를 먼저 선택한 뒤, 그 범위 안의 필요한 회수·구분을 충분히 만든다.**
-
-## 강의별 출제 범위
-
-{{lecture_scope}}
-
-관리자가 지정한 범위는 아래 coverage·Optional·변형 지시에도 우선한다.
-교수님이 중요하지 않다고 하거나 생략한 세부사항은 실제 출제 근거가 없는 한 제외한다.
-교수 강조·학습목표·take-home·올해 범위의 족보 또는 이 핵심을 이해하는 데 필요한 prerequisite을 근거로 출제 포인트를 선택한다.
-슬라이드에 존재하거나 일반적인 학습 가치가 있다는 이유만으로 추가하지 않는다. AI 작성 여부만으로 강조 중심 범위를 추정하지 않는다.
-S1에 기출이 다른 강의·범위 밖이라는 주석이 있으면 S2의 반복 횟수·최근 출제만으로 포함하지 마라. 올해 강의 본문과 관리자 지정 범위에서 별도 포함 근거를 확인하고, 근거가 없으면 해당 강의 은행에서 제외한다. 자료 사이에 포함 근거가 충돌하면 범위가 확정된 것으로 취급하지 않고 검토 대상으로 남긴다.
-
-Concept Map을 만들기 전에 **출제 범위 선정표**를 작성한다. 포함한 포인트마다 S1의 교수 강조·학습목표·직접 설명,
-올해 범위에 해당하는 S2 반복 기출, 또는 포함한 핵심을 이해하는 데 반드시 필요한 선행 관계 중 어느 근거인지와
-쪽/문항 번호를 명시한다. 제외한 세부 범주와 이유도 적는다. 일반적인 학습 가치나 슬라이드에 있다는 사실만으로는
-포함 근거가 되지 않는다. 포함 근거가 없는 포인트는 Core·Advanced·Optional 어느 등급에서도 출제하지 않는다.
-약물명이나 하위 분류를 나열한 표는 교수님이 각 항목의 암기를 요구하거나 개별 출제 근거가 있을 때만 각 항목을
-독립 문항으로 만든다. 그렇지 않으면 강조된 대표 약물과 실제 시험에서 필요한 계열 간 구분을 선택한다.
-단답형으로 이미 충분히 회수되는 사실에 역방향·OX·객관식을 덧붙일 때에는 추가로 시험하는 오개념·구분을 명시한다.
-같은 사실의 답과 질문만 뒤집거나 이미 시험한 참·거짓 판정을 다시 포장한 변형은 추가하지 않는다.
-문항의 exam_rationale은 선정표의 포함 포인트와 근거를 연결한다. 문항 수를 미리 정하거나 맞추지는 않는다.
-
-다음 순서로 작업해줘.
-
-# 1. Concept Map
-
-먼저 강의를 concept 단위로 나눠라.
-
-각 concept에 다음을 붙여라.
-
-- Concept ID
-- Concept name
-- Importance: 1–5
-- Concept difficulty: 1–5
-- 중요도 근거
-- 필요한 retrieval directions
-
-Importance와 difficulty는 독립적으로 평가해라.
-
-Importance를 판단할 때 특히 다음을 반영해라.
-
-- 교수 직접 강조
-- 학습목표
-- take-home message
-- 족보 반복
-- 최근 족보 직접 출제
-- 여러 슬라이드에 걸친 상세 설명
-- 다른 개념의 prerequisite 여부
-
-족보에서 반복된 granular fact는 큰 개념에 묻혀 삭제하지 마라.
-
-각 자료의 본문·표·그림·주석·족보 선택지를 검토해 지정한 출제 범위 안에서 독립적으로 물을 수 있는 학습 포인트를 찾아라.
-큰 concept 하나에 여러 약물·표적·효과·적응증·부작용·금기·수치·예외가 있으면 각각의 출제 포인트를 core_facts에 보존해라.
-큰 제목이나 대표 사실 하나로 나머지 출제 포인트를 대신하지 마라.
-
-슬라이드에 존재한다는 이유만으로 모든 세부사항을 같은 비중으로 취급하지 마라. 비중은 importance와 tier로 구분한다.
-
-선택한 출제 범위에 포함되지만 상대적으로 우선순위가 낮은 내용은 Optional과 해당 중요도로 표시해라.
-범위 밖의 세부사항을 보존하기 위한 우회 수단으로 Optional을 쓰지 마라.
-
-# 2. Retrieval Plan
-
-각 concept마다 실제로 어떤 방향으로 회수해야 하는지 정해라.
-
-가능한 retrieval direction:
-
-- direct
-- reverse
-- mechanism
-- discrimination
-- integration
-- sequence
-- trap
-
-중요도가 높을수록 필요한 경우 여러 retrieval direction을 사용해라.
-
-하지만 모든 concept에 기계적으로 direct/reverse/integration을 전부 만들지는 마라.
-
-저중요도 concept은 회수 방향이 direct만이어도 된다. 하지만 서로 다른 출제 포인트가 여러 개라면 각각 문항을 만든다.
-concept별 문항 수와 retrieval direction별 문항 수에 상한을 두지 마라.
-
-같은 사실을 여러 문제로 만들 경우에는 **retrieval direction을 바꾸거나, 객관식에서 시험하는 구분·오개념·조건을 바꿔라.**
-같은 direction이어도 다른 참·거짓 판단을 요구하는 객관식 변형은 만들 수 있다. 표현이나 보기 순서만 바꾼 것은 별도 문항으로 세지 않는다.
-역방향이나 보기 변형도 독립적인 학습 필요가 있을 때 만든다. 기존 문항으로 충분히 회수되는 사실을 기계적으로 늘리지 마라.
-
-예:
-- drug → target
-- target → drug
-- mechanism → drug
-- similar drugs discrimination
-- mechanism integration
-
-# 3. Question Bank
-
-Concept Map과 Retrieval Plan을 바탕으로 문제를 만들어라.
-
-사용 가능한 형식:
-
-- 단답형 (Basic, `basic`)
-- Cloze
-- List
-- O/X
-- MCQ
-- Multi-select
-- Matching
-- Sequence
-
-문제 수는 미리 정하지 말고, 강의의 양·중요도·족보 밀도에 따라 결정해라.
-
-## 출제 포인트의 coverage
-
-- Concept Map에 선택한 출제 범위의 각 사실·관계·구분 기준을 실제로 묻는 문항을 만든다. 같은 concept·같은 direction이어도 묻는 사실이 다르면 별도 문항이다.
-- 족보의 정답뿐 아니라 오답 선택지가 시험하는 구분·예외·흔한 오해도 검토해 문항으로 만든다. 같은 출제 포인트가 여러 해에 반복되면 근거를 합친다.
-- 중요한 사실은 유용한 reverse·mechanism·discrimination·trap·integration 문항을 추가한다. 표현만 바꾼 반복은 늘리지 않는다.
-- List·Matching·통합 문항 하나로 여러 사실을 묶었다고 개별 회수가 필요한 atomic 문항을 생략하지 마라. 각 항목을 따로 회수하거나 구분할 학습 가치가 있으면 함께 만든다.
-- 선택한 출제 범위 안의 상대적으로 낮은 우선순위 포인트는 Optional로 보존한다. 출제 근거가 없는 세부 수치·용량·부수적 사실, 교수님이 생략한 내용, 지정 범위 밖의 내용은 제외한다. 표지·목차·행정 안내, 같은 사실과 같은 회수 방향·같은 구분 판단의 중복, 정답을 확정할 수 없는 내용도 제외한다.
-- 문항 수나 출력 길이를 맞추려고 출제 포인트를 빼거나 여러 독립 사실을 한 문항에 압축하지 마라.
-
-## 문제 설계 원칙
-
-- **서술형은 사용하지 않는다.** 모든 tier에서 `basic`은 단답형이다. 정답은 용어·수치·짧은 관계로 직접 회상할 수 있어야 하며, 문장 표현·조사·연결어를 재현하게 하지 마라.
-- 단답형은 한 가지 명확한 정답을 기본으로 한다. 같은 축의 짧은 짝은 함께 물어도 되지만, 여러 독립 항목은 List, 대응 관계는 Matching, 과정은 Sequence, 문맥 속 핵심 개념은 Cloze를 사용해라.
-- 긴 설명이나 기전의 전체 서술이 필요하면 적합한 다른 형식으로 바꾸거나 좁은 단답 문항으로 나눠라. Advanced·Optional이라는 이유로 문장형 답을 단답형에 넣지 마라.
-- 한 문제는 **하나의 명확한 retrieval act**를 중심으로 한다.
-- 질문을 읽었을 때 무엇을 회상해야 하는지 즉시 알 수 있어야 한다.
-- 약물의 표적이나 용어를 회수하게 할 때, 정답 약어의 전체 이름·구성 성분을 발문에 미리 써서 약어 변환만으로 답하게 하지 마라. 예를 들어 답이 NCC인 「Thiazide가 억제하는 Na–Cl 공동수송체는?」은 「Thiazide가 억제하는 수송체는?」으로 고친다. 약어의 뜻 자체를 학습목표로 묻는 문항과, 다른 판단에 필요한 조건·단서는 구별해 보존한다.
-- 발문은 **출처가 아니라 개념 자체**를 묻는다. 「강의에서 제시한」, 「자료에 따르면」, 「2016-2 족보에서」 같은 출처 수식어는 쓰지 않는다. 출처·출제 연도는 `source_refs`·`exam_rationale`에 기록한다. 출처 수식어를 빼면 답의 범위가 모호해지는 경우, 필요한 조건·분류 기준·단계의 범위를 발문에 직접 명시한다.
-  - ✗ 강의에서 제시한 약리학적 사고의 전체 흐름을 순서대로 배열하라. → ✓ 약리학적 사고의 전체 흐름을 순서대로 배열하라.
-  - ✗ 2016-2 족보에서 simvastatin은 기원·제조 방식에 따라 어떤 약물로 분류되었는가? → ✓ Simvastatin은 기원·제조 방식에 따라 어떤 약물로 분류되는가?
-- 난이도는 애매한 발문으로 올리지 말고 reverse, mechanism, discrimination, integration으로 올린다.
-- 같은 사실을 같은 방향·같은 구분 판단으로 반복하는 문제는 만들지 않는다. 객관식에서 다른 오개념이나 조건을 시험하는 변형은 아래 기준으로 추가한다.
-- 중요한 concept은 필요하면 direct → reverse → mechanism/discrimination → integration으로 확장한다.
-- integration 문제는 atomic fact를 대체하지 않고 그 위에 추가한다.
-- Cloze는 아래 「Cloze 작성법」을 따른다.
-- List는 약물명, 효소, 구조, 숫자, 순서처럼 정답 범위가 좁을 때 사용하고, 채점 단위는 2–5개로 둔다. 더 많은 독립 항목은 축별 문항으로 나누어 모두 보존한다.
-- O/X는 족보형 명제, 자주 뒤집히는 사실, trap에 적합할 때 사용한다.
-- MCQ distractor는 가능하면 **같은 강의 안의 실제로 헷갈릴 만한 개념**을 사용한다.
-- “다른 mechanism은?”처럼 여러 해석이 가능한 발문은 피하고, “약물–기전 연결이 틀린 것은?”처럼 채점축을 명확히 한다.
-- 두 요소 이상을 답해야 한다면 발문에서 요구하는 axis를 명확히 제시한다.
-- 독립적인 사실을 3개 이상 한꺼번에 답해야 하는 문제는 기본적으로 분할을 검토한다.
-- 단, 하나의 mechanism/sequence 자체가 본질적으로 여러 단계라면 하나의 문제로 유지할 수 있다.
-- 쉬운 문제 자체는 나쁜 문제가 아니다. 초기 학습용 atomic recall은 쉽게 만들 수 있다.
-- 의학 용어를 임의의 기호로 바꾸어도 일반 추론·산술·제시된 범위 비교만으로 정답을 찾을 수 있는지 점검한다. 그런 문항은 의학 개념을 회수하는 문항으로 고쳐라. 예를 들어 측정값 521과 목표 400–600을 함께 주고 용량 유지 여부만 묻지 말고, 적응증에 맞는 판단 지표·목표 범위·용량 결정 원칙을 회상해 적용하게 한다. 환자 수치·필요한 조건은 제공하되, 평가하려는 의학 지식 자체를 발문에서 알려 주지 마라. 목표 범위 비교가 다른 의학적 판단을 수행하는 데 필요한 중간 단계인 경우는 유지할 수 있다.
-- 난이도를 높이기 위해 단서를 없애거나 표현을 모호하게 만들지 마라.
-- 고난도 문제는 comparison, reverse retrieval, mechanism, integration에서 만들어라.
-
-## 객관식 보기와 참·거짓 변형
-
-객관식과 복수 선택에는 `mcq_mode`를 반드시 지정한다.
-- `recall_first` (기억 확인형): 선지 없이도 질문만 보고 용어·약물·표적·관계를 먼저 인출할 수 있고, 선지는 기억을 확인하는 역할이다. 먼저 발문만 보여 주고 「선지 보기」 후 선택·정답을 확인한다.
-- `comparison` (구별·판단형): 여러 약물·조건·예외를 비교하거나 선지별 참·거짓을 판단하는 과정 자체가 학습 목표다. 선지를 처음부터 공개한다.
-어휘 하나로 분류하지 말고 무엇을 학습시키는지 판단한다. 「어떤 약물이 DNA gyrase를 억제하는가」는 기억 확인형이고, 「다음 항생제 중 신독성이 가장 문제 되는 것은」처럼 대상을 비교하는 발문은 구별·판단형이다.
-두 유형 모두 실제 선지와 정답·모든 선지의 해설을 작성한다. 선지를 숨기는 것은 앱의 역할이며 출제 응답에서 보기를 생략하지 않는다.
-객관식이 아닌 형식은 `mcq_mode=none`으로 쓴다.
-
-구분할 가치가 있는 약물·표적·기전·효과·적응증·부작용·예외에는 짧은 atomic 문항에 더해 **객관식 변형을 적극적으로 추가**해라.
-하나의 대표 객관식으로 끝내지 말고, 같은 개념에서도 다른 오개념·비교 대상·조건을 시험할 수 있으면 여러 문항을 은행에 보존한다.
-
-- MCQ는 가능하면 같은 축의 보기 4–5개를 만든다. 질 좋은 보기가 부족하면 2–3개도 허용하고, 보기 수를 채우려고 무관한 내용을 넣지 마라.
-- 「옳은 것은?」(참인 보기 하나)과 「옳지 않은 것은?」(거짓인 보기 하나)를 모두 활용한다. 발문에 선택할 판단을 명확히 쓰고 이중 부정은 피한다.
-- 여러 명제의 판단 자체가 중요하면 Multi-select로 「옳은 것을 모두 고르라」 또는 「옳지 않은 것을 모두 고르라」고 묻는다. 정답은 1개 이상·전체 보기 수 미만으로 두고, 문항마다 참·거짓 구성과 정답 개수가 달라질 수 있다.
-- 참·거짓을 바꿀 때에는 표적·약물·작용 방향·장기·적응증·조건 등을 혼동하는 **구체적인 오개념**을 사용한다. 실제로 올바른 명제와 틀린 명제를 확인하고, 표현만 부정하거나 애매한 한정어로 함정을 만들지 마라.
-- 정답 위치와 참·거짓 구성은 문항마다 다양하게 만든다. 가장 긴 보기, 특정 문자, 「항상/절대」 같은 단어만으로 정답을 찾을 수 없게 해라.
-- 각 변형에는 별도의 question_id를 주고 그 보기 구성에 맞게 correct_option_ids·answer·answer_units를 새로 확인한다. 보기만 바꾸고 기존 정답을 그대로 복사하지 마라.
-- answer는 선택해야 할 보기 ID와 내용을 쓴다. answer_units는 **보기 하나당 `A: 참 — 근거` 또는 `B: 거짓 — 올바른 관계`**처럼 짧은 판정과 이유를 적는다. 옳지 않은 것을 고르는 문항에서는 거짓인 보기의 ID가 정답이다.
-- **모든 선지의 해설을 빠짐없이 쓴다.** 정답 선지만 설명하거나 오답 선지를 「틀림」으로 끝내지 마라. 정답이 아닌 선지도 발문 조건에서 왜 선택할 수 없는지 설명하고, 거짓 명제는 잘못된 부분과 올바른 관계를 명시한다. 「옳지 않은 것」을 묻는 경우에도 명제의 참·거짓과 선택할 정답 여부를 구별한다.
-- source_refs에는 보기의 판정 근거가 되는 자료 위치를 포함하고, 자료 밖 지식으로 판정한 내용은 기존 규칙대로 EXT를 표시한다.
-- 보기 순서·문자만 바꾸거나 같은 명제를 기계적으로 참/거짓 한 쌍으로 뒤집어 문항 수를 늘리지 마라. 변형마다 실제로 구분할 대상·오개념·조건의 차이가 있어야 한다.
-- Basic·Cloze의 atomic 회수와 객관식의 보기 구분은 함께 보존한다. 객관식이라는 이유만으로 Advanced로 분류하지 말고 내용의 중요도와 필요한 사고에 따라 tier를 정한다.
-
-## 정답 노출과 조건 확인
-
-
-발문만 읽고 정답을 그대로 복사할 수 있으면 고친다. 단답·나열형에서 정답 약물명을 모두 제시한 뒤 그 이름을
-쓰게 하지 않는다. 빈칸 답을 같은 문장의 다른 부분에 풀어 쓰지 않는다. 필요한 환자 조건·계열은 제공하되
-회수 대상 자체는 제공하지 않는다. 복합 용어를 그대로 쪼개 쓰면 답이 되는 순서 문제도 고친다. 객관식의 정답 보기와 짝짓기의 후보는 정당한 문제 구성이다.
-제공된 정보만 비교하거나 그대로 옮기면 풀리는 문항은 임상·기전 적용으로 과장하지 않는다.
-강의 표의 목록을 묻는 경우 출처나 표 범위를 명시하되 답할 항목의 이름으로 범위를 지정하지 않는다.
-원문이 제안한 기전은 제안으로, 관찰한 결과는 관찰로 구분한다. 가설을 사람에서 입증된 인과로 바꾸지 않는다.
-약물 계열의 적응증을 모든 개별 약물에 일반화하지 않는다. 질환 아형·수용체 아형·투여/측정 조건이 정답을
-바꾸면 해당 조건을 명시한다. 강의의 축약 표현에 정밀화가 필요하면 기존 Source Conflicts 절에 기록한다.
-외부 지식으로 고칠 때 자료 밖 내용을 표시하고 구체적인 확인 근거를 남긴다.
-
-선정한 출제 범위의 독립 사실·관계를 Concept Map의 core_facts와 실제 문항에 대조해 누락을 보완한다.
-하나의 큰 개념이나 대표 문제로 독립적인 여러 사실을 대신하지 않는다. 비교가 필요한 내용은 객관식도 보존한다.
-형식 검사는 전체 원문 범위의 누락 여부를 보증하지 않으므로 원본 대조를 생략하지 않는다.
-
-- 「어떤 축의 variability」처럼 추상적인 표현만으로 분류나 기전을 묻지 마라. 분류 기준과 각 대상에서 답할 변수를 명시한다. 예를 들어 CYP2C9·VKORC1 비교는 약동학(PK)·약력학(PD) 중 어디에 해당하는지와 무엇의 차이를 만드는지를 묻고, 각 유전자의 분류·관계를 회상하게 한다.
-- 수송·분비·배출 문항에서는 공간적 이동 방향(세포 안/밖, 관강/혈액)과 양·속도의 증감(증가/감소)을 구별해 묻는다. 증가·감소를 답으로 기대하면 「어느 방향」만 쓰지 말고 「배출량은 증가하는가, 감소하는가?」처럼 평가하는 변수를 명시한다. 이동 방향을 묻는 문항은 출발점과 도착점으로 답하게 한다.
-- 분류 기준이나 답할 변수를 생략한 채 「축·variability」 같은 추상 표현으로만 묻는 발문
-- 수송·분비·배출의 이동 방향을 묻는 것으로 읽히지만 정답은 양·속도의 증가·감소인 발문, 또는 그 반대의 질문–정답 축 불일치
-- S1의 다른 강의·범위 밖 주석과 올해 본문을 대조하지 않고 S2의 반복·최근 출제만으로 포함한 기출
-
-## 반복할 때 바뀌는 보기 조합
-
-MCQ·Multi-select 중 발문의 참·거짓 선택 기준이 명확한 문항은 서로 다른 비교 대상·오개념의 보기 풀을 2개 이상 작성한다.
-각 풀은 2–8개의 보기를 선택하며, 선택 수보다 많은 후보를 최대 16개 보존한다. 질 좋은 후보가 부족하면 고정 보기를 유지한다.
-각 후보에 같은 조건에서 참인 문장과 거짓인 문장, 각각의 해설·정정 근거·원본 출처를 함께 쓴다.
-거짓형을 단순 부정으로 만들거나 원문에 없는 조건을 넣지 않는다. 모든 후보는 원래 문항과 같은 판단을 확인한다.
-correct_when은 발문이 참을 고르면 true, 거짓을 고르면 false다. 여러 풀에서 선택 기준과 정답 개수는 동일하다.
-앱은 검토된 풀에서만 보기 조합을 바꾼다. 같은 문항의 변형을 별도 학습 분량으로 세지 않는다.
-
-## Cloze 작성법
-
-Cloze는 **회수할 핵심이 한 문장 안에 여럿 박혀 있고, 그 문장이 있어야 무엇을 묻는지 서는** 자리에 쓴다. 문장은 그대로 보여 주고 핵심 자리만 비운다. 자료의 문장을 그대로 써도 되고, 문장이 길어도 된다.
-
-**한 카드에 빈칸 하나를 강제하지 마라.** 관련된 빈칸 1–4개가 문장 구조를 드러내면 그쪽이 더 좋다.
-
-한 문항의 빈칸은 함께 회수하도록 **모두 `{{c1}}`로 표시**한다. `answer_units`에는 빈칸이 등장하는 순서대로 답을 하나씩 적는다. 같은 `c1`이어도 답이 같다는 뜻은 아니다. Anki로 옮길 때는 각 자리에 대응하는 답을 넣어 `{{c1::정답}}`으로 변환하면 한 카드에서 함께 가려진다.
-
-```text
-Phase I 반응은 {{c1}} 같은 {{c1}}를 {{c1}}한다.
-answer_units: [(-OH, -NH2, -SH), functional group, 도입하거나 노출]
-answer: Phase I 반응은 **(-OH, -NH2, -SH)** 같은 **functional group**를 **도입하거나 노출**한다.
-```
-
-빈칸을 어디서 끊느냐가 곧 질문이다. **남는 글자가 질문이고, 가린 글자가 답이다.**
-
-1. **빈칸에는 핵심 개념을 둔다.** 시험에 나올 약물명·표적·기전·효과·수치를 비운다. 조사, 흔한 동사, 문장만 읽어도 채워지는 말은 비우지 않는다. 단계 번호나 기호처럼 실체를 가리키기만 하는 말은 실체와 함께 비운다.
-2. **빈칸마다 무엇을 묻는지가 문장에 남아야 한다.**
-   - ✗ 반감기는 {{c1}}하고 {{c1}}한다. → 남는 것이 「[ ]하고 [ ]한다」뿐이다
-   - ✓ 반감기는 분포용적에 {{c1}}하고 청소율에 {{c1}}한다.
-3. **남는 문장이 답을 알려 주면 안 된다.** 가린 말이 문장 다른 자리에 있거나 앞말이 답을 풀어 말하면, 회상이 아니라 읽기가 된다.
-   - ✗ Omeprazole은 proton pump 억제제로, 벽세포의 {{c1}}를 비가역적으로 억제한다.
-   - ✓ Omeprazole은 {{c1}}의 {{c1}}를 비가역적으로 억제한다.
-     `answer_units: [벽세포, H+/K+-ATPase]`
-4. **답이 되는 덩어리를 통째로 비운다.** 답의 일부가 문장에 남으면 나머지는 짐작된다.
-5. **한 문장 안의 빈칸은 같은 축이다.** 축이 다르면 문항을 나눈다.
-6. **세거나 나열하는 것은 Cloze가 아니라 List다.** 「~의 세 가지는?」처럼 묶는 이름이 서면 빈칸 문장은 질문과 같은 말이 된다. 문장이 각 항목의 축을 들고 있을 때만 Cloze로 쓴다.
-
-써 놓고 빈칸을 `[ ]`로 바꿔 읽어 본다. **각 `[ ]`가 무엇을 묻는지 말할 수 있고, 답은 떠오르지 않아야 한다.** 둘 중 하나라도 어긋나면 빈칸의 경계를 옮긴다.
-
-# 4. Tier
-
-문제를 다음 세 tier로 나눠라.
-
-## Core
-시험 전에 확실히 회수되어야 하는 내용.
-
-**짧게 회상하고 항목별로 바로 채점할 수 있게 만든다.** Core는 긴 서술문을 재현하는 형식으로 만들지 마라.
-- 한 용어·한 관계·한 판단을 묻는 atomic recall을 기본으로 한다. 서로 짝을 이루는 두 관계는 함께 물어도 된다.
-- 단답형(Basic)의 답은 용어, `A → B`, 짧은 원인–결과처럼 최소 정답으로 쓴다. 여러 항목이면 항목별로 분리하고, 이를 하나의 긴 문장으로 다시 합치지 마라.
-- 발문은 무엇을 몇 개 답해야 하는지 명확히 한다. 「전체를 설명하라」처럼 회수 범위가 넓으면 축별로 나누거나 List·Matching·Cloze로 바꾼다.
-- 기전이 중요해서 Core인 경우에도 핵심 표적·작용·결과를 짧은 관계로 묻는다. 여러 독립 사실을 한꺼번에 요구하는 부담은 문항을 나누어 줄인다.
-- 문장 표현·조사·연결어를 기억할 필요 없이 핵심 항목을 맞히면 정답이어야 한다.
-
-예:
-```text
-question: 시간에 따른 약물 효과를 예측하려면 어떤 두 관계를 함께 알아야 하는가?
-format: basic
-answer: 약동학: 시간 → 농도<br>약력학: 농도 → 반응
-answer_units: 약동학: 시간 → 농도<br>약력학: 농도 → 반응
-```
-「시간에 따른 약물 농도 변화인 약동학과 농도에 따른 반응인 약력학을 함께 알아야 한다」처럼 긴 문장으로 바꾸지 마라.
-
-주로:
-- 교수 강조
-- 학습목표
-- take-home
-- 반복 족보
-- 중요한 prerequisite
-- 핵심 drug–target / mechanism
-
-## Advanced
-Core atomic fact가 어느 정도 회수된 뒤 풀 가치가 있는 문제.
-
-주로:
-- reverse
-- mechanism
-- discrimination
-- integration
-- sequence
-- trap
-
-## Optional
-선택한 출제 범위 안에서 상대적으로 낮은 yield의 세부사항.
-
-Optional이라는 이유만으로 문항 수나 비율을 줄이지 마라. 다만 출제 근거와 지정 범위를 먼저 확인하고, 범위 밖 세부사항을 모두 담지 마라.
-개념과 문항의 tier·importance는 실제 중요도에 맞게 표시해라.
-낮은 중요도의 문항을 덜 보여주고 전체 학습률에 적게 반영하는 것은 앱의 학습 정책에서 처리한다.
-
-# 5. 각 문제 Metadata
-
-각 문제마다 다음 필드를 반드시 표시해라.
-
-- ID
-- Concept ID
-- Tier
-- Importance
-- Item difficulty
-- Format
-- Retrieval direction
-- Question
-- Answer
-- Answer units
-- Prerequisites
-- Source page/slide
-- 교수 강조 또는 족보 근거
-- Conflict ID, 해당되는 경우
-
-## Answer units
-
-정답을 self-grade할 수 있도록 핵심 채점 단위를 배열 형태로 분리해라.
-
-예:
-
-Question:
-Acyclovir 선택성의 activation 단계와 polymerase 단계를 각 특징과 짝지어라(Matching).
-
-Answer units:
-- activation → virus가 drug를 phosphorylate
-- polymerase → viral DNA polymerase가 더 sensitive
-
-단순 한 단어 정답이면 answer unit은 하나만 둔다.
-
-모든 tier의 단답형(Basic)은 `answer`와 `answer_units`를 같은 짧은 정답 항목으로 쓴다. 부연설명이나 별도의 회수 내용을 채점 항목에 끼워 넣지 마라.
-
-## Prerequisites
-
-Mechanism, discrimination, integration, sequence 문제에는 가능하면 그 문제를 풀기 위해 먼저 회수되어야 하는 **atomic question ID**를 prerequisites로 지정해라.
-
-예:
-
-```text
-Prerequisites:
-- AV-C23
-- AV-C25
-- AV-C26
-```
-
-Direct atomic question은:
-
-```text
-Prerequisites: []
-```
-
-로 둔다.
-
-Prerequisites는 단순히 같은 concept의 이전 문제를 넣는 것이 아니라, **그 고차원 문제를 풀기 위해 실제로 필요한 기초 retrieval**만 넣어라.
-
-## Source page/slide
-
-근거가 된 자리를 모두 적어라. 강의자료·필기 PDF는 **파일의 실제 쪽 번호**(첫 쪽이 1)를 쓰고, 여러 쪽이면 각각 적어라. 앱이 이 번호로 슬라이드 이미지를 붙인다.
-
-예: `S1 p13; S1 p14` · `S2 2023 11번`
-
-자료에 없는 내용을 외부 의학지식으로 쓴 문항은 `EXT 외부 의학지식`을 같이 적어라(자료 쪽 근거가 있으면 그것도 함께).
-
-# 6. Source Conflict 처리
-
-강의자료와 족보(또는 자료 안의 두 자리)가 서로 다른 표현이나 정답을 제시하면:
-
-1. 출처별로 문항을 나누지 말고 **한 문항으로 합쳐라.**
-2. 정답은 외부 의학지식으로 맞는 쪽을 정해라. 둘 다 맞는 표현이면 그렇게 답하고, 둘 다 틀렸으면 맞는 답을 써라.
-3. 그 문항에 Conflict ID를 붙이고, Source page/slide에 충돌한 자리를 모두 적어라. 외부 의학지식으로 정했으면 `EXT`도 함께 적는다.
-4. Source Conflicts 표의 description에 **각 출처가 무엇이라고 하는지, 문항의 정답이 무엇이고 왜 그쪽인지**를 적어라. 학생이 답을 본 뒤 이 설명을 읽는다.
-
-예:
-
-```text
-Conflict ID: ALPHA2_TRANSMITTER_01
-Question: Presynaptic α2 수용체를 차단하면 교감신경 말단에서 유리가 증가하는 전달물질은?
-Answer: norepinephrine
-Source page/slide: S1 p22; S2 2023 18번; EXT 외부 의학지식
-
-description: 강의자료(S1 p22)는 α2 활성화가 norepinephrine 유리를 억제한다고 쓰고, 2023 족보 18번 정답은
-「α2 억제 시 epinephrine 증가」다. 교감신경 말단의 전달물질은 norepinephrine이라 문항은 강의자료 쪽으로 답한다.
-```
-
-자료만으로 정답을 복원할 수 없는 족보 문항(정답 미확인 등)은 외부 의학지식으로 정답을 정하고 `EXT`로 표시해라. 외부 지식으로도 정할 수 없으면 제외해라.
-
-# 7. Quality Audit
-
-최종 출력 전 전체 question bank를 다시 검사해라.
-
-다음을 확인해서 문제가 있으면 스스로 수정해라.
-
-- source grounding
-- 발문 명확성
-- self-gradeability
-- answer burden
-- redundancy
-- reverse coverage
-- discrimination coverage
-- integration coverage
-- 선택한 출제 범위의 독립 출제 포인트 coverage (범위 안의 낮은 중요도 포함)
-- 관리자 지정 범위와 교수님이 생략·축소한 내용 준수
-- Retrieval Plan에 적은 각 direction의 실제 문항 존재
-- source conflict 표시 (합친 문항 · 설명)
-- prerequisite validity
-- answer-unit clarity
-
-특히 다음은 수정 대상이다.
-
-- 답이 여러 방향으로 자연스럽게 나올 수 있는 broad question
-- 문제를 어렵게 만들기 위해 일부러 모호하게 쓴 발문
-- 약물–표적 관계 등을 묻지만 정답 약어의 전체 이름·구성 성분을 발문에 제공해, 해당 관계를 몰라도 약어로 바꾸기만 하면 답할 수 있는 문항
-- 의학 용어를 기호로 바꾸어도 문제에 주어진 조건과 숫자만으로 답할 수 있는 문항. 어떤 의학 지식이 정답에 필요한지 말할 수 있어야 한다. 단순한 기초 의학 사실 회수와 구별해라.
-- 「강의에서 제시한」·「족보에서」 등 출처 수식어로 개념 질문을 대신하거나 답의 범위를 한정한 발문
-- 이미 있는 문제와 같은 사실·같은 retrieval direction·같은 구분 판단을 묻는 표현만 바꾼 중복
-- 객관식 변형의 발문(옳은 것/옳지 않은 것)·보기별 참거짓·correct_option_ids·해설이 서로 어긋난 경우
-- 큰 concept의 대표 문항만 만들고 나머지 독립 출제 포인트를 빠뜨린 경우
-- 낮은 중요도만을 이유로 범위 안의 필요한 출제 포인트를 삭제하거나 Optional 문항 수를 제한한 경우
-- 출제 근거가 없는 자료의 세부사항을 Optional로 모두 문항화한 경우
-- List·Matching·integration으로 묶으면서 필요한 atomic 문항을 빠뜨린 경우
-- 여러 독립 사실을 한꺼번에 요구해 self-grading이 어려운 문제
-- prerequisite 없이 너무 높은 단계의 integration 문제
-- 자료 근거 없이 생성된 distractor
-- 충돌을 합치면서 어느 쪽이 왜 맞는지 설명하지 않은 문제
-- 자료에 없는 내용을 썼는데 `EXT` 표시가 없는 문제
-
-# 8. Final Audit에서 확인할 추가 원칙
-
-High-importance concept에서는 가능한 경우 다음 구조가 자연스럽게 존재하는지 확인해라.
-
-```text
-atomic direct
-→ reverse 또는 discrimination
-→ mechanism
-→ integration
-```
-
-단, 모든 concept에 이 구조를 강제로 적용하지 마라.
-
-중요도가 낮은 concept도 독립 출제 포인트 수에 맞게 문항을 보존해라. direct만 필요한 것과 direct 1문항만 필요한 것은 다르다.
-
-선택한 범위의 출제 포인트 → Concept Map의 사실 → 실제 문항을 대조해서 누락을 추가해라.
-Retrieval Plan에 적은 각 direction에도 대응하는 문항이 있어야 한다. 유효한 문항을 만들 수 없는 방향은 계획에서 빼되,
-문항 수를 줄이기 위해 필요한 방향이나 사실을 계획에서 지우지 마라.
-
-또한 전체 bank가 다음 방향으로 치우치지 않았는지 확인해라.
-
-- direct recall만 지나치게 많음
-- reverse가 거의 없음
-- integration이 과도함
-- O/X가 과도함
-- broad list recall이 많음
-- low-yield 세부사항의 tier·importance를 높게 매겨 학습 우선순위를 왜곡함
-
-
-# 이번 강의
-
-- 강의: {{title}}
-- 시험일: {{exam_date}}
-- 자료 중요도 비중: **{{weighting}}**
-- 첨부 자료:
+첨부한 강의자료와 족보로 의대 시험 대비 문제은행을 만들어줘.
+강의: {{title}}
+
+1. 교수 강조·학습목표·족보를 참고해 출제 포인트를 먼저 정리하고, 이를 바탕으로 Concept Map → Retrieval Plan → Question Bank를 작성해라. 문항 수와 형식은 각 포인트의 학습 가치에 맞게 판단해라.
+2. 한 문제는 명확한 인출 또는 판단을 요구해야 한다. 단답형의 답은 용어·수치·짧은 관계로 쓰고, 나열·대응·과정·문맥에 맞는 형식을 선택해라.
+3. 중요한 사실·조건·예외를 충분히 다루되, 같은 인출이나 판단을 형식·표현만 바꾸어 반복하지 마라. 회상과 비교·적용이 서로 다른 학습 목표라면 함께 출제할 수 있다.
+4. 객관식을 적절히 활용해라. 먼저 답을 인출하는 기억 확인형은 recall_first, 선지를 비교·판별하는 과정이 목표인 구별·판단형은 comparison이다. 두 유형 모두 실제 선지·정답·모든 선지의 해설을 작성해라.
+5. 발문에 답을 노출하지 말고, 답의 범위를 결정하는 조건은 명확히 제시해라. answer_units는 핵심 채점 단위로 나누고, 필요한 기초 문항을 prerequisites로 연결해라.
+6. 중요도와 난이도를 독립적으로 판단하고 Core·Advanced·Optional을 구분해라. 형식만으로 tier를 정하지 마라.
+7. 각 포인트와 문제에 원본 근거를 남겨라. PDF는 실제 쪽 번호를 써라. 외부 의학지식도 사용하되 자료에 없거나 다른 내용은 EXT로 표시해라. 출처가 충돌하면 한 문항으로 합치고 차이·선택한 답·판단 근거를 설명해라.
+8. 완성본을 검토해 누락·오류·중복을 수정해라. 정답이나 범위를 확정할 수 없는 내용은 불확실한 것으로 남겨라.
+
+출력 형식
+
+첨부 자료의 ID와 파일 이름은 다음과 같다. 이 ID를 source_refs에 사용한다.
 {{sources}}
+다음 이름의 Markdown 표를 출력한다. 각 표의 열 순서는 아래와 같다.
+배열 항목은 <br>로 구분한다. 셀 본문의 |는 &#124;로 쓰고 한 행에 실제 줄바꿈을 넣지 않는다.
 
-자료 중요도 비중은 **중요도 판단 비중**이다. 충돌 해결 우선순위로 사용하지 마라 — 충돌은 외부 의학지식으로 판단한다(§6).
+0. Exam Point Plan
+point_id | point | source_refs
+포인트 ID는 P001…로 지정한다.
 
-`sequence`는 retrieval direction과 문제 형식 양쪽에서 쓸 수 있다. 두 필드는 독립적으로 기록하고, 한쪽이 sequence라고 다른 쪽도 자동 지정하지 마라.
+1. Concept Map
+concept_id | title | graph_title | core_facts | importance | importance_rationale | concept_difficulty | tier | exam_signal_strength | related_concepts | source_refs
+importance·concept_difficulty는 1–5, tier는 Core / Advanced / Optional, exam_signal_strength는 low / medium / high다.
+graph_title은 개념을 구분할 수 있는 짧은 이름이다. core_facts·related_concepts는 ;로 구분한다.
 
-# 9. 출력 형식
+2. Retrieval Plan
+concept_id | directions | repetition_budget | target_mastery
+directions는 direct / reverse / mechanism / discrimination / integration / sequence / trap 중 필요한 것을 선택한다.
+repetition_budget는 1–100, target_mastery는 0.1–1이다.
 
-{{output}} 아래 순서와 이름을 그대로 써라. 이름이 같아야 앱이 읽는다.
+3. Question Bank
 
-## 1. Concept Map
+3.1 Questions
+question_id | concept_id | tier | importance | item_difficulty | format | retrieval_direction | mcq_mode | question | answer | answer_units | prerequisites | source_refs | exam_rationale | conflict_id
+importance·item_difficulty는 1–5다. format은 basic / cloze / list / ox / mcq / multi_select / matching / sequence다.
+mcq_mode는 recall_first / comparison이며 다른 형식은 none이다. exam_rationale에 관련 point_id와 출제 이유를 적는다.
+cloze는 관련 빈칸 1–4개를 모두 {{c1}}로 표시한다. answer_units는 빈칸 등장 순서대로 대응시키고, answer에는 정답을 채운 문장을 쓴다.
+basic의 answer와 answer_units는 같은 짧은 정답 단위다. ox의 answer는 O 또는 X다.
+integration에는 실제 필요한 기초 question_id를 prerequisites로 연결한다. 빈 prerequisites·conflict_id는 —로 쓴다.
 
-표. 열은 이 순서:
+3.2 Choice Details
+question_id | options | correct_option_ids
+options는 A: 내용<br>B: 내용…으로 쓴다. mcq는 정답 1개, multi_select는 해당하는 정답을 모두 적는다.
 
-`concept_id | title | graph_title | core_facts | importance | importance_rationale | concept_difficulty | tier | exam_signal_strength | related_concepts | source_refs`
+3.3 Matching Details
+question_id | matching_left | matching_right | answer_pairs
+왼쪽은 1. 항목…, 오른쪽은 A. 항목…으로 쓰고 정답 짝은 1. 왼쪽 - B. 오른쪽처럼 적는다.
 
-- tier: Core / Advanced / Optional 중 하나
-- exam_signal_strength: low / medium / high
-- core_facts·related_concepts는 `;`로 구분
-- graph_title: 그래프에서 한눈에 알아볼 짧은 이름. title의 핵심 명사 2–3개를 한글 기준 8–14자 정도로 요약하고 줄임표는 쓰지 마라. 약물명·수용체명·비교 대상·긍정/부정 등 개념을 구분하는 정보는 남겨라. 임의의 약어는 만들지 말고 필요하면 권장 길이를 넘어도 된다. 같은 은행에서 이름만 보고 개념을 구분할 수 있어야 한다. 예: `심혈관 M2 기전과 차단 효과` → `M2 기전과 차단`. 전체 title과 core_facts는 그대로 상세하게 쓴다.
+3.4 Sequence Details
+question_id | sequence_items | correct_order
+항목에 A: 내용…처럼 ID를 붙이고 correct_order에 ID를 순서대로 적는다.
 
-## 2. Retrieval Plan
+3.5 Option Explanations
+question_id | option_id | text
+모든 선지에 정오 이유를 쓰고, 거짓 선지는 올바른 내용도 설명한다.
 
-표. 열은 이 순서:
+같은 판단의 보기 조합을 바꿀 가치가 있으면 선택적으로 다음 두 표를 작성한다.
+3.6 Option Pools: question_id | pool_id | select_count | correct_when
+3.7 Option Pool Candidates: question_id | pool_id | candidate_id | true_text | false_text | true_explanation | false_explanation | source_refs
+각 후보는 동일 조건의 참·거짓 쌍과 해설을 갖는다. 풀별 후보는 최대 16개, select_count는 후보 수보다 적은 2–8개다.
+correct_when은 참을 고르면 true, 거짓을 고르면 false다. 서로 다른 비교·판단이 필요하면 별도 문항으로 만든다.
 
-`concept_id | directions | repetition_budget | target_mastery`
+4. Source Conflicts
+conflict_id | description | source_refs | unresolved
 
-- repetition_budget: 1–100. 시험까지 이 concept에 줄 반복량. 생성·저장할 문항 수의 상한이 아니다.
-- target_mastery: 0.1–1. 시험 전 도달할 숙련도
+5. Final Statistics
+총 문제 수, tier별 수, 출처 충돌 문항 수, EXT 문항 수를 적는다.
 
-## 3. Question Bank
-
-문항별 필드 블록 대신 아래 마크다운 표로 출력한다. 내용을 줄이지 말고 필드 이름의 반복만 줄여라.
-
-### 3.1 Questions
-
-Core → Advanced → Optional 순서로 **문항당 한 행**. 모든 문항을 이 표에 넣는다. 열은 이 순서:
-
-`question_id | concept_id | tier | importance | item_difficulty | format | retrieval_direction | mcq_mode | question | answer | answer_units | prerequisites | source_refs | exam_rationale | conflict_id`
-
-- question_id는 은행 전체에서 유일하며 상세 표와 prerequisites에서도 같은 ID를 쓴다.
-- importance·item_difficulty: 1–5. concept의 값으로 자동 대체하지 말고 문항별로 평가한다.
-- format: basic / cloze / list / ox / mcq / multi_select / matching / sequence
-- retrieval_direction: direct / reverse / mechanism / discrimination / integration / sequence / trap. `matching`은 형식이며 회수 방향이 아니다.
-- answer_units·prerequisites는 항목 사이를 `<br>`로 구분한다. 대괄호로 감싸지 않는다. 쉼표·세미콜론은 항목 내부에도 쓰이므로 배열 구분자로 쓰지 않는다.
-- prerequisites가 없으면 `—`, conflict_id가 없으면 `—`. 그 외 필수 값은 생략하지 않는다.
-- list의 answer_units에는 원문에서 허용한 정답 후보를 각각 적고, 후보가 5개보다 많아도 보존한다. "4개 이상" 같은 요구 개수는 발문·정답에 유지하며 약물명 항목과 섞지 않는다. 단일 표의 사실을 직접 회수하는 문항은 direct로 분류하고, integration 문항에는 실제 기초 문항 ID를 연결한다.
-- source_refs는 기존처럼 `S1 p13; S1 p14; EXT 외부 의학지식`으로 쓴다. exam_rationale에는 해당 문항의 교수 강조 또는 족보 근거를 남긴다.
-- **cloze**: question의 빈칸 1–4개를 모두 `{{c1}}`로 표시한다. answer_units는 빈칸 등장 순서대로 하나씩 두고, question에는 답을 넣지 않는다. answer에는 정답을 채운 전체 문장을 쓰고 채운 정답 부분만 `**굵게**` 강조한다.
-- **ox**: answer는 `O` 또는 `X`. 설명은 answer_units에 둔다.
-- **mcq·multi_select**: answer_units에는 options의 각 ID마다 `A: 참 — 근거` 또는 `B: 거짓 — 정정과 근거` 형식의 해설을 하나씩 적는다. 정답이 아닌 선지도 빠짐없이 설명하고 항목은 `<br>`로 구분한다.
-- **basic (단답형, 모든 tier)**: answer는 용어·수치·짧은 관계만 쓴다. 같은 축의 짧은 짝이면 `<br>`로 구분하고 answer_units에도 같은 항목을 같은 순서로 적는다. 문장형 답이나 부연설명을 쓰지 않는다. 여러 독립 항목은 List 등으로 설계한다.
-
-### 3.2 Choice Details
-
-mcq / multi_select 문항만 한 행씩. 해당 문항이 없으면 이 절을 생략한다.
-
-`question_id | options | correct_option_ids`
-
-- options: `A: 선택지<br>B: 선택지`처럼 각 선택지를 구분한다.
-- correct_option_ids: `A` 또는 `A<br>C`처럼 정답 ID만 적는다.
-- 같은 발문이어도 다른 구분·오개념을 시험하는 보기 구성은 별도 문항으로 보존한다. 보기 순서나 문자만 바꾼 구성은 중복이다. Questions의 answer_units에 각 보기의 참·거짓 판정과 근거를 같은 ID로 연결한다.
-
-### 3.3 Matching Details
-
-matching 문항만 한 행씩. 해당 문항이 없으면 이 절을 생략한다.
-
-`question_id | matching_left | matching_right | answer_pairs`
-
-- matching_left: `1. 항목<br>2. 항목`, matching_right: `A. 항목<br>B. 항목`.
-- answer_pairs: `1. 왼쪽 - B. 오른쪽<br>2. 왼쪽 - A. 오른쪽`처럼 번호와 글을 함께 쓴다.
-- 여러 왼쪽 항목이 같은 오른쪽 답을 가질 수 있다. 동일한 오른쪽 보기는 하나만 적고 각 왼쪽의 정답 짝은 모두 보존한다.
-
-### 3.4 Sequence Details
-
-sequence 문항만 한 행씩. 해당 문항이 없으면 이 절을 생략한다.
-
-`question_id | sequence_items | correct_order`
-
-- sequence_items: `A: 항목<br>B: 항목`, correct_order: `B<br>A`처럼 순서대로 ID를 적는다.
-
-### 3.5 Option Explanations
-
-mcq·multi_select의 모든 보기마다 한 행: `question_id | option_id | text`.
-기존 answer_units의 보기별 해설과 같은 내용이다. 거짓 보기에는 올바른 관계와 근거를 명시한다.
-
-### 3.6 Option Pools
-
-참·거짓 기준으로 바꿀 수 있는 객관식만 풀당 한 행: `question_id | pool_id | select_count | correct_when`.
-고정 보기만 쓰는 문항은 이 표에 넣지 않는다.
-
-### 3.7 Option Pool Candidates
-
-풀별 후보마다 한 행: `question_id | pool_id | candidate_id | true_text | false_text | true_explanation | false_explanation | source_refs`.
-같은 후보의 참·거짓 쌍에는 같은 조건과 근거를 보존한다. 하나의 풀에 중복 후보·중복 문장을 넣지 않는다.
-
-Question Bank 표 공통 규칙:
-
-- 한 행을 실제 줄바꿈으로 나누지 않는다. 문장 안의 줄바꿈도 `<br>`로 표시한다. 배열 필드에서는 `<br>` 하나가 항목 경계이므로 항목 내부의 줄바꿈은 공백으로 바꾼다.
-- 셀 본문에 필요한 `|`는 `&#124;`로 쓴다. 셀 경계의 `|`와 구분한다.
-- 셀 폭을 맞추는 공백, 문항별 제목·필드 목록, 같은 문항의 재출력은 넣지 않는다. 긴 문장·정답·출처를 줄임표로 줄이지 마라.
-- 상세 표는 Questions의 해당 문항과 question_id로 연결한다. 필요한 상세 행을 빠뜨리거나 같은 ID를 두 번 넣지 마라.
-- 모든 Questions 행이 위의 14개 열을 갖는지 검사한다. 특히 format 다음의 retrieval_direction을 빠뜨리지 마라. prerequisites는 각각의 실제 question_id를 `<br>`로 분리하고 여러 ID를 한 항목에 넣지 마라.
-
-## 4. Source Conflicts
-
-표. 열은 이 순서:
-
-`conflict_id | description | source_refs | unresolved`
-
-- description: 각 출처의 말 · 문항의 정답 · 그쪽인 근거(§6)
-- unresolved: 외부 의학지식으로도 어느 쪽인지 정하지 못했으면 true
-
-## 5. Final Statistics
-
-- 총 문제 수
-- Core · Advanced · Optional 수
-- Source conflict 문제 수
-- 외부 의학지식(`EXT`)을 쓴 문제 수
-
-
-마지막 줄에 `STUDYEZ_BANK_COMPLETE`를 적어라. 응답이 끝나지 않았으면 적지 마라.
+문항 ID는 모든 표에서 일치해야 한다. 해당 형식이 없는 상세 표는 생략한다.
+마지막 줄: STUDYEZ_BANK_COMPLETE
