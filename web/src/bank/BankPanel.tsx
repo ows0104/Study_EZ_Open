@@ -4,6 +4,7 @@ import {
   absoluteUrl,
   bumpPreviewVersion,
   extensionCompatible,
+  extensionInputMinimum,
   requestPreview,
 } from "../bridge/previewBridge";
 import { ExtensionSetup } from "../bridge/ExtensionSetup";
@@ -115,14 +116,14 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
     wasMoving.current = moving;
   }, [moving]);
 
-  /** 확장이 필기·족보와 프롬프트를 채우면 관리자가 확인하고 전송한다. */
-  async function make() {
+  /** 자동 출제는 확장이 첨부·전송·응답 저장을 맡고 러너 검수로 이어진다. */
+  async function make(autoSend: boolean) {
     if (!notes) return;
-    if (!extensionCompatible()) {
+    if (!extensionCompatible(extensionInputMinimum("bank", autoSend))) {
       setError("아래 브리지 설치·업데이트 안내에서 최신 버전을 설치하고 이 페이지를 새로고침하세요.");
       return;
     }
-    setBusy("make");
+    setBusy(autoSend ? "auto" : "make");
     setError("");
     try {
       // 서명 URL 은 수명이 짧아 누른 순간에 받는다.
@@ -139,9 +140,11 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
         mode: "bank",
         prompt: renderBankPrompt(detail, sources),
         files,
-        autoSend: false,
+        autoSend,
       });
-      setNote("ChatGPT 탭을 열었다. 첨부된 자료와 프롬프트를 확인하고 직접 전송하면 답을 가져온다.");
+      setNote(autoSend
+        ? "자동 출제를 시작했습니다. 확장이 자료를 첨부·전송하고, 답변 저장 후 CLI 검수가 이어집니다."
+        : "ChatGPT 탭을 열었습니다. 자료와 프롬프트를 확인하고 직접 전송하면 답변을 가져옵니다.");
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -244,15 +247,18 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
       <ActionCard
         shape="is-key"
         hit={
-          <button className="panel-action-hit" disabled={Boolean(busy) || moving || !extensionCompatible()} onClick={() => void make()}>
-            <strong>{bank ? "ChatGPT로 다시 만들기" : "ChatGPT로 만들기"}</strong>
+          <button className="panel-action-hit" disabled={Boolean(busy) || moving || !extensionCompatible(extensionInputMinimum("bank", true))} onClick={() => void make(true)}>
+            <strong>{busy === "auto" ? "자동 출제 시작 중…" : "자동 출제"}</strong>
             <small>
-              {sources.some((s) => s.kind === "jokbo") ? "필기 + 족보 조각" : "필기만 — 족보 조각이 아직 없다"}
+              {sources.some((s) => s.kind === "jokbo") ? "필기 + 족보" : "필기"} · 전송·저장·CLI 검수
             </small>
           </button>
         }
         tools={
           <>
+            <PanelTool icon="↗" label="직접 전송" hint="자료·프롬프트만 넣고 전송은 직접 한다"
+                       busy={busy === "make"} disabled={Boolean(busy) || moving || !extensionCompatible()}
+                       onClick={() => void make(false)} />
             <PanelTool icon="⎘" label="답 붙여넣기" hint="확장이 못 가져온 ChatGPT 답을 직접 붙여 넣는다"
                        active={pasting} expanded={pasting} disabled={Boolean(busy) || moving}
                        onClick={() => setPasting((v) => !v)} />
