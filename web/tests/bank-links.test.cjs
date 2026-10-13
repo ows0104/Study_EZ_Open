@@ -166,7 +166,7 @@ test('bank creation and recreation wait for a person to send; only the separate 
   }
   const fresh = controls({...props.detail,bank:undefined});
   const primary = fresh.find(element => element.type === 'button' && element.props.className === 'panel-action-hit');
-  assert.equal(primary.props.children[0].props.children,'링크 만들기');
+  assert.equal(primary.props.children[0].props.children,'기본 링크');
   assert.ok(!fresh.some(element => element.props.label === '직접 전송'));
   await click(primary,false);
   await click(fresh.find(element => element.props.label === '자동전송'),true);
@@ -175,7 +175,8 @@ test('bank creation and recreation wait for a person to send; only the separate 
   await click(saved.find(element => element.props.label === '자동전송'),true);
   assert.equal(jobs.length, 0); // Link creation never queues a CLI session.
   const count = requests.length;
-  fresh.find(element => element.type === 'button' && element.props.children === 'Main-Quiz 만들기').props.onClick();
+  fresh.find(element => element.type === 'button' && element.props.className === 'panel-action-hit'
+    && element.props.children[0].props.children === 'Main-Quiz').props.onClick();
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(requests.length, count);
   assert.equal(jobs.length, 1);

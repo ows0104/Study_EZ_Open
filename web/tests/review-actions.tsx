@@ -11,7 +11,7 @@ import "../src/styles/calendar.css";
 
 const query = new URLSearchParams(location.search);
 const admin = !query.has("student");
-if (!query.has("noextension")) document.documentElement.setAttribute("data-studyez-ai-extension", "1.3.5");
+if (!query.has("noextension")) document.documentElement.setAttribute("data-studyez-ai-extension", "1.3.13");
 const prompts: Record<string, string> = {};
 window.fetch = async (input, init) => {
   const path = new URL(String(input), location.origin).pathname;
@@ -39,9 +39,15 @@ const detail = {
     { id: "current", kind: "notes_current", filename: "오늘 강의록.pdf", sizeBytes: 1000 },
     { id: "jokbo", kind: "jokbo", filename: "족보.pdf", sizeBytes: 1000 },
   ].filter(file => !query.has("nonotes") || file.kind !== "notes_current"),
-  preview: null, myPreview: null,
+  preview: query.has("saved") ? { provider: "chatgpt", shareUrl: "https://chatgpt.com/share/preview" } : null,
+  myPreview: query.has("saved") ? { provider: "chatgpt", conversationUrl: "https://chatgpt.com/c/preview" } : null,
   myReview: query.has("saved") ? { provider: "chatgpt", conversationUrl: "https://chatgpt.com/c/review" } : null,
-  bank: { status: "ready", usable: true, open: true, questionCount: 30, conceptCount: 12 },
+  bank: {
+    status: query.has("noquiz") ? "linked" : "ready", usable: !query.has("noquiz"), open: true,
+    shareUrl: query.has("saved") ? "https://chatgpt.com/share/bank" : "",
+    conversationUrl: query.has("saved") ? "https://chatgpt.com/c/bank" : "",
+    questionCount: 30, conceptCount: 12, studyQuestionCount: 30, seenQuestionCount: 4,
+  },
   bankSources: [{ assetId: "current", kind: "notes_current", filename: "오늘 강의록.pdf" }],
 } as unknown as LectureDetail;
 const lecture = { subject: detail.subject, runId: detail.runId } as LectureRef;
