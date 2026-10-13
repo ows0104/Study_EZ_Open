@@ -112,8 +112,16 @@ def main() -> None:
     with SessionLocal() as db:
         jobs = db.query(PrequizJob).filter_by(subject=SUBJECT, run_id=RUN, kind="bank").all()
     check("일감이 하나 선다", len(jobs) == 1 and jobs[0].origin == "button", [(j.kind, j.origin) for j in jobs])
-    client.put(f"{ADMIN}/bank-response", json={"raw": RAW}, headers=ADMIN_H)
+    conversation = "https://chatgpt.com/c/test-bank"
+    client.put(f"{ADMIN}/bank-response", json={"raw": RAW, "conversationUrl": conversation}, headers=ADMIN_H)
     responded = client.get(f"{ADMIN}/bank", headers=ADMIN_H).json()["summary"]["respondedAt"]
+    revision = {"validation": {"pass": False, "errors": ["Q1: leak"]}}
+    failure = client.put(f"{ADMIN}/bank", json={"respondedAt": responded, "message": "응답 수정 필요",
+                                              "revision": revision}, headers=RUNNER)
+    check("검수 실패 상세를 저장한다", failure.status_code == 200)
+    failed_summary = client.get(BASE, headers=ADMIN_H).json()["bank"]
+    check("생성 대화와 검수 상세가 관리자에게 연결된다",
+          failed_summary["conversationUrl"] == conversation and failed_summary["revision"] == revision)
     with SessionLocal() as db:
         check("다시 넣어도 열린 일감은 하나", db.query(PrequizJob).filter_by(kind="bank").count() == 1)
 
@@ -160,6 +168,8 @@ def main() -> None:
     check("열린다", client.put(f"{ADMIN}/bank/open", json={"open": True}, headers=ADMIN_H).json()["open"] is True)
     as_student()
     summary = client.get(f"{BASE}/bank").json()
+    check("학생에게 생성 대화·검수 상세를 노출하지 않는다",
+          "conversationUrl" not in summary["summary"] and "revision" not in summary["summary"])
     check("학생 요약", summary["summary"]["questionCount"] == 3 and "reviewCounts" not in summary["summary"]
           and "dropped" not in summary["summary"],
           summary["summary"])

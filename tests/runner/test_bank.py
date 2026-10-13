@@ -176,6 +176,24 @@ def test_정리해서_슬라이드와_결과를_올린다(tmp_path, monkeypatch,
     assert "Quiz Bank 261002_02: ready" in capsys.readouterr().out
 
 
+def test_revision_failure_uploads_diagnostics_without_replacing_bank(tmp_path, monkeypatch):
+    pdf = tmp_path / "a.pdf"
+    pdf.write_bytes(b"%PDF")
+    monkeypatch.setattr(bank, "_notes_pdf", lambda *args: pdf)
+    monkeypatch.setattr(bank, "jokbo_slices", lambda *args: {"261002_02": tmp_path / "j.md"})
+    def fake_run(argv, **kwargs):
+        out = Path(argv[argv.index("--out") + 1])
+        (out / "result.json").write_text(json.dumps({"requiresRevision": True}))
+        (out / "validation.json").write_text(json.dumps({"pass": False, "errors": ["Q1: leak"]}))
+        return SimpleNamespace(returncode=0)
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    client = FakeClient()
+    assert bank.run(client, tmp_path, "약리학", "261002_02", "2026", "2025", tmp_path) == 1
+    payload = [c for c in client.calls if c[0] == "PUT"][-1][2]
+    assert payload["revision"]["validation"]["errors"] == ["Q1: leak"]
+    assert "bank" not in payload
+
+
 def test_필기를_못_찾으면_서버에_실패를_적는다(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(publish, "plan_subject", lambda *a, **k: ([], []))
     client = FakeClient()

@@ -19,6 +19,8 @@ export type BankSummary = {
   /** 아래는 관리자에게만. */
   respondedAt?: string | null;
   promptVersion?: string;
+  conversationUrl?: string;
+  revision?: Record<string, unknown> | null;
   message?: string;
   reviewCounts?: { ok: number; doubt: number; wrong: number } | null;
   errorCount?: number;

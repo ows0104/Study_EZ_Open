@@ -78,10 +78,19 @@ const STATUS_LINE: Record<BankSummary["status"], string> = {
   failed: "정리에 실패했다",
 };
 
+function conversationLink(value?: string) {
+  try {
+    const url = new URL(value || "");
+    return url.protocol === "https:" && ["chatgpt.com", "chat.openai.com"].includes(url.hostname)
+      && /^\/(?:g\/[^/]+\/)?(?:c|share)\/[^/]+/.test(url.pathname) ? url.href : "";
+  } catch { return ""; }
+}
+
 function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | "runId">; detail: LectureDetail }) {
   const path = `${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
   const adminBase = `/api/admin/lectures/${path}`;
   const bank = detail.bank;
+  const conversation = conversationLink(bank?.conversationUrl);
   const sources = detail.bankSources ?? [];
   const notes = sources.find((s) => s.kind === "notes_current");
   const [job, setJob] = useState<PrequizJob | null>(null);
@@ -91,6 +100,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
   const [note, setNote] = useState("");
   const [pasting, setPasting] = useState(false);
   const [pasted, setPasted] = useState("");
+  const [pastedUrl, setPastedUrl] = useState("");
 
   const load = useCallback(() => {
     api<{ job: PrequizJob | null; runner: RunnerBeat | null }>(`${adminBase}/prequiz-job?kind=bank`)
@@ -164,10 +174,11 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
     try {
       await api(`${adminBase}/bank-response`, {
         method: "PUT",
-        body: JSON.stringify({ raw, conversationUrl: "", promptVersion: BANK_PROMPT_VERSION }),
+        body: JSON.stringify({ raw, conversationUrl: pastedUrl.trim() || conversation, promptVersion: BANK_PROMPT_VERSION }),
       });
       setPasting(false);
       setPasted("");
+      setPastedUrl("");
       setNote("붙여 넣은 답을 저장했다. 러너가 정리·검토한다.");
       load();
       bumpPreviewVersion();
@@ -274,8 +285,26 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
         }
       />
       <ExtensionSetup minimum={extensionInputMinimum("bank", true)} />
+      {conversation ? <p className="panel-hint">
+        <a href={conversation} target="_blank" rel="noopener noreferrer">생성한 ChatGPT 대화 열기·수정</a>
+      </p> : null}
+      {bank?.revision ? <details className="panel-hint">
+        <summary>CLI 검수 결과 — 생성한 ChatGPT 응답 수정 필요</summary>
+        <p>대화를 열어 아래 검수 내용을 전달하고, 수정된 전체 응답을 답 붙여넣기로 저장하세요.</p>
+        <button className="is-quiet" onClick={() => void navigator.clipboard.writeText(
+          "아래 CLI 검수 결과에 따라 기존 문제은행을 수정해주세요. 통과한 문항과 ID는 보존하고, "
+          + "수정된 전체 응답을 STUDYEZ_BANK_COMPLETE까지 출력해주세요.\n\n"
+          + JSON.stringify(bank.revision, null, 2)
+        ).then(() => setNote("검수 결과와 수정 요청을 복사했습니다."))
+          .catch(() => setError("복사하지 못했습니다. 아래 검수 내용을 직접 복사하세요."))}>수정 요청 복사</button>
+        <pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{JSON.stringify(bank.revision, null, 2)}</pre>
+      </details> : null}
       {pasting ? (
         <div className="bank-paste">
+          <label>생성 대화 주소
+            <input type="url" value={pastedUrl} placeholder={conversation || "https://chatgpt.com/c/… (선택)"}
+                   onChange={(event) => setPastedUrl(event.target.value)} />
+          </label>
           <textarea
             rows={8}
             value={pasted}

@@ -69,7 +69,7 @@ def validate_bank(bank: dict, source_ids: list[str]) -> dict:
     def refs(items: list[dict], label: str) -> None:
         fail(len(items) > 0, f"{label}: 출처 필요")
         for ref in items:
-            fail(ref["source_id"] in ids and _nonempty(ref["locator"]),
+            fail(ref["source_id"] in ids and (ref["source_id"] == EXTERNAL or _nonempty(ref["locator"])),
                  f"{label}: 유효한 source_id 및 page/slide/section 필요")
 
     fail(bank["build_meta"]["schema_version"] in ("3.0", SCHEMA_VERSION), f"지원 schema_version: 3.0, {SCHEMA_VERSION}")

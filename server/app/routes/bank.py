@@ -151,6 +151,7 @@ def summary(db: Session, lecture: Lecture, row: QuizBank | None, *, is_admin: bo
     if is_admin:
         review = row.review or {}
         out.update(respondedAt=_iso(row.responded_at), promptVersion=row.prompt_version, message=row.message,
+                   conversationUrl=row.conversation_url, revision=(row.validation or {}).get("revision"),
                    reviewCounts=review.get("counts"), errorCount=len((row.validation or {}).get("errors", [])),
                    # 검증에 걸려 뺀 문항(`quizbank.validate.validate_dropping`). 원문은 `GET …/bank` 의 validation 에 있다.
                    dropped=[{"questionId": d["question_id"], "errors": d["errors"]}
@@ -181,6 +182,8 @@ def put_bank_response(subject: str, run_id: str, payload: ResponseIn,
         row = QuizBank(subject=lecture.subject, run_id=lecture.run_id)
         db.add(row)
     row.raw_response = payload.raw
+    if (row.validation or {}).get("revision"):
+        row.validation = {k: v for k, v in row.validation.items() if k != "revision"}
     # 새 원문에는 이전 보강 요청을 이어 붙이지 않는다.
     if (row.validation or {}).get("maintenance"):
         row.validation = {k: v for k, v in row.validation.items() if k != "maintenance"}
@@ -252,6 +255,7 @@ class BankIn(BaseModel):
     usage: list[dict] | None = None
     message: str = Field(default="", max_length=2000)
     base_build_id: str | None = Field(None, alias="baseBuildId")
+    revision: dict | None = None
 
     model_config = {"populate_by_name": True}
 
@@ -272,6 +276,8 @@ def put_bank(subject: str, run_id: str, payload: BankIn, user: CurrentUser = Dep
     if maintenance and (row.build_id != payload.base_build_id or not (row.validation or {}).get("maintenance")):
         raise HTTPException(409, "보강 대상이 바뀌었습니다. 현재 은행으로 다시 요청하세요.")
     if payload.bank is None or payload.validation is None:
+        if payload.revision is not None:
+            row.validation = {**(row.validation or {}), "revision": payload.revision}
         row.status = BANK_READY if maintenance else BANK_FAILED
         if maintenance:
             row.validation = {k: v for k, v in (row.validation or {}).items() if k != "maintenance"}

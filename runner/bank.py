@@ -119,9 +119,10 @@ def run(client: publish.Client, root: Path, subject: str, run_id: str, this_year
     responded = got["respondedAt"]
     maintenance = got.get("existingBank") is not None
 
-    def fail(why: str) -> int:
+    def fail(why: str, *, revision: dict | None = None) -> int:
         try:
             client.call("PUT", f"{base}/bank", {"respondedAt": responded, "message": why,
+                        **({"revision": revision} if revision is not None else {}),
                         **({"baseBuildId": got["baseBuildId"]} if maintenance else {})})
         except publish.PublishError as e:
             print(f"  (실패를 서버에 적지 못했다: {e})", flush=True)
@@ -194,7 +195,11 @@ def run(client: publish.Client, root: Path, subject: str, run_id: str, this_year
     if code != 0 or result is None:
         return fail(f"quizbank 가 {code} 로 끝났다 (로그: {out})")
     if result.get("requiresRevision"):
-        return fail(f"CLI 검수에서 웹 수정이 필요합니다. 검수 기록: {out}")
+        return fail(f"CLI 검수에서 ChatGPT 응답 수정이 필요합니다. 검수 기록: {out}",
+                    revision={"validation": _read(out / "validation.json"),
+                              "audit": _read(out / "web-audit.json"),
+                              "review": _read(out / "review.json"),
+                              "explanations": _read(out / "explanations.json")})
 
     _stage("업로드")
     slides = sorted((out / "slides").glob("*.png")) if (out / "slides").is_dir() else []

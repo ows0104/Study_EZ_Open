@@ -19,9 +19,18 @@ def leaked_units(question: dict) -> list[str]:
     if question["format"] not in ("basic", "cloze", "list"):
         return []
     stem = _text(question["question"])
+    # Enumerated candidates still require a comparison. Their presence alone
+    # does not identify the answer (e.g. "UFH·LMWH·fondaparinux 중 … 가장 …?").
+    candidate_prefix, separator, comparison = stem.partition(" 중 ")
+    candidates = [item.strip() for item in re.split(r"[·,/]", candidate_prefix)]
+    choosing = (question.get("retrieval_direction") == "discrimination" and separator
+                and len(candidates) >= 2 and all(candidates)
+                and re.search(r"가장|어느|어떤|무엇", comparison))
     found = []
     for unit in question["answer_units"]:
         answer = _text(unit)
+        if choosing and answer in candidates and answer not in comparison:
+            continue
         # A one-letter symbol or a one-syllable suffix is not useful evidence.
         if len(answer) < 2 or answer in GENERIC_PREDICATES:
             continue

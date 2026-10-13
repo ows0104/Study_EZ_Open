@@ -141,6 +141,15 @@ def test_EXT_출처는_허용하되_출처_요약은_요구하지_않는다(bank
     assert any("유효한 source_id" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
 
 
+def test_external_refs_need_no_pdf_locator_but_uploaded_sources_do(bank):
+    _fix_lists(bank)
+    for section in ("concepts", "questions", "source_conflicts"):
+        bank[section][0]["source_refs"].append({"source_id": "EXT", "locator": ""})
+    assert validate_bank(bank, ["S1", "S2"])["pass"]
+    bank["questions"][0]["source_refs"].append({"source_id": "S1", "locator": ""})
+    assert any("유효한 source_id" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
+
+
 def test_걸린_문항만_빼고_다시_잰다(bank):
     """2026-10-05 관리자 — 「걸린 문항만 빼고 연다」. 실물의 list 셋이 빠지고 나머지 33이 통과한다."""
     kept, v = validate_dropping(bank, ["S1", "S2"])
