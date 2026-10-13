@@ -6,4 +6,4 @@
 
 bank.json, source-text.md, source-pages.json, 있으면 jokbo.md를 읽는다. 필요한 근거 이미지를 확인한다. annotations에 모든 대상 question_id를 정확히 한 번 포함하고 실제 option_id·pool_id·candidate_id에 연결한다. 대상은 MCQ·multi_select·OX다. 해당 없는 해설 필드는 빈 배열·빈 문자열이다. note는 의심·오류일 때만 쓴다. 설명은 한국어 1–2문장으로 쓴다.
 
-수정된 문제은행 전체를 출력하지 말고 지정 스키마의 해설과 판정만 반환한다.
+문제은행 전체를 다시 작성하지 말고 해설과 판정만 작성한다.

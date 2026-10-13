@@ -94,11 +94,11 @@ def test_new_web_flow_keeps_questions_and_never_calls_supplement(bank, tmp_path,
         raise AssertionError("CLI must not supplement web-authored questions")
     monkeypatch.setattr(run.coverage, "audit_and_supplement", forbid)
     monkeypatch.setattr(run, "validate_dropping", forbid)
-    def fake_call(prompt, schema, work, model, label):
+    def fake_call(prompt, schema, work, model, label, filename):
         assert len(json.loads((work / "source-pages.json").read_text(encoding="utf-8"))) == 1
         assert "P001" in (work / "point-plan.json").read_text(encoding="utf-8")
         return report(bank), {}
-    monkeypatch.setattr(web_audit, "_call", fake_call)
+    monkeypatch.setattr(web_audit.file_result, "write", fake_call)
     out = tmp_path / "out"
     result = run.run(raw_path, pdf, "강의", "lecture", [{"id": "S1"}, {"id": "S2"}], out,
                      prompt_version="1.29", do_review=False)

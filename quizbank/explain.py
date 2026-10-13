@@ -9,7 +9,7 @@ from pathlib import Path
 import fitz
 
 from studyez_llm.pdf import render
-from .coverage import _call
+from . import file_result
 from .points import _array, _object, STR
 from .session import SessionError
 from .slides import cited_pages
@@ -90,7 +90,7 @@ def write(bank: dict, pdf: Path, title: str, out: Path, *, pdf_source: str = 'S1
     if jokbo:
         (work / 'jokbo.md').write_text(jokbo.read_text(encoding='utf-8'), encoding='utf-8')
     prompt = PROMPT.read_text(encoding='utf-8') + '\n강의: ' + title
-    report, usage = _call(prompt, REPORT, work, model, '정답 확인·해설 작성')
+    report, usage = file_result.write(prompt, REPORT, work, model, '정답 확인·해설 작성', 'annotations.json')
     result, checked = apply(bank, report)
     (out / 'explanations.json').write_text(json.dumps(checked, ensure_ascii=False, indent=2), encoding='utf-8')
     return result, checked, usage
