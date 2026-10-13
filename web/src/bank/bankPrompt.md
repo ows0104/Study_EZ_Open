@@ -1,6 +1,7 @@
 <!--
 Bank Builder 프롬프트 — 정본
-Version: 1.30
+Version: 1.31
+1.31 (2026-10-13) 출제 포인트를 구체적인 인출·판단 목표로 적도록 명시한다.
 1.30 (2026-10-13) 완성된 표 전체를 대화 본문으로 출력하도록 명시한다.
 1.29 (2026-10-13) 출제 규칙을 간결하게 정리하고 웹 출제 포인트 계획과 CLI 검수를 연결한다.
 -->
@@ -28,6 +29,7 @@ Version: 1.30
 0. Exam Point Plan
 point_id | point | source_refs
 포인트 ID는 P001…로 지정한다.
+각 포인트에는 무엇을 인출·구별·적용해야 하는지 구체적으로 적어라.
 
 1. Concept Map
 concept_id | title | graph_title | core_facts | importance | importance_rationale | concept_difficulty | tier | exam_signal_strength | related_concepts | source_refs
