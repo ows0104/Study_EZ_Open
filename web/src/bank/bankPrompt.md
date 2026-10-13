@@ -1,6 +1,7 @@
 <!--
 Bank Builder 프롬프트 — 정본
-Version: 1.31
+Version: 1.32
+1.32 (2026-10-13) 웹은 문항·선지·정답을 출제하고 해설은 CLI에서 작성·검수한다.
 1.31 (2026-10-13) 출제 포인트를 구체적인 인출·판단 목표로 적도록 명시한다.
 1.30 (2026-10-13) 완성된 표 전체를 대화 본문으로 출력하도록 명시한다.
 1.29 (2026-10-13) 출제 규칙을 간결하게 정리하고 웹 출제 포인트 계획과 CLI 검수를 연결한다.
@@ -11,7 +12,7 @@ Version: 1.31
 1. 교수 강조·학습목표·족보를 참고해 출제 포인트를 먼저 정리하고, 이를 바탕으로 Concept Map → Retrieval Plan → Question Bank를 작성해라. 문항 수와 형식은 각 포인트의 학습 가치에 맞게 판단해라.
 2. 한 문제는 명확한 인출 또는 판단을 요구해야 한다. 단답형의 답은 용어·수치·짧은 관계로 쓰고, 나열·대응·과정·문맥에 맞는 형식을 선택해라.
 3. 중요한 사실·조건·예외를 충분히 다루되, 같은 인출이나 판단을 형식·표현만 바꾸어 반복하지 마라. 회상과 비교·적용이 서로 다른 학습 목표라면 함께 출제할 수 있다.
-4. 객관식을 적절히 활용해라. 먼저 답을 인출하는 기억 확인형은 recall_first, 선지를 비교·판별하는 과정이 목표인 구별·판단형은 comparison이다. 두 유형 모두 실제 선지·정답·모든 선지의 해설을 작성해라.
+4. 객관식을 적절히 활용해라. 먼저 답을 인출하는 기억 확인형은 recall_first, 선지를 비교·판별하는 과정이 목표인 구별·판단형은 comparison이다. 두 유형 모두 실제 선지와 정답을 작성해라.
 5. 발문에 답을 노출하지 말고, 답의 범위를 결정하는 조건은 명확히 제시해라. answer_units는 핵심 채점 단위로 나누고, 필요한 기초 문항을 prerequisites로 연결해라.
 6. 중요도와 난이도를 독립적으로 판단하고 Core·Advanced·Optional을 구분해라. 형식만으로 tier를 정하지 마라.
 7. 각 포인트와 문제에 원본 근거를 남겨라. PDF는 실제 쪽 번호를 써라. 외부 의학지식도 사용하되 자료에 없거나 다른 내용은 EXT로 표시해라. 출처가 충돌하면 한 문항으로 합치고 차이·선택한 답·판단 근거를 설명해라.
@@ -49,6 +50,7 @@ importance·item_difficulty는 1–5다. format은 basic / cloze / list / ox / m
 mcq_mode는 recall_first / comparison이며 다른 형식은 none이다. exam_rationale에 관련 point_id와 출제 이유를 적는다.
 cloze는 관련 빈칸 1–4개를 모두 {{c1}}로 표시한다. answer_units는 빈칸 등장 순서대로 대응시키고, answer에는 정답을 채운 문장을 쓴다.
 basic의 answer와 answer_units는 같은 짧은 정답 단위다. ox의 answer는 O 또는 X다.
+해설은 CLI에서 작성하므로 웹에서는 정답과 핵심 채점 단위만 출력한다.
 integration에는 실제 필요한 기초 question_id를 prerequisites로 연결한다. 빈 prerequisites·conflict_id는 —로 쓴다.
 
 3.2 Choice Details
@@ -63,14 +65,10 @@ question_id | matching_left | matching_right | answer_pairs
 question_id | sequence_items | correct_order
 항목에 A: 내용…처럼 ID를 붙이고 correct_order에 ID를 순서대로 적는다.
 
-3.5 Option Explanations
-question_id | option_id | text
-모든 선지에 정오 이유를 쓰고, 거짓 선지는 올바른 내용도 설명한다.
-
 같은 판단의 보기 조합을 바꿀 가치가 있으면 선택적으로 다음 두 표를 작성한다.
-3.6 Option Pools: question_id | pool_id | select_count | correct_when
-3.7 Option Pool Candidates: question_id | pool_id | candidate_id | true_text | false_text | true_explanation | false_explanation | source_refs
-각 후보는 동일 조건의 참·거짓 쌍과 해설을 갖는다. 풀별 후보는 최대 16개, select_count는 후보 수보다 적은 2–8개다.
+3.5 Option Pools: question_id | pool_id | select_count | correct_when
+3.6 Option Pool Candidates: question_id | pool_id | candidate_id | true_text | false_text | source_refs
+각 후보는 동일 조건의 참·거짓 쌍을 갖는다. 풀별 후보는 최대 16개, select_count는 후보 수보다 적은 2–8개다.
 correct_when은 참을 고르면 true, 거짓을 고르면 false다. 서로 다른 비교·판단이 필요하면 별도 문항으로 만든다.
 
 4. Source Conflicts

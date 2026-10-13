@@ -45,7 +45,7 @@ def expected_schema(raw: str, lecture: dict) -> str:
 
 
 def organizer_prompt(raw: str, lecture: dict) -> str:
-    meta = {"title": lecture["title"], "sources": lecture["sources"]}
+    meta = {"title": lecture["title"], "sources": lecture["sources"], "prompt_version": lecture.get("prompt_version", "")}
     fill = {"schema_version": expected_schema(raw, lecture),
             "lecture": json.dumps(meta, ensure_ascii=False),
             "raw": json.dumps(clean_response(raw), ensure_ascii=False)}

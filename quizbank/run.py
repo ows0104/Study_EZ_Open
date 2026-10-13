@@ -26,11 +26,11 @@ import sys
 import time
 from pathlib import Path
 
-from . import coverage, organize, review, slides, web_audit
+from . import coverage, explain, organize, review, slides, web_audit
 from .session import SessionError
 from .validate import validate_bank, validate_dropping
 
-OUTPUTS = ("bank.json", "bank.raw.json", "validation.json", "review.json", "coverage.json", "classification.json", "web-audit.json", "pages.json", "result.json", "usage.jsonl")
+OUTPUTS = ("bank.json", "bank.raw.json", "validation.json", "review.json", "coverage.json", "classification.json", "web-audit.json", "explanations.json", "pages.json", "result.json", "usage.jsonl")
 
 
 def _write(path: Path, data) -> None:
@@ -70,6 +70,14 @@ def run(raw_path: Path, pdf: Path | None, title: str, run_id: str, sources: list
         _usage(out, "정리", info)
     else:
         bank = json.loads(existing_bank.read_text(encoding="utf-8"))
+
+    cli_explanations = explain.enabled(prompt_version)
+    explanation_check = None
+    if cli_explanations and pdf is not None:
+        _stage("정답 확인·해설 작성")
+        bank, explanation_check, info = explain.write(bank, pdf, title, out,
+            pdf_source=pdf_source, jokbo=jokbo, model=model)
+        _usage(out, "정답 확인·해설 작성", info)
     _write(out / "bank.json", bank)
 
     _stage("검증")
@@ -92,12 +100,17 @@ def run(raw_path: Path, pdf: Path | None, title: str, run_id: str, sources: list
                     "review": None, "slides": 0, "missing_pages": []}
     if web_authored:
         result["requiresRevision"] = not validation["pass"] or pdf is None or not do_coverage
+    if cli_explanations:
+        result["explanations"] = {k: explanation_check[k] for k in ("annotatedCount", "requiresRevision")} \
+            if explanation_check else None
+        result["requiresRevision"] = result.get("requiresRevision", False) or not do_review \
+            or explanation_check is None or explanation_check["requiresRevision"]
     if validation["pass"]:
         if pdf is not None and do_coverage:
             if web_authored:
                 _stage("웹 출제 원본·포인트·중복 검수")
                 checked, usage = web_audit.inspect(bank, raw, pdf, title, sources, out, model=model, jokbo=jokbo)
-                result["requiresRevision"] = checked["requiresRevision"]
+                result["requiresRevision"] = result["requiresRevision"] or checked["requiresRevision"]
             else:
                 _stage("원본 누락 검증·객관식 보강")
                 bank, checked, usage = coverage.audit_and_supplement(
@@ -117,6 +130,8 @@ def run(raw_path: Path, pdf: Path | None, title: str, run_id: str, sources: list
             _usage(out, "외부지식 검토", info)
             result["review"] = checked["counts"]
             if web_authored and checked["counts"].get("wrong", 0):
+                result["requiresRevision"] = True
+            if cli_explanations and checked.get("missing"):
                 result["requiresRevision"] = True
 
         _stage("슬라이드")
