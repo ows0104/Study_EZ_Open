@@ -1,7 +1,6 @@
 <!--
 Bank Builder 프롬프트 — 정본
-Version: 1.33
-1.33 (2026-10-13) 설명·근거·통계의 반복을 줄이고 출제 결과 표만 간결하게 출력한다.
+Version: 1.32
 1.32 (2026-10-13) 웹은 문항·선지·정답을 출제하고 해설은 CLI에서 작성·검수한다.
 1.31 (2026-10-13) 출제 포인트를 구체적인 인출·판단 목표로 적도록 명시한다.
 1.30 (2026-10-13) 완성된 표 전체를 대화 본문으로 출력하도록 명시한다.
@@ -21,7 +20,7 @@ Version: 1.33
 
 출력 형식
 
-파일 링크 대신 이 대화 본문에 아래 표만 출력해라. 서론·자료 요약·표기 안내·별도 검토 보고는 생략하고 각 표는 한 번만 쓴다.
+전체 결과는 파일 링크 대신 이 대화 본문에 Markdown 표로 출력해라.
 
 첨부 자료의 ID와 파일 이름은 다음과 같다. 이 ID를 source_refs에 사용한다.
 {{sources}}
@@ -36,7 +35,7 @@ point_id | point | source_refs
 1. Concept Map
 concept_id | title | graph_title | core_facts | importance | importance_rationale | concept_difficulty | tier | exam_signal_strength | related_concepts | source_refs
 importance·concept_difficulty는 1–5, tier는 Core / Advanced / Optional, exam_signal_strength는 low / medium / high다.
-graph_title은 개념을 구분할 수 있는 짧은 이름이다. core_facts는 핵심 관계만 짧게, importance_rationale은 중요도 판단 근거만 짧게 쓴다. core_facts·related_concepts는 ;로 구분한다.
+graph_title은 개념을 구분할 수 있는 짧은 이름이다. core_facts·related_concepts는 ;로 구분한다.
 
 2. Retrieval Plan
 concept_id | directions | repetition_budget | target_mastery
@@ -48,7 +47,7 @@ repetition_budget는 1–100, target_mastery는 0.1–1이다.
 3.1 Questions
 question_id | concept_id | tier | importance | item_difficulty | format | retrieval_direction | mcq_mode | question | answer | answer_units | prerequisites | source_refs | exam_rationale | conflict_id
 importance·item_difficulty는 1–5다. format은 basic / cloze / list / ox / mcq / multi_select / matching / sequence다.
-mcq_mode는 recall_first / comparison이며 다른 형식은 none이다. exam_rationale에는 관련 point_id만 적고 포인트 설명을 반복하지 않는다.
+mcq_mode는 recall_first / comparison이며 다른 형식은 none이다. exam_rationale에 관련 point_id와 출제 이유를 적는다.
 cloze는 관련 빈칸 1–4개를 모두 {{c1}}로 표시한다. answer_units는 빈칸 등장 순서대로 대응시키고, answer에는 정답을 채운 문장을 쓴다.
 basic의 answer와 answer_units는 같은 짧은 정답 단위다. ox의 answer는 O 또는 X다.
 해설은 CLI에서 작성하므로 웹에서는 정답과 핵심 채점 단위만 출력한다.
@@ -76,7 +75,7 @@ correct_when은 참을 고르면 true, 거짓을 고르면 false다. 서로 다�
 conflict_id | description | source_refs | unresolved
 
 5. Final Statistics
-총 문제 수, tier별 수, 출처 충돌 문항 수, EXT 문항 수만 한 줄로 적는다.
+총 문제 수, tier별 수, 출처 충돌 문항 수, EXT 문항 수를 적는다.
 
 문항 ID는 모든 표에서 일치해야 한다. 해당 형식이 없는 상세 표는 생략한다.
 마지막 줄: STUDYEZ_BANK_COMPLETE

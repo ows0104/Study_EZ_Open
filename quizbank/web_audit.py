@@ -11,8 +11,7 @@ from pathlib import Path
 import fitz
 
 from studyez_llm.pdf import render
-from .coverage import bank_hash
-from . import file_result
+from .coverage import _call, bank_hash
 from .points import _array, _object, STR, INT
 from .session import SessionError
 
@@ -161,11 +160,10 @@ def inspect(bank: dict, raw: str, pdf: Path, title: str, sources: list[dict], ou
         (work / "jokbo.md").write_text(jokbo.read_text(encoding="utf-8"), encoding="utf-8")
     prompt = PROMPT.read_text(encoding="utf-8") + "\n\n작업 파일: context.json, source-text.md, source-pages.json, " \
         "point-plan.json, web-response.md, bank.json, 있으면 jokbo.md. 원본 이미지도 view_image로 확인한다. " \
-        "입력 파일은 변경하지 않는다. pages는 PDF의 모든 물리 쪽, " \
+        "파일을 변경하지 말고 지정 JSON 스키마로 최종 검수 결과를 반환한다. pages는 PDF의 모든 물리 쪽, " \
         "checks는 모든 point_id, classifications는 모든 mcq·multi_select question_id를 정확히 한 번 포함한다. " \
-        "읽지 못한 쪽은 unreadable로 기록한다. checked 쪽과 covered 포인트의 note는 빈 문자열로 두고, " \
-        "문제가 있는 항목만 근거를 설명한다. classifications의 reason은 분류 근거를 짧게 쓴다."
-    raw_report, info = file_result.write(prompt, REPORT, work, model, "웹 출제 원본·포인트·중복 검수", "audit.json")
+        "읽지 못한 쪽은 unreadable로 기록한다. note·reason은 간결하게 쓴다."
+    raw_report, info = _call(prompt, REPORT, work, model, "웹 출제 원본·포인트·중복 검수")
     pdf_source = next((s["id"] for s in sources if s.get("filename") == pdf.name), "S1")
     report = shape_report(raw_report, bank, points, count, pdf_source=pdf_source)
     report.update(sourceFilename=pdf.name, sourceSha256=hashlib.sha256(pdf.read_bytes()).hexdigest())
