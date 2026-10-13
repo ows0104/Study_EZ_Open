@@ -14,7 +14,7 @@ export function versionAtLeast(version: string, minimum: string) {
 
 export const PREVIEW_MIN_VERSION = "1.2.0";
 export const AUTO_SEND_MIN_VERSION = "1.3.3";
-export const BANK_AUTO_SEND_MIN_VERSION = "1.3.10";
+export const BANK_AUTO_SEND_MIN_VERSION = "1.3.11";
 /** 확장이 복습 결과 종류를 직접 구분하기 시작한 버전. 구버전은 사이트에서 구분한다. */
 export const NATIVE_REVIEW_MIN_VERSION = "1.3.5";
 
@@ -22,7 +22,7 @@ export type BridgeMode = "shared" | "personal" | "review" | "bank";
 
 /** 1.2는 직접 전송한다. 1.3.0~1.3.2는 수동 요청도 자동 전송하므로 갱신이 필요하다. */
 export function minimumVersionForInput(installed: string, mode: BridgeMode, autoSend: boolean) {
-  if (mode === "bank" && autoSend) return BANK_AUTO_SEND_MIN_VERSION;
+  if (mode === "bank") return BANK_AUTO_SEND_MIN_VERSION;
   if (autoSend || versionAtLeast(installed, "1.3.0")) return AUTO_SEND_MIN_VERSION;
   return PREVIEW_MIN_VERSION;
 }

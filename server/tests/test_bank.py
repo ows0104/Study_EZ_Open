@@ -113,8 +113,16 @@ def main() -> None:
         jobs = db.query(PrequizJob).filter_by(subject=SUBJECT, run_id=RUN, kind="bank").all()
     check("일감이 하나 선다", len(jobs) == 1 and jobs[0].origin == "button", [(j.kind, j.origin) for j in jobs])
     conversation = "https://chatgpt.com/c/test-bank"
-    client.put(f"{ADMIN}/bank-response", json={"raw": RAW, "conversationUrl": conversation}, headers=ADMIN_H)
+    shared = "https://chatgpt.com/share/test-bank"
+    client.put(f"{ADMIN}/bank-response", json={"raw": RAW, "conversationUrl": conversation,
+                                             "shareUrl": shared}, headers=ADMIN_H)
     responded = client.get(f"{ADMIN}/bank", headers=ADMIN_H).json()["summary"]["respondedAt"]
+    check("공유 주소를 함께 저장한다", client.get(BASE, headers=ADMIN_H).json()["bank"]["shareUrl"] == shared)
+    link_update = client.put(f"{ADMIN}/bank/links", json={"shareUrl": shared, "conversationUrl": conversation}, headers=ADMIN_H)
+    check("링크 수정은 원문·응답 시각·일감을 바꾸지 않는다", link_update.status_code == 200
+          and client.get(f"{ADMIN}/bank", headers=ADMIN_H).json()["summary"]["respondedAt"] == responded)
+    invalid_link = client.put(f"{ADMIN}/bank/links", json={"shareUrl": "https://evil.example/share/test", "conversationUrl": conversation}, headers=ADMIN_H)
+    check("잘못된 공유 주소는 저장하지 않는다", invalid_link.status_code == 422)
     revision = {"validation": {"pass": False, "errors": ["Q1: leak"]}}
     failure = client.put(f"{ADMIN}/bank", json={"respondedAt": responded, "message": "응답 수정 필요",
                                               "revision": revision}, headers=RUNNER)
@@ -168,6 +176,7 @@ def main() -> None:
     check("열린다", client.put(f"{ADMIN}/bank/open", json={"open": True}, headers=ADMIN_H).json()["open"] is True)
     as_student()
     summary = client.get(f"{BASE}/bank").json()
+    check("학생에게 공유 링크를 제공한다", summary["summary"]["shareUrl"] == shared)
     check("학생에게 생성 대화·검수 상세를 노출하지 않는다",
           "conversationUrl" not in summary["summary"] and "revision" not in summary["summary"])
     check("학생 요약", summary["summary"]["questionCount"] == 3 and "reviewCounts" not in summary["summary"]

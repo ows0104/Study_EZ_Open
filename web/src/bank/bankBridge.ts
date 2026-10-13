@@ -27,6 +27,7 @@ export function useBankLink() {
         body: JSON.stringify({
           raw,
           conversationUrl: typeof data.url === "string" ? data.url : "",
+          ...(typeof data.shareUrl === "string" ? { shareUrl: data.shareUrl } : {}),
           promptVersion: BANK_PROMPT_VERSION,
         }),
       })

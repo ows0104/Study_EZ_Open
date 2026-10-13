@@ -150,6 +150,33 @@ function shareFixture({ fields = [], buttons = [], text = 'Share conversation', 
   return { context, root, runtime, sent, state, document };
 }
 
+test('bank publishes verified shared and private URLs with its response, without preview link messages', async () => {
+  const s = shareFixture();
+  vm.runInContext('watch = { mode: "bank" };', s.context);
+  s.context.accessToken = async () => 'test-token';
+  s.context.conversationState = async () => ({ finished: true, currentNode: 'bank-answer', answer: 'Bank STUDYEZ_BANK_COMPLETE' });
+  s.context.publishViaApi = async () => 'https://chatgpt.com/share/bank-test';
+  s.context.isPubliclyReadable = async () => true;
+  assert.equal(await s.context.publish(), 'published');
+  const messages = s.sent.filter(m => m.type === 'STUDYEZ_BANK_ANSWER');
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].url, 'https://chatgpt.com/c/our-conversation');
+  assert.equal(messages[0].shareUrl, 'https://chatgpt.com/share/bank-test');
+  assert.equal(s.sent.some(m => ['STUDYEZ_SHARE_LINK', 'STUDYEZ_CONVERSATION_LINK'].includes(m.type)), false);
+  assert.equal(await s.context.publish(), 'settled');
+});
+
+test('bank does not emit a response with an unverified public link', async () => {
+  const s = shareFixture();
+  vm.runInContext('watch = { mode: "bank" };', s.context);
+  s.context.accessToken = async () => 'test-token';
+  s.context.conversationState = async () => ({ finished: true, currentNode: 'bank-answer', answer: 'Bank STUDYEZ_BANK_COMPLETE' });
+  s.context.publishViaApi = async () => 'https://chatgpt.com/share/bank-test';
+  s.context.isPubliclyReadable = async () => false;
+  assert.equal(await s.context.publish(), 'pending');
+  assert.equal(s.sent.some(m => m.type === 'STUDYEZ_BANK_ANSWER'), false);
+});
+
 test('reads anchor href inside sharing dialog and ignores answer links', () => {
   const s = shareFixture({ fields: [element('Copy', { href: '/share/our-share?source=copy' })] });
   assert.equal(s.context.shareUrlOnScreen(), 'https://chatgpt.com/share/our-share');

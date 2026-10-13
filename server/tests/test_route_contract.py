@@ -155,6 +155,7 @@ PUT /api/admin/course-aliases
 PUT /api/admin/lectures/{subject}/{run_id}/bank
 PUT /api/admin/lectures/{subject}/{run_id}/bank-response
 PUT /api/admin/lectures/{subject}/{run_id}/bank/open
+PUT /api/admin/lectures/{subject}/{run_id}/bank/links
 PUT /api/admin/lectures/{subject}/{run_id}/cards/{kind}/{item_id}
 PUT /api/admin/lectures/{subject}/{run_id}/main-items
 PUT /api/admin/lectures/{subject}/{run_id}/match

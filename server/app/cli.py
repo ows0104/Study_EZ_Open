@@ -51,6 +51,7 @@ from app.storage import ObjectStorage, StorageNotConfigured
 # 마이그레이션 도구를 두지 않은 사정은 이 파일 첫머리에 있다. 그 대신 **붙인 칼럼을
 # 여기 한 줄로 남긴다** — 다음 사람이 운영 DB와 모델이 어디서 갈라졌는지 볼 자리다.
 ADDED_COLUMNS = (
+    ("quiz_bank", "share_url", "TEXT NOT NULL DEFAULT ''"),
     ("profile", "review_prompt", "TEXT NOT NULL DEFAULT ''"),
     ("bank_feedback", "highlighted", "BOOLEAN NOT NULL DEFAULT TRUE"),
     ("bank_feedback", "correction", "JSON"),

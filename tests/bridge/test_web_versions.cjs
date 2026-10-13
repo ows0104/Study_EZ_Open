@@ -42,12 +42,13 @@ test('Chrome versions compare omitted and future components and reject invalid m
 test('unsupported preview and review requests never dispatch; supported requests complete', async () => {
   for (const [installed, mode, autoSend, allowed] of [
     ['1.1.0', 'personal', false, false], ['', 'personal', false, false],
-    ['1.2', 'personal', false, true], ['1.2.0', 'shared', false, true], ['1.2.0', 'bank', false, true],
+    ['1.2', 'personal', false, true], ['1.2.0', 'shared', false, true], ['1.2.0', 'bank', false, false],
     ['1.2.0', 'shared', true, false], ['1.2.0', 'review', false, true],
     ['1.3.0', 'personal', false, false], ['1.3.2', 'bank', false, false],
     ['1.3.2', 'shared', true, false], ['1.3.3', 'personal', false, true],
     ['1.3.3', 'shared', true, true], ['1.3.3', 'review', false, true],
-    ['1.3.9', 'bank', true, false], ['1.3.10', 'bank', true, true],
+    ['1.3.9', 'bank', true, false], ['1.3.10', 'bank', true, false], ['1.3.11', 'bank', true, true],
+    ['1.3.10', 'bank', false, false], ['1.3.11', 'bank', false, true],
     ['1.3.5', 'review', false, true], ['1.4', 'shared', false, true],
   ]) {
     let sent = 0;

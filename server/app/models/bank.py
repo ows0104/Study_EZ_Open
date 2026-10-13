@@ -42,6 +42,7 @@ class QuizBank(Base):
     # ChatGPT 응답 원문. **지우지 않는다** — 정리를 다시 돌릴 때 이것만 있으면 된다.
     raw_response: Mapped[str] = mapped_column(Text, nullable=False, default="")
     conversation_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    share_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
     responded_by: Mapped[str] = mapped_column(Text, nullable=False, default="")
     responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     bank: Mapped[dict | None] = mapped_column(JSON, nullable=True)

@@ -96,7 +96,8 @@ window.addEventListener("message", (event) => {
 function receiveMessage(message) {
   if (contextInvalidated) return false;
   if (message?.type === MESSAGES.bankReady) {
-    reply({ type: MESSAGES.bankReady, lectureId: message.lectureId, raw: message.raw, url: message.url });
+    reply({ type: MESSAGES.bankReady, lectureId: message.lectureId, raw: message.raw, url: message.url,
+            ...(typeof message.shareUrl === "string" ? { shareUrl: message.shareUrl } : {}) });
     return false;
   }
   if (message?.type !== MESSAGES.linkReady) return false;

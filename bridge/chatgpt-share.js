@@ -3,7 +3,7 @@
 // **대화 주소(`/c/<id>`)** 는 개인 링크다. 만든 계정에서만 열리므로 반 친구에게
 // 주면 죽은 링크다. **공유 주소(`/share/<id>`)** 는 가진 사람 누구나 열 수 있고,
 // `runner preview`가 읽어 Pre-Quiz의 재료로 쓰는 것도 이쪽이다. 공유는 기본
-// 링크를 만들 때만 낸다(`mode === "shared"`).
+// 링크 또는 관리자 문제은행을 만들 때 낸다(`shared`·`bank`).
 //
 // **둘 다 확인한 뒤에만 낸다.** 주소가 생긴 것은 성공이 아니다 — 공유는 비공개
 // 초안일 수 있고(§`isPubliclyReadable`), 대화는 주소창에 `/c/…`가 떠 있어도
@@ -13,9 +13,8 @@
 // 턴마다 다시 낸다. 같은 대화를 다시 공개하면 share id가 그대로라 저장된 주소는
 // 안 바뀌고 내용만 따라온다.
 //
-// **Quiz Bank(`mode === "bank"`, 2026-10-04)는 링크가 아니라 답 본문을 낸다.** 관리자가
-// 캘린더에서 연 대화다. 답이 끝나고 완료 표시가 있으면 마크다운 원문을 배경에 넘기고,
-// 웹앱이 서버에 저장한다. 공유도 대화 주소 저장도 하지 않는다.
+// Quiz Bank는 완료된 답 본문과 공개 공유 주소·생성자의 개인 주소를 함께 낸다.
+// 예습 저장 경로와 섞지 않고 은행의 링크로 보관한다.
 
 const LOG = "[Study_EZ preview]";
 const POLL_INTERVAL_MS = 4000;
@@ -375,7 +374,17 @@ async function publish() {
         console.info(LOG, "답이 끝났지만 완료 표시가 없습니다. 이어서 생성되기를 기다립니다.");
         return "settled";
       }
-      if (!sendShareMessage({ type: "STUDYEZ_BANK_ANSWER", raw: state.answer, url: `https://chatgpt.com/c/${conversation}` })) return "pending";
+      let shareUrl;
+      try {
+        shareUrl = await publishViaApi(conversation, token, state);
+      } catch (error) {
+        console.info(LOG, "Quiz Bank 공유를 대화상자로 재시도합니다:", error);
+        shareUrl = await publishViaDialog(conversation, token);
+      }
+      shareUrl = normalizedShareUrl(shareUrl || "");
+      if (!shareUrl || !(await isPubliclyReadable(shareUrl))) throw new Error("Quiz Bank 공유 주소의 공개 여부를 확인하지 못했습니다.");
+      if (!sendShareMessage({ type: "STUDYEZ_BANK_ANSWER", raw: state.answer,
+        url: `https://chatgpt.com/c/${conversation}`, shareUrl })) return "pending";
       lastBankNode = state.currentNode;
       console.info(LOG, `Quiz Bank 답 본문을 넘겼습니다 (${state.answer.length}자).`);
       return "published";

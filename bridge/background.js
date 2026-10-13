@@ -140,6 +140,7 @@ async function deliverPending(webappTabId) {
       try {
         await chrome.tabs.sendMessage(webappTabId, {
           type: MESSAGES.bankReady, lectureId: entry.lectureId, raw: entry.raw, url: entry.url,
+          ...(typeof entry.shareUrl === "string" ? { shareUrl: entry.shareUrl } : {}),
         });
       } catch {
         // 지금은 닿지 않는다. 남겨 두고 다음 기회에 다시 보낸다.
@@ -260,8 +261,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const watch = stored[key];
         if (!watch || watch.mode !== "bank") return;
         const url = isConversationUrl("chatgpt", message.url || "") ? message.url : "";
+        const shareUrl = shareIdentity("chatgpt", message.shareUrl || "") ? message.shareUrl : undefined;
         await chrome.storage.session.set({
-          [bankKey(watch.webappTabId, watch.lectureId)]: { lectureId: watch.lectureId, raw, url },
+          [bankKey(watch.webappTabId, watch.lectureId)]: { lectureId: watch.lectureId, raw, url,
+            ...(shareUrl ? { shareUrl } : {}) },
         });
         await deliverPending(watch.webappTabId);
       })

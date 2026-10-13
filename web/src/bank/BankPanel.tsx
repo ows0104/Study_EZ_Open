@@ -43,6 +43,11 @@ export function BankPanel({ lecture, detail }: { lecture: Pick<LectureRef, "subj
     );
     return (
       <PanelGroup tone="main" title="Main-Quiz" note="개념·방향별 반복">
+        {bank.shareUrl ? <ActionCard shape="is-key" hit={
+          <a className="panel-action-hit" href={bank.shareUrl} target="_blank" rel="noreferrer">
+            <strong>기본 링크</strong><small>ChatGPT 문제은행</small>
+          </a>
+        } /> : null}
         <StudyCard lecture={lecture} bank={bank} />
       </PanelGroup>
     );
@@ -101,6 +106,9 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
   const [pasting, setPasting] = useState(false);
   const [pasted, setPasted] = useState("");
   const [pastedUrl, setPastedUrl] = useState("");
+  const [showLinks, setShowLinks] = useState(false);
+  const [share, setShare] = useState("");
+  const [mine, setMine] = useState("");
 
   const load = useCallback(() => {
     api<{ job: PrequizJob | null; runner: RunnerBeat | null }>(`${adminBase}/prequiz-job?kind=bank`)
@@ -218,6 +226,19 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
     } finally { setBusy(""); }
   }
 
+  async function saveLinks() {
+    setBusy("links");
+    setError("");
+    try {
+      await api(`${adminBase}/bank/links`, { method: "PUT",
+        body: JSON.stringify({ shareUrl: share.trim(), conversationUrl: mine.trim() }) });
+      setShowLinks(false);
+      setNote("공유 링크와 개인 대화 주소를 저장했습니다.");
+      bumpPreviewVersion();
+    } catch (cause) { setError((cause as Error).message); }
+    finally { setBusy(""); }
+  }
+
   async function setOpen(open: boolean) {
     setBusy("open");
     setError("");
@@ -231,7 +252,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
     }
   }
 
-  if (!notes) {
+  if (!notes && !bank?.shareUrl) {
     return (
       <ActionCard
         shape="is-empty is-key"
@@ -257,16 +278,23 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
       </> : null}
       <ActionCard
         shape="is-key"
-        hit={
+        hit={bank?.shareUrl ? (
+          <a className="panel-action-hit" href={bank.shareUrl} target="_blank" rel="noreferrer">
+            <strong>기본 링크</strong><small>ChatGPT 문제은행</small>
+          </a>
+        ) : (
           <button className="panel-action-hit" disabled={Boolean(busy) || moving || !extensionCompatible(extensionInputMinimum("bank", true))} onClick={() => void make(true)}>
             <strong>{busy === "auto" ? "자동 출제 시작 중…" : "자동 출제"}</strong>
             <small>
               {sources.some((s) => s.kind === "jokbo") ? "필기 + 족보" : "필기"} · 전송·저장·CLI 검수
             </small>
           </button>
-        }
+        )}
         tools={
           <>
+            {bank?.shareUrl ? <PanelTool icon="⟳" label="새로 만들기" hint="자료를 첨부하고 새 문제은행을 자동 출제한다"
+              disabled={Boolean(busy) || moving || !notes || !extensionCompatible(extensionInputMinimum("bank", true))}
+              onClick={() => void make(true)} /> : null}
             <PanelTool icon="↗" label="직접 전송" hint="자료·프롬프트만 넣고 전송은 직접 한다"
                        busy={busy === "make"} disabled={Boolean(busy) || moving || !extensionCompatible()}
                        onClick={() => void make(false)} />
@@ -284,10 +312,28 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
           </>
         }
       />
+      {bank ? <div className="panel-aside">
+        <PanelTool icon="🔗" label={showLinks ? "수정 접기" : "수정"} hint="문제은행 공유 링크·개인 링크 수정 (관리자)"
+          active={showLinks} expanded={showLinks} disabled={Boolean(busy)} onClick={() => {
+            if (!showLinks) { setShare(bank.shareUrl || ""); setMine(bank.conversationUrl || ""); }
+            setShowLinks((value) => !value);
+          }} />
+      </div> : null}
+      {showLinks ? <div className="link-editor">
+        <label className="link-editor-field"><span>기본 링크 — 공유 주소</span>
+          <input value={share} placeholder="https://chatgpt.com/share/…" spellCheck={false}
+            onChange={(event) => setShare(event.target.value)} />
+        </label>
+        <label className="link-editor-field"><span>개인 링크 — 생성 대화 주소</span>
+          <input value={mine} placeholder="https://chatgpt.com/c/…" spellCheck={false}
+            onChange={(event) => setMine(event.target.value)} />
+        </label>
+        <div className="link-editor-actions">
+          <button disabled={Boolean(busy)} onClick={() => void saveLinks()}>{busy === "links" ? "저장 중…" : "저장"}</button>
+          {conversation ? <a href={conversation} target="_blank" rel="noopener noreferrer">개인 링크에서 응답 수정</a> : null}
+        </div>
+      </div> : null}
       <ExtensionSetup minimum={extensionInputMinimum("bank", true)} />
-      {conversation ? <p className="panel-hint">
-        <a href={conversation} target="_blank" rel="noopener noreferrer">생성한 ChatGPT 대화 열기·수정</a>
-      </p> : null}
       {bank?.revision ? <details className="panel-hint">
         <summary>CLI 검수 결과 — 생성한 ChatGPT 응답 수정 필요</summary>
         <p>대화를 열어 아래 검수 내용을 전달하고, 수정된 전체 응답을 답 붙여넣기로 저장하세요.</p>

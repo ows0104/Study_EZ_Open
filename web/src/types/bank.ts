@@ -5,6 +5,7 @@
 
 export type BankSummary = {
   coverage?: BankCoverage | null;
+  shareUrl?: string;
   status: "responded" | "building" | "ready" | "invalid" | "failed";
   open: boolean;
   buildId: string;

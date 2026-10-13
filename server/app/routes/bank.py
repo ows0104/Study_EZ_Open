@@ -35,6 +35,7 @@ from app.bank_validation.schema import QUESTION, schema_errors, without_retired
 from app.bank_validation.coverage import coverage_summary
 from app.bank_validation.validate import validate_bank
 from app.bank_validation.choice_mode import choice_mode
+from app.preview_links import conversation_url as valid_conversation_url, share_url as valid_share_url
 from app.auth import CurrentUser, require_admin, require_approved_user, require_runner
 from app.database import get_db
 from app.lecture_mastery import for_bank
@@ -138,6 +139,7 @@ def summary(db: Session, lecture: Lecture, row: QuizBank | None, *, is_admin: bo
     current = state.state if state and state.build_id == row.build_id else {}
     out: dict[str, Any] = {
         "status": row.status, "open": row.open_to_students, "buildId": row.build_id,
+        "shareUrl": row.share_url,
         "questionCount": len(bank.get("questions", [])), "conceptCount": len(bank.get("concepts", [])),
         "builtAt": _iso(row.built_at), "usable": bool(row.bank and (row.validation or {}).get("pass")),
         **panel_progress(bank, current),
@@ -165,6 +167,7 @@ def summary(db: Session, lecture: Lecture, row: QuizBank | None, *, is_admin: bo
 class ResponseIn(BaseModel):
     raw: str = Field(min_length=200, max_length=2_000_000)
     conversation_url: str = Field(default="", alias="conversationUrl", max_length=500)
+    share_url: str | None = Field(default=None, alias="shareUrl", max_length=500)
     prompt_version: str = Field(default="", alias="promptVersion", max_length=16)
 
     model_config = {"populate_by_name": True}
@@ -177,6 +180,9 @@ def put_bank_response(subject: str, run_id: str, payload: ResponseIn,
     lecture = lecture_or_404(db, subject, run_id)
     if COMPLETE_MARK not in payload.raw:
         raise HTTPException(422, "완료 표시가 없는 응답입니다. 답이 끝난 뒤 다시 저장하세요.")
+    if not valid_conversation_url(payload.conversation_url, "chatgpt") or (
+            payload.share_url is not None and not valid_share_url(payload.share_url, "chatgpt")):
+        raise HTTPException(422, "ChatGPT 공유 링크와 개인 대화 주소를 확인하세요.")
     row = db.get(QuizBank, (lecture.subject, lecture.run_id))
     if row is None:
         row = QuizBank(subject=lecture.subject, run_id=lecture.run_id)
@@ -187,7 +193,11 @@ def put_bank_response(subject: str, run_id: str, payload: ResponseIn,
     # 새 원문에는 이전 보강 요청을 이어 붙이지 않는다.
     if (row.validation or {}).get("maintenance"):
         row.validation = {k: v for k, v in row.validation.items() if k != "maintenance"}
-    row.conversation_url = payload.conversation_url
+    if payload.share_url is not None:
+        row.share_url = payload.share_url.strip()
+    elif row.conversation_url != payload.conversation_url:
+        row.share_url = ""
+    row.conversation_url = payload.conversation_url.strip()
     row.prompt_version = payload.prompt_version
     row.responded_by = user.email or user.id
     row.responded_at = datetime.now(UTC)
@@ -220,6 +230,27 @@ def get_bank_response(subject: str, run_id: str, user: CurrentUser = Depends(req
             "examDate": exam_date_for(db, lecture),
             "title": lecture.title, "sources": [{k: s[k] for k in ("id", "kind", "filename")}
                                                 for s in bank_sources(db, lecture)]}
+
+
+class BankLinksIn(BaseModel):
+    share_url: str = Field(alias="shareUrl", max_length=500)
+    conversation_url: str = Field(alias="conversationUrl", max_length=500)
+    model_config = {"populate_by_name": True}
+
+
+@admin_router.put("/lectures/{subject}/{run_id}/bank/links")
+def put_bank_links(subject: str, run_id: str, payload: BankLinksIn,
+                   user: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)) -> dict:
+    lecture = lecture_or_404(db, subject, run_id)
+    row = db.get(QuizBank, (lecture.subject, lecture.run_id))
+    if row is None:
+        raise HTTPException(404, "먼저 문제은행 대화를 생성하세요.")
+    if not valid_share_url(payload.share_url, "chatgpt") or not valid_conversation_url(payload.conversation_url, "chatgpt"):
+        raise HTTPException(422, "ChatGPT 공유 링크와 개인 대화 주소를 확인하세요.")
+    row.share_url = payload.share_url.strip()
+    row.conversation_url = payload.conversation_url.strip()
+    db.commit()
+    return {"shareUrl": row.share_url, "conversationUrl": row.conversation_url}
 
 
 class GeneratedResponseIn(ResponseIn):
