@@ -66,7 +66,7 @@ export function requestPreview(input: {
   mode: BridgeMode;
   prompt: string;
   files: PreviewFile[];
-  /** 기본 링크와 관리자의 자동 출제는 true. 직접 전송 모드는 false. */
+  /** 별도의 자동전송 버튼에서만 true. 기본 생성 버튼은 false. */
   autoSend: boolean;
 }) {
   const minimum = extensionInputMinimum(input.mode, input.autoSend);

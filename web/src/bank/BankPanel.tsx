@@ -135,7 +135,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
     wasMoving.current = moving;
   }, [moving]);
 
-  /** 자동 출제는 확장이 첨부·전송·응답 저장을 맡고 러너 검수로 이어진다. */
+  /** 기본은 사람이 전송한다. 자동전송을 고르면 확장이 전송까지 맡는다. */
   async function make(autoSend: boolean) {
     if (!notes) return;
     if (!extensionCompatible(extensionInputMinimum("bank", autoSend))) {
@@ -163,7 +163,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
         autoSend,
       });
       setNote(autoSend
-        ? "자동 출제를 시작했습니다. 확장이 자료를 첨부·전송하고, 답변 저장 후 CLI 검수가 이어집니다."
+        ? "자동전송을 시작했습니다. 확장이 자료를 첨부·전송하고, 답변 저장 후 CLI 검수가 이어집니다."
         : "ChatGPT 탭을 열었습니다. 자료와 프롬프트를 확인하고 직접 전송하면 답변을 가져옵니다.");
     } catch (cause) {
       setError((cause as Error).message);
@@ -285,21 +285,21 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
             <strong>기본 링크</strong><small>ChatGPT 문제은행</small>
           </a>
         ) : (
-          <button className="panel-action-hit" disabled={Boolean(busy) || moving || !extensionCompatible(extensionInputMinimum("bank", true))} onClick={() => void make(true)}>
-            <strong>{busy === "auto" ? "자동 출제 시작 중…" : "자동 출제"}</strong>
+          <button className="panel-action-hit" disabled={Boolean(busy) || moving || !extensionCompatible(extensionInputMinimum("bank", false))} onClick={() => void make(false)}>
+            <strong>{busy === "make" ? "문제 만들기 준비 중…" : "문제 만들기"}</strong>
             <small>
-              {sources.some((s) => s.kind === "jokbo") ? "필기 + 족보" : "필기"} · 전송·저장·CLI 검수
+              {sources.some((s) => s.kind === "jokbo") ? "필기 + 족보" : "필기"} · 확인 후 직접 전송
             </small>
           </button>
         )}
         tools={
           <>
-            {bank?.shareUrl ? <PanelTool icon="⟳" label="새로 만들기" hint="자료를 첨부하고 새 문제은행을 자동 출제한다"
-              disabled={Boolean(busy) || moving || !notes}
-              onClick={() => void make(true)} /> : null}
-            <PanelTool icon="↗" label="직접 전송" hint="자료·프롬프트만 넣고 전송은 직접 한다"
-                       busy={busy === "make"} disabled={Boolean(busy) || moving || !extensionCompatible()}
-                       onClick={() => void make(false)} />
+            {bank?.shareUrl ? <PanelTool icon="⟳" label="새로 만들기" hint="자료·프롬프트를 넣고 확인 후 직접 전송한다"
+              busy={busy === "make"} disabled={Boolean(busy) || moving || !notes || !extensionCompatible(extensionInputMinimum("bank", false))}
+              onClick={() => void make(false)} /> : null}
+            <PanelTool icon="↗" label="자동전송" hint="자료·프롬프트를 첨부하고 자동으로 전송한다"
+                       busy={busy === "auto"} disabled={Boolean(busy) || moving || !notes || !extensionCompatible(extensionInputMinimum("bank", true))}
+                       onClick={() => void make(true)} />
             <PanelTool icon="⎘" label="답 붙여넣기" hint="확장이 못 가져온 ChatGPT 답을 직접 붙여 넣는다"
                        active={pasting} expanded={pasting} disabled={Boolean(busy) || moving}
                        onClick={() => setPasting((v) => !v)} />

@@ -52,3 +52,64 @@ test('student can open the shared bank but never gets the private conversation o
   assert.match(html,/https:\/\/chatgpt.com\/share\/bank-test/);
   assert.doesNotMatch(html,/private-test|panel-aside|수정<\/button>/);
 });
+
+test('bank creation and recreation wait for a person to send; only the separate tool sends automatically', async () => {
+  const requests = [];
+  const mocked = {
+    ...dependencies,
+    react: {
+      ...React,
+      useState: value => [value, () => {}],
+      useEffect: () => {},
+      useCallback: callback => callback,
+      useRef: value => ({current:value}),
+    },
+    '../api': { api: async () => ({url:'https://example.com/notes.pdf'}) },
+    '../bridge/previewBridge': {
+      extensionCompatible: () => true,
+      extensionInputMinimum: () => '1.3.11',
+      absoluteUrl: url => url,
+      requestPreview: async request => { requests.push(request); },
+    },
+    './prompt': { renderBankPrompt: () => 'Bank prompt' },
+  };
+  const loaded = {};
+  vm.runInNewContext(compiled,{exports:loaded,performance:{now:() => 1},require:id => mocked[id]});
+  admin = true;
+  function controls(detail) {
+    const panel = loaded.BankPanel({...props,detail});
+    const adminElement = panel.props.children;
+    const tree = adminElement.type(adminElement.props);
+    const found = [];
+    function visit(element) {
+      if (Array.isArray(element)) { element.forEach(visit); return; }
+      if (!React.isValidElement(element)) return;
+      found.push(element);
+      visit(element.props.children);
+      visit(element.props.hit);
+      visit(element.props.tools);
+    }
+    visit(tree);
+    return found;
+  }
+  async function click(control, autoSend) {
+    assert.ok(control);
+    assert.equal(control.props.disabled,false);
+    const count = requests.length;
+    control.props.onClick();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(requests.length,count + 1);
+    assert.equal(requests.at(-1).autoSend,autoSend);
+    assert.equal(requests.at(-1).mode,'bank');
+    assert.equal(requests.at(-1).files.length,1);
+  }
+  const fresh = controls({...props.detail,bank:undefined});
+  const primary = fresh.find(element => element.type === 'button' && element.props.className === 'panel-action-hit');
+  assert.equal(primary.props.children[0].props.children,'문제 만들기');
+  assert.ok(!fresh.some(element => element.props.label === '직접 전송'));
+  await click(primary,false);
+  await click(fresh.find(element => element.props.label === '자동전송'),true);
+  const saved = controls(props.detail);
+  await click(saved.find(element => element.props.label === '새로 만들기'),false);
+  await click(saved.find(element => element.props.label === '자동전송'),true);
+});
