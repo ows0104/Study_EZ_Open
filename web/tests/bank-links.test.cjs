@@ -13,7 +13,7 @@ const dependencies = {
   react: React, 'react/jsx-runtime': jsx,
   '../api': { api() { throw Error('No request should be made while rendering a saved link'); } },
   '../bridge/previewBridge': { extensionCompatible: () => false, extensionInputMinimum: () => '1.3.11' },
-  '../bridge/ExtensionSetup': { ExtensionSetup: () => null },
+  '../bridge/ExtensionSetup': { ExtensionSetup: () => React.createElement('aside',{className:'extension-setup'},'Update extension') },
   '../calendar/panelShared': {
     PanelGroup: ({children}) => React.createElement('section', null, children),
     ActionCard: ({hit, tools}) => React.createElement('div', {className:'action-card'}, hit, tools),
@@ -44,6 +44,7 @@ test('saved bank uses the existing main card to open its share URL without the e
   assert.doesNotMatch(html,/<strong>자동 출제<\/strong>|생성한 ChatGPT 대화 열기·수정/);
   assert.ok(html.indexOf('panel-aside') > html.indexOf('https://chatgpt.com/share/bank-test'));
   assert.match(html,/수정<\/button>/);
+  assert.doesNotMatch(html,/extension-setup/);
 });
 test('student can open the shared bank but never gets the private conversation or editor', () => {
   admin = false;

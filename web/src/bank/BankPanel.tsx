@@ -109,6 +109,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
   const [showLinks, setShowLinks] = useState(false);
   const [share, setShare] = useState("");
   const [mine, setMine] = useState("");
+  const [showSetup, setShowSetup] = useState(false);
 
   const load = useCallback(() => {
     api<{ job: PrequizJob | null; runner: RunnerBeat | null }>(`${adminBase}/prequiz-job?kind=bank`)
@@ -138,6 +139,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
   async function make(autoSend: boolean) {
     if (!notes) return;
     if (!extensionCompatible(extensionInputMinimum("bank", autoSend))) {
+      setShowSetup(true);
       setError("아래 브리지 설치·업데이트 안내에서 최신 버전을 설치하고 이 페이지를 새로고침하세요.");
       return;
     }
@@ -293,7 +295,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
         tools={
           <>
             {bank?.shareUrl ? <PanelTool icon="⟳" label="새로 만들기" hint="자료를 첨부하고 새 문제은행을 자동 출제한다"
-              disabled={Boolean(busy) || moving || !notes || !extensionCompatible(extensionInputMinimum("bank", true))}
+              disabled={Boolean(busy) || moving || !notes}
               onClick={() => void make(true)} /> : null}
             <PanelTool icon="↗" label="직접 전송" hint="자료·프롬프트만 넣고 전송은 직접 한다"
                        busy={busy === "make"} disabled={Boolean(busy) || moving || !extensionCompatible()}
@@ -333,7 +335,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
           {conversation ? <a href={conversation} target="_blank" rel="noopener noreferrer">개인 링크에서 응답 수정</a> : null}
         </div>
       </div> : null}
-      <ExtensionSetup minimum={extensionInputMinimum("bank", true)} />
+      {!bank?.shareUrl || showSetup ? <ExtensionSetup minimum={extensionInputMinimum("bank", true)} /> : null}
       {bank?.revision ? <details className="panel-hint">
         <summary>CLI 검수 결과 — 생성한 ChatGPT 응답 수정 필요</summary>
         <p>대화를 열어 아래 검수 내용을 전달하고, 수정된 전체 응답을 답 붙여넣기로 저장하세요.</p>
