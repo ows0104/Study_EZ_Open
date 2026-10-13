@@ -184,10 +184,15 @@ def tidy_matching_choices(bank: dict) -> list[str]:
     return fixed
 
 
-def organize(raw: str, lecture: dict, *, model: str | None = None) -> tuple[dict, dict]:
+def organize(raw: str, lecture: dict, *, model: str | None = None, out: Path | None = None) -> tuple[dict, dict]:
     """`(bank, info)`. lecture = {title, sources: [{id, kind, filename}]}."""
-    bank, info = session.run_structured(organizer_prompt(raw, lecture), BANK, system=SYSTEM,
-                                        label="정리", timeout=1200, model=model)
+    from .web_audit import enabled
+    if out is not None and enabled(lecture.get("prompt_version", "")):
+        from .file_organize import convert
+        bank, info = convert(clean_response(raw), organizer_prompt(raw, lecture), out, model=model)
+    else:
+        bank, info = session.run_structured(organizer_prompt(raw, lecture), BANK, system=SYSTEM,
+                                            label="정리", timeout=1200, model=model)
     bank = without_retired(bank)   # 옛 응답을 다시 정리해도 뺀 칸은 남기지 않는다
     bank["build_meta"]["schema_version"] = expected_schema(raw, lecture)
     fixed = tidy_labels(bank)

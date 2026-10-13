@@ -66,7 +66,7 @@ def run(raw_path: Path, pdf: Path | None, title: str, run_id: str, sources: list
 
     _stage("정리")
     if existing_bank is None:
-        bank, info = organize.organize(raw, lecture, model=model)
+        bank, info = organize.organize(raw, lecture, model=model, out=out / "organize")
         _usage(out, "정리", info)
     else:
         bank = json.loads(existing_bank.read_text(encoding="utf-8"))
