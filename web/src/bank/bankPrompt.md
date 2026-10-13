@@ -1,6 +1,7 @@
 <!--
 Bank Builder 프롬프트 — 정본
-Version: 1.37
+Version: 1.38
+1.38 (2026-10-14) recall_first·comparison 예시를 모두 5지선다로 작성한다.
 1.37 (2026-10-14) 기억 확인형과 구별·판단형 객관식에 실제 선지·정답·분류 이유 예시를 추가한다.
 1.36 (2026-10-14) Basic 예시·의미 중심 채점·Tier 기준을 보완하고 중복 지시와 Cloze 빈칸 수 상한을 정리한다.
 1.35 (2026-10-14) Cloze의 정답 노출 예시를 다듬고 단일·복수 빈칸의 질문 축을 보여주는 예시를 추가한다.
@@ -86,14 +87,14 @@ answer_units: 넓고 둥근 모양<br>좁고 길쭉한 모양
 
 예시 1 — recall_first (기억 확인형, format=mcq)
 question: Vancomycin이 결합하는 세포벽 전구체의 말단 서열은?
-options: A: D-Ala-D-Lac<br>B: D-Ala-D-Ala<br>C: L-Ala-D-Ala<br>D: D-Ala-L-Ala
+options: A: D-Ala-D-Lac<br>B: D-Ala-D-Ala<br>C: L-Ala-D-Ala<br>D: D-Ala-L-Ala<br>E: L-Ala-L-Ala
 correct_option_ids: B
 answer: B: D-Ala-D-Ala
 분류 이유: 선지 없이도 특정 서열을 먼저 인출할 수 있다. 선지는 인출한 답을 확인하는 역할을 한다.
 
 예시 2 — comparison (구별·판단형, format=mcq)
 question: β-lactam계 항생제와 Vancomycin의 직접 결합 대상을 올바르게 연결한 것은?
-options: A: β-lactam → 전구체 기질; Vancomycin → 전구체 기질<br>B: β-lactam → 전구체 기질; Vancomycin → 효소(PBP)<br>C: β-lactam → 효소(PBP); Vancomycin → 전구체 기질<br>D: β-lactam → 효소(PBP); Vancomycin → 효소(PBP)
+options: A: β-lactam → 전구체 기질; Vancomycin → 전구체 기질<br>B: β-lactam → 전구체 기질; Vancomycin → 효소(PBP)<br>C: β-lactam → 효소(PBP); Vancomycin → 전구체 기질<br>D: β-lactam → 효소(PBP); Vancomycin → 효소(PBP)<br>E: β-lactam → 효소(DNA gyrase); Vancomycin → 전구체 기질
 correct_option_ids: C
 answer: C: β-lactam → 효소(PBP); Vancomycin → 전구체 기질
 분류 이유: 두 약물의 효소·기질 결합 차이를 후보별 연결과 비교해 판별하는 것이 목표다. 선지 없이 답을 말할 수도 있다는 사실만으로 recall_first로 분류하지 않는다.
