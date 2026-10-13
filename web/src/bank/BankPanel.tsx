@@ -221,6 +221,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
   return (
     <>
       <PanelGroup tone="bank" title="문제은행 링크" note="ChatGPT 대화">
+      <div className="panel-pair">
       <ActionCard
         shape="is-key"
         hit={bank?.shareUrl ? (
@@ -250,7 +251,12 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
         <a className="panel-action-hit" href={conversation} target="_blank" rel="noopener noreferrer">
           <strong>개인 링크</strong><small>문제은행 생성 대화</small>
         </a>
-      } /> : null}
+      } /> : <ActionCard shape="is-empty is-key" hit={
+        <span className="panel-action-hit">
+          <strong>개인 링크</strong><small>대화 생성 후 저장됩니다</small>
+        </span>
+      } />}
+      </div>
       <div className="panel-aside">
         <PanelTool icon="🔗" label={showLinks ? "링크 접기" : bank?.shareUrl || conversation ? "링크 고치기" : "링크 넣기"} hint="문제은행 공유 링크·개인 링크 입력 (관리자)"
           active={showLinks} expanded={showLinks} disabled={Boolean(busy)} onClick={() => {
