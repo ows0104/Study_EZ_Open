@@ -7,6 +7,7 @@ from __future__ import annotations
 import copy
 
 from app.bank_validation.schema import without_retired
+from app.bank_validation.choice_mode import choice_mode
 from app.bank_validation.validate import validate_dropping
 
 
@@ -41,13 +42,20 @@ def with_edits(bank: dict, validation: dict, edits: dict, source_ids: list[str])
 def reapply(bank: dict, validation: dict, previous: dict, source_ids: list[str]) -> tuple[dict, dict]:
     incoming = candidates(bank, validation)
     edits = {}
+    def content(question):
+        if question is None:
+            return None
+        normalized = without_retired({"questions": [question]})["questions"][0]
+        return {k: v for k, v in normalized.items() if k != "mcq_mode"}
     for qid, edit in previous.get("edits", {}).items():
         question = incoming.get(qid)
-        if question and without_retired({"questions": [question]})["questions"][0] in (
-            without_retired({"questions": [edit["original"]]})["questions"][0],
-            without_retired({"questions": [edit["question"]]})["questions"][0] if edit.get("question") else None
-        ):
-            edits[qid] = edit
+        if (question is None and edit["action"] == "delete") or (question and content(question) in (
+            content(edit["original"]), content(edit.get("question"))
+        )):
+            carried = copy.deepcopy(edit)
+            if question and carried.get("question"):
+                carried["question"]["mcq_mode"] = choice_mode(question)
+            edits[qid] = carried
     if not edits:
         return bank, validation
     return with_edits(bank, validation, edits, source_ids)

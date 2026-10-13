@@ -16,6 +16,7 @@ from .generate import lecture_scope
 from .schema import BANK, without_retired
 from .validate import validate_bank
 from .points import PLAN, MATCH_REPORT, shape_plan, match_report
+from .classify import CLASSIFICATION, apply_classifications
 
 PROMPTS = Path(__file__).parent / "prompts"
 
@@ -145,16 +146,35 @@ def audit_and_supplement(bank: dict, pdf: Path, title: str, sources: list[dict],
     initial = inspect(bank, "원본 누락 검증")
     (work / "before.json").write_text(json.dumps(initial, ensure_ascii=False, indent=2), encoding="utf-8")
     additions = []
-    if initial["gapCount"] or initial["mcq_opportunities"]:
+    final = initial
+    for round_number in range(1, 4):
+        if not final["gapCount"] and not final["mcq_opportunities"]:
+            break
+        (work / "before.json").write_text(json.dumps(final, ensure_ascii=False, indent=2), encoding="utf-8")
+        (work / f"before-{round_number}.json").write_text(json.dumps(final, ensure_ascii=False, indent=2), encoding="utf-8")
         patch, info = _call((PROMPTS / "supplement.md").read_text(encoding="utf-8"), BANK, work, model, "누락·객관식 보강")
         usage.append({"step": "누락·객관식 보강", **info})
         (work / "additions.json").write_text(json.dumps(patch, ensure_ascii=False, indent=2), encoding="utf-8")
+        (work / f"additions-{round_number}.json").write_text(json.dumps(patch, ensure_ascii=False, indent=2), encoding="utf-8")
         bank = merge_additions(bank, patch, [source["id"] for source in sources])
-        additions = patch["questions"]
+        additions += patch["questions"]
         final = inspect(bank, "보강 후 원본 재검증")
+        if not patch["questions"]:
+            break
+    mcqs = [q for q in bank["questions"] if q["format"] in ("mcq", "multi_select")]
+    if mcqs:
+        classify_work = work / "classification"
+        classify_work.mkdir(exist_ok=True)
+        (classify_work / "questions.json").write_text(json.dumps(mcqs, ensure_ascii=False), encoding="utf-8")
+        classified, info = _call((PROMPTS / "classify.md").read_text(encoding="utf-8"), CLASSIFICATION,
+                                 classify_work, model, "객관식 유형 분류")
+        usage.append({"step": "객관식 유형 분류", **info})
     else:
-        final = initial
+        classified = {"classifications": []}
+    bank, classification = apply_classifications(bank, classified)
+    (out / "classification.json").write_text(json.dumps(classification, ensure_ascii=False, indent=2), encoding="utf-8")
     final.update(addedQuestions=len(additions), addedMcq=sum(q["format"] in ("mcq", "multi_select") for q in additions),
+                 bankHash=bank_hash(bank), classification=classification,
                  sourceSha256=hashlib.sha256(pdf.read_bytes()).hexdigest(), sourceFilename=pdf.name)
     (out / "coverage.json").write_text(json.dumps(final, ensure_ascii=False, indent=2), encoding="utf-8")
     return bank, final, usage

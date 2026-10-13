@@ -10,6 +10,7 @@ export function BankCoverage({ value }: { value?: Coverage | null }) {
     <p>{value.totalPages}쪽 중 출제 범위 {value.checkedPages}쪽 대조 · 범위 밖·표지 등 {value.excludedPages}쪽 제외</p>
     {typeof value.pointCount === "number" ? <p>원본에서 먼저 추출한 출제 포인트 {value.pointCount}개 중 {value.coveredPointCount}개를 실제 문항으로 확인했습니다.</p> : <p>새 방식으로 확인하려면 누락 검증·객관식 보강을 다시 요청하세요.</p>}
     <p>보강 {value.addedQuestions}문항 · 그중 객관식 {value.addedMcq}문항</p>
+    {value.classification?.status === "verified" ? <p>객관식 {value.classification.classifiedCount}문항 유형 확인 · 기억 확인형 {value.classification.recallFirstCount}문항 · 구별·판단형 {value.classification.comparisonCount}문항</p> : null}
     {value.issues?.length ? <ul>{value.issues.map(issue => <li key={issue.page}>
       p.{issue.page} · {[...issue.facts, issue.note].filter(Boolean).join(" · ")}
     </li>)}</ul> : null}

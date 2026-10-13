@@ -22,6 +22,8 @@ from tests.bank_fixtures import example_bank
 def main():
     Base.metadata.create_all(engine)
     bank = without_retired(example_bank())
+    bank["questions"][1].update(format="mcq", mcq_mode="comparison", question="목표 사실의 이름은?",
+        options=[{"id": "A", "text": "예시 정답"}, {"id": "B", "text": "오답"}], correct_option_ids=["A"])
     at = datetime.now(UTC)
     state = record_review(bank, empty_state(), "Q1", "Good", now_ms())
     with SessionLocal() as db:
@@ -29,7 +31,8 @@ def main():
                        slot=1, slot_end=1, start_time="09:00", title="강의", professors=[], author=""))
         db.add(Asset(id="notes", subject="local", run_id="demo", kind="notes_current", filename="a.pdf",
                      object_key="a.pdf", content_type="application/pdf"))
-        db.add(QuizBank(subject="local", run_id="demo", bank=bank, validation={"pass": True, "errors": [], "warnings": []},
+        edits = {"Q2": {"action": "accept", "original": copy.deepcopy(bank["questions"][1]), "question": copy.deepcopy(bank["questions"][1])}}
+        db.add(QuizBank(subject="local", run_id="demo", bank=bank, validation={"pass": True, "errors": [], "warnings": [], "edits": edits},
                         build_id="old-build", status="ready", responded_at=at, open_to_students=True, raw_response="raw"))
         db.add(BankState(user_id="learner", subject="local", run_id="demo", build_id="old-build", state=state))
         db.commit()
@@ -40,14 +43,17 @@ def main():
     app.dependency_overrides[get_current_user] = lambda: student
     assert client.post(base + "/bank/audit").status_code == 403
     app.dependency_overrides[get_current_user] = lambda: admin
-    first = client.post(base + "/bank/audit")
+    runner = {"Authorization": "Bearer runner-token"}
+    assert client.post(base + "/bank/runner-audit").status_code == 401
+    assert client.post(base + "/bank/runner-audit", headers={"Authorization": "Bearer wrong"}).status_code == 401
+    first = client.post(base + "/bank/runner-audit", headers=runner)
     second = client.post(base + "/bank/audit")
     assert first.status_code == 200 and first.json()["created"]
     assert second.json()["jobId"] == first.json()["jobId"] and not second.json()["created"]
-    runner = {"Authorization": "Bearer runner-token"}
     data = client.get(base + "/bank-response", headers=runner).json()
     assert data["existingBank"] == bank and data["baseBuildId"] == "old-build"
     enriched = copy.deepcopy(bank)
+    enriched["questions"][1]["mcq_mode"] = "recall_first"
     enriched["questions"].append({**copy.deepcopy(bank["questions"][0]), "question_id": "SUP_Q1", "question": "새 사실?"})
     coverage = {"bankHash": bank_hash(enriched), "status": "verified", "gapCount": 0, "unreadablePages": 0, "sourceFilename": "a.pdf"}
     payload = {"respondedAt": data["respondedAt"], "baseBuildId": "old-build", "bank": enriched,
@@ -64,6 +70,8 @@ def main():
     with SessionLocal() as db:
         current = db.get(BankState, ("learner", "local", "demo"))
         assert current.state == state and current.build_id == "old-build"
+        assert db.get(QuizBank, ("local", "demo")).bank["questions"][1]["mcq_mode"] == "recall_first"
+        assert db.get(QuizBank, ("local", "demo")).validation["edits"]["Q2"]["question"]["mcq_mode"] == "recall_first"
     student_read = client.get("/api/lectures/local/demo/bank").json()
     assert student_read["summary"]["coverage"]["status"] == "verified"
     assert student_read["lectureGoal"]["unlearnedRemaining"] == 3

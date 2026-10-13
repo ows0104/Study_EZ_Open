@@ -9,6 +9,7 @@ from quizbank import coverage, run
 from quizbank.schema import without_retired
 from quizbank.validate import validate_dropping
 from quizbank.points import shape_plan, match_report
+from quizbank.classify import apply_classifications
 from studyez_llm.codex import SessionError
 
 
@@ -73,6 +74,9 @@ def test_audit_uses_all_pdf_pages_and_independent_post_supplement_check(bank, tm
     calls = []
     def fake(prompt, schema, work, model, label):
         calls.append(label)
+        if label == "객관식 유형 분류":
+            questions = json.loads((work / "questions.json").read_text(encoding="utf-8"))
+            return {"classifications": [{"question_id": q["question_id"], "mcq_mode": "comparison", "reason": "선지의 옳고 그름을 비교한다"} for q in questions]}, {}
         assert len(json.loads((work / "source-pages.json").read_text())) == 2
         assert "PDF p.2" in (work / "source-text.md").read_text(encoding="utf-8")
         if len(calls) == 1:
@@ -83,11 +87,24 @@ def test_audit_uses_all_pdf_pages_and_independent_post_supplement_check(bank, tm
     monkeypatch.setattr(coverage, "_call", fake)
     sources = [{"id": "S1", "kind": "notes_current", "filename": pdf.name}, {"id": "S2", "kind": "jokbo", "filename": "j.md"}]
     enriched, checked, usage = coverage.audit_and_supplement(bank, pdf, "강의", sources, tmp_path / "out")
-    assert len(calls) == 4 and len(usage) == 4
+    assert len(calls) == 5 and len(usage) == 5
     assert checked["status"] == "verified" and checked["addedQuestions"] == 1
     assert checked["bankHash"] == coverage.bank_hash(enriched)
     assert checked["sourceSha256"]
     assert checked["pointCount"] == checked["coveredPointCount"] == 1
+    assert checked["classification"]["classifiedCount"] == sum(q["format"] in ("mcq", "multi_select") for q in enriched["questions"])
+
+
+def test_classification_is_complete_and_preserves_question_content(bank):
+    mcqs = [q for q in bank["questions"] if q["format"] in ("mcq", "multi_select")]
+    raw = {"classifications": [{"question_id": q["question_id"], "mcq_mode": "recall_first", "reason": "선지 없이 목표 사실을 먼저 회상한다"} for q in mcqs]}
+    updated, report = apply_classifications(bank, raw)
+    assert report["classifiedCount"] == report["recallFirstCount"] == len(mcqs)
+    assert [{k: v for k, v in q.items() if k != "mcq_mode"} for q in updated["questions"]] == [{k: v for k, v in q.items() if k != "mcq_mode"} for q in bank["questions"]]
+    with pytest.raises(SessionError, match="빠졌"):
+        apply_classifications(bank, {"classifications": raw["classifications"][:-1]})
+    with pytest.raises(SessionError, match="중복"):
+        apply_classifications(bank, {"classifications": raw["classifications"] + raw["classifications"][:1]})
 
 
 def test_fixed_point_plan_cannot_be_shrunk_by_missing_matches(bank):

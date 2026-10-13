@@ -18,5 +18,7 @@ def coverage_summary(bank: dict, validation: dict) -> dict | None:
                "facts": [point["fact"] for point in row.get("points", []) if point.get("status") == "gap"]}
               for row in report.get("pages", []) if row.get("status") == "unreadable"
               or any(point.get("status") == "gap" for point in row.get("points", []))]
+    classification = report.get("classification") or {}
     return {**{key: report.get(key) for key in keys}, "issues": issues,
+            "classification": {key: classification.get(key) for key in ("status", "classifiedCount", "recallFirstCount", "comparisonCount", "checkedAt")} if classification else None,
             "status": report.get("status") if current else "stale"}

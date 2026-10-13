@@ -284,7 +284,9 @@ def put_bank(subject: str, run_id: str, payload: BankIn, user: CurrentUser = Dep
     if maintenance:
         old_questions = without_retired(row.bank)["questions"]
         incoming_questions = {q["question_id"]: q for q in without_retired(incoming)["questions"]}
-        if any(incoming_questions.get(q["question_id"]) != q for q in old_questions):
+        def content(question):
+            return {k: v for k, v in question.items() if k != "mcq_mode"} if question is not None else None
+        if any(content(incoming_questions.get(q["question_id"])) != content(q) for q in old_questions):
             raise HTTPException(422, "보강은 기존 질문과 정답을 그대로 유지해야 합니다.")
         if not validate_bank(incoming, source_ids)["pass"] or not checked.get("pass"):
             raise HTTPException(422, "보강본의 문항 검증을 통과해야 합니다.")
@@ -327,6 +329,13 @@ def request_bank_audit(subject: str, run_id: str, user: CurrentUser = Depends(re
     db.add(job)
     db.commit()
     return {"jobId": job.id, "created": True}
+
+
+@admin_router.post("/lectures/{subject}/{run_id}/bank/runner-audit")
+def request_runner_bank_audit(subject: str, run_id: str, user: CurrentUser = Depends(require_runner),
+                              db: Session = Depends(get_db)) -> dict:
+    """같은 보강 일감을 로컬 러너의 운영 작업에서도 요청한다."""
+    return request_bank_audit(subject, run_id, user, db)
 
 
 class OpenIn(BaseModel):

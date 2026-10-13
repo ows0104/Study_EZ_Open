@@ -27,6 +27,7 @@ export type BankSummary = {
 };
 
 export type BankCoverage = {
+  classification?: { status: "verified"; classifiedCount: number; recallFirstCount: number; comparisonCount: number; checkedAt: string } | null;
   pointCount?: number | null;
   coveredPointCount?: number | null;
   status: "verified" | "partial" | "stale";

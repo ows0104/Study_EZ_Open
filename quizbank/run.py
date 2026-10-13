@@ -30,7 +30,7 @@ from . import coverage, organize, review, slides
 from .session import SessionError
 from .validate import validate_dropping
 
-OUTPUTS = ("bank.json", "bank.raw.json", "validation.json", "review.json", "coverage.json", "pages.json", "result.json", "usage.jsonl")
+OUTPUTS = ("bank.json", "bank.raw.json", "validation.json", "review.json", "coverage.json", "classification.json", "pages.json", "result.json", "usage.jsonl")
 
 
 def _write(path: Path, data) -> None:

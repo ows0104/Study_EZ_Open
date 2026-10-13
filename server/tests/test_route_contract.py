@@ -54,6 +54,7 @@ POST /api/bank/batch/undo
 POST /api/bank/batch/session/end
 POST /api/lectures/{subject}/{run_id}/bank/options
 POST /api/admin/lectures/{subject}/{run_id}/bank/audit
+POST /api/admin/lectures/{subject}/{run_id}/bank/runner-audit
 PUT /api/admin/lectures/{subject}/{run_id}/bank-generated-response
 GET /api/admin/bank-review
 PUT /api/admin/lectures/{subject}/{run_id}/bank/cards/{question_id}
