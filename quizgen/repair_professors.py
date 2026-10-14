@@ -147,8 +147,12 @@ def main():
     parser.add_argument("materials", type=Path)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--backup", type=Path, help="지정하면 백업 후 적용. 생략하면 읽기 전용 대조")
+    parser.add_argument("--subject", help="지정한 과목 폴더만 읽고 처리")
     args = parser.parse_args()
-    rows = [repair_cut(p.parent, backup=args.backup) for p in sorted(args.materials.glob("*/*/index.json"))]
+    cuts = sorted(args.materials.glob("*/*/index.json"))
+    if args.subject:
+        cuts = [p for p in cuts if p.parent.parent.name == args.subject]
+    rows = [repair_cut(p.parent, backup=args.backup) for p in cuts]
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({"cuts": len(rows), "changedFiles": sum(len(r.get("changedFiles", [])) for r in rows),

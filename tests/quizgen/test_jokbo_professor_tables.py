@@ -82,3 +82,31 @@ def test_2022_history_uses_verified_notes_and_does_not_change_other_lectures_or_
 def section_for_test(payload):
     from quizgen.repair_professors import section
     return section(payload)
+
+
+def test_confirmed_history_corrections_are_limited_to_the_verified_course_and_year():
+    from quizgen.professor_history import history, corrected_payload
+    cases = [
+        ('약리학 소개', '2026', ['예상규'], ['조정현']),
+        ('약동학 (1)~(3)', '2026', ['유경상', '이승환'], ['허기영']),
+        ('약력학 (1)~(2)', '2022', ['장인진', '정재용'], ['정재용']),
+        ('중추신경계 약리 기초', '2023', ['김혜선'], ['성지혜']),
+        ('중추신경계 비정상 신경전달의 약리 학', '2023', ['김혜선'], ['성지혜']),
+        ('순환기 약리 기초 (1)~(2)', '2022', ['조정현'], ['박종완']),
+        ('항진균/항바이러스/ 항마이코박테리아 약물', '2026', ['장인진'], ['이승환']),
+    ]
+    for title, year, before, after in cases:
+        cells = {year[2:]: before, '25': ['이전 담당']}
+        fixed, records = history(title, cells)
+        assert fixed == {year[2:]: after, '25': ['이전 담당']}
+        assert cells[year[2:]] == before
+        assert len(records) == 1 and records[0]['evidence']['pages']
+        assert history('무관한 강의', cells) == (cells, [])
+        raw = {'title': title, 'stats': {'professors_by_year': cells},
+               'questions': [asdict(J.Question(year=year, no='1', stem='저장된 본문', by=before))]}
+        result = corrected_payload(raw)
+        assert result['questions'][0]['by'] == after
+        assert content_digest(raw) == content_digest(result)
+        assert corrected_payload(result) == result
+    cells = {'22': ['유경상', '이승환'], '23': ['유경상', '이승환']}
+    assert history('약동학 (1)~(3)', cells) == (cells, [])
