@@ -89,6 +89,7 @@ export type BankAnswer = {
   personalEdited?: boolean;
   personalAnswer?: boolean;
   answer: string;
+  explanation?: string;
   answerUnits: string[];
   correctOptionIds: string[];
   answerPairs: { left: string; right: string }[];
@@ -112,6 +113,7 @@ export type BankOptionPool = {
     source_refs: { source_id: string; locator: string }[] }[];
 };
 export type BankFullQuestion = BankQuestion & {
+  explanation?: string;
   option_pools?: BankOptionPool[];
   item_difficulty: number;
   prerequisites: string[];

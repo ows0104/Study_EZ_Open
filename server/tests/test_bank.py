@@ -71,6 +71,8 @@ def as_admin() -> None:
 
 def result(respondedAt: str, bank: dict | None = None) -> dict:
     bank = bank or example_bank()
+    for question in bank['questions']:
+        question.update(hint='선택해서 볼 회상 단서', explanation='정답 공개 뒤 읽을 부연')
     return {"respondedAt": respondedAt, "bank": bank,
             # 걸려서 뺀 문항이 하나 있었던 은행이다(`quizbank.validate.validate_dropping`).
             "validation": {"pass": True, "errors": [], "warnings": [],
@@ -200,7 +202,8 @@ def main() -> None:
         served = db.get(BankState, ("student-1", SUBJECT, RUN)).state["served"]
         check("미리 받아도 정답 열람 시각을 기록하지 않는다",
               not served["revealed"] and "revealed_at" not in served)
-    check("답 칸이 없다", q and not any(k in q for k in ("answer", "answer_units", "correct_option_ids",
+    check("이전 실험 힌트는 문항 응답에 없다", 'hint' not in q)
+    check("답 칸이 없다", q and not any(k in q for k in ("answer", "answer_units", "explanation", "correct_option_ids",
                                                          "answer_pairs", "correct_order")), q)
     again = client.post(f"{BASE}/bank/next").json()
     check("새로고침해도 같은 문항", again["reviewToken"] == first["reviewToken"])
@@ -211,6 +214,7 @@ def main() -> None:
     check("답을 보기 전 평가는 409", early.status_code == 409)
     shown = client.post(f"{BASE}/bank/reveal", json={"reviewToken": first["reviewToken"]}).json()
     check("답이 나온다", shown["answer"] == "예시 정답" and shown["answerUnits"] == ["예시 정답"])
+    check("해설은 정답과 별도 필드로 공개된다", shown.get('explanation') == '정답 공개 뒤 읽을 부연')
     check("충돌 설명과 자료 밖 표시가 답과 같이 온다",
           shown["conflict"] == "강의자료는 A, 족보는 B — 교과서대로 A" and shown["external"] is True, shown)
     # 예시 은행에서 처음 나갈 수 있는 것은 Q1(direct·Core)뿐이다 — Q2 는 Core 숙련도, Q3 는 선행에 막힌다.

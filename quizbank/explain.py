@@ -70,8 +70,8 @@ def apply(bank: dict, report: dict) -> tuple[dict, dict]:
         # newly worded CLI explanation should be appended. The new explanation
         # remains in the report for inspection; repairs own scoring changes.
         has_reason = any(u.strip().upper() not in ('O', 'X') for u in q['answer_units'])
-        if ox and not has_reason:
-            q['answer_units'].append(ox)
+        if ox and not has_reason and not q.get('explanation', '').strip():
+            q['explanation'] = ox
     if seen != set(questions):
         raise SessionError('일부 문항의 CLI 해설이 없습니다.')
     return out, {'annotatedCount': len(seen), 'requiresRevision': any(

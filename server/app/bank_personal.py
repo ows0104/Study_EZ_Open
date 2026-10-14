@@ -25,5 +25,5 @@ def apply(db: Session, row: QuizBank, user_id: str, question: dict) -> dict:
            "personalAnswer": answer_changed}
     if answer_changed:
         # A prose correction replaces the old answer and its structured scoring data.
-        out.update(answer_units=[], correct_option_ids=[], answer_pairs=[], correct_order=[])
+        out.update(answer_units=[], correct_option_ids=[], answer_pairs=[], correct_order=[], explanation="")
     return out

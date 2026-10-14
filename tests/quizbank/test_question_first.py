@@ -44,8 +44,9 @@ def test_web_contract_and_organizer_defer_learning_metadata():
     body, version = generate.prompt_for("강의", "", [{"id": "S1", "kind": "notes_current", "filename": "a.pdf"}])
     assert question_first.enabled(version) and not question_first.enabled("1.41")
     assert not question_first.enabled("2.0")
-    header = next(l for l in body.splitlines() if l.startswith("question_id | tier"))
-    assert len(header.split("|")) == 13 and "concept_id" not in header and "prerequisites" not in header
+    assert "### Q001 | cloze | Core | 5 | 2 | mechanism" in body
+    assert "### Q002 | mcq | Core | 4 | 2 | discrimination | comparison" in body
+    assert "question_id | tier" not in body and "Final Statistics" not in body
     assert "\n0. Exam Point Plan\n" not in body and "\n1. Concept Map\n" not in body
     prompt = organize.organizer_prompt("draft", {"title": "강의", "sources": [], "prompt_version": version})
     assert "문항 우선 출력 계약" in prompt

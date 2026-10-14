@@ -50,6 +50,7 @@ QUESTION = _object({
     "item_difficulty": _INT, "format": _enum(FORMATS), "retrieval_direction": _enum(DIRECTIONS),
     "mcq_mode": _enum(["recall_first", "comparison", "none"]),
     "question": _STR, "answer": _STR, "answer_units": _STRS, "prerequisites": _STRS,
+    "explanation": _STR,
     "source_refs": _array(SOURCE_REF), "exam_rationale": _STR,
     "conflict_id": _STR, "options": _array(_object({"id": _STR, "text": _STR})),
     "correct_option_ids": _STRS,
@@ -82,7 +83,8 @@ BANK = _object({
 
 # 프롬프트 v1.6(2026-10-05, 관리자)에서 뺀 칸. 앱이 읽지 않았다. 옛 응답·옛 은행에는 남아 있으므로
 # 형식을 잴 때와 정리할 때 걷어 낸다(`without_retired`) — 「모르는 칸」 오류로 옛 은행이 막히지 않게.
-RETIRED_QUESTION = ("concept_difficulty", "cognitive_type", "source_strength")
+# hint was removed after the v1.52 experiment; explanations remain separate.
+RETIRED_QUESTION = ("concept_difficulty", "cognitive_type", "source_strength", "hint")
 RETIRED_PLAN = ("rationale",)
 
 
@@ -95,7 +97,7 @@ def without_retired(bank: dict) -> dict:
     if isinstance(bank.get("concepts"), list):
         out["concepts"] = [{"graph_title": "", **c} if isinstance(c, dict) else c for c in bank["concepts"]]
     if isinstance(bank.get("questions"), list):
-        out["questions"] = [{"option_explanations": [], "option_pools": [], "mcq_mode": choice_mode(q),
+        out["questions"] = [{"explanation": "", "option_explanations": [], "option_pools": [], "mcq_mode": choice_mode(q),
                              **{k: v for k, v in q.items() if k not in RETIRED_QUESTION},
                              "mcq_mode": choice_mode(q) if q.get("mcq_mode") in (None, "none") else q["mcq_mode"]} if isinstance(q, dict) else q
                             for q in bank["questions"]]

@@ -137,12 +137,18 @@ export function AnswerBody({ question: q, answer, preload }: {
           <AnswerPoints text={answer.answer} units={answer.answerUnits} />
         </p>
       )}
-      {/* O/X의 채점 단위는 판단의 이유다. 한 항목이어도 해설 전체를 보여 준다. */}
-      {q.format === "ox" && !answer.personalAnswer ? (
+      {answer.explanation?.trim() && !answer.personalAnswer ? (
+        <section className="quiz-explanation bank-explanation" aria-label="해설">
+          <h2>해설</h2>
+          <p><Stem text={answer.explanation} /></p>
+        </section>
+      ) : null}
+      {/* 이전 O/X 은행의 채점 단위에 저장된 근거도 계속 보여 준다. */}
+      {q.format === "ox" && !answer.personalAnswer && !answer.explanation?.trim() ? (
         <section className="quiz-explanation bank-ox-explanation" aria-label="해설">
           <h2>해설</h2>
-          {answer.answerUnits.some((unit) => unit.trim()) ? (
-            <ul>{answer.answerUnits.filter((unit) => unit.trim()).map((unit, index) => (
+          {answer.answerUnits.some((unit) => unit.trim() && !/^[OX]$/i.test(unit.trim())) ? (
+            <ul>{answer.answerUnits.filter((unit) => unit.trim() && !/^[OX]$/i.test(unit.trim())).map((unit, index) => (
               <li key={index} className="bank-answer-point"><Stem text={unit} /></li>
             ))}</ul>
           ) : <p>이 문항에 등록된 해설이 없습니다.</p>}

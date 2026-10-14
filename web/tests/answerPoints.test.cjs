@@ -113,9 +113,28 @@ test('O and X show every explanation once, including a single or multiline unit'
   }
 });
 
-test('O/X does not hide explanations that also occur in the answer', () => {
+test('O/X alone is not displayed as an explanation', () => {
   const html = render({ answer: 'O', answerUnits: ['O'] }, 'ox');
-  assert.ok(html.includes('<h2>해설</h2><ul><li class="bank-answer-point">O</li></ul>'));
+  assert.ok(html.includes('이 문항에 등록된 해설이 없습니다.'));
+});
+
+test('retired experiment hints are not shown before or after revealing the answer', () => {
+  const q = { ...question, hint: 'apical/luminal membrane의 방향을 떠올려 보세요.' };
+  const props = { question: q, answer: null, picked: new Set(), onPick: () => {} };
+  const html = renderToStaticMarkup(React.createElement(QuestionBody, props));
+  assert.ok(!html.includes('힌트 보기') && !html.includes(q.hint));
+  const shown = renderToStaticMarkup(React.createElement(QuestionBody, { ...props, answer }));
+  assert.ok(!shown.includes('힌트 보기') && !shown.includes(q.hint));
+});
+
+test('general explanations are separate from scoring and work for basic, cloze and O/X', () => {
+  for (const format of ['basic', 'cloze', 'ox']) {
+    const html = render({ answer: 'X', answerUnits: ['X'], explanation: '구체적인 반례와 올바른 기전' }, format);
+    assert.ok(html.includes('<h2>해설</h2><p>구체적인 반례와 올바른 기전</p>'));
+    assert.equal((html.match(/<h2>해설<\/h2>/g) || []).length, 1);
+    assert.ok(!html.includes('이 문항에 등록된 해설이 없습니다.'));
+  }
+  assert.ok(!render({ explanation: '오래된 설명', personalAnswer: true }).includes('오래된 설명'));
 });
 
 test('missing O/X explanation is explicit, without an empty panel for other formats', () => {

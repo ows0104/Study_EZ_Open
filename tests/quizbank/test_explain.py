@@ -33,9 +33,9 @@ def test_annotations_preserve_authored_content_and_original_bank(bank):
     assert bank==original
     for before,after in zip(bank['questions'],result['questions']):
         for key in before:
-            if key not in ('option_explanations','answer_units','option_pools'):
+            if key not in ('option_explanations','explanation','option_pools'):
                 assert after[key]==before[key],key
-        assert after['answer_units'][:len(before['answer_units'])]==before['answer_units']
+        assert after['answer_units']==before['answer_units']
     assert len(result['questions'])==len(bank['questions'])
     assert not report['requiresRevision']
     assert explain.enabled('1.32') and not explain.enabled('1.31')
@@ -81,7 +81,18 @@ def test_ox_without_a_reason_gets_it_once(bank):
     row = next(r for r in data['annotations'] if r['question_id'] == q['question_id'])
     row['ox_explanation'] = '새 표현의 판단 근거'
     repeated, _ = explain.apply(updated, data)
-    assert next(q2 for q2 in repeated['questions'] if q2['question_id'] == q['question_id'])['answer_units'] == [q['answer'], '판정의 근거와 올바른 내용']
+    actual = next(q2 for q2 in repeated['questions'] if q2['question_id'] == q['question_id'])
+    assert actual['answer_units'] == [q['answer']]
+    assert actual['explanation'] == '판정의 근거와 올바른 내용'
+
+
+def test_authored_ox_explanation_is_not_overwritten_or_added_to_scoring(bank):
+    q = next(q for q in bank['questions'] if q['format'] == 'ox')
+    q.update(answer_units=[q['answer']], explanation='원문의 구체적인 반례')
+    result, _ = explain.apply(bank, annotations(bank))
+    actual = next(x for x in result['questions'] if x['question_id'] == q['question_id'])
+    assert actual['explanation'] == q['explanation']
+    assert actual['answer_units'] == q['answer_units']
 
 
 def test_pool_texts_and_answers_are_immutable_while_explanations_are_added(bank):

@@ -56,7 +56,7 @@ def organizer_prompt(raw: str, lecture: dict) -> str:
             "이 버전은 웹에 포인트·개념도·회상 계획·선행 관계가 없는 것이 정상이다. "
             "누락 경고를 만들거나 이를 추정·작성하지 않는다. concepts와 retrieval_plan은 빈 배열, "
             "각 문항의 concept_id는 빈 문자열, prerequisites는 빈 배열로 저장한다. "
-            "기존 Questions의 13열과 모든 상세 표를 question_id로 연결해 보존한다. "
+            "문항별 블록 또는 기존 Questions의 13열과 모든 상세 표를 question_id로 연결해 보존한다. "
             "사후 학습 구조는 내용 검수 뒤 별도 CLI가 작성한다.\n\nLECTURE_METADATA_DATA\n")
     return re.sub(r"\{\{(schema_version|lecture|raw)\}\}", lambda m: fill[m.group(1)], template)
 
@@ -195,6 +195,8 @@ def tidy_matching_choices(bank: dict) -> list[str]:
 def organize(raw: str, lecture: dict, *, model: str | None = None, out: Path | None = None) -> tuple[dict, dict]:
     """`(bank, info)`. lecture = {title, sources: [{id, kind, filename}]}."""
     from .web_audit import enabled
+    from .compact import read_blocks, restore
+    blocks = read_blocks(clean_response(raw))
     if out is not None and enabled(lecture.get("prompt_version", "")):
         from .file_organize import convert
         bank, info = convert(clean_response(raw), organizer_prompt(raw, lecture), out, model=model)
@@ -203,6 +205,7 @@ def organize(raw: str, lecture: dict, *, model: str | None = None, out: Path | N
                                             label="정리", timeout=1200, model=model)
     bank = without_retired(bank)   # 옛 응답을 다시 정리해도 뺀 칸은 남기지 않는다
     bank["build_meta"]["schema_version"] = expected_schema(raw, lecture)
+    restore(bank, blocks)
     fixed = tidy_labels(bank)
     matching = tidy_matching_choices(bank)
     if matching and isinstance(bank.get("warnings"), list):

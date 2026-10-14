@@ -34,7 +34,7 @@ REVIEW_REPORT['required'].append('pool_checks')
 # 검토에 보이는 필드. 난이도·중요도는 뺀다 — 정오만 보게 한다.
 FIELDS = ("question_id", "concept_id", "format", "question", "answer", "answer_units", "options",
           "correct_option_ids", "matching_left", "matching_right", "answer_pairs", "sequence_items",
-          "correct_order", "source_refs", "exam_rationale", "conflict_id", "option_explanations", "option_pools")
+          "correct_order", "source_refs", "exam_rationale", "conflict_id", "option_explanations", "option_pools", "explanation")
 
 
 def review_prompt(bank: dict, title: str) -> str:

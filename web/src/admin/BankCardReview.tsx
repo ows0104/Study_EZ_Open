@@ -114,6 +114,7 @@ function ReviewRow({ group, card, onChanged, focus }: {
           {q.correct_order?.length ? <p>{q.correct_order.join(" → ")}</p> : null}
         </dd>
         <dt>채점 단위</dt><dd>{q.answer_units?.join(" · ")}</dd>
+        {q.explanation ? <><dt>해설</dt><dd><Stem text={q.explanation} /></dd></> : null}
         {q.option_pools?.length ? <><dt>선지 변형</dt><dd>{q.option_pools.map(pool => <details key={pool.pool_id}>
           <summary>{pool.pool_id} · 후보 {pool.candidates.length}개 중 {pool.select_count}개 · {pool.correct_when === "true" ? "참" : "거짓"} 선택</summary>
           {pool.candidates.map(c => <div key={c.candidate_id}><b>{c.candidate_id}</b>
@@ -194,6 +195,7 @@ function QuestionEditor({ question, group, busy, onSave, onCancel }: {
       <label>질문<textarea rows={4} required value={q.question} onChange={e => field("question", e.target.value)} /></label>
       {q.format === "cloze" ? <small>빈칸은 {"{{c1}}"}, {"{{c2}}"}로 표시하고 채점 단위는 빈칸 등장 순서로 적으세요.</small> : null}
       <label>정답<textarea rows={3} required value={q.answer} onChange={e => field("answer", e.target.value)} /></label>
+      <label>해설<textarea rows={3} value={q.explanation ?? ""} onChange={e => field("explanation", e.target.value)} /></label>
       <Lines label="채점 단위" values={q.answer_units} onChange={v => field("answer_units", v)} />
       <fieldset><legend>선행 문항{q.retrieval_direction === "integration" ? " · 통합 문항은 필수" : ""}</legend>
         <small>기초가 되는 문항을 선택하세요.</small>

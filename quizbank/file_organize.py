@@ -17,7 +17,8 @@ WRITTEN = {"type": "object", "properties": {"written": {"type": "boolean", "enum
 
 
 def question_ids(raw: str) -> set[str]:
-    ids, header = set(), None
+    from .compact import read_blocks
+    ids, header = {b["question_id"] for b in read_blocks(raw)}, None
     for line in raw.splitlines():
         if not line.strip():
             continue
@@ -34,6 +35,7 @@ def question_ids(raw: str) -> set[str]:
 
 
 def convert(raw: str, prompt: str, out: Path, *, model: str | None = None) -> tuple[dict, dict]:
+    expected = question_ids(raw)
     out.mkdir(parents=True, exist_ok=True)
     target = out / "bank.json"
     target.unlink(missing_ok=True)
@@ -59,7 +61,6 @@ def convert(raw: str, prompt: str, out: Path, *, model: str | None = None) -> tu
     except (OSError, ValueError, jsonschema.ValidationError) as cause:
         note = cause.message if isinstance(cause, jsonschema.ValidationError) else str(cause)
         raise SessionError(f"파일 정리 결과를 확인할 수 없습니다: {note[:500]}") from cause
-    expected = question_ids(raw)
     actual = [q["question_id"] for q in bank["questions"]]
     if expected and (set(actual) != expected or len(actual) != len(expected)):
         raise SessionError("파일 정리에서 원문 문항 ID가 누락·추가·중복됐습니다.")

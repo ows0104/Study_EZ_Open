@@ -76,7 +76,7 @@ admin_router = APIRouter()
 COMPLETE_MARK = "STUDYEZ_BANK_COMPLETE"
 # 첨부 순서가 곧 자료 ID 다 — 웹이 프롬프트에 이 순서로 적고 확장이 이 순서로 붙인다.
 SOURCE_KINDS = (("notes_current", "S1"), ("jokbo", "S2"))
-ANSWER_FIELDS = ("answer", "answer_units", "correct_option_ids", "answer_pairs", "correct_order", "option_explanations", "option_pools", "choice_variant")
+ANSWER_FIELDS = ("answer", "answer_units", "explanation", "correct_option_ids", "answer_pairs", "correct_order", "option_explanations", "option_pools", "choice_variant")
 FEEDBACK_CATEGORIES = ("good", "wording", "easy", "hard", "leak", "format", "burden", "importance",
                        "content", "duplicate", "sequencing", "other")
 
@@ -683,6 +683,7 @@ def _save(state: BankState, value: dict) -> None:
 
 def _public(q: dict, *, show_choices: bool = True) -> dict:
     out = {**{k: v for k, v in q.items() if k not in ANSWER_FIELDS}, "mcq_mode": choice_mode(q)}
+    out.pop("hint", None)  # Retired experiment fields can remain in older stored JSON.
     if not show_choices and out["mcq_mode"] == "recall_first":
         out["options"] = []
     return out
@@ -727,7 +728,7 @@ def _answer(db: Session, row: QuizBank, q: dict) -> dict[str, Any]:
     # 각 출처가 무엇이라고 하는지와 고른 근거(충돌 기록의 설명)를 읽는다. 자료 밖 내용은 출처 `EXT` 로 표시된다.
     conflict = next((c for c in (row.bank or {}).get("source_conflicts", [])
                      if q["conflict_id"] and c["conflict_id"] == q["conflict_id"]), None)
-    return {"answer": q["answer"], "answerUnits": q["answer_units"], "correctOptionIds": q["correct_option_ids"],
+    return {"answer": q["answer"], "answerUnits": q["answer_units"], "explanation": q.get("explanation", ""), "correctOptionIds": q["correct_option_ids"],
             "personalEdited": q.get("personalEdited", False), "personalAnswer": q.get("personalAnswer", False),
             "answerPairs": q["answer_pairs"], "correctOrder": q["correct_order"],
             "slides": _slides(db, row, q["question_id"]), "medicalReview": review,
