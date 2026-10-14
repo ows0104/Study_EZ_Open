@@ -1213,7 +1213,7 @@ def to_markdown(sec: Section, stats: dict) -> str:
     for record in stats.get("professor_history_corrections", []):
         proof = record["evidence"]
         L.append(f"교수 이력 정정: {record['year']}년 {'·'.join(record['professors'])} "
-                 f"— 올해 필기 {', '.join('p.' + str(p) for p in proof['pages'])} 명시. "
+                 f"— 근거: {proof['filename']} {', '.join('p.' + str(p) for p in proof['pages'])} 명시. "
                  f"족보 교수표의 {'·'.join(record['table_professors'])} 표기와 충돌하여 필기 근거를 적용했다.")
     if stats["professor_changed_2026"]:
         L.append("⚠ 2026년 교수 교체 — 족보 신뢰도를 낮춰 사용할 것")
