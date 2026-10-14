@@ -44,6 +44,7 @@ def test_exact_sitting_is_used_in_merge_and_professor_priority():
     _, note = J.split_by_professor(payload,['박종완'])
     assert note['own_years'] == ['2016-1']
     assert J.year_professors(tables['17-18'],'2016') == []
+    assert J.year_professors({'16-1':['박종완']},'2016') == []
     assert J.year_professors({'16':['박종완']},'2016-2') == ['박종완']
 
 

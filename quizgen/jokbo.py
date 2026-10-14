@@ -42,7 +42,7 @@ def year_key(text: str) -> str:
 
 
 def yy(year: str) -> str:
-    """교수 표의 열 이름. `2016-1` 도 `16` 열을 본다 — 표는 회차를 가르지 않는다."""
+    """회차를 제외한 두 자리 연도. 연도 단위 표·통계의 호환용이다."""
     return year[2:4]
 
 
@@ -57,7 +57,7 @@ def year_professors(cells: dict, year: str) -> list[str]:
     # 회차를 모르는 문항에는 여러 회차의 교수가 모두 같은 경우만 적용한다.
     if "-" not in short:
         sittings = [v for k, v in cells.items() if k.startswith(base + "-")]
-        if sittings and all(set(v) == set(sittings[0]) for v in sittings):
+        if len(sittings) >= 2 and all(set(v) == set(sittings[0]) for v in sittings):
             return sittings[0]
     return []
 
