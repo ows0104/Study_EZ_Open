@@ -46,6 +46,22 @@ def yy(year: str) -> str:
     return year[2:4]
 
 
+def year_professors(cells: dict, year: str) -> list[str]:
+    """회차별 열이 있으면 그 열을 우선하고, 연도만 있는 표는 연도 열로 조회한다."""
+    short = year_key(year)[2:] if len(year_key(year)) >= 4 else year_key(year)
+    if short in cells:
+        return cells[short] or []
+    base = short[:2]
+    if base in cells:
+        return cells[base] or []
+    # 회차를 모르는 문항에는 여러 회차의 교수가 모두 같은 경우만 적용한다.
+    if "-" not in short:
+        sittings = [v for k, v in cells.items() if k.startswith(base + "-")]
+        if sittings and all(set(v) == set(sittings[0]) for v in sittings):
+            return sittings[0]
+    return []
+
+
 RE_QSTART = re.compile(r"^\s*(R?\d{1,3})\s*\.\s*(\S.*)$")
 RE_ANSWER = re.compile(r"^\s*(R?\d{1,3})\s*\.\s*([\d]+(?:\s*,\s*\d+)*)\s*$")
 RE_OPTION = re.compile(rf"^\s*([{CIRCLED}])\s*(.*)$")
@@ -344,6 +360,15 @@ def _table_words(page: fitz.Page) -> list[tuple]:
                        for r in notes)]
 
 
+class ProfessorTable(dict):
+    """행 번호 좌표로 구분한 표의 행. 공동 담당자의 이름 수로 행 혼입을 추정하지 않는다."""
+    anchored_rows: set[str]
+
+    def __init__(self, *args, anchored_rows=(), **kwargs):
+        super().__init__(*args, **kwargs)
+        self.anchored_rows = set(anchored_rows)
+
+
 def parse_toc(doc: fitz.Document) -> tuple[list[tuple[str, str]], dict, str | None]:
     """(강의목록, 교수표, 경고) 반환. 교수표 파싱이 미덥지 않으면 경고를 채운다."""
     # 목차 안내 페이지에도 "교수님 목록"이 나오므로 표 머리글("수업제목")로 특정한다
@@ -375,20 +400,41 @@ def parse_toc(doc: fitz.Document) -> tuple[list[tuple[str, str]], dict, str | No
         words = [w for w in words if w[1] < foot_y - 2]
     year_cols: dict[str, float] = {}
     for w in words:
-        if re.fullmatch(r"\d{2}", w[4]) and abs(w[1] - head_y) < 8:
+        if re.fullmatch(r"\d{2}(?:-\d)?", w[4]) and abs(w[1] - head_y) < 8:
             year_cols[w[4]] = (w[0] + w[2]) / 2
     if len(year_cols) < 3:
         return [], {}, "연도 열 머리글을 찾지 못했다"
     title_x_max = min(year_cols.values()) - 22
 
-    # 제목 열의 줄을 세로 간격으로 묶어 행을 만든다 (한 칸이 여러 줄일 수 있다)
+    # 행 번호를 기준으로 제목을 묶는다. 작은 글씨 표에서 14px 간격만으로 묶으면
+    # 서로 다른 행(예: 16과 17-18)이 합쳐지고 교수 정보도 이웃으로 이동한다.
+    anchors = [w for w in words if (w[0] + w[2]) / 2 < title_x_max and w[1] > head_y + 8
+               and re.fullmatch(r"(?:★|\d{1,2}(?:-\d{1,2})?)", w[4])]
+    left = min((w[0] for w in anchors), default=0)
+    anchors = [w for w in anchors if w[0] <= left + 25]
+    grouped = [{"ys": [w[1]], "parts": [], "anchor": w} for w in sorted(anchors, key=lambda w: w[1])]
+    if grouped:
+        for w in words:
+            if (w[0] + w[2]) / 2 >= title_x_max or w[1] <= head_y + 8:
+                continue
+            row = min(grouped, key=lambda r: abs(r["anchor"][1] - w[1]))
+            row["parts"].append(w)
+        rows = [{"ys": r["ys"], "parts": [" ".join(w[4] for w in sorted(r["parts"], key=lambda w: (round(w[1]), w[0])))]}
+                for r in grouped]
+        # 번호가 여러 줄 제목의 가운데에 있을 수 있으므로 번호를 맨 앞으로 둔다.
+        for row, group in zip(rows, grouped):
+            a = group["anchor"]
+            row["parts"] = [a[4] + " " + " ".join(w[4] for w in sorted(group["parts"], key=lambda w: (round(w[1]), w[0])) if w != a)]
+    else:
+        rows = []
+
+    # 번호 좌표가 없는 특수 표는 기존 제목 줄 묶음으로 처리한다.
     tlines: dict[int, list[tuple[float, str]]] = {}
     for w in words:
         if (w[0] + w[2]) / 2 < title_x_max and w[1] > head_y + 8:
             tlines.setdefault(round(w[1]), []).append((w[0], w[4]))
     ys = sorted(tlines)
-    rows: list[dict] = []
-    for y in ys:
+    for y in ys if not grouped else []:
         text = " ".join(t for _, t in sorted(tlines[y]))
         if rows and y - rows[-1]["ys"][-1] <= 14:
             rows[-1]["ys"].append(y)
@@ -397,7 +443,7 @@ def parse_toc(doc: fitz.Document) -> tuple[list[tuple[str, str]], dict, str | No
             rows.append({"ys": [y], "parts": [text]})
 
     lectures: list[tuple[str, str]] = []
-    profs: dict[str, dict] = {}
+    profs: dict[str, dict] = ProfessorTable()
     low_conf: list[str] = []
 
     entries = []
@@ -426,6 +472,8 @@ def parse_toc(doc: fitz.Document) -> tuple[list[tuple[str, str]], dict, str | No
         if seen_keys[key] > 1:
             key = f"{key}{seen_keys[key]}"
         entries.append({"key": key, "name": name, "center": sum(r["ys"]) / len(r["ys"])})
+        if grouped:
+            profs.anchored_rows.add(key)
 
     # 연도 열의 이름을 가장 가까운 제목 행에 붙인다
     for w in words:
@@ -441,12 +489,14 @@ def parse_toc(doc: fitz.Document) -> tuple[list[tuple[str, str]], dict, str | No
     for e in entries:
         lectures.append((e["key"], e["name"]))
         cells = profs.setdefault(e["key"], {})
+        for col in cells:
+            cells[col] = list(dict.fromkeys(cells[col]))
         n_lect = 1
         if "-" in e["key"]:
             a, b = e["key"].split("-")
             n_lect = int(b) - int(a) + 1
         # 한 칸에 강의 수보다 많은 이름이 잡히면 이웃 행에서 흘러들어온 것이다
-        if any(len(v) > n_lect for v in cells.values()):
+        if e["key"] not in profs.anchored_rows and any(len(v) > n_lect for v in cells.values()):
             low_conf.append(e["key"])
 
     warn = None
@@ -1092,7 +1142,7 @@ def split_by_professor(payload: dict, professors: list[str]) -> tuple[dict, dict
         if q.get("by") is not None:
             cell = q["by"]          # 옛 판에서 온 문항 — 그 판의 칸 (`merge_older`)
         else:
-            cell = ((by_year.get(yy(year)) or []) + (absorbed.get(yy(year)) or [])
+            cell = (year_professors(by_year, year) + year_professors(absorbed, year)
                     if RE_YEAR.match(year) else None)
         if cell and any(same_person(a, b) for a in cell for b in professors):
             own.append({k: v for k, v in q.items() if k != "reference"})
@@ -1105,7 +1155,7 @@ def split_by_professor(payload: dict, professors: list[str]) -> tuple[dict, dict
     sec = Section(lecture_key=payload.get("lecture_key", ""), title=payload.get("title", ""))
     sec.questions = [Question(**{k: v for k, v in q.items() if k in fields}) for q in (own or ref)]
     if own:
-        cells = {yy(y): by_year[yy(y)] for y in own_years if yy(y) in by_year}
+        cells = {year_key(y)[2:]: year_professors(by_year, y) for y in own_years if year_professors(by_year, y)}
         new_stats = repeat_stats(sec, {sec.lecture_key: cells})
         new_stats["professors_by_year"] = {**cells, "26": list(professors)}
         new_stats["professor_changed_2026"] = False
@@ -1237,10 +1287,11 @@ def parse_edition(doc: fitz.Document) -> dict:
         # (10 에 46문항 · 34 에 57문항), 섞인 교수 이름으로 「교수 교체」가 잘못 선다.
         # 강의 목록은 본문 머리를 따르고, 표에서는 **깨끗한 칸의 교수만** 가져온다.
         missed = [k for k, _ in body if k not in {key for key, _ in lectures}]
-        crowded = [k for k, cells in profs.items() if _crowded(k, cells)]
+        trusted = getattr(profs, "anchored_rows", set())
+        crowded = [k for k, cells in profs.items() if k not in trusted and _crowded(k, cells)]
         keep = {k for k, _ in body}
-        profs = {k: v for k, v in profs.items() if k in keep and k not in crowded
-                 and not k.startswith("★")}
+        profs = ProfessorTable({k: v for k, v in profs.items() if k in keep and k not in crowded
+                              and not k.startswith("★")}, anchored_rows=trusted & keep)
         warn = (f"목차 표에서 강의 {len(lectures)}개만 잡혀 본문 머리 {len(body)}개로 세웠다 "
                 f"(표에서 놓친 것 {missed}). 교수가 섞인 칸 {crowded} 과 ★ 는 교수를 버렸다 — "
                 f"그 강의는 교수 교체 판정이 안 선다")
@@ -1327,11 +1378,11 @@ def _older_author(old: Section, old_profs: dict, yy: str, n_lect: int) -> list[s
     병리학 2020판 `유전질환` 섹션에 `소아질환` 문항이 섞여 있다(본문에 소아질환
     머리가 없다). 그해 두 강의 교수가 같을 때만 그 이름을 쓴다.
     """
-    cell = (old_profs.get(old.lecture_key) or {}).get(yy) or []
-    if not cell or len(cell) > n_lect:
+    cell = year_professors(old_profs.get(old.lecture_key) or {}, yy)
+    if not cell or (old.lecture_key not in getattr(old_profs, "anchored_rows", set()) and len(cell) > n_lect):
         return []
     for key, _ in old.may_contain:
-        other = (old_profs.get(key) or {}).get(yy) or []
+        other = year_professors(old_profs.get(key) or {}, yy)
         if set(other) != set(cell):
             return []
     return list(cell)
@@ -1413,13 +1464,13 @@ def merge_older(sections: list[Section], lectures: list[tuple[str, str]], profs:
                 if q.year not in have[sec.lecture_key] and RE_YEAR.match(q.year)]
         for q in took:
             q.src = src
-            q.by = _older_author(old, older["profs"], yy(q.year), n_lect)
+            q.by = _older_author(old, older["profs"], q.year, n_lect)
         sec.questions += took
         filled = []
         if sec.lecture_key == key:
             cells = profs.setdefault(key, {})
             for col, names in sorted(old_cells.items()):
-                if col not in cells and len(names) <= n_lect:
+                if col not in cells and (old.lecture_key in getattr(older["profs"], "anchored_rows", set()) or len(names) <= n_lect):
                     cells[col] = names
                     filled.append(col)
         rows.append({"old_key": old.lecture_key, "old_title": old.title,

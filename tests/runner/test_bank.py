@@ -133,6 +133,9 @@ def test_족보_조각을_재고_적어_두었다가_다시_안_잰다(tmp_path,
     assert len(calls) == 1                               # 두 번째는 적어 둔 것을 읽는다
     cached = json.loads((tmp_path / "261002_03" / "bank" / "jokbo.json").read_text(encoding="utf-8"))
     assert cached["slice"] == "" and cached["why"] == "문턱 아래"
+    (cut / "index.json").write_text('{"professor_table_revision":"corrected-table"}', encoding="utf-8")
+    assert bank.jokbo_slices(tmp_path, "약리학", sources) == found
+    assert len(calls) == 2
 
 
 def test_족보를_안_잘랐으면_조용히_빈손(tmp_path, monkeypatch):

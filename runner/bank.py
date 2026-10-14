@@ -41,6 +41,7 @@ def jokbo_slices(runs_dir: Path, subject: str, sources: dict[str, Path]) -> dict
     cut = deck.jokbo_dir(runs_dir, subject)
     if not (cut / "index.json").is_file():
         return {}
+    revision = json.loads((cut / "index.json").read_text(encoding="utf-8")).get("professor_table_revision", "")
     found: dict[str, Path] = {}
     pending: dict[str, Path] = {}
     for run_id, pdf in sources.items():
@@ -48,7 +49,8 @@ def jokbo_slices(runs_dir: Path, subject: str, sources: dict[str, Path]) -> dict
             cached = json.loads(_cache_path(runs_dir, run_id).read_text(encoding="utf-8"))
         except (OSError, ValueError):
             cached = None
-        if cached and cached.get("cut") == str(cut) and cached.get("source") == pdf.name:
+        if (cached and cached.get("cut") == str(cut) and cached.get("source") == pdf.name
+                and cached.get("professorRevision", "") == revision):
             if cached.get("slice") and Path(cached["slice"]).is_file():
                 found[run_id] = Path(cached["slice"])
             continue
@@ -71,6 +73,7 @@ def jokbo_slices(runs_dir: Path, subject: str, sources: dict[str, Path]) -> dict
         path = _cache_path(runs_dir, run_id)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps({"cut": str(cut), "source": pdf.name, "slice": slice_md,
+                                    "professorRevision": revision,
                                     "score": row.get("score"), "why": row.get("why", "")},
                                    ensure_ascii=False, indent=2), encoding="utf-8")
         if slice_md:
