@@ -50,7 +50,8 @@ test('unsupported preview and review requests never dispatch; supported requests
     ['1.3.9', 'bank', true, false], ['1.3.10', 'bank', true, false], ['1.3.11', 'bank', true, false],
     ['1.3.10', 'bank', false, false], ['1.3.11', 'bank', false, false],
     ['1.3.12', 'bank', false, false], ['1.3.13', 'bank', false, false], ['1.3.13', 'bank', true, false],
-    ['1.3.14', 'bank', false, true], ['1.3.14', 'bank', true, true],
+    ['1.3.14', 'bank', false, false], ['1.3.14', 'bank', true, false],
+    ['1.3.15', 'bank', false, true], ['1.3.15', 'bank', true, true],
     ['1.3.5', 'review', false, true], ['1.4', 'shared', false, true],
   ]) {
     let sent = 0;
@@ -163,4 +164,24 @@ test('manual preview uses published 1.2 store release and needs no update for 1.
   assert.match(setup('1.3.0', '1.2.0'), /studyez-extension.zip/);
   assert.equal(setup('1.3.5', '1.2.0'), '');
   assert.equal(setup('', '1.2.0', '1.3.3', false), '');
+});
+
+
+test('bank response HTTP request preserves the originating prompt version', async () => {
+  let handler; const calls=[];
+  const window={location:{origin:'https://studyez.kr'},addEventListener(_event,fn){handler=fn;},
+    removeEventListener(){},postMessage(){}};
+  const source=fs.readFileSync(path.join(root,'web/src/bank/bankBridge.ts'),'utf8');
+  const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+  const exports={};
+  const deps={react:{useEffect:fn=>fn()},'../api':{api:async(url,init)=>{calls.push({url,body:JSON.parse(init.body)});}},
+    '../bridge/previewBridge':{bumpPreviewVersion(){}},'../bridge/protocol':{
+      ...protocol,MESSAGES:{bankReady:'BANK',bankSaved:'SAVED'}}};
+  vm.runInNewContext(compiled,{exports,window,require:id=>deps[id]}); exports.useBankLink();
+  handler({source:window,origin:window.location.origin,data:{source:protocol.EXTENSION_SOURCE,type:'BANK',
+    lectureId:'test/lecture',raw:'Question '.repeat(30)+'STUDYEZ_BANK_COMPLETE',
+    url:'https://chatgpt.com/c/test',promptVersion:'1.53'}});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(calls[0].body.promptVersion,'1.53');
+  assert.match(calls[0].url,/bank-response$/);
 });

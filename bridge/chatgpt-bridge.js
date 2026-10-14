@@ -296,7 +296,7 @@ function attachmentFilenameVisible(labels, filename) {
   const name = filename.normalize("NFC");
   const dot = name.lastIndexOf(".");
   const pattern = dot > 0
-    ? `${escape(name.slice(0, dot))}(?:\\s*\\(\\d+\\))*${escape(name.slice(dot))}`
+    ? `${escape(name.slice(0, dot))}(?:\\s*\\((?:\\d+|\\d{8}-\\d{6})\\))*${escape(name.slice(dot))}`
     : escape(name);
   return new RegExp(`(?:^|[\\s"'])${pattern}(?![\\w.])`, "m").test(labels.normalize("NFC"));
 }

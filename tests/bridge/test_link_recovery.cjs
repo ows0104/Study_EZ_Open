@@ -419,3 +419,34 @@ for (const mode of ['review', 'bank']) test(`${mode} links keep their own pendin
     assert.equal(stored[`studyez-pending:1:${request.lectureId}:chatgpt_bank_share`], undefined);
   }
 });
+
+
+test('bank version travels from the exact launch request through pending delivery and page bridge', async () => {
+  const stored = {}, delivered = []; let receive;
+  const context = vm.createContext({ URL, console, importScripts() {}, chrome: {
+    runtime: { onMessage: {addListener(fn) {receive = fn;}}, onConnect: {addListener() {}} },
+    storage: {session: {
+      async get(key) {return key === null ? {...stored} : {[key]: stored[key]};},
+      async set(values) {Object.assign(stored, values);}, async remove(key) {delete stored[key];},
+    }},
+    tabs: {onUpdated:{addListener(){}}, onRemoved:{addListener(){}}, onActivated:{addListener(){}},
+      async create() {return {id:10};}, async sendMessage(tab,message) {delivered.push({tab,...message});}},
+  }});
+  vm.runInContext(read('protocol.js'), context); vm.runInContext(read('background.js'), context);
+  const protocol = context.STUDYEZ_PROTOCOL;
+  const payload = {requestId:'bank', lectureId:'test/lecture',provider:'chatgpt',mode:'bank',
+    prompt:'Bank prompt 1.53',promptVersion:'1.53',files:[{filename:'test.pdf',
+      downloadUrl:'http://localhost:8000/api/local-storage/lectures/test.pdf'}]};
+  await new Promise(resolve => receive({type:protocol.MESSAGES.openPreview,payload},
+    {tab:{id:1,url:'http://localhost:5173'}},resolve));
+  assert.equal(stored['studyez-watch:10'].promptVersion,'1.53');
+  await new Promise(resolve => receive({type:'STUDYEZ_BANK_ANSWER',raw:'Question STUDYEZ_BANK_COMPLETE',
+    promptVersion:'untrusted',url:'https://chatgpt.com/c/test'},
+    {tab:{id:10,url:'https://chatgpt.com/c/test'}},resolve));
+  await new Promise(resolve => setImmediate(resolve));
+  const message=delivered.find(m=>m.type===protocol.MESSAGES.bankReady);
+  assert.equal(message.promptVersion,'1.53');
+  assert.equal(stored['studyez-bank:1:test/lecture'].promptVersion,'1.53');
+  const page=webBridge(); page.listeners.extension(message);
+  assert.equal(page.posted.at(-1).promptVersion,'1.53');
+});

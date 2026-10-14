@@ -140,6 +140,7 @@ async function deliverPending(webappTabId) {
       try {
         await chrome.tabs.sendMessage(webappTabId, {
           type: MESSAGES.bankReady, lectureId: entry.lectureId, raw: entry.raw, url: entry.url,
+          promptVersion: entry.promptVersion || "",
           ...(typeof entry.shareUrl === "string" ? { shareUrl: entry.shareUrl } : {}),
         });
       } catch {
@@ -264,6 +265,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const shareUrl = shareIdentity("chatgpt", message.shareUrl || "") ? message.shareUrl : undefined;
         await chrome.storage.session.set({
           [bankKey(watch.webappTabId, watch.lectureId)]: { lectureId: watch.lectureId, raw, url,
+            promptVersion: watch.promptVersion || "",
             ...(shareUrl ? { shareUrl } : {}) },
         });
         sendResponse({ ok: true });
@@ -432,6 +434,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       await chrome.storage.session.set({ [`${TAB_PAYLOAD}${tab.id}`]: payload });
       await watchTab(tab.id, {
         lectureId: payload.lectureId,
+        promptVersion: typeof payload.promptVersion === "string" ? payload.promptVersion : "",
         provider: payload.provider,
         mode,
         webappTabId: sender.tab.id,

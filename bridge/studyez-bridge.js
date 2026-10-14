@@ -97,6 +97,7 @@ function receiveMessage(message) {
   if (contextInvalidated) return false;
   if (message?.type === MESSAGES.bankReady) {
     reply({ type: MESSAGES.bankReady, lectureId: message.lectureId, raw: message.raw, url: message.url,
+            promptVersion: message.promptVersion || "",
             ...(typeof message.shareUrl === "string" ? { shareUrl: message.shareUrl } : {}) });
     return false;
   }

@@ -153,3 +153,12 @@ test('missing editor cannot trigger send', async () => {
   await assert.rejects(s.run(), /입력 내용이 바뀌/);
   assert.equal(s.clicks.length, 0);
 });
+
+
+test('duplicate uploads accept date-time suffixes while preserving the source basename', () => {
+  const name = 'L2-4_약동학-1-3.md';
+  assert.equal(context.attachmentFilenameVisible('L2-4_약동학-1-3(20261014-200438).md 제거', name), true);
+  assert.equal(context.attachmentFilenameVisible('L2-4_약동학-1-3(20261014-200438)(2).md', name), true);
+  assert.equal(context.attachmentFilenameVisible('L2-4_약동학-1-3(other).md', name), false);
+  assert.equal(context.attachmentFilenameVisible('L2-4_약동학-2-3(20261014-200438).md', name), false);
+});

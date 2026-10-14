@@ -165,6 +165,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
         provider: "chatgpt",
         mode: "bank",
         prompt: latest.prompt,
+        promptVersion: latest.version,
         files,
         autoSend,
       });

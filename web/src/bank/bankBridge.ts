@@ -25,6 +25,7 @@ export function useBankLink() {
           && data.raw.length <= 2_000_000 && data.raw.trimEnd().endsWith("STUDYEZ_BANK_COMPLETE")) {
         void api(`/api/admin/lectures/${path}/bank-response`, {
           method: "PUT", body: JSON.stringify({ raw: data.raw, conversationUrl: data.url || "",
+            promptVersion: typeof data.promptVersion === "string" ? data.promptVersion : "",
             ...(data.shareUrl ? { shareUrl: data.shareUrl } : {}) }),
         }).then(() => {
           window.postMessage({ source: WEBAPP_SOURCE, type: MESSAGES.bankSaved, lectureId }, window.location.origin);

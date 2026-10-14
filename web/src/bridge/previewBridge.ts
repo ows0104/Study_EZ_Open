@@ -65,6 +65,8 @@ export function requestPreview(input: {
    */
   mode: BridgeMode;
   prompt: string;
+  /** Version of the exact bank prompt attached to this conversation. */
+  promptVersion?: string;
   files: PreviewFile[];
   /** 별도의 자동전송 버튼에서만 true. 기본 생성 버튼은 false. */
   autoSend: boolean;
