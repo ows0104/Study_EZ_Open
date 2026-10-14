@@ -117,6 +117,7 @@ class PrequizJob(Base):
     ask: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     # 사람이 고른 전략(`기본`·`족보`·`필기`·`사진`). 빈 문자열이면 자동 판정이다.
     # 러너가 이 값을 `--strategy` 로 넘긴다.
+    # points 작업은 출제 전략을 쓰지 않으며 이 칸에 원본 버전 식별자를 저장해 완료 작업을 재사용한다.
     strategy: Mapped[str] = mapped_column(String(16), nullable=False, default="", server_default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)

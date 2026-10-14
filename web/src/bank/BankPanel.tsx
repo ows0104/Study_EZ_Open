@@ -16,7 +16,7 @@ import type { BankSummary } from "../types/bank";
 import type { LectureDetail, LectureRef } from "../types/lectures";
 import type { PrequizJob, RunnerBeat } from "../types/jobs";
 import { useMe } from "../useMe";
-import { renderBankPrompt } from "./prompt";
+import { loadLatestBankPrompt } from "./prompt";
 import { BankCoverage } from "./BankCoverage";
 
 /** 웹 문항 생성 → CLI 검수·보완 → Main-Quiz 게시·학습. */
@@ -151,6 +151,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
     }).then((answer) => setPointsJob(answer.job))
       .catch((cause: Error) => setPointsError(`출제포인트 준비 요청 실패: ${cause.message}`));
     try {
+      const latest = await loadLatestBankPrompt(detail, sources);
       // 서명 URL 은 수명이 짧아 누른 순간에 받는다.
       const files = [];
       for (const source of sources) {
@@ -163,13 +164,13 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
         lectureId: `${lecture.subject}/${lecture.runId}`,
         provider: "chatgpt",
         mode: "bank",
-        prompt: renderBankPrompt(detail, sources),
+        prompt: latest.prompt,
         files,
         autoSend,
       });
-      setNote(autoSend
+      setNote(`출제 프롬프트 ${latest.version} · ` + (autoSend
         ? "자동전송을 시작했습니다. 완성된 문항은 러너가 검수·보완하고 게시합니다."
-        : "ChatGPT 대화를 열었습니다. 직접 전송하면 완성된 문항을 러너가 검수·보완하고 게시합니다.");
+        : "ChatGPT 대화를 열었습니다. 직접 전송하면 완성된 문항을 러너가 검수·보완하고 게시합니다."));
     } catch (cause) {
       setError((cause as Error).message);
     } finally {

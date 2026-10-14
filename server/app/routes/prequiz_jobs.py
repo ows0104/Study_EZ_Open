@@ -6,6 +6,8 @@ running 취소는 cancel_requested로 러너에게 전달한다. 서버는 러�
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import hashlib
+import json
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -38,6 +40,15 @@ from app.models import (
     RunnerBeat,
 )
 from app.routes.common import lecture_or_404
+
+
+def _points_input(db: Session, lecture: Lecture) -> tuple[str, datetime]:
+    from app.routes.bank import bank_sources
+    assets = [db.get(Asset, source["assetId"]) for source in bank_sources(db, lecture)]
+    values = [(a.id, a.kind, a.filename, a.object_key, a.size_bytes, a.uploaded_at.isoformat()) for a in assets]
+    signature = hashlib.sha256(json.dumps([lecture.title, values], ensure_ascii=False).encode()).hexdigest()[:16]
+    latest = max([lecture.updated_at, *(a.uploaded_at for a in assets)])
+    return signature, latest
 
 router = APIRouter()
 
@@ -150,8 +161,21 @@ def request_prequiz(
 
     if kind == JOB_BANK_POINTS:
         db.refresh(lecture, with_for_update=True)
+        points_signature, inputs_updated = _points_input(db, lecture)
+        completed = db.scalars(select(PrequizJob).where(
+            PrequizJob.subject == lecture.subject, PrequizJob.run_id == lecture.run_id,
+            PrequizJob.kind == JOB_BANK_POINTS, PrequizJob.state == JOB_DONE,
+            PrequizJob.strategy == points_signature).order_by(PrequizJob.id.desc())).first()
+        if completed is not None:
+            return {"job": job_row(completed), "created": False}
 
     open_job = open_job_of(db, lecture.subject, lecture.run_id, kind)
+    if kind == JOB_BANK_POINTS and open_job is not None:
+        # 구버전 작업도 시작 이후 원본이 바뀌지 않았다면 현재 입력에 연결한다.
+        if not open_job.strategy and inputs_updated.replace(tzinfo=UTC) <= open_job.created_at.replace(tzinfo=UTC):
+            open_job.strategy = points_signature
+            db.commit()
+        return {"job": job_row(open_job), "created": False}
     if open_job is not None and open_job.state == JOB_HELD and open_job.ask:
         # 러너가 물어 놓은 줄이다. 여기서 풀면 답 없이 다시 줄에 서고, 러너가
         # 집자마자 같은 것을 또 묻는다 — 누른 사람에게는 아무 일도 안 난 것으로 보인다.
@@ -190,6 +214,8 @@ def request_prequiz(
         origin=JOB_BUTTON,
     )
     db.add(job)
+    if kind == JOB_BANK_POINTS:
+        job.strategy = points_signature
     if kind == JOB_BANK:
         bank = db.get(QuizBank, (lecture.subject, lecture.run_id))
         if bank is None:

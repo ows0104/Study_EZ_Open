@@ -10,3 +10,6 @@
 # 확장 zip은 이름에 해시가 없다. 빌드마다 내용이 바뀌므로 캐시하지 않는다.
 /studyez-extension.zip
   Cache-Control: public, max-age=0, must-revalidate
+
+/bank-prompt.json
+  Cache-Control: no-store

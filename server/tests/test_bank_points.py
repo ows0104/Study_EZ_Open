@@ -51,6 +51,8 @@ def main():
         assert db.get(QuizBank, KEY).status == "linked"
     claimed = client.post("/api/admin/prequiz-jobs/claim?worker=w1", headers=RUNNER).json()["job"]
     assert claimed["kind"] == "points" and claimed["state"] == "running"
+    again = client.post(jobs, headers=ADMIN)
+    assert again.json()['job']['id'] == claimed['id'] and not again.json()['created']
     # The normal content job waits for preparation on the same lecture.
     raw = '문항 본문 ' * 100 + '\nSTUDYEZ_BANK_COMPLETE'
     response = client.put(BASE_URL + '/bank-response', headers=ADMIN,
@@ -63,6 +65,17 @@ def main():
     with SessionLocal() as db:
         assert db.query(PrequizJob).filter_by(kind='bank').count() == 1
     assert client.post("/api/admin/prequiz-jobs/claim?worker=w2", headers=RUNNER).json()["job"] is None
+    with SessionLocal() as db:
+        db.get(PrequizJob, claimed['id']).state = 'done'
+        db.commit()
+    completed = client.post(jobs, headers=ADMIN, json={'force': True})
+    assert completed.json()['job']['id'] == claimed['id'] and not completed.json()['created']
+    with SessionLocal() as db:
+        assert db.query(PrequizJob).filter_by(kind='points').count() == 1
+        db.get(Asset, 'notes').size_bytes = 99
+        db.commit()
+    changed = client.post(jobs, headers=ADMIN)
+    assert changed.json()['created'] and changed.json()['job']['id'] != claimed['id']
     print("Independent point job and original-only source context passed")
 
 

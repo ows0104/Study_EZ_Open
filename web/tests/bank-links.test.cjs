@@ -138,7 +138,7 @@ test('bank creation and recreation wait for a person to send; only the separate 
       requestPreview: async request => { events.push('web'); requests.push(request); },
       bumpPreviewVersion() {},
     },
-    './prompt': { renderBankPrompt: () => 'Bank prompt' },
+    './prompt': { loadLatestBankPrompt: async () => ({prompt: 'Bank prompt', version: '1.48'}) },
   };
   const loaded = {};
   vm.runInNewContext(compiled,{exports:loaded,performance:{now:() => 1},require:id => mocked[id]});
