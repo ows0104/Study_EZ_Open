@@ -34,6 +34,7 @@ from app.bank_validation.pages import cited_pages
 from app.bank_validation.schema import QUESTION, schema_errors, without_retired
 from app.bank_validation.coverage import coverage_summary
 from app.bank_validation.validate import validate_bank
+from app.bank_validation.publication import stamp as publication_stamp, usable as bank_usable, warning as publication_warning
 from app.bank_validation.choice_mode import choice_mode
 from app.preview_links import conversation_url as valid_conversation_url, share_url as valid_share_url
 from app.auth import CurrentUser, require_admin, require_approved_user, require_runner
@@ -124,7 +125,7 @@ def _bank_or_404(db: Session, lecture: Lecture, user: CurrentUser) -> QuizBank:
 
 def _usable(row: QuizBank) -> dict:
     """학습에 쓸 수 있는 은행. 검증을 통과한 것만."""
-    if not row.bank or not (row.validation or {}).get("pass"):
+    if not bank_usable(row.bank, row.validation):
         raise HTTPException(409, "검증을 통과한 문제은행이 아직 없습니다.")
     return row.bank
 
@@ -146,7 +147,8 @@ def summary(db: Session, lecture: Lecture, row: QuizBank | None, *, is_admin: bo
         "status": row.status, "open": row.open_to_students, "buildId": row.build_id,
         "shareUrl": row.share_url,
         "questionCount": len(bank.get("questions", [])), "conceptCount": len(bank.get("concepts", [])),
-        "builtAt": _iso(row.built_at), "usable": bool(row.bank and (row.validation or {}).get("pass")),
+        "builtAt": _iso(row.built_at), "usable": bank_usable(row.bank, row.validation),
+        'publicationWarning': publication_warning(row.bank, row.validation),
         **panel_progress(bank, current),
         "coverage": coverage_summary(bank, row.validation or {}),
     }
@@ -236,6 +238,17 @@ def get_bank_response(subject: str, run_id: str, user: CurrentUser = Depends(req
                                                 for s in bank_sources(db, lecture)]}
 
 
+@admin_router.get("/lectures/{subject}/{run_id}/bank/source-context")
+def get_bank_source_context(subject: str, run_id: str, user: CurrentUser = Depends(require_runner),
+                            db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Independent point preparation receives original source metadata only."""
+    lecture = lecture_or_404(db, subject, run_id)
+    sources = [{k: s[k] for k in ("id", "kind", "filename")} for s in bank_sources(db, lecture)]
+    if not any(s["kind"] == "notes_current" for s in sources):
+        raise HTTPException(400, "올해 강의록이 아직 없습니다.")
+    return {"title": lecture.title, "sources": sources}
+
+
 class BankLinksIn(BaseModel):
     share_url: str | None = Field(default=None, alias="shareUrl", max_length=500)
     conversation_url: str | None = Field(default=None, alias="conversationUrl", max_length=500)
@@ -299,6 +312,7 @@ class BankIn(BaseModel):
     message: str = Field(default="", max_length=2000)
     base_build_id: str | None = Field(None, alias="baseBuildId")
     revision: dict | None = None
+    allow_unresolved: bool = Field(False, alias='allowUnresolved')
 
     model_config = {"populate_by_name": True}
 
@@ -322,14 +336,17 @@ def put_bank(subject: str, run_id: str, payload: BankIn, user: CurrentUser = Dep
         if payload.revision is not None:
             row.validation = {**(row.validation or {}), "revision": payload.revision}
         row.status = BANK_READY if maintenance else BANK_FAILED
-        if maintenance:
-            row.validation = {k: v for k, v in (row.validation or {}).items() if k != "maintenance"}
+        # 실패 뒤 러너가 같은 일감을 재시도해도 보강 의도를 유지한다.
+        # 새 ChatGPT 원문을 저장하는 명시적인 재생성 경로에서만 이 표시를 지운다.
         row.message = payload.message or "정리에 실패했다"
         db.commit()
         return {"status": row.status}
     source_ids = [s["id"] for s in bank_sources(db, lecture)]
     incoming, checked = bank_edits.reapply(
         payload.bank, payload.validation, row.validation or {}, source_ids)
+    if payload.revision is not None:
+        checked = {**checked, 'revision': payload.revision}
+    checked = publication_stamp(incoming, checked, source_ids, allow_unresolved=payload.allow_unresolved)
     if maintenance:
         old_questions = without_retired(row.bank)["questions"]
         incoming_questions = {q["question_id"]: q for q in without_retired(incoming)["questions"]}
@@ -337,7 +354,7 @@ def put_bank(subject: str, run_id: str, payload: BankIn, user: CurrentUser = Dep
             return {k: v for k, v in question.items() if k != "mcq_mode"} if question is not None else None
         if any(content(incoming_questions.get(q["question_id"])) != content(q) for q in old_questions):
             raise HTTPException(422, "보강은 기존 질문과 정답을 그대로 유지해야 합니다.")
-        if not validate_bank(incoming, source_ids)["pass"] or not checked.get("pass"):
+        if not bank_usable(incoming, checked):
             raise HTTPException(422, "보강본의 문항 검증을 통과해야 합니다.")
     row.bank, row.validation = incoming, checked
     row.review = payload.review
@@ -347,7 +364,7 @@ def put_bank(subject: str, run_id: str, payload: BankIn, user: CurrentUser = Dep
     if not maintenance:
         row.build_id = uuid.uuid4().hex[:16]
     row.built_at = datetime.now(UTC)
-    row.status = BANK_READY if row.validation.get("pass") else BANK_INVALID
+    row.status = BANK_READY if bank_usable(row.bank, row.validation) else BANK_INVALID
     if not maintenance:
         row.open_to_students = row.status == BANK_READY
     row.message = payload.message or (
@@ -703,6 +720,10 @@ def _answer(db: Session, row: QuizBank, q: dict) -> dict[str, Any]:
             "personalEdited": q.get("personalEdited", False), "personalAnswer": q.get("personalAnswer", False),
             "answerPairs": q["answer_pairs"], "correctOrder": q["correct_order"],
             "slides": _slides(db, row, q["question_id"]), "medicalReview": review,
+            'reviewIssues': [issue.get('reason') or issue.get('issue', '')
+                for issue in (((row.validation or {}).get('revision') or {}).get('audit') or {}).get('question_issues', [])
+                if issue.get('question_id') == q['question_id'] and issue.get('severity') == 'error'
+                and not q.get('personalEdited') and q['question_id'] not in (row.validation or {}).get('edits', {})],
             "conflict": conflict["description"] if conflict else "",
             "external": any(r["source_id"] == "EXT" for r in q["source_refs"])}
 
@@ -715,7 +736,7 @@ def read_bank(subject: str, run_id: str, user: CurrentUser = Depends(require_app
     out = {"summary": summary(db, lecture, row, is_admin=user.is_admin, user_id=user.id), "examDate": exam_date_for(db, lecture),
            "sizes": engine.DEFAULT["session"]["sizes"], "defaultSize": engine.DEFAULT["session"]["defaultSize"],
            "session": None, "previousSessions": [], "conceptMap": [], "mastery": None, "undoToken": None}
-    if row.bank and (row.validation or {}).get("pass"):
+    if bank_usable(row.bank, row.validation):
         now = engine.now_ms()
         state = db.get(BankState, (user.id, row.subject, row.run_id))
         current = state.state if state and state.build_id == row.build_id else engine.empty_state()

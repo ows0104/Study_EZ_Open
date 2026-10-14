@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.bank_validation.publication import usable as bank_usable
+
 from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -120,7 +122,7 @@ def material_marks(db: Session, keys: list[LectureKey], *, is_admin: bool = Fals
         QuizBank.subject.in_(subjects), QuizBank.run_id.in_(run_ids),
     )).all()
     for bank in banks:
-        if (is_admin or bank.open_to_students) and bank.bank and (bank.validation or {}).get("pass"):
+        if (is_admin or bank.open_to_students) and bank_usable(bank.bank, bank.validation):
             _touch((bank.subject, bank.run_id), "quiz")
 
     return marks

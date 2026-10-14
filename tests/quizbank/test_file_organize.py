@@ -61,3 +61,14 @@ def test_converter_cannot_drop_add_or_duplicate_authored_questions(bank, tmp_pat
 def test_other_tables_are_not_new_questions():
     assert file_organize.question_ids("| question_id | concept_id |\n| --- | --- |\n| Q001 | C001 |\n"
         "| question_id | options |\n| --- | --- |\n| Q999 | A: detail |") == {"Q001"}
+
+
+def test_blank_line_between_question_rows_keeps_the_question_header():
+    raw = "| question_id | concept_id |\n| --- | --- |\n| Q001 | C001 |\n\n| Q002 | C002 |\n"
+    assert file_organize.question_ids(raw) == {"Q001", "Q002"}
+
+
+def test_blank_line_does_not_make_choice_details_authored_questions():
+    raw = "| question_id | concept_id |\n| --- | --- |\n| Q001 | C001 |\n\n" \
+        "| question_id | options |\n| --- | --- |\n| Q999 | A: detail |"
+    assert file_organize.question_ids(raw) == {"Q001"}

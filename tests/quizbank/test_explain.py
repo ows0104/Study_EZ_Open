@@ -62,6 +62,28 @@ def test_wrong_answer_is_reported_and_not_changed(bank):
     assert [q['answer'] for q in updated['questions']]==[q['answer'] for q in bank['questions']]
 
 
+def test_ox_authored_reasons_are_preserved_and_reworded_explanations_do_not_accumulate(bank):
+    q = next(q for q in bank['questions'] if q['format'] == 'ox')
+    q['answer_units'] = ['기존의 핵심 정정 근거']
+    data = annotations(bank)
+    updated, _ = explain.apply(bank, data)
+    row = next(r for r in data['annotations'] if r['question_id'] == q['question_id'])
+    row['ox_explanation'] = '표현을 바꾼 동일 해설'
+    repeated, _ = explain.apply(updated, data)
+    assert next(q2 for q2 in repeated['questions'] if q2['question_id'] == q['question_id'])['answer_units'] == q['answer_units']
+
+
+def test_ox_without_a_reason_gets_it_once(bank):
+    q = next(q for q in bank['questions'] if q['format'] == 'ox')
+    q['answer_units'] = [q['answer']]
+    data = annotations(bank)
+    updated, _ = explain.apply(bank, data)
+    row = next(r for r in data['annotations'] if r['question_id'] == q['question_id'])
+    row['ox_explanation'] = '새 표현의 판단 근거'
+    repeated, _ = explain.apply(updated, data)
+    assert next(q2 for q2 in repeated['questions'] if q2['question_id'] == q['question_id'])['answer_units'] == [q['answer'], '판정의 근거와 올바른 내용']
+
+
 def test_pool_texts_and_answers_are_immutable_while_explanations_are_added(bank):
     q=next(q for q in bank['questions'] if q['format']=='mcq')
     q['option_pools']=[{'pool_id':'P1','select_count':2,'correct_when':'true','candidates':[
@@ -73,7 +95,7 @@ def test_pool_texts_and_answers_are_immutable_while_explanations_are_added(bank)
     assert changed['true_explanation']=='참인 근거' and changed['false_explanation']=='거짓인 부분과 정정'
 
 
-@pytest.mark.parametrize('verdict,do_review,blocked',[('ok',True,False),('wrong',True,True),('ok',False,True)])
+@pytest.mark.parametrize('verdict,do_review,blocked',[('ok',True,False),('wrong',True,True),('ok',False,True),('pool_missing',True,True)])
 def test_pipeline_adds_explanations_before_auditing_and_keeps_a_revision_block(bank,tmp_path,monkeypatch,verdict,do_review,blocked):
     from tests.quizbank.test_web_audit import RAW,report
     pdf=tmp_path/'a.pdf'
@@ -81,7 +103,11 @@ def test_pipeline_adds_explanations_before_auditing_and_keeps_a_revision_block(b
         doc.new_page().insert_text((40,40),'Source fact');doc.save(pdf)
     raw=tmp_path/'raw.md';raw.write_text(RAW,encoding='utf-8')
     monkeypatch.setattr(run.organize,'organize',lambda *a,**k:(copy.deepcopy(bank),{}))
-    data=annotations(bank);data['annotations'][0].update(verdict=verdict,note='오류 확인' if verdict=='wrong' else '')
+    monkeypatch.setattr(run.slides,'render',lambda *a,**k:([],[]))
+    def unavailable(*a,**k):
+        raise run.repair.RepairError('미해결 정답')
+    monkeypatch.setattr(run.repair,'repair',unavailable)
+    data=annotations(bank);data['annotations'][0].update(verdict='ok' if verdict=='pool_missing' else verdict,note='오류 확인' if verdict=='wrong' else '')
     def author(original,*a,**k):
         updated,checked=explain.apply(original,data)
         return updated,checked,{}
@@ -90,6 +116,7 @@ def test_pipeline_adds_explanations_before_auditing_and_keeps_a_revision_block(b
         assert any(q['option_explanations'] for q in updated['questions'])
         return web_audit.shape_report(report(updated),updated,web_audit.parse_points(RAW),1),[]
     monkeypatch.setattr(web_audit,'inspect',audit)
-    monkeypatch.setattr(run.review,'review',lambda *a,**k:({'counts':{'ok':len(bank['questions']),'doubt':0,'wrong':0},'missing':[]},{}))
+    monkeypatch.setattr(run.review,'review',lambda *a,**k:({'counts':{'ok':len(bank['questions']),'doubt':0,'wrong':0},'missing':[],
+        'requiresRevision':verdict=='pool_missing'},{}))
     result=run.run(raw,pdf,'강의','lecture',[{'id':'S1'},{'id':'S2'}],tmp_path/'out',prompt_version='1.32',do_review=do_review)
     assert result['coverage']['status']=='verified' and result['requiresRevision']==blocked

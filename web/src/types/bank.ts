@@ -17,6 +17,7 @@ export type BankSummary = {
   builtAt: string | null;
   /** 검증을 통과해 공부할 수 있는가. */
   usable: boolean;
+  publicationWarning?: string;
   /** 아래는 관리자에게만. */
   respondedAt?: string | null;
   promptVersion?: string;
@@ -96,6 +97,7 @@ export type BankAnswer = {
   slides: { page: number; url: string }[];
   /** 외부지식 검토. 막지 않고 표시만 한다. */
   medicalReview: BankReview | null;
+  reviewIssues?: string[];
   /** 충돌 문항이면 각 출처의 말과 고른 근거(프롬프트 v1.2). 옛 API 에는 없다. */
   conflict?: string;
   /** 자료 밖 내용을 외부 의학지식으로 썼다(출처 `EXT`). */

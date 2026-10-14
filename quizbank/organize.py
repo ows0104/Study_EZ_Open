@@ -45,12 +45,20 @@ def expected_schema(raw: str, lecture: dict) -> str:
 
 
 def organizer_prompt(raw: str, lecture: dict) -> str:
+    from .question_first import enabled
     meta = {"title": lecture["title"], "sources": lecture["sources"], "prompt_version": lecture.get("prompt_version", "")}
     fill = {"schema_version": expected_schema(raw, lecture),
             "lecture": json.dumps(meta, ensure_ascii=False),
             "raw": json.dumps(clean_response(raw), ensure_ascii=False)}
-    return re.sub(r"\{\{(schema_version|lecture|raw)\}\}", lambda m: fill[m.group(1)],
-                  PROMPT.read_text(encoding="utf-8"))
+    template = PROMPT.read_text(encoding="utf-8")
+    if enabled(lecture.get("prompt_version", "")):
+        template = template.replace("\nLECTURE_METADATA_DATA\n", "\n문항 우선 출력 계약\n"
+            "이 버전은 웹에 포인트·개념도·회상 계획·선행 관계가 없는 것이 정상이다. "
+            "누락 경고를 만들거나 이를 추정·작성하지 않는다. concepts와 retrieval_plan은 빈 배열, "
+            "각 문항의 concept_id는 빈 문자열, prerequisites는 빈 배열로 저장한다. "
+            "기존 Questions의 13열과 모든 상세 표를 question_id로 연결해 보존한다. "
+            "사후 학습 구조는 내용 검수 뒤 별도 CLI가 작성한다.\n\nLECTURE_METADATA_DATA\n")
+    return re.sub(r"\{\{(schema_version|lecture|raw)\}\}", lambda m: fill[m.group(1)], template)
 
 
 # `L1:M1` · `A: cAMP 감소` · `R2) PLC` — ChatGPT 가 짝짓기·순서 항목에 붙이는 라벨.

@@ -1,5 +1,8 @@
 """사용자별 강의 학습도를 읽기만 한다. 은행 교체 전 상태와 비공개 은행은 제외한다."""
 
+from app.bank_validation.publication import usable as bank_usable
+
+
 from sqlalchemy import select, tuple_
 from sqlalchemy.orm import Session, load_only
 
@@ -10,7 +13,7 @@ from app.study_engine.mastery import lecture_mastery
 
 def for_bank(row: QuizBank | None, state: BankState | None, *, is_admin: bool, now: int | None = None) -> dict | None:
     if (not row or (not is_admin and not row.open_to_students)
-            or not row.bank or not (row.validation or {}).get("pass")):
+            or not bank_usable(row.bank, row.validation)):
         return None
     current = state.state if state and state.build_id == row.build_id else empty_state()
     return lecture_mastery(row.bank, current, now=now_ms() if now is None else now)

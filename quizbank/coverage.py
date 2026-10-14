@@ -12,15 +12,21 @@ import jsonschema
 
 from studyez_llm import codex
 from studyez_llm.pdf import render
-from .generate import item_quality_guidance, lecture_scope
-from .schema import BANK, without_retired
-from .validate import validate_bank
-from .points import PLAN, MATCH_REPORT, shape_plan, match_report
+
 from .classify import CLASSIFICATION, apply_classifications
+from .generate import item_quality_guidance, lecture_scope
+from .points import MATCH_REPORT, PLAN, match_report, shape_plan
+from .schema import BANK, QUESTION, without_retired
+from .validate import validate_bank
 
 PROMPTS = Path(__file__).parent / "prompts"
+MAX_SUPPLEMENT_ROUNDS = 2
+MAX_DRAFT_REPAIRS = 1
 WRITTEN = {"type": "object", "properties": {"written": {"type": "boolean", "enum": [True]}},
            "required": ["written"], "additionalProperties": False}
+REPAIRS = {"type": "object", "properties": {"replacements": {"type": "array", "items": {
+    "type": "object", "properties": {"question_index": {"type": "integer"}, "question": QUESTION},
+    "required": ["question_index", "question"], "additionalProperties": False}}}, "required": ["replacements"], "additionalProperties": False}
 
 
 def bank_hash(bank: dict) -> str:
@@ -70,6 +76,26 @@ def _supplement(work: Path, model: str | None) -> tuple[dict, dict]:
     except (OSError, ValueError, jsonschema.ValidationError) as cause:
         raise codex.SessionError(f"보강 파일이 없거나 BANK 형식에 맞지 않습니다: {cause}") from cause
     return patch, info
+
+
+def repair_additions(bank: dict, patch: dict, error: str, work: Path, model: str | None) -> tuple[dict, dict]:
+    """수정 범위는 업로드 전 새 문항으로 제한한다. 기존 은행에는 손대지 않는다."""
+    (work / "bank.json").write_text(json.dumps(bank, ensure_ascii=False), encoding="utf-8")
+    (work / "repair-input.json").write_text(json.dumps({"error": error,
+        "questions": [{"question_index": i, "question": q} for i, q in enumerate(patch["questions"])]}, ensure_ascii=False), encoding="utf-8")
+    prompt = item_quality_guidance() + "\n\n" + (PROMPTS / "repair-supplement.md").read_text(encoding="utf-8")
+    output, info = _call(prompt, REPAIRS, work, model, "보강 문항 오류 수정")
+    corrected = copy.deepcopy(patch)
+    seen = set()
+    for replacement in output["replacements"]:
+        index = replacement["question_index"]
+        if index in seen or not 0 <= index < len(corrected["questions"]):
+            raise codex.SessionError("보강 오류 수정: 새 문항의 유효한 인덱스가 필요합니다.")
+        seen.add(index)
+        corrected["questions"][index] = replacement["question"]
+    if not seen:
+        raise codex.SessionError("보강 오류 수정: 수정된 문항이 없습니다.")
+    return corrected, info
 
 
 def shape_report(report: dict, bank: dict, count: int) -> dict:
@@ -136,7 +162,8 @@ def merge_additions(bank: dict, patch: dict, source_ids: list[str]) -> dict:
 
 
 def audit_and_supplement(bank: dict, pdf: Path, title: str, sources: list[dict], out: Path,
-                         *, model: str | None = None, pdf_source: str = "S1", jokbo: Path | None = None) -> tuple[dict, dict, list[dict]]:
+                         *, model: str | None = None, pdf_source: str = "S1", jokbo: Path | None = None,
+                         point_plan: Path | None = None) -> tuple[dict, dict, list[dict]]:
     work = out / "coverage"
     work.mkdir(parents=True, exist_ok=True)
     with fitz.open(pdf) as doc:
@@ -162,15 +189,27 @@ def audit_and_supplement(bank: dict, pdf: Path, title: str, sources: list[dict],
         source = work / name
         if source.is_file():
             (plan_work / name).write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
-    raw_plan, info = _call((PROMPTS / "points.md").read_text(encoding="utf-8"), PLAN, plan_work, model, "① 出제 포인트 추출")
+    if point_plan is None:
+        prompt = item_quality_guidance() + "\n\n" + (PROMPTS / "points.md").read_text(encoding="utf-8")
+        raw_plan, info = _call(prompt, PLAN, plan_work, model, "① 출제 포인트 추출")
+        usage.append({"step": "출제 포인트 추출", **info})
+    else:
+        previous_context = json.loads((point_plan.parent / "context.json").read_text(encoding="utf-8"))
+        if previous_context != context:
+            raise codex.SessionError("저장된 출제 포인트의 강의·자료·범위가 달라졌습니다.")
+        if jokbo is not None and (point_plan.parent / "jokbo.md").read_text(encoding="utf-8") != (work / "jokbo.md").read_text(encoding="utf-8"):
+            raise codex.SessionError("저장된 출제 포인트의 족보 내용이 달라졌습니다.")
+        raw_plan = json.loads(point_plan.read_text(encoding="utf-8"))
     plan = shape_plan(raw_plan, count)
-    usage.append({"step": "출제 포인트 추출", **info})
+    if point_plan is not None and raw_plan.get("extracted_at"):
+        plan["extracted_at"] = raw_plan["extracted_at"]
     (work / "point-plan.json").write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def inspect(current: dict, label: str) -> dict:
         (work / "bank.json").write_text(json.dumps(current, ensure_ascii=False), encoding="utf-8")
         (work / "point-plan.json").write_text(json.dumps(plan, ensure_ascii=False), encoding="utf-8")
-        output, info = _call((PROMPTS / "coverage.md").read_text(encoding="utf-8"), MATCH_REPORT, work, model, label)
+        prompt = item_quality_guidance() + "\n\n" + (PROMPTS / "coverage.md").read_text(encoding="utf-8")
+        output, info = _call(prompt, MATCH_REPORT, work, model, label)
         report = match_report(output, current, plan, count)
         usage.append({"step": label, **info})
         shaped = shape_report(report, current, count)
@@ -181,7 +220,7 @@ def audit_and_supplement(bank: dict, pdf: Path, title: str, sources: list[dict],
     (work / "before.json").write_text(json.dumps(initial, ensure_ascii=False, indent=2), encoding="utf-8")
     additions = []
     final = initial
-    for round_number in range(1, 4):
+    for round_number in range(1, MAX_SUPPLEMENT_ROUNDS + 1):
         if not final["gapCount"] and not final["mcq_opportunities"]:
             break
         (work / "before.json").write_text(json.dumps(final, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -191,7 +230,17 @@ def audit_and_supplement(bank: dict, pdf: Path, title: str, sources: list[dict],
         usage.append({"step": "누락·객관식 보강", **info})
         (work / "additions.json").write_text(json.dumps(patch, ensure_ascii=False, indent=2), encoding="utf-8")
         (work / f"additions-{round_number}.json").write_text(json.dumps(patch, ensure_ascii=False, indent=2), encoding="utf-8")
-        bank = merge_additions(bank, patch, [source["id"] for source in sources])
+        for repair_round in range(MAX_DRAFT_REPAIRS + 1):
+            try:
+                merged = merge_additions(bank, patch, [source["id"] for source in sources])
+                break
+            except codex.SessionError as cause:
+                if repair_round == MAX_DRAFT_REPAIRS:
+                    raise
+                patch, info = repair_additions(bank, patch, str(cause), work, model)
+                usage.append({"step": "보강 문항 오류 수정", **info})
+                (work / f"repaired-{round_number}-{repair_round + 1}.json").write_text(json.dumps(patch, ensure_ascii=False, indent=2), encoding="utf-8")
+        bank = merged
         additions += patch["questions"]
         final = inspect(bank, "보강 후 원본 재검증")
         if not patch["questions"]:

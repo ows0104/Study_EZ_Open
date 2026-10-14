@@ -93,6 +93,8 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
   const sources = detail.bankSources ?? [];
   const notes = sources.find((s) => s.kind === "notes_current");
   const [job, setJob] = useState<PrequizJob | null>(null);
+  const [pointsJob, setPointsJob] = useState<PrequizJob | null>(null);
+  const [pointsError, setPointsError] = useState("");
   const [runner, setRunner] = useState<RunnerBeat | null>(null);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -109,17 +111,21 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
         setRunner(answer.runner);
       })
       .catch(() => {});
+    api<{ job: PrequizJob | null }>(`${adminBase}/prequiz-job?kind=points`)
+      .then((answer) => setPointsJob(answer.job))
+      .catch(() => {});
   }, [adminBase]);
   useEffect(load, [load]);
 
   const moving = jobMoving(job);
+  const pointsMoving = jobMoving(pointsJob);
   const failureSuperseded = bank?.status === "ready" && Boolean(bank.builtAt)
     && Date.parse(bank.builtAt!) > Date.parse(job?.updatedAt || "");
   useEffect(() => {
-    if (!moving) return;
+    if (!moving && !pointsMoving) return;
     const timer = window.setInterval(load, 10_000);
     return () => window.clearInterval(timer);
-  }, [moving, load]);
+  }, [moving, pointsMoving, load]);
 
   // 끝나면 강의 상세를 다시 읽는다 — 요약(문항 수·검토)이 거기서 온다.
   const wasMoving = useRef(false);
@@ -138,6 +144,12 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
     }
     setBusy(autoSend ? "auto" : "make");
     setError("");
+    setPointsError("");
+    // 원본 준비는 웹 답변을 기다리지 않는다. 실패해도 웹 전송은 계속할 수 있다.
+    const pointsRequest = api<{ job: PrequizJob }>(`${adminBase}/prequiz-job?kind=points`, {
+      method: "POST",
+    }).then((answer) => setPointsJob(answer.job))
+      .catch((cause: Error) => setPointsError(`출제포인트 준비 요청 실패: ${cause.message}`));
     try {
       // 서명 URL 은 수명이 짧아 누른 순간에 받는다.
       const files = [];
@@ -161,6 +173,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
+      await pointsRequest;
       setBusy("");
     }
   }
@@ -277,6 +290,13 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
           </div>
         </div> : null}
         {!bank?.shareUrl || showSetup ? <ExtensionSetup minimum={extensionInputMinimum("bank", true)} /> : null}
+        {pointsMoving && pointsJob ? <p className="panel-hint">
+          출제포인트 준비 — {pointsJob.state === "queued" ? "러너를 기다리는 중" : progressLine(pointsJob)}
+          {runnerAlive(runner) ? "" : " · 러너가 꺼져 있다"}
+        </p> : pointsJob?.state === "done" ? <p className="panel-hint">출제포인트 준비됨</p> : null}
+        {pointsError || pointsJob?.state === "failed" ? <p className="notice is-error">
+          {pointsError || pointsJob?.message}
+        </p> : null}
       </PanelGroup>
       <PanelGroup tone="main" title="Main-Quiz">
         {bank?.usable ? <StudyCard lecture={lecture} bank={bank} tools={
@@ -300,7 +320,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
         </> : null}
         {bank?.revision ? <details className="panel-hint">
           <summary>CLI 검수 결과 — 자동 수정·보완 후 미해결 항목</summary>
-          <p>저장된 응답과 원본 자료로 CLI가 검토·수정·누락 보완을 수행합니다. 아래 기록을 확인한 뒤 Main-Quiz 다시 만들기를 요청하세요.</p>
+          <p>남은 검수 지적을 보존한 기록입니다. 게시된 문항은 계속 사용할 수 있으며, 필요할 때 문항 검토·수정 또는 Main-Quiz 다시 만들기를 요청하세요.</p>
           <button className="is-quiet" onClick={() => void navigator.clipboard.writeText(
             "아래 CLI 검수 결과에 따라 로컬 문제은행을 검토·수정하고 누락을 보완해주세요. "
             + "저장된 응답과 원본 자료를 사용하고 웹 대화를 호출하지 마세요.\n\n"

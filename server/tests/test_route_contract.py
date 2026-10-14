@@ -76,6 +76,7 @@ GET /api/admin/feedback
 GET /api/admin/feedback/{feedback_id}/screenshots/{index}
 GET /api/admin/lectures/{subject}/{run_id}/bank
 GET /api/admin/lectures/{subject}/{run_id}/bank-response
+GET /api/admin/lectures/{subject}/{run_id}/bank/source-context
 GET /api/admin/lectures/{subject}/{run_id}/cards/{kind}
 GET /api/admin/lectures/{subject}/{run_id}/prequiz-job
 GET /api/admin/overview

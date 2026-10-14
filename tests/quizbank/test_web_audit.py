@@ -9,6 +9,7 @@ from quizbank import run, web_audit
 from quizbank.schema import without_retired
 from quizbank.validate import validate_dropping
 from studyez_llm.codex import SessionError
+from server.app.bank_validation.pool_checks import candidates
 
 RAW = """## 0. Exam Point Plan
 | point_id | point | source_refs |
@@ -27,6 +28,9 @@ def report(bank):
     return {"summary": "검토", "pages": [{"page": 1, "status": "checked", "note": ""}],
         "checks": [{"point_id": "P001", "status": "covered", "question_ids": [bank["questions"][0]["question_id"]], "note": "직접 회수"}],
         "plan_issues": [], "question_issues": [], "duplicates": [],
+        'pool_checks': [{**{k: c[k] for k in ('question_id', 'pool_id', 'candidate_id', 'content_hash')},
+                         'true_verdict': 'ok', 'false_verdict': 'ok', 'criterion_verdict': 'ok',
+                         'note': '테스트 검수 근거'} for c in candidates(bank)],
         "classifications": [{"question_id": q["question_id"], "recommended_mode": q["mcq_mode"], "reason": "학습 목표 확인"}
                             for q in bank["questions"] if q["format"] in ("mcq", "multi_select")]}
 
@@ -66,7 +70,7 @@ def test_pdf_point_locations_expand_ranges_and_never_invent_page_one(bank):
     checked = web_audit.shape_report(valid, bank, points, 7)
     assert not any(p["points"] for p in checked["pages"])
 
-def test_missing_condition_duplicates_or_wrong_mode_require_web_revision(bank):
+def test_missing_condition_duplicates_or_wrong_mode_require_cli_repair(bank):
     original = copy.deepcopy(bank)
     points = web_audit.parse_points(RAW)
     for kind in ("partial", "duplicate", "mode"):
@@ -82,7 +86,40 @@ def test_missing_condition_duplicates_or_wrong_mode_require_web_revision(bank):
         assert checked["requiresRevision"] and checked["status"] == "partial"
         assert bank == original
 
-def test_new_web_flow_keeps_questions_and_never_calls_supplement(bank, tmp_path, monkeypatch):
+
+def test_source_management_is_recorded_separately_from_exam_coverage(bank):
+    points = web_audit.parse_points(RAW) + [{"point_id": "META", "point": "복원 실패의 출처 관리",
+                                            "source_refs": "S1 p.1; S2 미제공 그림"}]
+    raw = report(bank)
+    raw["checks"].append({"point_id": "META", "status": "excluded", "question_ids": [],
+                          "note": "미제공 과거 그림의 복원 상태는 출처 관리 기록으로 보존하며 시험 지식 목표가 아니다."})
+    raw["plan_issues"] = [{"kind": "uncertain", "point_ids": ["META"], "pages": [1],
+                           "fact": "source management", "reason": "관리 기록을 인출 누락으로 세지 않는다."}]
+    checked = web_audit.shape_report(raw, bank, points, 1)
+    assert checked["status"] == "verified" and not checked["requiresRevision"]
+    assert checked["pointCount"] == checked["coveredPointCount"] == 1
+    assert checked["excludedPointCount"] == 1 and checked["excludedPoints"][0]["point_id"] == "META"
+    assert len(checked["pages"][0]["points"]) == 1
+    raw["checks"][-1]["note"] = ""
+    with pytest.raises(SessionError, match="제외"):
+        web_audit.shape_report(raw, bank, points, 1)
+
+
+def test_exclusion_never_hides_missing_facts_unreadable_pages_or_empty_scope(bank):
+    points = web_audit.parse_points(RAW)
+    raw = report(bank)
+    raw["checks"][0].update(status="excluded", question_ids=[], note="source management")
+    checked = web_audit.shape_report(raw, bank, points, 1)
+    assert checked["requiresRevision"]  # A bank still needs genuine exam targets.
+    points.append({"point_id": "P2", "point": "실제 강의 지식", "source_refs": "S1 p.1"})
+    raw["checks"].append({"point_id": "P2", "status": "covered", "question_ids": [bank["questions"][0]["question_id"]], "note": "인출"})
+    raw["plan_issues"] = [{"kind": "missing_point", "point_ids": ["P001"], "pages": [1], "fact": "확인된 지식 누락", "reason": "exclude로 감출 수 없다"}]
+    assert web_audit.shape_report(raw, bank, points, 1)["requiresRevision"]
+    raw["plan_issues"] = []
+    raw["pages"][0]["status"] = "unreadable"
+    assert web_audit.shape_report(raw, bank, points, 1)["requiresRevision"]
+
+def test_passing_authored_bank_needs_no_repair_or_supplement(bank, tmp_path, monkeypatch):
     pdf = tmp_path / "a.pdf"
     with fitz.open() as doc:
         doc.new_page().insert_text((40, 40), "Source fact")
@@ -91,18 +128,21 @@ def test_new_web_flow_keeps_questions_and_never_calls_supplement(bank, tmp_path,
     raw_path.write_text(RAW, encoding="utf-8")
     monkeypatch.setattr(run.organize, "organize", lambda *a, **k: (copy.deepcopy(bank), {}))
     def forbid(*a, **k):
-        raise AssertionError("CLI must not supplement web-authored questions")
+        raise AssertionError("Passing questions need no repair or supplement")
     monkeypatch.setattr(run.coverage, "audit_and_supplement", forbid)
     monkeypatch.setattr(run, "validate_dropping", forbid)
+    monkeypatch.setattr(run.repair, "repair", forbid)
+    monkeypatch.setattr(run.slides, "render", lambda *a, **k: ([], []))
     def fake_call(prompt, schema, work, model, label):
         assert web_audit.item_quality_guidance() in prompt
         assert len(json.loads((work / "source-pages.json").read_text(encoding="utf-8"))) == 1
         assert "P001" in (work / "point-plan.json").read_text(encoding="utf-8")
         return report(bank), {}
     monkeypatch.setattr(web_audit, "_call", fake_call)
+    monkeypatch.setattr(run.review, "review", lambda *a, **k: ({"counts": {"wrong": 0, "doubt": 0}, "missing": []}, {}))
     out = tmp_path / "out"
     result = run.run(raw_path, pdf, "강의", "lecture", [{"id": "S1"}, {"id": "S2"}], out,
-                     prompt_version="1.29", do_review=False)
+                     prompt_version="1.29")
     assert result["pass"] and not result["requiresRevision"]
     assert json.loads((out / "bank.json").read_text(encoding="utf-8")) == bank
     assert result["coverage"]["addedQuestions"] == result["coverage"]["addedMcq"] == 0

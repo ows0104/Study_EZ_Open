@@ -1,6 +1,7 @@
 """V1 generation preserves authored pools and binds their medical review."""
 from quizbank import organize, review
 from server.app.bank_validation.choices import pool_review_identity
+from server.app.bank_validation.pool_checks import candidates
 
 
 def test_v1_contract_is_bound_to_prompt_metadata(monkeypatch):
@@ -24,7 +25,10 @@ def test_review_covers_every_truth_pair_and_is_bound_to_content():
     bank = {"source_conflicts": [], "questions": [question]}
     prompt = review.review_prompt(bank, "강의")
     assert "검토할 거짓 문장" in prompt and "정정 근거" in prompt and "모든 풀의 모든 후보" in prompt
-    shaped = review.shape({"summary": "", "reviews": [{"question_id": "Q1", "verdict": "ok", "note": "", "suggested_answer": ""}]}, bank)
+    checks = [{**{k: c[k] for k in ('question_id', 'pool_id', 'candidate_id', 'content_hash')},
+               'true_verdict': 'ok', 'false_verdict': 'ok', 'criterion_verdict': 'ok',
+               'note': '참·거짓의 근거 확인'} for c in candidates(bank)]
+    shaped = review.shape({"summary": "", "reviews": [{"question_id": "Q1", "verdict": "ok", "note": "", "suggested_answer": ""}], 'pool_checks': checks}, bank)
     proof = shaped["reviews"][0]["option_pool_hash"]
     assert proof == pool_review_identity(question)
     question["option_pools"][0]["candidates"][0]["false_text"] = "미검토 변경"

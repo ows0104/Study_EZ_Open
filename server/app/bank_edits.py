@@ -9,6 +9,8 @@ import copy
 from app.bank_validation.schema import without_retired
 from app.bank_validation.choice_mode import choice_mode
 from app.bank_validation.validate import validate_dropping
+from app.bank_validation.validate import validate_bank
+from app.bank_validation.publication import stamp as publication_stamp
 
 
 def _content(question):
@@ -42,8 +44,10 @@ def with_edits(bank: dict, validation: dict, edits: dict, source_ids: list[str])
     for q in draft["questions"]:
         if isinstance(q.get("prerequisites"), list):
             q["prerequisites"] = [p for p in q["prerequisites"] if p not in deleted]
-    clean, checked = validate_dropping(draft, source_ids)
-    return clean, {**{k: v for k, v in validation.items() if k not in ("maintenance", "dropped")}, **checked, "edits": edits}
+    permitted = bool((validation.get('publication') or {}).get('allowed'))
+    clean, checked = (draft, validate_bank(draft, source_ids)) if permitted else validate_dropping(draft, source_ids)
+    merged = {**{k: v for k, v in validation.items() if k not in ("maintenance", "dropped")}, **checked, "edits": edits}
+    return clean, publication_stamp(clean, merged, source_ids, allow_unresolved=permitted)
 
 
 def reapply(bank: dict, validation: dict, previous: dict, source_ids: list[str]) -> tuple[dict, dict]:
@@ -66,7 +70,11 @@ def reapply(bank: dict, validation: dict, previous: dict, source_ids: list[str])
 def question_errors(bank: dict, validation: dict, edits: dict, qid: str, source_ids: list[str]) -> list[str]:
     """An edited card must pass even if validate_dropping would simply hide it."""
     draft, checked = with_edits(bank, validation, edits, source_ids)
-    errors = list(checked["errors"])
+    if (validation.get('publication') or {}).get('allowed'):
+        structural = validate_bank(draft, source_ids, check_quality=False)
+        errors = list(structural['errors']) + [e for e in checked['errors'] if e.startswith(qid + ': ') or e.startswith(qid + ' ')]
+    else:
+        errors = list(checked["errors"])
     errors += [e for d in checked.get("dropped", []) if d["question_id"] == qid for e in d["errors"]]
     # Also validate schema errors before traversing the structured question.
     if not errors and not any(q["question_id"] == qid for q in draft["questions"]):

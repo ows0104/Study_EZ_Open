@@ -53,6 +53,7 @@ export function BankStart({ base, info, finished, lecture, onStarted, onUndo, un
       <DailyGoal plan={info.lectureGoal} showMain={info.lectureGoal?.met}
         onContinue={() => void start()} busy={busy} />
       <BankCoverage value={info.summary.coverage} />
+      {info.summary.publicationWarning ? <p className="bank-note">{info.summary.publicationWarning}</p> : null}
       {error ? <p className="notice is-error">{error}</p> : null}
       {info.conceptMap?.length ? <ConceptMap concepts={info.conceptMap} /> : <LectureMastery value={info.mastery} />}
       <div className="bank-start-row bank-secondary-actions">

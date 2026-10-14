@@ -19,12 +19,14 @@ WRITTEN = {"type": "object", "properties": {"written": {"type": "boolean", "enum
 def question_ids(raw: str) -> set[str]:
     ids, header = set(), None
     for line in raw.splitlines():
+        if not line.strip():
+            continue
         if not line.lstrip().startswith("|"):
             header = None
             continue
         cells = [c.strip().strip("`*") for c in line.strip().strip("|").split("|")]
         if "question_id" in cells:
-            header = cells if "concept_id" in cells else None
+            header = cells if "concept_id" in cells or "question" in cells else None
             continue
         if header and cells and not re.fullmatch(r":?-+:?", cells[0]):
             ids.add(cells[header.index("question_id")])

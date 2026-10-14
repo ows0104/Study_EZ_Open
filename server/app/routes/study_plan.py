@@ -1,5 +1,8 @@
 """시험별 오늘 학습 목표. 시간표의 같은 과목 첫 시험에 범위를 자동 연결한다."""
 
+from app.bank_validation.publication import usable as bank_usable
+
+
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query
@@ -67,7 +70,7 @@ def build_study_plan(target: int, subject: str | None, run_id: str | None,
         if not user.is_admin:
             query = query.where(QuizBank.open_to_students.is_(True))
         banks = {(b.subject, b.run_id): b for b in db.scalars(query)
-                 if b.bank and b.bank.get("questions") and (b.validation or {}).get("pass")}
+                 if b.bank and b.bank.get("questions") and bank_usable(b.bank, b.validation)}
         states = {(s.subject, s.run_id): s for s in db.scalars(select(BankState).options(load_only(
             BankState.subject, BankState.run_id, BankState.user_id, BankState.build_id, BankState.state,
         )).where(BankState.user_id == user.id, tuple_(BankState.subject, BankState.run_id).in_(keys)))}

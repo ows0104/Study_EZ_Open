@@ -112,6 +112,8 @@ test('manual input stores only URLs without an extension, source PDF, or existin
 test('bank creation and recreation wait for a person to send; only the separate tool sends automatically', async () => {
   const requests = [];
   const jobs = [];
+  const events = [];
+  let rejectPoints = false;
   const mocked = {
     ...dependencies,
     react: {
@@ -122,14 +124,18 @@ test('bank creation and recreation wait for a person to send; only the separate 
       useRef: value => ({current:value}),
     },
     '../api': { api: async (url, options) => {
-      if (options?.method === 'POST') {jobs.push(url); return {job: {state: 'queued'}};}
+      if (options?.method === 'POST') {
+        jobs.push(url); events.push('job');
+        if (rejectPoints && url.endsWith('kind=points')) throw new Error('Runner queue unavailable');
+        return {job: {state: 'queued'}};
+      }
       return {url:'https://example.com/notes.pdf'};
     } },
     '../bridge/previewBridge': {
       extensionCompatible: () => true,
       extensionInputMinimum: () => '1.3.11',
       absoluteUrl: url => url,
-      requestPreview: async request => { requests.push(request); },
+      requestPreview: async request => { events.push('web'); requests.push(request); },
       bumpPreviewVersion() {},
     },
     './prompt': { renderBankPrompt: () => 'Bank prompt' },
@@ -173,12 +179,16 @@ test('bank creation and recreation wait for a person to send; only the separate 
   const saved = controls(props.detail);
   await click(saved.find(element => element.props.label === '새로 만들기'),false);
   await click(saved.find(element => element.props.label === '자동전송'),true);
-  assert.equal(jobs.length, 0); // Link creation never queues a CLI session.
+  assert.equal(jobs.length, 4);
+  assert.ok(jobs.every(url => url.endsWith('/prequiz-job?kind=points'))); // Original-only preparation accompanies WEB.
+  assert.deepEqual(events, ['job','web','job','web','job','web','job','web']);
   const count = requests.length;
   fresh.find(element => element.type === 'button' && element.props.className === 'panel-action-hit'
     && element.props.children[0].props.children === 'Main-Quiz').props.onClick();
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(requests.length, count);
-  assert.equal(jobs.length, 1);
-  assert.ok(jobs[0].endsWith('/prequiz-job?kind=bank'));
+  assert.equal(jobs.length, 5);
+  assert.ok(jobs.at(-1).endsWith('/prequiz-job?kind=bank'));
+  rejectPoints = true;
+  await click(primary,false); // A preparation failure cannot prevent WEB from opening.
 });

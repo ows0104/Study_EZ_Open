@@ -82,6 +82,7 @@ HUMAN_FILES = frozenset({
     "CHOSEN.json",      # 어느 시도를 왜 골랐나 (`chosen.py`). 2026-09-15
     "preview.md",       # 공유된 예습 대화. 다시 못 받는다
     "pre_target.json",  # 작년 것으로 만든 예습을 올해 어느 강의에 붙이나
+    "pre_source_slides.json",  # 사람이 검토한 예습 문항의 원본 PDF 페이지 연결
     "note.md",          # 사람이 그 편에 적어 둔 지시
 })
 

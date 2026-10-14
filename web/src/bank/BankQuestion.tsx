@@ -196,6 +196,7 @@ export function AnswerBody({ question: q, answer, preload }: {
       {answer.external ? (
         <p className="bank-note">이 문항에는 강의자료·족보에 없는 내용(외부 의학지식)이 들어 있습니다.</p>
       ) : null}
+      {answer.reviewIssues?.map((issue, index) => <p className="bank-review is-doubt" key={index}><b>문항 검수 · 미해결</b> {issue}</p>)}
       {review && review.verdict !== "ok" ? (
         <p className={`bank-review is-${review.verdict}`}>
           <b>외부지식 검토 · {review.verdict === "wrong" ? "틀림" : "의심"}</b> {review.note}

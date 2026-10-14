@@ -19,6 +19,7 @@ from app.jobs.queue import MAX_RUNNING, RUNNER_NAME, open_job_of, queue_order
 from app.jobs.views import board, job_row, runner_row
 from app.models import (
     JOB_BANK,
+    JOB_BANK_POINTS,
     JOB_BUTTON,
     JOB_CANCELED,
     JOB_DONE,
@@ -95,7 +96,7 @@ def _no_material(db: Session, lecture: Lecture, kind: str) -> str:
         notes = db.scalars(select(Asset.id).where(
             Asset.subject == lecture.subject, Asset.run_id == lecture.run_id, Asset.kind == "notes_current")).first()
         return "" if notes else "올해 강의록이 아직 없습니다. Main-Quiz는 올해 필기로 만듭니다."
-    if kind == JOB_MAIN:
+    if kind in (JOB_MAIN, JOB_BANK_POINTS):
         notes = db.scalars(
             select(Asset.id).where(
                 Asset.subject == lecture.subject,
@@ -148,6 +149,9 @@ def request_prequiz(
     blocked = _no_material(db, lecture, kind)
     if blocked:
         raise HTTPException(400, blocked)
+
+    if kind == JOB_BANK_POINTS:
+        db.refresh(lecture, with_for_update=True)
 
     open_job = open_job_of(db, lecture.subject, lecture.run_id, kind)
     if open_job is not None and open_job.state == JOB_HELD and open_job.ask:

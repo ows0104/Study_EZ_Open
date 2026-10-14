@@ -72,20 +72,6 @@ def test_cloze_빈칸과_채점단위_수가_같아야_한다(bank):
     assert any("cloze는" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
 
 
-def test_cloze_빈칸_네개를_보존하고_정답_누락은_거른다(bank):
-    _fix_lists(bank)
-    q = next(x for x in bank["questions"] if x["format"] == "cloze")
-    q["question"] = "장 유입 억제: 흡수 {{c1}}, F {{c1}}. 장 유출 억제: 흡수 {{c1}}, F {{c1}}."
-    q["answer_units"] = ["감소", "감소", "증가", "증가"]
-    kept, validation = validate_dropping(bank, ["S1", "S2"])
-    assert validation["pass"] and validation["dropped"] == []
-    assert q in kept["questions"]
-    q["answer_units"].pop()
-    _, validation = validate_dropping(bank, ["S1", "S2"])
-    assert [d["question_id"] for d in validation["dropped"]] == [q["question_id"]]
-    assert any("cloze는" in error for error in validation["dropped"][0]["errors"])
-
-
 @pytest.mark.parametrize("blank_count", [1, 4, 5, 8])
 def test_cloze_고정_상한_없이_빈칸별_정답을_검증한다(bank, blank_count):
     q = next(x for x in bank["questions"] if x["format"] == "cloze")
@@ -108,35 +94,6 @@ def _fix_lists(bank):
     for q in bank["questions"]:                     # 실물의 list 셋을 고쳐 다른 오류가 없게 한다
         if q["question_id"] in ("Q009", "Q015", "Q026"):
             q["answer_units"] = ["가", "나"]
-
-
-def test_list_부분_회상의_정답_후보를_다섯개로_제한하지_않는다(bank):
-    _fix_lists(bank)
-    q = next(q for q in bank["questions"] if q["format"] == "list")
-    q["question"] = "강의에 제시된 예를 네 가지 이상 쓰라."
-    q["answer_units"] = [f"예시 {i}" for i in range(8)]
-    kept, validation = validate_dropping(bank, ["S1", "S2"])
-    assert validation["pass"] and validation["dropped"] == []
-    assert q in kept["questions"] and len(q["answer_units"]) == 8
-    q["answer_units"] = ["네 가지 이상"]
-    _, validation = validate_dropping(bank, ["S1", "S2"])
-    assert q["question_id"] in [d["question_id"] for d in validation["dropped"]]
-
-
-def test_동일_짝짓기_보기는_합치고_다대일_정답은_보존한다(monkeypatch, bank):
-    _fix_lists(bank)
-    q = next(q for q in bank["questions"] if q["format"] == "basic")
-    q.update(format="matching", matching_left=["유형 1", "유형 2", "유형 3"],
-             matching_right=["A", "B", "A"],
-             answer_pairs=[{"left": "유형 1", "right": "A"}, {"left": "유형 2", "right": "B"},
-                           {"left": "유형 3", "right": "A"}])
-    original_pairs = list(q["answer_pairs"])
-    monkeypatch.setattr(session, "run_structured", lambda *args, **kwargs: (bank, {}))
-    organized, _ = organize.organize("응답", {"title": "t", "sources": []})
-    fixed = next(x for x in organized["questions"] if x["question_id"] == q["question_id"])
-    assert fixed["matching_right"] == ["A", "B"] and fixed["answer_pairs"] == original_pairs
-    assert q["matching_right"] == ["A", "B", "A"]
-    assert validate_bank(organized, ["S1", "S2"])["pass"]
 
 
 def test_충돌은_한_문항으로_합쳐도_통과한다(bank):

@@ -9,8 +9,9 @@ from pathlib import Path
 import fitz
 
 from studyez_llm.pdf import render
+
 from .coverage import _call
-from .points import _array, _object, STR
+from .points import STR, _array, _object
 from .session import SessionError
 from .slides import cited_pages
 
@@ -65,12 +66,16 @@ def apply(bank: dict, report: dict) -> tuple[dict, dict]:
                         raise SessionError(f'{qid}: 빈 보기 풀 해설')
                     c[key] = annotation[key]
         q['option_explanations'] = explanations
-        if ox and ox not in q['answer_units']:
+        # Existing authored reasons are scoring units, not a list to which each
+        # newly worded CLI explanation should be appended. The new explanation
+        # remains in the report for inspection; repairs own scoring changes.
+        has_reason = any(u.strip().upper() not in ('O', 'X') for u in q['answer_units'])
+        if ox and not has_reason:
             q['answer_units'].append(ox)
     if seen != set(questions):
         raise SessionError('일부 문항의 CLI 해설이 없습니다.')
     return out, {'annotatedCount': len(seen), 'requiresRevision': any(
-        row['verdict'] != 'ok' for row in report['annotations']), **report}
+        row['verdict'] == 'wrong' for row in report['annotations']), **report}
 
 
 def write(bank: dict, pdf: Path, title: str, out: Path, *, pdf_source: str = 'S1',

@@ -50,7 +50,8 @@ JOB_MAIN = "main"
 # Quiz Bank(2026-10-04). 재료는 관리자가 ChatGPT 에서 받아 온 응답이고(`quiz_bank.raw_response`),
 # 러너는 그것을 정리·검증·검토만 한다 — 만드는 것은 ChatGPT 다.
 JOB_BANK = "bank"
-JOB_KINDS = frozenset({JOB_PRE, JOB_MAIN, JOB_BANK})
+JOB_BANK_POINTS = "points"
+JOB_KINDS = frozenset({JOB_PRE, JOB_MAIN, JOB_BANK, JOB_BANK_POINTS})
 
 
 class PrequizJob(Base):
@@ -65,7 +66,7 @@ class PrequizJob(Base):
     subject: Mapped[str] = mapped_column(Text, nullable=False)
     # **올해** run_id다. 예습은 작년 필기로 만들지만 누르는 자리는 올해 강의다.
     run_id: Mapped[str] = mapped_column(String(32), nullable=False)
-    # `pre` | `main` | `bank`. 기존 행을 위해 서버 기본값을 같이 준다 — 이미 서 있는
+    # `pre` | `main` | `bank` | `points`. 기존 행을 위해 서버 기본값을 같이 준다 — 이미 서 있는
     # DB에 `app.cli`가 이 값으로 채워 넣는다.
     kind: Mapped[str] = mapped_column(
         String(8), nullable=False, default=JOB_PRE, server_default=JOB_PRE

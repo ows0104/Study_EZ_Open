@@ -14,29 +14,47 @@ def _text(value: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[*_`]+", "", text)).strip()
 
 
+def _without_candidates(stem: str, answer: str, question: dict) -> str:
+    """Ignore an answer only at an explicit alternative, not elsewhere in prose."""
+    spans = []
+    basic = question['format'] == 'basic'
+    prefix, separator, comparison = stem.partition(' 중 ')
+    if separator and (basic or question.get('retrieval_direction') == 'discrimination') \
+            and re.search(r'가장|어느|어떤|무엇|어디|어떻게|쪽|고르|선택|판단|분류', comparison):
+        separators = list(re.finditer(r'[·,/]|(?:와|과)\s+', prefix))
+        boundaries = [0] + [m.end() for m in separators]
+        ends = [m.start() for m in separators] + [len(prefix)]
+        parts = [prefix[start:end].strip() for start, end in zip(boundaries, ends)]
+        if len(parts) >= 2 and all(parts) and len(set(parts)) >= 2:
+            for start, end in zip(boundaries, ends):
+                piece = prefix[start:end].rstrip()
+                if piece.strip() == answer or piece.endswith(' ' + answer):
+                    # Preserve preceding context: an earlier asserted answer
+                    # must still be detected even when the last term is a choice.
+                    spans.append((start + len(piece) - len(answer), start + len(piece)))
+    if basic:
+        for match in re.finditer(r'(?P<a>[^\s,?]+?)인가\s*[,?]\s*(?P<b>[^\s,?]+?)인가', stem):
+            if match['a'] != match['b']:
+                spans.extend(match.span(k) for k in ('a', 'b') if match[k] == answer)
+    for start, end in sorted(set(spans), reverse=True):
+        stem = stem[:start] + ' ' * (end - start) + stem[end:]
+    return stem
+
+
 def leaked_units(question: dict) -> list[str]:
     """Conservative literal disclosure check, never applied to choice candidates."""
     if question["format"] not in ("basic", "cloze", "list"):
         return []
     stem = _text(question["question"])
-    # Enumerated candidates still require a comparison. Their presence alone
-    # does not identify the answer (e.g. "UFH·LMWH·fondaparinux 중 … 가장 …?").
-    candidate_prefix, separator, comparison = stem.partition(" 중 ")
-    candidates = [item.strip() for item in re.split(r"[·,/]", candidate_prefix)]
-    choosing = (question.get("retrieval_direction") == "discrimination" and separator
-                and len(candidates) >= 2 and all(candidates)
-                and re.search(r"가장|어느|어떤|무엇", comparison))
     found = []
     for unit in question["answer_units"]:
         answer = _text(unit)
-        if choosing and answer in candidates and answer not in comparison:
-            continue
         # A one-letter symbol or a one-syllable suffix is not useful evidence.
         if len(answer) < 2 or answer in GENERIC_PREDICATES:
             continue
         boundary = (r"(?<![a-z0-9])" if answer[0].isascii() and answer[0].isalnum() else "")
         boundary_end = (r"(?![a-z0-9])" if answer[-1].isascii() and answer[-1].isalnum() else "")
-        if re.search(boundary + re.escape(answer) + boundary_end, stem):
+        if re.search(boundary + re.escape(answer) + boundary_end, _without_candidates(stem, answer, question)):
             found.append(unit)
     return found
 

@@ -77,6 +77,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--force", action="store_true",
                         help="publish: 이미 올린 표시를 무시하고 다시 올린다. "
                              "prequeue·watch: 이미 만든 편도 버리고 다시 만든다 (--run-id 필요)")
+    parser.add_argument("--points-only", action="store_true", help="bank: 원본 독립 출제포인트만 미리 추출·저장")
     parser.add_argument("--notes-only", action="store_true",
                         help="publish: 강의록만 올리고 덱·run-meta·예습 링크는 미룬다")
     parser.add_argument("--no-gate", action="store_true",
