@@ -383,7 +383,11 @@ async function publish() {
     if (watch.mode === "bank" && state.answer?.trimEnd().endsWith("STUDYEZ_BANK_COMPLETE")
         && state.answer.length >= 200 && state.answer.length <= 2_000_000
         && state.answer !== lastBankAnswer) {
-      if (!sendShareMessage({ type: "STUDYEZ_BANK_ANSWER", raw: state.answer, url })) return "pending";
+      const stored = await new Promise((resolve) => {
+        if (!sendShareMessage({ type: "STUDYEZ_BANK_ANSWER", raw: state.answer, url },
+            (response) => resolve(response?.ok === true))) resolve(false);
+      });
+      if (!stored) return "pending";
       lastBankAnswer = state.answer;
     }
     if (url !== lastConversationUrl) {

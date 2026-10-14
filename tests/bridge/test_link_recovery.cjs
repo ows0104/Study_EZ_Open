@@ -193,6 +193,20 @@ test('bank defers state API calls while the answer is generating', async () => {
   assert.equal(s.sent.length, 0);
 });
 
+test('bank retries an answer when extension storage did not acknowledge it', async () => {
+  const s = shareFixture();
+  vm.runInContext('watch = { mode: "bank" };', s.context);
+  s.context.accessToken = async () => 'token';
+  s.context.conversationState = async () => ({finished:true, currentNode:'answer',
+    answer:'Question '.repeat(50) + 'STUDYEZ_BANK_COMPLETE'});
+  s.context.chrome.runtime.sendMessage = (message, callback) => {
+    s.sent.push(message); callback?.({ok:false});
+  };
+  assert.equal(await s.context.publish(), 'pending');
+  assert.equal(await s.context.publish(), 'pending');
+  assert.equal(s.sent.filter(m => m.type === 'STUDYEZ_BANK_ANSWER').length, 2);
+});
+
 test('bank state 429 backs off, then resumes and clears the delay after saving', async () => {
   const s = shareFixture();
   vm.runInContext('watch = { mode: "bank" };', s.context);

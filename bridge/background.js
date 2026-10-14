@@ -259,17 +259,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .get(key)
       .then(async (stored) => {
         const watch = stored[key];
-        if (!watch || watch.mode !== "bank") return;
+        if (!watch || watch.mode !== "bank") { sendResponse({ ok: false }); return; }
         const url = isConversationUrl("chatgpt", message.url || "") ? message.url : "";
         const shareUrl = shareIdentity("chatgpt", message.shareUrl || "") ? message.shareUrl : undefined;
         await chrome.storage.session.set({
           [bankKey(watch.webappTabId, watch.lectureId)]: { lectureId: watch.lectureId, raw, url,
             ...(shareUrl ? { shareUrl } : {}) },
         });
+        sendResponse({ ok: true });
         await deliverPending(watch.webappTabId);
       })
-      .catch(() => undefined);
-    return false;
+      .catch(() => sendResponse({ ok: false }));
+    return true;
   }
 
   if (message?.type === MESSAGES.linkSaved) {
