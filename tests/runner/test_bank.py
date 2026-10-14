@@ -70,6 +70,17 @@ def test_point_job_only_prepares_points_and_does_not_publish_a_bank(tmp_path, mo
     assert reports[-1]["state"] == "failed"
 
 
+def test_web_attached_pdf_is_retained_when_a_newer_local_version_arrives(tmp_path, monkeypatch):
+    folder = tmp_path / "약리학/필기/2026"
+    folder.mkdir(parents=True)
+    old, new = folder / "lecture-v1.pdf", folder / "lecture-v2.pdf"
+    old.write_bytes(b"original")
+    new.write_bytes(b"newer")
+    monkeypatch.setattr(bank, "_notes_pdf", lambda *args: new)
+    sources = [{"id": "S1", "kind": "notes_current", "filename": old.name}]
+    assert bank._attached_pdf(tmp_path, "약리학", "2026", "2025", tmp_path, "demo", sources) == old
+
+
 def _finish(tmp_path, monkeypatch, code, lines):
     worker, seen = _agent(tmp_path), []
     monkeypatch.setattr(worker, "report", lambda job, **f: seen.append(f) or {})

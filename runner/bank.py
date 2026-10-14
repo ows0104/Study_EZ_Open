@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import unicodedata
 from pathlib import Path
 
 from . import deck, publish, watch
@@ -87,6 +88,24 @@ def _stage(name: str) -> None:
 def _notes_pdf(root: Path, subject: str, this_year: str, prev_year: str, runs_dir: Path, run_id: str) -> Path | None:
     plans, _ = publish.plan_subject(root, subject, this_year, prev_year, runs_dir)
     return next((p.item.path for p in plans if p.run_id == run_id), None)
+
+
+def _attached_pdf(root: Path, subject: str, this_year: str, prev_year: str, runs_dir: Path,
+                  run_id: str, sources: list[dict]) -> Path | None:
+    """Keep the WEB-attached source version even if a newer local PDF arrives."""
+    source = next((s for s in sources if s["kind"] == "notes_current"), None)
+    if source:
+        name = source["filename"]
+        folder = root / subject / "필기" / this_year
+        if Path(name).name == name:
+            direct = folder / name
+            if direct.is_file():
+                return direct
+            matches = [p for p in folder.rglob("*.pdf")
+                       if unicodedata.normalize("NFC", p.name) == unicodedata.normalize("NFC", name)]
+            if len(matches) == 1:
+                return matches[0]
+    return _notes_pdf(root, subject, this_year, prev_year, runs_dir, run_id)
 
 
 def _upload_slides(client: publish.Client, subject: str, run_id: str, slides: list[Path]) -> int:
@@ -226,12 +245,12 @@ def prepare_points(client: publish.Client, root: Path, subject: str, run_id: str
                    this_year: str, prev_year: str, runs_dir: Path, *, model: str = "") -> int:
     base = publish.lecture_path(subject, run_id)
     context = client.call("GET", f"{base}/bank/source-context")
-    pdf = _notes_pdf(root, subject, this_year, prev_year, runs_dir, run_id)
+    pdf = _attached_pdf(root, subject, this_year, prev_year, runs_dir, run_id, context["sources"])
     if pdf is None:
         print(f"멈췄다 — {run_id} 의 올해 필기 PDF를 노트북에서 못 찾았다", flush=True)
         return 1
     source = next((s for s in context["sources"] if s["kind"] == "notes_current"), None)
-    if source is None or source["filename"] != pdf.name:
+    if source is None or unicodedata.normalize("NFC", source["filename"]) != unicodedata.normalize("NFC", pdf.name):
         print("멈췄다 — 서버와 로컬의 올해 필기가 다릅니다. 자료 동기화가 필요합니다.", flush=True)
         return 1
     cache = runs_dir / run_id / "bank"
@@ -283,11 +302,11 @@ def run(client: publish.Client, root: Path, subject: str, run_id: str, this_year
         print(f"멈췄다 — {why}", flush=True)
         return 1
 
-    pdf = _notes_pdf(root, subject, this_year, prev_year, runs_dir, run_id)
+    pdf = _attached_pdf(root, subject, this_year, prev_year, runs_dir, run_id, got.get("sources", []))
     if pdf is None:
         return fail(f"{run_id} 의 올해 필기 PDF 를 노트북에서 못 찾았다")
     current_source = next((s for s in got.get("sources", []) if s["kind"] == "notes_current"), None)
-    if current_source and current_source["filename"] != pdf.name:
+    if current_source and unicodedata.normalize("NFC", current_source["filename"]) != unicodedata.normalize("NFC", pdf.name):
         return fail("서버의 올해 필기와 로컬 PDF 파일명이 다릅니다. 자료 동기화 후 다시 요청하세요.")
 
     out = runs_dir / run_id / "bank" / time.strftime("%y%m%d-%H%M%S")
