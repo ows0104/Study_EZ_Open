@@ -41,7 +41,7 @@ def main():
             key = f"261008_{n:02}"
             assert auto_review_excluded(db, "test", key) is excluded
             job = _auto_main_job(db, db.get(Lecture, ("test", key)), {"notes_current"})
-            assert (job is None) is excluded
+            assert job is None
             if excluded:
                 assert db.get(QuizBank, ("test", key)) is None
         db.commit()

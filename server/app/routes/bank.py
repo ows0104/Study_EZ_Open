@@ -185,12 +185,24 @@ def put_bank_response(subject: str, run_id: str, payload: ResponseIn,
                       user: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)) -> dict[str, Any]:
     """확장이 ChatGPT 탭에서 받아 온 응답 원문. 저장하면 러너가 정리할 일감이 선다."""
     lecture = lecture_or_404(db, subject, run_id)
-    if COMPLETE_MARK not in payload.raw:
+    db.refresh(lecture, with_for_update=True)
+    if not payload.raw.rstrip().endswith(COMPLETE_MARK):
         raise HTTPException(422, "완료 표시가 없는 응답입니다. 답이 끝난 뒤 다시 저장하세요.")
     if not valid_conversation_url(payload.conversation_url, "chatgpt") or (
             payload.share_url is not None and not valid_share_url(payload.share_url, "chatgpt")):
         raise HTTPException(422, "ChatGPT 공유 링크와 개인 대화 주소를 확인하세요.")
     row = db.get(QuizBank, (lecture.subject, lecture.run_id))
+    job = open_job_of(db, lecture.subject, lecture.run_id, JOB_BANK)
+    if row is not None and row.raw_response == payload.raw:
+        if payload.share_url is not None:
+            row.share_url = payload.share_url.strip()
+        if "conversation_url" in payload.model_fields_set:
+            row.conversation_url = payload.conversation_url.strip()
+        db.commit()
+        return {"status": row.status, "respondedAt": _iso(row.responded_at),
+                "jobId": job.id if job else None, "reused": True}
+    if job is not None and job.state == "running":
+        raise HTTPException(409, "이전 문항을 검수 중입니다. 완료 후 새 응답을 다시 전달합니다.")
     if row is None:
         row = QuizBank(subject=lecture.subject, run_id=lecture.run_id)
         db.add(row)
@@ -209,7 +221,6 @@ def put_bank_response(subject: str, run_id: str, payload: ResponseIn,
     row.responded_at = datetime.now(UTC)
     row.status = BANK_RESPONDED
     row.message = "응답을 받았다 — 러너가 정리한다"
-    job = open_job_of(db, lecture.subject, lecture.run_id, JOB_BANK)
     if job is None:
         job = PrequizJob(subject=lecture.subject, run_id=lecture.run_id, kind=JOB_BANK, state=JOB_QUEUED,
                          stage="응답을 받았다 — 러너를 기다리는 중", requested_by=user.email or user.id,

@@ -52,7 +52,16 @@ def main():
     claimed = client.post("/api/admin/prequiz-jobs/claim?worker=w1", headers=RUNNER).json()["job"]
     assert claimed["kind"] == "points" and claimed["state"] == "running"
     # The normal content job waits for preparation on the same lecture.
-    assert client.post(BASE_URL + "/prequiz-job?kind=bank", headers=ADMIN).status_code == 200
+    raw = '문항 본문 ' * 100 + '\nSTUDYEZ_BANK_COMPLETE'
+    response = client.put(BASE_URL + '/bank-response', headers=ADMIN,
+                          json={'raw': raw, 'conversationUrl': 'https://chatgpt.com/c/test-complete'})
+    assert response.status_code == 200, response.text
+    first_time = response.json()['respondedAt']
+    duplicate = client.put(BASE_URL + '/bank-response', headers=ADMIN,
+                           json={'raw': raw, 'conversationUrl': 'https://chatgpt.com/c/test-complete'})
+    assert duplicate.json()['reused'] and duplicate.json()['respondedAt'] == first_time
+    with SessionLocal() as db:
+        assert db.query(PrequizJob).filter_by(kind='bank').count() == 1
     assert client.post("/api/admin/prequiz-jobs/claim?worker=w2", headers=RUNNER).json()["job"] is None
     print("Independent point job and original-only source context passed")
 

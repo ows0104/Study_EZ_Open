@@ -33,48 +33,36 @@ def main():
         db.commit()
         lecture = db.get(Lecture, ("test", "261008_01"))
         assert _auto_main_job(db, lecture, {"notes_prev", "jokbo"}) is None
-        job = _auto_main_job(db, lecture, {"notes_current"})
-        assert job["kind"] == "bank" and job["state"] == "queued" and job["origin"] == "auto"
-        db.commit()
         assert _auto_main_job(db, lecture, {"notes_current"}) is None
-        assert _auto_main_job(db, lecture, set()) is None
-        row = db.get(QuizBank, ("test", "261008_01"))
-        assert row.responded_at and not row.raw_response and not row.open_to_students
+        assert db.get(QuizBank, ("test", "261008_01")) is None
+        assert db.query(PrequizJob).count() == 0
         db.add(Asset(id="notes", subject="test", run_id="261008_01", kind="notes_current",
                      filename="notes.pdf", object_key="notes.pdf", content_type="application/pdf"))
-        # 저장된 답과 완성된 은행은 자동 업로드로 덮지 않는다.
-        db.add(QuizBank(subject="test", run_id="261008_02", raw_response=RAW))
-        db.add(QuizBank(subject="test", run_id="261008_03", bank={"questions": []}))
-        db.add(PrequizJob(subject="test", run_id="261008_04", kind="bank", state="canceled"))
-        db.commit()
-        for n in (2, 3, 4):
-            assert _auto_main_job(db, db.get(Lecture, ("test", f"261008_{n:02}")), {"notes_current"}) is None
-        with patch("app.jobs.queue.auto_used_today", return_value=999):
-            held = _auto_main_job(db, db.get(Lecture, ("test", "261008_05")), {"notes_current"})
-            assert held["state"] == "held"
         db.commit()
 
     client = TestClient(app)
     base = "/api/admin/lectures/test/261008_01"
-    got = client.get(base + "/bank-response", headers=RUNNER)
-    assert got.status_code == 200 and got.json()["raw"] == ""
-    assert got.json()["sources"][0]["id"] == "S1"
-    token = got.json()["respondedAt"]
-    payload = {"respondedAt": token, "raw": RAW, "promptVersion": "1.15"}
-    assert client.put(base + "/bank-generated-response", headers=RUNNER,
-                      json={**payload, "raw": "미완성 " * 50}).status_code == 422
-    assert client.put(base + "/bank-generated-response", headers=RUNNER,
-                      json={**payload, "respondedAt": "stale"}).status_code == 409
-    assert client.put(base + "/bank-generated-response", headers=RUNNER, json=payload).status_code == 200
-    assert client.put(base + "/bank-generated-response", headers=RUNNER, json=payload).status_code == 409
-    assert client.get(base + "/bank-response", headers=RUNNER).json()["raw"] == RAW
-    manual = client.put(base + "/bank-response", headers=ADMIN, json={"raw": RAW + "手動"})
-    assert manual.status_code == 200
-    assert client.put(base + "/bank-generated-response", headers=RUNNER, json=payload).status_code == 409
+    assert client.post(base + '/prequiz-job?kind=bank', headers=ADMIN).status_code == 400
+    request = {"raw": RAW, "conversationUrl": "https://chatgpt.com/c/web-test"}
+    saved = client.put(base + '/bank-response', headers=ADMIN, json=request)
+    assert saved.status_code == 200
+    duplicate = client.put(base + '/bank-response', headers=ADMIN, json=request)
+    assert duplicate.json()['reused']
+    assert duplicate.json()['respondedAt'] == saved.json()['respondedAt']
     with SessionLocal() as db:
-        assert len(db.scalars(select(PrequizJob).where(PrequizJob.run_id == "261008_01")).all()) == 1
-        row = db.get(QuizBank, ("test", "261008_01"))
-        assert row.raw_response == RAW + "手動" and not row.open_to_students
+        job = db.query(PrequizJob).filter_by(kind='bank').one()
+        job.state = 'running'
+        db.commit()
+    newer = {**request, 'raw': '새 문항 ' * 100 + '\nSTUDYEZ_BANK_COMPLETE'}
+    assert client.put(base + '/bank-response', headers=ADMIN, json=newer).status_code == 409
+    with SessionLocal() as db:
+        assert db.get(QuizBank, ('test', '261008_01')).raw_response == RAW
+        job = db.query(PrequizJob).filter_by(kind='bank').one()
+        job.state = 'done'
+        db.commit()
+    assert client.put(base + '/bank-response', headers=ADMIN, json=newer).status_code == 200
+    with SessionLocal() as db:
+        assert db.query(PrequizJob).filter_by(kind='bank').count() == 2
     token = client.get(base + "/bank-response", headers=RUNNER).json()["respondedAt"]
     result = {"respondedAt": token, "bank": example_bank(),
               "validation": {"pass": True, "errors": [], "warnings": []}}
@@ -88,7 +76,7 @@ def main():
     assert client.put(base + "/bank", headers=RUNNER,
                       json={"respondedAt": token, "message": "출제 실패"}).json()["status"] == "failed"
     assert client.get(base + "/bank", headers=ADMIN).json()["summary"]["open"] is False
-    print("Quiz Bank 자동 출제 검사 통과")
+    print("웹 응답 자동 검수·게시 및 중복·경합 검사 통과")
 
 
 if __name__ == "__main__":

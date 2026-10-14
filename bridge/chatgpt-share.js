@@ -24,6 +24,7 @@ let publishing = false;
 let bound = "";
 let lastConversationUrl = "";
 let lastShareUrl = "";
+let lastBankAnswer = "";
 let lastSharedNode = "";
 let contextInvalidated = false;
 let turnObserver = null;
@@ -378,6 +379,13 @@ async function publish() {
     // 뒤에 낸다. 위의 `conversationState`가 그 확인이다 — 답이 하나 끝나 있는
     // 대화만 여기까지 온다.
     const url = `https://chatgpt.com/c/${conversation}`;
+    // 공유 생성 실패와 무관하게 완성된 문항을 먼저 러너에 전달한다.
+    if (watch.mode === "bank" && state.answer?.trimEnd().endsWith("STUDYEZ_BANK_COMPLETE")
+        && state.answer.length >= 200 && state.answer.length <= 2_000_000
+        && state.answer !== lastBankAnswer) {
+      if (!sendShareMessage({ type: "STUDYEZ_BANK_ANSWER", raw: state.answer, url })) return "pending";
+      lastBankAnswer = state.answer;
+    }
     if (url !== lastConversationUrl) {
       if (!sendLink("STUDYEZ_CONVERSATION_LINK", url)) return "pending";
       lastConversationUrl = url;

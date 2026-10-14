@@ -17,7 +17,7 @@ function createOverlay(payload, remembered) {
   // 문제은행 링크 생성은 Main-Quiz CLI 생성과 별도다.
   const bank = payload.mode === "bank";
   const providerLabel = { chatgpt: "ChatGPT", gemini: "Gemini", claude: "Claude" }[payload.provider] || "AI";
-  const modeLabel = bank ? "문제은행 링크 저장" : shared ? "공개 공유 링크" : "개인 대화 링크";
+  const modeLabel = bank ? "문항 전달·검수·게시" : shared ? "공개 공유 링크" : "개인 대화 링크";
   const title = bank ? "Study EZ Quiz Bank" : payload.mode === "review" ? "Study EZ 복습 자료" : "Study EZ 예습 자료";
   const fileList = payload.files
     .map((file) => `<li title="${escapeHtml(file.filename)}">${escapeHtml(file.filename)}</li>`)
@@ -28,7 +28,7 @@ function createOverlay(payload, remembered) {
       동의는 같은 서비스·모드·입력 방식별로 기억합니다. ×로 중지할 수 있습니다. 확장은 답변 완료 상태와 링크를
       확인합니다. ChatGPT 기본 링크·Quiz Bank 모드에서는 로그인 토큰을 메모리에서 잠깐 사용하지만, 토큰을
       저장하거나 Study EZ로 보내지 않습니다.
-      ${bank ? "이 모드는 답변이 끝나면 공개 공유 링크와 개인 대화 주소를 Study EZ 강의에 각각 저장합니다. Main-Quiz 생성은 별도로 요청합니다." : shared ? "이 모드는 링크를 가진 누구나 볼 수 있는 공개 공유 링크를 만들고 Study EZ 강의에 저장합니다." : "이 모드는 내 계정에서만 열리는 대화 주소를 Study EZ 강의에 저장합니다."}
+      ${bank ? "이 모드는 완성된 문항 본문을 Study EZ로 전달합니다. 러너가 검수·보완하고 Main-Quiz를 게시하며, 공유·개인 링크도 각각 저장합니다." : shared ? "이 모드는 링크를 가진 누구나 볼 수 있는 공개 공유 링크를 만들고 Study EZ 강의에 저장합니다." : "이 모드는 내 계정에서만 열리는 대화 주소를 Study EZ 강의에 저장합니다."}
       <a href="https://studyez.kr/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a>
     </p>`;
   const root = document.createElement("aside");
@@ -76,7 +76,7 @@ function createOverlay(payload, remembered) {
     ${remembered ? "" : `
     <label class="studyez-consent">
       <input type="checkbox" data-action="consent">
-      <span>${inputLabel}과 ${bank ? "공개 공유 링크·개인 대화 주소 저장" : shared ? "공개 공유 링크 생성" : "개인 대화 주소 저장"}에 동의합니다.</span>
+      <span>${inputLabel}과 ${bank ? "문항 본문 전달·Main-Quiz 게시·공유 및 개인 링크 저장" : shared ? "공개 공유 링크 생성" : "개인 대화 주소 저장"}에 동의합니다.</span>
     </label>
     <p class="studyez-consent-help">체크박스를 선택한 뒤 아래 버튼을 눌러 주세요.</p>`}
     <div class="studyez-actions">
@@ -396,7 +396,7 @@ const CONSENT_KEY = "studyez-consent:";
 const AUTO_CONSENT_VERSION = "auto-v1:";
 
 function consentScopeFor(payload) {
-  const mode = payload.mode === "bank" ? "bank-share-v1" : payload.mode;
+  const mode = payload.mode === "bank" ? "bank-answer-v2" : payload.mode;
   return `${payload.autoSend === true ? AUTO_CONSENT_VERSION : "manual-v1:"}${payload.provider}:${mode}`;
 }
 

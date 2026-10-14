@@ -19,7 +19,7 @@ import { useMe } from "../useMe";
 import { renderBankPrompt } from "./prompt";
 import { BankCoverage } from "./BankCoverage";
 
-/** ChatGPT 문제은행 링크와 별도 CLI 세션의 Main-Quiz 생성·학습. */
+/** 웹 문항 생성 → CLI 검수·보완 → Main-Quiz 게시·학습. */
 export function BankPanel({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | "runId">; detail: LectureDetail }) {
   const isAdmin = Boolean(useMe()?.isAdmin);
   const bank = detail.bank;
@@ -69,7 +69,7 @@ function StudyCard({ lecture, bank, tools }: {
 }
 
 const STATUS_LINE: Record<BankSummary["status"], string> = {
-  linked: "문제은행 링크 저장됨 · Main-Quiz는 별도로 만들 수 있습니다",
+  linked: "문제은행 링크 저장됨 · 완성된 문항 전달을 기다리는 중",
   responded: "응답을 받았다 — 러너가 정리하기를 기다린다",
   building: "러너가 정리·검토하는 중",
   ready: "준비됨",
@@ -115,7 +115,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
       .then((answer) => setPointsJob(answer.job))
       .catch(() => {});
   }, [adminBase]);
-  useEffect(load, [load]);
+  useEffect(load, [load, bank?.respondedAt]);
 
   const moving = jobMoving(job);
   const pointsMoving = jobMoving(pointsJob);
@@ -168,8 +168,8 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
         autoSend,
       });
       setNote(autoSend
-        ? "자동전송을 시작했습니다. 답변이 끝나면 공유·개인 링크를 각각 저장합니다."
-        : "문제은행 링크용 ChatGPT 대화를 열었습니다. 직접 전송하면 공유·개인 링크를 각각 저장합니다.");
+        ? "자동전송을 시작했습니다. 완성된 문항은 러너가 검수·보완하고 게시합니다."
+        : "ChatGPT 대화를 열었습니다. 직접 전송하면 완성된 문항을 러너가 검수·보완하고 게시합니다.");
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -178,8 +178,9 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
     }
   }
 
-  /** 문제은행 링크 생성과 분리된 CLI 출제 세션을 요청한다. */
+  /** 저장된 웹 문항은 다시 검수하고, 문항이 없으면 웹 생성을 시작한다. */
   async function reorganize() {
+    if (!bank?.respondedAt) { await make(false); return; }
     setBusy("again");
     setError("");
     try {
@@ -188,7 +189,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
         body: JSON.stringify({ force: true }),
       });
       setJob(answer.job);
-      setNote("Main-Quiz 생성 작업을 요청했습니다. CLI가 별도 세션에서 출제·검증합니다.");
+      setNote("저장된 웹 문항의 검수·보완과 게시를 다시 요청했습니다.");
       bumpPreviewVersion();
     } catch (cause) {
       setError((cause as Error).message);
@@ -300,13 +301,13 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
       </PanelGroup>
       <PanelGroup tone="main" title="Main-Quiz">
         {bank?.usable ? <StudyCard lecture={lecture} bank={bank} tools={
-          <PanelTool icon="⟳" label="다시 만들기" hint="Main-Quiz를 별도 세션에서 다시 출제·검증한다"
+          <PanelTool icon="⟳" label="다시 검수·게시" hint="저장된 웹 문항을 다시 검수·보완하고 게시한다"
             busy={busy === "again"} disabled={Boolean(busy) || moving || !notes} onClick={() => void reorganize()} />
         } /> : <ActionCard shape={`is-key${moving || !notes ? " is-empty" : ""}`} hit={
           <button className="panel-action-hit" disabled={Boolean(busy) || moving || !notes} onClick={() => void reorganize()}>
             <strong>Main-Quiz</strong>
             <small>{moving ? "준비 중…" : busy === "again" ? "요청 중…" : !notes ? "올해 필기 대기"
-              : bank?.respondedAt ? "다시 만들기" : "만들기"}</small>
+              : bank?.respondedAt ? "검수·게시 재시도" : "웹에서 만들기"}</small>
           </button>
         } />}
         {bank?.usable ? <>

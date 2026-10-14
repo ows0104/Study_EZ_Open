@@ -4,8 +4,8 @@ import { bumpPreviewVersion } from "../bridge/previewBridge";
 import { EXTENSION_SOURCE, MESSAGES, WEBAPP_SOURCE } from "../bridge/protocol";
 
 /**
- * 문제은행의 공유·개인 링크를 각각 저장한다. CLI 생성 일감은 별도 버튼으로 요청한다.
- * 저장에 성공한 링크만 확인을 돌려준다. 구버전에 남아 있는 본문 메시지도 링크만 회수한다.
+ * 완성된 웹 문항을 저장해 CLI 검수·게시를 시작한다. 링크는 별도로 저장한다.
+ * 서버 저장에 성공한 뒤에만 확인을 돌려줘 실패한 본문은 확장에 남는다.
  */
 export function useBankLink() {
   useEffect(() => {
@@ -20,6 +20,18 @@ export function useBankLink() {
       const lectureId = typeof data.lectureId === "string" ? data.lectureId : "";
       const [subject, runId] = lectureId.split("/");
       if (!subject || !runId || lectureId.split("/").length !== 2) return;
+      const path = `${encodeURIComponent(subject)}/${encodeURIComponent(runId)}`;
+      if (legacy && typeof data.raw === "string" && data.raw.length >= 200
+          && data.raw.length <= 2_000_000 && data.raw.trimEnd().endsWith("STUDYEZ_BANK_COMPLETE")) {
+        void api(`/api/admin/lectures/${path}/bank-response`, {
+          method: "PUT", body: JSON.stringify({ raw: data.raw, conversationUrl: data.url || "",
+            ...(data.shareUrl ? { shareUrl: data.shareUrl } : {}) }),
+        }).then(() => {
+          window.postMessage({ source: WEBAPP_SOURCE, type: MESSAGES.bankSaved, lectureId }, window.location.origin);
+          bumpPreviewVersion();
+        }).catch(() => undefined);
+        return;
+      }
       const links = legacy ? {
         ...(typeof data.url === "string" && data.url ? { conversationUrl: data.url } : {}),
         ...(typeof data.shareUrl === "string" && data.shareUrl ? { shareUrl: data.shareUrl } : {}),
@@ -27,7 +39,6 @@ export function useBankLink() {
         [data.kind === "chatgpt_bank_share" ? "shareUrl" : "conversationUrl"]: data.url,
       } : {};
       if (!Object.keys(links).length) return;
-      const path = `${encodeURIComponent(subject)}/${encodeURIComponent(runId)}`;
       void api(`/api/admin/lectures/${path}/bank/links`, {
         method: "PUT",
         body: JSON.stringify(links),

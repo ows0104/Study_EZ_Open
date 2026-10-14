@@ -49,7 +49,8 @@ test('unsupported preview and review requests never dispatch; supported requests
     ['1.3.3', 'shared', true, true], ['1.3.3', 'review', false, true],
     ['1.3.9', 'bank', true, false], ['1.3.10', 'bank', true, false], ['1.3.11', 'bank', true, false],
     ['1.3.10', 'bank', false, false], ['1.3.11', 'bank', false, false],
-    ['1.3.12', 'bank', false, false], ['1.3.13', 'bank', false, true], ['1.3.13', 'bank', true, true],
+    ['1.3.12', 'bank', false, false], ['1.3.13', 'bank', false, false], ['1.3.13', 'bank', true, false],
+    ['1.3.14', 'bank', false, true], ['1.3.14', 'bank', true, true],
     ['1.3.5', 'review', false, true], ['1.4', 'shared', false, true],
   ]) {
     let sent = 0;

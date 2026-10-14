@@ -21,6 +21,7 @@ function webBridge() {
     location: { origin: 'https://studyez.kr' },
     addEventListener: (type, listener) => { listeners[type] = listener; },
     postMessage: message => posted.push(message),
+    setInterval() {},
   };
   const context = vm.createContext({
     chrome: { runtime }, window,
@@ -166,17 +167,20 @@ test('bank saves shared and private URLs separately without a response or comple
   assert.equal(await s.context.publish(), 'settled');
 });
 
-test('bank retains its private URL even when public sharing fails', async () => {
+test('bank hands complete answer to runner even when public sharing fails, once per answer', async () => {
   const s = shareFixture();
   vm.runInContext('watch = { mode: "bank" };', s.context);
   s.context.accessToken = async () => 'test-token';
-  s.context.conversationState = async () => ({ finished: true, currentNode: 'bank-answer', answer: 'Bank STUDYEZ_BANK_COMPLETE' });
+  s.context.conversationState = async () => ({ finished: true, currentNode: 'bank-answer', answer: 'Bank '.repeat(50) + 'STUDYEZ_BANK_COMPLETE' });
   s.context.publishViaApi = async () => 'https://chatgpt.com/share/bank-test';
   s.context.isPubliclyReadable = async () => false;
   assert.equal(await s.context.publish(), 'pending');
-  assert.equal(s.sent.some(m => m.type === 'STUDYEZ_BANK_ANSWER'), false);
+  assert.equal(s.sent.filter(m => m.type === 'STUDYEZ_BANK_ANSWER').length, 1);
   assert.equal(s.sent.filter(m => m.type === 'STUDYEZ_CONVERSATION_LINK').length, 1);
   assert.equal(s.sent.some(m => m.type === 'STUDYEZ_SHARE_LINK'), false);
+  vm.runInContext('retryAfter = 0;', s.context);
+  await s.context.publish();
+  assert.equal(s.sent.filter(m => m.type === 'STUDYEZ_BANK_ANSWER').length, 1);
 });
 
 test('bank defers state API calls while the answer is generating', async () => {

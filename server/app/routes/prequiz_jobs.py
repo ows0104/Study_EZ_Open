@@ -91,11 +91,9 @@ def _no_material(db: Session, lecture: Lecture, kind: str) -> str:
     """
     if kind == JOB_BANK:
         bank = db.get(QuizBank, (lecture.subject, lecture.run_id))
-        if bank is not None and (bank.raw_response or bank.responded_at):
+        if bank is not None and bank.raw_response:
             return ""
-        notes = db.scalars(select(Asset.id).where(
-            Asset.subject == lecture.subject, Asset.run_id == lecture.run_id, Asset.kind == "notes_current")).first()
-        return "" if notes else "올해 강의록이 아직 없습니다. Main-Quiz는 올해 필기로 만듭니다."
+        return "완성된 웹 문항이 아직 없습니다. 강의 패널에서 웹 생성을 시작하세요."
     if kind in (JOB_MAIN, JOB_BANK_POINTS):
         notes = db.scalars(
             select(Asset.id).where(

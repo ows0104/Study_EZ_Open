@@ -186,9 +186,9 @@ test('bank creation and recreation wait for a person to send; only the separate 
   fresh.find(element => element.type === 'button' && element.props.className === 'panel-action-hit'
     && element.props.children[0].props.children === 'Main-Quiz').props.onClick();
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(requests.length, count);
+  assert.equal(requests.length, count + 1);
   assert.equal(jobs.length, 5);
-  assert.ok(jobs.at(-1).endsWith('/prequiz-job?kind=bank'));
+  assert.ok(jobs.at(-1).endsWith('/prequiz-job?kind=points'));
   rejectPoints = true;
   await click(primary,false); // A preparation failure cannot prevent WEB from opening.
 });

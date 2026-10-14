@@ -56,3 +56,15 @@ test('old extension pending answers recover links without storing a response or 
   assert.ok(s.calls[0].url.endsWith('/bank/links'));
   assert.equal(s.posted[0].type, 'BANK_SAVED');
 });
+
+test('complete bank answer starts review and acknowledges only after saving', async () => {
+  const s = fixture();
+  const raw = '문항 '.repeat(100) + '\nSTUDYEZ_BANK_COMPLETE';
+  await s.send({type:'BANK', raw, url:'https://chatgpt.com/c/complete'});
+  assert.ok(s.calls[0].url.endsWith('/bank-response'));
+  assert.equal(s.calls[0].body.raw, raw);
+  assert.equal(s.posted[0].type, 'BANK_SAVED');
+  const failed = fixture(true);
+  await failed.send({type:'BANK', raw, url:'https://chatgpt.com/c/complete'});
+  assert.equal(failed.posted.length, 0);
+});
