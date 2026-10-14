@@ -451,7 +451,8 @@ class Agent:
         「덱을 못 만들었다」가 적힌다 — 사람은 다시 만들라고 눌렀을 뿐인데 실패로 보인다.
         """
         if job.kind in (BANK, BANK_POINTS):
-            return [sys.executable, "-m", "runner", "bank", job.subject, "--run-id", job.run_id] + (
+            return [sys.executable, "-m", "runner", "bank", job.subject, "--run-id", job.run_id,
+                    "--runs", str(self.runs_dir)] + (
                 ["--points-only"] if job.kind == BANK_POINTS else [])
         if job.kind == deck.MAIN:
             argv = [sys.executable, "-m", "runner", "watch", job.subject,
@@ -463,7 +464,7 @@ class Agent:
             argv.append("--force")
         if job.kind == deck.MAIN and job.strategy:
             argv += ["--strategy", job.strategy]
-        return argv
+        return argv + ["--runs", str(self.runs_dir)]
 
     def building_seats(self, job: Job) -> set[Path]:
         """이 일감이 쓰는 자리. 표시를 놓고 지우는 곳이 여기다.
