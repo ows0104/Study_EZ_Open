@@ -25,6 +25,7 @@ import fitz
 from . import cutmark
 from .textutil import norm_key as norm
 from .textutil import word_tokens
+from .professor_history import history, corrected_payload
 
 # ─────────────────────────────────────────────────────────────── 정규식/상수
 
@@ -1087,10 +1088,11 @@ def repeat_stats(sec: Section, profs: dict) -> dict:
                 matched.add(b.key)
     rate = round(len(matched) / len(qs), 3) if qs else 0.0
 
-    yr = profs.get(sec.lecture_key, {})
+    yr, corrections = history(sec.title, profs.get(sec.lecture_key, {}), [q.year for q in sec.questions])
     cur = yr.get("26") or yr.get("25")
     changed = bool(yr.get("26") and yr.get("25") and set(yr["26"]) != set(yr["25"]))
-    return {"n_questions": len(sec.questions), "n_comparable": len(qs),
+    return {**({"professor_history_corrections": corrections} if corrections else {}),
+            "n_questions": len(sec.questions), "n_comparable": len(qs),
             "repeat_rate": rate, "repeat_pairs": pairs[:40],
             "professors_by_year": yr, "professor_2026": cur,
             "professor_changed_2026": changed,
@@ -1133,6 +1135,7 @@ def split_by_professor(payload: dict, professors: list[str]) -> tuple[dict, dict
     뜻이다. 앞이 비면(올해 처음 맡은 교수) 통계는 전체로 재고 `professor_changed_2026`
     을 켠다 — 지금까지의 「교수 교체」 지침이 그대로 그 경우다.
     """
+    payload = corrected_payload(payload)
     stats = payload.get("stats") or {}
     by_year = stats.get("professors_by_year") or {}
     absorbed = stats.get("absorbed_professors_by_year") or {}
@@ -1207,6 +1210,11 @@ def to_markdown(sec: Section, stats: dict) -> str:
         L.append("담당 교수: " + " | ".join(f"20{y} {'·'.join(v)}" for y, v in sorted(yr.items(), reverse=True)))
     if stats.get("professor_filter"):
         L.append(split_line(stats["professor_filter"]))
+    for record in stats.get("professor_history_corrections", []):
+        proof = record["evidence"]
+        L.append(f"교수 이력 정정: {record['year']}년 {'·'.join(record['professors'])} "
+                 f"— 올해 필기 {', '.join('p.' + str(p) for p in proof['pages'])} 명시. "
+                 f"족보 교수표의 {'·'.join(record['table_professors'])} 표기와 충돌하여 필기 근거를 적용했다.")
     if stats["professor_changed_2026"]:
         L.append("⚠ 2026년 교수 교체 — 족보 신뢰도를 낮춰 사용할 것")
     L.append(f"문항 {stats['n_questions']}개 · 연도간 반복률 {stats['repeat_rate']:.0%} "

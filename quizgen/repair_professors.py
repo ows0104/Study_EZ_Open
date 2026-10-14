@@ -11,6 +11,7 @@ from pathlib import Path
 import fitz
 
 from . import jokbo as J
+from .professor_history import corrected_payload, RULES
 
 _EDITIONS: dict[tuple, dict] = {}
 
@@ -57,10 +58,13 @@ def repair_payload(payload: dict, profs: dict, authors: dict[int, dict[str, list
         if author is not None and q.get("by") != author:
             q["by"] = author
             count += 1
+    repaired = corrected_payload(repaired)
+    stats = repaired["stats"]
     updated = J.repeat_stats(section(repaired), {key: stats["professors_by_year"]})
     for name in ("professor_2026", "professor_changed_2026", "jokbo_weight_hint"):
         stats[name] = updated[name]
     assert content_digest(payload) == content_digest(repaired), "교수 갱신 중 문항 내용 변경"
+    count = sum(a.get("by") != b.get("by") for a, b in zip(payload["questions"], repaired["questions"]))
     return repaired, count
 
 
@@ -130,7 +134,7 @@ def repair_cut(cut: Path, *, backup: Path | None = None) -> dict:
         for key in ("professor_changed_2026", "jokbo_weight_hint"):
             entry[key] = repaired["stats"][key]
     if affected:
-        index["professor_table_revision"] = hashlib.sha256(json.dumps(edition["profs"], sort_keys=True,
+        index["professor_table_revision"] = hashlib.sha256(json.dumps({"tables": edition["profs"], "history": RULES}, sort_keys=True,
                                                                        ensure_ascii=False).encode()).hexdigest()
         index["professor_table_repair"] = {"evidence": evidence, "lectures": affected}
         write(index_path, json.dumps(index, ensure_ascii=False, indent=2))
