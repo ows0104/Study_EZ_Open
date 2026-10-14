@@ -7,7 +7,7 @@ const text = fs.readFileSync(require('node:path').join(__dirname,'../src/bank/pr
 const code = ts.transpileModule(text,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
 function fixture(response) {
  const exports = {}, calls=[];
- vm.runInNewContext(code,{exports,Date,fetch:async (url,options)=>{calls.push({url,options});return response;},require:id=>id.endsWith('.json')?[]:'<!-- Version: 1.47 -->\nOld {{title}}'});
+ vm.runInNewContext(code,{exports,Date,fetch:async (url,options)=>{calls.push({url,options});return response;},require:id=>{default:id.endsWith('.json')?[]:'<!-- Version: 1.47 -->\nOld {{title}}'}});
  return {...exports,calls};
 }
 test('a stale loaded tab renders the latest canonical prompt with no cache',async()=>{
