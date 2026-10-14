@@ -36,6 +36,7 @@ export function renderBankPrompt(detail: LectureDetail, sources: BankSource[], s
     .replace(/\{\{(title|exam_date|weighting|sources|output|lecture_scope)\}\}/g, (_, key: string) => fill[key]);
 }
 
+/** 전송 시점의 정본을 읽는다. 페이지를 오래 열어 둔 경우에도 번들에 든 구버전으로 전송하지 않는다. */
 export async function loadLatestBankPrompt(detail: LectureDetail, sources: BankSource[]) {
   const response = await fetch(`/bank-prompt.json?t=${Date.now()}`, { cache: "no-store" });
   if (!response.ok) throw new Error("최신 출제 프롬프트를 불러오지 못했습니다. 다시 시도하세요.");
