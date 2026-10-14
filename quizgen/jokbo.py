@@ -1169,6 +1169,8 @@ def split_by_professor(payload: dict, professors: list[str]) -> tuple[dict, dict
         new_stats["professor_changed_2026"] = True
         new_stats["jokbo_weight_hint"] = "low"
     new_stats["professor_2026"] = list(professors)
+    if stats.get("professor_history_corrections"):
+        new_stats["professor_history_corrections"] = stats["professor_history_corrections"]
     new_stats["n_reference"] = len(ref)
     if absorbed:
         new_stats["absorbed_professors_by_year"] = absorbed

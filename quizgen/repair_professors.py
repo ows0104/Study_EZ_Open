@@ -114,13 +114,10 @@ def repair_cut(cut: Path, *, backup: Path | None = None) -> dict:
         if original["lecture_key"] == "PRAC":
             continue
         repaired, count = repair_payload(original, edition["profs"], authors)
-        if repaired == original:
-            continue
-        authored += count
-        affected.append({"key": original["lecture_key"], "title": original["title"], "authorsUpdated": count,
-                         "questions": len(original["questions"]), "contentPreserved": True})
-        write(base, json.dumps(repaired, ensure_ascii=False, indent=2))
-        write(base.with_suffix(".md"), J.to_markdown(section(repaired), repaired["stats"]))
+        previous_changes = len(changed)
+        if repaired != original:
+            write(base, json.dumps(repaired, ensure_ascii=False, indent=2))
+            write(base.with_suffix(".md"), J.to_markdown(section(repaired), repaired["stats"]))
         for derivative in sorted((cut / "교수별").glob("*/" + base.name)):
             old = json.loads(derivative.read_text(encoding="utf-8"))
             professors = old.get("stats", {}).get("professor_filter", {}).get("professors") or derivative.parent.name.split("·")
@@ -131,6 +128,11 @@ def repair_cut(cut: Path, *, backup: Path | None = None) -> dict:
                 continue
             write(derivative, json.dumps(filtered, ensure_ascii=False, indent=2))
             write(derivative.with_suffix(".md"), J.to_markdown(section(filtered), filtered["stats"]))
+        if len(changed) == previous_changes:
+            continue
+        authored += count
+        affected.append({"key": original["lecture_key"], "title": original["title"], "authorsUpdated": count,
+                         "questions": len(original["questions"]), "contentPreserved": True})
         for key in ("professor_changed_2026", "jokbo_weight_hint"):
             entry[key] = repaired["stats"][key]
     if affected:

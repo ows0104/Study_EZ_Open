@@ -102,11 +102,46 @@ def test_confirmed_history_corrections_are_limited_to_the_verified_course_and_ye
         assert cells[year[2:]] == before
         assert len(records) == 1 and records[0]['evidence']['pages']
         assert history('무관한 강의', cells) == (cells, [])
-        raw = {'title': title, 'stats': {'professors_by_year': cells},
+        raw = {'lecture_key': 'test', 'title': title, 'stats': {'professors_by_year': cells},
                'questions': [asdict(J.Question(year=year, no='1', stem='저장된 본문', by=before))]}
         result = corrected_payload(raw)
         assert result['questions'][0]['by'] == after
         assert content_digest(raw) == content_digest(result)
         assert corrected_payload(result) == result
+        raw['questions'] = [asdict(J.Question(year='2025', no='1', stem='기존 기출', by=after))]
+        filtered, _ = J.split_by_professor(raw, after)
+        assert filtered['stats']['professor_history_corrections'] == records
+        assert f'{year}년' in J.to_markdown(section_for_test(filtered), filtered['stats'])
     cells = {'22': ['유경상', '이승환'], '23': ['유경상', '이승환']}
     assert history('약동학 (1)~(3)', cells) == (cells, [])
+
+
+def test_backfill_checks_derivatives_even_when_base_is_already_correct(tmp_path, monkeypatch):
+    import json
+    from quizgen import repair_professors as repair
+    cut = tmp_path / '약리학' / 'current-cut'
+    cut.mkdir(parents=True)
+    source = tmp_path / 'already-local.pdf'
+    source.touch()
+    tables = {'1': {'26': ['예상규'], '25': ['조정현']}}
+    monkeypatch.setattr(repair, 'edition_for', lambda path: {'profs': tables, 'sections': [], 'lectures': []})
+    raw = {'lecture_key': '1', 'title': '약리학 소개',
+           'stats': {'professors_by_year': tables['1']},
+           'questions': [asdict(J.Question(year='2025', no='1', stem='보존할 문제', by=['조정현']))]}
+    fixed, _ = repair.repair_payload(raw, tables, {})
+    base = cut / 'L1.json'
+    base.write_text(json.dumps(fixed, ensure_ascii=False), encoding='utf-8')
+    (cut/'index.json').write_text(json.dumps({'source_path': str(source), 'lectures': [{'file': 'L1'}]}), encoding='utf-8')
+    filtered, _ = J.split_by_professor(fixed, ['조정현'])
+    filtered['stats'].pop('professor_history_corrections')
+    derivative = cut/'교수별/조정현/L1.json'
+    derivative.parent.mkdir(parents=True)
+    derivative.write_text(json.dumps(filtered, ensure_ascii=False), encoding='utf-8')
+    before = base.read_bytes()
+    report = repair.repair_cut(cut, backup=tmp_path/'backup')
+    after = json.loads(derivative.read_text(encoding='utf-8'))
+    assert base.read_bytes() == before
+    assert str(derivative) in report['changedFiles']
+    assert after['stats']['professor_history_corrections'][0]['professors'] == ['조정현']
+    assert repair.content_digest(after) == repair.content_digest(filtered)
+    assert not repair.repair_cut(cut)['changedFiles']
