@@ -55,11 +55,13 @@ def main():
         db.add(Asset(id="notes", subject=KEY[0], run_id=KEY[1], kind="notes_current",
                      filename="notes.pdf", object_key="notes.pdf", content_type="application/pdf"))
         db.commit()
-    requested = client.post(jobs, headers=ADMIN, json={"force": True})
-    assert requested.status_code == 200 and requested.json()["created"]
-    assert client.post(jobs, headers=ADMIN).json()["job"]["id"] == requested.json()["job"]["id"]
+    assert client.post(jobs, headers=ADMIN, json={"force": True}).status_code == 400
+    raw = "Web response " * 30 + "STUDYEZ_BANK_COMPLETE"
+    requested = client.put(ADMIN_BASE + '/bank-response', headers=ADMIN, json={'raw': raw})
+    assert requested.status_code == 200
+    assert client.post(jobs, headers=ADMIN).json()["job"]["id"] == requested.json()["jobId"]
     got = client.get(ADMIN_BASE + "/bank-response", headers=RUNNER).json()
-    assert got["respondedAt"] and not got["raw"]  # CLI generates in its own session.
+    assert got["respondedAt"] and got["raw"] == raw  # CLI reviews the WEB questions.
     for validation in (None, {"pass": False, "errors": ["CLI validation failed"]}):
         payload = {"respondedAt": got["respondedAt"], "message": "CLI failure"}
         if validation:
@@ -77,7 +79,7 @@ def main():
     assert client.put(links, headers=ADMIN, json={"shareUrl": ""}).json()["conversationUrl"] == MINE + "-updated"
     with SessionLocal() as db:
         assert db.query(PrequizJob).count() == 1
-    print("Problem bank links and separate Main-Quiz sessions passed")
+    print("Problem bank links and WEB-to-CLI Main-Quiz handoff passed")
 
 
 if __name__ == "__main__":
