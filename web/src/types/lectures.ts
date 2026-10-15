@@ -1,7 +1,7 @@
 import type { QuizProgress } from "./quiz";
 import type { LectureMastery } from "./mastery";
 import type { CardReviewCount } from "./admin";
-import type { BankSummary, BankSource } from "./bank";
+import type { BankSummary, BankSource, BankTimeline } from "./bank";
 
 /** 예습 대화를 열 수 있는 AI 서비스. 확장과 서버가 같은 세 값을 쓴다. */
 export type PreviewProvider = "chatgpt" | "gemini" | "claude";
@@ -58,6 +58,7 @@ export type PrequizProgress = {
 };
 
 export type LectureRef = {
+  bankTimeline?: BankTimeline | null;
   mastery?: LectureMastery | null;
   subject: string;
   runId: string;

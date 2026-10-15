@@ -3,7 +3,15 @@
 // ChatGPT 가 만든 문제은행을 서버 Study Engine 으로 푼다(`server/app/routes/bank.py`).
 // 문항 필드 이름은 서버가 저장한 꼴 그대로(snake_case)다 — 은행 JSON 을 옮겨 적지 않고 싣는다.
 
-export type BankSummary = {
+export type BankTimeline = {
+  shareUrl?: string;
+  /** 공유 링크를 새로 저장한 서버 시각. 기존 링크는 null. */
+  linkedAt?: string | null;
+  /** 최종퀴즈 결과 업로드를 서버가 받아 저장한 시각. */
+  builtAt: string | null;
+};
+
+export type BankSummary = BankTimeline & {
   coverage?: BankCoverage | null;
   shareUrl?: string;
   status: "linked" | "responded" | "building" | "ready" | "invalid" | "failed";

@@ -87,6 +87,14 @@ def _iso(value: datetime | None) -> str | None:
     return (value if value.tzinfo else value.replace(tzinfo=UTC)).isoformat()
 
 
+def _save_share_link(row: QuizBank, value: str | None) -> None:
+    if value is not None:
+        value = value.strip()
+        if value != (row.share_url or ""):
+            row.share_url = value
+            row.linked_at = datetime.now(UTC) if value else None
+
+
 def bank_sources(db: Session, lecture: Lecture) -> list[dict[str, Any]]:
     """ChatGPT 에 붙일 자료와 그 ID. 올해 필기(S1) · 족보 조각(S2, 있으면)."""
     out = []
@@ -139,13 +147,15 @@ def summary(db: Session, lecture: Lecture, row: QuizBank | None, *, is_admin: bo
         # 공유 대화는 CLI 생성·검증 상태와 독립적이다. 비공개 문항과 개인 주소는 내보내지 않는다.
         return {"status": "linked", "open": False, "buildId": "", "shareUrl": row.share_url,
                 "questionCount": 0, "conceptCount": 0, "studyQuestionCount": 0,
-                "seenQuestionCount": 0, "builtAt": None, "usable": False, "coverage": None}
+                "seenQuestionCount": 0, "linkedAt": _iso(row.linked_at),
+                "builtAt": None, "usable": False, "coverage": None}
     bank = row.bank or {}
     state = db.get(BankState, (user_id, row.subject, row.run_id)) if user_id else None
     current = state.state if state and state.build_id == row.build_id else {}
     out: dict[str, Any] = {
         "status": row.status, "open": row.open_to_students, "buildId": row.build_id,
         "shareUrl": row.share_url,
+        "linkedAt": _iso(row.linked_at),
         "questionCount": len(bank.get("questions", [])), "conceptCount": len(bank.get("concepts", [])),
         "builtAt": _iso(row.built_at), "usable": bank_usable(row.bank, row.validation),
         'publicationWarning': publication_warning(row.bank, row.validation),
@@ -194,8 +204,7 @@ def put_bank_response(subject: str, run_id: str, payload: ResponseIn,
     row = db.get(QuizBank, (lecture.subject, lecture.run_id))
     job = open_job_of(db, lecture.subject, lecture.run_id, JOB_BANK)
     if row is not None and row.raw_response == payload.raw:
-        if payload.share_url is not None:
-            row.share_url = payload.share_url.strip()
+        _save_share_link(row, payload.share_url)
         if "conversation_url" in payload.model_fields_set:
             row.conversation_url = payload.conversation_url.strip()
         db.commit()
@@ -212,8 +221,7 @@ def put_bank_response(subject: str, run_id: str, payload: ResponseIn,
     # 새 원문에는 이전 보강 요청을 이어 붙이지 않는다.
     if (row.validation or {}).get("maintenance"):
         row.validation = {k: v for k, v in row.validation.items() if k != "maintenance"}
-    if payload.share_url is not None:
-        row.share_url = payload.share_url.strip()
+    _save_share_link(row, payload.share_url)
     if "conversation_url" in payload.model_fields_set:
         row.conversation_url = payload.conversation_url.strip()
     row.prompt_version = payload.prompt_version
@@ -281,8 +289,7 @@ def put_bank_links(subject: str, run_id: str, payload: BankLinksIn,
         row = QuizBank(subject=lecture.subject, run_id=lecture.run_id, status="linked")
         db.add(row)
     # 독립적으로 도착하는 두 링크가 서로 덮어쓰지 않는다. 빈 문자열은 명시적 삭제다.
-    if payload.share_url is not None:
-        row.share_url = payload.share_url.strip()
+    _save_share_link(row, payload.share_url)
     if payload.conversation_url is not None:
         row.conversation_url = payload.conversation_url.strip()
     db.commit()

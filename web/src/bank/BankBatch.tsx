@@ -4,12 +4,13 @@ import { api } from "../api";
 import { takeTimetable } from "../firstScreen";
 import { useMe } from "../useMe";
 import type { LectureRef, TimetableEvent } from "../types/lectures";
-import type { BankNext, BankSession } from "../types/bank";
+import type { BankNext, BankSession, BankTimeline } from "../types/bank";
+import { BankBuildTimes } from "./BankBuildTimes";
 import { BankSolve, type BatchStudy } from "./BankSolve";
 import { useBankUndo } from "./useBankUndo";
 import "./batch.css";
 
-type Lecture = Pick<LectureRef, "subject" | "runId" | "title"> & { date: string };
+type Lecture = Pick<LectureRef, "subject" | "runId" | "title"> & { date: string; ready?: boolean; bankTimeline?: BankTimeline | null };
 type Queue = { lectures: Lecture[]; current?: Lecture; undoToken?: string | null; goal?: BankNext["batchGoal"] };
 const keyOf = (lecture: Lecture) => `${lecture.subject}/${lecture.runId}`;
 
@@ -52,8 +53,9 @@ export function BankBatchPage() {
     let live = true;
     takeTimetable().then(data => {
       const unique = new Map<string, Lecture>();
-      data.events.forEach((event: TimetableEvent) => event.lectures.filter(l => l.marks.quiz).forEach(l => {
-        const row = { subject: l.subject, runId: l.runId, title: l.title, date: event.date };
+      data.events.forEach((event: TimetableEvent) => event.lectures.filter(l => l.marks.quiz || l.bankTimeline?.shareUrl).forEach(l => {
+        const row = { subject: l.subject, runId: l.runId, title: l.title, date: event.date,
+          ready: l.marks.quiz, bankTimeline: l.bankTimeline };
         unique.set(keyOf(row), row);
       }));
       if (live) setLectures([...unique.values()].sort((a, b) => a.date.localeCompare(b.date) || a.runId.localeCompare(b.runId)));
@@ -95,6 +97,7 @@ export function BankBatchPage() {
   return <section className="batch-picker">
     <h1>강의 모아 풀기</h1>
     <p>선택한 강의의 문제를 섞어서 풉니다. 새 카드를 먼저 보고 예정된 복습까지 모두 하면 완료됩니다.</p>
+    <p className="bank-note">강의별 퀴즈뱅크 링크와 최종퀴즈 업로드 시각을 확인할 수 있습니다. 링크 생성 시각은 앞으로 새로 저장되는 공유 링크부터 표시합니다.</p>
     <div className="batch-filters">
       <label>과목 <select value={subject} onChange={e => setSubject(e.target.value)}>
         <option value="">모든 과목</option>
@@ -103,10 +106,10 @@ export function BankBatchPage() {
       <label>강의 검색 <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="강의명 또는 날짜" /></label>
     </div>
     <div className="batch-actions">
-      <button className="is-quiet" onClick={() => setSelected(old => new Set([...old, ...visible.map(keyOf)]))}>표시된 강의 모두 선택</button>
+      <button className="is-quiet" onClick={() => setSelected(old => new Set([...old, ...visible.filter(l => l.ready).map(keyOf)]))}>표시된 강의 모두 선택</button>
       <button className="is-quiet" onClick={() => setSelected(new Set())}>선택 해제</button>
       <button disabled={!selected.size} onClick={() => {
-        const chosen = (lectures ?? []).filter(l => selected.has(keyOf(l)));
+        const chosen = (lectures ?? []).filter(l => l.ready && selected.has(keyOf(l)));
         if (chosen.length) { setPaused(false); setDone(false); setQueue({ lectures: chosen }); }
       }}>{selected.size}강의 학습 시작</button>
       {me?.isAdmin ? <button className="is-quiet" disabled={!selected.size || auditing} onClick={() => void (async () => {
@@ -127,12 +130,13 @@ export function BankBatchPage() {
     {error ? <p className="notice is-error" role="alert">{error}</p> : null}
     {!lectures ? <p className="notice">강의를 불러오는 중…</p> : !visible.length ? <p>학습 가능한 강의가 없습니다.</p> : <ul className="batch-lectures">
       {visible.map(l => <li key={keyOf(l)}><label>
-        <input type="checkbox" checked={selected.has(keyOf(l))} onChange={e => {
+        <input type="checkbox" disabled={!l.ready} checked={selected.has(keyOf(l))} onChange={e => {
           const checked = e.target.checked;
           setSelected(old => { const next = new Set(old); if (checked) next.add(keyOf(l)); else next.delete(keyOf(l)); return next; });
         }} />
-        <span><strong>{l.title}</strong><small>{l.date} · {l.subject}</small></span>
-      </label></li>)}
+        <span><strong>{l.title}</strong><small>{l.date} · {l.subject}{!l.ready ? " · 최종퀴즈 대기" : ""}</small>
+          <BankBuildTimes timeline={l.bankTimeline} /></span>
+      </label>{l.bankTimeline?.shareUrl ? <a className="batch-quiz-link" href={l.bankTimeline.shareUrl} target="_blank" rel="noreferrer">퀴즈뱅크 링크 열기 ↗</a> : null}</li>)}
     </ul>}
   </section>;
 }

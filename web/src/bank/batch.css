@@ -7,6 +7,8 @@
 .batch-lectures li { border-bottom: 1px solid var(--line, #ddd); }
 .batch-lectures label { display: flex; gap: 12px; align-items: center; padding: 16px 8px; cursor: pointer; }
 .batch-lectures input { width: 20px; height: 20px; }
+.batch-lectures input:disabled { cursor: default; }
+.batch-quiz-link { display: inline-block; margin: 0 8px 16px 40px; }
 .batch-lectures small { display: block; margin-top: 4px; color: var(--muted, #666); }
 .batch-progress { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; padding: 14px; }
 @media (max-width: 600px) { .batch-picker { padding: 16px; } .batch-filters label { width: 100%; } }
