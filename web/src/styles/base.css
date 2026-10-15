@@ -2835,6 +2835,25 @@ button.notice-title:hover:not(:disabled) {
   margin: 0;
 }
 
+.bank-evidence-notice {
+  border-left: 3px solid #ba7a24;
+  background: #fff8eb;
+  color: #634b28;
+  padding: 12px 16px;
+  margin: 16px 0;
+  border-radius: 4px;
+}
+
+.bank-evidence-notice h2 {
+  font-size: 15px;
+  margin: 0 0 6px;
+}
+
+.bank-evidence-notice p {
+  margin: 6px 0;
+  white-space: pre-wrap;
+}
+
 .bank-evidence-slide figcaption {
   overflow-wrap: anywhere;
 }

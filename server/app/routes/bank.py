@@ -34,6 +34,7 @@ from app.bank_validation.pages import cited_pages
 from app.bank_validation.slide_focus import (selected_references, all_selected_pages, all_selected_references,
                                              question_hash, source_id, external_filename)
 from app.bank_validation.jokbo_pages import references as jokbo_references
+from app.bank_validation.evidence_resolution import primary_references as exam_primary_references, status as evidence_status
 from app.bank_validation.schema import QUESTION, schema_errors, without_retired
 from app.bank_validation.coverage import coverage_summary
 from app.bank_validation.validate import validate_bank
@@ -766,11 +767,15 @@ def _slides(db: Session, row: QuizBank, question_id: str, presented: dict | None
 def _jokbo_slides(db: Session, row: QuizBank, question: dict) -> list[dict[str, Any]]:
     original = next((q for q in (row.bank or {}).get("questions", []) if q["question_id"] == question["question_id"]), {})
     refs = jokbo_references((row.validation or {}).get("jokboPages"), original, question)
+    primary = exam_primary_references((row.validation or {}).get("evidenceResolution"), original, question)
+    refs += primary
     if not refs:
         return []
     assets = {a.filename: a for a in db.scalars(select(Asset).where(
         Asset.subject == row.subject, Asset.run_id == row.run_id, Asset.kind == SLIDE_KINDS["bank"],
         Asset.filename.in_({ref["filename"] for ref in refs})))}
+    core_names = {ref['filename'] for ref in primary}
+    complete = bool(primary) and core_names <= set(assets)
     grouped = {}
     for ref in refs:
         name = ref["filename"]
@@ -781,10 +786,16 @@ def _jokbo_slides(db: Session, row: QuizBank, question: dict) -> list[dict[str, 
                 url = ObjectStorage().presign_download(assets[name].object_key)
             except StorageNotConfigured:
                 break
-            grouped[name] = {"page": ref["page"], "url": url, "pdfFilename": ref["pdfFilename"], "references": []}
-        label = f"{ref['year']} {ref['number']}번"
-        if label not in grouped[name]["references"]:
-            grouped[name]["references"].append(label)
+            grouped[name] = {"page": ref["page"], "url": url, "pdfFilename": ref["pdfFilename"], "references": [],
+                             "primary": complete and name in core_names, "embedded": bool(ref.get('embedded'))}
+        labels = ref.get('references') or ([f"{ref['year']} {ref['number']}번"] if ref.get('year') and ref.get('number') else ['첨부 기출'])
+        grouped[name]['embedded'] = grouped[name]['embedded'] or bool(ref.get('embedded'))
+        for label in labels:
+            if label not in grouped[name]["references"]:
+                grouped[name]["references"].append(label)
+    if not core_names <= set(grouped):
+        for slide in grouped.values():
+            slide['primary'] = False
     return list(grouped.values())
 
 
@@ -797,10 +808,16 @@ def _answer(db: Session, row: QuizBank, q: dict) -> dict[str, Any]:
     # 각 출처가 무엇이라고 하는지와 고른 근거(충돌 기록의 설명)를 읽는다. 자료 밖 내용은 출처 `EXT` 로 표시된다.
     conflict = next((c for c in (row.bank or {}).get("source_conflicts", [])
                      if q["conflict_id"] and c["conflict_id"] == q["conflict_id"]), None)
+    original = next((item for item in (row.bank or {}).get('questions', []) if item['question_id'] == q['question_id']), {})
+    exam_slides = _jokbo_slides(db, row, q)
+    evidence = evidence_status((row.validation or {}).get('evidenceResolution'), original, q,
+                              focus=(row.validation or {}).get('slideFocus'))
+    if evidence and evidence['category'] == 'exam_only':
+        evidence['primaryAvailable'] = any(slide.get('primary') for slide in exam_slides)
     return {"answer": q["answer"], "answerUnits": q["answer_units"], "explanation": q.get("explanation", ""), "correctOptionIds": q["correct_option_ids"],
             "personalEdited": q.get("personalEdited", False), "personalAnswer": q.get("personalAnswer", False),
             "answerPairs": q["answer_pairs"], "correctOrder": q["correct_order"],
-            "slides": _slides(db, row, q["question_id"], q), "jokboSlides": _jokbo_slides(db, row, q), "medicalReview": review,
+            "slides": _slides(db, row, q["question_id"], q), "jokboSlides": exam_slides, "evidenceStatus": evidence, "medicalReview": review,
             'reviewIssues': [issue.get('reason') or issue.get('issue', '')
                 for issue in (((row.validation or {}).get('revision') or {}).get('audit') or {}).get('question_issues', [])
                 if issue.get('question_id') == q['question_id'] and issue.get('severity') == 'error'

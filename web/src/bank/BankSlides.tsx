@@ -15,7 +15,7 @@ function slideKey(slide: BankSlide) {
   return `${slide.sourceId || "self"}:${slide.page}`;
 }
 
-export function BankSlides({ slides, preload }: { slides: BankSlide[]; preload?: SlidePreloader }) {
+export function BankSlides({ slides, preload, statusKnown = false }: { slides: BankSlide[]; preload?: SlidePreloader; statusKnown?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const { primary, extra } = splitSlides(slides);
   if (!slides.length) return null;
@@ -31,7 +31,7 @@ export function BankSlides({ slides, preload }: { slides: BankSlide[]; preload?:
   );
   return <section className="bank-slides" aria-label="근거 슬라이드">
     {primary.map(image)}
-    {!primary.length ? <p className="bank-note">확인된 핵심 근거 슬라이드가 없습니다.</p> : null}
+    {!primary.length && !statusKnown ? <p className="bank-note">확인된 핵심 근거 슬라이드가 없습니다.</p> : null}
     {extra.length ? <details className="bank-answer-context bank-extra-slides"
       onToggle={event => setExpanded(event.currentTarget.open)}>
       <summary>추가 참고 슬라이드 {extra.length}장</summary>

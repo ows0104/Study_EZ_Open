@@ -6,6 +6,7 @@ import { BankStem } from "./BankStem";
 import { BankSourceNote } from "./BankSourceNote";
 import { BankSlides } from "./BankSlides";
 import { BankJokboSlides } from "./BankJokboSlides";
+import { BankEvidenceNotice } from "./BankEvidenceNotice";
 
 /**
  * 문항 ID 를 씨로 삼아 섞는다 — 다시 불러도, 답을 펴도 같은 순서다. 섞은 결과가 원래와 같으면 한 칸 민다.
@@ -215,8 +216,14 @@ export function AnswerBody({ question: q, answer, preload }: {
           {review.suggested_answer ? <><br />맞는 답: {review.suggested_answer}</> : null}
         </p>
       ) : null}
-      <BankSlides key={`${q.question_id}:${answer.slides.map(slide => slide.url).join("|")}`} slides={answer.slides} preload={preload} />
-      <BankJokboSlides slides={answer.jokboSlides} preload={preload} />
+      <BankEvidenceNotice status={answer.evidenceStatus} />
+      {answer.jokboSlides?.some(slide => slide.primary) ? (
+        <BankJokboSlides key={`core:${q.question_id}`} slides={answer.jokboSlides} preload={preload} />
+      ) : null}
+      <BankSlides key={`${q.question_id}:${answer.slides.map(slide => slide.url).join("|")}`} slides={answer.slides} preload={preload} statusKnown={!!answer.evidenceStatus} />
+      {!answer.jokboSlides?.some(slide => slide.primary) ? (
+        <BankJokboSlides key={`ref:${q.question_id}`} slides={answer.jokboSlides} preload={preload} collapseReferences={!!answer.evidenceStatus} />
+      ) : null}
     </>
   );
 }

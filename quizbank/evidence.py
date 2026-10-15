@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 from server.app.bank_validation.slide_focus import all_selected_pages
-from . import jokbo_pages, slide_focus, slides, evidence_sources
+from . import jokbo_pages, slide_focus, slides, evidence_sources, exam_focus
 from .session import SessionError
 
 
@@ -35,6 +35,15 @@ def enrich(pdf: Path, out: Path, run_id: str, *, jokbo: Path | None = None, mode
         result["slideFocusError"] = str(cause)
     references, images = jokbo_pages.connect(bank, jokbo, out / "slides", run_id)
     validation["jokboPages"] = references
+    try:
+        resolution, exam_usage = exam_focus.resolve(bank, focus, references, {'self': pdf, **related}, out, run_id, model)
+        validation['evidenceResolution'] = resolution
+        with (out / 'usage.jsonl').open('a', encoding='utf-8') as log:
+            for entry in exam_usage:
+                log.write(json.dumps({'step': '족보 핵심 지면 선택', 't': int(time.time()), **entry}) + '\n')
+    except (SessionError, ValueError, OSError) as cause:
+        validation['evidenceResolution'] = {'version': 1, 'questions': {}, 'error': str(cause)}
+        result['evidenceResolutionError'] = str(cause)
     pages = read("pages.json") if (out / "pages.json").is_file() else slides.cited_pages(bank, "S1")
     for question in bank["questions"]:
         qid = question["question_id"]

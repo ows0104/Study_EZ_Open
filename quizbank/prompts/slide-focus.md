@@ -47,5 +47,9 @@ source_conflict(실제 자료 충돌), unsupported(입증 근거 없음), uncert
 unresolved에는 searched_sources로 실제 검색한 모든 source_id를 빠짐없이 남기고 reason에
 빠진 핵심 사실을 구체적으로 쓴다. 강의 검색만으로 족보에서 실제 확인했다고 단정하지 않는다.
 선택을 완료한 경우 unresolved_cause는 빈 문자열, searched_sources에는 실제 확인한 source_id들을 쓴다.
+강의 PDF에 첨부된 기출 지면에서 핵심을 확인한 경우 exam_pages에 정확한 source_id·물리쪽·근거를
+쓴다. 첨부 기출을 강의 본문 slides로 승격하지 않는다. exam_pages는 실제 이미지로 확인한
+첨부 기출만 담고, S2 조각에 있는 연도·문제 번호를 강의 PDF 쪽으로 추측해 옮기지 않는다.
+해당 지면이 없으면 exam_pages=[]다. 후속 단계가 실제 족보 지면들 중 최소 핵심을 별도로 선정한다.
 reason은 짧게, evidence에는 지면의 실제 문구 인용 또는 구체적인 표·그림의 내용과 정답의 연결을
 남긴다. 모든 target을 정확히 한 번 반환한다. 문항 내용이나 정답, 검수 판정은 변경하지 않는다.

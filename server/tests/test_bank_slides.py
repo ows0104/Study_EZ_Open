@@ -5,6 +5,7 @@ from unittest.mock import patch
 from tests.test_bank import example_bank
 from app.bank_validation.slide_focus import question_hash, selected_pages, external_filename
 from app.bank_validation.jokbo_pages import references
+from app.bank_validation.evidence_resolution import status as evidence_status, primary_references
 from app.database import Base, SessionLocal, engine
 from app.models import Asset, QuizBank, SLIDE_KINDS
 from app.routes.bank import _slides, _jokbo_slides, _answer
@@ -76,6 +77,32 @@ def main():
             assert core[-1]['sourceFilename'] == 'other.pdf' and core[-1]['url'].endswith('copied-foreign.png')
             private = _slides(db, row, 'Q1', {**q, 'personalEdited': True, 'answer': 'mine'})
             assert not any(s['primary'] for s in private)
+            core_ref = {'filename': 'core-exam.png', 'pdfFilename': 'exam.pdf', 'page': 47,
+                        'references': ['2022 4번'], 'evidence': '실제 정답이 있는 지면', 'embedded': True}
+            resolution = {'version': 1, 'questions': {'Q1': {'questionHash': question_hash(q), 'base': {
+                'category': 'exam_only', 'reason': '강의 본문에 없고 기출에서 정답을 확인',
+                'examCore': {'mode': 'single', 'reason': '이 한 지면에 핵심 답이 있음', 'pages': [core_ref]}}}}}
+            row.validation = {**row.validation, 'evidenceResolution': resolution}
+            db.add(Asset(id='exam-core-copy', subject='slides', run_id='demo', kind=SLIDE_KINDS['bank'],
+                         filename='core-exam.png', object_key='slides/core-exam.png'))
+            db.commit()
+            actual = _answer(db, row, q)
+            assert actual['evidenceStatus']['category'] == 'exam_only' and actual['evidenceStatus']['primaryAvailable']
+            assert [s['page'] for s in actual['jokboSlides'] if s['primary']] == [47]
+            assert len(actual['jokboSlides']) == 2, 'Normal references remain available without being promoted'
+            assert next(s for s in actual['jokboSlides'] if s['primary'])['embedded']
+            assert primary_references(resolution, {**q, 'answer': 'changed'}) == []
+            assert evidence_status(resolution, q, {**q, 'personalEdited': True}) is None
+            assert evidence_status(resolution, q, {**q, 'choice_variant': {'poolId': 'P'}}) is None
+            base = resolution['questions']['Q1']['base']
+            base['examCore'].update(mode='linked', pages=[core_ref, {**core_ref, 'filename': 'missing.png', 'page': 48}])
+            assert not any(s['primary'] for s in _jokbo_slides(db, row, q)), 'Missing part of an exam proof is never a complete core'
+            assert not _answer(db, row, q)['evidenceStatus']['primaryAvailable']
+            for category in ('partial_support', 'source_conflict', 'unsupported', 'uncertain'):
+                base.update(category=category, reason='자료 내 판단 이유', missingClaim='빠진 핵심')
+                actual = _answer(db, row, q)
+                assert actual['evidenceStatus'] == {'category': category, 'reason': '자료 내 판단 이유', 'missingClaim': '빠진 핵심'}
+                assert not any(s['primary'] for s in actual['jokboSlides'])
     print('PASS: semantic single and linked evidence, no arbitrary fallback, stale and private edits, selected page outside old citations, exact exam page, lecture isolation')
 
 

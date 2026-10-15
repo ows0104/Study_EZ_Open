@@ -21,6 +21,7 @@ REPORT = _object({"selections": _array(_object({
     "reason": STR, "slides": _array(_object({"source_id": STR, "page": INT, "evidence": STR})),
     "unresolved_cause": {"type": "string", "enum": ["", "exam_only", "partial_support", "source_conflict", "unsupported", "uncertain"]},
     "searched_sources": _array(STR),
+    "exam_pages": _array(_object({"source_id": STR, "page": INT, "evidence": STR})),
 }))})
 
 
@@ -69,6 +70,13 @@ def shape(raw: dict, bank: dict, page_count: int, source_hash: str, *, sources: 
         for field in ("unresolved_cause", "searched_sources"):
             if field in row:
                 selection[field] = row[field]
+        exam_pages = row.get('exam_pages', [])
+        if any((s.get('source_id') or 'self') not in limits or type(s.get('page')) is not int
+               or not 1 <= s['page'] <= limits[s.get('source_id') or 'self'] or not s.get('evidence', '').strip()
+               for s in exam_pages):
+            raise SessionError(f'{key}: 첨부 기출도 실제 원본과 쪽·근거가 필요합니다.')
+        if exam_pages:
+            selection['exam_pages'] = exam_pages
         if row["pool_id"]:
             questions[row["question_id"]]["candidates"][f"{row['pool_id']}/{row['candidate_id']}"] = selection
         else:
