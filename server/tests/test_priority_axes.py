@@ -53,6 +53,16 @@ def main():
     # The separate depth flag, rather than Important, controls adaptive depth gating.
     ranked = {r["question_id"]: r for r in rank_questions(bank, empty_state(), EXAM, NOW)}
     assert ranked["important"]["eligible"] and not ranked["core-depth"]["eligible"]
+    # A Core+Advanced item is not its own foundation and cannot lock itself out.
+    depth_only = copy.deepcopy(bank)
+    depth_only["questions"] = [q for q in depth_only["questions"] if q["question_id"] == "core-depth"]
+    assert rank_questions(depth_only, empty_state(), EXAM, NOW)[0]["eligible"]
+    foundations = copy.deepcopy(bank)
+    foundations["questions"] = [q for q in foundations["questions"] if q["tier"] == "Core"]
+    foundations["questions"][0]["retrieval_direction"] = "mechanism"
+    ready = empty_state()
+    ready["dimensions"]["C1:direct"] = {"mastery": .65, "reviews": 2, "updated_at": NOW}
+    assert next(r for r in rank_questions(foundations, ready, EXAM, NOW) if r["question_id"] == "core-depth")["eligible"]
     # Prerequisites can cross priorities and must still be seen first.
     bank["questions"] = [q for q in bank["questions"] if q["question_id"] in ("core", "optional")]
     bank["questions"][0]["prerequisites"] = ["optional"]

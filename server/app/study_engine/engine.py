@@ -83,11 +83,12 @@ def concept_readiness(bank: dict, state: dict, concept_id: str, policy: dict = D
     return ready
 
 
-def core_mastery(bank: dict, state: dict, concept_id: str | None = None) -> float:
+def core_mastery(bank: dict, state: dict, concept_id: str | None = None, *, foundations_only: bool = False) -> float:
     bank = personal_bank(bank, state)
     by_concept: dict[str, dict[str, float]] = {}
     for q in bank["questions"]:
-        if q["tier"] == "Core" and (not concept_id or q["concept_id"] == concept_id):
+        if (q["tier"] == "Core" and (not concept_id or q["concept_id"] == concept_id)
+                and (not foundations_only or not is_advanced(q))):
             by_concept.setdefault(q["concept_id"], {})[q["retrieval_direction"]] = mastery(state, q)
     return _average([_average(list(ds.values())) for ds in by_concept.values()])
 
@@ -157,7 +158,8 @@ def rank_questions(bank: dict, state: dict, exam_date: str, now: int, policy: di
         stage = question_stage(q)
         ready = readiness.get(q["concept_id"], stage)
         prereq_ready = all(mastery(state, by_id.get(pid)) >= prog["prerequisiteMastery"] for pid in q["prerequisites"])
-        has_core = any(o["concept_id"] == q["concept_id"] and o["tier"] == "Core" for o in bank["questions"])
+        has_core = any(o["concept_id"] == q["concept_id"] and o["tier"] == "Core" and not is_advanced(o)
+                       for o in bank["questions"])
         remediation = any(r["prerequisite_id"] == qid for r in remediations)
         reasons: list[str] = []
         notes: list[str] = []
@@ -167,7 +169,7 @@ def rank_questions(bank: dict, state: dict, exam_date: str, now: int, policy: di
             reasons.append("중요한 Core의 약점을 먼저 복습합니다.")
         elif q["tier"] == "Optional" and core < prog["optionalCore"] and days > ex["closeDays"] and any_core:
             reasons.append("Core 숙련도가 Optional 진입 기준보다 낮습니다.")
-        if (is_advanced(q) and has_core and core_mastery(bank, state, q["concept_id"]) < prog["advancedCore"]
+        if (is_advanced(q) and has_core and core_mastery(bank, state, q["concept_id"], foundations_only=True) < prog["advancedCore"]
                 and not (q["prerequisites"] and prereq_ready)):
             reasons.append("기초 Core 또는 선행 문항의 숙련도를 더 쌓아야 합니다.")
         if stage > ready + prog["maxStageAhead"] and not remediation:
