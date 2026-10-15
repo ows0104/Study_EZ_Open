@@ -4,6 +4,7 @@ import { bankHref, lectureHref } from "../links";
 import type { LectureRef, TimetableEvent } from "../types/lectures";
 import type { CardProgress } from "../types/mastery";
 import { StudyPlanBoard } from "../calendar/StudyPlanBoard";
+import { toCalendarEntries } from "../calendar/entries";
 import { BankBuildTimes } from "./BankBuildTimes";
 import "./overview.css";
 
@@ -13,14 +14,22 @@ export type StudyLecture = Pick<LectureRef, "subject" | "runId" | "title" | "ban
 
 function lectureRows(events: TimetableEvent[]): StudyLecture[] {
   const rows = new Map<string, StudyLecture>();
-  for (const event of events) {
+  const blockName = (name: string) => name.replace(/(?:\s*(?:실습|PBL|CBL|TBL))+\s*$/gi, "").trim();
+  const blockKey = (name: string) => blockName(name).replace(/\s/g, "");
+  const blocks = new Map<string, string>();
+  for (const event of events.filter(e => e.lectures.length)) {
+    const name = blockName(event.course || event.lectures[0].subject);
+    if (name && !blocks.has(blockKey(name))) blocks.set(blockKey(name), name);
+  }
+  for (const event of toCalendarEntries(events)) {
+    const course = blocks.get(blockKey(event.course || event.lectures[0]?.subject || "")) || "기타 강의";
     for (const l of event.lectures) {
       const key = `${l.subject}/${l.runId}`;
-      if (!rows.has(key)) rows.set(key, { ...l, key, date: event.date, course: event.course || l.subject, ready: l.marks.quiz });
+      if (!rows.has(key)) rows.set(key, { ...l, key, date: event.date, course, ready: l.marks.quiz });
     }
     if (!event.lectures.length && ["lecture", "practice"].includes(event.category)) {
       const key = `event:${event.id}`;
-      rows.set(key, { key, subject: event.course, course: event.course, runId: "", title: event.title,
+      rows.set(key, { key, subject: event.course, course, runId: "", title: event.detail || event.title,
         date: event.date, ready: false });
     }
   }
@@ -45,7 +54,10 @@ export function StudyOverview({ events, onStart, adminActions }: {
   adminActions?: (lectures: StudyLecture[]) => React.ReactNode;
 }) {
   const rows = useMemo(() => lectureRows(events), [events]);
-  const [course, setCourse] = useState("");
+  const [course, setCourse] = useState(() => {
+    const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" }).format(new Date());
+    return rows.filter(l => l.ready && l.date <= today).at(-1)?.course ?? "";
+  });
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState("date");
