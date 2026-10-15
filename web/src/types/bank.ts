@@ -115,7 +115,10 @@ export type BankAnswer = {
   external?: boolean;
 };
 
-export type BankSlide = { page: number; url: string; primary?: boolean };
+export type BankSlide = {
+  page: number; url: string; primary?: boolean;
+  sourceId?: string; sourceRunId?: string; sourceFilename?: string;
+};
 
 /** 관리자가 보는 문항 — 은행 JSON 그대로라 답 칸도 snake_case 다. */
 export type BankOptionPool = {

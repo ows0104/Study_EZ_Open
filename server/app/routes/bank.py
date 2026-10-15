@@ -24,14 +24,15 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, select, tuple_
+from sqlalchemy import and_, or_, select, tuple_
 from sqlalchemy.orm import Session
 
 from app import study_engine as engine
 from app import bank_edits
 from app import bank_personal
 from app.bank_validation.pages import cited_pages
-from app.bank_validation.slide_focus import selected_pages, all_selected_pages, question_hash
+from app.bank_validation.slide_focus import (selected_references, all_selected_pages, all_selected_references,
+                                             question_hash, source_id, external_filename)
 from app.bank_validation.jokbo_pages import references as jokbo_references
 from app.bank_validation.schema import QUESTION, schema_errors, without_retired
 from app.bank_validation.coverage import coverage_summary
@@ -723,23 +724,42 @@ def _slides(db: Session, row: QuizBank, question_id: str, presented: dict | None
     report = (row.validation or {}).get("slideFocus") or {}
     current = (report.get("questions", {}).get(question_id) or {}).get("questionHash") == question_hash(question)
     pages = sorted(set((row.pages or {}).get(question_id) or []) | (all_selected_pages(report, question_id) if current else set()))
-    if not pages:
+    related = {}
+    if current and report.get("version") == 3:
+        for ref in all_selected_references(report, question_id):
+            sid, page = source_id(ref), ref["page"]
+            if sid == "self":
+                continue
+            meta = report.get("sources", {}).get(sid) or {}
+            if type(page) is not int or type(meta.get("pageCount")) is not int or not 1 <= page <= meta["pageCount"]:
+                continue
+            try:
+                name = external_filename(row.run_id, sid, meta.get("sourceSha256", ""), page)
+            except ValueError:
+                continue
+            related[name] = {"page": page, "sourceId": sid, "sourceRunId": meta.get("runId", sid),
+                             "sourceFilename": meta.get("sourceFilename", "")}
+    if not pages and not related:
         return []
-    assets = {a.slide_no: a for a in db.scalars(select(Asset).where(
+    assets = list(db.scalars(select(Asset).where(
         Asset.subject == row.subject, Asset.run_id == row.run_id, Asset.kind == SLIDE_KINDS["bank"],
-        Asset.slide_no.in_(pages)))}
+        or_(Asset.slide_no.in_(pages), Asset.filename.in_(related)))))
+    own_assets = {a.slide_no: a for a in assets if a.slide_no in pages}
+    foreign_assets = {a.filename: a for a in assets if a.filename in related}
     out = []
-    for page in pages:
-        asset = assets.get(page)
+    requested = [(own_assets.get(page), {"page": page, "sourceId": "self", "sourceRunId": row.run_id,
+                  "sourceFilename": report.get("sourceFilename", "")}) for page in pages]
+    requested += [(foreign_assets.get(name), info) for name, info in related.items()]
+    for asset, info in requested:
         if asset is None:
             continue
         try:
-            out.append({"page": page, "url": ObjectStorage().presign_download(asset.object_key)})
+            out.append({**info, "url": ObjectStorage().presign_download(asset.object_key)})
         except StorageNotConfigured:
             break
-    primary = selected_pages(report, question, [slide["page"] for slide in out], presented)
+    primary = selected_references(report, question, {(s["sourceId"], s["page"]) for s in out}, presented)
     for slide in out:
-        slide["primary"] = slide["page"] in primary
+        slide["primary"] = (slide["sourceId"], slide["page"]) in primary
     return out
 
 

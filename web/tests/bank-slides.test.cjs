@@ -47,3 +47,17 @@ test('empty references render nothing and a single reference needs no expander',
   assert.match(html, /alt="필기 2쪽"/);
   assert.doesNotMatch(html, /<details/);
 });
+
+test('equal page numbers in different lectures stay distinct and show their original source', () => {
+  const own = { ...slide(8, false), sourceId: 'self', sourceFilename: '내 강의.pdf' };
+  const other = { ...slide(8, true), sourceId: '261008_02', sourceFilename: '순환기 기초2.pdf', url: 'https://example.test/other-8.png' };
+  const { primary, extra } = splitSlides([own, other]);
+  assert.deepEqual(Array.from(primary, s => s.sourceId), ['261008_02']);
+  assert.deepEqual(Array.from(extra, s => s.sourceId), ['self']);
+  const html = renderToStaticMarkup(React.createElement(BankSlides, { slides: [own, other] }));
+  assert.match(html, /다른 강의/);
+  assert.match(html, /순환기 기초2.pdf/);
+  assert.match(html, /PDF 8쪽/);
+  assert.doesNotMatch(html, /alt="필기 8쪽"/);
+  assert.match(html, /추가 참고 슬라이드 1장/);
+});

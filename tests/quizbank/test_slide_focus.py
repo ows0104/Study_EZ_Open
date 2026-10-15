@@ -7,6 +7,8 @@ import pytest
 from quizbank import slide_focus, evidence
 from quizbank.session import SessionError
 from server.app.bank_validation.slide_focus import question_hash, selected_pages, authored_hash
+from server.app.bank_validation.slide_focus import selected_references, all_selected_pages, external_filename
+from quizbank import evidence_sources
 
 
 def bank():
@@ -144,3 +146,89 @@ def test_a_changed_answer_invalidates_the_authored_selection(tmp_path, monkeypat
     report, _ = slide_focus.select(original, pdf, tmp_path / "focus", authored=authored)
     assert len(calls) == 1 and report["reselectedCount"] == 1
     assert selected_pages(report, original["questions"][0], [1, 2]) == {2}
+
+
+def test_same_page_in_two_lectures_requires_both_images_and_does_not_pollute_own_pages():
+    raw = output("linked", (2, 2))
+    raw["selections"][0]["slides"][1]["source_id"] = "other"
+    sources = {"other": {"runId": "other", "pageCount": 4, "sourceSha256": "a" * 64}}
+    report = slide_focus.shape(raw, bank(), 3, "self-hash", sources=sources)
+    q = bank()["questions"][0]
+    assert report["version"] == 3
+    assert all_selected_pages(report, "Q1") == {2}
+    assert selected_references(report, q, {("self", 2)}) == set()
+    assert selected_references(report, q, {("self", 2), ("other", 2)}) == {("self", 2), ("other", 2)}
+    assert selected_references(report, {**q, "answer": "changed"}, {("self", 2), ("other", 2)}) == set()
+
+
+def test_related_sources_need_real_identity_page_and_complete_absence_search():
+    sources = {"other": {"pageCount": 2}}
+    raw = output()
+    raw["selections"][0]["slides"][0]["source_id"] = "missing"
+    with pytest.raises(SessionError):
+        slide_focus.shape(raw, bank(), 3, "s", sources=sources)
+    raw["selections"][0]["slides"][0].update(source_id="other", page=3)
+    with pytest.raises(SessionError):
+        slide_focus.shape(raw, bank(), 3, "s", sources=sources)
+    raw = output("unresolved", ())
+    raw["selections"][0].update(unresolved_cause="uncertain", searched_sources=["self"])
+    with pytest.raises(SessionError):
+        slide_focus.shape(raw, bank(), 3, "s", sources=sources)
+    raw["selections"][0]["searched_sources"].append("other")
+    assert slide_focus.shape(raw, bank(), 3, "s", sources=sources)["questions"]["Q1"]["base"]["mode"] == "unresolved"
+
+
+def make_pdf(path, text="A is B"):
+    with fitz.open() as doc:
+        doc.new_page().insert_text((30, 30), text)
+        doc.save(path)
+
+
+def test_authored_absence_is_searched_again_and_related_source_changes_invalidate_cache(tmp_path, monkeypatch):
+    pdf, other = tmp_path / "self.pdf", tmp_path / "other.pdf"
+    make_pdf(pdf)
+    make_pdf(other)
+    original = bank()
+    authored = {"Q1": {"authoredHash": authored_hash(original["questions"][0]), "evidence": {
+        "mode": "unresolved", "reason": "자기 강의에서 없음", "slides": []}}}
+    calls = []
+    raw = output(pages=(1,))
+    raw["selections"][0]["slides"][0]["source_id"] = "other"
+    def call(prompt, schema, work, model, label):
+        calls.append(work)
+        catalog = json.loads((work / "sources.json").read_text(encoding="utf-8"))
+        assert Path(catalog["other"]["images"][0]).is_file()
+        return raw, {}
+    from pathlib import Path
+    monkeypatch.setattr(slide_focus, "_call", call)
+    kwargs = dict(authored=authored, related={"other": other})
+    out = tmp_path / "focus"
+    slide_focus.select(original, pdf, out, **kwargs)
+    slide_focus.select(original, pdf, out, **kwargs)
+    assert len(calls) == 1
+    other.unlink()
+    make_pdf(other, "changed relationship")
+    slide_focus.select(original, pdf, out, **kwargs)
+    assert len(calls) == 2
+
+
+def test_selected_related_pages_are_rendered_as_separate_content_addressed_assets(tmp_path):
+    other = tmp_path / "other.pdf"
+    make_pdf(other)
+    meta = evidence_sources.describe(other, "other")
+    raw = output(pages=(1,))
+    raw["selections"][0]["slides"][0]["source_id"] = "other"
+    report = slide_focus.shape(raw, bank(), 3, "s", sources={"other": meta})
+    made = evidence_sources.render_selected(report, {"other": other}, tmp_path / "slides", "demo")
+    assert len(made) == 1 and made[0].name == external_filename("demo", "other", meta["sourceSha256"], 1)
+    assert all_selected_pages(report, "Q1") == set()
+    assert not list((tmp_path / "slides").glob("*_s*.png"))
+
+
+def test_source_discovery_stays_with_this_course_year_and_latest_lecture_version(tmp_path):
+    own = tmp_path / "[261001_01] ownv1.pdf"
+    for name in [own.name, "[261001_02] otherv1.pdf", "[261001_02] otherv3.pdf", "[251001_02] oldv9.pdf", "exam.pdf"]:
+        (tmp_path / name).write_bytes(b"placeholder")
+    found = evidence_sources.discover(own)
+    assert list(found) == ["261001_02"]
+    assert found["261001_02"].name.endswith("v3.pdf")

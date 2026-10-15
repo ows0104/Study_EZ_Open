@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 from server.app.bank_validation.slide_focus import all_selected_pages
-from . import jokbo_pages, slide_focus, slides
+from . import jokbo_pages, slide_focus, slides, evidence_sources
 from .session import SessionError
 
 
@@ -16,9 +16,12 @@ def enrich(pdf: Path, out: Path, run_id: str, *, jokbo: Path | None = None, mode
         (out / name).write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
     bank, validation, result = read("bank.json"), read("validation.json"), read("result.json")
+    related = {}
     try:
         authored = read("authored-evidence.json") if (out / "authored-evidence.json").is_file() else None
-        focus, usage = slide_focus.select(bank, pdf, out / "slide-focus", model=model, authored=authored)
+        related = evidence_sources.discover(pdf)
+        focus, usage = slide_focus.select(bank, pdf, out / "slide-focus", model=model, authored=authored,
+            related=related, source_cache=Path(__file__).resolve().parents[1] / "runs/_materials/evidence-sources", jokbo=jokbo)
         focus["sourceFilename"] = pdf.name
         validation["slideFocus"] = focus
         result["slideFocus"] = {mode: sum(q["base"]["mode"] == mode for q in focus["questions"].values())
@@ -26,7 +29,7 @@ def enrich(pdf: Path, out: Path, run_id: str, *, jokbo: Path | None = None, mode
         with (out / "usage.jsonl").open("a", encoding="utf-8") as log:
             for entry in usage:
                 log.write(json.dumps({"step": "문제·정답 핵심 근거 지면 선택", "t": int(time.time()), **entry}) + "\n")
-    except SessionError as cause:
+    except (SessionError, ValueError, OSError) as cause:
         focus = {"version": 2, "questions": {}, "error": str(cause)}
         validation["slideFocus"] = focus
         result["slideFocusError"] = str(cause)
@@ -37,6 +40,7 @@ def enrich(pdf: Path, out: Path, run_id: str, *, jokbo: Path | None = None, mode
         qid = question["question_id"]
         pages[qid] = sorted(set(pages.get(qid, [])) | all_selected_pages(focus, qid))
     _, missing = slides.render(pdf, {page for refs in pages.values() for page in refs}, out / "slides", run_id)
+    evidence_sources.render_selected(focus, related, out / "slides", run_id)
     result["slides"] = len(list((out / "slides").glob("*.png")))
     result["jokboSlides"] = len(images)
     result["missing_pages"] = missing

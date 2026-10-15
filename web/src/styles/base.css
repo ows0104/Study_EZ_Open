@@ -2831,6 +2831,14 @@ button.notice-title:hover:not(:disabled) {
   max-width: none;
 }
 
+.bank-evidence-slide {
+  margin: 0;
+}
+
+.bank-evidence-slide figcaption {
+  overflow-wrap: anywhere;
+}
+
 .bank-jokbo-slides {
   margin-top: 24px;
 }
