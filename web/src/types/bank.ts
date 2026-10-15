@@ -103,7 +103,7 @@ export type BankAnswer = {
   answerPairs: { left: string; right: string }[];
   correctOrder: string[];
   /** 문항이 인용한 필기 쪽들. 한 문항이 여러 장일 수 있다. */
-  slides: { page: number; url: string }[];
+  slides: BankSlide[];
   /** 외부지식 검토. 막지 않고 표시만 한다. */
   medicalReview: BankReview | null;
   reviewIssues?: string[];
@@ -112,6 +112,8 @@ export type BankAnswer = {
   /** 자료 밖 내용을 외부 의학지식으로 썼다(출처 `EXT`). */
   external?: boolean;
 };
+
+export type BankSlide = { page: number; url: string; primary?: boolean };
 
 /** 관리자가 보는 문항 — 은행 JSON 그대로라 답 칸도 snake_case 다. */
 export type BankOptionPool = {
@@ -255,7 +257,7 @@ export type BankNext = {
   lectureGoal?: import("./studyPlan").LectureGoal | null;
   question: BankQuestion | null;
   /** Warm the current question's images without recording a reveal. Older APIs omit this. */
-  preloadSlides?: { page: number; url: string }[];
+  preloadSlides?: BankSlide[];
   reviewToken?: string;
   days?: number;
   examDate?: string;

@@ -30,7 +30,7 @@ from sqlalchemy.orm import Session
 from app import study_engine as engine
 from app import bank_edits
 from app import bank_personal
-from app.bank_validation.pages import cited_pages
+from app.bank_validation.pages import cited_pages, primary_pages
 from app.bank_validation.schema import QUESTION, schema_errors, without_retired
 from app.bank_validation.coverage import coverage_summary
 from app.bank_validation.validate import validate_bank
@@ -729,6 +729,10 @@ def _slides(db: Session, row: QuizBank, question_id: str) -> list[dict[str, Any]
             out.append({"page": page, "url": ObjectStorage().presign_download(asset.object_key)})
         except StorageNotConfigured:
             break
+    question = next((q for q in (row.bank or {}).get("questions", []) if q["question_id"] == question_id), {})
+    primary = primary_pages(question, [slide["page"] for slide in out])
+    for slide in out:
+        slide["primary"] = slide["page"] in primary
     return out
 
 

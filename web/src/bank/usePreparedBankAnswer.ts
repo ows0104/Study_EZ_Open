@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { api } from "../api";
 import type { BankAnswer } from "../types/bank";
 import type { SlidePreloader } from "../slidePreload";
+import { splitSlides } from "./BankSlides";
 
 /** Preparation never records a reveal. Each served token owns its own cache. */
 export function usePreparedBankAnswer(base: string, token: string | undefined, slides: SlidePreloader, revision = 0) {
@@ -14,7 +15,7 @@ export function usePreparedBankAnswer(base: string, token: string | undefined, s
     }).then((answer) => {
       if (controller.signal.aborted) return;
       prepared.answer = answer;
-      slides.warm(answer.slides.map((slide) => slide.url));
+      slides.warm(splitSlides(answer.slides).primary.map(slide => slide.url));
     }).catch(() => {}); // A miss (or older API) falls back to the normal reveal.
     return () => controller.abort();
   }, [base, token, prepared, slides]);

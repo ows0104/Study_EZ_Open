@@ -1,9 +1,9 @@
 import { Stem } from "../lecture/Stem";
 import type { BankAnswer, BankQuestion } from "../types/bank";
-import { SlideImage } from "../SlideImage";
 import type { SlidePreloader } from "../slidePreload";
 import { AnswerPoints, answerPoints } from "./AnswerPoints";
 import { BankStem } from "./BankStem";
+import { BankSlides } from "./BankSlides";
 
 /**
  * 문항 ID 를 씨로 삼아 섞는다 — 다시 불러도, 답을 펴도 같은 순서다. 섞은 결과가 원래와 같으면 한 칸 민다.
@@ -220,9 +220,7 @@ export function AnswerBody({ question: q, answer, preload }: {
           {review.suggested_answer ? <><br />맞는 답: {review.suggested_answer}</> : null}
         </p>
       ) : null}
-      {answer.slides.map((slide) => (
-        <SlideImage key={slide.page} preload={preload} src={slide.url} alt={`필기 ${slide.page}쪽`} />
-      ))}
+      <BankSlides key={`${q.question_id}:${answer.slides.map(slide => slide.url).join("|")}`} slides={answer.slides} preload={preload} />
     </>
   );
 }

@@ -2813,6 +2813,14 @@ button.notice-title:hover:not(:disabled) {
   white-space: pre-wrap;
 }
 
+.bank-slides {
+  width: 100%;
+}
+
+.bank-extra-slides {
+  max-width: none;
+}
+
 .bank-ox-explanation,
 .bank-choice-explanation {
   width: min(100%, 720px);

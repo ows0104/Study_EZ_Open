@@ -15,6 +15,7 @@ import { useBankUndo } from "./useBankUndo";
 import { MatchingQuestion, type MatchingPicks } from "./MatchingQuestion";
 import { SequenceQuestion, sequenceComplete } from "./SequenceQuestion";
 import { SuspendedQuestions } from "./SuspendedQuestions";
+import { splitSlides } from "./BankSlides";
 
 const FORMAT_LABEL: Record<string, string> = {
   basic: "단답", cloze: "빈칸", list: "나열", ox: "O/X", mcq: "객관식", multi_select: "복수 선택",
@@ -69,7 +70,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
   const { undo, undoBusy, pending } = useBankUndo(base, current?.undoToken, restore, setError, busy || Boolean(peek), batch ? batchUndo : undefined);
   const slides = useMemo(() => new SlidePreloader(), [base]);
   const prepared = usePreparedBankAnswer(base, current?.reviewToken, slides, answerRevision);
-  useEffect(() => { slides.warm(current?.preloadSlides?.map((slide) => slide.url) ?? []); }, [current, slides]);
+  useEffect(() => { slides.warm(splitSlides(current?.preloadSlides ?? []).primary.map(slide => slide.url)); }, [current, slides]);
 
   const next = useCallback(async () => {
     if (pending.current) return;
