@@ -31,6 +31,7 @@ from pathlib import Path
 from . import classify, coverage, evidence, explain, incremental, option_pools, organize, question_first, repair, review, slides, web_audit
 from .schema import schema_errors
 from .session import SessionError
+from .runtime import record as record_runtime
 from .validate import validate_bank, validate_dropping
 from server.app.bank_validation.publication import stamp, usable
 
@@ -411,6 +412,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--prompt-version", default="")
     args = ap.parse_args(argv)
     sources = [parse_source(s) for s in args.source] or [{"id": "S1", "kind": "notes_current", "filename": ""}]
+    record_runtime(args.out, 'started')
     try:
         result = run(args.raw, args.pdf, args.title, args.run_id, sources, args.out,
                      pdf_source=args.pdf_source, do_review=not args.no_review, model=args.model,
@@ -425,6 +427,7 @@ def main(argv: list[str] | None = None) -> int:
                 _stage("핵심 근거 선택·족보 지면 연결")
                 result = evidence.enrich(args.pdf, args.out, args.run_id, jokbo=args.jokbo, model=args.model)
     except SessionError as e:
+        record_runtime(args.out, 'failed')
         print(f"멈췄다 — {e}", flush=True)
         return 1
     # 산출물을 다 쓴 뒤의 요약도 실패할 수 있는 코드다 (루트 CLAUDE.md 함정 ①) — 종료 코드를 바꾸지 않는다.
@@ -438,6 +441,7 @@ def main(argv: list[str] | None = None) -> int:
               + (f" · PDF에 없는 쪽 {result['missing_pages']}" if result["missing_pages"] else ""), flush=True)
     except Exception:  # noqa: BLE001
         pass
+    record_runtime(args.out, 'finished')
     return 0
 
 

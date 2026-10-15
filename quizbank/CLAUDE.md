@@ -62,6 +62,8 @@ wrong·doubt와 후보별 검수 hash는 그대로 보존하고, 누락·깨진 
 실행: `python -m quizbank.run --help`.
 검사: `python -m pytest tests/quizbank`.
 운영 실행·업로드는 `runner/bank.py`가 맡는다.
+실제 실행 사본과 공통 프롬프트의 버전·hash는 각 CLI 출력 폴더의 `runtime.json`에 기록한다.
+호출한 채팅의 작업 폴더나 Git 커밋만으로 실행 중인 배포 사본이 갱신됐다고 판단하지 않는다.
 
 프롬프트 1.61부터 출제 시 `근거:` JSON으로 핵심·추가 참고·족보를 구분한다. 정리기는 이를
 `authored-evidence.json`에 보존하고 문항 스키마·정답·해설에 섞지 않는다. 최종 문항의 발문·정답·출처가

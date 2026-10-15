@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .question_first import cached_points, extract_points
 from .session import SessionError
+from .runtime import record as record_runtime
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -21,6 +22,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--min-source-age", type=int, default=0)
     args = parser.parse_args(argv)
     args.out.mkdir(parents=True, exist_ok=True)
+    record_runtime(args.out, 'started')
     try:
         context = json.loads(args.context.read_text(encoding="utf-8"))
         sources = context["sources"]
@@ -40,8 +42,10 @@ def main(argv: list[str] | None = None) -> int:
         result = {"completed": True, "reused": reuse is not None, "points": len(points),
                   "pointPlanPath": str((args.out / "authored-points.json").resolve()), "usage": usage}
         (args.out / "points-result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+        record_runtime(args.out, 'finished')
         return 0
     except (SessionError, OSError, ValueError, KeyError, StopIteration, TypeError) as cause:
+        record_runtime(args.out, 'failed')
         print(f"멈췄다 — 원본 독립 포인트: {cause}", flush=True)
         return 1
 
