@@ -79,6 +79,8 @@
   --ok: #14683f;
   --ok-soft: #f0f8f3;
   --ok-line: #c4e2d2;
+  --bad: #b42332;
+  --bad-soft: #fff1f2;
 
   --r-1: 6px;
   --r-2: 8px;
@@ -129,6 +131,8 @@
     --ok: #5fc794;
     --ok-soft: #10201a;
     --ok-line: #244434;
+    --bad: #ff9ba6;
+    --bad-soft: #32191f;
 
     --shadow-1: 0 1px 2px rgb(0 0 0 / 40%);
     --shadow-2: 0 1px 2px rgb(0 0 0 / 40%), 0 6px 16px -6px rgb(0 0 0 / 50%);
@@ -2640,6 +2644,7 @@ button.notice-title:hover:not(:disabled) {
 }
 
 .bank-option {
+  display: block;
   width: 100%;
   padding: 10px 14px;
   border: 1px solid var(--line);
@@ -2672,9 +2677,34 @@ button.notice-title:hover:not(:disabled) {
   background: var(--ok-soft);
 }
 
-.bank-option.is-correct::after {
-  content: " ✓";
+.bank-option.is-missed {
+  border-color: var(--warn);
+  border-style: dashed;
+  color: var(--ink);
+  background: var(--warn-soft);
 }
+
+.bank-option.is-wrong {
+  border-color: var(--bad);
+  color: var(--bad);
+  background: var(--bad-soft);
+}
+
+.bank-option-result {
+  display: block;
+  margin-top: 6px;
+  font-size: .85em;
+  font-weight: 650;
+}
+
+.bank-choice-score {
+  display: grid;
+  gap: 6px;
+  margin: 16px 0;
+}
+
+.bank-choice-score.is-correct > strong { color: var(--ok); }
+.bank-choice-score.is-wrong > strong { color: var(--bad); }
 
 /* 두 열을 가운데로 모은다. `1fr 1fr` 이면 넓은 화면에서 왼쪽 열이 왼쪽 끝에, 오른쪽 열이 한가운데 서서
    짝을 눈으로 잇기 어려웠다(2026-10-05 관리자). */

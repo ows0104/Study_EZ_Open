@@ -20,9 +20,58 @@ function load(file) {
   vm.runInContext(js, context);
   return context.exports;
 }
-const { AnswerBody, QuestionBody } = load(path.join(__dirname, '../src/bank/BankQuestion.tsx'));
+const { AnswerBody, QuestionBody, choiceScore } = load(path.join(__dirname, '../src/bank/BankQuestion.tsx'));
 const question = { format: 'basic', question_id: 'q1', question: '', options: [], matching_left: [], matching_right: [] };
 const answer = { answer: '', answerUnits: [], answerPairs: [], correctOrder: [], correctOptionIds: [], medicalReview: null, slides: [] };
+const choiceQuestion = { ...question, format: 'multi_select', options: ['A', 'B', 'C', 'D'].map(id => ({ id, text: `보기 ${id}` })) };
+const choiceAnswer = { ...answer, correctOptionIds: ['A', 'C'] };
+test('multiple choice needs the entire answer set, with neither omissions nor extras', () => {
+  for (const [ids, correct, missed, wrong, allCorrect] of [
+    [[], 0, 2, 0, false], [['A'], 1, 1, 0, false], [['C'], 1, 1, 0, false],
+    [['C', 'A'], 2, 0, 0, true], [['A', 'B'], 1, 1, 1, false],
+    [['A', 'B', 'C'], 2, 0, 1, false], [['B', 'D'], 0, 2, 2, false],
+    [['A', 'B', 'C', 'D'], 2, 0, 2, false],
+  ]) {
+    assert.deepEqual(JSON.parse(JSON.stringify(choiceScore(choiceQuestion, choiceAnswer, new Set(ids)))),
+      { correct, missed, wrong, allCorrect }, `selected ${ids}`);
+  }
+});
+
+test('revealed options distinguish correct picks, missed answers, and incorrect picks', () => {
+  const html = renderToStaticMarkup(React.createElement(QuestionBody, {
+    question: choiceQuestion, answer: choiceAnswer, picked: new Set(['A', 'B']), onPick: () => {},
+  }));
+  assert.match(html, /class="bank-option is-picked is-correct"[^>]*aria-pressed="true"[^>]*><b>A<\/b>.*?✓ 맞게 고른 정답/);
+  assert.match(html, /class="bank-option is-picked is-wrong"[^>]*><b>B<\/b>.*?✕ 잘못 고른 선지/);
+  assert.match(html, /class="bank-option is-missed"[^>]*aria-pressed="false"[^>]*><b>C<\/b>.*?! 빠뜨린 정답 · 미선택/);
+  assert.match(html, /<b>D<\/b>.*?정답 아님 · 미선택/);
+  assert.ok(html.includes('맞게 고른 정답 1개 · 빠뜨린 정답 1개 · 잘못 고른 선지 1개'));
+  assert.ok(!html.includes('모두 맞았어요'));
+});
+
+test('choice feedback appears only after reveal and never uses stale personal answer keys', () => {
+  for (const revealed of [null, { ...choiceAnswer, personalAnswer: true }]) {
+    const html = renderToStaticMarkup(React.createElement(QuestionBody, {
+      question: choiceQuestion, answer: revealed, picked: new Set(['A']), onPick: () => {},
+    }));
+    assert.ok(!html.includes('bank-option-result') && !html.includes('bank-choice-score'));
+  }
+  for (const key of [[], ['Z']]) {
+    assert.equal(choiceScore(choiceQuestion, { ...choiceAnswer, correctOptionIds: key }, new Set(['A'])), null);
+  }
+  assert.equal(choiceScore(choiceQuestion, choiceAnswer, new Set(['Z'])), null);
+});
+
+test('single choice and blank selections cannot be mistaken for a correct answer', () => {
+  const q = { ...choiceQuestion, format: 'mcq' }, a = { ...choiceAnswer, correctOptionIds: ['C'] };
+  assert.equal(choiceScore(q, a, new Set(['A'])).allCorrect, false);
+  assert.equal(choiceScore(q, a, new Set(['C'])).allCorrect, true);
+  const html = renderToStaticMarkup(React.createElement(QuestionBody, {
+    question: choiceQuestion, answer: choiceAnswer, picked: new Set(), onPick: () => {},
+  }));
+  assert.ok(html.includes('선택한 답이 없어요.') && !html.includes('모두 맞았어요'));
+  assert.equal((html.match(/class="bank-option is-missed"/g) || []).length, 2);
+});
 const render = (changes, format = 'list', tier = 'Advanced') => renderToStaticMarkup(React.createElement(AnswerBody, {
   question: { ...question, format, tier }, answer: { ...answer, ...changes },
 }));

@@ -268,7 +268,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
           <p className="bank-conflict">강의자료와 족보가 어긋나는 대목입니다. 답을 보면 무엇이 어떻게 다른지 나옵니다.</p>
         ) : null}
 
-        <QuestionBody question={q} answer={answer} picked={picked} showOptions={!hiddenChoices}
+        <QuestionBody question={q} answer={answer} picked={picked} showOptions={!hiddenChoices} disabled={busy || undoBusy}
           sequence={q.format === "sequence" ? <SequenceQuestion question={q} answer={answer} order={order}
             disabled={busy || undoBusy} onSelect={item => {
               if (answer || busy || undoBusy) return;
@@ -287,7 +287,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
               setActiveMatch(following >= 0 ? following : unfilled >= 0 ? unfilled : activeMatch);
             }} /> : undefined}
           onPick={(id) => {
-          if (answer) return;
+          if (answer || busy || undoBusy) return;
           setPicked((old) => {
             const fresh = new Set(q.format === "mcq" ? [] : old);
             if (old.has(id) && q.format !== "mcq") fresh.delete(id);

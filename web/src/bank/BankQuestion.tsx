@@ -28,8 +28,19 @@ const letter = (index: number) => String.fromCharCode(65 + index);
 /** ChatGPT 가 항목에 스스로 붙인 꼬리표(`L1:` · `R2:`). 화면의 1·2·A·B 와 겹치므로 보일 때만 뗀다 — 짝은 원문으로 맞춘다. */
 const bare = (item: string) => item.replace(/^[LR]\d+\s*[:.)]\s*/, "");
 
+export function choiceScore(q: BankQuestion, answer: BankAnswer | null, picked: Set<string>) {
+  if (!answer || answer.personalAnswer || !["mcq", "multi_select"].includes(q.format)) return null;
+  const options = new Set(q.options.map(option => option.id));
+  const expected = new Set(answer.correctOptionIds);
+  if (!expected.size || [...expected, ...picked].some(id => !options.has(id))) return null;
+  const correct = [...picked].filter(id => expected.has(id)).length;
+  const missed = expected.size - correct;
+  const wrong = picked.size - correct;
+  return { correct, missed, wrong, allCorrect: missed === 0 && wrong === 0 };
+}
+
 /** 발문. cloze 빈칸은 답을 보면 채운다. */
-export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true }: {
+export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false }: {
   question: BankQuestion;
   answer: BankAnswer | null;
   picked: Set<string>;
@@ -37,7 +48,9 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
   matching?: import("react").ReactNode;
   sequence?: import("react").ReactNode;
   showOptions?: boolean;
+  disabled?: boolean;
 }) {
+  const score = choiceScore(q, answer, picked);
   const parts = q.format === "cloze" ? q.question.split(/(\{\{c\d+\}\})/g) : [q.question];
   let blank = 0;
   return (
@@ -60,18 +73,29 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
       {q.options.length && showOptions ? (
         <ul className="bank-options">
           {q.options.map((option) => {
+            const selected = picked.has(option.id);
             const correct = answer?.correctOptionIds.includes(option.id);
-            const cls = `${picked.has(option.id) ? " is-picked" : ""}${correct ? " is-correct" : ""}`;
+            const result = score ? correct ? selected ? "is-correct" : "is-missed" : selected ? "is-wrong" : "" : "";
+            const label = score ? correct ? selected ? "✓ 맞게 고른 정답" : "! 빠뜨린 정답 · 미선택"
+              : selected ? "✕ 잘못 고른 선지" : "정답 아님 · 미선택" : "";
+            const cls = `${selected ? " is-picked" : ""}${result ? ` ${result}` : ""}`;
             return (
               <li key={option.id}>
-                <button className={`bank-option${cls}`} disabled={Boolean(answer)} onClick={() => onPick(option.id)}>
+                <button type="button" className={`bank-option${cls}`} disabled={disabled || Boolean(answer)}
+                  aria-pressed={selected} onClick={() => onPick(option.id)}>
                   <b>{option.id}</b> {option.text}
+                  {label ? <span className="bank-option-result">{label}</span> : null}
                 </button>
               </li>
             );
           })}
         </ul>
       ) : null}
+      {showOptions && score ? <p className={`bank-choice-score ${score.allCorrect ? "is-correct" : "is-wrong"}`} role="status">
+        <strong>{score.allCorrect ? "모두 맞았어요!" : picked.size ? "정답과 선택이 달라요." : "선택한 답이 없어요."}</strong>
+        <span>맞게 고른 정답 {score.correct}개 · 빠뜨린 정답 {score.missed}개 · 잘못 고른 선지 {score.wrong}개</span>
+        <span className="bank-note">아래에서 Again·Hard·Good·Easy 중 체감 난이도에 맞는 평가를 고르세요.</span>
+      </p> : null}
       {q.format === "matching" ? (
         matching ?? (
         <div className="bank-match">
