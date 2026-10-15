@@ -62,8 +62,7 @@ def main():
     ticks = iter(range(NOW, NOW + 10000))
     sequence = []
     with patch("app.routes.bank.engine.now_ms", side_effect=lambda: next(ticks)), \
-         patch("app.study_engine.batch.random.choices", side_effect=lambda population, **kw: [population[0]]), \
-         patch("app.study_engine.daily_queue.random.choice", side_effect=lambda population: population[0]):
+         patch("app.study_engine.ordering.random.choices", side_effect=lambda population, **kw: [population[0]]):
         current = post("/api/bank/batch/next", selection)
         assert current["lecture"]["runId"] == "A" and current["question"]["question_id"] == "Q2"
         assert current["batchGoal"]["total"] == 4 and current["batchGoal"]["newRemaining"] == 3

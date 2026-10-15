@@ -69,7 +69,7 @@ from app.study_engine.progress import mark_seen, panel_progress
 from app.study_engine.choices import realize_choices
 from app.study_engine.planning import day_start
 from app.study_engine.review_undo import remember_review, undo_review, undo_token
-from app.study_engine.batch import aggregate_goal, choose_lecture
+from app.study_engine.batch import aggregate_goal, select_batch_question
 from app.storage import ObjectStorage, StorageNotConfigured
 
 router = APIRouter()
@@ -868,6 +868,11 @@ def end_bank_session(subject: str, run_id: str, payload: EndIn,
 def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(require_approved_user),
                        db: Session = Depends(get_db), target: int = Query(90, ge=50, le=100),
                        shuffle: bool = False, choice_protocol: bool = Query(False, alias="choiceProtocol")) -> dict[str, Any]:
+    return _next_bank_question(subject, run_id, user, db, choice_protocol=choice_protocol)
+
+
+def _next_bank_question(subject: str, run_id: str, user: CurrentUser, db: Session,
+                        *, choice_protocol: bool = False, selection: dict | None = None) -> dict[str, Any]:
     """다음 문항. **이미 내준 문항이 있으면 그것을 다시 준다** — 새로고침이 문항을 넘기지 않는다."""
     lecture = lecture_or_404(db, subject, run_id)
     row = _bank_or_404(db, lecture, user)
@@ -898,7 +903,8 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
             return {"question": None, "summary": engine.session_summary(bank, state, now=now),
                     "lectureGoal": goal, "reason": "lecture_goal_met", "undoToken": undo_token(state)}
         picked = (engine.select_question(bank, state, exam, now, prefer_unseen=True) if goal["met"] and extra_today
-                  else select_daily_question(bank, state, exam, now, shuffle=shuffle))
+                  else selection if selection is not None
+                  else select_daily_question(bank, state, exam, now, pages=row.pages))
         question, days = picked["question"], picked["days"]
         if question is None:
             if not goal["met"]:
@@ -1270,7 +1276,11 @@ def next_batch_question(payload: BatchIn, user: CurrentUser = Depends(require_ap
     chosen = next((entry for entry in entries if entry["key"] == resume and entry["goal"]["remaining"]
                    and (entry["state"].get("served") or {}).get("question_id") in {
                        u["key"] for u in daily_units(entry["bank"], entry["state"], engine.now_ms()) if u["status"] == "pending"}), None)
-    chosen = chosen or choose_lecture(entries, resume)
+    selection = None
+    if chosen is None:
+        for entry in entries:
+            entry["exam"] = exam_date_for(db, entry["lecture"])
+        chosen, selection = select_batch_question(entries, engine.now_ms())
     if chosen is None:
         raise HTTPException(409, "남은 문항을 선택할 수 없습니다. 강의 목록을 다시 확인하세요.")
     state_row = _load_state(db, user, chosen["row"])
@@ -1281,7 +1291,7 @@ def next_batch_question(payload: BatchIn, user: CurrentUser = Depends(require_ap
         state["served"] = None
     _save(state_row, state)
     db.commit()
-    got = next_bank_question(*chosen["key"], user=user, db=db, target=90, shuffle=True, choice_protocol=True)
+    got = _next_bank_question(*chosen["key"], user=user, db=db, choice_protocol=True, selection=selection)
     _refresh_batch_entry(chosen, user, db)
     return _batch_reply(got, entries, chosen)
 

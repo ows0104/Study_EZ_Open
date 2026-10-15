@@ -5,9 +5,8 @@
 추가 학습의 평가는 숙련도에 반영하지만 오늘 달성한 분량을 되돌리지 않는다.
 """
 
-import random
-
-from .engine import question_stage, rank_questions, days_until
+from .engine import rank_questions, days_until
+from .ordering import choose_candidate, question_slide, study_history
 from .planning import day_start
 from .memory import DAY_MS
 from .policy import DEFAULT
@@ -45,9 +44,11 @@ def daily_units(bank: dict, state: dict, now: int, policy: dict = DEFAULT) -> li
         kind = "review" if before or legacy and not history else "new"
         due = _due(before, state, latest=not today, policy=policy) if before else min(
             (item.get("due_at", start) for item in legacy), default=start)
+        scheduled_due = due
         scheduled = kind == "new" or due < end
         if not scheduled:
             units.append({"key": key, "questions": questions, "status": "later", "due": due,
+                          "scheduled_due": scheduled_due,
                           "kind": kind, "seen": known, "today": len(today), "last": last or before})
             continue
         if not today:
@@ -58,6 +59,7 @@ def daily_units(bank: dict, state: dict, now: int, policy: dict = DEFAULT) -> li
             status = "done"
             due = _due(last, state, latest=True, policy=policy)
         units.append({"key": key, "questions": questions, "status": status, "due": due,
+                      "scheduled_due": scheduled_due,
                       "kind": kind, "seen": known, "today": len(today), "last": last or before})
     return units
 
@@ -89,13 +91,16 @@ def lecture_goal(bank: dict, state: dict, title: str, now: int, policy: dict = D
             "firstPassSeen": sum(u["seen"] for u in units), "firstPassTotal": len(units)}
 
 
-def select_daily_question(bank: dict, state: dict, exam: str, now: int, policy: dict = DEFAULT, *, shuffle: bool = False) -> dict:
+def daily_candidates(bank: dict, state: dict, exam: str, now: int, policy: dict = DEFAULT,
+                     *, scope: tuple = (), lecture_order: int = 0, pages: dict | None = None) -> tuple[list[dict], list[dict]]:
+    """선행관계를 만족하는 오늘의 후보. 일정은 원래 예정일과 오늘 풀이 가능 시각을 구분한다."""
     units = daily_units(bank, state, now, policy)
     remaining = [u for u in units if u["status"] not in ("done", "later")]
     unlearned = {u["key"] for u in units if not u["seen"]}
     # 미학습 문항을 모두 먼저 확인한다. 완료 문항은 다시 고르지 않는다.
     ranked = rank_questions(bank, state, exam, now, policy)
-    scores = {r["question_id"]: r["raw_score"] for r in ranked}
+    rows = {r["question_id"]: r for r in ranked}
+    positions = {q["question_id"]: i for i, q in enumerate(bank["questions"])}
     candidates = []
     for unit in remaining:
         if unit["due"] > now:
@@ -103,15 +108,27 @@ def select_daily_question(bank: dict, state: dict, exam: str, now: int, policy: 
         q = unit["questions"][0]
         if unit["kind"] == "new" and any(qid in unlearned for qid in q["prerequisites"]):
             continue  # 아직 평가하지 않은 선행 문항부터 확인한다.
-        candidates.append(unit)
-    prioritized = [u for u in candidates if u["kind"] == "new"] or candidates
-    prioritized.sort(key=lambda u: ({"Core": 0, "Advanced": 1, "Optional": 2}[u["questions"][0]["tier"]],
-                              question_stage(u["questions"][0]), -scores[u["key"]], u["key"]))
-    chosen = random.choice(prioritized) if shuffle and prioritized else prioritized[0] if prioritized else None
-    question = chosen["questions"][0] if chosen else None
+        slide = question_slide(q, pages)
+        candidates.append({"unit": unit, "question": q, "rank": rows[unit["key"]], "scope": scope,
+                           "order": (lecture_order, slide, rows[unit["key"]]["stage"] if slide != float("inf") else 0,
+                                     positions[unit["key"]])})
+    return candidates, ranked
+
+
+def daily_selection(chosen: dict | None, ranked: list[dict], exam: str, now: int) -> dict:
+    question = chosen["question"] if chosen else None
     if question:
         row = next(r for r in ranked if r["question_id"] == question["question_id"])
-        row["notes"] += ["미학습 문항을 모두 먼저 확인한 뒤 예정된 복습을 진행합니다."] + row["reasons"]
+        row["notes"] += ["첫 학습은 선행관계·슬라이드 순서, 복습은 예정일·약점을 반영해 섞습니다.",
+                         "가능하면 같은 개념의 다른 회상방향 사이에 다른 문제 3~5개를 둡니다."] + row["reasons"]
         row.update(eligible=True, score=row["raw_score"], reasons=[])
     return {"question": question, "ranked": ranked,
             "days": days_until(exam, now), "reason": None, "retry_at": None}
+
+
+def select_daily_question(bank: dict, state: dict, exam: str, now: int, policy: dict = DEFAULT,
+                          *, shuffle: bool = False, pages: dict | None = None) -> dict:
+    # shuffle은 기존 호출 호환용이다. 두 화면 모두 동일한 정책으로 신규 정렬·복습 섞기를 한다.
+    candidates, ranked = daily_candidates(bank, state, exam, now, policy, pages=pages)
+    chosen = choose_candidate(candidates, study_history(bank, state, now), now, policy)
+    return daily_selection(chosen, ranked, exam, now)

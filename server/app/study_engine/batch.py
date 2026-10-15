@@ -1,17 +1,23 @@
-"""강의를 섞어 고르되 새 카드가 남으면 복습보다 먼저 배치한다."""
-import random
+"""강의별 첫 학습 흐름을 유지하고, 강의 전체 후보에 공통 출제 정책을 적용한다."""
+from .daily_queue import daily_candidates, daily_selection
+from .ordering import choose_candidate, study_history
+from .policy import DEFAULT
 
 
-def choose_lecture(entries: list[dict], previous: tuple[str, str] | None = None) -> dict | None:
-    pending = [entry for entry in entries if entry["goal"]["remaining"] > 0]
-    pool = [entry for entry in pending if entry["goal"]["newRemaining"] > 0] or pending
-    others = [entry for entry in pool if entry["key"] != previous]
-    if others:
-        pool = others
-    if not pool:
-        return None
-    weights = [entry["goal"]["newRemaining"] or entry["goal"]["reviewRemaining"] for entry in pool]
-    return random.choices(pool, weights=weights, k=1)[0]
+def select_batch_question(entries: list[dict], now: int, policy: dict = DEFAULT) -> tuple[dict | None, dict | None]:
+    candidates, history = [], []
+    for index, entry in enumerate(entries):
+        history.extend(study_history(entry["bank"], entry["state"], now, entry["key"]))
+        if not entry["goal"]["remaining"]:
+            continue
+        pool, ranked = daily_candidates(entry["bank"], entry["state"], entry["exam"], now, policy,
+                                        scope=entry["key"], lecture_order=index, pages=entry["row"].pages)
+        candidates.extend({**candidate, "entry": entry, "ranked": ranked} for candidate in pool)
+    chosen = choose_candidate(candidates, history, now, policy)
+    if chosen is None:
+        return None, None
+    entry = chosen["entry"]
+    return entry, daily_selection(chosen, chosen["ranked"], entry["exam"], now)
 
 
 def aggregate_goal(entries: list[dict], day_start: int) -> dict:

@@ -36,7 +36,7 @@ def main():
         goal = lecture_goal(bank, state, "test", NOW + i)
         assert goal["completed"] == i + 1 and goal["total"] == 5
         assert goal["met"] == (i == 4)
-    assert selected[:3] == ["variant", "Q3", "optional"]
+    assert selected[:3] == ["Q3", "variant", "optional"]
     assert set(selected[3:]) == {"Q1", "Q2"}
     assert select_daily_question(bank, state, EXAM, NOW + 61_000)["question"] is None
     repeated = record_review(bank, state, "Q1", "Again", NOW + 61_000)
@@ -64,6 +64,9 @@ def main():
     prereq = example_bank()
     prereq["questions"][0]["tier"] = "Advanced"
     prereq["questions"][2]["tier"] = "Core"
+    # 선행문항이 뒤쪽 슬라이드라도 먼저 풀고, 이후에는 슬라이드 흐름으로 돌아간다.
+    for q, page in zip(prereq["questions"], (30, 40, 1)):
+        q["source_refs"] = [{"source_id": "S1", "locator": f"p.{page}"}]
     assert lecture_goal(prereq, original, "test", NOW)["total"] == 3
     picked = select_daily_question(prereq, original, EXAM, NOW)["question"]
     assert picked["question_id"] == "Q1"
