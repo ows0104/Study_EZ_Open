@@ -13,7 +13,8 @@ import jsonschema
 
 from studyez_llm.pdf import render
 from .generate import item_quality_guidance, lecture_scope
-from .points import PLAN, STR, _array, _object, shape_plan
+from .points import PLAN, STR, _array, _object
+from .point_refs import checked_plan
 from .schema import BANK
 from .session import SessionError
 
@@ -117,14 +118,14 @@ def extract_points(pdf: Path, title: str, sources: list[dict], out: Path, *, pdf
         prompt = (PROMPTS / "points.md").read_text(encoding="utf-8") + "\n\n" + item_quality_guidance()
         raw, info = _call(prompt, PLAN, work, model, "원본 독립 출제포인트 추출")
         (out / "independent-plan.raw.json").write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
-        plan = shape_plan(raw, count)
+        plan, reference_usage = checked_plan(raw, count, work, out, model, _call)
         (out / "independent-plan.json").write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
         if plan["unreadable_pages"]:
             raise SessionError("독립 출제포인트 추출에서 읽지 못한 원본 쪽이 있습니다.")
         points = [{"point_id": t["point_id"], "point": t["target"],
                    "source_refs": "; ".join(f"{pdf_source} p.{p}" for p in t.get("slides", objective["slides"]))}
                   for objective in plan["objectives"] for t in objective["retrieval_targets"]]
-        usage = [{"step": "원본 독립 출제포인트 추출", **info}]
+        usage = [{"step": "원본 독립 출제포인트 추출", **info}, *reference_usage]
     ids = [p["point_id"] for p in points]
     if not ids or len(set(ids)) != len(ids) or any(not all(v.strip() for v in p.values()) for p in points):
         raise SessionError("독립 출제포인트의 ID·내용·근거가 없거나 중복됐습니다.")
