@@ -947,7 +947,7 @@ def _next_bank_question(subject: str, run_id: str, user: CurrentUser, db: Sessio
                   else select_daily_question(bank, state, exam, now, pages=row.pages))
         question, days = picked["question"], picked["days"]
         if question is None:
-            if not goal["met"] or extra_today and picked.get("retry_at") is not None:
+            if not goal["met"]:
                 _save(state_row, state)
                 db.commit()
                 return {"question": None, "waiting": True, "lectureGoal": goal,

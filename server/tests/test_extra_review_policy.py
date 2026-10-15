@@ -83,18 +83,18 @@ def main():
         state = record_review(spaced, state, f"B{i}", "Good", NOW + i + 1)
     with patch("app.study_engine.ordering.random.choices", side_effect=lambda pool, **kw: [next(c for c in pool if c["question"]["question_id"] == "reverse")]):
         assert select_extra_question(spaced, state, EXAM, NOW + 5)["question"]["question_id"] == "reverse"
-    # One available question waits only until the existing 60-second floor. Midnight cannot bypass it.
+    # One available question can be repeated immediately, including across the Korean day boundary.
     single = copy.deepcopy(bank)
     single["questions"] = single["questions"][:1]
     for at in (NOW, day_start(NOW) - 10_000):
         solo = learned(single, at=at, due=at + 7 * DAY_MS)
-        waiting = select_extra_question(single, solo, EXAM, at + 10_000)
-        assert waiting["question"] is None and waiting["retry_at"] == at + 60_000
-        assert select_extra_question(single, solo, EXAM, at + 60_000)["question"]["question_id"] == "Q0"
+        ready = select_extra_question(single, solo, EXAM, at + 1)
+        assert ready["question"]["question_id"] == "Q0" and ready["retry_at"] is None
+        assert select_extra_question(single, solo, EXAM, at + 10_000)["question"]["question_id"] == "Q0"
     excluded = {**today, "suspended_question_ids": [q["question_id"] for q in bank["questions"]]}
     assert select_extra_question(bank, excluded, EXAM, NOW)["question"] is None
     assert select_extra_question(bank, excluded, EXAM, NOW)["retry_at"] is None
-    print("PASS: shared weights without tier multipliers, future/done cards, due/weakness/importance, spacing, last-card exclusion, single-card cooldown, KST and suspensions")
+    print("PASS: shared weights without tier multipliers, future/done cards, due/weakness/importance, spacing, last-card exclusion, single-card immediate retry, KST and suspensions")
 
 
 if __name__ == "__main__":

@@ -111,15 +111,19 @@ def main() -> None:
     ).json()
     check("두 파일 다 확인됨",
           (completed["stored"], completed["missing"]) == (2, []), completed)
-    check("필기 업로드는 Quiz Bank 자동 출제를 접수한다",
-          completed["queued"]["kind"] == "bank" and completed["queued"]["origin"] == "auto", completed)
+    check("필기 업로드만으로 Quiz Bank 출제 작업을 만들지 않는다",
+          completed["queued"] is None, completed)
+    from app.models import PrequizJob
+    with SessionLocal() as db:
+        check("필기 업로드 후 출제 작업이 저장되지 않는다", db.query(PrequizJob).count() == 0)
 
-    # 러너는 쓸기마다 같은 강의록을 다시 밀어 본다. 그때마다 서면 10분에 한 번씩
-    # 같은 편을 만든다.
+    # 재업로드도 출제를 등록하지 않는다. 완성된 웹 응답을 저장할 때 검수 작업을 만든다.
     resent = client.post(
         "/api/admin/lectures/병리학/260813_03/uploads/complete", headers=RUNNER, json=files
     ).json()
     check("같은 파일을 다시 올려도 또 서지 않는다", resent["queued"] is None, resent)
+    with SessionLocal() as db:
+        check("재업로드 후에도 출제 작업이 저장되지 않는다", db.query(PrequizJob).count() == 0)
 
     # 필기는 받는 것이 아니라 보는 것이다. `inline=1`을 주면 첨부가 아니라
     # 인라인으로 서명돼야 새 탭이 내려받기로 바뀌지 않는다.

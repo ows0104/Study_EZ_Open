@@ -151,21 +151,16 @@ def select_extra_question(bank: dict, state: dict, exam: str, now: int, policy: 
     candidates, ranked = daily_candidates(bank, state, exam, now, policy, pages=pages, extra=True)
     history = [h for h in state.get("history", []) if h["timestamp"] <= now]
     last = max(history, key=lambda h: h["timestamp"], default=None)
-    retry_at = None
     recent = last and (day_start(last["timestamp"]) == day_start(now)
                        or now < last["timestamp"] + policy["recency"]["minimumRepeatMs"])
     if recent and any(c["question"]["question_id"] == last["question_id"] for c in candidates):
         others = [c for c in candidates if c["question"]["question_id"] != last["question_id"]]
         if others:
             candidates = others
-        elif now < last["timestamp"] + policy["recency"]["minimumRepeatMs"]:
-            candidates = []
-            retry_at = last["timestamp"] + policy["recency"]["minimumRepeatMs"]
     chosen = choose_candidate(candidates, study_history(bank, state, now), now, policy)
     result = daily_selection(chosen, ranked, exam, now)
     if chosen:
-        chosen["rank"]["notes"].append("추가 학습은 완료·미도래 문항도 같은 복습 가중치로 고르고 직전 문항의 연속 반복을 피합니다.")
+        chosen["rank"]["notes"].append("추가 학습은 완료·미도래 문항도 같은 복습 가중치로 고르고, 다른 후보가 있으면 직전 문항의 연속 반복을 피합니다.")
     else:
-        result.update(reason="직전 문제의 즉시 반복을 잠시 쉬고 있습니다." if retry_at else "학습 가능한 문제가 없습니다.",
-                      retry_at=retry_at)
+        result.update(reason="학습 가능한 문제가 없습니다.", retry_at=None)
     return result

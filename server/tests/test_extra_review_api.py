@@ -1,4 +1,4 @@
-"""HTTP extra-study future eligibility, no immediate repetition, reload/undo and cooldown continuation."""
+"""HTTP extra-study future eligibility, alternative-first selection, reload/undo and immediate single-card retry."""
 import datetime
 from unittest.mock import patch
 
@@ -55,14 +55,17 @@ def main():
     single = "/api/lectures/extra/single/bank"
     with patch("app.routes.bank.engine.now_ms", return_value=NOW + 1):
         post(single, "/session/start", {"continueAfterGoal": True})
-        waiting = post(single, "/next")
-        assert waiting["question"] is None and waiting["waiting"] and waiting["retryAt"] == NOW + 60_000
-        assert waiting["lectureGoal"]["met"] and waiting["session"]["status"] == "active"
-    with patch("app.routes.bank.engine.now_ms", return_value=NOW + 60_000):
         ready = post(single, "/next")
         assert ready["question"]["question_id"] == "Q0" and ready["lectureGoal"]["met"]
-        assert ready["session"]["session_id"] == waiting["session"]["session_id"]
-    print("PASS: future extra reviews, immediate-repeat exclusion, daily completion, reload/undo and same-session cooldown retry")
+        assert not ready.get("waiting") and not ready.get("retryAt")
+        token = {"reviewToken": ready["reviewToken"]}
+        post(single, "/reveal", token)
+        post(single, "/rate", {**token, "rating": "Good"})
+        repeated = post(single, "/next")
+        assert repeated["question"]["question_id"] == "Q0" and repeated["lectureGoal"]["met"]
+        assert repeated["session"]["session_id"] == ready["session"]["session_id"]
+        assert not repeated.get("waiting") and not repeated.get("retryAt")
+    print("PASS: future extra reviews, alternative-first selection, daily completion, reload/undo and immediate same-session single-card retry")
 
 
 if __name__ == "__main__":
