@@ -49,7 +49,7 @@ def test_endocrine_scope_is_tied_to_the_confirmed_lecture(title, filename, scope
         {"id": "S1", "kind": "notes_current", "filename": filename}])
     scope = generate.lecture_scope(title, [{"id": "S1", "kind": "notes_current", "filename": filename}])
     assert ("관리자 지정 범위: 2026-10-07 내분비" in scope) is scoped
-    assert "관리자 지정 범위:" not in body
+    assert ("관리자 지정 범위: 2026-10-07 내분비" in body) is scoped
     assert "{{lecture_scope}}" not in body
 
 
