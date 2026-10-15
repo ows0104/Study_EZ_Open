@@ -85,18 +85,39 @@ export function answerPoints(text: string, units: string[]) {
   return { text: visible, bold, highlights: merged, remaining };
 }
 
-export function AnswerPoints({ text, units = [] }: { text: string; units?: string[] }) {
+export function AnswerPoints({ text, units = [], readable = false }: { text: string; units?: string[]; readable?: boolean }) {
   const parsed = answerPoints(text, units);
-  const cuts = [...new Set([0, parsed.text.length,
+  const boundaries = [...new Set([0, parsed.text.length,
     ...parsed.bold.flatMap((range) => [range.start, range.end]),
     ...parsed.highlights.flatMap((range) => [range.start, range.end]),
   ])].sort((a, b) => a - b);
-  return <>{cuts.slice(0, -1).map((start, i) => {
-    const end = cuts[i + 1];
-    const value = parsed.text.slice(start, end);
-    const contains = (range: Range) => range.start <= start && range.end >= end;
-    if (parsed.highlights.some(contains)) return <strong key={start} className="bank-answer-point">{value}</strong>;
-    if (parsed.bold.some(contains)) return <strong key={start}>{value}</strong>;
-    return <Fragment key={start}>{value}</Fragment>;
-  })}</>;
+  function renderRange(from: number, to: number) {
+    const cuts = [from, ...boundaries.filter(cut => cut > from && cut < to), to];
+    return cuts.slice(0, -1).map((start, i) => {
+      const end = cuts[i + 1];
+      const value = parsed.text.slice(start, end);
+      const contains = (range: Range) => range.start <= start && range.end >= end;
+      if (parsed.highlights.some(contains)) return <strong key={start} className="bank-answer-point">{value}</strong>;
+      if (parsed.bold.some(contains)) return <strong key={start}>{value}</strong>;
+      return <Fragment key={start}>{value}</Fragment>;
+    });
+  }
+  // Parse emphasis and scoring across the whole answer before splitting its layout.
+  // This keeps a scoring unit or **bold span** intact even across sentence boundaries.
+  const separator = parsed.text.length >= 140
+    ? /(?<=[가-힣}\]][.!?])[ \t]+|\r?\n+[ \t]*/g : /\r?\n+[ \t]*/g;
+  const lines: Range[] = [];
+  let start = 0;
+  if (readable) for (const match of parsed.text.matchAll(separator)) {
+    if (match.index > start) lines.push({ start, end: match.index });
+    start = match.index + match[0].length;
+  }
+  if (start < parsed.text.length) lines.push({ start, end: parsed.text.length });
+  if (!readable || lines.length < 2) return <>{renderRange(0, parsed.text.length)}</>;
+  return <span className="bank-readable">{lines.map((line, index) => <Fragment key={line.start}>
+    {parsed.text.slice(index ? lines[index - 1].end : 0, line.start)}
+    <span className={`bank-readable-line${index ? " is-indented" : ""}`}>
+      {renderRange(line.start, line.end)}
+    </span>
+  </Fragment>)}{parsed.text.slice(lines.at(-1)!.end)}</span>;
 }

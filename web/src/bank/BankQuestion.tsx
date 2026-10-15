@@ -132,12 +132,12 @@ export function AnswerBody({ question: q, answer, preload }: {
       {conciseAnswer ? (
         <>
           <ul className="quiz-answer bank-short-answer">
-            {shortUnits.map((unit, index) => <li key={index}><AnswerPoints text={unit} units={[unit]} /></li>)}
+            {shortUnits.map((unit, index) => <li key={index}><AnswerPoints text={unit} units={[unit]} readable /></li>)}
           </ul>
           {shortExplanation ? (
             <details className="bank-answer-context">
               <summary>설명 보기</summary>
-              <p><Stem text={answer.answer} /></p>
+              <p><AnswerPoints text={answer.answer} readable /></p>
             </details>
           ) : null}
         </>
@@ -145,13 +145,13 @@ export function AnswerBody({ question: q, answer, preload }: {
       {/* Cloze는 위 발문에 정답을 채워 보여 준다. 짝짓기는 아래 짝이 곧 답이다. */}
       {conciseAnswer || (q.format === "cloze" && !answer.personalAnswer) || (q.format === "matching" && answer.answerPairs.length) ? null : (
         <p className="quiz-answer">
-          <AnswerPoints text={answer.answer} units={answer.answerUnits} />
+          <AnswerPoints text={answer.answer} units={answer.answerUnits} readable />
         </p>
       )}
       {answer.explanation?.trim() && !answer.personalAnswer ? (
         <section className="quiz-explanation bank-explanation" aria-label="해설">
           <h2>해설</h2>
-          <p><Stem text={answer.explanation} /></p>
+          <p><AnswerPoints text={answer.explanation} readable /></p>
         </section>
       ) : null}
       {/* 이전 O/X 은행의 채점 단위에 저장된 근거도 계속 보여 준다. */}
@@ -160,7 +160,7 @@ export function AnswerBody({ question: q, answer, preload }: {
           <h2>해설</h2>
           {answer.answerUnits.some((unit) => unit.trim() && !/^[OX]$/i.test(unit.trim())) ? (
             <ul>{answer.answerUnits.filter((unit) => unit.trim() && !/^[OX]$/i.test(unit.trim())).map((unit, index) => (
-              <li key={index} className="bank-answer-point"><Stem text={unit} /></li>
+              <li key={index} className="bank-answer-point"><AnswerPoints text={unit} readable /></li>
             ))}</ul>
           ) : <p>이 문항에 등록된 해설이 없습니다.</p>}
         </section>
@@ -175,17 +175,17 @@ export function AnswerBody({ question: q, answer, preload }: {
                   <span className="bank-note"> · {answer.correctOptionIds.includes(option.id) ? "정답 선지" : "정답이 아닌 선지"}</span>
                 </p>
                 {choiceUnits.has(option.id) ? choiceUnits.get(option.id)!.map((text, index) => (
-                  <p key={index}><Stem text={text} /></p>
+                  <p key={index}><AnswerPoints text={text} readable /></p>
                 )) : <p className="bank-note">이 선지에 등록된 해설이 없습니다.</p>}
               </li>
             ))}
-            {extraChoiceUnits.map(unit => <li key={unit}><Stem text={unit} /></li>)}
+            {extraChoiceUnits.map(unit => <li key={unit}><AnswerPoints text={unit} readable /></li>)}
           </ul>
         </section>
       ) : null}
       {/* 답에서 강조한 포인트는 반복하지 않는다. 답과 표현이 다른 설명은 보존한다. */}
       {!conciseAnswer && !choice && remainingPoints.length > 0 && !["ox", "cloze", "matching", "sequence"].includes(q.format) ? (
-        <ul className="bank-units">{remainingPoints.map((unit) => <li key={unit}><Stem text={unit} /></li>)}</ul>
+        <ul className="bank-units">{remainingPoints.map((unit) => <li key={unit}><AnswerPoints text={unit} readable /></li>)}</ul>
       ) : null}
       {answer.answerPairs.length ? (
         <ul className="bank-units">
@@ -201,7 +201,7 @@ export function AnswerBody({ question: q, answer, preload }: {
         <section className="bank-correct-order" aria-label="정답 순서">
           <p className="bank-note">정답 순서</p>
           <ol className="bank-order bank-answer-point">
-            {answer.correctOrder.map(item => <li key={item}><Stem text={item} /></li>)}
+            {answer.correctOrder.map(item => <li key={item}><AnswerPoints text={item} readable /></li>)}
           </ol>
         </section>
       ) : null}

@@ -2619,6 +2619,16 @@ button.notice-title:hover:not(:disabled) {
   font-size: 13px;
 }
 
+.bank-readable {
+  display: block;
+  white-space: normal;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.bank-readable-line { display: block; white-space: pre-line; }
+.bank-readable-line + .bank-readable-line { margin-top: 0.45em; }
+.bank-readable-line.is-indented { text-indent: 1em; }
+
 .bank-stem {
   text-align: left;
   overflow-wrap: anywhere;

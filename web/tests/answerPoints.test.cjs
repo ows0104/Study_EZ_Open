@@ -192,7 +192,9 @@ test('O and X show every explanation once, including a single or multiline unit'
   for (const binary of ['O', 'X']) {
     const units = ['판단의 **기준**이다.\n조건도 확인한다.', '예외를 구분한다.'];
     const html = render({ answer: binary, answerUnits: units }, 'ox');
-    assert.ok(html.includes('<strong>기준</strong>이다.\n조건도 확인한다.'));
+    assert.ok(html.includes('<strong>기준</strong>'));
+    assert.ok(html.replace(/<[^>]+>/g, '').includes('판단의 기준이다.\n조건도 확인한다.'));
+    assert.equal((html.match(/class="bank-readable-line is-indented"/g) || []).length, 1);
     assert.equal(html.split('예외를 구분한다.').length - 1, 1);
     assert.ok(!html.includes('bank-units'));
   }
