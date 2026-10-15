@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from "react";
-import { BrowserRouter, Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { api } from "./api";
 import { AuthProvider, LoginPage, PendingApproval, useAuth } from "./auth";
 import { CalendarPage } from "./calendar/CalendarPage";
@@ -29,7 +29,6 @@ const PrivacyPage = lazy(() => import("./PrivacyPage").then((m) => ({ default: m
 // 공지·이용방법(2026-10-04). 둘 다 가끔 여는 글이라 첫 번들에 안 싣는다.
 const NoticesPage = lazy(() => import("./notices/NoticesPage").then((m) => ({ default: m.NoticesPage })));
 const GuidePage = lazy(() => import("./notices/GuidePage").then((m) => ({ default: m.GuidePage })));
-const MasteryPage = lazy(() => import("./calendar/MasteryPage").then((m) => ({ default: m.MasteryPage })));
 
 /** 고른 탭에 표시를 남긴다. NavLink 기본값(`active`)은 이 앱의 이름이 아니다. */
 const tabClass = ({ isActive }: { isActive: boolean }) => (isActive ? "is-active" : "");
@@ -111,10 +110,7 @@ function Shell() {
             Study_EZ
           </Link>
           <nav>
-            <NavLink to="/study" className={tabClass}>모아 풀기</NavLink>
-            <NavLink to="/mastery" className={tabClass}>
-              학습도
-            </NavLink>
+            <NavLink to="/study" className={tabClass}>학습 현황</NavLink>
             <NavLink to="/notices" className={tabClass}>
               공지사항
               {unseenNotice ? <i className="nav-dot" aria-label="새 공지" /> : null}
@@ -149,7 +145,7 @@ function Shell() {
           <Routes>
             <Route path="/" element={<CalendarPage />} />
             <Route path="/study" element={<BankBatchPage />} />
-            <Route path="/mastery" element={<MasteryPage />} />
+            <Route path="/mastery" element={<Navigate to="/study" replace />} />
             <Route path="/lectures/:subject/:runId" element={<LecturePage />} />
             {/* 예습·복습은 같은 탭 안에서 서로 다른 주소로 이동한다. */}
             <Route path="/notices" element={<NoticesPage isAdmin={me.isAdmin} onSeen={onNoticeSeen} />} />
