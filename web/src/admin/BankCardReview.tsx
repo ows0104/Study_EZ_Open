@@ -114,6 +114,13 @@ function ReviewRow({ group, card, onChanged, focus }: {
           {q.correct_order?.length ? <p>{q.correct_order.join(" → ")}</p> : null}
         </dd>
         <dt>채점 단위</dt><dd>{q.answer_units?.join(" · ")}</dd>
+        {q.explanation ? <><dt>해설</dt><dd><Stem text={q.explanation} /></dd></> : null}
+        {q.option_pools?.length ? <><dt>선지 변형</dt><dd>{q.option_pools.map(pool => <details key={pool.pool_id}>
+          <summary>{pool.pool_id} · 후보 {pool.candidates.length}개 중 {pool.select_count}개 · {pool.correct_when === "true" ? "참" : "거짓"} 선택</summary>
+          {pool.candidates.map(c => <div key={c.candidate_id}><b>{c.candidate_id}</b>
+            <p>참: {c.true_text}<br />{c.true_explanation}</p><p>거짓: {c.false_text}<br />{c.false_explanation}</p>
+            <small>{c.source_refs.map(r => `${r.source_id} ${r.locator}`).join(" · ")}</small></div>)}
+        </details>)}</dd></> : null}
         <dt>선행 문항</dt><dd>{q.prerequisites?.join(", ") || "없음"}</dd>
         <dt>출처</dt><dd>{q.source_refs?.map((r, i) => <div key={i}>{r.source_id} · {r.locator}</div>)}</dd>
       </dl>
@@ -164,8 +171,10 @@ function QuestionEditor({ question, group, busy, onSave, onCancel }: {
   function field<K extends keyof BankFullQuestion>(key: K, value: BankFullQuestion[K]) { setQ(prev => ({ ...prev, [key]: value })); }
   function format(value: BankFormat) {
     setQ(prev => ({ ...prev, format: value,
+      mcq_mode: value === "mcq" || value === "multi_select" ? (prev.mcq_mode === "recall_first" ? "recall_first" : "comparison") : "none",
       options: value === "mcq" || value === "multi_select" ? prev.options : [],
       correct_option_ids: value === "mcq" || value === "multi_select" ? prev.correct_option_ids : [],
+      option_pools: value === "mcq" || value === "multi_select" ? prev.option_pools : [],
       matching_left: value === "matching" ? prev.matching_left : [], matching_right: value === "matching" ? prev.matching_right : [],
       answer_pairs: value === "matching" ? prev.answer_pairs : [],
       sequence_items: value === "sequence" ? prev.sequence_items : [], correct_order: value === "sequence" ? prev.correct_order : [],
@@ -186,6 +195,7 @@ function QuestionEditor({ question, group, busy, onSave, onCancel }: {
       <label>질문<textarea rows={4} required value={q.question} onChange={e => field("question", e.target.value)} /></label>
       {q.format === "cloze" ? <small>빈칸은 {"{{c1}}"}, {"{{c2}}"}로 표시하고 채점 단위는 빈칸 등장 순서로 적으세요.</small> : null}
       <label>정답<textarea rows={3} required value={q.answer} onChange={e => field("answer", e.target.value)} /></label>
+      <label>해설<textarea rows={3} value={q.explanation ?? ""} onChange={e => field("explanation", e.target.value)} /></label>
       <Lines label="채점 단위" values={q.answer_units} onChange={v => field("answer_units", v)} />
       <fieldset><legend>선행 문항{q.retrieval_direction === "integration" ? " · 통합 문항은 필수" : ""}</legend>
         <small>기초가 되는 문항을 선택하세요.</small>
@@ -196,6 +206,11 @@ function QuestionEditor({ question, group, busy, onSave, onCancel }: {
         </label>)}</div>
       </fieldset>
       {q.format === "mcq" || q.format === "multi_select" ? <>
+        <label>객관식 학습 유형<select value={q.mcq_mode === "recall_first" ? "recall_first" : "comparison"}
+          onChange={e => field("mcq_mode", e.target.value as BankFullQuestion["mcq_mode"])}>
+          <option value="recall_first">기억 확인형 · 먼저 인출 후 선지 공개</option>
+          <option value="comparison">구별·판단형 · 선지 처음부터 공개</option>
+        </select></label>
         <Pairs label="선택지" values={q.options.map(o => [o.id, o.text])} leftLabel="선택지 ID" rightLabel="선택지 내용" onChange={v => field("options", v.map(([id, text]) => ({ id, text })))} />
         <Lines label="정답 선택지 ID" values={q.correct_option_ids} onChange={v => field("correct_option_ids", v)} />
       </> : null}
@@ -213,8 +228,11 @@ function QuestionEditor({ question, group, busy, onSave, onCancel }: {
           <option value="">없음</option>
           {group.conflicts?.map(c => <option key={c.id} value={c.id}>{c.id} · {c.description}</option>)}
         </select></label>
-        <label>단계<select value={q.tier} onChange={e => field("tier", e.target.value as BankFullQuestion["tier"])}>{["Core", "Advanced", "Optional"].map(t => <option key={t}>{t}</option>)}</select></label>
-        <label>중요도<input type="number" min={1} max={5} value={q.importance} onChange={e => field("importance", Number(e.target.value))} /></label>
+        <label>중요도<select value={q.tier} onChange={e => {
+          const tier = e.target.value as BankFullQuestion["tier"];
+          setQ(prev => ({ ...prev, tier, importance: { Core: 5, Important: 4, Optional: 2 }[tier] }));
+        }}>{["Core", "Important", "Optional"].map(t => <option key={t}>{t}</option>)}</select></label>
+        <label><input type="checkbox" checked={q.advanced ?? false} onChange={e => field("advanced", e.target.checked)} /> Advanced · 심화 (중요도와 독립)</label>
         <label>난이도<input type="number" min={1} max={5} value={q.item_difficulty} onChange={e => field("item_difficulty", Number(e.target.value))} /></label>
         <Pairs label="출처" values={q.source_refs.map(r => [r.source_id, r.locator])} leftLabel="출처 ID (S1·S2·EXT)" rightLabel="쪽·위치" onChange={v => field("source_refs", v.map(([source_id, locator]) => ({ source_id, locator })))} />
         <label>출제 근거<textarea value={q.exam_rationale} onChange={e => field("exam_rationale", e.target.value)} /></label>

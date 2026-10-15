@@ -21,8 +21,9 @@ def run_bank(args, parser) -> int:
     if not token:
         print("러너 토큰이 없다. server/.env의 RUNNER_TOKEN이나 STUDYEZ_RUNNER_TOKEN 환경 변수, 또는 --token")
         return 2
-    return bank.run(publish.Client(api, token), Path(args.root), args.subject, args.run_id,
-                    args.this, args.prev, Path(args.runs), model=args.model)
+    action = bank.prepare_points if args.points_only else bank.run
+    return action(publish.Client(api, token), Path(args.root), args.subject, args.run_id,
+                  args.this, args.prev, Path(args.runs), model=args.model)
 
 
 def main(argv: list[str] | None = None) -> int:

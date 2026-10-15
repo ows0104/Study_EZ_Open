@@ -4,6 +4,7 @@ import {
   absoluteUrl,
   bumpPreviewVersion,
   extensionCompatible,
+  extensionInputMinimum,
   requestPreview,
 } from "../bridge/previewBridge";
 import { ExtensionSetup } from "../bridge/ExtensionSetup";
@@ -15,44 +16,42 @@ import type { BankSummary } from "../types/bank";
 import type { LectureDetail, LectureRef } from "../types/lectures";
 import type { PrequizJob, RunnerBeat } from "../types/jobs";
 import { useMe } from "../useMe";
-import { BANK_PROMPT_VERSION, renderBankPrompt } from "./prompt";
+import { loadLatestBankPrompt } from "./prompt";
+import { BankCoverage } from "./BankCoverage";
 
-/**
- * 캘린더 패널의 Quiz Bank 칸(2026-10-04).
- *
- *   관리자   ChatGPT 로 만들기 → (답이 끝나면 확장이 본문을 가져와 저장) → 러너가 정리·검토
- *            → 검토 결과를 보고 「학생에게 열기」
- *   학생     열린 은행이면 「공부하기」
- *
- * Main Quiz의 생성과 학습은 이 패널에서 처리한다.
- *
- * **「답 붙여넣기」는 확장이 못 읽는 자리를 위한 길이다**(2026-10-05 관리자 지시). 학교 계정(내부 워크스페이스)
- * ChatGPT 로 만든 답은 확장이 가져오지 못해 저장되지 않았다. 같은 저장 경로(`PUT …/bank-response`)로 넣으므로
- * 그 뒤는 확장으로 들어온 답과 똑같이 러너가 정리한다.
- */
+/** 웹 문항 생성 → CLI 검수·보완 → Main-Quiz 게시·학습. */
 export function BankPanel({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | "runId">; detail: LectureDetail }) {
   const isAdmin = Boolean(useMe()?.isAdmin);
   const bank = detail.bank;
   if (!isAdmin) {
-    if (!bank?.usable) return (
-      <PanelGroup tone="main" title="Main-Quiz" note="강의 후 반복">
-        <p className="panel-hint">아직 공개된 문제가 없습니다.</p>
-      </PanelGroup>
-    );
     return (
+      <>
+      {bank?.shareUrl ? <PanelGroup tone="bank" title="문제은행 링크">
+        <ActionCard shape="is-key" hit={
+          <a className="panel-action-hit" href={bank.shareUrl} target="_blank" rel="noreferrer">
+            <strong>기본 링크</strong>
+          </a>
+        } />
+      </PanelGroup> : null}
       <PanelGroup tone="main" title="Main-Quiz" note="개념·방향별 반복">
-        <StudyCard lecture={lecture} bank={bank} />
+        {bank?.usable ? <StudyCard lecture={lecture} bank={bank} />
+          : <p className="panel-hint">아직 공개된 문제가 없습니다.</p>}
       </PanelGroup>
+      </>
     );
   }
   return (
-    <PanelGroup tone="main" title="Main-Quiz">
+    <>
       <BankAdmin lecture={lecture} detail={detail} />
-    </PanelGroup>
+    </>
   );
 }
 
-function StudyCard({ lecture, bank }: { lecture: Pick<LectureRef, "subject" | "runId">; bank: BankSummary }) {
+function StudyCard({ lecture, bank, tools }: {
+  lecture: Pick<LectureRef, "subject" | "runId">;
+  bank: BankSummary;
+  tools?: React.ReactNode;
+}) {
   return (
     <>
       <ActionCard
@@ -63,12 +62,14 @@ function StudyCard({ lecture, bank }: { lecture: Pick<LectureRef, "subject" | "r
             <small>{bank.seenQuestionCount}/{bank.studyQuestionCount}문항 봄 · 개념 {bank.conceptCount}개</small>
           </Link>
         }
+        tools={tools}
       />
     </>
   );
 }
 
 const STATUS_LINE: Record<BankSummary["status"], string> = {
+  linked: "문제은행 링크 저장됨 · 완성된 문항 전달을 기다리는 중",
   responded: "응답을 받았다 — 러너가 정리하기를 기다린다",
   building: "러너가 정리·검토하는 중",
   ready: "준비됨",
@@ -76,19 +77,32 @@ const STATUS_LINE: Record<BankSummary["status"], string> = {
   failed: "정리에 실패했다",
 };
 
+function conversationLink(value?: string) {
+  try {
+    const url = new URL(value || "");
+    return url.protocol === "https:" && ["chatgpt.com", "chat.openai.com"].includes(url.hostname)
+      && /^\/(?:g\/[^/]+\/)?(?:c|share)\/[^/]+/.test(url.pathname) ? url.href : "";
+  } catch { return ""; }
+}
+
 function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | "runId">; detail: LectureDetail }) {
   const path = `${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
   const adminBase = `/api/admin/lectures/${path}`;
   const bank = detail.bank;
+  const conversation = conversationLink(bank?.conversationUrl);
   const sources = detail.bankSources ?? [];
   const notes = sources.find((s) => s.kind === "notes_current");
   const [job, setJob] = useState<PrequizJob | null>(null);
+  const [pointsJob, setPointsJob] = useState<PrequizJob | null>(null);
+  const [pointsError, setPointsError] = useState("");
   const [runner, setRunner] = useState<RunnerBeat | null>(null);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
-  const [pasting, setPasting] = useState(false);
-  const [pasted, setPasted] = useState("");
+  const [showLinks, setShowLinks] = useState(false);
+  const [share, setShare] = useState("");
+  const [mine, setMine] = useState("");
+  const [showSetup, setShowSetup] = useState(false);
 
   const load = useCallback(() => {
     api<{ job: PrequizJob | null; runner: RunnerBeat | null }>(`${adminBase}/prequiz-job?kind=bank`)
@@ -97,15 +111,21 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
         setRunner(answer.runner);
       })
       .catch(() => {});
+    api<{ job: PrequizJob | null }>(`${adminBase}/prequiz-job?kind=points`)
+      .then((answer) => setPointsJob(answer.job))
+      .catch(() => {});
   }, [adminBase]);
-  useEffect(load, [load]);
+  useEffect(load, [load, bank?.respondedAt]);
 
   const moving = jobMoving(job);
+  const pointsMoving = jobMoving(pointsJob);
+  const failureSuperseded = bank?.status === "ready" && Boolean(bank.builtAt)
+    && Date.parse(bank.builtAt!) > Date.parse(job?.updatedAt || "");
   useEffect(() => {
-    if (!moving) return;
+    if (!moving && !pointsMoving) return;
     const timer = window.setInterval(load, 10_000);
     return () => window.clearInterval(timer);
-  }, [moving, load]);
+  }, [moving, pointsMoving, load]);
 
   // 끝나면 강의 상세를 다시 읽는다 — 요약(문항 수·검토)이 거기서 온다.
   const wasMoving = useRef(false);
@@ -114,16 +134,24 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
     wasMoving.current = moving;
   }, [moving]);
 
-  /** 확장이 필기·족보와 프롬프트를 채우면 관리자가 확인하고 전송한다. */
-  async function make() {
+  /** 기본은 사람이 전송한다. 자동전송을 고르면 확장이 전송까지 맡는다. */
+  async function make(autoSend: boolean) {
     if (!notes) return;
-    if (!extensionCompatible()) {
+    if (!extensionCompatible(extensionInputMinimum("bank", autoSend))) {
+      setShowSetup(true);
       setError("아래 브리지 설치·업데이트 안내에서 최신 버전을 설치하고 이 페이지를 새로고침하세요.");
       return;
     }
-    setBusy("make");
+    setBusy(autoSend ? "auto" : "make");
     setError("");
+    setPointsError("");
+    // 원본 준비는 웹 답변을 기다리지 않는다. 실패해도 웹 전송은 계속할 수 있다.
+    const pointsRequest = api<{ job: PrequizJob }>(`${adminBase}/prequiz-job?kind=points`, {
+      method: "POST",
+    }).then((answer) => setPointsJob(answer.job))
+      .catch((cause: Error) => setPointsError(`출제포인트 준비 요청 실패: ${cause.message}`));
     try {
+      const latest = await loadLatestBankPrompt(detail, sources);
       // 서명 URL 은 수명이 짧아 누른 순간에 받는다.
       const files = [];
       for (const source of sources) {
@@ -136,46 +164,25 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
         lectureId: `${lecture.subject}/${lecture.runId}`,
         provider: "chatgpt",
         mode: "bank",
-        prompt: renderBankPrompt(detail, sources),
+        prompt: latest.prompt,
+        promptVersion: latest.version,
         files,
-        autoSend: false,
+        autoSend,
       });
-      setNote("ChatGPT 탭을 열었다. 첨부된 자료와 프롬프트를 확인하고 직접 전송하면 답을 가져온다.");
+      setNote(`출제 프롬프트 ${latest.version} · ` + (autoSend
+        ? "자동전송을 시작했습니다. 완성된 문항은 러너가 검수·보완하고 게시합니다."
+        : "ChatGPT 대화를 열었습니다. 직접 전송하면 완성된 문항을 러너가 검수·보완하고 게시합니다."));
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
+      await pointsRequest;
       setBusy("");
     }
   }
 
-  /** 붙여 넣은 답을 저장한다 — 확장이 하던 저장과 같다. 끝 표시가 없으면 서버도 안 받으므로 먼저 말한다. */
-  async function savePasted() {
-    const raw = pasted.trim();
-    if (!raw.includes("STUDYEZ_BANK_COMPLETE")) {
-      setError("마지막 줄의 STUDYEZ_BANK_COMPLETE 가 없습니다. 답이 끝까지 나온 뒤 전체를 붙여 넣으세요.");
-      return;
-    }
-    setBusy("paste");
-    setError("");
-    try {
-      await api(`${adminBase}/bank-response`, {
-        method: "PUT",
-        body: JSON.stringify({ raw, conversationUrl: "", promptVersion: BANK_PROMPT_VERSION }),
-      });
-      setPasting(false);
-      setPasted("");
-      setNote("붙여 넣은 답을 저장했다. 러너가 정리·검토한다.");
-      load();
-      bumpPreviewVersion();
-    } catch (cause) {
-      setError((cause as Error).message);
-    } finally {
-      setBusy("");
-    }
-  }
-
-  /** 저장된 응답으로 다시 정리·검토한다. ChatGPT 는 안 다시 부른다. */
+  /** 저장된 웹 문항은 다시 검수하고, 문항이 없으면 웹 생성을 시작한다. */
   async function reorganize() {
+    if (!bank?.respondedAt) { await make(false); return; }
     setBusy("again");
     setError("");
     try {
@@ -184,11 +191,38 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
         body: JSON.stringify({ force: true }),
       });
       setJob(answer.job);
+      setNote("저장된 웹 문항의 검수·보완과 게시를 다시 요청했습니다.");
+      bumpPreviewVersion();
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
       setBusy("");
     }
+  }
+
+  async function audit() {
+    setBusy("audit");
+    setError("");
+    try {
+      await api(`${adminBase}/bank/audit`, { method: "POST" });
+      setNote("원본 누락 검증·객관식 보강을 요청했습니다. 현재 카드로 계속 공부할 수 있습니다.");
+      load();
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally { setBusy(""); }
+  }
+
+  async function saveLinks() {
+    setBusy("links");
+    setError("");
+    try {
+      await api(`${adminBase}/bank/links`, { method: "PUT",
+        body: JSON.stringify({ shareUrl: share.trim(), conversationUrl: mine.trim() }) });
+      setShowLinks(false);
+      setNote("공유 링크와 개인 대화 주소를 저장했습니다.");
+      bumpPreviewVersion();
+    } catch (cause) { setError((cause as Error).message); }
+    finally { setBusy(""); }
   }
 
   async function setOpen(open: boolean) {
@@ -204,107 +238,139 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
     }
   }
 
-  if (!notes) {
-    return (
-      <ActionCard
-        shape="is-empty is-key"
-        hit={
-          <span className="panel-action-hit" title="Quiz Bank 는 올해 필기로 만든다">
-            <strong>Main-Quiz</strong>
-            <small>올해 필기 대기</small>
-          </span>
-        }
-      />
-    );
-  }
-
   const review = bank?.reviewCounts;
   return (
     <>
-      {bank?.usable ? <StudyCard lecture={lecture} bank={bank} /> : null}
-      <ActionCard
-        shape="is-key"
-        hit={
-          <button className="panel-action-hit" disabled={Boolean(busy) || moving || !extensionCompatible()} onClick={() => void make()}>
-            <strong>{bank ? "ChatGPT로 다시 만들기" : "ChatGPT로 만들기"}</strong>
-            <small>
-              {sources.some((s) => s.kind === "jokbo") ? "필기 + 족보 조각" : "필기만 — 족보 조각이 아직 없다"}
-            </small>
-          </button>
-        }
-        tools={
-          <>
-            <PanelTool icon="⎘" label="답 붙여넣기" hint="확장이 못 가져온 ChatGPT 답을 직접 붙여 넣는다"
-                       active={pasting} expanded={pasting} disabled={Boolean(busy) || moving}
-                       onClick={() => setPasting((v) => !v)} />
-            {bank ? (
-              <PanelTool icon="⟳" label="다시 정리" hint="저장된 응답으로 정리·검토만 다시 한다"
-                         busy={busy === "again"} disabled={Boolean(busy) || moving} onClick={() => void reorganize()} />
-            ) : null}
-            {bank?.usable ? (
-              <PanelTool icon={bank.open ? "◉" : "○"} label={bank.open ? "학생에게 닫기" : "학생에게 열기"}
-                         busy={busy === "open"} disabled={Boolean(busy)} onClick={() => void setOpen(!bank.open)} />
-            ) : null}
-          </>
-        }
-      />
-      <ExtensionSetup />
-      {pasting ? (
-        <div className="bank-paste">
-          <textarea
-            rows={8}
-            value={pasted}
-            placeholder="ChatGPT 답 전체를 붙여 넣으세요 — 「## 1. Concept Map」부터 마지막 줄 STUDYEZ_BANK_COMPLETE 까지"
-            onChange={(event) => setPasted(event.target.value)}
+      <PanelGroup tone="bank" title="문제은행 링크">
+        <div className="panel-pair">
+          <ActionCard
+            shape="is-key"
+            hit={bank?.shareUrl ? (
+              <a className="panel-action-hit" href={bank.shareUrl} target="_blank" rel="noreferrer">
+                <strong>기본 링크</strong>
+              </a>
+            ) : (
+              <button className="panel-action-hit" disabled={Boolean(busy) || !notes || !extensionCompatible(extensionInputMinimum("bank", false))} onClick={() => void make(false)}>
+                <strong>기본 링크</strong><small>{busy === "make" ? "여는 중…" : notes ? "만들기" : "올해 필기 대기"}</small>
+              </button>
+            )}
+            tools={notes ? <PanelTool icon="↗" label="자동전송" hint="자료·프롬프트를 첨부하고 자동으로 전송한다"
+              busy={busy === "auto"} disabled={Boolean(busy) || !extensionCompatible(extensionInputMinimum("bank", true))}
+              onClick={() => void make(true)} /> : undefined}
           />
-          <div className="bank-paste-actions">
-            <small>{pasted ? `${Math.round(pasted.length / 1024)}KB` : ""}</small>
-            <button className="is-quiet" disabled={busy === "paste"} onClick={() => setPasting(false)}>취소</button>
-            <button disabled={busy === "paste" || !pasted.trim()} onClick={() => void savePasted()}>
-              {busy === "paste" ? "저장하는 중…" : "저장하고 정리"}
-            </button>
+          {conversation ? <ActionCard shape="is-key" hit={
+            <a className="panel-action-hit" href={conversation} title={conversation} target="_blank" rel="noopener noreferrer">
+              <strong>개인 링크</strong>
+            </a>
+          } /> : <ActionCard shape="is-empty is-key" hit={
+            <span className="panel-action-hit">
+              <strong>개인 링크</strong><small>아직 없습니다</small>
+            </span>
+          } />}
+        </div>
+        <div className="panel-aside">
+          {bank?.shareUrl || conversation ? <PanelTool icon="⟳" label="새로 만들기" hint="문제은행 새 대화에 자료·프롬프트를 넣고 직접 전송한다"
+            busy={busy === "make"} disabled={Boolean(busy) || !notes || !extensionCompatible(extensionInputMinimum("bank", false))}
+            onClick={() => void make(false)} /> : null}
+          <PanelTool icon="🔗" label={showLinks ? "링크 접기" : bank?.shareUrl || conversation ? "링크 고치기" : "링크 넣기"} hint="문제은행 공유 링크·개인 링크 입력 (관리자)"
+            active={showLinks} expanded={showLinks} disabled={Boolean(busy)} onClick={() => {
+              if (!showLinks) { setShare(bank?.shareUrl || ""); setMine(bank?.conversationUrl || ""); }
+              setShowLinks((value) => !value);
+            }} />
+        </div>
+        {showLinks ? <div className="link-editor">
+          <label className="link-editor-field"><span>기본 링크 — 공유 주소</span>
+            <input value={share} placeholder="https://chatgpt.com/share/…" spellCheck={false}
+              onChange={(event) => setShare(event.target.value)} />
+          </label>
+          <label className="link-editor-field"><span>개인 링크 — 생성 대화 주소</span>
+            <input value={mine} placeholder="https://chatgpt.com/c/…" spellCheck={false}
+              onChange={(event) => setMine(event.target.value)} />
+          </label>
+          <div className="link-editor-actions">
+            <button className="is-primary" disabled={Boolean(busy)} onClick={() => void saveLinks()}>{busy === "links" ? "저장 중…" : "저장"}</button>
+            <small>비우고 저장하면 지워집니다.</small>
           </div>
-          {bank ? <small className="panel-hint">저장하면 지금 은행을 이 답으로 새로 만든다.</small> : null}
-        </div>
-      ) : null}
-      {bank ? (
-        <div className="panel-hint">
-          <Link to={`/admin/bank-cards/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`}>
-            문항 검토·수정{bank.dropped?.length ? ` · 제외 ${bank.dropped.length}개` : ""}
-            {review ? ` · 틀림 ${review.wrong} · 의심 ${review.doubt}` : ""}
-          </Link>
-        </div>
-      ) : null}
-      {bank ? (
-        <p className="panel-hint">
-          {STATUS_LINE[bank.status]}
-          {bank.usable ? ` · ${bank.seenQuestionCount}/${bank.studyQuestionCount}문항 봄` : ""}
-          {bank.status === "invalid" && bank.errorCount ? ` (${bank.errorCount}건)` : ""}
-          {review ? ` · 외부지식 검토 틀림 ${review.wrong} · 의심 ${review.doubt}` : ""}
-          {bank.usable ? (bank.open ? " · 학생에게 열림" : " · 아직 관리자만 본다") : ""}
-          {bank.status === "failed" && bank.message ? ` — ${bank.message}` : ""}
-        </p>
-      ) : null}
-      {/* 걸린 문항만 빼고 열었다(2026-10-05 관리자 지시). 무엇을 왜 뺐는지 남긴다 — 빠진 줄 모르면
-          학생 화면의 문항 수가 응답보다 적은 것을 고장으로 읽는다. */}
-      {bank?.dropped?.length ? (
-        <details className="panel-hint">
-          <summary>검증에 걸려 뺀 문항 {bank.dropped.length}개 — {bank.dropped.map((d) => d.questionId).join(", ")}</summary>
-          <ul>
-            {bank.dropped.map((d) => (
-              <li key={d.questionId}>{d.errors.join(" · ")}</li>
-            ))}
-          </ul>
-          <Link to={`/admin/bank-cards/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`}>제외된 문항 열고 수정하기</Link>
-        </details>
-      ) : null}
-      {moving && job ? (
-        <p className="panel-hint">
-          정리 — {progressLine(job)}
+        </div> : null}
+        {!bank?.shareUrl || showSetup ? <ExtensionSetup minimum={extensionInputMinimum("bank", true)} /> : null}
+        {pointsMoving && pointsJob ? <p className="panel-hint">
+          출제포인트 준비 — {pointsJob.state === "queued" ? "러너를 기다리는 중" : progressLine(pointsJob)}
           {runnerAlive(runner) ? "" : " · 러너가 꺼져 있다"}
-        </p>
-      ) : null}
-      {job?.state === "failed" ? <p className="notice is-error">{job.message}</p> : null}
+        </p> : pointsJob?.state === "done" ? <p className="panel-hint">출제포인트 준비됨</p> : null}
+        {pointsError || pointsJob?.state === "failed" ? <p className="notice is-error">
+          {pointsError || pointsJob?.message}
+        </p> : null}
+      </PanelGroup>
+      <PanelGroup tone="main" title="Main-Quiz">
+        {bank?.usable ? <StudyCard lecture={lecture} bank={bank} tools={
+          <PanelTool icon="⟳" label="다시 검수·게시" hint="저장된 웹 문항을 다시 검수·보완하고 게시한다"
+            busy={busy === "again"} disabled={Boolean(busy) || moving || !notes} onClick={() => void reorganize()} />
+        } /> : <ActionCard shape={`is-key${moving || !notes ? " is-empty" : ""}`} hit={
+          <button className="panel-action-hit" disabled={Boolean(busy) || moving || !notes} onClick={() => void reorganize()}>
+            <strong>Main-Quiz</strong>
+            <small>{moving ? "준비 중…" : busy === "again" ? "요청 중…" : !notes ? "올해 필기 대기"
+              : bank?.respondedAt ? "검수·게시 재시도" : "웹에서 만들기"}</small>
+          </button>
+        } />}
+        {bank?.usable ? <>
+          <div className="panel-aside">
+            <PanelTool icon="⟳" label="누락 검증·객관식 보강" busyLabel="요청 중…"
+              busy={busy === "audit"} disabled={Boolean(busy) || moving} onClick={() => void audit()} />
+            <PanelTool icon={bank.open ? "◉" : "○"} label={bank.open ? "학생에게 닫기" : "학생에게 열기"}
+              busy={busy === "open"} disabled={Boolean(busy)} onClick={() => void setOpen(!bank.open)} />
+          </div>
+          <BankCoverage value={bank.coverage} />
+        </> : null}
+        {bank?.revision ? <details className="panel-hint">
+          <summary>CLI 검수 결과 — 자동 수정·보완 후 미해결 항목</summary>
+          <p>남은 검수 지적을 보존한 기록입니다. 게시된 문항은 계속 사용할 수 있으며, 필요할 때 문항 검토·수정 또는 Main-Quiz 다시 만들기를 요청하세요.</p>
+          <button className="is-quiet" onClick={() => void navigator.clipboard.writeText(
+            "아래 CLI 검수 결과에 따라 로컬 문제은행을 검토·수정하고 누락을 보완해주세요. "
+            + "저장된 응답과 원본 자료를 사용하고 웹 대화를 호출하지 마세요.\n\n"
+            + JSON.stringify(bank.revision, null, 2)
+          ).then(() => setNote("CLI 검수 기록을 복사했습니다."))
+            .catch(() => setError("복사하지 못했습니다. 아래 검수 내용을 직접 복사하세요."))}>검수 기록 복사</button>
+          <pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{JSON.stringify(bank.revision, null, 2)}</pre>
+        </details> : null}
+        {bank?.respondedAt ? (
+          <div className="panel-hint">
+            <Link to={`/admin/bank-cards/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`}>
+              문항 검토·수정{bank.dropped?.length ? ` · 제외 ${bank.dropped.length}개` : ""}
+              {review ? ` · 틀림 ${review.wrong} · 의심 ${review.doubt}` : ""}
+            </Link>
+          </div>
+        ) : null}
+        {bank && bank.status !== "linked" && (bank.status !== "ready" || review?.wrong || review?.doubt) ? (
+          <p className="panel-hint">
+            {STATUS_LINE[bank.status]}
+            {bank.usable ? ` · ${bank.seenQuestionCount}/${bank.studyQuestionCount}문항 봄` : ""}
+            {bank.status === "invalid" && bank.errorCount ? ` (${bank.errorCount}건)` : ""}
+            {review ? ` · 외부지식 검토 틀림 ${review.wrong} · 의심 ${review.doubt}` : ""}
+            {bank.usable ? (bank.open ? " · 학생에게 열림" : " · 아직 관리자만 본다") : ""}
+            {bank.status === "failed" && bank.message ? ` — ${bank.message}` : ""}
+          </p>
+        ) : null}
+        {/* 걸린 문항만 빼고 열었다(2026-10-05 관리자 지시). 무엇을 왜 뺐는지 남긴다 — 빠진 줄 모르면
+            학생 화면의 문항 수가 응답보다 적은 것을 고장으로 읽는다. */}
+        {bank?.dropped?.length ? (
+          <details className="panel-hint">
+            <summary>검증에 걸려 뺀 문항 {bank.dropped.length}개 — {bank.dropped.map((d) => d.questionId).join(", ")}</summary>
+            <ul>
+              {bank.dropped.map((d) => (
+                <li key={d.questionId}>{d.errors.join(" · ")}</li>
+              ))}
+            </ul>
+            <Link to={`/admin/bank-cards/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`}>제외된 문항 열고 수정하기</Link>
+          </details>
+        ) : null}
+        {moving && job ? (
+          <p className="panel-hint">
+            정리 — {progressLine(job)}
+            {runnerAlive(runner) ? "" : " · 러너가 꺼져 있다"}
+          </p>
+        ) : null}
+        {job?.state === "failed" && !failureSuperseded ? <p className="notice is-error">{job.message}</p> : null}
+      </PanelGroup>
       {note ? <p className="panel-hint">{note}</p> : null}
       {error ? <p className="notice is-error">{error}</p> : null}
     </>

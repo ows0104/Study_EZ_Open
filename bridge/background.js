@@ -140,6 +140,8 @@ async function deliverPending(webappTabId) {
       try {
         await chrome.tabs.sendMessage(webappTabId, {
           type: MESSAGES.bankReady, lectureId: entry.lectureId, raw: entry.raw, url: entry.url,
+          promptVersion: entry.promptVersion || "",
+          ...(typeof entry.shareUrl === "string" ? { shareUrl: entry.shareUrl } : {}),
         });
       } catch {
         // 지금은 닿지 않는다. 남겨 두고 다음 기회에 다시 보낸다.
@@ -258,15 +260,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .get(key)
       .then(async (stored) => {
         const watch = stored[key];
-        if (!watch || watch.mode !== "bank") return;
+        if (!watch || watch.mode !== "bank") { sendResponse({ ok: false }); return; }
         const url = isConversationUrl("chatgpt", message.url || "") ? message.url : "";
+        const shareUrl = shareIdentity("chatgpt", message.shareUrl || "") ? message.shareUrl : undefined;
         await chrome.storage.session.set({
-          [bankKey(watch.webappTabId, watch.lectureId)]: { lectureId: watch.lectureId, raw, url },
+          [bankKey(watch.webappTabId, watch.lectureId)]: { lectureId: watch.lectureId, raw, url,
+            promptVersion: watch.promptVersion || "",
+            ...(shareUrl ? { shareUrl } : {}) },
         });
+        sendResponse({ ok: true });
         await deliverPending(watch.webappTabId);
       })
-      .catch(() => undefined);
-    return false;
+      .catch(() => sendResponse({ ok: false }));
+    return true;
   }
 
   if (message?.type === MESSAGES.linkSaved) {
@@ -311,14 +317,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const watch = stored[key];
         if (!watch || watch.provider !== provider) return;
         // Quiz Bank 로 연 대화는 예습 링크가 아니다. 저장하면 관리자의 개인 예습 자리를 덮는다.
-        if (watch.mode === "bank") return;
         // 공유는 기본 링크를 만들 때만 낸다.
         //
         // 개인 예습까지 공개 `/share/`를 발행하면 두 가지가 잘못된다 — 남이
         // 물은 것이 링크만 있으면 열리게 되고, 관리자가 개인 예습을 하는 순간
         // 그 공유가 반 전체의 기본 링크를 덮는다.
-        if (share && watch.mode !== "shared") return;
-        const kind = share ? `${provider}_share` : watch.mode === "review" ? `${provider}_review` : provider;
+        if (share && !["shared", "bank"].includes(watch.mode)) return;
+        const kind = watch.mode === "bank" ? (share ? "chatgpt_bank_share" : "chatgpt_bank")
+          : share ? `${provider}_share` : watch.mode === "review" ? `${provider}_review` : provider;
         await chrome.storage.session.set({
           [pendingKey(watch.webappTabId, watch.lectureId, kind)]: { lectureId: watch.lectureId, kind, url },
         });
@@ -428,6 +434,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       await chrome.storage.session.set({ [`${TAB_PAYLOAD}${tab.id}`]: payload });
       await watchTab(tab.id, {
         lectureId: payload.lectureId,
+        promptVersion: typeof payload.promptVersion === "string" ? payload.promptVersion : "",
         provider: payload.provider,
         mode,
         webappTabId: sender.tab.id,

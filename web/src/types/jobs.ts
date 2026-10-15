@@ -16,6 +16,7 @@ export type JobOrigin = "button" | "auto";
 /** 무엇을 만드는 일감인가. 재료도 명령도 갈린다 — 예습은 예습 대화와 작년 필기로,
  *  복습은 올해 필기로 만든다. */
 export type DeckKind = "pre" | "main" | "bank";
+export type JobKind = DeckKind | "points";
 
 /**
  * 「덱 만들기」를 누른 것. 만드는 곳은 노트북이라 여기서는 상태만 본다.
@@ -38,7 +39,7 @@ export type DeckKind = "pre" | "main" | "bank";
  * 같은 셈은 이 좁은 쪽을 받고, 관리자의 일감도 그대로 넣을 수 있다.
  */
 export type DeckWatch = {
-  kind: DeckKind;
+  kind: JobKind;
   state: PrequizJobState;
   /** 러너가 올린 진행(`② 카드`). **`running`이 아니면 빈 문자열이다** — 줄 서 있는
    *  일감의 `stage`는 서버가 넣어 둔 안내문이라 단계 이름이 아니다. */
@@ -63,7 +64,7 @@ export type PrequizJob = {
   id: number;
   subject: string;
   runId: string;
-  kind: DeckKind;
+  kind: JobKind;
   state: PrequizJobState;
   stage: string;
   message: string;

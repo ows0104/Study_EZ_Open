@@ -30,7 +30,7 @@ function scenario(options = {}) {
     getAttribute: () => null,
     click() { clicks.push(time); if (!options.unconfirmed) editor.value = ''; },
   };
-  const payload = { provider: 'chatgpt', prompt: editor.value, files: [{ filename: 'lecture.pdf' }] };
+  const payload = { provider: 'chatgpt', prompt: editor.value, files: [{ filename: 'lecture.pdf', size: options.fileSize || 0 }] };
   const dependencies = {
     now: () => time,
     sleep: async (ms) => { time += ms; options.tick?.({ time, editor, button }); },
@@ -49,6 +49,50 @@ test('waits for all attachments, then sends exactly once', async () => {
   const s = scenario({ attachments: time => ({ ready: time >= 4000 }) });
   await s.run();
   assert.deepEqual(s.clicks, [5500]);
+});
+
+test('reattached filenames accept provider numeric suffixes but reject different files', () => {
+  const name = '[261012_01] 지혈과 혈전증 약리(조정현)_강태우v2.pdf';
+  for (const label of [name, name.replace('.pdf', '(1).pdf'), name.replace('.pdf', ' (12).pdf')]) {
+    assert.equal(context.attachmentFilenameVisible(label, name), true, label);
+  }
+  for (const label of [name.replace('v2', 'v3'), name + '.backup', 'other' + name]) {
+    assert.equal(context.attachmentFilenameVisible(label, name), false, label);
+  }
+});
+
+test('only an empty or identical Study EZ draft can be reused', () => {
+  assert.equal(context.reusableDraft('', 'Study EZ prompt'), true);
+  assert.equal(context.reusableDraft('Study EZ prompt', 'Study EZ prompt'), true);
+  assert.equal(context.reusableDraft('User is writing something else', 'Study EZ prompt'), false);
+});
+
+test('identical draft cleanup removes only expected study attachments and leaves unknown ones untouched', async () => {
+  const clicks = [];
+  const buttons = names => names.map(name => ({getAttribute: () => name,
+    getBoundingClientRect: () => ({width: 10, height: 10}), click: () => clicks.push(name)}));
+  let attached = buttons(['lecture (2).pdf 제거', 'jokbo.md 제거']);
+  context.composerRoot = () => ({querySelectorAll: () => attached});
+  context.pause = async () => {};
+  const payload = {provider: 'chatgpt', files: [{filename: 'lecture.pdf'}, {filename: 'jokbo.md'}]};
+  await context.clearOwnDraftAttachments({}, payload, () => {});
+  assert.deepEqual(clicks, ['lecture (2).pdf 제거', 'jokbo.md 제거']);
+  clicks.length = 0;
+  attached = buttons(['lecture.pdf 제거', '사진 제거']);
+  await assert.rejects(context.clearOwnDraftAttachments({}, payload, () => {}), /다른 자료/);
+  assert.equal(clicks.length, 0);
+});
+
+test('large lecture upload can finish after two minutes and submits once', async () => {
+  const s = scenario({fileSize: 90 * 1024 * 1024, attachments: time => ({ready: time >= 180000})});
+  await s.run();
+  assert.deepEqual(s.clicks, [181500]);
+});
+
+test('large missing attachment still has a bounded timeout without submitting', async () => {
+  const s = scenario({fileSize: 90 * 1024 * 1024, attachments: () => ({ready: false})});
+  await assert.rejects(s.run(), /10분/);
+  assert.equal(s.clicks.length, 0);
 });
 
 test('readiness must stay stable after upload state changes', async () => {
@@ -108,4 +152,13 @@ test('missing editor cannot trigger send', async () => {
   const s = scenario({ missingEditor: true });
   await assert.rejects(s.run(), /입력 내용이 바뀌/);
   assert.equal(s.clicks.length, 0);
+});
+
+
+test('duplicate uploads accept date-time suffixes while preserving the source basename', () => {
+  const name = 'L2-4_약동학-1-3.md';
+  assert.equal(context.attachmentFilenameVisible('L2-4_약동학-1-3(20261014-200438).md 제거', name), true);
+  assert.equal(context.attachmentFilenameVisible('L2-4_약동학-1-3(20261014-200438)(2).md', name), true);
+  assert.equal(context.attachmentFilenameVisible('L2-4_약동학-1-3(other).md', name), false);
+  assert.equal(context.attachmentFilenameVisible('L2-4_약동학-2-3(20261014-200438).md', name), false);
 });

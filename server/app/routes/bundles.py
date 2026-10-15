@@ -37,6 +37,8 @@
 
 from __future__ import annotations
 
+from app.bank_validation.publication import usable as bank_usable
+
 from datetime import date as Date
 from typing import Any
 
@@ -164,7 +166,7 @@ def read_decks(
         for asset in db.scalars(media_query):
             bank_media.setdefault((asset.subject, asset.run_id), []).append(asset)
     for bank, lecture in bank_rows:
-        if not bank.bank or not (bank.validation or {}).get("pass") or not bank.bank.get("questions"):
+        if not bank_usable(bank.bank, bank.validation) or not bank.bank.get("questions"):
             continue
         export = describe(db, lecture, bank, media_assets=bank_media.get((bank.subject, bank.run_id), []))
         decks = [d for d in decks if (d["subject"], d["runId"], d["kind"]) != (lecture.subject, lecture.run_id, "main")]
@@ -203,7 +205,7 @@ def read_deck_bytes(
         lecture = db.get(Lecture, (nfc(subject), run_id))
         bank = db.get(QuizBank, (nfc(subject), run_id))
         visible = bank is not None and (user.is_admin or bank.open_to_students)
-        usable = visible and bank.bank and (bank.validation or {}).get("pass") and bank.bank.get("questions")
+        usable = visible and bank_usable(bank.bank, bank.validation) and bank.bank.get("questions")
         if export_id or usable:
             if lecture is None:
                 raise HTTPException(404, "강의를 찾을 수 없습니다.")
@@ -271,7 +273,7 @@ def put_grabs(
         bank = db.get(QuizBank, (nfc(ref.subject), ref.run_id))
         if not lecture or not bank or (not user.is_admin and not bank.open_to_students):
             continue
-        if not bank.bank or not (bank.validation or {}).get("pass") or not bank.bank.get("questions"):
+        if not bank_usable(bank.bank, bank.validation) or not bank.bank.get("questions"):
             continue
         # An old legacy bundle must never mark a new Quiz Bank export as downloaded.
         keys = [key for key in keys if key != (bank.subject, bank.run_id, "main_apkg")]

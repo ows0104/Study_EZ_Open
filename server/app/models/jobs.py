@@ -50,7 +50,8 @@ JOB_MAIN = "main"
 # Quiz Bank(2026-10-04). 재료는 관리자가 ChatGPT 에서 받아 온 응답이고(`quiz_bank.raw_response`),
 # 러너는 그것을 정리·검증·검토만 한다 — 만드는 것은 ChatGPT 다.
 JOB_BANK = "bank"
-JOB_KINDS = frozenset({JOB_PRE, JOB_MAIN, JOB_BANK})
+JOB_BANK_POINTS = "points"
+JOB_KINDS = frozenset({JOB_PRE, JOB_MAIN, JOB_BANK, JOB_BANK_POINTS})
 
 
 class PrequizJob(Base):
@@ -65,7 +66,7 @@ class PrequizJob(Base):
     subject: Mapped[str] = mapped_column(Text, nullable=False)
     # **올해** run_id다. 예습은 작년 필기로 만들지만 누르는 자리는 올해 강의다.
     run_id: Mapped[str] = mapped_column(String(32), nullable=False)
-    # `pre` | `main` | `bank`. 기존 행을 위해 서버 기본값을 같이 준다 — 이미 서 있는
+    # `pre` | `main` | `bank` | `points`. 기존 행을 위해 서버 기본값을 같이 준다 — 이미 서 있는
     # DB에 `app.cli`가 이 값으로 채워 넣는다.
     kind: Mapped[str] = mapped_column(
         String(8), nullable=False, default=JOB_PRE, server_default=JOB_PRE
@@ -116,6 +117,7 @@ class PrequizJob(Base):
     ask: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     # 사람이 고른 전략(`기본`·`족보`·`필기`·`사진`). 빈 문자열이면 자동 판정이다.
     # 러너가 이 값을 `--strategy` 로 넘긴다.
+    # points 작업은 출제 전략을 쓰지 않으며 이 칸에 원본 버전 식별자를 저장해 완료 작업을 재사용한다.
     strategy: Mapped[str] = mapped_column(String(16), nullable=False, default="", server_default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)

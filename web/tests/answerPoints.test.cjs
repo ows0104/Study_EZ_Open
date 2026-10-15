@@ -14,15 +14,126 @@ function load(file) {
   }).outputText;
   const context = vm.createContext({ exports: {}, require: (name) => {
     if (name.endsWith('/SlideImage')) return { SlideImage: () => null };
-    if (name.startsWith('.')) return load(path.resolve(path.dirname(file), name + '.tsx'));
+    if (name.endsWith('.css')) return {};
+    if (name.startsWith('.')) {
+      const target = path.resolve(path.dirname(file), name);
+      return load(fs.existsSync(target + '.tsx') ? target + '.tsx' : target + '.ts');
+    }
     return require(name);
   } });
   vm.runInContext(js, context);
   return context.exports;
 }
-const { AnswerBody, QuestionBody } = load(path.join(__dirname, '../src/bank/BankQuestion.tsx'));
+const { AnswerBody, QuestionBody, choiceScore } = load(path.join(__dirname, '../src/bank/BankQuestion.tsx'));
 const question = { format: 'basic', question_id: 'q1', question: '', options: [], matching_left: [], matching_right: [] };
 const answer = { answer: '', answerUnits: [], answerPairs: [], correctOrder: [], correctOptionIds: [], medicalReview: null, slides: [] };
+
+test('source differences are optional readable rows while unresolved issues stay visible', () => {
+  const conflict = '판단: 장관 내 작용과 전신 치료를 구분한다.\n자료 1: 강의 p.18 — 경구 흡수가 낮다.\n자료 2: 족보 2023 — 과거 설사 치료 사용.\n근거: 흡수 특성과 치료 권고는 다른 판단이다.\n미해결: 과거 정답표 원문을 추가 확인해야 한다.';
+  const html = renderToStaticMarkup(React.createElement(AnswerBody, {
+    question: { ...question, format: 'ox' }, answer: { ...answer, answer: 'X', answerUnits: ['X'], conflict, external: true },
+  }));
+  assert.match(html, /<details><summary>/);
+  assert.doesNotMatch(html, /<details open/);
+  assert.ok(html.indexOf('확인 필요') < html.indexOf('<details>'));
+  assert.match(html, /<dt>자료 1<\/dt><dd>강의 p.18/);
+  assert.match(html, /정답 판단에 외부 근거를 참고했습니다/);
+  assert.doesNotMatch(html, /강의자료·족보에 없는 내용/);
+});
+
+test('legacy comparison text survives while citation engine markup is removed', () => {
+  const conflict = '과거 자료의 적응증과 현재 판단을 구분한다. <Cite refs={{"turn290171search0"}}/> 핵심 근거는 보존한다.';
+  const html = renderToStaticMarkup(React.createElement(AnswerBody, { question, answer: { ...answer, conflict } }));
+  assert.match(html, /과거 자료의 적응증과 현재 판단을 구분한다/);
+  assert.match(html, /핵심 근거는 보존한다/);
+  assert.doesNotMatch(html, /Cite|turn290171search0/);
+});
+
+test('comparison stems use four indented rows and keep all eight blank answers in order', () => {
+  const text = 'Clindamycin과 vancomycin을 같은 약동학 기준으로 비교하여 빈칸을 채우시오. 경구흡수: clindamycin은 {{c1}}, vancomycin은 {{c1}}. 세포 내 침투: clindamycin은 {{c1}}, vancomycin은 {{c1}}. 주요 처리 경로: clindamycin은 {{c1}}, vancomycin은 {{c1}}. 신기능 저하 시: clindamycin은 대개 {{c1}}, vancomycin은 {{c1}}.';
+  const q = { ...question, format: 'cloze', question: text };
+  const props = { question: q, answer: null, picked: new Set(), onPick: () => {} };
+  const hidden = renderToStaticMarkup(React.createElement(QuestionBody, props));
+  assert.equal((hidden.match(/class="bank-stem-line is-item"/g) || []).length, 4);
+  assert.deepEqual([...hidden.matchAll(/\[ (\d+) \]/g)].map(m => Number(m[1])), [1,2,3,4,5,6,7,8]);
+  const units = Array.from({ length: 8 }, (_, i) => `답${i + 1}`);
+  const shown = renderToStaticMarkup(React.createElement(QuestionBody, { ...props, answer: { ...answer, answerUnits: units } }));
+  assert.equal((shown.match(/class="bank-stem-line is-item"/g) || []).length, 4);
+  assert.deepEqual([...shown.matchAll(/class="bank-answer-point">(.*?)<\/strong>/g)].map(m => m[1]), units);
+  assert.equal(shown.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
+    text.replace(/\{\{c1\}\}/g, () => units.shift()));
+});
+
+test('explicit multiline stems retain emphasis and blank order, including old cloze numbers', () => {
+  const html = renderToStaticMarkup(React.createElement(QuestionBody, {
+    question: { ...question, format: 'cloze', question: '비교하시오.\r\n  **기준 A**: {{c2}}.\r\n  기준 B: {{c1}}.' },
+    answer: null, picked: new Set(), onPick: () => {},
+  }));
+  assert.equal((html.match(/class="bank-stem-line is-item"/g) || []).length, 2);
+  assert.ok(html.includes('<strong>기준 A</strong>'));
+  assert.deepEqual([...html.matchAll(/\[ (\d+) \]/g)].map(m => m[1]), ['1', '2']);
+});
+
+test('long Korean stems separate sentences without splitting decimals or English abbreviations', () => {
+  const { stemLines } = load(path.join(__dirname, '../src/bank/BankStem.tsx'));
+  const first = 'C. difficile, S. aureus와 e.g. 표기를 그대로 유지하고 0.5 mg/kg 조건을 확인한다.';
+  const second = '제시된 조건을 충분히 검토한 다음 각 항목에 해당하는 관계를 설명하고 서로 다른 결과가 나타나는 이유를 판단하시오.';
+  const last = '다음 중 이 모든 조건에 해당하지 **않는 것은**?';
+  const lines = stemLines(`${first} ${second} ${last}`);
+  assert.deepEqual(Array.from(lines, line => line.text), [first, second, last]);
+  assert.ok(lines[1].indented && lines[2].indented);
+  assert.equal(stemLines('조건을 확인한다. 옳은 것은?').length, 1);
+});
+
+const choiceQuestion = { ...question, format: 'multi_select', options: ['A', 'B', 'C', 'D'].map(id => ({ id, text: `보기 ${id}` })) };
+const choiceAnswer = { ...answer, correctOptionIds: ['A', 'C'] };
+test('multiple choice needs the entire answer set, with neither omissions nor extras', () => {
+  for (const [ids, correct, missed, wrong, allCorrect] of [
+    [[], 0, 2, 0, false], [['A'], 1, 1, 0, false], [['C'], 1, 1, 0, false],
+    [['C', 'A'], 2, 0, 0, true], [['A', 'B'], 1, 1, 1, false],
+    [['A', 'B', 'C'], 2, 0, 1, false], [['B', 'D'], 0, 2, 2, false],
+    [['A', 'B', 'C', 'D'], 2, 0, 2, false],
+  ]) {
+    assert.deepEqual(JSON.parse(JSON.stringify(choiceScore(choiceQuestion, choiceAnswer, new Set(ids)))),
+      { correct, missed, wrong, allCorrect }, `selected ${ids}`);
+  }
+});
+
+test('revealed options distinguish correct picks, missed answers, and incorrect picks', () => {
+  const html = renderToStaticMarkup(React.createElement(QuestionBody, {
+    question: choiceQuestion, answer: choiceAnswer, picked: new Set(['A', 'B']), onPick: () => {},
+  }));
+  assert.match(html, /class="bank-option is-picked is-correct"[^>]*aria-pressed="true"[^>]*><b>A<\/b>.*?✓ 맞게 고른 정답/);
+  assert.match(html, /class="bank-option is-picked is-wrong"[^>]*><b>B<\/b>.*?✕ 잘못 고른 선지/);
+  assert.match(html, /class="bank-option is-missed"[^>]*aria-pressed="false"[^>]*><b>C<\/b>.*?! 빠뜨린 정답 · 미선택/);
+  assert.match(html, /<b>D<\/b>.*?정답 아님 · 미선택/);
+  assert.ok(html.includes('맞게 고른 정답 1개 · 빠뜨린 정답 1개 · 잘못 고른 선지 1개'));
+  assert.ok(!html.includes('모두 맞았어요'));
+});
+
+test('choice feedback appears only after reveal and never uses stale personal answer keys', () => {
+  for (const revealed of [null, { ...choiceAnswer, personalAnswer: true }]) {
+    const html = renderToStaticMarkup(React.createElement(QuestionBody, {
+      question: choiceQuestion, answer: revealed, picked: new Set(['A']), onPick: () => {},
+    }));
+    assert.ok(!html.includes('bank-option-result') && !html.includes('bank-choice-score'));
+  }
+  for (const key of [[], ['Z']]) {
+    assert.equal(choiceScore(choiceQuestion, { ...choiceAnswer, correctOptionIds: key }, new Set(['A'])), null);
+  }
+  assert.equal(choiceScore(choiceQuestion, choiceAnswer, new Set(['Z'])), null);
+});
+
+test('single choice and blank selections cannot be mistaken for a correct answer', () => {
+  const q = { ...choiceQuestion, format: 'mcq' }, a = { ...choiceAnswer, correctOptionIds: ['C'] };
+  assert.equal(choiceScore(q, a, new Set(['A'])).allCorrect, false);
+  assert.equal(choiceScore(q, a, new Set(['C'])).allCorrect, true);
+  const html = renderToStaticMarkup(React.createElement(QuestionBody, {
+    question: choiceQuestion, answer: choiceAnswer, picked: new Set(), onPick: () => {},
+  }));
+  assert.ok(html.includes('선택한 답이 없어요.') && !html.includes('모두 맞았어요'));
+  assert.equal((html.match(/class="bank-option is-missed"/g) || []).length, 2);
+});
 const render = (changes, format = 'list', tier = 'Advanced') => renderToStaticMarkup(React.createElement(AnswerBody, {
   question: { ...question, format, tier }, answer: { ...answer, ...changes },
 }));
@@ -107,20 +218,86 @@ test('O and X show every explanation once, including a single or multiline unit'
   for (const binary of ['O', 'X']) {
     const units = ['판단의 **기준**이다.\n조건도 확인한다.', '예외를 구분한다.'];
     const html = render({ answer: binary, answerUnits: units }, 'ox');
-    assert.ok(html.includes('<strong>기준</strong>이다.\n조건도 확인한다.'));
+    assert.ok(html.includes('<strong>기준</strong>'));
+    assert.ok(html.replace(/<[^>]+>/g, '').includes('판단의 기준이다.\n조건도 확인한다.'));
+    assert.equal((html.match(/class="bank-readable-line is-indented"/g) || []).length, 1);
     assert.equal(html.split('예외를 구분한다.').length - 1, 1);
     assert.ok(!html.includes('bank-units'));
   }
 });
 
-test('O/X does not hide explanations that also occur in the answer', () => {
+test('O/X alone is not displayed as an explanation', () => {
   const html = render({ answer: 'O', answerUnits: ['O'] }, 'ox');
-  assert.ok(html.includes('<h2>해설</h2><ul><li class="bank-answer-point">O</li></ul>'));
+  assert.ok(html.includes('이 문항에 등록된 해설이 없습니다.'));
+});
+
+test('retired experiment hints are not shown before or after revealing the answer', () => {
+  const q = { ...question, hint: 'apical/luminal membrane의 방향을 떠올려 보세요.' };
+  const props = { question: q, answer: null, picked: new Set(), onPick: () => {} };
+  const html = renderToStaticMarkup(React.createElement(QuestionBody, props));
+  assert.ok(!html.includes('힌트 보기') && !html.includes(q.hint));
+  const shown = renderToStaticMarkup(React.createElement(QuestionBody, { ...props, answer }));
+  assert.ok(!shown.includes('힌트 보기') && !shown.includes(q.hint));
+});
+
+test('general explanations are separate from scoring and work for basic, cloze and O/X', () => {
+  for (const format of ['basic', 'cloze', 'ox']) {
+    const html = render({ answer: 'X', answerUnits: ['X'], explanation: '구체적인 반례와 올바른 기전' }, format);
+    assert.ok(html.includes('<h2>해설</h2><p>구체적인 반례와 올바른 기전</p>'));
+    assert.equal((html.match(/<h2>해설<\/h2>/g) || []).length, 1);
+    assert.ok(!html.includes('이 문항에 등록된 해설이 없습니다.'));
+  }
+  assert.ok(!render({ explanation: '오래된 설명', personalAnswer: true }).includes('오래된 설명'));
 });
 
 test('missing O/X explanation is explicit, without an empty panel for other formats', () => {
   assert.ok(render({ answer: 'X', answerUnits: ['  '] }, 'ox').includes('등록된 해설이 없습니다.'));
   assert.ok(!render({ answer: '답' }).includes('bank-ox-explanation'));
+});
+
+test('choice explanations include every distractor, preserve emphasis, and follow option order', () => {
+  for (const format of ['mcq', 'multi_select']) {
+    const html = renderToStaticMarkup(React.createElement(AnswerBody, {
+      question: { ...question, format, options: [{ id: 'A', text: '표적 A' }, { id: 'B', text: '표적 B' }] },
+      answer: { ...answer, answer: 'A: 참 — 수용체를 억제한다.', correctOptionIds: ['A'],
+        answerUnits: ['B: 거짓 — **효소**를 억제하며 수용체에는 작용하지 않는다.', 'A: 참 — 수용체를 억제한다.'] },
+    }));
+    const section = html.slice(html.indexOf('<section'));
+    assert.ok(section.includes('aria-label="선지별 해설"><h2>선지별 해설</h2>'));
+    assert.ok(section.includes('거짓 — <strong>효소</strong>를 억제하며 수용체에는 작용하지 않는다.'));
+    assert.ok(section.indexOf('<b>A</b>') < section.indexOf('<b>B</b>'));
+    assert.ok(section.includes('참 — 수용체를 억제한다.'));
+    assert.equal(section.split('효소').length - 1, 1);
+    assert.ok(!html.includes('bank-units'));
+  }
+});
+
+test('negative choice stems keep truth explanations separate from the answer key', () => {
+  const html = renderToStaticMarkup(React.createElement(AnswerBody, {
+    question: { ...question, format: 'mcq', question: '옳지 않은 것은?', options: [{ id: 'A', text: '명제 A' }, { id: 'AA', text: '명제 AA' }] },
+    answer: { ...answer, correctOptionIds: ['AA'], answerUnits: ['**A:** 참 — 조건을 충족한다.', 'AA: 거짓 — 조건을 충족하지 않는다.'] },
+  }));
+  assert.ok(html.includes('<b>A</b> 명제 A<span class="bank-note"> · 정답이 아닌 선지</span>'));
+  assert.ok(html.includes('<b>AA</b> 명제 AA<span class="bank-note"> · 정답 선지</span>'));
+  assert.ok(html.includes('<p>참 — 조건을 충족한다.</p>'));
+  assert.ok(html.includes('<p>거짓 — 조건을 충족하지 않는다.</p>'));
+});
+
+test('legacy choices retain unlinked explanation text and explicitly show missing explanations', () => {
+  const html = renderToStaticMarkup(React.createElement(AnswerBody, {
+    question: { ...question, format: 'mcq', options: [{ id: '1', text: '보기 1' }, { id: '2', text: '보기 2' }] },
+    answer: { ...answer, answer: '원래 정답', answerUnits: ['1：참 — 기존 근거', '기존의 추가 설명'] },
+  }));
+  assert.ok(html.includes('원래 정답'));
+  assert.ok(html.includes('참 — 기존 근거'));
+  assert.equal(html.split('이 선지에 등록된 해설이 없습니다.').length - 1, 1);
+  assert.equal(html.split('기존의 추가 설명').length - 1, 1);
+});
+
+test('personal choice answers do not show stale original option explanations', () => {
+  const html = render({ answer: '개인 수정한 정답', personalAnswer: true }, 'mcq');
+  assert.ok(html.includes('개인 수정한 정답'));
+  assert.ok(!html.includes('bank-choice-explanation'));
 });
 
 test('short terms do not match inside other English words and text is escaped', () => {

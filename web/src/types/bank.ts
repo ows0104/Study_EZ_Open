@@ -3,8 +3,18 @@
 // ChatGPT 가 만든 문제은행을 서버 Study Engine 으로 푼다(`server/app/routes/bank.py`).
 // 문항 필드 이름은 서버가 저장한 꼴 그대로(snake_case)다 — 은행 JSON 을 옮겨 적지 않고 싣는다.
 
-export type BankSummary = {
-  status: "responded" | "building" | "ready" | "invalid" | "failed";
+export type BankTimeline = {
+  shareUrl?: string;
+  /** 공유 링크를 새로 저장한 서버 시각. 기존 링크는 null. */
+  linkedAt?: string | null;
+  /** 최종퀴즈 결과 업로드를 서버가 받아 저장한 시각. */
+  builtAt: string | null;
+};
+
+export type BankSummary = BankTimeline & {
+  coverage?: BankCoverage | null;
+  shareUrl?: string;
+  status: "linked" | "responded" | "building" | "ready" | "invalid" | "failed";
   open: boolean;
   buildId: string;
   questionCount: number;
@@ -15,14 +25,34 @@ export type BankSummary = {
   builtAt: string | null;
   /** 검증을 통과해 공부할 수 있는가. */
   usable: boolean;
+  publicationWarning?: string;
   /** 아래는 관리자에게만. */
   respondedAt?: string | null;
   promptVersion?: string;
+  conversationUrl?: string;
+  revision?: Record<string, unknown> | null;
   message?: string;
   reviewCounts?: { ok: number; doubt: number; wrong: number } | null;
   errorCount?: number;
   /** 검증에 걸려 빼고 연 문항(2026-10-05 — 「걸린 문항만 빼고 연다」). */
   dropped?: { questionId: string; errors: string[] }[];
+};
+
+export type BankCoverage = {
+  classification?: { status: "verified"; classifiedCount: number; recallFirstCount: number; comparisonCount: number; checkedAt: string } | null;
+  pointCount?: number | null;
+  coveredPointCount?: number | null;
+  status: "verified" | "partial" | "stale";
+  totalPages: number;
+  checkedPages: number;
+  excludedPages: number;
+  unreadablePages: number;
+  gapCount: number;
+  addedQuestions: number;
+  addedMcq: number;
+  checkedAt: string;
+  sourceFilename: string;
+  issues?: { page: number; note: string; facts: string[] }[];
 };
 
 export type BankSource = {
@@ -36,13 +66,19 @@ export type BankSource = {
 export type BankFormat = "basic" | "cloze" | "list" | "ox" | "mcq" | "multi_select" | "matching" | "sequence";
 
 export type BankRating = "Again" | "Hard" | "Good" | "Easy";
+export type BankTier = "Core" | "Important" | "Optional";
 
 /** 답이 빠진 문항. 답·채점 단위는 `reveal` 로만 온다. */
 export type BankQuestion = {
+  mcq_mode?: "recall_first" | "comparison" | "none";
   personalEdited?: boolean;
   question_id: string;
+  personalTier?: boolean;
+  originalTier?: BankTier;
+  targetMastery?: number;
   concept_id: string;
-  tier: "Core" | "Advanced" | "Optional";
+  tier: BankTier;
+  advanced?: boolean;
   importance: number;
   format: BankFormat;
   retrieval_direction: string;
@@ -66,22 +102,43 @@ export type BankAnswer = {
   personalEdited?: boolean;
   personalAnswer?: boolean;
   answer: string;
+  explanation?: string;
   answerUnits: string[];
   correctOptionIds: string[];
   answerPairs: { left: string; right: string }[];
   correctOrder: string[];
   /** 문항이 인용한 필기 쪽들. 한 문항이 여러 장일 수 있다. */
-  slides: { page: number; url: string }[];
+  slides: BankSlide[];
+  /** 실제로 인용한 족보 문항의 원본 PDF 지면. */
+  jokboSlides?: { page: number; url: string; pdfFilename: string; references: string[]; primary?: boolean; embedded?: boolean }[];
+  evidenceStatus?: {
+    category: "exam_only" | "partial_support" | "source_conflict" | "unsupported" | "uncertain";
+    reason: string; missingClaim?: string; primaryAvailable?: boolean;
+  } | null;
   /** 외부지식 검토. 막지 않고 표시만 한다. */
   medicalReview: BankReview | null;
+  reviewIssues?: string[];
   /** 충돌 문항이면 각 출처의 말과 고른 근거(프롬프트 v1.2). 옛 API 에는 없다. */
   conflict?: string;
   /** 자료 밖 내용을 외부 의학지식으로 썼다(출처 `EXT`). */
   external?: boolean;
 };
 
+export type BankSlide = {
+  page: number; url: string; primary?: boolean;
+  sourceId?: string; sourceRunId?: string; sourceFilename?: string;
+};
+
 /** 관리자가 보는 문항 — 은행 JSON 그대로라 답 칸도 snake_case 다. */
+export type BankOptionPool = {
+  pool_id: string; select_count: number; correct_when: "true" | "false";
+  candidates: { candidate_id: string; true_text: string; false_text: string;
+    true_explanation: string; false_explanation: string;
+    source_refs: { source_id: string; locator: string }[] }[];
+};
 export type BankFullQuestion = BankQuestion & {
+  explanation?: string;
+  option_pools?: BankOptionPool[];
   item_difficulty: number;
   prerequisites: string[];
   exam_rationale: string;
@@ -169,6 +226,7 @@ export type BankSession = {
 };
 
 export type BankRead = {
+  suspendedQuestions?: { questionId: string; question: string }[];
   undoToken?: string | null;
   lectureGoal?: import("./studyPlan").LectureGoal | null;
   mastery?: import("./mastery").LectureMastery | null;
@@ -195,7 +253,7 @@ export type BankConcept = {
   importance: number;
   importance_rationale: string;
   concept_difficulty: number;
-  tier: "Core" | "Advanced" | "Optional";
+  tier: BankTier;
   exam_signal_strength: string;
   related_concepts: string[];
   directions: { direction: string; mastery: number; target: number; reviews: number; questions: number }[];
@@ -204,12 +262,16 @@ export type BankConcept = {
 };
 
 export type BankNext = {
+  choicesShown?: boolean;
+  lecture?: { subject: string; runId: string; title?: string } | null;
+  batchGoal?: import("./studyPlan").LectureGoal | null;
+  undoLecture?: { subject: string; runId: string } | null;
   undoToken?: string | null;
   waiting?: boolean;
   lectureGoal?: import("./studyPlan").LectureGoal | null;
   question: BankQuestion | null;
   /** Warm the current question's images without recording a reveal. Older APIs omit this. */
-  preloadSlides?: { page: number; url: string }[];
+  preloadSlides?: BankSlide[];
   reviewToken?: string;
   days?: number;
   examDate?: string;

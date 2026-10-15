@@ -44,8 +44,8 @@ def test_그래프_요약은_선택적이고_전체_제목을_보존한다(bank)
 def test_실물_은행은_list_채점단위_셋만_오류다(bank):
     """「목록 중 4개」처럼 후보를 한 줄로 적은 list 셋. 나머지 13건은 2026-10-04 에 경고로 내렸다."""
     v = validate_bank(bank, ["S1", "S2"])
-    assert v["errors"] == ["Q009: list는 채점 단위 2–5개", "Q015: list는 채점 단위 2–5개",
-                           "Q026: list는 채점 단위 2–5개"]
+    assert v["errors"] == ["Q009: list는 개별 채점 단위 2개 이상 필요", "Q015: list는 개별 채점 단위 2개 이상 필요",
+                           "Q026: list는 개별 채점 단위 2개 이상 필요"]
     assert "C01/mechanism: 계획에 대응하는 문항 누락" in v["warnings"]
     assert "CF-04: 한 자료 안의 충돌" in v["warnings"]
     assert "Q024: 회상 계획에 없는 방향" in v["warnings"]
@@ -69,6 +69,24 @@ def test_선행_문항_순환을_잡는다(bank):
 def test_cloze_빈칸과_채점단위_수가_같아야_한다(bank):
     q = next(x for x in bank["questions"] if x["format"] == "cloze")
     q["answer_units"] = q["answer_units"][:1]
+    assert any("cloze는" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
+
+
+@pytest.mark.parametrize("blank_count", [1, 4, 5, 8])
+def test_cloze_고정_상한_없이_빈칸별_정답을_검증한다(bank, blank_count):
+    q = next(x for x in bank["questions"] if x["format"] == "cloze")
+    q["question"] = " ".join("{{c1}}" for _ in range(blank_count))
+    q["answer_units"] = [f"정답{i}" for i in range(blank_count)]
+    q["answer"] = " ".join(q["answer_units"])
+    assert not any("cloze는" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
+    q["answer_units"].append("빈칸이 없는 정답")
+    assert any("cloze는" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
+
+
+def test_cloze_빈칸이_없는_문장은_허용하지_않는다(bank):
+    q = next(x for x in bank["questions"] if x["format"] == "cloze")
+    q["question"] = "빈칸 없는 문장"
+    q["answer_units"] = []
     assert any("cloze는" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
 
 
@@ -98,12 +116,21 @@ def test_EXT_출처는_허용하되_출처_요약은_요구하지_않는다(bank
     assert any("유효한 source_id" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
 
 
+def test_external_refs_need_no_pdf_locator_but_uploaded_sources_do(bank):
+    _fix_lists(bank)
+    for section in ("concepts", "questions", "source_conflicts"):
+        bank[section][0]["source_refs"].append({"source_id": "EXT", "locator": ""})
+    assert validate_bank(bank, ["S1", "S2"])["pass"]
+    bank["questions"][0]["source_refs"].append({"source_id": "S1", "locator": ""})
+    assert any("유효한 source_id" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
+
+
 def test_걸린_문항만_빼고_다시_잰다(bank):
     """2026-10-05 관리자 — 「걸린 문항만 빼고 연다」. 실물의 list 셋이 빠지고 나머지 33이 통과한다."""
     kept, v = validate_dropping(bank, ["S1", "S2"])
     assert v["pass"] is True and len(kept["questions"]) == 33
     assert [d["question_id"] for d in v["dropped"]] == ["Q009", "Q015", "Q026"]
-    assert v["dropped"][0]["errors"] == ["Q009: list는 채점 단위 2–5개"]
+    assert v["dropped"][0]["errors"] == ["Q009: list는 개별 채점 단위 2개 이상 필요"]
     assert v["dropped"][0]["question"]["question_id"] == "Q009"   # 관리자가 원문을 본다
     assert v["warnings"][0] == "검증에 걸려 뺀 문항 3개: Q009, Q015, Q026"
     gone = {"Q009", "Q015", "Q026"}
@@ -115,7 +142,7 @@ def test_문항_탓이_아닌_오류가_있으면_통째로_막는다(bank):
     bank["concepts"][0]["related_concepts"] = ["C99"]
     kept, v = validate_dropping(bank, ["S1", "S2"])
     assert kept is bank and v["pass"] is False and v["dropped"] == []
-    assert "C01: related_concepts 오류" in v["errors"] and "Q009: list는 채점 단위 2–5개" in v["errors"]
+    assert "C01: related_concepts 오류" in v["errors"] and "Q009: list는 개별 채점 단위 2개 이상 필요" in v["errors"]
 
 
 def test_자료_요약과_점검_보고는_없어도_된다(bank):

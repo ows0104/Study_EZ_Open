@@ -75,6 +75,7 @@ def command(*, model: str, blind: bool, resume: str | None = None) -> list[str]:
 
 def parse_events(stdout: str, *, model: str, blind: bool) -> dict:
     text, sid, usage, turns, warnings = "", None, {}, 0, []
+    reconnecting = []
     for line in stdout.splitlines():
         if not line.strip():
             continue
@@ -85,6 +86,11 @@ def parse_events(stdout: str, *, model: str, blind: bool) -> dict:
         if not isinstance(event, dict):
             raise SessionError("codex 이벤트가 객체가 아니다")
         kind = event.get("type")
+        if kind == "error" and str(event.get("message", "")).startswith("Reconnecting..."):
+            # CLI can recover the stream and complete the same turn. Only a
+            # later turn.completed proves recovery; truncated output still fails.
+            reconnecting.append(str(event["message"]))
+            continue
         if kind in ("error", "turn.failed"):
             raise SessionError(json.dumps(event.get("error") or event, ensure_ascii=False)[-1500:])
         if kind == "thread.started":
@@ -100,10 +106,14 @@ def parse_events(stdout: str, *, model: str, blind: bool) -> dict:
             if kind == "item.completed" and item.get("type") == "agent_message":
                 text = item.get("text", "")
         if kind == "turn.completed":
+            warnings.extend(reconnecting)
+            reconnecting.clear()
             turns += 1
             for key, value in (event.get("usage") or {}).items():
                 if isinstance(value, int):
                     usage[key] = usage.get(key, 0) + value
+    if reconnecting:
+        raise SessionError(reconnecting[-1])
     if not turns:
         raise SessionError("codex 세션 완료 이벤트가 없다 (출력 중단)")
     if not text.strip():

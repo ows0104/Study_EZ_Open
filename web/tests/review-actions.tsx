@@ -11,12 +11,16 @@ import "../src/styles/calendar.css";
 
 const query = new URLSearchParams(location.search);
 const admin = !query.has("student");
-if (!query.has("noextension")) document.documentElement.setAttribute("data-studyez-ai-extension", "1.3.5");
-window.fetch = async (input) => {
+if (!query.has("noextension")) document.documentElement.setAttribute("data-studyez-ai-extension", "1.3.13");
+const prompts: Record<string, string> = {};
+window.fetch = async (input, init) => {
   const path = new URL(String(input), location.origin).pathname;
   let payload: object = {};
   if (path.endsWith("/me")) payload = { isAdmin: admin, isApproved: true };
-  else if (path.endsWith("/preview-prompt")) payload = { template: null };
+  else if (path.endsWith("/preview-prompt") || path.endsWith("/review-prompt")) {
+    if (init?.method === "PUT") prompts[path] = JSON.parse(String(init.body)).prompt;
+    payload = { prompt: prompts[path] ?? "" };
+  }
   else if (path.endsWith("/timetable")) payload = { events: [] };
   else if (path.includes("/files/")) payload = { url: `http://localhost:8000/api/local-storage/lectures/${path.split("/").at(-1)}` };
   else if (path.endsWith("/prequiz-job")) payload = { job: null, runner: null };
@@ -35,9 +39,15 @@ const detail = {
     { id: "current", kind: "notes_current", filename: "오늘 강의록.pdf", sizeBytes: 1000 },
     { id: "jokbo", kind: "jokbo", filename: "족보.pdf", sizeBytes: 1000 },
   ].filter(file => !query.has("nonotes") || file.kind !== "notes_current"),
-  preview: null, myPreview: null,
+  preview: query.has("saved") ? { provider: "chatgpt", shareUrl: "https://chatgpt.com/share/preview" } : null,
+  myPreview: query.has("saved") ? { provider: "chatgpt", conversationUrl: "https://chatgpt.com/c/preview" } : null,
   myReview: query.has("saved") ? { provider: "chatgpt", conversationUrl: "https://chatgpt.com/c/review" } : null,
-  bank: { status: "ready", usable: true, open: true, questionCount: 30, conceptCount: 12 },
+  bank: {
+    status: query.has("noquiz") ? "linked" : "ready", usable: !query.has("noquiz"), open: true,
+    shareUrl: query.has("saved") ? "https://chatgpt.com/share/bank" : "",
+    conversationUrl: query.has("saved") ? "https://chatgpt.com/c/bank" : "",
+    questionCount: 30, conceptCount: 12, studyQuestionCount: 30, seenQuestionCount: 4,
+  },
   bankSources: [{ assetId: "current", kind: "notes_current", filename: "오늘 강의록.pdf" }],
 } as unknown as LectureDetail;
 const lecture = { subject: detail.subject, runId: detail.runId } as LectureRef;

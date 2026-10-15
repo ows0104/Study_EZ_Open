@@ -41,7 +41,7 @@ type Deck = {
 };
 
 const kindLabels = { pre: "Pre-Quiz", bank: "Main-Quiz", main: "기존 Main-Quiz" } as const;
-const bankStatus = { responded: "정리 대기", building: "정리 중", ready: "준비됨", invalid: "검증 오류", failed: "생성 실패" } as const;
+const bankStatus = { linked: "링크 저장됨", responded: "정리 대기", building: "정리 중", ready: "준비됨", invalid: "검증 오류", failed: "생성 실패" } as const;
 
 /**
  * **옛 판으로 구운 덱인가.** 판을 둘 다 알 때만 말한다.

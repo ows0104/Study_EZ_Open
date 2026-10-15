@@ -66,7 +66,7 @@ lowered = record_review(bank, good, "Q1", "Hard", NOW + 30)
 check("Hard 는 숙련도를 내린다", lowered["dimensions"]["C1:direct"]["mastery"] < good["dimensions"]["C1:direct"]["mastery"])
 check("모르는 평가는 거절", raises(lambda: record_review(bank, good, "Q1", "bad", NOW)))
 bank["retrieval_plan"][0]["target_mastery"] = 1
-check("요청 목표 1 은 상한 0.9 로", target_for(bank, bank["questions"][0]) == {"requested": 1, "effective": 0.9})
+check("요청 목표 1 은 Core 상한 .85로", target_for(bank, bank["questions"][0]) == {"requested": 1, "effective": 0.85})
 
 print("선행 문항 보충")
 bank = example_bank()
@@ -183,7 +183,7 @@ check("그래프 요약과 전체 제목을 따로 전달한다", with_label["gr
 check("개념마다 한 줄", [c["concept_id"] for c in fresh] == ["C1"])
 check("방향은 문항이 있는 것만 · direct 가 먼저", [d["direction"] for d in fresh[0]["directions"]]
       == ["direct", "reverse", "integration"], fresh[0]["directions"])
-check("목표는 정책 상한을 씌운 값", all(d["target"] == target_for(bank, bank["questions"][0])["effective"]
+check("목표는 문항 중요도별 상한을 씌운 값", all(d["target"] == max(target_for(bank, q)["effective"] for q in bank["questions"] if q["retrieval_direction"] == d["direction"])
                                     for d in fresh[0]["directions"]))
 check("처음엔 숙련도 0 · 진척 0", fresh[0]["progress"] == 0 and all(d["mastery"] == 0 for d in fresh[0]["directions"]))
 check("관련 개념은 있는 것만, 자기 자신은 빼고", fresh[0]["related_concepts"] == [])

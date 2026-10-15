@@ -13,7 +13,7 @@ export function matchingScore(q: BankQuestion, answer: BankAnswer | null, picks:
   const expected = new Map(answer.answerPairs.map(pair => [pair.left, pair.right]));
   if (!q.matching_left.every(left => q.matching_right.includes(expected.get(left) ?? ""))) return null;
   const correct = q.matching_left.filter(left => picks[left] === expected.get(left)).length;
-  return { correct, total: q.matching_left.length, rating: correct === q.matching_left.length ? "Good" as const : "Again" as const };
+  return { correct, total: q.matching_left.length, allCorrect: correct === q.matching_left.length };
 }
 
 export function MatchingQuestion({ question: q, answer, picks, active, disabled, onActive, onMatch }: {
@@ -60,9 +60,9 @@ export function MatchingQuestion({ question: q, answer, picks, active, disabled,
         </li>)}
       </ul>
     </div>
-    {score ? <p className={`bank-match-score ${score.rating === "Good" ? "is-correct" : "is-wrong"}`} role="status">
-      {score.correct} / {score.total}개 정답 · {score.rating === "Good" ? "모두 맞았어요!" : "틀린 짝을 확인하세요."}
-      <span className="bank-note"> 다음 문제로 넘어가면 {score.rating}으로 자동 기록됩니다.</span>
+    {score ? <p className={`bank-match-score ${score.allCorrect ? "is-correct" : "is-wrong"}`} role="status">
+      {score.correct} / {score.total}개 정답 · {score.allCorrect ? "모두 맞았어요!" : "틀린 짝을 확인하세요."}
+      <span className="bank-note">아래에서 Again·Hard·Good·Easy 중 체감 난이도에 맞는 평가를 고르세요.</span>
     </p> : null}
   </>;
 }

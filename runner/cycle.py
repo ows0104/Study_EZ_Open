@@ -578,6 +578,7 @@ def run_agent(args) -> int:
     runner = agent.Agent(
         publish.Client(api, token), Path(args.runs), REPO_ROOT,
         subject=args.subject or "",
+        timetable=Path(args.timetable) if args.timetable else None,
         sweep_seconds=0 if args.no_sweep else args.sweep_minutes * 60,
         timeout=args.timeout, workers=args.workers)
     if args.once:

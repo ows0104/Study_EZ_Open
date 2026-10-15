@@ -37,6 +37,7 @@ npm run build
 | 주소 | 화면 |
 |---|---|
 | `/` | 캘린더 |
+| `/study` | 강의 선택·연속 학습·관리자 원본 대조 요청 |
 | `/lectures/:subject/:runId` | 강의 자료 |
 | `/prequiz/:subject/:runId`, `/mainquiz/:subject/:runId` | 자기채점 퀴즈 |
 | `/bank/:subject/:runId` | Quiz Bank |

@@ -61,18 +61,21 @@ export function requestPreview(input: {
    * 붙으면 남이 물은 것이 링크만으로 열리고, 관리자가 개인 예습을 하는 순간
    * 그 공유가 반 전체의 기본 링크를 덮는다.
    *
-   * `bank` 는 Quiz Bank(관리자)다. 링크 대신 끝난 답의 본문이 돌아온다(`bank/bankBridge.ts`).
+   * `bank`는 문제은행(관리자)이다. 공유·개인 링크를 bankBridge가 별도로 저장한다.
    */
   mode: BridgeMode;
   prompt: string;
+  /** Version of the exact bank prompt attached to this conversation. */
+  promptVersion?: string;
   files: PreviewFile[];
-  /** 기본 링크의 자동전송만 true. 개인 링크와 문제 생성은 확인 후 직접 전송한다. */
+  /** 별도의 자동전송 버튼에서만 true. 기본 생성 버튼은 false. */
   autoSend: boolean;
 }) {
   const minimum = extensionInputMinimum(input.mode, input.autoSend);
   if (!extensionCompatible(minimum)) {
     return Promise.reject(new Error(`이 기능에는 브리지 ${minimum} 이상이 필요합니다. 아래 브리지 설치·업데이트 안내에서 최신 버전을 설치한 뒤 Study EZ와 AI 대화 탭을 새로고침해 주세요.`));
   }
+  const payload = bridgeRequest(input, extensionVersion());
   return new Promise<void>((resolve, reject) => {
     const timeout = window.setTimeout(() => {
       window.removeEventListener("message", handle);
@@ -91,7 +94,7 @@ export function requestPreview(input: {
     }
 
     window.addEventListener("message", handle);
-    window.postMessage({ source: WEBAPP_SOURCE, type: MESSAGES.openPreview, payload: bridgeRequest(input, extensionVersion()) }, window.location.origin);
+    window.postMessage({ source: WEBAPP_SOURCE, type: MESSAGES.openPreview, payload }, window.location.origin);
   });
 }
 
@@ -153,6 +156,8 @@ export function usePreviewLink(save: (input: { lectureId: string; kind: LinkKind
       const lectureId = typeof data.lectureId === "string" ? data.lectureId : "";
       const url = typeof data.url === "string" ? data.url : "";
       const kind = typeof data.kind === "string" ? data.kind : "";
+      // 문제은행 링크는 bankBridge가 저장한다. 예습 자리를 덮지 않는다.
+      if (kind === "chatgpt_bank" || kind === "chatgpt_bank_share") return;
       if (!lectureId || !url || !LINK_KINDS.includes(kind as LinkKind)) return;
       const destination = linkDestination(lectureId, kind as LinkKind);
       if (!destination) return;

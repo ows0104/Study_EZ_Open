@@ -63,11 +63,18 @@
 .daily-goal-celebration .daily-goal-check { display: grid; place-items: center; width: 56px; height: 56px; margin: 0 auto 12px; border-radius: 50%; background: #176d55; color: white; font-size: 32px; }
 .daily-goal-celebration p { margin: 8px 0; font-size: 16px; }
 .daily-goal-celebration .daily-goal-message { font-size: 14px; }
-.daily-goal-celebration .daily-goal-main { margin-top: 12px; }
+.daily-goal-actions { display: flex; justify-content: center; align-items: stretch; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.daily-goal-actions .daily-goal-main, .daily-goal-continue { display: flex; flex-direction: column; justify-content: center; min-height: 56px; margin: 0; padding: 10px 16px; font-size: 14px; }
+.daily-goal-continue { border: 1px solid #176d55; border-radius: 6px; background: white; color: #176d55; font-weight: 600; }
+.daily-goal .daily-goal-continue { margin: 0; }
+.daily-goal-actions .daily-goal-main small { color: inherit; font-size: 11px; font-weight: 400; }
+.daily-goal-continue:disabled { opacity: .6; cursor: wait; }
+.daily-goal-actions a:focus-visible, .daily-goal-continue:focus-visible { outline: 3px solid #176d55; outline-offset: 3px; }
 .bank-complete > details { margin: 16px 0; font-size: 13px; }
 .bank-complete > details > summary { cursor: pointer; }
 .daily-goal-progress { display: block; width: 100%; height: 9px; margin: 12px 0; accent-color: #238563; }
 @media (max-width: 600px) {
+  .daily-goal-actions { flex-direction: column; }
   .mastery-list li { align-items: flex-start; flex-direction: column; gap: 8px; }
   .mastery-row-actions { width: 100%; justify-content: space-between; }
 }

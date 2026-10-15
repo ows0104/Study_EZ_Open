@@ -49,6 +49,14 @@ from app.main import app  # noqa: E402
 # 편을 가로질러 보고 반영했다·그대로 둔다를 적는다(관리 화면 「Quiz Bank 신고」 탭).
 # 2026-10-06: 개인 복습 대화를 예습과 별도로 저장하는 my-review 경로.
 ROUTES = """
+PUT /api/lectures/{subject}/{run_id}/bank/questions/{question_id}/priority
+PUT /api/lectures/{subject}/{run_id}/bank/questions/{question_id}/suspension
+POST /api/bank/batch/next
+POST /api/bank/batch/undo
+POST /api/bank/batch/session/end
+POST /api/lectures/{subject}/{run_id}/bank/options
+POST /api/admin/lectures/{subject}/{run_id}/bank/audit
+POST /api/admin/lectures/{subject}/{run_id}/bank/runner-audit
 PUT /api/admin/lectures/{subject}/{run_id}/bank-generated-response
 GET /api/admin/bank-review
 PUT /api/admin/lectures/{subject}/{run_id}/bank/cards/{question_id}
@@ -70,6 +78,7 @@ GET /api/admin/feedback
 GET /api/admin/feedback/{feedback_id}/screenshots/{index}
 GET /api/admin/lectures/{subject}/{run_id}/bank
 GET /api/admin/lectures/{subject}/{run_id}/bank-response
+GET /api/admin/lectures/{subject}/{run_id}/bank/source-context
 GET /api/admin/lectures/{subject}/{run_id}/cards/{kind}
 GET /api/admin/lectures/{subject}/{run_id}/prequiz-job
 GET /api/admin/overview
@@ -92,6 +101,7 @@ GET /api/lectures/{subject}/{run_id}/prequiz
 GET /api/local-storage/{object_key}
 GET /api/me
 GET /api/me/preview-prompt
+GET /api/me/review-prompt
 GET /api/notices
 GET /api/spotter/admin/reports
 GET /api/spotter/admin/subjects/{subject}/manifest
@@ -137,6 +147,7 @@ POST /api/spotter/admin/subjects/{subject}/db/refresh
 POST /api/spotter/admin/subjects/{subject}/uploads
 POST /api/spotter/finish
 POST /api/feedback
+POST /api/feedback/prequiz
 POST /api/spotter/images/sign
 POST /api/spotter/reports
 POST /api/spotter/state/merge
@@ -147,6 +158,7 @@ PUT /api/admin/course-aliases
 PUT /api/admin/lectures/{subject}/{run_id}/bank
 PUT /api/admin/lectures/{subject}/{run_id}/bank-response
 PUT /api/admin/lectures/{subject}/{run_id}/bank/open
+PUT /api/admin/lectures/{subject}/{run_id}/bank/links
 PUT /api/admin/lectures/{subject}/{run_id}/cards/{kind}/{item_id}
 PUT /api/admin/lectures/{subject}/{run_id}/main-items
 PUT /api/admin/lectures/{subject}/{run_id}/match
@@ -160,6 +172,7 @@ PUT /api/admin/users/{user_id}/approval
 PUT /api/lectures/{subject}/{run_id}/my-preview
 PUT /api/local-storage/{object_key}
 PUT /api/me/preview-prompt
+PUT /api/me/review-prompt
 """
 
 

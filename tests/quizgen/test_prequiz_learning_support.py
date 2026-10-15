@@ -1,6 +1,8 @@
 """예습의 읽기 근거, 학습 지원 전달, 핵심/도전 분량을 검사한다."""
 from copy import deepcopy
 
+import pytest
+
 from quizgen.prequiz.build import support_back, why_of
 from quizgen.prequiz.validate import validate
 from runner.deck import _web_items
@@ -64,3 +66,29 @@ def test_support_reaches_web_and_anki_without_exposing_excerpt():
     assert c["learning_support"]["scope"] in back
     assert c["learning_support"]["lecture_focus"] in back
     assert c["learning_support"]["preview_excerpt"] not in front + back
+
+
+@pytest.mark.parametrize("field,text", [
+    ("q", "설명본에 따르면 여과액이 다음으로 지나는 구조는?"),
+    ("q", "예습 자료에서 약물이 몸에 미치는 작용을 무엇이라 하는가?"),
+    ("hint", "설명본의 네프론 지도에서 근위세뇨관 뒤의 화살표를 따라가 보세요."),
+    ("hint", "'설명본'에서 몸과 약물 중 어느 쪽이 무엇을 하는지 살펴보세요."),
+])
+def test_source_narration_in_question_or_hint_is_reviewed(field, text):
+    c = card()
+    if field == "q":
+        c["q"] = text
+    else:
+        c["learning_support"]["hint"] = text
+    kept, suspects = check([c])
+    assert len(kept) == 1  # 문구 문제는 삭제 사유가 아닌 검토 표시다.
+    assert "preview_narration" in kept[0]["review_flags"]
+    assert suspects["flag_counts"]["preview_narration"] == 1
+
+
+def test_direct_situation_and_private_excerpt_do_not_trigger_narration_flag():
+    c = card(q="약물 투여 뒤 혈압이 낮아졌다. 약물이 몸에 미치는 작용을 무엇이라 하는가?")
+    c["learning_support"]["hint"] = "변화를 일으키는 주체가 몸인지 약물인지 먼저 구분해 보세요."
+    c["learning_support"]["preview_excerpt"] = "설명본에서는 약물이 몸에 미치는 작용을 다룬다."
+    kept, _ = check([c], c["learning_support"]["preview_excerpt"])
+    assert "preview_narration" not in kept[0]["review_flags"]

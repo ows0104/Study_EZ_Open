@@ -6,10 +6,12 @@ AdaptiveStudy3/bank_builder/schema.mjs 를 옮겼다(2026-10-04). 서버도 같�
 
 from __future__ import annotations
 
+from .choice_mode import choice_mode
+from .priorities import TIERS, priority_fields
+
 FORMATS = ["basic", "cloze", "list", "ox", "mcq", "multi_select", "matching", "sequence"]
 DIRECTIONS = ["direct", "reverse", "mechanism", "discrimination", "integration", "sequence", "trap"]
-TIERS = ["Core", "Advanced", "Optional"]
-SCHEMA_VERSION = "3.0"
+SCHEMA_VERSION = "3.2"
 
 _STR = {"type": "string"}
 _NUM = {"type": "number"}
@@ -32,10 +34,24 @@ def _object(properties: dict) -> dict:
 
 SOURCE_REF = _object({"source_id": _STR, "locator": _STR})
 
+# Both forms are authored and medically reviewed. The service never invents a
+# negation or infers truth from an existing distractor.
+OPTION_POOL = _object({
+    "pool_id": _STR, "select_count": _INT, "correct_when": _enum(["true", "false"]),
+    "candidates": _array(_object({
+        "candidate_id": _STR, "true_text": _STR, "false_text": _STR,
+        "true_explanation": _STR, "false_explanation": _STR,
+        "source_refs": _array(SOURCE_REF),
+    })),
+})
+
 QUESTION = _object({
     "question_id": _STR, "concept_id": _STR, "tier": _enum(TIERS), "importance": _INT,
+    "advanced": {"type": "boolean"},
     "item_difficulty": _INT, "format": _enum(FORMATS), "retrieval_direction": _enum(DIRECTIONS),
+    "mcq_mode": _enum(["recall_first", "comparison", "none"]),
     "question": _STR, "answer": _STR, "answer_units": _STRS, "prerequisites": _STRS,
+    "explanation": _STR,
     "source_refs": _array(SOURCE_REF), "exam_rationale": _STR,
     "conflict_id": _STR, "options": _array(_object({"id": _STR, "text": _STR})),
     "correct_option_ids": _STRS,
@@ -43,6 +59,8 @@ QUESTION = _object({
     "matching_left": _STRS, "matching_right": _STRS,
     "answer_pairs": _array(_object({"left": _STR, "right": _STR})),
     "sequence_items": _STRS, "correct_order": _STRS,
+    "option_explanations": _array(_object({"option_id": _STR, "text": _STR})),
+    "option_pools": _array(OPTION_POOL),
 })
 
 BANK = _object({
@@ -66,7 +84,8 @@ BANK = _object({
 
 # 프롬프트 v1.6(2026-10-05, 관리자)에서 뺀 칸. 앱이 읽지 않았다. 옛 응답·옛 은행에는 남아 있으므로
 # 형식을 잴 때와 정리할 때 걷어 낸다(`without_retired`) — 「모르는 칸」 오류로 옛 은행이 막히지 않게.
-RETIRED_QUESTION = ("concept_difficulty", "cognitive_type", "source_strength")
+# hint was removed after the v1.52 experiment; explanations remain separate.
+RETIRED_QUESTION = ("concept_difficulty", "cognitive_type", "source_strength", "hint")
 RETIRED_PLAN = ("rationale",)
 
 
@@ -77,9 +96,11 @@ def without_retired(bank: dict) -> dict:
     out = dict(bank)
     # 그래프용 요약이 없던 은행도 유효하다. 원래 제목은 바꾸지 않는다.
     if isinstance(bank.get("concepts"), list):
-        out["concepts"] = [{"graph_title": "", **c} if isinstance(c, dict) else c for c in bank["concepts"]]
+        out["concepts"] = [priority_fields({"graph_title": "", **c}) if isinstance(c, dict) else c for c in bank["concepts"]]
     if isinstance(bank.get("questions"), list):
-        out["questions"] = [{k: v for k, v in q.items() if k not in RETIRED_QUESTION} if isinstance(q, dict) else q
+        out["questions"] = [priority_fields({"explanation": "", "option_explanations": [], "option_pools": [], "mcq_mode": choice_mode(q),
+                             **{k: v for k, v in q.items() if k not in RETIRED_QUESTION},
+                             "mcq_mode": choice_mode(q) if q.get("mcq_mode") in (None, "none") else q["mcq_mode"]}, question=True) if isinstance(q, dict) else q
                             for q in bank["questions"]]
     if isinstance(bank.get("retrieval_plan"), list):
         out["retrieval_plan"] = [{k: v for k, v in p.items() if k not in RETIRED_PLAN} if isinstance(p, dict) else p

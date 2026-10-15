@@ -5,10 +5,12 @@ import { lectureHref } from "../links";
 import type { BankRead, BankSession } from "../types/bank";
 import { ConceptMap } from "./ConceptMap";
 import { DailyGoal } from "./DailyGoal";
+import { BankCoverage } from "./BankCoverage";
+import { SuspendedQuestions } from "./SuspendedQuestions";
 import { LectureMastery } from "../lecture/LectureMastery";
 import { daysLabel, DIRECTION_LABEL } from "./labels";
 
-export function BankStart({ base, info, finished, lecture, onStarted, onUndo, undoBusy }: {
+export function BankStart({ base, info, finished, lecture, onStarted, onUndo, undoBusy, onChanged }: {
   base: string;
   info: BankRead;
   finished: BankSession | null;
@@ -16,6 +18,7 @@ export function BankStart({ base, info, finished, lecture, onStarted, onUndo, un
   onStarted: () => void;
   onUndo?: () => void;
   undoBusy?: boolean;
+  onChanged: () => void;
 }) {
   const [size, setSize] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -48,13 +51,15 @@ export function BankStart({ base, info, finished, lecture, onStarted, onUndo, un
           {busy ? "여는 중…" : finished ? "계속 공부하기" : "학습 시작"}
         </button> : null}
       </header>
-      <DailyGoal plan={info.lectureGoal} showMain={info.lectureGoal?.met} />
+      <p className="bank-note">이 강의의 새 카드를 먼저 보고 예정된 복습을 이어갑니다. <Link to="/study">여러 강의 모아 풀기</Link></p>
+      <DailyGoal plan={info.lectureGoal} showMain={info.lectureGoal?.met}
+        onContinue={() => void start()} busy={busy} />
+      <BankCoverage value={info.summary.coverage} />
+      <SuspendedQuestions base={base} info={info} onChanged={onChanged} />
+      {info.summary.publicationWarning ? <p className="bank-note">{info.summary.publicationWarning}</p> : null}
       {error ? <p className="notice is-error">{error}</p> : null}
       {info.conceptMap?.length ? <ConceptMap concepts={info.conceptMap} /> : <LectureMastery value={info.mastery} />}
       <div className="bank-start-row bank-secondary-actions">
-        {info.lectureGoal?.met ? <button className="is-quiet" disabled={busy} onClick={() => void start()}>
-          {busy ? "여는 중…" : "이 강의 더 공부하기"}
-        </button> : null}
         {onUndo ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={onUndo} aria-keyshortcuts="Z Control+Z">마지막 평가 되돌리기 <kbd>Z</kbd></button> : null}
         <details className="bank-options">
           <summary>학습 설정</summary>

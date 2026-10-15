@@ -62,3 +62,27 @@ def write_preview_prompt(
     profile.preview_prompt = payload.prompt.strip()
     db.commit()
     return {"prompt": profile.preview_prompt}
+
+
+@router.get("/me/review-prompt")
+def read_review_prompt(
+    user: CurrentUser = Depends(require_approved_user),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    profile = db.get(Profile, user.id)
+    return {"prompt": profile.review_prompt if profile else ""}
+
+
+@router.put("/me/review-prompt")
+def write_review_prompt(
+    payload: PreviewPromptIn,
+    user: CurrentUser = Depends(require_approved_user),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    profile = db.get(Profile, user.id)
+    if profile is None:
+        profile = Profile(id=user.id, email=user.email)
+        db.add(profile)
+    profile.review_prompt = payload.prompt.strip()
+    db.commit()
+    return {"prompt": profile.review_prompt}

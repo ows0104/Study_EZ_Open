@@ -786,9 +786,20 @@ def _publish_one(
         report.pre_items += int(answer.get("itemCount", 0))
 
     if plan.preview_url:
-        client.call("PUT", f"{base}/preview", {"provider": _provider(plan.preview_url),
-                                               "shareUrl": plan.preview_url})
-        report.previews += 1
+        # Links are authored on the server. A sweep can take several minutes;
+        # its local plan may predate a link saved while uploads were running.
+        # Existing server links need no write-back, even when they match now.
+        rows = client.call("GET", "/api/admin/previews") or {}
+        remote = next((row for row in rows.get("previews", [])
+                       if row.get("subject") == plan.subject
+                       and row.get("runId") == plan.run_id), None)
+        if remote and remote.get("shareUrl"):
+            if remote["shareUrl"] != plan.preview_url:
+                log(f"{plan.label} — 서버에서 바뀐 예습 링크를 유지한다")
+        else:
+            client.call("PUT", f"{base}/preview", {"provider": _provider(plan.preview_url),
+                                                   "shareUrl": plan.preview_url})
+            report.previews += 1
 
 
 def _provider(url: str) -> str:

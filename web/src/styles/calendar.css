@@ -1330,11 +1330,16 @@ button.panel-action-hit:active:not(:disabled) {
 .panel-pair {
   display: grid;
   gap: 6px;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .panel-pair > .panel-action {
+  min-width: 0;
   margin-bottom: 0;
+}
+
+.panel-pair .panel-action strong {
+  flex-shrink: 0;
 }
 
 /* 카드 밖에 서는 작은 문. 갈래의 오른쪽 아래다 — 바로 아래에 편집칸이 펼쳐지고,

@@ -17,15 +17,29 @@ HEADER = re.compile(r"^\s*<!--([\s\S]*?)-->\s*")
 COMPLETE_MARK = "STUDYEZ_BANK_COMPLETE"
 
 
+def item_quality_guidance() -> str:
+    """Read the authoring rules from the canonical web prompt for CLI stages."""
+    body = HEADER.sub("", TEMPLATE.read_text(encoding="utf-8"))
+    _, start, section = body.partition("\n문항 품질 원칙\n")
+    quality, end, _ = section.partition("\n출력 형식\n")
+    if not start or not end or not quality.strip():
+        raise codex.SessionError("출제 정본의 문항 품질 원칙을 찾지 못했습니다.")
+    return "문항 품질 원칙\n\n" + quality.strip()
+
+
+def lecture_scope(title: str, sources: list[dict]) -> str:
+    scopes = json.loads(LECTURE_SCOPES.read_text(encoding="utf-8"))
+    return next((s["instruction"] for s in scopes if s["title"] == title and any(
+        source["kind"] == "notes_current" and source["filename"].startswith(s["sourcePrefix"])
+        for source in sources)), "별도 지정 없음. 자료의 교수 강조·출제 범위를 먼저 판단한다.")
+
+
 def prompt_for(title: str, exam_date: str, sources: list[dict]) -> tuple[str, str]:
     template = TEMPLATE.read_text(encoding="utf-8")
     header = HEADER.match(template)
     version = re.search(r"Version:\s*(\S+)", header[1] if header else "")
     labels = {"notes_current": "강의자료(필기 포함)", "jokbo": "족보"}
-    scopes = json.loads(LECTURE_SCOPES.read_text(encoding="utf-8"))
-    scope = next((s["instruction"] for s in scopes if s["title"] == title and any(
-        source["kind"] == "notes_current" and source["filename"].startswith(s["sourcePrefix"])
-        for source in sources)), "별도 지정 없음. 자료의 교수 강조·출제 범위를 먼저 판단한다.")
+    scope = lecture_scope(title, sources)
     values = {"title": title, "exam_date": exam_date or "미정",
               "lecture_scope": scope,
               "weighting": "강의슬라이드 > 족보 > 필기", "output": "이 응답 본문에 바로 쓴다.",

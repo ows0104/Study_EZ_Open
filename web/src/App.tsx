@@ -23,6 +23,7 @@ const LecturePage = lazy(() => import("./lecture/LecturePage").then((m) => ({ de
 const QuizPage = lazy(() => import("./lecture/QuizPage").then((m) => ({ default: m.QuizPage })));
 // Quiz Bank 풀이 화면. 같은 탭에서 강의·캘린더와 오간다.
 const BankStudyPage = lazy(() => import("./bank/BankStudy").then((m) => ({ default: m.BankStudyPage })));
+const BankBatchPage = lazy(() => import("./bank/BankBatch").then((m) => ({ default: m.BankBatchPage })));
 const AdminPage = lazy(() => import("./admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 const PrivacyPage = lazy(() => import("./PrivacyPage").then((m) => ({ default: m.PrivacyPage })));
 // 공지·이용방법(2026-10-04). 둘 다 가끔 여는 글이라 첫 번들에 안 싣는다.
@@ -92,7 +93,7 @@ function Shell() {
     location.pathname.startsWith("/prequiz/") ||
     location.pathname.startsWith("/mainquiz/") ||
     location.pathname.startsWith("/legacy-mainquiz/") ||
-    location.pathname.startsWith("/bank/");
+    location.pathname.startsWith("/bank/") || location.pathname === "/study";
   // 캘린더는 격자다. 읽기 좋은 폭으로 가둘 이유가 없고, 패널이 340px을 가져가는
   // 만큼 가로가 곧 요일 칸의 폭이 된다. 글을 읽는 화면들만 좁게 둔다.
   const wide = location.pathname === "/";
@@ -110,6 +111,7 @@ function Shell() {
             Study_EZ
           </Link>
           <nav>
+            <NavLink to="/study" className={tabClass}>모아 풀기</NavLink>
             <NavLink to="/mastery" className={tabClass}>
               학습도
             </NavLink>
@@ -146,6 +148,7 @@ function Shell() {
         <Suspense fallback={Loading}>
           <Routes>
             <Route path="/" element={<CalendarPage />} />
+            <Route path="/study" element={<BankBatchPage />} />
             <Route path="/mastery" element={<MasteryPage />} />
             <Route path="/lectures/:subject/:runId" element={<LecturePage />} />
             {/* 예습·복습은 같은 탭 안에서 서로 다른 주소로 이동한다. */}

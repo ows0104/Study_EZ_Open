@@ -4,7 +4,7 @@ import { api, downloadSignedFile, openSignedFile } from "../api";
 import { useBankLink } from "../bank/bankBridge";
 import { BankPanel } from "../bank/BankPanel";
 import { ReviewAction } from "../calendar/ReviewAction";
-import { bumpPreviewVersion, usePreviewLink, watchSharedLink } from "../bridge/previewBridge";
+import { bumpPreviewVersion, usePreviewLink, usePreviewVersion, watchSharedLink } from "../bridge/previewBridge";
 import { legacyMainHref, quizHref } from "../links";
 import { previewProviderLabels, previewProviders, type LectureDetail, type LectureFile, type PreviewProvider } from "../types/lectures";
 import { LectureCards } from "./LectureCards";
@@ -27,6 +27,7 @@ export function LecturePage() {
   const isAdmin = Boolean(useMe()?.isAdmin);
   const [detail, setDetail] = useState<LectureDetail | null>(null);
   const [error, setError] = useState("");
+  const version = usePreviewVersion();
 
   const load = useCallback(() => {
     api<LectureDetail>(`/api/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}`)
@@ -34,7 +35,7 @@ export function LecturePage() {
       .catch((cause: Error) => setError(cause.message));
   }, [subject, runId]);
 
-  useEffect(load, [load]);
+  useEffect(load, [load, version]);
   useEffect(() => {
     window.addEventListener("focus", load);
     return () => window.removeEventListener("focus", load);

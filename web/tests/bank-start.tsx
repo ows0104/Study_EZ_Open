@@ -47,7 +47,7 @@ function Preview() {
       <option value="complete">오늘 완료</option><option value="legacy">이전 API</option>
     </select></label>
     {started ? <p role="status">학습 시작 요청 확인</p> : null}
-    <BankStart base="/preview/bank" info={info} lecture={{ subject: "약리학", runId: "preview" }} finished={null} onStarted={() => setStarted(true)} />
+    <BankStart base="/preview/bank" info={info} lecture={{ subject: "약리학", runId: "preview" }} finished={null} onStarted={() => setStarted(true)} onChanged={() => {}} />
     <output id="request" />
   </>;
 }

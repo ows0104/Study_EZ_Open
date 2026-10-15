@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from datetime import UTC
+
+from app.bank_validation.publication import usable as bank_usable
+
 from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -20,6 +24,24 @@ from app.naming import nfc
 from app.storage import ObjectStorage, StorageNotConfigured
 
 LectureKey = tuple[str, str]
+
+
+def bank_timelines(db: Session, keys: list[LectureKey], *, is_admin: bool = False) -> dict[LectureKey, dict]:
+    """목록용 시각만 일괄 조회한다. 원문·문항·개인 대화 주소는 싣지 않는다."""
+    if not keys:
+        return {}
+    wanted = set(keys)
+    rows = db.execute(select(QuizBank.subject, QuizBank.run_id, QuizBank.share_url,
+                             QuizBank.linked_at, QuizBank.built_at, QuizBank.open_to_students).where(
+        QuizBank.subject.in_({s for s, _ in keys}), QuizBank.run_id.in_({r for _, r in keys})))
+
+    def iso(value):
+        return (value if value.tzinfo else value.replace(tzinfo=UTC)).isoformat() if value else None
+
+    return {(s, r): {"shareUrl": share, "linkedAt": iso(linked),
+                     "builtAt": iso(built) if is_admin or opened else None}
+            for s, r, share, linked, built, opened in rows
+            if (s, r) in wanted and (is_admin or opened or share)}
 
 
 def prequiz_core_filter(item=PreItem):
@@ -120,7 +142,7 @@ def material_marks(db: Session, keys: list[LectureKey], *, is_admin: bool = Fals
         QuizBank.subject.in_(subjects), QuizBank.run_id.in_(run_ids),
     )).all()
     for bank in banks:
-        if (is_admin or bank.open_to_students) and bank.bank and (bank.validation or {}).get("pass"):
+        if (is_admin or bank.open_to_students) and bank_usable(bank.bank, bank.validation):
             _touch((bank.subject, bank.run_id), "quiz")
 
     return marks

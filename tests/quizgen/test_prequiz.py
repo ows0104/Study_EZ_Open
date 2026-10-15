@@ -173,6 +173,25 @@ def test_결함도_위반도_없으면_수선하지_않는다(tmp_path):
     _runner(tmp_path).repair()                       # 모델을 부르면 멈춘다
 
 
+def test_repair_removes_new_answer_leak_before_reproduction(tmp_path, monkeypatch):
+    r = _runner(tmp_path)
+    state = {'leaked': False, 'done': False}
+    bad = {'id': 'c012', 'q': 'ambiguous question', 'a': 'answer',
+           'reproduce': {'reason': 'answer_underspecified'}}
+    monkeypatch.setattr(r, 'defects', lambda: [] if state['done'] else [bad])
+    monkeypatch.setattr(r, 'violations', lambda: [])
+    monkeypatch.setattr(r, 'agent', lambda *a, **k: state.update(leaked=True))
+    monkeypatch.setattr(r, 'validate', lambda: None)
+    monkeypatch.setattr(r, 'leak_repair', lambda: state.update(leaked=False))
+    def reproduce(only=None):
+        assert not state['leaked'], 'a repaired question still exposes its answer'
+        assert only == ['c012']
+        state['done'] = True
+    monkeypatch.setattr(r, 'reproduce', reproduce)
+    r.repair()
+    assert state['done']
+
+
 def test_카드가_넘쳐도_validate_는_카드를_버리지_않는다():
     """계약 위반은 '버릴 것'이 아니라 '사람에게 알릴 것'이다."""
     raw = {"cards": [_card(f"질문 {i}") for i in range(MAX_CARDS + 3)]}

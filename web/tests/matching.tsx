@@ -48,6 +48,7 @@ window.fetch = async (input, init) => {
 const buttons = () => Array.from(document.querySelectorAll<HTMLButtonElement>(".bank-match [aria-label='짝짓기 보기'] button"));
 const rows = () => Array.from(document.querySelectorAll<HTMLButtonElement>(".bank-match [aria-label='짝짓기 번호'] button"));
 const submit = () => document.querySelector<HTMLButtonElement>(".quiz-bar .quiz-submit")!;
+const rateButton = (grade: string) => document.querySelector<HTMLButtonElement>(`.quiz-grade.is-${grade}`)!;
 const pickRight = async (text: string) => {
   buttons().find(button => button.textContent?.includes(text))!.click();
   await new Promise(resolve => setTimeout(resolve, 20));
@@ -71,21 +72,25 @@ try {
   submit().click();
   await waitFor(() => document.body.textContent?.includes("reveal failed") && !submit().disabled);
   check(!document.querySelector(".bank-match-score"), "failed reveal clears provisional score and preserves picks for retry");
-  submit().click(); await waitFor(() => document.querySelector(".bank-match-score") && !submit().disabled);
+  submit().click(); await waitFor(() => document.querySelector(".bank-match-score") && !rateButton("hard").disabled);
   check(document.querySelector(".bank-match-score")!.textContent?.includes("4 / 4"), "correct raw pairs are graded using displayed shuffled letters");
   check(rows().every(row => row.disabled) && buttons().every(button => button.disabled), "graded choices are locked");
-  check(document.querySelectorAll(".quiz-grade").length === 0, "automatic result replaces manual rating buttons");
-  submit().click(); await waitFor(() => document.body.textContent?.includes("rate failed") && !submit().disabled);
+  check(document.querySelectorAll(".quiz-grade").length === 4, "automatic grading keeps all four manual rating buttons");
+  window.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+  await new Promise(resolve => setTimeout(resolve, 30));
+  check(ratings.length === 0 && !document.body.textContent?.includes("rate failed"), "space after grading cannot save an automatic rating");
+  rateButton("hard").click(); await waitFor(() => document.body.textContent?.includes("rate failed") && !rateButton("hard").disabled);
   check(ratings.length === 0 && document.body.textContent?.includes("MATCHING-1"), "failed rating keeps the graded question for retry");
-  submit().click(); await waitFor(() => document.body.textContent?.includes("MATCHING-2"));
-  check(ratings.join() === "Good", "all-correct result is stored as Good exactly once");
+  rateButton("hard").click(); rateButton("hard").click(); await waitFor(() => document.body.textContent?.includes("MATCHING-2"));
+  check(ratings.join() === "Hard", "all-correct result stores the user's Hard rating exactly once");
   check(rows().every(row => row.querySelector(".bank-match-picked")!.textContent === "—"), "next question clears old selections");
   await pickRight("Two"); await pickRight("One"); await pickRight("Three"); await pickRight("Four");
-  submit().click(); await waitFor(() => document.querySelector(".bank-match-score") && !submit().disabled);
+  submit().click(); await waitFor(() => document.querySelector(".bank-match-score") && !rateButton("again").disabled);
   check(document.querySelector(".bank-match-score")!.textContent?.includes("3 / 4"), "partially wrong pairs show the correct count");
   check(rows()[0].classList.contains("is-wrong") && rows()[0].textContent?.includes("정답"), "wrong row shows its correct letter");
-  submit().click(); await waitFor(() => document.body.textContent?.includes("MATCHING-3"));
-  check(ratings.join() === "Good,Again", "wrong result is automatically stored as Again");
+  window.dispatchEvent(new KeyboardEvent("keydown", { key: "1", bubbles: true }));
+  await waitFor(() => document.body.textContent?.includes("MATCHING-3"));
+  check(ratings.join() === "Hard,Again", "wrong result stores Again only when the user chooses it by keyboard");
   check(submit().textContent?.includes("답 보기"), "non-matching questions retain normal reveal flow");
   document.querySelector<HTMLButtonElement>(".quiz-undo")!.click(); await waitFor(() => document.body.textContent?.includes("MATCHING-2"));
   check(document.querySelectorAll(".quiz-grade").length === 4 && !document.querySelector(".bank-match-score"),

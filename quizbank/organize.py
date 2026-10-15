@@ -34,13 +34,31 @@ def clean_response(raw: str) -> str:
     return text
 
 
+def expected_schema(raw: str, lecture: dict) -> str:
+    """Keep old banks old and bind new authoring checks to prompt metadata."""
+    version = re.fullmatch(r"v?(\d+)\.(\d+)(?:\.\d+)?", lecture.get("prompt_version", ""))
+    if version and tuple(map(int, version.groups())) >= (1, 26):
+        return SCHEMA_VERSION
+    if re.search(r"^#{1,6}\s+(?:[0-9.]+\s+)?Option Pools\s*$", raw, re.M | re.I):
+        return SCHEMA_VERSION
+    return "3.0"
+
+
 def organizer_prompt(raw: str, lecture: dict) -> str:
-    meta = {"title": lecture["title"], "sources": lecture["sources"]}
-    fill = {"schema_version": SCHEMA_VERSION,
+    from .question_first import enabled
+    meta = {"title": lecture["title"], "sources": lecture["sources"], "prompt_version": lecture.get("prompt_version", "")}
+    fill = {"schema_version": expected_schema(raw, lecture),
             "lecture": json.dumps(meta, ensure_ascii=False),
             "raw": json.dumps(clean_response(raw), ensure_ascii=False)}
-    return re.sub(r"\{\{(schema_version|lecture|raw)\}\}", lambda m: fill[m.group(1)],
-                  PROMPT.read_text(encoding="utf-8"))
+    template = PROMPT.read_text(encoding="utf-8")
+    if enabled(lecture.get("prompt_version", "")):
+        template = template.replace("\nLECTURE_METADATA_DATA\n", "\n문항 우선 출력 계약\n"
+            "이 버전은 웹에 포인트·개념도·회상 계획·선행 관계가 없는 것이 정상이다. "
+            "누락 경고를 만들거나 이를 추정·작성하지 않는다. concepts와 retrieval_plan은 빈 배열, "
+            "각 문항의 concept_id는 빈 문자열, prerequisites는 빈 배열로 저장한다. "
+            "문항별 블록 또는 기존 Questions의 13열과 모든 상세 표를 question_id로 연결해 보존한다. "
+            "사후 학습 구조는 내용 검수 뒤 별도 CLI가 작성한다.\n\nLECTURE_METADATA_DATA\n")
+    return re.sub(r"\{\{(schema_version|lecture|raw)\}\}", lambda m: fill[m.group(1)], template)
 
 
 # `L1:M1` · `A: cAMP 감소` · `R2) PLC` — ChatGPT 가 짝짓기·순서 항목에 붙이는 라벨.
@@ -160,12 +178,38 @@ def tidy_prerequisites(bank: dict) -> list[str]:
     return notes
 
 
-def organize(raw: str, lecture: dict, *, model: str | None = None) -> tuple[dict, dict]:
+def tidy_matching_choices(bank: dict) -> list[str]:
+    """Remove identical right-hand choices while preserving many-to-one answers."""
+    fixed = []
+    for q in bank.get("questions", []):
+        if q.get("format") != "matching":
+            continue
+        right = q.get("matching_right", [])
+        unique = list(dict.fromkeys(right))
+        if unique != right:
+            q["matching_right"] = unique
+            fixed.append(q["question_id"])
+    return fixed
+
+
+def organize(raw: str, lecture: dict, *, model: str | None = None, out: Path | None = None) -> tuple[dict, dict]:
     """`(bank, info)`. lecture = {title, sources: [{id, kind, filename}]}."""
-    bank, info = session.run_structured(organizer_prompt(raw, lecture), BANK, system=SYSTEM,
-                                        label="정리", timeout=1200, model=model)
+    from .web_audit import enabled
+    from .compact import read_blocks, restore
+    blocks = read_blocks(clean_response(raw))
+    if out is not None and enabled(lecture.get("prompt_version", "")):
+        from .file_organize import convert
+        bank, info = convert(clean_response(raw), organizer_prompt(raw, lecture), out, model=model)
+    else:
+        bank, info = session.run_structured(organizer_prompt(raw, lecture), BANK, system=SYSTEM,
+                                            label="정리", timeout=1200, model=model)
     bank = without_retired(bank)   # 옛 응답을 다시 정리해도 뺀 칸은 남기지 않는다
+    bank["build_meta"]["schema_version"] = expected_schema(raw, lecture)
+    restore(bank, blocks)
     fixed = tidy_labels(bank)
+    matching = tidy_matching_choices(bank)
+    if matching and isinstance(bank.get("warnings"), list):
+        bank["warnings"].append(f"[정리] 동일한 짝짓기 보기를 합쳤다: {', '.join(matching)}")
     if fixed and isinstance(bank.get("warnings"), list):
         bank["warnings"].append(f"[정리] 짝짓기·순서 라벨을 떼고 본문으로 맞췄다: {', '.join(fixed)}")
     related = tidy_related(bank)
@@ -174,4 +218,11 @@ def organize(raw: str, lecture: dict, *, model: str | None = None) -> tuple[dict
     prerequisites = tidy_prerequisites(bank)
     if prerequisites and isinstance(bank.get("warnings"), list):
         bank["warnings"].append(f"[정리] 합쳐진 선행 문항 ID를 분리했다: {'; '.join(prerequisites)}")
+    if out is not None:
+        from server.app.bank_validation.slide_focus import authored_hash
+        questions = {q["question_id"]: q for q in bank["questions"]}
+        evidence = {block["question_id"]: {"authoredHash": authored_hash(questions[block["question_id"]]),
+                    "evidence": block["source_evidence"]} for block in blocks if block.get("source_evidence")}
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "authored-evidence.json").write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
     return bank, info

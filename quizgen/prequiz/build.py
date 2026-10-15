@@ -208,6 +208,7 @@ WARN_TRUST = {
 WARN_MINOR = {
     "missing_difficulty": "기본·심화·도전 난도가 빠져 있다",
     "difficulty_challenge_mismatch": "난도와 도전 여부가 서로 다르다",
+    "preview_narration": "질문·힌트가 상황 대신 설명본이나 예습 자료를 언급한다",
     "answer_leaked_in_hint": "접근 힌트에 정답이 그대로 들어 있다",
     "missing_learning_support": "힌트·지금 알아둘 범위·수업 집중 질문이 빠져 있다",
     "points_at_source": "질문이 원본 자료를 가리킨다",

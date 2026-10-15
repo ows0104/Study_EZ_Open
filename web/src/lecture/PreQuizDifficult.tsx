@@ -3,12 +3,14 @@ import { api } from "../api";
 import type { MissedItem, QuizItem, RevealResult } from "../types/quiz";
 import { PreQuizText } from "./PreQuizText";
 import { WhyAsked } from "./Quiz";
+import { FeedbackButton } from "../feedback/FeedbackButton";
 
 type Answer = Pick<RevealResult, "answer" | "explanation" | "lectureFocus">;
 
 /** 마지막 선택이 '아직 헷갈려요'인 문제를 완료 직후 펼쳐 보여 준다. */
-export function PreQuizDifficult({ base, items, answers, onReview, studyTrack = "core" }: {
+export function PreQuizDifficult({ base, items, answers, onReview, reportContext, studyTrack = "core" }: {
   base: string; items: QuizItem[]; answers: Record<string, Answer>; onReview: () => void;
+  reportContext: { subject: string; runId: string; title: string };
   studyTrack?: "core" | "extra";
 }) {
   const [saved, setSaved] = useState<Record<string, Answer>>({});
@@ -45,6 +47,8 @@ export function PreQuizDifficult({ base, items, answers, onReview, studyTrack = 
             {answer.explanation ? <p className="prequiz-review-explanation"><b>설명</b><PreQuizText text={answer.explanation} /></p> : null}
             {answer.lectureFocus ? <p className="prequiz-review-focus"><b>수업에서 확인할 내용</b><PreQuizText text={answer.lectureFocus} /></p> : null}
           </> : <p className="prequiz-review-note">답과 설명을 불러오는 중…</p>}
+          <FeedbackButton prequiz={{ ...reportContext, itemId: entry.itemId, stem: entry.stem,
+            ...(answer ? { answer: answer.answer, explanation: answer.explanation } : {}) }} />
         </article>;
       })}
     </div>

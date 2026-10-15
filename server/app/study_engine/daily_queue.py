@@ -1,50 +1,41 @@
-"""강의별 오늘 할 일. 핵심 개념×회상 방향과 필요한 선행 단위를 한 번씩 확인한다.
+"""문항별 오늘 할 일. 미학습 문항을 제한 없이 먼저 확인한 뒤 예정된 복습을 진행한다.
 
 숙련도 점수와 독립적이다. 이력에서 재구성하므로 조회는 저장 상태를 바꾸지 않는다.
-평가한 단위는 등급에 관계없이 오늘 완료다. 어려웠던 단위는 다음날부터 복습한다.
+평가한 문항은 등급에 관계없이 오늘 완료다. 어려웠던 문항은 다음날부터 복습한다.
 추가 학습의 평가는 숙련도에 반영하지만 오늘 달성한 분량을 되돌리지 않는다.
 """
 
-from .engine import dimension_key, question_stage, rank_questions, days_until
+from .engine import rank_questions, days_until, reschedule_bank, review_schedule
+from .ordering import choose_candidate, question_slide, study_history
 from .planning import day_start
 from .memory import DAY_MS
 from .policy import DEFAULT
+from .progress import seen_ids
+from .suspension import active_bank
+from app.bank_validation.priorities import TIER_ORDER, is_advanced, priority_tier
 
 
-def learning_groups(bank: dict) -> dict[str, list[dict]]:
-    by_id = {q["question_id"]: q for q in bank["questions"]}
-    seeds = [q for q in bank["questions"] if q["tier"] == "Core"] or bank["questions"]
-    selected = {q["question_id"]: q for q in seeds}
-    pending = list(seeds)
-    while pending:
-        for qid in pending.pop()["prerequisites"]:
-            if qid in by_id and qid not in selected:
-                selected[qid] = by_id[qid]
-                pending.append(by_id[qid])
-    groups = {}
-    for q in selected.values():
-        groups.setdefault(dimension_key(q), []).append(q)
-    return groups
-
-
-def _due(review: dict, state: dict, *, latest: bool, policy: dict) -> int:
+def _due(review: dict, state: dict, bank: dict, question: dict, *, latest: bool, policy: dict) -> int:
     rating, at = review["rating"], review["timestamp"]
+    item = state.get("items", {}).get(review["question_id"], {}) if latest else {}
+    snapshot = item.get("target_schedule") or review.get("target_schedule")
+    if snapshot:
+        return review_schedule(bank, question, snapshot, policy)["due_at"]
     if rating in ("Again", "Hard"):
         return max(day_start(at) + DAY_MS,
                    at + policy["intervals"]["againMs" if rating == "Again" else "hardMs"])
-    item = state.get("items", {}).get(review["question_id"], {}) if latest else {}
     scheduled = review.get("next_due_at", item.get("due_at", at + policy["intervals"]["goodMs" if rating == "Good" else "easyMs"]))
     return max(day_start(at) + DAY_MS, scheduled)
 
 
 def daily_units(bank: dict, state: dict, now: int, policy: dict = DEFAULT) -> list[dict]:
+    state = reschedule_bank(bank, state, policy)
     start, end = day_start(now), day_start(now) + DAY_MS
-    groups = learning_groups(bank)
-    keys = {q["question_id"]: key for key, qs in groups.items() for q in qs}
+    groups = {q["question_id"]: [q] for q in active_bank(bank, state)["questions"]}
     reviews = {key: [] for key in groups}
     for h in state.get("history", []):
-        key = keys.get(h["question_id"])
-        if key is not None and h["timestamp"] <= now:
+        key = h["question_id"]
+        if key in reviews and h["timestamp"] <= now:
             reviews[key].append(h)
     units = []
     for key, questions in groups.items():
@@ -57,12 +48,14 @@ def daily_units(bank: dict, state: dict, now: int, policy: dict = DEFAULT) -> li
         legacy = [item for item in legacy if item.get("reviews", 0) > 0]
         known = bool(history or legacy)
         kind = "review" if before or legacy and not history else "new"
-        due = _due(before, state, latest=not today, policy=policy) if before else min(
+        due = _due(before, state, bank, questions[0], latest=not today, policy=policy) if before else min(
             (item.get("due_at", start) for item in legacy), default=start)
-        scheduled = bool(today) or not known or due < end
+        scheduled_due = due
+        scheduled = kind == "new" or due < end
         if not scheduled:
             units.append({"key": key, "questions": questions, "status": "later", "due": due,
-                          "kind": kind, "seen": known, "today": 0, "last": None})
+                          "scheduled_due": scheduled_due,
+                          "kind": kind, "seen": known, "today": len(today), "last": last or before})
             continue
         if not today:
             # 오늘 예정된 복습은 바로 풀 수 있다. 할당량 도중 분 단위 대기는 없다.
@@ -70,47 +63,109 @@ def daily_units(bank: dict, state: dict, now: int, policy: dict = DEFAULT) -> li
         status = "pending"
         if last:
             status = "done"
-            due = _due(last, state, latest=True, policy=policy)
+            due = _due(last, state, bank, questions[0], latest=True, policy=policy)
         units.append({"key": key, "questions": questions, "status": status, "due": due,
+                      "scheduled_due": scheduled_due,
                       "kind": kind, "seen": known, "today": len(today), "last": last or before})
     return units
 
 
+def _new_progress(units: list[dict]) -> tuple[int, int]:
+    # 오늘 처음 평가한 문항도 신규 풀에 남아 있어 목표가 풀이할 때마다 늘지 않는다.
+    new = [u for u in units if u["kind"] == "new"]
+    return len(new), sum(u["status"] == "done" for u in new)
+
+
 def lecture_goal(bank: dict, state: dict, title: str, now: int, policy: dict = DEFAULT) -> dict:
     units = daily_units(bank, state, now, policy)
-    today = [u for u in units if u["status"] != "later"]
-    completed = sum(u["status"] == "done" for u in today)
-    pending = [u for u in today if u["status"] != "done"]
+    reviews = [u for u in units if u["kind"] == "review" and u["status"] != "later"]
+    new_total, new_completed = _new_progress(units)
+    total = len(reviews) + new_total
+    completed = sum(u["status"] == "done" for u in reviews) + new_completed
+    pending = [u for u in reviews if u["status"] != "done"]
     waiting = [u for u in pending if u["due"] > now]
-    return {"title": title, "dayStart": day_start(now), "scope": "core" if any(
-                q["tier"] == "Core" for q in bank["questions"]) else "all",
-            "total": len(today), "completed": completed, "remaining": len(pending),
-            "newRemaining": sum(u["status"] == "pending" and u["kind"] == "new" for u in pending),
-            "reviewRemaining": sum(u["status"] == "pending" and u["kind"] == "review" for u in pending),
+    return {"title": title, "dayStart": day_start(now), "scope": "all",
+            "total": total, "completed": completed, "remaining": total - completed,
+            "newRemaining": new_total - new_completed,
+            "reviewRemaining": len(pending),
+            "unlearnedRemaining": sum(not u["seen"] for u in units),
             "relearningRemaining": sum(u["status"] == "relearning" for u in pending),
             "waiting": len(waiting), "retryAt": min((u["due"] for u in waiting), default=None),
-            "met": bool(units) and not pending,
-            "progressPercent": completed * 100 // len(today) if today else 100 if units else 0,
-            "reviewedToday": sum(u["today"] for u in today),
+            "met": bool(bank["questions"]) and completed == total,
+            "progressPercent": completed * 100 // total if total else 100 if bank["questions"] else 0,
+            "reviewedToday": sum(u["today"] for u in units),
             "firstPassSeen": sum(u["seen"] for u in units), "firstPassTotal": len(units)}
 
 
-def select_daily_question(bank: dict, state: dict, exam: str, now: int, policy: dict = DEFAULT) -> dict:
+def daily_candidates(bank: dict, state: dict, exam: str, now: int, policy: dict = DEFAULT,
+                     *, scope: tuple = (), lecture_order: int = 0, pages: dict | None = None,
+                     extra: bool = False) -> tuple[list[dict], list[dict]]:
+    """선행관계를 만족하는 오늘의 후보. 일정은 원래 예정일과 오늘 풀이 가능 시각을 구분한다."""
+    state = reschedule_bank(bank, state, policy)
     units = daily_units(bank, state, now, policy)
-    remaining = [u for u in units if u["status"] not in ("done", "later")]
-    pending_keys = {u["key"] for u in remaining}
-    by_id = {q["question_id"]: q for q in bank["questions"]}
-    # 기존 적응형 점수는 순서를 정하는 데 쓴다. 숙련도 진입 장벽으로 오늘 할 일을 막지 않는다.
+    seen = seen_ids(state) if extra else set()
+    remaining = units if extra else [u for u in units if u["status"] not in ("done", "later")]
+    unlearned = {u["key"] for u in units if (u["key"] not in seen if extra else not u["seen"])}
+    # 미학습 문항을 모두 먼저 확인한다. 완료 문항은 다시 고르지 않는다.
     ranked = rank_questions(bank, state, exam, now, policy)
-    scores = {r["question_id"]: r["raw_score"] for r in ranked}
+    rows = {r["question_id"]: r for r in ranked}
+    positions = {q["question_id"]: i for i, q in enumerate(bank["questions"])}
     candidates = []
     for unit in remaining:
+        if extra:
+            # 완료·미도래 문항도 포함한다. 오늘 처음 평가한 문항도 추가 학습에서는 복습이다.
+            item = state.get("items", {}).get(unit["key"], {})
+            last = unit["last"] or {}
+            unit = {**unit, "kind": "review" if unit["key"] in seen else "new", "due": now,
+                    "scheduled_due": item.get("due_at", last.get("next_due_at", unit["scheduled_due"]))}
         if unit["due"] > now:
             continue
-        questions = unit["questions"]
-        for q in questions:
-            dependencies = sum(dimension_key(by_id[qid]) in pending_keys for qid in q["prerequisites"] if qid in by_id)
-            candidates.append((dependencies, question_stage(q), -scores[q["question_id"]], q["question_id"], q))
-    candidates.sort(key=lambda row: row[:4])
-    return {"question": candidates[0][-1] if candidates else None, "ranked": ranked,
+        q = unit["questions"][0]
+        if unit["kind"] == "new" and any(qid in unlearned for qid in q["prerequisites"]):
+            continue  # 아직 평가하지 않은 선행 문항부터 확인한다.
+        slide = question_slide(q, pages)
+        candidates.append({"unit": unit, "question": q, "rank": rows[unit["key"]], "scope": scope,
+                           "order": (TIER_ORDER[priority_tier(q)], is_advanced(q), lecture_order, slide,
+                                     rows[unit["key"]]["stage"] if slide != float("inf") else 0,
+                                     positions[unit["key"]])})
+    return candidates, ranked
+
+
+def daily_selection(chosen: dict | None, ranked: list[dict], exam: str, now: int) -> dict:
+    question = chosen["question"] if chosen else None
+    if question:
+        row = next(r for r in ranked if r["question_id"] == question["question_id"])
+        row["notes"] += ["첫 학습은 선행관계를 지키며 Core→Important→Optional, 같은 중요도는 기본→심화·슬라이드 순서입니다. 복습은 중요도·예정일·약점을 반영합니다.",
+                         "가능하면 같은 개념의 다른 회상방향 사이에 다른 문제 3~5개를 둡니다."] + row["reasons"]
+        row.update(eligible=True, score=row["raw_score"], reasons=[])
+    return {"question": question, "ranked": ranked,
             "days": days_until(exam, now), "reason": None, "retry_at": None}
+
+
+def select_daily_question(bank: dict, state: dict, exam: str, now: int, policy: dict = DEFAULT,
+                          *, shuffle: bool = False, pages: dict | None = None) -> dict:
+    # shuffle은 기존 호출 호환용이다. 두 화면 모두 동일한 정책으로 신규 정렬·복습 섞기를 한다.
+    candidates, ranked = daily_candidates(bank, state, exam, now, policy, pages=pages)
+    chosen = choose_candidate(candidates, study_history(bank, state, now), now, policy)
+    return daily_selection(chosen, ranked, exam, now)
+
+
+def select_extra_question(bank: dict, state: dict, exam: str, now: int, policy: dict = DEFAULT,
+                          *, pages: dict | None = None) -> dict:
+    """추가 학습도 공통 선택기를 사용하되 완료·미도래 문항까지 포함한다."""
+    candidates, ranked = daily_candidates(bank, state, exam, now, policy, pages=pages, extra=True)
+    history = [h for h in state.get("history", []) if h["timestamp"] <= now]
+    last = max(history, key=lambda h: h["timestamp"], default=None)
+    recent = last and (day_start(last["timestamp"]) == day_start(now)
+                       or now < last["timestamp"] + policy["recency"]["minimumRepeatMs"])
+    if recent and any(c["question"]["question_id"] == last["question_id"] for c in candidates):
+        others = [c for c in candidates if c["question"]["question_id"] != last["question_id"]]
+        if others:
+            candidates = others
+    chosen = choose_candidate(candidates, study_history(bank, state, now), now, policy)
+    result = daily_selection(chosen, ranked, exam, now)
+    if chosen:
+        chosen["rank"]["notes"].append("추가 학습은 완료·미도래 문항도 같은 복습 가중치로 고르고, 다른 후보가 있으면 직전 문항의 연속 반복을 피합니다.")
+    else:
+        result.update(reason="학습 가능한 문제가 없습니다.", retry_at=None)
+    return result

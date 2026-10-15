@@ -58,9 +58,14 @@ function cleanTitle(title: string) {
  * 있는데 파싱하면 거기서 떨어져 나간다. 파일이 없을 때만 조립한 이름으로 떨어진다.
  */
 export function renderPreviewPrompt(template: string, detail: LectureDetail) {
-  const notesPrev = detail.files.find((file) => file.kind === "notes_prev");
+  return renderLecturePrompt(template, detail, "notes_prev");
+}
+
+/** 예습·복습이 실제로 첨부하는 필기의 파일명으로 같은 자리표시자를 채운다. */
+export function renderLecturePrompt(template: string, detail: LectureDetail, notesKind: "notes_prev" | "notes_current") {
+  const notes = detail.files.find((file) => file.kind === notesKind);
   const values: Record<string, string> = {
-    "{파일명}": notesPrev?.filename || `[${detail.date}] ${detail.title}`,
+    "{파일명}": notes?.filename || `[${detail.date}] ${detail.title}`,
     "{강의}": cleanTitle(detail.title),
     "{과목}": detail.course || detail.subject,
     "{교수}": detail.professors.join(", "),

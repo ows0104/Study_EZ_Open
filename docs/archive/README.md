@@ -9,6 +9,7 @@
 
 | 문서 | 용도 |
 |---|---|
+| [2026-10-15-changes-and-bank-reuse.md](2026-10-15-changes-and-bank-reuse.md) | 10월 15일 누적 변경과 기존 문제은행의 재사용·국소 복구 판단 |
 | [interview.md](interview.md) | 학습 목적·출제 방향에 대한 관리자 인터뷰 |
 | [quizgen-cases.md](quizgen-cases.md) | 퀴즈 품질·프롬프트 실패 사례 |
 | [runner-cases.md](runner-cases.md) | 실행·대기·누락 보고 사례 |

@@ -8,7 +8,7 @@ def undo_token(state: dict) -> str | None:
     session = state.get("session") or {}
     last = history[-1] if history else {}
     saved = last.get("undo")
-    if not saved or last.get("session_id") != session.get("id"):
+    if not saved or last.get("session_id") != session.get("id") or last.get("question_id") in state.get("suspended_question_ids", []):
         return None
     return saved["served"]["token"]
 

@@ -45,6 +45,7 @@ window.fetch = async (input, init) => {
 const options = () => Array.from(document.querySelectorAll<HTMLButtonElement>(".bank-sequence-options button"));
 const selected = () => Array.from(document.querySelectorAll<HTMLButtonElement>(".bank-sequence-order button"));
 const submit = () => document.querySelector<HTMLButtonElement>(".quiz-bar .quiz-submit")!;
+const rateButton = (grade: string) => document.querySelector<HTMLButtonElement>(`.quiz-grade.is-${grade}`)!;
 const pick = async (position: number) => {
   const labels = ["첫 단계", "둘째 단계", "셋째 단계", "넷째 단계"];
   options().find(button => button.textContent?.includes(labels[position]))!.click();
@@ -77,17 +78,25 @@ try {
   check(!submit().disabled && selected()[0].querySelector("strong"), "complete order enables grading and preserves emphasis");
   submit().click(); await waitFor(() => document.body.textContent?.includes("reveal failed") && !submit().disabled);
   check(selected().length === 4 && !document.querySelector(".bank-sequence-score"), "failed reveal preserves order without a provisional score");
-  submit().click(); await waitFor(() => document.querySelector(".bank-sequence-score") && !submit().disabled);
+  submit().click(); await waitFor(() => document.querySelector(".bank-sequence-score") && !rateButton("easy").disabled);
   check(document.querySelector(".bank-sequence-score")!.textContent?.includes("모두 맞았어요"), "correct sequence is graded automatically");
   check(selected().every(button => button.disabled) && !document.querySelector(".bank-sequence-reset"), "graded order is locked");
+  check(document.querySelectorAll(".quiz-grade").length === 4 && ratings.length === 0, "automatic grading waits for a manual difficulty rating");
+  const colors = Array.from(document.querySelectorAll<HTMLElement>(".quiz-grade")).map(button => {
+    const style = getComputedStyle(button), nameStyle = getComputedStyle(button.querySelector(".quiz-grade-name")!);
+    return [style.backgroundColor, style.borderColor, nameStyle.color].join("/");
+  });
+  check(new Set(colors).size === 1, "Again and Good have the same neutral colors as Hard and Easy");
+  window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+  await new Promise(resolve => setTimeout(resolve, 30));
+  check(!document.body.textContent?.includes("rate failed"), "Enter after grading cannot auto-record a rating");
   window.dispatchEvent(new KeyboardEvent("keydown", { key: "4", bubbles: true }));
-  check(!document.querySelector(".quiz-grade") && ratings.length === 0, "manual rating cannot override automatic result");
-  submit().click(); await waitFor(() => document.body.textContent?.includes("rate failed") && !submit().disabled);
+  await waitFor(() => document.body.textContent?.includes("rate failed") && !rateButton("easy").disabled);
   check(ratings.length === 0 && selected().length === 4, "failed saving keeps the graded sequence for retry");
-  submit().click(); submit().click(); await waitFor(() => document.body.textContent?.includes("순서형 예시 2"));
-  check(ratings.join() === "Good" && selected().length === 0, "all-correct result is saved once and next sequence starts empty");
+  rateButton("easy").click(); rateButton("easy").click(); await waitFor(() => document.body.textContent?.includes("순서형 예시 2"));
+  check(ratings.join() === "Easy" && selected().length === 0, "chosen Easy rating is saved once and next sequence starts empty");
   await pick(1); await pick(0); await pick(2); await pick(3);
-  submit().click(); await waitFor(() => document.querySelector(".bank-sequence-score") && !submit().disabled);
+  submit().click(); await waitFor(() => document.querySelector(".bank-sequence-score") && !rateButton("hard").disabled);
   check(document.querySelector(".bank-sequence-score")!.textContent?.includes("2 / 4"), "wrong sequence reports matching positions");
   check(selected()[0].classList.contains("is-wrong") && selected()[2].classList.contains("is-correct"), "each selected position shows correctness");
   check(document.querySelectorAll(".bank-correct-order li").length === 4
@@ -99,8 +108,8 @@ try {
     document.getElementById("results")!.style.display = "none";
     await new Promise<void>(() => {});
   }
-  submit().click(); await waitFor(() => document.body.textContent?.includes("순서형 예시 3"));
-  check(ratings.join() === "Good,Again" && submit().textContent?.includes("답 보기"), "wrong order saves Again and other formats keep their flow");
+  rateButton("hard").click(); await waitFor(() => document.body.textContent?.includes("순서형 예시 3"));
+  check(ratings.join() === "Easy,Hard" && submit().textContent?.includes("답 보기"), "wrong order saves the chosen Hard rating and other formats keep their flow");
   document.querySelector<HTMLButtonElement>(".quiz-undo")!.click(); await waitFor(() => document.body.textContent?.includes("순서형 예시 2"));
   check(document.querySelectorAll(".quiz-grade").length === 4 && !document.querySelector(".bank-sequence-score"), "undo does not grade stale sequence selections");
   results.push("ALL PASSED");

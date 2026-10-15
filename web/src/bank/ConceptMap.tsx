@@ -62,7 +62,7 @@ export function ConceptMap({ concepts }: { concepts: BankConcept[] }) {
   );
 }
 
-const TIER_ORDER: Record<BankConcept["tier"], number> = { Core: 0, Advanced: 1, Optional: 2 };
+const TIER_ORDER: Record<BankConcept["tier"], number> = { Core: 0, Important: 1, Optional: 2 };
 const SIGNAL_LABEL: Record<string, string> = { high: "족보 신호 높음", medium: "족보 신호 보통", low: "족보 신호 낮음" };
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 

@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>브리지 박스 확인</title></head>
+<body style="margin:0;background:#f7f7f8;font-family:sans-serif"><main style="max-width:600px;margin:80px auto;color:#777"><h1>브리지 디자인 확인</h1><p>자료·프롬프트를 전송하지 않는 화면 미리보기입니다.</p><a href="?first">처음 동의</a> · <a href="?remembered">동의 완료</a> · <a href="?remembered&automatic">동의 완료 · 자동전송</a></main>
+<script type="module">
+import source from "../../bridge/chatgpt-bridge.js?raw";
+const createOverlay = new Function(source.replace("void initialize();", "") + "\nreturn createOverlay;")();
+const params = new URLSearchParams(location.search);
+const overlay = createOverlay({provider:"chatgpt",mode:"review",autoSend:params.has("automatic"),files:[{filename:"오늘 강의록.pdf"},{filename:"족보.pdf"}]},params.has("remembered"));
+overlay.querySelector('[data-action="cancel"]').addEventListener('click',()=>overlay.remove());
+</script></body></html>

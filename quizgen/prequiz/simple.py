@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
@@ -15,6 +16,10 @@ from .. import ledger
 from ..runbase import Failed
 from ..session import run_blind
 from .schema import CHALLENGE_GUIDANCE, DIFFICULTY_GUIDANCE, EXTRA_GUIDANCE, GENERATE_SCHEMA
+
+
+def voice_prompt():
+    return (Path(__file__).parent / "prompts" / "voice.md").read_text(encoding="utf-8")
 
 
 def dump(path, value):
@@ -90,6 +95,7 @@ basic 위주, cloze 가능, ox는 최대 2개. 한 문항 한 개념, 답은 짧
 learning_support: hint(답이 들어 있지 않은 접근 단서), scope(지금 알아둘 범위),
 lecture_focus(수업에서 집중할 질문), preview_excerpt(답의 근거인 설명본의 정확한 원문).
 도전도 설명본에서 답을 뒷받침할 수 있어야 한다. 자료가 부족하면 지어내지 말고 오류를 보고한다.
+{voice_prompt()}
 다음 JSON 스키마대로 must_know와 cards를 모두 가진 객체 하나만 출력한다:
 {json.dumps(GENERATE_SCHEMA, ensure_ascii=False)}
 <preview_note>\n{note}\n</preview_note>
@@ -117,6 +123,9 @@ def review(runner, cards):
 답이 질문/힌트에 새지 않는지, 중복, 과도한 세부, 핵심 난도, 도전의 추론 난도.
 핵심은 설명본을 읽으면 풀 수 있어야 한다.
 틀린 의학 지식이 의심되거나 근거가 불충분하면 통과시키지 말고 구체적으로 지적한다.
+질문·힌트가 자료를 읽는 행위를 말하거나 보이지 않는 지도·화살표를 가리키는지 확인한다.
+기전·적용 질문이 짧은 상황 안에서 자연스럽게 이어지는지 아래 말투 기준으로 검토한다.
+위반하면 ok=false와 문제가 있는 필드 및 고칠 방향을 issues에 쓴다.
 재현 풀이 시험이 아닌 답을 보는 검수이다. 문항마다 정확히 한 행을 출력한다.
 JSON만: {"cards":[{"id":"원래 id","ok":true,"issues":[]}]}
 문제가 있으면 ok=false와 구체적인 issues 문자열 목록을 쓴다.
@@ -125,7 +134,7 @@ JSON만: {"cards":[{"id":"원래 id","ok":true,"issues":[]}]}
         "심화가 정의 회상에 그치거나 도전이 한 단계 대입에 그치면 ok=false로 판정한다.\n" \
         + "\n도전 기준에 못 미치는 문항은 ok=false로 판정하고, " \
         "어느 중간 판단이 빠져 자명해졌는지와 고칠 방향을 issues에 쓴다.\n" \
-        + "\n<preview_note>\n" + note + "\n</preview_note>\n<cards>\n" + json.dumps(cards, ensure_ascii=False) + "\n</cards>" + extra_exam_context(runner)
+        + voice_prompt() + "\n<preview_note>\n" + note + "\n</preview_note>\n<cards>\n" + json.dumps(cards, ensure_ascii=False) + "\n</cards>" + extra_exam_context(runner)
     (runner.out / "prompt.batch_review.md").write_text(prompt, encoding="utf-8")
     result = ask(runner, prompt, "문항 묶음 검수")
     bad = check_review(result, cards)

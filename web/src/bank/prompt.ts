@@ -19,7 +19,7 @@ const KIND_LABEL: Record<BankSource["kind"], string> = {
 };
 
 /** 첨부 순서(S1·S2)는 서버가 정한 `bankSources` 순서다 — 러너도 같은 ID 로 출처를 읽는다. */
-export function renderBankPrompt(detail: LectureDetail, sources: BankSource[]) {
+export function renderBankPrompt(detail: LectureDetail, sources: BankSource[], sourceTemplate = template) {
   const fill: Record<string, string> = {
     title: detail.title,
     lecture_scope: lectureScopes.find((scope) => scope.title === detail.title && sources.some(
@@ -30,8 +30,21 @@ export function renderBankPrompt(detail: LectureDetail, sources: BankSource[]) {
     sources: sources.map((s) => `  - ${s.id} | ${KIND_LABEL[s.kind]} | ${s.filename}`).join("\n"),
     output: "이 응답 본문에 바로 쓴다.",
   };
-  return template
+  return sourceTemplate
     .replace(/\r\n/g, "\n")
     .replace(HEADER, "")
     .replace(/\{\{(title|exam_date|weighting|sources|output|lecture_scope)\}\}/g, (_, key: string) => fill[key]);
+}
+
+/** 전송 시점의 정본을 읽는다. 페이지를 오래 열어 둔 경우에도 번들에 든 구버전으로 전송하지 않는다. */
+export async function loadLatestBankPrompt(detail: LectureDetail, sources: BankSource[]) {
+  const response = await fetch(`/bank-prompt.json?t=${Date.now()}`, { cache: "no-store" });
+  if (!response.ok) throw new Error("최신 출제 프롬프트를 불러오지 못했습니다. 다시 시도하세요.");
+  const latest = await response.json();
+  if (typeof latest.template !== "string" || typeof latest.version !== "string"
+      || /Version:\s*(\S+)/.exec(latest.template)?.[1] !== latest.version
+      || !latest.template.includes("STUDYEZ_BANK_COMPLETE")) {
+    throw new Error("출제 프롬프트 파일이 올바르지 않습니다. 전송을 중단했습니다.");
+  }
+  return { prompt: renderBankPrompt(detail, sources, latest.template), version: latest.version };
 }

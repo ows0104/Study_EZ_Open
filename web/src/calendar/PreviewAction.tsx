@@ -12,10 +12,10 @@ import {
 import { ExtensionSetup } from "../bridge/ExtensionSetup";
 import { AUTO_SEND_MIN_VERSION } from "../bridge/version";
 import {
-  PROMPT_TOKENS,
   SHARED_PREVIEW_PROMPT,
   renderPreviewPrompt,
 } from "../lecture/previewPrompt";
+import { PromptEditor } from "./PromptEditor";
 import { usePreviewPrompt } from "../lecture/usePreviewPrompt";
 import { previewProviderLabels, previewProviders, type LectureDetail, type LectureRef, type PreviewProvider } from "../types/lectures";
 import { useMe } from "../useMe";
@@ -261,7 +261,7 @@ export function PreviewAction({
     <ActionCard
       shape="is-key is-faint"
       hit={
-        <button className="panel-action-hit" disabled={Boolean(busy) || !compatible} onClick={() => void start("personal", false)}>
+        <button className="panel-action-hit" disabled={Boolean(busy) || !compatible || !promptStore.loaded} onClick={() => void start("personal", false)}>
           <Body name="개인 링크" note={busy === "personal" ? "여는 중…" : "만들기"} />
         </button>
       }
@@ -562,115 +562,6 @@ function LinkEditor({
         <small>비우고 저장하면 지워집니다.</small>
       </div>
       {error ? <p className="prompt-editor-error">{error}</p> : null}
-    </div>
-  );
-}
-
-/**
- * 프롬프트 편집.
- *
- * 사람마다 예습하는 방식이 달라서 각자 고쳐 쓰고, 고친 것은 계정에 남는다.
- * 강의 이름 같은 값은 자리표시자로 남겨 둔다 — 안 그러면 고친 순간 모든 강의가
- * 한 강의의 이름을 달고 나간다.
- *
- * 미리보기는 지금 열어 둔 강의로 채워 보여 준다. 토큰이 실제로 무엇으로 바뀌는지
- * 눈으로 확인하지 않으면 자리표시자를 지워 버리기 쉽다.
- */
-function PromptEditor({
-  store,
-  detail,
-  provider,
-  onProvider,
-}: {
-  store: ReturnType<typeof usePreviewPrompt>;
-  detail: LectureDetail;
-  provider: PreviewProvider;
-  onProvider: (next: PreviewProvider) => void;
-}) {
-  const [draft, setDraft] = useState<string | null>(null);
-  const [error, setError] = useState("");
-  const text = draft ?? store.template;
-  const dirty = draft !== null && draft.trim() !== store.template.trim();
-
-  async function save() {
-    setError("");
-    try {
-      await store.save(text);
-      setDraft(null);
-    } catch (cause) {
-      setError((cause as Error).message);
-    }
-  }
-
-  async function reset() {
-    setError("");
-    try {
-      await store.reset();
-      setDraft(null);
-    } catch (cause) {
-      setError((cause as Error).message);
-    }
-  }
-
-  return (
-    <div className="prompt-editor">
-      {/* **어느 AI로 물을지도 여기서 고른다(2026-08-31 관리자 지시).** 갈래 머리에
-          늘 떠 있던 고르개인데, 한 번 정하면 바꿀 일이 드물어서 자리만 차지했다.
-
-          **이것만은 기본 링크에도 듣는다** — 아래 프롬프트는 개인 링크의 것이다.
-          그 갈림을 적어 두지 않으면 여기 있는 것이 다 개인 것으로 읽힌다. */}
-      <label className="prompt-editor-model">
-        <span>어느 AI로 물을까</span>
-        <select
-          aria-label="예습에 쓸 AI"
-          value={provider}
-          onChange={(event) => onProvider(event.target.value as PreviewProvider)}
-        >
-          {previewProviders.map((item) => <option value={item} key={item}>{previewProviderLabels[item]}</option>)}
-        </select>
-      </label>
-
-      {/* 기본 링크의 문구는 여기 안 나온다. 고칠 수 없는 것을 편집칸 위에
-          펼쳐 두면 무엇을 고치는 화면인지 흐려진다(2026-08-22 관리자 지시). */}
-      <h4 className="prompt-editor-label">개인 링크 — 내가 고쳐 쓰는 것</h4>
-      <textarea
-        className="prompt-editor-text"
-        value={text}
-        spellCheck={false}
-        onChange={(event) => setDraft(event.target.value)}
-        aria-label="예습 프롬프트"
-      />
-      <p className="prompt-editor-tokens">
-        {PROMPT_TOKENS.map(({ token, label }) => (
-          <button
-            key={token}
-            type="button"
-            title={`${label} 넣기`}
-            onClick={() => setDraft(`${text}${text.endsWith("\n") ? "" : " "}${token}`)}
-          >
-            {token}
-          </button>
-        ))}
-        <span>누르면 끝에 붙습니다</span>
-      </p>
-      <div className="prompt-editor-actions">
-        <button className="is-primary" onClick={save} disabled={!dirty || store.saving}>
-          {store.saving ? "저장 중…" : "저장"}
-        </button>
-        <button className="is-quiet" onClick={reset} disabled={!store.isCustom || store.saving}>
-          기본값으로
-        </button>
-        {draft !== null ? (
-          <button className="is-quiet" onClick={() => setDraft(null)} disabled={store.saving}>
-            되돌리기
-          </button>
-        ) : null}
-      </div>
-      {error ? <p className="prompt-editor-error">{error}</p> : null}
-      <details className="prompt-editor-preview">
-        <summary>이 강의로 채워 보기</summary>
-        <pre>{renderPreviewPrompt(text, detail)}</pre>
-      </details>
     </div>
   );
 }

@@ -21,6 +21,7 @@ function webBridge() {
     location: { origin: 'https://studyez.kr' },
     addEventListener: (type, listener) => { listeners[type] = listener; },
     postMessage: message => posted.push(message),
+    setInterval() {},
   };
   const context = vm.createContext({
     chrome: { runtime }, window,
@@ -149,6 +150,82 @@ function shareFixture({ fields = [], buttons = [], text = 'Share conversation', 
   vm.runInContext(source.slice(0, source.lastIndexOf('void initialize()')), context);
   return { context, root, runtime, sent, state, document };
 }
+
+test('bank saves shared and private URLs separately without a response or completion marker', async () => {
+  const s = shareFixture();
+  vm.runInContext('watch = { mode: "bank" };', s.context);
+  s.context.accessToken = async () => 'test-token';
+  s.context.conversationState = async () => ({ finished: true, currentNode: 'bank-answer', answer: 'Bank without a completion marker' });
+  s.context.publishViaApi = async () => 'https://chatgpt.com/share/bank-test';
+  s.context.isPubliclyReadable = async () => true;
+  assert.equal(await s.context.publish(), 'published');
+  const messages = s.sent.filter(m => ['STUDYEZ_SHARE_LINK', 'STUDYEZ_CONVERSATION_LINK'].includes(m.type));
+  assert.equal(messages.length, 2);
+  assert.equal(messages[0].url, 'https://chatgpt.com/c/our-conversation');
+  assert.equal(messages[1].url, 'https://chatgpt.com/share/bank-test');
+  assert.equal(s.sent.some(m => m.type === 'STUDYEZ_BANK_ANSWER'), false);
+  assert.equal(await s.context.publish(), 'settled');
+});
+
+test('bank hands complete answer to runner even when public sharing fails, once per answer', async () => {
+  const s = shareFixture();
+  vm.runInContext('watch = { mode: "bank" };', s.context);
+  s.context.accessToken = async () => 'test-token';
+  s.context.conversationState = async () => ({ finished: true, currentNode: 'bank-answer', answer: 'Bank '.repeat(50) + 'STUDYEZ_BANK_COMPLETE' });
+  s.context.publishViaApi = async () => 'https://chatgpt.com/share/bank-test';
+  s.context.isPubliclyReadable = async () => false;
+  assert.equal(await s.context.publish(), 'pending');
+  assert.equal(s.sent.filter(m => m.type === 'STUDYEZ_BANK_ANSWER').length, 1);
+  assert.equal(s.sent.filter(m => m.type === 'STUDYEZ_CONVERSATION_LINK').length, 1);
+  assert.equal(s.sent.some(m => m.type === 'STUDYEZ_SHARE_LINK'), false);
+  vm.runInContext('retryAfter = 0;', s.context);
+  await s.context.publish();
+  assert.equal(s.sent.filter(m => m.type === 'STUDYEZ_BANK_ANSWER').length, 1);
+});
+
+test('bank defers state API calls while the answer is generating', async () => {
+  const s = shareFixture();
+  vm.runInContext('watch = { mode: "bank" };', s.context);
+  const stop = element('중지');
+  s.document.querySelectorAll = () => [stop];
+  s.context.accessToken = async () => assert.fail('generation must not poll the backend');
+  assert.equal(await s.context.publish(), 'pending');
+  assert.equal(s.sent.length, 0);
+});
+
+test('bank retries an answer when extension storage did not acknowledge it', async () => {
+  const s = shareFixture();
+  vm.runInContext('watch = { mode: "bank" };', s.context);
+  s.context.accessToken = async () => 'token';
+  s.context.conversationState = async () => ({finished:true, currentNode:'answer',
+    answer:'Question '.repeat(50) + 'STUDYEZ_BANK_COMPLETE'});
+  s.context.chrome.runtime.sendMessage = (message, callback) => {
+    s.sent.push(message); callback?.({ok:false});
+  };
+  assert.equal(await s.context.publish(), 'pending');
+  assert.equal(await s.context.publish(), 'pending');
+  assert.equal(s.sent.filter(m => m.type === 'STUDYEZ_BANK_ANSWER').length, 2);
+});
+
+test('bank state 429 backs off, then resumes and clears the delay after saving', async () => {
+  const s = shareFixture();
+  vm.runInContext('watch = { mode: "bank" };', s.context);
+  let calls = 0;
+  s.context.accessToken = async () => 'test-token';
+  s.context.conversationState = async () => { calls++; throw new Error('HTTP 429'); };
+  assert.equal(await s.context.publish(), 'pending');
+  assert.equal(await s.context.publish(), 'pending');
+  assert.equal(calls, 1);
+  assert.ok(vm.runInContext('retryAfter > Date.now()', s.context));
+  vm.runInContext('retryAfter = 0;', s.context);
+  s.context.conversationState = async () => ({ finished: true, currentNode: 'recovered', answer: 'Bank STUDYEZ_BANK_COMPLETE' });
+  s.context.publishViaApi = async () => 'https://chatgpt.com/share/recovered';
+  s.context.isPubliclyReadable = async () => true;
+  assert.equal(await s.context.publish(), 'published');
+  assert.equal(vm.runInContext('failures', s.context), 0);
+  assert.equal(vm.runInContext('retryAfter', s.context), 0);
+  assert.equal(s.sent.filter(m => m.type === 'STUDYEZ_SHARE_LINK').length, 1);
+});
 
 test('reads anchor href inside sharing dialog and ignores answer links', () => {
   const s = shareFixture({ fields: [element('Copy', { href: '/share/our-share?source=copy' })] });
@@ -286,7 +363,7 @@ test('invalidation stops share observer/timer and initialization handles synchro
   assert.equal(vm.runInContext('contextInvalidated', other.context), true);
 });
 
-test('review links keep their own pending kind and never publish a shared link', async () => {
+for (const mode of ['review', 'bank']) test(`${mode} links keep their own pending keys until each save is acknowledged`, async () => {
   const stored = {};
   const delivered = [];
   let receive;
@@ -307,25 +384,69 @@ test('review links keep their own pending kind and never publish a shared link',
   vm.runInContext(read('background.js'), context);
   const protocol = context.STUDYEZ_PROTOCOL;
   const request = { requestId: 'review', lectureId: '약리학/261006_01', provider: 'chatgpt',
-    mode: 'review', prompt: 'Review today', autoSend: false,
+    mode, prompt: 'Review today', autoSend: false,
     files: [{ filename: 'today.pdf', downloadUrl: 'http://localhost:8000/api/local-storage/lectures/today.pdf' }] };
   const response = await new Promise(resolve => receive({ type: protocol.MESSAGES.openPreview, payload: request },
     { tab: { id: 1, url: 'http://localhost:5173' } }, resolve));
   assert.equal(response.ok, true);
-  assert.equal(stored['studyez-watch:10'].mode, 'review');
+  assert.equal(stored['studyez-watch:10'].mode, mode);
   const sender = { tab: { id: 10, url: 'https://chatgpt.com/c/review' } };
   receive({ type: 'STUDYEZ_CONVERSATION_LINK', lectureId: 'wrong', url: sender.tab.url }, sender, () => {});
   await new Promise(resolve => setImmediate(resolve));
   const link = delivered.find(message => message.type === protocol.MESSAGES.linkReady);
-  assert.equal(link.kind, 'chatgpt_review');
+  const privateKind = mode === 'bank' ? 'chatgpt_bank' : 'chatgpt_review';
+  assert.equal(link.kind, privateKind);
   assert.equal(link.lectureId, request.lectureId);
   assert.equal(stored[`studyez-pending:1:${request.lectureId}:chatgpt`], undefined);
   const count = delivered.length;
   receive({ type: 'STUDYEZ_SHARE_LINK', url: 'https://chatgpt.com/share/review' }, sender, () => {});
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(delivered.length, count);
-  receive({ type: protocol.MESSAGES.linkSaved, lectureId: request.lectureId, kind: 'chatgpt_review' },
+  if (mode === 'review') assert.equal(delivered.length, count);
+  else {
+    assert.ok(delivered.some(message => message.kind === 'chatgpt_bank_share'));
+    assert.equal(stored[`studyez-pending:1:${request.lectureId}:chatgpt_bank_share`].url, 'https://chatgpt.com/share/review');
+    assert.equal(stored[`studyez-pending:1:${request.lectureId}:chatgpt_share`], undefined);
+  }
+  receive({ type: protocol.MESSAGES.linkSaved, lectureId: request.lectureId, kind: privateKind },
     { tab: { id: 1, url: 'http://localhost:5173' } }, () => {});
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(stored[`studyez-pending:1:${request.lectureId}:chatgpt_review`], undefined);
+  assert.equal(stored[`studyez-pending:1:${request.lectureId}:${privateKind}`], undefined);
+  if (mode === 'bank') {
+    assert.ok(stored[`studyez-pending:1:${request.lectureId}:chatgpt_bank_share`]);
+    receive({type: protocol.MESSAGES.linkSaved, lectureId: request.lectureId, kind: 'chatgpt_bank_share'},
+      {tab: {id: 1, url: 'http://localhost:5173'}}, () => {});
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(stored[`studyez-pending:1:${request.lectureId}:chatgpt_bank_share`], undefined);
+  }
+});
+
+
+test('bank version travels from the exact launch request through pending delivery and page bridge', async () => {
+  const stored = {}, delivered = []; let receive;
+  const context = vm.createContext({ URL, console, importScripts() {}, chrome: {
+    runtime: { onMessage: {addListener(fn) {receive = fn;}}, onConnect: {addListener() {}} },
+    storage: {session: {
+      async get(key) {return key === null ? {...stored} : {[key]: stored[key]};},
+      async set(values) {Object.assign(stored, values);}, async remove(key) {delete stored[key];},
+    }},
+    tabs: {onUpdated:{addListener(){}}, onRemoved:{addListener(){}}, onActivated:{addListener(){}},
+      async create() {return {id:10};}, async sendMessage(tab,message) {delivered.push({tab,...message});}},
+  }});
+  vm.runInContext(read('protocol.js'), context); vm.runInContext(read('background.js'), context);
+  const protocol = context.STUDYEZ_PROTOCOL;
+  const payload = {requestId:'bank', lectureId:'test/lecture',provider:'chatgpt',mode:'bank',
+    prompt:'Bank prompt 1.53',promptVersion:'1.53',files:[{filename:'test.pdf',
+      downloadUrl:'http://localhost:8000/api/local-storage/lectures/test.pdf'}]};
+  await new Promise(resolve => receive({type:protocol.MESSAGES.openPreview,payload},
+    {tab:{id:1,url:'http://localhost:5173'}},resolve));
+  assert.equal(stored['studyez-watch:10'].promptVersion,'1.53');
+  await new Promise(resolve => receive({type:'STUDYEZ_BANK_ANSWER',raw:'Question STUDYEZ_BANK_COMPLETE',
+    promptVersion:'untrusted',url:'https://chatgpt.com/c/test'},
+    {tab:{id:10,url:'https://chatgpt.com/c/test'}},resolve));
+  await new Promise(resolve => setImmediate(resolve));
+  const message=delivered.find(m=>m.type===protocol.MESSAGES.bankReady);
+  assert.equal(message.promptVersion,'1.53');
+  assert.equal(stored['studyez-bank:1:test/lecture'].promptVersion,'1.53');
+  const page=webBridge(); page.listeners.extension(message);
+  assert.equal(page.posted.at(-1).promptVersion,'1.53');
 });

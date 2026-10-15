@@ -42,11 +42,16 @@ test('Chrome versions compare omitted and future components and reject invalid m
 test('unsupported preview and review requests never dispatch; supported requests complete', async () => {
   for (const [installed, mode, autoSend, allowed] of [
     ['1.1.0', 'personal', false, false], ['', 'personal', false, false],
-    ['1.2', 'personal', false, true], ['1.2.0', 'shared', false, true], ['1.2.0', 'bank', false, true],
+    ['1.2', 'personal', false, true], ['1.2.0', 'shared', false, true], ['1.2.0', 'bank', false, false],
     ['1.2.0', 'shared', true, false], ['1.2.0', 'review', false, true],
     ['1.3.0', 'personal', false, false], ['1.3.2', 'bank', false, false],
     ['1.3.2', 'shared', true, false], ['1.3.3', 'personal', false, true],
     ['1.3.3', 'shared', true, true], ['1.3.3', 'review', false, true],
+    ['1.3.9', 'bank', true, false], ['1.3.10', 'bank', true, false], ['1.3.11', 'bank', true, false],
+    ['1.3.10', 'bank', false, false], ['1.3.11', 'bank', false, false],
+    ['1.3.12', 'bank', false, false], ['1.3.13', 'bank', false, false], ['1.3.13', 'bank', true, false],
+    ['1.3.14', 'bank', false, false], ['1.3.14', 'bank', true, false],
+    ['1.3.15', 'bank', false, true], ['1.3.15', 'bank', true, true],
     ['1.3.5', 'review', false, true], ['1.4', 'shared', false, true],
   ]) {
     let sent = 0;
@@ -65,7 +70,7 @@ test('unsupported preview and review requests never dispatch; supported requests
     const bridge = load('previewBridge.ts', { react, './version': versions, './protocol': protocol, './linkRouting': routing }, {
       window, document: { documentElement: { getAttribute: () => installed } },
     });
-    const request = bridge.requestPreview({ requestId: 'case', lectureId: '약리학/261008_01', provider: 'chatgpt', prompt: 'study', mode, files: [], autoSend });
+    const request = bridge.requestPreview({ requestId: 'case', lectureId: '약리학/261008_01', provider: 'chatgpt', prompt: 'study', promptVersion:'1.53', mode, files: [], autoSend });
     if (allowed) await request;
     else await assert.rejects(request, /브리지 설치·업데이트/);
     assert.equal(sent, allowed ? 1 : 0, `${installed} ${mode}`);
@@ -159,4 +164,25 @@ test('manual preview uses published 1.2 store release and needs no update for 1.
   assert.match(setup('1.3.0', '1.2.0'), /studyez-extension.zip/);
   assert.equal(setup('1.3.5', '1.2.0'), '');
   assert.equal(setup('', '1.2.0', '1.3.3', false), '');
+});
+
+
+test('bank response HTTP request preserves the originating prompt version', async () => {
+  let handler; const calls=[];
+  const window={location:{origin:'https://studyez.kr'},addEventListener(_event,fn){handler=fn;},
+    removeEventListener(){},postMessage(){}};
+  const source=fs.readFileSync(path.join(root,'web/src/bank/bankBridge.ts'),'utf8');
+  const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+  const exports={};
+  const deps={react:{useEffect:fn=>fn()},'../api':{api:async(url,init)=>{calls.push({url,body:JSON.parse(init.body)});}},
+    '../bridge/linkRouting':routing,
+    '../bridge/previewBridge':{bumpPreviewVersion(){}},'../bridge/protocol':{
+      ...protocol,MESSAGES:{bankReady:'BANK',bankSaved:'SAVED'}}};
+  vm.runInNewContext(compiled,{exports,window,require:id=>deps[id]}); exports.useBankLink();
+  handler({source:window,origin:window.location.origin,data:{source:protocol.EXTENSION_SOURCE,type:'BANK',
+    lectureId:'test/lecture',raw:'Question '.repeat(30)+'STUDYEZ_BANK_COMPLETE',
+    url:'https://chatgpt.com/c/test',promptVersion:'1.53'}});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(calls[0].body.promptVersion,'1.53');
+  assert.match(calls[0].url,/bank-response$/);
 });

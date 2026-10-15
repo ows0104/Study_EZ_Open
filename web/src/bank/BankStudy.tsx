@@ -16,7 +16,7 @@ import { useBankUndo } from "./useBankUndo";
  * 중요도·약점·시험까지 남은 날·선행 문항으로 다음 문항을 정한다. 화면은 그리기만 한다 —
  * 두 곳에서 고르면 갈라진다(Main-Quiz 가 `srs.py` 를 화면에 안 두는 것과 같은 까닭).
  *
- * 자유회상은 스스로 평가한다. 짝짓기·순서형은 선택한 답을 비교해 전부 맞으면 Good, 틀리면 Again으로 기록한다.
+ * 짝짓기·순서형의 정오답은 자동채점하고, 모든 형식의 학습 평가는 사용자가 직접 고른다.
  */
 export function BankStudyPage() {
   const { subject = "", runId = "" } = useParams();
@@ -81,6 +81,7 @@ export function BankStudyPage() {
     <BankStart
       base={base}
       info={info}
+      onChanged={load}
       finished={finished}
       lecture={{ subject, runId }}
       onStarted={() => {

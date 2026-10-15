@@ -3,7 +3,7 @@
 // **대화 주소(`/c/<id>`)** 는 개인 링크다. 만든 계정에서만 열리므로 반 친구에게
 // 주면 죽은 링크다. **공유 주소(`/share/<id>`)** 는 가진 사람 누구나 열 수 있고,
 // `runner preview`가 읽어 Pre-Quiz의 재료로 쓰는 것도 이쪽이다. 공유는 기본
-// 링크를 만들 때만 낸다(`mode === "shared"`).
+// 링크 또는 관리자 문제은행을 만들 때 낸다(`shared`·`bank`).
 //
 // **둘 다 확인한 뒤에만 낸다.** 주소가 생긴 것은 성공이 아니다 — 공유는 비공개
 // 초안일 수 있고(§`isPubliclyReadable`), 대화는 주소창에 `/c/…`가 떠 있어도
@@ -13,9 +13,7 @@
 // 턴마다 다시 낸다. 같은 대화를 다시 공개하면 share id가 그대로라 저장된 주소는
 // 안 바뀌고 내용만 따라온다.
 //
-// **Quiz Bank(`mode === "bank"`, 2026-10-04)는 링크가 아니라 답 본문을 낸다.** 관리자가
-// 캘린더에서 연 대화다. 답이 끝나고 완료 표시가 있으면 마크다운 원문을 배경에 넘기고,
-// 웹앱이 서버에 저장한다. 공유도 대화 주소 저장도 하지 않는다.
+// Quiz Bank도 공유·개인 주소를 각각 낸다. 본문·CLI 검증과 무관하게 링크를 보관한다.
 
 const LOG = "[Study_EZ preview]";
 const POLL_INTERVAL_MS = 4000;
@@ -26,9 +24,8 @@ let publishing = false;
 let bound = "";
 let lastConversationUrl = "";
 let lastShareUrl = "";
+let lastBankAnswer = "";
 let lastSharedNode = "";
-let lastBankNode = "";
-const BANK_MARK = "STUDYEZ_BANK_COMPLETE";
 let contextInvalidated = false;
 let turnObserver = null;
 let pollTimer = null;
@@ -344,6 +341,9 @@ async function publish() {
   // 한 번 확인한 대화만 따라간다. 같은 탭에서 옛 대화로 건너뛰어도 그것이 이
   // 강의의 예습이 되지는 않는다.
   if (bound && bound !== conversation) return "settled";
+  // 생성 중에는 상태 API를 반복해서 읽지 않는다. UI는 확인을 미루는 신호만
+  // 주고, 저장 허용은 아래 finished_successfully/end_turn 검사로 결정한다.
+  if (buttonByLabel(/^(?:stop generating|stop|중지|생성 중지)$/i)) return "pending";
   publishing = true;
   try {
     let token = "";
@@ -355,7 +355,9 @@ async function publish() {
       console.info(LOG, "대화 상태를 읽지 못했습니다:", error);
       // 공유에는 백엔드 계약이 바뀌었을 때의 대비책이 있다. 대화 주소는 읽어
       // 낸 것 자체가 저장 조건이므로 다음 차례에 다시 본다.
-      if (watch.mode !== "shared") return "pending";
+      // 이 실패도 바깥 재시도 간격을 적용한다. 여기서 pending으로 삼키면
+      // 429 응답에도 4초마다 같은 요청을 보내 한도가 풀리지 않는다.
+      if (!["shared", "bank"].includes(watch.mode)) throw error;
       lastSharedNode = "";
       const result = await settleShare(await publishViaDialog(conversation, token));
       if (result === "published") {
@@ -367,20 +369,6 @@ async function publish() {
     if (!state.finished || !state.currentNode) return "pending";
     bound = conversation;
 
-    if (watch.mode === "bank") {
-      if (state.currentNode === lastBankNode) return "settled";
-      // 끝났는데 완료 표시가 없으면 잘린 답이다. 내지 않는다 — 「계속 생성」을 누르면
-      // 화면이 움직이고 다시 여기로 온다.
-      if (!state.answer.includes(BANK_MARK)) {
-        console.info(LOG, "답이 끝났지만 완료 표시가 없습니다. 이어서 생성되기를 기다립니다.");
-        return "settled";
-      }
-      if (!sendShareMessage({ type: "STUDYEZ_BANK_ANSWER", raw: state.answer, url: `https://chatgpt.com/c/${conversation}` })) return "pending";
-      lastBankNode = state.currentNode;
-      console.info(LOG, `Quiz Bank 답 본문을 넘겼습니다 (${state.answer.length}자).`);
-      return "published";
-    }
-
     // **대화 주소는 여기서 처음 낸다.**
     //
     // 주소창에 `/c/<id>`가 뜬 것은 그 대화가 있다는 뜻이 아니다. 보내기 전에도
@@ -391,13 +379,24 @@ async function publish() {
     // 뒤에 낸다. 위의 `conversationState`가 그 확인이다 — 답이 하나 끝나 있는
     // 대화만 여기까지 온다.
     const url = `https://chatgpt.com/c/${conversation}`;
+    // 공유 생성 실패와 무관하게 완성된 문항을 먼저 러너에 전달한다.
+    if (watch.mode === "bank" && state.answer?.trimEnd().endsWith("STUDYEZ_BANK_COMPLETE")
+        && state.answer.length >= 200 && state.answer.length <= 2_000_000
+        && state.answer !== lastBankAnswer) {
+      const stored = await new Promise((resolve) => {
+        if (!sendShareMessage({ type: "STUDYEZ_BANK_ANSWER", raw: state.answer, url },
+            (response) => resolve(response?.ok === true))) resolve(false);
+      });
+      if (!stored) return "pending";
+      lastBankAnswer = state.answer;
+    }
     if (url !== lastConversationUrl) {
       if (!sendLink("STUDYEZ_CONVERSATION_LINK", url)) return "pending";
       lastConversationUrl = url;
       console.info(LOG, "대화 주소를 저장했습니다:", url);
     }
 
-    if (watch.mode !== "shared") return "published";
+    if (!["shared", "bank"].includes(watch.mode)) return "published";
     if (state.currentNode === lastSharedNode) return "settled";
     try {
       const shareUrl = await publishViaApi(conversation, token, state);

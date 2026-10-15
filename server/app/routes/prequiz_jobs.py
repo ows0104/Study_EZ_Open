@@ -6,6 +6,8 @@ running 취소는 cancel_requested로 러너에게 전달한다. 서버는 러�
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import hashlib
+import json
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -19,6 +21,7 @@ from app.jobs.queue import MAX_RUNNING, RUNNER_NAME, open_job_of, queue_order
 from app.jobs.views import board, job_row, runner_row
 from app.models import (
     JOB_BANK,
+    JOB_BANK_POINTS,
     JOB_BUTTON,
     JOB_CANCELED,
     JOB_DONE,
@@ -37,6 +40,15 @@ from app.models import (
     RunnerBeat,
 )
 from app.routes.common import lecture_or_404
+
+
+def _points_input(db: Session, lecture: Lecture) -> tuple[str, datetime]:
+    from app.routes.bank import bank_sources
+    assets = [db.get(Asset, source["assetId"]) for source in bank_sources(db, lecture)]
+    values = [(a.id, a.kind, a.filename, a.object_key, a.size_bytes, a.uploaded_at.isoformat()) for a in assets]
+    signature = hashlib.sha256(json.dumps([lecture.title, values], ensure_ascii=False).encode()).hexdigest()[:16]
+    latest = max([lecture.updated_at, *(a.uploaded_at for a in assets)])
+    return signature, latest
 
 router = APIRouter()
 
@@ -90,9 +102,10 @@ def _no_material(db: Session, lecture: Lecture, kind: str) -> str:
     """
     if kind == JOB_BANK:
         bank = db.get(QuizBank, (lecture.subject, lecture.run_id))
-        return "" if bank is not None and (bank.raw_response or bank.responded_at) else (
-            "ChatGPT 응답이 아직 없습니다. Quiz Bank는 캘린더 패널에서 ChatGPT로 만들고 시작합니다.")
-    if kind == JOB_MAIN:
+        if bank is not None and bank.raw_response:
+            return ""
+        return "완성된 웹 문항이 아직 없습니다. 강의 패널에서 웹 생성을 시작하세요."
+    if kind in (JOB_MAIN, JOB_BANK_POINTS):
         notes = db.scalars(
             select(Asset.id).where(
                 Asset.subject == lecture.subject,
@@ -146,7 +159,23 @@ def request_prequiz(
     if blocked:
         raise HTTPException(400, blocked)
 
+    if kind == JOB_BANK_POINTS:
+        db.refresh(lecture, with_for_update=True)
+        points_signature, inputs_updated = _points_input(db, lecture)
+        completed = db.scalars(select(PrequizJob).where(
+            PrequizJob.subject == lecture.subject, PrequizJob.run_id == lecture.run_id,
+            PrequizJob.kind == JOB_BANK_POINTS, PrequizJob.state == JOB_DONE,
+            PrequizJob.strategy == points_signature).order_by(PrequizJob.id.desc())).first()
+        if completed is not None:
+            return {"job": job_row(completed), "created": False}
+
     open_job = open_job_of(db, lecture.subject, lecture.run_id, kind)
+    if kind == JOB_BANK_POINTS and open_job is not None:
+        # 구버전 작업도 시작 이후 원본이 바뀌지 않았다면 현재 입력에 연결한다.
+        if not open_job.strategy and inputs_updated.replace(tzinfo=UTC) <= open_job.created_at.replace(tzinfo=UTC):
+            open_job.strategy = points_signature
+            db.commit()
+        return {"job": job_row(open_job), "created": False}
     if open_job is not None and open_job.state == JOB_HELD and open_job.ask:
         # 러너가 물어 놓은 줄이다. 여기서 풀면 답 없이 다시 줄에 서고, 러너가
         # 집자마자 같은 것을 또 묻는다 — 누른 사람에게는 아무 일도 안 난 것으로 보인다.
@@ -185,6 +214,18 @@ def request_prequiz(
         origin=JOB_BUTTON,
     )
     db.add(job)
+    if kind == JOB_BANK_POINTS:
+        job.strategy = points_signature
+    if kind == JOB_BANK:
+        bank = db.get(QuizBank, (lecture.subject, lecture.run_id))
+        if bank is None:
+            bank = QuizBank(subject=lecture.subject, run_id=lecture.run_id)
+            db.add(bank)
+        if bank.responded_at is None:
+            bank.responded_at = datetime.now(UTC)
+            bank.responded_by = user.email or user.id
+            bank.status = "responded"
+            bank.message = "Main-Quiz 생성 대기 — 올해 강의록으로 별도 출제"
     db.commit()
     return {"job": job_row(job), "created": True}
 

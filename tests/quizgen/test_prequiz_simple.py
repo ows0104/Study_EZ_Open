@@ -60,3 +60,38 @@ def test_failed_machine_check_never_builds(tmp_path, monkeypatch):
         simple.run(runner)
     assert not built
     assert not (tmp_path / "items.reproduced.json").exists()
+
+
+def test_narration_flag_is_repaired_before_review_and_build(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from quizgen.prequiz import simple
+    from quizgen import reproduce
+
+    (tmp_path / "note.md").write_text("예습 설명 " * 100, encoding="utf-8")
+    simple.dump(tmp_path / "suspects.json", {"coverage": {}})
+    cards = [{"id": "c001", "review_flags": ["preview_narration"]}]
+    events = []
+
+    def generate(runner, feedback=None):
+        if feedback:
+            assert feedback["flags"] == [{"id": "c001", "flags": ["preview_narration"]}]
+            events.append("repair")
+            cards[0]["review_flags"] = []
+
+    def review(runner, current):
+        assert not current[0]["review_flags"]
+        events.append("review")
+        return []
+
+    runner = SimpleNamespace(
+        out=tmp_path, args=SimpleNamespace(note="note.md", repair_rounds=1),
+        step=lambda name, output, fn: fn(),
+        prep=lambda: None, note=lambda: None, approve=lambda: None,
+        validate=lambda: None, violations=lambda: [], save_config=lambda: None,
+        build=lambda: events.append("build"))
+    monkeypatch.setattr(simple, "generate", generate)
+    monkeypatch.setattr(simple, "review", review)
+    monkeypatch.setattr(reproduce, "hard_leaks", lambda _: [])
+    monkeypatch.setattr(reproduce, "load_cards", lambda _: cards)
+    simple.run(runner)
+    assert events == ["repair", "review", "build"]

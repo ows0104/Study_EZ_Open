@@ -14,6 +14,13 @@ from app.preview_links import conversation_url, share_url  # noqa: E402
 
 
 class ExtensionProviderTests(unittest.TestCase):
+    def test_installed_version_matches_manifest(self) -> None:
+        manifest = json.loads((EXTENSION / "manifest.json").read_text(encoding="utf-8"))
+        protocol = (EXTENSION / "protocol.js").read_text(encoding="utf-8")
+        advertised = re.search(r'VERSION:\s*"([^"]+)"', protocol)
+        self.assertIsNotNone(advertised)
+        self.assertEqual(advertised.group(1), manifest["version"])
+
     def test_manifest_covers_all_preview_providers(self) -> None:
         manifest = json.loads((EXTENSION / "manifest.json").read_text(encoding="utf-8"))
         hosts = set(manifest["host_permissions"])
@@ -31,6 +38,7 @@ class ExtensionProviderTests(unittest.TestCase):
         expected = {
             "chatgpt", "chatgpt_share", "gemini", "gemini_share", "claude", "claude_share",
             "chatgpt_review", "gemini_review", "claude_review",
+            "chatgpt_bank", "chatgpt_bank_share",
         }
         web_block = re.search(r"export const LINK_KINDS = \[(.*?)\] as const", web, re.S)
         extension_block = re.search(r"LINK_KINDS: \[(.*?)\]", extension, re.S)
@@ -56,7 +64,7 @@ class ExtensionProviderTests(unittest.TestCase):
         self.assertIn('providerForSender(sender) !== "chatgpt"', handler[:400])
         self.assertIn("raw.includes(BANK_MARK)", handler[:600])
         self.assertIn('watch.mode !== "bank"', handler[:1200])
-        self.assertIn('if (watch.mode === "bank") return;', source)
+        self.assertIn('watch.mode === "bank" ? (share ? "chatgpt_bank_share" : "chatgpt_bank")', source)
 
     def test_background_knows_each_conversation_shape(self) -> None:
         source = (EXTENSION / "background.js").read_text(encoding="utf-8")

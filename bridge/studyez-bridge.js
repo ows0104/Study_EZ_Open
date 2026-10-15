@@ -96,7 +96,9 @@ window.addEventListener("message", (event) => {
 function receiveMessage(message) {
   if (contextInvalidated) return false;
   if (message?.type === MESSAGES.bankReady) {
-    reply({ type: MESSAGES.bankReady, lectureId: message.lectureId, raw: message.raw, url: message.url });
+    reply({ type: MESSAGES.bankReady, lectureId: message.lectureId, raw: message.raw, url: message.url,
+            promptVersion: message.promptVersion || "",
+            ...(typeof message.shareUrl === "string" ? { shareUrl: message.shareUrl } : {}) });
     return false;
   }
   if (message?.type !== MESSAGES.linkReady) return false;
@@ -111,6 +113,10 @@ try {
     chrome.runtime.onMessage.addListener(receiveMessage);
     document.documentElement.setAttribute(READY_ATTRIBUTE, VERSION);
     sendToExtension({ type: MESSAGES.checkPending });
+    // 저장 실패·다른 검수 작업과의 충돌 뒤에도 보관된 문항을 다시 전달한다.
+    window.setInterval(() => {
+      if (!contextInvalidated) sendToExtension({ type: MESSAGES.checkPending });
+    }, 30_000);
   }
 } catch {
   invalidateContext();

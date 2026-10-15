@@ -49,6 +49,22 @@ def test_startup_warning_is_preserved_without_hiding_completed_response():
     assert result["warnings"] == ["tool disabled"]
 
 
+def test_recovered_stream_retains_response_and_usage():
+    warning = {"type": "error", "message": "Reconnecting... 2/5 (websocket closed)"}
+    result = codex.parse_events(events(extra=[warning]), model="gpt-6.1-sol", blind=True)
+    assert result["text"] == '{"ok":true}'
+    assert result["usage"]["output_tokens"] == 7
+    assert result["warnings"] == [warning["message"]]
+
+
+@pytest.mark.parametrize("completed_before", [False, True])
+def test_stream_reconnect_without_later_completion_fails(completed_before):
+    warning = json.dumps({"type": "error", "message": "Reconnecting... 2/5 (websocket closed)"})
+    stdout = (events() + "\n" if completed_before else "") + warning
+    with pytest.raises(codex.SessionError, match="Reconnecting"):
+        codex.parse_events(stdout, model="gpt-6.1-sol", blind=False)
+
+
 @pytest.mark.parametrize("stdout", ["not json", "[]", '{"type":"turn.started"}', events("")])
 def test_truncated_or_empty_output_fails(stdout):
     with pytest.raises(codex.SessionError):

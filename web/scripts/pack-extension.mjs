@@ -17,6 +17,19 @@ import { crc32 } from "node:zlib";
 const here = dirname(fileURLToPath(import.meta.url));
 const source = resolve(here, "../../bridge");
 const target = resolve(here, "../public/studyez-extension.zip");
+// 설치 표시는 웹의 최소 버전 검사에 쓰인다. 패키지와 다르면 배포하지 않는다.
+const manifest = JSON.parse(readFileSync(resolve(source, "manifest.json"), "utf8"));
+const protocol = readFileSync(resolve(source, "protocol.js"), "utf8");
+const advertisedVersion = /VERSION:\s*"([^"]+)"/.exec(protocol)?.[1];
+if (advertisedVersion !== manifest.version) {
+  throw new Error(`확장 버전 불일치: manifest=${manifest.version}, protocol=${advertisedVersion}`);
+}
+
+// 전송 직전에 읽는 정본. 오래 열린 사이트 탭도 새 배포의 프롬프트를 사용한다.
+const bankTemplate = readFileSync(resolve(here, "../src/bank/bankPrompt.md"), "utf8");
+writeFileSync(resolve(here, "../public/bank-prompt.json"), JSON.stringify({
+  version: /Version:\s*(\S+)/.exec(bankTemplate)?.[1], template: bankTemplate,
+}));
 
 /** 배포에 들어갈 것만. 스토어 자산과 문서는 뺀다. */
 const SKIP = new Set(["store-assets", "release", "node_modules", ".git"]);

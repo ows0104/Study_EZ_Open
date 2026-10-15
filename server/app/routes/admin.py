@@ -228,22 +228,8 @@ def complete_uploads(
 
 
 def _auto_main_job(db: Session, lecture: Lecture, fresh: set[str]) -> dict[str, Any] | None:
-    """새 올해 필기에 문제은행 출제부터 업로드까지 자동으로 연결한다."""
-    if "notes_current" not in fresh:
-        return None
-    row = db.get(QuizBank, (lecture.subject, lecture.run_id))
-    # 이미 저장한 응답·문제은행은 관리자가 다시 만들 때까지 보존한다.
-    if row is not None and (row.raw_response or row.bank):
-        return None
-    job = ensure_auto_job(db, lecture.subject, lecture.run_id, "bank", "올해 필기가 올라왔다 — 자동 출제")
-    if job is None:
-        return None
-    if row is None:
-        row = QuizBank(subject=lecture.subject, run_id=lecture.run_id)
-        db.add(row)
-    row.responded_at = datetime.now(UTC)
-    row.message = job.stage
-    return job_row(job)
+    """필기 업로드만으로 별도 출제하지 않는다. 완성된 웹 응답이 검수 작업을 등록한다."""
+    return None
 
 
 # ---------------------------------------------------------------- 산출물 JSON

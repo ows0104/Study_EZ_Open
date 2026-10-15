@@ -12,7 +12,7 @@ export function sequenceScore(q: BankQuestion, answer: BankAnswer | null, order:
   if (q.format !== "sequence" || !answer || !sequenceComplete(q, order)
     || !sequenceComplete(q, answer.correctOrder)) return null;
   const correct = order.filter((item, index) => item === answer.correctOrder[index]).length;
-  return { correct, total: order.length, rating: correct === order.length ? "Good" as const : "Again" as const };
+  return { correct, total: order.length, allCorrect: correct === order.length };
 }
 
 export function SequenceQuestion({ question: q, answer, order, disabled, onSelect, onRemove, onReset }: {
@@ -60,9 +60,9 @@ export function SequenceQuestion({ question: q, answer, order, disabled, onSelec
         {!answer ? <button type="button" className="is-quiet bank-sequence-reset" disabled={disabled} onClick={onReset}>다시 선택</button> : null}
       </> : <p className="bank-note">위에서 첫 번째 항목을 선택하세요.</p>}
     </section>
-    {score ? <p className={`bank-sequence-score ${score.rating === "Good" ? "is-correct" : "is-wrong"}`} role="status">
-      {score.rating === "Good" ? "순서가 모두 맞았어요!" : `순서가 달라요. ${score.correct} / ${score.total}개 위치가 맞습니다.`}
-      <span className="bank-note">다음 문제로 넘어가면 {score.rating}으로 자동 기록됩니다.</span>
+    {score ? <p className={`bank-sequence-score ${score.allCorrect ? "is-correct" : "is-wrong"}`} role="status">
+      {score.allCorrect ? "순서가 모두 맞았어요!" : `순서가 달라요. ${score.correct} / ${score.total}개 위치가 맞습니다.`}
+      <span className="bank-note">아래에서 Again·Hard·Good·Easy 중 체감 난이도에 맞는 평가를 고르세요.</span>
     </p> : null}
   </div>;
 }

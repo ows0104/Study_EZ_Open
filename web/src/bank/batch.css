@@ -1,0 +1,14 @@
+.batch-picker { max-width: 900px; margin: 0 auto; padding: 24px; }
+.batch-filters, .batch-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 20px 0; }
+.batch-filters label { display: flex; align-items: center; gap: 8px; }
+.batch-filters input { min-width: 180px; }
+.batch-actions { position: sticky; top: 0; background: var(--bg, #fff); padding: 12px 0; z-index: 2; }
+.batch-lectures { padding: 0; list-style: none; }
+.batch-lectures li { border-bottom: 1px solid var(--line, #ddd); }
+.batch-lectures label { display: flex; gap: 12px; align-items: center; padding: 16px 8px; cursor: pointer; }
+.batch-lectures input { width: 20px; height: 20px; }
+.batch-lectures input:disabled { cursor: default; }
+.batch-quiz-link { display: inline-block; margin: 0 8px 16px 40px; }
+.batch-lectures small { display: block; margin-top: 4px; color: var(--muted, #666); }
+.batch-progress { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; padding: 14px; }
+@media (max-width: 600px) { .batch-picker { padding: 16px; } .batch-filters label { width: 100%; } }

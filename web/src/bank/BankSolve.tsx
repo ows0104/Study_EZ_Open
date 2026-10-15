@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import { useMe } from "../useMe";
-import type { BankAnswer, BankNext, BankRating, BankRead, BankSession } from "../types/bank";
+import { invalidateTimetable } from "../firstScreen";
+import type { BankAnswer, BankNext, BankRating, BankRead, BankSession, BankTier } from "../types/bank";
 import { ConceptMap } from "./ConceptMap";
 import { PersonalQuestionDialog } from "./PersonalQuestionDialog";
 import { daysLabel, DIRECTION_LABEL } from "./labels";
@@ -11,8 +12,10 @@ import { SlidePreloader } from "../slidePreload";
 import { usePreparedBankAnswer } from "./usePreparedBankAnswer";
 import { DailyGoal } from "./DailyGoal";
 import { useBankUndo } from "./useBankUndo";
-import { MatchingQuestion, matchingScore, type MatchingPicks } from "./MatchingQuestion";
-import { SequenceQuestion, sequenceComplete, sequenceScore } from "./SequenceQuestion";
+import { MatchingQuestion, type MatchingPicks } from "./MatchingQuestion";
+import { SequenceQuestion, sequenceComplete } from "./SequenceQuestion";
+import { SuspendedQuestions } from "./SuspendedQuestions";
+import { splitSlides } from "./BankSlides";
 
 const FORMAT_LABEL: Record<string, string> = {
   basic: "단답", cloze: "빈칸", list: "나열", ox: "O/X", mcq: "객관식", multi_select: "복수 선택",
@@ -26,11 +29,21 @@ const RATINGS: { rating: BankRating; grade: string }[] = [
   { rating: "Easy", grade: "easy" },
 ];
 
-export function BankSolve({ base, lecture, onFinished }: {
+export type BatchStudy = {
+  lectures: { subject: string; runId: string }[];
+  resumeLecture?: { subject: string; runId: string };
+  onProgress: (next: BankNext) => void;
+};
+
+export function BankSolve({ base: initialBase, lecture: initialLecture, onFinished, batch }: {
   base: string; lecture: { subject: string; runId: string }; onFinished: (summary: BankSession | null) => void;
+  batch?: BatchStudy;
 }) {
   const isAdmin = Boolean(useMe()?.isAdmin);
   const [current, setCurrent] = useState<BankNext | null>(null);
+  const activeLecture = useRef(batch ? batch.resumeLecture ?? null : initialLecture);
+  const lecture = current?.lecture ?? initialLecture;
+  const base = batch ? `/api/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}/bank` : initialBase;
   const [answer, setAnswer] = useState<BankAnswer | null>(null);
   const [answerRevision, setAnswerRevision] = useState(0);
   const [picked, setPicked] = useState<Set<string>>(new Set());
@@ -44,15 +57,20 @@ export function BankSolve({ base, lecture, onFinished }: {
   // 회차를 끝내지 않고 지도와 진행도를 본다. 열 때마다 새로 읽는다 — 방금 매긴 평가가 숙련도에 들어가 있다.
   const [peek, setPeek] = useState<BankRead | null>(null);
   const restore = useCallback((got: BankNext) => {
+    if (got.lecture) activeLecture.current = got.lecture;
+    batch?.onProgress(got);
     setCurrent(got); setAnswer(got.answer ?? null); setPicked(new Set()); setReporting(false); setActionMessage("");
     setMatches({}); setActiveMatch(0);
     setOrder([]);
     window.scrollTo(0, 0);
-  }, []);
-  const { undo, undoBusy, pending } = useBankUndo(base, current?.undoToken, restore, setError, busy || Boolean(peek));
+  }, [batch]);
+  const batchUndo = useCallback((token: string) => api<BankNext>("/api/bank/batch/undo", {
+    method: "POST", body: JSON.stringify({ lectures: batch?.lectures, reviewToken: token }),
+  }), [batch]);
+  const { undo, undoBusy, pending } = useBankUndo(base, current?.undoToken, restore, setError, busy || Boolean(peek), batch ? batchUndo : undefined);
   const slides = useMemo(() => new SlidePreloader(), [base]);
   const prepared = usePreparedBankAnswer(base, current?.reviewToken, slides, answerRevision);
-  useEffect(() => { slides.warm(current?.preloadSlides?.map((slide) => slide.url) ?? []); }, [current, slides]);
+  useEffect(() => { slides.warm(splitSlides(current?.preloadSlides ?? []).primary.map(slide => slide.url)); }, [current, slides]);
 
   const next = useCallback(async () => {
     if (pending.current) return;
@@ -60,7 +78,12 @@ export function BankSolve({ base, lecture, onFinished }: {
     setBusy(true);
     setError("");
     try {
-      const got = await api<BankNext>(`${base}/next`, { method: "POST" });
+      const got = await api<BankNext>(batch ? "/api/bank/batch/next" : `${initialBase}/next?choiceProtocol=true`, {
+        method: "POST", ...(batch ? { body: JSON.stringify({ lectures: batch.lectures, resumeLecture: activeLecture.current }) } : {}),
+      });
+      if (got.lecture) activeLecture.current = got.lecture;
+      batch?.onProgress(got);
+      invalidateTimetable();
       if (!got.question && !got.waiting) {
         onFinished(got.summary ?? null);
         return;
@@ -79,8 +102,20 @@ export function BankSolve({ base, lecture, onFinished }: {
       pending.current = false;
       setBusy(false);
     }
-  }, [base, onFinished]);
+  }, [initialBase, batch, onFinished]);
   useEffect(() => void next(), [next]);
+
+  const showChoices = useCallback(async () => {
+    if (!current?.reviewToken || busy || pending.current) return;
+    pending.current = true; setBusy(true); setError("");
+    try {
+      const got = await api<Pick<BankNext, "question" | "choicesShown">>(`${base}/options`, {
+        method: "POST", body: JSON.stringify({ reviewToken: current.reviewToken }),
+      });
+      setCurrent(old => old ? { ...old, ...got } : old);
+    } catch (cause) { setError((cause as Error).message); }
+    finally { pending.current = false; setBusy(false); }
+  }, [base, current, busy]);
 
   const reveal = useCallback(async () => {
     if (!current?.reviewToken || answer || busy || pending.current) return;
@@ -105,9 +140,6 @@ export function BankSolve({ base, lecture, onFinished }: {
     }
   }, [base, current, answer, busy, prepared, matches, order]);
 
-  const autoResult = current?.question ? matchingScore(current.question, answer, matches)
-    ?? sequenceScore(current.question, answer, order) : null;
-
   const rate = useCallback(async (rating: BankRating) => {
     if (!current?.reviewToken || !answer || busy || pending.current) return;
     pending.current = true;
@@ -115,6 +147,7 @@ export function BankSolve({ base, lecture, onFinished }: {
     setError("");
     try {
       await api(`${base}/rate`, { method: "POST", body: JSON.stringify({ reviewToken: current.reviewToken, rating }) });
+      invalidateTimetable();
     } catch (cause) {
       setError((cause as Error).message);
       pending.current = false;
@@ -125,11 +158,47 @@ export function BankSolve({ base, lecture, onFinished }: {
     await next();
   }, [base, current, answer, busy, next]);
 
+  const suspend = useCallback(async () => {
+    if (!current?.question || !current.reviewToken || busy || pending.current || peek) return;
+    pending.current = true; setBusy(true); setError("");
+    try {
+      await api(`${base}/questions/${encodeURIComponent(current.question.question_id)}/suspension`, {
+        method: "PUT", body: JSON.stringify({ suspended: true, reviewToken: current.reviewToken }),
+      });
+      invalidateTimetable();
+      setCurrent(null); setAnswer(null);
+    } catch (cause) {
+      setError((cause as Error).message);
+      return;
+    } finally { pending.current = false; setBusy(false); }
+    await next();
+  }, [base, current, busy, peek, next]);
+
+  async function changeTier(tier: BankTier | null) {
+    if (!current?.question || !current.reviewToken || busy || undoBusy || pending.current) return;
+    pending.current = true; setBusy(true); setError(""); setActionMessage("");
+    try {
+      const got = await api<Pick<BankNext, "question" | "lectureGoal"> & { rescheduled?: boolean }>(`${base}/questions/${encodeURIComponent(current.question.question_id)}/priority`, {
+        method: "PUT", body: JSON.stringify({ tier, reviewToken: current.reviewToken }),
+      });
+      setCurrent(old => old ? { ...old, question: got.question, lectureGoal: got.lectureGoal ?? old.lectureGoal } : old);
+      invalidateTimetable();
+      setActionMessage((tier === null ? "원래 중요도로 되돌렸습니다." : `내 문제의 중요도를 ${tier}로 저장했습니다.`)
+        + (got.rescheduled ? " 복습 예정일도 새 목표로 다시 계산했습니다." : ""));
+    } catch (cause) { setError((cause as Error).message); }
+    finally { pending.current = false; setBusy(false); }
+  }
+
   async function end() {
     if (!current?.session || busy || pending.current) return;
     pending.current = true;
     setBusy(true);
     try {
+      if (batch) {
+        await api("/api/bank/batch/session/end", { method: "POST", body: JSON.stringify({ lectures: batch.lectures }) });
+        onFinished({ ...current.session, reason: "user_finished" });
+        return;
+      }
       const summary = await api<BankSession>(`${base}/session/end`, {
         method: "POST", body: JSON.stringify({ sessionId: current.session.session_id }),
       });
@@ -155,23 +224,27 @@ export function BankSolve({ base, lecture, onFinished }: {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (event.defaultPrevented || event.repeat || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
-      if (document.querySelector("dialog[open]")) return;
+      if (document.querySelector("dialog[open], [role='dialog'][aria-modal='true']")) return;
       if (peek) return;
-      if (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, button, a, summary, [contenteditable]:not([contenteditable='false'])")) return;
+      if (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, [role='textbox'], [contenteditable]:not([contenteditable='false'])")) return;
+      if (event.key === "5" && !event.shiftKey) {
+        event.preventDefault();
+        void suspend();
+        return;
+      }
+      if (event.target instanceof HTMLElement && event.target.closest("button, a, summary")) return;
       if ((event.key === " " || event.key === "Enter") && !answer) {
         event.preventDefault();
-        void reveal();
-      } else if (answer && autoResult && (event.key === " " || event.key === "Enter")) {
-        event.preventDefault();
-        void rate(autoResult.rating);
-      } else if (answer && !autoResult && ["1", "2", "3", "4"].includes(event.key)) {
+        if (current?.question?.mcq_mode === "recall_first" && !current.choicesShown) void showChoices();
+        else void reveal();
+      } else if (answer && ["1", "2", "3", "4"].includes(event.key)) {
         event.preventDefault();
         void rate(RATINGS[Number(event.key) - 1].rating);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [answer, reveal, rate, peek, autoResult]);
+  }, [answer, reveal, rate, peek, current, showChoices, suspend]);
 
   if (current?.waiting) return <div className="quiz bank-start">
     <h2>지금 풀 수 있는 분량을 마쳤어요!</h2>
@@ -181,8 +254,10 @@ export function BankSolve({ base, lecture, onFinished }: {
     {current.undoToken ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={() => void undo()} aria-keyshortcuts="Z Control+Z">되돌리기 <kbd>Z</kbd></button> : null}
     {error ? <p className="notice is-error">{error}</p> : null}
   </div>;
-  if (!current?.question) return error ? <p className="notice is-error">{error}</p> : <p className="notice">불러오는 중…</p>;
+  if (!current?.question) return error ? <div className="quiz"><p className="notice is-error">{error}</p>
+    <button onClick={() => void next()}>다시 시도</button></div> : <p className="notice">불러오는 중…</p>;
   const q = current.question;
+  const hiddenChoices = q.mcq_mode === "recall_first" && !current.choicesShown && !answer;
   const session = current.session;
 
   if (peek) {
@@ -193,7 +268,8 @@ export function BankSolve({ base, lecture, onFinished }: {
           <button className="is-quiet" onClick={() => setPeek(null)}>← 문제로 돌아가기</button>
           <span>{current.examDate ? daysLabel(current.examDate) : ""}</span>
         </p>
-        <DailyGoal plan={peek.lectureGoal} />
+        <DailyGoal plan={current.batchGoal ?? peek.lectureGoal} />
+        <SuspendedQuestions base={base} info={peek} onChanged={() => void openPeek()} />
         {peek.conceptMap?.length ? <ConceptMap concepts={peek.conceptMap} /> : null}
         {live ? (
           <details className="bank-session-details"><summary>이번 학습 기록 보기</summary>
@@ -211,28 +287,40 @@ export function BankSolve({ base, lecture, onFinished }: {
   return (
     <>
       <div className="quiz">
-        <DailyGoal plan={current.lectureGoal} collapsible />
+        <DailyGoal plan={current.batchGoal ?? current.lectureGoal} collapsible />
         <p className="quiz-progress bank-progress">
           <span>
             {session ? session.size == null ? `${session.reviewed}문항 완료` : `${session.reviewed + 1} / ${session.size}` : ""}
             {current.examDate ? ` · ${daysLabel(current.examDate)}` : ""}
           </span>
           <span className="bank-tags">
-            {q.tier} · {DIRECTION_LABEL[q.retrieval_direction] ?? q.retrieval_direction} ·{" "}
-            {FORMAT_LABEL[q.format] ?? q.format}
+            <label className="bank-tier-control" title="내 계정의 이 문제에 적용됩니다. Core: 학습목표·기출 / Important: 강조·임상 중요 / Optional: 기타 세부사항">
+              내 중요도{" "}
+              <select aria-label="내 문제 중요도" value={q.tier} disabled={busy || undoBusy}
+                onChange={event => void changeTier(event.target.value as BankTier)}>
+                <option value="Core">Core</option>
+                <option value="Important">Important</option>
+                <option value="Optional">Optional</option>
+              </select>
+            </label>
+            {q.targetMastery != null ? <span className="bank-target" title="현재 문제의 목표 숙련도이며 실제 기억률을 측정한 값은 아닙니다">
+              {" · "}목표 {Math.round(q.targetMastery * 100)}%
+            </span> : null}
+            {q.personalTier ? <button className="is-quiet bank-tier-reset" disabled={busy || undoBusy}
+              title={`원래 중요도: ${q.originalTier ?? ""}`} onClick={() => void changeTier(null)}>원래대로</button> : null}
+            {q.advanced ? <span className="bank-source-badge" title="중요도와 독립된 추가 추론·개념 연계 문항">Advanced · 심화</span> : null}
+            {" · "}{DIRECTION_LABEL[q.retrieval_direction] ?? q.retrieval_direction} ·{" "}
+            {q.mcq_mode === "recall_first" ? "기억 확인형 객관식" : q.mcq_mode === "comparison" ? "구별·판단형 객관식" : FORMAT_LABEL[q.format] ?? q.format}
+            {q.conflict_id ? <span className="bank-source-badge">자료 간 차이</span> : null}
           </span>
           <span className="bank-progress-actions">
             {current.undoToken ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={() => void undo()} aria-keyshortcuts="Z Control+Z">되돌리기 <kbd>Z</kbd></button> : null}
             <button className="is-quiet" onClick={() => void openPeek()}>개념 지도</button>
-            <button className="is-quiet" onClick={() => void end()}>회차 마치기</button>
+            <button className="is-quiet" onClick={() => void end()}>{batch ? "쉬기" : "회차 마치기"}</button>
           </span>
         </p>
 
-        {q.conflict_id ? (
-          <p className="bank-conflict">강의자료와 족보가 어긋나는 대목입니다. 답을 보면 무엇이 어떻게 다른지 나옵니다.</p>
-        ) : null}
-
-        <QuestionBody question={q} answer={answer} picked={picked}
+        <QuestionBody question={q} answer={answer} picked={picked} showOptions={!hiddenChoices} disabled={busy || undoBusy}
           sequence={q.format === "sequence" ? <SequenceQuestion question={q} answer={answer} order={order}
             disabled={busy || undoBusy} onSelect={item => {
               if (answer || busy || undoBusy) return;
@@ -251,7 +339,7 @@ export function BankSolve({ base, lecture, onFinished }: {
               setActiveMatch(following >= 0 ? following : unfilled >= 0 ? unfilled : activeMatch);
             }} /> : undefined}
           onPick={(id) => {
-          if (answer) return;
+          if (answer || busy || undoBusy) return;
           setPicked((old) => {
             const fresh = new Set(q.format === "mcq" ? [] : old);
             if (old.has(id) && q.format !== "mcq") fresh.delete(id);
@@ -288,11 +376,7 @@ export function BankSolve({ base, lecture, onFinished }: {
       </div>
 
       <div className="quiz-bar">
-        {answer && autoResult ? (
-          <button className="quiz-submit" disabled={busy || undoBusy} onClick={() => void rate(autoResult.rating)}>
-            {busy ? "기록 중…" : <>다음 문제 <kbd>space</kbd></>}
-          </button>
-        ) : answer ? (
+        {answer ? (
           RATINGS.map(({ rating, grade }, index) => (
             <button key={rating} className={`quiz-grade is-${grade}`} disabled={busy || undoBusy} onClick={() => void rate(rating)}>
               <span className="quiz-grade-name">
@@ -304,10 +388,14 @@ export function BankSolve({ base, lecture, onFinished }: {
         ) : (
           <button className="quiz-submit" disabled={busy || undoBusy || (q.format === "matching"
             && !q.matching_left.every(left => q.matching_right.includes(matches[left])))
-            || (q.format === "sequence" && !sequenceComplete(q, order))} onClick={() => void reveal()}>
-            {busy ? "펴는 중…" : <>{q.format === "matching" || q.format === "sequence" ? "채점하기" : "답 보기"} <kbd>space</kbd></>}
+            || (q.format === "sequence" && !sequenceComplete(q, order))} onClick={() => void (hiddenChoices ? showChoices() : reveal())}>
+            {busy ? "펴는 중…" : <>{hiddenChoices ? "선지 보기" : q.format === "matching" || q.format === "sequence" ? "채점하기" : "답 보기"} <kbd>space</kbd></>}
           </button>
         )}
+        <button className="bank-suspend" disabled={busy || undoBusy} aria-keyshortcuts="5"
+          title="내 학습에서 제외하고 다음 문제로 넘어갑니다" onClick={() => void suspend()}>
+          <span className="quiz-grade-name">비활성화 <kbd>5</kbd></span>
+        </button>
       </div>
     </>
   );

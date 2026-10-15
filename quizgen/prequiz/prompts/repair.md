@@ -11,6 +11,8 @@
 `missing_preview_evidence`·`preview_excerpt_not_found`는 예습 설명본을 다시 읽고
 문항에 답할 실제 원문을 발췌해 고친다. 발췌만 맞추려고 질문과 무관한 문장을 넣지 않는다.
 `missing_learning_support`는 정답을 노출하지 않는 힌트·학습 범위·수업 질문을 채운다.
+`preview_narration`은 질문·힌트에서 설명본·예습 자료 안내를 걷어 내고, 필요한 상황과
+조건을 직접 제시한다. 힌트는 같은 상황 안에서 사고를 돕는 단서로 고친다.
 
 ## ① 고치기 전에 그 슬라이드를 본다
 
