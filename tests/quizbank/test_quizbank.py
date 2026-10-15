@@ -132,6 +132,20 @@ def test_unused_conflict_history_is_preserved_as_a_warning(bank):
     assert any("Conflict ID 없음" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
 
 
+def test_conflict_source_consistency_is_content_quality_not_broken_structure(bank):
+    _fix_lists(bank)
+    cid = bank["source_conflicts"][0]["conflict_id"]
+    q = next(q for q in bank["questions"] if q["conflict_id"] == cid)
+    q["source_refs"] = [{"source_id": "S3", "locator": "p.1"}]
+    assert any('충돌 기록과 출처 불일치' in e for e in validate_bank(bank, ['S1','S2','S3'])['errors'])
+    assert validate_bank(bank, ['S1','S2','S3'], check_quality=False)['pass']
+    q['conflict_id'] = 'missing-conflict'
+    assert not validate_bank(bank, ['S1','S2','S3'], check_quality=False)['pass']
+    q['conflict_id'] = cid
+    q['source_refs'][0]['source_id'] = 'missing-source'
+    assert not validate_bank(bank, ['S1','S2','S3'], check_quality=False)['pass']
+
+
 def test_EXT_출처는_허용하되_출처_요약은_요구하지_않는다(bank):
     _fix_lists(bank)
     bank["questions"][0]["source_refs"].append({"source_id": "EXT", "locator": "외부 의학지식"})
