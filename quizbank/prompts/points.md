@@ -25,6 +25,9 @@ context.json의 강의·source ID·scope를 읽고 source-text.md 전체와 sour
    핵심 구별 특징은 필요한 약물→특징·특징→약물 방향과 정답 수준(계열·개별 약물)을 검토한다.
 4. 각 objective에 objective_id와 근거 slides를, 각 target에 안정적인 point_id와 실제 근거
    slides를 붙인다. slides는 PDF 물리 쪽 번호이며 목표의 모든 쪽을 각 target에 복사하지 않는다.
+   상위 objective의 slides에는 그 목표의 모든 target이 실제로 인용한 쪽을 포함한다.
+   각 target의 slides는 비어 있지 않은 상위 slides의 부분집합이어야 한다. 정확한 target 근거를
+   이 조건에 맞추려고 삭제하지 말고, 원본을 확인하여 상위 목표의 전체 근거 쪽도 함께 기록한다.
    원본 진행 순서로 정렬한다.
 
 ## 3. 원본 검토 범위
