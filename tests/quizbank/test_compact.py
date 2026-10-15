@@ -212,7 +212,7 @@ def test_shared_quality_guidance_preserves_158_rules_and_adds_159_layout():
     assert layout in quality
     clarity = '- 자료 충돌을 해결한 문항도 하나의 분명한 학습 목표를 시험한다. 자료 간 차이를 해명하려고 임상 조건·추론을 여러 겹 붙인 함정으로 만들지 않는다. 해설은 정답의 이유와 기억할 핵심을 먼저 짧게 설명하고, 출처별 차이·검증 이력·작업 경위와 섞지 않는다. 실제 모순·정답표 오류·상황 차이를 구별하며, 미해결 쟁점을 해결된 것처럼 쓰지 않는다.\n'
     assert clarity in quality
-    assert hashlib.sha256(quality.replace(layout, '').replace(clarity, '').encode()).hexdigest() == '25db5ff53bbeb974d59a8f53dd2e78557e0f721d3c4058dd75e63417faa3f5d4'
+    assert hashlib.sha256(quality.replace(layout, '').replace(clarity, '').encode()).hexdigest() == '2e0d28b75825828e32e9790f500f6f79bf35cb1cd3089ee8fa2a74e76dfbadb8'
 
 
 def test_multiline_comparison_keeps_compact_metadata_answers_and_question_ids():

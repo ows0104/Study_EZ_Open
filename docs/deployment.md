@@ -214,7 +214,8 @@ cd server; ./deploy.ps1
 ## 다시 배포할 때
 
 2026-10-12부터 V1 강의별 Main-Quiz 풀이와 기존 Study Engine 간격 계산을 사용한다.
-문항 품질 검사와 검토된 선지 풀은 프롬프트 1.26 / JSON 3.1에 유지한다. 기존 3.0 은행도 유효하다.
+문항 품질 검사·검토된 선지 풀을 유지하며 현재 Quiz Bank는 JSON 3.2를 생성한다. 중요도는
+Core·Important·Optional, 독립 심화 표시는 advanced boolean이다. 기존 3.0·3.1 은행도 계속 읽는다.
 V2의 learning_* 표와 학습 이력은 보존한다. 복귀를 위해 표·문제은행·개인 수정본을 삭제하지 않는다.
 `/study`는 캘린더로 연결하고 기존 `/bank/<subject>/<runId>` 주소는 V1 풀이를 연다.
 
