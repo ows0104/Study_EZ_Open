@@ -232,8 +232,9 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
   }, [answer, reveal, rate, peek, current, showChoices, suspend]);
 
   if (current?.waiting) return <div className="quiz bank-start">
-    <h2>지금 풀 수 있는 분량을 마쳤어요!</h2>
-    <p>어려웠던 내용은 복습으로 이어갈게요. 수고했어요!</p>
+    <h2>{current.retryAt ? "잠시 간격을 두고 다시 풀어요" : "지금 풀 수 있는 분량을 마쳤어요!"}</h2>
+    <p>{current.retryAt ? "직전 문제만 남아 잠시 쉬고 있습니다. 최소 1분 간격을 둔 뒤 다시 확인해 주세요." : "어려웠던 내용은 복습으로 이어갈게요. 수고했어요!"}</p>
+    {current.retryAt ? <button className="is-quiet" disabled={busy} onClick={() => void next()}>다시 문제 확인</button> : null}{" "}
     <Link className="daily-goal-main" to="/">다른 강의 학습하기</Link>{" "}
     <button className="is-quiet" disabled={busy} onClick={() => void end()}>학습 기록 보기</button>
     {current.undoToken ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={() => void undo()} aria-keyshortcuts="Z Control+Z">되돌리기 <kbd>Z</kbd></button> : null}

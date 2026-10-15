@@ -15,7 +15,6 @@ from datetime import UTC, datetime, timedelta
 
 from .policy import DEFAULT, policy_hash
 from .memory import memory_snapshot, next_stability, stability_days
-from .progress import seen_ids
 from .suspension import active_bank
 
 DAY_MS = 86_400_000
@@ -233,26 +232,14 @@ def rank_questions(bank: dict, state: dict, exam_date: str, now: int, policy: di
 
 
 def select_question(bank: dict, state: dict, exam_date: str, now: int, policy: dict = DEFAULT,
-                    *, prefer_unseen: bool = False) -> dict:
+                    *, prefer_unseen: bool = False, pages: dict | None = None) -> dict:
+    if prefer_unseen:
+        # 추가 학습의 기존 호출도 일반·모아풀기와 같은 선택 정책으로 연결한다.
+        from .daily_queue import select_extra_question
+        return select_extra_question(bank, state, exam_date, now, policy, pages=pages)
     bank = active_bank(bank, state)
     ranked = rank_questions(bank, state, exam_date, now, policy)
     chosen = next((r for r in ranked if r["eligible"] and r["score"] > 0), None)
-    if prefer_unseen:
-        seen = seen_ids(state)
-        questions = {q["question_id"]: q for q in bank["questions"]}
-        # 직접 선택한 추가 학습에서는 숙련도 문턱보다 첫 열람을 우선한다.
-        # 선행 문항을 아직 안 봤으면 그것부터 내고, 같은 방향의 변형도 별개로 확인한다.
-        unseen = [r for r in ranked if r["question_id"] not in seen]
-        for row in unseen:
-            question = questions[row["question_id"]]
-            ready = all(qid in seen for qid in question["prerequisites"])
-            row["notes"] += ["추가 학습에서는 아직 안 본 문항을 먼저 확인합니다."] + row["reasons"]
-            row["eligible"], row["score"] = ready, row["raw_score"] if ready else 0
-            row["reasons"] = [] if ready else ["아직 안 본 선행 문항을 먼저 확인합니다."]
-        candidates = [r for r in unseen if r["eligible"]]
-        candidates.sort(key=lambda r: ({"Core": 0, "Advanced": 1, "Optional": 2}[r["tier"]],
-                                       r["stage"], -r["raw_score"], r["question_id"]))
-        chosen = candidates[0] if candidates else next((r for r in ranked if r["eligible"] and r["score"] > 0), None)
     question = next((q for q in bank["questions"] if chosen and q["question_id"] == chosen["question_id"]), None)
     last = state["history"][-1]["timestamp"] if state["history"] else now
     return {"question": question, "ranked": ranked, "days": days_until(exam_date, now),

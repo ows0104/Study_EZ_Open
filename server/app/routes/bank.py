@@ -922,12 +922,12 @@ def _next_bank_question(subject: str, run_id: str, user: CurrentUser, db: Sessio
             db.commit()
             return {"question": None, "summary": engine.session_summary(bank, state, now=now),
                     "lectureGoal": goal, "reason": "lecture_goal_met", "undoToken": undo_token(state)}
-        picked = (engine.select_question(bank, state, exam, now, prefer_unseen=True) if goal["met"] and extra_today
+        picked = (engine.select_question(bank, state, exam, now, prefer_unseen=True, pages=row.pages) if goal["met"] and extra_today
                   else selection if selection is not None
                   else select_daily_question(bank, state, exam, now, pages=row.pages))
         question, days = picked["question"], picked["days"]
         if question is None:
-            if not goal["met"]:
+            if not goal["met"] or extra_today and picked.get("retry_at") is not None:
                 _save(state_row, state)
                 db.commit()
                 return {"question": None, "waiting": True, "lectureGoal": goal,

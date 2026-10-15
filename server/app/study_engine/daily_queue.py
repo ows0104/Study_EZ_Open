@@ -10,6 +10,7 @@ from .ordering import choose_candidate, question_slide, study_history
 from .planning import day_start
 from .memory import DAY_MS
 from .policy import DEFAULT
+from .progress import seen_ids
 from .suspension import active_bank
 
 
@@ -92,17 +93,25 @@ def lecture_goal(bank: dict, state: dict, title: str, now: int, policy: dict = D
 
 
 def daily_candidates(bank: dict, state: dict, exam: str, now: int, policy: dict = DEFAULT,
-                     *, scope: tuple = (), lecture_order: int = 0, pages: dict | None = None) -> tuple[list[dict], list[dict]]:
+                     *, scope: tuple = (), lecture_order: int = 0, pages: dict | None = None,
+                     extra: bool = False) -> tuple[list[dict], list[dict]]:
     """선행관계를 만족하는 오늘의 후보. 일정은 원래 예정일과 오늘 풀이 가능 시각을 구분한다."""
     units = daily_units(bank, state, now, policy)
-    remaining = [u for u in units if u["status"] not in ("done", "later")]
-    unlearned = {u["key"] for u in units if not u["seen"]}
+    seen = seen_ids(state) if extra else set()
+    remaining = units if extra else [u for u in units if u["status"] not in ("done", "later")]
+    unlearned = {u["key"] for u in units if (u["key"] not in seen if extra else not u["seen"])}
     # 미학습 문항을 모두 먼저 확인한다. 완료 문항은 다시 고르지 않는다.
     ranked = rank_questions(bank, state, exam, now, policy)
     rows = {r["question_id"]: r for r in ranked}
     positions = {q["question_id"]: i for i, q in enumerate(bank["questions"])}
     candidates = []
     for unit in remaining:
+        if extra:
+            # 완료·미도래 문항도 포함한다. 오늘 처음 평가한 문항도 추가 학습에서는 복습이다.
+            item = state.get("items", {}).get(unit["key"], {})
+            last = unit["last"] or {}
+            unit = {**unit, "kind": "review" if unit["key"] in seen else "new", "due": now,
+                    "scheduled_due": item.get("due_at", last.get("next_due_at", unit["scheduled_due"]))}
         if unit["due"] > now:
             continue
         q = unit["questions"][0]
@@ -132,3 +141,29 @@ def select_daily_question(bank: dict, state: dict, exam: str, now: int, policy: 
     candidates, ranked = daily_candidates(bank, state, exam, now, policy, pages=pages)
     chosen = choose_candidate(candidates, study_history(bank, state, now), now, policy)
     return daily_selection(chosen, ranked, exam, now)
+
+
+def select_extra_question(bank: dict, state: dict, exam: str, now: int, policy: dict = DEFAULT,
+                          *, pages: dict | None = None) -> dict:
+    """추가 학습도 공통 선택기를 사용하되 완료·미도래 문항까지 포함한다."""
+    candidates, ranked = daily_candidates(bank, state, exam, now, policy, pages=pages, extra=True)
+    history = [h for h in state.get("history", []) if h["timestamp"] <= now]
+    last = max(history, key=lambda h: h["timestamp"], default=None)
+    retry_at = None
+    recent = last and (day_start(last["timestamp"]) == day_start(now)
+                       or now < last["timestamp"] + policy["recency"]["minimumRepeatMs"])
+    if recent and any(c["question"]["question_id"] == last["question_id"] for c in candidates):
+        others = [c for c in candidates if c["question"]["question_id"] != last["question_id"]]
+        if others:
+            candidates = others
+        elif now < last["timestamp"] + policy["recency"]["minimumRepeatMs"]:
+            candidates = []
+            retry_at = last["timestamp"] + policy["recency"]["minimumRepeatMs"]
+    chosen = choose_candidate(candidates, study_history(bank, state, now), now, policy)
+    result = daily_selection(chosen, ranked, exam, now)
+    if chosen:
+        chosen["rank"]["notes"].append("추가 학습은 완료·미도래 문항도 같은 복습 가중치로 고르고 직전 문항의 연속 반복을 피합니다.")
+    else:
+        result.update(reason="직전 문제의 즉시 반복을 잠시 쉬고 있습니다." if retry_at else "학습 가능한 문제가 없습니다.",
+                      retry_at=retry_at)
+    return result

@@ -36,9 +36,10 @@ def direction_gap(candidate: dict, history: list[dict]) -> int | None:
 def review_weight(candidate: dict, now: int) -> float:
     row = candidate["rank"]
     overdue = max(0, (day_start(now) - candidate["unit"]["scheduled_due"]) / DAY_MS)
+    future_days = max(0, (day_start(candidate["unit"]["scheduled_due"]) - day_start(now)) / DAY_MS)
     components = row["components"]
     # 당일 시각을 기다리게 하지는 않지만 원래 예정일은 가중치에 남긴다.
-    return ((1 + min(overdue, 30)) * components["weakness"] * components["importance"]
+    return ((1 + min(overdue, 30)) / (1 + future_days) * components["weakness"] * components["importance"]
             * components["examUrgency"] * components["examDirection"])
 
 

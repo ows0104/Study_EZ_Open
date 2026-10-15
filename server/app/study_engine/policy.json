@@ -1,5 +1,5 @@
 {
-  "version": "3.6.0",
+  "version": "3.8.0",
   "ordering": { "minIntervening": 3, "targetIntervening": 4, "maxIntervening": 5 },
   "forgetting": { "minDays": 0.25, "maxDays": 365, "legacyDays": 1, "initialDays": { "Again": 0.25, "Hard": 0.5, "Good": 1, "Easy": 2 }, "growth": { "Hard": 1.1, "Good": 2, "Easy": 3 }, "lapseMultiplier": 0.5, "lapseMaxDays": 1, "minSpacingDays": 0.16666666666666666 },
   "mastery": { "alpha": 0.35, "ratings": { "Again": 0, "Hard": 0.45, "Good": 0.95, "Easy": 1 }, "maxTarget": 0.9, "targets": { "1": 0.4, "2": 0.55, "3": 0.7, "4": 0.78, "5": 0.85 }, "weaknessFloor": 0.08 },
