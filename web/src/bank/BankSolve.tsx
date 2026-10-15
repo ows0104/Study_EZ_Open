@@ -14,6 +14,7 @@ import { DailyGoal } from "./DailyGoal";
 import { useBankUndo } from "./useBankUndo";
 import { MatchingQuestion, type MatchingPicks } from "./MatchingQuestion";
 import { SequenceQuestion, sequenceComplete } from "./SequenceQuestion";
+import { SuspendedQuestions } from "./SuspendedQuestions";
 
 const FORMAT_LABEL: Record<string, string> = {
   basic: "단답", cloze: "빈칸", list: "나열", ox: "O/X", mcq: "객관식", multi_select: "복수 선택",
@@ -156,6 +157,22 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
     await next();
   }, [base, current, answer, busy, next]);
 
+  const suspend = useCallback(async () => {
+    if (!current?.question || !current.reviewToken || busy || pending.current || peek) return;
+    pending.current = true; setBusy(true); setError("");
+    try {
+      await api(`${base}/questions/${encodeURIComponent(current.question.question_id)}/suspension`, {
+        method: "PUT", body: JSON.stringify({ suspended: true, reviewToken: current.reviewToken }),
+      });
+      invalidateTimetable();
+      setCurrent(null); setAnswer(null);
+    } catch (cause) {
+      setError((cause as Error).message);
+      return;
+    } finally { pending.current = false; setBusy(false); }
+    await next();
+  }, [base, current, busy, peek, next]);
+
   async function end() {
     if (!current?.session || busy || pending.current) return;
     pending.current = true;
@@ -191,10 +208,13 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (event.defaultPrevented || event.repeat || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
-      if (document.querySelector("dialog[open]")) return;
+      if (document.querySelector("dialog[open], [role='dialog'][aria-modal='true']")) return;
       if (peek) return;
       if (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, button, a, summary, [contenteditable]:not([contenteditable='false'])")) return;
-      if ((event.key === " " || event.key === "Enter") && !answer) {
+      if (event.key === "5" && !event.shiftKey) {
+        event.preventDefault();
+        void suspend();
+      } else if ((event.key === " " || event.key === "Enter") && !answer) {
         event.preventDefault();
         if (current?.question?.mcq_mode === "recall_first" && !current.choicesShown) void showChoices();
         else void reveal();
@@ -205,7 +225,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [answer, reveal, rate, peek, current, showChoices]);
+  }, [answer, reveal, rate, peek, current, showChoices, suspend]);
 
   if (current?.waiting) return <div className="quiz bank-start">
     <h2>지금 풀 수 있는 분량을 마쳤어요!</h2>
@@ -230,6 +250,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
           <span>{current.examDate ? daysLabel(current.examDate) : ""}</span>
         </p>
         <DailyGoal plan={current.batchGoal ?? peek.lectureGoal} />
+        <SuspendedQuestions base={base} info={peek} onChanged={() => void openPeek()} />
         {peek.conceptMap?.length ? <ConceptMap concepts={peek.conceptMap} /> : null}
         {live ? (
           <details className="bank-session-details"><summary>이번 학습 기록 보기</summary>
@@ -340,6 +361,10 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
             {busy ? "펴는 중…" : <>{hiddenChoices ? "선지 보기" : q.format === "matching" || q.format === "sequence" ? "채점하기" : "답 보기"} <kbd>space</kbd></>}
           </button>
         )}
+        <button className="bank-suspend" disabled={busy || undoBusy} aria-keyshortcuts="5"
+          title="내 학습에서 제외하고 다음 문제로 넘어갑니다" onClick={() => void suspend()}>
+          <span className="quiz-grade-name">비활성화 <kbd>5</kbd></span>
+        </button>
       </div>
     </>
   );

@@ -6,10 +6,11 @@ import type { BankRead, BankSession } from "../types/bank";
 import { ConceptMap } from "./ConceptMap";
 import { DailyGoal } from "./DailyGoal";
 import { BankCoverage } from "./BankCoverage";
+import { SuspendedQuestions } from "./SuspendedQuestions";
 import { LectureMastery } from "../lecture/LectureMastery";
 import { daysLabel, DIRECTION_LABEL } from "./labels";
 
-export function BankStart({ base, info, finished, lecture, onStarted, onUndo, undoBusy }: {
+export function BankStart({ base, info, finished, lecture, onStarted, onUndo, undoBusy, onChanged }: {
   base: string;
   info: BankRead;
   finished: BankSession | null;
@@ -17,6 +18,7 @@ export function BankStart({ base, info, finished, lecture, onStarted, onUndo, un
   onStarted: () => void;
   onUndo?: () => void;
   undoBusy?: boolean;
+  onChanged: () => void;
 }) {
   const [size, setSize] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -53,6 +55,7 @@ export function BankStart({ base, info, finished, lecture, onStarted, onUndo, un
       <DailyGoal plan={info.lectureGoal} showMain={info.lectureGoal?.met}
         onContinue={() => void start()} busy={busy} />
       <BankCoverage value={info.summary.coverage} />
+      <SuspendedQuestions base={base} info={info} onChanged={onChanged} />
       {info.summary.publicationWarning ? <p className="bank-note">{info.summary.publicationWarning}</p> : null}
       {error ? <p className="notice is-error">{error}</p> : null}
       {info.conceptMap?.length ? <ConceptMap concepts={info.conceptMap} /> : <LectureMastery value={info.mastery} />}

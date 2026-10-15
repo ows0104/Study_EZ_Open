@@ -210,6 +210,7 @@ export type BankSession = {
 };
 
 export type BankRead = {
+  suspendedQuestions?: { questionId: string; question: string }[];
   undoToken?: string | null;
   lectureGoal?: import("./studyPlan").LectureGoal | null;
   mastery?: import("./mastery").LectureMastery | null;

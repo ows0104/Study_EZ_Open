@@ -16,5 +16,7 @@ def mark_seen(state: dict, question_id: str) -> None:
 
 
 def panel_progress(bank: dict, state: dict) -> dict[str, int]:
-    required = {q["question_id"] for q in bank.get("questions", []) if q["tier"] != "Optional"}
+    suspended = set(state.get("suspended_question_ids", []))
+    required = {q["question_id"] for q in bank.get("questions", [])
+                if q["tier"] != "Optional" and q["question_id"] not in suspended}
     return {"studyQuestionCount": len(required), "seenQuestionCount": len(required & seen_ids(state))}

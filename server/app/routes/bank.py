@@ -765,6 +765,9 @@ def read_bank(subject: str, run_id: str, user: CurrentUser = Depends(require_app
         now = engine.now_ms()
         state = db.get(BankState, (user.id, row.subject, row.run_id))
         current = state.state if state and state.build_id == row.build_id else engine.empty_state()
+        out["suspendedQuestions"] = [{"questionId": q["question_id"], "question": q["question"]}
+                                     for q in row.bank["questions"]
+                                     if q["question_id"] in current.get("suspended_question_ids", [])]
         if state and state.build_id == row.build_id:
             out["session"] = engine.session_summary(row.bank, state.state, now=now)
             out["previousSessions"] = state.state.get("sessions", [])[-5:]
@@ -846,7 +849,7 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
     by_id = {q["question_id"]: q for q in bank["questions"]}
     served = state.get("served")
     goal = lecture_goal(bank, state, lecture.title, now)
-    if served and served["question_id"] in by_id:
+    if served and served["question_id"] in by_id and served["question_id"] not in state.get("suspended_question_ids", []):
         question = by_id[served["question_id"]]
         days = engine.days_until(exam, now)
     else:
@@ -909,6 +912,39 @@ class TokenIn(BaseModel):
     review_token: str = Field(alias="reviewToken")
 
     model_config = {"populate_by_name": True}
+
+
+class SuspensionIn(BaseModel):
+    suspended: bool
+    review_token: str | None = Field(default=None, alias="reviewToken")
+    build_id: str | None = Field(default=None, alias="buildId")
+
+
+@router.put("/lectures/{subject}/{run_id}/bank/questions/{question_id}/suspension")
+def set_bank_suspension(subject: str, run_id: str, question_id: str, payload: SuspensionIn,
+                        user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)) -> dict:
+    row = _bank_or_404(db, lecture_or_404(db, subject, run_id), user)
+    bank = _usable(row)
+    if not any(q["question_id"] == question_id for q in bank["questions"]):
+        raise HTTPException(404, "문항을 찾을 수 없습니다.")
+    state_row = _load_state(db, user, row)
+    state = dict(state_row.state)
+    served = state.get("served") or {}
+    if payload.suspended:
+        if not payload.review_token or served.get("token") != payload.review_token or served.get("question_id") != question_id:
+            raise HTTPException(409, "현재 학습 문항이 아닙니다.")
+    elif payload.build_id != row.build_id:
+        raise HTTPException(409, "문제은행이 변경됐습니다. 목록을 새로고침하세요.")
+    suspended = set(state.get("suspended_question_ids", []))
+    if payload.suspended:
+        suspended.add(question_id)
+        state["served"] = None
+    else:
+        suspended.discard(question_id)
+    state["suspended_question_ids"] = sorted(suspended)
+    _save(state_row, state)
+    db.commit()
+    return {"questionId": question_id, "suspended": payload.suspended, "buildId": row.build_id}
 
 
 @router.post("/lectures/{subject}/{run_id}/bank/options")

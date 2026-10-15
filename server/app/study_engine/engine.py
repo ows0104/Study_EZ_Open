@@ -16,6 +16,7 @@ from datetime import UTC, datetime, timedelta
 from .policy import DEFAULT, policy_hash
 from .memory import memory_snapshot, next_stability, stability_days
 from .progress import seen_ids
+from .suspension import active_bank
 
 DAY_MS = 86_400_000
 KST = timedelta(hours=9)
@@ -121,6 +122,7 @@ def upgrade_state(bank: dict, previous: dict, policy: dict = DEFAULT, now: int =
 
 
 def rank_questions(bank: dict, state: dict, exam_date: str, now: int, policy: dict = DEFAULT) -> list[dict]:
+    bank = active_bank(bank, state)
     state = memory_snapshot(state, now, policy)
     days = days_until(exam_date, now)
     by_id = {q["question_id"]: q for q in bank["questions"]}
@@ -232,6 +234,7 @@ def rank_questions(bank: dict, state: dict, exam_date: str, now: int, policy: di
 
 def select_question(bank: dict, state: dict, exam_date: str, now: int, policy: dict = DEFAULT,
                     *, prefer_unseen: bool = False) -> dict:
+    bank = active_bank(bank, state)
     ranked = rank_questions(bank, state, exam_date, now, policy)
     chosen = next((r for r in ranked if r["eligible"] and r["score"] > 0), None)
     if prefer_unseen:

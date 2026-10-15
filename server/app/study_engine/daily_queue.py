@@ -11,6 +11,7 @@ from .engine import question_stage, rank_questions, days_until
 from .planning import day_start
 from .memory import DAY_MS
 from .policy import DEFAULT
+from .suspension import active_bank
 
 
 def _due(review: dict, state: dict, *, latest: bool, policy: dict) -> int:
@@ -25,7 +26,7 @@ def _due(review: dict, state: dict, *, latest: bool, policy: dict) -> int:
 
 def daily_units(bank: dict, state: dict, now: int, policy: dict = DEFAULT) -> list[dict]:
     start, end = day_start(now), day_start(now) + DAY_MS
-    groups = {q["question_id"]: [q] for q in bank["questions"]}
+    groups = {q["question_id"]: [q] for q in active_bank(bank, state)["questions"]}
     reviews = {key: [] for key in groups}
     for h in state.get("history", []):
         key = h["question_id"]
@@ -82,8 +83,8 @@ def lecture_goal(bank: dict, state: dict, title: str, now: int, policy: dict = D
             "unlearnedRemaining": sum(not u["seen"] for u in units),
             "relearningRemaining": sum(u["status"] == "relearning" for u in pending),
             "waiting": len(waiting), "retryAt": min((u["due"] for u in waiting), default=None),
-            "met": bool(units) and completed == total,
-            "progressPercent": completed * 100 // total if total else 100 if units else 0,
+            "met": bool(bank["questions"]) and completed == total,
+            "progressPercent": completed * 100 // total if total else 100 if bank["questions"] else 0,
             "reviewedToday": sum(u["today"] for u in units),
             "firstPassSeen": sum(u["seen"] for u in units), "firstPassTotal": len(units)}
 

@@ -81,6 +81,7 @@ export function BankStudyPage() {
     <BankStart
       base={base}
       info={info}
+      onChanged={load}
       finished={finished}
       lecture={{ subject, runId }}
       onStarted={() => {

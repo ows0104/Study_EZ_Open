@@ -2706,6 +2706,13 @@ button.notice-title:hover:not(:disabled) {
 .bank-choice-score.is-correct > strong { color: var(--ok); }
 .bank-choice-score.is-wrong > strong { color: var(--bad); }
 
+.bank-suspended { margin: 16px 0; }
+.bank-suspended ul { list-style: none; padding: 0; }
+.bank-suspended li { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 8px 0; }
+.bank-suspended li > span { min-width: 0; overflow-wrap: anywhere; }
+.bank-suspended li > button { flex-shrink: 0; }
+.quiz-bar .bank-suspend { color: var(--ink-2); border-style: dashed; }
+
 /* 두 열을 가운데로 모은다. `1fr 1fr` 이면 넓은 화면에서 왼쪽 열이 왼쪽 끝에, 오른쪽 열이 한가운데 서서
    짝을 눈으로 잇기 어려웠다(2026-10-05 관리자). */
 .bank-match {
