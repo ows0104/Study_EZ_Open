@@ -14,7 +14,11 @@ function load(file) {
   }).outputText;
   const context = vm.createContext({ exports: {}, require: (name) => {
     if (name.endsWith('/SlideImage')) return { SlideImage: () => null };
-    if (name.startsWith('.')) return load(path.resolve(path.dirname(file), name + '.tsx'));
+    if (name.endsWith('.css')) return {};
+    if (name.startsWith('.')) {
+      const target = path.resolve(path.dirname(file), name);
+      return load(fs.existsSync(target + '.tsx') ? target + '.tsx' : target + '.ts');
+    }
     return require(name);
   } });
   vm.runInContext(js, context);
@@ -23,6 +27,27 @@ function load(file) {
 const { AnswerBody, QuestionBody, choiceScore } = load(path.join(__dirname, '../src/bank/BankQuestion.tsx'));
 const question = { format: 'basic', question_id: 'q1', question: '', options: [], matching_left: [], matching_right: [] };
 const answer = { answer: '', answerUnits: [], answerPairs: [], correctOrder: [], correctOptionIds: [], medicalReview: null, slides: [] };
+test('source differences are optional readable rows while unresolved issues stay visible', () => {
+  const conflict = '판단: 장관 내 작용과 전신 치료를 구분한다.\n자료 1: 강의 p.18 — 경구 흡수가 낮다.\n자료 2: 족보 2023 — 과거 설사 치료 사용.\n근거: 흡수 특성과 치료 권고는 다른 판단이다.\n미해결: 과거 정답표 원문을 추가 확인해야 한다.';
+  const html = renderToStaticMarkup(React.createElement(AnswerBody, {
+    question: { ...question, format: 'ox' }, answer: { ...answer, answer: 'X', answerUnits: ['X'], conflict, external: true },
+  }));
+  assert.match(html, /<details><summary>/);
+  assert.doesNotMatch(html, /<details open/);
+  assert.ok(html.indexOf('확인 필요') < html.indexOf('<details>'));
+  assert.match(html, /<dt>자료 1<\/dt><dd>강의 p.18/);
+  assert.match(html, /정답 판단에 외부 근거를 참고했습니다/);
+  assert.doesNotMatch(html, /강의자료·족보에 없는 내용/);
+});
+
+test('legacy comparison text survives while citation engine markup is removed', () => {
+  const conflict = '과거 자료의 적응증과 현재 판단을 구분한다. <Cite refs={{"turn290171search0"}}/> 핵심 근거는 보존한다.';
+  const html = renderToStaticMarkup(React.createElement(AnswerBody, { question, answer: { ...answer, conflict } }));
+  assert.match(html, /과거 자료의 적응증과 현재 판단을 구분한다/);
+  assert.match(html, /핵심 근거는 보존한다/);
+  assert.doesNotMatch(html, /Cite|turn290171search0/);
+});
+
 test('comparison stems use four indented rows and keep all eight blank answers in order', () => {
   const text = 'Clindamycin과 vancomycin을 같은 약동학 기준으로 비교하여 빈칸을 채우시오. 경구흡수: clindamycin은 {{c1}}, vancomycin은 {{c1}}. 세포 내 침투: clindamycin은 {{c1}}, vancomycin은 {{c1}}. 주요 처리 경로: clindamycin은 {{c1}}, vancomycin은 {{c1}}. 신기능 저하 시: clindamycin은 대개 {{c1}}, vancomycin은 {{c1}}.';
   const q = { ...question, format: 'cloze', question: text };

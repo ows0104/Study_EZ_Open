@@ -210,7 +210,9 @@ def test_shared_quality_guidance_preserves_158_rules_and_adds_159_layout():
     quality = generate.item_quality_guidance().removeprefix('문항 품질 원칙\n\n')
     layout = '- 비교형 발문은 도입문 다음에 기준별로 줄을 나누고 두 칸 들여쓴다. 각 줄 안에서 비교 대상의 순서를 일정하게 유지한다. 긴 발문도 문장·조건 단위로 줄을 나누고 후속 문장을 들여써 읽기 쉽게 한다. 줄바꿈을 위해 내용·조건을 생략하거나 문항·빈칸을 새로 나누지 않는다.\n'
     assert layout in quality
-    assert hashlib.sha256(quality.replace(layout, '').encode()).hexdigest() == '6b095dd7d2690f6ccf9350f34363f6e81755494f7dd5bbb887fe4ece97762e28'
+    clarity = '- 자료 충돌을 해결한 문항도 하나의 분명한 학습 목표를 시험한다. 자료 간 차이를 해명하려고 임상 조건·추론을 여러 겹 붙인 함정으로 만들지 않는다. 해설은 정답의 이유와 기억할 핵심을 먼저 짧게 설명하고, 출처별 차이·검증 이력·작업 경위와 섞지 않는다. 실제 모순·정답표 오류·상황 차이를 구별하며, 미해결 쟁점을 해결된 것처럼 쓰지 않는다.\n'
+    assert clarity in quality
+    assert hashlib.sha256(quality.replace(layout, '').replace(clarity, '').encode()).hexdigest() == '6b095dd7d2690f6ccf9350f34363f6e81755494f7dd5bbb887fe4ece97762e28'
 
 
 def test_multiline_comparison_keeps_compact_metadata_answers_and_question_ids():

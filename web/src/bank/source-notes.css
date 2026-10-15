@@ -1,0 +1,69 @@
+.bank-source-badge {
+  display: inline-block;
+  margin-inline-start: 8px;
+  padding: 2px 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  color: var(--ink-2);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.bank-source-note {
+  max-width: 720px;
+  margin: 20px auto 24px;
+  border-block: 1px solid var(--line);
+  color: var(--ink-2);
+  text-align: left;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.75;
+}
+.bank-source-note summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  padding: 14px 0;
+  cursor: pointer;
+  list-style: none;
+  color: var(--ink);
+  font-weight: 600;
+}
+.bank-source-note summary::-webkit-details-marker { display: none; }
+.bank-source-note summary::before { content: "+"; width: 14px; color: var(--ink-3); }
+.bank-source-note details[open] > summary::before { content: "−"; }
+.bank-source-note summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+.bank-source-summary { color: var(--ink-3); font-size: 12px; font-weight: 400; }
+.bank-source-content { padding: 0 0 16px 26px; }
+.bank-source-content dl { display: grid; gap: 14px; margin: 0; }
+.bank-source-content dl > div { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 12px; }
+.bank-source-content dt { color: var(--ink-3); font-size: 12px; font-weight: 600; }
+.bank-source-content dd { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
+.bank-source-content strong { color: inherit; }
+.bank-source-legacy { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
+.bank-evidence-note { margin: 14px 0; color: var(--ink-3); font-size: 12px; font-weight: 400; text-align: left; }
+.bank-source-content .bank-evidence-note { margin: 14px 0 0; }
+.bank-source-pending { margin: 12px 0 0; color: var(--warn); }
+.bank-source-pending b { margin-inline-end: 6px; font-weight: 600; }
+.quiz-explanation.bank-explanation {
+  width: min(100%, 720px);
+  margin: 16px auto;
+  padding: 18px 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  color: var(--ink);
+  background: var(--surface-2);
+  font-size: 16px;
+  font-weight: 400;
+  text-align: left;
+}
+.bank-explanation h2 { margin: 0 0 10px; color: var(--ink); font-size: 14px; font-weight: 650; }
+.bank-explanation p { margin: 0; color: var(--ink); font-weight: 400; line-height: 1.75; }
+.bank-explanation strong { color: inherit; }
+.bank-ox-explanation .bank-answer-point { color: var(--ink); font-weight: 400; }
+@media (max-width: 520px) {
+  .bank-source-content { padding-inline-start: 0; }
+  .bank-source-content dl > div { grid-template-columns: 1fr; gap: 2px; }
+  .bank-explanation { padding: 16px; }
+}

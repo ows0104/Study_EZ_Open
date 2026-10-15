@@ -3,6 +3,7 @@ import type { BankAnswer, BankQuestion } from "../types/bank";
 import type { SlidePreloader } from "../slidePreload";
 import { AnswerPoints, answerPoints } from "./AnswerPoints";
 import { BankStem } from "./BankStem";
+import { BankSourceNote } from "./BankSourceNote";
 import { BankSlides } from "./BankSlides";
 
 /**
@@ -205,14 +206,7 @@ export function AnswerBody({ question: q, answer, preload }: {
           </ol>
         </section>
       ) : null}
-      {answer.conflict ? (
-        <p className="bank-conflict">
-          <b>자료 충돌</b> {answer.conflict}
-        </p>
-      ) : null}
-      {answer.external ? (
-        <p className="bank-note">이 문항에는 강의자료·족보에 없는 내용(외부 의학지식)이 들어 있습니다.</p>
-      ) : null}
+      <BankSourceNote conflict={answer.conflict} external={answer.external} />
       {answer.reviewIssues?.map((issue, index) => <p className="bank-review is-doubt" key={index}><b>문항 검수 · 미해결</b> {issue}</p>)}
       {review && review.verdict !== "ok" ? (
         <p className={`bank-review is-${review.verdict}`}>

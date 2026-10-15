@@ -281,6 +281,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
           <span className="bank-tags">
             {q.tier} · {DIRECTION_LABEL[q.retrieval_direction] ?? q.retrieval_direction} ·{" "}
             {q.mcq_mode === "recall_first" ? "기억 확인형 객관식" : q.mcq_mode === "comparison" ? "구별·판단형 객관식" : FORMAT_LABEL[q.format] ?? q.format}
+            {q.conflict_id ? <span className="bank-source-badge">자료 간 차이</span> : null}
           </span>
           <span className="bank-progress-actions">
             {current.undoToken ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={() => void undo()} aria-keyshortcuts="Z Control+Z">되돌리기 <kbd>Z</kbd></button> : null}
@@ -288,10 +289,6 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
             <button className="is-quiet" onClick={() => void end()}>{batch ? "쉬기" : "회차 마치기"}</button>
           </span>
         </p>
-
-        {q.conflict_id ? (
-          <p className="bank-conflict">강의자료와 족보가 어긋나는 대목입니다. 답을 보면 무엇이 어떻게 다른지 나옵니다.</p>
-        ) : null}
 
         <QuestionBody question={q} answer={answer} picked={picked} showOptions={!hiddenChoices} disabled={busy || undoBusy}
           sequence={q.format === "sequence" ? <SequenceQuestion question={q} answer={answer} order={order}
