@@ -90,6 +90,35 @@ STUDYEZ_BANK_COMPLETE
 '''
 
 
+def test_exact_repeated_block_is_collapsed_without_losing_conflict_section():
+    first = RAW.split('\n\n### Q002', 1)[0]
+    raw = RAW.replace('### CF001', first + '\n\n### CF001')
+    prepared, repeated = compact.deduplicate_repeats(raw)
+    assert repeated == ['Q001']
+    assert '### CF001\n설명:' in prepared
+    assert compact.read_blocks(prepared) == compact.read_blocks(RAW)
+
+
+@pytest.mark.parametrize('replacement', ['정답: ["β"]', '출처: S1 p.2'])
+def test_repeated_id_with_changed_answer_or_source_is_rejected(replacement):
+    first = RAW.split('\n\n### Q002', 1)[0]
+    changed = first.replace('정답: ["α"]', replacement) if replacement.startswith('정답') else first.replace('출처: S1 p.1', replacement)
+    with pytest.raises(SessionError, match='내용이 다른 블록'):
+        compact.read_blocks(first + '\n\n' + changed)
+
+
+def test_repeated_chunk_wrappers_do_not_change_question_identity():
+    first = RAW.split('\n\n### Q002', 1)[0]
+    raw = first + '\nSTUDYEZ_BANK_COMPLETE\n```\n```markdown\n' + first + '\nSTUDYEZ_BANK_COMPLETE'
+    assert compact.read_blocks(raw) == compact.read_blocks(first)
+
+
+def test_repeated_id_does_not_hide_changed_text_under_a_subheading():
+    first = RAW.split('\n\n### Q002', 1)[0]
+    with pytest.raises(SessionError, match='내용이 다른 블록'):
+        compact.read_blocks(first + '\n#### 세부 조건\n첫 조건\n' + first + '\n#### 세부 조건\n다른 조건')
+
+
 def draft():
     """The organizer's non-medical fixture with deliberately omitted derived answers."""
     questions = []

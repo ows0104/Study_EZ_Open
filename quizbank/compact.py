@@ -12,8 +12,38 @@ HEADER = re.compile(r"^#{1,6}[ \t]+(Q[A-Za-z0-9_-]+)([^\n]*)$", re.M)
 LABEL = re.compile(r"^\s*([A-Z]\d*|\d+)\s*[:.)]\s*(.+?)\s*$")
 
 
+def deduplicate_repeats(raw: str) -> tuple[str, list[str]]:
+    """Collapse exact repeated compact blocks; conflicting versions remain an error."""
+    headings = list(HEADER.finditer(raw))
+    if not any("|" in h[2] for h in headings):
+        return raw, []
+    seen, skipped, repeated = {}, [], []
+    for index, heading in enumerate(headings):
+        end = headings[index + 1].start() if index + 1 < len(headings) else len(raw)
+        following = re.search(r"^#{1,6}[ \t]+(?:CF\d+|Source Conflicts|출처 충돌|Statistics|통계)[ \t]*$",
+                              raw[heading.end():end], re.M)
+        if following:
+            end = heading.end() + following.start()
+        body = raw[heading.end():end]
+        # These are response/chunk wrappers, never answer JSON or source text.
+        body = re.sub(r"(?m)^[ \t]*(?:```(?:markdown|md)?|STUDYEZ_BANK_COMPLETE)[ \t]*$", "", body).strip()
+        signature = (heading[0].strip(), body)
+        qid = heading[1]
+        if qid in seen:
+            if seen[qid] != signature:
+                raise SessionError(f"문항 ID 중복: {qid} — 내용이 다른 블록은 합칠 수 없습니다.")
+            skipped.append((heading.start(), end))
+            repeated.append(qid)
+        else:
+            seen[qid] = signature
+    for start, end in reversed(skipped):
+        raw = raw[:start] + raw[end:]
+    return raw, repeated
+
+
 def read_blocks(raw: str) -> list[dict]:
     """Read explicit metadata, answers and optional display text; the LLM organizes the rest."""
+    raw, _ = deduplicate_repeats(raw)
     headings = list(HEADER.finditer(raw))
     if not any("|" in heading[2] for heading in headings):
         return []  # Older field blocks without compact metadata keep their existing path.

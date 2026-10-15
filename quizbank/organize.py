@@ -195,17 +195,20 @@ def tidy_matching_choices(bank: dict) -> list[str]:
 def organize(raw: str, lecture: dict, *, model: str | None = None, out: Path | None = None) -> tuple[dict, dict]:
     """`(bank, info)`. lecture = {title, sources: [{id, kind, filename}]}."""
     from .web_audit import enabled
-    from .compact import read_blocks, restore
-    blocks = read_blocks(clean_response(raw))
+    from .compact import deduplicate_repeats, read_blocks, restore
+    prepared, repeated = deduplicate_repeats(clean_response(raw))
+    blocks = read_blocks(prepared)
     if out is not None and enabled(lecture.get("prompt_version", "")):
         from .file_organize import convert
-        bank, info = convert(clean_response(raw), organizer_prompt(raw, lecture), out, model=model)
+        bank, info = convert(prepared, organizer_prompt(prepared, lecture), out, model=model)
     else:
-        bank, info = session.run_structured(organizer_prompt(raw, lecture), BANK, system=SYSTEM,
+        bank, info = session.run_structured(organizer_prompt(prepared, lecture), BANK, system=SYSTEM,
                                             label="정리", timeout=1200, model=model)
     bank = without_retired(bank)   # 옛 응답을 다시 정리해도 뺀 칸은 남기지 않는다
     bank["build_meta"]["schema_version"] = expected_schema(raw, lecture)
     restore(bank, blocks)
+    if repeated and isinstance(bank.get("warnings"), list):
+        bank["warnings"].append(f"[중복 기록] 내용이 같은 문항 블록 {len(repeated)}회를 한 번만 저장했다: {', '.join(repeated)}")
     fixed = tidy_labels(bank)
     matching = tidy_matching_choices(bank)
     if matching and isinstance(bank.get("warnings"), list):
@@ -224,5 +227,8 @@ def organize(raw: str, lecture: dict, *, model: str | None = None, out: Path | N
         evidence = {block["question_id"]: {"authoredHash": authored_hash(questions[block["question_id"]]),
                     "evidence": block["source_evidence"]} for block in blocks if block.get("source_evidence")}
         out.mkdir(parents=True, exist_ok=True)
+        if repeated:
+            (out / "repeated-blocks.json").write_text(json.dumps({"repeatedIds": repeated,
+                "policy": "exact content only; original raw response preserved"}, ensure_ascii=False, indent=2), encoding="utf-8")
         (out / "authored-evidence.json").write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
     return bank, info
