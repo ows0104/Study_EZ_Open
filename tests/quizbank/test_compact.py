@@ -206,10 +206,10 @@ def test_answer_decoder_preserves_quoted_field_names_inside_answers():
     assert compact.read_blocks(raw)[1]['units'] == units + ['α']
 
 
-def test_shared_quality_guidance_matches_the_reviewed_156_rules():
-    # v1.56 distinguishes ancillary comparisons from highlighted primary facts.
+def test_shared_quality_guidance_matches_the_reviewed_158_rules():
+    # External verification resolves source conflicts without expanding exam scope.
     quality = generate.item_quality_guidance().removeprefix('문항 품질 원칙\n\n')
-    assert hashlib.sha256(quality.encode()).hexdigest() == 'cfef4eaf998aa60b6a3a4d474f541ef59608629615719510d80112c31b8e80f0'
+    assert hashlib.sha256(quality.encode()).hexdigest() == '6b095dd7d2690f6ccf9350f34363f6e81755494f7dd5bbb887fe4ece97762e28'
 
 
 def test_optional_explanation_is_restored_without_becoming_answers(monkeypatch):
