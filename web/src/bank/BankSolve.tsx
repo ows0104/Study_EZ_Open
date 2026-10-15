@@ -280,7 +280,9 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
             {current.examDate ? ` · ${daysLabel(current.examDate)}` : ""}
           </span>
           <span className="bank-tags">
-            {q.tier} · {DIRECTION_LABEL[q.retrieval_direction] ?? q.retrieval_direction} ·{" "}
+            <span title="Core: 학습목표·기출 / Important: 강조·임상 중요 / Optional: 기타 세부사항">{q.tier}</span>
+            {q.advanced ? <span className="bank-source-badge" title="중요도와 독립된 추가 추론·개념 연계 문항">Advanced · 심화</span> : null}
+            {" · "}{DIRECTION_LABEL[q.retrieval_direction] ?? q.retrieval_direction} ·{" "}
             {q.mcq_mode === "recall_first" ? "기억 확인형 객관식" : q.mcq_mode === "comparison" ? "구별·판단형 객관식" : FORMAT_LABEL[q.format] ?? q.format}
             {q.conflict_id ? <span className="bank-source-badge">자료 간 차이</span> : null}
           </span>

@@ -61,7 +61,7 @@ def leaked_units(question: dict) -> list[str]:
 
 def quality_errors(bank: dict) -> tuple[list[str], list[str]]:
     """New authoring checks leave existing 3.0 banks valid."""
-    if bank["build_meta"]["schema_version"] != "3.1":
+    if bank["build_meta"]["schema_version"] not in ("3.1", "3.2"):
         return [], []
     errors, warnings = [], []
     for q in bank["questions"]:

@@ -16,6 +16,7 @@ from datetime import UTC, datetime, timedelta
 from .policy import DEFAULT, policy_hash
 from .memory import memory_snapshot, next_stability, stability_days
 from .suspension import active_bank
+from app.bank_validation.priorities import TIER_ORDER, is_advanced, priority_tier
 
 DAY_MS = 86_400_000
 KST = timedelta(hours=9)
@@ -59,7 +60,8 @@ def _plan(bank: dict, concept_id: str) -> dict | None:
 def target_for(bank: dict, q: dict, policy: dict = DEFAULT) -> dict:
     plan = _plan(bank, q["concept_id"])
     requested = plan["target_mastery"] if plan else policy["mastery"]["targets"][str(q["importance"])]
-    return {"requested": requested, "effective": min(requested, policy["mastery"]["maxTarget"])}
+    return {"requested": requested, "effective": min(requested, policy["mastery"]["maxTarget"],
+            policy["mastery"]["tierTargets"][priority_tier(q)])}
 
 
 def question_stage(q: dict) -> int:
@@ -163,7 +165,7 @@ def rank_questions(bank: dict, state: dict, exam_date: str, now: int, policy: di
             reasons.append("중요한 Core의 약점을 먼저 복습합니다.")
         elif q["tier"] == "Optional" and core < prog["optionalCore"] and days > ex["closeDays"] and any_core:
             reasons.append("Core 숙련도가 Optional 진입 기준보다 낮습니다.")
-        if (q["tier"] == "Advanced" and has_core and core_mastery(bank, state, q["concept_id"]) < prog["advancedCore"]
+        if (is_advanced(q) and has_core and core_mastery(bank, state, q["concept_id"]) < prog["advancedCore"]
                 and not (q["prerequisites"] and prereq_ready)):
             reasons.append("기초 Core 또는 선행 문항의 숙련도를 더 쌓아야 합니다.")
         if stage > ready + prog["maxStageAhead"] and not remediation:
@@ -196,7 +198,7 @@ def rank_questions(bank: dict, state: dict, exam_date: str, now: int, policy: di
             "weakness": max(policy["mastery"]["weaknessFloor"], target["effective"] - m),
             "examUrgency": urgency, "examDirection": direction,
             "progression": prog["stageMatch"] if stage <= ready else prog["stageAhead"] if stage == ready + 1 else prog["stageFar"],
-            "tier": w["tier"][q["tier"]],
+            "tier": w["tier"][priority_tier(q)],
             "novelty": w["novelty"] if not item else w["due"] if due_at <= now else w["notDue"],
             "budget": (w["budgetExceeded"] if (item or {}).get("reviews", 0) >= (plan["repetition_budget"] if plan else 1)
                        and m >= target["effective"] else 1),
@@ -209,7 +211,7 @@ def rank_questions(bank: dict, state: dict, exam_date: str, now: int, policy: di
         for value in components.values():
             raw_score *= value
         rows.append({"question_id": qid, "concept_id": q["concept_id"], "direction": q["retrieval_direction"],
-                     "tier": q["tier"], "eligible": not reasons, "reasons": reasons, "notes": notes,
+                     "tier": priority_tier(q), "advanced": is_advanced(q), "eligible": not reasons, "reasons": reasons, "notes": notes,
                      "raw_score": raw_score, "score": 0 if reasons else raw_score, "components": components,
                      "mastery": m, "target": target, "stage": stage, "ready_stage": ready, "remediation": remediation})
 
@@ -283,7 +285,7 @@ def record_review(bank: dict, previous: dict, question_id: str, rating: str, now
         else:
             remaining.append({**r, "remaining": r["remaining"] - 1})
     state["remediations"] = remaining
-    if rating == "Again" and q["prerequisites"] and (question_stage(q) >= 3 or q["tier"] == "Advanced"):
+    if rating == "Again" and q["prerequisites"] and (question_stage(q) >= 3 or is_advanced(q)):
         weakest = _weakest(bank, memory_snapshot(state, now, policy), q["prerequisites"])
         if weakest:
             entry = {"parent_id": question_id, "prerequisite_id": weakest["question_id"],
@@ -336,7 +338,7 @@ def concept_map(bank: dict, state: dict, policy: dict = DEFAULT, *, now: int | N
             "concept_id": cid, "title": concept["title"], "core_facts": concept.get("core_facts", []),
             "graph_title": concept.get("graph_title", ""),
             "importance": concept["importance"], "importance_rationale": concept.get("importance_rationale", ""),
-            "concept_difficulty": concept["concept_difficulty"], "tier": concept["tier"],
+            "concept_difficulty": concept["concept_difficulty"], "tier": priority_tier(concept),
             "exam_signal_strength": concept.get("exam_signal_strength", ""),
             "related_concepts": [r for r in concept.get("related_concepts", []) if r in ids and r != cid],
             "directions": directions, "progress": progress,

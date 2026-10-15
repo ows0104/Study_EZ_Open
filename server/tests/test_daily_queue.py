@@ -36,7 +36,7 @@ def main():
         goal = lecture_goal(bank, state, "test", NOW + i)
         assert goal["completed"] == i + 1 and goal["total"] == 5
         assert goal["met"] == (i == 4)
-    assert selected[:3] == ["Q3", "variant", "optional"]
+    assert selected[:3] == ["variant", "Q3", "optional"]
     assert set(selected[3:]) == {"Q1", "Q2"}
     assert select_daily_question(bank, state, EXAM, NOW + 61_000)["question"] is None
     repeated = record_review(bank, state, "Q1", "Again", NOW + 61_000)

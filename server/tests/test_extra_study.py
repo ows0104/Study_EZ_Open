@@ -20,7 +20,7 @@ def main():
     bank["questions"].append({**copy.deepcopy(bank["questions"][0]), "question_id": "optional", "tier": "Optional"})
     state = record_review(bank, empty_state(), "Q1", "Again", NOW)
     assert lecture_goal(bank, state, "test", NOW)["remaining"] == 4
-    assert select_question(example_bank(), state, EXAM, NOW + 61_000)["question"]["question_id"] == "Q1"
+    assert select_question(example_bank(), state, EXAM, NOW + 61_000)["question"]["question_id"] == "Q2"  # Important is independent of depth gating.
     selected = set()
     for _ in range(4):
         before = copy.deepcopy(state)

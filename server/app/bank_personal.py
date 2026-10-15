@@ -4,15 +4,16 @@ import json
 
 from sqlalchemy.orm import Session
 from app.models import BankPersonalEdit, QuizBank
+from app.bank_validation.priorities import priority_fields
 
 
 def revision(question: dict) -> str:
-    content = {k: v for k, v in question.items() if k != "mcq_mode"}
+    content = {k: v for k, v in priority_fields(question, question=True).items() if k != "mcq_mode"}
     return hashlib.sha256(json.dumps(content, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
 def same_source(first: dict, second: dict) -> bool:
-    return {k: v for k, v in first.items() if k != "mcq_mode"} == {k: v for k, v in second.items() if k != "mcq_mode"}
+    return revision(first) == revision(second)
 
 
 def apply(db: Session, row: QuizBank, user_id: str, question: dict) -> dict:

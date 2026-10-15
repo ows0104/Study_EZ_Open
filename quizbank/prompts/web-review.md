@@ -44,17 +44,15 @@ web-priorities.json은 저장된 응답의 Tier·importance 후보다. 현재 �
 중복은 같은 인출·판단을 시험하는 경우로 판단하며, 별도 회상 방향·비교·적용 목표는 구분한다.
 Core 묶음만으로 필수 목표와 방향이 시험되는지 확인하고, 형식·방향·문항 수의 할당 비율을 요구하지 않는다.
 
-모든 문항의 우선순위를 tier_checks에 정확히 한 번 기록한다. tested_target에는 발문·정답이 실제
-시험하는 지식 단위, recommended_tier에는 원본에서 독립 판단한 등급을,
-recommended_importance에는 독립 판단한 중요도 1–5를 쓴다. 등급이 같아도 중요도만 과도하거나
-낮으면 별도로 교정한다. basis는 emphasis /
-objective / past_exam / essential_dependency / extension / detail 중 실제 판단 근거다.
-source_refs에 실제 쪽·기출 위치를, evidence에는 그 위치의 구체적 강조·학습목표·기출 내용 또는
-강조 없는 부연임을 확인한 내용을 적는다. 단순한 쪽 번호·임상 유용성은 Core 근거가 아니다.
-essential_dependency이면 essential_target에 그 지식 없이 해결할 수 없는 명시적 필수 목표를
-적고 reason에서 의존성을 설명한다. 그 외에는 essential_target을 빈 문자열로 둔다.
-Advanced는 실제 확장 목표를, Optional은 낮은 우선순위의 이유를 쓴다. 기존 Core·importance·
-포인트 전체의 중요도는 증거가 아니다. 하향 판단과 기존 오류·미시험 기록은 함께 보존한다.
+모든 문항의 우선순위와 독립 심화 여부를 tier_checks에 정확히 한 번 기록한다.
+tested_target은 실제 인출 단위, recommended_tier는 Core/Important/Optional,
+recommended_importance는 Core=5/Important=4/Optional=2,
+recommended_advanced는 독립 심화 여부(boolean)다. advanced_reason에는 추가 추론·연계 또는
+단순 회상이라고 판단한 이유를 쓴다. basis는 objective/past_exam/emphasis/clinical/detail이다.
+source_refs에 실제 위치를, evidence에 실제 학습목표·기출 질문·강조 표시 또는 구체적인 임상
+중요성·부연임을 확인한 내용을 쓴다. essential_target은 과거 호환 필드로 빈 문자열을 쓴다.
+등급·수치·심화 중 하나라도 다르면 교정한다. 교육적 판단 기준은 뒤에 붙은 공통 원칙을 따른다.
+기존 등급·포인트 전체 중요도는 근거가 아니며 기존 오류·doubt·미시험 기록은 함께 보존한다.
 
 실제 화면·채점 계약을 적용한다.
 

@@ -228,8 +228,11 @@ function QuestionEditor({ question, group, busy, onSave, onCancel }: {
           <option value="">없음</option>
           {group.conflicts?.map(c => <option key={c.id} value={c.id}>{c.id} · {c.description}</option>)}
         </select></label>
-        <label>단계<select value={q.tier} onChange={e => field("tier", e.target.value as BankFullQuestion["tier"])}>{["Core", "Advanced", "Optional"].map(t => <option key={t}>{t}</option>)}</select></label>
-        <label>중요도<input type="number" min={1} max={5} value={q.importance} onChange={e => field("importance", Number(e.target.value))} /></label>
+        <label>중요도<select value={q.tier} onChange={e => {
+          const tier = e.target.value as BankFullQuestion["tier"];
+          setQ(prev => ({ ...prev, tier, importance: { Core: 5, Important: 4, Optional: 2 }[tier] }));
+        }}>{["Core", "Important", "Optional"].map(t => <option key={t}>{t}</option>)}</select></label>
+        <label><input type="checkbox" checked={q.advanced ?? false} onChange={e => field("advanced", e.target.checked)} /> Advanced · 심화 (중요도와 독립)</label>
         <label>난이도<input type="number" min={1} max={5} value={q.item_difficulty} onChange={e => field("item_difficulty", Number(e.target.value))} /></label>
         <Pairs label="출처" values={q.source_refs.map(r => [r.source_id, r.locator])} leftLabel="출처 ID (S1·S2·EXT)" rightLabel="쪽·위치" onChange={v => field("source_refs", v.map(([source_id, locator]) => ({ source_id, locator })))} />
         <label>출제 근거<textarea value={q.exam_rationale} onChange={e => field("exam_rationale", e.target.value)} /></label>

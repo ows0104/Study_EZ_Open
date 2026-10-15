@@ -93,3 +93,9 @@ CLI는 새 원본 전용 작업 폴더에서 독립 포인트를 추출한 뒤 �
 - 러너·quizgen을 import하지 않는다. 러너가 하위 프로세스로 실행한다.
 
 결정 배경은 [변경 전 기록](../docs/archive/2026-10-06-originals/quizbank/CLAUDE.md)에 있다.
+
+프롬프트 1.63 / JSON 3.2는 중요도 Core·Important·Optional과 문항 advanced boolean을 분리한다.
+Core는 실제 학습목표·해당 교수 기출, Important는 직접 강조·구체적인 임상 중요성, 그 외는 Optional이다.
+importance는 tier의 수치 표현(5/4/2)이며 심화만으로 중요도·목표 숙련도를 높이지 않는다.
+새 생성·원본 대조·수정은 공유 문항 품질 원칙을 사용한다. 옛 Advanced 등급은 읽기 호환에서
+중간 우선순위로만 표시하고 심화로 추정하지 않으며, 원본 재분류가 이를 최종 교정한다.

@@ -22,7 +22,10 @@ RAW = """## 0. Exam Point Plan
 @pytest.fixture
 def bank():
     original = json.loads((Path(__file__).parent / "fixtures/bank_261002_02.json").read_text(encoding="utf-8"))
-    return without_retired(validate_dropping(original, ["S1", "S2"])[0])
+    result = without_retired(validate_dropping(original, ["S1", "S2"])[0])
+    for q in result["questions"]:
+        q["importance"] = {"Core": 5, "Important": 4, "Optional": 2}[q["tier"]]
+    return result
 
 def report(bank):
     return {"summary": "검토", "pages": [{"page": 1, "status": "checked", "note": ""}],
@@ -30,7 +33,8 @@ def report(bank):
         "plan_issues": [], "question_issues": [], "duplicates": [],
         "tier_checks": [{"question_id": q["question_id"], "recommended_tier": q["tier"],
             "recommended_importance": q["importance"],
-            "tested_target": "실제 채점 목표", "basis": "objective" if q["tier"] == "Core" else "detail",
+            "recommended_advanced": q["advanced"], "advanced_reason": "직접 회상 예시",
+            "tested_target": "실제 채점 목표", "basis": {"Core": "objective", "Important": "emphasis", "Optional": "detail"}[q["tier"]],
             "source_refs": ["S1 p.1"], "evidence": "명시 학습목표의 실제 인출 단위", "essential_target": "",
             "reason": "원본 목표와 실제 발문 대조"} for q in bank["questions"]],
         'pool_checks': [{**{k: c[k] for k in ('question_id', 'pool_id', 'candidate_id', 'content_hash')},

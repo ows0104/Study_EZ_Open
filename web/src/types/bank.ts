@@ -66,6 +66,7 @@ export type BankSource = {
 export type BankFormat = "basic" | "cloze" | "list" | "ox" | "mcq" | "multi_select" | "matching" | "sequence";
 
 export type BankRating = "Again" | "Hard" | "Good" | "Easy";
+export type BankTier = "Core" | "Important" | "Optional";
 
 /** 답이 빠진 문항. 답·채점 단위는 `reveal` 로만 온다. */
 export type BankQuestion = {
@@ -73,7 +74,8 @@ export type BankQuestion = {
   personalEdited?: boolean;
   question_id: string;
   concept_id: string;
-  tier: "Core" | "Advanced" | "Optional";
+  tier: BankTier;
+  advanced?: boolean;
   importance: number;
   format: BankFormat;
   retrieval_direction: string;
@@ -248,7 +250,7 @@ export type BankConcept = {
   importance: number;
   importance_rationale: string;
   concept_difficulty: number;
-  tier: "Core" | "Advanced" | "Optional";
+  tier: BankTier;
   exam_signal_strength: string;
   related_concepts: string[];
   directions: { direction: string; mastery: number; target: number; reviews: number; questions: number }[];

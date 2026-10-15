@@ -77,13 +77,13 @@ def main():
     with SessionLocal() as db:
         row = db.get(QuizBank, ("choices", "demo"))
         updated = copy.deepcopy(row.bank)
-        updated["questions"][0].update(tier="Optional", importance=1)
+        updated["questions"][0].update(tier="Important", importance=4, advanced=True)
         row.bank = updated
         state_before = copy.deepcopy(db.get(BankState, (USER.id, "choices", "demo")).state)
         db.commit()
     refreshed = post("/next")
     assert refreshed["reviewToken"] == token
-    assert refreshed["question"] == {**first["question"], "tier": "Optional", "importance": 1}
+    assert refreshed["question"] == {**first["question"], "tier": "Important", "importance": 4, "advanced": True}
     with SessionLocal() as db:
         state_after = db.get(BankState, (USER.id, "choices", "demo")).state
         assert state_after["served"] == state_before["served"]

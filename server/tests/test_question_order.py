@@ -47,19 +47,19 @@ def solve(bank, state=None, **kwargs):
 
 
 def main():
-    # Numeric slide order overrides tiers, IDs and input ordering, including legacy shuffle=True.
+    # Priority precedes slide order; slide flow remains stable within a priority.
     bank = make_bank([("early-id", "C3", "direct", 10, []),
                       ("late-id", "C1", "direct", 2, []), ("middle", "C2", "direct", 3, [])])
     bank["questions"][1]["tier"] = "Optional"
     bank["questions"][0]["source_refs"].append({"source_id": "S2", "locator": "p.1"})
     with patch("app.study_engine.ordering.random.choices", side_effect=AssertionError("new must follow slides")):
-        assert solve(bank)[0] == ["late-id", "middle", "early-id"]
-        assert solve(bank, shuffle=True)[0] == ["late-id", "middle", "early-id"]
-        assert solve(bank, pages={"early-id": [1]})[0] == ["early-id", "late-id", "middle"]
+        assert solve(bank)[0] == ["middle", "early-id", "late-id"]
+        assert solve(bank, shuffle=True)[0] == ["middle", "early-id", "late-id"]
+        assert solve(bank, pages={"early-id": [1]})[0] == ["early-id", "middle", "late-id"]
     unknown = copy.deepcopy(bank)
     for q in unknown["questions"]:
         q["source_refs"] = [{"source_id": "S2", "locator": "p.1"}]
-    assert solve(unknown)[0] == [q["question_id"] for q in unknown["questions"]]
+    assert solve(unknown)[0] == ["early-id", "middle", "late-id"]
     # A future-slide prerequisite chain unlocks after feedback even on Again.
     prereq = make_bank([("child", "C1", "integration", 1, ["parent"]),
                         ("parent", "C2", "mechanism", 20, ["root"]),

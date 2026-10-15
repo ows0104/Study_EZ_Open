@@ -14,7 +14,10 @@ from quizbank.session import SessionError
 @pytest.fixture
 def bank():
     raw=json.loads((Path(__file__).parent/'fixtures/bank_261002_02.json').read_text(encoding='utf-8'))
-    return without_retired(validate_dropping(raw,['S1','S2'])[0])
+    result = without_retired(validate_dropping(raw,['S1','S2'])[0])
+    for q in result['questions']:
+        q['importance'] = {'Core': 5, 'Important': 4, 'Optional': 2}[q['tier']]
+    return result
 
 
 def annotations(bank):

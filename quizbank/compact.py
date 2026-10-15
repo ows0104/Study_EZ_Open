@@ -32,11 +32,14 @@ def read_blocks(raw: str) -> list[dict]:
             raise SessionError(f"{qid}: 문항 블록 머리의 필드 수 오류")
         tier, importance, difficulty, direction = fields[:4]
         mode = fields[4] if choice else "none"
-        if tier not in TIERS or direction not in DIRECTIONS or not all(
+        if tier not in (*TIERS, "Advanced") or direction not in DIRECTIONS or not all(
                 re.fullmatch(r"[1-5]", n) for n in (importance, difficulty)) \
                 or mode not in ("recall_first", "comparison", "none") or choice and mode == "none":
             raise SessionError(f"{qid}: 문항 블록 메타데이터 오류")
         body = raw[heading.end():headings[i + 1].start() if i + 1 < len(headings) else len(raw)]
+        depth = re.findall(r"(?:^|\s|&#x20;)심화:[ \t]*(true|false)\b", body)
+        if len(depth) > 1 or (re.search(r"(?:^|\s|&#x20;)심화:", body) and not depth):
+            raise SessionError(f"{qid}: 심화는 true 또는 false여야 합니다.")
         # Browser Markdown copying may put all labeled fields in one paragraph.
         # Decode the JSON value rather than assuming an answer occupies a whole line.
         values, position = {}, 0
@@ -64,7 +67,8 @@ def read_blocks(raw: str) -> list[dict]:
                 evidence, _ = json.JSONDecoder().raw_decode(body[evidence_marker.end():])
             except ValueError:
                 pass  # 표시 메타데이터만 잘못됐으면 이후 별도 선택 단계에서 보완한다.
-        blocks.append({"question_id": qid, "format": fmt, "tier": tier, "importance": int(importance),
+        blocks.append({"question_id": qid, "format": fmt, "tier": "Important" if tier == "Advanced" else tier,
+                       "importance": int(importance), "advanced": depth == ["true"],
                        "item_difficulty": int(difficulty), "retrieval_direction": direction,
                        "mcq_mode": mode, "units": units,
                        "explanation": values.get("해설", "")})

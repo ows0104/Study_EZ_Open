@@ -52,8 +52,10 @@ def validate_policy(p: dict, template: dict | None = None) -> dict:
     r = m["ratings"]
     if not (r["Again"] == 0 and 0 < r["Hard"] < r["Good"] < r["Easy"] == 1):
         raise ValueError("평가 목표는 Again < Hard < Good < Easy=1 순서여야 합니다.")
-    if m["maxTarget"] >= r["Good"] or any(not unit(n) or n > m["maxTarget"] for n in m["targets"].values()):
+    if m["maxTarget"] >= r["Good"] or any(not unit(n) or n > m["maxTarget"] for n in [*m["targets"].values(), *m["tierTargets"].values()]):
         raise ValueError("목표 숙련도는 Good 목표보다 낮아야 합니다.")
+    if not m["tierTargets"]["Core"] > m["tierTargets"]["Important"] > m["tierTargets"]["Optional"]:
+        raise ValueError("중요도별 목표 숙련도는 Core > Important > Optional이어야 합니다.")
     f = p["forgetting"]
     if not (0 < f["minDays"] <= f["legacyDays"] <= f["maxDays"]
             and f["minDays"] <= f["lapseMaxDays"] <= f["maxDays"]

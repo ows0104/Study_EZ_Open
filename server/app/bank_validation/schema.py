@@ -7,11 +7,11 @@ AdaptiveStudy3/bank_builder/schema.mjs 를 옮겼다(2026-10-04). 서버도 같�
 from __future__ import annotations
 
 from .choice_mode import choice_mode
+from .priorities import TIERS, priority_fields
 
 FORMATS = ["basic", "cloze", "list", "ox", "mcq", "multi_select", "matching", "sequence"]
 DIRECTIONS = ["direct", "reverse", "mechanism", "discrimination", "integration", "sequence", "trap"]
-TIERS = ["Core", "Advanced", "Optional"]
-SCHEMA_VERSION = "3.1"
+SCHEMA_VERSION = "3.2"
 
 _STR = {"type": "string"}
 _NUM = {"type": "number"}
@@ -47,6 +47,7 @@ OPTION_POOL = _object({
 
 QUESTION = _object({
     "question_id": _STR, "concept_id": _STR, "tier": _enum(TIERS), "importance": _INT,
+    "advanced": {"type": "boolean"},
     "item_difficulty": _INT, "format": _enum(FORMATS), "retrieval_direction": _enum(DIRECTIONS),
     "mcq_mode": _enum(["recall_first", "comparison", "none"]),
     "question": _STR, "answer": _STR, "answer_units": _STRS, "prerequisites": _STRS,
@@ -95,11 +96,11 @@ def without_retired(bank: dict) -> dict:
     out = dict(bank)
     # 그래프용 요약이 없던 은행도 유효하다. 원래 제목은 바꾸지 않는다.
     if isinstance(bank.get("concepts"), list):
-        out["concepts"] = [{"graph_title": "", **c} if isinstance(c, dict) else c for c in bank["concepts"]]
+        out["concepts"] = [priority_fields({"graph_title": "", **c}) if isinstance(c, dict) else c for c in bank["concepts"]]
     if isinstance(bank.get("questions"), list):
-        out["questions"] = [{"explanation": "", "option_explanations": [], "option_pools": [], "mcq_mode": choice_mode(q),
+        out["questions"] = [priority_fields({"explanation": "", "option_explanations": [], "option_pools": [], "mcq_mode": choice_mode(q),
                              **{k: v for k, v in q.items() if k not in RETIRED_QUESTION},
-                             "mcq_mode": choice_mode(q) if q.get("mcq_mode") in (None, "none") else q["mcq_mode"]} if isinstance(q, dict) else q
+                             "mcq_mode": choice_mode(q) if q.get("mcq_mode") in (None, "none") else q["mcq_mode"]}, question=True) if isinstance(q, dict) else q
                             for q in bank["questions"]]
     if isinstance(bank.get("retrieval_plan"), list):
         out["retrieval_plan"] = [{k: v for k, v in p.items() if k not in RETIRED_PLAN} if isinstance(p, dict) else p

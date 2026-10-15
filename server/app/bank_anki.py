@@ -23,9 +23,10 @@ from sqlalchemy.orm import Session
 
 from app.models import Asset, Lecture, QuizBank
 from app.bank_edits import current_review
+from app.bank_validation.priorities import priority_tier, is_advanced
 from app.routes.common import storage_or_503
 
-EXPORT_VERSION = 1
+EXPORT_VERSION = 2
 MODEL_ID = 1867040701
 CSS = """
 .card { font-family: Arial, sans-serif; font-size: 20px; line-height: 1.65;
@@ -199,9 +200,13 @@ def ensure_export(db: Session, lecture: Lecture, row: QuizBank) -> Export:
                                   ensure_ascii=False, sort_keys=True)
             guid = genanki.guid_for("studyez-bank", lecture.subject, lecture.run_id, q["question_id"], identity)
             images = [(p, media[p]) for p in mapped_pages.get(q["question_id"], [])]
+            tier = priority_tier(q)
+            depth = " · Advanced (심화)" if is_advanced(q) else ""
             fields = [render_question(q), render_answer(q, bank, current_review(row.review, row.validation), images),
-                      text(f'{lecture.title} · {q["question_id"]} · {q["concept_id"]} · {q["tier"]} · {q["retrieval_direction"]}')]
-            tags = ["Study_EZ::QuizBank", f'형식::{q["format"]}', f'등급::{q["tier"]}']
+                      text(f'{lecture.title} · {q["question_id"]} · {q["concept_id"]} · {tier}{depth} · {q["retrieval_direction"]}')]
+            tags = ["Study_EZ::QuizBank", f'형식::{q["format"]}', f'등급::{tier}']
+            if is_advanced(q):
+                tags.append("심화::Advanced")
             deck.add_note(genanki.Note(model=model, fields=fields, tags=tags, guid=guid, due=index + 1))
         # Write the SQLite file ourselves: genanki's write_to_file leaves a temporary
         # database behind. Both database and media here belong to this scoped directory.

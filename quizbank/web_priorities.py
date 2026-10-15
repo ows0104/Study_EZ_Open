@@ -6,7 +6,7 @@ import re
 
 from .session import SessionError
 
-TIERS = {"Core", "Advanced", "Optional"}
+TIERS = {"Core", "Important", "Advanced", "Optional"}  # Preserve historical provenance.
 
 
 def _plain(text: str) -> str:

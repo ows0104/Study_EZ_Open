@@ -16,7 +16,10 @@ from tests.quizbank.test_web_audit import report
 @pytest.fixture
 def bank():
     raw = json.loads((Path(__file__).parent / "fixtures/bank_261002_02.json").read_text(encoding="utf-8"))
-    return without_retired(validate_dropping(raw, ["S1", "S2"])[0])
+    result = without_retired(validate_dropping(raw, ["S1", "S2"])[0])
+    for q in result["questions"]:
+        q["importance"] = {"Core": 5, "Important": 4, "Optional": 2}[q["tier"]]
+    return result
 
 
 def structure_for(bank):
@@ -45,7 +48,7 @@ def test_web_contract_and_organizer_defer_learning_metadata():
     assert question_first.enabled(version) and not question_first.enabled("1.41")
     assert not question_first.enabled("2.0")
     assert "### Q001 | cloze | Core | 5 | 2 | mechanism" in body
-    assert "### Q002 | mcq | Core | 4 | 2 | discrimination | comparison" in body
+    assert "### Q002 | mcq | Core | 5 | 2 | discrimination | comparison" in body
     assert "question_id | tier" not in body and "Final Statistics" not in body
     assert "\n0. Exam Point Plan\n" not in body and "\n1. Concept Map\n" not in body
     prompt = organize.organizer_prompt("draft", {"title": "강의", "sources": [], "prompt_version": version})

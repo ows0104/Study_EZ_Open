@@ -36,6 +36,7 @@ from app.bank_validation.slide_focus import (selected_references, all_selected_p
 from app.bank_validation.jokbo_pages import references as jokbo_references
 from app.bank_validation.evidence_resolution import primary_references as exam_primary_references, status as evidence_status
 from app.bank_validation.schema import QUESTION, schema_errors, without_retired
+from app.bank_validation.priorities import priority_fields
 from app.bank_validation.coverage import coverage_summary
 from app.bank_validation.validate import validate_bank
 from app.bank_validation.publication import stamp as publication_stamp, usable as bank_usable, warning as publication_warning
@@ -497,7 +498,7 @@ def bank_review(subject: str | None = None, run_id: str | None = Query(None, ali
                 not review or review["verdict"] == "ok"
             ):
                 continue
-            cards.append({"question": q, "errors": dropped.get(qid, []),
+            cards.append({"question": priority_fields(q, question=True), "errors": dropped.get(qid, []),
                           "medicalReview": review, "edit": edits.get(qid)})
         if cards:
             groups.append({"subject": row.subject, "runId": row.run_id, "title": lecture.title,
@@ -627,7 +628,7 @@ def bank_feedback(user: CurrentUser = Depends(require_admin), db: Session = Depe
             group = groups[(*key, f.question_id)] = {
                 "subject": f.subject, "runId": f.run_id, "questionId": f.question_id,
                 "title": lecture.title if lecture else "", "date": lecture.date.isoformat() if lecture else "",
-                "question": q, "medicalReview": review, "reports": [],
+                "question": priority_fields(q, question=True) if q else None, "medicalReview": review, "reports": [],
             }
         group["reports"].append({
             "id": f.id, "category": f.category, "comment": f.comment, "status": f.status,
@@ -699,6 +700,7 @@ def _save(state: BankState, value: dict) -> None:
 
 
 def _public(q: dict, *, show_choices: bool = True) -> dict:
+    q = priority_fields(q, question=True)
     out = {**{k: v for k, v in q.items() if k not in ANSWER_FIELDS}, "mcq_mode": choice_mode(q)}
     out.pop("hint", None)  # Retired experiment fields can remain in older stored JSON.
     if not show_choices and out["mcq_mode"] == "recall_first":
@@ -717,7 +719,8 @@ def _served_question(db: Session, row: QuizBank, user_id: str, bank: dict, serve
     # Freeze the presented choices and scoring, but show current priority labels
     # after a metadata-only review without resetting this exposure or its token.
     question = snapshot or personal
-    return {**question, **{k: original[k] for k in ("tier", "importance") if k in original}}
+    metadata = priority_fields(original, question=True)
+    return {**question, **{k: metadata[k] for k in ("tier", "importance", "advanced")}}
 
 
 def _slides(db: Session, row: QuizBank, question_id: str, presented: dict | None = None) -> list[dict[str, Any]]:

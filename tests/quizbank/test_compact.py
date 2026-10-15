@@ -28,13 +28,13 @@ RAW = '''### Q001 | basic | Core | 5 | 2 | direct
 출처: S1 p.1
 출제근거: 목록 회상
 
-### Q004 | ox | Core | 4 | 2 | trap
+### Q004 | ox | Core | 5 | 2 | trap
 문제: 첫 기호는 β이다.
 정답: ["X"]
 출처: S1 p.1
 출제근거: 오개념 판별
 
-### Q005 | mcq | Core | 4 | 2 | discrimination | comparison
+### Q005 | mcq | Core | 5 | 2 | discrimination | comparison
 문제: 첫 기호를 고르시오.
 보기:
 A. α
@@ -47,7 +47,7 @@ E. ε
 출제근거: 기호 구별
 충돌: CF001
 
-### Q006 | multi_select | Optional | 3 | 3 | discrimination | comparison
+### Q006 | multi_select | Optional | 2 | 3 | discrimination | comparison
 문제: 해당하는 기호를 모두 고르시오.
 보기:
 A. α
@@ -59,7 +59,7 @@ E. ε
 출처: S1 p.1
 출제근거: 복수 항목 구별
 
-### Q007 | matching | Core | 4 | 2 | discrimination
+### Q007 | matching | Core | 5 | 2 | discrimination
 문제: 숫자와 기호를 연결하시오.
 왼쪽:
 1. 하나
@@ -72,7 +72,7 @@ B. β
 출처: S1 p.1
 출제근거: 짝 연결
 
-### Q008 | sequence | Core | 4 | 2 | sequence
+### Q008 | sequence | Core | 5 | 2 | sequence
 문제: 기호 순서를 정렬하시오.
 항목:
 A. α
@@ -212,7 +212,7 @@ def test_shared_quality_guidance_preserves_158_rules_and_adds_159_layout():
     assert layout in quality
     clarity = '- 자료 충돌을 해결한 문항도 하나의 분명한 학습 목표를 시험한다. 자료 간 차이를 해명하려고 임상 조건·추론을 여러 겹 붙인 함정으로 만들지 않는다. 해설은 정답의 이유와 기억할 핵심을 먼저 짧게 설명하고, 출처별 차이·검증 이력·작업 경위와 섞지 않는다. 실제 모순·정답표 오류·상황 차이를 구별하며, 미해결 쟁점을 해결된 것처럼 쓰지 않는다.\n'
     assert clarity in quality
-    assert hashlib.sha256(quality.replace(layout, '').replace(clarity, '').encode()).hexdigest() == '6b095dd7d2690f6ccf9350f34363f6e81755494f7dd5bbb887fe4ece97762e28'
+    assert hashlib.sha256(quality.replace(layout, '').replace(clarity, '').encode()).hexdigest() == '315632e2a92a4839e0ba1ea8889c196715046e80ae8cf0e399db161ae433f78d'
 
 
 def test_multiline_comparison_keeps_compact_metadata_answers_and_question_ids():
@@ -259,3 +259,17 @@ def test_previous_experiment_hint_is_consumed_without_becoming_question_data():
     blocks = compact.read_blocks(raw)
     assert blocks[0]['units'] == ['α'] and blocks[0]['explanation'] == '원문 해설'
     assert all('hint' not in q for q in blocks)
+
+
+def test_priority_and_depth_are_independent_and_legacy_labels_do_not_infer_depth():
+    raw = RAW.replace('### Q001 | basic | Core | 5 | 2 | direct',
+                      '### Q001 | basic | Important | 4 | 2 | direct\n심화: true')
+    first = compact.read_blocks(raw)[0]
+    assert first['tier'] == 'Important' and first['advanced'] is True
+    legacy = RAW.replace('### Q001 | basic | Core | 5 | 2 | direct',
+                         '### Q001 | basic | Advanced | 4 | 2 | direct')
+    first = compact.read_blocks(legacy)[0]
+    assert first['tier'] == 'Important' and first['advanced'] is False
+    for depth in ('yes', 'true\n심화: false'):
+        with pytest.raises(SessionError, match='심화'):
+            compact.read_blocks(raw.replace('심화: true', '심화: ' + depth))

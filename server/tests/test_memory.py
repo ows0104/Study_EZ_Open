@@ -17,6 +17,7 @@ from tests.bank_fixtures import example_bank
 def main():
     now = 1_791_003_600_000
     bank = example_bank()
+    bank["questions"][1]["advanced"] = True
     dim = {"mastery": 0.95, "reviews": 10, "updated_at": now, "stability_days": 1}
     assert retention(dim, now) == retention(dim, now - DAY_MS) == 1
     assert math.isclose(retention(dim, now + DAY_MS), 0.9)

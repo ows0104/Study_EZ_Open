@@ -6,15 +6,15 @@ from server.app.bank_validation.pool_checks import candidates
 
 def test_v1_contract_is_bound_to_prompt_metadata(monkeypatch):
     lecture = {"title": "강의", "sources": [], "prompt_version": "1.26"}
-    assert organize.expected_schema("표 누락", lecture) == "3.1"
+    assert organize.expected_schema("표 누락", lecture) == "3.2"
     assert organize.expected_schema("", {**lecture, "prompt_version": "1.25"}) == "3.0"
-    assert organize.expected_schema("## Option Pools", {"title": "강의", "sources": []}) == "3.1"
+    assert organize.expected_schema("## Option Pools", {"title": "강의", "sources": []}) == "3.2"
     prompt = organize.organizer_prompt("## Option Pools\n## Option Pool Candidates", lecture)
-    assert "`3.1`" in prompt and "false_explanation" in prompt and "option_pools=[]" in prompt
+    assert "`3.2`" in prompt and "false_explanation" in prompt and "option_pools=[]" in prompt
     monkeypatch.setattr(organize.session, "run_structured", lambda *a, **k: (
         {"build_meta": {"schema_version": "3.0"}, "questions": [], "concepts": []}, {}))
     bank, _ = organize.organize("表 누락", lecture)
-    assert bank["build_meta"]["schema_version"] == "3.1"
+    assert bank["build_meta"]["schema_version"] == "3.2"
 
 
 def test_review_covers_every_truth_pair_and_is_bound_to_content():
