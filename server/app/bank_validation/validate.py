@@ -217,10 +217,14 @@ def validate_bank(bank: dict, source_ids: list[str], *, learning_structure: bool
         fail(_nonempty(cid) and _nonempty(conflict["description"]), "충돌 기록 필수 필드 누락")
         refs(conflict["source_refs"], cid)
         warn(len({r["source_id"] for r in conflict["source_refs"]}) >= 2, f"{cid}: 한 자료 안의 충돌")
+        linked_questions = [q for q in bank["questions"] if q["conflict_id"] == cid]
+        if not linked_questions:
+            warnings.append(f"{cid}: 연결된 문항이 없는 출처 충돌 기록")
+            continue  # 삭제·통합한 문항의 이력은 보존할 수 있다. 끊어진 문항 참조와 다르다.
         if not conflict["unresolved"]:
             for ref in conflict["source_refs"]:
-                fail(any(q["conflict_id"] == cid and any(r["source_id"] == ref["source_id"] for r in q["source_refs"])
-                         for q in bank["questions"]), f"{cid}: {ref['source_id']} 기준 문항 누락")
+                fail(any(any(r["source_id"] == ref["source_id"] for r in q["source_refs"])
+                         for q in linked_questions), f"{cid}: {ref['source_id']} 기준 문항 누락")
         else:
             warnings.append(f"{cid}: 미해결 출처 충돌 — {conflict['description']}")
 

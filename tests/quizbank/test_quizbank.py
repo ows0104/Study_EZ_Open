@@ -119,6 +119,19 @@ def test_conflict_question_can_cite_additional_nonconflicting_evidence(bank):
     assert any("유효한 source_id" in e for e in validate_bank(bank, ["S1", "S2", "S3"])["errors"])
 
 
+def test_unused_conflict_history_is_preserved_as_a_warning(bank):
+    _fix_lists(bank)
+    cid = bank["source_conflicts"][0]["conflict_id"]
+    for q in bank["questions"]:
+        if q["conflict_id"] == cid:
+            q["conflict_id"] = ""
+    validation = validate_bank(bank, ["S1", "S2"])
+    assert validation["pass"], validation
+    assert f"{cid}: 연결된 문항이 없는 출처 충돌 기록" in validation["warnings"]
+    bank["questions"][0]["conflict_id"] = "missing-conflict"
+    assert any("Conflict ID 없음" in e for e in validate_bank(bank, ["S1", "S2"])["errors"])
+
+
 def test_EXT_출처는_허용하되_출처_요약은_요구하지_않는다(bank):
     _fix_lists(bank)
     bank["questions"][0]["source_refs"].append({"source_id": "EXT", "locator": "외부 의학지식"})
