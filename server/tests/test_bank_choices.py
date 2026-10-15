@@ -73,6 +73,22 @@ def main():
     assert len(first["question"]["options"]) == 4
     assert not {"option_pools", "choice_variant", "answer", "correct_option_ids", "option_explanations"} & first["question"].keys()
     assert post("/next")["question"] == first["question"]
+    # Reclassifying priorities keeps the in-flight variant, token and progress.
+    with SessionLocal() as db:
+        row = db.get(QuizBank, ("choices", "demo"))
+        updated = copy.deepcopy(row.bank)
+        updated["questions"][0].update(tier="Optional", importance=1)
+        row.bank = updated
+        state_before = copy.deepcopy(db.get(BankState, (USER.id, "choices", "demo")).state)
+        db.commit()
+    refreshed = post("/next")
+    assert refreshed["reviewToken"] == token
+    assert refreshed["question"] == {**first["question"], "tier": "Optional", "importance": 1}
+    with SessionLocal() as db:
+        state_after = db.get(BankState, (USER.id, "choices", "demo")).state
+        assert state_after["served"] == state_before["served"]
+        assert state_after["history"] == state_before["history"]
+    first = refreshed
     prepared = post("/prepare", {"reviewToken": token})
     assert prepared == post("/reveal", {"reviewToken": token})
     for option in first["question"]["options"]:

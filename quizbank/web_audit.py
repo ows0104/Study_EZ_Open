@@ -14,7 +14,7 @@ from studyez_llm.pdf import render
 
 from .coverage import _call, bank_hash
 from .generate import item_quality_guidance, lecture_scope
-from . import priority
+from . import priority, web_priorities
 from .points import INT, STR, _array, _object
 from .session import SessionError
 from server.app.bank_validation import pool_checks
@@ -195,7 +195,8 @@ def inspect(bank: dict, raw: str, pdf: Path, title: str, sources: list[dict], ou
                        ("source-pages.json", [str(path.resolve()) for path in images]),
                        ("context.json", {"title": title, "sources": sources, "page_count": count,
                                          "lecture_scope": lecture_scope(title, sources)}),
-                       ("pool-candidates.json", pool_checks.candidates(bank))]:
+                       ("pool-candidates.json", pool_checks.candidates(bank)),
+                       ("web-priorities.json", web_priorities.reference(raw))]:
         (work / name).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     (work / "web-response.md").write_text(raw, encoding="utf-8")
     if jokbo:

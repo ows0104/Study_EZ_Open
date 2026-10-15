@@ -710,7 +710,10 @@ def _served_question(db: Session, row: QuizBank, user_id: str, bank: dict, serve
     # A reset during the same exposure restores the original authored options.
     if personal.get("personalEdited") or snapshot.get("personalEdited"):
         return personal
-    return snapshot or personal
+    # Freeze the presented choices and scoring, but show current priority labels
+    # after a metadata-only review without resetting this exposure or its token.
+    question = snapshot or personal
+    return {**question, **{k: original[k] for k in ("tier", "importance") if k in original}}
 
 
 def _slides(db: Session, row: QuizBank, question_id: str) -> list[dict[str, Any]]:

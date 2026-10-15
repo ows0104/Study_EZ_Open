@@ -141,6 +141,8 @@ def test_passing_authored_bank_needs_no_repair_or_supplement(bank, tmp_path, mon
         assert web_audit.item_quality_guidance() in prompt
         assert len(json.loads((work / "source-pages.json").read_text(encoding="utf-8"))) == 1
         assert "P001" in (work / "point-plan.json").read_text(encoding="utf-8")
+        reference = json.loads((work / "web-priorities.json").read_text(encoding="utf-8"))
+        assert reference["status"] == "unavailable" and not reference["candidates"]
         return report(bank), {}
     monkeypatch.setattr(web_audit, "_call", fake_call)
     monkeypatch.setattr(run.review, "review", lambda *a, **k: ({"counts": {"wrong": 0, "doubt": 0}, "missing": []}, {}))
