@@ -28,7 +28,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import classify, coverage, explain, option_pools, organize, question_first, repair, review, slides, web_audit
+from . import classify, evidence, coverage, explain, option_pools, organize, question_first, repair, review, slides, web_audit
 from .schema import schema_errors
 from .session import SessionError
 from .validate import validate_bank, validate_dropping
@@ -37,6 +37,7 @@ from server.app.bank_validation.publication import stamp, usable
 OUTPUTS = ("bank.json", "bank.raw.json", "bank.before-repair.json", "authored-points.json", "repairs.json", "checkpoint.json", "validation.json", "review.json", "coverage.json", "classification.json", "web-audit.json", "explanations.json", "pages.json", "result.json", "usage.jsonl")
 OUTPUTS += ("content-validation.json", "learning-structure.json", "learning-structure.raw.json")
 OUTPUTS += ("option-pools.json", "option-pools.raw.json")
+OUTPUTS += ("authored-evidence.json",)
 MAX_REPAIR_ROUNDS = 3
 
 
@@ -403,6 +404,12 @@ def main(argv: list[str] | None = None) -> int:
                      do_coverage=not args.no_coverage, jokbo=args.jokbo, point_plan=args.point_plan,
                      preserve_existing=args.preserve_existing, max_repair_rounds=args.max_repair_rounds,
                      points_cache_root=args.points_cache_root)
+        if args.pdf is not None and (args.out / "bank.json").is_file():
+            final_bank = json.loads((args.out / "bank.json").read_text(encoding="utf-8"))
+            final_validation = json.loads((args.out / "validation.json").read_text(encoding="utf-8"))
+            if usable(final_bank, final_validation):
+                _stage("핵심 근거 선택·족보 지면 연결")
+                result = evidence.enrich(args.pdf, args.out, args.run_id, jokbo=args.jokbo, model=args.model)
     except SessionError as e:
         print(f"멈췄다 — {e}", flush=True)
         return 1

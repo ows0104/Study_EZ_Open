@@ -27,15 +27,3 @@ def cited_pages(bank: dict, pdf_source: str) -> dict[str, list[int]]:
         if pages:
             out[q["question_id"]] = sorted(pages)
     return out
-
-
-def primary_pages(question: dict, available: list[int]) -> set[int]:
-    """직접 인용한 근거를 인용 순서대로 최대 두 장 보여 준다.
-
-    별도의 핵심 근거 표시는 없으므로 보기 후보 전체의 출처는 우선하지 않는다.
-    해당 이미지가 없거나 옛 문항에 쪽 정보가 없으면 제공 가능한 첫 장을 쓴다.
-    """
-    direct = dict.fromkeys(page for ref in question.get("source_refs", [])
-                           if ref["source_id"] == "S1" for page in pages_of(ref["locator"])
-                           if page in available)
-    return set(list(direct)[:2] or available[:1])

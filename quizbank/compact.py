@@ -57,10 +57,19 @@ def read_blocks(raw: str) -> list[dict]:
             raise SessionError(f"{qid}: 정답은 비어 있지 않은 문자열 JSON 배열이어야 합니다.")
         if any(not isinstance(values.get(name, ""), str) for name in ("힌트", "해설")):
             raise SessionError(f"{qid}: 힌트·해설은 JSON 문자열이어야 합니다.")
+        evidence = None
+        evidence_marker = re.search(r"(?:^|\s|&#x20;)근거:[ \t]*(?=\{)", body)
+        if evidence_marker:
+            try:
+                evidence, _ = json.JSONDecoder().raw_decode(body[evidence_marker.end():])
+            except ValueError:
+                pass  # 표시 메타데이터만 잘못됐으면 이후 별도 선택 단계에서 보완한다.
         blocks.append({"question_id": qid, "format": fmt, "tier": tier, "importance": int(importance),
                        "item_difficulty": int(difficulty), "retrieval_direction": direction,
                        "mcq_mode": mode, "units": units,
                        "explanation": values.get("해설", "")})
+        if evidence is not None:
+            blocks[-1]["source_evidence"] = evidence
     return blocks
 
 
@@ -85,7 +94,7 @@ def restore(bank: dict, blocks: list[dict]) -> None:
     for block in blocks:
         qid, fmt, units = block["question_id"], block["format"], block["units"]
         q = questions[qid]
-        q.update({key: value for key, value in block.items() if key != "units"})
+        q.update({key: value for key, value in block.items() if key not in ("units", "source_evidence")})
         if fmt in ("basic", "list", "cloze"):
             if fmt == "basic" and len(units) != 1:
                 raise SessionError(f"{qid}: basic 정답은 한 단위여야 합니다.")

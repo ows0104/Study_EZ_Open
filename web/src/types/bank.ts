@@ -104,6 +104,8 @@ export type BankAnswer = {
   correctOrder: string[];
   /** 문항이 인용한 필기 쪽들. 한 문항이 여러 장일 수 있다. */
   slides: BankSlide[];
+  /** 실제로 인용한 족보 문항의 원본 PDF 지면. */
+  jokboSlides?: { page: number; url: string; pdfFilename: string; references: string[] }[];
   /** 외부지식 검토. 막지 않고 표시만 한다. */
   medicalReview: BankReview | null;
   reviewIssues?: string[];

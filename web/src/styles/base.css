@@ -2831,6 +2831,24 @@ button.notice-title:hover:not(:disabled) {
   max-width: none;
 }
 
+.bank-jokbo-slides {
+  margin-top: 24px;
+}
+
+.bank-jokbo-slides h2 {
+  font-size: 16px;
+}
+
+.bank-jokbo-slides figure {
+  margin: 16px 0 0;
+}
+
+.bank-jokbo-slides figcaption {
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .bank-ox-explanation,
 .bank-choice-explanation {
   width: min(100%, 720px);

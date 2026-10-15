@@ -30,7 +30,9 @@ from sqlalchemy.orm import Session
 from app import study_engine as engine
 from app import bank_edits
 from app import bank_personal
-from app.bank_validation.pages import cited_pages, primary_pages
+from app.bank_validation.pages import cited_pages
+from app.bank_validation.slide_focus import selected_pages, all_selected_pages, question_hash
+from app.bank_validation.jokbo_pages import references as jokbo_references
 from app.bank_validation.schema import QUESTION, schema_errors, without_retired
 from app.bank_validation.coverage import coverage_summary
 from app.bank_validation.validate import validate_bank
@@ -716,8 +718,11 @@ def _served_question(db: Session, row: QuizBank, user_id: str, bank: dict, serve
     return {**question, **{k: original[k] for k in ("tier", "importance") if k in original}}
 
 
-def _slides(db: Session, row: QuizBank, question_id: str) -> list[dict[str, Any]]:
-    pages = (row.pages or {}).get(question_id) or []
+def _slides(db: Session, row: QuizBank, question_id: str, presented: dict | None = None) -> list[dict[str, Any]]:
+    question = next((q for q in (row.bank or {}).get("questions", []) if q["question_id"] == question_id), {})
+    report = (row.validation or {}).get("slideFocus") or {}
+    current = (report.get("questions", {}).get(question_id) or {}).get("questionHash") == question_hash(question)
+    pages = sorted(set((row.pages or {}).get(question_id) or []) | (all_selected_pages(report, question_id) if current else set()))
     if not pages:
         return []
     assets = {a.slide_no: a for a in db.scalars(select(Asset).where(
@@ -732,11 +737,35 @@ def _slides(db: Session, row: QuizBank, question_id: str) -> list[dict[str, Any]
             out.append({"page": page, "url": ObjectStorage().presign_download(asset.object_key)})
         except StorageNotConfigured:
             break
-    question = next((q for q in (row.bank or {}).get("questions", []) if q["question_id"] == question_id), {})
-    primary = primary_pages(question, [slide["page"] for slide in out])
+    primary = selected_pages(report, question, [slide["page"] for slide in out], presented)
     for slide in out:
         slide["primary"] = slide["page"] in primary
     return out
+
+
+def _jokbo_slides(db: Session, row: QuizBank, question: dict) -> list[dict[str, Any]]:
+    original = next((q for q in (row.bank or {}).get("questions", []) if q["question_id"] == question["question_id"]), {})
+    refs = jokbo_references((row.validation or {}).get("jokboPages"), original, question)
+    if not refs:
+        return []
+    assets = {a.filename: a for a in db.scalars(select(Asset).where(
+        Asset.subject == row.subject, Asset.run_id == row.run_id, Asset.kind == SLIDE_KINDS["bank"],
+        Asset.filename.in_({ref["filename"] for ref in refs})))}
+    grouped = {}
+    for ref in refs:
+        name = ref["filename"]
+        if name not in assets:
+            continue
+        if name not in grouped:
+            try:
+                url = ObjectStorage().presign_download(assets[name].object_key)
+            except StorageNotConfigured:
+                break
+            grouped[name] = {"page": ref["page"], "url": url, "pdfFilename": ref["pdfFilename"], "references": []}
+        label = f"{ref['year']} {ref['number']}번"
+        if label not in grouped[name]["references"]:
+            grouped[name]["references"].append(label)
+    return list(grouped.values())
 
 
 def _answer(db: Session, row: QuizBank, q: dict) -> dict[str, Any]:
@@ -751,7 +780,7 @@ def _answer(db: Session, row: QuizBank, q: dict) -> dict[str, Any]:
     return {"answer": q["answer"], "answerUnits": q["answer_units"], "explanation": q.get("explanation", ""), "correctOptionIds": q["correct_option_ids"],
             "personalEdited": q.get("personalEdited", False), "personalAnswer": q.get("personalAnswer", False),
             "answerPairs": q["answer_pairs"], "correctOrder": q["correct_order"],
-            "slides": _slides(db, row, q["question_id"]), "medicalReview": review,
+            "slides": _slides(db, row, q["question_id"], q), "jokboSlides": _jokbo_slides(db, row, q), "medicalReview": review,
             'reviewIssues': [issue.get('reason') or issue.get('issue', '')
                 for issue in (((row.validation or {}).get('revision') or {}).get('audit') or {}).get('question_issues', [])
                 if issue.get('question_id') == q['question_id'] and issue.get('severity') == 'error'
@@ -910,7 +939,7 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
     return {"question": _public(question, show_choices=choices_shown), "choicesShown": choices_shown,
             "reviewToken": served["token"], "days": days, "examDate": exam,
             "lectureGoal": goal, "undoToken": undo_token(state),
-            "preloadSlides": _slides(db, row, question["question_id"]),
+            "preloadSlides": _slides(db, row, question["question_id"], question),
             "session": engine.session_summary(bank, state, now=now),
             "answer": _answer(db, row, question) if served.get("revealed") else None}
 
@@ -1071,7 +1100,7 @@ def undo_bank_answer(subject: str, run_id: str, payload: TokenIn,
             "days": engine.days_until(exam, now), "examDate": exam,
             "lectureGoal": lecture_goal(bank, state, lecture.title, now),
             "session": engine.session_summary(bank, state, now=now), "answer": _answer(db, row, question),
-            "preloadSlides": _slides(db, row, question["question_id"])}
+            "preloadSlides": _slides(db, row, question["question_id"], question)}
 
 
 class FeedbackIn(BaseModel):

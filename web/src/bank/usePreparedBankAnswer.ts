@@ -16,6 +16,7 @@ export function usePreparedBankAnswer(base: string, token: string | undefined, s
       if (controller.signal.aborted) return;
       prepared.answer = answer;
       slides.warm(splitSlides(answer.slides).primary.map(slide => slide.url));
+      slides.warm(answer.jokboSlides?.map(slide => slide.url) ?? []);
     }).catch(() => {}); // A miss (or older API) falls back to the normal reveal.
     return () => controller.abort();
   }, [base, token, prepared, slides]);

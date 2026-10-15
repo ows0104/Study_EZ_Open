@@ -218,4 +218,11 @@ def organize(raw: str, lecture: dict, *, model: str | None = None, out: Path | N
     prerequisites = tidy_prerequisites(bank)
     if prerequisites and isinstance(bank.get("warnings"), list):
         bank["warnings"].append(f"[정리] 합쳐진 선행 문항 ID를 분리했다: {'; '.join(prerequisites)}")
+    if out is not None:
+        from server.app.bank_validation.slide_focus import authored_hash
+        questions = {q["question_id"]: q for q in bank["questions"]}
+        evidence = {block["question_id"]: {"authoredHash": authored_hash(questions[block["question_id"]]),
+                    "evidence": block["source_evidence"]} for block in blocks if block.get("source_evidence")}
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "authored-evidence.json").write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
     return bank, info

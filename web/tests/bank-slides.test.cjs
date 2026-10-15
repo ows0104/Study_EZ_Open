@@ -26,10 +26,19 @@ test('only marked slides render initially; extra references stay closed and unlo
   assert.doesNotMatch(html, /<details[^>]*\bopen/);
 });
 
-test('older API responses show one slide and retain the rest for expansion', () => {
+test('missing semantic evidence never promotes the first cited slide to core evidence', () => {
   const { primary, extra } = splitSlides([slide(9), slide(10), slide(11)]);
+  assert.deepEqual(Array.from(primary, s => s.page), []);
+  assert.deepEqual(Array.from(extra, s => s.page), [9, 10, 11]);
+  const html = renderToStaticMarkup(React.createElement(BankSlides, { slides: [slide(9, false)] }));
+  assert.match(html, /확인된 핵심 근거 슬라이드가 없습니다/);
+  assert.doesNotMatch(html, /alt="필기/);
+});
+
+test('a selected single page is shown even when it is the last cited page', () => {
+  const { primary, extra } = splitSlides([slide(1, false), slide(2, false), slide(9, true)]);
   assert.deepEqual(Array.from(primary, s => s.page), [9]);
-  assert.deepEqual(Array.from(extra, s => s.page), [10, 11]);
+  assert.deepEqual(Array.from(extra, s => s.page), [1, 2]);
 });
 
 test('empty references render nothing and a single reference needs no expander', () => {

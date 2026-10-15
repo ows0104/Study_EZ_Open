@@ -39,10 +39,19 @@ CLI는 새 원본 전용 작업 폴더에서 독립 포인트를 추출한 뒤 �
 | CLI 수정·보완 | `repair.py` | 검증·원본·정답 지적에 따라 수정하고 재검수 |
 | 사후 학습 구조 | `question_first.py`·`prompts/learning-structure.md` | 최종 내용 보존 후 개념도·회상 계획·선행 연결 |
 | 근거 이미지 | `slides.py` | 인용한 PDF 쪽을 PNG로 생성 |
+| 핵심 근거·족보 지면 | `evidence.py`·`slide_focus.py`·`jokbo_pages.py` | CLI가 최종 문항·정답과 원본을 대조해 기본 한 장을 선택하고 실제 족보 PDF 지면을 연결 |
 
 실행: `python -m quizbank.run --help`.
 검사: `python -m pytest tests/quizbank`.
 운영 실행·업로드는 `runner/bank.py`가 맡는다.
+
+프롬프트 1.61부터 출제 시 `근거:` JSON으로 핵심·추가 참고·족보를 구분한다. 정리기는 이를
+`authored-evidence.json`에 보존하고 문항 스키마·정답·해설에 섞지 않는다. 최종 문항의 발문·정답·출처가
+유지되면 그 선택을 사용하며, 기존 문항·내용 수정분·새 보기 풀 후보만 CLI가 추가 대조한다.
+인용 순서·키워드로 핵심을 대신하지 않는다.
+`validation.slideFocus`는 문항 내용 hash와 지면별 선택 근거를 보존하며, 한 장으로 충분하지 않은
+연계 문항만 여러 장을 선택한다. 실제 근거를 못 찾으면 unresolved로 남긴다. `validation.jokboPages`는
+첨부한 족보 조각의 연도·문항 번호와 절단기 원본 PDF 쪽을 매칭한다. 문항·정답·검수 등급은 바꾸지 않는다.
 
 출제포인트 수와 문항 수는 일대일로 맞추지 않는다. 원본 대조는 목표의 등장과 방향별 실제 시험을
 분리해 기록하고 필수 누락·확장 제안을 구분한다. 수정은 기존 문항 보완을 우선하며, 추가 문항에는

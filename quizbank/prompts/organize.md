@@ -36,6 +36,7 @@
 - 원문 뒤의 「문항·선지 해설 보완」 표는 기존 question_id에 대한 후속 보완 기록이다. question·source_refs는 보완 표의 값을 적용한다. answer 열이 있으면 answer와 answer_units를 해당 표의 값으로 적용하고, answer 열이 없으면 answer_units를 원래 항목에 중복 없이 추가한다. 별도 문항으로 만들거나 기존 선택 정답표를 바꾸지 마라.
 - 짝짓기·순서 항목에 붙은 번호(`1.` · `A.`)와 정답 짝의 번호는 떼지 말고 원문 그대로 둔다. 정답 짝은 원문의 `1. … - A. …`를 left·right로 나누기만 한다 — 번호로 맞추는 것은 코드가 한다.
 - source_refs의 locator에는 원문의 쪽·문항 표기를 그대로 둔다(예: `p13`, `p13–14`, `2023 Q11`).
+- 간결 블록의 `근거:` JSON은 코드가 별도 표시 메타데이터로 보존한다. 문항 스키마에 새 필드를 만들거나 정답·해설·출제근거에 합치지 않는다. source_refs에는 기존 `출처:`의 핵심·참고·족보 인용 전체를 보존한다.
 - build_meta.schema_version은 `{{schema_version}}`, build_meta.lecture_title은 강의 제목이다.
 
 ## 3. 경고 기록
