@@ -67,6 +67,62 @@ def target_for(bank: dict, q: dict, policy: dict = DEFAULT) -> dict:
             policy["mastery"]["tierTargets"][priority_tier(q)])}
 
 
+def review_schedule(bank: dict, q: dict, snapshot: dict, policy: dict = DEFAULT) -> dict:
+    """Invert the same forgetting curve used by memory_snapshot, from the actual review time."""
+    at = snapshot["reviewed_at"]
+    target = target_for(bank, q, policy)["effective"]
+    stability = stability_days({"stability_days": snapshot["stability_days"]}, policy)
+    # M(t) = M_after / (1 + t / (9*S)); a target already missed is due next KST day.
+    days = min(policy["forgetting"]["maxDays"],
+               max(0, 9 * stability * (snapshot["mastery_after"] / target - 1)))
+    due = max(_korea_midnight_ms(at) + DAY_MS, at + round(days * DAY_MS))
+    return {"interval": due - at, "due_at": due,
+            "target_schedule": {"reviewed_at": at, "mastery_after": snapshot["mastery_after"],
+                                "stability_days": stability, "target": target}}
+
+
+def reschedule_bank(bank: dict, state: dict, policy: dict = DEFAULT, *, question_ids: set[str] | None = None) -> dict:
+    """Refresh schedules only; review facts, mastery, tokens, and completed sessions are preserved.
+
+    Old untouched schedules remain until their next review. Previously saved private tiers
+    and target-based schedules are recalculated on load, including before a read-only queue.
+    """
+    bank = personal_bank(bank, state)
+    latest = {}
+    for review in state.get("history", []):
+        qid = review["question_id"]
+        if qid not in latest or review["timestamp"] >= latest[qid]["timestamp"]:
+            latest[qid] = review
+    items = state.get("items", {})
+    changed = None
+    for q in bank["questions"]:
+        qid = q["question_id"]
+        item = items.get(qid) or {}
+        review = latest.get(qid) or {}
+        if not (item.get("reviews") or review) or not (item.get("target_schedule") or q.get("personalTier")
+                                           or question_ids is not None and qid in question_ids):
+            continue
+        snapshot = item.get("target_schedule")
+        if not snapshot and "mastery_after" in review:
+            snapshot = {"reviewed_at": review["timestamp"], "mastery_after": review["mastery_after"],
+                        "stability_days": review.get("stability_after", policy["forgetting"]["legacyDays"])}
+        if not snapshot:
+            # Legacy records without question history use their stored review anchor and known dimension.
+            dim = state.get("dimensions", {}).get(dimension_key(q)) or {}
+            at = item.get("due_at", 0) - item.get("interval", 0)
+            if not at or "mastery" not in dim:
+                continue
+            snapshot = {"reviewed_at": at, "mastery_after": dim["mastery"],
+                        "stability_days": stability_days(dim, policy)}
+        count = item.get("reviews") or sum(h["question_id"] == qid for h in state.get("history", []))
+        updated = {**item, "reviews": count, **review_schedule(bank, q, snapshot, policy)}
+        if updated != item:
+            if changed is None:
+                changed = dict(items)
+            changed[qid] = updated
+    return {**state, "items": changed} if changed is not None else state
+
+
 def question_stage(q: dict) -> int:
     if q["retrieval_direction"] == "direct" or (q["format"] == "ox" and q["item_difficulty"] <= 2):
         return 1
@@ -128,6 +184,7 @@ def upgrade_state(bank: dict, previous: dict, policy: dict = DEFAULT, now: int =
 
 
 def rank_questions(bank: dict, state: dict, exam_date: str, now: int, policy: dict = DEFAULT) -> list[dict]:
+    state = reschedule_bank(bank, state, policy)
     bank = active_bank(bank, state)
     state = memory_snapshot(state, now, policy)
     days = days_until(exam_date, now)
@@ -153,7 +210,7 @@ def rank_questions(bank: dict, state: dict, exam_date: str, now: int, policy: di
         item = state["items"].get(qid)
         dim = state["dimensions"].get(dimension_key(q)) or {}
         due_at = (item or {}).get("due_at", now)
-        if dim.get("updated_at") is not None:
+        if dim.get("updated_at") is not None and not (item or {}).get("target_schedule"):
             # 옛 일정도 현재 기억 유지 기간보다 멀리 밀린 경우 복습 대상으로 돌아온다.
             due_at = min(due_at, dim["updated_at"] + stability_days(dim, policy) * DAY_MS)
         target = target_for(bank, q, policy)
@@ -275,14 +332,9 @@ def record_review(bank: dict, previous: dict, question_id: str, rating: str, now
     after = (1 - alpha) * baseline + alpha * policy["mastery"]["ratings"][rating]
     state["dimensions"][dim] = {"mastery": after, "reviews": (state["dimensions"].get(dim) or {}).get("reviews", 0) + 1,
                                 "updated_at": now, "stability_days": stability}
-    old = state["items"].get(question_id) or {"reviews": 0, "interval": 0}
-    iv = policy["intervals"]
-    interval = (iv["againMs"] if rating == "Again"
-                else max(iv["hardMs"], old["interval"] * iv["hardMultiplier"]) if rating == "Hard"
-                else max(iv["goodMs"], old["interval"] * iv["goodMultiplier"]) if rating == "Good"
-                else max(iv["easyMs"], old["interval"] * iv["easyMultiplier"]))
-    interval = min(interval, round(stability * DAY_MS))
-    state["items"][question_id] = {"reviews": old["reviews"] + 1, "interval": interval, "due_at": now + interval}
+    old = state["items"].get(question_id) or {"reviews": 0}
+    schedule = review_schedule(bank, q, {"reviewed_at": now, "mastery_after": after, "stability_days": stability}, policy)
+    state["items"][question_id] = {"reviews": old["reviews"] + 1, **schedule}
 
     events, remaining = [], []
     for r in state["remediations"]:
@@ -304,7 +356,7 @@ def record_review(bank: dict, previous: dict, question_id: str, rating: str, now
         "question_id": question_id, "rating": rating, "timestamp": now, "mastery_before": before,
         "mastery_after": after, "dimension": dim, "session_id": (state.get("session") or {}).get("id"),
         "stability_after": stability,
-        "next_due_at": now + interval,
+        "next_due_at": schedule["due_at"], "target_schedule": dict(schedule["target_schedule"]),
         "dimension_before": dimension_before,
         "policy_version": policy["version"], "policy_hash": policy_hash(policy), "remediation_events": events})
     state["served"] = None

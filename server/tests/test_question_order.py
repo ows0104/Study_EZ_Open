@@ -92,7 +92,9 @@ def main():
     for qid, due in (("R0", NOW - 4 * DAY_MS), ("R1", NOW - 1000),
                      ("R2", day_start(NOW) + DAY_MS - 1), ("R3", day_start(NOW) + DAY_MS)):
         state["items"][qid]["due_at"] = due
+        state["items"][qid].pop("target_schedule")
         next(h for h in state["history"] if h["question_id"] == qid)["next_due_at"] = due
+        next(h for h in state["history"] if h["question_id"] == qid).pop("target_schedule")
     # _due respects earliest next-day availability; use an older history for the overdue item.
     state["history"][0]["timestamp"] = NOW - 5 * DAY_MS
     state["dimensions"]["CR2:direct"]["mastery"] = 0.8

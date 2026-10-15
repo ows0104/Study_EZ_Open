@@ -74,7 +74,7 @@ from app.study_engine.planning import day_start
 from app.study_engine.review_undo import remember_review, undo_review, undo_token
 from app.study_engine.batch import aggregate_goal, select_batch_question
 from app.study_engine.personal_priority import question_priority
-from app.study_engine.engine import target_for
+from app.study_engine.engine import target_for, reschedule_bank
 from app.storage import ObjectStorage, StorageNotConfigured
 
 router = APIRouter()
@@ -693,6 +693,8 @@ def _load_state(db: Session, user: CurrentUser, row: QuizBank) -> BankState:
         state.previous = {"build_id": state.build_id, "state": state.state}
         state.build_id = row.build_id
         state.state = engine.empty_state()
+    if row.bank:
+        state.state = reschedule_bank(row.bank, state.state)
     return state
 
 
@@ -1013,7 +1015,8 @@ class PriorityIn(TokenIn):
 @router.put("/lectures/{subject}/{run_id}/bank/questions/{question_id}/priority")
 def set_bank_priority(subject: str, run_id: str, question_id: str, payload: PriorityIn,
                       user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)) -> dict:
-    row = _bank_or_404(db, lecture_or_404(db, subject, run_id), user)
+    lecture = lecture_or_404(db, subject, run_id)
+    row = _bank_or_404(db, lecture, user)
     bank = _usable(row)
     if not any(q["question_id"] == question_id for q in bank["questions"]):
         raise HTTPException(404, "문항을 찾을 수 없습니다.")
@@ -1028,11 +1031,14 @@ def set_bank_priority(subject: str, run_id: str, question_id: str, payload: Prio
     else:
         tiers[question_id] = payload.tier
     state["question_tiers"] = tiers
+    state = reschedule_bank(bank, state, question_ids={question_id})
     _save(state_row, state)
     db.commit()
     question = _served_question(db, row, user.id, bank, served)
     choices_shown = not served.get("choice_protocol") or choice_mode(question) != "recall_first" or served.get("choices_shown", False) or served.get("revealed", False)
-    return {"question": _public(question, bank=bank, show_choices=choices_shown)}
+    return {"question": _public(question, bank=bank, show_choices=choices_shown),
+            "rescheduled": bool((state.get("items", {}).get(question_id) or {}).get("target_schedule")),
+            "lectureGoal": lecture_goal(bank, state, lecture.title, engine.now_ms())}
 
 
 class SuspensionIn(BaseModel):
@@ -1171,7 +1177,7 @@ def undo_bank_answer(subject: str, run_id: str, payload: TokenIn,
     bank = _usable(row)
     state_row = _load_state(db, user, row)
     try:
-        state = undo_review(state_row.state, payload.review_token)
+        state = reschedule_bank(bank, undo_review(state_row.state, payload.review_token))
     except ValueError as cause:
         raise HTTPException(409, str(cause)) from cause
     served = state["served"]
@@ -1345,7 +1351,14 @@ def next_batch_question(payload: BatchIn, user: CurrentUser = Depends(require_ap
                          db: Session = Depends(get_db)) -> dict:
     entries = _batch_entries(payload, user, db)
     goal = aggregate_goal(entries, day_start(engine.now_ms()))
-    if goal["met"]:
+    resume = (payload.resume_lecture.subject, payload.resume_lecture.run_id) if payload.resume_lecture else None
+    # Lowering the target may move this exposure out of today's queue. Keep the
+    # current ungraded question on refresh, just as ordinary study does.
+    chosen = next((entry for entry in entries if entry["key"] == resume
+                   and (entry["state"].get("served") or {}).get("question_id") in {
+                       q["question_id"] for q in entry["bank"]["questions"]
+                       if q["question_id"] not in entry["state"].get("suspended_question_ids", [])}), None)
+    if goal["met"] and chosen is None:
         for entry in entries:
             state_row = db.get(BankState, (user.id, *entry["key"]))
             if state_row and state_row.build_id == entry["row"].build_id:
@@ -1354,10 +1367,7 @@ def next_batch_question(payload: BatchIn, user: CurrentUser = Depends(require_ap
         for entry in entries:
             _refresh_batch_entry(entry, user, db)
         return _batch_reply({"question": None, "summary": None, "reason": "lecture_goal_met"}, entries, None)
-    resume = (payload.resume_lecture.subject, payload.resume_lecture.run_id) if payload.resume_lecture else None
-    chosen = next((entry for entry in entries if entry["key"] == resume and entry["goal"]["remaining"]
-                   and (entry["state"].get("served") or {}).get("question_id") in {
-                       u["key"] for u in daily_units(entry["bank"], entry["state"], engine.now_ms()) if u["status"] == "pending"}), None)
+    resuming = chosen is not None
     selection = None
     if chosen is None:
         for entry in entries:
@@ -1369,7 +1379,7 @@ def next_batch_question(payload: BatchIn, user: CurrentUser = Depends(require_ap
     state = engine.start_session(chosen["bank"], state_row.state, None, engine.now_ms())
     state["session"].update(size=None, continue_after_goal=False)
     pending = {u["key"] for u in daily_units(chosen["bank"], state, engine.now_ms()) if u["status"] == "pending"}
-    if state.get("served") and state["served"]["question_id"] not in pending:
+    if not resuming and state.get("served") and state["served"]["question_id"] not in pending:
         state["served"] = None
     _save(state_row, state)
     db.commit()

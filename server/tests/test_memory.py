@@ -50,7 +50,8 @@ def main():
     restored = reviewed["dimensions"]["C1:direct"]
     assert restored["mastery"] > expected and restored["stability_days"] > dim["stability_days"]
     assert reviewed["history"][-1]["mastery_before"] == expected
-    assert reviewed["items"]["Q1"]["interval"] <= restored["stability_days"] * DAY_MS
+    due = reviewed["items"]["Q1"]["due_at"]
+    assert math.isclose(memory_snapshot(reviewed, due)["dimensions"]["C1:direct"]["mastery"], .85, abs_tol=1e-8)
     assert state == untouched
     failed = record_review(bank, state, "Q1", "Again", later)["dimensions"]["C1:direct"]
     assert failed["mastery"] < expected and failed["stability_days"] < dim["stability_days"]
@@ -61,7 +62,7 @@ def main():
     for i in range(20):
         cram = record_review(bank, cram, "Q1", "Good", now + i * 60_000)
     assert cram["dimensions"]["C1:direct"]["stability_days"] == DEFAULT["forgetting"]["initialDays"]["Good"]
-    assert cram["items"]["Q1"]["interval"] <= DAY_MS
+    assert cram["items"]["Q1"]["interval"] < 2 * DAY_MS
     assert math.isclose(retention(cram["dimensions"]["C1:direct"], now + 19 * 60_000 + DAY_MS), 0.9)
     spaced, at = empty_state(), now
     for _ in range(12):

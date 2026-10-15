@@ -16,6 +16,9 @@ def learned(bank, *, at=NOW - DAY_MS, due=NOW - 1):
         state = record_review(bank, state, q["question_id"], "Good", at)
         state["items"][q["question_id"]]["due_at"] = due
         state["history"][-1]["next_due_at"] = due
+        # Explicit dates model imported legacy schedules, prior to a target-based review.
+        state["items"][q["question_id"]].pop("target_schedule")
+        state["history"][-1].pop("target_schedule")
     return state
 
 

@@ -52,7 +52,9 @@ def main():
     assert lecture_goal(bank, partial, "test", NOW + 1)["remaining"] == 4
     assert select_daily_question(bank, partial, EXAM, NOW + 1)["question"]["question_id"] == "variant"
     # Scheduled future reviews are excluded; unseen advanced questions stay in the daily task.
-    easy = record_review(bank, original, "Q1", "Easy", NOW - DAY_MS)
+    established = empty_state()
+    established["dimensions"]["C1:direct"] = {"mastery": .95, "reviews": 5, "updated_at": NOW - 2 * DAY_MS, "stability_days": 5}
+    easy = record_review(bank, established, "Q1", "Easy", NOW - DAY_MS)
     assert lecture_goal(bank, easy, "test", NOW)["total"] == 4
     assert lecture_goal(bank, easy, "test", NOW)["newRemaining"] == 4
     legacy = copy.deepcopy(easy)
@@ -126,7 +128,7 @@ def main():
     assert not carried["met"] and carried["total"] == 27 and carried["remaining"] == 11
     assert select_daily_question(large, repeated, EXAM, NOW + 40)["question"] is not None
     # Extra review before its due date cannot expand the daily goal.
-    future = record_review(single, original, "Q1", "Easy", NOW - DAY_MS)
+    future = record_review(single, established, "Q1", "Easy", NOW - DAY_MS)
     before_goal = lecture_goal(single, future, "test", NOW)
     future = record_review(single, future, "Q1", "Again", NOW)
     after_goal = lecture_goal(single, future, "test", NOW)

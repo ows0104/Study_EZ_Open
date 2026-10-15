@@ -178,12 +178,13 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
     if (!current?.question || !current.reviewToken || busy || undoBusy || pending.current) return;
     pending.current = true; setBusy(true); setError(""); setActionMessage("");
     try {
-      const got = await api<Pick<BankNext, "question">>(`${base}/questions/${encodeURIComponent(current.question.question_id)}/priority`, {
+      const got = await api<Pick<BankNext, "question" | "lectureGoal"> & { rescheduled?: boolean }>(`${base}/questions/${encodeURIComponent(current.question.question_id)}/priority`, {
         method: "PUT", body: JSON.stringify({ tier, reviewToken: current.reviewToken }),
       });
-      setCurrent(old => old ? { ...old, question: got.question } : old);
+      setCurrent(old => old ? { ...old, question: got.question, lectureGoal: got.lectureGoal ?? old.lectureGoal } : old);
       invalidateTimetable();
-      setActionMessage(tier === null ? "원래 중요도로 되돌렸습니다." : `내 문제의 중요도를 ${tier}로 저장했습니다.`);
+      setActionMessage((tier === null ? "원래 중요도로 되돌렸습니다." : `내 문제의 중요도를 ${tier}로 저장했습니다.`)
+        + (got.rescheduled ? " 복습 예정일도 새 목표로 다시 계산했습니다." : ""));
     } catch (cause) { setError((cause as Error).message); }
     finally { pending.current = false; setBusy(false); }
   }

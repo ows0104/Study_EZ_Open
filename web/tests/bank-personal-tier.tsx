@@ -32,7 +32,7 @@ window.fetch = async (input, init) => {
     check(path === base + "/questions/Q1/priority" && body.reviewToken === "token", "saves to the current lecture with its review token");
     await new Promise(resolve => setTimeout(resolve, 70));
     if (fail) { fail = false; status = 503; result = { detail: "저장 실패 테스트" }; }
-    else { tier = body.tier ?? "Core"; personal = body.tier !== null; result = { question: question() }; }
+    else { tier = body.tier ?? "Core"; personal = body.tier !== null; result = { question: question(), rescheduled: true }; }
   } else if (path.endsWith("/rate")) { rates++; result = {}; }
   else throw new Error(`Unexpected request: ${path}`);
   return new Response(JSON.stringify(result), { status, headers: { "Content-Type": "application/json" } });
@@ -57,6 +57,7 @@ try {
   await waitFor(() => document.body.textContent?.includes("Optional로 저장"));
   check(saves === 2 && document.querySelector<HTMLSelectElement>("select")!.value === "Optional", "duplicate changes are blocked while saving");
   check(document.querySelector(".bank-target")?.textContent?.includes("55%"), "Optional applies its new target immediately");
+  check(document.body.textContent?.includes("복습 예정일도 새 목표로 다시 계산했습니다"), "confirms that the existing review date was recalculated");
   check(option.getAttribute("aria-pressed") === "true" && document.body.textContent?.includes("Advanced · 심화") && rates === 0, "picked answer, depth flag, and ungraded state survive tier changes");
   document.querySelector<HTMLButtonElement>(".quiz-submit")!.click();
   await waitFor(() => document.querySelectorAll(".quiz-grade").length === 4

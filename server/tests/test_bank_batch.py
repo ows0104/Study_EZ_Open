@@ -50,6 +50,9 @@ def main():
                     state = record_review(bank, state, question["question_id"], "Easy", NOW - DAY_MS)
                     state["items"][question["question_id"]]["due_at"] = NOW + 7 * DAY_MS
                     state["history"][-1]["next_due_at"] = NOW + 7 * DAY_MS
+                    # An imported future schedule has no target-curve snapshot yet.
+                    state["items"][question["question_id"]].pop("target_schedule")
+                    state["history"][-1].pop("target_schedule")
             db.add(BankState(user_id=USER.id, subject="mix", run_id=run, build_id=f"build-{run}", state=state))
         db.commit()
     app.dependency_overrides[get_current_user] = lambda: USER

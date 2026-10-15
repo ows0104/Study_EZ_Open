@@ -5,7 +5,7 @@
 추가 학습의 평가는 숙련도에 반영하지만 오늘 달성한 분량을 되돌리지 않는다.
 """
 
-from .engine import rank_questions, days_until
+from .engine import rank_questions, days_until, reschedule_bank, review_schedule
 from .ordering import choose_candidate, question_slide, study_history
 from .planning import day_start
 from .memory import DAY_MS
@@ -15,17 +15,21 @@ from .suspension import active_bank
 from app.bank_validation.priorities import TIER_ORDER, is_advanced, priority_tier
 
 
-def _due(review: dict, state: dict, *, latest: bool, policy: dict) -> int:
+def _due(review: dict, state: dict, bank: dict, question: dict, *, latest: bool, policy: dict) -> int:
     rating, at = review["rating"], review["timestamp"]
+    item = state.get("items", {}).get(review["question_id"], {}) if latest else {}
+    snapshot = item.get("target_schedule") or review.get("target_schedule")
+    if snapshot:
+        return review_schedule(bank, question, snapshot, policy)["due_at"]
     if rating in ("Again", "Hard"):
         return max(day_start(at) + DAY_MS,
                    at + policy["intervals"]["againMs" if rating == "Again" else "hardMs"])
-    item = state.get("items", {}).get(review["question_id"], {}) if latest else {}
     scheduled = review.get("next_due_at", item.get("due_at", at + policy["intervals"]["goodMs" if rating == "Good" else "easyMs"]))
     return max(day_start(at) + DAY_MS, scheduled)
 
 
 def daily_units(bank: dict, state: dict, now: int, policy: dict = DEFAULT) -> list[dict]:
+    state = reschedule_bank(bank, state, policy)
     start, end = day_start(now), day_start(now) + DAY_MS
     groups = {q["question_id"]: [q] for q in active_bank(bank, state)["questions"]}
     reviews = {key: [] for key in groups}
@@ -44,7 +48,7 @@ def daily_units(bank: dict, state: dict, now: int, policy: dict = DEFAULT) -> li
         legacy = [item for item in legacy if item.get("reviews", 0) > 0]
         known = bool(history or legacy)
         kind = "review" if before or legacy and not history else "new"
-        due = _due(before, state, latest=not today, policy=policy) if before else min(
+        due = _due(before, state, bank, questions[0], latest=not today, policy=policy) if before else min(
             (item.get("due_at", start) for item in legacy), default=start)
         scheduled_due = due
         scheduled = kind == "new" or due < end
@@ -59,7 +63,7 @@ def daily_units(bank: dict, state: dict, now: int, policy: dict = DEFAULT) -> li
         status = "pending"
         if last:
             status = "done"
-            due = _due(last, state, latest=True, policy=policy)
+            due = _due(last, state, bank, questions[0], latest=True, policy=policy)
         units.append({"key": key, "questions": questions, "status": status, "due": due,
                       "scheduled_due": scheduled_due,
                       "kind": kind, "seen": known, "today": len(today), "last": last or before})
@@ -97,6 +101,7 @@ def daily_candidates(bank: dict, state: dict, exam: str, now: int, policy: dict 
                      *, scope: tuple = (), lecture_order: int = 0, pages: dict | None = None,
                      extra: bool = False) -> tuple[list[dict], list[dict]]:
     """선행관계를 만족하는 오늘의 후보. 일정은 원래 예정일과 오늘 풀이 가능 시각을 구분한다."""
+    state = reschedule_bank(bank, state, policy)
     units = daily_units(bank, state, now, policy)
     seen = seen_ids(state) if extra else set()
     remaining = units if extra else [u for u in units if u["status"] not in ("done", "later")]
