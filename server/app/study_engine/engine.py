@@ -16,6 +16,7 @@ from datetime import UTC, datetime, timedelta
 from .policy import DEFAULT, policy_hash
 from .memory import memory_snapshot, next_stability, stability_days
 from .suspension import active_bank
+from .personal_priority import personal_bank
 from app.bank_validation.priorities import TIER_ORDER, is_advanced, priority_tier
 
 DAY_MS = 86_400_000
@@ -83,6 +84,7 @@ def concept_readiness(bank: dict, state: dict, concept_id: str, policy: dict = D
 
 
 def core_mastery(bank: dict, state: dict, concept_id: str | None = None) -> float:
+    bank = personal_bank(bank, state)
     by_concept: dict[str, dict[str, float]] = {}
     for q in bank["questions"]:
         if q["tier"] == "Core" and (not concept_id or q["concept_id"] == concept_id):
@@ -250,6 +252,7 @@ def select_question(bank: dict, state: dict, exam_date: str, now: int, policy: d
 
 
 def record_review(bank: dict, previous: dict, question_id: str, rating: str, now: int, policy: dict = DEFAULT) -> dict:
+    bank = personal_bank(bank, previous)
     if rating not in policy["mastery"]["ratings"]:
         raise ValueError("잘못된 평가입니다.")
     q = next((x for x in bank["questions"] if x["question_id"] == question_id), None)
@@ -316,6 +319,7 @@ def concept_map(bank: dict, state: dict, policy: dict = DEFAULT, *, now: int | N
 
     `progress` 는 방향마다 목표 대비 비율(1에서 자른다)의 평균 — 그래프의 색 하나로 쓰는 값이다.
     """
+    bank = personal_bank(bank, state)
     state = memory_snapshot(state, now, policy)
     ids = {c["concept_id"] for c in bank["concepts"]}
     out = []

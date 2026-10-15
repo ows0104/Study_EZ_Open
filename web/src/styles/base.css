@@ -2609,6 +2609,17 @@ button.notice-title:hover:not(:disabled) {
   font-size: 12px;
 }
 
+.bank-tier-control { display: inline-flex; align-items: center; gap: 5px; }
+.bank-tier-control select {
+  padding: 4px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-2);
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+}
+.bank-tier-reset { margin-left: 4px; font-size: inherit; }
+
 .bank-conflict {
   margin: 0 0 12px;
   padding: 8px 12px;

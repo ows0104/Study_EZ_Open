@@ -73,6 +73,7 @@ from app.study_engine.choices import realize_choices
 from app.study_engine.planning import day_start
 from app.study_engine.review_undo import remember_review, undo_review, undo_token
 from app.study_engine.batch import aggregate_goal, select_batch_question
+from app.study_engine.personal_priority import question_priority
 from app.storage import ObjectStorage, StorageNotConfigured
 
 router = APIRouter()
@@ -714,13 +715,20 @@ def _served_question(db: Session, row: QuizBank, user_id: str, bank: dict, serve
     snapshot = served.get("question_snapshot") or {}
     # Explicit private corrections take effect immediately and disable pools.
     # A reset during the same exposure restores the original authored options.
-    if personal.get("personalEdited") or snapshot.get("personalEdited"):
-        return personal
     # Freeze the presented choices and scoring, but show current priority labels
     # after a metadata-only review without resetting this exposure or its token.
-    question = snapshot or personal
+    question = personal if personal.get("personalEdited") or snapshot.get("personalEdited") else snapshot or personal
     metadata = priority_fields(original, question=True)
-    return {**question, **{k: metadata[k] for k in ("tier", "importance", "advanced")}}
+    state = db.get(BankState, (user_id, row.subject, row.run_id))
+    current = state.state if state and state.build_id == row.build_id else {}
+    metadata = question_priority(metadata, current)
+    out = {**question, **{k: metadata[k] for k in ("tier", "importance", "advanced")}}
+    if metadata.get("personalTier"):
+        out.update(personalTier=True, originalTier=metadata["originalTier"])
+    else:
+        out.pop("personalTier", None)
+        out.pop("originalTier", None)
+    return out
 
 
 def _slides(db: Session, row: QuizBank, question_id: str, presented: dict | None = None) -> list[dict[str, Any]]:
@@ -968,7 +976,7 @@ def _next_bank_question(subject: str, run_id: str, user: CurrentUser, db: Sessio
         # 구 화면에서 이미 보던 선지는 숨기지 않는다. 새 문항부터 인출 단계를 적용한다.
         served.update(choice_protocol=True, choices_shown=True)
     if "question_snapshot" not in served:
-        question = bank_personal.apply(db, row, user.id, question)
+        question = bank_personal.apply(db, row, user.id, by_id[question["question_id"]])
         review = next((r for r in bank_edits.current_review(row.review, row.validation)["reviews"]
                        if r["question_id"] == question["question_id"]), None)
         previous = state.setdefault("choice_variants", {}).get(question["question_id"])
@@ -994,6 +1002,35 @@ class TokenIn(BaseModel):
     review_token: str = Field(alias="reviewToken")
 
     model_config = {"populate_by_name": True}
+
+
+class PriorityIn(TokenIn):
+    tier: Literal["Core", "Important", "Optional"] | None
+
+
+@router.put("/lectures/{subject}/{run_id}/bank/questions/{question_id}/priority")
+def set_bank_priority(subject: str, run_id: str, question_id: str, payload: PriorityIn,
+                      user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)) -> dict:
+    row = _bank_or_404(db, lecture_or_404(db, subject, run_id), user)
+    bank = _usable(row)
+    if not any(q["question_id"] == question_id for q in bank["questions"]):
+        raise HTTPException(404, "문항을 찾을 수 없습니다.")
+    state_row = _load_state(db, user, row)
+    state = dict(state_row.state)
+    served = state.get("served") or {}
+    if served.get("token") != payload.review_token or served.get("question_id") != question_id:
+        raise HTTPException(409, "현재 학습 문항이 아닙니다.")
+    tiers = dict(state.get("question_tiers", {}))
+    if payload.tier is None:
+        tiers.pop(question_id, None)
+    else:
+        tiers[question_id] = payload.tier
+    state["question_tiers"] = tiers
+    _save(state_row, state)
+    db.commit()
+    question = _served_question(db, row, user.id, bank, served)
+    choices_shown = not served.get("choice_protocol") or choice_mode(question) != "recall_first" or served.get("choices_shown", False) or served.get("revealed", False)
+    return {"question": _public(question, show_choices=choices_shown)}
 
 
 class SuspensionIn(BaseModel):
@@ -1221,6 +1258,9 @@ def save_personal_question(subject: str, run_id: str, question_id: str, payload:
                             highlighted=payload.report, correction=correction))
     db.commit()
     current = bank_personal.apply(db, row, user.id, original)
+    state = db.get(BankState, (user.id, row.subject, row.run_id))
+    if state and state.build_id == row.build_id:
+        current = question_priority(current, state.state)
     return {"question": _public(current), "answer": _answer(db, row, current),
             "reported": payload.action == "save", "highlighted": payload.report and payload.action == "save"}
 

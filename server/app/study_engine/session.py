@@ -11,6 +11,7 @@ import uuid
 from .engine import core_mastery, dimension_key, target_for
 from .memory import memory_snapshot
 from .policy import DEFAULT, policy_hash
+from .personal_priority import personal_bank
 
 RATINGS = ("Again", "Hard", "Good", "Easy")
 
@@ -31,6 +32,7 @@ def start_session(bank: dict, previous: dict, size: int | None, now: int, policy
 
 
 def session_summary(bank: dict, state: dict, policy: dict = DEFAULT, *, now: int | None = None) -> dict | None:
+    bank = personal_bank(bank, state)
     session = state.get("session")
     if not session:
         return None

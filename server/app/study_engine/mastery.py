@@ -4,9 +4,11 @@ from math import sqrt
 
 from .engine import concept_map
 from .policy import DEFAULT
+from .personal_priority import personal_bank
 
 
 def mastery_concepts(bank: dict, state: dict, policy: dict = DEFAULT, *, now: int | None = None) -> tuple[str, list[dict]]:
+    bank = personal_bank(bank, state)
     # 문항 수가 많은 개념이 점수를 독점하지 않도록 개념 단위로 집계한다.
     # 중요도 Core만 집계한다. 독립 심화 표시는 Core 여부를 바꾸지 않는다.
     core = [q for q in bank["questions"] if q["tier"] == "Core"]

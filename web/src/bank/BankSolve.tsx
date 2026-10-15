@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api";
 import { useMe } from "../useMe";
 import { invalidateTimetable } from "../firstScreen";
-import type { BankAnswer, BankNext, BankRating, BankRead, BankSession } from "../types/bank";
+import type { BankAnswer, BankNext, BankRating, BankRead, BankSession, BankTier } from "../types/bank";
 import { ConceptMap } from "./ConceptMap";
 import { PersonalQuestionDialog } from "./PersonalQuestionDialog";
 import { daysLabel, DIRECTION_LABEL } from "./labels";
@@ -174,6 +174,20 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
     await next();
   }, [base, current, busy, peek, next]);
 
+  async function changeTier(tier: BankTier | null) {
+    if (!current?.question || !current.reviewToken || busy || undoBusy || pending.current) return;
+    pending.current = true; setBusy(true); setError(""); setActionMessage("");
+    try {
+      const got = await api<Pick<BankNext, "question">>(`${base}/questions/${encodeURIComponent(current.question.question_id)}/priority`, {
+        method: "PUT", body: JSON.stringify({ tier, reviewToken: current.reviewToken }),
+      });
+      setCurrent(old => old ? { ...old, question: got.question } : old);
+      invalidateTimetable();
+      setActionMessage(tier === null ? "원래 중요도로 되돌렸습니다." : `내 문제의 중요도를 ${tier}로 저장했습니다.`);
+    } catch (cause) { setError((cause as Error).message); }
+    finally { pending.current = false; setBusy(false); }
+  }
+
   async function end() {
     if (!current?.session || busy || pending.current) return;
     pending.current = true;
@@ -279,7 +293,17 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
             {current.examDate ? ` · ${daysLabel(current.examDate)}` : ""}
           </span>
           <span className="bank-tags">
-            <span title="Core: 학습목표·기출 / Important: 강조·임상 중요 / Optional: 기타 세부사항">{q.tier}</span>
+            <label className="bank-tier-control" title="내 계정의 이 문제에 적용됩니다. Core: 학습목표·기출 / Important: 강조·임상 중요 / Optional: 기타 세부사항">
+              내 중요도{" "}
+              <select aria-label="내 문제 중요도" value={q.tier} disabled={busy || undoBusy}
+                onChange={event => void changeTier(event.target.value as BankTier)}>
+                <option value="Core">Core</option>
+                <option value="Important">Important</option>
+                <option value="Optional">Optional</option>
+              </select>
+            </label>
+            {q.personalTier ? <button className="is-quiet bank-tier-reset" disabled={busy || undoBusy}
+              title={`원래 중요도: ${q.originalTier ?? ""}`} onClick={() => void changeTier(null)}>원래대로</button> : null}
             {q.advanced ? <span className="bank-source-badge" title="중요도와 독립된 추가 추론·개념 연계 문항">Advanced · 심화</span> : null}
             {" · "}{DIRECTION_LABEL[q.retrieval_direction] ?? q.retrieval_direction} ·{" "}
             {q.mcq_mode === "recall_first" ? "기억 확인형 객관식" : q.mcq_mode === "comparison" ? "구별·판단형 객관식" : FORMAT_LABEL[q.format] ?? q.format}

@@ -73,6 +73,8 @@ export type BankQuestion = {
   mcq_mode?: "recall_first" | "comparison" | "none";
   personalEdited?: boolean;
   question_id: string;
+  personalTier?: boolean;
+  originalTier?: BankTier;
   concept_id: string;
   tier: BankTier;
   advanced?: boolean;

@@ -1,5 +1,7 @@
 """Distinct questions viewed, excluding Optional from the panel denominator."""
 
+from .personal_priority import personal_bank
+
 
 def seen_ids(state: dict) -> set[str]:
     ids = set(state.get("seen_question_ids", []))
@@ -16,6 +18,7 @@ def mark_seen(state: dict, question_id: str) -> None:
 
 
 def panel_progress(bank: dict, state: dict) -> dict[str, int]:
+    bank = personal_bank(bank, state)
     suspended = set(state.get("suspended_question_ids", []))
     required = {q["question_id"] for q in bank.get("questions", [])
                 if q["tier"] != "Optional" and q["question_id"] not in suspended}
