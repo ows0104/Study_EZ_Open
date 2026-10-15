@@ -6,6 +6,10 @@ const vm = require('node:vm');
 const ts = require('../node_modules/typescript');
 const source = fs.readFileSync(path.join(__dirname, '../src/bank/bankBridge.ts'), 'utf8');
 const compiled = ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.CommonJS}}).outputText;
+const routingExports = {};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/bridge/linkRouting.ts'), 'utf8'),
+  {compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,
+  {exports:routingExports, require:()=>({versionAtLeast:()=>true})});
 
 function fixture(fail = false) {
   let handle, bumps = 0;
@@ -18,6 +22,7 @@ function fixture(fail = false) {
     react: {useEffect: fn => fn()},
     '../api': {api: async (url, options) => {calls.push({url, body: JSON.parse(options.body)}); if (fail) throw Error('Save failed');}},
     '../bridge/previewBridge': {bumpPreviewVersion: () => {bumps++;}},
+    '../bridge/linkRouting': routingExports,
     '../bridge/protocol': {EXTENSION_SOURCE: 'ext', WEBAPP_SOURCE: 'web', MESSAGES: {
       bankReady: 'BANK', bankSaved: 'BANK_SAVED', linkReady: 'LINK', linkSaved: 'LINK_SAVED'}},
   };
@@ -67,4 +72,18 @@ test('complete bank answer starts review and acknowledges only after saving', as
   const failed = fixture(true);
   await failed.send({type:'BANK', raw, url:'https://chatgpt.com/c/complete'});
   assert.equal(failed.posted.length, 0);
+});
+
+test('legacy extension round trip preserves the launch version in answers, links and acknowledgements', async () => {
+  const payload = routingExports.bridgeRequest({mode:'bank', lectureId:'test/261013_01', promptVersion:'1.53'}, '1.3.15');
+  const s = fixture();
+  await s.send({type:'BANK', lectureId:payload.lectureId, raw:'문항 '.repeat(100)+'\nSTUDYEZ_BANK_COMPLETE',
+    promptVersion:'', url:'https://chatgpt.com/c/legacy'});
+  assert.equal(s.calls[0].body.promptVersion, '1.53');
+  assert.equal(s.calls[0].url, '/api/admin/lectures/test/261013_01/bank-response');
+  assert.equal(s.posted[0].lectureId, payload.lectureId);
+  await s.send({type:'LINK', lectureId:payload.lectureId, kind:'chatgpt_bank_share', url:'https://chatgpt.com/share/legacy'});
+  assert.equal(s.calls[1].url, '/api/admin/lectures/test/261013_01/bank/links');
+  assert.equal(s.posted[1].lectureId, payload.lectureId);
+  assert.throws(()=>routingExports.bridgeRequest({mode:'bank',lectureId:'test/run'},'1.3.15'), /버전/);
 });

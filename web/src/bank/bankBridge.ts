@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { api } from "../api";
 import { bumpPreviewVersion } from "../bridge/previewBridge";
 import { EXTENSION_SOURCE, MESSAGES, WEBAPP_SOURCE } from "../bridge/protocol";
+import { bankDestination } from "../bridge/linkRouting";
 
 /**
  * 완성된 웹 문항을 저장해 CLI 검수·게시를 시작한다. 링크는 별도로 저장한다.
@@ -18,14 +19,16 @@ export function useBankLink() {
         && ["chatgpt_bank", "chatgpt_bank_share"].includes(data.kind);
       if (!legacy && !bankLink) return;
       const lectureId = typeof data.lectureId === "string" ? data.lectureId : "";
-      const [subject, runId] = lectureId.split("/");
-      if (!subject || !runId || lectureId.split("/").length !== 2) return;
+      const destination = bankDestination(lectureId);
+      if (!destination) return;
+      const [subject, runId] = destination.lectureId.split("/");
+      if (!subject || !runId || destination.lectureId.split("/").length !== 2) return;
       const path = `${encodeURIComponent(subject)}/${encodeURIComponent(runId)}`;
       if (legacy && typeof data.raw === "string" && data.raw.length >= 200
           && data.raw.length <= 2_000_000 && data.raw.trimEnd().endsWith("STUDYEZ_BANK_COMPLETE")) {
         void api(`/api/admin/lectures/${path}/bank-response`, {
           method: "PUT", body: JSON.stringify({ raw: data.raw, conversationUrl: data.url || "",
-            promptVersion: typeof data.promptVersion === "string" ? data.promptVersion : "",
+            promptVersion: destination.promptVersion || (typeof data.promptVersion === "string" ? data.promptVersion : ""),
             ...(data.shareUrl ? { shareUrl: data.shareUrl } : {}) }),
         }).then(() => {
           window.postMessage({ source: WEBAPP_SOURCE, type: MESSAGES.bankSaved, lectureId }, window.location.origin);

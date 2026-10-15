@@ -49,6 +49,14 @@ def main():
     duplicate = client.put(base + '/bank-response', headers=ADMIN, json=request)
     assert duplicate.json()['reused']
     assert duplicate.json()['respondedAt'] == saved.json()['respondedAt']
+    metadata = client.put(base + '/bank-response', headers=ADMIN, json={**request, 'promptVersion':'1.53'})
+    assert metadata.json()['reused'] and metadata.json()['respondedAt'] == saved.json()['respondedAt']
+    with SessionLocal() as db:
+        assert db.get(QuizBank, ('test', '261008_01')).prompt_version == '1.53'
+        assert db.query(PrequizJob).filter_by(kind='bank').count() == 1
+    client.put(base + '/bank-response', headers=ADMIN, json=request)
+    with SessionLocal() as db:
+        assert db.get(QuizBank, ('test', '261008_01')).prompt_version == '1.53'
     with SessionLocal() as db:
         job = db.query(PrequizJob).filter_by(kind='bank').one()
         job.state = 'running'

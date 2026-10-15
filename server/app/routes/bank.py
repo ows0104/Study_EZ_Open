@@ -204,6 +204,12 @@ def put_bank_response(subject: str, run_id: str, payload: ResponseIn,
     row = db.get(QuizBank, (lecture.subject, lecture.run_id))
     job = open_job_of(db, lecture.subject, lecture.run_id, JOB_BANK)
     if row is not None and row.raw_response == payload.raw:
+        # A legacy extension may deliver the same answer first without metadata.
+        # Filling it in must not queue another job or invalidate a running build.
+        if not row.prompt_version and payload.prompt_version.strip():
+            if job is not None and job.state == "running":
+                raise HTTPException(409, "검수 중에는 프롬프트 버전을 바꿀 수 없습니다. 완료 후 다시 전달하세요.")
+            row.prompt_version = payload.prompt_version.strip()
         _save_share_link(row, payload.share_url)
         if "conversation_url" in payload.model_fields_set:
             row.conversation_url = payload.conversation_url.strip()

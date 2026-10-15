@@ -75,6 +75,7 @@ export function requestPreview(input: {
   if (!extensionCompatible(minimum)) {
     return Promise.reject(new Error(`이 기능에는 브리지 ${minimum} 이상이 필요합니다. 아래 브리지 설치·업데이트 안내에서 최신 버전을 설치한 뒤 Study EZ와 AI 대화 탭을 새로고침해 주세요.`));
   }
+  const payload = bridgeRequest(input, extensionVersion());
   return new Promise<void>((resolve, reject) => {
     const timeout = window.setTimeout(() => {
       window.removeEventListener("message", handle);
@@ -93,7 +94,7 @@ export function requestPreview(input: {
     }
 
     window.addEventListener("message", handle);
-    window.postMessage({ source: WEBAPP_SOURCE, type: MESSAGES.openPreview, payload: bridgeRequest(input, extensionVersion()) }, window.location.origin);
+    window.postMessage({ source: WEBAPP_SOURCE, type: MESSAGES.openPreview, payload }, window.location.origin);
   });
 }
 

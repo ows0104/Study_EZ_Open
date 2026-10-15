@@ -70,7 +70,7 @@ test('unsupported preview and review requests never dispatch; supported requests
     const bridge = load('previewBridge.ts', { react, './version': versions, './protocol': protocol, './linkRouting': routing }, {
       window, document: { documentElement: { getAttribute: () => installed } },
     });
-    const request = bridge.requestPreview({ requestId: 'case', lectureId: '약리학/261008_01', provider: 'chatgpt', prompt: 'study', mode, files: [], autoSend });
+    const request = bridge.requestPreview({ requestId: 'case', lectureId: '약리학/261008_01', provider: 'chatgpt', prompt: 'study', promptVersion:'1.53', mode, files: [], autoSend });
     if (allowed) await request;
     else await assert.rejects(request, /브리지 설치·업데이트/);
     assert.equal(sent, allowed ? 1 : 0, `${installed} ${mode}`);
@@ -175,6 +175,7 @@ test('bank response HTTP request preserves the originating prompt version', asyn
   const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
   const exports={};
   const deps={react:{useEffect:fn=>fn()},'../api':{api:async(url,init)=>{calls.push({url,body:JSON.parse(init.body)});}},
+    '../bridge/linkRouting':routing,
     '../bridge/previewBridge':{bumpPreviewVersion(){}},'../bridge/protocol':{
       ...protocol,MESSAGES:{bankReady:'BANK',bankSaved:'SAVED'}}};
   vm.runInNewContext(compiled,{exports,window,require:id=>deps[id]}); exports.useBankLink();
