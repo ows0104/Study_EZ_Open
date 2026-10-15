@@ -23,6 +23,42 @@ function load(file) {
 const { AnswerBody, QuestionBody, choiceScore } = load(path.join(__dirname, '../src/bank/BankQuestion.tsx'));
 const question = { format: 'basic', question_id: 'q1', question: '', options: [], matching_left: [], matching_right: [] };
 const answer = { answer: '', answerUnits: [], answerPairs: [], correctOrder: [], correctOptionIds: [], medicalReview: null, slides: [] };
+test('comparison stems use four indented rows and keep all eight blank answers in order', () => {
+  const text = 'Clindamycin과 vancomycin을 같은 약동학 기준으로 비교하여 빈칸을 채우시오. 경구흡수: clindamycin은 {{c1}}, vancomycin은 {{c1}}. 세포 내 침투: clindamycin은 {{c1}}, vancomycin은 {{c1}}. 주요 처리 경로: clindamycin은 {{c1}}, vancomycin은 {{c1}}. 신기능 저하 시: clindamycin은 대개 {{c1}}, vancomycin은 {{c1}}.';
+  const q = { ...question, format: 'cloze', question: text };
+  const props = { question: q, answer: null, picked: new Set(), onPick: () => {} };
+  const hidden = renderToStaticMarkup(React.createElement(QuestionBody, props));
+  assert.equal((hidden.match(/class="bank-stem-line is-item"/g) || []).length, 4);
+  assert.deepEqual([...hidden.matchAll(/\[ (\d+) \]/g)].map(m => Number(m[1])), [1,2,3,4,5,6,7,8]);
+  const units = Array.from({ length: 8 }, (_, i) => `답${i + 1}`);
+  const shown = renderToStaticMarkup(React.createElement(QuestionBody, { ...props, answer: { ...answer, answerUnits: units } }));
+  assert.equal((shown.match(/class="bank-stem-line is-item"/g) || []).length, 4);
+  assert.deepEqual([...shown.matchAll(/class="bank-answer-point">(.*?)<\/strong>/g)].map(m => m[1]), units);
+  assert.equal(shown.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
+    text.replace(/\{\{c1\}\}/g, () => units.shift()));
+});
+
+test('explicit multiline stems retain emphasis and blank order, including old cloze numbers', () => {
+  const html = renderToStaticMarkup(React.createElement(QuestionBody, {
+    question: { ...question, format: 'cloze', question: '비교하시오.\r\n  **기준 A**: {{c2}}.\r\n  기준 B: {{c1}}.' },
+    answer: null, picked: new Set(), onPick: () => {},
+  }));
+  assert.equal((html.match(/class="bank-stem-line is-item"/g) || []).length, 2);
+  assert.ok(html.includes('<strong>기준 A</strong>'));
+  assert.deepEqual([...html.matchAll(/\[ (\d+) \]/g)].map(m => m[1]), ['1', '2']);
+});
+
+test('long Korean stems separate sentences without splitting decimals or English abbreviations', () => {
+  const { stemLines } = load(path.join(__dirname, '../src/bank/BankStem.tsx'));
+  const first = 'C. difficile, S. aureus와 e.g. 표기를 그대로 유지하고 0.5 mg/kg 조건을 확인한다.';
+  const second = '제시된 조건을 충분히 검토한 다음 각 항목에 해당하는 관계를 설명하고 서로 다른 결과가 나타나는 이유를 판단하시오.';
+  const last = '다음 중 이 모든 조건에 해당하지 **않는 것은**?';
+  const lines = stemLines(`${first} ${second} ${last}`);
+  assert.deepEqual(Array.from(lines, line => line.text), [first, second, last]);
+  assert.ok(lines[1].indented && lines[2].indented);
+  assert.equal(stemLines('조건을 확인한다. 옳은 것은?').length, 1);
+});
+
 const choiceQuestion = { ...question, format: 'multi_select', options: ['A', 'B', 'C', 'D'].map(id => ({ id, text: `보기 ${id}` })) };
 const choiceAnswer = { ...answer, correctOptionIds: ['A', 'C'] };
 test('multiple choice needs the entire answer set, with neither omissions nor extras', () => {

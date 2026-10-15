@@ -47,7 +47,7 @@
 
 ## 새 규칙을 둘 곳
 
-Quiz Bank 출제 정본은 `web/src/bank/bankPrompt.md` 1.53다(문항별 간결 블록 실험). 웹은 원본 전체로 문항부터 작성하며,
+Quiz Bank 출제 정본은 `web/src/bank/bankPrompt.md` 1.59이다(문항별 간결 블록). 웹은 원본 전체로 문항부터 작성하며,
 Exam Point Plan·Concept Map·Retrieval Plan과 concept_id·prerequisites는 웹 출력에서 제외한다.
 웹은 객관식의 고정 선지 한 세트를 완성한다. 1.43 이상은 `option_pools.py`가 정리 뒤 실제
 변형 가치가 있는 문항에만 보기 풀을 선택적으로 작성하고 모든 후보를 이후 내용 검수에 포함한다.
@@ -66,6 +66,8 @@ LLM 정리기는 본문·근거·충돌을 기존 JSON으로 옮기고 `compact.
 답을 유추하게 하는 부연은 explanation으로 옮긴다. 힌트 필드는 제거했다. 필요한 해설은 한 줄
 JSON 문자열이며 원문을 코드로 복원하고 정답 공개 뒤 표시한다. 새 OX의 근거·정정·반례는
 explanation에 두고 과거 answer_units의 근거도 계속 읽는다.
+1.59는 비교 기준과 긴 발문의 문장을 실제 줄바꿈·두 칸 들여쓰기로 구분한다. `문제:`의 후속 줄은
+같은 question에 보존하며, 웹은 기존 한 줄 발문도 비교 항목·긴 문장 단위로 정리해 표시한다.
 CLI는 원본만 읽는 별도 작업 폴더에서 출제포인트를 독립 추출한다. `web_audit.py`·`repair.py`가
 원본·독립 목록·실제 문항과 필요한 회상 방향을 대조·보완하고, 내용 검수 뒤 `question_first.py`와
 `prompts/learning-structure.md`가 최종 문항에 개념도·회상 계획·선행 관계만 연결한다.

@@ -206,10 +206,18 @@ def test_answer_decoder_preserves_quoted_field_names_inside_answers():
     assert compact.read_blocks(raw)[1]['units'] == units + ['α']
 
 
-def test_shared_quality_guidance_matches_the_reviewed_158_rules():
-    # External verification resolves source conflicts without expanding exam scope.
+def test_shared_quality_guidance_preserves_158_rules_and_adds_159_layout():
     quality = generate.item_quality_guidance().removeprefix('문항 품질 원칙\n\n')
-    assert hashlib.sha256(quality.encode()).hexdigest() == '6b095dd7d2690f6ccf9350f34363f6e81755494f7dd5bbb887fe4ece97762e28'
+    layout = '- 비교형 발문은 도입문 다음에 기준별로 줄을 나누고 두 칸 들여쓴다. 각 줄 안에서 비교 대상의 순서를 일정하게 유지한다. 긴 발문도 문장·조건 단위로 줄을 나누고 후속 문장을 들여써 읽기 쉽게 한다. 줄바꿈을 위해 내용·조건을 생략하거나 문항·빈칸을 새로 나누지 않는다.\n'
+    assert layout in quality
+    assert hashlib.sha256(quality.replace(layout, '').encode()).hexdigest() == '6b095dd7d2690f6ccf9350f34363f6e81755494f7dd5bbb887fe4ece97762e28'
+
+
+def test_multiline_comparison_keeps_compact_metadata_answers_and_question_ids():
+    multiline = RAW.replace('문제: 앞은 {{c1}}, 중간은 {{c1}}, 끝은 {{c1}}이다.',
+                            '문제: 위치를 비교하시오.\n  앞: {{c1}}.\n  중간: {{c1}}.\n  끝: {{c1}}.')
+    assert compact.read_blocks(multiline) == compact.read_blocks(RAW)
+    assert file_organize.question_ids(multiline) == file_organize.question_ids(RAW)
 
 
 def test_optional_explanation_is_restored_without_becoming_answers(monkeypatch):

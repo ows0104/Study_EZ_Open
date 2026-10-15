@@ -2619,6 +2619,20 @@ button.notice-title:hover:not(:disabled) {
   font-size: 13px;
 }
 
+.bank-stem {
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.bank-stem-line {
+  display: block;
+  white-space: pre-line;
+}
+
+.bank-stem-line + .bank-stem-line { margin-top: 0.45em; }
+.bank-stem-line.is-item { padding-inline-start: 1em; }
+.bank-stem-line.is-sentence { text-indent: 1em; }
+
 .bank-blank {
   display: inline-block;
   min-width: 3.5em;

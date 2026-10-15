@@ -3,6 +3,7 @@ import type { BankAnswer, BankQuestion } from "../types/bank";
 import { SlideImage } from "../SlideImage";
 import type { SlidePreloader } from "../slidePreload";
 import { AnswerPoints, answerPoints } from "./AnswerPoints";
+import { BankStem } from "./BankStem";
 
 /**
  * 문항 ID 를 씨로 삼아 섞는다 — 다시 불러도, 답을 펴도 같은 순서다. 섞은 결과가 원래와 같으면 한 칸 민다.
@@ -51,23 +52,9 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
   disabled?: boolean;
 }) {
   const score = choiceScore(q, answer, picked);
-  const parts = q.format === "cloze" ? q.question.split(/(\{\{c\d+\}\})/g) : [q.question];
-  let blank = 0;
   return (
     <>
-      <p className="quiz-stem">
-        {parts.map((part, index) => {
-          if (!/^\{\{c\d+\}\}$/.test(part)) return <Stem key={index} text={part} />;
-          const unit = answer?.answerUnits[blank];
-          blank += 1;
-          if (unit !== undefined) return <strong key={index} className="bank-answer-point"><Stem text={unit} /></strong>;
-          return (
-            <span key={index} className="bank-blank">
-              {`[ ${blank} ]`}
-            </span>
-          );
-        })}
-      </p>
+      <BankStem text={q.question} cloze={q.format === "cloze"} answerUnits={answer?.answerUnits} />
       {q.format === "ox" && !answer ? <p className="bank-note">O 인가 X 인가, 그리고 왜인가</p> : null}
       {q.mcq_mode === "recall_first" && !showOptions ? <p className="bank-note">기억 확인형 · 먼저 답을 떠올린 뒤 선지를 공개하세요.</p> : null}
       {q.options.length && showOptions ? (
