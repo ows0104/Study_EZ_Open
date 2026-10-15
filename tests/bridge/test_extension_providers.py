@@ -14,6 +14,13 @@ from app.preview_links import conversation_url, share_url  # noqa: E402
 
 
 class ExtensionProviderTests(unittest.TestCase):
+    def test_installed_version_matches_manifest(self) -> None:
+        manifest = json.loads((EXTENSION / "manifest.json").read_text(encoding="utf-8"))
+        protocol = (EXTENSION / "protocol.js").read_text(encoding="utf-8")
+        advertised = re.search(r'VERSION:\s*"([^"]+)"', protocol)
+        self.assertIsNotNone(advertised)
+        self.assertEqual(advertised.group(1), manifest["version"])
+
     def test_manifest_covers_all_preview_providers(self) -> None:
         manifest = json.loads((EXTENSION / "manifest.json").read_text(encoding="utf-8"))
         hosts = set(manifest["host_permissions"])
