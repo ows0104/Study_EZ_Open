@@ -134,6 +134,29 @@ function answerText(body) {
   return parts.join("\n\n");
 }
 
+/** Markdown code fences are presentation wrappers, not an unfinished bank. */
+function completedBankAnswer(answer) {
+  const raw = typeof answer === "string" ? answer : "";
+  if (raw.trimEnd().endsWith("STUDYEZ_BANK_COMPLETE")) return raw;
+  let fence = null;
+  let wrapped = false;
+  const lines = [];
+  for (const line of raw.split("\n")) {
+    const match = /^ {0,3}(`{3,}|~{3,})(markdown|md)?[ \t\r]*$/i.exec(line);
+    if (match && !fence) {
+      fence = match[1];
+      wrapped = true;
+    } else if (fence && match && !match[2] && match[1][0] === fence[0] && match[1].length >= fence.length) {
+      fence = null;
+    } else {
+      lines.push(line);
+    }
+  }
+  const unwrapped = lines.join("\n").trim();
+  return wrapped && !fence && /^### Q\d+\s*\|/m.test(unwrapped)
+    && unwrapped.endsWith("STUDYEZ_BANK_COMPLETE") ? unwrapped : raw;
+}
+
 /** 이미 만들어 둔 공유가 있는지. 생성이 실패로 보고됐지만 실제로는 됐을 때의 복구로도 쓴다. */
 async function existingShareUrl(conversation, token) {
   const response = await api("/shared_conversations?order=created&limit=50", token);
@@ -380,15 +403,16 @@ async function publish() {
     // 대화만 여기까지 온다.
     const url = `https://chatgpt.com/c/${conversation}`;
     // 공유 생성 실패와 무관하게 완성된 문항을 먼저 러너에 전달한다.
-    if (watch.mode === "bank" && state.answer?.trimEnd().endsWith("STUDYEZ_BANK_COMPLETE")
-        && state.answer.length >= 200 && state.answer.length <= 2_000_000
-        && state.answer !== lastBankAnswer) {
+    const bankAnswer = completedBankAnswer(state.answer);
+    if (watch.mode === "bank" && bankAnswer.trimEnd().endsWith("STUDYEZ_BANK_COMPLETE")
+        && bankAnswer.length >= 200 && bankAnswer.length <= 2_000_000
+        && bankAnswer !== lastBankAnswer) {
       const stored = await new Promise((resolve) => {
-        if (!sendShareMessage({ type: "STUDYEZ_BANK_ANSWER", raw: state.answer, url },
+        if (!sendShareMessage({ type: "STUDYEZ_BANK_ANSWER", raw: bankAnswer, url },
             (response) => resolve(response?.ok === true))) resolve(false);
       });
       if (!stored) return "pending";
-      lastBankAnswer = state.answer;
+      lastBankAnswer = bankAnswer;
     }
     if (url !== lastConversationUrl) {
       if (!sendLink("STUDYEZ_CONVERSATION_LINK", url)) return "pending";

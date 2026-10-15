@@ -183,6 +183,25 @@ test('bank hands complete answer to runner even when public sharing fails, once 
   assert.equal(s.sent.filter(m => m.type === 'STUDYEZ_BANK_ANSWER').length, 1);
 });
 
+test('bank transports complete consecutive Markdown blocks without changing their content', async () => {
+  const s=shareFixture();
+  const first='### Q001 | basic | Core | 5 | 1 | direct\n문제: 첫 질문\n정답: ["첫 답"]\n출처: S1 p.6\n출제근거: '+ '원본의 같은 목표를 회상한다. '.repeat(8);
+  const last='### Q002 | basic | Core | 5 | 1 | direct\n문제: 다음 질문\n정답: ["다음 답"]\nSTUDYEZ_BANK_COMPLETE';
+  const raw='```markdown\n'+first+'\n```\n\n```md\n'+last+'\n```';
+  const expected=first+'\n\n'+last;
+  assert.equal(s.context.completedBankAnswer(raw),expected);
+  for(const incomplete of [raw.slice(0,-3),raw+'\n아직 미완성',raw.replace('STUDYEZ_BANK_COMPLETE','계속')]){
+    assert.equal(s.context.completedBankAnswer(incomplete),incomplete);
+  }
+  vm.runInContext('watch = {mode:"bank"};',s.context);
+  s.context.accessToken=async()=> 'token';
+  s.context.conversationState=async()=>({finished:true,currentNode:'wrapped-answer',answer:raw});
+  s.context.publishViaApi=async()=> 'https://chatgpt.com/share/bank-test';
+  s.context.isPubliclyReadable=async()=>true;
+  await s.context.publish();
+  assert.equal(s.sent.find(m=>m.type==='STUDYEZ_BANK_ANSWER').raw,expected);
+});
+
 test('bank defers state API calls while the answer is generating', async () => {
   const s = shareFixture();
   vm.runInContext('watch = { mode: "bank" };', s.context);
