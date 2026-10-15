@@ -206,10 +206,10 @@ def test_answer_decoder_preserves_quoted_field_names_inside_answers():
     assert compact.read_blocks(raw)[1]['units'] == units + ['α']
 
 
-def test_shared_quality_guidance_matches_the_reviewed_153_rules():
-    # v1.53 clarifies the user's language and explanation-only preferences.
+def test_shared_quality_guidance_matches_the_reviewed_154_rules():
+    # v1.54 adds item-level Core evidence and separates reprioritization from content repair.
     quality = generate.item_quality_guidance().removeprefix('문항 품질 원칙\n\n')
-    assert hashlib.sha256(quality.encode()).hexdigest() == 'd526a69dc9b4be733398489b2a21298edd47bb69e814ad6dc8d86ad626e309a6'
+    assert hashlib.sha256(quality.encode()).hexdigest() == '6eee63a803e1dca299371a850fe88a4699275119e2bddfabb2ba1cacd04127eb'
 
 
 def test_optional_explanation_is_restored_without_becoming_answers(monkeypatch):

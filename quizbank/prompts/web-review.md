@@ -39,6 +39,16 @@ web-response.md는 최초 생성 이력이며 현재 수정본의 발문·정답
 중복은 같은 인출·판단을 시험하는 경우로 판단하며, 별도 회상 방향·비교·적용 목표는 구분한다.
 Core 묶음만으로 필수 목표와 방향이 시험되는지 확인하고, 형식·방향·문항 수의 할당 비율을 요구하지 않는다.
 
+모든 문항의 우선순위를 tier_checks에 정확히 한 번 기록한다. tested_target에는 발문·정답이 실제
+시험하는 지식 단위, recommended_tier에는 원본에서 독립 판단한 등급을 쓴다. basis는 emphasis /
+objective / past_exam / essential_dependency / extension / detail 중 실제 판단 근거다.
+source_refs에 실제 쪽·기출 위치를, evidence에는 그 위치의 구체적 강조·학습목표·기출 내용 또는
+강조 없는 부연임을 확인한 내용을 적는다. 단순한 쪽 번호·임상 유용성은 Core 근거가 아니다.
+essential_dependency이면 essential_target에 그 지식 없이 해결할 수 없는 명시적 필수 목표를
+적고 reason에서 의존성을 설명한다. 그 외에는 essential_target을 빈 문자열로 둔다.
+Advanced는 실제 확장 목표를, Optional은 낮은 우선순위의 이유를 쓴다. 기존 Core·importance·
+포인트 전체의 중요도는 증거가 아니다. 하향 판단과 기존 오류·미시험 기록은 함께 보존한다.
+
 실제 화면·채점 계약을 적용한다.
 
 - 단답형(format=basic)의 후보 제시는 공통 원칙에 따라 필요성을 확인한다. 지식이 필요하다는

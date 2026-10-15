@@ -14,6 +14,7 @@ from studyez_llm.pdf import render
 
 from .coverage import _call, bank_hash
 from .generate import item_quality_guidance, lecture_scope
+from . import priority
 from .points import INT, STR, _array, _object
 from .session import SessionError
 from server.app.bank_validation import pool_checks
@@ -35,6 +36,7 @@ REPORT = _object({
     "duplicates": _array(_object({"question_ids": _array(STR), "reason": STR, "suggested_action": STR})),
     "classifications": _array(_object({"question_id": STR, "recommended_mode": enum("recall_first", "comparison"), "reason": STR})),
     "pool_checks": pool_checks.CHECK_SCHEMA,
+    "tier_checks": priority.CHECK_SCHEMA,
 })
 
 def enabled(version: str) -> bool:
@@ -85,6 +87,14 @@ def authored_pages(refs: str, pdf_source: str = "S1") -> list[int]:
 
 def shape_report(raw: dict, bank: dict, points: list[dict], count: int, *, pdf_source: str = "S1") -> dict:
     raw = copy.deepcopy(raw)
+    # Historical reports remain readable; newly produced REPORTs require this
+    # field through their schema. Global Tier decisions are never item-cached.
+    tier_review = None
+    if "tier_checks" in raw:
+        tier_review, tier_issues = priority.assess(bank, raw["tier_checks"])
+        for issue in tier_issues:
+            if issue not in raw["question_issues"]:
+                raw["question_issues"].append(issue)
     pool_coverage, valid_pool_checks = pool_checks.assess(bank, raw.get('pool_checks', []))
     for row in pool_checks.notes(valid_pool_checks):
         issue = {'question_id': row['question_id'],
@@ -167,6 +177,7 @@ def shape_report(raw: dict, bank: dict, points: list[dict], count: int, *, pdf_s
         "addedQuestions": 0, "addedMcq": 0,
         "checkedAt": datetime.now(UTC).isoformat(), "bankHash": bank_hash(bank),
         "classification": classification, "webAudit": raw, "poolCoverage": pool_coverage,
+        "tierReview": tier_review,
         "requiresRevision": bool(unresolved or unreadable or issues)}
 
 def inspect(bank: dict, raw: str, pdf: Path, title: str, sources: list[dict], out: Path,
@@ -203,6 +214,6 @@ def inspect(bank: dict, raw: str, pdf: Path, title: str, sources: list[dict], ou
     report = shape_report(raw_report, bank, points, count, pdf_source=pdf_source)
     report.update(sourceFilename=pdf.name, sourceSha256=hashlib.sha256(pdf.read_bytes()).hexdigest())
     (out / "coverage.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    (out / "web-audit.json").write_text(json.dumps(raw_report, ensure_ascii=False, indent=2), encoding="utf-8")
+    (out / "web-audit.json").write_text(json.dumps(report["webAudit"], ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "classification.json").write_text(json.dumps(report["classification"], ensure_ascii=False, indent=2), encoding="utf-8")
     return report, [{"step": "원본·포인트·중복 검수", **info}]
