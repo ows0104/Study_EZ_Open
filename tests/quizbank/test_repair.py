@@ -325,14 +325,15 @@ def test_uncertain_source_fact_preserves_doubt_without_repairing_it(bank, inputs
     assert row['verdict'] == 'doubt' and '원본 사실의 불확실성' in row['note']
 
 
-def test_file_repair_logs_actual_changes_and_preserves_input(bank, inputs, monkeypatch):
+@pytest.mark.parametrize("encoding", ["utf-8", "utf-8-sig"])
+def test_file_repair_logs_actual_changes_and_preserves_input(bank, inputs, monkeypatch, encoding):
     corrected = copy.deepcopy(bank)
     corrected["questions"][0]["exam_rationale"] += " 수정 근거"
     def write(prompt, schema, work, model, label):
         assert "웹·브라우저·ChatGPT" in prompt
         assert repair.item_quality_guidance() in prompt
-        (work / "repaired-bank.json").write_text(json.dumps(corrected), encoding="utf-8")
-        (work / "repaired-points.json").write_text(json.dumps(web_audit.parse_points(RAW)), encoding="utf-8")
+        (work / "repaired-bank.json").write_text(json.dumps(corrected), encoding=encoding)
+        (work / "repaired-points.json").write_text(json.dumps(web_audit.parse_points(RAW)), encoding=encoding)
         return {"written": True, "summary": "근거 수정", "changes": ["Q001의 근거 수정"]}, {}
     monkeypatch.setattr(repair, "_call", write)
     raw, pdf, out = inputs

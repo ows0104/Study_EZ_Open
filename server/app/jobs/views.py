@@ -7,7 +7,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.jobs.queue import (
@@ -131,7 +131,11 @@ def runner_row(beat: RunnerBeat | None) -> dict[str, Any] | None:
 
 def board(db: Session) -> dict[str, Any]:
     """최근 일감을 실행·대기·보류로 나누고 대기는 claim과 같은 순서로 응답한다."""
-    jobs = db.scalars(select(PrequizJob).order_by(PrequizJob.created_at.desc()).limit(50)).all()
+    recent = select(PrequizJob.id).order_by(PrequizJob.created_at.desc()).limit(50)
+    # 오래된 보류 작업을 재개해도 현재 실행·대기 목록에서 빠지면 안 된다.
+    jobs = db.scalars(select(PrequizJob).where(or_(
+        PrequizJob.state.in_(JOB_OPEN), PrequizJob.id.in_(recent),
+    )).order_by(PrequizJob.created_at.desc(), PrequizJob.id.desc())).all()
     rows = [job_row(job) for job in jobs]
     # 기다리는 줄은 **집어 갈 순서대로** 준다(`queue_order`). 화면이 「차례 2번째」라고
     # 말하려면 최신순이 아니라 이 순서여야 하고, 그 순서가 러너의 것과 같아야 한다.

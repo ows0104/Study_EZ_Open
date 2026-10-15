@@ -165,8 +165,11 @@ def validate_bank(bank: dict, source_ids: list[str], *, learning_structure: bool
             # 그래서 「[출처 기준] 머리말」과 「출처 하나로 분리」를 걷었다 — 갈라 낸 옛 판 문항도 그대로 통과한다.
             fail(q["conflict_id"] in conflicts, f"{label}: Conflict ID 없음")
             if q["conflict_id"] in conflicts:
-                allowed = {r["source_id"] for r in conflicts[q["conflict_id"]]["source_refs"]} | {EXTERNAL}
-                fail(all(r["source_id"] in allowed for r in q["source_refs"]), f"{label}: 충돌 기록과 출처 불일치")
+                # 충돌 기록은 서로 다른 주장을 가진 자료만 담는다. 문항에는 같은 목표의
+                # 족보 등 추가 근거가 있을 수 있으므로 전체 출처의 부분집합을 요구하지 않는다.
+                conflict_sources = {r["source_id"] for r in conflicts[q["conflict_id"]]["source_refs"]}
+                fail(bool(conflict_sources & {r["source_id"] for r in q["source_refs"]}),
+                     f"{label}: 충돌 기록과 출처 불일치")
 
         option_ids = [o["id"] for o in q["options"]]
         unique(option_ids, f"{label} options")
