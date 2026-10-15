@@ -45,7 +45,9 @@ web-priorities.json은 저장된 응답의 Tier·importance 후보다. 현재 �
 Core 묶음만으로 필수 목표와 방향이 시험되는지 확인하고, 형식·방향·문항 수의 할당 비율을 요구하지 않는다.
 
 모든 문항의 우선순위를 tier_checks에 정확히 한 번 기록한다. tested_target에는 발문·정답이 실제
-시험하는 지식 단위, recommended_tier에는 원본에서 독립 판단한 등급을 쓴다. basis는 emphasis /
+시험하는 지식 단위, recommended_tier에는 원본에서 독립 판단한 등급을,
+recommended_importance에는 독립 판단한 중요도 1–5를 쓴다. 등급이 같아도 중요도만 과도하거나
+낮으면 별도로 교정한다. basis는 emphasis /
 objective / past_exam / essential_dependency / extension / detail 중 실제 판단 근거다.
 source_refs에 실제 쪽·기출 위치를, evidence에는 그 위치의 구체적 강조·학습목표·기출 내용 또는
 강조 없는 부연임을 확인한 내용을 적는다. 단순한 쪽 번호·임상 유용성은 Core 근거가 아니다.

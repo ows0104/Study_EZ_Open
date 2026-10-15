@@ -10,6 +10,7 @@ ISSUE = "Tier 근거 불일치"
 CHECK_SCHEMA = _array(_object({
     "question_id": STR,
     "recommended_tier": {"type": "string", "enum": ["Core", "Advanced", "Optional"]},
+    "recommended_importance": {"type": "integer", "minimum": 1, "maximum": 5},
     "tested_target": STR,
     "basis": {"type": "string", "enum": list(BASIS)},
     "source_refs": _array(STR),
@@ -41,10 +42,13 @@ def assess(bank: dict, rows: list[dict]) -> tuple[dict, list[dict]]:
         if tier == "Core" and (basis not in CORE_BASES
                 or (basis == "essential_dependency" and not row["essential_target"].strip())):
             raise SessionError("Tier 검수: Core의 직접 근거 또는 구체적 필수 의존 목표가 필요합니다.")
-        if tier != questions[qid]["tier"]:
+        importance = row.get("recommended_importance", questions[qid]["importance"])
+        if type(importance) is not int or not 1 <= importance <= 5:
+            raise SessionError("Tier 검수: 중요도는 1–5 정수여야 합니다.")
+        if tier != questions[qid]["tier"] or importance != questions[qid]["importance"]:
             issues.append({"question_id": qid, "severity": "error", "issue": ISSUE,
-                "reason": f"{questions[qid]['tier']} → {tier}: {row['reason']} 근거: {row['evidence']}",
-                "suggested_action": f"원본 근거를 대조해 {tier}로 교정한다. 기존 오류·누락 판정은 보존한다."})
+                "reason": f"{questions[qid]['tier']}/{questions[qid]['importance']} → {tier}/{importance}: {row['reason']} 근거: {row['evidence']}",
+                "suggested_action": f"원본 근거를 대조해 Tier={tier}, importance={importance}로 교정한다. 기존 오류·누락 판정은 보존한다."})
     if seen != set(questions):
         raise SessionError("Tier 검수: 일부 문항의 우선순위 검토가 빠졌습니다.")
     return {"status": "partial" if issues else "verified", "checkedCount": len(seen),

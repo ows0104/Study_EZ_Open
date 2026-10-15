@@ -29,6 +29,7 @@ def report(bank):
         "checks": [{"point_id": "P001", "status": "covered", "question_ids": [bank["questions"][0]["question_id"]], "note": "직접 회수"}],
         "plan_issues": [], "question_issues": [], "duplicates": [],
         "tier_checks": [{"question_id": q["question_id"], "recommended_tier": q["tier"],
+            "recommended_importance": q["importance"],
             "tested_target": "실제 채점 목표", "basis": "objective" if q["tier"] == "Core" else "detail",
             "source_refs": ["S1 p.1"], "evidence": "명시 학습목표의 실제 인출 단위", "essential_target": "",
             "reason": "원본 목표와 실제 발문 대조"} for q in bank["questions"]],

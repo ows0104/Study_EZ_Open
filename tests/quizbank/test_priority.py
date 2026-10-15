@@ -36,6 +36,30 @@ def test_core_cannot_be_supported_only_by_surrounding_detail_or_utility(bank):
     assert checked["checkedCount"] == len(bank["questions"])
 
 
+def test_importance_only_disagreement_is_actionable_without_changing_tier(bank):
+    original = copy.deepcopy(bank)
+    rows = report(bank)["tier_checks"]
+    q = bank["questions"][0]
+    importance = 2 if q["importance"] != 2 else 3
+    rows[0]["recommended_importance"] = importance
+    checked, issues = priority.assess(bank, rows)
+    assert checked["mismatchCount"] == 1 and len(issues) == 1
+    assert f"importance={importance}" in issues[0]["suggested_action"]
+    assert bank == original
+    for invalid in (0, 6, True, "2"):
+        rows[0]["recommended_importance"] = invalid
+        with pytest.raises(SessionError, match="중요도"):
+            priority.assess(bank, rows)
+
+
+def test_historical_tier_only_reports_remain_readable(bank):
+    rows = report(bank)["tier_checks"]
+    for row in rows:
+        row.pop("recommended_importance")
+    checked, issues = priority.assess(bank, rows)
+    assert checked["status"] == "verified" and not issues
+
+
 def test_demotion_is_actionable_and_preserves_existing_content_findings(bank):
     original = copy.deepcopy(bank)
     raw = report(bank)
