@@ -23,3 +23,19 @@ test('failed or corrupt latest prompt stops instead of falling back to a stale t
   await assert.rejects(fixture(response).loadLatestBankPrompt({title:'Lecture'},[]));
  }
 });
+
+test('canonical web prompt includes the exact matching lecture scope and keeps other lectures separate',()=>{
+ const path=require('node:path');
+ const template=fs.readFileSync(path.join(__dirname,'../src/bank/bankPrompt.md'),'utf8');
+ const scopes=JSON.parse(fs.readFileSync(path.join(__dirname,'../src/bank/lectureScopes.json'),'utf8'));
+ const exports={};
+ vm.runInNewContext(code,{exports,require:id=>({default:id.endsWith('.json')?scopes:template})});
+ const scope=scopes[0];
+ const source={kind:'notes_current',filename:scope.sourcePrefix+' lecture.pdf',id:'S1'};
+ assert.ok(exports.renderBankPrompt({title:scope.title},[source]).includes(scope.instruction));
+ const other=exports.renderBankPrompt({title:'Other lecture'},[source]);
+ assert.ok(!other.includes(scope.instruction));
+ assert.ok(other.includes('별도 지정 없음'));
+ const wrongSource=exports.renderBankPrompt({title:scope.title},[{...source,filename:'different.pdf'}]);
+ assert.ok(!wrongSource.includes(scope.instruction));
+});
