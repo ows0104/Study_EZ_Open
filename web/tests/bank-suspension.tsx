@@ -65,9 +65,9 @@ try {
   const dialog = document.querySelector("dialog")!; dialog.showModal(); key(); dialog.close();
   await new Promise(resolve => setTimeout(resolve, 20));
   check(calls === 0, "typing, modifiers, held keys and open dialogs cannot suspend");
-  key();
+  key(document.querySelector(".quiz-submit")!);
   await waitFor(() => document.body.textContent?.includes("suspension failed"));
-  check(document.body.textContent?.includes("테스트 Q1") && rated === 0, "failed suspension preserves question without a rating");
+  check(document.body.textContent?.includes("테스트 Q1") && rated === 0, "shortcut works with a focused control and a failed save preserves the question");
   key(); key();
   await waitFor(() => document.body.textContent?.includes("테스트 Q2"));
   check(calls === 2 && suspended.has("Q1") && rated === 0, "successful shortcut advances once without grading");

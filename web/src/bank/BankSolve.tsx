@@ -210,11 +210,14 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
       if (event.defaultPrevented || event.repeat || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
       if (document.querySelector("dialog[open], [role='dialog'][aria-modal='true']")) return;
       if (peek) return;
-      if (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, button, a, summary, [contenteditable]:not([contenteditable='false'])")) return;
+      if (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, [role='textbox'], [contenteditable]:not([contenteditable='false'])")) return;
       if (event.key === "5" && !event.shiftKey) {
         event.preventDefault();
         void suspend();
-      } else if ((event.key === " " || event.key === "Enter") && !answer) {
+        return;
+      }
+      if (event.target instanceof HTMLElement && event.target.closest("button, a, summary")) return;
+      if ((event.key === " " || event.key === "Enter") && !answer) {
         event.preventDefault();
         if (current?.question?.mcq_mode === "recall_first" && !current.choicesShown) void showChoices();
         else void reveal();
