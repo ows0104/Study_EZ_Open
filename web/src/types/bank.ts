@@ -75,6 +75,7 @@ export type BankQuestion = {
   question_id: string;
   personalTier?: boolean;
   originalTier?: BankTier;
+  targetMastery?: number;
   concept_id: string;
   tier: BankTier;
   advanced?: boolean;

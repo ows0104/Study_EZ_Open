@@ -302,6 +302,9 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
                 <option value="Optional">Optional</option>
               </select>
             </label>
+            {q.targetMastery != null ? <span className="bank-target" title="현재 문제의 목표 숙련도이며 실제 기억률을 측정한 값은 아닙니다">
+              {" · "}목표 {Math.round(q.targetMastery * 100)}%
+            </span> : null}
             {q.personalTier ? <button className="is-quiet bank-tier-reset" disabled={busy || undoBusy}
               title={`원래 중요도: ${q.originalTier ?? ""}`} onClick={() => void changeTier(null)}>원래대로</button> : null}
             {q.advanced ? <span className="bank-source-badge" title="중요도와 독립된 추가 추론·개념 연계 문항">Advanced · 심화</span> : null}

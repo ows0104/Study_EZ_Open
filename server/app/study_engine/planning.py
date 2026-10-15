@@ -17,6 +17,8 @@ def day_start(now: int) -> int:
 def state_before(bank: dict, state: dict, cutoff: int) -> dict:
     """현재 빌드의 평가 이력을 재생한다. 현재 숙련도를 과거로 되감아 감쇠하지 않는다."""
     past = empty_state()
+    # Compare morning and current mastery against the same personal targets.
+    past["question_tiers"] = dict(state.get("question_tiers", {}))
     by_id = {q["question_id"]: q for q in bank["questions"]}
     for review in state.get("history", []):
         if review["timestamp"] >= cutoff or "mastery_after" not in review:

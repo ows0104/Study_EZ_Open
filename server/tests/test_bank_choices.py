@@ -83,7 +83,7 @@ def main():
         db.commit()
     refreshed = post("/next")
     assert refreshed["reviewToken"] == token
-    assert refreshed["question"] == {**first["question"], "tier": "Important", "importance": 4, "advanced": True}
+    assert refreshed["question"] == {**first["question"], "tier": "Important", "importance": 4, "advanced": True, "targetMastery": .78}
     with SessionLocal() as db:
         state_after = db.get(BankState, (USER.id, "choices", "demo")).state
         assert state_after["served"] == state_before["served"]

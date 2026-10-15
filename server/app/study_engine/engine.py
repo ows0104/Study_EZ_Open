@@ -60,7 +60,9 @@ def _plan(bank: dict, concept_id: str) -> dict | None:
 
 def target_for(bank: dict, q: dict, policy: dict = DEFAULT) -> dict:
     plan = _plan(bank, q["concept_id"])
-    requested = plan["target_mastery"] if plan else policy["mastery"]["targets"][str(q["importance"])]
+    # An explicit private tier replaces the authored concept target in both directions.
+    requested = (policy["mastery"]["tierTargets"][priority_tier(q)] if q.get("personalTier")
+                 else plan["target_mastery"] if plan else policy["mastery"]["targets"][str(q["importance"])])
     return {"requested": requested, "effective": min(requested, policy["mastery"]["maxTarget"],
             policy["mastery"]["tierTargets"][priority_tier(q)])}
 

@@ -74,6 +74,7 @@ from app.study_engine.planning import day_start
 from app.study_engine.review_undo import remember_review, undo_review, undo_token
 from app.study_engine.batch import aggregate_goal, select_batch_question
 from app.study_engine.personal_priority import question_priority
+from app.study_engine.engine import target_for
 from app.storage import ObjectStorage, StorageNotConfigured
 
 router = APIRouter()
@@ -700,10 +701,11 @@ def _save(state: BankState, value: dict) -> None:
     state.state = value
 
 
-def _public(q: dict, *, show_choices: bool = True) -> dict:
+def _public(q: dict, *, bank: dict, show_choices: bool = True) -> dict:
     q = priority_fields(q, question=True)
     out = {**{k: v for k, v in q.items() if k not in ANSWER_FIELDS}, "mcq_mode": choice_mode(q)}
     out.pop("hint", None)  # Retired experiment fields can remain in older stored JSON.
+    out["targetMastery"] = target_for(bank, q)["effective"]
     if not show_choices and out["mcq_mode"] == "recall_first":
         out["options"] = []
     return out
@@ -990,7 +992,7 @@ def _next_bank_question(subject: str, run_id: str, user: CurrentUser, db: Sessio
     _save(state_row, state)
     db.commit()
     choices_shown = not served.get("choice_protocol") or choice_mode(question) != "recall_first" or served.get("choices_shown", False) or served.get("revealed", False)
-    return {"question": _public(question, show_choices=choices_shown), "choicesShown": choices_shown,
+    return {"question": _public(question, bank=bank, show_choices=choices_shown), "choicesShown": choices_shown,
             "reviewToken": served["token"], "days": days, "examDate": exam,
             "lectureGoal": goal, "undoToken": undo_token(state),
             "preloadSlides": _slides(db, row, question["question_id"], question),
@@ -1030,7 +1032,7 @@ def set_bank_priority(subject: str, run_id: str, question_id: str, payload: Prio
     db.commit()
     question = _served_question(db, row, user.id, bank, served)
     choices_shown = not served.get("choice_protocol") or choice_mode(question) != "recall_first" or served.get("choices_shown", False) or served.get("revealed", False)
-    return {"question": _public(question, show_choices=choices_shown)}
+    return {"question": _public(question, bank=bank, show_choices=choices_shown)}
 
 
 class SuspensionIn(BaseModel):
@@ -1082,7 +1084,7 @@ def show_bank_options(subject: str, run_id: str, payload: TokenIn,
     state["served"] = served
     _save(state_row, state)
     db.commit()
-    return {"question": _public(question), "choicesShown": True}
+    return {"question": _public(question, bank=bank), "choicesShown": True}
 
 
 @router.post("/lectures/{subject}/{run_id}/bank/prepare")
@@ -1179,7 +1181,7 @@ def undo_bank_answer(subject: str, run_id: str, payload: TokenIn,
     _save(state_row, state)
     db.commit()
     exam = exam_date_for(db, lecture)
-    return {"question": _public(question), "reviewToken": served["token"], "undoToken": undo_token(state),
+    return {"question": _public(question, bank=bank), "reviewToken": served["token"], "undoToken": undo_token(state),
             "days": engine.days_until(exam, now), "examDate": exam,
             "lectureGoal": lecture_goal(bank, state, lecture.title, now),
             "session": engine.session_summary(bank, state, now=now), "answer": _answer(db, row, question),
@@ -1261,7 +1263,7 @@ def save_personal_question(subject: str, run_id: str, question_id: str, payload:
     state = db.get(BankState, (user.id, row.subject, row.run_id))
     if state and state.build_id == row.build_id:
         current = question_priority(current, state.state)
-    return {"question": _public(current), "answer": _answer(db, row, current),
+    return {"question": _public(current, bank=row.bank), "answer": _answer(db, row, current),
             "reported": payload.action == "save", "highlighted": payload.report and payload.action == "save"}
 
 

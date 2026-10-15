@@ -16,7 +16,8 @@ const batch = new URLSearchParams(location.search).has("batch");
 const base = batch ? "/api/lectures/actual/lecture/bank" : "/api/test/bank";
 let tier = "Core", personal = false, fail = true, saves = 0, nexts = 0, rates = 0;
 const question = () => ({ question_id: "Q1", concept_id: "C1", question: "중요도 변경 테스트", format: "mcq", tier,
-  originalTier: "Core", personalTier: personal, advanced: true, retrieval_direction: "direct", source_refs: [], conflict_id: "",
+  originalTier: "Core", personalTier: personal, targetMastery: personal ? tier === "Core" ? .85 : tier === "Important" ? .78 : .55 : .4,
+  advanced: true, retrieval_direction: "direct", source_refs: [], conflict_id: "",
   options: [{ id: "A", text: "첫째" }, { id: "B", text: "둘째" }], matching_left: [], matching_right: [], sequence_items: [] });
 const answer = { answer: "첫째", answerUnits: ["첫째"], explanation: "", correctOptionIds: ["A"], answerPairs: [], correctOrder: [], slides: [] };
 window.fetch = async (input, init) => {
@@ -47,6 +48,7 @@ try {
     batch={batch ? { lectures: [{ subject: "actual", runId: "lecture" }], onProgress: () => {} } : undefined} /></MemoryRouter>);
   await waitFor(() => document.querySelector("select"));
   check(document.querySelectorAll("select option").length === 3, "all three tiers are available before revealing the answer");
+  check(document.querySelector(".bank-target")?.textContent?.includes("40%"), "shows the server's original target");
   const option = document.querySelector<HTMLButtonElement>(".bank-option")!;
   option.click(); choose("Optional");
   await waitFor(() => document.body.textContent?.includes("저장 실패 테스트"));
@@ -54,15 +56,18 @@ try {
   choose("Optional"); choose("Important");
   await waitFor(() => document.body.textContent?.includes("Optional로 저장"));
   check(saves === 2 && document.querySelector<HTMLSelectElement>("select")!.value === "Optional", "duplicate changes are blocked while saving");
+  check(document.querySelector(".bank-target")?.textContent?.includes("55%"), "Optional applies its new target immediately");
   check(option.getAttribute("aria-pressed") === "true" && document.body.textContent?.includes("Advanced · 심화") && rates === 0, "picked answer, depth flag, and ungraded state survive tier changes");
   document.querySelector<HTMLButtonElement>(".quiz-submit")!.click();
   await waitFor(() => document.querySelectorAll(".quiz-grade").length === 4
     && !document.querySelector<HTMLSelectElement>("select")!.disabled);
   choose("Important");
   await waitFor(() => document.body.textContent?.includes("Important로 저장"));
+  check(document.querySelector(".bank-target")?.textContent?.includes("78%"), "raising priority raises the target");
   check(document.querySelectorAll(".quiz-grade").length === 4 && nexts === 1, "changing priority after reveal keeps the answer visible");
   document.querySelector<HTMLButtonElement>(".bank-tier-reset")!.click();
   await waitFor(() => document.body.textContent?.includes("원래 중요도로 되돌렸습니다"));
   check(document.querySelector<HTMLSelectElement>("select")!.value === "Core" && !document.querySelector(".bank-tier-reset"), "reset restores the shared tier");
+  check(document.querySelector(".bank-target")?.textContent?.includes("40%"), "reset restores the original target");
   document.getElementById("results")!.textContent = results.join("\n") + "\nALL PASSED";
 } catch (cause) { document.getElementById("results")!.textContent = results.join("\n") + `\nFAIL ${String(cause)}`; }
