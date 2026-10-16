@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { useOxHighlights } from "./useOxHighlights";
 import { textLayout } from "./textLayout";
 
 type Range = { start: number; end: number };
@@ -88,6 +89,7 @@ export function answerPoints(text: string, units: string[]) {
 
 export function AnswerPoints({ text, units = [], readable = false, list = false, blueBold = false }: { text: string; units?: string[]; readable?: boolean; list?: boolean; blueBold?: boolean }) {
   const parsed = answerPoints(text, units);
+  parsed.highlights.push(...useOxHighlights(blueBold ? parsed.text : ""));
   const boundaries = [...new Set([0, parsed.text.length,
     ...parsed.bold.flatMap((range) => [range.start, range.end]),
     ...parsed.highlights.flatMap((range) => [range.start, range.end]),

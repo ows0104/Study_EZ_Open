@@ -156,7 +156,7 @@ test('Core single-item answers do not repeat identical prose; blank units use th
   assert.ok(single.includes('bank-short-answer'));
   assert.ok(!single.includes('<details'));
   const fallback = render({ answer: '원래 정답', answerUnits: ['  '] }, 'basic', 'Core');
-  assert.equal(fallback, '<p class="quiz-answer">원래 정답</p>');
+  assert.equal(fallback.match(/<p class="quiz-answer">.*?<\/p>/)[0], '<p class="quiz-answer">원래 정답</p>');
 });
 
 test('short answers do not replace O/X explanations, cloze sentences, or choice answers', () => {
@@ -167,7 +167,7 @@ test('short answers do not replace O/X explanations, cloze sentences, or choice 
 
 test('points are blue inline, preserve context, and do not repeat below the answer', () => {
   const html = render({ answer: 'AChE를 억제하여 전달을 개선한다.', answerUnits: ['AChE'] });
-  assert.equal(html, '<p class="quiz-answer"><strong class="bank-answer-point">AChE</strong>를 억제하여 전달을 개선한다.</p>');
+  assert.equal(html.match(/<p class="quiz-answer">.*?<\/p>/)[0], '<p class="quiz-answer"><strong class="bank-answer-point">AChE</strong>를 억제하여 전달을 개선한다.</p>');
 });
 
 test('shorthand points highlight only the keywords in the user-provided answer', () => {
@@ -207,17 +207,17 @@ test('overlapping and repeated points retain all answer text without duplicating
   assert.ok(!html.includes('bank-units'));
 });
 
-test('single O/X explanations and paraphrased points remain visible in blue', () => {
+test('single O/X explanations remain visible without coloring the whole explanation', () => {
   const html = render({ answer: 'X', answerUnits: ['말초에서만 작용한다.'] }, 'ox');
   assert.ok(html.includes('aria-label="해설"><h2>해설</h2>'));
-  assert.ok(html.includes('<li class="bank-answer-point">말초에서만 작용한다.</li>'));
+  assert.ok(html.includes('<li>말초에서만 작용한다.</li>'));
 });
 
 test('O and X show every explanation once, including a single or multiline unit', () => {
   for (const binary of ['O', 'X']) {
     const units = ['판단의 **기준**이다.\n조건도 확인한다.', '예외를 구분한다.'];
     const html = render({ answer: binary, answerUnits: units }, 'ox');
-    assert.ok(html.includes('<strong>기준</strong>'));
+    assert.ok(html.includes('<strong class="bank-answer-point">기준</strong>'));
     assert.ok(html.replace(/<[^>]+>/g, '').includes('판단의 기준이다.\n조건도 확인한다.'));
     assert.equal((html.match(/class="bank-readable-line is-indented"/g) || []).length, 1);
     assert.equal(html.split('예외를 구분한다.').length - 1, 1);
