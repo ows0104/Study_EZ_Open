@@ -68,7 +68,7 @@ export type BankSource = {
 export type BankFormat = "basic" | "cloze" | "list" | "ox" | "mcq" | "multi_select" | "matching" | "sequence";
 
 export type BankRating = "Again" | "Hard" | "Good" | "Easy";
-export type BankTier = "Core" | "Important" | "Optional";
+export type BankTier = "Essential" | "Core" | "Important" | "Optional";
 
 /** 답이 빠진 문항. 답·채점 단위는 `reveal` 로만 온다. */
 export type BankQuestion = {
@@ -229,6 +229,7 @@ export type BankSession = {
 };
 
 export type BankRead = {
+  personalQuestions?: { questionId: string; question: string; tier: BankTier }[];
   suspendedQuestions?: { questionId: string; question: string }[];
   undoToken?: string | null;
   lectureGoal?: import("./studyPlan").LectureGoal | null;

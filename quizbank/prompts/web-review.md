@@ -47,10 +47,10 @@ Core 묶음이 학습목표·해당 교수 기출의 실제 목표와 방향을 
 형식·방향·문항 수의 할당 비율을 요구하지 않는다.
 
 모든 문항의 우선순위와 독립 심화 여부를 tier_checks에 정확히 한 번 기록한다.
-tested_target은 실제 인출 단위, recommended_tier는 Core/Important/Optional,
-recommended_importance는 Core=5/Important=4/Optional=2,
+tested_target은 실제 인출 단위, recommended_tier는 Essential/Core/Important/Optional,
+recommended_importance는 Essential=5/Core=5/Important=4/Optional=2,
 recommended_advanced는 독립 심화 여부(boolean)다. advanced_reason에는 추가 추론·연계 또는
-단순 회상이라고 판단한 이유를 쓴다. basis는 objective/past_exam/emphasis/clinical/detail이다.
+단순 회상이라고 판단한 이유를 쓴다. basis는 must_memorize/exam_explicit/objective/past_exam/emphasis/clinical/detail이다.
 source_refs에 실제 위치를, evidence에 실제 학습목표·기출 질문·강조 표시 또는 구체적인 임상
 중요성·부연임을 확인한 내용을 쓴다. essential_target은 과거 호환 필드로 빈 문자열을 쓴다.
 등급·수치·심화 중 하나라도 다르면 교정한다. 교육적 판단 기준은 뒤에 붙은 공통 원칙을 따른다.
@@ -91,3 +91,5 @@ unreadable로 남긴다. plan_issues에는 목록 자체의 누락·오류와 �
 문항별 문제·판단 이유·수정 제안을 적는다. duplicates에는 확인된 불필요한 중복만 넣는다.
 summary에는 실제 검토 범위·필수 누락·확장 제안·주요 오류를 구분해 짧게 적는다.
 검수 판정은 게시 여부와 별개다. 게시를 위해 오류·누락을 통과로 바꾸지 않는다.
+
+Essential은 반드시 암기(must_memorize) 또는 명시적 시험 출제 강조(exam_explicit)의 원본 직접 근거가 있을 때만 인정한다. 일반 강조·학습목표·반복 기출만으로 승격하지 않는다.

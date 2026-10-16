@@ -87,7 +87,7 @@ def validate_bank(bank: dict, source_ids: list[str], *, learning_structure: bool
         for item in [*bank["questions"], *bank["concepts"]]:
             ident = item.get("question_id", item.get("concept_id"))
             fail(item["importance"] == IMPORTANCE[item["tier"]],
-                 f"{ident}: 중요도 수치는 Core=5, Important=4, Optional=2여야 합니다.")
+                 f"{ident}: 중요도 수치는 Essential=5, Core=5, Important=4, Optional=2여야 합니다.")
 
     if check_quality:
         quality_invalid, quality_warnings = quality_errors(bank)

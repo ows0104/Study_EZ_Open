@@ -7,6 +7,7 @@ import { ConceptMap } from "./ConceptMap";
 import { DailyGoal } from "./DailyGoal";
 import { BankCoverage } from "./BankCoverage";
 import { SuspendedQuestions } from "./SuspendedQuestions";
+import { PersonalQuestions } from "./PersonalQuestions";
 import { LectureMastery } from "../lecture/LectureMastery";
 import { daysLabel, DIRECTION_LABEL } from "./labels";
 
@@ -56,11 +57,12 @@ export function BankStart({ base, info, finished, lecture, onStarted, onUndo, un
         onContinue={() => void start()} busy={busy} />
       <BankCoverage value={info.summary.coverage} />
       <SuspendedQuestions base={base} info={info} onChanged={onChanged} />
+      <PersonalQuestions base={base} info={info} onChanged={onChanged} />
       {info.summary.publicationWarning ? <p className="bank-note">{info.summary.publicationWarning}</p> : null}
       {error ? <p className="notice is-error">{error}</p> : null}
       {info.conceptMap?.length ? <ConceptMap concepts={info.conceptMap} /> : <LectureMastery value={info.mastery} />}
       <div className="bank-start-row bank-secondary-actions">
-        {onUndo ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={onUndo} aria-keyshortcuts="Z Control+Z">마지막 평가 되돌리기 <kbd>Z</kbd></button> : null}
+        {onUndo ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={onUndo} aria-keyshortcuts="Z Control+Z">마지막 작업 되돌리기 <kbd>Z</kbd></button> : null}
         <details className="bank-options">
           <summary>학습 설정</summary>
           <label>
@@ -86,7 +88,7 @@ function SessionSummary({ summary }: { summary: BankSession }) {
       <h3>이번 회차 · {summary.reviewed}문항</h3>
       <p>
         Again {summary.ratings.Again} · Hard {summary.ratings.Hard} · Good {summary.ratings.Good} · Easy{" "}
-        {summary.ratings.Easy} — Core 숙련 {pct(summary.core_before)} → {pct(summary.core_after)}
+        {summary.ratings.Easy} — 핵심·필수 숙련 {pct(summary.core_before)} → {pct(summary.core_after)}
       </p>
       {summary.weaknesses.length ? (
         <>

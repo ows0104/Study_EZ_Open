@@ -61,6 +61,17 @@ def main():
         assert second["question"]["question_id"] == "Q2", "a suspended prerequisite cannot block a new question"
         assert second["lectureGoal"]["total"] == 1 and second["lectureGoal"]["completed"] == 0
         assert next_question()["reviewToken"] == second["reviewToken"], "refresh preserves active question"
+        assert second["undoToken"] == first["reviewToken"]
+        restored = client.post(BASE + "/undo", json={"reviewToken": second["undoToken"]})
+        assert restored.status_code == 200, restored.text
+        restored = restored.json()
+        assert restored["question"]["question_id"] == "Q1" and restored["answer"] is None
+        assert restored["reviewToken"] != first["reviewToken"] and restored["undoToken"] is None
+        assert restored["lectureGoal"]["total"] == 2
+        assert client.get(BASE).json()["suspendedQuestions"] == []
+        assert client.post(BASE + "/undo", json={"reviewToken": first["reviewToken"]}).status_code == 409
+        put("Q1", {"reviewToken": restored["reviewToken"], "suspended": True})
+        second = next_question()
         reading = client.get(BASE).json()
         assert [q["questionId"] for q in reading["suspendedQuestions"]] == ["Q1"]
         assert reading["summary"]["studyQuestionCount"] == 1
@@ -74,6 +85,19 @@ def main():
         assert complete["summary"]["reviewed"] == 0, "suspensions never count as reviews"
         batch = client.post("/api/bank/batch/next", json={"lectures": [{"subject": "suspend", "runId": "demo"}]}).json()
         assert batch["question"] is None and batch["batchGoal"]["total"] == 0
+        # Completion and batch mode keep suspension undo available, in reverse order.
+        undone = client.post("/api/bank/batch/undo", json={
+            "lectures": [{"subject": "suspend", "runId": "demo"}], "reviewToken": batch["undoToken"]})
+        assert undone.status_code == 200, undone.text
+        undone = undone.json()
+        assert undone["question"]["question_id"] == "Q2" and undone["answer"] is None
+        assert undone["session"]["status"] == "active" and undone["session"]["reviewed"] == 0
+        undone = client.post(BASE + "/undo", json={"reviewToken": undone["undoToken"]}).json()
+        assert undone["question"]["question_id"] == "Q1" and undone["undoToken"] is None
+        put("Q1", {"reviewToken": undone["reviewToken"], "suspended": True})
+        second = next_question()
+        put("Q2", {"reviewToken": second["reviewToken"], "suspended": True})
+        next_question()
         put("Q1", {"suspended": False, "buildId": "old-build"}, 409)
         put("Q1", {"suspended": False, "buildId": "v1"})
         assert client.get(BASE).json()["lectureGoal"]["remaining"] == 1

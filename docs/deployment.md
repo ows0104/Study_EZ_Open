@@ -10,6 +10,13 @@ Cloudflare Pages  ──►  Cloud Run (studyez-api)  ──►  Supabase Postgr
 
 ## 한 번만 하는 것
 
+2026-10-16 개인 문제 추가와 Must-Know(Essential)는 API를 먼저, 웹을 다음에 배포한다.
+기존 `bank_personal_edit`에 `original.personalAdded`로 개인 추가 문항을 구분하므로 새 DB 표·칼럼은 없다.
+추가 문항은 공용 은행 재생성과 독립적으로 유지되며 계정별로 학습·모아 풀기·현황에 포함된다.
+정책 3.11.0의 중요도는 Essential > Core > Important > Optional이고 Essential 목표는 .90이다.
+출제 프롬프트 1.67과 CLI 검수는 명시적인 필수 암기·시험 출제 강조의 원본 근거를 요구한다.
+배포만으로 기존 문항의 중요도를 일괄 변경하거나 문제은행을 다시 생성하지 않는다.
+
 2026-10-16 시간표 첫 로딩 개선도 DB 변경 없이 API를 먼저, 웹을 다음에 배포한다.
 홈은 가벼운 시간표만 계정 조회와 병렬로 받으며 다른 화면의 계정 조회는 시간표를 미리 읽지 않는다.
 학습률은 사용자가 켰을 때 현재 주·월만 `include_cards=false`로 조회한다.

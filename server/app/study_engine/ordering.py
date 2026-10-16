@@ -38,9 +38,10 @@ def review_weight(candidate: dict, now: int) -> float:
     overdue = max(0, (day_start(now) - candidate["unit"]["scheduled_due"]) / DAY_MS)
     future_days = max(0, (day_start(candidate["unit"]["scheduled_due"]) - day_start(now)) / DAY_MS)
     components = row["components"]
+    essential = components["tier"] if candidate["question"]["tier"] == "Essential" else 1
     # 당일 시각을 기다리게 하지는 않지만 원래 예정일은 가중치에 남긴다.
     return ((1 + min(overdue, 30)) / (1 + future_days) * components["weakness"] * components["importance"]
-            * components["examUrgency"] * components["examDirection"])
+            * components["examUrgency"] * components["examDirection"] * essential)
 
 
 def choose_candidate(candidates: list[dict], history: list[dict], now: int, policy: dict = DEFAULT) -> dict | None:

@@ -116,7 +116,7 @@ class BankFeedback(Base):
 
 
 class BankPersonalEdit(Base):
-    """A user's wording and answer, applied only while the shared source is unchanged."""
+    """Private edits or additions (original.personalAdded), scoped to a user and lecture."""
 
     __tablename__ = "bank_personal_edit"
     user_id: Mapped[str] = mapped_column(String(64), primary_key=True)

@@ -3517,3 +3517,11 @@ button.notice-title:hover:not(:disabled) {
   padding: 0 4px;
   font-size: 12px;
 }
+
+.bank-personal-questions { margin: 16px 0; }
+.bank-personal-questions details { margin-top: 10px; }
+.bank-personal-questions ul { padding: 0; list-style: none; }
+.bank-personal-questions li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.bank-personal-questions li > span:first-child { flex: 1 1 220px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.is-essential { color: #a14212; font-weight: 700; }
+.bank-tier-control.is-essential select { border-color: #c47b31; background: #fff5dc; }

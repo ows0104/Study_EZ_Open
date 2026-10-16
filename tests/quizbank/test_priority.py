@@ -9,6 +9,19 @@ from quizbank.session import SessionError
 from tests.quizbank.test_web_audit import RAW, bank, report
 
 
+def test_essential_requires_explicit_memorization_or_exam_evidence(bank):
+    rows = report(bank)["tier_checks"]
+    for basis in ("objective", "past_exam", "emphasis", "clinical", "detail"):
+        rows[0].update(recommended_tier="Essential", recommended_importance=5, basis=basis)
+        with pytest.raises(SessionError, match="Essential"):
+            priority.assess(bank, rows)
+    for basis in ("must_memorize", "exam_explicit"):
+        rows[0].update(recommended_tier="Essential", recommended_importance=5, basis=basis)
+        checked, issues = priority.assess(bank, rows)
+        assert checked["checkedCount"] == len(bank["questions"])
+        assert any(issue["question_id"] == rows[0]["question_id"] for issue in issues)
+
+
 def test_every_question_needs_a_distinct_source_grounded_decision(bank):
     rows = report(bank)["tier_checks"]
     checked, issues = priority.assess(bank, rows)

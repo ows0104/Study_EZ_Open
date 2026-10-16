@@ -4,9 +4,9 @@ from __future__ import annotations
 from .points import STR, _array, _object
 from .session import SessionError
 
-BASIS = ("objective", "past_exam", "emphasis", "clinical", "detail")
+BASIS = ("must_memorize", "exam_explicit", "objective", "past_exam", "emphasis", "clinical", "detail")
 CORE_BASES = {"objective", "past_exam"}
-IMPORTANCE = {"Core": 5, "Important": 4, "Optional": 2}
+IMPORTANCE = {"Essential": 5, "Core": 5, "Important": 4, "Optional": 2}
 ISSUE = "Tier 근거 불일치"
 CHECK_SCHEMA = _array(_object({
     "question_id": STR,
@@ -42,6 +42,8 @@ def assess(bank: dict, rows: list[dict]) -> tuple[dict, list[dict]]:
         tier, basis = row["recommended_tier"], row["basis"]
         if tier not in IMPORTANCE or basis not in BASIS:
             raise SessionError("Tier 검수: 등급·근거 유형이 맞지 않습니다.")
+        if tier == "Essential" and basis not in {"must_memorize", "exam_explicit"}:
+            raise SessionError("Tier 검수: Essential은 반드시 암기 또는 명시적 시험 출제 강조의 직접 근거가 필요합니다.")
         if tier == "Core" and basis not in CORE_BASES:
             raise SessionError("Tier 검수: Core는 실제 학습목표 또는 해당 교수 기출의 직접 근거가 필요합니다.")
         if tier == "Important" and basis not in {"emphasis", "clinical"}:
@@ -52,7 +54,7 @@ def assess(bank: dict, rows: list[dict]) -> tuple[dict, list[dict]]:
         if type(importance) is not int or not 1 <= importance <= 5:
             raise SessionError("Tier 검수: 중요도는 1–5 정수여야 합니다.")
         if importance != IMPORTANCE[tier]:
-            raise SessionError("Tier 검수: Core=5, Important=4, Optional=2와 중요도가 다릅니다.")
+            raise SessionError("Tier 검수: Essential=5, Core=5, Important=4, Optional=2와 중요도가 다릅니다.")
         advanced = row.get("recommended_advanced")
         if type(advanced) is not bool or (advanced and not row.get("advanced_reason", "").strip()):
             raise SessionError("Tier 검수: 독립 심화 여부와 심화인 경우의 판단 이유가 필요합니다.")

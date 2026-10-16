@@ -8,7 +8,7 @@
 - 모든 문항, answer unit, source conflict, prerequisite를 보존해라. 출력 길이를 맞추려고 내용을 빼지 마라.
 ## 2. 변환 규칙
 
-- v1.63부터 tier는 Core/Important/Optional이며 `심화: true/false`를 question.advanced boolean으로 옮긴다. 심화와 중요도를 섞지 않는다. 심화 필드가 없는 옛 응답은 advanced=false로 두고 옛 tier=Advanced는 중간 우선순위 Important로 호환 변환한다. 이것은 심화 판정이 아니며 이후 원본 검수가 중요도를 다시 판단한다.
+- v1.63부터 tier는 Essential/Core/Important/Optional이며 `심화: true/false`를 question.advanced boolean으로 옮긴다. 심화와 중요도를 섞지 않는다. 심화 필드가 없는 옛 응답은 advanced=false로 두고 옛 tier=Advanced는 중간 우선순위 Important로 호환 변환한다. 이것은 심화 판정이 아니며 이후 원본 검수가 중요도를 다시 판단한다.
 
 - 전문 용어·영어·약어·원문의 한국어 병기를 그대로 옮긴다. 원문에 있는 영어를 한국어로 대체하지 않는다. 정리 단계에서 새 번역·설명을 만들지는 않는다.
 - `문제:` 뒤의 들여쓴 후속 줄은 다음 필드 전까지 같은 문항의 발문이다. 비교 항목·문장 사이의 실제 줄바꿈과 들여쓰기를 question의 JSON 문자열에 보존한다. 여러 줄이라는 이유로 문항을 나누거나 후속 문장을 누락하지 않는다.

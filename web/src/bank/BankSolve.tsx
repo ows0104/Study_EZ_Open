@@ -16,6 +16,7 @@ import { useBankUndo } from "./useBankUndo";
 import { MatchingQuestion, type MatchingPicks } from "./MatchingQuestion";
 import { SequenceQuestion, sequenceComplete } from "./SequenceQuestion";
 import { SuspendedQuestions } from "./SuspendedQuestions";
+import { AddQuestionDialog } from "./PersonalQuestions";
 import { splitSlides } from "./BankSlides";
 import { matchingLayout } from "./presentation";
 
@@ -59,6 +60,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
   const [error, setError] = useState("");
   const [reporting, setReporting] = useState(false);
   const [commonEditing, setCommonEditing] = useState(false);
+  const [addingQuestion, setAddingQuestion] = useState(false);
   const [actionMessage, setActionMessage] = useState("");
   // 회차를 끝내지 않고 지도와 진행도를 본다. 열 때마다 새로 읽는다 — 방금 매긴 평가가 숙련도에 들어가 있다.
   const [peek, setPeek] = useState<BankRead | null>(null);
@@ -312,7 +314,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
           <details className="bank-session-details"><summary>이번 학습 기록 보기</summary>
           <p className="bank-note">
             이번 회차 {live.reviewed}{live.size == null ? "" : ` / ${live.size}`}문항 · Again {live.ratings.Again} · Hard {live.ratings.Hard} · Good{" "}
-            {live.ratings.Good} · Easy {live.ratings.Easy} — Core 숙련 {Math.round(live.core_before * 100)}% →{" "}
+            {live.ratings.Good} · Easy {live.ratings.Easy} — 핵심·필수 숙련 {Math.round(live.core_before * 100)}% →{" "}
             {Math.round(live.core_after * 100)}%
           </p>
           </details>
@@ -331,10 +333,11 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
             {displayed.examDate ? ` · ${daysLabel(displayed.examDate)}` : ""}
           </span>
           <span className="bank-tags">
-            <label className="bank-tier-control" title="내 계정의 이 문제에 적용됩니다. Core: 학습목표·기출 / Important: 강조·임상 중요 / Optional: 기타 세부사항">
+            <label className={`bank-tier-control${q.tier === "Essential" ? " is-essential" : ""}`} title="내 계정의 이 문제에 적용됩니다. Must-Know: 반드시 암기·교수의 명시적 시험 출제 강조 / Core: 학습목표·기출 / Important: 강조·임상 중요 / Optional: 기타 세부사항">
               내 중요도{" "}
               <select aria-label="내 문제 중요도" value={q.tier} disabled={busy || undoBusy}
                 onChange={event => void changeTier(event.target.value as BankTier)}>
+                <option value="Essential">★ Must-Know</option>
                 <option value="Core">Core</option>
                 <option value="Important">Important</option>
                 <option value="Optional">Optional</option>
@@ -353,6 +356,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
           <span className="bank-progress-actions">
             {current.undoToken ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={() => void undo()} aria-keyshortcuts="Z Control+Z">되돌리기 <kbd>Z</kbd></button> : null}
             <button className="is-quiet" disabled={busy || undoBusy} onClick={() => void openPeek()}>개념 지도</button>
+            <button className="is-quiet" disabled={busy || undoBusy} onClick={() => setAddingQuestion(true)}>＋ 문제 추가</button>
             <button className="is-quiet" disabled={busy || undoBusy} onClick={() => void end()}>{batch ? "쉬기" : "회차 마치기"}</button>
           </span>
         </p>
@@ -402,6 +406,12 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
               void next();
             }} />
         </Suspense> : null}
+        {addingQuestion ? <AddQuestionDialog base={base} onClose={() => setAddingQuestion(false)} onSaved={() => {
+          setAddingQuestion(false); setAnswerRevision(value => value + 1);
+          setActionMessage("내 문제를 추가했습니다.");
+          void api<BankRead>(base).then(info => setCurrent(old => old ? { ...old, lectureGoal: info.lectureGoal } : old))
+            .catch(cause => setError((cause as Error).message));
+        }} /> : null}
         {reporting ? <PersonalQuestionDialog base={base} questionId={q.question_id} answerVisible={Boolean(answer)}
           onClose={() => setReporting(false)} onSaved={(result, reset) => {
             setCurrent(old => old ? { ...old, question: result.question } : old);
