@@ -93,6 +93,9 @@ export function AnswerBody({ question: q, answer, preload }: {
   question: BankQuestion; answer: BankAnswer; preload?: SlidePreloader;
 }) {
   const review = answer.medicalReview;
+  const hasMedicalReview = review && review.verdict !== "ok";
+  const hasReviewNotes = answer.reviewIssues?.length || hasMedicalReview
+    || answer.evidenceStatus || answer.conflict?.trim() || answer.external;
   const layout = q.format === "matching" ? matchingLayout(q) : { left: [], right: [] };
   const right = layout.right;
   const pairs = q.format === "matching" ? [...answer.answerPairs].sort((a, b) => layout.left.indexOf(a.left) - layout.left.indexOf(b.left)) : answer.answerPairs;
@@ -194,14 +197,6 @@ export function AnswerBody({ question: q, answer, preload }: {
           </ol>
         </section>
       ) : null}
-      <BankSourceNote conflict={answer.conflict} external={answer.external} />
-      {review && review.verdict !== "ok" ? (
-        <p className={`bank-review is-${review.verdict}`}>
-          <b>외부지식 검토 · {review.verdict === "wrong" ? "틀림" : "의심"}</b> {review.note}
-          {review.suggested_answer ? <><br />맞는 답: {review.suggested_answer}</> : null}
-        </p>
-      ) : null}
-      <BankEvidenceNotice status={answer.evidenceStatus} />
       {answer.jokboSlides?.some(slide => slide.primary) ? (
         <BankJokboSlides key={`core:${q.question_id}`} slides={answer.jokboSlides} preload={preload} />
       ) : null}
@@ -213,10 +208,18 @@ export function AnswerBody({ question: q, answer, preload }: {
             collapseReferences={!!answer.evidenceStatus && !answer.slides.some(slide => slide.primary)} />
         ) : null}
       </div>
-      {answer.reviewIssues?.length ? (
+      {hasReviewNotes ? (
         <details className="bank-review-notes" key={`review:${q.question_id}`}>
-          <summary>문항 검수 기록 · 미해결 {answer.reviewIssues.length}건</summary>
-          {answer.reviewIssues.map((issue, index) => <p key={index}>{issue}</p>)}
+          <summary>문항 검수 기록</summary>
+          {answer.reviewIssues?.map((issue, index) => <p key={index}><b>문항 검수 · 미해결</b> {issue}</p>)}
+          {hasMedicalReview ? (
+            <p>
+              <b>외부지식 검토 · {review.verdict === "wrong" ? "틀림" : "의심"}</b> {review.note}
+              {review.suggested_answer ? <><br />맞는 답: {review.suggested_answer}</> : null}
+            </p>
+          ) : null}
+          <BankEvidenceNotice status={answer.evidenceStatus} />
+          <BankSourceNote conflict={answer.conflict} external={answer.external} />
         </details>
       ) : null}
     </>

@@ -30,7 +30,8 @@ test('reference exams open beside selected lecture evidence with year and questi
   assert.match(html,/src="https:\/\/example.test\/12.png"/);
   assert.match(html,/<figcaption class="bank-note">2023년 · 52번 · 2022년 · 7번<\/figcaption>/);
   assert.doesNotMatch(html,/<h2>참고한 족보|족보\.pdf|지면 크게 보기|bank-jokbo-reference/);
-  assert.doesNotMatch(html,/<details/);
+  assert.match(html,/<details class="bank-review-notes"><summary>문항 검수 기록<\/summary>/);
+  assert.ok(html.indexOf('src="https://example.test/core.png"') < html.indexOf('class="bank-review-notes"'));
   assert.doesNotMatch(html,/핵심 근거 · 족보/);
 });
 
