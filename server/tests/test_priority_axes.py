@@ -39,11 +39,11 @@ def main():
         chosen = select_daily_question(bank, state, EXAM, NOW + i)["question"]
         order.append(chosen["question_id"])
         state = record_review(bank, state, chosen["question_id"], "Again", NOW + i)
-    assert order == ["core", "core-depth", "important", "important-depth", "optional", "optional-depth"], order
+    assert order == ["optional-depth", "important", "core-depth", "core", "optional", "important-depth"], order
     assert bank == before and len(state["history"]) == 6
     assert select_daily_question(bank, state, EXAM, NOW + 10)["question"] is None
     assert lecture_goal(bank, state, "test", NOW + 10)["met"]
-    assert select_question(bank, empty_state(), EXAM, NOW, prefer_unseen=True)["question"]["question_id"] == "core"
+    assert select_question(bank, empty_state(), EXAM, NOW, prefer_unseen=True)["question"]["question_id"] == "optional-depth"
     # Shared concept plans cannot give Optional a Core target; depth never raises it.
     targets = {q["question_id"]: target_for(bank, q)["effective"] for q in bank["questions"]}
     assert targets == {"core": .85, "core-depth": .85, "important": .78, "important-depth": .78,
@@ -67,7 +67,7 @@ def main():
     bank["questions"] = [q for q in bank["questions"] if q["question_id"] in ("core", "optional")]
     bank["questions"][0]["prerequisites"] = ["optional"]
     assert select_daily_question(bank, empty_state(), EXAM, NOW)["question"]["question_id"] == "optional"
-    # Core in another lecture takes precedence over an earlier lecture's Important.
+    # Batch keeps lecture/slide flow rather than pulling Core ahead from another lecture.
     a = bank_with_questions(); b = bank_with_questions()
     a["questions"] = [q for q in a["questions"] if q["question_id"] == "important"]
     b["questions"] = [q for q in b["questions"] if q["question_id"] == "core"]
@@ -75,7 +75,7 @@ def main():
                 "row": SimpleNamespace(pages={}), "goal": lecture_goal(bank, empty_state(), "test", NOW)}
                for i, bank in enumerate((a, b))]
     entry, picked = select_batch_question(entries, NOW)
-    assert entry is entries[1] and picked["question"]["question_id"] == "core"
+    assert entry is entries[0] and picked["question"]["question_id"] == "important"
     # Historical middle priorities remain readable, without guessing depth.
     legacy = example_bank(); original = copy.deepcopy(legacy)
     normalized = without_retired(legacy)

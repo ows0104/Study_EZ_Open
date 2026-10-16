@@ -12,7 +12,6 @@ from .memory import DAY_MS
 from .policy import DEFAULT
 from .progress import seen_ids
 from .suspension import active_bank
-from app.bank_validation.priorities import TIER_ORDER, is_advanced, priority_tier
 
 
 def _due(review: dict, state: dict, bank: dict, question: dict, *, latest: bool, policy: dict) -> int:
@@ -125,7 +124,7 @@ def daily_candidates(bank: dict, state: dict, exam: str, now: int, policy: dict 
             continue  # 아직 평가하지 않은 선행 문항부터 확인한다.
         slide = question_slide(q, pages)
         candidates.append({"unit": unit, "question": q, "rank": rows[unit["key"]], "scope": scope,
-                           "order": (TIER_ORDER[priority_tier(q)], is_advanced(q), lecture_order, slide,
+                           "order": (lecture_order, slide,
                                      rows[unit["key"]]["stage"] if slide != float("inf") else 0,
                                      positions[unit["key"]])})
     return candidates, ranked
@@ -135,7 +134,7 @@ def daily_selection(chosen: dict | None, ranked: list[dict], exam: str, now: int
     question = chosen["question"] if chosen else None
     if question:
         row = next(r for r in ranked if r["question_id"] == question["question_id"])
-        row["notes"] += ["첫 학습은 선행관계를 지키며 Core→Important→Optional, 같은 중요도는 기본→심화·슬라이드 순서입니다. 복습은 중요도·예정일·약점을 반영합니다.",
+        row["notes"] += ["첫 학습은 등급·심화 표시와 관계없이 선행관계·슬라이드 순서를 따릅니다. 복습은 중요도·예정일·약점을 반영합니다.",
                          "가능하면 같은 개념의 다른 회상방향 사이에 다른 문제 3~5개를 둡니다."] + row["reasons"]
         row.update(eligible=True, score=row["raw_score"], reasons=[])
     return {"question": question, "ranked": ranked,

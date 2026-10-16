@@ -47,10 +47,6 @@ def choose_candidate(candidates: list[dict], history: list[dict], now: int, poli
     if not candidates:
         return None
     pool = [c for c in candidates if c["unit"]["kind"] == "new"] or candidates
-    if pool[0]["unit"]["kind"] == "new":
-        # Spacing can reorder peers, but cannot promote a lower priority or depth.
-        priority = min(c["order"][:2] for c in pool)
-        pool = [c for c in pool if c["order"][:2] == priority]
     history = sorted(history, key=lambda event: event["timestamp"])
     spacing = policy["ordering"]
     gaps = {id(c): direction_gap(c, history) for c in pool}
