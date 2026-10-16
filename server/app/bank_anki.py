@@ -26,7 +26,7 @@ from app.bank_edits import current_review
 from app.bank_validation.priorities import priority_tier, is_advanced
 from app.routes.common import storage_or_503
 
-EXPORT_VERSION = 2
+EXPORT_VERSION = 3
 MODEL_ID = 1867040701
 CSS = """
 .card { font-family: Arial, sans-serif; font-size: 20px; line-height: 1.65;
@@ -104,6 +104,8 @@ def render_answer(q: dict, bank: dict, review: dict, images: list[tuple[int, str
         out += f'<p>{text(" → ".join(q["correct_order"]))}</p>'
     if len(q.get("answer_units", [])) > 1 and q["format"] not in {"cloze", "matching", "sequence"}:
         out += listing(q["answer_units"])
+    if q.get("explanation", "").strip():
+        out += f'<p><b>해설</b><br>{text(q["explanation"])}</p>'
     conflict = next((c for c in bank.get("source_conflicts", []) if q.get("conflict_id") == c["conflict_id"]), None)
     if conflict:
         out += f'<p><b>자료 충돌</b> {text(conflict["description"])}</p>'

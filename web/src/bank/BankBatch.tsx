@@ -35,6 +35,7 @@ export function BankBatchPage() {
   const [done, setDone] = useState(false);
   const { events, setEvents, onScope, error: loadError } = useStudyTimetable(refreshKey, !queue);
   const [paused, setPaused] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [auditing, setAuditing] = useState(false);
   const [auditMessage, setAuditMessage] = useState("");
@@ -43,7 +44,7 @@ export function BankBatchPage() {
     setQueue(old => old ? { ...old, current: got.lecture ? old.lectures.find(l => keyOf(l) === `${got.lecture!.subject}/${got.lecture!.runId}`) : old.current,
       undoToken: got.undoToken, goal: got.batchGoal } : old);
   }, []);
-  const batch = useMemo<BatchStudy | undefined>(() => queue ? { lectures: queue.lectures, resumeLecture: queue.current, onProgress: progress } : undefined,
+  const batch = useMemo<BatchStudy | undefined>(() => queue ? { lectures: queue.lectures, resumeLecture: queue.current, onProgress: progress, onSavingChange: setSaving } : undefined,
     [queue?.lectures, progress]);
   const requestUndo = useCallback((token: string) => api<BankNext>("/api/bank/batch/undo", {
     method: "POST", body: JSON.stringify({ lectures: queue?.lectures, reviewToken: token }),
@@ -97,7 +98,7 @@ export function BankBatchPage() {
     <div className="batch-progress" role="status">
       <span>강의 모아 풀기</span>
       <strong>{queue.lectures.length}강의 섞어 풀기{!done && current ? ` · ${current.title}` : ""}</strong>
-      <button className="is-quiet" onClick={() => { setQueue(null); setDone(false); setPaused(false); setError(""); }}>강의 다시 선택</button>
+      <button className="is-quiet" disabled={saving} onClick={() => { setQueue(null); setDone(false); setPaused(false); setError(""); }}>강의 다시 선택</button>
     </div>
     {error ? <p role="alert" className="notice is-error">{error}</p> : null}
     {current && !done && !paused ? <BankSolve base="" lecture={current} onFinished={finished} batch={batch} />

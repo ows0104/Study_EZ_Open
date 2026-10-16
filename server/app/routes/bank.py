@@ -553,8 +553,10 @@ def bank_review(subject: str | None = None, run_id: str | None = Query(None, ali
 class BankCardIn(BaseModel):
     build_id: str = Field(alias="buildId", max_length=64)
     expected_question: dict = Field(alias="expectedQuestion")
-    action: Literal["edit", "accept", "delete", "reset"]
+    action: Literal["edit", "accept", "delete", "reset", "split"]
     question: dict | None = None
+    questions: list[dict] | None = None
+    reason: str = Field(default="", max_length=4000)
 
 
 @admin_router.put("/lectures/{subject}/{run_id}/bank/cards/{question_id}")
@@ -581,12 +583,50 @@ def edit_bank_card(subject: str, run_id: str, question_id: str, payload: BankCar
     candidate_bank = copy.deepcopy(row.bank)
     candidate_validation = copy.deepcopy(validation)
     if payload.action == "reset":
+        previous_edit = edits.get(question_id, {})
+        child_ids = {q['question_id'] for q in previous_edit.get('children', [])}
+        for child_id in child_ids:
+            edits.pop(child_id, None)
+        for plan in candidate_bank.get('retrieval_plan', []):
+            if plan['concept_id'] == original['concept_id'] and 'originalDirections' in previous_edit:
+                plan['directions'] = previous_edit['originalDirections']
         edits.pop(question_id, None)
         # Restore the original before applying all remaining decisions.
-        candidate_bank["questions"] = [q for q in candidate_bank["questions"] if q["question_id"] != question_id]
-        candidate_validation["dropped"] = [d for d in validation.get("dropped", []) if d["question_id"] != question_id]
+        candidate_bank["questions"] = [q for q in candidate_bank["questions"] if q["question_id"] not in child_ids | {question_id}]
+        candidate_validation["dropped"] = [d for d in validation.get("dropped", []) if d["question_id"] not in child_ids | {question_id}]
         candidate_validation["edits"] = edits
         candidate_bank["questions"].append(original)
+    elif payload.action == 'split':
+        if not payload.reason.strip() or not payload.questions or len(payload.questions) < 2:
+            raise HTTPException(422, '분할한 문항과 근거가 필요합니다.')
+        if edits.get(question_id, {}).get('children') or any(
+            question_id in {q['question_id'] for q in e.get('children', [])} for e in edits.values()):
+            raise HTTPException(422, '이미 분할된 문항은 먼저 기존 분할을 검토하세요.')
+        replacements = without_retired({'questions': payload.questions})['questions']
+        errors = [error for q in replacements for error in schema_errors(q, QUESTION)]
+        if errors:
+            raise HTTPException(422, '\n'.join(errors))
+        ids = [q['question_id'] for q in replacements]
+        if ids.count(question_id) != 1 or len(ids) != len(set(ids)):
+            raise HTTPException(422, '기존 ID 한 개와 중복 없는 새 문항 ID가 필요합니다.')
+        known_ids = set(bank_edits.candidates(row.bank, validation))
+        for q in replacements:
+            qid = q['question_id']
+            if q['concept_id'] != current['concept_id']:
+                raise HTTPException(422, '분할은 기존 개념 안에서 수행하세요.')
+            if qid != question_id and (qid in known_ids or not qid.startswith(question_id + '-')):
+                raise HTTPException(422, '기존 문항과 충돌하지 않는 하위 ID가 필요합니다.')
+        anchor = next(q for q in replacements if q['question_id'] == question_id)
+        children = [q for q in replacements if q['question_id'] != question_id]
+        directions = next(p['directions'] for p in row.bank['retrieval_plan']
+                          if p['concept_id'] == current['concept_id'])
+        edits[question_id] = {'action': 'edit', 'original': original, 'question': anchor,
+            'children': children, 'originalDirections': copy.deepcopy(directions), 'splitReason': payload.reason,
+            'by': user.email or user.id, 'at': datetime.now(UTC).isoformat()}
+        for qid in ids:
+            errors = bank_edits.question_errors(candidate_bank, candidate_validation, edits, qid, source_ids)
+            if errors:
+                raise HTTPException(422, '\n'.join(errors))
     else:
         question = without_retired({"questions": [current]})["questions"][0]
         if payload.action == "edit":
@@ -600,7 +640,9 @@ def edit_bank_card(subject: str, run_id: str, question_id: str, payload: BankCar
                 raise HTTPException(422, "문항 ID는 바꿀 수 없습니다.")
             if question == without_retired({"questions": [current]})["questions"][0]:
                 raise HTTPException(422, "수정한 내용이 없습니다.")
-        edits[question_id] = {"action": payload.action, "original": original, "question": question,
+        split_fields = {k: copy.deepcopy(edits[question_id][k]) for k in ('children', 'originalDirections', 'splitReason')
+                        if k in edits.get(question_id, {})}
+        edits[question_id] = {**split_fields, "action": payload.action, "original": original, "question": question,
                               "by": user.email or user.id, "at": datetime.now(UTC).isoformat()}
         if payload.action in ("edit", "accept"):
             errors = bank_edits.question_errors(candidate_bank, candidate_validation, edits, question_id, source_ids)
@@ -969,7 +1011,8 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
 
 def _next_bank_question(subject: str, run_id: str, user: CurrentUser, db: Session,
                         *, choice_protocol: bool = False, selection: dict | None = None,
-                        preview_state: dict | None = None, served_token: str | None = None) -> dict[str, Any]:
+                        preview_state: dict | None = None, served_token: str | None = None,
+                        preview_states_out: dict | None = None) -> dict[str, Any]:
     """다음 문항. **이미 내준 문항이 있으면 그것을 다시 준다** — 새로고침이 문항을 넘기지 않는다."""
     lecture = lecture_or_404(db, subject, run_id)
     row = _bank_or_404(db, lecture, user)
@@ -979,6 +1022,8 @@ def _next_bank_question(subject: str, run_id: str, user: CurrentUser, db: Sessio
     state = engine.upgrade_state(bank, state_row.state if state_row else preview_state, engine.DEFAULT, now)
 
     def save():
+        if preview_states_out is not None:
+            preview_states_out[(subject, run_id)] = copy.deepcopy(state)
         if state_row is not None:
             _save(state_row, state)
             db.commit()
@@ -1160,8 +1205,12 @@ def prepare_bank_answer(subject: str, run_id: str, payload: TokenIn,
     return _answer(db, row, question)
 
 
+class RevealIn(TokenIn):
+    response_time_ms: int | None = Field(default=None, alias="responseTimeMs", ge=0, le=86_400_000)
+
+
 @router.post("/lectures/{subject}/{run_id}/bank/reveal")
-def reveal_bank_answer(subject: str, run_id: str, payload: TokenIn,
+def reveal_bank_answer(subject: str, run_id: str, payload: RevealIn,
                        user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)) -> dict:
     lecture = lecture_or_404(db, subject, run_id)
     row = _bank_or_404(db, lecture, user)
@@ -1176,6 +1225,9 @@ def reveal_bank_answer(subject: str, run_id: str, payload: TokenIn,
         raise HTTPException(409, "먼저 답을 떠올린 뒤 선지를 공개하세요.")
     served["revealed"] = True
     served.setdefault("revealed_at", engine.now_ms())
+    if payload.response_time_ms is not None:
+        # Cached cards can be read before the previous save reaches the server.
+        served.setdefault("client_response_time_ms", payload.response_time_ms)
     state["served"] = served
     _save(state_row, state)
     db.commit()
@@ -1192,6 +1244,7 @@ class RateIn(BaseModel):
     review_token: str = Field(alias="reviewToken")
     rating: Literal["Again", "Hard", "Good", "Easy"]
     advance: bool = False
+    retry_safe: bool = Field(default=False, alias="retrySafe")
     lectures: list[BatchLectureIn] | None = Field(default=None, min_length=1, max_length=100)
 
     model_config = {"populate_by_name": True}
@@ -1210,6 +1263,8 @@ def _reviewed_state(bank: dict, state: dict, rating: str, now: int) -> dict:
     last["selection_policy_version"] = served.get("policy_version")
     presented = served.get("presented_at")
     last["response_time_sec"] = max(0, (served.get("revealed_at", now) - presented) / 1000) if presented else None
+    if "client_response_time_ms" in served:
+        last["response_time_sec"] = served["client_response_time_ms"] / 1000
     summary = engine.session_summary(bank, nxt, now=now)
     limit = nxt["session"]["size"]
     if summary and limit is not None and summary["reviewed"] >= limit:
@@ -1227,19 +1282,27 @@ def rate_bank_answer(subject: str, run_id: str, payload: RateIn,
     state_row = _load_state(db, user, row)
     state = state_row.state
     served = state.get("served") or {}
-    if not served.get("revealed") or served.get("token") != payload.review_token:
+    last = (state.get("history") or [{}])[-1]
+    replay = payload.retry_safe and (last.get("undo", {}).get("served") or {}).get("token") == payload.review_token and last.get("rating") == payload.rating
+    if not replay and (not served.get("revealed") or served.get("token") != payload.review_token):
         raise HTTPException(409, "정답 공개 후 한 번만 평가할 수 있습니다.")
     now = engine.now_ms()
-    nxt = _reviewed_state(bank, state, payload.rating, now)
-    _save(state_row, nxt)
-    db.commit()
+    nxt = state if replay else _reviewed_state(bank, state, payload.rating, now)
+    if not replay:
+        _save(state_row, nxt)
+        db.commit()
     result = {"reviews": len(nxt["history"]), "session": engine.session_summary(bank, nxt, now=now)}
     if payload.advance:
         # The review is committed even if selecting the next question fails.
         # Report that separately so clients never submit the same rating twice.
         try:
             token = _advance_token(payload.review_token, payload.rating)
-            result["next"] = (_next_batch_question(BatchIn(lectures=payload.lectures), user, db, served_token=token)
+            resume = None
+            if replay and payload.lectures:
+                resume = next(({"subject": entry["key"][0], "runId": entry["key"][1]}
+                               for entry in _batch_entries(BatchIn(lectures=payload.lectures), user, db)
+                               if (entry["state"].get("served") or {}).get("token") == token), None)
+            result["next"] = (_next_batch_question(BatchIn(lectures=payload.lectures, resumeLecture=resume), user, db, served_token=token)
                               if payload.lectures else _next_bank_question(subject, run_id, user, db, choice_protocol=True,
                                                                          served_token=token))
         except Exception:
@@ -1469,6 +1532,83 @@ def prepare_next_bank_question(subject: str, run_id: str, payload: NextPreviewIn
     return previews
 
 
+class BufferPreviewIn(NextPreviewIn):
+    ratings: list[Literal["Again", "Hard", "Good", "Easy"]] = Field(default_factory=list, max_length=12)
+
+
+@router.post("/lectures/{subject}/{run_id}/bank/prepare-buffer")
+def prepare_bank_buffer(subject: str, run_id: str, payload: BufferPreviewIn,
+                        user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)) -> dict:
+    """Three-question lookahead on copied states, including answers and rating alternatives.
+
+    Good is the speculative continuation. Every step also prepares the other
+    ratings; actual reviews always reselect using the real saved state.
+    """
+    row = _bank_or_404(db, lecture_or_404(db, subject, run_id), user)
+    state_row = db.get(BankState, (user.id, subject, run_id))
+    if state_row is None or state_row.build_id != row.build_id or (
+        state_row.state.get("served") or {}).get("token") != payload.review_token:
+        raise HTTPException(409, "현재 학습 문항이 아닙니다.")
+    states = ({entry["key"]: copy.deepcopy(entry["state"])
+               for entry in _batch_entries(BatchIn(lectures=payload.lectures), user, db)}
+              if payload.lectures else {(subject, run_id): copy.deepcopy(state_row.state)})
+    if (subject, run_id) not in states:
+        raise HTTPException(409, "현재 강의가 선택한 학습 목록에 없습니다.")
+    frames = {}
+
+    def frame(got, snapshots, ratings):
+        if not got.get("question"):
+            return None
+        ref = got.get("lecture") or {"subject": subject, "runId": run_id}
+        key = (ref["subject"], ref["runId"])
+        bank_row = _bank_or_404(db, lecture_or_404(db, *key), user)
+        bank = _study_bank(db, bank_row, user)
+        served = snapshots[key]["served"]
+        question = _served_question(db, bank_row, user.id, bank, served)
+        result = {"next": got, "answer": _answer(db, bank_row, question),
+                  "options": _public(question, bank=bank), "previews": {},
+                  "origin": {"subject": subject, "runId": run_id,
+                             "reviewToken": payload.review_token, "ratings": ratings}}
+        frames[got["reviewToken"]] = result
+        return key, bank, result
+
+    if payload.lectures:
+        current = _next_batch_question(BatchIn(lectures=payload.lectures,
+            resumeLecture={"subject": subject, "runId": run_id}), user, db,
+            preview_states=states, preview_states_out=states)
+    else:
+        current = _next_bank_question(subject, run_id, user, db, choice_protocol=True,
+                                      preview_state=states[(subject, run_id)], preview_states_out=states)
+    path = []
+    # Pending local ratings may be projected while their ordered writes are in flight.
+    # Bound both the projection and the three-card continuation; nothing is persisted.
+    for step in range(len(payload.ratings) + 3):
+        parent = frame(current, states, path)
+        if parent is None:
+            break
+        key, bank, prepared = parent
+        continuation = None
+        projecting = step < len(payload.ratings)
+        selected = payload.ratings[step] if projecting else "Good"
+        for rating in ([selected] if projecting else ("Again", "Hard", "Good", "Easy")):
+            branch = copy.deepcopy(states)
+            # Simulation records no real exposure, reveal, choices, or review.
+            branch[key]["served"].update(revealed=True, choices_shown=True)
+            branch[key] = _reviewed_state(bank, branch[key], rating, engine.now_ms())
+            token = _advance_token(current["reviewToken"], rating)
+            got = (_next_batch_question(BatchIn(lectures=payload.lectures), user, db,
+                    served_token=token, preview_states=branch, preview_states_out=branch)
+                   if payload.lectures else _next_bank_question(*key, user, db, choice_protocol=True,
+                    preview_state=branch[key], served_token=token, preview_states_out=branch))
+            prepared["previews"][rating] = got
+            frame(got, branch, [*path, rating])
+            if rating == selected:
+                continuation = got, branch
+        current, states = continuation
+        path = [*path, selected]
+    return {"frames": frames}
+
+
 def _batch_entries(payload: BatchIn, user: CurrentUser, db: Session) -> list[dict]:
     now, entries = engine.now_ms(), []
     keys = list(dict.fromkeys((ref.subject, ref.run_id) for ref in payload.lectures))
@@ -1520,7 +1660,7 @@ def next_batch_question(payload: BatchIn, user: CurrentUser = Depends(require_ap
 
 
 def _next_batch_question(payload: BatchIn, user: CurrentUser, db: Session, *, served_token: str | None = None,
-                         preview_states: dict | None = None) -> dict:
+                         preview_states: dict | None = None, preview_states_out: dict | None = None) -> dict:
     entries = _batch_entries(payload, user, db)
     if preview_states is not None:
         for entry in entries:
@@ -1563,7 +1703,8 @@ def _next_batch_question(payload: BatchIn, user: CurrentUser, db: Session, *, se
         _save(state_row, state)
         db.commit()
     got = _next_bank_question(*chosen["key"], user=user, db=db, choice_protocol=True, selection=selection,
-                             preview_state=state if preview_states is not None else None, served_token=served_token)
+                             preview_state=state if preview_states is not None else None, served_token=served_token,
+                             preview_states_out=preview_states_out)
     if preview_states is not None:
         return _batch_reply(got, entries, chosen)
     _refresh_batch_entry(chosen, user, db)

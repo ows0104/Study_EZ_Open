@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const base = process.env.STUDY_TEST_URL || 'http://127.0.0.1:5199';
 
-for (const fixture of ['matching', 'sequence', 'prepared-answer', 'bank-advance', 'bank-advance?batch', 'common-editor']) {
+for (const fixture of ['matching', 'sequence', 'prepared-answer', 'bank-advance', 'bank-advance?batch', 'common-editor',
+  'bank-buffer', 'bank-buffer?batch', 'bank-buffer?revealFailure']) {
   test(`study interaction: ${fixture}`, async () => {
     const browser = await chromium.launch({ headless: true, channel: 'chrome' });
     try {

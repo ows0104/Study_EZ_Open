@@ -164,9 +164,12 @@ def validate_bank(bank: dict, source_ids: list[str], *, learning_structure: bool
             # 충돌은 v1.2 부터 한 문항으로 합치고 외부 의학지식으로 답을 정한다(관리자 지시, 2026-10-05).
             # 그래서 「[출처 기준] 머리말」과 「출처 하나로 분리」를 걷었다 — 갈라 낸 옛 판 문항도 그대로 통과한다.
             fail(q["conflict_id"] in conflicts, f"{label}: Conflict ID 없음")
-            if q["conflict_id"] in conflicts:
-                allowed = {r["source_id"] for r in conflicts[q["conflict_id"]]["source_refs"]} | {EXTERNAL}
-                fail(all(r["source_id"] in allowed for r in q["source_refs"]), f"{label}: 충돌 기록과 출처 불일치")
+            if check_quality and q["conflict_id"] in conflicts:
+                # 충돌 기록은 서로 다른 주장을 가진 자료만 담는다. 문항에는 같은 목표의
+                # 족보 등 추가 근거가 있을 수 있으므로 전체 출처의 부분집합을 요구하지 않는다.
+                conflict_sources = {r["source_id"] for r in conflicts[q["conflict_id"]]["source_refs"]}
+                fail(bool(conflict_sources & {r["source_id"] for r in q["source_refs"]}),
+                     f"{label}: 충돌 기록과 출처 불일치")
 
         option_ids = [o["id"] for o in q["options"]]
         unique(option_ids, f"{label} options")
@@ -214,10 +217,14 @@ def validate_bank(bank: dict, source_ids: list[str], *, learning_structure: bool
         fail(_nonempty(cid) and _nonempty(conflict["description"]), "충돌 기록 필수 필드 누락")
         refs(conflict["source_refs"], cid)
         warn(len({r["source_id"] for r in conflict["source_refs"]}) >= 2, f"{cid}: 한 자료 안의 충돌")
-        if not conflict["unresolved"]:
+        linked_questions = [q for q in bank["questions"] if q["conflict_id"] == cid]
+        if not linked_questions:
+            warnings.append(f"{cid}: 연결된 문항이 없는 출처 충돌 기록")
+            continue  # 삭제·통합한 문항의 이력은 보존할 수 있다. 끊어진 문항 참조와 다르다.
+        if check_quality and not conflict["unresolved"]:
             for ref in conflict["source_refs"]:
-                fail(any(q["conflict_id"] == cid and any(r["source_id"] == ref["source_id"] for r in q["source_refs"])
-                         for q in bank["questions"]), f"{cid}: {ref['source_id']} 기준 문항 누락")
+                fail(any(any(r["source_id"] == ref["source_id"] for r in q["source_refs"])
+                         for q in linked_questions), f"{cid}: {ref['source_id']} 기준 문항 누락")
         else:
             warnings.append(f"{cid}: 미해결 출처 충돌 — {conflict['description']}")
 

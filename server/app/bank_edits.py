@@ -32,15 +32,44 @@ def candidates(bank: dict, validation: dict) -> dict[str, dict]:
 def with_edits(bank: dict, validation: dict, edits: dict, source_ids: list[str]) -> tuple[dict, dict]:
     """Revalidate the whole bank, retaining unrelated quarantined cards."""
     all_questions = candidates(bank, validation)
+    previous_children = {q['question_id'] for e in validation.get('edits', {}).values()
+                         for q in e.get('children', [])}
+    active_children = {q['question_id'] for e in edits.values() if e['action'] != 'delete'
+                       for q in e.get('children', [])}
+    removed_children = previous_children - active_children
+    for qid in removed_children:
+        all_questions.pop(qid, None)
+    for edit in edits.values():
+        if edit['action'] != 'delete':
+            for child in edit.get('children', []):
+                all_questions[child['question_id']] = child
     for qid, edit in edits.items():
+        if qid in removed_children:
+            continue
         if edit["action"] == "delete":
             all_questions.pop(qid, None)
         else:
             all_questions[qid] = edit["question"]
-    draft = without_retired({**bank, "questions": list(all_questions.values())})
+    # Keep split children next to their source card without moving unrelated cards.
+    children = {qid: e.get('children', []) for qid, e in edits.items() if e['action'] != 'delete'}
+    ordered = []
+    for qid, question in all_questions.items():
+        if qid in active_children:
+            continue
+        ordered.append(question)
+        ordered.extend(all_questions[q['question_id']] for q in children.get(qid, [])
+                       if q['question_id'] in all_questions)
+    draft = without_retired({**bank, "questions": ordered})
+    split_concepts = {e['question']['concept_id'] for e in edits.values()
+                      if e['action'] != 'delete' and e.get('children')}
+    for plan in draft.get('retrieval_plan', []):
+        if plan['concept_id'] in split_concepts:
+            plan['directions'] = list(dict.fromkeys(q['retrieval_direction'] for q in draft['questions']
+                if q['concept_id'] == plan['concept_id']))
     # Removing a question also removes edges pointing to it. Dependent integration
     # questions without a foundation are quarantined by the normal validator.
     deleted = {qid for qid, e in edits.items() if e["action"] == "delete"}
+    deleted.update(previous_children - active_children)
     for q in draft["questions"]:
         if isinstance(q.get("prerequisites"), list):
             q["prerequisites"] = [p for p in q["prerequisites"] if p not in deleted]
@@ -53,7 +82,9 @@ def with_edits(bank: dict, validation: dict, edits: dict, source_ids: list[str])
 def reapply(bank: dict, validation: dict, previous: dict, source_ids: list[str]) -> tuple[dict, dict]:
     incoming = candidates(bank, validation)
     edits = {}
-    for qid, edit in previous.get("edits", {}).items():
+    previous_edits = previous.get('edits', {})
+    child_ids = {q['question_id'] for e in previous_edits.values() for q in e.get('children', [])}
+    for qid, edit in sorted(previous_edits.items(), key=lambda pair: pair[0] in child_ids):
         question = incoming.get(qid)
         if (question is None and edit["action"] == "delete") or (question and _content(question) in (
             _content(edit["original"]), _content(edit.get("question"))
@@ -62,6 +93,10 @@ def reapply(bank: dict, validation: dict, previous: dict, source_ids: list[str])
             if question and carried.get("question"):
                 carried["question"]["mcq_mode"] = choice_mode(question)
             edits[qid] = carried
+            # Child decisions can be reapplied against their source split even
+            # when an identical runner rebuild contains only the original card.
+            for child in carried.get('children', []) if carried['action'] != 'delete' else []:
+                incoming.setdefault(child['question_id'], child)
     if not edits:
         return bank, validation
     return with_edits(bank, validation, edits, source_ids)

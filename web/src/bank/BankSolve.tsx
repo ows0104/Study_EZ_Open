@@ -19,6 +19,8 @@ import { SuspendedQuestions } from "./SuspendedQuestions";
 import { AddQuestionDialog } from "./PersonalQuestions";
 import { splitSlides } from "./BankSlides";
 import { matchingLayout } from "./presentation";
+import { useBankBuffer } from "./useBankBuffer";
+import { useStudyWrites } from "./useStudyWrites";
 
 const FORMAT_LABEL: Record<string, string> = {
   basic: "단답", cloze: "빈칸", list: "나열", ox: "O/X", mcq: "객관식", multi_select: "복수 선택",
@@ -38,6 +40,7 @@ export type BatchStudy = {
   lectures: { subject: string; runId: string }[];
   resumeLecture?: { subject: string; runId: string };
   onProgress: (next: BankNext) => void;
+  onSavingChange?: (saving: boolean) => void;
 };
 
 export function BankSolve({ base: initialBase, lecture: initialLecture, onFinished, batch }: {
@@ -62,9 +65,20 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
   const [commonEditing, setCommonEditing] = useState(false);
   const [addingQuestion, setAddingQuestion] = useState(false);
   const [actionMessage, setActionMessage] = useState("");
+  const presentedAt = useRef(Date.now());
+  const visibleToken = useRef<string | undefined>(undefined);
+  const { saving, enqueue, cancel, count: writeCount } = useStudyWrites();
+  const [acknowledgement, setAcknowledgement] = useState(0);
+  const onSavingChange = batch?.onSavingChange;
+  useEffect(() => {
+    onSavingChange?.(saving);
+    return () => onSavingChange?.(false);
+  }, [onSavingChange, saving]);
   // 회차를 끝내지 않고 지도와 진행도를 본다. 열 때마다 새로 읽는다 — 방금 매긴 평가가 숙련도에 들어가 있다.
   const [peek, setPeek] = useState<BankRead | null>(null);
   const restore = useCallback((got: BankNext) => {
+    presentedAt.current = Date.now();
+    visibleToken.current = got.reviewToken;
     setTransition(null);
     setCommonEditing(false);
     if (got.lecture) activeLecture.current = got.lecture;
@@ -77,10 +91,14 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
   const batchUndo = useCallback((token: string) => api<BankNext>("/api/bank/batch/undo", {
     method: "POST", body: JSON.stringify({ lectures: batch?.lectures, reviewToken: token }),
   }), [batch]);
-  const { undo, undoBusy, pending } = useBankUndo(base, current?.undoToken, restore, setError, busy || Boolean(peek) || commonEditing, batch ? batchUndo : undefined);
+  const undoRestore = useCallback((got: BankNext) => {
+    cancel(); setAnswerRevision(value => value + 1); restore(got);
+  }, [cancel, restore]);
+  const { undo, undoBusy, pending } = useBankUndo(base, current?.undoToken, undoRestore, setError, busy || saving || Boolean(peek) || commonEditing, batch ? batchUndo : undefined);
   const slides = useMemo(() => new SlidePreloader(), []);
-  const prepared = usePreparedBankAnswer(base, current?.reviewToken, slides, answerRevision);
-  const preparedNext = usePreparedBankNext(base, current?.reviewToken, !!answer && !busy, slides, answerRevision, batch?.lectures);
+  const buffer = useBankBuffer(base, current?.reviewToken, slides, answerRevision, acknowledgement, batch?.lectures);
+  const prepared = usePreparedBankAnswer(base, buffer.has(current?.reviewToken ?? "") ? undefined : current?.reviewToken, slides, answerRevision);
+  const preparedNext = usePreparedBankNext(base, current?.reviewToken, !!answer && !busy && !saving && !buffer.has(current?.reviewToken ?? ""), slides, answerRevision, batch?.lectures);
   useEffect(() => { slides.warm(splitSlides(current?.preloadSlides ?? []).primary.map(slide => slide.url)); }, [current, slides]);
 
   const acceptNext = useCallback((got: BankNext) => {
@@ -114,76 +132,99 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
 
   const showChoices = useCallback(async () => {
     if (!current?.reviewToken || busy || pending.current) return;
-    pending.current = true; setBusy(true); setError("");
-    try {
+    const frame = buffer.get(current.reviewToken);
+    const rollback = () => { restore(current); setAnswer(answer); setPicked(picked); setMatches(matches); setOrder(order); };
+    const accepted = enqueue(`${current.reviewToken}:options`, async () => {
       const got = await api<Pick<BankNext, "question" | "choicesShown">>(`${base}/options`, {
         method: "POST", body: JSON.stringify({ reviewToken: current.reviewToken }),
       });
-      setCurrent(old => old ? { ...old, ...got } : old);
-    } catch (cause) { setError((cause as Error).message); }
-    finally { pending.current = false; setBusy(false); }
-  }, [base, current, busy]);
+      setCurrent(old => old?.reviewToken === current.reviewToken ? { ...old, ...got } : old);
+      if (!frame) { pending.current = false; setBusy(false); }
+    }, cause => { rollback(); pending.current = false; setBusy(false); setError(cause.message); });
+    if (!accepted) return;
+    setError("");
+    if (frame) setCurrent({ ...current, question: frame.options, choicesShown: true });
+    else { pending.current = true; setBusy(true); }
+  }, [base, current, busy, buffer, enqueue, restore, answer, picked, matches, order]);
 
   const reveal = useCallback(async () => {
     if (!current?.reviewToken || answer || busy || pending.current) return;
     if (current.question?.format === "matching"
       && !current.question.matching_left.every(left => current.question!.matching_right.includes(matches[left]))) return;
     if (current.question?.format === "sequence" && !sequenceComplete(current.question, order)) return;
-    pending.current = true;
-    setBusy(true);
+    const frame = buffer.get(current.reviewToken);
+    const responseTimeMs = Math.min(86_400_000, Math.max(0, Date.now() - presentedAt.current));
+    const accepted = enqueue(`${current.reviewToken}:reveal`, async () => {
+      const got = await api<BankAnswer>(`${base}/reveal`, {
+        method: "POST", body: JSON.stringify({ reviewToken: current.reviewToken, responseTimeMs }),
+      });
+      // Acknowledging an earlier card must never replace the visible card's answer.
+      if (!frame) { setAnswer(got); pending.current = false; setBusy(false); }
+    }, cause => {
+      restore(current); setAnswer(null); setPicked(picked); setMatches(matches); setOrder(order);
+      pending.current = false; setBusy(false); setError(cause.message);
+    });
+    if (!accepted) return;
     setError("");
-    // Display immediately; grading stays disabled until the click is recorded.
-    if (prepared.answer) setAnswer(prepared.answer);
-    try {
-      setAnswer(await api<BankAnswer>(`${base}/reveal`, {
-        method: "POST", body: JSON.stringify({ reviewToken: current.reviewToken }),
-      }));
-    } catch (cause) {
-      setAnswer(null);
-      setError((cause as Error).message);
-    } finally {
-      pending.current = false;
-      setBusy(false);
-    }
-  }, [base, current, answer, busy, prepared, matches, order]);
+    setAnswer(frame?.answer ?? prepared.answer);
+    if (!frame) { pending.current = true; setBusy(true); }
+  }, [base, current, answer, busy, prepared, matches, order, picked, buffer, enqueue, restore]);
 
   const rate = useCallback(async (rating: BankRating) => {
     if (!current?.reviewToken || !answer || busy || pending.current) return;
-    pending.current = true;
-    setBusy(true);
-    setError("");
-    const preview = preparedNext.previews[rating];
-    if (preview?.question) {
-      setTransition(preview);
-      window.scrollTo(0, 0);
-    }
-    try {
+    const preview = buffer.get(current.reviewToken)?.previews[rating];
+    const optimistic = !!preview?.question && !!preview.reviewToken;
+    const accepted = enqueue(`${current.reviewToken}:rate`, async () => {
       const result = await api<{ next?: BankNext; advanceFailed?: boolean }>(`${base}/rate`, {
-        method: "POST", body: JSON.stringify({ reviewToken: current.reviewToken, rating, advance: true,
+        method: "POST", body: JSON.stringify({ reviewToken: current.reviewToken, rating, advance: true, retrySafe: true,
           ...(batch ? { lectures: batch.lectures } : {}) }),
       });
       invalidateTimetable();
-      if (result?.next) {
-        acceptNext(result.next);
-        pending.current = false;
-        setBusy(false);
-        return;
+      // A committed review is never retried just because selecting /next failed.
+      let got = result?.next;
+      if (!got) {
+        try {
+          got = await api<BankNext>(batch ? "/api/bank/batch/next" : `${initialBase}/next?choiceProtocol=true`, {
+            method: "POST", ...(batch ? { body: JSON.stringify({ lectures: batch.lectures }) } : {}),
+          });
+        } catch (cause) {
+          cancel(); buffer.clear(); setCurrent(null); setAnswer(null);
+          pending.current = false; setBusy(false); setError((cause as Error).message);
+          return;
+        }
       }
-      // The review is already saved. A legacy API or failed advance only needs /next.
-      setCurrent(null); setAnswer(null);
-    } catch (cause) {
-      setTransition(null);
-      setError((cause as Error).message);
-      pending.current = false;
-      setBusy(false);
-      return;
+      const matchesPrediction = optimistic && got.reviewToken === preview.reviewToken
+        && JSON.stringify(got.question) === JSON.stringify(preview.question)
+        && got.lecture?.subject === preview.lecture?.subject && got.lecture?.runId === preview.lecture?.runId;
+      if (matchesPrediction) {
+        setCurrent(old => old && old.reviewToken === got.reviewToken ? { ...old,
+          session: got.session, lectureGoal: got.lectureGoal, batchGoal: got.batchGoal,
+          undoToken: got.undoToken, undoLecture: got.undoLecture } : old);
+        if (visibleToken.current === got.reviewToken) batch?.onProgress(got);
+      } else {
+        cancel(); buffer.clear(); acceptNext(got);
+        pending.current = false; setBusy(false);
+        if (optimistic) setActionMessage("평가 결과에 맞춰 다음 문제를 갱신했습니다.");
+      }
+      setAcknowledgement(value => value + 1);
+      if (!optimistic) { pending.current = false; setBusy(false); }
+    }, cause => {
+      buffer.clear(); restore(current); setAnswer(answer); setPicked(picked); setMatches(matches); setOrder(order);
+      pending.current = false; setBusy(false); setError(cause.message);
+      setAcknowledgement(value => value + 1);
+    });
+    if (!accepted) return;
+    setError("");
+    if (optimistic) restore(preview);
+    else {
+      pending.current = true; setBusy(true);
+      const legacyPreview = preparedNext.previews[rating];
+      if (legacyPreview?.question) { setTransition(legacyPreview); window.scrollTo(0, 0); }
     }
-    pending.current = false;
-    await next();
-  }, [base, current, answer, busy, next, batch, acceptNext, preparedNext]);
+  }, [base, initialBase, current, answer, busy, batch, acceptNext, preparedNext, buffer, enqueue, cancel, restore, picked, matches, order]);
 
   const suspend = useCallback(async () => {
-    if (!current?.question || !current.reviewToken || busy || pending.current || peek) return;
+    if (!current?.question || !current.reviewToken || busy || pending.current || peek || writeCount.current) return;
     pending.current = true; setBusy(true); setError("");
     try {
       await api(`${base}/questions/${encodeURIComponent(current.question.question_id)}/suspension`, {
@@ -199,7 +240,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
   }, [base, current, busy, peek, next]);
 
   async function changeTier(tier: BankTier | null) {
-    if (!current?.question || !current.reviewToken || busy || undoBusy || pending.current) return;
+    if (!current?.question || !current.reviewToken || busy || undoBusy || pending.current || writeCount.current) return;
     pending.current = true; setBusy(true); setError(""); setActionMessage("");
     try {
       const got = await api<Pick<BankNext, "question" | "lectureGoal"> & { rescheduled?: boolean }>(`${base}/questions/${encodeURIComponent(current.question.question_id)}/priority`, {
@@ -215,7 +256,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
   }
 
   async function end() {
-    if (!current?.session || busy || pending.current) return;
+    if (!current?.session || busy || pending.current || writeCount.current) return;
     pending.current = true;
     setBusy(true);
     try {
@@ -237,6 +278,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
   }
 
   async function openPeek() {
+    if (writeCount.current) return;
     try {
       setPeek(await api<BankRead>(base));
       window.scrollTo(0, 0);
@@ -335,7 +377,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
           <span className="bank-tags">
             <label className={`bank-tier-control${q.tier === "Essential" ? " is-essential" : ""}`} title="내 계정의 이 문제에 적용됩니다. Must-Know: 반드시 암기·교수의 명시적 시험 출제 강조 / Core: 학습목표·기출 / Important: 강조·임상 중요 / Optional: 기타 세부사항">
               내 중요도{" "}
-              <select aria-label="내 문제 중요도" value={q.tier} disabled={busy || undoBusy}
+              <select aria-label="내 문제 중요도" value={q.tier} disabled={busy || undoBusy || saving}
                 onChange={event => void changeTier(event.target.value as BankTier)}>
                 <option value="Essential">★ Must-Know</option>
                 <option value="Core">Core</option>
@@ -346,7 +388,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
             {q.targetMastery != null ? <span className="bank-target" title="현재 문제의 목표 숙련도이며 실제 기억률을 측정한 값은 아닙니다">
               {" · "}목표 {Math.round(q.targetMastery * 100)}%
             </span> : null}
-            {q.personalTier ? <button className="is-quiet bank-tier-reset" disabled={busy || undoBusy}
+            {q.personalTier ? <button className="is-quiet bank-tier-reset" disabled={busy || undoBusy || saving}
               title={`원래 중요도: ${q.originalTier ?? ""}`} onClick={() => void changeTier(null)}>원래대로</button> : null}
             {q.advanced ? <span className="bank-source-badge" title="중요도와 독립된 추가 추론·개념 연계 문항">Advanced · 심화</span> : null}
             {" · "}{DIRECTION_LABEL[q.retrieval_direction] ?? q.retrieval_direction} ·{" "}
@@ -354,10 +396,11 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
             {q.conflict_id ? <span className="bank-source-badge">자료 간 차이</span> : null}
           </span>
           <span className="bank-progress-actions">
-            {current.undoToken ? <button className="quiz-undo" disabled={busy || undoBusy} onClick={() => void undo()} aria-keyshortcuts="Z Control+Z">되돌리기 <kbd>Z</kbd></button> : null}
-            <button className="is-quiet" disabled={busy || undoBusy} onClick={() => void openPeek()}>개념 지도</button>
-            <button className="is-quiet" disabled={busy || undoBusy} onClick={() => setAddingQuestion(true)}>＋ 문제 추가</button>
-            <button className="is-quiet" disabled={busy || undoBusy} onClick={() => void end()}>{batch ? "쉬기" : "회차 마치기"}</button>
+            {saving ? <span role="status">저장 중…</span> : null}
+            {current.undoToken ? <button className="quiz-undo" disabled={busy || undoBusy || saving} onClick={() => void undo()} aria-keyshortcuts="Z Control+Z">되돌리기 <kbd>Z</kbd></button> : null}
+            <button className="is-quiet" disabled={busy || undoBusy || saving} onClick={() => void openPeek()}>개념 지도</button>
+            <button className="is-quiet" disabled={busy || undoBusy || saving} onClick={() => setAddingQuestion(true)}>＋ 문제 추가</button>
+            <button className="is-quiet" disabled={busy || undoBusy || saving} onClick={() => void end()}>{batch ? "쉬기" : "회차 마치기"}</button>
           </span>
         </p>
 
@@ -393,9 +436,9 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
         <div className="bank-question-actions">
           {q.personalEdited ? <span className="tag">내 수정본</span> : null}
           {actionMessage ? <span role="status">{actionMessage}</span> : null}
-          {isAdmin && !transition ? <button className="quiz-fix" disabled={busy || undoBusy}
+          {isAdmin && !transition ? <button className="quiz-fix" disabled={busy || undoBusy || saving}
             onClick={() => setCommonEditing(true)}>공용 문제 수정</button> : null}
-          <button className="is-quiet" disabled={busy || undoBusy} onClick={() => setReporting(true)}>⚑ 수정·제보</button>
+          <button className="is-quiet" disabled={busy || undoBusy || saving} onClick={() => setReporting(true)}>⚑ 수정·제보</button>
         </div>
         {commonEditing ? <Suspense fallback={<p role="status">수정창을 여는 중…</p>}>
           <CommonQuestionDialog subject={lecture.subject} runId={lecture.runId} questionId={q.question_id}
@@ -448,7 +491,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
             {busy && !transition ? "펴는 중…" : <>{hiddenChoices ? "선지 보기" : q.format === "matching" || q.format === "sequence" ? "채점하기" : "답 보기"} <kbd>space</kbd></>}
           </button>
         )}
-        <button className="bank-suspend" disabled={busy || undoBusy} aria-keyshortcuts="5"
+        <button className="bank-suspend" disabled={busy || undoBusy || saving} aria-keyshortcuts="5"
           title="내 학습에서 제외하고 다음 문제로 넘어갑니다" onClick={() => void suspend()}>
           <span className="quiz-grade-name">비활성화 <kbd>5</kbd></span>
         </button>
