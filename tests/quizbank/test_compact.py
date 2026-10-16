@@ -229,6 +229,23 @@ def test_browser_copy_can_join_labeled_fields_into_one_paragraph():
     assert compact.read_blocks(joined) == compact.read_blocks(RAW)
 
 
+def test_rationale_mention_of_explanation_is_not_a_json_field():
+    first = RAW.split('\n\n### Q002', 1)[0]
+    raw = first.replace('출제근거: 직접 회상',
+                        '출제근거: Case 1 해설: 기호 구별\n해설: "실제 원문 해설"')
+    block, = compact.read_blocks(raw)
+    assert block['units'] == ['α']
+    assert block['explanation'] == '실제 원문 해설'
+
+
+def test_prose_mention_cannot_supply_a_missing_or_malformed_explanation():
+    first = RAW.split('\n\n### Q002', 1)[0]
+    for suffix in ('', '\n해설: "닫히지 않은 문자열'):
+        raw = first.replace('출제근거: 직접 회상', '출제근거: Case 1 해설: 기호 구별' + suffix)
+        with pytest.raises(SessionError, match='JSON 오류'):
+            compact.read_blocks(raw)
+
+
 def test_answer_decoder_preserves_quoted_field_names_inside_answers():
     units = ['문구 정답: ["가짜"] 자체', '따옴표 " 와 역슬래시 \\']
     raw = RAW.replace('["α", "β", "α"]', json.dumps(units + ['α'], ensure_ascii=False))

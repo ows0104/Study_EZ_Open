@@ -77,8 +77,19 @@ def read_blocks(raw: str) -> list[dict]:
         marker = re.compile(r"(?:^|\s|&#x20;)(정답|힌트|해설):[ \t]*")
         try:
             while match := marker.search(body, position):
-                value, size = json.JSONDecoder().raw_decode(body[match.end():])
                 name = match[1]
+                try:
+                    value, size = json.JSONDecoder().raw_decode(body[match.end():])
+                except ValueError:
+                    # A rationale can mention e.g. "Case 1 해설: ..." in prose.
+                    # Ignore that mention only when a separate, line-aligned JSON
+                    # field supplies the actual value. Never guess a missing value.
+                    line = body[body.rfind("\n", 0, match.start(1)) + 1:match.start(1)]
+                    actual = re.search(r"(?m)^[ \t]*" + name + r":[ \t]*(?=[\[\"])", body)
+                    if re.match(r"[ \t]*(?:문제|출처|출제근거):", line) and actual:
+                        position = match.end()
+                        continue
+                    raise
                 if name in values:
                     raise SessionError(f"{qid}: {name} 필드 중복")
                 values[name] = value
