@@ -52,6 +52,29 @@ def test_plan_is_read_from_web_and_never_silently_recreated():
     assert web_audit.enabled("1.29") and web_audit.enabled("v1.30")
     assert not web_audit.enabled("1.27") and not web_audit.enabled("2.3")
 
+
+def test_completed_cli_report_survives_semantic_validation_failure(bank, tmp_path, monkeypatch):
+    pdf = tmp_path / 'source.pdf'
+    with fitz.open() as doc:
+        doc.new_page()
+        doc.save(pdf)
+    raw = report(bank)
+    raw['tier_checks'][0].update(recommended_tier='Important', recommended_importance=4, basis='objective')
+    calls = []
+    def completed(*args):
+        calls.append(args)
+        return raw, {'seconds': 1}
+    monkeypatch.setattr(web_audit, '_call', completed)
+    monkeypatch.setattr(web_audit, 'render', lambda *a: [])
+    out = tmp_path / 'out'
+    out.mkdir()
+    with pytest.raises(SessionError, match='Important'):
+        web_audit.inspect(bank, RAW, pdf, '강의', [{'id': 'S1'}], out)
+    assert len(calls) == 1
+    assert json.loads((out / 'web-audit.raw.json').read_text(encoding='utf-8')) == raw
+    assert json.loads((out / 'web-audit.usage.json').read_text(encoding='utf-8')) == {'seconds': 1}
+    assert not (out / 'coverage.json').exists()
+
 def test_report_requires_complete_source_point_and_mcq_checks(bank):
     valid = report(bank)
     points = web_audit.parse_points(RAW)
