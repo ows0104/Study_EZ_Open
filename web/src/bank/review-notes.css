@@ -1,0 +1,19 @@
+.bank-review-notes {
+  margin-top: 20px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.bank-review-notes summary {
+  width: fit-content;
+  cursor: pointer;
+}
+
+.bank-review-notes p {
+  margin: 10px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

@@ -8,6 +8,7 @@ import { BankSlides } from "./BankSlides";
 import { BankJokboSlides } from "./BankJokboSlides";
 import { BankEvidenceNotice } from "./BankEvidenceNotice";
 import { matchingLayout, presentationSeed, shuffled } from "./presentation";
+import "./review-notes.css";
 export { shuffled } from "./presentation";
 
 const letter = (index: number) => String.fromCharCode(65 + index);
@@ -194,7 +195,6 @@ export function AnswerBody({ question: q, answer, preload }: {
         </section>
       ) : null}
       <BankSourceNote conflict={answer.conflict} external={answer.external} />
-      {answer.reviewIssues?.map((issue, index) => <p className="bank-review is-doubt" key={index}><b>문항 검수 · 미해결</b> {issue}</p>)}
       {review && review.verdict !== "ok" ? (
         <p className={`bank-review is-${review.verdict}`}>
           <b>외부지식 검토 · {review.verdict === "wrong" ? "틀림" : "의심"}</b> {review.note}
@@ -213,6 +213,12 @@ export function AnswerBody({ question: q, answer, preload }: {
             collapseReferences={!!answer.evidenceStatus && !answer.slides.some(slide => slide.primary)} />
         ) : null}
       </div>
+      {answer.reviewIssues?.length ? (
+        <details className="bank-review-notes" key={`review:${q.question_id}`}>
+          <summary>문항 검수 기록 · 미해결 {answer.reviewIssues.length}건</summary>
+          {answer.reviewIssues.map((issue, index) => <p key={index}>{issue}</p>)}
+        </details>
+      ) : null}
     </>
   );
 }
