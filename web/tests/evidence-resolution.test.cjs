@@ -21,6 +21,19 @@ const q={question_id:'q1',question:'A?',format:'basic',options:[],matching_left:
 const a={answer:'B',answerUnits:['B'],answerPairs:[],correctOrder:[],correctOptionIds:[],medicalReview:null,slides:[{page:1,url:'https://example.test/background.png'}]};
 const image=(page,primary)=>({page,primary,url:`https://example.test/${page}.png`,pdfFilename:'족보.pdf',references:[`2022 ${page}번`]});
 const render=answer=>renderToStaticMarkup(React.createElement(AnswerBody,{question:q,answer:{...a,...answer}}));
+test('reference exams open beside selected lecture evidence with year and question labels',()=>{
+  const html=render({slides:[{page:8,primary:true,url:'https://example.test/core.png'}],
+    jokboSlides:[{...image(12,false),references:['2023 52번','2022년 7번']}],
+    evidenceStatus:{category:'partial_support',reason:'일부 확인'}});
+  assert.match(html,/class="bank-evidence-pair"/);
+  assert.match(html,/src="https:\/\/example.test\/core.png"/);
+  assert.match(html,/src="https:\/\/example.test\/12.png"/);
+  assert.match(html,/class="bank-jokbo-reference">2023년 · 52번/);
+  assert.match(html,/class="bank-jokbo-reference">2022년 · 7번/);
+  assert.doesNotMatch(html,/<details/);
+  assert.doesNotMatch(html,/핵심 근거 · 족보/);
+});
+
 test('a selected exam page is the core; other exam references stay closed and unloaded',()=>{
   const html=render({jokboSlides:[image(2,false),image(9,true)],evidenceStatus:{category:'exam_only',reason:'족보에만 있음',primaryAvailable:true}});
   assert.match(html,/핵심 근거 · 족보/); assert.match(html,/src="https:\/\/example.test\/9.png"/);

@@ -3,6 +3,10 @@ import { useState } from "react";
 import type { SlidePreloader } from "../slidePreload";
 import type { BankAnswer } from "../types/bank";
 
+function referenceLabel(reference: string) {
+  return reference.replace(/\b((?:19|20)\d{2})(?!\d)\s*년?\s*/, "$1년 · ");
+}
+
 export function BankJokboSlides({ slides, preload, collapseReferences = false }: {
   slides: BankAnswer["jokboSlides"]; preload?: SlidePreloader; collapseReferences?: boolean;
 }) {
@@ -12,7 +16,9 @@ export function BankJokboSlides({ slides, preload, collapseReferences = false }:
   const extra = slides.filter(slide => !slide.primary);
   const title = primary.length ? "핵심 근거 · 족보" : "참고한 족보";
   const image = (slide: NonNullable<BankAnswer["jokboSlides"]>[number]) => <figure key={`${slide.pdfFilename}:${slide.page}`}>
-      <figcaption><b>{slide.references.join(" · ")}</b><br />{slide.pdfFilename} · PDF {slide.page}쪽{" · "}
+      <figcaption><div className="bank-jokbo-references">
+        {slide.references.map(reference => <b className="bank-jokbo-reference" key={reference}>{referenceLabel(reference)}</b>)}
+      </div>{slide.pdfFilename} · PDF {slide.page}쪽{" · "}
         {slide.embedded ? "필기 PDF에 첨부된 기출 · " : ""}
         <a href={slide.url} target="_blank" rel="noreferrer">지면 크게 보기 ↗</a>
       </figcaption>

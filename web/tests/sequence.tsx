@@ -63,6 +63,9 @@ try {
   await new Promise(resolve => setTimeout(resolve, 30));
   check(revealCalls === 0, "keyboard cannot bypass incomplete sequence");
   check(!document.querySelector(".bank-sequence-score"), "prepared answer stays hidden");
+  const nativeSelection = new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true });
+  options()[0].dispatchEvent(nativeSelection);
+  check(!nativeSelection.defaultPrevented, "Space still selects a focused choice while the sequence is incomplete");
   await pick(2); await pick(0); await pick(1);
   check(selected()[0].textContent?.includes("셋째 단계") && selected()[1].textContent?.includes("첫 단계"), "clicked items stack below in click order");
   await pick(0);
@@ -76,7 +79,9 @@ try {
   check(options().every(button => !button.disabled) && submit().disabled, "reset clears order and re-enables all options");
   for (let i = 0; i < 4; i++) await pick(i);
   check(!submit().disabled && selected()[0].querySelector("strong"), "complete order enables grading and preserves emphasis");
-  submit().click(); await waitFor(() => document.body.textContent?.includes("reveal failed") && !submit().disabled);
+  selected()[0].focus();
+  selected()[0].dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true }));
+  await waitFor(() => document.body.textContent?.includes("reveal failed") && !submit().disabled);
   check(selected().length === 4 && !document.querySelector(".bank-sequence-score"), "failed reveal preserves order without a provisional score");
   submit().click(); await waitFor(() => document.querySelector(".bank-sequence-score") && !rateButton("easy").disabled);
   check(document.querySelector(".bank-sequence-score")!.textContent?.includes("모두 맞았어요"), "correct sequence is graded automatically");

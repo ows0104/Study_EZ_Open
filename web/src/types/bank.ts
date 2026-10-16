@@ -72,6 +72,7 @@ export type BankTier = "Core" | "Important" | "Optional";
 
 /** 답이 빠진 문항. 답·채점 단위는 `reveal` 로만 온다. */
 export type BankQuestion = {
+  presentationSeed?: string;
   mcq_mode?: "recall_first" | "comparison" | "none";
   personalEdited?: boolean;
   question_id: string;

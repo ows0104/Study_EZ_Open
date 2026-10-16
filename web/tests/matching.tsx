@@ -53,11 +53,21 @@ const pickRight = async (text: string) => {
   buttons().find(button => button.textContent?.includes(text))!.click();
   await new Promise(resolve => setTimeout(resolve, 20));
 };
+const fillCorrect = async () => {
+  for (const [index, item] of left.entries()) {
+    rows().find(row => row.textContent?.includes(item.split(': ')[1]))!.click();
+    await new Promise(resolve => setTimeout(resolve, 20));
+    await pickRight(right[index === 1 ? 0 : index].split(': ')[1]);
+  }
+};
 try {
   const { BankSolve } = await import("../src/bank/BankSolve");
   createRoot(document.getElementById("root")!).render(<MemoryRouter><BankSolve base="/api/test/bank" lecture={{ subject: "테스트", runId: "demo" }} onFinished={() => {}} /></MemoryRouter>);
   await waitFor(() => buttons().length === 4);
   check(submit().disabled, "incomplete matching cannot be submitted");
+  const nativeSelection = new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true });
+  buttons()[0].dispatchEvent(nativeSelection);
+  check(!nativeSelection.defaultPrevented, "Space still selects a focused choice while matching is incomplete");
   window.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
   await new Promise(resolve => setTimeout(resolve, 50));
   check(revealCalls === 0, "keyboard cannot bypass incomplete matching");
@@ -68,8 +78,10 @@ try {
   rows()[0].click(); await new Promise(resolve => setTimeout(resolve, 20)); await pickRight("One");
   check(rows()[0].querySelector(".bank-match-picked")!.textContent === rows()[1].querySelector(".bank-match-picked")!.textContent,
     "left row can be edited and right items can be reused");
+  await fillCorrect();
   check(!submit().disabled, "all matched rows enable grading");
-  submit().click();
+  buttons()[0].focus();
+  buttons()[0].dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true }));
   await waitFor(() => document.body.textContent?.includes("reveal failed") && !submit().disabled);
   check(!document.querySelector(".bank-match-score"), "failed reveal clears provisional score and preserves picks for retry");
   submit().click(); await waitFor(() => document.querySelector(".bank-match-score") && !rateButton("hard").disabled);
@@ -84,10 +96,13 @@ try {
   rateButton("hard").click(); rateButton("hard").click(); await waitFor(() => document.body.textContent?.includes("MATCHING-2"));
   check(ratings.join() === "Hard", "all-correct result stores the user's Hard rating exactly once");
   check(rows().every(row => row.querySelector(".bank-match-picked")!.textContent === "—"), "next question clears old selections");
-  await pickRight("Two"); await pickRight("One"); await pickRight("Three"); await pickRight("Four");
+  await fillCorrect();
+  rows().find(row => row.textContent?.includes("Alpha"))!.click();
+  await new Promise(resolve => setTimeout(resolve, 20)); await pickRight("Two");
   submit().click(); await waitFor(() => document.querySelector(".bank-match-score") && !rateButton("again").disabled);
   check(document.querySelector(".bank-match-score")!.textContent?.includes("3 / 4"), "partially wrong pairs show the correct count");
-  check(rows()[0].classList.contains("is-wrong") && rows()[0].textContent?.includes("정답"), "wrong row shows its correct letter");
+  const wrong = rows().find(row => row.textContent?.includes("Alpha"))!;
+  check(wrong.classList.contains("is-wrong") && wrong.textContent?.includes("정답"), "wrong row shows its correct letter");
   window.dispatchEvent(new KeyboardEvent("keydown", { key: "1", bubbles: true }));
   await waitFor(() => document.body.textContent?.includes("MATCHING-3"));
   check(ratings.join() === "Hard,Again", "wrong result stores Again only when the user chooses it by keyboard");

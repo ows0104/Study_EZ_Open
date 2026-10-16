@@ -17,7 +17,8 @@ export function usePreparedBankAnswer(base: string, token: string | undefined, s
       prepared.answer = answer;
       slides.warm(splitSlides(answer.slides).primary.map(slide => slide.url));
       const exam = answer.jokboSlides ?? [];
-      const visibleExam = exam.some(slide => slide.primary) ? exam.filter(slide => slide.primary) : answer.evidenceStatus ? [] : exam;
+      const visibleExam = exam.some(slide => slide.primary) ? exam.filter(slide => slide.primary)
+        : !answer.evidenceStatus || answer.slides.some(slide => slide.primary) ? exam : [];
       slides.warm(visibleExam.map(slide => slide.url));
     }).catch(() => {}); // A miss (or older API) falls back to the normal reveal.
     return () => controller.abort();

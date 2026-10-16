@@ -64,6 +64,7 @@ PUT /api/admin/lectures/{subject}/{run_id}/bank-generated-response
 GET /api/admin/bank-review
 PUT /api/admin/lectures/{subject}/{run_id}/bank/cards/{question_id}
 POST /api/lectures/{subject}/{run_id}/bank/prepare
+POST /api/lectures/{subject}/{run_id}/bank/prepare-next
 PUT /api/lectures/{subject}/{run_id}/my-review
 GET /api/study-plan
 POST /api/lectures/{subject}/{run_id}/prequiz/slides

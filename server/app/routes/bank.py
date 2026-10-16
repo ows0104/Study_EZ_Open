@@ -19,6 +19,8 @@ Main-Quiz 처럼 목록을 통째로 보내고 화면이 고르는 방식이 아
 from __future__ import annotations
 
 import uuid
+import copy
+import hashlib
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
@@ -502,7 +504,10 @@ FEEDBACK_STATUSES = ("open", "resolved", "wontfix")
 @admin_router.get("/bank-review")
 def bank_review(subject: str | None = None, run_id: str | None = Query(None, alias="runId"),
                 all_questions: bool = Query(False, alias="all"),
+                question_id: str | None = Query(None, alias="questionId"),
                 user: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)) -> dict:
+    if question_id is not None and (subject is None or run_id is None):
+        raise HTTPException(422, "문항을 고르려면 과목과 강의를 지정하세요.")
     query = select(QuizBank).join(Lecture)
     if subject is not None:
         query = query.where(QuizBank.subject == subject)
@@ -520,8 +525,10 @@ def bank_review(subject: str | None = None, run_id: str | None = Query(None, ali
         questions = bank_edits.candidates(row.bank, validation)
         cards = []
         for qid, q in questions.items():
+            if question_id is not None and qid != question_id:
+                continue
             review = reviews.get(qid)
-            if not all_questions and qid not in dropped and qid not in edits and (
+            if question_id is None and not all_questions and qid not in dropped and qid not in edits and (
                 not review or review["verdict"] == "ok"
             ):
                 continue
@@ -751,7 +758,9 @@ def _served_question(db: Session, row: QuizBank, user_id: str, bank: dict, serve
     state = db.get(BankState, (user_id, row.subject, row.run_id))
     current = state.state if state and state.build_id == row.build_id else {}
     metadata = question_priority(metadata, current)
-    out = {**question, **{k: metadata[k] for k in ("tier", "importance", "advanced")}}
+    out = {**question, **{k: metadata[k] for k in ("tier", "importance", "advanced")},
+           "presentationSeed": snapshot.get("presentationSeed") or hashlib.sha256(
+               f"layout:{served['token']}".encode()).hexdigest()}
     if metadata.get("personalTier"):
         out.update(personalTier=True, originalTier=metadata["originalTier"])
     else:
@@ -949,19 +958,25 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
 
 
 def _next_bank_question(subject: str, run_id: str, user: CurrentUser, db: Session,
-                        *, choice_protocol: bool = False, selection: dict | None = None) -> dict[str, Any]:
+                        *, choice_protocol: bool = False, selection: dict | None = None,
+                        preview_state: dict | None = None, served_token: str | None = None) -> dict[str, Any]:
     """다음 문항. **이미 내준 문항이 있으면 그것을 다시 준다** — 새로고침이 문항을 넘기지 않는다."""
     lecture = lecture_or_404(db, subject, run_id)
     row = _bank_or_404(db, lecture, user)
     bank = _usable(row)
-    state_row = _load_state(db, user, row)
+    state_row = _load_state(db, user, row) if preview_state is None else None
     now = engine.now_ms()
-    state = engine.upgrade_state(bank, state_row.state, engine.DEFAULT, now)
+    state = engine.upgrade_state(bank, state_row.state if state_row else preview_state, engine.DEFAULT, now)
+
+    def save():
+        if state_row is not None:
+            _save(state_row, state)
+            db.commit()
+
     if not state.get("session"):
         state = engine.start_session(bank, state, None, now)
     if state["session"]["status"] == "complete":
-        _save(state_row, state)
-        db.commit()
+        save()
         return {"question": None, "summary": engine.session_summary(bank, state, now=now), "undoToken": undo_token(state)}
     exam = exam_date_for(db, lecture)
     by_id = {q["question_id"]: q for q in bank["questions"]}
@@ -975,8 +990,7 @@ def _next_bank_question(subject: str, run_id: str, user: CurrentUser, db: Sessio
             state["session"]["started_at"]) == day_start(now)
         if goal and goal["met"] and not extra_today:
             state = engine.end_session(bank, state, "lecture_goal_met", now)
-            _save(state_row, state)
-            db.commit()
+            save()
             return {"question": None, "summary": engine.session_summary(bank, state, now=now),
                     "lectureGoal": goal, "reason": "lecture_goal_met", "undoToken": undo_token(state)}
         picked = (engine.select_question(bank, state, exam, now, prefer_unseen=True, pages=row.pages) if goal["met"] and extra_today
@@ -985,18 +999,16 @@ def _next_bank_question(subject: str, run_id: str, user: CurrentUser, db: Sessio
         question, days = picked["question"], picked["days"]
         if question is None:
             if not goal["met"]:
-                _save(state_row, state)
-                db.commit()
+                save()
                 return {"question": None, "waiting": True, "lectureGoal": goal,
                         "session": engine.session_summary(bank, state, now=now),
                         "reason": picked["reason"], "retryAt": picked["retry_at"], "undoToken": undo_token(state)}
             state = engine.end_session(bank, state, "no_eligible_question", now)
-            _save(state_row, state)
-            db.commit()
+            save()
             return {"question": None, "summary": engine.session_summary(bank, state, now=now),
                     "reason": picked["reason"], "retryAt": picked["retry_at"], "undoToken": undo_token(state)}
         score = next((r for r in picked["ranked"] if r["question_id"] == question["question_id"]), None)
-        served = {"question_id": question["question_id"], "token": uuid.uuid4().hex, "revealed": False,
+        served = {"question_id": question["question_id"], "token": served_token or uuid.uuid4().hex, "revealed": False,
                   "choice_protocol": bool(choice_protocol),
                   "presented_at": now, "policy_version": engine.DEFAULT["version"],
                   "policy_hash": engine.policy_hash(engine.DEFAULT), "score": score}
@@ -1011,13 +1023,13 @@ def _next_bank_question(subject: str, run_id: str, user: CurrentUser, db: Sessio
         previous = state.setdefault("choice_variants", {}).get(question["question_id"])
         question = realize_choices({**question, "medicalReview": review}, served["token"], previous)
         question.pop("medicalReview", None)
+        question["presentationSeed"] = hashlib.sha256(f"layout:{served['token']}".encode()).hexdigest()
         served["question_snapshot"] = question
         if question.get("choice_variant"):
             state["choice_variants"][question["question_id"]] = question["choice_variant"]
     question = _served_question(db, row, user.id, bank, served)
     mark_seen(state, question["question_id"])
-    _save(state_row, state)
-    db.commit()
+    save()
     choices_shown = not served.get("choice_protocol") or choice_mode(question) != "recall_first" or served.get("choices_shown", False) or served.get("revealed", False)
     return {"question": _public(question, bank=bank, show_choices=choices_shown), "choicesShown": choices_shown,
             "reviewToken": served["token"], "days": days, "examDate": exam,
@@ -1158,11 +1170,38 @@ def reveal_bank_answer(subject: str, run_id: str, payload: TokenIn,
     return _answer(db, row, question)
 
 
+class BatchLectureIn(BaseModel):
+    subject: str = Field(min_length=1, max_length=200)
+    run_id: str = Field(alias="runId", min_length=1, max_length=32)
+
+
 class RateIn(BaseModel):
     review_token: str = Field(alias="reviewToken")
     rating: Literal["Again", "Hard", "Good", "Easy"]
+    advance: bool = False
+    lectures: list[BatchLectureIn] | None = Field(default=None, min_length=1, max_length=100)
 
     model_config = {"populate_by_name": True}
+
+
+def _advance_token(token: str, rating: str) -> str:
+    return uuid.uuid5(uuid.NAMESPACE_URL, f"studyez:{token}:{rating}").hex
+
+
+def _reviewed_state(bank: dict, state: dict, rating: str, now: int) -> dict:
+    served = state["served"]
+    nxt = engine.record_review(bank, state, served["question_id"], rating, now)
+    remember_review(state, nxt)
+    last = nxt["history"][-1]
+    last["score_breakdown"] = served.get("score")
+    last["selection_policy_version"] = served.get("policy_version")
+    presented = served.get("presented_at")
+    last["response_time_sec"] = max(0, (served.get("revealed_at", now) - presented) / 1000) if presented else None
+    summary = engine.session_summary(bank, nxt, now=now)
+    limit = nxt["session"]["size"]
+    if summary and limit is not None and summary["reviewed"] >= limit:
+        nxt = engine.end_session(bank, nxt, "size_reached", now)
+    return nxt
 
 
 @router.post("/lectures/{subject}/{run_id}/bank/rate")
@@ -1178,20 +1217,22 @@ def rate_bank_answer(subject: str, run_id: str, payload: RateIn,
     if not served.get("revealed") or served.get("token") != payload.review_token:
         raise HTTPException(409, "정답 공개 후 한 번만 평가할 수 있습니다.")
     now = engine.now_ms()
-    nxt = engine.record_review(bank, state, served["question_id"], payload.rating, now)
-    remember_review(state, nxt)
-    last = nxt["history"][-1]
-    last["score_breakdown"] = served.get("score")
-    last["selection_policy_version"] = served.get("policy_version")
-    presented = served.get("presented_at")
-    last["response_time_sec"] = max(0, (served.get("revealed_at", now) - presented) / 1000) if presented else None
-    summary_now = engine.session_summary(bank, nxt, now=now)
-    limit = nxt["session"]["size"]
-    if summary_now and limit is not None and summary_now["reviewed"] >= limit:
-        nxt = engine.end_session(bank, nxt, "size_reached", now)
+    nxt = _reviewed_state(bank, state, payload.rating, now)
     _save(state_row, nxt)
     db.commit()
-    return {"reviews": len(nxt["history"]), "session": engine.session_summary(bank, nxt, now=now)}
+    result = {"reviews": len(nxt["history"]), "session": engine.session_summary(bank, nxt, now=now)}
+    if payload.advance:
+        # The review is committed even if selecting the next question fails.
+        # Report that separately so clients never submit the same rating twice.
+        try:
+            token = _advance_token(payload.review_token, payload.rating)
+            result["next"] = (_next_batch_question(BatchIn(lectures=payload.lectures), user, db, served_token=token)
+                              if payload.lectures else _next_bank_question(subject, run_id, user, db, choice_protocol=True,
+                                                                         served_token=token))
+        except Exception:
+            db.rollback()
+            result["advanceFailed"] = True
+    return result
 
 
 @router.post("/lectures/{subject}/{run_id}/bank/undo")
@@ -1313,11 +1354,6 @@ def post_bank_feedback(subject: str, run_id: str, payload: FeedbackIn,
     return {"id": entry.id}
 
 
-class BatchLectureIn(BaseModel):
-    subject: str = Field(min_length=1, max_length=200)
-    run_id: str = Field(alias="runId", min_length=1, max_length=32)
-
-
 class BatchIn(BaseModel):
     lectures: list[BatchLectureIn] = Field(min_length=1, max_length=100)
     resume_lecture: BatchLectureIn | None = Field(None, alias="resumeLecture")
@@ -1325,6 +1361,38 @@ class BatchIn(BaseModel):
 
 class BatchUndoIn(BatchIn):
     review_token: str = Field(alias="reviewToken")
+
+
+class NextPreviewIn(TokenIn):
+    lectures: list[BatchLectureIn] | None = Field(default=None, min_length=1, max_length=100)
+
+
+@router.post("/lectures/{subject}/{run_id}/bank/prepare-next")
+def prepare_next_bank_question(subject: str, run_id: str, payload: NextPreviewIn,
+                               user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)) -> dict:
+    """Predict each rating on copied states; never serve, mark seen, or record a review."""
+    row = _bank_or_404(db, lecture_or_404(db, subject, run_id), user)
+    bank = _usable(row)
+    state_row = db.get(BankState, (user.id, subject, run_id))
+    if state_row is None or state_row.build_id != row.build_id:
+        raise HTTPException(409, "현재 학습 문항이 아닙니다.")
+    served = state_row.state.get("served") or {}
+    if served.get("token") != payload.review_token or not served.get("revealed"):
+        raise HTTPException(409, "정답 공개 후 다음 문항을 준비할 수 있습니다.")
+    previews = {}
+    for rating in ("Again", "Hard", "Good", "Easy"):
+        state = _reviewed_state(bank, copy.deepcopy(state_row.state), rating, engine.now_ms())
+        token = _advance_token(payload.review_token, rating)
+        got = (_next_batch_question(BatchIn(lectures=payload.lectures), user, db,
+                                    served_token=token, preview_states={(subject, run_id): state})
+               if payload.lectures else _next_bank_question(subject, run_id, user, db, choice_protocol=True,
+                                                            preview_state=state, served_token=token))
+        # These are display previews, not usable review tokens or exposed answers.
+        got.pop("reviewToken", None)
+        got.pop("undoToken", None)
+        got["answer"] = None
+        previews[rating] = got
+    return previews
 
 
 def _batch_entries(payload: BatchIn, user: CurrentUser, db: Session) -> list[dict]:
@@ -1374,7 +1442,16 @@ def _batch_reply(next_question: dict, entries: list[dict], chosen: dict | None) 
 @router.post("/bank/batch/next")
 def next_batch_question(payload: BatchIn, user: CurrentUser = Depends(require_approved_user),
                          db: Session = Depends(get_db)) -> dict:
+    return _next_batch_question(payload, user, db)
+
+
+def _next_batch_question(payload: BatchIn, user: CurrentUser, db: Session, *, served_token: str | None = None,
+                         preview_states: dict | None = None) -> dict:
     entries = _batch_entries(payload, user, db)
+    if preview_states is not None:
+        for entry in entries:
+            entry["state"] = copy.deepcopy(preview_states.get(entry["key"], entry["state"]))
+            entry["goal"] = lecture_goal(entry["bank"], entry["state"], entry["lecture"].title, engine.now_ms())
     goal = aggregate_goal(entries, day_start(engine.now_ms()))
     resume = (payload.resume_lecture.subject, payload.resume_lecture.run_id) if payload.resume_lecture else None
     # Lowering the target may move this exposure out of today's queue. Keep the
@@ -1384,6 +1461,8 @@ def next_batch_question(payload: BatchIn, user: CurrentUser = Depends(require_ap
                        q["question_id"] for q in entry["bank"]["questions"]
                        if q["question_id"] not in entry["state"].get("suspended_question_ids", [])}), None)
     if goal["met"] and chosen is None:
+        if preview_states is not None:
+            return _batch_reply({"question": None, "summary": None, "reason": "lecture_goal_met"}, entries, None)
         for entry in entries:
             state_row = db.get(BankState, (user.id, *entry["key"]))
             if state_row and state_row.build_id == entry["row"].build_id:
@@ -1400,15 +1479,19 @@ def next_batch_question(payload: BatchIn, user: CurrentUser = Depends(require_ap
         chosen, selection = select_batch_question(entries, engine.now_ms())
     if chosen is None:
         raise HTTPException(409, "남은 문항을 선택할 수 없습니다. 강의 목록을 다시 확인하세요.")
-    state_row = _load_state(db, user, chosen["row"])
-    state = engine.start_session(chosen["bank"], state_row.state, None, engine.now_ms())
+    state_row = _load_state(db, user, chosen["row"]) if preview_states is None else None
+    state = engine.start_session(chosen["bank"], state_row.state if state_row else chosen["state"], None, engine.now_ms())
     state["session"].update(size=None, continue_after_goal=False)
     pending = {u["key"] for u in daily_units(chosen["bank"], state, engine.now_ms()) if u["status"] == "pending"}
     if not resuming and state.get("served") and state["served"]["question_id"] not in pending:
         state["served"] = None
-    _save(state_row, state)
-    db.commit()
-    got = _next_bank_question(*chosen["key"], user=user, db=db, choice_protocol=True, selection=selection)
+    if state_row is not None:
+        _save(state_row, state)
+        db.commit()
+    got = _next_bank_question(*chosen["key"], user=user, db=db, choice_protocol=True, selection=selection,
+                             preview_state=state if preview_states is not None else None, served_token=served_token)
+    if preview_states is not None:
+        return _batch_reply(got, entries, chosen)
     _refresh_batch_entry(chosen, user, db)
     return _batch_reply(got, entries, chosen)
 

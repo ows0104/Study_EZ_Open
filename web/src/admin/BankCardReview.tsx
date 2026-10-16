@@ -164,7 +164,7 @@ function Pairs({ label, values, onChange, leftLabel, rightLabel }: {
   </fieldset>;
 }
 
-function QuestionEditor({ question, group, busy, onSave, onCancel }: {
+export function QuestionEditor({ question, group, busy, onSave, onCancel }: {
   question: BankFullQuestion; group: BankReviewGroup; busy: boolean; onSave: (q: BankFullQuestion) => Promise<void>; onCancel: () => void;
 }) {
   const [q, setQ] = useState<BankFullQuestion>(() => structuredClone(question));

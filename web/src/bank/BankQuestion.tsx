@@ -7,25 +7,8 @@ import { BankSourceNote } from "./BankSourceNote";
 import { BankSlides } from "./BankSlides";
 import { BankJokboSlides } from "./BankJokboSlides";
 import { BankEvidenceNotice } from "./BankEvidenceNotice";
-
-/**
- * 문항 ID 를 씨로 삼아 섞는다 — 다시 불러도, 답을 펴도 같은 순서다. 섞은 결과가 원래와 같으면 한 칸 민다.
- *
- * 짝짓기 오른쪽 목록을 위한 것이다. 261002_03 의 짝짓기 5문항 중 4문항이 오른쪽을 정답 순서 그대로 냈다
- * (2026-10-05) — 줄만 맞춰 읽으면 답이 된다.
- */
-export function shuffled<T>(items: T[], seed: string): T[] {
-  let h = 2166136261;
-  for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
-  const out = [...items];
-  for (let i = out.length - 1; i > 0; i--) {
-    h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0;
-    const j = h % (i + 1);
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  if (out.length > 1 && out.every((x, i) => x === items[i])) out.push(out.shift() as T);
-  return out;
-}
+import { matchingLayout, presentationSeed, shuffled } from "./presentation";
+export { shuffled } from "./presentation";
 
 const letter = (index: number) => String.fromCharCode(65 + index);
 
@@ -89,9 +72,9 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
       {q.format === "matching" ? (
         matching ?? (
         <div className="bank-match">
-          <ul>{q.matching_left.map((item, index) => <li key={item}><b>{index + 1}</b> {bare(item)}</li>)}</ul>
+          <ul>{matchingLayout(q).left.map((item, index) => <li key={item}><b>{index + 1}</b> {bare(item)}</li>)}</ul>
           <ul>
-            {shuffled(q.matching_right, q.question_id).map((item, index) => (
+            {matchingLayout(q).right.map((item, index) => (
               <li key={item}><b>{letter(index)}</b> {bare(item)}</li>
             ))}
           </ul>
@@ -99,7 +82,7 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
         )
       ) : null}
       {q.format === "sequence" ? (
-        sequence ?? <ul className="bank-items">{q.sequence_items.map((item) => <li key={item}>{item}</li>)}</ul>
+        sequence ?? <ul className="bank-items">{shuffled(q.sequence_items, presentationSeed(q)).map((item) => <li key={item}>{item}</li>)}</ul>
       ) : null}
     </>
   );
@@ -109,7 +92,9 @@ export function AnswerBody({ question: q, answer, preload }: {
   question: BankQuestion; answer: BankAnswer; preload?: SlidePreloader;
 }) {
   const review = answer.medicalReview;
-  const right = q.format === "matching" ? shuffled(q.matching_right, q.question_id) : [];
+  const layout = q.format === "matching" ? matchingLayout(q) : { left: [], right: [] };
+  const right = layout.right;
+  const pairs = q.format === "matching" ? [...answer.answerPairs].sort((a, b) => layout.left.indexOf(a.left) - layout.left.indexOf(b.left)) : answer.answerPairs;
   const remainingPoints = answerPoints(answer.answer, answer.answerUnits).remaining;
   const shortUnits = q.format === "basic"
     ? answer.answerUnits.filter((unit) => unit.replace(/\*\*/g, "").trim()) : [];
@@ -192,7 +177,7 @@ export function AnswerBody({ question: q, answer, preload }: {
       ) : null}
       {answer.answerPairs.length ? (
         <ul className="bank-units">
-          {answer.answerPairs.map((pair) => (
+          {pairs.map((pair) => (
             <li key={`${pair.left}-${pair.right}`} className="bank-answer-point">
               {bare(pair.left)} → {right.includes(pair.right) ? <b>{letter(right.indexOf(pair.right))}</b> : null}{" "}
               {bare(pair.right)}
@@ -220,10 +205,14 @@ export function AnswerBody({ question: q, answer, preload }: {
       {answer.jokboSlides?.some(slide => slide.primary) ? (
         <BankJokboSlides key={`core:${q.question_id}`} slides={answer.jokboSlides} preload={preload} />
       ) : null}
-      <BankSlides key={`${q.question_id}:${answer.slides.map(slide => slide.url).join("|")}`} slides={answer.slides} preload={preload} statusKnown={!!answer.evidenceStatus} />
-      {!answer.jokboSlides?.some(slide => slide.primary) ? (
-        <BankJokboSlides key={`ref:${q.question_id}`} slides={answer.jokboSlides} preload={preload} collapseReferences={!!answer.evidenceStatus} />
-      ) : null}
+      <div className={answer.slides.some(slide => slide.primary) && answer.jokboSlides?.length && !answer.jokboSlides.some(slide => slide.primary)
+        ? "bank-evidence-pair" : "bank-evidence-stack"}>
+        <BankSlides key={`${q.question_id}:${answer.slides.map(slide => slide.url).join("|")}`} slides={answer.slides} preload={preload} statusKnown={!!answer.evidenceStatus} />
+        {!answer.jokboSlides?.some(slide => slide.primary) ? (
+          <BankJokboSlides key={`ref:${q.question_id}`} slides={answer.jokboSlides} preload={preload}
+            collapseReferences={!!answer.evidenceStatus && !answer.slides.some(slide => slide.primary)} />
+        ) : null}
+      </div>
     </>
   );
 }

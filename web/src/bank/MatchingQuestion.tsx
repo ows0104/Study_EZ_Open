@@ -1,6 +1,6 @@
 import { Stem } from "../lecture/Stem";
 import type { BankAnswer, BankQuestion } from "../types/bank";
-import { shuffled } from "./BankQuestion";
+import { matchingLayout } from "./presentation";
 import "../styles/matching.css";
 
 export type MatchingPicks = Record<string, string>;
@@ -25,7 +25,7 @@ export function MatchingQuestion({ question: q, answer, picks, active, disabled,
   onActive: (index: number) => void;
   onMatch: (right: string) => void;
 }) {
-  const right = shuffled(q.matching_right, q.question_id);
+  const { left: leftItems, right } = matchingLayout(q);
   const score = matchingScore(q, answer, picks);
   const expected = new Map(answer?.answerPairs.map(pair => [pair.left, pair.right]));
   return <>
@@ -34,7 +34,7 @@ export function MatchingQuestion({ question: q, answer, picks, active, disabled,
     </p>
     <div className="bank-match">
       <ul aria-label="짝짓기 번호">
-        {q.matching_left.map((left, index) => {
+        {leftItems.map((left, index) => {
           const selected = right.indexOf(picks[left]);
           const result = score ? picks[left] === expected.get(left) ? "is-correct" : "is-wrong" : "";
           return <li key={left}>
@@ -52,8 +52,8 @@ export function MatchingQuestion({ question: q, answer, picks, active, disabled,
       </ul>
       <ul aria-label="짝짓기 보기">
         {right.map((item, index) => <li key={item}>
-          <button type="button" className={`bank-match-choice ${picks[q.matching_left[active]] === item ? "is-picked" : ""}`}
-            disabled={disabled || Boolean(answer)} aria-pressed={picks[q.matching_left[active]] === item}
+          <button type="button" className={`bank-match-choice ${picks[leftItems[active]] === item ? "is-picked" : ""}`}
+            disabled={disabled || Boolean(answer)} aria-pressed={picks[leftItems[active]] === item}
             onClick={() => onMatch(item)}>
             <b>{letter(index)}</b> <span><Stem text={bare(item)} /></span>
           </button>
