@@ -11,7 +11,7 @@ import { ExtensionSetup } from "../bridge/ExtensionSetup";
 import { ActionCard, PanelGroup, PanelTool } from "../calendar/panelShared";
 import { jobMoving, progressLine, runnerAlive } from "../jobProgress";
 import { Link } from "react-router-dom";
-import { bankHref } from "../links";
+import { bankCatalogHref, bankHref } from "../links";
 import type { BankSummary } from "../types/bank";
 import type { LectureDetail, LectureRef } from "../types/lectures";
 import type { PrequizJob, RunnerBeat } from "../types/jobs";
@@ -64,6 +64,7 @@ function StudyCard({ lecture, bank, tools }: {
         }
         tools={tools}
       />
+      <p className="panel-hint"><Link to={bankCatalogHref(lecture)}>전체 문제 · 슬라이드 순서로 보기 →</Link></p>
     </>
   );
 }

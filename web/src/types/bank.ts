@@ -72,6 +72,7 @@ export type BankTier = "Essential" | "Core" | "Important" | "Optional";
 
 /** 답이 빠진 문항. 답·채점 단위는 `reveal` 로만 온다. */
 export type BankQuestion = {
+  personalAdded?: boolean;
   presentationSeed?: string;
   mcq_mode?: "recall_first" | "comparison" | "none";
   personalEdited?: boolean;
@@ -131,6 +132,13 @@ export type BankSlide = {
   page: number; url: string; primary?: boolean;
   sourceId?: string; sourceRunId?: string; sourceFilename?: string;
 };
+
+export type BankCatalogItem = { question: BankQuestion; pages: number[]; suspended: boolean };
+export type BankCatalog = {
+  buildId: string; title: string; subject: string; runId: string;
+  questions: BankCatalogItem[]; slides: BankSlide[];
+};
+export type BankCatalogAnswer = { question: BankQuestion; answer: BankAnswer };
 
 /** 관리자가 보는 문항 — 은행 JSON 그대로라 답 칸도 snake_case 다. */
 export type BankOptionPool = {

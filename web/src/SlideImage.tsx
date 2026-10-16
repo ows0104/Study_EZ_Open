@@ -15,8 +15,8 @@ function ExpandedSlide({ src, alt, onClose }: { src: string; alt: string; onClos
   </dialog>, document.body);
 }
 
-export function SlideImage({ src, alt, preload }: {
-  src: string; alt: string; preload?: SlidePreloader;
+export function SlideImage({ src, alt, preload, loading = "eager" }: {
+  src: string; alt: string; preload?: SlidePreloader; loading?: "eager" | "lazy";
 }) {
   const host = useRef<HTMLSpanElement>(null);
   const [expanded, setExpanded] = useState(false);
@@ -28,8 +28,8 @@ export function SlideImage({ src, alt, preload }: {
     };
     image.className = "quiz-slide";
     image.alt = alt;
-    image.loading = "eager";
-    image.fetchPriority = "high";
+    image.loading = loading;
+    image.fetchPriority = loading === "lazy" ? "auto" : "high";
     image.addEventListener("error", retry, { once: true });
     if (!image.src) image.src = src;
     host.current?.appendChild(image);
@@ -37,7 +37,7 @@ export function SlideImage({ src, alt, preload }: {
       image.removeEventListener("error", retry);
       image.remove();
     };
-  }, [src, alt, preload]);
+  }, [src, alt, preload, loading]);
   return <>
     <button type="button" className="slide-image-open" aria-label={`${alt} 크게 보기`} onClick={() => setExpanded(true)}>
       <span ref={host} style={{ display: "contents" }} />

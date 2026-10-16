@@ -41,6 +41,7 @@ npm run build
 | `/lectures/:subject/:runId` | 강의 자료 |
 | `/prequiz/:subject/:runId`, `/mainquiz/:subject/:runId` | 자기채점 퀴즈 |
 | `/bank/:subject/:runId` | Quiz Bank |
+| `/bank/:subject/:runId/all` | 전체 문제 · 슬라이드 순서 열람 |
 | `/admin/*` | 관리자 |
 | `/notices`, `/guide` | 공지·이용방법 |
 | `/privacy` | 공개 개인정보처리방침 |

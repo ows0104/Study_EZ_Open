@@ -65,6 +65,11 @@ def same_source(first: dict, second: dict) -> bool:
 
 def apply(db: Session, row: QuizBank, user_id: str, question: dict) -> dict:
     edit = db.get(BankPersonalEdit, (user_id, row.subject, row.run_id, question["question_id"]))
+    return apply_edit(question, edit)
+
+
+def apply_edit(question: dict, edit: BankPersonalEdit | None) -> dict:
+    """Apply an already loaded edit; catalogs load private edits in one query."""
     if not edit or not same_source(edit.original, question):
         return question
     answer_changed = edit.answer != question["answer"]

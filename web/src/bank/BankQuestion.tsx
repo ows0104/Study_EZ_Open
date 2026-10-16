@@ -28,7 +28,7 @@ export function choiceScore(q: BankQuestion, answer: BankAnswer | null, picked: 
 }
 
 /** 발문. cloze 빈칸은 답을 보면 채운다. */
-export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false }: {
+export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false, showChoiceScore = true }: {
   question: BankQuestion;
   answer: BankAnswer | null;
   picked: Set<string>;
@@ -37,8 +37,9 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
   sequence?: import("react").ReactNode;
   showOptions?: boolean;
   disabled?: boolean;
+  showChoiceScore?: boolean;
 }) {
-  const score = choiceScore(q, answer, picked);
+  const score = showChoiceScore ? choiceScore(q, answer, picked) : null;
   return (
     <>
       <BankStem text={q.question} list={q.format === "list"} cloze={q.format === "cloze"} answerUnits={answer?.answerUnits} />

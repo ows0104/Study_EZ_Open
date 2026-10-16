@@ -33,6 +33,7 @@ from sqlalchemy.orm import Session
 from app import study_engine as engine
 from app import bank_edits
 from app import bank_personal
+from app.bank_catalog import ordered_questions
 from app.personal_question_input import PersonalQuestionSettings
 from app.bank_validation.pages import cited_pages
 from app.bank_validation.slide_focus import (selected_references, all_selected_pages, all_selected_references,
@@ -953,6 +954,61 @@ def read_bank(subject: str, run_id: str, user: CurrentUser = Depends(require_app
         out["mastery"] = for_bank(row, state, is_admin=user.is_admin, now=now, bank=bank)
         out["lectureGoal"] = lecture_goal(bank, current, lecture.title, now)
     return out
+
+
+@router.get("/lectures/{subject}/{run_id}/bank/catalog")
+def read_bank_catalog(subject: str, run_id: str, user: CurrentUser = Depends(require_approved_user),
+                      db: Session = Depends(get_db)) -> dict[str, Any]:
+    """All cards in PDF order. Browsing never creates or changes learning state."""
+    lecture = lecture_or_404(db, subject, run_id)
+    row = _bank_or_404(db, lecture, user)
+    _usable(row)
+    edits = list(db.scalars(select(BankPersonalEdit).where(
+        BankPersonalEdit.user_id == user.id, BankPersonalEdit.subject == subject,
+        BankPersonalEdit.run_id == run_id)))
+    by_id = {edit.question_id: edit for edit in edits}
+    bank = bank_personal.augment(db, row, user.id, edits=edits)
+    state = db.get(BankState, (user.id, subject, run_id))
+    current = state.state if state and state.build_id == row.build_id else {}
+    suspended = set(current.get("suspended_question_ids", []))
+    questions = []
+    for original, pages in ordered_questions(bank, row.pages or {}):
+        q = question_priority(bank_personal.apply_edit(original, by_id.get(original["question_id"])), current)
+        questions.append({"question": _public(q, bank=bank), "pages": pages,
+                          "suspended": q["question_id"] in suspended})
+    # One asset query and one signed URL per slide, rather than per question.
+    first_pages = {item["pages"][0] for item in questions if item["pages"]}
+    slides = []
+    assets = db.scalars(select(Asset).where(Asset.subject == subject, Asset.run_id == run_id,
+        Asset.kind == SLIDE_KINDS["bank"], Asset.slide_no.in_(first_pages)).order_by(Asset.slide_no))
+    try:
+        storage = ObjectStorage()
+        for asset in assets:
+            slides.append({"page": asset.slide_no, "url": storage.presign_download(asset.object_key)})
+    except StorageNotConfigured:
+        pass
+    return {"buildId": row.build_id, "title": lecture.title, "subject": subject, "runId": run_id,
+            "questions": questions, "slides": slides}
+
+
+@router.get("/lectures/{subject}/{run_id}/bank/catalog/{question_id}")
+def read_catalog_answer(subject: str, run_id: str, question_id: str,
+                        build_id: str = Query(..., alias="buildId"),
+                        user: CurrentUser = Depends(require_approved_user),
+                        db: Session = Depends(get_db)) -> dict[str, Any]:
+    lecture = lecture_or_404(db, subject, run_id)
+    row = _bank_or_404(db, lecture, user)
+    bank = _study_bank(db, row, user)
+    if build_id != row.build_id:
+        raise HTTPException(409, "문제은행이 갱신되었습니다. 목록을 새로고침해 주세요.")
+    original = next((q for q in bank["questions"] if q["question_id"] == question_id), None)
+    if original is None:
+        raise HTTPException(404, "이 문제를 찾을 수 없습니다. 목록을 새로고침해 주세요.")
+    q = bank_personal.apply(db, row, user.id, original)
+    state = db.get(BankState, (user.id, subject, run_id))
+    current = state.state if state and state.build_id == row.build_id else {}
+    q = question_priority(q, current)
+    return {"question": _public(q, bank=bank), "answer": _answer(db, row, q)}
 
 
 class StartIn(BaseModel):

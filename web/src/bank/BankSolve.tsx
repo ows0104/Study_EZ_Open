@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { bankCatalogHref } from "../links";
 import { api } from "../api";
 import { useMe } from "../useMe";
 import { invalidateTimetable } from "../firstScreen";
@@ -434,6 +435,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
         }} />
 
         <div className="bank-question-actions">
+          <Link to={bankCatalogHref(lecture)}>전체 문제</Link>
           {q.personalEdited ? <span className="tag">내 수정본</span> : null}
           {actionMessage ? <span role="status">{actionMessage}</span> : null}
           {isAdmin && !transition ? <button className="quiz-fix" disabled={busy || undoBusy || saving}

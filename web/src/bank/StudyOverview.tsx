@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { bankHref, lectureHref } from "../links";
+import { bankCatalogHref, bankHref, lectureHref } from "../links";
 import type { LectureRef, TimetableEvent } from "../types/lectures";
 import type { CardProgress } from "../types/mastery";
 import { StudyPlanBoard } from "../calendar/StudyPlanBoard";
@@ -204,7 +204,7 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
             <td>{p ? number(p.recognized) : "—"}</td><td>{p ? number(p.retrieving) : "—"}</td><td>{p ? number(p.retained) : "—"}</td>
             <td className={p?.reviewDue ? "has-review" : ""}>{p ? number(p.reviewDue) : "—"}</td>
             <td>{l.mastery ? <div className="overview-score"><strong>{l.mastery.score}%</strong><progress value={l.mastery.score} max={100} aria-label={`${l.title} 학습률`} /></div> : "—"}</td></> : null}
-            <td>{l.ready ? <Link to={bankHref(l)}>풀기 →</Link> : <span className="overview-wait">준비 전</span>}</td>
+            <td>{l.ready ? <><Link to={bankHref(l)}>풀기 →</Link><small><Link to={bankCatalogHref(l)}>전체 문제</Link></small></> : <span className="overview-wait">준비 전</span>}</td>
           </tr>;
         })}</tbody>
       </table>
