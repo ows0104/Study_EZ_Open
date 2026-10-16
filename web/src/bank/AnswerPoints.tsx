@@ -86,7 +86,7 @@ export function answerPoints(text: string, units: string[]) {
   return { text: visible, bold, highlights: merged, remaining };
 }
 
-export function AnswerPoints({ text, units = [], readable = false, list = false }: { text: string; units?: string[]; readable?: boolean; list?: boolean }) {
+export function AnswerPoints({ text, units = [], readable = false, list = false, blueBold = false }: { text: string; units?: string[]; readable?: boolean; list?: boolean; blueBold?: boolean }) {
   const parsed = answerPoints(text, units);
   const boundaries = [...new Set([0, parsed.text.length,
     ...parsed.bold.flatMap((range) => [range.start, range.end]),
@@ -99,7 +99,7 @@ export function AnswerPoints({ text, units = [], readable = false, list = false 
       const value = parsed.text.slice(start, end);
       const contains = (range: Range) => range.start <= start && range.end >= end;
       if (parsed.highlights.some(contains)) return <strong key={start} className="bank-answer-point">{value}</strong>;
-      if (parsed.bold.some(contains)) return <strong key={start}>{value}</strong>;
+      if (parsed.bold.some(contains)) return <strong key={start} className={blueBold ? "bank-answer-point" : undefined}>{value}</strong>;
       return <Fragment key={start}>{value}</Fragment>;
     });
   }

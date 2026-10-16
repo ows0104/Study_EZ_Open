@@ -11,7 +11,7 @@ def test_prompt_uses_canonical_template_and_preserves_cloze():
     body, version = generate.prompt_for("강의", "2026-10-20", [
         {"id": "S1", "kind": "notes_current", "filename": "a.pdf"}])
     assert version != "unknown" and "Version:" not in body
-    assert "{{title}}" not in body and "a.pdf" in body and "{{c1}}" in body
+    assert "{{title}}" not in body and "a.pdf" in body and "{정답}" in body and "{{c1}}" not in body
     assert "{{lecture_scope}}" not in body
     assert generate.item_quality_guidance() in body
 

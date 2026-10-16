@@ -6,6 +6,7 @@ AdaptiveStudy3/bank_builder/schema.mjs 를 옮겼다(2026-10-04). 서버도 같�
 
 from __future__ import annotations
 
+from .cloze import normalize_cloze
 from .choice_mode import choice_mode
 from .priorities import TIERS, priority_fields
 
@@ -98,9 +99,9 @@ def without_retired(bank: dict) -> dict:
     if isinstance(bank.get("concepts"), list):
         out["concepts"] = [priority_fields({"graph_title": "", **c}) if isinstance(c, dict) else c for c in bank["concepts"]]
     if isinstance(bank.get("questions"), list):
-        out["questions"] = [priority_fields({"explanation": "", "option_explanations": [], "option_pools": [], "mcq_mode": choice_mode(q),
+        out["questions"] = [normalize_cloze(priority_fields({"explanation": "", "option_explanations": [], "option_pools": [], "mcq_mode": choice_mode(q),
                              **{k: v for k, v in q.items() if k not in RETIRED_QUESTION},
-                             "mcq_mode": choice_mode(q) if q.get("mcq_mode") in (None, "none") else q["mcq_mode"]}, question=True) if isinstance(q, dict) else q
+                             "mcq_mode": choice_mode(q) if q.get("mcq_mode") in (None, "none") else q["mcq_mode"]}, question=True)) if isinstance(q, dict) else q
                             for q in bank["questions"]]
     if isinstance(bank.get("retrieval_plan"), list):
         out["retrieval_plan"] = [{k: v for k, v in p.items() if k not in RETIRED_PLAN} if isinstance(p, dict) else p

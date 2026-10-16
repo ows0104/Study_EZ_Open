@@ -212,7 +212,10 @@ def test_shared_quality_guidance_preserves_158_rules_and_adds_159_layout():
     assert layout in quality
     clarity = '- 자료 충돌을 해결한 문항도 하나의 분명한 학습 목표를 시험한다. 자료 간 차이를 해명하려고 임상 조건·추론을 여러 겹 붙인 함정으로 만들지 않는다. 해설은 정답의 이유와 기억할 핵심을 먼저 짧게 설명하고, 출처별 차이·검증 이력·작업 경위와 섞지 않는다. 실제 모순·정답표 오류·상황 차이를 구별하며, 미해결 쟁점을 해결된 것처럼 쓰지 않는다.\n'
     assert clarity in quality
-    assert hashlib.sha256(quality.replace(layout, '').replace(clarity, '').encode()).hexdigest() == 'e4993d1bf8ad2d0611ccd7183b3c0ab80b4217b35c3fef7c498c1e84b8668e15'
+    assert 'Essential > Core > Important > Optional' in quality
+    assert '단순한 별표·반복·학습목표·과거 출제만으로 자동 승격하지 않는다' in quality
+    # v1.68 uses inline cloze answers while retaining the source-grounded priority rules.
+    assert hashlib.sha256(quality.replace(layout, '').replace(clarity, '').encode()).hexdigest() == '987f9bf983767aa96c73d99388c72a38d99a23c8474bce64fc34fab05f443b18'
 
 
 def test_multiline_comparison_keeps_compact_metadata_answers_and_question_ids():
@@ -273,3 +276,47 @@ def test_priority_and_depth_are_independent_and_legacy_labels_do_not_infer_depth
     for depth in ('yes', 'true\n심화: false'):
         with pytest.raises(SessionError, match='심화'):
             compact.read_blocks(raw.replace('심화: true', '심화: ' + depth))
+
+
+def test_inline_cloze_prompt_only_restores_answers_and_hides_them():
+    raw = """### Q002 | cloze | Core | 5 | 2 | mechanism
+문제: 앞은 {α},
+  중간은 {β}, 끝은 {α}이다.
+해설: "**순서**를 구별한다."
+출처: S1 p.1
+출제근거: 회상
+"""
+    blocks = compact.read_blocks(raw)
+    assert blocks[0]['units'] == ['α', 'β', 'α']
+    bank = {'questions': [draft()['questions'][1]]}
+    compact.restore(bank, blocks)
+    q = bank['questions'][0]
+    assert q['question'] == '앞은 {{c1}},\n  중간은 {{c1}}, 끝은 {{c1}}이다.'
+    assert q['answer'] == '앞은 α,\n  중간은 β, 끝은 α이다.'
+    assert q['answer_units'] == ['α', 'β', 'α']
+    assert q['explanation'] == '**순서**를 구별한다.'
+
+
+def test_inline_cloze_conflicting_separate_answer_is_rejected():
+    raw = "### Q1 | cloze | Core | 5 | 2 | direct\n문제: 값은 {A}다.\n정답: [\"B\"]"
+    with pytest.raises(SessionError, match='서로 다릅니다'):
+        compact.read_blocks(raw)
+
+
+def test_inline_cloze_shared_normalization_is_pure_and_idempotent():
+    from server.app.bank_validation.schema import without_retired
+    q = draft()['questions'][1]
+    q.update(question='앞은 {**α**}, 끝은 {α}다.', answer='stale', answer_units=['stale'])
+    original = copy.deepcopy(q)
+    normalized = without_retired({'questions': [q]})['questions'][0]
+    assert q == original
+    assert normalized['answer_units'] == ['**α**', 'α']
+    assert normalized['question'] == '앞은 {{c1}}, 끝은 {{c1}}다.'
+    assert without_retired({'questions': [normalized]})['questions'][0] == normalized
+
+
+def test_inline_cloze_browser_paragraph_does_not_include_following_fields():
+    blocks = compact.read_blocks('### Q1 | cloze | Core | 5 | 2 | direct\n문제: 앞 {A}, 뒤 {B}다. 해설: "**방향**" 출처: S1 p.1 근거: {"mode":"slides"}')
+    assert blocks[0]['question'] == '앞 {A}, 뒤 {B}다.'
+    assert blocks[0]['units'] == ['A', 'B']
+    assert blocks[0]['explanation'] == '**방향**'

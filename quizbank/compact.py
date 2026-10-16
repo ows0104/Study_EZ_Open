@@ -5,6 +5,7 @@ import json
 import re
 
 from .schema import DIRECTIONS, FORMATS, TIERS
+from server.app.bank_validation.cloze import INLINE, normalize_cloze
 from .session import SessionError
 
 # Conflict headings and references to other questions are not question blocks.
@@ -54,6 +55,15 @@ def read_blocks(raw: str) -> list[dict]:
                 values[name] = value
                 position = match.end() + size
             units = values.get("정답")
+            inline_question = None
+            if fmt == "cloze":
+                stem = re.search(r"(?:^|\s|&#x20;)문제:[ \t]*(.*?)(?=(?:\s|&#x20;)(?:정답|해설|출처|출제근거|근거|충돌):|\Z)", body, re.S)
+                if stem and INLINE.search(stem[1]):
+                    inline_question = stem[1].strip()
+                    embedded = [m[1].strip() for m in INLINE.finditer(inline_question)]
+                    if units is not None and units != embedded:
+                        raise SessionError(f"{qid}: 발문과 별도 정답이 서로 다릅니다.")
+                    units = embedded
         except ValueError as cause:
             raise SessionError(f"{qid}: 정답·힌트·해설 JSON 오류") from cause
         if not isinstance(units, list) or not units or not all(isinstance(u, str) and u.strip() for u in units):
@@ -72,6 +82,8 @@ def read_blocks(raw: str) -> list[dict]:
                        "item_difficulty": int(difficulty), "retrieval_direction": direction,
                        "mcq_mode": mode, "units": units,
                        "explanation": values.get("해설", "")})
+        if inline_question is not None:
+            blocks[-1]["question"] = inline_question
         if evidence is not None:
             blocks[-1]["source_evidence"] = evidence
     return blocks
@@ -99,6 +111,8 @@ def restore(bank: dict, blocks: list[dict]) -> None:
         qid, fmt, units = block["question_id"], block["format"], block["units"]
         q = questions[qid]
         q.update({key: value for key, value in block.items() if key not in ("units", "source_evidence")})
+        if fmt == "cloze":
+            q.update(normalize_cloze(q))
         if fmt in ("basic", "list", "cloze"):
             if fmt == "basic" and len(units) != 1:
                 raise SessionError(f"{qid}: basic 정답은 한 단위여야 합니다.")

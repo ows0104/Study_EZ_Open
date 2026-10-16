@@ -136,3 +136,32 @@ test('legacy O/X and per-option explanations also use sentence rows', () => {
   assert.equal((choice.match(/class="bank-readable"/g) || []).length, 1);
   assert.equal((choice.match(/class="bank-readable-line/g) || []).length, 3);
 });
+
+
+test('OX explanations color only authored key phrases blue, including legacy reasons', () => {
+  const a = { answer: 'X', answerUnits: ['X'], explanation: '판단은 **구별 키워드**로 한다.' };
+  const html = body({ format: 'ox' }, a);
+  assert.ok(html.includes('판단은 <strong class="bank-answer-point">구별 키워드</strong>로 한다.'));
+  assert.ok(!html.includes('class="bank-answer-point">X</strong>'));
+  const legacy = body({ format: 'ox' }, { answer: 'X', answerUnits: ['X', '근거는 **키워드**다.'] });
+  assert.ok(legacy.includes('<li>근거는 <strong class="bank-answer-point">키워드</strong>다.</li>'));
+});
+
+const { clozeDraft, clozeAnswer, editorQuestion, saveQuestion } = load(path.join(__dirname, '../src/bank/authoring.ts'));
+test('cloze edits derive ordered repeated answers and transport only hidden markers', () => {
+  assert.equal(clozeDraft('앞 {{c1}} 뒤 {{c2}} 반복 {{c1}}', ['A', '**B**', 'A']), '앞 {A} 뒤 {**B**} 반복 {A}');
+  const saved = clozeAnswer('앞 {A} 뒤 {**B**} 반복 {A}');
+  assert.equal(saved.question, '앞 {{c1}} 뒤 {{c1}} 반복 {{c1}}');
+  assert.deepEqual(Array.from(saved.answer_units), ['A', '**B**', 'A']);
+  assert.equal(saved.answer, '앞 A 뒤 **B** 반복 A');
+  assert.equal(clozeAnswer('값 { }').answer_units[0], '');
+});
+test('one answer edit synchronizes basic, list and OX while preserving legacy explanations', () => {
+  for (const format of ['basic', 'list', 'ox']) {
+    const answer = format === 'list' ? 'A\nB' : format === 'ox' ? 'O' : '새 답';
+    const saved = saveQuestion({ format, answer, answer_units: ['옛 답'] });
+    assert.equal(saved.answer_units.join('|'), format === 'list' ? 'A|B' : answer);
+  }
+  const legacy = editorQuestion({ format: 'ox', question: '발문', answer: 'X', answer_units: ['X', '판단 근거'] });
+  assert.equal(legacy.explanation, '판단 근거');
+});

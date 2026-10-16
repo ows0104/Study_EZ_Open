@@ -133,13 +133,13 @@ export function AnswerBody({ question: q, answer, preload }: {
       {/* Cloze는 위 발문에 정답을 채워 보여 준다. 짝짓기는 아래 짝이 곧 답이다. */}
       {conciseAnswer || (q.format === "cloze" && !answer.personalAnswer) || (q.format === "matching" && answer.answerPairs.length) ? null : (
         <p className="quiz-answer">
-          <AnswerPoints text={answer.answer} units={answer.answerUnits} readable list={q.format === "list"} />
+          <AnswerPoints text={answer.answer} units={q.format === "ox" ? [] : answer.answerUnits} readable list={q.format === "list"} />
         </p>
       )}
       {answer.explanation?.trim() && !answer.personalAnswer ? (
         <section className="quiz-explanation bank-explanation" aria-label="해설">
           <h2>해설</h2>
-          <p><AnswerPoints text={answer.explanation} readable /></p>
+          <p><AnswerPoints text={answer.explanation} readable blueBold={q.format === "ox"} /></p>
         </section>
       ) : null}
       {/* 이전 O/X 은행의 채점 단위에 저장된 근거도 계속 보여 준다. */}
@@ -148,7 +148,7 @@ export function AnswerBody({ question: q, answer, preload }: {
           <h2>해설</h2>
           {answer.answerUnits.some((unit) => unit.trim() && !/^[OX]$/i.test(unit.trim())) ? (
             <ul>{answer.answerUnits.filter((unit) => unit.trim() && !/^[OX]$/i.test(unit.trim())).map((unit, index) => (
-              <li key={index} className="bank-answer-point"><AnswerPoints text={unit} readable /></li>
+              <li key={index}><AnswerPoints text={unit} readable blueBold /></li>
             ))}</ul>
           ) : <p>이 문항에 등록된 해설이 없습니다.</p>}
         </section>

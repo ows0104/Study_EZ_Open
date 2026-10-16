@@ -3,6 +3,8 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, openSignedFile } from "../api";
 import { bumpPreviewVersion } from "../bridge/previewBridge";
 import { Stem } from "../lecture/Stem";
+import { editorQuestion, saveQuestion } from "../bank/authoring";
+import { AnswerPoints } from "../bank/AnswerPoints";
 import type { BankFormat, BankFullQuestion, BankReviewBoard, BankReviewCard, BankReviewGroup } from "../types/bank";
 
 const decisionLabel = { edit: "수정함", accept: "검토 완료", delete: "제외함" };
@@ -113,8 +115,8 @@ function ReviewRow({ group, card, onChanged, focus }: {
           {q.answer_pairs?.map((p, i) => <div key={i}>{p.left} → {p.right}</div>)}
           {q.correct_order?.length ? <p>{q.correct_order.join(" → ")}</p> : null}
         </dd>
-        <dt>채점 단위</dt><dd>{q.answer_units?.join(" · ")}</dd>
-        {q.explanation ? <><dt>해설</dt><dd><Stem text={q.explanation} /></dd></> : null}
+
+        {q.explanation ? <><dt>해설</dt><dd><AnswerPoints text={q.explanation} blueBold={q.format === "ox"} /></dd></> : null}
         {q.option_pools?.length ? <><dt>선지 변형</dt><dd>{q.option_pools.map(pool => <details key={pool.pool_id}>
           <summary>{pool.pool_id} · 후보 {pool.candidates.length}개 중 {pool.select_count}개 · {pool.correct_when === "true" ? "참" : "거짓"} 선택</summary>
           {pool.candidates.map(c => <div key={c.candidate_id}><b>{c.candidate_id}</b>
@@ -167,7 +169,7 @@ function Pairs({ label, values, onChange, leftLabel, rightLabel }: {
 export function QuestionEditor({ question, group, busy, onSave, onCancel }: {
   question: BankFullQuestion; group: BankReviewGroup; busy: boolean; onSave: (q: BankFullQuestion) => Promise<void>; onCancel: () => void;
 }) {
-  const [q, setQ] = useState<BankFullQuestion>(() => structuredClone(question));
+  const [q, setQ] = useState<BankFullQuestion>(() => editorQuestion(structuredClone(question)));
   function field<K extends keyof BankFullQuestion>(key: K, value: BankFullQuestion[K]) { setQ(prev => ({ ...prev, [key]: value })); }
   function format(value: BankFormat) {
     setQ(prev => ({ ...prev, format: value,
@@ -182,10 +184,10 @@ export function QuestionEditor({ question, group, busy, onSave, onCancel }: {
   }
   const trim = (items: string[]) => items.map(x => x.trim()).filter(Boolean);
   function cleaned(): BankFullQuestion {
-    return { ...q, question: q.question.trim(), answer: q.answer.trim(),
+    return saveQuestion({ ...q, question: q.question.trim(), answer: q.answer.trim(),
       answer_units: trim(q.answer_units), prerequisites: trim(q.prerequisites),
       matching_left: trim(q.matching_left), matching_right: trim(q.matching_right),
-      sequence_items: trim(q.sequence_items), correct_order: trim(q.correct_order), correct_option_ids: trim(q.correct_option_ids) };
+      sequence_items: trim(q.sequence_items), correct_order: trim(q.correct_order), correct_option_ids: trim(q.correct_option_ids) });
   }
   return <form className="card-review-edit" onSubmit={e => { e.preventDefault(); void onSave(cleaned()); }}>
     <fieldset disabled={busy} className="bank-edit-fields">
@@ -193,10 +195,12 @@ export function QuestionEditor({ question, group, busy, onSave, onCancel }: {
       <label>문항 형식<select value={q.format} onChange={e => format(e.target.value as BankFormat)}>{formats.map(f => <option key={f} value={f}>{formatLabels[f]}</option>)}</select></label>
       <label>회상 방향<select value={q.retrieval_direction} onChange={e => field("retrieval_direction", e.target.value)}>{Object.entries(directionLabels).map(([d, text]) => <option key={d} value={d}>{text}</option>)}</select></label>
       <label>질문<textarea rows={4} required value={q.question} onChange={e => field("question", e.target.value)} /></label>
-      {q.format === "cloze" ? <small>빈칸은 {"{{c1}}"}, {"{{c2}}"}로 표시하고 채점 단위는 빈칸 등장 순서로 적으세요.</small> : null}
-      <label>정답<textarea rows={3} required value={q.answer} onChange={e => field("answer", e.target.value)} /></label>
+      {q.format === "cloze" ? <small>가릴 답을 {"{정답}"}으로 감싸세요. 발문만 수정하면 정답도 함께 바뀝니다.</small> : null}
+      {["basic", "list", "ox"].includes(q.format) ? <label>정답<textarea rows={3} required value={q.answer} onChange={e => field("answer", e.target.value)} />
+        {q.format === "list" ? <small>한 줄에 한 항목</small> : null}</label> : null}
       <label>해설<textarea rows={3} value={q.explanation ?? ""} onChange={e => field("explanation", e.target.value)} /></label>
-      <Lines label="채점 단위" values={q.answer_units} onChange={v => field("answer_units", v)} />
+      {["mcq", "multi_select"].includes(q.format) ? <Lines label="선지별 해설" values={q.answer_units} onChange={v => field("answer_units", v)} /> : null}
+      {q.format === "ox" ? <small>해설의 핵심 감별 포인트·키워드를 {"**강조**"}로 감싸면 파란색으로 표시됩니다.</small> : null}
       <fieldset><legend>선행 문항{q.retrieval_direction === "integration" ? " · 통합 문항은 필수" : ""}</legend>
         <small>기초가 되는 문항을 선택하세요.</small>
         <div className="bank-prerequisites">{group.questions.filter(p => p.id !== q.question_id).map(p => <label key={p.id}>
