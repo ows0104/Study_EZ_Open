@@ -143,6 +143,34 @@ def test_족보를_안_잘랐으면_조용히_빈손(tmp_path, monkeypatch):
     assert bank.jokbo_slices(tmp_path, "약리학", {"r": Path("a.pdf")}) == {}
 
 
+def test_jokbo_pin_change_reselects_only_the_affected_cached_lecture(tmp_path, monkeypatch):
+    cut = _cut(tmp_path)
+    monkeypatch.setattr(bank.deck, "jokbo_dir", lambda runs, subject: cut)
+    pins = cut.parent / "pins.json"
+    new_slice = cut / "L10.md"
+    new_slice.write_text("# 질환 족보", encoding="utf-8")
+    calls = []
+
+    def select(argv, **kwargs):
+        sources = argv[argv.index("--out") + 2:]
+        calls.append(sources)
+        wanted = json.loads(pins.read_text(encoding="utf-8")) if pins.exists() else {}
+        rows = [{"source": source, "slice": str(new_slice if "261006_03" in source
+                 and "261006_03" in wanted else cut / "L12-13.md"), "score": 1.0}
+                for source in sources]
+        Path(argv[argv.index("--out") + 1]).write_text(json.dumps(rows), encoding="utf-8")
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", select)
+    sources = {rid: Path(f"x/[{rid}] 강의.pdf") for rid in ("261006_02", "261006_03")}
+    first = bank.jokbo_slices(tmp_path, "약리학", sources)
+    pins.write_text('{"261006_03":"질환"}', encoding="utf-8")
+    second = bank.jokbo_slices(tmp_path, "약리학", sources)
+    assert first["261006_03"] == cut / "L12-13.md" and second["261006_03"] == new_slice
+    assert calls[1] == [str(sources["261006_03"])]
+    assert bank.jokbo_slices(tmp_path, "약리학", sources) == second and len(calls) == 2
+
+
 # ── runner bank ───────────────────────────────────────────────────
 
 def test_올해_필기_전에도_시간표_교수의_족보를_예습에_올린다(tmp_path, monkeypatch):
