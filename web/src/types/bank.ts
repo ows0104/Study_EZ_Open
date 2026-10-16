@@ -4,6 +4,8 @@
 // 문항 필드 이름은 서버가 저장한 꼴 그대로(snake_case)다 — 은행 JSON 을 옮겨 적지 않고 싣는다.
 
 export type BankTimeline = {
+  /** 관리자에게만. 삭제 전 동시 변경 확인용 버전. */
+  deleteVersion?: string | null;
   shareUrl?: string;
   /** 공유 링크를 새로 저장한 서버 시각. 기존 링크는 null. */
   linkedAt?: string | null;

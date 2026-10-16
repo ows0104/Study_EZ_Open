@@ -9,7 +9,7 @@ import { BankBuildTimes } from "./BankBuildTimes";
 import "./overview.css";
 
 export type StudyLecture = Pick<LectureRef, "subject" | "runId" | "title" | "bankTimeline" | "mastery" | "cardProgress"> & {
-  date: string; course: string; ready: boolean; key: string;
+  date: string; course: string; ready: boolean; key: string; eventKey?: string;
 };
 
 function lectureRows(events: TimetableEvent[]): StudyLecture[] {
@@ -25,7 +25,7 @@ function lectureRows(events: TimetableEvent[]): StudyLecture[] {
     const course = blocks.get(blockKey(event.course || event.lectures[0]?.subject || "")) || "기타 강의";
     for (const l of event.lectures) {
       const key = `${l.subject}/${l.runId}`;
-      if (!rows.has(key)) rows.set(key, { ...l, key, date: event.date, course, ready: l.marks.quiz });
+      if (!rows.has(key)) rows.set(key, { ...l, key, eventKey: `event:${event.id}`, date: event.date, course, ready: l.marks.quiz });
     }
     if (!event.lectures.length && ["lecture", "practice"].includes(event.category)) {
       const key = `event:${event.id}`;
@@ -49,9 +49,11 @@ function StageBar({ value }: { value: CardProgress }) {
 }
 
 /** One list for seeing every lecture, comparing progress, and starting mixed study. */
-export function StudyOverview({ events, onStart, adminActions }: {
+export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], onVisibility, managing = false, onDeleteQuiz }: {
   events: TimetableEvent[]; onStart: (lectures: StudyLecture[]) => void;
   adminActions?: (lectures: StudyLecture[]) => React.ReactNode;
+  hiddenKeys?: string[]; onVisibility?: (keys: string[], hidden: boolean, count: number) => void; managing?: boolean;
+  onDeleteQuiz?: (lectures: StudyLecture[]) => void;
 }) {
   const rows = useMemo(() => lectureRows(events), [events]);
   const [course, setCourse] = useState(() => {
@@ -63,7 +65,11 @@ export function StudyOverview({ events, onStart, adminActions }: {
   const [sort, setSort] = useState("date");
   const [showPlan, setShowPlan] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const scoped = rows.filter(l => !course || l.course === course);
+  const hidden = new Set(hiddenKeys);
+  const isHidden = (l: StudyLecture) => hidden.has(l.key) || Boolean(l.eventKey && hidden.has(l.eventKey));
+  const inCourse = rows.filter(l => !course || l.course === course);
+  const scoped = inCourse.filter(l => !isHidden(l));
+  const hiddenCount = inCourse.length - scoped.length;
   const totals = scoped.reduce((sum, l) => {
     if (l.cardProgress) for (const key of Object.keys(empty) as (keyof CardProgress)[]) sum[key] += l.cardProgress[key];
     return sum;
@@ -71,19 +77,28 @@ export function StudyOverview({ events, onStart, adminActions }: {
   const assessed = scoped.filter(l => l.mastery);
   const score = assessed.length ? Math.round(assessed.reduce((sum, l) => sum + l.mastery!.score, 0) / assessed.length) : null;
   const available = scoped.filter(l => l.ready).length;
-  const visible = scoped.filter(l => `${l.title} ${l.date} ${l.subject}`.toLowerCase().includes(search.toLowerCase())
-    && (filter === "all" || filter === "review" && (l.cardProgress?.reviewDue ?? 0) > 0
+  const visible = (filter === "hidden" ? inCourse.filter(isHidden) : scoped)
+    .filter(l => `${l.title} ${l.date} ${l.subject}`.toLowerCase().includes(search.toLowerCase())
+    && (filter === "all" || filter === "hidden" || filter === "review" && (l.cardProgress?.reviewDue ?? 0) > 0
       || filter === "new" && (l.cardProgress?.newRemaining ?? 0) > 0 || filter === "pending" && !l.ready))
     .sort((a, b) => sort === "score" ? (a.mastery?.score ?? 101) - (b.mastery?.score ?? 101) || a.date.localeCompare(b.date)
       : sort === "review" ? (b.cardProgress?.reviewDue ?? 0) - (a.cardProgress?.reviewDue ?? 0) || a.date.localeCompare(b.date) : 0);
-  const chosen = rows.filter(l => l.ready && selected.has(l.key));
-  const selectable = visible.filter(l => l.ready);
+  const selectedRows = rows.filter(l => selected.has(l.key) && isHidden(l) === (filter === "hidden"));
+  const chosen = selectedRows.filter(l => l.ready && !isHidden(l));
+  const deletable = selectedRows.filter(l => l.bankTimeline?.deleteVersion);
+  const selectable = visible.filter(l => onVisibility || l.ready);
   const allChecked = selectable.length > 0 && selectable.every(l => selected.has(l.key));
   const toggle = (keys: string[], checked: boolean) => setSelected(old => {
     const next = new Set(old);
     keys.forEach(key => checked ? next.add(key) : next.delete(key));
     return next;
   });
+  const changeVisibility = (keys: string[], value: boolean) => {
+    const affected = rows.filter(l => keys.includes(l.key));
+    const savedKeys = value ? keys : [...new Set([...keys, ...affected.flatMap(l => l.eventKey ? [l.eventKey] : [])])];
+    onVisibility?.(savedKeys, value, keys.length);
+    toggle(keys, false);
+  };
 
   return <section className="study-overview">
     <header className="overview-heading">
@@ -118,19 +133,26 @@ export function StudyOverview({ events, onStart, adminActions }: {
       <label>검색 <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="강의명 · 날짜 · 과목" /></label>
       <label>보기 <select value={filter} onChange={e => setFilter(e.target.value)}>
         <option value="all">모든 강의</option><option value="new">새 학습 남음</option><option value="review">복습할 카드 있음</option><option value="pending">준비 전</option>
+        {onVisibility ? <option value="hidden">숨긴 강의 ({hiddenCount})</option> : null}
       </select></label>
       <label>정렬 <select value={sort} onChange={e => setSort(e.target.value)}>
         <option value="date">강의 순서</option><option value="score">학습률 낮은 순</option><option value="review">복습 많은 순</option>
       </select></label>
-      <span>{visible.length} / {scoped.length}강의</span>
+      <span>{visible.length} / {filter === "hidden" ? hiddenCount : scoped.length}강의{hiddenCount ? ` · 숨김 ${hiddenCount}` : ""}</span>
     </div>
     <div className="overview-selection">
-      <label><input type="checkbox" checked={allChecked} disabled={!selectable.length}
+      <label><input type="checkbox" checked={allChecked} disabled={managing || !selectable.length}
         onChange={e => toggle(selectable.map(l => l.key), e.target.checked)} /> 표시된 강의 선택</label>
-      <button className="is-quiet" disabled={!chosen.length} onClick={() => setSelected(new Set())}>선택 해제</button>
-      <button disabled={!chosen.length} onClick={() => onStart(chosen)}>{chosen.length}강의 모아 풀기</button>
+      <button className="is-quiet" disabled={!selected.size || managing} onClick={() => setSelected(new Set())}>선택 해제</button>
+      {filter !== "hidden" ? <button disabled={!chosen.length || managing} onClick={() => onStart(chosen)}>{chosen.length}강의 모아 풀기</button> : null}
+      {onVisibility ? <button className="is-quiet" disabled={!selectedRows.length || managing}
+        onClick={() => changeVisibility(selectedRows.map(l => l.key), filter !== "hidden")}>
+        선택 {selectedRows.length}강의 {filter === "hidden" ? "복원" : "숨기기"}</button> : null}
+      {onDeleteQuiz ? <button className="is-quiet overview-delete" disabled={!deletable.length || managing}
+        onClick={() => onDeleteQuiz(deletable)}>선택 퀴즈 삭제 ({deletable.length})</button> : null}
       {chosen.some(l => !visible.includes(l)) ? <small>다른 보기에서 선택한 강의 포함</small> : null}
     </div>
+    {filter === "hidden" ? <p className="bank-note">숨긴 강의는 위 집계와 모아 풀기에서 제외됩니다. 복원하면 기존 학습 기록으로 이어집니다.</p> : null}
     <div className="overview-table-wrap">
       <table className="overview-table">
         <caption className="sr-only">전체 강의별 카드 상태와 학습률</caption>
@@ -139,7 +161,7 @@ export function StudyOverview({ events, onStart, adminActions }: {
         <tbody>{visible.map(l => {
           const p = l.cardProgress;
           return <tr key={l.key} className={!l.ready ? "is-pending" : ""}>
-            <th scope="row"><div className="overview-lecture"><input type="checkbox" aria-label={`${l.title} 선택`} disabled={!l.ready}
+            <th scope="row"><div className="overview-lecture"><input type="checkbox" aria-label={`${l.title} 선택`} disabled={managing || (!onVisibility && !l.ready)}
               checked={selected.has(l.key)} onChange={e => toggle([l.key], e.target.checked)} />
               <div>{l.runId ? <Link to={lectureHref(l)}>{l.title}</Link> : <span>{l.title}</span>}
                 <small>{l.date} · {l.subject}{!l.ready ? " · 준비 전" : ""}</small>
@@ -148,6 +170,12 @@ export function StudyOverview({ events, onStart, adminActions }: {
                   <BankBuildTimes timeline={l.bankTimeline} />
                   {l.bankTimeline.shareUrl ? <a href={l.bankTimeline.shareUrl} target="_blank" rel="noreferrer">퀴즈뱅크 링크 ↗</a> : null}
                 </details> : null}
+                {onVisibility || onDeleteQuiz ? <div className="overview-row-actions">
+                  {onVisibility ? <button className="is-quiet" disabled={managing} aria-label={`${l.title} ${isHidden(l) ? "복원" : "숨기기"}`}
+                    onClick={() => changeVisibility([l.key], !isHidden(l))}>{isHidden(l) ? "복원" : "숨기기"}</button> : null}
+                  {onDeleteQuiz && l.bankTimeline?.deleteVersion ? <button className="is-quiet overview-delete" disabled={managing}
+                    aria-label={`${l.title} 퀴즈 삭제`} onClick={() => onDeleteQuiz([l])}>퀴즈 삭제</button> : null}
+                </div> : null}
               </div></div></th>
             <td>{p ? number(p.total) : "—"}{p?.suspended ? <small>제외 {p.suspended}</small> : null}</td>
             <td>{p ? number(p.seen) : "—"}{p && p.total > 0 ? <small>{Math.round(p.seen / p.total * 100)}%</small> : null}</td>

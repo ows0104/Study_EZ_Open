@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import { takeTimetable } from "../firstScreen";
@@ -6,6 +6,7 @@ import { useMe } from "../useMe";
 import type { TimetableEvent } from "../types/lectures";
 import type { BankNext, BankSession } from "../types/bank";
 import { StudyOverview, type StudyLecture } from "./StudyOverview";
+import { DeleteQuizDialog } from "./DeleteQuizDialog";
 import { BankSolve, type BatchStudy } from "./BankSolve";
 import { useBankUndo } from "./useBankUndo";
 import "./batch.css";
@@ -19,6 +20,12 @@ export function BankBatchPage() {
   const me = useMe();
   const storageKey = `studyez-batch:${me?.id ?? ""}`;
   const [events, setEvents] = useState<TimetableEvent[] | null>(null);
+  const [hiddenKeys, setHiddenKeys] = useState<string[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [managing, setManaging] = useState(false);
+  const [manageMessage, setManageMessage] = useState("");
+  const [deleting, setDeleting] = useState<StudyLecture[] | null>(null);
+  const requestVersion = useRef(0);
   const [queue, setQueue] = useState<Queue | null>(() => {
     try {
       const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? "null") as Queue | null;
@@ -49,18 +56,18 @@ export function BankBatchPage() {
     const previousTitle = document.title;
     document.title = "학습 현황 · Study_EZ";
     let live = true;
-    let request = 0;
     function load(initial = false) {
-      const current = ++request;
-      (initial ? takeTimetable() : api<{ events: TimetableEvent[] }>("/api/timetable"))
-        .then(data => { if (live && current === request) { setEvents(data.events); setError(""); } })
-        .catch((cause: Error) => { if (live && current === request) setError(cause.message); });
+      const current = ++requestVersion.current;
+      Promise.all([initial && !refreshKey ? takeTimetable() : api<{ events: TimetableEvent[] }>("/api/timetable"),
+        api<{ keys: string[] }>("/api/me/study-hidden")])
+        .then(([data, hidden]) => { if (live && current === requestVersion.current) { setEvents(data.events); setHiddenKeys(hidden.keys); setError(""); } })
+        .catch((cause: Error) => { if (live && current === requestVersion.current) setError(cause.message); });
     }
     const refresh = () => load();
     load(true);
     window.addEventListener("focus", refresh);
     return () => { live = false; window.removeEventListener("focus", refresh); document.title = previousTitle; };
-  }, [queue !== null]);
+  }, [queue !== null, refreshKey]);
   useEffect(() => {
     try {
       if (queue) sessionStorage.setItem(storageKey, JSON.stringify(queue));
@@ -72,6 +79,21 @@ export function BankBatchPage() {
     if (summary?.reason === "user_finished") setPaused(true);
     else setDone(true);
   }, []);
+
+  async function setVisibility(keys: string[], hidden: boolean, count: number) {
+    if (managing) return;
+    ++requestVersion.current;
+    setManaging(true); setManageMessage(""); setError("");
+    try {
+      const result = await api<{ keys: string[] }>("/api/me/study-hidden", {
+        method: "PATCH", body: JSON.stringify({ keys, hidden }),
+      });
+      ++requestVersion.current;
+      setHiddenKeys(result.keys);
+      setManageMessage(`${count}강의를 ${hidden ? "숨겼습니다. ‘숨긴 강의’에서 복원할 수 있습니다." : "복원했습니다."}`);
+    } catch (cause) { setError((cause as Error).message); }
+    finally { setManaging(false); }
+  }
 
   if (queue) return <>
     <div className="batch-progress" role="status">
@@ -93,8 +115,16 @@ export function BankBatchPage() {
 
   return <>
     {error ? <p className="notice is-error" role="alert">{error}</p> : null}
+    {manageMessage ? <p className="notice" role="status">{manageMessage}</p> : null}
+    {deleting ? <DeleteQuizDialog lectures={deleting} onClose={() => setDeleting(null)} onDeleted={keys => {
+      setEvents(old => old?.map(event => ({ ...event, lectures: event.lectures.map(l => keys.includes(`${l.subject}/${l.runId}`)
+        ? { ...l, marks: { ...l.marks, quiz: false }, bankTimeline: null, cardProgress: null, mastery: null } : l) })) ?? null);
+      setManageMessage(`${keys.length}강의의 퀴즈를 삭제했습니다.`);
+      setRefreshKey(old => old + 1);
+    }} /> : null}
     {!events ? <p className="notice" role="status">전체 강의와 학습 현황을 불러오는 중…</p>
-      : <StudyOverview events={events} onStart={chosen => {
+      : <StudyOverview events={events} hiddenKeys={hiddenKeys} managing={managing || auditing || deleting !== null}
+        onVisibility={(keys, hidden, count) => void setVisibility(keys, hidden, count)} onDeleteQuiz={me?.isAdmin ? setDeleting : undefined} onStart={chosen => {
         setPaused(false); setDone(false);
         setQueue({ lectures: chosen.map(({ subject, runId, title, date }) => ({ subject, runId, title, date })) });
       }} adminActions={me?.isAdmin ? chosen => <>

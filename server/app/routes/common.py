@@ -32,15 +32,16 @@ def bank_timelines(db: Session, keys: list[LectureKey], *, is_admin: bool = Fals
         return {}
     wanted = set(keys)
     rows = db.execute(select(QuizBank.subject, QuizBank.run_id, QuizBank.share_url,
-                             QuizBank.linked_at, QuizBank.built_at, QuizBank.open_to_students).where(
+                             QuizBank.linked_at, QuizBank.built_at, QuizBank.open_to_students, QuizBank.updated_at).where(
         QuizBank.subject.in_({s for s, _ in keys}), QuizBank.run_id.in_({r for _, r in keys})))
 
     def iso(value):
         return (value if value.tzinfo else value.replace(tzinfo=UTC)).isoformat() if value else None
 
     return {(s, r): {"shareUrl": share, "linkedAt": iso(linked),
-                     "builtAt": iso(built) if is_admin or opened else None}
-            for s, r, share, linked, built, opened in rows
+                     "builtAt": iso(built) if is_admin or opened else None,
+                     **({"deleteVersion": iso(updated)} if is_admin else {})}
+            for s, r, share, linked, built, opened, updated in rows
             if (s, r) in wanted and (is_admin or opened or share)}
 
 

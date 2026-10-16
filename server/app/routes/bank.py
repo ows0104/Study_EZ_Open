@@ -64,6 +64,7 @@ from app.models import (
     PrequizJob,
     Profile,
     QuizBank,
+    QuizBankArchive,
     TimetableEvent,
 )
 from app.routes.common import lecture_or_404, record_grabs, storage_or_503
@@ -437,6 +438,30 @@ def request_runner_bank_audit(subject: str, run_id: str, user: CurrentUser = Dep
 
 class OpenIn(BaseModel):
     open: bool
+
+
+@admin_router.delete("/lectures/{subject}/{run_id}/bank")
+def delete_bank(subject: str, run_id: str, version: str = Query(..., min_length=1),
+                user: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)) -> dict:
+    lecture = lecture_or_404(db, subject, run_id)
+    row = db.scalars(select(QuizBank).where(QuizBank.subject == lecture.subject,
+                     QuizBank.run_id == lecture.run_id).with_for_update()).first()
+    if row is None:
+        raise HTTPException(404, "삭제할 퀴즈가 없습니다.")
+    if _iso(row.updated_at) != version:
+        raise HTTPException(409, "퀴즈가 변경됐습니다. 목록을 새로고침한 뒤 다시 삭제하세요.")
+    if open_job_of(db, lecture.subject, lecture.run_id, JOB_BANK):
+        raise HTTPException(409, "생성·검증 작업이 진행 중입니다. 작업을 끝내거나 취소한 뒤 삭제하세요.")
+    snapshot = {column.name: (_iso(value) if isinstance(value, datetime) else value)
+                for column in QuizBank.__table__.columns
+                for value in [getattr(row, column.name)]}
+    archive = QuizBankArchive(subject=lecture.subject, run_id=lecture.run_id,
+                              deleted_by=user.id, snapshot=snapshot)
+    db.add(archive)
+    db.delete(row)
+    # Archive and removal are atomic. History, personal edits, and sources belong to the lecture.
+    db.commit()
+    return {"deleted": True, "archiveId": archive.id}
 
 
 @admin_router.put("/lectures/{subject}/{run_id}/bank/open")

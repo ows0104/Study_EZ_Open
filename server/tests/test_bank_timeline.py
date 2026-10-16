@@ -73,7 +73,9 @@ def main():
     assert uploaded.status_code == 200, uploaded.text
     assert uploaded.json()["status"] == "ready", uploaded.text
     expected = {"shareUrl": SHARE + "-new", "linkedAt": FIRST.isoformat(), "builtAt": SECOND.isoformat()}
-    assert timeline(client) == expected
+    admin_timeline = timeline(client)
+    assert admin_timeline.pop("deleteVersion")
+    assert admin_timeline == expected
     # Student list has public timestamps but never the administrator's personal URL.
     app.dependency_overrides[get_current_user] = lambda: CurrentUser(
         id="student", email="s@example.com", is_admin=False, apps=dict.fromkeys(APP_POLICY, ROLE_ADMIN))
