@@ -2,6 +2,9 @@
 
 자료를 찾고 생성기를 실행한 뒤 결과를 서버에 올린다.
 명령은 [명령 안내](../docs/commands.md), 검사는 `python -m pytest tests/runner`다.
+숨김 실행 중인 러너는 `powershell -File scripts/runner-status.ps1`로 상태 창을 연다.
+로컬 로그·프로세스만 5초마다 읽어 현재 강의·단계·생존 신호를 표시하며 서버를 조회하지 않는다.
+창을 닫아도 기존 러너는 계속 실행된다. 텍스트 표시는 `-Console`, 한 번만 확인은 `-Once`다.
 
 ## 수정 위치
 

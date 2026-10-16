@@ -5,7 +5,7 @@ import type { AdminOverview, CardReview } from "../types/admin";
 import type { AppUser } from "../types/account";
 import type { BankReportBoard } from "../types/bank";
 import type { JobBoard } from "../types/jobs";
-import { jobMoving, jobOpen } from "../jobProgress";
+import { jobOpen } from "../jobProgress";
 import { BankReportTab } from "./BankReportTab";
 import { BankCardReview } from "./BankCardReview";
 import { FeedbackTab } from "./FeedbackTab";
@@ -15,7 +15,7 @@ import { UsageTab } from "./UsageTab";
 import { QuizTab } from "./QuizTab";
 import { UsersTab } from "./UsersTab";
 import { isUnconfirmed, isUnmatched, pending, runnerAlive } from "./rows";
-import { mergeJobBoard, resultsChanged } from "./jobUpdates";
+import { ADMIN_REFRESH_MS, mergeJobBoard, refreshDue, resultsChanged } from "./jobUpdates";
 
 /**
  * 관리 화면의 겉틀.
@@ -53,6 +53,7 @@ export function AdminPage() {
   const [error, setError] = useState("");
   const boardRef = useRef<JobBoard | null>(null);
   const loadingJobs = useRef(false);
+  const [lastJobsFetchedAt, setLastJobsFetchedAt] = useState(0);
 
   const loadOverview = useCallback(() => {
     return api<AdminOverview>("/api/admin/overview")
@@ -74,7 +75,10 @@ export function AdminPage() {
     try {
       acceptBoard(await api<JobBoard>("/api/admin/prequiz-jobs"));
     } catch { /* 다음 주기에 재시도한다. */ }
-    finally { loadingJobs.current = false; }
+    finally {
+      loadingJobs.current = false;
+      setLastJobsFetchedAt(Date.now());
+    }
   }, [acceptBoard]);
 
   const load = useCallback(() => {
@@ -111,24 +115,20 @@ export function AdminPage() {
   useEffect(loadReview, [loadReview]);
   useEffect(loadReports, [loadReports]);
 
-  // 도는 일감이 있는 동안만 다시 읽는다. 한 편에 15분이 걸리는데 사람이 새로고침을
-  // 눌러야 진행이 보이면, 그 진행은 없는 것과 같다. 끝나면 폴링도 멈춘다.
-  //
-  // **`held`는 안 센다.** 사람을 기다리는 줄이라 다시 읽어 봐야 같은 값이다.
-  const working = board
-    ? board.running.length > 0 || board.waiting.length > 0
-    : (overview?.lectures ?? []).some((row) => jobMoving(row.prequizJob));
+  // 로컬 작업은 화면과 독립적으로 돈다. 마지막 조회 이후 10분 뒤에 상태만 읽는다.
   useEffect(() => {
-    if (!working) return;
-    // 진행 중에는 작은 작업 현황만 읽고, 결과 목록은 작업 상태가 바뀔 때 갱신한다.
-    const timer = window.setInterval(() => { if (!document.hidden) void loadJobs(); }, 10_000);
-    return () => window.clearInterval(timer);
-  }, [working, loadJobs]);
+    const timer = window.setTimeout(() => {
+      if (!document.hidden) void loadJobs();
+    }, ADMIN_REFRESH_MS);
+    return () => window.clearTimeout(timer);
+  }, [loadJobs, lastJobsFetchedAt]);
   useEffect(() => {
-    const visible = () => { if (!document.hidden) void loadJobs(); };
+    const visible = () => {
+      if (!document.hidden && refreshDue(lastJobsFetchedAt)) void loadJobs();
+    };
     document.addEventListener("visibilitychange", visible);
     return () => document.removeEventListener("visibilitychange", visible);
-  }, [loadJobs]);
+  }, [loadJobs, lastJobsFetchedAt]);
 
   if (error) return <p className="notice is-error">{error}</p>;
   if (!overview) return <p className="notice">불러오는 중…</p>;
@@ -146,6 +146,10 @@ export function AdminPage() {
   return (
     <div className="admin">
       <h1>관리</h1>
+      <p className="admin-summary">
+        자동 갱신 10분 · 로컬 작업은 이 화면을 닫아도 계속됩니다.{" "}
+        <button type="button" className="is-quiet" onClick={load}>지금 새로고침</button>
+      </p>
       <p className="admin-summary">
         강의 {overview.lectures.length}편 · 러너{" "}
         <strong>{runnerAlive(overview.runner) ? (overview.runner?.busy ? "만드는 중" : "대기") : "안 붙음"}</strong>

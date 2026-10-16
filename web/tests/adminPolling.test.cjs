@@ -14,9 +14,17 @@ function load(file) {
   vm.runInContext(js, context);
   return context.exports;
 }
-const { mergeJobBoard, resultsChanged } = load('admin/jobUpdates.ts');
+const { ADMIN_REFRESH_MS, mergeJobBoard, refreshDue, resultsChanged } = load('admin/jobUpdates.ts');
 const job = (id, state, extra = {}) => ({ id, subject: 'local', runId: 'demo', state, ...extra });
 const board = (...jobs) => ({ jobs, runner: { lastSeen: 'fresh', busy: true } });
+
+test('automatic and tab-return refreshes wait ten minutes since the last read', () => {
+  assert.equal(ADMIN_REFRESH_MS, 600000);
+  assert.equal(refreshDue(1000, 11000), false);
+  assert.equal(refreshDue(1000, 600999), false);
+  assert.equal(refreshDue(1000, 601000), true);
+  assert.equal(refreshDue(1000, 1201000), true);
+});
 
 test('progress ticks keep results; completion/failure/held/missing active jobs refresh once', () => {
   const running = board(job(1, 'running', { stage: 'validate' }));

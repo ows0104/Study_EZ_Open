@@ -2,6 +2,13 @@ import type { AdminOverview } from "../types/admin";
 import type { JobBoard, PrequizJob } from "../types/jobs";
 import { jobMoving } from "../jobProgress";
 
+export const ADMIN_REFRESH_MS = 10 * 60_000;
+
+/** Returning to a tab must not turn repeated tab switches into extra polling. */
+export function refreshDue(lastFetchedAt: number, now = Date.now()): boolean {
+  return now - lastFetchedAt >= ADMIN_REFRESH_MS;
+}
+
 /** Progress updates don't require reloading bank contents or review reports. */
 export function mergeJobBoard(overview: AdminOverview, board: JobBoard): AdminOverview {
   const latest = new Map<string, PrequizJob>();
