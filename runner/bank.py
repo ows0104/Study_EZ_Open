@@ -36,7 +36,7 @@ def jokbo_slices(runs_dir: Path, subject: str, sources: dict[str, Path]) -> dict
     """run_id → 그 편의 족보 조각(.md). 조각이 없거나 문턱 아래인 편은 빠진다.
 
     판정은 하위 프로세스(`python -m quizgen.slicefor`)라 느리다 — 쓸기가 10분마다 도므로
-    편마다 `runs/<id>/bank/jokbo.json` 에 적어 두고, **컷이나 필기 파일이 바뀔 때만** 다시 잰다.
+    편마다 `runs/<id>/bank/jokbo.json` 에 적어 두고, **컷·필기·그 편의 족보 지정이 바뀔 때** 다시 잰다.
     """
     cut = deck.jokbo_dir(runs_dir, subject)
     if not (cut / "index.json").is_file():
