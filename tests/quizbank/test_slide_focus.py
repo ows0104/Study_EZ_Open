@@ -142,6 +142,22 @@ def test_finalization_reuses_nested_organizer_evidence_and_prefers_explicit_root
     assert (tmp_path / "bank.json").read_bytes() == before
 
 
+def test_rerun_clears_previous_nested_evidence_before_an_unfinished_organization(tmp_path, monkeypatch):
+    from quizbank import run
+    out = tmp_path / "run"
+    nested = out / "organize/authored-evidence.json"
+    nested.parent.mkdir(parents=True)
+    nested.write_text('{"old":"must not survive a new attempt"}', encoding="utf-8")
+    raw = tmp_path / "raw.md"
+    raw.write_text("new response", encoding="utf-8")
+    def unfinished(*args, **kwargs):
+        raise SessionError("organization did not finish")
+    monkeypatch.setattr(run.organize, "organize", unfinished)
+    with pytest.raises(SessionError, match="organization did not finish"):
+        run.run(raw, None, "기호", "demo", [], out, do_review=False, do_coverage=False)
+    assert not nested.exists()
+
+
 def test_new_unchanged_questions_use_authored_evidence_without_another_model_call(tmp_path, monkeypatch):
     pdf = tmp_path / "source.pdf"
     with fitz.open() as doc:

@@ -40,7 +40,7 @@ OUTPUTS += ("content-validation.json", "learning-structure.json", "learning-stru
 OUTPUTS += ("learning-structure.resolution.json",)
 OUTPUTS += ("option-pools.json", "option-pools.raw.json")
 OUTPUTS += ("review-reuse.jsonl",)
-OUTPUTS += ("authored-evidence.json",)
+OUTPUTS += ("authored-evidence.json", "organize/authored-evidence.json")
 MAX_REPAIR_ROUNDS = 3
 
 
