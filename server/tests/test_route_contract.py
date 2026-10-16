@@ -117,6 +117,7 @@ GET /api/spotter/subjects/{subject}/db
 GET /api/spotter/threads
 GET /api/spotter/threads/{kind}/{subject}
 GET /api/timetable
+POST /api/timetable/study-progress
 PATCH /api/spotter/admin/reports/{report_id}
 PATCH /api/admin/feedback/{feedback_id}
 PATCH /api/spotter/admin/threads/{kind}/{subject}

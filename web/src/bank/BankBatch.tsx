@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
-import { takeTimetable } from "../firstScreen";
 import { useMe } from "../useMe";
-import type { TimetableEvent } from "../types/lectures";
 import type { BankNext, BankSession } from "../types/bank";
 import { StudyOverview, type StudyLecture } from "./StudyOverview";
 import { DeleteQuizDialog } from "./DeleteQuizDialog";
 import { BankSolve, type BatchStudy } from "./BankSolve";
 import { useBankUndo } from "./useBankUndo";
+import { useStudyTimetable } from "./useStudyTimetable";
 import "./batch.css";
 
 type Lecture = Pick<StudyLecture, "subject" | "runId" | "title" | "date">;
@@ -19,7 +18,6 @@ const keyOf = (lecture: Lecture) => `${lecture.subject}/${lecture.runId}`;
 export function BankBatchPage() {
   const me = useMe();
   const storageKey = `studyez-batch:${me?.id ?? ""}`;
-  const [events, setEvents] = useState<TimetableEvent[] | null>(null);
   const [hiddenKeys, setHiddenKeys] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [managing, setManaging] = useState(false);
@@ -35,6 +33,7 @@ export function BankBatchPage() {
     } catch { return null; }
   });
   const [done, setDone] = useState(false);
+  const { events, setEvents, onScope, error: loadError } = useStudyTimetable(refreshKey, !queue);
   const [paused, setPaused] = useState(false);
   const [error, setError] = useState("");
   const [auditing, setAuditing] = useState(false);
@@ -56,15 +55,14 @@ export function BankBatchPage() {
     const previousTitle = document.title;
     document.title = "학습 현황 · Study_EZ";
     let live = true;
-    function load(initial = false) {
+    function load() {
       const current = ++requestVersion.current;
-      Promise.all([initial && !refreshKey ? takeTimetable() : api<{ events: TimetableEvent[] }>("/api/timetable"),
-        api<{ keys: string[] }>("/api/me/study-hidden")])
-        .then(([data, hidden]) => { if (live && current === requestVersion.current) { setEvents(data.events); setHiddenKeys(hidden.keys); setError(""); } })
+      api<{ keys: string[] }>("/api/me/study-hidden")
+        .then(hidden => { if (live && current === requestVersion.current) { setHiddenKeys(hidden.keys); setError(""); } })
         .catch((cause: Error) => { if (live && current === requestVersion.current) setError(cause.message); });
     }
     const refresh = () => load();
-    load(true);
+    load();
     window.addEventListener("focus", refresh);
     return () => { live = false; window.removeEventListener("focus", refresh); document.title = previousTitle; };
   }, [queue !== null, refreshKey]);
@@ -115,6 +113,8 @@ export function BankBatchPage() {
 
   return <>
     {error ? <p className="notice is-error" role="alert">{error}</p> : null}
+    {loadError ? <p className="notice is-error" role="alert">{loadError}{" "}
+      <button onClick={() => setRefreshKey(old => old + 1)}>다시 시도</button></p> : null}
     {manageMessage ? <p className="notice" role="status">{manageMessage}</p> : null}
     {deleting ? <DeleteQuizDialog lectures={deleting} onClose={() => setDeleting(null)} onDeleted={keys => {
       setEvents(old => old?.map(event => ({ ...event, lectures: event.lectures.map(l => keys.includes(`${l.subject}/${l.runId}`)
@@ -122,8 +122,9 @@ export function BankBatchPage() {
       setManageMessage(`${keys.length}강의의 퀴즈를 삭제했습니다.`);
       setRefreshKey(old => old + 1);
     }} /> : null}
-    {!events ? <p className="notice" role="status">전체 강의와 학습 현황을 불러오는 중…</p>
+    {!events ? !loadError && <p className="notice" role="status">강의 목록을 불러오는 중…</p>
       : <StudyOverview events={events} hiddenKeys={hiddenKeys} managing={managing || auditing || deleting !== null}
+        onScope={onScope}
         onVisibility={(keys, hidden, count) => void setVisibility(keys, hidden, count)} onDeleteQuiz={me?.isAdmin ? setDeleting : undefined} onStart={chosen => {
         setPaused(false); setDone(false);
         setQueue({ lectures: chosen.map(({ subject, runId, title, date }) => ({ subject, runId, title, date })) });

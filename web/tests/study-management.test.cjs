@@ -13,8 +13,8 @@ test('study management: personal hide/restore, pending events, deletion confirma
   page.setDefaultTimeout(10000);
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
-  const open = async suffix => { await page.goto(base + suffix); await page.getByRole('heading', { name: '학습 현황', exact: true }).waitFor(); };
-  const stat = page.locator('.overview-stats > div').first().locator('strong');
+  const open = async suffix => { await page.goto(base + suffix, { waitUntil: 'domcontentloaded', timeout: 30000 }); await page.getByRole('heading', { name: '학습 현황', exact: true }).waitFor(); };
+  const stat = page.locator('.overview-filters > span');
   const visibility = page.locator('.overview-filters select').first();
   try {
     await open('');

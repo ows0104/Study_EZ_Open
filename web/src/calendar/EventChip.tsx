@@ -13,22 +13,24 @@ export function EventChip({
   compact,
   onOpen,
   active,
+  showLearning = true,
 }: {
   entry: CalendarEntry;
   compact: boolean;
   onOpen: (entry: CalendarEntry) => void;
   active: boolean;
+  showLearning?: boolean;
 }) {
   const primary = entry.detail || entry.title;
-  const hasLearning = entry.lectures.length > 0;
-  const learning = entry.lectures.map(learningDescription).filter(Boolean).join(" · ");
+  const hasLearning = showLearning && entry.lectures.length > 0;
+  const learning = showLearning ? entry.lectures.map(learningDescription).filter(Boolean).join(" · ") : "";
   // 왼쪽 띠는 범주만 진다. 할 일이 남았는지는 제목의 무게로만 말하고,
   // 아래 막대는 왼쪽 예습 풀이율, 오른쪽 복습 학습도다.
   const className = [
     "calendar-event",
     hasLearning ? "has-learning" : "",
     `is-${entry.category}`,
-    hasTodo(entry) ? "state-todo" : "",
+    (showLearning || entry.category === "exam") && hasTodo(entry) ? "state-todo" : "",
     compact ? "is-compact" : "",
     // `is-active`가 아니다 — base.css의 `button.is-active`가 토글 버튼용으로 그
     // 이름을 이미 쓰고 있어서, 칸에 붙이면 계열과 무관하게 강조색 배경·글자색이

@@ -23,6 +23,7 @@ export function PanelGroup({
   title,
   note,
   fold = false,
+  onOpenChange,
   children,
 }: {
   /**
@@ -39,6 +40,7 @@ export function PanelGroup({
   note?: string;
   /** 접힌 채로 설 것인가. 머리 줄이 여닫는 손잡이가 된다. */
   fold?: boolean;
+  onOpenChange?: (open: boolean) => void;
   children: ReactNode;
 }) {
   /* 접는 쪽은 `<details>` 다. 여닫힌 상태를 React 가 들면 패널이 칸을 갈아탈
@@ -46,7 +48,9 @@ export function PanelGroup({
      칸을 닫을 때 같이 사라지고 다시 열면 접힌 채로 뜬다 - 여기서 바라는 그대로다. */
   if (fold) {
     return (
-      <details className={`panel-group is-${tone} is-fold`}>
+      <details className={`panel-group is-${tone} is-fold`} onToggle={e => {
+        if (e.target === e.currentTarget) onOpenChange?.(e.currentTarget.open);
+      }}>
         <summary className="panel-group-head">
           <span>{title}</span>
           {note ? <small>{note}</small> : null}

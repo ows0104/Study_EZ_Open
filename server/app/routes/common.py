@@ -26,13 +26,15 @@ from app.storage import ObjectStorage, StorageNotConfigured
 LectureKey = tuple[str, str]
 
 
-def bank_timelines(db: Session, keys: list[LectureKey], *, is_admin: bool = False) -> dict[LectureKey, dict]:
+def bank_timelines(db: Session, keys: list[LectureKey], *, is_admin: bool = False,
+                   include_ready: bool = False) -> dict[LectureKey, dict]:
     """목록용 시각만 일괄 조회한다. 원문·문항·개인 대화 주소는 싣지 않는다."""
     if not keys:
         return {}
     wanted = set(keys)
     rows = db.execute(select(QuizBank.subject, QuizBank.run_id, QuizBank.share_url,
-                             QuizBank.linked_at, QuizBank.built_at, QuizBank.open_to_students, QuizBank.updated_at).where(
+                             QuizBank.linked_at, QuizBank.built_at, QuizBank.open_to_students, QuizBank.updated_at,
+                             QuizBank.status).where(
         QuizBank.subject.in_({s for s, _ in keys}), QuizBank.run_id.in_({r for _, r in keys})))
 
     def iso(value):
@@ -40,8 +42,9 @@ def bank_timelines(db: Session, keys: list[LectureKey], *, is_admin: bool = Fals
 
     return {(s, r): {"shareUrl": share, "linkedAt": iso(linked),
                      "builtAt": iso(built) if is_admin or opened else None,
+                     **({"ready": status == "ready" and (is_admin or opened)} if include_ready else {}),
                      **({"deleteVersion": iso(updated)} if is_admin else {})}
-            for s, r, share, linked, built, opened, updated in rows
+            for s, r, share, linked, built, opened, updated, status in rows
             if (s, r) in wanted and (is_admin or opened or share)}
 
 
@@ -73,7 +76,8 @@ def lecture_or_404(db: Session, subject: str, run_id: str) -> Lecture:
     return lecture
 
 
-def material_marks(db: Session, keys: list[LectureKey], *, is_admin: bool = False) -> dict[LectureKey, dict[str, bool]]:
+def material_marks(db: Session, keys: list[LectureKey], *, is_admin: bool = False,
+                   include_banks: bool = True) -> dict[LectureKey, dict[str, bool]]:
     """강의마다 무엇이 올라와 있는가. 캘린더 한 화면치를 한 번에 센다.
 
     **다섯 칸이 `CHECKLIST_ITEMS`와 하나씩 짝이다.** 관리자가 채우는 칸과 사용자가
@@ -139,6 +143,8 @@ def material_marks(db: Session, keys: list[LectureKey], *, is_admin: bool = Fals
         if share_url:
             _touch((subject, run_id), "preview")
 
+    if not include_banks:
+        return marks
     banks = db.scalars(select(QuizBank).where(
         QuizBank.subject.in_(subjects), QuizBank.run_id.in_(run_ids),
     )).all()

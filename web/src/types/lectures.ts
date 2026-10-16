@@ -58,6 +58,7 @@ export type PrequizProgress = {
 };
 
 export type LectureRef = {
+  studyLoaded?: boolean;
   cardProgress?: CardProgress | null;
   bankTimeline?: BankTimeline | null;
   mastery?: LectureMastery | null;

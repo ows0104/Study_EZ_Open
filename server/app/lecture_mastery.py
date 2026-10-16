@@ -44,8 +44,9 @@ def lecture_overviews(db: Session, user_id: str, keys: list[tuple[str, str]],
     for row in db.scalars(query):
         key = (row.subject, row.run_id)
         state = states.get(key)
-        value = for_bank(row, state, is_admin=is_admin, now=now)
-        usable = include_cards and bank_usable(row.bank, row.validation)
+        usable = bank_usable(row.bank, row.validation)
         current = state.state if state and state.build_id == row.build_id else empty_state()
-        result[key] = {"mastery": value, "cardProgress": card_progress(row.bank, current, now) if usable else None}
+        result[key] = {"ready": usable,
+                       "mastery": lecture_mastery(row.bank, current, now=now) if usable else None,
+                       "cardProgress": card_progress(row.bank, current, now) if usable and include_cards else None}
     return result

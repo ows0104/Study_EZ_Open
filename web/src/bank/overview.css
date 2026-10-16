@@ -1,4 +1,5 @@
 .study-overview { max-width: 1440px; margin: 0 auto; padding: 8px 16px 32px; }
+.overview-progress > summary { cursor: pointer; padding: 14px 0; color: var(--ink-2); font-size: 13px; }
 .overview-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; }
 .overview-heading h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -.04em; }
 .overview-heading p { margin: 0; color: var(--ink-2); font-size: 13px; }

@@ -53,7 +53,7 @@ function Shell() {
     }
     // `me`만 기다리지 않는다 — 시간표도 여기서 같이 나간다. 아래에서 `me`가
     // 올 때까지 캘린더를 마운트하지 않으므로, 미리 안 띄우면 두 왕복이 줄을 선다.
-    startFirstScreen();
+    startFirstScreen(location.pathname === "/");
     getMe()
       .then(setMe)
       .catch((cause: Error) => setMeError(cause.message));

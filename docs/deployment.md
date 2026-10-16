@@ -10,6 +10,17 @@ Cloudflare Pages  ──►  Cloud Run (studyez-api)  ──►  Supabase Postgr
 
 ## 한 번만 하는 것
 
+2026-10-16 시간표 첫 로딩 개선도 DB 변경 없이 API를 먼저, 웹을 다음에 배포한다.
+홈은 가벼운 시간표만 계정 조회와 병렬로 받으며 다른 화면의 계정 조회는 시간표를 미리 읽지 않는다.
+학습률은 사용자가 켰을 때 현재 주·월만 `include_cards=false`로 조회한다.
+덱 목록은 모아받기를 펼칠 때 주간 날짜 범위 또는 `subject`로 좁혀 읽고,
+강의 패널 코드는 강의를 누를 때 불러온다. 탭 복귀 조회는 1분 안에는 반복하지 않는다.
+
+2026-10-16 학습 현황 지연 계산은 DB 변경 없이 API를 먼저, 웹을 다음에 배포한다.
+학습 현황 화면은 `GET /api/timetable?include_study=false`로 목록만 읽고 집계는 접어 둔다.
+펼칠 때만 선택한 블록을 `POST /api/timetable/study-progress`로 최대 8강의씩 계산한다.
+접으면 다음 집계 요청을 중단하며, 기존 시간표 API의 기본 응답은 유지한다.
+
 2026-10-16 학습현황의 개인 강의 숨김과 관리자 퀴즈 삭제는 API 배포 전에
 `init-db`로 `study_hidden_lecture`, `quiz_bank_archive` 표를 만든다. 두 표에는 RLS를 적용한다.
 API를 먼저 배포한 다음 웹을 배포한다. 숨김은 본인의 학습현황 목록·집계에만 적용하며
