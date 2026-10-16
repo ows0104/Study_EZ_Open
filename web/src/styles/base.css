@@ -2860,24 +2860,34 @@ button.notice-title:hover:not(:disabled) {
   margin-top: 0;
 }
 
-.bank-jokbo-references {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 8px;
+.slide-image-open {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  cursor: zoom-in;
 }
 
-.bank-jokbo-reference {
-  display: inline-block;
-  padding: 5px 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: 6px;
-  background: #fff3d9;
-  color: #634315;
-  font-size: 17px;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
+.slide-image-open:hover { background: transparent; }
+.slide-image-open:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 4px; }
+
+.slide-image-dialog {
+  width: min(1600px, 96vw);
+  max-width: 96vw;
+  max-height: 94dvh;
+  padding: 0;
+  border: 0;
+  background: white;
+  overflow: auto;
 }
+
+.slide-image-dialog::backdrop { background: rgb(0 0 0 / 75%); }
+.slide-image-expanded { padding: 12px; }
+.slide-image-expanded img { display: block; width: 100%; height: auto; }
+.slide-image-close { display: block; position: sticky; top: 0; margin: 0 0 12px auto; }
 
 @media (max-width: 760px) {
   .bank-evidence-pair {
@@ -2929,9 +2939,7 @@ button.notice-title:hover:not(:disabled) {
 }
 
 .bank-jokbo-slides figcaption {
-  color: var(--ink-2);
-  font-size: 13px;
-  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .bank-ox-explanation,

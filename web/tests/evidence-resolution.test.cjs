@@ -28,8 +28,8 @@ test('reference exams open beside selected lecture evidence with year and questi
   assert.match(html,/class="bank-evidence-pair"/);
   assert.match(html,/src="https:\/\/example.test\/core.png"/);
   assert.match(html,/src="https:\/\/example.test\/12.png"/);
-  assert.match(html,/class="bank-jokbo-reference">2023년 · 52번/);
-  assert.match(html,/class="bank-jokbo-reference">2022년 · 7번/);
+  assert.match(html,/<figcaption class="bank-note">2023년 · 52번 · 2022년 · 7번<\/figcaption>/);
+  assert.doesNotMatch(html,/<h2>참고한 족보|족보\.pdf|지면 크게 보기|bank-jokbo-reference/);
   assert.doesNotMatch(html,/<details/);
   assert.doesNotMatch(html,/핵심 근거 · 족보/);
 });
@@ -50,8 +50,10 @@ test('each unresolved cause stays visible with its concrete missing claim and no
     assert.match(html,/참고 족보 1장/); assert.doesNotMatch(html,/src="https:\/\/example.test\/4.png"/);
   }
 });
-test('embedded exams disclose their origin; absent selected images are explicit; legacy references still render',()=>{
-  assert.match(render({jokboSlides:[{...image(37,true),embedded:true}]}),/필기 PDF에 첨부된 기출/);
+test('exam captions stay compact; absent selected images are explicit; legacy references still render',()=>{
+  const embedded=render({jokboSlides:[{...image(37,true),embedded:true}]});
+  assert.match(embedded,/<figcaption class="bank-note">2022년 · 37번<\/figcaption>/);
+  assert.doesNotMatch(embedded,/필기 PDF에 첨부된 기출|족보\.pdf|지면 크게 보기/);
   assert.match(render({evidenceStatus:{category:'exam_only',reason:'확인',primaryAvailable:false}}),/핵심 족보 지면을 아직 표시할 수 없습니다/);
   const html=render({jokboSlides:[image(3,false)]}); assert.match(html,/참고한 족보/); assert.match(html,/3.png/);
 });

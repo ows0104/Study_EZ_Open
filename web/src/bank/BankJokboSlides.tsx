@@ -16,16 +16,13 @@ export function BankJokboSlides({ slides, preload, collapseReferences = false }:
   const extra = slides.filter(slide => !slide.primary);
   const title = primary.length ? "핵심 근거 · 족보" : "참고한 족보";
   const image = (slide: NonNullable<BankAnswer["jokboSlides"]>[number]) => <figure key={`${slide.pdfFilename}:${slide.page}`}>
-      <figcaption><div className="bank-jokbo-references">
-        {slide.references.map(reference => <b className="bank-jokbo-reference" key={reference}>{referenceLabel(reference)}</b>)}
-      </div>{slide.pdfFilename} · PDF {slide.page}쪽{" · "}
-        {slide.embedded ? "필기 PDF에 첨부된 기출 · " : ""}
-        <a href={slide.url} target="_blank" rel="noreferrer">지면 크게 보기 ↗</a>
+      <figcaption className="bank-note">
+        {slide.references.map(referenceLabel).join(" · ")}
       </figcaption>
       <SlideImage src={slide.url} preload={preload} alt={`족보 ${slide.references.join(", ")} · PDF ${slide.page}쪽`} />
     </figure>;
   return <section className="bank-slides bank-jokbo-slides" aria-label={title}>
-    <h2>{title}</h2>
+    {primary.length ? <h2>{title}</h2> : null}
     {primary.length ? primary.map(image) : collapseReferences ? <details className="bank-answer-context" onToggle={event => setExpanded(event.currentTarget.open)}>
       <summary>참고 족보 {extra.length}장</summary>
       {expanded ? extra.map(image) : null}
