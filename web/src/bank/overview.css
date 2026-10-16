@@ -1,4 +1,11 @@
 .study-overview { max-width: 1440px; margin: 0 auto; padding: 8px 16px 32px; }
+.quiz-production-note { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; margin: 16px 0; font-size: 13px; }
+.quiz-production-note > span { flex: 1; min-width: 220px; }
+.quiz-production-note small { display: block; margin-top: 5px; color: var(--ink-2); font-size: 12px; }
+.overview-table .quiz-production { min-width: 145px; text-align: left; font-size: 13px; }
+.quiz-production small { display: block; margin-top: 5px; color: var(--ink-2); font-size: 11px; font-weight: normal; }
+.quiz-production.is-complete > span, .quiz-production.is-complete > a { color: #238258; font-weight: 650; }
+.quiz-production.is-incomplete > span, .quiz-production.is-incomplete > a { color: var(--ink-2); }
 .overview-progress > summary { cursor: pointer; padding: 14px 0; color: var(--ink-2); font-size: 13px; }
 .overview-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; }
 .overview-heading h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -.04em; }

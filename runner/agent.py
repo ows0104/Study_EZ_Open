@@ -876,6 +876,10 @@ class Agent:
         crew = [threading.Thread(target=self.work_loop, args=(f"w{n + 1}", poll),
                                  name=f"studyez-w{n + 1}", daemon=True)
                 for n in range(self.workers)]
+        if '약리학' in subjects:
+            from .share_monitor import watch as watch_shares
+            crew.append(threading.Thread(target=watch_shares, args=(self.client, self._stop),
+                                         name='studyez-share-check', daemon=True))
         if self.sweep_seconds:
             crew.append(threading.Thread(target=self.sweep_loop,
                                          name="studyez-sweep", daemon=True))

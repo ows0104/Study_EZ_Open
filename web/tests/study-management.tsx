@@ -11,6 +11,8 @@ const requests: string[] = [];
 const progressRequests: { subject: string; runId: string }[][] = [];
 const releases: (() => void)[] = [];
 Object.assign(window, { studyTest: { requests, progressRequests, release: () => releases.shift()?.() } });
+let publicationReady = false;
+Object.assign(window, { setPublicationReady: () => { publicationReady = true; } });
 const events = (): TimetableEvent[] => ["약력학", "약물대사", "예정 강의"].map((title, i) => ({
   id: String(i), title, date: `2026-10-0${i + 1}`, startTime: "09:00", endTime: "10:00",
   details: title, professor: "", category: "lecture", course: "약리학", slot: i + 1,
@@ -31,6 +33,12 @@ window.fetch = async (input, init) => {
   const path = decodeURIComponent(url.pathname);
   let result: object;
   if (path === "/api/me") result = { id: "management-test", isAdmin: !options.has("student"), isApproved: true };
+  else if (path === "/api/timetable/quiz-publication") result = { lectures: Array.from({ length: 10 }, (_, i) => ({
+    subject: "약리학", runId: String(i), shareUrl: i === 0 ? "https://chatgpt.com/share/test" : "",
+    link: { state: i === 0 ? "complete" : "missing", sinceCutoff: i === 0, completedAt: i === 0 ? "2026-10-15T03:00:00Z" : null, questionCount: i === 0 ? 75 : 0, checkedAt: "2026-10-17T00:00:00Z" },
+    upload: { sinceCutoff: i === 0, current: i === 0 && publicationReady, builtAt: i === 0 ? "2026-10-16T00:00:00Z" : null },
+    job: i === 0 && !publicationReady ? { state: "running", stage: "필수 검수" } : null,
+  })) };
   else if (path === "/api/timetable") {
     const rows = options.has("lazy") ? lazyEvents() : events();
     result = { events: url.searchParams.get("include_study") === "false"

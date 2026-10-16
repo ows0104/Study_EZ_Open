@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 
+from app.routes import quiz_publication
 from app.config import get_settings
 from app.routes import (
     admin,
@@ -56,6 +57,7 @@ def health() -> dict[str, str]:
 app.include_router(me.router, prefix="/api")
 app.include_router(feedback.router, prefix="/api")
 app.include_router(timetable.router, prefix="/api")
+app.include_router(quiz_publication.router, prefix="/api")
 app.include_router(study_plan.router, prefix="/api")
 app.include_router(study_visibility.router, prefix="/api")
 app.include_router(lectures.router, prefix="/api")

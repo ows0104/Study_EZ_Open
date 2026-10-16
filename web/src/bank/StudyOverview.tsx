@@ -6,6 +6,8 @@ import type { CardProgress } from "../types/mastery";
 import { StudyPlanBoard } from "../calendar/StudyPlanBoard";
 import { toCalendarEntries } from "../calendar/entries";
 import { BankBuildTimes } from "./BankBuildTimes";
+import { useQuizPublication } from "./useQuizPublication";
+import { QuizPublicationCell } from "./QuizPublicationCell";
 import "./overview.css";
 
 export type StudyLecture = Pick<LectureRef, "subject" | "runId" | "title" | "bankTimeline" | "mastery" | "cardProgress" | "studyLoaded"> & {
@@ -72,6 +74,9 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
   const isHidden = (l: StudyLecture) => hidden.has(l.key) || Boolean(l.eventKey && hidden.has(l.eventKey));
   const inCourse = rows.filter(l => !course || l.course === course);
   const scoped = inCourse.filter(l => !isHidden(l));
+  const showProduction = inCourse.some(l => l.subject === "약리학");
+  const production = useQuizPublication(showProduction);
+  const productionById = new Map(production.values?.map(value => [value.runId, value]));
   const hiddenCount = inCourse.length - scoped.length;
   const scope = JSON.stringify(showProgress ? inCourse.filter(l => l.runId).map(l => l.key) : []);
   useEffect(() => { onScope?.(scope); }, [scope, onScope]);
@@ -174,10 +179,15 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
       {chosen.some(l => !visible.includes(l)) ? <small>다른 보기에서 선택한 강의 포함</small> : null}
     </div>
     {filter === "hidden" ? <p className="bank-note">숨긴 강의는 위 집계와 모아 풀기에서 제외됩니다. 복원하면 기존 학습 기록으로 이어집니다.</p> : null}
+    {showProduction ? <div className="quiz-production-note">
+      <span><strong>퀴즈 준비 현황 · 10/15 이후</strong> (한국 시간, 10/15 포함)<small>완성 링크는 공유 응답의 작성 시각, 업로드는 서버 저장 시각으로 확인합니다. 공개 링크 확인은 최대 5분, 화면은 30초마다 갱신됩니다.</small></span>
+      <button className="is-quiet" onClick={production.refresh}>상태 새로고침</button>
+      {production.error ? <small role="alert">상태 갱신 실패 · 마지막 확인 결과를 표시합니다.</small> : null}
+    </div> : null}
     <div className="overview-table-wrap">
       <table className="overview-table">
         <caption className="sr-only">전체 강의별 카드 상태와 학습률</caption>
-        <thead><tr><th scope="col">강의</th>{showProgress ? <><th scope="col">전체</th><th scope="col">본 카드</th><th scope="col">미열람</th>
+        <thead><tr><th scope="col">강의</th>{showProduction ? <><th scope="col">① 완성 퀴즈 링크<br /><small>10/15 이후</small></th><th scope="col">② 완성 퀴즈 업로드<br /><small>10/15 이후</small></th></> : null}{showProgress ? <><th scope="col">전체</th><th scope="col">본 카드</th><th scope="col">미열람</th>
           <th scope="col">인지</th><th scope="col">인출</th><th scope="col">기억 유지</th><th scope="col">복습</th><th scope="col">학습률</th></> : null}<th scope="col">학습</th></tr></thead>
         <tbody>{visible.map(l => {
           const p = l.cardProgress;
@@ -198,6 +208,8 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
                     aria-label={`${l.title} 퀴즈 삭제`} onClick={() => onDeleteQuiz([l])}>퀴즈 삭제</button> : null}
                 </div> : null}
               </div></div></th>
+            {showProduction ? <><QuizPublicationCell value={productionById.get(l.runId)} kind="link" applicable={l.subject === "약리학"} />
+              <QuizPublicationCell value={productionById.get(l.runId)} kind="upload" applicable={l.subject === "약리학"} /></> : null}
             {showProgress ? <><td>{p ? number(p.total) : "—"}{p?.suspended ? <small>제외 {p.suspended}</small> : null}</td>
             <td>{p ? number(p.seen) : "—"}{p && p.total > 0 ? <small>{Math.round(p.seen / p.total * 100)}%</small> : null}</td>
             <td>{p ? number(p.unseen) : "—"}{p && p.newRemaining !== p.unseen ? <small>평가 전 {p.newRemaining}</small> : null}</td>

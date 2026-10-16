@@ -104,7 +104,10 @@ from app.models.spotter import (
     SpotterWrong,
 )
 
+from .quiz_publication import QuizPublicationCheck
+
 __all__ = [
+    "QuizPublicationCheck",
     "StudyHiddenLecture",
     "QuizBankArchive",
     "BankPersonalEdit",

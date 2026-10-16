@@ -13,8 +13,8 @@ test('list renders before progress; only selected blocks load in bounded batches
     await page.getByRole('heading', { name: '학습 현황', exact: true }).waitFor();
     assert.equal(await page.evaluate(() => window.studyTest.progressRequests.length), 0);
     assert.equal(await page.locator('.overview-stats').count(), 0);
-    assert.equal(await page.locator('.overview-table thead th').count(), 2);
-    assert.equal(await page.locator('.overview-table tbody tr td:last-child a').count(), 10);
+    assert.equal(await page.locator('.overview-table thead th').count(), 4);
+    assert.equal(await page.locator('.overview-table tbody tr td:last-child > a').count(), 10);
     await page.getByText('학습 현황 보기', { exact: true }).click();
     await page.waitForFunction(() => window.studyTest.progressRequests.length === 1);
     assert.equal(await page.locator('.overview-table tbody tr').count(), 10);
@@ -28,7 +28,7 @@ test('list renders before progress; only selected blocks load in bounded batches
     batches = await page.evaluate(() => window.studyTest.progressRequests);
     assert.equal(batches[1].length, 2);
     await page.evaluate(() => window.studyTest.release());
-    await page.waitForFunction(() => document.querySelectorAll('.overview-table tbody tr td:last-child a').length === 10);
+    await page.waitForFunction(() => document.querySelectorAll('.overview-table tbody tr td:last-child > a').length === 10);
     assert.equal(await page.locator('.overview-stats strong').nth(1).innerText(), '1,000개');
     const blocks = page.locator('.overview-heading select');
     await blocks.selectOption('다른 블록');
@@ -36,7 +36,7 @@ test('list renders before progress; only selected blocks load in bounded batches
     assert.equal(await page.locator('.overview-table tbody tr').count(), 1);
     await page.evaluate(() => window.studyTest.release());
     await page.waitForFunction(() => document.querySelector('.overview-stats strong')?.textContent === '1강의'
-      && document.querySelectorAll('.overview-table tbody tr td:last-child a').length === 1);
+      && document.querySelectorAll('.overview-table tbody tr td:last-child > a').length === 1);
     await blocks.selectOption('약리학');
     assert.equal(await page.locator('.overview-stats strong').nth(1).innerText(), '1,000개');
     assert.equal(await page.evaluate(() => window.studyTest.progressRequests.length), 3);
@@ -74,7 +74,7 @@ test('closing cancels remaining batches; a failed summary can be retried', async
     await page.evaluate(() => window.studyTest.release());
     await page.waitForFunction(() => window.studyTest.progressRequests.length === 3);
     await page.evaluate(() => window.studyTest.release());
-    await page.waitForFunction(() => document.querySelectorAll('.overview-table tbody tr td:last-child a').length === 10
+    await page.waitForFunction(() => document.querySelectorAll('.overview-table tbody tr td:last-child > a').length === 10
       && document.querySelectorAll('[role="alert"]').length === 0);
   } finally { await browser.close(); }
 });
