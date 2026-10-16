@@ -21,6 +21,7 @@ from __future__ import annotations
 import uuid
 import copy
 import hashlib
+import re
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
@@ -32,6 +33,7 @@ from sqlalchemy.orm import Session
 from app import study_engine as engine
 from app import bank_edits
 from app import bank_personal
+from app.personal_question_input import PersonalQuestionSettings
 from app.bank_validation.pages import cited_pages
 from app.bank_validation.slide_focus import (selected_references, all_selected_pages, all_selected_references,
                                              question_hash, source_id, external_filename)
@@ -1380,7 +1382,7 @@ class PersonalEditIn(BaseModel):
     explanation: str | None = Field(default=None, max_length=12000)
 
 
-class PersonalQuestionIn(BaseModel):
+class PersonalQuestionIn(PersonalQuestionSettings):
     client_id: uuid.UUID = Field(alias="clientId")
     question: str = Field(min_length=1, max_length=12000)
     answer: str = Field(min_length=1, max_length=12000)
@@ -1397,9 +1399,14 @@ def add_personal_question(subject: str, run_id: str, payload: PersonalQuestionIn
     if not question or not answer:
         raise HTTPException(422, "발문과 정답을 비워 둘 수 없습니다.")
     qid = f"PQ_{payload.client_id.hex}"
+    if payload.format == "cloze":
+        blanks = re.findall(r"\{\{c\d+\}\}", question)
+        if not blanks or len(blanks) != len(payload.answer_units):
+            raise HTTPException(422, "발문의 빈칸 수와 빈칸별 정답 수를 맞춰 주세요.")
     edit = db.get(BankPersonalEdit, (user.id, subject, run_id, qid))
     if edit is None:
-        original = bank_personal.added_question(qid, question, answer, payload.tier, payload.explanation.strip())
+        settings = payload.model_dump(include=set(PersonalQuestionSettings.model_fields))
+        original = bank_personal.added_question(qid, question, answer, payload.tier, payload.explanation.strip(), settings=settings)
         db.add(BankPersonalEdit(user_id=user.id, subject=subject, run_id=run_id, question_id=qid,
                                original=original, question=question, answer=answer, comment=""))
         db.commit()
@@ -1455,6 +1462,9 @@ def save_personal_question(subject: str, run_id: str, question_id: str, payload:
         if original.get("personalAdded"):
             edit.original = {**original, "question": question, "answer": answer,
                              "explanation": payload.explanation.strip() if payload.explanation is not None else original.get("explanation", "")}
+            if answer != original["answer"]:
+                edit.original = {**edit.original, "personalAnswerOverride": True,
+                                 "answer_units": [], "correct_option_ids": [], "answer_pairs": [], "correct_order": []}
     if payload.action == "save" and not original.get("personalAdded"):
         comment = payload.comment.strip()
         correction = None

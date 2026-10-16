@@ -4,6 +4,7 @@ import { api } from "../api";
 import { invalidateTimetable } from "../firstScreen";
 import type { BankRead, BankTier } from "../types/bank";
 import { PersonalQuestionDialog } from "./PersonalQuestionDialog";
+import { initialSettings, PersonalQuestionSettings, settingsPayload } from "./PersonalQuestionSettings";
 
 export const TIER_LABELS: Record<BankTier, string> = {
   Essential: "★ Must-Know", Core: "Core", Important: "Important", Optional: "Optional",
@@ -18,6 +19,7 @@ export function AddQuestionDialog({ base, onClose, onSaved }: {
   const [answer, setAnswer] = useState("");
   const [explanation, setExplanation] = useState("");
   const [tier, setTier] = useState<BankTier>("Core");
+  const [settings, setSettings] = useState(initialSettings);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const pending = useRef(false);
@@ -27,7 +29,7 @@ export function AddQuestionDialog({ base, onClose, onSaved }: {
     pending.current = true; setBusy(true); setError("");
     try {
       await api(`${base}/personal-questions`, { method: "POST", body: JSON.stringify({
-        clientId, question, answer, explanation, tier,
+        clientId, question, answer, explanation, tier, ...settingsPayload(settings),
       }) });
       invalidateTimetable(); onSaved();
     } catch (cause) { setError((cause as Error).message); }
@@ -38,7 +40,8 @@ export function AddQuestionDialog({ base, onClose, onSaved }: {
     <form onSubmit={event => { event.preventDefault(); void save(); }}>
       <header><h2 id="add-question-title">내 문제 추가</h2>
         <button type="button" className="is-quiet" aria-label="추가창 닫기" disabled={busy} onClick={onClose}>×</button></header>
-      <p className="bank-personal-hint">내 계정의 이 강의에만 추가됩니다. 답을 떠올린 뒤 직접 평가하는 단답형 문제입니다.</p>
+      <p className="bank-personal-hint">내 계정의 이 강의에만 추가됩니다. 문항 형식과 회상 방식을 선택하고, 풀이 후 직접 평가합니다.</p>
+      <PersonalQuestionSettings value={settings} onChange={setSettings} busy={busy} />
       <label>발문<textarea autoFocus required rows={3} maxLength={12000} value={question} disabled={busy}
         placeholder="무엇을 떠올릴지 질문으로 적어 주세요." onChange={event => setQuestion(event.target.value)} /></label>
       <label>정답<textarea required rows={4} maxLength={12000} value={answer} disabled={busy}

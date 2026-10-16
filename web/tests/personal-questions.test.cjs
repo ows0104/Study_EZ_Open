@@ -59,3 +59,29 @@ test('solve screen exposes Essential and adding a card does not reveal the curre
     assert.equal(await page.evaluate(() => window.personalTest.calls.some(c => c.path.endsWith('/reveal') || c.path.endsWith('/rate'))), false);
   } finally { await browser.close(); }
 });
+
+test('creation sends format, retrieval direction and recall-first choice answers', async () => {
+  const browser = await chromium.launch({ headless: true, channel: 'chrome' });
+  try {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.goto(`${base}/tests/personal-questions.html`);
+    await page.getByRole('button', { name: '＋ 문제 추가' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('문항 형식').selectOption('mcq');
+    await dialog.getByLabel('회상 방식').selectOption('reverse');
+    await dialog.getByLabel('객관식 학습 유형').selectOption('recall_first');
+    await dialog.getByRole('textbox', { name: /^보기/ }).fill('정답 보기\n다른 보기');
+    await dialog.getByRole('radio', { name: '1. 정답 보기', exact: true }).check();
+    await dialog.getByLabel('발문').fill('역방향으로 떠올리세요.');
+    await dialog.getByRole('textbox', { name: '정답', exact: true }).fill('정답 보기');
+    await dialog.getByRole('button', { name: '내 학습에 추가' }).click();
+    await dialog.waitFor({ state: 'detached' });
+    const call = await page.evaluate(() => window.personalTest.calls.find(c => c.method === 'POST' && c.path.endsWith('/personal-questions')));
+    assert.equal(call.body.format, 'mcq');
+    assert.equal(call.body.retrieval_direction, 'reverse');
+    assert.equal(call.body.mcq_mode, 'recall_first');
+    assert.deepEqual(call.body.options, [{ id: '1', text: '정답 보기' }, { id: '2', text: '다른 보기' }]);
+    assert.deepEqual(call.body.correct_option_ids, ['1']);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  } finally { await browser.close(); }
+});

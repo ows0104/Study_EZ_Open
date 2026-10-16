@@ -98,6 +98,57 @@ def main():
         assert info["personalQuestions"] == [] and info["suspendedQuestions"] == []
         assert info["lectureGoal"]["total"] == 1 and info["undoToken"] is not None
         assert request("POST", BASE + "/next?choiceProtocol=true")["question"] is None
+        # Each private format must survive storage and the real serving contract.
+        settings_cases = [
+            {"format": "mcq", "mcq_mode": "recall_first", "retrieval_direction": "reverse",
+             "options": [{"id": "1", "text": "맞는 보기"}, {"id": "2", "text": "다른 보기"}], "correct_option_ids": ["1"]},
+            {"format": "multi_select", "mcq_mode": "comparison",
+             "options": [{"id": "1", "text": "첫째"}, {"id": "2", "text": "둘째"}], "correct_option_ids": ["1", "2"]},
+            {"format": "matching", "answer_pairs": [{"left": "a", "right": "A"}, {"left": "b", "right": "B"}]},
+            {"format": "sequence", "correct_order": ["시작", "중간", "끝"]},
+            {"format": "cloze", "question": "답은 {{c1}}", "answer_units": ["정답"]},
+            {"format": "list", "answer_units": ["하나", "둘"]},
+            {"format": "ox"},
+        ]
+        for settings in settings_cases:
+            created = request("POST", BASE + "/personal-questions", {**draft, "clientId": str(uuid.uuid4()), **settings}, 201)
+            with SessionLocal() as db:
+                db.delete(db.get(BankState, (STUDENT.id, "private", "demo")))
+                db.commit()
+            shared = request("POST", BASE + "/next?choiceProtocol=true")
+            assert shared["question"]["question_id"] == "Q1"
+            request("POST", BASE + "/reveal", {"reviewToken": shared["reviewToken"]})
+            request("POST", BASE + "/rate", {"reviewToken": shared["reviewToken"], "rating": "Good"})
+            served = request("POST", BASE + "/next?choiceProtocol=true")
+            q = served["question"]
+            assert q["question_id"] == created["questionId"] and q["format"] == settings["format"]
+            assert q["retrieval_direction"] == settings.get("retrieval_direction", "direct")
+            assert "answer" not in q and "correct_option_ids" not in q
+            if settings.get("mcq_mode") == "recall_first":
+                assert not q["options"]
+                request("POST", BASE + "/reveal", {"reviewToken": served["reviewToken"]}, 409)
+                shown = request("POST", BASE + "/options", {"reviewToken": served["reviewToken"]})
+                assert len(shown["question"]["options"]) == 2
+            revealed = request("POST", BASE + "/reveal", {"reviewToken": served["reviewToken"]})
+            assert revealed["correctOptionIds"] == settings.get("correct_option_ids", [])
+            assert revealed["answerUnits"] == settings.get("answer_units", [])
+            assert revealed["answerPairs"] == settings.get("answer_pairs", [])
+            assert revealed["correctOrder"] == settings.get("correct_order", [])
+            if settings["format"] in {"mcq", "multi_select", "matching", "sequence"}:
+                assert not revealed["personalAnswer"], "structured private answers retain scoring"
+            if settings["format"] == "mcq":
+                snapshot = request("GET", f"{BASE}/questions/{created['questionId']}/personal")
+                edited = request("PUT", f"{BASE}/questions/{created['questionId']}/personal", {
+                    "revision": snapshot["revision"], "question": draft["question"], "answer": "새로 고친 답"})
+                assert edited["answer"]["personalAnswer"] and edited["answer"]["correctOptionIds"] == []
+            request("DELETE", f"{BASE}/personal-questions/{created['questionId']}")
+        for invalid in [
+            {"format": "unknown"}, {"retrieval_direction": "unknown"}, {"format": "mcq"},
+            {"format": "mcq", "options": [{"id": "1", "text": "a"}, {"id": "2", "text": "b"}], "correct_option_ids": ["3"]},
+            {"format": "matching", "answer_pairs": [{"left": "a", "right": ""}]},
+            {"format": "sequence", "correct_order": ["중복", "중복"]}, {"format": "cloze"},
+        ]:
+            request("POST", BASE + "/personal-questions", {**draft, "clientId": str(uuid.uuid4()), **invalid}, 422)
     print("PASS: private add/edit/delete, idempotency, isolation, study/batch/undo/overview, Essential and bank rebuilds")
 
 

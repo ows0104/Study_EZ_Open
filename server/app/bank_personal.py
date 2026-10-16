@@ -8,10 +8,10 @@ from app.models import BankPersonalEdit, QuizBank
 from app.bank_validation.priorities import priority_fields
 
 
-def added_question(question_id: str, question: str, answer: str, tier: str, explanation: str) -> dict:
+def added_question(question_id: str, question: str, answer: str, tier: str, explanation: str, *, settings: dict | None = None) -> dict:
     """User-authored recall cards use the same serving and review contract."""
     from app.bank_validation.priorities import IMPORTANCE
-    return {"question_id": question_id, "concept_id": f"PC_{question_id}",
+    out = {"question_id": question_id, "concept_id": f"PC_{question_id}",
             "personalAdded": True, "tier": tier, "importance": IMPORTANCE[tier],
             "advanced": False, "item_difficulty": 1, "format": "basic",
             "retrieval_direction": "direct", "mcq_mode": "none", "question": question,
@@ -20,6 +20,12 @@ def added_question(question_id: str, question: str, answer: str, tier: str, expl
             "conflict_id": "", "options": [], "correct_option_ids": [], "matching_left": [],
             "matching_right": [], "answer_pairs": [], "sequence_items": [], "correct_order": [],
             "option_explanations": [], "option_pools": []}
+    if settings:
+        out.update(settings)
+        out["matching_left"] = [pair["left"] for pair in out["answer_pairs"]]
+        out["matching_right"] = [pair["right"] for pair in out["answer_pairs"]]
+        out["sequence_items"] = list(out["correct_order"])
+    return out
 
 
 def augment(db: Session, row: QuizBank, user_id: str, *, edits: list | None = None) -> dict:
@@ -41,7 +47,7 @@ def augment(db: Session, row: QuizBank, user_id: str, *, edits: list | None = No
             "graph_title": edit.question[:24], "core_facts": [], "source_refs": [],
             "tier": q["tier"], "importance": q["importance"], "importance_rationale": "내가 추가한 문제",
             "concept_difficulty": 1, "exam_signal_strength": "low", "related_concepts": []})
-        plans.append({"concept_id": q["concept_id"], "directions": ["direct"],
+        plans.append({"concept_id": q["concept_id"], "directions": [q["retrieval_direction"]],
                       "repetition_budget": 3, "target_mastery": DEFAULT["mastery"]["tierTargets"][q["tier"]]})
     return {**bank, "questions": [*bank.get("questions", []), *questions],
             "concepts": [*bank.get("concepts", []), *concepts],
@@ -64,7 +70,8 @@ def apply(db: Session, row: QuizBank, user_id: str, question: dict) -> dict:
     answer_changed = edit.answer != question["answer"]
     out = {**question, "question": edit.question, "answer": edit.answer,
            "personalEdited": edit.question != question["question"] or answer_changed,
-           "personalAnswer": answer_changed or bool(question.get("personalAdded"))}
+           "personalAnswer": answer_changed or bool(question.get("personalAnswerOverride")) or (bool(question.get("personalAdded"))
+                              and question["format"] not in {"mcq", "multi_select", "matching", "sequence"})}
     if answer_changed:
         # A prose correction replaces the old answer and its structured scoring data.
         out.update(answer_units=[], correct_option_ids=[], answer_pairs=[], correct_order=[], explanation="")
