@@ -50,6 +50,24 @@ test('list siblings align from the first row and nested bullets keep their inden
   assert.ok(html.includes('class="bank-answer-point">첫 항목</strong>'));
 });
 
+test('list format aligns unmarked and colon-labeled answer rows including the first row', () => {
+  for (const text of ['첫 항목\n둘째 항목\n셋째 항목', '**분류 A**: 첫 항목\n분류 B: 둘째 항목\n  하위 설명']) {
+    const html = body({ format: 'list' }, { answer: text });
+    assert.ok(!html.includes('is-indented'));
+    assert.equal(plain(html).replace(/\s/g, '').includes(text.replace(/\*\*/g, '').replace(/\s/g, '')), true);
+  }
+});
+
+test('list format aligns unmarked question rows including the first row', () => {
+  const { QuestionBody } = load(path.join(__dirname, '../src/bank/BankQuestion.tsx'));
+  const html = renderToStaticMarkup(React.createElement(QuestionBody, {
+    question: { ...question, question: '분류 A: 첫 조건\n분류 B: 둘째 조건\n  하위 조건' },
+    answer: null, picked: new Set(), onPick: () => {},
+  }));
+  assert.ok(!html.includes('is-sentence') && !html.includes('is-item'));
+  assert.ok(html.includes('margin-inline-start:1em'));
+});
+
 test('explicit list rows keep long sentences within their own item', () => {
   const html = render({ text: `1. ${first} ${second}\n2. ${third}` });
   assert.equal((html.match(/class="bank-readable-line is-list"/g) || []).length, 2);

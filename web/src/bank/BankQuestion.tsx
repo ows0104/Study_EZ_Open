@@ -40,7 +40,7 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
   const score = choiceScore(q, answer, picked);
   return (
     <>
-      <BankStem text={q.question} cloze={q.format === "cloze"} answerUnits={answer?.answerUnits} />
+      <BankStem text={q.question} list={q.format === "list"} cloze={q.format === "cloze"} answerUnits={answer?.answerUnits} />
       {q.format === "ox" && !answer ? <p className="bank-note">O 인가 X 인가, 그리고 왜인가</p> : null}
       {q.mcq_mode === "recall_first" && !showOptions ? <p className="bank-note">기억 확인형 · 먼저 답을 떠올린 뒤 선지를 공개하세요.</p> : null}
       {q.options.length && showOptions ? (
@@ -133,7 +133,7 @@ export function AnswerBody({ question: q, answer, preload }: {
       {/* Cloze는 위 발문에 정답을 채워 보여 준다. 짝짓기는 아래 짝이 곧 답이다. */}
       {conciseAnswer || (q.format === "cloze" && !answer.personalAnswer) || (q.format === "matching" && answer.answerPairs.length) ? null : (
         <p className="quiz-answer">
-          <AnswerPoints text={answer.answer} units={answer.answerUnits} readable />
+          <AnswerPoints text={answer.answer} units={answer.answerUnits} readable list={q.format === "list"} />
         </p>
       )}
       {answer.explanation?.trim() && !answer.personalAnswer ? (

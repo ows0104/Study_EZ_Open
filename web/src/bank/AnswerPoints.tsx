@@ -86,7 +86,7 @@ export function answerPoints(text: string, units: string[]) {
   return { text: visible, bold, highlights: merged, remaining };
 }
 
-export function AnswerPoints({ text, units = [], readable = false }: { text: string; units?: string[]; readable?: boolean }) {
+export function AnswerPoints({ text, units = [], readable = false, list = false }: { text: string; units?: string[]; readable?: boolean; list?: boolean }) {
   const parsed = answerPoints(text, units);
   const boundaries = [...new Set([0, parsed.text.length,
     ...parsed.bold.flatMap((range) => [range.start, range.end]),
@@ -121,7 +121,7 @@ export function AnswerPoints({ text, units = [], readable = false }: { text: str
     const layout = textLayout((preceding.includes("\n") ? preceding.slice(preceding.lastIndexOf("\n") + 1) : "") + parsed.text.slice(line.start, line.end));
     return <Fragment key={line.start}>
       {preceding}
-      <span style={layout.style} className={`bank-readable-line${layout.list ? " is-list" : index && !layout.style ? " is-indented" : ""}`}>
+      <span style={layout.style} className={`bank-readable-line${layout.list ? " is-list" : index && !layout.style && !list ? " is-indented" : ""}`}>
         {renderRange(line.start, line.end)}
       </span>
     </Fragment>;
