@@ -252,6 +252,34 @@ def test_answer_decoder_preserves_quoted_field_names_inside_answers():
     assert compact.read_blocks(raw)[1]['units'] == units + ['α']
 
 
+@pytest.mark.parametrize('ticks', ['`', '``'])
+def test_browser_inline_code_wrappers_preserve_answers_explanation_and_evidence(ticks):
+    first = RAW.split('\n\n### Q002', 1)[0]
+    units = ['문구 정답: ["가짜"]와 `기호` 자체', '따옴표 " 와 역슬래시 \\']
+    raw = first.replace('["α"]', ticks + json.dumps(units, ensure_ascii=False) + ticks)
+    explanation = '실제 해설: 표기 `α`를 유지한다.'
+    evidence = {'mode': 'single', 'slides': [{'page': 1, 'evidence': '실제 표시'}]}
+    raw += '\n해설: ' + ticks + json.dumps(explanation, ensure_ascii=False) + ticks
+    raw += '\n근거: ' + ticks + json.dumps(evidence, ensure_ascii=False) + ticks
+    block, = compact.read_blocks(raw)
+    assert block['units'] == units and block['explanation'] == explanation
+    assert block['source_evidence'] == evidence
+
+
+@pytest.mark.parametrize('answer', ['`["α"]', '`["α"]``', '``["α"]`', '`["α"] extra`', '`["α",]`'])
+def test_inline_code_wrapper_cannot_hide_malformed_or_unterminated_json(answer):
+    with pytest.raises(SessionError, match='JSON 오류'):
+        compact.read_blocks(RAW.replace('정답: ["α"]', '정답: ' + answer, 1))
+
+
+def test_prose_explanation_mention_can_use_a_separate_inline_code_json_field():
+    first = RAW.split('\n\n### Q002', 1)[0]
+    raw = first.replace('출제근거: 직접 회상',
+                        '출제근거: Case 1 해설: 기호 구별\n해설: `"실제 원문 해설"`')
+    block, = compact.read_blocks(raw)
+    assert block['explanation'] == '실제 원문 해설'
+
+
 def test_shared_quality_guidance_preserves_158_rules_and_adds_layout_and_conflict_clarity():
     quality = generate.item_quality_guidance().removeprefix('문항 품질 원칙\n\n')
     layout = '- 비교형 발문은 도입문 다음에 기준별로 줄을 나누고 두 칸 들여쓴다. 각 줄 안에서 비교 대상의 순서를 일정하게 유지한다. 긴 발문도 문장·조건 단위로 줄을 나누고 후속 문장을 들여써 읽기 쉽게 한다. 줄바꿈을 위해 내용·조건을 생략하거나 문항·빈칸을 새로 나누지 않는다.\n'
