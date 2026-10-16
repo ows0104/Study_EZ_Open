@@ -112,6 +112,36 @@ def test_new_authoring_metadata_survives_compact_parsing_without_entering_questi
     assert original["questions"][0]["answer"] == "B"
 
 
+@pytest.mark.parametrize("root_override", [False, True])
+def test_finalization_reuses_nested_organizer_evidence_and_prefers_explicit_root_metadata(tmp_path, monkeypatch, root_override):
+    pdf = tmp_path / "source.pdf"
+    with fitz.open() as doc:
+        doc.new_page()
+        doc.new_page()
+        doc.save(pdf)
+    original = bank()
+    for name, data in (("bank.json", original), ("validation.json", {"pass": True}),
+                       ("result.json", {"pass": True}), ("pages.json", {"Q1": [1]})):
+        (tmp_path / name).write_text(json.dumps(data), encoding="utf-8")
+    def authored(page):
+        return {"Q1": {"authoredHash": authored_hash(original["questions"][0]), "evidence": {
+            "mode": "single", "reason": "직접 작성한 근거", "slides": [{"page": page, "evidence": "A → B"}],
+            "reference_pages": [], "jokbo": []}}}
+    organize = tmp_path / "organize"
+    organize.mkdir()
+    (organize / "authored-evidence.json").write_text(json.dumps(authored(1 if root_override else 2)), encoding="utf-8")
+    if root_override:
+        (tmp_path / "authored-evidence.json").write_text(json.dumps(authored(2)), encoding="utf-8")
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Unchanged authored evidence must reach finalization without another CLI call")
+    monkeypatch.setattr(slide_focus, "_call", forbidden)
+    before = (tmp_path / "bank.json").read_bytes()
+    evidence.enrich(pdf, tmp_path, "demo")
+    validation = json.loads((tmp_path / "validation.json").read_text(encoding="utf-8"))
+    assert selected_pages(validation["slideFocus"], original["questions"][0], [1, 2]) == {2}
+    assert (tmp_path / "bank.json").read_bytes() == before
+
+
 def test_new_unchanged_questions_use_authored_evidence_without_another_model_call(tmp_path, monkeypatch):
     pdf = tmp_path / "source.pdf"
     with fitz.open() as doc:

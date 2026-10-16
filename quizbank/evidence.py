@@ -18,7 +18,9 @@ def enrich(pdf: Path, out: Path, run_id: str, *, jokbo: Path | None = None, mode
     bank, validation, result = read("bank.json"), read("validation.json"), read("result.json")
     related = {}
     try:
-        authored = read("authored-evidence.json") if (out / "authored-evidence.json").is_file() else None
+        authored_name = next((name for name in ("authored-evidence.json", "organize/authored-evidence.json")
+                              if (out / name).is_file()), None)
+        authored = read(authored_name) if authored_name else None
         related = evidence_sources.discover(pdf)
         focus, usage = slide_focus.select(bank, pdf, out / "slide-focus", model=model, authored=authored,
             related=related, source_cache=Path(__file__).resolve().parents[1] / "runs/_materials/evidence-sources", jokbo=jokbo)
