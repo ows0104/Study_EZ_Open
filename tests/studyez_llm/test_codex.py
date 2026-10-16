@@ -175,6 +175,15 @@ def test_resumed_usage_counts_only_the_new_stage(monkeypatch, tmp_path):
     assert sum(result["models"].values()) == 4
 
 
+@pytest.mark.parametrize('stdout,stderr', [(None, 'process terminated'), ('process terminated', None), (None, None)])
+def test_process_failure_without_captured_streams(monkeypatch, tmp_path, stdout, stderr):
+    monkeypatch.setenv('STUDYEZ_CODEX_BIN', 'codex.exe')
+    monkeypatch.setattr(codex.subprocess, 'run', lambda *a, **k:
+                        SimpleNamespace(returncode=3221225773, stdout=stdout, stderr=stderr))
+    with pytest.raises(codex.SessionError, match='3221225773'):
+        codex.run('inspect', blind=False, cwd=tmp_path)
+
+
 def test_resumed_usage_requires_a_baseline(tmp_path):
     with pytest.raises(codex.SessionError, match="session_usage"):
         session.run_agent("continue", cwd=tmp_path, resume="previous")

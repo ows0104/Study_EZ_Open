@@ -159,7 +159,7 @@ def run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None 
         except OSError as cause:
             raise SessionError(f"{label or '세션'}: codex 실행 실패: {cause}") from cause
     if proc.returncode:
-        tail = (proc.stdout + "\n" + proc.stderr).strip()[-2000:]
+        tail = ((proc.stdout or "") + "\n" + (proc.stderr or "")).strip()[-2000:]
         raise SessionError(f"{label or '세션'}: codex가 {proc.returncode}로 끝났다\n{tail}")
     try:
         info = parse_events(proc.stdout, model=selected, blind=blind)
