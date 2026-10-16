@@ -2653,6 +2653,11 @@ button.notice-title:hover:not(:disabled) {
 .bank-stem-line + .bank-stem-line { margin-top: 0.45em; }
 .bank-stem-line.is-item { padding-inline-start: 1em; }
 .bank-stem-line.is-sentence { text-indent: 1em; }
+.bank-stem-line.is-list,
+.bank-readable-line.is-list {
+  padding-inline-start: 1.5em;
+  text-indent: -1.5em;
+}
 
 .bank-blank {
   display: inline-block;

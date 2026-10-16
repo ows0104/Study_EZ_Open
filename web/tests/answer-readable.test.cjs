@@ -15,7 +15,11 @@ function load(file) {
     if (name.endsWith('/SlideImage')) return { SlideImage: () => null };
     if (name.endsWith('/BankSlides')) return { BankSlides: () => null };
     if (name.endsWith('/BankSourceNote')) return { BankSourceNote: () => null };
-    if (name.startsWith('.')) return load(path.resolve(path.dirname(file), name + '.tsx'));
+    if (name.endsWith('.css')) return {};
+    if (name.startsWith('.')) {
+      const target = path.resolve(path.dirname(file), name);
+      return load(fs.existsSync(target + '.tsx') ? target + '.tsx' : target + '.ts');
+    }
     return require(name);
   }});
   vm.runInContext(code, context);
@@ -34,6 +38,33 @@ const answer = { answer: text, answerUnits: [], answerPairs: [], correctOrder: [
 const body = (q, a) => renderToStaticMarkup(React.createElement(AnswerBody, {
   question: { ...question, ...q }, answer: { ...answer, ...a },
 }));
+
+test('list siblings align from the first row and nested bullets keep their indentation', () => {
+  const text = '1. **첫 항목**\n   - 하위 항목\n2. 다음 항목\n\t• 다른 하위 항목';
+  const html = render({ text, units: ['첫 항목'] });
+  assert.equal((html.match(/class="bank-readable-line is-list"/g) || []).length, 4);
+  assert.ok(!html.includes('is-indented'));
+  assert.ok(html.includes('margin-inline-start:1.5em'));
+  assert.ok(html.includes('margin-inline-start:2em'));
+  assert.equal(plain(html), text.replace(/\*\*/g, ''));
+  assert.ok(html.includes('class="bank-answer-point">첫 항목</strong>'));
+});
+
+test('explicit list rows keep long sentences within their own item', () => {
+  const html = render({ text: `1. ${first} ${second}\n2. ${third}` });
+  assert.equal((html.match(/class="bank-readable-line is-list"/g) || []).length, 2);
+});
+
+test('list question stems retain sibling and nested row layout with cloze answers', () => {
+  const { BankStem } = load(path.join(__dirname, '../src/bank/BankStem.tsx'));
+  const html = renderToStaticMarkup(React.createElement(BankStem, {
+    text: '1. {{c1}}\n  - {{c2}}\n2. **항목**', cloze: true, answerUnits: ['답 하나', '답 둘'],
+  }));
+  assert.equal((html.match(/class="bank-stem-line is-list"/g) || []).length, 3);
+  assert.ok(html.includes('margin-inline-start:1em'));
+  assert.ok(!html.includes('is-sentence'));
+  assert.ok(html.indexOf('답 하나') < html.indexOf('답 둘'));
+});
 
 test('long answers use sentence rows without changing the text or splitting abbreviations and decimals', () => {
   const html = render({ text });

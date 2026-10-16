@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { textLayout } from "./textLayout";
 
 type Range = { start: number; end: number };
 
@@ -104,7 +105,8 @@ export function AnswerPoints({ text, units = [], readable = false }: { text: str
   }
   // Parse emphasis and scoring across the whole answer before splitting its layout.
   // This keeps a scoring unit or **bold span** intact even across sentence boundaries.
-  const separator = parsed.text.length >= 140
+  const singleLayout = textLayout(parsed.text);
+  const separator = parsed.text.length >= 140 && !parsed.text.includes("\n") && !singleLayout.list
     ? /(?<=[가-힣}\]][.!?])[ \t]+|\r?\n+[ \t]*/g : /\r?\n+[ \t]*/g;
   const lines: Range[] = [];
   let start = 0;
@@ -113,11 +115,15 @@ export function AnswerPoints({ text, units = [], readable = false }: { text: str
     start = match.index + match[0].length;
   }
   if (start < parsed.text.length) lines.push({ start, end: parsed.text.length });
-  if (!readable || lines.length < 2) return <>{renderRange(0, parsed.text.length)}</>;
-  return <span className="bank-readable">{lines.map((line, index) => <Fragment key={line.start}>
-    {parsed.text.slice(index ? lines[index - 1].end : 0, line.start)}
-    <span className={`bank-readable-line${index ? " is-indented" : ""}`}>
-      {renderRange(line.start, line.end)}
-    </span>
-  </Fragment>)}{parsed.text.slice(lines.at(-1)!.end)}</span>;
+  if (!readable || (lines.length < 2 && !singleLayout.list && !singleLayout.style)) return <>{renderRange(0, parsed.text.length)}</>;
+  return <span className="bank-readable">{lines.map((line, index) => {
+    const preceding = parsed.text.slice(index ? lines[index - 1].end : 0, line.start);
+    const layout = textLayout((preceding.includes("\n") ? preceding.slice(preceding.lastIndexOf("\n") + 1) : "") + parsed.text.slice(line.start, line.end));
+    return <Fragment key={line.start}>
+      {preceding}
+      <span style={layout.style} className={`bank-readable-line${layout.list ? " is-list" : index && !layout.style ? " is-indented" : ""}`}>
+        {renderRange(line.start, line.end)}
+      </span>
+    </Fragment>;
+  })}{parsed.text.slice(lines.at(-1)!.end)}</span>;
 }

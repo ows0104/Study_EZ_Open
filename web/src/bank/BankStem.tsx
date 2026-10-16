@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import { Stem } from "../lecture/Stem";
+import { textLayout } from "./textLayout";
 
 /** Only add layout: stored wording, blank order and answer units stay intact. */
 export function stemLines(text: string) {
@@ -10,9 +11,10 @@ export function stemLines(text: string) {
   const comparison = sentences.filter(labeled).length >= 2;
   // Explicit line breaks take precedence over automatic formatting.
   const lines = normalized.includes("\n") ? normalized.split(/\n+/)
-    : comparison || normalized.length >= 140 ? sentences : [normalized];
+    : !textLayout(normalized).list && (comparison || normalized.length >= 140) ? sentences : [normalized];
   const hasItems = comparison || lines.filter(labeled).length >= 2;
   return lines.filter(line => line.trim()).map((line, index) => ({
+    ...textLayout(line),
     text: line.trim(),
     indented: index > 0 || /^[ \t]+/.test(line),
     item: labeled(line) && hasItems,
@@ -26,7 +28,7 @@ export function BankStem({ text, cloze = false, answerUnits }: {
   return <p className="quiz-stem bank-stem">
     {stemLines(text).map((line, index) => <Fragment key={index}>
       {index > 0 ? "\n" : null}
-      <span className={`bank-stem-line${line.indented ? line.item ? " is-item" : " is-sentence" : ""}`}>
+      <span style={line.style} className={`bank-stem-line${line.list ? " is-list" : line.indented ? line.item ? " is-item" : line.style ? "" : " is-sentence" : ""}`}>
         {(cloze ? line.text.split(/(\{\{c\d+\}\})/g) : [line.text]).map((part, partIndex) => {
           if (!cloze || !/^\{\{c\d+\}\}$/.test(part)) return <Stem key={partIndex} text={part} />;
           const unit = answerUnits?.[blank];
