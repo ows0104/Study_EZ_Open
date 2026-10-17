@@ -18,6 +18,7 @@ import type { PrequizJob, RunnerBeat } from "../types/jobs";
 import { useMe } from "../useMe";
 import { loadLatestBankPrompt } from "./prompt";
 import { BankCoverage } from "./BankCoverage";
+import { BankResponseInput } from "./BankResponseInput";
 
 /** 웹 문항 생성 → CLI 검수·보완 → Main-Quiz 게시·학습. */
 export function BankPanel({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | "runId">; detail: LectureDetail }) {
@@ -293,6 +294,9 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
             <small>비우고 저장하면 지워집니다.</small>
           </div>
         </div> : null}
+        <BankResponseInput key={path} subject={lecture.subject} runId={lecture.runId}
+          disabled={Boolean(busy) || job?.state === "running"}
+          onSaved={() => { load(); bumpPreviewVersion(); }} />
         {!bank?.shareUrl || showSetup ? <ExtensionSetup minimum={extensionInputMinimum("bank", true)} /> : null}
         {pointsMoving && pointsJob ? <p className="panel-hint">
           출제포인트 준비 — {pointsJob.state === "queued" ? "러너를 기다리는 중" : progressLine(pointsJob)}
