@@ -40,11 +40,17 @@ def prompt_for(title: str, exam_date: str, sources: list[dict]) -> tuple[str, st
     version = re.search(r"Version:\s*(\S+)", header[1] if header else "")
     labels = {"notes_current": "강의자료(필기 포함)", "jokbo": "족보"}
     scope = lecture_scope(title, sources)
+    scope_row = next((row for row in json.loads(LECTURE_SCOPES.read_text(encoding="utf-8"))
+                      if row["instruction"] == scope), {})
+    delivery = TEMPLATE.with_name("fileDelivery.md" if scope_row.get("outputMode") == "markdown_file" else "textDelivery.md").read_text(encoding="utf-8")
+    delivery_values = {"run_id": scope_row.get("sourcePrefix", "")[1:-1], "subject": "약리학",
+                       "prompt_version": version[1] if version else "unknown"}
+    delivery = re.sub(r"\{\{(run_id|subject|prompt_version)\}\}", lambda match: delivery_values[match[1]], delivery)
     values = {"title": title, "exam_date": exam_date or "미정",
-              "lecture_scope": scope,
+              "lecture_scope": scope, "delivery_instructions": delivery,
               "weighting": "강의슬라이드 > 족보 > 필기", "output": "이 응답 본문에 바로 쓴다.",
               "sources": "\n".join(f"  - {s['id']} | {labels[s['kind']]} | {s['filename']}" for s in sources)}
-    body = re.sub(r"\{\{(title|exam_date|weighting|sources|output|lecture_scope)\}\}",
+    body = re.sub(r"\{\{(title|exam_date|weighting|sources|output|lecture_scope|delivery_instructions)\}\}",
                   lambda match: values[match[1]], HEADER.sub("", template))
     return body, version[1] if version else "unknown"
 

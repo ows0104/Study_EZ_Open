@@ -13,6 +13,7 @@ export function QuizCreateButton({ runId, title }: { runId: string; title: strin
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [setup, setSetup] = useState(false);
+  const [minimum, setMinimum] = useState(extensionInputMinimum("bank", false));
   if (!isAdmin) return null;
   async function create() {
     if (busy) return;
@@ -27,6 +28,11 @@ export function QuizCreateButton({ runId, title }: { runId: string; title: strin
       const sources = detail.bankSources ?? [];
       if (!sources.some(source => source.kind === "notes_current")) throw new Error("올해 강의 필기가 올라오면 만들 수 있습니다.");
       const latest = await loadLatestBankPrompt(detail, sources);
+      if (latest.fileOutput && !extensionCompatible("1.3.18")) {
+        setMinimum("1.3.18");
+        setSetup(true);
+        throw new Error("파일 문제은행 수집에는 브리지 1.3.18 이상이 필요합니다. 업데이트 뒤 사이트와 AI 대화 탭을 새로고침하세요.");
+      }
       const files = [];
       for (const source of sources) {
         const { url } = await api<{ url: string }>(`/api/lectures/${path}/files/${source.assetId}`);
@@ -42,6 +48,6 @@ export function QuizCreateButton({ runId, title }: { runId: string; title: strin
     <button className="is-quiet" disabled={busy} aria-label={`${title} 퀴즈 만들기`} onClick={() => void create()}>{busy ? "준비 중…" : "만들기"}</button>
     {message ? <small role="status">{message}</small> : null}
     {error ? <small role="alert">{error}</small> : null}
-    {setup ? <ExtensionSetup minimum={extensionInputMinimum("bank", false)} /> : null}
+    {setup ? <ExtensionSetup minimum={minimum} /> : null}
   </div>;
 }

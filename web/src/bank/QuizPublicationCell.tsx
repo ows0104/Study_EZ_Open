@@ -7,8 +7,8 @@ export function QuizPublicationCell({ value, kind, applicable = true }: { value?
   if (!applicable) return <td className="quiz-production">—</td>;
   if (!value) return <td className="quiz-production"><span>확인 중</span></td>;
   if (kind === "link") {
-    if (value.responseSource === "manual") return <td className={`quiz-production ${value.link.sinceCutoff ? "is-complete" : "is-incomplete"}`}>
-      <span>{value.link.sinceCutoff ? "✓ " : ""}직접 저장한 답변{value.link.state !== "complete" ? " · 확인 필요" : ""}</span>
+    if (value.responseSource === "manual" || value.responseSource === "file") return <td className={`quiz-production ${value.link.sinceCutoff ? "is-complete" : "is-incomplete"}`}>
+      <span>{value.link.sinceCutoff ? "✓ " : ""}{value.responseSource === "file" ? "검증한 문제은행 파일" : "직접 저장한 답변"}{value.link.state !== "complete" ? " · 확인 필요" : ""}</span>
       {value.link.completedAt ? <small>저장 {time(value.link.completedAt)}</small> : null}
       {value.link.questionCount > 0 ? <small>{value.link.questionCount}문항 · 링크보다 우선</small> : <small>링크보다 우선</small>}
     </td>;

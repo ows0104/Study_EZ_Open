@@ -147,6 +147,7 @@ function shareFixture({ fields = [], buttons = [], text = 'Share conversation', 
     },
   });
   const source = read('chatgpt-share.js');
+  vm.runInContext(read('bank-file.js'), context);
   vm.runInContext(source.slice(0, source.lastIndexOf('void initialize()')), context);
   return { context, root, runtime, sent, state, document };
 }
@@ -181,6 +182,25 @@ test('bank hands complete answer to runner even when public sharing fails, once 
   vm.runInContext('retryAfter = 0;', s.context);
   await s.context.publish();
   assert.equal(s.sent.filter(m => m.type === 'STUDYEZ_BANK_ANSWER').length, 1);
+});
+
+test('bank transports complete consecutive Markdown blocks without changing their content', async () => {
+  const s=shareFixture();
+  const first='### Q001 | basic | Core | 5 | 1 | direct\n문제: 첫 질문\n정답: ["첫 답"]\n출처: S1 p.6\n출제근거: '+ '원본의 같은 목표를 회상한다. '.repeat(8);
+  const last='### Q002 | basic | Core | 5 | 1 | direct\n문제: 다음 질문\n정답: ["다음 답"]\nSTUDYEZ_BANK_COMPLETE';
+  const raw='```markdown\n'+first+'\n```\n\n```md\n'+last+'\n```';
+  const expected=first+'\n\n'+last;
+  assert.equal(s.context.completedBankAnswer(raw),expected);
+  for(const incomplete of [raw.slice(0,-3),raw+'\n아직 미완성',raw.replace('STUDYEZ_BANK_COMPLETE','계속')]){
+    assert.equal(s.context.completedBankAnswer(incomplete),incomplete);
+  }
+  vm.runInContext('watch = {mode:"bank"};',s.context);
+  s.context.accessToken=async()=> 'token';
+  s.context.conversationState=async()=>({finished:true,currentNode:'wrapped-answer',answer:raw});
+  s.context.publishViaApi=async()=> 'https://chatgpt.com/share/bank-test';
+  s.context.isPubliclyReadable=async()=>true;
+  await s.context.publish();
+  assert.equal(s.sent.find(m=>m.type==='STUDYEZ_BANK_ANSWER').raw,expected);
 });
 
 test('bank defers state API calls while the answer is generating', async () => {
@@ -449,4 +469,33 @@ test('bank version travels from the exact launch request through pending deliver
   assert.equal(stored['studyez-bank:1:test/lecture'].promptVersion,'1.53');
   const page=webBridge(); page.listeners.extension(message);
   assert.equal(page.posted.at(-1).promptVersion,'1.53');
+});
+
+test('prefixed CNS launch requires a real validated file and retains its metadata across delivery', async () => {
+  const stored = {}, delivered = []; let receive;
+  const context = vm.createContext({ URL, console, importScripts() {}, chrome: {
+    runtime: {onMessage:{addListener(fn){receive=fn;}},onConnect:{addListener(){}}},
+    storage:{session:{async get(key){return key===null?{...stored}:{[key]:stored[key]};},
+      async set(value){Object.assign(stored,value);},async remove(key){delete stored[key];}}},
+    tabs:{onUpdated:{addListener(){}},onRemoved:{addListener(){}},onActivated:{addListener(){}},
+      async create(){return{id:10};},async sendMessage(tab,message){delivered.push({tab,...message});}},
+  }});
+  for(const name of ['protocol.js','bank-file.js','background.js'])vm.runInContext(read(name),context);
+  const protocol=context.STUDYEZ_PROTOCOL;
+  const lectureId='studyez:bank:1.76:약리학/261006_02';
+  const payload={requestId:'file',lectureId,provider:'chatgpt',mode:'bank',prompt:'request',promptVersion:'1.76',
+    files:[{filename:'test.pdf',downloadUrl:'http://localhost:8000/api/local-storage/lectures/test.pdf'}]};
+  const send=(message,tab=10)=>new Promise(resolve=>receive(message,{tab:{id:tab,url:tab===10?'https://chatgpt.com/c/test':'http://localhost:5173'}},resolve));
+  await send({type:protocol.MESSAGES.openPreview,payload},1);
+  const raw=fs.readFileSync(path.join(__dirname,'../fixtures/bank-file-valid.md'),'utf8');
+  assert.equal((await send({type:'STUDYEZ_BANK_ANSWER',raw})).ok,false);
+  const responseFile={filename:'study-ez-261006_02-bank.md',sha256:require('node:crypto').createHash('sha256').update(raw).digest('hex'),byteLength:Buffer.byteLength(raw)};
+  assert.equal((await send({type:'STUDYEZ_BANK_ANSWER',raw,responseFile,manualFile:true})).ok,true);
+  await new Promise(resolve=>setImmediate(resolve));
+  const message=delivered.find(m=>m.type===protocol.MESSAGES.bankReady);
+  assert.equal(message.lectureId,lectureId);assert.equal(message.responseFile.sha256,responseFile.sha256);
+  assert.equal(message.manualFile,true);assert.equal(message.raw,raw);
+  const page=webBridge();page.listeners.extension(message);
+  assert.equal(page.posted.at(-1).responseFile.filename,responseFile.filename);
+  assert.equal(page.posted.at(-1).manualFile,true);
 });

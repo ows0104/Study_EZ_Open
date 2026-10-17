@@ -30,6 +30,8 @@ const bankTemplate = readFileSync(resolve(here, "../src/bank/bankPrompt.md"), "u
 writeFileSync(resolve(here, "../public/bank-prompt.json"), JSON.stringify({
   version: /Version:\s*(\S+)/.exec(bankTemplate)?.[1], template: bankTemplate,
   lectureScopes: JSON.parse(readFileSync(resolve(here, "../src/bank/lectureScopes.json"), "utf8")),
+  deliveries: { file: readFileSync(resolve(here, "../src/bank/fileDelivery.md"), "utf8"),
+    text: readFileSync(resolve(here, "../src/bank/textDelivery.md"), "utf8") },
 }));
 
 /** 배포에 들어갈 것만. 스토어 자산과 문서는 뺀다. */

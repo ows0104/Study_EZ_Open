@@ -46,7 +46,9 @@ test('canonical web prompt includes the exact matching lecture scope and keeps o
  const template=fs.readFileSync(path.join(__dirname,'../src/bank/bankPrompt.md'),'utf8');
  const scopes=JSON.parse(fs.readFileSync(path.join(__dirname,'../src/bank/lectureScopes.json'),'utf8'));
  const exports={};
- vm.runInNewContext(code,{exports,require:id=>({default:id.endsWith('.json')?scopes:template})});
+ vm.runInNewContext(code,{exports,require:id=>({default:id.endsWith('.json')?scopes:
+  id.includes('fileDelivery')?fs.readFileSync(path.join(__dirname,'../src/bank/fileDelivery.md'),'utf8'):
+  id.includes('textDelivery')?fs.readFileSync(path.join(__dirname,'../src/bank/textDelivery.md'),'utf8'):template})});
  for(const scope of scopes) {
  const source={kind:'notes_current',filename:scope.sourcePrefix+' lecture.pdf',id:'S1'};
  assert.ok(exports.renderBankPrompt({title:scope.title},[source]).includes(scope.instruction));
@@ -58,5 +60,9 @@ test('canonical web prompt includes the exact matching lecture scope and keeps o
  const wrongSource=exports.renderBankPrompt({title:scope.title},[{...source,filename:'different.pdf'}]);
  assert.ok(!wrongSource.includes(scope.instruction));
  assert.ok(!wrongSource.includes('별도 지정 없음'));
+ const current=exports.renderBankPrompt({title:scope.title},[source]);
+ assert.ok(!/\{\{(?:delivery_instructions|run_id|prompt_version|subject)\}\}/.test(current));
+ assert.equal(current.includes('STUDYEZ_BANK_FILE'),scope.outputMode==='markdown_file');
+ if(scope.outputMode==='markdown_file') assert.ok(current.includes(`study-ez-${scope.sourcePrefix.slice(1,-1)}-bank.md`));
  }
 });

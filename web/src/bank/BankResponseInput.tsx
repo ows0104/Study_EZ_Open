@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { api, ApiError } from "../api";
+import { readBankFile, type ResponseFileMetadata } from "./responseFile";
 
 const COMPLETE_MARK = "STUDYEZ_BANK_COMPLETE";
 
@@ -12,6 +13,10 @@ export function BankResponseInput({ subject, runId, disabled, onSaved }: {
 }) {
   const id = useId();
   const [raw, setRaw] = useState("");
+  const [responseFile, setResponseFile] = useState<ResponseFileMetadata | null>(null);
+  const [fileVersion, setFileVersion] = useState("");
+  const [fileCount, setFileCount] = useState(0);
+  const [readingFile, setReadingFile] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -30,10 +35,13 @@ export function BankResponseInput({ subject, runId, disabled, onSaved }: {
     setLoading(true);
     setLoadError("");
     // bank-response GET은 러너의 작업 상태를 바꾸므로 읽기 전용 경로를 쓴다.
-    api<{ raw: string }>(`${base}/bank/shared-source`).then(answer => {
+    api<{ raw: string; responseFile?: ResponseFileMetadata & { promptVersion: string; questionCount: number } }>(`${base}/bank/shared-source`).then(answer => {
       if (!active) return;
       loaded.current = true;
-      if (!edited.current) { setRaw(answer.raw); setSaved(Boolean(answer.raw)); }
+      if (!edited.current) {
+        setRaw(answer.raw); setSaved(Boolean(answer.raw)); setResponseFile(answer.responseFile ?? null);
+        setFileVersion(answer.responseFile?.promptVersion ?? ""); setFileCount(answer.responseFile?.questionCount ?? 0);
+      }
     }).catch(cause => {
       if (!active) return;
       if (cause instanceof ApiError && cause.status === 404) { loaded.current = true; return; }
@@ -42,19 +50,31 @@ export function BankResponseInput({ subject, runId, disabled, onSaved }: {
     return () => { active = false; };
   }, [expanded, base, loadAttempt]);
   // 복사한 Markdown의 굵게·인라인 코드·닫는 코드블록은 완료 표시의 일부가 아니다.
-  const text = raw.trim().replace(
+  const text = responseFile ? raw : raw.trim().replace(
     /(?:\*\*|__|`{1,3})?STUDYEZ_BANK_COMPLETE(?:\*\*|__|`{1,3})?(?:\s*\n```)?\s*$/,
     COMPLETE_MARK,
   );
-  const complete = text.endsWith(COMPLETE_MARK);
+  const complete = text.trimEnd().endsWith(COMPLETE_MARK);
+
+  async function loadFile(file?: File) {
+    if (!file || saving || readingFile) return;
+    edited.current = true;
+    setReadingFile(true); setError(""); setSaved(false);
+    try {
+      const result = await readBankFile(file, { subject, runId });
+      setRaw(result.raw); setResponseFile(result.responseFile); setFileVersion(result.info.prompt_version);
+      setFileCount(result.info.question_count); setConfirmed(false);
+    } catch (cause) { setError((cause as Error).message); }
+    finally { setReadingFile(false); }
+  }
 
   async function save(event: FormEvent) {
     event.preventDefault();
-    if (saving) return;
+    if (saving || readingFile) return;
     setSaved(false);
     if (disabled) { setError("다른 작업이 진행 중입니다. 검수가 끝난 뒤 다시 저장해주세요. 입력한 답변은 그대로 남아 있습니다."); return; }
     if (text.length < 200) { setError("답변 본문이 너무 짧습니다. ChatGPT의 퀴즈뱅크 답변 전체를 붙여 넣어주세요. (200자 이상)"); return; }
-    if (!complete && !confirmed) { setError("완료 표시가 없습니다. 답변을 끝까지 붙여 넣었다면 아래 확인란을 선택한 뒤 다시 저장해주세요."); return; }
+    if (!complete && (responseFile || !confirmed)) { setError("완료 표시가 없습니다. 답변을 끝까지 붙여 넣었다면 아래 확인란을 선택한 뒤 다시 저장해주세요."); return; }
     setSaving(true);
     setError("");
     setSaved(false);
@@ -64,7 +84,8 @@ export function BankResponseInput({ subject, runId, disabled, onSaved }: {
         method: "PUT",
         // 링크 필드를 생략해 저장된 공유·개인 링크를 보존한다.
         // 수동으로 전체 복사를 확인한 경우에도 기존 전달 계약의 끝 표시를 붙인다.
-        body: JSON.stringify({ raw: submitted, source: "manual" }),
+        body: JSON.stringify({ raw: submitted, source: "manual",
+          ...(responseFile ? { responseFile, promptVersion: fileVersion } : {}) }),
       });
       edited.current = true;
       loaded.current = true;
@@ -81,23 +102,33 @@ export function BankResponseInput({ subject, runId, disabled, onSaved }: {
     <summary>답변 직접 붙여넣기</summary>
     <form className="link-editor" onSubmit={event => void save(event)}>
       <p className="panel-hint">저장할 강의: {subject} · {runId}. ChatGPT 답변 전체를 복사하세요. 여러 답변으로 나뉘었다면 순서대로 모두 붙여 넣으세요.</p>
+      <label className="link-editor-field">
+        <span>완성된 문제은행 .md 파일 불러오기</span>
+        <input type="file" accept=".md,text/markdown" disabled={saving || readingFile}
+          onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; void loadFile(file); }} />
+      </label>
+      {readingFile ? <p className="panel-hint">파일의 문항 수·강의 ID·정답 참조를 확인하는 중…</p> : null}
+      {responseFile ? <p className="panel-hint">{responseFile.filename} · {fileCount}문항 · 프롬프트 {fileVersion} · 파일 확인 완료. 아래 저장 버튼으로 검수를 요청하세요.</p> : null}
+      {responseFile ? <button type="button" disabled={saving || readingFile} onClick={() => {
+        edited.current = true; setResponseFile(null); setRaw(""); setSaved(false); setError("");
+      }}>파일 선택 취소</button> : null}
       {loading ? <p className="panel-hint">저장된 답변을 불러오는 중…</p> : null}
       {loadError ? <p role="alert" className="notice is-error">{loadError} <button type="button" onClick={() => setLoadAttempt(value => value + 1)}>다시 불러오기</button></p> : null}
       <label className="link-editor-field" htmlFor={id}>
         <span>퀴즈뱅크 답변 본문</span>
-        <textarea id={id} rows={10} maxLength={2_000_000} value={raw} disabled={saving}
+        <textarea id={id} rows={10} maxLength={2_000_000} value={raw} disabled={saving || readingFile} readOnly={Boolean(responseFile)}
           style={{ width: "100%", resize: "vertical" }} spellCheck={false}
           placeholder="이 강의의 완성된 답변 전체를 붙여 넣으세요."
-          onChange={event => { edited.current = true; setRaw(event.target.value); setSaved(false); setError(""); setConfirmed(false); }} />
+          onChange={event => { edited.current = true; setRaw(event.target.value); setResponseFile(null); setSaved(false); setError(""); setConfirmed(false); }} />
       </label>
-      {text && !complete ? <>
+      {text && !complete && !responseFile ? <>
         <p className="panel-hint">끝에 완료 표시({COMPLETE_MARK})가 없습니다. ChatGPT 답변이 중간에 끊기지 않았는지 확인하세요.</p>
         <label><input type="checkbox" checked={confirmed} disabled={saving}
           onChange={event => { setConfirmed(event.target.checked); setError(""); }} /> 답변 전체를 끝까지 붙여 넣었습니다</label>
       </> : null}
       {text && text.length < 200 ? <p className="panel-hint">답변 본문은 200자 이상이어야 합니다.</p> : null}
       <div className="link-editor-actions">
-        <button type="submit" className="is-primary" disabled={saving}>
+        <button type="submit" className="is-primary" disabled={saving || readingFile}>
           {saving ? "저장 중…" : "답변 저장·검수 요청"}
         </button>
       </div>

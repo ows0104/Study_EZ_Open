@@ -134,6 +134,103 @@ function answerText(body) {
   return parts.join("\n\n");
 }
 
+/** Markdown code fences are presentation wrappers, not an unfinished bank. */
+function completedBankAnswer(answer) {
+  const raw = typeof answer === "string" ? answer : "";
+  if (raw.trimEnd().endsWith("STUDYEZ_BANK_COMPLETE")) return raw;
+  let fence = null;
+  let wrapped = false;
+  const lines = [];
+  for (const line of raw.split("\n")) {
+    const match = /^ {0,3}(`{3,}|~{3,})(markdown|md)?[ \t\r]*$/i.exec(line);
+    if (match && !fence) {
+      fence = match[1];
+      wrapped = true;
+    } else if (fence && match && !match[2] && match[1][0] === fence[0] && match[1].length >= fence.length) {
+      fence = null;
+    } else {
+      lines.push(line);
+    }
+  }
+  const unwrapped = lines.join("\n").trim();
+  return wrapped && !fence && /^### Q\d+\s*\|/m.test(unwrapped)
+    && unwrapped.endsWith("STUDYEZ_BANK_COMPLETE") ? unwrapped : raw;
+}
+
+function bankFileTarget() {
+  return globalThis.StudyEZBankFile.lectureTarget(watch?.lectureId, watch?.promptVersion);
+}
+
+function fileMode() {
+  const target = bankFileTarget();
+  const version = /^(\d+)\.(\d+)$/.exec(target.promptVersion || "");
+  return target.subject === "약리학" && ["261006_02", "261006_03"].includes(target.runId)
+      && version && (Number(version[1]) > 1 || (Number(version[1]) === 1 && Number(version[2]) >= 76));
+}
+
+async function deliverBankFile(result, manualFile = false) {
+  const url = `https://chatgpt.com/c/${conversationId()}`;
+  return new Promise(resolve => {
+    if (!sendShareMessage({ type: "STUDYEZ_BANK_ANSWER", raw: result.raw, responseFile: result.responseFile, manualFile, url },
+      response => resolve(response?.ok === true))) resolve(false);
+  });
+}
+
+function offerBankFile(message) {
+  if (document.getElementById("studyez-bank-file")) return;
+  const panel = document.createElement("div");
+  panel.id = "studyez-bank-file";
+  panel.style.cssText = "position:fixed;bottom:18px;right:18px;z-index:2147483647;background:#fff;color:#18212f;border:1px solid #aaa;border-radius:10px;padding:12px;max-width:360px;font:14px sans-serif;box-shadow:0 2px 15px #0003";
+  const label = document.createElement("label");
+  label.textContent = "Study EZ · 완성된 .md 파일 전달 ";
+  const input = document.createElement("input"); input.type = "file"; input.accept = ".md,text/markdown";
+  const status = document.createElement("p"); status.textContent = message;
+  input.addEventListener("change", async () => {
+    const file = input.files?.[0]; if (!file) return;
+    input.disabled = true;
+    try {
+      const result = await globalThis.StudyEZBankFile.readFile(file, bankFileTarget());
+      if (!(await deliverBankFile(result, true))) throw new Error("전달 확인을 받지 못했습니다. Study EZ 탭을 열고 다시 선택하세요.");
+      lastBankAnswer = result.raw;
+      status.textContent = `${result.info.question_count}문항 파일을 확인해 전달했습니다. 사이트의 저장·검수 상태를 확인하세요.`;
+    } catch (error) { status.textContent = error.message; }
+    finally { input.disabled = false; input.value = ""; }
+  });
+  const close = document.createElement("button"); close.textContent = "닫기";
+  close.addEventListener("click", () => panel.remove());
+  label.appendChild(input); panel.append(label, status, close); document.body.appendChild(panel);
+}
+
+/** Use only real download links exposed by this reply; never invent a sandbox API. */
+async function collectBankFile(answer) {
+  const target = bankFileTarget();
+  const filename = `study-ez-${target.runId}-bank.md`;
+  const links = [...answer.matchAll(/\[[^\]]*\]\(([^\s)]+)\)/g)].map(m => m[1]);
+  const linked = links.find(value => {
+    try { return decodeURIComponent(value.split(/[?#]/)[0]).endsWith('/' + filename); } catch { return false; }
+  });
+  if (!linked) return null;
+  const candidates = [linked, ...[...document.querySelectorAll('a[href]')]
+    .filter(a => (a.textContent || '').includes(filename)).map(a => a.href)];
+  for (const value of candidates) {
+    let url; try { url = new URL(value, location.href); } catch { continue; }
+    if (url.protocol !== 'https:' || url.origin !== 'https://chatgpt.com'
+        || !url.pathname.startsWith('/backend-api/')) continue;
+    try {
+      const response = await fetch(url.href, { credentials: 'include', cache: 'no-store', redirect: 'error' });
+      if (!response.ok) continue;
+      const length = Number(response.headers.get('content-length') || 0);
+      if (length > globalThis.StudyEZBankFile.MAX_BYTES) throw new Error('파일이 너무 큽니다.');
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (bytes.byteLength > globalThis.StudyEZBankFile.MAX_BYTES) throw new Error('파일이 너무 큽니다.');
+      const raw = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
+      return await globalThis.StudyEZBankFile.describe(raw, target, filename);
+    } catch (error) { console.info(LOG, '파일 직접 회수 대기:', error.message); }
+  }
+  offerBankFile('ChatGPT에서 완성된 .md 파일을 내려받아 선택하세요. Study EZ 사이트의 파일 불러오기도 사용할 수 있습니다.');
+  return null;
+}
+
 /** 이미 만들어 둔 공유가 있는지. 생성이 실패로 보고됐지만 실제로는 됐을 때의 복구로도 쓴다. */
 async function existingShareUrl(conversation, token) {
   const response = await api("/shared_conversations?order=created&limit=50", token);
@@ -380,15 +477,21 @@ async function publish() {
     // 대화만 여기까지 온다.
     const url = `https://chatgpt.com/c/${conversation}`;
     // 공유 생성 실패와 무관하게 완성된 문항을 먼저 러너에 전달한다.
-    if (watch.mode === "bank" && state.answer?.trimEnd().endsWith("STUDYEZ_BANK_COMPLETE")
-        && state.answer.length >= 200 && state.answer.length <= 2_000_000
-        && state.answer !== lastBankAnswer) {
+    const bankFile = watch.mode === "bank" && fileMode() ? await collectBankFile(state.answer) : null;
+    if (bankFile && bankFile.raw !== lastBankAnswer) {
+      if (!(await deliverBankFile(bankFile))) return "pending";
+      lastBankAnswer = bankFile.raw;
+    }
+    const bankAnswer = completedBankAnswer(state.answer);
+    if (watch.mode === "bank" && !fileMode() && bankAnswer.trimEnd().endsWith("STUDYEZ_BANK_COMPLETE")
+        && bankAnswer.length >= 200 && bankAnswer.length <= 2_000_000
+        && bankAnswer !== lastBankAnswer) {
       const stored = await new Promise((resolve) => {
-        if (!sendShareMessage({ type: "STUDYEZ_BANK_ANSWER", raw: state.answer, url },
+        if (!sendShareMessage({ type: "STUDYEZ_BANK_ANSWER", raw: bankAnswer, url },
             (response) => resolve(response?.ok === true))) resolve(false);
       });
       if (!stored) return "pending";
-      lastBankAnswer = state.answer;
+      lastBankAnswer = bankAnswer;
     }
     if (url !== lastConversationUrl) {
       if (!sendLink("STUDYEZ_CONVERSATION_LINK", url)) return "pending";
@@ -447,9 +550,9 @@ function watchForCompletedTurns() {
   }, POLL_INTERVAL_MS);
 }
 
-function startWatching(lectureId, mode) {
+function startWatching(lectureId, mode, promptVersion = "") {
   if (watch) return;
-  watch = { lectureId, mode: ["shared", "bank", "review"].includes(mode) ? mode : "personal" };
+  watch = { lectureId, promptVersion, mode: ["shared", "bank", "review"].includes(mode) ? mode : "personal" };
   console.info(LOG, `이 대화의 링크를 자동으로 저장합니다 (${watch.mode}).`);
   watchForCompletedTurns();
 }
@@ -460,7 +563,7 @@ async function initialize() {
   // 걸리는 시간이라 폴링으로 기다리기엔 길다. 그래서 밀어 준다.
   chrome.runtime.onMessage.addListener((message) => {
     if (!contextInvalidated && message?.type === "STUDYEZ_WATCH_READY" && typeof message.lectureId === "string") {
-      startWatching(message.lectureId, message.mode);
+      startWatching(message.lectureId, message.mode, message.promptVersion || "");
     }
     return false;
   });
@@ -472,7 +575,7 @@ async function initialize() {
       if (!sendShareMessage({ type: "STUDYEZ_GET_WATCH" }, (response) => resolve(response?.ok ? response : null))) resolve(null);
     });
     if (contextInvalidated) return;
-    if (existing) return startWatching(existing.lectureId, existing.mode);
+    if (existing) return startWatching(existing.lectureId, existing.mode, existing.promptVersion || "");
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 }

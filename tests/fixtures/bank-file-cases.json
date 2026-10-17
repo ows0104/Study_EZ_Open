@@ -1,0 +1,15 @@
+[
+  {"name":"count mismatch","old":"\"question_count\":8","new":"\"question_count\":9"},
+  {"name":"missing question","old":"### Q002 |","new":"### Q009 |"},
+  {"name":"duplicate question","old":"### Q002 |","new":"### Q001 |"},
+  {"name":"missing completion","old":"STUDYEZ_BANK_COMPLETE","new":""},
+  {"name":"unknown option","old":"정답: [\"A\"]","new":"정답: [\"Z\"]"},
+  {"name":"unknown matching target","old":"\"1-A\"","new":"\"1-Z\""},
+  {"name":"missing matching pair","old":"[\"1-A\",\"2-B\"]","new":"[\"1-A\"]"},
+  {"name":"duplicate sequence item","old":"[\"B\",\"A\"]","new":"[\"B\",\"B\"]"},
+  {"name":"missing cloze","old":"{Alpha}","new":"Alpha"},
+  {"name":"unknown conflict","old":"충돌: CF001","new":"충돌: CF002"},
+  {"name":"missing question field","old":"문제: Symbol A의 대응 기호는?","new":""},
+  {"name":"malformed answer json","old":"[\"Alpha\"]","new":"[\"Alpha\",]"},
+  {"name":"wrong lecture","old":"\"run_id\":\"261006_02\"","new":"\"run_id\":\"261006_03\""}
+]
