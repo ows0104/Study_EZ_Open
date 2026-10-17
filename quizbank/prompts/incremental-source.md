@@ -30,14 +30,14 @@ note에 방향별 실제 question_id·빠진 조건·필수/확장 구분·원�
 excluded와 근거를 남기며, 실제 지식 누락·읽지 못한 쪽을 제외 처리로 숨기지 않는다.
 관리·지식 혼합 포인트는 지식을 분리하고, 관리 기록 암기로 coverage를 채우지 않는다.
 
-현재 전체 문항 간 중복·충돌과 Core가 학습목표·해당 교수 기출·올해 출제 예고의 실제 목표·회상 방향을
+현재 전체 문항 간 중복·충돌과 Must-Know·Core가 교수 출제 예고·학습목표·해당 교수 기출의 실제 목표·회상 방향을
 시험하는지 매번 확인한다. 교수의 일반 강조·필기자의 중요 표시·임상 중요성에 따른 Important 목표의 누락은 별도로 확인하며,
 누락 보완의 필요성만으로 Core로 올리지 않는다.
 모든 문항의 우선순위와 독립 심화 여부를 tier_checks에 정확히 한 번 기록한다.
 tested_target은 실제 인출 단위, recommended_tier는 Essential/Core/Important/Optional,
 recommended_importance는 Essential=5/Core=5/Important=4/Optional=2,
 recommended_advanced는 독립 심화 여부(boolean)다. advanced_reason에는 추가 추론·연계 또는
-단순 회상이라고 판단한 이유를 쓴다. basis는 must_memorize/exam_explicit/exam_hint/objective/past_exam/emphasis/note_emphasis/clinical/detail이다.
+단순 회상이라고 판단한 이유를 쓴다. basis는 must_memorize/must_know_implied/exam_explicit/exam_hint/objective/past_exam/emphasis/note_emphasis/clinical/detail이다.
 source_refs에 실제 위치를, evidence에 실제 학습목표·기출 질문·강조 표시 또는 구체적인 임상
 중요성·부연임을 확인한 내용을 쓴다. essential_target은 과거 호환 필드로 빈 문자열을 쓴다.
 등급·수치·심화 중 하나라도 다르면 교정한다. 교육적 판단 기준은 뒤에 붙은 공통 원칙을 따른다.
@@ -82,6 +82,6 @@ question_issues에는 개별 문제와 새 전역 관계 문제, duplicates에�
 summary에 실제 개별 검수 범위와 전역 대조·필수 누락·확장 제안·오류를 구분해 적는다.
 재사용 문항의 기존 판정을 제거하거나 게시를 위해 오류·누락을 통과로 바꾸지 않는다.
 
-Essential(Must-Know급)은 반드시 암기(must_memorize) 또는 올해 시험에 내겠다는 확정적 명시(exam_explicit)의 원본 직접 근거가 있을 때 인정한다. 그보다 약한 교수의 올해 출제 예고·암시는 exam_hint로 Core 근거에 포함한다. 단순 강조나 필기자의 시험 예상만으로 교수의 출제 예고를 추정하지 않는다. 필기자의 중요 표시는 note_emphasis로 Important 근거에 포함하고 실제 표시·위치·작성 주체를 기록한다. 일반 강조·학습목표·반복 기출·필기자 표시만으로 Essential로 승격하지 않는다.
+사용자 표기 Must-Know는 저장·검수 JSON의 기존 tier=Essential과 같은 등급이다. 교수의 직접적 암기 요구(must_memorize), 확정적 출제 언급(exam_explicit), 간접 출제 신호(exam_hint), 완곡한 필수 지식 강조(must_know_implied)를 모두 Must-Know 근거로 인정한다. “이 정도는 알아야겠죠?”, “시험에 내기 좋겠다”, “이거는 알고 있는 게 좋을 것 같아요”를 단순 가능성·일반 권장으로 낮추지 않는다. 교수의 실제 발언·출처·평가 지식 단위의 대응을 확인한다. Core는 학습목표·해당 교수 기출에 근거하되 교수의 출제 예고·강조가 확인되면 Must-Know를 우선한다. 필기자 본인의 중요 표시는 note_emphasis로 Important 근거이며 교수 발언으로 추정하지 않는다.
 
 Cloze를 새로 작성·수정할 때는 {정답}으로 감싸고 중복 정답은 정리 코드로 복원한다. 기존 {{c1}}+answer_units도 읽는다. OX 해설의 핵심 감별 키워드는 **강조**로 보존·작성하며 앱에서 파란색으로 표시한다.

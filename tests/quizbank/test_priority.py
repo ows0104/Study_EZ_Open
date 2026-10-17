@@ -11,11 +11,11 @@ from tests.quizbank.test_web_audit import RAW, bank, report
 
 def test_essential_requires_explicit_memorization_or_exam_evidence(bank):
     rows = report(bank)["tier_checks"]
-    for basis in ("objective", "past_exam", "emphasis", "note_emphasis", "exam_hint", "clinical", "detail"):
+    for basis in ("objective", "past_exam", "emphasis", "note_emphasis", "clinical", "detail"):
         rows[0].update(recommended_tier="Essential", recommended_importance=5, basis=basis)
         with pytest.raises(SessionError, match="Essential"):
             priority.assess(bank, rows)
-    for basis in ("must_memorize", "exam_explicit"):
+    for basis in ("must_memorize", "exam_explicit", "exam_hint", "must_know_implied"):
         rows[0].update(recommended_tier="Essential", recommended_importance=5, basis=basis)
         checked, issues = priority.assess(bank, rows)
         assert checked["checkedCount"] == len(bank["questions"])
@@ -23,12 +23,15 @@ def test_essential_requires_explicit_memorization_or_exam_evidence(bank):
 
 
 @pytest.mark.parametrize('basis', ['exam_hint', 'exam_explicit'])
-def test_professors_current_exam_signal_can_support_core(bank, basis):
+def test_professors_current_exam_signal_supports_must_know_instead_of_core(bank, basis):
     before = copy.deepcopy(bank)
     rows = report(bank)['tier_checks']
     rows[0].update(recommended_tier='Core', recommended_importance=5, basis=basis,
                    evidence='올해 수업에서 교수가 해당 비교를 시험으로 물을 수 있다고 언급한 기록',
                    source_refs=['S1 p.3'], reason='교수의 올해 시험 출제 예고와 실제 평가 대상이 일치')
+    with pytest.raises(SessionError, match='Must-Know'):
+        priority.assess(bank, rows)
+    rows[0].update(recommended_tier='Essential')
     checked, _ = priority.assess(bank, rows)
     assert checked['checkedCount'] == len(bank['questions'])
     assert bank == before

@@ -376,7 +376,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
             {displayed.examDate ? ` · ${daysLabel(displayed.examDate)}` : ""}
           </span>
           <span className="bank-tags">
-            <label className={`bank-tier-control${q.tier === "Essential" ? " is-essential" : ""}`} title="내 계정의 이 문제에 적용됩니다. Must-Know: 반드시 암기·교수의 명시적 시험 출제 강조 / Core: 학습목표·기출 / Important: 강조·임상 중요 / Optional: 기타 세부사항">
+            <label className={`bank-tier-control${q.tier === "Essential" ? " is-essential" : ""}`} title="내 계정의 이 문제에 적용됩니다. Must-Know: 교수의 직접·간접적인 필수 지식 강조·출제 예고 / Core: 학습목표·기출 / Important: 강조·임상 중요 / Optional: 기타 세부사항">
               내 중요도{" "}
               <select aria-label="내 문제 중요도" value={q.tier} disabled={busy || undoBusy || saving}
                 onChange={event => void changeTier(event.target.value as BankTier)}>

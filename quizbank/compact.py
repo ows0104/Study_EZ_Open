@@ -13,8 +13,56 @@ HEADER = re.compile(r"^#{1,6}[ \t]+(Q[A-Za-z0-9_-]+)([^\n]*)$", re.M)
 LABEL = re.compile(r"^\s*([A-Z]\d*|\d+)\s*[:.)]\s*(.+?)\s*$")
 
 
+def _json_value(body: str, start: int) -> tuple[object, int]:
+    """Decode an authored JSON value, allowing only a matched inline-code wrapper."""
+    fragment = body[start:]
+    wrapper = re.match(r"`{1,2}(?!`)", fragment)
+    offset = wrapper.end() if wrapper else 0
+    if wrapper:
+        offset += len(fragment[offset:]) - len(fragment[offset:].lstrip(" \t"))
+    value, size = json.JSONDecoder().raw_decode(fragment[offset:])
+    end = offset + size
+    if wrapper:
+        end += len(fragment[end:]) - len(fragment[end:].lstrip(" \t"))
+        ticks = wrapper[0]
+        if fragment[end:end + len(ticks)] != ticks or fragment[end + len(ticks):].startswith("`"):
+            raise ValueError("JSON inline-code wrapper is missing or contains trailing text")
+        end += len(ticks)
+    return value, end
+
+
+def deduplicate_repeats(raw: str) -> tuple[str, list[str]]:
+    """Collapse exact repeated compact blocks; conflicting versions remain an error."""
+    headings = list(HEADER.finditer(raw))
+    if not any("|" in h[2] for h in headings):
+        return raw, []
+    seen, skipped, repeated = {}, [], []
+    for index, heading in enumerate(headings):
+        end = headings[index + 1].start() if index + 1 < len(headings) else len(raw)
+        following = re.search(r"^#{1,6}[ \t]+(?:CF\d+|Source Conflicts|출처 충돌|Statistics|통계)[ \t]*$",
+                              raw[heading.end():end], re.M)
+        if following:
+            end = heading.end() + following.start()
+        body = raw[heading.end():end]
+        # These are response/chunk wrappers, never answer JSON or source text.
+        body = re.sub(r"(?m)^[ \t]*(?:```(?:markdown|md)?|STUDYEZ_BANK_COMPLETE)[ \t]*$", "", body).strip()
+        signature = (heading[0].strip(), body)
+        qid = heading[1]
+        if qid in seen:
+            if seen[qid] != signature:
+                raise SessionError(f"문항 ID 중복: {qid} — 내용이 다른 블록은 합칠 수 없습니다.")
+            skipped.append((heading.start(), end))
+            repeated.append(qid)
+        else:
+            seen[qid] = signature
+    for start, end in reversed(skipped):
+        raw = raw[:start] + raw[end:]
+    return raw, repeated
+
+
 def read_blocks(raw: str) -> list[dict]:
     """Read explicit metadata, answers and optional display text; the LLM organizes the rest."""
+    raw, _ = deduplicate_repeats(raw)
     headings = list(HEADER.finditer(raw))
     if not any("|" in heading[2] for heading in headings):
         return []  # Older field blocks without compact metadata keep their existing path.
@@ -32,6 +80,7 @@ def read_blocks(raw: str) -> list[dict]:
         if len(fields) != (5 if choice else 4):
             raise SessionError(f"{qid}: 문항 블록 머리의 필드 수 오류")
         tier, importance, difficulty, direction = fields[:4]
+        tier = 'Essential' if tier == 'Must-Know' else tier
         mode = fields[4] if choice else "none"
         if tier not in (*TIERS, "Advanced") or direction not in DIRECTIONS or not all(
                 re.fullmatch(r"[1-5]", n) for n in (importance, difficulty)) \
@@ -48,8 +97,19 @@ def read_blocks(raw: str) -> list[dict]:
         marker = re.compile(r"(?:^|\s|&#x20;)(정답|힌트|해설):[ \t]*")
         try:
             while match := marker.search(body, position):
-                value, size = json.JSONDecoder().raw_decode(body[match.end():])
                 name = match[1]
+                try:
+                    value, size = _json_value(body, match.end())
+                except ValueError:
+                    # A rationale can mention e.g. "Case 1 해설: ..." in prose.
+                    # Ignore that mention only when a separate, line-aligned JSON
+                    # field supplies the actual value. Never guess a missing value.
+                    line = body[body.rfind("\n", 0, match.start(1)) + 1:match.start(1)]
+                    actual = re.search(r"(?m)^[ \t]*" + name + r":[ \t]*(?=(?:`{1,2}(?!`)[ \t]*)?[\[\"])", body)
+                    if re.match(r"[ \t]*(?:문제|출처|출제근거):", line) and actual:
+                        position = match.end()
+                        continue
+                    raise
                 if name in values:
                     raise SessionError(f"{qid}: {name} 필드 중복")
                 values[name] = value
@@ -71,10 +131,10 @@ def read_blocks(raw: str) -> list[dict]:
         if any(not isinstance(values.get(name, ""), str) for name in ("힌트", "해설")):
             raise SessionError(f"{qid}: 힌트·해설은 JSON 문자열이어야 합니다.")
         evidence = None
-        evidence_marker = re.search(r"(?:^|\s|&#x20;)근거:[ \t]*(?=\{)", body)
+        evidence_marker = re.search(r"(?:^|\s|&#x20;)근거:[ \t]*(?=(?:`{1,2}(?!`)[ \t]*)?\{)", body)
         if evidence_marker:
             try:
-                evidence, _ = json.JSONDecoder().raw_decode(body[evidence_marker.end():])
+                evidence, _ = _json_value(body, evidence_marker.end())
             except ValueError:
                 pass  # 표시 메타데이터만 잘못됐으면 이후 별도 선택 단계에서 보완한다.
         blocks.append({"question_id": qid, "format": fmt, "tier": "Important" if tier == "Advanced" else tier,

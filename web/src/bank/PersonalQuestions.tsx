@@ -50,7 +50,7 @@ export function AddQuestionDialog({ base, onClose, onSaved }: {
         onChange={event => setExplanation(event.target.value)} /></label>
       <label>중요도<select value={tier} disabled={busy} onChange={event => setTier(event.target.value as BankTier)}>
         {Object.entries(TIER_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-      </select><small>Must-Know: 반드시 외워야 하거나 교수님이 시험 출제를 명시적으로 강조한 내용</small></label>
+      </select><small>Must-Know: 교수님이 직접·간접적으로 알아야 한다고 강조하거나 시험 출제를 예고한 내용</small></label>
       {error ? <p className="notice is-error" role="alert">{error}</p> : null}
       <footer><button type="button" className="is-quiet" disabled={busy} onClick={onClose}>취소</button>
         <button type="submit" disabled={busy || !question.trim() || !answer.trim()}>{busy ? "추가하는 중…" : "내 학습에 추가"}</button></footer>

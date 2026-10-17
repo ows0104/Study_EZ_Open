@@ -4,8 +4,8 @@ from __future__ import annotations
 from .points import STR, _array, _object
 from .session import SessionError
 
-BASIS = ("must_memorize", "exam_explicit", "exam_hint", "objective", "past_exam", "emphasis", "note_emphasis", "clinical", "detail")
-CORE_BASES = {"objective", "past_exam", "exam_explicit", "exam_hint"}
+BASIS = ("must_memorize", "must_know_implied", "exam_explicit", "exam_hint", "objective", "past_exam", "emphasis", "note_emphasis", "clinical", "detail")
+CORE_BASES = {"objective", "past_exam"}
 IMPORTANCE = {"Essential": 5, "Core": 5, "Important": 4, "Optional": 2}
 ISSUE = "Tier 근거 불일치"
 CHECK_SCHEMA = _array(_object({
@@ -42,10 +42,10 @@ def assess(bank: dict, rows: list[dict]) -> tuple[dict, list[dict]]:
         tier, basis = row["recommended_tier"], row["basis"]
         if tier not in IMPORTANCE or basis not in BASIS:
             raise SessionError("Tier 검수: 등급·근거 유형이 맞지 않습니다.")
-        if tier == "Essential" and basis not in {"must_memorize", "exam_explicit"}:
-            raise SessionError("Tier 검수: Essential은 반드시 암기 또는 명시적 시험 출제 강조의 직접 근거가 필요합니다.")
+        if tier == "Essential" and basis not in {"must_memorize", "must_know_implied", "exam_explicit", "exam_hint"}:
+            raise SessionError("Tier 검수: Must-Know(Essential)는 교수의 직접·간접적인 필수 지식 강조·출제 예고 근거가 필요합니다.")
         if tier == "Core" and basis not in CORE_BASES:
-            raise SessionError("Tier 검수: Core는 학습목표·해당 교수 기출 또는 교수의 올해 시험 출제 예고·암시의 직접 근거가 필요합니다.")
+            raise SessionError("Tier 검수: 교수의 올해 시험 출제 예고·암시는 Must-Know로 판단합니다. Core는 학습목표·해당 교수 기출의 직접 근거가 필요합니다.")
         if tier == "Important" and basis not in {"emphasis", "note_emphasis", "clinical"}:
             raise SessionError("Tier 검수: Important의 실제 강조 또는 구체적인 임상 중요성 근거가 필요합니다.")
         if tier == "Optional" and basis != "detail":

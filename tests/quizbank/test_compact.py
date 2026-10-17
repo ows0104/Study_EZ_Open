@@ -1,5 +1,4 @@
 import copy
-import hashlib
 import json
 
 import pytest
@@ -88,6 +87,35 @@ C. γ
 미해결: false
 STUDYEZ_BANK_COMPLETE
 '''
+
+
+def test_exact_repeated_block_is_collapsed_without_losing_conflict_section():
+    first = RAW.split('\n\n### Q002', 1)[0]
+    raw = RAW.replace('### CF001', first + '\n\n### CF001')
+    prepared, repeated = compact.deduplicate_repeats(raw)
+    assert repeated == ['Q001']
+    assert '### CF001\n설명:' in prepared
+    assert compact.read_blocks(prepared) == compact.read_blocks(RAW)
+
+
+@pytest.mark.parametrize('replacement', ['정답: ["β"]', '출처: S1 p.2'])
+def test_repeated_id_with_changed_answer_or_source_is_rejected(replacement):
+    first = RAW.split('\n\n### Q002', 1)[0]
+    changed = first.replace('정답: ["α"]', replacement) if replacement.startswith('정답') else first.replace('출처: S1 p.1', replacement)
+    with pytest.raises(SessionError, match='내용이 다른 블록'):
+        compact.read_blocks(first + '\n\n' + changed)
+
+
+def test_repeated_chunk_wrappers_do_not_change_question_identity():
+    first = RAW.split('\n\n### Q002', 1)[0]
+    raw = first + '\nSTUDYEZ_BANK_COMPLETE\n```\n```markdown\n' + first + '\nSTUDYEZ_BANK_COMPLETE'
+    assert compact.read_blocks(raw) == compact.read_blocks(first)
+
+
+def test_repeated_id_does_not_hide_changed_text_under_a_subheading():
+    first = RAW.split('\n\n### Q002', 1)[0]
+    with pytest.raises(SessionError, match='내용이 다른 블록'):
+        compact.read_blocks(first + '\n#### 세부 조건\n첫 조건\n' + first + '\n#### 세부 조건\n다른 조건')
 
 
 def draft():
@@ -200,22 +228,72 @@ def test_browser_copy_can_join_labeled_fields_into_one_paragraph():
     assert compact.read_blocks(joined) == compact.read_blocks(RAW)
 
 
+def test_rationale_mention_of_explanation_is_not_a_json_field():
+    first = RAW.split('\n\n### Q002', 1)[0]
+    raw = first.replace('출제근거: 직접 회상',
+                        '출제근거: Case 1 해설: 기호 구별\n해설: "실제 원문 해설"')
+    block, = compact.read_blocks(raw)
+    assert block['units'] == ['α']
+    assert block['explanation'] == '실제 원문 해설'
+
+
+def test_prose_mention_cannot_supply_a_missing_or_malformed_explanation():
+    first = RAW.split('\n\n### Q002', 1)[0]
+    for suffix in ('', '\n해설: "닫히지 않은 문자열'):
+        raw = first.replace('출제근거: 직접 회상', '출제근거: Case 1 해설: 기호 구별' + suffix)
+        with pytest.raises(SessionError, match='JSON 오류'):
+            compact.read_blocks(raw)
+
+
 def test_answer_decoder_preserves_quoted_field_names_inside_answers():
     units = ['문구 정답: ["가짜"] 자체', '따옴표 " 와 역슬래시 \\']
     raw = RAW.replace('["α", "β", "α"]', json.dumps(units + ['α'], ensure_ascii=False))
     assert compact.read_blocks(raw)[1]['units'] == units + ['α']
 
 
-def test_shared_quality_guidance_preserves_158_rules_and_adds_159_layout():
+@pytest.mark.parametrize('ticks', ['`', '``'])
+def test_browser_inline_code_wrappers_preserve_answers_explanation_and_evidence(ticks):
+    first = RAW.split('\n\n### Q002', 1)[0]
+    units = ['문구 정답: ["가짜"]와 `기호` 자체', '따옴표 " 와 역슬래시 \\']
+    raw = first.replace('["α"]', ticks + json.dumps(units, ensure_ascii=False) + ticks)
+    explanation = '실제 해설: 표기 `α`를 유지한다.'
+    evidence = {'mode': 'single', 'slides': [{'page': 1, 'evidence': '실제 표시'}]}
+    raw += '\n해설: ' + ticks + json.dumps(explanation, ensure_ascii=False) + ticks
+    raw += '\n근거: ' + ticks + json.dumps(evidence, ensure_ascii=False) + ticks
+    block, = compact.read_blocks(raw)
+    assert block['units'] == units and block['explanation'] == explanation
+    assert block['source_evidence'] == evidence
+
+
+@pytest.mark.parametrize('answer', ['`["α"]', '`["α"]``', '``["α"]`', '`["α"] extra`', '`["α",]`'])
+def test_inline_code_wrapper_cannot_hide_malformed_or_unterminated_json(answer):
+    with pytest.raises(SessionError, match='JSON 오류'):
+        compact.read_blocks(RAW.replace('정답: ["α"]', '정답: ' + answer, 1))
+
+
+def test_prose_explanation_mention_can_use_a_separate_inline_code_json_field():
+    first = RAW.split('\n\n### Q002', 1)[0]
+    raw = first.replace('출제근거: 직접 회상',
+                        '출제근거: Case 1 해설: 기호 구별\n해설: `"실제 원문 해설"`')
+    block, = compact.read_blocks(raw)
+    assert block['explanation'] == '실제 원문 해설'
+
+
+def test_shared_quality_guidance_preserves_158_rules_and_adds_layout_and_conflict_clarity():
     quality = generate.item_quality_guidance().removeprefix('문항 품질 원칙\n\n')
     layout = '- 비교형 발문은 도입문 다음에 기준별로 줄을 나누고 두 칸 들여쓴다. 각 줄 안에서 비교 대상의 순서를 일정하게 유지한다. 긴 발문도 문장·조건 단위로 줄을 나누고 후속 문장을 들여써 읽기 쉽게 한다. 줄바꿈을 위해 내용·조건을 생략하거나 문항·빈칸을 새로 나누지 않는다.\n'
     assert layout in quality
     clarity = '- 자료 충돌을 해결한 문항도 하나의 분명한 학습 목표를 시험한다. 자료 간 차이를 해명하려고 임상 조건·추론을 여러 겹 붙인 함정으로 만들지 않는다. 해설은 정답의 이유와 기억할 핵심을 먼저 짧게 설명하고, 출처별 차이·검증 이력·작업 경위와 섞지 않는다. 실제 모순·정답표 오류·상황 차이를 구별하며, 미해결 쟁점을 해결된 것처럼 쓰지 않는다.\n'
     assert clarity in quality
-    assert 'Essential > Core > Important > Optional' in quality
-    assert '단순한 별표·반복·학습목표·과거 출제만으로 자동 승격하지 않는다' in quality
-    # v1.68 uses inline cloze answers while retaining the source-grounded priority rules.
-    assert hashlib.sha256(quality.replace(layout, '').replace(clarity, '').encode()).hexdigest() == '987f9bf983767aa96c73d99388c72a38d99a23c8474bce64fc34fab05f443b18'
+    assert 'Must-Know > Core > Important > Optional' in quality
+    assert '교수의 간접적인 출제 신호로 보고 모두 Must-Know 근거로 인정한다' in quality
+    assert '필기자 본인의 중요 표시나 시험 예상만으로 교수의 발언을 추정하지 않는다' in quality
+
+
+def test_must_know_web_label_preserves_existing_top_priority_semantics():
+    current=RAW.replace('| Core |', '| Must-Know |', 1)
+    legacy=RAW.replace('| Core |', '| Essential |', 1)
+    assert compact.read_blocks(current)==compact.read_blocks(legacy)
 
 
 def test_multiline_comparison_keeps_compact_metadata_answers_and_question_ids():
