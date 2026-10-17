@@ -12,6 +12,7 @@ from .memory import DAY_MS
 from .policy import DEFAULT
 from .progress import seen_ids
 from .suspension import active_bank
+from .connections import connection_order
 
 
 def _due(review: dict, state: dict, bank: dict, question: dict, *, latest: bool, policy: dict) -> int:
@@ -104,7 +105,10 @@ def daily_candidates(bank: dict, state: dict, exam: str, now: int, policy: dict 
     units = daily_units(bank, state, now, policy)
     seen = seen_ids(state) if extra else set()
     remaining = units if extra else [u for u in units if u["status"] not in ("done", "later")]
-    unlearned = {u["key"] for u in units if (u["key"] not in seen if extra else not u["seen"])}
+    # Daily study requires a rating; explicit extra study preserves its existing
+    # first-view coverage rule. Catalog browsing does not mark either as seen.
+    unchecked = {u['key'] for u in units if (u['key'] not in seen if extra else not u['seen'])}
+    dependencies, anchors = connection_order(active_bank(bank, state), unchecked, pages)
     # 미학습 문항을 모두 먼저 확인한다. 완료 문항은 다시 고르지 않는다.
     ranked = rank_questions(bank, state, exam, now, policy)
     rows = {r["question_id"]: r for r in ranked}
@@ -120,13 +124,14 @@ def daily_candidates(bank: dict, state: dict, exam: str, now: int, policy: dict 
         if unit["due"] > now:
             continue
         q = unit["questions"][0]
-        if unit["kind"] == "new" and any(qid in unlearned for qid in q["prerequisites"]):
+        if unit["kind"] == "new" and dependencies[q['question_id']] & unchecked:
             continue  # 아직 평가하지 않은 선행 문항부터 확인한다.
         slide = question_slide(q, pages)
+        anchor = anchors[q['question_id']]
         candidates.append({"unit": unit, "question": q, "rank": rows[unit["key"]], "scope": scope,
-                           "order": (lecture_order, slide,
+                           "order": (lecture_order, anchor[0],
                                      rows[unit["key"]]["stage"] if slide != float("inf") else 0,
-                                     positions[unit["key"]])})
+                                     anchor[1], slide, positions[unit["key"]])})
     return candidates, ranked
 
 
@@ -134,7 +139,8 @@ def daily_selection(chosen: dict | None, ranked: list[dict], exam: str, now: int
     question = chosen["question"] if chosen else None
     if question:
         row = next(r for r in ranked if r["question_id"] == question["question_id"])
-        row["notes"] += ["첫 학습은 등급·심화 표시와 관계없이 선행관계·슬라이드 순서를 따릅니다. 복습은 중요도·예정일·약점을 반영합니다.",
+        row["notes"] += ["첫 학습은 선행관계와 같은 개념의 직접 회상을 먼저 확인하고, 대응·기전·응용으로 이어집니다. 관련 없는 문항은 슬라이드 흐름을 따릅니다.",
+                         "평가한 기초 문항은 틀려도 다음 연결을 막지 않습니다. 복습은 기존 예정일·약점·중요도를 반영합니다.",
                          "가능하면 같은 개념의 다른 회상방향 사이에 다른 문제 3~5개를 둡니다."] + row["reasons"]
         row.update(eligible=True, score=row["raw_score"], reasons=[])
     return {"question": question, "ranked": ranked,
