@@ -35,7 +35,10 @@ test('canonical web prompt includes the exact matching lecture scope and keeps o
  assert.ok(exports.renderBankPrompt({title:scope.title},[source]).includes(scope.instruction));
  const other=exports.renderBankPrompt({title:'Other lecture'},[source]);
  assert.ok(!other.includes(scope.instruction));
- assert.ok(other.includes('별도 지정 없음'));
+ assert.ok(!other.includes('별도 지정 없음'));
+ assert.ok(!other.includes('{{lecture_scope}}'));
+ assert.match(other,/강의: Other lecture\n\n## 1\./);
  const wrongSource=exports.renderBankPrompt({title:scope.title},[{...source,filename:'different.pdf'}]);
  assert.ok(!wrongSource.includes(scope.instruction));
+ assert.ok(!wrongSource.includes('별도 지정 없음'));
 });
