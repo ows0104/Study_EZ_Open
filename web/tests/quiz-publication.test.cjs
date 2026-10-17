@@ -8,7 +8,7 @@ test('production checks remain visible without study aggregates and refresh afte
   const page = await browser.newPage();
   try {
     await page.goto(base + '?lazy');
-    await page.getByRole('columnheader', { name: /① 완성 퀴즈 링크/ }).waitFor();
+    await page.getByRole('columnheader', { name: /① 퀴즈 답변 · 링크/ }).waitFor();
     const row = page.locator('.overview-table tbody tr').first();
     await row.getByText('75문항', { exact: true }).waitFor();
     assert.match(await row.innerText(), /새 응답 미반영/);
@@ -19,6 +19,19 @@ test('production checks remain visible without study aggregates and refresh afte
     assert.equal(await row.getByText('새 응답 미반영', { exact: true }).count(), 0);
     assert.equal(await row.locator('.quiz-production.is-complete').count(), 2);
     await page.screenshot({ path: '../work/quiz-publication-20261017/overview.png', fullPage: true });
+  } finally { await browser.close(); }
+});
+
+test('manual response is the primary production source even with a share link', async () => {
+  const browser = await chromium.launch({ headless: true, channel: 'chrome' });
+  try {
+    const page = await browser.newPage();
+    await page.goto(base + '?lazy&manual');
+    const row = page.locator('.overview-table tbody tr').first();
+    await row.getByText('✓ 직접 저장한 답변', { exact: true }).waitFor();
+    assert.match(await row.innerText(), /75문항 · 링크보다 우선/);
+    assert.equal(await row.locator('.quiz-production a').count(), 0);
+    assert.equal(await row.getByRole('button', { name: /퀴즈 만들기/ }).count(), 0);
   } finally { await browser.close(); }
 });
 

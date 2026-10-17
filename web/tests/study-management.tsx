@@ -35,6 +35,7 @@ window.fetch = async (input, init) => {
   if (path === "/api/me") result = { id: "management-test", isAdmin: !options.has("student"), isApproved: true };
   else if (path === "/api/timetable/quiz-publication") result = { lectures: Array.from({ length: 10 }, (_, i) => ({
     subject: "약리학", runId: String(i), title: `강의 ${i}`, shareUrl: i === 0 ? "https://chatgpt.com/share/test" : "",
+    responseSource: i === 0 && options.has("manual") ? "manual" : "link",
     link: { state: i === 0 ? "complete" : "missing", sinceCutoff: i === 0, completedAt: i === 0 ? "2026-10-15T03:00:00Z" : null, questionCount: i === 0 ? 75 : 0, checkedAt: "2026-10-17T00:00:00Z" },
     upload: { sinceCutoff: i === 0, current: i === 0 && publicationReady, builtAt: i === 0 ? "2026-10-16T00:00:00Z" : null },
     job: i === 0 && !publicationReady ? { state: "running", stage: "필수 검수" } : null,

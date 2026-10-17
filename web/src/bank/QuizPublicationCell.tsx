@@ -7,6 +7,11 @@ export function QuizPublicationCell({ value, kind, applicable = true }: { value?
   if (!applicable) return <td className="quiz-production">—</td>;
   if (!value) return <td className="quiz-production"><span>확인 중</span></td>;
   if (kind === "link") {
+    if (value.responseSource === "manual") return <td className={`quiz-production ${value.link.sinceCutoff ? "is-complete" : "is-incomplete"}`}>
+      <span>{value.link.sinceCutoff ? "✓ " : ""}직접 저장한 답변{value.link.state !== "complete" ? " · 확인 필요" : ""}</span>
+      {value.link.completedAt ? <small>저장 {time(value.link.completedAt)}</small> : null}
+      {value.link.questionCount > 0 ? <small>{value.link.questionCount}문항 · 링크보다 우선</small> : <small>링크보다 우선</small>}
+    </td>;
     const labels = { complete: value.link.sinceCutoff ? "완료" : "10/15 이전 응답", incomplete: "미완성", wrong_lecture: "다른 강의 링크",
       unavailable: "공유 확인 실패", unsupported: "확인 필요", unchecked: "확인 대기", missing: "링크 없음" };
     const ok = value.link.sinceCutoff;

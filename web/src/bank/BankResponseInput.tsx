@@ -64,7 +64,7 @@ export function BankResponseInput({ subject, runId, disabled, onSaved }: {
         method: "PUT",
         // 링크 필드를 생략해 저장된 공유·개인 링크를 보존한다.
         // 수동으로 전체 복사를 확인한 경우에도 기존 전달 계약의 끝 표시를 붙인다.
-        body: JSON.stringify({ raw: submitted }),
+        body: JSON.stringify({ raw: submitted, source: "manual" }),
       });
       edited.current = true;
       loaded.current = true;

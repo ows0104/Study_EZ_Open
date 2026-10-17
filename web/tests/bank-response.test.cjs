@@ -45,7 +45,7 @@ test('manual bank response validates completeness, retains failures and saves to
     assert.equal(requests.length, 2);
     assert.equal(requests[1].method, 'PUT');
     assert.ok(requests[1].url.endsWith('/api/admin/lectures/' + encodeURIComponent('약리학') + '/261016_03/bank-response'));
-    assert.deepEqual(requests[1].body, { raw });
+    assert.deepEqual(requests[1].body, { raw, source: 'manual' });
     const manual = '완료 표시가 없는 전체 답변 '.repeat(50);
     await input.fill(manual);
     await save.click();
@@ -55,7 +55,7 @@ test('manual bank response validates completeness, retains failures and saves to
     await save.click();
     await page.getByRole('status').waitFor();
     assert.equal(requests.length, 3);
-    assert.deepEqual(requests[2].body, { raw: manual.trim() + '\nSTUDYEZ_BANK_COMPLETE' });
+    assert.deepEqual(requests[2].body, { raw: manual.trim() + '\nSTUDYEZ_BANK_COMPLETE', source: 'manual' });
     assert.equal(await input.inputValue(), stored);
     await page.reload();
     await page.getByText('답변 직접 붙여넣기', { exact: true }).click();
