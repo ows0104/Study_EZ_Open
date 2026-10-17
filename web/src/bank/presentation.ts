@@ -17,5 +17,6 @@ export function shuffled<T>(items: T[], seed: string, avoidOriginal = true): T[]
 export const presentationSeed = (q: BankQuestion) => q.presentationSeed ?? q.question_id;
 export function matchingLayout(q: BankQuestion) {
   const seed = presentationSeed(q);
-  return { left: shuffled(q.matching_left, `${seed}:left`, false), right: shuffled(q.matching_right, `${seed}:right`, false) };
+  return { left: q.matchingOrdered ? [...q.matching_left] : shuffled(q.matching_left, `${seed}:left`, false),
+    right: shuffled(q.matching_right, `${seed}:right`, false) };
 }

@@ -19,7 +19,8 @@ let index = 1, revealed = false, rejectReveal = true, rejectRate = true, revealC
 const ratings: string[] = [];
 const question = () => ({ question_id: `Q${index}`, question: `MATCHING-${index}`, concept_id: "C1", tier: "Core",
   importance: 5, format: index === 3 ? "basic" : "matching", retrieval_direction: "direct",
-  source_refs: [], conflict_id: "", options: [], matching_left: left, matching_right: right, sequence_items: [] });
+  source_refs: [], conflict_id: "", options: [], matchingOrdered: index === 1,
+  matching_left: left, matching_right: right, sequence_items: [] });
 // Both of the first two rows map to the same right item: reuse is valid.
 const answer = { answer: "ANSWER", answerUnits: [], correctOptionIds: [],
   answerPairs: left.map((item, i) => ({ left: item, right: right[i === 1 ? 0 : i] })),
@@ -64,6 +65,8 @@ try {
   const { BankSolve } = await import("../src/bank/BankSolve");
   createRoot(document.getElementById("root")!).render(<MemoryRouter><BankSolve base="/api/test/bank" lecture={{ subject: "테스트", runId: "demo" }} onFinished={() => {}} /></MemoryRouter>);
   await waitFor(() => buttons().length === 4);
+  check(rows().every((row, i) => row.textContent?.includes(left[i].split(': ')[1])),
+    "ordered matching keeps the API's left order during interactive solving");
   check(submit().disabled, "incomplete matching cannot be submitted");
   const nativeSelection = new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true });
   buttons()[0].dispatchEvent(nativeSelection);
@@ -87,6 +90,8 @@ try {
   submit().click(); await waitFor(() => document.querySelector(".bank-match-score") && !rateButton("hard").disabled);
   check(document.querySelector(".bank-match-score")!.textContent?.includes("4 / 4"), "correct raw pairs are graded using displayed shuffled letters");
   check(rows().every(row => row.disabled) && buttons().every(button => button.disabled), "graded choices are locked");
+  check(rows().every((row, i) => row.textContent?.includes(left[i].split(': ')[1])),
+    "revealing the answer preserves the ordered left column");
   check(document.querySelectorAll(".quiz-grade").length === 4, "automatic grading keeps all four manual rating buttons");
   window.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
   await new Promise(resolve => setTimeout(resolve, 30));

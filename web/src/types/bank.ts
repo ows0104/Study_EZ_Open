@@ -74,6 +74,8 @@ export type BankTier = "Essential" | "Core" | "Important" | "Optional";
 export type BankQuestion = {
   personalAdded?: boolean;
   presentationSeed?: string;
+  /** The API has placed the ordered matching column on the left. */
+  matchingOrdered?: boolean;
   mcq_mode?: "recall_first" | "comparison" | "none";
   personalEdited?: boolean;
   question_id: string;

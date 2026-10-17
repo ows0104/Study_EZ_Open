@@ -7,6 +7,21 @@ const source = fs.readFileSync(require('node:path').join(__dirname, '../src/bank
 const context = vm.createContext({ exports: {} });
 vm.runInContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, context);
 const { matchingLayout, shuffled } = context.exports;
+test('ordered matching keeps its left column in order while right choices vary across exposures', () => {
+  const q = { question_id: 'ordered', matchingOrdered: true,
+    matching_left: ['M1', 'M2', 'M3'], matching_right: ['alpha', 'beta', 'gamma'] };
+  const right = new Set();
+  for (let i = 0; i < 50; i++) {
+    const exposure = { ...q, presentationSeed: `ordered-${i}` };
+    const layout = matchingLayout(exposure);
+    assert.deepEqual(Array.from(layout.left), q.matching_left);
+    assert.deepEqual(Array.from(layout.right).sort(), [...q.matching_right].sort());
+    assert.equal(JSON.stringify(layout), JSON.stringify(matchingLayout(exposure)));
+    right.add(layout.right.join());
+  }
+  assert.ok(right.size > 1);
+  assert.deepEqual(q.matching_left, ['M1', 'M2', 'M3']);
+});
 test('matching columns vary independently, retain values, and stay fixed during one exposure', () => {
   const q = { question_id: 'same-question', matching_left: ['L1', 'L2'], matching_right: ['R1', 'R2'] };
   const layouts = new Set();
