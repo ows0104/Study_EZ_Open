@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 
 export type QuizPublication = {
-  subject: string; runId: string; shareUrl: string;
+  subject: string; runId: string; shareUrl: string; title?: string;
   link: { state: "complete" | "incomplete" | "wrong_lecture" | "unavailable" | "unsupported" | "unchecked" | "missing";
     sinceCutoff: boolean; completedAt: string | null; questionCount: number; checkedAt: string | null };
   upload: { sinceCutoff: boolean; current: boolean; builtAt: string | null };

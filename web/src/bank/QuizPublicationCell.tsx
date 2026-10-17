@@ -1,4 +1,5 @@
 import type { QuizPublication } from "./useQuizPublication";
+import { QuizCreateButton } from "./QuizCreateButton";
 
 const time = (value: string) => new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(value));
 
@@ -14,6 +15,7 @@ export function QuizPublicationCell({ value, kind, applicable = true }: { value?
       {value.link.completedAt ? <small>응답 {time(value.link.completedAt)}</small> : null}
       {value.link.state === "complete" ? <small>{value.link.questionCount}문항</small> : null}
       {value.link.checkedAt ? <small title="공개 공유 페이지를 마지막으로 확인한 시각">확인 {time(value.link.checkedAt)}</small> : null}
+      {!ok ? <QuizCreateButton runId={value.runId} title={value.title || value.runId} /> : null}
     </td>;
   }
   const active = value.job && ["running", "queued", "held"].includes(value.job.state);

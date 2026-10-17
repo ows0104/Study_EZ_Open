@@ -94,3 +94,7 @@
   .overview-table th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: 1px 0 var(--line); }
   .overview-table thead th:first-child { background: var(--surface-2); }
 }
+
+.quiz-create { margin-top: 8px; white-space: normal; max-width: 290px; }
+.quiz-create button { font-size: 12px; padding: 5px 10px; }
+.quiz-create [role="alert"] { color: var(--warn); }

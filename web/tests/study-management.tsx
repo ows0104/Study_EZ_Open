@@ -34,11 +34,15 @@ window.fetch = async (input, init) => {
   let result: object;
   if (path === "/api/me") result = { id: "management-test", isAdmin: !options.has("student"), isApproved: true };
   else if (path === "/api/timetable/quiz-publication") result = { lectures: Array.from({ length: 10 }, (_, i) => ({
-    subject: "약리학", runId: String(i), shareUrl: i === 0 ? "https://chatgpt.com/share/test" : "",
+    subject: "약리학", runId: String(i), title: `강의 ${i}`, shareUrl: i === 0 ? "https://chatgpt.com/share/test" : "",
     link: { state: i === 0 ? "complete" : "missing", sinceCutoff: i === 0, completedAt: i === 0 ? "2026-10-15T03:00:00Z" : null, questionCount: i === 0 ? 75 : 0, checkedAt: "2026-10-17T00:00:00Z" },
     upload: { sinceCutoff: i === 0, current: i === 0 && publicationReady, builtAt: i === 0 ? "2026-10-16T00:00:00Z" : null },
     job: i === 0 && !publicationReady ? { state: "running", stage: "필수 검수" } : null,
   })) };
+  else if (path === "/bank-prompt.json") result = { version: "1.99", template: "Version: 1.99\n{{title}}\n{{sources}}\nSTUDYEZ_BANK_COMPLETE" };
+  else if (/^\/api\/lectures\/약리학\/\d+\/files\//.test(path)) result = { url: "/test-source.pdf" };
+  else if (/^\/api\/lectures\/약리학\/\d+$/.test(path)) result = { title: "시험 강의", subject: "약리학", runId: path.split("/").at(-1), examDate: "2026-10-20",
+    bankSources: [{ id: "S1", assetId: "notes1", kind: "notes_current", filename: "시험 강의.pdf", contentType: "application/pdf" }] };
   else if (path === "/api/timetable") {
     const rows = options.has("lazy") ? lazyEvents() : events();
     result = { events: url.searchParams.get("include_study") === "false"
