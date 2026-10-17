@@ -31,7 +31,8 @@ def added_question(question_id: str, question: str, answer: str, tier: str, expl
 def augment(db: Session, row: QuizBank, user_id: str, *, edits: list | None = None) -> dict:
     """Merge private additions into a copy, independent of shared bank rebuilds."""
     from app.study_engine.policy import DEFAULT
-    bank = row.bank or {}
+    from app.bank_excluded import augment as include_restored
+    bank = include_restored(db, row, user_id, row.bank or {})
     if edits is None:
         edits = list(db.scalars(select(BankPersonalEdit).where(
             BankPersonalEdit.user_id == user_id, BankPersonalEdit.subject == row.subject,

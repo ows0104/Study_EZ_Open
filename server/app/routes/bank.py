@@ -33,6 +33,7 @@ from sqlalchemy.orm import Session
 from app import study_engine as engine
 from app import bank_edits
 from app import bank_personal
+from app import bank_excluded
 from app.bank_catalog import ordered_questions
 from app.personal_question_input import PersonalQuestionSettings
 from app.bank_validation.pages import cited_pages
@@ -393,6 +394,8 @@ def put_bank(subject: str, run_id: str, payload: BankIn, user: CurrentUser = Dep
             raise HTTPException(422, "보강은 기존 질문과 정답을 그대로 유지해야 합니다.")
         if not bank_usable(incoming, checked):
             raise HTTPException(422, "보강본의 문항 검증을 통과해야 합니다.")
+    if (row.validation or {}).get('excludedQuestions'):
+        checked['excludedQuestions'] = copy.deepcopy(row.validation['excludedQuestions'])
     row.bank, row.validation = incoming, checked
     row.review = payload.review
     row.pages, row.usage = payload.pages or {}, payload.usage or []
@@ -920,6 +923,8 @@ def _jokbo_slides(db: Session, row: QuizBank, question: dict) -> list[dict[str, 
 def _answer(db: Session, row: QuizBank, q: dict) -> dict[str, Any]:
     review = next((r for r in bank_edits.current_review(row.review, row.validation)["reviews"]
                    if r["question_id"] == q["question_id"]), None)
+    if review is None:
+        review = bank_excluded.records(row).get(q['question_id'], {}).get('medicalReview')
     if q.get("personalAnswer"):
         review = None
     # 프롬프트 v1.2(2026-10-05): 충돌은 한 문항으로 합치고 외부 의학지식으로 답을 정한다. 학생은 답을 본 뒤
@@ -990,11 +995,18 @@ def read_bank_catalog(subject: str, run_id: str, user: CurrentUser = Depends(req
     state = db.get(BankState, (user.id, subject, run_id))
     current = state.state if state and state.build_id == row.build_id else {}
     suspended = set(current.get("suspended_question_ids", []))
+    excluded = bank_excluded.records(row)
+    decisions = current.get('excluded_question_decisions', {})
+    active_ids = {q['question_id'] for q in bank['questions']}
+    catalog_bank = {**bank, 'questions': [*bank['questions'],
+        *(r['question'] for qid, r in excluded.items() if qid not in active_ids)]}
     questions = []
-    for original, pages in ordered_questions(bank, row.pages or {}):
+    for original, pages in ordered_questions(catalog_bank, row.pages or {}):
         q = question_priority(bank_personal.apply_edit(original, by_id.get(original["question_id"])), current)
         questions.append({"question": _public(q, bank=bank), "pages": pages,
-                          "suspended": q["question_id"] in suspended})
+                          "suspended": q["question_id"] in suspended,
+                          "excludedStatus": decisions.get(q['question_id'], 'excluded') if q['question_id'] in excluded else None,
+                          "excludedReason": excluded.get(q['question_id'], {}).get('reason', '')})
     # One asset query and one signed URL per slide, rather than per question.
     first_pages = {item["pages"][0] for item in questions if item["pages"]}
     slides = []
@@ -1022,12 +1034,51 @@ def read_catalog_answer(subject: str, run_id: str, question_id: str,
         raise HTTPException(409, "문제은행이 갱신되었습니다. 목록을 새로고침해 주세요.")
     original = next((q for q in bank["questions"] if q["question_id"] == question_id), None)
     if original is None:
+        original = bank_excluded.records(row).get(question_id, {}).get('question')
+    if original is None:
         raise HTTPException(404, "이 문제를 찾을 수 없습니다. 목록을 새로고침해 주세요.")
     q = bank_personal.apply(db, row, user.id, original)
     state = db.get(BankState, (user.id, subject, run_id))
     current = state.state if state and state.build_id == row.build_id else {}
     q = question_priority(q, current)
     return {"question": _public(q, bank=bank), "answer": _answer(db, row, q)}
+
+
+class ExcludedDecisionIn(BaseModel):
+    build_id: str = Field(alias='buildId')
+    decision: Literal['excluded', 'restored', 'deleted']
+
+
+@router.put('/lectures/{subject}/{run_id}/bank/excluded/{question_id}')
+def decide_excluded(subject: str, run_id: str, question_id: str, payload: ExcludedDecisionIn,
+                    user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
+    lecture = lecture_or_404(db, subject, run_id)
+    row = _bank_or_404(db, lecture, user)
+    _usable(row)
+    if row.build_id != payload.build_id:
+        raise HTTPException(409, '문제은행이 갱신되었습니다. 목록을 새로고침해 주세요.')
+    if question_id not in bank_excluded.records(row):
+        raise HTTPException(404, '보관된 제외 문항을 찾을 수 없습니다.')
+    state = db.scalar(select(BankState).where(BankState.user_id == user.id,
+        BankState.subject == subject, BankState.run_id == run_id).with_for_update())
+    if state is None:
+        state = BankState(user_id=user.id, subject=subject, run_id=run_id,
+            build_id=row.build_id, state=engine.empty_state())
+        db.add(state)
+    elif state.build_id != row.build_id:
+        raise HTTPException(409, '먼저 현재 문제은행의 학습 화면을 열어 주세요. 이전 학습 기록은 보존됩니다.')
+    current = copy.deepcopy(state.state)
+    previous = current.setdefault('excluded_question_decisions', {}).get(question_id, 'excluded')
+    current['excluded_question_decisions'][question_id] = payload.decision
+    if previous != payload.decision:
+        current.setdefault('excluded_question_history', []).append({
+            'question_id': question_id, 'from': previous, 'to': payload.decision, 'at': engine.now_ms()})
+    if payload.decision != 'restored' and (current.get('served') or {}).get('question_id') == question_id:
+        current['served'] = None
+    # Preserve ratings, due dates, private edits and the archived original.
+    _save(state, current)
+    db.commit()
+    return {'questionId': question_id, 'decision': payload.decision}
 
 
 class StartIn(BaseModel):

@@ -135,7 +135,8 @@ export type BankSlide = {
   sourceId?: string; sourceRunId?: string; sourceFilename?: string;
 };
 
-export type BankCatalogItem = { question: BankQuestion; pages: number[]; suspended: boolean };
+export type BankCatalogItem = { question: BankQuestion; pages: number[]; suspended: boolean;
+  excludedStatus?: 'excluded' | 'restored' | 'deleted' | null; excludedReason?: string };
 export type BankCatalog = {
   buildId: string; title: string; subject: string; runId: string;
   questions: BankCatalogItem[]; slides: BankSlide[];

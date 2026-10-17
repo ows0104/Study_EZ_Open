@@ -24,7 +24,7 @@ function Catalog({ subject, runId }: { subject: string; runId: string }) {
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState(new URLSearchParams(window.location.search).get('filter') === 'excluded' ? 'excluded' : 'all');
   const reload = () => setRevision(value => value + 1);
   useEffect(() => {
     const controller = new AbortController();
@@ -42,7 +42,10 @@ function Catalog({ subject, runId }: { subject: string; runId: string }) {
     let count = 0;
     for (const [index, item] of (catalog?.questions ?? []).entries()) {
       const q = item.question;
-      if ((filter === "active" && item.suspended) || (filter === "suspended" && !item.suspended)
+      if (filter === 'deleted' ? item.excludedStatus !== 'deleted' : item.excludedStatus === 'deleted') continue;
+      if ((filter === 'excluded' && item.excludedStatus !== 'excluded')
+        || (filter === 'restored' && item.excludedStatus !== 'restored')
+        || (filter === "active" && (item.suspended || item.excludedStatus === 'excluded')) || (filter === "suspended" && !item.suspended)
         || (filter === "personal" && !q.personalAdded)) continue;
       if (normalize(search) && !normalize(`${q.question_id} ${q.question}`).includes(normalize(search))) continue;
       const page = item.pages[0] ?? null;
@@ -62,10 +65,15 @@ function Catalog({ subject, runId }: { subject: string; runId: string }) {
     {error ? <div role="alert" className="notice is-error">{error} <button onClick={reload}>다시 불러오기</button></div>
       : !catalog ? <p className="notice" role="status">전체 문제를 불러오는 중…</p> : <>
         <div className="catalog-toolbar">
+          {catalog.questions.some(item => item.excludedStatus) ? <button onClick={() => setFilter('excluded')}>
+            Excluded · {catalog.questions.filter(item => item.excludedStatus === 'excluded').length}문항
+          </button> : null}
           <label>문제 검색 <input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="문제 내용 · 문항 ID" /></label>
           <label>보기 <select value={filter} onChange={event => setFilter(event.target.value)}>
             <option value="all">모든 문제</option><option value="active">학습 중인 문제</option>
             <option value="suspended">비활성화한 문제</option><option value="personal">내가 추가한 문제</option>
+            <option value="excluded">Excluded · 제외 보관</option><option value="restored">제외 후 내 학습에 복원</option>
+            <option value="deleted">내 목록에서 삭제한 제외 문항</option>
           </select></label>
           <span role="status">{count} / {catalog.questions.length}문항 · 슬라이드 순</span>
           <button className="is-quiet" onClick={reload}>목록 새로고침</button>
@@ -104,7 +112,18 @@ function CatalogCard({ item, number, base, buildId, reload }: {
   const [detail, setDetail] = useState<BankCatalogAnswer | null>(null);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
+  const [saving, setSaving] = useState(false);
   const qid = item.question.question_id;
+  const decide = async (decision: 'excluded' | 'restored' | 'deleted') => {
+    setSaving(true); setError('');
+    try {
+      await api(`${base.replace(/\/catalog$/, '')}/excluded/${encodeURIComponent(qid)}`, {
+        method: 'PUT', body: JSON.stringify({ buildId, decision }),
+      });
+      reload();
+    } catch (cause) { setError((cause as Error).message); }
+    finally { setSaving(false); }
+  };
   useEffect(() => {
     if (!open) return;
     const controller = new AbortController();
@@ -123,6 +142,15 @@ function CatalogCard({ item, number, base, buildId, reload }: {
       <span>{formats[q.format] ?? q.format}</span><span className={q.tier === "Essential" ? "catalog-essential" : ""}>{tiers[q.tier] ?? q.tier}</span>
       {q.advanced ? <span>심화</span> : null}{q.personalAdded ? <span>내 문제</span> : q.personalEdited ? <span>내 수정본</span> : null}
       {item.suspended ? <span>비활성화</span> : null}<small>{qid}</small></header>
+    {item.excludedStatus ? <div className="notice">
+      <strong>{item.excludedStatus === 'excluded' ? 'Excluded' : item.excludedStatus === 'restored' ? '내 학습에 복원됨' : '내 목록에서 삭제됨'}</strong>
+      <p>제외 이유: {item.excludedReason}</p>
+      <p>정답을 가린 채 따로 풀어볼 수 있어요. 복원하면 내 학습·복습에 포함됩니다. 원본과 기존 학습 기록은 보존됩니다.</p>
+      {item.excludedStatus !== 'restored' ? <button disabled={saving} onClick={() => void decide('restored')}>내 학습에 복원</button> : null}{' '}
+      {item.excludedStatus !== 'excluded' ? <button disabled={saving} onClick={() => void decide('excluded')}>Excluded로 돌리기</button> : null}{' '}
+      {item.excludedStatus !== 'deleted' ? <button disabled={saving} onClick={() => void decide('deleted')}>내 목록에서 삭제</button> : null}
+      {error ? <p role="alert">{error}</p> : null}
+    </div> : null}
     <QuestionBody question={q} answer={answer} picked={new Set()} onPick={() => {}} disabled showChoiceScore={false} />
     {item.pages.length > 1 ? <p className="bank-note">참고 쪽: {item.pages.join(", ")}</p> : null}
     <button type="button" className="catalog-reveal" aria-expanded={open} aria-controls={answerId}
