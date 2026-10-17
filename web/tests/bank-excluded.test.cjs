@@ -2,6 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const path = require('node:path');
+const fs = require('node:fs');
 test('Excluded: reveal, personal restore, delete, return and mobile layout', async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chrome' });
   try {
@@ -17,7 +18,9 @@ test('Excluded: reveal, personal restore, delete, return and mobile layout', asy
     await card.getByRole('button', { name: '정답·해설 보기 ↓' }).click();
     await card.getByText('예시 정답', { exact: true }).waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-    await page.screenshot({ path: path.resolve(__dirname, '../../work/excluded-20261018/mobile.png'), fullPage: true });
+    const screenshot = path.resolve(__dirname, '../../work/excluded-20261018/mobile.png');
+    fs.mkdirSync(path.dirname(screenshot), { recursive: true });
+    await page.screenshot({ path: screenshot, fullPage: true });
     await card.getByRole('button', { name: '내 학습에 복원', exact: true }).click();
     await page.getByRole('combobox', { name: '보기', exact: true }).selectOption('restored');
     await card.getByText('내 학습에 복원됨', { exact: true }).waitFor();
