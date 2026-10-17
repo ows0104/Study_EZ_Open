@@ -1,5 +1,5 @@
-import { useId, useState, type FormEvent } from "react";
-import { api } from "../api";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { api, ApiError } from "../api";
 
 const COMPLETE_MARK = "STUDYEZ_BANK_COMPLETE";
 
@@ -16,6 +16,31 @@ export function BankResponseInput({ subject, runId, disabled, onSaved }: {
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const edited = useRef(false);
+  const loaded = useRef(false);
+  const base = `/api/admin/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}`;
+
+  useEffect(() => {
+    if (!expanded || loaded.current) return;
+    let active = true;
+    setLoading(true);
+    setLoadError("");
+    // bank-response GET은 러너의 작업 상태를 바꾸므로 읽기 전용 경로를 쓴다.
+    api<{ raw: string }>(`${base}/bank/shared-source`).then(answer => {
+      if (!active) return;
+      loaded.current = true;
+      if (!edited.current) { setRaw(answer.raw); setSaved(Boolean(answer.raw)); }
+    }).catch(cause => {
+      if (!active) return;
+      if (cause instanceof ApiError && cause.status === 404) { loaded.current = true; return; }
+      setLoadError("저장된 답변을 불러오지 못했습니다. 다시 불러오거나 답변을 직접 붙여 넣어주세요.");
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [expanded, base, loadAttempt]);
   // 복사한 Markdown의 굵게·인라인 코드·닫는 코드블록은 완료 표시의 일부가 아니다.
   const text = raw.trim().replace(
     /(?:\*\*|__|`{1,3})?STUDYEZ_BANK_COMPLETE(?:\*\*|__|`{1,3})?(?:\s*\n```)?\s*$/,
@@ -34,13 +59,16 @@ export function BankResponseInput({ subject, runId, disabled, onSaved }: {
     setError("");
     setSaved(false);
     try {
-      await api(`/api/admin/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}/bank-response`, {
+      const submitted = complete ? text : `${text}\n${COMPLETE_MARK}`;
+      await api(`${base}/bank-response`, {
         method: "PUT",
         // 링크 필드를 생략해 저장된 공유·개인 링크를 보존한다.
         // 수동으로 전체 복사를 확인한 경우에도 기존 전달 계약의 끝 표시를 붙인다.
-        body: JSON.stringify({ raw: complete ? text : `${text}\n${COMPLETE_MARK}` }),
+        body: JSON.stringify({ raw: submitted }),
       });
-      setRaw("");
+      edited.current = true;
+      loaded.current = true;
+      setRaw(submitted);
       setConfirmed(false);
       setSaved(true);
       onSaved();
@@ -49,16 +77,18 @@ export function BankResponseInput({ subject, runId, disabled, onSaved }: {
     } finally { setSaving(false); }
   }
 
-  return <details className="link-editor">
+  return <details className="link-editor" onToggle={event => setExpanded(event.currentTarget.open)}>
     <summary>답변 직접 붙여넣기</summary>
     <form className="link-editor" onSubmit={event => void save(event)}>
       <p className="panel-hint">저장할 강의: {subject} · {runId}. ChatGPT 답변 전체를 복사하세요. 여러 답변으로 나뉘었다면 순서대로 모두 붙여 넣으세요.</p>
+      {loading ? <p className="panel-hint">저장된 답변을 불러오는 중…</p> : null}
+      {loadError ? <p role="alert" className="notice is-error">{loadError} <button type="button" onClick={() => setLoadAttempt(value => value + 1)}>다시 불러오기</button></p> : null}
       <label className="link-editor-field" htmlFor={id}>
         <span>퀴즈뱅크 답변 본문</span>
         <textarea id={id} rows={10} maxLength={2_000_000} value={raw} disabled={saving}
           style={{ width: "100%", resize: "vertical" }} spellCheck={false}
           placeholder="이 강의의 완성된 답변 전체를 붙여 넣으세요."
-          onChange={event => { setRaw(event.target.value); setSaved(false); setError(""); setConfirmed(false); }} />
+          onChange={event => { edited.current = true; setRaw(event.target.value); setSaved(false); setError(""); setConfirmed(false); }} />
       </label>
       {text && !complete ? <>
         <p className="panel-hint">끝에 완료 표시({COMPLETE_MARK})가 없습니다. ChatGPT 답변이 중간에 끊기지 않았는지 확인하세요.</p>
@@ -73,7 +103,7 @@ export function BankResponseInput({ subject, runId, disabled, onSaved }: {
       </div>
       {disabled ? <p className="panel-hint">다른 작업이 진행 중이어서 지금은 저장할 수 없습니다. 입력 내용은 유지되니 검수가 끝난 뒤 저장해주세요.</p> : null}
       <p className="panel-hint">저장하면 이 강의의 응답 원문을 교체하고 검수·게시를 요청합니다. 검수 중인 작업이 끝난 뒤 저장할 수 있습니다.</p>
-      {saved ? <p role="status" className="panel-hint">답변을 저장했습니다. 러너가 켜져 있으면 검수·게시를 진행합니다.</p> : null}
+      {saved ? <p role="status" className="panel-hint">저장된 답변입니다. 러너가 켜져 있으면 검수·게시를 진행합니다.</p> : null}
       {error ? <p role="alert" className="notice is-error">{error}</p> : null}
     </form>
   </details>;

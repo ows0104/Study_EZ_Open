@@ -7,9 +7,14 @@ test('manual bank response validates completeness, retains failures and saves to
   try {
     const page = await browser.newPage();
     let fail = true;
+    let stored = '';
     const requests = [];
+    await page.route('**/api/admin/lectures/**/bank/shared-source', route => route.fulfill({
+      status: stored ? 200 : 404, contentType: 'application/json', body: JSON.stringify(stored ? { raw: stored } : { detail: '없음' }),
+    }));
     await page.route('**/api/admin/lectures/**/bank-response', async route => {
       requests.push({ url: route.request().url(), method: route.request().method(), body: route.request().postDataJSON() });
+      if (!fail) stored = route.request().postDataJSON().raw;
       await route.fulfill({ status: fail ? 409 : 200, contentType: 'application/json',
         body: JSON.stringify(fail ? { detail: '이전 문항을 검수 중입니다.' } : { jobId: 1 }) });
     });
@@ -35,7 +40,7 @@ test('manual bank response validates completeness, retains failures and saves to
     fail = false;
     await save.click();
     await page.getByRole('status').waitFor();
-    assert.equal(await input.inputValue(), '');
+    assert.equal(await input.inputValue(), raw);
     assert.equal(await page.locator('body').getAttribute('data-saved'), 'yes');
     assert.equal(requests.length, 2);
     assert.equal(requests[1].method, 'PUT');
@@ -51,5 +56,31 @@ test('manual bank response validates completeness, retains failures and saves to
     await page.getByRole('status').waitFor();
     assert.equal(requests.length, 3);
     assert.deepEqual(requests[2].body, { raw: manual.trim() + '\nSTUDYEZ_BANK_COMPLETE' });
+    assert.equal(await input.inputValue(), stored);
+    await page.reload();
+    await page.getByText('답변 직접 붙여넣기', { exact: true }).click();
+    await page.getByRole('status').waitFor();
+    assert.equal(await input.inputValue(), stored);
+    assert.equal(requests.length, 3, 'reopening only reads the saved response');
+  } finally { await browser.close(); }
+});
+
+test('loading an old saved response never overwrites newly pasted text', async () => {
+  const browser = await chromium.launch({ headless: true, channel: 'chrome' });
+  try {
+    const page = await browser.newPage();
+    let finish;
+    const pending = new Promise(resolve => { finish = resolve; });
+    await page.route('**/api/admin/lectures/**/bank/shared-source', async route => {
+      await pending;
+      await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ raw: 'old saved text' }) });
+    });
+    await page.goto(`${process.env.STUDY_TEST_URL || 'http://127.0.0.1:5199'}/tests/bank-response.html`);
+    await page.getByText('답변 직접 붙여넣기', { exact: true }).click();
+    const input = page.getByLabel('퀴즈뱅크 답변 본문');
+    await input.fill('new pasted text');
+    finish();
+    await page.getByText('저장된 답변을 불러오는 중…').waitFor({ state: 'hidden' });
+    assert.equal(await input.inputValue(), 'new pasted text');
   } finally { await browser.close(); }
 });
