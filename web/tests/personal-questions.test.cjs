@@ -52,7 +52,7 @@ test('solve screen exposes Essential and adding a card does not reveal the curre
     assert.equal(await page.getByRole('combobox', { name: '내 문제 중요도' }).inputValue(), 'Essential');
     await page.getByRole('button', { name: '＋ 문제 추가' }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByText('현재 보고 있는 문제의 슬라이드가 참고 자료로 자동 연결됩니다.').waitFor();
+    await dialog.getByText('현재 문제의 슬라이드를 자동 선택했습니다. 선택을 바꾸거나 삭제할 수 있습니다.').waitFor();
     await dialog.getByLabel('발문').fill('새 질문');
     await dialog.getByRole('textbox', { name: '정답', exact: true }).fill('새 답');
     await dialog.getByRole('button', { name: '내 학습에 추가' }).click();
@@ -60,9 +60,35 @@ test('solve screen exposes Essential and adding a card does not reveal the curre
     assert.equal(await page.getByText('기존 문제', { exact: true }).count(), 1);
     const created = await page.evaluate(() => window.personalTest.calls.find(c => c.method === 'POST' && c.path.endsWith('/personal-questions')));
     assert.equal(created.body.sourceQuestionId, 'Q1');
+    assert.deepEqual(created.body.slideAssetIds, ['slide-3']);
     assert.equal(await page.evaluate(() => window.personalTest.calls.some(c => c.path.endsWith('/reveal') || c.path.endsWith('/rate'))), false);
   } finally { await browser.close(); }
 });
+
+for (const removeAll of [false, true]) {
+  test(`reference slides can be ${removeAll ? 'removed entirely' : 'replaced'} before adding`, async () => {
+    const browser = await chromium.launch({ headless: true, channel: 'chrome' });
+    try {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      await page.goto(`${base}/tests/personal-questions.html?solve`);
+      await page.getByRole('button', { name: '＋ 문제 추가' }).click();
+      const dialog = page.getByRole('dialog');
+      await dialog.getByRole('button', { name: 'PDF 3쪽 연결 삭제' }).click();
+      await dialog.getByText('연결된 슬라이드 없음', { exact: true }).waitFor();
+      await dialog.getByText('슬라이드 선택·변경', { exact: true }).click();
+      await dialog.getByRole('checkbox', { name: 'PDF 7쪽', exact: true }).check();
+      await dialog.getByRole('button', { name: 'PDF 7쪽 크게 보기' }).waitFor();
+      if (removeAll) await dialog.getByRole('button', { name: '연결 모두 삭제' }).click();
+      await dialog.getByLabel('발문').fill('슬라이드 선택 확인');
+      await dialog.getByRole('textbox', { name: '정답', exact: true }).fill('답');
+      await dialog.getByRole('button', { name: '내 학습에 추가' }).click();
+      await dialog.waitFor({ state: 'detached' });
+      const call = await page.evaluate(() => window.personalTest.calls.find(c => c.method === 'POST' && c.path.endsWith('/personal-questions')));
+      assert.deepEqual(call.body.slideAssetIds, removeAll ? [] : ['slide-7']);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    } finally { await browser.close(); }
+  });
+}
 
 test('creation sends format, retrieval direction and recall-first choice answers', async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chrome' });

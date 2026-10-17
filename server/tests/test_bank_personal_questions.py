@@ -30,6 +30,10 @@ def main():
                         pages={"Q1": [3]}, validation={"pass": True}, open_to_students=True))
         db.add(Asset(id="personal-reference", subject="private", run_id="demo", kind=SLIDE_KINDS["bank"],
                      slide_no=3, filename="3.png", object_key="slides/3.png"))
+        db.add(Asset(id="replacement", subject="private", run_id="demo", kind=SLIDE_KINDS["bank"],
+                     slide_no=7, filename="7.png", object_key="slides/7.png"))
+        db.add(Asset(id="wrong-kind", subject="private", run_id="demo", kind="notes_current",
+                     slide_no=9, filename="notes.pdf", object_key="notes.pdf"))
         db.commit()
     app.dependency_overrides[get_current_user] = lambda: STUDENT
     client = TestClient(app)
@@ -42,6 +46,24 @@ def main():
     with patch("app.routes.bank.engine.now_ms", return_value=NOW):
         draft = {"clientId": str(uuid.uuid4()), "question": "내가 외울 질문", "answer": "내 정답",
                  "explanation": "내 설명", "tier": "Essential", "sourceQuestionId": "Q1"}
+        options = request("GET", BASE + "/personal-question-slides?sourceQuestionId=Q1")
+        assert options["selectedAssetIds"] == ["personal-reference"]
+        assert {s["assetId"] for s in options["slides"]} == {"personal-reference", "replacement"}
+        assert request("GET", BASE + "/personal-question-slides")["selectedAssetIds"] == []
+        request("GET", BASE + "/personal-question-slides?sourceQuestionId=missing", status=404)
+        for ids in [["wrong-kind"], ["missing-asset"]]:
+            request("POST", BASE + "/personal-questions", {**draft, "slideAssetIds": ids}, 422)
+        for ids in [[], ["replacement", "replacement"]]:
+            made = request("POST", BASE + "/personal-questions", {**draft, "clientId": str(uuid.uuid4()), "slideAssetIds": ids}, 201)
+            from app.models import BankPersonalEdit
+            from app.routes.bank import _slides
+            with SessionLocal() as db:
+                saved = db.get(BankPersonalEdit, (STUDENT.id, "private", "demo", made["questionId"]))
+                expected = ["replacement"] if ids else []
+                assert [r["assetId"] for r in saved.original["personalSlideReferences"]] == expected
+                assert saved.original["source_refs"] == ([{"source_id": "S1", "locator": "p7"}] if ids else [])
+                assert [s["page"] for s in _slides(db, db.get(QuizBank, ("private", "demo")), made["questionId"], saved.original)] == ([7] if ids else [])
+            request("DELETE", f"{BASE}/personal-questions/{made['questionId']}")
         request("POST", BASE + "/personal-questions", {**draft, "sourceQuestionId": "missing"}, 404)
         request("POST", BASE + "/personal-questions", {**draft, "question": "  "}, 422)
         request("POST", BASE + "/personal-questions", {**draft, "tier": "wrong"}, 422)

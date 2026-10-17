@@ -21,6 +21,11 @@ window.fetch = async (input, init) => {
   calls.push({ path, body, method });
   let result: unknown;
   if (path === "/api/me") result = { isAdmin: false, isApproved: true, id: "test" };
+  else if (path.endsWith("/personal-question-slides")) result = {
+    slides: [{ assetId: "slide-3", page: 3, sourceId: "self", url: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='100'><text x='20' y='40'>3</text></svg>" },
+      { assetId: "slide-7", page: 7, sourceId: "self", url: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='100'><text x='20' y='40'>7</text></svg>" }],
+    selectedAssetIds: new URL(String(input), location.origin).searchParams.has("sourceQuestionId") ? ["slide-3"] : [],
+  };
   else if (path.endsWith("/personal-questions") && method === "POST") {
     if (state.failAdd) return new Response(JSON.stringify({ detail: "추가 실패 테스트" }), { status: 500 });
     added = body; result = { questionId: "PQ_1" };

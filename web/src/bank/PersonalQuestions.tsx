@@ -4,6 +4,7 @@ import { api } from "../api";
 import { invalidateTimetable } from "../firstScreen";
 import type { BankRead, BankTier } from "../types/bank";
 import { PersonalQuestionDialog } from "./PersonalQuestionDialog";
+import { PersonalQuestionSlides } from "./PersonalQuestionSlides";
 import { initialSettings, PersonalQuestionSettings, settingsPayload } from "./PersonalQuestionSettings";
 
 export const TIER_LABELS: Record<BankTier, string> = {
@@ -20,16 +21,17 @@ export function AddQuestionDialog({ base, sourceQuestionId, onClose, onSaved }: 
   const [explanation, setExplanation] = useState("");
   const [tier, setTier] = useState<BankTier>("Core");
   const [settings, setSettings] = useState(initialSettings);
+  const [slideAssetIds, setSlideAssetIds] = useState<string[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const pending = useRef(false);
   useEffect(() => { dialog.current?.showModal(); }, []);
   async function save() {
-    if (pending.current || !question.trim() || !answer.trim()) return;
+    if (pending.current || slideAssetIds === null || !question.trim() || !answer.trim()) return;
     pending.current = true; setBusy(true); setError("");
     try {
       await api(`${base}/personal-questions`, { method: "POST", body: JSON.stringify({
-        clientId, question, answer, explanation, tier, sourceQuestionId, ...settingsPayload(settings),
+        clientId, question, answer, explanation, tier, sourceQuestionId, slideAssetIds, ...settingsPayload(settings),
       }) });
       invalidateTimetable(); onSaved();
     } catch (cause) { setError((cause as Error).message); }
@@ -41,7 +43,7 @@ export function AddQuestionDialog({ base, sourceQuestionId, onClose, onSaved }: 
       <header><h2 id="add-question-title">내 문제 추가</h2>
         <button type="button" className="is-quiet" aria-label="추가창 닫기" disabled={busy} onClick={onClose}>×</button></header>
       <p className="bank-personal-hint">내 계정의 이 강의에만 추가됩니다. 문항 형식과 회상 방식을 선택하고, 풀이 후 직접 평가합니다.</p>
-      {sourceQuestionId ? <p className="bank-personal-hint">현재 보고 있는 문제의 슬라이드가 참고 자료로 자동 연결됩니다.</p> : null}
+      <PersonalQuestionSlides base={base} sourceQuestionId={sourceQuestionId} selected={slideAssetIds} onChange={setSlideAssetIds} busy={busy} />
       <PersonalQuestionSettings value={settings} onChange={setSettings} busy={busy} />
       <label>발문<textarea autoFocus required rows={3} maxLength={12000} value={question} disabled={busy}
         placeholder="무엇을 떠올릴지 질문으로 적어 주세요." onChange={event => setQuestion(event.target.value)} /></label>
@@ -54,7 +56,7 @@ export function AddQuestionDialog({ base, sourceQuestionId, onClose, onSaved }: 
       </select><small>Must-Know: 교수님이 직접·간접적으로 알아야 한다고 강조하거나 시험 출제를 예고한 내용</small></label>
       {error ? <p className="notice is-error" role="alert">{error}</p> : null}
       <footer><button type="button" className="is-quiet" disabled={busy} onClick={onClose}>취소</button>
-        <button type="submit" disabled={busy || !question.trim() || !answer.trim()}>{busy ? "추가하는 중…" : "내 학습에 추가"}</button></footer>
+        <button type="submit" disabled={busy || slideAssetIds === null || !question.trim() || !answer.trim()}>{busy ? "추가하는 중…" : "내 학습에 추가"}</button></footer>
     </form>
   </dialog>, document.body);
 }

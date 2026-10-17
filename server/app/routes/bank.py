@@ -1460,6 +1460,7 @@ class PersonalEditIn(BaseModel):
 class PersonalQuestionIn(PersonalQuestionSettings):
     client_id: uuid.UUID = Field(alias="clientId")
     source_question_id: str | None = Field(default=None, alias="sourceQuestionId", min_length=1, max_length=128)
+    slide_asset_ids: list[str] | None = Field(default=None, alias="slideAssetIds", max_length=100)
     question: str = Field(min_length=1, max_length=12000)
     answer: str = Field(min_length=1, max_length=12000)
     explanation: str = Field(default="", max_length=12000)
@@ -1483,17 +1484,53 @@ def add_personal_question(subject: str, run_id: str, payload: PersonalQuestionIn
     if edit is None:
         settings = payload.model_dump(include=set(PersonalQuestionSettings.model_fields))
         original = bank_personal.added_question(qid, question, answer, payload.tier, payload.explanation.strip(), settings=settings)
+        inherited = []
         if payload.source_question_id:
             bank = _study_bank(db, row, user)
             source = next((q for q in bank["questions"] if q["question_id"] == payload.source_question_id), None)
             if source is None:
                 raise HTTPException(404, "참고할 문항을 찾을 수 없습니다.")
             original["source_refs"] = copy.deepcopy(source.get("source_refs", []))
-            original["personalSlideReferences"] = _slides(db, row, source["question_id"], source, references_only=True)
+            inherited = _slides(db, row, source["question_id"], source, references_only=True)
+        original["personalSlideReferences"] = inherited
+        if payload.slide_asset_ids is not None:
+            from app.personal_question_slides import choices
+            available = choices(db, row, inherited)
+            ids = list(dict.fromkeys(payload.slide_asset_ids))
+            if any(asset_id not in available for asset_id in ids):
+                raise HTTPException(422, "선택한 슬라이드를 사용할 수 없습니다. 슬라이드 목록을 다시 불러오세요.")
+            original["personalSlideReferences"] = [available[asset_id] for asset_id in ids]
+            original["source_refs"] = [{"source_id": "S1", "locator": f"p{ref['page']}"}
+                                       for ref in original["personalSlideReferences"] if ref.get("sourceId") == "self"]
         db.add(BankPersonalEdit(user_id=user.id, subject=subject, run_id=run_id, question_id=qid,
                                original=original, question=question, answer=answer, comment=""))
         db.commit()
     return {"questionId": qid}
+
+
+@router.get("/lectures/{subject}/{run_id}/bank/personal-question-slides")
+def personal_question_slides(subject: str, run_id: str,
+                             source_question_id: str | None = Query(None, alias="sourceQuestionId", max_length=128),
+                             user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)) -> dict:
+    from app.personal_question_slides import choices
+    row = _bank_or_404(db, lecture_or_404(db, subject, run_id), user)
+    _usable(row)
+    inherited = []
+    if source_question_id:
+        bank = _study_bank(db, row, user)
+        source = next((q for q in bank["questions"] if q["question_id"] == source_question_id), None)
+        if source is None:
+            raise HTTPException(404, "참고할 문항을 찾을 수 없습니다.")
+        inherited = _slides(db, row, source["question_id"], source, references_only=True)
+    available = choices(db, row, inherited)
+    assets = {asset.id: asset for asset in db.scalars(select(Asset).where(Asset.id.in_(available)))}
+    slides = []
+    for ref in available.values():
+        asset = assets.get(ref["assetId"])
+        if asset is None:
+            continue
+        slides.append({**ref, "url": ObjectStorage().presign_download(asset.object_key)})
+    return {"slides": slides, "selectedAssetIds": [ref["assetId"] for ref in inherited]}
 
 
 @router.delete("/lectures/{subject}/{run_id}/bank/personal-questions/{question_id}")
