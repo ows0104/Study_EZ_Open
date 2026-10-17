@@ -65,6 +65,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
   const [reporting, setReporting] = useState(false);
   const [commonEditing, setCommonEditing] = useState(false);
   const [addingQuestion, setAddingQuestion] = useState(false);
+  const questionMenu = useRef<HTMLDetailsElement>(null);
   const [actionMessage, setActionMessage] = useState("");
   const presentedAt = useRef(Date.now());
   const visibleToken = useRef<string | undefined>(undefined);
@@ -82,6 +83,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
     visibleToken.current = got.reviewToken;
     setTransition(null);
     setCommonEditing(false);
+    questionMenu.current?.removeAttribute("open");
     if (got.lecture) activeLecture.current = got.lecture;
     batch?.onProgress(got);
     setCurrent(got); setAnswer(got.answer ?? null); setPicked(new Set()); setReporting(false); setActionMessage("");
@@ -370,7 +372,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
     <>
       <div className="quiz">
         <DailyGoal plan={displayed.batchGoal ?? displayed.lectureGoal} collapsible />
-        <p className="quiz-progress bank-progress">
+        <div className="quiz-progress bank-progress">
           <span>
             {session ? session.size == null ? `${session.reviewed}문항 완료` : `${session.reviewed + 1} / ${session.size}` : ""}
             {displayed.examDate ? ` · ${daysLabel(displayed.examDate)}` : ""}
@@ -396,14 +398,28 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
             {q.mcq_mode === "recall_first" ? "기억 확인형 객관식" : q.mcq_mode === "comparison" ? "구별·판단형 객관식" : FORMAT_LABEL[q.format] ?? q.format}
             {q.conflict_id ? <span className="bank-source-badge">자료 간 차이</span> : null}
           </span>
-          <span className="bank-progress-actions">
+          <div className="bank-progress-actions">
             {saving ? <span role="status">저장 중…</span> : null}
-            {current.undoToken ? <button className="quiz-undo" disabled={busy || undoBusy || saving} onClick={() => void undo()} aria-keyshortcuts="Z Control+Z">되돌리기 <kbd>Z</kbd></button> : null}
             <button className="is-quiet" disabled={busy || undoBusy || saving} onClick={() => void openPeek()}>개념 지도</button>
-            <button className="is-quiet" disabled={busy || undoBusy || saving} onClick={() => setAddingQuestion(true)}>＋ 문제 추가</button>
-            <button className="is-quiet" disabled={busy || undoBusy || saving} onClick={() => void end()}>{batch ? "쉬기" : "회차 마치기"}</button>
-          </span>
-        </p>
+            <button className="is-quiet" disabled={busy || undoBusy || saving} onClick={() => void end()}>쉬기</button>
+            <details className="bank-question-menu" ref={questionMenu}>
+              <summary>문제 변경/추가/삭제</summary>
+              <div className="bank-question-menu-items" onClick={event => {
+                if ((event.target as HTMLElement).closest("button, a")) questionMenu.current?.removeAttribute("open");
+              }}>
+                <button className="is-quiet" disabled={busy || undoBusy || saving} onClick={() => setAddingQuestion(true)}>＋ 문제 추가</button>
+                <button className="is-quiet" disabled={busy || undoBusy || saving} onClick={() => setReporting(true)}>문제 수정·제보</button>
+                {isAdmin && !transition ? <button className="is-quiet" disabled={busy || undoBusy || saving}
+                  onClick={() => setCommonEditing(true)}>공용 문제 수정</button> : null}
+                <button className="is-quiet bank-suspend" disabled={busy || undoBusy || saving} aria-keyshortcuts="5"
+                  title="내 학습에서 제외하고 다음 문제로 넘어갑니다" onClick={() => void suspend()}>
+                  비활성화 <kbd>5</kbd>
+                </button>
+                <Link to={bankCatalogHref(lecture)}>전체 문제</Link>
+              </div>
+            </details>
+          </div>
+        </div>
 
         <QuestionBody question={q} answer={visibleAnswer} picked={transition ? new Set() : picked} showOptions={!hiddenChoices} disabled={busy || undoBusy}
           sequence={q.format === "sequence" ? <SequenceQuestion question={q} answer={visibleAnswer} order={transition ? [] : order}
@@ -435,12 +451,8 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
         }} />
 
         <div className="bank-question-actions">
-          <Link to={bankCatalogHref(lecture)}>전체 문제</Link>
           {q.personalEdited ? <span className="tag">내 수정본</span> : null}
           {actionMessage ? <span role="status">{actionMessage}</span> : null}
-          {isAdmin && !transition ? <button className="quiz-fix" disabled={busy || undoBusy || saving}
-            onClick={() => setCommonEditing(true)}>공용 문제 수정</button> : null}
-          <button className="is-quiet" disabled={busy || undoBusy || saving} onClick={() => setReporting(true)}>⚑ 수정·제보</button>
         </div>
         {commonEditing ? <Suspense fallback={<p role="status">수정창을 여는 중…</p>}>
           <CommonQuestionDialog subject={lecture.subject} runId={lecture.runId} questionId={q.question_id}
@@ -476,7 +488,9 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
         {error ? <p className="notice is-error">{error}</p> : null}
       </div>
 
-      <div className="quiz-bar">
+      <div className="quiz-bar bank-solve-bar">
+        <button className="quiz-undo" disabled={!current.undoToken || busy || undoBusy || saving}
+          onClick={() => void undo()} aria-keyshortcuts="Z Control+Z">되돌리기 <kbd>Z</kbd></button>
         {visibleAnswer ? (
           RATINGS.map(({ rating, grade }, index) => (
             <button key={rating} className={`quiz-grade is-${grade}`} disabled={busy || undoBusy} onClick={() => void rate(rating)}>
@@ -493,10 +507,6 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
             {busy && !transition ? "펴는 중…" : <>{hiddenChoices ? "선지 보기" : q.format === "matching" || q.format === "sequence" ? "채점하기" : "답 보기"} <kbd>space</kbd></>}
           </button>
         )}
-        <button className="bank-suspend" disabled={busy || undoBusy || saving} aria-keyshortcuts="5"
-          title="내 학습에서 제외하고 다음 문제로 넘어갑니다" onClick={() => void suspend()}>
-          <span className="quiz-grade-name">비활성화 <kbd>5</kbd></span>
-        </button>
       </div>
     </>
   );

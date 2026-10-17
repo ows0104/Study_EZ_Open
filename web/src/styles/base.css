@@ -2754,7 +2754,13 @@ button.notice-title:hover:not(:disabled) {
 .bank-suspended li { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 8px 0; }
 .bank-suspended li > span { min-width: 0; overflow-wrap: anywhere; }
 .bank-suspended li > button { flex-shrink: 0; }
-.quiz-bar .bank-suspend { color: var(--ink-2); border-style: dashed; }
+.bank-solve-bar .quiz-undo {
+  margin: 0;
+  padding: 10px 12px;
+  border-color: var(--line);
+  color: var(--ink-2);
+  letter-spacing: normal;
+}
 
 /* 두 열을 가운데로 모은다. `1fr 1fr` 이면 넓은 화면에서 왼쪽 열이 왼쪽 끝에, 오른쪽 열이 한가운데 서서
    짝을 눈으로 잇기 어려웠다(2026-10-05 관리자). */
@@ -2769,8 +2775,39 @@ button.notice-title:hover:not(:disabled) {
 
 .bank-progress-actions {
   display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
 }
+
+.bank-question-menu { position: relative; text-align: left; }
+.bank-question-menu > summary {
+  cursor: pointer;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.bank-question-menu > summary:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
+.bank-question-menu-items {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 200px;
+  max-width: calc(100vw - 32px);
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--surface);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 12%);
+}
+.bank-question-menu-items > button,
+.bank-question-menu-items > a { margin: 0; padding: 10px 12px; text-align: left; }
 
 .bank-match li {
   overflow-wrap: anywhere;

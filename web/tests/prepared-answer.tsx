@@ -1,6 +1,7 @@
 // Local-only browser regression: real BankSolve with controlled network completion.
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { MemoryRouter } from "react-router-dom";
 import "../src/styles/base.css";
 
 const results: string[] = [];
@@ -48,7 +49,7 @@ window.fetch = async (input, init) => {
 
 try {
   const { BankSolve } = await import("../src/bank/BankSolve");
-  createRoot(document.getElementById("root")!).render(<BankSolve base="/api/test/bank" lecture={{ subject: "테스트", runId: "demo" }} onFinished={() => {}} />);
+  createRoot(document.getElementById("root")!).render(<MemoryRouter><BankSolve base="/api/test/bank" lecture={{ subject: "테스트", runId: "demo" }} onFinished={() => {}} /></MemoryRouter>);
   await waitFor(() => prepared && images.some((image) => image.complete && image.naturalWidth));
   // The mock's prepared flag is set inside fetch, before api() parses its body.
   await new Promise(resolve => setTimeout(resolve, 30));
