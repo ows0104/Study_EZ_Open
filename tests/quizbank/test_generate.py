@@ -53,6 +53,20 @@ def test_endocrine_scope_is_tied_to_the_confirmed_lecture(title, filename, scope
     assert "{{lecture_scope}}" not in body
 
 
+def test_all_lecture_scopes_require_the_matching_title_and_source_prefix():
+    scopes = json.loads(generate.LECTURE_SCOPES.read_text(encoding="utf-8"))
+    for entry in scopes:
+        sources = [{"id": "S1", "kind": "notes_current", "filename": entry["sourcePrefix"] + " notes.pdf"}]
+        assert generate.lecture_scope(entry["title"], sources) == entry["instruction"]
+        body, _ = generate.prompt_for(entry["title"], "", sources)
+        assert body.count(entry["instruction"]) == 1
+        for title, candidate in [("Other lecture", sources),
+                                 (entry["title"], [{**sources[0], "filename": "different.pdf"}]),
+                                 (entry["title"], [{**sources[0], "kind": "jokbo"}])]:
+            body, _ = generate.prompt_for(title, "", candidate)
+            assert entry["instruction"] not in body
+
+
 def test_generate_reads_pdf_and_continues_without_completion(tmp_path, monkeypatch):
     pdf = tmp_path / "a.pdf"
     with fitz.open() as doc:

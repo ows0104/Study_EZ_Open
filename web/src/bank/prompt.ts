@@ -10,6 +10,7 @@ import type { LectureDetail } from "../types/lectures";
  * 프롬프트를 고치면 push 만으로 나간다 — 서버를 다시 배포할 일이 없다.
  */
 const HEADER = /^\s*<!--([\s\S]*?)-->\s*/;
+type LectureScope = { title: string; sourcePrefix: string; instruction: string };
 
 export const BANK_PROMPT_VERSION = /Version:\s*(\S+)/.exec(HEADER.exec(template)?.[1] ?? "")?.[1] ?? "unknown";
 
@@ -19,10 +20,11 @@ const KIND_LABEL: Record<BankSource["kind"], string> = {
 };
 
 /** 첨부 순서(S1·S2)는 서버가 정한 `bankSources` 순서다 — 러너도 같은 ID 로 출처를 읽는다. */
-export function renderBankPrompt(detail: LectureDetail, sources: BankSource[], sourceTemplate = template) {
+export function renderBankPrompt(detail: LectureDetail, sources: BankSource[], sourceTemplate = template,
+  sourceScopes: readonly LectureScope[] = lectureScopes) {
   const fill: Record<string, string> = {
     title: detail.title,
-    lecture_scope: lectureScopes.find((scope) => scope.title === detail.title && sources.some(
+    lecture_scope: sourceScopes.find((scope) => scope.title === detail.title && sources.some(
       (source) => source.kind === "notes_current" && source.filename.startsWith(scope.sourcePrefix),
     ))?.instruction ?? "",
     exam_date: detail.bankExamDate || "미정",
@@ -42,10 +44,17 @@ export async function loadLatestBankPrompt(detail: LectureDetail, sources: BankS
   const response = await fetch(`/bank-prompt.json?t=${Date.now()}`, { cache: "no-store" });
   if (!response.ok) throw new Error("최신 출제 프롬프트를 불러오지 못했습니다. 다시 시도하세요.");
   const latest = await response.json();
+  if (latest.lectureScopes !== undefined && (!Array.isArray(latest.lectureScopes)
+      || latest.lectureScopes.some((scope: LectureScope | null) => !scope
+        || typeof scope.title !== "string" || !scope.title.trim()
+        || typeof scope.sourcePrefix !== "string" || !scope.sourcePrefix.trim()
+        || typeof scope.instruction !== "string" || !scope.instruction.trim()))) {
+    throw new Error("최신 강의별 출제 범위가 올바르지 않습니다. 전송을 중단했습니다.");
+  }
   if (typeof latest.template !== "string" || typeof latest.version !== "string"
       || /Version:\s*(\S+)/.exec(latest.template)?.[1] !== latest.version
       || !latest.template.includes("STUDYEZ_BANK_COMPLETE")) {
     throw new Error("출제 프롬프트 파일이 올바르지 않습니다. 전송을 중단했습니다.");
   }
-  return { prompt: renderBankPrompt(detail, sources, latest.template), version: latest.version };
+  return { prompt: renderBankPrompt(detail, sources, latest.template, latest.lectureScopes ?? lectureScopes), version: latest.version };
 }

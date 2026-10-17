@@ -24,13 +24,30 @@ test('failed or corrupt latest prompt stops instead of falling back to a stale t
  }
 });
 
+test('a loaded tab uses fresh lecture scopes together with the latest template',async()=>{
+ const scope={title:'CNS lecture',sourcePrefix:'[261006_02]',instruction:'Current source-color scope'};
+ const s=fixture({ok:true,json:async()=>({version:'1.75',template:'<!-- Version: 1.75 -->\n{{lecture_scope}}\n\n{{title}}\nSTUDYEZ_BANK_COMPLETE',lectureScopes:[scope]})});
+ const source={id:'S1',kind:'notes_current',filename:'[261006_02] notes.pdf'};
+ const result=await s.loadLatestBankPrompt({title:scope.title},[source]);
+ assert.ok(result.prompt.includes(scope.instruction));
+ assert.ok(!(await s.loadLatestBankPrompt({title:'Other lecture'},[source])).prompt.includes(scope.instruction));
+ assert.ok(!(await s.loadLatestBankPrompt({title:scope.title},[{...source,filename:'[261006_03] notes.pdf'}])).prompt.includes(scope.instruction));
+});
+
+test('invalid fresh lecture scopes stop transmission instead of silently dropping scope',async()=>{
+ for(const lectureScopes of [null,{},[null],[{}],[{title:'CNS',sourcePrefix:'[261006_02]',instruction:''}]]) {
+  const s=fixture({ok:true,json:async()=>({version:'1.75',template:'<!-- Version: 1.75 -->\nSTUDYEZ_BANK_COMPLETE',lectureScopes})});
+  await assert.rejects(s.loadLatestBankPrompt({title:'CNS'},[]),/출제 범위/);
+ }
+});
+
 test('canonical web prompt includes the exact matching lecture scope and keeps other lectures separate',()=>{
  const path=require('node:path');
  const template=fs.readFileSync(path.join(__dirname,'../src/bank/bankPrompt.md'),'utf8');
  const scopes=JSON.parse(fs.readFileSync(path.join(__dirname,'../src/bank/lectureScopes.json'),'utf8'));
  const exports={};
  vm.runInNewContext(code,{exports,require:id=>({default:id.endsWith('.json')?scopes:template})});
- const scope=scopes[0];
+ for(const scope of scopes) {
  const source={kind:'notes_current',filename:scope.sourcePrefix+' lecture.pdf',id:'S1'};
  assert.ok(exports.renderBankPrompt({title:scope.title},[source]).includes(scope.instruction));
  const other=exports.renderBankPrompt({title:'Other lecture'},[source]);
@@ -41,4 +58,5 @@ test('canonical web prompt includes the exact matching lecture scope and keeps o
  const wrongSource=exports.renderBankPrompt({title:scope.title},[{...source,filename:'different.pdf'}]);
  assert.ok(!wrongSource.includes(scope.instruction));
  assert.ok(!wrongSource.includes('별도 지정 없음'));
+ }
 });
