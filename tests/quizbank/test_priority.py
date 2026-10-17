@@ -11,7 +11,7 @@ from tests.quizbank.test_web_audit import RAW, bank, report
 
 def test_essential_requires_explicit_memorization_or_exam_evidence(bank):
     rows = report(bank)["tier_checks"]
-    for basis in ("objective", "past_exam", "emphasis", "clinical", "detail"):
+    for basis in ("objective", "past_exam", "emphasis", "note_emphasis", "exam_hint", "clinical", "detail"):
         rows[0].update(recommended_tier="Essential", recommended_importance=5, basis=basis)
         with pytest.raises(SessionError, match="Essential"):
             priority.assess(bank, rows)
@@ -20,6 +20,30 @@ def test_essential_requires_explicit_memorization_or_exam_evidence(bank):
         checked, issues = priority.assess(bank, rows)
         assert checked["checkedCount"] == len(bank["questions"])
         assert any(issue["question_id"] == rows[0]["question_id"] for issue in issues)
+
+
+@pytest.mark.parametrize('basis', ['exam_hint', 'exam_explicit'])
+def test_professors_current_exam_signal_can_support_core(bank, basis):
+    before = copy.deepcopy(bank)
+    rows = report(bank)['tier_checks']
+    rows[0].update(recommended_tier='Core', recommended_importance=5, basis=basis,
+                   evidence='올해 수업에서 교수가 해당 비교를 시험으로 물을 수 있다고 언급한 기록',
+                   source_refs=['S1 p.3'], reason='교수의 올해 시험 출제 예고와 실제 평가 대상이 일치')
+    checked, _ = priority.assess(bank, rows)
+    assert checked['checkedCount'] == len(bank['questions'])
+    assert bank == before
+
+
+def test_note_authors_mark_supports_important_but_not_core_or_essential(bank):
+    rows = report(bank)['tier_checks']
+    rows[0].update(recommended_tier='Important', recommended_importance=4, basis='note_emphasis',
+                   evidence='필기자가 해당 지식에 별표와 밑줄을 표시', source_refs=['S1 p.4'],
+                   reason='필기자 본인의 직접 중요 표시이며 교수 발언으로 추정하지 않음')
+    priority.assess(bank, rows)
+    for tier in ('Core', 'Essential'):
+        rows[0].update(recommended_tier=tier, recommended_importance=5)
+        with pytest.raises(SessionError, match=tier):
+            priority.assess(bank, rows)
 
 
 def test_every_question_needs_a_distinct_source_grounded_decision(bank):

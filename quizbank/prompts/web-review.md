@@ -42,7 +42,7 @@ web-priorities.json은 저장된 응답의 Tier·importance 후보다. 현재 �
 확인된 원칙 위반은 error, 실질적인 불확실성은 doubt, 가능한 다른 표현이나 취향은 suggestion이다.
 문제 표현·실제 인출 목표·원본 위치·수정 근거를 함께 적는다. 의료 지식 판단은 ok / doubt / wrong으로 남긴다.
 중복은 같은 인출·판단을 시험하는 경우로 판단하며, 별도 회상 방향·비교·적용 목표는 구분한다.
-Core 묶음이 학습목표·해당 교수 기출의 실제 목표와 방향을 시험하는지 확인한다. 교수 강조·임상
+Core 묶음이 학습목표·해당 교수 기출·올해 출제 예고의 실제 목표와 방향을 시험하는지 확인한다. 교수의 일반 강조·필기자의 중요 표시·임상
 중요성에 따른 Important 목표의 누락은 별도로 확인하며, 누락 보완의 필요성만으로 Core로 올리지 않는다.
 형식·방향·문항 수의 할당 비율을 요구하지 않는다.
 
@@ -50,7 +50,7 @@ Core 묶음이 학습목표·해당 교수 기출의 실제 목표와 방향을 
 tested_target은 실제 인출 단위, recommended_tier는 Essential/Core/Important/Optional,
 recommended_importance는 Essential=5/Core=5/Important=4/Optional=2,
 recommended_advanced는 독립 심화 여부(boolean)다. advanced_reason에는 추가 추론·연계 또는
-단순 회상이라고 판단한 이유를 쓴다. basis는 must_memorize/exam_explicit/objective/past_exam/emphasis/clinical/detail이다.
+단순 회상이라고 판단한 이유를 쓴다. basis는 must_memorize/exam_explicit/exam_hint/objective/past_exam/emphasis/note_emphasis/clinical/detail이다.
 source_refs에 실제 위치를, evidence에 실제 학습목표·기출 질문·강조 표시 또는 구체적인 임상
 중요성·부연임을 확인한 내용을 쓴다. essential_target은 과거 호환 필드로 빈 문자열을 쓴다.
 등급·수치·심화 중 하나라도 다르면 교정한다. 교육적 판단 기준은 뒤에 붙은 공통 원칙을 따른다.
@@ -92,6 +92,6 @@ unreadable로 남긴다. plan_issues에는 목록 자체의 누락·오류와 �
 summary에는 실제 검토 범위·필수 누락·확장 제안·주요 오류를 구분해 짧게 적는다.
 검수 판정은 게시 여부와 별개다. 게시를 위해 오류·누락을 통과로 바꾸지 않는다.
 
-Essential은 반드시 암기(must_memorize) 또는 명시적 시험 출제 강조(exam_explicit)의 원본 직접 근거가 있을 때만 인정한다. 일반 강조·학습목표·반복 기출만으로 승격하지 않는다.
+Essential(Must-Know급)은 반드시 암기(must_memorize) 또는 올해 시험에 내겠다는 확정적 명시(exam_explicit)의 원본 직접 근거가 있을 때 인정한다. 그보다 약한 교수의 올해 출제 예고·암시는 exam_hint로 Core 근거에 포함한다. 단순 강조나 필기자의 시험 예상만으로 교수의 출제 예고를 추정하지 않는다. 필기자의 중요 표시는 note_emphasis로 Important 근거에 포함하고 실제 표시·위치·작성 주체를 기록한다. 일반 강조·학습목표·반복 기출·필기자 표시만으로 Essential로 승격하지 않는다.
 
 Cloze를 새로 작성·수정할 때는 {정답}으로 감싸고 중복 정답은 정리 코드로 복원한다. 기존 {{c1}}+answer_units도 읽는다. OX 해설의 핵심 감별 키워드는 **강조**로 보존·작성하며 앱에서 파란색으로 표시한다.
