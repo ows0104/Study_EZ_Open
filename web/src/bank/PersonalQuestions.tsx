@@ -10,8 +10,8 @@ export const TIER_LABELS: Record<BankTier, string> = {
   Essential: "★ Must-Know", Core: "Core", Important: "Important", Optional: "Optional",
 };
 
-export function AddQuestionDialog({ base, onClose, onSaved }: {
-  base: string; onClose: () => void; onSaved: () => void;
+export function AddQuestionDialog({ base, sourceQuestionId, onClose, onSaved }: {
+  base: string; sourceQuestionId?: string; onClose: () => void; onSaved: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [clientId] = useState(() => crypto.randomUUID());
@@ -29,7 +29,7 @@ export function AddQuestionDialog({ base, onClose, onSaved }: {
     pending.current = true; setBusy(true); setError("");
     try {
       await api(`${base}/personal-questions`, { method: "POST", body: JSON.stringify({
-        clientId, question, answer, explanation, tier, ...settingsPayload(settings),
+        clientId, question, answer, explanation, tier, sourceQuestionId, ...settingsPayload(settings),
       }) });
       invalidateTimetable(); onSaved();
     } catch (cause) { setError((cause as Error).message); }
@@ -41,6 +41,7 @@ export function AddQuestionDialog({ base, onClose, onSaved }: {
       <header><h2 id="add-question-title">내 문제 추가</h2>
         <button type="button" className="is-quiet" aria-label="추가창 닫기" disabled={busy} onClick={onClose}>×</button></header>
       <p className="bank-personal-hint">내 계정의 이 강의에만 추가됩니다. 문항 형식과 회상 방식을 선택하고, 풀이 후 직접 평가합니다.</p>
+      {sourceQuestionId ? <p className="bank-personal-hint">현재 보고 있는 문제의 슬라이드가 참고 자료로 자동 연결됩니다.</p> : null}
       <PersonalQuestionSettings value={settings} onChange={setSettings} busy={busy} />
       <label>발문<textarea autoFocus required rows={3} maxLength={12000} value={question} disabled={busy}
         placeholder="무엇을 떠올릴지 질문으로 적어 주세요." onChange={event => setQuestion(event.target.value)} /></label>

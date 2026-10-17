@@ -10,7 +10,7 @@ from tests.test_bank import STUDENT, example_bank
 from app.auth import get_current_user
 from app.database import Base, SessionLocal, engine
 from app.main import app
-from app.models import BankFeedback, BankState, Lecture, QuizBank
+from app.models import Asset, BankFeedback, BankState, Lecture, QuizBank, SLIDE_KINDS
 from app.lecture_mastery import lecture_overviews
 
 NOW = 1791824400000
@@ -27,7 +27,9 @@ def main():
                        slot=1, slot_end=1, start_time="09:00", title="Private questions"))
         db.flush()
         db.add(QuizBank(subject="private", run_id="demo", build_id="v1", bank=bank,
-                        validation={"pass": True}, open_to_students=True))
+                        pages={"Q1": [3]}, validation={"pass": True}, open_to_students=True))
+        db.add(Asset(id="personal-reference", subject="private", run_id="demo", kind=SLIDE_KINDS["bank"],
+                     slide_no=3, filename="3.png", object_key="slides/3.png"))
         db.commit()
     app.dependency_overrides[get_current_user] = lambda: STUDENT
     client = TestClient(app)
@@ -39,7 +41,8 @@ def main():
 
     with patch("app.routes.bank.engine.now_ms", return_value=NOW):
         draft = {"clientId": str(uuid.uuid4()), "question": "내가 외울 질문", "answer": "내 정답",
-                 "explanation": "내 설명", "tier": "Essential"}
+                 "explanation": "내 설명", "tier": "Essential", "sourceQuestionId": "Q1"}
+        request("POST", BASE + "/personal-questions", {**draft, "sourceQuestionId": "missing"}, 404)
         request("POST", BASE + "/personal-questions", {**draft, "question": "  "}, 422)
         request("POST", BASE + "/personal-questions", {**draft, "tier": "wrong"}, 422)
         added = request("POST", BASE + "/personal-questions", draft, 201)
@@ -56,6 +59,19 @@ def main():
         assert current["question"]["question_id"] == qid
         assert current["question"]["targetMastery"] == .9 and current["answer"] is None
         assert "answer" not in current["question"]
+        assert "personalSlideReferences" not in current["question"]
+        assert current["question"]["source_refs"] == bank["questions"][0]["source_refs"]
+        assert [slide["page"] for slide in current["preloadSlides"]] == [3]
+        assert all(not slide["primary"] for slide in current["preloadSlides"])
+        # A second addition can inherit a private card's references without a reveal.
+        inherited = request("POST", BASE + "/personal-questions", {**draft,
+            "clientId": str(uuid.uuid4()), "sourceQuestionId": qid}, 201)
+        with SessionLocal() as db:
+            from app.models import BankPersonalEdit
+            saved = db.get(BankPersonalEdit, (STUDENT.id, "private", "demo", inherited["questionId"]))
+            assert saved.original["personalSlideReferences"][0]["assetId"] == "personal-reference"
+            assert "url" not in saved.original["personalSlideReferences"][0]
+        request("DELETE", f"{BASE}/personal-questions/{inherited['questionId']}")
         token = current["reviewToken"]
         snapshot = request("GET", f"{BASE}/questions/{qid}/personal")
         assert snapshot["personalAdded"] and snapshot["draft"]["explanation"] == "내 설명"
@@ -65,6 +81,7 @@ def main():
         assert request("POST", BASE + "/next?choiceProtocol=true")["question"]["question"] == "바꾼 질문"
         revealed = request("POST", BASE + "/reveal", {"reviewToken": token})
         assert revealed["answer"] == "바꾼 답" and revealed["explanation"] == "바꾼 설명" and revealed["personalAnswer"]
+        assert [slide["page"] for slide in revealed["slides"]] == [3]
         request("POST", BASE + "/rate", {"reviewToken": token, "rating": "Good"})
         request("POST", BASE + "/next?choiceProtocol=true")
         restored = request("POST", BASE + "/undo", {"reviewToken": token})
@@ -149,6 +166,9 @@ def main():
             {"format": "sequence", "correct_order": ["중복", "중복"]}, {"format": "cloze"},
         ]:
             request("POST", BASE + "/personal-questions", {**draft, "clientId": str(uuid.uuid4()), **invalid}, 422)
+        plain = request("POST", BASE + "/personal-questions", {**draft, "clientId": str(uuid.uuid4()), "sourceQuestionId": None}, 201)
+        snapshot = request("GET", f"{BASE}/questions/{plain['questionId']}/personal")
+        assert snapshot["original"]["question"] == draft["question"]
     print("PASS: private add/edit/delete, idempotency, isolation, study/batch/undo/overview, Essential and bank rebuilds")
 
 

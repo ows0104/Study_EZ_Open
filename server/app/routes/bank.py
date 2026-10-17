@@ -789,6 +789,7 @@ def _public(q: dict, *, bank: dict, show_choices: bool = True) -> dict:
     q = priority_fields(q, question=True)
     out = {**{k: v for k, v in q.items() if k not in ANSWER_FIELDS}, "mcq_mode": choice_mode(q)}
     out.pop("hint", None)  # Retired experiment fields can remain in older stored JSON.
+    out.pop("personalSlideReferences", None)
     out["targetMastery"] = target_for(bank, q)["effective"]
     if not show_choices and out["mcq_mode"] == "recall_first":
         out["options"] = []
@@ -819,7 +820,22 @@ def _served_question(db: Session, row: QuizBank, user_id: str, bank: dict, serve
     return out
 
 
-def _slides(db: Session, row: QuizBank, question_id: str, presented: dict | None = None) -> list[dict[str, Any]]:
+def _slides(db: Session, row: QuizBank, question_id: str, presented: dict | None = None, *, references_only: bool = False) -> list[dict[str, Any]]:
+    if presented and presented.get("personalAdded"):
+        out = []
+        for reference in presented.get("personalSlideReferences", []):
+            asset = db.get(Asset, reference["assetId"])
+            if not asset or (asset.subject, asset.run_id, asset.kind) != (row.subject, row.run_id, SLIDE_KINDS["bank"]):
+                continue
+            if references_only:
+                out.append(dict(reference))
+                continue
+            try:
+                out.append({**{k: v for k, v in reference.items() if k != "assetId"},
+                            "primary": False, "url": ObjectStorage().presign_download(asset.object_key)})
+            except StorageNotConfigured:
+                break
+        return out
     question = next((q for q in (row.bank or {}).get("questions", []) if q["question_id"] == question_id), {})
     report = (row.validation or {}).get("slideFocus") or {}
     current = (report.get("questions", {}).get(question_id) or {}).get("questionHash") == question_hash(question)
@@ -852,6 +868,9 @@ def _slides(db: Session, row: QuizBank, question_id: str, presented: dict | None
     requested += [(foreign_assets.get(name), info) for name, info in related.items()]
     for asset, info in requested:
         if asset is None:
+            continue
+        if references_only:
+            out.append({**info, "assetId": asset.id})
             continue
         try:
             out.append({**info, "url": ObjectStorage().presign_download(asset.object_key)})
@@ -1440,6 +1459,7 @@ class PersonalEditIn(BaseModel):
 
 class PersonalQuestionIn(PersonalQuestionSettings):
     client_id: uuid.UUID = Field(alias="clientId")
+    source_question_id: str | None = Field(default=None, alias="sourceQuestionId", min_length=1, max_length=128)
     question: str = Field(min_length=1, max_length=12000)
     answer: str = Field(min_length=1, max_length=12000)
     explanation: str = Field(default="", max_length=12000)
@@ -1463,6 +1483,13 @@ def add_personal_question(subject: str, run_id: str, payload: PersonalQuestionIn
     if edit is None:
         settings = payload.model_dump(include=set(PersonalQuestionSettings.model_fields))
         original = bank_personal.added_question(qid, question, answer, payload.tier, payload.explanation.strip(), settings=settings)
+        if payload.source_question_id:
+            bank = _study_bank(db, row, user)
+            source = next((q for q in bank["questions"] if q["question_id"] == payload.source_question_id), None)
+            if source is None:
+                raise HTTPException(404, "참고할 문항을 찾을 수 없습니다.")
+            original["source_refs"] = copy.deepcopy(source.get("source_refs", []))
+            original["personalSlideReferences"] = _slides(db, row, source["question_id"], source, references_only=True)
         db.add(BankPersonalEdit(user_id=user.id, subject=subject, run_id=run_id, question_id=qid,
                                original=original, question=question, answer=answer, comment=""))
         db.commit()

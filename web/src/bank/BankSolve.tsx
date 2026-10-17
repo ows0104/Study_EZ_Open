@@ -451,7 +451,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
               void next();
             }} />
         </Suspense> : null}
-        {addingQuestion ? <AddQuestionDialog base={base} onClose={() => setAddingQuestion(false)} onSaved={() => {
+        {addingQuestion ? <AddQuestionDialog base={base} sourceQuestionId={q.question_id} onClose={() => setAddingQuestion(false)} onSaved={() => {
           setAddingQuestion(false); setAnswerRevision(value => value + 1);
           setActionMessage("내 문제를 추가했습니다.");
           void api<BankRead>(base).then(info => setCurrent(old => old ? { ...old, lectureGoal: info.lectureGoal } : old))

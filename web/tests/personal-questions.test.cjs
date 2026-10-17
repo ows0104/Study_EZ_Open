@@ -25,6 +25,7 @@ test('private question creation, retry, editing and confirmed deletion', async (
     assert.equal(await page.getByText('★ Must-Know', { exact: true }).count(), 1);
     const calls = await page.evaluate(() => window.personalTest.calls.filter(c => c.path.endsWith('/personal-questions')));
     assert.equal(calls[0].body.clientId, calls[1].body.clientId, 'retry keeps the same idempotency key');
+    assert.equal(calls[0].body.sourceQuestionId, undefined, 'starting screen has no current question');
     await page.getByRole('button', { name: '수정', exact: true }).click();
     await dialog.getByRole('heading', { name: '내가 추가한 문제 수정' }).waitFor();
     assert.equal(await dialog.getByText('제보 강조', { exact: true }).count(), 0);
@@ -51,11 +52,14 @@ test('solve screen exposes Essential and adding a card does not reveal the curre
     assert.equal(await page.getByRole('combobox', { name: '내 문제 중요도' }).inputValue(), 'Essential');
     await page.getByRole('button', { name: '＋ 문제 추가' }).click();
     const dialog = page.getByRole('dialog');
+    await dialog.getByText('현재 보고 있는 문제의 슬라이드가 참고 자료로 자동 연결됩니다.').waitFor();
     await dialog.getByLabel('발문').fill('새 질문');
     await dialog.getByRole('textbox', { name: '정답', exact: true }).fill('새 답');
     await dialog.getByRole('button', { name: '내 학습에 추가' }).click();
     await page.getByText('내 문제를 추가했습니다.', { exact: true }).waitFor();
     assert.equal(await page.getByText('기존 문제', { exact: true }).count(), 1);
+    const created = await page.evaluate(() => window.personalTest.calls.find(c => c.method === 'POST' && c.path.endsWith('/personal-questions')));
+    assert.equal(created.body.sourceQuestionId, 'Q1');
     assert.equal(await page.evaluate(() => window.personalTest.calls.some(c => c.path.endsWith('/reveal') || c.path.endsWith('/rate'))), false);
   } finally { await browser.close(); }
 });
