@@ -116,7 +116,8 @@ export type BankAnswer = {
   /** 문항이 인용한 필기 쪽들. 한 문항이 여러 장일 수 있다. */
   slides: BankSlide[];
   /** 실제로 인용한 족보 문항의 원본 PDF 지면. */
-  jokboSlides?: { page: number; url: string; pdfFilename: string; references: string[]; primary?: boolean; embedded?: boolean }[];
+  jokboSlides?: { page: number; url: string; pdfFilename: string; references: string[]; primary?: boolean; embedded?: boolean;
+    questions?: { reference: string; stem: string; options: string[]; needsFigure?: boolean }[] }[];
   evidenceStatus?: {
     category: "exam_only" | "partial_support" | "source_conflict" | "unsupported" | "uncertain";
     reason: string; missingClaim?: string; primaryAvailable?: boolean;

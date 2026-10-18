@@ -86,7 +86,11 @@ def connect(bank: dict, jokbo: Path | None, out: Path, run_id: str) -> tuple[dic
                                 doc[page - 1].get_pixmap(matrix=fitz.Matrix(1.5, 1.5), alpha=False).save(dest)
                             made[filename] = dest
                         refs.append({"year": str(hit["year"]), "number": no, "page": page, "filename": filename,
-                                     "pdfFilename": Path(path).name, "sourceSha256": hashes[path]})
+                                     "pdfFilename": Path(path).name, "sourceSha256": hashes[path],
+                                     "question": {"reference": f"{hit['year']} {no}번",
+                                                  "stem": hit.get("stem", ""),
+                                                  "options": hit.get("options", []),
+                                                  "needsFigure": bool(hit.get("needs_figure") or hit.get("figures"))}})
                 if not keys:
                     unresolved.append(locator)
                 mapped[locator] = refs

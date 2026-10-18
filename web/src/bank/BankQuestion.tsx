@@ -205,8 +205,7 @@ export function AnswerBody({ question: q, answer, preload }: {
         ? "bank-evidence-pair" : "bank-evidence-stack"}>
         <BankSlides key={`${q.question_id}:${answer.slides.map(slide => slide.url).join("|")}`} slides={answer.slides} preload={preload} statusKnown={!!answer.evidenceStatus} />
         {!answer.jokboSlides?.some(slide => slide.primary) ? (
-          <BankJokboSlides key={`ref:${q.question_id}`} slides={answer.jokboSlides} preload={preload}
-            collapseReferences={!!answer.evidenceStatus && !answer.slides.some(slide => slide.primary)} />
+          <BankJokboSlides key={`ref:${q.question_id}`} slides={answer.jokboSlides} preload={preload} />
         ) : null}
       </div>
       {hasReviewNotes ? (

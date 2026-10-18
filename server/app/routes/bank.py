@@ -908,12 +908,15 @@ def _jokbo_slides(db: Session, row: QuizBank, question: dict) -> list[dict[str, 
             except StorageNotConfigured:
                 break
             grouped[name] = {"page": ref["page"], "url": url, "pdfFilename": ref["pdfFilename"], "references": [],
-                             "primary": complete and name in core_names, "embedded": bool(ref.get('embedded'))}
+                             "primary": complete and name in core_names, "embedded": bool(ref.get('embedded')), "questions": []}
         labels = ref.get('references') or ([f"{ref['year']} {ref['number']}번"] if ref.get('year') and ref.get('number') else ['첨부 기출'])
         grouped[name]['embedded'] = grouped[name]['embedded'] or bool(ref.get('embedded'))
         for label in labels:
             if label not in grouped[name]["references"]:
                 grouped[name]["references"].append(label)
+        if isinstance(ref.get('question'), dict) and ref['question'].get('stem'):
+            if ref['question'] not in grouped[name]['questions']:
+                grouped[name]['questions'].append(ref['question'])
     if not core_names <= set(grouped):
         for slide in grouped.values():
             slide['primary'] = False
