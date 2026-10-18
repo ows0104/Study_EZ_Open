@@ -9,6 +9,11 @@ from .policy import DEFAULT
 
 
 def question_slide(question: dict, pages: dict | None = None) -> float:
+    # Reviewed placement reflects the tested relation, not an introductory
+    # background citation or the union of all evidence images.
+    position = question.get("learning_page")
+    if isinstance(position, int) and not isinstance(position, bool) and position > 0:
+        return position
     # 강의자료(S1)의 위치만 사용한다. 족보의 페이지 번호와 섞지 않는다.
     found = (pages or {}).get(question["question_id"], [])
     if not found:
@@ -44,7 +49,8 @@ def review_weight(candidate: dict, now: int) -> float:
             * components["examUrgency"] * components["examDirection"] * essential)
 
 
-def choose_candidate(candidates: list[dict], history: list[dict], now: int, policy: dict = DEFAULT) -> dict | None:
+def choose_candidate(candidates: list[dict], history: list[dict], now: int, policy: dict = DEFAULT,
+                     *, seed: str | None = None, prepared: tuple | None = None) -> dict | None:
     if not candidates:
         return None
     pool = [c for c in candidates if c["unit"]["kind"] == "new"] or candidates
@@ -66,4 +72,11 @@ def choose_candidate(candidates: list[dict], history: list[dict], now: int, poli
         pool = deferred
     if pool[0]["unit"]["kind"] == "new":
         return min(pool, key=lambda c: c["order"])
-    return random.choices(pool, weights=[review_weight(c, now) for c in pool], k=1)[0]
+    # A server-authenticated prepared draw keeps its place while it remains in
+    # the same eligible pool. Weights were applied when the draw was prepared.
+    if prepared is not None:
+        saved = next((c for c in pool if (c["scope"], c["question"]["question_id"]) == prepared), None)
+        if saved is not None:
+            return saved
+    rng = random.Random(seed) if seed else random
+    return rng.choices(pool, weights=[review_weight(c, now) for c in pool], k=1)[0]

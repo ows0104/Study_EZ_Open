@@ -148,15 +148,16 @@ def daily_selection(chosen: dict | None, ranked: list[dict], exam: str, now: int
 
 
 def select_daily_question(bank: dict, state: dict, exam: str, now: int, policy: dict = DEFAULT,
-                          *, shuffle: bool = False, pages: dict | None = None) -> dict:
+                          *, shuffle: bool = False, pages: dict | None = None,
+                          seed: str | None = None, prepared: tuple | None = None) -> dict:
     # shuffle은 기존 호출 호환용이다. 두 화면 모두 동일한 정책으로 신규 정렬·복습 섞기를 한다.
     candidates, ranked = daily_candidates(bank, state, exam, now, policy, pages=pages)
-    chosen = choose_candidate(candidates, study_history(bank, state, now), now, policy)
+    chosen = choose_candidate(candidates, study_history(bank, state, now), now, policy, seed=seed, prepared=prepared)
     return daily_selection(chosen, ranked, exam, now)
 
 
 def select_extra_question(bank: dict, state: dict, exam: str, now: int, policy: dict = DEFAULT,
-                          *, pages: dict | None = None) -> dict:
+                          *, pages: dict | None = None, seed: str | None = None, prepared: tuple | None = None) -> dict:
     """추가 학습도 공통 선택기를 사용하되 완료·미도래 문항까지 포함한다."""
     candidates, ranked = daily_candidates(bank, state, exam, now, policy, pages=pages, extra=True)
     history = [h for h in state.get("history", []) if h["timestamp"] <= now]
@@ -167,7 +168,7 @@ def select_extra_question(bank: dict, state: dict, exam: str, now: int, policy: 
         others = [c for c in candidates if c["question"]["question_id"] != last["question_id"]]
         if others:
             candidates = others
-    chosen = choose_candidate(candidates, study_history(bank, state, now), now, policy)
+    chosen = choose_candidate(candidates, study_history(bank, state, now), now, policy, seed=seed, prepared=prepared)
     result = daily_selection(chosen, ranked, exam, now)
     if chosen:
         chosen["rank"]["notes"].append("추가 학습은 완료·미도래 문항도 같은 복습 가중치로 고르고, 다른 후보가 있으면 직전 문항의 연속 반복을 피합니다.")

@@ -5,10 +5,11 @@ import { BankSolve } from "../src/bank/BankSolve";
 import "../src/styles/base.css";
 
 const results: string[] = [];
+let completed = false;
 const check = (yes: unknown, message: string) => {
   if (!yes) throw new Error(message);
   results.push(`PASS ${message}`);
-  document.getElementById("results")!.textContent = results.join("\n");
+  document.getElementById("results")!.textContent = results.join("\n") + (completed ? "\nALL PASSED" : "");
 };
 const waitFor = async (test: () => unknown) => {
   for (let i = 0; i < 500; i++) { if (test()) return; await new Promise(r => setTimeout(r, 10)); }
@@ -29,6 +30,7 @@ const question = (id: number, options = false) => ({ question_id: `Q${id}`, ques
   options: id === 2 && options ? [{ id: "A", text: "OPTION-A" }, { id: "B", text: "OPTION-B" }] : [],
   tier: "Core", retrieval_direction: "direct", conflict_id: "", matching_left: [], matching_right: [], sequence_items: [] });
 const next = (id: number) => ({ question: question(id), reviewToken: `token-${id}`, undoToken: id > 1 ? `undo-${id-1}` : null,
+  selectionTicket: `ticket-${id}`,
   choicesShown: id !== 2, lecture: batchMode ? lectures[id % 2] : undefined, preloadSlides: [] });
 window.fetch = async (input, init) => {
   const path = new URL(String(input), location.origin).pathname;
@@ -65,6 +67,7 @@ window.fetch = async (input, init) => {
     else result = answer(id);
   } else if (path.endsWith("/rate")) {
     check(id === index, "ratings never overtake preceding writes");
+    if (id <= 3) check(body.selectionTicket === `ticket-${id + 1}`, "queued rating carries its displayed prepared selection ticket");
     check(body.advance && (!batchMode || body.lectures.length === 2), "rating retains combined advancement and batch");
     rateCalls++; events.push(`rate-${id}`);
     await new Promise<void>(r => { releaseRate = r; });
@@ -136,13 +139,14 @@ try {
     await new Promise(r => setTimeout(r, 40));
     check(index === 6 && rateCalls === 6, "retry saves only the failed rating");
     stale = true;
-    // Force the next prepared window to differ from the authoritative selection.
+    // A refill tries to redraw a branch already prepared in the usable window.
     await reveal(); grade().click(); await flushRate(6);
     await waitFor(() => document.body.textContent?.includes("QUESTION-7") && submit() && !submit().disabled);
     await new Promise(r => setTimeout(r, 40));
-    await reveal(); await rate(99); await flushRate(7);
+    await reveal(); await rate(8); await flushRate(7);
     await waitFor(() => document.body.textContent?.includes("QUESTION-8") && submit() && !submit().disabled);
-    check(!document.body.textContent?.includes("QUESTION-99"), "changed selection replaces speculative cards using the saved server result");
+    check(!document.body.textContent?.includes("QUESTION-99"), "refills keep the original prepared branch instead of redrawing the displayed question");
   }
+  completed = true;
   document.getElementById("results")!.textContent = results.join("\n") + "\nALL PASSED";
 } catch (error) { document.getElementById("results")!.textContent = results.join("\n") + `\nFAIL ${String(error)}`; }

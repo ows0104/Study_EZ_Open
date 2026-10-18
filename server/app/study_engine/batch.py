@@ -4,7 +4,8 @@ from .ordering import choose_candidate, study_history
 from .policy import DEFAULT
 
 
-def select_batch_question(entries: list[dict], now: int, policy: dict = DEFAULT) -> tuple[dict | None, dict | None]:
+def select_batch_question(entries: list[dict], now: int, policy: dict = DEFAULT,
+                          *, seed: str | None = None, prepared: tuple | None = None) -> tuple[dict | None, dict | None]:
     candidates, history = [], []
     for index, entry in enumerate(entries):
         history.extend(study_history(entry["bank"], entry["state"], now, entry["key"]))
@@ -13,7 +14,7 @@ def select_batch_question(entries: list[dict], now: int, policy: dict = DEFAULT)
         pool, ranked = daily_candidates(entry["bank"], entry["state"], entry["exam"], now, policy,
                                         scope=entry["key"], lecture_order=index, pages=entry["row"].pages)
         candidates.extend({**candidate, "entry": entry, "ranked": ranked} for candidate in pool)
-    chosen = choose_candidate(candidates, history, now, policy)
+    chosen = choose_candidate(candidates, history, now, policy, seed=seed, prepared=prepared)
     if chosen is None:
         return None, None
     entry = chosen["entry"]

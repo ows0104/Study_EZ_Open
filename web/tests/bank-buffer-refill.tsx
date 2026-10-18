@@ -25,7 +25,7 @@ window.fetch = async (_input, init) => new Promise<Response>(resolve => {
   });
 });
 const frame = (id: number, successor = false): PreparedFrame => ({
-  next: { reviewToken: `token-${id}` },
+  next: { reviewToken: `token-${id}`, question: { question_id: `Q${id}` } },
   answer: { slides: [] },
   options: {},
   previews: successor ? { Good: { reviewToken: `token-${id + 1}` } } : {},
@@ -51,11 +51,13 @@ try {
   check(!requests[1].signal.aborted, "rapid navigation and save acknowledgements keep the previous refill running");
   requests[2].finish({ "token-3": frame(3, true), "token-4": frame(4, true), "token-5": frame(5) });
   await waitFor(() => cache.has("token-5"));
-  requests[1].finish({ "token-2": frame(2, true), "token-3": frame(3) });
+  const redrawn = frame(3, true);
+  redrawn.previews.Good = { reviewToken: "token-99", selectionTicket: "redrawn-ticket" } as PreparedFrame["next"];
+  requests[1].finish({ "token-2": frame(2, true), "token-3": redrawn });
   await new Promise(resolve => setTimeout(resolve, 40));
   check(cache.has("token-5"), "an older reply preserves the deeper prepared window");
   check(cache.get("token-3")?.previews.Good?.reviewToken === "token-4",
-    "a shallow reply preserves the next rating branch");
+    "an older refill cannot redraw an already prepared rating branch");
   update(old => ({ ...old, ack: 2 }));
   await waitFor(() => requests.length === 4);
   cache.clear();

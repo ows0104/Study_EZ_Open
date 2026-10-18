@@ -290,6 +290,7 @@ export type BankNext = {
   /** Warm the current question's images without recording a reveal. Older APIs omit this. */
   preloadSlides?: BankSlide[];
   reviewToken?: string;
+  selectionTicket?: string;
   days?: number;
   examDate?: string;
   session?: BankSession | null;

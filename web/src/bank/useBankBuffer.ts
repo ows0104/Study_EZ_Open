@@ -50,7 +50,10 @@ export function useBankBuffer(base: string, token: string | undefined, slides: S
       // reply cannot discard successors or erase branches prepared by a newer one.
       for (const [key, frame] of Object.entries(frames)) {
         const old = cache.get(key);
-        frame.previews = { ...old?.previews, ...frame.previews };
+        // A refill may not redraw an already usable frame or replace its signed
+        // rating branches. The visible card and its cached answer stay paired.
+        if (old && JSON.stringify(old.next.question) !== JSON.stringify(frame.next.question)) continue;
+        frame.previews = { ...frame.previews, ...old?.previews };
         cache.delete(key);
         cache.set(key, frame);
       }

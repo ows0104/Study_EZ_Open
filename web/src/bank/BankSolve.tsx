@@ -180,6 +180,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
     const accepted = enqueue(`${current.reviewToken}:rate`, async () => {
       const result = await api<{ next?: BankNext; advanceFailed?: boolean }>(`${base}/rate`, {
         method: "POST", body: JSON.stringify({ reviewToken: current.reviewToken, rating, advance: true, retrySafe: true,
+          selectionTicket: preview?.selectionTicket ?? preparedNext.previews[rating]?.selectionTicket,
           ...(batch ? { lectures: batch.lectures } : {}) }),
       });
       invalidateTimetable();

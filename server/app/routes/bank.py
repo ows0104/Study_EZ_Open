@@ -50,6 +50,8 @@ from app.bank_validation.choice_mode import choice_mode
 from app.preview_links import conversation_url as valid_conversation_url, share_url as valid_share_url
 from app.auth import CurrentUser, require_admin, require_approved_user, require_runner
 from app.database import get_db
+from app.config import get_settings
+from app.study_engine import prepared_selection
 from app.lecture_mastery import for_bank
 from app.jobs.queue import open_job_of
 from app.models import (
@@ -74,7 +76,7 @@ from app.models import (
     TimetableEvent,
 )
 from app.routes.common import lecture_or_404, record_grabs, storage_or_503
-from app.study_engine.daily_queue import daily_units, lecture_goal, select_daily_question
+from app.study_engine.daily_queue import daily_units, lecture_goal, select_daily_question, select_extra_question
 from app.study_engine.progress import mark_seen, panel_progress
 from app.study_engine.choices import realize_choices
 from app.study_engine.planning import day_start
@@ -1143,7 +1145,7 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
 def _next_bank_question(subject: str, run_id: str, user: CurrentUser, db: Session,
                         *, choice_protocol: bool = False, selection: dict | None = None,
                         preview_state: dict | None = None, served_token: str | None = None,
-                        preview_states_out: dict | None = None) -> dict[str, Any]:
+                        preview_states_out: dict | None = None, prepared: tuple | None = None) -> dict[str, Any]:
     """다음 문항. **이미 내준 문항이 있으면 그것을 다시 준다** — 새로고침이 문항을 넘기지 않는다."""
     lecture = lecture_or_404(db, subject, run_id)
     row = _bank_or_404(db, lecture, user)
@@ -1179,9 +1181,10 @@ def _next_bank_question(subject: str, run_id: str, user: CurrentUser, db: Sessio
             save()
             return {"question": None, "summary": engine.session_summary(bank, state, now=now),
                     "lectureGoal": goal, "reason": "lecture_goal_met", "undoToken": undo_token(state)}
-        picked = (engine.select_question(bank, state, exam, now, prefer_unseen=True, pages=row.pages) if goal["met"] and extra_today
+        reserved = ((), prepared[1]) if prepared and prepared[0] == (subject, run_id) else None
+        picked = (select_extra_question(bank, state, exam, now, pages=row.pages, seed=served_token, prepared=reserved) if goal["met"] and extra_today
                   else selection if selection is not None
-                  else select_daily_question(bank, state, exam, now, pages=row.pages))
+                  else select_daily_question(bank, state, exam, now, pages=row.pages, seed=served_token, prepared=reserved))
         question, days = picked["question"], picked["days"]
         if question is None:
             if not goal["met"]:
@@ -1376,6 +1379,7 @@ class RateIn(BaseModel):
     rating: Literal["Again", "Hard", "Good", "Easy"]
     advance: bool = False
     retry_safe: bool = Field(default=False, alias="retrySafe")
+    selection_ticket: str | None = Field(default=None, alias="selectionTicket", max_length=2048)
     lectures: list[BatchLectureIn] | None = Field(default=None, min_length=1, max_length=100)
 
     model_config = {"populate_by_name": True}
@@ -1383,6 +1387,35 @@ class RateIn(BaseModel):
 
 def _advance_token(token: str, rating: str) -> str:
     return uuid.uuid5(uuid.NAMESPACE_URL, f"studyez:{token}:{rating}").hex
+
+
+def _draw_entries(subject, run_id, lectures, user, db):
+    if lectures:
+        entries = _batch_entries(BatchIn(lectures=lectures), user, db)
+    else:
+        lecture = lecture_or_404(db, subject, run_id)
+        row = _bank_or_404(db, lecture, user)
+        saved = db.get(BankState, (user.id, subject, run_id))
+        entries = [{"key": (subject, run_id), "lecture": lecture, "row": row,
+                    "bank": _study_bank(db, row, user), "state": saved.state if saved else engine.empty_state()}]
+    for entry in entries:
+        entry["exam"] = exam_date_for(db, entry["lecture"])
+    return entries
+
+
+def _draw_context(subject, run_id, lectures, user, db, states=None, entries=None):
+    entries = [dict(entry) for entry in (entries if entries is not None else _draw_entries(subject, run_id, lectures, user, db))]
+    for entry in entries:
+        entry["state"] = (states or {}).get(entry["key"], entry["state"])
+    return prepared_selection.context(entries, engine.now_ms())
+
+
+def _seal_draw(got, parent, rating, fingerprint, subject, run_id, user):
+    secret = get_settings().runner_token
+    if got.get("question") and secret:
+        ref = got.get("lecture") or {"subject": subject, "runId": run_id}
+        got["selectionTicket"] = prepared_selection.seal(secret, user.id, parent, rating, fingerprint,
+            (ref["subject"], ref["runId"]), got["question"]["question_id"])
 
 
 def _reviewed_state(bank: dict, state: dict, rating: str, now: int) -> dict:
@@ -1428,14 +1461,17 @@ def rate_bank_answer(subject: str, run_id: str, payload: RateIn,
         # Report that separately so clients never submit the same rating twice.
         try:
             token = _advance_token(payload.review_token, payload.rating)
+            prepared = (prepared_selection.open_draw(payload.selection_ticket, get_settings().runner_token,
+                user.id, payload.review_token, payload.rating,
+                _draw_context(subject, run_id, payload.lectures, user, db)) if payload.selection_ticket and not replay else None)
             resume = None
             if replay and payload.lectures:
                 resume = next(({"subject": entry["key"][0], "runId": entry["key"][1]}
                                for entry in _batch_entries(BatchIn(lectures=payload.lectures), user, db)
                                if (entry["state"].get("served") or {}).get("token") == token), None)
-            result["next"] = (_next_batch_question(BatchIn(lectures=payload.lectures, resumeLecture=resume), user, db, served_token=token)
+            result["next"] = (_next_batch_question(BatchIn(lectures=payload.lectures, resumeLecture=resume), user, db, served_token=token, prepared=prepared)
                               if payload.lectures else _next_bank_question(subject, run_id, user, db, choice_protocol=True,
-                                                                         served_token=token))
+                                                                         served_token=token, prepared=prepared))
         except Exception:
             db.rollback()
             result["advanceFailed"] = True
@@ -1701,13 +1737,16 @@ def prepare_next_bank_question(subject: str, run_id: str, payload: NextPreviewIn
     if served.get("token") != payload.review_token or not served.get("revealed"):
         raise HTTPException(409, "정답 공개 후 다음 문항을 준비할 수 있습니다.")
     previews = {}
+    draw_entries = _draw_entries(subject, run_id, payload.lectures, user, db)
     for rating in ("Again", "Hard", "Good", "Easy"):
         state = _reviewed_state(bank, copy.deepcopy(state_row.state), rating, engine.now_ms())
         token = _advance_token(payload.review_token, rating)
+        fingerprint = _draw_context(subject, run_id, payload.lectures, user, db, {(subject, run_id): state}, draw_entries)
         got = (_next_batch_question(BatchIn(lectures=payload.lectures), user, db,
                                     served_token=token, preview_states={(subject, run_id): state})
                if payload.lectures else _next_bank_question(subject, run_id, user, db, choice_protocol=True,
                                                             preview_state=state, served_token=token))
+        _seal_draw(got, payload.review_token, rating, fingerprint, subject, run_id, user)
         # These are display previews, not usable review tokens or exposed answers.
         got.pop("reviewToken", None)
         got.pop("undoToken", None)
@@ -1739,6 +1778,7 @@ def prepare_bank_buffer(subject: str, run_id: str, payload: BufferPreviewIn,
     if (subject, run_id) not in states:
         raise HTTPException(409, "현재 강의가 선택한 학습 목록에 없습니다.")
     frames = {}
+    draw_entries = _draw_entries(subject, run_id, payload.lectures, user, db)
 
     def frame(got, snapshots, ratings):
         if not got.get("question"):
@@ -1780,10 +1820,12 @@ def prepare_bank_buffer(subject: str, run_id: str, payload: BufferPreviewIn,
             branch[key]["served"].update(revealed=True, choices_shown=True)
             branch[key] = _reviewed_state(bank, branch[key], rating, engine.now_ms())
             token = _advance_token(current["reviewToken"], rating)
+            fingerprint = _draw_context(subject, run_id, payload.lectures, user, db, branch, draw_entries)
             got = (_next_batch_question(BatchIn(lectures=payload.lectures), user, db,
                     served_token=token, preview_states=branch, preview_states_out=branch)
                    if payload.lectures else _next_bank_question(*key, user, db, choice_protocol=True,
                     preview_state=branch[key], served_token=token, preview_states_out=branch))
+            _seal_draw(got, current["reviewToken"], rating, fingerprint, subject, run_id, user)
             prepared["previews"][rating] = got
             frame(got, branch, [*path, rating])
             if rating == selected:
@@ -1844,7 +1886,8 @@ def next_batch_question(payload: BatchIn, user: CurrentUser = Depends(require_ap
 
 
 def _next_batch_question(payload: BatchIn, user: CurrentUser, db: Session, *, served_token: str | None = None,
-                         preview_states: dict | None = None, preview_states_out: dict | None = None) -> dict:
+                         preview_states: dict | None = None, preview_states_out: dict | None = None,
+                         prepared: tuple | None = None) -> dict:
     entries = _batch_entries(payload, user, db)
     if preview_states is not None:
         for entry in entries:
@@ -1874,7 +1917,7 @@ def _next_batch_question(payload: BatchIn, user: CurrentUser, db: Session, *, se
     if chosen is None:
         for entry in entries:
             entry["exam"] = exam_date_for(db, entry["lecture"])
-        chosen, selection = select_batch_question(entries, engine.now_ms())
+        chosen, selection = select_batch_question(entries, engine.now_ms(), seed=served_token, prepared=prepared)
     if chosen is None:
         raise HTTPException(409, "남은 문항을 선택할 수 없습니다. 강의 목록을 다시 확인하세요.")
     state_row = _load_state(db, user, chosen["row"]) if preview_states is None else None
