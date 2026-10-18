@@ -39,7 +39,7 @@ export function DailyGoal({ plan, showMain = false, collapsible = false, onConti
         Again·Hard로 평가한 내용은 다음날부터 복습에 반영합니다.</p>
       <p>오늘 신규 분량과 복습할 문항을 모두 처리하면 완료됩니다. 같은 문항을 반복해도 다른 문항의 남은 수가 줄지는 않습니다.
         추가 학습에서 어려운 내용이 나와도 오늘 달성한 분량은 유지됩니다.
-        숙련도와 시험 대비 계획은 별도 지표이며, 한국 자정을 기준으로 오늘 분량을 갱신합니다.</p>
+        숙련도와 시험 대비 계획은 별도 지표이며, 한국 시간 오전 4시를 기준으로 오늘 분량을 갱신합니다.</p>
     </details>
   </>;
   const className = `daily-goal${plan.met ? " is-complete" : ""}`;

@@ -17,6 +17,7 @@ from .policy import DEFAULT, policy_hash
 from .memory import memory_snapshot, next_stability, stability_days
 from .suspension import active_bank
 from .personal_priority import personal_bank
+from .study_day import day_start
 from app.bank_validation.priorities import TIER_ORDER, is_advanced, priority_tier
 
 DAY_MS = 86_400_000
@@ -75,7 +76,7 @@ def review_schedule(bank: dict, q: dict, snapshot: dict, policy: dict = DEFAULT)
     # M(t) = M_after / (1 + t / (9*S)); a target already missed is due next KST day.
     days = min(policy["forgetting"]["maxDays"],
                max(0, 9 * stability * (snapshot["mastery_after"] / target - 1)))
-    due = max(_korea_midnight_ms(at) + DAY_MS, at + round(days * DAY_MS))
+    due = max(day_start(at) + DAY_MS, at + round(days * DAY_MS))
     return {"interval": due - at, "due_at": due,
             "target_schedule": {"reviewed_at": at, "mastery_after": snapshot["mastery_after"],
                                 "stability_days": stability, "target": target}}
@@ -189,9 +190,9 @@ def rank_questions(bank: dict, state: dict, exam_date: str, now: int, policy: di
     state = memory_snapshot(state, now, policy)
     days = days_until(exam_date, now)
     by_id = {q["question_id"]: q for q in bank["questions"]}
-    midnight = _korea_midnight_ms(now)
+    start = day_start(now)
     rec, ex, prog, w = policy["recency"], policy["exam"], policy["progression"], policy["weights"]
-    today = [h for h in state["history"] if midnight <= h["timestamp"] <= now]
+    today = [h for h in state["history"] if start <= h["timestamp"] <= now]
     recent = today[-rec["window"]:]
     last = today[-1] if today else None
     weak_core = weak_high_core(bank, state, policy)
