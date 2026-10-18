@@ -1,4 +1,4 @@
-"""학습은 자정을 지나도 이어지고 한국 04시에 다음 학습일로 넘어간다."""
+"""학습은 자정을 지나도 이어지고 한국 09시에 다음 학습일로 넘어간다."""
 
 import copy
 from datetime import datetime
@@ -16,14 +16,16 @@ def at(day, hour, minute=0):
 
 
 def main():
-    evening, midnight, before, boundary = at(18, 23, 59), at(19, 0), at(19, 3, 59), at(19, 4)
-    assert day_start(evening) == day_start(midnight) == day_start(before) == at(18, 4)
-    assert day_start(boundary - 1) == at(18, 4)
+    evening, midnight, before, boundary = at(18, 23, 59), at(19, 0), at(19, 8, 59), at(19, 9)
+    assert day_start(evening) == day_start(midnight) == day_start(before) == at(18, 9)
+    assert day_start(boundary - 1) == at(18, 9)
     assert day_start(boundary) == boundary
     assert day_start(at(20, 0)) == boundary
+    assert day_start(at(19, 4)) == at(18, 9)
+    assert day_start(at(19, 9, 1)) == boundary
     # 월 경계도 같은 규칙을 사용한다.
     month_start = int(datetime(2026, 11, 1, 0, tzinfo=KOREA).timestamp() * 1000)
-    assert day_start(month_start) == int(datetime(2026, 10, 31, 4, tzinfo=KOREA).timestamp() * 1000)
+    assert day_start(month_start) == int(datetime(2026, 10, 31, 9, tzinfo=KOREA).timestamp() * 1000)
     bank = example_bank()
     bank['questions'] = bank['questions'][:1]
     state = record_review(bank, empty_state(), 'Q1', 'Again', evening)
@@ -40,14 +42,14 @@ def main():
     units = [{'bank': bank, 'state': state, 'date': datetime(2026, 10, 18).date()}]
     deadline = at(25, 9)
     plans = [daily_plan(units, 90, now, deadline) for now in (evening, midnight, before)]
-    assert all(plan['dayStart'] == at(18, 4) and plan['reviewedToday'] == 1 for plan in plans)
+    assert all(plan['dayStart'] == at(18, 9) and plan['reviewedToday'] == 1 for plan in plans)
     assert len({plan['endTarget'] for plan in plans}) == 1
     tomorrow = daily_plan(units, 90, boundary, deadline)
     assert tomorrow['dayStart'] == boundary and tomorrow['reviewedToday'] == 0
     # 試験日・D-day は暦どおりで、学習日境界とは分ける。
     assert days_until('2026-10-19', evening) == 1
     assert days_until('2026-10-19', midnight) == 0
-    print('PASS: KST 04:00 rollover, midnight continuity, next-day review, history spacing, calendar exam dates')
+    print('PASS: KST 09:00 rollover, midnight continuity, next-day review, history spacing, calendar exam dates')
 
 
 if __name__ == '__main__':

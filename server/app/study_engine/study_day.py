@@ -1,9 +1,9 @@
-"""Quiz Bank 학습일은 한국 시간 04시에 시작한다."""
+"""Quiz Bank 학습일은 한국 시간 09시에 시작한다."""
 
 from datetime import datetime, timedelta, timezone
 
 KOREA = timezone(timedelta(hours=9))
-DAY_START_HOUR = 4
+DAY_START_HOUR = 9
 
 
 def day_start(now: int) -> int:

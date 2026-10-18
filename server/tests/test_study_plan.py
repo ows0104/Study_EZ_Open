@@ -20,7 +20,7 @@ from app.study_engine.memory import DAY_MS
 from app.study_engine.planning import KOREA, balanced_daily_gain, daily_plan, day_start, state_before, total_score
 from tests.bank_fixtures import example_bank
 
-START = int(datetime(2026, 10, 6, 4, tzinfo=KOREA).timestamp() * 1000)
+START = int(datetime(2026, 10, 6, 9, tzinfo=KOREA).timestamp() * 1000)
 NOW = START + 10 * 3_600_000
 DEADLINE = START + 4 * DAY_MS + 9 * 3_600_000
 
