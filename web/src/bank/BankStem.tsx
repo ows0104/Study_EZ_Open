@@ -4,7 +4,7 @@ import { textLayout } from "./textLayout";
 
 /** Only add layout: stored wording, blank order and answer units stay intact. */
 export function stemLines(text: string, list = false) {
-  const normalized = text.replace(/\r\n?/g, "\n");
+  const normalized = (list ? text.replace(/[ \t]*;[ \t]*/g, "\n") : text).replace(/\r\n?/g, "\n");
   // Korean sentences and cloze endings leave C. difficile, e.g. and 0.5 intact.
   const sentences = normalized.split(/(?<=[가-힣}\]][.!?])[ \t]+/);
   const labeled = (line: string) => /^(?:\*\*)?[^:：\n]{1,32}[:：]/.test(line.trim());

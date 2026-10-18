@@ -88,7 +88,7 @@ export function answerPoints(text: string, units: string[]) {
 }
 
 export function AnswerPoints({ text, units = [], readable = false, list = false, blueBold = false }: { text: string; units?: string[]; readable?: boolean; list?: boolean; blueBold?: boolean }) {
-  const parsed = answerPoints(text, units);
+  const parsed = answerPoints(list ? text.replace(/[ \t]*;[ \t]*/g, "\n") : text, units);
   parsed.highlights.push(...useOxHighlights(blueBold ? parsed.text : ""));
   const boundaries = [...new Set([0, parsed.text.length,
     ...parsed.bold.flatMap((range) => [range.start, range.end]),

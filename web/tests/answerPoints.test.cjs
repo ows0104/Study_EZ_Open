@@ -203,7 +203,7 @@ test('case, spacing, and bold markup do not prevent an inline match', () => {
 
 test('overlapping and repeated points retain all answer text without duplicating it', () => {
   const html = render({ answer: 'NMDA receptor; NMDA.', answerUnits: ['NMDA', 'NMDA receptor'] });
-  assert.equal(html.replace(/<[^>]+>/g, ''), 'NMDA receptor; NMDA.');
+  assert.equal(html.replace(/<[^>]+>/g, ''), 'NMDA receptor\nNMDA.');
   assert.ok(!html.includes('bank-units'));
 });
 
