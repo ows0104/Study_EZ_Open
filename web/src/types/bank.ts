@@ -117,7 +117,8 @@ export type BankAnswer = {
   slides: BankSlide[];
   /** 실제로 인용한 족보 문항의 원본 PDF 지면. */
   jokboSlides?: { page: number; url: string; pdfFilename: string; references: string[]; primary?: boolean; embedded?: boolean;
-    questions?: { reference: string; stem: string; options: string[]; needsFigure?: boolean }[] }[];
+    questions?: { reference: string; stem: string; options: string[]; needsFigure?: boolean;
+      answer?: string | null; objection?: string | null }[] }[];
   evidenceStatus?: {
     category: "exam_only" | "partial_support" | "source_conflict" | "unsupported" | "uncertain";
     reason: string; missingClaim?: string; primaryAvailable?: boolean;

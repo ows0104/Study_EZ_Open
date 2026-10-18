@@ -52,3 +52,16 @@ test('legacy pages remain available with an explicit missing-text message',()=>{
   assert.match(html,/2022년 · 3번/);
   assert.match(html,/원본 PDF 펼쳐보기 · 족보.pdf · 3쪽/);
 });
+
+test('exam answers preserve source objections and explicitly flag missing answers',()=>{
+  const question={reference:'2023 52번',stem:'정답 확인 문항',options:['① A','② B'],answer:'2'};
+  const show=extra=>render({jokboSlides:[{...image(12,false),questions:[{...question,...extra}]}]});
+  assert.match(show({}),/족보 정답: <\/strong>2/);
+  assert.match(show({}),/원본 정답표 기준/);
+  assert.doesNotMatch(show({}),/정답 의심/);
+  assert.match(show({objection:'복수 정답 가능'}),/정답 의심 · 원본 이의제기: 복수 정답 가능/);
+  assert.match(show({answer:null}),/미확인/);
+  assert.match(show({answer:'  '}),/확인 필요 · 저장된 족보 정답이 없습니다/);
+  assert.match(show({answer:undefined}),/확인 필요/);
+  assert.match(show({answer:null,objection:'원문 누락'}),/정답 의심 · 원본 이의제기: 원문 누락/);
+});

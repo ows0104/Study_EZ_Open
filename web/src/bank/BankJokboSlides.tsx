@@ -31,6 +31,10 @@ export function BankJokboSlides({ slides, preload }: {
       <p className="bank-note">{referenceLabel(question.reference)}</p>
       <p className="bank-jokbo-stem">{question.stem}</p>
       {question.options.length ? <ul>{question.options.map((option, i) => <li key={i}>{option}</li>)}</ul> : null}
+      <p className="bank-jokbo-answer"><strong>족보 정답: </strong>{question.answer?.trim() || "미확인"}</p>
+      {question.objection?.trim() ? <p className="bank-note" role="note">⚠ 정답 의심 · 원본 이의제기: {question.objection}</p>
+        : !question.answer?.trim() ? <p className="bank-note" role="note">⚠ 확인 필요 · 저장된 족보 정답이 없습니다.</p>
+        : <p className="bank-note">원본 정답표 기준 · 의학적 정확성 별도 검수 전</p>}
       {question.needsFigure ? <p className="bank-note">그림·표는 아래 원본 PDF에서 확인하세요.</p> : null}
     </article>)}
     {!questions.length ? <p className="bank-note">문제 본문이 아직 연결되지 않았습니다. 원본 PDF를 펼쳐 확인하세요.</p> : null}

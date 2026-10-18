@@ -90,6 +90,8 @@ def connect(bank: dict, jokbo: Path | None, out: Path, run_id: str) -> tuple[dic
                                      "question": {"reference": f"{hit['year']} {no}번",
                                                   "stem": hit.get("stem", ""),
                                                   "options": hit.get("options", []),
+                                                  "answer": hit.get("answer"),
+                                                  "objection": hit.get("objection"),
                                                   "needsFigure": bool(hit.get("needs_figure") or hit.get("figures"))}})
                 if not keys:
                     unresolved.append(locator)

@@ -21,7 +21,8 @@ def test_pdf_page_uses_the_cut_index_and_correct_older_source(tmp_path):
     md = tmp_path / "slice.md"
     md.write_text("Past questions", encoding="utf-8")
     md.with_suffix(".json").write_text(json.dumps({"sources": [{"path": str(tmp_path / "older.pdf")}],
-        "questions": [{"year": "2023", "no": "52", "pages": [1], "stem": "Original question?", "options": ["① One", "② Two"]},
+        "questions": [{"year": "2023", "no": "52", "pages": [1], "stem": "Original question?", "options": ["① One", "② Two"],
+                       "answer": "2", "objection": "Two answers may be possible"},
                       {"year": "2016-2", "no": "R3", "pages": [2], "src": 0}]}), encoding="utf-8")
     q = {"question_id": "Q1", "source_refs": [{"source_id": "S2", "locator": "2023 52; 2016-2 R3"}]}
     report, images = connect({"questions": [q]}, md, tmp_path / "images", "demo")
@@ -29,6 +30,9 @@ def test_pdf_page_uses_the_cut_index_and_correct_older_source(tmp_path):
     assert {(r["pdfFilename"], r["page"]) for r in refs} == {("main.pdf", 1), ("older.pdf", 2)}
     assert refs[0]["question"]["stem"] == "Original question?"
     assert refs[0]["question"]["options"] == ["① One", "② Two"]
+    assert refs[0]["question"]["answer"] == "2"
+    assert refs[0]["question"]["objection"] == "Two answers may be possible"
+    assert refs[1]["question"]["answer"] is None
     assert len(images) == 2 and all(p.is_file() for p in images)
     assert not report["questions"]["Q1"]["unresolved"]
 
