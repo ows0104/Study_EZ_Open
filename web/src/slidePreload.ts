@@ -23,7 +23,11 @@ export class SlidePreloader {
     for (const url of urls) {
       const key = this.key(url);
       const old = this.images.get(key);
-      if (old && this.reusable(old)) continue;
+      if (old && this.reusable(old)) {
+        this.images.delete(key);
+        this.images.set(key, old);
+        continue;
+      }
       const image = new Image();
       image.decoding = "async";
       image.fetchPriority = "low";

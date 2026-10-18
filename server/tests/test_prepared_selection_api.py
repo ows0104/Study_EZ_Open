@@ -81,10 +81,10 @@ def main():
                 retry = post(base+'/rate', {**body, 'rating': rating, 'advance': True, 'retrySafe': True,
                     'selectionTicket': expected['selectionTicket']})['next']
                 assert retry['question'] == actual['question'] and snapshot() == saved
-                if rating == 'Good':
-                    # Consume the original three-card lookahead while its real
-                    # acknowledgements happen later, including lecture switches.
-                    for grade in ('Good', 'Hard'):
+                # All ratings have a second prepared step; Good retains three.
+                steps = ('Easy',) * 5 if rating == 'Easy' else ('Good', 'Hard') if rating == 'Good' else ('Hard',)
+                if steps:
+                    for grade in steps:
                         current = actual
                         if batch:
                             base = '/api/lectures/prepared/'+current['lecture']['runId']+'/bank'
@@ -93,8 +93,11 @@ def main():
                         post(base+'/reveal', body)
                         with patch('app.study_engine.ordering.random.Random', side_effect=AssertionError('deep redraw')):
                             actual = post(base+'/rate', {**body, 'rating': grade, 'advance': True,
-                                'selectionTicket': expected['selectionTicket']})['next']
-                        assert actual['question'] == expected['question'] and actual['reviewToken'] == expected['reviewToken']
+                                'selectionTicket': expected.get('selectionTicket')})['next']
+                        assert actual.get('question') == expected.get('question')
+                        if not actual.get('question'):
+                            break
+                        assert actual['reviewToken'] == expected['reviewToken']
     print('PASS: review-only solo/batch, all four ratings, stable repeated lookahead, five-minute delay, zero redraws, no preparation writes, idempotent retry')
 
 

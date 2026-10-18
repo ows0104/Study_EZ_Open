@@ -801,9 +801,12 @@ def _public(q: dict, *, bank: dict, show_choices: bool = True) -> dict:
     return out
 
 
-def _served_question(db: Session, row: QuizBank, user_id: str, bank: dict, served: dict) -> dict:
+def _served_question(db: Session, row: QuizBank, user_id: str, bank: dict, served: dict,
+                     *, prepared_entry: dict | None = None) -> dict:
     original = next(q for q in bank["questions"] if q["question_id"] == served["question_id"])
-    personal = bank_personal.apply(db, row, user_id, original)
+    personal = (bank_personal.apply_edit(original, prepared_entry["personal_edits"].get(original["question_id"]))
+                if prepared_entry is not None and "personal_edits" in prepared_entry
+                else bank_personal.apply(db, row, user_id, original))
     snapshot = served.get("question_snapshot") or {}
     # Explicit private corrections take effect immediately and disable pools.
     # A reset during the same exposure restores the original authored options.
@@ -811,8 +814,11 @@ def _served_question(db: Session, row: QuizBank, user_id: str, bank: dict, serve
     # after a metadata-only review without resetting this exposure or its token.
     question = personal if personal.get("personalAdded") or personal.get("personalEdited") or snapshot.get("personalEdited") else snapshot or personal
     metadata = priority_fields(original, question=True)
-    state = db.get(BankState, (user_id, row.subject, row.run_id))
-    current = state.state if state and state.build_id == row.build_id else {}
+    if prepared_entry is not None:
+        current = prepared_entry["state"]
+    else:
+        state = db.get(BankState, (user_id, row.subject, row.run_id))
+        current = state.state if state and state.build_id == row.build_id else {}
     metadata = question_priority(metadata, current)
     out = {**question, **{k: metadata[k] for k in ("tier", "importance", "advanced")},
            "presentationSeed": snapshot.get("presentationSeed") or hashlib.sha256(
@@ -825,11 +831,27 @@ def _served_question(db: Session, row: QuizBank, user_id: str, bank: dict, serve
     return out
 
 
-def _slides(db: Session, row: QuizBank, question_id: str, presented: dict | None = None, *, references_only: bool = False) -> list[dict[str, Any]]:
+def _slide_url(object_key: str, prepared_entry: dict | None = None) -> str:
+    if prepared_entry is None or "resources" not in prepared_entry:
+        return ObjectStorage().presign_download(object_key)
+    resources = prepared_entry["resources"]
+    urls = resources.setdefault("urls", {})
+    if object_key not in urls:
+        if "storage" not in resources:
+            resources["storage"] = ObjectStorage()
+        urls[object_key] = resources["storage"].presign_download(object_key)
+    return urls[object_key]
+
+
+def _slides(db: Session, row: QuizBank, question_id: str, presented: dict | None = None, *, references_only: bool = False,
+            prepared_entry: dict | None = None) -> list[dict[str, Any]]:
+    if prepared_entry is not None and "assets" not in prepared_entry:
+        prepared_entry = None
     if presented and presented.get("personalAdded"):
         out = []
         for reference in presented.get("personalSlideReferences", []):
-            asset = db.get(Asset, reference["assetId"])
+            asset = (prepared_entry["assets_by_id"].get(reference["assetId"]) if prepared_entry is not None
+                     else db.get(Asset, reference["assetId"]))
             if not asset or (asset.subject, asset.run_id, asset.kind) != (row.subject, row.run_id, SLIDE_KINDS["bank"]):
                 continue
             if references_only:
@@ -837,7 +859,7 @@ def _slides(db: Session, row: QuizBank, question_id: str, presented: dict | None
                 continue
             try:
                 out.append({**{k: v for k, v in reference.items() if k != "assetId"},
-                            "primary": False, "url": ObjectStorage().presign_download(asset.object_key)})
+                            "primary": False, "url": _slide_url(asset.object_key, prepared_entry)})
             except StorageNotConfigured:
                 break
         return out
@@ -862,9 +884,10 @@ def _slides(db: Session, row: QuizBank, question_id: str, presented: dict | None
                              "sourceFilename": meta.get("sourceFilename", "")}
     if not pages and not related:
         return []
-    assets = list(db.scalars(select(Asset).where(
-        Asset.subject == row.subject, Asset.run_id == row.run_id, Asset.kind == SLIDE_KINDS["bank"],
-        or_(Asset.slide_no.in_(pages), Asset.filename.in_(related)))))
+    assets = ([asset for asset in prepared_entry["assets"] if asset.slide_no in pages or asset.filename in related]
+              if prepared_entry is not None else list(db.scalars(select(Asset).where(
+                  Asset.subject == row.subject, Asset.run_id == row.run_id, Asset.kind == SLIDE_KINDS["bank"],
+                  or_(Asset.slide_no.in_(pages), Asset.filename.in_(related))))))
     own_assets = {a.slide_no: a for a in assets if a.slide_no in pages}
     foreign_assets = {a.filename: a for a in assets if a.filename in related}
     out = []
@@ -878,7 +901,7 @@ def _slides(db: Session, row: QuizBank, question_id: str, presented: dict | None
             out.append({**info, "assetId": asset.id})
             continue
         try:
-            out.append({**info, "url": ObjectStorage().presign_download(asset.object_key)})
+            out.append({**info, "url": _slide_url(asset.object_key, prepared_entry)})
         except StorageNotConfigured:
             break
     primary = selected_references(report, question, {(s["sourceId"], s["page"]) for s in out}, presented)
@@ -887,16 +910,19 @@ def _slides(db: Session, row: QuizBank, question_id: str, presented: dict | None
     return out
 
 
-def _jokbo_slides(db: Session, row: QuizBank, question: dict) -> list[dict[str, Any]]:
+def _jokbo_slides(db: Session, row: QuizBank, question: dict, *, prepared_entry: dict | None = None) -> list[dict[str, Any]]:
+    if prepared_entry is not None and "assets" not in prepared_entry:
+        prepared_entry = None
     original = next((q for q in (row.bank or {}).get("questions", []) if q["question_id"] == question["question_id"]), {})
     refs = jokbo_references((row.validation or {}).get("jokboPages"), original, question)
     primary = exam_primary_references((row.validation or {}).get("evidenceResolution"), original, question)
     refs += primary
     if not refs:
         return []
-    assets = {a.filename: a for a in db.scalars(select(Asset).where(
-        Asset.subject == row.subject, Asset.run_id == row.run_id, Asset.kind == SLIDE_KINDS["bank"],
-        Asset.filename.in_({ref["filename"] for ref in refs})))}
+    names = {ref["filename"] for ref in refs}
+    source_assets = (prepared_entry["assets"] if prepared_entry is not None else db.scalars(select(Asset).where(
+        Asset.subject == row.subject, Asset.run_id == row.run_id, Asset.kind == SLIDE_KINDS["bank"], Asset.filename.in_(names))))
+    assets = {a.filename: a for a in source_assets if a.filename in names}
     core_names = {ref['filename'] for ref in primary}
     complete = bool(primary) and core_names <= set(assets)
     grouped = {}
@@ -906,7 +932,7 @@ def _jokbo_slides(db: Session, row: QuizBank, question: dict) -> list[dict[str, 
             continue
         if name not in grouped:
             try:
-                url = ObjectStorage().presign_download(assets[name].object_key)
+                url = _slide_url(assets[name].object_key, prepared_entry)
             except StorageNotConfigured:
                 break
             grouped[name] = {"page": ref["page"], "url": url, "pdfFilename": ref["pdfFilename"], "references": [],
@@ -925,7 +951,7 @@ def _jokbo_slides(db: Session, row: QuizBank, question: dict) -> list[dict[str, 
     return list(grouped.values())
 
 
-def _answer(db: Session, row: QuizBank, q: dict) -> dict[str, Any]:
+def _answer(db: Session, row: QuizBank, q: dict, *, prepared_entry: dict | None = None) -> dict[str, Any]:
     review = next((r for r in bank_edits.current_review(row.review, row.validation)["reviews"]
                    if r["question_id"] == q["question_id"]), None)
     if review is None:
@@ -937,7 +963,7 @@ def _answer(db: Session, row: QuizBank, q: dict) -> dict[str, Any]:
     conflict = next((c for c in (row.bank or {}).get("source_conflicts", [])
                      if q["conflict_id"] and c["conflict_id"] == q["conflict_id"]), None)
     original = next((item for item in (row.bank or {}).get('questions', []) if item['question_id'] == q['question_id']), {})
-    exam_slides = _jokbo_slides(db, row, q)
+    exam_slides = _jokbo_slides(db, row, q, prepared_entry=prepared_entry)
     evidence = evidence_status((row.validation or {}).get('evidenceResolution'), original, q,
                               focus=(row.validation or {}).get('slideFocus'))
     if evidence and evidence['category'] == 'exam_only':
@@ -945,7 +971,7 @@ def _answer(db: Session, row: QuizBank, q: dict) -> dict[str, Any]:
     return {"answer": q["answer"], "answerUnits": q["answer_units"], "explanation": q.get("explanation", ""), "correctOptionIds": q["correct_option_ids"],
             "personalEdited": q.get("personalEdited", False), "personalAnswer": q.get("personalAnswer", False),
             "answerPairs": q["answer_pairs"], "correctOrder": q["correct_order"],
-            "slides": _slides(db, row, q["question_id"], q), "jokboSlides": exam_slides, "evidenceStatus": evidence, "medicalReview": review,
+            "slides": _slides(db, row, q["question_id"], q, prepared_entry=prepared_entry), "jokboSlides": exam_slides, "evidenceStatus": evidence, "medicalReview": review,
             'reviewIssues': [issue.get('reason') or issue.get('issue', '')
                 for issue in (((row.validation or {}).get('revision') or {}).get('audit') or {}).get('question_issues', [])
                 if issue.get('question_id') == q['question_id'] and issue.get('severity') == 'error'
@@ -1145,11 +1171,16 @@ def next_bank_question(subject: str, run_id: str, user: CurrentUser = Depends(re
 def _next_bank_question(subject: str, run_id: str, user: CurrentUser, db: Session,
                         *, choice_protocol: bool = False, selection: dict | None = None,
                         preview_state: dict | None = None, served_token: str | None = None,
-                        preview_states_out: dict | None = None, prepared: tuple | None = None) -> dict[str, Any]:
+                        preview_states_out: dict | None = None, prepared: tuple | None = None,
+                        preview_entry: dict | None = None) -> dict[str, Any]:
     """다음 문항. **이미 내준 문항이 있으면 그것을 다시 준다** — 새로고침이 문항을 넘기지 않는다."""
-    lecture = lecture_or_404(db, subject, run_id)
-    row = _bank_or_404(db, lecture, user)
-    bank = _study_bank(db, row, user)
+    if preview_entry is not None:
+        assert preview_state is not None
+        lecture, row, bank = preview_entry["lecture"], preview_entry["row"], preview_entry["bank"]
+    else:
+        lecture = lecture_or_404(db, subject, run_id)
+        row = _bank_or_404(db, lecture, user)
+        bank = _study_bank(db, row, user)
     state_row = _load_state(db, user, row) if preview_state is None else None
     now = engine.now_ms()
     state = engine.upgrade_state(bank, state_row.state if state_row else preview_state, engine.DEFAULT, now)
@@ -1166,7 +1197,9 @@ def _next_bank_question(subject: str, run_id: str, user: CurrentUser, db: Sessio
     if state["session"]["status"] == "complete":
         save()
         return {"question": None, "summary": engine.session_summary(bank, state, now=now), "undoToken": undo_token(state)}
-    exam = exam_date_for(db, lecture)
+    exam = preview_entry.get("exam") if preview_entry is not None else None
+    if exam is None:
+        exam = exam_date_for(db, lecture)
     by_id = {q["question_id"]: q for q in bank["questions"]}
     served = state.get("served")
     goal = lecture_goal(bank, state, lecture.title, now)
@@ -1206,7 +1239,9 @@ def _next_bank_question(subject: str, run_id: str, user: CurrentUser, db: Sessio
         # 구 화면에서 이미 보던 선지는 숨기지 않는다. 새 문항부터 인출 단계를 적용한다.
         served.update(choice_protocol=True, choices_shown=True)
     if "question_snapshot" not in served:
-        question = bank_personal.apply(db, row, user.id, by_id[question["question_id"]])
+        question = (bank_personal.apply_edit(by_id[question["question_id"]], preview_entry["personal_edits"].get(question["question_id"]))
+                    if preview_entry is not None and "personal_edits" in preview_entry
+                    else bank_personal.apply(db, row, user.id, by_id[question["question_id"]]))
         review = next((r for r in bank_edits.current_review(row.review, row.validation)["reviews"]
                        if r["question_id"] == question["question_id"]), None)
         previous = state.setdefault("choice_variants", {}).get(question["question_id"])
@@ -1216,16 +1251,16 @@ def _next_bank_question(subject: str, run_id: str, user: CurrentUser, db: Sessio
         served["question_snapshot"] = question
         if question.get("choice_variant"):
             state["choice_variants"][question["question_id"]] = question["choice_variant"]
-    question = _served_question(db, row, user.id, bank, served)
+    question = _served_question(db, row, user.id, bank, served, prepared_entry=preview_entry)
     mark_seen(state, question["question_id"])
     save()
     choices_shown = not served.get("choice_protocol") or choice_mode(question) != "recall_first" or served.get("choices_shown", False) or served.get("revealed", False)
     return {"question": _public(question, bank=bank, show_choices=choices_shown), "choicesShown": choices_shown,
             "reviewToken": served["token"], "days": days, "examDate": exam,
             "lectureGoal": goal, "undoToken": undo_token(state),
-            "preloadSlides": _slides(db, row, question["question_id"], question),
+            "preloadSlides": _slides(db, row, question["question_id"], question, prepared_entry=preview_entry),
             "session": engine.session_summary(bank, state, now=now),
-            "answer": _answer(db, row, question) if served.get("revealed") else None}
+            "answer": _answer(db, row, question, prepared_entry=preview_entry) if served.get("revealed") else None}
 
 
 class TokenIn(BaseModel):
@@ -1757,39 +1792,51 @@ def prepare_next_bank_question(subject: str, run_id: str, payload: NextPreviewIn
 
 class BufferPreviewIn(NextPreviewIn):
     ratings: list[Literal["Again", "Hard", "Good", "Easy"]] = Field(default_factory=list, max_length=12)
+    lookahead: Literal["near", "full"] = "full"
 
 
 @router.post("/lectures/{subject}/{run_id}/bank/prepare-buffer")
 def prepare_bank_buffer(subject: str, run_id: str, payload: BufferPreviewIn,
                         user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)) -> dict:
-    """Three-question lookahead on copied states, including answers and rating alternatives.
+    """Prepare two steps for every rating, six for Easy and three for Good.
 
-    Good is the speculative continuation. Every step also prepares the other
-    ratings; actual reviews always reselect using the real saved state.
+    Static lecture data is loaded once per request. All projected study states
+    remain private copies; signed draws are confirmed only by a real rating.
     """
     row = _bank_or_404(db, lecture_or_404(db, subject, run_id), user)
     state_row = db.get(BankState, (user.id, subject, run_id))
     if state_row is None or state_row.build_id != row.build_id or (
         state_row.state.get("served") or {}).get("token") != payload.review_token:
         raise HTTPException(409, "현재 학습 문항이 아닙니다.")
-    states = ({entry["key"]: copy.deepcopy(entry["state"])
-               for entry in _batch_entries(BatchIn(lectures=payload.lectures), user, db)}
-              if payload.lectures else {(subject, run_id): copy.deepcopy(state_row.state)})
+    draw_entries = _draw_entries(subject, run_id, payload.lectures, user, db)
+    by_key = {entry["key"]: entry for entry in draw_entries}
+    states = {key: copy.deepcopy(entry["state"]) for key, entry in by_key.items()}
     if (subject, run_id) not in states:
         raise HTTPException(409, "현재 강의가 선택한 학습 목록에 없습니다.")
     frames = {}
-    draw_entries = _draw_entries(subject, run_id, payload.lectures, user, db)
+    edits = list(db.scalars(select(BankPersonalEdit).where(BankPersonalEdit.user_id == user.id,
+        tuple_(BankPersonalEdit.subject, BankPersonalEdit.run_id).in_(list(by_key)))))
+    assets = list(db.scalars(select(Asset).where(Asset.kind == SLIDE_KINDS["bank"],
+        tuple_(Asset.subject, Asset.run_id).in_(list(by_key)))))
+    resources = {}
+    for key, entry in by_key.items():
+        entry["personal_edits"] = {edit.question_id: edit for edit in edits if (edit.subject, edit.run_id) == key}
+        entry["assets"] = [asset for asset in assets if (asset.subject, asset.run_id) == key]
+        entry["assets_by_id"] = {asset.id: asset for asset in entry["assets"]}
+        entry["resources"] = resources
 
     def frame(got, snapshots, ratings):
         if not got.get("question"):
             return None
         ref = got.get("lecture") or {"subject": subject, "runId": run_id}
         key = (ref["subject"], ref["runId"])
-        bank_row = _bank_or_404(db, lecture_or_404(db, *key), user)
-        bank = _study_bank(db, bank_row, user)
+        entry = by_key[key]
+        bank_row, bank = entry["row"], entry["bank"]
+        if got["reviewToken"] in frames:
+            return key, bank, frames[got["reviewToken"]]
         served = snapshots[key]["served"]
-        question = _served_question(db, bank_row, user.id, bank, served)
-        result = {"next": got, "answer": _answer(db, bank_row, question),
+        question = _served_question(db, bank_row, user.id, bank, served, prepared_entry={**entry, "state": snapshots[key]})
+        result = {"next": got, "answer": _answer(db, bank_row, question, prepared_entry=entry),
                   "options": _public(question, bank=bank), "previews": {},
                   "origin": {"subject": subject, "runId": run_id,
                              "reviewToken": payload.review_token, "ratings": ratings}}
@@ -1799,40 +1846,54 @@ def prepare_bank_buffer(subject: str, run_id: str, payload: BufferPreviewIn,
     if payload.lectures:
         current = _next_batch_question(BatchIn(lectures=payload.lectures,
             resumeLecture={"subject": subject, "runId": run_id}), user, db,
-            preview_states=states, preview_states_out=states)
+            preview_states=states, preview_states_out=states, preview_entries=draw_entries)
     else:
         current = _next_bank_question(subject, run_id, user, db, choice_protocol=True,
-                                      preview_state=states[(subject, run_id)], preview_states_out=states)
-    path = []
-    # Pending local ratings may be projected while their ordered writes are in flight.
-    # Bound both the projection and the three-card continuation; nothing is persisted.
-    for step in range(len(payload.ratings) + 3):
-        parent = frame(current, states, path)
+                                      preview_state=states[(subject, run_id)], preview_states_out=states,
+                                      preview_entry=by_key[(subject, run_id)])
+    def advance(current, snapshots, path, rating):
+        parent = frame(current, snapshots, path)
         if parent is None:
-            break
+            return None
         key, bank, prepared = parent
-        continuation = None
-        projecting = step < len(payload.ratings)
-        selected = payload.ratings[step] if projecting else "Good"
-        for rating in ([selected] if projecting else ("Again", "Hard", "Good", "Easy")):
-            branch = copy.deepcopy(states)
-            # Simulation records no real exposure, reveal, choices, or review.
-            branch[key]["served"].update(revealed=True, choices_shown=True)
-            branch[key] = _reviewed_state(bank, branch[key], rating, engine.now_ms())
-            token = _advance_token(current["reviewToken"], rating)
-            fingerprint = _draw_context(subject, run_id, payload.lectures, user, db, branch, draw_entries)
-            got = (_next_batch_question(BatchIn(lectures=payload.lectures), user, db,
-                    served_token=token, preview_states=branch, preview_states_out=branch)
-                   if payload.lectures else _next_bank_question(*key, user, db, choice_protocol=True,
-                    preview_state=branch[key], served_token=token, preview_states_out=branch))
-            _seal_draw(got, current["reviewToken"], rating, fingerprint, subject, run_id, user)
-            prepared["previews"][rating] = got
-            frame(got, branch, [*path, rating])
-            if rating == selected:
-                continuation = got, branch
-        current, states = continuation
-        path = [*path, selected]
-    return {"frames": frames}
+        branch = copy.deepcopy(snapshots)
+        branch[key]["served"].update(revealed=True, choices_shown=True)
+        branch[key] = _reviewed_state(bank, branch[key], rating, engine.now_ms())
+        token = _advance_token(current["reviewToken"], rating)
+        fingerprint = _draw_context(subject, run_id, payload.lectures, user, db, branch, draw_entries)
+        got = (_next_batch_question(BatchIn(lectures=payload.lectures), user, db,
+                served_token=token, preview_states=branch, preview_states_out=branch, preview_entries=draw_entries)
+               if payload.lectures else _next_bank_question(*key, user, db, choice_protocol=True,
+                preview_state=branch[key], served_token=token, preview_states_out=branch,
+                preview_entry={**by_key[key], "state": branch[key]}))
+        _seal_draw(got, current["reviewToken"], rating, fingerprint, subject, run_id, user)
+        prepared["previews"][rating] = got
+        frame(got, branch, [*path, rating])
+        return got, branch
+
+    def expand(current, snapshots, path, all_steps, easy_steps, good_steps):
+        if frame(current, snapshots, path) is None:
+            return
+        for rating in ("Easy", "Good", "Hard", "Again"):
+            got, branch = advance(current, snapshots, path, rating)
+            remaining_all = max(0, all_steps - 1)
+            remaining_easy = max(0, easy_steps - 1) if rating == "Easy" else 0
+            remaining_good = max(0, good_steps - 1) if rating == "Good" else 0
+            if remaining_all or remaining_easy or remaining_good:
+                expand(got, branch, [*path, rating], remaining_all, remaining_easy, remaining_good)
+
+    path = []
+    for rating in payload.ratings:
+        projected = advance(current, states, path, rating)
+        if projected is None:
+            break
+        current, states = projected
+        path = [*path, rating]
+    if payload.lookahead == "near":
+        expand(current, states, path, 1, 1, 1)
+    else:
+        expand(current, states, path, 2, 6, 3)
+    return {"frames": frames, "lookahead": payload.lookahead}
 
 
 def _batch_entries(payload: BatchIn, user: CurrentUser, db: Session) -> list[dict]:
@@ -1887,8 +1948,12 @@ def next_batch_question(payload: BatchIn, user: CurrentUser = Depends(require_ap
 
 def _next_batch_question(payload: BatchIn, user: CurrentUser, db: Session, *, served_token: str | None = None,
                          preview_states: dict | None = None, preview_states_out: dict | None = None,
-                         prepared: tuple | None = None) -> dict:
-    entries = _batch_entries(payload, user, db)
+                         prepared: tuple | None = None, preview_entries: list[dict] | None = None) -> dict:
+    if preview_entries is not None:
+        assert preview_states is not None
+        entries = [dict(entry) for entry in preview_entries]
+    else:
+        entries = _batch_entries(payload, user, db)
     if preview_states is not None:
         for entry in entries:
             entry["state"] = copy.deepcopy(preview_states.get(entry["key"], entry["state"]))
@@ -1916,7 +1981,8 @@ def _next_batch_question(payload: BatchIn, user: CurrentUser, db: Session, *, se
     selection = None
     if chosen is None:
         for entry in entries:
-            entry["exam"] = exam_date_for(db, entry["lecture"])
+            if "exam" not in entry:
+                entry["exam"] = exam_date_for(db, entry["lecture"])
         chosen, selection = select_batch_question(entries, engine.now_ms(), seed=served_token, prepared=prepared)
     if chosen is None:
         raise HTTPException(409, "남은 문항을 선택할 수 없습니다. 강의 목록을 다시 확인하세요.")
@@ -1931,7 +1997,7 @@ def _next_batch_question(payload: BatchIn, user: CurrentUser, db: Session, *, se
         db.commit()
     got = _next_bank_question(*chosen["key"], user=user, db=db, choice_protocol=True, selection=selection,
                              preview_state=state if preview_states is not None else None, served_token=served_token,
-                             preview_states_out=preview_states_out)
+                             preview_states_out=preview_states_out, preview_entry=chosen if preview_states is not None else None)
     if preview_states is not None:
         return _batch_reply(got, entries, chosen)
     _refresh_batch_entry(chosen, user, db)

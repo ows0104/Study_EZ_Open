@@ -6,11 +6,12 @@ from unittest.mock import patch
 from tests.test_bank import STUDENT as USER
 from tests.bank_fixtures import simulation_bank
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import event, select
 from app.auth import get_current_user
 from app.database import Base, SessionLocal, engine
 from app.main import app
-from app.models import BankState, Lecture, QuizBank
+from app.models import Asset, BankPersonalEdit, BankState, Lecture, QuizBank, SLIDE_KINDS
+from app.storage import ObjectStorage
 
 
 def main():
@@ -24,9 +25,18 @@ def main():
                 date=datetime.date(2026, 10, 16), slot=1, slot_end=1, start_time="09:00", title=run))
             db.flush()
             db.add(QuizBank(subject="buffer", run_id=run, build_id="v1", status="ready", open_to_students=True,
-                bank=bank, validation={"pass": True}, pages={}))
+                bank=bank, validation={"pass": True}, pages={q['question_id']: [1] for q in bank['questions']}))
+            db.flush()
+            db.add(Asset(id='buffer-slide-'+run, subject='buffer', run_id=run, kind=SLIDE_KINDS['bank'],
+                slide_no=1, filename='slide.png', object_key=f'buffer/{run}/slide.png'))
+            first = bank['questions'][0]
+            db.add(BankPersonalEdit(user_id=USER.id, subject='buffer', run_id=run,
+                question_id=first['question_id'], original=copy.deepcopy(first),
+                question='PRIVATE-'+run, answer='PRIVATE-ANSWER-'+run, comment=''))
         db.commit()
     client = TestClient(app)
+    queries = []
+    event.listen(engine, "before_cursor_execute", lambda *args: queries.append(1))
 
     def post(path, body=None):
         response = client.post(path, json=body or {})
@@ -45,8 +55,27 @@ def main():
                 base = f"/api/lectures/buffer/{current['lecture']['runId']}/bank"
             body = {"reviewToken": current["reviewToken"], "lectures": lectures}
             before = snapshot()
-            frames = post(base + "/prepare-buffer", body)["frames"]
+            near = post(base + "/prepare-buffer", {**body, 'lookahead': 'near'})
+            assert near['lookahead'] == 'near' and len(near['frames']) <= 5
+            assert set(near['frames'][current['reviewToken']]['previews']) == {'Again', 'Hard', 'Good', 'Easy'}
+            assert snapshot() == before, 'the short initial window wrote study state'
+            queries.clear()
+            with patch('app.routes.bank.ObjectStorage', wraps=ObjectStorage) as storage:
+                frames = post(base + "/prepare-buffer", body)["frames"]
+                assert storage.call_count == 1, 'each rating rebuilt the slide signing client'
+            assert len(queries) <= 20, f"lookahead reread static data {len(queries)} times"
             assert snapshot() == before, "preloading changed exposure, choices, session or history"
+            assert len(frames) <= 41
+            for prepared in frames.values():
+                ref = prepared['next'].get('lecture') or {'runId': 'solo'}
+                urls = [slide['url'] for slide in prepared['answer']['slides']]
+                assert urls and all(f"buffer/{ref['runId']}/slide.png" in url for url in urls), (ref, urls)
+            assert frames[current['reviewToken']]['next']['question']['question'].startswith('PRIVATE-')
+            assert frames[current['reviewToken']]['answer']['answer'].startswith('PRIVATE-ANSWER-')
+            for first in ("Again", "Hard", "Good", "Easy"):
+                successor = frames[current["reviewToken"]]["previews"][first]
+                if successor.get("question"):
+                    assert set(frames[successor["reviewToken"]]["previews"]) == {"Again", "Hard", "Good", "Easy"}, first
             assert not before[current.get("lecture", {}).get("runId", "solo")]["served"]["revealed"]
             for rating in ("Good", "Good", "Hard"):
                 prepared = frames[current["reviewToken"]]

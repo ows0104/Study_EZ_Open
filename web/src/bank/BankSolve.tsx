@@ -100,8 +100,8 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
   const { undo, undoBusy, pending } = useBankUndo(base, current?.undoToken, undoRestore, setError, busy || saving || Boolean(peek) || commonEditing, batch ? batchUndo : undefined);
   const slides = useMemo(() => new SlidePreloader(), []);
   const buffer = useBankBuffer(base, current?.reviewToken, slides, answerRevision, acknowledgement, batch?.lectures);
-  const prepared = usePreparedBankAnswer(base, buffer.has(current?.reviewToken ?? "") ? undefined : current?.reviewToken, slides, answerRevision);
-  const preparedNext = usePreparedBankNext(base, current?.reviewToken, !!answer && !busy && !saving && !buffer.has(current?.reviewToken ?? ""), slides, answerRevision, batch?.lectures);
+  const prepared = usePreparedBankAnswer(base, buffer.getFor(current) ? undefined : current?.reviewToken, slides, answerRevision);
+  const preparedNext = usePreparedBankNext(base, current?.reviewToken, !!answer && !busy && !saving && !buffer.getFor(current), slides, answerRevision, batch?.lectures);
   useEffect(() => { slides.warm(splitSlides(current?.preloadSlides ?? []).primary.map(slide => slide.url)); }, [current, slides]);
 
   const acceptNext = useCallback((got: BankNext) => {
@@ -135,7 +135,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
 
   const showChoices = useCallback(async () => {
     if (!current?.reviewToken || busy || pending.current) return;
-    const frame = buffer.get(current.reviewToken);
+    const frame = buffer.getFor(current);
     const rollback = () => { restore(current); setAnswer(answer); setPicked(picked); setMatches(matches); setOrder(order); };
     const accepted = enqueue(`${current.reviewToken}:options`, async () => {
       const got = await api<Pick<BankNext, "question" | "choicesShown">>(`${base}/options`, {
@@ -155,7 +155,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
     if (current.question?.format === "matching"
       && !current.question.matching_left.every(left => current.question!.matching_right.includes(matches[left]))) return;
     if (current.question?.format === "sequence" && !sequenceComplete(current.question, order)) return;
-    const frame = buffer.get(current.reviewToken);
+    const frame = buffer.getFor(current);
     const responseTimeMs = Math.min(86_400_000, Math.max(0, Date.now() - presentedAt.current));
     const accepted = enqueue(`${current.reviewToken}:reveal`, async () => {
       const got = await api<BankAnswer>(`${base}/reveal`, {
@@ -175,7 +175,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
 
   const rate = useCallback(async (rating: BankRating) => {
     if (!current?.reviewToken || !answer || busy || pending.current) return;
-    const preview = buffer.get(current.reviewToken)?.previews[rating];
+    const preview = buffer.getFor(current)?.previews[rating];
     const optimistic = !!preview?.question && !!preview.reviewToken;
     const accepted = enqueue(`${current.reviewToken}:rate`, async () => {
       const result = await api<{ next?: BankNext; advanceFailed?: boolean }>(`${base}/rate`, {

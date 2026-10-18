@@ -74,6 +74,18 @@ try {
   requests[5].finish({ "token-3": frame(3) });
   await waitFor(() => cache.has("token-3"));
   check(!cache.has("token-99"), "an edited question never reuses stale preparation");
+  update(old => ({ ...old, ack: 4 }));
+  await waitFor(() => requests.length === 7);
+  const allRatings = (id: number) => ({ ...frame(id), previews: Object.fromEntries(
+    ["Again", "Hard", "Good", "Easy"].map(rating => [rating, frame(id + 1).next])) });
+  requests[6].finish({ "token-3": allRatings(3), "token-4": allRatings(4), "token-5": frame(5) });
+  await waitFor(() => cache.has("token-5"));
+  update(old => ({ ...old, ack: 5 }));
+  await new Promise(resolve => setTimeout(resolve, 40));
+  check(requests.length === 7, "save acknowledgements do not refill an already complete two-step window");
+  update(old => ({ ...old, token: "token-4" }));
+  await waitFor(() => requests.length === 8);
+  check(requests[7].token === "token-4", "consuming a step replenishes the window while reading the next question");
   document.getElementById("results")!.textContent = results.join("\n") + "\nALL PASSED";
 } catch (error) {
   document.getElementById("results")!.textContent = results.join("\n") + `\nFAIL ${String(error)}`;
