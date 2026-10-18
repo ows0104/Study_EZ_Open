@@ -12,12 +12,9 @@ export function stemLines(text: string, list = false) {
   // Explicit line breaks take precedence over automatic formatting.
   const lines = normalized.includes("\n") ? normalized.split(/\n+/)
     : !textLayout(normalized).list && (comparison || normalized.length >= 140) ? sentences : [normalized];
-  const hasItems = comparison || lines.filter(labeled).length >= 2;
-  return lines.filter(line => line.trim()).map((line, index) => ({
+  return lines.filter(line => line.trim()).map(line => ({
     ...textLayout(line),
     text: line.trim(),
-    indented: !list && (index > 0 || /^[ \t]+/.test(line)),
-    item: labeled(line) && hasItems,
   }));
 }
 
@@ -28,7 +25,7 @@ export function BankStem({ text, cloze = false, answerUnits, list = false }: {
   return <p className="quiz-stem bank-stem">
     {stemLines(text, list).map((line, index) => <Fragment key={index}>
       {index > 0 ? "\n" : null}
-      <span style={line.style} className={`bank-stem-line${line.list ? " is-list" : line.indented ? line.item ? " is-item" : line.style ? "" : " is-sentence" : ""}`}>
+      <span style={line.style} className={`bank-stem-line${line.list ? " is-list" : ""}`}>
         {(cloze ? line.text.split(/(\{\{c\d+\}\})/g) : [line.text]).map((part, partIndex) => {
           if (!cloze || !/^\{\{c\d+\}\}$/.test(part)) return <Stem key={partIndex} text={part} />;
           const unit = answerUnits?.[blank];
