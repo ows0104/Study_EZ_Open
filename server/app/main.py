@@ -15,6 +15,7 @@ from app.routes import (
     lectures,
     local_storage,
     me,
+    site_prompts,
     notices,
     prequiz,
     prequiz_jobs,
@@ -66,6 +67,7 @@ app.include_router(lectures.router, prefix="/api")
 app.include_router(bundles.router, prefix="/api")
 app.include_router(prequiz.router, prefix="/api")
 app.include_router(admin.router, prefix="/api/admin")
+app.include_router(site_prompts.router, prefix="/api/admin")
 # 러너 일감 큐. `admin` 에서 갈라 나왔고 붙는 자리는 같다 — 주소가 바뀌면 안 된다.
 app.include_router(prequiz_jobs.router, prefix="/api/admin")
 # 사람별 이용현황. 읽기만 하는 집계라 `admin` 에서 따로 섰다 — 붙는 자리는 같다.

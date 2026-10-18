@@ -10,6 +10,12 @@ Cloudflare Pages  ──►  Cloud Run (studyez-api)  ──►  Supabase Postgr
 
 ## 한 번만 하는 것
 
+2026-10-18 기본 예습 프롬프트 편집은 API 배포 전에 `init-db`로 `site_prompt` 표를 만든다.
+표에는 RLS가 적용되며 읽기·쓰기는 관리자 전용 `GET|PUT /api/admin/preview-prompt`를 사용한다.
+API를 먼저 배포한 다음 웹을 배포한다. 강의 패널의 예습 → 기본 프롬프트 수정에서 저장하며,
+기본 링크를 새로 만들 때 최신 저장값을 읽는다. 빈 값은 기본 문구로 복원한다.
+기존 예습 대화와 개인 프롬프트는 변경하지 않는다.
+
 2026-10-16 전체 문제 열람은 DB 변경 없이 API를 먼저, 웹을 다음에 배포한다.
 `GET …/bank/catalog`는 공개된 문제은행과 본인의 개인 문제를 PDF 슬라이드 순서로 제공한다.
 정답·해설은 `GET …/bank/catalog/{question_id}?buildId=…`에서 필요할 때만 읽는다.
