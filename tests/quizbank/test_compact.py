@@ -423,3 +423,15 @@ def test_evidence_json_labels_are_not_answer_fields(wrapper):
     assert block['units'] == ['세포 내 농도']
     assert block['explanation'] == '원문 해설'
     assert block['source_evidence'] == evidence
+
+
+def test_trailing_conflict_prose_is_not_part_of_the_last_question():
+    raw = ('### Q001 | basic | Core | 5 | 1 | direct\n'
+           '문제: 첫 기호는?\n정답: ["Alpha"]\n출처: S1 p.1\n'
+           '해설: "문항 해설"\n'
+           '### CF001\n설명: 자료 충돌\n'
+           '  자료 2의 해설: 이 설명은 JSON이 아니다. 정답: 과거 자료의 값\n'
+           '출처: S1 p.1\n미해결: false\nSTUDYEZ_BANK_COMPLETE')
+    block = compact.read_blocks(raw)[0]
+    assert block['units'] == ['Alpha']
+    assert block['explanation'] == '문항 해설'

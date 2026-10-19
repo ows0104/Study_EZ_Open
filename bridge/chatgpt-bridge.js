@@ -28,7 +28,7 @@ function createOverlay(payload, remembered) {
       동의는 같은 서비스·모드·입력 방식별로 기억합니다. ×로 중지할 수 있습니다. 확장은 답변 완료 상태와 링크를
       확인합니다. ChatGPT 기본 링크·Quiz Bank 모드에서는 로그인 토큰을 메모리에서 잠깐 사용하지만, 토큰을
       저장하거나 Study EZ로 보내지 않습니다.
-      ${bank ? "이 모드는 완성된 문항 본문을 Study EZ로 전달합니다. 러너가 검수·보완하고 Main-Quiz를 게시하며, 공유·개인 링크도 각각 저장합니다." : shared ? "이 모드는 링크를 가진 누구나 볼 수 있는 공개 공유 링크를 만들고 Study EZ 강의에 저장합니다." : "이 모드는 내 계정에서만 열리는 대화 주소를 Study EZ 강의에 저장합니다."}
+      ${bank ? "이 모드는 완성된 MD 파일을 자동 다운로드해 원문을 Study EZ로 전달합니다. 파일 저장 확인 후 러너가 검수·보완하고 Main-Quiz를 게시하며, 공유·개인 링크도 각각 저장합니다." : shared ? "이 모드는 링크를 가진 누구나 볼 수 있는 공개 공유 링크를 만들고 Study EZ 강의에 저장합니다." : "이 모드는 내 계정에서만 열리는 대화 주소를 Study EZ 강의에 저장합니다."}
       <a href="https://studyez.kr/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a>
     </p>`;
   const root = document.createElement("aside");

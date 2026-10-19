@@ -101,6 +101,9 @@ def read_blocks(raw: str) -> list[dict]:
                 or mode not in ("recall_first", "comparison", "none") or choice and mode == "none":
             raise SessionError(f"{qid}: 문항 블록 메타데이터 오류")
         body = raw[heading.end():headings[i + 1].start() if i + 1 < len(headings) else len(raw)]
+        conflict = re.search(r'^#{1,6}[ \t]+CF[\w-]+[ \t]*$', body, re.M)
+        if conflict:
+            body = body[:conflict.start()]
         evidence, evidence_span = None, None
         evidence_marker = re.search(r"(?:^|\s|&#x20;)근거:[ \t]*(?=(?:`{1,2}(?!`)[ \t]*)?\{)", body)
         if evidence_marker:

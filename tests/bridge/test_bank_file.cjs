@@ -88,3 +88,11 @@ test('1.78 requires files for every lecture and preserves the older CNS contract
  vm.runInContext(`watch={lectureId:'studyez:bank:1.78:병리학/261019_01',mode:'bank',promptVersion:'1.78'}`,s.ctx);
  assert.equal(vm.runInContext('fileMode()',s.ctx),true);
 });
+
+test('file cards without a Markdown href use the actual UI download, not invented file endpoints',async()=>{
+ const s=collector();
+ s.ctx.chrome.runtime.sendMessage=(message,done)=>{s.sent.push(message);done({ok:true,raw,filename});};
+ const result=await vm.runInContext(`collectBankFile('완성된 파일은 문서 카드로 제공합니다.')`,s.ctx);
+ assert.equal(result.raw,raw);assert.equal(s.requests.length,0);
+ assert.equal(s.sent[0].type,'STUDYEZ_BANK_DOWNLOAD_FILE');
+});
