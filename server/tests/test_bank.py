@@ -243,6 +243,7 @@ def main() -> None:
         after_undo = copy.deepcopy(db.get(BankState, ("student-1", SUBJECT, RUN)).state)
         after_undo["served"]["token"] = before_rating["served"]["token"]
         before_rating["seen_question_ids"] = after_undo["seen_question_ids"]
+        check("취소한 평가는 백업 복구로 되살리지 않도록 표시", bool(after_undo.pop('review_tombstones', [])))
         check("숙련도·일정·이력·보충·회차 전체 원상복구", after_undo == before_rating)
     check("중복 되돌리기 거절", client.post(f"{BASE}/bank/undo", json={"reviewToken": first["reviewToken"]}).status_code == 409)
     check("예전 문항 토큰 무효", client.post(f"{BASE}/bank/rate", json={"reviewToken": first["reviewToken"], "rating": "Easy"}).status_code == 409)
@@ -266,7 +267,7 @@ def main() -> None:
     client.post(f"{BASE}/bank/next")
     with SessionLocal() as db:
         state = db.get(BankState, ("student-1", SUBJECT, RUN))
-        check("새 은행에서 새로 시작", state.build_id == build2 and state.state["history"] == [])
+        check("같은 문제의 기존 풀이를 이어간다", state.build_id == build2 and len(state.state["history"]) == 1)
         check("옛 상태는 밀어 둔다", state.previous and state.previous["build_id"] == build1
               and len(state.previous["state"]["history"]) == 1)
     as_admin()

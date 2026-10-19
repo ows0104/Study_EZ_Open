@@ -34,6 +34,7 @@ from app import study_engine as engine
 from app import bank_edits
 from app import bank_personal
 from app import bank_shared_response
+from app import bank_retention
 from app import bank_excluded
 from app.bank_catalog import ordered_questions
 from app.personal_question_input import PersonalQuestionSettings
@@ -472,13 +473,13 @@ def put_bank(subject: str, run_id: str, payload: BankIn, user: CurrentUser = Dep
             raise HTTPException(422, "보강본의 문항 검증을 통과해야 합니다.")
     if (row.validation or {}).get('excludedQuestions'):
         checked['excludedQuestions'] = copy.deepcopy(row.validation['excludedQuestions'])
-    row.bank, row.validation = incoming, checked
+    new_build = row.build_id if maintenance else uuid.uuid4().hex[:16]
+    bank_retention.replace_bank(db, row, incoming, new_build)
+    row.validation = checked
     row.review = payload.review
     row.pages, row.usage = payload.pages or {}, payload.usage or []
     if (row.validation or {}).get("edits"):
         row.pages = cited_pages(row.bank, "S1")
-    if not maintenance:
-        row.build_id = uuid.uuid4().hex[:16]
     row.built_at = datetime.now(UTC)
     row.status = BANK_READY if bank_usable(row.bank, row.validation) else BANK_INVALID
     if not maintenance:
@@ -737,7 +738,8 @@ def edit_bank_card(subject: str, run_id: str, question_id: str, payload: BankCar
     after_questions = {q["question_id"]: q for q in clean["questions"]}
     affected = {qid for qid in before_questions.keys() | after_questions.keys()
                 if before_questions.get(qid) != after_questions.get(qid)}
-    row.bank, row.validation = clean, checked
+    bank_retention.replace_bank(db, row, clean, row.build_id)
+    row.validation = checked
     row.pages = cited_pages(clean, "S1")
     row.status = BANK_READY
     # Preserve unrelated mastery; invalidate in-flight questions and undo snapshots.
@@ -851,11 +853,19 @@ def _load_state(db: Session, user: CurrentUser, row: QuizBank) -> BankState:
                           state=engine.empty_state())
         db.add(state)
     elif state.build_id != row.build_id:
-        state.previous = {"build_id": state.build_id, "state": state.state}
-        state.build_id = row.build_id
-        state.state = engine.empty_state()
+        bank_retention.save_version(db, row.subject, row.run_id, row.build_id, row.bank)
+        bank_retention.transition(db, state, row)
+    elif row.bank and bank_retention.content_changed(db, state, row):
+        bank_retention.save_version(db, row.subject, row.run_id, row.build_id, row.bank)
+        bank_retention.transition(db, state, row)
     if row.bank:
         state.state = reschedule_bank(bank_personal.augment(db, row, user.id), state.state)
+        known = state.state.get('_question_fingerprints', {})
+        current = bank_retention.manifest(bank_retention.augmented(db, row, row.bank, user.id, row.build_id, state.state))
+        if any(qid not in known for qid in current):
+            state.state = {**state.state, '_question_fingerprints': {**known, **current}}
+    if state.state.get('_study_build_id') != row.build_id:
+        state.state = {**state.state, '_study_build_id': row.build_id}
     return state
 
 
@@ -1532,6 +1542,10 @@ def _reviewed_state(bank: dict, state: dict, rating: str, now: int) -> dict:
     nxt = engine.record_review(bank, state, served["question_id"], rating, now)
     remember_review(state, nxt)
     last = nxt["history"][-1]
+    from app.study_retention import fingerprint as study_fingerprint
+    authored = next(q for q in bank['questions'] if q['question_id'] == served['question_id'])
+    snapshot = served.get('question_snapshot') or {}
+    last['question_fingerprint'] = study_fingerprint(snapshot if snapshot.get('personalEdited') else authored)
     last["score_breakdown"] = served.get("score")
     last["selection_policy_version"] = served.get("policy_version")
     presented = served.get("presented_at")

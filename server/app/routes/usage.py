@@ -64,6 +64,7 @@ from sqlalchemy import case, func, select, union
 from sqlalchemy.orm import Session
 
 from app import srs
+from app.study_retention import event_identity
 from app.auth import CurrentUser, require_admin
 from app.database import get_db
 from app.models import (
@@ -72,6 +73,7 @@ from app.models import (
     AppGrant,
     AssetGrab,
     BankState,
+    BankStateArchive,
     Lecture,
     MainAttempt,
     MainReviewLog,
@@ -206,18 +208,43 @@ def _bank_activity(db: Session, user_id: str | None = None):
     query = select(
         BankState.user_id, BankState.subject, BankState.run_id, BankState.build_id,
         BankState.state["history"], BankState.previous["build_id"].as_string(),
-        BankState.previous["state"]["history"],
+        BankState.previous["state"]["history"], BankState.state['review_tombstones'],
+        BankState.previous['state']['review_tombstones'],
     )
+    ranked = select(BankStateArchive.id, func.row_number().over(
+        partition_by=(BankStateArchive.user_id, BankStateArchive.subject, BankStateArchive.run_id, BankStateArchive.build_id),
+        order_by=(BankStateArchive.created_at.desc(), BankStateArchive.id.desc())).label('position'))
+    if user_id is not None:
+        ranked = ranked.where(BankStateArchive.user_id == user_id)
+    ranked = ranked.subquery()
+    archives = select(BankStateArchive.user_id, BankStateArchive.subject, BankStateArchive.run_id,
+                      BankStateArchive.build_id, BankStateArchive.state['history'],
+                      BankStateArchive.state['review_tombstones']).join(ranked, ranked.c.id == BankStateArchive.id).where(
+                          ranked.c.position == 1)
     if user_id is not None:
         query = query.where(BankState.user_id == user_id)
-    for uid, subject, run_id, build, history, old_build, old_history in db.execute(query):
+        archives = archives.where(BankStateArchive.user_id == user_id)
+    snapshots = {}
+    tombstones = {}
+    for uid, subject, run_id, build, history, undone in db.execute(archives):
+        snapshots.setdefault((uid, subject, run_id), {})[build] = history or []
+        tombstones.setdefault((uid, subject, run_id), set()).update(undone or [])
+    for uid, subject, run_id, build, history, old_build, old_history, undone, old_undone in db.execute(query):
+        versions = snapshots.setdefault((uid, subject, run_id), {})
+        tombstones.setdefault((uid, subject, run_id), set()).update([*(undone or []), *(old_undone or [])])
+        if old_build:
+            versions[old_build] = old_history or []
+        versions[build] = history or []
+    for (uid, subject, run_id), versions in snapshots.items():
         reviews = {}
-        for build_id, entries in ((old_build, old_history), (build, history)):
+        for build_id, entries in versions.items():
             for entry in entries or []:
+                if event_identity(build_id, entry) in tombstones[(uid, subject, run_id)]:
+                    continue
                 qid, stamp, rating = entry.get("question_id"), entry.get("timestamp"), entry.get("rating")
                 if not qid or not isinstance(stamp, (int, float)) or rating not in ("Again", "Hard", "Good", "Easy"):
                     continue
-                key = (build_id, qid, stamp)
+                key = (entry.get('origin_build_id', build_id), entry.get('origin_question_id', qid), stamp)
                 reviews[key] = rating
         yield uid, subject, run_id, reviews
 

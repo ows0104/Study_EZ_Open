@@ -53,6 +53,10 @@ def undo_review(previous: dict, token: str) -> dict:
         state["suspended_question_ids"] = [qid for qid in state.get("suspended_question_ids", [])
                                            if qid != last["question_id"]]
     else:
+        if last.get('origin_event_id') or state.get('_study_build_id'):
+            from app.study_retention import event_identity
+            origin = event_identity(state.get('_study_build_id', ''), last)
+            state['review_tombstones'] = sorted({*state.get('review_tombstones', []), origin})
         state["history"].pop()
         for field, key, value in (("dimensions", last["dimension"], last["dimension_before"]),
                                   ("items", last["question_id"], saved["item"])):
