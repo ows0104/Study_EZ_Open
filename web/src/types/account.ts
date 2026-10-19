@@ -84,6 +84,7 @@ export type UsageLecture = {
   /** `selfCorrect`는 **본인이 맞다고 찍은 것**이다. 서버 판정이 아니다. */
   pre: { cards: number; selfCorrect: number; grades: number };
   main: { cards: number; selfCorrect: number; grades: number };
+  bank?: { cards: number; selfCorrect: number; grades: number };
   grabs: string[];
   /** 이 편의 개인 대화를 저장해 뒀는가. */
   preview: boolean;

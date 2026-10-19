@@ -244,7 +244,8 @@ function LectureTable({ detail, now }: { detail: UsageDetail; now: Date }) {
         <tr>
           <th>강의</th>
           <th title="웹에서 푼 카드 · 괄호는 본인이 맞다고 찍은 수(서버 판정이 아니다)">예습</th>
-          <th>복습</th>
+          <th>기존 복습</th>
+          <th title="복습 카드에서 평가한 문항 수 · 괄호는 마지막 평가가 Good·Easy인 문항 수">복습 카드</th>
           <th title="받기 버튼을 누른 자료">받기</th>
           <th title="이 편의 예습 링크를 누른 횟수">링크</th>
           <th>마지막</th>
@@ -264,6 +265,7 @@ function LectureTable({ detail, now }: { detail: UsageDetail; now: Date }) {
             </td>
             <td className="num">{cards(row.pre)}</td>
             <td className="num">{cards(row.main)}</td>
+            <td className="num">{row.bank ? cards(row.bank) : "—"}</td>
             <td>{row.grabs.length ? row.grabs.map(grabLabel).join(", ") : "—"}</td>
             <td className="num">
               {row.opens.share || row.opens.mine

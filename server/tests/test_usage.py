@@ -49,6 +49,7 @@ from app.models import (  # noqa: E402
     ROLE_MEMBER,
     AppGrant,
     AssetGrab,
+    BankState,
     Lecture,
     MainAttempt,
     Preview,
@@ -247,6 +248,56 @@ def main() -> None:
 
     print("\n[7] 없는 계정은 404")
     check("404", client.get("/api/admin/usage/nobody", headers=ADMIN).status_code == 404)
+
+    print("\n[8] 복습 카드의 기존 기록·기간·이전 빌드·평가 취소")
+    now = datetime.datetime.now(datetime.UTC)
+    recent = int((now - datetime.timedelta(minutes=10)).timestamp() * 1000)
+    old = int(PREV_AT.timestamp() * 1000)
+    state = {"history": [
+        {"question_id": "Q1", "rating": "Again", "timestamp": recent},
+        {"question_id": "Q1", "rating": "Good", "timestamp": recent + 1},
+        {"question_id": "Q2", "rating": "Hard", "timestamp": recent + 2},
+    ], "served": {"question_id": "Q3", "answer_revealed": True}}
+    with SessionLocal() as db:
+        db.add(BankState(user_id=BUSY, subject=NOW_SUBJECT, run_id=NOW_RUN,
+                         build_id="new", state=state,
+                         previous={"build_id": "old", "state": {"history": [
+                             {"question_id": "Q1", "rating": "Easy", "timestamp": old},
+                             {"question_id": "Q2", "rating": "Good", "timestamp": recent},
+                         ]}}))
+        db.add(BankState(user_id=IDLE, subject=NOW_SUBJECT, run_id=NOW_RUN,
+                         build_id="new", state={"history": [
+                             {"question_id": "Q1", "rating": "Again", "timestamp": recent + 3},
+                         ]}))
+        db.add(BankState(user_id=WAITING, subject=NOW_SUBJECT, run_id=NOW_RUN,
+                         build_id="new", state={"history": [], "served": {"question_id": "Q1"}}))
+        db.commit()
+    updated = client.get("/api/admin/usage", headers=ADMIN).json()
+    updated_rows = {row["id"]: row for row in updated["users"]}
+    check("복습 카드 3장을 기존 4장에 더한다", updated_rows[BUSY]["cards"] == 7, updated_rows[BUSY])
+    check("복습 카드만 푼 사람도 센다", updated_rows[IDLE]["cards"] == 1, updated_rows[IDLE])
+    check("최신 복습 평가가 마지막 활동이다", updated_rows[IDLE]["lastAt"] ==
+          datetime.datetime.fromtimestamp((recent + 3) / 1000, datetime.UTC).isoformat(), updated_rows[IDLE])
+    check("공개만 하고 평가하지 않으면 활동이 아니다", updated_rows[WAITING]["cards"] == 0
+          and updated_rows[WAITING]["lastAt"] is None, updated_rows[WAITING])
+    previous = client.get("/api/admin/usage?window=prev", headers=ADMIN).json()
+    check("이전 빌드의 지난 블럭 풀이도 센다",
+          next(row for row in previous["users"] if row["id"] == BUSY)["cards"] == 3, previous)
+    week = client.get("/api/admin/usage?window=week", headers=ADMIN).json()
+    check("최근 7일에 복습 카드도 센다", next(row for row in week["users"] if row["id"] == BUSY)["cards"] == 7)
+    detail = client.get(f"/api/admin/usage/{BUSY}", headers=ADMIN).json()
+    lecture = next(row for row in detail["lectures"] if row["runId"] == NOW_RUN)
+    check("반복은 카드 한 장, 평가는 각각 센다", lecture["bank"] == {"cards": 4, "selfCorrect": 3, "grades": 5}, lecture)
+    detail = client.get(f"/api/admin/usage/{IDLE}", headers=ADMIN).json()
+    check("복습 카드만 있는 강의도 상세에 보인다", len(detail["lectures"]) == 1
+          and detail["lectures"][0]["bank"]["cards"] == 1, detail)
+    with SessionLocal() as db:
+        row = db.get(BankState, (IDLE, NOW_SUBJECT, NOW_RUN))
+        row.state = {"history": []}  # 평가 되돌리기는 history에서 마지막 평가를 제거한다.
+        check("조회가 기존 학습 기록을 바꾸지 않는다", db.get(BankState, (BUSY, NOW_SUBJECT, NOW_RUN)).state == state)
+        db.commit()
+    undone = client.get("/api/admin/usage", headers=ADMIN).json()
+    check("되돌린 평가는 집계에서 빠진다", next(row for row in undone["users"] if row["id"] == IDLE)["cards"] == 0)
 
     print(f"\n{'실패 ' + str(len(failures)) if failures else '모두 통과'}")
     if failures:
