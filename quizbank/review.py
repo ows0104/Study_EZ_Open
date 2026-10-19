@@ -76,14 +76,7 @@ def shape(output: dict, bank: dict) -> dict:
             "reviewed_at": datetime.now(UTC).isoformat()}
 
 
-def review(bank: dict, title: str, *, model: str | None = None,
-           related_questions: list[dict] | None = None) -> tuple[dict, dict]:
-    prompt = review_prompt(bank, title)
-    if related_questions:
-        prompt += ('\n아래 RELATED_QUESTIONS는 선행 문항·출처 충돌의 읽기 전용 맥락이다. '
-                   '필요한 관계·조건을 확인하되 이 문항들의 검수 판정은 다시 작성하지 않는다. '
-                   'reviews·pool_checks는 위의 검수 대상 문항에만 반환한다.\nRELATED_QUESTIONS: ')
-        prompt += json.dumps([{k: q[k] for k in FIELDS if k in q} for q in related_questions], ensure_ascii=False)
-    output, info = session.run_structured(prompt, REVIEW_REPORT, system=SYSTEM,
+def review(bank: dict, title: str, *, model: str | None = None) -> tuple[dict, dict]:
+    output, info = session.run_structured(review_prompt(bank, title), REVIEW_REPORT, system=SYSTEM,
                                           label="외부지식 검토", timeout=900, model=model)
     return shape(output, bank), info

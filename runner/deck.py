@@ -1133,22 +1133,13 @@ def contract(run_dir: Path, run_id: str, title: str, kind: str,
     # `publish`도 안 올린다. 여기서 먼저 내는 이유는 재료가 쌓이는 데 시간이
     # 걸려서다 — 이 줄이 붙기 전에 구운 39편에는 이 파일도 `slides/`도 없다.
     items = _web_items(cards)
-    if kind == PRE:
-        from . import prequiz_sources
-        source = Path(cfg["pdf"]) if cfg.get("pdf") else None
-        items = prequiz_sources.attach(run_dir, items, source)
     meta["web_items"] = len(items)
     meta["web_excluded"] = len(cards) - len(items)
     # 웹 풀이는 틀렸을 때 해설을 보여 준다. **복습은 그 자리가 절반이 빈다**
     # (실측 54%) — Anki는 앞뒤만 보므로 지금까지 아쉬울 일이 없었다. 세어만 둔다.
     meta["web_without_explanation"] = sum(
         1 for item in items if not str(item.get("explanation") or "").strip())
-    if kind == PRE and (run_dir / prequiz_sources.MANIFEST).is_file():
-        meta["slides_exported"] = prequiz_sources.render(run_dir, run_id, items, source)
-        meta["web_source_slides"] = sorted({item["slide_no"] for item in items
-                                           if type(item.get("slide_no")) is int})
-    else:
-        meta["slides_exported"] = _slides(run_dir, run_id, kind)
+    meta["slides_exported"] = _slides(run_dir, run_id, kind)
     # 이름은 갈래마다 못 박는다. `prefix`로 만들면 복습이 `items.final.json`이
     # 되는데, 복습 폴더에는 이미 `items.raw/checked/reproduced.json`이 있고 그것들은
     # **모양이 다른 것**(카드 그대로)이라 한 가족처럼 읽히면 안 된다.

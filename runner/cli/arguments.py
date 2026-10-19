@@ -55,7 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--today", default=None,
                         help="watch: 오늘을 이 날짜로 친다 (블럭 판정 확인용)")
     parser.add_argument("--timetable", default=None,
-                        help=f"watch/agent/publish: 시간표 (기본 {blocks.DEFAULT_SOURCE})")
+                        help=f"watch: 시간표 (기본 {blocks.DEFAULT_SOURCE})")
     parser.add_argument("--version", default="",
                         help="promote: 올릴 판 (예: 260827-2300). 생략하면 CHOSEN 이 고른 것")
     parser.add_argument("--keep", action="store_true",

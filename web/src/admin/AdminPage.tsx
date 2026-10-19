@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { api } from "../api";
 import type { AdminOverview, CardReview } from "../types/admin";
 import type { AppUser } from "../types/account";
 import type { BankReportBoard } from "../types/bank";
 import type { JobBoard } from "../types/jobs";
-import { jobMoving, jobOpen } from "../jobProgress";
+import { jobOpen } from "../jobProgress";
 import { BankReportTab } from "./BankReportTab";
 import { BankCardReview } from "./BankCardReview";
 import { FeedbackTab } from "./FeedbackTab";
@@ -15,6 +15,7 @@ import { UsageTab } from "./UsageTab";
 import { QuizTab } from "./QuizTab";
 import { UsersTab } from "./UsersTab";
 import { isUnconfirmed, isUnmatched, pending, runnerAlive } from "./rows";
+import { ADMIN_REFRESH_MS, mergeJobBoard, refreshDue, resultsChanged } from "./jobUpdates";
 
 /**
  * 관리 화면의 겉틀.
@@ -50,17 +51,40 @@ export function AdminPage() {
   const [review, setReview] = useState<CardReview | null>(null);
   const [reports, setReports] = useState<BankReportBoard | null>(null);
   const [error, setError] = useState("");
+  const boardRef = useRef<JobBoard | null>(null);
+  const loadingJobs = useRef(false);
+  const [lastJobsFetchedAt, setLastJobsFetchedAt] = useState(0);
+
+  const loadOverview = useCallback(() => {
+    return api<AdminOverview>("/api/admin/overview")
+      .then((next) => setOverview(boardRef.current ? mergeJobBoard(next, boardRef.current) : next))
+      .catch((cause: Error) => setError(cause.message));
+  }, []);
+
+  const acceptBoard = useCallback((next: JobBoard) => {
+    const refresh = resultsChanged(boardRef.current, next);
+    boardRef.current = next;
+    setBoard(next);
+    setOverview((current) => current ? mergeJobBoard(current, next) : current);
+    if (refresh) void loadOverview();
+  }, [loadOverview]);
+
+  const loadJobs = useCallback(async () => {
+    if (loadingJobs.current) return;
+    loadingJobs.current = true;
+    try {
+      acceptBoard(await api<JobBoard>("/api/admin/prequiz-jobs"));
+    } catch { /* 다음 주기에 재시도한다. */ }
+    finally {
+      loadingJobs.current = false;
+      setLastJobsFetchedAt(Date.now());
+    }
+  }, [acceptBoard]);
 
   const load = useCallback(() => {
-    api<AdminOverview>("/api/admin/overview")
-      .then(setOverview)
-      .catch((cause: Error) => setError(cause.message));
-    // 일감은 따로 읽는다. `/overview`는 편마다 최근 일감을 하나씩 들고 있어서
-    // **겹쳐 도는 편을 순서대로 볼 수 없다** — 그 답은 이쪽에 있다.
-    api<JobBoard>("/api/admin/prequiz-jobs")
-      .then(setBoard)
-      .catch(() => {});
-  }, []);
+    void loadOverview();
+    void loadJobs();
+  }, [loadOverview, loadJobs]);
 
   // 계정은 폴링에서 뺀다. 10초마다 다시 읽어 봐야 사람이 그 사이에 가입하는
   // 화면이 아니다. 승인을 누른 뒤에만 다시 읽는다.
@@ -91,19 +115,20 @@ export function AdminPage() {
   useEffect(loadReview, [loadReview]);
   useEffect(loadReports, [loadReports]);
 
-  // 도는 일감이 있는 동안만 다시 읽는다. 한 편에 15분이 걸리는데 사람이 새로고침을
-  // 눌러야 진행이 보이면, 그 진행은 없는 것과 같다. 끝나면 폴링도 멈춘다.
-  //
-  // **`held`는 안 센다.** 사람을 기다리는 줄이라 다시 읽어 봐야 같은 값이다.
-  const working =
-    (board?.running.length ?? 0) > 0 ||
-    (board?.waiting.length ?? 0) > 0 ||
-    (overview?.lectures ?? []).some((row) => jobMoving(row.prequizJob));
+  // 로컬 작업은 화면과 독립적으로 돈다. 마지막 조회 이후 10분 뒤에 상태만 읽는다.
   useEffect(() => {
-    if (!working) return;
-    const timer = window.setInterval(load, 10_000);
-    return () => window.clearInterval(timer);
-  }, [working, load]);
+    const timer = window.setTimeout(() => {
+      if (!document.hidden) void loadJobs();
+    }, ADMIN_REFRESH_MS);
+    return () => window.clearTimeout(timer);
+  }, [loadJobs, lastJobsFetchedAt]);
+  useEffect(() => {
+    const visible = () => {
+      if (!document.hidden && refreshDue(lastJobsFetchedAt)) void loadJobs();
+    };
+    document.addEventListener("visibilitychange", visible);
+    return () => document.removeEventListener("visibilitychange", visible);
+  }, [loadJobs, lastJobsFetchedAt]);
 
   if (error) return <p className="notice is-error">{error}</p>;
   if (!overview) return <p className="notice">불러오는 중…</p>;
@@ -121,6 +146,10 @@ export function AdminPage() {
   return (
     <div className="admin">
       <h1>관리</h1>
+      <p className="admin-summary">
+        자동 갱신 10분 · 로컬 작업은 이 화면을 닫아도 계속됩니다.{" "}
+        <button type="button" className="is-quiet" onClick={load}>지금 새로고침</button>
+      </p>
       <p className="admin-summary">
         강의 {overview.lectures.length}편 · 러너{" "}
         <strong>{runnerAlive(overview.runner) ? (overview.runner?.busy ? "만드는 중" : "대기") : "안 붙음"}</strong>
@@ -174,7 +203,7 @@ export function AdminPage() {
       </nav>
 
       <Routes>
-        <Route index element={<QuizTab overview={overview} board={board} onBoard={setBoard} />} />
+        <Route index element={<QuizTab overview={overview} board={board} onBoard={acceptBoard} />} />
         <Route path="users" element={<UsersTab users={users} onChanged={loadUsers} />} />
         <Route path="lectures" element={<LectureTab overview={overview} onChanged={load} />} />
         {/* 목록을 자기가 읽는다. 다른 탭에 있는 동안 도는 폴링에 얹지 않는다 —

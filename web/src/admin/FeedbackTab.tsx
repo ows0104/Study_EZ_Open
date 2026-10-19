@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, apiBytes } from "../api";
+import { ADMIN_REFRESH_MS, refreshDue } from "./jobUpdates";
 import "../styles/feedback.css";
 
 type Feedback = {
@@ -41,16 +42,19 @@ export function FeedbackTab() {
   const [rows, setRows] = useState<Feedback[] | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<number | null>(null);
+  const [lastReadAt, setLastReadAt] = useState(0);
   const load = useCallback(() => {
     api<Feedback[]>("/api/admin/feedback").then((data) => { setRows(data); setError(""); })
-      .catch((cause: Error) => setError(cause.message));
+      .catch((cause: Error) => setError(cause.message))
+      .finally(() => setLastReadAt(Date.now()));
   }, []);
+  useEffect(load, [load]);
   useEffect(() => {
-    load();
-    const timer = window.setInterval(() => { if (!document.hidden) load(); }, 15_000);
-    window.addEventListener("focus", load);
-    return () => { window.clearInterval(timer); window.removeEventListener("focus", load); };
-  }, [load]);
+    const timer = window.setTimeout(() => { if (!document.hidden) load(); }, ADMIN_REFRESH_MS);
+    const visible = () => { if (!document.hidden && refreshDue(lastReadAt)) load(); };
+    document.addEventListener("visibilitychange", visible);
+    return () => { window.clearTimeout(timer); document.removeEventListener("visibilitychange", visible); };
+  }, [load, lastReadAt]);
   async function change(row: Feedback) {
     setBusy(row.id);
     try {
@@ -61,7 +65,7 @@ export function FeedbackTab() {
   }
   return <section className="feedback-board">
     <header><h2>피드백함</h2><button onClick={load}>새로고침</button></header>
-    <p>최근 200건 · 미처리 {rows?.filter((row) => row.status === "open").length ?? 0}건 · 15초마다 갱신</p>
+    <p>최근 200건 · 미처리 {rows?.filter((row) => row.status === "open").length ?? 0}건 · 10분마다 갱신</p>
     {error ? <p className="notice is-error" role="alert">{error}</p> : null}
     {!rows ? <p>불러오는 중…</p> : !rows.length ? <p>아직 받은 피드백이 없습니다.</p> :
       rows.map((row) => <FeedbackCard key={row.id} row={row} busy={busy} onChange={() => void change(row)} />)}

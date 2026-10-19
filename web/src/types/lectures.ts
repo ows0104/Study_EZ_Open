@@ -1,5 +1,5 @@
 import type { QuizProgress } from "./quiz";
-import type { LectureMastery } from "./mastery";
+import type { CardProgress, LectureMastery } from "./mastery";
 import type { CardReviewCount } from "./admin";
 import type { BankSummary, BankSource, BankTimeline } from "./bank";
 
@@ -58,6 +58,8 @@ export type PrequizProgress = {
 };
 
 export type LectureRef = {
+  studyLoaded?: boolean;
+  cardProgress?: CardProgress | null;
   bankTimeline?: BankTimeline | null;
   mastery?: LectureMastery | null;
   subject: string;

@@ -193,7 +193,7 @@ CARD_SCHEMA = {
         "id": {"type": ["string", "null"],
                "description": "비워 둘 것. 코드가 부여한다."},
         "q": {"type": "string", "minLength": 1,
-              "description": "질문. 기전·적용은 짧은 상황과 판단을 직접 제시하고 설명본을 언급하지 않는다. cloze 는 {{c1::...}} 를 포함한 문장."},
+              "description": "질문. cloze 는 {{c1::...}} 를 포함한 문장."},
         "a": {"type": "string", "minLength": 1,
               "description": "회수 대상을 담는다. 회수 대상이 아닌 부연은 explanation 으로."},
         "explanation": {"type": ["string", "null"],
@@ -250,7 +250,7 @@ CARD_SCHEMA = {
                 "study_track": {"enum": ["core", "extra"], "description": "core=필수 예습, extra=선택적인 추가 암기·기출 학습."},
                 "difficulty": {"enum": list(DIFFICULTY_LABELS),
                                "description": "학습 난도: basic=핵심 확인, advanced=기전·비교·한 단계 적용, challenge=여러 관계를 연결한 추론."},
-                "hint": {"type": "string", "description": "같은 상황에서 정답을 말하지 않는 사고의 단서. 이동 경로·작용 주체·비교 기준 등을 짚고 설명본을 찾아보라고 하지 않는다."},
+                "hint": {"type": "string", "description": "정답을 말하지 않는 접근 단서. 예습 설명의 어느 개념을 다시 볼지 안내한다."},
                 "scope": {"type": "string", "description": "지금 알아둘 범위 한 문장. 세부 암기와 구분하고 이 카드로 확인한 내용을 구체적으로 쓴다."},
                 "lecture_focus": {"type": "string", "description": "수업에서 집중해 들을 질문 하나. 제공된 강의 자료에 답이 있어야 한다."},
                 "preview_excerpt": {"type": "string", "description": "핵심 문항을 풀 근거가 되는 예습 설명본의 짧은 원문 발췌. 지어내거나 바꿔 쓰지 않는다. 관리자 검토용."},
@@ -556,8 +556,6 @@ def dump(outdir: Path) -> None:
               f"- 필수의 `challenge: true` 는 필수 8~12장 안에 {MIN_CHALLENGE}~{MAX_CHALLENGE}장",
               "- hint·scope·lecture_focus가 빠지면 표시가 붙는다. 힌트에 정답이 그대로 "
               "들어가거나 핵심 문항의 preview_excerpt가 설명본에 없으면 검토 표시가 붙는다.",
-              "- 질문·힌트에 설명본이나 예습 자료를 언급하면 preview_narration 검토 표시가 붙는다. "
-              "상황·조건을 직접 쓰고 힌트는 사고의 단서를 준다.",
               f"- `why_asked` 가 비었거나 {MAX_WHY_CHARS}자를 넘으면 표시가 붙는다",
               "- `why_tags` 가 비었거나, 항목의 `signals` 에 없는 유형이면 표시가 붙는다 "
               "(`basis` 는 언제나 된다)",

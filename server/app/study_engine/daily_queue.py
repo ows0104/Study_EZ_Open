@@ -12,7 +12,7 @@ from .memory import DAY_MS
 from .policy import DEFAULT
 from .progress import seen_ids
 from .suspension import active_bank
-from app.bank_validation.priorities import TIER_ORDER, is_advanced, priority_tier
+from .connections import connection_order
 
 
 def _due(review: dict, state: dict, bank: dict, question: dict, *, latest: bool, policy: dict) -> int:
@@ -105,7 +105,10 @@ def daily_candidates(bank: dict, state: dict, exam: str, now: int, policy: dict 
     units = daily_units(bank, state, now, policy)
     seen = seen_ids(state) if extra else set()
     remaining = units if extra else [u for u in units if u["status"] not in ("done", "later")]
-    unlearned = {u["key"] for u in units if (u["key"] not in seen if extra else not u["seen"])}
+    # Daily study requires a rating; explicit extra study preserves its existing
+    # first-view coverage rule. Catalog browsing does not mark either as seen.
+    unchecked = {u['key'] for u in units if (u['key'] not in seen if extra else not u['seen'])}
+    dependencies, anchors = connection_order(active_bank(bank, state), unchecked, pages)
     # 미학습 문항을 모두 먼저 확인한다. 완료 문항은 다시 고르지 않는다.
     ranked = rank_questions(bank, state, exam, now, policy)
     rows = {r["question_id"]: r for r in ranked}
@@ -121,13 +124,14 @@ def daily_candidates(bank: dict, state: dict, exam: str, now: int, policy: dict 
         if unit["due"] > now:
             continue
         q = unit["questions"][0]
-        if unit["kind"] == "new" and any(qid in unlearned for qid in q["prerequisites"]):
+        if unit["kind"] == "new" and dependencies[q['question_id']] & unchecked:
             continue  # 아직 평가하지 않은 선행 문항부터 확인한다.
         slide = question_slide(q, pages)
+        anchor = anchors[q['question_id']]
         candidates.append({"unit": unit, "question": q, "rank": rows[unit["key"]], "scope": scope,
-                           "order": (TIER_ORDER[priority_tier(q)], is_advanced(q), lecture_order, slide,
+                           "order": (lecture_order, anchor[0],
                                      rows[unit["key"]]["stage"] if slide != float("inf") else 0,
-                                     positions[unit["key"]])})
+                                     anchor[1], slide, positions[unit["key"]])})
     return candidates, ranked
 
 
@@ -135,7 +139,8 @@ def daily_selection(chosen: dict | None, ranked: list[dict], exam: str, now: int
     question = chosen["question"] if chosen else None
     if question:
         row = next(r for r in ranked if r["question_id"] == question["question_id"])
-        row["notes"] += ["첫 학습은 선행관계를 지키며 Core→Important→Optional, 같은 중요도는 기본→심화·슬라이드 순서입니다. 복습은 중요도·예정일·약점을 반영합니다.",
+        row["notes"] += ["첫 학습은 선행관계와 같은 개념의 직접 회상을 먼저 확인하고, 대응·기전·응용으로 이어집니다. 관련 없는 문항은 슬라이드 흐름을 따릅니다.",
+                         "평가한 기초 문항은 틀려도 다음 연결을 막지 않습니다. 복습은 기존 예정일·약점·중요도를 반영합니다.",
                          "가능하면 같은 개념의 다른 회상방향 사이에 다른 문제 3~5개를 둡니다."] + row["reasons"]
         row.update(eligible=True, score=row["raw_score"], reasons=[])
     return {"question": question, "ranked": ranked,
@@ -143,15 +148,16 @@ def daily_selection(chosen: dict | None, ranked: list[dict], exam: str, now: int
 
 
 def select_daily_question(bank: dict, state: dict, exam: str, now: int, policy: dict = DEFAULT,
-                          *, shuffle: bool = False, pages: dict | None = None) -> dict:
+                          *, shuffle: bool = False, pages: dict | None = None,
+                          seed: str | None = None, prepared: tuple | None = None) -> dict:
     # shuffle은 기존 호출 호환용이다. 두 화면 모두 동일한 정책으로 신규 정렬·복습 섞기를 한다.
     candidates, ranked = daily_candidates(bank, state, exam, now, policy, pages=pages)
-    chosen = choose_candidate(candidates, study_history(bank, state, now), now, policy)
+    chosen = choose_candidate(candidates, study_history(bank, state, now), now, policy, seed=seed, prepared=prepared)
     return daily_selection(chosen, ranked, exam, now)
 
 
 def select_extra_question(bank: dict, state: dict, exam: str, now: int, policy: dict = DEFAULT,
-                          *, pages: dict | None = None) -> dict:
+                          *, pages: dict | None = None, seed: str | None = None, prepared: tuple | None = None) -> dict:
     """추가 학습도 공통 선택기를 사용하되 완료·미도래 문항까지 포함한다."""
     candidates, ranked = daily_candidates(bank, state, exam, now, policy, pages=pages, extra=True)
     history = [h for h in state.get("history", []) if h["timestamp"] <= now]
@@ -162,7 +168,7 @@ def select_extra_question(bank: dict, state: dict, exam: str, now: int, policy: 
         others = [c for c in candidates if c["question"]["question_id"] != last["question_id"]]
         if others:
             candidates = others
-    chosen = choose_candidate(candidates, study_history(bank, state, now), now, policy)
+    chosen = choose_candidate(candidates, study_history(bank, state, now), now, policy, seed=seed, prepared=prepared)
     result = daily_selection(chosen, ranked, exam, now)
     if chosen:
         chosen["rank"]["notes"].append("추가 학습은 완료·미도래 문항도 같은 복습 가중치로 고르고, 다른 후보가 있으면 직전 문항의 연속 반복을 피합니다.")

@@ -35,8 +35,7 @@ def test_기억한_족보폴더와_덱이름이_되살아난다(tmp_path, monkey
             seen.update(vars(self.args))
 
     monkeypatch.setattr(R, "Runner", Stub)
-    # 공개 main은 Quizbank 전환을 안내한다. 보존된 재개 로직을 직접 검사한다.
-    R._legacy_main(["--resume", str(d)])
+    R.main(["--resume", str(d)])
 
     assert seen["jokbo_dir"] == "runs/_jokbo/기생충학"
     assert seen["apkg_name"] == "[260902_01] 주혈흡충증(여선주)"
@@ -55,7 +54,7 @@ def test_명령줄이_기억을_이긴다(tmp_path, monkeypatch):
             seen.update(vars(self.args))
 
     monkeypatch.setattr(R, "Runner", Stub)
-    R._legacy_main(["--resume", str(d), "--jokbo-dir", "다른곳"])
+    R.main(["--resume", str(d), "--jokbo-dir", "다른곳"])
     assert seen["jokbo_dir"] == "다른곳"
 
 
@@ -72,7 +71,7 @@ def test_기억에_없으면_기본값으로_간다(tmp_path, monkeypatch):
             seen.update(vars(self.args))
 
     monkeypatch.setattr(R, "Runner", Stub)
-    R._legacy_main(["--resume", str(d)])
+    R.main(["--resume", str(d)])
     assert seen["jokbo_dir"] == R.DEFAULT_JOKBO_DIR
     assert seen["check_dir"] == R.DEFAULT_CHECK_DIR
     assert seen["apkg_name"] is None

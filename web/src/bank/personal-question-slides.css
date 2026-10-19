@@ -1,0 +1,8 @@
+.personal-question-slides { margin: 12px 0; }
+.personal-question-slides h3 { font-size: 1rem; margin: 0 0 8px; }
+.personal-selected-slides { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 12px; }
+.personal-selected-slides figure { margin: 0; min-width: 0; }
+.personal-selected-slides img { max-width: 100%; }
+.personal-question-slides fieldset { max-height: 240px; overflow: auto; margin-top: 8px; }
+.personal-question-slides fieldset label { display: flex; align-items: center; gap: 8px; }
+.personal-question-slides fieldset input { width: auto; }

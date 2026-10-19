@@ -12,11 +12,11 @@ import {
 import { ExtensionSetup } from "../bridge/ExtensionSetup";
 import { AUTO_SEND_MIN_VERSION } from "../bridge/version";
 import {
-  SHARED_PREVIEW_PROMPT,
   renderPreviewPrompt,
 } from "../lecture/previewPrompt";
 import { PromptEditor } from "./PromptEditor";
 import { usePreviewPrompt } from "../lecture/usePreviewPrompt";
+import { readSharedPreviewPrompt, useSharedPreviewPrompt } from "../lecture/useSharedPreviewPrompt";
 import { previewProviderLabels, previewProviders, type LectureDetail, type LectureRef, type PreviewProvider } from "../types/lectures";
 import { useMe } from "../useMe";
 import { ActionCard, PanelGroup, PanelTool, RemakeConfirm } from "./panelShared";
@@ -59,6 +59,7 @@ export function PreviewAction({
   const [busy, setBusy] = useState<"shared" | "personal" | "">("");
   const [askingRemake, setAskingRemake] = useState<boolean | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [showSharedPrompt, setShowSharedPrompt] = useState(false);
   const [showLinks, setShowLinks] = useState(false);
   const [saved, setSaved] = useState("");
   const [provider, setProvider] = useState<PreviewProvider>(() =>
@@ -66,6 +67,7 @@ export function PreviewAction({
   );
   const promptStore = usePreviewPrompt();
   const isAdmin = Boolean(useMe()?.isAdmin);
+  const sharedPromptStore = useSharedPreviewPrompt(isAdmin);
   const lectureId = `${lecture.subject}/${lecture.runId}`;
   const notesPrev = detail.files.find((file) => file.kind === "notes_prev");
 
@@ -116,6 +118,15 @@ export function PreviewAction({
      섰는지**가 안 보여서 한 줄을 남긴다 — 기본 링크가 바뀌면 서버가 Pre-Quiz를
      다시 만들 일감을 세운다. */
   const savedNote = saved && !showLinks ? <p className="panel-hint">{saved}</p> : null;
+  const sharedPromptTool = isAdmin ? (
+    <PanelTool icon="✎" label={showSharedPrompt ? "기본 프롬프트 접기" : "기본 프롬프트 수정"}
+      hint="모든 강의의 기본 예습 프롬프트 수정 (관리자)"
+      active={showSharedPrompt} expanded={showSharedPrompt}
+      onClick={() => setShowSharedPrompt((open) => !open)} />
+  ) : null;
+  const sharedPromptEditor = isAdmin && showSharedPrompt ? (
+    <PromptEditor store={sharedPromptStore} detail={detail} provider={provider} onProvider={setProvider} shared />
+  ) : null;
 
   /**
    * 확장이 자료를 첨부하고 프롬프트를 채운다. 여기서는 어느 자료를 어느 강의로,
@@ -125,6 +136,7 @@ export function PreviewAction({
     if (!notesPrev) return;
     setBusy(mode);
     try {
+      const template = mode === "shared" ? await readSharedPreviewPrompt() : promptStore.template;
       const sources = [notesPrev, ...detail.files.filter((file) => file.kind === "jokbo")];
       const files = await Promise.all(sources.map(async (file) => {
         const { url } = await api<{ url: string }>(`${base}/files/${file.id}`);
@@ -135,7 +147,7 @@ export function PreviewAction({
         lectureId,
         provider,
         mode,
-        prompt: renderPreviewPrompt(mode === "shared" ? SHARED_PREVIEW_PROMPT : promptStore.template, detail),
+        prompt: renderPreviewPrompt(template, detail),
         files,
         autoSend,
       });
@@ -177,7 +189,8 @@ export function PreviewAction({
             <Empty name="개인 링크" note={canInstall ? "확장을 설치하면 만듭니다" : "컴퓨터에서 만듭니다"} />
           )}
         </div>
-        {linkTool ? <div className="panel-aside">{linkTool}</div> : null}
+        {linkTool || sharedPromptTool ? <div className="panel-aside">{linkTool}{sharedPromptTool}</div> : null}
+        {sharedPromptEditor}
         {linkEditor}
         {savedNote}
         {canInstall ? (
@@ -228,8 +241,7 @@ export function PreviewAction({
     />
   );
 
-  /* 기본 링크 — 강의당 하나, 반 전체가 같은 것을 읽는다. 문구가 고정이라
-     누가 만들었든 같은 것을 물은 대화다. 만드는 것은 관리자뿐이다. */
+  /* 기본 링크는 강의당 하나다. 관리자들이 저장한 공통 문구로 새 대화를 만든다. */
   const shared = detail.preview?.shareUrl ? (
     <SharedOpen
       url={detail.preview.shareUrl}
@@ -278,10 +290,12 @@ export function PreviewAction({
       </div>
       <div className="panel-aside">
         {linkTool}
+        {sharedPromptTool}
         {promptTool}
       </div>
       {linkEditor}
       {savedNote}
+      {sharedPromptEditor}
 
       {canMake ? <ExtensionSetup /> : null}
 

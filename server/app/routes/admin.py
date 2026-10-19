@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
+from app.admin_banks import summaries as bank_summaries
 from app.auth import CurrentUser, require_admin, require_runner
 from app.config import get_settings
 from app.database import get_db
@@ -46,7 +47,6 @@ from app.models import (
     PrequizJob,
     Preview,
     Profile,
-    QuizBank,
     RunMeta,
     RunnerBeat,
     TimetableEvent,
@@ -55,7 +55,7 @@ from app.naming import nfc, object_key, slide_no_from_filename, version_from_fil
 from app.preview_links import conversation_url as valid_conversation_url
 from app.preview_links import provider as valid_provider
 from app.preview_links import share_url as valid_share_url
-from app.routes import bank as quiz_bank, cards
+from app.routes import cards
 from app.routes.common import lecture_or_404, storage_or_503
 
 router = APIRouter()
@@ -652,7 +652,7 @@ def overview(
         )
     }
     previews = {(row.subject, row.run_id): row for row in db.scalars(select(Preview))}
-    banks = {(row.subject, row.run_id): row for row in db.scalars(select(QuizBank))}
+    banks = bank_summaries(db, lectures)
     # 편마다 **가장 최근** 일감 하나. 끝난 것도 보여 준다 — 실패한 채로 사라지면
     # 화면이 "아직 아무도 안 눌렀다"와 같은 모양이 된다.
     #
@@ -675,7 +675,7 @@ def overview(
         event = events.get(lecture.timetable_event_id) if lecture.timetable_event_id else None
         preview = previews.get(key)
         meta = metas.get(key, {})
-        bank = quiz_bank.summary(db, lecture, banks.get(key), is_admin=True)
+        bank = banks.get(key)
         rows.append(
             {
                 "subject": lecture.subject,

@@ -13,8 +13,7 @@ import jsonschema
 
 from studyez_llm.pdf import render
 from .generate import item_quality_guidance, lecture_scope
-from .points import PLAN, STR, _array, _object
-from .point_refs import checked_plan
+from .points import PLAN, STR, _array, _object, shape_plan
 from .schema import BANK
 from .session import SessionError
 
@@ -118,14 +117,14 @@ def extract_points(pdf: Path, title: str, sources: list[dict], out: Path, *, pdf
         prompt = (PROMPTS / "points.md").read_text(encoding="utf-8") + "\n\n" + item_quality_guidance()
         raw, info = _call(prompt, PLAN, work, model, "원본 독립 출제포인트 추출")
         (out / "independent-plan.raw.json").write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
-        plan, reference_usage = checked_plan(raw, count, work, out, model, _call)
+        plan = shape_plan(raw, count)
         (out / "independent-plan.json").write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
         if plan["unreadable_pages"]:
             raise SessionError("독립 출제포인트 추출에서 읽지 못한 원본 쪽이 있습니다.")
         points = [{"point_id": t["point_id"], "point": t["target"],
                    "source_refs": "; ".join(f"{pdf_source} p.{p}" for p in t.get("slides", objective["slides"]))}
                   for objective in plan["objectives"] for t in objective["retrieval_targets"]]
-        usage = [{"step": "원본 독립 출제포인트 추출", **info}, *reference_usage]
+        usage = [{"step": "원본 독립 출제포인트 추출", **info}]
     ids = [p["point_id"] for p in points]
     if not ids or len(set(ids)) != len(ids) or any(not all(v.strip() for v in p.values()) for p in points):
         raise SessionError("독립 출제포인트의 ID·내용·근거가 없거나 중복됐습니다.")
@@ -134,7 +133,7 @@ def extract_points(pdf: Path, title: str, sources: list[dict], out: Path, *, pdf
     return points, usage
 
 
-def _checked_assignments(bank: dict, structure: dict) -> dict:
+def apply_structure(bank: dict, structure: dict) -> dict:
     try:
         jsonschema.validate(structure, STRUCTURE)
     except jsonschema.ValidationError as cause:
@@ -149,32 +148,6 @@ def _checked_assignments(bank: dict, structure: dict) -> dict:
         raise SessionError("사후 개념과 회상 계획은 같은 고유 ID로 빠짐없이 연결해야 합니다.")
     if {a["concept_id"] for a in assignments.values()} != set(concepts):
         raise SessionError("사후 개념은 실제 문항에 연결되어야 합니다.")
-    return assignments
-
-
-def resolve_directions(bank: dict, structure: dict) -> tuple[dict, list[dict]]:
-    """Derive redundant plan directions from immutable questions and checked links.
-
-    This does not infer new retrieval targets or change the CLI's concept grouping.
-    Keep the raw CLI response separately so every corrected aggregate is traceable.
-    """
-    assignments = _checked_assignments(bank, structure)
-    directions = {c["concept_id"]: set() for c in structure["concepts"]}
-    for q in bank["questions"]:
-        directions[assignments[q["question_id"]]["concept_id"]].add(q["retrieval_direction"])
-    resolved, corrections = copy.deepcopy(structure), []
-    for plan in resolved["retrieval_plan"]:
-        actual = sorted(directions[plan["concept_id"]])
-        if set(plan["directions"]) != set(actual) or len(plan["directions"]) != len(actual):
-            corrections.append({"concept_id": plan["concept_id"], "reported": plan["directions"],
-                                "actual": actual})
-        plan["directions"] = actual
-    return resolved, corrections
-
-
-def apply_structure(bank: dict, structure: dict) -> dict:
-    assignments = _checked_assignments(bank, structure)
-    plans = {p["concept_id"]: p for p in structure["retrieval_plan"]}
     for cid, plan in plans.items():
         directions = {q["retrieval_direction"] for q in bank["questions"] if assignments[q["question_id"]]["concept_id"] == cid}
         if set(plan["directions"]) != directions or len(plan["directions"]) != len(directions):
@@ -201,7 +174,4 @@ def connect(bank: dict, points: list[dict], title: str, out: Path, *, model: str
     prompt = (PROMPTS / "learning-structure.md").read_text(encoding="utf-8") + "\n\n" + item_quality_guidance()
     structure, info = _call(prompt, STRUCTURE, work, model, "검수 후 개념도·회상 계획 연결")
     (out / "learning-structure.raw.json").write_text(json.dumps(structure, ensure_ascii=False, indent=2), encoding="utf-8")
-    structure, corrections = resolve_directions(bank, structure)
-    (out / "learning-structure.resolution.json").write_text(json.dumps(
-        {"directionCorrections": corrections, "structure": structure}, ensure_ascii=False, indent=2), encoding="utf-8")
     return apply_structure(bank, structure), structure, info

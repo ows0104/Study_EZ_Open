@@ -49,6 +49,23 @@ from app.main import app  # noqa: E402
 # 편을 가로질러 보고 반영했다·그대로 둔다를 적는다(관리 화면 「Quiz Bank 신고」 탭).
 # 2026-10-06: 개인 복습 대화를 예습과 별도로 저장하는 my-review 경로.
 ROUTES = """
+GET /api/admin/lectures/{subject}/{run_id}/bank/shared-source
+PUT /api/admin/lectures/{subject}/{run_id}/bank-shared-response
+GET /api/admin/preview-prompt
+PUT /api/admin/preview-prompt
+PUT /api/lectures/{subject}/{run_id}/bank/excluded/{question_id}
+GET /api/lectures/{subject}/{run_id}/bank/personal-question-slides
+GET /api/admin/quiz-publication/sources
+GET /api/timetable/quiz-publication
+PUT /api/admin/quiz-publication/check
+GET /api/lectures/{subject}/{run_id}/bank/catalog
+GET /api/lectures/{subject}/{run_id}/bank/catalog/{question_id}
+POST /api/lectures/{subject}/{run_id}/bank/prepare-buffer
+POST /api/lectures/{subject}/{run_id}/bank/personal-questions
+DELETE /api/lectures/{subject}/{run_id}/bank/personal-questions/{question_id}
+DELETE /api/admin/lectures/{subject}/{run_id}/bank
+GET /api/me/study-hidden
+PATCH /api/me/study-hidden
 PUT /api/lectures/{subject}/{run_id}/bank/questions/{question_id}/priority
 PUT /api/lectures/{subject}/{run_id}/bank/questions/{question_id}/suspension
 POST /api/bank/batch/next
@@ -61,6 +78,7 @@ PUT /api/admin/lectures/{subject}/{run_id}/bank-generated-response
 GET /api/admin/bank-review
 PUT /api/admin/lectures/{subject}/{run_id}/bank/cards/{question_id}
 POST /api/lectures/{subject}/{run_id}/bank/prepare
+POST /api/lectures/{subject}/{run_id}/bank/prepare-next
 PUT /api/lectures/{subject}/{run_id}/my-review
 GET /api/study-plan
 POST /api/lectures/{subject}/{run_id}/prequiz/slides
@@ -113,6 +131,7 @@ GET /api/spotter/subjects/{subject}/db
 GET /api/spotter/threads
 GET /api/spotter/threads/{kind}/{subject}
 GET /api/timetable
+POST /api/timetable/study-progress
 PATCH /api/spotter/admin/reports/{report_id}
 PATCH /api/admin/feedback/{feedback_id}
 PATCH /api/spotter/admin/threads/{kind}/{subject}

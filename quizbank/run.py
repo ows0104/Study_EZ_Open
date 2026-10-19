@@ -28,19 +28,16 @@ import sys
 import time
 from pathlib import Path
 
-from . import classify, coverage, evidence, explain, incremental, option_pools, organize, question_first, repair, review, slides, web_audit
+from . import classify, evidence, coverage, explain, option_pools, organize, question_first, repair, review, slides, web_audit
 from .schema import schema_errors
 from .session import SessionError
-from .runtime import record as record_runtime
 from .validate import validate_bank, validate_dropping
 from server.app.bank_validation.publication import stamp, usable
 
 OUTPUTS = ("bank.json", "bank.raw.json", "bank.before-repair.json", "authored-points.json", "repairs.json", "checkpoint.json", "validation.json", "review.json", "coverage.json", "classification.json", "web-audit.json", "explanations.json", "pages.json", "result.json", "usage.jsonl")
 OUTPUTS += ("content-validation.json", "learning-structure.json", "learning-structure.raw.json")
-OUTPUTS += ("learning-structure.resolution.json",)
 OUTPUTS += ("option-pools.json", "option-pools.raw.json")
-OUTPUTS += ("review-reuse.jsonl",)
-OUTPUTS += ("authored-evidence.json", "organize/authored-evidence.json")
+OUTPUTS += ("authored-evidence.json",)
 MAX_REPAIR_ROUNDS = 3
 
 
@@ -97,7 +94,6 @@ def _run_authored(bank: dict, raw: str, pdf: Path | None, title: str, run_id: st
     initial_count = len(bank.get("questions", []))
     initial_ids = {q["question_id"] for q in bank.get("questions", [])}
     explanations_enabled = explain.enabled(prompt_version)
-    item_reviews = incremental.Reviews.create(out, title, sources, pdf, jokbo, model, prompt_version)
     points = json.loads(point_plan.read_text(encoding="utf-8")) if point_plan else None
     plan_error = None
     if question_first_mode and not points:
@@ -110,18 +106,14 @@ def _run_authored(bank: dict, raw: str, pdf: Path | None, title: str, run_id: st
     changes = []
     spent_repairs = 0
     for attempt in range(max_repair_rounds + 1):
-        # Rebuild aggregate reports each round. Only exact item/evidence matches
-        # can carry judgments forward through this run's incremental cache.
+        # Never publish a review of an earlier candidate as the final review.
         for name in ("review.json", "explanations.json", "coverage.json", "web-audit.json", "classification.json"):
             (out / name).unlink(missing_ok=True)
         explanation_check, source_check, answer_check = None, None, None
         if explanations_enabled and pdf is not None and not schema_errors(bank):
             _stage("정답 확인·해설 작성")
-            if item_reviews:
-                bank, explanation_check, info = item_reviews.explanations(bank, points, raw, pdf_source=pdf_source)
-            else:
-                bank, explanation_check, info = explain.write(bank, pdf, title, out,
-                    pdf_source=pdf_source, jokbo=jokbo, model=model)
+            bank, explanation_check, info = explain.write(bank, pdf, title, out,
+                pdf_source=pdf_source, jokbo=jokbo, model=model)
             _usage(out, "정답 확인·해설 작성", info)
             _write(out / "explanations.json", explanation_check)
         _write(out / "bank.json", bank)
@@ -150,12 +142,8 @@ def _run_authored(bank: dict, raw: str, pdf: Path | None, title: str, run_id: st
                     kwargs = {"points": points} if points is not None else {}
                     if question_first_mode:
                         kwargs["defer_structure"] = True
-                    if item_reviews:
-                        source_check, usage = item_reviews.source(bank, raw, points,
-                            defer_structure=question_first_mode)
-                    else:
-                        source_check, usage = web_audit.inspect(bank, raw, pdf, title, sources, out,
-                            model=model, jokbo=jokbo, **kwargs)
+                    source_check, usage = web_audit.inspect(bank, raw, pdf, title, sources, out,
+                        model=model, jokbo=jokbo, **kwargs)
                     if (source_check.get("classification") or {}).get("status") == "partial":
                         _stage("객관식 유형 반영")
                         bank, classification = classify.apply_classifications(bank,
@@ -180,10 +168,7 @@ def _run_authored(bank: dict, raw: str, pdf: Path | None, title: str, run_id: st
                         ("status", "gapCount", "unreadablePages", "addedQuestions", "addedMcq")}
             if do_review:
                 _stage("외부지식 검토")
-                if item_reviews:
-                    answer_check, info = item_reviews.answers(bank, points, raw)
-                else:
-                    answer_check, info = review.review(bank, title, model=model)
+                answer_check, info = review.review(bank, title, model=model)
                 answer_check = _review_with_notes(answer_check, source_check, explanation_check)
                 _write(out / "review.json", answer_check)
                 _usage(out, "외부지식 검토", info)
@@ -412,7 +397,6 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--prompt-version", default="")
     args = ap.parse_args(argv)
     sources = [parse_source(s) for s in args.source] or [{"id": "S1", "kind": "notes_current", "filename": ""}]
-    record_runtime(args.out, 'started')
     try:
         result = run(args.raw, args.pdf, args.title, args.run_id, sources, args.out,
                      pdf_source=args.pdf_source, do_review=not args.no_review, model=args.model,
@@ -427,7 +411,6 @@ def main(argv: list[str] | None = None) -> int:
                 _stage("핵심 근거 선택·족보 지면 연결")
                 result = evidence.enrich(args.pdf, args.out, args.run_id, jokbo=args.jokbo, model=args.model)
     except SessionError as e:
-        record_runtime(args.out, 'failed')
         print(f"멈췄다 — {e}", flush=True)
         return 1
     # 산출물을 다 쓴 뒤의 요약도 실패할 수 있는 코드다 (루트 CLAUDE.md 함정 ①) — 종료 코드를 바꾸지 않는다.
@@ -441,7 +424,6 @@ def main(argv: list[str] | None = None) -> int:
               + (f" · PDF에 없는 쪽 {result['missing_pages']}" if result["missing_pages"] else ""), flush=True)
     except Exception:  # noqa: BLE001
         pass
-    record_runtime(args.out, 'finished')
     return 0
 
 

@@ -27,7 +27,8 @@ def main():
     assert selected_pages(linked, q, [3, 8]) == {3, 8}
     assert selected_pages(linked, q, [3]) == set()
     jokbo = {'version': 1, 'questions': {'Q1': {'questionHash': question_hash(q), 'locators': {
-        '2023 52': [{'year': '2023', 'number': '52', 'page': 63, 'filename': 'jokbo.png', 'pdfFilename': 'exam.pdf'}]}}}}
+        '2023 52': [{'year': '2023', 'number': '52', 'page': 63, 'filename': 'jokbo.png', 'pdfFilename': 'exam.pdf',
+                    'question': {'reference': '2023 52번', 'stem': 'Original question?', 'options': ['First', 'Second']}}]}}}}
     assert len(references(jokbo, q)) == 1
     assert references(jokbo, {**q, 'answer': 'changed'}) == []
     assert references(jokbo, q, {**q, 'source_refs': []}) == []
@@ -53,6 +54,8 @@ def main():
         assert actual == answer['jokboSlides']
         assert actual[0]['references'] == ['2023 52번'] and actual[0]['page'] == 63
         assert actual[0]['url'].endswith('/slides/jokbo.png')
+        assert actual[0]['questions'][0]['stem'] == 'Original question?'
+        assert actual[0]['questions'][0]['options'] == ['First', 'Second']
         # Same physical page number in two different PDFs must never collide.
         foreign = external_filename('demo', 'other', 'a' * 64, 8)
         row.validation = {**row.validation, 'slideFocus': {'version': 3, 'sourceFilename': 'own.pdf',

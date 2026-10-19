@@ -4,6 +4,9 @@
 // 문항 필드 이름은 서버가 저장한 꼴 그대로(snake_case)다 — 은행 JSON 을 옮겨 적지 않고 싣는다.
 
 export type BankTimeline = {
+  /** 관리자에게만. 삭제 전 동시 변경 확인용 버전. */
+  deleteVersion?: string | null;
+  /** 문제은행 공유 주소는 관리자에게만 전달한다. */
   shareUrl?: string;
   /** 공유 링크를 새로 저장한 서버 시각. 기존 링크는 null. */
   linkedAt?: string | null;
@@ -66,10 +69,14 @@ export type BankSource = {
 export type BankFormat = "basic" | "cloze" | "list" | "ox" | "mcq" | "multi_select" | "matching" | "sequence";
 
 export type BankRating = "Again" | "Hard" | "Good" | "Easy";
-export type BankTier = "Core" | "Important" | "Optional";
+export type BankTier = "Essential" | "Core" | "Important" | "Optional";
 
 /** 답이 빠진 문항. 답·채점 단위는 `reveal` 로만 온다. */
 export type BankQuestion = {
+  personalAdded?: boolean;
+  presentationSeed?: string;
+  /** The API has placed the ordered matching column on the left. */
+  matchingOrdered?: boolean;
   mcq_mode?: "recall_first" | "comparison" | "none";
   personalEdited?: boolean;
   question_id: string;
@@ -110,7 +117,9 @@ export type BankAnswer = {
   /** 문항이 인용한 필기 쪽들. 한 문항이 여러 장일 수 있다. */
   slides: BankSlide[];
   /** 실제로 인용한 족보 문항의 원본 PDF 지면. */
-  jokboSlides?: { page: number; url: string; pdfFilename: string; references: string[]; primary?: boolean; embedded?: boolean }[];
+  jokboSlides?: { page: number; url: string; pdfFilename: string; references: string[]; primary?: boolean; embedded?: boolean;
+    questions?: { reference: string; stem: string; options: string[]; needsFigure?: boolean;
+      answer?: string | null; objection?: string | null }[] }[];
   evidenceStatus?: {
     category: "exam_only" | "partial_support" | "source_conflict" | "unsupported" | "uncertain";
     reason: string; missingClaim?: string; primaryAvailable?: boolean;
@@ -128,6 +137,14 @@ export type BankSlide = {
   page: number; url: string; primary?: boolean;
   sourceId?: string; sourceRunId?: string; sourceFilename?: string;
 };
+
+export type BankCatalogItem = { question: BankQuestion; pages: number[]; suspended: boolean;
+  excludedStatus?: 'excluded' | 'restored' | 'deleted' | null; excludedReason?: string };
+export type BankCatalog = {
+  buildId: string; title: string; subject: string; runId: string;
+  questions: BankCatalogItem[]; slides: BankSlide[];
+};
+export type BankCatalogAnswer = { question: BankQuestion; answer: BankAnswer };
 
 /** 관리자가 보는 문항 — 은행 JSON 그대로라 답 칸도 snake_case 다. */
 export type BankOptionPool = {
@@ -226,6 +243,7 @@ export type BankSession = {
 };
 
 export type BankRead = {
+  personalQuestions?: { questionId: string; question: string; tier: BankTier }[];
   suspendedQuestions?: { questionId: string; question: string }[];
   undoToken?: string | null;
   lectureGoal?: import("./studyPlan").LectureGoal | null;
@@ -273,6 +291,7 @@ export type BankNext = {
   /** Warm the current question's images without recording a reveal. Older APIs omit this. */
   preloadSlides?: BankSlide[];
   reviewToken?: string;
+  selectionTicket?: string;
   days?: number;
   examDate?: string;
   session?: BankSession | null;

@@ -59,7 +59,7 @@ export function StudyPlanBoard() {
             · 마지막 {plan.bufferDays}일은 여유 기간</p>
           <div className="study-plan-stats">
             <div><small>현재 전체 학습률</small><strong>{plan.currentScore.toFixed(1)}%</strong></div>
-            <div><small>추가 학습 없이 {plan.horizon === plan.dayStart + 86_400_000 ? "자정" : plan.bufferPhase ? "시험 직전" : "목표 마감"}</small>
+            <div><small>추가 학습 없이 {plan.horizon === plan.dayStart + 86_400_000 ? "다음 날 오전 4시" : plan.bufferPhase ? "시험 직전" : "목표 마감"}</small>
               <strong>{plan.projectedScore.toFixed(1)}%</strong></div>
             <div><small>오늘 끝 목표</small><strong>{plan.endTarget.toFixed(1)}%</strong></div>
           </div>
@@ -80,7 +80,7 @@ export function StudyPlanBoard() {
             예정 강의를 분량에 미리 포함하므로, 신규 강의가 공개되기 전에도 해야 할 학습량에 반영됩니다.</p>
           <p>시험 3일 전까지 목표에 도달하도록 계획합니다. 현재 기록에서 추정한 하루 학습률 유지 비율을 바탕으로,
             망각 보충까지 합친 하루 확보량이 고르게 되도록 초반 순증가 목표를 높입니다. 기록이 없으면 하루 90% 유지를 가정합니다.</p>
-          <p>마지막 3일은 목표 수준 유지와 밀린 분량 보충에 씁니다. 목표는 한국 자정 기록으로 계산하고 현재 기록으로 남은 분량을 갱신합니다.
+          <p>마지막 3일은 목표 수준 유지와 밀린 분량 보충에 씁니다. 목표는 한국 시간 오전 4시 기록으로 계산하고 현재 기록으로 남은 분량을 갱신합니다.
             목표 도달 시각부터는 복습 계획으로 전환하며, 시험 당일에는 시험 시작 시각이 마감입니다.</p>
           <p>‘확보’는 오늘 끝 시점에도 남을 것으로 추정되는 학습률 증가분입니다. 목표·자료·시간표가 바뀌면 다시 계산합니다.
             문제 수나 공부 시간의 보장치는 아니며, 앞으로의 복습에 따라 망각량도 달라집니다.</p>

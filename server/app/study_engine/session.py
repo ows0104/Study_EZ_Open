@@ -23,6 +23,7 @@ def start_session(bank: dict, previous: dict, size: int | None, now: int, policy
     if (state.get("session") or {}).get("status") == "active":
         return state
     current = memory_snapshot(state, now, policy)
+    state.pop("suspension_undo", None)
     state["session"] = {"id": str(uuid.uuid4()), "size": size, "status": "active",
                         "start_index": len(state["history"]), "started_at": now,
                         "dimensions_before": copy.deepcopy(current["dimensions"]),

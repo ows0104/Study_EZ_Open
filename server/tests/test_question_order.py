@@ -47,19 +47,21 @@ def solve(bank, state=None, **kwargs):
 
 
 def main():
-    # Priority precedes slide order; slide flow remains stable within a priority.
+    # Slides precede priority AND depth: an earlier Optional+Advanced cannot move behind Core.
     bank = make_bank([("early-id", "C3", "direct", 10, []),
                       ("late-id", "C1", "direct", 2, []), ("middle", "C2", "direct", 3, [])])
     bank["questions"][1]["tier"] = "Optional"
+    bank["questions"][1]["advanced"] = True
+    bank["questions"][2]["tier"] = "Important"
     bank["questions"][0]["source_refs"].append({"source_id": "S2", "locator": "p.1"})
     with patch("app.study_engine.ordering.random.choices", side_effect=AssertionError("new must follow slides")):
-        assert solve(bank)[0] == ["middle", "early-id", "late-id"]
-        assert solve(bank, shuffle=True)[0] == ["middle", "early-id", "late-id"]
-        assert solve(bank, pages={"early-id": [1]})[0] == ["early-id", "middle", "late-id"]
+        assert solve(bank)[0] == ["late-id", "middle", "early-id"]
+        assert solve(bank, shuffle=True)[0] == ["late-id", "middle", "early-id"]
+        assert solve(bank, pages={"early-id": [1]})[0] == ["early-id", "late-id", "middle"]
     unknown = copy.deepcopy(bank)
     for q in unknown["questions"]:
         q["source_refs"] = [{"source_id": "S2", "locator": "p.1"}]
-    assert solve(unknown)[0] == ["early-id", "middle", "late-id"]
+    assert solve(unknown)[0] == ["early-id", "late-id", "middle"]
     # A future-slide prerequisite chain unlocks after feedback even on Again.
     prereq = make_bank([("child", "C1", "integration", 1, ["parent"]),
                         ("parent", "C2", "mechanism", 20, ["root"]),
@@ -71,6 +73,9 @@ def main():
     # Same-slide directions are separated by four other questions when available.
     spaced = make_bank([("A", "CA", "direct", 1, []), ("A-reverse", "CA", "reverse", 1, ["A"])] +
                        [(f"B{i}", f"CB{i}", "direct", i + 2, []) for i in range(7)])
+    spaced["questions"][1].update(tier="Optional", advanced=True)
+    for i, q in enumerate(spaced["questions"][2:]):
+        q.update(tier="Important" if i % 2 else "Core", advanced=bool(i % 2))
     sequence, state = solve(spaced)
     assert sequence.index("A-reverse") - sequence.index("A") - 1 == 4, sequence
     # Only three fillers: use three; no fillers: finish without a waiting/deadlock state.

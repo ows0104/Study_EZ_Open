@@ -79,7 +79,6 @@ def test_잡힌_편은_만들지_않고_넘긴다(tmp_path):
     """`tick`이 그 편을 받아도 `handle`까지 가면 안 된다."""
     client = FakeClient([_job("260831_01")])
     worker = _agent(tmp_path, client)
-    worker.sweep_subjects = lambda: (["병리학"], "이번 블럭 병리학")
     worker.building["260831_01"] = "w1"
     worker.handle = lambda job: (_ for _ in ()).throw(AssertionError("만들면 안 된다"))
     assert worker.tick("w2") is False

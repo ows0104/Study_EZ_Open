@@ -165,8 +165,6 @@ def assemble(prep_dir: Path, jokbo_file: Path | None, schema_dir: Path,
                                "cards_out": (prep_dir / "items.raw.json").as_posix()}),
     ):
         task = (PROMPTS / task_file).read_text(encoding="utf-8")
-        if stage == "cards":
-            task += "\n\n" + (PROMPTS / "voice.md").read_text(encoding="utf-8")
         for k, v in subs.items():
             task = task.replace("{" + k + "}", v)
         tasks[stage] = task

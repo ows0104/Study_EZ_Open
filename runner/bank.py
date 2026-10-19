@@ -36,25 +36,21 @@ def jokbo_slices(runs_dir: Path, subject: str, sources: dict[str, Path]) -> dict
     """run_id → 그 편의 족보 조각(.md). 조각이 없거나 문턱 아래인 편은 빠진다.
 
     판정은 하위 프로세스(`python -m quizgen.slicefor`)라 느리다 — 쓸기가 10분마다 도므로
-    편마다 `runs/<id>/bank/jokbo.json` 에 적어 두고, **컷·필기·그 편의 족보 지정이 바뀔 때** 다시 잰다.
+    편마다 `runs/<id>/bank/jokbo.json` 에 적어 두고, **컷이나 필기 파일이 바뀔 때만** 다시 잰다.
     """
     cut = deck.jokbo_dir(runs_dir, subject)
     if not (cut / "index.json").is_file():
         return {}
     revision = json.loads((cut / "index.json").read_text(encoding="utf-8")).get("professor_table_revision", "")
-    pins_path = cut.parent / "pins.json"
-    pins = json.loads(pins_path.read_text(encoding="utf-8")) if pins_path.is_file() else {}
     found: dict[str, Path] = {}
     pending: dict[str, Path] = {}
     for run_id, pdf in sources.items():
-        pin_revision = json.dumps(pins[run_id], ensure_ascii=False, sort_keys=True) if run_id in pins else ""
         try:
             cached = json.loads(_cache_path(runs_dir, run_id).read_text(encoding="utf-8"))
         except (OSError, ValueError):
             cached = None
         if (cached and cached.get("cut") == str(cut) and cached.get("source") == pdf.name
-                and cached.get("professorRevision", "") == revision
-                and cached.get("pinRevision", "") == pin_revision):
+                and cached.get("professorRevision", "") == revision):
             if cached.get("slice") and Path(cached["slice"]).is_file():
                 found[run_id] = Path(cached["slice"])
             continue
@@ -78,8 +74,6 @@ def jokbo_slices(runs_dir: Path, subject: str, sources: dict[str, Path]) -> dict
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps({"cut": str(cut), "source": pdf.name, "slice": slice_md,
                                     "professorRevision": revision,
-                                    "pinRevision": json.dumps(pins[run_id], ensure_ascii=False, sort_keys=True)
-                                    if run_id in pins else "",
                                     "score": row.get("score"), "why": row.get("why", "")},
                                    ensure_ascii=False, indent=2), encoding="utf-8")
         if slice_md:

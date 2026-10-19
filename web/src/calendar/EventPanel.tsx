@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { BankPanel } from "../bank/BankPanel";
 import { api, downloadSignedFile, openSignedFile } from "../api";
 import { BundleButton } from "../bundle/BundleButton";
-import { decksIn, type BundleDeck } from "../bundle/decks";
+import { decksIn, useBundleDecks } from "../bundle/decks";
 import { usePreviewVersion } from "../bridge/previewBridge";
 import { Link } from "react-router-dom";
 import { useMe } from "../useMe";
@@ -33,15 +33,9 @@ import { LectureMastery } from "../lecture/LectureMastery";
 export function EventPanel({
   entry,
   onClose,
-  bundleDecks,
-  onBundleDone,
 }: {
   entry: CalendarEntry;
   onClose: () => void;
-  /** 덱이 어디 있고 무엇을 받아 갔나. **부모가 한 번 받아 내려준다** — 패널마다
-   *  부르면 칸을 갈아탈 때마다 학기 전체를 다시 받는다. 아직 안 왔으면 `null`. */
-  bundleDecks: BundleDeck[] | null;
-  onBundleDone: () => void;
 }) {
   const panel = useRef<HTMLElement>(null);
   const [chosen, setChosen] = useState(0);
@@ -106,8 +100,6 @@ export function EventPanel({
             <KeyActions
               lecture={lecture}
               detail={detail}
-              bundleDecks={bundleDecks}
-              onBundleDone={onBundleDone}
             />
           ) : error ? null : (
             <p className="event-panel-loading">자료를 불러오는 중…</p>
@@ -264,16 +256,14 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 function KeyActions({
   lecture,
   detail,
-  bundleDecks,
-  onBundleDone,
 }: {
   lecture: LectureRef;
   detail: LectureDetail;
-  bundleDecks: BundleDeck[] | null;
-  onBundleDone: () => void;
 }) {
   const base = `/api/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
   const isAdmin = Boolean(useMe()?.isAdmin);
+  const [showBundles, setShowBundles] = useState(false);
+  const bundles = useBundleDecks(isAdmin && showBundles, new URLSearchParams({ subject: lecture.subject }).toString());
   const [error, setError] = useState("");
   const fileOf = (kind: LectureFile["kind"]) => detail.files.find((file) => file.kind === kind);
 
@@ -388,20 +378,22 @@ function KeyActions({
         title={`${lecture.subject} 블럭 덱 받기`}
         note="현재까지 나온 것 한 파일로"
         fold
+        onOpenChange={setShowBundles}
       >
         <div className="panel-bundles">
-          {bundleDecks ? (
+          {bundles.decks ? (
             (["pre", "main"] as const).map((kind) => (
               <BundleButton
                 key={kind}
                 scope={{ kind: "subject", subject: lecture.subject }}
                 kind={kind}
-                decks={decksIn(bundleDecks, { kind: "subject", subject: lecture.subject }, kind)}
-                onDone={onBundleDone}
+                decks={decksIn(bundles.decks ?? [], { kind: "subject", subject: lecture.subject }, kind)}
+                onDone={bundles.reload}
               />
             ))
           ) : (
-            <p className="panel-hint">덱 목록을 불러오는 중…</p>
+            bundles.error ? <p className="panel-hint is-error" role="alert">{bundles.error}{" "}<button onClick={bundles.reload}>다시 시도</button></p>
+              : <p className="panel-hint">덱 목록을 불러오는 중…</p>
           )}
         </div>
       </PanelGroup> : null}

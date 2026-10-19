@@ -68,11 +68,11 @@ def main():
             row = next(r for r in ranked if r["question_id"] == "Q1")
             assert row["tier"] == "Optional" and row["target"]["effective"] == .55
             assert row["components"]["importance"] == .85
-            assert select_daily_question(bank, {**state, "served": None}, "2026-11-12", NOW)["question"]["question_id"] == "Q2"
+            assert select_daily_question(bank, {**state, "served": None}, "2026-11-12", NOW)["question"]["question_id"] == "Q1", "private tier changes keep first-learning slide order"
             assert concept_map(bank, state)[0]["directions"][0]["target"] == .55
             assert mastery_concepts(bank, state)[0] == "all", "private Core scope is used by lecture mastery"
         assert client.get(BASE).json()["summary"]["studyQuestionCount"] == 1
-        for tier, target in (("Core", .85), ("Important", .78), ("Optional", .55)):
+        for tier, target in (("Essential", .9), ("Core", .85), ("Important", .78), ("Optional", .55)):
             assert put("Q1", token, tier)["question"]["targetMastery"] == target
             assert client.get(BASE).json()["conceptMap"][0]["directions"][0]["target"] == target
         app.dependency_overrides[get_current_user] = lambda: replace(STUDENT, id="another-priority-student")

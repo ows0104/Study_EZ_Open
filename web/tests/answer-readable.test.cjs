@@ -15,7 +15,11 @@ function load(file) {
     if (name.endsWith('/SlideImage')) return { SlideImage: () => null };
     if (name.endsWith('/BankSlides')) return { BankSlides: () => null };
     if (name.endsWith('/BankSourceNote')) return { BankSourceNote: () => null };
-    if (name.startsWith('.')) return load(path.resolve(path.dirname(file), name + '.tsx'));
+    if (name.endsWith('.css')) return {};
+    if (name.startsWith('.')) {
+      const target = path.resolve(path.dirname(file), name);
+      return load(fs.existsSync(target + '.tsx') ? target + '.tsx' : target + '.ts');
+    }
     return require(name);
   }});
   vm.runInContext(code, context);
@@ -34,6 +38,51 @@ const answer = { answer: text, answerUnits: [], answerPairs: [], correctOrder: [
 const body = (q, a) => renderToStaticMarkup(React.createElement(AnswerBody, {
   question: { ...question, ...q }, answer: { ...answer, ...a },
 }));
+
+test('list siblings align from the first row and nested bullets keep their indentation', () => {
+  const text = '1. **첫 항목**\n   - 하위 항목\n2. 다음 항목\n\t• 다른 하위 항목';
+  const html = render({ text, units: ['첫 항목'] });
+  assert.equal((html.match(/class="bank-readable-line is-list"/g) || []).length, 4);
+  assert.ok(!html.includes('is-indented'));
+  assert.ok(html.includes('margin-inline-start:1.5em'));
+  assert.ok(html.includes('margin-inline-start:2em'));
+  assert.equal(plain(html), text.replace(/\*\*/g, ''));
+  assert.ok(html.includes('class="bank-answer-point">첫 항목</strong>'));
+});
+
+test('list format aligns unmarked and colon-labeled answer rows including the first row', () => {
+  for (const text of ['첫 항목\n둘째 항목\n셋째 항목', '**분류 A**: 첫 항목\n분류 B: 둘째 항목\n  하위 설명']) {
+    const html = body({ format: 'list' }, { answer: text });
+    assert.ok(!html.includes('is-indented'));
+    assert.equal(plain(html).replace(/\s/g, '').includes(text.replace(/\*\*/g, '').replace(/\s/g, '')), true);
+  }
+});
+
+test('list format aligns unmarked question rows including the first row', () => {
+  const { QuestionBody } = load(path.join(__dirname, '../src/bank/BankQuestion.tsx'));
+  const html = renderToStaticMarkup(React.createElement(QuestionBody, {
+    question: { ...question, question: '분류 A: 첫 조건\n분류 B: 둘째 조건\n  하위 조건' },
+    answer: null, picked: new Set(), onPick: () => {},
+  }));
+  assert.ok(!html.includes('is-sentence') && !html.includes('is-item'));
+  assert.ok(html.includes('margin-inline-start:1em'));
+});
+
+test('explicit list rows keep long sentences within their own item', () => {
+  const html = render({ text: `1. ${first} ${second}\n2. ${third}` });
+  assert.equal((html.match(/class="bank-readable-line is-list"/g) || []).length, 2);
+});
+
+test('list question stems retain sibling and nested row layout with cloze answers', () => {
+  const { BankStem } = load(path.join(__dirname, '../src/bank/BankStem.tsx'));
+  const html = renderToStaticMarkup(React.createElement(BankStem, {
+    text: '1. {{c1}}\n  - {{c2}}\n2. **항목**', cloze: true, answerUnits: ['답 하나', '답 둘'],
+  }));
+  assert.equal((html.match(/class="bank-stem-line is-list"/g) || []).length, 3);
+  assert.ok(html.includes('margin-inline-start:1em'));
+  assert.ok(!html.includes('is-sentence'));
+  assert.ok(html.indexOf('답 하나') < html.indexOf('답 둘'));
+});
 
 test('long answers use sentence rows without changing the text or splitting abbreviations and decimals', () => {
   const html = render({ text });
@@ -86,4 +135,33 @@ test('legacy O/X and per-option explanations also use sentence rows', () => {
   assert.ok(choice.includes('bank-choice-explanation'));
   assert.equal((choice.match(/class="bank-readable"/g) || []).length, 1);
   assert.equal((choice.match(/class="bank-readable-line/g) || []).length, 3);
+});
+
+
+test('OX explanations color only authored key phrases blue, including legacy reasons', () => {
+  const a = { answer: 'X', answerUnits: ['X'], explanation: '판단은 **구별 키워드**로 한다.' };
+  const html = body({ format: 'ox' }, a);
+  assert.ok(html.includes('판단은 <strong class="bank-answer-point">구별 키워드</strong>로 한다.'));
+  assert.ok(!html.includes('class="bank-answer-point">X</strong>'));
+  const legacy = body({ format: 'ox' }, { answer: 'X', answerUnits: ['X', '근거는 **키워드**다.'] });
+  assert.ok(legacy.includes('<li>근거는 <strong class="bank-answer-point">키워드</strong>다.</li>'));
+});
+
+const { clozeDraft, clozeAnswer, editorQuestion, saveQuestion } = load(path.join(__dirname, '../src/bank/authoring.ts'));
+test('cloze edits derive ordered repeated answers and transport only hidden markers', () => {
+  assert.equal(clozeDraft('앞 {{c1}} 뒤 {{c2}} 반복 {{c1}}', ['A', '**B**', 'A']), '앞 {A} 뒤 {**B**} 반복 {A}');
+  const saved = clozeAnswer('앞 {A} 뒤 {**B**} 반복 {A}');
+  assert.equal(saved.question, '앞 {{c1}} 뒤 {{c1}} 반복 {{c1}}');
+  assert.deepEqual(Array.from(saved.answer_units), ['A', '**B**', 'A']);
+  assert.equal(saved.answer, '앞 A 뒤 **B** 반복 A');
+  assert.equal(clozeAnswer('값 { }').answer_units[0], '');
+});
+test('one answer edit synchronizes basic, list and OX while preserving legacy explanations', () => {
+  for (const format of ['basic', 'list', 'ox']) {
+    const answer = format === 'list' ? 'A\nB' : format === 'ox' ? 'O' : '새 답';
+    const saved = saveQuestion({ format, answer, answer_units: ['옛 답'] });
+    assert.equal(saved.answer_units.join('|'), format === 'list' ? 'A|B' : answer);
+  }
+  const legacy = editorQuestion({ format: 'ox', question: '발문', answer: 'X', answer_units: ['X', '판단 근거'] });
+  assert.equal(legacy.explanation, '판단 근거');
 });

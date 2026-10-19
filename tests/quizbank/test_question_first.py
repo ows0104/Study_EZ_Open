@@ -110,58 +110,6 @@ def test_structure_cannot_claim_unlinked_concepts_or_directions(bank, problem):
         question_first.apply_structure(question_first.as_draft(bank), metadata)
 
 
-@pytest.mark.parametrize("reported", [[], ["direct", "reverse"], ["trap"], ["direct", "direct"]])
-def test_plan_directions_are_derived_without_reclassifying_questions(bank, reported):
-    draft, metadata = question_first.as_draft(bank), structure_for(bank)
-    plan = metadata["retrieval_plan"][0]
-    cid = plan["concept_id"]
-    actual = sorted({q["retrieval_direction"] for q in bank["questions"] if q["concept_id"] == cid})
-    plan["directions"] = reported
-    original = copy.deepcopy(metadata)
-    resolved, corrections = question_first.resolve_directions(draft, metadata)
-    assert metadata == original
-    assert resolved["retrieval_plan"][0]["directions"] == actual
-    assert corrections == ([{"concept_id": cid, "reported": reported, "actual": actual}]
-                           if set(reported) != set(actual) or len(reported) != len(actual) else [])
-    assert resolved["assignments"] == metadata["assignments"]
-    assert resolved["concepts"] == metadata["concepts"]
-    linked = question_first.apply_structure(draft, resolved)
-    assert question_first.content_hash(linked) == question_first.content_hash(draft)
-
-
-@pytest.mark.parametrize("problem", ["missing", "duplicate", "unknown_concept", "missing_plan"])
-def test_direction_resolution_keeps_broken_links_blocked(bank, problem):
-    metadata = structure_for(bank)
-    if problem == "missing":
-        metadata["assignments"].pop()
-    elif problem == "duplicate":
-        metadata["assignments"][0] = copy.deepcopy(metadata["assignments"][1])
-    elif problem == "unknown_concept":
-        metadata["assignments"][0]["concept_id"] = "MISSING"
-    else:
-        metadata["retrieval_plan"].pop()
-    with pytest.raises(SessionError):
-        question_first.resolve_directions(question_first.as_draft(bank), metadata)
-
-
-def test_connect_records_raw_and_resolved_directions_in_one_cli_call(bank, tmp_path, monkeypatch):
-    metadata = structure_for(bank)
-    metadata["retrieval_plan"][0]["directions"] = []
-    calls = []
-    def call(*args):
-        calls.append(args)
-        return metadata, {"seconds": 1}
-    monkeypatch.setattr(coverage, "_call", call)
-    draft = question_first.as_draft(bank)
-    linked, resolved, info = question_first.connect(draft, [], "lecture", tmp_path)
-    assert len(calls) == 1 and info == {"seconds": 1}
-    assert json.loads((tmp_path / "learning-structure.raw.json").read_text(encoding="utf-8")) == metadata
-    audit = json.loads((tmp_path / "learning-structure.resolution.json").read_text(encoding="utf-8"))
-    assert audit["structure"] == resolved and len(audit["directionCorrections"]) == 1
-    assert question_first.content_hash(linked) == question_first.content_hash(draft)
-    assert validate_bank(linked, ["S1", "S2"])["pass"]
-
-
 def test_extract_is_source_only_and_resume_requires_matching_provenance(tmp_path, monkeypatch):
     pdf, out = tmp_path / "a.pdf", tmp_path / "out"
     make_pdf(pdf)
@@ -184,7 +132,7 @@ def test_extract_is_source_only_and_resume_requires_matching_provenance(tmp_path
         question_first.extract_points(pdf, "다른 강의", sources, next_out, reuse=out / "authored-points.json")
 
 
-@pytest.mark.parametrize("scenario", ["clean", "remaining_gap", "remaining_gap_directions", "graph_cycle", "pools", "cached_points"])
+@pytest.mark.parametrize("scenario", ["clean", "remaining_gap", "graph_cycle", "pools", "cached_points"])
 def test_pipeline_order_limits_and_publication_with_retained_findings(bank, tmp_path, monkeypatch, scenario):
     raw, pdf, out = tmp_path / "raw.md", tmp_path / "a.pdf", tmp_path / "out"
     raw.write_text("Question-first response without planning tables", encoding="utf-8")
@@ -214,8 +162,6 @@ def test_pipeline_order_limits_and_publication_with_retained_findings(bank, tmp_
         if scenario == "graph_cycle":
             a, b = metadata["assignments"][:2]
             a["prerequisites"], b["prerequisites"] = [b["question_id"]], [a["question_id"]]
-        if scenario == "remaining_gap_directions":
-            metadata["retrieval_plan"][0]["directions"] = []
         return metadata, {}
     monkeypatch.setattr(coverage, "_call", call)
     def convert(*args, **kwargs):
@@ -230,7 +176,7 @@ def test_pipeline_order_limits_and_publication_with_retained_findings(bank, tmp_
             assert any(q["option_pools"] for q in candidate["questions"])
         events.append("audit")
         data = report(candidate)
-        if scenario.startswith("remaining_gap"):
+        if scenario == "remaining_gap":
             data["checks"][0]["status"] = "gap"
         return web_audit.shape_report(data, candidate, kwargs["points"], 1), []
     monkeypatch.setattr(web_audit, "inspect", inspect)
@@ -256,7 +202,7 @@ def test_pipeline_order_limits_and_publication_with_retained_findings(bank, tmp_
         final = json.loads((out / "bank.json").read_text(encoding="utf-8"))
         for original, current in zip(bank["questions"], final["questions"]):
             assert {k: v for k, v in original.items() if k != "option_pools"} == {k: v for k, v in current.items() if k != "option_pools"}
-    elif scenario.startswith("remaining_gap"):
+    elif scenario == "remaining_gap":
         assert events.count("repair") == 3 and events.count("audit") == events.count("review") == 4
         assert events.count('graph') == 1 and result['requiresRevision'] and result['pass']
         assert result['learningStructure']['status'] == 'connected'

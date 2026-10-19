@@ -3,7 +3,7 @@ import copy
 import random
 import re
 
-from app.bank_validation.pool_checks import reviewed_ok
+from app.bank_validation.choices import pool_review_identity
 
 
 def _relabel(text: str, labels: dict[str, str]) -> str:
@@ -20,7 +20,7 @@ def realize_choices(q: dict, seed: str, previous: dict | None = None, *, use_poo
     rng = random.Random(seed)
     previous = previous or {}
     review = q.get("medicalReview") or {}
-    pools = q.get("option_pools", []) if use_pools and reviewed_ok(q, review) else []
+    pools = q.get("option_pools", []) if use_pools and review.get("verdict") == "ok" and review.get("option_pool_hash") == pool_review_identity(q) else []
     if pools:
         # Rotate pools on successive exposures, rather than repeatedly drawing
         # the same set. Candidate subsets and truth forms vary within each pool.

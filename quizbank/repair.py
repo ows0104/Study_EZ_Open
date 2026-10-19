@@ -63,8 +63,8 @@ def repair(bank: dict, raw: str, pdf: Path, title: str, sources: list[dict], fin
     prompt += "\n\n" + item_quality_guidance()
     written, info = _call(prompt, WRITTEN, work, model, "CLI 문항 수정·누락 보완")
     try:
-        corrected = json.loads((work / "repaired-bank.json").read_text(encoding="utf-8-sig"))
-        revised_points = json.loads((work / "repaired-points.json").read_text(encoding="utf-8-sig"))
+        corrected = json.loads((work / "repaired-bank.json").read_text(encoding="utf-8"))
+        revised_points = json.loads((work / "repaired-points.json").read_text(encoding="utf-8"))
         jsonschema.validate(corrected, BANK)
         jsonschema.validate(revised_points, POINTS)
     except (OSError, ValueError, jsonschema.ValidationError) as cause:

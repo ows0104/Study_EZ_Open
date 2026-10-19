@@ -79,8 +79,7 @@ def apply(bank: dict, report: dict) -> tuple[dict, dict]:
 
 
 def write(bank: dict, pdf: Path, title: str, out: Path, *, pdf_source: str = 'S1',
-          jokbo: Path | None = None, model: str | None = None,
-          related_questions: list[dict] | None = None) -> tuple[dict, dict, dict]:
+          jokbo: Path | None = None, model: str | None = None) -> tuple[dict, dict, dict]:
     work = out / 'explain'
     work.mkdir(exist_ok=True)
     subset = {**bank, 'questions': targets(bank)}
@@ -96,11 +95,6 @@ def write(bank: dict, pdf: Path, title: str, out: Path, *, pdf_source: str = 'S1
     if jokbo:
         (work / 'jokbo.md').write_text(jokbo.read_text(encoding='utf-8'), encoding='utf-8')
     prompt = PROMPT.read_text(encoding='utf-8') + '\n강의: ' + title
-    if related_questions:
-        (work / 'related-questions.json').write_text(json.dumps(related_questions, ensure_ascii=False), encoding='utf-8')
-        prompt += ('\nrelated-questions.json은 선행 문항·출처 충돌의 읽기 전용 맥락이다. '
-                   '필요한 관계와 조건을 확인하되 해당 문항의 해설·검수 판정을 다시 작성하지 않는다. '
-                   'annotations는 bank.json의 대상 문항에만 반환한다.')
     report, usage = _call(prompt, REPORT, work, model, '정답 확인·해설 작성')
     result, checked = apply(bank, report)
     (out / 'explanations.json').write_text(json.dumps(checked, ensure_ascii=False, indent=2), encoding='utf-8')

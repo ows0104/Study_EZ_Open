@@ -27,7 +27,6 @@ function load(file) {
 const { AnswerBody, QuestionBody, choiceScore } = load(path.join(__dirname, '../src/bank/BankQuestion.tsx'));
 const question = { format: 'basic', question_id: 'q1', question: '', options: [], matching_left: [], matching_right: [] };
 const answer = { answer: '', answerUnits: [], answerPairs: [], correctOrder: [], correctOptionIds: [], medicalReview: null, slides: [] };
-
 test('source differences are optional readable rows while unresolved issues stay visible', () => {
   const conflict = '판단: 장관 내 작용과 전신 치료를 구분한다.\n자료 1: 강의 p.18 — 경구 흡수가 낮다.\n자료 2: 족보 2023 — 과거 설사 치료 사용.\n근거: 흡수 특성과 치료 권고는 다른 판단이다.\n미해결: 과거 정답표 원문을 추가 확인해야 한다.';
   const html = renderToStaticMarkup(React.createElement(AnswerBody, {
@@ -157,7 +156,7 @@ test('Core single-item answers do not repeat identical prose; blank units use th
   assert.ok(single.includes('bank-short-answer'));
   assert.ok(!single.includes('<details'));
   const fallback = render({ answer: '원래 정답', answerUnits: ['  '] }, 'basic', 'Core');
-  assert.equal(fallback, '<p class="quiz-answer">원래 정답</p>');
+  assert.equal(fallback.match(/<p class="quiz-answer">.*?<\/p>/)[0], '<p class="quiz-answer">원래 정답</p>');
 });
 
 test('short answers do not replace O/X explanations, cloze sentences, or choice answers', () => {
@@ -168,7 +167,7 @@ test('short answers do not replace O/X explanations, cloze sentences, or choice 
 
 test('points are blue inline, preserve context, and do not repeat below the answer', () => {
   const html = render({ answer: 'AChE를 억제하여 전달을 개선한다.', answerUnits: ['AChE'] });
-  assert.equal(html, '<p class="quiz-answer"><strong class="bank-answer-point">AChE</strong>를 억제하여 전달을 개선한다.</p>');
+  assert.equal(html.match(/<p class="quiz-answer">.*?<\/p>/)[0], '<p class="quiz-answer"><strong class="bank-answer-point">AChE</strong>를 억제하여 전달을 개선한다.</p>');
 });
 
 test('shorthand points highlight only the keywords in the user-provided answer', () => {
@@ -204,21 +203,21 @@ test('case, spacing, and bold markup do not prevent an inline match', () => {
 
 test('overlapping and repeated points retain all answer text without duplicating it', () => {
   const html = render({ answer: 'NMDA receptor; NMDA.', answerUnits: ['NMDA', 'NMDA receptor'] });
-  assert.equal(html.replace(/<[^>]+>/g, ''), 'NMDA receptor; NMDA.');
+  assert.equal(html.replace(/<[^>]+>/g, ''), 'NMDA receptor\nNMDA.');
   assert.ok(!html.includes('bank-units'));
 });
 
-test('single O/X explanations and paraphrased points remain visible in blue', () => {
+test('single O/X explanations remain visible without coloring the whole explanation', () => {
   const html = render({ answer: 'X', answerUnits: ['말초에서만 작용한다.'] }, 'ox');
   assert.ok(html.includes('aria-label="해설"><h2>해설</h2>'));
-  assert.ok(html.includes('<li class="bank-answer-point">말초에서만 작용한다.</li>'));
+  assert.ok(html.includes('<li>말초에서만 작용한다.</li>'));
 });
 
 test('O and X show every explanation once, including a single or multiline unit', () => {
   for (const binary of ['O', 'X']) {
     const units = ['판단의 **기준**이다.\n조건도 확인한다.', '예외를 구분한다.'];
     const html = render({ answer: binary, answerUnits: units }, 'ox');
-    assert.ok(html.includes('<strong>기준</strong>'));
+    assert.ok(html.includes('<strong class="bank-answer-point">기준</strong>'));
     assert.ok(html.replace(/<[^>]+>/g, '').includes('판단의 기준이다.\n조건도 확인한다.'));
     assert.equal((html.match(/class="bank-readable-line is-indented"/g) || []).length, 1);
     assert.equal(html.split('예외를 구분한다.').length - 1, 1);
@@ -317,4 +316,18 @@ test('revealed cloze blanks, matching pairs, and sequence answers are highlighte
     .includes('<li class="bank-answer-point">'));
   assert.ok(render({ correctOrder: ['흡수', '분포'] }, 'sequence')
     .includes('class="bank-order bank-answer-point"'));
+});
+
+test('four repeated cloze markers reveal four answers in their original order', () => {
+  const props = {
+    question: { ...question, format: 'cloze', question: '흡수 {{c1}}, F {{c1}}; 흡수 {{c1}}, F {{c1}}.' },
+    picked: new Set(), onPick: () => {},
+  };
+  const hidden = renderToStaticMarkup(React.createElement(QuestionBody, { ...props, answer: null }));
+  assert.equal((hidden.match(/class="bank-blank"/g) || []).length, 4);
+  const revealed = renderToStaticMarkup(React.createElement(QuestionBody, {
+    ...props, answer: { ...answer, answerUnits: ['감소', '감소', '증가', '증가'] },
+  }));
+  assert.deepEqual([...revealed.matchAll(/class="bank-answer-point">([^<]+)</g)].map(match => match[1]),
+    ['감소', '감소', '증가', '증가']);
 });

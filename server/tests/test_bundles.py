@@ -117,6 +117,8 @@ def main() -> None:
 
     print("\n[1] 목록 — 덱만, 그리고 아직 아무것도 안 받은 상태")
     decks = client.get("/api/bundles/decks", headers=USER).json()["decks"]
+    scoped = client.get("/api/bundles/decks", params={"subject": "병리학", "start": "2026-08-13", "end": "2026-08-13"}, headers=USER).json()["decks"]
+    check("과목·날짜로 조회 범위를 좁힌다", len(scoped) == 2 and all(d["subject"] == "병리학" and d["date"] == "2026-08-13" for d in scoped), scoped)
     check("덱 8개(편 4 × 갈래 2)", len(decks) == 8, len(decks))
     check("필기는 안 섞인다", {d["kind"] for d in decks} == {"pre", "main"}, {d["kind"] for d in decks})
     check("아무것도 안 받았다", not any(d["grabbed"] for d in decks))

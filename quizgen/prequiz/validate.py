@@ -72,9 +72,6 @@ from .schema import (
 # 「필기 강조」보다 앞서는 근거. 하나라도 있으면 `annotation` 배지를 뗀다.
 STRONGER_THAN_ANNOTATION = ("exam", "clinical", "later")
 
-# 근거 발췌는 관리자 검토용이다. 학생의 질문·힌트에서만 자료 안내를 찾는다.
-RE_PREVIEW_NARRATION = re.compile(r"설명\s*본|예습\s*(?:자료|원문|본문|글)")
-
 
 def prune_annotation(tags: list) -> list:
     """다른 근거가 있으면 「필기 강조」 배지를 뗀다(2026-10-05 관리자 — 「필기 강조는 다른
@@ -273,9 +270,6 @@ def validate(raw: dict, prep: dict, jokbo: dict | None,
             flags[i].append("missing_difficulty")
         if difficulty and bool(c.get("challenge")) != (difficulty == "challenge"):
             flags[i].append("difficulty_challenge_mismatch")
-        if any(RE_PREVIEW_NARRATION.search(text)
-               for text in (q, support.get("hint") or "")):
-            flags[i].append("preview_narration")
         # 옛 카드의 재검토에는 새 칸을 강제하지 않는다. 새 생성은 note 입력을 전달한다.
         if "learning_support" in c or preview_text is not None:
             if any(not (support.get(k) or "").strip() for k in ("hint", "scope", "lecture_focus")):

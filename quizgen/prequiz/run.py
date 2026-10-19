@@ -429,7 +429,6 @@ class Runner(BaseRunner):
             # 누출 수선 프롬프트는 복습과 함께 쓴다 — 고치는 대상이 예습·복습에서 같다.
             task = (PROMPT_ROOT / "repair_leak.md").read_text(
                 encoding="utf-8").replace("{raw}", raw)
-            task += "\n\n" + (PROMPTS / "voice.md").read_text(encoding="utf-8")
             self.agent(task + "\n\n" + "\n\n".join(body), f"누출수선{rnd}",
                        resume=bool(self.sid))
             ledger.append(self.out, "누출 수선", seconds=time.time() - t, cost=self.pend_cost,
@@ -478,7 +477,6 @@ class Runner(BaseRunner):
             task = ((PROMPTS / "repair.md").read_text(encoding="utf-8")
                     .replace("{raw}", raw)
                     .replace("{dir}", self.out.resolve().as_posix()))
-            task += "\n\n" + (PROMPTS / "voice.md").read_text(encoding="utf-8")
             self.agent(task + "\n\n" + "\n\n".join(body), f"수선{rnd}",
                        resume=bool(self.sid))
             ledger.append(self.out, "수선", seconds=time.time() - t, cost=self.pend_cost,
@@ -487,9 +485,6 @@ class Runner(BaseRunner):
 
             ids = [c["id"] for c in bad if c.get("id")]
             self.validate()
-            # A repair can introduce an answer in the question. Fix it before
-            # the reproduction command rejects the entire retry.
-            self.leak_repair()
             self.reproduce(only=ids)
             if len(self.defects()) >= len(bad) and len(self.violations()) >= len(viol):
                 print("   줄지 않았다. 수선을 멈춘다.", flush=True)

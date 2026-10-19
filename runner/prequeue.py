@@ -60,7 +60,7 @@ import unicodedata
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from . import deck, filenames, publish, runlayout
+from . import deck, filenames, publish
 from . import preview as preview_mod
 
 QUEUE_NAME = "prequeue.json"
@@ -302,13 +302,6 @@ def prepare(targets: list[Target], runs_dir: Path, *, force: bool = False) -> li
         # 덮어쓰고 나면 링크가 바뀌었다는 사실이 사라진다.
         standing = preview_mod.read_url(run_dir / "preview.md")
         built = (run_dir / "pre_items.final.json").is_file()
-        # publish can refresh preview.md before the queued build starts. Compare
-        # against the completed attempt's immutable input as well as the cache.
-        meta = deck._load(run_dir / "pre_run.meta.json") or {}
-        version = (meta.get("attempt") or {}).get("version")
-        built_note = (deck._attempt(run_dir, "note.md", deck.PRE, version)
-                      if version else run_dir / "note.md")
-        built_url = preview_mod.read_url(built_note) if built else ""
 
         if standing == target.link.share_url:
             target.notes.append("preview.md 그대로 — 같은 대화다")
@@ -344,13 +337,8 @@ def prepare(targets: list[Target], runs_dir: Path, *, force: bool = False) -> li
         elif built and target.occupancy == NEWER:
             target.state = STALE
             target.notes.append("작년 필기가 새 판으로 갈렸다 — 다시 만든다")
-        elif built and (standing != target.link.share_url
-                        or (built_url and built_url != target.link.share_url)):
-            target.state = STALE
-            target.force = True
-            target.notes.append("퀴즈를 만든 예습 대화가 바뀌었다 — 처음부터 다시 만든다")
         elif built:
-            target.state = DONE
+            target.state = DONE if standing == target.link.share_url else STALE
         else:
             target.state = READY
 
@@ -402,32 +390,11 @@ def build_one(target: Target, runs_dir: Path, repo_root: Path, *, model: str = "
     if not note.is_file():
         return False, "preview.md가 없다 — 예습 대화를 먼저 받아야 한다"
 
-    options = list(extra or [])
-    if target.occupancy == NEWER or target.force:
-        options.append("--force")
-    elif target.state == READY and target.occupancy == SAME and not options:
-        # Resume only an incomplete attempt for these exact inputs. A retry
-        # otherwise opens a new version and repeats all completed model stages.
-        work = runlayout.work_dir(run_dir, runlayout.PREQUIZ)
-        try:
-            cfg = json.loads((work / "prequiz.config.json").read_text(encoding="utf-8"))
-            matches = (
-                cfg.get("pdf") == target.prev_pdf
-                and cfg.get("subject") == target.link.subject
-                and cfg.get("lecture") == (target.this_lecture or target.this_title or target.link.title)
-                and (work / "note.md").read_bytes() == note.read_bytes()
-                and not deck.apkg_of(work, deck.PRE)
-            )
-        except (OSError, ValueError, AttributeError):
-            matches = False
-        if matches and not any(a.startswith("--resume") for a in options):
-            options += ["--resume", str(work)]
-
     result = deck.run_pre(
         pdf=target.prev_pdf, run_id=target.prev_run_id, subject=target.link.subject,
         lecture=target.this_lecture or target.this_title or target.link.title, note=str(note),
         runs_dir=runs_dir, repo_root=repo_root, model=model, timeout=timeout,
-        extra=options)
+        extra=(extra or []) + (["--force"] if target.occupancy == NEWER or target.force else []))
     if not result.ok:
         return False, f"{result.error} (로그: {result.log})"
 

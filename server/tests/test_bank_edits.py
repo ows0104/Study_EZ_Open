@@ -93,6 +93,18 @@ def main() -> None:
     assert card("CNS-C36")["edit"]["original"]["matching_right"] == ["A", "B", "B"]
     print("PASS: CNS-C05 foundation and CNS-C36 duplicate repair, atomic rejection and original preservation")
 
+    inline = copy.deepcopy(card("Q2")["question"])
+    inline.update(format="cloze", question="앞은 {A}, 뒤는 {B}, 다시 {A}다.",
+                  answer="stale", answer_units=["stale"])
+    saved = decide("Q2", "edit", inline)
+    assert saved.status_code == 200, saved.text
+    compiled = card("Q2")["question"]
+    assert compiled["question"] == "앞은 {{c1}}, 뒤는 {{c1}}, 다시 {{c1}}다."
+    assert compiled["answer_units"] == ["A", "B", "A"]
+    assert compiled["answer"] == "앞은 A, 뒤는 B, 다시 A다."
+    assert decide("Q2", "reset").status_code == 200
+    print("PASS: inline cloze edits compile ordered answers and hide answers in stored stems")
+
     assert client.put(f"{ADMIN}/bank/open", headers=ADMIN_H, json={"open": True}).status_code == 200
     client.post(f"{BASE}/bank/session/start", headers=ADMIN_H, json={"size": 5})
     served = client.post(f"{BASE}/bank/next", headers=ADMIN_H).json()

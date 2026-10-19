@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import type { DeckKind } from "../types/jobs";
 
 /**
  * 어느 편에 덱이 있고 무엇을 받아 갔나. **모아받기 버튼이 보는 유일한 값이다.**
  *
- * 학기 전체를 한 번에 받아 둔다(400줄쯤). 하루 버튼은 날짜 머리마다 서므로
- * 날짜별로 물으면 한 주를 그리는 데 열 번을 부른다.
+ * 기능을 펼친 뒤 현재 주 또는 선택한 과목만 읽는다. 날짜별 버튼은 주 단위 응답을 공유한다.
  *
  * **캘린더의 `marks`·`grabbed` 로는 못 센다.** 거기 `marks.prequiz` 는 덱이
  * 아니라 웹 문항이 있어도 참이고, `grabbed.pre` 는 작년 필기만 받아도 참이다.
@@ -37,27 +36,39 @@ export type BundleScope =
 /**
  * 덱 목록을 한 번 받아 두고, 받아 간 뒤에는 다시 읽는다.
  *
- * **`CalendarPage` 한 곳에서만 부른다.** 날짜 머리 다섯과 열려 있는 패널이 같은
- * 값을 봐야 하고, 칸마다 훅을 걸면 강의 수만큼 요청이 붙는다.
+ * 기본으로 조회하지 않는다. 주간 모아받기와 강의 패널의 블록 모아받기가
+ * 각자 열린 동안에만 해당 범위를 읽는다.
  */
-export function useBundleDecks() {
+export function useBundleDecks(enabled = false, query = "") {
   const [decks, setDecks] = useState<BundleDeck[] | null>(null);
   const [error, setError] = useState("");
+  const pending = useRef<AbortController | null>(null);
 
   const reload = useCallback(() => {
-    api<{ decks: BundleDeck[] }>("/api/bundles/decks")
+    if (!enabled) return;
+    pending.current?.abort();
+    const controller = new AbortController();
+    pending.current = controller;
+    setError("");
+    api<{ decks: BundleDeck[] }>(`/api/bundles/decks${query ? `?${query}` : ""}`, { signal: controller.signal })
       .then((answer) => {
+        if (controller.signal.aborted) return;
         setDecks(answer.decks);
         setError("");
       })
-      .catch((cause: Error) => setError(cause.message));
-  }, []);
+      .catch((cause: Error) => { if (!controller.signal.aborted) setError(cause.message); });
+  }, [enabled, query]);
 
-  useEffect(reload, [reload]);
   useEffect(() => {
+    setDecks(null); setError("");
+    reload();
+    return () => pending.current?.abort();
+  }, [reload]);
+  useEffect(() => {
+    if (!enabled) return;
     window.addEventListener("studyez:bank-downloaded", reload);
     return () => window.removeEventListener("studyez:bank-downloaded", reload);
-  }, [reload]);
+  }, [enabled, reload]);
   return { decks, error, reload };
 }
 

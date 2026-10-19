@@ -1,6 +1,6 @@
 import type { BankAnswer, BankQuestion } from "../types/bank";
 import { Stem } from "../lecture/Stem";
-import { shuffled } from "./BankQuestion";
+import { presentationSeed, shuffled } from "./presentation";
 import "../styles/sequence.css";
 
 export function sequenceComplete(q: BankQuestion, order: string[]) {
@@ -31,7 +31,7 @@ export function SequenceQuestion({ question: q, answer, order, disabled, onSelec
       {answer ? "선택한 순서와 정답을 확인하세요." : "항목을 순서대로 누르면 아래에 쌓입니다. 선택한 항목을 다시 누르면 취소할 수 있습니다."}
     </p>
     <ul className="bank-sequence-options" aria-label="순서형 보기">
-      {shuffled(q.sequence_items, q.question_id).map(item => {
+      {shuffled(q.sequence_items, presentationSeed(q)).map(item => {
         const selected = order.includes(item);
         return <li key={item}>
           <button type="button" className={`bank-sequence-choice${selected ? " is-picked" : ""}`}

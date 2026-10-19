@@ -3,7 +3,7 @@ import type { Me } from "./types/account";
 import type { TimetableEvent } from "./types/lectures";
 
 /**
- * 첫 화면에 필요한 두 요청을 같이 띄운다.
+ * 홈에서만 계정과 가벼운 시간표를 같이 띄운다. 다른 화면은 계정만 읽는다.
  *
  * 껍데기(`App`)가 `me`를 받기 전에는 "불러오는 중"에서 멈추므로 `CalendarPage`가
  * 마운트조차 못 한다. 그래서 아무것도 안 하면 두 요청이 **직렬로 선다** —
@@ -21,9 +21,21 @@ type Timetable = { events: TimetableEvent[] };
 let mePending: Promise<Me> | null = null;
 let meValue: Me | null = null;
 let timetablePending: Promise<Timetable> | null = null;
+let timetableInFlight: Promise<Timetable> | null = null;
 let timetableStarted = false;
 
-export function startFirstScreen(): void {
+/** 시간표의 제목·시간만 읽는다. 학습 집계는 화면에서 요청할 때 별도로 읽는다. */
+export function loadTimetable(): Promise<Timetable> {
+  if (!timetableInFlight) {
+    const pending = api<Timetable>("/api/timetable?include_study=false");
+    timetableInFlight = pending;
+    const clear = () => { if (timetableInFlight === pending) timetableInFlight = null; };
+    pending.then(clear, clear);
+  }
+  return timetableInFlight;
+}
+
+export function startFirstScreen(prefetchTimetable = false): void {
   if (!mePending) {
     mePending = api<Me>("/api/me").then((value) => {
       meValue = value;
@@ -33,9 +45,9 @@ export function startFirstScreen(): void {
     // 한 번 받아 두어도 원래 promise는 거절된 채 남아 호출부가 다시 받는다.
     mePending.catch(() => {});
   }
-  if (!timetableStarted) {
+  if (prefetchTimetable && !timetableStarted) {
     timetableStarted = true;
-    timetablePending = api<Timetable>("/api/timetable");
+    timetablePending = loadTimetable();
     timetablePending.catch(() => {});
   }
 }
@@ -60,13 +72,18 @@ export function peekMe(): Me | null {
  */
 export function takeTimetable(): Promise<Timetable> {
   const pending = timetablePending;
-  timetablePending = null;
-  return pending ?? api<Timetable>("/api/timetable");
+  if (pending) {
+    // StrictMode의 같은 커밋 안 재마운트도 이미 완료된 선조회 응답을 공유한다.
+    const clear = () => { if (timetablePending === pending) timetablePending = null; };
+    pending.then(clear, clear);
+  }
+  return pending ?? loadTimetable();
 }
 
 /** 퀴즈에서 바로 시작한 경우에도 학습 전 미리 받은 시간표를 다시 쓰지 않는다. */
 export function invalidateTimetable(): void {
   timetablePending = null;
+  timetableInFlight = null;
 }
 
 /**
@@ -79,5 +96,6 @@ export function resetFirstScreen(): void {
   mePending = null;
   meValue = null;
   timetablePending = null;
+  timetableInFlight = null;
   timetableStarted = false;
 }

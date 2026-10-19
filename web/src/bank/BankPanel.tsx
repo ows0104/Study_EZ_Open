@@ -11,7 +11,7 @@ import { ExtensionSetup } from "../bridge/ExtensionSetup";
 import { ActionCard, PanelGroup, PanelTool } from "../calendar/panelShared";
 import { jobMoving, progressLine, runnerAlive } from "../jobProgress";
 import { Link } from "react-router-dom";
-import { bankHref } from "../links";
+import { bankCatalogHref, bankHref } from "../links";
 import type { BankSummary } from "../types/bank";
 import type { LectureDetail, LectureRef } from "../types/lectures";
 import type { PrequizJob, RunnerBeat } from "../types/jobs";
@@ -27,13 +27,6 @@ export function BankPanel({ lecture, detail }: { lecture: Pick<LectureRef, "subj
   if (!isAdmin) {
     return (
       <>
-      {bank?.shareUrl ? <PanelGroup tone="bank" title="문제은행 링크">
-        <ActionCard shape="is-key" hit={
-          <a className="panel-action-hit" href={bank.shareUrl} target="_blank" rel="noreferrer">
-            <strong>기본 링크</strong>
-          </a>
-        } />
-      </PanelGroup> : null}
       <PanelGroup tone="main" title="Main-Quiz" note="개념·방향별 반복">
         {bank?.usable ? <StudyCard lecture={lecture} bank={bank} />
           : <p className="panel-hint">아직 공개된 문제가 없습니다.</p>}
@@ -65,6 +58,7 @@ function StudyCard({ lecture, bank, tools }: {
         }
         tools={tools}
       />
+      <p className="panel-hint"><Link to={bankCatalogHref(lecture)}>전체 문제 · 슬라이드 순서로 보기 →</Link></p>
     </>
   );
 }

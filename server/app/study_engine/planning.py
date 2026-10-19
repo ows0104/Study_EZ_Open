@@ -1,17 +1,13 @@
-"""하루 목표는 한국 자정의 기록으로 고정하고 현재 기록으로 남은 분량만 갱신한다."""
+"""하루 목표는 한국 09시의 기록으로 고정하고 현재 기록으로 남은 분량만 갱신한다."""
 
 import math
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 from .engine import dimension_key, empty_state
 from .mastery import coverage, mastery_concepts
 from .memory import DAY_MS, next_stability
 
-KOREA = timezone(timedelta(hours=9))
-
-
-def day_start(now: int) -> int:
-    return int(datetime.fromtimestamp(now / 1000, KOREA).replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000)
+from .study_day import KOREA, day_start
 
 
 def state_before(bank: dict, state: dict, cutoff: int) -> dict:

@@ -26,7 +26,7 @@ from app.bank_edits import current_review
 from app.bank_validation.priorities import priority_tier, is_advanced
 from app.routes.common import storage_or_503
 
-EXPORT_VERSION = 2
+EXPORT_VERSION = 3
 MODEL_ID = 1867040701
 CSS = """
 .card { font-family: Arial, sans-serif; font-size: 20px; line-height: 1.65;

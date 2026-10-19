@@ -65,6 +65,7 @@ _AI = {"assistant", "model", "ai", "bot", "claude", "chatgpt", "gemini"}
 class Turn:
     role: str          # 'user' | 'assistant'
     text: str
+    created_at: float | None = None
 
 
 @dataclass
@@ -113,7 +114,7 @@ def _flatten_text(value) -> str:
     return ""
 
 
-def _walk(node, out: list[Turn]) -> None:
+def _walk(node, out: list[Turn], max_turn_chars: int = MAX_TURN_CHARS) -> None:
     """JSON을 훑어 대화처럼 생긴 마디를 모은다."""
     if isinstance(node, dict):
         role = next((_normalize_role(node[k]) for k in _ROLE_KEYS if k in node), None)
@@ -125,13 +126,13 @@ def _walk(node, out: list[Turn]) -> None:
                     if text.strip():
                         break
             if text.strip():
-                out.append(Turn(role, _clean_text(text)[:MAX_TURN_CHARS]))
+                out.append(Turn(role, _clean_text(text)[:max_turn_chars]))
                 return          # 한 턴 안을 더 파고들지 않는다 - 중복이 생긴다
         for value in node.values():
-            _walk(value, out)
+            _walk(value, out, max_turn_chars)
     elif isinstance(node, list):
         for value in node:
-            _walk(value, out)
+            _walk(value, out, max_turn_chars)
 
 
 def _json_blobs(html: str):
@@ -240,7 +241,7 @@ def _clean_text(text: str) -> str:
     return re.sub(r"[ \t]+\n", "\n", text).strip()
 
 
-def _from_stream(html: str) -> list[Turn]:
+def _from_stream(html: str, max_turn_chars: int = MAX_TURN_CHARS) -> list[Turn]:
     """React Router 스트림에서 대화를 뽑는다.
 
     메시지 한 개는 이렇게 생겼다.
@@ -300,7 +301,7 @@ def _from_stream(html: str) -> list[Turn]:
 
             when = message.get("create_time")
             collected.append((float(when) if isinstance(when, (int, float)) else float(index),
-                              Turn(role, _clean_text(text)[:MAX_TURN_CHARS])))
+                              Turn(role, _clean_text(text)[:max_turn_chars], float(when) if isinstance(when, (int, float)) else None)))
 
         if len(collected) >= 2:
             # 평평한 배열의 순서는 대화 순서가 아니다. 시각으로 세운다.
@@ -309,8 +310,8 @@ def _from_stream(html: str) -> list[Turn]:
     return []
 
 
-def _extract(html: str) -> tuple[list[Turn], str]:
-    turns = _from_stream(html)
+def _extract(html: str, max_turn_chars: int = MAX_TURN_CHARS) -> tuple[list[Turn], str]:
+    turns = _from_stream(html, max_turn_chars)
     if len(turns) >= 2:
         return turns, "reactRouter stream"
 
@@ -321,7 +322,7 @@ def _extract(html: str) -> tuple[list[Turn], str]:
             except ValueError:
                 continue
             found: list[Turn] = []
-            _walk(data, found)
+            _walk(data, found, max_turn_chars)
             if len(found) >= 2:
                 return found, f"script[{index}] JSON"
     return [], "실패"
@@ -330,7 +331,7 @@ def _extract(html: str) -> tuple[list[Turn], str]:
 PREVIEW_NAME = "preview.md"
 
 
-def fetch(url: str, timeout: int = 30) -> Preview:
+def fetch(url: str, timeout: int = 30, *, max_turn_chars: int = MAX_TURN_CHARS) -> Preview:
     """공유 페이지를 내려받아 대화를 뽑는다. 못 뽑으면 예외로 멈춘다."""
     if not any(host in url for host in _SHARE_HOSTS):
         raise ValueError(
@@ -351,7 +352,7 @@ def fetch(url: str, timeout: int = 30) -> Preview:
     except urllib.error.URLError as error:
         raise SystemExit(f"공유 페이지에 닿지 못했다: {error.reason}") from error
 
-    turns, strategy = _extract(html)
+    turns, strategy = _extract(html, max_turn_chars)
     preview = Preview(url=url, strategy=strategy, turns=turns)
 
     if not turns:

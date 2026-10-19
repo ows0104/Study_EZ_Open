@@ -2,7 +2,7 @@
 
     python -m runner agent              계속 돈다 (Ctrl+C로 멈춘다)
     python -m runner agent --once       한 바퀴만 — 붙는지 볼 때
-    python -m runner agent 병리학        이번 블럭 안에서 처리 과목을 좁힌다
+    python -m runner agent 병리학        쓸기를 이 과목으로 좁힌다
 
 ## 왜 크론을 걷어냈나
 
@@ -119,7 +119,7 @@ from datetime import date as Date
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from . import ahead, blocks, deck, eta, gate, prequeue, publish, watch
+from . import ahead, deck, eta, gate, prequeue, publish, watch
 
 # Quiz Bank(2026-10-04). 만드는 것은 ChatGPT 이고 러너는 받은 응답을 정리·검토해 올린다 —
 # `runner bank` 가 업로드까지 스스로 끝내므로 뒤의 publish 를 안 지난다.
@@ -232,14 +232,12 @@ class Job:
 
 class Agent:
     def __init__(self, client: publish.Client, runs_dir: Path, repo_root: Path, *,
-                 subject: str = "", timetable: Path | None = None,
-                 sweep_seconds: int = SWEEP_SECONDS,
+                 subject: str = "", sweep_seconds: int = SWEEP_SECONDS,
                  timeout: int = BUILD_TIMEOUT, workers: int = WORKERS, announce=print):
         self.client = client
         self.runs_dir = runs_dir
         self.repo_root = repo_root
         self.subject = subject
-        self.timetable = Path(timetable or blocks.DEFAULT_SOURCE).resolve()
         self.sweep_seconds = sweep_seconds
         self.timeout = timeout
         self.workers = max(1, workers)
@@ -367,7 +365,6 @@ class Agent:
                             # 다음 편의 「남은 시간」이 이 값에서 나온다.
                             eta.observe(self.runs_dir, job.kind, posted, now - stage_at)
                         posted, stage_at = stage, now
-                        self.say(f"[{stamp()}] {job.label} — {stage_prefix}{stage}")
                         guess = eta.estimate(self.runs_dir, job.kind, stage,
                                              elapsed=now - started, stage_elapsed=0)
                         answer = self.report(job, stage=stage_prefix + stage,
@@ -467,7 +464,7 @@ class Agent:
             argv.append("--force")
         if job.kind == deck.MAIN and job.strategy:
             argv += ["--strategy", job.strategy]
-        return argv + ["--runs", str(self.runs_dir), "--timetable", str(self.timetable)]
+        return argv + ["--runs", str(self.runs_dir)]
 
     def building_seats(self, job: Job) -> set[Path]:
         """이 일감이 쓰는 자리. 표시를 놓고 지우는 곳이 여기다.
@@ -739,27 +736,24 @@ class Agent:
             return False
 
     def sweep_subjects(self) -> tuple[list[str], str]:
-        """쓸기와 일감 처리 대상 과목. **매 회차 시간표에 다시 물어본다.**
+        """이번 쓸기가 볼 과목. **매 회차 시간표에 다시 물어본다.**
 
-        과목을 손으로 줬으면 이번 블럭 안에서 그 과목으로 좁힌다. 안 줬으면
-        오늘의 블럭에 걸린 과목을 푼다 — 그래서 시험이 끝나고 다음 블럭이 서면 **아무도 안 건드려도
+        `--subject`를 손으로 줬으면 그것이 이긴다. 안 줬으면 오늘의 블럭에 걸린
+        과목을 푼다 — 그래서 시험이 끝나고 다음 블럭이 서면 **아무도 안 건드려도
         바뀐다.** 예약 작업에 `-Subject 병리학` 이 박힌 채 남아 2026-08-30 에
         기생충학이 쓸기 밖에 있었던 것이 이 자리를 만든 이유다.
 
-        시간표를 못 읽거나 대상 과목이 없으면 처리하지 않는다. 빈 목록을 전체
-        과목으로 넓히면 지난 블럭 자료까지 업로드·생성하게 된다.
+        못 풀면 `--all`로 물러난다. 쓸기는 만드는 일이 아니라 올리는 일이라,
+        넓게 여는 값이 놓치는 값보다 싸다.
         """
+        if self.subject:
+            return [self.subject], ""
         today = Date.today()
         try:
             picked, note = ahead.subjects_in_block(
-                watch.DEFAULT_ROOT, str(today.year), self.runs_dir, today,
-                self.timetable)
+                watch.DEFAULT_ROOT, str(today.year), self.runs_dir, today)
         except (OSError, ValueError, sqlite3.Error) as cause:
-            return [], f"시간표를 못 읽었다 ({cause}) — 파일 처리를 중단한다"
-        if self.subject:
-            if self.subject not in picked:
-                return [], f"{note} — 지정 과목 {self.subject}이 이번 블럭에 없어 파일 처리를 중단한다"
-            picked = [self.subject]
+            return [], f"시간표를 못 읽었다 ({cause}) — 과목 전부를 쓴다"
         return picked, note
 
     def sweep(self) -> None:
@@ -768,19 +762,16 @@ class Agent:
         subjects, note = self.sweep_subjects()
         if note:
             self.say(f"[{stamp()}] 쓸기 — {note}")
-        if not subjects:
-            self.say(f"[{stamp()}] 쓸기 — 대상 과목을 확인할 수 없어 파일 처리를 중단한다")
-            return
-        for subject in subjects:
-            argv = [sys.executable, "-m", "runner", "publish", subject,
-                    "--runs", str(self.runs_dir), "--timetable", str(self.timetable)]
+        for subject in subjects or [""]:
+            argv = [sys.executable, "-m", "runner", "publish"]
+            argv += [subject] if subject else ["--all"]
             # **과목마다 로그를 따로 쓴다.** `_run`이 파일을 덮어쓰기로 열어서,
             # 한 파일에 몰면 마지막 과목 것만 남는다.
-            log = self.runs_dir / f"agent.sweep.{subject}.log"
+            log = self.runs_dir / f"agent.sweep.{subject or 'all'}.log"
             with self._uploading:
                 code, lines = self._run(argv, log)
             line = first_match(lines, r"(올린 파일 .+)$") or f"종료 코드 {code}"
-            self.say(f"[{stamp()}] 쓸기 {subject} — {line}")
+            self.say(f"[{stamp()}] 쓸기 {subject or '전부'} — {line}")
 
     # ── 루프 ─────────────────────────────────────────────────────────
     def tick(self, slot: str = "w1") -> bool:
@@ -789,21 +780,12 @@ class Agent:
         **쓸기는 여기 없다**(2026-09-01). 따로 도는 실이 맡는다(`sweep_loop`) —
         같이 두면 한 편을 만드는 45분 동안 아무것도 안 올라간다.
         """
-        subjects, note = self.sweep_subjects()
-        if not subjects:
-            self.say(f"[{stamp()}] {slot} 일감 처리 중단 — {note or '이번 블럭의 대상 과목이 없다'}")
-            return False
         try:
             job = self.claim(slot)
         except publish.PublishError as cause:
             self.say(f"[{stamp()}] {slot} 서버에 못 물었다 — {cause}")
             return False
         if job is None:
-            return False
-        if job.subject not in subjects:
-            message = f"이번 블럭 처리 대상({', '.join(subjects)}) 밖의 과목이라 보류했다"
-            self.say(f"[{stamp()}] {slot} {job.label} — {message}")
-            self.report(job, state="held", stage="", message=message)
             return False
         if not self.take(job, slot):
             # 서버가 같은 편을 둘에게 줬다는 뜻이다. 서버도 막지만, 옛 러너가
@@ -885,22 +867,19 @@ class Agent:
         """
         if not self.take_lock():
             return 3
-        subjects, note = self.sweep_subjects()
-        if not subjects:
-            self.say(f"[{stamp()}] 러너 시작 중단 — {note or '이번 블럭의 대상 과목이 없다'}")
-            self.lock_path().unlink(missing_ok=True)
-            return 2
-        self.say(f"[{stamp()}] 처리 범위 — {note}"
-                 + (f" · 지정 과목 {self.subject}" if self.subject else ""))
         self.say(f"[{stamp()}] 러너가 붙었다 — {self.client.base}"
                  + f" · 일꾼 {self.workers}명"
-                 + (f" · 처리 과목 {self.subject}" if self.subject
-                    else " · 처리는 매 회차 시간표에서 이번 블럭의 과목을 푼다")
+                 + (f" · 쓸기 {self.subject}" if self.subject
+                    else " · 쓸기는 매 회차 시간표에서 이번 블럭의 과목을 푼다")
                  + f" · {poll}초마다 물어본다")
         self.last_sweep = time.monotonic()
         crew = [threading.Thread(target=self.work_loop, args=(f"w{n + 1}", poll),
                                  name=f"studyez-w{n + 1}", daemon=True)
                 for n in range(self.workers)]
+        if '약리학' in subjects:
+            from .share_monitor import watch as watch_shares
+            crew.append(threading.Thread(target=watch_shares, args=(self.client, self._stop),
+                                         name='studyez-share-check', daemon=True))
         if self.sweep_seconds:
             crew.append(threading.Thread(target=self.sweep_loop,
                                          name="studyez-sweep", daemon=True))

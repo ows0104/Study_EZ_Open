@@ -4,6 +4,11 @@ from quizbank import web_priorities
 from quizbank.session import SessionError
 
 
+def test_must_know_and_historical_essential_have_the_same_priority():
+    raw='### Q001 | basic | Must-Know | 5 | 2 | direct\n문제: 지식 단위\n정답: ["답"]'
+    assert web_priorities.read(raw)==web_priorities.read(raw.replace('Must-Know','Essential'))
+
+
 def test_original_web_labels_are_read_from_three_historical_formats():
     raw = '''
 | question_id | tier | importance | question |

@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from app.auth import APP_POLICY, ROLE_ADMIN, CurrentUser, get_current_user
 from app.database import Base, SessionLocal, engine
 from app.main import app
-from app.models import Asset, BankState, Lecture, QuizBank, PrequizJob
+from app.models import Asset, BankState, Lecture, QuizBank
 from app.bank_edits import current_review
 from app.bank_validation.coverage import bank_hash
 from app.bank_validation.schema import without_retired
@@ -90,15 +90,6 @@ def main():
     with SessionLocal() as db:
         current = db.get(BankState, ("learner", "local", "demo"))
         assert not current.state["session"]["continue_after_goal"] and current.state["history"] == state["history"]
-        db.get(PrequizJob, first.json()["jobId"]).state = "done"
-        db.commit()
-    assert client.post(base + "/bank/audit").status_code == 200
-    retry_data = client.get(base + "/bank-response", headers=runner).json()
-    failed = client.put(base + "/bank", headers=runner, json={"respondedAt": retry_data["respondedAt"], "baseBuildId": "old-build", "message": "일시적 실패"})
-    assert failed.status_code == 200 and failed.json()["status"] == "ready"
-    retry_data = client.get(base + "/bank-response", headers=runner).json()
-    assert retry_data["baseBuildId"] == "old-build" and retry_data["existingBank"]
-    assert client.put(base + "/bank", headers=runner, json={"respondedAt": retry_data["respondedAt"], "message": "구버전 재시도"}).status_code == 409
     print("PASS: coverage permissions, deduplication, append-only cards, stale upload rejection, progress preservation, stale audit")
 
 

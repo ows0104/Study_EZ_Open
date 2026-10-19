@@ -211,10 +211,6 @@ def inspect(bank: dict, raw: str, pdf: Path, title: str, sources: list[dict], ou
             "새 웹 출력 형식을 이유로 기존 학습 구조를 삭제하거나 오류로 판정하지 않는다."
     prompt += "\n\n" + item_quality_guidance()
     raw_report, info = _call(prompt, REPORT, work, model, "원본·포인트·중복 검수")
-    # Keep the one completed CLI opinion even when semantic report validation fails.
-    # Recovery must not need another content review merely to recover its findings.
-    (out / "web-audit.raw.json").write_text(json.dumps(raw_report, ensure_ascii=False, indent=2), encoding="utf-8")
-    (out / "web-audit.usage.json").write_text(json.dumps(info, ensure_ascii=False, indent=2), encoding="utf-8")
     pdf_source = next((s["id"] for s in sources if s.get("filename") == pdf.name), "S1")
     report = shape_report(raw_report, bank, points, count, pdf_source=pdf_source)
     report.update(sourceFilename=pdf.name, sourceSha256=hashlib.sha256(pdf.read_bytes()).hexdigest())

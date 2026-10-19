@@ -38,6 +38,10 @@ export function bankHref(lecture: { subject: string; runId: string }) {
   return quizHref("main", lecture);
 }
 
+export function bankCatalogHref(lecture: { subject: string; runId: string }) {
+  return `/bank/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}/all`;
+}
+
 export function legacyMainHref(lecture: { subject: string; runId: string }) {
   return `/legacy-mainquiz/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
 }

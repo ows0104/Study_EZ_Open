@@ -153,6 +153,13 @@ export function formatWeekTitle(start: Date) {
     : `${head} ~ ${end.getFullYear()}년 ${end.getMonth() + 1}월 ${end.getDate()}일`;
 }
 
+/** CalendarGrid가 실제로 그리는 주 5일 또는 월간 6주의 범위. */
+export function calendarRange(anchorDate: Date, mode: CalendarMode) {
+  const start = mode === "week" ? startOfWeek(anchorDate)
+    : startOfWeek(new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1));
+  return { start: toDateKey(start), end: toDateKey(addDays(start, mode === "week" ? 4 : 39)) };
+}
+
 export function timeToMinutes(value: string) {
   const [hour, minute] = value.split(":").map(Number);
   return hour * 60 + minute;

@@ -13,12 +13,13 @@ from datetime import date as Date
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth import CurrentUser, require_approved_user
 from app.database import get_db
-from app.lecture_mastery import lecture_masteries
+from app.lecture_mastery import lecture_overviews
 from app.models import Lecture, TimetableEvent
 from app.routes.common import asset_grabs, bank_timelines, grab_tracks, material_marks, prequiz_progress
 
@@ -29,6 +30,8 @@ router = APIRouter()
 def read_timetable(
     start: Date | None = Query(None, description="이 날짜부터 (없으면 전체)"),
     end: Date | None = Query(None, description="이 날짜까지"),
+    include_study: bool = Query(True, description="학습 집계 포함. false이면 목록만 먼저 읽는다"),
+    include_cards: bool = Query(True, description="카드 단계 집계 포함. 시간표 학습률 조회에는 불필요"),
     user: CurrentUser = Depends(require_approved_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -46,11 +49,17 @@ def read_timetable(
         else []
     )
     keys = [(lecture.subject, lecture.run_id) for lecture in lectures]
-    marks = material_marks(db, keys, is_admin=user.is_admin)
-    timelines = bank_timelines(db, keys, is_admin=user.is_admin)
-    progress = prequiz_progress(db, user.id, keys)
-    grabs = asset_grabs(db, user.id, keys)
-    mastery = lecture_masteries(db, user.id, keys, is_admin=user.is_admin)
+    marks = (material_marks(db, keys, is_admin=user.is_admin, include_banks=False) if include_study
+             else {key: dict.fromkeys(("notesPrev", "preview", "prequiz", "notesCurrent", "quiz"), False) for key in keys})
+    timelines = bank_timelines(db, keys, is_admin=user.is_admin, include_ready=not include_study)
+    if not include_study:
+        for key, timeline in timelines.items():
+            marks[key]["quiz"] = timeline.pop("ready")
+    progress = prequiz_progress(db, user.id, keys) if include_study else {}
+    grabs = asset_grabs(db, user.id, keys) if include_study else {}
+    overviews = lecture_overviews(db, user.id, keys, is_admin=user.is_admin, include_cards=include_cards) if include_study else {}
+    for key, overview in overviews.items():
+        marks[key]["quiz"] = overview["ready"]
 
     by_event: dict[str, list[dict[str, Any]]] = {}
     for lecture in lectures:
@@ -63,7 +72,9 @@ def read_timetable(
                 "professors": lecture.professors,
                 "marks": marks.get(key, {}),
                 "bankTimeline": timelines.get(key),
-                "mastery": mastery.get(key),
+                "mastery": overviews.get(key, {}).get("mastery"),
+                "cardProgress": overviews.get(key, {}).get("cardProgress"),
+                "studyLoaded": include_study,
                 # 웹에서 풀 문항이 없는 강의는 null이다. "안 풀었다"와 "잴 것이
                 # 없다"는 화면에서 다르게 그려야 한다.
                 "prequizProgress": progress.get(key),
@@ -93,3 +104,28 @@ def read_timetable(
             for event in events
         ]
     }
+
+
+class StudyLectureIn(BaseModel):
+    subject: str = Field(min_length=1, max_length=200)
+    runId: str = Field(min_length=1, max_length=32)
+
+
+class StudyProgressIn(BaseModel):
+    lectures: list[StudyLectureIn] = Field(min_length=1, max_length=8)
+
+
+@router.post("/timetable/study-progress")
+def read_study_progress(
+    payload: StudyProgressIn,
+    user: CurrentUser = Depends(require_approved_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    keys = list(dict.fromkeys((l.subject, l.runId) for l in payload.lectures))
+    overviews = lecture_overviews(db, user.id, keys, is_admin=user.is_admin)
+    return {"lectures": [
+        {"subject": subject, "runId": run_id, "ready": overviews.get((subject, run_id), {}).get("ready", False),
+         "mastery": overviews.get((subject, run_id), {}).get("mastery"),
+         "cardProgress": overviews.get((subject, run_id), {}).get("cardProgress")}
+        for subject, run_id in keys
+    ]}

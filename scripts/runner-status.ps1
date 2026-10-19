@@ -2,12 +2,24 @@
 [CmdletBinding()]
 param(
     [int]$IntervalSeconds = 5,
-    [switch]$Once
+    [switch]$Once,
+    [switch]$Console
 )
 
 $ErrorActionPreference = 'Stop'
 $monitorRepo = Split-Path -Parent $PSScriptRoot
 $monitorRuns = Join-Path $monitorRepo 'runs'
+if (-not $Console -and -not $Once) {
+    $monitorPython = @(
+        (Join-Path $monitorRepo '.venv/Scripts/pythonw.exe'),
+        (Join-Path $monitorRepo 'server/.venv/Scripts/pythonw.exe'),
+        (Join-Path $env:USERPROFILE 'anaconda3/pythonw.exe')
+    ) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+    if (-not $monitorPython) { throw 'pythonw.exe를 찾지 못했습니다. -Console로 텍스트 상태를 볼 수 있습니다.' }
+    Start-Process -FilePath $monitorPython -WorkingDirectory $monitorRepo -WindowStyle Normal `
+        -ArgumentList @('-m', 'runner.status_window', '--interval', [Math]::Max(1, $IntervalSeconds))
+    return
+}
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 $Host.UI.RawUI.WindowTitle = 'Study EZ - Runner Live Status'
 

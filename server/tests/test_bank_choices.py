@@ -10,7 +10,6 @@ from app.main import app
 from app.models import BankState, Lecture, QuizBank
 from app.bank_validation.schema import without_retired
 from app.bank_validation.choices import pool_review_identity
-from app.bank_validation.pool_checks import candidates
 from app.bank_validation.validate import validate_bank
 from app.study_engine.choices import realize_choices
 
@@ -34,10 +33,7 @@ def main():
     bank["questions"] = [question]
     assert validate_bank(bank, ["S1"])["pass"], validate_bank(bank, ["S1"])
     review = {"question_id": question["question_id"], "verdict": "ok", "note": "", "suggested_answer": "",
-              "option_pool_hash": pool_review_identity(question),
-              'pool_checks': [{**{k: c[k] for k in ('question_id', 'pool_id', 'candidate_id', 'content_hash')},
-                              'true_verdict': 'ok', 'false_verdict': 'ok', 'criterion_verdict': 'ok',
-                              'note': '테스트 후보 근거 확인'} for c in candidates(bank)]}
+              "option_pool_hash": pool_review_identity(question)}
     previous = None
     forms, subsets = set(), set()
     for seed in range(120):
@@ -52,10 +48,6 @@ def main():
         subsets.add((previous["poolId"], tuple(sorted(previous["forms"]))))
     assert len(forms) == 24 and len(subsets) > 20
     for override in ({"medicalReview": None}, {"medicalReview": {**review, "verdict": "wrong"}},
-                     {'medicalReview': {**review, 'pool_checks': []}},
-                     {'medicalReview': {**review, 'pool_checks': review['pool_checks'][:-1]}},
-                     {'medicalReview': {**review, 'pool_checks': [{**r, 'content_hash': 'stale'} if i == 0 else r
-                                                                for i, r in enumerate(review['pool_checks'])]}},
                      {"question": "검토 후 발문 변경", "medicalReview": review}, {"personalEdited": True, "medicalReview": review}):
         safe = realize_choices({**question, **override}, "safe")
         assert {o["text"] for o in safe["options"]} == {o["text"] for o in question["options"]}
