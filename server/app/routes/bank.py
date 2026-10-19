@@ -156,21 +156,14 @@ def _usable(row: QuizBank) -> dict:
 
 def summary(db: Session, lecture: Lecture, row: QuizBank | None, *, is_admin: bool,
             user_id: str | None = None) -> dict[str, Any] | None:
-    """공유 링크는 검증과 독립적이다. 학생 문항은 공개된 은행만 싣는다."""
-    if row is None or (not is_admin and not row.open_to_students and not row.share_url):
+    """문제은행 링크는 관리자 전용이며 학생 문항은 공개된 은행만 싣는다."""
+    if row is None or (not is_admin and not row.open_to_students):
         return None
-    if not is_admin and not row.open_to_students:
-        # 공유 대화는 CLI 생성·검증 상태와 독립적이다. 비공개 문항과 개인 주소는 내보내지 않는다.
-        return {"status": "linked", "open": False, "buildId": "", "shareUrl": row.share_url,
-                "questionCount": 0, "conceptCount": 0, "studyQuestionCount": 0,
-                "seenQuestionCount": 0, "linkedAt": _iso(row.linked_at),
-                "builtAt": None, "usable": False, "coverage": None}
     bank = bank_personal.augment(db, row, user_id) if user_id else row.bank or {}
     state = db.get(BankState, (user_id, row.subject, row.run_id)) if user_id else None
     current = state.state if state and state.build_id == row.build_id else {}
     out: dict[str, Any] = {
         "status": row.status, "open": row.open_to_students, "buildId": row.build_id,
-        "shareUrl": row.share_url,
         "linkedAt": _iso(row.linked_at),
         "questionCount": len(bank.get("questions", [])), "conceptCount": len(bank.get("concepts", [])),
         "builtAt": _iso(row.built_at), "usable": bank_usable(row.bank, row.validation),
@@ -185,7 +178,7 @@ def summary(db: Session, lecture: Lecture, row: QuizBank | None, *, is_admin: bo
             out["coverage"]["status"] = "stale"
     if is_admin:
         review = row.review or {}
-        out.update(respondedAt=_iso(row.responded_at), promptVersion=row.prompt_version, message=row.message,
+        out.update(shareUrl=row.share_url, respondedAt=_iso(row.responded_at), promptVersion=row.prompt_version, message=row.message,
                    conversationUrl=row.conversation_url, revision=(row.validation or {}).get("revision"),
                    reviewCounts=review.get("counts"), errorCount=len((row.validation or {}).get("errors", [])),
                    # 검증에 걸려 뺀 문항(`quizbank.validate.validate_dropping`). 원문은 `GET …/bank` 의 validation 에 있다.

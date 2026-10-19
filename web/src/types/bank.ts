@@ -6,6 +6,7 @@
 export type BankTimeline = {
   /** 관리자에게만. 삭제 전 동시 변경 확인용 버전. */
   deleteVersion?: string | null;
+  /** 문제은행 공유 주소는 관리자에게만 전달한다. */
   shareUrl?: string;
   /** 공유 링크를 새로 저장한 서버 시각. 기존 링크는 null. */
   linkedAt?: string | null;

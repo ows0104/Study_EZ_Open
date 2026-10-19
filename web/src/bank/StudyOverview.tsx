@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { bankCatalogHref, bankHref, lectureHref } from "../links";
+import { useMe } from "../useMe";
 import type { LectureRef, TimetableEvent } from "../types/lectures";
 import type { CardProgress } from "../types/mastery";
 import { StudyPlanBoard } from "../calendar/StudyPlanBoard";
@@ -58,6 +59,7 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
   onDeleteQuiz?: (lectures: StudyLecture[]) => void;
   onScope?: (keys: string) => void;
 }) {
+  const isAdmin = Boolean(useMe()?.isAdmin);
   const rows = useMemo(() => lectureRows(events), [events]);
   const [course, setCourse] = useState(() => {
     const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" }).format(new Date());
@@ -199,7 +201,7 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
                 {showProgress && p ? <StageBar value={p} /> : null}
                 {l.bankTimeline ? <details className="overview-materials"><summary>퀴즈 자료</summary>
                   <BankBuildTimes timeline={l.bankTimeline} />
-                  {l.bankTimeline.shareUrl ? <a href={l.bankTimeline.shareUrl} target="_blank" rel="noreferrer">퀴즈뱅크 링크 ↗</a> : null}
+                  {isAdmin && l.bankTimeline.shareUrl ? <a href={l.bankTimeline.shareUrl} target="_blank" rel="noreferrer">퀴즈뱅크 링크 ↗</a> : null}
                 </details> : null}
                 {onVisibility || onDeleteQuiz ? <div className="overview-row-actions">
                   {onVisibility ? <button className="is-quiet" disabled={managing} aria-label={`${l.title} ${isHidden(l) ? "복원" : "숨기기"}`}

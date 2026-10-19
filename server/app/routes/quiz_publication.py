@@ -41,7 +41,8 @@ def rows(db: Session, is_admin: bool):
         uploaded = bool(built and utc(built) >= CUTOFF and count and (is_admin or opened))
         current = bool(uploaded and responded and utc(built) >= utc(responded))
         job = latest.get(rid)
-        result.append({'subject': '약리학', 'runId': rid, 'title': title, 'shareUrl': url or '',
+        result.append({'subject': '약리학', 'runId': rid, 'title': title,
+            **({'shareUrl': url or ''} if is_admin else {}),
             'link': {'state': link_state, 'sinceCutoff': bool(link_state == 'complete' and recent),
                      'completedAt': completed.isoformat() if completed else None,
                      'questionCount': proof.get('questionCount', 0) if proof else 0,

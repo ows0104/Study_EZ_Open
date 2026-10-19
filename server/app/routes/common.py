@@ -40,12 +40,12 @@ def bank_timelines(db: Session, keys: list[LectureKey], *, is_admin: bool = Fals
     def iso(value):
         return (value if value.tzinfo else value.replace(tzinfo=UTC)).isoformat() if value else None
 
-    return {(s, r): {"shareUrl": share, "linkedAt": iso(linked),
+    return {(s, r): {**({"shareUrl": share} if is_admin else {}), "linkedAt": iso(linked),
                      "builtAt": iso(built) if is_admin or opened else None,
                      **({"ready": status == "ready" and (is_admin or opened)} if include_ready else {}),
                      **({"deleteVersion": iso(updated)} if is_admin else {})}
             for s, r, share, linked, built, opened, updated, status in rows
-            if (s, r) in wanted and (is_admin or opened or share)}
+            if (s, r) in wanted and (is_admin or opened)}
 
 
 def prequiz_core_filter(item=PreItem):

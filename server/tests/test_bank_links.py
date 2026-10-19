@@ -38,14 +38,16 @@ def main():
     with SessionLocal() as db:
         row = db.get(QuizBank, KEY)
         assert row.status == "linked" and row.responded_at is None and not row.raw_response
-        assert db.query(PrequizJob).count() == 0 and db.get(Preview, KEY) is None
+        queued = db.query(PrequizJob).one()
+        assert queued.kind == "bank" and queued.state == "queued"
+        assert "공유 링크" in queued.stage and db.get(Preview, KEY) is None
     detail = client.get(BASE, headers=ADMIN).json()["bank"]
     assert detail["conversationUrl"] == MINE and detail["shareUrl"] == SHARE and not detail["usable"]
     assert client.put(links, headers=ADMIN, json={"shareUrl": "https://evil.example/share/test"}).status_code == 422
     app.dependency_overrides[get_current_user] = lambda: CurrentUser(
         id="student", email="s@example.com", is_admin=False, apps=dict.fromkeys(APP_POLICY, ROLE_ADMIN))
     student = client.get(BASE).json()["bank"]
-    assert student["shareUrl"] == SHARE and not student["usable"] and "conversationUrl" not in student
+    assert student is None
     assert client.get(BASE + "/bank").status_code == 404
     assert client.put(links, json={"shareUrl": SHARE}).status_code == 403
     app.dependency_overrides.clear()

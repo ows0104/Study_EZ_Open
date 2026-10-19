@@ -27,13 +27,6 @@ export function BankPanel({ lecture, detail }: { lecture: Pick<LectureRef, "subj
   if (!isAdmin) {
     return (
       <>
-      {bank?.shareUrl ? <PanelGroup tone="bank" title="문제은행 링크">
-        <ActionCard shape="is-key" hit={
-          <a className="panel-action-hit" href={bank.shareUrl} target="_blank" rel="noreferrer">
-            <strong>기본 링크</strong>
-          </a>
-        } />
-      </PanelGroup> : null}
       <PanelGroup tone="main" title="Main-Quiz" note="개념·방향별 반복">
         {bank?.usable ? <StudyCard lecture={lecture} bank={bank} />
           : <p className="panel-hint">아직 공개된 문제가 없습니다.</p>}

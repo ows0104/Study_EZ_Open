@@ -5,6 +5,7 @@ from datetime import date,datetime,UTC
 tmp=Path(tempfile.mkdtemp(prefix='publication-'))
 os.environ.update(ENVIRONMENT='local-test',DATABASE_URL=f'sqlite:///{(tmp/"db.sqlite").as_posix()}',RUNNER_TOKEN='runner-token',STUDYEZ_LOCAL_STORAGE_DIR=str(tmp/'storage'))
 from fastapi.testclient import TestClient
+from app.auth import APP_POLICY, ROLE_ADMIN, CurrentUser, get_current_user
 from app.database import Base,SessionLocal,engine
 from app.main import app
 from app.models import Lecture,QuizBank
@@ -47,7 +48,23 @@ def main():
  with SessionLocal() as db:
   db.get(QuizBank,('약리학','0')).validation={'ok':True};db.commit()
  assert first()['link']['state']=='wrong_lecture'
+ with SessionLocal() as db:
+  row=db.get(QuizBank,('약리학','0'));row.responded_by='manual:admin';row.raw_response='### Q001 | recall\n'+('answer '*50)+'\nSTUDYEZ_BANK_COMPLETE';db.commit()
+ saved=first()
+ assert saved['responseSource']=='manual' and saved['link']['state']=='complete' and saved['link']['sinceCutoff']
+ assert saved['link']['questionCount']==1 and saved['upload']['current']
+ assert saved['link']['completedAt']==datetime(2026,10,16,tzinfo=UTC).isoformat()
+ assert 'raw' not in str(saved) and 'manual:admin' not in str(saved)
  assert 'raw' not in str(rows) and 'conversationUrl' not in str(rows)
+ assert first()['shareUrl']=='https://chatgpt.com/share/new'
+ app.dependency_overrides[get_current_user]=lambda: CurrentUser(
+  id='student',email='s@example.com',is_admin=False,apps=dict.fromkeys(APP_POLICY,ROLE_ADMIN))
+ student=c.get(read).json()['lectures']
+ assert len(student)==3 and all('shareUrl' not in row for row in student)
+ assert student[0]['upload']==saved['upload'] and student[0]['link']==saved['link']
+ assert c.get('/api/admin/quiz-publication/sources').status_code==401
+ app.dependency_overrides.clear()
+ assert c.get('/api/admin/quiz-publication/sources',headers=runner).json()['lectures'][0]['shareUrl']=='https://chatgpt.com/share/new'
  print('PASS: KST boundary, stale-link rejection, independent upload state, missing lectures, retained verification')
 
 
