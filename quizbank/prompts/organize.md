@@ -8,7 +8,8 @@
 - 모든 문항, answer unit, source conflict, prerequisite를 보존해라. 출력 길이를 맞추려고 내용을 빼지 마라.
 ## 2. 변환 규칙
 
-- v1.63부터 tier는 Core/Important/Optional이며 `심화: true/false`를 question.advanced boolean으로 옮긴다. 심화와 중요도를 섞지 않는다. 심화 필드가 없는 옛 응답은 advanced=false로 두고 옛 tier=Advanced는 중간 우선순위 Important로 호환 변환한다. 이것은 심화 판정이 아니며 이후 원본 검수가 중요도를 다시 판단한다.
+- 웹의 최상위 표기 Must-Know는 저장 스키마의 기존 tier=Essential과 같은 등급이다. Must-Know를 Essential로 정규화하며 중요도·문항 내용·정답·출처를 바꾸지 않는다. 옛 Essential 응답도 같은 등급으로 읽는다. 사용자에게 표시하는 명칭은 Must-Know다.
+- v1.63부터 tier는 Essential/Core/Important/Optional이며 `심화: true/false`를 question.advanced boolean으로 옮긴다. 심화와 중요도를 섞지 않는다. 심화 필드가 없는 옛 응답은 advanced=false로 두고 옛 tier=Advanced는 중간 우선순위 Important로 호환 변환한다. 이것은 심화 판정이 아니며 이후 원본 검수가 중요도를 다시 판단한다.
 
 - 전문 용어·영어·약어·원문의 한국어 병기를 그대로 옮긴다. 원문에 있는 영어를 한국어로 대체하지 않는다. 정리 단계에서 새 번역·설명을 만들지는 않는다.
 - `문제:` 뒤의 들여쓴 후속 줄은 다음 필드 전까지 같은 문항의 발문이다. 비교 항목·문장 사이의 실제 줄바꿈과 들여쓰기를 question의 JSON 문자열에 보존한다. 여러 줄이라는 이유로 문항을 나누거나 후속 문장을 누락하지 않는다.
@@ -32,7 +33,7 @@
 - mcq_mode는 원문의 recall_first·comparison을 그대로 옮긴다. 객관식이 아니면 none이다. 유형이 없는 옛 객관식은 발문과 기존 retrieval_direction으로 기억 확인형 또는 구별·판단형을 분류하며 질문·답·보기를 바꾸지 않는다.
 - 충돌 문항은 원문 그대로 옮긴다 — 한 문항으로 합쳐 있으면 합친 채로, 출처별로 갈려 있으면 갈린 채로.
 - 외부 의학지식을 근거로 적은 자리(`EXT`, 「외부 의학지식」)는 source_id `EXT`로 옮긴다.
-- Cloze는 발문에 `{{c1}}` 같은 자리만 두고, 답은 answer_units에 빈칸 등장 순서대로 하나씩 둔다. 같은 `{{c1}}`이 여러 번 나와도 합치거나 번호를 바꾸지 마라. 과거 응답의 `{{c2}}`·`{{c3}}` 표기도 보존한다.
+- 과거 Cloze는 발문에 `{{c1}}` 같은 자리만 두고, 답은 answer_units에 빈칸 등장 순서대로 하나씩 둔다. 같은 `{{c1}}`이 여러 번 나와도 합치거나 번호를 바꾸지 마라. 과거 응답의 `{{c2}}`·`{{c3}}` 표기도 보존한다.
 - OX의 answer는 `O` 또는 `X`다. 원문의 설명은 answer_units로 옮긴다.
 - MCQ·Multi-select의 원문 선지별 해설은 option_explanations로 보존한다. 원문 answer_units의 설명도 삭제하지 않는다. prompt_version 1.32 이상은 해설을 CLI에서 작성하므로 없는 선지·OX·보기 풀 해설은 빈 배열·빈 문자열로 두고 누락 경고를 적지 않는다. 핵심 정답 채점 단위에 해설을 새로 합치거나 해설을 만들지 마라.
 - 원문 뒤의 「문항·선지 해설 보완」 표는 기존 question_id에 대한 후속 보완 기록이다. question·source_refs는 보완 표의 값을 적용한다. answer 열이 있으면 answer와 answer_units를 해당 표의 값으로 적용하고, answer 열이 없으면 answer_units를 원래 항목에 중복 없이 추가한다. 별도 문항으로 만들거나 기존 선택 정답표를 바꾸지 마라.
@@ -66,3 +67,5 @@ LECTURE_METADATA_DATA
 
 CHATGPT_RESPONSE_DATA
 {{raw}}
+
+- v1.68 Cloze는 발문의 {정답} 안에 답을 포함하며 별도 정답 배열이 없는 것이 정상이다. 발문을 그대로 보존하고 answer·answer_units는 비워도 된다. 정리 코드가 빈칸과 정답을 복원한다. 해설의 **감별 키워드** 표시는 그대로 보존한다.

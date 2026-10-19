@@ -29,6 +29,8 @@ export function useBankLink() {
         void api(`/api/admin/lectures/${path}/bank-response`, {
           method: "PUT", body: JSON.stringify({ raw: data.raw, conversationUrl: data.url || "",
             promptVersion: destination.promptVersion || (typeof data.promptVersion === "string" ? data.promptVersion : ""),
+            ...(data.responseFile ? { responseFile: data.responseFile } : {}),
+            ...(data.responseFile && data.manualFile === true ? { source: "manual" } : {}),
             ...(data.shareUrl ? { shareUrl: data.shareUrl } : {}) }),
         }).then(() => {
           window.postMessage({ source: WEBAPP_SOURCE, type: MESSAGES.bankSaved, lectureId }, window.location.origin);

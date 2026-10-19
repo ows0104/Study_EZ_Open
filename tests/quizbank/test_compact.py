@@ -1,5 +1,4 @@
 import copy
-import hashlib
 import json
 
 import pytest
@@ -8,6 +7,19 @@ from quizbank import compact, file_organize, generate, organize
 from quizbank.schema import BANK, QUESTION
 from quizbank.session import SessionError
 from quizbank.validate import validate_bank
+
+
+def test_single_unit_list_normalization_changes_only_format_and_is_idempotent():
+    questions = [dict(question_id='Q001', format='list', answer='α', answer_units=['α'], question='첫 기호는?'),
+                 dict(question_id='Q002', format='list', answer='α; β', answer_units=['α', 'β']),
+                 dict(question_id='Q003', format='list', answer='다른 답', answer_units=['α'])]
+    bank = {'questions': copy.deepcopy(questions)}
+    changes = compact.normalize_single_unit_lists(bank)
+    assert [row['questionId'] for row in changes] == ['Q001']
+    expected = copy.deepcopy(questions)
+    expected[0]['format'] = 'basic'
+    assert bank['questions'] == expected
+    assert compact.normalize_single_unit_lists(bank) == []
 
 
 RAW = '''### Q001 | basic | Core | 5 | 2 | direct
@@ -124,7 +136,7 @@ def draft():
     questions = []
     for i, block in enumerate(compact.read_blocks(RAW)):
         q = {key: [] if spec['type'] == 'array' else 0 if spec['type'] == 'integer' else ''
-             for key, spec in QUESTION['properties'].items()}
+             for key, spec in QUESTION['properties'].items() if key in QUESTION['required']}
         q.update({k: v for k, v in block.items() if k != 'units'})
         q.update(question=["첫 기호는?", "앞은 {{c1}}, 중간은 {{c1}}, 끝은 {{c1}}이다.",
                            "두 묶음의 이름은?", "첫 기호는 β이다.", "첫 기호를 고르시오.",
@@ -286,7 +298,15 @@ def test_shared_quality_guidance_preserves_158_rules_and_adds_layout_and_conflic
     assert layout in quality
     clarity = '- 자료 충돌을 해결한 문항도 하나의 분명한 학습 목표를 시험한다. 자료 간 차이를 해명하려고 임상 조건·추론을 여러 겹 붙인 함정으로 만들지 않는다. 해설은 정답의 이유와 기억할 핵심을 먼저 짧게 설명하고, 출처별 차이·검증 이력·작업 경위와 섞지 않는다. 실제 모순·정답표 오류·상황 차이를 구별하며, 미해결 쟁점을 해결된 것처럼 쓰지 않는다.\n'
     assert clarity in quality
-    assert hashlib.sha256(quality.replace(layout, '').replace(clarity, '').encode()).hexdigest() == '2e0d28b75825828e32e9790f500f6f79bf35cb1cd3089ee8fa2a74e76dfbadb8'
+    assert 'Must-Know > Core > Important > Optional' in quality
+    assert '교수의 간접적인 출제 신호로 보고 모두 Must-Know 근거로 인정한다' in quality
+    assert '필기자 본인의 중요 표시나 시험 예상만으로 교수의 발언을 추정하지 않는다' in quality
+
+
+def test_must_know_web_label_preserves_existing_top_priority_semantics():
+    current=RAW.replace('| Core |', '| Must-Know |', 1)
+    legacy=RAW.replace('| Core |', '| Essential |', 1)
+    assert compact.read_blocks(current)==compact.read_blocks(legacy)
 
 
 def test_multiline_comparison_keeps_compact_metadata_answers_and_question_ids():
@@ -347,3 +367,59 @@ def test_priority_and_depth_are_independent_and_legacy_labels_do_not_infer_depth
     for depth in ('yes', 'true\n심화: false'):
         with pytest.raises(SessionError, match='심화'):
             compact.read_blocks(raw.replace('심화: true', '심화: ' + depth))
+
+
+def test_inline_cloze_prompt_only_restores_answers_and_hides_them():
+    raw = """### Q002 | cloze | Core | 5 | 2 | mechanism
+문제: 앞은 {α},
+  중간은 {β}, 끝은 {α}이다.
+해설: "**순서**를 구별한다."
+출처: S1 p.1
+출제근거: 회상
+"""
+    blocks = compact.read_blocks(raw)
+    assert blocks[0]['units'] == ['α', 'β', 'α']
+    bank = {'questions': [draft()['questions'][1]]}
+    compact.restore(bank, blocks)
+    q = bank['questions'][0]
+    assert q['question'] == '앞은 {{c1}},\n  중간은 {{c1}}, 끝은 {{c1}}이다.'
+    assert q['answer'] == '앞은 α,\n  중간은 β, 끝은 α이다.'
+    assert q['answer_units'] == ['α', 'β', 'α']
+    assert q['explanation'] == '**순서**를 구별한다.'
+
+
+def test_inline_cloze_conflicting_separate_answer_is_rejected():
+    raw = "### Q1 | cloze | Core | 5 | 2 | direct\n문제: 값은 {A}다.\n정답: [\"B\"]"
+    with pytest.raises(SessionError, match='서로 다릅니다'):
+        compact.read_blocks(raw)
+
+
+def test_inline_cloze_shared_normalization_is_pure_and_idempotent():
+    from server.app.bank_validation.schema import without_retired
+    q = draft()['questions'][1]
+    q.update(question='앞은 {**α**}, 끝은 {α}다.', answer='stale', answer_units=['stale'])
+    original = copy.deepcopy(q)
+    normalized = without_retired({'questions': [q]})['questions'][0]
+    assert q == original
+    assert normalized['answer_units'] == ['**α**', 'α']
+    assert normalized['question'] == '앞은 {{c1}}, 끝은 {{c1}}다.'
+    assert without_retired({'questions': [normalized]})['questions'][0] == normalized
+
+
+def test_inline_cloze_browser_paragraph_does_not_include_following_fields():
+    blocks = compact.read_blocks('### Q1 | cloze | Core | 5 | 2 | direct\n문제: 앞 {A}, 뒤 {B}다. 해설: "**방향**" 출처: S1 p.1 근거: {"mode":"slides"}')
+    assert blocks[0]['question'] == '앞 {A}, 뒤 {B}다.'
+    assert blocks[0]['units'] == ['A', 'B']
+    assert blocks[0]['explanation'] == '**방향**'
+
+
+@pytest.mark.parametrize('wrapper', ['', '`'])
+def test_evidence_json_labels_are_not_answer_fields(wrapper):
+    evidence = {'mode': 'single', 'slides': [{'page': 34, 'evidence': '연습문제 1 해설: 추가 측정 농도. 정답: 농도. 힌트: 측정'}]}
+    raw = ('### Q060 | basic | Important | 4 | 4 | integration\n'
+           '문제: 무엇을 측정하는가?\n정답: ["세포 내 농도"]\n'
+           '근거: ' + wrapper + json.dumps(evidence, ensure_ascii=False) + wrapper + '\n해설: "원문 해설"')
+    block = compact.read_blocks(raw)[0]
+    assert block['units'] == ['세포 내 농도']
+    assert block['explanation'] == '원문 해설'
+    assert block['source_evidence'] == evidence

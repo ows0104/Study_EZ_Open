@@ -107,3 +107,11 @@ JSON 3.1에는 `explanation`·`option_explanations`·`option_pools`를 보존한
 
 프롬프트 예시의 강의·동일 주제는 평가 표본에서 제외한다.
 예시 출처는 `prompting.py`의 `DOMAINS` 주석을 확인한다.
+
+## 전체 강의 MD 전달 (1.78)
+
+정본 `web/src/bank/bankPrompt.md`는 전체 확정본을 실제 UTF-8 MD 파일 하나로 받는다.
+`fileDelivery.md`의 헤더에는 과목·강의 ID·프롬프트 버전·실제 문항 수·문항/충돌 ID 목록을 넣는다.
+범위 설정과 관계없이 모든 강의에 적용하며 강의별 범위 지시는 그대로 유지한다.
+확장 1.3.19와 사이트 파일 선택은 같은 `bridge/bank-file.js` 계약을 사용하고 서버도 다시 검증한다.
+실제 파일 바이트·완료 표식·정답 참조·해시 확인 후 원문을 저장하고, 저장 성공 뒤에만 수신 확인한다.

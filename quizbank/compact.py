@@ -5,11 +5,26 @@ import json
 import re
 
 from .schema import DIRECTIONS, FORMATS, TIERS
+from server.app.bank_validation.cloze import INLINE, normalize_cloze
 from .session import SessionError
 
 # Conflict headings and references to other questions are not question blocks.
 HEADER = re.compile(r"^#{1,6}[ \t]+(Q[A-Za-z0-9_-]+)([^\n]*)$", re.M)
 LABEL = re.compile(r"^\s*([A-Z]\d*|\d+)\s*[:.)]\s*(.+?)\s*$")
+
+
+def normalize_single_unit_lists(bank: dict) -> list[dict]:
+    """Map one authored grading unit to basic without changing any authored text."""
+    changes = []
+    for question in bank.get('questions', []):
+        units = question.get('answer_units')
+        if (question.get('format') == 'list' and isinstance(units, list) and len(units) == 1
+                and isinstance(units[0], str) and units[0].strip()
+                and question.get('answer') == units[0]):
+            question['format'] = 'basic'
+            changes.append({'questionId': question['question_id'], 'from': 'list', 'to': 'basic',
+                            'reason': 'one unchanged authored grading unit'})
+    return changes
 
 
 def _json_value(body: str, start: int) -> tuple[object, int]:
@@ -79,12 +94,21 @@ def read_blocks(raw: str) -> list[dict]:
         if len(fields) != (5 if choice else 4):
             raise SessionError(f"{qid}: 문항 블록 머리의 필드 수 오류")
         tier, importance, difficulty, direction = fields[:4]
+        tier = 'Essential' if tier == 'Must-Know' else tier
         mode = fields[4] if choice else "none"
         if tier not in (*TIERS, "Advanced") or direction not in DIRECTIONS or not all(
                 re.fullmatch(r"[1-5]", n) for n in (importance, difficulty)) \
                 or mode not in ("recall_first", "comparison", "none") or choice and mode == "none":
             raise SessionError(f"{qid}: 문항 블록 메타데이터 오류")
         body = raw[heading.end():headings[i + 1].start() if i + 1 < len(headings) else len(raw)]
+        evidence, evidence_span = None, None
+        evidence_marker = re.search(r"(?:^|\s|&#x20;)근거:[ \t]*(?=(?:`{1,2}(?!`)[ \t]*)?\{)", body)
+        if evidence_marker:
+            try:
+                evidence, size = _json_value(body, evidence_marker.end())
+                evidence_span = (evidence_marker.end(), evidence_marker.end() + size)
+            except ValueError:
+                pass  # Invalid display metadata is resolved in the evidence stage.
         depth = re.findall(r"(?:^|\s|&#x20;)심화:[ \t]*(true|false)\b", body)
         if len(depth) > 1 or (re.search(r"(?:^|\s|&#x20;)심화:", body) and not depth):
             raise SessionError(f"{qid}: 심화는 true 또는 false여야 합니다.")
@@ -95,6 +119,9 @@ def read_blocks(raw: str) -> list[dict]:
         marker = re.compile(r"(?:^|\s|&#x20;)(정답|힌트|해설):[ \t]*")
         try:
             while match := marker.search(body, position):
+                if evidence_span and evidence_span[0] <= match.start(1) < evidence_span[1]:
+                    position = evidence_span[1]
+                    continue
                 name = match[1]
                 try:
                     value, size = _json_value(body, match.end())
@@ -113,24 +140,28 @@ def read_blocks(raw: str) -> list[dict]:
                 values[name] = value
                 position = match.end() + size
             units = values.get("정답")
+            inline_question = None
+            if fmt == "cloze":
+                stem = re.search(r"(?:^|\s|&#x20;)문제:[ \t]*(.*?)(?=(?:\s|&#x20;)(?:정답|해설|출처|출제근거|근거|충돌):|\Z)", body, re.S)
+                if stem and INLINE.search(stem[1]):
+                    inline_question = stem[1].strip()
+                    embedded = [m[1].strip() for m in INLINE.finditer(inline_question)]
+                    if units is not None and units != embedded:
+                        raise SessionError(f"{qid}: 발문과 별도 정답이 서로 다릅니다.")
+                    units = embedded
         except ValueError as cause:
             raise SessionError(f"{qid}: 정답·힌트·해설 JSON 오류") from cause
         if not isinstance(units, list) or not units or not all(isinstance(u, str) and u.strip() for u in units):
             raise SessionError(f"{qid}: 정답은 비어 있지 않은 문자열 JSON 배열이어야 합니다.")
         if any(not isinstance(values.get(name, ""), str) for name in ("힌트", "해설")):
             raise SessionError(f"{qid}: 힌트·해설은 JSON 문자열이어야 합니다.")
-        evidence = None
-        evidence_marker = re.search(r"(?:^|\s|&#x20;)근거:[ \t]*(?=(?:`{1,2}(?!`)[ \t]*)?\{)", body)
-        if evidence_marker:
-            try:
-                evidence, _ = _json_value(body, evidence_marker.end())
-            except ValueError:
-                pass  # 표시 메타데이터만 잘못됐으면 이후 별도 선택 단계에서 보완한다.
         blocks.append({"question_id": qid, "format": fmt, "tier": "Important" if tier == "Advanced" else tier,
                        "importance": int(importance), "advanced": depth == ["true"],
                        "item_difficulty": int(difficulty), "retrieval_direction": direction,
                        "mcq_mode": mode, "units": units,
                        "explanation": values.get("해설", "")})
+        if inline_question is not None:
+            blocks[-1]["question"] = inline_question
         if evidence is not None:
             blocks[-1]["source_evidence"] = evidence
     return blocks
@@ -158,6 +189,8 @@ def restore(bank: dict, blocks: list[dict]) -> None:
         qid, fmt, units = block["question_id"], block["format"], block["units"]
         q = questions[qid]
         q.update({key: value for key, value in block.items() if key not in ("units", "source_evidence")})
+        if fmt == "cloze":
+            q.update(normalize_cloze(q))
         if fmt in ("basic", "list", "cloze"):
             if fmt == "basic" and len(units) != 1:
                 raise SessionError(f"{qid}: basic 정답은 한 단위여야 합니다.")

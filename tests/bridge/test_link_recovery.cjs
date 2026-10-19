@@ -147,6 +147,7 @@ function shareFixture({ fields = [], buttons = [], text = 'Share conversation', 
     },
   });
   const source = read('chatgpt-share.js');
+  vm.runInContext(read('bank-file.js'), context);
   vm.runInContext(source.slice(0, source.lastIndexOf('void initialize()')), context);
   return { context, root, runtime, sent, state, document };
 }
@@ -468,4 +469,33 @@ test('bank version travels from the exact launch request through pending deliver
   assert.equal(stored['studyez-bank:1:test/lecture'].promptVersion,'1.53');
   const page=webBridge(); page.listeners.extension(message);
   assert.equal(page.posted.at(-1).promptVersion,'1.53');
+});
+
+test('prefixed CNS launch requires a real validated file and retains its metadata across delivery', async () => {
+  const stored = {}, delivered = []; let receive;
+  const context = vm.createContext({ URL, console, importScripts() {}, chrome: {
+    runtime: {onMessage:{addListener(fn){receive=fn;}},onConnect:{addListener(){}}},
+    storage:{session:{async get(key){return key===null?{...stored}:{[key]:stored[key]};},
+      async set(value){Object.assign(stored,value);},async remove(key){delete stored[key];}}},
+    tabs:{onUpdated:{addListener(){}},onRemoved:{addListener(){}},onActivated:{addListener(){}},
+      async create(){return{id:10};},async sendMessage(tab,message){delivered.push({tab,...message});}},
+  }});
+  for(const name of ['protocol.js','bank-file.js','background.js'])vm.runInContext(read(name),context);
+  const protocol=context.STUDYEZ_PROTOCOL;
+  const lectureId='studyez:bank:1.76:약리학/261006_02';
+  const payload={requestId:'file',lectureId,provider:'chatgpt',mode:'bank',prompt:'request',promptVersion:'1.76',
+    files:[{filename:'test.pdf',downloadUrl:'http://localhost:8000/api/local-storage/lectures/test.pdf'}]};
+  const send=(message,tab=10)=>new Promise(resolve=>receive(message,{tab:{id:tab,url:tab===10?'https://chatgpt.com/c/test':'http://localhost:5173'}},resolve));
+  await send({type:protocol.MESSAGES.openPreview,payload},1);
+  const raw=fs.readFileSync(path.join(__dirname,'../fixtures/bank-file-valid.md'),'utf8');
+  assert.equal((await send({type:'STUDYEZ_BANK_ANSWER',raw})).ok,false);
+  const responseFile={filename:'study-ez-261006_02-bank.md',sha256:require('node:crypto').createHash('sha256').update(raw).digest('hex'),byteLength:Buffer.byteLength(raw)};
+  assert.equal((await send({type:'STUDYEZ_BANK_ANSWER',raw,responseFile,manualFile:true})).ok,true);
+  await new Promise(resolve=>setImmediate(resolve));
+  const message=delivered.find(m=>m.type===protocol.MESSAGES.bankReady);
+  assert.equal(message.lectureId,lectureId);assert.equal(message.responseFile.sha256,responseFile.sha256);
+  assert.equal(message.manualFile,true);assert.equal(message.raw,raw);
+  const page=webBridge();page.listeners.extension(message);
+  assert.equal(page.posted.at(-1).responseFile.filename,responseFile.filename);
+  assert.equal(page.posted.at(-1).manualFile,true);
 });

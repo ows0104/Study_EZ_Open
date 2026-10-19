@@ -30,6 +30,7 @@ from sqlalchemy.orm import Session
 from app import study_engine as engine
 from app import bank_edits
 from app import bank_personal
+from app import bank_shared_response
 from app.bank_validation.pages import cited_pages
 from app.bank_validation.slide_focus import (selected_references, all_selected_pages, all_selected_references,
                                              question_hash, source_id, external_filename)
@@ -39,6 +40,7 @@ from app.bank_validation.schema import QUESTION, schema_errors, without_retired
 from app.bank_validation.priorities import priority_fields
 from app.bank_validation.coverage import coverage_summary
 from app.bank_validation.validate import validate_bank
+from app.bank_validation.markdown_file import validate as validate_markdown_file, required as markdown_file_required
 from app.bank_validation.publication import stamp as publication_stamp, usable as bank_usable, warning as publication_warning
 from app.bank_validation.choice_mode import choice_mode
 from app.preview_links import conversation_url as valid_conversation_url, share_url as valid_share_url
@@ -188,11 +190,20 @@ def summary(db: Session, lecture: Lecture, row: QuizBank | None, *, is_admin: bo
 # ---------------------------------------------------------------- 관리자 · 러너
 
 
+class ResponseFileIn(BaseModel):
+    filename: str = Field(min_length=1, max_length=255)
+    sha256: str = Field(pattern=r'^[a-f0-9]{64}$')
+    byte_length: int = Field(ge=200, le=8_000_000, alias='byteLength')
+    model_config = {"populate_by_name": True}
+
+
 class ResponseIn(BaseModel):
     raw: str = Field(min_length=200, max_length=2_000_000)
+    source: Literal['extension', 'manual'] = 'extension'
     conversation_url: str = Field(default="", alias="conversationUrl", max_length=500)
     share_url: str | None = Field(default=None, alias="shareUrl", max_length=500)
     prompt_version: str = Field(default="", alias="promptVersion", max_length=16)
+    response_file: ResponseFileIn | None = Field(default=None, alias='responseFile')
 
     model_config = {"populate_by_name": True}
 
@@ -203,6 +214,19 @@ def put_bank_response(subject: str, run_id: str, payload: ResponseIn,
     """확장이 ChatGPT 탭에서 받아 온 응답 원문. 저장하면 러너가 정리할 일감이 선다."""
     lecture = lecture_or_404(db, subject, run_id)
     db.refresh(lecture, with_for_update=True)
+    file_info = None
+    file_required = markdown_file_required(subject, run_id, payload.prompt_version)
+    if payload.response_file is not None or 'STUDYEZ_BANK_FILE' in payload.raw or file_required:
+        if payload.response_file is None:
+            raise HTTPException(422, '이 출제는 실제 .md 파일을 불러와 저장해야 합니다. 파일 링크나 본문만으로 완료 처리하지 않습니다.')
+        try:
+            file_info = validate_markdown_file(payload.raw, payload.response_file.filename, subject, run_id,
+                                              payload.response_file.model_dump(by_alias=True))
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+        if payload.prompt_version and payload.prompt_version != file_info['promptVersion']:
+            raise HTTPException(422, '파일과 요청의 프롬프트 버전이 다릅니다.')
+        payload.prompt_version = file_info['promptVersion']
     if not payload.raw.rstrip().endswith(COMPLETE_MARK):
         raise HTTPException(422, "완료 표시가 없는 응답입니다. 답이 끝난 뒤 다시 저장하세요.")
     if not valid_conversation_url(payload.conversation_url, "chatgpt") or (
@@ -210,6 +234,8 @@ def put_bank_response(subject: str, run_id: str, payload: ResponseIn,
         raise HTTPException(422, "ChatGPT 공유 링크와 개인 대화 주소를 확인하세요.")
     row = db.get(QuizBank, (lecture.subject, lecture.run_id))
     job = open_job_of(db, lecture.subject, lecture.run_id, JOB_BANK)
+    if row is not None and bank_shared_response.manual(row) and payload.source != 'manual' and row.raw_response != payload.raw:
+        raise HTTPException(409, '직접 저장한 답변을 우선합니다. 새 답변은 직접 붙여 넣어 저장하세요.')
     if row is not None and row.raw_response == payload.raw:
         # A legacy extension may deliver the same answer first without metadata.
         # Filling it in must not queue another job or invalidate a running build.
@@ -217,6 +243,10 @@ def put_bank_response(subject: str, run_id: str, payload: ResponseIn,
             if job is not None and job.state == "running":
                 raise HTTPException(409, "검수 중에는 프롬프트 버전을 바꿀 수 없습니다. 완료 후 다시 전달하세요.")
             row.prompt_version = payload.prompt_version.strip()
+        if payload.source == 'manual':
+            row.responded_by = f'manual:{user.email or user.id}'
+        if file_info:
+            row.validation = {**(row.validation or {}), 'responseFile': file_info}
         _save_share_link(row, payload.share_url)
         if "conversation_url" in payload.model_fields_set:
             row.conversation_url = payload.conversation_url.strip()
@@ -229,6 +259,9 @@ def put_bank_response(subject: str, run_id: str, payload: ResponseIn,
         row = QuizBank(subject=lecture.subject, run_id=lecture.run_id)
         db.add(row)
     row.raw_response = payload.raw
+    row.validation = {k: v for k, v in (row.validation or {}).items() if k != 'responseFile'}
+    if file_info:
+        row.validation['responseFile'] = file_info
     if (row.validation or {}).get("revision"):
         row.validation = {k: v for k, v in row.validation.items() if k != "revision"}
     # 새 원문에는 이전 보강 요청을 이어 붙이지 않는다.
@@ -238,7 +271,7 @@ def put_bank_response(subject: str, run_id: str, payload: ResponseIn,
     if "conversation_url" in payload.model_fields_set:
         row.conversation_url = payload.conversation_url.strip()
     row.prompt_version = payload.prompt_version
-    row.responded_by = user.email or user.id
+    row.responded_by = f'manual:{user.email or user.id}' if payload.source == 'manual' else user.email or user.id
     row.responded_at = datetime.now(UTC)
     row.status = BANK_RESPONDED
     row.message = "응답을 받았다 — 러너가 정리한다"
@@ -259,11 +292,16 @@ def get_bank_response(subject: str, run_id: str, user: CurrentUser = Depends(req
     row = db.get(QuizBank, (lecture.subject, lecture.run_id))
     if row is None:
         raise HTTPException(404, "저장된 ChatGPT 응답이 없습니다.")
-    row.status = BANK_BUILDING
-    row.message = "러너가 정리하는 중"
+    if not bank_shared_response.pending(row):
+        row.status = BANK_BUILDING
+        row.message = "러너가 정리하는 중"
     db.commit()
     maintenance = (row.validation or {}).get("maintenance")
     return {"raw": row.raw_response, "respondedAt": _iso(row.responded_at), "promptVersion": row.prompt_version,
+            "responseFile": (row.validation or {}).get('responseFile'),
+            "shareUrl": row.share_url, "importShare": bank_shared_response.pending(row),
+            "responseSource": "manual" if bank_shared_response.manual(row) else "link",
+            "publishedCurrent": bool(row.bank and row.built_at and row.responded_at and row.built_at >= row.responded_at and row.open_to_students),
             **({"existingBank": row.bank, "baseBuildId": row.build_id} if maintenance else {}),
             "examDate": exam_date_for(db, lecture),
             "title": lecture.title, "sources": [{k: s[k] for k in ("id", "kind", "filename")}
@@ -302,11 +340,52 @@ def put_bank_links(subject: str, run_id: str, payload: BankLinksIn,
         row = QuizBank(subject=lecture.subject, run_id=lecture.run_id, status="linked")
         db.add(row)
     # 독립적으로 도착하는 두 링크가 서로 덮어쓰지 않는다. 빈 문자열은 명시적 삭제다.
+    changed_share = bool(not bank_shared_response.manual(row) and not bank_shared_response.file_source(row) and payload.share_url is not None and payload.share_url.strip() and (payload.share_url.strip() != row.share_url or bank_shared_response.pending(row)))
+    job = open_job_of(db, lecture.subject, lecture.run_id, JOB_BANK) if changed_share else None
+    if job is not None and job.state == 'running':
+        raise HTTPException(409, '검수 중입니다. 완료 후 새 공유 링크를 다시 저장합니다.')
     _save_share_link(row, payload.share_url)
+    if changed_share and job is None:
+        db.add(PrequizJob(subject=lecture.subject, run_id=lecture.run_id, kind=JOB_BANK,
+                         state=JOB_QUEUED, origin=JOB_BUTTON, requested_by=user.email or user.id,
+                         stage='저장된 공유 링크에서 완성 응답 가져오기'))
     if payload.conversation_url is not None:
         row.conversation_url = payload.conversation_url.strip()
     db.commit()
     return {"shareUrl": row.share_url, "conversationUrl": row.conversation_url}
+
+
+class SharedResponseIn(BaseModel):
+    raw: str = Field(min_length=200, max_length=2_000_000)
+    share_url: str = Field(alias='shareUrl', max_length=500)
+    expected_responded_at: str | None = Field(alias='expectedRespondedAt')
+    expected_raw_hash: str = Field(alias='expectedRawHash', pattern=r'^[a-f0-9]{64}$')
+    extraction_strategy: str = Field(alias='extractionStrategy', max_length=100)
+
+
+@admin_router.get('/lectures/{subject}/{run_id}/bank/shared-source')
+def get_bank_shared_source(subject: str, run_id: str, user: CurrentUser = Depends(require_runner),
+                           db: Session = Depends(get_db)):
+    lecture_or_404(db, subject, run_id)
+    row = db.get(QuizBank, (subject, run_id))
+    if row is None:
+        raise HTTPException(404, '저장된 공유 응답이 없습니다.')
+    return {'raw': row.raw_response, 'respondedAt': _iso(row.responded_at),
+            'responseFile': (row.validation or {}).get('responseFile'),
+            'responseSource': 'manual' if bank_shared_response.manual(row) else 'link',
+            'shareUrl': row.share_url, 'importShare': bank_shared_response.pending(row),
+            'publishedCurrent': bool(row.bank and row.built_at and row.responded_at and row.built_at >= row.responded_at and row.open_to_students)}
+
+
+@admin_router.put('/lectures/{subject}/{run_id}/bank-shared-response')
+def put_bank_shared_response(subject: str, run_id: str, payload: SharedResponseIn,
+                             user: CurrentUser = Depends(require_runner), db: Session = Depends(get_db)):
+    lecture = lecture_or_404(db, subject, run_id)
+    db.refresh(lecture, with_for_update=True)
+    row = db.get(QuizBank, (subject, run_id))
+    if row is None or not valid_share_url(payload.share_url, 'chatgpt') or (payload.raw != row.raw_response and not payload.raw.rstrip().endswith(COMPLETE_MARK)):
+        raise HTTPException(422, '저장된 공유 링크와 완성 응답을 확인하세요.')
+    return bank_shared_response.store(db, row, payload, user.email or user.id)
 
 
 class GeneratedResponseIn(ResponseIn):
@@ -378,6 +457,8 @@ def put_bank(subject: str, run_id: str, payload: BankIn, user: CurrentUser = Dep
     if payload.revision is not None:
         checked = {**checked, 'revision': payload.revision}
     checked = publication_stamp(incoming, checked, source_ids, allow_unresolved=payload.allow_unresolved)
+    if (row.validation or {}).get('responseFile'):
+        checked = {**checked, 'responseFile': row.validation['responseFile']}
     if maintenance:
         old_questions = without_retired(row.bank)["questions"]
         incoming_questions = {q["question_id"]: q for q in without_retired(incoming)["questions"]}

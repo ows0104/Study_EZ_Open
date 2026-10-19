@@ -1,4 +1,4 @@
-importScripts("protocol.js");
+importScripts("protocol.js", "bank-file.js");
 
 const { WEBAPP_SOURCE, MESSAGES, LINK_KINDS } = globalThis.STUDYEZ_PROTOCOL;
 
@@ -141,6 +141,8 @@ async function deliverPending(webappTabId) {
         await chrome.tabs.sendMessage(webappTabId, {
           type: MESSAGES.bankReady, lectureId: entry.lectureId, raw: entry.raw, url: entry.url,
           promptVersion: entry.promptVersion || "",
+          ...(entry.responseFile ? { responseFile: entry.responseFile } : {}),
+          ...(entry.responseFile && entry.manualFile ? { manualFile: true } : {}),
           ...(typeof entry.shareUrl === "string" ? { shareUrl: entry.shareUrl } : {}),
         });
       } catch {
@@ -175,6 +177,7 @@ async function watchTab(tabId, watch) {
   void chrome.tabs
     .sendMessage(tabId, {
       type: "STUDYEZ_WATCH_READY",
+      promptVersion: watch.promptVersion || "",
       lectureId: watch.lectureId,
       provider: watch.provider,
       mode: watch.mode,
@@ -261,11 +264,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .then(async (stored) => {
         const watch = stored[key];
         if (!watch || watch.mode !== "bank") { sendResponse({ ok: false }); return; }
+        const target = globalThis.StudyEZBankFile?.lectureTarget(watch.lectureId, watch.promptVersion);
+        if (globalThis.StudyEZBankFile?.required(target) && !message.responseFile) {
+          sendResponse({ ok: false, error: "실제 .md 파일 원문이 필요합니다." }); return;
+        }
+        if (message.responseFile) {
+          try { globalThis.StudyEZBankFile.inspect(raw, target, message.responseFile.filename); }
+          catch (error) { sendResponse({ ok: false, error: error.message }); return; }
+        }
         const url = isConversationUrl("chatgpt", message.url || "") ? message.url : "";
         const shareUrl = shareIdentity("chatgpt", message.shareUrl || "") ? message.shareUrl : undefined;
         await chrome.storage.session.set({
           [bankKey(watch.webappTabId, watch.lectureId)]: { lectureId: watch.lectureId, raw, url,
             promptVersion: watch.promptVersion || "",
+            ...(message.responseFile ? { responseFile: message.responseFile } : {}),
+            ...(message.responseFile && message.manualFile === true ? { manualFile: true } : {}),
             ...(shareUrl ? { shareUrl } : {}) },
         });
         sendResponse({ ok: true });
@@ -296,6 +309,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           lectureId: stored[key].lectureId,
           provider: stored[key].provider,
           mode: stored[key].mode,
+          promptVersion: stored[key].promptVersion || "",
         } : { ok: false }),
       )
       .catch(() => sendResponse({ ok: false }));

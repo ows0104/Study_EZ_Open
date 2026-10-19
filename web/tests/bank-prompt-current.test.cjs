@@ -24,18 +24,60 @@ test('failed or corrupt latest prompt stops instead of falling back to a stale t
  }
 });
 
+test('a loaded tab uses fresh lecture scopes together with the latest template',async()=>{
+ const scope={title:'CNS lecture',sourcePrefix:'[261006_02]',instruction:'Current source-color scope'};
+ const s=fixture({ok:true,json:async()=>({version:'1.75',template:'<!-- Version: 1.75 -->\n{{lecture_scope}}\n\n{{title}}\nSTUDYEZ_BANK_COMPLETE',lectureScopes:[scope]})});
+ const source={id:'S1',kind:'notes_current',filename:'[261006_02] notes.pdf'};
+ const result=await s.loadLatestBankPrompt({title:scope.title},[source]);
+ assert.ok(result.prompt.includes(scope.instruction));
+ assert.ok(!(await s.loadLatestBankPrompt({title:'Other lecture'},[source])).prompt.includes(scope.instruction));
+ assert.ok(!(await s.loadLatestBankPrompt({title:scope.title},[{...source,filename:'[261006_03] notes.pdf'}])).prompt.includes(scope.instruction));
+});
+
+test('invalid fresh lecture scopes stop transmission instead of silently dropping scope',async()=>{
+ for(const lectureScopes of [null,{},[null],[{}],[{title:'CNS',sourcePrefix:'[261006_02]',instruction:''}]]) {
+  const s=fixture({ok:true,json:async()=>({version:'1.75',template:'<!-- Version: 1.75 -->\nSTUDYEZ_BANK_COMPLETE',lectureScopes})});
+  await assert.rejects(s.loadLatestBankPrompt({title:'CNS'},[]),/출제 범위/);
+ }
+});
+
 test('canonical web prompt includes the exact matching lecture scope and keeps other lectures separate',()=>{
  const path=require('node:path');
  const template=fs.readFileSync(path.join(__dirname,'../src/bank/bankPrompt.md'),'utf8');
  const scopes=JSON.parse(fs.readFileSync(path.join(__dirname,'../src/bank/lectureScopes.json'),'utf8'));
  const exports={};
- vm.runInNewContext(code,{exports,require:id=>({default:id.endsWith('.json')?scopes:template})});
- const scope=scopes[0];
+ vm.runInNewContext(code,{exports,require:id=>({default:id.endsWith('.json')?scopes:
+  id.includes('fileDelivery')?fs.readFileSync(path.join(__dirname,'../src/bank/fileDelivery.md'),'utf8'):
+  id.includes('textDelivery')?fs.readFileSync(path.join(__dirname,'../src/bank/textDelivery.md'),'utf8'):template})});
+ for(const scope of scopes) {
  const source={kind:'notes_current',filename:scope.sourcePrefix+' lecture.pdf',id:'S1'};
  assert.ok(exports.renderBankPrompt({title:scope.title},[source]).includes(scope.instruction));
  const other=exports.renderBankPrompt({title:'Other lecture'},[source]);
  assert.ok(!other.includes(scope.instruction));
- assert.ok(other.includes('별도 지정 없음'));
+ assert.ok(!other.includes('별도 지정 없음'));
+ assert.ok(!other.includes('{{lecture_scope}}'));
+ assert.match(other,/강의: Other lecture\n\n## 1\./);
  const wrongSource=exports.renderBankPrompt({title:scope.title},[{...source,filename:'different.pdf'}]);
  assert.ok(!wrongSource.includes(scope.instruction));
+ assert.ok(!wrongSource.includes('별도 지정 없음'));
+ const current=exports.renderBankPrompt({title:scope.title},[source]);
+ assert.ok(!/\{\{(?:delivery_instructions|run_id|prompt_version|subject)\}\}/.test(current));
+ assert.ok(current.includes('STUDYEZ_BANK_FILE'));
+ assert.ok(current.includes(`study-ez-${scope.sourcePrefix.slice(1,-1)}-bank.md`));
+ }
+});
+
+test('all lectures receive file delivery with their own identity, including non-pharmacology',()=>{
+ const path=require('node:path'); const exports={};
+ const template=fs.readFileSync(path.join(__dirname,'../src/bank/bankPrompt.md'),'utf8');
+ const file=fs.readFileSync(path.join(__dirname,'../src/bank/fileDelivery.md'),'utf8');
+ vm.runInNewContext(code,{exports,require:id=>({default:id.endsWith('.json')?[]:id.includes('fileDelivery')?file:template})});
+ for(const [subject,runId,title] of [['약리학','261012_02','항생제 치료의 기본 원리(윤성혜)'],['병리학','261019_01','병리학 강의']]) {
+  const prompt=exports.renderBankPrompt({subject,runId,title},[{id:'S1',kind:'notes_current',filename:`[${runId}] notes.pdf`}]);
+  assert.ok(prompt.includes(`study-ez-${runId}-bank.md`));
+  assert.ok(prompt.includes(`subject: "${subject}"`));
+  assert.ok(prompt.includes('STUDYEZ_BANK_FILE'));
+  assert.ok(!prompt.includes('파일 링크로 본문을 대신하지 않는다'));
+  assert.ok(!/\{\{(?:run_id|subject|prompt_version|delivery_instructions)\}\}/.test(prompt));
+ }
 });

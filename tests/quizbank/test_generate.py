@@ -11,7 +11,7 @@ def test_prompt_uses_canonical_template_and_preserves_cloze():
     body, version = generate.prompt_for("강의", "2026-10-20", [
         {"id": "S1", "kind": "notes_current", "filename": "a.pdf"}])
     assert version != "unknown" and "Version:" not in body
-    assert "{{title}}" not in body and "a.pdf" in body and "{{c1}}" in body
+    assert "{{title}}" not in body and "a.pdf" in body and "{정답}" in body and "{{c1}}" not in body
     assert "{{lecture_scope}}" not in body
     assert generate.item_quality_guidance() in body
 
@@ -53,6 +53,20 @@ def test_endocrine_scope_is_tied_to_the_confirmed_lecture(title, filename, scope
     assert "{{lecture_scope}}" not in body
 
 
+def test_all_lecture_scopes_require_the_matching_title_and_source_prefix():
+    scopes = json.loads(generate.LECTURE_SCOPES.read_text(encoding="utf-8"))
+    for entry in scopes:
+        sources = [{"id": "S1", "kind": "notes_current", "filename": entry["sourcePrefix"] + " notes.pdf"}]
+        assert generate.lecture_scope(entry["title"], sources) == entry["instruction"]
+        body, _ = generate.prompt_for(entry["title"], "", sources)
+        assert body.count(entry["instruction"]) == 1
+        for title, candidate in [("Other lecture", sources),
+                                 (entry["title"], [{**sources[0], "filename": "different.pdf"}]),
+                                 (entry["title"], [{**sources[0], "kind": "jokbo"}])]:
+            body, _ = generate.prompt_for(title, "", candidate)
+            assert entry["instruction"] not in body
+
+
 def test_generate_reads_pdf_and_continues_without_completion(tmp_path, monkeypatch):
     pdf = tmp_path / "a.pdf"
     with fitz.open() as doc:
@@ -61,18 +75,25 @@ def test_generate_reads_pdf_and_continues_without_completion(tmp_path, monkeypat
     calls = []
     def run(prompt, **kwargs):
         calls.append((prompt, kwargs))
+        if len(calls) == 2:
+            from pathlib import Path
+            value = (Path(__file__).parents[1] / 'fixtures/bank-file-valid.md').read_text(encoding='utf-8')
+            version = generate.prompt_for('강의', '', context['sources'])[1]
+            value = value.replace('1.76', version)
+            (out / 'study-ez-261006_02-bank.md').write_text(value, encoding='utf-8')
         return {"text": "문항 " * 100 if len(calls) == 1 else "나머지\nSTUDYEZ_BANK_COMPLETE",
                 "session_id": "s1", "session_usage": {"input_tokens": 5},
                 "usage": {"input_tokens": 5}, "cost_usd": None, "duration_ms": 100}
     monkeypatch.setattr(generate.codex, "run", run)
     out = tmp_path / "out"
-    context = {"title": "강의", "sources": [{"id": "S1", "kind": "notes_current", "filename": "a.pdf"}]}
+    context = {"title": "강의", "run_id": "261006_02", "sources": [{"id": "S1", "kind": "notes_current", "filename": "a.pdf"}]}
     result = generate.generate(pdf, context, out)
     assert calls[0][1]["blind"] is False
     assert calls[1][1]["resume"] == "s1" and calls[1][1]["previous_usage"] == {"input_tokens": 5}
     assert "Source text" in (out / "source-text.md").read_text(encoding="utf-8")
     assert len(json.loads((out / "source-pages.json").read_text())) == 1
-    assert (out / "raw.md").read_text(encoding="utf-8").endswith("STUDYEZ_BANK_COMPLETE")
+    assert (out / "raw.md").read_text(encoding="utf-8").rstrip().endswith("STUDYEZ_BANK_COMPLETE")
+    assert (out / 'raw.md').read_bytes() == (out / 'study-ez-261006_02-bank.md').read_bytes()
     assert len(result["usage"]) == 2
 
 

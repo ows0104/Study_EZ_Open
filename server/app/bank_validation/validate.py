@@ -87,7 +87,7 @@ def validate_bank(bank: dict, source_ids: list[str], *, learning_structure: bool
         for item in [*bank["questions"], *bank["concepts"]]:
             ident = item.get("question_id", item.get("concept_id"))
             fail(item["importance"] == IMPORTANCE[item["tier"]],
-                 f"{ident}: 중요도 수치는 Core=5, Important=4, Optional=2여야 합니다.")
+                 f"{ident}: 중요도 수치는 Essential=5, Core=5, Important=4, Optional=2여야 합니다.")
 
     if check_quality:
         quality_invalid, quality_warnings = quality_errors(bank)
@@ -145,8 +145,15 @@ def validate_bank(bank: dict, source_ids: list[str], *, learning_structure: bool
         fail(bool(q["answer_units"]) and all(_nonempty(u) for u in q["answer_units"]), f"{label}: 채점 단위 필요")
         refs(q["source_refs"], label)
         unique(q["prerequisites"], f"{label} prerequisites")
+        if "learning_page" in q:
+            fail(_in_range(q["learning_page"], 1, float("inf")) and isinstance(q["learning_page"], int),
+                 f"{label}: learning_page는 1 이상의 정수여야 합니다.")
         for pid in q["prerequisites"]:
             fail(pid in questions and pid != label, f"{label}: 잘못된 prerequisite {pid}")
+            parent = questions.get(pid, {})
+            if "learning_page" in q and "learning_page" in parent:
+                fail(q["learning_page"] >= parent["learning_page"],
+                     f"{label}: 학습 위치가 선행 문항 {pid}보다 앞섭니다.")
         if not learning_structure:
             fail(not q["prerequisites"], f"{label}: 사후 연결 전 prerequisites는 비워야 합니다.")
         if check_quality and learning_structure and q["retrieval_direction"] == "integration" and not q["prerequisites"]:

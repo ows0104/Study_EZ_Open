@@ -1,8 +1,8 @@
 """Priority and independent depth metadata, with read compatibility for old banks."""
 
-TIERS = ["Core", "Important", "Optional"]
+TIERS = ["Essential", "Core", "Important", "Optional"]
 TIER_ORDER = {tier: i for i, tier in enumerate(TIERS)}
-IMPORTANCE = {"Core": 5, "Important": 4, "Optional": 2}
+IMPORTANCE = {"Essential": 5, "Core": 5, "Important": 4, "Optional": 2}
 
 
 def priority_tier(item: dict) -> str:

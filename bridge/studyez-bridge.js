@@ -98,7 +98,9 @@ function receiveMessage(message) {
   if (message?.type === MESSAGES.bankReady) {
     reply({ type: MESSAGES.bankReady, lectureId: message.lectureId, raw: message.raw, url: message.url,
             promptVersion: message.promptVersion || "",
-            ...(typeof message.shareUrl === "string" ? { shareUrl: message.shareUrl } : {}) });
+            ...(typeof message.shareUrl === "string" ? { shareUrl: message.shareUrl } : {}),
+            ...(message.responseFile ? { responseFile: message.responseFile } : {}),
+            ...(message.responseFile && message.manualFile ? { manualFile: true } : {}) });
     return false;
   }
   if (message?.type !== MESSAGES.linkReady) return false;
