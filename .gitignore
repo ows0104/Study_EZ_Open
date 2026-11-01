@@ -86,6 +86,11 @@ tmp/
 runs/_deployment/
 runs/_rollback/
 
+# Local development copies, release candidates and build backups.
+# Keep plans, review summaries and revision-bound state in docs/changes/.
+runs/_development/
+web/dist-before-professor-candidate/
+
 # Change records retain source/plans/state; generated evidence stays local.
 docs/changes/**/*.png
 docs/changes/**/*.jpg
