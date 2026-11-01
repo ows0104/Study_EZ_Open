@@ -1,0 +1,119 @@
+{
+  "id": "2026-11-01-jokbo-format-policy",
+  "title": "족보 PDF 정리·첨부 형식의 공통 기본값 보존",
+  "area": "integration",
+  "created_at": "2026-11-01T13:32:47.931082+00:00",
+  "required_checks": [
+    "policy"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-01T13:32:52.494982+00:00",
+      "evidence": "2026-11-01 현재 사용자 직접 지시: ㅇㅋ 그럼 앞으로 족보도 이 형식으로 정리해서 첨부해줘.",
+      "scope": "확인한 족보 PDF 형식을 공통 정책과 관련 안내 문서에 보존. 운영 자산 변경·웹 배포 제외",
+      "evidence_version": 2,
+      "source_hash": "3d37f9864d41e2cb748edf9f6eb7093783961f7c41e6dd6d7b1bf211fe9374b1",
+      "plan_hash": "f7fc6816db8383e9b5194bc75b2da91e522dfacfb84ac92a787d401ec85bbd19",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "da1cc43232991996c6a2b54b19694b286b5a1f980ed754783c9bb4222adee7ff"
+    }
+  },
+  "checks": [
+    {
+      "name": "policy",
+      "at": "2026-11-01T13:33:33.144021+00:00",
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "CLAUDE.md",
+        "runner/CLAUDE.md",
+        "docs/map.md",
+        "docs/policies/infection-immunity-materials-2026.md",
+        "docs/policies/jokbo-attachments.md"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8fc525b9337709bdba727b6b517f0512898b11deecf15fc290b67ad61a2f94a5",
+      "plan_hash": "f7fc6816db8383e9b5194bc75b2da91e522dfacfb84ac92a787d401ec85bbd19",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-01-jokbo-format-policy/1793540012929780500-policy.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-01T13:33:35.964191+00:00",
+    "summary": "사용자가 확인한 형식의 공통 기본값·같은교수 우선·미상/공동담당·복습 실제필기/예습 기존판정·이미지/정답/이전자료 보존을 검토했다. 4개 지침 진입점과 로컬 문서 링크, diff 공백 검사 통과. 기존 웹 배포 보류 유지, 자동변환 구현이나 운영 변경으로 확대하지 않음.",
+    "evidence_version": 2,
+    "source_hash": "8fc525b9337709bdba727b6b517f0512898b11deecf15fc290b67ad61a2f94a5",
+    "plan_hash": "f7fc6816db8383e9b5194bc75b2da91e522dfacfb84ac92a787d401ec85bbd19",
+    "inputs": [
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "runner",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "tests/runner",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "completed_local",
+    "events": [
+      {
+        "at": "2026-11-01T13:33:39.200756+00:00",
+        "type": "completed_local",
+        "evidence": "현재 사용자 지시의 공통 족보 PDF 형식을 정책/진입점에 보존하고 문서 검사·리뷰 완료. 운영 자료 변경 및 웹 배포 없음.",
+        "resolution": null
+      }
+    ],
+    "links": []
+  },
+  "updated_at": "2026-11-01T13:33:39.200773+00:00"
+}

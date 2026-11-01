@@ -1,5 +1,6 @@
 import type { LectureDetail } from "../types/lectures";
 import { PROMPT_TOKENS, renderLecturePrompt } from "./previewPrompt";
+import { professorsFromNotesFilename, reviewProfessorGuidance } from "./reviewProfessor";
 
 export const DEFAULT_REVIEW_PROMPT = [
   "{파일명}",
@@ -11,5 +12,9 @@ export const REVIEW_PROMPT_TOKENS = PROMPT_TOKENS.map((item) =>
 );
 
 export function renderReviewPrompt(template: string, detail: LectureDetail) {
-  return renderLecturePrompt(template, detail, "notes_current");
+  const filename = detail.files.find(file => file.kind === "notes_current")?.filename;
+  if (!filename) return renderLecturePrompt(template, detail, "notes_current");
+  const names = professorsFromNotesFilename(filename);
+  const prompt = renderLecturePrompt(template, { ...detail, professors: names }, "notes_current");
+  return `${prompt}\n\n${reviewProfessorGuidance(filename)}`;
 }

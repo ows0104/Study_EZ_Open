@@ -30,6 +30,9 @@ Intent → Spec → Implementation Plan(사람 승인) → Build → Test → Re
 
 ## 적용 중인 개별 지시
 
+족보 정리·첨부는 [공통 PDF 형식](docs/policies/jokbo-attachments.md)을 기본으로 한다.
+연도별 교수 표시·올해 같은 교수 기출 우선·원문/그림 보존·실제 PDF 확인을 따른다.
+
 문항 내용 변경·강의 재출제·자료 이동·검수 예외·수동 응답 처리는
 [기존 사용자 지시 원문](docs/policies/pre-refactor-directions-2026-10-26.md)의 해당 강의/작업과
 컴포넌트 안내를 반드시 확인한다. 원문을 보관한 것은 지시를 해제한 것이 아니다.
