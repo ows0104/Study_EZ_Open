@@ -1,0 +1,22 @@
+{
+  "id": "2026-11-02-block-professor-briefing",
+  "title": "블록 시작 교수 변경 안내와 교수별 기출 스타일",
+  "area": "contracts",
+  "created_at": "2026-11-01T17:15:12.850871+00:00",
+  "required_checks": [
+    "professor-analysis",
+    "contracts",
+    "server",
+    "web",
+    "browser"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-01T17:15:12.850890+00:00"
+}
