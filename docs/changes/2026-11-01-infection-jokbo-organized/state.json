@@ -1,0 +1,186 @@
+{
+  "id": "2026-11-01-infection-jokbo-organized",
+  "title": "감염과 면역 이미지 보존 족보 정리본",
+  "area": "integration",
+  "created_at": "2026-11-01T05:14:21.039125+00:00",
+  "required_checks": [
+    "materials",
+    "upload"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-01T05:15:37.858358+00:00",
+      "evidence": "2026-11-01 현재 채팅: 그럼 이미지 유지하면서 저번처럼 정리된 파일로 다시 만들어서 업로드해줘.",
+      "scope": "감염과 면역 2026 족보 이미지 보존 정리본 제작·검증 및 기존 80개 jokbo 첨부 교체; 필기·강의·학습 기록 보존",
+      "evidence_version": 2,
+      "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+      "plan_hash": "95bf7ae2085f0d3d9c5392966bf85704639537d50bdab43afcd4e4c4df14ca83",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "d5b966a9eb6ca7f38b9d4b846808b1392b6ec8c589f74b95fd368b1c56ff5a1c"
+    }
+  },
+  "checks": [
+    {
+      "name": "materials",
+      "at": "2026-11-01T05:21:03.639502+00:00",
+      "command": [
+        "./.venv/Scripts/python.exe",
+        "docs/changes/2026-11-01-infection-jokbo-organized/verify_materials.py"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+      "plan_hash": "95bf7ae2085f0d3d9c5392966bf85704639537d50bdab43afcd4e4c4df14ca83",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-01-infection-jokbo-organized/1793510461289626800-materials.log"
+    },
+    {
+      "name": "materials",
+      "at": "2026-11-01T05:23:43.958766+00:00",
+      "command": [
+        "./.venv/Scripts/python.exe",
+        "docs/changes/2026-11-01-infection-jokbo-organized/verify_materials.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+      "plan_hash": "95bf7ae2085f0d3d9c5392966bf85704639537d50bdab43afcd4e4c4df14ca83",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-01-infection-jokbo-organized/1793510517230193600-materials.log"
+    },
+    {
+      "name": "upload",
+      "at": "2026-11-01T05:27:15.491243+00:00",
+      "command": [
+        "./server/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-01-infection-jokbo-organized/verify_upload.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+      "plan_hash": "95bf7ae2085f0d3d9c5392966bf85704639537d50bdab43afcd4e4c4df14ca83",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-01-infection-jokbo-organized/1793510819975963200-upload.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-01T05:27:57.893572+00:00",
+    "summary": "최종 자료 리뷰: 69개 정리본·864개 문항의 전체 원본 범위, 1791개 지면 구간의 글자·렌더 및 225개 원본 이미지 스트림 보존 확인. 원본 정답표의 단원/연도/번호로 826개 정답 연결, 연결 불명확 38개 표시 및 원본 표 전체 보존. 두 PDF 렌더러에서 그림·표·긴 문항·CBL·2차 시각 확인. 80개 운영 첨부 바이트 해시 일치, 80개 시간표 연결·강의 정보와 71개 필기·퀴즈 보존 검사 통과. 서비스 코드 변경 없음.",
+    "evidence_version": 2,
+    "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+    "plan_hash": "95bf7ae2085f0d3d9c5392966bf85704639537d50bdab43afcd4e4c4df14ca83",
+    "inputs": [
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "runner",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "tests/runner",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "verified",
+    "events": [
+      {
+        "at": "2026-11-01T05:25:59.770603+00:00",
+        "type": "implementing",
+        "evidence": "사용자의 이미지 유지 정리본 제작·업로드 명시 승인 적용. 69개 정리본 materials·시각 검사 통과 후 80개 jokbo 첨부 교체 진행.",
+        "resolution": null
+      },
+      {
+        "at": "2026-11-01T05:27:58.691023+00:00",
+        "type": "verified",
+        "evidence": "69개 이미지 보존 정리본 제작 및 80개 족보 첨부 교체 완료. materials와 upload 검증 통과. 71개 기존 필기와 80개 강의·학습 데이터 보존.",
+        "resolution": null
+      }
+    ],
+    "links": [
+      "2026-11-01-infection-jokbo-2026",
+      "2026-11-01-infection-jokbo-answer-audit"
+    ]
+  },
+  "updated_at": "2026-11-01T05:38:07.431952+00:00"
+}

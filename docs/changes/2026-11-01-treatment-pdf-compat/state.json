@@ -1,0 +1,112 @@
+{
+  "id": "2026-11-01-treatment-pdf-compat",
+  "title": "감염병의 치료 원칙 PDF 웹 표시 진단 및 호환 사본",
+  "area": "integration",
+  "created_at": "2026-11-01T04:52:29.596649+00:00",
+  "required_checks": [
+    "materials"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-01T04:53:06.631511+00:00",
+      "evidence": "사용자 최초 지시: 감염과 면역 작년필기, 족보 정리해서 업로드해줘. 현재 글씨 겹침 질문의 대상인 동일 원본 한 개에 대해 원문 보존 로컬 호환 사본을 만드는 자료 준비 범위에 한정. 운영 자료 교체나 대량 수정으로 확대하지 않음.",
+      "scope": "감염병의 치료 원칙 PDF 한 개의 읽기 전용 진단과 원문 보존 로컬 호환 사본 생성·검사. 원본·서버·대화·학습 기록 변경 없음",
+      "evidence_version": 2,
+      "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+      "plan_hash": "e7a105cb07d4874663b93d9b1c2bdba1ac8402daec2abd5408c25a8b1714be53",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "53955f25d0d5ccf2a58469baee0eb5602a25c4df0886d3b8c7c320bb84bed9da"
+    }
+  },
+  "checks": [
+    {
+      "name": "materials",
+      "at": "2026-11-01T04:54:04.109260+00:00",
+      "command": [
+        "./.venv/Scripts/python.exe",
+        "docs/changes/2026-11-01-treatment-pdf-compat/verify_materials.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+      "plan_hash": "e7a105cb07d4874663b93d9b1c2bdba1ac8402daec2abd5408c25a8b1714be53",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-01-treatment-pdf-compat/1793508841747814400-materials.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-01T04:55:21.308522+00:00",
+    "summary": "진단 대상 원본/서버 해시 일치, 원본 정상 렌더 확인. FreeText/Stamp 215개 주석과 저장 외관/기본 서식 차이를 근거로 웹 미리보기 호환 문제 추정. 주석 고정 사본 48쪽의 추출 텍스트 및 렌더 픽셀 완전 일치(차이0), 주석0 확인. PyMuPDF/Poppler 대표 지면 시각검토 통과. 원본/서버/대화/학습 기록 변경 없음. ChatGPT 미리보기와 모델 이해 정확도는 미검증임을 명시.",
+    "evidence_version": 2,
+    "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+    "plan_hash": "e7a105cb07d4874663b93d9b1c2bdba1ac8402daec2abd5408c25a8b1714be53",
+    "inputs": [
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "runner",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "tests/runner",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "completed_local",
+    "events": [
+      {
+        "at": "2026-11-01T04:55:22.201354+00:00",
+        "type": "completed_local",
+        "evidence": "해당 PDF 1개 진단 및 원문 외관/텍스트를 보존한 48쪽 주석 고정 호환 사본 생성·검증 완료. 서버 첨부나 ChatGPT 대화는 변경하지 않음.",
+        "resolution": null
+      }
+    ],
+    "links": []
+  },
+  "updated_at": "2026-11-01T04:55:22.201369+00:00"
+}

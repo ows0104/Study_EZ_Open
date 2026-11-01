@@ -1,0 +1,211 @@
+{
+  "id": "2026-11-01-infection-jokbo-json",
+  "title": "감염과 면역 족보 JSON 및 연결 그림 자료",
+  "area": "integration",
+  "created_at": "2026-11-01T05:52:40.973362+00:00",
+  "required_checks": [
+    "materials",
+    "package"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-01T05:53:27.210463+00:00",
+      "evidence": "2026-11-01 현재 대화: JSON 문항 + 연결 그림 폴더 + 원본 PDF 관리 방식 설명에 대해 사용자가 ㅇㅎ ㅇㅋ 그러면 그렇게 정리해줘.라고 명시 요청.",
+      "scope": "감염과 면역 족보 문항 JSON·연결 그림·원본 PDF 및 같은 JSON에서 생성한 GPT용 MD, 다운로드 묶음 제작·검증",
+      "evidence_version": 2,
+      "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+      "plan_hash": "b6cc79ad272f74edb9f946ae31cd9e67f79142d89492ee498f1a31911bdf26d5",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "2627ce35c07488c39bb4ec5200aa219676bf81829114bc0d0c82403f3da9faed"
+    }
+  },
+  "checks": [
+    {
+      "name": "materials",
+      "at": "2026-11-01T06:00:26.518496+00:00",
+      "command": [
+        "./.venv/Scripts/python.exe",
+        "docs/changes/2026-11-01-infection-jokbo-json/verify_materials.py"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+      "plan_hash": "b6cc79ad272f74edb9f946ae31cd9e67f79142d89492ee498f1a31911bdf26d5",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-01-infection-jokbo-json/1793512794966155300-materials.log"
+    },
+    {
+      "name": "materials",
+      "at": "2026-11-01T06:04:33.701120+00:00",
+      "command": [
+        "./.venv/Scripts/python.exe",
+        "docs/changes/2026-11-01-infection-jokbo-json/verify_materials.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+      "plan_hash": "b6cc79ad272f74edb9f946ae31cd9e67f79142d89492ee498f1a31911bdf26d5",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-01-infection-jokbo-json/1793513019995554300-materials.log"
+    },
+    {
+      "name": "materials",
+      "at": "2026-11-01T06:09:06.494395+00:00",
+      "command": [
+        "./.venv/Scripts/python.exe",
+        "docs/changes/2026-11-01-infection-jokbo-json/verify_materials.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+      "plan_hash": "b6cc79ad272f74edb9f946ae31cd9e67f79142d89492ee498f1a31911bdf26d5",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-01-infection-jokbo-json/1793513310111158200-materials.log"
+    },
+    {
+      "name": "package",
+      "at": "2026-11-01T06:10:41.065222+00:00",
+      "command": [
+        "./.venv/Scripts/python.exe",
+        "docs/changes/2026-11-01-infection-jokbo-json/verify_package.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+      "plan_hash": "b6cc79ad272f74edb9f946ae31cd9e67f79142d89492ee498f1a31911bdf26d5",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-01-infection-jokbo-json/1793513439023565000-package.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-01T06:11:48.840706+00:00",
+    "summary": "69개 JSON·850개 원문 항목·80강의 연결·831개 원본 정답과 19개 보류 보존 확인. 원문 전체/845개 보기 분리 무손실·모든 이미지 인스턴스 연결·1691개 원문 대조 PNG와 464개 시각 자료 픽셀 및 원본 PDF/216개 이미지 리소스 해시 검증. ID 여백은 원본 그림 픽셀과 분리. 이미지 보기 2문항의 4개 원본 배치 PNG 포함. JSON에서 MD 69개와 GPT PNG 317개 내보내기, 두 ZIP 모든 파일 해시·안전 경로·이미지 링크 검사 통과. 서비스 코드·개인 학습 기록 변경 없음.",
+    "evidence_version": 2,
+    "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+    "plan_hash": "b6cc79ad272f74edb9f946ae31cd9e67f79142d89492ee498f1a31911bdf26d5",
+    "inputs": [
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "runner",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "tests/runner",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "completed_local",
+    "events": [
+      {
+        "at": "2026-11-01T06:11:49.362828+00:00",
+        "type": "completed_local",
+        "evidence": "JSON 관리 자료와 GPT 첨부 자료 제작 완료. materials 및 package 실제 검사와 시각 검토 통과. 두 ZIP을 다운로드 파일로 제공하며 기존 원본·사이트 자료를 보존.",
+        "resolution": null
+      }
+    ],
+    "links": [
+      "2026-11-01-infection-jokbo-answer-audit"
+    ]
+  },
+  "updated_at": "2026-11-01T06:11:49.534714+00:00"
+}

@@ -1,0 +1,279 @@
+{
+  "id": "2026-11-01-infection-materials",
+  "title": "감염과 면역 작년 필기·족보 정리 및 자료 업로드",
+  "area": "integration",
+  "created_at": "2026-11-01T01:36:32.247288+00:00",
+  "required_checks": [
+    "materials",
+    "upload"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-01T02:18:19.508101+00:00",
+      "evidence": "2026-11-01 현재 채팅: 일단 감염과 면역 작년필기, 족보 정리해서 업로드해줘. 연결했어. 다시 해봐. 기존 자료 정리·업로드 승인 범위의 원본 페이지 추출 방법 구체화.",
+      "scope": "2025 감염과 면역 원본 70개 매칭·필기 합본·66개 기출 부록 원문 페이지 추출 및 notes_prev/jokbo 자료 업로드. 문항 내용 변경·소스 기능 변경·배포 제외",
+      "evidence_version": 2,
+      "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+      "plan_hash": "e83d74c16b2a54d4cd7260e773b1b37cb82b503e3357efbbbf6cbc7d38be6307",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "3169ee670334ab367a3fc3d3da422baa04563ea90faeddd47b17b0ada8b07400"
+    }
+  },
+  "checks": [
+    {
+      "name": "materials",
+      "at": "2026-11-01T01:42:45.095319+00:00",
+      "command": [
+        "./.venv/Scripts/python.exe",
+        "docs/changes/2026-11-01-infection-materials/verify_materials.py"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+      "plan_hash": "aaba9ee32521901e41a6ae93e43d023a02011314b560a40c79012b7d093eaaec",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-01-infection-materials/1793497364775999300-materials.log"
+    },
+    {
+      "name": "materials",
+      "at": "2026-11-01T02:20:25.298731+00:00",
+      "command": [
+        "./.venv/Scripts/python.exe",
+        "docs/changes/2026-11-01-infection-materials/verify_materials.py"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+      "plan_hash": "e83d74c16b2a54d4cd7260e773b1b37cb82b503e3357efbbbf6cbc7d38be6307",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-01-infection-materials/1793499624096709900-materials.log"
+    },
+    {
+      "name": "materials",
+      "at": "2026-11-01T02:21:44.465889+00:00",
+      "command": [
+        "./.venv/Scripts/python.exe",
+        "docs/changes/2026-11-01-infection-materials/verify_materials.py"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+      "plan_hash": "e83d74c16b2a54d4cd7260e773b1b37cb82b503e3357efbbbf6cbc7d38be6307",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-01-infection-materials/1793499697927780100-materials.log"
+    },
+    {
+      "name": "materials",
+      "at": "2026-11-01T02:22:29.188235+00:00",
+      "command": [
+        "./.venv/Scripts/python.exe",
+        "docs/changes/2026-11-01-infection-materials/verify_materials.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+      "plan_hash": "e83d74c16b2a54d4cd7260e773b1b37cb82b503e3357efbbbf6cbc7d38be6307",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-01-infection-materials/1793499742723068400-materials.log"
+    },
+    {
+      "name": "upload",
+      "at": "2026-11-01T02:27:48.225317+00:00",
+      "command": [
+        "./server/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-01-infection-materials/verify_upload.py"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+      "plan_hash": "e83d74c16b2a54d4cd7260e773b1b37cb82b503e3357efbbbf6cbc7d38be6307",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-01-infection-materials/1793500067898127400-upload.log"
+    },
+    {
+      "name": "upload",
+      "at": "2026-11-01T02:28:51.141415+00:00",
+      "command": [
+        "./server/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-01-infection-materials/verify_upload.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+      "plan_hash": "e83d74c16b2a54d4cd7260e773b1b37cb82b503e3357efbbbf6cbc7d38be6307",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-01-infection-materials/1793500098896631800-upload.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-01T02:29:49.116601+00:00",
+    "summary": "최종 자료 운영 검토 완료. 필기 70원본을 포함하는 notes_prev 71자리, 원문 기출 부록 jokbo 67자리, 총 138파일 업로드 성공. 71강의 시간표 연결 및 운영 저장 바이트 SHA-256 138개 일치, 크기·Content-Type 확인. 68개 파생 PDF 396쪽 원본 렌더 전수 대조 통과. 구판 미분류 파서의 0개 섹션은 게시하지 않고 2025 필기 내 기출 부록을 사용했음을 명시. 자료 미확인 10칸 보존. 원본·기존 퀴즈·학습 기록·프로덕션 코드 변경/배포 없음.",
+    "evidence_version": 2,
+    "source_hash": "21f98b154e1b501f0139fb9297c3379449c9c97235f91f526964b0912d370b62",
+    "plan_hash": "e83d74c16b2a54d4cd7260e773b1b37cb82b503e3357efbbbf6cbc7d38be6307",
+    "inputs": [
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "runner",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "tests/runner",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "verified",
+    "events": [
+      {
+        "at": "2026-11-01T02:26:00.270528+00:00",
+        "type": "implementing",
+        "evidence": "사용자의 2026-11-01 자료 정리·업로드 및 연결 복구 후 재시도 요청에 따라 고정 계획의 자료 업로드 진행 중. 코드 배포 없음.",
+        "resolution": null
+      },
+      {
+        "at": "2026-11-01T02:29:49.693021+00:00",
+        "type": "verified",
+        "evidence": "자료 운영 작업 완료: 71개 시간표 강의, 필기 71개 자리·족보 67개 자리의 138개 첨부 업로드 및 운영 저장 바이트 해시 전수 확인. 소스 코드 릴리스/배포는 없음.",
+        "resolution": null
+      }
+    ],
+    "links": []
+  },
+  "updated_at": "2026-11-01T02:29:49.693036+00:00"
+}
