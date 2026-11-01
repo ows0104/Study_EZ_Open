@@ -9,6 +9,8 @@ import { toCalendarEntries } from "../calendar/entries";
 import { BankBuildTimes } from "./BankBuildTimes";
 import { useQuizPublication } from "./useQuizPublication";
 import { QuizPublicationCell } from "./QuizPublicationCell";
+import { studyBlockKey, studyBlockNames } from "./studyBlocks";
+import { useStudyCourse } from "./useStudyCourse";
 import "./overview.css";
 
 export type StudyLecture = Pick<LectureRef, "subject" | "runId" | "title" | "bankTimeline" | "mastery" | "cardProgress" | "studyLoaded"> & {
@@ -17,15 +19,9 @@ export type StudyLecture = Pick<LectureRef, "subject" | "runId" | "title" | "ban
 
 function lectureRows(events: TimetableEvent[]): StudyLecture[] {
   const rows = new Map<string, StudyLecture>();
-  const blockName = (name: string) => name.replace(/(?:\s*(?:실습|PBL|CBL|TBL))+\s*$/gi, "").trim();
-  const blockKey = (name: string) => blockName(name).replace(/\s/g, "");
-  const blocks = new Map<string, string>();
-  for (const event of events.filter(e => e.lectures.length)) {
-    const name = blockName(event.course || event.lectures[0].subject);
-    if (name && !blocks.has(blockKey(name))) blocks.set(blockKey(name), name);
-  }
+  const blocks = studyBlockNames(events);
   for (const event of toCalendarEntries(events)) {
-    const course = blocks.get(blockKey(event.course || event.lectures[0]?.subject || "")) || "기타 강의";
+    const course = blocks.get(studyBlockKey(event.course || event.lectures[0]?.subject || event.title)) || "기타 강의";
     for (const l of event.lectures) {
       const key = `${l.subject}/${l.runId}`;
       if (!rows.has(key)) rows.set(key, { ...l, key, eventKey: `event:${event.id}`, date: event.date, course, ready: l.marks.quiz });
@@ -61,11 +57,7 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
 }) {
   const isAdmin = Boolean(useMe()?.isAdmin);
   const rows = useMemo(() => lectureRows(events), [events]);
-  const [course, setCourse] = useState(() => {
-    const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" }).format(new Date());
-    return rows.filter(l => (l.ready || l.bankTimeline?.builtAt) && l.date <= today).at(-1)?.course
-      ?? rows.filter(l => l.date <= today).at(-1)?.course ?? "";
-  });
+  const [course, setCourse] = useStudyCourse(events);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState("date");

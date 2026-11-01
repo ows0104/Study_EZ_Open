@@ -132,6 +132,7 @@ export function addDays(value: Date, amount: number) {
  * **일요일(0)은 다음 주로 보낸다.** 주는 일요일에 시작하고, 일요일에 하는 일은
  * 월요일 예습이다 — 지난 주로 돌리면 일요일에 캘린더를 열었을 때 정작 준비할
  * 주가 안 보인다.
+ * 토요일(6)은 바로 전 금요일이 속한 주에 그대로 남는다.
  */
 export function startOfWeek(value: Date) {
   const day = value.getDay();
