@@ -23,6 +23,8 @@ export type AppUser = {
  * **`cards`·`decks`·`opens`는 고른 기간 안의 값이다.** `lastAt`만 기간을 안 탄다.
  */
 export type UsageRow = {
+  activities: Record<string, UsageActivityMetric>;
+  previewCreates: number;
   id: string;
   email: string;
   isAdmin: boolean;
@@ -33,7 +35,12 @@ export type UsageRow = {
   lastAt: string | null;
   /** 이 기간에 웹에서 푼 카드 수. 한 줄이 한 장이라 같은 카드를 여러 번 봐도 한 장이다. */
   cards: number;
-  /** 이 기간에 파일을 받아 간 편 수. **받아 간 것이지 푼 것이 아니다.** */
+  quizzes: { pre: number; main: number; bank: number };
+  /** 현재 남아 있는 개인 예습의 최종 저장이 선택 기간에 속하는 강의 수. */
+  previewSaves: number;
+  /** 목적별 최종 요청이 선택 기간에 속하는 고유 강의 수. */
+  fileRequests: Record<FileRequestPurpose, number>;
+  /** 호환용 파일 요청 강의 수. 자동 첨부와 과거 목적 미상을 포함한다. 다운로드 수로 표시하지 않는다. */
   decks: number;
   /**
    * 이 기간에 예습 링크를 연 편 수. `share`가 기본 링크, `mine`이 개인 대화다.
@@ -57,7 +64,7 @@ export type UsageWindow = {
   to: string | null;
 };
 
-export type UsageBoard = {
+export type UsageBoard = UsageActivityCatalog & {
   now: string;
   /**
    * **고른 것이 아니라 실제로 잰 기간이다.** 블럭이 아직 없으면 서버가 최근 7일로
@@ -77,6 +84,8 @@ export type UsageBoard = {
 
 /** 한 사람이 강의 하나에서 한 것. `title`이 비면 지워진 편이다. */
 export type UsageLecture = {
+  activities: Record<string, UsageActivityMetric>;
+  previewCreates: { count: number; lastAt: string | null };
   subject: string;
   runId: string;
   title: string;
@@ -86,16 +95,35 @@ export type UsageLecture = {
   main: { cards: number; selfCorrect: number; grades: number };
   bank?: { cards: number; selfCorrect: number; grades: number };
   grabs: string[];
+  fileRequests: UsageFileRequest[];
   /** 이 편의 개인 대화를 저장해 뒀는가. */
   preview: boolean;
+  previewSavedAt: string | null;
+  quizLastAt: { pre: string | null; main: string | null; bank: string | null };
   /** 이 편의 예습 링크를 우리 화면에서 누른 **횟수**. 요약과 달리 편이 아니다. */
   opens: { share: number; mine: number };
+  opensAt: { share: string | null; mine: string | null };
   lastAt: string | null;
 };
 
-export type UsageDetail = {
+export type FileRequestPurpose = "download" | "view" | "preview_attach" | "review_attach" | "quiz_attach" | "unknown";
+
+export type UsageFileRequest = {
+  kind: string;
+  purpose: FileRequestPurpose;
+  count: number;
+  firstAt: string;
+  lastAt: string;
+};
+
+export type UsageDetail = UsageActivityCatalog & {
   /** `previewPrompt`는 고쳐 쓴 사람만 값이 있다. 빈 문자열이 곧 「기본 문구」다. */
   user: { id: string; email: string; previewPrompt: string };
   now: string;
   lectures: UsageLecture[];
 };
+
+/** Server-owned catalog: new registered actions render without a second UI list. */
+export type UsageActivityMetric = { count: number; lastAt: string | null; grades?: number };
+export type UsageActivityDefinition = { key: string; label: string; group: string; summaryUnit: string; detailUnit: string; filePurpose: string | null };
+export type UsageActivityCatalog = { activityCatalog: UsageActivityDefinition[]; activityGroups: {key: string; label: string}[] };

@@ -35,7 +35,7 @@ export function QuizCreateButton({ runId, title }: { runId: string; title: strin
       }
       const files = [];
       for (const source of sources) {
-        const { url } = await api<{ url: string }>(`/api/lectures/${path}/files/${source.assetId}`);
+        const { url } = await api<{ url: string }>(`/api/lectures/${path}/files/${source.assetId}?purpose=quiz_attach`);
         files.push({ id: source.assetId, filename: source.filename, downloadUrl: absoluteUrl(url), contentType: source.contentType });
       }
       await requestPreview({ requestId: `${runId}-bank-${performance.now()}`, lectureId: `약리학/${runId}`,

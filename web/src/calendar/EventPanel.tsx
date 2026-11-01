@@ -269,7 +269,7 @@ function KeyActions({
 
   async function download(file: LectureFile) {
     try {
-      await downloadSignedFile(`${base}/files/${file.id}`, file.filename);
+      await downloadSignedFile(`${base}/files/${file.id}?purpose=download`, file.filename);
     } catch (cause) {
       setError((cause as Error).message);
     }
@@ -279,7 +279,7 @@ function KeyActions({
   // 내려받기로 바뀌고 빈 탭만 남는다.
   async function open(file: LectureFile) {
     try {
-      await openSignedFile(`${base}/files/${file.id}?inline=1`);
+      await openSignedFile(`${base}/files/${file.id}?inline=1&purpose=view`);
     } catch (cause) {
       setError((cause as Error).message);
     }

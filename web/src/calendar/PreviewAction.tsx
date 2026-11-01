@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api } from "../api";
+import { notePreviewAction } from "../usage";
 import {
   absoluteUrl,
   bumpPreviewVersion,
@@ -135,11 +136,12 @@ export function PreviewAction({
   async function start(mode: "shared" | "personal", autoSend: boolean) {
     if (!notesPrev) return;
     setBusy(mode);
+    if (mode === "personal") notePreviewAction(base, "create");
     try {
       const template = mode === "shared" ? await readSharedPreviewPrompt() : promptStore.template;
       const sources = [notesPrev, ...detail.files.filter((file) => file.kind === "jokbo")];
       const files = await Promise.all(sources.map(async (file) => {
-        const { url } = await api<{ url: string }>(`${base}/files/${file.id}`);
+        const { url } = await api<{ url: string }>(`${base}/files/${file.id}?purpose=preview_attach`);
         return { id: file.id, filename: file.filename, downloadUrl: absoluteUrl(url), contentType: file.contentType };
       }));
       await requestPreview({
@@ -333,11 +335,6 @@ export function PreviewAction({
  * **기다리지 않는다.** 링크는 그 자리에서 열려야 하고, 이 한 줄이 실패했다고
  * 열리지 않으면 바꿔치기가 나쁜 쪽이다. 그래서 `void` 로 띄워 보내고 오류도 삼킨다.
  */
-function noteOpen(base: string, kind: "share" | "mine") {
-  void api(`${base}/preview-open`, { method: "POST", body: JSON.stringify({ kind }) }).catch(
-    () => {},
-  );
-}
 
 function SharedOpen({
   url,
@@ -363,7 +360,7 @@ function SharedOpen({
           rel="noreferrer"
           onClick={() => {
             watchSharedLink(lectureId, provider, url);
-            noteOpen(base, "share");
+            notePreviewAction(base, "share");
           }}
         >
           <Body name="기본 링크" />
@@ -398,7 +395,7 @@ function PersonalOpen({ url, base, tools }: { url: string; base: string; tools?:
           title={url}
           target="_blank"
           rel="noreferrer"
-          onClick={() => noteOpen(base, "mine")}
+          onClick={() => notePreviewAction(base, "mine")}
         >
           <Body name="개인 링크" />
         </a>

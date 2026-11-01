@@ -288,7 +288,7 @@ def put_grabs(
         export = describe(db, lecture, bank)
         if ref.export_id == export.revision:
             keys.append((bank.subject, bank.run_id, export.grab_kind))
-    return {"recorded": record_grabs(db, user.id, keys)}
+    return {"recorded": record_grabs(db, user.id, keys, purpose="download")}
 
 
 def _checked(refs: list[DeckRef]) -> list[DeckRef]:

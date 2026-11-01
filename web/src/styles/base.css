@@ -1439,8 +1439,21 @@ button.resource.is-download:hover:not(:disabled)::after {
 /* 안쪽 표는 넓은 화면에서 끝까지 늘리지 않는다. 늘리면 강의 이름과 그 편의
  * 숫자가 화면 양 끝으로 갈라져, 한 줄을 읽는 데 눈이 가로질러야 한다. */
 .admin-usage-detail .admin-table {
-  max-width: 720px;
+  max-width: none;
 }
+
+.usage-scroll { overflow-x: auto; margin-bottom: 14px; }
+.usage-board { min-width: 1000px; }
+.usage-lectures { min-width: 1000px; }
+.usage-lectures td:first-child { min-width: 230px; max-width: 320px; }
+.usage-board th, .usage-lectures th { white-space: nowrap; }
+.usage-action { margin-bottom: 7px; font-size: 12px; }
+.usage-action:last-child { margin-bottom: 0; }
+.usage-saved { color: var(--ink); font-size: 12px; }
+.usage-empty { color: var(--ink-3); white-space: nowrap; font-size: 12px; }
+.usage-unknown { color: var(--ink-3); }
+.usage-time { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.usage-legend { max-width: 1050px; line-height: 1.7; }
 
 /* 예습 링크 입력 묶음. 링크 한 줄이 남는 가로를 다 가져가지 않게 한다. */
 .admin-preview {

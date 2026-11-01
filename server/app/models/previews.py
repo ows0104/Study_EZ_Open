@@ -93,6 +93,7 @@ event.listen(
 PREVIEW_OPEN_SHARE = "share"  # 반 전체가 읽는 기본 링크
 PREVIEW_OPEN_MINE = "mine"  # 자기 대화
 PREVIEW_OPEN_KINDS = (PREVIEW_OPEN_SHARE, PREVIEW_OPEN_MINE)
+PREVIEW_ACTION_KINDS = (*PREVIEW_OPEN_KINDS, "create")  # personal creation attempt, not completion
 
 
 class PreviewOpen(Base):

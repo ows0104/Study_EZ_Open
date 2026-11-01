@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, downloadSignedFile, openSignedFile } from "../api";
+import { notePreviewAction } from "../usage";
 import { useBankLink } from "../bank/bankBridge";
 import { BankPanel } from "../bank/BankPanel";
 import { ReviewAction } from "../calendar/ReviewAction";
@@ -78,7 +79,7 @@ export function LecturePage() {
   // 첨부로 서명해 줘서 탭이 뜨자마자 내려받기로 바뀐다.
   async function open(file: LectureFile) {
     try {
-      await openSignedFile(`${fileUrl(file)}?inline=1`);
+      await openSignedFile(`${fileUrl(file)}?inline=1&purpose=view`);
     } catch (cause) {
       setError((cause as Error).message);
     }
@@ -88,7 +89,7 @@ export function LecturePage() {
   // 바뀌면서 빈 탭만 남는다.
   async function download(file: LectureFile) {
     try {
-      await downloadSignedFile(fileUrl(file), file.filename);
+      await downloadSignedFile(`${fileUrl(file)}?purpose=download`, file.filename);
     } catch (cause) {
       setError((cause as Error).message);
     }
@@ -209,11 +210,10 @@ function PreviewResource({ detail }: { detail: LectureDetail }) {
         href={detail.preview.shareUrl}
         target="_blank"
         rel="noreferrer"
-        onClick={() => watchSharedLink(
-          `${detail.subject}/${detail.runId}`,
-          detail.preview!.provider,
-          detail.preview!.shareUrl,
-        )}
+        onClick={() => {
+          watchSharedLink(`${detail.subject}/${detail.runId}`, detail.preview!.provider, detail.preview!.shareUrl);
+          notePreviewAction(`/api/lectures/${encodeURIComponent(detail.subject)}/${encodeURIComponent(detail.runId)}`, "share");
+        }}
       >
         <strong>기본 링크 · {previewProviderLabels[detail.preview.provider]}</strong>
         <small>공통 예습 대화</small>

@@ -28,10 +28,11 @@ Study_EZ 몫만 센다(땡시는 여기 없다 — 같은 날 범위를 그렇�
 ## 셀 수 있는 것과 없는 것
 
 **apkg 로 나간 풀이는 서버에 없다.** 덱은 안키에서 풀리고 그 진행은 안키가 든다.
-그래서 여기 숫자는 전부 *웹에서 한 것*과 *파일을 받아 간 것*이고, 둘을 더해
+그래서 여기 숫자는 *웹 평가·대화 저장·링크 클릭·파일 요청*이며, 이를 더해
 「이 사람이 얼마나 공부했나」로 읽으면 안 된다.
 
-같은 이유로 **받아 간 것은 「받아 갔다」지 「풀었다」가 아니다**(`AssetGrab`).
+`AssetGrab`은 파일 요청이다. 자동 첨부·브라우저 열기·직접 받기를 purpose로 구분하고,
+과거 미분류는 unknown으로 유지한다. 요청은 전송/첨부 완료를 증명하지 않는다.
 
 **기본 링크를 누가 열었는지는 링크로는 알 수 없다.** 강의당 하나이고
 (`preview.share_url`) 누르면 그 길로 AI 쪽으로 가서 서버를 안 지난다. 세는 것은
@@ -67,6 +68,8 @@ from app import srs
 from app.study_retention import event_identity
 from app.auth import CurrentUser, require_admin
 from app.database import get_db
+from app.file_requests import FILE_PURPOSES, request_stats
+from app.usage_actions import ACTION_GROUPS, catalog, collect
 from app.models import (
     APP_STUDYEZ,
     PREVIEW_OPEN_KINDS,
@@ -199,6 +202,15 @@ def _lecture_counts(db: Session, *sources: Any) -> dict[str, int]:
     return {user_id: int(count) for user_id, count in rows}
 
 
+def _file_activity(db: Session, user_id: str | None = None):
+    query = select(AssetGrab)
+    if user_id is not None:
+        query = query.where(AssetGrab.user_id == user_id)
+    for grab in db.scalars(query):
+        for purpose, stats in request_stats(grab).items():
+            yield grab, purpose, stats
+
+
 def _bank_activity(db: Session, user_id: str | None = None):
     """Read review history without downloading the other state/session fields.
 
@@ -271,6 +283,18 @@ def usage(
     # `answered_at` 은 마지막으로 찍은 때라 그 장이 창 안에 있었는지를 말한다.
     pre_cards = _count_by_user(db, QuizAttempt, QuizAttempt.answered_at, span)
     main_cards = _count_by_user(db, MainAttempt, MainAttempt.answered_at, span)
+    preview_saves = {
+        uid: int(count) for uid, count in db.execute(
+            select(UserPreview.user_id, func.count()).where(
+                UserPreview.conversation_url != "", *_within(UserPreview.updated_at, span)
+            ).group_by(UserPreview.user_id)
+        )
+    }
+    file_lectures: dict[tuple[str, str], set[tuple[str, str]]] = {}
+    for grab, purpose, stats in _file_activity(db):
+        at = _parse(stats["lastAt"])
+        if at >= span["from"] and (span["to"] is None or at < span["to"]):
+            file_lectures.setdefault((grab.user_id, purpose), set()).add((grab.subject, grab.run_id))
     bank_cards: dict[str, int] = {}
     bank_last: dict[str, datetime] = {}
     for uid, _, _, reviews in _bank_activity(db):
@@ -290,18 +314,24 @@ def usage(
         ),
     )
     opens: dict[str, dict[str, int]] = {}
+    creates: dict[str, int] = {}
     for uid, kind, lectures in db.execute(
         select(PreviewOpen.user_id, PreviewOpen.kind, func.count())
         .where(*_within(PreviewOpen.last_at, span))
         .group_by(PreviewOpen.user_id, PreviewOpen.kind)
     ).all():
-        opens.setdefault(uid, dict.fromkeys(PREVIEW_OPEN_KINDS, 0))[kind] = int(lectures)
+        if kind == "create":
+            creates[uid] = int(lectures)
+        elif kind in PREVIEW_OPEN_KINDS:
+            opens.setdefault(uid, dict.fromkeys(PREVIEW_OPEN_KINDS, 0))[kind] = int(lectures)
 
     # ── 여기부터는 창을 안 탄다. 「마지막으로 무엇이든 한 때」와 사람의 설정이다.
     last_seen: dict[str, datetime | None] = dict(bank_last)
     for model, stamp in (
         (QuizAttempt, QuizAttempt.answered_at),
         (MainAttempt, MainAttempt.answered_at),
+        (PreReviewLog, PreReviewLog.reviewed_at),
+        (MainReviewLog, MainReviewLog.reviewed_at),
         (AssetGrab, AssetGrab.last_at),
         (PreviewOpen, PreviewOpen.last_at),
         (UserPreview, UserPreview.updated_at),
@@ -334,6 +364,12 @@ def usage(
                 "lastAt": _iso(last_seen.get(uid)),
                 # ── 창 안의 값 셋. 화면의 칸과 하나씩 짝이다.
                 "cards": pre_cards.get(uid, 0) + main_cards.get(uid, 0) + bank_cards.get(uid, 0),
+                "quizzes": {"pre": pre_cards.get(uid, 0), "main": main_cards.get(uid, 0),
+                            "bank": bank_cards.get(uid, 0)},
+                "previewSaves": preview_saves.get(uid, 0),
+                "previewCreates": creates.get(uid, 0),
+                "fileRequests": {purpose: len(file_lectures.get((uid, purpose), set()))
+                                 for purpose in FILE_PURPOSES},
                 "decks": grab_lectures.get(uid, 0),
                 "opens": opens.get(uid, dict.fromkeys(PREVIEW_OPEN_KINDS, 0)),
                 # ── 창을 안 타는 것. 펴서 보는 자리에 쓴다.
@@ -344,6 +380,9 @@ def usage(
                 },
             }
         )
+
+    for row in rows:
+        row["activities"] = collect(row)
 
     # 쓰는 사람이 위, 한 번도 안 연 사람이 아래. 안 연 사람끼리는 가입 순이라
     # **승인하고 안 들어온 사람이 맨 밑에 모인다.**
@@ -363,8 +402,10 @@ def usage(
         },
         "windows": [{"key": key, "label": _window(db, key, now)["label"]} for key in WINDOW_KEYS],
         # **언제부터 남았는가.** 이 값이 없으면 화면이 0을 「안 했다」로 그린다.
-        "opensSince": _iso(db.scalar(select(func.min(PreviewOpen.first_at)))),
+        "opensSince": _iso(db.scalar(select(func.min(PreviewOpen.first_at)).where(PreviewOpen.kind.in_(PREVIEW_OPEN_KINDS)))),
         "users": active + idle,
+        "activityCatalog": catalog(),
+        "activityGroups": ACTION_GROUPS,
     }
 
 
@@ -391,9 +432,14 @@ def usage_detail(
             "main": {"cards": 0, "selfCorrect": 0, "grades": 0},
             "bank": {"cards": 0, "selfCorrect": 0, "grades": 0},
             "grabs": [],
+            "fileRequests": [],
             "preview": False,
+            "previewSavedAt": None,
+            "previewCreates": {"count": 0, "lastAt": None},
+            "quizLastAt": {"pre": None, "main": None, "bank": None},
             # 우리 화면에서 이 편의 링크를 누른 횟수. 갈래로 갈라 둔다.
             "opens": dict.fromkeys(PREVIEW_OPEN_KINDS, 0),
+            "opensAt": dict.fromkeys(PREVIEW_OPEN_KINDS, None),
             "lastAt": None,
         }
 
@@ -413,6 +459,7 @@ def usage_detail(
                        "grades": len(reviews)}
         last = datetime.fromtimestamp(max(key[2] for key in reviews) / 1000, UTC)
         row["lastAt"] = _iso(_latest(last, _parse(row["lastAt"])))
+        row["quizLastAt"]["bank"] = _iso(last)
 
     for track, model in (("pre", QuizAttempt), ("main", MainAttempt)):
         rows = db.execute(
@@ -432,6 +479,7 @@ def usage_detail(
             row = slot(subject, run_id)
             # 서버가 판정한 값이 아니다. 이름이 그렇게 말한다.
             row[track].update(cards=int(cards), selfCorrect=int(correct or 0))
+            row["quizLastAt"][track] = _iso(last)
             row["lastAt"] = _iso(_latest(last, _parse(row["lastAt"])))
 
     for track, model, stamp in (
@@ -446,16 +494,15 @@ def usage_detail(
         for subject, run_id, grades, last in rows:
             row = slot(subject, run_id)
             row[track]["grades"] = int(grades)
+            row["quizLastAt"][track] = _iso(_latest(last, _parse(row["quizLastAt"][track])))
             row["lastAt"] = _iso(_latest(last, _parse(row["lastAt"])))
 
-    for subject, run_id, kind, last in db.execute(
-        select(AssetGrab.subject, AssetGrab.run_id, AssetGrab.kind, AssetGrab.last_at).where(
-            AssetGrab.user_id == user_id
-        )
-    ).all():
-        row = slot(subject, run_id)
-        row["grabs"].append(kind)
-        row["lastAt"] = _iso(_latest(last, _parse(row["lastAt"])))
+    for grab, purpose, stats in _file_activity(db, user_id):
+        row = slot(grab.subject, grab.run_id)
+        if grab.kind not in row["grabs"]:
+            row["grabs"].append(grab.kind)
+        row["fileRequests"].append({"kind": grab.kind, "purpose": purpose, **stats})
+        row["lastAt"] = _iso(_latest(_parse(stats["lastAt"]), _parse(row["lastAt"])))
 
     for subject, run_id, kind, times, last in db.execute(
         select(
@@ -463,8 +510,11 @@ def usage_detail(
         ).where(PreviewOpen.user_id == user_id)
     ).all():
         row = slot(subject, run_id)
-        if kind in PREVIEW_OPEN_KINDS:
+        if kind == "create":
+            row["previewCreates"] = {"count": int(times or 0), "lastAt": _iso(last)}
+        elif kind in PREVIEW_OPEN_KINDS:
             row["opens"][kind] = int(times or 0)
+            row["opensAt"][kind] = _iso(last)
         row["lastAt"] = _iso(_latest(last, _parse(row["lastAt"])))
 
     for subject, run_id, last in db.execute(
@@ -474,6 +524,7 @@ def usage_detail(
     ).all():
         row = slot(subject, run_id)
         row["preview"] = True
+        row["previewSavedAt"] = _iso(last)
         row["lastAt"] = _iso(_latest(last, _parse(row["lastAt"])))
 
     titles = {
@@ -484,6 +535,8 @@ def usage_detail(
     for (subject, run_id), row in lectures.items():
         lecture = titles.get((subject, run_id))
         row["grabs"].sort()
+        row["fileRequests"].sort(key=lambda item: (item["lastAt"], item["kind"], item["purpose"]), reverse=True)
+        row["activities"] = collect(row, detail=True)
         out.append(
             {
                 "subject": subject,
@@ -505,4 +558,6 @@ def usage_detail(
         },
         "now": datetime.now(UTC).isoformat(),
         "lectures": out,
+        "activityCatalog": catalog(),
+        "activityGroups": ACTION_GROUPS,
     }

@@ -41,7 +41,7 @@ def download_bank_anki(subject: str, run_id: str, user: CurrentUser = Depends(re
     _usable(row)
     export = ensure_export(db, lecture, row)
     url = storage_or_503().presign_download(export.key, filename=export.filename)
-    record_grabs(db, user.id, [(lecture.subject, lecture.run_id, export.grab_kind)])
+    record_grabs(db, user.id, [(lecture.subject, lecture.run_id, export.grab_kind)], purpose="download")
     return {"url": url, "filename": export.filename}
 
 

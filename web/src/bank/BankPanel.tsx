@@ -150,7 +150,7 @@ function BankAdmin({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | 
       // 서명 URL 은 수명이 짧아 누른 순간에 받는다.
       const files = [];
       for (const source of sources) {
-        const { url } = await api<{ url: string }>(`/api/lectures/${path}/files/${source.assetId}`);
+        const { url } = await api<{ url: string }>(`/api/lectures/${path}/files/${source.assetId}?purpose=quiz_attach`);
         files.push({ id: source.assetId, filename: source.filename, downloadUrl: absoluteUrl(url),
                      contentType: source.contentType });
       }

@@ -15,6 +15,8 @@ from sqlalchemy.orm import Session
 
 from app.auth import CurrentUser, require_approved_user
 from app.config import get_settings
+from app.file_requests import FilePurpose
+from app.models.previews import PREVIEW_ACTION_KINDS
 from app.database import get_db
 from app.lecture_mastery import lecture_masteries
 from app.jobs.queue import RUNNER_NAME
@@ -274,6 +276,7 @@ def sign_file(
     run_id: str,
     asset_id: str,
     inline: bool = Query(False, description="참이면 내려받지 않고 브라우저에서 연다."),
+    purpose: FilePurpose = Query("unknown", description="파일 요청 목적. 미표기는 목적 미상으로 보존한다."),
     user: CurrentUser = Depends(require_approved_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -292,7 +295,7 @@ def sign_file(
         inline=inline,
         content_type=asset.content_type,
     )
-    _record_grab(db, user.id, asset)
+    _record_grab(db, user.id, asset, purpose="view" if inline else purpose)
     return {
         "url": url,
         "expiresIn": get_settings().signed_url_ttl,
@@ -300,7 +303,7 @@ def sign_file(
     }
 
 
-def _record_grab(db: Session, user_id: str, asset: Asset) -> None:
+def _record_grab(db: Session, user_id: str, asset: Asset, *, purpose: FilePurpose = "unknown") -> None:
     """받아 갔다고 적는다. 캘린더의 채운 점이 이 줄에서 나온다.
 
     **서명을 낸 뒤에만 적는다.** 저장소가 아직 안 붙었으면 위에서 503으로 끝나고,
@@ -310,7 +313,7 @@ def _record_grab(db: Session, user_id: str, asset: Asset) -> None:
     둘 사이가 벌어지지 않는다. 모아받기는 그 사이가 몇 분이라 갈라 두었다
     (`routes/bundles.py`). 적는 일 자체는 둘이 같은 함수를 쓴다.
     """
-    record_grabs(db, user_id, [(asset.subject, asset.run_id, asset.kind)])
+    record_grabs(db, user_id, [(asset.subject, asset.run_id, asset.kind)], purpose=purpose)
 
 
 class PreviewOpenIn(BaseModel):
@@ -339,7 +342,7 @@ def post_preview_open(
     막지 않기 위해서다 — 대신 그 줄은 아무 데도 안 남는다.
     """
     lecture = lecture_or_404(db, subject, run_id)
-    if payload.kind in PREVIEW_OPEN_KINDS:
+    if payload.kind in PREVIEW_ACTION_KINDS:
         record_preview_open(db, user.id, lecture.subject, lecture.run_id, payload.kind)
 
 

@@ -46,7 +46,7 @@ CHECKLIST_ITEMS = ("notes_prev", "preview", "pre_apkg", "notes_current", "bank")
 
 # "받아 갔다"로 셀 종류. `media`는 뺀다 — 오답 해설이 근거 슬라이드를 띄울 때
 # 서명이 자동으로 나가므로, 세면 사용자가 받은 것이 아니라 해설을 본 것이 된다.
-GRABBABLE_KINDS = frozenset({"notes_prev", "notes_current", "pre_apkg", "main_apkg"})
+GRABBABLE_KINDS = frozenset({"notes_prev", "notes_current", "pre_apkg", "main_apkg", "jokbo"})
 
 
 class TimetableEvent(Base):
@@ -164,9 +164,9 @@ class RunMeta(Base):
 
 
 class AssetGrab(Base):
-    """사용자가 강의의 파일 종류를 다운로드한 기록. 실제 학습 완료를 뜻하지 않는다.
+    """강의 파일 요청 기록. 자동 첨부/열기/받기를 모두 포함하며 전송 완료가 아니다.
 
-    여러 파일을 한 종류로 묶고 count는 다운로드 버튼 횟수에 가깝다.
+    여러 파일을 한 종류로 묶고 count는 서명 URL 또는 모아받기 확인 요청 횟수다.
     서명 URL은 유효기간 동안 재사용할 수 있어 실제 파일 전송 횟수와 다르다."""
 
     __tablename__ = "asset_grab"
@@ -176,6 +176,7 @@ class AssetGrab(Base):
     run_id: Mapped[str] = mapped_column(String(32), primary_key=True)
     kind: Mapped[str] = mapped_column(String(24), primary_key=True)  # GRABBABLE_KINDS
     count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    request_stats: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict, server_default="{}")
     first_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     last_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 

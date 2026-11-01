@@ -31,7 +31,7 @@ export function ReviewAction({ lecture, detail, base, onError }: {
     try {
       const sources = [notes, ...detail.files.filter((file) => file.kind === "jokbo")];
       const files = await Promise.all(sources.map(async (file) => {
-        const { url } = await api<{ url: string }>(`${base}/files/${file.id}`);
+        const { url } = await api<{ url: string }>(`${base}/files/${file.id}?purpose=review_attach`);
         return { id: file.id, filename: file.filename, downloadUrl: absoluteUrl(url), contentType: file.contentType };
       }));
       await requestPreview({

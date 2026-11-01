@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC
+from datetime import UTC, datetime
 
 from app.bank_validation.publication import usable as bank_usable
 
@@ -22,6 +22,8 @@ from app.models import (
 )
 from app.naming import nfc
 from app.storage import ObjectStorage, StorageNotConfigured
+from app.file_requests import FILE_PURPOSES, FilePurpose, add_request
+from app.models.previews import PREVIEW_ACTION_KINDS
 
 LectureKey = tuple[str, str]
 
@@ -246,33 +248,41 @@ def prequiz_progress(
     return progress
 
 
-def record_grabs(db: Session, user_id: str, keys: list[tuple[str, str, str]]) -> int:
-    """받아 갔다고 적는다. `(subject, run_id, kind)` 여럿을 한 번에.
+def record_grabs(db: Session, user_id: str, keys: list[tuple[str, str, str]],
+                 *, purpose: FilePurpose = "unknown") -> int:
+    """자료 요청 목적과 횟수. 파일 전송/첨부 완료를 뜻하지 않는다.
 
-    **파일이 나간 뒤에만 부른다.** 저장소가 아직 안 붙었으면 부르는 쪽이 먼저
-    503으로 끝나고, 그때는 사용자가 아무것도 못 받았으므로 기록도 남으면 안 된다.
-
-    **여기서 실패해도 파일은 나가야 한다.** 점 하나 때문에 내려받기를 막는 것은
-    바꿔치기가 나쁜 쪽이다. 그래서 예외를 삼키고 롤백만 한다 — 돌려주는 수가
-    0이 되므로 부르는 쪽이 적혔는지 아닌지는 알 수 있다.
-
-    서명 URL은 TTL 동안 재사용되므로 `count`는 내려받은 횟수가 아니라 **버튼을
-    누른 횟수**다. 화면은 안 쓰고, 나중에 "다시 받으러 온 강의"를 볼 때를 위해 센다.
+    서명 URL 발급 성공 뒤 또는 모아받기 완료 확인 때 부른다. 기록 실패는
+    파일 이용을 막지 않으며 0을 반환한다. 구버전 호출은 unknown으로 남긴다.
     """
     wanted = [(subject, run_id, kind) for subject, run_id, kind in keys
               if kind in GRABBABLE_KINDS or (kind.startswith("bank_") and len(kind) == 21
                                             and all(c in "0123456789abcdef" for c in kind[5:]))]
     if not wanted:
         return 0
+    if purpose not in FILE_PURPOSES:
+        raise ValueError("Unknown file request purpose")
     try:
-        for subject, run_id, kind in wanted:
-            grab = db.get(AssetGrab, (user_id, subject, run_id, kind))
-            if grab is None:
-                grab = AssetGrab(user_id=user_id, subject=subject, run_id=run_id, kind=kind)
-                db.add(grab)
-            grab.count = (grab.count or 0) + 1
+        # Insert before reading: SQLite acquires its write lock; PostgreSQL then
+        # locks the existing row. Concurrent requests cannot overwrite JSON counts.
+        if db.bind.dialect.name == "postgresql":
+            from sqlalchemy.dialects.postgresql import insert
+        else:
+            from sqlalchemy.dialects.sqlite import insert
+        for subject, run_id, kind in sorted(set(wanted)):
+            now = datetime.now(UTC)
+            db.execute(insert(AssetGrab).values(
+                user_id=user_id, subject=subject, run_id=run_id, kind=kind,
+                count=0, request_stats={}, first_at=now, last_at=now,
+            ).on_conflict_do_nothing())
+            grab = db.scalars(select(AssetGrab).where(
+                AssetGrab.user_id == user_id, AssetGrab.subject == subject,
+                AssetGrab.run_id == run_id, AssetGrab.kind == kind,
+            ).with_for_update().execution_options(populate_existing=True)).one()
+            add_request(grab, purpose, now)
+            db.flush()
         db.commit()
-        return len(wanted)
+        return len(set(wanted))
     except Exception:
         db.rollback()
         return 0
@@ -285,14 +295,22 @@ def record_preview_open(db: Session, user_id: str, subject: str, run_id: str, ki
     지난다(`PreviewOpen` 의 설명이 그 자리다). 받아 가기와 마찬가지로 여기서
     실패해도 링크는 열려야 하므로 예외를 삼킨다.
     """
-    if kind not in PREVIEW_OPEN_KINDS:
+    if kind not in PREVIEW_ACTION_KINDS:
         return
     try:
-        row = db.get(PreviewOpen, (user_id, subject, run_id, kind))
-        if row is None:
-            row = PreviewOpen(user_id=user_id, subject=subject, run_id=run_id, kind=kind)
-            db.add(row)
+        if db.bind.dialect.name == "postgresql":
+            from sqlalchemy.dialects.postgresql import insert
+        else:
+            from sqlalchemy.dialects.sqlite import insert
+        now = datetime.now(UTC)
+        db.execute(insert(PreviewOpen).values(user_id=user_id, subject=subject, run_id=run_id,
+                   kind=kind, count=0, first_at=now, last_at=now).on_conflict_do_nothing())
+        row = db.scalars(select(PreviewOpen).where(
+            PreviewOpen.user_id == user_id, PreviewOpen.subject == subject,
+            PreviewOpen.run_id == run_id, PreviewOpen.kind == kind,
+        ).with_for_update().execution_options(populate_existing=True)).one()
         row.count = (row.count or 0) + 1
+        row.last_at = now
         db.commit()
     except Exception:
         db.rollback()

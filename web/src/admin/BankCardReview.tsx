@@ -40,7 +40,7 @@ export function BankCardReview() {
   useEffect(() => { setBoard(null); void load(); }, [load]);
   async function changed() { bumpPreviewVersion(); await load(); }
   async function openSource(group: BankReviewGroup, assetId: string) {
-    try { await openSignedFile(`/api/lectures/${encodeURIComponent(group.subject)}/${encodeURIComponent(group.runId)}/files/${encodeURIComponent(assetId)}`); }
+    try { await openSignedFile(`/api/lectures/${encodeURIComponent(group.subject)}/${encodeURIComponent(group.runId)}/files/${encodeURIComponent(assetId)}?inline=1&purpose=view`); }
     catch (cause) { setError((cause as Error).message); }
   }
   const visible = (card: BankReviewCard) => focusId && !showAll

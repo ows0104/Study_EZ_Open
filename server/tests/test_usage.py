@@ -245,6 +245,15 @@ def main() -> None:
     check("받아 간 것이 편에 붙는다", first.get("grabs") == ["notes_prev", "pre_apkg"], first.get("grabs"))
     check("편마다 링크도 갈린다", first.get("opens") == {"share": 3, "mine": 1}, first.get("opens"))
     check("고친 프롬프트가 온다", detail["user"].get("previewPrompt") == "내 방식대로 물어봐", detail["user"])
+    check("개인 예습 저장을 클릭과 별도로 센다", busy["previewSaves"] == 1 and prev_busy["previewSaves"] == 0)
+    check("웹 퀴즈 갈래를 분리한다", busy["quizzes"] == {"pre": 3, "main": 1, "bank": 0})
+    check("과거 파일 요청은 다운로드로 분류하지 않는다", busy["fileRequests"]["unknown"] == 1
+          and busy["fileRequests"]["download"] == 0, busy["fileRequests"])
+    check("파일 요청 상세에 과거 횟수와 목적 미상을 보존한다", len(first["fileRequests"]) == 2
+          and all(r["purpose"] == "unknown" and r["count"] == 2 for r in first["fileRequests"]))
+    check("저장/클릭/평가 시각이 구분된다", bool(first["previewSavedAt"])
+          and bool(first["opensAt"]["share"]) and bool(first["quizLastAt"]["pre"]))
+    check("개인 대화 주소를 관리 응답에 노출하지 않는다", "https://chatgpt.com/c/abc" not in str(detail))
 
     print("\n[7] 없는 계정은 404")
     check("404", client.get("/api/admin/usage/nobody", headers=ADMIN).status_code == 404)
@@ -298,6 +307,20 @@ def main() -> None:
         db.commit()
     undone = client.get("/api/admin/usage", headers=ADMIN).json()
     check("되돌린 평가는 집계에서 빠진다", next(row for row in undone["users"] if row["id"] == IDLE)["cards"] == 0)
+
+    print("\n[9] 저장만 있거나 링크만 있는 계정도 행동을 구분한다")
+    with SessionLocal() as db:
+        db.add(UserPreview(user_id=WAITING, subject=NOW_SUBJECT, run_id=NOW_RUN,
+                           provider="chatgpt", conversation_url="https://chatgpt.com/c/private",
+                           updated_at=now))
+        db.add(PreviewOpen(user_id=IDLE, subject=NOW_SUBJECT, run_id=NOW_RUN,
+                           kind="share", count=1, first_at=now, last_at=now))
+        db.commit()
+    rows = {row["id"]: row for row in client.get("/api/admin/usage", headers=ADMIN).json()["users"]}
+    check("저장만 있는 계정의 퀴즈/클릭은 0이다", rows[WAITING]["previewSaves"] == 1
+          and rows[WAITING]["cards"] == 0 and rows[WAITING]["opens"] == {"share": 0, "mine": 0})
+    check("링크만 있는 계정의 저장/풀이를 부풀리지 않는다", rows[IDLE]["opens"]["share"] == 1
+          and rows[IDLE]["previewSaves"] == 0 and rows[IDLE]["cards"] == 0)
 
     print(f"\n{'실패 ' + str(len(failures)) if failures else '모두 통과'}")
     if failures:

@@ -60,3 +60,5 @@
 
 push는 API를 배포하지 않는다. 배포 절차는 [배포 안내](../docs/deployment.md)에 있다.
 과거 변경 이유는 [원문 기록](../docs/archive/2026-10-06-originals/server/CLAUDE.md)에 보관했다.
+
+사용자 행동을 추가/변경할 때 [이용현황 행동 등록](../docs/development/usage-actions.md)을 함께 따른다. 기록·공통 카탈로그·수집·검사를 한 범위로 갱신한다.
