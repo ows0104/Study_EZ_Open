@@ -81,6 +81,53 @@ def test_concurrent_verifications_preserve_all_records(change):
     assert len({row['log'] for row in state['checks']}) == 2
 
 
+def test_verification_retries_transient_state_read_denial(change, monkeypatch):
+    read = Path.read_text
+    run = dev.subprocess.run
+    denied = False
+    def run_and_deny_once(*args, **kwargs):
+        result = run(*args, **kwargs)
+        def read_once(path, *a, **kw):
+            nonlocal denied
+            if path == change / 'state.json' and not denied:
+                denied = True
+                raise PermissionError('Concurrent Windows state replacement')
+            return read(path, *a, **kw)
+        monkeypatch.setattr(Path, 'read_text', read_once)
+        return result
+    monkeypatch.setattr(dev.subprocess, 'run', run_and_deny_once)
+    assert dev.main(['verify', 'test-change', '--check', 'unit', '--', sys.executable, '-c', 'pass']) == 0
+    assert denied
+    assert dev.load('test-change')[1]['checks'][-1]['exit_code'] == 0
+
+
+def test_state_write_retries_transient_replace_denial(change, monkeypatch):
+    replace = Path.replace
+    attempts = []
+    def replace_once(path, target):
+        attempts.append(path)
+        if len(attempts) == 1:
+            raise PermissionError('Concurrent Windows state reader')
+        return replace(path, target)
+    monkeypatch.setattr(Path, 'replace', replace_once)
+    dev.update(change, lambda state: state.update(review={'summary': 'Preserved'}))
+    assert len(attempts) == 2
+    assert dev.load('test-change')[1]['review']['summary'] == 'Preserved'
+    assert not (change / '.state.lock').exists()
+
+
+def test_state_retry_does_not_hide_permanent_denial_or_invalid_json(change, monkeypatch):
+    with monkeypatch.context() as scoped:
+        ticks = iter([0, 6])
+        scoped.setattr(dev.time, 'monotonic', lambda: next(ticks))
+        with pytest.raises(PermissionError):
+            dev.state_io(lambda: (_ for _ in ()).throw(PermissionError('Permanent denial')))
+    (change / 'state.json').write_text('{invalid', encoding='utf-8')
+    import json
+    with pytest.raises(json.JSONDecodeError):
+        dev.read_state(change)
+
+
 def test_new_change_cannot_escape_root_or_overwrite(change):
     with pytest.raises(ValueError):
         dev.change_dir('../outside')

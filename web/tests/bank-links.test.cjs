@@ -21,15 +21,16 @@ const dependencies = {
   },
   '../jobProgress': { jobMoving: () => false },
   'react-router-dom': { Link: ({to,children,...props}) => React.createElement('a', {...props,href:to}, children) },
-  '../links': { bankHref: () => '/mainquiz/test' },
+  '../links': { bankHref: () => '/mainquiz/test', bankCatalogHref: () => '/mainquiz/test/catalog' },
   '../useMe': { useMe: () => ({isAdmin:admin}) },
   './prompt': { BANK_PROMPT_VERSION:'1.32' },
   './BankCoverage': { BankCoverage: () => null },
+  './BankResponseInput': { BankResponseInput: () => null },
 };
 const source = fs.readFileSync(path.join(root,'web/src/bank/BankPanel.tsx'),'utf8');
 const compiled = ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
 const exportsValue = {};
-vm.runInNewContext(compiled,{exports:exportsValue,require:id => {
+vm.runInNewContext(compiled,{exports:exportsValue,URL,require:id => {
   assert.ok(id in dependencies, `Unexpected dependency ${id}`);
   return dependencies[id];
 }});
@@ -46,20 +47,20 @@ test('saved bank uses the existing main card to open its share URL without the e
   assert.match(html,/링크 고치기<\/button>/);
   assert.doesNotMatch(html,/extension-setup/);
 });
-test('student can open the shared bank but never gets the private conversation or editor', () => {
+test('student can study a published bank without receiving conversation links or the editor', () => {
   admin = false;
   const html = renderToStaticMarkup(React.createElement(exportsValue.BankPanel,props));
-  assert.match(html,/https:\/\/chatgpt.com\/share\/bank-test/);
-  assert.doesNotMatch(html,/private-test|panel-aside|링크 고치기<\/button>/);
+  assert.match(html,/href="\/mainquiz\/test"/);
+  assert.match(html,/href="\/mainquiz\/test\/catalog"/);
+  assert.doesNotMatch(html,/chatgpt\.com|private-test|panel-aside|링크 고치기<\/button>/);
 });
 
-test('student can open the bank link before CLI succeeds', () => {
+test('student sees the waiting state without conversation links before publication', () => {
   admin = false;
   const html = renderToStaticMarkup(React.createElement(exportsValue.BankPanel, {...props,
     detail: {...props.detail, bank: {...props.detail.bank, usable: false, status: 'linked'}}}));
-  assert.match(html, /https:\/\/chatgpt.com\/share\/bank-test/);
   assert.match(html, /아직 공개된 문제가 없습니다/);
-  assert.doesNotMatch(html, /private-test|공부하기/);
+  assert.doesNotMatch(html, /chatgpt\.com|private-test|공부하기/);
 });
 
 test('manual input stores only URLs without an extension, source PDF, or existing bank', async () => {
@@ -77,7 +78,7 @@ test('manual input stores only URLs without an extension, source PDF, or existin
     '../jobProgress': {jobMoving: () => true}, // CLI running cannot block link entry.
   };
   const loaded = {};
-  vm.runInNewContext(compiled, {exports: loaded, require: id => mocked[id]});
+  vm.runInNewContext(compiled, {exports: loaded, URL, require: id => mocked[id]});
   admin = true;
   function controls() {
     slot = 0;
@@ -141,7 +142,7 @@ test('bank creation and recreation wait for a person to send; only the separate 
     './prompt': { loadLatestBankPrompt: async () => ({prompt: 'Bank prompt', version: '1.48'}) },
   };
   const loaded = {};
-  vm.runInNewContext(compiled,{exports:loaded,performance:{now:() => 1},require:id => mocked[id]});
+  vm.runInNewContext(compiled,{exports:loaded,URL,performance:{now:() => 1},require:id => mocked[id]});
   admin = true;
   function controls(detail) {
     const panel = loaded.BankPanel({...props,detail});

@@ -44,9 +44,25 @@ def change_dir(change_id):
     return ROOT / 'docs/changes' / change_id
 
 
+def state_io(action):
+    """Windows readers can briefly deny access while another check replaces state.json."""
+    deadline = time.monotonic() + 5
+    while True:
+        try:
+            return action()
+        except PermissionError:
+            if time.monotonic() >= deadline:
+                raise
+            time.sleep(0.05)
+
+
+def read_state(folder):
+    return json.loads(state_io(lambda: (folder / 'state.json').read_text(encoding='utf-8')))
+
+
 def load(change_id):
     folder = change_dir(change_id)
-    return folder, json.loads((folder / 'state.json').read_text(encoding='utf-8'))
+    return folder, read_state(folder)
 
 
 def save(folder, state):
@@ -54,7 +70,7 @@ def save(folder, state):
     target = folder / 'state.json'
     temp = target.with_suffix('.tmp')
     temp.write_text(json.dumps(state, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-    temp.replace(target)
+    state_io(lambda: temp.replace(target))
 
 
 def update(folder, change):
@@ -71,7 +87,7 @@ def update(folder, change):
                 raise ValueError('Change record is busy; inspect the lock before retrying')
             time.sleep(0.05)
     try:
-        state = json.loads((folder / 'state.json').read_text(encoding='utf-8'))
+        state = read_state(folder)
         change(state)
         save(folder, state)
     finally:
@@ -80,7 +96,7 @@ def update(folder, change):
 
 def plan_hash(folder):
     documents = digest([folder / name for name in ('intent.md', 'spec.md', 'plan.md')])
-    state = json.loads((folder / 'state.json').read_text(encoding='utf-8'))
+    state = read_state(folder)
     checks = state['required_checks']
     if (not isinstance(checks, list) or not checks or state['area'] not in AREAS
             or any(not isinstance(c, str) or not re.fullmatch(r'[a-z0-9-]+', c) for c in checks)):

@@ -52,7 +52,10 @@ try {
   open();
   await waitFor(() => document.querySelector('dialog[open] textarea'));
   check(!document.querySelector('a[href*="admin/bank-cards"]'), "shared editing stays in the study page");
-  check(requests.slice(before).every(path => path === "/api/admin/bank-review" || path.endsWith("/prepare")), "no admin overview, jobs, users or reports are loaded");
+  // Initial study requests may settle while the lazy editor opens. Check the
+  // management boundary without depending on the timing of those requests.
+  check(requests.slice(before).filter(path => path.startsWith("/api/admin/"))
+    .every(path => path === "/api/admin/bank-review"), "no admin overview, jobs, users or reports are loaded");
   const dialog = () => document.querySelector<HTMLDialogElement>('dialog[open]')!;
   dialog().querySelector<HTMLButtonElement>('[aria-label="공용 수정창 닫기"]')!.click();
   await waitFor(() => !dialog());

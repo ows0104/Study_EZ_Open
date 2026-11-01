@@ -50,6 +50,7 @@ test('solve screen exposes Essential and adding a card does not reveal the curre
     const page = await browser.newPage();
     await page.goto(`${base}/tests/personal-questions.html?solve`);
     assert.equal(await page.getByRole('combobox', { name: '내 문제 중요도' }).inputValue(), 'Essential');
+    await page.getByText('문제 변경/추가/삭제', { exact: true }).click();
     await page.getByRole('button', { name: '＋ 문제 추가' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByText('현재 문제의 슬라이드를 자동 선택했습니다. 선택을 바꾸거나 삭제할 수 있습니다.').waitFor();
@@ -71,6 +72,7 @@ for (const removeAll of [false, true]) {
     try {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       await page.goto(`${base}/tests/personal-questions.html?solve`);
+      await page.getByText('문제 변경/추가/삭제', { exact: true }).click();
       await page.getByRole('button', { name: '＋ 문제 추가' }).click();
       const dialog = page.getByRole('dialog');
       await dialog.getByRole('button', { name: 'PDF 3쪽 연결 삭제' }).click();

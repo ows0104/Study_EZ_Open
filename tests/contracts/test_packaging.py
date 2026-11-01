@@ -20,8 +20,8 @@ def test_cloud_source_includes_shared_contracts_and_only_allowed_files(tmp_path)
         ROOT / 'studyez_contracts/bank/schema.py').read_bytes()
     assert (target / 'app/bank_validation/schema.py').read_bytes() == (
         ROOT / 'server/app/bank_validation/schema.py').read_bytes()
-    assert '-e ../studyez_contracts' in (target / 'requirements.txt').read_text()
-    assert 'COPY studyez_contracts /studyez_contracts' in (target / 'Dockerfile').read_text()
+    assert '-e ../studyez_contracts' in (target / 'requirements.txt').read_text(encoding='utf-8')
+    assert 'COPY studyez_contracts /studyez_contracts' in (target / 'Dockerfile').read_text(encoding='utf-8')
     assert not any(p.name.startswith('.env') or p.suffix in {'.db', '.sqlite', '.pyc'}
                    or 'tests' in p.parts for p in target.rglob('*'))
 
