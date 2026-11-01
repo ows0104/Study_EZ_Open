@@ -35,12 +35,13 @@ runner: 탐색·매칭 → 서버의 생성 작업 수신
 
 2026-10-06부터 Main Quiz는 Quizbank로 생성한다. 필기 업로드만으로 quizgen 작업을
 등록하지 않는다. ChatGPT에서 출제한 완성 답을 저장하면 `kind=bank` 작업으로 정리·검증한다.
-공개는 관리자가 결정하며, Pre-Quiz의 생성과 기존 카드·학습 기록은 유지한다.
+현재 서버는 신규 은행 업로드가 게시 가능 상태이면 학생 공개를 켠다. 관리자는 공개 여부를 변경할 수 있다.
+보강 업로드는 기존 공개 상태를 유지한다. Pre-Quiz의 생성과 기존 카드·학습 기록은 유지한다.
 관리자의 완료 체크는 Quizbank 검증·학생 공개를 기준으로 한다. 기존 Main 덱의
 해당 없음 표시는 새 문제은행에 승계하지 않는다. DB 스키마 변경은 없으며 배포는
 서버 → 웹 → 로컬 러너 재시작 순서로 적용한다.
 
-Quiz Bank의 최초 문항 생성 프롬프트는 `web/src/bank/bankPrompt.md`다.
+Quiz Bank의 최초 문항 생성 프롬프트는 `content/prompts/bank/bankPrompt.md`다.
 확장은 PDF와 족보 조각을 대화에 붙이고 답을 회수한다. `quizbank`는 받은 답을
 정리하고 구조를 검사한다. 특정 문항 오류는 해당 문항을 제거하고 다시 검사하며,
 전체 구조 오류는 공개를 막는다. 외부지식 검토 결과는 표시로 남긴다.
@@ -49,6 +50,11 @@ Quiz Bank의 최초 문항 생성 프롬프트는 `web/src/bank/bankPrompt.md`�
 `server/app/study_engine/`이 담당한다. 서로 다른 학습 방식이므로 별개로 유지한다.
 
 ## 경계
+
+- 데이터 계약의 정본은 `studyez_contracts/bank/`, 출제 자산은 `content/prompts/bank/`다.
+- 기존 `server/app/bank_validation/` 경로는 공유 모듈의 호환 별칭이다.
+- 웹 빌드는 `prepare-prompts`로 버전·해시가 있는 프롬프트 JSON을 만들고 `pack-extension`으로 확장을 묶는다.
+- 전체 개발·유지보수 절차와 사건→새 작업 연결은 [개발 루프](development/README.md)를 따른다.
 
 - 서버는 `runner`·`quizgen`·`quizbank`를 import하지 않는다.
 - 러너는 `deck.py`에서 quizgen 계약을 연결하고, quizbank는 하위 프로세스로 실행한다.

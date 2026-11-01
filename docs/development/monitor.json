@@ -1,0 +1,7 @@
+{
+  "consecutive_failures": 2,
+  "probes": [
+    {"id": "api", "kind": "api", "url": "https://studyez-api-97999573571.asia-northeast3.run.app/api/health"},
+    {"id": "web", "kind": "web", "url": "https://studyez.kr/"}
+  ]
+}

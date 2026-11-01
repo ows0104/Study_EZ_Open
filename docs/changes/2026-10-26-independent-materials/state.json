@@ -1,0 +1,53 @@
+{
+  "id": "2026-10-26-independent-materials",
+  "title": "P4 독립 영역과 불필요한 자료의 분리·보관",
+  "area": "operations",
+  "created_at": "2026-10-26T03:57:23.425368+00:00",
+  "required_checks": [
+    "archive-integrity",
+    "boundaries"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-10-26T03:57:23.449952+00:00",
+      "evidence": "2026-10-26 사용자: 좋아. 다음 단계인 본 사이트와 독립적인 부분과 불필요한 자료를 확인하고, 분리·보관하는 작업도 진행해줘.",
+      "scope": "본 사이트와 독립적인 영역 구분 및 확인된 과거 완료 배포 사본·테스트 임시 DB의 로컬 복구 가능한 보관. 기록·현역 기능·운영 배포 제외.",
+      "plan_hash": "e3a2a6276a2bb64f9db2405095cae125e318625d0f79e30c6aeb8a793bb0d811",
+      "source_hash": "bb7ce1390317f34c4b429b3016b06ff4c557b90b1630326f0409f850298846c4",
+      "release_hash": "41322766793885c0d69d80ab20d48ccbc0f86a13f2147269fd1dc436fe26880b"
+    }
+  },
+  "checks": [
+    {
+      "name": "archive-integrity",
+      "at": "2026-10-26T04:03:57.920304+00:00",
+      "command": [
+        "C:\\Users\\ows01\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "-B",
+        "C:\\Users\\ows01\\Documents\\Codex\\2026-10-26\\wlr\\work\\archive_verify.py",
+        "archived"
+      ],
+      "exit_code": 0,
+      "source_hash": "bb7ce1390317f34c4b429b3016b06ff4c557b90b1630326f0409f850298846c4",
+      "log": "runs/_development/2026-10-26-independent-materials/1792987432620788400-archive-integrity.log"
+    },
+    {
+      "name": "boundaries",
+      "at": "2026-10-26T04:04:09.353807+00:00",
+      "command": [
+        "C:\\Users\\ows01\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "-B",
+        "C:\\Users\\ows01\\Documents\\Codex\\2026-10-26\\wlr\\work\\archive_boundaries.py"
+      ],
+      "exit_code": 0,
+      "source_hash": "bb7ce1390317f34c4b429b3016b06ff4c557b90b1630326f0409f850298846c4",
+      "log": "runs/_development/2026-10-26-independent-materials/1792987439374023100-boundaries.log"
+    }
+  ],
+  "review": {
+    "at": "2026-10-26T04:06:22.518866+00:00",
+    "summary": "137개 선정 근거, 활성 참조/자동화/예약 작업 및 Git 비추적 확인. 전체5670파일 백업·실제복원·이동후 해시/12junction 대조 통과. 중단 후 양쪽검증으로 안전하게 재개.977기존파일 보존, 실행코드 동일, 공유세션/검색/복원/덮어쓰기거부 검사 통과. Spotter 현역 공유의존성 유지.",
+    "source_hash": "bb7ce1390317f34c4b429b3016b06ff4c557b90b1630326f0409f850298846c4"
+  },
+  "updated_at": "2026-10-26T04:06:23.518329+00:00"
+}

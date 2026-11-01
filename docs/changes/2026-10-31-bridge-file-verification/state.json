@@ -1,0 +1,20 @@
+{
+  "id": "2026-10-31-bridge-file-verification",
+  "title": "Bridge 파일 수신 동작 점검",
+  "area": "integration",
+  "created_at": "2026-10-31T05:56:37.793643+00:00",
+  "required_checks": [
+    "bridge-file",
+    "runner-file",
+    "server-file"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-10-31T05:56:37.793664+00:00"
+}

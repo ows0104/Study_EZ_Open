@@ -2,6 +2,22 @@
 
 고칠 기능을 찾고 해당 행의 파일부터 읽는다. 폴더별 `CLAUDE.md`에는 계약과 검사만 있다.
 
+## 작업 범위부터 선택
+
+| 영역 | 먼저 읽을 곳 | 연결된 검사 |
+|---|---|---|
+| 사이트 | web/CLAUDE.md, server/CLAUDE.md, 해당 화면/API | 웹 typecheck/build, 해당 서버 테스트 |
+| 출제 | quizbank/CLAUDE.md, content/prompts/CLAUDE.md | tests/quizbank |
+| 연결부 | runner/CLAUDE.md, bridge/CLAUDE.md | tests/runner, tests/bridge |
+| 공용 계약 | studyez_contracts/CLAUDE.md, artifact-contract.md | tests/contracts + 생산자/소비자 |
+| 독립 앱 | spotter/CLAUDE.md | tests/spotter + 공유 인증 |
+| 개발·운영 루프 | [개발 절차](development/README.md), scripts/development.py, scripts/maintenance.py | tests/development |
+
+독립 영역과 실제 보관 위치는 [제품 경계와 보관](components-and-archives.md)을 본다.
+Spotter 검색은 `rg --no-ignore <검색어> spotter/scripts spotter/web`로 범위를 지정한다.
+
+새 작업 기록은 `docs/changes/<id>/`에 만든다. work/tmp/runs는 필요한 경로를 지정한 경우만 읽는다.
+
 ## Study_EZ
 
 | 할 일 | 시작할 파일 |
@@ -11,8 +27,9 @@
 | 기존 예습·복습 풀이 | [web/src/lecture](../web/src/lecture), [server/app/srs.py](../server/app/srs.py) |
 | Quiz Bank 시작·개념 지도 | [BankStart.tsx](../web/src/bank/BankStart.tsx), [ConceptMap.tsx](../web/src/bank/ConceptMap.tsx) |
 | Quiz Bank 풀이·문항 표시 | [BankSolve.tsx](../web/src/bank/BankSolve.tsx), [BankQuestion.tsx](../web/src/bank/BankQuestion.tsx) |
-| Quiz Bank 생성·공개 | [BankPanel.tsx](../web/src/bank/BankPanel.tsx), [bank.py](../server/app/routes/bank.py) |
-| Quiz Bank 생성 프롬프트 | [bankPrompt.md](../web/src/bank/bankPrompt.md) |
+| Quiz Bank 생성·공개 | [BankPanel.tsx](../web/src/bank/BankPanel.tsx), [publication.py](../server/app/routes/bank_api/publication.py) |
+| Quiz Bank API 책임·검사 지도 | [bank_api/CLAUDE.md](../server/app/routes/bank_api/CLAUDE.md) |
+| Quiz Bank 생성 프롬프트 | [bankPrompt.md](../content/prompts/bank/bankPrompt.md) |
 | Quiz Bank 정리·검증 | [quizbank/CLAUDE.md](../quizbank/CLAUDE.md) |
 | 다음 문항·숙련도 | [server/app/study_engine](../server/app/study_engine) |
 | 관리 화면·사용 현황 | [web/src/admin](../web/src/admin), [usage.py](../server/app/routes/usage.py) |
@@ -30,8 +47,10 @@
 | 러너 명령 옵션·분기 | [runner/cli](../runner/cli) |
 | 자료 탐색·연도 매칭 | [runner/watch.py](../runner/watch.py), [runner/filenames.py](../runner/filenames.py), [runner/matching.py](../runner/matching.py) |
 | 자동 작업 실행·대기 | [runner/agent.py](../runner/agent.py), [runner/cycle.py](../runner/cycle.py) |
-| 생성기 실행·계약 변환 | [runner/deck.py](../runner/deck.py), [runner/bank.py](../runner/bank.py) |
+| 상태 판정·재시도 기록 | [runner/agent_state.py](../runner/agent_state.py) |
+| 생성기 실행·계약 변환 | [runner/deck.py](../runner/deck.py), [은행 러너 지도](../runner/bank_flow/CLAUDE.md) |
 | 업로드·보류 판정 | [runner/publish.py](../runner/publish.py), [runner/gate.py](../runner/gate.py) |
+| HTTP·파일 전송 | [runner/transport.py](../runner/transport.py), [은행 업로드](../runner/bank_flow/upload.py) |
 | 시도 선택·폴더 위치 | [runner/runlayout.py](../runner/runlayout.py), [runner/chosen.py](../runner/chosen.py) |
 | 덱 생성 단계·재시도 | [quizgen/run.py](../quizgen/run.py), [quizgen/prequiz/run.py](../quizgen/prequiz/run.py) |
 | 카드 작성 지침 | [프롬프트 조립 안내](prompt-architecture.md), [quizgen/prompts](../quizgen/prompts) |

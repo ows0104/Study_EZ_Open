@@ -4,6 +4,7 @@
 
 | 목적 | 문서 |
 |---|---|
+| 리팩토링 현황·최종 흐름 점검 | [최종 현황](refactor-status.md) |
 | 수정할 파일 찾기 | [작업 지도](map.md) |
 | 실행·검사 | [명령 안내](commands.md) |
 | 데이터 흐름·책임 | [현재 구조](architecture.md) |
@@ -14,6 +15,7 @@
 | 퀴즈 파이프라인 | [quizgen](quizgen.md), [프롬프트 조립](prompt-architecture.md) |
 | 배포 | [배포 안내](deployment.md), [Pages](cloudflare-pages-runbook.md) |
 | 인프라 운영 | [R2](r2-runbook.md), [도메인](domain-runbook.md) |
+| 독립 영역·자료 보관·복원 | [제품 경계와 보관](components-and-archives.md) |
 | 앱 추가·공유 인증 | [형제 앱](sibling-apps.md) |
 | Chrome 확장 제출 | [스토어 제출](chrome-web-store-submission.md) |
 | 실패 사례·인터뷰·옛 인계 | [기록 보관함](archive/README.md) |

@@ -18,7 +18,7 @@ Study_EZ의 Vite·React·TypeScript 화면이다.
 
 Quiz Bank의 `BankStudy.tsx`는 진입점이고 시작·풀이·문항 표시를
 `BankStart.tsx`·`BankSolve.tsx`·`BankQuestion.tsx`로 나눈다.
-생성 프롬프트의 정본은 `src/bank/bankPrompt.md`이며 변경 시 버전을 갱신한다.
+생성 프롬프트의 정본은 `../content/prompts/bank/bankPrompt.md`이며 변경 시 버전을 갱신한다.
 
 ## 계약
 

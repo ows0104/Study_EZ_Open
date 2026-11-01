@@ -1,0 +1,15 @@
+{
+  "target": "server",
+  "destination": "meddeck-503318/asia-northeast3/studyez-api",
+  "health_url": "https://studyez-api-97999573571.asia-northeast3.run.app/api/health",
+  "smoke_command": [
+    "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\server\\.venv\\Scripts\\python.exe",
+    "-X",
+    "utf8",
+    "-B",
+    "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\scripts\\production_smoke.py",
+    "--revision",
+    "{revision}"
+  ],
+  "rollback": "gcloud run services update-traffic studyez-api --project meddeck-503318 --region asia-northeast3 --to-revisions studyez-api-study-retention-20261019=100. No DB migration or content replacement."
+}

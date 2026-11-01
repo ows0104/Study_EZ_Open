@@ -1,0 +1,88 @@
+{
+  "id": "2026-10-26-bank-api-boundaries",
+  "title": "P3a 은행 API 책임 분리와 기존 보존 검사 수정",
+  "area": "site",
+  "created_at": "2026-10-26T02:38:58.100219+00:00",
+  "required_checks": [
+    "server",
+    "contracts"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-10-26T02:50:19.136930+00:00",
+      "evidence": "2026-10-26 현재 채팅: 좋아. 후속단계 진행하자. 같은 로컬 호환성·검증 범위에서 기존 테스트 기대값과 필요 없는 SQL 칼럼 조회를 정정. 학습 정책 변경 없음.",
+      "scope": "P3a API 책임 분리, 기존 coverage/personal-priority 검사 정정, 기존 결과를 유지하는 SQL 조회 범위 축소와 로컬 검사. 배포·DB·정책·자료 이동 제외.",
+      "plan_hash": "1b4c836e3d3d628d2aba26669828ded05a0ae7edc7f9257b8f1f3ae790f896c5",
+      "source_hash": "38dab7540e4688cc98470eb48f8b7a114d1074a0dfa537ecd8a11912030a9c3d",
+      "release_hash": "fb9fd065fd26b2b7e7a739a16077db3be89e1345b5dc36afb83ed3b72e496096"
+    }
+  },
+  "checks": [
+    {
+      "name": "contracts",
+      "at": "2026-10-26T02:44:47.290938+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\.venv\\Scripts\\python.exe",
+        "-B",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "tests/development",
+        "-q",
+        "--basetemp=../pytest-followup"
+      ],
+      "exit_code": 0,
+      "source_hash": "3523f3178006500b592459ce01f0bb49e7fc86f70444bf2691c552b652024e76",
+      "log": "runs/_development/2026-10-26-bank-api-boundaries/1792982683918332800-contracts.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-10-26T02:47:19.361681+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\server\\.venv\\Scripts\\python.exe",
+        "-B",
+        "-c",
+        "import subprocess,sys; raise SystemExit(subprocess.call([sys.executable,'-B','-u','-m','tests'],cwd='server'))"
+      ],
+      "exit_code": 1,
+      "source_hash": "3523f3178006500b592459ce01f0bb49e7fc86f70444bf2691c552b652024e76",
+      "log": "runs/_development/2026-10-26-bank-api-boundaries/1792982683016547200-server.log"
+    },
+    {
+      "name": "contracts",
+      "at": "2026-10-26T02:51:00.606054+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\.venv\\Scripts\\python.exe",
+        "-B",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "tests/development",
+        "-q",
+        "--basetemp=../pytest-followup"
+      ],
+      "exit_code": 0,
+      "source_hash": "38dab7540e4688cc98470eb48f8b7a114d1074a0dfa537ecd8a11912030a9c3d",
+      "log": "runs/_development/2026-10-26-bank-api-boundaries/1792983057194553000-contracts.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-10-26T02:53:32.373730+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\server\\.venv\\Scripts\\python.exe",
+        "-B",
+        "-c",
+        "import subprocess,sys; raise SystemExit(subprocess.call([sys.executable,'-B','-u','-m','tests'],cwd='server'))"
+      ],
+      "exit_code": 0,
+      "source_hash": "38dab7540e4688cc98470eb48f8b7a114d1074a0dfa537ecd8a11912030a9c3d",
+      "log": "runs/_development/2026-10-26-bank-api-boundaries/1792983056153254300-server.log"
+    }
+  ],
+  "review": {
+    "at": "2026-10-26T02:53:40.162714+00:00",
+    "summary": "144개 경로/권한과 68개 스키마 동등, 96개 함수·모델 AST 동등(FeedbackIn 공개 이름 메타데이터 제외), 순환 import 없음. 기존 보존 계약 검사와 SQL load_only 범위 확인. 전체 서버 85파일 및 계약/도구 14검사 통과. 운영/데이터 미변경; 실제 배포 후보 분리는 아직 필요.",
+    "source_hash": "38dab7540e4688cc98470eb48f8b7a114d1074a0dfa537ecd8a11912030a9c3d"
+  },
+  "updated_at": "2026-10-26T02:53:40.394916+00:00"
+}

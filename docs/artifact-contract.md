@@ -34,6 +34,15 @@ Anki 표시 이름과 GUID 씨앗은 다르다. 표시 이름 변경을 이유�
 같은 쪽번호여도 서로 다른 PDF일 수 있으므로 합치지 않는다.
 추가 자산 kind의 정본은 서버 모델에 있다.
 
+Quiz Bank 1.76부터 중추신경계 `261006_02`·`261006_03`는 실제 UTF-8
+`study-ez-<run_id>-bank.md` 파일을 전달한다. 첫 줄의 `STUDYEZ_BANK_FILE` JSON은
+schema_version·subject·run_id·prompt_version·question_count·question_ids·conflict_ids를 기록한다.
+모든 문항·출처 충돌 뒤 마지막 줄에만 `STUDYEZ_BANK_COMPLETE`를 둔다.
+사이트·브리지는 파일을 읽어 구조를 검사하고, `/bank-response`에는 원문과
+`responseFile: {filename, sha256, byteLength}`를 전달한다. 서버와 러너가 다시 검사하며,
+러너는 받은 바이트를 `raw.md`, 검증 정보를 `response-file.json`에 보존한다.
+파일 검사는 전달·구조 검증이며 원본·정답 검수를 대신하지 않는다. 기존 은행·학습 기록은 유지한다.
+
 덱 이름은 강의 ID·제목·교수를 사용하고 예습에는 ` 예습`을 붙인다.
 예습은 작년 자료로 만들어도 올해 대상 강의의 표시 이름을 사용한다.
 대상 정보는 `pre_target.json`이 연결한다.

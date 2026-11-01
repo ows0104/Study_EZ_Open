@@ -6,20 +6,25 @@
 
 ## 어디부터 읽나요?
 
+새 기능·수정·장애 대응은 [StudyEZ 개발 루프](docs/development/README.md)에서 시작합니다.
+아이디어를 intent → spec → plan으로 구체화하고, 사람 승인 후 구현·검사·리뷰·중요 배포 승인을 거칩니다.
+`python scripts/development.py new <id> --title "작업" --area site --checks web regression`으로 작업 기록을 만듭니다.
+
 | 할 일 | 읽을 문서 |
 |---|---|
+| 전체 리팩토링 현황·남은 작업 | [최종 현황](docs/refactor-status.md) |
 | 코드 수정 위치 찾기 | [작업 지도](docs/map.md) |
 | 실행·검사 명령 확인 | [명령 안내](docs/commands.md) |
 | 데이터 흐름 이해 | [현재 구조](docs/architecture.md) |
 | 생성부터 학생 풀이까지 도식 | [현재 파이프라인](docs/pipeline.md) |
 | 산출물·작업 폴더 확인 | [산출물 계약](docs/artifact-contract.md), [runs 구조](docs/runs-layout.md) |
 | 배포·운영 | [배포 안내](docs/deployment.md) |
+| 독립 앱·보관 자료 찾기 | [제품 경계와 보관](docs/components-and-archives.md) |
 | 이전 결정의 이유 찾기 | [기록 보관함](docs/archive/README.md) |
 
 ## 현재 흐름
 
 ```text
-올해 필기 PDF ───────────────→ quizgen ──→ Main-Quiz · Anki 덱
 작년 필기 PDF + 예습 대화 ───→ quizgen ──→ Pre-Quiz · Anki 덱
 필기 PDF + 족보 → ChatGPT 답 ─→ quizbank ─→ Quiz Bank · 근거 슬라이드
                                   ↑
@@ -29,6 +34,9 @@
                                   ↓
                        web: 캘린더 · 문제 풀이
 ```
+
+기존 Main 덱과 학습 기록은 계속 읽습니다. 현행 Main 생성은 저장된 완성 웹 응답의 Quizbank 후처리입니다.
+공유 구조 검증은 `studyez_contracts/`, 출제 프롬프트 정본은 `content/prompts/`에 있습니다.
 
 관리자는 웹에서 자료·예습 링크를 연결하고 생성 작업을 요청합니다.
 `runner agent`가 서버의 작업을 받아 로컬에서 실행한 뒤 결과를 업로드합니다.

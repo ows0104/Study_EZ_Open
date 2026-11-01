@@ -1,0 +1,18 @@
+{
+  "id": "2026-10-27-learner-journey",
+  "title": "학습자 여정과 핵심 화면 구성",
+  "area": "site",
+  "created_at": "2026-10-27T04:15:39.612354+00:00",
+  "required_checks": [
+    "design-review"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-10-27T04:15:39.612374+00:00"
+}

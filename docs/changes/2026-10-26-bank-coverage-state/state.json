@@ -1,0 +1,31 @@
+{
+  "id": "2026-10-26-bank-coverage-state",
+  "title": "기존 bank coverage 상태 보존 검사 불일치",
+  "area": "site",
+  "created_at": "2026-10-26T02:12:43.782023+00:00",
+  "required_checks": [
+    "server"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "updated_at": "2026-10-26T04:51:19.727985+00:00",
+  "lifecycle": {
+    "status": "completed_local",
+    "links": [
+      "2026-10-26-bank-api-boundaries"
+    ],
+    "events": [
+      {
+        "at": "2026-10-26T04:51:19.727985+00:00",
+        "type": "historical_resolution_link",
+        "evidence": "기존 resolution.md와 P3a 최종 server 통과 기록. 새 검증/운영 배포 승인이 아님."
+      }
+    ],
+    "resolution": {
+      "kind": "historical_local",
+      "change": "2026-10-26-bank-api-boundaries",
+      "evidence": "resolution.md"
+    }
+  }
+}

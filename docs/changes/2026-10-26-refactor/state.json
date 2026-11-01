@@ -1,0 +1,160 @@
+{
+  "id": "2026-10-26-refactor",
+  "title": "StudyEZ 경계 분리와 사이트 전체 개발 루프",
+  "area": "integration",
+  "created_at": "2026-10-26T02:12:37.847841+00:00",
+  "required_checks": [
+    "python",
+    "web",
+    "server",
+    "package"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-10-26T02:12:37.914247+00:00",
+      "evidence": "2026-10-26 현재 채팅 사용자: 좋아. 지금 행동은 진행해줘. 루프는 이 사이트에 대해 적용.",
+      "scope": "P0~P2 로컬 리팩토링·검사와 사이트 전체 개발/유지보수 루프 연결. 운영 배포 제외.",
+      "plan_hash": "bd8bc5a948c971bb0e9ec642d33a191bc9b6e420bb65513a2afce5e1b8d22179",
+      "source_hash": "f455eb75a3ece7f25fa22acf9ec6c0fc38a5c26e8bff0ec652c5abea6dc5fc02",
+      "release_hash": "07ae206476e7c084a33ad8452b760b9d0ce1afebf6b0718dfe6f5818925330e2"
+    }
+  },
+  "checks": [
+    {
+      "name": "server",
+      "at": "2026-10-26T02:17:04.069655+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\server\\.venv\\Scripts\\python.exe",
+        "-c",
+        "import subprocess,sys; raise SystemExit(subprocess.call([sys.executable,'-B','-u','-m','tests','bank'],cwd='server'))"
+      ],
+      "exit_code": 2,
+      "source_hash": "179dad0957fd624ca36ac185e1e507fda06c6392cf08d048cc8fb7386ab8fc82",
+      "log": "runs/_development/2026-10-26-refactor/000-server.log"
+    },
+    {
+      "name": "package",
+      "at": "2026-10-26T02:18:46.101866+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\.venv\\Scripts\\python.exe",
+        "-B",
+        "-m",
+        "pytest",
+        "tests/contracts/test_packaging.py",
+        "-q",
+        "--basetemp=../pytest-package-final"
+      ],
+      "exit_code": 0,
+      "source_hash": "e00cf784b47c1c41a4cf4b5552ce34e3b3add5b96ba1d05fccc8199b67e75512",
+      "log": "runs/_development/2026-10-26-refactor/1792981121503758300-package.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-10-26T02:18:52.657848+00:00",
+      "command": [
+        "C:\\Users\\ows01\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "-c",
+        "import subprocess; subprocess.run(['cmd.exe','/d','/c','npm','--prefix','web','run','build'],check=True); subprocess.run(['node','--test','web/tests/bank-prompt-current.test.cjs'],check=True)"
+      ],
+      "exit_code": 0,
+      "source_hash": "e00cf784b47c1c41a4cf4b5552ce34e3b3add5b96ba1d05fccc8199b67e75512",
+      "log": "runs/_development/2026-10-26-refactor/1792981121841869500-web.log"
+    },
+    {
+      "name": "python",
+      "at": "2026-10-26T02:19:30.258842+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\.venv\\Scripts\\python.exe",
+        "-B",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/runner",
+        "-q",
+        "--basetemp=../pytest-final"
+      ],
+      "exit_code": 0,
+      "source_hash": "e00cf784b47c1c41a4cf4b5552ce34e3b3add5b96ba1d05fccc8199b67e75512",
+      "log": "runs/_development/2026-10-26-refactor/1792981121931194400-python.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-10-26T02:20:03.792131+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\server\\.venv\\Scripts\\python.exe",
+        "-c",
+        "import subprocess,sys; raise SystemExit(subprocess.call([sys.executable,'-B','-u','-m','tests','bank'],cwd='server'))"
+      ],
+      "exit_code": 1,
+      "source_hash": "e00cf784b47c1c41a4cf4b5552ce34e3b3add5b96ba1d05fccc8199b67e75512",
+      "log": "runs/_development/2026-10-26-refactor/1792981122686528000-server.log"
+    },
+    {
+      "name": "package",
+      "at": "2026-10-26T02:25:13.766378+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\.venv\\Scripts\\python.exe",
+        "-B",
+        "-m",
+        "pytest",
+        "tests/contracts/test_packaging.py",
+        "-q",
+        "--basetemp=../pytest-package-final"
+      ],
+      "exit_code": 0,
+      "source_hash": "8b67d16f393e31b8b532ef0a70afdd138961e4ed97bc18ec987ca3ad73fdd2ad",
+      "log": "runs/_development/2026-10-26-refactor/1792981508429052800-package.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-10-26T02:25:21.998746+00:00",
+      "command": [
+        "C:\\Users\\ows01\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "-c",
+        "import subprocess; subprocess.run(['cmd.exe','/d','/c','npm','--prefix','web','run','build'],check=True); subprocess.run(['node','--test','web/tests/bank-prompt-current.test.cjs'],check=True)"
+      ],
+      "exit_code": 0,
+      "source_hash": "8b67d16f393e31b8b532ef0a70afdd138961e4ed97bc18ec987ca3ad73fdd2ad",
+      "log": "runs/_development/2026-10-26-refactor/1792981508737556900-web.log"
+    },
+    {
+      "name": "python",
+      "at": "2026-10-26T02:25:56.856589+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\.venv\\Scripts\\python.exe",
+        "-B",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/runner",
+        "-q",
+        "--basetemp=../pytest-final"
+      ],
+      "exit_code": 0,
+      "source_hash": "8b67d16f393e31b8b532ef0a70afdd138961e4ed97bc18ec987ca3ad73fdd2ad",
+      "log": "runs/_development/2026-10-26-refactor/1792981507703443300-python.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-10-26T02:26:30.970107+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\server\\.venv\\Scripts\\python.exe",
+        "-c",
+        "import subprocess,sys; raise SystemExit(subprocess.call([sys.executable,'-B','-u','-m','tests','bank'],cwd='server'))"
+      ],
+      "exit_code": 1,
+      "source_hash": "8b67d16f393e31b8b532ef0a70afdd138961e4ed97bc18ec987ca3ad73fdd2ad",
+      "log": "runs/_development/2026-10-26-refactor/1792981509719825200-server.log"
+    }
+  ],
+  "review": {
+    "at": "2026-10-26T02:28:03.162489+00:00",
+    "summary": "현재 원본과 일치하는 코드 목록에서 최종 검증. 계약·프롬프트 21파일 원문 보존, 생성기 의존성, 레거시 별칭, 서버 패키징/독립 설치, 웹 build/dev, 승인/검사/리뷰 해시 및 동시 기록 병합 검토 완료. 기존 서버 coverage 상태 보존 단언 실패 1건은 별도 작업으로 기록; 배포하지 않음.",
+    "source_hash": "8b67d16f393e31b8b532ef0a70afdd138961e4ed97bc18ec987ca3ad73fdd2ad"
+  },
+  "updated_at": "2026-10-26T02:28:03.562006+00:00"
+}
