@@ -24,6 +24,8 @@ web-priorities.json은 저장된 응답의 Tier·importance 후보다. 현재 �
    uncertain으로 숨기거나 불확실성만 있는 목표를 확실한 누락으로 만들지 않는다.
 4. checks.note에 방향별 실제 question_id, 빠진 조건·방향, 필수 회상인지 확장 회상인지와
    원본 근거를 적는다. 회상 방향의 필요성과 계열·개별 약물의 식별 조건은 공통 원칙으로 판단한다.
+   기초 연결을 제공하고 세부 연결만 묻는 문항은 제공한 관계와 실제 시험한 관계를 구분해 적는다.
+   기초 회상 누락과 족보의 실제 연결·조건·왜곡 지점은 공통 원칙으로 대조하고, 목록 밖 누락도 남긴다.
 5. 누락을 기록하는 것과 추가 문항을 요구하는 것을 구분한다. checks.note나 지적의 suggested_action에 기존 문항의
    수정 가능 여부를 적고, 추가를 제안할 때는 독립 목표와 기존 목표를 보존하면서 수정하기 어려운
    이유를 명시한다. 같은 누락이 여러 포인트에 반복되면 공통 누락임을 기록하고 하나의 대응을 제안한다.
@@ -38,19 +40,24 @@ web-priorities.json은 저장된 응답의 Tier·importance 후보다. 현재 �
 함께 전달되는 「문항 품질 원칙」의 공통 원칙·회상 방향·Tier·형식·완성본 검토를 모든 현재
 문항에 적용한다. 정답의 정확성과 문항 설계의 적절성을 각각 확인하고, 모든 고정 선지·채점 단위·
 해설·출처 충돌·EXT도 검토한다. prerequisites 등 학습 구조의 검토 시점은 현재 단계 계약을 따른다.
+공통 원칙의 첫 학습 순서 기준으로 실제 정답에 필요한 기초 회상이 문항 집합에 존재하는지와
+개요 인용 때문에 비교·응용이 앞서 있는지를 대조한다. 내용 단계의 빈 prerequisites를 오류로
+처리하지 않는다. 기초 회상 누락은 기존 checks.note에 해당 ID·실제 관계·근거를 남기고,
+위치만의 문제는 summary에 해당 ID와 학습 위치 판단 근거를 남겨 사후 학습 구조가 처리하게 한다.
+순서 조정만 필요한 문제로 문항·정답을 다시 쓰거나 새 문항을 요구하지 않는다.
 작성자의 자기검수 선언이나 단어 검색·선지 길이 차이만으로 판정을 대신하지 않는다.
 확인된 원칙 위반은 error, 실질적인 불확실성은 doubt, 가능한 다른 표현이나 취향은 suggestion이다.
 문제 표현·실제 인출 목표·원본 위치·수정 근거를 함께 적는다. 의료 지식 판단은 ok / doubt / wrong으로 남긴다.
 중복은 같은 인출·판단을 시험하는 경우로 판단하며, 별도 회상 방향·비교·적용 목표는 구분한다.
-Core 묶음이 학습목표·해당 교수 기출의 실제 목표와 방향을 시험하는지 확인한다. 교수 강조·임상
+Must-Know·Core 묶음이 교수 출제 예고·학습목표·해당 교수 기출의 실제 목표와 방향을 시험하는지 확인한다. 교수의 일반 강조·필기자의 중요 표시·임상
 중요성에 따른 Important 목표의 누락은 별도로 확인하며, 누락 보완의 필요성만으로 Core로 올리지 않는다.
 형식·방향·문항 수의 할당 비율을 요구하지 않는다.
 
 모든 문항의 우선순위와 독립 심화 여부를 tier_checks에 정확히 한 번 기록한다.
-tested_target은 실제 인출 단위, recommended_tier는 Core/Important/Optional,
-recommended_importance는 Core=5/Important=4/Optional=2,
+tested_target은 실제 인출 단위, recommended_tier는 Essential/Core/Important/Optional,
+recommended_importance는 Essential=5/Core=5/Important=4/Optional=2,
 recommended_advanced는 독립 심화 여부(boolean)다. advanced_reason에는 추가 추론·연계 또는
-단순 회상이라고 판단한 이유를 쓴다. basis는 objective/past_exam/emphasis/clinical/detail이다.
+단순 회상이라고 판단한 이유를 쓴다. basis는 must_memorize/must_know_implied/exam_explicit/exam_hint/objective/past_exam/emphasis/note_emphasis/clinical/detail이다.
 source_refs에 실제 위치를, evidence에 실제 학습목표·기출 질문·강조 표시 또는 구체적인 임상
 중요성·부연임을 확인한 내용을 쓴다. essential_target은 과거 호환 필드로 빈 문자열을 쓴다.
 등급·수치·심화 중 하나라도 다르면 교정한다. 교육적 판단 기준은 뒤에 붙은 공통 원칙을 따른다.
@@ -91,3 +98,7 @@ unreadable로 남긴다. plan_issues에는 목록 자체의 누락·오류와 �
 문항별 문제·판단 이유·수정 제안을 적는다. duplicates에는 확인된 불필요한 중복만 넣는다.
 summary에는 실제 검토 범위·필수 누락·확장 제안·주요 오류를 구분해 짧게 적는다.
 검수 판정은 게시 여부와 별개다. 게시를 위해 오류·누락을 통과로 바꾸지 않는다.
+
+사용자 표기 Must-Know는 저장·검수 JSON의 기존 tier=Essential과 같은 등급이다. 교수의 직접적 암기 요구(must_memorize), 확정적 출제 언급(exam_explicit), 간접 출제 신호(exam_hint), 완곡한 필수 지식 강조(must_know_implied)를 모두 Must-Know 근거로 인정한다. “이 정도는 알아야겠죠?”, “시험에 내기 좋겠다”, “이거는 알고 있는 게 좋을 것 같아요”를 단순 가능성·일반 권장으로 낮추지 않는다. 교수의 실제 발언·출처·평가 지식 단위의 대응을 확인한다. Core는 학습목표·해당 교수 기출에 근거하되 교수의 출제 예고·강조가 확인되면 Must-Know를 우선한다. 필기자 본인의 중요 표시는 note_emphasis로 Important 근거이며 교수 발언으로 추정하지 않는다.
+
+Cloze를 새로 작성·수정할 때는 {정답}으로 감싸고 중복 정답은 정리 코드로 복원한다. 기존 {{c1}}+answer_units도 읽는다. OX 해설의 핵심 감별 키워드는 **강조**로 보존·작성하며 앱에서 파란색으로 표시한다.

@@ -448,7 +448,8 @@ def _spawn(argv: list[str], run_dir: Path, repo_root: Path, timeout: int,
         sink.flush()
         try:
             done = subprocess.run(argv, stdout=sink, stderr=subprocess.STDOUT,
-                                  cwd=str(repo_root), env=env, timeout=timeout)
+                                  cwd=str(repo_root), env=env, timeout=timeout,
+                                  creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), stdin=subprocess.DEVNULL)
         except subprocess.TimeoutExpired:
             return Result(False, run_dir, log, f"{timeout // 60}분 안에 끝나지 않았다",
                           work=work or run_dir)
@@ -509,8 +510,8 @@ def cut_jokbo(pdf: Path, out_dir: Path, repo_root: Path,
         argv += ["--practical", *[str(p) for p in practical]]
     if older:
         argv += ["--older", *[str(p) for p in older]]
-    done = subprocess.run(argv, cwd=str(repo_root),
-                          env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+    from .subprocesses import run_forwarded
+    done = run_forwarded(argv, cwd=str(repo_root), env=dict(os.environ, PYTHONIOENCODING="utf-8"))
     return done.returncode
 
 
@@ -549,7 +550,8 @@ def rebuild(*, run_dir: Path, kind: str, deck_name: str, id: str, jokbo_dir: Pat
         argv += ["--site-edits", str(edits)]
     done = subprocess.run(argv, cwd=str(repo_root), capture_output=True, text=True,
                           encoding="utf-8", errors="replace",
-                          env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+                          env=dict(os.environ, PYTHONIOENCODING="utf-8"),
+                          creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), stdin=subprocess.DEVNULL)
     if done.returncode != 0:
         tail = (done.stderr or done.stdout or "").strip().splitlines()
         return False, tail or [str(done.returncode)]

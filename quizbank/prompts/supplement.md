@@ -29,7 +29,7 @@ mcq_mode는 학습 목표로 구분한다. 선지 없이 먼저 용어·약물·
 옳지 않은 것을 고르면 거짓 선지가 정답이다. answer, answer_units, correct_option_ids, 해설을 서로 대조한다.
 option_pools는 비워도 된다. 안전한 참·거짓 쌍을 만들 수 있을 때만 원본에 근거해 추가한다.
 source_refs는 context의 source ID와 정확한 PDF 물리 쪽 번호(p.N)를 사용한다.
-새 문항 때문에 기존 내용의 tier·중요도·학습 일정을 바꾸지 않는다. 내용에 맞게 Core·Important·Optional 및 독립 advanced을 정한다.
+새 문항 때문에 기존 내용의 tier·중요도·학습 일정을 바꾸지 않는다. 내용에 맞게 Essential·Core·Important·Optional 및 독립 advanced을 정한다.
 같은 개념의 속성·retrieval_plan에 넣는 directions는 기존 값과 새 문항이 요구하는 방향을 유지한다.
 retrieval_direction=integration 문항은 실제로 필요한 기초 문항 ID를 prerequisites에 반드시 연결한다.
 발문에 식이 주어져 있어도 integration으로 분류했다면 해당 개념의 기초 문항 연결을 빠뜨리지 않는다.

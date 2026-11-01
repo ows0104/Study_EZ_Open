@@ -2,12 +2,36 @@
 [CmdletBinding()]
 param(
     [int]$IntervalSeconds = 5,
-    [switch]$Once
+    [switch]$Once,
+    [switch]$Console
 )
 
 $ErrorActionPreference = 'Stop'
 $monitorRepo = Split-Path -Parent $PSScriptRoot
 $monitorRuns = Join-Path $monitorRepo 'runs'
+if (-not $Console -and -not $Once) {
+    # uv 가상환경의 pythonw 프록시는 콘솔용 python.exe를 자식으로 띄울 수 있다.
+    # 상태 창은 표준 라이브러리만 쓰므로 기본 설치의 실제 pythonw.exe를 직접 쓴다.
+    $monitorPython = @(
+        foreach ($monitorConfig in @('.venv/pyvenv.cfg', 'server/.venv/pyvenv.cfg')) {
+            $monitorConfigPath = Join-Path $monitorRepo $monitorConfig
+            if (Test-Path -LiteralPath $monitorConfigPath) {
+                foreach ($monitorConfigLine in (Get-Content -LiteralPath $monitorConfigPath)) {
+                    if ($monitorConfigLine -match '^home\s*=\s*(.+)$') {
+                        Join-Path $Matches[1].Trim() 'pythonw.exe'
+                    }
+                }
+            }
+        }
+        (Join-Path $env:USERPROFILE 'anaconda3/pythonw.exe')
+        (Join-Path $env:USERPROFILE 'miniconda3/pythonw.exe')
+    ) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+    if (-not $monitorPython) { throw 'pythonw.exe를 찾지 못했습니다. -Console로 텍스트 상태를 볼 수 있습니다.' }
+    Write-Verbose "상태 창: $monitorPython (기존 러너는 유지)"
+    Start-Process -FilePath $monitorPython -WorkingDirectory $monitorRepo -WindowStyle Normal `
+        -ArgumentList @('-m', 'runner.status_window', '--interval', [Math]::Max(1, $IntervalSeconds))
+    return
+}
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 $Host.UI.RawUI.WindowTitle = 'Study EZ - Runner Live Status'
 

@@ -218,6 +218,24 @@ def test_answer_position_and_ids_are_checked(index, units):
         compact.restore(draft(), blocks)
 
 
+def test_blank_section_separators_do_not_become_matching_or_sequence_choices():
+    expected, bank = draft(), draft()
+    for question in bank['questions']:
+        for field in ('matching_left', 'matching_right', 'sequence_items'):
+            if question.get(field):
+                question[field] = ['', '  ', *question[field], '\n']
+    blocks = compact.read_blocks(RAW)
+    compact.restore(expected, blocks)
+    compact.restore(bank, blocks)
+    assert bank == expected
+
+
+@pytest.mark.parametrize('items', [['', ' '], ['', 'unlabeled'], ['', 'A. α', 'A. β']])
+def test_blank_separators_do_not_relax_choice_id_checks(items):
+    with pytest.raises(SessionError, match='보기의 ID'):
+        compact._labels(items, 'Q001')
+
+
 def test_question_ids_keep_old_tables_and_ignore_conflicts_and_references():
     assert file_organize.question_ids(RAW) == {f'Q{i:03}' for i in range(1, 9)}
     assert compact.read_blocks('### Q001\nquestion: old block\nanswer: old answer') == []
@@ -423,3 +441,15 @@ def test_evidence_json_labels_are_not_answer_fields(wrapper):
     assert block['units'] == ['세포 내 농도']
     assert block['explanation'] == '원문 해설'
     assert block['source_evidence'] == evidence
+
+
+def test_trailing_conflict_prose_is_not_part_of_the_last_question():
+    raw = ('### Q001 | basic | Core | 5 | 1 | direct\n'
+           '문제: 첫 기호는?\n정답: ["Alpha"]\n출처: S1 p.1\n'
+           '해설: "문항 해설"\n'
+           '### CF001\n설명: 자료 충돌\n'
+           '  자료 2의 해설: 이 설명은 JSON이 아니다. 정답: 과거 자료의 값\n'
+           '출처: S1 p.1\n미해결: false\nSTUDYEZ_BANK_COMPLETE')
+    block = compact.read_blocks(raw)[0]
+    assert block['units'] == ['Alpha']
+    assert block['explanation'] == '문항 해설'

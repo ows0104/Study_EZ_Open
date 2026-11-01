@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
-import { takeTimetable } from "../firstScreen";
 import { useMe } from "../useMe";
-import type { LectureRef, TimetableEvent } from "../types/lectures";
-import type { BankNext, BankSession, BankTimeline } from "../types/bank";
-import { BankBuildTimes } from "./BankBuildTimes";
+import type { BankNext, BankSession } from "../types/bank";
+import { StudyOverview, type StudyLecture } from "./StudyOverview";
+import { DeleteQuizDialog } from "./DeleteQuizDialog";
 import { BankSolve, type BatchStudy } from "./BankSolve";
 import { useBankUndo } from "./useBankUndo";
+import { useStudyTimetable } from "./useStudyTimetable";
 import "./batch.css";
 
-type Lecture = Pick<LectureRef, "subject" | "runId" | "title"> & { date: string; ready?: boolean; bankTimeline?: BankTimeline | null };
+type Lecture = Pick<StudyLecture, "subject" | "runId" | "title" | "date">;
 type Queue = { lectures: Lecture[]; current?: Lecture; undoToken?: string | null; goal?: BankNext["batchGoal"] };
 const keyOf = (lecture: Lecture) => `${lecture.subject}/${lecture.runId}`;
 
@@ -18,10 +18,12 @@ const keyOf = (lecture: Lecture) => `${lecture.subject}/${lecture.runId}`;
 export function BankBatchPage() {
   const me = useMe();
   const storageKey = `studyez-batch:${me?.id ?? ""}`;
-  const [lectures, setLectures] = useState<Lecture[] | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [subject, setSubject] = useState("");
-  const [search, setSearch] = useState("");
+  const [hiddenKeys, setHiddenKeys] = useState<string[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [managing, setManaging] = useState(false);
+  const [manageMessage, setManageMessage] = useState("");
+  const [deleting, setDeleting] = useState<StudyLecture[] | null>(null);
+  const requestVersion = useRef(0);
   const [queue, setQueue] = useState<Queue | null>(() => {
     try {
       const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? "null") as Queue | null;
@@ -31,7 +33,9 @@ export function BankBatchPage() {
     } catch { return null; }
   });
   const [done, setDone] = useState(false);
+  const { events, setEvents, onScope, error: loadError } = useStudyTimetable(refreshKey, !queue);
   const [paused, setPaused] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [auditing, setAuditing] = useState(false);
   const [auditMessage, setAuditMessage] = useState("");
@@ -40,7 +44,7 @@ export function BankBatchPage() {
     setQueue(old => old ? { ...old, current: got.lecture ? old.lectures.find(l => keyOf(l) === `${got.lecture!.subject}/${got.lecture!.runId}`) : old.current,
       undoToken: got.undoToken, goal: got.batchGoal } : old);
   }, []);
-  const batch = useMemo<BatchStudy | undefined>(() => queue ? { lectures: queue.lectures, resumeLecture: queue.current, onProgress: progress } : undefined,
+  const batch = useMemo<BatchStudy | undefined>(() => queue ? { lectures: queue.lectures, resumeLecture: queue.current, onProgress: progress, onSavingChange: setSaving } : undefined,
     [queue?.lectures, progress]);
   const requestUndo = useCallback((token: string) => api<BankNext>("/api/bank/batch/undo", {
     method: "POST", body: JSON.stringify({ lectures: queue?.lectures, reviewToken: token }),
@@ -49,19 +53,20 @@ export function BankBatchPage() {
   const { undo, undoBusy } = useBankUndo("/api/bank/batch", queue?.undoToken, restore, setError, !done && !paused, requestUndo);
 
   useEffect(() => {
-    document.title = "강의 모아 풀기 · Study_EZ";
+    const previousTitle = document.title;
+    document.title = "학습 현황 · Study_EZ";
     let live = true;
-    takeTimetable().then(data => {
-      const unique = new Map<string, Lecture>();
-      data.events.forEach((event: TimetableEvent) => event.lectures.filter(l => l.marks.quiz || l.bankTimeline?.shareUrl).forEach(l => {
-        const row = { subject: l.subject, runId: l.runId, title: l.title, date: event.date,
-          ready: l.marks.quiz, bankTimeline: l.bankTimeline };
-        unique.set(keyOf(row), row);
-      }));
-      if (live) setLectures([...unique.values()].sort((a, b) => a.date.localeCompare(b.date) || a.runId.localeCompare(b.runId)));
-    }).catch((cause: Error) => { if (live) setError(cause.message); });
-    return () => { live = false; };
-  }, []);
+    function load() {
+      const current = ++requestVersion.current;
+      api<{ keys: string[] }>("/api/me/study-hidden")
+        .then(hidden => { if (live && current === requestVersion.current) { setHiddenKeys(hidden.keys); setError(""); } })
+        .catch((cause: Error) => { if (live && current === requestVersion.current) setError(cause.message); });
+    }
+    const refresh = () => load();
+    load();
+    window.addEventListener("focus", refresh);
+    return () => { live = false; window.removeEventListener("focus", refresh); document.title = previousTitle; };
+  }, [queue !== null, refreshKey]);
   useEffect(() => {
     try {
       if (queue) sessionStorage.setItem(storageKey, JSON.stringify(queue));
@@ -73,14 +78,27 @@ export function BankBatchPage() {
     if (summary?.reason === "user_finished") setPaused(true);
     else setDone(true);
   }, []);
-  const visible = useMemo(() => (lectures ?? []).filter(l => (!subject || l.subject === subject)
-    && `${l.title} ${l.date}`.toLowerCase().includes(search.toLowerCase())), [lectures, subject, search]);
+
+  async function setVisibility(keys: string[], hidden: boolean, count: number) {
+    if (managing) return;
+    ++requestVersion.current;
+    setManaging(true); setManageMessage(""); setError("");
+    try {
+      const result = await api<{ keys: string[] }>("/api/me/study-hidden", {
+        method: "PATCH", body: JSON.stringify({ keys, hidden }),
+      });
+      ++requestVersion.current;
+      setHiddenKeys(result.keys);
+      setManageMessage(`${count}강의를 ${hidden ? "숨겼습니다. ‘숨긴 강의’에서 복원할 수 있습니다." : "복원했습니다."}`);
+    } catch (cause) { setError((cause as Error).message); }
+    finally { setManaging(false); }
+  }
 
   if (queue) return <>
     <div className="batch-progress" role="status">
       <span>강의 모아 풀기</span>
       <strong>{queue.lectures.length}강의 섞어 풀기{!done && current ? ` · ${current.title}` : ""}</strong>
-      <button className="is-quiet" onClick={() => { setQueue(null); setDone(false); setPaused(false); setError(""); }}>강의 다시 선택</button>
+      <button className="is-quiet" disabled={saving} onClick={() => { setQueue(null); setDone(false); setPaused(false); setError(""); }}>강의 다시 선택</button>
     </div>
     {error ? <p role="alert" className="notice is-error">{error}</p> : null}
     {current && !done && !paused ? <BankSolve base="" lecture={current} onFinished={finished} batch={batch} />
@@ -94,49 +112,38 @@ export function BankBatchPage() {
       </div>}
   </>;
 
-  return <section className="batch-picker">
-    <h1>강의 모아 풀기</h1>
-    <p>선택한 강의의 문제를 섞어서 풉니다. 새 카드를 먼저 보고 예정된 복습까지 모두 하면 완료됩니다.</p>
-    <p className="bank-note">강의별 퀴즈뱅크 링크와 최종퀴즈 업로드 시각을 확인할 수 있습니다. 링크 생성 시각은 앞으로 새로 저장되는 공유 링크부터 표시합니다.</p>
-    <div className="batch-filters">
-      <label>과목 <select value={subject} onChange={e => setSubject(e.target.value)}>
-        <option value="">모든 과목</option>
-        {[...new Set((lectures ?? []).map(l => l.subject))].map(s => <option key={s}>{s}</option>)}
-      </select></label>
-      <label>강의 검색 <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="강의명 또는 날짜" /></label>
-    </div>
-    <div className="batch-actions">
-      <button className="is-quiet" onClick={() => setSelected(old => new Set([...old, ...visible.filter(l => l.ready).map(keyOf)]))}>표시된 강의 모두 선택</button>
-      <button className="is-quiet" onClick={() => setSelected(new Set())}>선택 해제</button>
-      <button disabled={!selected.size} onClick={() => {
-        const chosen = (lectures ?? []).filter(l => l.ready && selected.has(keyOf(l)));
-        if (chosen.length) { setPaused(false); setDone(false); setQueue({ lectures: chosen }); }
-      }}>{selected.size}강의 학습 시작</button>
-      {me?.isAdmin ? <button className="is-quiet" disabled={!selected.size || auditing} onClick={() => void (async () => {
-        setAuditing(true); setAuditMessage("");
-        const failures: string[] = [];
-        let requested = 0;
-        for (const lecture of (lectures ?? []).filter(l => selected.has(keyOf(l)))) {
-          try {
-            await api(`/api/admin/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}/bank/audit`, { method: "POST" });
-            requested++;
-          } catch (cause) { failures.push(`${lecture.title}: ${(cause as Error).message}`); }
-        }
-        setAuditMessage(`${requested}강의 검증·보강 요청 완료${failures.length ? ` · 요청 실패 ${failures.join(" / ")}` : " · 러너가 처리합니다. 기존 카드로 계속 공부할 수 있습니다."}`);
-        setAuditing(false);
-      })()}>{auditing ? "요청 중…" : "선택 강의 누락 검증·객관식 보강"}</button> : null}
-    </div>
-    {auditMessage ? <p role="status" className="bank-note">{auditMessage}</p> : null}
+  return <>
     {error ? <p className="notice is-error" role="alert">{error}</p> : null}
-    {!lectures ? <p className="notice">강의를 불러오는 중…</p> : !visible.length ? <p>학습 가능한 강의가 없습니다.</p> : <ul className="batch-lectures">
-      {visible.map(l => <li key={keyOf(l)}><label>
-        <input type="checkbox" disabled={!l.ready} checked={selected.has(keyOf(l))} onChange={e => {
-          const checked = e.target.checked;
-          setSelected(old => { const next = new Set(old); if (checked) next.add(keyOf(l)); else next.delete(keyOf(l)); return next; });
-        }} />
-        <span><strong>{l.title}</strong><small>{l.date} · {l.subject}{!l.ready ? " · 최종퀴즈 대기" : ""}</small>
-          <BankBuildTimes timeline={l.bankTimeline} /></span>
-      </label>{l.bankTimeline?.shareUrl ? <a className="batch-quiz-link" href={l.bankTimeline.shareUrl} target="_blank" rel="noreferrer">퀴즈뱅크 링크 열기 ↗</a> : null}</li>)}
-    </ul>}
-  </section>;
+    {loadError ? <p className="notice is-error" role="alert">{loadError}{" "}
+      <button onClick={() => setRefreshKey(old => old + 1)}>다시 시도</button></p> : null}
+    {manageMessage ? <p className="notice" role="status">{manageMessage}</p> : null}
+    {deleting ? <DeleteQuizDialog lectures={deleting} onClose={() => setDeleting(null)} onDeleted={keys => {
+      setEvents(old => old?.map(event => ({ ...event, lectures: event.lectures.map(l => keys.includes(`${l.subject}/${l.runId}`)
+        ? { ...l, marks: { ...l.marks, quiz: false }, bankTimeline: null, cardProgress: null, mastery: null } : l) })) ?? null);
+      setManageMessage(`${keys.length}강의의 퀴즈를 삭제했습니다.`);
+      setRefreshKey(old => old + 1);
+    }} /> : null}
+    {!events ? !loadError && <p className="notice" role="status">강의 목록을 불러오는 중…</p>
+      : <StudyOverview events={events} hiddenKeys={hiddenKeys} managing={managing || auditing || deleting !== null}
+        onScope={onScope}
+        onVisibility={(keys, hidden, count) => void setVisibility(keys, hidden, count)} onDeleteQuiz={me?.isAdmin ? setDeleting : undefined} onStart={chosen => {
+        setPaused(false); setDone(false);
+        setQueue({ lectures: chosen.map(({ subject, runId, title, date }) => ({ subject, runId, title, date })) });
+      }} adminActions={me?.isAdmin ? chosen => <>
+        <button className="is-quiet" disabled={!chosen.length || auditing} onClick={() => void (async () => {
+          setAuditing(true); setAuditMessage("");
+          const failures: string[] = [];
+          let requested = 0;
+          for (const lecture of chosen) {
+            try {
+              await api(`/api/admin/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}/bank/audit`, { method: "POST" });
+              requested++;
+            } catch (cause) { failures.push(`${lecture.title}: ${(cause as Error).message}`); }
+          }
+          setAuditMessage(`${requested}강의 검증·보강 요청 완료${failures.length ? ` · 요청 실패 ${failures.join(" / ")}` : " · 러너가 처리합니다. 기존 카드로 계속 공부할 수 있습니다."}`);
+          setAuditing(false);
+        })()}>{auditing ? "요청 중…" : "선택 강의 누락 검증·객관식 보강"}</button>
+        {auditMessage ? <p role="status" className="bank-note">{auditMessage}</p> : null}
+      </> : undefined} />}
+  </>;
 }

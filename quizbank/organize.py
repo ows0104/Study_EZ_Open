@@ -51,7 +51,7 @@ def organizer_prompt(raw: str, lecture: dict) -> str:
             "lecture": json.dumps(meta, ensure_ascii=False),
             "raw": json.dumps(clean_response(raw), ensure_ascii=False)}
     template = PROMPT.read_text(encoding="utf-8")
-    if enabled(lecture.get("prompt_version", "")):
+    if enabled(lecture.get("prompt_version", "")) or lecture.get("defer_learning_structure"):
         template = template.replace("\nLECTURE_METADATA_DATA\n", "\n문항 우선 출력 계약\n"
             "이 버전은 웹에 포인트·개념도·회상 계획·선행 관계가 없는 것이 정상이다. "
             "누락 경고를 만들거나 이를 추정·작성하지 않는다. concepts와 retrieval_plan은 빈 배열, "
@@ -222,7 +222,7 @@ def organize(raw: str, lecture: dict, *, model: str | None = None, out: Path | N
     if prerequisites and isinstance(bank.get("warnings"), list):
         bank["warnings"].append(f"[정리] 합쳐진 선행 문항 ID를 분리했다: {'; '.join(prerequisites)}")
     if out is not None:
-        from server.app.bank_validation.slide_focus import authored_hash
+        from studyez_contracts.bank.slide_focus import authored_hash
         questions = {q["question_id"]: q for q in bank["questions"]}
         evidence = {block["question_id"]: {"authoredHash": authored_hash(questions[block["question_id"]]),
                     "evidence": block["source_evidence"]} for block in blocks if block.get("source_evidence")}

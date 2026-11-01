@@ -53,6 +53,17 @@ def main() -> None:
                    {"question_id": "Q2", "verdict": "doubt", "note": "check", "suggested_answer": ""}]}}
     assert client.put(f"{ADMIN}/bank", headers=RUNNER, json=payload).status_code == 200
 
+    # Older stored questions omit advanced and may still use the old tier name.
+    # The review API fills these fields; its unchanged response must be writable.
+    with SessionLocal() as db:
+        row = db.get(QuizBank, ("test", "261007_01"))
+        legacy = copy.deepcopy(row.bank)
+        legacy_question = next(q for q in legacy["questions"] if q["question_id"] == "Q2")
+        legacy_question.pop("advanced", None)
+        legacy_question["tier"] = "Advanced"
+        row.bank = legacy
+        db.commit()
+
     def board() -> dict:
         answer = client.get("/api/admin/bank-review?subject=test&runId=261007_01&all=true", headers=ADMIN_H)
         assert answer.status_code == 200, answer.text
@@ -70,6 +81,47 @@ def main() -> None:
 
     flagged = client.get("/api/admin/bank-review", headers=ADMIN_H).json()
     assert flagged["open"] == 4
+    legacy_before = copy.deepcopy(card("Q2")["question"])
+    assert legacy_before["tier"] == "Important" and legacy_before["advanced"] is False
+    legacy_changed = {**legacy_before, "answer": "corrected legacy answer", "answer_units": ["corrected legacy answer"]}
+    saved = decide("Q2", "edit", legacy_changed)
+    assert saved.status_code == 200, saved.text
+    assert card("Q2")["question"]["answer"] == "corrected legacy answer"
+    assert decide("Q2", "edit", legacy_changed, expected=legacy_before).status_code == 409
+    stale_build = client.put(f"{ADMIN}/bank/cards/Q2", headers=ADMIN_H,
+                            json={"action": "edit", "question": legacy_changed,
+                                  "expectedQuestion": card("Q2")["question"], "buildId": "stale-build"})
+    assert stale_build.status_code == 409
+    assert decide("Q2", "reset").status_code == 200
+    print("PASS: shared answer edits accept review defaults on legacy questions and reject stale content/builds")
+    for changes in ({"question": "Updated shared question stem?"},
+                    {"explanation": "Updated shared explanation."},
+                    {"question": "Updated shared question and explanation?",
+                     "explanation": "Explanation saved together with the stem."}):
+        # Recreate the legacy representation for each independent editor save.
+        with SessionLocal() as db:
+            row = db.get(QuizBank, ("test", "261007_01"))
+            legacy = copy.deepcopy(row.bank)
+            source = next(q for q in legacy["questions"] if q["question_id"] == "Q2")
+            source.pop("advanced", None)
+            source["tier"] = "Advanced"
+            row.bank = legacy
+            db.commit()
+        before = copy.deepcopy(card("Q2")["question"])
+        changed = {**before, **changes}
+        saved = decide("Q2", "edit", changed)
+        assert saved.status_code == 200, saved.text
+        reloaded = card("Q2")["question"]
+        for field in ("question", "answer", "explanation", "answer_units"):
+            assert reloaded.get(field) == changed.get(field), (field, reloaded)
+        with SessionLocal() as db:
+            stored = next(q for q in db.get(QuizBank, ("test", "261007_01")).bank["questions"]
+                          if q["question_id"] == "Q2")
+            assert all(stored[field] == value for field, value in changes.items())
+        assert decide("Q2", "edit", changed, expected=before).status_code == 409
+        assert card("Q2")["question"] == reloaded
+        assert decide("Q2", "reset").status_code == 200
+    print("PASS: shared stem-only, explanation-only and combined edits persist on legacy questions; stale writes rejected")
     assert "integration" in card("CNS-C05")["errors"][0]
     assert card("CNS-C36")["question"]["matching_right"] == ["A", "B", "B"]
     assert decide("CNS-C05", "accept").status_code == 422
@@ -92,6 +144,18 @@ def main() -> None:
     assert saved.json()["summary"]["dropped"] == []
     assert card("CNS-C36")["edit"]["original"]["matching_right"] == ["A", "B", "B"]
     print("PASS: CNS-C05 foundation and CNS-C36 duplicate repair, atomic rejection and original preservation")
+
+    inline = copy.deepcopy(card("Q2")["question"])
+    inline.update(format="cloze", question="앞은 {A}, 뒤는 {B}, 다시 {A}다.",
+                  answer="stale", answer_units=["stale"])
+    saved = decide("Q2", "edit", inline)
+    assert saved.status_code == 200, saved.text
+    compiled = card("Q2")["question"]
+    assert compiled["question"] == "앞은 {{c1}}, 뒤는 {{c1}}, 다시 {{c1}}다."
+    assert compiled["answer_units"] == ["A", "B", "A"]
+    assert compiled["answer"] == "앞은 A, 뒤는 B, 다시 A다."
+    assert decide("Q2", "reset").status_code == 200
+    print("PASS: inline cloze edits compile ordered answers and hide answers in stored stems")
 
     assert client.put(f"{ADMIN}/bank/open", headers=ADMIN_H, json={"open": True}).status_code == 200
     client.post(f"{BASE}/bank/session/start", headers=ADMIN_H, json={"size": 5})

@@ -11,16 +11,38 @@
 # PowerShell 5.1은 네이티브 명령이 stderr에 쓴 줄을 오류 레코드로 감싼다.
 # gcloud는 경고도 빌드 로그도 전부 stderr로 내보내므로, "Stop"으로 두면 멀쩡한
 # 배포가 첫 경고에서 멈춘다. 대신 중요한 호출마다 종료 코드를 직접 본다.
+[CmdletBinding()]
+param([string]$ChangeId = $env:STUDYEZ_CHANGE_ID,
+      [string]$GatePython = '')
+
 $ErrorActionPreference = "Continue"
 Set-Location $PSScriptRoot
+
+if (-not $ChangeId) { throw '배포할 작업 ID가 필요합니다. docs/development/README.md를 확인하세요.' }
+if (-not $GatePython) { $GatePython = Join-Path $PSScriptRoot '.venv/Scripts/python.exe' }
+if (-not (Test-Path -LiteralPath $gatePython)) { throw '서버 검사 환경을 먼저 준비하세요.' }
+& $gatePython (Join-Path (Split-Path -Parent $PSScriptRoot) 'scripts/development.py') check $ChangeId --phase deploy
+if ($LASTEXITCODE -ne 0) { throw '현재 버전의 검사·리뷰·사람 배포 승인이 확인되지 않았습니다.' }
 
 function Assert-Ok([string]$what) {
   if ($LASTEXITCODE -ne 0) { throw "$what 실패 (종료 코드 $LASTEXITCODE)" }
 }
+. (Join-Path $PSScriptRoot 'deploy-revision.ps1')
+
+$releaseTool = Join-Path (Split-Path -Parent $PSScriptRoot) 'scripts/release_evidence.py'
+$startedJson = & $gatePython $releaseTool begin $ChangeId --target server
+Assert-Ok '배포 후보 승인 확인'
+$started = $startedJson | ConvertFrom-Json
+$buildSource = $started.artifact
+$attempt = $started.attempt
+$receiptRecorded = $false
+try {
 
 $PROJECT = "meddeck-503318"
 $REGION  = "asia-northeast3"
 $SERVICE = "studyez-api"
+$revisionSuffix = "release-$attempt"
+$expectedRevision = "$SERVICE-$revisionSuffix"
 
 # Secret Manager로 갈 것. 나머지는 평문 환경 변수다.
 $SECRET_KEYS = @(
@@ -108,6 +130,7 @@ foreach ($key in $active) {
   gcloud secrets add-iam-policy-binding "studyez-$($key.ToLower().Replace('_','-'))" `
     --project $PROJECT --member "serviceAccount:$RUNTIME_SA" `
     --role roles/secretmanager.secretAccessor 2>$null | Out-Null
+  Assert-Ok 'Secret IAM 설정'
 }
 
 # ── 배포 ─────────────────────────────────────────────────────────────
@@ -134,7 +157,9 @@ Write-Host "`nCloud Run에 배포합니다 ($SERVICE / $REGION)..."
 gcloud run deploy $SERVICE `
   --project $PROJECT `
   --region $REGION `
-  --source . `
+  --source $buildSource `
+  --revision-suffix $revisionSuffix `
+  --no-traffic `
   --allow-unauthenticated `
   --set-env-vars "^|^$plain" `
   --set-secrets $secrets `
@@ -143,7 +168,16 @@ gcloud run deploy $SERVICE `
   --timeout 600
 Assert-Ok "Cloud Run 배포"
 
-$url = gcloud run services describe $SERVICE --project $PROJECT --region $REGION --format="value(status.url)"
-Assert-Ok "서비스 주소 조회"
-Write-Host "`n배포 완료: $url"
-Write-Host "확인: curl $url/api/health"
+$actualRevision = Enable-StudyEZRevision -Service $SERVICE -Project $PROJECT -Region $REGION -ExpectedRevision $expectedRevision
+& $gatePython $releaseTool record $ChangeId --attempt $attempt --status succeeded --revision $actualRevision
+Assert-Ok '배포 결과 기록'
+$receiptRecorded = $true
+& $gatePython $releaseTool postcheck $ChangeId --attempt $attempt
+Assert-Ok '배포 후 health 및 핵심 학습 동작 검사'
+Write-Host "배포 및 사후 검사 완료: $actualRevision"
+} catch {
+  if (-not $receiptRecorded) {
+    & $gatePython $releaseTool record $ChangeId --attempt $attempt --status failed --revision 'deployment_failed_or_revision_unconfirmed'
+  }
+  throw
+}

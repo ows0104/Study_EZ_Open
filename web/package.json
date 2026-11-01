@@ -4,11 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "npm run pack-extension && vite",
+    "dev": "npm run prepare-prompts && npm run pack-extension && vite",
     "pack-extension": "node scripts/pack-extension.mjs",
-    "build": "npm run pack-extension && tsc -b && vite build",
+    "build": "npm run prepare-prompts && npm run pack-extension && tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "prepare-prompts": "node scripts/prepare-prompts.mjs"
   },
   "dependencies": {
     "@supabase/auth-js": "^2.112.3",

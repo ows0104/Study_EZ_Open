@@ -46,7 +46,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
 from app.auth import CurrentUser, require_approved_user
 from app.database import get_db
@@ -85,6 +85,7 @@ class DeckRefs(BaseModel):
 def read_decks(
     start: Date | None = Query(None, description="이 날짜부터 (없으면 전체)"),
     end: Date | None = Query(None, description="이 날짜까지"),
+    subject: str | None = Query(None, description="이 과목만"),
     user: CurrentUser = Depends(require_approved_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -107,6 +108,8 @@ def read_decks(
         query = query.where(Lecture.date >= start)
     if end is not None:
         query = query.where(Lecture.date <= end)
+    if subject is not None:
+        query = query.where(Lecture.subject == nfc(subject))
     rows = db.execute(
         query.order_by(Lecture.date, Lecture.slot, Asset.kind, Asset.uploaded_at, Asset.id)
     ).all()
@@ -147,7 +150,10 @@ def read_decks(
     # remain a fallback for lectures that only have legacy materials.
     from app.bank_anki import describe
 
-    bank_query = select(QuizBank, Lecture).join(Lecture,
+    bank_query = select(QuizBank, Lecture).options(load_only(
+        QuizBank.subject, QuizBank.run_id, QuizBank.build_id, QuizBank.bank,
+        QuizBank.validation, QuizBank.review, QuizBank.pages,
+    )).join(Lecture,
         (QuizBank.subject == Lecture.subject) & (QuizBank.run_id == Lecture.run_id))
     if not user.is_admin:
         bank_query = bank_query.where(QuizBank.open_to_students.is_(True))
@@ -155,6 +161,8 @@ def read_decks(
         bank_query = bank_query.where(Lecture.date >= start)
     if end is not None:
         bank_query = bank_query.where(Lecture.date <= end)
+    if subject is not None:
+        bank_query = bank_query.where(Lecture.subject == nfc(subject))
     bank_grabs = {(g.subject, g.run_id, g.kind) for g in db.scalars(
         select(AssetGrab).where(AssetGrab.user_id == user.id, AssetGrab.kind.like("bank_%")))}
     bank_rows = db.execute(bank_query).all()

@@ -21,6 +21,22 @@ def run_bank(args, parser) -> int:
     if not token:
         print("러너 토큰이 없다. server/.env의 RUNNER_TOKEN이나 STUDYEZ_RUNNER_TOKEN 환경 변수, 또는 --token")
         return 2
+    if getattr(args, 'import_share', False):
+        from runner.shared_bank import recover
+        client = publish.Client(api, token)
+        base = publish.lecture_path(args.subject, args.run_id)
+        got = client.call('GET', f'{base}/bank/shared-source')
+        backup = Path(args.runs) / args.run_id / 'bank' / 'share-import-before.json'
+        backup.parent.mkdir(parents=True, exist_ok=True)
+        import json
+        if not backup.exists():
+            backup.write_text(json.dumps(got, ensure_ascii=False, indent=2), encoding='utf-8')
+        recovered = recover(client, base, args.run_id, got, force=True)
+        if recovered.get('shareUnchanged'):
+            print(f"공유 응답이 기존 게시본과 같습니다: {args.subject}/{args.run_id} · 재검수 생략")
+            return 0
+        print(f"공유 응답 저장·러너 등록 완료: {args.subject}/{args.run_id} · {len(recovered['raw'])}자")
+        return 0
     action = bank.prepare_points if args.points_only else bank.run
     return action(publish.Client(api, token), Path(args.root), args.subject, args.run_id,
                   args.this, args.prev, Path(args.runs), model=args.model)

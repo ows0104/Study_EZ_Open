@@ -68,11 +68,11 @@ def main():
             row = next(r for r in ranked if r["question_id"] == "Q1")
             assert row["tier"] == "Optional" and row["target"]["effective"] == .55
             assert row["components"]["importance"] == .85
-            assert select_daily_question(bank, {**state, "served": None}, "2026-11-12", NOW)["question"]["question_id"] == "Q2"
+            assert select_daily_question(bank, {**state, "served": None}, "2026-11-12", NOW)["question"]["question_id"] == "Q1", "private tier changes keep first-learning slide order"
             assert concept_map(bank, state)[0]["directions"][0]["target"] == .55
             assert mastery_concepts(bank, state)[0] == "all", "private Core scope is used by lecture mastery"
         assert client.get(BASE).json()["summary"]["studyQuestionCount"] == 1
-        for tier, target in (("Core", .85), ("Important", .78), ("Optional", .55)):
+        for tier, target in (("Essential", .9), ("Core", .85), ("Important", .78), ("Optional", .55)):
             assert put("Q1", token, tier)["question"]["targetMastery"] == target
             assert client.get(BASE).json()["conceptMap"][0]["directions"][0]["target"] == target
         app.dependency_overrides[get_current_user] = lambda: replace(STUDENT, id="another-priority-student")
@@ -108,7 +108,27 @@ def main():
             db.commit()
         put("Q1", undo["reviewToken"], "Core", 409)
         rebuilt = client.post(BASE + "/next?choiceProtocol=true").json()
-        assert rebuilt["question"]["tier"] == "Core" and not rebuilt["question"].get("personalTier")
+        # Reusing identical content keeps the explicit private preference;
+        # changing the build ID alone is not evidence of a new question.
+        assert rebuilt["question"]["tier"] == "Important" and rebuilt["question"]["personalTier"]
+        assert rebuilt["question"]["targetMastery"] == .78
+        with SessionLocal() as db:
+            state = db.get(BankState, (STUDENT.id, "priority", "demo"))
+            assert state.state["question_tiers"] == {"Q1": "Important"}
+            assert state.state["history"] == [], "an undone review must not be restored"
+            row = db.get(QuizBank, ("priority", "demo"))
+            assert row.bank == original, "private preference did not change shared content"
+            changed_bank = copy.deepcopy(row.bank)
+            changed_bank["questions"][0]["question"] = "Changed shared wording"
+            row.bank = changed_bank
+            db.commit()
+        # Even with the same build and question ID, changed content must not
+        # inherit the old preference. The original stays in the archive.
+        changed_content = client.post(BASE + "/next?choiceProtocol=true").json()
+        assert changed_content["question"]["question_id"] == "Q1"
+        assert changed_content["question"]["tier"] == "Core"
+        assert not changed_content["question"].get("personalTier")
+        assert changed_content["question"]["targetMastery"] == .4
     assert bank == original, "pure study reads never mutate shared data"
     state = empty_state()
     state["dimensions"] = {"C1:direct": {"mastery": .6, "reviews": 2}}

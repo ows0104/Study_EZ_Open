@@ -1,4 +1,4 @@
-importScripts("protocol.js", "bank-file.js");
+importScripts("protocol.js", "bank-file.js", "bank-download.js");
 
 const { WEBAPP_SOURCE, MESSAGES, LINK_KINDS } = globalThis.STUDYEZ_PROTOCOL;
 
@@ -248,8 +248,36 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message?.type === MESSAGES.bankSaved) {
     if (!fromWebapp(sender) || !sender.tab?.id || !message.lectureId) return false;
-    void chrome.storage.session.remove(bankKey(sender.tab.id, message.lectureId));
+    const key = bankKey(sender.tab.id, message.lectureId);
+    void chrome.storage.session.get(key).then(async stored => {
+      const pending = stored[key];
+      if (pending?.sourceTabId && pending.responseFile?.sha256) {
+        await chrome.tabs.sendMessage(pending.sourceTabId, {type:'STUDYEZ_BANK_FILE_SAVED',
+          sha256:pending.responseFile.sha256, filename:pending.responseFile.filename}).catch(() => {});
+      }
+      await chrome.storage.session.remove(key);
+    }).catch(() => {});
     return false;
+  }
+
+  if (message?.type === 'STUDYEZ_BANK_DOWNLOAD_FILE') {
+    if (providerForSender(sender) !== 'chatgpt' || !sender.tab?.id) return false;
+    void chrome.storage.session.get(`${TAB_WATCH}${sender.tab.id}`).then(async stored => {
+      const watch = stored[`${TAB_WATCH}${sender.tab.id}`];
+      const target = globalThis.StudyEZBankFile.lectureTarget(watch?.lectureId, watch?.promptVersion);
+      const conversation = /^\/(?:g\/[^/]+\/)?c\/([A-Za-z0-9_:-]+)/.exec(new URL(sender.tab.url).pathname)?.[1];
+      if (watch?.mode !== 'bank' || !globalThis.StudyEZBankFile.required(target) || !conversation) {
+        sendResponse({ok:false}); return;
+      }
+      target.filename = `study-ez-${target.runId}-bank.md`;
+      const results = await chrome.scripting.executeScript({target:{tabId:sender.tab.id},world:'MAIN',
+        func:captureBankDownload,args:[target,conversation]});
+      const file = results.find(item => item.frameId === 0)?.result;
+      if (!file?.raw) { sendResponse({ok:false,error:file?.error || 'MD 파일 다운로드를 기다립니다.'}); return; }
+      globalThis.StudyEZBankFile.inspect(file.raw,target,file.filename);
+      sendResponse({ok:true,raw:file.raw,filename:file.filename});
+    }).catch(error => sendResponse({ok:false,error:error.message}));
+    return true;
   }
 
   // Quiz Bank 탭이 끝난 답의 본문을 보낸다. **강의 id 는 감시 기록에서 읽는다** — 링크와 같다.
@@ -276,6 +304,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const shareUrl = shareIdentity("chatgpt", message.shareUrl || "") ? message.shareUrl : undefined;
         await chrome.storage.session.set({
           [bankKey(watch.webappTabId, watch.lectureId)]: { lectureId: watch.lectureId, raw, url,
+            sourceTabId: sender.tab.id,
             promptVersion: watch.promptVersion || "",
             ...(message.responseFile ? { responseFile: message.responseFile } : {}),
             ...(message.responseFile && message.manualFile === true ? { manualFile: true } : {}),

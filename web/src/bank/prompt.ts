@@ -1,7 +1,7 @@
-import template from "./bankPrompt.md?raw";
-import lectureScopes from "./lectureScopes.json";
-import fileDelivery from "./fileDelivery.md?raw";
-import textDelivery from "./textDelivery.md?raw";
+import template from "../../../content/prompts/bank/bankPrompt.md?raw";
+import lectureScopes from "../../../content/prompts/bank/lectureScopes.json";
+import fileDelivery from "../../../content/prompts/bank/fileDelivery.md?raw";
+import textDelivery from "../../../content/prompts/bank/textDelivery.md?raw";
 import type { BankSource } from "../types/bank";
 import type { LectureDetail } from "../types/lectures";
 

@@ -17,6 +17,7 @@ from .policy import DEFAULT, policy_hash
 from .memory import memory_snapshot, next_stability, stability_days
 from .suspension import active_bank
 from .personal_priority import personal_bank
+from .study_day import day_start
 from app.bank_validation.priorities import TIER_ORDER, is_advanced, priority_tier
 
 DAY_MS = 86_400_000
@@ -61,7 +62,7 @@ def _plan(bank: dict, concept_id: str) -> dict | None:
 def target_for(bank: dict, q: dict, policy: dict = DEFAULT) -> dict:
     plan = _plan(bank, q["concept_id"])
     # An explicit private tier replaces the authored concept target in both directions.
-    requested = (policy["mastery"]["tierTargets"][priority_tier(q)] if q.get("personalTier")
+    requested = (policy["mastery"]["tierTargets"][priority_tier(q)] if q.get("personalTier") or priority_tier(q) == "Essential"
                  else plan["target_mastery"] if plan else policy["mastery"]["targets"][str(q["importance"])])
     return {"requested": requested, "effective": min(requested, policy["mastery"]["maxTarget"],
             policy["mastery"]["tierTargets"][priority_tier(q)])}
@@ -75,7 +76,7 @@ def review_schedule(bank: dict, q: dict, snapshot: dict, policy: dict = DEFAULT)
     # M(t) = M_after / (1 + t / (9*S)); a target already missed is due next KST day.
     days = min(policy["forgetting"]["maxDays"],
                max(0, 9 * stability * (snapshot["mastery_after"] / target - 1)))
-    due = max(_korea_midnight_ms(at) + DAY_MS, at + round(days * DAY_MS))
+    due = max(day_start(at) + DAY_MS, at + round(days * DAY_MS))
     return {"interval": due - at, "due_at": due,
             "target_schedule": {"reviewed_at": at, "mastery_after": snapshot["mastery_after"],
                                 "stability_days": stability, "target": target}}
@@ -145,7 +146,7 @@ def core_mastery(bank: dict, state: dict, concept_id: str | None = None, *, foun
     bank = personal_bank(bank, state)
     by_concept: dict[str, dict[str, float]] = {}
     for q in bank["questions"]:
-        if (q["tier"] == "Core" and (not concept_id or q["concept_id"] == concept_id)
+        if (q["tier"] in ("Essential", "Core") and (not concept_id or q["concept_id"] == concept_id)
                 and (not foundations_only or not is_advanced(q))):
             by_concept.setdefault(q["concept_id"], {})[q["retrieval_direction"]] = mastery(state, q)
     return _average([_average(list(ds.values())) for ds in by_concept.values()])
@@ -155,7 +156,7 @@ def weak_high_core(bank: dict, state: dict, policy: dict = DEFAULT) -> list[dict
     concepts = {c["concept_id"]: c for c in bank["concepts"]}
     high = policy["progression"]["highImportance"]
     return [q for q in bank["questions"]
-            if q["tier"] == "Core"
+            if q["tier"] in ("Essential", "Core")
             and max(q["importance"], (concepts.get(q["concept_id"]) or {}).get("importance", 0)) >= high
             and mastery(state, q) < target_for(bank, q, policy)["effective"]]
 
@@ -189,16 +190,16 @@ def rank_questions(bank: dict, state: dict, exam_date: str, now: int, policy: di
     state = memory_snapshot(state, now, policy)
     days = days_until(exam_date, now)
     by_id = {q["question_id"]: q for q in bank["questions"]}
-    midnight = _korea_midnight_ms(now)
+    start = day_start(now)
     rec, ex, prog, w = policy["recency"], policy["exam"], policy["progression"], policy["weights"]
-    today = [h for h in state["history"] if midnight <= h["timestamp"] <= now]
+    today = [h for h in state["history"] if start <= h["timestamp"] <= now]
     recent = today[-rec["window"]:]
     last = today[-1] if today else None
     weak_core = weak_high_core(bank, state, policy)
     core = core_mastery(bank, state)
     remediations = state.get("remediations") or []
     readiness = {c["concept_id"]: concept_readiness(bank, state, c["concept_id"], policy) for c in bank["concepts"]}
-    any_core = any(o["tier"] == "Core" for o in bank["questions"])
+    any_core = any(o["tier"] in ("Essential", "Core") for o in bank["questions"])
     last_q = by_id.get(last["question_id"]) if last else None
     recent_directions = [(by_id.get(h["question_id"]) or {}).get("retrieval_direction")
                          for h in today[-rec["diversityWindow"]:]]
@@ -217,7 +218,7 @@ def rank_questions(bank: dict, state: dict, exam_date: str, now: int, policy: di
         stage = question_stage(q)
         ready = readiness.get(q["concept_id"], stage)
         prereq_ready = all(mastery(state, by_id.get(pid)) >= prog["prerequisiteMastery"] for pid in q["prerequisites"])
-        has_core = any(o["concept_id"] == q["concept_id"] and o["tier"] == "Core" and not is_advanced(o)
+        has_core = any(o["concept_id"] == q["concept_id"] and o["tier"] in ("Essential", "Core") and not is_advanced(o)
                        for o in bank["questions"])
         remediation = any(r["prerequisite_id"] == qid for r in remediations)
         reasons: list[str] = []

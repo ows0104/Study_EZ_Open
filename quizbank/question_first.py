@@ -26,6 +26,12 @@ STRUCTURE = _object({
     "assignments": _array(_object({"question_id": STR, "concept_id": STR, "prerequisites": _array(STR)})),
     "summary": STR,
 })
+STRUCTURE["properties"]["assignments"]["items"]["properties"]["learning_page"] = {
+    "type": "integer", "minimum": 0}
+# Saved historical structures remain readable. New CLI results must place every
+# question using the relation actually tested, independently of evidence images.
+SEQUENCED_STRUCTURE = copy.deepcopy(STRUCTURE)
+SEQUENCED_STRUCTURE["properties"]["assignments"]["items"]["required"].append("learning_page")
 
 
 def enabled(version: str) -> bool:
@@ -39,6 +45,7 @@ def as_draft(bank: dict) -> dict:
     draft["concepts"], draft["retrieval_plan"] = [], []
     for q in draft["questions"]:
         q["concept_id"], q["prerequisites"] = "", []
+        q.pop("learning_page", None)
     return draft
 
 
@@ -51,7 +58,7 @@ def require_draft(bank: dict) -> None:
 def content_hash(bank: dict) -> str:
     payload = {"build_meta": bank["build_meta"], "source_summary": bank["source_summary"],
                "source_conflicts": bank["source_conflicts"],
-               "questions": [{k: v for k, v in q.items() if k not in ("concept_id", "prerequisites")}
+               "questions": [{k: v for k, v in q.items() if k not in ("concept_id", "prerequisites", "learning_page")}
                              for q in bank["questions"]]}
     return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
 
@@ -184,6 +191,9 @@ def apply_structure(bank: dict, structure: dict) -> dict:
     for q in result["questions"]:
         assignment = assignments[q["question_id"]]
         q["concept_id"], q["prerequisites"] = assignment["concept_id"], assignment["prerequisites"]
+        q.pop("learning_page", None)
+        if assignment.get("learning_page", 0) > 0:
+            q["learning_page"] = assignment["learning_page"]
     if content_hash(result) != content_hash(bank):
         raise SessionError("사후 학습 구조 연결에서 검수한 문항 내용이 바뀌었습니다.")
     return result
@@ -199,7 +209,7 @@ def connect(bank: dict, points: list[dict], title: str, out: Path, *, model: str
         if (out / name).is_file():
             (work / name).write_text((out / name).read_text(encoding="utf-8"), encoding="utf-8")
     prompt = (PROMPTS / "learning-structure.md").read_text(encoding="utf-8") + "\n\n" + item_quality_guidance()
-    structure, info = _call(prompt, STRUCTURE, work, model, "검수 후 개념도·회상 계획 연결")
+    structure, info = _call(prompt, SEQUENCED_STRUCTURE, work, model, "검수 후 개념도·회상 계획 연결")
     (out / "learning-structure.raw.json").write_text(json.dumps(structure, ensure_ascii=False, indent=2), encoding="utf-8")
     structure, corrections = resolve_directions(bank, structure)
     (out / "learning-structure.resolution.json").write_text(json.dumps(

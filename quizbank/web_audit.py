@@ -17,7 +17,7 @@ from .generate import item_quality_guidance, lecture_scope
 from . import priority, web_priorities
 from .points import INT, STR, _array, _object
 from .session import SessionError
-from server.app.bank_validation import pool_checks
+from studyez_contracts.bank import pool_checks
 
 PROMPT = Path(__file__).parent / "prompts" / "web-review.md"
 
@@ -202,8 +202,12 @@ def inspect(bank: dict, raw: str, pdf: Path, title: str, sources: list[dict], ou
     if jokbo:
         (work / "jokbo.md").write_text(jokbo.read_text(encoding="utf-8"), encoding="utf-8")
     prompt = PROMPT.read_text(encoding="utf-8")
+    if (out / "point-origin.json").is_file():
+        from .web_postprocess import POINT_CONTEXT
+        (work / "point-origin.json").write_text((out / "point-origin.json").read_text(encoding="utf-8"), encoding="utf-8")
+        prompt += POINT_CONTEXT
     if defer_structure:
-        prompt += "\n문항 우선 단계다. point-plan.json은 원본 독립 추출 결과다. concepts·retrieval_plan과 " \
+        prompt += "\n문항 우선 단계다. point-plan.json의 출처는 point-origin.json이 있으면 그 기록을 따른다. 없으면 원본 독립 추출 결과다. concepts·retrieval_plan과 " \
             "concept_id·prerequisites는 내용 검수 뒤 연결하므로 현재 빈 값은 정상 계약이다. " \
             "integration을 포함한 선행 관계는 사후 연결 단계에서 검토한다."
     else:

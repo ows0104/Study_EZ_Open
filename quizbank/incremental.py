@@ -13,7 +13,7 @@ import jsonschema
 
 from studyez_llm import codex
 from studyez_llm.pdf import render
-from server.app.bank_validation import pool_checks
+from studyez_contracts.bank import pool_checks
 
 from . import coverage, explain, priority, review, web_audit, web_priorities
 from .generate import item_quality_guidance, lecture_scope
@@ -264,7 +264,12 @@ class Reviews:
         (work / "web-response.md").write_text(raw, encoding="utf-8")
         if self.jokbo:
             (work / "jokbo.md").write_text(self.jokbo.read_text(encoding="utf-8"), encoding="utf-8")
-        output, info = coverage._call(PROMPT.read_text(encoding="utf-8") + "\n\n" + item_quality_guidance(),
+        prompt = PROMPT.read_text(encoding="utf-8")
+        if (self.out / "point-origin.json").is_file():
+            from .web_postprocess import POINT_CONTEXT
+            (work / "point-origin.json").write_text((self.out / "point-origin.json").read_text(encoding="utf-8"), encoding="utf-8")
+            prompt += POINT_CONTEXT
+        output, info = coverage._call(prompt + "\n\n" + item_quality_guidance(),
                                      DELTA_REPORT, work, self.model, "원본 전체 대조·변경 문항 검수")
         jsonschema.validate(output, DELTA_REPORT)
         reviewed = output.pop("reviewed_question_ids")

@@ -61,7 +61,8 @@
 .bank-explanation h2 { margin: 0 0 10px; color: var(--ink); font-size: 14px; font-weight: 650; }
 .bank-explanation p { margin: 0; color: var(--ink); font-weight: 400; line-height: 1.75; }
 .bank-explanation strong { color: inherit; }
-.bank-ox-explanation .bank-answer-point { color: var(--ink); font-weight: 400; }
+.bank-explanation .bank-answer-point,
+.bank-ox-explanation .bank-answer-point { color: var(--accent-ink); font-weight: 700; }
 @media (max-width: 520px) {
   .bank-source-content { padding-inline-start: 0; }
   .bank-source-content dl > div { grid-template-columns: 1fr; gap: 2px; }

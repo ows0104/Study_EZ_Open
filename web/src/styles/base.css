@@ -2641,6 +2641,9 @@ button.notice-title:hover:not(:disabled) {
 .bank-readable-line.is-indented { text-indent: 1em; }
 
 .bank-stem {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 4px;
   text-align: left;
   overflow-wrap: anywhere;
 }
@@ -2651,8 +2654,11 @@ button.notice-title:hover:not(:disabled) {
 }
 
 .bank-stem-line + .bank-stem-line { margin-top: 0.45em; }
-.bank-stem-line.is-item { padding-inline-start: 1em; }
-.bank-stem-line.is-sentence { text-indent: 1em; }
+.bank-stem-line.is-list,
+.bank-readable-line.is-list {
+  padding-inline-start: 1.5em;
+  text-indent: -1.5em;
+}
 
 .bank-blank {
   display: inline-block;
@@ -2746,7 +2752,13 @@ button.notice-title:hover:not(:disabled) {
 .bank-suspended li { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 8px 0; }
 .bank-suspended li > span { min-width: 0; overflow-wrap: anywhere; }
 .bank-suspended li > button { flex-shrink: 0; }
-.quiz-bar .bank-suspend { color: var(--ink-2); border-style: dashed; }
+.bank-solve-bar .quiz-undo {
+  margin: 0;
+  padding: 10px 12px;
+  border-color: var(--line);
+  color: var(--ink-2);
+  letter-spacing: normal;
+}
 
 /* 두 열을 가운데로 모은다. `1fr 1fr` 이면 넓은 화면에서 왼쪽 열이 왼쪽 끝에, 오른쪽 열이 한가운데 서서
    짝을 눈으로 잇기 어려웠다(2026-10-05 관리자). */
@@ -2761,8 +2773,39 @@ button.notice-title:hover:not(:disabled) {
 
 .bank-progress-actions {
   display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
 }
+
+.bank-question-menu { position: relative; text-align: left; }
+.bank-question-menu > summary {
+  cursor: pointer;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.bank-question-menu > summary:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
+.bank-question-menu-items {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 200px;
+  max-width: calc(100vw - 32px);
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--surface);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 12%);
+}
+.bank-question-menu-items > button,
+.bank-question-menu-items > a { margin: 0; padding: 10px 12px; text-align: left; }
 
 .bank-match li {
   overflow-wrap: anywhere;
@@ -2838,6 +2881,63 @@ button.notice-title:hover:not(:disabled) {
   width: 100%;
 }
 
+.bank-evidence-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 24px;
+  width: 100%;
+  margin-top: 24px;
+}
+
+.bank-evidence-pair > .bank-slides {
+  min-width: 0;
+  margin-top: 0;
+}
+
+.bank-evidence-pair .bank-jokbo-slides h2 {
+  margin: 0 0 12px;
+}
+
+.bank-evidence-pair .bank-jokbo-slides figure:first-of-type {
+  margin-top: 0;
+}
+
+.slide-image-open {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  cursor: zoom-in;
+}
+
+.slide-image-open:hover { background: transparent; }
+.slide-image-open:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 4px; }
+
+.slide-image-dialog {
+  width: min(1600px, 96vw);
+  max-width: 96vw;
+  max-height: 94dvh;
+  padding: 0;
+  border: 0;
+  background: white;
+  overflow: auto;
+}
+
+.slide-image-dialog::backdrop { background: rgb(0 0 0 / 75%); }
+.slide-image-expanded { padding: 12px; }
+.slide-image-expanded img { display: block; width: 100%; height: auto; }
+.slide-image-close { display: block; position: sticky; top: 0; margin: 0 0 12px auto; }
+
+@media (max-width: 760px) {
+  .bank-evidence-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .bank-extra-slides {
   max-width: none;
 }
@@ -2882,10 +2982,13 @@ button.notice-title:hover:not(:disabled) {
 }
 
 .bank-jokbo-slides figcaption {
-  color: var(--ink-2);
-  font-size: 13px;
-  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
+
+.bank-jokbo-question { text-align: left; overflow-wrap: anywhere; }
+.bank-jokbo-stem { white-space: pre-wrap; line-height: 1.75; }
+.bank-jokbo-question ul { list-style: none; padding: 0; line-height: 1.75; }
+.bank-jokbo-question li { white-space: pre-wrap; margin: 6px 0; }
 
 .bank-ox-explanation,
 .bank-choice-explanation {
@@ -3462,3 +3565,11 @@ button.notice-title:hover:not(:disabled) {
   padding: 0 4px;
   font-size: 12px;
 }
+
+.bank-personal-questions { margin: 16px 0; }
+.bank-personal-questions details { margin-top: 10px; }
+.bank-personal-questions ul { padding: 0; list-style: none; }
+.bank-personal-questions li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.bank-personal-questions li > span:first-child { flex: 1 1 220px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.is-essential { color: #a14212; font-weight: 700; }
+.bank-tier-control.is-essential select { border-color: #c47b31; background: #fff5dc; }

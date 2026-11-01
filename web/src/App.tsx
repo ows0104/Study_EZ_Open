@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from "react";
-import { BrowserRouter, Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { api } from "./api";
 import { AuthProvider, LoginPage, PendingApproval, useAuth } from "./auth";
 import { CalendarPage } from "./calendar/CalendarPage";
@@ -23,13 +23,13 @@ const LecturePage = lazy(() => import("./lecture/LecturePage").then((m) => ({ de
 const QuizPage = lazy(() => import("./lecture/QuizPage").then((m) => ({ default: m.QuizPage })));
 // Quiz Bank 풀이 화면. 같은 탭에서 강의·캘린더와 오간다.
 const BankStudyPage = lazy(() => import("./bank/BankStudy").then((m) => ({ default: m.BankStudyPage })));
+const BankCatalogPage = lazy(() => import("./bank/BankCatalog").then((m) => ({ default: m.BankCatalogPage })));
 const BankBatchPage = lazy(() => import("./bank/BankBatch").then((m) => ({ default: m.BankBatchPage })));
 const AdminPage = lazy(() => import("./admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 const PrivacyPage = lazy(() => import("./PrivacyPage").then((m) => ({ default: m.PrivacyPage })));
 // 공지·이용방법(2026-10-04). 둘 다 가끔 여는 글이라 첫 번들에 안 싣는다.
 const NoticesPage = lazy(() => import("./notices/NoticesPage").then((m) => ({ default: m.NoticesPage })));
 const GuidePage = lazy(() => import("./notices/GuidePage").then((m) => ({ default: m.GuidePage })));
-const MasteryPage = lazy(() => import("./calendar/MasteryPage").then((m) => ({ default: m.MasteryPage })));
 
 /** 고른 탭에 표시를 남긴다. NavLink 기본값(`active`)은 이 앱의 이름이 아니다. */
 const tabClass = ({ isActive }: { isActive: boolean }) => (isActive ? "is-active" : "");
@@ -54,7 +54,7 @@ function Shell() {
     }
     // `me`만 기다리지 않는다 — 시간표도 여기서 같이 나간다. 아래에서 `me`가
     // 올 때까지 캘린더를 마운트하지 않으므로, 미리 안 띄우면 두 왕복이 줄을 선다.
-    startFirstScreen();
+    startFirstScreen(location.pathname === "/");
     getMe()
       .then(setMe)
       .catch((cause: Error) => setMeError(cause.message));
@@ -111,10 +111,7 @@ function Shell() {
             Study_EZ
           </Link>
           <nav>
-            <NavLink to="/study" className={tabClass}>모아 풀기</NavLink>
-            <NavLink to="/mastery" className={tabClass}>
-              학습도
-            </NavLink>
+            <NavLink to="/study" className={tabClass}>학습 현황</NavLink>
             <NavLink to="/notices" className={tabClass}>
               공지사항
               {unseenNotice ? <i className="nav-dot" aria-label="새 공지" /> : null}
@@ -149,7 +146,7 @@ function Shell() {
           <Routes>
             <Route path="/" element={<CalendarPage />} />
             <Route path="/study" element={<BankBatchPage />} />
-            <Route path="/mastery" element={<MasteryPage />} />
+            <Route path="/mastery" element={<Navigate to="/study" replace />} />
             <Route path="/lectures/:subject/:runId" element={<LecturePage />} />
             {/* 예습·복습은 같은 탭 안에서 서로 다른 주소로 이동한다. */}
             <Route path="/notices" element={<NoticesPage isAdmin={me.isAdmin} onSeen={onNoticeSeen} />} />
@@ -158,6 +155,7 @@ function Shell() {
             <Route path="/mainquiz/:subject/:runId" element={<BankStudyPage />} />
             <Route path="/legacy-mainquiz/:subject/:runId" element={<QuizPage kind="main" />} />
             <Route path="/bank/:subject/:runId" element={<BankStudyPage />} />
+            <Route path="/bank/:subject/:runId/all" element={<BankCatalogPage />} />
             {/* 관리 화면은 탭을 갈래로 들고 있다(`/admin/match` 등). 그 갈래는
                 안에서 고르므로 여기서는 통째로 넘긴다. */}
             <Route

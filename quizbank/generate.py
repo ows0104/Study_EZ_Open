@@ -10,9 +10,9 @@ import fitz
 
 from studyez_llm import codex
 from studyez_llm.pdf import render
-from server.app.bank_validation.markdown_file import validate as validate_markdown_file
+from studyez_contracts.bank.markdown_file import validate as validate_markdown_file
 
-TEMPLATE = Path(__file__).resolve().parents[1] / "web" / "src" / "bank" / "bankPrompt.md"
+TEMPLATE = Path(__file__).resolve().parents[1] / "content" / "prompts" / "bank" / "bankPrompt.md"
 LECTURE_SCOPES = TEMPLATE.with_name("lectureScopes.json")
 HEADER = re.compile(r"^\s*<!--([\s\S]*?)-->\s*")
 COMPLETE_MARK = "STUDYEZ_BANK_COMPLETE"

@@ -1,22 +1,22 @@
 # 검색 도구(ripgrep — Claude Code 의 Grep·Glob)만 읽는 파일이다. git 은 안 본다.
 # 추적은 그대로 하고 **경로를 안 찍은 검색에서만** 뺀다.
 #
-# 2026-10-03 에 쟀다. 저장소 전체를 `answer` 로 찾으면 6,668건인데 그중 6,220건(93%)이
-# 땡시 생성 JSON 이었다(`past_questions_linked.json` 하나가 2,270건). `image` 는 85%.
-# Study_EZ 일을 하는 세션이 경로 없이 찾으면 그 긴 줄이 통째로 컨텍스트로 들어온다.
-#
-# 손으로 고치는 것은 도로 연다 — 목록은 spotter/CLAUDE.md 「손으로 고치는 파일은 여섯이다」.
-spotter/data/*
-!spotter/data/README.md
-!spotter/data/question_corrections.json
-!spotter/data/image_overrides.json
-!spotter/data/glossary.json
-!spotter/data/identification_pairs.csv
-!spotter/data/species/
-!spotter/data/specimens/
+# Spotter는 별도 현역 제품이다. StudyEZ 기본 검색에서 분리한다.
+# 수정할 때 spotter/CLAUDE.md를 읽고, 경로를 지정해 --no-ignore로 검색한다.
+# 예: rg --no-ignore <검색어> spotter/scripts spotter/web
+# 수동 데이터는 spotter/CLAUDE.md의 파일을 개별 지정한다.
+spotter/
 
 # 배포본이다. 원본은 spotter/ 에 있고 deploy_pages.py 가 옮겨 쓴다.
 spotter-dist/
 
 # 지난 설계·작업 기록은 경로를 지정할 때만 읽는다. 현재 안내는 docs/에 있다.
 docs/archive/
+
+# Local work copies and runtime records: inspect with an explicit path.
+work/
+tmp/
+out/
+runs/
+.tmp_card_review/
+.tmp_uv_cache/

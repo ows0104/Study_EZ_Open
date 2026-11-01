@@ -58,11 +58,11 @@ try {
     <BankSolve base="/api/test/bank" lecture={{ subject: "테스트", runId: "demo" }} onFinished={() => {}} />
   </main></MemoryRouter>);
   await waitFor(() => options().length === 4);
-  check(submit().disabled, "incomplete sequence cannot be graded");
-  window.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
-  await new Promise(resolve => setTimeout(resolve, 30));
-  check(revealCalls === 0, "keyboard cannot bypass incomplete sequence");
+  check(!submit().disabled, "incomplete sequence can be graded");
   check(!document.querySelector(".bank-sequence-score"), "prepared answer stays hidden");
+  const nativeSelection = new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true });
+  options()[0].dispatchEvent(nativeSelection);
+  check(!nativeSelection.defaultPrevented, "Space still selects a focused choice while the sequence is incomplete");
   await pick(2); await pick(0); await pick(1);
   check(selected()[0].textContent?.includes("셋째 단계") && selected()[1].textContent?.includes("첫 단계"), "clicked items stack below in click order");
   await pick(0);
@@ -73,10 +73,12 @@ try {
   check(selected()[2].textContent?.includes("첫 단계"), "removed item can be appended again");
   document.querySelector<HTMLButtonElement>(".bank-sequence-reset")!.click();
   await waitFor(() => selected().length === 0);
-  check(options().every(button => !button.disabled) && submit().disabled, "reset clears order and re-enables all options");
+  check(options().every(button => !button.disabled) && !submit().disabled, "reset clears order and keeps grading available");
   for (let i = 0; i < 4; i++) await pick(i);
   check(!submit().disabled && selected()[0].querySelector("strong"), "complete order enables grading and preserves emphasis");
-  submit().click(); await waitFor(() => document.body.textContent?.includes("reveal failed") && !submit().disabled);
+  selected()[0].focus();
+  selected()[0].dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true }));
+  await waitFor(() => document.body.textContent?.includes("reveal failed") && !submit().disabled);
   check(selected().length === 4 && !document.querySelector(".bank-sequence-score"), "failed reveal preserves order without a provisional score");
   submit().click(); await waitFor(() => document.querySelector(".bank-sequence-score") && !rateButton("easy").disabled);
   check(document.querySelector(".bank-sequence-score")!.textContent?.includes("모두 맞았어요"), "correct sequence is graded automatically");
@@ -95,9 +97,9 @@ try {
   check(ratings.length === 0 && selected().length === 4, "failed saving keeps the graded sequence for retry");
   rateButton("easy").click(); rateButton("easy").click(); await waitFor(() => document.body.textContent?.includes("순서형 예시 2"));
   check(ratings.join() === "Easy" && selected().length === 0, "chosen Easy rating is saved once and next sequence starts empty");
-  await pick(1); await pick(0); await pick(2); await pick(3);
+  await pick(1); await pick(0); await pick(2);
   submit().click(); await waitFor(() => document.querySelector(".bank-sequence-score") && !rateButton("hard").disabled);
-  check(document.querySelector(".bank-sequence-score")!.textContent?.includes("2 / 4"), "wrong sequence reports matching positions");
+  check(document.querySelector(".bank-sequence-score")!.textContent?.includes("1 / 4"), "partial sequence counts unanswered positions as incorrect");
   check(selected()[0].classList.contains("is-wrong") && selected()[2].classList.contains("is-correct"), "each selected position shows correctness");
   check(document.querySelectorAll(".bank-correct-order li").length === 4
     && document.querySelector(".bank-correct-order li strong"), "correct order is numbered and keeps emphasis");
@@ -111,7 +113,7 @@ try {
   rateButton("hard").click(); await waitFor(() => document.body.textContent?.includes("순서형 예시 3"));
   check(ratings.join() === "Easy,Hard" && submit().textContent?.includes("답 보기"), "wrong order saves the chosen Hard rating and other formats keep their flow");
   document.querySelector<HTMLButtonElement>(".quiz-undo")!.click(); await waitFor(() => document.body.textContent?.includes("순서형 예시 2"));
-  check(document.querySelectorAll(".quiz-grade").length === 4 && !document.querySelector(".bank-sequence-score"), "undo does not grade stale sequence selections");
+  check(document.querySelectorAll(".quiz-grade").length === 4 && document.querySelector(".bank-sequence-score")?.textContent?.includes("0 / 4"), "undo clears stale sequence selections");
   results.push("ALL PASSED");
   document.getElementById("results")!.textContent = results.join("\n");
 } catch (error) { document.getElementById("results")!.textContent = results.join("\n") + `\nFAIL ${String(error)}`; }

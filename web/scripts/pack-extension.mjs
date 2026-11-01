@@ -25,15 +25,6 @@ if (advertisedVersion !== manifest.version) {
   throw new Error(`확장 버전 불일치: manifest=${manifest.version}, protocol=${advertisedVersion}`);
 }
 
-// 전송 직전에 읽는 정본. 오래 열린 사이트 탭도 새 배포의 프롬프트를 사용한다.
-const bankTemplate = readFileSync(resolve(here, "../src/bank/bankPrompt.md"), "utf8");
-writeFileSync(resolve(here, "../public/bank-prompt.json"), JSON.stringify({
-  version: /Version:\s*(\S+)/.exec(bankTemplate)?.[1], template: bankTemplate,
-  lectureScopes: JSON.parse(readFileSync(resolve(here, "../src/bank/lectureScopes.json"), "utf8")),
-  deliveries: { file: readFileSync(resolve(here, "../src/bank/fileDelivery.md"), "utf8"),
-    text: readFileSync(resolve(here, "../src/bank/textDelivery.md"), "utf8") },
-}));
-
 /** 배포에 들어갈 것만. 스토어 자산과 문서는 뺀다. */
 const SKIP = new Set(["store-assets", "release", "node_modules", ".git"]);
 

@@ -62,7 +62,7 @@ export function ConceptMap({ concepts }: { concepts: BankConcept[] }) {
   );
 }
 
-const TIER_ORDER: Record<BankConcept["tier"], number> = { Core: 0, Important: 1, Optional: 2 };
+const TIER_ORDER: Record<BankConcept["tier"], number> = { Essential: 0, Core: 1, Important: 2, Optional: 3 };
 const SIGNAL_LABEL: Record<string, string> = { high: "족보 신호 높음", medium: "족보 신호 보통", low: "족보 신호 낮음" };
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 
@@ -320,7 +320,7 @@ function ConceptCard({ concept: c, focused, onPick }: {
           {c.concept_id} {c.title}
         </strong>
         <span className="bank-cmap-meta">
-          {c.tier} · 중요도 {c.importance} · 난이도 {c.concept_difficulty}
+          {c.tier === "Essential" ? "★ Must-Know" : c.tier} · 중요도 {c.importance} · 난이도 {c.concept_difficulty}
           {SIGNAL_LABEL[c.exam_signal_strength] ? ` · ${SIGNAL_LABEL[c.exam_signal_strength]}` : ""}
         </span>
       </header>

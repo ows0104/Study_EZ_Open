@@ -7,25 +7,9 @@ import { BankSourceNote } from "./BankSourceNote";
 import { BankSlides } from "./BankSlides";
 import { BankJokboSlides } from "./BankJokboSlides";
 import { BankEvidenceNotice } from "./BankEvidenceNotice";
-
-/**
- * 문항 ID 를 씨로 삼아 섞는다 — 다시 불러도, 답을 펴도 같은 순서다. 섞은 결과가 원래와 같으면 한 칸 민다.
- *
- * 짝짓기 오른쪽 목록을 위한 것이다. 261002_03 의 짝짓기 5문항 중 4문항이 오른쪽을 정답 순서 그대로 냈다
- * (2026-10-05) — 줄만 맞춰 읽으면 답이 된다.
- */
-export function shuffled<T>(items: T[], seed: string): T[] {
-  let h = 2166136261;
-  for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
-  const out = [...items];
-  for (let i = out.length - 1; i > 0; i--) {
-    h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0;
-    const j = h % (i + 1);
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  if (out.length > 1 && out.every((x, i) => x === items[i])) out.push(out.shift() as T);
-  return out;
-}
+import { matchingLayout, presentationSeed, shuffled } from "./presentation";
+import "./review-notes.css";
+export { shuffled } from "./presentation";
 
 const letter = (index: number) => String.fromCharCode(65 + index);
 
@@ -44,7 +28,7 @@ export function choiceScore(q: BankQuestion, answer: BankAnswer | null, picked: 
 }
 
 /** 발문. cloze 빈칸은 답을 보면 채운다. */
-export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false }: {
+export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false, showChoiceScore = true }: {
   question: BankQuestion;
   answer: BankAnswer | null;
   picked: Set<string>;
@@ -53,11 +37,12 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
   sequence?: import("react").ReactNode;
   showOptions?: boolean;
   disabled?: boolean;
+  showChoiceScore?: boolean;
 }) {
-  const score = choiceScore(q, answer, picked);
+  const score = showChoiceScore ? choiceScore(q, answer, picked) : null;
   return (
     <>
-      <BankStem text={q.question} cloze={q.format === "cloze"} answerUnits={answer?.answerUnits} />
+      <BankStem text={q.question} list={q.format === "list"} cloze={q.format === "cloze"} answerUnits={answer?.answerUnits} />
       {q.format === "ox" && !answer ? <p className="bank-note">O 인가 X 인가, 그리고 왜인가</p> : null}
       {q.mcq_mode === "recall_first" && !showOptions ? <p className="bank-note">기억 확인형 · 먼저 답을 떠올린 뒤 선지를 공개하세요.</p> : null}
       {q.options.length && showOptions ? (
@@ -89,9 +74,9 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
       {q.format === "matching" ? (
         matching ?? (
         <div className="bank-match">
-          <ul>{q.matching_left.map((item, index) => <li key={item}><b>{index + 1}</b> {bare(item)}</li>)}</ul>
+          <ul>{matchingLayout(q).left.map((item, index) => <li key={item}><b>{index + 1}</b> {bare(item)}</li>)}</ul>
           <ul>
-            {shuffled(q.matching_right, q.question_id).map((item, index) => (
+            {matchingLayout(q).right.map((item, index) => (
               <li key={item}><b>{letter(index)}</b> {bare(item)}</li>
             ))}
           </ul>
@@ -99,7 +84,7 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
         )
       ) : null}
       {q.format === "sequence" ? (
-        sequence ?? <ul className="bank-items">{q.sequence_items.map((item) => <li key={item}>{item}</li>)}</ul>
+        sequence ?? <ul className="bank-items">{shuffled(q.sequence_items, presentationSeed(q)).map((item) => <li key={item}>{item}</li>)}</ul>
       ) : null}
     </>
   );
@@ -109,7 +94,12 @@ export function AnswerBody({ question: q, answer, preload }: {
   question: BankQuestion; answer: BankAnswer; preload?: SlidePreloader;
 }) {
   const review = answer.medicalReview;
-  const right = q.format === "matching" ? shuffled(q.matching_right, q.question_id) : [];
+  const hasMedicalReview = review && review.verdict !== "ok";
+  const hasReviewNotes = answer.reviewIssues?.length || hasMedicalReview
+    || answer.evidenceStatus || answer.conflict?.trim() || answer.external;
+  const layout = q.format === "matching" ? matchingLayout(q) : { left: [], right: [] };
+  const right = layout.right;
+  const pairs = q.format === "matching" ? [...answer.answerPairs].sort((a, b) => layout.left.indexOf(a.left) - layout.left.indexOf(b.left)) : answer.answerPairs;
   const remainingPoints = answerPoints(answer.answer, answer.answerUnits).remaining;
   const shortUnits = q.format === "basic"
     ? answer.answerUnits.filter((unit) => unit.replace(/\*\*/g, "").trim()) : [];
@@ -148,13 +138,13 @@ export function AnswerBody({ question: q, answer, preload }: {
       {/* Cloze는 위 발문에 정답을 채워 보여 준다. 짝짓기는 아래 짝이 곧 답이다. */}
       {conciseAnswer || (q.format === "cloze" && !answer.personalAnswer) || (q.format === "matching" && answer.answerPairs.length) ? null : (
         <p className="quiz-answer">
-          <AnswerPoints text={answer.answer} units={answer.answerUnits} readable />
+          <AnswerPoints text={answer.answer} units={q.format === "ox" ? [] : answer.answerUnits} readable list={q.format === "list"} />
         </p>
       )}
       {answer.explanation?.trim() && !answer.personalAnswer ? (
         <section className="quiz-explanation bank-explanation" aria-label="해설">
           <h2>해설</h2>
-          <p><AnswerPoints text={answer.explanation} readable /></p>
+          <p><AnswerPoints text={answer.explanation} readable blueBold={q.format === "ox"} /></p>
         </section>
       ) : null}
       {/* 이전 O/X 은행의 채점 단위에 저장된 근거도 계속 보여 준다. */}
@@ -163,7 +153,7 @@ export function AnswerBody({ question: q, answer, preload }: {
           <h2>해설</h2>
           {answer.answerUnits.some((unit) => unit.trim() && !/^[OX]$/i.test(unit.trim())) ? (
             <ul>{answer.answerUnits.filter((unit) => unit.trim() && !/^[OX]$/i.test(unit.trim())).map((unit, index) => (
-              <li key={index} className="bank-answer-point"><AnswerPoints text={unit} readable /></li>
+              <li key={index}><AnswerPoints text={unit} readable blueBold /></li>
             ))}</ul>
           ) : <p>이 문항에 등록된 해설이 없습니다.</p>}
         </section>
@@ -192,7 +182,7 @@ export function AnswerBody({ question: q, answer, preload }: {
       ) : null}
       {answer.answerPairs.length ? (
         <ul className="bank-units">
-          {answer.answerPairs.map((pair) => (
+          {pairs.map((pair) => (
             <li key={`${pair.left}-${pair.right}`} className="bank-answer-point">
               {bare(pair.left)} → {right.includes(pair.right) ? <b>{letter(right.indexOf(pair.right))}</b> : null}{" "}
               {bare(pair.right)}
@@ -208,21 +198,29 @@ export function AnswerBody({ question: q, answer, preload }: {
           </ol>
         </section>
       ) : null}
-      <BankSourceNote conflict={answer.conflict} external={answer.external} />
-      {answer.reviewIssues?.map((issue, index) => <p className="bank-review is-doubt" key={index}><b>문항 검수 · 미해결</b> {issue}</p>)}
-      {review && review.verdict !== "ok" ? (
-        <p className={`bank-review is-${review.verdict}`}>
-          <b>외부지식 검토 · {review.verdict === "wrong" ? "틀림" : "의심"}</b> {review.note}
-          {review.suggested_answer ? <><br />맞는 답: {review.suggested_answer}</> : null}
-        </p>
-      ) : null}
-      <BankEvidenceNotice status={answer.evidenceStatus} />
       {answer.jokboSlides?.some(slide => slide.primary) ? (
         <BankJokboSlides key={`core:${q.question_id}`} slides={answer.jokboSlides} preload={preload} />
       ) : null}
-      <BankSlides key={`${q.question_id}:${answer.slides.map(slide => slide.url).join("|")}`} slides={answer.slides} preload={preload} statusKnown={!!answer.evidenceStatus} />
-      {!answer.jokboSlides?.some(slide => slide.primary) ? (
-        <BankJokboSlides key={`ref:${q.question_id}`} slides={answer.jokboSlides} preload={preload} collapseReferences={!!answer.evidenceStatus} />
+      <div className={answer.slides.some(slide => slide.primary) && answer.jokboSlides?.length && !answer.jokboSlides.some(slide => slide.primary)
+        ? "bank-evidence-pair" : "bank-evidence-stack"}>
+        <BankSlides key={`${q.question_id}:${answer.slides.map(slide => slide.url).join("|")}`} slides={answer.slides} preload={preload} statusKnown={!!answer.evidenceStatus} />
+        {!answer.jokboSlides?.some(slide => slide.primary) ? (
+          <BankJokboSlides key={`ref:${q.question_id}`} slides={answer.jokboSlides} preload={preload} />
+        ) : null}
+      </div>
+      {hasReviewNotes ? (
+        <details className="bank-review-notes" key={`review:${q.question_id}`}>
+          <summary>문항 검수 기록</summary>
+          {answer.reviewIssues?.map((issue, index) => <p key={index}><b>문항 검수 · 미해결</b> {issue}</p>)}
+          {hasMedicalReview ? (
+            <p>
+              <b>외부지식 검토 · {review.verdict === "wrong" ? "틀림" : "의심"}</b> {review.note}
+              {review.suggested_answer ? <><br />맞는 답: {review.suggested_answer}</> : null}
+            </p>
+          ) : null}
+          <BankEvidenceNotice status={answer.evidenceStatus} />
+          <BankSourceNote conflict={answer.conflict} external={answer.external} />
+        </details>
       ) : null}
     </>
   );

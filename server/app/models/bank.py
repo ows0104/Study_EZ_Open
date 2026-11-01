@@ -70,7 +70,8 @@ class QuizBank(Base):
 class BankState(Base):
     """사용자·강의별 Study Engine 상태 JSON. 순수 함수 엔진이 전체 상태를 갱신한다.
 
-    build_id가 현재 은행과 다르면 기존 상태를 previous로 보관하고 새로 시작한다."""
+    은행 교체 시 모든 원본은 bank_state_archive로 보관하고 동일 문항의 학습을 이어간다.
+    previous는 구 클라이언트 호환용 직전 상태이며 전체 보관본은 별도 표에 남는다."""
 
     __tablename__ = "bank_state"
 
@@ -116,7 +117,7 @@ class BankFeedback(Base):
 
 
 class BankPersonalEdit(Base):
-    """A user's wording and answer, applied only while the shared source is unchanged."""
+    """Private edits or additions (original.personalAdded), scoped to a user and lecture."""
 
     __tablename__ = "bank_personal_edit"
     user_id: Mapped[str] = mapped_column(String(64), primary_key=True)

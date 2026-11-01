@@ -19,7 +19,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import PyJWKClient
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
 from app.config import get_settings
 from app.database import get_db
@@ -112,7 +112,7 @@ def get_current_user(
     if not user_id:
         raise HTTPException(status_code=401, detail="로그인 정보가 유효하지 않습니다.")
 
-    profile = db.get(Profile, user_id)
+    profile = db.get(Profile, user_id, options=[load_only(Profile.id, Profile.email, Profile.is_admin)])
     if profile is None:
         # 첫 로그인에서만 환경 변수를 본다. 그 뒤로는 DB의 값이 사실이다.
         is_admin = bool(email) and email.lower() in settings.admin_emails
@@ -129,8 +129,8 @@ def get_current_user(
         db.commit()
 
     apps = {
-        row.app: row.role
-        for row in db.scalars(select(AppGrant).where(AppGrant.user_id == user_id)).all()
+        app: role
+        for app, role in db.execute(select(AppGrant.app, AppGrant.role).where(AppGrant.user_id == user_id))
     }
     return CurrentUser(id=user_id, email=email, is_admin=profile.is_admin, apps=apps)
 

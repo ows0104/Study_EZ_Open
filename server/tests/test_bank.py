@@ -171,9 +171,7 @@ def main() -> None:
     as_student()
     check("열기 전 학생에게는 없다", client.get(f"{BASE}/bank").status_code == 404)
     private_summary = client.get(BASE).json()["bank"]
-    check("닫힌 Main-Quiz와 독립적으로 공유 링크만 실린다", private_summary["shareUrl"] == shared
-          and not private_summary["usable"] and private_summary["questionCount"] == 0
-          and "conversationUrl" not in private_summary)
+    check("닫힌 문제은행과 링크는 학생에게 노출하지 않는다", private_summary is None)
     check("학생은 자료 목록을 못 본다", "bankSources" not in client.get(BASE).json())
     check("학생도 개인 예습에 족보를 첨부할 수 있다",
           any(f["id"] == "a-jokbo" for f in client.get(BASE).json()["files"]))
@@ -181,7 +179,8 @@ def main() -> None:
     check("열린다", client.put(f"{ADMIN}/bank/open", json={"open": True}, headers=ADMIN_H).json()["open"] is True)
     as_student()
     summary = client.get(f"{BASE}/bank").json()
-    check("학생에게 공유 링크를 제공한다", summary["summary"]["shareUrl"] == shared)
+    check("학생에게 공유 링크를 노출하지 않는다", "shareUrl" not in summary["summary"]
+          and "shareUrl" not in client.get(BASE).json()["bank"])
     check("학생에게 생성 대화·검수 상세를 노출하지 않는다",
           "conversationUrl" not in summary["summary"] and "revision" not in summary["summary"])
     check("학생 요약", summary["summary"]["questionCount"] == 3 and "reviewCounts" not in summary["summary"]
@@ -244,6 +243,7 @@ def main() -> None:
         after_undo = copy.deepcopy(db.get(BankState, ("student-1", SUBJECT, RUN)).state)
         after_undo["served"]["token"] = before_rating["served"]["token"]
         before_rating["seen_question_ids"] = after_undo["seen_question_ids"]
+        check("취소한 평가는 백업 복구로 되살리지 않도록 표시", bool(after_undo.pop('review_tombstones', [])))
         check("숙련도·일정·이력·보충·회차 전체 원상복구", after_undo == before_rating)
     check("중복 되돌리기 거절", client.post(f"{BASE}/bank/undo", json={"reviewToken": first["reviewToken"]}).status_code == 409)
     check("예전 문항 토큰 무효", client.post(f"{BASE}/bank/rate", json={"reviewToken": first["reviewToken"], "rating": "Easy"}).status_code == 409)
@@ -267,7 +267,7 @@ def main() -> None:
     client.post(f"{BASE}/bank/next")
     with SessionLocal() as db:
         state = db.get(BankState, ("student-1", SUBJECT, RUN))
-        check("새 은행에서 새로 시작", state.build_id == build2 and state.state["history"] == [])
+        check("같은 문제의 기존 풀이를 이어간다", state.build_id == build2 and len(state.state["history"]) == 1)
         check("옛 상태는 밀어 둔다", state.previous and state.previous["build_id"] == build1
               and len(state.previous["state"]["history"]) == 1)
     as_admin()
@@ -313,7 +313,7 @@ def main() -> None:
         check("선택한 경우에만 상한 저장", opened["size"] == payload.get("size"))
         # 출제 정책과 독립적으로 실제 next/reveal/rate 경로의 종료 조건을 검증한다.
         picked = {"question": example_bank()["questions"][0], "days": 14, "ranked": []}
-        with patch("app.routes.bank.engine.select_question", return_value=picked):
+        with patch("app.routes.bank_api.study.select_extra_question", return_value=picked):
             for _ in range(count):
                 next_item = client.post(f"{BASE}/bank/next").json()
                 token = next_item["reviewToken"]
@@ -336,7 +336,7 @@ def main() -> None:
     client.post(f"{BASE}/bank/session/start", json={"size": None, "continueAfterGoal": True})
     check("새 회차는 이전 회차를 되돌리지 못한다", client.post(
         f"{BASE}/bank/undo", json={"reviewToken": undo_token}).status_code == 409)
-    with patch("app.routes.bank.engine.select_question", return_value={
+    with patch("app.routes.bank_api.study.select_extra_question", return_value={
             "question": None, "days": 14, "reason": "waiting", "retry_at": None}):
         exhausted = client.post(f"{BASE}/bank/next").json()
     check("제한 없어도 출제할 문항이 없으면 종료", exhausted["question"] is None

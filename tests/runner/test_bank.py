@@ -10,6 +10,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from runner import agent, ahead, bank, filenames, publish
+from runner.bank_flow import sources as bank_sources
 
 
 def _agent(tmp_path: Path) -> agent.Agent:
@@ -35,39 +36,14 @@ def test_bank_는_작년_자리를_막지_않는다(tmp_path):
     assert _agent(tmp_path).building_seats(_job()) == {tmp_path / "261002_02"}
 
 
-def test_point_job_only_prepares_points_and_does_not_publish_a_bank(tmp_path, monkeypatch):
-    job = agent.Job(id=7, subject="약리학", run_id="261002_02", kind=agent.BANK_POINTS)
-    assert _agent(tmp_path).make_argv(job)[-1] == "--points-only"
-    assert job.what == "출제포인트 준비"
-    pdf = tmp_path / "a.pdf"
-    pdf.write_bytes(b"source")
-    monkeypatch.setattr(bank, "_notes_pdf", lambda *args: pdf)
+def test_legacy_point_job_does_not_repeat_web_authorship(tmp_path, monkeypatch, capsys):
     client = FakeClient()
-    def call(method, path, payload=None):
-        client.calls.append((method, path, payload))
-        assert method == "GET" and path.endswith("/bank/source-context")
-        return {"title": "강의", "sources": [{"id": "S1", "kind": "notes_current", "filename": pdf.name}],
-                "raw": "must not reach point extraction", "existingBank": {"secret": True}}
-    client.call = call
-    def prepare(argv, **kwargs):
-        assert argv[2] == "quizbank.independent"
-        out = Path(argv[argv.index("--out") + 1])
-        context = json.loads((out / "context.json").read_text(encoding="utf-8"))
-        assert set(context) == {"title", "sources"}
-        points = out / "authored-points.json"
-        points.write_text('[{"point_id":"P1","point":"objective","source_refs":"S1 p.1"}]', encoding="utf-8")
-        (out / "points-result.json").write_text(json.dumps({"completed": True, "reused": True,
-            "pointPlanPath": str(points), "points": 1}), encoding="utf-8")
-        return SimpleNamespace(returncode=0)
-    monkeypatch.setattr(subprocess, "run", prepare)
+    def forbidden(*a, **k):
+        raise AssertionError("must not call a model")
+    monkeypatch.setattr(subprocess, "run", forbidden)
     assert bank.prepare_points(client, tmp_path, "약리학", "261002_02", "2026", "2025", tmp_path) == 0
-    assert len(client.calls) == 1
-    worker, reports = _agent(tmp_path), []
-    monkeypatch.setattr(worker, "report", lambda job, **fields: reports.append(fields) or {})
-    worker.finish_bank(job, 0, ["Quiz Bank points 261002_02: 저장된 결과 재사용 · 포인트 1개"], tmp_path / "log")
-    assert reports[-1]["state"] == "done"
-    worker.finish_bank(job, 0, ["── 원본 독립 출제포인트 추출"], tmp_path / "log")
-    assert reports[-1]["state"] == "failed"
+    assert client.calls == []
+    assert "별도 포인트 생성 생략" in capsys.readouterr().out
 
 
 def test_web_attached_pdf_is_retained_when_a_newer_local_version_arrives(tmp_path, monkeypatch):
@@ -76,7 +52,7 @@ def test_web_attached_pdf_is_retained_when_a_newer_local_version_arrives(tmp_pat
     old, new = folder / "lecture-v1.pdf", folder / "lecture-v2.pdf"
     old.write_bytes(b"original")
     new.write_bytes(b"newer")
-    monkeypatch.setattr(bank, "_notes_pdf", lambda *args: new)
+    monkeypatch.setattr(bank_sources, "_notes_pdf", lambda *args: new)
     sources = [{"id": "S1", "kind": "notes_current", "filename": old.name}]
     assert bank._attached_pdf(tmp_path, "약리학", "2026", "2025", tmp_path, "demo", sources) == old
 
@@ -113,7 +89,7 @@ def _cut(tmp_path: Path) -> Path:
 
 def test_족보_조각을_재고_적어_두었다가_다시_안_잰다(tmp_path, monkeypatch):
     cut = _cut(tmp_path)
-    monkeypatch.setattr(bank.deck, "jokbo_dir", lambda runs, subject: cut)
+    monkeypatch.setattr(bank_sources.deck, "jokbo_dir", lambda runs, subject: cut)
     calls = []
 
     def fake_run(argv, **kw):
@@ -139,13 +115,13 @@ def test_족보_조각을_재고_적어_두었다가_다시_안_잰다(tmp_path,
 
 
 def test_족보를_안_잘랐으면_조용히_빈손(tmp_path, monkeypatch):
-    monkeypatch.setattr(bank.deck, "jokbo_dir", lambda runs, subject: tmp_path / "없는곳")
+    monkeypatch.setattr(bank_sources.deck, "jokbo_dir", lambda runs, subject: tmp_path / "없는곳")
     assert bank.jokbo_slices(tmp_path, "약리학", {"r": Path("a.pdf")}) == {}
 
 
 def test_jokbo_pin_change_reselects_only_the_affected_cached_lecture(tmp_path, monkeypatch):
     cut = _cut(tmp_path)
-    monkeypatch.setattr(bank.deck, "jokbo_dir", lambda runs, subject: cut)
+    monkeypatch.setattr(bank_sources.deck, "jokbo_dir", lambda runs, subject: cut)
     pins = cut.parent / "pins.json"
     new_slice = cut / "L10.md"
     new_slice.write_text("# 질환 족보", encoding="utf-8")
@@ -192,7 +168,7 @@ def test_올해_필기_전에도_시간표_교수의_족보를_예습에_올린�
         seen.update(sources)
         return {cell.key: md}
 
-    monkeypatch.setattr(bank, "jokbo_slices", slices)
+    monkeypatch.setattr(bank_sources, "jokbo_slices", slices)
     plans, _ = publish.plan_subject(root, "약리학", "2026", "2025", runs,
                                     notes_only=True, timetable=tmp_path / "timetable.json")
     assert "이올해" in seen[cell.key].name and "김작년" not in seen[cell.key].name
@@ -242,7 +218,7 @@ def test_정리해서_슬라이드와_결과를_올린다(tmp_path, monkeypatch,
     monkeypatch.setattr(publish, "plan_subject", lambda *a, **k: ([SimpleNamespace(run_id="261002_02",
                                                                                    item=SimpleNamespace(path=pdf))], []))
     monkeypatch.setattr(subprocess, "run", _fake_quizbank(True))
-    monkeypatch.setattr(bank, "jokbo_slices", lambda *args: {"261002_02": tmp_path / "j.md"})
+    monkeypatch.setattr(bank_sources, "jokbo_slices", lambda *args: {"261002_02": tmp_path / "j.md"})
     client = FakeClient()
     assert bank.run(client, tmp_path, "약리학", "261002_02", "2026", "2025", tmp_path) == 0
     puts = [c for c in client.calls if c[0] == "PUT"]
@@ -256,8 +232,8 @@ def test_정리해서_슬라이드와_결과를_올린다(tmp_path, monkeypatch,
 def test_revision_failure_uploads_diagnostics_without_replacing_bank(tmp_path, monkeypatch):
     pdf = tmp_path / "a.pdf"
     pdf.write_bytes(b"%PDF")
-    monkeypatch.setattr(bank, "_notes_pdf", lambda *args: pdf)
-    monkeypatch.setattr(bank, "jokbo_slices", lambda *args: {"261002_02": tmp_path / "j.md"})
+    monkeypatch.setattr(bank_sources, "_notes_pdf", lambda *args: pdf)
+    monkeypatch.setattr(bank_sources, "jokbo_slices", lambda *args: {"261002_02": tmp_path / "j.md"})
     def fake_run(argv, **kwargs):
         out = Path(argv[argv.index("--out") + 1])
         (out / "result.json").write_text(json.dumps({"requiresRevision": True}))
@@ -276,8 +252,8 @@ def test_revision_failure_uploads_diagnostics_without_replacing_bank(tmp_path, m
 def test_unresolved_content_is_uploaded_with_findings_and_permission(tmp_path, monkeypatch):
     pdf = tmp_path / 'a.pdf'
     pdf.write_bytes(b'%PDF')
-    monkeypatch.setattr(bank, '_notes_pdf', lambda *args: pdf)
-    monkeypatch.setattr(bank, 'jokbo_slices', lambda *args: {'261002_02': tmp_path / 'j.md'})
+    monkeypatch.setattr(bank_sources, '_notes_pdf', lambda *args: pdf)
+    monkeypatch.setattr(bank_sources, 'jokbo_slices', lambda *args: {'261002_02': tmp_path / 'j.md'})
     def fake_run(argv, **kwargs):
         got = _fake_quizbank(False)(argv, **kwargs)
         out = Path(argv[argv.index('--out') + 1])
@@ -406,8 +382,8 @@ def test_runner_retries_from_cli_bank_and_point_plan_instead_of_original_respons
     (saved / "bank.json").write_text("{}")
     (saved / "authored-points.json").write_text("[]")
     bank._record_response_resume(tmp_path, "261002_02", got, pdf, saved, jokbo, remaining_repair_rounds=1)
-    monkeypatch.setattr(bank, "_notes_pdf", lambda *args: pdf)
-    monkeypatch.setattr(bank, "jokbo_slices", lambda *args: {"261002_02": jokbo})
+    monkeypatch.setattr(bank_sources, "_notes_pdf", lambda *args: pdf)
+    monkeypatch.setattr(bank_sources, "jokbo_slices", lambda *args: {"261002_02": jokbo})
     def fake_run(argv, **kwargs):
         assert argv[argv.index("--existing-bank") + 1] == str((saved / "bank.json").resolve())
         assert argv[argv.index("--point-plan") + 1] == str((saved / "authored-points.json").resolve())
@@ -465,8 +441,8 @@ def test_runner_keeps_cli_candidate_when_a_model_session_exits_before_result(tmp
     pdf.write_bytes(b"%PDF")
     jokbo = tmp_path / "j.md"
     jokbo.write_text("source")
-    monkeypatch.setattr(bank, "_notes_pdf", lambda *args: pdf)
-    monkeypatch.setattr(bank, "jokbo_slices", lambda *args: {"261002_02": jokbo})
+    monkeypatch.setattr(bank_sources, "_notes_pdf", lambda *args: pdf)
+    monkeypatch.setattr(bank_sources, "jokbo_slices", lambda *args: {"261002_02": jokbo})
     def fail_after_candidate(argv, **kwargs):
         out = Path(argv[argv.index("--out") + 1])
         (out / "bank.json").write_text('{"questions": []}')
@@ -497,12 +473,10 @@ def test_interrupted_or_changed_source_outputs_are_not_recorded(tmp_path):
     assert not (out.parent / "response-resume.json").exists()
 
 
-def test_응답이_없으면_자동_출제_후_기존_정리와_업로드(tmp_path, monkeypatch):
+def test_missing_web_response_never_starts_cli_generation(tmp_path, monkeypatch):
     pdf = tmp_path / "a.pdf"
     pdf.write_bytes(b"%PDF")
-    os.utime(pdf, (1, 1))
-    monkeypatch.setattr(bank, "_notes_pdf", lambda *args: pdf)
-    monkeypatch.setattr(bank, "jokbo_slices", lambda *args: {"261002_02": tmp_path / "j.md"})
+    monkeypatch.setattr(bank_sources, "_notes_pdf", lambda *args: pdf)
     client = FakeClient()
     original_call = client.call
     def call(method, path, payload=None):
@@ -511,19 +485,36 @@ def test_응답이_없으면_자동_출제_후_기존_정리와_업로드(tmp_pa
             answer["raw"] = ""
         return answer
     monkeypatch.setattr(client, "call", call)
-    seen = []
-    def fake_run(argv, **kwargs):
-        seen.append(argv[2])
-        out = Path(argv[argv.index("--out") + 1])
-        if argv[2] == "quizbank.generate":
-            (out / "raw.md").write_text("문항 " * 100 + "STUDYEZ_BANK_COMPLETE", encoding="utf-8")
-            (out / "generation.json").write_text(json.dumps({"promptVersion": "1.15",
-                                                               "usage": [{"step": "출제"}]}))
-            return SimpleNamespace(returncode=0)
-        return _fake_quizbank(True)(argv, **kwargs)
-    monkeypatch.setattr(subprocess, "run", fake_run)
-    assert bank.run(client, tmp_path, "약리학", "261002_02", "2026", "2025", tmp_path) == 0
-    assert seen == ["quizbank.generate", "quizbank.run"]
-    puts = [c for c in client.calls if c[0] == "PUT"]
-    assert puts[0][1].endswith("bank-generated-response")
-    assert puts[-1][2]["usage"][0]["step"] == "출제"
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: (_ for _ in ()).throw(AssertionError("must not generate")))
+    assert bank.run(client, tmp_path, "약리학", "261002_02", "2026", "2025", tmp_path) == 1
+    assert "저장된 웹 응답이 없습니다" in client.calls[-1][2]["message"]
+
+
+def test_markdown_file_is_revalidated_and_preserves_exact_bytes(tmp_path, monkeypatch):
+    import hashlib
+    from server.app.bank_validation.markdown_file import validate
+    fixture = Path(__file__).parents[1] / 'fixtures/bank-file-valid.md'
+    raw = '\ufeff' + fixture.read_text(encoding='utf-8').replace('\n', '\r\n')
+    info = validate(raw, 'study-ez-261006_02-bank.md', '약리학', '261006_02')
+    pdf = tmp_path / 'a.pdf'; pdf.write_bytes(b'%PDF')
+    monkeypatch.setattr(bank_sources, '_notes_pdf', lambda *args: pdf)
+    client = FakeClient()
+    call = client.call
+    def file_response(method, path, payload=None):
+        response = call(method, path, payload)
+        if method == 'GET':
+            response.update(raw=raw, responseFile=info, promptVersion='1.76', sources=[])
+        return response
+    monkeypatch.setattr(client, 'call', file_response)
+    def stop_after_read(argv, **kwargs):
+        source = Path(argv[3])
+        assert source.read_bytes() == raw.encode('utf-8')
+        audit = json.loads((source.parent / 'response-file.json').read_text(encoding='utf-8'))
+        assert audit['sha256'] == hashlib.sha256(raw.encode('utf-8')).hexdigest()
+        return SimpleNamespace(returncode=1)
+    monkeypatch.setattr(subprocess, 'run', stop_after_read)
+    assert bank.run(client, tmp_path, '약리학', '261006_02', '2026', '2025', tmp_path) == 1
+    info['sha256'] = '0' * 64
+    monkeypatch.setattr(subprocess, 'run', lambda *a, **k: (_ for _ in ()).throw(AssertionError('tampered file must stop')))
+    assert bank.run(client, tmp_path, '약리학', '261006_02', '2026', '2025', tmp_path) == 1
+    assert '파일 확인' in client.calls[-1][2]['message']

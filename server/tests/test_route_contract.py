@@ -25,6 +25,16 @@ os.environ.setdefault("ENVIRONMENT", "local-test")
 
 from app.main import app  # noqa: E402
 
+
+def check_bank_schema_identity():
+    # General site feedback also defines FeedbackIn. Moving the bank handler
+    # must not rename its published component or leave forward types unresolved.
+    schema = app.openapi()
+    body = schema['paths']['/api/lectures/{subject}/{run_id}/bank/feedback']['post']['requestBody']
+    assert body['content']['application/json']['schema'] == {
+        '$ref': '#/components/schemas/app__routes__bank__FeedbackIn'}
+
+
 # 2026-09-14 의 목록. 가르기 전과 후가 한 줄도 다르지 않은 것을 확인한 값이다.
 #
 # 2026-09-21 에 한 줄이 늘었다 — `GET …/deck-job`. 관리자가 아닌 사람도 덱이
@@ -49,6 +59,18 @@ from app.main import app  # noqa: E402
 # 편을 가로질러 보고 반영했다·그대로 둔다를 적는다(관리 화면 「Quiz Bank 신고」 탭).
 # 2026-10-06: 개인 복습 대화를 예습과 별도로 저장하는 my-review 경로.
 ROUTES = """
+GET /api/admin/preview-prompt
+PUT /api/admin/preview-prompt
+PUT /api/lectures/{subject}/{run_id}/bank/excluded/{question_id}
+GET /api/lectures/{subject}/{run_id}/bank/personal-question-slides
+GET /api/lectures/{subject}/{run_id}/bank/catalog
+GET /api/lectures/{subject}/{run_id}/bank/catalog/{question_id}
+POST /api/lectures/{subject}/{run_id}/bank/prepare-buffer
+POST /api/lectures/{subject}/{run_id}/bank/personal-questions
+DELETE /api/lectures/{subject}/{run_id}/bank/personal-questions/{question_id}
+DELETE /api/admin/lectures/{subject}/{run_id}/bank
+GET /api/me/study-hidden
+PATCH /api/me/study-hidden
 PUT /api/lectures/{subject}/{run_id}/bank/questions/{question_id}/priority
 PUT /api/lectures/{subject}/{run_id}/bank/questions/{question_id}/suspension
 POST /api/bank/batch/next
@@ -61,6 +83,7 @@ PUT /api/admin/lectures/{subject}/{run_id}/bank-generated-response
 GET /api/admin/bank-review
 PUT /api/admin/lectures/{subject}/{run_id}/bank/cards/{question_id}
 POST /api/lectures/{subject}/{run_id}/bank/prepare
+POST /api/lectures/{subject}/{run_id}/bank/prepare-next
 PUT /api/lectures/{subject}/{run_id}/my-review
 GET /api/study-plan
 POST /api/lectures/{subject}/{run_id}/prequiz/slides
@@ -78,6 +101,9 @@ GET /api/admin/feedback
 GET /api/admin/feedback/{feedback_id}/screenshots/{index}
 GET /api/admin/lectures/{subject}/{run_id}/bank
 GET /api/admin/lectures/{subject}/{run_id}/bank-response
+GET /api/admin/lectures/{subject}/{run_id}/bank/shared-source
+GET /api/admin/quiz-publication/sources
+GET /api/timetable/quiz-publication
 GET /api/admin/lectures/{subject}/{run_id}/bank/source-context
 GET /api/admin/lectures/{subject}/{run_id}/cards/{kind}
 GET /api/admin/lectures/{subject}/{run_id}/prequiz-job
@@ -113,6 +139,7 @@ GET /api/spotter/subjects/{subject}/db
 GET /api/spotter/threads
 GET /api/spotter/threads/{kind}/{subject}
 GET /api/timetable
+POST /api/timetable/study-progress
 PATCH /api/spotter/admin/reports/{report_id}
 PATCH /api/admin/feedback/{feedback_id}
 PATCH /api/spotter/admin/threads/{kind}/{subject}
@@ -157,6 +184,8 @@ PUT /api/admin/bank-feedback
 PUT /api/admin/course-aliases
 PUT /api/admin/lectures/{subject}/{run_id}/bank
 PUT /api/admin/lectures/{subject}/{run_id}/bank-response
+PUT /api/admin/lectures/{subject}/{run_id}/bank-shared-response
+PUT /api/admin/quiz-publication/check
 PUT /api/admin/lectures/{subject}/{run_id}/bank/open
 PUT /api/admin/lectures/{subject}/{run_id}/bank/links
 PUT /api/admin/lectures/{subject}/{run_id}/cards/{kind}/{item_id}
@@ -184,6 +213,7 @@ def current() -> list[str]:
 
 
 def main() -> None:
+    check_bank_schema_identity()
     want = sorted(line for line in ROUTES.strip().split("\n") if line)
     got = current()
     missing = [r for r in want if r not in got]

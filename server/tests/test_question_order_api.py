@@ -18,6 +18,10 @@ def main():
     standalone = make_bank([("A-reverse", "CA", "reverse", 50, ["A"]),
                             ("A", "CA", "direct", 20, [])] +
                            [(f"B{i}", f"CB{i}", "direct", 30 + i, []) for i in range(5)])
+    # The first slide is Optional+Advanced. Core/Important fillers must not jump ahead.
+    standalone["questions"][1].update(tier="Optional", advanced=True)
+    for i, q in enumerate(standalone["questions"][2:]):
+        q.update(tier="Important" if i % 2 else "Core", advanced=bool(i % 2))
     mixed_a = copy.deepcopy(standalone)
     mixed_a["questions"] = mixed_a["questions"][:2]
     mixed_b = make_bank([(f"B{i}", "CA", "direct", i + 1, []) for i in range(4)])

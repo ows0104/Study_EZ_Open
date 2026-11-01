@@ -6,7 +6,7 @@ import re
 
 from .session import SessionError
 
-TIERS = {"Core", "Important", "Advanced", "Optional"}  # Preserve historical provenance.
+TIERS = {"Must-Know", "Essential", "Core", "Important", "Advanced", "Optional"}  # Preserve historical provenance.
 
 
 def _plain(text: str) -> str:
@@ -23,6 +23,7 @@ def candidates(raw: str) -> list[dict]:
 
     def add(qid, tier, importance, question, origin):
         qid, tier, importance = map(_plain, (qid, tier, importance))
+        tier = 'Essential' if tier == 'Must-Know' else tier
         if not qid or tier not in TIERS or not re.fullmatch("[1-5]", importance):
             raise SessionError("웹 우선순위: 원문의 ID·Tier·중요도를 읽지 못했습니다.")
         item = {"question_id": qid, "tier": tier, "importance": int(importance),

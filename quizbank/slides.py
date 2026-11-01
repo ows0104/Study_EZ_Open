@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from server.app.bank_validation.pages import (
+from studyez_contracts.bank.pages import (
     MAX_RANGE as MAX_RANGE, cited_pages as cited_pages, pages_of as pages_of,
 )
 

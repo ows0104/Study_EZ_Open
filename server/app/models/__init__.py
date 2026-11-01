@@ -5,6 +5,10 @@
 강의 식별자는 언제나 ``(subject, run_id)`` 복합 키다."""
 
 from app.database import Base
+from app.models.site_prompt import SitePrompt
+from app.models.study_visibility import StudyHiddenLecture
+from app.models.bank_archive import QuizBankArchive
+from app.models.study_archive import BankVersion, BankStateArchive
 from app.models.feedback import SiteFeedback
 from app.models.accounts import (
     APP_POLICY,
@@ -102,7 +106,14 @@ from app.models.spotter import (
     SpotterWrong,
 )
 
+from .quiz_publication import QuizPublicationCheck
+
 __all__ = [
+    "BankVersion", "BankStateArchive",
+    "SitePrompt",
+    "QuizPublicationCheck",
+    "StudyHiddenLecture",
+    "QuizBankArchive",
     "BankPersonalEdit",
     "SiteFeedback",
     "Base", "APP_POLICY", "APP_SPOTTER", "APP_STUDYEZ", "POLICY_AUTO", "POLICY_MANUAL",

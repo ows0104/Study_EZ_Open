@@ -64,6 +64,7 @@ from sqlalchemy import case, func, select, union
 from sqlalchemy.orm import Session
 
 from app import srs
+from app.study_retention import event_identity
 from app.auth import CurrentUser, require_admin
 from app.database import get_db
 from app.models import (
@@ -71,6 +72,8 @@ from app.models import (
     PREVIEW_OPEN_KINDS,
     AppGrant,
     AssetGrab,
+    BankState,
+    BankStateArchive,
     Lecture,
     MainAttempt,
     MainReviewLog,
@@ -196,6 +199,56 @@ def _lecture_counts(db: Session, *sources: Any) -> dict[str, int]:
     return {user_id: int(count) for user_id, count in rows}
 
 
+def _bank_activity(db: Session, user_id: str | None = None):
+    """Read review history without downloading the other state/session fields.
+
+    An ungraded reveal is not a review. Undo removes the review from history.
+    Include the previous build kept by BankState, even when its bank is hidden.
+    """
+    query = select(
+        BankState.user_id, BankState.subject, BankState.run_id, BankState.build_id,
+        BankState.state["history"], BankState.previous["build_id"].as_string(),
+        BankState.previous["state"]["history"], BankState.state['review_tombstones'],
+        BankState.previous['state']['review_tombstones'],
+    )
+    ranked = select(BankStateArchive.id, func.row_number().over(
+        partition_by=(BankStateArchive.user_id, BankStateArchive.subject, BankStateArchive.run_id, BankStateArchive.build_id),
+        order_by=(BankStateArchive.created_at.desc(), BankStateArchive.id.desc())).label('position'))
+    if user_id is not None:
+        ranked = ranked.where(BankStateArchive.user_id == user_id)
+    ranked = ranked.subquery()
+    archives = select(BankStateArchive.user_id, BankStateArchive.subject, BankStateArchive.run_id,
+                      BankStateArchive.build_id, BankStateArchive.state['history'],
+                      BankStateArchive.state['review_tombstones']).join(ranked, ranked.c.id == BankStateArchive.id).where(
+                          ranked.c.position == 1)
+    if user_id is not None:
+        query = query.where(BankState.user_id == user_id)
+        archives = archives.where(BankStateArchive.user_id == user_id)
+    snapshots = {}
+    tombstones = {}
+    for uid, subject, run_id, build, history, undone in db.execute(archives):
+        snapshots.setdefault((uid, subject, run_id), {})[build] = history or []
+        tombstones.setdefault((uid, subject, run_id), set()).update(undone or [])
+    for uid, subject, run_id, build, history, old_build, old_history, undone, old_undone in db.execute(query):
+        versions = snapshots.setdefault((uid, subject, run_id), {})
+        tombstones.setdefault((uid, subject, run_id), set()).update([*(undone or []), *(old_undone or [])])
+        if old_build:
+            versions[old_build] = old_history or []
+        versions[build] = history or []
+    for (uid, subject, run_id), versions in snapshots.items():
+        reviews = {}
+        for build_id, entries in versions.items():
+            for entry in entries or []:
+                if event_identity(build_id, entry) in tombstones[(uid, subject, run_id)]:
+                    continue
+                qid, stamp, rating = entry.get("question_id"), entry.get("timestamp"), entry.get("rating")
+                if not qid or not isinstance(stamp, (int, float)) or rating not in ("Again", "Hard", "Good", "Easy"):
+                    continue
+                key = (entry.get('origin_build_id', build_id), entry.get('origin_question_id', qid), stamp)
+                reviews[key] = rating
+        yield uid, subject, run_id, reviews
+
+
 @router.get("/usage")
 def usage(
     window: str = Query("block"),
@@ -218,6 +271,16 @@ def usage(
     # `answered_at` 은 마지막으로 찍은 때라 그 장이 창 안에 있었는지를 말한다.
     pre_cards = _count_by_user(db, QuizAttempt, QuizAttempt.answered_at, span)
     main_cards = _count_by_user(db, MainAttempt, MainAttempt.answered_at, span)
+    bank_cards: dict[str, int] = {}
+    bank_last: dict[str, datetime] = {}
+    for uid, _, _, reviews in _bank_activity(db):
+        cards = set()
+        for (build, qid, stamp), _rating in reviews.items():
+            at = datetime.fromtimestamp(stamp / 1000, UTC)
+            bank_last[uid] = _latest(bank_last.get(uid), at)
+            if at >= span["from"] and (span["to"] is None or at < span["to"]):
+                cards.add((build, qid))
+        bank_cards[uid] = bank_cards.get(uid, 0) + len(cards)
     # 받은 덱·연 링크는 **편으로 센다.** 횟수는 「다시 받으러 왔다」를 말할 뿐이고,
     # 관리자가 묻는 것은 「몇 편을 챙겼나」다.
     grab_lectures = _lecture_counts(
@@ -235,7 +298,7 @@ def usage(
         opens.setdefault(uid, dict.fromkeys(PREVIEW_OPEN_KINDS, 0))[kind] = int(lectures)
 
     # ── 여기부터는 창을 안 탄다. 「마지막으로 무엇이든 한 때」와 사람의 설정이다.
-    last_seen: dict[str, datetime | None] = {}
+    last_seen: dict[str, datetime | None] = dict(bank_last)
     for model, stamp in (
         (QuizAttempt, QuizAttempt.answered_at),
         (MainAttempt, MainAttempt.answered_at),
@@ -270,7 +333,7 @@ def usage(
                 "joinedAt": _iso(profile.created_at),
                 "lastAt": _iso(last_seen.get(uid)),
                 # ── 창 안의 값 셋. 화면의 칸과 하나씩 짝이다.
-                "cards": pre_cards.get(uid, 0) + main_cards.get(uid, 0),
+                "cards": pre_cards.get(uid, 0) + main_cards.get(uid, 0) + bank_cards.get(uid, 0),
                 "decks": grab_lectures.get(uid, 0),
                 "opens": opens.get(uid, dict.fromkeys(PREVIEW_OPEN_KINDS, 0)),
                 # ── 창을 안 타는 것. 펴서 보는 자리에 쓴다.
@@ -326,6 +389,7 @@ def usage_detail(
         return {
             "pre": {"cards": 0, "selfCorrect": 0, "grades": 0},
             "main": {"cards": 0, "selfCorrect": 0, "grades": 0},
+            "bank": {"cards": 0, "selfCorrect": 0, "grades": 0},
             "grabs": [],
             "preview": False,
             # 우리 화면에서 이 편의 링크를 누른 횟수. 갈래로 갈라 둔다.
@@ -337,6 +401,18 @@ def usage_detail(
 
     def slot(subject: str, run_id: str) -> dict[str, Any]:
         return lectures.setdefault((subject, run_id), empty())
+
+    for _, subject, run_id, reviews in _bank_activity(db, user_id):
+        if not reviews:
+            continue
+        row = slot(subject, run_id)
+        latest = {}
+        for (build, qid, stamp), rating in sorted(reviews.items(), key=lambda pair: pair[0][2]):
+            latest[(build, qid)] = rating
+        row["bank"] = {"cards": len(latest), "selfCorrect": sum(r in ("Good", "Easy") for r in latest.values()),
+                       "grades": len(reviews)}
+        last = datetime.fromtimestamp(max(key[2] for key in reviews) / 1000, UTC)
+        row["lastAt"] = _iso(_latest(last, _parse(row["lastAt"])))
 
     for track, model in (("pre", QuizAttempt), ("main", MainAttempt)):
         rows = db.execute(

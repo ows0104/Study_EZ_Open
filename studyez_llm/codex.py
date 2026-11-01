@@ -9,6 +9,8 @@ import subprocess
 import tempfile
 import time
 from pathlib import Path
+from .execution import AlreadyRunning, exclusive, run_process
+from . import telemetry
 
 DEFAULT_MODEL = "gpt-6.1-sol"
 JUDGE_MODEL = DEFAULT_MODEL
@@ -127,7 +129,7 @@ def parse_events(stdout: str, *, model: str, blind: bool) -> dict:
             "models": {model: output}, "provider": "codex", "warnings": warnings}
 
 
-def run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None = None,
+def _run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None = None,
         timeout: int = 1800, label: str = "", resume: str | None = None,
         schema: dict | None = None, system: str | None = None,
         previous_usage: dict | None = None) -> dict:
@@ -152,8 +154,9 @@ def run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None 
             argv += ["--output-schema", str(schema_file)]
         argv += ["-"]
         try:
-            proc = subprocess.run(argv, input=prompt, cwd=work, timeout=timeout,
-                                  capture_output=True, text=True, encoding="utf-8", errors="replace")
+            proc = run_process(argv, input=prompt, cwd=work, timeout=timeout,
+                                  capture_output=True, text=True, encoding="utf-8", errors="replace",
+                                  creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         except subprocess.TimeoutExpired as cause:
             raise SessionError(f"{label or '세션'}: {timeout}초 안에 끝나지 않았다") from cause
         except OSError as cause:
@@ -175,4 +178,29 @@ def run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None 
                          for key, value in info["usage"].items()}
         info["models"] = {selected: info["usage"]["output_tokens"]}
     info["duration_ms"] = round((time.monotonic() - started) * 1000)
+    return info
+
+
+def run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None = None,
+        timeout: int = 1800, label: str = '', resume: str | None = None,
+        schema: dict | None = None, system: str | None = None,
+        previous_usage: dict | None = None) -> dict:
+    selected = model_name(model)
+    started = time.monotonic()
+    request = {'cwd': str(Path(cwd).resolve()) if cwd else '', 'model': selected,
+               'prompt': prompt, 'blind': blind, 'resume': resume, 'schema': schema, 'system': system}
+    try:
+        with exclusive(request):
+            info = _run(prompt, blind=blind, cwd=cwd, model=selected, timeout=timeout, label=label,
+                        resume=resume, schema=schema, system=system, previous_usage=previous_usage)
+    except AlreadyRunning as cause:
+        telemetry.record(status='duplicate-blocked', model=selected, label=label, cwd=cwd,
+                         prompt=prompt, seconds=time.monotonic()-started, usage={})
+        raise SessionError(str(cause)) from cause
+    except BaseException:
+        telemetry.record(status='failed', model=selected, label=label, cwd=cwd,
+                         prompt=prompt, seconds=time.monotonic()-started)
+        raise
+    telemetry.record(status='completed', model=selected, label=label, cwd=cwd, prompt=prompt,
+                     seconds=time.monotonic()-started, usage=info['usage'], session_id=info['session_id'])
     return info

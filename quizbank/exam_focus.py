@@ -71,8 +71,8 @@ def select(targets: list[dict], out: Path, model: str | None = None) -> tuple[di
 def resolve(bank: dict, focus: dict, references: dict, paths: dict[str, Path], out: Path,
             run_id: str, model: str | None = None) -> tuple[dict, list[dict]]:
     """Turn source-audited unresolved cases into exam cores or visible, hash-bound source notices."""
-    from server.app.bank_validation.slide_focus import question_hash
-    from server.app.bank_validation.evidence_resolution import CATEGORIES
+    from studyez_contracts.bank.slide_focus import question_hash
+    from studyez_contracts.bank.evidence_resolution import CATEGORIES
     import fitz
     questions, pending = {}, []
     images = out / 'slides'

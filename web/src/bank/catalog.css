@@ -1,0 +1,61 @@
+.bank-catalog { max-width: 1600px; margin: 0 auto; padding: 16px 24px 64px; }
+.catalog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+.catalog-heading h1 { margin: 8px 0 10px; font-size: 30px; letter-spacing: -.04em; }
+.catalog-heading p { margin: 0; font-size: 13px; line-height: 1.8; color: var(--ink-2); }
+.catalog-links { display: flex; flex-wrap: wrap; gap: 16px; padding-top: 12px; font-size: 13px; }
+.catalog-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 16px 0; border-block: 1px solid var(--line); margin-bottom: 28px; }
+.catalog-toolbar label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.catalog-toolbar input { width: min(300px, 50vw); }
+.catalog-toolbar > span { margin-left: auto; font-size: 12px; color: var(--ink-2); }
+.catalog-layout { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 28px; align-items: start; }
+.catalog-index { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 4px; max-height: calc(100dvh - 40px); overflow-y: auto; font-size: 12px; }
+.catalog-index > strong { padding: 8px 10px 12px; color: var(--ink-2); }
+.catalog-index a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 6px; color: var(--ink-2); text-decoration: none; }
+.catalog-index a:hover, .catalog-index a:focus-visible { background: var(--surface-2); color: var(--accent); }
+.catalog-index small { font-variant-numeric: tabular-nums; color: var(--ink-3); }
+.catalog-groups, .catalog-cards, .catalog-slide { min-width: 0; }
+.catalog-group { margin-bottom: 40px; scroll-margin-top: 20px; }
+.catalog-group > h2 { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; font-size: 17px; }
+.catalog-group > h2 small { font-size: 12px; font-weight: 400; color: var(--ink-2); }
+.catalog-group-body { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.4fr); gap: 20px; align-items: start; }
+.catalog-slide { position: sticky; top: 20px; }
+.catalog-slide .slide-image-open { width: 100%; }
+.catalog-slide img { width: 100%; border: 1px solid var(--line); border-radius: 8px; }
+.catalog-slide > p { display: grid; place-items: center; min-height: 130px; padding: 20px; margin: 0; border: 1px dashed var(--line); border-radius: 8px; font-size: 12px; color: var(--ink-3); text-align: center; }
+.catalog-slide > small { display: block; margin-top: 8px; font-size: 10px; line-height: 1.7; color: var(--ink-3); }
+.catalog-cards { display: flex; flex-direction: column; gap: 14px; }
+.catalog-card { padding: 22px 24px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow-wrap: anywhere; }
+.catalog-card > header { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 16px; font-size: 11px; color: var(--ink-2); }
+.catalog-number { color: var(--accent); font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.catalog-card > header small { margin-left: auto; font-size: 10px; color: var(--ink-3); }
+.catalog-card .catalog-essential { color: var(--warn); font-weight: 600; }
+.catalog-card .quiz-stem { font-size: 16px; text-align: left; margin: 0 0 16px; }
+.catalog-card .bank-option:disabled { opacity: 1; cursor: default; }
+.catalog-card .bank-options { margin-block: 16px; }
+.catalog-card .catalog-reveal { padding: 8px 0; border: 0; background: transparent; color: var(--accent); font-size: 12px; }
+.catalog-answer { margin-top: 12px; padding-top: 16px; border-top: 1px solid var(--line-soft); }
+.catalog-answer[hidden] { display: none; }
+.catalog-answer .quiz-answer { font-size: 16px; text-align: left; }
+.catalog-answer h2 { font-size: 14px; }
+.catalog-empty { padding: 40px 20px; text-align: center; color: var(--ink-2); }
+@media (max-width: 1100px) {
+  .catalog-layout { grid-template-columns: 110px minmax(0, 1fr); gap: 16px; }
+  .catalog-card { padding: 18px; }
+}
+@media (max-width: 760px) {
+  .bank-catalog { padding: 12px 14px 40px; }
+  .catalog-heading { flex-direction: column; gap: 10px; margin-bottom: 18px; }
+  .catalog-heading h1 { font-size: 25px; }
+  .catalog-links { padding-top: 0; }
+  .catalog-toolbar { gap: 12px; margin-bottom: 16px; }
+  .catalog-toolbar > span { margin-left: 0; }
+  .catalog-layout { display: block; }
+  .catalog-index { position: static; flex-direction: row; align-items: center; overflow-x: auto; margin-bottom: 24px; max-height: none; white-space: nowrap; padding-bottom: 8px; }
+  .catalog-index > strong, .catalog-index a { flex-shrink: 0; }
+  .catalog-group-body { display: flex; flex-direction: column; gap: 16px; }
+  .catalog-slide { position: static; width: 100%; }
+  .catalog-slide .quiz-slide { max-height: 320px; object-fit: contain; background: var(--surface); }
+  .catalog-cards { width: 100%; }
+  .catalog-card { padding: 16px; }
+  .catalog-card .quiz-stem { font-size: 15px; }
+}

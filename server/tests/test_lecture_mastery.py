@@ -93,6 +93,13 @@ def main(_bank_clock, _mastery_clock):
         detail = client.get("/api/lectures/subject/run")
         timetable = client.get("/api/timetable")
         assert detail.status_code == timetable.status_code == 200
+        lecture = timetable.json()["events"][0]["lectures"][0]
+        p = lecture["cardProgress"]
+        if lecture["mastery"] is None:
+            assert p is None
+        else:
+            assert p["total"] == 3
+            assert sum(p[k] for k in ("unseen", "recognized", "retrieving", "retained")) == 3
         return detail.json()["mastery"], timetable.json()["events"][0]["lectures"][0]["mastery"]
 
     login("one")
@@ -110,11 +117,13 @@ def main(_bank_clock, _mastery_clock):
         assert db.get(BankState, ("one", "subject", "run")).state == state
     login("two")
     assert summaries() == (initial, initial)
+    assert client.get("/api/timetable").json()["events"][0]["lectures"][0]["cardProgress"]["seen"] == 0
     login("one")
     with SessionLocal() as db:
         db.get(QuizBank, ("subject", "run")).build_id = "v2"
         db.commit()
     assert summaries() == (initial, initial)
+    assert client.get("/api/timetable").json()["events"][0]["lectures"][0]["cardProgress"]["seen"] == 0
     # GET은 기존 기록을 수정하지 않는다.
     with SessionLocal() as db:
         assert db.get(BankState, ("one", "subject", "run")).build_id == "v1"

@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 import fitz
 
-from server.app.bank_validation.slide_focus import all_selected_references, external_filename, source_id
+from studyez_contracts.bank.slide_focus import all_selected_references, external_filename, source_id
 
 
 def discover(pdf: Path) -> dict[str, Path]:

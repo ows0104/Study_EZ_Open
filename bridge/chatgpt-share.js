@@ -25,6 +25,9 @@ let bound = "";
 let lastConversationUrl = "";
 let lastShareUrl = "";
 let lastBankAnswer = "";
+let lastBankFile = null;
+let lastBankFileNode = "";
+let lastSavedBankFileHash = "";
 let lastSharedNode = "";
 let contextInvalidated = false;
 let turnObserver = null;
@@ -206,10 +209,10 @@ async function collectBankFile(answer) {
   const linked = links.find(value => {
     try { return decodeURIComponent(value.split(/[?#]/)[0]).endsWith('/' + filename); } catch { return false; }
   });
-  if (!linked) return null;
   const candidates = [linked, ...[...document.querySelectorAll('a[href]')]
     .filter(a => (a.textContent || '').includes(filename)).map(a => a.href)];
   for (const value of candidates) {
+    if (!value) continue;
     let url; try { url = new URL(value, location.href); } catch { continue; }
     if (url.protocol !== 'https:' || url.origin !== 'https://chatgpt.com'
         || !url.pathname.startsWith('/backend-api/')) continue;
@@ -224,7 +227,11 @@ async function collectBankFile(answer) {
       return await globalThis.StudyEZBankFile.describe(raw, target, filename);
     } catch (error) { console.info(LOG, '파일 직접 회수 대기:', error.message); }
   }
-  offerBankFile('ChatGPT에서 완성된 .md 파일을 내려받아 선택하세요. Study EZ 사이트의 파일 불러오기도 사용할 수 있습니다.');
+  const downloaded = await new Promise(resolve => {
+    if (!sendShareMessage({type:'STUDYEZ_BANK_DOWNLOAD_FILE'},response => resolve(response?.ok && typeof response.raw === 'string' ? response : null))) resolve(null);
+  });
+  if (downloaded) return globalThis.StudyEZBankFile.describe(downloaded.raw,target,downloaded.filename);
+  offerBankFile('실제 MD 파일의 자동 다운로드를 재시도하고 있습니다. 파일이 준비되면 자동으로 검수에 전달합니다. 파일을 직접 선택할 수도 있습니다.');
   return null;
 }
 
@@ -474,11 +481,18 @@ async function publish() {
     // 대화만 여기까지 온다.
     const url = `https://chatgpt.com/c/${conversation}`;
     // 공유 생성 실패와 무관하게 완성된 문항을 먼저 러너에 전달한다.
-    const bankFile = watch.mode === "bank" && fileMode() ? await collectBankFile(state.answer) : null;
+    const needsFile = watch.mode === 'bank' && fileMode();
+    const bankFile = needsFile ? (lastBankFileNode === state.currentNode && lastBankFile
+      ? lastBankFile : await collectBankFile(state.answer)) : null;
+    if (needsFile && !bankFile) return 'pending';
+    if (bankFile) { lastBankFile = bankFile; lastBankFileNode = state.currentNode; }
     if (bankFile && bankFile.raw !== lastBankAnswer) {
       if (!(await deliverBankFile(bankFile))) return "pending";
       lastBankAnswer = bankFile.raw;
     }
+    // A background storage receipt is not a server receipt. Only publish links
+    // after Study EZ confirms the file, so the runner cannot ingest share prose.
+    if (needsFile && lastSavedBankFileHash !== bankFile.responseFile.sha256) return 'pending';
     const bankAnswer = completedBankAnswer(state.answer);
     if (watch.mode === "bank" && !fileMode() && bankAnswer.trimEnd().endsWith("STUDYEZ_BANK_COMPLETE")
         && bankAnswer.length >= 200 && bankAnswer.length <= 2_000_000
@@ -559,6 +573,11 @@ async function initialize() {
   // 배경은 탭을 열 때 감시를 건다 — 사람이 확인 카드를 보고 전송을 누르기까지
   // 걸리는 시간이라 폴링으로 기다리기엔 길다. 그래서 밀어 준다.
   chrome.runtime.onMessage.addListener((message) => {
+    if (!contextInvalidated && message?.type === 'STUDYEZ_BANK_FILE_SAVED'
+        && message.sha256 === lastBankFile?.responseFile?.sha256
+        && message.filename === lastBankFile?.responseFile?.filename) {
+      lastSavedBankFileHash = message.sha256;
+    }
     if (!contextInvalidated && message?.type === "STUDYEZ_WATCH_READY" && typeof message.lectureId === "string") {
       startWatching(message.lectureId, message.mode, message.promptVersion || "");
     }

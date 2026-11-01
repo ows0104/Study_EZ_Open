@@ -498,4 +498,49 @@ test('prefixed CNS launch requires a real validated file and retains its metadat
   const page=webBridge();page.listeners.extension(message);
   assert.equal(page.posted.at(-1).responseFile.filename,responseFile.filename);
   assert.equal(page.posted.at(-1).manualFile,true);
+  assert.ok(!delivered.some(m=>m.type==='STUDYEZ_BANK_FILE_SAVED'));
+  receive({type:protocol.MESSAGES.bankSaved,lectureId},{tab:{id:1,url:'http://localhost:5173'}},()=>{});
+  await new Promise(resolve=>setImmediate(resolve));
+  const receipt=delivered.find(m=>m.type==='STUDYEZ_BANK_FILE_SAVED');
+  assert.equal(receipt.tab,10);assert.equal(receipt.sha256,responseFile.sha256);
+});
+
+test('a file-mode reply cannot queue shared-text processing while the MD is absent or unsaved',async()=>{
+ const s=shareFixture();
+ vm.runInContext(`watch={mode:'bank',lectureId:'studyez:bank:1.78:약리학/261012_02',promptVersion:'1.78'}`,s.context);
+ s.context.accessToken=async()=> 'test-token';
+ s.context.conversationState=async()=>({finished:true,currentNode:'new-file',answer:'완료: MD 파일 링크'});
+ s.context.collectBankFile=async()=>null;
+ let shares=0;s.context.publishViaApi=async()=>{shares++;return 'https://chatgpt.com/share/test';};
+ assert.equal(await s.context.publish(),'pending');assert.equal(shares,0);
+ assert.equal(s.sent.length,0);
+ s.context.collectBankFile=async()=>({raw:'complete file',responseFile:{filename:'study-ez-261012_02-bank.md',sha256:'hash'}});
+ assert.equal(await s.context.publish(),'pending');assert.equal(shares,0);
+ assert.equal(s.sent.filter(m=>m.type==='STUDYEZ_BANK_ANSWER').length,1);
+ assert.equal(s.sent.filter(m=>m.type.includes('LINK')).length,0);
+ vm.runInContext(`lastSavedBankFileHash='hash'`,s.context);
+ s.context.isPubliclyReadable=async()=>true;
+ assert.equal(await s.context.publish(),'published');assert.equal(shares,1);
+ assert.equal(s.sent.filter(m=>m.type==='STUDYEZ_BANK_ANSWER').length,1);
+});
+
+test('only the bound bank tab may request its own real download in MAIN world',async()=>{
+ const raw=fs.readFileSync(path.join(__dirname,'../fixtures/bank-file-valid.md'),'utf8');
+ const filename='study-ez-261006_02-bank.md';let receive;const executions=[];
+ const stored={'studyez-watch:10':{lectureId:'studyez:bank:1.76:약리학/261006_02',mode:'bank',promptVersion:'1.76',webappTabId:1}};
+ const context=vm.createContext({URL,console,importScripts(){},chrome:{
+  runtime:{onMessage:{addListener(fn){receive=fn;}},onConnect:{addListener(){}}},
+  storage:{session:{async get(key){return {[key]:stored[key]};}}},
+  scripting:{async executeScript(options){executions.push(options);return [{frameId:0,result:{raw,filename}}];}},
+  tabs:{onUpdated:{addListener(){}},onRemoved:{addListener(){}},onActivated:{addListener(){}}},
+ }});
+ for(const name of ['protocol.js','bank-file.js','bank-download.js','background.js'])vm.runInContext(read(name),context);
+ const message={type:'STUDYEZ_BANK_DOWNLOAD_FILE',runId:'attacker-supplied-ignored'};
+ assert.equal(receive(message,{tab:{id:10,url:'https://evil.example/c/existing'}},()=>{}),false);
+ const send=id=>new Promise(resolve=>receive(message,{tab:{id,url:'https://chatgpt.com/c/existing'}},resolve));
+ assert.equal((await send(9)).ok,false);assert.equal(executions.length,0);
+ const result=await send(10);
+ assert.equal(result.raw,raw);assert.equal(result.filename,filename);
+ assert.equal(executions[0].world,'MAIN');assert.equal(executions[0].target.tabId,10);
+ assert.equal(executions[0].args[0].runId,'261006_02');assert.equal(executions[0].args[1],'existing');
 });

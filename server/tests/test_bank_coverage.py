@@ -9,14 +9,16 @@ _TMP = Path(tempfile.mkdtemp(prefix="studyez-coverage-"))
 os.environ.update(ENVIRONMENT="local-test", DATABASE_URL=f"sqlite:///{(_TMP / 'bank.db').as_posix()}", RUNNER_TOKEN="runner-token")
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from app.auth import APP_POLICY, ROLE_ADMIN, CurrentUser, get_current_user
 from app.database import Base, SessionLocal, engine
 from app.main import app
-from app.models import Asset, BankState, Lecture, QuizBank, PrequizJob
+from app.models import Asset, BankState, BankStateArchive, BankVersion, Lecture, QuizBank, PrequizJob
 from app.bank_edits import current_review
 from app.bank_validation.coverage import bank_hash
 from app.bank_validation.schema import without_retired
 from app.study_engine import empty_state, now_ms, record_review
+from app.study_retention import manifest
 from tests.bank_fixtures import example_bank
 
 
@@ -70,7 +72,32 @@ def main():
     assert good.status_code == 200 and good.json()["buildId"] == "old-build", good.text
     with SessionLocal() as db:
         current = db.get(BankState, ("learner", "local", "demo"))
-        assert current.state == state and current.build_id == "old-build"
+        assert current.build_id == "old-build"
+        # A safe transition adds provenance, but must retain every original
+        # review fact, aggregate, and scheduling value. Full JSON equality
+        # incorrectly rejects the new fingerprint/origin metadata.
+        retained_history = copy.deepcopy(current.state["history"])
+        assert len(retained_history) == len(state["history"])
+        for original, retained in zip(state["history"], retained_history):
+            assert {key: retained[key] for key in original} == original
+            assert retained["origin_build_id"] == "old-build"
+            assert retained["origin_question_id"] == original["question_id"]
+            assert retained["origin_event_id"]
+            assert retained["question_fingerprint"] == manifest(bank)[original["question_id"]]
+        for key, original in state.items():
+            if key != "history":
+                assert current.state[key] == original, key
+        assert current.state["_question_fingerprints"] == manifest(enriched)
+        assert current.state["_study_build_id"] == "old-build"
+        assert "SUP_Q1" not in current.state["items"]
+        archives = list(db.scalars(select(BankStateArchive).where(
+            BankStateArchive.user_id == "learner", BankStateArchive.subject == "local",
+            BankStateArchive.run_id == "demo", BankStateArchive.build_id == "old-build")))
+        assert any(archive.state == state for archive in archives)
+        versions = list(db.scalars(select(BankVersion).where(
+            BankVersion.subject == "local", BankVersion.run_id == "demo", BankVersion.build_id == "old-build")))
+        assert any(version.bank == bank for version in versions)
+        assert any(version.bank == enriched for version in versions)
         assert db.get(QuizBank, ("local", "demo")).bank["questions"][1]["mcq_mode"] == "recall_first"
         assert db.get(QuizBank, ("local", "demo")).validation["edits"]["Q2"]["question"]["mcq_mode"] == "recall_first"
         review = {"reviews": [{"question_id": "Q2", "verdict": "ok"}]}
@@ -89,7 +116,8 @@ def main():
     assert client.post(study, json={"size": None, "dailyOnly": True}).json()["size"] is None
     with SessionLocal() as db:
         current = db.get(BankState, ("learner", "local", "demo"))
-        assert not current.state["session"]["continue_after_goal"] and current.state["history"] == state["history"]
+        assert not current.state["session"]["continue_after_goal"]
+        assert current.state["history"] == retained_history
         db.get(PrequizJob, first.json()["jobId"]).state = "done"
         db.commit()
     assert client.post(base + "/bank/audit").status_code == 200

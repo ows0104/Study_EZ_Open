@@ -46,7 +46,7 @@ function CalendarResult() {
   useEffect(() => { takeTimetable().then(data => setCount((data.events[0] as unknown as { seen: number }).seen)); }, []);
   return <p>Main 캘린더 · <span id="seen">{count}</span>/3문항 봄</p>;
 }
-startFirstScreen();
+startFirstScreen(true);
 const { BankStudyPage } = await import("../src/bank/BankStudy");
 createRoot(document.getElementById("root")!).render(<MemoryRouter initialEntries={["/mainquiz/local/demo"]}><Routes>
   <Route path="/mainquiz/:subject/:runId" element={<BankStudyPage />} />

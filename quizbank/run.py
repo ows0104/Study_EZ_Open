@@ -33,7 +33,7 @@ from .schema import schema_errors
 from .session import SessionError
 from .runtime import record as record_runtime
 from .validate import validate_bank, validate_dropping
-from server.app.bank_validation.publication import stamp, usable
+from studyez_contracts.bank.publication import stamp, usable
 
 OUTPUTS = ("bank.json", "bank.raw.json", "bank.before-repair.json", "authored-points.json", "repairs.json", "checkpoint.json", "validation.json", "review.json", "coverage.json", "classification.json", "web-audit.json", "explanations.json", "pages.json", "result.json", "usage.jsonl")
 OUTPUTS += ("content-validation.json", "learning-structure.json", "learning-structure.raw.json")
@@ -92,11 +92,11 @@ def _run_authored(bank: dict, raw: str, pdf: Path | None, title: str, run_id: st
                   sources: list[dict], out: Path, *, pdf_source: str, do_review: bool,
                   do_coverage: bool, model: str | None, prompt_version: str,
                   jokbo: Path | None, point_plan: Path | None, max_repair_rounds: int,
-                  question_first_mode: bool = False) -> dict:
+                  question_first_mode: bool = False, web_postprocess: bool = False) -> dict:
     """Assess → repair locally → independently reassess, retaining every change."""
     initial_count = len(bank.get("questions", []))
     initial_ids = {q["question_id"] for q in bank.get("questions", [])}
-    explanations_enabled = explain.enabled(prompt_version)
+    explanations_enabled = explain.enabled(prompt_version) and not web_postprocess
     item_reviews = incremental.Reviews.create(out, title, sources, pdf, jokbo, model, prompt_version)
     points = json.loads(point_plan.read_text(encoding="utf-8")) if point_plan else None
     plan_error = None
@@ -257,6 +257,11 @@ def _run_authored(bank: dict, raw: str, pdf: Path | None, title: str, run_id: st
     if result['requiresRevision']:
         validation['revision'] = {'audit': (source_check or {}).get('webAudit'), 'review': answer_check,
             'explanations': explanation_check, 'repairs': changes, 'repairError': result.get('repairError')}
+    if web_postprocess:
+        validation['processing'] = {'mode': 'web-postprocess', 'contentPreserved': True,
+            'newOptionPools': False, 'rewrittenExplanations': False, 'repairRounds': 0,
+            'pointOrigin': 'web-question-index' if (out / 'point-origin.json').is_file() else 'cached-source-only'}
+        result['processing'] = validation['processing']
     validation = stamp(bank, validation, [s['id'] for s in sources], allow_unresolved=True)
     result['publication'] = validation['publication']
     _write(out / 'validation.json', validation)
@@ -279,9 +284,15 @@ def run(raw_path: Path, pdf: Path | None, title: str, run_id: str, sources: list
         prompt_version: str = "", existing_bank: Path | None = None,
         do_coverage: bool = True, jokbo: Path | None = None, point_plan: Path | None = None,
         preserve_existing: bool = False, max_repair_rounds: int = MAX_REPAIR_ROUNDS,
-        points_cache_root: Path | None = None) -> dict:
+        points_cache_root: Path | None = None, web_postprocess: bool = False) -> dict:
     if type(max_repair_rounds) is not int or not 0 <= max_repair_rounds <= MAX_REPAIR_ROUNDS:
         raise ValueError("CLI 수정 상한은 0~3회여야 합니다.")
+    if web_postprocess:
+        max_repair_rounds = 0  # Review findings are published; web content is not rewritten.
+        if point_plan is not None and not (point_plan.parent / 'independent-origin.json').is_file():
+            # An old audit's question index is resumable metadata, not proof of
+            # independent source extraction. Rebuild the web index below instead.
+            point_plan = None
     out.mkdir(parents=True, exist_ok=True)
     # 지난 실행이 남긴 것을 이번 것으로 읽지 않는다 (루트 CLAUDE.md 함정 ②).
     for name in OUTPUTS:
@@ -289,18 +300,25 @@ def run(raw_path: Path, pdf: Path | None, title: str, run_id: str, sources: list
     shutil.rmtree(out / "slides", ignore_errors=True)
 
     raw = raw_path.read_text(encoding="utf-8")
-    lecture = {"title": title, "sources": sources, "prompt_version": prompt_version}
-    question_first_mode = question_first.enabled(prompt_version) and not preserve_existing
+    # Public-share imports may have no recorded prompt version. Web postprocessing
+    # must still connect the deferred learning graph; do not invent a version.
+    question_first_mode = (question_first.enabled(prompt_version)
+                           or (web_postprocess and not prompt_version)) and not preserve_existing
+    lecture = {"title": title, "sources": sources, "prompt_version": prompt_version,
+               "defer_learning_structure": question_first_mode}
     if question_first_mode and pdf is not None and do_coverage:
         if point_plan is None and points_cache_root is not None:
             point_plan = question_first.cached_points(points_cache_root, pdf, title, sources,
                                                        pdf_source=pdf_source, jokbo=jokbo)
-        _stage("저장된 원본 독립 포인트 재사용" if point_plan else "원본 독립 출제포인트 추출")
-        _, entries = question_first.extract_points(pdf, title, sources, out,
-            pdf_source=pdf_source, jokbo=jokbo, reuse=point_plan, model=model)
+        if web_postprocess and point_plan is None:
+            entries = []
+        else:
+            _stage("저장된 원본 독립 포인트 재사용" if point_plan else "원본 독립 출제포인트 추출")
+            _, entries = question_first.extract_points(pdf, title, sources, out,
+                pdf_source=pdf_source, jokbo=jokbo, reuse=point_plan, model=model)
         for entry in entries:
             _usage(out, entry["step"], {k: v for k, v in entry.items() if k != "step"})
-        point_plan = out / "authored-points.json"
+        point_plan = out / "authored-points.json" if (out / "authored-points.json").is_file() else None
 
     _stage("정리")
     if existing_bank is None:
@@ -310,9 +328,19 @@ def run(raw_path: Path, pdf: Path | None, title: str, run_id: str, sources: list
         bank = json.loads(existing_bank.read_text(encoding="utf-8"))
         if question_first_mode:
             bank = question_first.as_draft(bank)
+    if web_postprocess:
+        from .compact import normalize_single_unit_lists
+        normalized = normalize_single_unit_lists(bank)
+        if normalized:
+            _write(out / 'format-normalization.json', {'changes': normalized,
+                'policy': 'format only; authored question, answer, evidence and raw file unchanged'})
+    if web_postprocess and point_plan is None:
+        from .web_postprocess import question_points
+        question_points(bank, out)
+        point_plan = out / "authored-points.json"
     if question_first_mode:
         question_first.require_draft(bank)
-        if option_pools.enabled(prompt_version) and existing_bank is None and pdf is not None and do_coverage and do_review:
+        if option_pools.enabled(prompt_version) and existing_bank is None and pdf is not None and do_coverage and do_review and not web_postprocess:
             _write(out / "bank.json", bank)
             _stage("CLI 보기 풀 선택적 작성")
             points = json.loads(point_plan.read_text(encoding="utf-8"))
@@ -322,11 +350,11 @@ def run(raw_path: Path, pdf: Path | None, title: str, run_id: str, sources: list
             if info is not None:
                 _usage(out, "CLI 보기 풀 선택적 작성", info)
 
-    if web_audit.enabled(prompt_version) and not preserve_existing:
+    if (web_audit.enabled(prompt_version) or web_postprocess) and not preserve_existing:
         return _run_authored(bank, raw, pdf, title, run_id, sources, out,
             pdf_source=pdf_source, do_review=do_review, do_coverage=do_coverage, model=model,
             prompt_version=prompt_version, jokbo=jokbo, point_plan=point_plan, max_repair_rounds=max_repair_rounds,
-            question_first_mode=question_first_mode)
+            question_first_mode=question_first_mode, web_postprocess=web_postprocess)
 
     _write(out / "bank.json", bank)
 
@@ -383,6 +411,11 @@ def run(raw_path: Path, pdf: Path | None, title: str, run_id: str, sources: list
     if result['requiresRevision']:
         validation['revision'] = {'coverage': validation.get('coverage'),
             'review': json.loads((out / 'review.json').read_text(encoding='utf-8')) if (out / 'review.json').exists() else None}
+    if web_postprocess:
+        validation['processing'] = {'mode': 'web-postprocess', 'contentPreserved': True,
+            'newOptionPools': False, 'rewrittenExplanations': False, 'repairRounds': 0,
+            'pointOrigin': 'web-question-index' if (out / 'point-origin.json').is_file() else 'cached-source-only'}
+        result['processing'] = validation['processing']
     validation = stamp(bank, validation, [s['id'] for s in sources], allow_unresolved=True)
     result['publication'] = validation['publication']
     _write(out / 'validation.json', validation)
@@ -406,6 +439,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--jokbo", type=Path, help="범위에 해당하는 족보 조각")
     ap.add_argument("--point-plan", type=Path, help="자료·범위가 같은 기존 고정 포인트 계획을 재사용")
     ap.add_argument("--points-cache-root", type=Path, help="웹 출제 중 미리 추출한 원본 독립 포인트 검색 위치")
+    ap.add_argument("--web-postprocess", action="store_true", help="웹 문항 보존: 별도 보기·해설 작성과 자동 문항 수정 생략")
     ap.add_argument("--model")
     ap.add_argument("--max-repair-rounds", type=int, choices=range(MAX_REPAIR_ROUNDS + 1), default=MAX_REPAIR_ROUNDS,
                     help="복구 시 남은 수정 횟수 (기본 3, 상한을 늘릴 수 없음)")
@@ -419,7 +453,7 @@ def main(argv: list[str] | None = None) -> int:
                      prompt_version=args.prompt_version, existing_bank=args.existing_bank,
                      do_coverage=not args.no_coverage, jokbo=args.jokbo, point_plan=args.point_plan,
                      preserve_existing=args.preserve_existing, max_repair_rounds=args.max_repair_rounds,
-                     points_cache_root=args.points_cache_root)
+                     points_cache_root=args.points_cache_root, web_postprocess=args.web_postprocess)
         if args.pdf is not None and (args.out / "bank.json").is_file():
             final_bank = json.loads((args.out / "bank.json").read_text(encoding="utf-8"))
             final_validation = json.loads((args.out / "validation.json").read_text(encoding="utf-8"))

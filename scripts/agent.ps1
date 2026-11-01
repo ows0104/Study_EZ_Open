@@ -19,14 +19,11 @@ param(
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
 $logPath = Join-Path $repo "runs\agent.log"
+$env:PYTHONIOENCODING = "utf-8"
+$env:PYTHONUNBUFFERED = "1"
 
 $logDir = Split-Path -Parent $logPath
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
-
-# 종일 도는 로그다. 5MB에서 한 세대만 접는다.
-if ((Test-Path $logPath) -and (Get-Item $logPath).Length -gt 5MB) {
-    Move-Item -Path $logPath -Destination "$logPath.1" -Force
-}
 
 # 이 저장소는 PATH의 python이 아니라 anaconda로 돈다.
 if (-not $Python) {
@@ -44,6 +41,21 @@ $stamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 if (-not $Python) {
     "[$stamp] 파이썬을 못 찾았다 — 러너를 띄우지 못했다." | Out-File $logPath -Append -Encoding utf8
     exit 2
+}
+
+# 이미 실행 중이면 작업·로그 파일을 건드리지 않고 같은 창에서 상태를 보여 준다.
+$existingLock = Join-Path $repo 'runs\agent.lock'
+if ((Test-Path -LiteralPath $existingLock) -and
+    ((Get-Date) - (Get-Item -LiteralPath $existingLock).LastWriteTime).TotalSeconds -lt 90) {
+    Push-Location $repo
+    try { & $Python -u -m runner.console --runs (Join-Path $repo 'runs') }
+    finally { Pop-Location }
+    exit $LASTEXITCODE
+}
+
+# 실행 중인 러너의 로그는 회전시키지 않는다.
+if ((Test-Path $logPath) -and (Get-Item $logPath).Length -gt 5MB) {
+    Move-Item -Path $logPath -Destination "$logPath.1" -Force
 }
 
 $arguments = @("-m", "runner", "agent")

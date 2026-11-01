@@ -13,6 +13,11 @@ from runner import agent
 from studyez_llm import codex
 
 
+@pytest.fixture(autouse=True)
+def local_usage_log(monkeypatch, tmp_path):
+    monkeypatch.setenv('STUDYEZ_CODEX_USAGE_DIR', str(tmp_path / 'usage'))
+
+
 def events(text='{"ok":true}', *, extra=()):
     return "\n".join(json.dumps(e) for e in [
         {"type": "thread.started", "thread_id": "test-session"},
@@ -84,7 +89,7 @@ def test_blind_cli_is_isolated(monkeypatch):
         assert kw["cwd"] != Path.cwd() and not list(kw["cwd"].iterdir())
         assert argv[-1] == "-" and kw["input"] == "question only"
         return SimpleNamespace(returncode=0, stdout=events(), stderr="")
-    monkeypatch.setattr(codex.subprocess, "run", fake)
+    monkeypatch.setattr(codex, "run_process", fake)
     data, info = session.run_blind("question only")
     assert data == {"ok": True} and info["session_id"] == "test-session"
 
@@ -100,7 +105,7 @@ def test_author_resume_retains_workspace_and_pdf_adapter(monkeypatch, tmp_path):
         assert kw["cwd"] == tmp_path.resolve()
         assert "view_image" in kw["input"] and "pdf.py" in kw["input"]
         return SimpleNamespace(returncode=0, stdout=events("written"), stderr="")
-    monkeypatch.setattr(codex.subprocess, "run", fake)
+    monkeypatch.setattr(codex, "run_process", fake)
     assert session.run_agent("write", cwd=tmp_path, resume="previous-session",
                              previous_usage={})["text"] == "written"
 
@@ -116,7 +121,7 @@ def test_bank_passes_schema_file_and_verifies_output(monkeypatch):
         assert json.loads(path.read_text()) == SCHEMA
         assert (path.parent / "instructions.md").read_text() == "system instruction"
         return SimpleNamespace(returncode=0, stdout=events(), stderr="")
-    monkeypatch.setattr(codex.subprocess, "run", fake)
+    monkeypatch.setattr(codex, "run_process", fake)
     data, info = bank.run_structured("question", SCHEMA, system="system instruction", label="bank")
     assert data == {"ok": True} and info["input_tokens"] == 100
 
@@ -139,13 +144,13 @@ def test_model_override_and_old_claude_model_rejected(monkeypatch):
 
 def test_process_failure_and_timeout_are_session_errors(monkeypatch):
     monkeypatch.setenv("STUDYEZ_CODEX_BIN", "codex.exe")
-    monkeypatch.setattr(codex.subprocess, "run", lambda *a, **k:
+    monkeypatch.setattr(codex, "run_process", lambda *a, **k:
                         SimpleNamespace(returncode=1, stdout="", stderr="401 Unauthorized"))
     with pytest.raises(codex.SessionError, match="401"):
         session.run_blind("q")
     def timeout(*a, **k):
         raise subprocess.TimeoutExpired("codex", 1)
-    monkeypatch.setattr(codex.subprocess, "run", timeout)
+    monkeypatch.setattr(codex, "run_process", timeout)
     with pytest.raises(codex.SessionError, match="1초"):
         session.run_blind("q", timeout=1)
 
@@ -164,7 +169,7 @@ def test_codex_auth_failure_and_old_log_are_distinguished(message):
 
 def test_resumed_usage_counts_only_the_new_stage(monkeypatch, tmp_path):
     monkeypatch.setenv("STUDYEZ_CODEX_BIN", "codex.exe")
-    monkeypatch.setattr(codex.subprocess, "run", lambda *a, **k:
+    monkeypatch.setattr(codex, "run_process", lambda *a, **k:
                         SimpleNamespace(returncode=0, stdout=events(), stderr=""))
     old = {"input_tokens": 25, "output_tokens": 3, "cache_read_input_tokens": 50,
            "cache_creation_input_tokens": 0}
@@ -178,7 +183,7 @@ def test_resumed_usage_counts_only_the_new_stage(monkeypatch, tmp_path):
 @pytest.mark.parametrize('stdout,stderr', [(None, 'process terminated'), ('process terminated', None), (None, None)])
 def test_process_failure_without_captured_streams(monkeypatch, tmp_path, stdout, stderr):
     monkeypatch.setenv('STUDYEZ_CODEX_BIN', 'codex.exe')
-    monkeypatch.setattr(codex.subprocess, 'run', lambda *a, **k:
+    monkeypatch.setattr(codex, 'run_process', lambda *a, **k:
                         SimpleNamespace(returncode=3221225773, stdout=stdout, stderr=stderr))
     with pytest.raises(codex.SessionError, match='3221225773'):
         codex.run('inspect', blind=False, cwd=tmp_path)

@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
+import { fileURLToPath } from "node:url";
 
 /**
  * 자산은 `pages.dev`에서 받는다.
@@ -33,6 +34,8 @@ export default defineConfig(({ command, mode }) => {
     base: command === "build" ? env.VITE_ASSET_ORIGIN || ASSET_ORIGIN : "/",
     server: {
       port: 5173,
+      // Canonical prompts live in the repository's content/ directory.
+      fs: { allow: [fileURLToPath(new URL("..", import.meta.url))] },
       // 개발 중에는 같은 출처로 보내 CORS를 신경 쓰지 않는다. 배포에서는
       // VITE_API_BASE_URL이 채워지고 이 프록시는 쓰이지 않는다.
       proxy: {

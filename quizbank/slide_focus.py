@@ -8,7 +8,7 @@ from pathlib import Path
 
 import fitz
 
-from server.app.bank_validation.slide_focus import question_hash, authored_hash
+from studyez_contracts.bank.slide_focus import question_hash, authored_hash
 from .coverage import _call
 from .points import STR, INT, _array, _object
 from .session import SessionError

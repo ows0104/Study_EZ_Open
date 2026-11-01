@@ -75,3 +75,27 @@ bridge/release/
 
 # .apkg 를 풀어 눈으로 보려고 만드는 임시 자리. 덱에서 언제든 다시 푼다.
 .tmp_card_review/
+
+# Local study materials, work copies, and tool caches stay on this machine.
+output/
+work/
+tmp/
+.vite/
+.wrangler/
+.codex-remote-attachments/
+runs/_deployment/
+runs/_rollback/
+
+# Change records retain source/plans/state; generated evidence stays local.
+docs/changes/**/*.png
+docs/changes/**/*.jpg
+docs/changes/**/*.jpeg
+docs/changes/**/*.log
+docs/changes/**/*.txt
+docs/changes/**/*.zip
+docs/changes/**/*.json
+!docs/changes/**/state.json
+!docs/changes/**/release-config.json
+
+# Local staging audit path lists.
+docs/changes/**/*.bin

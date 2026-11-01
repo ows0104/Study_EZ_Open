@@ -43,6 +43,72 @@ def plan():
         "rejected_candidates": [], "unreadable_pages": []}
 
 
+@pytest.mark.parametrize('version', ['1.67', ''])
+@pytest.mark.parametrize('legacy_resume', [False, True])
+def test_web_postprocess_preserves_web_content_and_skips_authorship(bank, tmp_path, monkeypatch, version, legacy_resume):
+    pdf, raw, out = tmp_path / 'source.pdf', tmp_path / 'raw.md', tmp_path / 'out'
+    make_pdf(pdf)
+    raw.write_text('Saved web response', encoding='utf-8')
+    draft = question_first.as_draft(bank)
+    monkeypatch.setattr(run.organize, 'organize', lambda *a, **k: (copy.deepcopy(draft), {}))
+    def forbidden(*a, **k):
+        raise AssertionError('duplicate authorship')
+    monkeypatch.setattr(question_first, 'extract_points', forbidden)
+    monkeypatch.setattr(option_pools, 'write', forbidden)
+    old_plan = None
+    if legacy_resume:
+        old_plan = tmp_path / 'old-audit-points.json'
+        old_plan.write_text(json.dumps([{'point_id':'old', 'point':'Old audit index', 'source_refs':'S1 p.1'}]), encoding='utf-8')
+    def inspect(candidate, *a, **kw):
+        assert candidate == draft
+        assert kw['web_postprocess'] and kw['max_repair_rounds'] == 0
+        assert kw['question_first_mode']
+        points = json.loads(kw['point_plan'].read_text(encoding='utf-8'))
+        assert len(points) == len(bank['questions'])
+        assert not (out / 'independent-origin.json').exists()
+        return {'verified': True}
+    monkeypatch.setattr(run, '_run_authored', inspect)
+    assert run.run(raw, pdf, '강의', 'lecture', [{'id':'S1'},{'id':'S2'}], out,
+                   prompt_version=version, web_postprocess=True, point_plan=old_plan) == {'verified': True}
+
+
+@pytest.mark.parametrize('version', ['1.12', '1.67', ''])
+def test_web_postprocess_keeps_findings_and_runs_each_review_once(bank, tmp_path, monkeypatch, version):
+    pdf, raw, out = tmp_path / 'source.pdf', tmp_path / 'raw.md', tmp_path / 'out'
+    make_pdf(pdf)
+    raw.write_text('Saved response', encoding='utf-8')
+    candidate = question_first.as_draft(bank) if question_first.enabled(version) or not version else copy.deepcopy(bank)
+    monkeypatch.setattr(run.organize, 'organize', lambda *a, **k: (copy.deepcopy(candidate), {}))
+    def forbidden(*a, **k):
+        raise AssertionError('web content must not be rewritten')
+    for module, name in ((question_first,'extract_points'), (option_pools,'write'), (run.explain,'write'), (run.repair,'repair')):
+        monkeypatch.setattr(module, name, forbidden)
+    calls = []
+    def inspect(current, *a, **kw):
+        calls.append('source')
+        data = report(current)
+        data['checks'] = [{'point_id':p['point_id'], 'status':'covered',
+                           'question_ids':[q['question_id']], 'note':'test'}
+                          for p,q in zip(kw['points'], current['questions'])]
+        data['checks'][0]['status'] = 'gap'
+        data['checks'][0]['question_ids'] = []
+        return web_audit.shape_report(data, current, kw['points'], 1), []
+    monkeypatch.setattr(web_audit, 'inspect', inspect)
+    def review(current, *a, **k):
+        calls.append('answer')
+        return good_review(current)
+    monkeypatch.setattr(run.review, 'review', review)
+    monkeypatch.setattr(question_first, 'connect', lambda current,*a,**k:
+                        (question_first.apply_structure(current, structure_for(bank)), structure_for(bank), {}))
+    monkeypatch.setattr(run.slides, 'render', lambda *a, **k: ([], []))
+    result = run.run(raw, pdf, '강의', 'lecture', [{'id':'S1'},{'id':'S2'}], out,
+                     prompt_version=version, web_postprocess=True)
+    assert calls == ['source', 'answer']
+    assert result['repairs']['attempts'] == 0 and result['requiresRevision']
+    assert result['publication']['hasUnresolved']
+    assert question_first.content_hash(json.loads((out/'bank.json').read_text(encoding='utf-8'))) == question_first.content_hash(bank)
+
+
 def test_web_contract_and_organizer_defer_learning_metadata():
     body, version = generate.prompt_for("강의", "", [{"id": "S1", "kind": "notes_current", "filename": "a.pdf"}])
     assert question_first.enabled(version) and not question_first.enabled("1.41")
@@ -77,6 +143,22 @@ def test_structure_links_metadata_without_mutating_reviewed_content(bank):
     assert linked["questions"] == bank["questions"] and linked is not bank
     assert question_first.content_hash(linked) == question_first.content_hash(draft)
     assert not draft["concepts"] and all(not q["concept_id"] for q in draft["questions"])
+
+
+def test_reviewed_learning_positions_preserve_content_and_reset_with_draft(bank):
+    metadata = structure_for(bank)
+    for row in metadata["assignments"]:
+        row["learning_page"] = 26
+    metadata["assignments"][-1]["learning_page"] = 0  # No authored S1 position.
+    draft = question_first.as_draft(bank)
+    linked = question_first.apply_structure(draft, metadata)
+    assert linked["questions"][0]["learning_page"] == 26
+    assert "learning_page" not in linked["questions"][-1]
+    assert question_first.content_hash(linked) == question_first.content_hash(draft)
+    assert all("learning_page" not in q for q in question_first.as_draft(linked)["questions"])
+    metadata["assignments"][0]["learning_page"] = -1
+    with pytest.raises(SessionError):
+        question_first.apply_structure(draft, metadata)
 
 
 @pytest.mark.parametrize("problem", ["missing", "duplicate", "extra", "answer_rewrite"])
@@ -208,7 +290,7 @@ def test_pipeline_order_limits_and_publication_with_retained_findings(bank, tmp_
             assert events == ["points", "organize"]
             events.append("pools")
             return proposal(bank), {}
-        assert schema == question_first.STRUCTURE and events[-1] == "review"
+        assert schema == question_first.SEQUENCED_STRUCTURE and events[-1] == "review"
         events.append("graph")
         metadata = structure_for(bank)
         if scenario == "graph_cycle":

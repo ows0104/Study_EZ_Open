@@ -9,7 +9,7 @@ from pathlib import Path
 
 import fitz
 
-from server.app.bank_validation.slide_focus import question_hash
+from studyez_contracts.bank.slide_focus import question_hash
 
 YEAR = re.compile(r"(?<!\d)((?:19|20)\d{2})(?:\s*[-–]\s*([12])(?!\d))?")
 NUMBER = re.compile(r"(?<![\w.])(?:Q\s*)?(R?\s*\d{1,3})(?:\s*[–~\-]\s*(R?\s*\d{1,3}))?", re.I)
@@ -86,7 +86,13 @@ def connect(bank: dict, jokbo: Path | None, out: Path, run_id: str) -> tuple[dic
                                 doc[page - 1].get_pixmap(matrix=fitz.Matrix(1.5, 1.5), alpha=False).save(dest)
                             made[filename] = dest
                         refs.append({"year": str(hit["year"]), "number": no, "page": page, "filename": filename,
-                                     "pdfFilename": Path(path).name, "sourceSha256": hashes[path]})
+                                     "pdfFilename": Path(path).name, "sourceSha256": hashes[path],
+                                     "question": {"reference": f"{hit['year']} {no}번",
+                                                  "stem": hit.get("stem", ""),
+                                                  "options": hit.get("options", []),
+                                                  "answer": hit.get("answer"),
+                                                  "objection": hit.get("objection"),
+                                                  "needsFigure": bool(hit.get("needs_figure") or hit.get("figures"))}})
                 if not keys:
                     unresolved.append(locator)
                 mapped[locator] = refs

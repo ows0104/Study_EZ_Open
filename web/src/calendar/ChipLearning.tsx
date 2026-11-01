@@ -12,6 +12,7 @@ const phaseLabels = { pre: "예습", main: "복습" };
 const clampScore = (score: number) => Math.max(0, Math.min(100, score));
 
 function progressFor(lecture: LectureRef, phase: Phase): Progress {
+  if (lecture.studyLoaded === false) return { score: null, unknown: true, description: `${phaseLabels[phase]}: 학습률 불러오는 중` };
   if (phase === "pre") {
     const progress = lecture.prequizProgress;
     if (!lecture.marks.prequiz || !progress || progress.total <= 0) {

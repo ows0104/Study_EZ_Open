@@ -1,6 +1,7 @@
 // Local-only browser regression: real BankSolve with controlled network completion.
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { MemoryRouter } from "react-router-dom";
 import "../src/styles/base.css";
 
 const results: string[] = [];
@@ -23,7 +24,7 @@ let releaseReveal: (() => void) | undefined;
 let rejectReveal = false;
 let revealDone = false;
 const answer = (id: number) => ({ answer: `ANSWER-${id}`, answerUnits: [], correctOptionIds: [],
-  answerPairs: [], correctOrder: [], slides: [{ page: 1, url: imageUrl }], conflict: "", external: false });
+  answerPairs: [], correctOrder: [], slides: [{ page: 1, primary: true, url: imageUrl }], conflict: "", external: false });
 window.fetch = async (input, init) => {
   const path = new URL(String(input), location.origin).pathname;
   const body = init?.body ? JSON.parse(String(init.body)) : {};
@@ -31,7 +32,7 @@ window.fetch = async (input, init) => {
   let status = 200;
   if (path.endsWith("/next")) result = { question: { question_id: `Q${question}`, question: `QUESTION-${question}`,
     format: "basic", options: [], tier: "Core", retrieval_direction: "direct", conflict_id: "" },
-    reviewToken: `token-${question}`, preloadSlides: [{ page: 1, url: imageUrl }] };
+    reviewToken: `token-${question}`, preloadSlides: [{ page: 1, primary: true, url: imageUrl }] };
   else if (path.endsWith("/prepare")) {
     if (question === 2) { status = 503; result = { detail: "warmup unavailable" }; }
     else { result = answer(question); prepared = true; }
@@ -48,8 +49,10 @@ window.fetch = async (input, init) => {
 
 try {
   const { BankSolve } = await import("../src/bank/BankSolve");
-  createRoot(document.getElementById("root")!).render(<BankSolve base="/api/test/bank" lecture={{ subject: "테스트", runId: "demo" }} onFinished={() => {}} />);
+  createRoot(document.getElementById("root")!).render(<MemoryRouter><BankSolve base="/api/test/bank" lecture={{ subject: "테스트", runId: "demo" }} onFinished={() => {}} /></MemoryRouter>);
   await waitFor(() => prepared && images.some((image) => image.complete && image.naturalWidth));
+  // The mock's prepared flag is set inside fetch, before api() parses its body.
+  await new Promise(resolve => setTimeout(resolve, 30));
   check(!document.body.textContent?.includes("ANSWER-1"), "answer stays hidden before click");
   document.querySelector<HTMLButtonElement>(".quiz-submit")!.click();
   await waitFor(() => document.querySelector(".quiz-answer"));

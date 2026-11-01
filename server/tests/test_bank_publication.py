@@ -35,6 +35,7 @@ def main():
     bank = without_retired(example_bank())
     bank['build_meta']['schema_version'] = '3.1'
     bank['questions'][0]['question'] = bank['questions'][0]['answer']
+    bank['questions'][2]['prerequisites'] = []
     validation = validate_bank(bank, ['S1'])
     assert not validation['pass'] and validate_bank(bank, ['S1'], check_quality=False)['pass']
     issue = {'question_id': 'Q1', 'severity': 'error', 'issue': 'answer disclosed', 'reason': 'Authored answer in stem'}
@@ -58,6 +59,43 @@ def main():
     shown = client.post(base + '/reveal', json={'reviewToken': first['reviewToken']}).json()
     assert shown['medicalReview']['verdict'] == 'wrong' and shown['reviewIssues'] == [issue['reason']]
     app.dependency_overrides.pop(get_current_user)
+    # Editing a healthy card must retain unrelated unresolved integration issues.
+    headers = {'Authorization': 'Bearer local-test-token'}
+    route = admin + '/bank/cards/Q2'
+    with SessionLocal() as db:
+        saved = db.get(QuizBank, ('test', 'demo'))
+        original_bank = copy.deepcopy(saved.bank)
+        original_validation = copy.deepcopy(saved.validation)
+        build_id = saved.build_id
+    target = next(q for q in original_bank['questions'] if q['question_id'] == 'Q2')
+    changed = {**target, 'question': 'Updated independent recall question?'}
+    def edit(question, expected=target):
+        return client.put(route, headers=headers, json={'action': 'edit',
+            'buildId': build_id, 'expectedQuestion': expected, 'question': question})
+    edited = edit(changed)
+    assert edited.status_code == 200, edited.text
+    with SessionLocal() as db:
+        saved = db.get(QuizBank, ('test', 'demo'))
+        edited_bank = copy.deepcopy(saved.bank)
+        edited_validation = copy.deepcopy(saved.validation)
+        assert saved.build_id == build_id and saved.open_to_students
+        assert saved.review == review and not saved.validation['pass']
+        assert saved.validation['errors'] == original_validation['errors']
+        assert 'Q3: integration의 기초 문항 필요' in saved.validation['errors']
+        assert saved.validation['revision'] == original_validation['revision']
+        assert saved.validation['publication']['allowed']
+        assert saved.validation['edits']['Q2']['original'] == target
+        assert saved.bank['questions'] == [changed if q['question_id'] == 'Q2' else q
+                                           for q in original_bank['questions']]
+    for invalid in ({**changed, 'prerequisites': ['missing-id']},
+                    {**changed, 'question': changed['answer']},
+                    {**changed, 'retrieval_direction': 'integration', 'prerequisites': []}):
+        rejected = edit(invalid, expected=changed)
+        assert rejected.status_code == 422, rejected.text
+        with SessionLocal() as db:
+            saved = db.get(QuizBank, ('test', 'demo'))
+            assert saved.bank == edited_bank and saved.validation == edited_validation
+    print('PASS common edits retain unrelated integration issues and review records; invalid edits remain atomic')
     # A runner cannot bypass broken runtime references or forge a publication stamp.
     broken = copy.deepcopy(payload)
     broken['bank']['questions'][0]['prerequisites'] = ['missing-id']

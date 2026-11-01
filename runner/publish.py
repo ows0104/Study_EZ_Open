@@ -54,40 +54,24 @@ from __future__ import annotations
 
 import json
 import time
-import unicodedata
-import urllib.error
 import urllib.parse
-import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from . import ahead, bank, deck, filenames, fingerprint, gate, matching
+from . import ahead, deck, filenames, fingerprint, gate, matching
+from .bank_flow import sources as bank_sources
 from . import preview as preview_mod
 from .filenames import LectureFile
 from .watch import assign_run_ids
+from .transport import (
+    DEFAULT_API_BASE, CONTENT_TYPES, DEFAULT_CONTENT_TYPE, UPLOAD_RETRIES, PublishError, content_type,
+    Upload, Client, lecture_path, _put_with_retry,
+)
 
-# 배포된 API. --api나 STUDYEZ_API_BASE_URL로 바꾼다. 운영 안내는 docs/deployment.md.
-DEFAULT_API_BASE = "https://studyez-api-97999573571.asia-northeast3.run.app"
 
 LEDGER_NAME = "published.json"
-
-# 서명 URL은 content-type까지 서명한다(botocore가 SignedHeaders에 넣는다).
-# 여기서 정한 값과 PUT의 헤더가 다르면 R2가 SignatureDoesNotMatch로 막는다.
-# `.md` 는 Quiz Bank 의 족보 조각이다(2026-10-04). 확장이 이 형식 그대로 ChatGPT 에 붙인다.
-CONTENT_TYPES = {".pdf": "application/pdf", ".png": "image/png", ".md": "text/markdown"}
-DEFAULT_CONTENT_TYPE = "application/octet-stream"
-
-UPLOAD_RETRIES = 3
-
-
-class PublishError(RuntimeError):
-    """서버가 거절했거나 연결이 끊겼다. 어느 요청이었는지까지 담는다."""
-
-
-def content_type(path: Path) -> str:
-    return CONTENT_TYPES.get(path.suffix.lower(), DEFAULT_CONTENT_TYPE)
 
 
 def human(size: int) -> str:
@@ -96,40 +80,6 @@ def human(size: int) -> str:
     # 1KB 아래를 0KB로 적으면 크기를 말한 것이 아니라 안 말한 것이 된다. 다만
     # 진짜 0은 0으로 적는다 — "올린 것 없음"과 "작은 것 하나"는 다른 말이다.
     return f"{max(1, size // 1024)}KB" if size else "0KB"
-
-
-@dataclass(frozen=True)
-class Upload:
-    """올릴 파일 하나. `kind`는 계약의 다섯 가지뿐이다."""
-
-    kind: str
-    path: Path
-
-    @property
-    def filename(self) -> str:
-        # Synology 파일명 일부가 NFD다. 서버도 NFC로 모으지만 여기서 맞춰 두어야
-        # 표시(`published.json`)와 서버의 키가 같은 문자열이 된다.
-        return unicodedata.normalize("NFC", self.path.name)
-
-    @property
-    def size(self) -> int:
-        return self.path.stat().st_size
-
-    @property
-    def mtime(self) -> int:
-        return int(self.path.stat().st_mtime)
-
-    @property
-    def key(self) -> str:
-        return f"{self.kind}/{self.filename}"
-
-    def payload(self) -> dict[str, Any]:
-        return {
-            "kind": self.kind,
-            "filename": self.filename,
-            "sizeBytes": self.size,
-            "contentType": content_type(self.path),
-        }
 
 
 MAIN, PRE = "main", "pre"
@@ -550,7 +500,7 @@ def plan_subject(
                    Path(f"[{p.run_id}] {p.item.title.replace('/', ' ')}({','.join(p.item.professors)}).pdf"))
         for p in plans if any(u.kind in ("notes_prev", "notes_current") for u in p.uploads)
     }
-    slices = bank.jokbo_slices(runs_dir, subject, with_notes)
+    slices = bank_sources.jokbo_slices(runs_dir, subject, with_notes)
     for plan in plans:
         if plan.run_id in slices:
             plan.uploads.append(Upload("jokbo", slices[plan.run_id]))
@@ -561,63 +511,6 @@ def plan_subject(
 
 
 # ------------------------------------------------------------------ 서버
-
-
-class Client:
-    """러너 토큰으로 부르는 API. 실패는 삼키지 않는다."""
-
-    def __init__(self, base: str, token: str, timeout: int = 600) -> None:
-        self.base = base.rstrip("/")
-        self.token = token
-        self.timeout = timeout
-
-    def call(self, method: str, path: str, payload: Any = None) -> Any:
-        data = json.dumps(payload, ensure_ascii=False).encode("utf-8") if payload is not None else None
-        request = urllib.request.Request(
-            f"{self.base}{path}",
-            data=data,
-            method=method,
-            headers={"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"},
-        )
-        return self._open(request)
-
-    def put_file(self, url: str, path: Path) -> None:
-        """서명 URL에 파일 본문을 민다.
-
-        content-type이 서명에 들어 있으므로 발급 때 적어 보낸 값과 **같은 헤더**를
-        달아야 한다. Content-Length도 직접 넣는다 — 파일 객체를 주면 urllib이
-        길이를 모르고 chunked로 보내는데 R2가 그걸 서명과 함께 받지 않는다.
-
-        주소가 상대 경로로 올 수 있다. local-test 모드에서 R2 대신 서버 자신이
-        파일을 받는데, `PUBLIC_API_BASE_URL`이 비어 있으면 `/api/local-storage/…`
-        만 온다. 같은 서버가 받을 자리이므로 API 주소에 이어 붙인다.
-        """
-        size = path.stat().st_size
-        with path.open("rb") as handle:
-            request = urllib.request.Request(
-                urllib.parse.urljoin(f"{self.base}/", url),
-                data=handle,
-                method="PUT",
-                headers={"Content-Type": content_type(path), "Content-Length": str(size)},
-            )
-            self._open(request, parse=False)
-
-    def _open(self, request: urllib.request.Request, parse: bool = True) -> Any:
-        where = f"{request.get_method()} {request.full_url.split('?')[0]}"
-        try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                body = response.read()
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", "replace").strip()[:300]
-            raise PublishError(f"{exc.code} {where} — {detail}") from exc
-        except (urllib.error.URLError, OSError) as exc:
-            raise PublishError(f"{where} 실패 — {exc}") from exc
-        return json.loads(body) if parse and body else None
-
-
-def lecture_path(subject: str, run_id: str, tail: str = "") -> str:
-    quoted = urllib.parse.quote(unicodedata.normalize("NFC", subject), safe="")
-    return f"/api/admin/lectures/{quoted}/{urllib.parse.quote(run_id, safe='')}{tail}"
 
 
 # ------------------------------------------------------------------ 표시(ledger)
@@ -811,13 +704,3 @@ def _provider(url: str) -> str:
     return "chatgpt"
 
 
-def _put_with_retry(client: Client, url: str, upload: Upload) -> None:
-    """끊긴 업로드는 다시 시도한다. 30~56MB짜리가 한 번 튄다고 편을 버리지 않는다."""
-    for attempt in range(1, UPLOAD_RETRIES + 1):
-        try:
-            client.put_file(url, upload.path)
-            return
-        except PublishError:
-            if attempt == UPLOAD_RETRIES:
-                raise
-            time.sleep(2 * attempt)

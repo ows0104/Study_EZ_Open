@@ -48,7 +48,7 @@ def main():
     assert timeline(client)["linkedAt"] is None
     assert client.put(BASE + "/bank/links", headers=ADMIN, json={"shareUrl": SHARE}).status_code == 200
     assert timeline(client)["linkedAt"] is None
-    with patch("app.routes.bank.datetime") as clock:
+    with patch("app.routes.bank_api.common.datetime") as clock:
         clock.now.return_value = FIRST
         assert client.put(BASE + "/bank/links", headers=ADMIN, json={"shareUrl": SHARE + "-new"}).status_code == 200
     assert timeline(client)["linkedAt"] == FIRST.isoformat()
@@ -66,26 +66,35 @@ def main():
     bank = example_bank()
     for q in bank["questions"]:
         q.update(hint="회상 단서", explanation="정답 부연")
-    with patch("app.routes.bank.datetime") as clock:
+    with patch("app.routes.bank_api.publication.datetime") as clock:
         clock.now.return_value = SECOND
         uploaded = client.put(BASE + "/bank", headers=RUNNER, json={"respondedAt": responded,
             "bank": bank, "validation": {"pass": True, "errors": [], "warnings": []}})
     assert uploaded.status_code == 200, uploaded.text
     assert uploaded.json()["status"] == "ready", uploaded.text
     expected = {"shareUrl": SHARE + "-new", "linkedAt": FIRST.isoformat(), "builtAt": SECOND.isoformat()}
-    assert timeline(client) == expected
-    # Student list has public timestamps but never the administrator's personal URL.
+    admin_timeline = timeline(client)
+    assert admin_timeline.pop("deleteVersion")
+    assert admin_timeline == expected
+    detail_url = f"/api/lectures/{KEY[0]}/{KEY[1]}"
+    assert client.get(detail_url, headers=ADMIN).json()["bank"]["shareUrl"] == SHARE + "-new"
+    # Student list keeps upload timestamps without either bank conversation URL.
     app.dependency_overrides[get_current_user] = lambda: CurrentUser(
         id="student", email="s@example.com", is_admin=False, apps=dict.fromkeys(APP_POLICY, ROLE_ADMIN))
-    assert timeline(client, {}) == expected
+    assert timeline(client, {}) == {k: v for k, v in expected.items() if k != "shareUrl"}
+    for payload in (client.get(detail_url).json()["bank"],
+                    client.get(detail_url + "/bank").json()["summary"]):
+        assert payload["usable"]
+        assert "shareUrl" not in payload and "conversationUrl" not in payload
     app.dependency_overrides.clear()
-    # Closing the bank hides its upload metadata from students; share metadata remains public.
+    # Closing the bank hides the entire timeline from students.
     with SessionLocal() as db:
         db.get(QuizBank, KEY).open_to_students = False
         db.commit()
     app.dependency_overrides[get_current_user] = lambda: CurrentUser(
         id="student", email="s@example.com", is_admin=False, apps=dict.fromkeys(APP_POLICY, ROLE_ADMIN))
-    assert timeline(client, {}) == {**expected, "builtAt": None}
+    assert timeline(client, {}) is None
+    assert client.get(detail_url).json()["bank"] is None
     app.dependency_overrides.clear()
     assert client.put(BASE + "/bank/links", headers=ADMIN, json={"shareUrl": ""}).status_code == 200
     assert timeline(client)["linkedAt"] is None

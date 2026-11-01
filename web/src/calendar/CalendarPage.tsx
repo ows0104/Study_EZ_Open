@@ -1,18 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api } from "../api";
 import { useBankLink } from "../bank/bankBridge";
 import { BundleButton } from "../bundle/BundleButton";
 import { decksIn, useBundleDecks } from "../bundle/decks";
 import { bumpPreviewVersion, usePreviewLink } from "../bridge/previewBridge";
-import { takeTimetable } from "../firstScreen";
-import { previewProviders, type PreviewProvider, type TimetableEvent } from "../types/lectures";
+import { previewProviders, type PreviewProvider } from "../types/lectures";
 import { useMe } from "../useMe";
 import { CalendarGrid } from "./CalendarGrid";
 import { EventChip } from "./EventChip";
-import { EventPanel } from "./EventPanel";
+import { useCalendarTimetable } from "./useCalendarTimetable";
 import {
   addDays,
+  calendarRange,
   formatWeekTitle,
   startOfWeek,
   toDateKey,
@@ -21,6 +21,8 @@ import {
   type CalendarMode,
 } from "./entries";
 
+const EventPanel = lazy(() => import("./EventPanel").then(m => ({ default: m.EventPanel })));
+
 /**
  * 캘린더가 홈이다.
  *
@@ -28,13 +30,15 @@ import {
  * 그래서 첫 배포에 강의 자료가 하나도 없어도 쓸모가 있다.
  */
 export function CalendarPage() {
-  const [events, setEvents] = useState<TimetableEvent[] | null>(null);
-  const [error, setError] = useState("");
   const [params, setParams] = useSearchParams();
   const mode: CalendarMode = params.get("view") === "month" ? "month" : "week";
   const savedDate = params.get("date") ?? "";
   const parsedDate = /^\d{4}-\d{2}-\d{2}$/.test(savedDate) ? new Date(`${savedDate}T12:00:00`) : new Date();
   const anchorDate = Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+  const [showLearning, setShowLearning] = useState(false);
+  const [showBundles, setShowBundles] = useState(false);
+  const range = calendarRange(anchorDate, mode);
+  const { events, error, learningError, learningLoading, reload } = useCalendarTimetable(range.start, range.end, showLearning);
   // 방문 기록에 날짜·보기·열린 패널을 남겨 퀴즈에서 뒤로 와도 같은 자리로 돌아온다.
   function remember(name: string, value: string | null) {
     setParams(current => {
@@ -55,7 +59,7 @@ export function CalendarPage() {
    * 다섯과 열려 있는 패널이 같은 값을 봐야 하고, 칸마다 훅을 걸면 강의 수만큼
    * 요청이 붙는다(`isAdmin` 을 여기서 한 번 묻는 것과 같은 이유다).
    */
-  const bundles = useBundleDecks();
+  const bundles = useBundleDecks(isAdmin && showBundles && mode === "week", new URLSearchParams(range).toString());
 
   /**
    * 확장이 만들어 준 예습 링크를 받아 저장한다. 종류에 따라 주인이 다르다.
@@ -93,36 +97,9 @@ export function CalendarPage() {
       // 칸의 점(marks)과 열려 있는 패널을 둘 다 갱신한다. 시간표만 다시 부르면
       // 패널은 자기가 부른 강의 상세를 그대로 들고 있어서 안 바뀐다.
       bumpPreviewVersion();
-      const payload = await api<{ events: TimetableEvent[] }>("/api/timetable");
-      setEvents(payload.events);
-    }, []),
+      reload();
+    }, [reload]),
   );
-
-  useEffect(() => {
-    let live = true;
-    let request = 0;
-    function load(initial = false) {
-      const current = ++request;
-      (initial ? takeTimetable() : api<{ events: TimetableEvent[] }>("/api/timetable"))
-        .then(payload => {
-          if (live && current === request) { setEvents(payload.events); setError(""); }
-        })
-        .catch((cause: Error) => { if (live && current === request) setError(cause.message); });
-    }
-    const refresh = () => load();
-    load(true);
-    window.addEventListener("focus", refresh);
-    return () => { live = false; window.removeEventListener("focus", refresh); };
-  }, []);
-
-  /**
-   * 강의 상세 조각을 미리 받아 둔다.
-   *
-   * 같은 탭에서 강의 화면으로 이동할 때 필요한 번들을 미리 받는다.
-   */
-  useEffect(() => {
-    void import("../lecture/LecturePage");
-  }, []);
 
   const entries = useMemo(() => toCalendarEntries(events ?? []), [events]);
   const opened = entries.find(entry => entry.id === params.get("event")) ?? null;
@@ -140,7 +117,7 @@ export function CalendarPage() {
     );
   }
 
-  if (error) return <p className="notice is-error">{error}</p>;
+  if (error && !events) return <p className="notice is-error" role="alert">{error}{" "}<button onClick={reload}>다시 시도</button></p>;
   if (!events) return <p className="notice">시간표를 불러오는 중…</p>;
 
   return (
@@ -183,6 +160,14 @@ export function CalendarPage() {
           </div>
         </div>
 
+        <div className="calendar-options">
+          <button className="is-quiet" aria-pressed={showLearning} onClick={() => setShowLearning(old => !old)}>학습률 {showLearning ? "접기" : "보기"}</button>
+          {isAdmin && mode === "week" ? <button className="is-quiet" aria-pressed={showBundles} onClick={() => setShowBundles(old => !old)}>덱 모아받기 {showBundles ? "접기" : "보기"}</button> : null}
+          {learningLoading ? <span role="status">표시된 기간의 학습률을 불러오는 중…</span> : null}
+          {showBundles && mode === "week" && !bundles.decks && !bundles.error ? <span role="status">표시된 기간의 덱 목록을 불러오는 중…</span> : null}
+        </div>
+        {error || learningError || bundles.error ? <p className="notice is-error" role="alert">{error || learningError || bundles.error}{" "}<button onClick={() => { reload(); bundles.reload(); }}>다시 시도</button></p> : null}
+
         <CalendarGrid
           mode={mode}
           anchorDate={anchorDate}
@@ -194,12 +179,13 @@ export function CalendarPage() {
               compact={compact}
               onOpen={setOpened}
               active={opened?.id === entry.id}
+              showLearning={showLearning}
             />
           )}
           /* 격자 맨 아랫줄의 하루치 모아받기. 예습과 복습을 갈라 둔다 — 쓰는
              때가 다르고(강의 전 · 강의 후) 덱 나무도 이미 갈라져 있다. 덱이
              없는 날에는 `BundleButton` 이 스스로 아무것도 안 그린다. */
-          renderDay={(dateKey) => {
+          renderDay={isAdmin && showBundles ? (dateKey) => {
             if (!isAdmin) return null;
             const all = bundles.decks;
             if (!all) return null;
@@ -218,17 +204,17 @@ export function CalendarPage() {
                 ))}
               </span>
             );
-          }}
+          } : undefined}
         />
 
         <div className="calendar-legend">
-          <span className="legend-group is-learning" aria-label="학습률 표시 안내">
+          {showLearning ? <span className="legend-group is-learning" aria-label="학습률 표시 안내">
             <b>왼쪽 예습 · 오른쪽 복습</b>
             <span><i className="learning-legend-track is-empty" /> 0%: 테두리만</span>
             <span><i className="learning-legend-track is-progress" /> 진행 중</span>
             <span><i className="learning-legend-track is-complete" /> 100%</span>
             <span>빈칸: 퀴즈 없음</span>
-          </span>
+          </span> : null}
           <span className="legend-group">
             <span>
               <i className="legend-swatch is-lecture" /> 강의
@@ -248,13 +234,11 @@ export function CalendarPage() {
 
       {/* key로 칸이 바뀔 때 패널 안의 상태(고른 강의·불러온 자료)를 갈아 끼운다. */}
       {opened ? (
-        <EventPanel
+        <Suspense fallback={<aside className="event-panel"><p role="status">강의 자료를 불러오는 중…</p><button onClick={() => setOpened(null)}>닫기</button></aside>}><EventPanel
           key={opened.id}
           entry={opened}
           onClose={() => setOpened(null)}
-          bundleDecks={bundles.decks}
-          onBundleDone={bundles.reload}
-        />
+        /></Suspense>
       ) : null}
 
     </div>

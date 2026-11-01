@@ -5,7 +5,7 @@ import json
 import re
 
 from .schema import DIRECTIONS, FORMATS, TIERS
-from server.app.bank_validation.cloze import INLINE, normalize_cloze
+from studyez_contracts.bank.cloze import INLINE, normalize_cloze
 from .session import SessionError
 
 # Conflict headings and references to other questions are not question blocks.
@@ -101,6 +101,9 @@ def read_blocks(raw: str) -> list[dict]:
                 or mode not in ("recall_first", "comparison", "none") or choice and mode == "none":
             raise SessionError(f"{qid}: 문항 블록 메타데이터 오류")
         body = raw[heading.end():headings[i + 1].start() if i + 1 < len(headings) else len(raw)]
+        conflict = re.search(r'^#{1,6}[ \t]+CF[\w-]+[ \t]*$', body, re.M)
+        if conflict:
+            body = body[:conflict.start()]
         evidence, evidence_span = None, None
         evidence_marker = re.search(r"(?:^|\s|&#x20;)근거:[ \t]*(?=(?:`{1,2}(?!`)[ \t]*)?\{)", body)
         if evidence_marker:
@@ -175,6 +178,10 @@ def require_ids(bank: dict, blocks: list[dict]) -> None:
 
 
 def _labels(items: list[str], qid: str) -> dict[str, str]:
+    # File conversion can retain the blank line after a section heading as an
+    # empty array entry. It has no authored ID or text; keep checking every
+    # nonempty choice strictly rather than treating that separator as a choice.
+    items = [item for item in items if item.strip()]
     pairs = [LABEL.fullmatch(item) for item in items]
     if not items or not all(pairs) or len({m[1] for m in pairs}) != len(items):
         raise SessionError(f"{qid}: 보기의 ID·번호를 보존해야 합니다.")

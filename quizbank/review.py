@@ -22,8 +22,8 @@ from pathlib import Path
 
 from . import session
 from .schema import REVIEW, VERDICTS
-from server.app.bank_validation.choices import pool_review_identity
-from server.app.bank_validation import pool_checks
+from studyez_contracts.bank.choices import pool_review_identity
+from studyez_contracts.bank import pool_checks
 
 PROMPT = Path(__file__).parent / "prompts" / "review.md"
 SYSTEM = "You are a meticulous medical fact checker for Korean medical-school exam questions. Answer only with the requested JSON."

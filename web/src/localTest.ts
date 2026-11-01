@@ -7,4 +7,6 @@
  *
  * 빌드 시점에 값이 없으면 코드째로 사라진다.
  */
-export const LOCAL_TEST_TOKEN: string = import.meta.env.VITE_LOCAL_TEST_TOKEN ?? "";
+export const LOCAL_TEST_TOKEN: string = import.meta.env.DEV
+  ? (import.meta.env.VITE_LOCAL_TEST_TOKEN ?? "")
+  : "";

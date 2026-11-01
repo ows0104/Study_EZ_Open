@@ -6,7 +6,7 @@ from quizbank import runtime
 
 def setup_source(tmp_path, monkeypatch):
     root = tmp_path / 'deployed-copy'
-    prompt = root / 'web/src/bank/bankPrompt.md'
+    prompt = root / 'content/prompts/bank/bankPrompt.md'
     prompt.parent.mkdir(parents=True)
     prompt.write_text('<!--\nVersion: 1.66\n-->\n문항 품질 원칙\n원본 기준', encoding='utf-8')
     code = root / 'quizbank/run.py'
