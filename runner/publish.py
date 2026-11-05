@@ -126,6 +126,7 @@ class LecturePlan:
     # 아직 필기가 없는 강의. 시간표 칸에서 세운 자리다. **올해 필기만 없을 뿐
     # Pre-Quiz는 다 붙는다** — 예습이 필요한 쪽이 이쪽이라 그러라고 세운 자리다.
     ahead: bool = False
+    preview_source: dict | None = None
 
     @property
     def label(self) -> str:
@@ -148,6 +149,7 @@ class LecturePlan:
             # 것처럼 보이고 화면이 "필기 v1"이라고 말한다.
             "author": "" if self.ahead else self.item.author,
             "version": None if self.ahead else self.item.version,
+            **({"previewSource": self.preview_source} if self.preview_source else {}),
         }
 
     def kinds(self) -> str:
@@ -238,6 +240,14 @@ def _add_prev_year(plan: LecturePlan, run_dir: Path) -> None:
     슬라이드 이미지는 `pre_items`가 있을 때만 따라 올린다. 오답 해설이 그
     번호로 찾는 유일한 소비자이고, 없으면 아무도 읽지 않는다.
     """
+    source = plan.preview_source or {}
+    selected = source.get('selected') or {}
+    if selected and selected.get('filename') != source.get('baselineFilename'):
+        target = deck._load(run_dir / deck.TARGET_NAME) or {}
+        if (target.get('subject') != plan.subject or target.get('run_id') != plan.run_id
+                or Path(target.get('prev_pdf', '')).name != selected['filename']):
+            plan.notes.append('예습 원본 변경 — 기존 대화·덱 보존, 새 원본의 대상 확인 전 재사용 보류')
+            return
     apkg = _pre_apkg(run_dir)
     if apkg:
         plan.uploads.append(Upload("pre_apkg", apkg))
@@ -421,7 +431,8 @@ def plan_subject(
         raise ValueError('파생 예습 입력 ID가 원본 강의와 겹칩니다.')
     prev_files += extra
     run_ids = assign_run_ids(this_files)
-    prev_run_ids = assign_run_ids(prev_files)
+    from .preview_sources import History
+    history = History(root, subject, this_year, prev_year, prev_files, runs_dir, current_files=this_files)
     # 사람이 확인한 짝이 먼저다(`_pairs`). 올해 필기가 올라온 뒤에도 그렇다.
     matches = {m.this_year.uid: m for m in matching.match_with_confirmed(
         this_files, prev_files, ahead.load_pairs(runs_dir, subject))}
@@ -448,10 +459,12 @@ def plan_subject(
             _add_this_year(plan, run_dir)
 
         match = matches.get(item.uid)
-        if match and match.confident and match.prev_year is not None:
-            prev = match.prev_year
+        selected = history.select(item, match.prev_year if match and match.confident else None)
+        plan.preview_source = selected.metadata
+        if selected.item is not None:
+            prev = selected.item
             plan.uploads.append(Upload("notes_prev", prev.path))
-            plan.prev_run_id = prev_run_ids[prev.uid]
+            plan.prev_run_id = selected.run_id
             prev_dir = runs_dir / plan.prev_run_id
             prev_owned, prev_note = _owns(prev_dir, prev)
             if prev_note:
@@ -473,16 +486,19 @@ def plan_subject(
 
     if timetable is not None:
         # 아직 필기가 없는 강의. **예습이 필요한 쪽이 이쪽이다.**
-        seats, ahead_warnings = ahead.plan(subject, this_files, prev_files, timetable, runs_dir)
+        seats, ahead_warnings = ahead.plan(subject, this_files, prev_files, timetable, runs_dir,
+                                          include_unmatched=True)
         warnings += ahead_warnings
         for seat in seats:
             # 짝을 넘기는 이유는 제목 때문이다. 시간표 칸은 제목이 접혀 와서
             # 첫 줄만 읽으면 문장 중간에서 끊긴다 (`ahead.unfold_title`).
             plan = LecturePlan(subject=subject, run_id=seat.cell.key,
                                item=seat.cell.as_lecture(seat.prev), ahead=True)
-            if seat.prev is not None:
-                plan.uploads.append(Upload("notes_prev", seat.prev.path))
-                plan.prev_run_id = prev_run_ids.get(seat.prev.uid, "")
+            selected = history.select(plan.item, seat.prev, source='timetable')
+            plan.preview_source = selected.metadata
+            if selected.item is not None:
+                plan.uploads.append(Upload("notes_prev", selected.item.path))
+                plan.prev_run_id = selected.run_id
                 if seat.source == "confirmed":
                     plan.notes.append(f"작년 짝은 사람이 확인해 준 것이다 (runs/{ahead.PAIRS_DIR}/{subject}.json)")
 
@@ -491,11 +507,13 @@ def plan_subject(
                 # 뒤다. 강의 직전에 푸는 퀴즈가 강의 다음 날 도착하는 셈이었다.
                 prev_dir = runs_dir / plan.prev_run_id if plan.prev_run_id else None
                 if prev_dir is not None:
-                    prev_owned, prev_note = _owns(prev_dir, seat.prev)
+                    prev_owned, prev_note = _owns(prev_dir, selected.item)
                     if prev_note:
                         plan.notes.append(prev_note)
                     if prev_owned:
                         _add_prev_year(plan, prev_dir)
+            elif seat.note:
+                plan.notes.append(seat.note)
 
             # 위쪽 편과 같은 검문을 받는다. 필기가 없다는 것이 덱을 덜 보는
             # 이유가 되지는 않는다.
@@ -590,6 +608,14 @@ def publish(
     report = Report(lectures=len(plans))
     if not plans:
         return report
+
+    if any(plan.preview_source for plan in plans):
+        capabilities = client.call('GET', '/api/admin/previews') or {}
+        if not isinstance(capabilities, dict) or capabilities.get('previewSourceVersion') != 1:
+            reason = '서버의 교수별 예습 자료 보존 기능 준비 전 — 강의·첨부 변경을 보류한다'
+            report.failures.append(reason)
+            log(reason)
+            return report
 
     answer = client.call("POST", "/api/admin/lectures", [plan.payload for plan in plans])
     report.linked = int(answer.get("linked", 0))

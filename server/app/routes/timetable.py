@@ -21,6 +21,7 @@ from app.auth import CurrentUser, require_approved_user
 from app.database import get_db
 from app.lecture_mastery import lecture_overviews
 from app.models import Lecture, TimetableEvent
+from app.preview_sources import public_source
 from app.routes.common import asset_grabs, bank_timelines, grab_tracks, material_marks, prequiz_progress
 
 router = APIRouter()
@@ -62,6 +63,7 @@ def read_timetable(
         marks[key]["quiz"] = overview["ready"]
 
     by_event: dict[str, list[dict[str, Any]]] = {}
+    event_map = {event.id: event for event in events}
     for lecture in lectures:
         key = (lecture.subject, lecture.run_id)
         by_event.setdefault(lecture.timetable_event_id, []).append(
@@ -70,6 +72,7 @@ def read_timetable(
                 "runId": lecture.run_id,
                 "title": lecture.title,
                 "professors": lecture.professors,
+                "previewSource": public_source(lecture, event_map.get(lecture.timetable_event_id)),
                 "marks": marks.get(key, {}),
                 "bankTimeline": timelines.get(key),
                 "mastery": overviews.get(key, {}).get("mastery"),

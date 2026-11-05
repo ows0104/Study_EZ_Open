@@ -159,7 +159,7 @@ def test_올해_필기_전에도_시간표_교수의_족보를_예습에_올린�
     cell = ahead.Cell(date="2026-10-02", slot=2, start_time="10:00", title="약물의 이해",
                       heading="콜린성 약리학(2)", body=("콜린성 약리학(2)",),
                       professors=("이올해",), course="약물의 이해")
-    monkeypatch.setattr(ahead, "plan", lambda *a: ([SimpleNamespace(cell=cell, prev=prev, source="confirmed")], []))
+    monkeypatch.setattr(ahead, "plan", lambda *a, **kw: ([SimpleNamespace(cell=cell, prev=prev, source="confirmed")], []))
     seen = {}
     md = tmp_path / "올해족보.md"
     md.write_text("# 올해 교수 족보", encoding="utf-8")

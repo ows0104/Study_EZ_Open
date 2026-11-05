@@ -16,6 +16,24 @@ export const previewProviderLabels: Record<PreviewProvider, string> = {
 
 export type EventCategory = "lecture" | "practice" | "exam" | "holiday" | "elective" | "study";
 
+export type PreviewSource = {
+  version: 1;
+  year: number;
+  currentProfessors: string[];
+  currentSource: "notes" | "timetable";
+  baselineYear: number;
+  baselineProfessors: string[];
+  changed: boolean | null;
+  newProfessor: boolean | null;
+  status: "ok" | "needs_review";
+  reason: string;
+  coverage: { available: number[]; missing: number[]; incomplete: number[]; failed: number[] };
+  selected: { year: number; filename: string; professors: string[]; sha256: string; sizeBytes: number;
+    match: "same" | "partial" | "different" | "unknown" } | null;
+  conversationNeedsReview?: boolean;
+  attachmentNeedsReview?: boolean;
+};
+
 /**
  * 강의에 무엇이 올라와 있는가. 있다/없다만 안다.
  *
@@ -58,6 +76,7 @@ export type PrequizProgress = {
 };
 
 export type LectureRef = {
+  previewSource?: PreviewSource | null;
   studyLoaded?: boolean;
   cardProgress?: CardProgress | null;
   bankTimeline?: BankTimeline | null;
@@ -97,6 +116,7 @@ export type LectureFile = {
 };
 
 export type LectureDetail = {
+  previewSource?: PreviewSource | null;
   mastery?: LectureMastery | null;
   subject: string;
   runId: string;

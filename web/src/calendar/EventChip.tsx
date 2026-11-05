@@ -1,5 +1,6 @@
 import { ChipLearning, learningDescription } from "./ChipLearning";
 import { hasTodo, type CalendarEntry } from "./entries";
+import { ProfessorBadges, professorDescription } from "./ProfessorInfo";
 
 /**
  * 캘린더 한 칸.
@@ -22,6 +23,8 @@ export function EventChip({
   showLearning?: boolean;
 }) {
   const primary = entry.detail || entry.title;
+  const sources = entry.lectures.map(lecture => lecture.previewSource);
+  const professorInfo = sources.flatMap(source => source ? [professorDescription(source)] : []).join("\n");
   const hasLearning = showLearning && entry.lectures.length > 0;
   const learning = showLearning ? entry.lectures.map(learningDescription).filter(Boolean).join(" · ") : "";
   // 왼쪽 띠는 범주만 진다. 할 일이 남았는지는 제목의 무게로만 말하고,
@@ -41,8 +44,8 @@ export function EventChip({
     .join(" ");
 
   return (
-    <button type="button" className={className} title={learning ? `${primary}\n${learning}` : primary} onClick={() => onOpen(entry)}>
-      <strong className="calendar-event-primary">{primary}</strong>
+    <button type="button" className={className} title={[primary, professorInfo, learning].filter(Boolean).join("\n")} onClick={() => onOpen(entry)}>
+      <strong className="calendar-event-primary"><ProfessorBadges values={sources} compact={compact} />{primary}</strong>
       {/* 교수와 과목은 한 겹으로 싼다. 칸이 낮으면 CSS가 이 겹을 한 줄로 눕히고
           넉넉하면 `display: contents`로 풀어 예전처럼 두 줄로 편다. 합치면 줄
           하나(13px)가 예산에서 빠져서, 같은 칸 높이에서 과목이 더 오래 산다. */}

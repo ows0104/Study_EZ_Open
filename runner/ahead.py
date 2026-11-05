@@ -336,6 +336,8 @@ def plan(
     prev_files: list[LectureFile],
     timetable: Path,
     runs_dir: Path,
+    *,
+    include_unmatched: bool = False,
 ) -> tuple[list[Seat], list[str]]:
     """올해 필기가 없는 칸에 작년 필기를 앉힌다. (앉은 자리, 사람이 볼 말)"""
     warnings: list[str] = []
@@ -438,6 +440,13 @@ def plan(
         else:
             warnings.append(f"{subject}/{cell.key} {cell.heading[:22]} — 작년 짝을 못 찾았다")
 
+    if include_unmatched:
+        for cell in empty:
+            if cell.key not in planned:
+                note = next((w for w in warnings if w.startswith(f'{subject}/{cell.key} ')
+                             or w.startswith(f'{subject}: 확인해 준 짝을 못 찾았다 — {cell.key} →')),
+                            '작년 필기 매칭 확인 필요')
+                planned[cell.key] = Seat(cell, None, 0.0, 'unmatched', note)
     return [planned[key] for key in sorted(planned)], warnings
 
 

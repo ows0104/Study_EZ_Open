@@ -16,7 +16,7 @@ from datetime import UTC, datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
@@ -55,6 +55,8 @@ from app.naming import nfc, object_key, slide_no_from_filename, version_from_fil
 from app.preview_links import conversation_url as valid_conversation_url
 from app.preview_links import provider as valid_provider
 from app.preview_links import share_url as valid_share_url
+from app.preview_sources import preserve_binding, bind_new_preview, preview_binding, archive_attachment, public_source
+from studyez_contracts.preview_sources import validate as validate_preview_source, professor_names
 from app.routes import cards
 from app.routes.common import lecture_or_404, storage_or_503
 
@@ -80,6 +82,21 @@ class LectureIn(BaseModel):
     professors: list[str] = Field(default_factory=list)
     author: str = ""
     version: int | None = None
+    preview_source: dict | None = Field(default=None, alias='previewSource')
+
+    @field_validator('preview_source')
+    @classmethod
+    def valid_preview_source(cls, value):
+        return validate_preview_source(value) if value is not None else None
+
+    @model_validator(mode='after')
+    def matching_preview_target(self):
+        source = self.preview_source
+        if source and (source['year'] != self.date.year or source['date'] != self.date.isoformat()
+                       or source['startTime'] != self.start_time
+                       or source['currentProfessors'] != professor_names(self.professors)):
+            raise ValueError('예습 자료의 대상 강의/담당이 등록할 강의와 다릅니다')
+        return self
 
     model_config = {"populate_by_name": True}
 
@@ -106,6 +123,8 @@ def upsert_lectures(
         lecture.professors = [nfc(name) for name in row.professors]
         lecture.author = nfc(row.author)
         lecture.version = row.version
+        if row.preview_source is not None:
+            lecture.preview_source = preserve_binding(db, lecture, row.preview_source)
         db.flush()
         relink(db, lecture)
         if lecture.timetable_event_id:
@@ -142,6 +161,18 @@ def _validate(files: list[FileIn]) -> None:
             )
 
 
+def _upload_key(lecture, item):
+    filename = nfc(item.filename)
+    selected = (lecture.preview_source or {}).get('selected')
+    if item.kind == 'notes_prev' and selected:
+        if filename != nfc(selected['filename']):
+            raise HTTPException(status_code=409, detail='선택한 예습 필기가 바뀌었습니다. 최신 자료로 다시 확인하세요.')
+        # A new source/revision cannot overwrite the only copy of the previous PDF.
+        folder, name = object_key(lecture.subject, lecture.run_id, item.kind, filename).rsplit('/', 1)
+        return f'{folder}/{selected["sha256"]}/{name}'
+    return object_key(lecture.subject, lecture.run_id, item.kind, filename)
+
+
 @router.post("/lectures/{subject}/{run_id}/uploads")
 def presign_uploads(
     subject: str,
@@ -158,7 +189,7 @@ def presign_uploads(
             {
                 "kind": item.kind,
                 "filename": nfc(item.filename),
-                "objectKey": (key := object_key(lecture.subject, lecture.run_id, item.kind, item.filename)),
+                "objectKey": (key := _upload_key(lecture, item)),
                 "uploadUrl": storage.presign_upload(key, content_type=item.content_type),
             }
             for item in files
@@ -186,11 +217,14 @@ def complete_uploads(
 
     for item in files:
         filename = nfc(item.filename)
-        key = object_key(lecture.subject, lecture.run_id, item.kind, filename)
+        key = _upload_key(lecture, item)
         head = storage.head(key)
         if head is None:
             missing.append(filename)
             continue
+        selected = (lecture.preview_source or {}).get('selected')
+        if item.kind == 'notes_prev' and selected and int(head.get('ContentLength', 0)) != selected['sizeBytes']:
+            raise HTTPException(status_code=409, detail='선택한 예습 필기의 크기가 원본 기록과 다릅니다.')
 
         if item.kind in SINGULAR_KINDS:
             for old in db.scalars(
@@ -201,7 +235,13 @@ def complete_uploads(
                     Asset.object_key != key,
                 )
             ):
-                storage.delete(old.object_key)
+                if item.kind == 'notes_prev' and lecture.preview_source:
+                    try:
+                        archive_attachment(lecture, old, storage)
+                    except ValueError as cause:
+                        raise HTTPException(status_code=409, detail=str(cause)) from cause
+                else:
+                    storage.delete(old.object_key)
                 db.delete(old)
 
         asset = db.scalar(select(Asset).where(Asset.object_key == key))
@@ -371,6 +411,10 @@ def put_pre_items(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """`pre_items.final.json` 통째로."""
+    lecture = lecture_or_404(db, subject, run_id)
+    source = public_source(lecture)
+    if source and source['conversationNeedsReview']:
+        raise HTTPException(status_code=409, detail='예습 원본이 변경되어 새 자료에 맞는 예습 링크 확인이 필요합니다.')
     return _put_items(PreItem, "pre", payload, db, subject, run_id)
 
 
@@ -443,6 +487,7 @@ def put_preview(
     # 삼으면 10분마다 같은 편이 큐에 선다.
     queued = None
     if preview.share_url and preview.share_url != before:
+        bind_new_preview(lecture)
         queued = job_row(ensure_auto_job(
             db, lecture.subject, lecture.run_id, "pre", "예습 링크가 저장됐다"))
     db.commit()
@@ -495,11 +540,13 @@ def list_previews(
             # 이미 올라간 Pre-Quiz 문항 수. 러너가 사람에게 적어 주는 값이고,
             # 만들지 말지의 판정은 로컬 산출물이 한다.
             "preItemCount": counts.get((preview.subject, preview.run_id), 0),
+            "sourceFilename": preview_binding(lecture).get('filename', ''),
+            "sourceSha256": preview_binding(lecture).get('sha256', ''),
         }
         for preview, lecture in joined
     ]
     rows.sort(key=lambda row: (row["date"], row["runId"]))
-    return {"previews": rows}
+    return {"previews": rows, "previewSourceVersion": 1}
 
 
 # ---------------------------------------------------------------- 매칭

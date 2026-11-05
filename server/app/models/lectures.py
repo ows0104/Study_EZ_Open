@@ -101,6 +101,7 @@ class Lecture(Base):
     professors: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     author: Mapped[str] = mapped_column(Text, nullable=False, default="")  # 필기자
     version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    preview_source: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     # 캘린더 칸과의 연결. 자동 매칭이 붙이고 관리자가 고칠 수 있다.
     timetable_event_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # 관리자가 눈으로 확인했는가. 자동 매칭 결과는 False로 남는다.

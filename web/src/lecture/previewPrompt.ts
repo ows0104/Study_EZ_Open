@@ -32,7 +32,7 @@ export const SHARED_PREVIEW_PROMPT = DEFAULT_PREVIEW_PROMPT;
  * 이 토큰을 남겨 둔다. 편집 화면이 이 목록을 그대로 보여 준다.
  */
 export const PROMPT_TOKENS = [
-  { token: "{파일명}", label: "붙이는 작년 필기 파일명", sample: "[250818_01]급성 염증의 병태 생리(고재문)_고명재 v2.pdf" },
+  { token: "{파일명}", label: "선택한 예습 필기 파일명", sample: "[250818_01]급성 염증의 병태 생리(고재문)_고명재 v2.pdf" },
   { token: "{강의}", label: "강의 제목", sample: "급성 염증의 병태 생리" },
   { token: "{과목}", label: "과목", sample: "질병의 병리학적 이해" },
   { token: "{교수}", label: "담당 교수", sample: "고재문" },

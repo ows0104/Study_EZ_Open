@@ -38,6 +38,7 @@ from app.models import (
 )
 from app.preview_links import conversation_url as valid_conversation_url
 from app.preview_links import provider as valid_provider
+from app.preview_sources import public_source
 from app.routes import bank as quiz_bank
 from app.routes import cards, prequiz
 from app.routes.common import (
@@ -168,6 +169,7 @@ def read_lecture(
         "startTime": lecture.start_time,
         "title": lecture.title,
         "professors": lecture.professors,
+        "previewSource": public_source(lecture, event, assets),
         "author": lecture.author,
         "version": lecture.version,
         "course": event.course if event else "",

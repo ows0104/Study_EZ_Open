@@ -135,6 +135,10 @@ export function PreviewAction({
    */
   async function start(mode: "shared" | "personal", autoSend: boolean) {
     if (!notesPrev) return;
+    if (detail.previewSource?.attachmentNeedsReview) {
+      onError("선택한 예습 필기가 아직 준비되지 않았습니다. 자료 갱신 후 다시 시작하세요.");
+      return;
+    }
     setBusy(mode);
     if (mode === "personal") notePreviewAction(base, "create");
     try {
@@ -211,7 +215,7 @@ export function PreviewAction({
 
   // 작년 필기가 없으면 새로 만들 수는 없다. 다만 이미 만들어진 링크는 그대로
   // 열려야 하므로 여기서 통째로 돌려보내지 않는다.
-  const canMake = Boolean(notesPrev);
+  const canMake = Boolean(notesPrev) && !detail.previewSource?.attachmentNeedsReview;
   const compatible = extensionCompatible();
   const automatic = extensionCompatible(AUTO_SEND_MIN_VERSION);
   const sharedTools = canMake && isAdmin ? (
@@ -253,7 +257,7 @@ export function PreviewAction({
       tools={sharedTools}
     />
   ) : !canMake ? (
-    <Empty name="기본 링크" note="작년 필기 대기" />
+    <Empty name="기본 링크" note="예습 필기 대기" />
   ) : isAdmin ? (
     <ActionCard
       shape="is-key"
@@ -281,7 +285,7 @@ export function PreviewAction({
       }
     />
   ) : (
-    <Empty name="개인 링크" note="작년 필기 대기" />
+    <Empty name="개인 링크" note="예습 필기 대기" />
   );
 
   return (
