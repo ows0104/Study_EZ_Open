@@ -14,7 +14,6 @@
 
 | 우선순위 | 작업 | 작업자 / 세션 | 브랜치 | 건드리는 영역·파일 | 시작일 | 상태·메모 |
 |---|---|---|---|---|---|---|
-| P1 | master 검사 실패 원인 수정 및 배포 | ows0104 / Codex 세션 | `codex/ci-regression-fix` | `runner/deck.py`, `tests/runner/test_promote.py`, `docs/changes/2026-11-05-ci-regression-fix/` | 2026-11-05 | 로컬 1923 passed / 1 skipped. [PR #4](https://github.com/ows0104/Study_EZ_Open/pull/4) 검사 중. 사용자 수정·배포 승인 |
 
 ## 2. 앞으로 하기로 약속된 일
 
@@ -38,4 +37,5 @@ merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 �
 
 | 완료일 | 작업 | 작업자 | PR |
 |---|---|---|---|
+| 2026-11-05 | master 검사 실패 수정 — merge 완료, 자동 배포 확인 중 | ows0104 / Codex 세션 | [#4](https://github.com/ows0104/Study_EZ_Open/pull/4) |
 | 2026-11-05 | 협업 대시보드와 작업 시작 대원칙 도입 | HungryPotato01 / Claude 세션 | [#2](https://github.com/ows0104/Study_EZ_Open/pull/2) |
