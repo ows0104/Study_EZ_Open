@@ -131,15 +131,19 @@ def run(packet,out,model,invoke):
     if initial_cost:
         ledger['repairRounds']=max(ledger['repairRounds'],initial_cost);g.write(ledger_path,ledger)
     recoveries=ledger.get('authoringRecoveries',[])
-    c.validate_authoring_recoveries({'authoringRecoveries':recoveries,'inputHash':packet['inputHash'],
-        'runtimeHash':fingerprint,'initialBrief':initial,'repairRounds':max(ledger['repairRounds'],initial_cost+1)},
-        {k:{'name':k,**v}for k,v in ledger['stages'].items()})
+    format_recoveries=ledger.get('formatRecoveries',[])
+    recovery_meta={'authoringRecoveries':recoveries,'formatRecoveries':format_recoveries,'inputHash':packet['inputHash'],
+        'runtimeHash':fingerprint,'initialBrief':initial,'repairRounds':max(ledger['repairRounds'],initial_cost+1)}
+    recovery_stages={k:{'name':k,**v}for k,v in ledger['stages'].items()}
+    c.validate_format_recoveries(recovery_meta,recovery_stages)
+    c.validate_authoring_recoveries(recovery_meta,recovery_stages)
     rejected=recoveries[0]['proof']['rawAuthoring']if recoveries and recoveries[0]['proof']['mode']=='brief-repair'else None
     start_round=1 if rejected else 0
     if rejected:
         proof=recoveries[0]['proof']
+        origin_runtime=format_recoveries[0]['proof']['priorLedger']['identity']if format_recoveries else fingerprint
         c.require(document_hash(rejected)==ledger['stages']['generate']['rawOutputHash']
-            and proof['packetHash']==packet['inputHash']and proof['currentRuntimeHash']==fingerprint,'Changed rejected authoring')
+            and proof['packetHash']==packet['inputHash']and proof['currentRuntimeHash']==origin_runtime,'Changed rejected authoring')
         ledger['repairRounds']=max(ledger['repairRounds'],initial_cost+1);g.write(ledger_path,ledger)
         authored=stage('repair-1',{**base,'brief':rejected['brief'],'bank':rejected['bank'],
             'previousAuthoring':rejected,'rejectedAuthoring':True,'sourceAudit':None,'medical':None,
@@ -192,6 +196,7 @@ def run(packet,out,model,invoke):
             'initialMapCorrection':{'errors':initial_errors,'consumedRounds':initial_cost},
             'normalizationRecoveries':ledger.get('normalizationRecoveries',[]),
             **({'authoringRecoveries':recoveries}if recoveries else{}),
+            **({'formatRecoveries':format_recoveries}if format_recoveries else{}),
             **({'authoringRecoveryOutput':json.loads((out/'repair-1.raw.json').read_text(encoding='utf-8'))}if rejected else{}),
             'briefRevisions':[{'stage':name,'brief':value['brief'],'reason':value['map_change_reason']}
                 for name in ([]if rejected else['generate'])+[f'repair-{i}'for i in range(1,n+1)]

@@ -15,6 +15,11 @@ FORMATS = ('basic', 'list', 'cloze', 'ox', 'mcq', 'multi_select')
 IMPORTANCE = {'Must-Know': 5, 'Core': 5, 'Important': 4, 'Optional': 2}
 
 
+def canonical_tier(value):
+    """The authored name and legacy BANK name denote the same priority."""
+    return 'Essential' if value == 'Must-Know' else value
+
+
 def require(value, message):
     if not value:
         raise ValueError(message)
@@ -186,7 +191,7 @@ def to_bank(raw, title):
         q = {key: '' if schema['type'] == 'string' else [] for key, schema in QUESTION['properties'].items()
              if key in QUESTION['required']}
         q.update({key: copy.deepcopy(value) for key, value in item.items() if key not in ('answers', 'evidence')})
-        q.update(tier='Essential' if item['tier'] == 'Must-Know' else item['tier'],
+        q.update(tier=canonical_tier(item['tier']),
                  mcq_mode=item.get('mcq_mode', 'none'), answer_units=item.get('answers', []).copy())
         if item['format'] == 'cloze':
             q = normalize_cloze(q)

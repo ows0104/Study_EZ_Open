@@ -26,6 +26,22 @@ AUTHOR_BANK=copy.deepcopy(BANK)
 AUTHOR_BANK['properties']['questions']['items']['properties'].pop('stimuli',None)
 CONFLICT=obj(conflict_id=TEXT,facts=TEXT)
 AUTHOR=obj(bank=AUTHOR_BANK,brief=BRIEF,visual_stimuli=arr(CROP),clinical_conflicts=arr(CONFLICT),map_change_reason=TEXT)
+TIER_POLICY='bank-tier-alias/1'
+
+
+def tier_projection(value):
+    """Only the canonical authored tier alias is a transport spelling change."""
+    from studyez_contracts.bank.authored_json import canonical_tier
+    result=copy.deepcopy(value);changes=[]
+    if isinstance(result,dict)and isinstance(result.get('bank'),dict):
+        questions=result['bank'].get('questions',[])
+        for question in questions if isinstance(questions,list)else[]:
+            if isinstance(question,dict)and question.get('tier')=='Must-Know':
+                question['tier']=canonical_tier(question['tier'])
+                changes.append({'question_id':question.get('question_id'),'from':'Must-Know','to':'Essential'})
+    projection={'policy':TIER_POLICY,'rawHash':document_hash(value),'decodedHash':document_hash(result),
+                'changes':changes}if changes else None
+    return result,projection
 ISSUE=obj(issue_id=TEXT,kind=enum('question_fix','map_fix','required_gap','optional_extension','limitation','confirmation'),
           text=TEXT,question_ids=arr(TEXT),direction_ids=arr(TEXT))
 PART=obj(component_id=TEXT,location=enum('answer','provided','explanation','missing','unknown'),
@@ -150,6 +166,45 @@ def validate_recovered_authoring(before,after):
             'recovery: corrected brief must be derived with a reason')
 
 
+def validate_format_recoveries(meta,stages):
+    rows=meta.get('formatRecoveries',[])
+    require(type(rows)is list and len(rows)<=1,'result2: invalid format recovery history')
+    for row in rows:
+        require(type(row)is dict and set(row)=={'proof','proofHash'}and type(row['proof'])is dict
+            and row['proofHash']==document_hash(row['proof']),'result2: changed format recovery proof')
+        p=row['proof']
+        require(set(p)=={'priorLedger','priorLedgerHash','packetHash','currentRuntimeHash','reason','stage',
+            'rawAuthoring','projection','nativeJournalSha256','recoveryToolSha256','modelReplay'},'result2: malformed format recovery')
+        old=p['priorLedger'];name=p['stage']
+        require(type(old)is dict and type(old.get('stages'))is dict and old.get('pipelineVersion')==POLICY
+            and p['priorLedgerHash']==document_hash(old)and not old.get('formatRecoveries')
+            and type(old.get('identity'))is str and re.fullmatch(r'[a-f0-9]{64}',old['identity']),
+            'result2: changed prior format ledger')
+        require(type(name)is str and re.fullmatch(r'generate|repair-[1-3]',name)
+            and p['packetHash']==meta['inputHash']and p['currentRuntimeHash']==meta['runtimeHash']
+            and p['modelReplay']is False and type(p['reason'])is str and p['reason'].strip(),
+            'result2: changed format recovery identity')
+        require(type(old.get('repairRounds'))is int and 0<=old['repairRounds']<=meta['repairRounds']<=3,
+            'result2: format recovery reset budget')
+        require(meta.get('authoringRecoveries',[])==old.get('authoringRecoveries',[]),
+            'result2: earlier authoring recovery was changed')
+        prior=old['stages'];entry=prior.get(name,{})
+        require(type(entry)is dict and all(type(v)is dict for v in prior.values())
+            and entry.get('status')=='failed'and set(prior)<=set(stages),'result2: format stage was not failed')
+        for key,value in prior.items():
+            if key!=name:require(stages[key]=={'name':key,**value},'result2: changed reused format stage')
+        decoded,projection=tier_projection(p['rawAuthoring'])
+        require(projection is not None and projection==p['projection'],'result2: wrong tier projection')
+        validate_authoring(decoded)
+        current=stages[name]
+        require(current['status']=='completed'and current['inputHash']==entry['inputHash']
+            and current['rawOutputHash']==document_hash(decoded)
+            and current['briefHash']==document_hash(decoded['brief']),'result2: format output mismatch')
+        require(all(type(p[k])is str and re.fullmatch(r'[a-f0-9]{64}',p[k])for k in ('nativeJournalSha256','recoveryToolSha256')),
+            'result2: missing original Native rejection')
+    return rows
+
+
 def validate_authoring_recoveries(meta,stages):
     rows=meta.get('authoringRecoveries',[])
     require(type(rows)is list and len(rows)<=1,'result2: invalid authoring recovery history')
@@ -166,7 +221,8 @@ def validate_authoring_recoveries(meta,stages):
                 'result2: changed prior authoring ledger')
         require(not old.get('authoringRecoveries')and not old.get('normalizationRecoveries'),
                 'result2: repeated or mixed authoring recovery')
-        require(p['packetHash']==meta['inputHash']and p['currentRuntimeHash']==meta['runtimeHash']
+        origin_runtime=meta['formatRecoveries'][0]['proof']['priorLedger']['identity']if meta.get('formatRecoveries')else meta['runtimeHash']
+        require(p['packetHash']==meta['inputHash']and p['currentRuntimeHash']==origin_runtime
             and p['modelReplay']is False and type(p['reason'])is str and p['reason'].strip(),
             'result2: changed authoring recovery identity')
         prior=old.get('stages',{});entry=prior.get(name,{})
@@ -457,6 +513,7 @@ def validate_result(value,packet):
     require(correction=={'errors':findings,'consumedRounds':initial_cost},'result2: missing initial correction evidence')
     n=total-initial_cost;require(n>=0,'result2: initial correction not counted')
     stages=index_by(meta['stages'],'name')
+    validate_format_recoveries(meta,stages)
     recoveries=validate_authoring_recoveries(meta,stages)
     rejected=recoveries[0]['proof']['rawAuthoring']if recoveries and recoveries[0]['proof']['mode']=='brief-repair'else None
     start_round=1 if rejected else 0

@@ -108,6 +108,12 @@ def schema_for(stage,ctx):
     require(re.fullmatch(r'source-[0-3]',stage),'Unsupported file-output stage')
     return c.source_schema(ctx['brief'],ctx['bank'])
 
+
+def decode_for(stage,value,schema):
+    value=g.decode_optional_fields(value,schema)
+    if stage=='generate'or stage.startswith('repair-'):return c.tier_projection(value)
+    return value,None
+
 def task_for(stage):
     kind=stage.split('-')[0];name='extract-v2.md'if kind=='normalize'else'source-v2.md'if kind=='source'else'author-v2.md'
     task=(g.PROMPTS/name).read_text(encoding='utf-8')+'\n'+g.item_quality_guidance()
@@ -138,7 +144,7 @@ def check_file(stage,work):
     work=Path(work);ctx=read(work/'input.json');schema=read(work/'acceptance.schema.json')
     require(schema==schema_for(stage,ctx),'Different acceptance schema')
     path=work/'result.json';require(not path.is_symlink()and path.is_file()and 0<path.stat().st_size<=LIMIT,'Unsafe/missing result')
-    value=g.decode_optional_fields(read(path),schema);jsonschema.validate(value,schema)
+    value,_=decode_for(stage,read(path),schema);jsonschema.validate(value,schema)
     if stage=='normalize':
         require(value['sources']==ctx['sources']and value['lecture_id']==ctx['lecture_id'],'Different normalization sources/lecture')
         require((value['provenance']['independent_points']=='confirmed')==(ctx.get('inputMode')=='source'),'Different extraction independence')
@@ -243,7 +249,8 @@ class NativeJson:
             require(inventory(material)==source_inventory==inventory(work/'material'),'Model changed original material')
             receipt=loads(result['text']);body,value=artifact(work,receipt)
             (seat/'output.json').write_bytes(body)
-            raw=g.decode_optional_fields(value,schema);jsonschema.validate(raw,schema)
+            raw,projection=decode_for(stage,value,schema);jsonschema.validate(raw,schema)
+            if projection is not None:proof['tierProjection']=projection
             proof.update(nativeSessionId=result['session_id'],providerHash=document_hash(result),outputSha256=receipt['sha256'],rawHash=document_hash(raw))
             row={'proof':proof,'proofHash':document_hash(proof)}
             g.write(seat/'receipt.json',row);g.write(seat/'journal.json',{'status':'completed','proofHash':row['proofHash']})
@@ -274,7 +281,8 @@ def validate_stage(out,entry,*,model):
         and type(response.get('turns'))is int and response['turns']>0,'Native provider completion differs')
     require(loads(response['text'])=={'path':'result.json','sha256':proof['outputSha256']},'Native completion receipt differs')
     require(sha(seat/'output.json')==proof['outputSha256'],'Native output archive differs')
-    raw=g.decode_optional_fields(read(seat/'output.json'),schema);jsonschema.validate(raw,schema)
+    raw,projection=decode_for(name,read(seat/'output.json'),schema);jsonschema.validate(raw,schema)
+    require(proof.get('tierProjection')==projection,'Changed authored tier projection')
     saved=read(out/(name+'.raw.json'));saved=saved['assessment']if name.startswith('source-')else saved
     require(document_hash(raw)==proof['rawHash']==document_hash(saved),'Accepted raw differs from actual native file')
     require(all(usage[k]==response[k]for k in('usage','cost_usd','duration_ms','models'))and entry['usageHash']==document_hash(usage),'Native usage differs')
@@ -293,6 +301,9 @@ def validate_all(out,payload):
         validate_stage(out,{'name':name,**prior},model=payload['manifest']['model'])
         require(read(Path(out)/(name+'.raw.json'))==proof['rawAuthoring'],'Changed rejected authoring archive')
         require(read(Path(out)/'authoring.recovery.json')==row,'Changed authoring recovery archive')
+    for row in payload['manifest'].get('formatRecoveries',[]):
+        from .root_tier_recovery import validate_recovery
+        validate_recovery(out,row,model=payload['manifest']['model'])
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--packet',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--model');a=p.parse_args()
