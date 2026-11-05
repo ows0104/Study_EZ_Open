@@ -8,12 +8,12 @@
   ],
   "approvals": {
     "build": {
-      "at": "2026-11-05T16:07:15.671798+00:00",
-      "evidence": "현재 사용자: 콜린성 약리학 Map 예시 같은 느낌을 원함. 겹침 조정 질문에 시범은 유지하고 별도 복사본에 정리 선택.",
-      "scope": "새 별도 worktree의 map-extract-reference.md 작성·/2 출력 예시 호환 검증 및 기록만. 실제 시범 입력/기존 프롬프트/출제포인트/스키마/운영 미변경",
+      "at": "2026-11-05T16:19:10.235350+00:00",
+      "evidence": "현재 사용자 어 한번 실험해볼까? 이어 자료와 OpenAI Codex/GPT 전송·Map1회·JSON/지도 미리보기를 명시한 선택 질문에 준비된 심내막염·중추신경계감염 선택. 기존 별도복사/시범유지 승인도 유지.",
+      "scope": "고정 필기58쪽·TBL2족보13쪽을 OpenAI Codex/GPT로 별도 1회 전송해 두 강의 Map JSON 생성·원본/형식 검증·로컬 미리보기. 기존 시범/문항/서버/게시/학습 미변경",
       "evidence_version": 2,
-      "source_hash": "2a0dced38f85d626f0d8f023387365495f21efe576514dc1b12305afa29b8ad0",
-      "plan_hash": "331cf69f23a370ebf0203c9d8a9f24ead872574d00e288d41d32ada0b9281b6f",
+      "source_hash": "ec5087e5a620b4d11986c0e5fc5bc802816278c2f6c15eb673629755a476c681",
+      "plan_hash": "eda582769070a333a68b3b99be5c2a134b35db1d2cd74e62c90f8c3b494bdafc",
       "inputs": [
         ".github",
         "content",
@@ -30,7 +30,7 @@
         "tests/quizgen",
         "uv.lock"
       ],
-      "release_hash": "ff2ec315e4baca7208c4946565ede8479575642a63cd2b4c7063f360f65cc9b6"
+      "release_hash": "e5839e9a5f2472312a534c52f525c22f7cd4b56bc071aff6c765773d7006124a"
     }
   },
   "checks": [
@@ -62,14 +62,44 @@
         "uv.lock"
       ],
       "log": "runs/_development/2026-11-06-map-flow-reference/1793894874791479000-prompt-review.log"
+    },
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T16:28:54.504951+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-flow-reference/short_map_experiment.py",
+        "verify"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ec5087e5a620b4d11986c0e5fc5bc802816278c2f6c15eb673629755a476c681",
+      "plan_hash": "eda582769070a333a68b3b99be5c2a134b35db1d2cd74e62c90f8c3b494bdafc",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-flow-reference/1793896133131660900-prompt-review.log"
     }
   ],
   "review": {
-    "at": "2026-11-05T16:07:55.690002+00:00",
-    "summary": "시범 보존을 위해 별도 worktree/새 파일만 작성. 큰 흐름·개요 노드·짧은 핵심 내용·교차 연결/합류 반영. /2 JSON 예시·스키마·기존 지시문 줄수 유지 확인. 문항평가/누락/회상목표 미혼입. 모델/의학/렌더링 검증 없음.",
+    "at": "2026-11-05T16:28:54.835373+00:00",
+    "summary": "짧은 두 항목+최소JSON 지시로 선택한 원본을 Codex/GPT에1회 전송, 약296초에 두 강의 Map 완료.20/25 및24/31개 개념/관계. 원본/입력 SHA 보존·출력 영수증/스키마/참조/강의쪽수 범위 검증. 모델결과무수정 PNG2개 육안확인. 독립의학검수미실행. HTML file프로토콜차단은우회하지않고 오프라인PNG제공. 기존시범/운영미변경.",
     "evidence_version": 2,
     "source_hash": "ec5087e5a620b4d11986c0e5fc5bc802816278c2f6c15eb673629755a476c681",
-    "plan_hash": "331cf69f23a370ebf0203c9d8a9f24ead872574d00e288d41d32ada0b9281b6f",
+    "plan_hash": "eda582769070a333a68b3b99be5c2a134b35db1d2cd74e62c90f8c3b494bdafc",
     "inputs": [
       ".github",
       "content",
@@ -92,5 +122,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-05T16:07:55.781702+00:00"
+  "updated_at": "2026-11-05T16:28:54.939581+00:00"
 }
