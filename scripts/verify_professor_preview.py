@@ -40,7 +40,7 @@ def main():
         env.pop('PYTHONHOME', None)
         commands = [(ROOT / 'server', [server_python, '-m', 'tests', pattern]) for pattern in
                     ['preview_sources', 'matching', 'route_contract', 'immunity_timetable',
-                     'smoke', 'shared_preview_prompt', 'study_retention']]
+                     'smoke', 'shared_preview_prompt', 'study_retention', 'runner_desktop']]
     elif group == 'web':
         npm = shutil.which('npm.cmd') or shutil.which('npm')
         if not npm:

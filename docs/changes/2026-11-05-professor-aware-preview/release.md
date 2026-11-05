@@ -1,14 +1,14 @@
 # 교수 변경 표시와 최근 5년 동일 교수 예습 필기 선택 — 배포 준비
 
 ## 코드 리뷰·검증 결과
-로컬 구현과 Test 완료. 운영 직전 대조에서 Synology의 NFD 파일명을 서버의 NFC 첨부 이름으로 정규화하도록 보완했다. 현재 소스 지문은 `f2d486cea902de868e0449a1d379c4a32923f51d335bb892d17f7fdcac1924e0`, 계획 지문은 `1dbe02286dc9e4e19d9f0c3c1cc18def9be7b76755eb8907372a72e02a896214`다.
+로컬 구현과 Test 완료. 운영 직전 대조에서 Synology의 NFD 파일명을 서버의 NFC 첨부 이름으로 정규화하도록 보완했다. 현재 소스 지문은 `a4c49e1124f963f0b0ee3dfead524afae9e4d70ac3b1ffa728bacb944e54a986`, 계획 지문은 `1dbe02286dc9e4e19d9f0c3c1cc18def9be7b76755eb8907372a72e02a896214`다.
 
 | 체크 | 실제 결과 |
 |---|---|
 | professor-selection | 18 passed. 동일 교수 최신 연도/5년 경계/작년 대체/수동·합본/교수 충돌/출처 변경/구형 서버 보호/NFD 파일명 |
 | contracts | 134 passed. 기존 공통 계약 포함 |
 | runner | 695 passed(681 + Windows 화면 검사 12 + 2). 로컬 Tcl 상태 충돌을 피하려고 두 화면 검사 파일은 독립 프로세스에서 전부 실행했다. 생략 없음 |
-| server | 8개 독립 검사 파일 통과: preview_sources, matching와 matching_presentation, route_contract, immunity_timetable, smoke, shared_preview_prompt, study_retention |
+| server | 9개 독립 검사 파일 통과: preview_sources, matching와 matching_presentation, route_contract, immunity_timetable, smoke, shared_preview_prompt, study_retention, runner_desktop |
 | web | typecheck와 production build 통과. 웹 트리 해시 `1ce7636d001ebae04baa9bf12a78252a0fc4916e8230baa53e86daf7cb859ba0` |
 | browser | 4개 브라우저 검사 통과. 신규 태그·실제 연도·기존 캘린더 지연 로딩·오류 복구·월간/모바일/키보드 확인. 데스크톱·모바일 화면을 직접 확인했으며 잘림/가로 넘침 없음 |
 
@@ -33,3 +33,5 @@
 복원은 러너 업로드를 먼저 중지한 뒤 이전 코드/보존 파일 연결을 복원한다. 추가 JSON과 이력, 원본 PDF 객체, 학습 기록/대화는 삭제하지 않는다. 2024 미보유와 관련 비표준 파일명, 시간표 잠정/합본/교수 표기 충돌은 계속 화면에 확인 상태로 남긴다.
 
 최종 CI 보완: 공유 Tcl 상태 때문에 로컬/원격 전체 검사의 status_window 초기화가 실패했다. 두 GUI 파일을 각각 새 Python 프로세스로 실행하도록 로컬 검사 실행기와 GitHub 검사 단계를 일치시켰다. 일반 회귀와 두 GUI 파일을 모두 실행하며 실패 시 배포 차단은 유지한다. 재검사 6개 체크 전부 통과 및 CI 배포 경계 검사 19개 통과.
+
+서버 전체 CI에서 원본 필기가 없는 강의의 기존 안내가 출처 변경 안내로 덮이는 경우를 발견했다. 로컬 자료가 준비된 경우에만 출처 일치 검사를 적용하여 기존 누락 안내를 보존했다. runner_desktop 서버 회귀 파일을 로컬 필수 검사에도 포함했으며 현재 소스의 6개 검사를 모두 다시 통과했다.
