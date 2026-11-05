@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 
 import pytest
@@ -173,6 +174,34 @@ def test_크기가_다르면_다시_쓴다(tmp_path):
     deck.promote(run_dir)
     (work / "[260812_01] 강의.apkg").write_bytes(b"rebuilt and longer")
     assert deck.promote(run_dir).read_bytes() == b"rebuilt and longer"
+
+
+@pytest.mark.parametrize("offset_ns", [0, -2_000_000_000])
+def test_changed_deck_with_equal_size_and_non_newer_mtime_is_promoted(tmp_path, offset_ns):
+    run_dir = tmp_path / "260812_01"
+    work = attempt(run_dir / L.MAIN / "260827-2300", 10, body=b"old deck")
+    dest = deck.promote(run_dir)
+    stamp = dest.stat().st_mtime_ns
+    src = work / dest.name
+    src.write_bytes(b"new deck")
+    os.utime(src, ns=(stamp + offset_ns, stamp + offset_ns))
+    assert src.stat().st_size == dest.stat().st_size
+    assert src.stat().st_mtime_ns <= dest.stat().st_mtime_ns
+
+    assert deck.promote(run_dir).read_bytes() == b"new deck"
+
+
+def test_identical_deck_with_newer_mtime_leaves_destination_untouched(tmp_path):
+    run_dir = tmp_path / "260812_01"
+    work = attempt(run_dir / L.MAIN / "260827-2300", 10)
+    dest = deck.promote(run_dir)
+    stamp = dest.stat().st_mtime_ns
+    src = work / dest.name
+    os.utime(src, ns=(stamp + 2_000_000_000, stamp + 2_000_000_000))
+
+    assert deck.promote(run_dir) == dest
+    assert dest.read_bytes() == b"deck"
+    assert dest.stat().st_mtime_ns == stamp
 
 
 # ── ④ 옛 모양 ────────────────────────────────────────────────────────
