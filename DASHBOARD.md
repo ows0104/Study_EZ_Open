@@ -14,7 +14,7 @@
 
 | 우선순위 | 작업 | 작업자 / 세션 | 브랜치 | 건드리는 영역·파일 | 시작일 | 상태·메모 |
 |---|---|---|---|---|---|---|
-| P1 | 웹 문제은행 순수 JSON 파일 전환·프롬프트 정리·기존 MD 호환 | ows0104 / Codex JSON 전환 세션 | codex/bank-json-delivery | content/prompts/bank, studyez_contracts/bank, quizbank, web/src/bank, server/app/routes/bank_api 및 root_generation, bridge, runner/bank_flow, 관련 검사 | 2026-11-05 | 사용자 구현 요청. 내용·학습 기록·기존 검수 상한 보존. 운영 배포 별도 |
+| P1 | 웹 문제은행 순수 JSON 파일 전환·프롬프트 정리·기존 MD 호환 | ows0104 / Codex JSON 전환 세션 | codex/bank-json-delivery | content/prompts/bank, studyez_contracts/bank, quizbank, web/src/bank, server/app/routes/bank_api 및 root_generation, bridge, runner/bank_flow, 관련 검사 | 2026-11-05 | 구현·관련 검사 완료. 사용자 승인으로 [초안 PR #6](https://github.com/ows0104/Study_EZ_Open/pull/6) 게시, 검토 대기. 내용·학습 기록·검수 상한 보존. 운영 미배포 |
 
 ## 2. 앞으로 하기로 약속된 일
 
