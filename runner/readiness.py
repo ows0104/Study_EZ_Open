@@ -48,20 +48,25 @@ def preview_sources(root: Path, subject: str, this_year: str, prev_year: str,
     if {f.key for f in previous} & {f.key for f in extra}:
         raise ValueError('파생 예습 입력 ID가 원본 강의와 겹칩니다.')
     previous += extra
-    current_ids, previous_ids = filenames.assign_run_ids(current), filenames.assign_run_ids(previous)
+    current_ids = filenames.assign_run_ids(current)
     pairs = ahead.load_pairs(runs, subject)
     result = {}
+    from .preview_sources import History
+    history = History(root, subject, this_year, prev_year, previous, runs, current_files=current)
 
-    def row(previous, confident, reason):
-        if previous is None or not confident:
-            return dict(ready=False, reason=reason, prevRunId='', prevPdf='')
-        return dict(ready=True, reason='', prevRunId=previous_ids[previous.uid], prevPdf=str(previous.path))
+    def row(target, previous, source, reason):
+        selection = history.select(target, previous, source=source)
+        if selection.item is None:
+            return dict(ready=False, reason=reason, prevRunId='', prevPdf='', previewSource=selection.metadata)
+        return dict(ready=True, reason='', prevRunId=selection.run_id,
+                    prevPdf=str(selection.item.path), previewSource=selection.metadata)
 
     for match in matching.match_with_confirmed(current, previous, pairs):
         result[current_ids[match.this_year.uid]] = row(
-            match.prev_year, match.confident,
+            match.this_year, match.prev_year if match.confident else None, 'notes',
             '작년 필기 매칭 확인 필요' if match.prev_year else '연결할 작년 필기 없음')
-    seats, _ = ahead.plan(subject, current, previous, timetable, runs)
+    seats, _ = ahead.plan(subject, current, previous, timetable, runs, include_unmatched=True)
     for seat in seats:
-        result[seat.cell.key] = row(seat.prev, seat.prev is not None, '작년 필기 매칭 확인 필요')
+        result[seat.cell.key] = row(seat.cell.as_lecture(seat.prev), seat.prev, 'timetable',
+                                    seat.note or '작년 필기 매칭 확인 필요')
     return result

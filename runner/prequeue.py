@@ -62,6 +62,7 @@ from pathlib import Path
 
 from . import deck, filenames, publish, runlayout
 from . import preview as preview_mod
+from studyez_contracts.preview_sources import conversation_matches
 
 QUEUE_NAME = "prequeue.json"
 
@@ -87,6 +88,8 @@ class Link:
     share_url: str
     updated_at: str = ""
     pre_item_count: int = 0
+    source_filename: str = ''
+    source_sha256: str = ''
 
 
 @dataclass
@@ -141,6 +144,8 @@ def fetch_links(client: publish.Client) -> list[Link]:
             share_url=url,
             updated_at=str(row.get("updatedAt", "")),
             pre_item_count=int(row.get("preItemCount") or 0),
+            source_filename=str(row.get('sourceFilename') or ''),
+            source_sha256=str(row.get('sourceSha256') or ''),
         ))
     return sorted(links, key=lambda link: (link.date, link.run_id))
 
@@ -213,6 +218,12 @@ def resolve(
                 why = next((note for note in plan.notes if "작년 짝" in note),
                            "작년 짝이 없어 Pre-Quiz를 만들 자리가 없다")
                 targets.append(Target(link=link, state=BLOCKED, reason=why))
+                continue
+
+            provenance = plan.preview_source or {}
+            if provenance and not conversation_matches(provenance, link.source_filename, link.source_sha256):
+                targets.append(Target(link=link, state=BLOCKED,
+                    reason='예습 원본이 변경됐다 — 기존 대화를 보존하고 선택한 필기로 만든 새 예습 링크를 확인해야 한다'))
                 continue
 
             targets.append(Target(

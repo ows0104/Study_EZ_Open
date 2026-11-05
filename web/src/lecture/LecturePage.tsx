@@ -12,6 +12,7 @@ import { LectureCards } from "./LectureCards";
 import { Missed } from "./Missed";
 import { LectureMastery } from "./LectureMastery";
 import { useMe } from "../useMe";
+import { ProfessorInfo, previewNotesLabel } from "../calendar/ProfessorInfo";
 
 /**
  * 강의 상세. 순서가 공부 순서다.
@@ -130,10 +131,11 @@ export function LecturePage() {
 
       {detail.runMeta ? <AdminNotice runMeta={detail.runMeta} /> : null}
       <LectureMastery value={detail.mastery} />
+      <ProfessorInfo value={detail.previewSource} />
 
       <section className="lecture-section">
         <h2>강의 전</h2>
-        {fileButton("notes_prev", "작년 필기")}
+        {fileButton("notes_prev", previewNotesLabel(detail))}
         <PreviewResource detail={detail} />
 
         {/* 같은 탭에서 웹 풀이 화면으로 이동한다.
@@ -221,14 +223,14 @@ function PreviewResource({ detail }: { detail: LectureDetail }) {
     );
   }
 
-  if (!notesPrev) return <div className="resource is-empty">예습 — 작년 필기가 올라오면 열립니다</div>;
+  if (!notesPrev) return <div className="resource is-empty">예습 — 예습 필기가 올라오면 열립니다</div>;
 
   // 예습을 시작하는 자리는 캘린더 패널이다. 여기는 강의를 펼쳐 보는 창이라
   // 확장을 부르지 않고, 무엇을 눌러야 하는지만 말한다.
   return (
     <div className="resource is-empty">
       예습 — 캘린더에서 이 강의를 눌러 시작하세요
-      <small>확장 프로그램이 작년 필기와 프롬프트를 선택한 AI에 넣어 줍니다</small>
+      <small>확장 프로그램이 선택한 예습 필기와 프롬프트를 AI에 넣어 줍니다</small>
     </div>
   );
 }

@@ -15,6 +15,7 @@ import { ActionCard, fileSize, PanelGroup } from "./panelShared";
 import { PreviewAction } from "./PreviewAction";
 import { ReviewAction } from "./ReviewAction";
 import { LectureMastery } from "../lecture/LectureMastery";
+import { ProfessorInfo, previewNotesLabel } from "./ProfessorInfo";
 
 /**
  * 칸 하나를 눌렀을 때 옆에 서는 패널.
@@ -94,6 +95,7 @@ export function EventPanel({
         ) : null}
 
         {error ? <p className="notice is-error">{error}</p> : null}
+        <ProfessorInfo value={detail ? detail.previewSource : lecture?.previewSource} />
 
         {lecture ? (
           detail ? (
@@ -418,7 +420,7 @@ function KeyActions({
  */
 function Notes({ detail, onOpen }: { detail: LectureDetail; onOpen: (file: LectureFile) => void }) {
   const rows: [string, LectureFile | undefined][] = [
-    ["작년", detail.files.find((file) => file.kind === "notes_prev")],
+    [previewNotesLabel(detail), detail.files.find((file) => file.kind === "notes_prev")],
     ["올해", detail.files.find((file) => file.kind === "notes_current")],
   ];
   return (

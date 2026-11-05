@@ -53,6 +53,9 @@ def report_subject(root: Path, subject: str, this_year: str, prev_year: str,
     # 사람이 확인한 짝(`_pairs`)을 먼저 앉힌다 — `publish` 가 올리는 짝과 같아야 한다.
     confirmed = ahead.load_pairs(runs_dir, subject) if runs_dir else {}
     matches = matching.match_with_confirmed(this_files, prev_files, confirmed)
+    from runner.preview_sources import History
+    history = History(root, subject, this_year, prev_year, prev_files, runs_dir or REPO_ROOT / 'runs',
+                      current_files=this_files)
     counts = {"확정": 0, "확인": 0, "없음": 0}
 
     print(f"\n  {'올해':<10} {'상태':<4} {'점수':>5} {'작년':<10}  제목")
@@ -69,6 +72,12 @@ def report_subject(root: Path, subject: str, this_year: str, prev_year: str,
             print(f"  {'':>32}  ↳ 작년: {prev.title[:44]}")
         if match.status == "확인" and match.runner_up:
             print(f"  {'':>32}  ⚠ 경쟁: {match.runner_up.title[:40]}")
+        choice = history.select(match.this_year, prev if match.confident else None)
+        selected = choice.metadata['selected']
+        labels = [label for label, yes in [('교수 변경', choice.metadata['changed']),
+                                           ('신규 교수', choice.metadata['newProfessor'])] if yes]
+        print(f"  {'':>32}  예습: {str(selected['year']) + '년 ' + selected['filename'] if selected else '확인 필요'}"
+              + (f" · {', '.join(labels)}" if labels else ''))
 
     matched_prev = {m.prev_year.uid for m in matches if m.prev_year}
     leftovers = [p for p in prev_files if p.uid not in matched_prev]

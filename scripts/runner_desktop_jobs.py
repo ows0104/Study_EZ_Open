@@ -46,7 +46,8 @@ def tasks(db, subjects, runs, window, *, notes_root=None, timetable=None):
     lectures = db.scalars(select(Lecture).where(Lecture.subject.in_(subjects), Lecture.date >= window[0], Lecture.date <= window[1])
                           .order_by(Lecture.date, Lecture.slot)).all()
     assets = {(s, r, k) for s, r, k in db.execute(select(Asset.subject, Asset.run_id, Asset.kind).where(Asset.subject.in_(subjects)))}
-    links = {(s, r) for s, r in db.execute(select(Preview.subject, Preview.run_id).where(Preview.subject.in_(subjects), Preview.share_url != ''))}
+    previews = {(p.subject, p.run_id): p for p in db.scalars(select(Preview).where(Preview.subject.in_(subjects), Preview.share_url != ''))}
+    links = set(previews)
     banks = {(b.subject, b.run_id): b for b in db.scalars(select(QuizBank).where(QuizBank.subject.in_(subjects)))}
     latest = {}
     for job in db.scalars(select(PrequizJob).where(PrequizJob.subject.in_(subjects)).order_by(PrequizJob.id.desc())):
@@ -61,6 +62,12 @@ def tasks(db, subjects, runs, window, *, notes_root=None, timetable=None):
             choice = state.get('jobs', {}).get(key, '')
             has_notes = (subject, run_id, 'notes_current') in assets
             local = sources[subject].get(run_id, dict(ready=False, reason='작년 필기·시간표 연결 확인 필요'))
+            if kind == 'pre' and local.get('previewSource') and (subject, run_id) in links:
+                from app.preview_sources import preview_binding
+                from studyez_contracts.preview_sources import conversation_matches
+                binding = preview_binding(lecture)
+                if not conversation_matches(local['previewSource'], binding.get('filename', ''), binding.get('sha256', '')):
+                    local = {**local, 'ready': False, 'reason': '예습 원본 변경 · 새 필기에 맞는 예습 링크 확인 필요'}
             ready = ((subject, run_id) in links and local['ready']) if kind == 'pre' else has_notes and bool(bank and bank.raw_response.strip())
             reason = '' if ready else (('예습 링크 필요' if (subject, run_id) not in links else local['reason'])
                                       if kind == 'pre' else '올해 필기 필요' if not has_notes else '저장된 웹 응답 필요')
