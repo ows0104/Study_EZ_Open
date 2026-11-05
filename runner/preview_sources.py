@@ -5,6 +5,7 @@ from dataclasses import dataclass, replace
 from functools import lru_cache
 import hashlib
 from pathlib import Path
+import unicodedata
 
 from studyez_contracts.preview_sources import fingerprint, professor_names, validate
 from . import filenames, matching
@@ -125,13 +126,14 @@ class History:
             relation = ('unknown' if not teachers or not selected_teachers else
                         'same' if selected_teachers == teachers else
                         'partial' if set(teachers) & set(selected_teachers) else 'different')
-            selected_value = dict(year=selected.year, filename=selected.path.name,
+            selected_value = dict(year=selected.year, filename=unicodedata.normalize('NFC', selected.path.name),
                                   professors=selected_teachers, sizeBytes=stat.st_size,
                                   sha256=_digest(str(selected.path.resolve()), stat.st_size, stat.st_mtime_ns),
                                   match=relation)
         value = dict(version=1, year=self.year, currentProfessors=teachers, currentSource=source,
                      date=target.date, startTime=target.start_time, baselineYear=self.baseline_year,
-                     baselineProfessors=old_teachers, baselineFilename=baseline.path.name if baseline else '',
+                     baselineProfessors=old_teachers,
+                     baselineFilename=unicodedata.normalize('NFC', baseline.path.name) if baseline else '',
                      changed=(teachers != old_teachers) if teachers and old_teachers and not conflict else None,
                      newProfessor=False if same or partial else None if uncertain else True,
                      status='needs_review' if uncertain or partial or selected is None else 'ok',

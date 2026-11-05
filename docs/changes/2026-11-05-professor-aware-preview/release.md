@@ -1,13 +1,13 @@
 # 교수 변경 표시와 최근 5년 동일 교수 예습 필기 선택 — 배포 준비
 
 ## 코드 리뷰·검증 결과
-로컬 구현과 Test 완료. 실제 결과는 state.json의 최신 revision-bound 체크와 로그에 보존했다. 소스 지문은 `9550b993ad4b1dc9d29742b7892ebe16b9f94677dc83cc299a4b9a963cf915ce`, 계획 지문은 `1dbe02286dc9e4e19d9f0c3c1cc18def9be7b76755eb8907372a72e02a896214`다.
+로컬 구현과 Test 완료. 운영 직전 대조에서 Synology의 NFD 파일명을 서버의 NFC 첨부 이름으로 정규화하도록 보완했다. 현재 소스 지문은 `f524bc4cc7c31c2d1ac52214ac0ac0d4678c8e497f554261d2244af978240338`, 계획 지문은 `1dbe02286dc9e4e19d9f0c3c1cc18def9be7b76755eb8907372a72e02a896214`다.
 
 | 체크 | 실제 결과 |
 |---|---|
-| professor-selection | 17 passed. 동일 교수 최신 연도/5년 경계/작년 대체/수동·합본/교수 충돌/출처 변경/구형 서버 보호 |
+| professor-selection | 18 passed. 동일 교수 최신 연도/5년 경계/작년 대체/수동·합본/교수 충돌/출처 변경/구형 서버 보호/NFD 파일명 |
 | contracts | 134 passed. 기존 공통 계약 포함 |
-| runner | 694 passed. 중지·보류·기존 예습/게시·시간표 범위 회귀 포함 |
+| runner | 695 passed(681 + Windows 화면 검사 12 + 2). 로컬 Tcl 상태 충돌을 피하려고 두 화면 검사 파일은 독립 프로세스에서 전부 실행했다. 생략 없음 |
 | server | 8개 독립 검사 파일 통과: preview_sources, matching와 matching_presentation, route_contract, immunity_timetable, smoke, shared_preview_prompt, study_retention |
 | web | typecheck와 production build 통과. 웹 트리 해시 `1ce7636d001ebae04baa9bf12a78252a0fc4916e8230baa53e86daf7cb859ba0` |
 | browser | 4개 브라우저 검사 통과. 신규 태그·실제 연도·기존 캘린더 지연 로딩·오류 복구·월간/모바일/키보드 확인. 데스크톱·모바일 화면을 직접 확인했으며 잘림/가로 넘침 없음 |
@@ -18,6 +18,8 @@
 
 ## 배포 대상 버전·순서·데이터 변경
 브랜치 `codex/professor-aware-preview`의 로컬 변경이며 커밋/push/운영 배포는 하지 않았다. 웹 빌드와 source hash에 대응하는 로컬 검토본은 있으나 Git SHA에 고정한 운영 배포 후보는 아직 아니다.
+
+후속 진행: 사용자의 “반영해줘.”에 따라 PR #3을 생성했다. 첫 CI에서 기존 promote 테스트가 인접 파일 쓰기에 같은 timestamp가 부여되어 실패했다(제품 변경 경로가 아님). ‘원본이 더 최신’이라는 검사의 전제만 `os.utime`으로 명시해 비결정성을 없앴다. 운영의 기존 강의는 84개이며 모든 ID를 보존한다. nullable JSON 칼럼 한 개 준비를 완료했고, 코드/자료의 실제 전환은 최종 CI 및 같은 SHA의 API 배포 확인 후 수행한다. 실행 스크립트는 `deploy_ops.py`, 비공개 원상 자료와 영수증은 `runs/_development/2026-11-05-professor-aware-preview/`에 둔다.
 
 운영 DB·자료·첨부·대화·학습 기록 변경 없음. 승인된 현재 단계는 로컬 구현/격리 검사 및 운영 적용 후보 목록 준비다. [운영 적용 제안](operating-proposal.md)에 감염과 면역 로컬 83개 대상, 선택 자료 71개, 작년 대응과 다른 자료 후보 8개의 조건부 대조·보존·복원 순서를 정리했다. 이는 실제 운영 첨부와 대조한 적용 영수증이 아니다.
 

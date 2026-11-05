@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 
 import pytest
@@ -162,6 +163,9 @@ def test_크기가_같아도_판_폴더가_더_새것이면_다시_쓴다(tmp_pa
 
     src = work / "[260812_01] 강의.apkg"
     src.write_bytes(b"new deck")                       # 같은 길이 · 다른 내용
+    # Windows CI can give adjacent writes the same timestamp. Establish the
+    # test's newer-source premise explicitly instead of relying on clock ticks.
+    os.utime(src, ns=(src.stat().st_atime_ns, first.stat().st_mtime_ns + 2_000_000_000))
     assert src.stat().st_size == first.stat().st_size
 
     assert deck.promote(run_dir).read_bytes() == b"new deck"

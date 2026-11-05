@@ -209,3 +209,18 @@ def test_older_server_cannot_receive_new_materials_without_retention_support(tmp
     report = publish.publish([plan], client, tmp_path / 'runs', log=lambda *a: None)
     assert report.failures
     assert client.calls == [('GET', '/api/admin/previews')]
+
+
+def test_synology_nfd_filename_matches_the_servers_nfc_attachment_identity(tmp_path):
+    import unicodedata
+    from dataclasses import replace
+    from studyez_contracts.preview_sources import conversation_matches
+    target, baseline = note(tmp_path, 2026), note(tmp_path, 2025)
+    decomposed = baseline.path.with_name(unicodedata.normalize('NFD', baseline.path.name))
+    baseline.path.rename(decomposed)
+    baseline = replace(baseline, path=decomposed)
+    result = history(tmp_path, tmp_path / 'runs', baseline).select(target, baseline)
+    filename = unicodedata.normalize('NFC', decomposed.name)
+    assert result.metadata['selected']['filename'] == filename
+    assert result.metadata['baselineFilename'] == filename
+    assert conversation_matches(result.metadata, filename)
