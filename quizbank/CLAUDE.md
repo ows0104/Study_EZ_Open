@@ -1,5 +1,7 @@
 # quizbank 작업 안내
 
+프롬프트 1.80의 순수 JSON은 `studyez_contracts.bank.authored_json`에서 구조 검증 후 모델 없이 BANK로 변환한다. 원본 정답/선지/출처/충돌/근거/순서를 보존하며 `authored-evidence.json`을 만든다. 기존 MD는 기존 정리 경로를 유지한다. root generation은 같은 결정적 BANK의 문항을 보존하고 학습 구조·실제 그림·임상 충돌 분리만 수행한 뒤 기존 독립 검수를 진행한다. JSON 변환을 내용 검수로 간주하거나 기존 수정 상한을 초기화하지 않는다.
+
 관리자가 만든 ChatGPT 답을 서버에서 쓸 문제은행으로 정리한다.
 사용자가 명시적으로 요청한 Concept map·포인트 자동출제는 `connection_generate.py`의 별도 경로다.
 입력·원본 지문과 실행 ledger를 고정하고 정규화→출제→원본 대조/독립 정답 검수→최대 3회 수정→roots/1을 만든다.

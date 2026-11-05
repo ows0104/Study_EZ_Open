@@ -62,8 +62,8 @@ test('canonical web prompt includes the exact matching lecture scope and keeps o
  assert.ok(!wrongSource.includes('별도 지정 없음'));
  const current=exports.renderBankPrompt({title:scope.title},[source]);
  assert.ok(!/\{\{(?:delivery_instructions|run_id|prompt_version|subject)\}\}/.test(current));
- assert.ok(current.includes('STUDYEZ_BANK_FILE'));
- assert.ok(current.includes(`study-ez-${scope.sourcePrefix.slice(1,-1)}-bank.md`));
+ assert.ok(current.includes('schema_version: 2'));
+ assert.ok(current.includes(`study-ez-${scope.sourcePrefix.slice(1,-1)}-bank.json`));
  }
 });
 
@@ -74,10 +74,18 @@ test('all lectures receive file delivery with their own identity, including non-
  vm.runInNewContext(code,{exports,require:id=>({default:id.endsWith('.json')?[]:id.includes('fileDelivery')?file:template})});
  for(const [subject,runId,title] of [['약리학','261012_02','항생제 치료의 기본 원리(윤성혜)'],['병리학','261019_01','병리학 강의']]) {
   const prompt=exports.renderBankPrompt({subject,runId,title},[{id:'S1',kind:'notes_current',filename:`[${runId}] notes.pdf`}]);
-  assert.ok(prompt.includes(`study-ez-${runId}-bank.md`));
-  assert.ok(prompt.includes(`subject: "${subject}"`));
-  assert.ok(prompt.includes('STUDYEZ_BANK_FILE'));
+  assert.ok(prompt.includes(`study-ez-${runId}-bank.json`));
+  assert.ok(prompt.includes(`subject는 "${subject}"`));
+  assert.ok(prompt.includes('schema_version: 2'));
   assert.ok(!prompt.includes('파일 링크로 본문을 대신하지 않는다'));
   assert.ok(!/\{\{(?:run_id|subject|prompt_version|delivery_instructions)\}\}/.test(prompt));
  }
+});
+
+test('professor preparation uses explicit notes groups and never the note writer',()=>{
+ const s=fixture({ok:false});
+ const source=filename=>[{kind:'notes_current',filename}];
+ assert.match(s.professorInformation(source('[261007_01] 강의 (조정현)_황다현v1.pdf')),/조정현/);
+ assert.match(s.professorInformation(source('[261105_07] 심내막염, 중추신경계감염_서윤성v1.pdf')),/미확인/);
+ assert.ok(!s.professorInformation(source('[261105_07] 강의_서윤성v1.pdf')).includes('서윤성'));
 });

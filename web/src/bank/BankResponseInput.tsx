@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { api, ApiError } from "../api";
-import { readBankFile, type ResponseFileMetadata } from "./responseFile";
+import { readBankFile, validBankFile, type ResponseFileMetadata } from "./responseFile";
 
 const COMPLETE_MARK = "STUDYEZ_BANK_COMPLETE";
 
@@ -54,7 +54,8 @@ export function BankResponseInput({ subject, runId, disabled, onSaved }: {
     /(?:\*\*|__|`{1,3})?STUDYEZ_BANK_COMPLETE(?:\*\*|__|`{1,3})?(?:\s*\n```)?\s*$/,
     COMPLETE_MARK,
   );
-  const complete = text.trimEnd().endsWith(COMPLETE_MARK);
+  const complete = responseFile ? validBankFile(raw, {subject,runId,promptVersion:fileVersion}, responseFile.filename)
+    : text.trimEnd().endsWith(COMPLETE_MARK);
 
   async function loadFile(file?: File) {
     if (!file || saving || readingFile) return;
@@ -103,8 +104,8 @@ export function BankResponseInput({ subject, runId, disabled, onSaved }: {
     <form className="link-editor" onSubmit={event => void save(event)}>
       <p className="panel-hint">저장할 강의: {subject} · {runId}. ChatGPT 답변 전체를 복사하세요. 여러 답변으로 나뉘었다면 순서대로 모두 붙여 넣으세요.</p>
       <label className="link-editor-field">
-        <span>완성된 문제은행 .md 파일 불러오기</span>
-        <input type="file" accept=".md,text/markdown" disabled={saving || readingFile}
+        <span>완성된 문제은행 JSON 파일 불러오기 (기존 MD 지원)</span>
+        <input type="file" accept=".json,application/json,.md,text/markdown" disabled={saving || readingFile}
           onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; void loadFile(file); }} />
       </label>
       {readingFile ? <p className="panel-hint">파일의 문항 수·강의 ID·정답 참조를 확인하는 중…</p> : null}

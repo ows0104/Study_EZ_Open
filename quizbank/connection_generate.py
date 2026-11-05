@@ -260,6 +260,10 @@ def _run(packet, out, model, invoke):
             value, info = invoke(name, context, out / 'material', model)
             write(out / (name + '.usage.json'), info)
             evidence={}
+            if name == 'generate' and context.get('webBank'):
+                from studyez_contracts.bank.authored_json import preserve_authored
+                write(out / (name + '.raw.json'), value)
+                value = preserve_authored(value, context['webResponse']['raw'], packet['title'])
             if name.startswith('source-'):
                 raw=envelope(context['brief'],context['bank'],value)
                 write(out/(name+'.raw.json'),raw)
@@ -282,6 +286,12 @@ def _run(packet, out, model, invoke):
     base.update(lecture_id=f"{packet['subject']}/{packet['runId']}", sources=sources,
                 preserved_scope=lecture_scope(packet['title'], packet['sources']))
     if packet.get('authoring')=='web':base['webResponse']=packet['webResponse']
+    if packet.get('authoring') == 'web':
+        from studyez_contracts.bank.response_file import is_json
+        if is_json(packet['webResponse']['raw']):
+            from studyez_contracts.bank.authored_json import to_bank
+            base['webBank'], authored_evidence = to_bank(packet['webResponse']['raw'], packet['title'])
+            write(out / 'authored-evidence.json', authored_evidence)
     from_sources=packet.get('inputMode')=='source'
     intake={**source_intake(packet,sources),'preserved_scope':base['preserved_scope']} if from_sources else base
     brief = stage('normalize', intake)
@@ -289,9 +299,8 @@ def _run(packet, out, model, invoke):
     if brief['lecture_id'] != base['lecture_id']: raise ValueError('brief: 다른 강의입니다.')
     bank = stage('generate', {**base, 'brief': brief})
     if packet.get('authoring')=='web':
-        import re
-        raw=packet['webResponse']['raw'].removeprefix('\ufeff')
-        metadata=json.loads(re.match(r'<!-- STUDYEZ_BANK_FILE (\{[^\n]+\}) -->',raw)[1])
+        from studyez_contracts.bank.response_file import metadata as file_metadata
+        metadata=file_metadata(packet['webResponse']['raw'])
         if [q['question_id'] for q in bank['questions']]!=metadata['question_ids']:
             raise ValueError('웹 원문의 전체 문항 ID가 보존되지 않았습니다. 대체 출제하지 않습니다.')
     for round_no in range(4):

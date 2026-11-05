@@ -10,4 +10,6 @@ visual_stimuli는 실제 원본 PDF의 question_id/source_id/물리쪽/page/정�
 
 clinical_conflicts는 BANK source_conflicts의 모든 conflict_id마다 facts를 가지며 실제 원본의 충돌 주장과 현재 의학 답의 관계만 명시한다. 과거 sourceAudit/medical verdict, 검수자 판단, 수정 차수, 중요도는 넣지 않는다. 의학적으로 필요한 충돌 사실은 누락하지 않는다. 과거 판정·수정 이력은 audit_summary.changes 등 별도 기록에 보존하며 문제/답/해설/clinical_conflicts에 섞지 않는다. 독립 원본 검수가 이 projection과 정본의 일치·완전성을 확인하고 정답 검수는 이 의학적 내용만 받는다.
 
+webBank가 제공되면 이미 원문 JSON을 코드로 변환한 BANK다. 이를 그대로 사용하고 개념·학습 위치·실제 선행 연결 및 원본 그림만 연결한다. 문항 내용·정답·선지·출처·중요도·심화·순서를 다시 작성하지 않는다. clinical_conflicts는 보존된 충돌에 맞춰 작성한다.
+
 option_pools는 빈 배열이다. 실제 범위/안전한 조건/외부 근거·불확실성을 보존한다. JSON만 반환한다.

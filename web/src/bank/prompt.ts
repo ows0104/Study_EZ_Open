@@ -23,6 +23,17 @@ const KIND_LABEL: Record<BankSource["kind"], string> = {
 
 /** 첨부 순서(S1·S2)는 서버가 정한 `bankSources` 순서다 — 러너도 같은 ID 로 출처를 읽는다. */
 type PromptLecture=Pick<LectureDetail,'title'|'runId'|'subject'|'bankExamDate'>;
+export function professorInformation(sources: BankSource[]) {
+  const names = sources.filter(s => s.kind === 'notes_current').flatMap(s => {
+    const title = s.filename.normalize('NFC').replace(/^\[[^\]]+\]\s*/, '').split('_',1)[0];
+    return Array.from(title.matchAll(/\(([^()]*)\)/g)).flatMap(m => {
+      const values = m[1].trim().split(/[·,/ㆍ\s]+/);
+      return values.every(v => /^[가-힣]{2,4}$/.test(v)) ? values : [];
+    });
+  });
+  return names.length ? `올해 담당 교수: ${Array.from(new Set(names)).join('·')} (올해 필기 파일명 확인)`
+    : '올해 담당 교수: 미확인. 동일 교수 기출 여부를 추정하지 않는다.';
+}
 export function renderBankPrompt(detail: PromptLecture, sources: BankSource[], sourceTemplate = template,
   sourceScopes: readonly LectureScope[] = lectureScopes as LectureScope[],
   deliveries = { file: fileDelivery, text: textDelivery }) {
@@ -35,19 +46,20 @@ export function renderBankPrompt(detail: PromptLecture, sources: BankSource[], s
     subject: detail.subject || "약리학", prompt_version: version };
   const fill: Record<string, string> = {
     title: detail.title,
+    professor_info: professorInformation(sources),
     lecture_scope: scope?.instruction ?? "",
     delivery_instructions: deliveries.file
       .replace(/\{\{(run_id|subject|prompt_version)\}\}/g, (_, key: string) => deliveryValues[key]),
     exam_date: detail.bankExamDate || "미정",
     weighting: "강의슬라이드 > 족보 > 필기",
     sources: sources.map((s) => `  - ${s.id} | ${KIND_LABEL[s.kind]} | ${s.filename}`).join("\n"),
-    output: "전체 확정본을 실제 UTF-8 .md 파일 하나로 제공한다.",
+    output: "전체 확정본을 실제 UTF-8 .json 파일 하나로 제공한다.",
   };
   return sourceTemplate
     .replace(/\r\n/g, "\n")
     .replace(HEADER, "")
     .replace(/^\{\{lecture_scope\}\}\n(?:\n)?/m, () => fill.lecture_scope ? `${fill.lecture_scope}\n\n` : "")
-    .replace(/\{\{(title|exam_date|weighting|sources|output|lecture_scope|delivery_instructions)\}\}/g, (_, key: string) => fill[key]);
+    .replace(/\{\{(title|professor_info|exam_date|weighting|sources|output|lecture_scope|delivery_instructions)\}\}/g, (_, key: string) => fill[key]);
 }
 
 /** 전송 시점의 정본을 읽는다. 페이지를 오래 열어 둔 경우에도 번들에 든 구버전으로 전송하지 않는다. */
@@ -65,7 +77,8 @@ export async function loadLatestBankPrompt(detail: PromptLecture, sources: BankS
   }
   if (typeof latest.template !== "string" || typeof latest.version !== "string"
       || /Version:\s*(\S+)/.exec(latest.template)?.[1] !== latest.version
-      || !latest.template.includes("STUDYEZ_BANK_COMPLETE")) {
+      || !(Number(latest.version.split('.')[1]) >= 80 ? latest.template.includes('"complete": true')
+        : latest.template.includes("STUDYEZ_BANK_COMPLETE"))) {
     throw new Error("출제 프롬프트 파일이 올바르지 않습니다. 전송을 중단했습니다.");
   }
   if (latest.deliveries !== undefined && (typeof latest.deliveries?.file !== "string" || typeof latest.deliveries?.text !== "string")) {

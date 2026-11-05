@@ -194,6 +194,18 @@ def tidy_matching_choices(bank: dict) -> list[str]:
 
 def organize(raw: str, lecture: dict, *, model: str | None = None, out: Path | None = None) -> tuple[dict, dict]:
     """`(bank, info)`. lecture = {title, sources: [{id, kind, filename}]}."""
+    from studyez_contracts.bank.response_file import is_json
+    from studyez_contracts.bank.authored_json import json_version
+    if is_json(raw) or json_version(lecture.get('prompt_version')):
+        from studyez_contracts.bank.authored_json import loads, to_bank
+        document = loads(raw)
+        if lecture.get('prompt_version') and document['prompt_version'] != lecture['prompt_version']:
+            raise ValueError('JSON 파일과 요청의 프롬프트 버전이 다릅니다.')
+        bank, evidence = to_bank(raw, lecture['title'])
+        if out is not None:
+            out.mkdir(parents=True, exist_ok=True)
+            (out / 'authored-evidence.json').write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding='utf-8')
+        return bank, {'usage': {}, 'cost_usd': 0, 'duration_ms': 0, 'conversion': 'authored-json/2'}
     from .web_audit import enabled
     from .compact import deduplicate_repeats, read_blocks, restore
     prepared, repeated = deduplicate_repeats(clean_response(raw))

@@ -1,0 +1,20 @@
+{
+  "schema_version": 2,
+  "subject": "약리학",
+  "run_id": "261006_02",
+  "prompt_version": "1.80",
+  "generation_id": "ab682837b3c34916a2c0c77c342bd115",
+  "complete": true,
+  "question_count": 6,
+  "question_ids": ["Q001", "Q002", "Q003", "Q004", "Q005", "Q006"],
+  "conflict_ids": ["CF001"],
+  "questions": [
+    {"question_id":"Q001","format":"basic","tier":"Must-Know","importance":5,"advanced":false,"item_difficulty":1,"retrieval_direction":"direct","question":"Synthetic target?","answers":["Target A"],"source_refs":[{"source_id":"S1","locator":"p.1"}],"exam_rationale":"Synthetic required recall","evidence":{"mode":"single","slides":[{"page":1,"evidence":"Target A"}],"reference_pages":[],"reason":"Direct synthetic evidence","jokbo":[]}},
+    {"question_id":"Q002","format":"cloze","tier":"Core","importance":5,"advanced":false,"item_difficulty":2,"retrieval_direction":"direct","question":"Before {A}, after {B}, repeated {A}.","source_refs":[{"source_id":"S1","locator":"p.1"}],"exam_rationale":"Synthetic paired recall","evidence":{"mode":"single","slides":[{"page":1,"evidence":"A to B"}],"reference_pages":[],"reason":"Direct synthetic evidence","jokbo":[]}},
+    {"question_id":"Q003","format":"list","tier":"Optional","importance":2,"advanced":false,"item_difficulty":1,"retrieval_direction":"direct","question":"Synthetic members?","answers":["A, first","B"],"source_refs":[{"source_id":"S2","locator":"2023 Q1"}],"exam_rationale":"Synthetic list","evidence":{"mode":"unresolved","slides":[],"reference_pages":[],"reason":"Synthetic lecture evidence absent","jokbo":[{"year":"2023","number":"Q1"}]}},
+    {"question_id":"Q004","format":"ox","tier":"Important","importance":4,"advanced":false,"item_difficulty":2,"retrieval_direction":"discrimination","question":"Synthetic target is B. (O/X)","answers":["X"],"explanation":"The synthetic target is **A**.","conflict_id":"CF001","source_refs":[{"source_id":"S1","locator":"p.1"}],"exam_rationale":"EXT synthetic conflict","evidence":{"mode":"single","slides":[{"page":1,"evidence":"Target A"}],"reference_pages":[],"reason":"Direct synthetic evidence","jokbo":[]}},
+    {"question_id":"Q005","format":"mcq","tier":"Core","importance":5,"advanced":false,"item_difficulty":2,"retrieval_direction":"discrimination","question":"Choose the synthetic target.","answers":["B"],"options":[{"id":"A","text":"Other"},{"id":"B","text":"Target A"}],"mcq_mode":"comparison","source_refs":[{"source_id":"S1","locator":"p.1"}],"exam_rationale":"Synthetic choice","evidence":{"mode":"single","slides":[{"page":1,"evidence":"Target A"}],"reference_pages":[],"reason":"Direct synthetic evidence","jokbo":[]}},
+    {"question_id":"Q006","format":"multi_select","tier":"Important","importance":4,"advanced":true,"item_difficulty":3,"retrieval_direction":"integration","question":"Choose synthetic members.","answers":["A","C"],"options":[{"id":"A","text":"First"},{"id":"B","text":"Other"},{"id":"C","text":"Second"}],"mcq_mode":"comparison","source_refs":[{"source_id":"S1","locator":"p.2; p.3"}],"exam_rationale":"Synthetic linked choice","evidence":{"mode":"linked","slides":[{"page":2,"evidence":"First"},{"page":3,"evidence":"Second"}],"reference_pages":[4],"reason":"Both synthetic facts required","jokbo":[]}}
+  ],
+  "source_conflicts": [{"conflict_id":"CF001","description":"판단: A\n자료 1: synthetic A\n자료 2: synthetic B\n근거: synthetic correction","source_refs":[{"source_id":"S1","locator":"p.1"}],"unresolved":false}]
+}

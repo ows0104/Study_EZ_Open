@@ -4,6 +4,7 @@ import { bumpPreviewVersion } from "../bridge/previewBridge";
 import { EXTENSION_SOURCE, MESSAGES, WEBAPP_SOURCE } from "../bridge/protocol";
 import { bankDestination } from "../bridge/linkRouting";
 import { webGenerationId } from './rootWeb';
+import { validBankFile } from './responseFile';
 
 /**
  * 완성된 웹 문항을 저장해 CLI 검수·게시를 시작한다. 링크는 별도로 저장한다.
@@ -25,8 +26,12 @@ export function useBankLink() {
       const [subject, runId] = destination.lectureId.split("/");
       if (!subject || !runId || destination.lectureId.split("/").length !== 2) return;
       const path = `${encodeURIComponent(subject)}/${encodeURIComponent(runId)}`;
+      if (legacy && data.responseFile && (typeof data.raw !== 'string'
+          || !validBankFile(data.raw,{subject,runId,promptVersion:destination.promptVersion || data.promptVersion},data.responseFile.filename))) return;
       if (legacy && typeof data.raw === "string" && data.raw.length >= 200
-          && data.raw.length <= 2_000_000 && data.raw.trimEnd().endsWith("STUDYEZ_BANK_COMPLETE")) {
+          && data.raw.length <= 2_000_000 && (data.responseFile
+            ? validBankFile(data.raw,{subject,runId,promptVersion:destination.promptVersion || data.promptVersion},data.responseFile.filename)
+            : data.raw.trimEnd().endsWith("STUDYEZ_BANK_COMPLETE"))) {
         const generation=webGenerationId(data.raw);
         void api(generation?`/api/admin/root-generation/${generation}/web-response`:`/api/admin/lectures/${path}/bank-response`, {
           method: "PUT", body: JSON.stringify({ raw: data.raw, conversationUrl: data.url || "",

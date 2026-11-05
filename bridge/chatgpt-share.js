@@ -182,8 +182,8 @@ function offerBankFile(message) {
   panel.id = "studyez-bank-file";
   panel.style.cssText = "position:fixed;bottom:18px;right:18px;z-index:2147483647;background:#fff;color:#18212f;border:1px solid #aaa;border-radius:10px;padding:12px;max-width:360px;font:14px sans-serif;box-shadow:0 2px 15px #0003";
   const label = document.createElement("label");
-  label.textContent = "Study EZ · 완성된 .md 파일 전달 ";
-  const input = document.createElement("input"); input.type = "file"; input.accept = ".md,text/markdown";
+  label.textContent = "Study EZ · 완성된 문제은행 파일 전달 ";
+  const input = document.createElement("input"); input.type = "file"; input.accept = ".json,application/json,.md,text/markdown";
   const status = document.createElement("p"); status.textContent = message;
   input.addEventListener("change", async () => {
     const file = input.files?.[0]; if (!file) return;
@@ -204,7 +204,7 @@ function offerBankFile(message) {
 /** Use only real download links exposed by this reply; never invent a sandbox API. */
 async function collectBankFile(answer) {
   const target = bankFileTarget();
-  const filename = `study-ez-${target.runId}-bank.md`;
+  const filename = globalThis.StudyEZBankFile.filenameFor(target);
   const links = [...answer.matchAll(/\[[^\]]*\]\(([^\s)]+)\)/g)].map(m => m[1]);
   const linked = links.find(value => {
     try { return decodeURIComponent(value.split(/[?#]/)[0]).endsWith('/' + filename); } catch { return false; }
@@ -231,7 +231,7 @@ async function collectBankFile(answer) {
     if (!sendShareMessage({type:'STUDYEZ_BANK_DOWNLOAD_FILE'},response => resolve(response?.ok && typeof response.raw === 'string' ? response : null))) resolve(null);
   });
   if (downloaded) return globalThis.StudyEZBankFile.describe(downloaded.raw,target,downloaded.filename);
-  offerBankFile('실제 MD 파일의 자동 다운로드를 재시도하고 있습니다. 파일이 준비되면 자동으로 검수에 전달합니다. 파일을 직접 선택할 수도 있습니다.');
+  offerBankFile('문제은행 파일의 자동 다운로드를 재시도하고 있습니다. 파일이 준비되면 검수에 전달합니다. 직접 선택할 수도 있습니다.');
   return null;
 }
 

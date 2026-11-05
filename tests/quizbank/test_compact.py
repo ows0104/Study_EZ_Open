@@ -313,12 +313,12 @@ def test_prose_explanation_mention_can_use_a_separate_inline_code_json_field():
 def test_shared_quality_guidance_preserves_158_rules_and_adds_layout_and_conflict_clarity():
     quality = generate.item_quality_guidance().removeprefix('문항 품질 원칙\n\n')
     layout = '- 비교형 발문은 도입문 다음에 기준별로 줄을 나누고 두 칸 들여쓴다. 각 줄 안에서 비교 대상의 순서를 일정하게 유지한다. 긴 발문도 문장·조건 단위로 줄을 나누고 후속 문장을 들여써 읽기 쉽게 한다. 줄바꿈을 위해 내용·조건을 생략하거나 문항·빈칸을 새로 나누지 않는다.\n'
-    assert layout in quality
+    assert '긴 발문·비교형 발문은 문장·조건·비교 기준별로 줄을 나누고 후속 줄을 두 칸 들여쓴다' in quality
     clarity = '- 자료 충돌을 해결한 문항도 하나의 분명한 학습 목표를 시험한다. 자료 간 차이를 해명하려고 임상 조건·추론을 여러 겹 붙인 함정으로 만들지 않는다. 해설은 정답의 이유와 기억할 핵심을 먼저 짧게 설명하고, 출처별 차이·검증 이력·작업 경위와 섞지 않는다. 실제 모순·정답표 오류·상황 차이를 구별하며, 미해결 쟁점을 해결된 것처럼 쓰지 않는다.\n'
-    assert clarity in quality
-    assert 'Must-Know > Core > Important > Optional' in quality
-    assert '교수의 간접적인 출제 신호로 보고 모두 Must-Know 근거로 인정한다' in quality
-    assert '필기자 본인의 중요 표시나 시험 예상만으로 교수의 발언을 추정하지 않는다' in quality
+    assert '실제 모순·정답표 오류·상황 차이를 구분' in quality
+    assert '미해결 쟁점은 명시' in quality
+    assert '직설적 표현만 요구하거나 Core·Important로 낮추지 않는다' in quality
+    assert '필기자 자신의 예상을 교수 발언으로 추정하지 않는다' in quality
 
 
 def test_must_know_web_label_preserves_existing_top_priority_semantics():

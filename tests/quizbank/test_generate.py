@@ -77,10 +77,10 @@ def test_generate_reads_pdf_and_continues_without_completion(tmp_path, monkeypat
         calls.append((prompt, kwargs))
         if len(calls) == 2:
             from pathlib import Path
-            value = (Path(__file__).parents[1] / 'fixtures/bank-file-valid.md').read_text(encoding='utf-8')
+            value = (Path(__file__).parents[1] / 'fixtures/bank-file-valid.json').read_text(encoding='utf-8')
             version = generate.prompt_for('강의', '', context['sources'])[1]
-            value = value.replace('1.76', version)
-            (out / 'study-ez-261006_02-bank.md').write_text(value, encoding='utf-8')
+            value = value.replace('1.80', version)
+            (out / 'study-ez-261006_02-bank.json').write_text(value, encoding='utf-8')
         return {"text": "문항 " * 100 if len(calls) == 1 else "나머지\nSTUDYEZ_BANK_COMPLETE",
                 "session_id": "s1", "session_usage": {"input_tokens": 5},
                 "usage": {"input_tokens": 5}, "cost_usd": None, "duration_ms": 100}
@@ -92,8 +92,8 @@ def test_generate_reads_pdf_and_continues_without_completion(tmp_path, monkeypat
     assert calls[1][1]["resume"] == "s1" and calls[1][1]["previous_usage"] == {"input_tokens": 5}
     assert "Source text" in (out / "source-text.md").read_text(encoding="utf-8")
     assert len(json.loads((out / "source-pages.json").read_text())) == 1
-    assert (out / "raw.md").read_text(encoding="utf-8").rstrip().endswith("STUDYEZ_BANK_COMPLETE")
-    assert (out / 'raw.md').read_bytes() == (out / 'study-ez-261006_02-bank.md').read_bytes()
+    assert json.loads((out / "raw.json").read_text(encoding="utf-8"))['complete'] is True
+    assert (out / 'raw.json').read_bytes() == (out / 'study-ez-261006_02-bank.json').read_bytes()
     assert len(result["usage"]) == 2
 
 

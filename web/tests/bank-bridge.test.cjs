@@ -23,6 +23,8 @@ function fixture(fail = false) {
     '../api': {api: async (url, options) => {calls.push({url, body: JSON.parse(options.body)}); if (fail) throw Error('Save failed');}},
     '../bridge/previewBridge': {bumpPreviewVersion: () => {bumps++;}},
     '../bridge/linkRouting': routingExports,
+    './rootWeb': {webGenerationId:()=>null},
+    './responseFile': {validBankFile:()=>false},
     '../bridge/protocol': {EXTENSION_SOURCE: 'ext', WEBAPP_SOURCE: 'web', MESSAGES: {
       bankReady: 'BANK', bankSaved: 'BANK_SAVED', linkReady: 'LINK', linkSaved: 'LINK_SAVED'}},
   };

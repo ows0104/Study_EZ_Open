@@ -304,7 +304,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (watch?.mode !== 'bank' || !globalThis.StudyEZBankFile.required(target) || !conversation) {
         sendResponse({ok:false}); return;
       }
-      target.filename = `study-ez-${target.runId}-bank.md`;
+      target.filename = globalThis.StudyEZBankFile.filenameFor(target);
       const results = await chrome.scripting.executeScript({target:{tabId:sender.tab.id},world:'MAIN',
         func:captureBankDownload,args:[target,conversation]});
       const file = results.find(item => item.frameId === 0)?.result;
@@ -329,7 +329,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (!watch || watch.mode !== "bank") { sendResponse({ ok: false }); return; }
         const target = globalThis.StudyEZBankFile?.lectureTarget(watch.lectureId, watch.promptVersion);
         if (globalThis.StudyEZBankFile?.required(target) && !message.responseFile) {
-          sendResponse({ ok: false, error: "실제 .md 파일 원문이 필요합니다." }); return;
+          sendResponse({ ok: false, error: "실제 문제은행 파일 원문이 필요합니다." }); return;
         }
         if (message.responseFile) {
           try { globalThis.StudyEZBankFile.inspect(raw, target, message.responseFile.filename); }

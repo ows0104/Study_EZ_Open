@@ -1,0 +1,16 @@
+# 웹 문제은행 순수 JSON 전달과 프롬프트 간소화 — 구현 계획
+
+## 변경 범위·대상 파일·순서
+1. studyez_contracts/bank에 authored JSON 검증·메타데이터 추출·BANK 변환과 파일 형식 분기 계층을 추가한다. 기존 markdown_file은 유지한다.
+2. content/prompts/bank 정본을 1.80으로 갱신하고 프롬프트 조립·사전 교수 메타데이터 전달·파일 지시를 함께 맞춘다. 기존 공통 품질 원칙 추출 경계는 보존한다.
+3. bridge의 공용 검증·자동/수동 파일 회수, 웹의 파일 선택·응답 전달과 root generation 요청 식별을 갱신한다. 서버 일반/root 수신과 러너, 두 root generation 소비자를 새 분기 계층에 연결한다.
+4. quizbank JSON 입력을 모델 없는 변환에 연결하고 근거 재사용을 보존한다. 원본 MD 경로와 기존 실패/재개 예산은 바꾸지 않는다.
+5. contracts/generation/bridge/server/web 검사에서 JSON 성공과 손상·잘못된 요청·해시·보기 참조·cloze·충돌·필드 누락 거절 및 구형 MD 호환을 확인한다. 웹 타입·빌드와 코드 리뷰를 수행한다.
+
+승인 범위는 위 파일들의 로컬 구현·검사·변경 기록이다. 사용자의 현 요청이 같은 범위를 직접 승인했으므로 중복 승인을 요청하지 않는다. DB migration, 기존 콘텐츠 교체·재출제, 운영 배포/러너 재시작은 하지 않는다. 브랜치 codex/bank-json-delivery에서 검토 가능한 결과를 준비한다. 복원은 변경 커밋 revert이며 기존 원문/상태는 건드리지 않는다.
+
+## 검사 명령과 성공 조건
+프로젝트 Python으로 pytest tests/contracts, tests/quizbank, tests/bridge, tests/runner를 실행한다. 서버는 기존 server 가상환경으로 -m tests bank_response 및 root_generation을 독립 실행한다. 웹은 Node 테스트, typecheck, build를 실행한다. 추가한 거절/변환 검사가 실제 수행되고 기존 호환 검사가 통과해야 한다.
+
+## 위험·복원·승인할 범위
+새 수집 확장과 서버/러너가 함께 필요하므로 판별 버전과 최소 확장 버전을 갱신한다. 구형 파일을 덮어쓰지 않으며 로컬 변경만 준비한다. 변경된 승인 문서는 같은 사용자 직접 요청 범위이며 승인 지문을 다시 기록한다.

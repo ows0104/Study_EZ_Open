@@ -44,3 +44,22 @@ assert packet['webResponse']==response
 result=f.result(packet)
 assert client.put(base+'/result',json=result).status_code==200
 print('PASS web request held, owned input, single dispatch, file/header/hash binding, queued after real MD, replay, old bank links preserved and publication')
+
+# New JSON requests use the same ownership, frozen dispatch and replay checks.
+import json
+from studyez_contracts.bank.response_file import validate as validate_file
+r=client.post(ADMIN+'/generation',json={**payload,'requestId':'json-web','points':'Synthetic JSON point'})
+assert r.status_code==200,r.text
+json_job=r.json()['generation'];json_base='/api/admin/root-generation/'+json_job['id']
+assert client.post(json_base+'/web-dispatch',json={'promptVersion':'1.80','promptHash':'c'*64}).json()['send']
+doc=json.loads((Path(__file__).resolve().parents[2]/'tests/fixtures/bank-file-valid.json').read_text(encoding='utf-8'))
+doc.update(subject='test',run_id='demo',generation_id=json_job['id'])
+raw=json.dumps(doc,ensure_ascii=False)
+info=validate_file(raw,'study-ez-demo-bank.json','test','demo')
+json_response={'raw':raw,'promptVersion':'1.80','responseFile':{k:info[k]for k in ('filename','sha256','byteLength')}}
+assert client.put(json_base+'/web-response',json={**json_response,'promptVersion':'1.81'}).status_code==422
+assert client.put(base+'/web-response',json=json_response).status_code==422
+r=client.put(json_base+'/web-response',json=json_response);assert r.status_code==200,r.text
+assert client.put(json_base+'/web-response',json=json_response).json()['reused']
+assert client.get(json_base+'/input').json()['packet']['webResponse']['raw']==raw
+print('PASS JSON request identity, frozen prompt version, exact bytes and replay')
