@@ -1,0 +1,218 @@
+{
+  "id": "2026-11-06-map-point-e2e",
+  "title": "심내막염·CNS Map·포인트에서 생성·검수·풀이 E2E 실험",
+  "area": "generation",
+  "created_at": "2026-11-05T17:22:35.260507+00:00",
+  "required_checks": [
+    "input-preservation",
+    "generation-contract",
+    "solve-flow"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-05T17:30:33.423942+00:00",
+      "evidence": "현재 사용자 명시승인: 원본 PDF2개58/13쪽·Map2개·최종47/60포인트를 OpenAI Codex/GPT로 전송해 문제 생성·원본/독립정답검수, 생성문항/검수결과 후속전송 및 강의별 최대3회 보완/재검수. 답변 위 자료 전송·문제 생성·검수 승인. 짧은 실험경로는 동일범위의 Windows 실행환경 조정.",
+      "scope": "동일 두강의 실험용 생성·검수·로컬 풀이, 기존 최대3회 상한 유지, 운영548/은행/학습 보존",
+      "evidence_version": 2,
+      "source_hash": "2a0dced38f85d626f0d8f023387365495f21efe576514dc1b12305afa29b8ad0",
+      "plan_hash": "231ee3640bc9a9ebd610a8b182cf4f02bfcda2d9aca42347ea8dcf7c1cd9bd70",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "22ded853a0715c624e5a1d99a1aae5ba5604460d12c136ec0c3f0ae3e27b2cac"
+    }
+  },
+  "checks": [
+    {
+      "name": "input-preservation",
+      "at": "2026-11-05T17:24:56.041414+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-e2e/experiment.py",
+        "inputs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2a0dced38f85d626f0d8f023387365495f21efe576514dc1b12305afa29b8ad0",
+      "plan_hash": "7138686f8699d2c3f4dd9955bf5c3b9f82b44c360305d6986442a46bff751ea5",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-e2e/1793899495042857400-input-preservation.log"
+    },
+    {
+      "name": "input-preservation",
+      "at": "2026-11-05T17:30:35.398539+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-e2e/experiment.py",
+        "inputs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2a0dced38f85d626f0d8f023387365495f21efe576514dc1b12305afa29b8ad0",
+      "plan_hash": "231ee3640bc9a9ebd610a8b182cf4f02bfcda2d9aca42347ea8dcf7c1cd9bd70",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-e2e/1793899834776192800-input-preservation.log"
+    },
+    {
+      "name": "input-preservation",
+      "at": "2026-11-05T19:14:08.786008+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-e2e/experiment.py",
+        "inputs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2a0dced38f85d626f0d8f023387365495f21efe576514dc1b12305afa29b8ad0",
+      "plan_hash": "231ee3640bc9a9ebd610a8b182cf4f02bfcda2d9aca42347ea8dcf7c1cd9bd70",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-e2e/1793906048308152500-input-preservation.log"
+    },
+    {
+      "name": "generation-contract",
+      "at": "2026-11-05T19:17:53.590761+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-e2e/experiment.py",
+        "ready-results"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2a0dced38f85d626f0d8f023387365495f21efe576514dc1b12305afa29b8ad0",
+      "plan_hash": "231ee3640bc9a9ebd610a8b182cf4f02bfcda2d9aca42347ea8dcf7c1cd9bd70",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-e2e/1793906256599094700-generation-contract.log"
+    },
+    {
+      "name": "solve-flow",
+      "at": "2026-11-05T19:18:14.314765+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-e2e/check_solve.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2a0dced38f85d626f0d8f023387365495f21efe576514dc1b12305afa29b8ad0",
+      "plan_hash": "231ee3640bc9a9ebd610a8b182cf4f02bfcda2d9aca42347ea8dcf7c1cd9bd70",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-e2e/1793906293813346500-solve-flow.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-05T19:20:05.740947+00:00",
+    "summary": "Reviewed frozen original sources/Map/47-60 points, isolated SQLite/storage and loopback-only API, SHA-sealed CNS registration, actual technical-account UI events and response/session reload persistence. Human events remain zero. generation-contract validates completed subset complete=false: CNS49/40 ready, Endocarditis47 held duplicate IDs at budget3 with40 ok/6 doubt/1 wrong. No production deployment or full two-lecture completion claimed.",
+    "evidence_version": 2,
+    "source_hash": "2a0dced38f85d626f0d8f023387365495f21efe576514dc1b12305afa29b8ad0",
+    "plan_hash": "231ee3640bc9a9ebd610a8b182cf4f02bfcda2d9aca42347ea8dcf7c1cd9bd70",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-05T19:20:05.834334+00:00"
+}
