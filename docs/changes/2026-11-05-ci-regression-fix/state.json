@@ -220,9 +220,16 @@
     ]
   },
   "lifecycle": {
-    "status": "planning",
-    "events": [],
+    "status": "verified",
+    "events": [
+      {
+        "at": "2026-11-05T09:50:23.636444+00:00",
+        "type": "verified",
+        "evidence": "Local full regression 1923 passed/1 skipped, contracts 125 passed; release gate ready; PR 4 and master 42003615259 CI success; API d5e30590 health and auth postcheck passed; Cloudflare same-SHA deployment success.",
+        "resolution": null
+      }
+    ],
     "links": []
   },
-  "updated_at": "2026-11-05T09:23:07.908212+00:00"
+  "updated_at": "2026-11-05T09:50:23.636464+00:00"
 }
