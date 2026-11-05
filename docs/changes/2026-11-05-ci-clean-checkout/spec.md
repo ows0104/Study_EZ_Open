@@ -3,6 +3,8 @@
 ## 요구사항과 수용 기준
 work 없는 checkout에서 tests/quizbank/test_incremental_comparison.py의 6개 검사가 동일한 provenance/hash/시간/검수 범위를 검증해야 한다. 작업 폴더에서 읽었던 일반 함수 구현을 그대로 승격하며 모델 호출이나 콘텐츠 판단은 추가하지 않는다. requests를 CI 설치 목록에 추가한다.
 
+두 번째 실행 41983410862는 1,919 passed/1 skipped 후 Windows 바로가기 검사가 요구하는 실제 .venv가 없어 한 건 실패했다. 테스트를 건너뛰지 않고 CI에서 프로젝트 .venv를 생성해 모든 Python 검사/의존성 설치에 사용한다. 이는 동일한 새 checkout 재현성 복구 범위다.
+
 ## 책임·입출력 계약·오류 상태
 scripts/incremental_comparison.py는 전달받은 합성/실제 아티팩트 폴더를 읽기만 한다. main/운영 탐색/자동 보고서 쓰기를 복사하지 않는다. 기존 업무용 work 원본은 그대로 보존한다.
 

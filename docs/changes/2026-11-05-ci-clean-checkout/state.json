@@ -8,12 +8,12 @@
   ],
   "approvals": {
     "build": {
-      "at": "2026-11-05T06:51:49.964844+00:00",
-      "evidence": "2026-11-05 사용자 Git 전체 commit/push 및 공동작업용 자동 배포 요청과 승인 — 위 범위로 자동 배포 연결. 해당 자동 배포의 새 checkout 검사 복구에 적용.",
-      "scope": "추적 제외 work 참조를 일반 읽기 helper로 보존하고 검사 import/CI requests 의존성 수정, 새 SHA 전체 CI 및 자동 배포 검증. 제품/자료/운영 데이터 변경 없음",
+      "at": "2026-11-05T06:58:08.522445+00:00",
+      "evidence": "현재 사용자의 Git 공동작업·자동 배포 구현/연결/검증 승인 범위. 새 checkout의 실제 개발 .venv 부재로 실패한 바로가기 검사까지 같은 범위에서 복구하며 plan 지문 갱신.",
+      "scope": "추적 helper/requests와 실제 프로젝트 .venv 생성으로 CI 재현성 복구. 검사 생략·제품/DB/내용 변경 없음",
       "evidence_version": 2,
-      "source_hash": "87a1fdfa26fd42c0fc45736c0e4486aaab1a94cdfd954c598276fa765bec5563",
-      "plan_hash": "ce452c438b7dc00a55c7e942e3c223eca8eef31783ff0b20284dcd87ebd2ddb6",
+      "source_hash": "bf9c73f3d69e3c05226f6e3e8ec7912d8e5381a56ecca8376fa00e96fe0447a8",
+      "plan_hash": "ebabd74fc8ce6d569a5f5e62bad4f03388431a512781c02612fbe57ff8ac5269",
       "inputs": [
         ".github",
         "bridge",
@@ -42,7 +42,7 @@
         "uv.lock",
         "web"
       ],
-      "release_hash": "fe9573dd57c723e37d91a42580f59c273e391a132786b84b2799312b36890398"
+      "release_hash": "987ae760c125a12a578adec441f240cf9918203347dd91f72ff13300569d2347"
     }
   },
   "checks": [
@@ -91,14 +91,61 @@
         "web"
       ],
       "log": "runs/_development/2026-11-05-ci-clean-checkout/1793861546427874000-automation.log"
+    },
+    {
+      "name": "automation",
+      "at": "2026-11-05T06:58:14.757494+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "-m",
+        "pytest",
+        "tests/quizbank/test_incremental_comparison.py",
+        "tests/development/test_ci_deploy.py",
+        "tests/runner/test_desktop_control.py",
+        "-q",
+        "--basetemp=runs/_development/2026-11-05-ci-clean-checkout/pytest-second"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "bf9c73f3d69e3c05226f6e3e8ec7912d8e5381a56ecca8376fa00e96fe0447a8",
+      "plan_hash": "ebabd74fc8ce6d569a5f5e62bad4f03388431a512781c02612fbe57ff8ac5269",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "server",
+        "spotter/data",
+        "spotter/scripts",
+        "spotter/web",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "tests/runner",
+        "tests/spotter",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ci-clean-checkout/1793861889222295000-automation.log"
     }
   ],
   "review": {
-    "at": "2026-11-05T06:53:08.797053+00:00",
-    "summary": "최초 CI 수집 오류 두 건과 수정 대조. 읽기 전용 helper 함수 본문을 기존 source에서 그대로 보존했고 운영 main/쓰기/자료는 옮기지 않음. 테스트가 추적 module을 사용하고 CI requests만 추가함. 관련25개 및 work 없는 추적파일 복사본25개 통과. 제품/DB/내용 변경 없음. 다음 SHA GitHub 전체 검사·실제 배포 확인 필요.",
+    "at": "2026-11-05T06:58:59.573329+00:00",
+    "summary": "clean checkout helper/requests 수정에 이어 원격 1919pass/1skip/1fail을 검토. Windows shortcut이 프로젝트 .venv/pyvenv.cfg를 요구하므로 표준 venv 생성 후 GitHub PATH에 등록하여 모든 후속 Python/pip가 같은 개발 구조를 쓰도록 수정. 기존 바로가기 검사를 포함한 관련 로컬 검사 통과. 제품·서버·DB 변경 없음. 새 SHA 전체 CI/배포 검증 필요.",
     "evidence_version": 2,
-    "source_hash": "8dd701086942563ef7cb998da71e5980a15076bf32e036f7e71862068c70dde7",
-    "plan_hash": "ce452c438b7dc00a55c7e942e3c223eca8eef31783ff0b20284dcd87ebd2ddb6",
+    "source_hash": "bf9c73f3d69e3c05226f6e3e8ec7912d8e5381a56ecca8376fa00e96fe0447a8",
+    "plan_hash": "ebabd74fc8ce6d569a5f5e62bad4f03388431a512781c02612fbe57ff8ac5269",
     "inputs": [
       ".github",
       "bridge",
@@ -133,5 +180,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-05T06:53:09.187916+00:00"
+  "updated_at": "2026-11-05T06:58:59.775548+00:00"
 }

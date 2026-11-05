@@ -1,7 +1,7 @@
 # Make CI tests reproducible from a clean checkout — 구현 계획
 
 ## 변경 범위·대상 파일·순서
-기존 work helper의 read/jsonl/metrics/quality_checks 일반 함수를 scripts/incremental_comparison.py에 의미 변경 없이 복사한다. 테스트는 추적 모듈을 import한다. .github/workflows/deploy.yml의 검사 설치 목록에 requests를 추가한다. 로컬 격리 체크 후 commit/push하고 새 GitHub 전체 실행/배포를 확인한다.
+기존 work helper의 read/jsonl/metrics/quality_checks 일반 함수를 scripts/incremental_comparison.py에 의미 변경 없이 복사한다. 테스트는 추적 모듈을 import한다. .github/workflows/deploy.yml의 검사 설치 목록에 requests를 추가하고 실제 개발 구조와 같은 .venv를 만든 뒤 이후 단계 PATH에 등록한다. 로컬 격리 체크 후 commit/push하고 새 GitHub 전체 실행/배포를 확인한다.
 
 ## 검사 명령과 성공 조건
 automation: pytest tests/quizbank/test_incremental_comparison.py tests/development/test_ci_deploy.py -q. 추가로 추적된 파일만 임시 checkout에 복제하여 work 없이 같은 검사를 실행한다. 새 SHA의 전체 Python/서버/웹/Node 검사는 GitHub Actions가 실제 실행한다.
