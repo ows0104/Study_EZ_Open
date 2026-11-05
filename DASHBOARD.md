@@ -17,6 +17,8 @@
 
 | P1 | Map·독립 출제포인트 추출 프롬프트 정리 | ows0104 / Codex Map 세션 | codex/map-point-prompts | content/prompts/learning-links/map-extract.md, point-extract.md, *-output.schema.json, *-output.example.json, README.md, docs/changes/2026-11-06-map-point-prompts, .worktrees/map-point-prompts/runs/_map-point-pilot | 2026-11-06 | 사용자 승인 범위의 두 원본 전용 지시문·JSON 스키마·예시·로컬 형식 검증. 현재 사용자 예시 추출 승인: 심내막염·중추신경계감염 Map/포인트 각 1회 로컬 실추출. 운영 요청 재개/문항/게시/배포 없음 |
 
+| P1 | Map 흐름 예시를 반영한 별도 프롬프트 복사본 | ows0104 / Codex Map 참고 세션 | codex/map-flow-reference | content/prompts/learning-links/map-extract-reference.md, docs/changes/2026-11-06-map-flow-reference | 2026-11-06 | 사용자 조정 승인: 시범은 유지하고 별도 복사본에 정리. 시범 폴더/원본 프롬프트/실행 입력 미변경 |
+
 ## 2. 앞으로 하기로 약속된 일
 
 | 우선순위 | 작업 | 예정 작업자 | 예상 영역·파일 | 선행 조건·메모 |
