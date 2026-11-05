@@ -19,6 +19,8 @@
 
 | P1 | Map 흐름 예시를 반영한 별도 프롬프트 복사본 | ows0104 / Codex Map 참고 세션 | codex/map-flow-reference | content/prompts/learning-links/map-extract-reference.md, docs/changes/2026-11-06-map-flow-reference, .worktrees/map-flow-reference/runs/_map-flow-experiment | 2026-11-06 | 별도 짧은 지시문 실험 완료: 심내막염20개념/25연결·CNS24개념/31연결, 단일 호출296초. 원본/형식검증·PNG확인. 기존시범/운영미변경. 로컬브랜치 검토대기 |
 
+| P1 | 심내막염·CNS Map→포인트→문제→실제 풀이 E2E 실험 | ows0104 / Codex E2E 세션 | codex/map-point-e2e | docs/changes/2026-11-06-map-point-e2e, .worktrees/map-point-e2e/runs/_map-point-e2e (실험 도구·격리 DB·로컬 앱), 기존 추출 결과는 읽기 전용 | 2026-11-06 | 사용자 요청으로 최종 Map·47/60포인트에서 실제 문제 생성·원본/정답검수·연결 대조·풀이까지 시험. 기존 프롬프트/Map 참고 실험 파일·운영 요청548·운영 은행/학습 기록 보존. 운영 변경이 필요한 경우 구체 결과로 별도 판단 |
+
 ## 2. 앞으로 하기로 약속된 일
 
 | 우선순위 | 작업 | 예정 작업자 | 예상 영역·파일 | 선행 조건·메모 |
