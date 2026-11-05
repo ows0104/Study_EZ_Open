@@ -1,5 +1,20 @@
 # StudyEZ 공통 작업 안내
 
+## 작업 시작 대원칙 (모든 작업보다 먼저, 예외 없음)
+
+두 사람이 여러 세션으로 동시에 작업한다. 새 기능·수정을 시작할 때마다 아래를 끝낸 뒤에만 파일을 고친다.
+
+1. 기능 하나에 새 브랜치 하나를 최신 master(`origin/master`)에서 만든다. master에서 직접 작업하지 않는다.
+   동시에 도는 세션은 각자 별도 worktree를 쓴다.
+2. `git pull`로 대시보드(`dashboard` 브랜치의 `DASHBOARD.md`, 폴더 `../Study_EZ_dashboard`)를 최신으로 받는다.
+3. 대시보드의 진행 중·예정 작업과 겹칠 여지(같은 파일·화면·API·DB·프롬프트)를 확인한다.
+   있으면 시작하지 말고 사람에게 알려 조정한다.
+4. 대시보드 "지금 하고 있는 작업"에 우선순위·작업·작업자/세션·브랜치·영역/파일을 쓰고 push한다.
+   push가 거절되면 pull 후 3번부터 다시 한다.
+
+끝나면(merge·중단) 대시보드에서 지운다. `dashboard`는 master에 merge하지 않는다.
+명령과 세부 규칙: [협업 대원칙](docs/development/collaboration.md#작업-시작-대원칙-예외-없음).
+
 StudyEZ의 모든 개발·유지보수는 [개발 루프](docs/development/README.md)를 따른다.
 Intent → Spec → Implementation Plan(사람 승인) → Build → Test → Review → Deploy(중요 승인) → Maintain.
 이번 구조 정리만의 절차가 아니다. 새 작업은 docs/changes/<id>/에 기록한다.
