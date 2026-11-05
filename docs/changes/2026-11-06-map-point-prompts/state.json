@@ -5,16 +5,17 @@
   "created_at": "2026-11-05T15:15:43.659548+00:00",
   "required_checks": [
     "prompt-review",
-    "pilot-files"
+    "pilot-files",
+    "point-refinement"
   ],
   "approvals": {
     "build": {
-      "at": "2026-11-05T16:16:46.628126+00:00",
-      "evidence": "현재 사용자의 해당 필기58쪽·족보13쪽 OpenAI 전송·추출 명시 승인 및 두 강의 합본 주의. 같은 승인 범위의 로컬 결과 검증을 pilot-files 필수 체크로 구체화하며 자기 해시 기록 오류의 로컬 검증만 수행, 추가 모델 호출 없음.",
-      "scope": "동일2호출/강의별JSON4파일과 입력 보존·형식·참조·실제강의범위·파일영수증 검증, 원래실패기록 보존. 추가전송/재호출/내용수정/기존요청/게시/배포 없음",
+      "at": "2026-11-05T17:09:09.440480+00:00",
+      "evidence": "현재 사용자 명시승인: 동일 원본·이번 포인트·대조결과를 OpenAI로 전송하여 추가 보완1회·재검수1회 승인. 검증 이름 point-refinement를 필수목록에 반영하는 동일 작업 기록 갱신.",
+      "scope": "현재 승인된 포인트 네 곳 보완·별도재검수 및 로컬 결과/기록 검증. 추가 전송범위/횟수 확대 없이 기존결과보존. 기존은행/게시/배포 변경없음",
       "evidence_version": 2,
-      "source_hash": "320006e3b42b42420f3c508ce139381797478bab2d56bcfa359d57a09124720a",
-      "plan_hash": "c1c3304af83a693b684011f03163c59839e97979403bb89a2d8c6ffc705d3f7e",
+      "source_hash": "2ce5c3c35a0b50df15923d09f184eaddf3cac7cdcad2ce59d5c1af9728ff34e6",
+      "plan_hash": "2f195c665de3904e3a1e7f1d525331a00fbcf499a713aefd2951827f5b1883d0",
       "inputs": [
         ".github",
         "content",
@@ -357,14 +358,131 @@
         "uv.lock"
       ],
       "log": "runs/_development/2026-11-06-map-point-prompts/1793895407898911400-pilot-files.log"
+    },
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T16:43:12.662636+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-prompts/verify_formats.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2ce5c3c35a0b50df15923d09f184eaddf3cac7cdcad2ce59d5c1af9728ff34e6",
+      "plan_hash": "3588dfb870d79c5aa347c2b81add68e74802d737382de8a305b48437411849ac",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793896992111093000-prompt-review.log"
+    },
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T17:13:32.411301+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-prompts/verify_formats.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2ce5c3c35a0b50df15923d09f184eaddf3cac7cdcad2ce59d5c1af9728ff34e6",
+      "plan_hash": "2f195c665de3904e3a1e7f1d525331a00fbcf499a713aefd2951827f5b1883d0",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793898811807236700-prompt-review.log"
+    },
+    {
+      "name": "pilot-files",
+      "at": "2026-11-05T17:13:33.419156+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-prompts/verify_pilot_outputs.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2ce5c3c35a0b50df15923d09f184eaddf3cac7cdcad2ce59d5c1af9728ff34e6",
+      "plan_hash": "2f195c665de3904e3a1e7f1d525331a00fbcf499a713aefd2951827f5b1883d0",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793898812737779200-pilot-files.log"
+    },
+    {
+      "name": "point-refinement",
+      "at": "2026-11-05T17:17:01.394955+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-prompts/point_refinement.py",
+        "verify"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2ce5c3c35a0b50df15923d09f184eaddf3cac7cdcad2ce59d5c1af9728ff34e6",
+      "plan_hash": "2f195c665de3904e3a1e7f1d525331a00fbcf499a713aefd2951827f5b1883d0",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793899020707646800-point-refinement.log"
     }
   ],
   "review": {
-    "at": "2026-11-05T16:16:48.974566+00:00",
-    "summary": "실제2호출 완료·강의별4JSON 파일 검증. 심내막염20개념/27관계/18포인트, CNS26/35/22. 입력원본71쪽·PNG·프롬프트·스키마 보존 및 출력영수증SHA·형식/참조/강의S1범위 확인. 사전 자기해시수록 오류는 시작상태직렬화/이전백업으로 증명해 로컬 재검증, 추가모델호출0·원래실패/사용량보존. 출력내용 임의수정없음. 모델 의학검수/문항대조/게시 미실행.",
+    "at": "2026-11-05T17:17:37.806973+00:00",
+    "summary": "독립 회상 목표 기준의 프롬프트·예시 개선. 동일 원본 source-only 재추출45/58, 원본대조 실제4지적만 1회 보완47/60, 별도 재대조 ready/ready·issues없음·unreadable없음. 원본/중간/실패/기존Map 보존. 검사변수 덮임 수정 후 원래 응답/입력/영수증SHA 별도 검증, 내용수동수정·추가호출없음. 수정대상4레코드 외99레코드동일. 스키마16오류사례·기존4파일·최종파일지문 및 근거범위 검증통과, pytest16·웹7통과. 임상최신성/전문의검수 및 문항/게시/자동연동은 범위밖. 파생전송차단 후 현재사용자 구체승인 적용, 후속4호출로 종료.",
     "evidence_version": 2,
-    "source_hash": "320006e3b42b42420f3c508ce139381797478bab2d56bcfa359d57a09124720a",
-    "plan_hash": "c1c3304af83a693b684011f03163c59839e97979403bb89a2d8c6ffc705d3f7e",
+    "source_hash": "2ce5c3c35a0b50df15923d09f184eaddf3cac7cdcad2ce59d5c1af9728ff34e6",
+    "plan_hash": "2f195c665de3904e3a1e7f1d525331a00fbcf499a713aefd2951827f5b1883d0",
     "inputs": [
       ".github",
       "content",
@@ -387,5 +505,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-05T16:16:49.058188+00:00"
+  "updated_at": "2026-11-05T17:17:37.888883+00:00"
 }
