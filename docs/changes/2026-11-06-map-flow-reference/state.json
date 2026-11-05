@@ -1,0 +1,96 @@
+{
+  "id": "2026-11-06-map-flow-reference",
+  "title": "Map 흐름 예시를 반영한 별도 프롬프트 복사본",
+  "area": "generation",
+  "created_at": "2026-11-05T16:06:28.865035+00:00",
+  "required_checks": [
+    "prompt-review"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-05T16:07:15.671798+00:00",
+      "evidence": "현재 사용자: 콜린성 약리학 Map 예시 같은 느낌을 원함. 겹침 조정 질문에 시범은 유지하고 별도 복사본에 정리 선택.",
+      "scope": "새 별도 worktree의 map-extract-reference.md 작성·/2 출력 예시 호환 검증 및 기록만. 실제 시범 입력/기존 프롬프트/출제포인트/스키마/운영 미변경",
+      "evidence_version": 2,
+      "source_hash": "2a0dced38f85d626f0d8f023387365495f21efe576514dc1b12305afa29b8ad0",
+      "plan_hash": "331cf69f23a370ebf0203c9d8a9f24ead872574d00e288d41d32ada0b9281b6f",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "ff2ec315e4baca7208c4946565ede8479575642a63cd2b4c7063f360f65cc9b6"
+    }
+  },
+  "checks": [
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T16:07:55.457701+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-flow-reference/verify_reference.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ec5087e5a620b4d11986c0e5fc5bc802816278c2f6c15eb673629755a476c681",
+      "plan_hash": "331cf69f23a370ebf0203c9d8a9f24ead872574d00e288d41d32ada0b9281b6f",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-flow-reference/1793894874791479000-prompt-review.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-05T16:07:55.690002+00:00",
+    "summary": "시범 보존을 위해 별도 worktree/새 파일만 작성. 큰 흐름·개요 노드·짧은 핵심 내용·교차 연결/합류 반영. /2 JSON 예시·스키마·기존 지시문 줄수 유지 확인. 문항평가/누락/회상목표 미혼입. 모델/의학/렌더링 검증 없음.",
+    "evidence_version": 2,
+    "source_hash": "ec5087e5a620b4d11986c0e5fc5bc802816278c2f6c15eb673629755a476c681",
+    "plan_hash": "331cf69f23a370ebf0203c9d8a9f24ead872574d00e288d41d32ada0b9281b6f",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-05T16:07:55.781702+00:00"
+}
