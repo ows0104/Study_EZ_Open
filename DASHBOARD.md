@@ -37,5 +37,5 @@ merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 �
 
 | 완료일 | 작업 | 작업자 | PR |
 |---|---|---|---|
-| 2026-11-05 | master 검사 실패 수정 — merge 완료, 자동 배포 확인 중 | ows0104 / Codex 세션 | [#4](https://github.com/ows0104/Study_EZ_Open/pull/4) |
+| 2026-11-05 | master 검사 실패 수정 및 API·웹 배포 완료 (`d5e30590`) — [검사·배포 기록](https://github.com/ows0104/Study_EZ_Open/blob/9f57d3d607335204193441c1358a95fe85b363c7/docs/changes/2026-11-05-ci-regression-fix/deployment.md) | ows0104 / Codex 세션 | [#4](https://github.com/ows0104/Study_EZ_Open/pull/4) |
 | 2026-11-05 | 협업 대시보드와 작업 시작 대원칙 도입 | HungryPotato01 / Claude 세션 | [#2](https://github.com/ows0104/Study_EZ_Open/pull/2) |
