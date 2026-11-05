@@ -21,6 +21,8 @@
 
 | P1 | 심내막염·CNS Map→포인트→문제→실제 풀이 E2E 실험 | ows0104 / Codex E2E 세션 | codex/map-point-e2e | docs/changes/2026-11-06-map-point-e2e, runs/_e2e/26110507 (긴 경로 회피용 실험 전용 저장소·격리 DB·로컬 앱), .worktrees/map-point-e2e/runs/_map-point-e2e (초기 준비본 보존), 기존 추출 결과는 읽기 전용 | 2026-11-06 | 사용자 요청으로 최종 Map·47/60포인트에서 실제 문제 생성·원본/정답검수·연결 대조·풀이까지 시험. 기존 프롬프트/Map 참고 실험 파일·운영 요청548·운영 은행/학습 기록 보존. 운영 변경이 필요한 경우 구체 결과로 별도 판단 |
 
+| P1 | 완료 작성 초안의 구조 수용 실패 복구 | ows0104 / Codex E2E 복구 세션 | codex/root-authoring-recovery | quizbank/connection_generate_v2.py, quizbank/connection_authoring_recovery.py, studyez_contracts/roots/generation_v2.py, runner/root_native_json.py, 관련 tests, docs/changes/2026-11-06-root-authoring-recovery; 심내막염 실험 ledger만 명시 복구 | 2026-11-06 | 사용자 구체 승인: 완료47문항·실패영수증 보존·기존3회상한 남은횟수에서 보완 후 검수/풀이. CNS 실행중인 map-point-e2e 코드 불변. 운영 배포/548 재개 없음 |
+
 ## 2. 앞으로 하기로 약속된 일
 
 | 우선순위 | 작업 | 예정 작업자 | 예상 영역·파일 | 선행 조건·메모 |
