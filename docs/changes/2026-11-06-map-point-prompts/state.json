@@ -1,0 +1,128 @@
+{
+  "id": "2026-11-06-map-point-prompts",
+  "title": "Map와 독립 출제포인트 추출 지침 정리",
+  "area": "generation",
+  "created_at": "2026-11-05T15:15:43.659548+00:00",
+  "required_checks": [
+    "prompt-review"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-05T15:18:43.891522+00:00",
+      "evidence": "2026-11-06 현재 채팅 사용자 Map·포인트 지시문 작성 승인 및 후속 교정: Map 추출은 문제와 무관하게 강의·족보의 개념 Map 구성에 집중. 동일 작성 범위의 명확화.",
+      "scope": "원본 전용 Map·독립 포인트 지시문과 출력 형식 및 안내. Map에는 문항·누락·회상 평가를 넣지 않음. 호출 분리 코드·모델 실행·재개·배포 제외",
+      "evidence_version": 2,
+      "source_hash": "2a0dced38f85d626f0d8f023387365495f21efe576514dc1b12305afa29b8ad0",
+      "plan_hash": "bea0ad7578777fdbdb84a7bb59c3667f2306ba74c7d401d1a7e92df8b6c4b354",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "bd0f64810c10fa494ac2935ae89a7d0398c67e4afb989b216ab493901a78b516"
+    }
+  },
+  "checks": [
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T15:19:40.867220+00:00",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "02ecf4d9d199ba8524b10e78f0da91888ac3a2638b0adc5b8fe20b745cef388c",
+      "plan_hash": "bea0ad7578777fdbdb84a7bb59c3667f2306ba74c7d401d1a7e92df8b6c4b354",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793891980596478700-prompt-review.log"
+    },
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T15:20:18.166906+00:00",
+      "command": [
+        "git",
+        "diff",
+        "--cached",
+        "--check"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "02ecf4d9d199ba8524b10e78f0da91888ac3a2638b0adc5b8fe20b745cef388c",
+      "plan_hash": "bea0ad7578777fdbdb84a7bb59c3667f2306ba74c7d401d1a7e92df8b6c4b354",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793892018061284400-prompt-review.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-05T15:20:18.331557+00:00",
+    "summary": "확인: Map 본문은 원본 개념·관계·흐름에만 집중하고 문항/누락/회상 평가를 지시하지 않음. 포인트는 원본 독립·단서→답 범위·기초 연결·필요 방향과 근거를 보존. 자동 호출/JSON/운영 미연결 한계를 README 및 release에 명시. 모델 품질 실증은 미실행.",
+    "evidence_version": 2,
+    "source_hash": "02ecf4d9d199ba8524b10e78f0da91888ac3a2638b0adc5b8fe20b745cef388c",
+    "plan_hash": "bea0ad7578777fdbdb84a7bb59c3667f2306ba74c7d401d1a7e92df8b6c4b354",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-05T15:20:18.388366+00:00"
+}
