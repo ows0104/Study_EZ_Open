@@ -52,7 +52,13 @@ jobs:
         working-directory: server
         run: python -m pip install -r requirements.txt
       - name: Python regression and contracts
-        run: python -m pytest tests -q
+        run: |
+          python -m pytest tests -q --ignore=tests/runner/test_desktop_window.py --ignore=tests/runner/test_status_window.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m pytest tests/runner/test_desktop_window.py -q
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m pytest tests/runner/test_status_window.py -q
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Server tests (one process per file, isolated local databases)
         working-directory: server
         run: python -m tests

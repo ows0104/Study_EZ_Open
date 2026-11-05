@@ -25,8 +25,15 @@ def main():
     commands = []
     if group in ('professor-selection', 'contracts', 'runner'):
         tests = 'tests/runner/test_preview_sources.py' if group == 'professor-selection' else 'tests/' + group
-        commands = [(ROOT, [python, '-m', 'pytest', tests, '-q', '--tb=short',
-                            '--basetemp=' + str(OUT / f'{group}-{time.time_ns()}')])]
+        groups = [[tests]]
+        if group == 'runner':
+            # Tcl's process-global state survives root-window destruction. Keep both
+            # GUI files, but run each in a fresh interpreter as in production CI.
+            gui = ['tests/runner/test_desktop_window.py', 'tests/runner/test_status_window.py']
+            groups = [[tests, *['--ignore=' + name for name in gui]], *[[name] for name in gui]]
+        commands = [(ROOT, [python, '-m', 'pytest', *names, '-q', '--tb=short',
+                            '--basetemp=' + str(OUT / f'{group}-{time.time_ns()}-{i}')])
+                    for i, names in enumerate(groups)]
     elif group == 'server':
         # The root uv launcher exports its own standard-library location. The server
         # uses another Python distribution and must resolve its own standard library.
