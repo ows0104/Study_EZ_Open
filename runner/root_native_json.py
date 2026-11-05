@@ -143,7 +143,8 @@ def check_file(stage,work):
         require(value['sources']==ctx['sources']and value['lecture_id']==ctx['lecture_id'],'Different normalization sources/lecture')
         require((value['provenance']['independent_points']=='confirmed')==(ctx.get('inputMode')=='source'),'Different extraction independence')
     elif stage=='generate'or stage.startswith('repair-'):
-        c.validate_authoring(value,ctx.get('previousAuthoring'))
+        if ctx.get('rejectedAuthoring'):c.validate_recovered_authoring(ctx['previousAuthoring'],value)
+        else:c.validate_authoring(value,ctx.get('previousAuthoring'))
         require(value['brief']['sources']==ctx['sources']and value['brief']['lecture_id']==ctx['lecture_id'],'Different authoring source/lecture')
         if stage=='generate':
             if ctx['initialBriefErrors']:c.validate_initial_correction(ctx['brief'],value['brief'],value['map_change_reason'])
@@ -219,7 +220,10 @@ class NativeJson:
         root=Path(__file__).resolve().parents[1]
         checker='import sys\nfrom pathlib import Path\nsys.path.insert(0,'+repr(str(root))+')\nfrom runner.root_native_json import check_file\ncheck_file('+repr(stage)+',Path(__file__).parent)\nprint("Acceptance checks passed")\n'
         (work/'check_result.py').write_text(checker,encoding='utf-8')
-        (work/'task.md').write_text(task_for(stage)+'\nBefore finalizing, run '+str(sys.executable)+' with argument check_result.py successfully. Fix serialization/structural inconsistencies within this one task; never falsify findings or sources to pass.\n',encoding='utf-8')
+        task=task_for(stage)
+        if ctx.get('rejectedAuthoring'):
+            task+='\nThis is the explicitly authorized repair of a completed but structurally rejected brief. Copy previousAuthoring.bank, visual_stimuli and clinical_conflicts EXACTLY using local code. Correct only the brief findings and their complete structural implications, preserve original points/source boundaries, set derived and explain the correction. The rejected brief is not a valid prior accepted map. Do not create or rewrite clinical questions in this recovery step.\n'
+        (work/'task.md').write_text(task+'\nBefore finalizing, run '+str(sys.executable)+' with argument check_result.py successfully. Fix serialization/structural inconsistencies within this one task; never falsify findings or sources to pass.\n',encoding='utf-8')
         protected={name:sha(work/name)for name in('input.json','acceptance.schema.json','task.md','check_result.py')}
         (seat/'adapter.py').write_bytes(Path(__file__).read_bytes())
         proof={'policy':POLICY,'stage':stage,'inputHash':document_hash(ctx),'cleanInputHash':document_hash(clean(ctx)),
@@ -284,6 +288,11 @@ def validate_all(out,payload):
             if 'transportRecovery'in entry:
                 from .root_transport_recovery import validate_recovery
                 validate_recovery(out,entry)
+    for row in payload['manifest'].get('authoringRecoveries',[]):
+        proof=row['proof'];name=proof['stage'];prior=proof['priorLedger']['stages'][name]
+        validate_stage(out,{'name':name,**prior},model=payload['manifest']['model'])
+        require(read(Path(out)/(name+'.raw.json'))==proof['rawAuthoring'],'Changed rejected authoring archive')
+        require(read(Path(out)/'authoring.recovery.json')==row,'Changed authoring recovery archive')
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--packet',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--model');a=p.parse_args()

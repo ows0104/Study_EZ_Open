@@ -92,7 +92,10 @@ def run(packet,out,model,invoke):
                 if packet.get('inputMode')=='source':c.require(raw['provenance']['independent_points']=='confirmed','Initial independent extraction required')
                 else:c.require(raw['provenance']['independent_points']!='confirmed','Supplied map is not independent extraction')
             elif name=='generate'or name.startswith('repair-'):
-                jsonschema.validate(raw,c.AUTHOR);c.validate_authoring(raw,ctx.get('previousAuthoring'))
+                jsonschema.validate(raw,c.AUTHOR)
+                if ctx.get('rejectedAuthoring'):
+                    c.validate_recovered_authoring(ctx['previousAuthoring'],raw)
+                else:c.validate_authoring(raw,ctx.get('previousAuthoring'))
                 c.require(raw['brief']['sources']==sources and raw['brief']['lecture_id']==packet['subject']+'/'+packet['runId'],'Different source/lecture')
                 value=copy.deepcopy(raw)
                 if name == 'generate' and ctx.get('webBank'):
@@ -127,12 +130,27 @@ def run(packet,out,model,invoke):
     initial_errors=c.brief_findings(initial,sources);initial_cost=int(bool(initial_errors))
     if initial_cost:
         ledger['repairRounds']=max(ledger['repairRounds'],initial_cost);g.write(ledger_path,ledger)
-    authored=stage('generate',{**base,'brief':initial,'initialBriefErrors':initial_errors})
+    recoveries=ledger.get('authoringRecoveries',[])
+    c.validate_authoring_recoveries({'authoringRecoveries':recoveries,'inputHash':packet['inputHash'],
+        'runtimeHash':fingerprint,'initialBrief':initial,'repairRounds':max(ledger['repairRounds'],initial_cost+1)},
+        {k:{'name':k,**v}for k,v in ledger['stages'].items()})
+    rejected=recoveries[0]['proof']['rawAuthoring']if recoveries and recoveries[0]['proof']['mode']=='brief-repair'else None
+    start_round=1 if rejected else 0
+    if rejected:
+        proof=recoveries[0]['proof']
+        c.require(document_hash(rejected)==ledger['stages']['generate']['rawOutputHash']
+            and proof['packetHash']==packet['inputHash']and proof['currentRuntimeHash']==fingerprint,'Changed rejected authoring')
+        ledger['repairRounds']=max(ledger['repairRounds'],initial_cost+1);g.write(ledger_path,ledger)
+        authored=stage('repair-1',{**base,'brief':rejected['brief'],'bank':rejected['bank'],
+            'previousAuthoring':rejected,'rejectedAuthoring':True,'sourceAudit':None,'medical':None,
+            'validation':{'errors':proof['findings']},'repairReasons':[{'kind':'map_fix','text':e,
+                'question_ids':[],'direction_ids':[]}for e in proof['findings']]})
+    else:authored=stage('generate',{**base,'brief':initial,'initialBriefErrors':initial_errors})
     if packet.get('authoring')=='web':
         from studyez_contracts.bank.response_file import metadata as file_metadata
         meta=file_metadata(packet['webResponse']['raw'])
         c.require([q['question_id']for q in authored['bank']['questions']]==meta['question_ids'],'Web original IDs must be preserved')
-    for n in range(4-initial_cost):
+    for n in range(start_round,4-initial_cost):
         b=authored['brief'];bank=authored['bank']
         if schema_errors(bank):raise ValueError('BANK 스키마 오류. 원문을 보존합니다.')
         validation=validate_bank(bank,[s['id']for s in packet['sources']])
@@ -173,8 +191,10 @@ def run(packet,out,model,invoke):
             'mapChangeReason':authored['map_change_reason'],'sourceAssessment':audit['assessment'],'repairRounds':n+initial_cost,
             'initialMapCorrection':{'errors':initial_errors,'consumedRounds':initial_cost},
             'normalizationRecoveries':ledger.get('normalizationRecoveries',[]),
+            **({'authoringRecoveries':recoveries}if recoveries else{}),
+            **({'authoringRecoveryOutput':json.loads((out/'repair-1.raw.json').read_text(encoding='utf-8'))}if rejected else{}),
             'briefRevisions':[{'stage':name,'brief':value['brief'],'reason':value['map_change_reason']}
-                for name in ['generate',*[f'repair-{i}'for i in range(1,n+1)]]
+                for name in ([]if rejected else['generate'])+[f'repair-{i}'for i in range(1,n+1)]
                 for value in [json.loads((out/(name+'.json')).read_text(encoding='utf-8'))]],
             'medicalInputHash':ledger['stages'][f'medical-{n}']['inputHash'],
             'stages':[{'name':k,**v}for k,v in ledger['stages'].items()]}}

@@ -1,0 +1,107 @@
+{
+  "id": "2026-11-06-root-authoring-recovery",
+  "title": "완료 작성 초안의 구조 실패를 기존 보완 예산으로 복구",
+  "area": "generation",
+  "created_at": "2026-11-05T18:01:23.493837+00:00",
+  "required_checks": [
+    "recovery-contract",
+    "pipeline-regression",
+    "live-recovery"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-05T18:04:34.507568+00:00",
+      "evidence": "현재 사용자 승인 복구 경로까지 수정해 이어가기 적용. 같은 E2E에서 CNS 완료보완의 reviewed/limitations 교정이 범위변경으로 거절된 동일 구조수용 실패를 확인해 알림. 강의경계 보존·검토설명 교정 구분 및 완료본 무호출 수용재검증은 승인된 복구 기능의 구체 구현.",
+      "scope": "실제 범위와 원본/포인트/실패/보완예산 보존, 심내막염 구조보완 복구 및 CNS 완료보완의 명시 수용재검증, 각 원본·정답검수 후 로컬 풀이",
+      "evidence_version": 2,
+      "source_hash": "2a0dced38f85d626f0d8f023387365495f21efe576514dc1b12305afa29b8ad0",
+      "plan_hash": "b963424c1f16f3c73cd63ad4e884877cbde3b313fb32c76e71b86982df8c9902",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "a8c40a52cdef568e7955d2c2210b1fdf64c88c1f6e05d737b1bac676776c2584"
+    }
+  },
+  "checks": [
+    {
+      "name": "recovery-contract",
+      "at": "2026-11-05T18:17:47.533883+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-root-authoring-recovery/checks.py",
+        "recovery-contract"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "fb57407a0fe4641295e44e18c560a0dfc93d954c0ca74ae5ae0e4ac431900e7a",
+      "plan_hash": "b963424c1f16f3c73cd63ad4e884877cbde3b313fb32c76e71b86982df8c9902",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-root-authoring-recovery/1793902656328475800-recovery-contract.log"
+    },
+    {
+      "name": "pipeline-regression",
+      "at": "2026-11-05T18:18:21.153011+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-root-authoring-recovery/checks.py",
+        "pipeline-regression"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "fb57407a0fe4641295e44e18c560a0dfc93d954c0ca74ae5ae0e4ac431900e7a",
+      "plan_hash": "b963424c1f16f3c73cd63ad4e884877cbde3b313fb32c76e71b86982df8c9902",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-root-authoring-recovery/1793902667806744500-pipeline-regression.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-05T18:18:21.153917+00:00"
+}

@@ -122,7 +122,7 @@ def validate_authoring(value,previous=None):
 def validate_transition(before,after,reason):
     validate_brief(before);validate_brief(after)
     preserve_map_inputs(before,after)
-    changed=any(before[k]!=after[k]for k in ('concepts','relations','targets','points','prerequisites'))
+    changed=any(before[k]!=after[k]for k in ('concepts','relations','targets','points','prerequisites','scope'))
     if before['provenance']['independent_points']!='confirmed':
         require(after['provenance']['independent_points']!='confirmed','authoring: independent extraction cannot be re-certified after revision')
     if changed:
@@ -130,11 +130,75 @@ def validate_transition(before,after,reason):
         require(type(reason)is str and reason.strip(),'authoring: map revision reason required')
 
 def preserve_map_inputs(before,after):
-    for k in ('lecture_id','sources','scope','exclusions'):
+    for k in ('lecture_id','sources','exclusions'):
         require(before[k]==after[k],'authoring: source point/scope preservation: '+k)
+    for k in ('label','included','excluded'):
+        require(before['scope'][k]==after['scope'][k],'authoring: source point/scope preservation: scope.'+k)
     points=index_by(after['points'],'point_id')
     for p in before['points']:
         require(p['point_id']in points and all(p[k]==points[p['point_id']][k]for k in ('text','scope_status')),'authoring: original point text/scope changed')
+
+
+def validate_recovered_authoring(before,after):
+    """A rejected brief may be corrected; already completed questions stay exact."""
+    validate_shape(before,AUTHOR,'rejected authoring2');validate_authoring(after)
+    require(brief_findings(before['brief']),'recovery: rejected brief has no structural findings')
+    preserve_map_inputs(before['brief'],after['brief'])
+    for k in ('bank','visual_stimuli','clinical_conflicts'):
+        require(before[k]==after[k],'recovery: completed authoring content changed: '+k)
+    require(after['brief']['provenance']['independent_points']=='derived'and after['map_change_reason'].strip(),
+            'recovery: corrected brief must be derived with a reason')
+
+
+def validate_authoring_recoveries(meta,stages):
+    rows=meta.get('authoringRecoveries',[])
+    require(type(rows)is list and len(rows)<=1,'result2: invalid authoring recovery history')
+    for row in rows:
+        require(type(row)is dict and set(row)=={'proof','proofHash'}and type(row['proof'])is dict
+            and row['proofHash']==document_hash(row['proof']),
+                'result2: changed authoring recovery proof')
+        p=row['proof'];require(set(p)=={'priorLedger','priorLedgerHash','packetHash','currentRuntimeHash',
+            'reason','mode','stage','rawAuthoring','findings','modelReplay'},'result2: malformed authoring recovery')
+        old=p['priorLedger'];name=p['stage'];draft=p['rawAuthoring']
+        require(type(old)is dict and type(old.get('stages'))is dict
+            and type(old.get('identity'))is str and re.fullmatch(r'[a-f0-9]{64}',old['identity'])
+            and type(name)is str and p['priorLedgerHash']==document_hash(old)and old.get('pipelineVersion')==POLICY,
+                'result2: changed prior authoring ledger')
+        require(not old.get('authoringRecoveries')and not old.get('normalizationRecoveries'),
+                'result2: repeated or mixed authoring recovery')
+        require(p['packetHash']==meta['inputHash']and p['currentRuntimeHash']==meta['runtimeHash']
+            and p['modelReplay']is False and type(p['reason'])is str and p['reason'].strip(),
+            'result2: changed authoring recovery identity')
+        prior=old.get('stages',{});entry=prior.get(name,{})
+        initial_cost=int(bool(brief_findings(meta['initialBrief'])))
+        require(all(type(v)is dict for v in prior.values())and type(entry)is dict
+            and entry.get('status')=='failed'and set(prior)<=set(stages)
+            and [k for k,v in prior.items()if v['status']=='failed']==[name],
+            'result2: recovery was not one failed authoring acceptance')
+        validate_shape(draft,AUTHOR,'rejected authoring2')
+        require(all(type(entry.get(k))is str and re.fullmatch(r'[a-f0-9]{64}',entry[k])
+            for k in ('inputHash','rawOutputHash','usageHash'))and entry.get('rawOutputHash')==document_hash(draft)
+            and p['findings']==brief_findings(draft['brief']), 'result2: rejected authoring proof mismatch')
+        require(type(old.get('repairRounds'))is int and 0<=old['repairRounds']<=3
+            and meta['repairRounds']>=old['repairRounds'],'result2: recovered budget reset')
+        for k,v in prior.items():
+            if k!=name:require(stages[k]=={'name':k,**v},'result2: changed reused stage')
+        current=stages[name]
+        if p['mode']=='brief-repair':
+            require(name=='generate'and set(prior)=={'normalize','generate'}and p['findings']
+                and old['repairRounds']==initial_cost and meta['repairRounds']>=old['repairRounds']+1,
+                'result2: invalid rejected-brief repair allowance')
+            require(current=={'name':name,**entry},'result2: original rejected stage was changed')
+        else:
+            require(p['mode']=='acceptance-recheck'and re.fullmatch(r'repair-[1-3]',name)
+                and old['repairRounds']==int(name.split('-')[1])+initial_cost
+                and not p['findings'],'result2: invalid authoring acceptance recheck')
+            validate_authoring(draft)
+            require(current['status']=='completed'and current['rawOutputHash']==entry['rawOutputHash']
+                and all(current[k]==entry[k]for k in ('inputHash','usageHash'))
+                and current['briefHash']==document_hash(draft['brief']),
+                'result2: completed recheck differs from original call')
+    return rows
 
 def graph_order(bank):
     qs=index_by(bank['questions'],'question_id');done=set();visiting=set();order=[]
@@ -392,9 +456,16 @@ def validate_result(value,packet):
     correction=meta.get('initialMapCorrection',{'errors':[],'consumedRounds':0})
     require(correction=={'errors':findings,'consumedRounds':initial_cost},'result2: missing initial correction evidence')
     n=total-initial_cost;require(n>=0,'result2: initial correction not counted')
-    stages=index_by(meta['stages'],'name');needed={'normalize','generate'}|{f'{k}-{i}'for i in range(n+1)for k in ('source','medical')}|{f'repair-{i}'for i in range(1,n+1)}
+    stages=index_by(meta['stages'],'name')
+    recoveries=validate_authoring_recoveries(meta,stages)
+    rejected=recoveries[0]['proof']['rawAuthoring']if recoveries and recoveries[0]['proof']['mode']=='brief-repair'else None
+    start_round=1 if rejected else 0
+    require(n>=start_round,'result2: recovered authoring correction not counted')
+    needed={'normalize','generate'}|{f'{k}-{i}'for i in range(start_round,n+1)for k in ('source','medical')}|{f'repair-{i}'for i in range(1,n+1)}
     require(set(stages)==needed,'result2: incomplete/ambiguous stages')
     for name,s in stages.items():
+        if name=='generate'and rejected:
+            require(s['status']=='failed','result2: rejected authoring failure must remain visible');continue
         if s['status']=='blocked':
             require(name.startswith('medical-')and int(name.split('-')[1])<n,'result2: incomplete final medical review')
             require(s['blockedReport']['reason']and s['blockedHash']==document_hash(s['blockedReport']),'result2: missing blocked review evidence')
@@ -406,15 +477,21 @@ def validate_result(value,packet):
     validate_normalization_recoveries(meta,stages)
     if packet.get('inputMode')=='source':require(meta['initialBrief']['provenance']['independent_points']=='confirmed','result2: initial extraction must be independent')
     else:require(meta['initialBrief']['provenance']['independent_points']!='confirmed','result2: supplied map is not independent extraction')
-    revisions=meta['briefRevisions'];require(len(revisions)==n+1,'result2: missing map revision lineage')
+    revisions=meta['briefRevisions']
+    names=([]if rejected else['generate'])+[f'repair-{i}'for i in range(1,n+1)]
+    require(len(revisions)==len(names),'result2: missing map revision lineage')
+    require(bool(meta.get('authoringRecoveryOutput'))==bool(rejected),'result2: missing/extra authoring recovery output')
+    if rejected:
+        accepted=meta['authoringRecoveryOutput'];validate_recovered_authoring(rejected,accepted)
+        require(stages['repair-1']['rawOutputHash']==document_hash(accepted)
+            and revisions[0]['brief']==accepted['brief'],'result2: recovered authoring output changed')
     previous=meta['initialBrief']
-    for i,revision in enumerate(revisions):
-        name='generate'if i==0 else f'repair-{i}'
+    for i,(name,revision)in enumerate(zip(names,revisions)):
         require(revision['stage']==name and stages[name]['briefHash']==document_hash(revision['brief']),'result2: map stage revision mismatch')
         if i==0 and initial_cost:validate_initial_correction(previous,revision['brief'],revision['reason'])
         else:
             validate_transition(previous,revision['brief'],revision['reason'])
-            if i==0:require(revision['brief']==previous,'result2: initial authoring changed independent map')
+            if i==0 and not rejected:require(revision['brief']==previous,'result2: initial authoring changed independent map')
         previous=revision['brief']
     require(previous==b,'result2: final map not in revision lineage')
     author={'bank':bank,'brief':b,'visual_stimuli':meta['visualStimuli'],'clinical_conflicts':meta['clinicalConflicts'],'map_change_reason':meta['mapChangeReason']}
