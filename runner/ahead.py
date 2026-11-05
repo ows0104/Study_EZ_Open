@@ -106,10 +106,11 @@ class Cell:
     body: tuple[str, ...]
     professors: tuple[str, ...]
     course: str
+    run_id: str = ""  # A moved timetable event keeps its existing lecture identity.
 
     @property
     def key(self) -> str:
-        return f"{self.date[2:4]}{self.date[5:7]}{self.date[8:10]}_{self.slot:02d}"
+        return self.run_id or f"{self.date[2:4]}{self.date[5:7]}{self.date[8:10]}_{self.slot:02d}"
 
     def as_lecture(self, prev: LectureFile | None = None) -> LectureFile:
         """파일명에서 읽은 강의와 같은 모양으로. 점수기가 이 꼴만 받는다.
@@ -207,7 +208,15 @@ def read_cells(source: Path) -> list[Cell]:
     if not source.exists():
         raise FileNotFoundError(source)
 
-    rows: list[tuple[str, str, int | None, str, str, str, str, str]] = []
+    identities_path = blocks.REPO_ROOT / "data" / "timetable" / "identities" / "2026-2.json"
+    identities = (json.loads(identities_path.read_text(encoding="utf-8"))
+                  if identities_path.exists() else {})
+    if not isinstance(identities, dict) or any(
+            not isinstance(key, str) or not isinstance(value, str)
+            or not re.fullmatch(r"\d{6}_\d{2}", value)
+            for key, value in identities.items()):
+        raise ValueError("Invalid timetable lecture identities")
+    rows = []
     if source.suffix.lower() == ".json":
         for item in json.loads(source.read_text(encoding="utf-8")):
             start_time = str(item.get("startTime", ""))
@@ -216,18 +225,19 @@ def read_cells(source: Path) -> list[Cell]:
                 str(item.get("date", "")), start_time, _slot_from_time(start_time), title,
                 unicodedata.normalize("NFC", str(item.get("details", ""))),
                 str(item.get("professor", "")), str(item.get("category", "lecture")),
-                blocks.base_name(title)))
+                blocks.base_name(title), identities.get(str(item.get("id", "")), "")))
     else:
         db = sqlite3.connect(f"file:{source}?mode=ro", uri=True)
         try:
             rows = list(db.execute(
-                "select date, start_time, slot, title, details, professor, category, course "
+                "select date, start_time, slot, title, details, professor, category, course, id "
                 "from timetable_event"))
+            rows = [(*row[:-1], identities.get(row[-1], "")) for row in rows]
         finally:
             db.close()
 
     cells = []
-    for date, start_time, slot, title, details, professor, category, course in rows:
+    for date, start_time, slot, title, details, professor, category, course, run_id in rows:
         if category not in TEACHING or not date or slot is None:
             continue
         lines = [line.strip() for line in (details or "").split("\n") if line.strip()]
@@ -253,7 +263,7 @@ def read_cells(source: Path) -> list[Cell]:
             title=unicodedata.normalize("NFC", title or ""),
             heading=unicodedata.normalize("NFC", lines[0] if lines else (title or "")),
             body=tuple(body) or (unicodedata.normalize("NFC", title or ""),),
-            professors=_professors(professor), course=course or title or ""))
+            professors=_professors(professor), course=course or title or "", run_id=run_id))
     return sorted(cells, key=lambda cell: (cell.date, cell.slot))
 
 
@@ -356,7 +366,8 @@ def plan(
 
     seats = {(f.date, f.slot) for f in this_files}
     empty = [cell for cell in cells
-             if blocks.base_name(cell.course) in names and (cell.date, cell.slot) not in seats]
+             if (blocks.base_name(cell.course) in names or cell.key in confirmed)
+             and (cell.date, cell.slot) not in seats]
 
     # 블럭을 두 과목이 나눠 쓰면, 이름만으로는 상대 과목의 칸까지 딸려 온다.
     # 사람이 적어 둔 구간이 있으면 거기서 자른다(`FROM_KEY`·`UNTIL_KEY`).

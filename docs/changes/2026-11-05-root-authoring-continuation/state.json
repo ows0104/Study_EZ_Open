@@ -1,0 +1,48 @@
+{
+  "id": "2026-11-05-root-authoring-continuation",
+  "title": "시간 제한된 문항 정리의 명시적 동일 세션 계속",
+  "area": "integration",
+  "created_at": "2026-11-05T02:56:01.616432+00:00",
+  "required_checks": [
+    "contracts",
+    "runner"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-05T03:13:42.218226+00:00",
+      "evidence": "현재 사용자의 공통 6종 구현·검증, 배포 및 다른 실제 강의의 자동전송부터 학습 확인 요청을 적용한다. 같은 입력·모델·자료·세션의 명시적 1회 계속이며 기존 실패/미상 사용량/총 3회 중 1회 사용을 보존한다.",
+      "scope": "로컬 초기 문항 정리 동일 세션 계속 검사/증거/취소 연결과 합성 검사. 실제 job544 1회 이어 확인. API/웹/DB/원문 내용 변경 없음",
+      "evidence_version": 2,
+      "source_hash": "bf099be620c1e85ebf90a118d8e10c3f63a27239e982bc35004ee63f17283392",
+      "plan_hash": "4bacd4b9d522dda4bd4ec853f2b36564dbb7fc27a269e18d690063bbb1d1f6ab",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "65265499ea5a65b0bc3c2fed28f644cbc9f3830b746e497094f1cfc14f23f323"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-05T03:13:42.299813+00:00"
+}

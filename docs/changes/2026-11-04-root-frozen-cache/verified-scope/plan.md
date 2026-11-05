@@ -1,0 +1,1 @@
+1. runner/connection_generation.py에서 검증된 사본 우선 재사용, bounded transient download retry, atomic fresh write를 구현한다. 2. 합성 저장소/모델 stub로 오프라인 재개, 손상 사본 보류, 연결 종료 후3회 제한/성공 및 인증헤더 비전달을 검사하고 전체 runner 회귀를 실행한다. 3. review 후 같은 job524만 기존 재개 서비스로 queued 전환한다. 완료 source-1과 모든 이전 단계는 재사용하며 다음 미실행 단계만 진행한다. 복원 시 보관본과 원장·오류 로그는 지우지 않는다.

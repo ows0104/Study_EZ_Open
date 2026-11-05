@@ -19,6 +19,7 @@ import { useMe } from "../useMe";
 import { loadLatestBankPrompt } from "./prompt";
 import { BankCoverage } from "./BankCoverage";
 import { BankResponseInput } from "./BankResponseInput";
+import { RootGenerationPanel } from './RootGenerationPanel';
 
 /** 웹 문항 생성 → CLI 검수·보완 → Main-Quiz 게시·학습. */
 export function BankPanel({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | "runId">; detail: LectureDetail }) {
@@ -37,6 +38,7 @@ export function BankPanel({ lecture, detail }: { lecture: Pick<LectureRef, "subj
   return (
     <>
       <BankAdmin lecture={lecture} detail={detail} />
+      <RootGenerationPanel subject={lecture.subject} runId={lecture.runId}/>
     </>
   );
 }

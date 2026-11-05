@@ -33,3 +33,6 @@
 .bank-review-notes .bank-source-pending {
   color: inherit;
 }
+.bank-stimuli { display:flex; flex-wrap:wrap; gap:1rem; margin-block:1rem; }
+.bank-stimuli figure { margin:0; max-width:100%; }
+.bank-stimuli img { display:block; max-width:100%; height:auto; }

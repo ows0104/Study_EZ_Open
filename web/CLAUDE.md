@@ -38,6 +38,7 @@ Quiz Bank의 `BankStudy.tsx`는 진입점이고 시작·풀이·문항 표시를
 
 설치·실행은 [README](README.md), 운영 배포는
 [Pages 실행서](../docs/cloudflare-pages-runbook.md)를 따른다.
-웹 push와 API 배포는 별개이며, API 계약을 같이 바꾸면 배포 순서를 검토한다.
+master push의 GitHub 검사 후 API가 먼저 배포되고, Pages는 같은 SHA의 API를 확인한 뒤 웹을 배포한다.
+다른 브랜치/PR은 검사만 한다. [협업·자동 배포](../docs/development/collaboration.md)를 따른다.
 
 사용자 행동을 추가/변경할 때 [이용현황 행동 등록](../docs/development/usage-actions.md)을 함께 따른다. 이용현황의 행동 이름/단위는 서버 카탈로그를 사용하며 별도 목록을 만들지 않는다.

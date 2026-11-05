@@ -1,0 +1,27 @@
+import type { BankAnswer, BankQuestion } from './bank';
+export type RootPolicy = {id: string; day_hour: number; deadline_offset: number} & (
+  {intervals: number[]} | {mode:'adaptive'; initial_days:number; success_growth:number; partial_factor:number; max_days:number; exam_fraction:number});
+export type RootSummary = {total: number; learned: number; recalled: number; unseen: number; unready: number;
+  importantUnseen: number; newToday: number; recallChange: number; recallLearningChange:number; recallTimeChange:number;
+  targets: {id:string; learned:boolean; recalled:boolean; important:boolean; ready:boolean; status:string}[]};
+export type RootPlan = {tasks:{task_id:string; direction_id:string; question_id:string; reason:string}[];
+  newGoalQuota:number; days:number|null; habitualTasks:number|null; deadline:string|null;
+  preparedUnseen:number; unpreparedGoals:number; scopeNote:string};
+export type RootOverview = {revision:string; title:string; policyReady:boolean; message?:string;
+  policy?:RootPolicy; summary:RootSummary|null; plan:RootPlan|null; sessionId:string|null; preparationProblems?:number;
+  scope?:{label:string; limitations:string[]; included:string[]; excluded:string[]}};
+export type RootView = {sessionId:string; revision:string; version:number; day:string; policy:RootPolicy;
+  position:number; count:number; finished:boolean; blocked:string|null; canUndo:boolean; mapSeen:boolean; summary:RootSummary;
+  task:{id:string; question:BankQuestion; answer:(BankAnswer&{reviewNotes?:{source:string;verdict:string;note:string;suggested_answer:string}[];
+    reviewIssues?:string[];sourceLinks?:{label:string;url:string}[]})|null; response:string|null; attempted:boolean|null; helped:boolean}|null};
+export type RootAction = {kind:'reveal'|'rate'|'skip'|'map'|'undo'; attempted?:boolean; response?:string; helped?:boolean;stimulusHashes?:string[];
+  grade?:'missed'|'partial'|'independent'};
+export type RootMapData = {concepts:{concept_id:string;label:string;parent_ids:string[]}[];
+  readyDirectionIds?:string[];
+  relations:{relation_id:string;from_id:string;to_id:string;kind:string;reason:string}[];
+  targets:{target_id:string;title:string;role:string;concept_ids:string[];
+    directions:{direction_id:string;cue:string;answer_scope:string;requirement:string}[];
+    importance:Record<string,{status:string;reason:string}>}[];
+  points?:{point_id:string;text:string;target_ids:string[];scope_status:string;reason:string}[];
+  coverage?:{point_id:string;status:string;reason:string;confirmed_direction_ids:string[];missing_direction_ids:string[];unknown_direction_ids:string[];partial_direction_ids:string[]}[];
+  scope:{label:string;limitations:string[]}};

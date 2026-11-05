@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { MissedItem, QuizItem, RevealResult } from "../types/quiz";
 import { PreQuizText } from "./PreQuizText";
+import { PreQuizCloze } from "./PreQuizCloze";
 import { WhyAsked } from "./Quiz";
 import { FeedbackButton } from "../feedback/FeedbackButton";
 
-type Answer = Pick<RevealResult, "answer" | "explanation" | "lectureFocus">;
+type Answer = Pick<RevealResult, "answer" | "explanation" | "lectureFocus" | "clozeParts">;
 
 /** 마지막 선택이 '아직 헷갈려요'인 문제를 완료 직후 펼쳐 보여 준다. */
 export function PreQuizDifficult({ base, items, answers, onReview, reportContext, studyTrack = "core" }: {
@@ -41,7 +42,7 @@ export function PreQuizDifficult({ base, items, answers, onReview, reportContext
         return <article className="prequiz-review-card" key={entry.itemId}>
           <small className="prequiz-review-number">문제 {index + 1}</small>
           <WhyAsked item={entry} />
-          <h4><PreQuizText text={entry.stem} /></h4>
+          <h4><PreQuizCloze text={entry.stem} parts={entry.qtype === "cloze" ? answer?.clozeParts : undefined} /></h4>
           {answer ? <>
             <p className="prequiz-review-answer"><b>답</b><PreQuizText text={answer.answer} /></p>
             {answer.explanation ? <p className="prequiz-review-explanation"><b>설명</b><PreQuizText text={answer.explanation} /></p> : null}

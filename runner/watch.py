@@ -219,19 +219,7 @@ def assign_run_ids(files: list[LectureFile]) -> dict[str, str]:
     강의를 세므로 한 편이 다른 편을 덮는다. `LectureFile.uid`가 정확히 이 두 파일을
     예로 들며 괄호를 남겨 두는데, 여기서 그걸 안 쓰고 있었다.
     """
-    by_key: dict[str, list[LectureFile]] = {}
-    for item in files:
-        by_key.setdefault(item.key, []).append(item)
-
-    run_ids: dict[str, str] = {}
-    for key, group in by_key.items():
-        if len(group) == 1:
-            run_ids[group[0].uid] = key
-            continue
-        for item in group:
-            digest = hashlib.md5(item.uid.encode("utf-8")).hexdigest()[:4]
-            run_ids[item.uid] = f"{key}-{digest}"
-    return run_ids
+    return filenames.assign_run_ids(files)
 
 
 def build_queue(

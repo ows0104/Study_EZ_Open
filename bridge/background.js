@@ -15,6 +15,9 @@ const BANK_MAX_CHARS = 2_000_000;
  * 메시지가 아니라 여기서 읽는다 — 페이지가 아무 강의에나 링크를 달 수 없다.
  */
 const TAB_WATCH = "studyez-watch:";
+// Only hashes of verified, unsubmitted failed drafts; cleared with the browser session.
+const DRAFT_STATE = "studyez-draft:";
+let draftOperation = Promise.resolve();
 /** 기본 링크의 share id → 어느 강의였나. 갈라져 나온 대화를 그 강의로 돌리는 데 쓴다. */
 const SHARE_ORIGIN = "studyez-share-origin:";
 
@@ -227,6 +230,38 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === 'STUDYEZ_DRAFT_STATE') {
+    if (providerForSender(sender) !== 'chatgpt' || !sender.tab?.id) return false;
+    // Serialize claims so two new requests cannot both consume the same proof.
+    draftOperation = draftOperation.catch(() => {}).then(async () => {
+      const stored = await chrome.storage.session.get(null);
+      const watch = stored[`${TAB_WATCH}${sender.tab.id}`];
+      if (!watch?.requestId || watch.requestId !== message.requestId || watch.provider !== 'chatgpt') {
+        sendResponse({ok:false}); return;
+      }
+      const key = `${DRAFT_STATE}${sender.tab.id}`;
+      if (message.action === 'forget') {
+        await chrome.storage.session.remove(key);
+        sendResponse({ok:true}); return;
+      }
+      if (!/^[a-f0-9]{64}$/.test(message.fingerprint || '')) { sendResponse({ok:false}); return; }
+      const drafts = Object.entries(stored).filter(([name]) => name.startsWith(DRAFT_STATE));
+      if (message.action === 'failed') {
+        await chrome.storage.session.set({[key]: {requestId:watch.requestId, mode:watch.mode,
+          fingerprint:message.fingerprint, recordedAt:Date.now()}});
+        const excess = drafts.filter(([name]) => name !== key).sort((a,b) => b[1].recordedAt-a[1].recordedAt).slice(99);
+        if (excess.length) await chrome.storage.session.remove(excess.map(([name]) => name));
+        sendResponse({ok:true}); return;
+      }
+      if (message.action === 'claim') {
+        const matching = drafts.filter(([, draft]) => draft.mode === watch.mode && draft.fingerprint === message.fingerprint);
+        if (matching.length) await chrome.storage.session.remove(matching.map(([name]) => name));
+        sendResponse({ok:matching.length > 0}); return;
+      }
+      sendResponse({ok:false});
+    }).catch(() => sendResponse({ok:false}));
+    return true;
+  }
   if (message?.type === MESSAGES.checkPending) {
     if (!fromWebapp(sender) || !sender.tab?.id) return false;
     void deliverPending(sender.tab.id).catch(() => undefined);
@@ -476,6 +511,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (!sender.tab?.id) throw new Error("Study_EZ 탭을 확인하지 못했습니다.");
       await chrome.storage.session.set({ [`${TAB_PAYLOAD}${tab.id}`]: payload });
       await watchTab(tab.id, {
+        requestId: payload.requestId,
         lectureId: payload.lectureId,
         promptVersion: typeof payload.promptVersion === "string" ? payload.promptVersion : "",
         provider: payload.provider,

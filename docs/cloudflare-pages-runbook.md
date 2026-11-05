@@ -1,5 +1,9 @@
 # Cloudflare Pages 배포 실행서
 
+2026-11-05 자동 배포 구성은 [협업·자동 배포](development/collaboration.md)가 정본이다.
+현재 build command는 `npm run build:pages`이며 preview 자동 배포는 끈다.
+아래 최초 설치 기록의 `npm run build`는 복구 시 현재 명령으로 바꿔 적용한다.
+
 이 문서는 Claude·Codex 같은 다음 작업자가 Study_EZ 프론트를 다시 배포하거나
 설정을 복구할 때 그대로 따라 할 수 있는 실행 기록이다. 2026-08-17에 아래
 절차로 실제 운영 배포를 완료했다.

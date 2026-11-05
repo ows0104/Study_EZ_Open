@@ -1,0 +1,93 @@
+{
+  "id": "2026-11-02-cholinergic-rebuild",
+  "title": "콜린성 약리학(1) 연결 중심 콘텐츠 재구성",
+  "area": "generation",
+  "created_at": "2026-11-02T07:31:14.085592+00:00",
+  "required_checks": [
+    "source-preservation"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-02T07:31:48.481318+00:00",
+      "evidence": "2026-11-02 현재 사용자: 콜린성 약리학(1)으로 진행해줘. 기존 개념도나 출제포인트에 얽매이지 말고 연결된 질문과 중요도 근거, 부족한 질문, 첫 학습 경로까지 보여줘. 기존 방식에서 얽매일 필요없이 목적을 이루는것을 도와줘.",
+      "scope": "원본 기반 새 로컬 콘텐츠 설계 초안 및 한 차례 읽기 전용 CLI 작성과 보존 검사. 기존 운영 은행/기록 수정 및 배포 제외",
+      "evidence_version": 2,
+      "source_hash": "0ff2540a59a1025dbd59030706fef1e35ef44a044b581a1f33869fad21687d82",
+      "plan_hash": "6c9b79cedba02814e0bde1b23f37ad0e81527e726b682b75b87f2f140f1afdcd",
+      "inputs": [
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "1dbb1d08e3b064af5b42e207b3dc4c7aef0918a3131dd17a94a8f230637f67ae"
+    }
+  },
+  "checks": [
+    {
+      "name": "source-preservation",
+      "at": "2026-11-02T07:47:50.097582+00:00",
+      "command": [
+        ".\\.venv\\Scripts\\python.exe",
+        "docs/changes/2026-11-02-cholinergic-rebuild/check_inputs.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0021dc97a1e2085a7fc34dc65e88028d55900d6e0176ed4df2ee8372153a1d6f",
+      "plan_hash": "6c9b79cedba02814e0bde1b23f37ad0e81527e726b682b75b87f2f140f1afdcd",
+      "inputs": [
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-02-cholinergic-rebuild/1793605669891236100-source-preservation.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-02T07:49:10.242316+00:00",
+    "summary": "단회 초안 원문/24포인트/49질문 및 기존 ID 참조, 입력55 보존, 강의35+시험12 이미지 반환 확인. 의학 판정은 인증하지 않음. 가지 근거의 일괄 상속·복합 자기평가·열람과 첫 학습 집계 혼동을 review-notes.md에서 후속 보완으로 명시. 운영 반영 없음.",
+    "evidence_version": 2,
+    "source_hash": "0021dc97a1e2085a7fc34dc65e88028d55900d6e0176ed4df2ee8372153a1d6f",
+    "plan_hash": "6c9b79cedba02814e0bde1b23f37ad0e81527e726b682b75b87f2f140f1afdcd",
+    "inputs": [
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-02T07:49:10.311081+00:00"
+}

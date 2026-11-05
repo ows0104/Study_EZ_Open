@@ -1,0 +1,26 @@
+{
+  "target": "web",
+  "destination": "Cloudflare Pages study-ez-open / master / studyez.kr",
+  "health_url": "https://studyez.kr",
+  "smoke_command": [
+    "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+    "-X", "utf8", "-B",
+    "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/tmp/preview-bridge-20261105/scripts/preview_bridge_smoke.py",
+    "--revision", "{revision}", "--artifact", "{artifact}"
+  ],
+  "deploy_command": [
+    "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+    "-X", "utf8", "-B",
+    "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/tmp/preview-bridge-20261105/scripts/cloudflare_release.py",
+    "publish", "--artifact", "{artifact}", "--receipt",
+    "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/tmp/preview-bridge-20261105/runs/_development/2026-11-05-preview-bridge-deploy/pages-upload.json"
+  ],
+  "revision_command": [
+    "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+    "-X", "utf8", "-B",
+    "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/tmp/preview-bridge-20261105/scripts/cloudflare_release.py",
+    "revision", "--receipt",
+    "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/tmp/preview-bridge-20261105/runs/_development/2026-11-05-preview-bridge-deploy/pages-upload.json"
+  ],
+  "rollback": "Cloudflare Pages rollback production to the previous successful deployment 57fe6571-2415-4250-9895-e5f2bb903171; do not change API, DB, learning history, private pilot or pending extension replies."
+}

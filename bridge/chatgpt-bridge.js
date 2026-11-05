@@ -83,6 +83,7 @@ function createOverlay(payload, remembered) {
       <div class="studyez-status" role="status"></div>
       <button type="button" data-action="confirm"${remembered && automatic ? " hidden" : remembered ? "" : " disabled"}>${automatic ? "동의하고 자동 시작" : remembered ? "자료·프롬프트 넣기" : "동의하고 입력"}</button>
     </div>
+    <button type="button" data-action="recover" hidden>${automatic ? "이전 초안 비우고 자동전송" : "이전 초안 비우고 자료 넣기"}</button>
     ${
       remembered
         ? `<details>
@@ -220,6 +221,7 @@ function fillPrompt(prompt, editor) {
   }
   editor.focus();
   document.execCommand("selectAll", false);
+  document.execCommand("delete", false);
   document.execCommand("insertText", false, prompt);
   editor.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: prompt }));
 }
@@ -301,26 +303,93 @@ function attachmentFilenameVisible(labels, filename) {
   return new RegExp(`(?:^|[\\s"'])${pattern}(?![\\w.])`, "m").test(labels.normalize("NFC"));
 }
 
-function reusableDraft(text, prompt) {
-  return !normalized(text) || normalized(text) === normalized(prompt);
+function draftRemovalButtons(root) {
+  return [...root.querySelectorAll("button")].filter((button) => visible(button)
+    && !button.closest?.('#studyez-bridge, [contenteditable]')
+    && /(?:제거|remove|(?:파일|첨부).*삭제|delete.*(?:file|attachment))/i.test(button.getAttribute("aria-label") || ""));
 }
 
-async function clearOwnDraftAttachments(editor, payload, active) {
-  const root = composerRoot(editor, payload.provider);
-  if (!root) throw new Error("이전 첨부 상태를 확인하지 못했습니다. 새 대화로 다시 시작해 주세요.");
-  const buttons = [...root.querySelectorAll("button")].filter((button) => {
-    const label = button.getAttribute("aria-label") || "";
-    return visible(button) && /(?:제거|remove)/i.test(label);
+// Only the composer is inspected. Conversation history is never removed.
+function draftSnapshot(provider) {
+  const editor = findEditor(provider);
+  const root = editor && composerRoot(editor, provider);
+  if (!root) throw new Error("입력창과 첨부 상태를 확인하지 못했습니다. AI 화면을 확인해 주세요.");
+  return { text: editorText(editor), attachments: draftRemovalButtons(root)
+    .map((button) => button.getAttribute("aria-label")).sort(),
+    turns: document.querySelectorAll('[data-message-author-role]').length };
+}
+
+const sameDraft = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+const knownDraftAttachments = (snapshot, files) => snapshot.attachments.every((label) =>
+  files.some((file) => attachmentFilenameVisible(label, file.filename)));
+
+async function draftFingerprint(snapshot) {
+  const bytes = new TextEncoder().encode(JSON.stringify(snapshot));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function draftMessage(payload, action, fingerprint) {
+  return new Promise((resolve) => {
+    try {
+      chrome.runtime.sendMessage({ type: 'STUDYEZ_DRAFT_STATE', action,
+        requestId: payload.requestId, fingerprint }, (response) => {
+        resolve(!chrome.runtime.lastError && response?.ok === true);
+      });
+    } catch { resolve(false); } // No ownership proof means explicit recovery is required.
   });
-  if (buttons.some((button) => !payload.files.some((file) =>
-    attachmentFilenameVisible(button.getAttribute("aria-label") || "", file.filename)))) {
-    throw new Error("이전 작성 내용에 다른 자료가 첨부되어 있어 자동 진행을 멈췄습니다.");
+}
+
+class DraftConflict extends Error {
+  constructor(snapshot) {
+    const leftover = snapshot.attachments.length ? `이전 내용과 첨부 ${snapshot.attachments.length}개가` : '이전 내용이';
+    super(`입력창에 ${leftover} 남아 있어 멈췄습니다. 내용을 유지하려면 ×로 닫으세요. 아래 버튼을 누르면 현재 입력창의 초안·첨부만 비우고 이번 자료로 진행합니다.`);
+    this.snapshot = snapshot;
   }
-  for (const button of buttons) {
+}
+
+async function checkDraft(payload, active, approved = null) {
+  active();
+  const snapshot = draftSnapshot(payload.provider);
+  if (approved) {
+    if (!sameDraft(snapshot, approved)) throw new Error("확인 후 입력 내용이나 첨부가 바뀌었습니다. 초안을 보존하고 중지했습니다.");
+  } else {
+    const owned = payload.provider === 'chatgpt'
+      && await draftMessage(payload, 'claim', await draftFingerprint(snapshot));
     active();
-    button.click();
+    // Existing text is replaced by this request; unexpected attachments still need recovery.
+    if (!knownDraftAttachments(snapshot, payload.files) && !owned) {
+      throw new DraftConflict(snapshot);
+    }
   }
-  if (buttons.length) await pause(300);
+  return snapshot;
+}
+
+async function clearDraftSnapshot(payload, expected, active) {
+  // Re-read after every asynchronous step; React may replace the entire composer.
+  let remaining = expected;
+  for (let index = 0; index < expected.attachments.length; index += 1) {
+    active();
+    if (!sameDraft(draftSnapshot(payload.provider), remaining)) throw new Error("초안이나 첨부가 바뀌어 정리를 중지했습니다.");
+    const editor = findEditor(payload.provider);
+    const button = draftRemovalButtons(composerRoot(editor, payload.provider))
+      .find((item) => item.getAttribute('aria-label') === remaining.attachments[0]);
+    button.click();
+    const next = { ...remaining, attachments: remaining.attachments.slice(1) };
+    let removed = false;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      await pause(100);
+      active();
+      const current = draftSnapshot(payload.provider);
+      if (sameDraft(current, next)) { removed = true; break; }
+      if (!sameDraft(current, remaining)) throw new Error("초안이나 첨부가 바뀌어 정리를 중지했습니다.");
+    }
+    if (!removed) throw new Error("이전 첨부 제거를 확인하지 못했습니다. 자동으로 전송하지 않았습니다.");
+    remaining = next;
+  }
+  active();
+  if (!sameDraft(draftSnapshot(payload.provider), remaining)) throw new Error("입력 내용이 바뀌어 초안을 보존하고 중지했습니다.");
+  return findEditor(payload.provider);
 }
 
 function attachmentStatus(root, files) {
@@ -360,6 +429,7 @@ async function autoSend(payload, status, active, dependencies = {}) {
       if (readySince === null) readySince = now();
       if (now() - readySince >= 1500) {
         active();
+        dependencies.beforeSend?.();
         button.click(); // 이 실행에서 유일한 전송 시도. 이후에는 확인만 한다.
         status.textContent = "전송 확인 중…";
         const confirmationDeadline = now() + 15000;
@@ -439,17 +509,48 @@ async function initialize() {
     const status = overlay.querySelector(".studyez-status");
     const confirm = overlay.querySelector('[data-action="confirm"]');
     const consent = overlay.querySelector('[data-action="consent"]');
+    const recover = overlay.querySelector('[data-action="recover"]');
     let cancelled = false;
     let started = false;
+    let conflict = null;
+    let wrotePrompt = false;
+    let fillingPrompt = false;
+    let sendAttempted = false;
+    let userChanged = false;
     const downloads = new AbortController();
     const startUrl = location.href;
     const active = () => {
       if (cancelled || !overlay.isConnected) throw new Error("자동 진행을 중지했습니다.");
       if (location.href !== startUrl) throw new Error("대화 화면이 바뀌어 자동 진행을 중지했습니다.");
+      if (wrotePrompt && userChanged) throw new Error("사용자가 입력창을 수정하거나 전송해 자동 진행을 중지했습니다.");
+    };
+    // Invalidate a failed-draft proof if the user subsequently edits or sends it.
+    const invalidateDraft = () => { userChanged = true; void draftMessage(payload, 'forget'); };
+    const onInput = (event) => {
+      if (!fillingPrompt && event.isTrusted && event.target.closest?.('textarea, [contenteditable]')) invalidateDraft();
+    };
+    const onComposerAction = (event) => {
+      const editor = findEditor(provider);
+      const root = editor && composerRoot(editor, provider);
+      if (root && (event.type === 'submit' && event.target === root
+        || event.type === 'click' && event.target.closest?.('button') === sendButton(root, provider)
+        || event.type === 'keydown' && event.key === 'Enter' && !event.shiftKey && root.contains(event.target)
+        || event.isTrusted && event.type === 'click' && draftRemovalButtons(root).includes(event.target.closest?.('button'))
+        || event.isTrusted && event.type === 'change' && event.target.matches?.('input[type="file"]') && root.contains(event.target)
+        || event.isTrusted && event.type === 'drop' && root.contains(event.target))) invalidateDraft();
+    };
+    const composerEvents = ['click', 'submit', 'keydown', 'change', 'drop'];
+    document.addEventListener('input', onInput, true);
+    for (const event of composerEvents) document.addEventListener(event, onComposerAction, true);
+    const stopWatchingDraft = () => {
+      document.removeEventListener('input', onInput, true);
+      for (const event of composerEvents) document.removeEventListener(event, onComposerAction, true);
     };
     overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => {
       cancelled = true;
       downloads.abort();
+      stopWatchingDraft();
+      void draftMessage(payload, 'forget');
       overlay.remove();
     });
     consent?.addEventListener("change", () => {
@@ -459,6 +560,8 @@ async function initialize() {
     overlay.querySelector('[data-action="revoke"]')?.addEventListener("click", async () => {
       cancelled = true;
       downloads.abort();
+      stopWatchingDraft();
+      void draftMessage(payload, 'forget');
       try {
         await chrome.storage.local.remove(consentKey);
       } catch {
@@ -469,10 +572,11 @@ async function initialize() {
       status.textContent = "자동 진행을 중지하고 동의를 해제했습니다. 다시 실행하려면 Study EZ에서 새 대화로 시작해 주세요.";
       if (consent) consent.checked = false;
       confirm.hidden = true;
+      recover.hidden = true;
       overlay.querySelector('[data-action="revoke"]').disabled = true;
     });
 
-    async function start() {
+    async function start(approvedDraft = null) {
       if (started || (!remembered && !consent?.checked)) return;
       started = true;
       confirm.disabled = true;
@@ -483,16 +587,11 @@ async function initialize() {
       status.classList.remove("is-error");
       try {
         // 기억된 동의로 시작해도 취소/동의 해제를 누를 시간을 준다.
-        if (remembered && automatic) {
+        if (remembered && automatic && !approvedDraft) {
           status.textContent = "3초 후 자동으로 첨부·전송합니다. (×로 중지)";
           await pause(3000);
         }
         active();
-        const files = [];
-        for (const file of payload.files) {
-          files.push(await fetchFile(file, status, downloads.signal));
-          active();
-        }
         let editor = null;
         for (let attempt = 0; attempt < 60 && !editor; attempt += 1) {
           active();
@@ -500,15 +599,18 @@ async function initialize() {
           if (!editor) await pause(500);
         }
         if (!editor) throw new Error("입력창을 찾지 못했습니다. AI 서비스 로그인과 화면을 확인해 주세요.");
-        if (!reusableDraft(editorText(editor), payload.prompt)) throw new Error("입력창에 작성 중인 다른 내용이 있어 자동 진행을 멈췄습니다. 새 대화로 다시 시작해 주세요.");
-        if (editorText(editor)) {
-          await clearOwnDraftAttachments(editor, payload, active);
-          editor = findEditor(provider);
-          if (!editor || !reusableDraft(editorText(editor), payload.prompt)) throw new Error("이전 작업을 정리하는 동안 입력 내용이 바뀌어 자동 진행을 멈췄습니다.");
+        const snapshot = await checkDraft(payload, active, approvedDraft);
+        const files = [];
+        for (const file of payload.files) {
+          files.push(await fetchFile(file, status, downloads.signal));
+          active();
         }
+        editor = await clearDraftSnapshot(payload, snapshot, active);
         status.textContent = "자료를 첨부하고 프롬프트를 넣는 중…";
         // 먼저 입력한다. 파일 입력을 찾는 동안 사용자가 전송/이동했으면 덮어쓰지 않는다.
-        fillPrompt(payload.prompt, editor);
+        fillingPrompt = true;
+        try { fillPrompt(payload.prompt, editor); } finally { fillingPrompt = false; }
+        wrotePrompt = true;
         active();
         await attachFiles(files, provider, () => {
           active();
@@ -518,17 +620,42 @@ async function initialize() {
         });
         active();
         confirm.hidden = true;
-        await finishInput({ ...payload, files: payload.files.map((file, index) => ({ ...file, size: files[index].size })) }, status, active);
+        await finishInput({ ...payload, files: payload.files.map((file, index) => ({ ...file, size: files[index].size })) }, status, active,
+          (input, line, guard) => autoSend(input, line, guard, { beforeSend: () => { sendAttempted = true; } }));
+        stopWatchingDraft();
         setTimeout(() => overlay.remove(), 5000);
       } catch (error) {
         if (cancelled) return;
         status.classList.add("is-error");
         status.textContent = error instanceof Error ? error.message : String(error);
-        // 일부 첨부/전송이 성공했을 수 있으므로 같은 요청에 재시도 버튼을 주지 않는다.
         confirm.hidden = true;
+        // Only a conflict detected before download/attachment is recoverable here.
+        if (error instanceof DraftConflict && !wrotePrompt && !sendAttempted) {
+          conflict = error.snapshot;
+          recover.hidden = false;
+          started = false;
+        } else if (provider === 'chatgpt' && wrotePrompt && !sendAttempted && !userChanged) {
+          try {
+            const failed = draftSnapshot(provider);
+            if (failed.text === normalized(payload.prompt) && knownDraftAttachments(failed, payload.files)) {
+              const fingerprint = await draftFingerprint(failed);
+              active();
+              if (!userChanged && sameDraft(failed, draftSnapshot(provider))) await draftMessage(payload, 'failed', fingerprint);
+              // A trusted edit/send may race the asynchronous storage response.
+              if (userChanged) await draftMessage(payload, 'forget');
+            }
+          } catch { /* Without proof the next request offers explicit recovery. */ }
+        }
       }
     }
     confirm.addEventListener("click", () => void start());
+    recover.addEventListener('click', () => {
+      if (!conflict || cancelled || started) return;
+      const approved = conflict;
+      conflict = null;
+      recover.hidden = true;
+      void start(approved);
+    });
     if (remembered && automatic) void start();
   }
 

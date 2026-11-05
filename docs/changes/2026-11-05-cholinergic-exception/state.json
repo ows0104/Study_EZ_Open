@@ -1,0 +1,191 @@
+{
+  "id": "2026-11-05-cholinergic-exception",
+  "title": "콜린성 예시 핵심 보완 1회 예외",
+  "area": "generation",
+  "created_at": "2026-11-04T15:55:22.414977+00:00",
+  "required_checks": [
+    "artifact",
+    "contracts",
+    "preview"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-04T16:00:12.246946+00:00",
+      "evidence": "2026-11-05 사용자: 추가 1회 예외로 핵심 보완. 계획 내용 동일, 기록 언어 오탈자만 교정.",
+      "scope": "지정 핵심 항목 1회 교정 및 독립 재검수, 동일 자료 전송, 운영 미게시 예시와 트리.",
+      "evidence_version": 2,
+      "source_hash": "b50719f743e42f5c5b0b26645af61fa02756fb1b5365c02f0e9611e3a25c0b51",
+      "plan_hash": "b9bb3f82520aa1a38cb2cad437f93ac3af2af306d20e3da8c8a0c2433f8646a2",
+      "inputs": [
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "c849d0e27b112a3a26f321102b2aeef1984357060db0fa124e5c95fda24a9fdf"
+    }
+  },
+  "checks": [
+    {
+      "name": "contracts",
+      "at": "2026-11-04T16:01:12.801890+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "tests/quizbank/test_connection_generate.py",
+        "-q",
+        "--basetemp",
+        "runs/_test-temp/cholinergic-exception-contracts"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "b50719f743e42f5c5b0b26645af61fa02756fb1b5365c02f0e9611e3a25c0b51",
+      "plan_hash": "b9bb3f82520aa1a38cb2cad437f93ac3af2af306d20e3da8c8a0c2433f8646a2",
+      "inputs": [
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-05-cholinergic-exception/1793808053988514900-contracts.log"
+    },
+    {
+      "name": "contracts",
+      "at": "2026-11-04T16:01:49.420208+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "tests/quizbank/test_connection_generate.py",
+        "-q",
+        "--basetemp",
+        "runs/_test-temp/cholinergic-exception-contracts-native"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "b50719f743e42f5c5b0b26645af61fa02756fb1b5365c02f0e9611e3a25c0b51",
+      "plan_hash": "b9bb3f82520aa1a38cb2cad437f93ac3af2af306d20e3da8c8a0c2433f8646a2",
+      "inputs": [
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-05-cholinergic-exception/1793808101554208200-contracts.log"
+    },
+    {
+      "name": "preview",
+      "at": "2026-11-04T16:28:26.716271+00:00",
+      "command": [
+        "node",
+        "docs/changes/2026-11-05-cholinergic-exception/preview_qa.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "b50719f743e42f5c5b0b26645af61fa02756fb1b5365c02f0e9611e3a25c0b51",
+      "plan_hash": "b9bb3f82520aa1a38cb2cad437f93ac3af2af306d20e3da8c8a0c2433f8646a2",
+      "inputs": [
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-05-cholinergic-exception/1793809695545811900-preview.log"
+    },
+    {
+      "name": "artifact",
+      "at": "2026-11-04T16:29:49.413094+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "docs/changes/2026-11-05-cholinergic-exception/verify_artifact.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "b50719f743e42f5c5b0b26645af61fa02756fb1b5365c02f0e9611e3a25c0b51",
+      "plan_hash": "b9bb3f82520aa1a38cb2cad437f93ac3af2af306d20e3da8c8a0c2433f8646a2",
+      "inputs": [
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-05-cholinergic-exception/1793809781380729900-artifact.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-04T16:31:02.297106+00:00",
+    "summary": "지정7문항과 D10/R35만의 실제 모델 delta, 원본/이전 ledger 불변, 후속 추가1회 상한, 실제10 crop와 도구 없는 정답검수, source 명시 판정에 의한 R35 metadata-only 검토 완료 및 원문 binding 보존, 최종49/57·필수41/42 보수적 채택, 운영 무변경을 검증. 계약145·artifact·preview 통과. D10·D22 회상 누락과 Q130 순서는 보존하며 전부 해결로 표기하지 않음.",
+    "evidence_version": 2,
+    "source_hash": "b50719f743e42f5c5b0b26645af61fa02756fb1b5365c02f0e9611e3a25c0b51",
+    "plan_hash": "b9bb3f82520aa1a38cb2cad437f93ac3af2af306d20e3da8c8a0c2433f8646a2",
+    "inputs": [
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-04T16:31:02.371763+00:00"
+}

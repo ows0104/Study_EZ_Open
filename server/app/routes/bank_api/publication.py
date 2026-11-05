@@ -61,6 +61,9 @@ def put_bank_response(subject: str, run_id: str, payload: ResponseIn,
     """확장이 ChatGPT 탭에서 받아 온 응답 원문. 저장하면 러너가 정리할 일감이 선다."""
     lecture = lecture_or_404(db, subject, run_id)
     db.refresh(lecture, with_for_update=True)
+    from app.routes.root_generation import pending_for_lecture
+    if pending_for_lecture(db, subject, run_id):
+        raise HTTPException(409, 'Concept map 자동출제 작업이 있습니다. 완료하거나 취소한 뒤 웹 응답을 저장하세요.')
     file_info = None
     file_required = markdown_file_required(subject, run_id, payload.prompt_version)
     if payload.response_file is not None or 'STUDYEZ_BANK_FILE' in payload.raw or file_required:
@@ -136,6 +139,10 @@ def get_bank_response(subject: str, run_id: str, user: CurrentUser = Depends(req
                       db: Session = Depends(get_db)) -> dict[str, Any]:
     """러너가 정리할 재료. 집어 가면 `building` 으로 적는다."""
     lecture = lecture_or_404(db, subject, run_id)
+    from app.routes.root_generation import pending_for_lecture
+    explicit_generation = pending_for_lecture(db, subject, run_id)
+    if explicit_generation:
+        return explicit_generation
     row = db.get(QuizBank, (lecture.subject, lecture.run_id))
     if row is None:
         raise HTTPException(404, "저장된 ChatGPT 응답이 없습니다.")
@@ -181,6 +188,9 @@ def put_bank_links(subject: str, run_id: str, payload: BankLinksIn,
         raise HTTPException(422, "ChatGPT 공유 링크와 개인 대화 주소를 확인하세요.")
     # 첫 두 링크가 동시에 도착해도 같은 강의의 은행을 한 번만 만든다.
     db.refresh(lecture, with_for_update=True)
+    from app.routes.root_generation import pending_for_lecture
+    if pending_for_lecture(db,subject,run_id):
+        return {'preserved':True,'message':'뿌리 자동출제 링크는 완성 파일과 함께 보존합니다.'}
     row = db.scalars(select(QuizBank).where(QuizBank.subject == subject, QuizBank.run_id == run_id)
                      .with_for_update()).first()
     if row is None:

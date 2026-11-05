@@ -21,6 +21,11 @@ def run_bank(args, parser) -> int:
     if not token:
         print("러너 토큰이 없다. server/.env의 RUNNER_TOKEN이나 STUDYEZ_RUNNER_TOKEN 환경 변수, 또는 --token")
         return 2
+    if getattr(args,'root_generation',''):
+        if args.points_only or args.import_share:
+            parser.error('root-generation은 points-only/import-share와 함께 사용할 수 없습니다')
+        from runner.connection_generation import run_generation
+        return run_generation(publish.Client(api,token),args.subject,args.run_id,Path(args.runs),args.root_generation,model=args.model)
     if getattr(args, 'import_share', False):
         from runner.shared_bank import recover
         client = publish.Client(api, token)

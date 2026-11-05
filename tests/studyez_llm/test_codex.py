@@ -93,6 +93,16 @@ def test_blind_cli_is_isolated(monkeypatch):
     data, info = session.run_blind("question only")
     assert data == {"ok": True} and info["session_id"] == "test-session"
 
+def test_blind_native_image_attachment_retains_tool_isolation(monkeypatch,tmp_path):
+    monkeypatch.setenv('STUDYEZ_CODEX_BIN','codex.exe');image=tmp_path/'synthetic.png';image.write_bytes(b'synthetic attachment bytes')
+    def fake(argv,**kw):
+        assert argv[argv.index('--image')+1]==str(image.resolve())
+        assert '--ephemeral'in argv and 'features.view_image=false'in argv and 'features.shell_tool=false'in argv
+        assert 'mcp_servers={}'in argv and 'web_search="disabled"'in argv
+        return SimpleNamespace(returncode=0,stdout=events(),stderr='')
+    monkeypatch.setattr(codex,'run_process',fake)
+    assert codex.run('Question image only',blind=True,images=[image])['text']=='{"ok":true}'
+
 
 def test_author_resume_retains_workspace_and_pdf_adapter(monkeypatch, tmp_path):
     monkeypatch.setenv("STUDYEZ_CODEX_BIN", "codex.exe")

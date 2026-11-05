@@ -1,0 +1,61 @@
+{
+  "id": "2026-11-03-root-web-deployment",
+  "title": "자동전송 기반 뿌리 출제 배포와 콜린성 1건 시범",
+  "area": "contracts",
+  "created_at": "2026-11-03T07:58:00.761051+00:00",
+  "required_checks": [
+    "contracts",
+    "generation",
+    "runner",
+    "server",
+    "ui",
+    "web",
+    "root-regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-03T07:58:03.074157+00:00",
+      "evidence": "2026-11-03 사용자: 배포하고 하나 예시로 돌려보자. Chatgpt에는 네가 직접 들어가지 말고 자동전송버튼을 이용하면 될듯.",
+      "scope": "자동전송 웹 출제·MD 수신·검수/게시 연결, 관련 기능 고정 사본/DB/API/러너/웹 배포, 콜린성 약리학(1) 261002_01 개인 시범 1건. ChatGPT 직접 UI 접근 금지·기존 은행/기록 보존.",
+      "evidence_version": 2,
+      "source_hash": "3890cd26980aa8a70dff4921e8c47e9704f0fab19b311fb5f4a1a3dcc9534198",
+      "plan_hash": "3e9967b8008eef907def1cc595d237fbc1e7a94bf5547b920d457daed1e31b21",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "server",
+        "spotter/data",
+        "spotter/scripts",
+        "spotter/web",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "tests/runner",
+        "tests/spotter",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "419b2f3a316a84460bc813610d74a907f2084e927b6a23c515de121bc5c993fb"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-03T07:58:03.456422+00:00"
+}

@@ -148,5 +148,6 @@ def collect_external(runs: Path, processes: list[dict], now: float) -> tuple[tup
                 details = tuple(_event(line, config) for line in log_lines[-3:])
             jobs.append(JobStatus(f"{key}/{run_id}" if run_id else key, title,
                                   process["ProcessId"], label, (stage,), details,
-                                  min(ages) if ages else None, owner))
+                                  min(ages) if ages else None, owner,
+                                  config.get('subject') or status.get('subject') or context.get('subject', '')))
     return tuple(jobs), tuple(events)

@@ -58,7 +58,8 @@
 - 카드 전체 교체 시 관리자의 `card_edit` 판정을 다시 반영한다.
 - 파일 본문은 R2 서명 URL로 직접 전송하며 계약의 kind와 Content-Type을 유지한다.
 
-push는 API를 배포하지 않는다. 배포 절차는 [배포 안내](../docs/deployment.md)에 있다.
+master push는 GitHub 검사 통과 후 API를 자동 배포한다. 다른 브랜치는 검사만 한다.
+배포 절차는 [협업·자동 배포](../docs/development/collaboration.md)와 [배포 안내](../docs/deployment.md)에 있다.
 과거 변경 이유는 [원문 기록](../docs/archive/2026-10-06-originals/server/CLAUDE.md)에 보관했다.
 
 사용자 행동을 추가/변경할 때 [이용현황 행동 등록](../docs/development/usage-actions.md)을 함께 따른다. 기록·공통 카탈로그·수집·검사를 한 범위로 갱신한다.

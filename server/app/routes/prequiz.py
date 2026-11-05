@@ -71,6 +71,7 @@ from sqlalchemy.orm import Session
 from app import srs
 from app.auth import CurrentUser, require_approved_user
 from app.database import get_db
+from app.quiz_cloze import revealed_cloze
 from app.models import (
     SLIDE_KINDS,
     Asset,
@@ -284,6 +285,7 @@ def missed_items(
             "examHit": row.exam_hit,
             "lectureFocus": (row.learning_support or {}).get("lecture_focus", ""),
             "difficulty": _difficulty(row),
+            **(revealed_cloze(row) if quiz.name == "pre" else {}),
         }
         for row in (rows if quiz.name == "pre" else rows[:limit])
     ]
@@ -507,6 +509,7 @@ def _reveal(
         "itemId": item.item_id,
         "answer": item.answer,
         "explanation": item.explanation,
+        **(revealed_cloze(item) if quiz.name == "pre" else {}),
         # 왜 냈나(2026-10-04 관리자 — 「문제 풀기 전에는 배지만, 풀고 나서 이유가」).
         # 도전 문제의 「강의의 ‘○○’ 대목에서 풀린다」가 앞면에 있으면 답의 절반을 알려 준다.
         "whyAsked": item.why_asked,

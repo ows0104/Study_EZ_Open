@@ -148,6 +148,21 @@ def fetch_links(client: publish.Client) -> list[Link]:
 # ------------------------------------------------------------------ 자리 찾기
 
 
+def _unplanned_reason(subject: str, run_id: str, warnings: list[str]) -> str:
+    """A missing plan can mean an unconfirmed match, not a missing timetable."""
+    for warning in warnings:
+        if (warning.startswith(f"{subject}/{run_id} ")
+                or warning.startswith(f"{subject}: 확인해 준 짝을 못 찾았다 — {run_id} →")
+                or warning.startswith(f"{subject}: 확인해 준 짝 {run_id}에 해당하는 빈 칸이 없다")):
+            return warning
+    for warning in warnings:
+        if warning.startswith(f"{subject}:") and any(marker in warning for marker in (
+                "시간표를 읽지 못했다", "시간표에서 이 과목을 못 찾는다")):
+            return warning
+    return ("로컬에서 이 강의의 예습 계획을 세우지 못했다 — "
+            "올해 필기·시간표 대상·작년 필기 연결을 확인해야 한다")
+
+
 def resolve(
     links: list[Link],
     root: Path,
@@ -187,9 +202,8 @@ def resolve(
         for link in subject_links:
             plan = by_run.get(link.run_id)
             if plan is None:
-                targets.append(Target(link=link, state=BLOCKED, reason=(
-                    "로컬에서 이 강의를 못 찾았다 — 올해 필기도 시간표 칸도 없다. "
-                    "시간표를 먼저 넣어야 할 수 있다")))
+                targets.append(Target(link=link, state=BLOCKED, reason=
+                                      _unplanned_reason(subject, link.run_id, subject_warnings)))
                 continue
 
             pdf = next((u.path for u in plan.uploads if u.kind == "notes_prev"), None)

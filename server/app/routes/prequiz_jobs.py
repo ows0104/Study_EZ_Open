@@ -307,7 +307,7 @@ def claim_prequiz_job(
     if mine is not None:
         _touch_runner(db, busy=True, note=_busy_note(running))
         db.commit()
-        return {"job": job_row(mine)}
+        return {"job": claimed_job(db, mine)}
 
     if len(running) >= MAX_RUNNING:
         _touch_runner(db, busy=True, note=_busy_note(running))
@@ -350,7 +350,23 @@ def claim_prequiz_job(
 
     _touch_runner(db, busy=bool(running), note=_busy_note(running))
     db.commit()
-    return {"job": job_row(job)}
+    return {"job": claimed_job(db, job)}
+
+
+def claimed_job(db: Session, job: PrequizJob | None):
+    """Bind an explicit root request to this claimed job; never widen batch scope."""
+    row = job_row(job)
+    if not job or job.state != JOB_RUNNING or job.kind != JOB_BANK or job.origin != JOB_BUTTON or job.cancel_requested:
+        return row
+    from app.models.root_generation import RootGeneration
+    root = db.scalars(select(RootGeneration).where(RootGeneration.job_id == job.id)).first()
+    if (root and not root.result_digest and root.web_response
+        and (root.subject, root.run_id) == (job.subject, job.run_id)
+        and root.packet.get('owner') == root.user_id
+        and (root.packet.get('subject'), root.packet.get('runId'), root.packet.get('generationId'))
+            == (root.subject, root.run_id, root.id)):
+        row['rootGenerationId'] = root.id
+    return row
 
 
 class JobUpdate(BaseModel):

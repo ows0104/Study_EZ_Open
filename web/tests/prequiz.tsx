@@ -16,6 +16,11 @@ const items = concepts.map((name, index) => ({
   difficulty: index === 5 ? "challenge" : index < 3 || index >= 6 ? "basic" : "advanced",
   attempt: (completedPreview && index < 6 ? { correct: index !== 0 && index !== 5, state: "review", dueAt: null } : null) as object | null,
 }));
+const clozePreview = new URLSearchParams(location.search).has("cloze");
+if (clozePreview) {
+  items[0].qtype = "cloze";
+  items[0].stem = "**개념 연결**: [____]을 이해하고, [대조 기준]를 비교한다.";
+}
 const next = Object.fromEntries(["again", "hard", "good", "easy"].map((g) => [g, { days: 1, seconds: 86400 }]));
 const history: { itemId: string; attempt: object | null }[] = [];
 const reports: object[] = [];
@@ -31,6 +36,10 @@ window.fetch = async (input, init) => {
     learningScope: `${concepts[items.indexOf(entry)]}: 기준 하나만 알면 충분하다.`,
     lectureFocus: `‘${concepts[items.indexOf(entry)]}’ 부분의 기준을 사례에 어떻게 적용하는지 들어보자.`,
     next, slideUrl: null, slideNo: null, sourceAnchor: "",
+    ...(clozePreview && entry === items[0] ? { clozeParts: [
+      { text: "**개념 연결**: " }, { text: "핵심 용어", blank: true },
+      { text: "을 이해하고, " }, { text: "두 개념의 차이", blank: true }, { text: "를 비교한다." },
+    ] } : {}),
   });
   let result: object;
   if (path === "/api/me") result = { isAdmin: false };

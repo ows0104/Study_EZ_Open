@@ -38,3 +38,17 @@ cd server
 
 **`details`는 칸의 원문이고 `professor`는 거기서 뽑아낸 것이다.** 둘이 다투면
 `details`가 이긴다.
+
+## 2026-11-05 감염과 면역 수정 공지
+
+11월 2~27일 학생 공지 4쪽을 대조해 16칸을 갱신했다. 원본·변경표·승인·검사 기록은
+`docs/changes/2026-11-05-immunity-timetable/`에 있다.
+
+시간이 바뀐 12강의는 **주제를 따라 기존 event ID와 run ID를 유지**한다.
+`identities/2026-2.json`은 event ID→기존 run ID, `identities/2026-2-notes.json`은
+올해 필기의 기존/수정 교시와 정확한 주제→기존 run ID의 검토된 별칭이다.
+이 파일들은 시간표 배열이 아니므로 별도 하위 폴더에 둔다. `seed-timetable`의 최신 학기 선택에는 포함되지 않는다.
+
+러너는 수정된 날짜·교시와 보존된 ID를 함께 사용한다. 기존 `_pairs`·runs 경로·자료·링크·학습 기록의 키를
+새 교시로 일괄 변경하지 않는다. 수정 시간표가 처음 등록되는 DB에는 기존 seed를 쓰고, 이미 운영 중인
+DB의 이번 갱신은 검토된 조건부 데이터 변경 도구 `scripts/immunity_timetable_update.py`를 쓴다.

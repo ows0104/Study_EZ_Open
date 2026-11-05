@@ -1,5 +1,10 @@
 # 배포
 
+2026-11-05 사용자 승인으로 일반 코드의 master 자동 배포 경로를 추가했다.
+[협업·자동 배포](development/collaboration.md)가 이 경로의 정본이다.
+GitHub 검사 통과 → 고정 서버 패키지 배포 → 같은 SHA의 API를 확인한 Pages 웹 배포 순서다.
+아래 내용은 별도 승인을 사용하는 수동 고정 후보 배포 경로이며, DB/문항/권한 변경 정책은 계속 적용된다.
+
 모든 변경은 [개발 루프](development/README.md)의 구현 승인·실제 검사·코드 리뷰·중요 배포 승인을 따른다.
 서버 배포는 `./deploy.ps1 -ChangeId <작업ID>`로 실행한다. 해당 코드 해시의 승인/검사/리뷰가 없으면
 클라우드 호출 전에 중단한다. 서버/웹 모두 [고정 후보·사후 검사 절차](development/release-and-incidents.md)를 따른다.

@@ -1,0 +1,109 @@
+name: Test and deploy
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUTF8: '1'
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  checks:
+    name: Tests and build
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install test dependencies
+        run: |
+          python -m pip install -r requirements.txt pytest httpx PyYAML
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm.cmd --prefix web ci
+      - name: Install server dependencies
+        working-directory: server
+        run: python -m pip install -r requirements.txt
+      - name: Python regression and contracts
+        run: python -m pytest tests -q
+      - name: Server tests (one process per file, isolated local databases)
+        working-directory: server
+        run: python -m tests
+      - name: Web typecheck and build
+        run: npm.cmd --prefix web run build
+      - name: Bridge and deployment gate tests
+        run: |
+          node --test tests/bridge/*.cjs web/tests/wait-for-api.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python scripts/map_numbers.py --check
+      - name: Prepare fixed server candidate
+        shell: pwsh
+        run: |
+          ./server/prepare-build.ps1 -Destination "$env:RUNNER_TEMP/studyez-server"
+          python scripts/ci_deploy.py seal --artifact "$env:RUNNER_TEMP/studyez-server" --receipt "$env:RUNNER_TEMP/candidate.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: server-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/studyez-server
+            ${{ runner.temp }}/candidate.json
+          if-no-files-found: error
+          retention-days: 14
+  deploy:
+    name: Deploy production API
+    needs: checks
+    if: github.repository == 'ows0104/Study_EZ_Open' && github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: studyez-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - name: Download the tested candidate from this run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "server-$GITHUB_SHA" --dir "$RUNNER_TEMP/candidate"
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+        with:
+          project_id: meddeck-503318
+      - name: Deploy exact candidate, verify traffic and read-only health
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/ci_deploy.py deploy --artifact "$RUNNER_TEMP/candidate/studyez-server" --receipt "$RUNNER_TEMP/candidate/candidate.json" --output "$RUNNER_TEMP/deployment.json"
+      - name: Preserve deployment receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: deployment-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/deployment.json
+          if-no-files-found: warn
+          retention-days: 30

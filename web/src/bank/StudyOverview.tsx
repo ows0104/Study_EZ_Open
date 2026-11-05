@@ -12,6 +12,7 @@ import { QuizPublicationCell } from "./QuizPublicationCell";
 import { studyBlockKey, studyBlockNames } from "./studyBlocks";
 import { useStudyCourse } from "./useStudyCourse";
 import "./overview.css";
+import { RootOverviewPanel } from "./RootLearning";
 
 export type StudyLecture = Pick<LectureRef, "subject" | "runId" | "title" | "bankTimeline" | "mastery" | "cardProgress" | "studyLoaded"> & {
   date: string; course: string; ready: boolean; key: string; eventKey?: string;
@@ -108,6 +109,7 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
   };
 
   return <section className="study-overview">
+    <RootOverviewPanel lectureKeys={scoped.map(l=>l.key)}/>
     <header className="overview-heading">
       <div><h1>학습 현황</h1><p>블록의 모든 강의와 내 카드가 쌓이는 과정</p></div>
       <label>블록 <select value={course} onChange={e => setCourse(e.target.value)}>

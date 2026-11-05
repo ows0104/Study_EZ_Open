@@ -120,6 +120,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from . import ahead, blocks, deck, eta, gate, prequeue, publish, watch
+from . import desktop_control
 
 # Quiz Bank(2026-10-04). 만드는 것은 ChatGPT 이고 러너는 받은 응답을 정리·검토해 올린다 —
 # `runner bank` 가 업로드까지 스스로 끝내므로 뒤의 publish 를 안 지난다.
@@ -156,6 +157,7 @@ from .agent_state import (
 # 「왜 끝났나」를 말해야 하는데, 실제 코드(윈도우에서 죽인 프로세스는 1을 낸다)를
 # 그대로 쓰면 진짜 실패와 구별이 안 된다.
 KILLED_BY_HUMAN = -1000
+HELD_BY_DESKTOP = -1001
 
 
 @dataclass
@@ -174,6 +176,11 @@ class Job:
     # 사람이 고른 전략(`기본`·`족보`·`필기`·`사진`). 빈 문자열이면 자동이다.
     # 러너가 물어서(`watch.strategy_question`) 사람이 관리 화면에서 고른 값이 온다.
     strategy: str = ""
+    root_generation_id: str = ""
+
+    @property
+    def explicit_root(self) -> bool:
+        return self.kind == BANK and bool(re.fullmatch(r'[a-f0-9]{32}', self.root_generation_id))
 
     @property
     def label(self) -> str:
@@ -185,6 +192,8 @@ class Job:
         if self.kind == BANK_POINTS:
             return "출제포인트 준비"
         if self.kind == BANK:
+            if self.explicit_root:
+                return "뿌리 학습"
             return "Main-Quiz"
         return "기존 Main-Quiz" if self.kind == deck.MAIN else "Pre-Quiz"
 
@@ -248,7 +257,8 @@ class Agent:
         return Job(id=int(row["id"]), subject=str(row["subject"]), run_id=str(row["runId"]),
                    kind=str(row.get("kind") or deck.PRE), force=bool(row.get("force")),
                    cancel_requested=bool(row.get("cancelRequested")),
-                   strategy=str(row.get("strategy") or ""))
+                   strategy=str(row.get("strategy") or ""),
+                   root_generation_id=str(row.get('rootGenerationId') or ''))
 
     def report(self, job: Job, **fields) -> dict:
         """진행을 적는다. **실패해도 하던 일은 계속한다.**
@@ -284,6 +294,9 @@ class Agent:
         **덱 빌드는 15분 동안 한 줄도 안 흘린다** — 읽을 것이 없는 파이프를 지키느니
         주기적으로 로그를 훑는 편이 단순하다.
         """
+        choice = desktop_control.decision(self.runs_dir, job.subject, job.run_id, job.kind) if job else desktop_control.decision(self.runs_dir)
+        if choice:
+            return (KILLED_BY_HUMAN if choice == 'canceled' else HELD_BY_DESKTOP), []
         log.parent.mkdir(parents=True, exist_ok=True)
         # **하위 명령도 같은 서버를 봐야 한다.** 안 넘기면 `prequeue`·`publish`가
         # 기본 주소(운영)로 가는데, 러너를 다른 주소로 띄웠다면 일감은 이쪽에서
@@ -312,7 +325,10 @@ class Agent:
                                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
             try:
                 while proc.poll() is None:
-                    time.sleep(STAGE_SECONDS)
+                    choice = desktop_control.wait(self.runs_dir, STAGE_SECONDS, job)
+                    if choice:
+                        kill_tree(proc)
+                        return (KILLED_BY_HUMAN if choice == 'canceled' else HELD_BY_DESKTOP), tail(log)
                     now = time.time()
                     if now > deadline:
                         kill_tree(proc)
@@ -423,7 +439,8 @@ class Agent:
         if job.kind in (BANK, BANK_POINTS):
             return [sys.executable, "-m", "runner", "bank", job.subject, "--run-id", job.run_id,
                     "--runs", str(self.runs_dir)] + (
-                ["--points-only"] if job.kind == BANK_POINTS else [])
+                ["--points-only"] if job.kind == BANK_POINTS else []) + (
+                ['--root-generation',job.root_generation_id] if job.explicit_root else [])
         if job.kind == deck.MAIN:
             argv = [sys.executable, "-m", "runner", "watch", job.subject,
                     "--run-id", job.run_id, "--build"]
@@ -510,6 +527,9 @@ class Agent:
             # 남아 있으면 자기 자신이 만든 것을 「만드는 중」이라고 건너뛴다.
             self.clear_building(job)
 
+        if code == HELD_BY_DESKTOP:
+            self.hold_for_desktop(job)
+            return
         if code == KILLED_BY_HUMAN:
             # **여기까지 만든 것은 안 지운다.** 다시 누르면 그 단계를 건너뛰고
             # 이어 간다(`quizgen`가 산출물이 있는 단계를 안 다시 만든다).
@@ -578,7 +598,13 @@ class Agent:
         with self._uploading:
             code, lines = self._run(
                 [sys.executable, "-m", "runner", "publish", job.subject, "--run-id", job.run_id],
-                up_log)
+                up_log, job)
+        if code == HELD_BY_DESKTOP:
+            self.hold_for_desktop(job)
+            return
+        if code == KILLED_BY_HUMAN:
+            self.report(job, state='canceled', stage='', message='사람이 업로드를 취소했습니다. 산출물은 보존했습니다.')
+            return
         if code != 0:
             why = summary(lines) or f"종료 코드 {code}"
             self.say(f"    올리다 실패 — {why}")
@@ -602,6 +628,17 @@ class Agent:
         total = len(eta.samples(self.runs_dir, job.kind).order)
         closed = {"stageIndex": total, "stageTotal": total} if total else {}
         self.report(job, state="done", stage="", message=message, **closed)
+
+    def hold_for_desktop(self, job: Job) -> None:
+        choice = desktop_control.decision(self.runs_dir, job.subject, job.run_id, job.kind)
+        stage = desktop_control.JOB_STAGE if choice == 'stopped' else desktop_control.GLOBAL_STAGE
+        self.report(job, state='held', stage=stage, message='만들던 자료를 보존했습니다. 시작하면 이어서 처리합니다.')
+        # Resume can race with the worker acknowledging its stop. Recheck after commit.
+        choice = desktop_control.decision(self.runs_dir, job.subject, job.run_id, job.kind)
+        if not choice:
+            self.report(job, state='queued', stage='프로그램에서 재개', message='보존한 단계부터 이어서 처리합니다.')
+        elif choice == 'canceled':
+            self.report(job, state='canceled', stage='', message='사람이 취소했습니다. 산출물은 보존했습니다.')
 
     def finish_bank(self, job: Job, code: int, lines: list[str], log: Path) -> None:
         """Quiz Bank 일감의 끝. **성공은 마지막 요약 줄로 본다** — `runner bank` 가 결과를
@@ -732,6 +769,8 @@ class Agent:
     def sweep(self) -> None:
         """남은 것을 쓸어 올린다. 06:00 크론이 받던 자리다."""
         self.last_sweep = time.monotonic()
+        if desktop_control.decision(self.runs_dir):
+            return
         subjects, note = self.sweep_subjects()
         if note:
             self.say(f"[{stamp()}] 쓸기 — {note}")
@@ -739,6 +778,8 @@ class Agent:
             self.say(f"[{stamp()}] 쓸기 — 대상 과목을 확인할 수 없어 파일 처리를 중단한다")
             return
         for subject in subjects:
+            if desktop_control.decision(self.runs_dir):
+                return
             argv = [sys.executable, "-m", "runner", "publish", subject,
                     "--runs", str(self.runs_dir), "--timetable", str(self.timetable)]
             # **과목마다 로그를 따로 쓴다.** `_run`이 파일을 덮어쓰기로 열어서,
@@ -756,6 +797,8 @@ class Agent:
         **쓸기는 여기 없다**(2026-09-01). 따로 도는 실이 맡는다(`sweep_loop`) —
         같이 두면 한 편을 만드는 45분 동안 아무것도 안 올라간다.
         """
+        if desktop_control.decision(self.runs_dir):
+            return False
         subjects, note = self.sweep_subjects()
         if not subjects:
             self.say(f"[{stamp()}] {slot} 일감 처리 중단 — {note or '이번 블럭의 대상 과목이 없다'}")
@@ -767,7 +810,14 @@ class Agent:
             return False
         if job is None:
             return False
-        if job.subject not in subjects:
+        choice = desktop_control.decision(self.runs_dir, job.subject, job.run_id, job.kind)
+        if choice:
+            if choice == 'canceled':
+                self.report(job, state='canceled', stage='', message='프로그램에서 취소했습니다.')
+            else:
+                self.hold_for_desktop(job)
+            return False
+        if job.subject not in subjects and not job.explicit_root:
             message = f"이번 블럭 처리 대상({', '.join(subjects)}) 밖의 과목이라 보류했다"
             self.say(f"[{stamp()}] {slot} {job.label} — {message}")
             self.report(job, state="held", stage="", message=message)

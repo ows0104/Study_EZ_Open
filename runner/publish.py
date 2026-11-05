@@ -60,7 +60,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from . import ahead, deck, filenames, fingerprint, gate, matching
+from . import ahead, deck, filenames, fingerprint, gate, matching, desktop_control
 from .bank_flow import sources as bank_sources
 from . import preview as preview_mod
 from .filenames import LectureFile
@@ -363,6 +363,13 @@ def hold_main(plan: LecturePlan, why: str) -> None:
         plan.notes.append(f"미룬 것 ({why}): {' · '.join(held)}")
 
 
+def hold_desktop(plan: LecturePlan, runs_dir: Path) -> None:
+    if desktop_control.decision(runs_dir, plan.subject, plan.run_id, 'pre'):
+        hold_pre(plan, '프로그램 중지·취소')
+    if desktop_control.decision(runs_dir, plan.subject, plan.run_id, 'bank'):
+        hold_main(plan, '프로그램 중지·취소')
+
+
 def hold_blocked(plan: LecturePlan, why: str = "검문") -> None:
     """걸린 갈래만 미룬다. 둘 다 걸렸으면 예전처럼 통째로 미룬다.
 
@@ -408,6 +415,11 @@ def plan_subject(
 
     this_files = filenames.latest_versions(this_scan.files)
     prev_files = filenames.latest_versions(prev_scan.files)
+    from .readiness import packet_sources
+    extra = packet_sources(root, subject, prev_year, runs_dir)
+    if {f.key for f in prev_files} & {f.key for f in extra}:
+        raise ValueError('파생 예습 입력 ID가 원본 강의와 겹칩니다.')
+    prev_files += extra
     run_ids = assign_run_ids(this_files)
     prev_run_ids = assign_run_ids(prev_files)
     # 사람이 확인한 짝이 먼저다(`_pairs`). 올해 필기가 올라온 뒤에도 그렇다.
@@ -504,6 +516,8 @@ def plan_subject(
     for plan in plans:
         if plan.run_id in slices:
             plan.uploads.append(Upload("jokbo", slices[plan.run_id]))
+        # A periodic sweep must not publish a desktop-stopped half-built deck.
+        hold_desktop(plan, runs_dir)
 
     # 필기가 있는 편과 아직 없는 편이 날짜순으로 섞여야 진도 순서로 읽힌다.
     plans.sort(key=lambda plan: (plan.item.date, plan.run_id))
@@ -586,7 +600,7 @@ def publish(
     uploaded = load_ledger(runs_dir, client.base)
     for plan in plans:
         try:
-            _publish_one(plan, client, uploaded, report, force=force, log=log)
+            _publish_one(plan, client, uploaded, report, force=force, log=log, runs_dir=runs_dir)
         except PublishError as exc:
             report.failures.append(f"{plan.label} — {exc}")
             log(f"    ✗ {plan.label} — {exc}")
@@ -609,7 +623,10 @@ def _publish_one(
     *,
     force: bool,
     log: Callable[[str], None],
+    runs_dir: Path | None = None,
 ) -> None:
+    if runs_dir is not None:
+        hold_desktop(plan, runs_dir)
     base = lecture_path(plan.subject, plan.run_id)
     payloads = [upload.payload() for upload in plan.uploads]
 

@@ -258,9 +258,9 @@ export function PreviewAction({
     <ActionCard
       shape="is-key"
       hit={
-        <span className="panel-action-hit">
+        <button type="button" className="panel-action-hit" aria-label="기본 링크 만들기" disabled={Boolean(busy) || !compatible} onClick={() => void start("shared", false)}>
           <Body name="기본 링크" note={busy === "shared" ? "여는 중…" : "만들기"} />
-        </span>
+        </button>
       }
       tools={sharedTools}
     />

@@ -3,8 +3,8 @@ import argparse, json, re, subprocess
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 WRANGLER=Path.home()/'AppData/Local/npm-cache/_npx/32026684e21afda6/node_modules/wrangler/bin/wrangler.js'
-p=argparse.ArgumentParser(); p.add_argument('action',choices=['publish','revision','list']); p.add_argument('--artifact'); a=p.parse_args()
-receipt=ROOT/'runs/_development/2026-10-26-production-web/pages-upload.json'
+p=argparse.ArgumentParser(); p.add_argument('action',choices=['publish','revision','list']); p.add_argument('--artifact'); p.add_argument('--receipt',type=Path); a=p.parse_args()
+receipt=a.receipt or ROOT/'runs/_development/2026-10-26-production-web/pages-upload.json'
 def call(args):
     r=subprocess.run(['node',str(WRANGLER),*args],capture_output=True,text=True,encoding='utf-8',timeout=600)
     if r.returncode: raise SystemExit('Cloudflare command failed; authenticate the existing deployment account and retry.')

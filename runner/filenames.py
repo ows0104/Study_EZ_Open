@@ -24,6 +24,9 @@
 from __future__ import annotations
 
 import re
+import hashlib
+import os
+import json
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
@@ -213,9 +216,24 @@ def parse(path: str | Path) -> LectureFile | None:
         if trailing:
             seq = int(trailing.group(1))
 
+    key = f"{yy}{mm}{dd}_{slot:02d}"
+    # A revised schedule must not reuse another lecture's existing storage key.
+    # Only explicitly reviewed date/slot + full-topic aliases can change a key.
+    aliases_path = Path(__file__).resolve().parents[1] / "data/timetable/identities/2026-2-notes.json"
+    if key.startswith("2611") and aliases_path.exists():
+        aliases = json.loads(aliases_path.read_text(encoding="utf-8"))
+        topic = stripped
+        for prefix in ("미생물학)", "감염학)"):
+            topic = topic.removeprefix(prefix).strip()
+        stable = aliases.get(key, {}).get(_JUNK_RE.sub("", topic))
+        if stable is not None:
+            if not isinstance(stable, str) or not re.fullmatch(r"\d{6}_\d{2}", stable):
+                raise ValueError("Invalid timetable note identity")
+            key = stable
+
     return LectureFile(
         path=path,
-        key=f"{yy}{mm}{dd}_{slot:02d}",
+        key=key,
         date=f"20{yy}-{mm}-{dd}",
         slot=slot,
         slot_end=max(slot, slot_end),
@@ -310,13 +328,30 @@ def scan(folder: str | Path, expect_year: str | None = None) -> Scan:
     if not folder.is_dir():
         return result
 
-    paths = sorted(folder.glob("*.pdf"))
-    stems = {path.stem for path in paths}
+    paths = []
+    boundary = folder.resolve()
+    excluded = {'archive', 'archives', 'backup', 'backups', '보관', '보관본', '백업',
+                'work', 'tmp', 'runs', 'generated', 'out'}
+    def fail(error):
+        raise error
+    for current, dirs, names in os.walk(folder, followlinks=False, onerror=fail):
+        parent = Path(current)
+        dirs[:] = sorted(d for d in dirs if not d.startswith(('.', '_', '#'))
+                         and d.casefold() not in excluded
+                         and not (parent / d).is_symlink() and not (parent / d).is_junction())
+        for name in names:
+            path = parent / name
+            if path.suffix.lower() == '.pdf' and not path.is_symlink() and path.resolve().is_relative_to(boundary):
+                paths.append(path)
+    paths.sort()
+    stems_by_parent = {}
+    for path in paths:
+        stems_by_parent.setdefault(path.parent, set()).add(path.stem)
     for path in paths:
         if _CONFLICT_RE.search(path.stem):
             result.conflicts.append(path)
             continue
-        if _duplicate_of(path.stem, stems):
+        if _duplicate_of(path.stem, stems_by_parent[path.parent]):
             result.conflicts.append(path)
             continue
         item = parse(path)
@@ -328,6 +363,22 @@ def scan(folder: str | Path, expect_year: str | None = None) -> Scan:
             continue
         result.files.append(item)
     return result
+
+
+def assign_run_ids(files: list[LectureFile]) -> dict[str, str]:
+    """Shared run identity for generation and read-only desktop readiness."""
+    by_key: dict[str, list[LectureFile]] = {}
+    for item in files:
+        by_key.setdefault(item.key, []).append(item)
+    run_ids = {}
+    for key, group in by_key.items():
+        if len(group) == 1:
+            run_ids[group[0].uid] = key
+        else:
+            for item in group:
+                digest = hashlib.md5(item.uid.encode('utf-8')).hexdigest()[:4]
+                run_ids[item.uid] = f'{key}-{digest}'
+    return run_ids
 
 
 def latest_versions(files: list[LectureFile]) -> list[LectureFile]:

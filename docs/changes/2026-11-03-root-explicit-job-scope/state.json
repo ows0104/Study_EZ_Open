@@ -1,0 +1,57 @@
+{
+  "id": "2026-11-03-root-explicit-job-scope",
+  "title": "명시적 뿌리 학습 작업의 블럭 범위와 실행 ID 연결",
+  "area": "operations",
+  "created_at": "2026-11-03T11:31:43.734026+00:00",
+  "required_checks": [
+    "contracts",
+    "runner",
+    "server"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-03T11:32:34.105093+00:00",
+      "evidence": "User explicitly requested one-click root pipeline like Main Quiz, deployment and one actual example via automatic transmission, then approved 해당 실제 자료로 1건 실행 for cholinergic pharmacology (1). Current follow-up asks if that same run worked. This fix is necessary to complete the authorized explicit out-of-block example and root-button scope; no general batch expansion.",
+      "scope": "Bind genuine explicit root job to generation ID, permit only that authenticated request across subject block, preserve general block/stop/limits and existing content. Deploy API fix, safely update idle local runner and resume same pilot only.",
+      "evidence_version": 2,
+      "source_hash": "5eb050b5e319b45f38d966e7750471cfe5cc5f1bb67c9aa6e7bdf0c41ac9e1e4",
+      "plan_hash": "7bf6306c0b12a4a52502b99b22f32e9437f528c63c44063581b3cf4296251a7d",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "server",
+        "spotter/data",
+        "spotter/scripts",
+        "spotter/web",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "tests/runner",
+        "tests/spotter",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "55ded67b217e7b438cfb9f05c8d3785591edaedb9c27193f22dca2486138d45d"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-03T11:32:34.633659+00:00"
+}

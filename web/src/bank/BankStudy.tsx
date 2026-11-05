@@ -4,6 +4,8 @@ import { api, ApiError } from "../api";
 import { lectureHref } from "../links";
 import type { BankRead, BankSession } from "../types/bank";
 import { BankStart } from "./BankStart";
+import { RootEntry } from "./RootLearning";
+import { ConnectionEntry } from "./ConnectionLearning";
 import { BankSolve } from "./BankSolve";
 import { useBankUndo } from "./useBankUndo";
 
@@ -61,6 +63,8 @@ export function BankStudyPage() {
     <section className="quiz bank-start">
       <h2>Main-Quiz</h2>
       <p>아직 공개된 문제가 없습니다.</p>
+      <ConnectionEntry subject={subject} runId={runId}/>
+      <RootEntry subject={subject} runId={runId}/>
       <a href={lectureHref({ subject, runId })}>강의 자료와 기존 Main-Quiz 보기</a>
     </section>
   );

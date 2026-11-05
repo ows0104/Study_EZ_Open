@@ -55,6 +55,8 @@ Study_EZ 몫만 센다(땡시는 여기 없다 — 같은 날 범위를 그렇�
 """
 
 from __future__ import annotations
+from app.models.connections import ConnectionEvent
+from app.models.root_learning import RootEvent
 
 from datetime import UTC, datetime, time, timedelta
 from datetime import date as Date
@@ -88,6 +90,15 @@ from app.models import (
 )
 
 router = APIRouter()
+
+ROOT_FIELDS = ('rootStarts', 'rootAttempts', 'rootRatings', 'rootUndos', 'rootGenerations', 'rootGenerated')
+
+def _root_field(event):
+    if event.kind == 'reveal' and event.payload.get('attempted'):
+        return 'rootAttempts'
+    return {'start':'rootStarts', 'rate':'rootRatings', 'undo':'rootUndos',
+            'generation':'rootGenerations', 'generated':'rootGenerated'}.get(event.kind)
+
 
 #: 「최근」 창의 크기. 블럭이 아직 없을 때의 기본이기도 하다.
 WEEK_DAYS = 7
@@ -282,6 +293,13 @@ def usage(
     # 푼 카드. **한 줄이 한 장이다** — 같은 카드를 세 번 봐도 줄은 하나고,
     # `answered_at` 은 마지막으로 찍은 때라 그 장이 창 안에 있었는지를 말한다.
     pre_cards = _count_by_user(db, QuizAttempt, QuizAttempt.answered_at, span)
+    connection_saves = _count_by_user(db, ConnectionEvent, ConnectionEvent.created_at, span)
+    root_metrics = {}
+    for event in db.scalars(select(RootEvent).where(*_within(RootEvent.created_at, span))):
+        field = _root_field(event)
+        if field:
+            metrics = root_metrics.setdefault(event.user_id, {})
+            metrics[field] = metrics.get(field, 0) + 1
     main_cards = _count_by_user(db, MainAttempt, MainAttempt.answered_at, span)
     preview_saves = {
         uid: int(count) for uid, count in db.execute(
@@ -335,6 +353,8 @@ def usage(
         (AssetGrab, AssetGrab.last_at),
         (PreviewOpen, PreviewOpen.last_at),
         (UserPreview, UserPreview.updated_at),
+        (ConnectionEvent, ConnectionEvent.created_at),
+        (RootEvent, RootEvent.created_at),
     ):
         for uid, last in db.execute(
             select(model.user_id, func.max(stamp)).group_by(model.user_id)
@@ -356,6 +376,8 @@ def usage(
         rows.append(
             {
                 "id": uid,
+                "connectionSaves": connection_saves.get(uid, 0),
+                **{field: root_metrics.get(uid, {}).get(field, 0) for field in ROOT_FIELDS},
                 "email": profile.email,
                 "isAdmin": profile.is_admin,
                 # 0이 「안 썼다」인지 「못 썼다」인지를 가르는 값이다. 위를 보라.
@@ -435,6 +457,8 @@ def usage_detail(
             "fileRequests": [],
             "preview": False,
             "previewSavedAt": None,
+            "connectionSaves": {"count": 0, "lastAt": None},
+            **{field: {"count":0,"lastAt":None} for field in ROOT_FIELDS},
             "previewCreates": {"count": 0, "lastAt": None},
             "quizLastAt": {"pre": None, "main": None, "bank": None},
             # 우리 화면에서 이 편의 링크를 누른 횟수. 갈래로 갈라 둔다.
@@ -460,6 +484,21 @@ def usage_detail(
         last = datetime.fromtimestamp(max(key[2] for key in reviews) / 1000, UTC)
         row["lastAt"] = _iso(_latest(last, _parse(row["lastAt"])))
         row["quizLastAt"]["bank"] = _iso(last)
+
+    for subject, run_id, count, last in db.execute(select(
+        ConnectionEvent.subject, ConnectionEvent.run_id, func.count(), func.max(ConnectionEvent.created_at)
+    ).where(ConnectionEvent.user_id == user_id).group_by(ConnectionEvent.subject, ConnectionEvent.run_id)):
+        row = slot(subject, run_id)
+        row['connectionSaves'] = {'count': count, 'lastAt': _iso(last)}
+        row['lastAt'] = _iso(_latest(last, _parse(row['lastAt'])))
+
+    for event in db.scalars(select(RootEvent).where(RootEvent.user_id == user_id)):
+        field = _root_field(event)
+        if field:
+            row = slot(event.subject, event.run_id)
+            row[field]['count'] += 1
+            row[field]['lastAt'] = _iso(_latest(event.created_at, _parse(row[field]['lastAt'])))
+            row['lastAt'] = _iso(_latest(event.created_at, _parse(row['lastAt'])))
 
     for track, model in (("pre", QuizAttempt), ("main", MainAttempt)):
         rows = db.execute(

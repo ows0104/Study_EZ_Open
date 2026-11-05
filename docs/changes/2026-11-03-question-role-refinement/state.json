@@ -1,0 +1,94 @@
+{
+  "id": "2026-11-03-question-role-refinement",
+  "title": "분류·나열 역할과 연결 회상 검토 기준",
+  "area": "generation",
+  "created_at": "2026-11-02T15:04:38.133449+00:00",
+  "required_checks": [
+    "document-review"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-02T15:07:49.356245+00:00",
+      "evidence": "2026-11-03 사용자 반영해줘 요청. intent 오탈자 정리 후 같은 승인 범위 재기록",
+      "scope": "로컬 설계·검토 안내·첫 10묶음 역할 검토, 운영과 의학 답안 변경 없음",
+      "evidence_version": 2,
+      "source_hash": "2c09eccaabfb60fa24a2e92ad67b5c8844ae11a8c8403b04aa93999cd9339879",
+      "plan_hash": "eeee0885cfd4d1607eeb4999473c5557d85f60752844c7920a3a6fbce3acfb3e",
+      "inputs": [
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "fab14c4ca4bfe4dc4bbc0c21be157e6f004046119aa458a1d21037c064889f5e"
+    }
+  },
+  "checks": [
+    {
+      "name": "document-review",
+      "at": "2026-11-02T15:08:05.859441+00:00",
+      "command": [
+        ".venv\\Scripts\\python.exe",
+        "-c",
+        "from pathlib import Path; import hashlib,re; root=Path('.'); d=root/'docs/changes/2026-11-03-question-role-refinement'; p=root/'content/prompts/learning-links/mapping-review.md'; t=(d/'first-ten-review.md').read_text(encoding='utf-8'); assert len(re.findall(r'^\\| \\d+ \\|',t,re.M))==10; s=p.read_text(encoding='utf-8'); assert all(x in s for x in ['분류','나열','통합 회상','답 단위','도움 없이','구조적 역할']); files=[p,*d.glob('*.md'),root/'docs/changes/2026-11-02-cholinergic-rebuild/review-notes.md']; links=[(f.parent/u) for f in files for u in re.findall(r'\\]\\(([^)]+\\.md)\\)',f.read_text(encoding='utf-8'))]; assert all(x.exists() for x in links); assert hashlib.sha256((root/'docs/changes/2026-11-02-cholinergic-rebuild/content-review.md').read_bytes()).hexdigest()=='56add7744dca7b223d86a65d4aa8f9ab9b3086812958a0080f305b528f96437a'; print('PASS: ten bundles, role criteria, document links, original report hash')"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2c09eccaabfb60fa24a2e92ad67b5c8844ae11a8c8403b04aa93999cd9339879",
+      "plan_hash": "eeee0885cfd4d1607eeb4999473c5557d85f60752844c7920a3a6fbce3acfb3e",
+      "inputs": [
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-03-question-role-refinement/1793632085675171700-document-review.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-02T15:08:06.738620+00:00",
+    "summary": "분류·나열과 구조·학습 역할을 분리. 10묶음의 원래 D 참조 및 미확정 작업을 검토. 문서 링크·10행·기준·원문 지문 검사 통과. 의학 답안·운영 프롬프트·JSON 계약·UI 변경 없음. 실제 학습 효과 미검증.",
+    "evidence_version": 2,
+    "source_hash": "2c09eccaabfb60fa24a2e92ad67b5c8844ae11a8c8403b04aa93999cd9339879",
+    "plan_hash": "eeee0885cfd4d1607eeb4999473c5557d85f60752844c7920a3a6fbce3acfb3e",
+    "inputs": [
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-02T15:08:06.800962+00:00"
+}

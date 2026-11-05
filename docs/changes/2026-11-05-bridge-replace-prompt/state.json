@@ -1,0 +1,266 @@
+{
+  "id": "2026-11-05-bridge-replace-prompt",
+  "title": "Bridge 입력 시 기존 프롬프트 기본 교체",
+  "area": "site",
+  "created_at": "2026-11-05T01:04:07.586916+00:00",
+  "required_checks": [
+    "bridge",
+    "bridge-python",
+    "browser",
+    "package"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-05T01:08:21.992190+00:00",
+      "evidence": "2026-11-05 현재 사용자: Bridge에서 프롬프트를 입력할때 기본적으로 원래있던 프롬프트를 비우고 자기 프롬프트를 넣도록. 같은 구현 범위의 site 지문 및 모의 제공자 검사 구체화.",
+      "scope": "기존 텍스트 기본 교체 및 첨부/전송 경계 유지, 브리지·모의화면·패키지 검사와 1.3.22 로컬 ZIP",
+      "evidence_version": 2,
+      "source_hash": "d151824f25eed4e51da5d45caeabe7b61856d2bc9bfaa018b09f2a87af39c377",
+      "plan_hash": "8b4002eb3382ba1e0095ed2152cc10ef1af68c830536f54cd0a76bb2a33c25d1",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "eda84c035f5aacd7bce8b4f90102669e59a60a4759fee2769016dd24b8aa8faa"
+    }
+  },
+  "checks": [
+    {
+      "name": "bridge",
+      "at": "2026-11-05T01:06:22.345134+00:00",
+      "command": [
+        "node",
+        "--test",
+        "tests/bridge/test_autosend.cjs",
+        "tests/bridge/test_link_recovery.cjs",
+        "tests/bridge/test_web_versions.cjs",
+        "tests/bridge/test_bank_file.cjs",
+        "tests/bridge/test_bank_download.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "c2731f4c9d96c5f238944ca3d08df566b5de3434336aacd4506ea71bb5ca9b32",
+      "plan_hash": "e21f82a90a66b31095d7f12b52744ffcd195d8604f2f4d2870b8972dc99d7c51",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-05-bridge-replace-prompt/1793840780900866900-bridge.log"
+    },
+    {
+      "name": "browser",
+      "at": "2026-11-05T01:07:48.688926+00:00",
+      "command": [
+        "node",
+        "--test",
+        "web/tests/preview-actions.test.cjs"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "c2731f4c9d96c5f238944ca3d08df566b5de3434336aacd4506ea71bb5ca9b32",
+      "plan_hash": "e21f82a90a66b31095d7f12b52744ffcd195d8604f2f4d2870b8972dc99d7c51",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-05-bridge-replace-prompt/1793840789202343100-browser.log"
+    },
+    {
+      "name": "bridge",
+      "at": "2026-11-05T01:08:24.902376+00:00",
+      "command": [
+        "node",
+        "--test",
+        "tests/bridge/test_autosend.cjs",
+        "tests/bridge/test_link_recovery.cjs",
+        "tests/bridge/test_web_versions.cjs",
+        "tests/bridge/test_bank_file.cjs",
+        "tests/bridge/test_bank_download.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "d151824f25eed4e51da5d45caeabe7b61856d2bc9bfaa018b09f2a87af39c377",
+      "plan_hash": "8b4002eb3382ba1e0095ed2152cc10ef1af68c830536f54cd0a76bb2a33c25d1",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-bridge-replace-prompt/1793840903816469100-bridge.log"
+    },
+    {
+      "name": "bridge-python",
+      "at": "2026-11-05T01:08:25.415243+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "-m",
+        "pytest",
+        "tests/bridge",
+        "-q",
+        "--basetemp=tmp/bridge-py-final-1105"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "d151824f25eed4e51da5d45caeabe7b61856d2bc9bfaa018b09f2a87af39c377",
+      "plan_hash": "8b4002eb3382ba1e0095ed2152cc10ef1af68c830536f54cd0a76bb2a33c25d1",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-bridge-replace-prompt/1793840903815993300-bridge-python.log"
+    },
+    {
+      "name": "browser",
+      "at": "2026-11-05T01:08:48.437587+00:00",
+      "command": [
+        "node",
+        "--test",
+        "web/tests/preview-actions.test.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "d151824f25eed4e51da5d45caeabe7b61856d2bc9bfaa018b09f2a87af39c377",
+      "plan_hash": "8b4002eb3382ba1e0095ed2152cc10ef1af68c830536f54cd0a76bb2a33c25d1",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-bridge-replace-prompt/1793840908576015600-browser.log"
+    },
+    {
+      "name": "package",
+      "at": "2026-11-05T01:08:57.589698+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "docs/changes/2026-11-05-bridge-replace-prompt/verify_package.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "d151824f25eed4e51da5d45caeabe7b61856d2bc9bfaa018b09f2a87af39c377",
+      "plan_hash": "8b4002eb3382ba1e0095ed2152cc10ef1af68c830536f54cd0a76bb2a33c25d1",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-bridge-replace-prompt/1793840937106346400-package.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-05T01:09:30.237751+00:00",
+    "summary": "텍스트 기본 교체와 명시 삭제, 스냅샷 재검사·기존 첨부 복구·전송1회 경계를 검토했다. Node92/Python9/실제모의Chrome21 및 ZIP 모든 소스 바이트 대조 통과. 첫 Gemini fixture 실패는 업로드 메뉴/메시지 mock 보완으로 해결했다. 다른 작업 미커밋 변경/운영데이터 미수정.",
+    "evidence_version": 2,
+    "source_hash": "d151824f25eed4e51da5d45caeabe7b61856d2bc9bfaa018b09f2a87af39c377",
+    "plan_hash": "8b4002eb3382ba1e0095ed2152cc10ef1af68c830536f54cd0a76bb2a33c25d1",
+    "inputs": [
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-05T01:09:30.433432+00:00"
+}

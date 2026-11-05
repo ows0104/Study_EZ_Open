@@ -73,6 +73,7 @@ export type BankTier = "Essential" | "Core" | "Important" | "Optional";
 
 /** 답이 빠진 문항. 답·채점 단위는 `reveal` 로만 온다. */
 export type BankQuestion = {
+  stimuli?: {sha256:string; width:number; height:number; url:string; alt:string}[];
   personalAdded?: boolean;
   presentationSeed?: string;
   /** The API has placed the ordered matching column on the left. */

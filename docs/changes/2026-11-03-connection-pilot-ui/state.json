@@ -1,0 +1,354 @@
+{
+  "id": "2026-11-03-connection-pilot-ui",
+  "title": "연결 중심 학습 시범 화면",
+  "area": "site",
+  "created_at": "2026-11-02T15:15:37.620526+00:00",
+  "required_checks": [
+    "typecheck",
+    "pilot-tests",
+    "pilot-build"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-02T15:16:14.506879+00:00",
+      "evidence": "2026-11-03 사용자: 아니 제발 말만하지 말고, 좀 작업을 해봐. 그냥 지금까지 의논한거 구현까지 할래?",
+      "scope": "연결 중심 첫 10묶음 로컬 시범 UI, 근거·지도·누락·로컬 기록·내보내기 및 검증",
+      "evidence_version": 2,
+      "source_hash": "2b9456908bf48a45228d7ea78f1d852e2dff562f8e4d4b6302d9a7b9858f9486",
+      "plan_hash": "d2e014eb66e0784869f5b4895b5ae9c93067a83bd4e91da28dfc9f00280d74f4",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "3908d089ea2d845410931adef5ea2358cb872820abbe640344ac7366d360d4c9"
+    }
+  },
+  "checks": [
+    {
+      "name": "typecheck",
+      "at": "2026-11-02T15:26:24.805269+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "5ca746263f674b0efb1a35df8f5b016a3064394c6ff25d34b8516fdf7ab74102",
+      "plan_hash": "d2e014eb66e0784869f5b4895b5ae9c93067a83bd4e91da28dfc9f00280d74f4",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-pilot-ui/1793633181101627100-typecheck.log"
+    },
+    {
+      "name": "pilot-tests",
+      "at": "2026-11-02T15:26:26.567621+00:00",
+      "command": [
+        "node",
+        "--test",
+        "web/tests/connection-pilot.test.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "5ca746263f674b0efb1a35df8f5b016a3064394c6ff25d34b8516fdf7ab74102",
+      "plan_hash": "d2e014eb66e0784869f5b4895b5ae9c93067a83bd4e91da28dfc9f00280d74f4",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-pilot-ui/1793633185979946300-pilot-tests.log"
+    },
+    {
+      "name": "pilot-build",
+      "at": "2026-11-02T15:26:29.315605+00:00",
+      "command": [
+        "node",
+        "web/node_modules/vite/bin/vite.js",
+        "build",
+        "web",
+        "--config",
+        "web/vite.pilot.config.ts"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "5ca746263f674b0efb1a35df8f5b016a3064394c6ff25d34b8516fdf7ab74102",
+      "plan_hash": "d2e014eb66e0784869f5b4895b5ae9c93067a83bd4e91da28dfc9f00280d74f4",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-pilot-ui/1793633187955046400-pilot-build.log"
+    },
+    {
+      "name": "typecheck",
+      "at": "2026-11-02T15:31:08.229473+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "c8fff7cd77e07ed910da52fd99c8bdfe97ab2bdf22020418111a721119bc6d3f",
+      "plan_hash": "d2e014eb66e0784869f5b4895b5ae9c93067a83bd4e91da28dfc9f00280d74f4",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-pilot-ui/1793633462912185200-typecheck.log"
+    },
+    {
+      "name": "pilot-tests",
+      "at": "2026-11-02T15:31:10.493320+00:00",
+      "command": [
+        "node",
+        "--test",
+        "web/tests/connection-pilot.test.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "c8fff7cd77e07ed910da52fd99c8bdfe97ab2bdf22020418111a721119bc6d3f",
+      "plan_hash": "d2e014eb66e0784869f5b4895b5ae9c93067a83bd4e91da28dfc9f00280d74f4",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-pilot-ui/1793633469762612300-pilot-tests.log"
+    },
+    {
+      "name": "pilot-build",
+      "at": "2026-11-02T15:31:14.022236+00:00",
+      "command": [
+        "node",
+        "web/node_modules/vite/bin/vite.js",
+        "build",
+        "web",
+        "--config",
+        "web/vite.pilot.config.ts"
+      ],
+      "exit_code": 2,
+      "evidence_version": 2,
+      "source_hash": "c8fff7cd77e07ed910da52fd99c8bdfe97ab2bdf22020418111a721119bc6d3f",
+      "plan_hash": "d2e014eb66e0784869f5b4895b5ae9c93067a83bd4e91da28dfc9f00280d74f4",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-pilot-ui/1793633472305038600-pilot-build.log"
+    },
+    {
+      "name": "typecheck",
+      "at": "2026-11-02T15:31:56.839608+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "f1cfe0d33bd472b1267577e68a4e90df536d81b8d8450688704a9a211b795095",
+      "plan_hash": "d2e014eb66e0784869f5b4895b5ae9c93067a83bd4e91da28dfc9f00280d74f4",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-pilot-ui/1793633511647388300-typecheck.log"
+    },
+    {
+      "name": "pilot-tests",
+      "at": "2026-11-02T15:31:59.133456+00:00",
+      "command": [
+        "node",
+        "--test",
+        "web/tests/connection-pilot.test.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "f1cfe0d33bd472b1267577e68a4e90df536d81b8d8450688704a9a211b795095",
+      "plan_hash": "d2e014eb66e0784869f5b4895b5ae9c93067a83bd4e91da28dfc9f00280d74f4",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-pilot-ui/1793633518453642900-pilot-tests.log"
+    },
+    {
+      "name": "pilot-build",
+      "at": "2026-11-02T15:32:02.476657+00:00",
+      "command": [
+        "node",
+        "web/node_modules/vite/bin/vite.js",
+        "build",
+        "web",
+        "--config",
+        "web/vite.pilot.config.ts"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "f1cfe0d33bd472b1267577e68a4e90df536d81b8d8450688704a9a211b795095",
+      "plan_hash": "d2e014eb66e0784869f5b4895b5ae9c93067a83bd4e91da28dfc9f00280d74f4",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-pilot-ui/1793633520558781800-pilot-build.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-02T15:32:03.805126+00:00",
+    "summary": "최종 수정 후 타입 검사·8개 테스트·빌드 통과. 로컬 저장/단계 공개/내려받기 실제 확인. 좁은 화면 가로 넘침 수정 및 375px 실측 확인. 빌드 출력 지문 변경으로 무효가 된 이전 검사 대신 안정된 최종 출력에서 재검증. 운영 적용·의학 검수와 구분.",
+    "evidence_version": 2,
+    "source_hash": "f1cfe0d33bd472b1267577e68a4e90df536d81b8d8450688704a9a211b795095",
+    "plan_hash": "d2e014eb66e0784869f5b4895b5ae9c93067a83bd4e91da28dfc9f00280d74f4",
+    "inputs": [
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-02T15:32:04.037326+00:00"
+}

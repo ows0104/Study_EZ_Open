@@ -1,0 +1,318 @@
+{
+  "id": "2026-11-03-connection-save-recovery",
+  "title": "연결 학습 저장 복구와 제품 빌드",
+  "area": "site",
+  "created_at": "2026-11-03T04:10:06.832620+00:00",
+  "required_checks": [
+    "server",
+    "recovery-ui",
+    "web-types",
+    "web-build"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-03T04:10:59.211047+00:00",
+      "evidence": "2026-11-03 현재 사용자: 슬슬 구현과 빌드 단계를 진행하자. 기존 실제 앱 연결 학습 구현 승인 범위의 저장/재개 완성에 적용.",
+      "scope": "연결 학습 웹 저장 복구·초안 보존·검사·로컬 제품 빌드, 운영 배포 및 미확정 추천 정책 제외",
+      "evidence_version": 2,
+      "source_hash": "f970d623a9047578864e21f401f451ee502e6e186764a736683dffc2cf13afd7",
+      "plan_hash": "63bb197c895045ed8b6f315069c03289f12ddc9adb75229b9cc572b008dcd45b",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "5364d2b26b8ed49906c2619d809388ea36c1393d4893459a4f5e5d2d55bd52c4"
+    }
+  },
+  "checks": [
+    {
+      "name": "recovery-ui",
+      "at": "2026-11-03T04:13:25.198024+00:00",
+      "command": [
+        "server/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-03-connection-save-recovery/check.py",
+        "recovery-ui"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "9cfd1d53d269cba54c16968fee85e179f2dfee41dd65e632d61513226acf3ab6",
+      "plan_hash": "63bb197c895045ed8b6f315069c03289f12ddc9adb75229b9cc572b008dcd45b",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-save-recovery/1793679201717255100-recovery-ui.log"
+    },
+    {
+      "name": "web-types",
+      "at": "2026-11-03T04:13:38.578444+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "9cfd1d53d269cba54c16968fee85e179f2dfee41dd65e632d61513226acf3ab6",
+      "plan_hash": "63bb197c895045ed8b6f315069c03289f12ddc9adb75229b9cc572b008dcd45b",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-save-recovery/1793679213802962500-web-types.log"
+    },
+    {
+      "name": "web-build",
+      "at": "2026-11-03T04:14:00.694838+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "9cfd1d53d269cba54c16968fee85e179f2dfee41dd65e632d61513226acf3ab6",
+      "plan_hash": "63bb197c895045ed8b6f315069c03289f12ddc9adb75229b9cc572b008dcd45b",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-save-recovery/1793679230474156300-web-build.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-03T04:14:32.227124+00:00",
+      "command": [
+        "server/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-03-connection-save-recovery/check.py",
+        "server"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "9cfd1d53d269cba54c16968fee85e179f2dfee41dd65e632d61513226acf3ab6",
+      "plan_hash": "63bb197c895045ed8b6f315069c03289f12ddc9adb75229b9cc572b008dcd45b",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-save-recovery/1793679256838133000-server.log"
+    },
+    {
+      "name": "web-types",
+      "at": "2026-11-03T04:15:52.675421+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ba7e00a94de335dcfecdc88c3a77ce1a4690c1bd96e1b650cf10265105e229da",
+      "plan_hash": "63bb197c895045ed8b6f315069c03289f12ddc9adb75229b9cc572b008dcd45b",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-save-recovery/1793679344529462200-web-types.log"
+    },
+    {
+      "name": "recovery-ui",
+      "at": "2026-11-03T04:15:53.442387+00:00",
+      "command": [
+        "server/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-03-connection-save-recovery/check.py",
+        "recovery-ui"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ba7e00a94de335dcfecdc88c3a77ce1a4690c1bd96e1b650cf10265105e229da",
+      "plan_hash": "63bb197c895045ed8b6f315069c03289f12ddc9adb75229b9cc572b008dcd45b",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-save-recovery/1793679346614429100-recovery-ui.log"
+    },
+    {
+      "name": "web-build",
+      "at": "2026-11-03T04:16:05.042634+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ba7e00a94de335dcfecdc88c3a77ce1a4690c1bd96e1b650cf10265105e229da",
+      "plan_hash": "63bb197c895045ed8b6f315069c03289f12ddc9adb75229b9cc572b008dcd45b",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-save-recovery/1793679353164026600-web-build.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-03T04:16:07.509059+00:00",
+      "command": [
+        "server/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-03-connection-save-recovery/check.py",
+        "server"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ba7e00a94de335dcfecdc88c3a77ce1a4690c1bd96e1b650cf10265105e229da",
+      "plan_hash": "63bb197c895045ed8b6f315069c03289f12ddc9adb75229b9cc572b008dcd45b",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-save-recovery/1793679347260399100-server.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-03T04:17:14.906347+00:00",
+    "summary": "요청별 보관·기존 입력 이관·계정/판 격리·충돌 보존·초안 복원과 POST 재전달 후 최신 GET 우선을 검토. 서버 독립 파일 6개, 보관함 검사 3개, 실제 제품 브라우저 검사 2개, 타입·전체 제품 빌드가 동일 코드 지문에서 통과. 로컬 보관 실패 시 전송 중단 확인. 같은 질문 초안의 마지막 보관값 의미, 미확정 추천 정책·콘텐츠·운영 배포 제외를 release에 명시.",
+    "evidence_version": 2,
+    "source_hash": "ba7e00a94de335dcfecdc88c3a77ce1a4690c1bd96e1b650cf10265105e229da",
+    "plan_hash": "63bb197c895045ed8b6f315069c03289f12ddc9adb75229b9cc572b008dcd45b",
+    "inputs": [
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-03T04:17:15.094808+00:00"
+}

@@ -6,6 +6,7 @@ import { cardsHash } from "./LectureCards";
 import type { GradeResult, QuizPayload, QuizSchedule, RevealResult, UndoResult } from "../types/quiz";
 import { WhyAsked } from "./Quiz";
 import { PreQuizText } from "./PreQuizText";
+import { PreQuizCloze } from "./PreQuizCloze";
 import { SlideImage } from "../SlideImage";
 import { useQuizSlidePreload } from "./useQuizSlidePreload";
 import { PreQuizDifficult } from "./PreQuizDifficult";
@@ -170,7 +171,7 @@ export function PreQuiz({ subject, runId, onDone }: {
   return <>
     <div className="quiz prequiz">
       <div className="prequiz-status">{progress}<WhyAsked item={item} /></div>
-      <p className="quiz-stem"><PreQuizText text={item.stem} /></p>
+      <p className="quiz-stem"><PreQuizCloze text={item.stem} parts={item.qtype === "cloze" ? feedback?.clozeParts : undefined} /></p>
       {!feedback && item.hint ? <details className="quiz-hint" key={item.itemId}>
         <summary>
           <svg className="quiz-hint-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

@@ -1,0 +1,150 @@
+{
+  "id": "2026-11-05-root-authoring-continuation",
+  "title": "시간 제한된 문항 정리의 명시적 동일 세션 계속",
+  "area": "integration",
+  "created_at": "2026-11-05T02:56:01.616432+00:00",
+  "required_checks": [
+    "contracts",
+    "runner"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-05T03:14:05.700143+00:00",
+      "evidence": "현재 사용자의 공통6종 구현검증, 배포 및 다른실제강의 자동전송부터 학습확인 요청을 적용한다. 같은입력·모델·자료·세션을 명시적1회 계속하며 실패/미상사용량/총3회 중1회사용을 보존한다.",
+      "scope": "로컬 초기문항정리 동일세션 계속 검사/증거/취소연결과 합성검사. 실제job544 1회 이어확인. API/웹/DB/원문내용 변경없음",
+      "evidence_version": 2,
+      "source_hash": "10be20d4185ce57827e77fafabd55df9b8398194ab794544cf068742c8045be5",
+      "plan_hash": "4bacd4b9d522dda4bd4ec853f2b36564dbb7fc27a269e18d690063bbb1d1f6ab",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "65265499ea5a65b0bc3c2fed28f644cbc9f3830b746e497094f1cfc14f23f323"
+    }
+  },
+  "checks": [
+    {
+      "name": "contracts",
+      "at": "2026-11-05T03:14:20.622323+00:00",
+      "command": [
+        "../../.venv/Scripts/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "-q",
+        "--basetemp",
+        "runs/_test-temp/authoring-continuation-contracts"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "10be20d4185ce57827e77fafabd55df9b8398194ab794544cf068742c8045be5",
+      "plan_hash": "4bacd4b9d522dda4bd4ec853f2b36564dbb7fc27a269e18d690063bbb1d1f6ab",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-05-root-authoring-continuation/1793848456451360500-contracts.log"
+    },
+    {
+      "name": "runner",
+      "at": "2026-11-05T03:14:30.060766+00:00",
+      "command": [
+        "../../.venv/Scripts/python.exe",
+        "-m",
+        "pytest",
+        "tests/runner/test_root_authoring_resume.py",
+        "tests/runner/test_connection_generation.py",
+        "tests/runner/test_root_session_resume.py",
+        "-q",
+        "--basetemp",
+        "runs/_test-temp/authoring-continuation-runner"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "10be20d4185ce57827e77fafabd55df9b8398194ab794544cf068742c8045be5",
+      "plan_hash": "4bacd4b9d522dda4bd4ec853f2b36564dbb7fc27a269e18d690063bbb1d1f6ab",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-05-root-authoring-continuation/1793848456584323900-runner.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-05T03:15:20.499108+00:00",
+    "summary": "명시적 initial generate 동일세션 1회 계속만 허용. exact prompt/runtime/source/material/session/model/종료프로세스/누적사용량/실제완료turn 검증, 실패ledger deepcopy 및 native원문/도구소스/저널 보존. 자동 재실행·상한초기화 없음. 변조·완료·취소·중지·다른작업 충돌 차단. contracts125/runner72 실제통과. 실패한 원격job은 자동 재등록하지 않음. 같은 job544 실제 이어확인 미완료, API/웹/DB 변경없음.",
+    "evidence_version": 2,
+    "source_hash": "10be20d4185ce57827e77fafabd55df9b8398194ab794544cf068742c8045be5",
+    "plan_hash": "4bacd4b9d522dda4bd4ec853f2b36564dbb7fc27a269e18d690063bbb1d1f6ab",
+    "inputs": [
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "runner",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "tests/runner",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-05T03:15:20.577265+00:00"
+}

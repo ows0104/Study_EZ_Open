@@ -1,8 +1,15 @@
 # Shared contracts
 
 bank/ is canonical. Only Python standard library and sibling pure modules may be imported.
+learning_links/ owns the separate v1 connection-review contract and question fingerprints.
+It does not mutate BANK, certify medical judgments, or create learner state. Consumers call
+validate_review with hashes calculated from the actual inputs. Tests: tests/contracts/test_learning_links.py.
 Server legacy paths re-export these exact modules for compatibility. Do not add DB, FastAPI or model calls.
 Schema/policy semantics are unchanged by relocation. Contract changes require producer and consumer checks.
 Run tests/contracts, relevant tests/quizbank, and server bank/route/retention checks.
 Independent server environment: install server/requirements.txt from server/ (includes this editable package).
 Cloud build context must be created with server/prepare-build.ps1; never deploy a bare server/ directory.
+
+roots/ wraps learning_links with adopted targets, explicit target prerequisites, whole-direction tasks and reviewed identity links. It never copies the goal/direction/evidence schema or certifies medical correctness. Tests: tests/contracts/test_roots.py.
+
+roots/generation_v2.py defines the opt-in source-assessment/2 generation contract and learning-links/2 extension. Legacy /1 remains readable. Component answer evidence, current source/importance checks, immutable PNG bytes, and combined question/target prerequisites gate preparation. Semantic truth is still reviewed by content models. Tests: test_generation_v2.py and test_generation_pipeline_v2.py.

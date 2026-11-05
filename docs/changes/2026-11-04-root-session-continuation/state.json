@@ -1,0 +1,48 @@
+{
+  "id": "2026-11-04-root-session-continuation",
+  "title": "중단된 원본 검수의 동일 세션 계속 실행",
+  "area": "integration",
+  "created_at": "2026-11-04T00:16:36.238086+00:00",
+  "required_checks": [
+    "contracts",
+    "runner"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-04T00:16:36.579939+00:00",
+      "evidence": "Current explicit user instruction: 그럼 다시 이어서 해봐. Exact source/private single-pilot and one-click pipeline authorization persists. Continue the proven same interrupted CLI review session with identical data/model and preserved partial usage, logical review slot and repair budget; do not restart ambiguous work from scratch.",
+      "scope": "Operator-only source-1 session continuation once, exact proofs and completed cache preservation, existing cancellation/heartbeat controls, same generation/job/private audience; no web resend, new independent review, cap reset or content edits by parent.",
+      "evidence_version": 2,
+      "source_hash": "0a7ca1c253255a24ab9945843ae1c270b0da716f2b7b71020ab719483f7f8e5b",
+      "plan_hash": "40ff3797e08089beab2482a61e1af148812349f72b09d64fe38c2b28baff4b30",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "69ad24c74a6d373f54f3d7da8056186d8abcc0deff312e1a34aba99b5d78ac26"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-04T00:16:40.484890+00:00"
+}

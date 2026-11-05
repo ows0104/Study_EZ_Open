@@ -72,6 +72,7 @@ class StatusWindow:
         self.state.pack(fill='x', padx=26, pady=(0, 14))
         self.eta_label = tk.Label(root, text='', bg=BG, fg=MUTED, font=(FONT, 10), anchor='w')
         self.eta_label.pack(fill='x', padx=26, pady=(0, 10))
+        self.build_controls(root)
         # Kept for diagnostics, shown only through the details panel.
         self.heartbeat = tk.Label(root, bg=BG, fg=MUTED)
         body = tk.Frame(root, bg=BG)
@@ -111,6 +112,9 @@ class StatusWindow:
                         bordercolor=PANEL, lightcolor=GREEN, darkcolor=GREEN, thickness=8)
         self.request()
         self.tick()
+
+    def build_controls(self, root):
+        """Optional desktop controls; the existing monitor stays read-only."""
 
     def toggle_details(self):
         if self.log_frame.winfo_manager():

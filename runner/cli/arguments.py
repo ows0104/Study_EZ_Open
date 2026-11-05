@@ -78,6 +78,7 @@ def build_parser() -> argparse.ArgumentParser:
                         help="publish: 이미 올린 표시를 무시하고 다시 올린다. "
                              "prequeue·watch: 이미 만든 편도 버리고 다시 만든다 (--run-id 필요)")
     parser.add_argument("--points-only", action="store_true", help="bank: 원본 독립 출제포인트만 미리 추출·저장")
+    parser.add_argument('--root-generation',default='',help='bank: 서버가 지정한 뿌리 학습 요청 ID만 처리')
     parser.add_argument('--import-share', action='store_true', help='bank: 저장된 공유 링크에서 완성 응답을 가져와 검수 작업 등록')
     parser.add_argument("--notes-only", action="store_true",
                         help="publish: 강의록만 올리고 덱·run-meta·예습 링크는 미룬다")

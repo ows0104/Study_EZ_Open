@@ -66,6 +66,10 @@ Quiz Bank는 업로드 결과가 검증을 통과하면 학생에게 자동 공�
 
 ## 개발 시작
 
+공동작업은 개인 브랜치 → PR → 검사/리뷰 → master 반영 순서로 진행합니다.
+master의 검사가 통과하면 API → 같은 커밋의 웹 순서로 자동 배포합니다.
+[협업·자동 배포·복원 안내](docs/development/collaboration.md)를 먼저 확인하세요.
+
 Python 의존성은 루트 [requirements.txt](requirements.txt), 서버 의존성은
 [server/requirements.txt](server/requirements.txt), 웹 의존성은
 [web/package.json](web/package.json)에 있습니다.

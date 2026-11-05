@@ -1,0 +1,221 @@
+{
+  "id": "2026-11-03-connection-learning-product",
+  "title": "강의별 연결 학습 제품 통합",
+  "area": "site",
+  "created_at": "2026-11-02T15:45:51.029774+00:00",
+  "required_checks": [
+    "server",
+    "web-types",
+    "web-build"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-02T15:46:23.437622+00:00",
+      "evidence": "2026-11-03 사용자: 아니 그냥 실제 구현을 해줘. 실제 StudyEZ 통합 요청",
+      "scope": "강의별 연결 학습 모델/API/관리자 콘텐츠 등록과 공개 설정/실제 앱 학습 화면 및 검증, 운영 배포 제외",
+      "evidence_version": 2,
+      "source_hash": "f1cfe0d33bd472b1267577e68a4e90df536d81b8d8450688704a9a211b795095",
+      "plan_hash": "209440c2ed620cde8c7308bd6dcc66330769aefa90f72dd7204ce70fb89882c6",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "b394e0dd69a979a4446965025fca6763a02a969047c45b76ab09c894a481319e"
+    }
+  },
+  "checks": [
+    {
+      "name": "server",
+      "at": "2026-11-02T15:53:46.489056+00:00",
+      "command": [
+        "server/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-03-connection-learning-product/check.py"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "f970d623a9047578864e21f401f451ee502e6e186764a736683dffc2cf13afd7",
+      "plan_hash": "209440c2ed620cde8c7308bd6dcc66330769aefa90f72dd7204ce70fb89882c6",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-learning-product/1793634825041977900-server.log"
+    },
+    {
+      "name": "web-types",
+      "at": "2026-11-02T15:53:52.839248+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "f970d623a9047578864e21f401f451ee502e6e186764a736683dffc2cf13afd7",
+      "plan_hash": "209440c2ed620cde8c7308bd6dcc66330769aefa90f72dd7204ce70fb89882c6",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-learning-product/1793634827583050300-web-types.log"
+    },
+    {
+      "name": "web-build",
+      "at": "2026-11-02T15:53:57.323783+00:00",
+      "command": [
+        "node",
+        "web/node_modules/vite/bin/vite.js",
+        "build",
+        "web",
+        "--config",
+        "web/vite.config.ts"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "f970d623a9047578864e21f401f451ee502e6e186764a736683dffc2cf13afd7",
+      "plan_hash": "209440c2ed620cde8c7308bd6dcc66330769aefa90f72dd7204ce70fb89882c6",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-learning-product/1793634834131460600-web-build.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-02T15:54:53.638017+00:00",
+      "command": [
+        "server/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-03-connection-learning-product/check.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "f970d623a9047578864e21f401f451ee502e6e186764a736683dffc2cf13afd7",
+      "plan_hash": "209440c2ed620cde8c7308bd6dcc66330769aefa90f72dd7204ce70fb89882c6",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-learning-product/1793634866078147300-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-03T04:15:43.645841+00:00",
+      "command": [
+        "server/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-03-connection-learning-product/check.py"
+      ],
+      "exit_code": 2,
+      "evidence_version": 2,
+      "source_hash": "f970d623a9047578864e21f401f451ee502e6e186764a736683dffc2cf13afd7",
+      "plan_hash": "209440c2ed620cde8c7308bd6dcc66330769aefa90f72dd7204ce70fb89882c6",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-03-connection-learning-product/1793678956853285600-server.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-02T15:56:39.984338+00:00",
+    "summary": "실제 앱 인증 경로·관리자 등록/공개·서버 저장/재개·답 비노출·중복/충돌/계정 격리 및 기존 개인문항 보존 검토. 격리 API·경로·이용현황·개인문항 검사, 웹 타입/빌드 통과. 실제 브라우저 API 저장·새로고침 확인. 운영 미배포와 49문항 전체 미변환을 명시.",
+    "evidence_version": 2,
+    "source_hash": "f970d623a9047578864e21f401f451ee502e6e186764a736683dffc2cf13afd7",
+    "plan_hash": "209440c2ed620cde8c7308bd6dcc66330769aefa90f72dd7204ce70fb89882c6",
+    "inputs": [
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-03T04:15:43.647543+00:00"
+}

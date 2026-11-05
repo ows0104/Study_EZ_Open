@@ -201,13 +201,13 @@
       check(!stored['studyez-consent:auto-v1:chatgpt:personal'],'consent retained');
       check(!document.querySelector('[data-action=consent]').checked,'revoked consent still displayed as checked');
     });
-    await run('Existing draft is preserved', async () => {
+    await run('Existing draft is replaced before automatic submission', async () => {
       const {state,editor}=reset();
       editor.textContent='My draft';
       stored['studyez-consent:auto-v1:chatgpt:personal']=true;
       await start();
-      await until(()=>document.querySelector('.is-error'),'missing draft warning');
-      check(state.attached===0 && state.clicks===0 && editor.textContent==='My draft','draft overwritten');
+      await until(()=>state.clicks===1,'previous prompt blocked automatic input');
+      check(state.attached===1 && !editor.textContent,'prompt was not replaced and sent');
     });
     await run('Cancel after attaching stops send without attaching twice', async () => {
       const {state}=reset();

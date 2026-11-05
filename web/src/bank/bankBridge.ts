@@ -3,6 +3,7 @@ import { api } from "../api";
 import { bumpPreviewVersion } from "../bridge/previewBridge";
 import { EXTENSION_SOURCE, MESSAGES, WEBAPP_SOURCE } from "../bridge/protocol";
 import { bankDestination } from "../bridge/linkRouting";
+import { webGenerationId } from './rootWeb';
 
 /**
  * 완성된 웹 문항을 저장해 CLI 검수·게시를 시작한다. 링크는 별도로 저장한다.
@@ -26,7 +27,8 @@ export function useBankLink() {
       const path = `${encodeURIComponent(subject)}/${encodeURIComponent(runId)}`;
       if (legacy && typeof data.raw === "string" && data.raw.length >= 200
           && data.raw.length <= 2_000_000 && data.raw.trimEnd().endsWith("STUDYEZ_BANK_COMPLETE")) {
-        void api(`/api/admin/lectures/${path}/bank-response`, {
+        const generation=webGenerationId(data.raw);
+        void api(generation?`/api/admin/root-generation/${generation}/web-response`:`/api/admin/lectures/${path}/bank-response`, {
           method: "PUT", body: JSON.stringify({ raw: data.raw, conversationUrl: data.url || "",
             promptVersion: destination.promptVersion || (typeof data.promptVersion === "string" ? data.promptVersion : ""),
             ...(data.responseFile ? { responseFile: data.responseFile } : {}),

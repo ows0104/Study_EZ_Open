@@ -23,6 +23,8 @@ const LecturePage = lazy(() => import("./lecture/LecturePage").then((m) => ({ de
 const QuizPage = lazy(() => import("./lecture/QuizPage").then((m) => ({ default: m.QuizPage })));
 // Quiz Bank 풀이 화면. 같은 탭에서 강의·캘린더와 오간다.
 const BankStudyPage = lazy(() => import("./bank/BankStudy").then((m) => ({ default: m.BankStudyPage })));
+const RootLearningPage = lazy(() => import("./bank/RootLearning").then((m) => ({ default: m.RootLearningPage })));
+const ConnectionLearningPage = lazy(() => import("./bank/ConnectionLearning").then((m) => ({ default: m.ConnectionLearningPage })));
 const BankCatalogPage = lazy(() => import("./bank/BankCatalog").then((m) => ({ default: m.BankCatalogPage })));
 const BankBatchPage = lazy(() => import("./bank/BankBatch").then((m) => ({ default: m.BankBatchPage })));
 const AdminPage = lazy(() => import("./admin/AdminPage").then((m) => ({ default: m.AdminPage })));
@@ -155,6 +157,8 @@ function Shell() {
             <Route path="/mainquiz/:subject/:runId" element={<BankStudyPage />} />
             <Route path="/legacy-mainquiz/:subject/:runId" element={<QuizPage kind="main" />} />
             <Route path="/bank/:subject/:runId" element={<BankStudyPage />} />
+            <Route path="/bank/:subject/:runId/roots" element={<RootLearningPage />} />
+            <Route path="/bank/:subject/:runId/connections" element={<ConnectionLearningPage />} />
             <Route path="/bank/:subject/:runId/all" element={<BankCatalogPage />} />
             {/* 관리 화면은 탭을 갈래로 들고 있다(`/admin/match` 등). 그 갈래는
                 안에서 고르므로 여기서는 통째로 넘긴다. */}

@@ -64,6 +64,10 @@ python scripts/development.py check 2026-10-26-example --phase release
 
 ## 배포 준비와 중요 승인
 
+2026-11-05 사용자가 요청한 일반 코드 master 자동 배포는 [협업·자동 배포](collaboration.md)를 따른다.
+해당 승인 범위에서 SHA별 실제 검사와 배포 영수증을 보존한다. DB/콘텐츠/기록/권한 변경 및
+새 기능 구현의 사람 승인은 계속 이 절차를 적용한다. 자동화가 새 사람 승인 발언을 만들지는 않는다.
+
 release.md에 실제 대상 revision, 테스트 결과, 코드 리뷰, DB 변경 유무, 배포 순서, 관측과 롤백을 쓴다.
 검사 결과에 대응하는 고정 후보를 prepare한 뒤 사람 승인과 deploy 승인을 기록하고 `check --phase deploy`로 확인한다.
 development.py 자체가 배포를 실행하지는 않는다. publish-web과 server/deploy.ps1은 실제 운영 명령이다.

@@ -4,6 +4,8 @@ import { api } from "../api";
 import { bankCatalogHref, lectureHref } from "../links";
 import type { BankRead, BankSession } from "../types/bank";
 import { ConceptMap } from "./ConceptMap";
+import { RootEntry } from "./RootLearning";
+import { ConnectionEntry } from "./ConnectionLearning";
 import { DailyGoal } from "./DailyGoal";
 import { BankCoverage } from "./BankCoverage";
 import { SuspendedQuestions } from "./SuspendedQuestions";
@@ -53,6 +55,8 @@ export function BankStart({ base, info, finished, lecture, onStarted, onUndo, un
         </button> : null}
       </header>
       <p className="bank-note">이 강의의 새 카드를 먼저 보고 예정된 복습을 이어갑니다. <Link to="/study">여러 강의 모아 풀기</Link></p>
+      <ConnectionEntry subject={lecture.subject} runId={lecture.runId}/>
+      <RootEntry subject={lecture.subject} runId={lecture.runId}/>
       <p className="bank-note"><Link to={bankCatalogHref(lecture)}>전체 문제 · 슬라이드 순서로 보기 →</Link></p>
       <DailyGoal plan={info.lectureGoal} showMain={info.lectureGoal?.met}
         onContinue={() => void start()} busy={busy} />

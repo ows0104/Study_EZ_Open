@@ -59,6 +59,13 @@ def check_bank_schema_identity():
 # 편을 가로질러 보고 반영했다·그대로 둔다를 적는다(관리 화면 「Quiz Bank 신고」 탭).
 # 2026-10-06: 개인 복습 대화를 예습과 별도로 저장하는 my-review 경로.
 ROUTES = """
+GET /api/admin/root-generation/{generation_id}/web-input
+POST /api/admin/root-generation/{generation_id}/web-dispatch
+PUT /api/admin/root-generation/{generation_id}/web-response
+GET /api/admin/root-learning/lectures/{subject}/{run_id}/generation
+POST /api/admin/root-learning/lectures/{subject}/{run_id}/generation
+GET /api/admin/root-generation/{generation_id}/input
+PUT /api/admin/root-generation/{generation_id}/result
 GET /api/admin/preview-prompt
 PUT /api/admin/preview-prompt
 PUT /api/lectures/{subject}/{run_id}/bank/excluded/{question_id}
@@ -214,7 +221,22 @@ def current() -> list[str]:
 
 def main() -> None:
     check_bank_schema_identity()
-    want = sorted(line for line in ROUTES.strip().split("\n") if line)
+    # 2026-11-03: versioned connection learning and explicit admin publication.
+    connection_routes = '''GET /api/lectures/{subject}/{run_id}/connections
+GET /api/lectures/{subject}/{run_id}/connections/{revision}
+POST /api/lectures/{subject}/{run_id}/connections/{revision}/actions
+POST /api/admin/lectures/{subject}/{run_id}/connections
+PUT /api/admin/lectures/{subject}/{run_id}/connections/{revision}/publication'''
+    root_routes = """GET /api/root-learning
+GET /api/root-learning/lectures/{subject}/{run_id}
+GET /api/admin/root-learning/lectures/{subject}/{run_id}
+POST /api/admin/root-learning/lectures/{subject}/{run_id}
+PUT /api/admin/root-learning/lectures/{subject}/{run_id}/publication
+POST /api/root-learning/lectures/{subject}/{run_id}/sessions
+GET /api/root-learning/sessions/{session_id}
+POST /api/root-learning/sessions/{session_id}/events
+GET /api/root-learning/sessions/{session_id}/map"""
+    want = sorted(line for line in (ROUTES + '\n' + connection_routes + '\n' + root_routes).strip().split("\n") if line)
     got = current()
     missing = [r for r in want if r not in got]
     extra = [r for r in got if r not in want]

@@ -34,6 +34,9 @@ def run(client: transport.Client, root: Path, subject: str, run_id: str, this_ye
     base = transport.lecture_path(subject, run_id)
     _stage("응답 받기")
     got = client.call("GET", f"{base}/bank-response")
+    if got.get('connectionGeneration'):
+        from runner.connection_generation import run_generation
+        return run_generation(client, subject, run_id, runs_dir, got['connectionGeneration'], model=model)
     if got.get('importShare'):
         from ..shared_bank import recover
         _stage('저장된 공유 링크에서 완성 응답 가져오기')

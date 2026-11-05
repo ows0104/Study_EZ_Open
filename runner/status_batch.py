@@ -63,12 +63,13 @@ def collect_batches(runs: Path, processes: list[dict]):
             if group == 'attention' and stage not in ATTENTION:
                 label += ' · 실행 프로세스 없음'
             item = dict(runId=rid, title=row.get('title') or config.get('targets', {}).get(rid, rid),
-                        stage=label, error=row.get('error', ''), added=row.get('added'), removed=row.get('removed'))
+                        stage=label, error=row.get('error', ''), added=row.get('added'), removed=row.get('removed'),
+                        subject=row.get('subject') or config.get('subject') or state.get('subject', ''))
             groups[group].append(item)
             if group == 'active':
                 jobs.append(JobStatus(f"{config['id']}/{rid}", item['title'], row_pid,
                                       config.get('label', config['id']), (label,), (), None,
-                                      config.get('owner', '일괄 작업')))
+                                      config.get('owner', '일괄 작업'), item['subject']))
         boards.append(dict(label=config.get('label', config['id']), **groups))
     return tuple(boards), tuple(jobs)
 
@@ -84,6 +85,14 @@ def overview(snapshot):
                     text += f" · 추가 {len(added) if isinstance(added, list) else added} / 제외 {len(removed) if isinstance(removed, list) else removed}"
                 groups[key].append(text)
     server = snapshot.queue or {}
+    if server.get('scopeFiltered'):
+        # Desktop tasks already contain the latest state per lecture and kind.
+        # Older failed attempts must not remain errors after a later success.
+        for row in server.get('tasks', []):
+            target = 'done' if row.get('state') == 'done' else 'attention' if row.get('state') == 'failed' else ''
+            if target:
+                label = row.get('title', row['runId']) + ' · ' + row.get('label', row.get('kind', ''))
+                groups[target].append(label + ' · ' + (row.get('message') or ('완료' if target == 'done' else '확인 필요')))
     groups['pending'] += [r.get('title', r['runId']) for r in server.get('waiting', [])]
     groups['other'] += [r.get('title', r['runId']) + ' · ' + (r.get('message') or r.get('stage') or '보류')
                             for r in server.get('held', [])]

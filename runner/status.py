@@ -19,6 +19,7 @@ class JobStatus:
     lines: tuple[str, ...]
     log_age: int | None
     owner: str = "로컬 러너"
+    subject: str = ""
 
 
 @dataclass(frozen=True)
@@ -129,7 +130,9 @@ def collect(runs: Path, processes: list[dict] | None = None, now: float | None =
                 recent += details
             jobs.append(JobStatus(run_id, title, process["ProcessId"],
                                   "출제 포인트 준비" if "--points-only" in command else "퀴즈 생성 · 검수",
-                                  stages[-5:], recent, log_age))
+                                  stages[-5:], recent, log_age,
+                                  subject=(re.search(r'\bbank\s+("[^"]+"|\S+)', command)[1].strip('"')
+                                           if re.search(r'\bbank\s+("[^"]+"|\S+)', command) else '')))
     # Other sessions opt in by registering their local script and output paths.
     from .status_external import collect_external
     external, external_events = collect_external(runs, processes, now)

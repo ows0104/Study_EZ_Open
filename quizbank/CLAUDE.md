@@ -1,6 +1,15 @@
 # quizbank 작업 안내
 
 관리자가 만든 ChatGPT 답을 서버에서 쓸 문제은행으로 정리한다.
+사용자가 명시적으로 요청한 Concept map·포인트 자동출제는 `connection_generate.py`의 별도 경로다.
+입력·원본 지문과 실행 ledger를 고정하고 정규화→출제→원본 대조/독립 정답 검수→최대 3회 수정→roots/1을 만든다.
+중단된 모델 호출·깨진/없는 ledger는 자동 반복하지 않는다. 기존 웹 후처리의 fallback으로 사용하지 않는다.
+계약은 `studyez_contracts/roots/automation.py`, 합성 검사는 `test_connection_generate.py`다.
+신규 생성은 `source-assessment/2`와 `connection_generate_v2.py`를 사용한다. 필수 요소별 실제 답 위치·그림·중요도·선행 검토로 전체 방향을 채택하며, 지도 오류와 문항 오류를 같은 최대3회 안에서 수정한다.
+선택 제안·자료 한계·긍정적 확인은 자동 수정 사유가 아니다. 임상 충돌과 과거 판정을 분리하고 분리되지 않은 독립 검수는 blocked로 보존한다. 그림은 `connection_visuals.py`의 실제 원본 crop이며 검수/화면과 동일 bytes를 사용한다.
+기존 /1 요청·완료 결과·동일 입력의 상한은 재요청/프로토콜 변경으로 초기화하지 않는다. 상세 계약·회귀 검사는 `docs/changes/2026-11-05-root-pipeline-guards/`에 있다.
+초기 원본 지도에 기계적으로 확인된 참조/선행 오류가 있으면 첫 문항 정리에 오류를 함께 전달하며 총3회 중1회를 먼저 소비한다. 초기 원문은 보존하고 질문을 본 교정 지도는 derived다. 검수 전 선행 상태는 허용하되 최종 채택에는 실제 검수 근거를 요구한다.
+`connection_recovery_v2`는 모델 호출이 완료됐으나 초기 수용 검사에서 실패한 source-only normalize의 input/raw/usage/원본/실패 ledger를 명시적 승인 범위에서만 재검증한다. 모델·DB를 호출하거나 내용·상한을 바꾸지 않고 이전 실패와 실행 지문을 보존한다. 중단 호출·후속 단계·누락/변조·반복 복구는 거절한다.
 최초 문항 생성 프롬프트는 `../content/prompts/bank/bankPrompt.md`다.
 2026-10-16 저녁 사용자 지시로 러너는 `--web-postprocess`를 사용한다. 아래 기존 전체 생성 경로와
 구분하며, 웹 문항·해설을 보존하고 최초 원본·정답 검수 후 지적을 기록·게시한다. 별도 보기 풀·해설
@@ -74,6 +83,11 @@ wrong·doubt와 후보별 검수 hash는 그대로 보존하고, 누락·깨진 
 
 실행: `python -m quizbank.run --help`.
 검사: `python -m pytest tests/quizbank`.
+별도 로컬 연결 검토 묶음은 `python -m quizbank.connection_plan --help`를 따른다.
+명시적 review/bank/sources만 읽고 새 출력 폴더에 검증·보고서를 만든다. 모델·서버·러너를 호출하지 않으며
+기존 은행·검수·학습 상태를 변경하지 않는다. 계약은 `studyez_contracts/learning_links/`, 입력 안내는
+`content/prompts/learning-links/README.md`, 검사는 `test_connection_plan.py`·`test_connection_report.py`다.
+완료 표시는 로컬 묶음 작성 완료이며 의학 검수·공개·학습 완료가 아니다.
 운영 실행·업로드는 `runner/bank.py`가 맡는다.
 실제 실행 사본과 공통 프롬프트의 버전·hash는 각 CLI 출력 폴더의 `runtime.json`에 기록한다.
 호출한 채팅의 작업 폴더나 Git 커밋만으로 실행 중인 배포 사본이 갱신됐다고 판단하지 않는다.

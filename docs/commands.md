@@ -88,6 +88,10 @@ python -m runner bank 병리학 --run-id 261005_01
 
 ## 상시 러너
 
+바탕화면 프로그램은 `powershell -File scripts/install-runner-desktop.ps1`로 바로가기를 설치한다.
+`Study EZ 러너`를 열면 강의별 예습/복습을 시작·중지·취소하거나 전체 일시정지/재개할 수 있다.
+입력이 없으면 1분 뒤 자료가 준비된 신규 작업을 자동 등록한다. 상태 전용 창은 기존 명령을 유지한다.
+
 ```powershell
 python -m runner agent
 python -m runner agent --once

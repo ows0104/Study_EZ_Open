@@ -1,0 +1,189 @@
+{
+  "id": "2026-11-04-cholinergic-example",
+  "title": "콜린성 약리학 수정 흐름 실제 자료 예시",
+  "area": "generation",
+  "created_at": "2026-11-04T05:40:53.412841+00:00",
+  "required_checks": [
+    "example-preflight",
+    "example-result"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-04T05:57:30.867636+00:00",
+      "evidence": "현재 실제 자료1회 예시 실행 승인을 적용. 모델 응답은 이미 완료됐고 새 호출 없이 필수성/회상 분리 규칙으로 기술 조립만 완료하는 구체화. 원문·실패·원래시범/상한·의학 판정과 운영 미게시 조건 유지.",
+      "scope": "실제 자료 예시 preflight 및 새 검수1회 기록 보존·추가 호출0회 순수 조립·88문항/독립검수 재사용 계보 검증·읽기 전용 실제 결과 미리보기",
+      "evidence_version": 2,
+      "source_hash": "b73125ebbf5e47c5c8b7499bb9246368eb03c5cfdd9090938e73ca550a80a4c7",
+      "plan_hash": "2a73092da0faebdeb00cb66c3dc9c531ed27ab42e794e4c525b79e3b3d2804e5",
+      "inputs": [
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "9b67b57d80b935127d1018c98996f70a4bfeb1138c3dc6b76bcf8167f9fefd28"
+    }
+  },
+  "checks": [
+    {
+      "name": "example-preflight",
+      "at": "2026-11-04T05:42:36.356011+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "docs/changes/2026-11-04-cholinergic-example/example_run.py",
+        "--preflight"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "33a7d18095de4e452a500ce7417d92ce66b68da98d143c495ee087d196e137c5",
+      "plan_hash": "ff4f346250d7192db95a7567fb02479453a807b2bc88fb636c43737d9e4367be",
+      "inputs": [
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-04-cholinergic-example/1793770954452923700-example-preflight.log"
+    },
+    {
+      "name": "example-preflight",
+      "at": "2026-11-04T05:43:09.547045+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "docs/changes/2026-11-04-cholinergic-example/example_run.py",
+        "--preflight"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "33a7d18095de4e452a500ce7417d92ce66b68da98d143c495ee087d196e137c5",
+      "plan_hash": "ff4f346250d7192db95a7567fb02479453a807b2bc88fb636c43737d9e4367be",
+      "inputs": [
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-04-cholinergic-example/1793770988824182500-example-preflight.log"
+    },
+    {
+      "name": "example-preflight",
+      "at": "2026-11-04T05:57:32.316065+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "docs/changes/2026-11-04-cholinergic-example/example_run.py",
+        "--preflight"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "b73125ebbf5e47c5c8b7499bb9246368eb03c5cfdd9090938e73ca550a80a4c7",
+      "plan_hash": "2a73092da0faebdeb00cb66c3dc9c531ed27ab42e794e4c525b79e3b3d2804e5",
+      "inputs": [
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-04-cholinergic-example/1793771851477647000-example-preflight.log"
+    },
+    {
+      "name": "example-result",
+      "at": "2026-11-04T05:57:33.863078+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "docs/changes/2026-11-04-cholinergic-example/assemble_result.py",
+        "--check"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "b73125ebbf5e47c5c8b7499bb9246368eb03c5cfdd9090938e73ca550a80a4c7",
+      "plan_hash": "2a73092da0faebdeb00cb66c3dc9c531ed27ab42e794e4c525b79e3b3d2804e5",
+      "inputs": [
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-04-cholinergic-example/1793771852632760800-example-result.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-04T06:08:55.033948+00:00",
+    "summary": "실제35쪽PDF/족보/88문항 지문과 원래13단계·3회 원장을 보존했다. 새 source1회 완료 raw/usage와 첫 조립 실패를 그대로 두고 requirement/회상 독립 규칙으로 추가 모델0회 조립. 문항/정답/독립검수 원문 동일, source76ok12doubt와 지적20·미준비3을 보존.21task/26point 집계와 raw 재컴파일·proof/선택동일 검증 통과. 실제 미리보기의 문항·답·목표·포인트·경고·좁은화면 동작 확인. 운영 미게시/학습기록 변경 없음.",
+    "evidence_version": 2,
+    "source_hash": "b73125ebbf5e47c5c8b7499bb9246368eb03c5cfdd9090938e73ca550a80a4c7",
+    "plan_hash": "2a73092da0faebdeb00cb66c3dc9c531ed27ab42e794e4c525b79e3b3d2804e5",
+    "inputs": [
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "completed_local",
+    "events": [
+      {
+        "at": "2026-11-04T06:10:00.611694+00:00",
+        "type": "completed_local",
+        "evidence": "실제 고정35쪽PDF/족보와 최종88문항으로 새 source1회 실행을 보존했다. 추가 모델0회 순수 조립 후21과제·미준비3방향·포인트26개/원본의심12/지적20을 실제 데이터 미리보기로 검증. 원래 capped 원장·문항/독립검수·첫 실패/사용량 보존, 운영 미게시.",
+        "resolution": null
+      }
+    ],
+    "links": []
+  },
+  "updated_at": "2026-11-04T06:10:00.611712+00:00"
+}

@@ -1,4 +1,5 @@
 export type MissedItem = {
+  clozeParts?: ClozePart[];
   lectureFocus?: string;
   itemId: string;
   stem: string;
@@ -121,7 +122,11 @@ export type NextInterval = { days: number; seconds: number };
  * `next`는 네 버튼에 적을 값이다. **서버가 재서 보낸다** — 화면이 자기
  * 계산으로 적으면 사다리가 파이썬과 타입스크립트 두 곳에 산다.
  */
+export type ClozePart = { text: string; blank?: true };
+
 export type RevealResult = {
+  /** Positioned blank answers, available only after revealing a preview card. */
+  clozeParts?: ClozePart[];
   itemId: string;
   answer: string;
   explanation: string;

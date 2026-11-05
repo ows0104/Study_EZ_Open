@@ -59,6 +59,7 @@ server/local_test_data/
 # 웹
 node_modules/
 web/dist/
+web/pilot-dist/
 
 # 확장 zip은 빌드마다 chrome-extension/에서 다시 묶인다. 소스가 원본이다.
 web/public/studyez-extension.zip
@@ -104,3 +105,6 @@ docs/changes/**/*.json
 
 # Local staging audit path lists.
 docs/changes/**/*.bin
+
+# Temporary Google OIDC credentials created by the official GitHub auth action.
+gha-creds-*.json

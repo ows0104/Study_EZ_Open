@@ -1,0 +1,36 @@
+{
+  "id": "2026-11-04-root-conservative-adoption",
+  "title": "불확실한 연결을 미준비로 보존하는 뿌리 학습 채택",
+  "area": "contracts",
+  "created_at": "2026-11-04T01:52:25.849015+00:00",
+  "required_checks": [
+    "contracts",
+    "generation",
+    "server",
+    "runner"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "investigating",
+    "events": [
+      {
+        "at": "2026-11-04T02:10:49.083853+00:00",
+        "type": "awaiting_approval",
+        "evidence": "원래13단계/수정3회/원본·정답검수4회 완료 후 연결 계약 오류로 미게시. 임상 판정/원문/상한을 보존하면서 확인된 과제만 채택하는 구체 intent/spec/plan을 작성하고 사용자에게 별도 게시 방식 선택을 요청함. 아직 답변/구현/부분 게시/추가 모델 호출 없음.",
+        "resolution": null
+      },
+      {
+        "at": "2026-11-04T02:51:00.740186+00:00",
+        "type": "investigating",
+        "evidence": "현재 사용자가 실제 학습용이 아닌 예시이므로 원인을 해결하라고 지시했다. 부분 채택 선택 대기는 철회하고 해당 제안은 미구현으로 보존한다. 대체한 원인 수정/검증/배포 근거는 연결된 2026-11-04-root-audit-compilation에 기록한다.",
+        "resolution": null
+      }
+    ],
+    "links": [
+      "2026-11-04-root-audit-compilation"
+    ]
+  },
+  "updated_at": "2026-11-04T02:51:00.740204+00:00"
+}

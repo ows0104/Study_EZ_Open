@@ -5,6 +5,7 @@
 강의 식별자는 언제나 ``(subject, run_id)`` 복합 키다."""
 
 from app.database import Base
+from app.models.connections import ConnectionContent, ConnectionState, ConnectionEvent
 from app.models.site_prompt import SitePrompt
 from app.models.study_visibility import StudyHiddenLecture
 from app.models.bank_archive import QuizBankArchive
@@ -132,3 +133,7 @@ __all__ = [
     "SPOTTER_THREAD_IMAGE", "SPOTTER_THREAD_KINDS", "SPOTTER_THREAD_QUESTION", "SpotterComment",
     "SpotterRecord", "SpotterReport", "SpotterThread", "SpotterWrong",
 ]
+
+from .root_learning import RootContent, RootControl, RootSession, RootEvent
+
+from .root_generation import RootGeneration

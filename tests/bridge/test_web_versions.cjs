@@ -176,6 +176,7 @@ test('bank response HTTP request preserves the originating prompt version', asyn
   const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
   const exports={};
   const deps={react:{useEffect:fn=>fn()},'../api':{api:async(url,init)=>{calls.push({url,body:JSON.parse(init.body)});}},
+    './rootWeb':{webGenerationId:()=>null},
     '../bridge/linkRouting':routing,
     '../bridge/previewBridge':{bumpPreviewVersion(){}},'../bridge/protocol':{
       ...protocol,MESSAGES:{bankReady:'BANK',bankSaved:'SAVED'}}};

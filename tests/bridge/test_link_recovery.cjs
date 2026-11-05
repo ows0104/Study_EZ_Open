@@ -7,6 +7,35 @@ const vm = require('node:vm');
 const bridge = path.join(__dirname, '../../bridge');
 const read = name => fs.readFileSync(path.join(bridge, name), 'utf8');
 
+test('failed draft proofs bind to the launched request and mode; simultaneous claims consume proof once', async () => {
+  const stored = {'studyez-bank:1:test/lecture':{raw:'preserved response'}};let receive;
+  const context = vm.createContext({URL,console,importScripts(){},chrome:{
+    runtime:{onMessage:{addListener(fn){receive=fn;}},onConnect:{addListener(){}}},
+    storage:{session:{async get(key){return key===null?{...stored}:{[key]:stored[key]};},
+      async set(values){Object.assign(stored,values);},async remove(keys){for(const key of [].concat(keys))delete stored[key];}}},
+    tabs:{onUpdated:{addListener(){}},onRemoved:{addListener(){}},onActivated:{addListener(){}}},
+  }});
+  vm.runInContext(read('protocol.js'),context);vm.runInContext(read('background.js'),context);
+  const message={type:'STUDYEZ_DRAFT_STATE',action:'failed',requestId:'old',fingerprint:'a'.repeat(64)};
+  const sender={tab:{id:10,url:'https://chatgpt.com/'}};
+  assert.equal(receive(message,{tab:{id:10,url:'https://foreign.test/'}},()=>assert.fail()),false);
+  const send=(input,from=sender)=>new Promise(resolve=>receive(input,from,resolve));
+  assert.equal((await send(message)).ok,false);
+  stored['studyez-watch:10']={requestId:'old',provider:'chatgpt',mode:'shared'};
+  assert.equal((await send({...message,requestId:'forged'})).ok,false);
+  assert.equal((await send(message)).ok,true);
+  assert.deepEqual(Object.keys(stored['studyez-draft:10']).sort(),['fingerprint','mode','recordedAt','requestId']);
+  stored['studyez-watch:11']={requestId:'new',provider:'chatgpt',mode:'personal'};
+  const next={tab:{id:11,url:'https://chatgpt.com/'}};
+  const claim={...message,action:'claim',requestId:'new'};
+  assert.equal((await send(claim,next)).ok,false);
+  stored['studyez-watch:11'].mode='shared';
+  const claims=await Promise.all([send(claim,next),send(claim,next)]);
+  assert.deepEqual(claims.map(result=>result.ok),[true,false]);
+  assert.equal(stored['studyez-draft:10'],undefined);
+  assert.equal(stored['studyez-bank:1:test/lecture'].raw,'preserved response');
+});
+
 function webBridge() {
   const attributes = new Map();
   const posted = [];

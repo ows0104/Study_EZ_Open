@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:pages": "node scripts/wait-for-api.mjs && npm run build && node scripts/wait-for-api.mjs --check",
+    "pilot": "vite --config vite.pilot.config.ts --open /connection-pilot.html",
+    "pilot:build": "vite build --config vite.pilot.config.ts",
+    "pilot:test": "node --test tests/connection-pilot.test.cjs",
     "dev": "npm run prepare-prompts && npm run pack-extension && vite",
     "pack-extension": "node scripts/pack-extension.mjs",
     "build": "npm run prepare-prompts && npm run pack-extension && tsc -b && vite build",

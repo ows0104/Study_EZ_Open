@@ -2,7 +2,7 @@
 import hashlib
 import os
 
-COMMON = ('scripts', 'tests/development', 'pyproject.toml', 'requirements.txt', 'uv.lock')
+COMMON = ('.github', 'scripts', 'tests/development', 'pyproject.toml', 'requirements.txt', 'uv.lock')
 GROUPS = {
     'site': ('web', 'server', 'studyez_contracts', 'content', 'bridge', 'platform', 'data/timetable', 'tests/contracts', 'tests/bridge'),
     'generation': ('quizbank', 'quizgen', 'studyez_llm', 'studyez_contracts', 'content', 'tests/quizbank', 'tests/quizgen', 'tests/contracts'),

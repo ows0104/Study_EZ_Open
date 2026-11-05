@@ -1,0 +1,106 @@
+{
+  "id": "2026-11-04-root-frozen-cache",
+  "title": "재개 시 검증된 고정 원본 재사용",
+  "area": "integration",
+  "created_at": "2026-11-04T00:44:15.190845+00:00",
+  "required_checks": [
+    "runner"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-04T00:44:15.794581+00:00",
+      "evidence": "User: 그럼 다시 이어서 해봐. Same single-pilot authorization persists. Fix deterministic pre-model re-download connection reset; reuse already verified immutable sources and completed review. No new model review or budget reset.",
+      "scope": "Local frozen-source verified cache reuse, bounded transient download retry/atomic store, same generation/job resumed after tests; preserve model/runtime/content and all prior evidence.",
+      "evidence_version": 2,
+      "source_hash": "8323434e492ef23d51227b887d99125758211cd206a68cdb241e66a2a906304d",
+      "plan_hash": "d7cbf779f92a659768e947322a2511eb2484ae2f3f415a06cbecc0ee3de01616",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "4bb78ce79cc99d92e3c04f9b5189be5fa54f838a47c848538e3dc51914a985d5"
+    }
+  },
+  "checks": [
+    {
+      "name": "runner",
+      "at": "2026-11-04T00:47:20.028310+00:00",
+      "command": [
+        "server/.venv/Scripts/python.exe",
+        "scripts/check_root_explicit_scope.py",
+        "runner"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ed8296a1b9628cf5f5ca021969a59d7af149e78c1921924dc0694ef38b40722b",
+      "plan_hash": "d7cbf779f92a659768e947322a2511eb2484ae2f3f415a06cbecc0ee3de01616",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-04-root-frozen-cache/1793753209709458100-runner.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-04T00:48:54.671210+00:00",
+    "summary": "514 scoped runner tests and 13 targeted frozen-source tests pass. Exact size/SHA cache reuse before network, corrupt-cache hold, transient read-reset bounded3, permanent errors and hash mismatch fail before models, atomic fresh store, no API auth to object URLs. Generator code/identity/cache and cap unchanged. Unfiltered default-runtime GUI/timing failures recorded separately; unrelated files untouched. Same pilot only.",
+    "evidence_version": 2,
+    "source_hash": "ed8296a1b9628cf5f5ca021969a59d7af149e78c1921924dc0694ef38b40722b",
+    "plan_hash": "d7cbf779f92a659768e947322a2511eb2484ae2f3f415a06cbecc0ee3de01616",
+    "inputs": [
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "runner",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "tests/runner",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-04T00:48:54.806860+00:00"
+}

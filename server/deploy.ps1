@@ -136,6 +136,7 @@ foreach ($key in $active) {
 # ── 배포 ─────────────────────────────────────────────────────────────
 $plain = @(
   "ENVIRONMENT=$($env_values['ENVIRONMENT'])",
+  "STUDYEZ_ROOT_LEARNING_ENABLED=$($env_values['STUDYEZ_ROOT_LEARNING_ENABLED'])",
   "SUPABASE_URL=$($env_values['SUPABASE_URL'])",
   "R2_ENDPOINT_URL=$($env_values['R2_ENDPOINT_URL'])",
   "R2_BUCKET_NAME=$($env_values['R2_BUCKET_NAME'])",

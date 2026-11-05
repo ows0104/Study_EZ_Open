@@ -68,6 +68,13 @@ QUESTION = _object({
 # Legacy banks keep their original ordering until their relationships are reviewed.
 QUESTION["properties"]["learning_page"] = {"type": "integer", "minimum": 1}
 
+# Renderer-owned original-source PNGs; optional on all historical banks.
+# Keep this pure schema independent of roots modules to avoid import cycles.
+QUESTION["properties"]["stimuli"] = {"type":"array","items":_object({
+    "source_id":_STR,"source_sha256":_STR,"page":_INT,
+    "crop":{"type":"array","items":_NUM},"sha256":_STR,
+    "width":_INT,"height":_INT,"png_base64":_STR})}
+
 BANK = _object({
     "build_meta": _object({"schema_version": _STR, "lecture_title": _STR}),
     "source_summary": _array(_object({"source_id": _STR, "summary": _STR})),

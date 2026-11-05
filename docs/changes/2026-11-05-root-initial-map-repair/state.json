@@ -1,0 +1,59 @@
+{
+  "id": "2026-11-05-root-initial-map-repair",
+  "title": "초기 지도 오류도 동일 교정 상한에서 처리",
+  "area": "contracts",
+  "created_at": "2026-11-05T01:40:05.165709+00:00",
+  "required_checks": [
+    "contracts",
+    "generator",
+    "runner",
+    "server",
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-05T01:41:29.160786+00:00",
+      "evidence": "현재 사용자의 공통6종 구현·검증 및 배포/다른강의1건실증 승인을 같은 초기지도교정·선행관계 흐름의 실제 결함 보완에 적용. 콜린성예시 추가교정 아님. 실제 구조 오류를 부모가 직접 바꾸지 않고 모델과 동일3회상한으로 처리.",
+      "scope": "초기지도 구조검증·동일교정상한·전후원문/실패증거보존·명시적 완료결과 재검증·API배포와 동일시범작업 이어검증",
+      "evidence_version": 2,
+      "source_hash": "3cbac1a27c08eca3b7e5bb1a4014d2599bbe8a91dab73c4202df66ed23b0ea20",
+      "plan_hash": "b9b38073e2a0f8d3c5811ea778272073d31d858f7ed3a37e09c91f54bbd8f0a3",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "server",
+        "spotter/data",
+        "spotter/scripts",
+        "spotter/web",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "tests/runner",
+        "tests/spotter",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "905a4edc57ee0070d62c0d9839d0ec760958a9152c31889f70da960d206c74ff"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-05T01:41:29.687431+00:00"
+}

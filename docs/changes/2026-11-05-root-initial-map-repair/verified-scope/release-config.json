@@ -1,0 +1,14 @@
+{
+  "target": "server",
+  "destination": "meddeck-503318/asia-northeast3/studyez-api",
+  "health_url": "https://studyez-api-97999573571.asia-northeast3.run.app/api/health",
+  "smoke_command": [
+    "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\tmp\\rp5\\server\\.venv\\Scripts\\python.exe",
+    "-X",
+    "utf8",
+    "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\tmp\\rp5\\docs\\changes\\2026-11-05-root-pipeline-deploy\\server_postcheck.py",
+    "--revision",
+    "{revision}"
+  ],
+  "rollback": "Restore 100% traffic to studyez-api-release-1793840260420597100; hold new initial-map results and preserve all source/ledgers/budgets/content/learning events."
+}

@@ -132,7 +132,7 @@ def parse_events(stdout: str, *, model: str, blind: bool) -> dict:
 def _run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None = None,
         timeout: int = 1800, label: str = "", resume: str | None = None,
         schema: dict | None = None, system: str | None = None,
-        previous_usage: dict | None = None) -> dict:
+        previous_usage: dict | None = None, images: list[Path] | None = None) -> dict:
     """가림 실행은 임시 cwd, 저작 실행은 주어진 workspace에서 수행한다."""
     selected = model_name(model)
     if resume and previous_usage is None:
@@ -152,6 +152,7 @@ def _run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None
             schema_file = Path(tmp) / "schema.json"
             schema_file.write_text(json.dumps(schema), encoding="utf-8")
             argv += ["--output-schema", str(schema_file)]
+        for image in images or []:argv += ['--image',str(Path(image).resolve())]
         argv += ["-"]
         try:
             proc = run_process(argv, input=prompt, cwd=work, timeout=timeout,
@@ -184,15 +185,16 @@ def _run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None
 def run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None = None,
         timeout: int = 1800, label: str = '', resume: str | None = None,
         schema: dict | None = None, system: str | None = None,
-        previous_usage: dict | None = None) -> dict:
+        previous_usage: dict | None = None, images: list[Path] | None = None) -> dict:
     selected = model_name(model)
     started = time.monotonic()
     request = {'cwd': str(Path(cwd).resolve()) if cwd else '', 'model': selected,
-               'prompt': prompt, 'blind': blind, 'resume': resume, 'schema': schema, 'system': system}
+               'prompt': prompt, 'blind': blind, 'resume': resume, 'schema': schema, 'system': system,
+               'images': [__import__('hashlib').sha256(Path(p).read_bytes()).hexdigest()for p in images or []]}
     try:
         with exclusive(request):
             info = _run(prompt, blind=blind, cwd=cwd, model=selected, timeout=timeout, label=label,
-                        resume=resume, schema=schema, system=system, previous_usage=previous_usage)
+                        resume=resume, schema=schema, system=system, previous_usage=previous_usage,images=images)
     except AlreadyRunning as cause:
         telemetry.record(status='duplicate-blocked', model=selected, label=label, cwd=cwd,
                          prompt=prompt, seconds=time.monotonic()-started, usage={})

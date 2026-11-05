@@ -1,0 +1,44 @@
+{
+  "id": "2026-11-03-root-optional-schema",
+  "title": "뿌리 정리의 선택 필드 형식과 완료 지도 재사용",
+  "area": "generation",
+  "created_at": "2026-11-03T12:21:09.298570+00:00",
+  "required_checks": [
+    "contracts",
+    "generation"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-03T12:21:09.793647+00:00",
+      "evidence": "Current user explicitly: 그럼 다시 이어서 해봐. Existing exact-material private pilot, deploy and one-click authoring authorization persists. Continue same run by preserving completed normalize and repairing only deterministic generate preflight schema rejection.",
+      "scope": "Root-only strict optional-field transport/decode, once-only proven generate preflight recovery with completed cache and all prior failure proof retained, same generation/job/input/response/private audience and budgets.",
+      "evidence_version": 2,
+      "source_hash": "f443dbf14089194233f748c574428993f656ee333fc73982d9fdc847c9d955b4",
+      "plan_hash": "1d617d5728892cd9e522a76abe1e8ed324d19307fb4257c032e78fc879236310",
+      "inputs": [
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "68f5bc90a23f64f1a930f90d873d5fd7f177c601eae505d16ec17fc07dc0ad68"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-03T12:21:09.972218+00:00"
+}

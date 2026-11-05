@@ -61,26 +61,26 @@ test('reattached filenames accept provider numeric suffixes but reject different
   }
 });
 
-test('only an empty or identical Study EZ draft can be reused', () => {
-  assert.equal(context.reusableDraft('', 'Study EZ prompt'), true);
-  assert.equal(context.reusableDraft('Study EZ prompt', 'Study EZ prompt'), true);
-  assert.equal(context.reusableDraft('User is writing something else', 'Study EZ prompt'), false);
+test('existing text does not require recovery; unknown attachments still do', async () => {
+  const ctx = vm.createContext({setTimeout, console});
+  vm.runInContext(source.replace('void initialize();', ''), ctx);
+  vm.runInContext('draftMessage = async () => false; draftFingerprint = async () => "fingerprint";', ctx);
+  for (const text of ['', 'Study EZ prompt', 'Previous lecture prompt']) {
+    ctx.snapshot = {text, attachments:[], turns:0};
+    vm.runInContext('draftSnapshot = () => snapshot;', ctx);
+    const snapshot = await ctx.checkDraft({provider:'chatgpt',prompt:'Study EZ prompt',files:[]}, () => {});
+    assert.equal(snapshot.text, text);
+  }
+  ctx.snapshot = {text:'Previous lecture prompt',attachments:['unknown.pdf 제거'],turns:0};
+  await assert.rejects(ctx.checkDraft({provider:'chatgpt',prompt:'Study EZ prompt',files:[]}, () => {}), /첨부/);
 });
 
-test('identical draft cleanup removes only expected study attachments and leaves unknown ones untouched', async () => {
-  const clicks = [];
-  const buttons = names => names.map(name => ({getAttribute: () => name,
-    getBoundingClientRect: () => ({width: 10, height: 10}), click: () => clicks.push(name)}));
-  let attached = buttons(['lecture (2).pdf 제거', 'jokbo.md 제거']);
-  context.composerRoot = () => ({querySelectorAll: () => attached});
-  context.pause = async () => {};
-  const payload = {provider: 'chatgpt', files: [{filename: 'lecture.pdf'}, {filename: 'jokbo.md'}]};
-  await context.clearOwnDraftAttachments({}, payload, () => {});
-  assert.deepEqual(clicks, ['lecture (2).pdf 제거', 'jokbo.md 제거']);
-  clicks.length = 0;
-  attached = buttons(['lecture.pdf 제거', '사진 제거']);
-  await assert.rejects(context.clearOwnDraftAttachments({}, payload, () => {}), /다른 자료/);
-  assert.equal(clicks.length, 0);
+test('automatic draft recovery requires every attachment to belong to the failed request', () => {
+  const knownDraftAttachments = vm.runInContext('knownDraftAttachments', context);
+  const files = [{filename:'lecture.pdf'}, {filename:'jokbo.md'}];
+  assert.equal(knownDraftAttachments({attachments:['lecture (2).pdf 제거','jokbo.md 제거']},files),true);
+  assert.equal(knownDraftAttachments({attachments:['lecture.pdf 제거','사진 제거']},files),false);
+  assert.equal(knownDraftAttachments({attachments:['Remove attachment']},files),false);
 });
 
 test('large lecture upload can finish after two minutes and submits once', async () => {

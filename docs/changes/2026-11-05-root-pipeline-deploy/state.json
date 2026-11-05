@@ -1,0 +1,22 @@
+{
+  "id": "2026-11-05-root-pipeline-deploy",
+  "title": "공통 뿌리 파이프라인 운영 배포와 다른 강의 1건 실증",
+  "area": "contracts",
+  "created_at": "2026-11-05T00:41:55.536901+00:00",
+  "required_checks": [
+    "contracts",
+    "generator",
+    "runner",
+    "server",
+    "web"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-05T00:41:55.536929+00:00"
+}

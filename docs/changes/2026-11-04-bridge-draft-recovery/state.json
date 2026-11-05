@@ -1,0 +1,522 @@
+{
+  "id": "2026-11-04-bridge-draft-recovery",
+  "title": "기본 링크 버튼 및 GPT 브리지 이전 초안 충돌 복구",
+  "area": "site",
+  "created_at": "2026-11-04T12:08:57.239684+00:00",
+  "required_checks": [
+    "bridge",
+    "web-links",
+    "web-types",
+    "web-build"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-04T12:14:49.048268+00:00",
+      "evidence": "2026-11-04 현재 채팅 사용자: 응, 그 범위로 수정해줘. 스크린샷 확인 후 정정한 예습 기본 링크 카드 및 GPT 브리지 초안 복구 계획 승인.",
+      "scope": "PreviewAction 기본 링크 클릭 연결, 전송 전 초안 복구, 관련 회귀 검사·문서·확장 ZIP 로컬 생성. 기존 기록 보존. 운영 배포·실제 자료 전송 제외.",
+      "evidence_version": 2,
+      "source_hash": "66001fa93e1c394e0ec9a37acd7176bf731ed9e361fd77626bd732e1e921b67a",
+      "plan_hash": "6454b6ac4870eb6cc375aeb8990a974178c8b7ec7fc3a4bfc4071ccfb4683f43",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "b3f9ad333b9ba726f385a51fff962cbb7c55c64daeae15d8972c6fc21fb32fb2"
+    }
+  },
+  "checks": [
+    {
+      "name": "bridge",
+      "at": "2026-11-04T12:27:30.885629+00:00",
+      "command": [
+        "node",
+        "--test",
+        "tests/bridge/test_autosend.cjs",
+        "tests/bridge/test_link_recovery.cjs",
+        "tests/bridge/test_web_versions.cjs",
+        "tests/bridge/test_bank_file.cjs",
+        "tests/bridge/test_bank_download.cjs"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "5e12cf2609474d04bfde42473dcec3324b8c1c4432ddcbcc9097227b57b05179",
+      "plan_hash": "6454b6ac4870eb6cc375aeb8990a974178c8b7ec7fc3a4bfc4071ccfb4683f43",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-04-bridge-draft-recovery/1793795250007156800-bridge.log"
+    },
+    {
+      "name": "bridge",
+      "at": "2026-11-04T12:28:00.356861+00:00",
+      "command": [
+        "node",
+        "--test",
+        "tests/bridge/test_autosend.cjs",
+        "tests/bridge/test_link_recovery.cjs",
+        "tests/bridge/test_web_versions.cjs",
+        "tests/bridge/test_bank_file.cjs",
+        "tests/bridge/test_bank_download.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ce1d64169af79d7a2efeaa523ba26d05d48b6c0af3492d11e74475a818d6064c",
+      "plan_hash": "6454b6ac4870eb6cc375aeb8990a974178c8b7ec7fc3a4bfc4071ccfb4683f43",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-04-bridge-draft-recovery/1793795279357912300-bridge.log"
+    },
+    {
+      "name": "web-types",
+      "at": "2026-11-04T12:28:05.596157+00:00",
+      "command": [
+        "node",
+        "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ce1d64169af79d7a2efeaa523ba26d05d48b6c0af3492d11e74475a818d6064c",
+      "plan_hash": "6454b6ac4870eb6cc375aeb8990a974178c8b7ec7fc3a4bfc4071ccfb4683f43",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-04-bridge-draft-recovery/1793795279357882000-web-types.log"
+    },
+    {
+      "name": "web-links",
+      "at": "2026-11-04T12:28:10.230966+00:00",
+      "command": [
+        "node",
+        "--test",
+        "web/tests/preview-actions.test.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ce1d64169af79d7a2efeaa523ba26d05d48b6c0af3492d11e74475a818d6064c",
+      "plan_hash": "6454b6ac4870eb6cc375aeb8990a974178c8b7ec7fc3a4bfc4071ccfb4683f43",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-04-bridge-draft-recovery/1793795283033517900-web-links.log"
+    },
+    {
+      "name": "web-build",
+      "at": "2026-11-04T12:28:29.804155+00:00",
+      "command": [
+        "node",
+        "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ce1d64169af79d7a2efeaa523ba26d05d48b6c0af3492d11e74475a818d6064c",
+      "plan_hash": "6454b6ac4870eb6cc375aeb8990a974178c8b7ec7fc3a4bfc4071ccfb4683f43",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-04-bridge-draft-recovery/1793795301054715500-web-build.log"
+    },
+    {
+      "name": "bridge",
+      "at": "2026-11-04T12:29:33.332295+00:00",
+      "command": [
+        "node",
+        "--test",
+        "tests/bridge/test_autosend.cjs",
+        "tests/bridge/test_link_recovery.cjs",
+        "tests/bridge/test_web_versions.cjs",
+        "tests/bridge/test_bank_file.cjs",
+        "tests/bridge/test_bank_download.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "e620e490ad6525bc74446b61b3bf7be5a7e562b79d162d88df322cf030f66d9c",
+      "plan_hash": "6454b6ac4870eb6cc375aeb8990a974178c8b7ec7fc3a4bfc4071ccfb4683f43",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-04-bridge-draft-recovery/1793795372400378900-bridge.log"
+    },
+    {
+      "name": "web-types",
+      "at": "2026-11-04T12:29:39.331830+00:00",
+      "command": [
+        "node",
+        "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "e620e490ad6525bc74446b61b3bf7be5a7e562b79d162d88df322cf030f66d9c",
+      "plan_hash": "6454b6ac4870eb6cc375aeb8990a974178c8b7ec7fc3a4bfc4071ccfb4683f43",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-04-bridge-draft-recovery/1793795372400094200-web-types.log"
+    },
+    {
+      "name": "web-links",
+      "at": "2026-11-04T12:29:41.943066+00:00",
+      "command": [
+        "node",
+        "--test",
+        "web/tests/preview-actions.test.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "e620e490ad6525bc74446b61b3bf7be5a7e562b79d162d88df322cf030f66d9c",
+      "plan_hash": "6454b6ac4870eb6cc375aeb8990a974178c8b7ec7fc3a4bfc4071ccfb4683f43",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-04-bridge-draft-recovery/1793795373982761000-web-links.log"
+    },
+    {
+      "name": "web-build",
+      "at": "2026-11-04T12:30:11.236864+00:00",
+      "command": [
+        "node",
+        "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "e620e490ad6525bc74446b61b3bf7be5a7e562b79d162d88df322cf030f66d9c",
+      "plan_hash": "6454b6ac4870eb6cc375aeb8990a974178c8b7ec7fc3a4bfc4071ccfb4683f43",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-04-bridge-draft-recovery/1793795402824238000-web-build.log"
+    },
+    {
+      "name": "bridge",
+      "at": "2026-11-04T12:30:58.133320+00:00",
+      "command": [
+        "node",
+        "--test",
+        "tests/bridge/test_autosend.cjs",
+        "tests/bridge/test_link_recovery.cjs",
+        "tests/bridge/test_web_versions.cjs",
+        "tests/bridge/test_bank_file.cjs",
+        "tests/bridge/test_bank_download.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "46c773394b2e6eea238cc1c7ae1cdbfcd807fd84978058f63454e4babef17839",
+      "plan_hash": "6454b6ac4870eb6cc375aeb8990a974178c8b7ec7fc3a4bfc4071ccfb4683f43",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-04-bridge-draft-recovery/1793795457202640900-bridge.log"
+    },
+    {
+      "name": "web-types",
+      "at": "2026-11-04T12:31:04.020194+00:00",
+      "command": [
+        "node",
+        "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "46c773394b2e6eea238cc1c7ae1cdbfcd807fd84978058f63454e4babef17839",
+      "plan_hash": "6454b6ac4870eb6cc375aeb8990a974178c8b7ec7fc3a4bfc4071ccfb4683f43",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-04-bridge-draft-recovery/1793795457202227800-web-types.log"
+    },
+    {
+      "name": "web-links",
+      "at": "2026-11-04T12:31:06.953112+00:00",
+      "command": [
+        "node",
+        "--test",
+        "web/tests/preview-actions.test.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "46c773394b2e6eea238cc1c7ae1cdbfcd807fd84978058f63454e4babef17839",
+      "plan_hash": "6454b6ac4870eb6cc375aeb8990a974178c8b7ec7fc3a4bfc4071ccfb4683f43",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-04-bridge-draft-recovery/1793795459003250400-web-links.log"
+    },
+    {
+      "name": "web-build",
+      "at": "2026-11-04T12:31:16.474357+00:00",
+      "command": [
+        "node",
+        "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "46c773394b2e6eea238cc1c7ae1cdbfcd807fd84978058f63454e4babef17839",
+      "plan_hash": "6454b6ac4870eb6cc375aeb8990a974178c8b7ec7fc3a4bfc4071ccfb4683f43",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-04-bridge-draft-recovery/1793795468068508100-web-build.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-04T12:32:30.128917+00:00",
+    "summary": "자체 리뷰: 예습 카드 실제 클릭 및 관리자/필기/호환 경계, 전송 전 초안 스냅샷 재확인과 React 교체, 실패 초안 SHA-256/요청·모드 바인딩·단회 claim, 사용자 텍스트·첨부 변경 시 근거 해제, 전송 시도 후 재전송 금지와 미저장 응답 보존 확인. 첨부 변경 무효화 누락을 수정해 회귀 추가. 최종 동일 소스 지문에서 브리지92/92·실제 Chrome 모의화면12/12·타입검사·생산빌드 통과, ZIP1.3.21 소스 바이트 일치. 외부 GPT·운영 배포 미실행. 상세 implementation.md.",
+    "evidence_version": 2,
+    "source_hash": "46c773394b2e6eea238cc1c7ae1cdbfcd807fd84978058f63454e4babef17839",
+    "plan_hash": "6454b6ac4870eb6cc375aeb8990a974178c8b7ec7fc3a4bfc4071ccfb4683f43",
+    "inputs": [
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "resolved",
+    "events": [
+      {
+        "at": "2026-11-04T12:32:30.956452+00:00",
+        "type": "completed_local",
+        "evidence": "승인된 예습 기본 링크 클릭 및 GPT 초안 복구 로컬 구현·검사·리뷰 완료. 브리지92/92·브라우저12/12·TypeScript·생산빌드 통과, ZIP1.3.21 생성. 운영 배포·실제 자료 전송 없음.",
+        "resolution": null
+      },
+      {
+        "at": "2026-11-04T16:04:34.541088+00:00",
+        "type": "resolved",
+        "evidence": "후속 사용자 운영 배포 지시로 예습 기본 링크/초안 복구를 Pages d7970ab3-67ef-4598-aaf5-8903bd268b1e에 반영. 고정 후보 공개 파일·브리지1.3.21 ZIP 일치 및 읽기 전용 사후 검사 통과. 정본 배포 근거는 후속 작업의 분리 실행 공간과 deployment.md.",
+        "resolution": {
+          "kind": "deployed_fix",
+          "change": "2026-11-05-preview-bridge-deploy",
+          "attempt": "1793808157567703600",
+          "candidate": "8f20afebae1d3e393dc6684c87025d310271e36cbff8e1cbac7b0d42e5ef75d8",
+          "revision": "d7970ab3-67ef-4598-aaf5-8903bd268b1e"
+        }
+      }
+    ],
+    "links": [
+      "2026-11-05-preview-bridge-deploy"
+    ],
+    "resolution": {
+      "kind": "deployed_fix",
+      "change": "2026-11-05-preview-bridge-deploy",
+      "attempt": "1793808157567703600",
+      "candidate": "8f20afebae1d3e393dc6684c87025d310271e36cbff8e1cbac7b0d42e5ef75d8",
+      "revision": "d7970ab3-67ef-4598-aaf5-8903bd268b1e"
+    }
+  },
+  "updated_at": "2026-11-04T16:04:34.541099+00:00"
+}

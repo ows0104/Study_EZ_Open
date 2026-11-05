@@ -26,11 +26,16 @@ Spotter 검색은 `rg --no-ignore <검색어> spotter/scripts spotter/web`로 �
 | 덱 생성 진행 표시 | [DeckSlot.tsx](../web/src/calendar/DeckSlot.tsx), [jobProgress.ts](../web/src/jobProgress.ts) |
 | 기존 예습·복습 풀이 | [web/src/lecture](../web/src/lecture), [server/app/srs.py](../server/app/srs.py) |
 | Quiz Bank 시작·개념 지도 | [BankStart.tsx](../web/src/bank/BankStart.tsx), [ConceptMap.tsx](../web/src/bank/ConceptMap.tsx) |
+| 뿌리 학습·목표 집계·오늘 추천 | [RootLearning.tsx](../web/src/bank/RootLearning.tsx), [전용 API](../server/app/routes/root_learning.py), [구현 기록](changes/2026-11-02-root-learning-product/implementation.md) |
+| 강의별 연결 학습·근거·자료 등록 | [ConnectionLearning.tsx](../web/src/bank/ConnectionLearning.tsx), [서버 API](../server/app/routes/connections.py), [제품 구현 기록](changes/2026-11-03-connection-learning-product/implementation.md) |
 | Quiz Bank 풀이·문항 표시 | [BankSolve.tsx](../web/src/bank/BankSolve.tsx), [BankQuestion.tsx](../web/src/bank/BankQuestion.tsx) |
 | Quiz Bank 생성·공개 | [BankPanel.tsx](../web/src/bank/BankPanel.tsx), [publication.py](../server/app/routes/bank_api/publication.py) |
+| Concept map·포인트 자동출제·게시 | [요청 화면](../web/src/bank/RootGenerationPanel.tsx), [전용 API](../server/app/routes/root_generation.py), [생성기](../quizbank/connection_generate.py), [구현·운영 조건](changes/2026-11-03-connection-generation-pipeline/implementation.md) |
+| 뿌리 생성의 큰 JSON·시간 초과·모델 제한 | [공통 파일 실행·실패 구분](../runner/root_native_json.py), [기존 실패의 명시적 재사용](../runner/root_transport_recovery.py), [실행·검증 기록](changes/2026-11-05-root-timeout-fix/live.md). 원래 수용·독립 검수·상한을 유지하며 공급자 콘텐츠 거절은 재호출·게시 보류 |
 | Quiz Bank API 책임·검사 지도 | [bank_api/CLAUDE.md](../server/app/routes/bank_api/CLAUDE.md) |
 | Quiz Bank 생성 프롬프트 | [bankPrompt.md](../content/prompts/bank/bankPrompt.md) |
 | Quiz Bank 정리·검증 | [quizbank/CLAUDE.md](../quizbank/CLAUDE.md) |
+| 연결·문항·중요성 근거 로컬 검토 묶음 | [입력 안내](../content/prompts/learning-links/README.md), [connection_plan.py](../quizbank/connection_plan.py), [공용 계약](../studyez_contracts/learning_links/validate.py) |
 | 다음 문항·숙련도 | [server/app/study_engine](../server/app/study_engine) |
 | 관리 화면·사용 현황 | [web/src/admin](../web/src/admin), [usage.py](../server/app/routes/usage.py) |
 | 오류 제보·사이트 개선 루프 | [운영 안내](feedback-loop.md), [runner/feedback.py](../runner/feedback.py) |

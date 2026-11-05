@@ -1,0 +1,213 @@
+{
+  "id": "2026-11-02-prequiz-nested-notes",
+  "title": "감염과 면역 예습의 하위 폴더 필기 탐색 누락",
+  "area": "integration",
+  "created_at": "2026-11-02T07:33:46.781761+00:00",
+  "required_checks": [
+    "runner",
+    "desktop-db"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-02T08:00:35.838050+00:00",
+      "evidence": "사용자의 내일 예습 재실행 승인 범위에서 발견한 실행 환경 오류를 해결한다. 기존 agent.ps1의 정상 설치 Python 선택을 프로그램에도 일치시키며, 코드 보안·권한 설정은 바꾸지 않는다.",
+      "scope": "하위 폴더·준비 판정, 보존 합본 입력, 기존 정상 Python 실행 환경 선택 일치와 내일 예습의 같은 시도 재개. 원본·기록·상한 보존.",
+      "evidence_version": 2,
+      "source_hash": "5672c4f1ed2043cc3ef6bb17eb3e82c2ed6f574b72d52f5e782dc5f178b39a2a",
+      "plan_hash": "3c91de29a6d69459969a3e48478008dfe307d5da6377cf9ba84fae684a2e1ade",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "9037ccb712b3db5319ecd56baac5dd8680cfca73d8bcf57276977ef94ecad3ca"
+    }
+  },
+  "checks": [
+    {
+      "name": "desktop-db",
+      "at": "2026-11-02T07:51:52.958467+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "-c",
+        "import os,subprocess,sys; from pathlib import Path; env=dict(os.environ); env.pop(\"PYTHONHOME\",None); env.pop(\"UV_INTERNAL__PYTHONHOME\",None); sys.exit(subprocess.call([str(Path(\"server/.venv/Scripts/python.exe\").resolve()),\"-m\",\"tests\",\"runner_desktop\"],cwd=\"server\",env=env))"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "10d08565feb764063213a1eb27ff3fb1410588977cf36bab03d0dd4d883bdaf8",
+      "plan_hash": "5ea26b1351eb01ef0e852c8a13d1733bd83786e50cde077ce604ed2c6e6b8bf8",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-02-prequiz-nested-notes/1793605909923956300-desktop-db.log"
+    },
+    {
+      "name": "runner",
+      "at": "2026-11-02T07:52:01.385900+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "-c",
+        "import subprocess,sys; base=[sys.executable,\"-m\",\"pytest\"]; checks=[[\"tests/runner\",\"--ignore=tests/runner/test_desktop_window.py\",\"--ignore=tests/runner/test_status_window.py\",\"--basetemp\",\"runs/_development/2026-11-02-prequiz-nested-notes/core-tmp-1\",\"-q\"],[\"tests/runner/test_desktop_window.py\",\"--basetemp\",\"runs/_development/2026-11-02-prequiz-nested-notes/gui-tmp-1\",\"-q\"],[\"tests/runner/test_status_window.py\",\"--basetemp\",\"runs/_development/2026-11-02-prequiz-nested-notes/status-tmp-1\",\"-q\"]]; codes=[subprocess.call(base+args) for args in checks]; sys.exit(int(any(codes)))"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "10d08565feb764063213a1eb27ff3fb1410588977cf36bab03d0dd4d883bdaf8",
+      "plan_hash": "5ea26b1351eb01ef0e852c8a13d1733bd83786e50cde077ce604ed2c6e6b8bf8",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-02-prequiz-nested-notes/1793605899150203100-runner.log"
+    },
+    {
+      "name": "desktop-db",
+      "at": "2026-11-02T08:01:24.167469+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "-c",
+        "import os,subprocess,sys; from pathlib import Path; env=dict(os.environ); env.pop(\"PYTHONHOME\",None); env.pop(\"UV_INTERNAL__PYTHONHOME\",None); sys.exit(subprocess.call([str(Path(\"server/.venv/Scripts/python.exe\").resolve()),\"-m\",\"tests\",\"runner_desktop\"],cwd=\"server\",env=env))"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "5672c4f1ed2043cc3ef6bb17eb3e82c2ed6f574b72d52f5e782dc5f178b39a2a",
+      "plan_hash": "3c91de29a6d69459969a3e48478008dfe307d5da6377cf9ba84fae684a2e1ade",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-02-prequiz-nested-notes/1793606481571773300-desktop-db.log"
+    },
+    {
+      "name": "runner",
+      "at": "2026-11-02T08:01:45.276302+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "-c",
+        "import subprocess,sys; base=[sys.executable,\"-m\",\"pytest\"]; checks=[[\"tests/runner\",\"--ignore=tests/runner/test_desktop_window.py\",\"--ignore=tests/runner/test_status_window.py\",\"--basetemp\",\"runs/_development/2026-11-02-prequiz-nested-notes/core-tmp-2\",\"-q\"],[\"tests/runner/test_desktop_window.py\",\"--basetemp\",\"runs/_development/2026-11-02-prequiz-nested-notes/gui-tmp-2\",\"-q\"],[\"tests/runner/test_status_window.py\",\"--basetemp\",\"runs/_development/2026-11-02-prequiz-nested-notes/status-tmp-2\",\"-q\"]]; codes=[subprocess.call(base+args) for args in checks]; sys.exit(int(any(codes)))"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "5672c4f1ed2043cc3ef6bb17eb3e82c2ed6f574b72d52f5e782dc5f178b39a2a",
+      "plan_hash": "3c91de29a6d69459969a3e48478008dfe307d5da6377cf9ba84fae684a2e1ade",
+      "inputs": [
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-02-prequiz-nested-notes/1793606484705080800-runner.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-02T08:03:16.225815+00:00",
+    "summary": "최종 코드의 하위 폴더 탐색 경계·사본/버전/UID 보존, 읽기 전용 자료 준비·확정 매칭, 원본/합본 해시와 파생 ID 충돌 차단, 기존 agent.ps1과 프로그램의 실행 환경 일치를 검토했다. 전체 504개와 격리 DB 검사 통과. 실제 작업 516이 기존 prep/시도를 재사용하고 127쪽 렌더 후 저작 단계에서 실행 중이다. 덱 완료/업로드는 아직 아니며 실패 511/515와 검수 이력을 보존했다.",
+    "evidence_version": 2,
+    "source_hash": "5672c4f1ed2043cc3ef6bb17eb3e82c2ed6f574b72d52f5e782dc5f178b39a2a",
+    "plan_hash": "3c91de29a6d69459969a3e48478008dfe307d5da6377cf9ba84fae684a2e1ade",
+    "inputs": [
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "runner",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "tests/runner",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "completed_local",
+    "events": [
+      {
+        "at": "2026-11-02T08:03:16.744702+00:00",
+        "type": "completed_local",
+        "evidence": "탐색·준비 판정·정상 실행 환경 선택 수정 및 504개/격리 DB 검사·release gate 통과. 승인된 내일 예습을 작업 516으로 재개하고 실제 PDF 127쪽 렌더·저작 단계 실행을 확인했다. 생성은 백그라운드에서 계속되며 덱 완료/업로드와 구분한다. 서버 코드 배포 없음.",
+        "resolution": null
+      }
+    ],
+    "links": []
+  },
+  "updated_at": "2026-11-02T08:03:16.744717+00:00"
+}

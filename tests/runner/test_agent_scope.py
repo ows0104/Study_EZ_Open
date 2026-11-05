@@ -104,3 +104,51 @@ def test_current_block_job_is_processed(scoped_agent):
     assert scoped_agent.tick() is True
     assert handled == [job]
     assert scoped_agent.building == {}
+
+
+def test_claimed_explicit_root_runs_outside_block_with_exact_generation(scoped_agent):
+    class Client:
+        def call(self,*args):
+            return {'job':{'id':524,'subject':'기초신경과학','runId':'260604_07',
+                'kind':agent.BANK,'rootGenerationId':'a'*32}}
+    scoped_agent.client=Client()
+    handled=[];scoped_agent.handle=handled.append
+    assert scoped_agent.tick()
+    job=handled[0]
+    assert job.explicit_root and job.what=='뿌리 학습'
+    argv=scoped_agent.make_argv(job)
+    assert argv[argv.index('--root-generation')+1]=='a'*32
+    assert argv[argv.index('--run-id')+1]=='260604_07'
+    assert scoped_agent.building=={}
+
+
+@pytest.mark.parametrize('kind,ident',[(agent.BANK,''),(agent.BANK,'not-an-id'),(agent.BANK_POINTS,'a'*32),(agent.deck.PRE,'a'*32)])
+def test_unbound_or_nonroot_job_cannot_expand_block(scoped_agent,kind,ident):
+    updates=[]
+    scoped_agent.claim=lambda slot:agent.Job(524,'기초신경과학','260604_07',kind=kind,root_generation_id=ident)
+    scoped_agent.report=lambda job,**fields:updates.append(fields)
+    scoped_agent.handle=lambda job:pytest.fail('must not process')
+    assert not scoped_agent.tick()
+    assert updates[0]['state']=='held'
+
+
+@pytest.mark.parametrize('choice',['held','canceled'])
+def test_explicit_root_preserves_desktop_stop(scoped_agent,monkeypatch,choice):
+    monkeypatch.setattr(agent.desktop_control,'decision',lambda *args:choice if len(args)>1 else '')
+    job=agent.Job(524,'기초신경과학','260604_07',kind=agent.BANK,root_generation_id='a'*32)
+    scoped_agent.claim=lambda slot:job
+    updates=[];scoped_agent.report=lambda job,**fields:updates.append(fields)
+    scoped_agent.handle=lambda job:pytest.fail('stopped root must not process')
+    assert not scoped_agent.tick()
+    assert updates[0]['state']==choice
+
+
+def test_root_cli_uses_bound_request_without_latest_bank_lookup(tmp_path,monkeypatch):
+    from runner.cli import main as cli
+    from runner import connection_generation
+    calls=[]
+    monkeypatch.setattr(cli.cycle,'runner_token',lambda *_:'synthetic-token')
+    monkeypatch.setattr(connection_generation,'run_generation',lambda *args,**kwargs:calls.append((args,kwargs)) or 0)
+    monkeypatch.setattr(cli.bank,'run',lambda *args,**kwargs:pytest.fail('must not select latest bank'))
+    assert cli.main(['bank','약리학','--run-id','demo','--runs',str(tmp_path),'--root-generation','a'*32])==0
+    assert calls[0][0][1:]==('약리학','demo',tmp_path,'a'*32)

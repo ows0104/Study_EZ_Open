@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { Stem } from "../lecture/Stem";
 import type { BankAnswer, BankQuestion } from "../types/bank";
 import type { SlidePreloader } from "../slidePreload";
@@ -12,6 +13,20 @@ import "./review-notes.css";
 export { shuffled } from "./presentation";
 
 const letter = (index: number) => String.fromCharCode(65 + index);
+
+function QuestionStimulus({image,onReady}:{image:NonNullable<BankQuestion['stimuli']>[number];onReady:(loaded:boolean)=>void}) {
+  const [failed,setFailed]=useState(false);
+  return failed?<p role="alert">문항 그림을 불러오지 못했습니다. 그림을 확인하기 전에는 회상 완료로 평가하지 마세요.</p>
+    :<img src={image.url} alt={image.alt} width={image.width} height={image.height} onLoad={()=>onReady(true)} onError={()=>{setFailed(true);onReady(false);}}/>;
+}
+
+function QuestionStimuli({images,onReady}:{images:NonNullable<BankQuestion['stimuli']>;onReady?:(ready:boolean)=>void}) {
+  const loaded=useRef(new Set<number>());const failed=useRef(false);
+  return <div className="bank-stimuli">{images.map((s,i)=><figure key={s.sha256+':'+i}><QuestionStimulus image={s} onReady={ready=>{
+    if(ready)loaded.current.add(i);else failed.current=true;
+    onReady?.(!failed.current&&loaded.current.size===images.length);
+  }}/></figure>)}</div>;
+}
 
 /** ChatGPT 가 항목에 스스로 붙인 꼬리표(`L1:` · `R2:`). 화면의 1·2·A·B 와 겹치므로 보일 때만 뗀다 — 짝은 원문으로 맞춘다. */
 const bare = (item: string) => item.replace(/^[LR]\d+\s*[:.)]\s*/, "");
@@ -28,7 +43,7 @@ export function choiceScore(q: BankQuestion, answer: BankAnswer | null, picked: 
 }
 
 /** 발문. cloze 빈칸은 답을 보면 채운다. */
-export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false, showChoiceScore = true }: {
+export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false, showChoiceScore = true,onStimuliReady }: {
   question: BankQuestion;
   answer: BankAnswer | null;
   picked: Set<string>;
@@ -38,11 +53,13 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
   showOptions?: boolean;
   disabled?: boolean;
   showChoiceScore?: boolean;
+  onStimuliReady?:(ready:boolean)=>void;
 }) {
   const score = showChoiceScore ? choiceScore(q, answer, picked) : null;
   return (
     <>
       <BankStem text={q.question} list={q.format === "list"} cloze={q.format === "cloze"} answerUnits={answer?.answerUnits} />
+      {!!q.stimuli?.length&&<QuestionStimuli key={q.question_id+q.stimuli.map(s=>s.sha256).join('')} images={q.stimuli} onReady={onStimuliReady}/>}
       {q.format === "ox" && !answer ? <p className="bank-note">O 인가 X 인가, 그리고 왜인가</p> : null}
       {q.mcq_mode === "recall_first" && !showOptions ? <p className="bank-note">기억 확인형 · 먼저 답을 떠올린 뒤 선지를 공개하세요.</p> : null}
       {q.options.length && showOptions ? (

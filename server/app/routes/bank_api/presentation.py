@@ -33,6 +33,9 @@ def _public(q: dict, *, bank: dict, show_choices: bool = True) -> dict:
     out = {**{k: v for k, v in q.items() if k not in ANSWER_FIELDS}, "mcq_mode": choice_mode(q)}
     out.pop("hint", None)  # Retired experiment fields can remain in older stored JSON.
     out.pop("personalSlideReferences", None)
+    if q.get('stimuli'):
+        from studyez_contracts.roots.media import public_images
+        out['stimuli']=public_images(q)
     out["targetMastery"] = target_for(bank, q)["effective"]
     if not show_choices and out["mcq_mode"] == "recall_first":
         out["options"] = []

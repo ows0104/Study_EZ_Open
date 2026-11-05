@@ -1,0 +1,44 @@
+{
+  "id": "2026-11-03-root-schema-compat",
+  "title": "뿌리 출력 형식 호환과 생성 전 거절의 제한 복구",
+  "area": "generation",
+  "created_at": "2026-11-03T12:09:48.727845+00:00",
+  "required_checks": [
+    "contracts",
+    "generation"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-03T12:09:49.061722+00:00",
+      "evidence": "Existing user authorization requests one-click pipeline, deployment and exact real-material private example. This is deterministic schema compatibility repair before any content was accepted/generated; same generation, web response, source and review budget remain. No new content authoring round or web resend.",
+      "scope": "Root-only transport schema compatibility, unchanged full validation, explicit once-only proven HTTP400 preflight recovery with prior ledger/log preserved; same authorized pilot only.",
+      "evidence_version": 2,
+      "source_hash": "9722476493e215b7aefd17be912e6445d67ca6683ed8f4b69a4f825ff1d8b915",
+      "plan_hash": "3bfefb35076ef456efb34482494b9cc81ad206b6a2f3e6b5bda087401b7f8468",
+      "inputs": [
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "b7f709ff0d686ba96674f8475397ec1539f8cd2ae6ca1044e5db7274e53a9966"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-03T12:09:49.186864+00:00"
+}

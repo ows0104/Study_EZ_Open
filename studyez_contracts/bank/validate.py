@@ -51,6 +51,14 @@ def validate_bank(bank: dict, source_ids: list[str], *, learning_structure: bool
 
     if errors:
         return result()
+    if any(q.get('stimuli')for q in bank['questions']):
+        from ..roots.media import validate_images
+        try:
+            validate_images(bank)
+            if any(s['source_id']not in source_ids for q in bank['questions']for s in q.get('stimuli',[])):
+                errors.append('stimuli: 유효한 원본 source_id 필요')
+        except (ValueError,KeyError,TypeError)as error:errors.append(str(error))
+        if errors:return result()
 
     def fail(ok: bool, text: str) -> None:
         if not ok:
