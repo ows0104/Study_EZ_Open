@@ -160,8 +160,9 @@ def test_sweep_holds_only_the_stopped_kind_and_keeps_notes(tmp_path):
 @pytest.mark.skipif(os.name != 'nt', reason='Windows desktop shortcut')
 def test_shortcut_installer_supports_korean_filename_in_windows_powershell(tmp_path):
     root = Path(__file__).resolve().parents[2]
-    subprocess.run(['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+    result = subprocess.run(['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
                     str(root / 'scripts/install-runner-desktop.ps1'), '-Destination', str(tmp_path)],
-                   check=True, capture_output=True, timeout=20,
+                   capture_output=True, timeout=20,
                    creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+    assert result.returncode == 0, (result.stdout + result.stderr).decode('utf-8', errors='replace')
     assert (tmp_path / 'Study EZ 러너.lnk').is_file()
