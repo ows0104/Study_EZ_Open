@@ -155,13 +155,64 @@
         "uv.lock"
       ],
       "log": "runs/_development/2026-11-06-root-tier-transport/1793905292507211400-tier-regression.log"
+    },
+    {
+      "name": "live-tier-recovery",
+      "at": "2026-11-05T19:17:45.954449+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-root-tier-transport/live.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ba3d7f49d12d64c4576c58e3eb23125f808391077440cba2e825c9304cdf1a91",
+      "plan_hash": "15e95a416d856901851cd2d2e25df661edd3eb685a6036d70e6c647ecdaff630",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-root-tier-transport/1793906246292485100-live-tier-recovery.log"
     }
   ],
-  "review": null,
+  "review": {
+    "at": "2026-11-05T19:20:02.747770+00:00",
+    "summary": "Reviewed exact existing tier alias only, provider bytes and clinical/numeric data retained; deterministic derived explanation compatibility keeps raw judgments exact; explicit archive-bound runtime revalidation, no model replay or budget reset. 12 dedicated +252 regression +3 server tests and actual recovery receipts pass. Endocarditis final bank still invalid duplicate concepts; held at three rounds, not released. CNS verified independently.",
+    "evidence_version": 2,
+    "source_hash": "ba3d7f49d12d64c4576c58e3eb23125f808391077440cba2e825c9304cdf1a91",
+    "plan_hash": "15e95a416d856901851cd2d2e25df661edd3eb685a6036d70e6c647ecdaff630",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-05T19:02:24.002566+00:00"
+  "updated_at": "2026-11-05T19:20:02.844823+00:00"
 }
