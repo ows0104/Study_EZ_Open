@@ -33,7 +33,7 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Install test dependencies
         run: |
-          python -m pip install -r requirements.txt pytest httpx PyYAML
+          python -m pip install -r requirements.txt pytest httpx PyYAML requests
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm.cmd --prefix web ci
       - name: Install server dependencies

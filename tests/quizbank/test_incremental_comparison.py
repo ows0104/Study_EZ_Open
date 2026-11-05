@@ -1,10 +1,9 @@
 import copy
-import importlib
 import json
 
 import pytest
 
-comparison = importlib.import_module("work.incremental-review-20261015.compare_next_job")
+from scripts import incremental_comparison as comparison
 
 
 def test_usage_metrics_count_zero_time_cache_hits_without_counting_model_calls(tmp_path):
