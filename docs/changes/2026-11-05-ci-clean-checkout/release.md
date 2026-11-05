@@ -12,3 +12,5 @@ CI 수집 실패의 두 원인을 수정했다. 일반 metrics/quality_checks �
 두 번째 원격 실행 41983410862는 Python 1,919 passed/1 skipped/1 failed였다. 남은 실패는 Windows 바로가기 설치 검사가 요구하는 .venv 부재다. CI에 실제 프로젝트 가상환경 생성과 PATH 등록을 추가했다. 기존 바로가기 검사를 포함한 로컬 검사를 다시 통과했으며 새 SHA에서 전체 CI를 실행한다. 기존 원격 실패를 보존하고 건너뛰기로 해결하지 않는다.
 
 run41984679415에서 실제 오류를 확인: 영어 Windows WScript.Shell.Save가 `Study EZ ??.lnk`를 저장하지 못했다. 같은 목적지에 고유 ASCII 임시 이름으로 COM 저장 후 PowerShell Unicode Move-Item으로 원래 이름을 반영하며 임시 파일을 finally 정리하도록 installer를 수정했다. 대상 pythonw/인수/설명/작업 디렉터리는 유지한다. 기존 테스트에 임시 파일 잔여 없음 검증과 실패 출력만 보강했다. 관련 38개 로컬 검사와 PowerShell UTF-8 BOM 보존을 확인했다. 영문 Windows의 실제 동작은 새 GitHub SHA에서 검증한다.
+
+run41985032273: 영어 Windows installer와 전체 Python 회귀 통과. 서버는106/107 통과, 기존 시간표 조건부 도구 입력 timetable-patch.json/source.json이 ignore되어 누락된 한 건만 실패했다. 두 정확한 입력 경로만 추적하고 해당 정본에 -text를 적용해 원래 승인 CRLF 바이트를 보존했다. 기존 source after_sha256를 변경하지 않았고 staged blob의 SHA가 원래 승인 값과 정확히 일치함을 검증했다. 로컬 및 Git 추적 파일만 새로 복제한 checkout에서 시간표 보존/재실행/복원/실패 원자성 6개 시나리오 모두 통과. 실제 운영 DB 갱신·PDF 추가·문항 변경은 없다.

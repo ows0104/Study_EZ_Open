@@ -7,6 +7,8 @@ work 없는 checkout에서 tests/quizbank/test_incremental_comparison.py의 6개
 
 실제 .venv 준비 후에도 영어 Windows의 WScript.Shell.Save가 한글 파일명을 저장하지 못했다. 목적지/대상/인수/설명/이름은 유지하고 COM 저장용 임시 이름만 ASCII로 한다. 기존 바로가기를 교체하는 동작은 유지하며 실패/성공 모두 새 임시 파일만 정리한다. 바로가기 변경은 기존 installer를 명시적으로 실행할 때만 일어난다.
 
+시간표 조건부 갱신의 두 JSON은 생성 캐시가 아닌 이미 승인·적용된 변경의 필수 입력이다. 정확한 경로만 추적 예외로 하며 PDF는 넣지 않는다. 기존 source after_sha256=3ff5d3c49b0aa93fdc3e3284a76b00e32a353c0ba6b8b552448ab75cd401277f를 수정하지 않고 해당 정본의 원래 CRLF 바이트를 Git -text 속성으로 보존한다. 운영 시간표/DB 갱신 명령은 실행하지 않는다.
+
 ## 책임·입출력 계약·오류 상태
 scripts/incremental_comparison.py는 전달받은 합성/실제 아티팩트 폴더를 읽기만 한다. main/운영 탐색/자동 보고서 쓰기를 복사하지 않는다. 기존 업무용 work 원본은 그대로 보존한다.
 

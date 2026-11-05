@@ -102,6 +102,9 @@ docs/changes/**/*.zip
 docs/changes/**/*.json
 !docs/changes/**/state.json
 !docs/changes/**/release-config.json
+# Reviewed timetable update inputs are required by the tracked conditional updater.
+!docs/changes/2026-11-05-immunity-timetable/timetable-patch.json
+!docs/changes/2026-11-05-immunity-timetable/source.json
 
 # Local staging audit path lists.
 docs/changes/**/*.bin

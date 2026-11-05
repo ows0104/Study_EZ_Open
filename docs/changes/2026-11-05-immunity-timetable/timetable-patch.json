@@ -1,0 +1,386 @@
+[
+  {
+    "before": {
+      "id": "official-4938fc1a755a",
+      "date": "2026-11-02",
+      "startTime": "14:00",
+      "endTime": "15:50",
+      "title": "감염과 면역 5",
+      "details": "<동영상 강의 시청>\n위장관 감염\n피부연조직감염\n요로감염\n폐렴",
+      "professor": "폐렴",
+      "category": "lecture",
+      "sourcePage": "15"
+    },
+    "after": {
+      "id": "official-4938fc1a755a",
+      "date": "2026-11-02",
+      "startTime": "14:00",
+      "endTime": "15:50",
+      "title": "감염과 면역 5",
+      "details": "<동영상 강의 시청>\n위장관 감염\n피부연조직감염\n요로감염\n폐렴",
+      "professor": "",
+      "category": "lecture",
+      "sourcePage": "15"
+    }
+  },
+  {
+    "before": {
+      "id": "official-5c7d62617c1d",
+      "date": "2026-11-10",
+      "startTime": "09:00",
+      "endTime": "09:50",
+      "title": "감염과 면역 22",
+      "details": "미생물학) 콜레라,\n캄필로박터, 수도모나스\n방예지",
+      "professor": "방예지",
+      "category": "lecture",
+      "sourcePage": "16"
+    },
+    "after": {
+      "id": "official-5c7d62617c1d",
+      "date": "2026-11-05",
+      "startTime": "13:00",
+      "endTime": "13:50",
+      "title": "감염과 면역 12",
+      "details": "미생물학) 콜레라,\n캄필로박터, 수도모나스\n방예지",
+      "professor": "방예지",
+      "category": "lecture",
+      "sourcePage": "16"
+    }
+  },
+  {
+    "before": {
+      "id": "official-5539888b20b8",
+      "date": "2026-11-06",
+      "startTime": "14:00",
+      "endTime": "14:50",
+      "title": "감염과 면역 17",
+      "details": "미생물학) 미코플라스마,\n클라미디아\n김동현",
+      "professor": "김동현",
+      "category": "lecture",
+      "sourcePage": "15"
+    },
+    "after": {
+      "id": "official-5539888b20b8",
+      "date": "2026-11-05",
+      "startTime": "14:00",
+      "endTime": "14:50",
+      "title": "감염과 면역 13",
+      "details": "미생물학) 미코플라스마,\n클라미디아\n김동현",
+      "professor": "김동현",
+      "category": "lecture",
+      "sourcePage": "15"
+    }
+  },
+  {
+    "before": {
+      "id": "official-9e6c08193748",
+      "date": "2026-11-05",
+      "startTime": "14:00",
+      "endTime": "14:50",
+      "title": "감염과 면역 13",
+      "details": "미생물학) 무산소성세균\n염진기",
+      "professor": "염진기",
+      "category": "lecture",
+      "sourcePage": "15"
+    },
+    "after": {
+      "id": "official-9e6c08193748",
+      "date": "2026-11-06",
+      "startTime": "14:00",
+      "endTime": "14:50",
+      "title": "감염과 면역 17",
+      "details": "미생물학) 무산소성세균\n염진기",
+      "professor": "염진기",
+      "category": "lecture",
+      "sourcePage": "15"
+    }
+  },
+  {
+    "before": {
+      "id": "official-5c96def7cf99",
+      "date": "2026-11-05",
+      "startTime": "13:00",
+      "endTime": "13:50",
+      "title": "감염과 면역 12",
+      "details": "미생물학) 렙토스피라,\n매독균, 보렐리아\n김현제",
+      "professor": "김현제",
+      "category": "lecture",
+      "sourcePage": "15"
+    },
+    "after": {
+      "id": "official-5c96def7cf99",
+      "date": "2026-11-10",
+      "startTime": "09:00",
+      "endTime": "09:50",
+      "title": "감염과 면역 22",
+      "details": "미생물학) 렙토스피라,\n매독균, 보렐리아\n김현제",
+      "professor": "김현제",
+      "category": "lecture",
+      "sourcePage": "15"
+    }
+  },
+  {
+    "before": {
+      "id": "official-a886d6a379ea",
+      "date": "2026-11-13",
+      "startTime": "09:00",
+      "endTime": "09:50",
+      "title": "감염과 면역 30",
+      "details": "미생물학) 아데노바이러스,\n폭스바이러스\n방예지",
+      "professor": "방예지",
+      "category": "lecture",
+      "sourcePage": "16"
+    },
+    "after": {
+      "id": "official-a886d6a379ea",
+      "date": "2026-11-10",
+      "startTime": "10:00",
+      "endTime": "10:50",
+      "title": "감염과 면역 23",
+      "details": "미생물학) 아데노바이러스,\n폭스바이러스\n방예지",
+      "professor": "방예지",
+      "category": "lecture",
+      "sourcePage": "16"
+    }
+  },
+  {
+    "before": {
+      "id": "official-626ec806726f",
+      "date": "2026-11-10",
+      "startTime": "10:00",
+      "endTime": "10:50",
+      "title": "감염과 면역 23",
+      "details": "미생물학)\n헤르페스바이러스과\n김현제",
+      "professor": "김현제",
+      "category": "lecture",
+      "sourcePage": "16"
+    },
+    "after": {
+      "id": "official-626ec806726f",
+      "date": "2026-11-13",
+      "startTime": "09:00",
+      "endTime": "09:50",
+      "title": "감염과 면역 30",
+      "details": "미생물학)\n헤르페스바이러스과\n김현제",
+      "professor": "김현제",
+      "category": "lecture",
+      "sourcePage": "16"
+    }
+  },
+  {
+    "before": {
+      "id": "official-dee56c0282d7",
+      "date": "2026-11-19",
+      "startTime": "14:00",
+      "endTime": "14:50",
+      "title": "감염과 면역 47",
+      "details": "감염학) 병원감염\n김의석",
+      "professor": "김의석",
+      "category": "lecture",
+      "sourcePage": "17"
+    },
+    "after": {
+      "id": "official-dee56c0282d7",
+      "date": "2026-11-18",
+      "startTime": "09:00",
+      "endTime": "09:50",
+      "title": "감염과 면역 40",
+      "details": "감염학) 의료관련감염\n김의석",
+      "professor": "김의석",
+      "category": "lecture",
+      "sourcePage": "17"
+    }
+  },
+  {
+    "before": {
+      "id": "official-e251c074ca21",
+      "date": "2026-11-19",
+      "startTime": "15:00",
+      "endTime": "15:50",
+      "title": "감염과 면역 48",
+      "details": "형성평가와 피드백\n박완범",
+      "professor": "박완범",
+      "category": "lecture",
+      "sourcePage": "17"
+    },
+    "after": {
+      "id": "official-e251c074ca21",
+      "date": "2026-11-19",
+      "startTime": "13:00",
+      "endTime": "13:50",
+      "title": "감염과 면역 46",
+      "details": "형성평가와 피드백\n박완범",
+      "professor": "박완범",
+      "category": "lecture",
+      "sourcePage": "17"
+    }
+  },
+  {
+    "before": {
+      "id": "official-fb8ded501e16",
+      "date": "2026-11-18",
+      "startTime": "09:00",
+      "endTime": "09:50",
+      "title": "감염과 면역 40",
+      "details": "감염학) 신종 감염병에 대한\n대처와 전망\n박상원",
+      "professor": "박상원",
+      "category": "lecture",
+      "sourcePage": "17"
+    },
+    "after": {
+      "id": "official-fb8ded501e16",
+      "date": "2026-11-19",
+      "startTime": "14:00",
+      "endTime": "14:50",
+      "title": "감염과 면역 47",
+      "details": "감염학) 신종 감염병에 대한\n대처와 전망\n박상원",
+      "professor": "박상원",
+      "category": "lecture",
+      "sourcePage": "17"
+    }
+  },
+  {
+    "before": {
+      "id": "official-0f0b4e690e67",
+      "date": "2026-11-19",
+      "startTime": "13:00",
+      "endTime": "13:50",
+      "title": "감염과 면역 46",
+      "details": "감염학) 감염병의 예방:\n환경 관리\n신수",
+      "professor": "신수",
+      "category": "lecture",
+      "sourcePage": "17"
+    },
+    "after": {
+      "id": "official-0f0b4e690e67",
+      "date": "2026-11-19",
+      "startTime": "15:00",
+      "endTime": "15:50",
+      "title": "감염과 면역 48",
+      "details": "감염학) 감염병의 예방:\n환경 관리\n신수",
+      "professor": "신수",
+      "category": "lecture",
+      "sourcePage": "17"
+    }
+  },
+  {
+    "before": {
+      "id": "official-1d3b0c5c9396",
+      "date": "2026-11-24",
+      "startTime": "09:00",
+      "endTime": "09:50",
+      "title": "감염과 면역 55",
+      "details": "전신 경화증\n김민정",
+      "professor": "김민정",
+      "category": "lecture",
+      "sourcePage": "18"
+    },
+    "after": {
+      "id": "official-1d3b0c5c9396",
+      "date": "2026-11-24",
+      "startTime": "09:00",
+      "endTime": "09:50",
+      "title": "감염과 면역 55",
+      "details": "전신 경화증\n박준원",
+      "professor": "박준원",
+      "category": "lecture",
+      "sourcePage": "18"
+    }
+  },
+  {
+    "before": {
+      "id": "official-48bc281201b3",
+      "date": "2026-11-25",
+      "startTime": "10:00",
+      "endTime": "10:50",
+      "title": "감염과 면역 59",
+      "details": "알레르기 비염\n양민석",
+      "professor": "양민석",
+      "category": "lecture",
+      "sourcePage": "18"
+    },
+    "after": {
+      "id": "official-48bc281201b3",
+      "date": "2026-11-25",
+      "startTime": "10:00",
+      "endTime": "10:50",
+      "title": "감염과 면역 59",
+      "details": "알레르기 비염\n장윤석",
+      "professor": "장윤석",
+      "category": "lecture",
+      "sourcePage": "18"
+    }
+  },
+  {
+    "before": {
+      "id": "official-8fbb8bbe7ee5",
+      "date": "2026-11-26",
+      "startTime": "09:00",
+      "endTime": "09:50",
+      "title": "감염과 면역 63",
+      "details": "두드러기/혈관부종/\n아나필락시스\n장윤석",
+      "professor": "장윤석",
+      "category": "lecture",
+      "sourcePage": "18"
+    },
+    "after": {
+      "id": "official-8fbb8bbe7ee5",
+      "date": "2026-11-26",
+      "startTime": "09:00",
+      "endTime": "09:50",
+      "title": "감염과 면역 63",
+      "details": "두드러기/혈관부종/\n아나필락시스\n강성윤",
+      "professor": "강성윤",
+      "category": "lecture",
+      "sourcePage": "18"
+    }
+  },
+  {
+    "before": {
+      "id": "official-02d3598cce6c",
+      "date": "2026-11-26",
+      "startTime": "13:00",
+      "endTime": "13:50",
+      "title": "감염과 면역 66",
+      "details": "다양한 알레르기질환\n김세훈",
+      "professor": "김세훈",
+      "category": "lecture",
+      "sourcePage": "18"
+    },
+    "after": {
+      "id": "official-02d3598cce6c",
+      "date": "2026-11-26",
+      "startTime": "11:00",
+      "endTime": "11:50",
+      "title": "감염과 면역 65",
+      "details": "다양한 알레르기질환\n양민석",
+      "professor": "양민석",
+      "category": "lecture",
+      "sourcePage": "18"
+    }
+  },
+  {
+    "before": {
+      "id": "official-e595cc98df53",
+      "date": "2026-11-26",
+      "startTime": "11:00",
+      "endTime": "11:50",
+      "title": "감염과 면역 65",
+      "details": "호산구성 질환\n박흥우",
+      "professor": "박흥우",
+      "category": "lecture",
+      "sourcePage": "18"
+    },
+    "after": {
+      "id": "official-e595cc98df53",
+      "date": "2026-11-26",
+      "startTime": "13:00",
+      "endTime": "13:50",
+      "title": "감염과 면역 66",
+      "details": "호산구성 질환\n김세훈",
+      "professor": "김세훈",
+      "category": "lecture",
+      "sourcePage": "18"
+    }
+  }
+]
