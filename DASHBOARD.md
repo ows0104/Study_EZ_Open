@@ -25,6 +25,8 @@
 
 | P1 | UI/UX 개편: 좌측 메뉴·흰 바탕·캘린더·강의 목록(학습 현황+모아풀기 통합)·강의 패널·회독·자유 노트를 운영 웹에 적용 | HungryPotato01 / Claude UI 개편 세션 | claude/ui-ux-redesign-727bb1 | web/src/App.tsx·셸, web/src/calendar/*, web/src/styles/*, web/src/bank/StudyOverview.tsx·overview.css(목록 화면), web/src/bundle/*, web/src/notices/GuidePage.tsx, 새 web/src/notes/*; 회독 기록이 서버 저장이 필요하면 server 학습 기록 API·테이블(별도 승인 후). 프로토타입 web/src/redesign-prototype/*, docs/changes/2026-11-05-ui-ux-redesign | 2026-11-06 | 프로토타입 확정, spec·plan 작성 중 → 사용자 계획 승인 후 구현. 출제·quizbank·studyez_contracts/roots·runner·content/prompts는 건드리지 않는다. 겹침 확인 필요: 사용자 지시로 강의 패널에서 뿌리·연결 학습 진입을 당분간 숨김(Map/root 작업 세션과 화면 노출 조정 필요, 코드 파일은 안 겹침) |
 
+| P1 | E2E 완료 파일의 기존 등급 별칭 전송 복구 | ows0104 / Codex E2E 형식 복구 세션 | codex/root-tier-transport | studyez_contracts/bank/authored_json.py의 기존 Must-Know→Essential 대응 공용화, roots/generation_v2.py, runner/root_native_json.py, runner/root_tier_recovery.py, quizbank/connection_generate_v2.py, 관련 tests, docs/changes/2026-11-06-root-tier-transport; 심내막염 실험만 | 2026-11-06 | 같은 사용자 승인 복구 범위의 전송 형식 처리. 기존 de1fcf73 복구 의존성을 분리 복사. CNS가 사용하는 root-authoring-recovery 코드는 불변. 같은 등급 이름 대응만 재사용, 추가 보완 호출/예산 초기화/운영변경 없음 |
+
 ## 2. 앞으로 하기로 약속된 일
 
 | 우선순위 | 작업 | 예정 작업자 | 예상 영역·파일 | 선행 조건·메모 |
