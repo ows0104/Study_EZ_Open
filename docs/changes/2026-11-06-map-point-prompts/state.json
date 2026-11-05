@@ -8,12 +8,12 @@
   ],
   "approvals": {
     "build": {
-      "at": "2026-11-05T15:33:32.040718+00:00",
-      "evidence": "2026-11-06 현재 사용자: 각각 어떤 형식이 좋을지 생각해서 구체적으로 프롬프트를 작성해줘. 두 추출 프롬프트의 JSON 형식 구체화 승인.",
-      "scope": "Map 그래프·포인트 목표/방향 JSON 형식, 프롬프트 필드 설명·예시·JSON Schema·개발용 합성 검증. 런타임 연결/모델 호출/출제 재개/배포 없음",
+      "at": "2026-11-05T15:51:14.441041+00:00",
+      "evidence": "현재 사용자: 과도한 Map 수집 항목을 줄이자는 제안에 좋아. 옛날 프롬프트를 따라할 필요 없이 참고만 하도록 제공. 동일 두 요청문의 간결화 후속 승인.",
+      "scope": "두 프롬프트 및 JSON 스키마/예시를 개념·관계·구체적 목표·간단 근거 중심 /2로 축소. 참고 지침의 tier/EXT/Markdown 전달/종속순서 미적용. 실제 파일 작성 지시 포함. 자동 회수·런타임 연결·재개·배포 없음",
       "evidence_version": 2,
-      "source_hash": "8368e7de2bf1a7b3a8a90cbd5ed379a7bc4617a3002b95dcf661e9d1b916a7b7",
-      "plan_hash": "04c488c35f010925bb7d3b6e793e1dfcee6459b692eacff1bf14556a80a4aeff",
+      "source_hash": "c4cef9067163eea55c1005696e50c8338a5068ff3eff49a74cbc86e4411dd09e",
+      "plan_hash": "98c83bed790c256d2ecc57a76227f5959a50bb3bf60132edcc7459b9be93dd07",
       "inputs": [
         ".github",
         "content",
@@ -30,7 +30,7 @@
         "tests/quizgen",
         "uv.lock"
       ],
-      "release_hash": "961327ee99f737f0384ca9cab27070908ee392baa98ccfdd962c3aeb5c976fc3"
+      "release_hash": "371430381c996b08016b8a84cebd59546cd0367ea69bde5092adde8f4e1c9f30"
     }
   },
   "checks": [
@@ -182,14 +182,72 @@
         "uv.lock"
       ],
       "log": "runs/_development/2026-11-06-map-point-prompts/1793893096440487300-prompt-review.log"
+    },
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T15:53:04.079881+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-prompts/verify_formats.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "958703778807f2ff4d7cbf36853dbf643d2078f1a3866f9a28b3adfca1db0b69",
+      "plan_hash": "98c83bed790c256d2ecc57a76227f5959a50bb3bf60132edcc7459b9be93dd07",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793893983589683700-prompt-review.log"
+    },
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T15:54:11.670455+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-prompts/verify_formats.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "320006e3b42b42420f3c508ce139381797478bab2d56bcfa359d57a09124720a",
+      "plan_hash": "98c83bed790c256d2ecc57a76227f5959a50bb3bf60132edcc7459b9be93dd07",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793894051167318100-prompt-review.log"
     }
   ],
   "review": {
-    "at": "2026-11-05T15:38:17.793456+00:00",
-    "summary": "최종 JSON 스키마 2개·프롬프트 포함 예시 2개 일치/정상 수용, 비정상 16사례 거절, 다중 부모·교차 소속·인과 순환·unreadable 2사례 수용. Map은 문항/누락 평가 지시 없음. 포인트는 단서→답 범위·핵심 요소·조건·중요도 근거·심화를 구분. 개발 검증이며 자동 런타임 미연결·모델 품질 미검증을 명시.",
+    "at": "2026-11-05T15:54:11.894928+00:00",
+    "summary": "간소 /2 최종 안내 포함 검증: 스키마·두 프롬프트 예시 일치, 오류16사례/중복JSON키 거절, 다중연결·미독해·locator 정상 수용. Map 문항 평가 지시 없음. 포인트 목표와 근거만 수집. 기존 등급·EXT·Markdown전달·종속순서는 미적용. 실제 JSON 파일 지시는 있으나 모델/회수 성공 미실증.",
     "evidence_version": 2,
-    "source_hash": "c4cef9067163eea55c1005696e50c8338a5068ff3eff49a74cbc86e4411dd09e",
-    "plan_hash": "04c488c35f010925bb7d3b6e793e1dfcee6459b692eacff1bf14556a80a4aeff",
+    "source_hash": "320006e3b42b42420f3c508ce139381797478bab2d56bcfa359d57a09124720a",
+    "plan_hash": "98c83bed790c256d2ecc57a76227f5959a50bb3bf60132edcc7459b9be93dd07",
     "inputs": [
       ".github",
       "content",
@@ -212,5 +270,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-05T15:38:17.927787+00:00"
+  "updated_at": "2026-11-05T15:54:11.980779+00:00"
 }
