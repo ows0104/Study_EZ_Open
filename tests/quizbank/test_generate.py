@@ -13,7 +13,32 @@ def test_prompt_uses_canonical_template_and_preserves_cloze():
     assert version != "unknown" and "Version:" not in body
     assert "{{title}}" not in body and "a.pdf" in body and "{정답}" in body and "{{c1}}" not in body
     assert "{{lecture_scope}}" not in body
-    assert generate.item_quality_guidance() in body
+    assert generate.item_quality_guidance().split('### 4.2 최종 내용 검수')[0].strip() in body
+    assert '### 4.2 최종 내용 검수' in body
+
+
+def test_current_quality_keeps_three_design_examples_with_clean_heading_boundaries():
+    body, _ = generate.prompt_for('강의', '', [])
+    quality = generate.item_quality_guidance()
+    assert '기초 연결을 직접 회상시키기' in quality
+    assert '함께 묶을 목표와 별도 목표 구분하기' in quality
+    assert '질문 축은 남기고 정답 단서는 없애기' in quality
+    assert 'tyrosine hydroxylase' in quality and '생산자, 소비자, 분해자' in quality
+    assert '## 1.' not in quality and '\n## 4.' not in quality and '## 5.' not in quality
+    headings = [line for line in body.splitlines() if line.startswith('## ')]
+    assert [line.split('.')[0] for line in headings] == [f'## {n}' for n in range(1,7)]
+    for label in ('5.1 파일 전체 객체','5.2 문항 객체','5.3 출처 참조','5.4 근거 객체','5.5 충돌 객체'):
+        assert '### '+label in body
+
+
+def test_restored_source_rules_and_final_checklist_are_shared_without_workflow():
+    quality = generate.item_quality_guidance()
+    for rule in ('어떤 상황에서 그 개념을 사용할지', '연결을 결론 내려서는 안 되는 한계',
+                 '추가로 물을 수 있다는 이유만으로 필수 누락',
+                 '이름 하나만 비우고', '단정어만 지워 참 문장으로',
+                 '가독성 편집 때문에 내용·조건을 생략', '### 4.2 최종 내용 검수'):
+        assert rule in quality
+    assert '### 4.1 처리 순서' not in quality and '## 5. JSON' not in quality
 
 
 def test_cli_quality_reads_only_the_current_authoring_rules(tmp_path, monkeypatch):
@@ -77,10 +102,10 @@ def test_generate_reads_pdf_and_continues_without_completion(tmp_path, monkeypat
         calls.append((prompt, kwargs))
         if len(calls) == 2:
             from pathlib import Path
-            value = (Path(__file__).parents[1] / 'fixtures/bank-file-valid.md').read_text(encoding='utf-8')
+            value = (Path(__file__).parents[1] / 'fixtures/bank-file-valid.json').read_text(encoding='utf-8')
             version = generate.prompt_for('강의', '', context['sources'])[1]
-            value = value.replace('1.76', version)
-            (out / 'study-ez-261006_02-bank.md').write_text(value, encoding='utf-8')
+            value = value.replace('1.80', version)
+            (out / 'study-ez-261006_02-bank.json').write_text(value, encoding='utf-8')
         return {"text": "문항 " * 100 if len(calls) == 1 else "나머지\nSTUDYEZ_BANK_COMPLETE",
                 "session_id": "s1", "session_usage": {"input_tokens": 5},
                 "usage": {"input_tokens": 5}, "cost_usd": None, "duration_ms": 100}
@@ -92,8 +117,8 @@ def test_generate_reads_pdf_and_continues_without_completion(tmp_path, monkeypat
     assert calls[1][1]["resume"] == "s1" and calls[1][1]["previous_usage"] == {"input_tokens": 5}
     assert "Source text" in (out / "source-text.md").read_text(encoding="utf-8")
     assert len(json.loads((out / "source-pages.json").read_text())) == 1
-    assert (out / "raw.md").read_text(encoding="utf-8").rstrip().endswith("STUDYEZ_BANK_COMPLETE")
-    assert (out / 'raw.md').read_bytes() == (out / 'study-ez-261006_02-bank.md').read_bytes()
+    assert json.loads((out / "raw.json").read_text(encoding="utf-8"))['complete'] is True
+    assert (out / 'raw.json').read_bytes() == (out / 'study-ez-261006_02-bank.json').read_bytes()
     assert len(result["usage"]) == 2
 
 

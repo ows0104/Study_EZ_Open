@@ -17,7 +17,7 @@ test('actual Markdown file selects the lecture, validates before saving and reta
   });
   await page.goto(`${process.env.STUDY_TEST_URL||'http://127.0.0.1:5199'}/tests/bank-response.html`);
   await page.getByText('답변 직접 붙여넣기',{exact:true}).click();
-  const picker=page.getByLabel('완성된 문제은행 .md 파일 불러오기');
+  const picker=page.getByLabel('완성된 문제은행 JSON 파일 불러오기 (기존 MD 지원)');
   const source=fs.readFileSync(path.join(__dirname,'../../tests/fixtures/bank-file-valid.md'),'utf8');
   await picker.setInputFiles({name:'study-ez-261006_02-bank.md',mimeType:'text/markdown',buffer:Buffer.from(source)});
   await page.getByRole('alert').waitFor();assert.equal(requests.length,0);

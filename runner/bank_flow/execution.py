@@ -65,7 +65,8 @@ def run(client: transport.Client, root: Path, subject: str, run_id: str, this_ye
 
     out = runs_dir / run_id / "bank" / time.strftime("%y%m%d-%H%M%S")
     out.mkdir(parents=True, exist_ok=True)
-    raw = out / "raw.md"
+    from studyez_contracts.bank.response_file import is_json
+    raw = out / ('raw.json' if is_json(got.get('raw')) else 'raw.md')
     existing = out / "existing-bank.json"
     if maintenance:
         existing.write_text(json.dumps(got["existingBank"], ensure_ascii=False), encoding="utf-8")
@@ -77,15 +78,17 @@ def run(client: transport.Client, root: Path, subject: str, run_id: str, this_ye
     if not got.get("raw") and not maintenance:
         return fail("저장된 웹 응답이 없습니다. CLI에서 대신 출제하지 않습니다. 웹 출제를 완료하고 응답을 저장하세요.")
     legacy = bool(re.fullmatch(r"v?1\.(?:[0-9]|1[0-2])", got.get("promptVersion", "")))
-    if got.get("raw") and not legacy and not got["raw"].rstrip().endswith("STUDYEZ_BANK_COMPLETE"):
+    if got.get("raw") and not legacy and not is_json(got['raw']) and not got["raw"].rstrip().endswith("STUDYEZ_BANK_COMPLETE"):
         return fail("저장된 웹 응답의 완료 표식이 없습니다. 완성된 응답을 먼저 확인하세요.")
-    if got.get('responseFile') or 'STUDYEZ_BANK_FILE' in (got.get('raw') or ''):
-        from studyez_contracts.bank.markdown_file import validate as validate_markdown_file
+    if got.get('responseFile') or is_json(got.get('raw')) or 'STUDYEZ_BANK_FILE' in (got.get('raw') or ''):
+        from studyez_contracts.bank.response_file import validate as validate_markdown_file
         info = got.get('responseFile')
         if not info:
-            return fail('파일 문제은행의 원본 검증 정보가 없습니다. 실제 .md 파일을 다시 전달하세요.')
+            return fail('파일 문제은행의 원본 검증 정보가 없습니다. 실제 파일을 다시 전달하세요.')
         try:
             checked_file = validate_markdown_file(got['raw'], info['filename'], subject, run_id, info)
+            if got.get('promptVersion') and checked_file['promptVersion'] != got['promptVersion']:
+                raise ValueError('파일과 요청의 프롬프트 버전이 다릅니다.')
         except (ValueError, KeyError) as error:
             return fail(f'문제은행 파일 확인: {error}')
         (out / 'response-file.json').write_text(json.dumps(checked_file, ensure_ascii=False, indent=2), encoding='utf-8')

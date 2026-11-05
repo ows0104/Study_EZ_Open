@@ -13,8 +13,9 @@ from sqlalchemy.orm import Session
 
 from app import bank_edits, bank_retention, bank_shared_response
 from app.auth import CurrentUser, require_admin, require_runner
-from app.bank_validation.markdown_file import (
+from studyez_contracts.bank.response_file import (
     required as markdown_file_required, validate as validate_markdown_file,
+    is_json,
 )
 from app.bank_validation.pages import cited_pages
 from app.bank_validation.publication import stamp as publication_stamp, usable as bank_usable
@@ -66,9 +67,9 @@ def put_bank_response(subject: str, run_id: str, payload: ResponseIn,
         raise HTTPException(409, 'Concept map 자동출제 작업이 있습니다. 완료하거나 취소한 뒤 웹 응답을 저장하세요.')
     file_info = None
     file_required = markdown_file_required(subject, run_id, payload.prompt_version)
-    if payload.response_file is not None or 'STUDYEZ_BANK_FILE' in payload.raw or file_required:
+    if payload.response_file is not None or is_json(payload.raw) or 'STUDYEZ_BANK_FILE' in payload.raw or file_required:
         if payload.response_file is None:
-            raise HTTPException(422, '이 출제는 실제 .md 파일을 불러와 저장해야 합니다. 파일 링크나 본문만으로 완료 처리하지 않습니다.')
+            raise HTTPException(422, '실제 문제은행 JSON 파일을 불러와 저장하세요. 기존 판의 MD도 읽을 수 있습니다.')
         try:
             file_info = validate_markdown_file(payload.raw, payload.response_file.filename, subject, run_id,
                                               payload.response_file.model_dump(by_alias=True))
@@ -77,7 +78,7 @@ def put_bank_response(subject: str, run_id: str, payload: ResponseIn,
         if payload.prompt_version and payload.prompt_version != file_info['promptVersion']:
             raise HTTPException(422, '파일과 요청의 프롬프트 버전이 다릅니다.')
         payload.prompt_version = file_info['promptVersion']
-    if not payload.raw.rstrip().endswith(COMPLETE_MARK):
+    if file_info is None and not payload.raw.rstrip().endswith(COMPLETE_MARK):
         raise HTTPException(422, "완료 표시가 없는 응답입니다. 답이 끝난 뒤 다시 저장하세요.")
     if not valid_conversation_url(payload.conversation_url, "chatgpt") or (
             payload.share_url is not None and not valid_share_url(payload.share_url, "chatgpt")):

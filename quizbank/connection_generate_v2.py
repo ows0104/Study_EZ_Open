@@ -94,7 +94,11 @@ def run(packet,out,model,invoke):
             elif name=='generate'or name.startswith('repair-'):
                 jsonschema.validate(raw,c.AUTHOR);c.validate_authoring(raw,ctx.get('previousAuthoring'))
                 c.require(raw['brief']['sources']==sources and raw['brief']['lecture_id']==packet['subject']+'/'+packet['runId'],'Different source/lecture')
-                value=copy.deepcopy(raw);value['bank']=visual.render(raw['bank'],raw['visual_stimuli'],packet,out/'material')
+                value=copy.deepcopy(raw)
+                if name == 'generate' and ctx.get('webBank'):
+                    from studyez_contracts.bank.authored_json import preserve_authored
+                    value['bank'] = preserve_authored(value['bank'], ctx['webResponse']['raw'], packet['title'])
+                value['bank']=visual.render(value['bank'],raw['visual_stimuli'],packet,out/'material')
                 entry['briefHash']=document_hash(value['brief'])
                 if name=='generate':
                     if ctx['initialBriefErrors']:c.validate_initial_correction(ctx['brief'],raw['brief'],raw['map_change_reason'])
@@ -112,6 +116,12 @@ def run(packet,out,model,invoke):
     base={k:packet[k]for k in ('title','scope','conceptMap','points','examDate')}
     base.update(lecture_id=packet['subject']+'/'+packet['runId'],sources=sources,preserved_scope=g.lecture_scope(packet['title'],packet['sources']))
     if packet.get('authoring')=='web':base['webResponse']=packet['webResponse']
+    if packet.get('authoring') == 'web':
+        from studyez_contracts.bank.response_file import is_json
+        if is_json(packet['webResponse']['raw']):
+            from studyez_contracts.bank.authored_json import to_bank
+            base['webBank'], authored_evidence = to_bank(packet['webResponse']['raw'], packet['title'])
+            g.write(out / 'authored-evidence.json', authored_evidence)
     intake={**source_intake(packet,sources),'preserved_scope':base['preserved_scope']}if packet.get('inputMode')=='source'else base
     initial=stage('normalize',intake)
     initial_errors=c.brief_findings(initial,sources);initial_cost=int(bool(initial_errors))
@@ -119,8 +129,8 @@ def run(packet,out,model,invoke):
         ledger['repairRounds']=max(ledger['repairRounds'],initial_cost);g.write(ledger_path,ledger)
     authored=stage('generate',{**base,'brief':initial,'initialBriefErrors':initial_errors})
     if packet.get('authoring')=='web':
-        import re
-        meta=json.loads(re.match(r'<!-- STUDYEZ_BANK_FILE (\{[^\n]+\}) -->',packet['webResponse']['raw'].removeprefix('\ufeff'))[1])
+        from studyez_contracts.bank.response_file import metadata as file_metadata
+        meta=file_metadata(packet['webResponse']['raw'])
         c.require([q['question_id']for q in authored['bank']['questions']]==meta['question_ids'],'Web original IDs must be preserved')
     for n in range(4-initial_cost):
         b=authored['brief'];bank=authored['bank']

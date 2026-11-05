@@ -5,7 +5,7 @@ async function captureBankDownload(target, expectedConversation, timeoutMs = 120
   const conversation = /^\/(?:g\/[^/]+\/)?c\/([A-Za-z0-9_:-]+)/.exec(location.pathname)?.[1];
   if (!conversation || conversation !== expectedConversation
       || !/^[\w-]+$/.test(target.runId || "") || !target.subject
-      || target.filename !== `study-ez-${target.runId}-bank.md`) {
+      || ![`study-ez-${target.runId}-bank.md`,`study-ez-${target.runId}-bank.json`].includes(target.filename)) {
     return { error: "파일을 받을 대화·강의가 일치하지 않습니다." };
   }
   const filename = target.filename;
@@ -27,7 +27,7 @@ async function captureBankDownload(target, expectedConversation, timeoutMs = 120
       catch { return false; }
     });
   }
-  if (!control) return { error: "이 강의의 실제 MD 다운로드 버튼이 아직 없습니다." };
+  if (!control) return { error: "이 강의의 실제 문제은행 다운로드 버튼이 아직 없습니다." };
   return new Promise(resolve => {
     const original = URL.createObjectURL;
     const anchorPrototype = typeof HTMLAnchorElement === 'function' ? HTMLAnchorElement.prototype : null;
@@ -45,12 +45,14 @@ async function captureBankDownload(target, expectedConversation, timeoutMs = 120
       if (!blob || typeof blob.arrayBuffer !== 'function' || blob.size < 200 || blob.size > 8_000_000) return;
       try {
         const raw = new TextDecoder('utf-8', {fatal:true, ignoreBOM:true}).decode(await blob.arrayBuffer());
-        const header = /^<!-- STUDYEZ_BANK_FILE (\{[^\n]+\}) -->\r?\n/.exec(raw.replace(/^\uFEFF/, ''));
-        if (!header) return;
-        const info = JSON.parse(header[1]);
+        const text = raw.replace(/^\uFEFF/, '');
+        const jsonFile = filename.endsWith('.json');
+        const header = /^<!-- STUDYEZ_BANK_FILE (\{[^\n]+\}) -->\r?\n/.exec(text);
+        if (!jsonFile && !header) return;
+        const info = JSON.parse(jsonFile ? text : header[1]);
         if (info.run_id !== target.runId || info.subject !== target.subject
             || target.promptVersion && info.prompt_version !== target.promptVersion
-            || !raw.trimEnd().endsWith('STUDYEZ_BANK_COMPLETE')) return;
+            || (jsonFile ? info.complete !== true : !raw.trimEnd().endsWith('STUDYEZ_BANK_COMPLETE'))) return;
         const current = /^\/(?:g\/[^/]+\/)?c\/([A-Za-z0-9_:-]+)/.exec(location.pathname)?.[1];
         if (current !== expectedConversation) { finish({error:'다운로드 중 대화가 변경됐습니다.'}); return; }
         finish({raw, filename});
@@ -67,7 +69,7 @@ async function captureBankDownload(target, expectedConversation, timeoutMs = 120
       }
       return Reflect.apply(originalClick, this, args);
     }
-    const timer = setTimeout(() => finish({error:'실제 MD 다운로드 데이터를 기다리는 중입니다.'}), timeoutMs);
+    const timer = setTimeout(() => finish({error:'실제 문제은행 다운로드 데이터를 기다리는 중입니다.'}), timeoutMs);
     URL.createObjectURL = capture;
     if (originalClick) anchorPrototype.click = captureClick;
     try {

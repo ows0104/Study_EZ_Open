@@ -312,14 +312,13 @@ def web_dispatch(generation_id:str,payload:WebDispatch,user:CurrentUser=Depends(
 def web_response(generation_id:str,payload:dict,user:CurrentUser=Depends(require_admin),db:Session=Depends(get_db)):
     from app.routes.bank_api.publication import ResponseIn
     from app.preview_links import conversation_url as valid_conversation_url,share_url as valid_share_url
-    from studyez_contracts.bank.markdown_file import validate
+    from studyez_contracts.bank.response_file import validate, metadata as file_metadata
     row=owned_web(db,generation_id,user)
     try:
         value=ResponseIn.model_validate(payload)
-        if not value.response_file:raise ValueError('실제 MD 파일이 필요합니다.')
+        if not value.response_file:raise ValueError('실제 문제은행 파일이 필요합니다.')
         metadata=validate(value.raw,value.response_file.filename,row.subject,row.run_id,value.response_file.model_dump(by_alias=True))
-        header=re.match(r'<!-- STUDYEZ_BANK_FILE (\{[^\n]+\}) -->',value.raw.removeprefix('\ufeff'))
-        if not header or json.loads(header[1]).get('generation_id')!=row.id:raise ValueError('다른 자동출제 요청의 파일입니다.')
+        if file_metadata(value.raw).get('generation_id')!=row.id:raise ValueError('다른 자동출제 요청의 파일입니다.')
         if not row.web_dispatch or value.prompt_version!=row.web_dispatch['promptVersion'] or metadata['promptVersion']!=value.prompt_version:
             raise ValueError('전송한 프롬프트와 파일의 판이 다릅니다.')
         if value.conversation_url and not valid_conversation_url(value.conversation_url,'chatgpt'):raise ValueError('대화 주소가 올바르지 않습니다.')
@@ -339,7 +338,7 @@ def web_response(generation_id:str,payload:dict,user:CurrentUser=Depends(require
     row.packet={**row.packet,'webResponseHash':document_hash(response)}
     row.packet={**row.packet,'inputHash':packet_hash(row.packet)}
     duplicate=retain_duplicate(db,row)
-    if duplicate is None:job.state,job.stage=JOB_QUEUED,'웹 MD 수신 완료 · 원본·정답 검수 대기'
+    if duplicate is None:job.state,job.stage=JOB_QUEUED,'웹 파일 수신 완료 · 원본·정답 검수 대기'
     db.commit()
     return {'saved':True,'reused':False,**({'held':True,'generationId':duplicate.id}if duplicate else {})}
 

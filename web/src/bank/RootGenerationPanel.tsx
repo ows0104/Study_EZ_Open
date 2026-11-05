@@ -72,7 +72,7 @@ export function RootGenerationPanel({subject,runId,onPublished}:{subject:string;
       {job.published?<><Link to={`/bank/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}/roots`}>생성된 뿌리 학습 열기 →</Link>
         {!job.featureEnabled&&<p>콘텐츠는 저장되었습니다. 현재 전체 뿌리 학습 공개 설정은 꺼져 있습니다.</p>}</>:
         !pending&&!job.awaitingWeb&&<button disabled={busy} onClick={()=>void send(true)}>같은 입력·남은 횟수로 재개</button>}</div>}
-    {job?.awaitingWeb&&<label>완성된 웹 응답 MD 불러오기<input type="file" accept=".md" aria-label="웹 응답 MD" disabled={busy} onChange={async e=>{const file=e.target.files?.[0];if(!file)return;setBusy(true);try{await saveRootWebFile(job.id,file);setError('');}catch(err){setError((err as Error).message);}finally{setBusy(false);}}}/></label>}
+    {job?.awaitingWeb&&<label>완성된 웹 응답 JSON 불러오기 (기존 MD 지원)<input type="file" accept=".json,.md" aria-label="웹 응답 파일" disabled={busy} onChange={async e=>{const file=e.target.files?.[0];if(!file)return;setBusy(true);try{await saveRootWebFile(job.id,file);setError('');}catch(err){setError((err as Error).message);}finally{setBusy(false);}}}/></label>}
     {job?.report&&<details><summary>생성·검수 결과</summary><p>목표 {job.report.targetCount}개 · 준비된 과제 {job.report.taskCount}개 · 수정 {job.report.repairRounds}/3회</p>
       <ul>{job.report.issues.map((text,i)=><li key={i}>{text}</li>)}{job.report.questionNotes.map((r,i)=><li key={'q'+i}>{r.source} · {r.question_id} · {r.verdict}: {r.note}</li>)}</ul>
       <ul>{job.report.coverage.map(c=><li key={c.point_id}>{c.point_id} · {c.status} · {c.reason}</li>)}</ul></details>}

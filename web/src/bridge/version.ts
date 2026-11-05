@@ -14,7 +14,7 @@ export function versionAtLeast(version: string, minimum: string) {
 
 export const PREVIEW_MIN_VERSION = "1.2.0";
 export const AUTO_SEND_MIN_VERSION = "1.3.3";
-export const BANK_AUTO_SEND_MIN_VERSION = "1.3.20";
+export const BANK_AUTO_SEND_MIN_VERSION = "1.3.23";
 /** 확장이 복습 결과 종류를 직접 구분하기 시작한 버전. 구버전은 사이트에서 구분한다. */
 export const NATIVE_REVIEW_MIN_VERSION = "1.3.5";
 
