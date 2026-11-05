@@ -1,4 +1,4 @@
-## 7. 파일 저장과 전달
+## 6. 파일 저장과 전달
 
 실제 UTF-8 JSON 파일 `study-ez-{{run_id}}-bank.json` 하나를 작성한다. 최상위 subject는 "{{subject}}", run_id는 "{{run_id}}", prompt_version은 "{{prompt_version}}"이다.
 

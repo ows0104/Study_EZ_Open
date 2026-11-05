@@ -22,6 +22,9 @@ COMPLETE_MARK = "STUDYEZ_BANK_COMPLETE"
 def item_quality_guidance() -> str:
     """Read the authoring rules from the canonical web prompt for CLI stages."""
     body = HEADER.sub("", TEMPLATE.read_text(encoding="utf-8"))
+    current = re.search(r'(?ms)^(## 2\. 최상위 출제 철학[^\n]*\n.+?)(?=^## 4\. 작업 순서와 검수)', body)
+    if current:
+        return current[1].strip()
     _, start, section = body.partition("\n문항 품질 원칙\n")
     quality, end, _ = section.partition("\n출력 형식\n")
     if not start or not end or not quality.strip():

@@ -16,6 +16,20 @@ def test_prompt_uses_canonical_template_and_preserves_cloze():
     assert generate.item_quality_guidance() in body
 
 
+def test_current_quality_keeps_three_design_examples_with_clean_heading_boundaries():
+    body, _ = generate.prompt_for('강의', '', [])
+    quality = generate.item_quality_guidance()
+    assert '기초 연결을 직접 회상시키기' in quality
+    assert '함께 묶을 목표와 별도 목표 구분하기' in quality
+    assert '질문 축은 남기고 정답 단서는 없애기' in quality
+    assert 'tyrosine hydroxylase' in quality and '생산자, 소비자, 분해자' in quality
+    assert '## 1.' not in quality and '## 4.' not in quality and '## 5.' not in quality
+    headings = [line for line in body.splitlines() if line.startswith('## ')]
+    assert [line.split('.')[0] for line in headings] == [f'## {n}' for n in range(1,7)]
+    for label in ('5.1 파일 전체 객체','5.2 문항 객체','5.3 출처 참조','5.4 근거 객체','5.5 충돌 객체'):
+        assert '### '+label in body
+
+
 def test_cli_quality_reads_only_the_current_authoring_rules(tmp_path, monkeypatch):
     template = tmp_path / "bankPrompt.md"
     template.write_text("<!-- Version: 1.33 -->\n강의: {{title}}\n\n문항 품질 원칙\n"
