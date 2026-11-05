@@ -24,7 +24,8 @@ def item_quality_guidance() -> str:
     body = HEADER.sub("", TEMPLATE.read_text(encoding="utf-8"))
     current = re.search(r'(?ms)^(## 2\. 최상위 출제 철학[^\n]*\n.+?)(?=^## 4\. 작업 순서와 검수)', body)
     if current:
-        return current[1].strip()
+        checklist = re.search(r'(?ms)^(### 4\.2 최종 내용 검수\n.+?)(?=^## 5\.)', body)
+        return current[1].strip() + ('\n\n' + checklist[1].strip() if checklist else '')
     _, start, section = body.partition("\n문항 품질 원칙\n")
     quality, end, _ = section.partition("\n출력 형식\n")
     if not start or not end or not quality.strip():
