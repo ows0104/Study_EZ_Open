@@ -3,6 +3,8 @@
 ## 변경 범위·대상 파일·순서
 기존 work helper의 read/jsonl/metrics/quality_checks 일반 함수를 scripts/incremental_comparison.py에 의미 변경 없이 복사한다. 테스트는 추적 모듈을 import한다. .github/workflows/deploy.yml의 검사 설치 목록에 requests를 추가하고 실제 개발 구조와 같은 .venv를 만든 뒤 이후 단계 PATH에 등록한다. 로컬 격리 체크 후 commit/push하고 새 GitHub 전체 실행/배포를 확인한다.
 
+원격 Windows 진단으로 WScript.Shell.Save가 영어 시스템의 한글 .lnk 파일명에서 FileNotFoundException을 발생시킴을 확인했다(run41984679415). scripts/install-runner-desktop.ps1은 같은 목적지의 고유 ASCII 임시 .lnk로 COM 저장 후 PowerShell Unicode Move-Item으로 원래 한글 이름에 반영하고 임시 파일을 정리한다. 기존 shortcut 테스트에서 최종 파일과 임시 파일 정리도 확인한다. 실제 협업 환경 재현성 수정이며 러너/생성/업로드 동작은 바꾸지 않는다.
+
 ## 검사 명령과 성공 조건
 automation: pytest tests/quizbank/test_incremental_comparison.py tests/development/test_ci_deploy.py -q. 추가로 추적된 파일만 임시 checkout에 복제하여 work 없이 같은 검사를 실행한다. 새 SHA의 전체 Python/서버/웹/Node 검사는 GitHub Actions가 실제 실행한다.
 

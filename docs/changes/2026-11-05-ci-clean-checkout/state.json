@@ -8,12 +8,12 @@
   ],
   "approvals": {
     "build": {
-      "at": "2026-11-05T06:58:08.522445+00:00",
-      "evidence": "현재 사용자의 Git 공동작업·자동 배포 구현/연결/검증 승인 범위. 새 checkout의 실제 개발 .venv 부재로 실패한 바로가기 검사까지 같은 범위에서 복구하며 plan 지문 갱신.",
-      "scope": "추적 helper/requests와 실제 프로젝트 .venv 생성으로 CI 재현성 복구. 검사 생략·제품/DB/내용 변경 없음",
+      "at": "2026-11-05T07:06:57.152529+00:00",
+      "evidence": "현재 사용자 공동작업 준비 및 Git/자동 배포 연결·검증 승인 범위에서 영어 Windows CI가 발견한 한글 바로가기 저장 호환 문제를 복구. 같은 설치 결과와 이름을 보존하며 러너 동작 변경 없음.",
+      "scope": "clean checkout 재현성: tracked helper/requests/.venv와 Windows installer의 임시 ASCII 저장 후 한글 이름 이동. 기존 테스트 유지/진단/임시 정리 검증, 실제 CI/자동 배포 확인.",
       "evidence_version": 2,
-      "source_hash": "bf9c73f3d69e3c05226f6e3e8ec7912d8e5381a56ecca8376fa00e96fe0447a8",
-      "plan_hash": "ebabd74fc8ce6d569a5f5e62bad4f03388431a512781c02612fbe57ff8ac5269",
+      "source_hash": "fd6d818946c4adf2924038b7f055483ca8ac325b3a9143e09e9753f070ebb74f",
+      "plan_hash": "735e5499f3224d66e320b5ea1b33e9a302c75e8032972130d39046c528693775",
       "inputs": [
         ".github",
         "bridge",
@@ -42,7 +42,7 @@
         "uv.lock",
         "web"
       ],
-      "release_hash": "987ae760c125a12a578adec441f240cf9918203347dd91f72ff13300569d2347"
+      "release_hash": "066be75b807ea171a6f8741cee70c93c970af90ef1c37adc42587c39c2e654a6"
     }
   },
   "checks": [
@@ -185,14 +185,61 @@
         "web"
       ],
       "log": "runs/_development/2026-11-05-ci-clean-checkout/1793862268233842800-automation.log"
+    },
+    {
+      "name": "automation",
+      "at": "2026-11-05T07:07:09.576184+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "-m",
+        "pytest",
+        "tests/quizbank/test_incremental_comparison.py",
+        "tests/development/test_ci_deploy.py",
+        "tests/runner/test_desktop_control.py",
+        "-q",
+        "--basetemp=runs/_development/2026-11-05-ci-clean-checkout/pytest-unicode"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "46337e9362696608c0b748cfe9bc97067400011e02e64d03acf1deb46d166ce7",
+      "plan_hash": "735e5499f3224d66e320b5ea1b33e9a302c75e8032972130d39046c528693775",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "server",
+        "spotter/data",
+        "spotter/scripts",
+        "spotter/web",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "tests/runner",
+        "tests/spotter",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ci-clean-checkout/1793862424672526300-automation.log"
     }
   ],
   "review": {
-    "at": "2026-11-05T07:04:32.926807+00:00",
-    "summary": "새 checkout helper와 dependency/venv 보강 및38개 로컬 검사 통과. 원격 바로가기 오류가 캡처되어 원인을 숨기므로 기존 테스트 assert에 stdout/stderr를 포함하고 CI의 의존성 설치 전에 실제 Windows installer를 fail-fast 검증한다. 검사를 제거·완화하지 않으며 제품·DB 변경 없음.",
+    "at": "2026-11-05T07:07:32.971263+00:00",
+    "summary": "실제 영어 Windows WScript.Shell.Save 한글 파일명 실패 로그를 확인하고 ASCII 임시 COM 저장→PowerShell Unicode Move-Item으로 기존 이름 반영→finally 임시 정리 구현을 검토. 목적지의 고유 임시파일만 제거하며 원래 shortcut 대상·인수·작업 디렉터리/이름/설명 유지. 기존 테스트가 최종 한글 파일과 잔여파일 없음 검증,38개 통과, UTF8 BOM 유지. clean checkout helper/requests/venv 포함. 제품 서버·DB·콘텐츠 변경 없음. 새 원격 전체 검사와 배포 확인 필요.",
     "evidence_version": 2,
-    "source_hash": "fd6d818946c4adf2924038b7f055483ca8ac325b3a9143e09e9753f070ebb74f",
-    "plan_hash": "ebabd74fc8ce6d569a5f5e62bad4f03388431a512781c02612fbe57ff8ac5269",
+    "source_hash": "46337e9362696608c0b748cfe9bc97067400011e02e64d03acf1deb46d166ce7",
+    "plan_hash": "735e5499f3224d66e320b5ea1b33e9a302c75e8032972130d39046c528693775",
     "inputs": [
       ".github",
       "bridge",
@@ -227,5 +274,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-05T07:04:33.109853+00:00"
+  "updated_at": "2026-11-05T07:07:33.141504+00:00"
 }

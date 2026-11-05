@@ -166,3 +166,4 @@ def test_shortcut_installer_supports_korean_filename_in_windows_powershell(tmp_p
                    creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     assert result.returncode == 0, (result.stdout + result.stderr).decode('utf-8', errors='replace')
     assert (tmp_path / 'Study EZ 러너.lnk').is_file()
+    assert sorted(p.name for p in tmp_path.iterdir()) == ['Study EZ 러너.lnk']
