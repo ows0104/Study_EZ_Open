@@ -14,7 +14,6 @@
 
 | 우선순위 | 작업 | 작업자 / 세션 | 브랜치 | 건드리는 영역·파일 | 시작일 | 상태·메모 |
 |---|---|---|---|---|---|---|
-| P1 | 협업 대시보드와 작업 시작 대원칙 도입 | HungryPotato01 / Claude 세션 | `docs/collab-dashboard` | `CLAUDE.md`, `AGENTS.md`, `docs/development/collaboration.md`, `docs/changes/2026-11-05-collab-dashboard/` | 2026-11-05 | 문서만 변경. PR 대기 |
 
 ## 2. 앞으로 하기로 약속된 일
 
@@ -38,4 +37,4 @@ merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 �
 
 | 완료일 | 작업 | 작업자 | PR |
 |---|---|---|---|
-| | | | |
+| 2026-11-05 | 협업 대시보드와 작업 시작 대원칙 도입 | HungryPotato01 / Claude 세션 | [#2](https://github.com/ows0104/Study_EZ_Open/pull/2) |
