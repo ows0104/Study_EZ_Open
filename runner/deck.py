@@ -1021,15 +1021,13 @@ def promote(run_dir: Path, kind: str = MAIN, version: str | None = None) -> Path
     # 고르므로(`runs/published.json`), 내용이 같은데 mtime 만 새로 찍으면 수백 MB 가
     # 다시 올라간다.
     #
-    # **크기만으로는 갈리지 않는다.** `copy2` 가 mtime 을 그대로 옮기므로 안 건드린
-    # 덱은 src 와 dest 의 mtime 이 같다 — 판 폴더 쪽이 **더 새것이면 다시 구운
-    # 것이다.** 2026-09-18 에 예습 덱 둘을 카드 하나씩 고쳐 다시 구웠는데 둘 다
-    # 바이트 수가 09-16 것과 같았고, 크기만 보던 이 자리가 새 덱을 안 올려서
-    # **옛 덱이 그대로 나갔다.** 계약은 카드 파일을 읽으므로 깨끗했다 —
-    # 화면 어디에도 어긋남이 안 떴다.
-    if (dest.is_file() and dest.stat().st_size == src.stat().st_size
-            and src.stat().st_mtime_ns <= dest.stat().st_mtime_ns):
-        return dest
+    # 크기와 mtime이 같아도 내용은 다를 수 있다. 같은 시각에 다시 굽거나 과거
+    # 시각을 보존한 덱도 확인하며, 큰 덱은 메모리에 통째로 올리지 않는다.
+    if dest.is_file() and dest.stat().st_size == src.stat().st_size:
+        with src.open("rb") as source, dest.open("rb") as target:
+            if (hashlib.file_digest(source, "sha256").digest()
+                    == hashlib.file_digest(target, "sha256").digest()):
+                return dest
     shutil.copy2(src, dest)
     return dest
 
