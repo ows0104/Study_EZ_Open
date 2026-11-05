@@ -180,8 +180,9 @@ def validate_format_recoveries(meta,stages):
             and p['priorLedgerHash']==document_hash(old)and not old.get('formatRecoveries')
             and type(old.get('identity'))is str and re.fullmatch(r'[a-f0-9]{64}',old['identity']),
             'result2: changed prior format ledger')
+        format_runtime=meta['runtimeRevalidations'][0]['proof']['priorLedger']['identity']if meta.get('runtimeRevalidations')else meta['runtimeHash']
         require(type(name)is str and re.fullmatch(r'generate|repair-[1-3]',name)
-            and p['packetHash']==meta['inputHash']and p['currentRuntimeHash']==meta['runtimeHash']
+            and p['packetHash']==meta['inputHash']and p['currentRuntimeHash']==format_runtime
             and p['modelReplay']is False and type(p['reason'])is str and p['reason'].strip(),
             'result2: changed format recovery identity')
         require(type(old.get('repairRounds'))is int and 0<=old['repairRounds']<=meta['repairRounds']<=3,
@@ -202,6 +203,32 @@ def validate_format_recoveries(meta,stages):
             and current['briefHash']==document_hash(decoded['brief']),'result2: format output mismatch')
         require(all(type(p[k])is str and re.fullmatch(r'[a-f0-9]{64}',p[k])for k in ('nativeJournalSha256','recoveryToolSha256')),
             'result2: missing original Native rejection')
+    return rows
+
+
+def validate_runtime_revalidations(meta,stages):
+    rows=meta.get('runtimeRevalidations',[])
+    require(type(rows)is list and len(rows)<=1,'result2: invalid runtime revalidation history')
+    for row in rows:
+        require(type(row)is dict and set(row)=={'proof','proofHash'}and type(row['proof'])is dict
+            and row['proofHash']==document_hash(row['proof']),'result2: changed runtime revalidation')
+        p=row['proof']
+        require(set(p)=={'priorLedger','priorLedgerHash','packetHash','currentRuntimeHash','reason','toolSha256','modelReplay'},
+            'result2: malformed runtime revalidation')
+        old=p['priorLedger']
+        require(type(old)is dict and type(old.get('stages'))is dict and not old.get('runtimeRevalidations')
+            and old.get('formatRecoveries')and p['priorLedgerHash']==document_hash(old)
+            and old.get('pipelineVersion')==POLICY,'result2: invalid prior runtime ledger')
+        require(p['packetHash']==meta['inputHash']and p['currentRuntimeHash']==meta['runtimeHash']
+            and p['modelReplay']is False and type(p['reason'])is str and p['reason'].strip()
+            and type(p['toolSha256'])is str and re.fullmatch(r'[a-f0-9]{64}',p['toolSha256']),
+            'result2: changed runtime revalidation identity')
+        require(meta.get('formatRecoveries',[])==old['formatRecoveries']
+            and meta.get('authoringRecoveries',[])==old.get('authoringRecoveries',[])
+            and type(old.get('repairRounds'))is int and old['repairRounds']==meta['repairRounds'],
+            'result2: runtime revalidation changed history/budget')
+        require(set(old['stages'])<=set(stages)and all(stages[k]=={'name':k,**v}for k,v in old['stages'].items()),
+            'result2: runtime revalidation changed cached stages')
     return rows
 
 
@@ -380,7 +407,7 @@ def compile_assessment(brief,bank,raw):
             notes +=[row['direction_id']+'/'+row['question_id']+': '+components[p['component_id']]+' · '+labels[p['location']]
                 for p in row['components']if p['location']!='answer']
             if row['visual_verdict']in ('doubt','wrong'):notes.append(row['direction_id']+': 그림 확인 필요 · '+row['reason'])
-        for did in relevant:
+        for did in sorted(relevant):
             if direction_checks[did]['scope_status']!='consistent':notes.append(did+': '+direction_checks[did]['reason'])
             target=dirs[did][0]
             if targets[target['target_id']]['status']!='consistent':notes.append(did+': '+targets[target['target_id']]['reason'])
@@ -388,8 +415,21 @@ def compile_assessment(brief,bank,raw):
     audit.update(schema_version='source-audit/2',assessment=copy.deepcopy(raw))
     return audit
 
+def equivalent_audit(left,right):
+    """Legacy compiler appended unordered explanation fragments, never judgments."""
+    if left==right:return True
+    a,b=copy.deepcopy(left),copy.deepcopy(right)
+    try:
+        for value in (a,b):
+            for row in value['review']['coverage']:
+                if type(row['reason'])is not str:return False
+                row['reason']=sorted(row['reason'].split('; '))
+    except (KeyError,TypeError):return False
+    return a==b
+
+
 def validate_audit(brief,bank,audit):
-    require(audit==compile_assessment(brief,bank,audit['assessment']),'audit2: derived result differs from raw judgments')
+    require(equivalent_audit(audit,compile_assessment(brief,bank,audit['assessment'])),'audit2: derived result differs from raw judgments')
     return audit
 
 def make_document(brief,bank,audit,*,revision,title,exam_date,medical=None):
@@ -513,6 +553,7 @@ def validate_result(value,packet):
     require(correction=={'errors':findings,'consumedRounds':initial_cost},'result2: missing initial correction evidence')
     n=total-initial_cost;require(n>=0,'result2: initial correction not counted')
     stages=index_by(meta['stages'],'name')
+    validate_runtime_revalidations(meta,stages)
     validate_format_recoveries(meta,stages)
     recoveries=validate_authoring_recoveries(meta,stages)
     rejected=recoveries[0]['proof']['rawAuthoring']if recoveries and recoveries[0]['proof']['mode']=='brief-repair'else None

@@ -10,7 +10,7 @@ import generation_v2_fixture as f
 import test_authoring_recovery as ar
 from quizbank import connection_generate as g,connection_generate_v2 as producer
 from runner import root_native_json as n
-from runner.root_tier_recovery import recover
+from runner.root_tier_recovery import recover,revalidate_runtime
 from studyez_contracts.roots import generation_v2 as c
 from studyez_contracts.bank.authored_json import canonical_tier
 
@@ -96,6 +96,11 @@ def test_tier_recovery_chains_a_prior_structural_recovery_without_a_fourth_round
     monkeypatch.setattr(n,'decode_for',decode);monkeypatch.setattr(g,'identity',actual_identity)
     recovered=recover(packet,out,stage='repair-2',expected_identity='a'*64,reason='Explicit canonical alias recovery')
     assert recovered['repairRounds']==3 and recovered['modelCalls']==0
+    tier_runtime=n.read(out/'ledger.json')['identity']
+    monkeypatch.setattr(g,'identity',lambda *args:'b'*64)
+    compatible=revalidate_runtime(packet,out,expected_identity=tier_runtime,reason='Revalidated deterministic derived explanations')
+    assert compatible['modelCalls']==0 and compatible['repairRounds']==3
+    with pytest.raises(ValueError):revalidate_runtime(packet,out,expected_identity='b'*64,reason='No repeats')
     result=g.run(packet,out,invoke=transport)
     assert calls==['normalize','generate','repair-1','source-1','repair-2','source-2']
     assert result['manifest']['repairRounds']==3 and result['manifest']['authoringRecoveries']==old_recovery
@@ -108,6 +113,20 @@ def test_tier_recovery_chains_a_prior_structural_recovery_without_a_fourth_round
         elif mistake=='projection':broken['manifest']['formatRecoveries'][0]['proof']['projection']['changes']=[]
         else:broken['manifest']['stages']=[s for s in broken['manifest']['stages']if s['name']!='medical-2']
         with pytest.raises(ValueError):c.validate_result(broken,packet)
+
+
+def test_only_order_of_derived_explanation_fragments_is_compatible():
+    original={'review':{'coverage':[{'point_id':'P1','status':'partial','reason':'Base; D1: first; D2: second'}]},
+              'assessment':{'verdict':'doubt','reason':'Actual source judgment'}}
+    legacy=copy.deepcopy(original);legacy['review']['coverage'][0]['reason']='Base; D2: second; D1: first'
+    assert c.equivalent_audit(original,legacy)
+    for change in('raw-judgment','coverage','deleted-fragment','repeated-fragment'):
+        bad=copy.deepcopy(legacy)
+        if change=='raw-judgment':bad['assessment']['reason']='Different judgment'
+        elif change=='coverage':bad['review']['coverage'][0]['status']='covered'
+        elif change=='deleted-fragment':bad['review']['coverage'][0]['reason']='Base; D1: first'
+        else:bad['review']['coverage'][0]['reason']+='; D2: second'
+        assert not c.equivalent_audit(original,bad)
 
 
 @pytest.mark.parametrize('problem',['unknown','provider','output','input','material','started','restricted'])

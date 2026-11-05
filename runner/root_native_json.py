@@ -304,6 +304,11 @@ def validate_all(out,payload):
     for row in payload['manifest'].get('formatRecoveries',[]):
         from .root_tier_recovery import validate_recovery
         validate_recovery(out,row,model=payload['manifest']['model'])
+    for row in payload['manifest'].get('runtimeRevalidations',[]):
+        proof=row['proof'];archive=Path(out)/'.runtime-revalidation'
+        require(read(Path(out)/'runtime.revalidation.json')==row
+            and read(archive/'ledger-before.json')==proof['priorLedger']
+            and sha(archive/'recovery.py')==proof['toolSha256'],'Changed runtime compatibility archive')
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--packet',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--model');a=p.parse_args()

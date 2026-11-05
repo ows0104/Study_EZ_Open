@@ -113,10 +113,56 @@ def validate_recovery(out,row,*,model):
     n.require(projection==p['projection']and n.read(out/(stage+'.raw.json'))==decoded,'Changed projected authoring')
     n.validate_stage(out,{'name':stage,**n.read(out/'ledger.json')['stages'][stage]},model=model)
 
+
+def revalidate_runtime(packet,out,*,expected_identity,reason,model=None):
+    """Recheck unchanged completed caches after the deterministic-note fix."""
+    out=Path(out)
+    with g.exclusive({'connection-generation':str(out.resolve())}):
+        n.require_unblocked(out);old=n.read(out/'ledger.json')
+        n.require(old['identity']==expected_identity and old.get('formatRecoveries')
+            and not old.get('runtimeRevalidations')and old['repairRounds']==3
+            and not(out/'runtime.revalidation.json').exists()and not(out/'.runtime-revalidation').exists()
+            and not(out/'result.json').exists()and packet_hash(packet)==packet['inputHash']and reason.strip(),
+            'Only the unchanged final completed tier recovery may be revalidated')
+        for source in packet['sources']:
+            path=Path(source['localPath'])
+            n.require(path.stat().st_size==source['sizeBytes']and n.sha(path)==source['sha256'],'Original source changed')
+        for name,entry in old['stages'].items():
+            n.require(entry['status']in('completed','failed','blocked'),'An active/interrupted stage cannot be rebound')
+            if entry['status']=='blocked':continue
+            for suffix,key in(('.input.json','inputHash'),('.raw.json','rawOutputHash'),('.usage.json','usageHash')):
+                n.require(document_hash(n.read(out/(name+suffix)))==entry[key],'Cached execution evidence changed')
+            n.validate_stage(out,{'name':name,**entry},model=g.codex.model_name(model))
+            if entry['status']=='completed':
+                value=n.read(out/(name+'.json'));n.require(document_hash(value)==entry['outputHash'],'Cached accepted output changed')
+                if name.startswith('source-'):
+                    ctx=n.read(out/(name+'.input.json'));c.validate_audit(ctx['brief'],ctx['bank'],value)
+        for row in old['formatRecoveries']:validate_recovery(out,row,model=g.codex.model_name(model))
+        stages={k:{'name':k,**v}for k,v in old['stages'].items()}
+        meta={'formatRecoveries':old['formatRecoveries'],'authoringRecoveries':old.get('authoringRecoveries',[]),
+            'inputHash':packet['inputHash'],'runtimeHash':old['identity'],'repairRounds':3,
+            'initialBrief':n.read(out/'normalize.json')}
+        c.validate_format_recoveries(meta,stages);c.validate_authoring_recoveries(meta,stages)
+        proof={'priorLedger':old,'priorLedgerHash':document_hash(old),'packetHash':packet['inputHash'],
+            'currentRuntimeHash':g.identity(packet,model),'reason':reason,'toolSha256':n.sha(__file__),'modelReplay':False}
+        row={'proof':proof,'proofHash':document_hash(proof)}
+        updated=copy.deepcopy(old);updated.update(identity=proof['currentRuntimeHash'],runtimeRevalidations=[row])
+        meta.update(runtimeHash=updated['identity'],runtimeRevalidations=[row])
+        c.validate_runtime_revalidations(meta,stages);c.validate_format_recoveries(meta,stages);c.validate_authoring_recoveries(meta,stages)
+        archive=out/'.runtime-revalidation';archive.mkdir()
+        (archive/'ledger-before.json').write_bytes((out/'ledger.json').read_bytes())
+        (archive/'recovery.py').write_bytes(Path(__file__).read_bytes())
+        g.write(out/'runtime.revalidation.json',row);g.write(out/'ledger.json',updated)
+        return {'modelCalls':0,'repairRounds':3,'priorRuntime':expected_identity,'runtime':updated['identity'],'proofHash':row['proofHash']}
+
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--packet',type=Path,required=True)
     p.add_argument('--out',type=Path,required=True);p.add_argument('--stage',required=True)
     p.add_argument('--expected-identity',required=True);p.add_argument('--reason',required=True);p.add_argument('--model')
-    a=p.parse_args();print(json.dumps(recover(n.read(a.packet),a.out,stage=a.stage,expected_identity=a.expected_identity,reason=a.reason,model=a.model)))
+    p.add_argument('--revalidate-runtime',action='store_true')
+    a=p.parse_args()
+    result=(revalidate_runtime(n.read(a.packet),a.out,expected_identity=a.expected_identity,reason=a.reason,model=a.model)
+        if a.revalidate_runtime else recover(n.read(a.packet),a.out,stage=a.stage,expected_identity=a.expected_identity,reason=a.reason,model=a.model))
+    print(json.dumps(result))
 
 if __name__=='__main__':main()
