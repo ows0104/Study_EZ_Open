@@ -1,0 +1,179 @@
+{
+  "id": "2026-11-05-cbl-prev-notes",
+  "title": "미정 CBL 3개 작년 필기 확인과 연결",
+  "area": "integration",
+  "created_at": "2026-11-05T11:41:11.696913+00:00",
+  "required_checks": [
+    "source-review",
+    "selection",
+    "preservation"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-05T11:43:35.403640+00:00",
+      "evidence": "2026-11-05 현재 채팅 사용자: 작년 자료 연결이 미정인 CBL 3개도 확인해서 맞는 작년 필기로 연결해줘.",
+      "scope": "대상 261118_03,261125_07,261126_07의 원본 대조·참고 사본/수동 연결·선택 메타데이터/notes_prev 운영 반영 및 보존 검증. 기존 기록과 원본 보존, 재출제 제외.",
+      "evidence_version": 2,
+      "source_hash": "dde5290b9c39bb1d324a1cd2170ae743b50e551fb480bbf7c60bd2bea8b00ebc",
+      "plan_hash": "994ada854f89bb671874270b75e9deb8efe1c151fbf28f66aea9025f0ae01601",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "8fae07f9087963a00c80d2f1e977216c9acb938f5c0ef7d0ba78660d7bfa8720"
+    }
+  },
+  "checks": [
+    {
+      "name": "source-review",
+      "at": "2026-11-05T11:50:52.863331+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-05-cbl-prev-notes/cbl_ops.py",
+        "source-review"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "dde5290b9c39bb1d324a1cd2170ae743b50e551fb480bbf7c60bd2bea8b00ebc",
+      "plan_hash": "994ada854f89bb671874270b75e9deb8efe1c151fbf28f66aea9025f0ae01601",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-05-cbl-prev-notes/1793879452192848700-source-review.log"
+    },
+    {
+      "name": "selection",
+      "at": "2026-11-05T11:50:54.546323+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-05-cbl-prev-notes/cbl_ops.py",
+        "selection"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "dde5290b9c39bb1d324a1cd2170ae743b50e551fb480bbf7c60bd2bea8b00ebc",
+      "plan_hash": "994ada854f89bb671874270b75e9deb8efe1c151fbf28f66aea9025f0ae01601",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-05-cbl-prev-notes/1793879452194410000-selection.log"
+    },
+    {
+      "name": "preservation",
+      "at": "2026-11-05T11:51:04.459101+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-05-cbl-prev-notes/cbl_ops.py",
+        "preservation-check"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "dde5290b9c39bb1d324a1cd2170ae743b50e551fb480bbf7c60bd2bea8b00ebc",
+      "plan_hash": "994ada854f89bb671874270b75e9deb8efe1c151fbf28f66aea9025f0ae01601",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-05-cbl-prev-notes/1793879458412510600-preservation.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-05T12:48:41.603551+00:00",
+    "summary": "세 PDF 직접 대조, 원본과 사본 해시 일치, publish/readiness 3개 2025 선택 및 다른 선택·매핑 보존 확인. 운영 84강의·459첨부·10테이블 원상 검사 통과. 세 기존 강의의 notes_prev/선택 메타데이터만 반영하며 재출제나 코드 배포 없음.",
+    "evidence_version": 2,
+    "source_hash": "dde5290b9c39bb1d324a1cd2170ae743b50e551fb480bbf7c60bd2bea8b00ebc",
+    "plan_hash": "994ada854f89bb671874270b75e9deb8efe1c151fbf28f66aea9025f0ae01601",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "runner",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "tests/runner",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-05T12:48:41.713133+00:00"
+}
