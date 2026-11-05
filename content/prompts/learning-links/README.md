@@ -7,7 +7,18 @@
 - [Map 추출](map-extract.md): 필기·족보의 개념·분류·관계·큰 흐름만 구성한다. 문항 대응·누락 판단·문항 학습 순서는 이후 대조 단계에서 다룬다.
 - [독립 출제포인트 추출](point-extract.md): 이전 points 지침의 목표 묶기·원본 근거·전체 범위 확인에 연결 회상 철학을 적용한다.
 
-각 요청에 동일한 원본 필기·족보와 해당 강의 범위만 별도로 제공한다. Map 결과를 포인트 추출의 범위 기준으로 넣지 않는다. 두 요청문은 사람이 검토할 Markdown 결과용이며 현재 자동 생성기에 연결되지 않았다. 현행 자동 파이프라인은 여전히 automation/extract-v2.md로 Map·포인트를 함께 추출한다. 기존 JSON 계약이나 quizbank/prompts/points.md의 PLAN 출력을 이 요청문으로 대체하지 않는다. 호출 분리·JSON 연결·후속 문항 대조는 별도 구현 범위다.
+각 요청에 동일한 원본 필기·족보와 해당 강의 범위만 별도로 제공한다. Map 결과를 포인트 추출의 범위 기준으로 넣지 않는다.
+
+| 결과 | 버전 | 스키마 | 완전한 합성 예시 |
+|---|---|---|---|
+| Map | concept-map-extract/1 | [map-output.schema.json](map-output.schema.json) | [map-output.example.json](map-output.example.json) |
+| 포인트 | exam-point-extract/1 | [point-output.schema.json](point-output.schema.json) | [point-output.example.json](point-output.example.json) |
+
+두 프롬프트는 최종 JSON 객체 하나를 요구한다. Map의 sections는 표시용 묶음이며 concepts/relations가 실제 그래프다. 포인트는 groups/points/directions로 목표와 필요한 회상을 구별한다. 각 결과 안에서 고유한 ID를 사용하며 서로의 ID 대응은 후속 대조에서 결정한다. extracted/partial/unreadable은 자료 확인 범위에 대한 기록이며 정확성 인증이 아니다.
+
+JSON Schema는 타입·필수 필드·열거값을 검사한다. 결과 안의 참조·ID 중복·분류 순환·실제 쪽수 범위 등은 추가 검사가 필요하다. 개발 기록의 [verify_formats.py](../../../docs/changes/2026-11-06-map-point-prompts/verify_formats.py)는 합성 정상/오류 사례와 프롬프트 내 예시를 검증한다. 자료와 실제 추출 결과의 의미는 별도 원본 검토가 필요하다.
+
+현재 자동 생성기에 연결되지 않았다. 현행 자동 파이프라인은 여전히 automation/extract-v2.md로 Map·포인트를 함께 추출한다. 기존 learning-brief/2나 quizbank/prompts/points.md의 PLAN 출력을 이 형식으로 대체하지 않는다. 실제 응답 수신·저장·화면 렌더링·호출 분리·후속 대조의 연동은 별도 구현 범위다.
 
 ## 입력과 실행
 

@@ -1,0 +1,92 @@
+{
+  "schema_version": "concept-map-extract/1",
+  "title": "사각형 분류",
+  "sources": [
+    {
+      "source_id": "S1",
+      "label": "합성 예시 자료: 사각형 분류",
+      "kind": "notes",
+      "professor": null,
+      "year": null,
+      "page_count": 1
+    }
+  ],
+  "scope": {
+    "included": [
+      "사각형의 정의와 분류"
+    ],
+    "excluded": [],
+    "limitations": [
+      "출력 형식을 설명하는 비의학 합성 예시다."
+    ]
+  },
+  "central_question": "정사각형과 직사각형은 어떤 분류 관계인가?",
+  "overview": "도형의 정의를 기준으로 포함 관계를 구성한다.",
+  "sections": [
+    {
+      "section_id": "G1",
+      "title": "정의와 포함 관계",
+      "summary": "정의의 조건으로 두 도형을 연결한다.",
+      "concept_ids": [
+        "C1",
+        "C2"
+      ]
+    }
+  ],
+  "concepts": [
+    {
+      "concept_id": "C1",
+      "label": "정사각형",
+      "description": "네 각이 직각이고 네 변의 길이가 같은 사각형.",
+      "evidence": [
+        {
+          "source_id": "S1",
+          "pages": [
+            1
+          ],
+          "locator": "사각형 분류"
+        }
+      ]
+    },
+    {
+      "concept_id": "C2",
+      "label": "직사각형",
+      "description": "네 각이 직각인 사각형.",
+      "evidence": [
+        {
+          "source_id": "S1",
+          "pages": [
+            1
+          ],
+          "locator": "사각형 분류"
+        }
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "relation_id": "R1",
+      "from_id": "C1",
+      "to_id": "C2",
+      "kind": "is_a",
+      "direction": "directed",
+      "label": "정사각형은 직사각형의 한 종류다.",
+      "condition": null,
+      "exceptions": [],
+      "support": {
+        "status": "direct",
+        "reason": "합성 자료가 두 정의와 포함 관계를 명시한다."
+      },
+      "evidence": [
+        {
+          "source_id": "S1",
+          "pages": [
+            1
+          ],
+          "locator": "사각형 분류"
+        }
+      ]
+    }
+  ],
+  "extraction_status": "extracted"
+}

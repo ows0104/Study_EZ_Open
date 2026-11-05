@@ -1,0 +1,109 @@
+{
+  "schema_version": "exam-point-extract/1",
+  "title": "사각형 분류",
+  "sources": [
+    {
+      "source_id": "S1",
+      "label": "합성 예시 자료: 사각형 분류",
+      "kind": "notes",
+      "professor": null,
+      "year": null,
+      "page_count": 1
+    }
+  ],
+  "scope": {
+    "included": [
+      "사각형의 정의와 분류"
+    ],
+    "excluded": [],
+    "limitations": [
+      "출력 형식을 설명하는 비의학 합성 예시다."
+    ]
+  },
+  "summary": "정의에 근거한 포함 관계를 회상 목표로 정리한다.",
+  "groups": [
+    {
+      "group_id": "G1",
+      "title": "사각형의 포함 관계"
+    }
+  ],
+  "points": [
+    {
+      "point_id": "P1",
+      "group_id": "G1",
+      "objective": "정사각형을 직사각형의 하위 분류로 연결한다.",
+      "requirement": "required",
+      "requirement_reason": "포함 관계가 합성 자료의 명시적 학습목표다.",
+      "directions": [
+        {
+          "direction_id": "D1",
+          "cue": "정사각형의 상위 분류는?",
+          "answer_scope": "네 각이 직각이라는 정의에 따른 상위 분류.",
+          "answer_elements": [
+            "직사각형"
+          ],
+          "relation": "정사각형 → 직사각형의 한 종류",
+          "conditions": [],
+          "exceptions": [],
+          "visual_requirement": "not_required",
+          "visual_refs": [],
+          "evidence": [
+            {
+              "source_id": "S1",
+              "pages": [
+                1
+              ],
+              "locator": "사각형 분류"
+            }
+          ]
+        }
+      ],
+      "importance": {
+        "structural": {
+          "status": "supported",
+          "reason": "사각형 분류를 이해하는 기초 연결이다.",
+          "basis": [
+            "structural_rationale"
+          ],
+          "evidence": [
+            {
+              "source_id": "S1",
+              "pages": [
+                1
+              ],
+              "locator": "사각형 분류"
+            }
+          ]
+        },
+        "exam": {
+          "status": "supported",
+          "reason": "합성 자료의 학습목표에 명시되어 있다.",
+          "basis": [
+            "learning_objective"
+          ],
+          "evidence": [
+            {
+              "source_id": "S1",
+              "pages": [
+                1
+              ],
+              "locator": "사각형 분류"
+            }
+          ]
+        },
+        "clinical": {
+          "status": "not_identified",
+          "reason": "이 합성 자료에서 임상 근거는 확인되지 않는다.",
+          "basis": [],
+          "evidence": []
+        }
+      },
+      "advanced": {
+        "status": "no",
+        "reason": "명시된 분류의 직접 회상이다."
+      }
+    }
+  ],
+  "excluded_candidates": [],
+  "extraction_status": "extracted"
+}

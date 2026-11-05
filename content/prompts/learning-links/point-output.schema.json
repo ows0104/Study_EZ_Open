@@ -1,0 +1,918 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "exam-point-extract/1"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "notes",
+              "exam",
+              "other"
+            ]
+          },
+          "professor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "year": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1900
+          },
+          "page_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          }
+        },
+        "required": [
+          "source_id",
+          "label",
+          "kind",
+          "professor",
+          "year",
+          "page_count"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "included": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "excluded": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "included",
+        "excluded",
+        "limitations"
+      ],
+      "additionalProperties": false
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "group_id": {
+            "type": "string",
+            "pattern": "^G[1-9][0-9]*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "group_id",
+          "title"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "points": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "point_id": {
+            "type": "string",
+            "pattern": "^P[1-9][0-9]*$"
+          },
+          "group_id": {
+            "type": "string",
+            "pattern": "^G[1-9][0-9]*$"
+          },
+          "objective": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requirement": {
+            "type": "string",
+            "enum": [
+              "required",
+              "optional",
+              "undecided"
+            ]
+          },
+          "requirement_reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "directions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "direction_id": {
+                  "type": "string",
+                  "pattern": "^D[1-9][0-9]*$"
+                },
+                "cue": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "answer_scope": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "answer_elements": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1
+                },
+                "relation": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "conditions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 0
+                },
+                "exceptions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 0
+                },
+                "visual_requirement": {
+                  "type": "string",
+                  "enum": [
+                    "required",
+                    "not_required",
+                    "uncertain"
+                  ]
+                },
+                "visual_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "source_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "pages": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "uniqueItems": true
+                      },
+                      "locator": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "source_id",
+                      "pages",
+                      "locator"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 0
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "source_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "pages": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "uniqueItems": true
+                      },
+                      "locator": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "source_id",
+                      "pages",
+                      "locator"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 1
+                }
+              },
+              "required": [
+                "direction_id",
+                "cue",
+                "answer_scope",
+                "answer_elements",
+                "relation",
+                "conditions",
+                "exceptions",
+                "visual_requirement",
+                "visual_refs",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          },
+          "importance": {
+            "type": "object",
+            "properties": {
+              "structural": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "supported",
+                      "uncertain",
+                      "not_identified"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "basis": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "structural_rationale"
+                      ]
+                    },
+                    "minItems": 0
+                  },
+                  "evidence": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "source_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "pages": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "uniqueItems": true
+                        },
+                        "locator": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "source_id",
+                        "pages",
+                        "locator"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 0
+                  }
+                },
+                "required": [
+                  "status",
+                  "reason",
+                  "basis",
+                  "evidence"
+                ],
+                "additionalProperties": false,
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "status": {
+                          "const": "supported"
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "basis": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "structural_rationale"
+                            ]
+                          },
+                          "minItems": 1
+                        },
+                        "evidence": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "source_id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "pages": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                },
+                                "uniqueItems": true
+                              },
+                              "locator": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "source_id",
+                              "pages",
+                              "locator"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "minItems": 1
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "exam": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "supported",
+                      "uncertain",
+                      "not_identified"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "basis": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "learning_objective",
+                        "professor_exam_hint",
+                        "professor_emphasis",
+                        "same_professor_exam",
+                        "other_professor_exam",
+                        "note_taker_emphasis"
+                      ]
+                    },
+                    "minItems": 0
+                  },
+                  "evidence": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "source_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "pages": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "uniqueItems": true
+                        },
+                        "locator": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "source_id",
+                        "pages",
+                        "locator"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 0
+                  }
+                },
+                "required": [
+                  "status",
+                  "reason",
+                  "basis",
+                  "evidence"
+                ],
+                "additionalProperties": false,
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "status": {
+                          "const": "supported"
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "basis": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "learning_objective",
+                              "professor_exam_hint",
+                              "professor_emphasis",
+                              "same_professor_exam",
+                              "other_professor_exam",
+                              "note_taker_emphasis"
+                            ]
+                          },
+                          "minItems": 1
+                        },
+                        "evidence": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "source_id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "pages": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                },
+                                "uniqueItems": true
+                              },
+                              "locator": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "source_id",
+                              "pages",
+                              "locator"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "minItems": 1
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "clinical": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "supported",
+                      "uncertain",
+                      "not_identified"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "basis": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "clinical_rationale"
+                      ]
+                    },
+                    "minItems": 0
+                  },
+                  "evidence": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "source_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "pages": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "uniqueItems": true
+                        },
+                        "locator": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "source_id",
+                        "pages",
+                        "locator"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 0
+                  }
+                },
+                "required": [
+                  "status",
+                  "reason",
+                  "basis",
+                  "evidence"
+                ],
+                "additionalProperties": false,
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "status": {
+                          "const": "supported"
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "basis": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "clinical_rationale"
+                            ]
+                          },
+                          "minItems": 1
+                        },
+                        "evidence": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "source_id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "pages": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                },
+                                "uniqueItems": true
+                              },
+                              "locator": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "source_id",
+                              "pages",
+                              "locator"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "minItems": 1
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "required": [
+              "structural",
+              "exam",
+              "clinical"
+            ],
+            "additionalProperties": false
+          },
+          "advanced": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "yes",
+                  "no",
+                  "uncertain"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "status",
+              "reason"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "point_id",
+          "group_id",
+          "objective",
+          "requirement",
+          "requirement_reason",
+          "directions",
+          "importance",
+          "advanced"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "excluded_candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "pages": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "uniqueItems": true
+                },
+                "locator": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "source_id",
+                "pages",
+                "locator"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0
+          }
+        },
+        "required": [
+          "description",
+          "reason",
+          "evidence"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "extraction_status": {
+      "type": "string",
+      "enum": [
+        "extracted",
+        "partial",
+        "unreadable"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "title",
+    "sources",
+    "scope",
+    "summary",
+    "groups",
+    "points",
+    "excluded_candidates",
+    "extraction_status"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "extraction_status": {
+            "const": "extracted"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "groups": {
+            "minItems": 1
+          },
+          "points": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "extraction_status": {
+            "enum": [
+              "partial",
+              "unreadable"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "scope": {
+            "properties": {
+              "limitations": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "extraction_status": {
+            "const": "unreadable"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "groups": {
+            "maxItems": 0
+          },
+          "points": {
+            "maxItems": 0
+          },
+          "excluded_candidates": {
+            "maxItems": 0
+          }
+        }
+      }
+    }
+  ]
+}

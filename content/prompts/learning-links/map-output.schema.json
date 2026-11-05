@@ -1,0 +1,540 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "concept-map-extract/1"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "notes",
+              "exam",
+              "other"
+            ]
+          },
+          "professor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "year": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1900
+          },
+          "page_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          }
+        },
+        "required": [
+          "source_id",
+          "label",
+          "kind",
+          "professor",
+          "year",
+          "page_count"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "included": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "excluded": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "included",
+        "excluded",
+        "limitations"
+      ],
+      "additionalProperties": false
+    },
+    "central_question": {
+      "type": "string",
+      "minLength": 1
+    },
+    "overview": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "section_id": {
+            "type": "string",
+            "pattern": "^G[1-9][0-9]*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "concept_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^C[1-9][0-9]*$"
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "section_id",
+          "title",
+          "summary",
+          "concept_ids"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "concepts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "concept_id": {
+            "type": "string",
+            "pattern": "^C[1-9][0-9]*$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "pages": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "uniqueItems": true
+                },
+                "locator": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "source_id",
+                "pages",
+                "locator"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "concept_id",
+          "label",
+          "description",
+          "evidence"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "relation_id": {
+            "type": "string",
+            "pattern": "^R[1-9][0-9]*$"
+          },
+          "from_id": {
+            "type": "string",
+            "pattern": "^C[1-9][0-9]*$"
+          },
+          "to_id": {
+            "type": "string",
+            "pattern": "^C[1-9][0-9]*$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "is_a",
+              "part_of",
+              "causal",
+              "sequence",
+              "structure_function",
+              "comparison",
+              "application",
+              "association"
+            ]
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "directed",
+              "undirected"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "exceptions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 0
+          },
+          "support": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "direct",
+                  "inferred",
+                  "uncertain"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "status",
+              "reason"
+            ],
+            "additionalProperties": false
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "pages": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "uniqueItems": true
+                },
+                "locator": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "source_id",
+                "pages",
+                "locator"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0
+          }
+        },
+        "required": [
+          "relation_id",
+          "from_id",
+          "to_id",
+          "kind",
+          "direction",
+          "label",
+          "condition",
+          "exceptions",
+          "support",
+          "evidence"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "is_a",
+                    "part_of",
+                    "causal",
+                    "sequence",
+                    "structure_function",
+                    "application"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "direction": {
+                  "const": "directed"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "comparison"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "direction": {
+                  "const": "undirected"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "support": {
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "direct",
+                        "inferred"
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "source_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "pages": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "uniqueItems": true
+                      },
+                      "locator": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "source_id",
+                      "pages",
+                      "locator"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 1
+                }
+              }
+            }
+          }
+        ]
+      },
+      "minItems": 0
+    },
+    "extraction_status": {
+      "type": "string",
+      "enum": [
+        "extracted",
+        "partial",
+        "unreadable"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "title",
+    "sources",
+    "scope",
+    "central_question",
+    "overview",
+    "sections",
+    "concepts",
+    "relations",
+    "extraction_status"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "extraction_status": {
+            "const": "extracted"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "sections": {
+            "minItems": 1
+          },
+          "concepts": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "extraction_status": {
+            "enum": [
+              "partial",
+              "unreadable"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "scope": {
+            "properties": {
+              "limitations": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "extraction_status": {
+            "const": "unreadable"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "sections": {
+            "maxItems": 0
+          },
+          "concepts": {
+            "maxItems": 0
+          },
+          "relations": {
+            "maxItems": 0
+          }
+        }
+      }
+    }
+  ]
+}
