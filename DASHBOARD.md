@@ -15,6 +15,8 @@
 | 우선순위 | 작업 | 작업자 / 세션 | 브랜치 | 건드리는 영역·파일 | 시작일 | 상태·메모 |
 |---|---|---|---|---|---|---|
 
+| P1 | Map·독립 출제포인트 추출 프롬프트 정리 | ows0104 / Codex Map 세션 | codex/map-point-prompts | content/prompts/learning-links/map-extract.md, point-extract.md, README.md, docs/changes/2026-11-06-map-point-prompts | 2026-11-06 | 사용자 승인 범위의 두 원본 전용 지시문·출력 형식. 실행 코드/문항/출제 재개/배포 없음 |
+
 ## 2. 앞으로 하기로 약속된 일
 
 | 우선순위 | 작업 | 예정 작업자 | 예상 영역·파일 | 선행 조건·메모 |
