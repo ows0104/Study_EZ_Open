@@ -1,0 +1,383 @@
+{
+  "id": "2026-11-06-main-quiz-unified",
+  "title": "새 생성·학습 파이프라인을 Main Quiz에 통합",
+  "area": "site",
+  "created_at": "2026-11-06T04:41:19.949537+00:00",
+  "required_checks": [
+    "main-quiz-contract",
+    "server-regression",
+    "web",
+    "browser"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-06T05:08:17.577188+00:00",
+      "evidence": "사용자 Main Quiz로 되게 해줘. 사이트에서 Main-Quiz 대체 요청 및 담당 범위에 그렇게 범위를 나눠 진행 승인. 이미 승인한 생성/학습 연결의 BankPanel·전송 지침·문항 형식 보존을 계획에 구체화함.",
+      "scope": "Main Quiz 시작·풀이·생성/학습 API 연결, 기존 Main Quiz 표시 재사용과 새 출제 지침 전송 및 사이트 코드 반영. 기존 은행·학습·공개 범위 유지, 다른 UI 세션 파일 제외",
+      "evidence_version": 2,
+      "source_hash": "2182676bec09c072cd0eee58314017dac038a77b3d0d4855041cc29d1fa9b992",
+      "plan_hash": "523b344a4acb16a80eb63bcc07ce8fe3192bac3f4597e96ed3855c494558def5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "8361d6b9a75b043450e6005772d289a912c7ef06e20009d41024121deac34f59"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-06T05:09:56.331515+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\.venv\\Scripts\\python.exe",
+        "docs/changes/2026-11-06-main-quiz-unified/checks.py",
+        "web"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0bd6b8dec27d466550f8537e5c50fb0e98ffcf0f22fb8412fc25be84d84d80cb",
+      "plan_hash": "523b344a4acb16a80eb63bcc07ce8fe3192bac3f4597e96ed3855c494558def5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-06-main-quiz-unified/1793941773526631300-web.log",
+      "web_artifact": "ca4eaa24e5361bd88863f32b2c9188aed722abdb1310703d0e87c852b27610f6",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "main-quiz-contract",
+      "at": "2026-11-06T05:11:56.465119+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\.venv\\Scripts\\python.exe",
+        "docs/changes/2026-11-06-main-quiz-unified/checks.py",
+        "main-quiz-contract"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0bd6b8dec27d466550f8537e5c50fb0e98ffcf0f22fb8412fc25be84d84d80cb",
+      "plan_hash": "523b344a4acb16a80eb63bcc07ce8fe3192bac3f4597e96ed3855c494558def5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-06-main-quiz-unified/1793941821814754800-main-quiz-contract.log"
+    },
+    {
+      "name": "server-regression",
+      "at": "2026-11-06T05:16:52.572337+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\.venv\\Scripts\\python.exe",
+        "docs/changes/2026-11-06-main-quiz-unified/checks.py",
+        "server-regression"
+      ],
+      "exit_code": 2,
+      "evidence_version": 2,
+      "source_hash": "0bd6b8dec27d466550f8537e5c50fb0e98ffcf0f22fb8412fc25be84d84d80cb",
+      "plan_hash": "523b344a4acb16a80eb63bcc07ce8fe3192bac3f4597e96ed3855c494558def5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-06-main-quiz-unified/1793941969151920200-server-regression.log"
+    },
+    {
+      "name": "main-quiz-contract",
+      "at": "2026-11-06T05:18:02.431473+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\.venv\\Scripts\\python.exe",
+        "docs/changes/2026-11-06-main-quiz-unified/checks.py",
+        "main-quiz-contract"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "d0ed7e29e454c8cdd42b4a40c3c082e7a59344aa8551d416bf2e77ab83b86b72",
+      "plan_hash": "523b344a4acb16a80eb63bcc07ce8fe3192bac3f4597e96ed3855c494558def5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-06-main-quiz-unified/1793942175661013000-main-quiz-contract.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-06T05:20:12.732337+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\.venv\\Scripts\\python.exe",
+        "docs/changes/2026-11-06-main-quiz-unified/checks.py",
+        "web"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "4242d07e02e99d319889c880ced03d5f3edc2b7c91a8d522aa141cb7570e881a",
+      "plan_hash": "523b344a4acb16a80eb63bcc07ce8fe3192bac3f4597e96ed3855c494558def5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-06-main-quiz-unified/1793942383278758700-web.log",
+      "web_artifact": "ca4eaa24e5361bd88863f32b2c9188aed722abdb1310703d0e87c852b27610f6",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "browser",
+      "at": "2026-11-06T05:20:15.178497+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\.venv\\Scripts\\python.exe",
+        "docs/changes/2026-11-06-main-quiz-unified/check_browser.py"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "4242d07e02e99d319889c880ced03d5f3edc2b7c91a8d522aa141cb7570e881a",
+      "plan_hash": "523b344a4acb16a80eb63bcc07ce8fe3192bac3f4597e96ed3855c494558def5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-06-main-quiz-unified/1793942414501807000-browser.log"
+    },
+    {
+      "name": "browser",
+      "at": "2026-11-06T05:21:20.877223+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\.venv\\Scripts\\python.exe",
+        "docs/changes/2026-11-06-main-quiz-unified/check_browser.py"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "4242d07e02e99d319889c880ced03d5f3edc2b7c91a8d522aa141cb7570e881a",
+      "plan_hash": "523b344a4acb16a80eb63bcc07ce8fe3192bac3f4597e96ed3855c494558def5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-06-main-quiz-unified/1793942479950331900-browser.log"
+    },
+    {
+      "name": "main-quiz-contract",
+      "at": "2026-11-06T05:21:50.165327+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\.venv\\Scripts\\python.exe",
+        "docs/changes/2026-11-06-main-quiz-unified/checks.py",
+        "main-quiz-contract"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "4242d07e02e99d319889c880ced03d5f3edc2b7c91a8d522aa141cb7570e881a",
+      "plan_hash": "523b344a4acb16a80eb63bcc07ce8fe3192bac3f4597e96ed3855c494558def5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-06-main-quiz-unified/1793942415903395700-main-quiz-contract.log"
+    },
+    {
+      "name": "browser",
+      "at": "2026-11-06T05:21:56.169492+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\.venv\\Scripts\\python.exe",
+        "docs/changes/2026-11-06-main-quiz-unified/check_browser.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "4242d07e02e99d319889c880ced03d5f3edc2b7c91a8d522aa141cb7570e881a",
+      "plan_hash": "523b344a4acb16a80eb63bcc07ce8fe3192bac3f4597e96ed3855c494558def5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-06-main-quiz-unified/1793942515166022800-browser.log"
+    },
+    {
+      "name": "server-regression",
+      "at": "2026-11-06T05:24:34.452386+00:00",
+      "command": [
+        "C:\\Users\\ows01\\Documents\\Python Scripts\\Study_EZ_Open\\.venv\\Scripts\\python.exe",
+        "docs/changes/2026-11-06-main-quiz-unified/checks.py",
+        "server-regression"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "4242d07e02e99d319889c880ced03d5f3edc2b7c91a8d522aa141cb7570e881a",
+      "plan_hash": "523b344a4acb16a80eb63bcc07ce8fe3192bac3f4597e96ed3855c494558def5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-06-main-quiz-unified/1793942336085641500-server-regression.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-06T05:23:37.198169+00:00",
+    "summary": "Main Quiz 읽기 전용 진입·계정/공개/중지 경계, 구형404/405만 호환, old 요청 지문 보존, 선지 모드/도움/지도/답만 보기, 짝짓기·순서 필드 공개 전후, outbox·로컬 응답·키보드·표와 기존 은행 호환 검토. 공통프롬프트/원본/학습/상한 보존. CI와 같은 SHA의 API·웹 완료 확인이 남았으며 운영 데이터 쓰기 없음.",
+    "evidence_version": 2,
+    "source_hash": "4242d07e02e99d319889c880ced03d5f3edc2b7c91a8d522aa141cb7570e881a",
+    "plan_hash": "523b344a4acb16a80eb63bcc07ce8fe3192bac3f4597e96ed3855c494558def5",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-06T05:24:34.456489+00:00"
+}

@@ -39,6 +39,7 @@ class Action(Start):
     helped: bool = False
     grade: Literal['missed', 'partial', 'independent'] = 'missed'
     stimulusHashes: list[str] = Field(default_factory=list,max_length=64)
+    choicesShown: bool | None = None
 
 
 class Publication(Strict):
@@ -50,11 +51,11 @@ class Publication(Strict):
 
 def active(db, subject, run_id, user):
     if not content.allowed(db, subject, run_id, user):
-        raise HTTPException(404, '공개된 뿌리 학습 범위가 없습니다.')
+        raise HTTPException(404, '공개된 Main Quiz 학습 범위가 없습니다.')
     control = db.get(RootControl, (subject, run_id))
     row = db.get(RootContent, (subject, run_id, control.revision))
     if not row or not row.reviewed:
-        raise HTTPException(404, '검토된 뿌리 학습 자료가 없습니다.')
+        raise HTTPException(404, '검토된 Main Quiz 학습 자료가 없습니다.')
     return row
 
 
@@ -83,6 +84,19 @@ def overview_data(db, row, user, when):
             'scope': row.document['review']['scope'], 'summary': state.summary(row.document, events, available, when, configured),
             'plan': planning.plan(row.document, events, available, when, configured),
             'sessionId': pending.id if pending else None, 'preparationProblems': len(problems)}
+
+
+@router.get('/main-quiz/lectures/{subject}/{run_id}/entry')
+def main_quiz_entry(subject: str, run_id: str, user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
+    """Read-only dispatch; publication/account/stop guards remain authoritative."""
+    if not db.get(Lecture, (subject, run_id)):
+        raise HTTPException(404, '강의가 없습니다.')
+    if content.allowed(db, subject, run_id, user):
+        control = db.get(RootControl, (subject, run_id))
+        row = db.get(RootContent, (subject, run_id, control.revision))
+        if row and row.reviewed:
+            return {'mode': 'structured', 'overview': overview_data(db, row, user, now())}
+    return {'mode': 'legacy'}
 
 
 @router.get('/root-learning')
@@ -246,9 +260,11 @@ def revealed_answer(db, doc, q):
     return answer
 
 
-def prior_exposure(doc, task, q, session_state):
+def prior_exposure(doc, task, q, session_state, choices_shown=None):
     direction = next(d for t in state.targets(doc) for d in t['directions'] if d['direction_id'] == task['direction_id'])
-    return bool(q.get('options')) or bool(set(direction['relation_ids']) & set(session_state.get('exposedRelations', [])))
+    choice_help = bool(q.get('options')) if choices_shown is None else (
+        bool(q.get('options')) and q.get('mcq_mode') != 'comparison' and choices_shown)
+    return choice_help or bool(set(direction['relation_ids']) & set(session_state.get('exposedRelations', [])))
 
 
 @router.get('/root-learning/sessions/{session_id}')
@@ -262,6 +278,7 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
     row, doc = checked_session(db, session_id, user)
     request = payload.model_dump()
     if not request['stimulusHashes']:request.pop('stimulusHashes')
+    if request['choicesShown'] is None:request.pop('choicesShown')
     previous = db.get(RootEvent, (user.id, payload.requestId))
     if previous:
         if previous.session_id != session_id or previous.payload.get('_request') != request:
@@ -301,7 +318,7 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
             expected=[s['sha256']for s in q.get('stimuli',[])]
             if payload.attempted and expected and payload.stimulusHashes!=expected:
                 raise HTTPException(409,'문항 그림 확인이 필요합니다. 새로고침 후 그림을 확인하거나 답만 보기를 선택하세요.')
-            helped = payload.helped or session_state['mapSeen'] or prior_exposure(doc.document, task, q, session_state)
+            helped = payload.helped or session_state['mapSeen'] or prior_exposure(doc.document, task, q, session_state, payload.choicesShown)
             data.update(attempted=payload.attempted, response=payload.response, helped=helped)
             session_state['reveals'][task['task_id']] = {k: data[k] for k in ('attempted', 'response', 'helped')}
             exposed = set(session_state.get('exposedRelations', []))

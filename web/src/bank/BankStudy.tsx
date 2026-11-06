@@ -1,26 +1,37 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api";
 import { lectureHref } from "../links";
 import type { BankRead, BankSession } from "../types/bank";
 import { BankStart } from "./BankStart";
-import { RootEntry } from "./RootLearning";
+import { RootLearningPage } from "./RootLearning";
+import { RootGenerationPanel } from "./RootGenerationPanel";
+import { useMe } from "../useMe";
+import { useAuth } from "../auth";
 import { ConnectionEntry } from "./ConnectionLearning";
 import { BankSolve } from "./BankSolve";
 import { useBankUndo } from "./useBankUndo";
+import { useMainQuizEntry } from './useMainQuizEntry';
 
 /**
- * Quiz Bank 풀이 창(2026-10-04).
- *
- *   학습을 시작한다(기본 개수 제한 없음) → 서버가 고른 문항 → 「답 보기」 → Again·Hard·Good·Easy → 다음
- *
- * **고르는 것도 일정도 서버다**(`server/app/study_engine/`). 개념 × 회상 방향마다 숙련도를 두고
- * 중요도·약점·시험까지 남은 날·선행 문항으로 다음 문항을 정한다. 화면은 그리기만 한다 —
- * 두 곳에서 고르면 갈라진다(Main-Quiz 가 `srs.py` 를 화면에 안 두는 것과 같은 까닭).
- *
- * 짝짓기·순서형의 정오답은 자동채점하고, 모든 형식의 학습 평가는 사용자가 직접 고른다.
+ * Main Quiz 공통 진입. 검토·공개·계정 범위를 통과한 새 자료를 우선한다.
+ * 기존 은행과 학습 기록은 아래 호환 화면에서 기존 서버 정책 그대로 사용한다.
  */
 export function BankStudyPage() {
+  const { subject = "", runId = "" } = useParams();
+  const { session } = useAuth();
+  const [search] = useSearchParams();
+  const legacy = search.get('legacy') === '1';
+  const account = session?.user.id ?? '';
+  const scope = JSON.stringify([account, subject, runId]);
+  const {entry,error}=useMainQuizEntry(subject,runId,!legacy);
+  if(legacy)return <LegacyBankStudyPage key={scope}/>;
+  if(error)return <p role="alert" className="notice is-error">{error}</p>;
+  if(!entry)return <p className="notice">Main Quiz를 준비하고 있습니다…</p>;
+  return entry.mode==='structured'?<RootLearningPage/>:<LegacyBankStudyPage key={scope}/>;
+}
+
+function LegacyBankStudyPage() {
   const { subject = "", runId = "" } = useParams();
   const base = `/api/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}/bank`;
   const [info, setInfo] = useState<BankRead | null>(null);
@@ -29,6 +40,7 @@ export function BankStudyPage() {
   const [solving, setSolving] = useState(false);
   const [finished, setFinished] = useState<BankSession | null>(null);
   const [unavailable, setUnavailable] = useState(false);
+  const admin = useMe()?.isAdmin;
   const restore = useCallback(() => { setFinished(null); setSolving(true); }, []);
   const { undo, undoBusy } = useBankUndo(base, info?.undoToken, restore, setUndoError, solving);
 
@@ -64,7 +76,7 @@ export function BankStudyPage() {
       <h2>Main-Quiz</h2>
       <p>아직 공개된 문제가 없습니다.</p>
       <ConnectionEntry subject={subject} runId={runId}/>
-      <RootEntry subject={subject} runId={runId}/>
+      {admin&&<RootGenerationPanel subject={subject} runId={runId} onPublished={()=>window.location.reload()}/>}
       <a href={lectureHref({ subject, runId })}>강의 자료와 기존 Main-Quiz 보기</a>
     </section>
   );

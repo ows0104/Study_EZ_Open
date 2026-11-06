@@ -3,6 +3,7 @@ import { absoluteUrl, extensionCompatible, extensionInputMinimum, requestPreview
 import { loadLatestBankPrompt } from './prompt';
 import type { BankSource } from '../types/bank';
 import { bankFileMetadata, readBankFile } from './responseFile';
+import recallGuidance from '../../../content/prompts/learning-links/automation/web-author.md?raw';
 
 export function webGenerationId(raw:string) {
   try {
@@ -20,7 +21,7 @@ export async function sendRootWeb(id:string) {
   const {packet:p}=await api<{packet:Packet}>(base+'/web-input');
   const latest=await loadLatestBankPrompt({subject:p.subject,runId:p.runId,title:p.title,bankExamDate:p.examDate??undefined},p.sources);
   const instructions=p.inputMode==='source'?'':'\n첨부 원본과 아래 Concept map·출제포인트를 대조해 필요한 전체 회상 방향을 출제한다.\n'+JSON.stringify({conceptMap:p.conceptMap,points:p.points});
-  const prompt=latest.prompt+'\n\n결과 JSON 최상위에 "generation_id": "'+id+'"를 추가한다.\n'+instructions+
+  const prompt=latest.prompt+'\n\n'+recallGuidance+'\n\n결과 JSON 최상위에 "generation_id": "'+id+'"를 추가한다.\n'+instructions+
     (p.scope?'\n추가 출제 범위: '+p.scope:'');
   const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(prompt));
   const promptHash=[...new Uint8Array(hash)].map(n=>n.toString(16).padStart(2,'0')).join('');

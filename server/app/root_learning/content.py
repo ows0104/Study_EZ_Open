@@ -87,9 +87,10 @@ def front(q):
     # Allowlist, never a blacklist of all possible authoring/answer metadata.
     from studyez_contracts.bank.cloze import normalize_cloze
     result={'question_id': q['question_id'], 'concept_id': '', 'tier': 'Core', 'importance': 0,
-            'format': q.get('format', 'basic'), 'retrieval_direction': '', 'question': normalize_cloze(q)['question'],
+            'format': q.get('format', 'basic'), 'mcq_mode': q.get('mcq_mode', 'none'), 'retrieval_direction': '', 'question': normalize_cloze(q)['question'],
             'source_refs': [], 'conflict_id': '', 'options': [{'id': o['id'], 'text': o['text']} for o in q.get('options', [])],
-            'matching_left': [], 'matching_right': [], 'sequence_items': []}
+            'matching_left': q.get('matching_left', []), 'matching_right': q.get('matching_right', []),
+            'sequence_items': q.get('sequence_items', [])}
     if q.get('stimuli'):
         from studyez_contracts.roots.media import public_images
         result['stimuli']=public_images(q)
@@ -99,4 +100,5 @@ def front(q):
 def answer(q):
     return {'answer': q['answer'], 'explanation': q.get('explanation', ''),
             'answerUnits': q.get('answer_units', []), 'correctOptionIds': q.get('correct_option_ids', []),
-            'answerPairs': [], 'correctOrder': [], 'slides': [], 'optionExplanations': q.get('option_explanations', [])}
+            'answerPairs': q.get('answer_pairs', []), 'correctOrder': q.get('correct_order', []),
+            'slides': [], 'optionExplanations': q.get('option_explanations', [])}

@@ -1,7 +1,7 @@
 import type { RootMapData, RootSummary } from '../types/rootLearning';
 export function RootMap({map,summary,position}:{map:RootMapData;summary:RootSummary;position:string}) {
-  return <section><h2>뿌리 지도와 근거</h2><p>{position} · 지도 탐색은 풀이 위치를 바꾸지 않습니다.</p>
-    <p>{map.scope.label}</p>{map.scope.limitations.map((text,i)=><p className="bank-note" key={i}>{text}</p>)}
+  return <section><h2>개념 지도와 근거</h2><p>{position} · 지도 탐색은 풀이 위치를 바꾸지 않습니다.</p>
+    <p>{map.scope.label}</p>{!!map.scope.limitations.length&&<details><summary>자료 범위·검토 기록</summary>{map.scope.limitations.map((text,i)=><p className="bank-note" key={i}>{text}</p>)}</details>}
     <details><summary>탐색 구조</summary><ul>{map.concepts.map(c=><li key={c.concept_id}>{c.label}{c.parent_ids.length?` · 상위 ${c.parent_ids.map(id=>map.concepts.find(x=>x.concept_id===id)?.label??id).join(', ')}`:''}</li>)}</ul></details>
     {map.targets.map(t=><article className="root-card" key={t.target_id}><h3>{t.title}</h3><p>{summary.targets.find(x=>x.id===t.target_id)?.status??'준비 전'}</p>
       <p>구조적 역할: {t.role==='root'?'뼈대':t.role==='branch'?'가지':'세부'}</p>
@@ -13,6 +13,6 @@ export function RootMap({map,summary,position}:{map:RootMapData;summary:RootSumm
     {!!map.points?.length&&<section><h3>출제포인트와 실제 시험 범위</h3><p>원본 대조 결과입니다. 정답 검수와 선행 과제를 반영한 학습 준비 여부는 각 목표에 표시합니다.</p>
       <ul>{map.points.map(p=>{const c=map.coverage?.find(row=>row.point_id===p.point_id);return <li key={p.point_id}><strong>{p.text}</strong>
         {' · '}{({covered:'방향 충족',partial:'일부 시험',gap:'미시험',unknown:'검토 필요',excluded:'범위 제외'} as Record<string,string>)[c?.status??'unknown']}
-        <p>{c?.reason??p.reason}</p>{c&&<p>확인 {c.confirmed_direction_ids.length} · 일부 {c.partial_direction_ids.length} · 누락 {c.missing_direction_ids.length} · 미확인 {c.unknown_direction_ids.length}</p>}</li>;})}</ul></section>}
+        <details><summary>대조 근거</summary><p>{c?.reason??p.reason}</p></details>{c&&<p>확인 {c.confirmed_direction_ids.length} · 일부 {c.partial_direction_ids.length} · 누락 {c.missing_direction_ids.length} · 미확인 {c.unknown_direction_ids.length}</p>}</li>;})}</ul></section>}
   </section>;
 }

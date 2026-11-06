@@ -9,6 +9,7 @@ const React = require(path.join(root, 'web/node_modules/react'));
 const jsx = require(path.join(root, 'web/node_modules/react/jsx-runtime'));
 const { renderToStaticMarkup } = require(path.join(root, 'web/node_modules/react-dom/server'));
 let admin = true;
+let mainEntry={mode:"legacy"};
 const dependencies = {
   react: React, 'react/jsx-runtime': jsx,
   '../api': { api() { throw Error('No request should be made while rendering a saved link'); } },
@@ -24,6 +25,8 @@ const dependencies = {
   '../links': { bankHref: () => '/mainquiz/test', bankCatalogHref: () => '/mainquiz/test/catalog' },
   '../useMe': { useMe: () => ({isAdmin:admin}) },
   './prompt': { BANK_PROMPT_VERSION:'1.32' },
+  './useMainQuizEntry': {useMainQuizEntry:()=>({entry:mainEntry,error:''})},
+  './RootGenerationPanel': {RootGenerationPanel:()=>React.createElement('section',null,'Main Quiz 만들기')},
   './BankCoverage': { BankCoverage: () => null },
   './BankResponseInput': { BankResponseInput: () => null },
 };
@@ -83,7 +86,7 @@ test('manual input stores only URLs without an extension, source PDF, or existin
   function controls() {
     slot = 0;
     const panel = loaded.BankPanel({lecture: props.lecture, detail: {bankSources: []}});
-    const child = panel.props.children;
+    const child = panel.props.children.find(e=>e?.type==='details').props.children[1];
     const tree = child.type(child.props);
     const found = [];
     function visit(element) {
@@ -146,7 +149,7 @@ test('bank creation and recreation wait for a person to send; only the separate 
   admin = true;
   function controls(detail) {
     const panel = loaded.BankPanel({...props,detail});
-    const adminElement = panel.props.children;
+    const adminElement = panel.props.children.find(e=>e?.type==='details').props.children[1];
     const tree = adminElement.type(adminElement.props);
     const found = [];
     function visit(element) {
@@ -193,3 +196,10 @@ test('bank creation and recreation wait for a person to send; only the separate 
   rejectPoints = true;
   await click(primary,false); // A preparation failure cannot prevent WEB from opening.
 });
+
+ test('new standalone Main Quiz opens from the same study card without a legacy bank',()=>{
+  admin=false;mainEntry={mode:'structured',overview:{summary:{learned:1,total:3,recalled:0}}};
+  try{const html=renderToStaticMarkup(React.createElement(exportsValue.BankPanel,{...props,detail:{}}));
+   assert.match(html,/href="\/mainquiz\/test"/);assert.match(html,/목표 첫 학습 1\/3/);assert.doesNotMatch(html,/아직 공개된|private-test|Main Quiz 만들기/);
+  }finally{mainEntry={mode:'legacy'};}
+ });
