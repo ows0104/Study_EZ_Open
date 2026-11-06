@@ -25,15 +25,15 @@ test('actual admin UI -> queue -> live worker -> synthetic model child -> atomic
   try{
     await page.goto(url);
     await page.getByRole('heading',{name:'Main Quiz 만들기'}).waitFor();
-    assert.equal(await page.getByRole('button',{name:'Main Quiz 자동전송',exact:true}).isEnabled(),true);
+    assert.equal(await page.getByRole('button',{name:'Main Quiz 만들기',exact:true}).isEnabled(),true);
     assert.equal(await page.getByLabel('Concept map 파일').count(),0);
     await page.getByText('설정·기존 지도 사용',{exact:true}).click();
     await page.getByLabel('기존 Concept map·출제포인트 사용',{exact:true}).check();
-    assert.equal(await page.getByRole('button',{name:'Main Quiz 자동전송',exact:true}).isDisabled(),true);
+    assert.equal(await page.getByRole('button',{name:'Main Quiz 만들기',exact:true}).isDisabled(),true);
     await page.getByLabel('기존 Concept map·출제포인트 사용',{exact:true}).uncheck();
     await page.getByText('설정·기존 지도 사용',{exact:true}).click();
     const requested=page.waitForResponse(r=>r.url().endsWith('/generation')&&r.request().method()==='POST');
-    await page.getByRole('button',{name:'Main Quiz 자동전송',exact:true}).click();
+    await page.getByRole('button',{name:'Main Quiz 만들기',exact:true}).click();
     const queued=await requested;assert.equal(queued.status(),200);const generation=(await queued.json()).generation;
     assert.equal(generation.privatePilot,true);assert.equal(generation.input.inputMode,'source');
     assert.equal(generation.input.conceptMap,'');assert.equal(generation.input.points,'');
