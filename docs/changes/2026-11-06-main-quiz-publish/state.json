@@ -1,0 +1,40 @@
+{
+  "id": "2026-11-06-main-quiz-publish",
+  "title": "검증된 Main Quiz 웹 버전의 게시 대기열 복구",
+  "area": "site",
+  "created_at": "2026-11-06T06:20:13.038156+00:00",
+  "required_checks": [
+    "contracts",
+    "web"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "resolved",
+    "events": [
+      {
+        "key": "2026-11-06-main-quiz-publish:recovered",
+        "at": "2026-11-06T06:26:56.862180+00:00",
+        "type": "recovered",
+        "evidence": "자동Pages가7b 동일SHA로 성공. 수동 후보/업로드 없이 대체 준비 종료"
+      },
+      {
+        "at": "2026-11-06T06:26:56.873808+00:00",
+        "type": "resolved",
+        "evidence": "관측 복구로 종료. 수동 배포나 코드 수정을 수행하지 않았음",
+        "resolution": {
+          "kind": "observation_only",
+          "note": "Recovery does not prove code was fixed or deployed"
+        }
+      }
+    ],
+    "links": [],
+    "observation": "recovered",
+    "resolution": {
+      "kind": "observation_only",
+      "note": "Recovery does not prove code was fixed or deployed"
+    }
+  },
+  "updated_at": "2026-11-06T06:26:56.873819+00:00"
+}
