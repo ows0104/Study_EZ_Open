@@ -14,7 +14,6 @@
 
 | 우선순위 | 작업 | 작업자 / 세션 | 브랜치 | 건드리는 영역·파일 | 시작일 | 상태·메모 |
 |---|---|---|---|---|---|---|
-| P1 | Main Quiz 통합 최신7b96003f 웹 게시 대기열 복구 | ows0104 / Codex Main Quiz 게시 세션 | codex/main-quiz-publish | docs/changes/2026-11-06-main-quiz-publish, runs/_development/2026-11-06-main-quiz-publish, 고정 웹 산출물·동일 SHA Cloudflare 직접 게시 | 2026-11-06 | 사용자 사이트 Main-Quiz 대체 및 범위 조정 승인 적용. API/전체 CI 성공7b96003f를 그대로 게시. App/메뉴/캘린더/목록/Guide/전역CSS 소스 편집 없음, 운영 자료/DB/권한 변경 없음. 자동 웹5c2b062e 대기26분·선행86da 빌드 정지·retry304. 같은 최신버전의 고정 산출물 직접 게시 및 사후검사 준비 |
 
 | P1 | Map·독립 출제포인트 추출 프롬프트 정리 | ows0104 / Codex Map 세션 | codex/map-point-prompts | content/prompts/learning-links/map-extract.md, point-extract.md, *-output.schema.json, *-output.example.json, README.md, docs/changes/2026-11-06-map-point-prompts, .worktrees/map-point-prompts/runs/_map-point-pilot | 2026-11-06 | 사용자 승인 범위의 두 원본 전용 지시문·JSON 스키마·예시·로컬 형식 검증. 현재 사용자 예시 추출 승인: 명시적 OpenAI 전송 승인으로 Map/포인트 각1회 완료, 심내막염·CNS 강의별 JSON4개 보존. 후속 승인된 독립단위 재추출·4지적 보완·별도 재대조 완료: 최종47/60개, ready/ready·잔여issues없음. 원본/중간/실패보존, 필수검사통과, d68b6d57 로컬 검토대기. 운영 요청 재개/문항/게시/배포 없음 |
 
@@ -53,7 +52,7 @@ merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 �
 
 | 완료일 | 작업 | 작업자 | PR |
 |---|---|---|---|
-| 2026-11-06 | 새 파이프라인의 Main Quiz 통합(회상 단위 PR7 포함) 7b96003f master 반영. 필수 계약644·서버52·웹27·CUA15 통과. API/Pages 자동 배포 확인 중. GuidePage 인계: 새 화면 Space/Enter 답 확인·1/2/3 회상평가·Z 취소, 기존 은행4등급/기록 유지 | ows0104 / Codex Main Quiz 세션 | [#8](https://github.com/ows0104/Study_EZ_Open/pull/8) |
+| 2026-11-06 | 새 파이프라인의 Main Quiz 통합(회상 단위 PR7 포함) 7b96003f master 반영. 필수 계약644·서버52·웹27·CUA15 통과. API·Pages7b96003f 같은SHA 배포 및 실제 Main Quiz assets 대조 완료(한국15:16:51 게시). [배포 기록](https://github.com/ows0104/Study_EZ_Open/blob/codex/main-quiz-unified/docs/changes/2026-11-06-main-quiz-unified/deployment.md). 직접 게시 준비는 자동복구로 종료·수동 업로드0. GuidePage 인계: 새 화면 Space/Enter 답 확인·1/2/3 회상평가·Z 취소, 기존 은행4등급/기록 유지 | ows0104 / Codex Main Quiz 세션 | [#8](https://github.com/ows0104/Study_EZ_Open/pull/8) |
 | 2026-11-05 | 순수 JSON 수신·검증·결정적 변환과 프롬프트 1.82 API·웹 a3f67d13 배포 완료. 전체 검사/health SHA/401/운영 프롬프트 확인. 로컬 러너 코드 갱신·기존 매칭 보존. 브리지 1.3.23 사용자 업데이트 필요 — [배포 기록](https://github.com/ows0104/Study_EZ_Open/blob/codex/bank-json-delivery/docs/changes/2026-11-05-bank-json-delivery/deployment.md) | ows0104 / Codex JSON 전환 세션 | [#6](https://github.com/ows0104/Study_EZ_Open/pull/6) |
 | 2026-11-05 | 교수별 예습·CBL 매핑과 적용 기록 master 반영 및 API·웹 `5c56d462` 배포 완료. 양쪽 전체 검사/health/401/Pages success/CBL 세 첨부 유지 확인 — [배포 기록](https://github.com/ows0104/Study_EZ_Open/blob/04e60a2df003dcb7688e3678457754a13d506577/docs/changes/2026-11-05-cbl-prev-notes/repository-deployment.md) | ows0104 / Codex 교수별 예습 세션 | [#5](https://github.com/ows0104/Study_EZ_Open/pull/5) |
 | 2026-11-05 | 미정 CBL 3개에 주제와 관련 CBL 기출을 확인한 2025년 필기 연결 완료. 세 PDF 실제 해시/학습 기록 보존/운영 화면 확인 및 러너 복원. 코드 재배포 없음 — [운영 기록](https://github.com/ows0104/Study_EZ_Open/blob/2d420b1f78f670f0dfa205bd0b86917bc7b0f675/docs/changes/2026-11-05-cbl-prev-notes/deployment.md) | ows0104 / Codex 교수별 예습 세션 | 승인된 자료 연결, 기록 codex/cbl-prev-notes |
