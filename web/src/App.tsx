@@ -1,11 +1,11 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from "react";
-import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { api } from "./api";
 import { AuthProvider, LoginPage, PendingApproval, useAuth } from "./auth";
 import { CalendarPage } from "./calendar/CalendarPage";
 import { getMe, resetFirstScreen, startFirstScreen } from "./firstScreen";
 import { seenNotice } from "./notices/seen";
-import { FeedbackButton } from "./feedback/FeedbackButton";
+import { Sidebar } from "./shell/Sidebar";
 import { StudyNav } from "./StudyNav";
 import type { Me } from "./types/account";
 import type { Notice } from "./types/notices";
@@ -32,9 +32,7 @@ const PrivacyPage = lazy(() => import("./PrivacyPage").then((m) => ({ default: m
 // 공지·이용방법(2026-10-04). 둘 다 가끔 여는 글이라 첫 번들에 안 싣는다.
 const NoticesPage = lazy(() => import("./notices/NoticesPage").then((m) => ({ default: m.NoticesPage })));
 const GuidePage = lazy(() => import("./notices/GuidePage").then((m) => ({ default: m.GuidePage })));
-
-/** 고른 탭에 표시를 남긴다. NavLink 기본값(`active`)은 이 앱의 이름이 아니다. */
-const tabClass = ({ isActive }: { isActive: boolean }) => (isActive ? "is-active" : "");
+const SettingsPage = lazy(() => import("./settings/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 
 const Loading = <p className="notice">불러오는 중…</p>;
 
@@ -43,7 +41,7 @@ function Shell() {
   const location = useLocation();
   const [me, setMe] = useState<Me | null>(null);
   const [meError, setMeError] = useState("");
-  // 이 브라우저가 아직 안 본 공지가 있는가 — 머리줄 「공지사항」 옆의 점.
+  // 이 브라우저가 아직 안 본 공지가 있는가 — 좌측 메뉴 「공지사항」 옆의 점.
   const [unseenNotice, setUnseenNotice] = useState(false);
   const onNoticeSeen = useCallback(() => setUnseenNotice(false), []);
 
@@ -95,51 +93,25 @@ function Shell() {
     location.pathname.startsWith("/prequiz/") ||
     location.pathname.startsWith("/mainquiz/") ||
     location.pathname.startsWith("/legacy-mainquiz/") ||
-    location.pathname.startsWith("/bank/") || location.pathname === "/study";
+    location.pathname.startsWith("/bank/");
   // 캘린더는 격자다. 읽기 좋은 폭으로 가둘 이유가 없고, 패널이 340px을 가져가는
   // 만큼 가로가 곧 요일 칸의 폭이 된다. 글을 읽는 화면들만 좁게 둔다.
-  const wide = location.pathname === "/";
+  const wide = location.pathname === "/" || location.pathname === "/study";
   // **푸는 창은 글 읽는 폭이 아니다.** 안키의 복습 화면처럼 창 전체를 카드로
   // 쓴다 — 문항·답·슬라이드가 다 이 폭을 쓰고, 답 버튼은 아래에 못 박힌다.
   // 문항 중앙값 43자·답 63자라 넓혀도 대개 한두 줄이고, 슬라이드는 원본이
   // 1152~1536px이라 700px 안에서는 절반으로 누웠다.
   const solving = bare && !location.pathname.startsWith("/lectures/");
 
+  // 2026-11 개편: 상단 머리줄 대신 좌측 메뉴. 풀이 화면(bare)은 좌측 메뉴 없이 간단한 이동 줄만 둔다.
   return (
-    <>
+    <div className={`app-shell${bare ? " is-bare" : ""}`}>
       {bare ? null : (
-        <header className="app-bar">
-          <Link className="app-brand" to="/">
-            Study_EZ
-          </Link>
-          <nav>
-            <NavLink to="/study" className={tabClass}>학습 현황</NavLink>
-            <NavLink to="/notices" className={tabClass}>
-              공지사항
-              {unseenNotice ? <i className="nav-dot" aria-label="새 공지" /> : null}
-            </NavLink>
-            <NavLink to="/guide" className={tabClass}>
-              이용방법
-            </NavLink>
-            {me.isAdmin ? (
-              <NavLink to="/admin" className={tabClass}>
-                관리
-              </NavLink>
-            ) : null}
-          </nav>
-          <span className="app-user">
-            {/* 폰에서는 이메일을 접는다 — 탭과 계정 버튼에 자리를 내준다.
-                누구로 들어와 있는지는 로그아웃 버튼의 title 이 말한다. */}
-            <span className="app-email">{me.email || email}</span>
-            <FeedbackButton />
-            <button className="is-quiet" onClick={signOut} title={`${me.email || email} 로그아웃`}>
-              로그아웃
-            </button>
-          </span>
-        </header>
+        <Sidebar email={me.email || email} isAdmin={me.isAdmin} unseenNotice={unseenNotice} onSignOut={signOut} />
       )}
+      <div className="app-column">
       {bare ? <StudyNav /> : null}
-      <main
+        <main
         className={`app-main${bare ? " is-bare" : ""}${wide ? " is-wide" : ""}${
           solving ? " is-solving" : ""
         }`}
@@ -153,6 +125,7 @@ function Shell() {
             {/* 예습·복습은 같은 탭 안에서 서로 다른 주소로 이동한다. */}
             <Route path="/notices" element={<NoticesPage isAdmin={me.isAdmin} onSeen={onNoticeSeen} />} />
             <Route path="/guide" element={<GuidePage />} />
+            <Route path="/settings" element={<SettingsPage email={me.email || email} onSignOut={signOut} />} />
             <Route path="/prequiz/:subject/:runId" element={<QuizPage kind="pre" />} />
             <Route path="/mainquiz/:subject/:runId" element={<BankStudyPage />} />
             <Route path="/legacy-mainquiz/:subject/:runId" element={<QuizPage kind="main" />} />
@@ -169,8 +142,9 @@ function Shell() {
             <Route path="*" element={<p className="notice">없는 화면입니다.</p>} />
           </Routes>
         </Suspense>
-      </main>
-    </>
+        </main>
+      </div>
+    </div>
   );
 }
 

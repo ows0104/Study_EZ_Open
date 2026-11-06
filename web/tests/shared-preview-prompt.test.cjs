@@ -25,7 +25,7 @@ test('admin saves, reloads, resets and sends latest shared prompt; personal rema
     await page.getByRole('button', { name: '기본 링크 생성 · 첨부 후 자동 전송 (관리자)' }).click();
     await page.waitForFunction(() => window.promptTest.sent.length === 1);
     assert.equal(await page.evaluate(() => window.promptTest.sent[0].prompt), '작년 필기.pdf\n최신 예시 강의');
-    await page.getByRole('button', { name: '개인 링크 만들기' }).click();
+    await page.getByRole('button', { name: '개인 대화 만들기' }).click();
     await page.waitForFunction(() => window.promptTest.sent.length === 2);
     assert.equal(await page.evaluate(() => window.promptTest.sent[1].prompt), '내 개인 프롬프트');
     // A failed save retains the draft and the previous stored value.

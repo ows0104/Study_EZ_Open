@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
 import { api } from "../api";
@@ -22,7 +22,11 @@ function readImage(file: File): Promise<string> {
   });
 }
 
-export function FeedbackButton({ prequiz }: { prequiz?: PreQuizContext } = {}) {
+/** `launch`를 주면 그 모양으로 여는 버튼을 그린다(좌측 메뉴의 「문의하기」). 대화상자는 같다. */
+export function FeedbackButton({ prequiz, launch }: {
+  prequiz?: PreQuizContext;
+  launch?: { className: string; content: ReactNode; title?: string };
+} = {}) {
   const location = useLocation();
   const id = useId();
   const pending = useRef(false);
@@ -86,10 +90,10 @@ export function FeedbackButton({ prequiz }: { prequiz?: PreQuizContext } = {}) {
     } finally { pending.current = false; setBusy(false); }
   }
   return <>
-    <button ref={opener} className="feedback-launch" onClick={() => {
+    <button ref={opener} className={launch?.className ?? "feedback-launch"} title={launch?.title} onClick={() => {
       setReport(prequiz ?? null); setPage(location.pathname); setSent(false); setError(""); dialog.current?.showModal();
       window.requestAnimationFrame(() => input.current?.focus());
-    }}>{prequiz ? "문제 제보" : "피드백"}</button>
+    }}>{launch?.content ?? (prequiz ? "문제 제보" : "피드백")}</button>
     {createPortal(<dialog ref={dialog} className="feedback-dialog" aria-labelledby={`${id}-title`}
       onCancel={(event) => { event.preventDefault(); close(); }}
       onPaste={(event) => {

@@ -149,18 +149,22 @@ function officialTimetable() {
 
 test('actual semester timetable selects infection/immunity on November 1 and preserves both exam stages', () => {
   const events = officialTimetable();
+  // 감염과 면역은 1차 시험에서 블럭을 나눈다(2026-11-06 사용자 결정 4).
   for (const date of ['2026-11-01T00:00:00', '2026-11-01T23:59:59', '2026-11-02T09:00:00',
-    '2026-11-10T14:00:00', '2026-11-20T12:00:00', '2026-11-27T15:49:59']) {
-    assert.equal(currentStudyBlock(events, at(date)), '감염과 면역', date);
+    '2026-11-10T14:00:00', '2026-11-20T11:49:59']) {
+    assert.equal(currentStudyBlock(events, at(date)), '감염과 면역 1차', date);
   }
-  assert.notEqual(currentStudyBlock(events, at('2026-11-27T15:50:00')), '감염과 면역');
+  for (const date of ['2026-11-20T11:50:00', '2026-11-20T12:00:00', '2026-11-27T15:49:59']) {
+    assert.equal(currentStudyBlock(events, at(date)), '감염과 면역 2차', date);
+  }
+  assert.doesNotMatch(currentStudyBlock(events, at('2026-11-27T15:50:00')), /^감염과 면역/);
 });
 
 test('Korean midnight and Sunday work in an overseas browser timezone', () => {
   const old = process.env.TZ;
   try {
     process.env.TZ = 'America/Los_Angeles';
-    assert.equal(currentStudyBlock(officialTimetable(), new Date('2026-10-31T15:00:00Z')), '감염과 면역');
+    assert.equal(currentStudyBlock(officialTimetable(), new Date('2026-10-31T15:00:00Z')), '감염과 면역 1차');
     assert.equal(toDateKey(startOfWeek(new Date('2026-10-31T12:00:00'))), '2026-10-26');
   } finally { if (old === undefined) delete process.env.TZ; else process.env.TZ = old; }
 });
@@ -172,6 +176,8 @@ test('actual overview first render selects the new block and displays classes wi
     'useQuizPublication.ts': { useQuizPublication: () => ({ values: [] }) },
     'QuizPublicationCell.tsx': { QuizPublicationCell: () => null },
     'StudyPlanBoard.tsx': { StudyPlanBoard: () => null },
+    // Its `?raw` prompt imports need Vite; the static first render only needs the overview itself.
+    'RootLearning.tsx': { RootOverviewPanel: () => null },
   });
   const { StudyOverview } = render(path.join(__dirname, '../src/bank/StudyOverview.tsx'));
   const React = webRequire('react');
@@ -179,8 +185,17 @@ test('actual overview first render selects the new block and displays classes wi
   const { MemoryRouter } = webRequire('react-router-dom');
   const html = renderToStaticMarkup(React.createElement(MemoryRouter, {},
     React.createElement(StudyOverview, { events: twoBlocks(), onStart() {} })));
-  assert.match(html, /<option[^>]*selected=""[^>]*>감염과 면역<\/option>/);
-  assert.match(html, /2026-11-02/);
-  assert.match(html, /준비 전/);
-  assert.doesNotMatch(html, /2026-10-29/);
+  assert.match(html, /data-block="감염과 면역"/);
+  assert.match(html, /이번 블럭/);
+  assert.match(html, /감염과 면역 · 11\.02 – 11\.03/);
+  assert.match(html, /퀴즈 없음/);
+  assert.doesNotMatch(html, /이전 블록/);
+  // Real timetable: infection/immunity is split at its first exam and grouped by display kind.
+  const actual = renderToStaticMarkup(React.createElement(MemoryRouter, {},
+    React.createElement(StudyOverview, { events: officialTimetable(), onStart() {} })));
+  assert.match(actual, /data-block="감염과 면역 1차"/);
+  for (const section of ['강의', '실습', 'TBL·CBL']) assert.match(actual, new RegExp(`aria-label="${section}"`));
+  assert.match(actual, /감염질환에 대한 접근/);
+  assert.match(actual, /김남중[^·]*· 감염학/);
+  assert.match(actual, /감염과 면역 1차 · 11.02 – 11.19/);
 });

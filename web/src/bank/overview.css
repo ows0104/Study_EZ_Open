@@ -1,7 +1,124 @@
-.study-overview { max-width: 1440px; margin: 0 auto; padding: 8px 16px 32px; }
-.quiz-production-note { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; margin: 16px 0; font-size: 13px; }
-.quiz-production-note > span { flex: 1; min-width: 220px; }
-.quiz-production-note small { display: block; margin-top: 5px; color: var(--ink-2); font-size: 12px; }
+/* 강의 목록(/study, 2026-11 개편). 정본 화면: src/redesign-prototype/ LecturesPage. */
+.study-overview { max-width: 1000px; display: flex; flex-direction: column; container-type: inline-size; }
+.study-overview > * { width: 100%; }
+.list-head h1 { font-size: 28px; }
+
+/* 블럭 선택 */
+.block-picker { position: relative; }
+.study-overview .block-picker-button { display: inline-flex; align-items: center; gap: 8px; padding: 0 10px 0 14px; font-weight: 600; white-space: nowrap; }
+.block-picker-label { font-weight: 500; color: var(--ink-3); font-size: 13px; }
+.block-now { font-size: 11px; font-weight: 600; color: var(--accent-ink); background: var(--accent-soft); border-radius: 999px; padding: 1px 7px; margin-left: 6px; }
+.block-picker-button .block-now { margin-left: 0; }
+.block-now.is-next { color: var(--ink-2); background: var(--surface-2); }
+.block-scrim { position: fixed; inset: 0; z-index: 20; }
+.block-menu {
+  position: absolute; right: 0; top: calc(100% + 6px); width: 260px; max-height: min(420px, 70vh); overflow-y: auto; padding: 6px;
+  background: var(--surface); z-index: 21; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+.study-overview .block-menu button {
+  display: flex; align-items: center; justify-content: flex-start; gap: 10px; width: 100%; min-height: 0; padding: 8px 10px;
+  border: 0; border-radius: 8px; background: transparent; color: var(--ink); text-align: left;
+}
+.study-overview .block-menu button:hover { background: var(--hover); }
+.block-menu-text { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+.block-menu-text b { font-size: 14px; font-weight: 600; }
+.block-menu-text small { font-size: 12px; color: var(--ink-3); }
+
+/* 통계 3칸 */
+.list-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
+.list-stats div { background: var(--surface); padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; }
+.list-stats span { font-size: 12.5px; color: var(--ink-3); }
+.list-stats b { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.list-stats b small { font-size: 13px; font-weight: 500; color: var(--ink-3); margin-left: 1px; }
+.list-stats b.is-review { color: #6e62d9; }
+
+/* 카드 단계: 코랄 → 살구 → 하늘 → 초록(막대/글자) */
+.stage-unseen { background: #f07167; }
+.stage-recognized { background: #f6b54d; }
+.stage-retrieving { background: #5aa9e6; }
+.stage-retained { background: #34a77f; }
+.stage-text-unseen { color: #ef5f55; }
+.stage-text-recognized { color: #f29b1d; }
+.stage-text-retrieving { color: #3d9be9; }
+.stage-text-retained { color: #1fae7a; }
+.stage-card { border: 1px solid var(--line); border-radius: 14px; padding: 16px 20px 18px; display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
+.stage-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px; font-size: 14px; color: var(--ink-2); }
+.stage-legend span { display: inline-flex; align-items: center; gap: 8px; }
+.stage-legend b { font-weight: 800; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.stage-dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.stage-bar { display: flex; height: 10px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.stage-bar > span { display: block; height: 100%; }
+
+/* 표: 체크 · 번호 · 강의 · 전체 · 미열람 · 인지 · 인출 · 저장 · 복습 · 학습률 */
+.list-table { --cols: 28px 40px minmax(140px, 1fr) repeat(7, minmax(46px, 72px)); padding-bottom: 8px; font-variant-numeric: tabular-nums; }
+.list-row { display: grid; grid-template-columns: var(--cols); align-items: center; gap: 0 8px; min-height: 50px; padding: 0 10px; border-radius: 10px; }
+.list-row.is-link { cursor: pointer; }
+.list-row:hover { background: var(--hover); }
+.list-row.is-picked { background: var(--accent-soft); }
+.list-row.is-head { min-height: 36px; font-size: 12px; color: var(--ink-3); border-bottom: 1px solid var(--line); border-radius: 0; position: sticky; top: 0; background: var(--surface); z-index: 2; }
+.list-row.is-head:hover { background: var(--surface); }
+.list-row.is-head .is-stage { display: inline-flex; align-items: center; justify-content: flex-end; gap: 5px; white-space: nowrap; }
+.list-row.is-head .stage-dot { width: 8px; height: 8px; border-radius: 2px; }
+.list-row .is-num { text-align: right; font-size: 13.5px; }
+.list-row .is-stage { font-weight: 700; }
+.list-row .is-zero { color: #c4c4c4; }
+.list-section { padding: 4px 0 8px; }
+.list-section + .list-section { border-top: 1px solid var(--line); }
+.list-section-title { font-size: 14px; font-weight: 700; padding: 14px 10px 6px; }
+.list-section-title span span { font-weight: 500; color: var(--ink-3); margin-left: 6px; font-size: 13px; }
+.list-code { font-size: 12.5px; font-weight: 500; line-height: 1.25; color: #9a9a9a; word-break: keep-all; overflow-wrap: anywhere; }
+.list-title { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 8px 0; }
+.list-title a { min-width: 0; color: inherit; text-decoration: none; }
+.list-title strong { display: block; font-size: 14px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-title a:hover strong { text-decoration: underline; }
+.list-title small { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-due.is-on { font-weight: 700; color: #6e62d9; }
+.rate-text { font-weight: 700; }
+.rate-text.is-band1 { color: #ef5f55; }
+.rate-text.is-band2 { color: #f29b1d; }
+.rate-text.is-band3 { color: #3d9be9; }
+.rate-text.is-band4 { color: #1fae7a; }
+.rate-text.is-closed { color: #b5b5b5; font-weight: 500; }
+/* 아직 복습이 열리지 않은 강의: 위기 색을 쓰지 않는다 */
+.list-row.is-closed .is-num, .list-row.is-closed .is-num .is-zero { color: #b5b5b5; }
+.list-none { grid-column: 4 / -1; text-align: right; font-size: 12px; color: var(--ink-3); }
+.list-empty { margin: 12px 10px; color: var(--ink-3); font-size: 13px; }
+
+.study-overview button.check {
+  transition: none;
+  display: grid; place-items: center; width: 18px; height: 18px; min-height: 0; padding: 0; border-radius: 5px;
+  border: 1.5px solid var(--chip-line); background: var(--surface); color: #fff;
+}
+.study-overview button.check:hover:not(:disabled) { border-color: var(--ink-3); background: var(--surface); }
+.study-overview button.check[aria-checked='true'], .study-overview button.check[aria-checked='true']:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* 모아풀기 막대 */
+.pick-bar {
+  position: sticky; bottom: 20px; align-self: center; display: flex; align-items: center; gap: 10px; width: min(640px, 100%);
+  margin-top: 12px; padding: 8px 8px 8px 20px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18); z-index: 4;
+}
+.pick-bar b { font-weight: 700; }
+.pick-spacer { flex: 1; }
+.study-overview .pick-bar button { min-height: 0; border: 0; border-radius: 999px; white-space: nowrap; }
+.study-overview .pick-clear { height: 34px; padding: 0 12px; background: transparent; color: color-mix(in srgb, var(--bg) 82%, transparent); font-weight: 500; }
+.study-overview .pick-clear:hover:not(:disabled) { background: color-mix(in srgb, var(--bg) 12%, transparent); color: var(--bg); }
+.study-overview .pick-start { gap: 8px; height: 38px; padding: 0 20px; background: var(--accent); color: #fff; font-size: 14.5px; font-weight: 600; }
+.study-overview .pick-start:hover:not(:disabled) { background: var(--accent-ink); color: #fff; }
+
+/* 더 보기: 숨기기·복원, 관리자 도구, 약리학 준비 현황, 시험까지, 뿌리 학습 */
+.list-more { margin: 24px 0 8px; border-top: 1px solid var(--line); padding-top: 4px; font-size: 13px; }
+.list-more > summary { cursor: pointer; padding: 12px 10px; color: var(--ink-2); font-weight: 600; }
+.more-section { margin: 12px 0 20px; }
+.more-section h2 { margin: 0; font-size: 15px; font-weight: 700; }
+.more-section h2 span { margin-left: 6px; color: var(--ink-3); font-weight: 500; font-size: 13px; }
+.more-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 12px; }
+.more-toolbar label { display: flex; align-items: center; gap: 6px; font-size: 12.5px; }
+.more-tabs { display: flex; padding: 3px; background: var(--surface-2); border-radius: 10px; }
+.study-overview .more-tabs button { min-height: 0; height: 26px; padding: 0 12px; border: 0; border-radius: 7px; background: transparent; color: var(--ink-2); font-size: 12.5px; }
+.study-overview .more-tabs button[aria-pressed='true'] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+.quiz-production-note { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; margin: 0 0 12px; font-size: 13px; }
+.quiz-production-note small { color: var(--warn); font-size: 12px; }
 .overview-table .quiz-production { min-width: 145px; text-align: left; font-size: 13px; }
 .quiz-production small { display: block; margin-top: 5px; color: var(--ink-2); font-size: 11px; font-weight: normal; }
 .quiz-production.is-complete > span, .quiz-production.is-complete > a { color: #238258; font-weight: 650; }
@@ -9,69 +126,33 @@
 .quiz-create { margin-top: 8px; white-space: normal; max-width: 290px; }
 .quiz-create button { font-size: 12px; padding: 5px 10px; }
 .quiz-create [role="alert"] { color: var(--warn); }
-.overview-progress > summary { cursor: pointer; padding: 14px 0; color: var(--ink-2); font-size: 13px; }
-.overview-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; }
-.overview-heading h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -.04em; }
-.overview-heading p { margin: 0; color: var(--ink-2); font-size: 13px; }
-.overview-heading label, .overview-filters label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-.overview-stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
-.overview-stats > div { padding: 18px 16px; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; }
-.overview-stats span { font-size: 12px; color: var(--ink-2); }
-.overview-stats strong { display: block; margin: 10px 0 8px; font-size: 28px; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
-.overview-stats strong small { display: inline; margin-left: 4px; font-size: 13px; font-weight: 400; }
-.overview-stats small { display: block; color: var(--ink-2); font-size: 11px; line-height: 1.5; }
-.overview-stats .overview-review { border-color: var(--warn-line); background: var(--warn-soft); }
-.overview-review strong, .overview-table .has-review { color: var(--warn); }
-.overview-flow { margin: 16px 0 24px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
-.stage-legend { display: flex; flex-wrap: wrap; gap: 12px 28px; margin-bottom: 12px; font-size: 12px; }
-.stage-legend span { display: flex; align-items: center; gap: 7px; }
-.stage-legend b { font-variant-numeric: tabular-nums; }
-.stage-legend i { width: 9px; height: 9px; border-radius: 3px; }
-.stage-unseen { background: var(--line-strong); }
-.stage-recognized { background: #d5a33c; }
-.stage-retrieving { background: #6580db; }
-.stage-retained { background: #278b73; }
-.card-stage-bar { display: flex; gap: 2px; height: 8px; overflow: hidden; border-radius: 4px; background: var(--surface-2); }
-.overview-help { margin-top: 12px; color: var(--ink-2); font-size: 12px; line-height: 1.7; }
-.overview-help summary, .overview-plan > summary, .overview-admin > summary { cursor: pointer; }
-.overview-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin: 20px 0 12px; }
-.overview-filters input { width: 240px; }
-.overview-filters > span { margin-left: auto; color: var(--ink-2); font-size: 12px; }
-.overview-selection { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 12px 0; position: sticky; top: 0; z-index: 3; background: var(--bg); }
-.overview-selection label { display: flex; align-items: center; gap: 8px; font-size: 12px; }
-.overview-selection small { font-size: 11px; color: var(--ink-2); }
 .overview-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .overview-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
-.overview-table th, .overview-table td { padding: 14px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line-soft); }
-.overview-table thead th { background: var(--surface-2); color: var(--ink-2); font-size: 11px; font-weight: 500; }
-.overview-table th:first-child { text-align: left; width: 34%; min-width: 280px; }
+.overview-table th, .overview-table td { padding: 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+.overview-table thead th { background: var(--surface-2); color: var(--ink-2); font-size: 11px; font-weight: 500; vertical-align: middle; }
+.overview-table th:first-child { text-align: left; min-width: 220px; }
 .overview-table th[scope="row"] { font-weight: 500; white-space: normal; }
 .overview-table tr:last-child > * { border-bottom: 0; }
-.overview-table tbody tr:hover { background: var(--surface-2); }
-.overview-table small { display: block; margin-top: 5px; font-weight: 400; color: var(--ink-2); font-size: 10px; }
+.overview-table small { display: block; margin-top: 4px; font-weight: 400; color: var(--ink-3); font-size: 11px; }
+.overview-table .is-pending th[scope="row"] { color: var(--ink-3); }
 .overview-lecture { display: flex; align-items: flex-start; gap: 10px; }
-.overview-lecture > input { flex-shrink: 0; margin-top: 3px; }
+.overview-lecture > input { flex-shrink: 0; margin-top: 3px; min-height: 0; }
 .overview-lecture > div { flex: 1; min-width: 0; }
 .overview-lecture a { color: var(--ink); text-decoration: none; }
 .overview-lecture a:hover { color: var(--accent); text-decoration: underline; }
-.overview-lecture .card-stage-bar { margin-top: 10px; max-width: 300px; height: 5px; }
-.overview-materials { margin-top: 7px; color: var(--ink-2); font-size: 10px; font-weight: 400; }
+.overview-materials { margin-top: 6px; color: var(--ink-2); font-size: 11px; font-weight: 400; }
 .overview-materials summary { cursor: pointer; }
 .overview-materials a { display: inline-block; margin-top: 6px; }
-.overview-score { min-width: 66px; }
-.overview-score strong { font-size: 14px; }
-.overview-score progress { display: block; width: 66px; height: 5px; margin: 7px 0 0 auto; accent-color: var(--accent); }
-.overview-wait { font-size: 11px; color: var(--ink-3); }
-.overview-table .is-pending td { color: var(--ink-3); }
-.overview-table td:last-child a { font-size: 12px; text-decoration: none; }
-.overview-plan, .overview-admin { margin-top: 20px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; font-size: 13px; }
-.overview-plan > summary, .overview-admin > summary { color: var(--ink-2); }
-.overview-plan .study-plan-board { margin: 16px 0 0; }
-.overview-admin button { margin-top: 12px; }
-.overview-table caption { text-align: left; padding: 12px; font-size: 12px; color: var(--ink-2); }
-.overview-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
-.overview-row-actions button { font-size: 11px; padding: 5px 8px; white-space: nowrap; }
+.overview-row-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
+.overview-row-actions a { font-size: 12px; text-decoration: none; margin-right: 4px; }
+.overview-row-actions button { font-size: 11px; min-height: 26px; padding: 0 8px; white-space: nowrap; }
 .overview-delete { color: var(--danger, #c0392b); }
+.overview-admin button { margin-top: 10px; }
+.overview-plan { margin: 12px 0 20px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; }
+.overview-plan > summary { cursor: pointer; color: var(--ink-2); }
+.overview-plan .study-plan-board { margin: 16px 0 0; }
+
+/* 퀴즈 삭제 확인(DeleteQuizDialog) */
 .overview-delete-dialog { width: min(520px, calc(100vw - 32px)); max-height: 85vh; overflow: auto; box-sizing: border-box; padding: 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink); }
 .overview-delete-dialog::backdrop { background: #0007; }
 .overview-delete-dialog h2 { margin-top: 0; font-size: 20px; }
@@ -81,19 +162,20 @@
 .overview-delete-dialog small { display: block; margin-top: 4px; color: var(--ink-2); font-size: 11px; }
 .overview-delete-dialog [role="alert"] { white-space: pre-wrap; }
 .overview-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-@media (max-width: 1100px) { .overview-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 600px) {
-  .study-overview { padding: 0 0 24px; }
-  .overview-heading { align-items: flex-start; flex-direction: column; }
-  .overview-heading h1 { font-size: 23px; }
-  .overview-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .overview-stats > div { padding: 13px; }
-  .overview-stats strong { font-size: 25px; }
-  .overview-filters label:first-child { width: 100%; }
-  .overview-filters input { flex: 1; min-width: 0; }
-  .overview-filters > span { margin-left: 0; }
-  .overview-table th:first-child { min-width: 230px; }
-  .overview-table th, .overview-table td { padding: 12px 9px; }
-  .overview-table th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: 1px 0 var(--line); }
-  .overview-table thead th:first-child { background: var(--surface-2); }
+
+/* 좁은 폭: 네 단계 칸을 빼고 전체·복습·학습률만 남긴다(좌측 메뉴 폭과 상관없이 표 폭 기준). */
+@container (max-width: 640px) {
+  .list-table { --cols: 28px 40px minmax(0, 1fr) repeat(3, minmax(40px, 52px)); }
+  .list-row > .is-stage, .list-row.is-head > .is-stage { display: none; }
+}
+@media (max-width: 640px) {
+  .list-table { --cols: 28px 40px minmax(0, 1fr) repeat(3, minmax(40px, 52px)); }
+  .list-row > .is-stage, .list-row.is-head > .is-stage { display: none; }
+  .list-row { padding: 0 6px; gap: 0 6px; }
+  .list-head h1 { font-size: 24px; }
+  .stage-legend { gap: 6px 18px; font-size: 13px; }
+  .list-stats div { padding: 10px 12px; }
+  .list-stats b { font-size: 18px; }
+  .pick-bar { padding-left: 14px; font-size: 13px; gap: 6px; }
+  .study-overview .pick-start { padding: 0 14px; }
 }

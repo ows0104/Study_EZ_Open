@@ -54,7 +54,7 @@ export function BankBatchPage() {
 
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = "학습 현황 · Study_EZ";
+    document.title = "강의 목록 · Study_EZ";
     let live = true;
     function load() {
       const current = ++requestVersion.current;
@@ -89,7 +89,7 @@ export function BankBatchPage() {
       });
       ++requestVersion.current;
       setHiddenKeys(result.keys);
-      setManageMessage(`${count}강의를 ${hidden ? "숨겼습니다. ‘숨긴 강의’에서 복원할 수 있습니다." : "복원했습니다."}`);
+      setManageMessage(`${count}강의를 ${hidden ? "숨겼습니다." : "복원했습니다."}`);
     } catch (cause) { setError((cause as Error).message); }
     finally { setManaging(false); }
   }

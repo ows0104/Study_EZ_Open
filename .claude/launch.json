@@ -2,6 +2,27 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "_note": "UI/UX 개편 비주얼 프로토타입(2026-11-05). 서버·로그인 없이 가짜 데이터만 쓴다.",
+      "name": "redesign-prototype",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "--prefix",
+        "web",
+        "prototype"
+      ],
+      "port": 5187,
+      "url": "http://127.0.0.1:5187"
+    },
+    {
+      "_note": "운영 웹 컴포넌트를 가짜 API로 띄우는 web/tests/*.html 고정물(2026-11 UI 개편 확인용). 서버·운영 DB를 부르지 않는다.",
+      "name": "web-fixtures",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["web/node_modules/vite/bin/vite.js", "web", "--host", "127.0.0.1", "--port", "5198", "--strictPort"],
+      "port": 5198,
+      "url": "http://127.0.0.1:5198"
+    },
+    {
       "name": "web",
       "runtimeExecutable": "npm",
       "runtimeArgs": [

@@ -39,27 +39,36 @@ async function waitFor(condition: () => boolean, label: string) {
   throw new Error(label);
 }
 const results: string[] = [];
-const select = () => document.querySelector<HTMLSelectElement>(".overview-heading select")!;
-const change = (value: string) => { select().value = value; select().dispatchEvent(new Event("change", { bubbles: true })); };
+// 강의 목록의 블럭 선택(2026-11 개편): 단추 + 목록. 지금 블럭은 단추의 data-block.
+const picker = () => document.querySelector<HTMLButtonElement>(".block-picker-button");
+async function change(name: string) {
+  picker()!.click();
+  await waitFor(() => !!document.querySelector(".block-menu"), "open block menu");
+  const option = [...document.querySelectorAll<HTMLButtonElement>(".block-menu [role=option]")]
+    .find(o => o.querySelector("b")?.firstChild?.textContent === name);
+  if (!option) throw Error(`missing block option ${name}`);
+  option.click();
+}
 async function check(course: string, label: string) {
-  await waitFor(() => select()?.value === course, label);
+  await waitFor(() => picker()?.dataset.block === course, label);
   results.push(label);
 }
 async function run() {
-  await waitFor(() => !!select(), "mount");
+  await waitFor(() => !!picker(), "mount");
   await check("", "empty timetable");
   document.getElementById("refresh")!.click();
   await check("이전 블록", "late timetable arrival");
-  change("");
-  await check("", "manual all-block view");
+  await change("다음 블록");
+  await check("다음 블록", "manual other-block view");
   document.getElementById("refresh")!.click();
   await pause();
-  await check("", "refresh preserves all-block view");
+  await check("다음 블록", "refresh preserves manual block");
   clock = NativeDate.parse("2026-10-30T11:50:00+09:00");
   window.dispatchEvent(new Event("focus"));
   await check("감염과 면역", "focus switches immediately after final exam");
-  if (!document.querySelector(".overview-table tbody")?.textContent?.includes("준비 전")) throw Error("missing pending class");
-  change("이전 블록");
+  if (!picker()!.textContent?.includes("이번 블럭")) throw Error("missing current-block mark");
+  if (!document.querySelector(".list-table")?.textContent?.includes("퀴즈 없음")) throw Error("missing pending class");
+  await change("이전 블록");
   await check("이전 블록", "manual old-block review");
   document.getElementById("refresh")!.click();
   await pause();
@@ -71,7 +80,7 @@ async function run() {
   clock = NativeDate.parse("2026-11-04T16:00:00+09:00");
   await new Promise<void>(resolve => setTimeout(resolve, 60_100));
   await check("다음 블록", "open page switches on its periodic clock without interaction");
-  change("이전 블록");
+  await change("이전 블록");
   await check("이전 블록", "manual choice after an automatic transition");
   clock = NativeDate.parse("2026-11-06T16:00:00+09:00");
   document.dispatchEvent(new Event("visibilitychange"));

@@ -9,7 +9,7 @@ export function StudyNav() {
     <nav aria-label="학습 화면 이동">
       <button className="is-quiet" onClick={() => location.key === "default" ? navigate("/") : navigate(-1)}>← 뒤로</button>
       <Link to="/">캘린더</Link>
-      <Link to="/study">학습 현황</Link>
+      <Link to="/study">강의 목록</Link>
     </nav>
     <FeedbackButton />
   </header>;
