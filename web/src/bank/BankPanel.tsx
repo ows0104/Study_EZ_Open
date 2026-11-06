@@ -20,25 +20,26 @@ import { loadLatestBankPrompt } from "./prompt";
 import { BankCoverage } from "./BankCoverage";
 import { BankResponseInput } from "./BankResponseInput";
 import { RootGenerationPanel } from './RootGenerationPanel';
+import { useMainQuizEntry } from './useMainQuizEntry';
 
 /** 웹 문항 생성 → CLI 검수·보완 → Main-Quiz 게시·학습. */
 export function BankPanel({ lecture, detail }: { lecture: Pick<LectureRef, "subject" | "runId">; detail: LectureDetail }) {
   const isAdmin = Boolean(useMe()?.isAdmin);
   const bank = detail.bank;
-  if (!isAdmin) {
-    return (
-      <>
-      <PanelGroup tone="main" title="Main-Quiz" note="개념·방향별 반복">
-        {bank?.usable ? <StudyCard lecture={lecture} bank={bank} />
-          : <p className="panel-hint">아직 공개된 문제가 없습니다.</p>}
-      </PanelGroup>
-      </>
-    );
-  }
+  const [version,setVersion]=useState(0);
+  const {entry,error}=useMainQuizEntry(lecture.subject,lecture.runId,true,version);
+  const published=useCallback(()=>{setVersion(v=>v+1);bumpPreviewVersion();},[]);
+  const summary=entry?.mode==='structured'?entry.overview.summary:null;
   return (
     <>
-      <BankAdmin lecture={lecture} detail={detail} />
-      <RootGenerationPanel subject={lecture.subject} runId={lecture.runId}/>
+      <PanelGroup tone="main" title="Main Quiz" note="개념과 학습 목표에 맞춰 복습">
+        {error?<p role="alert" className="panel-hint">{error}</p>:!entry?<p className="panel-hint">학습 자료 확인 중…</p>:
+          entry.mode==='structured'?<ActionCard shape="is-key" hit={<Link className="panel-action-hit" to={bankHref(lecture)}>
+            <strong>공부하기</strong><small>{summary?`목표 첫 학습 ${summary.learned}/${summary.total} · 회상 가능 ${summary.recalled}`:'검토된 학습 자료 준비됨'}</small>
+          </Link>}/>:bank?.usable?<StudyCard lecture={lecture} bank={bank}/>:<p className="panel-hint">아직 공개된 문제가 없습니다.</p>}
+        {isAdmin&&<RootGenerationPanel subject={lecture.subject} runId={lecture.runId} onPublished={published}/>}
+      </PanelGroup>
+      {isAdmin&&<details><summary>기존 문제·기록 관리</summary><BankAdmin lecture={lecture} detail={detail}/></details>}
     </>
   );
 }

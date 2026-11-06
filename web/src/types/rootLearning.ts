@@ -15,6 +15,7 @@ export type RootView = {sessionId:string; revision:string; version:number; day:s
   task:{id:string; question:BankQuestion; answer:(BankAnswer&{reviewNotes?:{source:string;verdict:string;note:string;suggested_answer:string}[];
     reviewIssues?:string[];sourceLinks?:{label:string;url:string}[]})|null; response:string|null; attempted:boolean|null; helped:boolean}|null};
 export type RootAction = {kind:'reveal'|'rate'|'skip'|'map'|'undo'; attempted?:boolean; response?:string; helped?:boolean;stimulusHashes?:string[];
+  choicesShown?:boolean;
   grade?:'missed'|'partial'|'independent'};
 export type RootMapData = {concepts:{concept_id:string;label:string;parent_ids:string[]}[];
   readyDirectionIds?:string[];

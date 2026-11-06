@@ -12,7 +12,7 @@ test('actual admin UI -> queue -> live worker -> synthetic model child -> atomic
     return ['http:','https:'].includes(u.protocol)&&!['127.0.0.1','localhost'].includes(u.hostname)?route.abort():route.continue();
   });
   await context.addInitScript(()=>{
-    document.addEventListener('DOMContentLoaded',()=>document.documentElement.setAttribute('data-studyez-ai-extension','1.3.20'));
+    document.addEventListener('DOMContentLoaded',()=>document.documentElement.setAttribute('data-studyez-ai-extension','1.3.23'));
     window.addEventListener('message',event=>{
       if(event.data?.source==='studyez-webapp'&&event.data.type==='STUDYEZ_OPEN_PREVIEW'){
         window.__rootDispatch=event.data.payload;
@@ -24,16 +24,16 @@ test('actual admin UI -> queue -> live worker -> synthetic model child -> atomic
   const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   try{
     await page.goto(url);
-    await page.getByRole('heading',{name:'뿌리 학습 자동 생성'}).waitFor();
-    assert.equal(await page.getByRole('button',{name:'뿌리 학습 자동전송',exact:true}).isEnabled(),true);
+    await page.getByRole('heading',{name:'Main Quiz 만들기'}).waitFor();
+    assert.equal(await page.getByRole('button',{name:'Main Quiz 자동전송',exact:true}).isEnabled(),true);
     assert.equal(await page.getByLabel('Concept map 파일').count(),0);
     await page.getByText('설정·기존 지도 사용',{exact:true}).click();
     await page.getByLabel('기존 Concept map·출제포인트 사용',{exact:true}).check();
-    assert.equal(await page.getByRole('button',{name:'뿌리 학습 자동전송',exact:true}).isDisabled(),true);
+    assert.equal(await page.getByRole('button',{name:'Main Quiz 자동전송',exact:true}).isDisabled(),true);
     await page.getByLabel('기존 Concept map·출제포인트 사용',{exact:true}).uncheck();
     await page.getByText('설정·기존 지도 사용',{exact:true}).click();
     const requested=page.waitForResponse(r=>r.url().endsWith('/generation')&&r.request().method()==='POST');
-    await page.getByRole('button',{name:'뿌리 학습 자동전송',exact:true}).click();
+    await page.getByRole('button',{name:'Main Quiz 자동전송',exact:true}).click();
     const queued=await requested;assert.equal(queued.status(),200);const generation=(await queued.json()).generation;
     assert.equal(generation.privatePilot,true);assert.equal(generation.input.inputMode,'source');
     assert.equal(generation.input.conceptMap,'');assert.equal(generation.input.points,'');
@@ -61,7 +61,7 @@ test('actual admin UI -> queue -> live worker -> synthetic model child -> atomic
     // later in the original bank. A miss still opens the following connection.
     await page.getByText('Synthetic question 2?',{exact:true}).waitFor();
     assert.equal(await page.getByText('Secret answer 2',{exact:true}).count(),0);
-    await page.getByRole('button',{name:'떠올려본 뒤 답 확인',exact:true}).click();
+    await page.getByRole('button',{name:/^답 확인/,exact:false}).click();
     await page.getByRole('button',{name:'1 못 떠올림',exact:true}).click();
     await page.getByText('Synthetic question 1?',{exact:true}).waitFor();
     assert.equal(await page.getByText('Secret answer 1',{exact:true}).count(),0);
@@ -89,16 +89,16 @@ test('actual admin UI -> queue -> live worker -> synthetic model child -> atomic
     });
     await broken.route('**/api/root-learning/sessions/*/events',route=>{brokenWrites++;return route.continue();});
     await broken.goto(url);await broken.getByRole('alert').filter({hasText:'문항 그림을 불러오지 못했습니다.'}).waitFor();
-    assert.equal(await broken.getByRole('button',{name:'떠올려본 뒤 답 확인',exact:true}).isDisabled(),true);
-    await broken.getByRole('heading',{name:'현재 연결 2',exact:true}).focus();await broken.keyboard.press('Space');
+    assert.equal(await broken.getByRole('button',{name:/^답 확인/,exact:false}).isDisabled(),true);
+    await broken.getByRole('heading',{name:'문항 2 / 2',exact:true}).focus();await broken.keyboard.press('Space');
     assert.equal(brokenWrites,0);await broken.close();
-    await page.getByRole('textbox',{name:'뿌리 질문 응답'}).fill('Synthetic recall');
+    await page.getByText('내 답 적기 · 선택',{exact:true}).click();await page.getByRole('textbox',{name:'Main Quiz 응답'}).fill('Synthetic recall');
     const revealRequest=page.waitForRequest(r=>r.url().includes('/events')&&r.postDataJSON()?.kind==='reveal');
-    await page.getByRole('button',{name:'떠올려본 뒤 답 확인',exact:true}).click();
+    await page.getByRole('button',{name:/^답 확인/,exact:false}).click();
     const body=(await revealRequest).postDataJSON();
     assert.deepEqual(body.stimulusHashes,[require('node:crypto').createHash('sha256').update(png).digest('hex')]);
     await page.getByText('Secret answer 1',{exact:true}).waitFor();
-    const source=page.getByRole('link',{name:'synthetic.pdf',exact:true});
+    await page.getByText('출제 당시 원본 자료',{exact:true}).click();const source=page.getByRole('link',{name:'synthetic.pdf',exact:true});
     const original=await context.request.get(new URL(await source.getAttribute('href'),url).href);
     assert.equal(original.status(),200);assert.equal((await original.body()).subarray(0,4).toString(),'%PDF');
     await page.getByRole('button',{name:'지도·근거 보기 (답 포함)',exact:true}).click();

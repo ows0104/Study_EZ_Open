@@ -50,9 +50,9 @@ export function RootGenerationPanel({subject,runId,onPublished}:{subject:string;
     catch{setError('파일을 읽지 못했습니다. 내용을 직접 붙여 넣으세요.');}
   }
   const sourceMode=input.inputMode==='source';
-  return <section className="root-card root-generation" aria-label="Concept map 자동출제"><h3>뿌리 학습 자동 생성</h3>
+  return <section className="root-card root-generation" aria-label="Main Quiz 만들기"><h3>Main Quiz 만들기</h3>
     <p>올해 필기·족보를 자동으로 첨부해 전송합니다. 문항 회수 후 원본만으로 지도·출제포인트를 따로 만들고, 대조·독립 정답 검수와 필요한 수정을 거쳐 게시합니다.</p>
-    <button disabled={busy||pending||!sourceMode&&(!input.conceptMap.trim()||!input.points.trim())} onClick={()=>void send()}>뿌리 학습 자동전송</button>
+    <button disabled={busy||pending||!sourceMode&&(!input.conceptMap.trim()||!input.points.trim())} onClick={()=>void send()}>Main Quiz 자동전송</button>
     <p>러너가 켜져 있으면 회수·검수·게시까지 이어집니다. 기본은 내 계정 시범 공개이며, 기존 문제와 학습 기록은 보존합니다.</p>
     <details><summary>설정·기존 지도 사용</summary>
     <label><input type="checkbox" checked={!sourceMode} onChange={e=>setInput({...input,inputMode:e.target.checked?'provided':'source'})}/>기존 Concept map·출제포인트 사용</label>
@@ -69,8 +69,8 @@ export function RootGenerationPanel({subject,runId,onPublished}:{subject:string;
     </details>
     {error&&<p role="alert">{error}</p>}
     {job&&<div role="status"><p>{job.published?'게시 완료':job.awaitingWeb?'웹 응답 대기':job.state==='queued'?'러너 대기':job.state==='running'?'출제·검수 진행 중':'작업 중지·실패'} · {job.stage||job.message}</p>
-      {job.published?<><Link to={`/bank/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}/roots`}>생성된 뿌리 학습 열기 →</Link>
-        {!job.featureEnabled&&<p>콘텐츠는 저장되었습니다. 현재 전체 뿌리 학습 공개 설정은 꺼져 있습니다.</p>}</>:
+      {job.published?<><Link to={`/bank/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}`}>Main Quiz 열기 →</Link>
+        {!job.featureEnabled&&<p>콘텐츠는 저장되었습니다. 현재 Main Quiz 학습 공개 설정은 꺼져 있습니다.</p>}</>:
         !pending&&!job.awaitingWeb&&<button disabled={busy} onClick={()=>void send(true)}>같은 입력·남은 횟수로 재개</button>}</div>}
     {job?.awaitingWeb&&<label>완성된 웹 응답 JSON 불러오기 (기존 MD 지원)<input type="file" accept=".json,.md" aria-label="웹 응답 파일" disabled={busy} onChange={async e=>{const file=e.target.files?.[0];if(!file)return;setBusy(true);try{await saveRootWebFile(job.id,file);setError('');}catch(err){setError((err as Error).message);}finally{setBusy(false);}}}/></label>}
     {job?.report&&<details><summary>생성·검수 결과</summary><p>목표 {job.report.targetCount}개 · 준비된 과제 {job.report.taskCount}개 · 수정 {job.report.repairRounds}/3회</p>

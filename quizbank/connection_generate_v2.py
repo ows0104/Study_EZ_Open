@@ -15,6 +15,7 @@ from studyez_contracts.bank.validate import validate_bank
 from studyez_contracts.bank.cloze import normalize_cloze
 from quizbank.review import FIELDS,REVIEW_REPORT,SYSTEM,shape
 from . import connection_visuals as visual
+from studyez_contracts.roots import recall_units as recall
 
 def medical_input(bank,conflicts):
     # History, importance, authoring rationale and raw conflict descriptions are
@@ -178,6 +179,7 @@ def run(packet,out,model,invoke):
                 for value in [json.loads((out/(name+'.json')).read_text(encoding='utf-8'))]],
             'medicalInputHash':ledger['stages'][f'medical-{n}']['inputHash'],
             'stages':[{'name':k,**v}for k,v in ledger['stages'].items()]}}
+        if recall.enabled(b):result['manifest']['goalPreparation']=recall.prepared_coverage(audit,doc)
         c.validate_result(result,packet)
         if not doc['tasks']:raise ValueError('전체 방향 회상이 검토된 과제가 없습니다. 결과와 미준비 사유를 보존합니다.')
         if (out/'result.json').exists():

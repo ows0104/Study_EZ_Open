@@ -58,7 +58,10 @@ def check_bank_schema_identity():
 # 같은 날 둘이 더 — `GET|PUT /api/admin/bank-feedback`. 학생이 누른 「문제 있음」을 관리자가
 # 편을 가로질러 보고 반영했다·그대로 둔다를 적는다(관리 화면 「Quiz Bank 신고」 탭).
 # 2026-10-06: 개인 복습 대화를 예습과 별도로 저장하는 my-review 경로.
+# 2026-11-06: Main Quiz 공통 진입에서 기존 공개·계정·중지 조건을 지키며
+# 검토된 새 자료와 기존 은행을 고르는 읽기 전용 경로 하나를 추가한다.
 ROUTES = """
+GET /api/main-quiz/lectures/{subject}/{run_id}/entry
 GET /api/admin/root-generation/{generation_id}/web-input
 POST /api/admin/root-generation/{generation_id}/web-dispatch
 PUT /api/admin/root-generation/{generation_id}/web-response

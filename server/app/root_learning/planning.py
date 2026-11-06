@@ -96,4 +96,4 @@ def plan(doc, events, available, now, policy):
             'deadline': deadline.isoformat() if deadline else None,
             'preparedUnseen': len(unseen), 'unpreparedGoals': sum(
                 not any(owners[d] == t['target_id'] for d in candidates) for t in target_list),
-            'scopeNote': '준비된 뿌리 범위 기준 · 앞으로 들어올 자료량 추정 없음'}
+            'scopeNote': '준비된 학습 범위 기준 · 앞으로 들어올 자료량 추정 없음'}

@@ -4,7 +4,8 @@ import { api } from "../api";
 import { bankCatalogHref, lectureHref } from "../links";
 import type { BankRead, BankSession } from "../types/bank";
 import { ConceptMap } from "./ConceptMap";
-import { RootEntry } from "./RootLearning";
+import { RootGenerationPanel } from "./RootGenerationPanel";
+import { useMe } from "../useMe";
 import { ConnectionEntry } from "./ConnectionLearning";
 import { DailyGoal } from "./DailyGoal";
 import { BankCoverage } from "./BankCoverage";
@@ -26,6 +27,7 @@ export function BankStart({ base, info, finished, lecture, onStarted, onUndo, un
   const [size, setSize] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const admin = useMe()?.isAdmin;
 
   async function start() {
     setBusy(true);
@@ -46,6 +48,7 @@ export function BankStart({ base, info, finished, lecture, onStarted, onUndo, un
     <div className={`quiz bank-start${info.lectureGoal?.met ? " bank-complete" : ""}`}>
       <p className="quiz-progress bank-progress">
         <Link to={lectureHref(lecture)}>강의로</Link>
+        <Link to={`/bank/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`}>Main Quiz로</Link>
         <span>{daysLabel(info.examDate)}</span>
       </p>
       <header className="bank-start-heading">
@@ -56,7 +59,9 @@ export function BankStart({ base, info, finished, lecture, onStarted, onUndo, un
       </header>
       <p className="bank-note">이 강의의 새 카드를 먼저 보고 예정된 복습을 이어갑니다. <Link to="/study">여러 강의 모아 풀기</Link></p>
       <ConnectionEntry subject={lecture.subject} runId={lecture.runId}/>
-      <RootEntry subject={lecture.subject} runId={lecture.runId}/>
+      {admin&&<details className="bank-session-details"><summary>Main Quiz 만들기·새 자료 사용</summary>
+        <RootGenerationPanel subject={lecture.subject} runId={lecture.runId} onPublished={()=>window.location.reload()}/>
+      </details>}
       <p className="bank-note"><Link to={bankCatalogHref(lecture)}>전체 문제 · 슬라이드 순서로 보기 →</Link></p>
       <DailyGoal plan={info.lectureGoal} showMain={info.lectureGoal?.met}
         onContinue={() => void start()} busy={busy} />

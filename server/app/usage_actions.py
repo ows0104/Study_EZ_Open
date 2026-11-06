@@ -33,12 +33,12 @@ class Action:
 ACTIONS = (
     *(Action(code, label, 'quizzes', (field,), (field, 'count'), (field, 'lastAt'), '작업', '작업')
       for code, label, field in (
-          ('root_start', '뿌리 학습 시작·재개 저장', 'rootStarts'),
-          ('root_attempt', '뿌리 시도 후 답 확인 저장', 'rootAttempts'),
-          ('root_rate', '뿌리 자기평가 저장 (취소 별도)', 'rootRatings'),
-          ('root_undo', '뿌리 자기평가 취소', 'rootUndos'),
-          ('root_generation', 'Concept map 자동출제 요청 저장', 'rootGenerations'),
-          ('root_generated', 'Concept map 자동출제 게시 완료', 'rootGenerated'),
+          ('root_start', 'Main Quiz 시작·재개 저장', 'rootStarts'),
+          ('root_attempt', 'Main Quiz 시도 후 답 확인 저장', 'rootAttempts'),
+          ('root_rate', 'Main Quiz 자기평가 저장 (취소 별도)', 'rootRatings'),
+          ('root_undo', 'Main Quiz 자기평가 취소', 'rootUndos'),
+          ('root_generation', 'Main Quiz 생성 요청 저장', 'rootGenerations'),
+          ('root_generated', 'Main Quiz 생성·검수 게시 완료', 'rootGenerated'),
       )),
     Action('connection_save', '연결 학습 저장 (이동·열람·자기확인)', 'quizzes', ('connectionSaves',),
            ('connectionSaves', 'count'), ('connectionSaves', 'lastAt'), '작업', '작업'),
