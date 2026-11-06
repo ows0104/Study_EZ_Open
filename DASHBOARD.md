@@ -27,7 +27,7 @@
 
 | P1 | E2E 완료 파일의 기존 등급 별칭 전송 복구 | ows0104 / Codex E2E 형식 복구 세션 | codex/root-tier-transport | studyez_contracts/bank/authored_json.py, roots/generation_v2.py, runner/root_native_json.py, runner/root_tier_recovery.py, quizbank/connection_generate_v2.py, 관련 tests, docs/changes/2026-11-06-root-tier-transport | 2026-11-06 | bba2dad6 기존별칭1곳 및 파생설명순서 호환·명시지문재검증, 모델재호출0·소비3 유지. 12전용+252회귀+서버3·실제Native/보존검증통과. 최종source-2/medical-2 완료. 다른 C001/C012 중복은 임의합치지 않고 BANK등록보류. 코드 기술복구와 콘텐츠수용 구별. 로컬 검토대기·운영미배포 |
 
-| P1 | 회상 부담에 맞는 문항 단위·검수·분산 충족 및 세 문항 재생성 비교 | ows0104 / Codex E2E 후속 세션 | codex/recall-units | content/prompts/learning-links/automation, studyez_contracts/roots, quizbank/connection_generate_v2.py, 관련 tests, docs/changes/2026-11-06-recall-units; web/src/bank/BankStem.tsx 표/cloze 최소 확장·관련 web/tests·별도 로컬 비교 도구 | 2026-11-06 | 사용자 명시 구현·세 문항 재생성 승인. 이전 동일 세션 root-authoring-recovery/root-tier-transport 후보는 동결해 읽기만 하고 후속 수정은 이 브랜치로 이동. 운영/기존 풀이 기록/초안/상한 보존. 다른 UI 개편의 App/calendar/styles/목록/BankStart/BankStudy는 수정하지 않음. 기존 Main Quiz QuestionBody/AnswerBody 재사용, 파이프 표와 빈칸만 BankStem에서 렌더 검증 |
+| P1 | 회상 부담에 맞는 문항 단위·검수·분산 충족 및 세 문항 재생성 비교 | ows0104 / Codex E2E 후속 세션 | codex/recall-units | content/prompts/learning-links/automation, studyez_contracts/roots/recall_units.py·generation_v2.py, quizbank/connection_generate_v2.py, web/src/bank/BankStem.tsx, 관련 tests, docs/changes/2026-11-06-recall-units | 2026-11-06 | 788adb0c·[검토 초안 #7](https://github.com/ows0104/Study_EZ_Open/pull/7). 명시 회상 단위별 채택/부모 충족·설계 검수·의학/선행 후 준비 집계 구현. 회귀254·전용25(일부 중복)·서버4·표4·타입/실제 브라우저 검증. CNS 세 문항→4/1/3개, 설계8ok·의학7ok/1doubt·준비7. 기존 Main Quiz 표시 재사용 비교5197/JSON 제공. 원래 문항/실패/상한/실제 풀이 보존·운영배포없음. 다른 UI 개편 파일 불변·사용자 비교 피드백 대기 |
 
 ## 2. 앞으로 하기로 약속된 일
 
