@@ -29,7 +29,7 @@
 
 
 
-| P1 | 관리자 Main Quiz 원클릭 생성·검수·업로드와 중복 패널 정리 | ows0104 / Codex Main Quiz 버튼 세션 | codex/admin-main-quiz-one-click | web/src/bank/BankPanel.tsx, RootGenerationPanel.tsx, rootWeb.ts, 관련 web/tests, docs/changes/2026-11-06-admin-main-quiz-one-click | 2026-11-06 | 사용자 조정 승인: Main Quiz만 담당, Claude UI 세션의 메뉴/캘린더/목록은 제외. 문제은행 웹 작성, 원본 지도·포인트 CLI 추출, CLI 통합·검수, 러너 업로드. 기존 기록·상한 보존 |
+| P1 | 관리자 Main Quiz 원클릭 생성·검수·업로드와 중복 패널 정리 | ows0104 / Codex Main Quiz 버튼 세션 | codex/admin-main-quiz-one-click | web/src/bank/BankPanel.tsx, RootGenerationPanel.tsx, rootWeb.ts, 관련 web/tests, docs/changes/2026-11-06-admin-main-quiz-one-click | 2026-11-06 | 사용자 조정 승인: Main Quiz만 담당, calendar/셸 제외. d304fa09 구현·단위10/타입/빌드/release gate 통과. PR #10 https://github.com/ows0104/Study_EZ_Open/pull/10 초안·운영미배포. 현재 지도/포인트는 원본전용 단일 CLI 추출, 웹문항과 CLI통합·검수 후 러너 업로드. UI세션 인계: GuidePage 버튼명 Main Quiz 만들기, 생성부터 업로드 자동 진행으로 안내 갱신 필요. 기록·상한 보존 |
 
 ## 2. 앞으로 하기로 약속된 일
 
