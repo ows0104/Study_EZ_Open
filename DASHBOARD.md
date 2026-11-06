@@ -27,9 +27,7 @@
 
 | P1 | E2E 완료 파일의 기존 등급 별칭 전송 복구 | ows0104 / Codex E2E 형식 복구 세션 | codex/root-tier-transport | studyez_contracts/bank/authored_json.py, roots/generation_v2.py, runner/root_native_json.py, runner/root_tier_recovery.py, quizbank/connection_generate_v2.py, 관련 tests, docs/changes/2026-11-06-root-tier-transport | 2026-11-06 | bba2dad6 기존별칭1곳 및 파생설명순서 호환·명시지문재검증, 모델재호출0·소비3 유지. 12전용+252회귀+서버3·실제Native/보존검증통과. 최종source-2/medical-2 완료. 다른 C001/C012 중복은 임의합치지 않고 BANK등록보류. 코드 기술복구와 콘텐츠수용 구별. 로컬 검토대기·운영미배포 |
 
-| P1 | 회상 부담에 맞는 문항 단위·검수·분산 충족 및 세 문항 재생성 비교 | ows0104 / Codex E2E 후속 세션 | codex/recall-units | content/prompts/learning-links/automation, studyez_contracts/roots/recall_units.py·generation_v2.py, quizbank/connection_generate_v2.py, web/src/bank/BankStem.tsx, 관련 tests, docs/changes/2026-11-06-recall-units | 2026-11-06 | 788adb0c·[검토 초안 #7](https://github.com/ows0104/Study_EZ_Open/pull/7). 명시 회상 단위별 채택/부모 충족·설계 검수·의학/선행 후 준비 집계 구현. 회귀254·전용25(일부 중복)·서버4·표4·타입/실제 브라우저 검증. CNS 세 문항→4/1/3개, 설계8ok·의학7ok/1doubt·준비7. 기존 Main Quiz 표시 재사용 비교5197/JSON 제공. 원래 문항/실패/상한/실제 풀이 보존·운영배포없음. 다른 UI 개편 파일 불변·사용자 비교 피드백 대기 |
 
-| P1 | 새 파이프라인을 기존 Main Quiz 시작·풀이 UI와 사이트 진입에 통합 | ows0104 / Codex Main Quiz 세션 | codex/main-quiz-unified | web/src/bank/BankPanel·BankStudy·BankStart·RootLearning·RootSolve·RootToday·RootMap·RootGenerationPanel·rootWeb·main-quiz.css·useMainQuizEntry, 관련 types/tests; content/prompts/learning-links/automation/web-author.md; server main-quiz 진입/기존 root API·usage 라벨, 관련 tests; recall-units 의존성788adb0c | 2026-11-06 | 사용자 구현/사이트 Main-Quiz 대체 승인 및 범위 조정 답변 그렇게 범위를 나눠 진행. 이 세션은 시작·풀이·생성/학습 API 연결. 다른 세션의 App/메뉴/캘린더/목록/GuidePage/전역styles는 수정하지 않음. 기존 은행/학습/비공개 범위 보존, 새로 검증·공개된 자료 우선·기존 자료 호환. UI 실제15사례/계약644/웹27/서버52 통과, [PR8](https://github.com/ows0104/Study_EZ_Open/pull/8) 원격 검사 중. 콘텐츠 자동교체/일괄재출제 없음. GuidePage 담당에게: 새 Main Quiz는 Space/Enter 답 확인, 1 못 떠올림·2 일부/도움·3 독립 회상, Z 직전평가 취소. 지도·선지 도움·답만 보기는 독립평가 제한. 기존 은행은 기존4등급/기록 유지 |
 
 ## 2. 앞으로 하기로 약속된 일
 
@@ -54,6 +52,7 @@ merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 �
 
 | 완료일 | 작업 | 작업자 | PR |
 |---|---|---|---|
+| 2026-11-06 | 새 파이프라인의 Main Quiz 통합(회상 단위 PR7 포함) 7b96003f master 반영. 필수 계약644·서버52·웹27·CUA15 통과. API/Pages 자동 배포 확인 중. GuidePage 인계: 새 화면 Space/Enter 답 확인·1/2/3 회상평가·Z 취소, 기존 은행4등급/기록 유지 | ows0104 / Codex Main Quiz 세션 | [#8](https://github.com/ows0104/Study_EZ_Open/pull/8) |
 | 2026-11-05 | 순수 JSON 수신·검증·결정적 변환과 프롬프트 1.82 API·웹 a3f67d13 배포 완료. 전체 검사/health SHA/401/운영 프롬프트 확인. 로컬 러너 코드 갱신·기존 매칭 보존. 브리지 1.3.23 사용자 업데이트 필요 — [배포 기록](https://github.com/ows0104/Study_EZ_Open/blob/codex/bank-json-delivery/docs/changes/2026-11-05-bank-json-delivery/deployment.md) | ows0104 / Codex JSON 전환 세션 | [#6](https://github.com/ows0104/Study_EZ_Open/pull/6) |
 | 2026-11-05 | 교수별 예습·CBL 매핑과 적용 기록 master 반영 및 API·웹 `5c56d462` 배포 완료. 양쪽 전체 검사/health/401/Pages success/CBL 세 첨부 유지 확인 — [배포 기록](https://github.com/ows0104/Study_EZ_Open/blob/04e60a2df003dcb7688e3678457754a13d506577/docs/changes/2026-11-05-cbl-prev-notes/repository-deployment.md) | ows0104 / Codex 교수별 예습 세션 | [#5](https://github.com/ows0104/Study_EZ_Open/pull/5) |
 | 2026-11-05 | 미정 CBL 3개에 주제와 관련 CBL 기출을 확인한 2025년 필기 연결 완료. 세 PDF 실제 해시/학습 기록 보존/운영 화면 확인 및 러너 복원. 코드 재배포 없음 — [운영 기록](https://github.com/ows0104/Study_EZ_Open/blob/2d420b1f78f670f0dfa205bd0b86917bc7b0f675/docs/changes/2026-11-05-cbl-prev-notes/deployment.md) | ows0104 / Codex 교수별 예습 세션 | 승인된 자료 연결, 기록 codex/cbl-prev-notes |
