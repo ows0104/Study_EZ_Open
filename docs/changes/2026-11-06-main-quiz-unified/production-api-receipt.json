@@ -1,0 +1,17 @@
+{
+  "sha": "7b96003fce476157d909863d64389d7b2f9a00b0",
+  "expected_revision": "studyez-api-release-421706833041",
+  "status": "success",
+  "artifact_hash": "369b9bb962ef1f6b3dd562db6c667828f3fd3855d02c7516464e82b509b4fd86",
+  "previous_traffic": [
+    {
+      "percent": 100,
+      "revisionName": "studyez-api-release-420497606571"
+    }
+  ],
+  "postcheck": {
+    "health_sha": "7b96003fce476157d909863d64389d7b2f9a00b0",
+    "protected_routes": "401",
+    "passed": true
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "at": "2026-11-06T06:25:15.918093+00:00",
+  "health": {
+    "status": "ok",
+    "environment": "production",
+    "revision": "7b96003fce476157d909863d64389d7b2f9a00b0"
+  },
+  "pages": {
+    "id": "5c2b062e-241d-47a9-8c03-914a489d394d",
+    "url": "https://5c2b062e.study-ez-open.pages.dev",
+    "environment": "production",
+    "latest_stage": {
+      "name": "deploy",
+      "started_on": "2026-11-06T06:16:46.177351Z",
+      "ended_on": "2026-11-06T06:16:51.713532Z",
+      "status": "success"
+    }
+  },
+  "pagesSha": "7b96003fce476157d909863d64389d7b2f9a00b0",
+  "entryAnonymousStatus": 401,
+  "assets": [
+    "AnswerPoints-BdVqSNs0.js",
+    "BankQuestion-Di7ojmQ2.js",
+    "BankSolve-DIUKvH7g.js",
+    "BankStudy-DjUcNuLi.js",
+    "ConnectionLearning-BWrf5M5U.js",
+    "LectureMastery-C65lwaTr.js",
+    "RootGenerationPanel-Dii11Onm.js",
+    "RootLearning-PMFGlSPQ.js",
+    "SlideImage-8Ul1ReIo.js",
+    "Stem--Qk-eK3q.js",
+    "feedback-CtSXkFip.js",
+    "index-DyAQBxN8.js",
+    "slidePreload-D9II2EyC.js",
+    "useMainQuizEntry-Dwc_kDRD.js"
+  ],
+  "entryAsset": "https://study-ez-open.pages.dev/assets/index-DyAQBxN8.js",
+  "promptVersion": "1.82",
+  "mainQuizChecks": true
+}
