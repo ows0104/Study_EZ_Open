@@ -34,3 +34,22 @@ test('scientific comparisons, apostrophes and intentional quotations are preserv
   assert.equal(stemText(text), text);
   assert.equal(stemText('<escape>{{c2}}</escape>와 ``{{c1}}``'), '{{c2}}와 {{c1}}');
 });
+
+test('comparison tables preserve row-major blanks and reveal only supplied answers', () => {
+  const text = '앞 {{c1}}\n| 항목 | A | B |\n| --- | --- | --- |\n| 첫째 | {{c1}} | {{c1}} |\n| 둘째 | {{c1}} | {{c1}} |\n뒤 {{c1}}';
+  const hidden = renderToStaticMarkup(React.createElement(BankStem, { text, cloze: true }));
+  assert.match(hidden, /<table/);assert.match(hidden, /scope="row"/);
+  assert.deepEqual([...hidden.matchAll(/\[ (\d) \]/g)].map(m => m[1]), ['1','2','3','4','5','6']);
+  assert.doesNotMatch(hidden, /SECRET|\{\{c/);
+  const shown = renderToStaticMarkup(React.createElement(BankStem, { text, cloze: true, answerUnits: ['START','A1','B1','A2','B2','END'] }));
+  const positions=['START','A1','B1','A2','B2','END'].map(x=>shown.indexOf(x));
+  assert.ok(positions.every((x,i)=>x>=0&&(i===0||x>positions[i-1])));
+});
+
+test('table parsing preserves scientific inequality text and escapes markup', () => {
+  const text='| 항목 | 값 |\n| --- | --- |\n| 비교 | A < B |\n| 안전 | <script>unsafe</script> |';
+  const html=renderToStaticMarkup(React.createElement(BankStem,{text}));
+  assert.match(html,/A &lt; B/);assert.doesNotMatch(html,/<script>/);
+  const malformed=renderToStaticMarkup(React.createElement(BankStem,{text:'| A | B |\n| - | --- |\n| 1 | 2 |'}));
+  assert.doesNotMatch(malformed,/<table/);
+});

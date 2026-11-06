@@ -9,6 +9,20 @@ import generation_v2_fixture as f
 from quizbank import connection_generate as g
 from studyez_contracts.roots import generation_v2 as c
 
+def test_opt_in_recall_policy_runs_through_actual_orchestrator(tmp_path):
+    from studyez_contracts.roots.recall_units import POLICY
+    p=f.packet(tmp_path/'units-source.txt')
+    def invoke(stage,ctx,*args):
+        value,info=f.model(stage,ctx,*args)
+        if stage=='normalize':value['recall_policy']=POLICY
+        if stage.startswith('source-'):
+            value['design_checks']=[{'question_id':q['question_id'],'verdict':'ok','reason':'Synthetic suitable recall'}for q in ctx['bank']['questions']]
+        return value,info
+    result=g.run(p,tmp_path/'units-out',invoke=invoke)
+    assert result['brief']['recall_policy']==POLICY and result['sourceAudit']['goal_coverage']
+    assert len(result['document']['tasks'])==2
+    c.validate_result(result,p)
+
 def test_real_orchestrator_uses_new_contract_and_reuses_all_stages(tmp_path):
     p=f.packet(tmp_path/'source.txt');out=tmp_path/'out';calls=[]
     def invoke(*args):calls.append(args[0]);return f.model(*args)

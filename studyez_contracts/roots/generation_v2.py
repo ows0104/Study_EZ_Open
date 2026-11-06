@@ -10,6 +10,7 @@ from studyez_contracts.learning_links.schema import obj,arr,enum,TEXT,REVIEW_SCH
 from studyez_contracts.learning_links.validate import require,validate_shape,index_by
 from studyez_contracts.bank.schema import BANK
 from studyez_contracts.bank.validate import validate_bank
+from . import recall_units as recall
 
 VERSION='source-assessment/2'
 POLICY='root-generation/2'
@@ -19,9 +20,12 @@ REVIEW2['properties']['schema_version']=enum('learning-links/2')
 direction=REVIEW2['properties']['targets']['items']['properties']['directions']['items']
 direction['properties'].update(components=arr(COMPONENT,1),requires_visual={'type':'boolean'})
 direction['required']+=['components','requires_visual']
+direction['properties']['recall_units']=arr(obj(unit_id=TEXT,cue=TEXT,answer_scope=TEXT,
+    component_ids=arr(TEXT,1),relation_ids=arr(TEXT,1)),1)
 BRIEF=copy.deepcopy(BRIEF_SCHEMA)
 BRIEF['properties']['schema_version']=enum('learning-brief/2')
 BRIEF['properties']['targets']=copy.deepcopy(REVIEW2['properties']['targets'])
+BRIEF['properties']['recall_policy']=enum(recall.POLICY)
 AUTHOR_BANK=copy.deepcopy(BANK)
 AUTHOR_BANK['properties']['questions']['items']['properties'].pop('stimuli',None)
 CONFLICT=obj(conflict_id=TEXT,facts=TEXT)
@@ -43,6 +47,7 @@ SOURCE['properties'].update(direction_evidence=arr(EVIDENCE),relation_checks=arr
 SOURCE['required']+=['direction_evidence','relation_checks','target_checks','prerequisite_checks','issues','clinical_context_status','clinical_context_reason']
 SOURCE['properties']['direction_checks']['items']['properties']['scope_status']=enum('consistent','conflict','unknown')
 SOURCE['properties']['direction_checks']['items']['required'].append('scope_status')
+SOURCE['properties']['design_checks']=arr(obj(question_id=TEXT,verdict=enum('ok','doubt','wrong'),reason=TEXT))
 
 def medical_input(bank,conflicts):
     fields=('question_id','concept_id','format','question','answer','answer_units','options','correct_option_ids',
@@ -64,9 +69,11 @@ def medical_input(bank,conflicts):
 
 def legacy_brief(brief):
     value=copy.deepcopy(brief);value['schema_version']='learning-brief/1'
+    value.pop('recall_policy',None)
     for t in value['targets']:
         for d in t['directions']:
             d.pop('components',None);d.pop('requires_visual',None)
+            d.pop('recall_units',None)
     return value
 
 def validate_brief(brief,sources=None):
@@ -78,6 +85,7 @@ def validate_brief(brief,sources=None):
     validate_prerequisites(targets,index_by(brief['relations'],'relation_id'),brief['prerequisites'],set(targets),reviewed=False)
     for t in brief['targets']:
         for d in t['directions']:index_by(d['components'],'component_id')
+    recall.project_brief(brief)
     return brief
 
 def brief_findings(brief,sources=None):
@@ -104,6 +112,7 @@ def validate_initial_correction(before,after,reason):
 def source_schema(brief,bank):
     old=source_assessment_schema(legacy_brief(brief),bank)
     value=copy.deepcopy(SOURCE)
+    if recall.enabled(brief):value['required'].append('design_checks')
     value['properties']['question_reviews']=old['properties']['question_reviews']
     value['properties']['direction_checks'].update(minItems=len(old['properties']['direction_checks']['items']['properties']['direction_id']['enum']),
         maxItems=len(old['properties']['direction_checks']['items']['properties']['direction_id']['enum']))
@@ -182,6 +191,18 @@ def order_plan(doc,selected,available,assessed):
     return result
 
 def compile_assessment(brief,bank,raw):
+    validate_brief(brief)
+    require(raw==envelope(brief,bank,raw.get('assessment')),'assessment2: input revision mismatch')
+    validate_shape(raw['assessment'],SOURCE,'assessment2')
+    if not recall.enabled(brief):return _compile_assessment(brief,bank,raw)
+    projected,proof,groups=recall.project_assessment(brief,bank,raw)
+    audit=_compile_assessment(projected,bank,proof)
+    audit['assessment']=copy.deepcopy(raw)
+    audit['goal_coverage']=recall.summarize(groups,audit)
+    return audit
+
+
+def _compile_assessment(brief,bank,raw):
     from .source_assessment import compile_source_assessment as compile1
     validate_brief(brief);validate_images(bank,brief['sources'])
     require(type(raw)is dict and set(raw)=={'briefHash','bankHash','assessment'},'assessment2: malformed input envelope')
@@ -260,7 +281,7 @@ def compile_assessment(brief,bank,raw):
             notes +=[row['direction_id']+'/'+row['question_id']+': '+components[p['component_id']]+' · '+labels[p['location']]
                 for p in row['components']if p['location']!='answer']
             if row['visual_verdict']in ('doubt','wrong'):notes.append(row['direction_id']+': 그림 확인 필요 · '+row['reason'])
-        for did in relevant:
+        for did in sorted(relevant):
             if direction_checks[did]['scope_status']!='consistent':notes.append(did+': '+direction_checks[did]['reason'])
             target=dirs[did][0]
             if targets[target['target_id']]['status']!='consistent':notes.append(did+': '+targets[target['target_id']]['reason'])
@@ -269,11 +290,18 @@ def compile_assessment(brief,bank,raw):
     return audit
 
 def validate_audit(brief,bank,audit):
-    require(audit==compile_assessment(brief,bank,audit['assessment']),'audit2: derived result differs from raw judgments')
+    compiled=compile_assessment(brief,bank,audit['assessment'])
+    # Older set traversal changed only the order of derived explanation fragments.
+    # Retain every fragment and all raw judgments, states and scope exactly.
+    left,right=copy.deepcopy(audit),copy.deepcopy(compiled)
+    for value in (left,right):
+        for row in value['review']['coverage']:row['reason']=sorted(row['reason'].split('; '))
+    require(left==right,'audit2: derived result differs from raw judgments')
     return audit
 
 def make_document(brief,bank,audit,*,revision,title,exam_date,medical=None):
     validate_audit(brief,bank,audit)
+    if recall.enabled(brief):brief=recall.project_brief(brief)[0]
     review=audit['review'];coverage={c['point_id']:c for c in review['coverage']};candidates=[]
     source={r['question_id']:r['verdict']for r in audit['question_checks']['reviews']}
     med={r['question_id']:r['verdict']for r in medical['reviews']}if medical else {}
@@ -308,6 +336,18 @@ def make_document(brief,bank,audit,*,revision,title,exam_date,medical=None):
     return validate_document(doc)
 
 def repair_reasons(brief,bank,audit,medical,validation):
+    if recall.enabled(brief):
+        projected,raw,groups=recall.project_assessment(brief,bank,audit['assessment'])
+        local=copy.deepcopy(audit);local['assessment']=raw;local.pop('goal_coverage',None)
+        local['assessment']['assessment'].pop('design_checks',None)
+        # Recompile with the same validated leaf scope; final result retains raw review.
+        local=_compile_assessment(projected,bank,local['assessment'])
+        reasons=repair_reasons(projected,bank,local,medical,validation)
+        reasons +=[{'kind':'question_fix','text':'문항 설계: '+r['reason'],'question_ids':[r['question_id']],
+            'direction_ids':[]}for r in audit['assessment']['assessment']['design_checks']if r['verdict']=='wrong']
+        parent={did:g['direction_id']for g in groups for did in g['unit_direction_ids']}
+        for r in reasons:r['direction_ids']=list(dict.fromkeys(parent.get(d,d)for d in r['direction_ids']))
+        return reasons
     a=audit['assessment']['assessment'];reasons=[i for i in a['issues']if i['kind']in ('question_fix','map_fix','required_gap')]
     for label,rows in [('source',a['question_reviews']),('medical',medical['reviews']if medical else[])]:
         reasons +=[{'kind':'question_fix','text':label+': '+r['note'],'question_ids':[r['question_id']],'direction_ids':[]}for r in rows if r['verdict']=='wrong']
@@ -438,5 +478,6 @@ def validate_result(value,packet):
     actual=validate_bank(bank,[s['id']for s in packet['sources']])
     require(all(value['validation'].get(k)==actual[k]for k in ('pass','errors','warnings'))and validate_bank(bank,[s['id']for s in packet['sources']],check_quality=False)['pass'],'result2: invalid bank or validation')
     expected=make_document(b,bank,a,revision=packet['revision'],title=packet['title'],exam_date=packet['examDate'],medical=m)
+    if recall.enabled(b):require(meta.get('goalPreparation')==recall.prepared_coverage(a,expected),'result2: altered prepared goal coverage')
     require(value['document']==expected,'result2: altered readiness/document')
     return expected

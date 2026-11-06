@@ -2,11 +2,13 @@ source-assessment/2. 별도 원본 검수 세션에서 원본 전체·현재 bri
 
 questionFronts는 실제 학습자에게 보이는 발문이며 cloze 정답은 마스킹돼 있다. raw BANK의 cloze 저작 표기 속 정답을 발문 제공으로 오인하지 않는다. 반대로 실제 보이는 이름·선지·그림의 답 주석은 provided다. stimulusFiles의 각 정확한 PNG를 직접 열어 해당 문항의 실제 시각 자극으로 판독한다. 원본 전체 쪽을 문항 자극 crop으로 대신하지 않는다.
 
-question_reviews와 direction_checks는 모든 실제 ID를 정확히 한 번 포함한다. tested/provided/explanation은 실제 관계 역할이다. 방향이 맞지 않는 역식별/설명은 direction_ids=[]로 보존한다. broad relation의 일부 사실을 묻는다는 이유만으로 전체 condition/answer_scope가 시험됐다고 하지 않는다. 여러 문항의 합집합과 한 문항 전체 회상을 구별한다.
+question_reviews와 direction_checks는 모든 실제 ID를 정확히 한 번 포함한다. tested/provided/explanation은 실제 관계 역할이다. 방향이 맞지 않는 역식별/설명은 direction_ids=[]로 보존한다. recall_units가 있는 목표는 여러 문항에 나뉜 단위별 실제 회상을 확인해 내용 충족을 집계한다. 각 단위의 cue/answer_scope/components/relation_ids가 같은 실제 회상 범위를 나타내는지 확인한다. units가 없는 종합 방향은 그 판단을 실제로 수행하는 한 문항의 전체 회상이 필요하다. 부분 사실의 합집합으로 종합 판단을 대신하지 않는다.
 
 각 direction_checks의 scope_status는 cue·answer_scope·components·relation_ids가 실제로 같은 전체 목표인지 consistent/conflict/unknown으로 판정한다. answer_scope의 필수 요소가 components에서 빠졌으면 map_fix다. components 목록 자체를 무조건 올바른 완전 목록으로 가정하지 않는다.
 
-direction_evidence는 방향의 회상을 검토하는 각 후보 문항마다 작성한다. 그 방향의 모든 components를 정확히 한 번 포함한다. location=answer는 실제 질문이 요구하고 정답의 answer_units에 존재하는 경우이며 해당 0-based answer_unit_indices를 적는다. 발문/선지/그림이 답을 제공하면 provided, 해설에만 있으면 explanation, 확실히 묻지 않으면 missing, 근거상 판단 불가면 unknown이다. answer 외에는 indices=[]다. 표·문항·해설에 존재한다는 사실만으로 회상을 승인하지 않는다. 코드가 한 문항의 모든 요소가 answer인지 검사하며 부분 문항들을 합쳐 완성하지 않는다. visual_verdict는 실제 자극이 필요·존재·식별 가능하고 답 주석/오류가 없는지 ok/doubt/wrong/not_applicable로 판단한다. 이미지와 답의 좌우/기호/결합이 일치하는지 직접 실제 PNG를 연다. 이 검수와 독립 정답 검수에 동일 PNG가 첨부된다.
+direction_evidence는 방향의 회상을 검토하는 각 후보 문항마다 작성한다. 부모 방향의 모든 components를 정확히 한 번 포함하여 분할 문항이 맡지 않은 내용도 missing 등으로 정직하게 남긴다. location=answer는 실제 발문이 요구하고 answer_units에 존재하는 내용이며 0-based answer_unit_indices를 적는다. 발문/선지/그림이 제공한 내용은 provided, 해설에만 있으면 explanation, 묻지 않으면 missing, 판단 불가면 unknown이다. answer 외에는 indices=[]다. 코드는 명시 recall_unit마다 전체 실제 회상을 확인하고 모든 단위가 확인되어야 부모 내용 충족을 인정한다. 표의 행/열 안내와 실제 빈칸 정답을 구별한다. visual_verdict는 원본 그림의 필요·존재·식별·답 주석 여부를 판정하며 원본 시각 식별에 실제 PNG를 확인한다. 텍스트 cloze 표는 원본 그림 식별이 아니다.
+
+recall_policy=recall-units/1이면 design_checks에 모든 문항을 정확히 한 번 포함한다: question_id, verdict(ok/doubt/wrong), reason. 실제 회상 목표를 짧게 요약하고 답의 양·독립 요구의 수·조건·채점 부담과 형식의 적절성을 검토한다. 단순한 글자 수 상한을 쓰지 않는다. 여러 요구가 과도하게 겹치면 분할이나 표/빈칸/대응/선택 등 구체적 개선 방향을 쓴다. 원본 일치나 문항 안의 지식이 맞다는 사실만으로 설계를 ok로 하지 않는다. 기출 정답 기억·검수 설명을 묻는 질문, 의도가 불분명한 후속 질문, 지식 없이 문구로 정답이 드러나는 판단은 wrong과 question_fix로 기록한다. 해설의 주의사항이 채점에 섞이면 역할에 맞게 옮긴다. 목표 자체가 지나치게 넓거나 units가 의미를 바꾸면 map_fix로 기록한다. 단순 표현 취향과 실제 설계 위반을 구별한다.
 
 relation_checks는 모든 관계의 원본·임상 지지 여부 supported/conflict/unknown을 정확히 한 번 판정한다. 초기 unreviewed 상태와 별개이며 미확인은 자동 승격하지 않는다. target_checks는 모든 목표의 중요도 근거가 현재 의미에 맞는지 consistent/conflict/unknown을 정확히 한 번 판정한다. 원래 강조를 비동등 재정의에 전이하지 않는다. prerequisite_checks는 BANK의 모든 기존 question_id→prerequisite_id 쌍에 supported/unnecessary/unknown과 실제 이유를 정확히 한 번 기록한다. 내용상 필요한 최소 기초와 과도한 전체 표/목록 잠금을 구별한다.
 
