@@ -1,0 +1,280 @@
+{
+  "id": "2026-11-06-recall-units",
+  "title": "회상 단위별 문항 설계·검수·분산 충족과 Main Quiz 비교",
+  "area": "generation",
+  "created_at": "2026-11-06T03:39:37.020192+00:00",
+  "required_checks": [
+    "recall-contract",
+    "pipeline-regression",
+    "main-quiz-ui",
+    "live-comparison"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-06T03:41:14.396866+00:00",
+      "evidence": "현재 사용자: 제안한 추가 지시/검수/충족 코드 동시 수정 및 기존 Main Quiz UI 기준 세 문제 재생성 비교를 명시 승인. 같은 원본/생성 자료의 OpenAI 전송·검수 승인 유지.",
+      "scope": "회상 단위 opt-in 계약/분산 충족·설계 검수·Main Quiz 표 최소 확장·별도 세 문항 생성/원본/독립 검수 및 로컬 비교. 기존 실행/학습/상한 보존, 운영 미변경",
+      "evidence_version": 2,
+      "source_hash": "2a0dced38f85d626f0d8f023387365495f21efe576514dc1b12305afa29b8ad0",
+      "plan_hash": "b8b11bfa0153e503c38ac459e73e8484543ebf72c758d3ce18d06d40d852f13d",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "8ab1b06c468c4f33e7d3c40bbb4cbe408a0a33a03ca085b8cc38b0e184601fd7"
+    }
+  },
+  "checks": [
+    {
+      "name": "recall-contract",
+      "at": "2026-11-06T04:00:35.114729+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-recall-units/checks.py",
+        "recall-contract"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "4da758a4f638fa26aa4f7e41c3523414b17f7cf406254397eb18a3baea22e1e8",
+      "plan_hash": "b8b11bfa0153e503c38ac459e73e8484543ebf72c758d3ce18d06d40d852f13d",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-recall-units/1793937623687587800-recall-contract.log"
+    },
+    {
+      "name": "main-quiz-ui",
+      "at": "2026-11-06T04:02:00.619986+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-recall-units/checks.py",
+        "main-quiz-ui"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0f10f16ed5132c020079f039d02d8d4e1228dd97de8c4bee4e7f42fede398efb",
+      "plan_hash": "b8b11bfa0153e503c38ac459e73e8484543ebf72c758d3ce18d06d40d852f13d",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-recall-units/1793937701224101900-main-quiz-ui.log"
+    },
+    {
+      "name": "pipeline-regression",
+      "at": "2026-11-06T04:02:45.051023+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-recall-units/checks.py",
+        "pipeline-regression"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0f10f16ed5132c020079f039d02d8d4e1228dd97de8c4bee4e7f42fede398efb",
+      "plan_hash": "b8b11bfa0153e503c38ac459e73e8484543ebf72c758d3ce18d06d40d852f13d",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-recall-units/1793937705973419300-pipeline-regression.log"
+    },
+    {
+      "name": "recall-contract",
+      "at": "2026-11-06T04:04:30.408995+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-recall-units/checks.py",
+        "recall-contract"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0b472b6889614aba3b2da34075b19a749128848701ca2a869ecdeaf10441180d",
+      "plan_hash": "b8b11bfa0153e503c38ac459e73e8484543ebf72c758d3ce18d06d40d852f13d",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-recall-units/1793937863034339600-recall-contract.log"
+    },
+    {
+      "name": "pipeline-regression",
+      "at": "2026-11-06T04:05:30.413534+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-recall-units/checks.py",
+        "pipeline-regression"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0b472b6889614aba3b2da34075b19a749128848701ca2a869ecdeaf10441180d",
+      "plan_hash": "b8b11bfa0153e503c38ac459e73e8484543ebf72c758d3ce18d06d40d852f13d",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-recall-units/1793937870744937300-pipeline-regression.log"
+    },
+    {
+      "name": "main-quiz-ui",
+      "at": "2026-11-06T04:05:35.183325+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-recall-units/checks.py",
+        "main-quiz-ui"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0b472b6889614aba3b2da34075b19a749128848701ca2a869ecdeaf10441180d",
+      "plan_hash": "b8b11bfa0153e503c38ac459e73e8484543ebf72c758d3ce18d06d40d852f13d",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-recall-units/1793937921658847200-main-quiz-ui.log"
+    },
+    {
+      "name": "live-comparison",
+      "at": "2026-11-06T04:05:36.904115+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-recall-units/checks.py",
+        "live-comparison"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0b472b6889614aba3b2da34075b19a749128848701ca2a869ecdeaf10441180d",
+      "plan_hash": "b8b11bfa0153e503c38ac459e73e8484543ebf72c758d3ce18d06d40d852f13d",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-recall-units/1793937935523940900-live-comparison.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-06T04:07:44.133596+00:00",
+    "summary": "Reviewed explicit lossless unit partitions, complete per-unit answer/relationship evidence, non-union integration guards, mandatory source-design review, clinical/precondition task filtering and separately validated parent goalPreparation. Legacy records and raw reviewer/provider evidence retained. Actual trial8 drafts,7 prepared with1 medical doubt displayed. Existing Main Quiz renderer reused with table/cloze tests and browser before/after/reveal inspection. Original3/run/consumed budget/learner DB preserved; no production deployment.",
+    "evidence_version": 2,
+    "source_hash": "0b472b6889614aba3b2da34075b19a749128848701ca2a869ecdeaf10441180d",
+    "plan_hash": "b8b11bfa0153e503c38ac459e73e8484543ebf72c758d3ce18d06d40d852f13d",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-06T04:07:44.327542+00:00"
+}
