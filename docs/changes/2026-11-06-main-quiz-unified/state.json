@@ -375,9 +375,16 @@
     ]
   },
   "lifecycle": {
-    "status": "planning",
-    "events": [],
+    "status": "verified",
+    "events": [
+      {
+        "at": "2026-11-06T06:26:47.077661+00:00",
+        "type": "verified",
+        "evidence": "PR8/master7b 실제 CI1992+112, API exact SHA와401, Pages 동일SHA deploy success15:16:51 KST 및 실제MainQuiz assets 대조 성공. 원본/운영 학습 보존",
+        "resolution": null
+      }
+    ],
     "links": []
   },
-  "updated_at": "2026-11-06T05:24:34.456489+00:00"
+  "updated_at": "2026-11-06T06:26:47.077677+00:00"
 }
