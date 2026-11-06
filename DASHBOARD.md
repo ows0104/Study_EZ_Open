@@ -14,6 +14,7 @@
 
 | 우선순위 | 작업 | 작업자 / 세션 | 브랜치 | 건드리는 영역·파일 | 시작일 | 상태·메모 |
 |---|---|---|---|---|---|---|
+| P1 | Main Quiz 통합 최신7b96003f 웹 게시 대기열 복구 | ows0104 / Codex Main Quiz 게시 세션 | codex/main-quiz-publish | docs/changes/2026-11-06-main-quiz-publish, runs/_development/2026-11-06-main-quiz-publish, 고정 웹 산출물·동일 SHA Cloudflare 직접 게시 | 2026-11-06 | 사용자 사이트 Main-Quiz 대체 및 범위 조정 승인 적용. API/전체 CI 성공7b96003f를 그대로 게시. App/메뉴/캘린더/목록/Guide/전역CSS 소스 편집 없음, 운영 자료/DB/권한 변경 없음. 자동 웹5c2b062e 대기26분·선행86da 빌드 정지·retry304. 같은 최신버전의 고정 산출물 직접 게시 및 사후검사 준비 |
 
 | P1 | Map·독립 출제포인트 추출 프롬프트 정리 | ows0104 / Codex Map 세션 | codex/map-point-prompts | content/prompts/learning-links/map-extract.md, point-extract.md, *-output.schema.json, *-output.example.json, README.md, docs/changes/2026-11-06-map-point-prompts, .worktrees/map-point-prompts/runs/_map-point-pilot | 2026-11-06 | 사용자 승인 범위의 두 원본 전용 지시문·JSON 스키마·예시·로컬 형식 검증. 현재 사용자 예시 추출 승인: 명시적 OpenAI 전송 승인으로 Map/포인트 각1회 완료, 심내막염·CNS 강의별 JSON4개 보존. 후속 승인된 독립단위 재추출·4지적 보완·별도 재대조 완료: 최종47/60개, ready/ready·잔여issues없음. 원본/중간/실패보존, 필수검사통과, d68b6d57 로컬 검토대기. 운영 요청 재개/문항/게시/배포 없음 |
 
