@@ -29,7 +29,7 @@
 
 | P1 | 회상 부담에 맞는 문항 단위·검수·분산 충족 및 세 문항 재생성 비교 | ows0104 / Codex E2E 후속 세션 | codex/recall-units | content/prompts/learning-links/automation, studyez_contracts/roots/recall_units.py·generation_v2.py, quizbank/connection_generate_v2.py, web/src/bank/BankStem.tsx, 관련 tests, docs/changes/2026-11-06-recall-units | 2026-11-06 | 788adb0c·[검토 초안 #7](https://github.com/ows0104/Study_EZ_Open/pull/7). 명시 회상 단위별 채택/부모 충족·설계 검수·의학/선행 후 준비 집계 구현. 회귀254·전용25(일부 중복)·서버4·표4·타입/실제 브라우저 검증. CNS 세 문항→4/1/3개, 설계8ok·의학7ok/1doubt·준비7. 기존 Main Quiz 표시 재사용 비교5197/JSON 제공. 원래 문항/실패/상한/실제 풀이 보존·운영배포없음. 다른 UI 개편 파일 불변·사용자 비교 피드백 대기 |
 
-| P1 | 새 파이프라인을 기존 Main Quiz 시작·풀이 UI와 사이트 진입에 통합 | ows0104 / Codex Main Quiz 세션 | codex/main-quiz-unified | web/src/bank/BankStudy·BankStart·RootLearning·RootSolve·RootToday·RootMap·RootGenerationPanel·rootWeb·main-quiz.css, 관련 types/tests; server main-quiz 진입/기존 root API·usage 라벨, 관련 tests; recall-units 의존성788adb0c | 2026-11-06 | 사용자 구현/사이트 Main-Quiz 대체 승인 및 범위 조정 답변 그렇게 범위를 나눠 진행. 이 세션은 시작·풀이·생성/학습 API 연결. 다른 세션의 App/메뉴/캘린더/목록/GuidePage/전역styles는 수정하지 않음. 기존 은행/학습/비공개 범위 보존, 새로 검증·공개된 자료 우선·기존 자료 호환. 테스트 후 사이트 코드 반영, 콘텐츠 자동교체/일괄재출제 없음 |
+| P1 | 새 파이프라인을 기존 Main Quiz 시작·풀이 UI와 사이트 진입에 통합 | ows0104 / Codex Main Quiz 세션 | codex/main-quiz-unified | web/src/bank/BankPanel·BankStudy·BankStart·RootLearning·RootSolve·RootToday·RootMap·RootGenerationPanel·rootWeb·main-quiz.css, 관련 types/tests; server main-quiz 진입/기존 root API·usage 라벨, 관련 tests; recall-units 의존성788adb0c | 2026-11-06 | 사용자 구현/사이트 Main-Quiz 대체 승인 및 범위 조정 답변 그렇게 범위를 나눠 진행. 이 세션은 시작·풀이·생성/학습 API 연결. 다른 세션의 App/메뉴/캘린더/목록/GuidePage/전역styles는 수정하지 않음. 기존 은행/학습/비공개 범위 보존, 새로 검증·공개된 자료 우선·기존 자료 호환. 테스트 후 사이트 코드 반영, 콘텐츠 자동교체/일괄재출제 없음 |
 
 ## 2. 앞으로 하기로 약속된 일
 
