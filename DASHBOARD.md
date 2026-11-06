@@ -23,8 +23,6 @@
 
 | P1 | 완료 작성 초안의 구조 수용 실패 복구 | ows0104 / Codex E2E 복구 세션 | codex/root-authoring-recovery | quizbank/connection_generate_v2.py, quizbank/connection_authoring_recovery.py, studyez_contracts/roots/generation_v2.py, runner/root_native_json.py, 관련 tests, docs/changes/2026-11-06-root-authoring-recovery | 2026-11-06 | de1fcf73 구조복구·252검사+서버3·실제740파일보존/복구증거 통과. CNS49/40 준비. 심내막염 후속은 별도 root-tier-transport 후보로 연결, 최종ID중복 보류. 원래실패·3회상한 보존. 로컬 검토대기·운영미배포. 사용자 인계 승인: cli-parallel-main-quiz 세션이 기존 복구 후보 보존·연결 담당 |
 
-| P1 | UI/UX 개편: 좌측 메뉴·흰 바탕·캘린더·강의 목록(학습 현황+모아풀기 통합)·강의 패널·회독·자유 노트를 운영 웹에 적용 | HungryPotato01 / Claude UI 개편 세션 | claude/ui-ux-redesign-727bb1 | web/src/App.tsx·셸, web/src/calendar/*, web/src/styles/*, web/src/bank/StudyOverview.tsx·overview.css(목록 화면), web/src/bundle/*, web/src/notices/GuidePage.tsx, 새 web/src/notes/*; 회독 기록이 서버 저장이 필요하면 server 학습 기록 API·테이블(별도 승인 후). 프로토타입 web/src/redesign-prototype/*, docs/changes/2026-11-05-ui-ux-redesign | 2026-11-06 | 2026-11-06 1단계(웹만) 구현 승인·로컬 구현·검사 완료, PR [#9](https://github.com/ows0104/Study_EZ_Open/pull/9) 검토·CI 중(병합=운영 배포, 사용자 확인 후). 2단계(회독 저장·자유 노트, 새 표·API)는 별도 승인. 출제·quizbank·studyez_contracts/roots·runner·content/prompts는 건드리지 않는다. 겹침 확인 필요: 뿌리·연결 학습 진입(BankStart·BankStudy)은 그대로, 강의 목록의 뿌리 개요는 「더 보기」 안으로 옮김(동작 불변). 추가로 web/src/shell·settings·theme.ts, calendar/kinds.ts 새 파일. 사용자 조정: Main Quiz 시작/풀이/생성·학습 API는 Codex main-quiz-unified가 담당, 이 세션은 메뉴/캘린더/목록/이용안내 담당. 2026-11-06 사용자 재조정: codex/admin-main-quiz-one-click가 Main Quiz 버튼·중복 패널 정리 담당, calendar/셸 변경 제외 |
-
 | P1 | E2E 완료 파일의 기존 등급 별칭 전송 복구 | ows0104 / Codex E2E 형식 복구 세션 | codex/root-tier-transport | studyez_contracts/bank/authored_json.py, roots/generation_v2.py, runner/root_native_json.py, runner/root_tier_recovery.py, quizbank/connection_generate_v2.py, 관련 tests, docs/changes/2026-11-06-root-tier-transport | 2026-11-06 | bba2dad6 기존별칭1곳 및 파생설명순서 호환·명시지문재검증, 모델재호출0·소비3 유지. 12전용+252회귀+서버3·실제Native/보존검증통과. 최종source-2/medical-2 완료. 다른 C001/C012 중복은 임의합치지 않고 BANK등록보류. 코드 기술복구와 콘텐츠수용 구별. 로컬 검토대기·운영미배포. 사용자 인계 승인: cli-parallel-main-quiz 세션이 기존 복구 후보 보존·연결 담당 |
 
 
@@ -38,6 +36,7 @@
 
 | 우선순위 | 작업 | 예정 작업자 | 예상 영역·파일 | 선행 조건·메모 |
 |---|---|---|---|---|
+| P2 | UI/UX 개편 2단계: 강의록 회독 기록(+/삭제/되돌리기)·자유 노트(Notion식 편집기) 서버 저장 | HungryPotato01 / Claude | server/app/models·routes(새 표 2개+RLS), server/app/cli.py, web/src/notes/*, web/src/calendar/EventPanel.tsx | 2026-11-06 사용자 결정으로 1단계와 분리. 새 표·API라 운영 DB 준비·중요 운영 승인 필요. 1단계 PR #9 병합 후 시작 |
 | | | | | |
 
 ## 3. 제안된 아이디어 (논의 필요)
@@ -56,6 +55,7 @@ merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 �
 
 | 완료일 | 작업 | 작업자 | PR |
 |---|---|---|---|
+| 2026-11-06 | UI/UX 개편 1단계(웹만) 구현·검사 완료: 좌측 메뉴·흰 바탕·색 5조합·캘린더(D-day·회독·학습률)·강의 패널·강의 목록·감염과 면역 1차/2차 블럭·강의 번호. 서버·DB·출제 미변경. 병합(=운영 배포)은 사용자 확인 후 | HungryPotato01 / Claude UI 개편 세션 | [#9](https://github.com/ows0104/Study_EZ_Open/pull/9) (병합 전) |
 | 2026-11-06 | 새 파이프라인의 Main Quiz 통합(회상 단위 PR7 포함) 7b96003f master 반영. 필수 계약644·서버52·웹27·CUA15 통과. API·Pages7b96003f 같은SHA 배포 및 실제 Main Quiz assets 대조 완료(한국15:16:51 게시). [배포 기록](https://github.com/ows0104/Study_EZ_Open/blob/codex/main-quiz-unified/docs/changes/2026-11-06-main-quiz-unified/deployment.md). 직접 게시 준비는 자동복구로 종료·수동 업로드0. GuidePage 인계: 새 화면 Space/Enter 답 확인·1/2/3 회상평가·Z 취소, 기존 은행4등급/기록 유지 | ows0104 / Codex Main Quiz 세션 | [#8](https://github.com/ows0104/Study_EZ_Open/pull/8) |
 | 2026-11-05 | 순수 JSON 수신·검증·결정적 변환과 프롬프트 1.82 API·웹 a3f67d13 배포 완료. 전체 검사/health SHA/401/운영 프롬프트 확인. 로컬 러너 코드 갱신·기존 매칭 보존. 브리지 1.3.23 사용자 업데이트 필요 — [배포 기록](https://github.com/ows0104/Study_EZ_Open/blob/codex/bank-json-delivery/docs/changes/2026-11-05-bank-json-delivery/deployment.md) | ows0104 / Codex JSON 전환 세션 | [#6](https://github.com/ows0104/Study_EZ_Open/pull/6) |
 | 2026-11-05 | 교수별 예습·CBL 매핑과 적용 기록 master 반영 및 API·웹 `5c56d462` 배포 완료. 양쪽 전체 검사/health/401/Pages success/CBL 세 첨부 유지 확인 — [배포 기록](https://github.com/ows0104/Study_EZ_Open/blob/04e60a2df003dcb7688e3678457754a13d506577/docs/changes/2026-11-05-cbl-prev-notes/repository-deployment.md) | ows0104 / Codex 교수별 예습 세션 | [#5](https://github.com/ows0104/Study_EZ_Open/pull/5) |
