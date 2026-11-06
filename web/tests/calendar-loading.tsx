@@ -41,7 +41,8 @@ window.fetch = async (input, init) => {
             masteredConcepts: 0, weakConcepts: 1, assessedDirections: 1, totalDirections: 1, weakest: [] },
         })) })) };
     }
-  } else if (url.pathname === "/api/bundles/decks") result = { decks: [] };
+  } else if (url.pathname === "/api/timetable/study-progress") result = { lectures: [] };
+  else if (url.pathname === "/api/bundles/decks") result = { decks: [] };
   else if (url.pathname === "/api/lectures/subject/run-0") result = {
     subject: "subject", runId: "run-0", uid: "one", date: "2026-10-16", slot: 1, slotEnd: 1,
     startTime: "09:00", title: "시간표 강의 0", professors: [], author: "", version: null, course: "과목",

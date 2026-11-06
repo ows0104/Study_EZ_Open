@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { api } from "../api";
 import { notePreviewAction } from "../usage";
 import {
@@ -51,11 +51,14 @@ export function PreviewAction({
   detail,
   base,
   onError,
+  trailing,
 }: {
   lecture: LectureRef;
   detail: LectureDetail;
   base: string;
   onError: (message: string) => void;
+  /** 같은 줄 끝에 붙는 버튼(2026-11 개편: 「예습 퀴즈」). */
+  trailing?: ReactNode;
 }) {
   const [busy, setBusy] = useState<"shared" | "personal" | "">("");
   const [askingRemake, setAskingRemake] = useState<boolean | null>(null);
@@ -187,13 +190,14 @@ export function PreviewAction({
               provider={detail.preview.provider}
             />
           ) : (
-            <Empty name="기본 링크" note="아직 없습니다" />
+            <Empty name="공통 대화" note="아직 없습니다" />
           )}
           {detail.myPreview?.conversationUrl ? (
             <PersonalOpen url={detail.myPreview.conversationUrl} base={base} />
           ) : (
-            <Empty name="개인 링크" note={canInstall ? "확장을 설치하면 만듭니다" : "컴퓨터에서 만듭니다"} />
+            <Empty name="개인 대화" note={canInstall ? "확장을 설치하면 만듭니다" : "컴퓨터에서 만듭니다"} />
           )}
+          {trailing}
         </div>
         {linkTool || sharedPromptTool ? <div className="panel-aside">{linkTool}{sharedPromptTool}</div> : null}
         {sharedPromptEditor}
@@ -257,19 +261,19 @@ export function PreviewAction({
       tools={sharedTools}
     />
   ) : !canMake ? (
-    <Empty name="기본 링크" note="예습 필기 대기" />
+    <Empty name="공통 대화" note="예습 필기 대기" />
   ) : isAdmin ? (
     <ActionCard
       shape="is-key"
       hit={
-        <button type="button" className="panel-action-hit" aria-label="기본 링크 만들기" disabled={Boolean(busy) || !compatible} onClick={() => void start("shared", false)}>
-          <Body name="기본 링크" note={busy === "shared" ? "여는 중…" : "만들기"} />
+        <button type="button" className="panel-action-hit" aria-label="공통 대화 만들기" disabled={Boolean(busy) || !compatible} onClick={() => void start("shared", false)}>
+          <Body name="공통 대화" note={busy === "shared" ? "여는 중…" : "만들기"} />
         </button>
       }
       tools={sharedTools}
     />
   ) : (
-    <Empty name="기본 링크" note="아직 없습니다" />
+    <Empty name="공통 대화" note="아직 없습니다" />
   );
 
   /* 개인 링크 — 사람마다 하나. 프롬프트도 자기 것으로 묻는다. */
@@ -280,12 +284,12 @@ export function PreviewAction({
       shape="is-key is-faint"
       hit={
         <button className="panel-action-hit" disabled={Boolean(busy) || !compatible || !promptStore.loaded} onClick={() => void start("personal", false)}>
-          <Body name="개인 링크" note={busy === "personal" ? "여는 중…" : "만들기"} />
+          <Body name="개인 대화" note={busy === "personal" ? "여는 중…" : "만들기"} />
         </button>
       }
     />
   ) : (
-    <Empty name="개인 링크" note="예습 필기 대기" />
+    <Empty name="개인 대화" note="예습 필기 대기" />
   );
 
   return (
@@ -293,6 +297,7 @@ export function PreviewAction({
       <div className="panel-pair">
         {shared}
         {personal}
+        {trailing}
       </div>
       <div className="panel-aside">
         {linkTool}
@@ -367,7 +372,7 @@ function SharedOpen({
             notePreviewAction(base, "share");
           }}
         >
-          <Body name="기본 링크" />
+          <Body name="공통 대화" />
         </a>
       }
       tools={tools}
@@ -401,7 +406,7 @@ function PersonalOpen({ url, base, tools }: { url: string; base: string; tools?:
           rel="noreferrer"
           onClick={() => notePreviewAction(base, "mine")}
         >
-          <Body name="개인 링크" />
+          <Body name="개인 대화" />
         </a>
       }
       tools={tools}

@@ -150,7 +150,7 @@ test('preview primary card creates a shared manual request; only the separate to
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   try {
     await page.goto(origin+'/tests/shared-preview-prompt.html');
-    await page.getByRole('button',{name:'기본 링크 만들기',exact:true}).click({timeout:5000}).catch(async error=>{
+    await page.getByRole('button',{name:'공통 대화 만들기',exact:true}).click({timeout:5000}).catch(async error=>{
       throw new Error(`${error.message}\nFixture errors: ${errors.join('; ')}\n${await page.locator('body').innerText()}`);
     });
     await page.waitForFunction(()=>window.promptTest.sent.length===1);
@@ -163,10 +163,10 @@ test('preview primary card creates a shared manual request; only the separate to
     await page.getByRole('button',{name:'내 예습 프롬프트 고치기'}).waitFor({timeout:5000}).catch(async error=>{
       throw new Error(`${error.message}\nFixture errors: ${errors.join('; ')}\n${await page.locator('body').innerText()}`);
     });
-    assert.equal(await page.getByRole('button',{name:'기본 링크 만들기',exact:true}).count(),0);
+    assert.equal(await page.getByRole('button',{name:'공통 대화 만들기',exact:true}).count(),0);
     await page.goto(origin+'/tests/shared-preview-prompt.html?noExtension');
     await page.getByText('확장을 설치하면 만듭니다').waitFor();
-    assert.equal(await page.getByRole('button',{name:'기본 링크 만들기',exact:true}).count(),0);
+    assert.equal(await page.getByRole('button',{name:'공통 대화 만들기',exact:true}).count(),0);
   } finally {await page.close();}
 });
 

@@ -25,53 +25,54 @@
 
 :root {
   /* 표면은 세 층이다. 바닥 < 카드 < 눌린 것. */
-  --bg: #fbfbfc;
+  /* 2026-11 개편: 흰 바탕 + 회색 강조. 회색은 강조색을 빼고 봐도 흐리지 않게 한 단계 진하다. */
+  --bg: #ffffff;
   --surface: #ffffff;
-  --surface-2: #f6f7f9;
-  --surface-3: #eceef1;
+  --surface-2: #f4f4f4;
+  --surface-3: #e8e8e8;
+  --side: #f9f9f9;
+  --hover: #efefef;
 
-  --line: #e4e6ea;
-  --line-soft: #eef0f3;
-  --line-strong: #d3d7dd;
+  --line: #e3e3e3;
+  --line-soft: #ececec;
+  --line-strong: #d0d0d0;
+  --chip-line: #a9a9a9;
 
-  --ink: #16181d;
-  --ink-2: #565b64;
-  --ink-3: #878d97;
+  --ink: #171717;
+  --ink-2: #474747;
+  --ink-3: #7c7c7c;
 
   /* 인터페이스 강조색. 범주 계열의 '강의'와 같은 인디고를 쓴다 — 미세하게
    * 다른 인디고 둘이 나란히 있으면 색을 나눈 것이 아니라 실수로 읽힌다. */
-  --accent: #3e63dd; /* indigo 9 */
-  --accent-ink: #3a5bc7; /* indigo 11 */
-  --accent-soft: #edf2fe; /* indigo 3 */
-  --accent-line: #c1d0ff; /* indigo 6 */
+  /* 강조색 두 개는 사용자가 고른 조합(src/theme.ts)이 정한다. 기본은 인디고 + 앰버. */
+  --accent: var(--theme-accent, #3e63dd);
+  --accent-ink: var(--theme-accent-ink, #2f4fb8);
+  --accent-soft: color-mix(in srgb, var(--accent) 9%, var(--surface));
+  --accent-line: color-mix(in srgb, var(--accent) 28%, var(--surface));
+  --accent-mid: color-mix(in srgb, var(--accent) 50%, var(--surface));
   --on-accent: #ffffff;
+  --accent2: var(--theme-accent2, #e8930c);
+  --accent2-ink: var(--theme-accent2-ink, #a35f00);
+  --accent2-soft: color-mix(in srgb, var(--accent2) 11%, var(--surface));
+  --accent2-line: color-mix(in srgb, var(--accent2) 32%, var(--surface));
+  --accent2-mid: color-mix(in srgb, var(--accent2) 45%, var(--surface));
+  /* 시험·D-day·신규 교수 N */
+  --exam: #e5484d;
+  --exam-ink: #c4372f;
+  --exam-soft: color-mix(in srgb, var(--exam) 7%, var(--surface));
 
-  /* 범주 계열. Radix Colors의 9단(solid) 값이다 — 그 단계는 라이트·다크가
-   * 같은 값이라 한 벌만 두면 된다. 옅은 배경과 테두리는 표면에 섞어서
-   * 만들므로(`color-mix`) 다크 모드가 따로 손 안 대도 따라온다. */
-  --cat-lecture: #3e63dd; /* indigo 9 */
-  --cat-practice: #12a594; /* teal 9 */
-  --cat-exam: #e5484d; /* red 9 */
+  /* 범주는 색으로 나누지 않는다(2026-11 개편: 강의·실습·TBL·CBL은 같은 모양). 시험만 빨강. */
+  --cat-lecture: var(--ink-2);
+  --cat-practice: var(--ink-2);
+  --cat-exam: var(--exam);
 
-  /* 패널의 세 갈래. 예습 · Pre-Quiz · Main-Quiz.
-   *
-   * 셋이 같은 파랑을 쓰고 있어서 어디까지가 예습이고 어디부터가 Pre-Quiz인지
-   * 글자를 읽어야 알았다(2026-08-31 관리자 문의).
-   *
-   * **범주와 무관하게 고정이다(2026-08-31 관리자 지시).** 강의든 실습이든
-   * 시험이든 예습 버튼은 violet, Pre-Quiz는 teal, Main-Quiz는 indigo다.
-   * 위의 `--cat-*`과 값이 겹치는 자리가 있고(teal = 실습, indigo = 강의) 그래서
-   * 패널 머리의 범주 배지와 아래 버튼이 한 화면에서 같은 색을 쓸 때가 있는데,
-   * **그것을 알고 고정한 것이다.** 겹친다는 이유로 갈래 색을 바꾸지 마라 —
-   * 버튼 색이 무엇을 뜻하는지가 열어 본 교시마다 달라지는 쪽이 더 나쁘다.
-   *
-   * 접으려면: 셋을 모두 `--accent`로 되돌리면 전과 같은 화면이 된다. */
-  --fam-preview: #6e56cf; /* violet 9 */
-  --fam-pre: #12a594; /* teal 9 */
-  --fam-main: #3e63dd; /* indigo 9 */
-  --fam-review: var(--ink-3); /* 복습 대화 — 차분한 회색 */
-  /* Quiz Bank(2026-10-04). 세 갈래와 겹치지 않는 색 — 복습 줄 개편의 새 갈래다. */
-  --fam-bank: #f76b15; /* orange 9 */
+  /* 갈래 색. 2026-08-31 관리자 지시의 고정색(예습 violet · Pre-Quiz teal · Main-Quiz indigo)을
+   * 2026-11-06 사용자 결정으로 대체했다: 예습 갈래 = 두 번째 강조색, 복습 갈래 = 메인 강조색. */
+  --fam-preview: var(--accent2);
+  --fam-pre: var(--accent2);
+  --fam-main: var(--accent);
+  --fam-review: var(--accent);
+  --fam-bank: var(--accent);
 
   --warn: #9a3412;
   --warn-soft: #fdf3ec;
@@ -105,25 +106,27 @@
  * 바닥이 가장 어둡고 카드가 한 칸 밝은 순서가 그대로다. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0d0e11;
-    --surface: #15171b;
-    --surface-2: #1a1d22;
-    --surface-3: #23262c;
+    --bg: #121212;
+    --surface: #161616;
+    --surface-2: #1e1e1e;
+    --surface-3: #2a2a2a;
+    --side: #1a1a1a;
+    --hover: #242424;
+    --chip-line: #5a5a5a;
 
     --line: #272a31;
     --line-soft: #1f2229;
     --line-strong: #363a43;
 
-    --ink: #eceef1;
-    --ink-2: #a8aeb8;
-    --ink-3: #757c88;
+    --ink: #ededed;
+    --ink-2: #b4b4b4;
+    --ink-3: #858585;
 
     /* 9단은 라이트·다크가 같은 값이다. 글자로 쓰는 자리만 밝은 11단으로. */
-    --accent: #3e63dd; /* indigo 9 */
-    --accent-ink: #9eb1ff; /* indigo 11 (dark) */
-    --accent-soft: #182449; /* indigo 3 (dark) */
-    --accent-line: #304384; /* indigo 6 (dark) */
-    --on-accent: #ffffff;
+    /* 글자로 쓰는 강조색만 밝힌다. 옅은 바탕·선은 위의 섞기가 어두운 표면으로 따라온다. */
+    --accent-ink: color-mix(in srgb, var(--accent) 60%, #ffffff);
+    --accent2-ink: color-mix(in srgb, var(--accent2) 65%, #ffffff);
+    --exam-ink: #ff8a8e;
 
     --warn: #f0a06a;
     --warn-soft: #251a13;
@@ -3586,3 +3589,161 @@ button.notice-title:hover:not(:disabled) {
 .bank-personal-questions li > span:first-child { flex: 1 1 220px; overflow-wrap: anywhere; white-space: pre-wrap; }
 .is-essential { color: #a14212; font-weight: 700; }
 .bank-tier-control.is-essential select { border-color: #c47b31; background: #fff5dc; }
+
+/* 2026-11 UI/UX 개편(docs/changes/2026-11-05-ui-ux-redesign).
+ *
+ * 흰 바탕 + 회색 강조 + 사용자가 고른 두 강조색. base.css·calendar.css를 통째로 갈아엎지 않고
+ * 이 파일이 마지막에 실려 겉모습을 덮는다. 원칙: 중요한 것이 더 눈에 띈다(덜 공부한 것이 진하다),
+ * 화면에 설명 문장을 두지 않는다. */
+
+/* ───────── 앱 틀: 좌측 메뉴 ───────── */
+
+.app-shell { display: flex; min-height: 100vh; }
+.app-shell.is-bare { display: block; }
+.app-column { flex: 1; min-width: 0; }
+.app-shell:not(.is-bare) .app-main { margin: 0; max-width: none; padding: 28px 36px 40px; }
+.app-shell:not(.is-bare) .app-main.is-wide { max-width: none; }
+
+.sidebar {
+  --side-w: 236px;
+  position: sticky; top: 0; height: 100vh; width: var(--side-w); flex: none; z-index: 30;
+  display: flex; flex-direction: column; gap: 4px; padding: 12px 10px;
+  background: var(--side); border-right: 1px solid var(--line); transition: width 0.18s ease;
+}
+.sidebar.is-collapsed { --side-w: 64px; }
+.sidebar-head { display: flex; align-items: center; justify-content: space-between; height: 40px; margin-bottom: 6px; padding: 0 2px 0 10px; }
+.sidebar-brand { font-weight: 700; font-size: 16px; letter-spacing: -0.02em; white-space: nowrap; color: var(--ink); text-decoration: none; }
+.icon-button {
+  display: inline-grid; place-items: center; width: 32px; height: 32px; min-height: 0; padding: 0; border: 0;
+  border-radius: 8px; background: none; color: var(--ink-2); cursor: pointer;
+}
+.icon-button:hover { background: var(--hover); color: var(--ink); }
+.sidebar-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
+.nav-group { display: flex; flex-direction: column; gap: 1px; }
+.nav-group-title { font-size: 12px; color: var(--ink-3); padding: 0 10px 6px; height: 22px; white-space: nowrap; }
+
+.sidebar .nav-item {
+  position: relative; display: flex; align-items: center; gap: 11px; width: 100%; height: 36px; min-height: 0;
+  padding: 0 10px; border: 0; border-radius: 8px; background: none; color: var(--ink-2);
+  font-size: 14.5px; font-weight: 500; text-align: left; white-space: nowrap; text-decoration: none; cursor: pointer;
+}
+.sidebar .nav-item:hover { background: var(--hover); color: var(--ink); }
+.sidebar .nav-item.is-current { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+.nav-icon { position: relative; display: grid; place-items: center; width: 20px; }
+.sidebar .nav-dot { top: -2px; right: -3px; width: 7px; height: 7px; background: var(--accent); border: 1.5px solid var(--side); }
+.nav-label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+
+.sidebar-foot { display: flex; flex-direction: column; gap: 1px; padding-top: 10px; border-top: 1px solid var(--line); }
+.profile-wrap { position: relative; margin-top: 8px; }
+.profile {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 0; padding: 8px 6px; border: 0;
+  border-radius: 10px; background: none; text-align: left; cursor: pointer; color: var(--ink);
+}
+.profile:hover { background: var(--hover); }
+.avatar {
+  display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 50%;
+  background: var(--accent-soft); color: var(--accent-ink); font-size: 11.5px; font-weight: 600;
+}
+.profile-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.profile-text strong { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-text small { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.profile-caret { color: var(--ink-3); display: grid; }
+.profile-menu {
+  position: absolute; bottom: calc(100% + 6px); left: 0; width: 228px; padding: 6px; z-index: 40;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-3);
+}
+.profile-menu-head { font-size: 12px; color: var(--ink-3); padding: 6px 8px 8px; overflow: hidden; text-overflow: ellipsis; }
+.profile-menu button {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 0; padding: 8px; border: 0;
+  border-radius: 7px; background: none; font-size: 14px; color: var(--ink); cursor: pointer;
+}
+.profile-menu button:hover { background: var(--hover); }
+.profile-menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+
+/* 접힌 메뉴: 아이콘만 */
+.sidebar.is-collapsed .sidebar-head { justify-content: center; padding: 0; }
+.sidebar.is-collapsed .sidebar-brand,
+.sidebar.is-collapsed .nav-label,
+.sidebar.is-collapsed .profile-text,
+.sidebar.is-collapsed .profile-caret { display: none; }
+.sidebar.is-collapsed .nav-item { justify-content: center; padding: 0; }
+.sidebar.is-collapsed .nav-group-title { height: 1px; padding: 0; margin: 0 10px 8px; background: var(--line); overflow: hidden; color: transparent; }
+.sidebar.is-collapsed .nav-group:first-child .nav-group-title { display: none; }
+.sidebar.is-collapsed .profile { justify-content: center; padding: 8px 0; }
+.sidebar.is-collapsed .profile-menu { left: calc(100% + 8px); bottom: 0; }
+
+/* 좁은 화면은 아이콘 줄로 접는다 */
+@media (max-width: 900px) {
+  .sidebar { --side-w: 64px; }
+  .sidebar .sidebar-head { justify-content: center; padding: 0; }
+  .sidebar .sidebar-brand, .sidebar .sidebar-toggle, .sidebar .nav-label,
+  .sidebar .profile-text, .sidebar .profile-caret { display: none; }
+  .sidebar .nav-item { justify-content: center; padding: 0; }
+  .sidebar .nav-group-title { display: none; }
+  .sidebar .profile { justify-content: center; padding: 8px 0; }
+  .sidebar .profile-menu { left: calc(100% + 8px); bottom: 0; }
+  .app-shell:not(.is-bare) .app-main { padding: 20px 16px 32px; }
+}
+
+/* 휴대폰: 위쪽 가로 줄 */
+@media (max-width: 640px) {
+  .app-shell:not(.is-bare) { flex-direction: column; }
+  .sidebar {
+    position: sticky; top: 0; width: 100%; height: auto; flex-direction: row; align-items: center;
+    padding: 6px 8px; gap: 2px; border-right: 0; border-bottom: 1px solid var(--line);
+  }
+  .sidebar-head { display: none; }
+  .sidebar-scroll { flex: none; flex-direction: row; gap: 2px; margin: 0; overflow: visible; }
+  .nav-group { flex-direction: row; gap: 2px; }
+  .sidebar-foot { flex-direction: row; align-items: center; gap: 2px; padding: 0; border: 0; margin-left: auto; }
+  .sidebar .nav-item { width: 40px; height: 40px; }
+  .profile-wrap { margin: 0; }
+  .sidebar .profile { padding: 4px; }
+  .avatar { width: 32px; height: 32px; }
+  .sidebar .profile-menu { left: auto; right: 0; bottom: auto; top: calc(100% + 6px); }
+  .app-shell:not(.is-bare) .app-main { padding: 16px 12px 28px; }
+}
+
+/* ───────── 공용 머리 ───────── */
+
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+.page-head h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.03em; }
+.page-sub { margin: 4px 0 0; color: var(--ink-3); font-size: 14px; }
+
+/* ───────── 설정 ───────── */
+
+.settings-page { max-width: 720px; }
+.settings-section { padding: 18px 0; border-top: 1px solid var(--line); }
+.settings-section h2 { margin: 0 0 12px; font-size: 15px; font-weight: 700; }
+.accent-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.accent-option {
+  display: flex; align-items: center; justify-content: flex-start; gap: 12px; min-height: 0; padding: 10px 12px; border: 1px solid var(--line);
+  border-radius: 12px; background: var(--surface); text-align: left; cursor: pointer; color: var(--ink);
+}
+.accent-option:hover { background: var(--hover); }
+.accent-option[aria-checked="true"] { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.accent-swatch { display: grid; grid-template-columns: 1fr 1fr; width: 30px; height: 30px; border-radius: 9px; overflow: hidden; flex: none; }
+.accent-name { font-size: 14px; font-weight: 600; }
+
+/* ───────── 공용 조각 ───────── */
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.pill-button {
+  height: 34px; min-height: 0; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line-strong);
+  font-size: 14px; font-weight: 500; background: var(--surface); color: var(--ink); cursor: pointer;
+}
+.pill-button:hover { background: var(--hover); }
+
+/* 복습 학습률 막대. 바탕은 메인 색을 옅게 깔아 0%여도 보이고, 채움 색은 컴포넌트가 학습률에 따라 정한다. */
+.meter { display: block; height: 3px; border-radius: 99px; background: color-mix(in srgb, var(--accent) 14%, var(--surface)); overflow: hidden; }
+.meter > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+.meter.is-closed { background: var(--surface-3); }
+
+/* 회독 줄: 막대와 같은 두께의 점선. 예습 퀴즈 완료만 옅은 예습 색으로 채운다. */
+.readline { display: flex; align-items: center; gap: 5px; height: 3px; overflow: hidden; }
+.readline i { display: block; width: clamp(16px, 1.3vw, 24px); height: 3px; border-radius: 2px; flex: none; background: var(--surface-3); }
+.readline i.rl-pre.is-on { background: color-mix(in srgb, var(--accent2) 42%, var(--surface)); }
+
+/* 교수 변경 표시: 연도는 흐린 회색, N만 빨강 */
+.prof-tag { display: inline-block; margin-left: 3px; font-size: 10.5px; font-weight: 500; line-height: 15px; color: #ababab; font-variant-numeric: tabular-nums; vertical-align: 1px; }
+.prof-tag.is-new { margin-left: 4px; padding: 0 4px; border-radius: 4px; font-weight: 700; color: var(--exam-ink); background: var(--exam-soft); }

@@ -9,14 +9,17 @@ import { previewProviders, type PreviewProvider } from "../types/lectures";
 import { useMe } from "../useMe";
 import { CalendarGrid } from "./CalendarGrid";
 import { EventChip } from "./EventChip";
+import { displayInfo } from "./kinds";
 import { useCalendarTimetable } from "./useCalendarTimetable";
+import { useTodayDue } from "./useTodayDue";
 import {
   addDays,
   calendarRange,
-  formatWeekTitle,
+  prequizDone,
   startOfWeek,
   toDateKey,
   toCalendarEntries,
+  weekDayLabels,
   type CalendarEntry,
   type CalendarMode,
 } from "./entries";
@@ -35,7 +38,8 @@ export function CalendarPage() {
   const savedDate = params.get("date") ?? "";
   const parsedDate = /^\d{4}-\d{2}-\d{2}$/.test(savedDate) ? new Date(`${savedDate}T12:00:00`) : new Date();
   const anchorDate = Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
-  const [showLearning, setShowLearning] = useState(false);
+  // 회독·학습률은 늘 보인다(2026-11 개편, 토글 없음). 첫 화면 요청은 그대로 두고 그린 뒤 이어 받는다.
+  const showLearning = true;
   const [showBundles, setShowBundles] = useState(false);
   const range = calendarRange(anchorDate, mode);
   const { events, error, learningError, learningLoading, reload } = useCalendarTimetable(range.start, range.end, showLearning);
@@ -102,12 +106,22 @@ export function CalendarPage() {
   );
 
   const entries = useMemo(() => toCalendarEntries(events ?? []), [events]);
+  const info = useMemo(() => displayInfo(events ?? []), [events]);
   const opened = entries.find(entry => entry.id === params.get("event")) ?? null;
+  const todayDue = useTodayDue(events);
 
-  const heading =
-    mode === "week"
-      ? formatWeekTitle(startOfWeek(anchorDate))
-      : `${anchorDate.getFullYear()}년 ${anchorDate.getMonth() + 1}월`;
+  const heading = `${anchorDate.getFullYear()}년 ${anchorDate.getMonth() + 1}월`;
+  const weekStart = startOfWeek(anchorDate);
+  const weekEnd = addDays(weekStart, 4);
+  const span = `${weekStart.getMonth() + 1}.${weekStart.getDate()} – ${weekEnd.getMonth() + 1}.${weekEnd.getDate()}`;
+  const subheading = mode === "week" ? [blockWeek(entries, info, weekStart), span].filter(Boolean).join(" · ") : "평일만 표시";
+
+  // 「오늘」 줄: 오늘 날짜에 배정된 강의 중 예습 퀴즈를 아직 끝내지 않은 것(사용자 지시: 오늘 배정된 양만).
+  const todayKey = toDateKey(new Date());
+  const todayLectures = entries.filter(e => e.date === todayKey).flatMap(e => e.lectures);
+  const preLoading = todayLectures.some(l => l.studyLoaded === false);
+  const preToday = todayLectures.filter(l => l.marks.prequiz && !prequizDone(l)).length;
+  const exam = nextExam(entries, events ?? [], todayKey);
 
   function step(direction: -1 | 1) {
     setAnchorDate(
@@ -125,47 +139,44 @@ export function CalendarPage() {
        다른 칸을 눌러 갈아탈 수 있다. */
     <div className={`calendar-page ${opened ? "is-split" : ""}`}>
       <div className="calendar-main">
-        {/* 날짜가 가운데다. 좌우를 같은 폭으로 잡아 두어야 제목이 길어져도
-            화살표가 흔들리지 않는다. */}
-        <div className="calendar-toolbar">
-          <div className="calendar-actions is-left">
-            <button onClick={() => setAnchorDate(new Date())}>오늘</button>
-          </div>
-          <div className="calendar-heading">
-            <button className="calendar-step" onClick={() => step(-1)} aria-label="이전">
-              ‹
-            </button>
+        <header className="page-head calendar-head">
+          <div>
             <h1>{heading}</h1>
-            <button className="calendar-step" onClick={() => step(1)} aria-label="다음">
-              ›
-            </button>
+            <p className="page-sub">{subheading}</p>
           </div>
-          <div className="calendar-actions is-right">
-            <div className="calendar-mode" role="group" aria-label="보기 전환">
-              <button
-                className={mode === "week" ? "is-selected" : ""}
-                aria-pressed={mode === "week"}
-                onClick={() => setMode("week")}
-              >
-                주
-              </button>
-              <button
-                className={mode === "month" ? "is-selected" : ""}
-                aria-pressed={mode === "month"}
-                onClick={() => setMode("month")}
-              >
-                월
-              </button>
+          {exam ? (
+            <div className="dday" title={exam.entry.title}>
+              <span className="dday-label">
+                <b>{exam.label}</b>
+                {exam.dateLabel}
+              </span>
+              <strong>{exam.days === 0 ? "D-day" : `D-${exam.days}`}</strong>
             </div>
+          ) : null}
+        </header>
+
+        <div className="today-strip">
+          <span className="today-label">오늘</span>
+          <span className="today-pill is-pre">미열람 예습 <b>{preLoading ? "…" : `${preToday}강의`}</b></span>
+          <span className="today-pill is-review">미열람 복습 퀴즈 <b>{todayDue === null ? "…" : `${todayDue}문제`}</b></span>
+          <span className="today-spacer" />
+          {isAdmin && mode === "week" ? (
+            <button className="is-quiet" aria-pressed={showBundles} onClick={() => setShowBundles(old => !old)}>
+              덱 모아받기 {showBundles ? "접기" : "보기"}
+            </button>
+          ) : null}
+          <button className="pill-button" onClick={() => setAnchorDate(new Date())}>오늘</button>
+          <span className="calendar-stepper">
+            <button className="icon-button" onClick={() => step(-1)} aria-label="이전">‹</button>
+            <button className="icon-button" onClick={() => step(1)} aria-label="다음">›</button>
+          </span>
+          <div className="calendar-mode" role="group" aria-label="보기 전환">
+            <button className={mode === "week" ? "is-selected" : ""} aria-pressed={mode === "week"} onClick={() => setMode("week")}>주</button>
+            <button className={mode === "month" ? "is-selected" : ""} aria-pressed={mode === "month"} onClick={() => setMode("month")}>월</button>
           </div>
         </div>
-
-        <div className="calendar-options">
-          <button className="is-quiet" aria-pressed={showLearning} onClick={() => setShowLearning(old => !old)}>학습률 {showLearning ? "접기" : "보기"}</button>
-          {isAdmin && mode === "week" ? <button className="is-quiet" aria-pressed={showBundles} onClick={() => setShowBundles(old => !old)}>덱 모아받기 {showBundles ? "접기" : "보기"}</button> : null}
-          {learningLoading ? <span role="status">표시된 기간의 학습률을 불러오는 중…</span> : null}
-          {showBundles && mode === "week" && !bundles.decks && !bundles.error ? <span role="status">표시된 기간의 덱 목록을 불러오는 중…</span> : null}
-        </div>
+        {learningLoading ? <span className="sr-only" role="status">표시된 기간의 학습률을 불러오는 중…</span> : null}
+        {showBundles && mode === "week" && !bundles.decks && !bundles.error ? <span className="sr-only" role="status">표시된 기간의 덱 목록을 불러오는 중…</span> : null}
         {error || learningError || bundles.error ? <p className="notice is-error" role="alert">{error || learningError || bundles.error}{" "}<button onClick={() => { reload(); bundles.reload(); }}>다시 시도</button></p> : null}
 
         <CalendarGrid
@@ -176,6 +187,7 @@ export function CalendarPage() {
             <EventChip
               key={entry.id}
               entry={entry}
+              info={info.get(entry.id)}
               compact={compact}
               onOpen={setOpened}
               active={opened?.id === entry.id}
@@ -208,27 +220,15 @@ export function CalendarPage() {
         />
 
         <div className="calendar-legend">
-          {showLearning ? <span className="legend-group is-learning" aria-label="학습률 표시 안내">
-            <b>왼쪽 예습 · 오른쪽 복습</b>
-            <span><i className="learning-legend-track is-empty" /> 0%: 테두리만</span>
-            <span><i className="learning-legend-track is-progress" /> 진행 중</span>
-            <span><i className="learning-legend-track is-complete" /> 100%</span>
-            <span>빈칸: 퀴즈 없음</span>
-          </span> : null}
-          <span className="legend-group">
-            <span>
-              <i className="legend-swatch is-lecture" /> 강의
-            </span>
-            <span>
-              <i className="legend-swatch is-practice" /> 실습
-            </span>
-            <span>
-              <i className="legend-swatch is-exam" /> 시험
-            </span>
-            <span>
-              <i className="legend-swatch is-off" /> 휴일·자율
-            </span>
-          </span>
+          <span><i className="legend-swatch is-lecture" /> 강의·실습·TBL·CBL</span>
+          <span><i className="legend-swatch is-exam" /> 시험</span>
+          {mode === "week" ? (
+            <>
+              <span className="legend-sep" />
+              <span><span className="readline"><i className="rl-pre is-on" /></span> 예습 퀴즈</span>
+              <span className="legend-meter"><span className="meter"><span style={{ width: "25%", background: "color-mix(in srgb, var(--accent) 85%, var(--surface))" }} /></span> 복습 학습률</span>
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -237,10 +237,47 @@ export function CalendarPage() {
         <Suspense fallback={<aside className="event-panel"><p role="status">강의 자료를 불러오는 중…</p><button onClick={() => setOpened(null)}>닫기</button></aside>}><EventPanel
           key={opened.id}
           entry={opened}
+          info={info.get(opened.id)}
           onClose={() => setOpened(null)}
         /></Suspense>
       ) : null}
 
     </div>
   );
+}
+
+/** 그 주에 가장 많이 든 블럭과 블럭 안의 주차(「감염과 면역 1차 1주차」). */
+function blockWeek(entries: CalendarEntry[], info: ReturnType<typeof displayInfo>, weekStart: Date) {
+  const startKey = toDateKey(weekStart);
+  const endKey = toDateKey(addDays(weekStart, 4));
+  const counts = new Map<string, number>();
+  for (const e of entries) {
+    const block = info.get(e.id)?.block;
+    if (block && e.date >= startKey && e.date <= endKey) counts.set(block, (counts.get(block) ?? 0) + 1);
+  }
+  const block = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  if (!block) return "";
+  const first = entries.find(e => info.get(e.id)?.block === block);
+  if (!first) return block;
+  const firstWeek = startOfWeek(new Date(`${first.date}T12:00:00`));
+  const n = Math.round((weekStart.getTime() - firstWeek.getTime()) / (7 * 86_400_000)) + 1;
+  return `${block} ${n}주차`;
+}
+
+/** 오늘 이후 가장 가까운 시험. 세부에 「(1차)」가 있으면 「1차 시험」. */
+function nextExam(entries: CalendarEntry[], events: { id: string; details: string }[], todayKey: string) {
+  const entry = entries.find(e => e.category === "exam" && e.date >= todayKey);
+  if (!entry) return null;
+  const date = new Date(`${entry.date}T12:00:00`);
+  const today = new Date(`${todayKey}T12:00:00`);
+  const days = Math.round((date.getTime() - today.getTime()) / 86_400_000);
+  const raw = events.find(e => e.id === entry.id)?.details ?? entry.detail;
+  const order = `${entry.title} ${raw}`.match(/(\d+)\s*차/);
+  const day = weekDayLabels[(date.getDay() + 6) % 7] ?? "";
+  return {
+    entry,
+    days,
+    label: order ? `${order[1]}차 시험` : "시험",
+    dateLabel: `${date.getMonth() + 1}월 ${date.getDate()}일${day ? ` (${day})` : ""}`,
+  };
 }

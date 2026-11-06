@@ -3,17 +3,20 @@ const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const base = process.env.STUDY_TEST_URL || 'http://127.0.0.1:5197/tests/study-management.html';
 
-test('production checks remain visible without study aggregates and refresh after a change', async () => {
+// 2026-11 개편: 약리학 퀴즈 준비 칸은 강의 목록 아래 「더 보기」 접힘 안으로 옮겼다. 열면 그대로 보인다.
+const openMore = page => page.locator('.list-more > summary').click();
+
+test('production checks remain visible in 더 보기 and refresh after a change', async () => {
   const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHANNEL || 'chrome' });
   const page = await browser.newPage();
   try {
     await page.goto(base + '?lazy');
+    await openMore(page);
     await page.getByRole('columnheader', { name: /① 퀴즈 답변 · 링크/ }).waitFor();
     const row = page.locator('.overview-table tbody tr').first();
     await row.getByText('75문항', { exact: true }).waitFor();
     assert.match(await row.innerText(), /새 응답 미반영/);
     assert.match(await row.innerText(), /필수 검수/);
-    assert.equal(await page.evaluate(() => window.studyTest.progressRequests.length), 0);
     await page.evaluate(() => { window.setPublicationReady(); window.dispatchEvent(new Event('focus')); });
     await page.waitForFunction(() => document.querySelectorAll('.quiz-production.is-complete').length === 2);
     assert.equal(await row.getByText('새 응답 미반영', { exact: true }).count(), 0);
@@ -27,6 +30,7 @@ test('manual response is the primary production source even with a share link', 
   try {
     const page = await browser.newPage();
     await page.goto(base + '?lazy&manual');
+    await openMore(page);
     const row = page.locator('.overview-table tbody tr').first();
     await row.getByText('✓ 직접 저장한 답변', { exact: true }).waitFor();
     assert.match(await row.innerText(), /75문항 · 링크보다 우선/);
@@ -40,6 +44,7 @@ test('missing current link offers manual creation with latest prompt and attachm
   const page = await browser.newPage();
   try {
     await page.goto(base + '?lazy');
+    await openMore(page);
     const rows = page.locator('.overview-table tbody tr');
     await rows.nth(1).getByRole('button', { name: '강의 1 퀴즈 만들기' }).waitFor();
     assert.equal(await rows.first().getByRole('button', { name: /퀴즈 만들기/ }).count(), 0);
@@ -61,6 +66,7 @@ test('missing current link offers manual creation with latest prompt and attachm
     assert.equal(requests[0].promptVersion, '1.99');
     assert.equal(requests[0].files[0].filename, '시험 강의.pdf');
     await page.goto(base + '?lazy&student');
+    await openMore(page);
     await page.getByText('75문항', { exact: true }).waitFor();
     assert.equal(await page.getByRole('button', { name: /퀴즈 만들기/ }).count(), 0);
   } finally { await browser.close(); }

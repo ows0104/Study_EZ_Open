@@ -53,6 +53,7 @@ window.fetch = async (input) => {
   let result: object;
   if (url.pathname === "/api/me") result = { id: "test", isAdmin: false, isApproved: true };
   else if (url.pathname === "/api/timetable") result = { events };
+  else if (url.pathname === "/api/timetable/study-progress") result = { lectures: [] };
   else if (url.pathname.startsWith("/api/lectures/")) {
     const index = events.findIndex(e => url.pathname.endsWith(e.lectures[0].runId));
     if (index >= 0) result = detail(index);

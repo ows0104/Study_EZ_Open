@@ -60,6 +60,7 @@ server/local_test_data/
 node_modules/
 web/dist/
 web/pilot-dist/
+web/prototype-dist/
 
 # 확장 zip은 빌드마다 chrome-extension/에서 다시 묶인다. 소스가 원본이다.
 web/public/studyez-extension.zip

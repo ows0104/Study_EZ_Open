@@ -17,14 +17,51 @@ export function studyBlockName(value: string): string {
 }
 
 export const studyBlockKey = (name: string) => studyBlockName(name).replace(/\s/g, "").toLowerCase();
-const eventName = (event: TimetableEvent) => event.course || event.lectures[0]?.subject || event.title;
+
+/**
+ * 1차·2차 시험 범위의 과목이 전혀 다른 과목은 1차 시험에서 블럭을 나눈다(2026-11-06 사용자 결정).
+ * 일반 규칙(중간시험 뒤 수업이 남으면 블럭을 끝내지 않음)은 그대로 두고 여기 적은 과목만 예외다.
+ */
+const SPLIT_AT_FIRST_EXAM = new Set(["감염과면역"]);
+const splitCache = new WeakMap<TimetableEvent[], Map<string, string>>();
+
+type Named = Pick<TimetableEvent, "id" | "course" | "lectures" | "title">;
+
+function baseName(event: Named) {
+  return event.course || event.lectures[0]?.subject || event.title;
+}
+
+/** 나눌 과목의 수업마다 「과목 1차」·「과목 2차」 이름을 정한다. 1차 시험이 수업 사이에 없으면 나누지 않는다. */
+function splitNames(events: TimetableEvent[]) {
+  let names = splitCache.get(events);
+  if (names) return names;
+  names = new Map();
+  const firstExams = events.filter(e => e.category === "exam" && /\(\s*1\s*차\s*\)|1차/.test(`${e.title} ${e.details}`));
+  for (const key of SPLIT_AT_FIRST_EXAM) {
+    const classes = events.filter(e => (e.category === "lecture" || e.category === "practice") && studyBlockKey(baseName(e)) === key);
+    if (!classes.length) continue;
+    const first = classes.reduce((a, b) => (a.date < b.date ? a : b)).date;
+    const last = classes.reduce((a, b) => (a.date > b.date ? a : b)).date;
+    const exam = firstExams.find(e => e.date > first && e.date < last);
+    if (!exam) continue;
+    const name = studyBlockName(baseName(classes[0]));
+    for (const e of classes) names.set(e.id, `${name} ${e.date <= exam.date ? 1 : 2}차`);
+  }
+  splitCache.set(events, names);
+  return names;
+}
+
+/** 블럭을 정할 때 쓰는 과목 이름. 나눈 과목이면 「감염과 면역 1차」처럼 차수가 붙는다. */
+export function studyCourseOf(event: Named, events: TimetableEvent[]): string {
+  return splitNames(events).get(event.id) ?? baseName(event);
+}
 const teaching = (event: TimetableEvent) => event.category === "lecture" || event.category === "practice";
 
 /** 강의/퀴즈 첨부가 아직 없는 시간표도 블록 이름을 가진다. */
 export function studyBlockNames(events: TimetableEvent[]): Map<string, string> {
   const names = new Map<string, string>();
   for (const event of events.filter(teaching)) {
-    const name = studyBlockName(eventName(event));
+    const name = studyBlockName(studyCourseOf(event, events));
     if (name && !names.has(studyBlockKey(name))) names.set(studyBlockKey(name), name);
   }
   return names;
@@ -45,7 +82,7 @@ function blocksFrom(events: TimetableEvent[]): Block[] {
   const latest = new Map<string, Block>();
   const names = studyBlockNames(events);
   for (const event of events.filter(teaching).sort((a, b) => a.date.localeCompare(b.date))) {
-    const key = studyBlockKey(eventName(event));
+    const key = studyBlockKey(studyCourseOf(event, events));
     const name = names.get(key);
     if (!name) continue;
     let block = latest.get(key);

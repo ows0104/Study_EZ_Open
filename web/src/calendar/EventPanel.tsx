@@ -6,16 +6,19 @@ import { decksIn, useBundleDecks } from "../bundle/decks";
 import { usePreviewVersion } from "../bridge/previewBridge";
 import { Link } from "react-router-dom";
 import { useMe } from "../useMe";
-import { lectureHref, legacyMainHref, quizHref } from "../links";
+import { bankHref, lectureHref, legacyMainHref, quizHref } from "../links";
+import { FeedbackButton } from "../feedback/FeedbackButton";
 import { type LectureDetail, type LectureFile, type LectureRef } from "../types/lectures";
+import type { CardProgress } from "../types/mastery";
 import { categoryLabel, type CalendarEntry } from "./entries";
+import { fullCode, splitSubject, type DisplayInfo } from "./kinds";
+import { ReviewMeter } from "./ChipLearning";
 import { DeckSlot } from "./DeckSlot";
 import { cardsHash } from "../lecture/LectureCards";
 import { ActionCard, fileSize, PanelGroup } from "./panelShared";
 import { PreviewAction } from "./PreviewAction";
 import { ReviewAction } from "./ReviewAction";
-import { LectureMastery } from "../lecture/LectureMastery";
-import { ProfessorInfo, previewNotesLabel } from "./ProfessorInfo";
+import { PreviewSourceNotice, ProfessorInfo, ProfTag, previewNotesLabel } from "./ProfessorInfo";
 
 /**
  * 칸 하나를 눌렀을 때 옆에 서는 패널.
@@ -33,9 +36,11 @@ import { ProfessorInfo, previewNotesLabel } from "./ProfessorInfo";
  */
 export function EventPanel({
   entry,
+  info,
   onClose,
 }: {
   entry: CalendarEntry;
+  info?: DisplayInfo;
   onClose: () => void;
 }) {
   const panel = useRef<HTMLElement>(null);
@@ -59,8 +64,10 @@ export function EventPanel({
     };
   }, [onClose]);
 
-  const primary = entry.detail || entry.title;
-  const hasSeries = Boolean(entry.detail && entry.title && entry.detail !== entry.title);
+  const primary = splitSubject(entry.detail).title || entry.title;
+  const isAdmin = Boolean(useMe()?.isAdmin);
+  const source = detail ? detail.previewSource : lecture?.previewSource;
+  const group = info?.kind === "tbl" || info?.kind === "cbl";
 
   return (
     <>
@@ -69,13 +76,24 @@ export function EventPanel({
       <div className="panel-scrim" onClick={onClose} aria-hidden="true" />
       <aside className="event-panel" aria-label={primary} tabIndex={-1} ref={panel}>
         <header className="event-panel-head">
-          <span className={`event-panel-kind is-${entry.category}`}>{categoryLabel(entry.category)}</span>
+          <span className="event-panel-tags">
+            <span className={`event-panel-kind is-${entry.category}`}>{fullCode(info) || categoryLabel(entry.category)}</span>
+            {info?.block ? <span className="event-panel-block">{info.block}</span> : null}
+          </span>
           <button className="is-quiet event-panel-close" onClick={onClose} aria-label="닫기">
             ✕
           </button>
         </header>
 
         <h2 className="event-panel-title">{primary}</h2>
+        {entry.professor ? (
+          <p className="event-panel-prof">
+            <span>{group ? "분반" : "교수"}</span>
+            {entry.professor}
+            <ProfTag values={[source]} />
+          </p>
+        ) : null}
+        <PreviewSourceNotice value={source} />
 
         {/* 한 교시에 여러 강의가 열릴 때(선택형 과목). 자동으로 하나를 고르면
             다른 강의가 화면에서 사라지므로 고르게 한다. */}
@@ -95,7 +113,6 @@ export function EventPanel({
         ) : null}
 
         {error ? <p className="notice is-error">{error}</p> : null}
-        <ProfessorInfo value={detail ? detail.previewSource : lecture?.previewSource} />
 
         {lecture ? (
           detail ? (
@@ -115,31 +132,20 @@ export function EventPanel({
           </p>
         )}
 
-        {detail ? <LectureMastery value={detail.mastery} /> : null}
-
-        {/* 여기부터는 읽을 것이지 누를 것이 아니다. */}
-        <dl className="event-panel-facts">
-          <Fact label="일시">
-            <time>
-              {entry.date} · {entry.startTime}–{entry.endTime}
-            </time>
-          </Fact>
-          {entry.professor ? <Fact label="담당">{entry.professor}</Fact> : null}
-          {entry.course ? <Fact label="과목">{entry.course}</Fact> : null}
-          {hasSeries ? <Fact label="교시명">{entry.title}</Fact> : null}
-          {/* 필기 파일 자체는 위로 올라갔다. 여기 남는 것은 누가 썼는가뿐이다. */}
-          {detail?.author ? (
-            <Fact label="필기자">
-              {detail.author}
-              {detail.version ? ` v${detail.version}` : ""}
-            </Fact>
-          ) : null}
-        </dl>
-
-        {lecture ? (
-          <Link className="event-panel-more" to={lectureHref(lecture)}>
-            강의 화면 전체 보기 →
-          </Link>
+        {/* 관리자만: 예전 패널의 관리 도구·필기·강의 정보. 학생 화면에는 두지 않는다(2026-11 개편). */}
+        {isAdmin && lecture && detail ? (
+          <details className="event-panel-admin">
+            <summary>관리자</summary>
+            <AdminTools lecture={lecture} detail={detail} />
+            <ProfessorInfo value={source} />
+            <dl className="event-panel-facts">
+              <Fact label="일시"><time>{entry.date} · {entry.startTime}–{entry.endTime}</time></Fact>
+              {entry.course ? <Fact label="과목">{entry.course}</Fact> : null}
+              <Fact label="교시명">{entry.title}</Fact>
+              {detail.author ? <Fact label="필기자">{detail.author}{detail.version ? ` v${detail.version}` : ""}</Fact> : null}
+            </dl>
+            <Link className="event-panel-more" to={lectureHref(lecture)}>강의 화면 전체 보기 →</Link>
+          </details>
         ) : null}
       </aside>
     </>
@@ -187,6 +193,24 @@ function useLectureDetail(lecture: LectureRef | undefined) {
   }, [key]);
 
   return { detail, error };
+}
+
+type Study = { mastery?: LectureDetail["mastery"]; cardProgress?: CardProgress | null };
+
+/** 패널의 카드 단계·오늘 복습 수. 강의 목록과 같은 `/api/timetable/study-progress`를 이 강의 하나로 부른다. */
+function useLectureStudy(lecture: LectureRef): Study | null {
+  const [study, setStudy] = useState<Study | null>(lecture.cardProgress ? { mastery: lecture.mastery, cardProgress: lecture.cardProgress } : null);
+  useEffect(() => {
+    const controller = new AbortController();
+    api<{ lectures: (Study & { subject: string; runId: string })[] }>("/api/timetable/study-progress", {
+      method: "POST", signal: controller.signal,
+      body: JSON.stringify({ lectures: [{ subject: lecture.subject, runId: lecture.runId }] }),
+    }).then(data => {
+      if (!controller.signal.aborted && data.lectures[0]) setStudy(data.lectures[0]);
+    }).catch(() => {});
+    return () => controller.abort();
+  }, [lecture.subject, lecture.runId]);
+  return study;
 }
 
 /**
@@ -263,9 +287,128 @@ function KeyActions({
   detail: LectureDetail;
 }) {
   const base = `/api/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
-  const isAdmin = Boolean(useMe()?.isAdmin);
+  const [error, setError] = useState("");
+  const fileOf = (kind: LectureFile["kind"]) => detail.files.find((file) => file.kind === kind);
+  const study = useLectureStudy(lecture);
+  // 학습률: 강의 상세의 Quiz Bank 학습도. 없으면 카드 진행에서 받은 값.
+  const mastery = detail.mastery ?? study?.mastery ?? null;
+  const rate = detail.bank?.usable ? Math.max(0, Math.min(100, mastery?.score ?? 0)) : null;
+
+  async function download(file: LectureFile) {
+    try {
+      await downloadSignedFile(`${base}/files/${file.id}?purpose=download`, file.filename);
+    } catch (cause) {
+      setError((cause as Error).message);
+    }
+  }
+
+  const preDone = Boolean(detail.prequiz && detail.prequiz.itemCount > 0 && detail.prequiz.answered >= detail.prequiz.itemCount);
+  const bank = detail.bank;
+  const preDeck = fileOf("pre_apkg");
+  const mainDeck = fileOf("main_apkg");
+
+  return (
+    <div className="event-panel-actions">
+      <PreviewAction
+        lecture={lecture}
+        detail={detail}
+        base={base}
+        onError={setError}
+        trailing={detail.prequiz ? (
+          <Link className="action-button is-quiz is-pre" to={quizHref("pre", lecture)}>▶ 예습 퀴즈</Link>
+        ) : (
+          <span className="action-button is-quiz is-pre is-disabled" aria-disabled="true">▶ 예습 퀴즈</span>
+        )}
+      />
+      <ReviewAction
+        lecture={lecture}
+        detail={detail}
+        base={base}
+        onError={setError}
+        open
+        trailing={bank?.usable ? (
+          <Link className="action-button is-quiz is-review" to={bankHref(lecture)}>
+            ▶ 복습 퀴즈{study?.cardProgress?.reviewDue ? <b>{study.cardProgress.reviewDue}</b> : null}
+          </Link>
+        ) : (
+          <span className="action-button is-quiz is-review is-disabled" aria-disabled="true">▶ 복습 퀴즈</span>
+        )}
+      />
+
+      <section className="panel-stats" aria-label="통계">
+        <h3>통계</h3>
+        <div className="stat-row">
+          <span className="stat-label">회독</span>
+          <span className="readline is-lg">{detail.prequiz ? <i className={`rl-pre${preDone ? " is-on" : ""}`} title={preDone ? "예습 퀴즈 완료" : "예습 퀴즈 미완료"} /> : null}</span>
+        </div>
+        <div className="stat-row">
+          <span className="stat-label">학습률</span>
+          <span className="stat-rate">
+            <b className={`rate-text ${rateBand(rate)}`}>{rate === null ? "0%" : `${rate}%`}</b>
+            <ReviewMeter score={rate} />
+          </span>
+        </div>
+        {study?.cardProgress ? (
+          <div className="stat-row is-top">
+            <span className="stat-label">카드</span>
+            <StageSummary cards={study.cardProgress} />
+          </div>
+        ) : null}
+      </section>
+
+      <div className="event-panel-foot">
+        {preDeck || mainDeck ? (
+          <span className="deck-links">
+            덱 다운로드
+            {preDeck ? <button type="button" onClick={() => void download(preDeck)}>예습</button> : null}
+            {mainDeck ? <button type="button" onClick={() => void download(mainDeck)}>복습</button> : null}
+          </span>
+        ) : <span />}
+        <FeedbackButton launch={{ className: "ghost-button", content: "오류 제보" }} />
+      </div>
+
+      {error ? <p className="notice is-error">{error}</p> : null}
+    </div>
+  );
+}
+
+/** 학습률 25% 구간 색(2026-11 개편). 낮을수록 위기 색, 높을수록 안심 색 — 카드 단계 색과 같은 줄기. */
+function rateBand(rate: number | null) {
+  if (rate === null) return "is-closed";
+  if (rate < 25) return "is-band1";
+  if (rate < 50) return "is-band2";
+  if (rate < 75) return "is-band3";
+  return "is-band4";
+}
+
+/** 미열람 · 인지 · 인출 · 저장(운영 Quiz Bank 네 단계, 「기억 유지」는 「저장」으로 부른다). */
+const STAGES = [
+  ["unseen", "미열람"], ["recognized", "인지"], ["retrieving", "인출"], ["retained", "저장"],
+] as const;
+
+function StageSummary({ cards }: { cards: CardProgress }) {
+  return (
+    <span className="stage-summary">
+      <span className="stage-legend">
+        {STAGES.map(([key, label]) => (
+          <span key={key}><i className={`stage-dot stage-${key}`} />{label}<b className={`stage-text-${key}`}>{cards[key]}</b></span>
+        ))}
+      </span>
+      <span className="stage-bar" role="img" aria-label={STAGES.map(([key, label]) => `${label} ${cards[key]}장`).join(" · ")}>
+        {STAGES.map(([key]) => (cards[key] > 0 ? <span key={key} className={`stage-${key}`} style={{ flex: cards[key] }} /> : null))}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * 관리자 도구. 예전 패널의 Pre-Quiz 덱 만들기·문제은행 관리·기존 Main-Quiz·카드 고치기·블럭 덱·필기를 그대로 둔다.
+ * 학생 화면에서는 「관리자」 접힘째 빠진다(2026-11 개편).
+ */
+function AdminTools({ lecture, detail }: { lecture: LectureRef; detail: LectureDetail }) {
+  const base = `/api/lectures/${encodeURIComponent(lecture.subject)}/${encodeURIComponent(lecture.runId)}`;
   const [showBundles, setShowBundles] = useState(false);
-  const bundles = useBundleDecks(isAdmin && showBundles, new URLSearchParams({ subject: lecture.subject }).toString());
+  const bundles = useBundleDecks(showBundles, new URLSearchParams({ subject: lecture.subject }).toString());
   const [error, setError] = useState("");
   const fileOf = (kind: LectureFile["kind"]) => detail.files.find((file) => file.kind === kind);
 
@@ -277,8 +420,6 @@ function KeyActions({
     }
   }
 
-  // `inline=1`이 없으면 서버가 첨부로 서명해 준다. 그러면 새 탭이 뜨자마자
-  // 내려받기로 바뀌고 빈 탭만 남는다.
   async function open(file: LectureFile) {
     try {
       await openSignedFile(`${base}/files/${file.id}?inline=1&purpose=view`);
@@ -287,30 +428,15 @@ function KeyActions({
     }
   }
 
-  /**
-   * 덩어리의 앞칸 — 「웹에서 풀기」. 문항이 없으면 아예 안 세운다(덱만 남는다).
-   *
-   * 같은 탭에서 해당 퀴즈로 이동한다. 뒤로 가면 캘린더와 이 패널로 돌아온다.
-   * 문항 수는 이름 옆이 말한다 — 덱 칸에서 되풀이하면 덱의 장수처럼 읽히는데,
-   * 덱에는 그림 카드까지 들어 있어 언제나 더 많다.
-   */
-  function webSolve(kind: "pre" | "main", progress: LectureDetail["prequiz"]) {
+  function webSolve(progress: LectureDetail["prequiz"]) {
     if (!progress) return undefined;
     return (tools: React.ReactNode) => (
       <ActionCard
         shape="is-lead"
         hit={
-          <Link className="panel-action-hit" to={quizHref(kind, lecture)}>
+          <Link className="panel-action-hit" to={quizHref("pre", lecture)}>
             <strong>웹에서 풀기</strong>
-            <small>
-              {/* 일정이 도는 자리라 「몇 장 있나」보다 「오늘 뭘 해야 하나」가
-                  먼저다(2026-09-18). 강의 상세의 그 줄과 같은 규칙이다. */}
-              {progress.answered
-                ? progress.due
-                  ? `오늘 낼 카드 ${progress.due}장`
-                  : `오늘 몫 완료 · ${progress.later}장 대기`
-                : `${progress.itemCount}장`}
-            </small>
+            <small>{progress.itemCount}장</small>
           </Link>
         }
         tools={tools}
@@ -319,15 +445,7 @@ function KeyActions({
   }
 
   return (
-    <div className="event-panel-actions">
-      <PreviewAction lecture={lecture} detail={detail} base={base} onError={setError} />
-
-      {/* **웹 풀이와 덱을 한 덩어리로 붙였다(2026-08-31 관리자 지시).** 둘은 한
-          가지를 하는 두 길인데 — 여기서 풀 것이냐, Anki로 가져갈 것이냐 —
-          위아래 두 줄로 세워 두니 서로 다른 것으로 읽혔다.
-
-          「다시 만들기」는 덱의 것이지만 넓은 왼쪽 칸이 든다 — 덱 칸은 이름과
-          용량으로 한 줄이 찬다(관리자 지시도 그 자리였다). */}
+    <div className="event-panel-admin-body">
       <PanelGroup tone="pre" title="Pre-Quiz">
         <DeckSlot
           kind="pre"
@@ -335,7 +453,7 @@ function KeyActions({
           file={fileOf("pre_apkg")}
           lecture={lecture}
           onDownload={download}
-          before={webSolve("pre", detail.prequiz)}
+          before={webSolve(detail.prequiz)}
           blocked={
             detail.preview?.shareUrl
               ? undefined
@@ -343,39 +461,18 @@ function KeyActions({
           }
         />
       </PanelGroup>
-
       <BankPanel lecture={lecture} detail={detail} />
-      <ReviewAction lecture={lecture} detail={detail} base={base} onError={setError} />
-      {detail.mainquiz || isAdmin && fileOf("main_apkg") ? (
+      {detail.mainquiz || fileOf("main_apkg") ? (
         <details className="panel-hint legacy-main">
           <summary>기존 Main-Quiz 자료</summary>
           {detail.mainquiz ? <Link to={legacyMainHref(lecture)}>기존 카드 풀기</Link> : null}
-          {isAdmin && fileOf("main_apkg") ? (
+          {fileOf("main_apkg") ? (
             <button className="is-quiet" onClick={() => void download(fileOf("main_apkg")!)}>기존 Anki 덱 받기</button>
           ) : null}
         </details>
       ) : null}
-
       <CardFixLinks lecture={lecture} counts={detail.cardReview} />
-
-      {/* **블럭 전체를 한 파일로**(2026-09-15 관리자 지시). 블럭은 과목 하나다 —
-          「감염의 기초」가 기생충학과 미생물학 둘로 갈려 서는 것이 이 학기의
-          실제 모양이고(`runner/ahead.py` 의 `_block_from`·`_block_until`),
-          덱 나무의 맨 위 마디도 과목이다.
-
-          **강의 패널에 두는 것이 억지가 아닌 이유는 여기가 과목을 아는 자리라서다.**
-          캘린더 칸은 시간표 이름(「감염의 기초 7」)을 들고 있고 과목 이름은 강의가
-          든다. 한 번 눌러 연 사람은 이미 그 과목을 보고 있다.
-
-          **접힌 채로 서고 회색을 진다(2026-09-18 관리자 지시 — 의도보다 눈에
-          띈다).** 위의 Pre-Quiz·Main-Quiz 가 이 패널이 하라는 일이고 이것은 그
-          다음이다. 그런데 바로 위 두 칸과 같은 teal·indigo 를 칠하고 펼쳐져
-          있으니 「덱 받기」가 한 화면에 네 번 나온 것처럼 읽혔다.
-
-          **이름이 「블럭 전체」에서 「현재까지」로 바뀐 것도 같은 지시다.**
-          담기는 것은 처음부터 지금까지 구워진 편이고 — 블럭이 끝나기 전이면
-          「전체」가 아직 없다 — 앞으로 나올 편은 다시 눌러야 온다. */}
-      {isAdmin ? <PanelGroup
+      <PanelGroup
         tone="plain"
         title={`${lecture.subject} 블럭 덱 받기`}
         note="현재까지 나온 것 한 파일로"
@@ -398,11 +495,8 @@ function KeyActions({
               : <p className="panel-hint">덱 목록을 불러오는 중…</p>
           )}
         </div>
-      </PanelGroup> : null}
-
-      {/* 강의 정보(일시·담당·과목) 바로 위. 읽는 것에 가깝지만 누르면 열린다. */}
+      </PanelGroup>
       <Notes detail={detail} onOpen={open} />
-
       {error ? <p className="notice is-error">{error}</p> : null}
     </div>
   );

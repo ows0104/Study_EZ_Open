@@ -1,0 +1,246 @@
+{
+  "id": "2026-11-05-ui-ux-redesign",
+  "title": "UI/UX 개편: 좌측 메뉴·흰색 바탕·캘린더",
+  "area": "site",
+  "created_at": "2026-11-05T09:27:36.124052+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-05T18:26:43.452376+00:00",
+      "evidence": "2026-11-06 사용자: '좋은 거 같아. 이제 쓸데없이 열려있던 localhost 포트 다 닫고 실제 코드로 구현해줘. 구현하기 전에 대시보드에 할 일 꼭 작성하고 ...' + 같은 날 plan 결정 질문 답변: 갈래 색 5조합으로 대체 / 2단계로 분리 / 기능 생길 때까지 숨김 / 감염과 면역만 분리",
+      "scope": "plan.md 1단계: web만(토큰·테마 5조합·설정, 좌측 메뉴 앱 틀, 갈래·번호 표시 계산, 감염과 면역 1차 블럭 분리 예외, 캘린더·패널·강의 목록 개편, 이용방법·웹 테스트 갱신)의 로컬 구현·검사·PR 생성까지. merge·운영 배포·DB 변경·2단계(회독 저장·자유 노트) 제외",
+      "evidence_version": 2,
+      "source_hash": "d0a09a7602a724e02ac7b0e59c38999de6972cecc806663ff97dd71e7682a143",
+      "plan_hash": "8686119fd4a7c8b05dc781d4e1ab1a0ea7e91f9607cbf656ac8a8a8a8ebc6fa3",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "fdbc941fbaf41eba586246372cb429c67c5f86707a767155ca9899b6befda7c3"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-05T18:52:32.173576+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "e071c0daf1c7ae92a3b70ef778bc64d8300032f1e0c9e1d82c2cddd9ef411b64",
+      "plan_hash": "8686119fd4a7c8b05dc781d4e1ab1a0ea7e91f9607cbf656ac8a8a8a8ebc6fa3",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1793904748343037600-web.log",
+      "web_artifact": "a2ce6ad72698b24806b9592890fbc0dbe6cb8a660fe0f6513cc533ff49f40915",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-05T18:52:39.060759+00:00",
+      "command": [
+        "node",
+        "web/tests/run-professor-preview.cjs",
+        "--all"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "e071c0daf1c7ae92a3b70ef778bc64d8300032f1e0c9e1d82c2cddd9ef411b64",
+      "plan_hash": "8686119fd4a7c8b05dc781d4e1ab1a0ea7e91f9607cbf656ac8a8a8a8ebc6fa3",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1793904753909032800-web.log",
+      "web_artifact": "a2ce6ad72698b24806b9592890fbc0dbe6cb8a660fe0f6513cc533ff49f40915",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-05T18:52:49.065989+00:00",
+      "command": [
+        "node",
+        "--test",
+        "web/tests/preview-actions.test.cjs",
+        "web/tests/wait-for-api.test.mjs",
+        "web/tests/firstScreen.test.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "e071c0daf1c7ae92a3b70ef778bc64d8300032f1e0c9e1d82c2cddd9ef411b64",
+      "plan_hash": "8686119fd4a7c8b05dc781d4e1ab1a0ea7e91f9607cbf656ac8a8a8a8ebc6fa3",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1793904759371556300-web.log",
+      "web_artifact": "a2ce6ad72698b24806b9592890fbc0dbe6cb8a660fe0f6513cc533ff49f40915",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-05T18:52:49.536203+00:00",
+      "command": [
+        "cmd",
+        "C:/",
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "e071c0daf1c7ae92a3b70ef778bc64d8300032f1e0c9e1d82c2cddd9ef411b64",
+      "plan_hash": "8686119fd4a7c8b05dc781d4e1ab1a0ea7e91f9607cbf656ac8a8a8a8ebc6fa3",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1793904769396999400-web.log",
+      "web_artifact": "a2ce6ad72698b24806b9592890fbc0dbe6cb8a660fe0f6513cc533ff49f40915",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-05T18:53:05.132104+00:00",
+      "command": [
+        "cmd",
+        "/c",
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "e071c0daf1c7ae92a3b70ef778bc64d8300032f1e0c9e1d82c2cddd9ef411b64",
+      "plan_hash": "8686119fd4a7c8b05dc781d4e1ab1a0ea7e91f9607cbf656ac8a8a8a8ebc6fa3",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1793904777483953300-web.log",
+      "web_artifact": "54902b7c1bb0b67813b6f0d53bf44d5f76a94770e8f356857a16628adebbfedf",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": {
+    "at": "2026-11-05T18:53:41.851926+00:00",
+    "summary": "1단계 웹 구현 검토: 앱 틀·토큰·캘린더·패널·강의 목록(하위 에이전트 구현을 실제 데이터 고정물·테스트로 재검증)·이용방법. 계약 확인: previewSource 출처 변경 안내 학생 유지, 확장 링크 수신·EventPanel 지연 로딩·URL 상태·첫 화면 요청 유지(calendar-loading), studyBlocks 일반 규칙 유지·감염과 면역만 1차 분리. 고친 것: D-day 이름, 낮은 칸 교수 줄, 칸 세로 정렬, 출처 안내, 목록 제목, bank-prompt.json 줄바꿈 복원. 남은 위험: 학습 정보 자동 요청 증가, 학생 덱 다운로드 노출. 기존 결함 2건(quiz-publication 프롬프트 고정물, bank-links 허용 목록)은 미변경 파일.",
+    "evidence_version": 2,
+    "source_hash": "e071c0daf1c7ae92a3b70ef778bc64d8300032f1e0c9e1d82c2cddd9ef411b64",
+    "plan_hash": "8686119fd4a7c8b05dc781d4e1ab1a0ea7e91f9607cbf656ac8a8a8a8ebc6fa3",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-05T18:53:41.963972+00:00"
+}

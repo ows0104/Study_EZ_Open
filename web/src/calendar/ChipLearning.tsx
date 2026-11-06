@@ -1,66 +1,78 @@
 import type { LectureRef } from "../types/lectures";
+import { prequizDone } from "./entries";
 
+/**
+ * 칸 아래 학습 표시(2026-11 개편).
+ *
+ *   위 = 회독 줄: 학습률 막대와 같은 두께의 점선. 예습 퀴즈를 끝까지 풀었을 때만 첫 토막을 옅은 예습 색으로 채운다
+ *        (예습은 1회독까지만 센다). 강의록 회독 토막은 서버 저장과 함께 2단계에서 붙는다.
+ *   아래 = 복습 학습률 막대: 0%여도 바탕이 보이고, 덜 채울수록 진하다(덜 공부한 강의가 더 중요하다).
+ *          아직 복습이 열리지 않았거나 불러오는 중이면 회색 바탕만.
+ * 예습 학습률 막대는 없앴다(사용자 지시).
+ */
 const labels = {
   not_started: "미학습",
   needs_review: "복습 필요",
   mastered: "목표 달성",
 };
 
-type Phase = "pre" | "main";
-type Progress = { score: number | null; description: string; unknown?: boolean };
-const phaseLabels = { pre: "예습", main: "복습" };
-const clampScore = (score: number) => Math.max(0, Math.min(100, score));
+type Review = { score: number | null; description: string };
 
-function progressFor(lecture: LectureRef, phase: Phase): Progress {
-  if (lecture.studyLoaded === false) return { score: null, unknown: true, description: `${phaseLabels[phase]}: 학습률 불러오는 중` };
-  if (phase === "pre") {
-    const progress = lecture.prequizProgress;
-    if (!lecture.marks.prequiz || !progress || progress.total <= 0) {
-      return { score: null, description: "예습: 측정할 웹 문항 없음" };
-    }
-    const answered = Math.max(0, Math.min(progress.total, progress.answered));
-    const score = clampScore(100 * answered / progress.total);
-    return { score, description: `예습 ${formatScore(score)}% · ${answered}/${progress.total}문항 완료` };
-  }
+function reviewFor(lecture: LectureRef): Review {
+  if (lecture.studyLoaded === false) return { score: null, description: "복습: 학습률 불러오는 중" };
   if (!lecture.marks.quiz) return { score: null, description: "복습: 측정할 웹 문항 없음" };
   const value = lecture.mastery;
-  if (value === undefined) return { score: null, unknown: true, description: "복습: 학습도 정보 없음" };
-  if (value === null) return { score: null, description: "복습: 평가 준비 전" };
-  return { score: clampScore(value.score), description: `복습 학습도 ${value.score}% · ${labels[value.status]}` };
+  if (value === undefined) return { score: null, description: "복습: 학습도 정보 없음" };
+  if (value === null) return { score: 0, description: "복습 학습률 0% · 평가 준비 전" };
+  const score = Math.max(0, Math.min(100, value.score));
+  return { score, description: `복습 학습률 ${score}% · ${labels[value.status]}` };
 }
 
-// 99.9%를 반올림해 100% 완료로 보이게 하지 않는다.
-function formatScore(score: number) { return score >= 100 ? 100 : Math.floor(score); }
-function progressClass(progress: Progress) {
-  return progress.score === null ? progress.unknown ? "is-unknown" : "is-unavailable"
-    : progress.score >= 100 ? "is-complete" : "is-progress";
+function preFor(lecture: LectureRef) {
+  if (lecture.studyLoaded === false) return "예습: 불러오는 중";
+  const progress = lecture.prequizProgress;
+  if (!lecture.marks.prequiz || !progress || progress.total <= 0) return "예습: 웹 문항 없음";
+  return prequizDone(lecture) ? "예습 퀴즈 완료" : `예습 퀴즈 ${Math.min(progress.answered, progress.total)}/${progress.total}`;
 }
 
 export function learningDescription(lecture: LectureRef) {
-  return `${lecture.title}: ${progressFor(lecture, "pre").description} · ${progressFor(lecture, "main").description}`;
+  return `${lecture.title}: ${preFor(lecture)} · ${reviewFor(lecture).description}`;
 }
 
-/** 왼쪽 예습 풀이율 · 오른쪽 Quiz Bank 학습도. 두 영역은 항상 같은 폭이다. */
+/** 채울수록 옅어지는 복습 막대. 채움 색 = 메인 색을 (100 − 학습률×62)%만큼 섞는다. */
+export function ReviewMeter({ score, className = "" }: { score: number | null; className?: string }) {
+  if (score === null) return <span className={`meter is-closed ${className}`} />;
+  const strength = Math.round(100 - (score / 100) * 62);
+  return (
+    <span className={`meter ${className}`}>
+      <span style={{ width: `${score}%`, background: `color-mix(in srgb, var(--accent) ${strength}%, var(--surface))` }} />
+    </span>
+  );
+}
+
 export function ChipLearning({ lectures }: { lectures: LectureRef[] }) {
   if (!lectures.length) return null;
-  return <span className="chip-learning-pair">
-    {(["pre", "main"] as const).map(phase => {
-      const progress = lectures.map(lecture => progressFor(lecture, phase));
-      const single = lectures.length === 1 ? progress[0] : null;
-      const unavailable = progress.every(value => value.score === null && !value.unknown);
-      const description = lectures.map((lecture, index) => `${lecture.title}: ${progress[index].description}`).join(" · ");
-      return <span className={`chip-learning is-${phase}${unavailable ? " is-unavailable" : ""}`} key={phase} title={description} aria-label={description}>
-        <span className="chip-learning-value" aria-hidden="true">
-          <span className="chip-learning-label">{phaseLabels[phase]} </span>
-          {single ? single.score === null ? "—" : `${formatScore(single.score)}%` : null}
+  const reviews = lectures.map(reviewFor);
+  const description = lectures.map(learningDescription).join(" · ");
+  const preOpen = lectures.some(l => l.marks.prequiz);
+  const preDone = lectures.every(l => !l.marks.prequiz || prequizDone(l)) && preOpen;
+  const single = lectures.length === 1 ? reviews[0] : null;
+  return (
+    <span className="chip-learning-pair" title={description} aria-label={description}>
+      <span className="readline" aria-hidden="true">
+        {preOpen ? <i className={`rl-pre${preDone ? " is-on" : ""}`} /> : null}
+      </span>
+      <span className="chip-learning is-main">
+        {/* 화면에는 막대만 보이고, 숫자는 화면 낭독용으로 남긴다. */}
+        <span className="chip-learning-value sr-only">
+          복습 {single ? (single.score === null ? "—" : `${single.score}%`) : ""}
         </span>
         <span className="chip-learning-bars" aria-hidden="true">
-          {progress.map((value, index) => <span key={JSON.stringify([lectures[index].subject, lectures[index].runId])}
-            className={`chip-learning-track ${progressClass(value)}`}>
-            {value.score !== null ? <span className="chip-learning-fill" style={{ width: `${value.score}%` }} /> : null}
-          </span>)}
+          {reviews.map((review, index) => (
+            <ReviewMeter key={`${lectures[index].subject}/${lectures[index].runId}`} score={review.score} />
+          ))}
         </span>
-      </span>;
-    })}
-  </span>;
+      </span>
+    </span>
+  );
 }

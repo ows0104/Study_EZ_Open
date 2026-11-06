@@ -3,7 +3,10 @@ const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const base = process.env.CALENDAR_TEST_URL || 'http://127.0.0.1:5198/tests/calendar-loading.html';
 
-test('startup loads only metadata; learning and bundles are opt-in and scoped', async () => {
+// 2026-11 개편: 회독·학습률은 늘 보인다(토글 없음). 첫 화면 요청은 그대로 두고, 그린 뒤 보이는 범위만 이어 받는다.
+const learning = r => r.includes('include_cards=false');
+
+test('startup loads metadata first; learning follows for the visible range; bundles stay opt-in and scoped', async () => {
   const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHANNEL || 'chrome' });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   const errors = [];
@@ -12,24 +15,26 @@ test('startup loads only metadata; learning and bundles are opt-in and scoped', 
   try {
     await page.goto(base, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: /시간표 강의 0/ }).waitFor();
-    assert.deepEqual((await requests()).sort(), ['/api/me', '/api/timetable?include_study=false'].sort());
-    assert.equal(await page.locator('.chip-learning-pair').count(), 0);
+    const first = await requests();
+    assert.deepEqual(first.slice(0, 2).sort(), ['/api/me', '/api/timetable?include_study=false'].sort());
+    // 그 뒤에 나가는 것은 보이는 범위의 학습률과 오늘 복습 수뿐이다.
+    assert(first.slice(2).every(r => learning(r) || r === '/api/timetable/study-progress'), first.join(', '));
     const modules = await page.evaluate(() => performance.getEntriesByType('resource').map(r => r.name));
     assert(!modules.some(url => /\/(EventPanel|LecturePage)\.tsx/.test(url)));
     await page.evaluate(() => { window.dispatchEvent(new Event('focus')); window.dispatchEvent(new Event('focus')); });
-    assert.equal((await requests()).filter(r => r.includes('/timetable')).length, 1);
-    await page.getByRole('button', { name: '학습률 보기', exact: true }).click();
-    await page.getByRole('status').filter({ hasText: '표시된 기간의 학습률' }).waitFor();
-    let enriched = (await requests()).filter(r => r.includes('include_cards=false'));
+    assert.equal((await requests()).filter(r => r.startsWith('/api/timetable?include_study=false')).length, 1);
+    await page.waitForFunction(() => window.calendarTest.requests.some(r => r.includes('include_cards=false')));
+    let enriched = (await requests()).filter(learning);
     assert.equal(enriched.length, 1);
     assert.match(enriched[0], /start=2026-10-12&end=2026-10-16/);
     assert.equal(await page.getByRole('button', { name: /시간표 강의 0/ }).count(), 1);
     await page.evaluate(() => window.calendarTest.release());
-    await page.locator('.chip-learning-value').filter({ hasText: '복습 50%' }).waitFor();
-    await page.getByRole('button', { name: '학습률 접기', exact: true }).click();
+    await page.locator('.chip-learning-value').filter({ hasText: '복습 50%' }).waitFor({ state: 'attached' });
     await page.getByRole('button', { name: '다음', exact: true }).click();
     await page.getByRole('button', { name: /시간표 강의 1/ }).waitFor();
-    assert.equal((await requests()).filter(r => r.includes('include_cards=false')).length, 1);
+    await page.waitForFunction(() => window.calendarTest.requests.filter(r => r.includes('include_cards=false')).length === 2);
+    assert.match((await requests()).filter(learning)[1], /start=2026-10-19&end=2026-10-23/);
+    await page.evaluate(() => window.calendarTest.release());
     await page.getByRole('button', { name: '덱 모아받기 보기', exact: true }).click();
     await page.waitForFunction(() => window.calendarTest.requests.some(r => r.startsWith('/api/bundles/decks')));
     assert((await requests()).filter(r => r.startsWith('/api/bundles/decks')).every(r => r.includes('start=2026-10-19&end=2026-10-23')));
@@ -37,6 +42,8 @@ test('startup loads only metadata; learning and bundles are opt-in and scoped', 
     await page.getByRole('button', { name: '이전', exact: true }).click();
     await page.getByRole('button', { name: /시간표 강의 0/ }).click();
     await page.getByRole('heading', { name: '시간표 강의 0', exact: true }).waitFor();
+    // 관리 도구·강의 화면 링크는 패널 아래 「관리자」 접힘 안에 있다.
+    await page.getByText('관리자', { exact: true }).click();
     await page.getByRole('link', { name: '강의 화면 전체 보기 →', exact: true }).waitFor();
     assert((await requests()).some(r => r === '/api/lectures/subject/run-0'));
     assert.equal((await requests()).filter(r => r.startsWith('/api/bundles/decks')).length, 1);
@@ -56,13 +63,12 @@ test('failed learning leaves timetable usable and retryable; students never load
     await page.goto(base + '?student&learningFail', { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: /시간표 강의 0/ }).waitFor();
     assert.equal(await page.getByRole('button', { name: /덱 모아받기/ }).count(), 0);
-    await page.getByRole('button', { name: '학습률 보기', exact: true }).click();
     await page.getByRole('alert').filter({ hasText: '학습률 조회 실패' }).waitFor();
     assert.equal(await page.getByRole('button', { name: /시간표 강의 0/ }).count(), 1);
     await page.getByRole('button', { name: '다시 시도', exact: true }).click();
     await page.waitForFunction(() => window.calendarTest.requests.filter(r => r.includes('include_cards=false')).length === 2);
     await page.evaluate(() => window.calendarTest.release());
-    await page.locator('.chip-learning-value').filter({ hasText: '복습 50%' }).waitFor();
+    await page.locator('.chip-learning-value').filter({ hasText: '복습 50%' }).waitFor({ state: 'attached' });
     assert.equal(await page.getByRole('alert').count(), 0);
     assert.equal(await page.evaluate(() => window.calendarTest.requests.filter(r => r.startsWith('/api/bundles/decks')).length), 0);
   } finally { await browser.close(); }
@@ -73,18 +79,17 @@ test('changing a visible period cancels stale learning; month uses the displayed
   const page = await browser.newPage();
   try {
     await page.goto(base + '?student', { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: '학습률 보기', exact: true }).click();
     await page.waitForFunction(() => window.calendarTest.requests.filter(r => r.includes('include_cards=false')).length === 1);
     await page.getByRole('button', { name: '다음', exact: true }).click();
     await page.waitForFunction(() => window.calendarTest.requests.filter(r => r.includes('include_cards=false')).length === 2);
     await page.evaluate(() => window.calendarTest.release());
     assert.equal(await page.locator('.chip-learning-value').filter({ hasText: '복습 50%' }).count(), 0);
     await page.evaluate(() => window.calendarTest.release());
-    await page.locator('.chip-learning-value').filter({ hasText: '복습 50%' }).waitFor();
+    await page.locator('.chip-learning-value').filter({ hasText: '복습 50%' }).waitFor({ state: 'attached' });
     await page.getByRole('button', { name: '월', exact: true }).click();
     await page.waitForFunction(() => window.calendarTest.requests.some(r => r.includes('start=2026-09-28&end=2026-11-06&include_cards=false')));
-    await page.getByRole('button', { name: '학습률 접기', exact: true }).click();
     await page.evaluate(() => window.calendarTest.release());
+    // 월간 칸은 좁아서 학습 표시를 접는다.
     assert.equal(await page.locator('.chip-learning-pair').count(), 0);
     assert.equal(await page.getByRole('alert').count(), 0);
   } finally { await browser.close(); }

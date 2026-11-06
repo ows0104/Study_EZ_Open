@@ -53,3 +53,41 @@ export function ProfessorInfo({ value }: { value?: PreviewSource | null }) {
     {value.attachmentNeedsReview ? <p role="status">선택한 예습 필기를 준비 중입니다. 첨부가 갱신되면 새 예습을 시작할 수 있습니다.</p> : null}
   </div>;
 }
+
+/**
+ * 교수 이름 옆 작은 표시(2026-11-05 사용자 지시).
+ *   작년과 같은 교수 → 없음
+ *   작년과 다르지만 보유한 최근 5년 자료에 같은 교수 필기가 있음 → 그 해 두 자리(「23」, 흐린 회색)
+ *   최근 5년 담당 기록 없음(`newProfessor`) → 「N」(빨강)
+ * 확인 필요(`needs_review`)는 표시하지 않는다. 자세한 근거는 칸의 title·패널이 말한다.
+ */
+export function professorNote(values: (PreviewSource | null | undefined)[]): string | null {
+  for (const value of values) {
+    if (!value || value.status === "needs_review") continue;
+    if (value.newProfessor) return "N";
+    if (value.changed && value.selected?.match === "same" && value.selected.year !== value.year - 1) {
+      return String(value.selected.year).slice(-2);
+    }
+  }
+  return null;
+}
+
+export function ProfTag({ values }: { values: (PreviewSource | null | undefined)[] }) {
+  const note = professorNote(values);
+  if (!note) return null;
+  const isNew = note === "N";
+  const text = isNew ? "작년과 다른 교수 · 보유한 최근 5년 자료에 담당 기록 없음" : `작년과 다른 교수 · 20${note}년에 담당`;
+  return <span className={`prof-tag${isNew ? " is-new" : ""}`} title={text} aria-label={text}>{note}</span>;
+}
+
+/**
+ * 학생 패널에 남기는 출처 변경 안내(web/CLAUDE.md 계약: 원본 선택과 실제 첨부가 다르면
+ * 새 예습 시작을 보류하고 기존 링크는 출처 변경 안내와 함께 보존한다). 자세한 출처는 관리자 접힘의 ProfessorInfo.
+ */
+export function PreviewSourceNotice({ value }: { value?: PreviewSource | null }) {
+  if (!value?.conversationNeedsReview && !value?.attachmentNeedsReview) return null;
+  return <div className="preview-source-notice">
+    {value.conversationNeedsReview ? <p role="status">예습 자료가 바뀌었습니다. 기존 대화는 이전 자료 기준이므로 확인이 필요합니다.</p> : null}
+    {value.attachmentNeedsReview ? <p role="status">선택한 예습 필기를 준비 중입니다. 첨부가 갱신되면 새 예습을 시작할 수 있습니다.</p> : null}
+  </div>;
+}
