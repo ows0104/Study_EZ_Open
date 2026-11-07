@@ -81,7 +81,7 @@ def overview_data(db, row, user, when):
         RootSession.day == policy.study_day(when, configured).isoformat()).order_by(RootSession.created_at.desc())).all()
     pending = next((s for s in sessions if s.policy == configured and s.state['index'] < len(s.tasks)), None)
     return {'revision': row.revision, 'title': row.document['title'], 'policyReady': True, 'policy': configured,
-            'scope': row.document['review']['scope'], 'summary': state.summary(row.document, events, available, when, configured),
+            'scope': content.learner_scope(row.document), 'summary': state.summary(row.document, events, available, when, configured),
             'plan': planning.plan(row.document, events, available, when, configured),
             'sessionId': pending.id if pending else None, 'preparationProblems': len(problems)}
 
@@ -247,14 +247,20 @@ def revealed_answer(db, doc, q):
     from app.storage import ObjectStorage
     answer = content.answer(q)
     generation = db.scalars(select(RootGeneration).where(RootGeneration.subject == doc.subject,
-        RootGeneration.run_id == doc.run_id, RootGeneration.result_digest.is_not(None))).all()
-    generation = next((g for g in generation if g.packet['revision'] == doc.revision), None)
+        RootGeneration.run_id == doc.run_id, RootGeneration.result_digest.is_not(None),
+        RootGeneration.packet['revision'].as_string()==doc.revision)).first()
     if generation:
         result = generation.result
-        answer['reviewNotes'] = [
+        if result.get('policy')in('verified-main-quiz-replacement/1','verified-main-quiz-curation/1'):
+            from app.root_learning.replacement_import import report as replacement_report
+            summary=replacement_report(result)
+            answer['reviewNotes']=[r for r in summary['questionNotes']if r['question_id']==q['question_id']]
+            answer['reviewIssues']=summary['issues']
+        else:
+            answer['reviewNotes'] = [
             {'source': label, **r} for label, checks in [('원본 대조', result['sourceAudit']['question_checks']), ('독립 정답 검수', result['medical'])]
             for r in checks['reviews'] if r['question_id'] == q['question_id'] and r['verdict'] != 'ok']
-        answer['reviewIssues'] = result['sourceAudit']['input_issues'] + result['validation']['errors'] + result['validation']['warnings']
+            answer['reviewIssues'] = result['sourceAudit']['input_issues'] + result['validation']['errors'] + result['validation']['warnings']
         from app.root_learning.reviewed_import import source_records
         answer['sourceLinks'] = [{'label': s['filename'], 'url': ObjectStorage().presign_download(s['snapshotKey'], filename=s['filename'])}
                                  for s in source_records(generation)]
@@ -359,6 +365,6 @@ def read_map(session_id: str, user: CurrentUser = Depends(require_approved_user)
     if not row.state['mapSeen']:
         raise HTTPException(409, '지도 답 노출을 먼저 확인하세요.')
     return {'concepts': doc.document['review']['concepts'], 'relations': doc.document['review']['relations'],
-            'targets': state.targets(doc.document), 'scope': doc.document['review']['scope'],
+            'targets': state.targets(doc.document), 'scope': content.learner_scope(doc.document),
             'readyDirectionIds':sorted({t['direction_id']for t in doc.document['tasks']}),
             'points': doc.document['review']['points'], 'coverage': doc.document['review']['coverage']}
