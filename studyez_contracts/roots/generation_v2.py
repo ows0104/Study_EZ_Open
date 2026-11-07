@@ -2,6 +2,7 @@
 import copy
 import json
 import re
+from .media import MAX_IMAGE
 from .automation import BRIEF_SCHEMA, CORE, packet_hash
 from .source_assessment import SCHEMA as SOURCE1, source_assessment_schema, envelope
 from .validate import document_hash, validate_document,validate_prerequisites
@@ -248,6 +249,44 @@ def validate_runtime_revalidations(meta,stages):
             'result2: runtime revalidation changed cached stages')
     return rows
 
+
+def validate_render_recoveries(meta,stages):
+    """One completed authoring call whose only failure was oversized original-crop PNGs.
+
+    The model output, input and usage stay byte-identical; only the renderer changed (it now
+    steps the scale down until a crop fits). No model replay and no budget change."""
+    rows=meta.get('renderRecoveries',[])
+    require(type(rows)is list and len(rows)<=1,'result2: invalid render recovery history')
+    for row in rows:
+        require(type(row)is dict and set(row)=={'proof','proofHash'}and type(row['proof'])is dict
+            and row['proofHash']==document_hash(row['proof']),'result2: changed render recovery proof')
+        p=row['proof']
+        require(set(p)=={'priorLedger','priorLedgerHash','packetHash','currentRuntimeHash','reason','stage',
+            'oversized','toolSha256','modelReplay'},'result2: malformed render recovery')
+        old=p['priorLedger'];name=p['stage']
+        require(type(old)is dict and type(old.get('stages'))is dict and old.get('pipelineVersion')==POLICY
+            and p['priorLedgerHash']==document_hash(old)and not old.get('renderRecoveries')
+            and not old.get('formatRecoveries')and not old.get('authoringRecoveries')
+            and type(old.get('identity'))is str and re.fullmatch(r'[a-f0-9]{64}',old['identity']),
+            'result2: changed prior render ledger')
+        require(type(name)is str and re.fullmatch(r'generate|repair-[1-3]',name)and p['packetHash']==meta['inputHash']
+            and p['currentRuntimeHash']==meta['runtimeHash']and p['modelReplay']is False
+            and type(p['reason'])is str and p['reason'].strip()
+            and type(p['toolSha256'])is str and re.fullmatch(r'[a-f0-9]{64}',p['toolSha256']),
+            'result2: changed render recovery identity')
+        require(type(p['oversized'])is list and p['oversized']and all(type(o)is dict and set(o)=={'question_id','page','bytes'}
+            and type(o['bytes'])is int and o['bytes']>MAX_IMAGE for o in p['oversized']),'result2: render recovery without oversized crop')
+        prior=old['stages'];entry=prior.get(name,{})
+        require(all(type(v)is dict for v in prior.values())and entry.get('status')=='failed'
+            and [k for k,v in prior.items()if v['status']=='failed']==[name]and set(prior)<=set(stages),
+            'result2: render recovery was not one failed authoring acceptance')
+        require(type(old.get('repairRounds'))is int and old['repairRounds']<=meta['repairRounds']<=3,'result2: render recovery reset budget')
+        for k,v in prior.items():
+            if k!=name:require(stages[k]=={'name':k,**v},'result2: changed reused render stage')
+        current=stages[name]
+        require(current['status']=='completed'and all(current[k]==entry[k]for k in ('inputHash','rawOutputHash','usageHash')),
+            'result2: render recovery changed the original call')
+    return rows
 
 def validate_authoring_recoveries(meta,stages):
     rows=meta.get('authoringRecoveries',[])
@@ -613,6 +652,7 @@ def validate_result(value,packet):
     validate_schema_recovery(meta,stages)
     validate_runtime_revalidations(meta,stages)
     validate_format_recoveries(meta,stages)
+    validate_render_recoveries(meta,stages)
     recoveries=validate_authoring_recoveries(meta,stages)
     rejected=recoveries[0]['proof']['rawAuthoring']if recoveries and recoveries[0]['proof']['mode']=='brief-repair'else None
     start_round=1 if rejected else 0

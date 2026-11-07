@@ -147,12 +147,14 @@ def run(packet,out,model,invoke):
     recoveries=ledger.get('authoringRecoveries',[])
     format_recoveries=ledger.get('formatRecoveries',[])
     runtime_revalidations=ledger.get('runtimeRevalidations',[])
+    render_recoveries=ledger.get('renderRecoveries',[])
     recovery_meta={'authoringRecoveries':recoveries,'formatRecoveries':format_recoveries,
-        'runtimeRevalidations':runtime_revalidations,'inputHash':packet['inputHash'],
+        'runtimeRevalidations':runtime_revalidations,'renderRecoveries':render_recoveries,'inputHash':packet['inputHash'],
         'runtimeHash':fingerprint,'initialBrief':initial,'repairRounds':max(ledger['repairRounds'],initial_cost+1)}
     recovery_stages={k:{'name':k,**v}for k,v in ledger['stages'].items()}
     c.validate_runtime_revalidations(recovery_meta,recovery_stages)
     c.validate_format_recoveries(recovery_meta,recovery_stages)
+    c.validate_render_recoveries(recovery_meta,recovery_stages)
     c.validate_authoring_recoveries(recovery_meta,recovery_stages)
     rejected=recoveries[0]['proof']['rawAuthoring']if recoveries and recoveries[0]['proof']['mode']=='brief-repair'else None
     start_round=1 if rejected else 0
@@ -219,6 +221,7 @@ def run(packet,out,model,invoke):
             'normalizationRecoveries':ledger.get('normalizationRecoveries',[]),
             **({'authoringRecoveries':recoveries}if recoveries else{}),
             **({'formatRecoveries':format_recoveries}if format_recoveries else{}),
+            **({'renderRecoveries':render_recoveries}if render_recoveries else{}),
             **({'runtimeRevalidations':runtime_revalidations}if runtime_revalidations else{}),
             **({'authoringRecoveryOutput':json.loads((out/'repair-1.raw.json').read_text(encoding='utf-8'))}if rejected else{}),
             'briefRevisions':[{'stage':name,'brief':value['brief'],'reason':value['map_change_reason']}

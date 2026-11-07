@@ -336,6 +336,11 @@ def validate_all(out,payload):
         require(read(Path(out)/'runtime.revalidation.json')==row
             and read(archive/'ledger-before.json')==proof['priorLedger']
             and sha(archive/'recovery.py')==proof['toolSha256'],'Changed runtime compatibility archive')
+    for row in payload['manifest'].get('renderRecoveries',[]):
+        proof=row['proof'];archive=Path(out)/'.render-recovery'
+        require(read(Path(out)/'render.recovery.json')==row
+            and read(archive/'ledger-before.json')==proof['priorLedger']
+            and sha(archive/'recovery.py')==proof['toolSha256'],'Changed render recovery archive')
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--packet',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--model');a=p.parse_args()
