@@ -117,3 +117,21 @@ def test_medical_retry_contract_rejects_changes(change):
     row['proofHash'] = document_hash(row['proof'])
     with pytest.raises(ValueError):
         c.validate_medical_retries(meta, stages)
+
+
+def test_runtime_revalidation_after_medical_retry_keeps_earlier_proofs_valid():
+    meta, stages = _medical_case()
+    ledger = {'identity': '3' * 64, 'pipelineVersion': c.POLICY, 'repairRounds': 3,
+              'stages': {k: {kk: vv for kk, vv in v.items() if kk != 'name'} for k, v in stages.items()},
+              'medicalRetries': meta['medicalRetries']}
+    proof = {'priorLedger': ledger, 'priorLedgerHash': document_hash(ledger), 'packetHash': '2' * 64,
+             'currentRuntimeHash': '5' * 64, 'reason': 'validator fix', 'toolSha256': '6' * 64, 'modelReplay': False}
+    later = {**meta, 'runtimeHash': '5' * 64, 'runtimeRevalidations': [{'proof': proof, 'proofHash': document_hash(proof)}]}
+    assert c.validate_runtime_revalidations(later, stages)
+    assert c.validate_medical_retries(later, stages)
+    changed = copy.deepcopy(stages)
+    changed['normalize']['outputHash'] = '0' * 64
+    with pytest.raises(ValueError):
+        c.validate_runtime_revalidations(later, changed)
+    with pytest.raises(ValueError):  # without the revalidation record the medical proof's runtime no longer matches
+        c.validate_medical_retries({**meta, 'runtimeHash': '5' * 64}, stages)

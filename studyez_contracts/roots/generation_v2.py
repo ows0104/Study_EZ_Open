@@ -224,6 +224,14 @@ def validate_format_recoveries(meta,stages):
     return rows
 
 
+RECOVERY_HISTORY=('formatRecoveries','authoringRecoveries','renderRecoveries','medicalRetries')
+
+
+def history_runtime(meta):
+    """The runtime that recorded recoveries ran under (before a later deterministic revalidation)."""
+    return meta['runtimeRevalidations'][0]['proof']['priorLedger']['identity']if meta.get('runtimeRevalidations')else meta['runtimeHash']
+
+
 def validate_runtime_revalidations(meta,stages):
     rows=meta.get('runtimeRevalidations',[])
     require(type(rows)is list and len(rows)<=1,'result2: invalid runtime revalidation history')
@@ -235,14 +243,13 @@ def validate_runtime_revalidations(meta,stages):
             'result2: malformed runtime revalidation')
         old=p['priorLedger']
         require(type(old)is dict and type(old.get('stages'))is dict and not old.get('runtimeRevalidations')
-            and old.get('formatRecoveries')and p['priorLedgerHash']==document_hash(old)
+            and any(old.get(k)for k in RECOVERY_HISTORY)and p['priorLedgerHash']==document_hash(old)
             and old.get('pipelineVersion')==POLICY,'result2: invalid prior runtime ledger')
         require(p['packetHash']==meta['inputHash']and p['currentRuntimeHash']==meta['runtimeHash']
             and p['modelReplay']is False and type(p['reason'])is str and p['reason'].strip()
             and type(p['toolSha256'])is str and re.fullmatch(r'[a-f0-9]{64}',p['toolSha256']),
             'result2: changed runtime revalidation identity')
-        require(meta.get('formatRecoveries',[])==old['formatRecoveries']
-            and meta.get('authoringRecoveries',[])==old.get('authoringRecoveries',[])
+        require(all(meta.get(k,[])==old.get(k,[])for k in RECOVERY_HISTORY)
             and type(old.get('repairRounds'))is int and old['repairRounds']==meta['repairRounds'],
             'result2: runtime revalidation changed history/budget')
         require(set(old['stages'])<=set(stages)and all(stages[k]=={'name':k,**v}for k,v in old['stages'].items()),
@@ -270,7 +277,7 @@ def validate_render_recoveries(meta,stages):
             and type(old.get('identity'))is str and re.fullmatch(r'[a-f0-9]{64}',old['identity']),
             'result2: changed prior render ledger')
         # A later medical retry (prompt fix) moves the runtime on; the render proof keeps the runtime it ran under.
-        render_runtime=meta['medicalRetries'][0]['proof']['priorLedger']['identity']if meta.get('medicalRetries')else meta['runtimeHash']
+        render_runtime=meta['medicalRetries'][0]['proof']['priorLedger']['identity']if meta.get('medicalRetries')else history_runtime(meta)
         require(type(name)is str and re.fullmatch(r'generate|repair-[1-3]',name)and p['packetHash']==meta['inputHash']
             and p['currentRuntimeHash']==render_runtime and p['modelReplay']is False
             and type(p['reason'])is str and p['reason'].strip()
@@ -309,7 +316,7 @@ def validate_medical_retries(meta,stages,pending=False):
             and type(old.get('identity'))is str and re.fullmatch(r'[a-f0-9]{64}',old['identity']),
             'result2: changed prior medical ledger')
         require(type(name)is str and re.fullmatch(r'medical-[0-3]',name)and p['packetHash']==meta['inputHash']
-            and p['currentRuntimeHash']==meta['runtimeHash']and p['modelReplay']is True
+            and p['currentRuntimeHash']==history_runtime(meta)and p['modelReplay']is True
             and type(p['reason'])is str and p['reason'].strip()
             and type(p['toolSha256'])is str and re.fullmatch(r'[a-f0-9]{64}',p['toolSha256']),
             'result2: changed medical retry identity')
@@ -675,7 +682,8 @@ def validate_result(value,packet):
     original={s['id']:s for s in packet['sources']}
     for s in b['sources']:
         require(s['label']==original[s['source_id']]['filename'],'result2: source label mismatch')
-        require((type(s['page_count'])is int and s['page_count']>0)if s['label'].lower().endswith('.pdf')else s['page_count']is None,'result2: invalid page inventory')
+        is_pdf=s['label'].lower().endswith('.pdf')or str(original[s['source_id']].get('localPath','')).lower().endswith('.pdf')
+        require((type(s['page_count'])is int and s['page_count']>0)if is_pdf else s['page_count']is None,'result2: invalid page inventory')
     require(meta['inputHash']==packet['inputHash']and packet_hash(packet)==packet['inputHash'],'result2: input mismatch')
     require(meta['pipelineVersion']==POLICY and meta['bankHash']==document_hash(bank)and meta['briefHash']==document_hash(b),'result2: stale manifest')
     require(type(meta.get('runtimeHash'))is str and re.fullmatch(r'[a-f0-9]{64}',meta['runtimeHash'])and
