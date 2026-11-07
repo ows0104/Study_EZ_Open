@@ -166,6 +166,7 @@ gcloud run deploy $SERVICE `
   --set-secrets $secrets `
   --cpu 1 --memory 512Mi `
   --min-instances 0 --max-instances 4 `
+  --concurrency 8 `
   --timeout 600
 Assert-Ok "Cloud Run 배포"
 

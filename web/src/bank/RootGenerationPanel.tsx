@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import './roots.css';
 import { saveRootWebFile } from './rootWeb';
+import { pollAfterSettled } from './pollChain';
 
 type Input={conceptMap:string;points:string;scope:string;examDate:string|null;inputMode?:'provided'|'source'};
 type Generation={id:string;requestId?:string;state:string;stage:string;message:string;published:boolean;revision:string;
@@ -31,10 +32,11 @@ function GenerationPanel({subject,runId,onPublished}:Props) {
   useEffect(()=>{
     if(!pending)return;
     let live=true;
-    const timer=setInterval(()=>api<{generation:Generation|null}>(base).then(({generation:g})=>{
+    // 고정 간격은 이 GET이 3초보다 오래 걸릴 때 요청을 겹쳐 쌓는다 — 까닭은 pollChain.ts에 있다.
+    const stop=pollAfterSettled(()=>api<{generation:Generation|null}>(base).then(({generation:g})=>{
       if(live){setJob(g);if(g?.published)onPublished?.();}
     }).catch(e=>{if(live)setError(e.message);}),3000);
-    return()=>{live=false;clearInterval(timer);};
+    return()=>{live=false;stop();};
   },[base,pending,onPublished]);
   async function send(resume=false){
     if(sending.current)return;
