@@ -606,6 +606,9 @@ def validate_result(value,packet):
     require(correction=={'errors':findings,'consumedRounds':initial_cost},'result2: missing initial correction evidence')
     n=total-initial_cost;require(n>=0,'result2: initial correction not counted')
     stages=index_by(meta['stages'],'name')
+    if 'chunkedReview'in meta:
+        from .chunked import validate_continuation
+        validate_continuation(value)
     from .parallel import validate_schema_recovery
     validate_schema_recovery(meta,stages)
     validate_runtime_revalidations(meta,stages)

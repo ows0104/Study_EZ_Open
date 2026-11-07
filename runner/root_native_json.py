@@ -304,6 +304,9 @@ def validate_stage(out,entry,*,model):
 
 def validate_all(out,payload):
     require_unblocked(out)
+    if payload['manifest'].get('chunkedReview'):
+        from .root_chunked_review import validate
+        validate(out,payload)
     if payload['manifest'].get('parallelSchemaRecovery'):
         from .root_parallel_schema_recovery import validate_recovery
         validate_recovery(out,payload['manifest']['parallelSchemaRecovery'])
