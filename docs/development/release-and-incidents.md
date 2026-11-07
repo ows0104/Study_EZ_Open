@@ -1,7 +1,7 @@
 # 배포 후보·사후 확인·사건 종료
 
 2026-11-05 승인된 일반 코드 master 자동 경로는 [협업·자동 배포](collaboration.md)를 따른다.
-아래는 수동 고정 후보 경로다. 콘텐츠/DB/학습 기록/권한 변경에는 기존 개별 승인 요건이 유지된다.
+아래는 수동 고정 후보 경로다. 콘텐츠/DB/학습 기록/권한 변경 등 [사람에게 묻는 것](README.md#사람에게-묻는-것)은 개별 승인을 받는다.
 
 이 절차의 구현 완료와 실제 운영 배포는 다르다. 현재 workflow-hardening 작업은 운영 배포 승인이 없다.
 기존 명령으로 직접 master를 push하거나 클라우드에 배포해 이 절차를 우회하지 않는다.
@@ -9,9 +9,9 @@
 
 ## 1. 검사와 리뷰
 
-작업을 new로 만들고 intent/spec/plan과 required_checks를 정한 뒤 사람의 실제 구현 승인을 기록한다.
+작업을 new로 만들고 intent/spec/plan과 required_checks를 정한 뒤 사용자의 작업 요청 원문을 구현 근거로 기록한다.
 검사와 리뷰는 evidence_version 2의 영역 입력·코드 지문·계획 지문에 묶인다.
-설계를 바꾸면 구현 재승인뿐 아니라 새 설계에 맞는 검사와 리뷰가 필요하다.
+설계를 바꾸면 구현 근거 재기록뿐 아니라 새 설계에 맞는 검사와 리뷰가 필요하다.
 구형 state의 기록은 보존하고 자동 승격하지 않는다. 현재 작업으로 계속할 때 실제 승인 범위와 재검증을 기록한다.
 
 scripts/workflow_scope.py가 실제 읽는 입력 목록의 정본이다. scripts/개발 검사/requirements/pyproject/uv.lock은
@@ -64,7 +64,7 @@ Git push로 별도의 소스를 다시 빌드하는 경로는 고정 산출물 �
 
 ```powershell
 python scripts/release_evidence.py prepare <id> --artifact <패키지 또는 web/dist> --config <release-config.json>
-python scripts/development.py approve <id> --phase deploy --evidence "실제 사람의 후보 배포 승인 발언" --scope "실제 대상·후보·변경 범위"
+python scripts/development.py approve <id> --phase deploy --evidence "사용자의 배포 요청·승인 발언 원문" --scope "실제 대상·후보·변경 범위"
 python scripts/development.py check <id> --phase deploy
 ```
 
@@ -74,7 +74,7 @@ python scripts/development.py check <id> --phase deploy
 
 ## 3. 실제 배포와 결과
 
-중요 승인이 있을 때만 서버 `server/deploy.ps1 -ChangeId <id>` 또는
+deploy 근거가 기록된 뒤에만 서버 `server/deploy.ps1 -ChangeId <id>` 또는
 웹 `python scripts/release_evidence.py publish-web <id>`를 실행한다.
 서버는 기존 설정 경로를 유지하면서 승인된 서버 후보만 업로드한다. 실제 revision과 100% 트래픽을 확인한다.
 서버 revision은 release-<attempt>로 고정하며 --no-traffic으로 생성한다. 해당 revision의 Ready·ContainerReady와
