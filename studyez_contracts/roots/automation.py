@@ -111,8 +111,9 @@ def make_document(brief, bank, audit, *, revision, title, exam_date,medical=None
 
 
 def validate_result(result, packet):
+    from .parallel import is_v2_source
     """Check the final artifact and complete review sets again at the consumer."""
-    if packet.get('sourceAssessmentFormat')=='source-assessment/2':
+    if is_v2_source(packet):
         from .generation_v2 import validate_result as check
         return check(result,packet)
     require(type(result) is dict and set(result) == {'brief', 'document', 'sourceAudit', 'medical', 'validation', 'manifest'},

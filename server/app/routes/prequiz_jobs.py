@@ -360,7 +360,7 @@ def claimed_job(db: Session, job: PrequizJob | None):
         return row
     from app.models.root_generation import RootGeneration
     root = db.scalars(select(RootGeneration).where(RootGeneration.job_id == job.id)).first()
-    if (root and not root.result_digest and root.web_response
+    if (root and not root.result_digest and (root.web_response or (root.packet.get('parallelAuthoring') is True and root.packet.get('authoring')=='cli'and root.packet.get('inputMode')=='source'))
         and (root.subject, root.run_id) == (job.subject, job.run_id)
         and root.packet.get('owner') == root.user_id
         and (root.packet.get('subject'), root.packet.get('runId'), root.packet.get('generationId'))

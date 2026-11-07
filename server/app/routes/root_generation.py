@@ -43,6 +43,7 @@ class RequestIn(BaseModel):
     privatePilot: bool = True
     resume: bool = False
     authoring: Literal['cli','web'] = 'web'
+    parallelAuthoring: bool = False
 
 
 def control_hash(db, subject, run_id):
@@ -73,6 +74,7 @@ def generation_input(packet):
     """Compare effective frozen inputs, not how an automatic date was selected."""
     return {**{k: packet.get(k) for k in ('subject','runId','title','conceptMap','points','scope','examDate')},
         'inputMode':packet.get('inputMode','provided'),'authoring':packet.get('authoring','cli'),
+        'parallelAuthoring':packet.get('parallelAuthoring',False),
         'sources':[{k:v for k,v in s.items() if k!='snapshotKey'} for s in packet['sources']]}
 
 
@@ -139,7 +141,7 @@ def public_job(db, row):
             'input': {**{k: row.packet[k] for k in ('conceptMap', 'points', 'scope')},
                 'examDate':row.packet.get('requestedExamDate',row.packet['examDate']),
                 'inputMode':row.packet.get('inputMode','provided')}, 'report': report,
-            'authoring':row.packet.get('authoring','cli'), 'awaitingWeb':row.packet.get('authoring')=='web' and not row.web_response and job.state=='held' and not job.cancel_requested and job.stage=='ChatGPT 응답 대기',
+            'authoring':row.packet.get('authoring','cli'), 'parallelAuthoring':row.packet.get('parallelAuthoring',False), 'awaitingWeb':row.packet.get('authoring')=='web' and not row.web_response and job.state=='held' and not job.cancel_requested and job.stage=='ChatGPT 응답 대기',
             'dispatched':bool(row.web_dispatch)}
 
 
@@ -168,7 +170,9 @@ def latest(subject: str, run_id: str, user: CurrentUser = Depends(require_admin)
 def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)):
     if payload.inputMode=='provided' and (not payload.conceptMap.strip() or not payload.points.strip()):
         raise HTTPException(422, 'Concept map과 출제포인트를 입력하세요.')
-    if payload.inputMode=='source' and (payload.conceptMap or payload.points or payload.authoring!='web'):
+    if payload.parallelAuthoring and (payload.authoring!='cli' or payload.inputMode!='source'):
+        raise HTTPException(422,'병렬 생성은 CLI 원본 모드에서만 사용합니다.')
+    if payload.inputMode=='source' and (payload.conceptMap or payload.points or (payload.authoring!='web' and not payload.parallelAuthoring)):
         raise HTTPException(422,'원본 자동 준비는 웹 출제와 빈 지도·포인트 입력을 사용합니다.')
     if payload.examDate:
         from datetime import date
@@ -180,10 +184,11 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
     db.refresh(lecture, with_for_update=True)
     raw = {'conceptMap': payload.conceptMap, 'points': payload.points, 'scope': payload.scope, 'examDate': payload.examDate,'authoring':payload.authoring}
     if payload.inputMode=='source':raw.update(inputMode='source',requestedExamDate=payload.examDate)
+    if payload.parallelAuthoring:raw['parallelAuthoring']=True
     prior = db.scalars(select(RootGeneration).where(RootGeneration.user_id == user.id, RootGeneration.request_id == payload.requestId)).first()
     if prior:
         compare={k:v for k,v in raw.items() if not (payload.inputMode=='source' and k=='examDate')}
-        if (prior.subject, prior.run_id) != (subject, run_id) or prior.packet.get('inputMode','provided')!=payload.inputMode or any(prior.packet.get(k) != v for k, v in compare.items()) or prior.packet['privatePilot'] != payload.privatePilot:
+        if (prior.subject, prior.run_id) != (subject, run_id) or prior.packet.get('inputMode','provided')!=payload.inputMode or prior.packet.get('parallelAuthoring',False)!=payload.parallelAuthoring or any(prior.packet.get(k) != v for k, v in compare.items()) or prior.packet['privatePilot'] != payload.privatePilot:
             raise HTTPException(409, '같은 요청 ID의 입력이 달라졌습니다.')
         if payload.resume: resume_job(db, prior)
         return {'generation': public_job(db, prior), 'reused': True}
@@ -221,10 +226,11 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
         raise HTTPException(503,'출제용 원본 사본을 저장하지 못했습니다. 원본과 기존 학습은 보존했으며 전송은 시작하지 않았습니다. 잠시 후 다시 시도하세요.')
     packet = {'generationId': generation_id, 'revision': 'auto-' + generation_id, 'subject': subject, 'runId': run_id,
               'title': lecture.title, 'owner': user.id, 'privatePilot': payload.privatePilot, 'sources': sources, **raw,'inputMode':payload.inputMode}
-    packet['sourceAssessmentFormat']=SOURCE_FORMAT
+    from studyez_contracts.roots.parallel import SOURCE_FORMAT as PARALLEL_FORMAT
+    packet['sourceAssessmentFormat']=PARALLEL_FORMAT if payload.parallelAuthoring else SOURCE_FORMAT
     packet['inputHash'] = packet_hash(packet)
     job = PrequizJob(subject=subject, run_id=run_id, kind=JOB_BANK, origin=JOB_BUTTON, state='held' if payload.authoring=='web' else JOB_QUEUED,
-                     requested_by=user.email or user.id, stage='ChatGPT 응답 대기' if payload.authoring=='web' else 'Concept map·포인트 자동출제 대기')
+                     requested_by=user.email or user.id, stage='ChatGPT 응답 대기' if payload.authoring=='web' else '문제은행·개념도·출제포인트 CLI 병렬 대기' if payload.parallelAuthoring else 'Concept map·포인트 자동출제 대기')
     db.add(job); db.flush()
     row = RootGeneration(id=generation_id, job_id=job.id, subject=subject, run_id=run_id, user_id=user.id,
         request_id=payload.requestId, input_digest=digest, packet=packet, baseline=control_hash(db, subject, run_id))

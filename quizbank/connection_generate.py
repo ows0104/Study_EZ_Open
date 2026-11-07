@@ -143,6 +143,8 @@ def identity(packet, model):
              *Path(__file__).parent.glob('session.py'), *Path(__file__).parent.joinpath('prompts').glob('review.md')]
     for folder in ('studyez_contracts/roots', 'studyez_contracts/learning_links', 'studyez_contracts/bank', 'studyez_llm'):
         files += list(root.joinpath(folder).rglob('*.py'))
+    if packet.get('parallelAuthoring'):
+        files += [p for p in PROMPTS.parent.joinpath('parallel').rglob('*') if p.is_file()]
     return document_hash({'input': packet['inputHash'], 'model': model or codex.model_name(),
         'code': {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(set(files))}})
 
@@ -205,14 +207,17 @@ def call_model(stage, context, material, model):
 
 
 def run(packet, out, *, model=None, invoke=None):
+    from studyez_contracts.roots.parallel import SOURCE_FORMAT as PARALLEL_FORMAT,is_v2_source
     out = Path(out); out.mkdir(parents=True, exist_ok=True)
     if packet_hash(packet) != packet['inputHash']: raise ValueError('입력 지문이 다릅니다.')
-    if packet.get('sourceAssessmentFormat') not in (None,SOURCE_FORMAT,'source-assessment/2'):raise ValueError('지원하지 않는 원본 검수 형식입니다.')
+    if packet.get('sourceAssessmentFormat') not in (None,SOURCE_FORMAT,'source-assessment/2',PARALLEL_FORMAT):raise ValueError('지원하지 않는 원본 검수 형식입니다.')
+    if packet.get('sourceAssessmentFormat')==PARALLEL_FORMAT and not (packet.get('parallelAuthoring')is True and packet.get('authoring')=='cli'and packet.get('inputMode')=='source'):
+        raise ValueError('새 병렬 형식은 명시적 CLI 원본 요청에만 사용합니다.')
     if packet.get('authoring')=='web' and document_hash(packet.get('webResponse'))!=packet.get('webResponseHash'):
         raise ValueError('웹 원문이 없거나 지문이 다릅니다. CLI 최초 출제로 우회하지 않습니다.')
     invoke = invoke or call_model
     with exclusive({'connection-generation': str(out.resolve())}):
-        if packet.get('sourceAssessmentFormat')=='source-assessment/2':
+        if is_v2_source(packet):
             from .connection_generate_v2 import run as run2
             return run2(packet,out,model,invoke)
         return _run(packet, out, model, invoke)

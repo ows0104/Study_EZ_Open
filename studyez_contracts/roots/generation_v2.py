@@ -30,6 +30,14 @@ AUTHOR_BANK=copy.deepcopy(BANK)
 AUTHOR_BANK['properties']['questions']['items']['properties'].pop('stimuli',None)
 CONFLICT=obj(conflict_id=TEXT,facts=TEXT)
 AUTHOR=obj(bank=AUTHOR_BANK,brief=BRIEF,visual_stimuli=arr(CROP),clinical_conflicts=arr(CONFLICT),map_change_reason=TEXT)
+PARALLEL_CROP=copy.deepcopy(CROP)
+PARALLEL_CROP['properties']['image_id']=TEXT
+PARALLEL_AUTHOR=copy.deepcopy(AUTHOR)
+PARALLEL_AUTHOR['properties']['visual_stimuli']=arr(PARALLEL_CROP)
+
+
+def author_schema(parallel=False):
+    return PARALLEL_AUTHOR if parallel else AUTHOR
 TIER_POLICY='bank-tier-alias/1'
 
 
@@ -136,7 +144,7 @@ def source_schema(brief,bank):
     return value
 
 def validate_authoring(value,previous=None):
-    validate_shape(value,AUTHOR,'authoring2');validate_brief(value['brief'])
+    validate_shape(value,author_schema(any('image_id'in s for s in value.get('visual_stimuli',[]))),'authoring2');validate_brief(value['brief'])
     require(not any(q.get('stimuli')for q in value['bank']['questions']),'authoring: inline images are renderer-owned')
     conflicts=index_by(value['clinical_conflicts'],'conflict_id')
     require(set(conflicts)=={r['conflict_id']for r in value['bank']['source_conflicts']},'authoring: clinical conflicts need complete ID coverage')
@@ -567,6 +575,17 @@ def validate_result(value,packet):
     from .automation import validate_checks
     require(set(value)=={'brief','document','sourceAudit','medical','validation','manifest'},'result2: unknown/missing artifacts')
     b=value['brief'];bank=value['document']['bank_snapshot'];a=value['sourceAudit'];m=value['medical'];meta=value['manifest']
+    if packet.get('parallelAuthoring'):
+        proof=meta.get('parallelAuthoring',{})
+        require(packet.get('authoring')=='cli'and packet.get('inputMode')=='source','parallel: wrong authoring mode')
+        require(proof.get('policy')=='parallel-source-authoring/1'and proof.get('inputHash')==packet['inputHash']and proof.get('model')==meta.get('model'),'parallel: missing original provenance')
+        rows=proof.get('branches',{})
+        require(set(rows)=={'bank','map','point'},'parallel: missing independent branch')
+        for kind,row in rows.items():
+            require(row.get('state')=='completed'and row.get('kind')==kind and row.get('identity')==proof.get('identity'),'parallel: branch not completed')
+            require(all(re.fullmatch(r'[a-f0-9]{64}',row.get(key,''))for key in('inputHash','outputHash','providerHash')),'parallel: missing receipt hashes')
+        require(len({row['inputHash']for row in rows.values()})==1,'parallel: different source-only inputs')
+    else:require('parallelAuthoring'not in meta,'parallel: unsolicited provenance')
     validate_brief(b);validate_checks(m,bank);validate_audit(b,bank,a);validate_images(bank,b['sources'])
     require(b['lecture_id']==packet['subject']+'/'+packet['runId'],'result2: wrong lecture')
     require({s['source_id']:s['sha256']for s in b['sources']}=={s['id']:s['sha256']for s in packet['sources']},'result2: wrong sources')
@@ -587,6 +606,8 @@ def validate_result(value,packet):
     require(correction=={'errors':findings,'consumedRounds':initial_cost},'result2: missing initial correction evidence')
     n=total-initial_cost;require(n>=0,'result2: initial correction not counted')
     stages=index_by(meta['stages'],'name')
+    from .parallel import validate_schema_recovery
+    validate_schema_recovery(meta,stages)
     validate_runtime_revalidations(meta,stages)
     validate_format_recoveries(meta,stages)
     recoveries=validate_authoring_recoveries(meta,stages)

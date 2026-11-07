@@ -24,6 +24,7 @@ test('actual admin UI -> queue -> live worker -> synthetic model child -> atomic
   const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   try{
     await page.goto(url);
+    await page.locator('summary').filter({hasText:/^Main Quiz 만들기$/}).first().click();
     await page.getByRole('heading',{name:'Main Quiz 만들기'}).waitFor();
     assert.equal(await page.getByRole('button',{name:'Main Quiz 만들기',exact:true}).isEnabled(),true);
     assert.equal(await page.getByLabel('Concept map 파일').count(),0);
@@ -37,20 +38,9 @@ test('actual admin UI -> queue -> live worker -> synthetic model child -> atomic
     const queued=await requested;assert.equal(queued.status(),200);const generation=(await queued.json()).generation;
     assert.equal(generation.privatePilot,true);assert.equal(generation.input.inputMode,'source');
     assert.equal(generation.input.conceptMap,'');assert.equal(generation.input.points,'');
-    await page.getByText(/웹 응답 대기 ·/).waitFor();
-    await page.waitForFunction(()=>!!window.__rootDispatch);
-    const sent=await page.evaluate(()=>window.__rootDispatch);
-    assert.equal(sent.autoSend,true);assert.match(sent.prompt,/원본 전용 단계/);assert.ok(!sent.prompt.includes('"conceptMap":'));
-    assert.ok(sent.prompt.includes(generation.id));assert.equal(sent.files.length,1);
-    const meta={schema_version:1,subject:'test',run_id:'demo',prompt_version:'1.79',generation_id:generation.id,
-      question_count:2,question_ids:['Q001','Q002'],conflict_ids:[]};
-    let raw='<!-- STUDYEZ_BANK_FILE '+JSON.stringify(meta)+' -->\n';
-    for(let i=1;i<=2;i++)raw+=`\n### Q00${i} | basic | Optional | direct\n문제: Synthetic question ${i}?\n정답: ["Secret answer ${i}"]\n출처: S1 synthetic paragraph\n출제근거: Synthetic only\n근거: {}\n심화: false\n해설: "Synthetic explanation ${i}"\n`;
-    raw+='\nSTUDYEZ_BANK_COMPLETE';
-    const responseFile={filename:'study-ez-demo-bank.md',byteLength:Buffer.byteLength(raw),sha256:require('node:crypto').createHash('sha256').update(raw).digest('hex')};
-    const captured=page.waitForResponse(r=>r.url().endsWith('/web-response')&&r.request().method()==='PUT');
-    await page.evaluate(value=>window.postMessage(value,location.origin),{source:'studyez-ai-extension',type:'STUDYEZ_BANK_READY',lectureId:sent.lectureId,raw,promptVersion:'1.79',responseFile});
-    assert.equal((await captured).status(),200);
+    assert.equal(generation.authoring,'cli');assert.equal(generation.parallelAuthoring,true);
+    await page.getByRole('button',{name:'생성·업로드 진행 중',exact:true}).waitFor();
+    assert.equal(await page.evaluate(()=>!!window.__rootDispatch),false);
     const worker=await fetch((process.env.GENERATION_TEST_API||'http://127.0.0.1:8028')+'/__test/process',{method:'POST'});assert.equal(worker.status,200);
     await page.getByText(/게시 완료 ·/).waitFor({timeout:45000});
     await page.getByRole('button',{name:'오늘 학습 시작',exact:true}).waitFor();

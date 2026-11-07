@@ -30,6 +30,7 @@ Spotter 검색은 `rg --no-ignore <검색어> spotter/scripts spotter/web`로 �
 | 강의별 연결 학습·근거·자료 등록 | [ConnectionLearning.tsx](../web/src/bank/ConnectionLearning.tsx), [서버 API](../server/app/routes/connections.py), [제품 구현 기록](changes/2026-11-03-connection-learning-product/implementation.md) |
 | Quiz Bank 풀이·문항 표시 | [BankSolve.tsx](../web/src/bank/BankSolve.tsx), [BankQuestion.tsx](../web/src/bank/BankQuestion.tsx) |
 | Quiz Bank 생성·공개 | [BankPanel.tsx](../web/src/bank/BankPanel.tsx), [publication.py](../server/app/routes/bank_api/publication.py) |
+| Main Quiz CLI 병렬 출제·개념도·포인트·그림 | [병렬 생성기](../quizbank/connection_parallel.py), [원본 그림 목록](../quizbank/connection_figures.py), [러너 개별 진행](../runner/parallel_status.py), [실행·검증 기록](changes/2026-11-06-cli-parallel-main-quiz/intent.md) |
 | Concept map·포인트 자동출제·게시 | [요청 화면](../web/src/bank/RootGenerationPanel.tsx), [전용 API](../server/app/routes/root_generation.py), [생성기](../quizbank/connection_generate.py), [구현·운영 조건](changes/2026-11-03-connection-generation-pipeline/implementation.md) |
 | 뿌리 생성의 큰 JSON·시간 초과·모델 제한 | [공통 파일 실행·실패 구분](../runner/root_native_json.py), [기존 실패의 명시적 재사용](../runner/root_transport_recovery.py), [실행·검증 기록](changes/2026-11-05-root-timeout-fix/live.md). 원래 수용·독립 검수·상한을 유지하며 공급자 콘텐츠 거절은 재호출·게시 보류 |
 | Quiz Bank API 책임·검사 지도 | [bank_api/CLAUDE.md](../server/app/routes/bank_api/CLAUDE.md) |

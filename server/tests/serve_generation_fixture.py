@@ -32,7 +32,7 @@ process=None
 def process_job():
     global process
     if process and process.poll() is None:return {'started':False}
-    process=subprocess.Popen([str(ROOT/'.venv/Scripts/python.exe'),str(ROOT/'tests/runner/generation_fixture_worker.py'),str(folder/('worker-'+uuid4().hex[:8]))],
+    process=subprocess.Popen([str(ROOT/'.venv/Scripts/python.exe'),str(ROOT/'tests/runner/generation_fixture_worker.py'),str(ROOT/'tmp'/('g'+uuid4().hex[:3]))],
         cwd=ROOT,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0),stdin=subprocess.DEVNULL,stdout=sys.stdout,stderr=sys.stderr)
     return {'started':True}
 @app.post('/__test/stop')

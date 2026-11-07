@@ -104,7 +104,7 @@ def inventory(folder):
 
 def schema_for(stage,ctx):
     if stage=='normalize':return c.BRIEF
-    if stage=='generate'or re.fullmatch(r'repair-[1-3]',stage):return c.AUTHOR
+    if stage=='generate'or re.fullmatch(r'repair-[1-3]',stage):return c.author_schema(ctx.get('parallelAuthoring',False))
     require(re.fullmatch(r'source-[0-3]',stage),'Unsupported file-output stage')
     return c.source_schema(ctx['brief'],ctx['bank'])
 
@@ -137,6 +137,18 @@ the host will validate the full unchanged schema, medical/source evidence and li
         task+='Reuse the existing source-only brief and original web/BANK from input.json; do not redo independent extraction. Inspect original images needed for actual stimulus selection. Full independent source review follows separately.\n'
     else:
         task+='Read every original source page, including handwriting and original material/S*.png. Report unknown when evidence cannot be established.\n'
+    task+='''
+If input.json contains independentMap and independentPoints, these are completed
+source-only extractions from separate CLI jobs. Normalize/link those exact results into
+the required brief; retain their content, coverage, source boundaries and uncertainty.
+The bank is absent from that source-only task. Do not invent a passing source review.
+If independentBank is present in generate, copy its bank question content/answers/options/
+tiers/references exactly; adapt only concept IDs, learning_page and prerequisites to the
+supplied brief. Reuse its visual_stimuli and clinical_conflicts after inspecting actual
+images. Necessary content changes are handled later by the bounded independent review.
+Use figure-index.json image_id only when its standalone original image is sufficient;
+otherwise keep the original page crop including necessary arrows/marks.
+'''
     return task
 
 def check_file(stage,work):
@@ -153,6 +165,9 @@ def check_file(stage,work):
         else:c.validate_authoring(value,ctx.get('previousAuthoring'))
         require(value['brief']['sources']==ctx['sources']and value['brief']['lecture_id']==ctx['lecture_id'],'Different authoring source/lecture')
         if stage=='generate':
+            if ctx.get('independentBank'):
+                from quizbank.connection_parallel import preserved_bank
+                preserved_bank(ctx['independentBank']['bank'],value['bank'])
             if ctx['initialBriefErrors']:c.validate_initial_correction(ctx['brief'],value['brief'],value['map_change_reason'])
             else:require(value['brief']==ctx['brief'],'Initial valid brief changed')
         if stage=='generate'and ctx.get('webResponse'):
@@ -289,6 +304,12 @@ def validate_stage(out,entry,*,model):
 
 def validate_all(out,payload):
     require_unblocked(out)
+    if payload['manifest'].get('parallelSchemaRecovery'):
+        from .root_parallel_schema_recovery import validate_recovery
+        validate_recovery(out,payload['manifest']['parallelSchemaRecovery'])
+    if payload['manifest'].get('parallelAuthoring'):
+        from quizbank.connection_parallel import validate_completed
+        validate_completed(out,payload['manifest']['parallelAuthoring'])
     for entry in payload['manifest']['stages']:
         if entry['status']=='completed':
             if 'usageHash'in entry:validate_stage(out,entry,model=payload['manifest']['model'])
@@ -314,9 +335,16 @@ def main():
     p=argparse.ArgumentParser();p.add_argument('--packet',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--model');a=p.parse_args()
     try:
         require_unblocked(a.out)
-        packet=read(a.packet);result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if packet.get('sourceAssessmentFormat')==c.VERSION else None)
+        from studyez_contracts.roots.parallel import is_v2_source
+        packet=read(a.packet);result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)else None)
         validate_all(a.out,result)
+        if packet.get('parallelAuthoring'):
+            from runner.parallel_status import refresh
+            refresh(a.out,'local-ready')
     except Exception as error:
+        if 'packet' in locals()and packet.get('parallelAuthoring'):
+            from runner.parallel_status import refresh
+            refresh(a.out,'failed',str(error))
         print('연결 자동출제 보류: '+classify_error(error)['message'],flush=True);return 1
     return 0
 

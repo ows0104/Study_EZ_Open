@@ -2,12 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import './roots.css';
-import { sendRootWeb,saveRootWebFile } from './rootWeb';
-import { extensionCompatible,extensionInputMinimum } from '../bridge/previewBridge';
+import { saveRootWebFile } from './rootWeb';
 
 type Input={conceptMap:string;points:string;scope:string;examDate:string|null;inputMode?:'provided'|'source'};
 type Generation={id:string;requestId?:string;state:string;stage:string;message:string;published:boolean;revision:string;
-  authoring?:string;awaitingWeb?:boolean;dispatched?:boolean;
+  authoring?:string;parallelAuthoring?:boolean;awaitingWeb?:boolean;dispatched?:boolean;
   privatePilot:boolean;featureEnabled:boolean;input:Input;report?:{repairRounds:number;taskCount:number;targetCount:number;
     issues:string[];questionNotes:{source:string;question_id:string;verdict:string;note:string}[];
     coverage:{point_id:string;status:string;reason:string}[]}|null};
@@ -41,14 +40,12 @@ function GenerationPanel({subject,runId,onPublished}:Props) {
     if(sending.current)return;
     sending.current=true;setBusy(true);setError('');
     try{
-      if(!resume&&!extensionCompatible(extensionInputMinimum('bank',true)))throw new Error('최신 Study EZ 브리지를 연결한 뒤 자동전송을 이용하세요.');
       const data=resume&&job?job.input:input;
       const mode=data.inputMode??'provided';
       const result=await api<{generation:Generation}>(base,{method:'POST',body:JSON.stringify({
         ...data,conceptMap:mode==='source'?'':data.conceptMap,points:mode==='source'?'':data.points,inputMode:mode,
-        requestId:resume&&job?.requestId?job.requestId:crypto.randomUUID(),privatePilot:resume&&job?job.privatePilot:privatePilot,resume,authoring:resume&&job?job.authoring??'cli':'web'})});
+        requestId:resume&&job?.requestId?job.requestId:crypto.randomUUID(),privatePilot:resume&&job?job.privatePilot:privatePilot,resume,authoring:resume&&job?job.authoring??'cli':'cli',parallelAuthoring:resume&&job?job.parallelAuthoring??false:mode==='source'})});
       setJob(result.generation);if(result.generation.published)onPublished?.();
-      if(!resume&&result.generation.awaitingWeb)await sendRootWeb(result.generation.id);
     }catch(e){setError(e instanceof Error?e.message:'요청을 저장하지 못했습니다.');}finally{sending.current=false;setBusy(false);}
   }
   async function upload(field:'conceptMap'|'points',file?:File){
@@ -63,7 +60,7 @@ function GenerationPanel({subject,runId,onPublished}:Props) {
   return <section className="root-card root-generation" aria-label="Main Quiz 만들기"><h3>Main Quiz 만들기</h3>
     <p>올해 필기·족보로 문제은행을 만들고, 개념도·출제포인트와 통합·검수한 뒤 자동으로 업로드합니다.</p>
     <button className="is-primary" disabled={!loaded&&!error||busy||pending||!resumable&&!sourceMode&&(!input.conceptMap.trim()||!input.points.trim())} onClick={()=>{if(!loaded){setError('');setLoadVersion(v=>v+1);}else void send(resumable);}}>{loaded?label:error?'기존 작업 다시 확인':'기존 작업 확인 중…'}</button>
-    <p>Study EZ 브리지를 연결하고 러너를 켜두세요. 완성된 응답 회수부터 업로드까지 자동으로 이어집니다. 기본은 내 계정 시범 공개이며, 기존 문제와 학습 기록은 보존합니다.</p>
+    <p>러너를 켜두세요. {sourceMode?'문제은행·개념도·출제포인트를 각각 CLI에서 만듭니다.':'입력한 지도·포인트로 CLI에서 출제합니다.'} 통합·검수·업로드까지 자동으로 이어집니다. 기본은 내 계정 시범 공개이며, 기존 문제와 학습 기록은 보존합니다.</p>
     <details><summary>설정·기존 지도 사용</summary><fieldset disabled={busy||pending||resumable}>
     <label><input type="checkbox" checked={!sourceMode} onChange={e=>setInput({...input,inputMode:e.target.checked?'provided':'source'})}/>기존 Concept map·출제포인트 사용</label>
     {!sourceMode&&<>
