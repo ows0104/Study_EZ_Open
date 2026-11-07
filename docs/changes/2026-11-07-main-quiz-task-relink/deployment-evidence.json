@@ -1,0 +1,194 @@
+{
+  "at": "2026-11-07T10:44:18.547431+00:00",
+  "pr": 14,
+  "head": "5eebe7b5092cce808f4320edbf2e68ed3292b513",
+  "merge": "a462564148bdbcd334a801827cb618b2e978e36e",
+  "workflowRun": 42363708589,
+  "workflowAttempt": 2,
+  "localChecks": {
+    "contractsAndRunner": 239,
+    "serverGroups": 6
+  },
+  "fullPython": {
+    "passed": 2071,
+    "skipped": 1,
+    "extraDesktopPassed": 14
+  },
+  "bridgePassed": 118,
+  "candidate": {
+    "sameApprovedServerFiles": true,
+    "sha": "a462564148bdbcd334a801827cb618b2e978e36e",
+    "workflowRun": "42363708589",
+    "artifactHash": "746b1e635ee2442a76cece448420a53cdfaf46e6967ecc24dcc354cbb7c827d6",
+    "approvedCandidate": "83fcf25489f5e864a133953d2c6ba5372632b507934633812ee1001ad4ab2370"
+  },
+  "deployment": {
+    "sha": "a462564148bdbcd334a801827cb618b2e978e36e",
+    "expected_revision": "studyez-api-release-423637085892",
+    "status": "success",
+    "artifact_hash": "746b1e635ee2442a76cece448420a53cdfaf46e6967ecc24dcc354cbb7c827d6",
+    "previous_traffic": [
+      {
+        "percent": 100,
+        "revisionName": "studyez-api-release-423608074101"
+      }
+    ],
+    "postcheck": {
+      "health_sha": "a462564148bdbcd334a801827cb618b2e978e36e",
+      "protected_routes": "401",
+      "passed": true
+    }
+  },
+  "pages": {
+    "id": "6616f407-59eb-49bf-91d6-3377b40296af",
+    "url": "https://6616f407.study-ez-open.pages.dev",
+    "environment": "production",
+    "stage": {
+      "name": "deploy",
+      "started_on": "2026-11-07T10:39:41.400753Z",
+      "ended_on": "2026-11-07T10:39:45.742353Z",
+      "status": "success"
+    },
+    "sha": "a462564148bdbcd334a801827cb618b2e978e36e"
+  },
+  "curation": {
+    "ready": true,
+    "questions": 98,
+    "tasks": 98,
+    "imageQuestions": 12,
+    "heldIds": [
+      "Q009",
+      "Q088",
+      "Q103",
+      "Q026",
+      "Q049",
+      "Q063"
+    ],
+    "unverifiedPriorityIds": [
+      "Q085",
+      "Q051",
+      "Q055",
+      "Q084",
+      "Q091",
+      "Q092"
+    ],
+    "contentRepairs": 0,
+    "independentScopeCalls": 1
+  },
+  "visual": {
+    "verified": true,
+    "technicalUser": "local-pilot",
+    "productionWrites": 0,
+    "questionId": "Q018",
+    "renderedImages": 1,
+    "sourcePdfSha256": "4b4229bc65d9636a3326efb2dba187a75327f6d21e9eec9e9c598671c4248751",
+    "sourceLinkVerified": true,
+    "ratingPersistedAfterReload": true,
+    "undoRestoredTask": true,
+    "jsErrors": []
+  },
+  "published": {
+    "publishedVerified": true,
+    "response": {
+      "generationId": "6143c8c89ad64d9c9a44d41360b1e0cc",
+      "revision": "main-quiz-reviewed-6143c8c89ad64d9c",
+      "reused": false,
+      "privatePilot": true,
+      "tasks": 98
+    },
+    "apiRevision": "a462564148bdbcd334a801827cb618b2e978e36e",
+    "health": {
+      "status": "ok",
+      "environment": "production",
+      "revision": "a462564148bdbcd334a801827cb618b2e978e36e"
+    },
+    "productionFlags": {
+      "STUDYEZ_ROOT_LEARNING_ENABLED": "true",
+      "STUDYEZ_REVISION": "a462564148bdbcd334a801827cb618b2e978e36e"
+    },
+    "resultSha256": "6a59e601c624551cd56d6583dc0ce08778b4327578786fb3b169a731e7089fae",
+    "questions": 98,
+    "tasks": 98,
+    "visualQuestions": 12,
+    "images": 14,
+    "freshRepairRounds": 3,
+    "historicalRepairRounds": 3,
+    "oldVersionsArchived": true,
+    "oldBankAndPeopleRecordsUnchanged": true,
+    "humanEvents": 0,
+    "humanSessions": 0,
+    "learnerWrites": 0,
+    "privatePilot": true,
+    "actualSignedOriginalPdfReadback": true,
+    "allImageHashesVerified": true,
+    "sameMainQuizEntry": true
+  },
+  "readback": {
+    "publishedVerified": true,
+    "response": {
+      "generationId": "6143c8c89ad64d9c9a44d41360b1e0cc",
+      "revision": "main-quiz-reviewed-6143c8c89ad64d9c",
+      "verifiedExisting": true
+    },
+    "apiRevision": "a462564148bdbcd334a801827cb618b2e978e36e",
+    "health": {
+      "status": "ok",
+      "environment": "production",
+      "revision": "a462564148bdbcd334a801827cb618b2e978e36e"
+    },
+    "productionFlags": {
+      "STUDYEZ_ROOT_LEARNING_ENABLED": "true",
+      "STUDYEZ_REVISION": "a462564148bdbcd334a801827cb618b2e978e36e"
+    },
+    "resultSha256": "6a59e601c624551cd56d6583dc0ce08778b4327578786fb3b169a731e7089fae",
+    "questions": 98,
+    "tasks": 98,
+    "visualQuestions": 12,
+    "images": 14,
+    "freshRepairRounds": 3,
+    "historicalRepairRounds": 3,
+    "oldVersionsArchived": true,
+    "oldBankAndPeopleRecordsUnchanged": true,
+    "humanEvents": 0,
+    "humanSessions": 0,
+    "learnerWrites": 0,
+    "privatePilot": true,
+    "actualSignedOriginalPdfReadback": true,
+    "allImageHashesVerified": true,
+    "sameMainQuizEntry": true
+  },
+  "ui": {
+    "verified": true,
+    "publicAsset": "/assets/RootLearning-DmilHK3c.js",
+    "sha256": "47c9eea5484dff15a5cee1e4f3015b418f2e7f4e163f25fa4d43f49418e9f586",
+    "uiUnchangedSinceMainQuizIntegration": true,
+    "sourceFiles": [
+      "web/src/bank/RootLearning.tsx",
+      "web/src/bank/RootSolve.tsx",
+      "web/src/bank/BankStudy.tsx",
+      "web/src/bank/main-quiz.css"
+    ],
+    "keys": [
+      "Space answer",
+      "1 missed",
+      "2 partial",
+      "3 independent",
+      "Z undo"
+    ],
+    "legacyFourGradeView": "?legacy=1",
+    "productionWrites": 0,
+    "sourceRevisionCompared": "a462564148bdbcd334a801827cb618b2e978e36e",
+    "matchesBeforeAsset": false,
+    "compiledUiEqualExceptDependencyFilenames": true
+  },
+  "failuresPreserved": {
+    "masterFirstAttempt": "test_preview_sources.py::test_selection_hash_changes_when_source_bytes_change; one identical-SHA rerun passed",
+    "pagesFirstAttempt": "88e3ea6b-dfb8-45c7-a730-8eb9fe8382f5 API wait timeout; one exact-SHA retry succeeded",
+    "operatorPrecheck": {
+      "stage": "before registration",
+      "productionWrites": 0,
+      "failure": "Operator preflight incorrectly assumed synthetic local-pathology-1 was an Asset row with originalKey. Prior approved frozen-reviewed-import uses SHA-bound immutable sourceSnapshots.",
+      "resolution": "Compare complete source metadata to validated parent source_records and hash/size of actual immutable object, then preserve the same registration/CAS safeguards."
+    }
+  }
+}
