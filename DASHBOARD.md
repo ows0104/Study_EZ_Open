@@ -15,7 +15,7 @@
 | 우선순위 | 작업 | 작업자 / 세션 | 브랜치 | 건드리는 영역·파일 | 시작일 | 상태·메모 |
 |---|---|---|---|---|---|---|
 
-| P1 | Main Quiz 통과28문항 재연결·이미지 보완·기존 UI 확인 | ows0104 / Codex Main Quiz 후속 | codex/main-quiz-task-relink | studyez_contracts/roots 신규 보존형 task supplement, server/app/root_learning·routes/root_learning.py, runner 명시적 CLI 재연결, 관련 tests, docs/changes/2026-11-07-main-quiz-task-relink, 지정261104_02 별도후속runs; web MainQuiz/Bank 라우트 읽기확인 | 2026-11-07 | 현재 사용자 명시 승인: 검수통과28문항 구조·연결 보완/이미지 누락사유 보완,91문항·학습기록·수정3of3 보존. 기존 판정/원래결과 불변, 추가콘텐츠 수정예산 초기화 금지. UI/Map 프롬프트 다른세션영역 제외. 실제 CLI 의미연결과 별도 구조증명/검수 후 동일UI·관리자시범 후속판 반입 |
+| P1 | Main Quiz 새은행·문항별 연결·이미지 재검수 및 대체 | ows0104 / Codex Main Quiz 후속 | codex/main-quiz-task-relink | studyez_contracts/roots/task_supplement.py, runner/root_task_supplement.py, server/app/root_learning·routes/root_learning.py, 관련 tests, docs/changes/2026-11-07-main-quiz-task-relink, 지정261104_02 후속runs; web UI 읽기확인 | 2026-11-07 | 최신 사용자 승인: 학습자0 전제로 기존91/학습기록/3of3 보존제약 해제, 새것으로 대체. 보존형28연결 준비는 모델호출0 중단. 원래실행은 과거판으로 보관하고 별도새생성·수정0..3, 실제CLI 작성/원본·그림/독립정답 검수 후 관리자시범 대체. 문항수고정없음·기존 MainQuiz UI 유지·다른강의/다른세션 영역 제외 |
 
 | P1 | Map·독립 출제포인트 추출 프롬프트 정리 | ows0104 / Codex Map 세션 | codex/map-point-prompts | content/prompts/learning-links/map-extract.md, point-extract.md, *-output.schema.json, *-output.example.json, README.md, docs/changes/2026-11-06-map-point-prompts, .worktrees/map-point-prompts/runs/_map-point-pilot | 2026-11-06 | 사용자 승인 범위의 두 원본 전용 지시문·JSON 스키마·예시·로컬 형식 검증. 현재 사용자 예시 추출 승인: 명시적 OpenAI 전송 승인으로 Map/포인트 각1회 완료, 심내막염·CNS 강의별 JSON4개 보존. 후속 승인된 독립단위 재추출·4지적 보완·별도 재대조 완료: 최종47/60개, ready/ready·잔여issues없음. 원본/중간/실패보존, 필수검사통과, d68b6d57 로컬 검토대기. 운영 요청 재개/문항/게시/배포 없음 |
 
