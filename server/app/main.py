@@ -18,6 +18,7 @@ from app.routes import (
     lectures,
     local_storage,
     me,
+    notes,
     site_prompts,
     notices,
     prequiz,
@@ -63,6 +64,7 @@ def health() -> dict[str, str]:
 
 
 app.include_router(me.router, prefix="/api")
+app.include_router(notes.router, prefix="/api")
 app.include_router(connections.router, prefix="/api")
 app.include_router(feedback.router, prefix="/api")
 app.include_router(timetable.router, prefix="/api")

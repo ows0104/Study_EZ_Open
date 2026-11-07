@@ -6,8 +6,8 @@ import { Icon } from "./icons";
 /**
  * 좌측 메뉴(2026-11 개편). 위에서부터 학습 · 커뮤니티 · 도움 · 프로필.
  *
- * 아직 없는 화면(통합 퀴즈·오류 토의·진탐 공유·결제·자유 노트)은 기능이 생길 때까지 넣지 않는다
- * (2026-11-06 사용자 결정). 관리는 관리자에게만 보인다. 접으면 아이콘만 남고, 접힘은 이 기기에 남긴다.
+ * 아직 없는 화면(통합 퀴즈·오류 토의·진탐 공유·결제)은 기능이 생길 때까지 넣지 않는다
+ * (2026-11-06 사용자 결정). 자유 노트는 서버 저장과 함께 열었다(2026-11-07). 관리는 관리자에게만 보인다. 접으면 아이콘만 남고, 접힘은 이 기기에 남긴다.
  */
 const KEY = "studyez-sidebar";
 
@@ -75,6 +75,7 @@ export function Sidebar({ email, isAdmin, unseenNotice, onSignOut }: {
   const study: Item[] = [
     { to: "/", label: "캘린더", icon: Icon.calendar, end: true },
     { to: "/study", label: "강의 목록", icon: Icon.list },
+    { to: "/notes", label: "자유 노트", icon: Icon.note },
   ];
   const community: Item[] = [{ to: "/notices", label: "공지사항", icon: Icon.bell, dot: unseenNotice }];
   const initials = (email.split("@")[0] || "?").slice(0, 2);

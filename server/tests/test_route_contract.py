@@ -81,6 +81,11 @@ DELETE /api/lectures/{subject}/{run_id}/bank/personal-questions/{question_id}
 DELETE /api/admin/lectures/{subject}/{run_id}/bank
 GET /api/me/study-hidden
 PATCH /api/me/study-hidden
+GET /api/me/notes
+POST /api/me/notes
+GET /api/me/notes/{note_id}
+PUT /api/me/notes/{note_id}
+DELETE /api/me/notes/{note_id}
 PUT /api/lectures/{subject}/{run_id}/bank/questions/{question_id}/priority
 PUT /api/lectures/{subject}/{run_id}/bank/questions/{question_id}/suspension
 POST /api/bank/batch/next

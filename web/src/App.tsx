@@ -33,6 +33,7 @@ const PrivacyPage = lazy(() => import("./PrivacyPage").then((m) => ({ default: m
 const NoticesPage = lazy(() => import("./notices/NoticesPage").then((m) => ({ default: m.NoticesPage })));
 const GuidePage = lazy(() => import("./notices/GuidePage").then((m) => ({ default: m.GuidePage })));
 const SettingsPage = lazy(() => import("./settings/SettingsPage").then((m) => ({ default: m.SettingsPage })));
+const NotesPage = lazy(() => import("./notes/NotesPage").then((m) => ({ default: m.NotesPage })));
 
 const Loading = <p className="notice">불러오는 중…</p>;
 
@@ -114,6 +115,7 @@ function Shell() {
         <main
         className={`app-main${bare ? " is-bare" : ""}${wide ? " is-wide" : ""}${
           solving ? " is-solving" : ""
+        }${location.pathname === "/notes" ? " is-notes" : ""
         }`}
       >
         <Suspense fallback={Loading}>
@@ -125,6 +127,7 @@ function Shell() {
             {/* 예습·복습은 같은 탭 안에서 서로 다른 주소로 이동한다. */}
             <Route path="/notices" element={<NoticesPage isAdmin={me.isAdmin} onSeen={onNoticeSeen} />} />
             <Route path="/guide" element={<GuidePage />} />
+            <Route path="/notes" element={<NotesPage />} />
             <Route path="/settings" element={<SettingsPage email={me.email || email} onSignOut={signOut} />} />
             <Route path="/prequiz/:subject/:runId" element={<QuizPage kind="pre" />} />
             <Route path="/mainquiz/:subject/:runId" element={<BankStudyPage />} />
