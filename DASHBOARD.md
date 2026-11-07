@@ -32,6 +32,7 @@
 | P1 | CLI 병렬 Main Quiz·지도·포인트 및 이미지 시범 | ows0104 / Codex 병렬 파이프라인 세션 | codex/cli-parallel-main-quiz | quizbank/connection_generate_v2.py 및 신규 병렬 모듈·이미지 목록, runner/root_native_json.py·connection_generation.py·parallel_status.py(기존 status_batch 재사용), server/app/routes/root_generation.py·prequiz_jobs.py, web/src/bank/RootGenerationPanel.tsx, studyez_contracts/roots, content/prompts/learning-links/parallel, 관련 tests, docs/changes/2026-11-06-cli-parallel-main-quiz, 격리 runs | 2026-11-06 | 7fdc2f65·PR #11 https://github.com/ows0104/Study_EZ_Open/pull/11 초안/출시보류. 기존 복구·버튼 후보 보존 통합. CLI3작업 병렬/개별진행·원본그림 지원 구현, source288/runner40·병렬/서버/합성E2E/빌드 통과. 실제261104_02 은행74·지도36/54·포인트68 동시완료 후 2차수정91문항/이미지명세19개. source-2가2400초 시간초과, 완료/실패/사용량불명/수정2/3 보존·자동반복0. pilot-evidence실패/release불가·업로드/운영미변경. 검수분할 후속은 제안만, 사슬알균미실행 |
 
 ## 2. 앞으로 하기로 약속된 일
+| P1 | 91문항 고정 분할 검수·이미지 확인·업로드 | ows0104 / Codex 병렬 파이프라인 후속 세션 | codex/chunked-main-quiz-review | quizbank 신규 분할검수·continuation, runner Native/업로드, studyez_contracts/roots, 관련 tests, docs/changes/2026-11-07-chunked-main-quiz-review, 기존261104_02 산출물 읽기 전용 및 별도 후속 runs | 2026-11-07 | 사용자 명시 승인: 기존91문항·수정2/3 보존, 검수분할→이미지확인→업로드. 본 세션의 cli-parallel-main-quiz 및 인계받은 복구 영역을 이어서 담당, 타 Map/UI 작업 제외. 원래 source-2 실패/사용량불명 보존·자동반복금지. 최신master 기반 별도 worktree에 PR11 후보 통합 |
 
 
 | 우선순위 | 작업 | 예정 작업자 | 예상 영역·파일 | 선행 조건·메모 |
