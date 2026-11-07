@@ -134,7 +134,8 @@ def run(out):
         'oldVisualSpecs':base['manifest']['visualStimuli'],'clinicalConflicts':base['manifest']['clinicalConflicts'],
         'oldSourceAssessment':base['sourceAudit']['assessment']['assessment'],'oldMedicalReviews':base['medical'],
         'independentSourceMapAndPoints':base['brief'],'previouslyPassedMissing28':cap['passedMissingIds'],'previouslyMissingImages':cap['imageMissingIds']}
-    previous={'proposal':rounds[-1]['proposal'],'structuralRejection':rounds[-1]['rejection']}if rounds else None
+    previous=({'proposal':rounds[-1]['proposal'],'structuralRejection':rounds[-1]['rejection']}if rounds[-1].get('status')=='author_rejected'
+        else {k:rounds[-1][k]for k in ('proposal','sourceReview','medicalReview')})if rounds else None
     for index in range(len(rounds),4):
         # A new durable seat is consumed before each call; failures are never replayed.
         authored_input={**initial,'stage':'author','replacementRound':index}
@@ -213,9 +214,47 @@ def resume_structural(out):
     run(out)
 
 
+def resume_completed(out):
+    """Reuse completed actual reviews after canonical ok-comment transport correction."""
+    cap=origin_check(out);history=n.read(out/'resume.json')['rounds'];index=len(history)
+    n.require(index==1 and not(out/'author-2').exists()and not(out/'result-round-1.json').exists(),
+        'Not the known completed round1 assembly continuation')
+    base=n.read(out/'parent-result.json');outputs={};execution={}
+    for kind in ('author','source','medical'):
+        seat=out/(kind+'-1');state=n.read(seat/'state.json');protected=n.read(seat/'protected.json')
+        n.require(state['status']=='completed'and state['protectedHash']==document_hash(protected)
+            and state['inputHash']==document_hash(n.read(seat/'work/input.json'))
+            and all(n.sha(seat/'work'/k)==v for k,v in protected.items()),'Not an intact completed actual stage')
+        outputs[kind]=n.read(seat/'output.json');execution[kind]=state
+    jsonschema.validate(outputs['medical'],REVIEW_REPORT)
+    n.require(any(r['verdict']=='ok'and r['note']==''for r in outputs['medical']['reviews']),
+        'Not the canonical empty-ok-note compatibility case')
+    c.check_execution(execution,outputs)
+    proposal=outputs['author'];row={'round':1,'proposal':proposal,'sourceReview':outputs['source'],
+        'medicalReview':outputs['medical'],'execution':execution}
+    bank=n.read(out/'bank-1.json');document=c.assemble(base,proposal,outputs['source'],outputs['medical'],bank,'main-quiz-new-'+cap['replacementRunId'][:16])
+    ready=not outputs['source']['coverage_findings']and len(document['tasks'])==len(bank['questions'])
+    value={'policy':c.POLICY,'runId':cap['replacementRunId'],'parentResultHash':document_hash(base),'historicalRepairRounds':3,
+        'repairRounds':1,'rounds':history+[row],'document':document,'ready':ready};c.validate(base,value)
+    archive='runtime-before-revalidation2';shutil.copytree(out/'runtime',out/archive)
+    shutil.copy2(out/'capture.json',out/'capture-before-revalidation2.json');shutil.copy2(out/'resume.json',out/'resume-before-completed.json')
+    shutil.copy2(out/'followup.log',out/'assembly-failure-before-compat.log')
+    cap.setdefault('runtimeRevalidations',[]).append({'archive':archive,'priorRuntime':cap['runtime'],
+        'reason':'Canonical REVIEW_REPORT already permits empty notes on ok; retain all54 actual empty-ok comments and every verdict; independent completed stages reused, zero model calls'})
+    cap['runtime']={k:n.sha(ROOT/k)for k in cap['runtime']}
+    for k in cap['runtime']:shutil.copy2(ROOT/k,out/'runtime'/k)
+    g.write(out/'capture.json',cap);g.write(out/'result-round-1.json',value)
+    g.write(out/'completion-recovery.json',{'policy':'canonical-medical-ok-comment/1','round':1,
+        'executionHashes':{k:document_hash(v)for k,v in execution.items()},'originalStandardSchemaHash':document_hash(REVIEW_REPORT),'modelCalls':0})
+    g.write(out/'resume.json',{'rounds':history+[row],'consumedNextRepair':2,'maximumRepairs':3,'automaticReplay':False})
+    n.require(not ready,'Already ready; do not consume another repair')
+    run(out)
+
+
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('action',choices=('prepare','run','resume-structural','check'));p.add_argument('--out',type=Path,required=True);p.add_argument('--origin',type=Path);args=p.parse_args();out=args.out.resolve()
+    p=argparse.ArgumentParser();p.add_argument('action',choices=('prepare','run','resume-structural','resume-completed','check'));p.add_argument('--out',type=Path,required=True);p.add_argument('--origin',type=Path);args=p.parse_args();out=args.out.resolve()
     if args.action=='prepare':prepare(args.origin,out)
     elif args.action=='run':run(out)
     elif args.action=='resume-structural':resume_structural(out)
+    elif args.action=='resume-completed':resume_completed(out)
     else:validate(out);print('Task supplement archive verified')

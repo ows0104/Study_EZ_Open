@@ -50,3 +50,17 @@ def test_completed_but_rejected_author_is_history_not_reset_or_pass():
     c.validate(b,v)
     rejected['rejection']='Pretend network failure'
     with pytest.raises(ValueError):c.validate(b,v)
+
+
+def test_canonical_medical_ok_notes_may_be_empty_but_uncertain_notes_may_not():
+    b,p,s,m=fixture()
+    for row in m['reviews']:row['note']=''
+    assert len(c.eligible(p,s,m))==len(p['bank']['questions'])
+    m['reviews'][0]['verdict']='doubt'
+    with pytest.raises(ValueError):c.eligible(p,s,m)
+
+
+def test_authored_limits_are_visible_in_replacement_scope():
+    b,p,s,m=fixture();p['bank']['warnings']=['Synthetic limited original image, not a new diagnosis']
+    d=c.assemble(b,p,s,m,p['bank'],'followup')
+    assert p['bank']['warnings'][0]in d['review']['scope']['limitations']

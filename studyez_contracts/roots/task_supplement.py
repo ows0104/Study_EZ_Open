@@ -69,7 +69,7 @@ def eligible(proposal,source,medical):
     check_source(proposal,source);ids=[q['question_id']for q in proposal['bank']['questions']]
     require([r['question_id']for r in medical['reviews']]==ids and medical['pool_checks']==[],'replacement: incomplete blind medical review')
     med={r['question_id']:r for r in medical['reviews']};links={l['question_id']:l for l in proposal['links']}
-    require(all(r['verdict']in ('ok','doubt','wrong')and r['note']for r in med.values()),'replacement: invalid medical verdict')
+    require(all(r['verdict']in ('ok','doubt','wrong')and type(r['note'])is str and(r['verdict']=='ok'or r['note'])for r in med.values()),'replacement: invalid medical verdict')
     return [r['question_id']for r in source['reviews']if r['source_verdict']==r['goal_verdict']==r['importance_verdict']=='ok'
         and r['all_answer_units_covered']and med[r['question_id']]['verdict']=='ok'
         and r['visual_verdict']==('ok'if links[r['question_id']]['requires_visual']else'not_applicable')]
@@ -81,6 +81,8 @@ def assemble(base,proposal,source,medical,bank,revision):
         relations=[],targets=[],points=[],mappings=[],coverage=[],provenance={'status':'reviewed','method':POLICY,
         'reviewer':'Independent CLI original-source/goal and blind medical sessions','independent_points':'derived',
         'notes':'New per-question goals checked against complete original PDF and earlier independent points. Earlier verdicts archived separately.'})
+    review['scope']['limitations']=list(dict.fromkeys(review['scope']['limitations']+proposal['bank']['warnings']))
+    review['scope']['outside_list_review']=source['summary']
     qs={q['question_id']:q for q in bank['questions']};verdicts={r['question_id']:r for r in source['reviews']};tasks=[]
     for i,l in enumerate(proposal['links']):
         qid=l['question_id'];q=qs[qid];stem='N'+str(i+1);cid=stem+'_A';rid=stem+'_R';tid=stem+'_T';did=stem+'_D';pid=stem+'_P';ready=qid in keep
