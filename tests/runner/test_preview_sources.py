@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -178,7 +179,13 @@ def test_unmatched_future_cell_still_gets_metadata_and_old_matching_policy_survi
 def test_selection_hash_changes_when_source_bytes_change(tmp_path):
     target, baseline = note(tmp_path, 2026), note(tmp_path, 2025)
     first = history(tmp_path, tmp_path / 'runs', baseline).select(target, baseline)
-    baseline.path.write_bytes(b'new revision with new content')
+    before = baseline.path.stat()
+    replacement = b'new revision with new content'
+    assert len(replacement) == before.st_size  # same size: only mtime separates the cache key
+    baseline.path.write_bytes(replacement)
+    # Windows can stamp two quick writes with the same mtime; advance it so the test
+    # checks a real edit instead of racing the filesystem clock.
+    os.utime(baseline.path, ns=(before.st_atime_ns, before.st_mtime_ns + 1_000_000_000))
     second = history(tmp_path, tmp_path / 'runs', baseline).select(target, baseline)
     assert first.metadata['selected']['sha256'] != second.metadata['selected']['sha256']
     assert first.metadata['fingerprint'] != second.metadata['fingerprint']
