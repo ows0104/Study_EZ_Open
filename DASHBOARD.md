@@ -14,6 +14,7 @@
 
 | 우선순위 | 작업 | 작업자 / 세션 | 브랜치 | 건드리는 영역·파일 | 시작일 | 상태·메모 |
 |---|---|---|---|---|---|---|
+| P1 | Main-Quiz 약리 블럭 UI 복원 | ows0104 / Codex UI 복원 세션 | codex/main-quiz-pharm-ui | web/src/bank/RootLearning.tsx, RootSolve.tsx, RootMap.tsx, 관련 표시 컴포넌트·스타일·웹 검사, docs/changes/2026-11-07-main-quiz-pharm-ui; 필요 시 읽기 전용 근거 API 호환 | 2026-11-07 | 사용자 직접 요청: 이전 약리 UI·참고 슬라이드·버튼 정리·답 입력 제거·Space 후 3번·개념지도. 기존 문제/기록/생성 정책 보존. 진행/예정 행 확인: 추출 프롬프트·실험 저장소·강의패널 예정과 수정 파일 겹침 없음 |
 
 
 | P1 | Map·독립 출제포인트 추출 프롬프트 정리 | ows0104 / Codex Map 세션 | codex/map-point-prompts | content/prompts/learning-links/map-extract.md, point-extract.md, *-output.schema.json, *-output.example.json, README.md, docs/changes/2026-11-06-map-point-prompts, .worktrees/map-point-prompts/runs/_map-point-pilot | 2026-11-06 | 사용자 승인 범위의 두 원본 전용 지시문·JSON 스키마·예시·로컬 형식 검증. 현재 사용자 예시 추출 승인: 명시적 OpenAI 전송 승인으로 Map/포인트 각1회 완료, 심내막염·CNS 강의별 JSON4개 보존. 후속 승인된 독립단위 재추출·4지적 보완·별도 재대조 완료: 최종47/60개, ready/ready·잔여issues없음. 원본/중간/실패보존, 필수검사통과, d68b6d57 로컬 검토대기. 운영 요청 재개/문항/게시/배포 없음 |
