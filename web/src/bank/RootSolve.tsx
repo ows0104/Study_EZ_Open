@@ -76,7 +76,7 @@ export function RootSolve({view,scope,disabled,advancing,onAction,onToday,onErro
           <button disabled={disabled||advancing||!!view.blocked?.includes('학습일')} onClick={()=>onAction({kind:'skip'})}>이 문제 보류</button>
         </details></span></div>
     {view.blocked&&<p role="alert">{view.blocked}</p>}
-    {advancing&&<p className="bank-note" role="status">평가 저장 중…</p>}
+    {advancing&&<p className="bank-note" role="status">불러오는 중…</p>}
     {task&&<div className="quiz-card bank-card"><QuestionBody key={task.id} question={task.question} answer={task.answer} picked={picked}
       onStimuliReady={ready=>setImageState({taskId:task.id,ready})} onPick={pick} disabled={locked}
       showOptions={!hiddenChoices} showChoiceScore={false}/>

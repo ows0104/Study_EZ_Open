@@ -229,6 +229,7 @@ def current() -> list[str]:
 
 def main() -> None:
     check_bank_schema_identity()
+    # 2026-11-08: root-learning sessions/{session_id}/prepare is a read-only look-ahead so answers draw at once.
     # 2026-11-07: root-learning sources/{source_id} streams the reference PDF for PDF.js (R2 has no CORS rule).
     # 2026-11-03: versioned connection learning and explicit admin publication.
     connection_routes = '''GET /api/lectures/{subject}/{run_id}/connections
@@ -243,6 +244,7 @@ POST /api/admin/root-learning/lectures/{subject}/{run_id}
 PUT /api/admin/root-learning/lectures/{subject}/{run_id}/publication
 POST /api/root-learning/lectures/{subject}/{run_id}/sessions
 GET /api/root-learning/sessions/{session_id}
+GET /api/root-learning/sessions/{session_id}/prepare
 POST /api/root-learning/sessions/{session_id}/events
 GET /api/root-learning/sessions/{session_id}/map
 GET /api/root-learning/lectures/{subject}/{run_id}/sources/{source_id}"""

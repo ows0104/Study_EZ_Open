@@ -15,8 +15,12 @@ export type RootOverview = {revision:string; title:string; policyReady:boolean; 
   scope?:{label:string; limitations:string[]; included:string[]; excluded:string[]}};
 export type RootView = {sessionId:string; revision:string; version:number; day:string; policy:RootPolicy;
   position:number; count:number; finished:boolean; blocked:string|null; canUndo:boolean; mapSeen:boolean; summary:RootSummary;
-  task:{id:string; question:BankQuestion; answer:(BankAnswer&{reviewNotes?:{source:string;verdict:string;note:string;suggested_answer:string}[];
-    reviewIssues?:string[];sourceLinks?:{label:string;url:string}[];pdfSlides?:RootPdfSlide[]})|null; response:string|null; attempted:boolean|null; helped:boolean}|null};
+  task:{id:string; question:BankQuestion; answer:RootAnswer|null; response:string|null; attempted:boolean|null; helped:boolean}|null};
+export type RootAnswer = BankAnswer&{reviewNotes?:{source:string;verdict:string;note:string;suggested_answer:string}[];
+  reviewIssues?:string[];sourceLinks?:{label:string;url:string}[];pdfSlides?:RootPdfSlide[]};
+/** Read-only look-ahead of one session position (GET …/prepare). Records nothing; display only until /events confirms. */
+export type RootFrame = {position:number; taskId:string; blocked:string|null;
+  task:{id:string; question:BankQuestion; answer:RootAnswer; helped:boolean}|null};
 export type RootAction = {kind:'reveal'|'rate'|'skip'|'map'|'undo'; attempted?:boolean; response?:string; helped?:boolean;stimulusHashes?:string[];
   choicesShown?:boolean;
   grade?:'missed'|'partial'|'independent';selfRating?:BankRating};

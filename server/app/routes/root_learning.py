@@ -4,7 +4,7 @@ import re
 from datetime import UTC, datetime
 from typing import Literal
 from uuid import uuid4
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select, update
@@ -19,6 +19,7 @@ from app.root_learning import content, policy, state, planning
 
 router = APIRouter()
 BASE = '/root-learning/lectures/{subject}/{run_id}'
+PREPARE_AHEAD = 4
 
 
 def now():
@@ -186,6 +187,33 @@ def publish(subject: str, run_id: str, payload: Publication, user: CurrentUser =
 
 
 RANGE = re.compile(r'^bytes=(\d*)-(\d*)$')
+# (subject, run_id, revision, source_id) -> (source record, byte size). A reviewed revision's
+# document is immutable and its sources are pinned by sha256, so the frozen file for one key
+# never changes. PDF.js asks for many byte ranges per page; each one reloaded the whole
+# document JSON, the generation row and an R2 HEAD (about 0.7 s apiece in production).
+_SOURCES = {}
+
+
+def frozen_source(db, subject, run_id, user, source_id, storage):
+    if not content.allowed(db, subject, run_id, user):
+        raise HTTPException(404, '공개된 뿌리 학습 범위가 없습니다.')
+    control = db.get(RootControl, (subject, run_id))
+    key = (subject, run_id, control.revision, source_id)
+    cached = _SOURCES.get(key)
+    if cached:
+        return cached
+    from app.root_learning.evidence import frozen_pdf
+    doc = active(db, subject, run_id, user)
+    source = frozen_pdf(doc, active_generation(db, doc, light=True), source_id)
+    if source is None:
+        raise HTTPException(404, '참고 자료가 없습니다.')
+    head = storage.head(source['snapshotKey'])
+    if head is None:
+        raise HTTPException(404, '참고 자료 파일이 저장소에 없습니다.')
+    if len(_SOURCES) >= 64:
+        _SOURCES.clear()
+    _SOURCES[key] = cached = (source, int(head['ContentLength']))
+    return cached
 
 
 @router.get(BASE + '/sources/{source_id}')
@@ -195,17 +223,9 @@ def read_source(subject: str, run_id: str, source_id: str, range_header: str | N
 
     Same audience as the signed 원본 링크: users allowed to study the active revision.
     Supports a single byte range so the viewer only pulls the pages it draws."""
-    from app.root_learning.evidence import frozen_pdf
     from app.storage import ObjectStorage
-    doc = active(db, subject, run_id, user)
-    source = frozen_pdf(doc, active_generation(db, doc, light=True), source_id)
-    if source is None:
-        raise HTTPException(404, '참고 자료가 없습니다.')
     storage = ObjectStorage()
-    head = storage.head(source['snapshotKey'])
-    if head is None:
-        raise HTTPException(404, '참고 자료 파일이 저장소에 없습니다.')
-    size = int(head['ContentLength'])
+    source, size = frozen_source(db, subject, run_id, user, source_id, storage)
     headers = {'Accept-Ranges': 'bytes', 'Cache-Control': 'private, max-age=3600', 'ETag': f'"{source["sha256"]}"'}
     span = None
     if range_header:
@@ -302,9 +322,13 @@ def active_generation(db, doc, *, light=False):
     return db.scalars(query).first()
 
 
-def revealed_answer(db, doc, q):
+_UNSET = object()
+
+
+def revealed_answer(db, doc, q, generation=_UNSET):
     answer = content.answer(q)
-    generation = active_generation(db, doc)
+    if generation is _UNSET:
+        generation = active_generation(db, doc)
     if generation:
         result = generation.result
         if result.get('policy')in('verified-main-quiz-replacement/1','verified-main-quiz-curation/1'):
@@ -333,6 +357,33 @@ def prior_exposure(doc, task, q, session_state, choices_shown=None):
 def read_session(session_id: str, user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
     row, doc = checked_session(db, session_id, user)
     return project_session(db, row, doc, user, now())
+
+
+@router.get('/root-learning/sessions/{session_id}/prepare')
+def prepare(session_id: str, start: int | None = Query(None, ge=0), count: int = Query(PREPARE_AHEAD, ge=1, le=8),
+            user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
+    """Read-only look-ahead of this session's fixed task list; it records nothing.
+
+    A reveal, rating or skip is still a fact only once /events stores it. The page holds
+    these frames so Space and a rating draw at once while the event is confirmed behind it
+    (each answer used to wait for the event, then this projection, then the overview)."""
+    row, doc = checked_session(db, session_id, user)
+    out = {'sessionId': row.id, 'revision': row.revision, 'frames': []}
+    if row.day != policy.study_day(now(), row.policy).isoformat():
+        return out
+    begin = row.state['index'] if start is None else start
+    available, problems = content.availability(db, doc, user.id)
+    generation = active_generation(db, doc)
+    for position in range(begin, min(begin + count, len(row.tasks))):
+        task = row.tasks[position]
+        frame = {'position': position, 'taskId': task['task_id'], 'blocked': problems.get(task['task_id']), 'task': None}
+        if task['task_id'] in available:
+            q = content.question(doc.document, task)
+            frame['task'] = {'id': task['task_id'], 'question': content.front(q),
+                             'answer': revealed_answer(db, doc, q, generation),
+                             'helped': row.state['mapSeen'] or prior_exposure(doc.document, task, q, row.state)}
+        out['frames'].append(frame)
+    return out
 
 
 @router.post('/root-learning/sessions/{session_id}/events')
