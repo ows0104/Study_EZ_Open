@@ -251,10 +251,16 @@ def revealed_answer(db, doc, q):
     generation = next((g for g in generation if g.packet['revision'] == doc.revision), None)
     if generation:
         result = generation.result
-        answer['reviewNotes'] = [
+        if result.get('policy')=='verified-main-quiz-replacement/1':
+            from app.root_learning.replacement_import import report as replacement_report
+            summary=replacement_report(result)
+            answer['reviewNotes']=[r for r in summary['questionNotes']if r['question_id']==q['question_id']]
+            answer['reviewIssues']=summary['issues']
+        else:
+            answer['reviewNotes'] = [
             {'source': label, **r} for label, checks in [('원본 대조', result['sourceAudit']['question_checks']), ('독립 정답 검수', result['medical'])]
             for r in checks['reviews'] if r['question_id'] == q['question_id'] and r['verdict'] != 'ok']
-        answer['reviewIssues'] = result['sourceAudit']['input_issues'] + result['validation']['errors'] + result['validation']['warnings']
+            answer['reviewIssues'] = result['sourceAudit']['input_issues'] + result['validation']['errors'] + result['validation']['warnings']
         from app.root_learning.reviewed_import import source_records
         answer['sourceLinks'] = [{'label': s['filename'], 'url': ObjectStorage().presign_download(s['snapshotKey'], filename=s['filename'])}
                                  for s in source_records(generation)]

@@ -128,7 +128,10 @@ def public_job(db, row):
     report = None
     if row.result:
         result = row.result
-        report = {'repairRounds': result['manifest']['repairRounds'], 'taskCount': len(result['document']['tasks']),
+        if result.get('policy')=='verified-main-quiz-replacement/1':
+            from app.root_learning.replacement_import import report as replacement_report
+            report=replacement_report(result)
+        else: report = {'repairRounds': result['manifest']['repairRounds'], 'taskCount': len(result['document']['tasks']),
             'targetCount': len(result['brief']['targets']),
             'issues': result['sourceAudit']['input_issues'] + result['validation']['errors'] + result['validation']['warnings'],
             'questionNotes': [{'source': label, **r} for label, checks in [('원본 대조', result['sourceAudit']['question_checks']), ('독립 정답 검수', result['medical'])]

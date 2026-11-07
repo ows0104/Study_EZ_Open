@@ -14,7 +14,7 @@ POLICY='frozen-reviewed-import/1'
 
 def source_records(generation):
     metadata=generation.web_dispatch or {}
-    if metadata.get('policy')!=POLICY:return generation.packet['sources']
+    if metadata.get('policy')not in(POLICY,'verified-main-quiz-replacement/1'):return generation.packet['sources']
     records=metadata['sourceSnapshots'];sources=generation.packet['sources']
     require(metadata['packetHash']==generation.packet['inputHash']and len(records)==len(sources),'reviewed import: changed source mapping')
     for original,snapshot in zip(sources,records):
