@@ -53,7 +53,9 @@ test('admin edits without extension on mobile; students have no shared editor or
     await page.getByRole('status').filter({ hasText: '저장했습니다.' }).waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await page.goto(base + '?student');
-    await page.getByRole('button', { name: '내 예습 프롬프트 고치기' }).waitFor();
+    // 2026-11-07: 내 프롬프트 수정은 개인 대화 ▾ 메뉴 안에 있다.
+    await page.getByRole('button', { name: '개인 대화 메뉴' }).first().click();
+    await page.getByRole('menuitem', { name: /내 프롬프트 수정/ }).waitFor();
     assert.equal(await page.getByRole('button', { name: /모든 강의의 기본/ }).count(), 0);
     assert.equal(await page.evaluate(() => window.promptTest.requests.some(r => r.includes('/api/admin/preview-prompt'))), false);
   } finally { await browser.close(); }
