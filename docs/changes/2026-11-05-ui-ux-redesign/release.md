@@ -39,6 +39,19 @@
 강의 패널은 열 때 그 강의 하나의 study-progress를 부른다. 학생에게 덱(`pre_apkg`·`main_apkg`) 다운로드 링크가 새로 보인다
 (서버는 원래 승인 사용자에게 서명 허용).
 
+### 2026-11-07 추가 반영(PR #9 두 번째 커밋)
+사용자 「Yes, apply」(intent.md 2026-11-07 (1)–(6)):
+- 캘린더 머리: 「감염과 면역 1차 1주차 D-13」 한 줄 + 오른쪽 끝 오늘 예습·복습 카드(좁은 화면·패널 열림 시 아래 줄).
+  오늘 버튼·주/월·월간 보기·「덱 모아받기 보기」(관리자 포함) 제거, 날짜 줄 양끝 ‹ ›로 주 넘기기. 관리자 블럭 덱은 패널 「관리자」에 남음.
+- 스크롤 없는 격자: 좌측 메뉴 기준 높이(`calc(100dvh - 68px)`, 태블릿·휴대폰 별도), 줄 최소 40px. 1440×900·1280×720 고정물에서 격자·페이지 스크롤 없음.
+- 시험 칸: 옅은 빨강 + 「감염과 면역 1차 시험」(앞 7일 수업의 블럭 이름, `kinds.ts`).
+- 빈 막대: 5px, 채움 없이 1px 테두리(예습 미완료·복습 미개방). 예습 완료 토막 72% 맑은 색.
+- N 규칙(`professorNote`): 작년과 다르고 같은 교수 필기가 없으면 needs_review여도 N(러너가 newProfessor를 비우는 경우).
+- 개인 대화 C안(`ChatSplit.tsx`): 왼쪽은 처음 만들기(＋)·이후 열기(↗), ▾에 새 대화 만들기·내 프롬프트 수정. 대화 버튼 갈래 색, 모든 버튼 34px.
+- 이용방법 문구와 테스트(calendar-loading·professor-preview·preview-actions·shared-preview-prompt) 갱신.
+검사(기록): tsc 0, run-professor-preview --all 0(4/4), preview-actions·wait-for-api·firstScreen 0(28), build 0. 수동: shared-preview-prompt 2/2.
+남은 것: 「강의별 보기의 퀴즈 탭」 스크롤은 대상 화면 확인 전이라 미반영. 강의록 회독의 「앞에서부터 채우기」는 2단계(회독 저장)와 함께.
+
 ## 배포 대상 버전·순서·데이터 변경
 - 웹만. 서버·DB·러너·확장 변경 없음. master 병합 시 자동 배포(API 같은 SHA 확인 후 Pages).
 - 프로토타입(`web/src/redesign-prototype/`, `web/redesign-prototype.html`, `vite.prototype.config.ts`)과 확인용 고정물

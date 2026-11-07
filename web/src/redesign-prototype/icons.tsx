@@ -188,6 +188,11 @@ export const Icon = {
       <path d="M5 12h14" />
     </Svg>
   ),
+  pencil: () => (
+    <Svg size={15}>
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z" />
+    </Svg>
+  ),
   plus: () => (
     <Svg size={16}>
       <path d="M12 5v14M5 12h14" />

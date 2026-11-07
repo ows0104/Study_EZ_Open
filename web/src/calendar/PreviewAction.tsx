@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { ChatSplit } from "./ChatSplit";
 import { api } from "../api";
 import { notePreviewAction } from "../usage";
 import {
@@ -193,7 +194,8 @@ export function PreviewAction({
             <Empty name="공통 대화" note="아직 없습니다" />
           )}
           {detail.myPreview?.conversationUrl ? (
-            <PersonalOpen url={detail.myPreview.conversationUrl} base={base} />
+            <ChatSplit tone="pre" main={<PersonalLink url={detail.myPreview.conversationUrl} base={base} />}
+              onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} promptCustom={promptStore.isCustom} />
           ) : (
             <Empty name="개인 대화" note={canInstall ? "확장을 설치하면 만듭니다" : "컴퓨터에서 만듭니다"} />
           )}
@@ -239,17 +241,6 @@ export function PreviewAction({
 
      **줄 자체는 이제 둘이 같이 쓴다** — 관리자의 「링크 고치기」가 왼쪽에
      선다(2026-09-21). 둘 다 이 갈래의 것이지 어느 카드 하나의 것이 아니다. */
-  const promptTool = (
-    <PanelTool
-      icon="✎"
-      label={showPrompt ? "프롬프트 접기" : "프롬프트 수정"}
-      hint={`내 예습 프롬프트 ${showPrompt ? "접기" : "고치기"}`}
-      active={showPrompt}
-      dot={promptStore.isCustom}
-      expanded={showPrompt}
-      onClick={() => setShowPrompt((open) => !open)}
-    />
-  );
 
   /* 기본 링크는 강의당 하나다. 관리자들이 저장한 공통 문구로 새 대화를 만든다. */
   const shared = detail.preview?.shareUrl ? (
@@ -277,17 +268,21 @@ export function PreviewAction({
   );
 
   /* 개인 링크 — 사람마다 하나. 프롬프트도 자기 것으로 묻는다. */
+  /* 개인 대화 — C안(2026-11-07): 왼쪽은 처음엔 만들기(＋), 그 뒤엔 열기(↗). ▾에 새 대화 만들기·내 프롬프트 수정. */
+  const makeDisabled = Boolean(busy) || !compatible || !promptStore.loaded;
   const personal = detail.myPreview?.conversationUrl ? (
-    <PersonalOpen url={detail.myPreview.conversationUrl} base={base} />
+    <ChatSplit tone="pre" main={<PersonalLink url={detail.myPreview.conversationUrl} base={base} />}
+      onRemake={canMake ? () => void start("personal", false) : undefined} remakeDisabled={makeDisabled}
+      onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} promptCustom={promptStore.isCustom} />
   ) : canMake ? (
-    <ActionCard
-      shape="is-key is-faint"
-      hit={
-        <button className="panel-action-hit" disabled={Boolean(busy) || !compatible || !promptStore.loaded} onClick={() => void start("personal", false)}>
-          <Body name="개인 대화" note={busy === "personal" ? "여는 중…" : "만들기"} />
+    <ChatSplit tone="pre"
+      main={
+        <button type="button" className="chat-split-main" aria-label="개인 대화 만들기" disabled={makeDisabled}
+          onClick={() => void start("personal", false)}>
+          <span aria-hidden="true">＋</span>{busy === "personal" ? "여는 중…" : "개인 대화"}
         </button>
       }
-    />
+      onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} promptCustom={promptStore.isCustom} />
   ) : (
     <Empty name="개인 대화" note="예습 필기 대기" />
   );
@@ -302,7 +297,6 @@ export function PreviewAction({
       <div className="panel-aside">
         {linkTool}
         {sharedPromptTool}
-        {promptTool}
       </div>
       {linkEditor}
       {savedNote}
@@ -393,26 +387,16 @@ function SharedOpen({
  * 주소라 로그인만 돼 있으면 폰에서도 열린다. 확장이 없는 갈래가 이 카드를 같이
  * 쓰는 이유다.
  */
-function PersonalOpen({ url, base, tools }: { url: string; base: string; tools?: React.ReactNode }) {
+/** 개인 대화 열기(↗). ChatSplit의 왼쪽 칸. */
+function PersonalLink({ url, base }: { url: string; base: string }) {
   return (
-    <ActionCard
-      shape="is-key"
-      hit={
-        <a
-          className="panel-action-hit"
-          href={url}
-          title={url}
-          target="_blank"
-          rel="noreferrer"
-          onClick={() => notePreviewAction(base, "mine")}
-        >
-          <Body name="개인 대화" />
-        </a>
-      }
-      tools={tools}
-    />
+    <a className="chat-split-main" href={url} title={url} target="_blank" rel="noreferrer"
+      onClick={() => notePreviewAction(base, "mine")}>
+      <span aria-hidden="true">↗</span>개인 대화
+    </a>
   );
 }
+
 
 /** 아직 없는 링크 자리. 칸은 그대로 서고 왜 없는지만 적는다. */
 function Empty({ name, note }: { name: string; note: string }) {

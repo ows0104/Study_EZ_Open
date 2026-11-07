@@ -59,15 +59,19 @@ export function ProfessorInfo({ value }: { value?: PreviewSource | null }) {
  *   작년과 같은 교수 → 없음
  *   작년과 다르지만 보유한 최근 5년 자료에 같은 교수 필기가 있음 → 그 해 두 자리(「23」, 흐린 회색)
  *   최근 5년 담당 기록 없음(`newProfessor`) → 「N」(빨강)
- * 확인 필요(`needs_review`)는 표시하지 않는다. 자세한 근거는 칸의 title·패널이 말한다.
+ * 확인 필요(`needs_review`)라도 작년과 다르고 같은 교수 필기가 없으면 N이다. 자세한 근거는 칸의 title·패널이 말한다.
  */
 export function professorNote(values: (PreviewSource | null | undefined)[]): string | null {
   for (const value of values) {
-    if (!value || value.status === "needs_review") continue;
-    if (value.newProfessor) return "N";
+    if (!value) continue;
+    // 같은 교수 필기를 최근 5년에서 찾았고 그게 작년이 아니면 그 해.
     if (value.changed && value.selected?.match === "same" && value.selected.year !== value.year - 1) {
       return String(value.selected.year).slice(-2);
     }
+    // 최근 5년에 같은 교수 필기가 없으면 N. 러너는 작년 대응을 확정하지 못하면 newProfessor를 비우고
+    // needs_review로 두므로(runner/preview_sources.py), 상태와 무관하게 「작년과 다름 + 같은 교수 필기 없음」으로 판정한다
+    // (2026-11-07 사용자 지적: 교수가 바뀐 강의의 N이 사라졌다).
+    if (value.newProfessor || (value.changed && value.selected?.match !== "same")) return "N";
   }
   return null;
 }
