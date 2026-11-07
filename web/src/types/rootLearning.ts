@@ -1,5 +1,7 @@
 import type { BankAnswer, BankQuestion, BankRating } from './bank';
-export type RootPdfSlide = {sourceId:string;sourceSha256:string;sourceFilename:string;page:number;url:string};
+export type RootPdfSlide = {sourceId:string;sourceSha256:string;sourceFilename:string;page:number;url:string;
+  /** API path streaming the same frozen PDF; PDF.js cannot fetch the signed R2 URL (no CORS rule). */
+  proxyPath?:string};
 export type RootPolicy = {id: string; day_hour: number; deadline_offset: number} & (
   {intervals: number[]} | {mode:'adaptive'; initial_days:number; success_growth:number; partial_factor:number; max_days:number; exam_fraction:number});
 export type RootSummary = {total: number; learned: number; recalled: number; unseen: number; unready: number;
@@ -22,7 +24,7 @@ export type RootMapData = {concepts:{concept_id:string;label:string;parent_ids:s
   currentConceptIds?:string[];
   readyDirectionIds?:string[];
   relations:{relation_id:string;from_id:string;to_id:string;kind:string;reason:string}[];
-  targets:{target_id:string;title:string;role:string;concept_ids:string[];
+  targets:{target_id:string;title:string;role:string;concept_ids:string[];evidence?:{source_id:string;locator?:string;pages?:number[]}[];
     directions:{direction_id:string;cue:string;answer_scope:string;requirement:string}[];
     importance:Record<string,{status:string;reason:string}>}[];
   points?:{point_id:string;text:string;target_ids:string[];scope_status:string;reason:string}[];

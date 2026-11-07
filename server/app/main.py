@@ -42,7 +42,10 @@ app.add_middleware(
     allow_origins=list(settings.cors_allowed_origins),
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    # Range/Accept-Ranges/Content-Range: PDF.js reads only the pages it draws from the
+    # Main-Quiz reference PDF stream (routes/root_learning.py read_source).
+    allow_headers=["Authorization", "Content-Type", "Range"],
+    expose_headers=["Accept-Ranges", "Content-Range", "Content-Length"],
 )
 
 

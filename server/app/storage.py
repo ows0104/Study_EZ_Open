@@ -112,7 +112,8 @@ class ObjectStorage:
                 return None
             raise
 
-    def open_stream(self, key: str, *, chunk_size: int = 1 << 20) -> tuple[Iterator[bytes], int] | None:
+    def open_stream(self, key: str, *, chunk_size: int = 1 << 20,
+                    byte_range: tuple[int, int] | None = None) -> tuple[Iterator[bytes], int] | None:
         """객체를 조각으로 흘려 보낸다. `(조각들, 바이트 수)` — 없으면 `None`.
 
         **`get_bytes` 와 달리 통째로 안 올린다.** 덱 하나가 200MB 까지 가는데
@@ -125,20 +126,30 @@ class ObjectStorage:
         `Access-Control-Allow-Origin` 이 안 붙는다. `<img>`·`<a>` 는 CORS 를 안
         타므로 지금까지 걸리지 않았다). 버킷에 CORS 규칙이 붙으면 이 자리는
         없어져도 된다 — 그때는 `routes/bundles.py` 가 서명 URL 을 주면 된다.
+        Main-Quiz 참고 PDF(`routes/root_learning.py`)도 같은 사정으로 여기를 지난다.
+
+        `byte_range=(처음, 끝)`은 양끝을 포함한 바이트 범위다(HTTP Range와 같다).
+        호출하는 쪽이 `head`로 크기를 확인해 범위가 파일 안에 있음을 보장한다.
+        돌려주는 바이트 수는 그 범위의 길이다.
         """
         if self.local_root is not None:
             path = self.local_path(key)
             if not path.is_file():
                 return None
+            start, end = byte_range or (0, path.stat().st_size - 1)
 
             def _file_chunks() -> Iterator[bytes]:
                 with path.open("rb") as handle:
-                    while chunk := handle.read(chunk_size):
+                    handle.seek(start)
+                    left = end - start + 1
+                    while left > 0 and (chunk := handle.read(min(chunk_size, left))):
+                        left -= len(chunk)
                         yield chunk
 
-            return _file_chunks(), path.stat().st_size
+            return _file_chunks(), max(0, end - start + 1)
         try:
-            answer = self.client.get_object(Bucket=self.bucket, Key=key)
+            extra = {"Range": f"bytes={byte_range[0]}-{byte_range[1]}"} if byte_range else {}
+            answer = self.client.get_object(Bucket=self.bucket, Key=key, **extra)
         except ClientError as exc:
             if str(exc.response.get("Error", {}).get("Code", "")) in {"404", "NoSuchKey", "NotFound"}:
                 return None

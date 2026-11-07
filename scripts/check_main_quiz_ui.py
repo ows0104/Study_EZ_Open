@@ -2,7 +2,8 @@
 import os,socket,subprocess,sys,tempfile,time,urllib.request
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
-LOGS=ROOT/'runs/_development/2026-11-07-main-quiz-pharm-ui'
+# Work folder for logs/screenshots; later Main-Quiz UI changes reuse these checks under their own id.
+LOGS=ROOT/'runs/_development'/os.environ.get('MAIN_QUIZ_CHECK_ID','2026-11-07-main-quiz-pharm-ui')
 HIDDEN=getattr(subprocess,'CREATE_NO_WINDOW',0)
 
 def env():
@@ -30,7 +31,7 @@ def wait(url,process):
 def main(mode):
     if mode=='web':
         run(['npm.cmd','run','typecheck'],ROOT/'web')
-        run(['node','--test','tests/main-quiz-render.test.cjs'],ROOT/'web')
+        run(['node','--test','tests/main-quiz-render.test.cjs','tests/main-quiz-map-tree.test.cjs'],ROOT/'web')
         run(['npm.cmd','run','build'],ROOT/'web');return
     if mode=='server-regression':
         for pattern in ('root_api','root_exposure','root_adaptive','root_state','root_preservation','main_quiz','root_replacement_import','root_reviewed_import','root_usage','usage_actions','route_contract'):

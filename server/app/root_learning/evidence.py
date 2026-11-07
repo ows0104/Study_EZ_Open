@@ -1,8 +1,31 @@
 """Read-only question evidence, bound to the exact authored source snapshots."""
+from urllib.parse import quote
 from studyez_contracts.bank.pages import pages_of
 from studyez_contracts.roots import document_hash
 from app.models import QuizBank
 from app.storage import ObjectStorage
+
+
+def proxy_path(doc, source):
+    """API path that streams the frozen PDF. PDF.js must fetch() the bytes and the R2
+    bucket has no CORS rule, so the signed URL only works for links (원본 열기)."""
+    return (f"/api/root-learning/lectures/{quote(doc.subject, safe='')}/{quote(doc.run_id, safe='')}"
+            f"/sources/{quote(source['id'], safe='')}?sha={source['sha256']}")
+
+
+def frozen_pdf(doc, generation, source_id):
+    """The verified PDF snapshot for one source of the active document, or None."""
+    if generation is None:
+        return None
+    from app.root_learning.reviewed_import import source_records
+    known = {s['source_id']: s for s in doc.document['review']['sources']}
+    for source in source_records(generation):
+        expected = known.get(source['id'])
+        if source['id'] != source_id or not expected or expected['sha256'] != source['sha256']:
+            continue
+        if source.get('contentType') == 'application/pdf' or source['filename'].lower().endswith('.pdf'):
+            return source
+    return None
 
 
 def attach_evidence(db, doc, question, generation, answer):
@@ -44,5 +67,5 @@ def attach_evidence(db, doc, question, generation, answer):
             if type(page) is not int or page < 1 or (type(count) is int and page > count):
                 continue
             slides[(source['id'], page)] = {'sourceId': source['id'], 'sourceSha256': source['sha256'],
-                'sourceFilename': source['filename'], 'page': page, 'url': url}
+                'sourceFilename': source['filename'], 'page': page, 'url': url, 'proxyPath': proxy_path(doc, source)}
     answer['pdfSlides'] = list(slides.values())

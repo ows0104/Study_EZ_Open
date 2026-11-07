@@ -9,7 +9,9 @@ export class ApiError extends Error {
   }
 }
 
-async function authHeader(): Promise<Record<string, string>> {
+export const apiUrl = (path: string) => `${BASE}${path}`;
+
+export async function authHeader(): Promise<Record<string, string>> {
   if (LOCAL_TEST_TOKEN) return { Authorization: `Bearer ${LOCAL_TEST_TOKEN}` };
   const { data } = (await auth?.getSession()) ?? { data: { session: null } };
   const token = data.session?.access_token;

@@ -18,6 +18,7 @@ with patch('app.root_learning.evidence.ObjectStorage')as storage:
     out={};attach_evidence(None,row,question,generation,out)
     assert [s['page']for s in out['pdfSlides']]==[2,3]
     assert all(s['sourceSha256']==source['sha256']for s in out['pdfSlides'])
+    assert all(s['proxyPath']==f"/api/root-learning/lectures/test/demo/sources/S1?sha={source['sha256']}"for s in out['pdfSlides'])
     assert out['sourceLinks'][0]['label']=='original.pdf'
     assert storage.return_value.presign_download.call_args.kwargs['inline']
     no_page={};attach_evidence(None,row,{'source_refs':[]},generation,no_page)

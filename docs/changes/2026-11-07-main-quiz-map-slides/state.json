@@ -1,0 +1,292 @@
+{
+  "id": "2026-11-07-main-quiz-map-slides",
+  "title": "Main-Quiz 참고슬라이드 복구·트리형 개념지도",
+  "area": "site",
+  "created_at": "2026-11-07T13:37:45.345830+00:00",
+  "required_checks": [
+    "web",
+    "server-regression",
+    "browser"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-07T13:41:14.700078+00:00",
+      "evidence": "2026-11-07 사용자 채팅: '응, 진행해줘' (plan.md 제시 직후)",
+      "scope": "plan.md의 server storage 범위 읽기·출처 경유 경로·evidence, web RootPdfSlides·RootMap·main-quiz.css, 검사·문서의 로컬 구현·검사·리뷰·PR 생성. master 병합/운영 배포와 학생 공개 설정 변경은 미포함",
+      "evidence_version": 2,
+      "source_hash": "bdba88b1468b3986d29692a627b565f0c2164d97e2661e797de28fca43e17023",
+      "plan_hash": "a34e79684b1b8cbd80dbc4cdc9ab633a5c7df28ec546a61ca3906a7eec45b6fe",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "5e36f326ad08af470fb07fb0a60f6993f5684daa5a5a834c9ff4ed30e0c8e609"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-07T13:56:03.611707+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "scripts/check_main_quiz_ui.py",
+        "web"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "79290b7899b139d6d3e047d5d1eb34afac4a6e2ca63b89d7edb00e058b519ba5",
+      "plan_hash": "a34e79684b1b8cbd80dbc4cdc9ab633a5c7df28ec546a61ca3906a7eec45b6fe",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-main-quiz-map-slides/1794059742358612400-web.log",
+      "web_artifact": "f4233ce9dd8bdb39bc87cb259657260a16afbe429c8f3beabc1b1a75eecc59ea",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "server-regression",
+      "at": "2026-11-07T13:56:50.986490+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "scripts/check_main_quiz_ui.py",
+        "server-regression"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "79290b7899b139d6d3e047d5d1eb34afac4a6e2ca63b89d7edb00e058b519ba5",
+      "plan_hash": "a34e79684b1b8cbd80dbc4cdc9ab633a5c7df28ec546a61ca3906a7eec45b6fe",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-main-quiz-map-slides/1794059771624761300-server-regression.log"
+    },
+    {
+      "name": "browser",
+      "at": "2026-11-07T13:57:17.553030+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "scripts/check_main_quiz_ui.py",
+        "browser"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "79290b7899b139d6d3e047d5d1eb34afac4a6e2ca63b89d7edb00e058b519ba5",
+      "plan_hash": "a34e79684b1b8cbd80dbc4cdc9ab633a5c7df28ec546a61ca3906a7eec45b6fe",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-main-quiz-map-slides/1794059817146807600-browser.log"
+    },
+    {
+      "name": "browser",
+      "at": "2026-11-07T13:57:44.342729+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "scripts/check_main_quiz_ui.py",
+        "browser"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "11b04c9d94fd0fe8e28d10bd086e478ad6cf3eff3fb6627666aef5de0fd10798",
+      "plan_hash": "a34e79684b1b8cbd80dbc4cdc9ab633a5c7df28ec546a61ca3906a7eec45b6fe",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-main-quiz-map-slides/1794059844977164900-browser.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T14:02:00.890841+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "scripts/check_main_quiz_ui.py",
+        "web"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "7624e780673b99723e7c336637f8c9dcded547c1bdd95d76b8d30dada5e2a445",
+      "plan_hash": "a34e79684b1b8cbd80dbc4cdc9ab633a5c7df28ec546a61ca3906a7eec45b6fe",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-main-quiz-map-slides/1794060100211946100-web.log",
+      "web_artifact": "431a48d2bd0a4438d2b68d665d3ebfbd5fd685df57492674635fc7cec35c9694",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "server-regression",
+      "at": "2026-11-07T14:02:42.704730+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "scripts/check_main_quiz_ui.py",
+        "server-regression"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "7624e780673b99723e7c336637f8c9dcded547c1bdd95d76b8d30dada5e2a445",
+      "plan_hash": "a34e79684b1b8cbd80dbc4cdc9ab633a5c7df28ec546a61ca3906a7eec45b6fe",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-main-quiz-map-slides/1794060124078844900-server-regression.log"
+    },
+    {
+      "name": "browser",
+      "at": "2026-11-07T14:03:01.415419+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "scripts/check_main_quiz_ui.py",
+        "browser"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "7624e780673b99723e7c336637f8c9dcded547c1bdd95d76b8d30dada5e2a445",
+      "plan_hash": "a34e79684b1b8cbd80dbc4cdc9ab633a5c7df28ec546a61ca3906a7eec45b6fe",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-main-quiz-map-slides/1794060163034980400-browser.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-07T14:03:29.705191+00:00",
+    "summary": "출처 경유 경로 열람 범위(활성 판·허용 사용자·SHA 일치·404)·Range 해석(206/416)·교차 출처 CORS(OPTIONS 200→206 실제 재현)·답 노출 경계(답 개념 비노드, 답 범위 접힘, mapSeen 불변)·실패 문서 캐시·첫 화면 배율 덮어쓰기 버그 수정. 남은 위험: 운영 R2 대용량 PDF 경유 트래픽(Range로 축소), 다른 강의 판 구조는 parent_ids/기타 묶음으로 처리",
+    "evidence_version": 2,
+    "source_hash": "7624e780673b99723e7c336637f8c9dcded547c1bdd95d76b8d30dada5e2a445",
+    "plan_hash": "a34e79684b1b8cbd80dbc4cdc9ab633a5c7df28ec546a61ca3906a7eec45b6fe",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-07T14:03:31.020730+00:00"
+}

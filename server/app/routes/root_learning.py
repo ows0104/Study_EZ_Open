@@ -1,9 +1,11 @@
 """Root-learning product API. Legacy question and learner tables are read-only here."""
 import copy
+import re
 from datetime import UTC, datetime
 from typing import Literal
 from uuid import uuid4
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
@@ -181,6 +183,49 @@ def publish(subject: str, run_id: str, payload: Publication, user: CurrentUser =
     return {'enabled': control.enabled, 'revision': control.revision}
 
 
+RANGE = re.compile(r'^bytes=(\d*)-(\d*)$')
+
+
+@router.get(BASE + '/sources/{source_id}')
+def read_source(subject: str, run_id: str, source_id: str, range_header: str | None = Header(None, alias='Range'),
+                user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
+    """Read-only stream of the frozen reference PDF for PDF.js (R2 has no CORS rule).
+
+    Same audience as the signed 원본 링크: users allowed to study the active revision.
+    Supports a single byte range so the viewer only pulls the pages it draws."""
+    from app.root_learning.evidence import frozen_pdf
+    from app.storage import ObjectStorage
+    doc = active(db, subject, run_id, user)
+    source = frozen_pdf(doc, active_generation(db, doc), source_id)
+    if source is None:
+        raise HTTPException(404, '참고 자료가 없습니다.')
+    storage = ObjectStorage()
+    head = storage.head(source['snapshotKey'])
+    if head is None:
+        raise HTTPException(404, '참고 자료 파일이 저장소에 없습니다.')
+    size = int(head['ContentLength'])
+    headers = {'Accept-Ranges': 'bytes', 'Cache-Control': 'private, max-age=3600', 'ETag': f'"{source["sha256"]}"'}
+    span = None
+    if range_header:
+        match = RANGE.match(range_header.strip())
+        if not match or match.groups() == ('', ''):
+            raise HTTPException(416, '잘못된 범위 요청입니다.', headers={'Content-Range': f'bytes */{size}'})
+        first, last = match.groups()
+        start, end = (size - int(last), size - 1) if first == '' else (int(first), min(int(last), size - 1) if last else size - 1)
+        start = max(start, 0)
+        if size == 0 or start > end or start >= size:
+            raise HTTPException(416, '잘못된 범위 요청입니다.', headers={'Content-Range': f'bytes */{size}'})
+        span = (start, end)
+    opened = storage.open_stream(source['snapshotKey'], byte_range=span)
+    if opened is None:
+        raise HTTPException(404, '참고 자료 파일이 저장소에 없습니다.')
+    chunks, length = opened
+    headers['Content-Length'] = str(length)
+    if span:
+        headers['Content-Range'] = f'bytes {span[0]}-{span[1]}/{size}'
+    return StreamingResponse(chunks, status_code=206 if span else 200, media_type='application/pdf', headers=headers)
+
+
 @router.post(BASE + '/sessions')
 def start(subject: str, run_id: str, payload: Start, user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
     row = active(db, subject, run_id, user)
@@ -243,12 +288,16 @@ def project_session(db, row, doc, user, when):
     return out
 
 
-def revealed_answer(db, doc, q):
+def active_generation(db, doc):
     from app.models.root_generation import RootGeneration
-    answer = content.answer(q)
-    generation = db.scalars(select(RootGeneration).where(RootGeneration.subject == doc.subject,
+    return db.scalars(select(RootGeneration).where(RootGeneration.subject == doc.subject,
         RootGeneration.run_id == doc.run_id, RootGeneration.result_digest.is_not(None),
         RootGeneration.packet['revision'].as_string()==doc.revision)).first()
+
+
+def revealed_answer(db, doc, q):
+    answer = content.answer(q)
+    generation = active_generation(db, doc)
     if generation:
         result = generation.result
         if result.get('policy')in('verified-main-quiz-replacement/1','verified-main-quiz-curation/1'):

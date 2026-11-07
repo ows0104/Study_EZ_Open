@@ -2,22 +2,31 @@ import { useEffect, useState } from 'react';
 import { getDocument, GlobalWorkerOptions, type PDFDocumentLoadingTask, type RenderTask } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { SlideImage } from '../SlideImage';
+import { apiUrl, authHeader } from '../api';
 import type { RootPdfSlide } from '../types/rootLearning';
 
 GlobalWorkerOptions.workerSrc=workerUrl;
-const documents=new Map<string,{task:PDFDocumentLoadingTask;users:number;timer?:ReturnType<typeof setTimeout>}>();
-function acquire(url:string){
-  let entry=documents.get(url);
+type Entry={task:Promise<PDFDocumentLoadingTask>;users:number;timer?:ReturnType<typeof setTimeout>};
+const documents=new Map<string,Entry>();
+// The signed R2 URL works for links only: the bucket has no CORS rule, so PDF.js reads
+// the same frozen file through the API (with the login header and byte ranges).
+function acquire(slide:RootPdfSlide){
+  const key=slide.proxyPath??slide.url;
+  let entry=documents.get(key);
   if(!entry){
     const assets=new URL('pdfjs/',new URL(import.meta.env.BASE_URL,window.location.href)).href;
-    entry={task:getDocument({url,enableXfa:false,cMapUrl:assets+'cmaps/',cMapPacked:true,
-      standardFontDataUrl:assets+'standard_fonts/',wasmUrl:assets+'wasm/'}),users:0};
-    documents.set(url,entry);
+    const task=(slide.proxyPath?authHeader():Promise.resolve({})).then(httpHeaders=>getDocument({
+      url:slide.proxyPath?apiUrl(slide.proxyPath):slide.url,httpHeaders,enableXfa:false,cMapUrl:assets+'cmaps/',cMapPacked:true,
+      standardFontDataUrl:assets+'standard_fonts/',wasmUrl:assets+'wasm/'}));
+    const created:Entry={task,users:0};entry=created;
+    documents.set(key,created);
+    // A failed load must not stay cached for the next question or a retry.
+    void task.then(t=>t.promise).catch(()=>{if(documents.get(key)===created)documents.delete(key);});
   }
   clearTimeout(entry.timer);entry.users++;
   const current=entry;
-  return {promise:entry.task.promise,release:()=>{
-    if(--current.users===0)current.timer=setTimeout(()=>{documents.delete(url);void current.task.destroy();},15000);
+  return {promise:current.task.then(t=>t.promise),release:()=>{
+    if(--current.users===0)current.timer=setTimeout(()=>{if(documents.get(key)===current)documents.delete(key);void current.task.then(t=>t.destroy());},15000);
   }};
 }
 
@@ -26,7 +35,7 @@ function PdfSlide({slide}:{slide:RootPdfSlide}){
   const [failed,setFailed]=useState(false);
   useEffect(()=>{
     let live=true;
-    const pdf=acquire(slide.url);
+    const pdf=acquire(slide);
     let render:RenderTask|undefined;
     setImage('');setFailed(false);
     void (async()=>{
@@ -42,7 +51,7 @@ function PdfSlide({slide}:{slide:RootPdfSlide}){
       page.cleanup();
     })().catch(()=>{if(live)setFailed(true);});
     return()=>{live=false;render?.cancel();pdf.release();};
-  },[slide.url,slide.page]);
+  },[slide.url,slide.proxyPath,slide.page]);
   const label=`${slide.sourceFilename} · PDF ${slide.page}쪽`;
   return <figure className="bank-evidence-slide main-quiz-pdf-slide"><figcaption>{label}
     {' · '}<a href={`${slide.url}#page=${slide.page}`} target="_blank" rel="noreferrer">원본 열기</a></figcaption>
