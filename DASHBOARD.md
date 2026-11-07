@@ -15,7 +15,6 @@
 | 우선순위 | 작업 | 작업자 / 세션 | 브랜치 | 건드리는 영역·파일 | 시작일 | 상태·메모 |
 |---|---|---|---|---|---|---|
 
-| P1 | Main Quiz 새은행·문항별 연결·이미지 재검수 및 대체 | ows0104 / Codex Main Quiz 후속 | codex/main-quiz-task-relink | studyez_contracts/roots/task_supplement.py·quiz_curation.py, runner/root_task_supplement.py·root_quiz_curation.py, server/app/root_learning·routes/root_learning.py, 관련 tests, docs/changes/2026-11-07-main-quiz-task-relink, 지정261104_02 후속runs; web UI 읽기확인 | 2026-11-07 | 최신 사용자 승인: 학습자0 전제로 기존91/학습기록/3of3 보존제약 해제, 새것으로 대체. 보존형28연결 준비는 모델호출0 중단. 원래실행은 과거판으로 보관하고 별도새생성·수정0..3, 실제CLI 작성/원본·그림/독립정답 검수 후 관리자시범 대체. 실제CLI 최종104후보3of3 보류/원형보관, 별도범위검수CLI 승인98문항98과제(이미지12문항14장) 선별·중요도미확정6중립화. 239계약/러너·서버6·실제격리UI(저장/새로고침/Z/그림·원본SHA) 통과, PR14 전체CI 진행중. 기존 MainQuiz UI 유지·다른강의/다른세션 영역 제외 |
 
 | P1 | Map·독립 출제포인트 추출 프롬프트 정리 | ows0104 / Codex Map 세션 | codex/map-point-prompts | content/prompts/learning-links/map-extract.md, point-extract.md, *-output.schema.json, *-output.example.json, README.md, docs/changes/2026-11-06-map-point-prompts, .worktrees/map-point-prompts/runs/_map-point-pilot | 2026-11-06 | 사용자 승인 범위의 두 원본 전용 지시문·JSON 스키마·예시·로컬 형식 검증. 현재 사용자 예시 추출 승인: 명시적 OpenAI 전송 승인으로 Map/포인트 각1회 완료, 심내막염·CNS 강의별 JSON4개 보존. 후속 승인된 독립단위 재추출·4지적 보완·별도 재대조 완료: 최종47/60개, ready/ready·잔여issues없음. 원본/중간/실패보존, 필수검사통과, d68b6d57 로컬 검토대기. 운영 요청 재개/문항/게시/배포 없음 |
 
@@ -55,6 +54,7 @@ merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 �
 
 | 완료일 | 작업 | 작업자 | PR |
 |---|---|---|---|
+| 2026-11-07 | Main Quiz 새판 PR14 병합a4625641. 실제CLI104전체안held·수정3/3 보관, 별도범위검수 승인98문항98과제·이미지12문항14장, 의학/그림보류6·중요도미확정6중립화. 239계약/러너·서버6·실제격리UI·PR전체CI 통과. **master 전체검사·API/Pages 동일SHA 배포·지정강의 실제대체 후속 진행중, 아직 운영반입 전.** UI동일·관리자시범범위유지·다른강의미실행 | ows0104 / Codex Main Quiz 후속 | [#14](https://github.com/ows0104/Study_EZ_Open/pull/14) |
 | 2026-11-07 | 복습 개인링크 기본 문구를 올해 필기·족보 기반 큰 흐름 요청으로 교체하고 올해 교수 한 줄 표시. 관련 검사5개·웹 타입/빌드·PR/master 전체 CI 통과, 2d85e793 API/Pages 배포 성공. 실제 공개 복습 자산의 새 문구/긴 안내 제거·동일API SHA·401 확인. 기존 개인 문구·예습·자료·학습 기록 보존 — [배포 근거](https://github.com/ows0104/Study_EZ_Open/blob/codex/review-prompt-simple/docs/changes/2026-11-07-review-prompt-simple/deployment.md) | ows0104 / Codex 복습 문구 세션 | [#15](https://github.com/ows0104/Study_EZ_Open/pull/15) |
 | 2026-11-07 | Main Quiz 원클릭·CLI3작업 병렬/개별진행·분할검수/기존복구 통합 PR13 병합2489e52e. 전체CI 통과. 실제261104_02 최종91문항·그림15문항19장·49과제, C005한행CLI/새전체대조 완료 수정3/3; 기존문항/판정/22검수/실패보존, 격리UI/원본PDF링크 통과. API/Pages2489e52e 동일SHA 배포성공·관리자시범 실제반입/원본PDF서명링크실제다운로드/19PNG해시 확인. 기존은행/사람학습기록불변·학습사건쓰기0. 러너바로가기 고정코드로 갱신(작업시작0), 격리서버종료·기록보존. 사슬알균미실행 | ows0104 / Codex Main Quiz 후속 | [#13](https://github.com/ows0104/Study_EZ_Open/pull/13) (PR10/11/12와 인계복구 포함) |
 | 2026-11-06 | UI/UX 개편 1단계(웹만) 구현·검사 완료: 좌측 메뉴·흰 바탕·색 5조합·캘린더(D-day·회독·학습률)·강의 패널·강의 목록·감염과 면역 1차/2차 블럭·강의 번호. 서버·DB·출제 미변경. 병합(=운영 배포)은 사용자 확인 후 | HungryPotato01 / Claude UI 개편 세션 | [#9](https://github.com/ows0104/Study_EZ_Open/pull/9) (병합 전) |
@@ -65,4 +65,5 @@ merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 �
 | 2026-11-05 | 교수 변경·신규 교수 표시 및 최근 5년 동일 교수 최신 필기 우선, 없으면 작년 대체 운영 반영 (`c86e15fb`). 84개 강의·기록 보존, PDF 72개 실제 검증, 러너 복원 완료 — [배포 기록](https://github.com/ows0104/Study_EZ_Open/blob/a757ce86c548519b1c1c714298f530f1e9eb86c3/docs/changes/2026-11-05-professor-aware-preview/deployment.md) | ows0104 / Codex 교수별 예습 세션 | [#3](https://github.com/ows0104/Study_EZ_Open/pull/3) |
 | 2026-11-05 | master 검사 실패 수정 및 API·웹 배포 완료 (`d5e30590`) — [검사·배포 기록](https://github.com/ows0104/Study_EZ_Open/blob/9f57d3d607335204193441c1358a95fe85b363c7/docs/changes/2026-11-05-ci-regression-fix/deployment.md) | ows0104 / Codex 세션 | [#4](https://github.com/ows0104/Study_EZ_Open/pull/4) |
 | 2026-11-05 | 협업 대시보드와 작업 시작 대원칙 도입 | HungryPotato01 / Claude 세션 | [#2](https://github.com/ows0104/Study_EZ_Open/pull/2) |
+
 
