@@ -351,6 +351,181 @@
       "log": "runs/_development/2026-11-05-ui-ux-redesign/1794056190096646200-web.log",
       "web_artifact": "842d3d23da29528bd8946b19466883629b70ad27bdcb070202119ce9ce0c18f5",
       "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T12:59:54.504037+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "7b951a455b1e130cfff756a1aaf5e1101868d8864a05b5ddeda1188d1cd8db15",
+      "plan_hash": "8b8bb6ad699da91e237a995d64ccb8854daec63dc28f4b79236219a5ebe7ab65",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1794056384101802700-web.log",
+      "web_artifact": "842d3d23da29528bd8946b19466883629b70ad27bdcb070202119ce9ce0c18f5",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T13:00:07.704036+00:00",
+      "command": [
+        "node",
+        "web/tests/run-professor-preview.cjs",
+        "--all"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "7b951a455b1e130cfff756a1aaf5e1101868d8864a05b5ddeda1188d1cd8db15",
+      "plan_hash": "8b8bb6ad699da91e237a995d64ccb8854daec63dc28f4b79236219a5ebe7ab65",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1794056395337432600-web.log",
+      "web_artifact": "842d3d23da29528bd8946b19466883629b70ad27bdcb070202119ce9ce0c18f5",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T13:00:27.806901+00:00",
+      "command": [
+        "node",
+        "--test",
+        "web/tests/preview-actions.test.cjs",
+        "web/tests/wait-for-api.test.mjs",
+        "web/tests/firstScreen.test.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "7b951a455b1e130cfff756a1aaf5e1101868d8864a05b5ddeda1188d1cd8db15",
+      "plan_hash": "8b8bb6ad699da91e237a995d64ccb8854daec63dc28f4b79236219a5ebe7ab65",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1794056408489575200-web.log",
+      "web_artifact": "842d3d23da29528bd8946b19466883629b70ad27bdcb070202119ce9ce0c18f5",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T13:00:54.187523+00:00",
+      "command": [
+        "cmd",
+        "/c",
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 2,
+      "evidence_version": 2,
+      "source_hash": "7b951a455b1e130cfff756a1aaf5e1101868d8864a05b5ddeda1188d1cd8db15",
+      "plan_hash": "8b8bb6ad699da91e237a995d64ccb8854daec63dc28f4b79236219a5ebe7ab65",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1794056428640441800-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T13:01:37.564884+00:00",
+      "command": [
+        "cmd",
+        "/c",
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ef62b13e8ff110c8e7be671b3ab55852181d2dde6eac355953fbb173d56845d7",
+      "plan_hash": "8b8bb6ad699da91e237a995d64ccb8854daec63dc28f4b79236219a5ebe7ab65",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1794056474079738600-web.log",
+      "web_artifact": "9ab2a99992e50595b91b8e202933848fe591c4a5e34e4317808d34a76cc975c6",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
     }
   ],
   "review": {
@@ -382,5 +557,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-07T12:56:51.337949+00:00"
+  "updated_at": "2026-11-07T13:01:41.359810+00:00"
 }
