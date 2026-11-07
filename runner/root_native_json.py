@@ -304,6 +304,9 @@ def validate_stage(out,entry,*,model):
 
 def validate_all(out,payload):
     require_unblocked(out)
+    if payload['manifest'].get('planRepair'):
+        from .root_plan_repair import validate
+        validate(out,payload)
     if payload['manifest'].get('chunkedReview'):
         from .root_chunked_review import validate
         validate(out,payload)

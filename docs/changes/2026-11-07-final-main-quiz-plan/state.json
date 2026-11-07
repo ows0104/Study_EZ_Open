@@ -1,0 +1,101 @@
+{
+  "id": "2026-11-07-final-main-quiz-plan",
+  "title": "C005 마지막1회 구조보완과 검수·이미지·업로드",
+  "area": "operations",
+  "created_at": "2026-11-07T07:07:46.351351+00:00",
+  "required_checks": [
+    "plan-regression",
+    "preserved-origin",
+    "live-evidence"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-07T07:08:28.093768+00:00",
+      "evidence": "2026-11-07 현재 사용자 명시 답변: 남은1회 구조 보완 승인. 앞선91문항/정답/이미지보존과 필요재검수후업로드 승인 유지",
+      "scope": "C005계획한행 실제CLI·마지막3of3소비·불변개별검수재사용증명·새전체대조·이미지UI/업로드",
+      "evidence_version": 2,
+      "source_hash": "7da0b72f0cb32009484b8534b12a3e97b6472b2c7c5843a24d5077c736d8d3af",
+      "plan_hash": "d58a03bcc01e40af93d823037a46f747b0ec312ee6c91f170f2bd044028bb520",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "server",
+        "spotter/data",
+        "spotter/scripts",
+        "spotter/web",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "tests/runner",
+        "tests/spotter",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "3a2c8044de7809aa887c0c56814d5b5b70f343c73722875087ce1f4fb132158d"
+    }
+  },
+  "checks": [
+    {
+      "name": "plan-regression",
+      "at": "2026-11-07T07:18:32.370975+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "scripts/check_final_plan.py",
+        "regression"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "706477c1b8a7ea538ad651851bd2d76e10b4e2d50d5b87f5e96940bd121fb57e",
+      "plan_hash": "d58a03bcc01e40af93d823037a46f747b0ec312ee6c91f170f2bd044028bb520",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "server",
+        "spotter/data",
+        "spotter/scripts",
+        "spotter/web",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "tests/runner",
+        "tests/spotter",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-final-main-quiz-plan/1794035852618527800-plan-regression.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-07T07:18:32.371446+00:00"
+}

@@ -45,11 +45,11 @@ def register(db,packet,result,snapshots,*,expected_control_hash):
     frozen=copy.deepcopy(packet)
     for s in frozen['sources']:s.pop('localPath',None);s.pop('downloadUrl',None)
     metadata={'policy':POLICY,'packetHash':packet['inputHash'],'sourceSnapshots':snapshots,
-        'reviewProofHash':result['manifest']['chunkedReview']['proofHash'],'originFailurePreserved':True}
+        'reviewProofHash':result['manifest'].get('planRepair',result['manifest']['chunkedReview'])['proofHash'],'originFailurePreserved':True}
     now=datetime.now(UTC)
     job=PrequizJob(subject=subject,run_id=rid,kind=JOB_BANK,origin=JOB_BUTTON,state=JOB_DONE,
         requested_by='runner: explicit reviewed import authorized 2026-11-07',
-        message='실제 CLI 분할 검수 완료 자료 반입 · 원래 실패/수정2of3 보존 · 신규 출제 호출 없음',finished_at=now)
+        message='실제 CLI 검수 완료 자료 반입 · 원래 실패/수정'+str(result['manifest']['repairRounds'])+'of3 보존 · 신규 문항 출제 없음',finished_at=now)
     db.add(job);db.flush()
     row=RootGeneration(id=gid,job_id=job.id,subject=subject,run_id=rid,user_id='runner',
         request_id='reviewed-import-'+packet['generationId'],input_digest=document_hash({'policy':POLICY,'inputHash':packet['inputHash']}),

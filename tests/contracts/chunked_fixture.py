@@ -3,7 +3,7 @@ import copy
 import generation_v2_fixture as f
 from studyez_contracts.roots import generation_v2 as c,chunked as part,document_hash
 
-def result(packet):
+def result(packet,*,validate=True):
     value=f.result(packet);meta=value['manifest'];bank=value['document']['bank_snapshot'];b=value['brief']
     ctx={'title':packet['title'],'bank':bank,'brief':b,'clinical_conflicts':[],'_pipeline_version':c.POLICY}
     raw=f.assessment(b,bank);raw['design_checks']=[{'question_id':q['question_id'],'verdict':'ok','reason':'Synthetic design'}for q in bank['questions']]
@@ -34,5 +34,5 @@ def result(packet):
     meta.update(repairRounds=2,sourceAssessment=audit['assessment'],chunkedReview=row,
         stages=[{'name':k,**v}for k,v in stages.items()],briefRevisions=meta['briefRevisions']+[
             {'stage':'repair-'+str(i),'brief':b,'reason':meta['mapChangeReason']}for i in(1,2)])
-    c.validate_result(value,packet)
+    if validate:c.validate_result(value,packet)
     return value

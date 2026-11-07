@@ -91,6 +91,9 @@ def merge(ctx,outputs):
     return result
 
 def validate_continuation(value):
+    if value['manifest'].get('planRepair'):
+        from .plan_repair import validate
+        value=validate(value)
     meta=value['manifest'];row=meta.get('chunkedReview')
     if row is None:return
     p=row['proof'];old=p['priorLedger'];stages={r['name']:r for r in meta['stages']}
