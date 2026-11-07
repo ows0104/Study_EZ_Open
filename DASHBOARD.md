@@ -14,7 +14,6 @@
 
 | 우선순위 | 작업 | 작업자 / 세션 | 브랜치 | 건드리는 영역·파일 | 시작일 | 상태·메모 |
 |---|---|---|---|---|---|---|
-| P1 | 복습 개인링크 기본 프롬프트·교수 안내 간소화 | ows0104 / Codex 복습 문구 세션 | codex/review-prompt-simple | web/src/lecture/reviewPrompt.ts, reviewProfessor.ts, web/tests/review-professor.test.cjs, docs/changes/2026-11-07-review-prompt-simple | 2026-11-07 | 사용자 명시 승인: 기본 문구를 올해 필기·족보 기반 큰 흐름 요청으로 교체, 실제 올해 교수 한 줄만 추가. 기존 개인 저장문구·예습·자료·학습기록 보존. 다른 진행/예정 작업과 파일·프롬프트 겹침 없음 |
 
 | P1 | Main Quiz 새은행·문항별 연결·이미지 재검수 및 대체 | ows0104 / Codex Main Quiz 후속 | codex/main-quiz-task-relink | studyez_contracts/roots/task_supplement.py, runner/root_task_supplement.py, server/app/root_learning·routes/root_learning.py, 관련 tests, docs/changes/2026-11-07-main-quiz-task-relink, 지정261104_02 후속runs; web UI 읽기확인 | 2026-11-07 | 최신 사용자 승인: 학습자0 전제로 기존91/학습기록/3of3 보존제약 해제, 새것으로 대체. 보존형28연결 준비는 모델호출0 중단. 원래실행은 과거판으로 보관하고 별도새생성·수정0..3, 실제CLI 작성/원본·그림/독립정답 검수 후 관리자시범 대체. 문항수고정없음·기존 MainQuiz UI 유지·다른강의/다른세션 영역 제외 |
 
@@ -56,6 +55,7 @@ merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 �
 
 | 완료일 | 작업 | 작업자 | PR |
 |---|---|---|---|
+| 2026-11-07 | 복습 개인링크 기본 문구를 올해 필기·족보 기반 큰 흐름 요청으로 교체하고 올해 교수 한 줄 표시. 관련 검사5개·웹 타입/빌드·전체 PR CI 통과, 2d85e793 병합. master 자동 검사/배포 확인 중. 기존 개인 문구·예습·자료·학습 기록 보존 | ows0104 / Codex 복습 문구 세션 | [#15](https://github.com/ows0104/Study_EZ_Open/pull/15) |
 | 2026-11-07 | Main Quiz 원클릭·CLI3작업 병렬/개별진행·분할검수/기존복구 통합 PR13 병합2489e52e. 전체CI 통과. 실제261104_02 최종91문항·그림15문항19장·49과제, C005한행CLI/새전체대조 완료 수정3/3; 기존문항/판정/22검수/실패보존, 격리UI/원본PDF링크 통과. API/Pages2489e52e 동일SHA 배포성공·관리자시범 실제반입/원본PDF서명링크실제다운로드/19PNG해시 확인. 기존은행/사람학습기록불변·학습사건쓰기0. 러너바로가기 고정코드로 갱신(작업시작0), 격리서버종료·기록보존. 사슬알균미실행 | ows0104 / Codex Main Quiz 후속 | [#13](https://github.com/ows0104/Study_EZ_Open/pull/13) (PR10/11/12와 인계복구 포함) |
 | 2026-11-06 | UI/UX 개편 1단계(웹만) 구현·검사 완료: 좌측 메뉴·흰 바탕·색 5조합·캘린더(D-day·회독·학습률)·강의 패널·강의 목록·감염과 면역 1차/2차 블럭·강의 번호. 서버·DB·출제 미변경. 병합(=운영 배포)은 사용자 확인 후 | HungryPotato01 / Claude UI 개편 세션 | [#9](https://github.com/ows0104/Study_EZ_Open/pull/9) (병합 전) |
 | 2026-11-06 | 새 파이프라인의 Main Quiz 통합(회상 단위 PR7 포함) 7b96003f master 반영. 필수 계약644·서버52·웹27·CUA15 통과. API·Pages7b96003f 같은SHA 배포 및 실제 Main Quiz assets 대조 완료(한국15:16:51 게시). [배포 기록](https://github.com/ows0104/Study_EZ_Open/blob/codex/main-quiz-unified/docs/changes/2026-11-06-main-quiz-unified/deployment.md). 직접 게시 준비는 자동복구로 종료·수동 업로드0. GuidePage 인계: 새 화면 Space/Enter 답 확인·1/2/3 회상평가·Z 취소, 기존 은행4등급/기록 유지 | ows0104 / Codex Main Quiz 세션 | [#8](https://github.com/ows0104/Study_EZ_Open/pull/8) |
