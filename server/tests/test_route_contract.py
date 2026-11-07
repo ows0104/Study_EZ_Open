@@ -224,6 +224,7 @@ def current() -> list[str]:
 
 def main() -> None:
     check_bank_schema_identity()
+    # 2026-11-07: root-learning sources/{source_id} streams the reference PDF for PDF.js (R2 has no CORS rule).
     # 2026-11-03: versioned connection learning and explicit admin publication.
     connection_routes = '''GET /api/lectures/{subject}/{run_id}/connections
 GET /api/lectures/{subject}/{run_id}/connections/{revision}
@@ -238,7 +239,8 @@ PUT /api/admin/root-learning/lectures/{subject}/{run_id}/publication
 POST /api/root-learning/lectures/{subject}/{run_id}/sessions
 GET /api/root-learning/sessions/{session_id}
 POST /api/root-learning/sessions/{session_id}/events
-GET /api/root-learning/sessions/{session_id}/map"""
+GET /api/root-learning/sessions/{session_id}/map
+GET /api/root-learning/lectures/{subject}/{run_id}/sources/{source_id}"""
     want = sorted(line for line in (ROUTES + '\n' + connection_routes + '\n' + root_routes).strip().split("\n") if line)
     got = current()
     missing = [r for r in want if r not in got]

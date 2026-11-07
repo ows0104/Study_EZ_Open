@@ -103,7 +103,7 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     {notice&&<p role="status">{notice}</p>}
     {writes.busy&&<p className="bank-note main-quiz-save-status" role="status">저장 중…</p>}
     {view?<>
-      {view.finished&&writes.blocked?<p role="status">마지막 저장과 미확인 요청을 확인 중입니다. 완료 현황은 확인 뒤 표시합니다.</p>:tab==='map'&&map?<><button className="main-quiz-back" onClick={()=>setTab('learn')}>← 문제로 돌아가기</button><RootMap map={map} summary={view.summary} position={`문항 ${Math.min(view.position+1,view.count)}/${view.count}`}/></>:
+      {view.finished&&writes.blocked?<p role="status">마지막 저장과 미확인 요청을 확인 중입니다. 완료 현황은 확인 뒤 표시합니다.</p>:tab==='map'&&map?<><button className="main-quiz-back" onClick={()=>setTab('learn')}>← 문제로 돌아가기</button><RootMap map={map} summary={view.summary} title={info?.title} position={`문항 ${Math.min(view.position+1,view.count)}/${view.count}`}/></>:
         <RootSolve view={view} scope={scope} disabled={writes.blocked} advancing={advancing} onAction={a=>void act(a)} onError={setError} onMap={()=>void showMap()}
           onToday={()=>{setView(null);setMap(null);setTab('learn');void refresh().catch(e=>setError(e.message));}}/>}
       {view.blocked?.includes('학습일')&&<button disabled={writes.blocked} onClick={()=>{setView(null);void refresh().catch(e=>setError(e.message));}}>오늘 학습 다시 계획</button>}
