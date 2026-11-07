@@ -8,7 +8,7 @@ OUT=ROOT/'runs/_replacement/261104_02-v1'
 read=lambda p:json.loads(p.read_text(encoding='utf-8'))
 p=argparse.ArgumentParser();p.add_argument('--port',type=int,required=True);a=p.parse_args()
 os.environ['PUBLIC_API_BASE_URL']='http://127.0.0.1:'+str(a.port)
-value=read(OUT/'result.json');base=read(OUT/'parent-result.json');packet=read(OUT/'packet.json');checked=read(OUT/'checked-for-publication.json')
+checked=read(OUT/'checked-for-publication.json');value=read(OUT/checked.get('resultFile','result.json'));base=read(OUT/'parent-result.json');packet=read(OUT/'packet.json')
 assert checked['verified']and value['ready']
 from tests.root_support import setup
 client,user,SessionLocal=setup()

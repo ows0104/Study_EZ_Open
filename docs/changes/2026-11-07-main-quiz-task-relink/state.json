@@ -11,12 +11,12 @@
   ],
   "approvals": {
     "build": {
-      "at": "2026-11-07T08:45:04.613523+00:00",
-      "evidence": "사용자 최신: 지금 학습한 사람이 없어서 기존91문항·학습기록·수정3/3 이력 버려도 됨. 그냥 새걸로 대체 가능. 앞선28구조/이미지보완/UI확인 지시 유지",
-      "scope": "원본자료로 실제CLI 새은행·그림·문항별목표 작성/독립검수·별도새생성0..3·UI유지·운영새판대체; 원래실행은 과거판 보관",
+      "at": "2026-11-07T09:52:35.948484+00:00",
+      "evidence": "최신 사용자: 기존91문항·학습기록·수정3/3 보존조건 해제, 새걸로 대체 가능. 문항수고정 없는 검수된 새판 대체 범위에서 추가문항수정없이 실제확인된 범위만 게시용선별·독립CLI검증",
+      "scope": "원래104후보 ready=false/3of3 보존, 의학·원본·전체회상·그림ok의 게시문항만 선별, 중요도doubt 주장은중립처리, 독립CLI 범위검수/원형보존/보류이유공개 후 새판대체. 제4회문항수정없음",
       "evidence_version": 2,
-      "source_hash": "62225f8e643115c126d35a60d47930fdf77eb95c982703f1b52d3e22ca5dfa3e",
-      "plan_hash": "8bc17a6c2876cfeb5b04d6296025e1f55161bd1c2483f8e14be9c885d32b6483",
+      "source_hash": "5fc69f99bd2b276a514a4daa9270b3d59d30e8e694ba24ea65d3c12979fcbf9b",
+      "plan_hash": "c70ad20fb2fe11e54a2e2264bf9753cd17fcbcf84ab586b90a89f018b1ffcf88",
       "inputs": [
         ".github",
         "bridge",
@@ -45,7 +45,7 @@
         "uv.lock",
         "web"
       ],
-      "release_hash": "f2f9d5e41909e07940c284dd14583631bfadcb8850350294f6f1cc9eb822567a"
+      "release_hash": "cb48129995c95b400ead4e2175a0cb75e52c180f9702a4ec2047af8cd88b4c4a"
     }
   },
   "checks": [
@@ -384,14 +384,182 @@
         "web"
       ],
       "log": "runs/_development/2026-11-07-main-quiz-task-relink/1794044305133869100-preserved-candidate.log"
+    },
+    {
+      "name": "relink-contracts",
+      "at": "2026-11-07T10:05:59.566831+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "scripts/check_main_quiz_replacement.py",
+        "contracts"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0135e4a6613e5b6275c462c70b4eb7e40da74f859e9c382bb3e04928b0738aff",
+      "plan_hash": "c70ad20fb2fe11e54a2e2264bf9753cd17fcbcf84ab586b90a89f018b1ffcf88",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "server",
+        "spotter/data",
+        "spotter/scripts",
+        "spotter/web",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "tests/runner",
+        "tests/spotter",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-main-quiz-task-relink/1794045908349013100-relink-contracts.log"
+    },
+    {
+      "name": "relink-server",
+      "at": "2026-11-07T10:06:12.971939+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "scripts/check_main_quiz_replacement.py",
+        "server"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0135e4a6613e5b6275c462c70b4eb7e40da74f859e9c382bb3e04928b0738aff",
+      "plan_hash": "c70ad20fb2fe11e54a2e2264bf9753cd17fcbcf84ab586b90a89f018b1ffcf88",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "server",
+        "spotter/data",
+        "spotter/scripts",
+        "spotter/web",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "tests/runner",
+        "tests/spotter",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-main-quiz-task-relink/1794045925064250800-relink-server.log"
+    },
+    {
+      "name": "preserved-candidate",
+      "at": "2026-11-07T10:06:59.912046+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "scripts/check_main_quiz_replacement.py",
+        "candidate"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0135e4a6613e5b6275c462c70b4eb7e40da74f859e9c382bb3e04928b0738aff",
+      "plan_hash": "c70ad20fb2fe11e54a2e2264bf9753cd17fcbcf84ab586b90a89f018b1ffcf88",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "server",
+        "spotter/data",
+        "spotter/scripts",
+        "spotter/web",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "tests/runner",
+        "tests/spotter",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-main-quiz-task-relink/1794046007796899000-preserved-candidate.log"
+    },
+    {
+      "name": "live-followup",
+      "at": "2026-11-07T10:09:32.713871+00:00",
+      "command": [
+        ".venv/Scripts/python.exe",
+        "scripts/check_main_quiz_replacement.py",
+        "live"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0135e4a6613e5b6275c462c70b4eb7e40da74f859e9c382bb3e04928b0738aff",
+      "plan_hash": "c70ad20fb2fe11e54a2e2264bf9753cd17fcbcf84ab586b90a89f018b1ffcf88",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "server",
+        "spotter/data",
+        "spotter/scripts",
+        "spotter/web",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "tests/runner",
+        "tests/spotter",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-main-quiz-task-relink/1794046165704075700-live-followup.log"
     }
   ],
   "review": {
-    "at": "2026-11-07T09:38:29.998201+00:00",
-    "summary": "5fc69f99의232계약/러너·서버5·원래입력보존검사 통과. 표시API에서 기술 진단만 복사본 필터, 실제 임상·원본한계와 원래판정/실패보존. 단일문항-전체회상·새예산·제공자증명·CAS·원래버전아카이브·공개범위·원본다운로드 경계 검토. 실제98문항초안 검수후 새수정3 진행중; 마지막CLI/격리UI·배포·반입 완료 전 출시불가.",
+    "at": "2026-11-07T10:09:54.605955+00:00",
+    "summary": "239계약·러너/서버6/실제98선별·영수증·부모원본 지문 통과. 격리 Main Quiz 데스크톱/모바일 실제이미지·원본PDF 동일SHA, 자기평가 저장/새로고침/Z취소 통과 및 스크린샷 육안확인. 104전체후보held·3of3 불변, 중요도 중립화·명시범위·CAS/보존 경계 검토. 전체CI와 동일SHA API/Pages 및 운영반입 확인은 후속.",
     "evidence_version": 2,
-    "source_hash": "5fc69f99bd2b276a514a4daa9270b3d59d30e8e694ba24ea65d3c12979fcbf9b",
-    "plan_hash": "8bc17a6c2876cfeb5b04d6296025e1f55161bd1c2483f8e14be9c885d32b6483",
+    "source_hash": "0135e4a6613e5b6275c462c70b4eb7e40da74f859e9c382bb3e04928b0738aff",
+    "plan_hash": "c70ad20fb2fe11e54a2e2264bf9753cd17fcbcf84ab586b90a89f018b1ffcf88",
     "inputs": [
       ".github",
       "bridge",
@@ -426,5 +594,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-07T09:38:30.281602+00:00"
+  "updated_at": "2026-11-07T10:09:54.750832+00:00"
 }

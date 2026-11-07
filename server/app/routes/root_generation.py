@@ -128,7 +128,7 @@ def public_job(db, row):
     report = None
     if row.result:
         result = row.result
-        if result.get('policy')=='verified-main-quiz-replacement/1':
+        if result.get('policy')in('verified-main-quiz-replacement/1','verified-main-quiz-curation/1'):
             from app.root_learning.replacement_import import report as replacement_report
             report=replacement_report(result)
         else: report = {'repairRounds': result['manifest']['repairRounds'], 'taskCount': len(result['document']['tasks']),

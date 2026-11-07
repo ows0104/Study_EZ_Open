@@ -7,7 +7,7 @@ from app.models import Lecture, PrequizJob, JOB_BANK, JOB_BUTTON, JOB_DONE
 from app.models.root_learning import RootContent, RootControl, RootEvent
 from app.models.root_generation import RootGeneration
 from app.root_learning.content import validate_registration
-from studyez_contracts.roots import document_hash, task_supplement as contract
+from studyez_contracts.roots import document_hash, task_supplement as contract,quiz_curation
 from studyez_contracts.roots.automation import packet_hash
 from studyez_contracts.learning_links.validate import require
 
@@ -15,21 +15,28 @@ POLICY=contract.POLICY
 
 
 def report(result):
-    last=result['rounds'][-1];source=last['sourceReview'];medical=last['medicalReview']
+    curated=result.get('policy')==quiz_curation.POLICY
+    candidate=result['candidate']if curated else result
+    last=candidate['rounds'][-1];source=last['sourceReview'];medical=last['medicalReview']
     notes=[]
     for r in source['reviews']:
-        verdict=max((r['source_verdict'],r['goal_verdict'],r['importance_verdict']),key=('ok','doubt','wrong').index)
+        verdict=max((r['source_verdict'],r['goal_verdict']),key=('ok','doubt','wrong').index)
         if verdict!='ok':notes.append({'source':'원본·회상목표 검수','question_id':r['question_id'],'verdict':verdict,'note':r['reason'],'suggested_answer':''})
+        if r['importance_verdict']!='ok':notes.append({'source':'중요도 근거 미확정','question_id':r['question_id'],
+            'verdict':r['importance_verdict'],'note':r['reason'],'suggested_answer':''})
     notes +=[{'source':'독립 정답 검수',**r}for r in medical['reviews']if r['verdict']!='ok']
     return {'repairRounds':result['repairRounds'],'taskCount':len(result['document']['tasks']),
-        'targetCount':len(result['document']['review']['targets']),'issues':source['coverage_findings'],
+        'targetCount':len(result['document']['review']['targets']),
+        'issues':result['approval']['scope_limits']if curated else source['coverage_findings'],
         'questionNotes':notes,'coverage':result['document']['review']['coverage']}
 
 
 def register(db,parent_id,value,*,expected_control_hash):
     parent=db.get(RootGeneration,parent_id)
     require(parent and parent.result and parent.result_digest==document_hash(parent.result),'replacement: missing/changed historical generation')
-    contract.validate(parent.result,value);require(value['ready'],'replacement: unresolved review cannot be published')
+    if value.get('policy')==quiz_curation.POLICY:quiz_curation.validate(parent.result,value)
+    else:contract.validate(parent.result,value)
+    require(value['ready'],'replacement: unresolved review cannot be published')
     gid=value['runId'];require(type(gid)is str and re.fullmatch('[0-9a-f]{32}',gid),'replacement: invalid new generation ID')
     digest=document_hash(value);prior=db.get(RootGeneration,gid)
     if prior:
@@ -53,14 +60,14 @@ def register(db,parent_id,value,*,expected_control_hash):
         message='새 Main Quiz 실제 CLI 작성·독립 검수 완료 · '+str(len(doc['tasks']))+'과제 · 새 수정'+str(value['repairRounds'])+'of3',finished_at=datetime.now(UTC))
     db.add(job);db.flush()
     row=RootGeneration(id=gid,job_id=job.id,subject=subject,run_id=rid,user_id='runner',request_id='replacement-'+gid,
-        input_digest=document_hash({'policy':POLICY,'runId':gid}),packet=packet,baseline=expected_control_hash,result=value,result_digest=digest,
-        web_dispatch={'policy':POLICY,'parentGenerationId':parent_id,'parentResultHash':value['parentResultHash'],
+        input_digest=document_hash({'policy':value['policy'],'runId':gid}),packet=packet,baseline=expected_control_hash,result=value,result_digest=digest,
+        web_dispatch={'policy':value['policy'],'parentGenerationId':parent_id,'parentResultHash':value['parentResultHash'],
             'packetHash':packet['inputHash'],'sourceSnapshots':snapshots,'newRun':True,'historicalRepairRounds':value['historicalRepairRounds']})
     source_records(row)
     db.add(row);db.add(RootContent(subject=subject,run_id=rid,revision=doc['revision'],document=doc,digest=document_hash(doc),reviewed=True))
     # Existing content/events/sessions stay archived; visibility never expands here.
     control.revision=doc['revision']
     db.add(RootEvent(user_id='runner',request_id='replacement-published-'+gid,session_id='',subject=subject,run_id=rid,revision=doc['revision'],kind='publication',
-        payload={'policy':POLICY,'generationId':gid,'parentGenerationId':parent_id},result={'revision':doc['revision'],'newRepairRounds':value['repairRounds']}))
+        payload={'policy':value['policy'],'generationId':gid,'parentGenerationId':parent_id},result={'revision':doc['revision'],'newRepairRounds':value['repairRounds']}))
     db.commit()
     return {'generationId':gid,'revision':doc['revision'],'reused':False,'privatePilot':bool(control.allowed_users),'tasks':len(doc['tasks'])}

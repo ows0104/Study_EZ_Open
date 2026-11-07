@@ -44,8 +44,9 @@ def snapshot(db,subject,rid):
 
 
 def main(revision,verify_only=False):
-    value=read(OUT/'result.json');checked=read(OUT/'checked-for-publication.json');packet=read(OUT/'packet.json')
-    assert checked['verified']and value['ready']and checked['resultSha256']==hashlib.sha256((OUT/'result.json').read_bytes()).hexdigest()
+    checked=read(OUT/'checked-for-publication.json');result_path=OUT/checked.get('resultFile','result.json')
+    value=read(result_path);packet=read(OUT/'packet.json')
+    assert checked['verified']and value['ready']and checked['resultSha256']==hashlib.sha256(result_path.read_bytes()).hexdigest()
     assert checked['runId']==value['runId']
     with urllib.request.urlopen(API+'/api/health',timeout=30)as r:health=json.load(r)
     assert health['revision']==revision and health['environment']=='production','Reviewed code must be deployed first'

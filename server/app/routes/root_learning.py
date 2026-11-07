@@ -247,11 +247,11 @@ def revealed_answer(db, doc, q):
     from app.storage import ObjectStorage
     answer = content.answer(q)
     generation = db.scalars(select(RootGeneration).where(RootGeneration.subject == doc.subject,
-        RootGeneration.run_id == doc.run_id, RootGeneration.result_digest.is_not(None))).all()
-    generation = next((g for g in generation if g.packet['revision'] == doc.revision), None)
+        RootGeneration.run_id == doc.run_id, RootGeneration.result_digest.is_not(None),
+        RootGeneration.packet['revision'].as_string()==doc.revision)).first()
     if generation:
         result = generation.result
-        if result.get('policy')=='verified-main-quiz-replacement/1':
+        if result.get('policy')in('verified-main-quiz-replacement/1','verified-main-quiz-curation/1'):
             from app.root_learning.replacement_import import report as replacement_report
             summary=replacement_report(result)
             answer['reviewNotes']=[r for r in summary['questionNotes']if r['question_id']==q['question_id']]
