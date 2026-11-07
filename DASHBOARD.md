@@ -33,6 +33,8 @@
 
 | P1 | 91문항 고정 분할 검수·이미지 확인·업로드 | ows0104 / Codex 병렬 파이프라인 후속 세션 | codex/chunked-main-quiz-review | quizbank 신규 분할검수·continuation, runner Native/업로드, studyez_contracts/roots, server/app/routes/root_learning.py(명시 반입의 원본 링크 읽기)·관련 server검사, 관련 tests, docs/changes/2026-11-07-chunked-main-quiz-review, 기존261104_02 산출물 읽기 전용 및 별도 후속 runs | 2026-11-07 | 594f1fcf·PR12초안. 실제CLI22묶음 모두완료·원래91문항/수정2of3/실패/전체파일 보존. 원본81ok/8doubt/2wrong·의학84ok/6doubt/1wrong, 그림15문항19장 갤러리확인. C005 회상계획누락으로 최종등록실패·live-evidence/release불가·운영미변경. 이전계획없어 임의복원금지. 남은1회 구조보완 사용 여부 사용자응답대기. 코드319+서버4·경계검사통과. 사슬알균미실행 |
 
+| P1 | C005 마지막1회 구조보완·검수재사용·업로드 | ows0104 / Codex Main Quiz 후속 | codex/main-quiz-final-plan | runner 신규 plan-repair·검증, studyez_contracts/roots, server reviewed_import 증명연결, tests, scripts, docs/changes/2026-11-07-final-main-quiz-plan, 별도 runs | 2026-11-07 | 사용자 현재 명시 승인: 남은1회 구조보완 승인. 본 세션 기존 PR12/11/10 및 인계복구 영역 계속 담당, 다른 Map/UI 영역 제외.91문항·답·이미지불변, 실제CLI가 C005 회상계획 한행만 작성하고3/3소비. 동일 개별검수/의학입력 재사용 증명+새 전체원본대조·그림확인후 업로드. 원래실패/22검수/상한보존·자동반복금지 |
+
 ## 2. 앞으로 하기로 약속된 일
 
 
