@@ -1,0 +1,20 @@
+{
+  "id": "2026-11-07-main-quiz-pharm-ui",
+  "title": "Main-Quiz 약리 블럭 UI 복원",
+  "area": "site",
+  "created_at": "2026-11-07T10:56:41.230014+00:00",
+  "required_checks": [
+    "web",
+    "server-regression",
+    "browser"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-07T10:56:41.230044+00:00"
+}
