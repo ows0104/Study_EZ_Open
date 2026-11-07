@@ -88,6 +88,12 @@ assert job['report'] == {'repairRounds': 2, 'taskCount': 7, 'targetCount': 7,
                       {'source': '독립 정답 검수', 'question_id': 'Q001', 'verdict': 'doubt', 'note': 'synthetic note'}],
     'coverage': [{'point_id': 'P000', 'status': 'covered', 'reason': ''}]}, job['report']
 selects = generation_selects()
+# 이 판의 report를 처음 만들 때만 result를 한 번 더 읽는다(판마다 한 번, test_root_generation_columns).
+assert len(selects) == 2 and 'LIMIT' in selects[0].upper() and 'root_generation.result AS' in selects[1], selects
+first = job
+job = poll()
+assert job == first, job
+selects = generation_selects()
 assert len(selects) == 1 and 'LIMIT' in selects[0].upper(), selects
 
 print('root generation poll: bounded query and preserved fields')
