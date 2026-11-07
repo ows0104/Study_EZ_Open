@@ -21,19 +21,13 @@
 
 | P1 | 심내막염·CNS Map→포인트→문제→실제 풀이 E2E 실험 | ows0104 / Codex E2E 세션 | codex/map-point-e2e | docs/changes/2026-11-06-map-point-e2e, runs/_e2e/26110507 (실험 전용 저장소·격리 DB·로컬 앱), 기존 추출 결과 읽기 전용 | 2026-11-06 | CNS49문항 중40과제 실제UI·응답/진도 새로고침 복원·별도 기술계정 사건 저장 확인. 사람기록0 유지해 풀이 링크/JSON 제공. 심내막염47문항 최종 source-2/medical-2 완료했으나 서로 다른 C001/C012 중복으로 BANK등록 실패·3회상한 도달 보류(40ok/6doubt/1wrong). 양강의 완료 아님. 원본740파일·실패/소비보존, 운영548/DB/은행/학습/배포변경없음. 로컬 검토대기 |
 
-| P1 | 완료 작성 초안의 구조 수용 실패 복구 | ows0104 / Codex E2E 복구 세션 | codex/root-authoring-recovery | quizbank/connection_generate_v2.py, quizbank/connection_authoring_recovery.py, studyez_contracts/roots/generation_v2.py, runner/root_native_json.py, 관련 tests, docs/changes/2026-11-06-root-authoring-recovery | 2026-11-06 | de1fcf73 구조복구·252검사+서버3·실제740파일보존/복구증거 통과. CNS49/40 준비. 심내막염 후속은 별도 root-tier-transport 후보로 연결, 최종ID중복 보류. 원래실패·3회상한 보존. 로컬 검토대기·운영미배포. 사용자 인계 승인: cli-parallel-main-quiz 세션이 기존 복구 후보 보존·연결 담당 |
-
-| P1 | E2E 완료 파일의 기존 등급 별칭 전송 복구 | ows0104 / Codex E2E 형식 복구 세션 | codex/root-tier-transport | studyez_contracts/bank/authored_json.py, roots/generation_v2.py, runner/root_native_json.py, runner/root_tier_recovery.py, quizbank/connection_generate_v2.py, 관련 tests, docs/changes/2026-11-06-root-tier-transport | 2026-11-06 | bba2dad6 기존별칭1곳 및 파생설명순서 호환·명시지문재검증, 모델재호출0·소비3 유지. 12전용+252회귀+서버3·실제Native/보존검증통과. 최종source-2/medical-2 완료. 다른 C001/C012 중복은 임의합치지 않고 BANK등록보류. 코드 기술복구와 콘텐츠수용 구별. 로컬 검토대기·운영미배포. 사용자 인계 승인: cli-parallel-main-quiz 세션이 기존 복구 후보 보존·연결 담당 |
 
 
 
-| P1 | 관리자 Main Quiz 원클릭 생성·검수·업로드와 중복 패널 정리 | ows0104 / Codex Main Quiz 버튼 세션 | codex/admin-main-quiz-one-click | web/src/bank/BankPanel.tsx, RootGenerationPanel.tsx, rootWeb.ts, 관련 web/tests, docs/changes/2026-11-06-admin-main-quiz-one-click | 2026-11-06 | 사용자 조정 승인: Main Quiz만 담당, calendar/셸 제외. d304fa09 구현·단위10/타입/빌드/release gate 통과. PR #10 https://github.com/ows0104/Study_EZ_Open/pull/10 초안·운영미배포. 현재 지도/포인트는 원본전용 단일 CLI 추출, 웹문항과 CLI통합·검수 후 러너 업로드. UI세션 인계: GuidePage 버튼명 Main Quiz 만들기, 생성부터 업로드 자동 진행으로 안내 갱신 필요. 기록·상한 보존 |
 
-| P1 | CLI 병렬 Main Quiz·지도·포인트 및 이미지 시범 | ows0104 / Codex 병렬 파이프라인 세션 | codex/cli-parallel-main-quiz | quizbank/connection_generate_v2.py 및 신규 병렬 모듈·이미지 목록, runner/root_native_json.py·connection_generation.py·parallel_status.py(기존 status_batch 재사용), server/app/routes/root_generation.py·prequiz_jobs.py, web/src/bank/RootGenerationPanel.tsx, studyez_contracts/roots, content/prompts/learning-links/parallel, 관련 tests, docs/changes/2026-11-06-cli-parallel-main-quiz, 격리 runs | 2026-11-06 | 7fdc2f65·PR #11 https://github.com/ows0104/Study_EZ_Open/pull/11 초안/출시보류. 기존 복구·버튼 후보 보존 통합. CLI3작업 병렬/개별진행·원본그림 지원 구현, source288/runner40·병렬/서버/합성E2E/빌드 통과. 실제261104_02 은행74·지도36/54·포인트68 동시완료 후 2차수정91문항/이미지명세19개. source-2가2400초 시간초과, 완료/실패/사용량불명/수정2/3 보존·자동반복0. pilot-evidence실패/release불가·업로드/운영미변경. 검수분할 후속은 제안만, 사슬알균미실행 |
 
-| P1 | 91문항 고정 분할 검수·이미지 확인·업로드 | ows0104 / Codex 병렬 파이프라인 후속 세션 | codex/chunked-main-quiz-review | quizbank 신규 분할검수·continuation, runner Native/업로드, studyez_contracts/roots, server/app/routes/root_learning.py(명시 반입의 원본 링크 읽기)·관련 server검사, 관련 tests, docs/changes/2026-11-07-chunked-main-quiz-review, 기존261104_02 산출물 읽기 전용 및 별도 후속 runs | 2026-11-07 | 594f1fcf·PR12초안. 실제CLI22묶음 모두완료·원래91문항/수정2of3/실패/전체파일 보존. 원본81ok/8doubt/2wrong·의학84ok/6doubt/1wrong, 그림15문항19장 갤러리확인. C005 회상계획누락으로 최종등록실패·live-evidence/release불가·운영미변경. 이전계획없어 임의복원금지. 남은1회 구조보완 사용 여부 사용자응답대기. 코드319+서버4·경계검사통과. 사슬알균미실행 |
 
-| P1 | C005 마지막1회 구조보완·검수재사용·업로드 | ows0104 / Codex Main Quiz 후속 | codex/main-quiz-final-plan | runner 신규 plan-repair·검증, studyez_contracts/roots, server reviewed_import 증명연결, tests, scripts, docs/changes/2026-11-07-final-main-quiz-plan, 별도 runs | 2026-11-07 | 사용자 현재 명시 승인: 남은1회 구조보완 승인. 본 세션 기존 PR12/11/10 및 인계복구 영역 계속 담당, 다른 Map/UI 영역 제외.91문항·답·이미지불변, 실제CLI가 C005 회상계획 한행만 작성하고3/3소비. 동일 개별검수/의학입력 재사용 증명+새 전체원본대조·그림확인후 업로드. 원래실패/22검수/상한보존·자동반복금지 |
+
 
 ## 2. 앞으로 하기로 약속된 일
 
@@ -59,6 +53,7 @@ merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 �
 
 | 완료일 | 작업 | 작업자 | PR |
 |---|---|---|---|
+| 2026-11-07 | Main Quiz 원클릭·CLI3작업 병렬/개별진행·분할검수/기존복구 통합 PR13 병합2489e52e. 전체CI 통과. 실제261104_02 최종91문항·그림15문항19장·49과제, C005한행CLI/새전체대조 완료 수정3/3; 기존문항/판정/22검수/실패보존, 격리UI/원본PDF링크 통과. API/Pages 자동배포 및 관리자 시범 반입 진행 중(아직 업로드완료 아님). 사슬알균미실행 | ows0104 / Codex Main Quiz 후속 | [#13](https://github.com/ows0104/Study_EZ_Open/pull/13) (PR10/11/12와 인계복구 포함) |
 | 2026-11-06 | UI/UX 개편 1단계(웹만) 구현·검사 완료: 좌측 메뉴·흰 바탕·색 5조합·캘린더(D-day·회독·학습률)·강의 패널·강의 목록·감염과 면역 1차/2차 블럭·강의 번호. 서버·DB·출제 미변경. 병합(=운영 배포)은 사용자 확인 후 | HungryPotato01 / Claude UI 개편 세션 | [#9](https://github.com/ows0104/Study_EZ_Open/pull/9) (병합 전) |
 | 2026-11-06 | 새 파이프라인의 Main Quiz 통합(회상 단위 PR7 포함) 7b96003f master 반영. 필수 계약644·서버52·웹27·CUA15 통과. API·Pages7b96003f 같은SHA 배포 및 실제 Main Quiz assets 대조 완료(한국15:16:51 게시). [배포 기록](https://github.com/ows0104/Study_EZ_Open/blob/codex/main-quiz-unified/docs/changes/2026-11-06-main-quiz-unified/deployment.md). 직접 게시 준비는 자동복구로 종료·수동 업로드0. GuidePage 인계: 새 화면 Space/Enter 답 확인·1/2/3 회상평가·Z 취소, 기존 은행4등급/기록 유지 | ows0104 / Codex Main Quiz 세션 | [#8](https://github.com/ows0104/Study_EZ_Open/pull/8) |
 | 2026-11-05 | 순수 JSON 수신·검증·결정적 변환과 프롬프트 1.82 API·웹 a3f67d13 배포 완료. 전체 검사/health SHA/401/운영 프롬프트 확인. 로컬 러너 코드 갱신·기존 매칭 보존. 브리지 1.3.23 사용자 업데이트 필요 — [배포 기록](https://github.com/ows0104/Study_EZ_Open/blob/codex/bank-json-delivery/docs/changes/2026-11-05-bank-json-delivery/deployment.md) | ows0104 / Codex JSON 전환 세션 | [#6](https://github.com/ows0104/Study_EZ_Open/pull/6) |
