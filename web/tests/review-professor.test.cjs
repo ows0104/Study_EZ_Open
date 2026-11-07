@@ -28,23 +28,32 @@ test('a changed professor overrides timetable tokens for review while preview st
   ]};
   const review = load('reviewPrompt').renderReviewPrompt('{교수}\n{파일명}',detail);
   assert.ok(review.startsWith('허기영\n[261001_01]'));
-  assert.ok(review.includes('시간표나 족보의 올해 담당 표기와 다르면'));
+  assert.equal(review, '허기영\n[261001_01]약물대사(허기영)_김필기.pdf\n\n올해 담당 교수: 허기영');
   const preview = load('previewPrompt').renderPreviewPrompt('{교수}\n{파일명}',detail);
   assert.ok(preview.startsWith('유경상\n[251001_01]'));
   assert.ok(!preview.includes('복습 담당 교수 확인'));
 });
-test('custom review templates still receive the source check and unknowns are not replaced by timetable guesses', () => {
+test('custom review templates receive one professor line and unknowns are not replaced by timetable guesses', () => {
   const detail = {title:'강의',professors:['예정교수'],date:'2026-11-01',subject:'과목',files:[
     {kind:'notes_current',filename:'[261001_01]강의(2)_필기자.pdf'}]};
   const review = load('reviewPrompt').renderReviewPrompt('간결하게 복습해줘. {교수}',detail);
-  assert.ok(review.startsWith('간결하게 복습해줘.'));
-  assert.ok(review.includes('교수 미상'));
+  assert.equal(review, '간결하게 복습해줘.\n\n올해 담당 교수: 교수 미상');
   assert.ok(!review.includes('예정교수'));
 });
-test('canonical bank instructions check actual notes and retain other professors as references', () => {
+test('default review uses the requested flow prompt and only one professor line', () => {
+  const { DEFAULT_REVIEW_PROMPT, renderReviewPrompt } = load('reviewPrompt');
+  const filename = '[261104_01] 포도알균(김범준)_박정수 v1.pdf';
+  const detail = {title:'포도알균',professors:['예정교수'],date:'2026-11-04',subject:'감염과 면역',files:[
+    {kind:'notes_current',filename}]};
+  assert.equal(renderReviewPrompt(DEFAULT_REVIEW_PROMPT, detail),
+    `${filename}\n오늘 들은 강의를 복습하고 싶어. 첨부한 올해 필기와 족보를 바탕으로 큰 흐름을 설명해줘.\n\n올해 담당 교수: 김범준`);
+  assert.equal(p.reviewProfessorGuidance('[261001_01]강의(문경철김혜령)_필기자.pdf'),
+    '올해 담당 교수: 문경철·김혜령');
+});
+
+test('canonical bank instructions retain professor context and priority/reference rules', () => {
   const bank = fs.readFileSync(path.join(__dirname,'../../content/prompts/bank/bankPrompt.md'),'utf8');
-  assert.match(bank,/Version: 1\.79/);
-  assert.ok(bank.includes('올해 실제 담당 교수는 첨부한 올해 필기의 파일명'));
-  assert.ok(bank.includes('필기자 이름을 교수로 읽지 않으며'));
+  assert.ok(bank.includes('{{professor_info}}'));
+  assert.ok(bank.includes('올해 담당 교수와 일치하는 기출을 우선'));
   assert.ok(bank.includes('다른 교수·교수 미상 기출은 참고'));
 });

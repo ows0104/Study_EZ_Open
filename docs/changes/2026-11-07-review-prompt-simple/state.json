@@ -1,0 +1,135 @@
+{
+  "id": "2026-11-07-review-prompt-simple",
+  "title": "복습 개인링크 기본 문구와 교수 안내 간소화",
+  "area": "site",
+  "created_at": "2026-11-07T09:26:31.627235+00:00",
+  "required_checks": [
+    "review-prompt",
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-07T09:27:45.087310+00:00",
+      "evidence": "2026-11-07 현재 채팅 사용자: 긴 설명은 빼고 올해 담당 교수만 한 줄로 나오게 수정해줘. 올해 필기와 족보를 바탕으로 큰 흐름을 설명해줘를 기본 프롬프트로 해줘.",
+      "scope": "복습 개인링크 기본 문장 교체, 실제 올해 교수 한 줄 표시, 기존 개인 문구/예습/자료/기록 보존, 관련 검사 및 일반 코드 출시",
+      "evidence_version": 2,
+      "source_hash": "f2960c5f2b833ed4c9c03bb11e1ce129cdcc49edc2b77c2d7d654c34a4570366",
+      "plan_hash": "1238341baec8d619074b1214dd62568d9be352808dfec43e0933be5d6f0ba10b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "bc4ca25da10df2a8bce6efb03ad70cbd3a423c73e46a62821213a051ee7b061a"
+    }
+  },
+  "checks": [
+    {
+      "name": "review-prompt",
+      "at": "2026-11-07T09:28:47.400561+00:00",
+      "command": [
+        "C:/Program Files/nodejs/node.exe",
+        "--test",
+        "web/tests/review-professor.test.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "7bf249a40c7b95e505e8413af55a47032605d2ea1f95e8d9bd5d57d5aa850bda",
+      "plan_hash": "1238341baec8d619074b1214dd62568d9be352808dfec43e0933be5d6f0ba10b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-review-prompt-simple/1794043726722314100-review-prompt.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T09:29:44.553616+00:00",
+      "command": [
+        "powershell.exe",
+        "-NoProfile",
+        "-Command",
+        "npm.cmd --prefix web run typecheck; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; npm.cmd --prefix web run build; exit $LASTEXITCODE"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "7bf249a40c7b95e505e8413af55a47032605d2ea1f95e8d9bd5d57d5aa850bda",
+      "plan_hash": "1238341baec8d619074b1214dd62568d9be352808dfec43e0933be5d6f0ba10b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-review-prompt-simple/1794043741617304500-web.log",
+      "web_artifact": "ce418a0c6d55a2c272a15751077537738676007d8be94fff95b5a3e5488de70f",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": {
+    "at": "2026-11-07T09:30:19.688296+00:00",
+    "summary": "직접 diff 리뷰: 기본 문장은 사용자 원문과 일치하며 교수 안내는 한 줄이다. 기존 파서, 현재 필기 우선, 미상/공동 교수, 개인 템플릿, 예습과 첨부/기록 보존을 확인했다. 관련 검사 5개 및 웹 타입/빌드 통과. 은행 프롬프트 변경 없이 stale 1.79 문자열 검사만 현재 계약으로 갱신. 미해결 발견 없음.",
+    "evidence_version": 2,
+    "source_hash": "7bf249a40c7b95e505e8413af55a47032605d2ea1f95e8d9bd5d57d5aa850bda",
+    "plan_hash": "1238341baec8d619074b1214dd62568d9be352808dfec43e0933be5d6f0ba10b",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-07T09:30:19.806585+00:00"
+}
