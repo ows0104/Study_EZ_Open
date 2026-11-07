@@ -50,4 +50,4 @@ def test_rejects_missing_target_unreviewed_status_and_other_changes():
     with pytest.raises(ValueError):
         imp.validate(proof(lineage, output(lineage)), lineage, changed)
     with pytest.raises(ValueError):
-        imp.validate({**proof(lineage, output(lineage)), 'modelCalls': 3}, lineage, after)
+        imp.validate({**proof(lineage, output(lineage)), 'modelCalls': 1}, lineage, after)

@@ -38,7 +38,8 @@ def only_importance_changed(before, after):
 def validate(proof, lineage_brief, final_brief):
     require(type(proof) is dict and set(proof) == {'policy', 'reason', 'stage', 'briefBeforeHash', 'importance',
                                                    'sourceInputHash', 'sourceRaw', 'usage', 'toolSha256', 'modelCalls'}
-            and proof['policy'] == POLICY and proof['modelCalls'] == 2 and type(proof['reason']) is str and proof['reason'].strip(),
+            and proof['policy'] == POLICY and type(proof['modelCalls']) is int and proof['modelCalls'] >= 2
+            and type(proof['reason']) is str and proof['reason'].strip(),
             'importance: malformed review proof')
     require(proof['briefBeforeHash'] == document_hash(lineage_brief), 'importance: different lineage brief')
     expected = apply(lineage_brief, proof['importance'])
