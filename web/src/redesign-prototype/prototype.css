@@ -19,7 +19,7 @@
   --ink-3: #7c7c7c;
   --dark: #1f1f1f;
   /* 시험·D-day·신규 교수 N */
-  --exam: #e5484d;
+  --exam: #ec7a7d;
   --exam-ink: #c4372f;
   --exam-soft: #fdecea;
   /* 메인 컬러. 색 후보 전환기가 --accent·--accent-ink 둘만 바꾼다. 옅은 색은 섞어서 만든다. */
@@ -240,9 +240,11 @@ svg { flex: none; }
 .chip-learning { display: flex; flex-direction: column; gap: 4px; margin-top: auto; padding-top: 3px; }
 .chip .readline { overflow: hidden; }
 
-.chip.is-exam { background: var(--exam); border-color: var(--exam); color: #fff; }
-.chip.is-exam:hover { border-color: var(--exam-ink); }
-.chip.is-exam .chip-meta { color: #ffe1df; }
+/* 시험: 옅은 빨강 바탕 + 빨간 글자(2026-11-07 사용자 지시: 새빨간 칸이 너무 강하다) */
+.chip.is-exam { background: #fdeeee; border-color: #f3b0b2; color: var(--exam-ink); }
+.chip.is-exam:hover { border-color: var(--exam); }
+.chip.is-exam .chip-title { font-weight: 700; }
+.chip.is-exam .chip-meta { color: #d87d80; }
 /* 실습·TBL·CBL은 강의와 같은 모양이다(2026-11-05 사용자 지시). */
 /* 임상의학입문: 같은 시간의 다른 과목. 가장 옅게 */
 .chip.is-intro { background: transparent; border: 1px dashed var(--line-strong); color: #a3a3a3; }
@@ -279,7 +281,7 @@ svg { flex: none; }
 .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; font-size: 12px; color: var(--ink-3); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid #a9a9a9; background: #fff; }
-.swatch.is-exam { background: var(--exam); border-color: var(--exam); }
+.swatch.is-exam { background: #fdeeee; border-color: #f3b0b2; }
 .swatch.is-intro { border: 1px dashed var(--line-strong); background: transparent; }
 .legend-sep { width: 1px; height: 12px; background: var(--line-strong); }
 .legend-meter .meter { width: 36px; }
@@ -376,7 +378,7 @@ svg { flex: none; }
 
 .readline { display: flex; align-items: center; gap: 5px; height: 3px; }
 .readline i, .readline .rl-note { display: block; width: clamp(16px, 1.3vw, 24px); height: 3px; border-radius: 2px; flex: none; }
-.rl-pre { background: var(--active); }
+.rl-pre { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); }
 .rl-pre.is-on { background: color-mix(in srgb, var(--accent2) 42%, #fff); }
 .rl-notes { display: flex; gap: 2px; }
 .rl-note { background: #c9c9c9; }
@@ -725,3 +727,112 @@ svg { flex: none; }
 .deck-links button:hover { background: var(--hover); }
 .deck-links button:disabled { color: #c4c4c4; background: none; cursor: default; }
 .sheet .sheet-foot { align-items: center; }
+
+/* ───────── 2026-11-07 캘린더 머리·오늘 할 일·양옆 화살표 ───────── */
+
+.calendar-main { overflow: hidden; }
+.cal-head { margin-bottom: 14px; }
+.cal-head h1 { display: flex; align-items: baseline; gap: 12px; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.03em; }
+.cal-dday { font-size: 26px; font-weight: 700; color: #e5534b; font-variant-numeric: tabular-nums; }
+
+.today-board { display: grid; grid-template-columns: repeat(2, minmax(0, 260px)); gap: 10px; margin-bottom: 16px; }
+.today-card {
+  display: grid; grid-template-columns: 1fr auto; grid-template-areas: "label num" "sub num"; align-items: center;
+  gap: 2px 12px; padding: 12px 16px; border-radius: 14px; text-align: left; border: 1px solid transparent;
+}
+.today-card-label { grid-area: label; font-size: 13px; font-weight: 600; }
+.today-card-sub { grid-area: sub; font-size: 12px; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.today-card b { grid-area: num; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.today-card b small { font-size: 14px; font-weight: 600; margin-left: 2px; }
+.today-card.is-pre { background: var(--accent2-soft); border-color: var(--accent2-line); color: var(--accent2-ink); }
+.today-card.is-review { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-ink); }
+.today-card:hover { filter: brightness(0.98); }
+
+/* 캘린더는 남은 높이를 다 쓰고 넘치지 않는다. 주는 양옆 화살표로만 넘긴다. */
+.calendar-frame { flex: 1; min-height: 0; display: grid; grid-template-columns: 36px minmax(0, 1fr) 36px; grid-template-rows: minmax(0, 1fr); gap: 6px; align-items: center; }
+.calendar-frame .calendar-surface { height: 100%; min-height: 0; overflow: hidden; }
+.week-arrow { display: grid; place-items: center; width: 36px; height: 72px; border-radius: 10px; color: var(--ink-3); }
+.week-arrow:hover { background: var(--hover); color: var(--ink); }
+
+/* 4. 대화 버튼도 갈래 색, 퀴즈 버튼과 같은 높이 */
+.action-button.is-chat-pre { color: var(--accent2-ink); border-color: var(--accent2-line); }
+.action-button.is-chat-pre svg { color: var(--accent2-ink); }
+.action-button.is-chat-review { color: var(--accent-ink); border-color: var(--accent-line); }
+.action-button.is-chat-review svg { color: var(--accent-ink); }
+.action-button { box-sizing: border-box; height: 34px; line-height: 1; }
+
+/* ───────── 2026-11-07(2): 날짜 줄 화살표 · 개인 대화 버튼 안 ───────── */
+
+.calendar-frame { grid-template-columns: minmax(0, 1fr); }
+.week-head { position: relative; }
+.week-head .week-gutter { display: grid; place-items: center; }
+.week-step { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; color: var(--ink-2); }
+.week-step:hover { background: var(--hover); color: var(--ink); }
+.week-step.is-next { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); }
+.today-card { grid-template-areas: "label num"; padding: 12px 18px; }
+
+.variant-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: -4px 0 10px; padding: 6px 8px; border: 1px dashed var(--line-strong); border-radius: 10px; font-size: 11.5px; color: var(--ink-3); }
+.variant-switch span { margin-right: 4px; }
+.variant-switch button { padding: 3px 8px; border-radius: 6px; font-size: 11.5px; color: var(--ink-2); }
+.variant-switch button[aria-pressed='true'] { background: var(--ink); color: #fff; }
+
+/* A: 별도 작은 「내 프롬프트」 */
+.prompt-chip { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 10px; border-radius: 9px; font-size: 12.5px; color: var(--ink-2); border: 1px dashed var(--line-strong); }
+.prompt-chip:hover { background: var(--hover); color: var(--ink); }
+.prompt-chip:disabled { opacity: 0.45; cursor: default; background: none; }
+
+/* B·C: 붙은 버튼 */
+.split-button { position: relative; display: inline-flex; height: 34px; border-radius: 9px; border: 1px solid var(--line-strong); background: #fff; }
+.split-button.is-pre { border-color: var(--accent2-line); color: var(--accent2-ink); }
+.split-button.is-review { border-color: var(--accent-line); color: var(--accent-ink); }
+.split-button.is-disabled { opacity: 0.45; }
+.split-main { display: inline-flex; align-items: center; gap: 6px; padding: 0 11px; font-size: 13.5px; font-weight: 500; color: inherit; border-radius: 8px 0 0 8px; }
+.split-side { display: grid; place-items: center; width: 32px; color: inherit; border-left: 1px solid currentColor; border-left-color: color-mix(in srgb, currentColor 30%, #fff); border-radius: 0 8px 8px 0; }
+.split-main:hover, .split-side:hover { background: var(--hover); }
+.split-button button:disabled { cursor: default; background: none; }
+.chat-menu {
+  position: absolute; top: calc(100% + 4px); right: 0; z-index: 10; display: flex; flex-direction: column; min-width: 170px; padding: 5px;
+  background: #fff; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+}
+.chat-menu button { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; font-size: 13px; color: var(--ink); text-align: left; }
+.chat-menu button:hover { background: var(--hover); }
+
+/* 2026-11-07(3): 오늘 카드는 머리 오른쪽 정렬 */
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.cal-head .today-board { margin: 0 0 0 auto; grid-template-columns: repeat(2, minmax(150px, 200px)); }
+.cal-head .today-card { padding: 10px 16px; }
+.cal-head { flex-wrap: nowrap; }
+.cal-head h1 { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-head .today-board { flex: none; grid-template-columns: repeat(2, minmax(118px, 190px)); }
+.has-sheet .cal-head h1 { font-size: 24px; }
+.has-sheet .cal-head .today-card b { font-size: 22px; }
+
+/* 2026-11-07(4): 빈 막대는 회색 채움 없이 테두리만. 3px 안에 1px 테두리를 그리면 회색 막대로 보여서
+ * 회독 토막·학습률 막대를 5px로 키우고 가운데를 비운다. */
+.chip-learning { gap: 4px; }
+.meter, .readline i, .readline .rl-note { height: 5px; }
+.readline { height: 5px; }
+.meter.is-closed { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); }
+.rl-pre { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); }
+.rl-note.is-empty { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); }
+
+/* 오늘 카드: 숫자는 조금 작게, 글자는 조금 크게, 높이는 제목 줄과 비슷하게 */
+.cal-head .today-card { padding: 6px 14px; gap: 0 10px; border-radius: 12px; }
+.cal-head .today-card-label { font-size: 14px; }
+.cal-head .today-card b { font-size: 20px; }
+.cal-head .today-card b small { font-size: 13px; }
+.has-sheet .cal-head .today-card b { font-size: 18px; }
+
+/* 아주 좁은 화면: 오늘 카드는 제목 아래 줄로 */
+@media (max-width: 640px) {
+  .cal-head { flex-wrap: wrap; }
+  .cal-head h1 { white-space: normal; font-size: 22px; }
+  .cal-head .today-board { margin: 0; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* 2026-11-07(5): 예습 퀴즈 완료 토막. 5px로 키운 뒤 42% 섞은 색이 탁한 베이지로 보여서 맑은 두 번째 강조색에 가깝게 */
+.rl-pre.is-on { background: color-mix(in srgb, var(--accent2) 72%, #fff); }
+/* 좁아지면 제목만 줄이고 D-day는 끝까지 보인다 */
+.cal-head h1 { overflow: visible; text-overflow: clip; }
+.cal-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-dday { flex: none; }

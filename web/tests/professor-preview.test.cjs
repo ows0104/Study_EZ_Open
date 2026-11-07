@@ -44,9 +44,7 @@ test('calendar tags, fallback notes, provenance, keyboard and mobile', async () 
     assert.equal(await panel.locator('.event-panel-prof .prof-tag').innerText(), 'N');
     assert.match(await panel.locator('.event-panel-prof .prof-tag').getAttribute('title'), /최근 5년/);
     await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: '월', exact: true }).click();
-    await page.locator('.month-calendar').waitFor();
-    assert.equal(await page.getByRole('button', { name: /신규 교수 강의/ }).locator('.prof-tag').innerText(), 'N');
+    // 월간 보기는 없앴다(2026-11-07). 칸의 N은 주간에서 확인한다(위).
     await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole('button', { name: /신규 교수 강의/ }).click();
     await panel.getByRole('heading', { name: '신규 교수 강의', exact: true }).waitFor();

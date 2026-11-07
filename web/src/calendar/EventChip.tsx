@@ -28,7 +28,7 @@ export function EventChip({
   showLearning?: boolean;
 }) {
   const { subject, title } = splitSubject(entry.detail);
-  const primary = title || entry.title;
+  const primary = (info?.kind === "exam" && info.label) || title || entry.title;
   const sources = entry.lectures.map(lecture => lecture.previewSource);
   const professorInfo = sources.flatMap(source => (source ? [professorDescription(source)] : [])).join("\n");
   const hasLearning = showLearning && entry.lectures.length > 0;

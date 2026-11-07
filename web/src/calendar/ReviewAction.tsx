@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { ChatSplit } from "./ChatSplit";
 import { api } from "../api";
 import { absoluteUrl, extensionCompatible, extensionInstalled, extensionPossible, requestPreview } from "../bridge/previewBridge";
 import { ExtensionSetup } from "../bridge/ExtensionSetup";
@@ -7,7 +8,7 @@ import { PromptEditor } from "./PromptEditor";
 import { DEFAULT_REVIEW_PROMPT, REVIEW_PROMPT_TOKENS, renderReviewPrompt } from "../lecture/reviewPrompt";
 import { usePersonalPrompt } from "../lecture/usePersonalPrompt";
 import type { PreviewProvider } from "../types/lectures";
-import { ActionCard, PanelGroup, PanelTool } from "./panelShared";
+import { ActionCard, PanelGroup } from "./panelShared";
 
 /** 올해 강의록으로 복습한다. 예습 대화와 문제은행에서 독립된 개인 대화다. */
 export function ReviewAction({ lecture, detail, base, onError, trailing, open }: {
@@ -57,32 +58,28 @@ export function ReviewAction({ lecture, detail, base, onError, trailing, open }:
   return (
     <PanelGroup tone="review" title="복습" fold={!saved && !open}
       note={saved ? "오늘 강의록을 다시 읽는 대화" : "개인 링크 만들기"}>
-      <ActionCard shape={`is-key${notes ? " is-review" : " is-faint"}${saved || notes && installed ? "" : " is-empty"}`}
-        hit={saved ? (
-          <a className="panel-action-hit" href={saved.conversationUrl} target="_blank" rel="noreferrer">
-            <strong>개인 대화</strong><small>복습 대화 열기</small>
-          </a>
-        ) : notes && installed ? (
-          <button className="panel-action-hit" disabled={busy || !compatible || !promptStore.loaded} onClick={() => void start()}>
-            <strong>개인 대화</strong><small>{busy ? "여는 중…" : "만들기"}</small>
-          </button>
-        ) : (
-          <span className="panel-action-hit">
-            <strong>개인 대화</strong>
-            <small>{!notes ? "올해 강의록 대기" : extensionPossible() ? "확장을 설치하면 만듭니다" : "컴퓨터에서 만듭니다"}</small>
-          </span>
-        )}
-        tools={saved && notes && installed ? (
-          <PanelTool icon="↗" label="새로 만들기" hint="새 복습 대화 만들기"
-            disabled={busy || !compatible || !promptStore.loaded} busy={busy}
-            onClick={() => void start()} />
-        ) : null} />
+      {/* C안(2026-11-07): 왼쪽은 처음엔 만들기(＋), 그 뒤엔 열기(↗). ▾에 새 대화 만들기·내 프롬프트 수정. */}
+      {saved ? (
+        <ChatSplit tone="review"
+          main={<a className="chat-split-main" href={saved.conversationUrl} target="_blank" rel="noreferrer"><span aria-hidden="true">↗</span>개인 대화</a>}
+          onRemake={notes && installed ? () => void start() : undefined}
+          remakeDisabled={busy || !compatible || !promptStore.loaded}
+          onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} promptCustom={promptStore.isCustom} />
+      ) : notes && installed ? (
+        <ChatSplit tone="review"
+          main={
+            <button type="button" className="chat-split-main" aria-label="개인 대화 만들기"
+              disabled={busy || !compatible || !promptStore.loaded} onClick={() => void start()}>
+              <span aria-hidden="true">＋</span>{busy ? "여는 중…" : "개인 대화"}
+            </button>
+          }
+          onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} promptCustom={promptStore.isCustom} />
+      ) : (
+        <ActionCard shape="is-key is-faint is-empty"
+          hit={<span className="panel-action-hit"><strong>개인 대화</strong>
+            <small>{!notes ? "올해 강의록 대기" : extensionPossible() ? "확장을 설치하면 만듭니다" : "컴퓨터에서 만듭니다"}</small></span>} />
+      )}
       {trailing}
-      <div className="panel-aside">
-        <PanelTool icon="✎" label={showPrompt ? "프롬프트 접기" : "프롬프트 수정"}
-          hint={`내 복습 프롬프트 ${showPrompt ? "접기" : "고치기"}`} active={showPrompt}
-          dot={promptStore.isCustom} expanded={showPrompt} onClick={() => setShowPrompt((open) => !open)} />
-      </div>
       {promptStore.error && !showPrompt ? <p className="prompt-editor-error">{promptStore.error}</p> : null}
       {showPrompt ? <PromptEditor store={promptStore} detail={detail} provider={provider} onProvider={setProvider}
         kind="review" render={renderReviewPrompt} tokens={REVIEW_PROMPT_TOKENS} /> : null}

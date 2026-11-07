@@ -194,7 +194,10 @@ function ReadLine({ entry, size }: { entry: Entry; size?: 'lg' }) {
   const label = `예습 퀴즈 ${entry.preDone ? '완료' : '미완료'} · 강의록 ${notes}회독`;
   return (
     <span className={`readline${size ? ` is-${size}` : ''}`} title={label} aria-label={label}>
-      <i className={`rl-pre${entry.preDone ? ' is-on' : ''}`} />
+      {/* 앞에서부터 채운다(2026-11-07 사용자 지시): 예습 퀴즈를 끝냈으면 첫 토막이 예습 색, 아니면 강의록 회독이
+          첫 토막부터 채운다. 아무것도 없을 때만 테두리 칸 하나를 남긴다. */}
+      {entry.preDone ? <i className="rl-pre is-on" /> : null}
+      {!entry.preDone && !notes ? <i className="rl-pre" /> : null}
       {notes ? (
         <span className="rl-notes">
           {Array.from({ length: Math.min(notes, 6) }, (_, i) => <i key={i} className="rl-note" />)}
@@ -243,7 +246,7 @@ function useRowHeight() {
   useEffect(() => {
     const el = ref.current?.parentElement;
     if (!el) return;
-    const measure = () => setRow(Math.max(60, Math.min(96, Math.floor((el.clientHeight - 54 - LUNCH_HEIGHT) / (HOURS.length - 1)))));
+    const measure = () => setRow(Math.max(44, Math.min(96, Math.floor((el.clientHeight - 54 - LUNCH_HEIGHT) / (HOURS.length - 1)))));
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -275,7 +278,7 @@ function Chip({ entry, active, compact, showLearning, onOpen }: { entry: Entry; 
   );
 }
 
-function WeekGrid({ anchor, entries, openId, showLearning, onOpen }: { anchor: Date; entries: Entry[]; openId: string | null; showLearning: boolean; onOpen: (e: Entry) => void }) {
+function WeekGrid({ anchor, entries, openId, showLearning, onOpen, onStep }: { anchor: Date; entries: Entry[]; openId: string | null; showLearning: boolean; onOpen: (e: Entry) => void; onStep?: (dir: -1 | 1) => void }) {
   const start = startOfWeek(anchor);
   const days = Array.from({ length: 5 }, (_, i) => addDays(start, i));
   const todayKey = toKey(TODAY);
@@ -285,7 +288,10 @@ function WeekGrid({ anchor, entries, openId, showLearning, onOpen }: { anchor: D
   return (
     <div className="week" ref={ref}>
       <div className="week-head">
-        <div className="week-gutter" />
+        <div className="week-gutter">
+          {/* 주 넘기기는 날짜 줄 양끝(2026-11-07 사용자 지시) */}
+          {onStep ? <button className="week-step" onClick={() => onStep(-1)} aria-label="이전 주"><Icon.left /></button> : null}
+        </div>
         {days.map((d, i) => {
           const key = toKey(d);
           return (
@@ -295,6 +301,7 @@ function WeekGrid({ anchor, entries, openId, showLearning, onOpen }: { anchor: D
             </div>
           );
         })}
+        {onStep ? <button className="week-step is-next" onClick={() => onStep(1)} aria-label="다음 주"><Icon.right /></button> : null}
       </div>
       <div className="week-body">
         <div className="week-gutter">
@@ -329,40 +336,7 @@ function WeekGrid({ anchor, entries, openId, showLearning, onOpen }: { anchor: D
   );
 }
 
-/** 그 달의 평일이 든 주만. 1일이 주말이면 다음 월요일 주부터 센다. */
-function monthWeeks(anchor: Date) {
-  const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1, 12);
-  const last = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0, 12);
-  const firstWeekday = first.getDay() === 0 ? addDays(first, 1) : first.getDay() === 6 ? addDays(first, 2) : first;
-  const start = startOfWeek(firstWeekday);
-  const weeks = Math.floor((startOfWeek(last).getTime() - start.getTime()) / (7 * 86400000)) + 1;
-  return [start, weeks] as const;
-}
-
-function MonthGrid({ anchor, entries, openId, onOpen }: { anchor: Date; entries: Entry[]; openId: string | null; onOpen: (e: Entry) => void }) {
-  const [gridStart, weeks] = monthWeeks(anchor);
-  const days = Array.from({ length: weeks * 5 }, (_, i) => addDays(gridStart, Math.floor(i / 5) * 7 + (i % 5)));
-  const todayKey = toKey(TODAY);
-  return (
-    <div className="month">
-      {weekdayLabels.map((d) => <div key={d} className="month-dow">{d}</div>)}
-      {days.map((d) => {
-        const key = toKey(d);
-        const list = entries.filter((e) => e.date === key);
-        const shown = list.slice(0, 4);
-        return (
-          <div key={key} className={`month-cell${d.getMonth() !== anchor.getMonth() ? ' is-outside' : ''}${key === todayKey ? ' is-today' : ''}`}>
-            <span className="month-date">{d.getDate()}</span>
-            <div className="month-list">
-              {shown.map((e) => <Chip key={e.id} entry={e} compact active={openId === e.id} showLearning={false} onOpen={onOpen} />)}
-              {list.length > shown.length ? <span className="month-more">+{list.length - shown.length}개</span> : null}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+/* 월간 보기는 없앴다(2026-11-07 사용자 지시: 주간만, 양옆 화살표로 넘긴다). */
 
 /* ───────────────────────── 카드 단계 막대 ───────────────────────── */
 
@@ -439,7 +413,52 @@ function ReadEditor({ entry }: { entry: Entry }) {
   );
 }
 
+type ChatVariant = 'a' | 'b' | 'c';
+
+/**
+ * 개인 대화 버튼 안(2026-11-07 사용자 요청: 「만들기」 글자·프롬프트 수정이 별로다, 링크 아이콘이 사라진 것도 별로).
+ *   A: 있으면 ↗, 없으면 ＋ 아이콘으로 상태를 말한다. 프롬프트는 옆에 「✎ 내 프롬프트」 작은 버튼.
+ *   B: 버튼 오른쪽에 ✎ 칸이 붙은 한 덩어리(누르면 프롬프트 수정).
+ *   C: 버튼 오른쪽 ▾를 누르면 열기/새로 만들기/내 프롬프트 수정 메뉴.
+ */
+function ChatButton({ tone, made, variant, disabled }: { tone: 'pre' | 'review'; made: boolean; variant: ChatVariant; disabled?: boolean }) {
+  const [menu, setMenu] = useState(false);
+  const icon = made ? <Icon.external /> : <Icon.plus />;
+  const title = made ? '개인 대화 열기' : '개인 대화 새로 만들기';
+  const cls = `action-button is-chat-${tone}`;
+  if (variant === 'a') {
+    return (
+      <>
+        <button className={cls} disabled={disabled} title={title}>{icon}개인 대화</button>
+        <button className="prompt-chip" disabled={disabled} title="개인 대화를 만들 때 쓰는 내 프롬프트 고치기"><Icon.pencil />내 프롬프트</button>
+      </>
+    );
+  }
+  if (variant === 'b') {
+    return (
+      <span className={`split-button is-${tone}${disabled ? ' is-disabled' : ''}`}>
+        <button className="split-main" disabled={disabled} title={title}>{icon}개인 대화</button>
+        <button className="split-side" disabled={disabled} title="내 프롬프트 고치기" aria-label="내 프롬프트 고치기"><Icon.pencil /></button>
+      </span>
+    );
+  }
+  return (
+    <span className={`split-button is-${tone}${disabled ? ' is-disabled' : ''} menu-wrap`}>
+      <button className="split-main" disabled={disabled} title={title}>{icon}개인 대화</button>
+      <button className="split-side" disabled={disabled} aria-label="개인 대화 메뉴" aria-expanded={menu} onClick={() => setMenu((v) => !v)}><Icon.chevronDown /></button>
+      {menu ? (
+        <span className="chat-menu" role="menu">
+          {made ? <button role="menuitem"><Icon.plus />새 대화 만들기</button> : null}
+          <button role="menuitem"><Icon.pencil />내 프롬프트 수정</button>
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 function EventSheet({ entry, onClose }: { entry: Entry; onClose: () => void }) {
+  // 2026-11-07 사용자 선택: C안(누르면 처음엔 새 대화 만들기, 이후엔 대화 열기 · ▾에 새 대화 만들기·내 프롬프트 수정).
+  const chatVariant: ChatVariant = 'c';
   const group = entry.category === 'tbl' || entry.category === 'cbl';
   const cards = entry.cards;
   const open = entry.review !== null;
@@ -466,8 +485,8 @@ function EventSheet({ entry, onClose }: { entry: Entry; onClose: () => void }) {
           <section className="sheet-block">
             <h3><i className="role-dot is-pre" />예습</h3>
             <div className="sheet-actions">
-              <button className="action-button"><Icon.external />공통 대화</button>
-              <button className="action-button"><Icon.external />개인 대화</button>
+              <button className="action-button is-chat-pre"><Icon.external />공통 대화</button>
+              <ChatButton tone="pre" made={entry.preDone} variant={chatVariant} />
               <button className="action-button is-quiz is-pre"><Icon.play />예습 퀴즈</button>
             </div>
           </section>
@@ -475,7 +494,7 @@ function EventSheet({ entry, onClose }: { entry: Entry; onClose: () => void }) {
           <section className="sheet-block">
             <h3><i className="role-dot is-review" />복습</h3>
             <div className="sheet-actions">
-              <button className="action-button" disabled={!open}><Icon.external />개인 대화</button>
+              <ChatButton tone="review" made={false} variant={chatVariant} disabled={!open} />
               <button className="action-button is-quiz is-review" disabled={!open}>
                 <Icon.play />복습 퀴즈{open && cards?.due ? <b>{cards.due}</b> : null}
               </button>
@@ -549,95 +568,69 @@ function blockWeekOf(weekStart: Date) {
   return `${name} ${week}주차`;
 }
 
+/**
+ * 캘린더(2026-11-07 사용자 지시): 머리는 「블럭 n주차 + D-day」 한 줄, 그 아래 오늘 할 예습·복습을 크게.
+ * 오늘·주/월 전환·월간은 없애고 캘린더 양옆 화살표로만 주를 넘긴다. 화면 높이에 맞춰 스크롤 없이 한 주를 다 보인다.
+ */
 function CalendarPage() {
-  const [mode, setMode] = useState<'week' | 'month'>('week');
   const [anchor, setAnchor] = useState(TODAY);
   const [openId, setOpenId] = useState<string | null>(null);
   const close = useMemo(() => () => setOpenId(null), []);
   useEscape(close);
 
   const range = useMemo(() => {
-    if (mode === 'week') {
-      const s = startOfWeek(anchor);
-      return [s, addDays(s, 4)] as const;
-    }
-    const [s, weeks] = monthWeeks(anchor);
-    return [s, addDays(s, weeks * 7 - 1)] as const;
-  }, [anchor, mode]);
+    const s = startOfWeek(anchor);
+    return [s, addDays(s, 4)] as const;
+  }, [anchor]);
   const entries = useMemo(() => entriesBetween(range[0], range[1]), [range]);
   const opened = entries.find((e) => e.id === openId) ?? null;
 
   const weekStart = startOfWeek(anchor);
-  const blockWeek = blockWeekOf(weekStart);
-  const title = `${anchor.getFullYear()}년 ${anchor.getMonth() + 1}월`;
-  const span = `${weekStart.getMonth() + 1}.${weekStart.getDate()} – ${addDays(weekStart, 4).getMonth() + 1}.${addDays(weekStart, 4).getDate()}`;
-  const sub = mode === 'week' ? (blockWeek ? `${blockWeek} · ${span}` : span) : '평일만 표시';
+  const blockWeek = blockWeekOf(weekStart) ?? `${weekStart.getMonth() + 1}.${weekStart.getDate()} 주`;
+  const step = (dir: -1 | 1) => setAnchor((a) => addDays(a, 7 * dir));
 
-  const step = (dir: -1 | 1) =>
-    setAnchor((a) => (mode === 'week' ? addDays(a, 7 * dir) : new Date(a.getFullYear(), a.getMonth() + dir, 1, 12)));
-
-  // 「오늘」 줄은 오늘 배정된 양만 센다(2026-11-05 사용자 지시).
-  const todays = entriesBetween(TODAY, TODAY);
-  const preToday = todays.filter((e) => learnable(e) && !e.preDone).length;
+  // 오늘 배정된 양만 센다(2026-11-05 사용자 지시).
+  const todays = entriesBetween(TODAY, TODAY).filter(learnable);
+  const preLeft = todays.filter((e) => !e.preDone);
   const reviewToday = sumCards(blockEntries(CURRENT.id)).due;
   const exam = nextExam();
-  const examDate = exam ? new Date(`${exam.exam.date}T12:00:00`) : null;
 
   return (
     <div className={`calendar-layout${opened ? ' has-sheet' : ''}`}>
       <div className="calendar-main">
-        <header className="page-head">
-          <div>
-            <h1>{title}</h1>
-            <p className="page-sub">{sub}</p>
+        <header className="cal-head">
+          <h1>
+            <span className="cal-title">{blockWeek}</span>
+            {exam ? <span className="cal-dday" title={exam.exam.title}>D-{exam.days}</span> : null}
+          </h1>
+          {/* 오늘 할 예습·복습은 머리 오른쪽 끝(2026-11-07 사용자 지시) */}
+          <div className="today-board" aria-label="오늘 할 일">
+            <button className="today-card is-pre">
+              <span className="today-card-label">오늘 예습</span>
+              <b>{preLeft.length}<small>강의</small></b>
+            </button>
+            <button className="today-card is-review">
+              <span className="today-card-label">오늘 복습</span>
+              <b>{reviewToday}<small>문제</small></b>
+            </button>
           </div>
-          {exam && examDate ? (
-            <div className="dday" title={exam.exam.title}>
-              <span className="dday-label">
-                <b>{exam.exam.no}차 시험</b>
-                {examDate.getMonth() + 1}월 {examDate.getDate()}일 ({weekdayLabels[(examDate.getDay() + 6) % 7]})
-              </span>
-              <strong>D-{exam.days}</strong>
-            </div>
-          ) : null}
         </header>
 
-        <div className="today-strip">
-          <span className="today-label">오늘</span>
-          <button className="chip-pill is-pre">미열람 예습 <b>{preToday}강의</b></button>
-          <button className="chip-pill is-review">미열람 복습 퀴즈 <b>{reviewToday}문제</b></button>
-          <span className="today-spacer" />
-          <button className="pill-button" onClick={() => setAnchor(TODAY)}>오늘</button>
-          <div className="stepper">
-            <button className="icon-button" onClick={() => step(-1)} aria-label="이전"><Icon.left /></button>
-            <button className="icon-button" onClick={() => step(1)} aria-label="다음"><Icon.right /></button>
+        <div className="calendar-frame">
+          <div className="calendar-surface">
+            <WeekGrid anchor={anchor} entries={entries} openId={openId} showLearning onOpen={(e) => setOpenId(e.id)} onStep={step} />
           </div>
-          <div className="segmented" role="group" aria-label="보기 전환">
-            <button aria-pressed={mode === 'week'} onClick={() => setMode('week')}>주</button>
-            <button aria-pressed={mode === 'month'} onClick={() => setMode('month')}>월</button>
-          </div>
-        </div>
-
-        <div className="calendar-surface">
-          {mode === 'week' ? (
-            <WeekGrid anchor={anchor} entries={entries} openId={openId} showLearning onOpen={(e) => setOpenId(e.id)} />
-          ) : (
-            <MonthGrid anchor={anchor} entries={entries} openId={openId} onOpen={(e) => setOpenId(e.id)} />
-          )}
         </div>
 
         <footer className="legend">
           <span><i className="swatch is-lecture" />강의·실습·TBL·CBL</span>
           <span><i className="swatch is-exam" />시험</span>
           <span><i className="swatch is-intro" />다른 과목</span>
-          {mode === 'week' ? (
-            <>
-              <span className="legend-sep" />
-              <span><span className="readline"><i className="rl-pre is-on" /></span>예습 퀴즈</span>
-              <span><span className="readline"><span className="rl-notes"><i className="rl-note" /><i className="rl-note" /></span></span>강의록 회독</span>
-              <span className="legend-meter"><span className="meter"><span style={{ width: '25%', background: 'color-mix(in srgb, var(--accent) 85%, #fff)' }} /></span>복습 학습률</span>
-            </>
-          ) : null}
+          <span className="legend-sep" />
+          <span><span className="readline"><i className="rl-pre is-on" /></span>예습 퀴즈 완료</span>
+          <span><span className="readline"><i className="rl-pre" /></span>미완료</span>
+          <span><span className="readline"><span className="rl-notes"><i className="rl-note" /><i className="rl-note" /></span></span>강의록 회독</span>
+          <span className="legend-meter"><span className="meter"><span style={{ width: '25%', background: 'color-mix(in srgb, var(--accent) 85%, #fff)' }} /></span>복습 학습률</span>
         </footer>
       </div>
       {opened ? <EventSheet entry={opened} onClose={close} /> : null}
