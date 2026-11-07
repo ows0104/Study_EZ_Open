@@ -6,6 +6,8 @@ from pathlib import Path
 from jsonschema import Draft202012Validator, ValidationError
 ROOT=Path(__file__).resolve().parents[3]
 ASSETS=ROOT/'content/prompts/learning-links'
+# 2026-11-08: Map /3 replaced map-extract.md; this pilot check keeps reading the /2 copies.
+V={'map':'-v2','point':''}
 
 def pairs(items):
     value={}
@@ -17,7 +19,7 @@ def pairs(items):
 def read(path):return json.loads(path.read_text(encoding='utf-8'),object_pairs_hook=pairs)
 
 def validate(kind,value,sources):
-    Draft202012Validator(read(ASSETS/f'{kind}-output.schema.json')).validate(value)
+    Draft202012Validator(read(ASSETS/f'{kind}-output{V[kind]}.schema.json')).validate(value)
     def refs(v):
         if isinstance(v,list):
             for x in v:refs(x)
@@ -44,9 +46,9 @@ def main():
     sources={'S1':1} # Frozen synthetic INPUT inventory; not model-authored metadata.
     samples={}
     for kind,filename in [('map','concept-map.json'),('point','exam-points.json')]:
-        Draft202012Validator.check_schema(read(ASSETS/f'{kind}-output.schema.json'))
-        sample=read(ASSETS/f'{kind}-output.example.json')
-        prompt=(ASSETS/f'{kind}-extract.md').read_text(encoding='utf-8')
+        Draft202012Validator.check_schema(read(ASSETS/f'{kind}-output{V[kind]}.schema.json'))
+        sample=read(ASSETS/f'{kind}-output{V[kind]}.example.json')
+        prompt=(ASSETS/f'{kind}-extract{V[kind]}.md').read_text(encoding='utf-8')
         blocks=re.findall(r'```json\s*([\s\S]*?)```',prompt)
         assert len(blocks)==1 and json.loads(blocks[0],object_pairs_hook=pairs)==sample
         assert filename in prompt and 'UTF-8' in prompt

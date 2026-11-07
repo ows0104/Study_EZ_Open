@@ -3,7 +3,7 @@
   "type": "object",
   "properties": {
     "schema_version": {
-      "const": "concept-map-extract/2"
+      "const": "concept-map-extract/3"
     },
     "title": {
       "type": "string",
@@ -20,6 +20,13 @@
         "properties": {
           "concept_id": {
             "type": "string",
+            "pattern": "^C[0-9]{3,}$"
+          },
+          "parent_id": {
+            "type": [
+              "string",
+              "null"
+            ],
             "pattern": "^C[0-9]{3,}$"
           },
           "title": {
@@ -88,6 +95,7 @@
         },
         "required": [
           "concept_id",
+          "parent_id",
           "title",
           "core_facts",
           "source_refs"

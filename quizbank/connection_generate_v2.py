@@ -16,6 +16,7 @@ from studyez_contracts.bank.cloze import normalize_cloze
 from quizbank.review import FIELDS,REVIEW_REPORT,SYSTEM,shape
 from . import connection_visuals as visual
 from studyez_contracts.roots import recall_units as recall
+from studyez_contracts.learning_links import concept_tree
 
 def medical_input(bank,conflicts):
     # History, importance, authoring rationale and raw conflict descriptions are
@@ -196,6 +197,10 @@ def run(packet,out,model,invoke):
             med_ctx={'title':packet['title'],'bank':bank,'clinicalInput':projection}
             medical=stage(f'medical-{n}',med_ctx)
         reasons=c.repair_reasons(b,bank,audit,medical,validation)
+        # concept-map-extract/3: the Map's parent_id tree must survive in the brief (no-op for /2 Maps).
+        hierarchy=concept_tree.hierarchy_findings(b,packet.get('conceptMap'))
+        if hierarchy:g.write(out/f'map-hierarchy-{n}.json',{'findings':hierarchy})
+        reasons+=[{'kind':'map_fix','text':t,'question_ids':[],'direction_ids':[]}for t in hierarchy]
         if blocked and blocking_fix:reasons.append({'kind':'question_fix','text':blocked,'question_ids':[],'direction_ids':[]})
         g.write(out/f'repair-decision-{n}.json',{'reasons':reasons,'allIssues':audit['assessment']['assessment']['issues'],'repair':bool(reasons)and n+initial_cost<3})
         if reasons and n+initial_cost<3:
