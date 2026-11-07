@@ -20,7 +20,7 @@
 
 
 
-| P1 | 감염병리1(261104_02) Map 파이프라인 재구성: 트리형 Map(parent_id)→포인트→개별·구조 문제·검수, 격리 확인 | ows0104 / Claude Main-Quiz 지도 세션(Codex Map 세 작업 승계) | claude/infection-path1-map | content/prompts/learning-links/map-extract*(→/3)·automation/extract-v2.md, studyez_contracts/roots·learning_links 검증, quizbank/connection_generate_v2.py(정규화 부모 보존 검사), tests, docs/changes/2026-11-08-infection-path1-map, runs/_e2e/<새 id> | 2026-11-08 | 계획 승인 대기. 모델 Codex CLI gpt-6.1-sol·Map 부모 칸 추가(사용자 선택). 외부 전송·생성은 별도 승인. 운영 등록·공개 없음 |
+| P1 | 감염병리1(261104_02) Map 파이프라인 재구성: 트리형 Map(parent_id)→포인트→개별·구조 문제·검수, 격리 확인 | ows0104 / Claude Main-Quiz 지도 세션(Codex Map 세 작업 승계) | claude/infection-path1-map | content/prompts/learning-links/map-extract*(→/3)·automation/extract-v2.md, studyez_contracts/roots·learning_links 검증, quizbank/connection_generate_v2.py(정규화 부모 보존 검사), tests, docs/changes/2026-11-08-infection-path1-map, runs/_e2e/<새 id> | 2026-11-08 | 사용자 "둘 다 승인"(구현+S1·S2 OpenAI 전송·생성·검수). b4cff4b0 Map /3·부모 보존 검사·실행도구, 계약/파이프라인 검사 285 통과. runs/_e2e/26110801에서 Map·포인트 추출 실행 중. 운영 등록·공개 없음 |
 
 | P1 | Map·독립 출제포인트 추출 프롬프트 정리 | ows0104 / Codex Map 세션 → 2026-11-08 Claude Main-Quiz 지도 세션 승계(사용자 지시: Codex 작업 중단) | codex/map-point-prompts | content/prompts/learning-links/map-extract.md, point-extract.md, *-output.schema.json, *-output.example.json, README.md, docs/changes/2026-11-06-map-point-prompts, .worktrees/map-point-prompts/runs/_map-point-pilot | 2026-11-06 | 사용자 승인 범위의 두 원본 전용 지시문·JSON 스키마·예시·로컬 형식 검증. 현재 사용자 예시 추출 승인: 명시적 OpenAI 전송 승인으로 Map/포인트 각1회 완료, 심내막염·CNS 강의별 JSON4개 보존. 후속 승인된 독립단위 재추출·4지적 보완·별도 재대조 완료: 최종47/60개, ready/ready·잔여issues없음. 원본/중간/실패보존, 필수검사통과, d68b6d57 로컬 검토대기. 운영 요청 재개/문항/게시/배포 없음 |
 
