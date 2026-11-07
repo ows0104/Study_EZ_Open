@@ -28,7 +28,7 @@ def call_model(stage,context,material,model):
     kind=stage.split('-')[0]
     if kind=='medical':
         images,labels=visual.paths(context['bank'],material)
-        prompt='독립 의학 정답 검수다. 중요도나 과거 판정은 평가하지 않는다. 실제 문항·정답·모든 answer_units·해설·임상 충돌을 자신의 의학 지식으로 대조한다. 그림은 아래 attachment 순서대로 실제 문항의 일부다. 오류/의심을 그대로 기록한다. conflicts의 사실과 현재 정답을 구별한다. pool_checks는 빈 배열이다. JSON만 반환한다.\n'
+        prompt='독립 의학 정답 검수다. 중요도나 과거 판정은 평가하지 않는다. 실제 문항·정답·모든 answer_units·해설·임상 충돌을 자신의 의학 지식으로 대조한다. 그림은 아래 attachment 순서대로 실제 문항의 일부다. 오류/의심을 그대로 기록한다. reviews에는 입력의 모든 question_id마다 ok·doubt·wrong 판정을 정확히 한 줄씩 작성하며, 오류가 없는 문항도 ok로 적는다. conflicts의 사실과 현재 정답을 구별한다. pool_checks는 빈 배열이다. JSON만 반환한다.\n'
         prompt+=json.dumps({'input':context['clinicalInput'],'images':labels},ensure_ascii=False)
         result=codex.run(prompt,blind=True,model=model,timeout=900,label='연결 독립 정답 검수',schema=g.output_schema(REVIEW_REPORT),system=SYSTEM,images=images)
         visual.paths(context['bank'],material)
@@ -148,13 +148,15 @@ def run(packet,out,model,invoke):
     format_recoveries=ledger.get('formatRecoveries',[])
     runtime_revalidations=ledger.get('runtimeRevalidations',[])
     render_recoveries=ledger.get('renderRecoveries',[])
+    medical_retries=ledger.get('medicalRetries',[])
     recovery_meta={'authoringRecoveries':recoveries,'formatRecoveries':format_recoveries,
-        'runtimeRevalidations':runtime_revalidations,'renderRecoveries':render_recoveries,'inputHash':packet['inputHash'],
+        'runtimeRevalidations':runtime_revalidations,'renderRecoveries':render_recoveries,'medicalRetries':medical_retries,'inputHash':packet['inputHash'],
         'runtimeHash':fingerprint,'initialBrief':initial,'repairRounds':max(ledger['repairRounds'],initial_cost+1)}
     recovery_stages={k:{'name':k,**v}for k,v in ledger['stages'].items()}
     c.validate_runtime_revalidations(recovery_meta,recovery_stages)
     c.validate_format_recoveries(recovery_meta,recovery_stages)
     c.validate_render_recoveries(recovery_meta,recovery_stages)
+    c.validate_medical_retries(recovery_meta,recovery_stages,pending=True)
     c.validate_authoring_recoveries(recovery_meta,recovery_stages)
     rejected=recoveries[0]['proof']['rawAuthoring']if recoveries and recoveries[0]['proof']['mode']=='brief-repair'else None
     start_round=1 if rejected else 0
@@ -222,6 +224,7 @@ def run(packet,out,model,invoke):
             **({'authoringRecoveries':recoveries}if recoveries else{}),
             **({'formatRecoveries':format_recoveries}if format_recoveries else{}),
             **({'renderRecoveries':render_recoveries}if render_recoveries else{}),
+            **({'medicalRetries':medical_retries}if medical_retries else{}),
             **({'runtimeRevalidations':runtime_revalidations}if runtime_revalidations else{}),
             **({'authoringRecoveryOutput':json.loads((out/'repair-1.raw.json').read_text(encoding='utf-8'))}if rejected else{}),
             'briefRevisions':[{'stage':name,'brief':value['brief'],'reason':value['map_change_reason']}

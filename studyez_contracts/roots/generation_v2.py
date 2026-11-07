@@ -269,8 +269,10 @@ def validate_render_recoveries(meta,stages):
             and not old.get('formatRecoveries')and not old.get('authoringRecoveries')
             and type(old.get('identity'))is str and re.fullmatch(r'[a-f0-9]{64}',old['identity']),
             'result2: changed prior render ledger')
+        # A later medical retry (prompt fix) moves the runtime on; the render proof keeps the runtime it ran under.
+        render_runtime=meta['medicalRetries'][0]['proof']['priorLedger']['identity']if meta.get('medicalRetries')else meta['runtimeHash']
         require(type(name)is str and re.fullmatch(r'generate|repair-[1-3]',name)and p['packetHash']==meta['inputHash']
-            and p['currentRuntimeHash']==meta['runtimeHash']and p['modelReplay']is False
+            and p['currentRuntimeHash']==render_runtime and p['modelReplay']is False
             and type(p['reason'])is str and p['reason'].strip()
             and type(p['toolSha256'])is str and re.fullmatch(r'[a-f0-9]{64}',p['toolSha256']),
             'result2: changed render recovery identity')
@@ -286,6 +288,48 @@ def validate_render_recoveries(meta,stages):
         current=stages[name]
         require(current['status']=='completed'and all(current[k]==entry[k]for k in ('inputHash','rawOutputHash','usageHash')),
             'result2: render recovery changed the original call')
+    return rows
+
+def validate_medical_retries(meta,stages,pending=False):
+    """One fresh independent medical review after a completed call that omitted question verdicts.
+
+    The rejected response is archived, the review input (final bank) is unchanged, no content or
+    budget changes. `pending` allows the orchestrator to check the proof before the new call."""
+    rows=meta.get('medicalRetries',[])
+    require(type(rows)is list and len(rows)<=1,'result2: invalid medical retry history')
+    for row in rows:
+        require(type(row)is dict and set(row)=={'proof','proofHash'}and type(row['proof'])is dict
+            and row['proofHash']==document_hash(row['proof']),'result2: changed medical retry proof')
+        p=row['proof']
+        require(set(p)=={'priorLedger','priorLedgerHash','packetHash','currentRuntimeHash','reason','stage',
+            'rejectedRawHash','reviewed','missing','toolSha256','modelReplay'},'result2: malformed medical retry')
+        old=p['priorLedger'];name=p['stage']
+        require(type(old)is dict and type(old.get('stages'))is dict and old.get('pipelineVersion')==POLICY
+            and p['priorLedgerHash']==document_hash(old)and not old.get('medicalRetries')
+            and type(old.get('identity'))is str and re.fullmatch(r'[a-f0-9]{64}',old['identity']),
+            'result2: changed prior medical ledger')
+        require(type(name)is str and re.fullmatch(r'medical-[0-3]',name)and p['packetHash']==meta['inputHash']
+            and p['currentRuntimeHash']==meta['runtimeHash']and p['modelReplay']is True
+            and type(p['reason'])is str and p['reason'].strip()
+            and type(p['toolSha256'])is str and re.fullmatch(r'[a-f0-9]{64}',p['toolSha256']),
+            'result2: changed medical retry identity')
+        prior=old['stages'];entry=prior.get(name,{})
+        require(all(type(v)is dict for v in prior.values())and entry.get('status')=='failed'
+            and [k for k,v in prior.items()if v['status']=='failed']==[name]
+            and entry.get('rawOutputHash')==p['rejectedRawHash'],'result2: medical retry was not one failed review')
+        require(type(p['missing'])is list and p['missing']and type(p['reviewed'])is list
+            and not set(p['missing'])&set(p['reviewed']),'result2: medical retry without missing verdicts')
+        require(old.get('repairRounds')==meta['repairRounds']
+            and all(old.get(k,[])==meta.get(k,[])for k in ('renderRecoveries','formatRecoveries','authoringRecoveries')),
+            'result2: medical retry changed history/budget')
+        for k,v in prior.items():
+            if k!=name:require(stages[k]=={'name':k,**v},'result2: changed reused stage before medical retry')
+        current=stages.get(name)
+        if current is None:
+            require(pending,'result2: medical retry stage missing')
+            continue
+        require(current['status']=='completed'and current['inputHash']==entry['inputHash']
+            and current['rawOutputHash']!=entry['rawOutputHash'],'result2: medical retry did not review the same input')
     return rows
 
 def validate_authoring_recoveries(meta,stages):
@@ -653,6 +697,7 @@ def validate_result(value,packet):
     validate_runtime_revalidations(meta,stages)
     validate_format_recoveries(meta,stages)
     validate_render_recoveries(meta,stages)
+    validate_medical_retries(meta,stages)
     recoveries=validate_authoring_recoveries(meta,stages)
     rejected=recoveries[0]['proof']['rawAuthoring']if recoveries and recoveries[0]['proof']['mode']=='brief-repair'else None
     start_round=1 if rejected else 0

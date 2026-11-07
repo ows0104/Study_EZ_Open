@@ -341,6 +341,9 @@ def validate_all(out,payload):
         require(read(Path(out)/'render.recovery.json')==row
             and read(archive/'ledger-before.json')==proof['priorLedger']
             and sha(archive/'recovery.py')==proof['toolSha256'],'Changed render recovery archive')
+    for row in payload['manifest'].get('medicalRetries',[]):
+        from .root_medical_retry import validate_archive
+        validate_archive(out,row)
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--packet',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--model');a=p.parse_args()

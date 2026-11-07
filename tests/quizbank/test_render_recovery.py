@@ -77,3 +77,43 @@ def test_render_recovery_contract_rejects_changes(change):
     row['proofHash'] = document_hash(row['proof'])
     with pytest.raises(ValueError):
         c.validate_render_recoveries(meta, stages)
+
+
+def _medical_case():
+    stages = {'normalize': {'status': 'completed', 'inputHash': 'a' * 64, 'outputHash': 'b' * 64, 'rawOutputHash': 'c' * 64},
+              'medical-2': {'status': 'failed', 'inputHash': 'd' * 64, 'rawOutputHash': 'e' * 64, 'usageHash': 'f' * 64}}
+    old = {'identity': '1' * 64, 'pipelineVersion': c.POLICY, 'repairRounds': 3, 'stages': stages}
+    proof = {'priorLedger': old, 'priorLedgerHash': document_hash(old), 'packetHash': '2' * 64, 'currentRuntimeHash': '3' * 64,
+             'reason': 'review omitted ok verdicts', 'stage': 'medical-2', 'rejectedRawHash': 'e' * 64,
+             'reviewed': ['Q1'], 'missing': ['Q2'], 'toolSha256': '4' * 64, 'modelReplay': True}
+    now = {'normalize': dict(stages['normalize']),
+           'medical-2': {'status': 'completed', 'inputHash': 'd' * 64, 'rawOutputHash': '8' * 64, 'outputHash': '9' * 64, 'usageHash': '7' * 64}}
+    meta = {'medicalRetries': [{'proof': proof, 'proofHash': document_hash(proof)}], 'inputHash': '2' * 64,
+            'runtimeHash': '3' * 64, 'repairRounds': 3}
+    return meta, {k: {'name': k, **v} for k, v in now.items()}
+
+
+def test_medical_retry_contract_accepts_one_fresh_review_of_the_same_input():
+    meta, stages = _medical_case()
+    assert c.validate_medical_retries(meta, stages) == meta['medicalRetries']
+    pending = {k: v for k, v in stages.items() if k != 'medical-2'}
+    assert c.validate_medical_retries(meta, pending, pending=True)
+    with pytest.raises(ValueError):
+        c.validate_medical_retries(meta, pending)
+
+
+@pytest.mark.parametrize('change', [
+    lambda m, s: m['medicalRetries'][0]['proof'].update(modelReplay=False),
+    lambda m, s: m['medicalRetries'][0]['proof'].update(missing=[]),
+    lambda m, s: s['medical-2'].update(inputHash='0' * 64),
+    lambda m, s: s['medical-2'].update(rawOutputHash='e' * 64),
+    lambda m, s: s['normalize'].update(outputHash='0' * 64),
+    lambda m, s: m.update(repairRounds=2),
+])
+def test_medical_retry_contract_rejects_changes(change):
+    meta, stages = _medical_case()
+    change(meta, stages)
+    row = meta['medicalRetries'][0]
+    row['proofHash'] = document_hash(row['proof'])
+    with pytest.raises(ValueError):
+        c.validate_medical_retries(meta, stages)
