@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 load_dotenv(ROOT.parents[1]/'server/.env',override=False)
 from sqlalchemy import select
 from app.database import SessionLocal
-from app.models import QuizBank,BankState
+from app.models import QuizBank,BankState,Asset
 from app.models.root_learning import RootContent,RootControl,RootEvent,RootSession
 from app.models.root_generation import RootGeneration
 from app.root_learning import replacement_import
@@ -57,9 +57,21 @@ def main(revision,verify_only=False):
     before=read(OUT/'production-preflight.json');subject,rid=before['subject'],before['runId']
     with SessionLocal()as db:
         if not verify_only:
-            assert snapshot(db,subject,rid)==before,'Current lecture/records/control changed after preflight'
+            current=snapshot(db,subject,rid)
+            assert all(current[k]==before[k]for k in ('control','controlHash','versions','bank','bankStates')),'Current content/control changed after preflight'
+            # The latest user releases the old no-learning condition; archive any
+            # intervening human activity rather than deleting it or carrying mastery.
+            before=current
+            (OUT/'publication-baseline.json').write_text(json.dumps(before,ensure_ascii=False,indent=2),encoding='utf-8')
+            for source in packet['sources']:
+                asset=db.get(Asset,source['assetId'])
+                assert asset and(asset.subject,asset.run_id,asset.filename,asset.object_key)==(subject,rid,source['filename'],source['originalKey'])
+                body=ObjectStorage().get_bytes(asset.object_key)
+                assert body and len(body)==source['sizeBytes']and hashlib.sha256(body).hexdigest()==source['sha256'],'Original lecture PDF changed'
             response=replacement_import.register(db,PARENT,value,expected_control_hash=before['controlHash'])
-        else:response={'generationId':value['runId'],'revision':value['document']['revision'],'verifiedExisting':True}
+        else:
+            before=read(OUT/'publication-baseline.json')
+            response={'generationId':value['runId'],'revision':value['document']['revision'],'verifiedExisting':True}
         after=snapshot(db,subject,rid)
         assert after['bank']==before['bank']and after['bankStates']==before['bankStates']and after['sessions']==before['sessions']
         assert all(after['events'].get(k)==v for k,v in before['events'].items())

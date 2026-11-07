@@ -56,4 +56,10 @@ user('member')
 assert client.get(BASE).status_code==404
 user('admin',True)
 assert client.get(BASE).status_code==200
+from app.root_learning.content import learner_scope
+screen=copy.deepcopy(value['document'])
+screen['review']['scope']['limitations']=['Synthetic low-resolution source photo remains limited','Python checker permission denied',
+    '새 외부 문헌 검색·독립 의료 검수는 시행하지 않았다.']
+assert learner_scope(screen)['limitations']==['Synthetic low-resolution source photo remains limited']
+assert len(screen['review']['scope']['limitations'])==3
 print('replacement: independent proofs, stale/held rejection, old content/event preservation, private scope, source/notes/report readback passed')

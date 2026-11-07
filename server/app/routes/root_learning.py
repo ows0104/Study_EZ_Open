@@ -81,7 +81,7 @@ def overview_data(db, row, user, when):
         RootSession.day == policy.study_day(when, configured).isoformat()).order_by(RootSession.created_at.desc())).all()
     pending = next((s for s in sessions if s.policy == configured and s.state['index'] < len(s.tasks)), None)
     return {'revision': row.revision, 'title': row.document['title'], 'policyReady': True, 'policy': configured,
-            'scope': row.document['review']['scope'], 'summary': state.summary(row.document, events, available, when, configured),
+            'scope': content.learner_scope(row.document), 'summary': state.summary(row.document, events, available, when, configured),
             'plan': planning.plan(row.document, events, available, when, configured),
             'sessionId': pending.id if pending else None, 'preparationProblems': len(problems)}
 
@@ -365,6 +365,6 @@ def read_map(session_id: str, user: CurrentUser = Depends(require_approved_user)
     if not row.state['mapSeen']:
         raise HTTPException(409, '지도 답 노출을 먼저 확인하세요.')
     return {'concepts': doc.document['review']['concepts'], 'relations': doc.document['review']['relations'],
-            'targets': state.targets(doc.document), 'scope': doc.document['review']['scope'],
+            'targets': state.targets(doc.document), 'scope': content.learner_scope(doc.document),
             'readyDirectionIds':sorted({t['direction_id']for t in doc.document['tasks']}),
             'points': doc.document['review']['points'], 'coverage': doc.document['review']['coverage']}

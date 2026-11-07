@@ -1,10 +1,21 @@
 """Content registration and conservative legacy-bank availability checks."""
 import os
+import copy
+import re
 from sqlalchemy import select
 from studyez_contracts.roots import validate_document, document_hash, direction_hash
 from app import bank_personal
 from app.models import QuizBank, BankState
 from app.models.root_learning import RootContent, RootControl, RootEvent
+
+
+def learner_scope(document):
+    """Show source limitations, keep authoring-environment diagnostics in the archive."""
+    value=copy.deepcopy(document['review']['scope'])
+    if document['review']['provenance']['method']=='verified-main-quiz-replacement/1':
+        operational=r'Python|checker|trampoline|permission denied|os error|독립\s*(?:의료|의학|정답)\s*검수.*(?:시행하지|수행하지|하지 않았)'
+        value['limitations']=[text for text in value['limitations']if not re.search(operational,text,re.I)]
+    return value
 
 
 def globally_enabled():
