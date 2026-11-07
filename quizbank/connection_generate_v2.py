@@ -215,9 +215,10 @@ def run(packet,out,model,invoke):
         if blocked:raise ValueError('독립 정답 검수 입력 분리가 완료되지 않았습니다. 실제 검수를 완료로 표시하지 않고 보존합니다.')
         # Tree maps leave organising concepts without a question of their own; they stay in the review
         # tree, and only their empty plans leave the bank snapshot (exact reviewed bank kept in the proof).
-        bank,projection=c.project_container_concepts(bank)
+        reviewed_bank=bank;bank,projection=c.project_container_concepts(bank)
         if projection:validation=validate_bank(bank,[s['id']for s in packet['sources']])
-        doc=c.make_document(b,bank,audit,revision=packet['revision'],title=packet['title'],exam_date=packet['examDate'],medical=medical)
+        doc=c.make_document(b,reviewed_bank,audit,revision=packet['revision'],title=packet['title'],exam_date=packet['examDate'],
+            medical=medical,snapshot=bank if projection else None)
         result={'brief':b,'document':doc,'sourceAudit':audit,'medical':medical,'validation':validation,'manifest':{
             'pipelineVersion':c.POLICY,'inputHash':packet['inputHash'],'briefHash':document_hash(b),'bankHash':document_hash(bank),
             'runtimeHash':fingerprint,'model':codex.model_name(model),'webResponseHash':packet.get('webResponseHash'),

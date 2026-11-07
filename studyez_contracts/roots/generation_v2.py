@@ -602,7 +602,9 @@ def validate_audit(brief,bank,audit):
     require(equivalent_audit(audit,compile_assessment(brief,bank,audit['assessment'])),'audit2: derived result differs from raw judgments')
     return audit
 
-def make_document(brief,bank,audit,*,revision,title,exam_date,medical=None):
+def make_document(brief,bank,audit,*,revision,title,exam_date,medical=None,snapshot=None):
+    """`snapshot`: a container-concept projection of the reviewed `bank` to publish instead; the
+    review's bank/question fingerprints are re-bound to it (questions identical, like quiz_curation)."""
     validate_audit(brief,bank,audit)
     if recall.enabled(brief):brief=recall.project_brief(brief)[0]
     review=audit['review'];coverage={c['point_id']:c for c in review['coverage']};candidates=[]
@@ -636,6 +638,13 @@ def make_document(brief,bank,audit,*,revision,title,exam_date,medical=None):
         'adopted_target_ids':[t['target_id']for t in brief['targets']],'tasks':candidates,'exam_date':exam_date,
         'equivalences':[],'prerequisites':adopted_edges}
     doc['tasks']=[{k:t[k]for k in ('task_id','question_id','direction_id')}for t in order_plan(doc,candidates,{t['task_id']for t in candidates},set())]
+    if snapshot is not None:
+        require(snapshot['questions']==bank['questions'],'container projection changed questions')
+        from studyez_contracts.learning_links.validate import question_hash
+        review=copy.deepcopy(review);qs={q['question_id']:q for q in snapshot['questions']}
+        review['bank_sha256']=document_hash(snapshot)
+        for m in review['mappings']:m['question_sha256']=question_hash(qs[m['question_id']],snapshot)
+        doc.update(review=review,bank_snapshot=snapshot)
     return validate_document(doc)
 
 def repair_reasons(brief,bank,audit,medical,validation):
@@ -816,7 +825,8 @@ def validate_result(value,packet):
         require(specs[q['question_id']]==[{k:s[k]for k in ('source_id','page','crop')}for s in q.get('stimuli',[])],'result2: rendered image is not the authored crop')
     actual=validate_bank(bank,[s['id']for s in packet['sources']])
     require(all(value['validation'].get(k)==actual[k]for k in ('pass','errors','warnings'))and validate_bank(bank,[s['id']for s in packet['sources']],check_quality=False)['pass'],'result2: invalid bank or validation')
-    expected=make_document(b,bank,a,revision=packet['revision'],title=packet['title'],exam_date=packet['examDate'],medical=m)
+    expected=make_document(b,reviewed,a,revision=packet['revision'],title=packet['title'],exam_date=packet['examDate'],medical=m,
+        snapshot=bank if meta.get('bankProjection')else None)
     if recall.enabled(b):require(meta.get('goalPreparation')==recall.prepared_coverage(a,expected),'result2: altered prepared goal coverage')
     require(value['document']==expected,'result2: altered readiness/document')
     return expected
