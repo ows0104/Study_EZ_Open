@@ -1,0 +1,56 @@
+#!/bin/sh
+# master 직접 push와 dashboard 내용 유입을 막는다.
+#
+# 왜 훅인가: 이 저장소는 비공개이고 계정이 무료 플랜이라 GitHub 서버측
+# branch protection과 ruleset이 둘 다 403으로 막힌다(2026-11-08 확인).
+# 그래서 같은 목적을 클라이언트에서 지킨다.
+#
+# 한계: 이것은 로컬 훅이다. `--no-verify`로 우회되고, 설치하지 않은 클론에서는
+# 아예 돌지 않으며, GitHub 웹 병합은 막지 못한다. 서버 강제 보호가 아니다.
+# 설치: sh .githooks/install.sh   (클론마다 한 번, 훅을 고친 뒤에도 다시)
+#
+# 규칙 근거: CLAUDE.md "작업 시작 대원칙" — master에서 직접 작업하지 않는다,
+# dashboard는 master에 merge하지 않는다.
+
+status=0
+
+# 40자 0 = 삭제 또는 새 ref
+ZERO='0000000000000000000000000000000000000000'
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+	[ -z "$remote_ref" ] && continue
+
+	if [ "$remote_ref" = "refs/heads/master" ]; then
+		echo "" >&2
+		echo "거부: master에 직접 push하려고 한다 ($remote_ref)" >&2
+		echo "" >&2
+		echo "  master는 PR 병합으로만 바뀐다. 기능 브랜치에서 PR을 올려라:" >&2
+		echo "    git switch -c <기능이름> origin/master" >&2
+		echo "    git push -u origin <기능이름>" >&2
+		echo "" >&2
+		status=1
+		continue
+	fi
+
+	# dashboard 브랜치 자신은 예외. 그 밖의 브랜치가 DASHBOARD.md를 들고
+	# 가면 dashboard가 master로 흘러들어갈 길이 열린다.
+	if [ "$remote_ref" != "refs/heads/dashboard" ] && [ "$local_sha" != "$ZERO" ]; then
+		if git cat-file -e "$local_sha:DASHBOARD.md" 2>/dev/null; then
+			echo "" >&2
+			echo "거부: $remote_ref 가 DASHBOARD.md를 담고 있다" >&2
+			echo "" >&2
+			echo "  dashboard를 기능 브랜치에 merge한 것 같다. 대시보드는" >&2
+			echo "  dashboard 브랜치에만 있어야 하고 master로 가지 않는다." >&2
+			echo "  해당 merge 커밋을 되돌리고 다시 push해라." >&2
+			echo "" >&2
+			status=1
+		fi
+	fi
+done
+
+if [ "$status" -ne 0 ]; then
+	echo "  정말 밀어야 하면 --no-verify 로 우회할 수 있다(권장하지 않는다)." >&2
+	echo "" >&2
+fi
+
+exit $status
