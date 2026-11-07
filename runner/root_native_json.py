@@ -331,9 +331,9 @@ def validate_all(out,payload):
     for row in payload['manifest'].get('formatRecoveries',[]):
         from .root_tier_recovery import validate_recovery
         validate_recovery(out,row,model=payload['manifest']['model'])
-    for row in payload['manifest'].get('runtimeRevalidations',[]):
-        proof=row['proof'];archive=Path(out)/'.runtime-revalidation'
-        require(read(Path(out)/'runtime.revalidation.json')==row
+    for i,row in enumerate(payload['manifest'].get('runtimeRevalidations',[]),1):
+        proof=row['proof'];archive=Path(out)/('.runtime-revalidation'if i==1 else f'.runtime-revalidation-{i}')
+        require(read(Path(out)/('runtime.revalidation.json'if i==1 else f'runtime.revalidation-{i}.json'))==row
             and read(archive/'ledger-before.json')==proof['priorLedger']
             and sha(archive/'recovery.py')==proof['toolSha256'],'Changed runtime compatibility archive')
     for row in payload['manifest'].get('renderRecoveries',[]):

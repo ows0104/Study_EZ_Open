@@ -213,6 +213,10 @@ def run(packet,out,model,invoke):
                 'sourceAudit':audit,'medical':medical,'validation':{k:v for k,v in validation.items()if k!='checked_at'},'repairReasons':reasons})
             continue
         if blocked:raise ValueError('독립 정답 검수 입력 분리가 완료되지 않았습니다. 실제 검수를 완료로 표시하지 않고 보존합니다.')
+        # Tree maps leave organising concepts without a question of their own; they stay in the review
+        # tree, and only their empty plans leave the bank snapshot (exact reviewed bank kept in the proof).
+        bank,projection=c.project_container_concepts(bank)
+        if projection:validation=validate_bank(bank,[s['id']for s in packet['sources']])
         doc=c.make_document(b,bank,audit,revision=packet['revision'],title=packet['title'],exam_date=packet['examDate'],medical=medical)
         result={'brief':b,'document':doc,'sourceAudit':audit,'medical':medical,'validation':validation,'manifest':{
             'pipelineVersion':c.POLICY,'inputHash':packet['inputHash'],'briefHash':document_hash(b),'bankHash':document_hash(bank),
@@ -225,6 +229,7 @@ def run(packet,out,model,invoke):
             **({'formatRecoveries':format_recoveries}if format_recoveries else{}),
             **({'renderRecoveries':render_recoveries}if render_recoveries else{}),
             **({'medicalRetries':medical_retries}if medical_retries else{}),
+            **({'bankProjection':projection}if projection else{}),
             **({'runtimeRevalidations':runtime_revalidations}if runtime_revalidations else{}),
             **({'authoringRecoveryOutput':json.loads((out/'repair-1.raw.json').read_text(encoding='utf-8'))}if rejected else{}),
             'briefRevisions':[{'stage':name,'brief':value['brief'],'reason':value['map_change_reason']}

@@ -23,8 +23,7 @@ def revalidate(packet, out, *, expected_identity, reason, model=None):
         n.require_unblocked(out)
         old = n.read(out / 'ledger.json')
         n.require(old['identity'] == expected_identity and old.get('pipelineVersion') == c.POLICY
-                  and any(old.get(k) for k in c.RECOVERY_HISTORY) and not old.get('runtimeRevalidations')
-                  and not (out / 'runtime.revalidation.json').exists() and not (out / '.runtime-revalidation').exists()
+                  and any(old.get(k) for k in c.RECOVERY_HISTORY)
                   and not (out / 'result.json').exists() and packet_hash(packet) == packet['inputHash'] and reason.strip(),
                   'Only an unrevalidated run with a recorded recovery may be rebound')
         current = g.identity(packet, model)
@@ -47,18 +46,22 @@ def revalidate(packet, out, *, expected_identity, reason, model=None):
                  'currentRuntimeHash': current, 'reason': reason, 'toolSha256': n.sha(__file__), 'modelReplay': False}
         row = {'proof': proof, 'proofHash': document_hash(proof)}
         updated = copy.deepcopy(old)
-        updated.update(identity=current, runtimeRevalidations=[row])
+        rows = old.get('runtimeRevalidations', []) + [row]
+        updated.update(identity=current, runtimeRevalidations=rows)
         meta = {k: updated.get(k, []) for k in c.RECOVERY_HISTORY}
-        meta.update(runtimeRevalidations=[row], inputHash=packet['inputHash'], runtimeHash=current, repairRounds=old['repairRounds'])
+        meta.update(runtimeRevalidations=rows, inputHash=packet['inputHash'], runtimeHash=current, repairRounds=old['repairRounds'])
         stages = {k: {'name': k, **v} for k, v in updated['stages'].items()}
         c.validate_runtime_revalidations(meta, stages)
         c.validate_render_recoveries(meta, stages)
         c.validate_medical_retries(meta, stages)
-        archive = out / '.runtime-revalidation'
+        count = len(rows)
+        archive = out / ('.runtime-revalidation' if count == 1 else f'.runtime-revalidation-{count}')
+        journal = out / ('runtime.revalidation.json' if count == 1 else f'runtime.revalidation-{count}.json')
+        n.require(not archive.exists() and not journal.exists(), 'Revalidation archive already exists')
         archive.mkdir()
         (archive / 'ledger-before.json').write_bytes((out / 'ledger.json').read_bytes())
         (archive / 'recovery.py').write_bytes(Path(__file__).read_bytes())
-        g.write(out / 'runtime.revalidation.json', row)
+        g.write(journal, row)
         g.write(out / 'ledger.json', updated)
         return {'modelCalls': 0, 'repairRounds': old['repairRounds'], 'priorRuntime': old['identity'], 'runtime': current,
                 'proofHash': row['proofHash']}

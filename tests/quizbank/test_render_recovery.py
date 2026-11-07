@@ -1,5 +1,6 @@
 """Oversized original crops: deterministic scale step-down and the no-replay render recovery contract."""
 import copy
+import gc
 import random
 
 import fitz
@@ -20,6 +21,10 @@ def noisy_pdf(path):
             pix.set_pixel(x, y, (random.randrange(256), random.randrange(256), random.randrange(256)))
     page.insert_image(page.rect, pixmap=pix)
     doc.save(path)
+    doc.close()
+    del pix, page, doc
+    # PyMuPDF objects must be freed on this thread; a later GC on a worker thread of another test can crash.
+    gc.collect()
 
 
 SPEC = {'question_id': 'Q1', 'source_id': 'S1', 'page': 1, 'crop': [0, 0, 1, 1], 'reason': 'whole page'}
@@ -30,6 +35,7 @@ def test_crops_that_fit_keep_the_original_2x_bytes(tmp_path):
     first = visual.page_crop(tmp_path / 'a.pdf', SPEC)
     fixed = visual.page_crop(tmp_path / 'a.pdf', SPEC, scales=(2,))
     assert first == fixed and first[1] == 800
+    gc.collect()
 
 
 def test_oversized_crop_steps_down_until_it_fits(tmp_path, monkeypatch):
@@ -39,6 +45,7 @@ def test_oversized_crop_steps_down_until_it_fits(tmp_path, monkeypatch):
     body, width, height = visual.page_crop(tmp_path / 'a.pdf', SPEC)
     assert len(body) <= len(full) - 1 and width < 800 and (width, height) != (800, 600)
     assert visual.page_crop(tmp_path / 'a.pdf', SPEC) == (body, width, height)  # deterministic
+    gc.collect()
 
 
 def _proof_case():
@@ -135,3 +142,35 @@ def test_runtime_revalidation_after_medical_retry_keeps_earlier_proofs_valid():
         c.validate_runtime_revalidations(later, changed)
     with pytest.raises(ValueError):  # without the revalidation record the medical proof's runtime no longer matches
         c.validate_medical_retries({**meta, 'runtimeHash': '5' * 64}, stages)
+
+
+def _bank():
+    concept = lambda cid, related: {'concept_id': cid, 'title': cid, 'related_concepts': related}
+    plan = lambda cid, dirs, budget: {'concept_id': cid, 'directions': dirs, 'repetition_budget': budget, 'target_mastery': 0.85}
+    return {'concepts': [concept('C001', []), concept('C002', ['C001', 'C003']), concept('C003', ['C002'])],
+            'retrieval_plan': [plan('C001', [], 0), plan('C002', ['direct'], 2), plan('C003', [], 0)],
+            'questions': [{'question_id': 'Q1', 'concept_id': 'C002'}]}
+
+
+def test_container_projection_drops_only_unused_empty_concepts_and_restores_exactly():
+    bank = _bank()
+    projected, proof = c.project_container_concepts(bank)
+    assert [x['concept_id'] for x in projected['concepts']] == ['C002']
+    assert [x['concept_id'] for x in projected['retrieval_plan']] == ['C002']
+    assert projected['concepts'][0]['related_concepts'] == []
+    assert projected['questions'] == bank['questions']
+    assert c.restore_container_concepts(projected, proof) == bank
+    assert c.project_container_concepts(projected) == (projected, None)
+
+
+def test_container_projection_keeps_planned_or_used_concepts_and_rejects_tampering():
+    bank = _bank()
+    bank['retrieval_plan'][2]['directions'] = ['direct']  # C003 has a plan -> kept
+    projected, proof = c.project_container_concepts(bank)
+    assert [x['concept_id'] for x in projected['concepts']] == ['C002', 'C003']
+    tampered = copy.deepcopy(projected)
+    tampered['questions'][0]['concept_id'] = 'C003'
+    with pytest.raises(ValueError):
+        c.restore_container_concepts(tampered, proof)
+    with pytest.raises(ValueError):
+        c.restore_container_concepts(projected, {**proof, 'policy': 'other'})

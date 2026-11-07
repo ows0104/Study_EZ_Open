@@ -233,19 +233,21 @@ def history_runtime(meta):
 
 
 def validate_runtime_revalidations(meta,stages):
+    """Sequential no-model rebinds of unchanged cached stages to a newer deterministic runtime."""
     rows=meta.get('runtimeRevalidations',[])
-    require(type(rows)is list and len(rows)<=1,'result2: invalid runtime revalidation history')
-    for row in rows:
+    require(type(rows)is list and len(rows)<=4,'result2: invalid runtime revalidation history')
+    for i,row in enumerate(rows):
         require(type(row)is dict and set(row)=={'proof','proofHash'}and type(row['proof'])is dict
             and row['proofHash']==document_hash(row['proof']),'result2: changed runtime revalidation')
         p=row['proof']
         require(set(p)=={'priorLedger','priorLedgerHash','packetHash','currentRuntimeHash','reason','toolSha256','modelReplay'},
             'result2: malformed runtime revalidation')
         old=p['priorLedger']
-        require(type(old)is dict and type(old.get('stages'))is dict and not old.get('runtimeRevalidations')
+        require(type(old)is dict and type(old.get('stages'))is dict and old.get('runtimeRevalidations',[])==rows[:i]
             and any(old.get(k)for k in RECOVERY_HISTORY)and p['priorLedgerHash']==document_hash(old)
             and old.get('pipelineVersion')==POLICY,'result2: invalid prior runtime ledger')
-        require(p['packetHash']==meta['inputHash']and p['currentRuntimeHash']==meta['runtimeHash']
+        following=rows[i+1]['proof']['priorLedger']['identity']if i+1<len(rows)else meta['runtimeHash']
+        require(p['packetHash']==meta['inputHash']and p['currentRuntimeHash']==following
             and p['modelReplay']is False and type(p['reason'])is str and p['reason'].strip()
             and type(p['toolSha256'])is str and re.fullmatch(r'[a-f0-9]{64}',p['toolSha256']),
             'result2: changed runtime revalidation identity')
@@ -255,6 +257,55 @@ def validate_runtime_revalidations(meta,stages):
         require(set(old['stages'])<=set(stages)and all(stages[k]=={'name':k,**v}for k,v in old['stages'].items()),
             'result2: runtime revalidation changed cached stages')
     return rows
+
+
+CONTAINER_POLICY='container-concepts/1'
+
+
+def project_container_concepts(bank):
+    """Drop bank concepts that no question uses and whose retrieval plan is empty.
+
+    A tree-shaped map (concept-map-extract/3) has organising/branch concepts without a question of
+    their own; they stay in the review concept tree and targets. Questions, answers, plans of used
+    concepts and order are untouched; the proof restores the exact reviewed bank."""
+    used={q['concept_id']for q in bank['questions']}
+    plans={r['concept_id']:(j,r)for j,r in enumerate(bank['retrieval_plan'])}
+    removed=[]
+    for i,concept in enumerate(bank['concepts']):
+        cid=concept['concept_id'];j,plan=plans.get(cid,(None,None))
+        if cid not in used and(plan is None or not plan['directions']):
+            removed.append({'concept':concept,'conceptIndex':i,'plan':plan,'planIndex':j})
+    if not removed:return bank,None
+    gone={r['concept']['concept_id']for r in removed}
+    value=copy.deepcopy(bank)
+    value['concepts']=[c for c in value['concepts']if c['concept_id']not in gone]
+    value['retrieval_plan']=[r for r in value['retrieval_plan']if r['concept_id']not in gone]
+    related=[]  # kept concepts' links to removed ones (the review tree keeps these relations)
+    for concept in value['concepts']:
+        links=concept.get('related_concepts',[])
+        if any(x in gone for x in links):
+            related.append({'concept_id':concept['concept_id'],'related_concepts':copy.deepcopy(links)})
+            concept['related_concepts']=[x for x in links if x not in gone]
+    return value,{'policy':CONTAINER_POLICY,'sourceBankHash':document_hash(bank),'removed':removed,'related':related}
+
+
+def restore_container_concepts(bank,proof):
+    """The exact reviewed bank behind a projected document bank (identity when no proof)."""
+    if proof is None:return bank
+    require(type(proof)is dict and set(proof)=={'policy','sourceBankHash','removed','related'}and proof['policy']==CONTAINER_POLICY
+        and type(proof['removed'])is list and proof['removed']and type(proof['related'])is list,'result2: malformed container projection')
+    value=copy.deepcopy(bank)
+    links={r['concept_id']:r['related_concepts']for r in proof['related']}
+    for concept in value['concepts']:
+        if concept['concept_id']in links:concept['related_concepts']=copy.deepcopy(links[concept['concept_id']])
+    for row in sorted(proof['removed'],key=lambda r:r['conceptIndex']):
+        value['concepts'].insert(row['conceptIndex'],copy.deepcopy(row['concept']))
+    for row in sorted((r for r in proof['removed']if r['plan']is not None),key=lambda r:r['planIndex']):
+        value['retrieval_plan'].insert(row['planIndex'],copy.deepcopy(row['plan']))
+    require(document_hash(value)==proof['sourceBankHash'],'result2: container projection does not restore the reviewed bank')
+    again,check=project_container_concepts(value)
+    require(again==bank and check==proof,'result2: container projection removed a used or planned concept')
+    return value
 
 
 def validate_render_recoveries(meta,stages):
@@ -665,6 +716,8 @@ def validate_result(value,packet):
     from .automation import validate_checks
     require(set(value)=={'brief','document','sourceAudit','medical','validation','manifest'},'result2: unknown/missing artifacts')
     b=value['brief'];bank=value['document']['bank_snapshot'];a=value['sourceAudit'];m=value['medical'];meta=value['manifest']
+    # The document may carry a container-concept projection of the reviewed bank (questions identical).
+    reviewed=restore_container_concepts(bank,meta.get('bankProjection'))
     if packet.get('parallelAuthoring'):
         proof=meta.get('parallelAuthoring',{})
         require(packet.get('authoring')=='cli'and packet.get('inputMode')=='source','parallel: wrong authoring mode')
@@ -676,7 +729,7 @@ def validate_result(value,packet):
             require(all(re.fullmatch(r'[a-f0-9]{64}',row.get(key,''))for key in('inputHash','outputHash','providerHash')),'parallel: missing receipt hashes')
         require(len({row['inputHash']for row in rows.values()})==1,'parallel: different source-only inputs')
     else:require('parallelAuthoring'not in meta,'parallel: unsolicited provenance')
-    validate_brief(b);validate_checks(m,bank);validate_audit(b,bank,a);validate_images(bank,b['sources'])
+    validate_brief(b);validate_checks(m,reviewed);validate_audit(b,reviewed,a);validate_images(bank,b['sources'])
     require(b['lecture_id']==packet['subject']+'/'+packet['runId'],'result2: wrong lecture')
     require({s['source_id']:s['sha256']for s in b['sources']}=={s['id']:s['sha256']for s in packet['sources']},'result2: wrong sources')
     original={s['id']:s for s in packet['sources']}
@@ -743,7 +796,7 @@ def validate_result(value,packet):
             if i==0 and not rejected:require(revision['brief']==previous,'result2: initial authoring changed independent map')
         previous=revision['brief']
     require(previous==b,'result2: final map not in revision lineage')
-    author={'bank':bank,'brief':b,'visual_stimuli':meta['visualStimuli'],'clinical_conflicts':meta['clinicalConflicts'],'map_change_reason':meta['mapChangeReason']}
+    author={'bank':reviewed,'brief':b,'visual_stimuli':meta['visualStimuli'],'clinical_conflicts':meta['clinicalConflicts'],'map_change_reason':meta['mapChangeReason']}
     final=stages[f'repair-{n}'if n else'generate']
     require(final['outputHash']==document_hash(author)and stages[f'source-{n}']['outputHash']==document_hash(a)and stages[f'medical-{n}']['outputHash']==document_hash(m),'result2: stage output mismatch')
     raw_author=copy.deepcopy(author)
@@ -752,8 +805,8 @@ def validate_result(value,packet):
     validate_authoring(raw_author)
     require(stages[f'source-{n}']['rawOutputHash']==document_hash(a['assessment']),'result2: raw source proof mismatch')
     require(meta['medicalInputHash']==stages[f'medical-{n}']['inputHash'],'result2: medical input proof mismatch')
-    require(meta['medicalInputHash']==document_hash({'title':packet['title'],'bank':bank,
-        'clinicalInput':medical_input(bank,meta['clinicalConflicts']),'_pipeline_version':POLICY}),'result2: actual medical projection mismatch')
+    require(meta['medicalInputHash']==document_hash({'title':packet['title'],'bank':reviewed,
+        'clinicalInput':medical_input(reviewed,meta['clinicalConflicts']),'_pipeline_version':POLICY}),'result2: actual medical projection mismatch')
     require(stages[f'source-{n}']['clinicalContextHash']==document_hash(meta['clinicalConflicts']),'result2: source reviewed different clinical context')
     specs={q['question_id']:[]for q in bank['questions']}
     for s in meta['visualStimuli']:
