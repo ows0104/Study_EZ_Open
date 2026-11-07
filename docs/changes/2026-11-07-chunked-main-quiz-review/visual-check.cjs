@@ -13,7 +13,7 @@ async function api(url,body){const r=await fetch(local.api+url,body?{method:'POS
   view=await api('/api/root-learning/sessions/'+sid);if(++skipped>100)throw Error('No visual task in normal session');
  }
  if(!view.task)throw Error('No prepared visual task');
- const browser=await chromium.launch({headless:true});
+ const browser=await chromium.launch({headless:true,channel:'chrome'});
  try{
   const page=await browser.newPage({viewport:{width:1280,height:960}});const errors=[];
   page.on('pageerror',e=>errors.push(e.message));
