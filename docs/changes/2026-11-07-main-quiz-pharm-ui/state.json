@@ -164,11 +164,34 @@
       "log": "runs/_development/2026-11-07-main-quiz-pharm-ui/1794050565960206600-server-regression.log"
     }
   ],
-  "review": null,
+  "review": {
+    "at": "2026-11-07T11:25:10.905096+00:00",
+    "summary": "원본 SHA/문항 인용 쪽·읽기 권한, 답 공개/선지/그림, 네 평가와 도움 기록 분리, 옛 요청 재시도 및 새·구 사건 혼합·고정 평가 매개변수, PDF 정리/실패, 모달·숫자키·저장 차단을 검토. 리뷰 중 ratingDays 혼합 및 매개변수 고정을 보완했고 최종 웹·서버14·브라우저3 및 PNG 확인 완료. 운영 데이터 쓰기/배포0.",
+    "evidence_version": 2,
+    "source_hash": "9200b5d5cdb8029af6393f6659efdaba134245b64609cda60fc0c01335ec00f3",
+    "plan_hash": "d5e8374d7cc6df3580c1eee1b866d3196baec8368fc77b63f75f1f5709fab9ee",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-07T11:23:23.825567+00:00"
+  "updated_at": "2026-11-07T11:25:11.154368+00:00"
 }
