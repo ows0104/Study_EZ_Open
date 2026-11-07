@@ -5,8 +5,8 @@
 GitHub 검사 통과 → 고정 서버 패키지 배포 → 같은 SHA의 API를 확인한 Pages 웹 배포 순서다.
 아래 내용은 별도 승인을 사용하는 수동 고정 후보 배포 경로이며, DB/문항/권한 변경 정책은 계속 적용된다.
 
-모든 변경은 [개발 루프](development/README.md)의 구현 승인·실제 검사·코드 리뷰·중요 배포 승인을 따른다.
-서버 배포는 `./deploy.ps1 -ChangeId <작업ID>`로 실행한다. 해당 코드 해시의 승인/검사/리뷰가 없으면
+모든 변경은 [개발 루프](development/README.md)의 구현 근거·실제 검사·코드 리뷰·배포 근거를 따른다. 따로 묻는 것은 [사람에게 묻는 것](development/README.md#사람에게-묻는-것)뿐이다.
+서버 배포는 `./deploy.ps1 -ChangeId <작업ID>`로 실행한다. 해당 코드 해시의 근거/검사/리뷰가 없으면
 클라우드 호출 전에 중단한다. 서버/웹 모두 [고정 후보·사후 검사 절차](development/release-and-incidents.md)를 따른다.
 웹은 검증된 web/dist 후보를 승인된 publish-web 명령으로 배포한다. 기존 master push가 별도의 배포를
 유발할 수 있으므로 이 절차를 우회하는 직접 push는 하지 않는다. 원격 브랜치/Pages 설정 자체는 이번에 변경하지 않았다.
@@ -14,7 +14,7 @@ GitHub 검사 통과 → 고정 서버 패키지 배포 → 같은 SHA의 API를
 서버 독립 환경은 server 폴더에서 requirements.txt를 설치한다. `../studyez_contracts`의 editable 설치가 포함된다.
 기존 환경도 한 번 다시 설치해야 한다. 서버 패키지는 `prepare-build.ps1 -Destination <새폴더>`로 준비하며,
 app·공용 계약·requirements·Dockerfile만 포함한다. 이 패키지를 release_evidence.py prepare로 검증·고정하고
-후보에 대한 승인을 받은 뒤 deploy.ps1이 고정 패키지만 배포한다.
+후보의 deploy 근거를 기록한 뒤 deploy.ps1이 고정 패키지만 배포한다.
 서버 배포는 attempt별 고유 revision을 트래픽 없이 생성한 뒤 준비 상태와 실제 생성 버전을 확인한다.
 deploy-revision.ps1이 해당 버전으로 100% 트래픽을 명시 전환하고 생성·준비·트래픽 버전의 일치를 검증한다.
 기존 버전의 정상 응답만으로 이번 배포를 성공 처리하지 않는다. 회귀 검사는 tests/development/test_server_deploy.py를 따른다.
