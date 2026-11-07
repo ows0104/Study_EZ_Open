@@ -160,7 +160,9 @@ test('preview primary card creates a shared manual request; only the separate to
     await page.waitForFunction(()=>window.promptTest.sent.length===2);
     assert.equal(await page.evaluate(()=>window.promptTest.sent[1].autoSend),true);
     await page.goto(origin+'/tests/shared-preview-prompt.html?student');
-    await page.getByRole('button',{name:'내 예습 프롬프트 고치기'}).waitFor({timeout:5000}).catch(async error=>{
+    // 2026-11-07: 내 프롬프트 수정은 개인 대화 ▾ 메뉴 안에 있다.
+    await page.getByRole('button',{name:'개인 대화 메뉴'}).first().click({timeout:5000});
+    await page.getByRole('menuitem',{name:/내 프롬프트 수정/}).waitFor({timeout:5000}).catch(async error=>{
       throw new Error(`${error.message}\nFixture errors: ${errors.join('; ')}\n${await page.locator('body').innerText()}`);
     });
     assert.equal(await page.getByRole('button',{name:'공통 대화 만들기',exact:true}).count(),0);

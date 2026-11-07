@@ -8,12 +8,12 @@
   ],
   "approvals": {
     "build": {
-      "at": "2026-11-05T18:26:43.452376+00:00",
-      "evidence": "2026-11-06 사용자: '좋은 거 같아. 이제 쓸데없이 열려있던 localhost 포트 다 닫고 실제 코드로 구현해줘. 구현하기 전에 대시보드에 할 일 꼭 작성하고 ...' + 같은 날 plan 결정 질문 답변: 갈래 색 5조합으로 대체 / 2단계로 분리 / 기능 생길 때까지 숨김 / 감염과 면역만 분리",
-      "scope": "plan.md 1단계: web만(토큰·테마 5조합·설정, 좌측 메뉴 앱 틀, 갈래·번호 표시 계산, 감염과 면역 1차 블럭 분리 예외, 캘린더·패널·강의 목록 개편, 이용방법·웹 테스트 갱신)의 로컬 구현·검사·PR 생성까지. merge·운영 배포·DB 변경·2단계(회독 저장·자유 노트) 제외",
+      "at": "2026-11-07T12:55:36.427720+00:00",
+      "evidence": "2026-11-07 사용자: 'Yes, apply' — 프로토타입 변경(시험 칸·빈 막대 테두리·예습 색·N 규칙·대화 버튼 C안·캘린더 머리/오늘 카드/날짜 줄 화살표·덱 모아받기 제거·스크롤 없는 격자)을 운영 코드에 반영해 PR #9에 올리기",
+      "scope": "intent.md 2026-11-07 (1)–(6) 지시의 web 반영(calendar/*, styles/calendar.css, notices/GuidePage.tsx, 관련 web/tests)과 PR #9 브랜치 push. merge·배포·DB 변경 제외",
       "evidence_version": 2,
-      "source_hash": "d0a09a7602a724e02ac7b0e59c38999de6972cecc806663ff97dd71e7682a143",
-      "plan_hash": "8686119fd4a7c8b05dc781d4e1ab1a0ea7e91f9607cbf656ac8a8a8a8ebc6fa3",
+      "source_hash": "a80519ea1ec0afdce5a48ff8bfaa55914c33d666631255dc3ce7c2dc79242035",
+      "plan_hash": "8b8bb6ad699da91e237a995d64ccb8854daec63dc28f4b79236219a5ebe7ab65",
       "inputs": [
         ".github",
         "bridge",
@@ -31,7 +31,7 @@
         "uv.lock",
         "web"
       ],
-      "release_hash": "fdbc941fbaf41eba586246372cb429c67c5f86707a767155ca9899b6befda7c3"
+      "release_hash": "f886ce0616f02ef0517ad650179631da5c5e7bb336df13a16cdb50705520a406"
     }
   },
   "checks": [
@@ -211,6 +211,321 @@
       "log": "runs/_development/2026-11-05-ui-ux-redesign/1793904777483953300-web.log",
       "web_artifact": "54902b7c1bb0b67813b6f0d53bf44d5f76a94770e8f356857a16628adebbfedf",
       "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T12:55:56.125937+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "a80519ea1ec0afdce5a48ff8bfaa55914c33d666631255dc3ce7c2dc79242035",
+      "plan_hash": "8b8bb6ad699da91e237a995d64ccb8854daec63dc28f4b79236219a5ebe7ab65",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1794056145097431000-web.log",
+      "web_artifact": "54902b7c1bb0b67813b6f0d53bf44d5f76a94770e8f356857a16628adebbfedf",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T12:56:08.638470+00:00",
+      "command": [
+        "node",
+        "web/tests/run-professor-preview.cjs",
+        "--all"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "a80519ea1ec0afdce5a48ff8bfaa55914c33d666631255dc3ce7c2dc79242035",
+      "plan_hash": "8b8bb6ad699da91e237a995d64ccb8854daec63dc28f4b79236219a5ebe7ab65",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1794056158096095600-web.log",
+      "web_artifact": "54902b7c1bb0b67813b6f0d53bf44d5f76a94770e8f356857a16628adebbfedf",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T12:56:29.268877+00:00",
+      "command": [
+        "node",
+        "--test",
+        "web/tests/preview-actions.test.cjs",
+        "web/tests/wait-for-api.test.mjs",
+        "web/tests/firstScreen.test.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "a80519ea1ec0afdce5a48ff8bfaa55914c33d666631255dc3ce7c2dc79242035",
+      "plan_hash": "8b8bb6ad699da91e237a995d64ccb8854daec63dc28f4b79236219a5ebe7ab65",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1794056169454887000-web.log",
+      "web_artifact": "54902b7c1bb0b67813b6f0d53bf44d5f76a94770e8f356857a16628adebbfedf",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T12:56:49.629491+00:00",
+      "command": [
+        "cmd",
+        "/c",
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "a80519ea1ec0afdce5a48ff8bfaa55914c33d666631255dc3ce7c2dc79242035",
+      "plan_hash": "8b8bb6ad699da91e237a995d64ccb8854daec63dc28f4b79236219a5ebe7ab65",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1794056190096646200-web.log",
+      "web_artifact": "842d3d23da29528bd8946b19466883629b70ad27bdcb070202119ce9ce0c18f5",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T12:59:54.504037+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "7b951a455b1e130cfff756a1aaf5e1101868d8864a05b5ddeda1188d1cd8db15",
+      "plan_hash": "8b8bb6ad699da91e237a995d64ccb8854daec63dc28f4b79236219a5ebe7ab65",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1794056384101802700-web.log",
+      "web_artifact": "842d3d23da29528bd8946b19466883629b70ad27bdcb070202119ce9ce0c18f5",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T13:00:07.704036+00:00",
+      "command": [
+        "node",
+        "web/tests/run-professor-preview.cjs",
+        "--all"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "7b951a455b1e130cfff756a1aaf5e1101868d8864a05b5ddeda1188d1cd8db15",
+      "plan_hash": "8b8bb6ad699da91e237a995d64ccb8854daec63dc28f4b79236219a5ebe7ab65",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1794056395337432600-web.log",
+      "web_artifact": "842d3d23da29528bd8946b19466883629b70ad27bdcb070202119ce9ce0c18f5",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T13:00:27.806901+00:00",
+      "command": [
+        "node",
+        "--test",
+        "web/tests/preview-actions.test.cjs",
+        "web/tests/wait-for-api.test.mjs",
+        "web/tests/firstScreen.test.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "7b951a455b1e130cfff756a1aaf5e1101868d8864a05b5ddeda1188d1cd8db15",
+      "plan_hash": "8b8bb6ad699da91e237a995d64ccb8854daec63dc28f4b79236219a5ebe7ab65",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1794056408489575200-web.log",
+      "web_artifact": "842d3d23da29528bd8946b19466883629b70ad27bdcb070202119ce9ce0c18f5",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T13:00:54.187523+00:00",
+      "command": [
+        "cmd",
+        "/c",
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 2,
+      "evidence_version": 2,
+      "source_hash": "7b951a455b1e130cfff756a1aaf5e1101868d8864a05b5ddeda1188d1cd8db15",
+      "plan_hash": "8b8bb6ad699da91e237a995d64ccb8854daec63dc28f4b79236219a5ebe7ab65",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1794056428640441800-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T13:01:37.564884+00:00",
+      "command": [
+        "cmd",
+        "/c",
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ef62b13e8ff110c8e7be671b3ab55852181d2dde6eac355953fbb173d56845d7",
+      "plan_hash": "8b8bb6ad699da91e237a995d64ccb8854daec63dc28f4b79236219a5ebe7ab65",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-05-ui-ux-redesign/1794056474079738600-web.log",
+      "web_artifact": "9ab2a99992e50595b91b8e202933848fe591c4a5e34e4317808d34a76cc975c6",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
     }
   ],
   "review": {
@@ -242,5 +557,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-05T18:53:41.963972+00:00"
+  "updated_at": "2026-11-07T13:01:41.359810+00:00"
 }

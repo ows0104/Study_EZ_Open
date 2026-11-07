@@ -2397,3 +2397,108 @@ button.event-panel-note:hover {
 .preview-source-notice { margin: 4px 0 8px; padding: 8px 10px; border-radius: 8px; background: var(--warn-soft); border: 1px solid var(--warn-line); font-size: 12.5px; color: var(--warn); }
 .preview-source-notice p { margin: 0; }
 .preview-source-notice p + p { margin-top: 4px; }
+
+/* ───────── 2026-11-07 사용자 지시 반영 ───────── */
+
+/* 화면 한 장에 들어가게(스크롤 없음). 좌측 메뉴로 바뀌어 위쪽 머리줄(52px)이 없다: 위아래 여백 28+40만 뺀다. */
+.app-shell:not(.is-bare) .calendar-main { height: calc(100dvh - 68px); }
+@media (max-width: 900px) { .app-shell:not(.is-bare) .calendar-main { height: calc(100dvh - 52px); } }
+@media (max-width: 640px) { .app-shell:not(.is-bare) .calendar-main { height: calc(100dvh - 97px); } }
+.week-calendar, .month-calendar { --row-min: 40px; }
+
+/* 머리: 「감염과 면역 1차 1주차 D-13」 한 줄 + 오른쪽 끝 오늘 예습·복습 */
+.calendar-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: nowrap; }
+.calendar-head h1 { display: flex; align-items: baseline; gap: 12px; min-width: 0; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.03em; }
+.calendar-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calendar-dday { flex: none; font-size: 26px; font-weight: 700; color: #e5534b; font-variant-numeric: tabular-nums; }
+.today-board { flex: none; display: grid; grid-template-columns: repeat(2, minmax(118px, 190px)); gap: 10px; }
+.today-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 14px;
+  border-radius: 12px; border: 1px solid transparent;
+}
+.today-card-label { font-size: 14px; font-weight: 600; white-space: nowrap; }
+.today-card b { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.today-card b small { font-size: 13px; font-weight: 600; margin-left: 2px; }
+.today-card.is-pre { background: var(--accent2-soft); border-color: var(--accent2-line); color: var(--accent2-ink); }
+.today-card.is-review { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-ink); }
+.calendar-page.is-split .calendar-head h1 { font-size: 24px; }
+.calendar-page.is-split .today-card b { font-size: 18px; }
+@media (max-width: 640px) {
+  .calendar-head { flex-wrap: wrap; }
+  .calendar-head h1 { font-size: 22px; }
+  .today-board { width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* 주 넘기기: 날짜 줄 양끝 */
+.week-head.is-spacer { place-content: center; place-items: center; }
+.week-head { position: sticky; }
+.week-step {
+  display: grid; place-items: center; width: 28px; height: 28px; min-height: 0; padding: 0; border: 0; border-radius: 8px;
+  background: none; color: var(--ink-2); font-size: 20px; line-height: 1; cursor: pointer;
+}
+.week-step:hover { background: var(--hover); color: var(--ink); }
+.week-step.is-next { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); }
+
+/* 시험 칸: 옅은 빨강 바탕 + 빨간 글자(새빨간 칸이 너무 강하다) */
+.calendar-event.is-exam, .calendar-event.is-exam:hover:not(:disabled) { background: #fdeeee; border-color: #f3b0b2; color: var(--exam-ink); }
+.calendar-event.is-exam:hover:not(:disabled) { border-color: var(--exam); }
+.calendar-event.is-exam .calendar-event-primary { color: var(--exam-ink); font-weight: 700; }
+.calendar-event.is-exam .calendar-event-meta { color: #d87d80; }
+.calendar-legend .legend-swatch.is-exam { background: #fdeeee; border-color: #f3b0b2; }
+.event-panel-kind.is-exam { background: #fdeeee; color: var(--exam-ink); }
+
+/* 빈 막대는 채움 없이 테두리만. 3px에 1px 테두리를 그리면 회색 막대로 보여서 회독 토막·학습률 막대를 5px로 */
+.meter, .readline, .readline i { height: 5px; }
+.meter.is-closed { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); }
+.readline i { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); }
+.readline i.rl-pre.is-on { background: color-mix(in srgb, var(--accent2) 72%, var(--surface)); box-shadow: none; }
+.calendar-event.has-learning { padding-bottom: 24px; }
+.calendar-event-footer { bottom: 6px; }
+.chip-learning-pair { gap: 4px; }
+
+/* 개인 대화 C안: 왼쪽 칸(만들기 ＋ / 열기 ↗) + 오른쪽 ▾ 메뉴. 대화 버튼도 갈래 색, 퀴즈 버튼과 같은 34px. */
+.chat-split {
+  position: relative; display: inline-flex; align-items: stretch; height: 34px; vertical-align: top;
+  border: 1px solid var(--line-strong); border-radius: 9px; background: var(--surface);
+}
+.chat-split.is-pre { border-color: var(--accent2-line); color: var(--accent2-ink); }
+.chat-split.is-review { border-color: var(--accent-line); color: var(--accent-ink); }
+.chat-split-main {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 0; height: 100%; padding: 0 11px; border: 0;
+  border-radius: 8px 0 0 8px; background: none; color: inherit; font-size: 13.5px; font-weight: 500;
+  text-decoration: none; white-space: nowrap; cursor: pointer;
+}
+.chat-split-side {
+  position: relative; display: grid; place-items: center; width: 30px; min-height: 0; height: 100%; padding: 0; border: 0;
+  border-left: 1px solid color-mix(in srgb, currentColor 25%, var(--surface)); border-radius: 0 8px 8px 0;
+  background: none; color: inherit; font-size: 11px; cursor: pointer;
+}
+.chat-split-side.is-dot::after { content: ""; position: absolute; top: 6px; right: 6px; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.chat-split-main:hover:not(:disabled), .chat-split-side:hover { background: var(--hover); }
+.chat-split-main:disabled { opacity: 0.5; cursor: default; }
+.chat-split-menu {
+  position: absolute; top: calc(100% + 4px); right: 0; z-index: 20; display: flex; flex-direction: column; min-width: 172px; padding: 5px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-3);
+}
+.chat-split-menu button {
+  display: flex; align-items: center; gap: 8px; min-height: 0; padding: 7px 8px; border: 0; border-radius: 6px;
+  background: none; color: var(--ink); font-size: 13px; text-align: left; cursor: pointer;
+}
+.chat-split-menu button:hover:not(:disabled) { background: var(--hover); }
+.chat-split-menu button span { width: 14px; text-align: center; color: var(--ink-3); }
+.event-panel-actions > .panel-group > .chat-split { margin: 0 6px 6px 0; }
+
+/* 공통 대화도 링크 아이콘(↗), 대화 버튼은 갈래 색, 높이는 34px로 퀴즈 버튼과 맞춘다 */
+.event-panel-actions > .panel-group .panel-action-hit { min-height: 32px; height: 32px; }
+.event-panel-actions > .panel-group a.panel-action-hit strong::before { content: "↗"; margin-right: 6px; font-weight: 400; }
+.event-panel-actions > .panel-group.is-preview .panel-action:not(.is-empty) { border-color: var(--accent2-line); }
+.event-panel-actions > .panel-group.is-preview .panel-action:not(.is-empty) strong { color: var(--accent2-ink); }
+.event-panel-actions > .panel-group.is-review .panel-action:not(.is-empty) { border-color: var(--accent-line); }
+.event-panel-actions > .panel-group.is-review .panel-action:not(.is-empty) strong { color: var(--accent-ink); }
+.action-button { box-sizing: border-box; height: 34px; }
+.event-panel-actions > .panel-group .panel-action,
+.event-panel-actions > .panel-group .panel-action.is-key { box-sizing: border-box; height: 34px; }
+.event-panel-actions > .panel-group .panel-action-hit { height: 100%; min-height: 0; }
+/* 패널을 열어 좁아지면 제목을 지키고 오늘 카드는 오른쪽 아래 줄로 */
+.calendar-page.is-split .calendar-head { flex-wrap: wrap; row-gap: 8px; }
+.calendar-page.is-split .today-board { margin-left: auto; }

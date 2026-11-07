@@ -40,7 +40,7 @@ function titleNumber(title: string) {
   return match ? Number(match[1]) : null;
 }
 
-export type DisplayInfo = { kind: DisplayKind; code: string; block: string };
+export type DisplayInfo = { kind: DisplayKind; code: string; block: string; label?: string };
 
 const cache = new WeakMap<TimetableEvent[], Map<string, DisplayInfo>>();
 
@@ -76,7 +76,19 @@ export function displayInfo(events: TimetableEvent[]): Map<string, DisplayInfo> 
       const n = target ? titleNumber(target.title) : null;
       code = n ? `TBL ${n} 영상` : "TBL 영상";
     }
-    out.set(event.id, { kind, code, block });
+    let label: string | undefined;
+    if (kind === "exam") {
+      // 시험은 바로 앞(7일 안) 수업의 블럭 이름을 붙인다(2026-11-07 사용자 지시: 「감염과 면역 1차」처럼 시험 정보).
+      const before = ordered.filter(e => e.date <= event.date && displayKind(e) !== "exam" && displayKind(e) !== "other"
+        && Date.parse(event.date) - Date.parse(e.date) <= 7 * 86_400_000);
+      const near = before[before.length - 1];
+      const owner = near ? studyCourseOf(near, events) : "";
+      const order = `${event.title} ${event.details}`.match(/(\d+)\s*차/)?.[1];
+      label = owner
+        ? /\d+\s*차$/.test(owner) || !order ? `${owner} 시험` : `${owner} ${order}차 시험`
+        : order ? `${order}차 시험` : undefined;
+    }
+    out.set(event.id, { kind, code, block, label });
   }
   cache.set(events, out);
   return out;

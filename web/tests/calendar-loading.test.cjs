@@ -35,10 +35,8 @@ test('startup loads metadata first; learning follows for the visible range; bund
     await page.waitForFunction(() => window.calendarTest.requests.filter(r => r.includes('include_cards=false')).length === 2);
     assert.match((await requests()).filter(learning)[1], /start=2026-10-19&end=2026-10-23/);
     await page.evaluate(() => window.calendarTest.release());
-    await page.getByRole('button', { name: '덱 모아받기 보기', exact: true }).click();
-    await page.waitForFunction(() => window.calendarTest.requests.some(r => r.startsWith('/api/bundles/decks')));
-    assert((await requests()).filter(r => r.startsWith('/api/bundles/decks')).every(r => r.includes('start=2026-10-19&end=2026-10-23')));
-    await page.getByRole('button', { name: '덱 모아받기 접기', exact: true }).click();
+    // 2026-11-07: 캘린더 머리의 「덱 모아받기 보기」는 관리자에게도 없앴다. 블럭 덱은 패널 「관리자」에서만 펼칠 때 부른다.
+    assert.equal(await page.getByRole('button', { name: /덱 모아받기/ }).count(), 0);
     await page.getByRole('button', { name: '이전', exact: true }).click();
     await page.getByRole('button', { name: /시간표 강의 0/ }).click();
     await page.getByRole('heading', { name: '시간표 강의 0', exact: true }).waitFor();
@@ -46,7 +44,7 @@ test('startup loads metadata first; learning follows for the visible range; bund
     await page.getByText('관리자', { exact: true }).click();
     await page.getByRole('link', { name: '강의 화면 전체 보기 →', exact: true }).waitFor();
     assert((await requests()).some(r => r === '/api/lectures/subject/run-0'));
-    assert.equal((await requests()).filter(r => r.startsWith('/api/bundles/decks')).length, 1);
+    assert.equal((await requests()).filter(r => r.startsWith('/api/bundles/decks')).length, 0);
     await page.getByText('subject 블럭 덱 받기', { exact: true }).click();
     await page.waitForFunction(() => window.calendarTest.requests.includes('/api/bundles/decks?subject=subject'));
     await page.getByRole('button', { name: '닫기', exact: true }).click();
@@ -74,7 +72,7 @@ test('failed learning leaves timetable usable and retryable; students never load
   } finally { await browser.close(); }
 });
 
-test('changing a visible period cancels stale learning; month uses the displayed six weeks', async () => {
+test('changing a visible week cancels stale learning; there is no month view', async () => {
   const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHANNEL || 'chrome' });
   const page = await browser.newPage();
   try {
@@ -86,11 +84,12 @@ test('changing a visible period cancels stale learning; month uses the displayed
     assert.equal(await page.locator('.chip-learning-value').filter({ hasText: '복습 50%' }).count(), 0);
     await page.evaluate(() => window.calendarTest.release());
     await page.locator('.chip-learning-value').filter({ hasText: '복습 50%' }).waitFor({ state: 'attached' });
-    await page.getByRole('button', { name: '월', exact: true }).click();
-    await page.waitForFunction(() => window.calendarTest.requests.some(r => r.includes('start=2026-09-28&end=2026-11-06&include_cards=false')));
-    await page.evaluate(() => window.calendarTest.release());
-    // 월간 칸은 좁아서 학습 표시를 접는다.
-    assert.equal(await page.locator('.chip-learning-pair').count(), 0);
+    // 2026-11-07: 주/월 전환·오늘 버튼 없이 날짜 줄 양끝 화살표만 있다.
+    assert.equal(await page.getByRole('button', { name: '월', exact: true }).count(), 0);
+    assert.equal(await page.getByRole('button', { name: '오늘', exact: true }).count(), 0);
+    // 화면 높이에 맞춰 한 주가 스크롤 없이 들어간다.
+    const grid = page.locator('.week-calendar');
+    assert.equal(await grid.evaluate(el => el.scrollHeight > el.clientHeight + 1), false);
     assert.equal(await page.getByRole('alert').count(), 0);
   } finally { await browser.close(); }
 });

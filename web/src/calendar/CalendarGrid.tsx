@@ -33,6 +33,7 @@ export function CalendarGrid({
   entries,
   renderEntry,
   renderDay,
+  onStep,
 }: {
   mode: CalendarMode;
   anchorDate: Date;
@@ -54,6 +55,8 @@ export function CalendarGrid({
    * 정한다(`renderEntry` 와 같은 규칙이다).
    */
   renderDay?: (dateKey: string) => ReactNode;
+  /** 주 넘기기. 날짜 줄 양끝(시각 칸 위 ‹, 금요일 오른쪽 ›)에 선다(2026-11-07 사용자 지시). */
+  onStep?: (direction: -1 | 1) => void;
 }) {
   const now = useNow();
   const todayKey = toDateKey(now);
@@ -79,7 +82,9 @@ export function CalendarGrid({
 
     return (
       <section className="week-calendar" aria-label="주간 캘린더" style={rows}>
-        <div className="week-head is-spacer" style={{ gridColumn: 1, gridRow: 1 }} />
+        <div className="week-head is-spacer" style={{ gridColumn: 1, gridRow: 1 }}>
+          {onStep ? <button type="button" className="week-step" onClick={() => onStep(-1)} aria-label="이전">‹</button> : null}
+        </div>
         {weekDates.map((day, index) => {
           const key = toDateKey(day);
           return (
@@ -90,6 +95,9 @@ export function CalendarGrid({
             >
               <span>{weekDayLabels[index]}</span>
               <strong>{day.getDate()}</strong>
+              {onStep && index === 4 ? (
+                <button type="button" className="week-step is-next" onClick={() => onStep(1)} aria-label="다음">›</button>
+              ) : null}
             </div>
           );
         })}
