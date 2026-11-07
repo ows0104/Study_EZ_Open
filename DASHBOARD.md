@@ -15,7 +15,7 @@
 | 우선순위 | 작업 | 작업자 / 세션 | 브랜치 | 건드리는 영역·파일 | 시작일 | 상태·메모 |
 |---|---|---|---|---|---|---|
 
-| P1 | Main Quiz 새은행·문항별 연결·이미지 재검수 및 대체 | ows0104 / Codex Main Quiz 후속 | codex/main-quiz-task-relink | studyez_contracts/roots/task_supplement.py, runner/root_task_supplement.py, server/app/root_learning·routes/root_learning.py, 관련 tests, docs/changes/2026-11-07-main-quiz-task-relink, 지정261104_02 후속runs; web UI 읽기확인 | 2026-11-07 | 최신 사용자 승인: 학습자0 전제로 기존91/학습기록/3of3 보존제약 해제, 새것으로 대체. 보존형28연결 준비는 모델호출0 중단. 원래실행은 과거판으로 보관하고 별도새생성·수정0..3, 실제CLI 작성/원본·그림/독립정답 검수 후 관리자시범 대체. 문항수고정없음·기존 MainQuiz UI 유지·다른강의/다른세션 영역 제외 |
+| P1 | Main Quiz 새은행·문항별 연결·이미지 재검수 및 대체 | ows0104 / Codex Main Quiz 후속 | codex/main-quiz-task-relink | studyez_contracts/roots/task_supplement.py·quiz_curation.py, runner/root_task_supplement.py·root_quiz_curation.py, server/app/root_learning·routes/root_learning.py, 관련 tests, docs/changes/2026-11-07-main-quiz-task-relink, 지정261104_02 후속runs; web UI 읽기확인 | 2026-11-07 | 최신 사용자 승인: 학습자0 전제로 기존91/학습기록/3of3 보존제약 해제, 새것으로 대체. 보존형28연결 준비는 모델호출0 중단. 원래실행은 과거판으로 보관하고 별도새생성·수정0..3, 실제CLI 작성/원본·그림/독립정답 검수 후 관리자시범 대체. 실제CLI 최종104후보3of3 보류/원형보관, 별도범위검수CLI 승인98문항98과제(이미지12문항14장) 선별·중요도미확정6중립화. 239계약/러너·서버6·실제격리UI(저장/새로고침/Z/그림·원본SHA) 통과, PR14 전체CI 진행중. 기존 MainQuiz UI 유지·다른강의/다른세션 영역 제외 |
 
 | P1 | Map·독립 출제포인트 추출 프롬프트 정리 | ows0104 / Codex Map 세션 | codex/map-point-prompts | content/prompts/learning-links/map-extract.md, point-extract.md, *-output.schema.json, *-output.example.json, README.md, docs/changes/2026-11-06-map-point-prompts, .worktrees/map-point-prompts/runs/_map-point-pilot | 2026-11-06 | 사용자 승인 범위의 두 원본 전용 지시문·JSON 스키마·예시·로컬 형식 검증. 현재 사용자 예시 추출 승인: 명시적 OpenAI 전송 승인으로 Map/포인트 각1회 완료, 심내막염·CNS 강의별 JSON4개 보존. 후속 승인된 독립단위 재추출·4지적 보완·별도 재대조 완료: 최종47/60개, ready/ready·잔여issues없음. 원본/중간/실패보존, 필수검사통과, d68b6d57 로컬 검토대기. 운영 요청 재개/문항/게시/배포 없음 |
 
@@ -65,3 +65,4 @@ merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 �
 | 2026-11-05 | 교수 변경·신규 교수 표시 및 최근 5년 동일 교수 최신 필기 우선, 없으면 작년 대체 운영 반영 (`c86e15fb`). 84개 강의·기록 보존, PDF 72개 실제 검증, 러너 복원 완료 — [배포 기록](https://github.com/ows0104/Study_EZ_Open/blob/a757ce86c548519b1c1c714298f530f1e9eb86c3/docs/changes/2026-11-05-professor-aware-preview/deployment.md) | ows0104 / Codex 교수별 예습 세션 | [#3](https://github.com/ows0104/Study_EZ_Open/pull/3) |
 | 2026-11-05 | master 검사 실패 수정 및 API·웹 배포 완료 (`d5e30590`) — [검사·배포 기록](https://github.com/ows0104/Study_EZ_Open/blob/9f57d3d607335204193441c1358a95fe85b363c7/docs/changes/2026-11-05-ci-regression-fix/deployment.md) | ows0104 / Codex 세션 | [#4](https://github.com/ows0104/Study_EZ_Open/pull/4) |
 | 2026-11-05 | 협업 대시보드와 작업 시작 대원칙 도입 | HungryPotato01 / Claude 세션 | [#2](https://github.com/ows0104/Study_EZ_Open/pull/2) |
+
