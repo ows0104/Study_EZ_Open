@@ -14,6 +14,7 @@
 
 | 우선순위 | 작업 | 작업자 / 세션 | 브랜치 | 건드리는 영역·파일 | 시작일 | 상태·메모 |
 |---|---|---|---|---|---|---|
+| P1 | 복습퀴즈 버튼 준비 상태 수정 | ows0104 / Codex 버튼 수정 | codex/review-quiz-entry | web/src/calendar/EventPanel.tsx의 활성화 조건·관련 확인, docs/changes/2026-11-07-review-quiz-entry | 2026-11-07 | 사용자 승인: 겹치는 EventPanel 중 버튼 활성화 조건만 분리 수정·확인·사이트 반영. 아래 UI2 예정 작업과 범위 조정 완료 |
 
 
 | P1 | Map·독립 출제포인트 추출 프롬프트 정리 | ows0104 / Codex Map 세션 | codex/map-point-prompts | content/prompts/learning-links/map-extract.md, point-extract.md, *-output.schema.json, *-output.example.json, README.md, docs/changes/2026-11-06-map-point-prompts, .worktrees/map-point-prompts/runs/_map-point-pilot | 2026-11-06 | 사용자 승인 범위의 두 원본 전용 지시문·JSON 스키마·예시·로컬 형식 검증. 현재 사용자 예시 추출 승인: 명시적 OpenAI 전송 승인으로 Map/포인트 각1회 완료, 심내막염·CNS 강의별 JSON4개 보존. 후속 승인된 독립단위 재추출·4지적 보완·별도 재대조 완료: 최종47/60개, ready/ready·잔여issues없음. 원본/중간/실패보존, 필수검사통과, d68b6d57 로컬 검토대기. 운영 요청 재개/문항/게시/배포 없음 |
@@ -35,7 +36,7 @@
 
 | 우선순위 | 작업 | 예정 작업자 | 예상 영역·파일 | 선행 조건·메모 |
 |---|---|---|---|---|
-| P2 | UI/UX 개편 2단계: 강의록 회독 기록(+/삭제/되돌리기)·자유 노트(Notion식 편집기) 서버 저장 | HungryPotato01 / Claude | server/app/models·routes(새 표 2개+RLS), server/app/cli.py, web/src/notes/*, web/src/calendar/EventPanel.tsx | 2026-11-06 사용자 결정으로 1단계와 분리. 새 표·API라 운영 DB 준비·중요 운영 승인 필요. 1단계 PR #9 병합 후 시작 |
+| P2 | UI/UX 개편 2단계: 강의록 회독 기록(+/삭제/되돌리기)·자유 노트(Notion식 편집기) 서버 저장 | HungryPotato01 / Claude | server/app/models·routes(새 표 2개+RLS), server/app/cli.py, web/src/notes/*, web/src/calendar/EventPanel.tsx | 2026-11-06 사용자 결정으로 1단계와 분리. 새 표·API라 운영 DB 준비·중요 운영 승인 필요. 1단계 PR #9 병합 후 시작. 사용자 2026-11-07 조정 승인: codex/review-quiz-entry가 EventPanel의 복습퀴즈 활성화 조건만 먼저 수정 |
 | | | | | |
 
 ## 3. 제안된 아이디어 (논의 필요)
