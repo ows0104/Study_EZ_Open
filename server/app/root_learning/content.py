@@ -3,9 +3,10 @@ import os
 import copy
 import re
 from sqlalchemy import select
+from sqlalchemy.orm import defer
 from studyez_contracts.roots import validate_document, document_hash, direction_hash
 from app import bank_personal
-from app.models import QuizBank, BankState
+from app.models import QuizBank, BankState, BankPersonalEdit
 from app.models.root_learning import RootContent, RootControl, RootEvent
 
 
@@ -49,27 +50,53 @@ def validate_registration(db, subject, run_id, payload):
     return doc
 
 
+# (subject, run_id) -> (build_id, updated_at, document_hash(bank)). The bank is the
+# whole question set; hashing its canonical JSON on every learner request held the
+# single API CPU. Every ORM write to quiz_bank bumps updated_at (onupdate), so a
+# changed bank misses the cache and is hashed again.
+_BANK_HASHES = {}
+
+
+def bank_hash(row):
+    key = (row.subject, row.run_id)
+    cached = _BANK_HASHES.get(key)
+    if cached and row.updated_at is not None and cached[:2] == (row.build_id, row.updated_at):
+        return cached[2]
+    value = document_hash(row.bank)
+    if row.updated_at is not None:
+        _BANK_HASHES[key] = (row.build_id, row.updated_at, value)
+    return value
+
+
+# Columns availability never reads; still loaded on access if another caller needs them.
+_UNUSED_BANK_COLUMNS = (QuizBank.raw_response, QuizBank.validation, QuizBank.review, QuizBank.usage)
+
+
 def availability(db, content, user_id):
     doc = content.document
     tasks = {t['task_id']: t for t in doc['tasks']}
     if doc['bank_source'] == 'standalone':
         return set(tasks), {}
-    row = db.get(QuizBank, (content.subject, content.run_id))
+    row = db.get(QuizBank, (content.subject, content.run_id), options=[defer(c) for c in _UNUSED_BANK_COLUMNS])
     if not row or not row.open_to_students or row.status != 'ready':
         return set(), {tid: '원래 문제은행 공개/준비 상태 변경' for tid in tasks}
-    if row.build_id != doc['bank_build_id'] or document_hash(row.bank) != doc['review']['bank_sha256']:
+    if row.build_id != doc['bank_build_id'] or bank_hash(row) != doc['review']['bank_sha256']:
         return set(), {tid: '원래 문항 판 변경 · 연결 재검토 필요' for tid in tasks}
     legacy = db.get(BankState, (user_id, content.subject, content.run_id))
     state = legacy.state if legacy and legacy.build_id == row.build_id else {}
     suspended = set(state.get('suspended_question_ids', []))
     decisions = state.get('excluded_question_decisions', {})
     questions = {q['question_id']: q for q in row.bank['questions']}
+    # One query for the learner's edits, not one round trip per task.
+    edits = {e.question_id: e for e in db.scalars(select(BankPersonalEdit).where(
+        BankPersonalEdit.user_id == user_id, BankPersonalEdit.subject == content.subject,
+        BankPersonalEdit.run_id == content.run_id))}
     available, problems = set(), {}
     for tid, task in tasks.items():
         qid = task['question_id']
         if qid not in questions or qid in suspended or decisions.get(qid) == 'excluded':
             problems[tid] = '개인 제외/일시중지 또는 문항 없음'
-        elif bank_personal.apply(db, row, user_id, questions[qid]).get('personalEdited'):
+        elif bank_personal.apply_edit(questions[qid], edits.get(qid)).get('personalEdited'):
             problems[tid] = '개인 수정본과 연결 목표의 일치 미확인'
         else:
             available.add(tid)

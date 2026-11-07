@@ -17,7 +17,11 @@ function acquire(slide:RootPdfSlide){
     const assets=new URL('pdfjs/',new URL(import.meta.env.BASE_URL,window.location.href)).href;
     const task=(slide.proxyPath?authHeader():Promise.resolve({})).then(httpHeaders=>getDocument({
       url:slide.proxyPath?apiUrl(slide.proxyPath):slide.url,httpHeaders,enableXfa:false,cMapUrl:assets+'cmaps/',cMapPacked:true,
-      standardFontDataUrl:assets+'standard_fonts/',wasmUrl:assets+'wasm/'}));
+      standardFontDataUrl:assets+'standard_fonts/',wasmUrl:assets+'wasm/',
+      // Through the API, only the byte ranges the drawn pages need: by default PDF.js keeps
+      // streaming the whole file (22MB lecture PDFs held the one API instance for ~9s).
+      // Each range request passes auth and a DB lookup, so use larger chunks than 64KB.
+      ...(slide.proxyPath?{disableStream:true,disableAutoFetch:true,rangeChunkSize:524288}:{})}));
     const created:Entry={task,users:0};entry=created;
     documents.set(key,created);
     // A failed load must not stay cached for the next question or a retry.
