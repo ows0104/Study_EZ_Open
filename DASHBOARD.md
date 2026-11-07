@@ -20,6 +20,8 @@
 
 
 
+| P1 | Main-Quiz 문제 퀄리티 — 검사기에 측정 추가(구조 단서-정답 상관·정답 회상 부담·형식 쏠림) | ows0104 / Claude 문제 퀄리티 세션 | claude/bank-quality-checks | studyez_contracts/bank/quality.py, tests/quizbank/test_answer_quality.py(새 파일), docs/changes/2026-11-08-bank-quality-checks | 2026-11-08 | 사용자 2026-11-08 진단 뒤 「검사기에 측정 추가」 선택. 근거: 감염과 면역 261104_02 98문항 중 예/아니오 축 6문항 정답이 전부 부정, basic/list 답 60자 초과 21개, cloze·mcq 0개. 기존 품질 검사는 leaked_units(발문 정답 노출) 하나뿐. errors 아님 — warnings만 추가해 문항을 떨어뜨리지 않고 repair 단계·관리자 issues에 보인다. 선은 운영 Quiz Bank 35편 3,103문항의 p97에서 쟀다. 프롬프트·DB·운영 미변경 |
+
 | P1 | 감염병리1(261104_02) Map 파이프라인 재구성: 트리형 Map(parent_id)→포인트→개별·구조 문제·검수, 격리 확인 | ows0104 / Claude Main-Quiz 지도 세션(Codex Map 세 작업 승계) | claude/infection-path1-map | content/prompts/learning-links/map-extract*(→/3)·automation/extract-v2.md, studyez_contracts/roots·learning_links 검증, quizbank/connection_generate_v2.py(정규화 부모 보존 검사), tests, docs/changes/2026-11-08-infection-path1-map, runs/_e2e/<새 id> | 2026-11-08 | 사용자 "둘 다 승인"(구현+S1·S2 OpenAI 전송·생성·검수). b4cff4b0 Map /3·부모 보존 검사·실행도구, 계약/파이프라인 검사 285 통과. runs/_e2e/26110801에서 Map·포인트 추출 실행 중. 운영 등록·공개 없음 |
 
 | P1 | Map·독립 출제포인트 추출 프롬프트 정리 | ows0104 / Codex Map 세션 → 2026-11-08 Claude Main-Quiz 지도 세션 승계(사용자 지시: Codex 작업 중단) | codex/map-point-prompts | content/prompts/learning-links/map-extract.md, point-extract.md, *-output.schema.json, *-output.example.json, README.md, docs/changes/2026-11-06-map-point-prompts, .worktrees/map-point-prompts/runs/_map-point-pilot | 2026-11-06 | 사용자 승인 범위의 두 원본 전용 지시문·JSON 스키마·예시·로컬 형식 검증. 현재 사용자 예시 추출 승인: 명시적 OpenAI 전송 승인으로 Map/포인트 각1회 완료, 심내막염·CNS 강의별 JSON4개 보존. 후속 승인된 독립단위 재추출·4지적 보완·별도 재대조 완료: 최종47/60개, ready/ready·잔여issues없음. 원본/중간/실패보존, 필수검사통과, d68b6d57 로컬 검토대기. 운영 요청 재개/문항/게시/배포 없음 |
