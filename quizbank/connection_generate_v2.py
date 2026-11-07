@@ -56,6 +56,11 @@ def call_model(stage,context,material,model):
         value=g.decode_optional_fields(json.loads(result['text']),schema)
     return value,{k:result[k]for k in ('usage','cost_usd','duration_ms','models')}
 
+def importance_brief(lineage,proof):
+    from studyez_contracts.roots.importance_review import apply
+    return apply(lineage,proof['importance'])
+
+
 def run(packet,out,model,invoke):
     from . import connection_generate as g
     fingerprint=g.identity(packet,model);ledger_path=out/'ledger.json'
@@ -213,6 +218,13 @@ def run(packet,out,model,invoke):
                 'sourceAudit':audit,'medical':medical,'validation':{k:v for k,v in validation.items()if k!='checked_at'},'repairReasons':reasons})
             continue
         if blocked:raise ValueError('독립 정답 검수 입력 분리가 완료되지 않았습니다. 실제 검수를 완료로 표시하지 않고 보존합니다.')
+        importance=ledger.get('importanceReview')
+        if importance:
+            # runner.root_importance_review: reviewed importance + one fresh final source audit (approved).
+            from studyez_contracts.roots.importance_review import validate as validate_importance
+            lineage=b;b=validate_importance(importance,lineage,importance_brief(lineage,importance))
+            c.require(importance['stage']==f'source-{n}','importance review targets another round')
+            audit=c.compile_assessment(b,bank,importance['sourceRaw'])
         # Tree maps leave organising concepts without a question of their own; they stay in the review
         # tree, and only their empty plans leave the bank snapshot (exact reviewed bank kept in the proof).
         reviewed_bank=bank;bank,projection=c.project_container_concepts(bank)
@@ -231,6 +243,7 @@ def run(packet,out,model,invoke):
             **({'renderRecoveries':render_recoveries}if render_recoveries else{}),
             **({'medicalRetries':medical_retries}if medical_retries else{}),
             **({'bankProjection':projection}if projection else{}),
+            **({'importanceReview':importance}if importance else{}),
             **({'runtimeRevalidations':runtime_revalidations}if runtime_revalidations else{}),
             **({'authoringRecoveryOutput':json.loads((out/'repair-1.raw.json').read_text(encoding='utf-8'))}if rejected else{}),
             'briefRevisions':[{'stage':name,'brief':value['brief'],'reason':value['map_change_reason']}

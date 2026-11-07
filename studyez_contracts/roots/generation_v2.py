@@ -224,7 +224,7 @@ def validate_format_recoveries(meta,stages):
     return rows
 
 
-RECOVERY_HISTORY=('formatRecoveries','authoringRecoveries','renderRecoveries','medicalRetries')
+RECOVERY_HISTORY=('formatRecoveries','authoringRecoveries','renderRecoveries','medicalRetries','importanceReview')
 
 
 def history_runtime(meta):
@@ -804,15 +804,24 @@ def validate_result(value,packet):
             validate_transition(previous,revision['brief'],revision['reason'])
             if i==0 and not rejected:require(revision['brief']==previous,'result2: initial authoring changed independent map')
         previous=revision['brief']
-    require(previous==b,'result2: final map not in revision lineage')
-    author={'bank':reviewed,'brief':b,'visual_stimuli':meta['visualStimuli'],'clinical_conflicts':meta['clinicalConflicts'],'map_change_reason':meta['mapChangeReason']}
+    importance=meta.get('importanceReview')
+    if importance:
+        # Approved continuation: only target importance differs from the lineage brief; the final audit
+        # is the deterministic compile of one fresh source review of the same reviewed bank.
+        from .importance_review import validate as validate_importance
+        validate_importance(importance,previous,b)
+        require(importance['stage']==f'source-{n}'and a==compile_assessment(b,reviewed,importance['sourceRaw']),
+            'result2: importance re-audit is not the compiled fresh review')
+    else:require(previous==b,'result2: final map not in revision lineage')
+    author={'bank':reviewed,'brief':previous,'visual_stimuli':meta['visualStimuli'],'clinical_conflicts':meta['clinicalConflicts'],'map_change_reason':meta['mapChangeReason']}
     final=stages[f'repair-{n}'if n else'generate']
-    require(final['outputHash']==document_hash(author)and stages[f'source-{n}']['outputHash']==document_hash(a)and stages[f'medical-{n}']['outputHash']==document_hash(m),'result2: stage output mismatch')
+    require(final['outputHash']==document_hash(author)and(importance or stages[f'source-{n}']['outputHash']==document_hash(a))
+        and stages[f'medical-{n}']['outputHash']==document_hash(m),'result2: stage output mismatch')
     raw_author=copy.deepcopy(author)
     for q in raw_author['bank']['questions']:q.pop('stimuli',None)
     require(final['rawOutputHash']==document_hash(raw_author),'result2: authored input mismatch')
     validate_authoring(raw_author)
-    require(stages[f'source-{n}']['rawOutputHash']==document_hash(a['assessment']),'result2: raw source proof mismatch')
+    require(importance or stages[f'source-{n}']['rawOutputHash']==document_hash(a['assessment']),'result2: raw source proof mismatch')
     require(meta['medicalInputHash']==stages[f'medical-{n}']['inputHash'],'result2: medical input proof mismatch')
     require(meta['medicalInputHash']==document_hash({'title':packet['title'],'bank':reviewed,
         'clinicalInput':medical_input(reviewed,meta['clinicalConflicts']),'_pipeline_version':POLICY}),'result2: actual medical projection mismatch')
