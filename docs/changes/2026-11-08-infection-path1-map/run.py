@@ -56,7 +56,8 @@ def sha(path):
 
 
 def read(path):
-    return json.loads(Path(path).read_text(encoding='utf-8'))
+    # utf-8-sig: the audit model wrote audit.json with a UTF-8 BOM (2026-11-08); content is unchanged.
+    return json.loads(Path(path).read_text(encoding='utf-8-sig'))
 
 
 def write(path, value):
@@ -211,7 +212,7 @@ def audit_schema():
 
 def audit(stage='audit', source='point'):
     src = OUT / source
-    assert read(src / 'state.json')['status'] == 'completed'
+    assert completed(source)
     work = OUT / stage
     assert not work.exists(), 'Preserve earlier audit; no automatic repeat'
     work.mkdir()
@@ -233,6 +234,11 @@ def audit(stage='audit', source='point'):
             '네트워크/다른세션/추가모델은 사용하지 않는다. 최종 응답에는 {"path":"audit.json","sha256":"실제파일의소문자SHA256"}만 반환한다.')
     (work / 'task.md').write_text(task, encoding='utf-8')
     info, result = call(work, task, '감염병리1 point ' + stage, 'audit.json')
+    finish(work, info, check_audit(work, src))
+
+
+def check_audit(work, src):
+    result = work / 'audit.json'
     value = read(result)
     Draft202012Validator(audit_schema()).validate(value)
     points = read(src / 'exam-points.json')['points']
@@ -245,11 +251,45 @@ def audit(stage='audit', source='point'):
     for sid, count in PAGES.items():
         pages = [p for row in value['page_review'] if row['source_id'] == sid for p in row['pages']]
         assert sorted(pages) == list(range(1, count + 1)), f'Incomplete page review for {sid}'
-    finish(work, info, {'sha256': sha(result), 'verdict': value['verdict'], 'issues': len(value['issues']), 'points': len(points)})
+    return {'sha256': sha(result), 'verdict': value['verdict'], 'issues': len(value['issues']), 'points': len(points)}
+
+
+def completed(stage):
+    """A stage is complete when its call completed, or when a local-check failure was re-verified without a model call."""
+    work = OUT / stage
+    if read(work / 'state.json')['status'] == 'completed':
+        return True
+    post = work / 'postcheck.json'
+    return post.exists() and read(post)['status'] == 'completed'
+
+
+def postcheck(stage, source):
+    """Re-verify a finished model call whose local check failed (e.g. BOM). No model call; failure kept."""
+    work = OUT / stage
+    state = read(work / 'state.json')
+    # The call finished (model-response.json saved) but the local check raised afterwards, leaving
+    # state 'started' or 'failed'. Record that failure as-is before re-verifying.
+    assert state['status'] in ('failed', 'started') and (work / 'model-response.json').exists()
+    assert not (work / 'postcheck.json').exists()
+    if state['status'] == 'started':
+        state = {**state, 'status': 'failed', 'automaticRetry': False,
+                 'error': 'Local check after the completed call raised JSONDecodeError: Unexpected UTF-8 BOM'}
+        write(work / 'state.json', state)
+    info = read(work / 'model-response.json')
+    receipt = json.loads(info['text'])
+    assert receipt['path'] == 'audit.json' and sha(work / 'audit.json') == receipt['sha256'], 'Receipt mismatch'
+    for rel, expected in state['inputHashes'].items():
+        assert sha(work / rel) == expected, 'Input changed ' + rel
+    extra = check_audit(work, OUT / source)
+    bom = (work / 'audit.json').read_bytes().startswith(b'\xef\xbb\xbf')
+    write(work / 'postcheck.json', {'status': 'completed', 'originalFailure': state['error'], 'originalFailurePreserved': True,
+                                    'additionalModelCalls': 0, 'utf8Bom': bom, 'duration_ms': info['duration_ms'],
+                                    'usage': info['usage'], 'session_id': info['session_id'], **extra})
+    print(json.dumps({'postcheck': stage, **extra}, ensure_ascii=False), flush=True)
 
 
 def repair():
-    assert read(OUT / 'audit/state.json')['status'] == 'completed'
+    assert completed('audit')
     found = read(OUT / 'audit/audit.json')
     assert found['issues'], 'No actual issue to repair'
     work = OUT / 'point-repair'
@@ -278,7 +318,7 @@ def repair():
 def final_points():
     """The point file the packet uses: repaired+re-audited if a repair ran, else the first ready one."""
     if (OUT / 'point-repair/state.json').exists():
-        assert read(OUT / 'final-audit/state.json')['status'] == 'completed'
+        assert completed('final-audit')
         return OUT / 'point-repair/exam-points.json', read(OUT / 'final-audit/audit.json')
     found = read(OUT / 'audit/audit.json')
     return OUT / 'point/exam-points.json', found
@@ -362,8 +402,9 @@ def status():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('action', choices=['prepare', 'map', 'point', 'audit', 'repair', 'final-audit', 'verify-points', 'packet', 'results', 'status'])
+    parser.add_argument('action', choices=['prepare', 'map', 'point', 'audit', 'postcheck-audit', 'repair', 'final-audit', 'postcheck-final-audit', 'verify-points', 'packet', 'results', 'status'])
     a = parser.parse_args().action
     {'prepare': prepare, 'map': lambda: extract('map'), 'point': lambda: extract('point'), 'audit': audit, 'repair': repair,
-     'final-audit': lambda: audit('final-audit', 'point-repair'), 'verify-points': verify_points, 'packet': packet,
+     'final-audit': lambda: audit('final-audit', 'point-repair'),
+     'postcheck-audit': lambda: postcheck('audit', 'point'), 'postcheck-final-audit': lambda: postcheck('final-audit', 'point-repair'), 'verify-points': verify_points, 'packet': packet,
      'results': results, 'status': status}[a]()
