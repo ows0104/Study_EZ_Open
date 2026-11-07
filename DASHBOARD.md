@@ -29,7 +29,6 @@
 | P1 | Map 흐름 예시를 반영한 별도 프롬프트 복사본 | ows0104 / Codex Map 참고 세션 → 2026-11-08 Claude Main-Quiz 지도 세션 승계(사용자 지시: Codex 작업 중단) | codex/map-flow-reference | content/prompts/learning-links/map-extract-reference.md, docs/changes/2026-11-06-map-flow-reference, .worktrees/map-flow-reference/runs/_map-flow-experiment | 2026-11-06 | 별도 짧은 지시문 실험 완료: 심내막염20개념/25연결·CNS24개념/31연결, 단일 호출296초. 원본/형식검증·PNG확인. 기존시범/운영미변경. 로컬브랜치 검토대기 |
 
 | P1 | 심내막염·CNS Map→포인트→문제→실제 풀이 E2E 실험 | ows0104 / Codex E2E 세션 → 2026-11-08 Claude Main-Quiz 지도 세션 승계(사용자 지시: Codex 작업 중단) | codex/map-point-e2e | docs/changes/2026-11-06-map-point-e2e, runs/_e2e/26110507 (실험 전용 저장소·격리 DB·로컬 앱), 기존 추출 결과 읽기 전용 | 2026-11-06 | CNS49문항 중40과제 실제UI·응답/진도 새로고침 복원·별도 기술계정 사건 저장 확인. 사람기록0 유지해 풀이 링크/JSON 제공. 심내막염47문항 최종 source-2/medical-2 완료했으나 서로 다른 C001/C012 중복으로 BANK등록 실패·3회상한 도달 보류(40ok/6doubt/1wrong). 양강의 완료 아님. 원본740파일·실패/소비보존, 운영548/DB/은행/학습/배포변경없음. 로컬 검토대기 |
-| P2 | master 직접 push 차단 — 로컬 pre-push 훅(무료 플랜은 GitHub 서버측 보호 불가) | ows0104 / Claude 브랜치 정리 세션 | claude/push-guard-hooks | .githooks/pre-push(새 파일), docs/development/collaboration.md(훅 설치 절차 추가) | 2026-11-08 | 사용자 2026-11-08 「main 브랜치 보호」 요청. GitHub 비공개+무료 플랜이라 branch protection·ruleset 모두 403 — 사용자가 네 길 중 로컬 훅 선택. master 직접 push와 dashboard→master 병합을 거부한다. core.hooksPath는 클론마다 한 번 설정 필요(상대방 클론 포함). --no-verify로 우회 가능한 한계 명시. 출제·DB·운영·배포 미변경 |
 
 
 
@@ -63,6 +62,7 @@ merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 �
 
 | 완료일 | 작업 | 작업자 | PR |
 |---|---|---|---|
+| 2026-11-08 | master 직접 push 차단 로컬 pre-push 훅(.githooks/pre-push·install.sh, .git/hooks 복사 설치). GitHub 비공개+무료 플랜이라 서버측 보호·ruleset 403 → 로컬 훅. master push·삭제와 DASHBOARD.md 담은 브랜치 거부, 실제 push 7경우·worktree 3곳 확인. core.hooksPath 방식은 옛 커밋 worktree에서 보호가 빠져 미채택. --no-verify·미설치 클론·웹 병합은 못 막음. 상대방 클론은 `sh .githooks/install.sh` 1회 필요. 같은 세션에서 병합 끝난 로컬 브랜치 108개·원격 5개 정리, 배포 기록 담은 브랜치 13개는 보존 | ows0104 / Claude 브랜치 정리 세션 | [#23](https://github.com/ows0104/Study_EZ_Open/pull/23) |
 | 2026-11-07 | Main-Quiz 참고슬라이드 API 경유(R2 CORS 없음 우회, Range)·개념지도 트리형. PR19 병합ef40ddfe(자체 배포는 PR18 병합으로 대체되어 거부), master e73ccf0a 전체CI·API 배포 성공. 운영 health SHA·새 경로 401·Range preflight 허용·expose 헤더·openapi 경로·Pages 새 트리/proxyPath 청크 확인. 로그인 화면 슬라이드 렌더링은 학습 기록(답 열람) 쓰기 필요로 미확인. 학생 공개 미변경 | ows0104 / Claude Main-Quiz 지도 세션 | [#19](https://github.com/ows0104/Study_EZ_Open/pull/19) |
 | 2026-11-07 | 복습퀴즈 버튼 활성화 조건만 수정. 새 자료/기존 은행/없음 3상태 브라우저 및 웹·PR전체CI 통과. PR17 병합75ada218·사용자 배포 승인. master CI/API42371918796·Pages82ad1c19 동일SHA 반영 성공. 실제 EventPanel 새조건 확인·운영 학습쓰기0 | ows0104 / Codex 버튼 수정 | [#17](https://github.com/ows0104/Study_EZ_Open/pull/17) |
 | 2026-11-07 | Main-Quiz 약리 UI 복원 PR16 병합 b8a9540a. 사용자 병합/사이트 반영 승인. 네 평가 자유선택·답 입력 제거·참고 PDF·개념지도. 로컬 웹/서버14/브라우저3 및 PR 전체CI 통과. master 전체CI/API 배포42369151301·Pages219bb8bf 같은SHA 반영 성공. 실제 health/웹 네 평가·PDF worker/CMap·401 확인, 운영 학습쓰기0 | ows0104 / Codex UI 복원 | [#16](https://github.com/ows0104/Study_EZ_Open/pull/16) |
