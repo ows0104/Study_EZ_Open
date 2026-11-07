@@ -9,7 +9,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 from studyez_contracts.roots import document_hash
 from app.auth import CurrentUser, require_admin, require_approved_user
 from app.database import get_db
@@ -122,11 +122,13 @@ def overview(subject: str, run_id: str, user: CurrentUser = Depends(require_appr
 
 @router.get('/admin' + BASE)
 def versions(subject: str, run_id: str, user: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)):
-    rows = db.scalars(select(RootContent).where(RootContent.subject == subject, RootContent.run_id == run_id)
+    # Each revision's document carries the whole bank snapshot; the list needs only its title.
+    rows = db.execute(select(RootContent.revision, RootContent.document['title'].as_string(), RootContent.reviewed,
+                             RootContent.digest).where(RootContent.subject == subject, RootContent.run_id == run_id)
                       .order_by(RootContent.created_at.desc())).all()
     control = db.get(RootControl, (subject, run_id))
-    return {'versions': [{'revision': r.revision, 'title': r.document['title'], 'reviewed': r.reviewed,
-                          'digest': r.digest} for r in rows], 'enabled': bool(control and control.enabled),
+    return {'versions': [{'revision': revision, 'title': title, 'reviewed': reviewed, 'digest': digest}
+                         for revision, title, reviewed, digest in rows], 'enabled': bool(control and control.enabled),
             'activeRevision': control.revision if control else None}
 
 
@@ -196,7 +198,7 @@ def read_source(subject: str, run_id: str, source_id: str, range_header: str | N
     from app.root_learning.evidence import frozen_pdf
     from app.storage import ObjectStorage
     doc = active(db, subject, run_id, user)
-    source = frozen_pdf(doc, active_generation(db, doc), source_id)
+    source = frozen_pdf(doc, active_generation(db, doc, light=True), source_id)
     if source is None:
         raise HTTPException(404, '참고 자료가 없습니다.')
     storage = ObjectStorage()
@@ -288,11 +290,16 @@ def project_session(db, row, doc, user, when):
     return out
 
 
-def active_generation(db, doc):
+def active_generation(db, doc, *, light=False):
+    """light: the caller reads only packet/web_dispatch (source snapshots), so the large
+    result/web_response JSON stays in the database unless something touches it."""
     from app.models.root_generation import RootGeneration
-    return db.scalars(select(RootGeneration).where(RootGeneration.subject == doc.subject,
+    query = select(RootGeneration).where(RootGeneration.subject == doc.subject,
         RootGeneration.run_id == doc.run_id, RootGeneration.result_digest.is_not(None),
-        RootGeneration.packet['revision'].as_string()==doc.revision)).first()
+        RootGeneration.packet['revision'].as_string()==doc.revision)
+    if light:
+        query = query.options(defer(RootGeneration.result), defer(RootGeneration.web_response))
+    return db.scalars(query).first()
 
 
 def revealed_answer(db, doc, q):
