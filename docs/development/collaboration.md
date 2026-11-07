@@ -60,7 +60,41 @@
 ```bash
 git fetch origin
 git worktree add ../Study_EZ_dashboard dashboard
+sh .githooks/install.sh               # master 직접 push 차단 훅을 설치한다
 ```
+
+`install.sh`는 `.githooks/pre-push`를 이 클론의 `.git/hooks/`로 복사한다.
+커밋되는 설정이 아니므로 **클론마다 한 번** 돌려야 하고, 훅을 고친 뒤에도 다시
+돌려야 한다. 설치됐는지 확인:
+
+```bash
+ls "$(git rev-parse --git-common-dir)/hooks/pre-push"
+```
+
+`core.hooksPath=.githooks`로 거는 길은 택하지 않았다. 그 경로는 작업본 안에서
+풀리기 때문에, `.githooks`가 없는 옛 커밋에 올라간 worktree는 아무 경고도 없이
+보호가 빠진다(2026-11-08 실측: 같은 push가 한 worktree에서는 거부되고 다른
+worktree에서는 통과했다). `.git/hooks` 복사본은 공용 디렉터리에 있어서 체크아웃된
+브랜치와 무관하게 모든 worktree에서 돈다.
+
+### master 보호 (로컬 훅)
+
+`.githooks/pre-push`가 두 가지를 거부한다.
+
+- `refs/heads/master`로의 직접 push와 master 삭제. master는 PR 병합으로만 바뀐다.
+- `dashboard` 외의 브랜치가 `DASHBOARD.md`를 담고 있는 경우.
+  dashboard를 기능 브랜치에 merge해 master로 흘려보내는 길을 막는다.
+
+**이것은 서버에서 강제되는 보호가 아니다.** 이 저장소는 비공개이고 계정이 무료
+플랜이라 GitHub의 branch protection과 ruleset이 둘 다 403으로 막힌다(2026-11-08
+확인). 그래서 같은 목적을 클라이언트에서 지킨다. 따라서
+
+- `git push --no-verify`로 우회된다.
+- `.githooks/install.sh`를 돌리지 않은 클론에서는 아예 돌지 않는다.
+- GitHub 웹에서 하는 병합은 막지 못한다.
+
+서버측으로 올리려면 GitHub Pro(유료)로 올리거나 저장소를 공개로 바꿔야 한다.
+공개 전환은 학습 기록·배포 영수증·운영 경로가 함께 공개되므로 택하지 않았다.
 
 ## 작업 방법
 
