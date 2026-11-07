@@ -90,10 +90,10 @@ def test_parallel_status_uses_operating_runs_when_code_is_in_another_runtime(tmp
     client.packet['inputHash']=packet_hash(client.packet)
     monkeypatch.setattr(worker.urllib.request,'urlopen',lambda *a,**k:io.BytesIO(f.BODY))
     monkeypatch.setattr(worker,'run_forwarded',lambda *a,**k:SimpleNamespace(returncode=1))
-    runs=tmp_path/'r'
+    runs=tmp_path/'runs'
     assert worker.run_generation(client,'test','demo',runs,'a'*32)==1
     config=json.loads((runs/'status-jobs'/('main-quiz-parallel-'+('a'*32)+'.json')).read_text(encoding='utf-8'))
-    assert config['script']=='runner.root_native_json'and config['outputs']=='r/_root-generation/'+('a'*32)
+    assert config['script']=='runner.root_native_json'and config['outputs']=='runs/_root-generation/'+('a'*32)
 
 @pytest.mark.parametrize('tamper',[False,True])
 def test_completed_pipeline_result_reuses_original_proof_without_new_model_budget(tmp_path,monkeypatch,tamper):
