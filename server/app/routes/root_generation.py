@@ -164,8 +164,10 @@ def resume_job(db, row):
 
 @router.get(BASE)
 def latest(subject: str, run_id: str, user: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)):
+    # 3초마다 폴링하는 화면이 쓰는 것은 가장 최근 한 판이다. LIMIT이 없으면 그 강의의 모든 판이
+    # 결과 집합에 들어오고, 각 행이 packet/result/web_dispatch/web_response JSON을 함께 싣는다.
     row = db.scalars(select(RootGeneration).where(RootGeneration.subject == subject, RootGeneration.run_id == run_id)
-                     .order_by(RootGeneration.created_at.desc())).first()
+                     .order_by(RootGeneration.created_at.desc()).limit(1)).first()
     return {'generation': public_job(db, row) if row else None}
 
 
