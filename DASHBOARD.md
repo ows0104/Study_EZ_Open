@@ -20,11 +20,11 @@
 
 
 
-| P1 | Map·독립 출제포인트 추출 프롬프트 정리 | ows0104 / Codex Map 세션 | codex/map-point-prompts | content/prompts/learning-links/map-extract.md, point-extract.md, *-output.schema.json, *-output.example.json, README.md, docs/changes/2026-11-06-map-point-prompts, .worktrees/map-point-prompts/runs/_map-point-pilot | 2026-11-06 | 사용자 승인 범위의 두 원본 전용 지시문·JSON 스키마·예시·로컬 형식 검증. 현재 사용자 예시 추출 승인: 명시적 OpenAI 전송 승인으로 Map/포인트 각1회 완료, 심내막염·CNS 강의별 JSON4개 보존. 후속 승인된 독립단위 재추출·4지적 보완·별도 재대조 완료: 최종47/60개, ready/ready·잔여issues없음. 원본/중간/실패보존, 필수검사통과, d68b6d57 로컬 검토대기. 운영 요청 재개/문항/게시/배포 없음 |
+| P1 | Map·독립 출제포인트 추출 프롬프트 정리 | ows0104 / Codex Map 세션 → 2026-11-08 Claude Main-Quiz 지도 세션 승계(사용자 지시: Codex 작업 중단) | codex/map-point-prompts | content/prompts/learning-links/map-extract.md, point-extract.md, *-output.schema.json, *-output.example.json, README.md, docs/changes/2026-11-06-map-point-prompts, .worktrees/map-point-prompts/runs/_map-point-pilot | 2026-11-06 | 사용자 승인 범위의 두 원본 전용 지시문·JSON 스키마·예시·로컬 형식 검증. 현재 사용자 예시 추출 승인: 명시적 OpenAI 전송 승인으로 Map/포인트 각1회 완료, 심내막염·CNS 강의별 JSON4개 보존. 후속 승인된 독립단위 재추출·4지적 보완·별도 재대조 완료: 최종47/60개, ready/ready·잔여issues없음. 원본/중간/실패보존, 필수검사통과, d68b6d57 로컬 검토대기. 운영 요청 재개/문항/게시/배포 없음 |
 
-| P1 | Map 흐름 예시를 반영한 별도 프롬프트 복사본 | ows0104 / Codex Map 참고 세션 | codex/map-flow-reference | content/prompts/learning-links/map-extract-reference.md, docs/changes/2026-11-06-map-flow-reference, .worktrees/map-flow-reference/runs/_map-flow-experiment | 2026-11-06 | 별도 짧은 지시문 실험 완료: 심내막염20개념/25연결·CNS24개념/31연결, 단일 호출296초. 원본/형식검증·PNG확인. 기존시범/운영미변경. 로컬브랜치 검토대기 |
+| P1 | Map 흐름 예시를 반영한 별도 프롬프트 복사본 | ows0104 / Codex Map 참고 세션 → 2026-11-08 Claude Main-Quiz 지도 세션 승계(사용자 지시: Codex 작업 중단) | codex/map-flow-reference | content/prompts/learning-links/map-extract-reference.md, docs/changes/2026-11-06-map-flow-reference, .worktrees/map-flow-reference/runs/_map-flow-experiment | 2026-11-06 | 별도 짧은 지시문 실험 완료: 심내막염20개념/25연결·CNS24개념/31연결, 단일 호출296초. 원본/형식검증·PNG확인. 기존시범/운영미변경. 로컬브랜치 검토대기 |
 
-| P1 | 심내막염·CNS Map→포인트→문제→실제 풀이 E2E 실험 | ows0104 / Codex E2E 세션 | codex/map-point-e2e | docs/changes/2026-11-06-map-point-e2e, runs/_e2e/26110507 (실험 전용 저장소·격리 DB·로컬 앱), 기존 추출 결과 읽기 전용 | 2026-11-06 | CNS49문항 중40과제 실제UI·응답/진도 새로고침 복원·별도 기술계정 사건 저장 확인. 사람기록0 유지해 풀이 링크/JSON 제공. 심내막염47문항 최종 source-2/medical-2 완료했으나 서로 다른 C001/C012 중복으로 BANK등록 실패·3회상한 도달 보류(40ok/6doubt/1wrong). 양강의 완료 아님. 원본740파일·실패/소비보존, 운영548/DB/은행/학습/배포변경없음. 로컬 검토대기 |
+| P1 | 심내막염·CNS Map→포인트→문제→실제 풀이 E2E 실험 | ows0104 / Codex E2E 세션 → 2026-11-08 Claude Main-Quiz 지도 세션 승계(사용자 지시: Codex 작업 중단) | codex/map-point-e2e | docs/changes/2026-11-06-map-point-e2e, runs/_e2e/26110507 (실험 전용 저장소·격리 DB·로컬 앱), 기존 추출 결과 읽기 전용 | 2026-11-06 | CNS49문항 중40과제 실제UI·응답/진도 새로고침 복원·별도 기술계정 사건 저장 확인. 사람기록0 유지해 풀이 링크/JSON 제공. 심내막염47문항 최종 source-2/medical-2 완료했으나 서로 다른 C001/C012 중복으로 BANK등록 실패·3회상한 도달 보류(40ok/6doubt/1wrong). 양강의 완료 아님. 원본740파일·실패/소비보존, 운영548/DB/은행/학습/배포변경없음. 로컬 검토대기 |
 
 
 
@@ -40,7 +40,7 @@
 | 우선순위 | 작업 | 예정 작업자 | 예상 영역·파일 | 선행 조건·메모 |
 |---|---|---|---|---|
 | P2 | UI/UX 개편 2단계: 강의록 회독 기록(+/삭제/되돌리기) 서버 저장 (자유 노트는 1번 claude/free-notes로 분리 시작) | HungryPotato01 / Claude | server/app/models·routes(새 표 2개+RLS), server/app/cli.py, web/src/notes/*, web/src/calendar/EventPanel.tsx | 2026-11-06 사용자 결정으로 1단계와 분리. 새 표·API라 운영 DB 준비·중요 운영 승인 필요. 1단계 PR #9 병합 후 시작. 사용자 2026-11-07 조정 승인: codex/review-quiz-entry가 EventPanel의 복습퀴즈 활성화 조건만 먼저 수정 |
-| P1 | 감염병리1(감염과 면역/261104_02) Main-Quiz를 Map 파이프라인으로 재구성: 강의록 개념 트리(Map)·연결 → 포인트 → 개별·구조 문제(콜린성 예시 수준), 새 판 등록·기존 학습기록 보존 | ows0104 / Claude Main-Quiz 지도 세션 (Codex Map 세션과 순서 조정) | 감염병리1 원본 PDF(박준원v2, 37쪽)·Map/포인트 프롬프트(읽기)·생성 실행 기록(runs), 새 판 등록. 프롬프트·생성기 자체는 Codex Map 세션 소관 | 2026-11-08 사용자 선택 "Map 파이프라인에 합류". 선행: codex/map-point-e2e·map-point-prompts의 Map→포인트→문제 흐름 확정(현재 심내막염 보류·로컬 검토대기). 외부 모델 전송·생성·새 판 공개는 단계별 별도 승인. 문제 품질(4번) 보완도 여기서 함께 |
+| P1 | 감염병리1(감염과 면역/261104_02) Main-Quiz를 Map 파이프라인으로 재구성: 강의록 개념 트리(Map)·연결 → 포인트 → 개별·구조 문제(콜린성 예시 수준), 새 판 등록·기존 학습기록 보존 | ows0104 / Claude Main-Quiz 지도 세션 (Codex Map 세 작업 승계) | 감염병리1 원본 PDF(박준원v2, 37쪽)·Map/포인트 프롬프트(읽기)·생성 실행 기록(runs), 새 판 등록. 프롬프트·생성기 자체는 Codex Map 세션 소관 | 2026-11-08 사용자 선택 "Map 파이프라인에 합류". 선행: codex/map-point-e2e·map-point-prompts의 Map→포인트→문제 흐름 확정(현재 심내막염 보류·로컬 검토대기). 외부 모델 전송·생성·새 판 공개는 단계별 별도 승인. 문제 품질(4번) 보완도 여기서 함께 |
 | | | | | |
 
 ## 3. 제안된 아이디어 (논의 필요)
