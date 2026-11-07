@@ -17,6 +17,7 @@ const SECTIONS = [
   ["panel", "강의 칸을 눌렀을 때"],
   ["quiz", "웹에서 풀기"],
   ["bridge", "예습 링크와 크롬 확장"],
+  ["notes", "자유 노트"],
   ["help", "문의"],
 ] as const;
 
@@ -392,6 +393,17 @@ export function GuidePage() {
         <p className="guide-note">
           확장이 무엇을 읽고 어디로 보내는지는 <a href="/privacy">개인정보처리방침</a>에 적혀 있습니다.
         </p>
+      </section>
+
+      <section id="notes">
+        <h2>자유 노트</h2>
+        <ul>
+          <li>좌측 메뉴 <b>자유 노트</b>. 쓰는 대로 계정에 저장되어 다른 기기에서도 열립니다. 나만 볼 수 있습니다.</li>
+          <li><kbd>/</kbd> 블록 고르기 · 줄 맨 앞 <kbd>#</kbd> <kbd>-</kbd> <kbd>1.</kbd> <kbd>[]</kbd> <kbd>&gt;</kbd> <kbd>```</kbd> <kbd>---</kbd> · 글 안 <kbd>**굵게**</kbd> <kbd>*기울임*</kbd> <kbd>~~취소~~</kbd> <kbd>`코드`</kbd></li>
+          <li>글을 고르면 서식 막대: 블록 전환 · B · i · U · S · 코드 · 글자색·배경색(형광펜).</li>
+          <li>줄 왼쪽 손잡이: <b>+</b> 아래에 추가 · 끌어서 옮기기 · 눌러서 삭제·복제·전환.</li>
+          <li><b>태그</b>: <b>+</b>를 눌러 입력하고 Enter 또는 쉼표로 추가, ×로 삭제.</li>
+        </ul>
       </section>
 
       <section id="help">

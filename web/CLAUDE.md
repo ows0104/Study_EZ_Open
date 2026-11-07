@@ -12,6 +12,7 @@ Study_EZ의 Vite·React·TypeScript 화면이다.
 | 기존 예습·복습 풀이 | `src/lecture/` |
 | Quiz Bank | `src/bank/` |
 | 공지·이용방법 | `src/notices/` |
+| 자유 노트 | `src/notes/` (저장 HTML은 `sanitize.ts`를 거쳐 그린다) |
 | 덱 모아받기 | `src/bundle/` |
 | API 데이터 타입 | `src/types/`의 해당 기능 파일 |
 | 색·여백 | `src/styles/` |

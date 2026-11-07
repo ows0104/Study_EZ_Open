@@ -41,6 +41,7 @@ Spotter 검색은 `rg --no-ignore <검색어> spotter/scripts spotter/web`로 �
 | 관리 화면·사용 현황 | [web/src/admin](../web/src/admin), [usage.py](../server/app/routes/usage.py) |
 | 오류 제보·사이트 개선 루프 | [운영 안내](feedback-loop.md), [runner/feedback.py](../runner/feedback.py) |
 | 공지·이용방법 | [web/src/notices](../web/src/notices), [notices.py](../server/app/routes/notices.py) |
+| 자유 노트(블록 편집기·태그) | [web/src/notes](../web/src/notes), [notes.py](../server/app/routes/notes.py), [구현 기록](changes/2026-11-07-free-notes/spec.md) |
 | 카드 수정과 덱 반영 | [cards.py](../server/app/routes/cards.py), [runner/site_edits.py](../runner/site_edits.py), [quizgen/site_edits.py](../quizgen/site_edits.py) |
 | 로그인·API 요청 | [web/src/auth.tsx](../web/src/auth.tsx), [web/src/api.ts](../web/src/api.ts), [server/app/auth.py](../server/app/auth.py) |
 | 화면 색·여백 | [web/src/styles](../web/src/styles) |
