@@ -27,7 +27,7 @@ with SessionLocal()as db:
     db.add(Profile(id='local-pilot',email='local-pilot@example.invalid',is_admin=True));db.commit()
     snapshots=[]
     for s in packet['sources']:
-        key='root-reviewed-import/'+s['sha256']+'/'+s['id'];ObjectStorage().put_bytes(key,Path(s['localPath']).read_bytes())
+        key='lectures/root-reviewed-import/'+s['sha256']+'/'+s['id'];ObjectStorage().put_bytes(key,Path(s['localPath']).read_bytes())
         snapshots.append({**{k:v for k,v in s.items()if k not in('localPath','downloadUrl','snapshotKey')},'snapshotKey':key})
     registered=reviewed_import.register(db,packet,result,snapshots,expected_control_hash=document_hash(None))
 user('local-pilot',True)

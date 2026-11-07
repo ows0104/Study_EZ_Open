@@ -84,6 +84,17 @@ def test_already_published_does_not_download_or_run(tmp_path,monkeypatch):
     monkeypatch.setattr(worker,'run_forwarded',lambda *a,**k:pytest.fail('already published'))
     assert worker.run_generation(client,'test','demo',tmp_path,'a'*32)==0
 
+def test_parallel_status_uses_operating_runs_when_code_is_in_another_runtime(tmp_path,monkeypatch):
+    from studyez_contracts.roots.automation import packet_hash
+    client=Client();client.packet.update(parallelAuthoring=True,authoring='cli',inputMode='source',sourceAssessmentFormat='source-assessment/2-parallel/1')
+    client.packet['inputHash']=packet_hash(client.packet)
+    monkeypatch.setattr(worker.urllib.request,'urlopen',lambda *a,**k:io.BytesIO(f.BODY))
+    monkeypatch.setattr(worker,'run_forwarded',lambda *a,**k:SimpleNamespace(returncode=1))
+    runs=tmp_path/'r'
+    assert worker.run_generation(client,'test','demo',runs,'a'*32)==1
+    config=json.loads((runs/'status-jobs'/('main-quiz-parallel-'+('a'*32)+'.json')).read_text(encoding='utf-8'))
+    assert config['script']=='runner.root_native_json'and config['outputs']=='r/_root-generation/'+('a'*32)
+
 @pytest.mark.parametrize('tamper',[False,True])
 def test_completed_pipeline_result_reuses_original_proof_without_new_model_budget(tmp_path,monkeypatch,tamper):
     import generation_v2_fixture as f2

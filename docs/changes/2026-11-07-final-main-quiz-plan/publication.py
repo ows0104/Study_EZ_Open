@@ -1,9 +1,11 @@
 """Named-lecture operational preflight; never initialize DB or modify source banks."""
 import hashlib
 import json
+import os
 import sys
 import argparse
 import urllib.request
+import subprocess
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT/'server'));sys.path.insert(0,str(ROOT))
@@ -46,6 +48,12 @@ def publish(api,revision):
     assert checked['reviewProofHash']==result['manifest']['planRepair']['proofHash']and checked['visualQuestions']>0
     with urllib.request.urlopen(api.rstrip('/')+'/api/health',timeout=30)as response:health=json.load(response)
     assert health['revision']==revision and health['environment']=='production','Reviewed server candidate must be deployed first'
+    observed=subprocess.run(['gcloud','run','services','describe','studyez-api','--project','meddeck-503318','--region','asia-northeast3','--format=json'],
+        capture_output=True,text=True,encoding='utf-8',check=True,shell=True)
+    config=json.loads(observed.stdout)
+    flags={v['name']:v.get('value')for v in config['spec']['template']['spec']['containers'][0].get('env',[])if v['name']in('STUDYEZ_ROOT_LEARNING_ENABLED','STUDYEZ_REVISION')}
+    assert flags=={'STUDYEZ_ROOT_LEARNING_ENABLED':'true','STUDYEZ_REVISION':revision},'Production feature/revision must match'
+    os.environ['STUDYEZ_ROOT_LEARNING_ENABLED']=flags['STUDYEZ_ROOT_LEARNING_ENABLED']
     before=read(OUT/'publication-preflight.json')
     with SessionLocal()as db:
         current=inspect(db,packet)
@@ -54,7 +62,7 @@ def publish(api,revision):
         for source in packet['sources']:
             body=Path(source['localPath']).read_bytes()
             assert hashlib.sha256(body).hexdigest()==source['sha256']and len(body)==source['sizeBytes']
-            key='root-reviewed-import/'+source['sha256']+'/'+source['id']
+            key='lectures/root-reviewed-import/'+source['sha256']+'/'+source['id']
             prior=storage.get_bytes(key)
             if prior is None:storage.put_bytes(key,body)
             else:assert prior==body,'Never overwrite different original snapshot'
@@ -77,7 +85,7 @@ def publish(api,revision):
         assert len(answer['sourceLinks'])==len(packet['sources'])and 'reviewNotes'in answer and 'reviewIssues'in answer
     receipt={'publishedVerified':True,'response':response,'apiRevision':revision,'health':health,
         'resultSha256':checked['resultSha256'],'bankUnchanged':True,'humanRootEventsUnchanged':True,
-        'humanSessionsUnchanged':True,'privatePilot':True,'sourceLinksVerified':True,'productionWrites':True}
+        'humanSessionsUnchanged':True,'privatePilot':True,'sourceLinksVerified':True,'productionWrites':True,'productionFlags':flags}
     (OUT/'publication-receipt.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2),encoding='utf-8')
     print(json.dumps(receipt,ensure_ascii=False))
 

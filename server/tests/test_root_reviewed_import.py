@@ -14,7 +14,9 @@ from studyez_contracts.roots import document_hash
 from studyez_contracts.roots.automation import packet_hash
 
 p=f.packet();p.update(subject='test',runId='demo');p['inputHash']=packet_hash(p);value=cf.result(p)
-snapshot=[{**{k:v for k,v in s.items()if k not in('localPath','downloadUrl')},'snapshotKey':'root-reviewed-import/'+s['sha256']+'/'+s['id']}for s in p['sources']]
+snapshot=[{**{k:v for k,v in s.items()if k not in('localPath','downloadUrl')},'snapshotKey':'lectures/root-reviewed-import/'+s['sha256']+'/'+s['id']}for s in p['sources']]
+from app.storage import ObjectStorage
+ObjectStorage().put_bytes(snapshot[0]['snapshotKey'],f.old.BODY)
 with SessionLocal()as db:
     # A complete review is required, not a raw authoring candidate.
     bad=copy.deepcopy(value);bad['manifest'].pop('chunkedReview')
@@ -36,6 +38,7 @@ with SessionLocal()as db:
     content=db.get(RootContent,('test','demo',p['revision']))
     answer=revealed_answer(db,content,content.document['bank_snapshot']['questions'][0])
     assert len(answer['sourceLinks'])==1 and 'reviewNotes'in answer and 'reviewIssues'in answer
+    assert client.get(answer['sourceLinks'][0]['url']).content==f.old.BODY
     row.web_dispatch={**row.web_dispatch,'sourceSnapshots':[{**snapshot[0],'sha256':'0'*64}]}
     try:imp.source_records(row);raise AssertionError('Tampered source accepted')
     except ValueError:db.rollback()

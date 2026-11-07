@@ -102,7 +102,7 @@ def run_generation(client, subject, run_id, runs_dir, generation_id, *, model=No
     packet_path.write_text(json.dumps(packet, ensure_ascii=False, indent=2), encoding='utf-8')
     if packet.get('parallelAuthoring'):
         from .parallel_status import register
-        project=Path(__file__).resolve().parents[1]
+        project=Path(runs_dir).resolve().parent
         # The reader binds this exact -m token AND the observed child PID.
         register(project,out,project/'runner.root_native_json',out/'runner.log')
     module='runner.root_native_json'if is_v2_source(packet)else'quizbank.connection_generate'

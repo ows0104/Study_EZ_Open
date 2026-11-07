@@ -20,7 +20,7 @@ def source_records(generation):
     for original,snapshot in zip(sources,records):
         expected={k:v for k,v in original.items()if k not in('localPath','downloadUrl','snapshotKey')}
         require({k:v for k,v in snapshot.items()if k!='snapshotKey'}==expected
-            and snapshot['snapshotKey']=='root-reviewed-import/'+original['sha256']+'/'+original['id'],
+            and snapshot['snapshotKey']=='lectures/root-reviewed-import/'+original['sha256']+'/'+original['id'],
             'reviewed import: changed frozen source')
     return records
 
