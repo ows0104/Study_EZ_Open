@@ -54,6 +54,7 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
   const [error,setError]=useState('');
   const [tab,setTab]=useState<'learn'|'map'>('learn');
   const [advancing,setAdvancing]=useState(false);
+  const [mapRequested,setMapRequested]=useState(false);
   const loadSession=async(id:string)=>setView(await api<RootView>(`/api/root-learning/sessions/${id}`));
   async function refresh(resume=false) {
     const next=await api<RootOverview>(base);setInfo(next);setError('');
@@ -68,11 +69,14 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     finally{setAdvancing(false);}
   }
   async function showMap() {
-    if(!view||writes.blocked)return;
+    if(writes.blocked)return;
+    if(!view){setMapRequested(true);await writes.run(base+'/sessions',{});return;}
     await act({kind:'map'});
     try{setMap(await api<RootMapData>(`/api/root-learning/sessions/${view.sessionId}/map`));setTab('map');}
     catch(e){setError((e as Error).message);}
   }
+  useEffect(()=>{if(mapRequested&&view&&!writes.blocked){setMapRequested(false);void showMap();}},[mapRequested,view,writes.blocked]);
+  useEffect(()=>{document.title='Main-Quiz · Study_EZ';},[]);
   async function reload() {
     if(view)await loadSession(view.sessionId);
     await refresh();
@@ -88,24 +92,24 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
   useEffect(()=>{if(me?.isAdmin)void adminVersions().catch(e=>setError(e.message));},[me?.isAdmin,base]);
   async function register(){if(!candidate)return;setManaging(true);try{await api(base.replace('/api/','/api/admin/'),{method:'POST',body:JSON.stringify(candidate)});setNotice('새 콘텐츠 판을 비공개로 보관했습니다. 내용 검토와 적용 범위를 확인한 뒤 활성화하세요.');await adminVersions();}catch(e){setError((e as Error).message);}finally{setManaging(false);}}
   async function publish(revision:string,enabled:boolean){setManaging(true);try{await api(base.replace('/api/','/api/admin/')+'/publication',{method:'PUT',body:JSON.stringify({revision,reviewed,enabled,allowedUsers:privatePilot?[me!.id]:[]})});setNotice(enabled?'선택한 범위에 활성화했습니다. 서버 전체 기능 설정이 꺼져 있으면 학습 진입은 열리지 않습니다.':'신규 진입과 쓰기를 중지했습니다. 기록은 보존됩니다.');await adminVersions();await refresh();}catch(e){setError((e as Error).message);}finally{setManaging(false);}}
-  return <main className="root-learning main-quiz-learning"><div className="main-quiz-heading"><Link to={lectureHref({subject,runId})}>← 강의로</Link><Link to={`/bank/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}?legacy=1`}>기존 문제·기록</Link></div>
-    <h1>Main Quiz</h1>
+  return <main className="root-learning main-quiz-learning"><div className="main-quiz-heading"><Link to={lectureHref({subject,runId})}>← 강의로</Link>
+    {!view&&<Link to={`/bank/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}?legacy=1`}>기존 문제·기록</Link>}</div>
+    {!view&&<h1>Main-Quiz</h1>}
     {(error||writes.error||writes.pending&&!writes.busy||writes.conflicts.some(r=>!r.acknowledged))&&<div role="alert" className="notice is-error">{error||writes.error||'이전에 저장 확인을 받지 못한 요청 또는 충돌 응답이 있습니다.'}
       {writes.pending&&<button disabled={writes.busy} onClick={()=>void writes.retry()}>같은 요청 다시 저장</button>}
       {writes.conflicts.some(r=>!r.acknowledged)&&<button disabled={writes.busy} onClick={()=>void writes.acknowledge(reload)}>보관 응답 확인 후 서버 기록 불러오기</button>}
     </div>}
     {writes.conflicts.length>0&&<details><summary>보존된 충돌 응답 {writes.conflicts.length}개</summary>{writes.conflicts.map(r=><pre key={r.requestId}>{typeof r.body.response==='string'?r.body.response:JSON.stringify(r.body)}</pre>)}</details>}
     {notice&&<p role="status">{notice}</p>}
-    <p className="bank-note main-quiz-save-status" role="status">{writes.busy?'서버 저장 확인 중…':writes.pending?'저장 미확인 요청 있음':'서버 확인 기록 기준'}</p>
-    {view?<><nav className="main-quiz-tabs" aria-label="Main Quiz"><button onClick={()=>setTab('learn')}>현재 질문</button><button disabled={writes.blocked} onClick={()=>void showMap()}>지도·근거 보기 (답 포함)</button></nav>
-      {view.mapSeen&&<p className="bank-note">이번 회차에서 지도 답을 열람했습니다. 독립 회상과 구별합니다.</p>}
-      {view.finished&&writes.blocked?<p role="status">마지막 저장과 미확인 요청을 확인 중입니다. 완료 현황은 확인 뒤 표시합니다.</p>:tab==='map'&&map?<RootMap map={map} summary={view.summary} position={`질문 ${Math.min(view.position+1,view.count)}/${view.count}`}/>:
-        <RootSolve view={view} scope={scope} disabled={writes.blocked} advancing={advancing} onAction={a=>void act(a)} onError={setError}
+    {writes.busy&&<p className="bank-note main-quiz-save-status" role="status">저장 중…</p>}
+    {view?<>
+      {view.finished&&writes.blocked?<p role="status">마지막 저장과 미확인 요청을 확인 중입니다. 완료 현황은 확인 뒤 표시합니다.</p>:tab==='map'&&map?<><button className="main-quiz-back" onClick={()=>setTab('learn')}>← 문제로 돌아가기</button><RootMap map={map} summary={view.summary} position={`문항 ${Math.min(view.position+1,view.count)}/${view.count}`}/></>:
+        <RootSolve view={view} scope={scope} disabled={writes.blocked} advancing={advancing} onAction={a=>void act(a)} onError={setError} onMap={()=>void showMap()}
           onToday={()=>{setView(null);setMap(null);setTab('learn');void refresh().catch(e=>setError(e.message));}}/>}
       {view.blocked?.includes('학습일')&&<button disabled={writes.blocked} onClick={()=>{setView(null);void refresh().catch(e=>setError(e.message));}}>오늘 학습 다시 계획</button>}
-    </>:info?<RootToday info={info} disabled={writes.blocked} onStart={()=>void writes.run(base+'/sessions',{})}/>:!error&&<p>학습 범위 확인 중…</p>}
-    {me?.isAdmin&&<details><summary>Main Quiz 만들기</summary><RootGenerationPanel subject={subject} runId={runId} onPublished={()=>{void refresh().catch(e=>setError(e.message));void adminVersions();}}/></details>}
-    {me?.isAdmin&&<details><summary>Main Quiz 자료·공개 관리</summary><p>검토 묶음·원본 문항·채택 목표·방향별 과제를 포함한 새 판을 등록합니다. 기존 기록과 은행은 보존됩니다.</p>
+    </>:info?<RootToday info={info} disabled={writes.blocked} onStart={()=>void writes.run(base+'/sessions',{})} onMap={()=>void showMap()}/>:!error&&<p>학습 범위 확인 중…</p>}
+    {!view&&me?.isAdmin&&<details><summary>Main Quiz 만들기</summary><RootGenerationPanel subject={subject} runId={runId} onPublished={()=>{void refresh().catch(e=>setError(e.message));void adminVersions();}}/></details>}
+    {!view&&me?.isAdmin&&<details><summary>Main Quiz 자료·공개 관리</summary><p>검토 묶음·원본 문항·채택 목표·방향별 과제를 포함한 새 판을 등록합니다. 기존 기록과 은행은 보존됩니다.</p>
       <input type="file" accept="application/json,.json" aria-label="Main Quiz 자료" onChange={async e=>{setCandidate(null);const file=e.target.files?.[0];if(!file)return;if(file.size>5_000_000){setError('5MB 이하의 자료를 선택하세요.');return;}try{const text=await file.text();setRaw(text);const value=JSON.parse(text);if(value.schema_version!=='roots/1')throw new Error('Main Quiz 자료 형식을 확인하세요.');setCandidate(value);}catch(err){setError((err as Error).message);}}}/>
       {candidate&&<><details><summary>등록할 내용 검토</summary><pre>{raw}</pre></details><button disabled={managing||writes.blocked} onClick={()=>void register()}>새 판 비공개 등록</button></>}
       <p><label><input type="checkbox" checked={reviewed} onChange={e=>setReviewed(e.target.checked)}/>목표·답·출처·미준비 범위를 검토했습니다</label></p>

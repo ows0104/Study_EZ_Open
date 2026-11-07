@@ -10,4 +10,4 @@
 ## 근거·미정 사항
 최신 origin/master a4625641에서 codex/main-quiz-pharm-ui와 전용 worktree를 만들고 dashboard를 pull/확인/등록/push했다. 기존 작업표의 추출 프롬프트, 실험 전용 저장소, 강의 패널 예정 작업과 소스 수정 범위는 겹치지 않는다.
 이전 구성의 기준은 BankSolve.tsx의 quiz-progress·quiz-card·quiz-bar, 네 단계 평가와 ConceptMap.tsx다. 새 Main Quiz는 BankStudy.tsx에서 RootLearningPage로 분기한다.
-구체적인 spec/plan을 작성한 상태다. 구현 승인 및 테스트/배포 근거는 아직 없으며 승인 기록을 만들지 않는다.
+2026-11-07 현재 대화에서 사용자가 “응, 그 계획대로 진행해줘”로 구현을 승인했다. 이어 “언제나 1,2,3,4 다 선택 가능”을 명시했다. 답 공개 후 네 단계는 도움/이전 답 열람과 무관하게 선택 가능하다. 테스트/배포 근거는 실제 실행 후 기록한다.

@@ -8,13 +8,167 @@
     "server-regression",
     "browser"
   ],
-  "approvals": {},
-  "checks": [],
+  "approvals": {
+    "build": {
+      "at": "2026-11-07T11:01:23.301974+00:00",
+      "evidence": "2026-11-07 현재 채팅 사용자: 응, 그 계획대로 진행해줘. 언제나 1,2,3,4 다 선택 가능하지.",
+      "scope": "승인된 plan의 UI 복원·4단계 평가 호환·참고 슬라이드·개념지도·검사 및 PR 준비. 기존 문제/기록 보존. 운영 자료 변경 없음",
+      "evidence_version": 2,
+      "source_hash": "5dea488944e166f79494406952c7c2debe7ddc8ffb3d02fb319e9049342001ee",
+      "plan_hash": "d5e8374d7cc6df3580c1eee1b866d3196baec8368fc77b63f75f1f5709fab9ee",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "cb1f5a7c78530782316a1b60b0fb19bed0b3c140880f27215043d28483bd6efe"
+    }
+  },
+  "checks": [
+    {
+      "name": "browser",
+      "at": "2026-11-07T11:21:39.241507+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "scripts/check_main_quiz_ui.py",
+        "browser"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "787a43ec5ed5f65c7fa29ab75d4c3c24642b36b3e05fe3d641ab7cb20993c101",
+      "plan_hash": "d5e8374d7cc6df3580c1eee1b866d3196baec8368fc77b63f75f1f5709fab9ee",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-main-quiz-pharm-ui/1794050482811133300-browser.log"
+    },
+    {
+      "name": "browser",
+      "at": "2026-11-07T11:23:14.693738+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "scripts/check_main_quiz_ui.py",
+        "browser"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "9200b5d5cdb8029af6393f6659efdaba134245b64609cda60fc0c01335ec00f3",
+      "plan_hash": "d5e8374d7cc6df3580c1eee1b866d3196baec8368fc77b63f75f1f5709fab9ee",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-main-quiz-pharm-ui/1794050566239264300-browser.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T11:23:17.685272+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "scripts/check_main_quiz_ui.py",
+        "web"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "9200b5d5cdb8029af6393f6659efdaba134245b64609cda60fc0c01335ec00f3",
+      "plan_hash": "d5e8374d7cc6df3580c1eee1b866d3196baec8368fc77b63f75f1f5709fab9ee",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-main-quiz-pharm-ui/1794050568328497300-web.log",
+      "web_artifact": "9bdf4ed53e824369a1944b3440e21d841f7154ce64ecdacce5d96b51be221747",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "server-regression",
+      "at": "2026-11-07T11:23:23.824611+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "scripts/check_main_quiz_ui.py",
+        "server-regression"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "9200b5d5cdb8029af6393f6659efdaba134245b64609cda60fc0c01335ec00f3",
+      "plan_hash": "d5e8374d7cc6df3580c1eee1b866d3196baec8368fc77b63f75f1f5709fab9ee",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-main-quiz-pharm-ui/1794050565960206600-server-regression.log"
+    }
+  ],
   "review": null,
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-07T10:56:41.230044+00:00"
+  "updated_at": "2026-11-07T11:23:23.825567+00:00"
 }
