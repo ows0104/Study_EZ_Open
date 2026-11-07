@@ -27,6 +27,10 @@
 화면은 이것을 **3초 고정 간격**으로 호출한다(`web/src/bank/RootGenerationPanel.tsx` `setInterval(…, 3000)`).
 간격이 응답 시간보다 짧으므로 응답을 기다리는 요청이 계속 겹쳐 쌓인다.
 
+**이 느림은 강의 하나에만 있다.** 강의별로 모은 기준값은 `baseline.md`에 있다 —
+261104_02는 n=23 median 2.736초 max 6.328초이고, 278번 폴링된 261105_07은 median 0.047초,
+나머지 24개 강의도 모두 수십 밀리초다. 폴링 자체가 비싼 것이 아니라 판이 쌓인 강의에서만 비싸다.
+
 ### 쌓여도 인스턴스가 늦게 늘어난다
 
 `server/deploy.ps1`은 `--cpu 1 --memory 512Mi --min-instances 0 --max-instances 4`로 배포하고
