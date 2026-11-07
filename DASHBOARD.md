@@ -14,7 +14,6 @@
 
 | 우선순위 | 작업 | 작업자 / 세션 | 브랜치 | 건드리는 영역·파일 | 시작일 | 상태·메모 |
 |---|---|---|---|---|---|---|
-| P1 | 복습퀴즈 버튼 준비 상태 수정 | ows0104 / Codex 버튼 수정 | codex/review-quiz-entry | web/src/calendar/EventPanel.tsx의 활성화 조건·관련 확인, docs/changes/2026-11-07-review-quiz-entry | 2026-11-07 | 사용자 승인: 겹치는 EventPanel 중 버튼 활성화 조건만 분리 수정·확인·사이트 반영. 아래 UI2 예정 작업과 범위 조정 완료 |
 
 
 | P1 | Map·독립 출제포인트 추출 프롬프트 정리 | ows0104 / Codex Map 세션 | codex/map-point-prompts | content/prompts/learning-links/map-extract.md, point-extract.md, *-output.schema.json, *-output.example.json, README.md, docs/changes/2026-11-06-map-point-prompts, .worktrees/map-point-prompts/runs/_map-point-pilot | 2026-11-06 | 사용자 승인 범위의 두 원본 전용 지시문·JSON 스키마·예시·로컬 형식 검증. 현재 사용자 예시 추출 승인: 명시적 OpenAI 전송 승인으로 Map/포인트 각1회 완료, 심내막염·CNS 강의별 JSON4개 보존. 후속 승인된 독립단위 재추출·4지적 보완·별도 재대조 완료: 최종47/60개, ready/ready·잔여issues없음. 원본/중간/실패보존, 필수검사통과, d68b6d57 로컬 검토대기. 운영 요청 재개/문항/게시/배포 없음 |
@@ -55,6 +54,7 @@ merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 �
 
 | 완료일 | 작업 | 작업자 | PR |
 |---|---|---|---|
+| 2026-11-07 | 복습퀴즈 버튼 활성화 조건만 수정. 새 자료/기존 은행/없음 3상태 브라우저 및 웹·PR전체CI 통과. PR17 병합·사이트 반영 사용자 승인. 자동 배포 확인 중 | ows0104 / Codex 버튼 수정 | [#17](https://github.com/ows0104/Study_EZ_Open/pull/17) |
 | 2026-11-07 | Main-Quiz 약리 UI 복원 PR16 병합 b8a9540a. 사용자 병합/사이트 반영 승인. 네 평가 자유선택·답 입력 제거·참고 PDF·개념지도. 로컬 웹/서버14/브라우저3 및 PR 전체CI 통과. master 전체CI/API 배포42369151301·Pages219bb8bf 같은SHA 반영 성공. 실제 health/웹 네 평가·PDF worker/CMap·401 확인, 운영 학습쓰기0 | ows0104 / Codex UI 복원 | [#16](https://github.com/ows0104/Study_EZ_Open/pull/16) |
 | 2026-11-07 | Main Quiz 새판 PR14 병합a4625641. 실제CLI104전체안held·수정3/3 보관, 별도범위검수 승인98문항98과제·이미지12문항14장, 의학/그림보류6·중요도미확정6중립화. 239계약/러너·서버6·실제격리UI·PR전체CI 통과. master 전체CI(기존mtime 간헐실패1회 동일SHA 재검사통과)·API/Pages a4625641 배포 성공. 실제261104_02 새98문항98과제·이미지12문항14장 반입/별도프로세스 readback·원본PDF실제다운로드·전체PNG SHA 확인. 사람기록0·학습쓰기0·UI동일·관리자시범범위유지·과거판보관·다른강의미실행. [실제배포기록](https://github.com/ows0104/Study_EZ_Open/blob/codex/main-quiz-task-relink/docs/changes/2026-11-07-main-quiz-task-relink/deployment.md) | ows0104 / Codex Main Quiz 후속 | [#14](https://github.com/ows0104/Study_EZ_Open/pull/14) |
 | 2026-11-07 | 복습 개인링크 기본 문구를 올해 필기·족보 기반 큰 흐름 요청으로 교체하고 올해 교수 한 줄 표시. 관련 검사5개·웹 타입/빌드·PR/master 전체 CI 통과, 2d85e793 API/Pages 배포 성공. 실제 공개 복습 자산의 새 문구/긴 안내 제거·동일API SHA·401 확인. 기존 개인 문구·예습·자료·학습 기록 보존 — [배포 근거](https://github.com/ows0104/Study_EZ_Open/blob/codex/review-prompt-simple/docs/changes/2026-11-07-review-prompt-simple/deployment.md) | ows0104 / Codex 복습 문구 세션 | [#15](https://github.com/ows0104/Study_EZ_Open/pull/15) |
