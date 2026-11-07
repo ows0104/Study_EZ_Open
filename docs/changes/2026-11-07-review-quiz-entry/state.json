@@ -1,0 +1,198 @@
+{
+  "id": "2026-11-07-review-quiz-entry",
+  "title": "복습퀴즈 버튼 준비 상태 수정",
+  "area": "site",
+  "created_at": "2026-11-07T12:04:35.860230+00:00",
+  "required_checks": [
+    "web",
+    "browser"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-07T12:05:09.671157+00:00",
+      "evidence": "현재 사용자: 응, 복습퀴즈 버튼 활성화 조건만 수정하고 확인한 뒤 사이트에 반영해줘.",
+      "scope": "EventPanel 복습퀴즈 활성화 조건·확인·PR 병합·운영 코드 배포. 겹치는 예정 작업과 이 조건만 분리하도록 사용자 승인",
+      "evidence_version": 2,
+      "source_hash": "6913aae4dcbb0506b493508dfede948177dea78603da8252365df46b8e4b9d16",
+      "plan_hash": "99365964072d5eef840e31756cafeefae660ec47ce9d6a9071b7ebf0e99e1f36",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "921fc5b82fcf4be9ba6efad4d17993019702862045e756a5fb539a3b6a3ed42e"
+    }
+  },
+  "checks": [
+    {
+      "name": "browser",
+      "at": "2026-11-07T12:06:07.843235+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "runs/_development/2026-11-07-review-quiz-entry/browser.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "bdba88b1468b3986d29692a627b565f0c2164d97e2661e797de28fca43e17023",
+      "plan_hash": "99365964072d5eef840e31756cafeefae660ec47ce9d6a9071b7ebf0e99e1f36",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-review-quiz-entry/1794053159655903200-browser.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T12:06:24.237729+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 2,
+      "evidence_version": 2,
+      "source_hash": "bdba88b1468b3986d29692a627b565f0c2164d97e2661e797de28fca43e17023",
+      "plan_hash": "99365964072d5eef840e31756cafeefae660ec47ce9d6a9071b7ebf0e99e1f36",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-review-quiz-entry/1794053172047911200-web.log"
+    },
+    {
+      "name": "browser",
+      "at": "2026-11-07T12:06:53.519240+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "runs/_development/2026-11-07-review-quiz-entry/browser.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "232357f51f168fe613c868b76aaffdf47116e63cc289e5cc7a16e471f279a88a",
+      "plan_hash": "99365964072d5eef840e31756cafeefae660ec47ce9d6a9071b7ebf0e99e1f36",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-review-quiz-entry/1794053205875457600-browser.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-07T12:06:57.970951+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "232357f51f168fe613c868b76aaffdf47116e63cc289e5cc7a16e471f279a88a",
+      "plan_hash": "99365964072d5eef840e31756cafeefae660ec47ce9d6a9071b7ebf0e99e1f36",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-07-review-quiz-entry/1794053206696083700-web.log",
+      "web_artifact": "27f6ebe09e3844b20c8b24272c449fda9a538641b8cf9ec09ab7b32d595ec58c",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": {
+    "at": "2026-11-07T12:07:19.412411+00:00",
+    "summary": "EventPanel의 import/기존 hook 호출/OR 조건 한 곳만 검토. 서버의 공개·계정 판정 재사용, 기존 usable 은행 유지, 새 자료만/옛 은행/없음 3 브라우저 사례와 웹 빌드 통과. 다른 기능·기록·데이터 변경 없음",
+    "evidence_version": 2,
+    "source_hash": "232357f51f168fe613c868b76aaffdf47116e63cc289e5cc7a16e471f279a88a",
+    "plan_hash": "99365964072d5eef840e31756cafeefae660ec47ce9d6a9071b7ebf0e99e1f36",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-07T12:07:19.543582+00:00"
+}

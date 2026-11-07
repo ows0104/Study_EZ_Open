@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { BankPanel } from "../bank/BankPanel";
+import { useMainQuizEntry } from "../bank/useMainQuizEntry";
 import { api, downloadSignedFile, openSignedFile } from "../api";
 import { BundleButton } from "../bundle/BundleButton";
 import { decksIn, useBundleDecks } from "../bundle/decks";
@@ -290,6 +291,7 @@ function KeyActions({
   const [error, setError] = useState("");
   const fileOf = (kind: LectureFile["kind"]) => detail.files.find((file) => file.kind === kind);
   const study = useLectureStudy(lecture);
+  const { entry: mainQuizEntry } = useMainQuizEntry(lecture.subject, lecture.runId);
   // 학습률: 강의 상세의 Quiz Bank 학습도. 없으면 카드 진행에서 받은 값.
   const mastery = detail.mastery ?? study?.mastery ?? null;
   const rate = detail.bank?.usable ? Math.max(0, Math.min(100, mastery?.score ?? 0)) : null;
@@ -326,7 +328,7 @@ function KeyActions({
         base={base}
         onError={setError}
         open
-        trailing={bank?.usable ? (
+        trailing={bank?.usable || mainQuizEntry?.mode === "structured" ? (
           <Link className="action-button is-quiz is-review" to={bankHref(lecture)}>
             ▶ 복습 퀴즈{study?.cardProgress?.reviewDue ? <b>{study.cardProgress.reviewDue}</b> : null}
           </Link>
