@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 load_dotenv(ROOT.parents[1]/'server/.env',override=False)
 from sqlalchemy import select
 from app.database import SessionLocal
-from app.models import QuizBank,BankState,Asset
+from app.models import QuizBank,BankState
 from app.models.root_learning import RootContent,RootControl,RootEvent,RootSession
 from app.models.root_generation import RootGeneration
 from app.root_learning import replacement_import
@@ -64,10 +64,16 @@ def main(revision,verify_only=False):
             # intervening human activity rather than deleting it or carrying mastery.
             before=current
             (OUT/'publication-baseline.json').write_text(json.dumps(before,ensure_ascii=False,indent=2),encoding='utf-8')
-            for source in packet['sources']:
-                asset=db.get(Asset,source['assetId'])
-                assert asset and(asset.subject,asset.run_id,asset.filename,asset.object_key)==(subject,rid,source['filename'],source['originalKey'])
-                body=ObjectStorage().get_bytes(asset.object_key)
+            parent=db.get(RootGeneration,PARENT)
+            assert parent and document_hash(parent.result)==value['parentResultHash']
+            snapshots=source_records(parent)
+            assert len(snapshots)==len(packet['sources'])
+            for source,snapshot_source in zip(packet['sources'],snapshots):
+                # The approved original pilot imported a local PDF into an
+                # immutable reviewed snapshot; local-pathology-1 is not Asset.id.
+                assert {k:v for k,v in source.items()if k not in('localPath','downloadUrl','snapshotKey')}=={
+                    k:v for k,v in snapshot_source.items()if k!='snapshotKey'}
+                body=ObjectStorage().get_bytes(snapshot_source['snapshotKey'])
                 assert body and len(body)==source['sizeBytes']and hashlib.sha256(body).hexdigest()==source['sha256'],'Original lecture PDF changed'
             response=replacement_import.register(db,PARENT,value,expected_control_hash=before['controlHash'])
         else:
