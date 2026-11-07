@@ -40,6 +40,7 @@
 | 우선순위 | 작업 | 예정 작업자 | 예상 영역·파일 | 선행 조건·메모 |
 |---|---|---|---|---|
 | P2 | UI/UX 개편 2단계: 강의록 회독 기록(+/삭제/되돌리기) 서버 저장 (자유 노트는 1번 claude/free-notes로 분리 시작) | HungryPotato01 / Claude | server/app/models·routes(새 표 2개+RLS), server/app/cli.py, web/src/notes/*, web/src/calendar/EventPanel.tsx | 2026-11-06 사용자 결정으로 1단계와 분리. 새 표·API라 운영 DB 준비·중요 운영 승인 필요. 1단계 PR #9 병합 후 시작. 사용자 2026-11-07 조정 승인: codex/review-quiz-entry가 EventPanel의 복습퀴즈 활성화 조건만 먼저 수정 |
+| P1 | 감염병리1(감염과 면역/261104_02) Main-Quiz를 Map 파이프라인으로 재구성: 강의록 개념 트리(Map)·연결 → 포인트 → 개별·구조 문제(콜린성 예시 수준), 새 판 등록·기존 학습기록 보존 | ows0104 / Claude Main-Quiz 지도 세션 (Codex Map 세션과 순서 조정) | 감염병리1 원본 PDF(박준원v2, 37쪽)·Map/포인트 프롬프트(읽기)·생성 실행 기록(runs), 새 판 등록. 프롬프트·생성기 자체는 Codex Map 세션 소관 | 2026-11-08 사용자 선택 "Map 파이프라인에 합류". 선행: codex/map-point-e2e·map-point-prompts의 Map→포인트→문제 흐름 확정(현재 심내막염 보류·로컬 검토대기). 외부 모델 전송·생성·새 판 공개는 단계별 별도 승인. 문제 품질(4번) 보완도 여기서 함께 |
 | | | | | |
 
 ## 3. 제안된 아이디어 (논의 필요)
