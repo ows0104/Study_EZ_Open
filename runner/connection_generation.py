@@ -13,6 +13,7 @@ import urllib.request
 from studyez_contracts.roots.automation import packet_hash, validate_result
 from .subprocesses import run_forwarded
 from studyez_contracts.roots import document_hash
+from studyez_contracts.roots.parallel import is_v2_source
 
 
 def frozen_source(path, url, source):
@@ -99,18 +100,26 @@ def run_generation(client, subject, run_id, runs_dir, generation_id, *, model=No
         source['localPath'] = str(path.resolve())
     packet_path = out / 'packet.json'
     packet_path.write_text(json.dumps(packet, ensure_ascii=False, indent=2), encoding='utf-8')
-    module='runner.root_native_json'if packet.get('sourceAssessmentFormat')=='source-assessment/2'else'quizbank.connection_generate'
+    if packet.get('parallelAuthoring'):
+        from .parallel_status import register
+        project=Path(runs_dir).resolve().parent
+        # The reader binds this exact -m token AND the observed child PID.
+        register(project,out,project/'runner.root_native_json',out/'runner.log')
+    module='runner.root_native_json'if is_v2_source(packet)else'quizbank.connection_generate'
     args = [sys.executable, '-m', module, '--packet', str(packet_path.resolve()), '--out', str(out.resolve())]
     if model: args += ['--model', model]
     if (out/'result.json').exists():payload=completed_result(out,packet)
     else:
         result = run_forwarded(args, cwd=Path(__file__).resolve().parents[1])
         if result.returncode: return result.returncode
-        payload = completed_result(out,packet)if packet.get('sourceAssessmentFormat')=='source-assessment/2'else json.loads((out / 'result.json').read_text(encoding='utf-8'))
+        payload = completed_result(out,packet)if is_v2_source(packet)else json.loads((out / 'result.json').read_text(encoding='utf-8'))
     validate_result(payload, packet)
     validate_continuations(out,payload)
     posted = client.call('PUT', base + '/result', payload)
     if posted.get('status') != 'ready': raise ValueError('게시 완료 응답을 받지 못했습니다.')
     (out / 'published.json').write_text(json.dumps(posted, ensure_ascii=False), encoding='utf-8')
+    if packet.get('parallelAuthoring'):
+        from .parallel_status import refresh
+        refresh(out,'published')
     print(f'Quiz Bank {run_id}: Concept map·포인트 → 뿌리 학습 게시 완료', flush=True)
     return 0

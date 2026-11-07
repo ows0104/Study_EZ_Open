@@ -104,9 +104,15 @@ def inventory(folder):
 
 def schema_for(stage,ctx):
     if stage=='normalize':return c.BRIEF
-    if stage=='generate'or re.fullmatch(r'repair-[1-3]',stage):return c.AUTHOR
+    if stage=='generate'or re.fullmatch(r'repair-[1-3]',stage):return c.author_schema(ctx.get('parallelAuthoring',False))
     require(re.fullmatch(r'source-[0-3]',stage),'Unsupported file-output stage')
     return c.source_schema(ctx['brief'],ctx['bank'])
+
+
+def decode_for(stage,value,schema):
+    value=g.decode_optional_fields(value,schema)
+    if stage=='generate'or stage.startswith('repair-'):return c.tier_projection(value)
+    return value,None
 
 def task_for(stage):
     kind=stage.split('-')[0];name='extract-v2.md'if kind=='normalize'else'source-v2.md'if kind=='source'else'author-v2.md'
@@ -131,6 +137,18 @@ the host will validate the full unchanged schema, medical/source evidence and li
         task+='Reuse the existing source-only brief and original web/BANK from input.json; do not redo independent extraction. Inspect original images needed for actual stimulus selection. Full independent source review follows separately.\n'
     else:
         task+='Read every original source page, including handwriting and original material/S*.png. Report unknown when evidence cannot be established.\n'
+    task+='''
+If input.json contains independentMap and independentPoints, these are completed
+source-only extractions from separate CLI jobs. Normalize/link those exact results into
+the required brief; retain their content, coverage, source boundaries and uncertainty.
+The bank is absent from that source-only task. Do not invent a passing source review.
+If independentBank is present in generate, copy its bank question content/answers/options/
+tiers/references exactly; adapt only concept IDs, learning_page and prerequisites to the
+supplied brief. Reuse its visual_stimuli and clinical_conflicts after inspecting actual
+images. Necessary content changes are handled later by the bounded independent review.
+Use figure-index.json image_id only when its standalone original image is sufficient;
+otherwise keep the original page crop including necessary arrows/marks.
+'''
     return task
 
 def check_file(stage,work):
@@ -138,14 +156,18 @@ def check_file(stage,work):
     work=Path(work);ctx=read(work/'input.json');schema=read(work/'acceptance.schema.json')
     require(schema==schema_for(stage,ctx),'Different acceptance schema')
     path=work/'result.json';require(not path.is_symlink()and path.is_file()and 0<path.stat().st_size<=LIMIT,'Unsafe/missing result')
-    value=g.decode_optional_fields(read(path),schema);jsonschema.validate(value,schema)
+    value,_=decode_for(stage,read(path),schema);jsonschema.validate(value,schema)
     if stage=='normalize':
         require(value['sources']==ctx['sources']and value['lecture_id']==ctx['lecture_id'],'Different normalization sources/lecture')
         require((value['provenance']['independent_points']=='confirmed')==(ctx.get('inputMode')=='source'),'Different extraction independence')
     elif stage=='generate'or stage.startswith('repair-'):
-        c.validate_authoring(value,ctx.get('previousAuthoring'))
+        if ctx.get('rejectedAuthoring'):c.validate_recovered_authoring(ctx['previousAuthoring'],value)
+        else:c.validate_authoring(value,ctx.get('previousAuthoring'))
         require(value['brief']['sources']==ctx['sources']and value['brief']['lecture_id']==ctx['lecture_id'],'Different authoring source/lecture')
         if stage=='generate':
+            if ctx.get('independentBank'):
+                from quizbank.connection_parallel import preserved_bank
+                preserved_bank(ctx['independentBank']['bank'],value['bank'])
             if ctx['initialBriefErrors']:c.validate_initial_correction(ctx['brief'],value['brief'],value['map_change_reason'])
             else:require(value['brief']==ctx['brief'],'Initial valid brief changed')
         if stage=='generate'and ctx.get('webResponse'):
@@ -219,7 +241,10 @@ class NativeJson:
         root=Path(__file__).resolve().parents[1]
         checker='import sys\nfrom pathlib import Path\nsys.path.insert(0,'+repr(str(root))+')\nfrom runner.root_native_json import check_file\ncheck_file('+repr(stage)+',Path(__file__).parent)\nprint("Acceptance checks passed")\n'
         (work/'check_result.py').write_text(checker,encoding='utf-8')
-        (work/'task.md').write_text(task_for(stage)+'\nBefore finalizing, run '+str(sys.executable)+' with argument check_result.py successfully. Fix serialization/structural inconsistencies within this one task; never falsify findings or sources to pass.\n',encoding='utf-8')
+        task=task_for(stage)
+        if ctx.get('rejectedAuthoring'):
+            task+='\nThis is the explicitly authorized repair of a completed but structurally rejected brief. Copy previousAuthoring.bank, visual_stimuli and clinical_conflicts EXACTLY using local code. Correct only the brief findings and their complete structural implications, preserve original points/source boundaries, set derived and explain the correction. The rejected brief is not a valid prior accepted map. Do not create or rewrite clinical questions in this recovery step.\n'
+        (work/'task.md').write_text(task+'\nBefore finalizing, run '+str(sys.executable)+' with argument check_result.py successfully. Fix serialization/structural inconsistencies within this one task; never falsify findings or sources to pass.\n',encoding='utf-8')
         protected={name:sha(work/name)for name in('input.json','acceptance.schema.json','task.md','check_result.py')}
         (seat/'adapter.py').write_bytes(Path(__file__).read_bytes())
         proof={'policy':POLICY,'stage':stage,'inputHash':document_hash(ctx),'cleanInputHash':document_hash(clean(ctx)),
@@ -239,7 +264,8 @@ class NativeJson:
             require(inventory(material)==source_inventory==inventory(work/'material'),'Model changed original material')
             receipt=loads(result['text']);body,value=artifact(work,receipt)
             (seat/'output.json').write_bytes(body)
-            raw=g.decode_optional_fields(value,schema);jsonschema.validate(raw,schema)
+            raw,projection=decode_for(stage,value,schema);jsonschema.validate(raw,schema)
+            if projection is not None:proof['tierProjection']=projection
             proof.update(nativeSessionId=result['session_id'],providerHash=document_hash(result),outputSha256=receipt['sha256'],rawHash=document_hash(raw))
             row={'proof':proof,'proofHash':document_hash(proof)}
             g.write(seat/'receipt.json',row);g.write(seat/'journal.json',{'status':'completed','proofHash':row['proofHash']})
@@ -270,13 +296,26 @@ def validate_stage(out,entry,*,model):
         and type(response.get('turns'))is int and response['turns']>0,'Native provider completion differs')
     require(loads(response['text'])=={'path':'result.json','sha256':proof['outputSha256']},'Native completion receipt differs')
     require(sha(seat/'output.json')==proof['outputSha256'],'Native output archive differs')
-    raw=g.decode_optional_fields(read(seat/'output.json'),schema);jsonschema.validate(raw,schema)
+    raw,projection=decode_for(name,read(seat/'output.json'),schema);jsonschema.validate(raw,schema)
+    require(proof.get('tierProjection')==projection,'Changed authored tier projection')
     saved=read(out/(name+'.raw.json'));saved=saved['assessment']if name.startswith('source-')else saved
     require(document_hash(raw)==proof['rawHash']==document_hash(saved),'Accepted raw differs from actual native file')
     require(all(usage[k]==response[k]for k in('usage','cost_usd','duration_ms','models'))and entry['usageHash']==document_hash(usage),'Native usage differs')
 
 def validate_all(out,payload):
     require_unblocked(out)
+    if payload['manifest'].get('planRepair'):
+        from .root_plan_repair import validate
+        validate(out,payload)
+    if payload['manifest'].get('chunkedReview'):
+        from .root_chunked_review import validate
+        validate(out,payload)
+    if payload['manifest'].get('parallelSchemaRecovery'):
+        from .root_parallel_schema_recovery import validate_recovery
+        validate_recovery(out,payload['manifest']['parallelSchemaRecovery'])
+    if payload['manifest'].get('parallelAuthoring'):
+        from quizbank.connection_parallel import validate_completed
+        validate_completed(out,payload['manifest']['parallelAuthoring'])
     for entry in payload['manifest']['stages']:
         if entry['status']=='completed':
             if 'usageHash'in entry:validate_stage(out,entry,model=payload['manifest']['model'])
@@ -284,14 +323,34 @@ def validate_all(out,payload):
             if 'transportRecovery'in entry:
                 from .root_transport_recovery import validate_recovery
                 validate_recovery(out,entry)
+    for row in payload['manifest'].get('authoringRecoveries',[]):
+        proof=row['proof'];name=proof['stage'];prior=proof['priorLedger']['stages'][name]
+        validate_stage(out,{'name':name,**prior},model=payload['manifest']['model'])
+        require(read(Path(out)/(name+'.raw.json'))==proof['rawAuthoring'],'Changed rejected authoring archive')
+        require(read(Path(out)/'authoring.recovery.json')==row,'Changed authoring recovery archive')
+    for row in payload['manifest'].get('formatRecoveries',[]):
+        from .root_tier_recovery import validate_recovery
+        validate_recovery(out,row,model=payload['manifest']['model'])
+    for row in payload['manifest'].get('runtimeRevalidations',[]):
+        proof=row['proof'];archive=Path(out)/'.runtime-revalidation'
+        require(read(Path(out)/'runtime.revalidation.json')==row
+            and read(archive/'ledger-before.json')==proof['priorLedger']
+            and sha(archive/'recovery.py')==proof['toolSha256'],'Changed runtime compatibility archive')
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--packet',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--model');a=p.parse_args()
     try:
         require_unblocked(a.out)
-        packet=read(a.packet);result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if packet.get('sourceAssessmentFormat')==c.VERSION else None)
+        from studyez_contracts.roots.parallel import is_v2_source
+        packet=read(a.packet);result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)else None)
         validate_all(a.out,result)
+        if packet.get('parallelAuthoring'):
+            from runner.parallel_status import refresh
+            refresh(a.out,'local-ready')
     except Exception as error:
+        if 'packet' in locals()and packet.get('parallelAuthoring'):
+            from runner.parallel_status import refresh
+            refresh(a.out,'failed',str(error))
         print('연결 자동출제 보류: '+classify_error(error)['message'],flush=True);return 1
     return 0
 

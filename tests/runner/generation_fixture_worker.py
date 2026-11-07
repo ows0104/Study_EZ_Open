@@ -9,7 +9,7 @@ from runner import connection_generation as worker
 from runner.bank_flow import execution
 from runner.transport import Client
 def child(argv,**kwargs):
-    assert argv[1:3]==['-m','quizbank.connection_generate']
+    assert argv[1]=='-m' and argv[2] in ('quizbank.connection_generate','runner.root_native_json')
     return subprocess.run([sys.executable,str(ROOT/'tests/quizbank/generation_fixture_cli.py'),*argv[3:]],**kwargs)
 worker.run_forwarded=child
 if __name__=='__main__':

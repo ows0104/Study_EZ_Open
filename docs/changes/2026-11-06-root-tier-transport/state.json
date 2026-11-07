@@ -1,0 +1,218 @@
+{
+  "id": "2026-11-06-root-tier-transport",
+  "title": "기존 Must-Know 등급 별칭의 Native 전송 복구",
+  "area": "generation",
+  "created_at": "2026-11-05T18:36:37.614128+00:00",
+  "required_checks": [
+    "tier-contract",
+    "tier-regression",
+    "live-tier-recovery"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-05T18:57:57.766145+00:00",
+      "evidence": "현재 사용자 완료 초안 복구 승인 적용. 실제 재개에서 판정/근거가 아닌 파생 설명3곳의 set 순회 순서 차이가 cache 지문불일치를 유발함을 확인·설명. raw 판정·캐시·예산 불변인 결정적 설명/명시 runtime재검증은 같은 승인된 기술 복구 범위.",
+      "scope": "기존등급별칭 무손실정규화 및 변경없는 완료캐시의 파생설명순서 호환/명시지문재검증. 모델0회·3회상한·실제검수·원문보존",
+      "evidence_version": 2,
+      "source_hash": "ba3d7f49d12d64c4576c58e3eb23125f808391077440cba2e825c9304cdf1a91",
+      "plan_hash": "15e95a416d856901851cd2d2e25df661edd3eb685a6036d70e6c647ecdaff630",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "5012c503a83338f1f75ce20a4f5350f14bc3cb739aea51fd8f5b6456e4be7561"
+    }
+  },
+  "checks": [
+    {
+      "name": "tier-contract",
+      "at": "2026-11-05T18:48:54.324034+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-root-tier-transport/checks.py",
+        "tier-contract"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ad205419b647978dcb4babce95422d675d17c8f69ed8a3389f0a2137b3296c99",
+      "plan_hash": "3e14d104e12a5b69d218bbabb4a06a6d2d0124938b28a321e4fde7ee89a1a3f1",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-root-tier-transport/1793904523655506100-tier-contract.log"
+    },
+    {
+      "name": "tier-regression",
+      "at": "2026-11-05T18:49:50.682441+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-root-tier-transport/checks.py",
+        "tier-regression"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ad205419b647978dcb4babce95422d675d17c8f69ed8a3389f0a2137b3296c99",
+      "plan_hash": "3e14d104e12a5b69d218bbabb4a06a6d2d0124938b28a321e4fde7ee89a1a3f1",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-root-tier-transport/1793904534681164700-tier-regression.log"
+    },
+    {
+      "name": "tier-contract",
+      "at": "2026-11-05T19:01:32.168282+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-root-tier-transport/checks.py",
+        "tier-contract"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ba3d7f49d12d64c4576c58e3eb23125f808391077440cba2e825c9304cdf1a91",
+      "plan_hash": "15e95a416d856901851cd2d2e25df661edd3eb685a6036d70e6c647ecdaff630",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-root-tier-transport/1793905282252319400-tier-contract.log"
+    },
+    {
+      "name": "tier-regression",
+      "at": "2026-11-05T19:02:24.001490+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-root-tier-transport/checks.py",
+        "tier-regression"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ba3d7f49d12d64c4576c58e3eb23125f808391077440cba2e825c9304cdf1a91",
+      "plan_hash": "15e95a416d856901851cd2d2e25df661edd3eb685a6036d70e6c647ecdaff630",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-root-tier-transport/1793905292507211400-tier-regression.log"
+    },
+    {
+      "name": "live-tier-recovery",
+      "at": "2026-11-05T19:17:45.954449+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-root-tier-transport/live.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ba3d7f49d12d64c4576c58e3eb23125f808391077440cba2e825c9304cdf1a91",
+      "plan_hash": "15e95a416d856901851cd2d2e25df661edd3eb685a6036d70e6c647ecdaff630",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-root-tier-transport/1793906246292485100-live-tier-recovery.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-05T19:20:02.747770+00:00",
+    "summary": "Reviewed exact existing tier alias only, provider bytes and clinical/numeric data retained; deterministic derived explanation compatibility keeps raw judgments exact; explicit archive-bound runtime revalidation, no model replay or budget reset. 12 dedicated +252 regression +3 server tests and actual recovery receipts pass. Endocarditis final bank still invalid duplicate concepts; held at three rounds, not released. CNS verified independently.",
+    "evidence_version": 2,
+    "source_hash": "ba3d7f49d12d64c4576c58e3eb23125f808391077440cba2e825c9304cdf1a91",
+    "plan_hash": "15e95a416d856901851cd2d2e25df661edd3eb685a6036d70e6c647ecdaff630",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-05T19:20:02.844823+00:00"
+}

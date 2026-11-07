@@ -1,0 +1,200 @@
+{
+  "id": "2026-11-06-admin-main-quiz-one-click",
+  "title": "관리자 Main Quiz 원클릭 생성과 업로드",
+  "area": "site",
+  "created_at": "2026-11-06T06:38:47.398450+00:00",
+  "required_checks": [
+    "web-build",
+    "web-main-quiz"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-06T06:39:59.512833+00:00",
+      "evidence": "2026-11-06 사용자: Main Quiz 전담 진행, 버튼 하나로 생성부터 업로드, 중복 패널 제거",
+      "scope": "Main Quiz 생성 UI와 중복 패널 정리 및 관련 검사. calendar/셸/생성기 변경 제외",
+      "evidence_version": 2,
+      "source_hash": "9a324cbc0aa9d192944f5ee57b817888e9c8d1458c0695bf2dd94c286cded662",
+      "plan_hash": "66a7f3888d6bb56a2b3eb4a9ea2b9a3df44e60ce2adaf0ca98b20f6a6e333d9c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "d03abf210d19cfaafcf2c2ee6bceabbb1ae941bd3f3cf0c5672cccfb45aa28c5"
+    }
+  },
+  "checks": [
+    {
+      "name": "web-build",
+      "at": "2026-11-06T06:41:38.069457+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "5f399756af63b50b84b9bef504306cfb33e281c72d8ba9c595d7e531700ab161",
+      "plan_hash": "66a7f3888d6bb56a2b3eb4a9ea2b9a3df44e60ce2adaf0ca98b20f6a6e333d9c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-06-admin-main-quiz-one-click/1793947287633479600-web-build.log"
+    },
+    {
+      "name": "web-main-quiz",
+      "at": "2026-11-06T06:42:11.364961+00:00",
+      "command": [
+        "node",
+        "--test",
+        "web/tests/main-quiz-generation-button.test.cjs",
+        "web/tests/main-quiz-web-author.test.cjs",
+        "web/tests/main-quiz-render.test.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "6144975495963653436ad4b44441210727cee014619ed7819914954a5419c5db",
+      "plan_hash": "66a7f3888d6bb56a2b3eb4a9ea2b9a3df44e60ce2adaf0ca98b20f6a6e333d9c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-06-admin-main-quiz-one-click/1793947330522800400-web-main-quiz.log"
+    },
+    {
+      "name": "web-build",
+      "at": "2026-11-06T06:43:13.449112+00:00",
+      "command": [
+        "../../.venv/Scripts/python.exe",
+        "-c",
+        "import subprocess,pathlib; p=pathlib.Path('web/public/bank-prompt.json'); original=subprocess.check_output(['git','show','HEAD:web/public/bank-prompt.json']); r=subprocess.run(['npm.cmd','--prefix','web','run','build']); p.write_bytes(original); raise SystemExit(r.returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8e11924149564feaa3bf94c9b32677d255a89d7f9665147d09e3969bd701692a",
+      "plan_hash": "66a7f3888d6bb56a2b3eb4a9ea2b9a3df44e60ce2adaf0ca98b20f6a6e333d9c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-06-admin-main-quiz-one-click/1793947379659472100-web-build.log"
+    },
+    {
+      "name": "web-main-quiz",
+      "at": "2026-11-06T06:43:14.950208+00:00",
+      "command": [
+        "node",
+        "--test",
+        "web/tests/main-quiz-generation-button.test.cjs",
+        "web/tests/main-quiz-web-author.test.cjs",
+        "web/tests/main-quiz-render.test.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8e11924149564feaa3bf94c9b32677d255a89d7f9665147d09e3969bd701692a",
+      "plan_hash": "66a7f3888d6bb56a2b3eb4a9ea2b9a3df44e60ce2adaf0ca98b20f6a6e333d9c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-06-admin-main-quiz-one-click/1793947393987308200-web-main-quiz.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-06T06:43:51.338652+00:00",
+    "summary": "Main Quiz 중복 UI 제거 및 기존 자동 업로드 경로 보존. 동일 요청 재개·중복 방지·조회 실패·강의별 상태 검토. 10개 검사와 타입/빌드 통과, 운영 모델 E2E 미실행. DB·콘텐츠·프롬프트 미변경.",
+    "evidence_version": 2,
+    "source_hash": "8e11924149564feaa3bf94c9b32677d255a89d7f9665147d09e3969bd701692a",
+    "plan_hash": "66a7f3888d6bb56a2b3eb4a9ea2b9a3df44e60ce2adaf0ca98b20f6a6e333d9c",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-06T06:43:51.446562+00:00"
+}

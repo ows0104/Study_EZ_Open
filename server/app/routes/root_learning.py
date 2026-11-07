@@ -255,8 +255,9 @@ def revealed_answer(db, doc, q):
             {'source': label, **r} for label, checks in [('원본 대조', result['sourceAudit']['question_checks']), ('독립 정답 검수', result['medical'])]
             for r in checks['reviews'] if r['question_id'] == q['question_id'] and r['verdict'] != 'ok']
         answer['reviewIssues'] = result['sourceAudit']['input_issues'] + result['validation']['errors'] + result['validation']['warnings']
+        from app.root_learning.reviewed_import import source_records
         answer['sourceLinks'] = [{'label': s['filename'], 'url': ObjectStorage().presign_download(s['snapshotKey'], filename=s['filename'])}
-                                 for s in generation.packet['sources']]
+                                 for s in source_records(generation)]
     return answer
 
 
