@@ -1,5 +1,6 @@
 """Named-lecture operational preflight; never initialize DB or modify source banks."""
 import hashlib
+import io
 import json
 import os
 import sys
@@ -64,7 +65,7 @@ def publish(api,revision):
             assert hashlib.sha256(body).hexdigest()==source['sha256']and len(body)==source['sizeBytes']
             key='lectures/root-reviewed-import/'+source['sha256']+'/'+source['id']
             prior=storage.get_bytes(key)
-            if prior is None:storage.put_bytes(key,body)
+            if prior is None:storage.upload_fileobj(io.BytesIO(body),key,content_type=source.get('mimeType','application/pdf'))
             else:assert prior==body,'Never overwrite different original snapshot'
             assert storage.get_bytes(key)==body,'Snapshot readback failed'
             snapshots.append({**{k:v for k,v in source.items()if k not in('localPath','downloadUrl','snapshotKey')},'snapshotKey':key})

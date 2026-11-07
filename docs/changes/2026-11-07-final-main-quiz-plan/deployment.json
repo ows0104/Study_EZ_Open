@@ -1,0 +1,133 @@
+{
+  "observedAt": "2026-11-07T08:13:11.371527+00:00",
+  "sha": "2489e52e6ff517d661e56d25c0f0ff6058384e8d",
+  "testedHead": "6da5a7f42bfbce6832dc567db9f25cd8664901f5",
+  "identicalTree": "cf5370c96ddbb36a362a87021ec07841c178ca96",
+  "pullRequest": 13,
+  "prChecks": {
+    "run": 42352099443,
+    "attempt": 2,
+    "result": "success",
+    "priorFailurePreserved": true
+  },
+  "masterWorkflow": {
+    "run": 42353129292,
+    "attempt": 1,
+    "result": "success"
+  },
+  "server": {
+    "sha": "2489e52e6ff517d661e56d25c0f0ff6058384e8d",
+    "expected_revision": "studyez-api-release-423531292921",
+    "status": "success",
+    "artifact_hash": "abaea68ee411ecc8bc4c90e2ca3d6227861a3282befc383cf643dae2b7b1148a",
+    "previous_traffic": [
+      {
+        "percent": 100,
+        "revisionName": "studyez-api-release-421706833041"
+      }
+    ],
+    "postcheck": {
+      "health_sha": "2489e52e6ff517d661e56d25c0f0ff6058384e8d",
+      "protected_routes": "401",
+      "passed": true
+    }
+  },
+  "pages": {
+    "id": "8898e76f-2ec1-49e8-a59b-fcd5c54c6be1",
+    "url": "https://8898e76f.study-ez-open.pages.dev",
+    "environment": "production",
+    "stage": {
+      "name": "deploy",
+      "started_on": "2026-11-07T08:08:36.667354Z",
+      "ended_on": "2026-11-07T08:08:43.278209Z",
+      "status": "success"
+    },
+    "sha": "2489e52e6ff517d661e56d25c0f0ff6058384e8d"
+  },
+  "publication": {
+    "publishedVerified": true,
+    "response": {
+      "generationId": "382c53909ad28529243208029e82bbf1",
+      "revision": "cli-parallel-pilot-261104-02",
+      "reused": false,
+      "privatePilot": true
+    },
+    "apiRevision": "2489e52e6ff517d661e56d25c0f0ff6058384e8d",
+    "health": {
+      "status": "ok",
+      "environment": "production",
+      "revision": "2489e52e6ff517d661e56d25c0f0ff6058384e8d"
+    },
+    "resultSha256": "974af6c0a866a291995b4de8667d5da1c5c145cf30865e254e16b249055e66e5",
+    "bankUnchanged": true,
+    "humanRootEventsUnchanged": true,
+    "humanSessionsUnchanged": true,
+    "privatePilot": true,
+    "sourceLinksVerified": true,
+    "productionWrites": true,
+    "productionFlags": {
+      "STUDYEZ_ROOT_LEARNING_ENABLED": "true",
+      "STUDYEZ_REVISION": "2489e52e6ff517d661e56d25c0f0ff6058384e8d"
+    }
+  },
+  "readback": {
+    "verified": true,
+    "apiRevision": "2489e52e6ff517d661e56d25c0f0ff6058384e8d",
+    "questions": 91,
+    "visualQuestions": 15,
+    "stimuli": 19,
+    "tasks": 49,
+    "bankUnchanged": true,
+    "humanSessionsUnchanged": true,
+    "humanEventsUnchanged": true,
+    "privatePilot": true,
+    "actualPresignedPdfReadback": true,
+    "reviewNotesAvailable": true,
+    "learnerWrites": 0
+  },
+  "candidate": {
+    "verified": true,
+    "resultSha256": "974af6c0a866a291995b4de8667d5da1c5c145cf30865e254e16b249055e66e5",
+    "reviewProofHash": "a67341df1a7d40f2d2f915b5f5bbc0402e7613559fafd0a181960356c3dcb137",
+    "questions": 91,
+    "visualQuestions": 15,
+    "stimuli": 19,
+    "tasks": 49,
+    "repairRounds": 3,
+    "clinicalContentUnchanged": true,
+    "originInventoryHash": "21e80ff5c270b3ac52cf7982b66078fa4a92645bb6f900aa745868a8aeb8e0de"
+  },
+  "publicHttp": {
+    "revision": "2489e52e6ff517d661e56d25c0f0ff6058384e8d",
+    "checks": {
+      "health": true,
+      "cors": true,
+      "anonymous_denied:/api/timetable": true,
+      "invalid_token_denied:/api/timetable": true,
+      "anonymous_denied:/api/spotter/db": true,
+      "invalid_token_denied:/api/spotter/db": true,
+      "web:https://studyez.kr": true,
+      "web:https://study-ez-open.pages.dev": true
+    },
+    "authenticated_ui": "separate browser evidence"
+  },
+  "firstPublicationAttempt": {
+    "status": "failed",
+    "stage": "source-snapshot-upload",
+    "error": "Local storage is not enabled",
+    "productionDatabaseWrites": 0,
+    "objectWrites": 0,
+    "modelCalls": 0,
+    "fix": "Use existing ObjectStorage.upload_fileobj instead of local-only put_bytes"
+  },
+  "runner": {
+    "revision": "6da5a7f42bfbce6832dc567db9f25cd8664901f5",
+    "shortcutUpdated": true,
+    "backupPreserved": true,
+    "jobsStarted": 0,
+    "scheduledTaskChanges": 0,
+    "oldOperatingRunsPreserved": true
+  },
+  "localVerificationServicesStopped": true,
+  "deferredLectureNotRun": "261105_1"
+}
