@@ -2,6 +2,24 @@
 
 원본 기반 개념도·포인트와 실제 문항의 연결을 **별도 로컬 검토 묶음**으로 보관한다. 기존 문제은행·검수·사용자 기록은 변경하지 않는다. 자동 생성·모델 호출·웹 전송·서버 게시 기능은 없다.
 
+## 원본 전용 추출 요청문
+
+- [Map 추출](map-extract.md): 필기·족보의 개념·분류·관계·큰 흐름만 구성한다. 문항 대응·누락 판단·문항 학습 순서는 이후 대조 단계에서 다룬다.
+- [독립 출제포인트 추출](point-extract.md): 이전 points 지침의 목표 묶기·원본 근거·전체 범위 확인에 연결 회상 철학을 적용한다.
+
+각 요청에 동일한 원본 필기·족보와 해당 강의 범위만 별도로 제공한다. Map 결과를 포인트 추출의 범위 기준으로 넣지 않는다.
+
+| 결과 | 버전 | 스키마 | 완전한 합성 예시 |
+|---|---|---|---|
+| Map | concept-map-extract/2 | [map-output.schema.json](map-output.schema.json) | [map-output.example.json](map-output.example.json) |
+| 포인트 | exam-point-extract/2 | [point-output.schema.json](point-output.schema.json) | [point-output.example.json](point-output.example.json) |
+
+두 프롬프트는 실제 UTF-8 JSON 파일과 다운로드 링크를 요구한다. Map은 overview/concepts/relations/notes, 포인트는 points/notes만 수집하며 공통 헤더는 schema_version/title이다. 같은 결과 안에서 고유한 ID를 사용하며 서로의 ID 대응은 후속 대조에서 결정한다. 교수·연도·쪽수 같은 원본 메타데이터는 입력 재고에서 관리하고 결과에서는 source_refs로 실제 위치만 연결한다. 읽지 못한 자료·충돌·중요한 불확실성은 notes에 남긴다. /1 상세 초안은 Git 이력에 보존하고 최종 요청문은 간소화한 /2를 사용한다.
+
+JSON Schema는 타입·필수 필드·근거 위치 형식을 검사한다. 결과 안의 참조·ID 중복·실제 쪽수 범위 등은 추가 검사가 필요하다. 개발 기록의 [verify_formats.py](../../../docs/changes/2026-11-06-map-point-prompts/verify_formats.py)는 합성 입력 재고를 사용해 정상/오류 사례와 프롬프트 내 예시를 검증한다. 관계 종류·방향·조건은 relation 문장으로 표현한다. 관계의 타당성·분류 순환·목표 누락 같은 의미 판단은 원본과 후속 대조에서 확인한다.
+
+현재 자동 생성기에 연결되지 않았다. 파일을 만들라는 요청문은 작성했으나 실제 모델의 파일 작성·다운로드·자동 회수를 확인한 것은 아니다. 현행 자동 파이프라인은 여전히 automation/extract-v2.md로 Map·포인트를 함께 추출한다. 기존 learning-brief/2나 quizbank/prompts/points.md의 PLAN 출력을 이 형식으로 대체하지 않는다. 실제 응답 수신·저장·화면 렌더링·호출 분리·후속 대조의 연동은 별도 구현 범위다.
+
 ## 입력과 실행
 
 저장소 루트에서 프로젝트 Python을 사용한다. `<...>`는 실제 경로로 바꾼다. 출력은 아직 존재하지 않는 폴더여야 한다.
