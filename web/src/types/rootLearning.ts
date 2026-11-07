@@ -1,4 +1,5 @@
-import type { BankAnswer, BankQuestion } from './bank';
+import type { BankAnswer, BankQuestion, BankRating } from './bank';
+export type RootPdfSlide = {sourceId:string;sourceSha256:string;sourceFilename:string;page:number;url:string};
 export type RootPolicy = {id: string; day_hour: number; deadline_offset: number} & (
   {intervals: number[]} | {mode:'adaptive'; initial_days:number; success_growth:number; partial_factor:number; max_days:number; exam_fraction:number});
 export type RootSummary = {total: number; learned: number; recalled: number; unseen: number; unready: number;
@@ -13,11 +14,12 @@ export type RootOverview = {revision:string; title:string; policyReady:boolean; 
 export type RootView = {sessionId:string; revision:string; version:number; day:string; policy:RootPolicy;
   position:number; count:number; finished:boolean; blocked:string|null; canUndo:boolean; mapSeen:boolean; summary:RootSummary;
   task:{id:string; question:BankQuestion; answer:(BankAnswer&{reviewNotes?:{source:string;verdict:string;note:string;suggested_answer:string}[];
-    reviewIssues?:string[];sourceLinks?:{label:string;url:string}[]})|null; response:string|null; attempted:boolean|null; helped:boolean}|null};
+    reviewIssues?:string[];sourceLinks?:{label:string;url:string}[];pdfSlides?:RootPdfSlide[]})|null; response:string|null; attempted:boolean|null; helped:boolean}|null};
 export type RootAction = {kind:'reveal'|'rate'|'skip'|'map'|'undo'; attempted?:boolean; response?:string; helped?:boolean;stimulusHashes?:string[];
   choicesShown?:boolean;
-  grade?:'missed'|'partial'|'independent'};
+  grade?:'missed'|'partial'|'independent';selfRating?:BankRating};
 export type RootMapData = {concepts:{concept_id:string;label:string;parent_ids:string[]}[];
+  currentConceptIds?:string[];
   readyDirectionIds?:string[];
   relations:{relation_id:string;from_id:string;to_id:string;kind:string;reason:string}[];
   targets:{target_id:string;title:string;role:string;concept_ids:string[];

@@ -29,7 +29,9 @@ def replay(doc, events, now, policy):
             value['learned'] = True
             first.setdefault(tid, when)
         elif event['kind'] == 'rate' and event['id'] not in undone:
-            value.update(transition(value, p['grade'], p['helped'], when, p['policy'], p.get('exam_date')))
+            updated = transition(value, p['grade'], p['helped'], when, p['policy'], p.get('exam_date'),
+                                 p.get('selfRating'), p.get('ratingParameters'))
+            value.clear(); value.update(updated)
     for value in directions.values():
         value['effectiveDue'] = effective_due(value, now, policy, doc['exam_date'])
     today = study_day(now, policy)

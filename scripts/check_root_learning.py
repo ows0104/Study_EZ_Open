@@ -45,7 +45,7 @@ def browser():
     if bundled.exists():
         ENV.setdefault('PLAYWRIGHT_MODULE', str(bundled))
     with (logs / 'fixture-api.log').open('w', encoding='utf-8') as api_log, (logs / 'fixture-web.log').open('w', encoding='utf-8') as web_log:
-        api = subprocess.Popen([str(SERVER), '-m', 'tests.serve_root_fixture'], cwd=ROOT/'server', env=ENV, stdout=api_log, stderr=subprocess.STDOUT)
+        api = subprocess.Popen([str(SERVER), '-m', 'tests.serve_main_quiz_ui_fixture'], cwd=ROOT/'server', env=ENV, stdout=api_log, stderr=subprocess.STDOUT)
         web = None
         try:
             ready(api, 'http://127.0.0.1:8027/api/health')

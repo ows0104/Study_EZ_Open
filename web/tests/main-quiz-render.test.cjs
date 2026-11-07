@@ -17,19 +17,20 @@ function render(change={}){
  const task={id:'task1',question,answer:null,response:null,attempted:null,helped:false,...change};
  return renderToStaticMarkup(React.createElement(RootSolve,{view:{revision:'v1',position:0,count:1,task,blocked:null,finished:false,canUndo:false,mapSeen:false},scope:'synthetic',disabled:false,advancing:false,onAction:()=>{},onToday:()=>{},onError:()=>{}}));
 }
-test('recall first hides actual choice text and answers while draft remains optional',()=>{
- const html=render();assert.doesNotMatch(html,/선지 비밀|Secret answer/);assert.match(html,/선지 보기/);assert.match(html,/<details[^>]*><summary>내 답 적기/);
+test('recall first hides answers and choices without a response textbox',()=>{
+ const html=render();assert.doesNotMatch(html,/선지 비밀|Secret answer/);assert.match(html,/선지 보기/);assert.doesNotMatch(html,/<textarea|내 답 적기/);
  assert.doesNotMatch(html,/Again|Hard|Good|Easy/);
 });
 test('comparison displays choices as the task without leaking the answer',()=>{
  const html=render({question:{...question,mcq_mode:'comparison'}});
  assert.match(html,/선지 비밀 A/);assert.doesNotMatch(html,/선지 보기|Secret answer/);
 });
-test('helped or answer-only attempts cannot offer independent recall and keep three grades',()=>{
+test('all four self-ratings remain selectable even after help or answer-only',()=>{
  const answer={answer:'Secret answer',answerUnits:[],correctOptionIds:['A'],answerPairs:[],correctOrder:[],slides:[],explanation:'',sourceRefs:[],reviewNotes:[]};
  const html=render({answer,attempted:true,helped:true});
- assert.match(html,/Secret answer/);assert.match(html,/<button disabled="">3 스스로 떠올림/);
- assert.match(html,/1 못 떠올림/);assert.match(html,/2 일부만·도움 받아 떠올림/);assert.doesNotMatch(html,/Again|Hard|Good|Easy/);
- assert.match(render({answer,attempted:false}),/<button disabled="">3 스스로 떠올림/);
- assert.doesNotMatch(render({answer,attempted:true}),/<button disabled="">3 스스로 떠올림/);
+ assert.match(html,/Secret answer/);
+ for(const rating of ['Again','Hard','Good','Easy'])assert.match(html,new RegExp(rating+'<kbd>'));
+ for(const value of [html,render({answer,attempted:false}),render({answer,attempted:true})]){
+   assert.doesNotMatch(value,/<button[^>]*disabled[^>]*><span class="quiz-grade-name">/);
+ }
 });

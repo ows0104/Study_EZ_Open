@@ -11,6 +11,13 @@ CONFIGURED_POLICY = {
     'initial_days': 1, 'success_growth': 2.0, 'partial_factor': 0.5,
     'max_days': 30, 'exam_fraction': 0.25,
 }
+# Frozen for new self-assessments; every event stores its own parameters.
+FOUR_RATING_PARAMETERS = {
+    'minDays': 0.25, 'maxDays': 365, 'legacyDays': 1,
+    'initialDays': {'Again': 0.25, 'Hard': 0.5, 'Good': 1, 'Easy': 2},
+    'growth': {'Hard': 1.1, 'Good': 2, 'Easy': 3},
+    'lapseMultiplier': 0.5, 'lapseMaxDays': 1, 'minSpacingDays': 1 / 6,
+}
 
 
 def validate_policy(policy):
@@ -67,12 +74,30 @@ def exam_limit(exam_date, when, policy):
     return max(1, floor(remaining * policy['exam_fraction'])) if remaining >= 0 else None
 
 
-def transition(value, grade, helped, when, policy, exam_date=None):
+def transition(value, grade, helped, when, policy, exam_date=None, self_rating=None, rating_parameters=None):
     """Return the next assessment state; never mutate an event or infer correctness."""
     when = utc(when)
     day = study_day(when, policy)
     grade = 'partial' if grade == 'independent' and helped else grade
     stage = value.get('stage', -1)
+    if self_rating is not None:
+        # New four-button events use the established Quiz Bank rating spacing.
+        # Older immutable events continue through their original branches below.
+        from app.study_engine.memory import next_stability
+        last = instant(value['lastAt']) if value.get('lastAt') else None
+        prior = {'reviews': 1, 'stability_days': value.get('ratingDays', value.get('baseDays', 1)),
+                 'updated_at': int(last.timestamp() * 1000)} if last else {}
+        rating_days = next_stability(prior, self_rating, int(when.timestamp() * 1000),
+                                     {'forgetting': rating_parameters or FOUR_RATING_PARAMETERS})
+        if last and study_day(last, policy) == day and self_rating != 'Again':
+            rating_days = prior['stability_days']
+        maximum = policy.get('max_days', max(policy.get('intervals', [30])))
+        base = min(maximum, max(1, ceil(rating_days)))
+        limit = exam_limit(exam_date, when, policy)
+        interval = min(base, limit) if limit is not None else base
+        return {**value, 'rating': grade, 'selfRating': self_rating, 'ratingDays': min(maximum, rating_days),
+                'stage': -1, 'baseDays': base, 'scheduledDays': interval,
+                'due': (day + timedelta(days=interval)).isoformat(), 'lastDay': day, 'lastAt': when}
     if policy.get('mode') == 'adaptive':
         initial = policy['initial_days']
         previous = max(initial, value.get('baseDays', initial))
@@ -101,7 +126,8 @@ def transition(value, grade, helped, when, policy, exam_date=None):
             base = interval = policy['intervals'][max(0, stage)]
         else:
             stage, base, interval = -1, 1, 1
-    return {**value, 'rating': grade, 'stage': stage, 'baseDays': base, 'scheduledDays': interval,
+    previous = {k: v for k, v in value.items() if k not in ('selfRating', 'ratingDays')}
+    return {**previous, 'rating': grade, 'stage': stage, 'baseDays': base, 'scheduledDays': interval,
             'due': (day + timedelta(days=interval)).isoformat(), 'lastDay': day, 'lastAt': when}
 
 

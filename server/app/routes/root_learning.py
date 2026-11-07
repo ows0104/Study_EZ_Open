@@ -40,6 +40,7 @@ class Action(Start):
     grade: Literal['missed', 'partial', 'independent'] = 'missed'
     stimulusHashes: list[str] = Field(default_factory=list,max_length=64)
     choicesShown: bool | None = None
+    selfRating: Literal['Again', 'Hard', 'Good', 'Easy'] | None = None
 
 
 class Publication(Strict):
@@ -244,7 +245,6 @@ def project_session(db, row, doc, user, when):
 
 def revealed_answer(db, doc, q):
     from app.models.root_generation import RootGeneration
-    from app.storage import ObjectStorage
     answer = content.answer(q)
     generation = db.scalars(select(RootGeneration).where(RootGeneration.subject == doc.subject,
         RootGeneration.run_id == doc.run_id, RootGeneration.result_digest.is_not(None),
@@ -261,9 +261,8 @@ def revealed_answer(db, doc, q):
             {'source': label, **r} for label, checks in [('원본 대조', result['sourceAudit']['question_checks']), ('독립 정답 검수', result['medical'])]
             for r in checks['reviews'] if r['question_id'] == q['question_id'] and r['verdict'] != 'ok']
             answer['reviewIssues'] = result['sourceAudit']['input_issues'] + result['validation']['errors'] + result['validation']['warnings']
-        from app.root_learning.reviewed_import import source_records
-        answer['sourceLinks'] = [{'label': s['filename'], 'url': ObjectStorage().presign_download(s['snapshotKey'], filename=s['filename'])}
-                                 for s in source_records(generation)]
+    from app.root_learning.evidence import attach_evidence
+    attach_evidence(db, doc, q, generation, answer)
     return answer
 
 
@@ -286,6 +285,7 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
     request = payload.model_dump()
     if not request['stimulusHashes']:request.pop('stimulusHashes')
     if request['choicesShown'] is None:request.pop('choicesShown')
+    if request['selfRating'] is None:request.pop('selfRating')
     previous = db.get(RootEvent, (user.id, payload.requestId))
     if previous:
         if previous.session_id != session_id or previous.payload.get('_request') != request:
@@ -339,9 +339,14 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
             if not reveal:
                 raise HTTPException(409, '답을 먼저 확인하세요.')
             helped = payload.helped or reveal['helped'] or session_state['mapSeen']
-            if payload.grade == 'independent' and (helped or not reveal['attempted']):
+            if payload.selfRating is None and payload.grade == 'independent' and (helped or not reveal['attempted']):
                 raise HTTPException(422, '답만 보거나 도움을 본 회상은 독립 회상으로 기록할 수 없습니다.')
-            data.update(grade=payload.grade, helped=helped)
+            grade = {'Again': 'missed', 'Hard': 'partial', 'Good': 'independent', 'Easy': 'independent'}.get(payload.selfRating, payload.grade)
+            # Self-assessment stays available; exposure remains a separate fact.
+            data.update(grade=grade, helped=(helped or not reveal['attempted']) if payload.selfRating is not None else helped)
+            if payload.selfRating is not None:
+                data.update(selfRating=payload.selfRating, ratingPolicy='roots-four-rating/1',
+                            ratingParameters=copy.deepcopy(policy.FOUR_RATING_PARAMETERS))
             session_state.update(undo={'requestId': payload.requestId, 'index': session_state['index']}, index=session_state['index'] + 1)
     result = {'sessionId': row.id, 'version': row.version + 1}
     changed = db.execute(update(RootSession).where(RootSession.id == row.id, RootSession.version == row.version)
@@ -364,7 +369,10 @@ def read_map(session_id: str, user: CurrentUser = Depends(require_approved_user)
     row, doc = checked_session(db, session_id, user)
     if not row.state['mapSeen']:
         raise HTTPException(409, '지도 답 노출을 먼저 확인하세요.')
-    return {'concepts': doc.document['review']['concepts'], 'relations': doc.document['review']['relations'],
+    task = row.tasks[row.state['index']] if row.state['index'] < len(row.tasks) else None
+    current = next((t['concept_ids'] for t in state.targets(doc.document) if task and
+                    any(d['direction_id'] == task['direction_id'] for d in t['directions'])), [])
+    return {'concepts': doc.document['review']['concepts'], 'relations': doc.document['review']['relations'], 'currentConceptIds': current,
             'targets': state.targets(doc.document), 'scope': content.learner_scope(doc.document),
             'readyDirectionIds':sorted({t['direction_id']for t in doc.document['tasks']}),
             'points': doc.document['review']['points'], 'coverage': doc.document['review']['coverage']}
