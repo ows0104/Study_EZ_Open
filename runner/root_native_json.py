@@ -21,6 +21,9 @@ POLICY='root-native-json/1'
 LIMIT=5_000_000
 RECEIPT={'type':'object','properties':{'path':{'type':'string','enum':['result.json']},
     'sha256':{'type':'string','pattern':'^[a-f0-9]{64}$'}},'required':['path','sha256'],'additionalProperties':False}
+FOLLOWUP=('check_result.py failed on your result.json with this error:\n{error}\n'
+    'Fix only what this error requires in result.json with local code (structure, IDs, duplicates, allowed values); keep every '
+    'finding, verdict and content otherwise unchanged. Run check_result.py again until it passes, then return only the receipt.')
 SYSTEM='Preserve source boundaries. Never fabricate coverage or review evidence. Write the full acceptance JSON to result.json; return only its exact SHA256 receipt.'
 
 class ContentRestricted(ValueError):pass
@@ -265,8 +268,32 @@ class NativeJson:
             receipt=loads(result['text']);body,value=artifact(work,receipt)
             (seat/'output.json').write_bytes(body)
             raw,projection=decode_for(stage,value,schema);jsonschema.validate(raw,schema)
+            first_output=receipt['sha256'];first_result=result
+            # The model is asked to run check_result.py; enforce it. On failure, send the exact error back
+            # once into the same session (format/structure only; findings stay the model's). 2026-11-08.
+            # The adapter never rejects: the orchestrator's acceptance still decides, with the receipt kept.
+            try:check_file(stage,work);error=None
+            except Exception as failed:error=failed
+            if error is not None and(self.invoke is None or getattr(self,'followups',False)):
+                (seat/'check-failure.json').write_text(json.dumps({'error':str(error)[:4000],'outputSha256':first_output},ensure_ascii=False),encoding='utf-8')
+                followup=(self.invoke or g.codex.run)(FOLLOWUP.format(error=str(error)[:4000]),
+                    blind=False,cwd=work,model=g.codex.model_name(model),timeout=self.timeout,
+                    label='연결 파일 실행 '+stage+' 형식 확인 후속',schema=RECEIPT,system=SYSTEM,
+                    resume=result['session_id'],previous_usage=result['usage'])
+                g.write(seat/'provider-followup.json',followup)
+                require(type(followup.get('turns'))is int and followup['turns']>0 and followup.get('session_id')==result['session_id'],'Follow-up did not continue the same session')
+                require(all(sha(work/name)==digest for name,digest in protected.items()),'Model changed protected input/contract')
+                require(inventory(material)==source_inventory==inventory(work/'material'),'Model changed original material')
+                receipt=loads(followup['text']);body,value=artifact(work,receipt)
+                (seat/'output.json').write_bytes(body)
+                raw,projection=decode_for(stage,value,schema);jsonschema.validate(raw,schema)
+                proof['followup']={'error':str(error)[:4000],'firstOutputSha256':first_output,'providerHash':document_hash(followup)}
+                result={**followup,'usage':{k:first_result['usage'].get(k,0)+followup['usage'].get(k,0)for k in set(first_result['usage'])|set(followup['usage'])},
+                        'cost_usd':(first_result.get('cost_usd')or 0)+(followup.get('cost_usd')or 0),
+                        'duration_ms':first_result['duration_ms']+followup['duration_ms'],
+                        'models':list(dict.fromkeys([*first_result.get('models',[]),*followup.get('models',[])]))}
             if projection is not None:proof['tierProjection']=projection
-            proof.update(nativeSessionId=result['session_id'],providerHash=document_hash(result),outputSha256=receipt['sha256'],rawHash=document_hash(raw))
+            proof.update(nativeSessionId=first_result['session_id'],providerHash=document_hash(first_result),outputSha256=receipt['sha256'],rawHash=document_hash(raw))
             row={'proof':proof,'proofHash':document_hash(proof)}
             g.write(seat/'receipt.json',row);g.write(seat/'journal.json',{'status':'completed','proofHash':row['proofHash']})
             info={k:result[k]for k in('usage','cost_usd','duration_ms','models')};info['fileReceipt']=row
@@ -294,13 +321,24 @@ def validate_stage(out,entry,*,model):
     require(inventory(work/'material')==proof['materialHashes']and all(sha(out/'material'/k)==v for k,v in proof['materialHashes'].items()),'Native original material differs')
     response=read(seat/'provider.json');require(document_hash(response)==proof['providerHash']and response['session_id']==proof['nativeSessionId']
         and type(response.get('turns'))is int and response['turns']>0,'Native provider completion differs')
-    require(loads(response['text'])=={'path':'result.json','sha256':proof['outputSha256']},'Native completion receipt differs')
+    follow=proof.get('followup')
+    if follow:
+        second=read(seat/'provider-followup.json')
+        require(document_hash(second)==follow['providerHash']and second['session_id']==proof['nativeSessionId']
+            and loads(response['text'])=={'path':'result.json','sha256':follow['firstOutputSha256']}
+            and loads(second['text'])=={'path':'result.json','sha256':proof['outputSha256']},'Native follow-up receipt differs')
+        merged={'usage':{k:response['usage'].get(k,0)+second['usage'].get(k,0)for k in set(response['usage'])|set(second['usage'])},
+                'cost_usd':(response.get('cost_usd')or 0)+(second.get('cost_usd')or 0),'duration_ms':response['duration_ms']+second['duration_ms'],
+                'models':list(dict.fromkeys([*response.get('models',[]),*second.get('models',[])]))}
+    else:
+        require(loads(response['text'])=={'path':'result.json','sha256':proof['outputSha256']},'Native completion receipt differs')
+        merged=response
     require(sha(seat/'output.json')==proof['outputSha256'],'Native output archive differs')
     raw,projection=decode_for(name,read(seat/'output.json'),schema);jsonschema.validate(raw,schema)
     require(proof.get('tierProjection')==projection,'Changed authored tier projection')
     saved=read(out/(name+'.raw.json'));saved=saved['assessment']if name.startswith('source-')else saved
     require(document_hash(raw)==proof['rawHash']==document_hash(saved),'Accepted raw differs from actual native file')
-    require(all(usage[k]==response[k]for k in('usage','cost_usd','duration_ms','models'))and entry['usageHash']==document_hash(usage),'Native usage differs')
+    require(all(usage[k]==merged[k]for k in('usage','cost_usd','duration_ms','models'))and entry['usageHash']==document_hash(usage),'Native usage differs')
 
 def validate_all(out,payload):
     require_unblocked(out)

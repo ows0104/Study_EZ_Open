@@ -66,3 +66,16 @@
   - brief-repair의 과거 failed generate를 허용한다. 저작 복구의 런타임은 source 복구 직전 것으로 이어 본다.
   - 사본 시험: 거절 재현 → Q026/R026만 합침 → (정답 검수를 가짜로 넣고) 3.3·79문항·과제 58개로 조립, validate_result 통과.
   - 루트 2,172 통과, 서버 root_ 26 통과.
+- **17:38 generation-3 조립 성공**(`result.json`, validate_result 통과)
+  - 79문항·과제 57·은행 3.3, 정답 검수 ok 75·doubt 4·wrong 0, 원본 대조 ok 64·doubt 15
+  - 목표 consistent 75·conflict 7
+  - 등급: Must-Know 10%·Core 30%·Important 43%·Optional 16%(운영 Quiz Bank 13·31·41·14%)
+  - 미공개다.
+
+## 형식 검사 되돌려주기 (claude/format-retry)
+- 오늘 형식 거절 5건 모두, 모델에게 준 `check_result.py`가 잡을 수 있는 오류였다. 모델이 이를 돌리지 않거나 무시했다.
+- 이제 어댑터(`runner/root_native_json.NativeJson.file`)가 호출 뒤 같은 검사를 직접 돌린다. 실패하면 오류 문구를 **같은 Codex 세션**에 한 번 되돌려주고(`resume`), 고친 `result.json`을 받는다.
+- 판정은 여전히 생성기의 수용 단계가 한다. 어댑터는 거절하지 않아서, 영수증·원문이 남고 기존 복구 도구가 그대로 쓰인다.
+- 기록: `check-failure.json`, `provider-followup.json`, 영수증 `proof.followup`. 사용량은 두 호출을 합친다. `validate_stage`가 후속 영수증·세션·합산을 다시 확인한다.
+- 내용 수정 상한은 쓰지 않는다. 대신 실패한 단계에 한해 호출이 한 번 는다.
+- runner만 바뀐다. 코드 지문 대상과 서버 계약은 그대로다.
