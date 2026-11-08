@@ -647,6 +647,20 @@ def make_document(brief,bank,audit,*,revision,title,exam_date,medical=None,snaps
         doc.update(review=review,bank_snapshot=snapshot)
     return validate_document(doc)
 
+def quality_reasons(bank):
+    """Answer-quality measures (bank/quality.py warnings) as repair input within the same 3-round budget.
+
+    The measures only warn so a question is never dropped. Here they become question_fix reasons so
+    authoring actually revisits them; they never add a round. Errors already arrive via validation.
+    """
+    from studyez_contracts.bank.quality import quality_errors
+    out=[]
+    for text in quality_errors(bank)[1]:
+        qid=re.match(r'(Q[0-9A-Za-z_-]+): ',text)
+        out.append({'kind':'question_fix','text':'문항 품질: '+text,'question_ids':[qid.group(1)]if qid else[],'direction_ids':[]})
+    return out
+
+
 def repair_reasons(brief,bank,audit,medical,validation):
     if recall.enabled(brief):
         projected,raw,groups=recall.project_assessment(brief,bank,audit['assessment'])
@@ -664,6 +678,7 @@ def repair_reasons(brief,bank,audit,medical,validation):
     for label,rows in [('source',a['question_reviews']),('medical',medical['reviews']if medical else[])]:
         reasons +=[{'kind':'question_fix','text':label+': '+r['note'],'question_ids':[r['question_id']],'direction_ids':[]}for r in rows if r['verdict']=='wrong']
     reasons +=[{'kind':'question_fix','text':s,'question_ids':[],'direction_ids':[]}for s in validation['errors']]
+    reasons +=quality_reasons(bank)
     try:graph_order(bank)
     except ValueError as error:reasons.append({'kind':'question_fix','text':str(error),'question_ids':[],'direction_ids':[]})
     for field,kind,bad in [('relation_checks','map_fix','conflict'),('target_checks','map_fix','conflict'),('prerequisite_checks','question_fix','unnecessary')]:

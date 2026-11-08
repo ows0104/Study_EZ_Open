@@ -4,7 +4,9 @@ bank/ is canonical. Only Python standard library and sibling pure modules may be
 bank/quality.py measures answer disclosure, recall load, structural answer cues and format spread.
 Only disclosure of every answer unit is an error; every measure added 2026-11-08 is a warning, so it
 never drops a question. Its lines are the p97 tail of the live Quiz Bank, not authoring rules — change
-the constants, not the code. Tests: tests/quizbank/test_answer_quality.py.
+the constants, not the code. A basic answer has one scoring unit (live Quiz Bank: 99.5%); more than one is
+warned as a wrong format. roots/generation_v2.quality_reasons turns these warnings into question_fix repair
+reasons inside the existing 3-round budget. Tests: tests/quizbank/test_answer_quality.py.
 learning_links/ owns the separate v1 connection-review contract and question fingerprints.
 It does not mutate BANK, certify medical judgments, or create learner state. Consumers call
 validate_review with hashes calculated from the actual inputs. Tests: tests/contracts/test_learning_links.py.

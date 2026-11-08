@@ -147,6 +147,29 @@ def _recall_load(question: dict) -> list[str]:
             f"cloze·객관식으로 나눌지 검토"]
 
 
+def _basic_units(question: dict) -> list[str]:
+    """basic 은 정답 하나를 회상하는 형식이다(정본 §3.5). 여러 채점 단위면 형식이 틀렸다.
+
+    운영 Quiz Bank 35편 basic 1,240문항 중 단위 2개 이상은 6개(0.5%)였고, 2026-11-08
+    Map 파이프라인 감염병리1 83문항 판에서는 basic 72개 중 62개였다 — 「A·B와 한계는?」처럼
+    여러 요구를 한 발문에 묶은 것이다.
+    """
+    if question["format"] != "basic" or len(question["answer_units"]) < 2:
+        return []
+    return [f"{question['question_id']}: basic인데 채점 단위 {len(question['answer_units'])}개 — "
+            f"같은 범주 항목이면 list, 대응·비교면 cloze 표·객관식, 서로 다른 요구면 문항을 나눈다"]
+
+
+def _ox_reason(question: dict) -> list[str]:
+    """ox 는 판단보다 이유를 아는 것이 목표다(2026-11-08 관리자). 이유는 해설에 있다.
+
+    운영 Quiz Bank ox 137개 중 60개(44%)가 해설 없이 O/X만 남겼다.
+    """
+    if question["format"] != "ox" or (question.get("explanation") or "").strip():
+        return []
+    return [f"{question['question_id']}: ox인데 해설이 없다 — 왜 O 또는 X인지 핵심 근거를 해설에 쓴다"]
+
+
 def _polarity_bias(bank: dict) -> list[str]:
     """예/아니오 문항의 정답이 한쪽으로만 쏠렸는가. 정본 §2.1 의 「정답 단서」다."""
     groups: dict[str, list[str]] = {}
@@ -212,6 +235,6 @@ def quality_errors(bank: dict) -> tuple[list[str], list[str]]:
         load = _recall_load(q)
         if load:
             long_ids.append(q["question_id"])
-        warnings += load + _yes_no_axis(q) + _overstated_cue(q)
+        warnings += load + _basic_units(q) + _ox_reason(q) + _yes_no_axis(q) + _overstated_cue(q)
     warnings += _polarity_bias(bank) + _narrow_format(bank, long_ids)
     return errors, warnings

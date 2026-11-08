@@ -81,6 +81,16 @@ def test_unknown_is_not_a_repairable_missing_fact_and_map_conflict_routes_separa
     reasons=c.repair_reasons(b,bank,audit,f.old.checks(bank),validate_bank(bank,['S1']))
     assert any(r['kind']=='map_fix'for r in reasons)
 
+def test_answer_quality_warnings_become_question_fixes_without_new_rounds():
+    from studyez_contracts.bank.validate import validate_bank
+    b=f.brief();bank=f.old.bank();audit=compile_value(b,bank,f.assessment(b,bank))
+    assert not c.quality_reasons(bank)
+    q=bank['questions'][0];q['format']='basic';q['answer_units']=['first unit','second unit'];q['answer']='first unit; second unit'
+    fixes=c.quality_reasons(bank)
+    assert [r['question_ids']for r in fixes]==[[q['question_id']]]and fixes[0]['kind']=='question_fix'
+    reasons=c.repair_reasons(b,bank,audit,f.old.checks(bank),validate_bank(bank,['S1']))
+    assert any(r['text'].startswith('문항 품질: ')and r['question_ids']==[q['question_id']]for r in reasons)
+
 def test_changed_map_needs_derived_provenance_and_source_point_preservation():
     before=f.author();after=copy.deepcopy(before)
     after['brief']['targets'][0]['directions'][0]['answer_scope']='New synthetic answer scope'
