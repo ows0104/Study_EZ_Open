@@ -228,6 +228,7 @@ def test_author_scratch_folder_is_opened_for_writing(monkeypatch, tmp_path):
     assert session.run_agent("write", cwd=tmp_path, scratch=scratch)["text"] == "written"
 
 
-def test_blind_session_never_gets_extra_writable_folder(tmp_path):
+def test_blind_session_never_gets_extra_writable_folder(monkeypatch, tmp_path):
+    monkeypatch.setenv("STUDYEZ_CODEX_BIN", "codex.exe")
     argv = codex.command(model="gpt-test", blind=True, writable=[tmp_path])
     assert "--add-dir" not in argv and "read-only" in argv
