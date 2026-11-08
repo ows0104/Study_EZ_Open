@@ -1,0 +1,56 @@
+{
+  "schema_version": "concept-map-extract/2",
+  "title": "사각형 분류",
+  "overview": "정의와 포함 관계로 사각형의 큰 분류를 이해한다.",
+  "concepts": [
+    {
+      "concept_id": "C001",
+      "title": "정사각형",
+      "core_facts": [
+        "네 각이 직각이고 네 변의 길이가 같은 사각형."
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "pages": [
+            1
+          ],
+          "locator": null
+        }
+      ]
+    },
+    {
+      "concept_id": "C002",
+      "title": "직사각형",
+      "core_facts": [
+        "네 각이 직각인 사각형."
+      ],
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "pages": [
+            1
+          ],
+          "locator": null
+        }
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "from_id": "C001",
+      "to_id": "C002",
+      "relation": "정사각형은 직사각형의 한 종류다.",
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "pages": [
+            1
+          ],
+          "locator": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

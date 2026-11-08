@@ -1,0 +1,20 @@
+{
+  "schema_version": "exam-point-extract/2",
+  "title": "사각형 분류",
+  "points": [
+    {
+      "point_id": "P001",
+      "point": "정사각형이 속하는 상위 분류로 직사각형을 인출한다.",
+      "source_refs": [
+        {
+          "source_id": "S1",
+          "pages": [
+            1
+          ],
+          "locator": null
+        }
+      ]
+    }
+  ],
+  "notes": []
+}

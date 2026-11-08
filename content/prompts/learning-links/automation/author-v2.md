@@ -20,4 +20,4 @@ clinical_conflicts는 BANK source_conflicts의 모든 conflict_id마다 facts를
 
 webBank가 제공되면 이미 원문 JSON을 코드로 변환한 BANK다. 이를 그대로 사용하고 개념·학습 위치·실제 선행 연결 및 원본 그림만 연결한다. 문항 내용·정답·선지·출처·중요도·심화·순서를 다시 작성하지 않는다. clinical_conflicts는 보존된 충돌에 맞춰 작성한다.
 
-option_pools는 빈 배열이다. 실제 범위/안전한 조건/외부 근거·불확실성을 보존한다. JSON만 반환한다.
+BANK concepts·retrieval_plan에는 실제 문항의 concept_id로 쓰인 개념만 넣는다. 문항이 없는 갈래·상위 개념은 brief의 개념 트리와 목표에만 둔다. option_pools는 빈 배열이다. 실제 범위/안전한 조건/외부 근거·불확실성을 보존한다. JSON만 반환한다.

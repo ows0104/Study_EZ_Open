@@ -16,18 +16,19 @@ from studyez_contracts.bank.cloze import normalize_cloze
 from quizbank.review import FIELDS,REVIEW_REPORT,SYSTEM,shape
 from . import connection_visuals as visual
 from studyez_contracts.roots import recall_units as recall
+from studyez_contracts.learning_links import concept_tree
 
 def medical_input(bank,conflicts):
     # History, importance, authoring rationale and raw conflict descriptions are
     # deliberately absent; canonical clinical question/answer text stays verbatim.
     return c.medical_input(bank,conflicts)
 
-def call_model(stage,context,material,model):
+def call_model(stage,context,material,model,timeout=2400):
     from . import connection_generate as g
     kind=stage.split('-')[0]
     if kind=='medical':
         images,labels=visual.paths(context['bank'],material)
-        prompt='독립 의학 정답 검수다. 중요도나 과거 판정은 평가하지 않는다. 실제 문항·정답·모든 answer_units·해설·임상 충돌을 자신의 의학 지식으로 대조한다. 그림은 아래 attachment 순서대로 실제 문항의 일부다. 오류/의심을 그대로 기록한다. conflicts의 사실과 현재 정답을 구별한다. pool_checks는 빈 배열이다. JSON만 반환한다.\n'
+        prompt='독립 의학 정답 검수다. 중요도나 과거 판정은 평가하지 않는다. 실제 문항·정답·모든 answer_units·해설·임상 충돌을 자신의 의학 지식으로 대조한다. 그림은 아래 attachment 순서대로 실제 문항의 일부다. 오류/의심을 그대로 기록한다. reviews에는 입력의 모든 question_id마다 ok·doubt·wrong 판정을 정확히 한 줄씩 작성하며, 오류가 없는 문항도 ok로 적는다. conflicts의 사실과 현재 정답을 구별한다. pool_checks는 빈 배열이다. JSON만 반환한다.\n'
         prompt+=json.dumps({'input':context['clinicalInput'],'images':labels},ensure_ascii=False)
         result=codex.run(prompt,blind=True,model=model,timeout=900,label='연결 독립 정답 검수',schema=g.output_schema(REVIEW_REPORT),system=SYSTEM,images=images)
         visual.paths(context['bank'],material)
@@ -49,11 +50,16 @@ def call_model(stage,context,material,model):
         with tempfile.TemporaryDirectory(prefix='studyez-root-v2-',ignore_cleanup_errors=True)as tmp:
             work=Path(tmp);shutil.copytree(material,work/'material')
             if 'bank'in context:visual.paths(context['bank'],work/'material')
-            result=codex.run(prompt,blind=False,cwd=work,model=model,timeout=2400,label='연결 자동출제 '+stage,
+            result=codex.run(prompt,blind=False,cwd=work,model=model,timeout=timeout,label='연결 자동출제 '+stage,
                 schema=g.output_schema(schema),system='Preserve source boundaries. Never fabricate coverage or review evidence.')
             if 'bank'in context:visual.paths(context['bank'],work/'material')
         value=g.decode_optional_fields(json.loads(result['text']),schema)
     return value,{k:result[k]for k in ('usage','cost_usd','duration_ms','models')}
+
+def importance_brief(lineage,proof):
+    from studyez_contracts.roots.importance_review import apply
+    return apply(lineage,proof['importance'])
+
 
 def run(packet,out,model,invoke):
     from . import connection_generate as g
@@ -146,12 +152,16 @@ def run(packet,out,model,invoke):
     recoveries=ledger.get('authoringRecoveries',[])
     format_recoveries=ledger.get('formatRecoveries',[])
     runtime_revalidations=ledger.get('runtimeRevalidations',[])
+    render_recoveries=ledger.get('renderRecoveries',[])
+    medical_retries=ledger.get('medicalRetries',[])
     recovery_meta={'authoringRecoveries':recoveries,'formatRecoveries':format_recoveries,
-        'runtimeRevalidations':runtime_revalidations,'inputHash':packet['inputHash'],
+        'runtimeRevalidations':runtime_revalidations,'renderRecoveries':render_recoveries,'medicalRetries':medical_retries,'inputHash':packet['inputHash'],
         'runtimeHash':fingerprint,'initialBrief':initial,'repairRounds':max(ledger['repairRounds'],initial_cost+1)}
     recovery_stages={k:{'name':k,**v}for k,v in ledger['stages'].items()}
     c.validate_runtime_revalidations(recovery_meta,recovery_stages)
     c.validate_format_recoveries(recovery_meta,recovery_stages)
+    c.validate_render_recoveries(recovery_meta,recovery_stages)
+    c.validate_medical_retries(recovery_meta,recovery_stages,pending=True)
     c.validate_authoring_recoveries(recovery_meta,recovery_stages)
     rejected=recoveries[0]['proof']['rawAuthoring']if recoveries and recoveries[0]['proof']['mode']=='brief-repair'else None
     start_round=1 if rejected else 0
@@ -196,6 +206,10 @@ def run(packet,out,model,invoke):
             med_ctx={'title':packet['title'],'bank':bank,'clinicalInput':projection}
             medical=stage(f'medical-{n}',med_ctx)
         reasons=c.repair_reasons(b,bank,audit,medical,validation)
+        # concept-map-extract/3: the Map's parent_id tree must survive in the brief (no-op for /2 Maps).
+        hierarchy=concept_tree.hierarchy_findings(b,packet.get('conceptMap'))
+        if hierarchy:g.write(out/f'map-hierarchy-{n}.json',{'findings':hierarchy})
+        reasons+=[{'kind':'map_fix','text':t,'question_ids':[],'direction_ids':[]}for t in hierarchy]
         if blocked and blocking_fix:reasons.append({'kind':'question_fix','text':blocked,'question_ids':[],'direction_ids':[]})
         g.write(out/f'repair-decision-{n}.json',{'reasons':reasons,'allIssues':audit['assessment']['assessment']['issues'],'repair':bool(reasons)and n+initial_cost<3})
         if reasons and n+initial_cost<3:
@@ -204,7 +218,19 @@ def run(packet,out,model,invoke):
                 'sourceAudit':audit,'medical':medical,'validation':{k:v for k,v in validation.items()if k!='checked_at'},'repairReasons':reasons})
             continue
         if blocked:raise ValueError('독립 정답 검수 입력 분리가 완료되지 않았습니다. 실제 검수를 완료로 표시하지 않고 보존합니다.')
-        doc=c.make_document(b,bank,audit,revision=packet['revision'],title=packet['title'],exam_date=packet['examDate'],medical=medical)
+        importance=ledger.get('importanceReview')
+        if importance:
+            # runner.root_importance_review: reviewed importance + one fresh final source audit (approved).
+            from studyez_contracts.roots.importance_review import validate as validate_importance
+            lineage=b;b=validate_importance(importance,lineage,importance_brief(lineage,importance))
+            c.require(importance['stage']==f'source-{n}','importance review targets another round')
+            audit=c.compile_assessment(b,bank,importance['sourceRaw'])
+        # Tree maps leave organising concepts without a question of their own; they stay in the review
+        # tree, and only their empty plans leave the bank snapshot (exact reviewed bank kept in the proof).
+        reviewed_bank=bank;bank,projection=c.project_container_concepts(bank)
+        if projection:validation=validate_bank(bank,[s['id']for s in packet['sources']])
+        doc=c.make_document(b,reviewed_bank,audit,revision=packet['revision'],title=packet['title'],exam_date=packet['examDate'],
+            medical=medical,snapshot=bank if projection else None)
         result={'brief':b,'document':doc,'sourceAudit':audit,'medical':medical,'validation':validation,'manifest':{
             'pipelineVersion':c.POLICY,'inputHash':packet['inputHash'],'briefHash':document_hash(b),'bankHash':document_hash(bank),
             'runtimeHash':fingerprint,'model':codex.model_name(model),'webResponseHash':packet.get('webResponseHash'),
@@ -214,6 +240,10 @@ def run(packet,out,model,invoke):
             'normalizationRecoveries':ledger.get('normalizationRecoveries',[]),
             **({'authoringRecoveries':recoveries}if recoveries else{}),
             **({'formatRecoveries':format_recoveries}if format_recoveries else{}),
+            **({'renderRecoveries':render_recoveries}if render_recoveries else{}),
+            **({'medicalRetries':medical_retries}if medical_retries else{}),
+            **({'bankProjection':projection}if projection else{}),
+            **({'importanceReview':importance}if importance else{}),
             **({'runtimeRevalidations':runtime_revalidations}if runtime_revalidations else{}),
             **({'authoringRecoveryOutput':json.loads((out/'repair-1.raw.json').read_text(encoding='utf-8'))}if rejected else{}),
             'briefRevisions':[{'stage':name,'brief':value['brief'],'reason':value['map_change_reason']}

@@ -1,0 +1,45 @@
+{
+  "id": "2026-11-08-infection-path1-map",
+  "title": "감염병리1 Map 파이프라인 재구성(개념 트리·구조 문제)",
+  "area": "generation",
+  "created_at": "2026-11-07T15:28:16.013288+00:00",
+  "required_checks": [
+    "contracts",
+    "generation"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-07T15:29:52.882735+00:00",
+      "evidence": "2026-11-08 사용자 채팅: '둘 다 승인' (plan.md의 승인 요청 1 구현, 승인 요청 2 외부 전송·생성 제시 직후)",
+      "scope": "구현: map-extract /3(트리 지시+parent_id)·스키마·예시·/2 보존, extract-v2 부모 보존 지시, Map 계층 검증·정규화 부모 보존 검사·단위검사, 감염병리1 실행 스크립트. 외부 전송·생성: S1 필기(sha 4b4229bc…,37쪽)·S2 족보(sha 82ba65c6…,27쪽) 텍스트·페이지 이미지를 OpenAI Codex CLI gpt-6.1-sol로 Map·포인트 각1회 추출, 파생 결과 후속 전송과 정제 보완1·재대조1, 문제 생성·원본 대조·독립 정답 검수 최대3회 보완, 격리 로컬 등록·풀이. 운영 등록·공개·master 병합 제외",
+      "evidence_version": 2,
+      "source_hash": "95ca628ae5b3a19cf986295f9eda22929c4339f7e0366b1fe674f27b04769a5e",
+      "plan_hash": "f9e781ee0255c1535d1c1ab41db5cb9a9a3892b2794e7f5554431a72a91cc23e",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "84569b02eb5be1492c184720f996062ee9dbc16402880268776e2c9c796ab582"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-07T15:29:56.294114+00:00"
+}

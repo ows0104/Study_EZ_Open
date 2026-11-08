@@ -161,3 +161,35 @@ def test_unverified_clinical_projection_never_reaches_independent_model_or_chase
     assert not any(s.startswith(('medical-','repair-'))for s in calls)
     ledger=json.loads((tmp_path/'out/ledger.json').read_text(encoding='utf-8'))
     assert ledger['repairRounds']==0 and ledger['stages']['medical-0']['status']=='blocked'
+
+def _tree_packet(path,parents):
+    import json as _json
+    from studyez_contracts.roots.automation import packet_hash
+    p=f.packet(path)
+    p['conceptMap']=_json.dumps({'schema_version':'concept-map-extract/3','title':'t','overview':'o','relations':[],'notes':[],
+        'concepts':[{'concept_id':cid,'parent_id':parent,'title':'T'+cid,'core_facts':['f'],
+            'source_refs':[{'source_id':'S1','pages':[1],'locator':None}]}for cid,parent in parents]})
+    p['inputHash']=packet_hash(p);return p
+
+def test_map_tree_parents_kept_by_brief_cost_no_repair(tmp_path):
+    p=_tree_packet(tmp_path/'source.txt',[('A',None),('B','A'),('C','A'),('D','A')]);calls=[]
+    def invoke(stage,*args):calls.append(stage);return f.model(stage,*args)
+    result=g.run(p,tmp_path/'out',invoke=invoke)
+    assert result['manifest']['repairRounds']==0 and not any(s.startswith('repair')for s in calls)
+    assert not list((tmp_path/'out').glob('map-hierarchy-*.json'))
+
+def test_flattened_map_tree_becomes_one_map_fix_repair(tmp_path):
+    # Map nests C under B; the synthetic brief puts C directly under A.
+    p=_tree_packet(tmp_path/'source.txt',[('A',None),('B','A'),('C','B'),('D','A')]);seen=[]
+    def invoke(stage,ctx,*args):
+        value,info=f.model(stage,ctx,*args)
+        if stage=='repair-1':
+            seen.extend(r['text']for r in ctx['repairReasons']if r['kind']=='map_fix')
+            next(x for x in value['brief']['concepts']if x['concept_id']=='C')['parent_ids']=['B']
+            value['brief']['provenance']['independent_points']='derived';value['map_change_reason']='Keep the Map parent of C'
+        return value,info
+    result=g.run(p,tmp_path/'out',invoke=invoke)
+    assert result['manifest']['repairRounds']==1 and len(seen)==1 and 'C' in seen[0] and 'B' in seen[0]
+    assert (tmp_path/'out/map-hierarchy-0.json').exists() and not (tmp_path/'out/map-hierarchy-1.json').exists()
+    assert next(x for x in result['brief']['concepts']if x['concept_id']=='C')['parent_ids']==['B']
+    c.validate_result(result,p)

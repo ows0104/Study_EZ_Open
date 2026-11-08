@@ -34,7 +34,12 @@ def render(bank,specs,packet,material):
     return value
 
 
-def page_crop(path,s):
+# Render at 2x first (unchanged for every crop that already fits). Photo-heavy notes can exceed
+# the 1 MB PNG limit at 2x; then step the scale down deterministically until the bytes fit.
+SCALES=(2,1.5,1.25,1,0.75)
+
+def page_crop(path,s,scales=SCALES):
+        from studyez_contracts.roots.media import MAX_IMAGE
         x0,y0,x1,y1=s['crop']
         with fitz.open(path)as pdf:
             if not 1<=s['page']<=len(pdf):raise ValueError('그림 원본 물리쪽 불일치')
@@ -42,8 +47,10 @@ def page_crop(path,s):
             clip=fitz.Rect(x0*r.width,y0*r.height,x1*r.width,y1*r.height)
             if clip.width*2>4096 or clip.height*2>4096 or clip.width*clip.height*4>4*1024*1024:
                 raise ValueError('그림 crop이 표시·검수 크기 한도를 초과했습니다.')
-            pix=page.get_pixmap(matrix=fitz.Matrix(2,2),clip=clip)
-            return pix.tobytes('png'),pix.width,pix.height
+            for scale in scales:
+                pix=page.get_pixmap(matrix=fitz.Matrix(scale,scale),clip=clip);body=pix.tobytes('png')
+                if len(body)<=MAX_IMAGE:break
+            return body,pix.width,pix.height
 
 def paths(bank,material):
     result=[];labels=[]

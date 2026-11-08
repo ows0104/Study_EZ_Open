@@ -1,0 +1,509 @@
+{
+  "id": "2026-11-06-map-point-prompts",
+  "title": "Map와 독립 출제포인트 추출 지침 정리",
+  "area": "generation",
+  "created_at": "2026-11-05T15:15:43.659548+00:00",
+  "required_checks": [
+    "prompt-review",
+    "pilot-files",
+    "point-refinement"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-05T17:09:09.440480+00:00",
+      "evidence": "현재 사용자 명시승인: 동일 원본·이번 포인트·대조결과를 OpenAI로 전송하여 추가 보완1회·재검수1회 승인. 검증 이름 point-refinement를 필수목록에 반영하는 동일 작업 기록 갱신.",
+      "scope": "현재 승인된 포인트 네 곳 보완·별도재검수 및 로컬 결과/기록 검증. 추가 전송범위/횟수 확대 없이 기존결과보존. 기존은행/게시/배포 변경없음",
+      "evidence_version": 2,
+      "source_hash": "2ce5c3c35a0b50df15923d09f184eaddf3cac7cdcad2ce59d5c1af9728ff34e6",
+      "plan_hash": "2f195c665de3904e3a1e7f1d525331a00fbcf499a713aefd2951827f5b1883d0",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "40592fe81c14f361db26e8b84b4c1da651b6634c343b19ffbfbc383a10632bda"
+    }
+  },
+  "checks": [
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T15:19:40.867220+00:00",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "02ecf4d9d199ba8524b10e78f0da91888ac3a2638b0adc5b8fe20b745cef388c",
+      "plan_hash": "bea0ad7578777fdbdb84a7bb59c3667f2306ba74c7d401d1a7e92df8b6c4b354",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793891980596478700-prompt-review.log"
+    },
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T15:20:18.166906+00:00",
+      "command": [
+        "git",
+        "diff",
+        "--cached",
+        "--check"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "02ecf4d9d199ba8524b10e78f0da91888ac3a2638b0adc5b8fe20b745cef388c",
+      "plan_hash": "bea0ad7578777fdbdb84a7bb59c3667f2306ba74c7d401d1a7e92df8b6c4b354",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793892018061284400-prompt-review.log"
+    },
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T15:27:30.697602+00:00",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8368e7de2bf1a7b3a8a90cbd5ed379a7bc4617a3002b95dcf661e9d1b916a7b7",
+      "plan_hash": "c179e88f47bf480c82760834c7665a88f0a725ffcfb03fbed662828dc0700959",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793892450524685600-prompt-review.log"
+    },
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T15:37:10.574054+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-prompts/verify_formats.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "b436e6a9c1fc02b0610bee7dcbcc9d3ffc5a00449b35688b2a445d00580e4357",
+      "plan_hash": "04c488c35f010925bb7d3b6e793e1dfcee6459b692eacff1bf14556a80a4aeff",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793893029366274600-prompt-review.log"
+    },
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T15:38:17.417762+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-prompts/verify_formats.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "c4cef9067163eea55c1005696e50c8338a5068ff3eff49a74cbc86e4411dd09e",
+      "plan_hash": "04c488c35f010925bb7d3b6e793e1dfcee6459b692eacff1bf14556a80a4aeff",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793893096440487300-prompt-review.log"
+    },
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T15:53:04.079881+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-prompts/verify_formats.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "958703778807f2ff4d7cbf36853dbf643d2078f1a3866f9a28b3adfca1db0b69",
+      "plan_hash": "98c83bed790c256d2ecc57a76227f5959a50bb3bf60132edcc7459b9be93dd07",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793893983589683700-prompt-review.log"
+    },
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T15:54:11.670455+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-prompts/verify_formats.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "320006e3b42b42420f3c508ce139381797478bab2d56bcfa359d57a09124720a",
+      "plan_hash": "98c83bed790c256d2ecc57a76227f5959a50bb3bf60132edcc7459b9be93dd07",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793894051167318100-prompt-review.log"
+    },
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T16:04:57.668012+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-prompts/verify_formats.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "320006e3b42b42420f3c508ce139381797478bab2d56bcfa359d57a09124720a",
+      "plan_hash": "f7d5be3c282d7e8f07aecd5b997789257829506fe972c5043461468a846cc56a",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793894697168704500-prompt-review.log"
+    },
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T16:10:15.189609+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-prompts/verify_formats.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "320006e3b42b42420f3c508ce139381797478bab2d56bcfa359d57a09124720a",
+      "plan_hash": "c981e40c7ba89b0b11ba2ee008d11e3723384836ab6fbb00ae83a6d76e85ff60",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793895014453341400-prompt-review.log"
+    },
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T16:16:47.584008+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-prompts/verify_formats.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "320006e3b42b42420f3c508ce139381797478bab2d56bcfa359d57a09124720a",
+      "plan_hash": "c1c3304af83a693b684011f03163c59839e97979403bb89a2d8c6ffc705d3f7e",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793895407047989900-prompt-review.log"
+    },
+    {
+      "name": "pilot-files",
+      "at": "2026-11-05T16:16:48.730735+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-prompts/verify_pilot_outputs.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "320006e3b42b42420f3c508ce139381797478bab2d56bcfa359d57a09124720a",
+      "plan_hash": "c1c3304af83a693b684011f03163c59839e97979403bb89a2d8c6ffc705d3f7e",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793895407898911400-pilot-files.log"
+    },
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T16:43:12.662636+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-prompts/verify_formats.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2ce5c3c35a0b50df15923d09f184eaddf3cac7cdcad2ce59d5c1af9728ff34e6",
+      "plan_hash": "3588dfb870d79c5aa347c2b81add68e74802d737382de8a305b48437411849ac",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793896992111093000-prompt-review.log"
+    },
+    {
+      "name": "prompt-review",
+      "at": "2026-11-05T17:13:32.411301+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-prompts/verify_formats.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2ce5c3c35a0b50df15923d09f184eaddf3cac7cdcad2ce59d5c1af9728ff34e6",
+      "plan_hash": "2f195c665de3904e3a1e7f1d525331a00fbcf499a713aefd2951827f5b1883d0",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793898811807236700-prompt-review.log"
+    },
+    {
+      "name": "pilot-files",
+      "at": "2026-11-05T17:13:33.419156+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-prompts/verify_pilot_outputs.py"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2ce5c3c35a0b50df15923d09f184eaddf3cac7cdcad2ce59d5c1af9728ff34e6",
+      "plan_hash": "2f195c665de3904e3a1e7f1d525331a00fbcf499a713aefd2951827f5b1883d0",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793898812737779200-pilot-files.log"
+    },
+    {
+      "name": "point-refinement",
+      "at": "2026-11-05T17:17:01.394955+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "docs/changes/2026-11-06-map-point-prompts/point_refinement.py",
+        "verify"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2ce5c3c35a0b50df15923d09f184eaddf3cac7cdcad2ce59d5c1af9728ff34e6",
+      "plan_hash": "2f195c665de3904e3a1e7f1d525331a00fbcf499a713aefd2951827f5b1883d0",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-06-map-point-prompts/1793899020707646800-point-refinement.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-05T17:17:37.806973+00:00",
+    "summary": "독립 회상 목표 기준의 프롬프트·예시 개선. 동일 원본 source-only 재추출45/58, 원본대조 실제4지적만 1회 보완47/60, 별도 재대조 ready/ready·issues없음·unreadable없음. 원본/중간/실패/기존Map 보존. 검사변수 덮임 수정 후 원래 응답/입력/영수증SHA 별도 검증, 내용수동수정·추가호출없음. 수정대상4레코드 외99레코드동일. 스키마16오류사례·기존4파일·최종파일지문 및 근거범위 검증통과, pytest16·웹7통과. 임상최신성/전문의검수 및 문항/게시/자동연동은 범위밖. 파생전송차단 후 현재사용자 구체승인 적용, 후속4호출로 종료.",
+    "evidence_version": 2,
+    "source_hash": "2ce5c3c35a0b50df15923d09f184eaddf3cac7cdcad2ce59d5c1af9728ff34e6",
+    "plan_hash": "2f195c665de3904e3a1e7f1d525331a00fbcf499a713aefd2951827f5b1883d0",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-05T17:17:37.888883+00:00"
+}
