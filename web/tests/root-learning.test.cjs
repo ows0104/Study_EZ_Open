@@ -24,7 +24,7 @@ test('actual API: no textbox, preserved drafts/retries/conflicts, four ratings, 
  try{
    await page.goto(url);await page.getByText('학습 현황·자료 범위',{exact:true}).click();await page.getByText(/한국시간 04:00/).waitFor();
    await page.getByRole('button',{name:'오늘 학습 시작',exact:true}).click();await enabled(page,'답 보기');
-   assert.equal(await page.locator('textarea').count(),0);await page.reload();await enabled(page,'답 보기');
+   assert.equal(await page.locator('textarea').count(),0);await page.addInitScript(()=>{window.__sawStart=false;new MutationObserver(()=>{if(document.querySelector('.mq-start-button'))window.__sawStart=true;}).observe(document,{subtree:true,childList:true});});await page.reload();await enabled(page,'답 보기');assert.equal(await page.evaluate(()=>window.__sawStart),false,'resuming an open session never draws the start screen first');
    assert.equal(await page.evaluate(key=>localStorage.getItem(key),draft),'retired draft preserved');
    const other=await context.newPage();await other.goto(url);await enabled(other,'답 보기');
    await page.getByRole('heading',{name:'문항 1 / 3'}).focus();await page.keyboard.press('Space');

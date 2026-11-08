@@ -14,7 +14,6 @@ import { useBankLink } from './bankBridge';
 import './roots.css';
 import './main-quiz.css';
 import { lectureHref } from '../links';
-import { useSolvingChrome } from '../shell/studyChrome';
 
 const href=(subject:string,runId:string)=>`/bank/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}`;
 const endpoint=(subject:string,runId:string)=>`/api/root-learning/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}`;
@@ -48,7 +47,6 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
   const [advancing,setAdvancing]=useState(false);
   const [mapRequested,setMapRequested]=useState(false);
   const viewRef=useRef(view);viewRef.current=view;
-  useSolvingChrome(Boolean(view));
   // The view before the last rating, so Z draws at once (the server keeps the reveal).
   const undoSnapshot=useRef<RootView|null>(null);
   // stale: only replace the screen if no newer action was drawn ahead of the server meanwhile.
@@ -57,9 +55,11 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     if(stale&&viewRef.current&&viewRef.current.version!==next.version)return;
     undoSnapshot.current=null;viewRef.current=next;setView(next);
   };
+  // Resuming an open session draws the question first; the start screen would only flash in between.
   async function refresh(resume=false) {
-    const next=await api<RootOverview>(base);setInfo(next);setError('');
+    const next=await api<RootOverview>(base);
     if(resume&&next.sessionId)await loadSession(next.sessionId);
+    setInfo(next);setError('');
   }
   const writes=useRootStudyWrites(scope);
   const frames=useRootFrames(view?.sessionId);
@@ -174,10 +174,10 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     {writes.slow&&<p className="bank-note main-quiz-save-status" role="status">저장 확인 중…</p>}
     {view?<>
       {view.finished&&(writes.blocked||writes.queued>0)?<p role="status">마지막 저장과 미확인 요청을 확인 중입니다. 완료 현황은 확인 뒤 표시합니다.</p>:tab==='map'&&map?<><button className="main-quiz-back" onClick={()=>setTab('learn')}>← 문제로 돌아가기</button><RootMap map={map} summary={view.summary} title={info?.title} position={`문항 ${Math.min(view.position+1,view.count)}/${view.count}`}/></>:
-        <RootSolve view={view} scope={scope} disabled={writes.blocked} advancing={advancing} onAction={act} onError={setError} onMap={()=>void showMap()}
+        <RootSolve view={view} title={info?.title} scope={scope} disabled={writes.blocked} advancing={advancing} onAction={act} onError={setError} onMap={()=>void showMap()}
           onToday={()=>{setView(null);setMap(null);setTab('learn');void refresh().catch(e=>setError(e.message));}}/>}
       {view.blocked?.includes('학습일')&&<button disabled={writes.blocked} onClick={()=>{setView(null);void refresh().catch(e=>setError(e.message));}}>오늘 학습 다시 계획</button>}
-    </>:info?<RootToday info={info} disabled={writes.blocked||advancing} onStart={()=>void begin()} onMap={()=>void showMap()}
-      lectureLink={lectureHref({subject,runId})} admin={adminTools}/>:!error&&<><p className="notice" role="status">학습 범위 확인 중…</p>{adminTools}</>}
+    </>:info?<RootToday info={info} disabled={writes.blocked||advancing} starting={advancing} onStart={()=>void begin()} onMap={()=>void showMap()}
+      lectureLink={lectureHref({subject,runId})} admin={adminTools}/>:!error&&<><p className="notice" role="status">Main-Quiz를 불러오는 중…</p>{adminTools}</>}
   </main>;
 }

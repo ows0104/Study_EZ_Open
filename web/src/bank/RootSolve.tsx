@@ -7,7 +7,7 @@ import { RootSummaryPanel } from './RootToday';
 const PdfSlides = lazy(() => import('./RootPdfSlides').then(m => ({default:m.RootPdfSlides})));
 const RATINGS: BankRating[] = ['Again', 'Hard', 'Good', 'Easy'];
 
-export function RootSolve({view,scope,disabled,advancing,onAction,onToday,onError,onMap}:{view:RootView;scope:string;disabled:boolean;
+export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,onError,onMap}:{view:RootView;title?:string;scope:string;disabled:boolean;
   advancing:boolean;onAction:(a:RootAction)=>void;onToday:()=>void;onError:(message:string)=>void;onMap?:()=>void}) {
   const task=view.task;
   const key=`studyez:root-draft:${scope}:${JSON.stringify([view.revision,task?.id])}`;
@@ -64,20 +64,31 @@ export function RootSolve({view,scope,disabled,advancing,onAction,onToday,onErro
     };
     window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler);
   },[locked,task,picked,imagesReady,hiddenChoices,view.mapSeen,view.canUndo]);
-  if(view.finished)return <section className="quiz bank-start"><h2>오늘 목록을 마쳤어요</h2><p>이번 회차 목록 {view.count}문항</p>
-    <details><summary>학습 기록·남은 범위</summary><RootSummaryPanel summary={view.summary}/></details>
-    <div className="root-actions"><button disabled={disabled||!view.canUndo} onClick={()=>onAction({kind:'undo'})}>되돌리기 <kbd>Z</kbd></button><button className="quiz-submit" disabled={disabled} onClick={onToday}>오늘 현황으로</button></div></section>;
-  return <section className="quiz main-quiz-solve is-solving" aria-busy={advancing}>
-    <div className="quiz-progress bank-progress"><h2 className="main-quiz-question-heading" ref={heading} tabIndex={-1}>문항 {view.position+1} / {view.count}</h2>
-      <span className="main-quiz-tools">{onMap&&<button disabled={disabled||advancing} onClick={onMap}>개념 지도</button>}
-        <button disabled={disabled||advancing} onClick={onToday}>쉬기</button>
-        <details ref={menu} className="main-quiz-menu"><summary>더 보기</summary>
+  const done=Math.min(view.position,view.count);
+  const head=<header className="mq-solve-head">
+    <p className="mq-kicker"><span className="mq-badge">Main-Quiz</span>{title&&<span className="mq-solve-title">{title}</span>}</p>
+    {!view.finished&&<span className="main-quiz-tools">{onMap&&<button className="pill-button" disabled={disabled||advancing} onClick={onMap}>개념 지도</button>}
+      <button className="pill-button" disabled={disabled||advancing} onClick={onToday}>쉬기</button>
+      <details ref={menu} className="main-quiz-menu"><summary className="pill-button">더 보기</summary>
+        <div className="mq-menu-pop">
           {!task?.answer&&<button disabled={locked} onClick={()=>reveal(false)}>답만 보기</button>}
           <button disabled={disabled||advancing||!!view.blocked?.includes('학습일')} onClick={()=>onAction({kind:'skip'})}>이 문제 보류</button>
-        </details></span></div>
+        </div>
+      </details></span>}
+  </header>;
+  if(view.finished)return <section className="mq-done">{head}
+    <div className="mq-today mq-done-card"><div className="mq-today-text"><h2>오늘 목록을 마쳤어요</h2>
+      <p>이번 회차 <b>{view.count}</b>문항 · 첫 학습 <b>{view.summary.learned}</b>/{view.summary.total} · 회상 가능 <b>{view.summary.recalled}</b></p></div>
+      <div className="root-actions"><button className="pill-button" disabled={disabled||!view.canUndo} onClick={()=>onAction({kind:'undo'})}>되돌리기 <kbd>Z</kbd></button>
+        <button className="mq-start-button" disabled={disabled} onClick={onToday}>오늘 현황으로</button></div></div>
+    <details className="mq-more"><summary>학습 기록·남은 범위</summary><RootSummaryPanel summary={view.summary}/></details></section>;
+  return <section className="quiz main-quiz-solve is-solving" aria-busy={advancing}>
+    {head}
+    <div className="quiz-progress bank-progress mq-solve-progress"><h2 className="main-quiz-question-heading" ref={heading} tabIndex={-1}>문항 {view.position+1} / {view.count}</h2>
+      <span className="mq-track" aria-hidden="true"><i style={{width:`${view.count?done/view.count*100:0}%`}}/></span></div>
     {view.blocked&&<p role="alert">{view.blocked}</p>}
     {advancing&&<p className="bank-note" role="status">불러오는 중…</p>}
-    {task&&<div className="quiz-card bank-card"><QuestionBody key={task.id} question={task.question} answer={task.answer} picked={picked}
+    {task&&<div className="quiz-card bank-card mq-card"><QuestionBody key={task.id} question={task.question} answer={task.answer} picked={picked}
       onStimuliReady={ready=>setImageState({taskId:task.id,ready})} onPick={pick} disabled={locked}
       showOptions={!hiddenChoices} showChoiceScore={false}/>
       {hiddenChoices&&<button className="is-quiet" disabled={locked} onClick={showChoices}>선지 보기</button>}
