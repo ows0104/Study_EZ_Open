@@ -13,9 +13,10 @@
 |---|---|---|---|
 | Map | concept-map-extract/3 | [map-output.schema.json](map-output.schema.json) | [map-output.example.json](map-output.example.json) |
 | Map(이전) | concept-map-extract/2 | [map-output-v2.schema.json](map-output-v2.schema.json) | [map-output-v2.example.json](map-output-v2.example.json) · [요청문](map-extract-v2.md) |
+| 포인트(근거) | exam-point-extract/3 | [point-output-v3.schema.json](point-output-v3.schema.json) | [요청문](point-extract-v3.md) |
 | 포인트 | exam-point-extract/2 | [point-output.schema.json](point-output.schema.json) | [point-output.example.json](point-output.example.json) |
 
-두 프롬프트는 실제 UTF-8 JSON 파일과 다운로드 링크를 요구한다. Map은 overview/concepts/relations/notes, 포인트는 points/notes만 수집하며 공통 헤더는 schema_version/title이다. 같은 결과 안에서 고유한 ID를 사용하며 서로의 ID 대응은 후속 대조에서 결정한다. 교수·연도·쪽수 같은 원본 메타데이터는 입력 재고에서 관리하고 결과에서는 source_refs로 실제 위치만 연결한다. 읽지 못한 자료·충돌·중요한 불확실성은 notes에 남긴다. /1 상세 초안은 Git 이력에 보존한다. Map /3(2026-11-08)은 /2에 parent_id와 트리 중심 지시를 더했으며, 계층 검사와 생성 단계의 부모 보존 검사는 `studyez_contracts/learning_links/concept_tree.py`가 맡는다(/2 Map에는 적용하지 않는다).
+두 프롬프트는 실제 UTF-8 JSON 파일과 다운로드 링크를 요구한다. Map은 overview/concepts/relations/notes, 포인트는 points/notes만 수집하며 공통 헤더는 schema_version/title이다. 같은 결과 안에서 고유한 ID를 사용하며 서로의 ID 대응은 후속 대조에서 결정한다. 교수·연도·쪽수 같은 원본 메타데이터는 입력 재고에서 관리하고 결과에서는 source_refs로 실제 위치만 연결한다. 읽지 못한 자료·충돌·중요한 불확실성은 notes에 남긴다. /1 상세 초안은 Git 이력에 보존한다. Map /3(2026-11-08)은 /2에 parent_id와 트리 중심 지시를 더했으며, 계층 검사와 생성 단계의 부모 보존 검사는 `studyez_contracts/learning_links/concept_tree.py`가 맡는다(/2 Map에는 적용하지 않는다). 포인트 /3(2026-11-08)은 포인트마다 중요도 근거(`importance_basis`)와 필기본 프로필을 더한다. 루트 생성이 이 근거로 Tier·importance(은행 3.3)와 목표 3축을 계산한다(`studyez_contracts/bank/importance.py`, [설계](../../../docs/changes/2026-11-08-importance-basis/spec.md)). 병렬 경로와 /2 포인트는 그대로다.
 
 JSON Schema는 타입·필수 필드·근거 위치 형식을 검사한다. 결과 안의 참조·ID 중복·실제 쪽수 범위 등은 추가 검사가 필요하다. 개발 기록의 [verify_formats.py](../../../docs/changes/2026-11-06-map-point-prompts/verify_formats.py)는 합성 입력 재고를 사용해 정상/오류 사례와 프롬프트 내 예시를 검증한다. 관계 종류·방향·조건은 relation 문장으로 표현한다. 관계의 타당성·분류 순환·목표 누락 같은 의미 판단은 원본과 후속 대조에서 확인한다.
 

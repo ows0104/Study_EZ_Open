@@ -7,6 +7,10 @@ never drops a question. Its lines are the p97 tail of the live Quiz Bank, not au
 the constants, not the code. A basic answer has one scoring unit (live Quiz Bank: 99.5%); more than one is
 warned as a wrong format. roots/generation_v2.quality_reasons turns these warnings into question_fix repair
 reasons inside the existing 3-round budget. Tests: tests/quizbank/test_answer_quality.py.
+bank/importance.py (importance-basis/1) scores exam-point-extract/3 point evidence into tier and bank 3.3
+importance (5/4/3/2) and review target axes; roots/generation_v2.project_importance applies it at assembly
+and validate_result recomputes it. Weights are administrator decisions (docs/changes/2026-11-08-importance-basis);
+change them only with a new decision. Tests: tests/contracts/test_importance_basis.py, tests/quizbank/test_importance_projection.py.
 learning_links/ owns the separate v1 connection-review contract and question fingerprints.
 It does not mutate BANK, certify medical judgments, or create learner state. Consumers call
 validate_review with hashes calculated from the actual inputs. Tests: tests/contracts/test_learning_links.py.

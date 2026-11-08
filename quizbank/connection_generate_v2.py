@@ -131,6 +131,9 @@ def run(packet,out,model,invoke):
 
     base={k:packet[k]for k in ('title','scope','conceptMap','points','examDate')}
     base.update(lecture_id=packet['subject']+'/'+packet['runId'],sources=sources,preserved_scope=g.lecture_scope(packet['title'],packet['sources']))
+    # importance-basis/1: tiers come from the exam points' basis (exam-point-extract/3), not from authoring.
+    table=c.importance_table(packet)
+    if table is not None:base['importanceTable']=table
     if packet.get('parallelAuthoring'):base['parallelAuthoring']=True
     if packet.get('authoring')=='web':base['webResponse']=packet['webResponse']
     if packet.get('authoring') == 'web':
@@ -188,6 +191,7 @@ def run(packet,out,model,invoke):
         if schema_errors(bank):raise ValueError('BANK 스키마 오류. 원문을 보존합니다.')
         validation=validate_bank(bank,[s['id']for s in packet['sources']])
         audit=stage(f'source-{n}',{**base,'brief':b,'bank':bank,'clinical_conflicts':authored['clinical_conflicts'],
+            **({'targetImportance':c.target_importance(b,table)}if table is not None else{}),
             'questionFronts':[{'question_id':q['question_id'],'question':normalize_cloze(q)['question'],'options':q['options']}for q in bank['questions']],
             'stimulusFiles':[{'question_id':q['question_id'],'file':'material/stimulus-'+s['sha256']+'.png','sha256':s['sha256']}
                 for q in bank['questions']for s in q.get('stimuli',[])]})
@@ -207,7 +211,7 @@ def run(packet,out,model,invoke):
         else:
             med_ctx={'title':packet['title'],'bank':bank,'clinicalInput':projection}
             medical=stage(f'medical-{n}',med_ctx)
-        reasons=c.repair_reasons(b,bank,audit,medical,validation)
+        reasons=c.repair_reasons(b,bank,audit,medical,validation)+c.point_id_reasons(bank,table)
         # concept-map-extract/3: the Map's parent_id tree must survive in the brief (no-op for /2 Maps).
         hierarchy=concept_tree.hierarchy_findings(b,packet.get('conceptMap'))
         if hierarchy:g.write(out/f'map-hierarchy-{n}.json',{'findings':hierarchy})
@@ -230,9 +234,12 @@ def run(packet,out,model,invoke):
         # Tree maps leave organising concepts without a question of their own; they stay in the review
         # tree, and only their empty plans leave the bank snapshot (exact reviewed bank kept in the proof).
         reviewed_bank=bank;bank,projection=c.project_container_concepts(bank)
-        if projection:validation=validate_bank(bank,[s['id']for s in packet['sources']])
+        importance_proof=None
+        if table is not None:bank,importance_proof=c.project_importance(bank,b,table)
+        if projection or importance_proof:validation=validate_bank(bank,[s['id']for s in packet['sources']])
         doc=c.make_document(b,reviewed_bank,audit,revision=packet['revision'],title=packet['title'],exam_date=packet['examDate'],
-            medical=medical,snapshot=bank if projection else None)
+            medical=medical,snapshot=bank if projection or importance_proof else None,
+            importance=c.target_importance(b,table)if importance_proof else None)
         result={'brief':b,'document':doc,'sourceAudit':audit,'medical':medical,'validation':validation,'manifest':{
             'pipelineVersion':c.POLICY,'inputHash':packet['inputHash'],'briefHash':document_hash(b),'bankHash':document_hash(bank),
             'runtimeHash':fingerprint,'model':codex.model_name(model),'webResponseHash':packet.get('webResponseHash'),
@@ -246,6 +253,7 @@ def run(packet,out,model,invoke):
             **({'medicalRetries':medical_retries}if medical_retries else{}),
             **({'sourceGapRecoveries':source_gap_recoveries}if source_gap_recoveries else{}),
             **({'bankProjection':projection}if projection else{}),
+            **({'importanceProjection':importance_proof}if importance_proof else{}),
             **({'importanceReview':importance}if importance else{}),
             **({'runtimeRevalidations':runtime_revalidations}if runtime_revalidations else{}),
             **({'authoringRecoveryOutput':json.loads((out/'repair-1.raw.json').read_text(encoding='utf-8'))}if rejected else{}),
