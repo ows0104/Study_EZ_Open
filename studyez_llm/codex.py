@@ -48,7 +48,8 @@ def executable() -> str:
     return exe
 
 
-def command(*, model: str, blind: bool, resume: str | None = None) -> list[str]:
+def command(*, model: str, blind: bool, resume: str | None = None,
+            writable: list[Path] | None = None) -> list[str]:
     argv = [executable(), "exec", "--json", "--ignore-user-config", "--ignore-rules",
             "--skip-git-repo-check", "--model", model,
             "--sandbox", "read-only" if blind else "workspace-write"]
@@ -70,6 +71,10 @@ def command(*, model: str, blind: bool, resume: str | None = None) -> list[str]:
         argv += ["--disable", feature]
     if blind:
         argv += ["--ephemeral"]
+    else:
+        # 쓰기 허용은 cwd 하위뿐이다. 쪽 이미지처럼 cwd 밖에 쓸 폴더는 따로 연다.
+        for folder in writable or []:
+            argv += ["--add-dir", str(Path(folder).resolve())]
     if resume:
         argv += ["resume", resume]
     return argv
@@ -132,12 +137,13 @@ def parse_events(stdout: str, *, model: str, blind: bool) -> dict:
 def _run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None = None,
         timeout: int = 1800, label: str = "", resume: str | None = None,
         schema: dict | None = None, system: str | None = None,
-        previous_usage: dict | None = None, images: list[Path] | None = None) -> dict:
+        previous_usage: dict | None = None, images: list[Path] | None = None,
+        writable: list[Path] | None = None) -> dict:
     """가림 실행은 임시 cwd, 저작 실행은 주어진 workspace에서 수행한다."""
     selected = model_name(model)
     if resume and previous_usage is None:
         raise SessionError("Codex 세션 재개에는 이전 응답의 session_usage가 필요하다")
-    argv = command(model=selected, blind=blind, resume=resume)
+    argv = command(model=selected, blind=blind, resume=resume, writable=writable)
     started = time.monotonic()
     with tempfile.TemporaryDirectory(prefix="studyez-codex-", ignore_cleanup_errors=True) as tmp:
         work = Path(tmp) if blind else Path(cwd).resolve()
@@ -185,7 +191,8 @@ def _run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None
 def run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None = None,
         timeout: int = 1800, label: str = '', resume: str | None = None,
         schema: dict | None = None, system: str | None = None,
-        previous_usage: dict | None = None, images: list[Path] | None = None) -> dict:
+        previous_usage: dict | None = None, images: list[Path] | None = None,
+        writable: list[Path] | None = None) -> dict:
     selected = model_name(model)
     started = time.monotonic()
     request = {'cwd': str(Path(cwd).resolve()) if cwd else '', 'model': selected,
@@ -194,7 +201,8 @@ def run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None 
     try:
         with exclusive(request):
             info = _run(prompt, blind=blind, cwd=cwd, model=selected, timeout=timeout, label=label,
-                        resume=resume, schema=schema, system=system, previous_usage=previous_usage,images=images)
+                        resume=resume, schema=schema, system=system, previous_usage=previous_usage,images=images,
+                        writable=writable)
     except AlreadyRunning as cause:
         telemetry.record(status='duplicate-blocked', model=selected, label=label, cwd=cwd,
                          prompt=prompt, seconds=time.monotonic()-started, usage={})

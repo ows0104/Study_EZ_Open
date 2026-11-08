@@ -56,8 +56,13 @@ def run_blind(prompt: str, *, model: str | None = None, timeout: int = 1800,
 
 def run_agent(prompt: str, *, cwd: Path, model: str | None = None,
               timeout: int = 3600, label: str = "", resume: str | None = None,
-              previous_usage: dict | None = None) -> dict:
-    """자료를 읽고 결과 파일을 쓰며, 같은 Codex 세션에서 다음 단계를 이어 간다."""
+              previous_usage: dict | None = None, scratch: Path | None = None) -> dict:
+    """자료를 읽고 결과 파일을 쓰며, 같은 Codex 세션에서 다음 단계를 이어 간다.
+
+    `cwd` 는 결과를 쓰는 폴더다 — Codex는 cwd 하위에만 쓸 수 있다. `scratch` 를 주면
+    PDF 쪽 이미지를 거기에 그린다(쓰기 허용을 따로 연다). 안 주면 cwd 안에 그린다.
+    """
+    pages = Path(scratch).resolve().as_posix() if scratch else "작업폴더 안"
     renderer = Path(__file__).resolve().parents[1] / "studyez_llm" / "pdf.py"
     adapter = (
         "이것은 Study_EZ 자료 생성 작업이다. 프롬프트에서 지정한 자료와 출력 경로를 사용한다.\n"
@@ -66,12 +71,13 @@ def run_agent(prompt: str, *, cwd: Path, model: str | None = None,
         "텍스트 파일은 shell로 UTF-8 전체를 나눠 읽는다. PDF는 텍스트 추출로 대신하지 말고 "
         "아래 Python 도구로 해당 쪽을 PNG로 렌더한 다음 view_image로 빠짐없이 본다.\n"
         f"Python: {sys.executable}\nPDF 도구: {renderer}\n"
-        "명령 인자: <PDF 경로> --pages <1-20 또는 1,3-5> --out <작업폴더 안 PDF별 임시 이미지 폴더>\n"
+        f"명령 인자: <PDF 경로> --pages <1-20 또는 1,3-5> --out <{pages} PDF별 임시 이미지 폴더>\n"
         "쪽 번호는 1부터 센다. 도구가 출력하는 각 이미지 경로를 view_image에 전달한다.\n"
         "최종 JSON은 본문이 지정한 경로에 UTF-8로 쓴다.\n\n"
     )
     return codex.run(adapter + prompt, blind=False, cwd=cwd, model=model,
-                     timeout=timeout, label=label, resume=resume, previous_usage=previous_usage)
+                     timeout=timeout, label=label, resume=resume, previous_usage=previous_usage,
+                     writable=[scratch] if scratch else None)
 
 
 def verify_blind(target: Path, *, model: str | None = None) -> tuple[bool, str]:

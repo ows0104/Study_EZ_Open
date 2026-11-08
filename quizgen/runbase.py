@@ -15,10 +15,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -148,10 +151,21 @@ class BaseRunner:
     def agent(self, prompt: str, label: str, resume: bool = False):
         """빈 세션에 프롬프트를 던지고 비용·토큰을 이번 단계 몫으로 쌓는다."""
         prompt += self.prompt_extra()
-        res = run_agent(prompt, cwd=Path.cwd(), model=self.args.model,
-                        timeout=self.args.timeout, label=label,
-                        resume=self.sid if resume else None,
-                        previous_usage=self.session_usage if resume else None)
+        # Codex는 cwd 하위에만 쓴다. 러너가 어느 폴더(.runtime 설치본 등)에서 돌든
+        # 결과는 이 편의 출력 폴더에 써야 하므로 cwd를 출력 폴더로 둔다.
+        # 쪽 이미지(편마다 100MB 안팎)는 runs/에 남기지 않고 임시 폴더에 그린다.
+        out = self.out.resolve()
+        scratch = Path(tempfile.gettempdir()) / "studyez-pages" / hashlib.sha1(
+            out.as_posix().encode("utf-8")).hexdigest()[:12]
+        scratch.mkdir(parents=True, exist_ok=True)
+        try:
+            res = run_agent(prompt, cwd=out, model=self.args.model,
+                            timeout=self.args.timeout, label=label,
+                            resume=self.sid if resume else None,
+                            previous_usage=self.session_usage if resume else None,
+                            scratch=scratch)
+        finally:
+            shutil.rmtree(scratch, ignore_errors=True)
         self.cost += res.get("cost_usd") or 0.0
         self.pend_cost += res.get("cost_usd") or 0.0
         self.pend_sessions += 1
