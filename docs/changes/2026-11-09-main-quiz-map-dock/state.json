@@ -1,0 +1,204 @@
+{
+  "id": "2026-11-09-main-quiz-map-dock",
+  "title": "Main-Quiz 개념 지도 패널 옆 붙이기·확대 복원",
+  "area": "site",
+  "created_at": "2026-11-08T17:37:00.671738+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-08T17:37:01.013665+00:00",
+      "evidence": "2026-11-09 사용자 채팅: 「뒤에 점점 격자를 없애고 움직이고 확대할 수 있게 하자. 그리고 좌우 공간을 더 써서 사이드 패널이 Map을 안 가리게 하자.」",
+      "scope": "web/src/bank/RootMap.tsx·main-quiz.css, web/tests/root-learning.test.cjs, 변경 기록; 커밋·PR·master 병합. 서버·DB 미변경",
+      "evidence_version": 2,
+      "source_hash": "25966361ed0b97c78f393adff3c3410fcad5132cea8a211ead9668133a8d1139",
+      "plan_hash": "d4f7ea3ec091931d85dd875fd8ae5cc997f2ccc3fa5d9d8258c28063a1136e99",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "6bd3785ac7bc97d90c820733f3785733415d7682100fbebbab60aaccdfca5948"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-08T17:40:18.306045+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "e7217c9f7e2c9bbc5db602d0028abeab376c93339e91f9775a11b35230180153",
+      "plan_hash": "d4f7ea3ec091931d85dd875fd8ae5cc997f2ccc3fa5d9d8258c28063a1136e99",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-map-dock/1794159613148741800-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-08T17:40:31.066441+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 2,
+      "evidence_version": 2,
+      "source_hash": "e7217c9f7e2c9bbc5db602d0028abeab376c93339e91f9775a11b35230180153",
+      "plan_hash": "d4f7ea3ec091931d85dd875fd8ae5cc997f2ccc3fa5d9d8258c28063a1136e99",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-map-dock/1794159618600887200-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-08T17:40:55.185666+00:00",
+      "command": [
+        "C:/Program Files/Git/bin/bash.exe",
+        "C:/Users/ows01/AppData/Local/Temp/claude/2f8c495ebd154c62/0388ffe9-875f-4654-935c-073850089fe6/scratchpad/rootui2.sh",
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.worktrees/main-quiz-map-dock",
+        "2026-11-09-main-quiz-map-dock"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2a419b08fec67a7e1d4c92cfa7e0c36efdf48cb12ef94aac03d86c7962d3925b",
+      "plan_hash": "d4f7ea3ec091931d85dd875fd8ae5cc997f2ccc3fa5d9d8258c28063a1136e99",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-map-dock/1794159631433418500-web.log",
+      "web_artifact": "7a4a1ce6ac21005bb1d6da53d816a15cf91c694c7e61720d3d707bfd21e689f1",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-08T17:41:23.614676+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "2a419b08fec67a7e1d4c92cfa7e0c36efdf48cb12ef94aac03d86c7962d3925b",
+      "plan_hash": "d4f7ea3ec091931d85dd875fd8ae5cc997f2ccc3fa5d9d8258c28063a1136e99",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-map-dock/1794159674127557800-web.log",
+      "web_artifact": "7a4a1ce6ac21005bb1d6da53d816a15cf91c694c7e61720d3d707bfd21e689f1",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": {
+    "at": "2026-11-08T17:41:48.297372+00:00",
+    "summary": "경계: RootMap·main-quiz.css·root-learning 검사. 데이터·buildTree·서버 미변경. 확인: moved 플래그로 '움직이기 전엔 영역 변화에 재맞춤, 뒤엔 유지+고른 노드만 들여오기', 지도 영역 ResizeObserver(재맞춤)와 지도 ResizeObserver(재측정만)로 루프 없음, 끌기 뒤 클릭 억제·도구 클릭은 선택 해제·끌기 제외, 패널은 flex 열이라 겹침 없음. 발견: verify의 종료 코드 2는 prepare-prompts가 bank-prompt.json을 LF로 다시 써 지문이 바뀐 탓. 남은 위험: 패널을 열면 안 움직인 지도는 다시 작아짐(요청대로 가리지 않음 우선).",
+    "evidence_version": 2,
+    "source_hash": "2a419b08fec67a7e1d4c92cfa7e0c36efdf48cb12ef94aac03d86c7962d3925b",
+    "plan_hash": "d4f7ea3ec091931d85dd875fd8ae5cc997f2ccc3fa5d9d8258c28063a1136e99",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-08T17:41:48.467471+00:00"
+}

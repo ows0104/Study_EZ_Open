@@ -54,12 +54,11 @@ test('actual API: no textbox, preserved drafts/retries/conflicts, four ratings, 
    assert.deepEqual(await page.locator('.main-quiz-map').evaluate(m=>[...m.children].filter(c=>!c.classList.contains('sr-only')).map(c=>c.className)),['main-quiz-tree-frame']);
    assert.equal(await page.evaluate(()=>{const f=document.querySelector('.main-quiz-tree-frame').getBoundingClientRect();
      return f.bottom<=innerHeight&&innerHeight-f.bottom<=16&&document.documentElement.scrollHeight<=innerHeight+1;}),true);
-   // The map never moves: no zoom buttons, the wheel does nothing, picking a topic keeps scale and place.
-   assert.equal(await page.getByRole('button',{name:'확대',exact:true}).count(),0);
-   const still=await graph.getAttribute('style');const s=await page.locator('.main-quiz-tree-stage').boundingBox();
-   await page.mouse.move(s.x+s.width/2,s.y+s.height/2);await page.mouse.wheel(0,-400);assert.equal(await graph.getAttribute('style'),still);
+   // The panel sits beside the map, never over it, and the picked topic stays inside the map area.
    await graph.getByRole('button',{name:/^주제 A ·/}).click();await page.getByRole('heading',{name:'A',exact:true}).waitFor();
-   assert.equal(await graph.getAttribute('style'),still);
+   assert.equal(await page.evaluate(()=>{const s=document.querySelector('.main-quiz-tree-stage').getBoundingClientRect(),
+     p=document.querySelector('.main-quiz-tree-panel').getBoundingClientRect(),n=document.querySelector('[data-node="c:A"]').getBoundingClientRect();
+     return (p.left>=s.right-1||p.right<=s.left+1)&&n.left>=s.left&&n.right<=s.right&&n.top>=s.top&&n.bottom<=s.bottom;}),true);
    assert.equal(await graph.getByRole('button',{name:/^주제 A ·/}).getAttribute('aria-expanded'),'true');
    await graph.getByRole('button',{name:/^주제 C ·/}).click();await graph.getByRole('button',{name:/^주제 C ·/}).click();
    assert.equal(await graph.getByRole('button',{name:/^주제 C ·/}).getAttribute('aria-expanded'),'false');
@@ -91,6 +90,11 @@ test('map from start, PDF failure and modal do not block four self-ratings',asyn
    assert.equal(await graph.getByRole('button',{name:/현재 문제$/}).count(),1);
    await graph.getByRole('button',{name:/^주제 D ·/}).click();await graph.getByRole('button',{name:/^문항 Synthetic target 3 ·/}).click();
    await page.getByRole('complementary',{name:'선택한 항목'}).getByRole('heading',{name:'Synthetic target 3'}).waitFor();
+   // Moving and zooming are back: the 확대 button and the wheel change the view.
+   const before=await graph.getAttribute('style');await page.getByRole('button',{name:'확대',exact:true}).click();
+   const zoomed=await graph.getAttribute('style');assert.notEqual(zoomed,before);
+   const s=await page.locator('.main-quiz-tree-stage').boundingBox();await page.mouse.move(s.x+s.width/2,s.y+s.height/2);await page.mouse.wheel(0,-300);
+   assert.notEqual(await graph.getAttribute('style'),zoomed);
    assert.equal(await page.locator('.main-quiz-tree-frame').evaluate(e=>e.getBoundingClientRect().bottom<=innerHeight),true);
    await page.getByRole('button',{name:'← 문제로 돌아가기'}).click();await enabled(page,'답 보기');await page.getByRole('button',{name:/^답 보기/}).click();await allRatings(page);
    await page.getByRole('img',{name:'two-pages.pdf · PDF 2쪽',exact:true}).waitFor();await page.getByRole('button',{name:'two-pages.pdf · PDF 2쪽 크게 보기'}).click();
