@@ -184,3 +184,66 @@ def test_speed_path_context_stage_runs_through_native_files_and_stays_verifiable
     assert 'context-0'in calls and result['manifest']['contextStages']is True
     n.check_file('context-0',out/'.native'/'context-0'/'work')
     n.validate_all(out,result)
+
+
+def image_packet(tmp_path):
+    import fitz
+    from studyez_contracts.roots.automation import packet_hash
+    packet=f.packet();path=tmp_path/'shape.pdf'
+    with fitz.open()as pdf:
+        page=pdf.new_page(width=240,height=240);page.draw_rect(fitz.Rect(20,20,80,80),color=(0,0,1),fill=(0,0,1));pdf.save(path)
+    packet['sources'][0].update(filename=path.name,localPath=str(path),sizeBytes=path.stat().st_size,sha256=n.sha(path));packet['inputHash']=packet_hash(packet)
+    return packet
+
+
+def test_repair_input_holds_authored_questions_not_rendered_images(tmp_path,monkeypatch):
+    """26110901 사슬알균 repair-1: the input bank carried the renderer's `stimuli`; a model that copies unchanged
+    questions verbatim (as told) wrote them back and the authoring schema rejected the whole repair."""
+    packet=image_packet(tmp_path);out=tmp_path/'out';rounds=[]
+    def blind(stage,ctx,*args):return f.model(stage,ctx,*args)
+    monkeypatch.setattr(producer,'call_model',blind)
+    base=provider(out)
+    def run(prompt,**kwargs):
+        work=kwargs['cwd'];stage=work.parent.name;result=base(prompt,**kwargs)
+        path=work/'result.json';value=n.read(path)
+        if stage=='source-0':value['question_reviews'][0]['verdict']='wrong'  # one real finding → repair-1
+        if stage.startswith('repair-'):
+            rounds.append(stage);given={q['question_id']:q for q in n.read(work/'input.json')['bank']['questions']}
+            for q in value['bank']['questions']:  # copy unchanged questions verbatim, as the task instructs
+                if 'stimuli'in given.get(q['question_id'],{}):q['stimuli']=copy.deepcopy(given[q['question_id']]['stimuli'])
+        path.write_text(json.dumps(value,ensure_ascii=False),encoding='utf-8')
+        result['text']=json.dumps({'path':'result.json','sha256':n.sha(path)});return result
+    result=g.run(packet,out,invoke=n.NativeJson(out,invoke=run))
+    assert rounds and result['manifest']['repairRounds']>=1
+    ctx=n.read(out/'repair-1.input.json')
+    assert not any('stimuli'in q for q in ctx['bank']['questions']+ctx['previousAuthoring']['bank']['questions'])
+    assert ctx['previousAuthoring']['visual_stimuli']  # the authored image choice still travels with the repair
+    assert result['document']['bank_snapshot']['questions'][0]['stimuli']  # and the renderer still attaches it
+    n.validate_all(out,result)
+
+
+def test_schema_rejected_first_output_is_also_sent_back_once_into_the_same_session(tmp_path,monkeypatch):
+    """26110901 repair-1: the schema check ran before the follow-up, so a schema-level error skipped it."""
+    packet=f.packet(tmp_path/'source.txt');out=tmp_path/'out';prompts=[]
+    monkeypatch.setattr(producer,'call_model',lambda stage,ctx,material,model:f.model(stage,ctx,material,model))
+    base=provider(out)
+    def run(prompt,**kwargs):
+        work=kwargs['cwd'];stage=work.parent.name;prompts.append((stage,kwargs.get('resume')));path=work/'result.json'
+        if kwargs.get('resume'):  # the follow-up removes the field the schema rejected
+            value=n.read(path)
+            for q in value['bank']['questions']:q.pop('stimuli',None)
+            path.write_text(json.dumps(value,ensure_ascii=False),encoding='utf-8')
+            return {'text':json.dumps({'path':'result.json','sha256':n.sha(path)}),'turns':2,'session_id':kwargs['resume'],
+                    'usage':{'input_tokens':7,'output_tokens':3,'cache_read_input_tokens':0,'cache_creation_input_tokens':0},
+                    'models':{kwargs['model']:3},'cost_usd':None,'duration_ms':2}
+        result=base(prompt,**kwargs)
+        if stage=='generate':
+            value=n.read(path);value['bank']['questions'][0]['stimuli']=[{'source_id':'S1'}]
+            path.write_text(json.dumps(value,ensure_ascii=False),encoding='utf-8')
+            result['text']=json.dumps({'path':'result.json','sha256':n.sha(path)})
+        return result
+    native=n.NativeJson(out,invoke=run);native.followups=True
+    result=g.run(packet,out,invoke=native)
+    assert ('generate','synthetic-native')in prompts and sum(1 for s,r in prompts if r)==1
+    assert 'stimuli'in n.read(out/'.native/generate/check-failure.json')['error']
+    n.validate_all(out,result)

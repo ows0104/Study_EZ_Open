@@ -8,7 +8,7 @@ ROOT="$(cd "$HERE/../../.." && pwd)"
 MAIN="$(cd "$ROOT/../.." && pwd)"
 PY="$MAIN/.venv/Scripts/python.exe"
 OUT="$MAIN/runs/_e2e/26110901"
-GEN="$OUT/generation"
+GEN="$OUT/${GEN_DIR:-generation}"
 export PYTHONIOENCODING=utf-8
 cd "$ROOT"
 step() { echo; echo "=== $(date '+%H:%M:%S') $*"; }

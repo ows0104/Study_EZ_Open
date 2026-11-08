@@ -270,14 +270,17 @@ class NativeJson:
             require(inventory(material)==source_inventory==inventory(work/'material'),'Model changed original material')
             receipt=loads(result['text']);body,value=artifact(work,receipt)
             (seat/'output.json').write_bytes(body)
-            raw,projection=decode_for(stage,value,schema);jsonschema.validate(raw,schema)
+            raw,projection=decode_for(stage,value,schema)
             first_output=receipt['sha256'];first_result=result
             # The model is asked to run check_result.py; enforce it. On failure, send the exact error back
             # once into the same session (format/structure only; findings stay the model's). 2026-11-08.
             # The adapter never rejects: the orchestrator's acceptance still decides, with the receipt kept.
+            # check_file includes the schema; a schema error is sent back too (26110901 repair-1 skipped it).
+            followups=self.invoke is None or getattr(self,'followups',False)
+            if not followups:jsonschema.validate(raw,schema)
             try:check_file(stage,work);error=None
             except Exception as failed:error=failed
-            if error is not None and(self.invoke is None or getattr(self,'followups',False)):
+            if error is not None and followups:
                 (seat/'check-failure.json').write_text(json.dumps({'error':str(error)[:4000],'outputSha256':first_output},ensure_ascii=False),encoding='utf-8')
                 followup=(self.invoke or g.codex.run)(FOLLOWUP.format(error=str(error)[:4000]),
                     blind=False,cwd=work,model=g.codex.model_name(model),timeout=self.timeout,
