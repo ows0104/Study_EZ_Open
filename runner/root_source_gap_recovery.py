@@ -1,4 +1,5 @@
-"""Explicit recovery of one completed source review rejected only for a mixed required_gap.
+"""Explicit recovery of one completed source review rejected only for a mixed required_gap
+or a relation claimed twice in one question review (generation_v2.normalize_source_review).
 
 The reviewer listed optional directions inside a required_gap (2026-11-08, 261104_02 source-0).
 The model's raw review, input and usage stay byte-identical. The original rejection is reproduced
@@ -21,7 +22,7 @@ from . import root_native_json as n
 
 JOURNAL = 'source-gap.recovery.json'
 ARCHIVE = '.source-gap-recovery'
-CAUSE = 'required gaps must reference required directions'
+CAUSES = ('required gaps must reference required directions', 'relation_id: duplicate')
 
 
 def recover(packet, out, *, stage, expected_identity, reason, model=None):
@@ -36,9 +37,11 @@ def _recover(packet, out, *, stage, expected_identity, reason, model=None):
     n.require(packet_hash(packet) == packet['inputHash'] and packet.get('sourceAssessmentFormat') == c.VERSION
               and old['identity'] == expected_identity and old.get('pipelineVersion') == c.POLICY,
               'Different source gap recovery input/runtime')
+    historical = ({'generate'} if old.get('authoringRecoveries')
+                  and old['authoringRecoveries'][0]['proof'].get('mode') == 'brief-repair' else set())
     n.require(stage in ('source-0', 'source-1', 'source-2', 'source-3') and stage in old['stages']
               and old['stages'][stage]['status'] == 'failed'
-              and [k for k, v in old['stages'].items() if v['status'] == 'failed'] == [stage]
+              and [k for k, v in old['stages'].items() if v['status'] == 'failed' and k not in historical] == [stage]
               and all(v['status'] in ('completed', 'failed', 'blocked') for v in old['stages'].values())
               and not old.get('sourceGapRecoveries')
               and not (out / JOURNAL).exists() and not (out / ARCHIVE).exists()
@@ -62,13 +65,14 @@ def _recover(packet, out, *, stage, expected_identity, reason, model=None):
         rejection = None
     except Exception as error:  # the reproduced original rejection
         rejection = str(error)
-    n.require(rejection is not None and CAUSE in rejection, 'The original review is not rejected for a mixed required_gap')
-    fixed, splits = c.split_required_gaps(brief, raw)
-    n.require(splits, 'No mixed required_gap to split')
+    n.require(rejection is not None and any(cause in rejection for cause in CAUSES),
+              'The original review is not rejected for a mixed required_gap or a duplicate relation claim')
+    fixed, splits, merges = c.normalize_source_review(brief, raw)
+    n.require(splits or merges, 'Nothing to normalise')
     jsonschema.validate(fixed['assessment'], c.source_schema(brief, bank))
     accepted = c.compile_assessment(brief, bank, fixed)
     for name, other in old['stages'].items():
-        if name == stage or other['status'] == 'blocked':
+        if name == stage or other['status'] == 'blocked' or name in historical:
             continue
         n.require(document_hash(n.read(out / (name + '.input.json'))) == other['inputHash']
                   and document_hash(n.read(out / (name + '.raw.json'))) == other['rawOutputHash']
@@ -76,7 +80,7 @@ def _recover(packet, out, *, stage, expected_identity, reason, model=None):
     current = g.identity(packet, model)
     proof = {'priorLedger': old, 'priorLedgerHash': document_hash(old), 'packetHash': packet['inputHash'],
              'currentRuntimeHash': current, 'reason': reason, 'stage': stage, 'rejection': rejection,
-             'brief': brief, 'originalRaw': raw, 'splits': splits, 'toolSha256': n.sha(__file__), 'modelReplay': False}
+             'brief': brief, 'originalRaw': raw, 'splits': splits, 'merges': merges, 'toolSha256': n.sha(__file__), 'modelReplay': False}
     row = {'proof': proof, 'proofHash': document_hash(proof)}
     updated = copy.deepcopy(old)
     updated.update(identity=current, sourceGapRecoveries=[row])
@@ -91,7 +95,7 @@ def _recover(packet, out, *, stage, expected_identity, reason, model=None):
     g.write(out / JOURNAL, row)
     g.write(out / (stage + '.json'), accepted)
     g.write(out / 'ledger.json', updated)
-    return {'stage': stage, 'rejection': rejection, 'splits': splits, 'repairRounds': old['repairRounds'],
+    return {'stage': stage, 'rejection': rejection, 'splits': splits, 'merges': merges, 'repairRounds': old['repairRounds'],
             'modelCalls': 0, 'proofHash': row['proofHash'], 'identity': current}
 
 

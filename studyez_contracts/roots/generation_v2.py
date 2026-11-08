@@ -449,6 +449,36 @@ def split_required_gaps(brief,raw):
     return fixed,splits
 
 
+def merge_duplicate_claims(raw):
+    """One relation claimed twice in one question review is merged with the least credit.
+
+    261104_02 26110803 source-2: Q026 claimed R026 as both `tested` and `provided`. If any claim
+    is provided/explanation the merged claim is that role without directions (no tested credit);
+    if all are tested their directions are united. Reasons are kept in order."""
+    fixed=copy.deepcopy(raw);merges=[]
+    for review in fixed['assessment']['question_reviews']:
+        seen={}
+        for claim in review['relations']:seen.setdefault(claim['relation_id'],[]).append(claim)
+        if all(len(v)==1 for v in seen.values()):continue
+        rows=[]
+        for rid,claims in seen.items():
+            if len(claims)==1:rows.append(claims[0]);continue
+            roles=[c['role']for c in claims]
+            role=next((r for r in ('provided','explanation')if r in roles),'tested')
+            dirs=[]if role!='tested'else list(dict.fromkeys(d for c in claims for d in c['direction_ids']))
+            rows.append({'relation_id':rid,'role':role,'direction_ids':dirs,'reason':' / '.join(c['reason']for c in claims)})
+            merges.append({'question_id':review['question_id'],'relation_id':rid,'roles':roles,'role':role})
+        review['relations']=rows
+    return fixed,merges
+
+
+def normalize_source_review(brief,raw):
+    """All deterministic source-review normalisations: required_gap split, then duplicate-claim merge."""
+    fixed,splits=split_required_gaps(brief,raw)
+    fixed,merges=merge_duplicate_claims(fixed)
+    return fixed,splits,merges
+
+
 def _source_gap_rows(meta):
     return {row['proof']['stage']:row for row in meta.get('sourceGapRecoveries',[])}
 
@@ -456,7 +486,7 @@ def _source_gap_rows(meta):
 def accepted_source_raw_hash(meta,name):
     """The raw review a source stage was accepted with: the model's own, or its recorded gap split."""
     row=_source_gap_rows(meta).get(name)
-    return document_hash(split_required_gaps(row['proof']['brief'],row['proof']['originalRaw'])[0])if row else None
+    return document_hash(normalize_source_review(row['proof']['brief'],row['proof']['originalRaw'])[0])if row else None
 
 
 def validate_source_gap_recoveries(meta,stages):
@@ -470,7 +500,7 @@ def validate_source_gap_recoveries(meta,stages):
         require(type(row)is dict and set(row)=={'proof','proofHash'}and type(row['proof'])is dict
             and row['proofHash']==document_hash(row['proof']),'result2: changed source gap recovery proof')
         p=row['proof']
-        require(set(p)=={'priorLedger','priorLedgerHash','packetHash','currentRuntimeHash','reason','stage','rejection',
+        require(set(p)-{'merges'}=={'priorLedger','priorLedgerHash','packetHash','currentRuntimeHash','reason','stage','rejection',
             'brief','originalRaw','splits','toolSha256','modelReplay'},'result2: malformed source gap recovery')
         old=p['priorLedger'];name=p['stage']
         require(type(old)is dict and type(old.get('stages'))is dict and old.get('pipelineVersion')==POLICY
@@ -481,12 +511,14 @@ def validate_source_gap_recoveries(meta,stages):
         require(type(name)is str and re.fullmatch(r'source-[0-3]',name)and p['packetHash']==meta['inputHash']
             and p['currentRuntimeHash']==gap_runtime and p['modelReplay']is False
             and type(p['reason'])is str and p['reason'].strip()and type(p['rejection'])is str
-            and 'required gaps must reference required directions'in p['rejection']
+            and ('required gaps must reference required directions'in p['rejection']or'relation_id: duplicate'in p['rejection'])
             and type(p['toolSha256'])is str and re.fullmatch(r'[a-f0-9]{64}',p['toolSha256']),
             'result2: changed source gap recovery identity')
         prior=old['stages'];entry=prior.get(name,{})
+        # A brief-repair authoring recovery keeps its rejected first `generate` as a failed stage.
+        historical={'generate'}if old.get('authoringRecoveries')and old['authoringRecoveries'][0]['proof'].get('mode')=='brief-repair'else set()
         require(all(type(v)is dict for v in prior.values())and entry.get('status')=='failed'
-            and [k for k,v in prior.items()if v['status']=='failed']==[name]and set(prior)<=set(stages),
+            and [k for k,v in prior.items()if v['status']=='failed'and k not in historical]==[name]and set(prior)<=set(stages),
             'result2: source gap recovery was not one failed source review')
         require(type(old.get('repairRounds'))is int and old['repairRounds']<=meta['repairRounds']<=3,'result2: source gap recovery reset budget')
         for k,v in prior.items():
@@ -495,8 +527,8 @@ def validate_source_gap_recoveries(meta,stages):
         author=f"repair-{name.split('-')[1]}"if name!='source-0'else'generate'
         require(document_hash(raw)==entry['rawOutputHash']and raw['briefHash']==document_hash(brief)
             and stages[author]['briefHash']==document_hash(brief),'result2: source gap recovery reviewed another brief')
-        fixed,splits=split_required_gaps(brief,raw)
-        require(splits and splits==p['splits'],'result2: source gap split is not the deterministic one')
+        fixed,splits,merges=normalize_source_review(brief,raw)
+        require((splits or merges)and splits==p['splits']and merges==p.get('merges',[]),'result2: source review normalisation is not the deterministic one')
         current=stages[name]
         require(current['status']=='completed'and all(current[k]==entry[k]for k in ('inputHash','rawOutputHash','usageHash')),
             'result2: source gap recovery changed the original call')
@@ -561,7 +593,9 @@ def validate_authoring_recoveries(meta,stages):
                 'result2: changed prior authoring ledger')
         require(not old.get('authoringRecoveries')and not old.get('normalizationRecoveries'),
                 'result2: repeated or mixed authoring recovery')
-        origin_runtime=meta['formatRecoveries'][0]['proof']['priorLedger']['identity']if meta.get('formatRecoveries')else meta['runtimeHash']
+        origin_runtime=(meta['formatRecoveries'][0]['proof']['priorLedger']['identity']if meta.get('formatRecoveries')
+            else meta['sourceGapRecoveries'][0]['proof']['priorLedger']['identity']if meta.get('sourceGapRecoveries')
+            and meta['sourceGapRecoveries'][0]['proof']['priorLedger'].get('authoringRecoveries')else meta['runtimeHash'])
         require(p['packetHash']==meta['inputHash']and p['currentRuntimeHash']==origin_runtime
             and p['modelReplay']is False and type(p['reason'])is str and p['reason'].strip(),
             'result2: changed authoring recovery identity')

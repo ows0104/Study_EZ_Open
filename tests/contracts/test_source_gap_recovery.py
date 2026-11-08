@@ -84,3 +84,19 @@ def test_recovery_proof_is_accepted_and_tampering_is_rejected():
     broken(lambda m, s: s['source-0'].update(rawOutputHash='6' * 64))                    # model output replaced
     broken(lambda m, s: s['generate'].update(briefHash='6' * 64))                        # another brief
     broken(lambda m, s: m['sourceGapRecoveries'][0]['proof'].update(rejection='other failure'))
+
+
+def test_a_relation_claimed_twice_in_one_review_merges_with_the_least_credit():
+    """26110803 source-2: Q026 claimed R026 as tested and as provided."""
+    b, bank, raw = case(); issues(raw).clear()
+    review = raw['assessment']['question_reviews'][0]
+    first = copy.deepcopy(review['relations'][0])
+    review['relations'].append({**first, 'role': 'provided', 'direction_ids': [], 'reason': 'given in the stem'})
+    with pytest.raises(ValueError, match='relation_id: duplicate'):
+        c.compile_assessment(b, bank, raw)
+    fixed, splits, merges = c.normalize_source_review(b, raw)
+    assert splits == [] and merges == [{'question_id': review['question_id'], 'relation_id': first['relation_id'],
+                                        'roles': [first['role'], 'provided'], 'role': 'provided'}]
+    merged = [r for r in fixed['assessment']['question_reviews'][0]['relations'] if r['relation_id'] == first['relation_id']]
+    assert len(merged) == 1 and merged[0]['direction_ids'] == [] and 'given in the stem' in merged[0]['reason']
+    assert c.merge_duplicate_claims(fixed)[1] == []
