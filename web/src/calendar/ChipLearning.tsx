@@ -1,4 +1,5 @@
 import type { LectureRef } from "../types/lectures";
+import { rootRate, useRootCatalog, type RootCatalog } from "../bank/useRootCatalog";
 import { prequizDone } from "./entries";
 
 /**
@@ -18,8 +19,14 @@ const labels = {
 
 type Review = { score: number | null; description: string };
 
-function reviewFor(lecture: LectureRef): Review {
+function reviewFor(lecture: LectureRef, roots?: RootCatalog): Review {
   if (lecture.studyLoaded === false) return { score: null, description: "복습: 학습률 불러오는 중" };
+  // Main-Quiz만 있는 강의: 회상 가능 목표 비율. 요약을 아직 못 받았으면 0%로 열어 둔다(강의 목록과 같은 정의).
+  if (!lecture.marks.quiz && lecture.marks.mainQuiz) {
+    const summary = roots?.get(`${lecture.subject}/${lecture.runId}`);
+    const score = rootRate(summary) ?? 0;
+    return { score, description: summary ? `Main-Quiz 학습률 ${score}% · 회상 가능 ${summary.recalled}/${summary.total}` : `Main-Quiz 학습률 ${score}%` };
+  }
   if (!lecture.marks.quiz) return { score: null, description: "복습: 측정할 웹 문항 없음" };
   const value = lecture.mastery;
   if (value === undefined) return { score: null, description: "복습: 학습도 정보 없음" };
@@ -35,8 +42,8 @@ function preFor(lecture: LectureRef) {
   return prequizDone(lecture) ? "예습 퀴즈 완료" : `예습 퀴즈 ${Math.min(progress.answered, progress.total)}/${progress.total}`;
 }
 
-export function learningDescription(lecture: LectureRef) {
-  return `${lecture.title}: ${preFor(lecture)} · ${reviewFor(lecture).description}`;
+export function learningDescription(lecture: LectureRef, roots?: RootCatalog) {
+  return `${lecture.title}: ${preFor(lecture)} · ${reviewFor(lecture, roots).description}`;
 }
 
 /** 채울수록 옅어지는 복습 막대. 채움 색 = 메인 색을 (100 − 학습률×62)%만큼 섞는다. */
@@ -51,9 +58,10 @@ export function ReviewMeter({ score, className = "" }: { score: number | null; c
 }
 
 export function ChipLearning({ lectures }: { lectures: LectureRef[] }) {
+  const roots = useRootCatalog(lectures.some(l => l.marks.mainQuiz && !l.marks.quiz));
   if (!lectures.length) return null;
-  const reviews = lectures.map(reviewFor);
-  const description = lectures.map(learningDescription).join(" · ");
+  const reviews = lectures.map(l => reviewFor(l, roots));
+  const description = lectures.map(l => learningDescription(l, roots)).join(" · ");
   const preOpen = lectures.some(l => l.marks.prequiz);
   const preDone = lectures.every(l => !l.marks.prequiz || prequizDone(l)) && preOpen;
   const single = lectures.length === 1 ? reviews[0] : null;

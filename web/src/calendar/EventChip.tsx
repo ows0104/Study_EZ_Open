@@ -1,4 +1,5 @@
 import { ChipLearning, learningDescription } from "./ChipLearning";
+import { useRootCatalog } from "../bank/useRootCatalog";
 import { prequizDone, toDateKey, type CalendarEntry } from "./entries";
 import { splitSubject, type DisplayInfo } from "./kinds";
 import { ProfTag, professorDescription } from "./ProfessorInfo";
@@ -32,7 +33,8 @@ export function EventChip({
   const sources = entry.lectures.map(lecture => lecture.previewSource);
   const professorInfo = sources.flatMap(source => (source ? [professorDescription(source)] : [])).join("\n");
   const hasLearning = showLearning && entry.lectures.length > 0;
-  const learning = showLearning ? entry.lectures.map(learningDescription).filter(Boolean).join(" · ") : "";
+  const roots = useRootCatalog(Boolean(showLearning) && entry.lectures.some(l => l.marks.mainQuiz && !l.marks.quiz));
+  const learning = showLearning ? entry.lectures.map(l => learningDescription(l, roots)).filter(Boolean).join(" · ") : "";
   // 예습 퀴즈가 올라왔는데 아직 끝내지 않은 오늘·이후 강의에만 작은 예습 색 점.
   const todo = entry.date >= toDateKey(new Date())
     && entry.lectures.some(l => l.studyLoaded !== false && l.marks.prequiz && !prequizDone(l));
