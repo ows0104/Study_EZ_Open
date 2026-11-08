@@ -24,7 +24,6 @@
 
 
 | P1 | Main-Quiz 문제 퀄리티 — 검사기에 측정 추가(구조 단서-정답 상관·정답 회상 부담·형식 쏠림) | ows0104 / Claude 문제 퀄리티 세션 | claude/bank-quality-checks | studyez_contracts/bank/quality.py, tests/quizbank/test_answer_quality.py(새 파일), docs/changes/2026-11-08-bank-quality-checks | 2026-11-08 | 사용자 2026-11-08 진단 뒤 「검사기에 측정 추가」 선택. 근거: 감염과 면역 261104_02 98문항 중 예/아니오 축 6문항 정답이 전부 부정, basic/list 답 60자 초과 21개, cloze·mcq 0개. 기존 품질 검사는 leaked_units(발문 정답 노출) 하나뿐. errors 아님 — warnings만 추가해 문항을 떨어뜨리지 않고 repair 단계·관리자 issues에 보인다. 선은 운영 Quiz Bank 35편 3,103문항의 p97에서 쟀다. 프롬프트·DB·운영 미변경. 구현·검사 완료 eff75a83 PR #22 https://github.com/ows0104/Study_EZ_Open/pull/22 — 측정 16·contracts·quizbank 720 통과, 전체 pytest 2,098 통과(1 실패는 tests/runner/test_desktop_control.py 바로가기 설치기로 pristine origin/master에서 동일 재현·미수정), 서버 bank 33·경로 171 동일·retention 통과, map_numbers 정상. 실물 대조: 새 Main-Quiz 98문항 errors 0·warnings 36(다섯 측정 모두, Q003·Q080 이름으로), 운영 은행 35편 새 경고 62(편당 중앙 2)·errors 증가 0. master 병합은 사용자 승인 대기 |
-| P1 | Main-Quiz 개념 지도를 「가지 보기」로: 화면 전체를 쓰고 클릭 없이 강의→최상위 가지(열)→하위 개념이 위에서 아래로 다 보이게. 문항은 개념 줄의 학습 상태 점, 누르면 계통·연결선·옆 패널. 프로토타입 etc/infection-path1-concept-map.html(로컬, 미추적) | ows0104 / Claude 개념 지도 세션 | claude/main-quiz-lane-map | web/src/bank/(RootMap·rootMapTree·main-quiz.css), web/tests/(root-learning·main-quiz-map-tree), docs/changes/2026-11-09-main-quiz-lane-map. RootLearning·GuidePage·서버·DB 미변경 | 2026-11-09 | 사용자 2026-11-09 「가지 보기로」 선택. 구현·검사 완료 b94f1965 PR [#49](https://github.com/ows0104/Study_EZ_Open/pull/49) — typecheck·build 0, map-tree 4/4, root-ui 4/4, 감염병리1 실데이터 1600×900 64노드 모두 틀 안(배율 0.66). CI·병합 대기. 후속: GuidePage 지도 안내 문구(UI 개편 행 범위) |
 
 
 
@@ -62,6 +61,7 @@ merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 �
 
 | 완료일 | 작업 | 작업자 | PR |
 |---|---|---|---|
+| 2026-11-09 | Main-Quiz 개념 지도 「가지 보기」: 강의 → 최상위 주제 열 → 하위 주제 위→아래, 접힘 없이 한 화면, 문항은 상태 점, 누르면 문항 줄·계통·연결선·패널, 760px 미만 세로 목록. web만(RootMap·rootMapTree·main-quiz.css·검사 2). 병합 7e7304bb, Test and deploy 42500938223 성공, health revision 7e7304bb, Pages RootLearning 청크 mq-lane 17·「모두 펼치기」 0·CSS 확인. 남은 것: 문항 없는/보조 개념 13개가 트리에서 빠짐(buildTree 규칙) — 수정 제안 중, GuidePage 지도 안내 문구(UI 개편 행 범위) | ows0104 / Claude 개념 지도 세션 | [#49](https://github.com/ows0104/Study_EZ_Open/pull/49) |
 | 2026-11-09 | Main-Quiz 근거 변경 기록 정정: 모델 호출은 처음부터 OpenAI Codex CLI(`studyez_llm.codex`), `claude -p`가 아니었다. 문서만 | ows0104 / Claude 쪽 파서 세션 | [#48](https://github.com/ows0104/Study_EZ_Open/pull/48) |
 | 2026-11-09 | 예습 must_know.json 미생성 수정: 러너가 .runtime 설치본에서 돌며 Codex 쓰기 범위가 설치 폴더로 잡혀 runs/에 못 쓰던 것. 저작 세션 cwd=편 출력 폴더, 쪽 이미지는 임시 폴더(--add-dir). 새 검사 3(수정 전 실패)·570 통과·실제 Codex 쓰기 확인, PR CI 통과, 사용자 병합 07f4e3cb. 러너 설치본 main-quiz-07f4e3cb4b59로 재설치·재시작(옛 설치본 보존). 261109_01·03·05 재생성 완료(14·12·16장), 261109_02는 OpenAI 생물 콘텐츠 제한 거절로 실패(경로 문제와 별개) | ows0104 / Claude 예습 실패 점검 세션 | [#46](https://github.com/ows0104/Study_EZ_Open/pull/46) |
 | 2026-11-09 | Main-Quiz 근거를 Quiz Bank 수준으로: 족보 지면(연도·번호)·족보 핵심·핵심 슬라이드 선택·근거 상태, 자료 충돌·EXT를 검토 기록에 통합. 병합 2a314648·API·Pages 배포 확인. 감염병리1 map-tree-26110803 근거 JSON 업로드(root_evidence) — 운영 읽기 확인: 핵심 75/79·족보 14·족보 핵심 2·상태 4. 이후 판은 러너가 게시 직후 자동(새 코드 러너부터) | ows0104 / Claude 쪽 파서 세션 | [#47](https://github.com/ows0104/Study_EZ_Open/pull/47) |
