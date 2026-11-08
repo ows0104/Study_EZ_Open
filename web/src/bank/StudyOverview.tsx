@@ -15,10 +15,13 @@ import { QuizPublicationCell } from "./QuizPublicationCell";
 import { currentStudyBlock, studyBlockKey, studyBlockNames, studyCourseOf } from "./studyBlocks";
 import { useStudyCourse } from "./useStudyCourse";
 import "./overview.css";
-import { RootOverviewPanel } from "./RootLearning";
+import { useRootCatalog } from "./RootLearning";
+import type { RootOverview } from "../types/rootLearning";
 
 export type StudyLecture = Pick<LectureRef, "subject" | "runId" | "title" | "bankTimeline" | "mastery" | "cardProgress" | "studyLoaded"> & {
   date: string; course: string; ready: boolean; key: string; eventKey?: string;
+  /** 모아풀기에 섞을 수 있는가(Quiz Bank). Main-Quiz만 있는 강의는 열리지만 섞이지 않는다. */
+  batch?: boolean; mainQuiz?: boolean;
   /** 화면 계산값(2026-11 개편). DB에는 없다. */
   startTime?: string; kind?: DisplayKind; code?: string; professor?: string; field?: string;
   sources?: (PreviewSource | null | undefined)[];
@@ -40,12 +43,13 @@ function lectureRows(events: TimetableEvent[]): StudyLecture[] {
       // 캘린더 칸과 같은 제목: 한 칸에 강의 하나면 시간표 세부에서 분야 머리(「감염학)」)를 뗀 제목을 쓴다.
       const title = event.lectures.length === 1 ? split.title || l.title : l.title;
       if (!rows.has(key)) rows.set(key, { ...l, ...shown, title, sources: [l.previewSource], key, eventKey: `event:${event.id}`,
-        date: event.date, course, ready: l.marks.quiz });
+        date: event.date, course, ready: l.marks.quiz || Boolean(l.marks.mainQuiz), batch: l.marks.quiz,
+        mainQuiz: Boolean(l.marks.mainQuiz) });
     }
     if (!event.lectures.length && ["lecture", "practice"].includes(event.category)) {
       const key = `event:${event.id}`;
       rows.set(key, { ...shown, sources: [], key, subject: event.course, course, runId: "", title: split.title || event.title,
-        date: event.date, ready: false });
+        date: event.date, ready: false, batch: false });
     }
   }
   return [...rows.values()].sort((a, b) => a.date.localeCompare(b.date)
@@ -109,6 +113,22 @@ function Check({ checked, label, disabled, onChange }: { checked: boolean; label
     disabled={disabled} onClick={e => { e.stopPropagation(); onChange(!checked); }}>{checked ? <Icon.check /> : null}</button>;
 }
 
+/**
+ * Main-Quiz만 있는 강의의 칸. 카드 네 단계가 아니라 학습 목표로 센다 — 같은 줄에 섞으면
+ * 「미열람」이 목표 수인지 카드 수인지 읽을 수 없다. 학습률 칸은 회상 가능 비율.
+ */
+function MainQuizCells({ summary }: { summary?: RootOverview["summary"] }) {
+  const rate = summary && summary.total ? Math.round(summary.recalled / summary.total * 100) : null;
+  return <>
+    <span role="cell" className="list-main-quiz">
+      <b>Main-Quiz</b>
+      {summary ? <span>첫 학습 {number(summary.learned)}/{number(summary.total)} · 회상 가능 {number(summary.recalled)}</span> : null}
+      {summary && summary.total ? <i className="list-main-bar" aria-hidden="true"><i style={{ width: `${summary.learned / summary.total * 100}%` }} /></i> : null}
+    </span>
+    <span role="cell" className={`is-num rate-text ${rate === null ? "is-closed" : rateBand(rate)}`}>{rate === null ? "—" : `${rate}%`}</span>
+  </>;
+}
+
 /** 강의 목록: 블럭의 모든 강의와 카드 단계, 골라서 모아풀기. */
 export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], onVisibility, managing = false, onDeleteQuiz, onScope }: {
   events: TimetableEvent[]; onStart: (lectures: StudyLecture[]) => void;
@@ -118,6 +138,7 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
   onScope?: (keys: string) => void;
 }) {
   const isAdmin = Boolean(useMe()?.isAdmin);
+  const roots = useRootCatalog();
   const navigate = useNavigate();
   const rows = useMemo(() => lectureRows(events), [events]);
   const [course, setCourse] = useStudyCourse(events);
@@ -159,7 +180,7 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
   const score = assessed.length ? Math.round(assessed.reduce((sum, l) => sum + l.mastery!.score, 0) / assessed.length) : null;
   const display = (value: number) => loading ? "—" : number(value);
 
-  const selectable = scoped.filter(l => l.ready);
+  const selectable = scoped.filter(l => l.batch);
   const chosen = selectable.filter(l => selected.has(l.key));
   const allPicked = selectable.length > 0 && selectable.every(l => selected.has(l.key));
   const pickedDue = chosen.reduce((sum, l) => sum + (l.cardProgress?.reviewDue ?? 0), 0);
@@ -232,7 +253,7 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
             return <div key={l.key} role="row" onClick={() => { if (href) navigate(href); }}
               className={`list-row${picked ? " is-picked" : ""}${closed ? " is-closed" : ""}${href ? " is-link" : ""}`}>
               <span role="cell" onClick={e => e.stopPropagation()}>
-                {l.ready ? <Check checked={picked} label={`${l.title} 선택`} disabled={managing}
+                {l.batch ? <Check checked={picked} label={`${l.title} 선택`} disabled={managing}
                   onChange={checked => toggle(setSelected, [l.key], checked)} /> : null}
               </span>
               <span role="cell" className="list-code">{l.code}</span>
@@ -245,7 +266,8 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
                 <span role="cell" className="is-num">—</span>
                 {stages.map(([key]) => <span role="cell" key={key} className="is-num is-stage">—</span>)}
                 <span role="cell" className="is-num">—</span><span role="cell" className="is-num rate-text is-closed">—</span>
-              </> : p ? <>
+              </> : l.mainQuiz && !p ? <MainQuizCells summary={roots.get(l.key)} />
+              : p ? <>
                 <span role="cell" className="is-num"><Num value={p.total} /></span>
                 {stages.map(([key]) => <span role="cell" key={key} className={`is-num is-stage stage-text-${key}`}><Num value={p[key]} /></span>)}
                 <span role="cell" className={`is-num list-due${p.reviewDue ? " is-on" : ""}`}><Num value={p.reviewDue} /></span>
@@ -328,7 +350,6 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
           <summary>시험까지 · 오늘의 목표</summary>{showPlan ? <StudyPlanBoard /> : null}
         </details>
       </> : null}
-      <RootOverviewPanel lectureKeys={scoped.map(l => l.key)} />
     </details>
   </section>;
 }

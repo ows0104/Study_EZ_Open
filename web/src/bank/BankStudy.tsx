@@ -12,6 +12,7 @@ import { ConnectionEntry } from "./ConnectionLearning";
 import { BankSolve } from "./BankSolve";
 import { useBankUndo } from "./useBankUndo";
 import { useMainQuizEntry } from './useMainQuizEntry';
+import { useSolvingChrome } from '../shell/studyChrome';
 
 /**
  * Main Quiz 공통 진입. 검토·공개·계정 범위를 통과한 새 자료를 우선한다.
@@ -27,7 +28,7 @@ export function BankStudyPage() {
   const {entry,error}=useMainQuizEntry(subject,runId,!legacy);
   if(legacy)return <LegacyBankStudyPage key={scope}/>;
   if(error)return <p role="alert" className="notice is-error">{error}</p>;
-  if(!entry)return <p className="notice">Main Quiz를 준비하고 있습니다…</p>;
+  if(!entry)return <p className="notice" role="status">Main-Quiz를 불러오는 중…</p>;
   return entry.mode==='structured'?<RootLearningPage/>:<LegacyBankStudyPage key={scope}/>;
 }
 
@@ -43,6 +44,7 @@ function LegacyBankStudyPage() {
   const admin = useMe()?.isAdmin;
   const restore = useCallback(() => { setFinished(null); setSolving(true); }, []);
   const { undo, undoBusy } = useBankUndo(base, info?.undoToken, restore, setUndoError, solving);
+  useSolvingChrome(solving);
 
   const load = useCallback(() => {
     api<BankRead>(base)

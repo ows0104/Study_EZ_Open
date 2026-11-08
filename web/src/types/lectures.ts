@@ -50,6 +50,8 @@ export type Marks = {
   prequiz: boolean;
   notesCurrent: boolean;
   quiz: boolean;
+  /** 검토·공개된 Main-Quiz(뿌리 학습). 구 API에는 없다. 모아풀기는 `quiz`(Quiz Bank)만 섞는다. */
+  mainQuiz?: boolean;
 };
 
 /**

@@ -23,6 +23,22 @@ def globally_enabled():
     return os.getenv('STUDYEZ_ROOT_LEARNING_ENABLED', '').lower() == 'true'
 
 
+def published_for(db, keys, user):
+    """Lectures whose reviewed Main Quiz this user may open. Reads no document JSON."""
+    if not keys or not globally_enabled():
+        return set()
+    wanted = set(keys)
+    controls = [c for c in db.scalars(select(RootControl).where(RootControl.enabled.is_(True),
+        RootControl.revision.is_not(None), RootControl.subject.in_({s for s, _ in wanted}),
+        RootControl.run_id.in_({r for _, r in wanted})))
+        if (c.subject, c.run_id) in wanted and (not c.allowed_users or user.id in c.allowed_users or user.is_admin)]
+    if not controls:
+        return set()
+    reviewed = set(db.execute(select(RootContent.subject, RootContent.run_id, RootContent.revision).where(
+        RootContent.reviewed.is_(True), RootContent.run_id.in_({c.run_id for c in controls}))).all())
+    return {(c.subject, c.run_id) for c in controls if (c.subject, c.run_id, c.revision) in reviewed}
+
+
 def allowed(db, subject, run_id, user):
     control = db.get(RootControl, (subject, run_id))
     return bool(globally_enabled() and control and control.enabled and control.revision and
