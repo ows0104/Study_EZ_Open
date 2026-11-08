@@ -28,14 +28,6 @@ export function RootEntry({subject,runId}:{subject:string;runId:string}) {
     {info?.summary&&<span> 첫 학습 {info.summary.learned}/{info.summary.total} · 회상 가능 {info.summary.recalled} · 준비 전 {info.summary.unready}</span>}</p>;
 }
 
-type Catalog={lectures:(RootOverview&{subject:string;runId:string})[]};
-/** 이 계정에 열린 Main-Quiz의 학습 목표 요약. 키는 `과목/runId`. 실패하면 빈 지도(칸만 비어 보인다). */
-export function useRootCatalog() {
-  const [rows,setRows]=useState<Map<string,RootOverview['summary']>>(new Map());
-  useEffect(()=>{let live=true;api<Catalog>('/api/root-learning').then(v=>{if(live)setRows(new Map((v.lectures??[]).map(r=>[`${r.subject}/${r.runId}`,r.summary])));}).catch(()=>{});return()=>{live=false;};},[]);
-  return rows;
-}
-
 export function RootLearningPage() {
   useBankLink();
   const {subject='',runId=''}=useParams();

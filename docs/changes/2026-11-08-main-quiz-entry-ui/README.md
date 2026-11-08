@@ -12,7 +12,7 @@
   `main-quiz-reviewed-6143c8c89ad64d9c`만 검토·공개(enabled)되어 있다. Cloud Run의
   `STUDYEZ_ROOT_LEARNING_ENABLED=true`, 학습 기록이 있는 계정은 관리자다.
 - `GET /api/main-quiz/.../entry`는 이 계정에 `structured`를 돌려준다(격리 실행으로 확인, 1.1–1.6 s).
-- 그런데 시간표 `/api/timetable`의 `marks.quiz`는 Quiz Bank만 센다. 캘린더 칸의 복습 자리,
+- 그런데 시간표 `/api/timetable`의 `marks.quiz`는 Quiz Bank만 센다. 캘린더 칸의 학습률 막대,
   강의 목록(학습현황)의 열림·링크, 패널 버튼의 첫 표시가 모두 이 값을 본다.
   → Main-Quiz만 있는 강의는 「퀴즈 없음」·비활성으로 그려졌다(패널 버튼은 entry 응답 뒤에야 켜짐).
 - 그래프: 감염병리1 Map /3 실행(`runs/_e2e/26110801/`)은 중요도 단계에서 결과 없이 멈췄다
@@ -24,7 +24,10 @@
 - 서버: `root_learning.content.published_for` — 계정에 열린 검토·공개 Main-Quiz를 문서 JSON 없이 센다.
   시간표가 강의마다 `marks.mainQuiz`를 싣는다. `marks.quiz`(Quiz Bank) 의미는 그대로.
 - 웹
-  - 캘린더 칸·관리자 칸: `quiz || mainQuiz`면 복습 자리를 연다. 패널 「▶ 복습 퀴즈」는 `marks.mainQuiz`로 바로 켜진다.
+  - 패널 「▶ 복습 퀴즈」는 `marks.mainQuiz`로 바로 켜진다.
+  - (정정) #31에서 `calendar/entries.ts`의 `lectureSlots`·`adminLectureSlots`도 `quiz || mainQuiz`로 바꿨지만,
+    두 함수는 화면 어디에서도 쓰지 않는 코드다(빌드에서 빠짐). 캘린더 칸 막대는 `ChipLearning`이 그리고,
+    #31 시점에는 여전히 `marks.quiz`만 봐서 회색이었다. 아래 후속에서 고쳤다.
   - 강의 목록: Main-Quiz만 있는 강의는 링크로 열리고 「Main-Quiz · 첫 학습 n/N · 회상 가능 m」과 회상 비율을 보인다.
     모아풀기(은행만 섞음) 선택에는 넣지 않는다. 「더 보기」 아래 중복 목록(RootOverviewPanel)은 뺐다.
   - Main-Quiz 시작 화면: 홈과 같은 좌측 메뉴 안에 선다. 머리(배지·제목·개념 지도), 숫자 칸 셋, 진행 막대,
@@ -45,3 +48,12 @@
 
 - 감염병리1 그래프(Map /3) 재개와 운영 등록은 별도 작업이다. 사용자는 이 강의의 기존 학습 기록을 잃어도 된다고 했다
   (2026-11-08). 그 허락은 그 등록 작업에서만 쓴다.
+
+## 후속 (같은 날, claude/main-quiz-chip-rate)
+
+- 캘린더 칸 막대(`ChipLearning`)·칸 설명·패널 「학습률」이 Main-Quiz만 있는 강의에서 Main-Quiz 학습률을 보인다.
+  정의는 강의 목록과 같다: 회상 가능 목표 ÷ 전체 목표(`bank/useRootCatalog.ts`의 `rootRate`).
+- 요약은 `/api/root-learning` 한 번으로 받아 칸·목록이 60초 나눠 쓴다. Main-Quiz 강의가 보일 때만 묻는다.
+  패널은 이미 받은 entry 개요의 요약을 쓴다(추가 요청 없음).
+- 검사: typecheck, `study-blocks` 14/14, `calendar-loading` 3/3. 격리 fixture에서 세 문항을 Easy로 평가한 뒤
+  칸 설명·막대·패널·강의 목록이 모두 67%(회상 가능 2/3)로 같음을 확인, 페이지 오류 0.

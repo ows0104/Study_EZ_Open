@@ -14,6 +14,7 @@ import type { CardProgress } from "../types/mastery";
 import { categoryLabel, type CalendarEntry } from "./entries";
 import { fullCode, splitSubject, type DisplayInfo } from "./kinds";
 import { ReviewMeter } from "./ChipLearning";
+import { rootRate } from "../bank/useRootCatalog";
 import { DeckSlot } from "./DeckSlot";
 import { cardsHash } from "../lecture/LectureCards";
 import { ActionCard, fileSize, PanelGroup } from "./panelShared";
@@ -294,7 +295,10 @@ function KeyActions({
   const { entry: mainQuizEntry } = useMainQuizEntry(lecture.subject, lecture.runId);
   // 학습률: 강의 상세의 Quiz Bank 학습도. 없으면 카드 진행에서 받은 값.
   const mastery = detail.mastery ?? study?.mastery ?? null;
-  const rate = detail.bank?.usable ? Math.max(0, Math.min(100, mastery?.score ?? 0)) : null;
+  // Main-Quiz만 있는 강의는 이미 받은 Main-Quiz 요약의 회상 비율(강의 목록·캘린더 칸과 같은 정의).
+  const rootSummary = mainQuizEntry?.mode === "structured" ? mainQuizEntry.overview.summary : null;
+  const rate = detail.bank?.usable ? Math.max(0, Math.min(100, mastery?.score ?? 0))
+    : lecture.marks?.mainQuiz || rootSummary ? rootRate(rootSummary) ?? 0 : null;
 
   async function download(file: LectureFile) {
     try {

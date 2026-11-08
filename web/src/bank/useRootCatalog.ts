@@ -1,0 +1,44 @@
+import { useEffect, useState } from "react";
+import { api } from "../api";
+import type { RootOverview, RootSummary } from "../types/rootLearning";
+
+type Catalog = { lectures: (RootOverview & { subject: string; runId: string })[] };
+export type RootCatalog = Map<string, RootSummary | null>;
+
+/**
+ * 이 계정에 열린 Main-Quiz의 학습 목표 요약. 키는 `과목/runId`.
+ *
+ * 캘린더 칸마다·강의 목록·패널이 같은 값을 쓰므로 한 번만 묻고 잠시 나눠 쓴다.
+ * 서버는 강의마다 요약을 계산하므로(약 1초) Main-Quiz가 있는 화면에서만 부른다.
+ * 실패하면 빈 지도 — 막대가 회색으로 남을 뿐 화면은 그대로다.
+ */
+let cached: { at: number; value: Promise<RootCatalog> } | null = null;
+const FRESH_MS = 60_000;
+
+function load(): Promise<RootCatalog> {
+  if (cached && Date.now() - cached.at < FRESH_MS) return cached.value;
+  const value = api<Catalog>("/api/root-learning")
+    .then(v => new Map((v.lectures ?? []).map(r => [`${r.subject}/${r.runId}`, r.summary] as const)))
+    .catch(() => { cached = null; return new Map() as RootCatalog; });
+  cached = { at: Date.now(), value };
+  return value;
+}
+
+export function useRootCatalog(enabled = true): RootCatalog {
+  const [rows, setRows] = useState<RootCatalog>(new Map());
+  useEffect(() => {
+    if (!enabled) return;
+    let live = true;
+    const refresh = () => void load().then(v => { if (live) setRows(v); });
+    refresh();
+    // 풀이 창에서 돌아오면 새 기록으로 다시 읽는다(캐시가 지났을 때만 실제 요청).
+    window.addEventListener("focus", refresh);
+    return () => { live = false; window.removeEventListener("focus", refresh); };
+  }, [enabled]);
+  return rows;
+}
+
+/** Main-Quiz 학습률 = 회상 가능 목표 / 전체 목표. 강의 목록·캘린더·패널이 같은 정의를 쓴다. */
+export function rootRate(summary: RootSummary | null | undefined): number | null {
+  return summary && summary.total ? Math.round(summary.recalled / summary.total * 100) : null;
+}

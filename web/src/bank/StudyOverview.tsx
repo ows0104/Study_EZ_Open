@@ -15,7 +15,7 @@ import { QuizPublicationCell } from "./QuizPublicationCell";
 import { currentStudyBlock, studyBlockKey, studyBlockNames, studyCourseOf } from "./studyBlocks";
 import { useStudyCourse } from "./useStudyCourse";
 import "./overview.css";
-import { useRootCatalog } from "./RootLearning";
+import { rootRate, useRootCatalog } from "./useRootCatalog";
 import type { RootOverview } from "../types/rootLearning";
 
 export type StudyLecture = Pick<LectureRef, "subject" | "runId" | "title" | "bankTimeline" | "mastery" | "cardProgress" | "studyLoaded"> & {
@@ -118,7 +118,7 @@ function Check({ checked, label, disabled, onChange }: { checked: boolean; label
  * 「미열람」이 목표 수인지 카드 수인지 읽을 수 없다. 학습률 칸은 회상 가능 비율.
  */
 function MainQuizCells({ summary }: { summary?: RootOverview["summary"] }) {
-  const rate = summary && summary.total ? Math.round(summary.recalled / summary.total * 100) : null;
+  const rate = rootRate(summary);
   return <>
     <span role="cell" className="list-main-quiz">
       <b>Main-Quiz</b>
@@ -138,9 +138,9 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
   onScope?: (keys: string) => void;
 }) {
   const isAdmin = Boolean(useMe()?.isAdmin);
-  const roots = useRootCatalog();
   const navigate = useNavigate();
   const rows = useMemo(() => lectureRows(events), [events]);
+  const roots = useRootCatalog(rows.some(l => l.mainQuiz));
   const [course, setCourse] = useStudyCourse(events);
   // useStudyCourse가 고른 기본 블럭과 같은 규칙. 블럭이 바뀌면 course도 바뀌므로 함께 다시 계산한다.
   const automatic = useMemo(() => currentStudyBlock(events), [events, course]);

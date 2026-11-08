@@ -177,7 +177,7 @@ test('actual overview first render selects the new block and displays classes wi
     'QuizPublicationCell.tsx': { QuizPublicationCell: () => null },
     'StudyPlanBoard.tsx': { StudyPlanBoard: () => null },
     // Its `?raw` prompt imports need Vite; the static first render only needs the overview itself.
-    'RootLearning.tsx': { useRootCatalog: () => new Map() },
+    'useRootCatalog.ts': { useRootCatalog: () => new Map(), rootRate: s => s && s.total ? Math.round(s.recalled / s.total * 100) : null },
   });
   const { StudyOverview } = render(path.join(__dirname, '../src/bank/StudyOverview.tsx'));
   const React = webRequire('react');
@@ -207,7 +207,7 @@ test('a Main-Quiz-only lecture opens from the list but is not offered to the ban
     'useQuizPublication.ts': { useQuizPublication: () => ({ values: [] }) },
     'QuizPublicationCell.tsx': { QuizPublicationCell: () => null },
     'StudyPlanBoard.tsx': { StudyPlanBoard: () => null },
-    'RootLearning.tsx': { useRootCatalog: () => new Map([['감염과 면역/261104_02', { total: 98, learned: 11, recalled: 0 }]]) },
+    'useRootCatalog.ts': { useRootCatalog: () => new Map([['감염과 면역/261104_02', { total: 98, learned: 11, recalled: 0 }]]), rootRate: s => s && s.total ? Math.round(s.recalled / s.total * 100) : null },
   });
   const { StudyOverview } = render(path.join(__dirname, '../src/bank/StudyOverview.tsx'));
   const React = webRequire('react');
