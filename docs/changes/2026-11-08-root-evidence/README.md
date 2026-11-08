@@ -43,7 +43,9 @@ Quiz Bank는 출제 뒤 `quizbank/evidence.py`(핵심 근거 지면 선택 → �
 ## 승인·보존
 - 사용자의 작업 요청을 구현·배포 승인으로 본다(docs/development/README.md 「사람에게 묻는 것」 밖).
 - 운영 쓰기는 근거 JSON 하나를 기존 업로드 API로 더하는 것뿐이다(되돌리기: asset 행·R2 객체 삭제).
-- 모델 호출은 Quiz Bank 보강과 같은 `claude -p` 경로·같은 프롬프트, 같은 강의 자료다.
+- 모델 호출은 Quiz Bank 보강과 같은 경로(`coverage._call` → `studyez_llm.codex`, ChatGPT 로그인의 OpenAI Codex CLI)·같은 프롬프트, 같은 강의 자료다.
+  (2026-11-09 정정: 처음 이 기록에 `claude -p`라고 적었으나 코드를 확인하지 않은 잘못이었다. 실제 호출은 처음부터 Codex CLI였다.
+  사용자 지시 「CLI 작업은 openai에게 맡기자」와 일치하며 코드 변경은 없다.)
 
 ## 검사·결과
 - quizbank `test_root_evidence` 3, runner `test_root_evidence_publish` 3 + 기존 generation 검사(근거 단계는 모델 없이 대체),
@@ -51,7 +53,7 @@ Quiz Bank는 출제 뒤 `quizbank/evidence.py`(핵심 근거 지면 선택 → �
 - 전체: contracts·quizbank·runner pytest 1,541 통과·1 실패(`test_desktop_control` 바로가기 설치기 — pristine master에서도 같은 실패,
   대시보드 기존 기록), server `-m tests`(PYTHONPATH=..) 129 전부 통과, web typecheck·build 통과.
 - 기존 `web/tests/main-quiz-render.test.cjs`는 master에서도 `api.ts`의 `import.meta`·`platform/session` 로딩으로 실패한다(CI 밖). 고치지 않았다.
-- 실제 데이터(감염병리1 261104_02 `map-tree-26110803`, 79문항): 보강 실행(`claude -p`, Quiz Bank 같은 프롬프트) 결과
+- 실제 데이터(감염병리1 261104_02 `map-tree-26110803`, 79문항): 보강 실행(OpenAI Codex CLI `gpt-6.1-sol`, 2회 315초·39초 — `usage.jsonl`, Quiz Bank 같은 프롬프트) 결과
   핵심 근거 single 69·linked 6·unresolved 4, 족보 색인 25쪽, 족보 연결 14문항, 족보 핵심 2문항.
   새 서버 코드로 모의(읽기만): 강의록 핵심 75문항, 족보 지면 14문항, 족보 핵심 2문항(그중 1은 강의록 첨부 기출 34쪽),
   근거 상태 4(자료 충돌 1·족보에만 2·근거 일부 부족 1).
