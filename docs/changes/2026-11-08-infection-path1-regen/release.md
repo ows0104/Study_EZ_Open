@@ -36,3 +36,17 @@ DB·운영 문항·학습 기록·수정 상한 변경 없음.
 배포 영수증·API health SHA 확인. 롤백은 병합 되돌리기.
 감염병리1 새 생성(외부 모델 전송·대량 실행)은 실행 직전에 범위를 정해 사용자 승인을 받는다.
 운영 등록·학생 공개·기존 판 교체는 별도 승인.
+
+## 2026-11-08 실행 중 멈춤과 source 형식 복구 (claude/root-source-gap-recovery)
+
+12:20 실행(`runs/_e2e/26110802`): Map 75개념(뿌리 7·깊이 3·관계 34) → 포인트 66 → 대조 지적 4 → 보완 70 → 재대조 지적 6(기록만)
+→ packet → normalize(초기 지도 교정으로 보완 1/3 사용) → generate → **source-0 거절(12:47)**.
+원인: 원본 대조가 required_gap I008에 필수 D046과 선택 D044·D045·D047·D048을 함께 적었다. 계약은 required_gap에 필수 방향만 받는다.
+사용자 결정(2026-11-08 「복구 도구로 이어가기」).
+
+- `generation_v2.split_required_gaps`: 필수 방향은 같은 required_gap에, 선택 방향은 같은 문구·문항의 optional_extension으로. 판단을 지우거나 올리지 않는다.
+- `validate_source_gap_recoveries`·`accepted_source_raw_hash`: 원래 거절 사유·원문 해시·brief·결정적 분할을 증명으로 다시 계산. 최종 회차 source면 분할본 해시로 대조.
+- `runner/root_source_gap_recovery.py`: 모델 호출 0, 원문·입력·사용량 그대로, 수정 상한 그대로. `.source-gap-recovery/`에 이전 ledger·도구·분할본 보관.
+- `source-v2.md`: required_gap에는 required 방향만, optional은 optional_extension, 방향 없는 누락은 map_fix.
+- 검사: 계약 3개(분할·거절·변조 6종), 루트 `pytest tests` 2,140 통과(제외 1 동일), 서버 root_ 24·route_contract 통과.
+- 실제 폴더 사본에서 시험: 거절 재현 → I008만 분할 → 생성기가 medical-0 모델 호출 직전까지 진행.
