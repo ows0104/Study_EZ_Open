@@ -7,6 +7,7 @@ import { getMe, resetFirstScreen, startFirstScreen } from "./firstScreen";
 import { seenNotice } from "./notices/seen";
 import { Sidebar } from "./shell/Sidebar";
 import { StudyNav } from "./StudyNav";
+import { StudyChrome, isMainQuizPath } from "./shell/studyChrome";
 import type { Me } from "./types/account";
 import type { Notice } from "./types/notices";
 
@@ -45,6 +46,8 @@ function Shell() {
   // 이 브라우저가 아직 안 본 공지가 있는가 — 좌측 메뉴 「공지사항」 옆의 점.
   const [unseenNotice, setUnseenNotice] = useState(false);
   const onNoticeSeen = useCallback(() => setUnseenNotice(false), []);
+  // Main-Quiz 화면이 지금 문항을 푸는가. 시작 화면은 홈처럼 좌측 메뉴 안에 둔다.
+  const [quizSolving, setQuizSolving] = useState(false);
 
   useEffect(() => {
     if (!session) {
@@ -89,12 +92,13 @@ function Shell() {
   if (!me.isApproved) return <PendingApproval email={me.email || email} onSignOut={signOut} />;
 
   // 학습 화면은 넓은 본문과 간단한 이동 메뉴를 사용한다.
-  const bare =
+  const mainQuiz = isMainQuizPath(location.pathname);
+  const bare = (mainQuiz && quizSolving) || (!mainQuiz && (
     location.pathname.startsWith("/lectures/") ||
     location.pathname.startsWith("/prequiz/") ||
     location.pathname.startsWith("/mainquiz/") ||
     location.pathname.startsWith("/legacy-mainquiz/") ||
-    location.pathname.startsWith("/bank/");
+    location.pathname.startsWith("/bank/")));
   // 캘린더는 격자다. 읽기 좋은 폭으로 가둘 이유가 없고, 패널이 340px을 가져가는
   // 만큼 가로가 곧 요일 칸의 폭이 된다. 글을 읽는 화면들만 좁게 둔다.
   const wide = location.pathname === "/" || location.pathname === "/study";
@@ -118,6 +122,7 @@ function Shell() {
         }${location.pathname === "/notes" ? " is-notes" : ""
         }`}
       >
+        <StudyChrome.Provider value={setQuizSolving}>
         <Suspense fallback={Loading}>
           <Routes>
             <Route path="/" element={<CalendarPage />} />
@@ -145,6 +150,7 @@ function Shell() {
             <Route path="*" element={<p className="notice">없는 화면입니다.</p>} />
           </Routes>
         </Suspense>
+        </StudyChrome.Provider>
         </main>
       </div>
     </div>

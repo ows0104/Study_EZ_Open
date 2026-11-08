@@ -177,7 +177,7 @@ test('actual overview first render selects the new block and displays classes wi
     'QuizPublicationCell.tsx': { QuizPublicationCell: () => null },
     'StudyPlanBoard.tsx': { StudyPlanBoard: () => null },
     // Its `?raw` prompt imports need Vite; the static first render only needs the overview itself.
-    'RootLearning.tsx': { RootOverviewPanel: () => null },
+    'RootLearning.tsx': { useRootCatalog: () => new Map() },
   });
   const { StudyOverview } = render(path.join(__dirname, '../src/bank/StudyOverview.tsx'));
   const React = webRequire('react');
@@ -198,4 +198,29 @@ test('actual overview first render selects the new block and displays classes wi
   assert.match(actual, /감염질환에 대한 접근/);
   assert.match(actual, /김남중[^·]*· 감염학/);
   assert.match(actual, /감염과 면역 1차 · 11.02 – 11.19/);
+});
+
+test('a Main-Quiz-only lecture opens from the list but is not offered to the bank batch', () => {
+  const render = modules('2026-11-01T10:00:00+09:00', {
+    'useMe.ts': { useMe: () => null },
+    'api.ts': { api: () => { throw Error('Unexpected API in initial render'); } },
+    'useQuizPublication.ts': { useQuizPublication: () => ({ values: [] }) },
+    'QuizPublicationCell.tsx': { QuizPublicationCell: () => null },
+    'StudyPlanBoard.tsx': { StudyPlanBoard: () => null },
+    'RootLearning.tsx': { useRootCatalog: () => new Map([['감염과 면역/261104_02', { total: 98, learned: 11, recalled: 0 }]]) },
+  });
+  const { StudyOverview } = render(path.join(__dirname, '../src/bank/StudyOverview.tsx'));
+  const React = webRequire('react');
+  const { renderToStaticMarkup } = webRequire('react-dom/server');
+  const { MemoryRouter } = webRequire('react-router-dom');
+  const events = twoBlocks();
+  const marks = { notesPrev: false, preview: false, prequiz: false, notesCurrent: false, quiz: false, mainQuiz: true };
+  events[3].lectures = [{ subject: '감염과 면역', runId: '261104_02', title: '감염성 질환의 병리 1', professors: [], marks,
+    prequizProgress: null, grabbed: { pre: false, main: false }, studyLoaded: true, cardProgress: null, mastery: null }];
+  const html = renderToStaticMarkup(React.createElement(MemoryRouter, {},
+    React.createElement(StudyOverview, { events, onStart() {} })));
+  assert.match(html, /Main-Quiz/);
+  assert.match(html, /첫 학습 11\/98 · 회상 가능 0/);
+  assert.match(html, /href="\/mainquiz\/%EA%B0%90%EC%97%BC%EA%B3%BC%20%EB%A9%B4%EC%97%AD\/261104_02"/);
+  assert.doesNotMatch(html, /감염성 질환의 병리 1 선택/, 'no batch checkbox for a Main-Quiz-only lecture');
 });

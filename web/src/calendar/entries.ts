@@ -95,7 +95,7 @@ export function lectureSlots(lecture: LectureRef): Slots {
     preFill: !preOpen || !progress || progress.total <= 0 ? null
       : Math.max(0, Math.min(1, progress.answered / progress.total)),
     // 옛 덱·필기를 받은 기록은 Quizbank 학습 완료를 뜻하지 않는다.
-    main: marks.quiz ? "ready" : "none",
+    main: marks.quiz || marks.mainQuiz ? "ready" : "none",
   };
 }
 
@@ -271,6 +271,6 @@ export function adminLectureSlots(lecture: LectureRef): AdminSlots {
   const { marks } = lecture;
   return {
     pre: marks.prequiz ? "done" : marks.preview ? "ready" : marks.notesPrev ? "none" : "absent",
-    main: marks.quiz ? "done" : marks.notesCurrent ? "ready" : "none",
+    main: marks.quiz || marks.mainQuiz ? "done" : marks.notesCurrent ? "ready" : "none",
   };
 }

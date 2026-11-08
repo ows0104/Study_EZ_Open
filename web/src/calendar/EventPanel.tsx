@@ -328,7 +328,7 @@ function KeyActions({
         base={base}
         onError={setError}
         open
-        trailing={bank?.usable || mainQuizEntry?.mode === "structured" ? (
+        trailing={bank?.usable || lecture.marks?.mainQuiz || mainQuizEntry?.mode === "structured" ? (
           <Link className="action-button is-quiz is-review" to={bankHref(lecture)}>
             ▶ 복습 퀴즈{study?.cardProgress?.reviewDue ? <b>{study.cardProgress.reviewDue}</b> : null}
           </Link>

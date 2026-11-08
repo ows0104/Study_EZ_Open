@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from app.auth import CurrentUser, require_approved_user
 from app.database import get_db
 from app.lecture_mastery import lecture_overviews
+from app.root_learning import content as root_content
 from app.models import Lecture, TimetableEvent
 from app.preview_sources import public_source
 from app.routes.common import asset_grabs, bank_timelines, grab_tracks, material_marks, prequiz_progress
@@ -61,6 +62,10 @@ def read_timetable(
     overviews = lecture_overviews(db, user.id, keys, is_admin=user.is_admin, include_cards=include_cards) if include_study else {}
     for key, overview in overviews.items():
         marks[key]["quiz"] = overview["ready"]
+    # 검토·공개된 Main-Quiz(뿌리 학습). `quiz`(Quiz Bank)와 따로 둔다 — 모아풀기는 은행만 섞는다.
+    published = root_content.published_for(db, keys, user)
+    for key in keys:
+        marks.setdefault(key, {})["mainQuiz"] = key in published
 
     by_event: dict[str, list[dict[str, Any]]] = {}
     event_map = {event.id: event for event in events}
