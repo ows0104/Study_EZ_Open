@@ -7,13 +7,16 @@ from typing import Literal
 import json
 import re
 import io
+from collections import OrderedDict
+from copy import deepcopy
+from threading import Lock
 from boto3.exceptions import S3UploadFailedError
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import Text, case, cast, inspect as sa_inspect, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 from app.auth import CurrentUser, require_admin, require_runner
 from app.database import get_db
 from app.models import Asset, Lecture, PrequizJob, JOB_BANK, JOB_BUTTON, JOB_QUEUED, JOB_DONE
@@ -87,12 +90,35 @@ def equivalent_generation(db, packet, *, before=None):
     return None
 
 
+# 폴링 경로가 참/거짓만 쓰거나(web_*) 판이 바뀔 때만 쓰는(result) 큰 JSON. 운영 Supabase에서는
+# 2.5MB result를 매 폴링 끌어오는 것이 2초대였다. 접근하면 SQLAlchemy가 그때 읽으므로 값은 같다.
+HEAVY = ('result', 'web_dispatch', 'web_response')
+LIGHT = tuple(defer(getattr(RootGeneration, name)) for name in HEAVY)
+
+
+def present(column):
+    """SQL에서 Python bool(dict | None)과 같은 참/거짓: SQL NULL·JSON null·{}는 거짓."""
+    return case((column.is_(None), False), (cast(column, Text).in_(('null', '{}')), False), else_=True)
+
+
+PRESENT = tuple(present(getattr(RootGeneration, name)).label('has_' + name) for name in HEAVY)
+
+
+def heavy_flags(db, row):
+    """{'result': bool, ...}. 이미 적재된 칼럼은 그 값으로, 아니면 참/거짓만 질의한다."""
+    unloaded = sa_inspect(row).unloaded
+    if not unloaded.intersection(HEAVY):
+        return {name: bool(getattr(row, name)) for name in HEAVY}
+    values = db.execute(select(*PRESENT).where(RootGeneration.id == row.id)).one()
+    return {name: bool(getattr(row, name)) if name not in unloaded else bool(value) for name, value in zip(HEAVY, values)}
+
+
 def canonical_generation(db, row):
     seen=set()
     while row.packet.get('supersededBy'):
         if row.id in seen:raise HTTPException(409,'중복 작업 연결을 확인해야 합니다.')
         seen.add(row.id)
-        prior=db.get(RootGeneration,row.packet['supersededBy'])
+        prior=db.get(RootGeneration,row.packet['supersededBy'],options=LIGHT)
         if (prior is None or prior.user_id!=row.user_id or prior.packet['privatePilot']!=row.packet['privatePilot']
             or generation_input(prior.packet)!=generation_input(row.packet)
             or (prior.created_at,prior.id)>=(row.created_at,row.id)):
@@ -122,21 +148,46 @@ def retain_duplicate(db, row):
     return prior
 
 
-def public_job(db, row):
-    row=canonical_generation(db,row)
-    job = db.get(PrequizJob, row.job_id)
-    report = None
-    if row.result:
-        result = row.result
-        if result.get('policy')in('verified-main-quiz-replacement/1','verified-main-quiz-curation/1'):
-            from app.root_learning.replacement_import import report as replacement_report
-            report=replacement_report(result)
-        else: report = {'repairRounds': result['manifest']['repairRounds'], 'taskCount': len(result['document']['tasks']),
+def build_report(result):
+    if result.get('policy')in('verified-main-quiz-replacement/1','verified-main-quiz-curation/1'):
+        from app.root_learning.replacement_import import report as replacement_report
+        return replacement_report(result)
+    return {'repairRounds': result['manifest']['repairRounds'], 'taskCount': len(result['document']['tasks']),
             'targetCount': len(result['brief']['targets']),
             'issues': result['sourceAudit']['input_issues'] + result['validation']['errors'] + result['validation']['warnings'],
             'questionNotes': [{'source': label, **r} for label, checks in [('원본 대조', result['sourceAudit']['question_checks']), ('독립 정답 검수', result['medical'])]
                 for r in checks['reviews'] if r['verdict'] != 'ok'],
             'coverage': result['sourceAudit']['review']['coverage']}
+
+
+# 게시된 판의 result는 바뀌지 않는다(put_result·대체판 등록이 다른 digest를 거부). 그래서 report를
+# (판 id, result_digest)마다 한 번만 만든다. 인스턴스마다 따로이고, 다시 뜨면 한 번 더 읽는다.
+REPORTS: OrderedDict = OrderedDict()
+REPORTS_MAX = 128
+REPORTS_LOCK = Lock()
+
+
+def generation_report(row):
+    if row.result_digest is None:
+        return build_report(row.result)
+    key = (row.id, row.result_digest)
+    with REPORTS_LOCK:
+        if key in REPORTS:
+            REPORTS.move_to_end(key)
+            return deepcopy(REPORTS[key])
+    report = build_report(row.result)
+    with REPORTS_LOCK:
+        REPORTS[key] = deepcopy(report)
+        while len(REPORTS) > REPORTS_MAX: REPORTS.popitem(last=False)
+    return report
+
+
+def public_job(db, row, flags=None):
+    canonical=canonical_generation(db,row)
+    if canonical is not row or flags is None: flags=heavy_flags(db,canonical)
+    row=canonical
+    job = db.get(PrequizJob, row.job_id)
+    report = generation_report(row) if flags['result'] else None
     return {'id': row.id, 'requestId':row.request_id, 'jobId': row.job_id, 'state': job.state, 'stage': job.stage, 'message': job.message,
             'published': row.result_digest is not None, 'revision': row.packet['revision'],
             'privatePilot': row.packet['privatePilot'], 'featureEnabled': globally_enabled(),
@@ -144,8 +195,8 @@ def public_job(db, row):
             'input': {**{k: row.packet[k] for k in ('conceptMap', 'points', 'scope')},
                 'examDate':row.packet.get('requestedExamDate',row.packet['examDate']),
                 'inputMode':row.packet.get('inputMode','provided')}, 'report': report,
-            'authoring':row.packet.get('authoring','cli'), 'parallelAuthoring':row.packet.get('parallelAuthoring',False), 'awaitingWeb':row.packet.get('authoring')=='web' and not row.web_response and job.state=='held' and not job.cancel_requested and job.stage=='ChatGPT 응답 대기',
-            'dispatched':bool(row.web_dispatch)}
+            'authoring':row.packet.get('authoring','cli'), 'parallelAuthoring':row.packet.get('parallelAuthoring',False), 'awaitingWeb':row.packet.get('authoring')=='web' and not flags['web_response'] and job.state=='held' and not job.cancel_requested and job.stage=='ChatGPT 응답 대기',
+            'dispatched':flags['web_dispatch']}
 
 
 def resume_job(db, row):
@@ -164,9 +215,14 @@ def resume_job(db, row):
 
 @router.get(BASE)
 def latest(subject: str, run_id: str, user: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)):
-    row = db.scalars(select(RootGeneration).where(RootGeneration.subject == subject, RootGeneration.run_id == run_id)
-                     .order_by(RootGeneration.created_at.desc())).first()
-    return {'generation': public_job(db, row) if row else None}
+    # 3초마다 폴링하는 화면이 쓰는 것은 가장 최근 한 판이다. LIMIT이 없으면 그 강의의 모든 판이
+    # 결과 집합에 들어온다. 큰 JSON(result·web_*)은 싣지 않고 참/거짓만 같은 SELECT에서 받는다.
+    found = db.execute(select(RootGeneration, *PRESENT).options(*LIGHT)
+                       .where(RootGeneration.subject == subject, RootGeneration.run_id == run_id)
+                       .order_by(RootGeneration.created_at.desc()).limit(1)).first()
+    if not found: return {'generation': None}
+    row, *values = found
+    return {'generation': public_job(db, row, dict(zip(HEAVY, map(bool, values))))}
 
 
 @router.post(BASE)

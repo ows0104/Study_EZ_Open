@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
 import { useMe } from '../useMe';
 import type { RootAction, RootMapData, RootOverview, RootView } from '../types/rootLearning';
 import { useRootStudyWrites } from './useRootStudyWrites';
+import { useRootFrames } from './useRootFrames';
 import { RootToday } from './RootToday';
 import { RootMap } from './RootMap';
 import { RootSolve } from './RootSolve';
@@ -55,31 +56,98 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
   const [tab,setTab]=useState<'learn'|'map'>('learn');
   const [advancing,setAdvancing]=useState(false);
   const [mapRequested,setMapRequested]=useState(false);
-  const loadSession=async(id:string)=>setView(await api<RootView>(`/api/root-learning/sessions/${id}`));
+  const viewRef=useRef(view);viewRef.current=view;
+  // The view before the last rating, so Z draws at once (the server keeps the reveal).
+  const undoSnapshot=useRef<RootView|null>(null);
+  // stale: only replace the screen if no newer action was drawn ahead of the server meanwhile.
+  const loadSession=async(id:string,stale=false)=>{
+    const next=await api<RootView>(`/api/root-learning/sessions/${id}`);
+    if(stale&&viewRef.current&&viewRef.current.version!==next.version)return;
+    undoSnapshot.current=null;viewRef.current=next;setView(next);
+  };
   async function refresh(resume=false) {
     const next=await api<RootOverview>(base);setInfo(next);setError('');
     if(resume&&next.sessionId)await loadSession(next.sessionId);
   }
-  const writes=useRootStudyWrites(scope,async(result)=>{await loadSession(result.sessionId);await refresh();});
+  const writes=useRootStudyWrites(scope);
+  const frames=useRootFrames(view?.sessionId);
+  const {ensure}=frames;
+  useEffect(()=>{if(view&&!view.finished)ensure(view.position,view.count);},[view?.sessionId,view?.position,view?.count,view?.finished,ensure]);
   useEffect(()=>{void refresh(true).catch(e=>setError(e instanceof ApiError&&e.status===404?'아직 공개된 Main Quiz 학습 자료가 없습니다. 기존 문제를 이용하거나 자료 준비를 기다려 주세요.':e.message));},[base]);
-  async function act(action:RootAction) {
-    if(!view||writes.blocked)return;
-    setError('');if(action.kind==='rate')setAdvancing(true);
-    try{await writes.run(`/api/root-learning/sessions/${view.sessionId}/events`,{version:view.version,...action});}
+  /** What the server will show once this event is stored, drawn from prepared frames. null: wait for it. */
+  function predict(current:RootView,action:RootAction):RootView|null {
+    const version=current.version+1;
+    if(action.kind==='reveal') {
+      const frame=frames.get(current.position);
+      if(!current.task||current.task.answer||!frame?.task||frame.taskId!==current.task.id)return null;
+      return {...current,version,canUndo:false,task:{...current.task,answer:frame.task.answer,attempted:!!action.attempted,
+        response:action.response??'',helped:current.task.helped||!!action.helped||current.mapSeen}};
+    }
+    if(action.kind==='rate'||action.kind==='skip') {
+      const position=current.position+1;
+      const moved={...current,version,position,canUndo:action.kind==='rate',blocked:null};
+      if(position>=current.count)return {...moved,finished:true,task:null};
+      const frame=frames.get(position);
+      if(!frame)return null;
+      return {...moved,blocked:frame.blocked,task:frame.task?{id:frame.task.id,question:frame.task.question,answer:null,response:null,
+        attempted:null,helped:current.mapSeen||frame.task.helped}:null};
+    }
+    if(action.kind==='undo') {
+      const before=undoSnapshot.current;
+      if(!current.canUndo||!before||before.sessionId!==current.sessionId||before.position!==current.position-1)return null;
+      return {...before,version,canUndo:false,mapSeen:current.mapSeen,summary:current.summary};
+    }
+    return null;
+  }
+  function act(action:RootAction) {
+    const current=viewRef.current;
+    if(!current||writes.blocked||advancing)return;
+    setError('');
+    const confirmed=writes.run(`/api/root-learning/sessions/${current.sessionId}/events`,{version:current.version,...action});
+    if(!confirmed)return;
+    const next=predict(current,action);
+    if(next) {
+      undoSnapshot.current=action.kind==='rate'?current:null;
+      viewRef.current=next;setView(next);
+      // The finished screen shows the server's own summary once every event is stored.
+      if(next.finished)void confirmed.then(r=>Promise.all([loadSession(r.sessionId,true),refresh()])).catch(()=>{});
+      return;
+    }
+    // No prepared frame yet: confirm, then read the session (the former path).
+    setAdvancing(true);
+    void confirmed.then(r=>loadSession(r.sessionId)).catch(e=>{if(!(e instanceof ApiError))setError((e as Error).message);})
+      .finally(()=>setAdvancing(false));
+  }
+  async function begin() {
+    const started=writes.run(base+'/sessions',{});
+    if(!started)return;
+    setAdvancing(true);
+    try{const r=await started;await Promise.all([loadSession(r.sessionId),refresh()]);}
+    catch(e){if(!(e instanceof ApiError))setError((e as Error).message);}
     finally{setAdvancing(false);}
   }
   async function showMap() {
-    if(writes.blocked)return;
-    if(!view){setMapRequested(true);await writes.run(base+'/sessions',{});return;}
-    await act({kind:'map'});
-    try{setMap(await api<RootMapData>(`/api/root-learning/sessions/${view.sessionId}/map`));setTab('map');}
-    catch(e){setError((e as Error).message);}
+    if(writes.blocked||advancing)return;
+    const current=viewRef.current;
+    if(!current){setMapRequested(true);await begin();return;}
+    const confirmed=writes.run(`/api/root-learning/sessions/${current.sessionId}/events`,{version:current.version,kind:'map'});
+    if(!confirmed)return;
+    setAdvancing(true);
+    try{
+      const r=await confirmed;
+      const [data]=await Promise.all([api<RootMapData>(`/api/root-learning/sessions/${r.sessionId}/map`),loadSession(r.sessionId)]);
+      setMap(data);setTab('map');
+    }catch(e){if(!(e instanceof ApiError&&e.status===409))setError((e as Error).message);}
+    finally{setAdvancing(false);}
   }
-  useEffect(()=>{if(mapRequested&&view&&!writes.blocked){setMapRequested(false);void showMap();}},[mapRequested,view,writes.blocked]);
+  useEffect(()=>{if(mapRequested&&view&&!writes.blocked&&!advancing){setMapRequested(false);void showMap();}},[mapRequested,view,writes.blocked,advancing]);
   useEffect(()=>{document.title='Main-Quiz · Study_EZ';},[]);
   async function reload() {
     if(view)await loadSession(view.sessionId);
     await refresh();
+  }
+  async function retry() {
+    if(await writes.retry())await refresh(true).catch(e=>setError((e as Error).message));
   }
   const [versions,setVersions]=useState<{revision:string;title:string;reviewed:boolean}[]>([]);
   const [candidate,setCandidate]=useState<Record<string,unknown>|null>(null);
@@ -96,18 +164,18 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     {!view&&<Link to={`/bank/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}?legacy=1`}>기존 문제·기록</Link>}</div>
     {!view&&<h1>Main-Quiz</h1>}
     {(error||writes.error||writes.pending&&!writes.busy||writes.conflicts.some(r=>!r.acknowledged))&&<div role="alert" className="notice is-error">{error||writes.error||'이전에 저장 확인을 받지 못한 요청 또는 충돌 응답이 있습니다.'}
-      {writes.pending&&<button disabled={writes.busy} onClick={()=>void writes.retry()}>같은 요청 다시 저장</button>}
+      {writes.pending&&<button disabled={writes.busy} onClick={()=>void retry()}>같은 요청 다시 저장</button>}
       {writes.conflicts.some(r=>!r.acknowledged)&&<button disabled={writes.busy} onClick={()=>void writes.acknowledge(reload)}>보관 응답 확인 후 서버 기록 불러오기</button>}
     </div>}
     {writes.conflicts.length>0&&<details><summary>보존된 충돌 응답 {writes.conflicts.length}개</summary>{writes.conflicts.map(r=><pre key={r.requestId}>{typeof r.body.response==='string'?r.body.response:JSON.stringify(r.body)}</pre>)}</details>}
     {notice&&<p role="status">{notice}</p>}
-    {writes.busy&&<p className="bank-note main-quiz-save-status" role="status">저장 중…</p>}
+    {writes.slow&&<p className="bank-note main-quiz-save-status" role="status">저장 확인 중…</p>}
     {view?<>
-      {view.finished&&writes.blocked?<p role="status">마지막 저장과 미확인 요청을 확인 중입니다. 완료 현황은 확인 뒤 표시합니다.</p>:tab==='map'&&map?<><button className="main-quiz-back" onClick={()=>setTab('learn')}>← 문제로 돌아가기</button><RootMap map={map} summary={view.summary} title={info?.title} position={`문항 ${Math.min(view.position+1,view.count)}/${view.count}`}/></>:
-        <RootSolve view={view} scope={scope} disabled={writes.blocked} advancing={advancing} onAction={a=>void act(a)} onError={setError} onMap={()=>void showMap()}
+      {view.finished&&(writes.blocked||writes.queued>0)?<p role="status">마지막 저장과 미확인 요청을 확인 중입니다. 완료 현황은 확인 뒤 표시합니다.</p>:tab==='map'&&map?<><button className="main-quiz-back" onClick={()=>setTab('learn')}>← 문제로 돌아가기</button><RootMap map={map} summary={view.summary} title={info?.title} position={`문항 ${Math.min(view.position+1,view.count)}/${view.count}`}/></>:
+        <RootSolve view={view} scope={scope} disabled={writes.blocked} advancing={advancing} onAction={act} onError={setError} onMap={()=>void showMap()}
           onToday={()=>{setView(null);setMap(null);setTab('learn');void refresh().catch(e=>setError(e.message));}}/>}
       {view.blocked?.includes('학습일')&&<button disabled={writes.blocked} onClick={()=>{setView(null);void refresh().catch(e=>setError(e.message));}}>오늘 학습 다시 계획</button>}
-    </>:info?<RootToday info={info} disabled={writes.blocked} onStart={()=>void writes.run(base+'/sessions',{})} onMap={()=>void showMap()}/>:!error&&<p>학습 범위 확인 중…</p>}
+    </>:info?<RootToday info={info} disabled={writes.blocked||advancing} onStart={()=>void begin()} onMap={()=>void showMap()}/>:!error&&<p>학습 범위 확인 중…</p>}
     {!view&&me?.isAdmin&&<details><summary>Main Quiz 만들기</summary><RootGenerationPanel subject={subject} runId={runId} onPublished={()=>{void refresh().catch(e=>setError(e.message));void adminVersions();}}/></details>}
     {!view&&me?.isAdmin&&<details><summary>Main Quiz 자료·공개 관리</summary><p>검토 묶음·원본 문항·채택 목표·방향별 과제를 포함한 새 판을 등록합니다. 기존 기록과 은행은 보존됩니다.</p>
       <input type="file" accept="application/json,.json" aria-label="Main Quiz 자료" onChange={async e=>{setCandidate(null);const file=e.target.files?.[0];if(!file)return;if(file.size>5_000_000){setError('5MB 이하의 자료를 선택하세요.');return;}try{const text=await file.text();setRaw(text);const value=JSON.parse(text);if(value.schema_version!=='roots/1')throw new Error('Main Quiz 자료 형식을 확인하세요.');setCandidate(value);}catch(err){setError((err as Error).message);}}}/>

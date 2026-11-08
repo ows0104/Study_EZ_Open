@@ -103,3 +103,37 @@ test('blocked storage and malformed requests prevent untracked writes',async()=>
   assert.equal(await broken.getByRole('button',{name:'오늘 학습 시작'}).isDisabled(),true);assert.equal(await broken.evaluate(key=>localStorage.getItem(key),key),'{broken');await corrupt.close();
  }finally{await browser.close();}
 });
+
+test('answers and next questions draw at once while saving is slow; PDF reads ranges only',async()=>{
+ const browser=await chromium.launch({headless:true,channel:'chrome'});
+ try{
+  const context=await contextFor(browser,{extraHTTPHeaders:{'X-Root-Test-User':'slow-save'}});
+  const sources=[];let sessionReads=0;
+  await context.route('**/api/root-learning/sessions/*/events',async route=>{await new Promise(r=>setTimeout(r,1500));return route.continue();});
+  context.on('request',request=>{
+    if(request.method()!=='GET')return;
+    if(/\/api\/root-learning\/lectures\/[^/]+\/[^/]+\/sources\//.test(request.url()))sources.push(request.headers()['range']??'');
+    if(/\/api\/root-learning\/sessions\/[^/?]+$/.test(request.url()))sessionReads++;
+  });
+  const page=await context.newPage();
+  const prepared=page.waitForResponse(r=>r.url().includes('/prepare?')&&r.status()===200);
+  await page.goto(url);await page.getByRole('button',{name:'오늘 학습 시작'}).click();await enabled(page,'답 보기');await prepared;
+  await page.getByRole('img',{name:'two-pages.pdf · PDF 2쪽',exact:true}).count();
+  const quick=async(step,ready)=>{const t=Date.now();await step();await ready();const ms=Date.now()-t;assert.ok(ms<1000,`drew in ${ms}ms, not after the 1.5s save`);};
+  await page.getByRole('heading',{name:'문항 1 / 3'}).focus();
+  await quick(()=>page.keyboard.press('Space'),()=>enabled(page,'Good'));
+  await page.getByRole('img',{name:'two-pages.pdf · PDF 2쪽',exact:true}).waitFor();
+  const reads=sessionReads;
+  await quick(()=>page.keyboard.press('3'),()=>page.getByText('Synthetic question 2?',{exact:true}).waitFor());
+  await quick(()=>page.keyboard.press('Space'),()=>enabled(page,'Good'));
+  await quick(()=>page.keyboard.press('2'),()=>page.getByText('Synthetic question 3?',{exact:true}).waitFor());
+  assert.equal(sessionReads,reads,'no session read between actions');
+  await page.keyboard.press('Space');await enabled(page,'Easy');await page.keyboard.press('4');
+  await page.getByRole('heading',{name:'오늘 목록을 마쳤어요'}).waitFor();
+  await page.getByText('학습 기록·남은 범위',{exact:true}).click();
+  assert.match(await page.getByRole('region',{name:'Main Quiz 학습 현황'}).innerText(),/고유 목표 3개 · 첫 학습 2 · 회상 가능 1/);
+  assert.equal(await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('studyez:root-write:')).length),0,'every write confirmed');
+  assert.ok(sources.length>0);assert.deepEqual(sources.filter(r=>!/^bytes=\d+-\d+$/.test(r)),[],'no full-file GET of the PDF');
+  await context.close();
+ }finally{await browser.close();}
+});

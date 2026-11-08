@@ -1,7 +1,7 @@
 # 공동작업과 자동 배포
 
 2026-11-05 사용자 요청으로 `master` 코드 변경의 자동 배포를 활성화한다. 이번 요청은
-일반 코드 배포 자동화의 승인 근거이며, 새 기능의 구현 승인이나 운영 데이터 변경 승인을 대신하지 않는다.
+일반 코드 배포 자동화의 근거다. 운영 데이터 변경 등 [사람에게 묻는 것](README.md#사람에게-묻는-것)은 따로 승인받는다.
 
 ## 작업 시작 대원칙 (예외 없음)
 
@@ -60,12 +60,46 @@
 ```bash
 git fetch origin
 git worktree add ../Study_EZ_dashboard dashboard
+sh .githooks/install.sh               # master 직접 push 차단 훅을 설치한다
 ```
+
+`install.sh`는 `.githooks/pre-push`를 이 클론의 `.git/hooks/`로 복사한다.
+커밋되는 설정이 아니므로 **클론마다 한 번** 돌려야 하고, 훅을 고친 뒤에도 다시
+돌려야 한다. 설치됐는지 확인:
+
+```bash
+ls "$(git rev-parse --git-common-dir)/hooks/pre-push"
+```
+
+`core.hooksPath=.githooks`로 거는 길은 택하지 않았다. 그 경로는 작업본 안에서
+풀리기 때문에, `.githooks`가 없는 옛 커밋에 올라간 worktree는 아무 경고도 없이
+보호가 빠진다(2026-11-08 실측: 같은 push가 한 worktree에서는 거부되고 다른
+worktree에서는 통과했다). `.git/hooks` 복사본은 공용 디렉터리에 있어서 체크아웃된
+브랜치와 무관하게 모든 worktree에서 돈다.
+
+### master 보호 (로컬 훅)
+
+`.githooks/pre-push`가 두 가지를 거부한다.
+
+- `refs/heads/master`로의 직접 push와 master 삭제. master는 PR 병합으로만 바뀐다.
+- `dashboard` 외의 브랜치가 `DASHBOARD.md`를 담고 있는 경우.
+  dashboard를 기능 브랜치에 merge해 master로 흘려보내는 길을 막는다.
+
+**이것은 서버에서 강제되는 보호가 아니다.** 이 저장소는 비공개이고 계정이 무료
+플랜이라 GitHub의 branch protection과 ruleset이 둘 다 403으로 막힌다(2026-11-08
+확인). 그래서 같은 목적을 클라이언트에서 지킨다. 따라서
+
+- `git push --no-verify`로 우회된다.
+- `.githooks/install.sh`를 돌리지 않은 클론에서는 아예 돌지 않는다.
+- GitHub 웹에서 하는 병합은 막지 못한다.
+
+서버측으로 올리려면 GitHub Pro(유료)로 올리거나 저장소를 공개로 바꿔야 한다.
+공개 전환은 학습 기록·배포 영수증·운영 경로가 함께 공개되므로 택하지 않았다.
 
 ## 작업 방법
 
 1. 위 "작업 시작 대원칙" 네 단계를 마친다. 에이전트 브랜치 접두사는 `codex/`, `claude/`를 쓸 수 있다.
-2. `docs/changes/<id>/`에서 intent → spec → plan과 실제 사람의 구현 승인 근거를 보존한다.
+2. `docs/changes/<id>/`에서 intent → spec → plan과 사용자의 작업 요청 원문(구현 근거)을 보존한다.
 3. 변경을 push하고 master 대상 PR을 만든다. `Tests and build` 결과와 코드 리뷰를 확인한다.
 4. master 병합/push 후 검사가 다시 통과하면 API를 먼저 배포한다. 웹은 같은 Git SHA가
    운영 API `/api/health`에 표시된 후 빌드하고 업로드한다.
@@ -102,7 +136,7 @@ API가 확인된 뒤 해당 SHA의 Pages 배포를 Retry한다. Pages가 다른 
 ## 별도 승인이 필요한 작업
 
 DB migration/init-db, 문항/은행 교체, 사용자 학습 기록, 공용 권한·비밀값 회전, 자료 이동/삭제는
-자동 배포가 실행하지 않는다. 해당 작업의 보존 정책과 중요 운영 승인을 따르고 DB 호환 준비를 먼저 마친다.
+자동 배포가 실행하지 않는다. 해당 작업의 보존 정책과 [사람에게 묻는 것](README.md#사람에게-묻는-것)을 따르고 DB 호환 준비를 먼저 마친다.
 자동 배포되는 코드는 이전 웹/러너와 호환돼야 한다. Spotter 정적 배포와 로컬 러너 설치/재시작도 별도다.
 기존 `development.py`/`release_evidence.py`의 수동 고정 후보 경로는 유지하며, 이번 일반 코드 자동 경로는
 이 문서와 GitHub 실행의 SHA별 검사/배포 근거로 기록한다. CI가 사람의 승인 발언을 만들어 기록하지 않는다.

@@ -1,8 +1,8 @@
 """Read-only question evidence, bound to the exact authored source snapshots."""
 from urllib.parse import quote
 from studyez_contracts.bank.pages import pages_of
-from studyez_contracts.roots import document_hash
 from app.models import QuizBank
+from app.root_learning.content import bank_hash
 from app.storage import ObjectStorage
 
 
@@ -31,7 +31,7 @@ def frozen_pdf(doc, generation, source_id):
 def attach_evidence(db, doc, question, generation, answer):
     if doc.document['bank_source'] == 'quizbank':
         row = db.get(QuizBank, (doc.subject, doc.run_id))
-        if row and row.build_id == doc.document['bank_build_id'] and document_hash(row.bank) == doc.document['review']['bank_sha256']:
+        if row and row.build_id == doc.document['bank_build_id'] and bank_hash(row) == doc.document['review']['bank_sha256']:
             from app.routes.bank_api.presentation import _slides, _jokbo_slides
             answer['slides'] = _slides(db, row, question['question_id'])
             answer['jokboSlides'] = _jokbo_slides(db, row, question)

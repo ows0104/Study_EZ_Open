@@ -16,7 +16,9 @@
 명령과 세부 규칙: [협업 대원칙](docs/development/collaboration.md#작업-시작-대원칙-예외-없음).
 
 StudyEZ의 모든 개발·유지보수는 [개발 루프](docs/development/README.md)를 따른다.
-Intent → Spec → Implementation Plan(사람 승인) → Build → Test → Review → Deploy(중요 승인) → Maintain.
+Intent → Spec → Implementation Plan → Build → Test → Review → Deploy → Maintain.
+사람에게 따로 묻는 것은 되돌릴 수 없는 작업뿐이다([사람에게 묻는 것](docs/development/README.md#사람에게-묻는-것)).
+그 밖에는 사용자의 작업 요청을 승인으로 보고 구현·검사·PR·병합·배포까지 진행한다.
 이번 구조 정리만의 절차가 아니다. 새 작업은 docs/changes/<id>/에 기록한다.
 
 ## 읽기 순서
