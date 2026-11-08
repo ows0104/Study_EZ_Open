@@ -71,3 +71,20 @@ def test_older_point_formats_keep_the_authored_tiers(tmp_path):
     result = g.run(p, tmp_path / 'out', invoke=f.model)
     assert 'importanceProjection' not in result['manifest']
     assert result['document']['bank_snapshot']['build_meta']['schema_version'] == '3.2'
+
+
+def test_model_written_target_axes_are_replaced_by_the_assembly_placeholder(tmp_path):
+    """261104_02 26110803: normalisation copied point evidence into target axes (clinical under exam)."""
+    p = v3_packet(tmp_path, BASIS); seen = []
+    def invoke(stage, ctx, *args):
+        seen.append((stage, 'importanceTable' in ctx))
+        value, info = with_point_ids(stage, ctx, *args)
+        if stage == 'normalize':
+            value['targets'][0]['importance']['exam'] = {'status': 'supported', 'reason': 'model copy', 'evidence': [
+                {'kind': 'clinical_rationale', 'reason': 'wrong axis', 'refs': [{'source_id': 'S1', 'locator': 'p1', 'pages': []}]}]}
+        return value, info
+    result = g.run(p, tmp_path / 'out', invoke=invoke)
+    assert dict(seen)['normalize'] is False and dict(seen)['generate'] is True
+    assert all(a == c.IMPORTANCE_PLACEHOLDER for t in result['manifest']['initialBrief']['targets'] for a in t['importance'].values())
+    assert result['manifest']['repairRounds'] == 0
+    c.validate_result(result, p)
