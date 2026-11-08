@@ -30,15 +30,14 @@
 .main-quiz-map{text-align:left}
 .main-quiz-tree-frame{position:relative;display:flex;border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden;height:max(560px,calc(100dvh - 230px))}
 .main-quiz-map.is-large .main-quiz-tree-frame{position:fixed;inset:12px;z-index:40;height:auto;box-shadow:0 10px 40px rgba(0,0,0,.18)}
-.main-quiz-tree-stage{position:relative;flex:1;min-width:0;overflow:hidden;
-  background-image:radial-gradient(circle,color-mix(in srgb,var(--ink-3) 22%,transparent) 1px,transparent 1.2px);background-size:22px 22px}
+.main-quiz-tree-stage{position:relative;flex:1;min-width:0;overflow:hidden;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.main-quiz-tree-stage:active{cursor:grabbing}
 .main-quiz-tree-bar{display:flex;height:4px;border-radius:2px;overflow:hidden;background:var(--line)}
 .main-quiz-tree-bar i{display:block;min-width:2px}
 .main-quiz-tree-bar .is-new{background:#9aa3b3}.main-quiz-tree-bar .is-learning{background:#ca9b46}.main-quiz-tree-bar .is-recalled{background:#4c997b}.main-quiz-tree-bar .is-unready{background:#d6d6d6}
 /* 가지 보기: 강의 → 열(최상위 주제) → 들여쓴 하위 주제. 문항은 상태 점, 펼치면 줄. */
-.main-quiz-learning:has(.main-quiz-map){max-width:none;padding-bottom:0}
-.main-quiz-tree-stage.is-scroll{overflow-y:auto}
-.mq-lanes-spacer{width:1px}
+.main-quiz-learning:has(.main-quiz-map){max-width:none;padding:0 8px}
+.main-quiz-map .main-quiz-tree-frame{border-radius:8px}
 .mq-map-legend{display:flex;align-items:center;gap:10px;padding:0 8px 0 4px;font-size:.72rem;color:var(--ink-3);white-space:nowrap}
 .mq-map-legend>span::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#9aa3b3;margin-right:4px;vertical-align:0}
 .mq-map-legend>.is-learning::before{background:#ca9b46}.mq-map-legend>.is-recalled::before{background:#4c997b}.mq-map-legend>.is-unready::before{background:#d6d6d6}
@@ -102,8 +101,8 @@
 .main-quiz-tree-tools{position:absolute;z-index:6;left:8px;bottom:8px;display:flex;flex-wrap:wrap;align-items:center;gap:4px;max-width:calc(100% - 16px);padding:4px;border-radius:10px;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(4px)}
 .main-quiz-tree-tools button{border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:8px;font:inherit;font-size:.75rem;min-height:32px;min-width:32px;padding:4px 9px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .main-quiz-tree-tools button:hover{background:var(--hover);color:var(--ink)}
-.main-quiz-tree-panel{position:absolute;z-index:5;top:8px;right:8px;bottom:56px;width:340px;max-width:calc(100% - 16px);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.14);background:var(--surface);overflow:auto;padding:18px 18px 24px;box-sizing:border-box;font-size:.85rem}
-.main-quiz-tree-panel.is-left{right:auto;left:8px}
+/* 패널은 지도 옆에 붙는 열이다 — 지도를 덮지 않고 지도 영역이 그만큼 좁아진다. */
+.main-quiz-tree-panel{position:relative;flex:0 0 340px;max-width:40%;border-left:1px solid var(--line);background:var(--surface);overflow:auto;padding:18px 18px 24px;box-sizing:border-box;font-size:.85rem}
 .main-quiz-tree-panel h3{font-size:1rem;line-height:1.5;margin:6px 28px 8px 0}
 .main-quiz-tree-panel h4{font-size:.8rem;color:var(--ink-3);margin:18px 0 6px}
 .main-quiz-tree-panel ul{list-style:none;padding:0;margin:8px 0}
@@ -122,7 +121,7 @@
 .main-quiz-tree-outline{padding-left:18px;line-height:1.7}
 .main-quiz-tree-outline ol{padding-left:18px}
 @media(max-width:760px){.main-quiz-tree-frame{flex-direction:column}
-  .main-quiz-tree-panel,.main-quiz-tree-panel.is-left{left:6px;right:6px;top:auto;bottom:52px;width:auto;max-height:55%;padding:14px}
+  .main-quiz-tree-panel{position:absolute;z-index:5;left:6px;right:6px;bottom:52px;max-width:none;max-height:55%;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.14);padding:14px}
   .main-quiz-tree-tools{left:6px;right:6px;bottom:6px;flex-wrap:nowrap;overflow-x:auto;max-width:none}.main-quiz-tree-tools button{flex:0 0 auto;min-height:30px;padding:3px 8px}}
 @media(max-width:600px){.main-quiz-learning{padding:0 8px 100px}.main-quiz-tools{gap:0}.main-quiz-learning .main-quiz-tools button,.main-quiz-menu>summary{padding:6px}.main-quiz-learning .quiz-bar{padding:10px 8px;gap:5px}.main-quiz-learning .quiz-bar button{font-size:12px}.main-quiz-learning .quiz-bar .quiz-undo{min-width:48px;font-size:11px;flex-basis:56px}.main-quiz-map .root-card{padding:14px}}
 
