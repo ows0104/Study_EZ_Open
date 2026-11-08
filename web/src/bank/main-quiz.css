@@ -28,29 +28,20 @@
 .main-quiz-pdf-slide{margin:12px 0}
 .main-quiz-pdf-slide figcaption{font-size:.75rem;line-height:1.7;color:var(--ink-3)}
 .main-quiz-map{text-align:left}
-.main-quiz-map h2{font-size:1.2rem}
-.main-quiz-map-legend{display:flex;flex-wrap:wrap;gap:16px;font-size:.75rem;color:var(--ink-2)}
-.main-quiz-map-legend>span::before{content:'';display:inline-block;width:9px;height:9px;border-radius:50%;background:#9aa3b3;margin-right:6px}
-.main-quiz-map-legend>.is-learning::before{background:#ca9b46}
-.main-quiz-map-legend>.is-recalled::before{background:#4c997b}
-.main-quiz-map-legend>.is-unready::before{background:#ccc}
-.main-quiz-map-legend>.is-current::before{background:transparent;border:2px solid var(--accent);box-sizing:border-box}
-.main-quiz-map-search{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:16px 0;font-size:.85rem}
-.main-quiz-map-search input{width:220px;max-width:60vw;padding:8px;border:1px solid var(--line);border-radius:6px;font:inherit}
-.main-quiz-map .main-quiz-map-search ul{position:absolute;top:100%;left:0;z-index:12;width:min(560px,100%);list-style:none;padding:4px;margin:4px 0 0;max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface);box-shadow:0 8px 24px rgba(0,0,0,.12)}
-.main-quiz-map .main-quiz-map-search li>button{display:block;width:100%;text-align:left;border:0;border-radius:6px;background:transparent;font:inherit;font-size:.82rem;line-height:1.45;padding:7px 10px;cursor:pointer;color:var(--ink)}
-.main-quiz-map .main-quiz-map-search li>button:hover{background:var(--hover)}
-.main-quiz-map .main-quiz-map-search li>button .bank-note{display:inline;margin:0 6px 0 0;font-size:.7rem}
 .main-quiz-tree-frame{position:relative;display:flex;border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden;height:max(560px,calc(100dvh - 230px))}
 .main-quiz-map.is-large .main-quiz-tree-frame{position:fixed;inset:12px;z-index:40;height:auto;box-shadow:0 10px 40px rgba(0,0,0,.18)}
-.main-quiz-tree-stage{position:relative;flex:1;min-width:0;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;
+.main-quiz-tree-stage{position:relative;flex:1;min-width:0;overflow:hidden;
   background-image:radial-gradient(circle,color-mix(in srgb,var(--ink-3) 22%,transparent) 1px,transparent 1.2px);background-size:22px 22px}
-.main-quiz-tree-stage:active{cursor:grabbing}
 .main-quiz-tree-bar{display:flex;height:4px;border-radius:2px;overflow:hidden;background:var(--line)}
 .main-quiz-tree-bar i{display:block;min-width:2px}
 .main-quiz-tree-bar .is-new{background:#9aa3b3}.main-quiz-tree-bar .is-learning{background:#ca9b46}.main-quiz-tree-bar .is-recalled{background:#4c997b}.main-quiz-tree-bar .is-unready{background:#d6d6d6}
 /* 가지 보기: 강의 → 열(최상위 주제) → 들여쓴 하위 주제. 문항은 상태 점, 펼치면 줄. */
-.main-quiz-learning:has(.main-quiz-map){max-width:none}
+.main-quiz-learning:has(.main-quiz-map){max-width:none;padding-bottom:0}
+.main-quiz-tree-stage.is-scroll{overflow-y:auto}
+.mq-lanes-spacer{width:1px}
+.mq-map-legend{display:flex;align-items:center;gap:10px;padding:0 8px 0 4px;font-size:.72rem;color:var(--ink-3);white-space:nowrap}
+.mq-map-legend>span::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#9aa3b3;margin-right:4px;vertical-align:0}
+.mq-map-legend>.is-learning::before{background:#ca9b46}.mq-map-legend>.is-recalled::before{background:#4c997b}.mq-map-legend>.is-unready::before{background:#d6d6d6}
 .mq-lanes-world{position:absolute;left:0;top:0;transform-origin:0 0;padding:18px 28px 40px;width:max-content}
 .mq-lane-wires{position:absolute;left:0;top:0;overflow:visible;pointer-events:none;z-index:0}
 .mq-lane-wires path{fill:none}
@@ -74,7 +65,6 @@
 .mq-lane-num{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--lane)}
 .mq-lane-row{display:flex;align-items:flex-start;gap:6px}
 .mq-lane-row b{flex:1;min-width:0;font-weight:600;word-break:keep-all;overflow-wrap:anywhere}
-.mq-lane-meta{display:block;font-size:10.5px;color:var(--ink-3);margin-top:2px}
 .mq-lane-tree>li>.mq-lane-node{background:color-mix(in srgb,var(--lane) 7%,var(--surface));border-color:color-mix(in srgb,var(--lane) 28%,var(--line))}
 .mq-lane-node.is-current{border-color:var(--accent)}
 .mq-lane-dots{flex:0 1 auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:3px;max-width:76px;padding-top:4px}
@@ -104,16 +94,16 @@
 .has-selection .mq-lane-node.is-dim,.has-selection .mq-lane-q.is-dim{opacity:.3}
 .has-selection .is-linked{border-color:var(--lane);box-shadow:0 0 0 2px color-mix(in srgb,var(--lane) 30%,transparent)}
 .mq-lane-node.is-selected,.mq-lane-q.is-selected{border-color:var(--lane);box-shadow:0 0 0 3px color-mix(in srgb,var(--lane) 38%,transparent),0 6px 16px rgba(0,0,0,.1)}
-.main-quiz-map-legend>.is-line::before{width:16px;height:0;border-radius:0;border-top:2px solid #bd944a;vertical-align:middle}
 /* 좁은 화면: 확대 캔버스 대신 세로 목록 */
 .main-quiz-tree-stage.is-narrow{overflow-y:auto;touch-action:pan-y;cursor:auto;user-select:auto;-webkit-user-select:auto}
 .is-narrow .mq-lanes-world{position:static;width:auto;padding:12px 10px 64px}
 .is-narrow .mq-lane-root{max-width:100%;margin-bottom:14px}
 .is-narrow .mq-lanes{display:flex;flex-direction:column;align-items:stretch;gap:18px}
-.main-quiz-tree-tools{position:absolute;left:8px;bottom:8px;display:flex;flex-wrap:wrap;gap:4px;max-width:calc(100% - 16px);padding:4px;border-radius:10px;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(4px)}
+.main-quiz-tree-tools{position:absolute;z-index:6;left:8px;bottom:8px;display:flex;flex-wrap:wrap;align-items:center;gap:4px;max-width:calc(100% - 16px);padding:4px;border-radius:10px;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(4px)}
 .main-quiz-tree-tools button{border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:8px;font:inherit;font-size:.75rem;min-height:32px;min-width:32px;padding:4px 9px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .main-quiz-tree-tools button:hover{background:var(--hover);color:var(--ink)}
-.main-quiz-tree-panel{position:relative;flex:0 0 320px;max-width:42%;border-left:1px solid var(--line);background:var(--surface);overflow:auto;padding:18px 18px 24px;box-sizing:border-box;font-size:.85rem}
+.main-quiz-tree-panel{position:absolute;z-index:5;top:8px;right:8px;bottom:56px;width:340px;max-width:calc(100% - 16px);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.14);background:var(--surface);overflow:auto;padding:18px 18px 24px;box-sizing:border-box;font-size:.85rem}
+.main-quiz-tree-panel.is-left{right:auto;left:8px}
 .main-quiz-tree-panel h3{font-size:1rem;line-height:1.5;margin:6px 28px 8px 0}
 .main-quiz-tree-panel h4{font-size:.8rem;color:var(--ink-3);margin:18px 0 6px}
 .main-quiz-tree-panel ul{list-style:none;padding:0;margin:8px 0}
@@ -131,8 +121,8 @@
 .main-quiz-tree-link:hover{color:var(--accent-ink);text-decoration:underline}
 .main-quiz-tree-outline{padding-left:18px;line-height:1.7}
 .main-quiz-tree-outline ol{padding-left:18px}
-@media(max-width:760px){.main-quiz-tree-frame{flex-direction:column;height:min(78vh,640px)}
-  .main-quiz-tree-panel{flex:0 0 auto;max-width:none;max-height:38%;border-left:0;border-top:1px solid var(--line);padding:14px}
+@media(max-width:760px){.main-quiz-tree-frame{flex-direction:column}
+  .main-quiz-tree-panel,.main-quiz-tree-panel.is-left{left:6px;right:6px;top:auto;bottom:52px;width:auto;max-height:55%;padding:14px}
   .main-quiz-tree-tools{left:6px;right:6px;bottom:6px;flex-wrap:nowrap;overflow-x:auto;max-width:none}.main-quiz-tree-tools button{flex:0 0 auto;min-height:30px;padding:3px 8px}}
 @media(max-width:600px){.main-quiz-learning{padding:0 8px 100px}.main-quiz-tools{gap:0}.main-quiz-learning .main-quiz-tools button,.main-quiz-menu>summary{padding:6px}.main-quiz-learning .quiz-bar{padding:10px 8px;gap:5px}.main-quiz-learning .quiz-bar button{font-size:12px}.main-quiz-learning .quiz-bar .quiz-undo{min-width:48px;font-size:11px;flex-basis:56px}.main-quiz-map .root-card{padding:14px}}
 

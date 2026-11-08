@@ -50,7 +50,16 @@ test('actual API: no textbox, preserved drafts/retries/conflicts, four ratings, 
    assert.equal(await page.locator('.main-quiz-tree-stage').evaluate(stage=>{const s=stage.getBoundingClientRect();
      return [...stage.querySelectorAll('[data-node]')].every(n=>{const r=n.getBoundingClientRect();return r.left>=s.left&&r.right<=s.right&&r.top>=s.top&&r.bottom<=s.bottom;});}),true);
    assert.ok(await graph.evaluate(w=>new DOMMatrix(getComputedStyle(w).transform).a)>=0.6);
+   // Only the map: no title/notes/search/legend row above it, it fills the window, and the page does not scroll.
+   assert.deepEqual(await page.locator('.main-quiz-map').evaluate(m=>[...m.children].filter(c=>!c.classList.contains('sr-only')).map(c=>c.className)),['main-quiz-tree-frame']);
+   assert.equal(await page.evaluate(()=>{const f=document.querySelector('.main-quiz-tree-frame').getBoundingClientRect();
+     return f.bottom<=innerHeight&&innerHeight-f.bottom<=16&&document.documentElement.scrollHeight<=innerHeight+1;}),true);
+   // The map never moves: no zoom buttons, the wheel does nothing, picking a topic keeps scale and place.
+   assert.equal(await page.getByRole('button',{name:'확대',exact:true}).count(),0);
+   const still=await graph.getAttribute('style');const s=await page.locator('.main-quiz-tree-stage').boundingBox();
+   await page.mouse.move(s.x+s.width/2,s.y+s.height/2);await page.mouse.wheel(0,-400);assert.equal(await graph.getAttribute('style'),still);
    await graph.getByRole('button',{name:/^주제 A ·/}).click();await page.getByRole('heading',{name:'A',exact:true}).waitFor();
+   assert.equal(await graph.getAttribute('style'),still);
    assert.equal(await graph.getByRole('button',{name:/^주제 A ·/}).getAttribute('aria-expanded'),'true');
    await graph.getByRole('button',{name:/^주제 C ·/}).click();await graph.getByRole('button',{name:/^주제 C ·/}).click();
    assert.equal(await graph.getByRole('button',{name:/^주제 C ·/}).getAttribute('aria-expanded'),'false');
@@ -80,11 +89,9 @@ test('map from start, PDF failure and modal do not block four self-ratings',asyn
    // lecture + 4 hierarchy topics (A, B, C, D) and the current topic's question row.
    const graph=page.getByRole('group',{name:'개념 트리'});assert.equal(await graph.getByRole('button').count(),6);
    assert.equal(await graph.getByRole('button',{name:/현재 문제$/}).count(),1);
-   await page.getByRole('searchbox').fill('Synthetic target 3');await page.locator('.main-quiz-map-search li button').filter({hasText:'Synthetic target 3'}).click();
+   await graph.getByRole('button',{name:/^주제 D ·/}).click();await graph.getByRole('button',{name:/^문항 Synthetic target 3 ·/}).click();
    await page.getByRole('complementary',{name:'선택한 항목'}).getByRole('heading',{name:'Synthetic target 3'}).waitFor();
-   const before=await graph.getAttribute('style');await page.getByRole('button',{name:'확대',exact:true}).click();
-   assert.notEqual(await graph.getAttribute('style'),before);
-   assert.equal(await page.locator('.main-quiz-tree-frame').evaluate(e=>e.clientHeight<=640),true);
+   assert.equal(await page.locator('.main-quiz-tree-frame').evaluate(e=>e.getBoundingClientRect().bottom<=innerHeight),true);
    await page.getByRole('button',{name:'← 문제로 돌아가기'}).click();await enabled(page,'답 보기');await page.getByRole('button',{name:/^답 보기/}).click();await allRatings(page);
    await page.getByRole('img',{name:'two-pages.pdf · PDF 2쪽',exact:true}).waitFor();await page.getByRole('button',{name:'two-pages.pdf · PDF 2쪽 크게 보기'}).click();
    await page.getByRole('dialog').waitFor();await page.keyboard.press('3');assert.match(await page.getByRole('heading',{name:/문항/}).innerText(),/1 \/ 3/);
