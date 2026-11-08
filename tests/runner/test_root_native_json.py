@@ -134,3 +134,33 @@ def test_repair_checker_permits_producer_accepted_new_required_question(tmp_path
     value=f.author(brief,True);extra=copy.deepcopy(value['bank']['questions'][-1]);extra['question_id']='Q003';extra['question']='Additional synthetic recall?';value['bank']['questions'].append(extra)
     work=tmp_path/'repair-work';work.mkdir();g.write(work/'input.json',ctx);g.write(work/'acceptance.schema.json',n.c.AUTHOR);g.write(work/'result.json',value)
     n.check_file('repair-1',work)
+
+
+def test_failed_check_is_sent_back_once_into_the_same_session_and_stays_verifiable(tmp_path,monkeypatch):
+    """26110803 source-2 claimed one relation twice; the enforced checker now catches it in the call."""
+    packet=f.packet(tmp_path/'source.txt');out=tmp_path/'out';prompts=[]
+    monkeypatch.setattr(producer,'call_model',lambda stage,ctx,material,model:f.model(stage,ctx,material,model))
+    base=provider(out)
+    def run(prompt,**kwargs):
+        work=kwargs['cwd'];stage=work.parent.name;prompts.append((stage,kwargs.get('resume')))
+        if kwargs.get('resume'):  # the follow-up: remove the duplicate claim in the same files
+            value=n.read(work/'result.json')
+            for review in value['question_reviews']:review['relations']=review['relations'][:1]
+            path=work/'result.json';path.write_text(json.dumps(value,ensure_ascii=False),encoding='utf-8')
+            return {'text':json.dumps({'path':'result.json','sha256':n.sha(path)}),'turns':2,'session_id':kwargs['resume'],
+                    'usage':{'input_tokens':7,'output_tokens':3,'cache_read_input_tokens':0,'cache_creation_input_tokens':0},
+                    'models':{kwargs['model']:3},'cost_usd':None,'duration_ms':2}
+        result=base(prompt,**kwargs)
+        if stage=='source-0':
+            path=work/'result.json';value=n.read(path)
+            review=value['question_reviews'][0];review['relations'].append({**review['relations'][0],'role':'provided','direction_ids':[]})
+            path.write_text(json.dumps(value,ensure_ascii=False),encoding='utf-8')
+            result['text']=json.dumps({'path':'result.json','sha256':n.sha(path)})
+        return result
+    native=n.NativeJson(out,invoke=run);native.followups=True
+    result=g.run(packet,out,invoke=native)
+    assert ('source-0','synthetic-native')in prompts and sum(1 for s,r in prompts if r)==1
+    seat=out/'.native'/'source-0'
+    assert (seat/'provider-followup.json').exists() and 'duplicate'in n.read(seat/'check-failure.json')['error']
+    assert n.read(out/'source-0.usage.json')['usage']['input_tokens']==107
+    n.validate_all(out,result)
