@@ -18,13 +18,16 @@
 ledger 신원 `811c33f3…9312a69`, `importanceReview` 기록 없음. 문항·이전 검수·수정 예산은 그대로다.
 자동 재시도는 하지 않았다. 로그: `importance.log`, `importance-2.log`.
 
-## 알려진 결함 (다음에 고칠 것)
+## 결함과 수정
 
-`runner/root_importance_review.py`는 중요도 묶음 결과를 최종 원본 대조가 끝난 뒤에만 저장한다.
-그래서 2차 실행의 7개 묶음 결과·사용량이 디스크에 남지 않았다. 다시 쓰려면 먼저:
+2차 실행 당시 `runner/root_importance_review.py`는 중요도 묶음 결과를 최종 원본 대조가 끝난 뒤에만
+저장했다. 그래서 7개 묶음 결과·사용량이 디스크에 남지 않았다. 중단 뒤 PR 준비에서 고쳤다(모델 호출 없음):
 
-1. 묶음마다 끝나는 즉시 저장하고, 다음 실행에서 저장된 묶음은 다시 호출하지 않는다.
-2. 최종 원본 대조 시한을 늘리거나(현재 `connection_generate_v2.call_model`의 2400초) 대조를 나눈다.
+1. 묶음마다 끝나는 즉시 `.importance-review-chunks/<갈래>.json`에 저장한다. 같은 lineage brief·
+   목표 집합이면 다음 실행에서 다시 호출하지 않는다. 실패한 묶음·대조는 `failed-*`·`source-failed-*`로 남긴다.
+2. 최종 원본 대조 시한은 5400초다. `call_model`의 기본 2400초는 그대로다.
+
+검사: `tests/quizbank/test_importance_chunks.py`. 이 수정으로 다시 실행하지는 않았다.
 
 ## 브랜치에 남은 것
 

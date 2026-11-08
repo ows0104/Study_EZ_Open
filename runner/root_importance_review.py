@@ -1,8 +1,10 @@
 """Approved continuation: complete target importance, then one fresh final source audit.
 
 Only for a finished run whose final source audit left every target unknown while every target's
-importance was still unreviewed with no evidence. Two model calls (importance, source audit),
-same reviewed bank, no content edit, no correction-budget change. The orchestrator then assembles
+importance was still unreviewed with no evidence. One importance call per top-level branch, then one
+source audit; same reviewed bank, no content edit, no correction-budget change. Each finished branch is
+saved at once under `.importance-review-chunks/` and reused by a later run for the same lineage brief,
+so a failed audit or branch never discards finished importance work. The orchestrator then assembles
 the document from the recorded proof (ledger `importanceReview`).
 
   python -m runner.root_importance_review --packet <packet.json> --out <run> --reason "..."
@@ -23,6 +25,8 @@ from studyez_llm import codex
 from . import root_native_json as n
 
 ARCHIVE = '.importance-review'
+CHUNKS = '.importance-review-chunks'
+SOURCE_TIMEOUT = 5400  # the importance-laden final audit exceeded 2400s
 PROMPT = """중요도 근거 작성 단계다. 학습 목표마다 이해의 뼈대(structural)·시험 근거(exam)·임상 근거(clinical) 세 축의 status·reason·evidence를 원본에서 작성한다.
 - status는 supported 또는 insufficient다. supported는 원본 근거(refs: source_id·pages·locator)가 있는 evidence가 하나 이상 필요하다. 근거가 없거나 약하면 insufficient로 두고 reason에 이유를 적는다. 미검토로 남기지 않는다.
 - structural은 structural_rationale(이 목표가 강의 구조·다른 목표의 이해에 필요한 이유), exam은 observed_exam(S2 족보 등 실제 기출)·exam_forecast(교수의 명시·암시 출제 예고)·teaching_emphasis(교수 강조·별표), clinical은 clinical_rationale만 쓴다.
@@ -57,6 +61,34 @@ def _pages(targets):
         for ref in t['evidence']:
             pages.setdefault(ref['source_id'], set()).update(ref.get('pages') or [])
     return {k: sorted(v) for k, v in pages.items()}
+
+
+def _chunk_path(out, branch):
+    return out / CHUNKS / (''.join(ch if ch.isalnum() or ch in '-_' else '_' for ch in branch) + '.json')
+
+
+def _saved(out, lineage, branch, targets):
+    """A finished chunk from an earlier run of this same lineage brief and target set, else None."""
+    path = _chunk_path(out, branch)
+    if not path.exists():
+        return None
+    row = n.read(path)
+    ids = sorted(t['target_id'] for t in targets)
+    if row.get('briefBeforeHash') != document_hash(lineage) or row.get('branch') != branch or row.get('targetIds') != ids:
+        return None
+    n.require(sorted(r['target_id'] for r in row['value']['targets']) == ids, 'Saved importance chunk ' + branch + ' is incomplete')
+    return row['value'], row['usage']
+
+
+def _chunk(out, lineage, title, branch, targets, model):
+    saved = _saved(out, lineage, branch, targets)
+    if saved:
+        return (*saved, True)
+    value, usage = _importance_call(out, lineage, title, branch, targets, model)
+    (out / CHUNKS).mkdir(exist_ok=True)
+    g.write(_chunk_path(out, branch), {'briefBeforeHash': document_hash(lineage), 'branch': branch,
+                                       'targetIds': sorted(t['target_id'] for t in targets), 'value': value, 'usage': usage})
+    return value, usage, False
 
 
 def _importance_call(out, lineage, title, branch, targets, model):
@@ -109,7 +141,7 @@ def review(packet, out, *, reason, model=None):
         # 1) importance from the original sources, one call per top-level branch (a single call timed out)
         groups = branches(lineage)
         with ThreadPoolExecutor(max_workers=len(groups)) as pool:
-            futures = {b: pool.submit(_importance_call, out, lineage, packet['title'], b, ts, model) for b, ts in groups.items()}
+            futures = {b: pool.submit(_chunk, out, lineage, packet['title'], b, ts, model) for b, ts in groups.items()}
             done, failed = {}, {}
             for b, fut in futures.items():
                 try:
@@ -117,19 +149,22 @@ def review(packet, out, *, reason, model=None):
                 except Exception as error:  # keep every finished chunk; no automatic retry
                     failed[b] = str(error)
         if failed:
-            keep = out / f'.importance-review-failed-{int(time.time())}'
-            keep.mkdir()
-            g.write(keep / 'chunks.json', {'done': {b: v for b, (v, _u) in done.items()},
-                                          'usage': {b: u for b, (_v, u) in done.items()}, 'failed': failed})
-            raise ValueError('Importance chunks failed (no retry): ' + json.dumps(failed, ensure_ascii=False))
+            (out / CHUNKS).mkdir(exist_ok=True)
+            g.write(out / CHUNKS / f'failed-{int(time.time())}.json', {'failed': failed, 'saved': sorted(done)})
+            raise ValueError('Importance chunks failed (no retry; finished chunks are saved): ' + json.dumps(failed, ensure_ascii=False))
         importance = {'targets': [row for b in groups for row in done[b][0]['targets']]}
-        importance_usage = {b: u for b, (_v, u) in done.items()}
+        importance_usage = {b: {**u, 'reused': reused} for b, (_v, u, reused) in done.items()}
         brief = imp.apply(lineage, importance)
         imp.only_importance_changed(lineage, brief)
         c.validate_brief(brief)
         # 2) one fresh final source audit of the same bank under that brief
         source_ctx = {**copy.deepcopy(ctx), 'brief': brief}
-        raw, source_usage = v2.call_model('source-' + str(rounds + 1), source_ctx, out / 'material', model)
+        try:
+            raw, source_usage = v2.call_model('source-' + str(rounds + 1), source_ctx, out / 'material', model,
+                                              timeout=SOURCE_TIMEOUT)
+        except Exception as error:  # importance chunks stay saved for the next approved run
+            g.write(out / CHUNKS / f'source-failed-{int(time.time())}.json', {'error': str(error)})
+            raise
         jsonschema.validate(raw, c.source_schema(brief, bank))
         raw_evidence = envelope(brief, bank, raw)
         audit = c.compile_assessment(brief, bank, raw_evidence)
@@ -151,7 +186,7 @@ def review(packet, out, *, reason, model=None):
         g.write(out / 'ledger.json', updated)
         checks = raw['target_checks']
         from collections import Counter
-        return {'modelCalls': 2, 'targetChecks': dict(Counter(r['status'] for r in checks)),
+        return {'modelCalls': sum(not u['reused'] for u in importance_usage.values()) + 1, 'targetChecks': dict(Counter(r['status'] for r in checks)),
                 'importance': {ax: dict(Counter(r['importance'][ax]['status'] for r in importance['targets'])) for ax in imp.AXES},
                 'mappings': len(audit['review']['mappings']),
                 'coverage': dict(Counter(x['status'] for x in audit['review']['coverage']))}

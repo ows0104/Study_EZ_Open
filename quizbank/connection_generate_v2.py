@@ -23,7 +23,7 @@ def medical_input(bank,conflicts):
     # deliberately absent; canonical clinical question/answer text stays verbatim.
     return c.medical_input(bank,conflicts)
 
-def call_model(stage,context,material,model):
+def call_model(stage,context,material,model,timeout=2400):
     from . import connection_generate as g
     kind=stage.split('-')[0]
     if kind=='medical':
@@ -50,7 +50,7 @@ def call_model(stage,context,material,model):
         with tempfile.TemporaryDirectory(prefix='studyez-root-v2-',ignore_cleanup_errors=True)as tmp:
             work=Path(tmp);shutil.copytree(material,work/'material')
             if 'bank'in context:visual.paths(context['bank'],work/'material')
-            result=codex.run(prompt,blind=False,cwd=work,model=model,timeout=2400,label='연결 자동출제 '+stage,
+            result=codex.run(prompt,blind=False,cwd=work,model=model,timeout=timeout,label='연결 자동출제 '+stage,
                 schema=g.output_schema(schema),system='Preserve source boundaries. Never fabricate coverage or review evidence.')
             if 'bank'in context:visual.paths(context['bank'],work/'material')
         value=g.decode_optional_fields(json.loads(result['text']),schema)
