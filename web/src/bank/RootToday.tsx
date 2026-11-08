@@ -29,8 +29,8 @@ function Stat({label,value,total,tone}:{label:string;value:number;total?:number;
  * Main-Quiz 첫 화면(2026-11-08). 홈의 「강의 목록」과 같은 머리·숫자 칸·카드 모양.
  * 해야 할 일(오늘 학습)을 한 장의 카드에 두고, 설명·정책·판 정보는 접어 둔다.
  */
-export function RootToday({info,onStart,disabled,onMap,lectureLink,admin}:{info:RootOverview;onStart:()=>void;disabled:boolean;onMap?:()=>void;
-  lectureLink?:string;admin?:ReactNode}) {
+export function RootToday({info,onStart,disabled,starting=false,onMap,lectureLink,admin}:{info:RootOverview;onStart:()=>void;disabled:boolean;
+  starting?:boolean;onMap?:()=>void;lectureLink?:string;admin?:ReactNode}) {
   const p=info.plan,s=info.summary;
   const learned=s&&s.total?s.learned/s.total*100:0,recalled=s&&s.total?s.recalled/s.total*100:0;
   return <section className="mq-start">
@@ -60,8 +60,9 @@ export function RootToday({info,onStart,disabled,onMap,lectureLink,admin}:{info:
           <p>{p.tasks.length?<>과제 <b>{p.tasks.length}</b>개 · 새 목표 최소 <b>{p.newGoalQuota}</b>개</>:'지금 추천할 과제가 없습니다.'}</p>
           <small>{p.deadline?`첫 학습 목표일 ${p.deadline}${p.days!==null&&p.days<=0?' · 목표일 지남':''}`:'시험일 미정 · 준비된 새 범위와 필요한 복습을 추천합니다.'}</small>
         </div>
-        <button className="mq-start-button" disabled={disabled||!p.tasks.length&&!info.sessionId} onClick={onStart}>
+        <button className="mq-start-button" disabled={disabled||!p.tasks.length&&!info.sessionId} onClick={onStart} aria-busy={starting}>
           <Icon.play/>{info.sessionId?'오늘 학습 재개':'오늘 학습 시작'}</button>
+        {starting&&<span className="sr-only" role="status">첫 문항을 여는 중…</span>}
       </>:<p className="mq-today-text">{info.message}</p>}
     </section>
 

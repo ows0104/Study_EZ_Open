@@ -147,3 +147,52 @@
   .mq-summary dl{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 .mq-summary-line{margin:8px 0;font-size:14px;font-weight:600;color:var(--ink)}
+
+/* ───────── 풀이 화면(2026-11-08): 홈과 같은 좌측 메뉴 안. 평가 줄은 화면 아래 떠 있는 독 ───────── */
+.app-shell:not(.is-bare) .main-quiz-learning:not(.is-start){max-width:1100px;margin:0 auto;padding:0}
+.mq-solve-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px;text-align:left}
+.mq-solve-head .mq-kicker{min-width:0}
+.mq-solve-title{font-size:15px;font-weight:700;color:var(--ink);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.main-quiz-learning .mq-solve-head .main-quiz-tools{gap:8px}
+.main-quiz-learning .mq-solve-head .pill-button,.main-quiz-learning .mq-solve-head .main-quiz-menu>summary.pill-button{height:32px;min-height:0;padding:0 13px;font-size:13px;color:var(--ink);
+  display:inline-flex;align-items:center;border:1px solid var(--line-strong);border-radius:999px;background:var(--surface)}
+.main-quiz-learning .mq-solve-head .pill-button:hover:not(:disabled){background:var(--hover)}
+.main-quiz-menu>summary.pill-button{list-style:none}
+.main-quiz-menu>summary.pill-button::-webkit-details-marker{display:none}
+.main-quiz-menu[open]>summary.pill-button{border-color:var(--accent-line);background:var(--accent-soft)}
+.mq-solve-head .main-quiz-menu[open]{background:none;border:0}
+.mq-menu-pop{position:absolute;right:0;top:calc(100% + 6px);z-index:7;display:flex;flex-direction:column;min-width:160px;padding:4px;
+  border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:0 8px 24px rgba(0,0,0,.10)}
+.main-quiz-learning .mq-menu-pop>button{min-height:36px;padding:8px 12px;border:0;border-radius:8px;background:none;text-align:left;font:inherit;font-size:13px;color:var(--ink);cursor:pointer}
+.main-quiz-learning .mq-menu-pop>button:hover:not(:disabled){background:var(--hover)}
+.mq-solve-progress{display:flex;align-items:center;gap:14px;margin:0 0 16px;letter-spacing:0}
+.mq-solve-progress .main-quiz-question-heading{flex:none;font-size:13px;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.main-quiz-solve .main-quiz-question-heading:focus,.main-quiz-solve .main-quiz-question-heading:focus-visible{outline:none;box-shadow:none}
+.mq-track{flex:1;height:6px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.mq-track i{display:block;height:100%;border-radius:inherit;background:var(--accent);transition:width .25s ease}
+.main-quiz-solve .mq-card{border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:36px 40px 32px;margin-top:0;min-height:240px;
+  box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.main-quiz-solve .mq-card .quiz-line{width:auto;height:0;margin:28px -40px;border:0;border-top:1px dashed var(--line);background:none}
+.app-shell:not(.is-bare) .main-quiz-solve{display:flex;flex-direction:column;min-height:calc(100vh - 68px)}
+.app-shell:not(.is-bare) .main-quiz-learning .main-quiz-solve .quiz-bar{position:sticky;bottom:16px;left:auto;right:auto;margin:auto 0 0;top:auto;
+  padding:12px;border:1px solid var(--line);border-radius:16px;background:color-mix(in srgb,var(--surface) 94%,transparent);
+  backdrop-filter:blur(8px);box-shadow:0 8px 28px rgba(0,0,0,.08)}
+.main-quiz-solve>.mq-card{margin-bottom:20px}
+.app-shell:not(.is-bare) .main-quiz-learning .quiz-bar .quiz-submit{border-radius:12px;font-weight:600}
+.app-shell:not(.is-bare) .main-quiz-learning .quiz-bar .quiz-grade,.app-shell:not(.is-bare) .main-quiz-learning .quiz-bar .quiz-undo{border-radius:12px}
+.mq-done{display:flex;flex-direction:column;gap:14px;text-align:left}
+.mq-done-card{flex-wrap:wrap}
+.mq-done-card .root-actions{display:flex;gap:10px;margin:0;align-items:center}
+.main-quiz-learning .mq-done-card .pill-button{height:44px;padding:0 16px}
+.main-quiz-learning .mq-start-button[aria-busy="true"]{opacity:.7;cursor:progress}
+@media(max-width:900px){.app-shell:not(.is-bare) .main-quiz-solve{min-height:calc(100vh - 52px)}}
+@media(max-width:640px){
+  .app-shell:not(.is-bare) .main-quiz-solve{min-height:calc(100vh - 100px)}
+  .main-quiz-solve .mq-card{padding:22px 16px 20px;border-radius:12px}
+  .main-quiz-solve .mq-card .quiz-line{margin:20px -16px}
+  .app-shell:not(.is-bare) .main-quiz-learning .main-quiz-solve .quiz-bar{bottom:8px;padding:8px;border-radius:14px}
+  .mq-solve-title{font-size:14px}
+}
+.main-quiz-learning .mq-menu-pop>button{display:flex;justify-content:flex-start;white-space:nowrap}
+.main-quiz-learning .quiz-bar .quiz-undo{white-space:nowrap}
+@media(max-width:640px){.app-shell:not(.is-bare) .main-quiz-learning .quiz-bar .quiz-undo{flex:0 0 auto;min-width:0;padding:0 8px}}

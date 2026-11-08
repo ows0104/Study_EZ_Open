@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect } from "react";
 
 /**
- * Main-Quiz는 시작 화면과 풀이 화면이 같은 주소다(2026-11-08).
- * 시작 화면은 홈과 같은 좌측 메뉴 안에 서고, 문항을 푸는 동안만 창 전체를 쓴다.
- * 주소로는 둘을 가를 수 없어 화면이 직접 알린다.
+ * Main-Quiz 주소는 시작 화면과 풀이 화면이 같다(2026-11-08).
+ * 새 Main-Quiz(뿌리 학습)는 풀이까지 홈과 같은 좌측 메뉴 안에 선다 — 이 신호를 쓰지 않는다.
+ * 같은 주소의 기존 Quiz Bank 화면만 푸는 동안 창 전체를 쓰겠다고 알린다.
  */
 export const StudyChrome = createContext<(solving: boolean) => void>(() => {});
 
