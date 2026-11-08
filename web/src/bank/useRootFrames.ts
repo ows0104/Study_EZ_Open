@@ -43,7 +43,9 @@ export function useRootFrames(sessionId: string | undefined) {
       .finally(() => inflight.current.delete(start));
   }, [sessionId, images]);
   const get = useCallback((position: number) => frames.current.get(position), []);
-  return { get, ensure };
+  /** 개인 수정 뒤: 미리 받은 문항·답이 옛 문면이다. 다음 ensure가 새로 받는다. */
+  const forget = useCallback(() => { frames.current = new Map(); inflight.current = new Set(); }, []);
+  return { get, ensure, forget };
 }
 
 function warm(frames: RootFrame[], images: SlidePreloader) {

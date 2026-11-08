@@ -206,3 +206,5 @@
 .mq-records>summary{cursor:pointer;min-height:32px;display:flex;align-items:center;color:var(--ink-3);font-size:12.5px}
 .mq-records p{margin:6px 0;line-height:1.6}
 .mq-help-note{margin:10px 0 0;font-size:12px}
+.mq-edited{margin:0 0 8px;text-align:left}
+.mq-edit-note{margin:0 0 8px;text-align:left}

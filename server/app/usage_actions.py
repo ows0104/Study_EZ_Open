@@ -42,6 +42,9 @@ ACTIONS = (
       )),
     Action('connection_save', '연결 학습 저장 (이동·열람·자기확인)', 'quizzes', ('connectionSaves',),
            ('connectionSaves', 'count'), ('connectionSaves', 'lastAt'), '작업', '작업'),
+    # bank_feedback 한 줄 = 「문제 수정·제보」 저장 한 번(기존 은행·Main-Quiz 공통). 되돌리기는 줄을 남기지 않는다.
+    Action('question_report', '문제 수정·제보 저장', 'quizzes', ('questionReports',),
+           ('questionReports', 'count'), ('questionReports', 'lastAt'), '건', '건'),
     Action("personal_preview_create", "개인 링크 만들기 시도", "personal", ("previewCreates",),
            ("previewCreates", "count"), ("previewCreates", "lastAt"), preview_kind="create"),
     Action("personal_preview_saved", "개인 예습 링크 저장", "personal", ("previewSaves",),

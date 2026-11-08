@@ -89,3 +89,21 @@
   검토된 판을 그대로 쓰며 문항 수정 API가 없다. 이번 변경에 넣지 않았다.
 - 검사: 서버 전체 126, root-ui 4/4, bank-slides·study-blocks 19, typecheck·build. 격리 fixture에서 순서(그림<출처<기록),
   회차 메모 미노출, 제보 전송(화면 칸에 문항 id), 닫힌 동안 입력칸 0, 맨 아래에서 카드와 평가 독 간격 20px 확인.
+
+## 후속 4 (같은 날, claude/main-quiz-question-edit)
+
+사용자: 「문제 수정, 오류 제보 기능은 넣어야 할 듯.」
+
+- 새 Main-Quiz 풀이의 「더 보기 → 문제 수정·제보」. 기존 Quiz Bank와 같은 대화상자(`PersonalQuestionDialog`)를 쓴다.
+  - 발문·정답 개인 수정본은 내 계정의 풀이·미리받기에만 보이고 「내 수정본」 표시가 붙는다. 원본 판·다른 계정·학습 사건은 그대로.
+  - 저장하면 관리자 신고함(「Quiz Bank 신고」 탭)에 남는다. 수정 내용은 [개인 수정 제안]으로 붙는다. 원본으로 되돌리기는 수정본만 지운다.
+- 새 표 없음: `bank_personal_edit`·`bank_feedback`(둘 다 강의 외래키만)을 그대로 쓴다. 제보의 `build_id`는 `root:<판>`(64자 자름)이고,
+  신고함은 그 판의 Main-Quiz 문항 문면을 싣고 지금 공개 판이 아니면 옛 판으로 표시한다.
+- 개인 수정은 문제은행 없이 선 판(standalone, 감염병리1)만. 문제은행과 연결된 판은 기존 규칙(`content.availability`)상 개인 수정본이
+  있으면 그 과제를 연결 미확인으로 막으므로 제보만 받는다(대화상자가 「문제 제보」로 바뀐다).
+- 이용현황: 「문제 수정·제보 저장」(`question_report`, bank_feedback 한 줄 = 한 건)을 카탈로그에 등록했다. 기존 은행 제보도 같이 센다
+  (이전에는 등록돼 있지 않았다).
+- #36의 일반 피드백 「문제 제보」는 이 항목으로 대신했다(`FeedbackButton`의 문맥 prop 제거, 열 때만 그리기는 유지).
+- 검사: 서버 전체 127(새 `test_root_personal`: 계정 분리·풀이/미리받기 반영·사건 미기록·신고함 문면·되돌리기·연결 판 제보만·이용현황),
+  route_contract, root-ui 4/4, personal-questions 5/5(기존 은행 대화상자), study-blocks·bank-slides 19, typecheck·build.
+  격리 fixture 브라우저: 저장 → 「내 수정본」·문면 반영 → 새로고침 유지 → 관리자 신고함 탭에 문면 → 되돌리기, 페이지 오류 0.
