@@ -107,13 +107,33 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
   );
 }
 
-export function AnswerBody({ question: q, answer, preload }: {
-  question: BankQuestion; answer: BankAnswer; preload?: SlidePreloader;
-}) {
+/** 문항 검수·외부지식·근거 상태·자료 차이. 답 영역 안(기존 은행) 또는 참고 슬라이드 아래(Main-Quiz)에 그린다. */
+export function hasAnswerReview(answer: BankAnswer) {
   const review = answer.medicalReview;
-  const hasMedicalReview = review && review.verdict !== "ok";
-  const hasReviewNotes = answer.reviewIssues?.length || hasMedicalReview
-    || answer.evidenceStatus || answer.conflict?.trim() || answer.external;
+  return Boolean(answer.reviewIssues?.length || (review && review.verdict !== "ok")
+    || answer.evidenceStatus || answer.conflict?.trim() || answer.external);
+}
+
+export function AnswerReviewItems({ answer }: { answer: BankAnswer }) {
+  const review = answer.medicalReview;
+  return <>
+    {answer.reviewIssues?.map((issue, index) => <p key={index}><b>문항 검수 · 미해결</b> {issue}</p>)}
+    {review && review.verdict !== "ok" ? (
+      <p>
+        <b>외부지식 검토 · {review.verdict === "wrong" ? "틀림" : "의심"}</b> {review.note}
+        {review.suggested_answer ? <><br />맞는 답: {review.suggested_answer}</> : null}
+      </p>
+    ) : null}
+    <BankEvidenceNotice status={answer.evidenceStatus} />
+    <BankSourceNote conflict={answer.conflict} external={answer.external} />
+  </>;
+}
+
+/** `reviewInline={false}`: 검토 기록을 그리지 않는다 — 호출한 화면이 참고 슬라이드 아래에 따로 둔다. */
+export function AnswerBody({ question: q, answer, preload, reviewInline = true }: {
+  question: BankQuestion; answer: BankAnswer; preload?: SlidePreloader; reviewInline?: boolean;
+}) {
+  const hasReviewNotes = reviewInline && hasAnswerReview(answer);
   const layout = q.format === "matching" ? matchingLayout(q) : { left: [], right: [] };
   const right = layout.right;
   const pairs = q.format === "matching" ? [...answer.answerPairs].sort((a, b) => layout.left.indexOf(a.left) - layout.left.indexOf(b.left)) : answer.answerPairs;
@@ -228,15 +248,7 @@ export function AnswerBody({ question: q, answer, preload }: {
       {hasReviewNotes ? (
         <details className="bank-review-notes" key={`review:${q.question_id}`}>
           <summary>문항 검수 기록</summary>
-          {answer.reviewIssues?.map((issue, index) => <p key={index}><b>문항 검수 · 미해결</b> {issue}</p>)}
-          {hasMedicalReview ? (
-            <p>
-              <b>외부지식 검토 · {review.verdict === "wrong" ? "틀림" : "의심"}</b> {review.note}
-              {review.suggested_answer ? <><br />맞는 답: {review.suggested_answer}</> : null}
-            </p>
-          ) : null}
-          <BankEvidenceNotice status={answer.evidenceStatus} />
-          <BankSourceNote conflict={answer.conflict} external={answer.external} />
+          <AnswerReviewItems answer={answer} />
         </details>
       ) : null}
     </>

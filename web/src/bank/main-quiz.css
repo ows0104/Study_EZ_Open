@@ -196,3 +196,13 @@
 .main-quiz-learning .mq-menu-pop>button{display:flex;justify-content:flex-start;white-space:nowrap}
 .main-quiz-learning .quiz-bar .quiz-undo{white-space:nowrap}
 @media(max-width:640px){.app-shell:not(.is-bare) .main-quiz-learning .quiz-bar .quiz-undo{flex:0 0 auto;min-width:0;padding:0 8px}}
+
+/* 답 영역(2026-11-08): 그림 → 출처 줄 → 이 문항 검토 기록 */
+.main-quiz-pdf-slides{margin:24px 0 0}
+.main-quiz-pdf-slide{margin:0}
+.main-quiz-pdf-slide figcaption{margin-top:8px;text-align:center;font-size:12px;color:var(--ink-3)}
+.main-quiz-pdf-slide figcaption a{color:var(--accent-ink)}
+.mq-records{margin:18px 0 0;text-align:left;border-top:1px dashed var(--line);padding-top:10px;font-size:13px;color:var(--ink-2)}
+.mq-records>summary{cursor:pointer;min-height:32px;display:flex;align-items:center;color:var(--ink-3);font-size:12.5px}
+.mq-records p{margin:6px 0;line-height:1.6}
+.mq-help-note{margin:10px 0 0;font-size:12px}
