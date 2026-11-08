@@ -90,35 +90,25 @@ export function ancestors(tree:Tree,id:string){
   return out;
 }
 
-export const SIZE={root:{w:210,h:64},concept:{w:260,h:66},target:{w:330,h:64}} as const;
-const GAP_X=72,GAP_Y=12,GROUP_Y=22;
-
-export type Placed = {id:string;x:number;y:number;w:number;h:number};
-/** Left-to-right tidy tree of the expanded part. x,y = top-left corner. */
-export function layout(tree:Tree,expanded:Set<string>){
-  const placed=new Map<string,Placed>();
-  const depthOf=new Map<string,number>();
-  const visibleKids=(id:string)=>id===tree.rootId||expanded.has(id)?tree.nodes.get(id)!.children:[];
-  (function depth(id:string,d:number){depthOf.set(id,d);visibleKids(id).forEach(c=>depth(c,d+1));})(tree.rootId,0);
-  const colWidth:number[]=[];
-  for(const [id,d] of depthOf)colWidth[d]=Math.max(colWidth[d]??0,SIZE[tree.nodes.get(id)!.kind].w);
-  const colX=colWidth.map((_,i)=>colWidth.slice(0,i).reduce((s,w)=>s+w+GAP_X,0));
-  let cursor=0;
-  function place(id:string):{top:number;bottom:number}{
-    const n=tree.nodes.get(id)!,size=SIZE[n.kind],x=colX[depthOf.get(id)!];
-    const kids=visibleKids(id);
-    if(!kids.length){const y=cursor;cursor+=size.h+GAP_Y;placed.set(id,{id,x,y,w:size.w,h:size.h});return {top:y,bottom:y+size.h};}
-    const spans=kids.map((c,i)=>{if(i>0&&tree.nodes.get(c)!.kind==='concept'&&visibleKids(c).length)cursor+=GROUP_Y-GAP_Y;return place(c);});
-    const top=spans[0].top,bottom=spans[spans.length-1].bottom;
-    // Centre on the first and last child centres, never above the cursor that placed them.
-    const centre=(top+bottom)/2,y=Math.max(centre-size.h/2,0);
-    placed.set(id,{id,x,y,w:size.w,h:size.h});
-    if(kids.length&&id!==tree.rootId&&tree.nodes.get(kids[kids.length-1])!.kind==='concept')cursor+=GROUP_Y-GAP_Y;
-    return {top:Math.min(top,y),bottom:Math.max(bottom,y+size.h)};
-  }
-  place(tree.rootId);
-  let width=0,height=0;
-  for(const p of placed.values()){width=Math.max(width,p.x+p.w);height=Math.max(height,p.y+p.h);}
-  const edges=[...placed.values()].filter(p=>p.id!==tree.rootId).map(p=>({from:tree.nodes.get(p.id)!.parent!,to:p.id}));
-  return {placed,edges,width,height};
+export type LaneRow = {id:string; depth:number};
+export type Lane = {head:string; rows:LaneRow[]};
+/** Top-down lane view: each top-level topic is one column (lane); the topics below it follow
+ *  depth-first in lecture order, with their depth under the lane head. Questions are not rows —
+ *  they belong to the topic they hang under (see `questionsOf`). Nothing is collapsed. */
+export function lanes(tree:Tree):Lane[]{
+  const isConcept=(id:string)=>tree.nodes.get(id)!.kind==='concept';
+  return tree.nodes.get(tree.rootId)!.children.filter(isConcept).map(head=>{
+    const rows:LaneRow[]=[];
+    (function walk(id:string,depth:number){
+      for(const c of tree.nodes.get(id)!.children)if(isConcept(c)){rows.push({id:c,depth});walk(c,depth+1);}
+    })(head,1);
+    return {head,rows};
+  });
+}
+export const questionsOf=(tree:Tree,id:string)=>tree.nodes.get(id)!.children.filter(c=>tree.nodes.get(c)!.kind==='target');
+/** Lanes per row: everything on one row up to 8 lanes, then balanced rows so a flat map
+ *  (many topics, no nesting) still keeps a screen-like shape instead of one very wide strip. */
+export function lanesPerRow(count:number){
+  if(count<=8)return Math.max(1,count);
+  return Math.ceil(count/Math.ceil(count/8));
 }
