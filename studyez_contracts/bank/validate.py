@@ -15,10 +15,10 @@ import re
 import unicodedata
 from datetime import UTC, datetime
 
-from .schema import SCHEMA_VERSION, schema_errors, without_retired
+from .schema import SCHEMA_VERSIONS, schema_errors, without_retired
 from .choices import option_pool_errors
 from .quality import quality_errors
-from .priorities import IMPORTANCE
+from .priorities import IMPORTANCE_BY_VERSION
 
 
 # 외부 의학지식으로 쓴 자리(프롬프트 v1.2, 2026-10-05). 첨부 자료가 아니라서 출처 요약에는 안 서지만
@@ -82,7 +82,7 @@ def validate_bank(bank: dict, source_ids: list[str], *, learning_structure: bool
             fail(ref["source_id"] in ids and (ref["source_id"] == EXTERNAL or _nonempty(ref["locator"])),
                  f"{label}: 유효한 source_id 및 page/slide/section 필요")
 
-    fail(bank["build_meta"]["schema_version"] in ("3.0", "3.1", SCHEMA_VERSION), f"지원 schema_version: 3.0, 3.1, {SCHEMA_VERSION}")
+    fail(bank["build_meta"]["schema_version"] in SCHEMA_VERSIONS, f"지원 schema_version: {', '.join(SCHEMA_VERSIONS)}")
     fail(_nonempty(bank["build_meta"]["lecture_title"]), "강의 제목 누락")
     fail(bool(bank["questions"]) and (bool(bank["concepts"]) if learning_structure else True), "개념과 문항이 비어 있습니다.")
     if not learning_structure:
@@ -91,11 +91,12 @@ def validate_bank(bank: dict, source_ids: list[str], *, learning_structure: bool
     if errors:
         return result()
 
-    if bank["build_meta"]["schema_version"] == "3.2":
+    table = IMPORTANCE_BY_VERSION.get(bank["build_meta"]["schema_version"])
+    if table:
         for item in [*bank["questions"], *bank["concepts"]]:
             ident = item.get("question_id", item.get("concept_id"))
-            fail(item["importance"] == IMPORTANCE[item["tier"]],
-                 f"{ident}: 중요도 수치는 Essential=5, Core=5, Important=4, Optional=2여야 합니다.")
+            fail(item["importance"] == table[item["tier"]],
+                 f"{ident}: 중요도 수치는 " + ", ".join(f"{k}={v}" for k, v in table.items()) + "여야 합니다.")
 
     if check_quality:
         quality_invalid, quality_warnings = quality_errors(bank)

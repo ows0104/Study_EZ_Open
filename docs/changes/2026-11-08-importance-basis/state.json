@@ -1,0 +1,19 @@
+{
+  "id": "2026-11-08-importance-basis",
+  "title": "중요도 근거 통합 — 포인트 근거에서 Tier·importance·3축 계산",
+  "area": "generation",
+  "created_at": "2026-11-08T06:10:15.544681+00:00",
+  "required_checks": [
+    "contracts",
+    "generation"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-08T06:10:15.544697+00:00"
+}

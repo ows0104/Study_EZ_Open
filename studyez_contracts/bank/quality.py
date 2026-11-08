@@ -222,7 +222,7 @@ def quality_errors(bank: dict) -> tuple[list[str], list[str]]:
     상관, 정답의 회상 부담, 형식 쏠림. 전부 warnings 라 문항을 떨어뜨리지 않고
     repair 단계 입력(`validation`)과 관리자 화면의 issues 로 돌아간다.
     """
-    if bank["build_meta"]["schema_version"] not in ("3.1", "3.2"):
+    if bank["build_meta"]["schema_version"] not in ("3.1", "3.2", "3.3"):
         return [], []
     errors, warnings = [], []
     long_ids = []

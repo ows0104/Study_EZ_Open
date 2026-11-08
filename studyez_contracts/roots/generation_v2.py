@@ -289,6 +289,76 @@ def project_container_concepts(bank):
     return value,{'policy':CONTAINER_POLICY,'sourceBankHash':document_hash(bank),'removed':removed,'related':related}
 
 
+def importance_table(packet):
+    """importance-basis/1 table of an exam-point-extract/3 packet; None for older point formats."""
+    from studyez_contracts.bank import importance as imp
+    try:value=json.loads(packet.get('points')or'null')
+    except (TypeError,ValueError):return None
+    if type(value)is not dict or value.get('schema_version')!='exam-point-extract/3':return None
+    return imp.point_table(value['points'],value['notebook_profile'])
+
+
+def target_importance(brief,table):
+    """Review axes of every brief target from the basis of its points (brief points keep target_ids)."""
+    from studyez_contracts.bank import importance as imp
+    owned={t['target_id']:[]for t in brief['targets']}
+    for p in brief['points']:
+        if p['point_id']in table['points']:
+            for tid in p.get('target_ids',[]):
+                if tid in owned:owned[tid].append(p['point_id'])
+    counts={x['source_id']:x.get('page_count')for x in brief['sources']}
+    return {tid:imp.target_axes(table,pids,counts)for tid,pids in owned.items()}
+
+
+def _question_points(q,brief,table):
+    """The question's own point_ids; otherwise the points of targets that own its concept."""
+    ids=q.get('point_ids')or[]
+    if ids and all(p in table['points']for p in ids):return ids,False
+    targets={t['target_id']for t in brief['targets']if q['concept_id']in t['concept_ids']}
+    return [p['point_id']for p in brief['points']if p['point_id']in table['points']and targets&set(p.get('target_ids',[]))],True
+
+
+def point_id_reasons(bank,table):
+    """Repair input: a question must name the exam points it implements (bank 3.3)."""
+    if table is None:return[]
+    return [{'kind':'question_fix','text':'중요도 근거: point_ids가 없거나 추출 포인트에 없다 — 이 문항이 구현하는 포인트 ID를 쓴다',
+             'question_ids':[q['question_id']],'direction_ids':[]}
+            for q in bank['questions']if not q.get('point_ids')or not all(p in table['points']for p in q['point_ids'])]
+
+
+def project_importance(bank,brief,table):
+    """Bank 3.3 snapshot: tier/importance of questions and concepts from the point basis.
+
+    Only tier, importance and build_meta.schema_version change; the proof restores the bank."""
+    from studyez_contracts.bank import importance as imp
+    value=copy.deepcopy(bank);fallback=[];decided={}
+    for q in value['questions']:
+        ids,inferred=_question_points(q,brief,table)
+        d=imp.question_decision(table,ids)if ids else{'tier':'Optional','importance':imp.BANK_IMPORTANCE['Optional']}
+        if inferred:fallback.append(q['question_id'])
+        decided[q['question_id']]=d;q.update(tier=d['tier'],importance=d['importance'])
+    for c in value['concepts']:
+        own=[decided[q['question_id']]for q in value['questions']if q['concept_id']==c['concept_id']]
+        tier=max((d['tier']for d in own),key=imp.ORDER.get)if own else c['tier']
+        c.update(tier=tier,importance=imp.BANK_IMPORTANCE[tier])
+    value['build_meta']['schema_version']='3.3'
+    proof={'policy':imp.POLICY,'table':table,'sourceBankHash':document_hash(bank),'schemaVersion':bank['build_meta']['schema_version'],
+           'original':{x.get('question_id',x.get('concept_id')):{'tier':x['tier'],'importance':x['importance']}for x in[*bank['questions'],*bank['concepts']]},
+           'fallback':fallback}
+    return value,proof
+
+
+def restore_importance(bank,proof):
+    """The bank behind an importance projection (identity when no proof)."""
+    if proof is None:return bank
+    require(type(proof)is dict and set(proof)=={'policy','table','sourceBankHash','schemaVersion','original','fallback'},'result2: malformed importance projection')
+    value=copy.deepcopy(bank);value['build_meta']['schema_version']=proof['schemaVersion']
+    for x in[*value['questions'],*value['concepts']]:
+        x.update(proof['original'][x.get('question_id',x.get('concept_id'))])
+    require(document_hash(value)==proof['sourceBankHash'],'result2: importance projection does not restore the bank')
+    return value
+
+
 def restore_container_concepts(bank,proof):
     """The exact reviewed bank behind a projected document bank (identity when no proof)."""
     if proof is None:return bank
@@ -677,9 +747,11 @@ def validate_audit(brief,bank,audit):
     require(equivalent_audit(audit,compile_assessment(brief,bank,audit['assessment'])),'audit2: derived result differs from raw judgments')
     return audit
 
-def make_document(brief,bank,audit,*,revision,title,exam_date,medical=None,snapshot=None):
+def make_document(brief,bank,audit,*,revision,title,exam_date,medical=None,snapshot=None,importance=None):
     """`snapshot`: a container-concept projection of the reviewed `bank` to publish instead; the
-    review's bank/question fingerprints are re-bound to it (questions identical, like quiz_curation)."""
+    review's bank/question fingerprints are re-bound to it (questions identical, like quiz_curation).
+    `importance`: target review axes from the point basis (importance-basis/1); then the snapshot
+    may differ from the bank only in question/concept tier and importance."""
     validate_audit(brief,bank,audit)
     if recall.enabled(brief):brief=recall.project_brief(brief)[0]
     review=audit['review'];coverage={c['point_id']:c for c in review['coverage']};candidates=[]
@@ -714,12 +786,19 @@ def make_document(brief,bank,audit,*,revision,title,exam_date,medical=None,snaps
         'equivalences':[],'prerequisites':adopted_edges}
     doc['tasks']=[{k:t[k]for k in ('task_id','question_id','direction_id')}for t in order_plan(doc,candidates,{t['task_id']for t in candidates},set())]
     if snapshot is not None:
-        require(snapshot['questions']==bank['questions'],'container projection changed questions')
+        strip=lambda qs:[{k:v for k,v in q.items()if k not in('tier','importance')}for q in qs]
+        require(snapshot['questions']==bank['questions']or(importance is not None and strip(snapshot['questions'])==strip(bank['questions'])),
+            'container projection changed questions')
         from studyez_contracts.learning_links.validate import question_hash
         review=copy.deepcopy(review);qs={q['question_id']:q for q in snapshot['questions']}
         review['bank_sha256']=document_hash(snapshot)
         for m in review['mappings']:m['question_sha256']=question_hash(qs[m['question_id']],snapshot)
         doc.update(review=review,bank_snapshot=snapshot)
+    if importance is not None:
+        review=copy.deepcopy(doc['review'])
+        for t in review['targets']:
+            if t['target_id']in importance:t['importance']=copy.deepcopy(importance[t['target_id']])
+        doc['review']=review
     return validate_document(doc)
 
 def quality_reasons(bank):
@@ -729,8 +808,10 @@ def quality_reasons(bank):
     authoring actually revisits them; they never add a round. Errors already arrive via validation.
     """
     from studyez_contracts.bank.quality import quality_errors
+    from studyez_contracts.bank.schema import without_retired
     out=[]
-    for text in quality_errors(bank)[1]:
+    # Measure the same bank validate_bank measures (cloze {answer} frames are normalised there).
+    for text in quality_errors(without_retired(bank))[1]:
         qid=re.match(r'(Q[0-9A-Za-z_-]+): ',text)
         out.append({'kind':'question_fix','text':'문항 품질: '+text,'question_ids':[qid.group(1)]if qid else[],'direction_ids':[]})
     return out
@@ -816,7 +897,13 @@ def validate_result(value,packet):
     require(set(value)=={'brief','document','sourceAudit','medical','validation','manifest'},'result2: unknown/missing artifacts')
     b=value['brief'];bank=value['document']['bank_snapshot'];a=value['sourceAudit'];m=value['medical'];meta=value['manifest']
     # The document may carry a container-concept projection of the reviewed bank (questions identical).
-    reviewed=restore_container_concepts(bank,meta.get('bankProjection'))
+    iproof=meta.get('importanceProjection');table=importance_table(packet)
+    require((iproof is None)==(table is None),'result2: importance projection must follow exam-point-extract/3 points')
+    unprojected=restore_importance(bank,iproof)
+    if iproof is not None:
+        again,check=project_importance(unprojected,b,table)
+        require(again==bank and check==iproof,'result2: importance projection is not the point-basis computation')
+    reviewed=restore_container_concepts(unprojected,meta.get('bankProjection'))
     if packet.get('parallelAuthoring'):
         proof=meta.get('parallelAuthoring',{})
         require(packet.get('authoring')=='cli'and packet.get('inputMode')=='source','parallel: wrong authoring mode')
@@ -927,7 +1014,8 @@ def validate_result(value,packet):
     actual=validate_bank(bank,[s['id']for s in packet['sources']])
     require(all(value['validation'].get(k)==actual[k]for k in ('pass','errors','warnings'))and validate_bank(bank,[s['id']for s in packet['sources']],check_quality=False)['pass'],'result2: invalid bank or validation')
     expected=make_document(b,reviewed,a,revision=packet['revision'],title=packet['title'],exam_date=packet['examDate'],medical=m,
-        snapshot=bank if meta.get('bankProjection')else None)
+        snapshot=bank if meta.get('bankProjection')or iproof is not None else None,
+        importance=target_importance(b,table)if iproof is not None else None)
     if recall.enabled(b):require(meta.get('goalPreparation')==recall.prepared_coverage(a,expected),'result2: altered prepared goal coverage')
     require(value['document']==expected,'result2: altered readiness/document')
     return expected

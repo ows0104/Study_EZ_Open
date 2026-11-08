@@ -74,6 +74,9 @@ QUESTION["properties"]["stimuli"] = {"type":"array","items":_object({
     "source_id":_STR,"source_sha256":_STR,"page":_INT,
     "crop":{"type":"array","items":_NUM},"sha256":_STR,
     "width":_INT,"height":_INT,"png_base64":_STR})}
+# Bank 3.3: the exam points (exam-point-extract/3) a question implements; tier/importance follow them.
+QUESTION["properties"]["point_ids"] = _STRS
+SCHEMA_VERSIONS = ("3.0", "3.1", SCHEMA_VERSION, "3.3")
 
 BANK = _object({
     "build_meta": _object({"schema_version": _STR, "lecture_title": _STR}),
