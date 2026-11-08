@@ -19,7 +19,7 @@
 검사:
 - 루트 `pytest tests`: 2,136 통과·3 건너뜀. 제외 1건은 `test_desktop_control` 바로가기 설치기(origin/master에서도 같은 실패).
 - `scripts/map_numbers --check` 정상.
-- 서버(브랜치 계약을 `PYTHONPATH`로, 파일별 격리 sqlite): 아래 「서버 검사」에 기록.
+- 서버(브랜치 계약을 `PYTHONPATH`로, 파일별 격리 sqlite, `.env` 없음): bank 33 · root_ 23 · route_contract · retention 모두 통과.
 
 ## 배포 대상 버전·순서·데이터 변경
 
