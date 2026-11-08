@@ -79,3 +79,16 @@
 - 기록: `check-failure.json`, `provider-followup.json`, 영수증 `proof.followup`. 사용량은 두 호출을 합친다. `validate_stage`가 후속 영수증·세션·합산을 다시 확인한다.
 - 내용 수정 상한은 쓰지 않는다. 대신 실패한 단계에 한해 호출이 한 번 는다.
 - runner만 바뀐다. 코드 지문 대상과 서버 계약은 그대로다.
+
+## 운영 반입 (claude/root-generation-import)
+- 사용자 「남은 거 둘 다 실행해줘」(2026-11-08)를 운영 등록 승인으로 받았다. 공개 범위는 그대로 둔다(지금 판도 `allowed_users=['runner']` 관리자 시범). 학생 공개는 별도 결정이다.
+- `server/app/root_learning/generation_import.py`(새 파일)
+  - `validate_result`를 다시 확인하고 원본 스냅숏을 묶는다(`lectures/root-reviewed-import/<sha>/<id>`).
+  - preflight 때의 control 해시가 같을 때만 진행한다.
+  - 새 RootContent를 넣고 활성 revision만 바꾼다. enabled·allowed_users는 그대로다.
+  - publication 이벤트 1건과 RootGeneration·PrequizJob(done)을 남긴다.
+  - 이전 판·이벤트·세션은 보존한다.
+- `reviewed_import.source_records`가 새 정책을 받아 참고 PDF 링크를 낸다.
+- 서버 검사: 새 1개(계약 재검증·낡은 preflight 거절·revision 전환·옛 판과 이벤트 보존·공개 범위 유지) + root_ 27·route_contract·retention 통과.
+- `publication.py`: preflight(읽기만) → 배포 확인(health revision) → 스냅숏(없을 때만, 다른 바이트면 중단) → 등록 → 전후 대조.
+  - preflight 실행 결과: 활성 `main-quiz-reviewed-6143c8c89ad64d9c`, 관리자 시범, 판 2·이벤트 42·세션 2.
