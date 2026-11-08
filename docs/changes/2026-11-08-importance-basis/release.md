@@ -58,3 +58,11 @@
   - 이후 단계는 scope를 바꿀 수 없어 고칠 길이 없었다.
   - 수정: 정규화 직후 `scope.label`을 packet의 강의 제목으로 정한다. extract-v2에도 적었다. 실패 재현 검사 1개를 더했다.
   - 생성은 `generation-3`에서 다시 돈다. 실패한 `generation-2/`는 보존한다.
+- generation-3 진행 기록
+  - 첫 저작이 지도 구조 오류(recall units)로 거절됐다. 기존 `connection_authoring_recovery --mode brief-repair`로 기록하고 보완 1회로 교정했다(보완 2/3 사용).
+  - 보완 3/3 뒤 마지막 source-2가 Q026에 R026을 tested·provided 두 번 적어 거절됐다(`relation_id: duplicate`).
+  - 수정(claude/source-duplicate-claims): `merge_duplicate_claims`를 넣었다. 하나라도 provided·explanation이면 그 역할로, 방향 없이, 시험 점수 없이 합친다.
+  - `normalize_source_review`(필수 누락 분할 + 중복 합치기)를 `root_source_gap_recovery`가 쓴다. 증명에 `merges`를 남긴다.
+  - brief-repair의 과거 failed generate를 허용한다. 저작 복구의 런타임은 source 복구 직전 것으로 이어 본다.
+  - 사본 시험: 거절 재현 → Q026/R026만 합침 → (정답 검수를 가짜로 넣고) 3.3·79문항·과제 58개로 조립, validate_result 통과.
+  - 루트 2,172 통과, 서버 root_ 26 통과.

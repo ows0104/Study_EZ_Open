@@ -178,7 +178,10 @@ def run(packet,out,model,invoke):
     start_round=1 if rejected else 0
     if rejected:
         proof=recoveries[0]['proof']
-        origin_runtime=format_recoveries[0]['proof']['priorLedger']['identity']if format_recoveries else fingerprint
+        # The authoring recovery keeps the runtime it ran under, even after a later source normalisation recovery.
+        origin_runtime=(format_recoveries[0]['proof']['priorLedger']['identity']if format_recoveries
+            else source_gap_recoveries[0]['proof']['priorLedger']['identity']if source_gap_recoveries
+            and source_gap_recoveries[0]['proof']['priorLedger'].get('authoringRecoveries')else fingerprint)
         c.require(document_hash(rejected)==ledger['stages']['generate']['rawOutputHash']
             and proof['packetHash']==packet['inputHash']and proof['currentRuntimeHash']==origin_runtime,'Changed rejected authoring')
         ledger['repairRounds']=max(ledger['repairRounds'],initial_cost+1);g.write(ledger_path,ledger)
