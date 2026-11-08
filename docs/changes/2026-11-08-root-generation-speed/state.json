@@ -1,0 +1,19 @@
+{
+  "id": "2026-11-08-root-generation-speed",
+  "title": "루트 생성 효율화 — 임상 확인 단계·원본 대조‖정답 검수·정답 검수 재사용",
+  "area": "generation",
+  "created_at": "2026-11-08T12:17:26.518158+00:00",
+  "required_checks": [
+    "contracts",
+    "generation"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-08T12:17:26.518186+00:00"
+}

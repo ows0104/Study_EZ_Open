@@ -936,6 +936,44 @@ def validate_normalization_recoveries(meta,stages):
         require(all(prior.get(k)==stage.get(k)for k in('inputHash','rawOutputHash','usageHash'))
                 and stage['outputHash']==stage['rawOutputHash'],'result2: recovered raw/input/usage changed')
 
+# Speed (2026-11-08): a short clinical-context check runs first; only when it is consistent do the
+# source review and the blind medical review run side by side (the medical model never sees an
+# unverified projection). Ledgers that start with `contextStages` use it; older runs are unchanged.
+CONTEXT=obj(clinical_context_status=enum('consistent','conflict','unknown'),clinical_context_reason=TEXT)
+MEDICAL_REUSE_POLICY='medical-review-reuse/1'
+
+
+def medical_question_hash(question,clinical_conflicts):
+    """What the blind medical reviewer sees for one question: its projected fields, its original
+    image bytes and the whole clinical-conflict projection (any change there re-reviews everything)."""
+    item=medical_input({'questions':[question]},clinical_conflicts)['questions'][0]
+    return document_hash({'item':item,'stimuli':[s.get('sha256')for s in question.get('stimuli',[])],
+                          'conflicts':clinical_conflicts})
+
+
+def validate_medical_reuse(meta,stages,bank,medical,n):
+    """Reused reviews name a completed earlier medical stage and the same question fingerprint."""
+    rows=meta.get('medicalReuse',[])
+    require(type(rows)is list,'result2: invalid medical reuse history')
+    by_stage={}
+    for row in rows:
+        require(type(row)is dict and set(row)=={'policy','stage','from','fromOutputHash','reused'}and row['policy']==MEDICAL_REUSE_POLICY
+            and re.fullmatch(r'medical-[1-3]',row['stage'])and re.fullmatch(r'medical-[0-2]',row['from'])
+            and int(row['from'].split('-')[1])<int(row['stage'].split('-')[1])and row['stage']not in by_stage,'result2: malformed medical reuse')
+        prior=stages.get(row['from'],{})
+        require(prior.get('status')=='completed'and prior.get('outputHash')==row['fromOutputHash'],'result2: medical reuse names a missing review')
+        require(type(row['reused'])is list and all(type(r)is dict and set(r)=={'question_id','questionHash','review'}for r in row['reused']),
+            'result2: malformed reused review')
+        by_stage[row['stage']]=row
+    final=by_stage.get(f'medical-{n}')
+    if final:
+        qs={q['question_id']:q for q in bank['questions']};reviews={r['question_id']:r for r in medical['reviews']}
+        for r in final['reused']:
+            require(r['question_id']in qs and r['questionHash']==medical_question_hash(qs[r['question_id']],meta['clinicalConflicts'])
+                and reviews.get(r['question_id'])==r['review'],'result2: reused medical review does not match the reviewed question')
+    return rows
+
+
 def validate_result(value,packet):
     from .automation import validate_checks
     require(set(value)=={'brief','document','sourceAudit','medical','validation','manifest'},'result2: unknown/missing artifacts')
@@ -995,7 +1033,8 @@ def validate_result(value,packet):
     rejected=recoveries[0]['proof']['rawAuthoring']if recoveries and recoveries[0]['proof']['mode']=='brief-repair'else None
     start_round=1 if rejected else 0
     require(n>=start_round,'result2: recovered authoring correction not counted')
-    needed={'normalize','generate'}|{f'{k}-{i}'for i in range(start_round,n+1)for k in ('source','medical')}|{f'repair-{i}'for i in range(1,n+1)}
+    kinds=('context','source','medical')if meta.get('contextStages')else('source','medical')
+    needed={'normalize','generate'}|{f'{k}-{i}'for i in range(start_round,n+1)for k in kinds}|{f'repair-{i}'for i in range(1,n+1)}
     require(set(stages)==needed,'result2: incomplete/ambiguous stages')
     for name,s in stages.items():
         if name=='generate'and rejected:
@@ -1050,6 +1089,14 @@ def validate_result(value,packet):
     require(meta['medicalInputHash']==document_hash({'title':packet['title'],'bank':reviewed,
         'clinicalInput':medical_input(reviewed,meta['clinicalConflicts']),'_pipeline_version':POLICY}),'result2: actual medical projection mismatch')
     require(stages[f'source-{n}']['clinicalContextHash']==document_hash(meta['clinicalConflicts']),'result2: source reviewed different clinical context')
+    if meta.get('contextStages'):
+        require(meta.get('contextStages')is True and type(meta.get('clinicalContext'))is dict,'result2: missing clinical context check')
+        validate_shape(meta['clinicalContext'],CONTEXT,'clinical context')
+        require(stages[f'context-{n}']['outputHash']==document_hash(meta['clinicalContext'])
+            and stages[f'context-{n}']['clinicalContextHash']==document_hash(meta['clinicalConflicts'])
+            and meta['clinicalContext']['clinical_context_status']=='consistent','result2: final medical review ran without a consistent context check')
+    else:require('clinicalContext'not in meta,'result2: unexpected clinical context check')
+    validate_medical_reuse(meta,stages,reviewed,m,n)
     specs={q['question_id']:[]for q in bank['questions']}
     for s in meta['visualStimuli']:
         require(s['question_id']in specs,'result2: unknown stimulus question')

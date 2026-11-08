@@ -164,3 +164,23 @@ def test_failed_check_is_sent_back_once_into_the_same_session_and_stays_verifiab
     assert (seat/'provider-followup.json').exists() and 'duplicate'in n.read(seat/'check-failure.json')['error']
     assert n.read(out/'source-0.usage.json')['usage']['input_tokens']==107
     n.validate_all(out,result)
+
+
+def test_speed_path_context_stage_runs_through_native_files_and_stays_verifiable(tmp_path,monkeypatch):
+    from studyez_contracts.roots.automation import packet_hash
+    packet=f.packet(tmp_path/'source.txt');packet['speedStages']=True;packet['inputHash']=packet_hash(packet);out=tmp_path/'out';calls=[]
+    monkeypatch.setattr(producer,'call_model',lambda stage,ctx,material,model:f.model(stage,ctx,material,model))
+    base=provider(out,calls)
+    def run(prompt,**kwargs):
+        work=kwargs['cwd'];stage=work.parent.name
+        if stage.startswith('context-'):
+            calls.append(stage);path=work/'result.json'
+            path.write_text(json.dumps({'clinical_context_status':'consistent','clinical_context_reason':'synthetic'}),encoding='utf-8')
+            return {'text':json.dumps({'path':'result.json','sha256':n.sha(path)}),'turns':1,'session_id':'synthetic-native',
+                    'usage':{'input_tokens':5,'output_tokens':2,'cache_read_input_tokens':0,'cache_creation_input_tokens':0},
+                    'models':{kwargs['model']:2},'cost_usd':None,'duration_ms':3}
+        return base(prompt,**kwargs)
+    result=g.run(packet,out,invoke=n.NativeJson(out,invoke=run))
+    assert 'context-0'in calls and result['manifest']['contextStages']is True
+    n.check_file('context-0',out/'.native'/'context-0'/'work')
+    n.validate_all(out,result)

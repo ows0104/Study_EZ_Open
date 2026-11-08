@@ -108,6 +108,7 @@ def inventory(folder):
 def schema_for(stage,ctx):
     if stage=='normalize':return c.BRIEF
     if stage=='generate'or re.fullmatch(r'repair-[1-3]',stage):return c.author_schema(ctx.get('parallelAuthoring',False))
+    if re.fullmatch(r'context-[0-3]',stage):return c.CONTEXT
     require(re.fullmatch(r'source-[0-3]',stage),'Unsupported file-output stage')
     return c.source_schema(ctx['brief'],ctx['bank'])
 
@@ -118,7 +119,7 @@ def decode_for(stage,value,schema):
     return value,None
 
 def task_for(stage):
-    kind=stage.split('-')[0];name='extract-v2.md'if kind=='normalize'else'source-v2.md'if kind=='source'else'author-v2.md'
+    kind=stage.split('-')[0];name='extract-v2.md'if kind=='normalize'else'context-v2.md'if kind=='context'else'source-v2.md'if kind=='source'else'author-v2.md'
     task=(g.PROMPTS/name).read_text(encoding='utf-8')+'\n'+g.item_quality_guidance()
     task+='''
 EXECUTION TRANSPORT ONLY; ACCEPTANCE RULES ABOVE REMAIN MANDATORY.
@@ -176,6 +177,8 @@ def check_file(stage,work):
         if stage=='generate'and ctx.get('webResponse'):
             meta=json.loads(re.match(r'<!-- STUDYEZ_BANK_FILE (\{[^\n]+\}) -->',ctx['webResponse']['raw'].removeprefix('\ufeff'))[1])
             require([q['question_id']for q in value['bank']['questions']]==meta['question_ids'],'Original web IDs changed')
+    elif stage.startswith('context-'):
+        c.validate_shape(value,c.CONTEXT,'clinical context')
     else:
         for q in ctx['bank']['questions']:
             for stimulus in q.get('stimuli',[]):

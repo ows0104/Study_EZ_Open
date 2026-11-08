@@ -35,8 +35,9 @@ def call_model(stage,context,material,model,timeout=2400):
         raw=json.loads(result['text']);jsonschema.validate(raw,REVIEW_REPORT)
         value=shape(raw,context['bank'])
     else:
-        schema=c.BRIEF if kind=='normalize'else c.source_schema(context['brief'],context['bank'])if kind=='source'else c.author_schema(context.get('parallelAuthoring',False))
-        name='extract-v2.md'if kind=='normalize'else'source-v2.md'if kind=='source'else'author-v2.md'
+        schema=(c.BRIEF if kind=='normalize'else c.CONTEXT if kind=='context'else c.source_schema(context['brief'],context['bank'])if kind=='source'
+            else c.author_schema(context.get('parallelAuthoring',False)))
+        name='extract-v2.md'if kind=='normalize'else'context-v2.md'if kind=='context'else'source-v2.md'if kind=='source'else'author-v2.md'
         prompt=g.PROMPTS.joinpath(name).read_text(encoding='utf-8')+'\n'+g.item_quality_guidance()
         prompt+='\nFull acceptance schema:\n'+json.dumps(schema,ensure_ascii=False)
         # Do not put PNG base64 in token text. The exact source PNG files are copied.
@@ -69,10 +70,14 @@ def run(packet,out,model,invoke):
         if ledger.get('identity')!=fingerprint or ledger.get('pipelineVersion')!=c.POLICY:raise ValueError('기존 실행의 입력·모델·코드가 달라졌습니다. 이력과 상한을 보존합니다.')
     else:
         if any(p.name!='packet.json'for p in out.glob('*.json')):raise ValueError('기존 산출물의 ledger가 없습니다. 자동 재시작하지 않습니다.')
-        ledger={'identity':fingerprint,'pipelineVersion':c.POLICY,'repairRounds':0,'stages':{}}
+        ledger={'identity':fingerprint,'pipelineVersion':c.POLICY,'repairRounds':0,'stages':{},
+            # opt-in speed path: context check first, then source ‖ medical, medical review reuse
+            **({'contextStages':True}if packet.get('speedStages')is True else{})}
     c.require(type(ledger['repairRounds'])is int and 0<=ledger['repairRounds']<=3,'pipeline2: invalid budget')
     sources=g.prepare(packet,out/'material');g.write(ledger_path,ledger)
 
+    import threading
+    lock=threading.RLock()  # source and medical stages may run concurrently and share the ledger
     def stage(name,ctx):
         if packet.get('parallelAuthoring'):
             from .connection_parallel import progress as refresh
@@ -88,14 +93,15 @@ def run(packet,out,model,invoke):
                 document_hash(json.loads(usage_path.read_text(encoding='utf-8')))==prior['usageHash'],name+': input/usage evidence changed')
             return value
         if any((out/(name+s)).exists()for s in ('.json','.raw.json','.usage.json','.input.json')):raise ValueError(name+': ledger 없는 산출물 보존')
-        entry={'status':'started','inputHash':input_hash};ledger['stages'][name]=entry;g.write(ledger_path,ledger)
+        entry={'status':'started','inputHash':input_hash}
+        with lock:ledger['stages'][name]=entry;g.write(ledger_path,ledger)
         g.write(out/(name+'.input.json'),ctx);print('── 연결 자동출제 '+name,flush=True)
         try:
-            raw,info=invoke(name,ctx,out/'material',model)
+            raw,info=(reuse_invoke if name in medical_plans else invoke)(name,ctx,out/'material',model)
             # Archive before acceptance checks, including malformed model output.
             raw_evidence=envelope(ctx['brief'],ctx['bank'],raw)if name.startswith('source-')else raw
             g.write(raw_path,raw_evidence);g.write(out/(name+'.usage.json'),info)
-            entry['rawOutputHash']=document_hash(raw_evidence);entry['usageHash']=document_hash(info);g.write(ledger_path,ledger)
+            with lock:entry['rawOutputHash']=document_hash(raw_evidence);entry['usageHash']=document_hash(info);g.write(ledger_path,ledger)
             if name=='normalize':
                 c.validate_shape(raw,c.BRIEF,'initial brief2');value=raw
                 # importance-basis/1: target axes are computed at assembly; the model's are replaced by placeholders.
@@ -128,11 +134,55 @@ def run(packet,out,model,invoke):
                 entry['clinicalContextHash']=document_hash(ctx['clinical_conflicts'])
                 jsonschema.validate(raw,c.source_schema(ctx['brief'],ctx['bank']))
                 value=c.compile_assessment(ctx['brief'],ctx['bank'],raw_evidence)
+            elif name.startswith('context-'):
+                entry['clinicalContextHash']=document_hash(ctx['clinical_conflicts'])
+                jsonschema.validate(raw,g.output_schema(c.CONTEXT));c.validate_shape(raw,c.CONTEXT,'clinical context');value=raw
             else:validate_checks(raw,ctx['bank']);value=raw
-            g.write(path,value);entry.update(status='completed',outputHash=document_hash(value));g.write(ledger_path,ledger)
+            g.write(path,value)
+            with lock:entry.update(status='completed',outputHash=document_hash(value));g.write(ledger_path,ledger)
             return value
         except BaseException:
-            entry['status']='failed';g.write(ledger_path,ledger);raise
+            with lock:entry['status']='failed';g.write(ledger_path,ledger)
+            raise
+
+    medical_plans={};finished_reuse={}
+
+    def reuse_invoke(name,ctx,material,model):
+        # Only questions whose medical view changed go to the blind reviewer; the rest keep the
+        # earlier round's review. The stage input stays the full projection the contract expects.
+        plan=medical_plans[name];bank=ctx['bank'];conflicts=ctx['clinicalInput']['clinical_conflicts']
+        changed=[q for q in bank['questions']if q['question_id']not in plan['reuse']]
+        rows=[copy.deepcopy(plan['reuse'][q['question_id']]['review'])for q in bank['questions']if q['question_id']in plan['reuse']]
+        summary=f"{len(rows)}문항은 이전 회차({plan['from']}) 판정을 같은 문항·그림·임상 정리로 재사용."
+        info={'usage':{},'cost_usd':0,'duration_ms':0,'models':{}};pool_checks=[]
+        if changed:
+            sub={**bank,'questions':changed}
+            value,info=invoke(name,{**ctx,'bank':sub,'clinicalInput':medical_input(sub,conflicts)},material,model)
+            rows+=value['reviews'];pool_checks=value.get('pool_checks',[]);summary=value['summary']+' / '+summary
+        order={q['question_id']:i for i,q in enumerate(bank['questions'])};rows.sort(key=lambda r:order.get(r['question_id'],1e9))
+        merged=shape({'summary':summary,'reviews':rows,'pool_checks':pool_checks},bank)
+        finished_reuse[name]={'policy':c.MEDICAL_REUSE_POLICY,'stage':name,'from':plan['from'],'fromOutputHash':plan['fromOutputHash'],
+            'reused':[{'question_id':qid,'questionHash':r['questionHash'],'review':r['review']}for qid,r in plan['reuse'].items()]}
+        return merged,{**info,'medicalReuse':{'reused':len(plan['reuse']),'reviewed':len(changed)}}
+
+    def medical_stage(n,med_ctx):
+        name=f'medical-{n}';prior=next((f'medical-{k}'for k in range(n-1,-1,-1)
+            if ledger['stages'].get(f'medical-{k}',{}).get('status')=='completed'),None)
+        if prior and name not in ledger['stages']:
+            before=json.loads((out/(prior+'.input.json')).read_text(encoding='utf-8'))
+            done={r['question_id']:r for r in json.loads((out/(prior+'.json')).read_text(encoding='utf-8'))['reviews']}
+            old={q['question_id']:q for q in before['bank']['questions']};conflicts=med_ctx['clinicalInput']['clinical_conflicts']
+            reuse={}
+            for q in med_ctx['bank']['questions']:
+                qid=q['question_id'];h=c.medical_question_hash(q,conflicts)
+                if qid in old and qid in done and h==c.medical_question_hash(old[qid],before['clinicalInput']['clinical_conflicts']):
+                    reuse[qid]={'questionHash':h,'review':done[qid]}
+            if reuse:medical_plans[name]={'from':prior,'fromOutputHash':ledger['stages'][prior]['outputHash'],'reuse':reuse}
+        value=stage(name,med_ctx)
+        if name in finished_reuse:
+            with lock:
+                ledger.setdefault('medicalReuse',[]);ledger['medicalReuse'].append(finished_reuse.pop(name));g.write(ledger_path,ledger)
+        return value
 
     base={k:packet[k]for k in ('title','scope','conceptMap','points','examDate')}
     base.update(lecture_id=packet['subject']+'/'+packet['runId'],sources=sources,preserved_scope=g.lecture_scope(packet['title'],packet['sources']))
@@ -199,17 +249,37 @@ def run(packet,out,model,invoke):
         b=authored['brief'];bank=authored['bank']
         if schema_errors(bank):raise ValueError('BANK 스키마 오류. 원문을 보존합니다.')
         validation=validate_bank(bank,[s['id']for s in packet['sources']])
-        audit=stage(f'source-{n}',{**base,'brief':b,'bank':bank,'clinical_conflicts':authored['clinical_conflicts'],
+        source_ctx=({**base,'brief':b,'bank':bank,'clinical_conflicts':authored['clinical_conflicts'],
             **({'targetImportance':c.target_importance(b,table)}if table is not None else{}),
             'questionFronts':[{'question_id':q['question_id'],'question':normalize_cloze(q)['question'],'options':q['options']}for q in bank['questions']],
             'stimulusFiles':[{'question_id':q['question_id'],'file':'material/stimulus-'+s['sha256']+'.png','sha256':s['sha256']}
                 for q in bank['questions']for s in q.get('stimuli',[])]})
         try:projection=medical_input(bank,authored['clinical_conflicts']);blocked=None;blocking_fix=False
         except ValueError as error:blocked=str(error);projection=None;blocking_fix=True
-        context_check=audit['assessment']['assessment']
-        if projection is not None and context_check['clinical_context_status']!='consistent':
-            blocked='독립 검수 입력 확인: '+context_check['clinical_context_reason']
-            blocking_fix=context_check['clinical_context_status']=='conflict'
+        med_ctx={'title':packet['title'],'bank':bank,'clinicalInput':projection}
+        if ledger.get('contextStages')is True:
+            # Context check first: the blind medical model only ever sees a verified projection.
+            clinical_context=stage(f'context-{n}',{k:base[k]for k in('title','scope','lecture_id','sources')}|
+                {'bank':bank,'clinical_conflicts':authored['clinical_conflicts']})
+            if projection is not None and clinical_context['clinical_context_status']!='consistent':
+                blocked='독립 검수 입력 확인: '+clinical_context['clinical_context_reason']
+                blocking_fix=clinical_context['clinical_context_status']=='conflict'
+            if blocked:audit=stage(f'source-{n}',source_ctx);medical_value=None
+            else:
+                from concurrent.futures import ThreadPoolExecutor
+                with ThreadPoolExecutor(max_workers=2)as pool:
+                    pending=[pool.submit(stage,f'source-{n}',source_ctx),pool.submit(medical_stage,n,med_ctx)];errors=[]
+                    for future in pending:
+                        try:future.result()
+                        except BaseException as error:errors.append(error)
+                if errors:raise errors[0]
+                audit,medical_value=pending[0].result(),pending[1].result()
+        else:
+            audit=stage(f'source-{n}',source_ctx);medical_value=None;clinical_context=None
+            context_check=audit['assessment']['assessment']
+            if projection is not None and context_check['clinical_context_status']!='consistent':
+                blocked='독립 검수 입력 확인: '+context_check['clinical_context_reason']
+                blocking_fix=context_check['clinical_context_status']=='conflict'
         if blocked:
             report={'reason':blocked,'bankHash':document_hash(bank),'clinicalContextHash':document_hash(authored['clinical_conflicts'])}
             name=f'medical-{n}';entry={'status':'blocked','blockedReport':report,'blockedHash':document_hash(report)}
@@ -218,8 +288,7 @@ def run(packet,out,model,invoke):
             ledger['stages'][name]=entry;g.write(ledger_path,ledger);g.write(out/(name+'.blocked.json'),report)
             medical=None
         else:
-            med_ctx={'title':packet['title'],'bank':bank,'clinicalInput':projection}
-            medical=stage(f'medical-{n}',med_ctx)
+            medical=medical_value if medical_value is not None else stage(f'medical-{n}',med_ctx)
         reasons=c.repair_reasons(b,bank,audit,medical,validation)+c.point_id_reasons(bank,table)
         # concept-map-extract/3: the Map's parent_id tree must survive in the brief (no-op for /2 Maps).
         hierarchy=concept_tree.hierarchy_findings(b,packet.get('conceptMap'))
@@ -254,6 +323,8 @@ def run(packet,out,model,invoke):
             'runtimeHash':fingerprint,'model':codex.model_name(model),'webResponseHash':packet.get('webResponseHash'),
             'initialBrief':initial,'visualStimuli':authored['visual_stimuli'],'clinicalConflicts':authored['clinical_conflicts'],
             'mapChangeReason':authored['map_change_reason'],'sourceAssessment':audit['assessment'],'repairRounds':n+initial_cost,
+            **({'contextStages':True,'clinicalContext':clinical_context}if ledger.get('contextStages')is True else{}),
+            **({'medicalReuse':ledger['medicalReuse']}if ledger.get('medicalReuse')else{}),
             'initialMapCorrection':{'errors':initial_errors,'consumedRounds':initial_cost},
             'normalizationRecoveries':ledger.get('normalizationRecoveries',[]),
             **({'authoringRecoveries':recoveries}if recoveries else{}),
