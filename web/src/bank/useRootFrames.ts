@@ -55,7 +55,9 @@ function warm(frames: RootFrame[], images: SlidePreloader) {
     if (!frame.task) continue;
     urls.push(...(frame.task.question.stimuli ?? []).map(s => s.url));
     urls.push(...frame.task.answer.slides.filter(s => s.primary).map(s => s.url));
-    if (frame.task.answer.pdfSlides?.length) pdf.push(frame.task.answer.pdfSlides[0]);
+    // 답을 열면 먼저 보이는 한 장: 족보 핵심이 있으면 그것, 아니면 강의록 첫 장(핵심이 앞에 온다).
+    const first = frame.task.answer.jokboPdfSlides?.find(s => s.primary) ?? frame.task.answer.pdfSlides?.[0];
+    if (first) pdf.push(first);
   }
   images.warm(urls);
   if (pdf.length) void import('./RootPdfSlides').then(m => m.prewarmPdfSlides(pdf)).catch(() => {});

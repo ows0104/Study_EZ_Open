@@ -96,6 +96,11 @@ Quiz Bank는 `GET …/bank/anki`에서 전체 문항을 `.apkg`로 내보낸다.
 Main 모아받기는 사용할 수 있는 Quiz Bank 덱을 우선하며, 없으면 기존 `main_apkg`를 제공한다.
 `exportId`로 다운로드 중 판 변경을 확인하고, 다운로드 기록도 판별로 구분한다.
 Anki의 복습 일정과 웹 학습 기록은 서로 독립적이다.
+
+Main-Quiz 판의 근거 보강은 `root_evidence` kind의 `<revision>.json` 하나다(`root-evidence/1`,
+`quizbank/root_evidence.py`). 러너가 판 게시 뒤 같은 고정 원본으로 만들어 올린다. 서버는 revision과
+원본 지문이 맞을 때만 읽어 핵심 슬라이드·족보 지면·근거 상태를 붙이고, 없으면 인용 쪽만 쓴다.
+학생 파일 목록(`DOWNLOADABLE`)에 들지 않으며 작업을 만들지 않는다.
 Anki의 cloze 문법은 웹용 빈칸으로 변환한다.
 예습과 복습 문항은 각각 다른 kind로 저장하고, 복습 간격은 서버 `srs.py`가 정한다.
 

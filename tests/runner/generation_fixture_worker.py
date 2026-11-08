@@ -9,6 +9,7 @@ from runner import connection_generation as worker
 from runner.bank_flow import execution
 from runner.transport import Client
 def child(argv,**kwargs):
+    if argv[2]=='quizbank.root_evidence':return subprocess.CompletedProcess(argv,1)  # 근거 보강은 이 합성 판에서 실행하지 않는다
     assert argv[1]=='-m' and argv[2] in ('quizbank.connection_generate','runner.root_native_json')
     return subprocess.run([sys.executable,str(ROOT/'tests/quizbank/generation_fixture_cli.py'),*argv[3:]],**kwargs)
 worker.run_forwarded=child

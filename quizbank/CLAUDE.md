@@ -84,6 +84,7 @@ wrong·doubt와 후보별 검수 hash는 그대로 보존하고, 누락·깨진 
 | 사후 학습 구조 | `question_first.py`·`prompts/learning-structure.md` | 최종 내용 보존 후 개념도·회상 계획·선행 연결 |
 | 근거 이미지 | `slides.py` | 인용한 PDF 쪽을 PNG로 생성 |
 | 핵심 근거·족보 지면 | `evidence.py`·`slide_focus.py`·`jokbo_pages.py` | CLI가 최종 문항·정답과 원본을 대조해 기본 한 장을 선택하고 실제 족보 PDF 지면을 연결 |
+| Main-Quiz 판 근거 | `root_evidence.py` | 판의 bank_snapshot·고정 원본에 위 함수를 그대로 적용. 정리본 족보는 쪽 머리 `연도 \| 교수 \| N번`으로 색인(모델 없음). 결과 `root-evidence/1` |
 
 실행: `python -m quizbank.run --help`.
 검사: `python -m pytest tests/quizbank`.

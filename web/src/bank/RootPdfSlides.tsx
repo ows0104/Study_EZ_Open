@@ -119,7 +119,8 @@ function PdfSlide({slide}:{slide:RootPdfSlide}){
     render(slide).then(url=>{if(live)setImage(url);}).catch(()=>{if(live)setFailed(true);});
     return()=>{live=false;};
   },[slide.url,slide.proxyPath,slide.page]);
-  const label=`${slide.sourceFilename} · PDF ${slide.page}쪽`;
+  const label=slide.references?.length?`${slide.references.map(referenceLabel).join(' · ')} · PDF ${slide.page}쪽`
+    :`${slide.sourceFilename} · PDF ${slide.page}쪽`;
   // 그림이 먼저, 출처 줄은 그 아래(2026-11-08 사용자 지시).
   return <figure className="bank-evidence-slide main-quiz-pdf-slide">
     {image?<SlideImage src={image} alt={label}/>:failed?<p role="alert">참고 슬라이드를 불러오지 못했습니다. 원본 열기로 확인하거나 새로고침해 주세요.</p>:<p role="status">슬라이드 불러오는 중…</p>}
@@ -127,13 +128,43 @@ function PdfSlide({slide}:{slide:RootPdfSlide}){
   </figure>;
 }
 
-export function RootPdfSlides({slides}:{slides:RootPdfSlide[]}){
+/** 「2023 79번」 → 「2023년 · 79번」 (Quiz Bank 족보 표시와 같다). */
+function referenceLabel(reference:string){
+  return reference.replace(/\b((?:19|20)\d{2})(?!\d)\s*년?\s*/,'$1년 · ');
+}
+
+function Extra({slides,label}:{slides:RootPdfSlide[];label:string}){
   const [expanded,setExpanded]=useState(false);
   if(!slides.length)return null;
+  return <details className="bank-answer-context bank-extra-slides" onToggle={e=>setExpanded(e.currentTarget.open)}>
+    <summary>{label} {slides.length}장</summary>
+    {expanded&&slides.map(s=><PdfSlide key={`${s.sourceId}:${s.page}`} slide={s}/>)}</details>;
+}
+
+/**
+ * 강의록 슬라이드. 판의 근거 보강이 있으면(`focusKnown`) Quiz Bank처럼 내용 대조로 고른 핵심만 펼치고
+ * 나머지는 접는다. 없으면 종전처럼 첫 장을 펼치되 핵심이라고 표시하지 않는다.
+ */
+export function RootPdfSlides({slides,focusKnown=false,statusKnown=false}:{slides:RootPdfSlide[];focusKnown?:boolean;statusKnown?:boolean}){
+  if(!slides.length)return null;
+  const open=focusKnown?slides.filter(s=>s.primary):slides.slice(0,1);
+  const rest=slides.filter(s=>!open.includes(s));
   return <section className="bank-slides main-quiz-pdf-slides" aria-label="참고 슬라이드">
-    <PdfSlide slide={slides[0]}/>
-    {slides.length>1&&<details className="bank-answer-context" onToggle={e=>setExpanded(e.currentTarget.open)}>
-      <summary>추가 참고 슬라이드 {slides.length-1}장</summary>
-      {expanded&&slides.slice(1).map(s=><PdfSlide key={`${s.sourceId}:${s.page}`} slide={s}/>)}</details>}
+    {open.map(s=><PdfSlide key={`${s.sourceId}:${s.page}`} slide={s}/>)}
+    {focusKnown&&!open.length&&!statusKnown&&<p className="bank-note">확인된 핵심 근거 슬라이드가 없습니다.</p>}
+    <Extra slides={rest} label="추가 참고 슬라이드"/>
+  </section>;
+}
+
+/** 족보 지면(정리본 PDF의 실제 문항 쪽). 핵심이면 「핵심 근거 · 족보」로 펼치고, 아니면 첫 장을 펼친다. */
+export function RootJokboSlides({slides}:{slides:RootPdfSlide[]}){
+  if(!slides.length)return null;
+  const core=slides.filter(s=>s.primary);
+  const open=core.length?core:slides.slice(0,1);
+  const title=core.length?'핵심 근거 · 족보':'참고 족보 문제';
+  return <section className="bank-slides bank-jokbo-slides main-quiz-pdf-slides" aria-label={title}>
+    <h2>{title}</h2>
+    {open.map(s=><PdfSlide key={`${s.sourceId}:${s.page}`} slide={s}/>)}
+    <Extra slides={slides.filter(s=>!open.includes(s))} label="추가 족보 지면"/>
   </section>;
 }
