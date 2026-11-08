@@ -28,9 +28,7 @@
 
 
 
-| P1 | Map 흐름 예시를 반영한 별도 프롬프트 복사본 | ows0104 / Codex Map 참고 세션 → 2026-11-08 Claude Main-Quiz 지도 세션 승계(사용자 지시: Codex 작업 중단) | codex/map-flow-reference | content/prompts/learning-links/map-extract-reference.md, docs/changes/2026-11-06-map-flow-reference, .worktrees/map-flow-reference/runs/_map-flow-experiment | 2026-11-06 | 별도 짧은 지시문 실험 완료: 심내막염20개념/25연결·CNS24개념/31연결, 단일 호출296초. 원본/형식검증·PNG확인. 기존시범/운영미변경. 로컬브랜치 검토대기 |
 
-| P1 | 심내막염·CNS Map→포인트→문제→실제 풀이 E2E 실험 | ows0104 / Codex E2E 세션 → 2026-11-08 Claude Main-Quiz 지도 세션 승계(사용자 지시: Codex 작업 중단) | codex/map-point-e2e | docs/changes/2026-11-06-map-point-e2e, runs/_e2e/26110507 (실험 전용 저장소·격리 DB·로컬 앱), 기존 추출 결과 읽기 전용 | 2026-11-06 | CNS49문항 중40과제 실제UI·응답/진도 새로고침 복원·별도 기술계정 사건 저장 확인. 사람기록0 유지해 풀이 링크/JSON 제공. 심내막염47문항 최종 source-2/medical-2 완료했으나 서로 다른 C001/C012 중복으로 BANK등록 실패·3회상한 도달 보류(40ok/6doubt/1wrong). 양강의 완료 아님. 원본740파일·실패/소비보존, 운영548/DB/은행/학습/배포변경없음. 로컬 검토대기 |
 
 
 
