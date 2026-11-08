@@ -112,8 +112,12 @@ master 직접 push 금지·필수 검사 `Tests and build`·리뷰 승인을 설
 
 ## 자동으로 실행되는 범위
 
-`.github/workflows/deploy.yml`은 PR/master push/수동 실행에서 Windows Python 회귀, 독립 서버 검사,
-웹 타입/빌드, bridge 및 배포 실패 경로 검사를 실행한다. master만 배포 권한을 얻는다.
+`.github/workflows/deploy.yml`은 PR/master push/수동 실행에서 두 검사 작업을 나란히 돌린다.
+`Tests and build`(Linux)는 Python 회귀·계약, 독립 서버 검사, 웹 타입/빌드, bridge 및 배포 실패 경로 검사,
+서버 후보 준비를 맡는다. `Windows runner checks`(Windows)는 운영자 PC에서 도는 러너·데스크톱 창·바로가기와
+수동 `server/deploy.ps1` 검사만 맡는다(비공개 저장소에서 Windows 분은 2배로 차감된다,
+[기록](../changes/2026-11-08-ci-linux-runner/README.md)). 배포는 둘 다 통과해야 시작한다.
+같은 PR에 새 push가 오면 그 PR의 이전 실행은 취소된다. master만 배포 권한을 얻는다.
 검사 작업에서 고정한 서버 패키지와 해시를 동일 실행의 배포 작업에 전달하고 Git SHA·실행 ID·파일 해시를
 재확인한다. 다른 커밋으로 master가 전진했으면 이전 작업은 배포를 중단한다.
 
