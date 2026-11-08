@@ -213,3 +213,22 @@ def test_scheduled_runner_finds_desktop_cli_without_path(monkeypatch, tmp_path):
     installed.parent.mkdir(parents=True)
     installed.touch()
     assert codex.executable() == str(installed)
+
+
+def test_author_scratch_folder_is_opened_for_writing(monkeypatch, tmp_path):
+    """쓰기 허용은 cwd 하위뿐이다. 쪽 이미지 폴더는 --add-dir로 따로 열어야 한다."""
+    monkeypatch.setenv("STUDYEZ_CODEX_BIN", "codex.exe")
+    scratch = tmp_path / "pages"
+    scratch.mkdir()
+    def fake(argv, **kw):
+        assert argv[argv.index("--add-dir") + 1] == str(scratch.resolve())
+        assert scratch.resolve().as_posix() in kw["input"]
+        return SimpleNamespace(returncode=0, stdout=events("written"), stderr="")
+    monkeypatch.setattr(codex, "run_process", fake)
+    assert session.run_agent("write", cwd=tmp_path, scratch=scratch)["text"] == "written"
+
+
+def test_blind_session_never_gets_extra_writable_folder(monkeypatch, tmp_path):
+    monkeypatch.setenv("STUDYEZ_CODEX_BIN", "codex.exe")
+    argv = codex.command(model="gpt-test", blind=True, writable=[tmp_path])
+    assert "--add-dir" not in argv and "read-only" in argv

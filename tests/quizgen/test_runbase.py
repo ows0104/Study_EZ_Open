@@ -229,3 +229,29 @@ def test_defects는_카드_결함만_고른다(tmp_path, mod):
 
 def test_defects는_파일이_없으면_빈_목록(tmp_path):
     assert main_run.Runner(tmp_path, _args()).defects() == []
+
+
+def test_모델은_출력_폴더에서_쓰고_쪽_이미지는_runs_밖에_그린다(tmp_path, monkeypatch):
+    """**2026-11-09 예습 4편이 must_know.json 없이 멈췄다.**
+
+    러너가 `.runtime` 설치본에서 돌자 cwd(=Codex 쓰기 범위)가 설치 폴더가 됐고,
+    출력 폴더 runs/<id>/… 는 범위 밖이라 모델이 설치 폴더에 대신 썼다. 러너가 어디서
+    돌든 cwd는 이 편의 출력 폴더여야 한다.
+    """
+    seen = {}
+
+    def fake(prompt, **kwargs):
+        seen.update(kwargs)
+        assert kwargs["scratch"].is_dir()
+        return {"cost_usd": 0.0, "usage": {}, "models": {}, "text": ""}
+
+    elsewhere = tmp_path / "install"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    monkeypatch.setattr(runbase, "run_agent", fake)
+    out = tmp_path / "runs" / "251110_03" / "prequiz" / "ts"
+    out.mkdir(parents=True)
+    pre_run.Runner(out, _args()).agent("본문", "라벨")
+    assert seen["cwd"] == out.resolve()
+    assert out.resolve() not in seen["scratch"].parents
+    assert not seen["scratch"].exists()
