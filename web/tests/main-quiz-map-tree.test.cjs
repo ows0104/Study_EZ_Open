@@ -33,7 +33,7 @@ test('published shape: lecture → merged topics → questions, answer nodes are
   same(root.children.map(id=>tree.nodes.get(id).label),['감염·염증의 구별','Prion과 CJD']);
   const topic=tree.nodes.get(root.children[0]);
   same(topic.conceptIds,['C001','C002']);
-  same(topic.children.map(id=>tree.nodes.get(id).targetId),['N1_T','N2_T','N5_T'],'ordered by page, unpaged last');
+  same(topic.children.map(id=>tree.nodes.get(id).targetId),['N1_T','N2_T','N5_T'],'questions in the 판 target order');
   assert.equal([...tree.nodes.values()].some(n=>/정답/.test(n.label)),false,'answer nodes never become labels');
   assert.equal(tree.leaves,5);
   assert.equal(tree.currentId,'t:N2_T');same(ancestors(tree,'t:N2_T'),[topic.id,tree.rootId]);
@@ -80,7 +80,8 @@ test('Map 판 shape: every hierarchy topic is shown, answer nodes are not, quest
   assert.equal(tree.nodes.get('t:T025').parent,'c:C030','the AFB question hangs under AFB (its answer node’s parent), not 결핵');
   assert.equal(tree.nodes.get('t:T024').parent,'c:C015');
   same(questionsOf(tree,'c:C016'),[],'한센병 is a topic even with no question of its own');
-  same(tree.nodes.get('c:C029').children,['c:C030','c:C028'],'the question-less topic follows its paged sibling');
+  same(tree.nodes.get('c:C029').children,['c:C030','c:C028'],'topics in the 판 concept order');
+  same(tree.nodes.get(tree.rootId).children,['c:C029','c:C014'],'top level in the 판 concept order, not by page');
 });
 
 test('lane rows stay screen-shaped for flat maps',()=>{

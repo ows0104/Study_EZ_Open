@@ -82,6 +82,12 @@ export function buildTree(map:RootMapData,summary:RootSummary,title:string):Tree
     nodes.get(parent)!.children.push(node.id);conceptNode.set(id,node.id);return node.id;
   }
 
+  // Page numbers shown are the lecture's: the source most questions cite (S1 필기), never mixed with
+  // another source's pages (족보 p.1 is not lecture p.1).
+  const cited=new Map<string,number>();
+  for(const t of map.targets)for(const e of t.evidence??[])cited.set(e.source_id,(cited.get(e.source_id)??0)+1);
+  const lecture=[...cited].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0]?.[0];
+
   let leaves=0,currentId:string|null=null;
   for(const t of map.targets){
     const own=t.concept_ids.filter(id=>concepts.has(id));
@@ -89,7 +95,7 @@ export function buildTree(map:RootMapData,summary:RootSummary,title:string):Tree
     const anchor=answerParent??own.filter(id=>!isAnswer(id)).sort((a,b)=>(uses.get(b)??0)-(uses.get(a)??0))[0];
     const parent=anchor?placeConcept(anchor):(nodes.get('c:__other')?.id??(()=>{
       const n=add({id:'c:__other',kind:'concept',label:'기타',parent:ROOT_ID,conceptIds:[]});nodes.get(ROOT_ID)!.children.push(n.id);return n.id;})());
-    const pages=[...new Set((t.evidence??[]).flatMap(e=>e.pages??[]).filter(p=>Number.isInteger(p)&&p>0))].sort((a,b)=>a-b);
+    const pages=[...new Set((t.evidence??[]).filter(e=>e.source_id===lecture).flatMap(e=>e.pages??[]).filter(p=>Number.isInteger(p)&&p>0))].sort((a,b)=>a-b);
     const status=targetStatus(t.target_id,t.directions.some(d=>ready.has(d.direction_id)),summary);
     const current=t===currentTarget;
     const leaf=add({id:'t:'+t.target_id,kind:'target',label:plain(t.title),parent,conceptIds:t.concept_ids,targetId:t.target_id,pages,status,current});
@@ -105,23 +111,20 @@ export function buildTree(map:RootMapData,summary:RootSummary,title:string):Tree
     if(parentsOf(id).length||parents.has(id)||links.get(id)?.size)placeConcept(id);
   }
 
-  // Aggregate pages/status upward, then order children by first page (lecture order).
-  // A topic with no page (no question under it) sits right after its previous sibling in the 판's concept order.
-  const order=new Map(map.concepts.map((c,i)=>[c.concept_id,i]));
-  const first=(n:TreeNode)=>n.pages[0]??Number.MAX_SAFE_INTEGER;
+  // Aggregate pages/status upward. Order is the 판's own: concepts in the order the Map stage wrote
+  // them while reading the lecture (C001 → …), questions in target order. Pages are not used for
+  // order — one question citing an intro page pulled a whole branch forward (2026-11-09).
+  const conceptAt=new Map(map.concepts.map((c,i)=>[c.concept_id,i]));
+  const targetAt=new Map(map.targets.map((t,i)=>[t.target_id,i]));
+  const rank=(n:TreeNode)=>n.kind==='target'?targetAt.get(n.targetId!)??0
+    :map.targets.length+Math.min(...n.conceptIds.map(id=>conceptAt.get(id)??Number.MAX_SAFE_INTEGER));
   (function walk(id:string){
     const n=nodes.get(id)!;
     for(const c of n.children){walk(c);const child=nodes.get(c)!;
       n.pages=[...new Set([...n.pages,...child.pages])].sort((a,b)=>a-b);
       if(child.kind==='target')n.counts[child.status!]++;else for(const k of Object.keys(n.counts) as Status[])n.counts[k]+=child.counts[k];
       if(child.current)n.current=true;}
-    const at=new Map(n.children.map((c,i)=>[c,i]));
-    const rank=(c:string)=>{const x=nodes.get(c)!;return x.kind==='concept'?order.get(x.conceptIds[0])??Number.MAX_SAFE_INTEGER:0;};
-    const key=new Map(n.children.map(c=>{const child=nodes.get(c)!;
-      if(child.pages.length||child.kind!=='concept')return [c,first(child)];
-      const before=n.children.filter(o=>o!==c&&nodes.get(o)!.kind==='concept'&&nodes.get(o)!.pages.length&&rank(o)<rank(c)).map(o=>first(nodes.get(o)!));
-      return [c,before.length?Math.max(...before)+0.5:0];}));
-    n.children.sort((a,b)=>key.get(a)!-key.get(b)!||rank(a)-rank(b)||at.get(a)!-at.get(b)!);
+    n.children.sort((a,b)=>rank(nodes.get(a)!)-rank(nodes.get(b)!));
   })(ROOT_ID);
   return {nodes,rootId:ROOT_ID,currentId,leaves};
 }
