@@ -154,13 +154,15 @@ def run(packet,out,model,invoke):
     runtime_revalidations=ledger.get('runtimeRevalidations',[])
     render_recoveries=ledger.get('renderRecoveries',[])
     medical_retries=ledger.get('medicalRetries',[])
+    source_gap_recoveries=ledger.get('sourceGapRecoveries',[])
     recovery_meta={'authoringRecoveries':recoveries,'formatRecoveries':format_recoveries,
-        'runtimeRevalidations':runtime_revalidations,'renderRecoveries':render_recoveries,'medicalRetries':medical_retries,'inputHash':packet['inputHash'],
+        'runtimeRevalidations':runtime_revalidations,'renderRecoveries':render_recoveries,'medicalRetries':medical_retries,'sourceGapRecoveries':source_gap_recoveries,'inputHash':packet['inputHash'],
         'runtimeHash':fingerprint,'initialBrief':initial,'repairRounds':max(ledger['repairRounds'],initial_cost+1)}
     recovery_stages={k:{'name':k,**v}for k,v in ledger['stages'].items()}
     c.validate_runtime_revalidations(recovery_meta,recovery_stages)
     c.validate_format_recoveries(recovery_meta,recovery_stages)
     c.validate_render_recoveries(recovery_meta,recovery_stages)
+    c.validate_source_gap_recoveries(recovery_meta,recovery_stages)
     c.validate_medical_retries(recovery_meta,recovery_stages,pending=True)
     c.validate_authoring_recoveries(recovery_meta,recovery_stages)
     rejected=recoveries[0]['proof']['rawAuthoring']if recoveries and recoveries[0]['proof']['mode']=='brief-repair'else None
@@ -242,6 +244,7 @@ def run(packet,out,model,invoke):
             **({'formatRecoveries':format_recoveries}if format_recoveries else{}),
             **({'renderRecoveries':render_recoveries}if render_recoveries else{}),
             **({'medicalRetries':medical_retries}if medical_retries else{}),
+            **({'sourceGapRecoveries':source_gap_recoveries}if source_gap_recoveries else{}),
             **({'bankProjection':projection}if projection else{}),
             **({'importanceReview':importance}if importance else{}),
             **({'runtimeRevalidations':runtime_revalidations}if runtime_revalidations else{}),

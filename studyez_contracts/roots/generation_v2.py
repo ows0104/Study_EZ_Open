@@ -224,7 +224,7 @@ def validate_format_recoveries(meta,stages):
     return rows
 
 
-RECOVERY_HISTORY=('formatRecoveries','authoringRecoveries','renderRecoveries','medicalRetries','importanceReview')
+RECOVERY_HISTORY=('formatRecoveries','authoringRecoveries','renderRecoveries','medicalRetries','importanceReview','sourceGapRecoveries')
 
 
 def history_runtime(meta):
@@ -347,6 +347,81 @@ def validate_render_recoveries(meta,stages):
         require(current['status']=='completed'and all(current[k]==entry[k]for k in ('inputHash','rawOutputHash','usageHash')),
             'result2: render recovery changed the original call')
     return rows
+
+def split_required_gaps(brief,raw):
+    """A required_gap may name only required directions (the brief decides requirement, not the reviewer).
+
+    A completed source review that listed optional directions inside a required_gap is split
+    deterministically: the required directions stay one required_gap, the optional ones become an
+    optional_extension with the same text and questions. No judgment is dropped or upgraded; an
+    issue with no direction, or only unknown ones, is left as it is (it still needs map_fix)."""
+    req={d['direction_id']:d['requirement']for t in brief['targets']for d in t['directions']}
+    fixed=copy.deepcopy(raw);rows=[];splits=[]
+    for row in fixed['assessment']['issues']:
+        ids=row['direction_ids']
+        if row['kind']!='required_gap'or not ids or not all(d in req for d in ids)or all(req[d]=='required'for d in ids):
+            rows.append(row);continue
+        keep=[d for d in ids if req[d]=='required'];move=[d for d in ids if req[d]!='required']
+        if keep:rows.append({**row,'direction_ids':keep})
+        rows.append({**row,'issue_id':row['issue_id']+('-optional'if keep else''),'kind':'optional_extension','direction_ids':move})
+        splits.append({'issue_id':row['issue_id'],'required':keep,'optional':move})
+    fixed['assessment']['issues']=rows
+    return fixed,splits
+
+
+def _source_gap_rows(meta):
+    return {row['proof']['stage']:row for row in meta.get('sourceGapRecoveries',[])}
+
+
+def accepted_source_raw_hash(meta,name):
+    """The raw review a source stage was accepted with: the model's own, or its recorded gap split."""
+    row=_source_gap_rows(meta).get(name)
+    return document_hash(split_required_gaps(row['proof']['brief'],row['proof']['originalRaw'])[0])if row else None
+
+
+def validate_source_gap_recoveries(meta,stages):
+    """One completed source review rejected only because a required_gap also named optional directions.
+
+    The model's raw review, input and usage stay byte-identical; acceptance uses the deterministic
+    split above. No model replay and no budget change."""
+    rows=meta.get('sourceGapRecoveries',[])
+    require(type(rows)is list and len(rows)<=1,'result2: invalid source gap recovery history')
+    for row in rows:
+        require(type(row)is dict and set(row)=={'proof','proofHash'}and type(row['proof'])is dict
+            and row['proofHash']==document_hash(row['proof']),'result2: changed source gap recovery proof')
+        p=row['proof']
+        require(set(p)=={'priorLedger','priorLedgerHash','packetHash','currentRuntimeHash','reason','stage','rejection',
+            'brief','originalRaw','splits','toolSha256','modelReplay'},'result2: malformed source gap recovery')
+        old=p['priorLedger'];name=p['stage']
+        require(type(old)is dict and type(old.get('stages'))is dict and old.get('pipelineVersion')==POLICY
+            and p['priorLedgerHash']==document_hash(old)and not old.get('sourceGapRecoveries')
+            and type(old.get('identity'))is str and re.fullmatch(r'[a-f0-9]{64}',old['identity']),
+            'result2: changed prior source gap ledger')
+        gap_runtime=meta['medicalRetries'][0]['proof']['priorLedger']['identity']if meta.get('medicalRetries')else history_runtime(meta)
+        require(type(name)is str and re.fullmatch(r'source-[0-3]',name)and p['packetHash']==meta['inputHash']
+            and p['currentRuntimeHash']==gap_runtime and p['modelReplay']is False
+            and type(p['reason'])is str and p['reason'].strip()and type(p['rejection'])is str
+            and 'required gaps must reference required directions'in p['rejection']
+            and type(p['toolSha256'])is str and re.fullmatch(r'[a-f0-9]{64}',p['toolSha256']),
+            'result2: changed source gap recovery identity')
+        prior=old['stages'];entry=prior.get(name,{})
+        require(all(type(v)is dict for v in prior.values())and entry.get('status')=='failed'
+            and [k for k,v in prior.items()if v['status']=='failed']==[name]and set(prior)<=set(stages),
+            'result2: source gap recovery was not one failed source review')
+        require(type(old.get('repairRounds'))is int and old['repairRounds']<=meta['repairRounds']<=3,'result2: source gap recovery reset budget')
+        for k,v in prior.items():
+            if k!=name:require(stages[k]=={'name':k,**v},'result2: changed reused source gap stage')
+        raw=p['originalRaw'];brief=p['brief']
+        author=f"repair-{name.split('-')[1]}"if name!='source-0'else'generate'
+        require(document_hash(raw)==entry['rawOutputHash']and raw['briefHash']==document_hash(brief)
+            and stages[author]['briefHash']==document_hash(brief),'result2: source gap recovery reviewed another brief')
+        fixed,splits=split_required_gaps(brief,raw)
+        require(splits and splits==p['splits'],'result2: source gap split is not the deterministic one')
+        current=stages[name]
+        require(current['status']=='completed'and all(current[k]==entry[k]for k in ('inputHash','rawOutputHash','usageHash')),
+            'result2: source gap recovery changed the original call')
+    return rows
+
 
 def validate_medical_retries(meta,stages,pending=False):
     """One fresh independent medical review after a completed call that omitted question verdicts.
@@ -782,6 +857,7 @@ def validate_result(value,packet):
     validate_runtime_revalidations(meta,stages)
     validate_format_recoveries(meta,stages)
     validate_render_recoveries(meta,stages)
+    validate_source_gap_recoveries(meta,stages)
     validate_medical_retries(meta,stages)
     recoveries=validate_authoring_recoveries(meta,stages)
     rejected=recoveries[0]['proof']['rawAuthoring']if recoveries and recoveries[0]['proof']['mode']=='brief-repair'else None
@@ -836,7 +912,8 @@ def validate_result(value,packet):
     for q in raw_author['bank']['questions']:q.pop('stimuli',None)
     require(final['rawOutputHash']==document_hash(raw_author),'result2: authored input mismatch')
     validate_authoring(raw_author)
-    require(importance or stages[f'source-{n}']['rawOutputHash']==document_hash(a['assessment']),'result2: raw source proof mismatch')
+    require(importance or stages[f'source-{n}']['rawOutputHash']==document_hash(a['assessment'])
+        or accepted_source_raw_hash(meta,f'source-{n}')==document_hash(a['assessment']),'result2: raw source proof mismatch')
     require(meta['medicalInputHash']==stages[f'medical-{n}']['inputHash'],'result2: medical input proof mismatch')
     require(meta['medicalInputHash']==document_hash({'title':packet['title'],'bank':reviewed,
         'clinicalInput':medical_input(reviewed,meta['clinicalConflicts']),'_pipeline_version':POLICY}),'result2: actual medical projection mismatch')

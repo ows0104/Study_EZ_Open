@@ -344,6 +344,9 @@ def validate_all(out,payload):
     for row in payload['manifest'].get('medicalRetries',[]):
         from .root_medical_retry import validate_archive
         validate_archive(out,row)
+    for row in payload['manifest'].get('sourceGapRecoveries',[]):
+        from .root_source_gap_recovery import validate_archive as validate_gap_archive
+        validate_gap_archive(out,row)
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--packet',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--model');a=p.parse_args()
