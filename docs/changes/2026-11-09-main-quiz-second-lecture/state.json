@@ -1,0 +1,19 @@
+{
+  "id": "2026-11-09-main-quiz-second-lecture",
+  "title": "Main-Quiz 생성 두 번째 강의 시범 — 사슬알균",
+  "area": "generation",
+  "created_at": "2026-11-08T17:48:01.305715+00:00",
+  "required_checks": [
+    "contracts",
+    "generation"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-08T17:48:01.305737+00:00"
+}
