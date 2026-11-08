@@ -59,7 +59,8 @@ def kinds(warnings: list[str]) -> list[str]:
         for key, name in (("회상 부담이 크다", "회상 부담"), ("예/아니오로 답한다", "예아니오 축"),
                           ("단정어", "단정어×부정"), ("정답이 모두", "정답 쏠림"),
                           ("형식이 좁다", "형식 쏠림"),
-                          ("basic인데 채점 단위", "basic 단위")):
+                          ("basic인데 채점 단위", "basic 단위"),
+                          ("ox인데 해설이 없다", "ox 이유")):
             if key in line:
                 found.append(name)
                 break
@@ -152,6 +153,15 @@ def test_basic은_채점_단위가_하나다():
     assert kinds(warnings_of(two)) == ["basic 단위"]
     as_list = bank_of({"format": "list", "answer": "가; 나", "answer_units": ["가", "나"]})
     assert "basic 단위" not in kinds(warnings_of(as_list))
+
+
+def test_ox는_해설에_이유를_둔다():
+    """ox 는 판단보다 이유를 아는 것이 목표다 — 이유 없는 O/X 만 적는다."""
+    bare = bank_of({"format": "ox", "question": "Clostridium perfringens 감염의 주된 조직 소견은 화농성 염증이다. (O/X)", "answer": "X"})
+    assert kinds(warnings_of(bare)) == ["ox 이유"]
+    explained = bank_of({"format": "ox", "question": "Clostridium perfringens 감염의 주된 조직 소견은 화농성 염증이다. (O/X)", "answer": "X",
+                         "explanation": "독소로 염증세포가 모이기 전에 조직괴사가 먼저 일어난다."})
+    assert kinds(warnings_of(explained)) == []
 
 
 def test_list는_단위_길이와_단위_수를_따로_본다():

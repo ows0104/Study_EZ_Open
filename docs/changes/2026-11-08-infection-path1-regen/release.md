@@ -6,15 +6,19 @@
 - `studyez_contracts/roots/generation_v2.py` `quality_reasons`: 품질 경고를 `question_fix` 보완 사유로.
   `repair_reasons`가 붙인다. 보완 상한 3회는 그대로이고 계약 검증(`validate_result`)은 보완 사유를 다시 계산하지 않으므로
   기존 결과의 검증은 바뀌지 않는다.
-- `content/prompts/learning-links/automation/author-v2.md`: basic 정답 하나, 여러 항목은 list·cloze 표·객관식·분할,
-  긴 정답의 부연은 해설로, 「문항 품질」 보완 사유를 실제 형식·분할로 고칠 것.
+- `content/prompts/learning-links/automation/author-v2.md`(2026-11-08 관리자 토의 반영): 정답은 핵심어(짧은 문장 허용),
+  명제는 발문·cloze 틀에 두고 핵심어만 빈칸, basic 정답 하나, 기전은 인과 cloze, 발문에 상황 제시와 양방향 연결,
+  한계·예외는 cloze·객관식·해설로, ox는 함정 명제에 쓰고 해설에 이유. 「문항 품질」 보완 사유를 형식·분할·해설로 고칠 것.
+- `bank/quality.py`: ox인데 해설이 없으면 경고(이유를 아는 것이 목표).
 - `runner/root_importance_review.py`: 자격을 「수정 3/3 소진」에서 「모든 단계 완료·결과 없음·다음 원본 대조 없음」으로.
   계약 쪽은 이미 최종 회차 n을 일반으로 받는다.
 - 실행 스크립트 `run.py`: 이전 `2026-11-08-infection-path1-map/run.py`의 사본, 실행 폴더 `runs/_e2e/26110802`와 revision만 다름.
 
-측정(읽기 전용, 새 코드):
-- 운영 Quiz Bank 35편: 새 basic 단위 경고 6개(261001_03 3, 261007_02·261008_02·261008_03 각 1). errors 증가 0.
-- 공개 98문항 판: errors 0 · warnings 38(basic 단위 8). 83문항 판: errors 1 · warnings 101(basic 단위 62).
+측정(읽기 전용, 새 코드. 경고 종류별):
+- 운영 Quiz Bank 35편: errors 2(기존 그대로). 새 경고는 ox 해설 없음 56 · basic 복수 단위 6.
+  기존 경고: 회상 부담 50 · 일부 노출 11 · 단정어×부정 7 · 정답 쏠림 5.
+- 공개 98문항 판: errors 0 · 회상 부담 26 · 예/아니오 축 6 · 단정어×부정 3 · basic 복수 단위 2 · 정답 쏠림 1.
+- Map 83문항 판: errors 1 · basic 복수 단위 62 · 회상 부담 39.
 
 검사:
 - 루트 `pytest tests`: 2,136 통과·3 건너뜀. 제외 1건은 `test_desktop_control` 바로가기 설치기(origin/master에서도 같은 실패).

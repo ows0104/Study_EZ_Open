@@ -160,6 +160,16 @@ def _basic_units(question: dict) -> list[str]:
             f"같은 범주 항목이면 list, 대응·비교면 cloze 표·객관식, 서로 다른 요구면 문항을 나눈다"]
 
 
+def _ox_reason(question: dict) -> list[str]:
+    """ox 는 판단보다 이유를 아는 것이 목표다(2026-11-08 관리자). 이유는 해설에 있다.
+
+    운영 Quiz Bank ox 137개 중 60개(44%)가 해설 없이 O/X만 남겼다.
+    """
+    if question["format"] != "ox" or (question.get("explanation") or "").strip():
+        return []
+    return [f"{question['question_id']}: ox인데 해설이 없다 — 왜 O 또는 X인지 핵심 근거를 해설에 쓴다"]
+
+
 def _polarity_bias(bank: dict) -> list[str]:
     """예/아니오 문항의 정답이 한쪽으로만 쏠렸는가. 정본 §2.1 의 「정답 단서」다."""
     groups: dict[str, list[str]] = {}
@@ -225,6 +235,6 @@ def quality_errors(bank: dict) -> tuple[list[str], list[str]]:
         load = _recall_load(q)
         if load:
             long_ids.append(q["question_id"])
-        warnings += load + _basic_units(q) + _yes_no_axis(q) + _overstated_cue(q)
+        warnings += load + _basic_units(q) + _ox_reason(q) + _yes_no_axis(q) + _overstated_cue(q)
     warnings += _polarity_bias(bank) + _narrow_format(bank, long_ids)
     return errors, warnings
