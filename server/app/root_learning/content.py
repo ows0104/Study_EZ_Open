@@ -148,6 +148,8 @@ def front(q):
     if q.get('stimuli'):
         from studyez_contracts.roots.media import public_images
         result['stimuli']=public_images(q)
+    if q.get('personalEdited'):
+        result['personalEdited']=True
     return result
 
 
@@ -155,4 +157,5 @@ def answer(q):
     return {'answer': q['answer'], 'explanation': q.get('explanation', ''),
             'answerUnits': q.get('answer_units', []), 'correctOptionIds': q.get('correct_option_ids', []),
             'answerPairs': q.get('answer_pairs', []), 'correctOrder': q.get('correct_order', []),
-            'slides': [], 'optionExplanations': q.get('option_explanations', [])}
+            'slides': [], 'optionExplanations': q.get('option_explanations', []),
+            'personalAnswer': bool(q.get('personalAnswer'))}

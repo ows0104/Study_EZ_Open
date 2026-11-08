@@ -45,16 +45,40 @@ def bank_feedback(user: CurrentUser = Depends(require_admin), db: Session = Depe
     emails = {p.id: p.email for p in db.scalars(select(Profile).where(
         Profile.id.in_({f.user_id for f in rows})))} if rows else {}
     groups: dict[tuple[str, str, str], dict[str, Any]] = {}
+    roots: dict[tuple[str, str], tuple[str | None, dict[str, dict]]] = {}
+
+    def root_question(f: BankFeedback) -> tuple[dict | None, bool]:
+        """Main-Quiz 제보(build_id `root:<판>`)는 그 판의 문항 문면을 싣는다. 지금 공개 판이 아니면 stale."""
+        key = (f.subject, f.run_id)
+        if key not in roots:
+            from app.models.root_learning import RootContent, RootControl
+            control = db.get(RootControl, key)
+            revisions = {("root:" + r)[:64]: r for r in db.scalars(select(RootContent.revision).where(
+                RootContent.subject == f.subject, RootContent.run_id == f.run_id))}
+            roots[key] = (control.revision if control else None, revisions)
+        active, revisions = roots[key]
+        revision = revisions.get(f.build_id)
+        if revision is None:
+            return None, True
+        from app.models.root_learning import RootContent
+        doc = db.get(RootContent, (f.subject, f.run_id, revision))
+        q = next((q for q in doc.document["bank_snapshot"]["questions"] if q["question_id"] == f.question_id), None)
+        # Main-Quiz 문항은 빈 목록 칸을 생략한다. 신고함 카드는 기존 은행 문항처럼 모든 칸이 있다고 읽는다.
+        empty = {k: [] for k in ("options", "answer_pairs", "correct_option_ids", "correct_order", "answer_units")}
+        return ({**empty, "answer": "", **q} if q else None), revision != active
+
     for f in rows:
         key = (f.subject, f.run_id)
         if key not in banks:
             banks[key] = db.get(QuizBank, key)
             lectures[key] = db.get(Lecture, key)
         bank, lecture = banks[key], lectures[key]
+        main_quiz = f.build_id.startswith("root:")
+        root_q, root_stale = root_question(f) if main_quiz else (None, False)
         group = groups.get((*key, f.question_id))
         if group is None:
             questions = (bank.bank or {}).get("questions", []) if bank else []
-            q = next((q for q in questions if q["question_id"] == f.question_id), None)
+            q = root_q if main_quiz else next((q for q in questions if q["question_id"] == f.question_id), None)
             review = next((r for r in ((bank.review or {}).get("reviews", []) if bank else [])
                            if r["question_id"] == f.question_id), None)
             group = groups[(*key, f.question_id)] = {
@@ -66,7 +90,8 @@ def bank_feedback(user: CurrentUser = Depends(require_admin), db: Session = Depe
             "id": f.id, "category": f.category, "comment": f.comment, "status": f.status,
             "highlighted": f.highlighted,
             "email": emails.get(f.user_id, ""), "createdAt": _iso(f.created_at),
-            "stale": bank is None or f.build_id != bank.build_id,
+            "stale": root_stale if main_quiz else bank is None or f.build_id != bank.build_id,
+            "mainQuiz": main_quiz,
         })
     out = list(groups.values())
     out.sort(key=lambda g: any(r["highlighted"] and r["status"] == "open" for r in g["reports"]), reverse=True)

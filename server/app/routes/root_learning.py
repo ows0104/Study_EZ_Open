@@ -13,7 +13,8 @@ from sqlalchemy.orm import Session, defer
 from studyez_contracts.roots import document_hash
 from app.auth import CurrentUser, require_admin, require_approved_user
 from app.database import get_db
-from app.models import Lecture
+from app import bank_personal
+from app.models import BankFeedback, BankPersonalEdit, Lecture
 from app.models.root_learning import RootContent, RootControl, RootSession, RootEvent
 from app.root_learning import content, policy, state, planning
 
@@ -301,9 +302,10 @@ def project_session(db, row, doc, user, when):
            'summary': state.summary(doc.document, content.events_for(db, row.subject, row.run_id, user.id), available, when, row.policy)}
     if task and task['task_id'] in available and not expired:
         q = content.question(doc.document, task)
+        shown = with_personal(q, personal_edits(db, doc, user.id))
         reveal = row.state['reveals'].get(task['task_id'])
-        out['task'] = {'id': task['task_id'], 'question': content.front(q),
-                       'answer': revealed_answer(db, doc, q) if reveal else None,
+        out['task'] = {'id': task['task_id'], 'question': content.front(shown),
+                       'answer': revealed_answer(db, doc, shown) if reveal else None,
                        'response': reveal['response'] if reveal else None,
                        'attempted': reveal['attempted'] if reveal else None,
                        'helped': row.state['mapSeen'] or (reveal['helped'] if reveal else prior_exposure(doc.document, task, q, row.state))}
@@ -323,6 +325,109 @@ def active_generation(db, doc, *, light=False):
 
 
 _UNSET = object()
+
+
+# ── 문제 수정·제보 (2026-11-08) ──────────────────────────────────────────────
+# 기존 Quiz Bank와 같은 표를 쓴다: 개인 수정본은 bank_personal_edit(내 계정에만), 제보는 bank_feedback.
+# 개인 수정은 문제은행 없이 선 판(standalone)에만 적용한다. 문제은행과 연결된 판은 기존 규칙상 개인 수정본이 있으면
+# 그 과제를 연결 미확인으로 막으므로(content.availability) 여기서는 제보만 받는다.
+
+def personal_editable(doc):
+    return doc.document['bank_source'] == 'standalone'
+
+
+def personal_edits(db, doc, user_id):
+    if not personal_editable(doc):
+        return {}
+    return {e.question_id: e for e in db.scalars(select(BankPersonalEdit).where(
+        BankPersonalEdit.user_id == user_id, BankPersonalEdit.subject == doc.subject,
+        BankPersonalEdit.run_id == doc.run_id))}
+
+
+def with_personal(q, edits):
+    return bank_personal.apply_edit(q, edits.get(q['question_id']))
+
+
+def feedback_build(doc):
+    """bank_feedback.build_id(64자)에 Main-Quiz 판을 적는다. 관리자 신고함이 이 값으로 문면과 옛 판을 가른다."""
+    return ('root:' + doc.revision)[:64]
+
+
+def snapshot_question(doc, question_id):
+    q = next((q for q in doc.document['bank_snapshot']['questions'] if q['question_id'] == question_id), None)
+    if q is None:
+        raise HTTPException(404, '문항을 찾을 수 없습니다.')
+    return q
+
+
+class RootPersonalEdit(Strict):
+    action: Literal['save', 'reset'] = 'save'
+    revision: str = Field(min_length=64, max_length=64)
+    question: str = Field(min_length=1, max_length=12000)
+    answer: str = Field(min_length=1, max_length=12000)
+    report: bool = False
+    category: str = Field(default='content', max_length=16)
+    comment: str = Field(default='', max_length=2000)
+
+
+@router.get(BASE + '/questions/{question_id}/personal')
+def read_personal(subject: str, run_id: str, question_id: str, user: CurrentUser = Depends(require_approved_user),
+                  db: Session = Depends(get_db)):
+    doc = active(db, subject, run_id, user)
+    original = snapshot_question(doc, question_id)
+    edit = db.get(BankPersonalEdit, (user.id, subject, run_id, question_id)) if personal_editable(doc) else None
+    valid = edit is not None and bank_personal.same_source(edit.original, original)
+    current = bank_personal.apply_edit(original, edit) if valid else original
+    return {'original': {'question': original['question'], 'answer': original['answer'], 'explanation': original.get('explanation', '')},
+            'draft': {'question': current['question'], 'answer': current['answer'], 'explanation': current.get('explanation', '')},
+            'edited': valid, 'comment': edit.comment if valid else '', 'revision': bank_personal.revision(original),
+            'personalAdded': False, 'editable': personal_editable(doc)}
+
+
+@router.put(BASE + '/questions/{question_id}/personal')
+def save_personal(subject: str, run_id: str, question_id: str, payload: RootPersonalEdit,
+                  user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
+    from app.routes.bank_api.feedback import FEEDBACK_CATEGORIES
+    if payload.category not in FEEDBACK_CATEGORIES:
+        raise HTTPException(422, '제보 유형을 확인하세요.')
+    doc = active(db, subject, run_id, user)
+    original = snapshot_question(doc, question_id)
+    if payload.revision != bank_personal.revision(original):
+        raise HTTPException(409, '문항이 바뀌었습니다. 수정창을 다시 열어 주세요.')
+    question, answer = payload.question.strip(), payload.answer.strip()
+    if not question or not answer:
+        raise HTTPException(422, '발문과 정답을 비워 둘 수 없습니다.')
+    changed = question != original['question'] or answer != original['answer']
+    editable = personal_editable(doc)
+    if changed and not editable:
+        raise HTTPException(409, '이 Main-Quiz는 문제은행과 연결된 판이라 개인 수정은 할 수 없습니다. 제보만 보낼 수 있습니다.')
+    comment = payload.comment.strip()
+    edit = db.get(BankPersonalEdit, (user.id, subject, run_id, question_id)) if editable else None
+    if editable:
+        if payload.action == 'reset' or (not changed and not comment):
+            if edit:
+                db.delete(edit)
+                edit = None
+        else:
+            if edit is None:
+                edit = BankPersonalEdit(user_id=user.id, subject=subject, run_id=run_id, question_id=question_id)
+                db.add(edit)
+            edit.original, edit.question, edit.answer, edit.comment = original, question, answer, comment
+    reported = payload.action == 'save'
+    if reported:
+        correction = None
+        note = comment
+        if changed:
+            note += f"\n\n[개인 수정 제안]\n발문: {question}\n정답: {answer}"
+            correction = {'original': original, 'proposed': {'question': question, 'answer': answer},
+                          'changedFields': [k for k, v in (('question', question), ('answer', answer)) if v != original[k]]}
+        db.add(BankFeedback(user_id=user.id, subject=subject, run_id=run_id, build_id=feedback_build(doc),
+                            question_id=question_id, category=payload.category, comment=note.strip(),
+                            highlighted=payload.report, correction=correction))
+    db.commit()
+    current = bank_personal.apply_edit(original, edit)
+    return {'question': content.front(current), 'answer': revealed_answer(db, doc, current),
+            'reported': reported, 'highlighted': reported and payload.report}
 
 
 def question_issues(issues, question_id):
@@ -381,13 +486,15 @@ def prepare(session_id: str, start: int | None = Query(None, ge=0), count: int =
     begin = row.state['index'] if start is None else start
     available, problems = content.availability(db, doc, user.id)
     generation = active_generation(db, doc)
+    edits = personal_edits(db, doc, user.id)
     for position in range(begin, min(begin + count, len(row.tasks))):
         task = row.tasks[position]
         frame = {'position': position, 'taskId': task['task_id'], 'blocked': problems.get(task['task_id']), 'task': None}
         if task['task_id'] in available:
             q = content.question(doc.document, task)
-            frame['task'] = {'id': task['task_id'], 'question': content.front(q),
-                             'answer': revealed_answer(db, doc, q, generation),
+            shown = with_personal(q, edits)
+            frame['task'] = {'id': task['task_id'], 'question': content.front(shown),
+                             'answer': revealed_answer(db, doc, shown, generation),
                              'helped': row.state['mapSeen'] or prior_exposure(doc.document, task, q, row.state)}
         out['frames'].append(frame)
     return out

@@ -63,7 +63,7 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
   }
   const writes=useRootStudyWrites(scope);
   const frames=useRootFrames(view?.sessionId);
-  const {ensure}=frames;
+  const {ensure,forget}=frames;
   useEffect(()=>{if(view&&!view.finished)ensure(view.position,view.count);},[view?.sessionId,view?.position,view?.count,view?.finished,ensure]);
   useEffect(()=>{void refresh(true).catch(e=>setError(e instanceof ApiError&&e.status===404?'아직 공개된 Main Quiz 학습 자료가 없습니다. 기존 문제를 이용하거나 자료 준비를 기다려 주세요.':e.message));},[base]);
   /** What the server will show once this event is stored, drawn from prepared frames. null: wait for it. */
@@ -174,7 +174,11 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     {writes.slow&&<p className="bank-note main-quiz-save-status" role="status">저장 확인 중…</p>}
     {view?<>
       {view.finished&&(writes.blocked||writes.queued>0)?<p role="status">마지막 저장과 미확인 요청을 확인 중입니다. 완료 현황은 확인 뒤 표시합니다.</p>:tab==='map'&&map?<><button className="main-quiz-back" onClick={()=>setTab('learn')}>← 문제로 돌아가기</button><RootMap map={map} summary={view.summary} title={info?.title} position={`문항 ${Math.min(view.position+1,view.count)}/${view.count}`}/></>:
-        <RootSolve view={view} title={info?.title} scope={scope} disabled={writes.blocked} advancing={advancing} onAction={act} onError={setError} onMap={()=>void showMap()}
+        <RootSolve view={view} title={info?.title} scope={scope} disabled={writes.blocked}
+          editPath={qid=>`${base}/questions/${encodeURIComponent(qid)}/personal`}
+          onEdited={result=>{forget();const current=viewRef.current;if(!current?.task)return;
+            const next={...current,task:{...current.task,question:result.question,answer:current.task.answer?result.answer:null}};
+            viewRef.current=next;setView(next);if(!current.finished)ensure(current.position,current.count);}} advancing={advancing} onAction={act} onError={setError} onMap={()=>void showMap()}
           onToday={()=>{setView(null);setMap(null);setTab('learn');void refresh().catch(e=>setError(e.message));}}/>}
       {view.blocked?.includes('학습일')&&<button disabled={writes.blocked} onClick={()=>{setView(null);void refresh().catch(e=>setError(e.message));}}>오늘 학습 다시 계획</button>}
     </>:info?<RootToday info={info} disabled={writes.blocked||advancing} starting={advancing} onStart={()=>void begin()} onMap={()=>void showMap()}

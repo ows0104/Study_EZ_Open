@@ -77,6 +77,7 @@ from app.models import (
     PREVIEW_OPEN_KINDS,
     AppGrant,
     AssetGrab,
+    BankFeedback,
     BankState,
     BankStateArchive,
     Lecture,
@@ -294,6 +295,7 @@ def usage(
     # `answered_at` 은 마지막으로 찍은 때라 그 장이 창 안에 있었는지를 말한다.
     pre_cards = _count_by_user(db, QuizAttempt, QuizAttempt.answered_at, span)
     connection_saves = _count_by_user(db, ConnectionEvent, ConnectionEvent.created_at, span)
+    question_reports = _count_by_user(db, BankFeedback, BankFeedback.created_at, span)
     root_metrics = {}
     for event in db.scalars(select(RootEvent).where(*_within(RootEvent.created_at, span))):
         field = _root_field(event)
@@ -355,6 +357,7 @@ def usage(
         (UserPreview, UserPreview.updated_at),
         (ConnectionEvent, ConnectionEvent.created_at),
         (RootEvent, RootEvent.created_at),
+        (BankFeedback, BankFeedback.created_at),
     ):
         for uid, last in db.execute(
             select(model.user_id, func.max(stamp)).group_by(model.user_id)
@@ -377,6 +380,7 @@ def usage(
             {
                 "id": uid,
                 "connectionSaves": connection_saves.get(uid, 0),
+                "questionReports": question_reports.get(uid, 0),
                 **{field: root_metrics.get(uid, {}).get(field, 0) for field in ROOT_FIELDS},
                 "email": profile.email,
                 "isAdmin": profile.is_admin,
@@ -458,6 +462,7 @@ def usage_detail(
             "preview": False,
             "previewSavedAt": None,
             "connectionSaves": {"count": 0, "lastAt": None},
+            "questionReports": {"count": 0, "lastAt": None},
             **{field: {"count":0,"lastAt":None} for field in ROOT_FIELDS},
             "previewCreates": {"count": 0, "lastAt": None},
             "quizLastAt": {"pre": None, "main": None, "bank": None},
@@ -490,6 +495,13 @@ def usage_detail(
     ).where(ConnectionEvent.user_id == user_id).group_by(ConnectionEvent.subject, ConnectionEvent.run_id)):
         row = slot(subject, run_id)
         row['connectionSaves'] = {'count': count, 'lastAt': _iso(last)}
+        row['lastAt'] = _iso(_latest(last, _parse(row['lastAt'])))
+
+    for subject, run_id, count, last in db.execute(select(
+        BankFeedback.subject, BankFeedback.run_id, func.count(), func.max(BankFeedback.created_at)
+    ).where(BankFeedback.user_id == user_id).group_by(BankFeedback.subject, BankFeedback.run_id)):
+        row = slot(subject, run_id)
+        row['questionReports'] = {'count': count, 'lastAt': _iso(last)}
         row['lastAt'] = _iso(_latest(last, _parse(row['lastAt'])))
 
     for event in db.scalars(select(RootEvent).where(RootEvent.user_id == user_id)):

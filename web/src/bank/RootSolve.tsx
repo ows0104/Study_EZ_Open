@@ -2,19 +2,22 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import type { RootAction, RootView } from '../types/rootLearning';
 import type { BankRating } from '../types/bank';
 import { QuestionBody, AnswerBody, AnswerReviewItems, hasAnswerReview } from './BankQuestion';
-import { FeedbackButton } from '../feedback/FeedbackButton';
+import { PersonalQuestionDialog, type PersonalQuestionResult } from './PersonalQuestionDialog';
 import { RootSummaryPanel } from './RootToday';
 
 const PdfSlides = lazy(() => import('./RootPdfSlides').then(m => ({default:m.RootPdfSlides})));
 const RATINGS: BankRating[] = ['Again', 'Hard', 'Good', 'Easy'];
 
-export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,onError,onMap}:{view:RootView;title?:string;scope:string;disabled:boolean;
+export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,onError,onMap,editPath,onEdited}:{view:RootView;title?:string;scope:string;disabled:boolean;
+  editPath?:(questionId:string)=>string;onEdited?:(result:PersonalQuestionResult)=>void;
   advancing:boolean;onAction:(a:RootAction)=>void;onToday:()=>void;onError:(message:string)=>void;onMap?:()=>void}) {
   const task=view.task;
   const key=`studyez:root-draft:${scope}:${JSON.stringify([view.revision,task?.id])}`;
   const [picked,setPicked]=useState<Set<string>>(new Set());
   const [choices,setChoices]=useState(false);
   const [imageState,setImageState]=useState<{taskId:string;ready:boolean}|null>(null);
+  const [editing,setEditing]=useState(false);
+  const [editNote,setEditNote]=useState('');
   const heading=useRef<HTMLHeadingElement>(null);
   const menu=useRef<HTMLDetailsElement>(null);
   const locked=disabled||advancing||!!view.blocked;
@@ -27,7 +30,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       if(!Array.isArray(ids)||!ids.every(id=>typeof id==='string'&&allowed.has(id)))throw Error('invalid saved choices');
       setPicked(new Set(ids));setChoices(localStorage.getItem(key+':choices')==='shown');
     }catch{setPicked(new Set());setChoices(false);onError('보관된 선지 선택을 읽지 못했습니다. 원본을 보존했습니다.');}
-    menu.current?.removeAttribute('open');
+    menu.current?.removeAttribute('open');setEditing(false);setEditNote('');
     heading.current?.focus();window.scrollTo(0,0);
   },[key]);
   function save(suffix:string,text:string) {
@@ -73,8 +76,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
         <div className="mq-menu-pop" onClick={e=>{if((e.target as HTMLElement).closest('button'))menu.current?.removeAttribute('open');}}>
           {!task?.answer&&<button disabled={locked} onClick={()=>reveal(false)}>답만 보기</button>}
           <button disabled={disabled||advancing||!!view.blocked?.includes('학습일')} onClick={()=>onAction({kind:'skip'})}>이 문제 보류</button>
-          {task&&<FeedbackButton launch={{className:'',content:'문제 제보'}}
-            about={{title:title?`Main-Quiz · ${title}`:'Main-Quiz',itemId:`${task.question.question_id} · ${task.id}`,stem:task.question.question}}/>}
+          {task&&editPath&&<button disabled={disabled||advancing} onClick={()=>setEditing(true)}>문제 수정·제보</button>}
           {/* 기록은 평가마다 저장된다. 이 버튼은 풀이를 멈추고 오늘 현황(시작 화면)으로 간다. */}
           <button disabled={disabled||advancing} onClick={onToday}>오늘 현황 보기</button>
         </div>
@@ -91,6 +93,13 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
     <div className="quiz-progress bank-progress mq-solve-progress"><h2 className="main-quiz-question-heading" ref={heading} tabIndex={-1}>문항 {view.position+1} / {view.count}</h2>
       <span className="mq-track" aria-hidden="true"><i style={{width:`${view.count?done/view.count*100:0}%`}}/></span></div>
     {view.blocked&&<p role="alert">{view.blocked}</p>}
+    {editNote&&<p className="bank-note mq-edit-note" role="status">{editNote}</p>}
+    {task&&task.question.personalEdited&&<p className="mq-edited"><span className="tag">내 수정본</span></p>}
+    {editing&&task&&editPath&&<PersonalQuestionDialog path={editPath(task.question.question_id)} questionId={task.question.question_id}
+      answerVisible={!!task.answer} onClose={()=>setEditing(false)} onSaved={(result,reset)=>{
+        setEditing(false);onEdited?.(result);
+        setEditNote(reset?'원본으로 되돌렸습니다.':(result.highlighted?'강조 제보를 보냈습니다.':'관리자에게 전달했습니다.')+(result.question.personalEdited?' 내 수정본을 저장했습니다.':''));
+      }}/>}
     {advancing&&<p className="bank-note" role="status">불러오는 중…</p>}
     {task&&<div className="quiz-card bank-card mq-card"><QuestionBody key={task.id} question={task.question} answer={task.answer} picked={picked}
       onStimuliReady={ready=>setImageState({taskId:task.id,ready})} onPick={pick} disabled={locked}
