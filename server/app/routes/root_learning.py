@@ -325,6 +325,12 @@ def active_generation(db, doc, *, light=False):
 _UNSET = object()
 
 
+def question_issues(issues, question_id):
+    """Run-wide audit notes that name this question. The rest stay in the generation record, not on every answer."""
+    named = re.compile(r'(?<![A-Za-z0-9_])' + re.escape(question_id) + r'(?![A-Za-z0-9_])')
+    return [i for i in issues if named.search(i if isinstance(i, str) else str(i))]
+
+
 def revealed_answer(db, doc, q, generation=_UNSET):
     answer = content.answer(q)
     if generation is _UNSET:
@@ -335,12 +341,13 @@ def revealed_answer(db, doc, q, generation=_UNSET):
             from app.root_learning.replacement_import import report as replacement_report
             summary=replacement_report(result)
             answer['reviewNotes']=[r for r in summary['questionNotes']if r['question_id']==q['question_id']]
-            answer['reviewIssues']=summary['issues']
+            answer['reviewIssues']=question_issues(summary['issues'],q['question_id'])
         else:
             answer['reviewNotes'] = [
             {'source': label, **r} for label, checks in [('원본 대조', result['sourceAudit']['question_checks']), ('독립 정답 검수', result['medical'])]
             for r in checks['reviews'] if r['question_id'] == q['question_id'] and r['verdict'] != 'ok']
-            answer['reviewIssues'] = result['sourceAudit']['input_issues'] + result['validation']['errors'] + result['validation']['warnings']
+            answer['reviewIssues'] = question_issues(
+                result['sourceAudit']['input_issues'] + result['validation']['errors'] + result['validation']['warnings'], q['question_id'])
     from app.root_learning.evidence import attach_evidence
     attach_evidence(db, doc, q, generation, answer)
     return answer

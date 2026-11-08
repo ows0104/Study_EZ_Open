@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import type { RootAction, RootView } from '../types/rootLearning';
 import type { BankRating } from '../types/bank';
-import { QuestionBody, AnswerBody } from './BankQuestion';
+import { QuestionBody, AnswerBody, AnswerReviewItems, hasAnswerReview } from './BankQuestion';
+import { FeedbackButton } from '../feedback/FeedbackButton';
 import { RootSummaryPanel } from './RootToday';
 
 const PdfSlides = lazy(() => import('./RootPdfSlides').then(m => ({default:m.RootPdfSlides})));
@@ -68,11 +69,14 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   const head=<header className="mq-solve-head">
     <p className="mq-kicker"><span className="mq-badge">Main-Quiz</span>{title&&<span className="mq-solve-title">{title}</span>}</p>
     {!view.finished&&<span className="main-quiz-tools">{onMap&&<button className="pill-button" disabled={disabled||advancing} onClick={onMap}>개념 지도</button>}
-      <button className="pill-button" disabled={disabled||advancing} onClick={onToday}>쉬기</button>
       <details ref={menu} className="main-quiz-menu"><summary className="pill-button">더 보기</summary>
-        <div className="mq-menu-pop">
+        <div className="mq-menu-pop" onClick={e=>{if((e.target as HTMLElement).closest('button'))menu.current?.removeAttribute('open');}}>
           {!task?.answer&&<button disabled={locked} onClick={()=>reveal(false)}>답만 보기</button>}
           <button disabled={disabled||advancing||!!view.blocked?.includes('학습일')} onClick={()=>onAction({kind:'skip'})}>이 문제 보류</button>
+          {task&&<FeedbackButton launch={{className:'',content:'문제 제보'}}
+            about={{title:title?`Main-Quiz · ${title}`:'Main-Quiz',itemId:`${task.question.question_id} · ${task.id}`,stem:task.question.question}}/>}
+          {/* 기록은 평가마다 저장된다. 이 버튼은 풀이를 멈추고 오늘 현황(시작 화면)으로 간다. */}
+          <button disabled={disabled||advancing} onClick={onToday}>오늘 현황 보기</button>
         </div>
       </details></span>}
   </header>;
@@ -92,17 +96,11 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       onStimuliReady={ready=>setImageState({taskId:task.id,ready})} onPick={pick} disabled={locked}
       showOptions={!hiddenChoices} showChoiceScore={false}/>
       {hiddenChoices&&<button className="is-quiet" disabled={locked} onClick={showChoices}>선지 보기</button>}
-      {task.answer&&<><hr className="quiz-line"/><AnswerBody question={task.question} answer={task.answer}/>
+      {task.answer&&<><hr className="quiz-line"/><AnswerBody question={task.question} answer={task.answer} reviewInline={false}/>
         {!!task.answer.pdfSlides?.length&&<Suspense fallback={<p role="status">참고 슬라이드를 준비하고 있습니다…</p>}>
           <PdfSlides key={task.id} slides={task.answer.pdfSlides}/></Suspense>}
         {!task.answer.pdfSlides?.length&&!task.answer.slides.length&&<p className="bank-note">이 문항에 연결된 참고 슬라이드가 없습니다.</p>}
-        {(!!task.answer.reviewNotes?.length||!!task.answer.reviewIssues?.length||!!task.answer.sourceLinks?.length||task.helped||!task.attempted)&&
-          <details className="main-quiz-details"><summary>자료·검토 기록</summary>
-            {task.answer.reviewNotes?.map((r,i)=><p key={i}>{r.source} · {r.verdict==='wrong'?'오류 지적':'판단 유보'}: {r.note}{r.suggested_answer&&` · 검토 제안: ${r.suggested_answer}`}</p>)}
-            {task.answer.reviewIssues?.map((issue,i)=><p key={i}>{issue}</p>)}
-            {task.answer.sourceLinks?.map((s,i)=><p key={i}><a href={s.url} target="_blank" rel="noreferrer">{s.label}</a></p>)}
-            {(task.helped||!task.attempted)&&<p className="bank-note">지도·선지 열람과 답만 보기는 별도로 기록됩니다. 자기평가는 네 단계 중 자유롭게 선택하세요.</p>}
-          </details>}
+        <AnswerRecords task={task}/>
       </>}
     </div>}
     <div className="quiz-bar bank-solve-bar" aria-label="자기평가">
@@ -112,4 +110,23 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
         <button className="quiz-submit" disabled={locked||!task||!imagesReady} onClick={()=>reveal()} aria-keyshortcuts="Space Enter">답 보기 <kbd>Space</kbd></button>}
     </div>
   </section>;
+}
+
+/**
+ * 참고 슬라이드 아래에 두는 이 문항의 기록(2026-11-08 사용자 지시). 회차 전체 메모는 서버가 이미 걸렀다.
+ * 슬라이드가 원본 열기를 주므로 원본 링크는 슬라이드가 없을 때만 보인다.
+ */
+function AnswerRecords({task}:{task:NonNullable<RootView['task']>}) {
+  const a=task.answer!;
+  const notes=a.reviewNotes??[];
+  const links=a.pdfSlides?.length?[]:a.sourceLinks??[];
+  const records=hasAnswerReview(a)||notes.length>0||links.length>0;
+  return <>
+    {records&&<details className="mq-records"><summary>이 문항 검토 기록</summary>
+      <AnswerReviewItems answer={a}/>
+      {notes.map((r,i)=><p key={i}><b>{r.source} · {r.verdict==='wrong'?'오류 지적':'판단 유보'}</b> {r.note}{r.suggested_answer&&` · 검토 제안: ${r.suggested_answer}`}</p>)}
+      {links.map((s,i)=><p key={i}><a href={s.url} target="_blank" rel="noreferrer">{s.label}</a></p>)}
+    </details>}
+    {(task.helped||!task.attempted)&&<p className="bank-note mq-help-note">지도·선지 열람과 답만 보기는 따로 기록됩니다. 자기평가는 네 단계 중 자유롭게 고르세요.</p>}
+  </>;
 }

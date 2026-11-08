@@ -22,10 +22,14 @@ function readImage(file: File): Promise<string> {
   });
 }
 
+/** 지금 보고 있는 문항(Main-Quiz). 일반 피드백으로 보내되 화면 칸에 문항 id·발문을 함께 싣는다. */
+export type FeedbackAbout = { title: string; itemId: string; stem: string };
+
 /** `launch`를 주면 그 모양으로 여는 버튼을 그린다(좌측 메뉴의 「문의하기」). 대화상자는 같다. */
-export function FeedbackButton({ prequiz, launch }: {
+export function FeedbackButton({ prequiz, launch, about }: {
   prequiz?: PreQuizContext;
   launch?: { className: string; content: ReactNode; title?: string };
+  about?: FeedbackAbout;
 } = {}) {
   const location = useLocation();
   const id = useId();
@@ -42,6 +46,8 @@ export function FeedbackButton({ prequiz, launch }: {
   const [sent, setSent] = useState(false);
   const [report, setReport] = useState<PreQuizContext | null>(null);
   const [category, setCategory] = useState("content");
+  // 닫혀 있는 동안은 대화상자 내용을 그리지 않는다 — 풀이 화면에 입력칸·문항 글이 숨은 채 남지 않게.
+  const [open, setOpen] = useState(false);
   useEffect(() => () => {
     attachments.current.forEach((shot) => URL.revokeObjectURL(shot.url));
   }, []);
@@ -67,6 +73,7 @@ export function FeedbackButton({ prequiz, launch }: {
   }
   function close() {
     if (pending.current) return;
+    setOpen(false);
     dialog.current?.close();
     opener.current?.focus();
   }
@@ -91,7 +98,9 @@ export function FeedbackButton({ prequiz, launch }: {
   }
   return <>
     <button ref={opener} className={launch?.className ?? "feedback-launch"} title={launch?.title} onClick={() => {
-      setReport(prequiz ?? null); setPage(location.pathname); setSent(false); setError(""); dialog.current?.showModal();
+      setReport(prequiz ?? null);
+      setPage(about ? `${location.pathname} · ${about.title} · ${about.itemId} · ${about.stem.replace(/\s+/g, " ").slice(0, 400)}` : location.pathname);
+      setSent(false); setError(""); setOpen(true); dialog.current?.showModal();
       window.requestAnimationFrame(() => input.current?.focus());
     }}>{launch?.content ?? (prequiz ? "문제 제보" : "피드백")}</button>
     {createPortal(<dialog ref={dialog} className="feedback-dialog" aria-labelledby={`${id}-title`}
@@ -101,10 +110,11 @@ export function FeedbackButton({ prequiz, launch }: {
         if (files.length) { event.preventDefault(); add(files); }
       }} onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => { event.preventDefault(); add(Array.from(event.dataTransfer.files)); }}>
-      <header><h2 id={`${id}-title`}>{prequiz ? "예습 문제 제보" : "피드백 보내기"}</h2>
+      {open ? <>
+      <header><h2 id={`${id}-title`}>{prequiz ? "예습 문제 제보" : about ? "문제 제보" : "피드백 보내기"}</h2>
         <button className="is-quiet" disabled={busy} onClick={close} aria-label="피드백 닫기">닫기</button>
       </header>
-      {sent ? <div role="status"><p>{prequiz ? "제보를 보냈습니다. 관리자가 확인하겠습니다." : "피드백을 보냈습니다. 관리자가 확인하겠습니다."}</p>
+      {sent ? <div role="status"><p>{prequiz || about ? "제보를 보냈습니다. 관리자가 확인하겠습니다." : "피드백을 보냈습니다. 관리자가 확인하겠습니다."}</p>
         <button onClick={close}>확인</button></div> :
       <form onSubmit={(event) => { event.preventDefault(); void submit(); }}>
         {report ? <>
@@ -116,11 +126,15 @@ export function FeedbackButton({ prequiz, launch }: {
               {prequizCategories.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </label>
+        </> : about ? <>
+          <p className="feedback-context">{about.title} · {about.itemId}</p>
+          <p className="feedback-question">{about.stem}</p>
+          <p className="feedback-hint">이 문항의 id와 발문이 관리자에게 함께 전달됩니다.</p>
         </> : null}
-        <label htmlFor={`${id}-message`}>{report ? "어떤 부분을 확인하면 될까요?" : "불편한 점이나 원하는 기능을 알려 주세요."}</label>
+        <label htmlFor={`${id}-message`}>{report || about ? "어떤 부분을 확인하면 될까요?" : "불편한 점이나 원하는 기능을 알려 주세요."}</label>
         <textarea ref={input} id={`${id}-message`} required maxLength={4000} rows={5}
           disabled={busy} value={message} onChange={(event) => setMessage(event.target.value)} />
-        <p className="feedback-context">보고 있던 화면: {page}</p>
+        {about ? null : <p className="feedback-context">보고 있던 화면: {page}</p>}
         <label className="feedback-attach">화면 캡처 첨부
           <input aria-label="화면 캡처 파일 선택" type="file" multiple accept="image/png,image/jpeg,image/webp" disabled={busy}
             onChange={(event) => { add(Array.from(event.target.files ?? [])); event.target.value = ""; }} />
@@ -133,8 +147,9 @@ export function FeedbackButton({ prequiz, launch }: {
           }}>삭제</button></figure>)}</div>
         {error ? <p className="notice is-error" role="alert">{error}</p> : null}
         <footer><button type="button" className="is-quiet" disabled={busy} onClick={close}>나중에</button>
-          <button type="submit" disabled={busy || !message.trim()}>{busy ? "보내는 중…" : report ? "제보 보내기" : "보내기"}</button></footer>
+          <button type="submit" disabled={busy || !message.trim()}>{busy ? "보내는 중…" : report || about ? "제보 보내기" : "보내기"}</button></footer>
       </form>}
+      </> : null}
     </dialog>, document.body)}
   </>;
 }

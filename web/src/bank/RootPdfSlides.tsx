@@ -120,9 +120,10 @@ function PdfSlide({slide}:{slide:RootPdfSlide}){
     return()=>{live=false;};
   },[slide.url,slide.proxyPath,slide.page]);
   const label=`${slide.sourceFilename} · PDF ${slide.page}쪽`;
-  return <figure className="bank-evidence-slide main-quiz-pdf-slide"><figcaption>{label}
-    {' · '}<a href={`${slide.url}#page=${slide.page}`} target="_blank" rel="noreferrer">원본 열기</a></figcaption>
+  // 그림이 먼저, 출처 줄은 그 아래(2026-11-08 사용자 지시).
+  return <figure className="bank-evidence-slide main-quiz-pdf-slide">
     {image?<SlideImage src={image} alt={label}/>:failed?<p role="alert">참고 슬라이드를 불러오지 못했습니다. 원본 열기로 확인하거나 새로고침해 주세요.</p>:<p role="status">슬라이드 불러오는 중…</p>}
+    <figcaption>{label}{' · '}<a href={`${slide.url}#page=${slide.page}`} target="_blank" rel="noreferrer">원본 열기</a></figcaption>
   </figure>;
 }
 
@@ -130,7 +131,7 @@ export function RootPdfSlides({slides}:{slides:RootPdfSlide[]}){
   const [expanded,setExpanded]=useState(false);
   if(!slides.length)return null;
   return <section className="bank-slides main-quiz-pdf-slides" aria-label="참고 슬라이드">
-    <h3>참고 슬라이드</h3><PdfSlide slide={slides[0]}/>
+    <PdfSlide slide={slides[0]}/>
     {slides.length>1&&<details className="bank-answer-context" onToggle={e=>setExpanded(e.currentTarget.open)}>
       <summary>추가 참고 슬라이드 {slides.length-1}장</summary>
       {expanded&&slides.slice(1).map(s=><PdfSlide key={`${s.sourceId}:${s.page}`} slide={s}/>)}</details>}
