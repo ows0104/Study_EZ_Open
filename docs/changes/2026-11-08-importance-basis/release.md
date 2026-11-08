@@ -97,3 +97,8 @@
   - 활성 판: `main-quiz-reviewed-6143c8c89ad64d9c` → `map-tree-26110803`. 공개 범위(관리자 시범 `['runner']`)는 그대로다.
   - 이전 판 2개, 이벤트 42건, 세션 2개, Quiz Bank, 학습 상태가 그대로인지 스크립트의 전후 대조로 확인했다.
   - 첫 시도는 S2 스냅숏 업로드에서 멈췄다. `put_bytes`가 로컬 저장소 전용이어서다. DB 쓰기는 없었다. R2 `upload_fileobj`로 고쳐 다시 실행했다.
+- **학생 공개**(사용자 「학생 공개」, 2026-11-08)
+  - `open_to_students.py`가 관리자 publication 경로(`routes/root_learning.publish`)를 그대로 호출했다.
+  - `allowed_users`를 `['runner']`에서 `[]`(전체)로 바꿨다. revision과 enabled는 그대로다. publication 이벤트는 43 → 44건.
+  - 학생 계정 접근 판정은 `content.allowed` True이고, 운영 `STUDYEZ_ROOT_LEARNING_ENABLED=true`다.
+  - 기록: `runs/_e2e/26110803/publication/open-to-students.json`.
