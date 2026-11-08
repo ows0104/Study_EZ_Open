@@ -296,6 +296,10 @@ def test_검토_프롬프트는_정오만_보게_필드를_줄인다(bank):
 @pytest.mark.parametrize("locator,pages", [
     ("p13", [13]), ("p13–14", [13, 14]), ("p11, p18", [11, 18]), ("S1 p4", [4]),
     ("p 7", [7]), ("13쪽", [13]), ("2023 Q11", []), ("p2-p3", [2, 3]), ("p3–40", [3, 40]),
+    # Map 판 표기(2026-11-08 감염병리1 map-tree-26110803)
+    ("physical PDF page 8", [8]), ("physical PDF page 2, 3", [2, 3]),
+    ("physical PDF page 7, 9, 11", [7, 9, 11]), ("physical PDF page 23; selected original image crop", [23]),
+    ("pages 4–6", [4, 5, 6]), ("2023 김지은 79번 ④", []),
 ])
 def test_쪽_번호를_읽는다(locator, pages):
     assert slides.pages_of(locator) == pages
