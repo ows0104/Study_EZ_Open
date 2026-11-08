@@ -1,6 +1,6 @@
 """Approved continuation: complete target importance, then one fresh final source audit.
 
-Only for a finished run whose final source audit left every target unknown while every target's
+For any finished run (correction budget exhausted or the loop ended early) whose final source audit left every target unknown while every target's
 importance was still unreviewed with no evidence. One importance call per top-level branch, then one
 source audit; same reviewed bank, no content edit, no correction-budget change. Each finished branch is
 saved at once under `.importance-review-chunks/` and reused by a later run for the same lineage brief,
@@ -126,10 +126,11 @@ def review(packet, out, *, reason, model=None):
         cost = int(bool(c.brief_findings(initial)))
         rounds = ledger['repairRounds'] - cost
         stage = f'source-{rounds}'
-        n.require(ledger['repairRounds'] == 3 and _completed(ledger) and stage in ledger['stages']
+        # Any finished run (budget exhausted or audit-clean early); the final round is the last source audit.
+        n.require(_completed(ledger) and stage in ledger['stages'] and f'source-{rounds + 1}' not in ledger['stages']
                   and f'medical-{rounds}' in ledger['stages'] and not ledger.get('importanceReview')
                   and not (out / 'result.json').exists() and not (out / ARCHIVE).exists() and reason.strip(),
-                  'Only a finished, budget-exhausted run without importance review is eligible')
+                  'Only a finished run without importance review is eligible')
         ctx = n.read(out / (stage + '.input.json'))
         n.require(document_hash(ctx) == ledger['stages'][stage]['inputHash'], 'Changed final source input')
         lineage, bank = ctx['brief'], ctx['bank']

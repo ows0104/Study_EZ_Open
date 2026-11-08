@@ -58,7 +58,8 @@ def kinds(warnings: list[str]) -> list[str]:
     for line in warnings:
         for key, name in (("회상 부담이 크다", "회상 부담"), ("예/아니오로 답한다", "예아니오 축"),
                           ("단정어", "단정어×부정"), ("정답이 모두", "정답 쏠림"),
-                          ("형식이 좁다", "형식 쏠림")):
+                          ("형식이 좁다", "형식 쏠림"),
+                          ("basic인데 채점 단위", "basic 단위")):
             if key in line:
                 found.append(name)
                 break
@@ -140,6 +141,17 @@ def test_basic_정답이_선을_넘으면_적는다():
     line = LONG_ANSWER_CHARS["basic"]
     assert kinds(warnings_of(bank_of({"answer": "가" * line}))) == []
     assert "회상 부담" in kinds(warnings_of(bank_of({"answer": "가" * (line + 1)})))
+
+
+def test_basic은_채점_단위가_하나다():
+    """여러 요구를 한 발문에 묶은 basic 은 형식이 틀렸다 — 2026-11-08 Map 판 basic 72개 중 62개."""
+    one = bank_of({"answer": "MERS"})
+    assert kinds(warnings_of(one)) == []
+    two = bank_of({"answer": "넓은 정의: histiocyte 집합; 좁은 정의: epithelioid histiocyte 집합",
+                   "answer_units": ["넓은 정의: histiocyte 집합", "좁은 정의: epithelioid histiocyte 집합"]})
+    assert kinds(warnings_of(two)) == ["basic 단위"]
+    as_list = bank_of({"format": "list", "answer": "가; 나", "answer_units": ["가", "나"]})
+    assert "basic 단위" not in kinds(warnings_of(as_list))
 
 
 def test_list는_단위_길이와_단위_수를_따로_본다():
