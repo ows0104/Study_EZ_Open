@@ -88,3 +88,17 @@ def test_model_written_target_axes_are_replaced_by_the_assembly_placeholder(tmp_
     assert all(a == c.IMPORTANCE_PLACEHOLDER for t in result['manifest']['initialBrief']['targets'] for a in t['importance'].values())
     assert result['manifest']['repairRounds'] == 0
     c.validate_result(result, p)
+
+
+def test_scope_label_is_the_lecture_title_even_when_the_model_writes_the_scope_there(tmp_path):
+    """26110803 generation-2: normalisation put the 612-character scope text into scope.label."""
+    p = v3_packet(tmp_path, BASIS)
+    def invoke(stage, ctx, *args):
+        value, info = with_point_ids(stage, ctx, *args)
+        if stage == 'normalize':
+            value['scope']['label'] = '긴 범위 설명 ' * 60
+        return value, info
+    result = g.run(p, tmp_path / 'out', invoke=invoke)
+    assert result['manifest']['initialBrief']['scope']['label'] == p['title']
+    assert result['manifest']['repairRounds'] == 0
+    c.validate_result(result, p)

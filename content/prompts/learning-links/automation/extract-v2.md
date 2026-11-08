@@ -15,3 +15,4 @@ prerequisites의 relation_id는 kind=prerequisite인 관계만 가리킨다. 그
 제공된 Concept map이 concept-map-extract/3이면 Map의 concept_id를 그대로 쓰고, 각 개념의 parent_id를 해당 개념의 parent_ids에 그대로 포함해 강의의 갈래 구조를 보존한다. 세부 사실 노드는 해당 Map 개념 아래에 둔다. 갈래를 넘는 연결과 구조를 묻는 목표(root/branch)는 Map의 relations를 근거로 만든다.
 
 importanceTable이 있으면 targets[].importance의 세 축은 모두 status=unreviewed, evidence=[]로 둔다. 중요도는 출제 포인트 근거로 조립 때 계산하며, 정규화는 근거를 목표에 옮겨 적지 않는다.
+scope.label은 강의 제목(title) 그대로다. 범위 설명은 scope.included·excluded에 둔다.

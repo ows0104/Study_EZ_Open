@@ -53,3 +53,8 @@
   - extract-v2·author-v2에 「3축은 손대지 않는다」를 넣었다.
 - 검사: 이번 실패를 재현하는 파이프라인 검사 1개. 루트 2,170 통과, 서버 root_ 26 통과.
 - 26110803의 포인트·packet은 그대로 쓰고, 생성만 새 폴더(`generation-2`)에서 다시 돈다. 실패한 `generation/`은 보존한다.
+- 다시 돌린 generation-2도 generate에서 거절됐다(`roots: title required`).
+  - 정규화 모델이 brief `scope.label`에 범위 설명문 전체(612자)를 넣었다. 앞의 두 실행은 강의 제목을 넣었다.
+  - 이후 단계는 scope를 바꿀 수 없어 고칠 길이 없었다.
+  - 수정: 정규화 직후 `scope.label`을 packet의 강의 제목으로 정한다. extract-v2에도 적었다. 실패 재현 검사 1개를 더했다.
+  - 생성은 `generation-3`에서 다시 돈다. 실패한 `generation-2/`는 보존한다.

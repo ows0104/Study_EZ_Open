@@ -100,6 +100,9 @@ def run(packet,out,model,invoke):
                 c.validate_shape(raw,c.BRIEF,'initial brief2');value=raw
                 # importance-basis/1: target axes are computed at assembly; the model's are replaced by placeholders.
                 if table is not None:value=c.blank_target_importance(raw)
+                # scope.label is the document title (validate_document: 1–300 chars); a model once wrote the whole
+                # scope text there, and later stages may not change scope (261104_02 26110803 generation-2).
+                if value['scope']['label']!=packet['title']:value={**value,'scope':{**value['scope'],'label':packet['title']}}
                 c.require(raw['sources']==sources and raw['lecture_id']==packet['subject']+'/'+packet['runId'],'Different initial source/lecture')
                 if packet.get('inputMode')=='source':c.require(raw['provenance']['independent_points']=='confirmed','Initial independent extraction required')
                 else:c.require(raw['provenance']['independent_points']!='confirmed','Supplied map is not independent extraction')
