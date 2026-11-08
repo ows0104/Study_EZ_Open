@@ -1,37 +1,113 @@
 import { useEffect, useState } from 'react';
-import { getDocument, GlobalWorkerOptions, type PDFDocumentLoadingTask, type RenderTask } from 'pdfjs-dist';
+import { getDocument, GlobalWorkerOptions, PDFDataRangeTransport, type PDFDocumentLoadingTask, type PDFDocumentProxy } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { SlideImage } from '../SlideImage';
 import { apiUrl, authHeader } from '../api';
 import type { RootPdfSlide } from '../types/rootLearning';
 
 GlobalWorkerOptions.workerSrc=workerUrl;
-type Entry={task:Promise<PDFDocumentLoadingTask>;users:number;timer?:ReturnType<typeof setTimeout>};
+const CHUNK=524288;
+// A lecture PDF stays open while the learner studies it: reopening it for every answer
+// re-read the file header, trailer and page tree before the first slide could draw.
+const KEEP_OPEN_MS=20*60_000;
+const RENDERED_LIMIT=16;
+
+/**
+ * Byte ranges through the API with the login header (R2 has no CORS rule).
+ * Letting PDF.js open the URL itself always began with a full GET, so every new
+ * document streamed the whole lecture PDF (22 MB) before the ranges started.
+ */
+class ApiRangeTransport extends PDFDataRangeTransport {
+  failed?:(cause:Error)=>void;
+  constructor(length:number,initial:Uint8Array,private url:string,private headers:Record<string,string>){super(length,initial);}
+  override requestDataRange(begin:number,end:number){
+    void fetchRange(this.url,this.headers,begin,end-1).then(({bytes})=>this.onDataRange(begin,bytes))
+      .catch(cause=>this.failed?.(cause as Error));
+  }
+}
+
+async function fetchRange(url:string,headers:Record<string,string>,first:number,last:number) {
+  const response=await fetch(url,{headers:{...headers,Range:`bytes=${first}-${last}`}});
+  if(response.status!==206&&response.status!==200)throw new Error(`참고 자료 범위 요청 실패 (${response.status})`);
+  const total=Number(response.headers.get('Content-Range')?.split('/')[1]??response.headers.get('Content-Length'));
+  let bytes=new Uint8Array(await response.arrayBuffer());
+  if(response.status===200)bytes=bytes.slice(first,last+1);
+  return {bytes,total};
+}
+
+type Entry={doc:Promise<PDFDocumentProxy>;task?:PDFDocumentLoadingTask;users:number;timer?:ReturnType<typeof setTimeout>};
 const documents=new Map<string,Entry>();
-// The signed R2 URL works for links only: the bucket has no CORS rule, so PDF.js reads
-// the same frozen file through the API (with the login header and byte ranges).
+const assets=()=>new URL('pdfjs/',new URL(import.meta.env.BASE_URL,window.location.href)).href;
+
+function open(slide:RootPdfSlide):Entry {
+  const key=slide.proxyPath??slide.url;
+  const existing=documents.get(key);
+  if(existing)return existing;
+  const options={enableXfa:false,cMapUrl:assets()+'cmaps/',cMapPacked:true,standardFontDataUrl:assets()+'standard_fonts/',
+    wasmUrl:assets()+'wasm/',disableStream:true,disableAutoFetch:true,rangeChunkSize:CHUNK};
+  const entry:Entry={users:0,doc:null as unknown as Promise<PDFDocumentProxy>};
+  entry.doc=(async()=>{
+    if(!slide.proxyPath){const task=getDocument({...options,url:slide.url});entry.task=task;return task.promise;}
+    const url=apiUrl(slide.proxyPath),headers=await authHeader();
+    const head=await fetchRange(url,headers,0,CHUNK-1);
+    if(!Number.isFinite(head.total)||head.total<=0)throw new Error('참고 자료 크기를 확인하지 못했습니다.');
+    const range=new ApiRangeTransport(head.total,head.bytes,url,headers);
+    const task=getDocument({...options,range});entry.task=task;
+    // A lost range would leave PDF.js waiting forever: drop the document so the slide fails and a retry reopens it.
+    range.failed=()=>{if(documents.get(key)===entry)documents.delete(key);void task.destroy();};
+    return task.promise;
+  })();
+  documents.set(key,entry);
+  // A failed load must not stay cached for the next question or a retry.
+  entry.doc.catch(()=>{if(documents.get(key)===entry)documents.delete(key);});
+  return entry;
+}
+
 function acquire(slide:RootPdfSlide){
   const key=slide.proxyPath??slide.url;
-  let entry=documents.get(key);
-  if(!entry){
-    const assets=new URL('pdfjs/',new URL(import.meta.env.BASE_URL,window.location.href)).href;
-    const task=(slide.proxyPath?authHeader():Promise.resolve({})).then(httpHeaders=>getDocument({
-      url:slide.proxyPath?apiUrl(slide.proxyPath):slide.url,httpHeaders,enableXfa:false,cMapUrl:assets+'cmaps/',cMapPacked:true,
-      standardFontDataUrl:assets+'standard_fonts/',wasmUrl:assets+'wasm/',
-      // Through the API, only the byte ranges the drawn pages need: by default PDF.js keeps
-      // streaming the whole file (22MB lecture PDFs held the one API instance for ~9s).
-      // Each range request passes auth and a DB lookup, so use larger chunks than 64KB.
-      ...(slide.proxyPath?{disableStream:true,disableAutoFetch:true,rangeChunkSize:524288}:{})}));
-    const created:Entry={task,users:0};entry=created;
-    documents.set(key,created);
-    // A failed load must not stay cached for the next question or a retry.
-    void task.then(t=>t.promise).catch(()=>{if(documents.get(key)===created)documents.delete(key);});
-  }
+  const entry=open(slide);
   clearTimeout(entry.timer);entry.users++;
-  const current=entry;
-  return {promise:current.task.then(t=>t.promise),release:()=>{
-    if(--current.users===0)current.timer=setTimeout(()=>{if(documents.get(key)===current)documents.delete(key);void current.task.then(t=>t.destroy());},15000);
+  return {promise:entry.doc,release:()=>{
+    if(--entry.users===0)entry.timer=setTimeout(()=>{
+      if(documents.get(key)===entry)documents.delete(key);
+      void entry.task?.destroy();
+    },KEEP_OPEN_MS);
   }};
+}
+
+// Drawn slides (data URLs), most recent last. Prepared ahead for the coming answers.
+const rendered=new Map<string,Promise<string>>();
+const slideKey=(slide:RootPdfSlide)=>`${slide.proxyPath??slide.url.split('?')[0]}#${slide.page}`;
+
+function render(slide:RootPdfSlide):Promise<string> {
+  const key=slideKey(slide);
+  const old=rendered.get(key);
+  if(old){rendered.delete(key);rendered.set(key,old);return old;}
+  const pdf=acquire(slide);
+  let timer:ReturnType<typeof setTimeout>|undefined;
+  const drawn=(async()=>{
+    try {
+      const doc=await Promise.race([pdf.promise,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new Error('참고 자료 응답 시간 초과')),45_000);})]);
+      const page=await doc.getPage(slide.page);
+      const natural=page.getViewport({scale:1});
+      const scale=Math.min(2,1800/Math.max(natural.width,natural.height));
+      const viewport=page.getViewport({scale});
+      const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
+      await page.render({canvas,viewport}).promise;
+      page.cleanup();
+      return canvas.toDataURL('image/png');
+    } finally {clearTimeout(timer);pdf.release();}
+  })();
+  rendered.set(key,drawn);
+  drawn.catch(()=>{if(rendered.get(key)===drawn)rendered.delete(key);});
+  while(rendered.size>RENDERED_LIMIT)rendered.delete(rendered.keys().next().value!);
+  return drawn;
+}
+
+/** Open and draw these slides now so the answer shows them without waiting. */
+export function prewarmPdfSlides(slides:RootPdfSlide[]){
+  // One at a time: the visible answer's slide must not queue behind many others.
+  void slides.reduce<Promise<unknown>>((before,slide)=>before.then(()=>render(slide)).catch(()=>{}),Promise.resolve());
 }
 
 function PdfSlide({slide}:{slide:RootPdfSlide}){
@@ -39,22 +115,9 @@ function PdfSlide({slide}:{slide:RootPdfSlide}){
   const [failed,setFailed]=useState(false);
   useEffect(()=>{
     let live=true;
-    const pdf=acquire(slide);
-    let render:RenderTask|undefined;
     setImage('');setFailed(false);
-    void (async()=>{
-      const doc=await pdf.promise;
-      const page=await doc.getPage(slide.page);
-      if(!live)return;
-      const natural=page.getViewport({scale:1});
-      const scale=Math.min(2,1800/Math.max(natural.width,natural.height));
-      const viewport=page.getViewport({scale});
-      const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
-      render=page.render({canvas,viewport});await render.promise;
-      if(live)setImage(canvas.toDataURL('image/png'));
-      page.cleanup();
-    })().catch(()=>{if(live)setFailed(true);});
-    return()=>{live=false;render?.cancel();pdf.release();};
+    render(slide).then(url=>{if(live)setImage(url);}).catch(()=>{if(live)setFailed(true);});
+    return()=>{live=false;};
   },[slide.url,slide.proxyPath,slide.page]);
   const label=`${slide.sourceFilename} · PDF ${slide.page}쪽`;
   return <figure className="bank-evidence-slide main-quiz-pdf-slide"><figcaption>{label}

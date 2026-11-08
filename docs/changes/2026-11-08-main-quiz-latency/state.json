@@ -1,0 +1,114 @@
+{
+  "id": "2026-11-08-main-quiz-latency",
+  "title": "Main-Quiz 풀이 지연 제거",
+  "area": "site",
+  "created_at": "2026-11-07T18:38:33.277244+00:00",
+  "required_checks": [
+    "web",
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-07T18:51:39.295484+00:00",
+      "evidence": "2026-11-08 채팅: 메인 퀴즈를 풀때 여전히 저장중.. 이라고 뜨면서 다음 문제가 너무 느리게 나와. 공부할때 너무 신경이 쓰이는 최우선 해결과제야. 다른 걸 포기하더라도 이 시간은 줄이고 싶어. / 아 답과 참고 슬라이드도 늦게 나와.",
+      "scope": "plan.md의 서버 root_learning 경로·웹 Root* 파일·검사, 되돌릴 수 있는 코드 배포. DB 스키마·학습 기록 변경 없음",
+      "evidence_version": 2,
+      "source_hash": "43042b65befb4563239909b45d0d97a2560c8d83ef8b4bdb837fda711b0afc04",
+      "plan_hash": "231076b7e7da47aabfecdc7139d7997006b13f35952b040ec977564520c2eac1",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "70232514dede7fe3a57f2201ec78104b7050c7feee36f0325ce13a08e97c65e5"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-07T18:51:51.686596+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "43042b65befb4563239909b45d0d97a2560c8d83ef8b4bdb837fda711b0afc04",
+      "plan_hash": "231076b7e7da47aabfecdc7139d7997006b13f35952b040ec977564520c2eac1",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-08-main-quiz-latency/1794077507555670300-web.log",
+      "web_artifact": "e76276795dcb23a7fa0c8d6cc439546603de03f7ae5bc0da49b37ac047248e1f",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-07T18:52:20.598169+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "scripts/check_root_learning.py",
+        "--check",
+        "root-ui"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "43042b65befb4563239909b45d0d97a2560c8d83ef8b4bdb837fda711b0afc04",
+      "plan_hash": "231076b7e7da47aabfecdc7139d7997006b13f35952b040ec977564520c2eac1",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-08-main-quiz-latency/1794077514455671000-regression.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-07T18:52:20.598675+00:00"
+}
