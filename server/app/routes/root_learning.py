@@ -453,6 +453,11 @@ def revealed_answer(db, doc, q, generation=_UNSET):
             for r in checks['reviews'] if r['question_id'] == q['question_id'] and r['verdict'] != 'ok']
             answer['reviewIssues'] = question_issues(
                 result['sourceAudit']['input_issues'] + result['validation']['errors'] + result['validation']['warnings'], q['question_id'])
+    # Quiz Bank와 같은 자료 충돌·자료 밖(EXT) 표시. 판 문서에 고정된 충돌 기록만 쓴다(2026-11-08).
+    conflict = next((c for c in doc.document['bank_snapshot'].get('source_conflicts', [])
+                     if q.get('conflict_id') and c.get('conflict_id') == q['conflict_id']), None)
+    answer['conflict'] = (conflict or {}).get('description', '')
+    answer['external'] = any(r.get('source_id') == 'EXT' for r in q.get('source_refs', []))
     from app.root_learning.evidence import attach_evidence
     attach_evidence(db, doc, q, generation, answer)
     return answer

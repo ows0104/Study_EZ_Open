@@ -33,6 +33,7 @@ ASSET_KINDS = frozenset(
         "main_media",  # 복습 슬라이드 렌더
         "jokbo",  # 이 강의의 족보 조각(.md). Quiz Bank 를 만들 때 ChatGPT 에 붙인다
         "bank_media",  # Quiz Bank 가 인용한 필기 쪽 렌더
+        "root_evidence",  # Main-Quiz 판별 근거 보강 JSON(`<revision>.json`, quizbank/root_evidence.py)
     }
 )
 

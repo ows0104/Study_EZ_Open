@@ -6,6 +6,20 @@ import { PersonalQuestionDialog, type PersonalQuestionResult } from './PersonalQ
 import { RootSummaryPanel } from './RootToday';
 
 const PdfSlides = lazy(() => import('./RootPdfSlides').then(m => ({default:m.RootPdfSlides})));
+const JokboSlides = lazy(() => import('./RootPdfSlides').then(m => ({default:m.RootJokboSlides})));
+
+/** 강의록·족보 근거. Quiz Bank처럼 족보가 핵심이면 족보를 먼저, 아니면 강의록 뒤에 참고 족보를 둔다. */
+function AnswerSlides({answer}:{answer:NonNullable<NonNullable<RootView['task']>['answer']>}){
+  const notes=answer.pdfSlides??[], exams=answer.jokboPdfSlides??[];
+  const examFirst=exams.some(s=>s.primary);
+  const exam=exams.length?<JokboSlides slides={exams}/>:null;
+  if(!notes.length&&!exams.length&&!answer.slides.length)return <p className="bank-note">이 문항에 연결된 참고 슬라이드가 없습니다.</p>;
+  return <Suspense fallback={<p role="status">참고 슬라이드를 준비하고 있습니다…</p>}>
+    {examFirst&&exam}
+    {!!notes.length&&<PdfSlides slides={notes} focusKnown={!!answer.slideFocusKnown} statusKnown={!!answer.evidenceStatus}/>}
+    {!examFirst&&exam}
+  </Suspense>;
+}
 const RATINGS: BankRating[] = ['Again', 'Hard', 'Good', 'Easy'];
 
 export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,onError,onMap,editPath,onEdited}:{view:RootView;title?:string;scope:string;disabled:boolean;
@@ -106,9 +120,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       showOptions={!hiddenChoices} showChoiceScore={false}/>
       {hiddenChoices&&<button className="is-quiet" disabled={locked} onClick={showChoices}>선지 보기</button>}
       {task.answer&&<><hr className="quiz-line"/><AnswerBody question={task.question} answer={task.answer} reviewInline={false}/>
-        {!!task.answer.pdfSlides?.length&&<Suspense fallback={<p role="status">참고 슬라이드를 준비하고 있습니다…</p>}>
-          <PdfSlides key={task.id} slides={task.answer.pdfSlides}/></Suspense>}
-        {!task.answer.pdfSlides?.length&&!task.answer.slides.length&&<p className="bank-note">이 문항에 연결된 참고 슬라이드가 없습니다.</p>}
+        <AnswerSlides key={task.id} answer={task.answer}/>
         <AnswerRecords task={task}/>
       </>}
     </div>}
@@ -128,7 +140,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
 function AnswerRecords({task}:{task:NonNullable<RootView['task']>}) {
   const a=task.answer!;
   const notes=a.reviewNotes??[];
-  const links=a.pdfSlides?.length?[]:a.sourceLinks??[];
+  const links=a.pdfSlides?.length||a.jokboPdfSlides?.length?[]:a.sourceLinks??[];
   const records=hasAnswerReview(a)||notes.length>0||links.length>0;
   return <>
     {records&&<details className="mq-records"><summary>이 문항 검토 기록</summary>

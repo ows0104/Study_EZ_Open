@@ -122,4 +122,7 @@ def run_generation(client, subject, run_id, runs_dir, generation_id, *, model=No
         from .parallel_status import refresh
         refresh(out,'published')
     print(f'Quiz Bank {run_id}: Concept map·포인트 → 뿌리 학습 게시 완료', flush=True)
+    # Quiz Bank와 같은 핵심 근거·족보 지면(2026-11-08). 실패해도 게시 결과는 그대로다.
+    from .root_evidence import publish as publish_evidence
+    publish_evidence(client, subject, run_id, out, packet, payload, model=model, run=run_forwarded)
     return 0
