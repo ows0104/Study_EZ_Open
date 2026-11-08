@@ -1,24 +1,25 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import type { RootMapData, RootSummary } from '../types/rootLearning';
-import { ancestors, buildTree, lanes, lanesPerRow, questionsOf, STATUS_LABEL, type Status, type Tree, type TreeNode } from './rootMapTree';
+import { ancestors, buildTree, lanes, lanesPerRow, questionsOf, STATUS_LABEL, type Status, type TreeNode } from './rootMapTree';
 
 /*
  * 개념 지도 — 가지 보기(2026-11-09).
  *
  * 강의 제목 아래로 최상위 주제마다 열(가지)이 하나씩, 열 안에서 하위 주제가 위→아래로 내려간다.
  * 처음부터 모든 주제가 보이고(접힌 것이 없다), 문항은 주제 줄 끝의 상태 점이다.
- * 주제를 누르면 그 줄 아래로 문항이 펼쳐지고, 계통·다른 가지와의 연결선이 강조되며, 옆 패널에 자세한 내용이 나온다.
- * 줄은 HTML로 그리고(글자 줄바꿈), 가지선·연결선만 SVG 겹침층에 그린다. 좁은 화면은 확대 캔버스 대신 세로 목록이다.
+ * 주제를 누르면 그 줄 아래로 문항이 펼쳐지고, 계통·다른 가지와의 연결선이 강조되며, 지도 위에 패널이 겹친다.
+ *
+ * 화면은 지도 하나다(사용자 2026-11-09 「필요없는 거 싹 다 날리고 화면을 최대한 넓게, 안 움직이게」).
+ * 남은 화면을 다 채우고, 확대·끌기 없이 항상 틀에 맞춘다. 너무 작아지면(0.5 미만) 폭에 맞추고 틀 안에서만 세로로 스크롤한다.
+ * 줄은 HTML로 그리고, 가지선·연결선만 SVG 겹침층에 그린다. 좁은 화면은 세로 목록이다.
  */
 const STATUSES:Status[]=['is-new','is-learning','is-recalled','is-unready'];
-const POINT_STATUS:Record<string,string>={covered:'충족',partial:'일부 충족',gap:'미출제',unknown:'검토 필요',excluded:'범위 제외'};
-const PAD=24,TOOLS=48,MIN_K=0.25,MAX_K=2.6,FIT_MIN_K=0.55,DETAIL_K=1.15,LANE_W=236,LANE_GAP=16;
+const PAD=20,TOOLS=46,MIN_READ=0.5,MAX_K=1.2,LANE_W=236,LANE_GAP=16,BOTTOM=12,MIN_FRAME=360;
 const HUES=['#5466cf','#cf4f68','#b07a12','#8a5cc7','#18978a','#2d83c6','#4c9a35','#c0622b'];
 const NARROW='(max-width:760px)';
-type View={x:number;y:number;k:number};
+type Fit={x:number;y:number;k:number;scroll:boolean};
 type Box={x:number;y:number;w:number;h:number};
 type Geo={w:number;h:number;boxes:Map<string,Box>};
-const clamp=(v:number,a:number,b:number)=>Math.max(a,Math.min(b,v));
 const pageText=(pages:number[])=>!pages.length?'':pages.length===1?`p.${pages[0]}`:`p.${pages[0]}–${pages[pages.length-1]}`;
 const total=(n:TreeNode)=>STATUSES.reduce((s,k)=>s+n.counts[k],0);
 /** 판의 관계는 뜻을 `condition`에, 검수 메모를 `reason`에 둔다. 뜻이 있으면 그것을 보인다. */
@@ -31,8 +32,7 @@ function useNarrow(){
 }
 
 function Counts({node}:{node:TreeNode}){
-  const sum=total(node);
-  if(!sum)return null;
+  if(!total(node))return null;
   return <span className="main-quiz-tree-bar" aria-hidden="true">{STATUSES.map(k=>node.counts[k]?
     <i key={k} className={k} style={{flexGrow:node.counts[k]}}/>:null)}</span>;
 }
@@ -55,36 +55,27 @@ function crossPath(a:Box,b:Box){
   return `M${x1} ${ay} C${x1+dx} ${ay} ${x2-dx} ${by} ${x2} ${by}`;
 }
 
-function initialOpen(tree:Tree){
-  const open=new Set<string>();
-  const current=tree.currentId?tree.nodes.get(tree.currentId):null;
-  if(current?.parent&&current.parent!==tree.rootId)open.add(current.parent);
-  return open;
-}
-
-export function RootMap({map,summary,position,title='강의 전체'}:{map:RootMapData;summary:RootSummary;position:string;title?:string}) {
+export function RootMap({map,summary,title='강의 전체'}:{map:RootMapData;summary:RootSummary;position?:string;title?:string}) {
   const tree=useMemo(()=>buildTree(map,summary,title),[map,summary,title]);
   const columns=useMemo(()=>lanes(tree),[tree]);
   const laneOf=useMemo(()=>{const m=new Map<string,number>();columns.forEach((l,i)=>{m.set(l.head,i);
     for(const r of l.rows){m.set(r.id,i);for(const q of questionsOf(tree,r.id))m.set(q,i);}
     for(const q of questionsOf(tree,l.head))m.set(q,i);});return m;},[columns,tree]);
   const narrow=useNarrow();
-  const [open,setOpen]=useState(()=>initialOpen(tree));
+  const [open,setOpen]=useState(()=>{const s=new Set<string>(),c=tree.currentId?tree.nodes.get(tree.currentId):null;
+    if(c?.parent&&c.parent!==tree.rootId)s.add(c.parent);return s;});
   const [allOpen,setAllOpen]=useState(false);
   const [showAll,setShowAll]=useState(false);
   const [selected,setSelected]=useState<string|null>(null);
-  const [search,setSearch]=useState('');
+  const [side,setSide]=useState<'left'|'right'>('right');
   const [large,setLarge]=useState(false);
-  const [view,setView]=useState<View>({x:PAD,y:PAD,k:1});
+  const [fit,setFit]=useState<Fit>({x:PAD,y:PAD,k:1,scroll:false});
   const [geo,setGeo]=useState<Geo|null>(null);
+  const [frameH,setFrameH]=useState<number|null>(null);
+  const frame=useRef<HTMLDivElement>(null);
   const stage=useRef<HTMLDivElement>(null);
   const world=useRef<HTMLDivElement>(null);
-  const viewRef=useRef(view);viewRef.current=view;
-  const geoRef=useRef(geo);geoRef.current=geo;
-  const anim=useRef<number>(0);
   const reveal=useRef<string|null>(null);
-  const fitted=useRef(false);
-  const drag=useRef<{pointers:Map<number,{x:number;y:number}>;start?:View;origin?:{x:number;y:number};pinch?:{d:number;k:number};moved:number}>({pointers:new Map(),moved:0});
   const byId=new Map(map.concepts.map(c=>[c.concept_id,c]));
   const targets=new Map(map.targets.map(t=>[t.target_id,t]));
   const node=selected?tree.nodes.get(selected)??null:null;
@@ -109,113 +100,70 @@ export function RootMap({map,summary,position,title='강의 전체'}:{map:RootMa
   const tone=(id:string)=>!selected?'':id===selected?' is-selected':linkedIds.has(id)?' is-linked':context.has(id)?' is-context':' is-dim';
   const shown=(id:string)=>allOpen||open.has(id);
 
-  function size(){const r=stage.current?.getBoundingClientRect();return {w:r?.width||800,h:r?.height||560};}
-  function flyTo(next:View,ms=420){
-    cancelAnimationFrame(anim.current);
-    const from=viewRef.current,start=performance.now();
-    const step=(now:number)=>{const p=Math.min(1,(now-start)/ms),e=p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;
-      setView({x:from.x+(next.x-from.x)*e,y:from.y+(next.y-from.y)*e,k:from.k+(next.k-from.k)*e});
-      if(p<1)anim.current=requestAnimationFrame(step);};
-    if(matchMedia('(prefers-reduced-motion: reduce)').matches)setView(next);else anim.current=requestAnimationFrame(step);
+  /** Fit the whole map. Below MIN_READ, fit the width and let the frame scroll vertically.
+   *  `keep`: a click opened or closed question rows — keep scale and place (the map must not jump);
+   *  only switch scrolling on if the rows now run past the frame. */
+  function fitTo(g:Geo|null,keep=false){
+    const s=stage.current;if(!g||!s||narrow)return;
+    const w=s.clientWidth,h=s.clientHeight-TOOLS;
+    if(keep){setFit(f=>{const scroll=g.h*f.k+f.y+PAD>h;return scroll===f.scroll?f:{...f,scroll};});return;}
+    let k=Math.min((w-PAD*2)/g.w,(h-PAD*2)/g.h,MAX_K),scroll=false;
+    if(k<MIN_READ){k=Math.max(MIN_READ,Math.min((w-PAD*2)/g.w,MAX_K));scroll=g.h*k+PAD*2>h;}
+    const x=Math.max(PAD,(w-g.w*k)/2),y=scroll?PAD:Math.max(PAD,(h-g.h*k)/2*0.4);
+    setFit(f=>f.x===x&&f.y===y&&f.k===k&&f.scroll===scroll?f:{x,y,k,scroll});
   }
-  /** Whole map in the frame. Too big to stay readable → keep FIT_MIN_K and show it from the top. */
-  function fitAll(animate=true,g=geoRef.current){
-    if(!g||narrow)return;
-    const {w,h}=size(),usable=h-TOOLS;
-    const k=clamp(Math.min((w-PAD*2)/g.w,(usable-PAD*2)/g.h,1),FIT_MIN_K,MAX_K);
-    const x=g.w*k<=w-PAD*2?(w-g.w*k)/2:PAD,y=g.h*k<=usable-PAD*2?Math.max(PAD,(usable-g.h*k)/2*0.4):PAD;
-    if(animate)flyTo({x,y,k});else setView({x,y,k});
-  }
-  /** Bring one node into view without changing a readable zoom. */
-  function bring(id:string,g=geoRef.current){
-    const b=g?.boxes.get(id);if(!b)return;
-    if(narrow){world.current?.querySelector<HTMLElement>(`[data-node="${CSS.escape(id)}"]`)?.scrollIntoView({block:'center',behavior:'smooth'});return;}
-    const v=viewRef.current,{w,h}=size(),usable=h-TOOLS,k=Math.max(v.k,0.85);
-    const sx=b.x*k+v.x,sy=b.y*k+v.y;
-    if(k===v.k&&sx>PAD&&sx+b.w*k<w-PAD&&sy>PAD&&sy+Math.min(b.h,120)*k<usable-PAD)return;
-    flyTo({k,x:w/2-(b.x+b.w/2)*k,y:usable*0.4-(b.y+Math.min(b.h,120)/2)*k});
-  }
-
-  // Measure after every layout change; lines and framing read these boxes.
   function measure(){
     const w=world.current;if(!w)return null;
     const boxes=new Map<string,Box>();
     w.querySelectorAll<HTMLElement>('[data-node]').forEach(el=>boxes.set(el.dataset.node!,boxOf(el,w)));
     const g={w:w.offsetWidth,h:w.offsetHeight,boxes};setGeo(g);return g;
   }
+  // Full re-fit only when what the map shows as a whole changes; a click keeps the map still.
+  const shape=useRef('');
   useLayoutEffect(()=>{
-    const g=measure();if(!g)return;
-    if(!fitted.current){fitted.current=true;fitAll(false,g);}
-    if(reveal.current){const id=reveal.current;reveal.current=null;bring(id,g);}
+    const g=measure(),now=[tree.rootId,tree.leaves,allOpen,narrow].join('|');
+    fitTo(g,shape.current===now);shape.current=now;
+    if(reveal.current){const id=reveal.current;reveal.current=null;
+      world.current?.querySelector<HTMLElement>(`[data-node="${CSS.escape(id)}"]`)?.scrollIntoView({block:'nearest'});}
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[open,allOpen,selected,narrow,tree,large]);
-  useEffect(()=>{
-    const w=world.current;if(!w||typeof ResizeObserver!=='function')return;
-    let last='';const ro=new ResizeObserver(()=>{const key=w.offsetWidth+'x'+w.offsetHeight;if(key!==last){last=key;measure();}});
-    ro.observe(w);return()=>ro.disconnect();
+  },[open,allOpen,selected,narrow,tree,showAll]);
+  // The frame fills what is left of the window below it; re-fit whenever the frame or the map changes size.
+  useLayoutEffect(()=>{
+    const place=()=>{const f=frame.current;if(!f)return;
+      setFrameH(Math.max(MIN_FRAME,Math.floor(innerHeight-(f.getBoundingClientRect().top+scrollY)-BOTTOM)));};
+    place();addEventListener('resize',place);return()=>removeEventListener('resize',place);
   },[]);
-  useEffect(()=>()=>cancelAnimationFrame(anim.current),[]);
-
-  function zoomAt(factor:number,cx?:number,cy?:number){
-    const v=viewRef.current,{w,h}=size(),px=cx??w/2,py=cy??h/2;
-    const k=clamp(v.k*factor,MIN_K,MAX_K),wx=(px-v.x)/v.k,wy=(py-v.y)/v.k;
-    cancelAnimationFrame(anim.current);setView({k,x:px-wx*k,y:py-wy*k});
-  }
   useEffect(()=>{
-    const el=stage.current;if(!el||narrow)return;
-    const wheel=(e:WheelEvent)=>{e.preventDefault();const r=el.getBoundingClientRect();
-      zoomAt(Math.exp(-e.deltaY*(e.ctrlKey?0.01:0.0018)),e.clientX-r.left,e.clientY-r.top);};
-    el.addEventListener('wheel',wheel,{passive:false});return()=>el.removeEventListener('wheel',wheel);
+    if(typeof ResizeObserver!=='function')return;
+    // Frame resized (window, 크게 보기) → re-fit. Map resized (fonts, rows) → re-measure lines, keep the fit.
+    const ro=new ResizeObserver(()=>fitTo(measure()));
+    const rw=new ResizeObserver(()=>fitTo(measure(),true));
+    if(stage.current)ro.observe(stage.current);if(world.current)rw.observe(world.current);
+    return()=>{ro.disconnect();rw.disconnect();};
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   },[narrow]);
-  function pointerDown(e:ReactPointerEvent){
-    if(narrow||e.button!==0)return;
-    const d=drag.current;d.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(d.pointers.size===1){d.start=viewRef.current;d.origin={x:e.clientX,y:e.clientY};d.moved=0;d.pinch=undefined;}
-    if(d.pointers.size===2){const [a,b]=[...d.pointers.values()];d.pinch={d:Math.hypot(a.x-b.x,a.y-b.y),k:viewRef.current.k};}
-  }
-  function pointerMove(e:ReactPointerEvent){
-    const d=drag.current;if(!d.pointers.has(e.pointerId))return;
-    d.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(d.pinch&&d.pointers.size===2){const [a,b]=[...d.pointers.values()],r=stage.current!.getBoundingClientRect();
-      zoomAt(d.pinch.k*Math.hypot(a.x-b.x,a.y-b.y)/d.pinch.d/viewRef.current.k,(a.x+b.x)/2-r.left,(a.y+b.y)/2-r.top);d.moved=99;return;}
-    if(!d.start||!d.origin)return;
-    const dx=e.clientX-d.origin.x,dy=e.clientY-d.origin.y;d.moved=Math.max(d.moved,Math.hypot(dx,dy));
-    if(d.moved>4){if(!stage.current!.hasPointerCapture(e.pointerId))stage.current!.setPointerCapture(e.pointerId);
-      cancelAnimationFrame(anim.current);setView({...d.start,x:d.start.x+dx,y:d.start.y+dy});}
-  }
-  function pointerUp(e:ReactPointerEvent){const d=drag.current;d.pointers.delete(e.pointerId);if(!d.pointers.size){d.start=undefined;d.pinch=undefined;}}
 
-  /** Topic: select and open its questions (again → close). Question: select, keep its topic open. */
+  /** Topic: select and open its questions (again → close). Question: select, keep its topic open.
+   *  The panel lies over the map on the side away from what was picked, so the map never moves. */
   function choose(id:string,{toggle=false}={}){
     const n=tree.nodes.get(id);if(!n)return;
-    if(n.kind==='root'){setSelected(null);fitAll();return;}
+    if(n.kind==='root'){setSelected(null);return;}
     const next=new Set(open);
     if(n.kind==='concept'&&toggle&&selected===id){next.delete(id);setOpen(next);setSelected(null);return;}
     if(n.kind==='concept'&&questionsOf(tree,id).length)next.add(id);
     if(n.kind==='target'&&n.parent)next.add(n.parent);
+    const b=geo?.boxes.get(id),w=stage.current?.clientWidth??0;
+    if(b&&w)setSide(b.x*fit.k+fit.x+b.w*fit.k/2>w/2?'left':'right');
     setOpen(next);setSelected(id);reveal.current=id;
   }
   useEffect(()=>{
     const key=(e:KeyboardEvent)=>{
-      const target=e.target as HTMLElement;
-      if(!stage.current?.parentElement?.contains(target)&&target!==document.body)return;
-      if(target.closest('input,textarea,select'))return;
-      if(e.key==='+'||e.key==='=')zoomAt(1.25);
-      else if(e.key==='-'||e.key==='_')zoomAt(0.8);
-      else if(e.key==='0')fitAll();
-      else if(e.key==='Escape'){if(large)setLarge(false);else setSelected(null);}
-      else return;
-      e.preventDefault();
+      if(e.key!=='Escape'||(e.target as HTMLElement).closest('input,textarea,select'))return;
+      if(large)setLarge(false);else setSelected(null);
     };
-    window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);
-  });
-  // Re-fit only when the frame size actually changes (크게 보기), not on the first render.
-  const sized=useRef(false);
-  useEffect(()=>{if(!sized.current){sized.current=true;return;}const t=setTimeout(()=>fitAll(),30);return()=>clearTimeout(t);},[large]);
+    addEventListener('keydown',key);return()=>removeEventListener('keydown',key);
+  },[large]);
 
-  const query=search.trim().toLocaleLowerCase();
-  const hits=query?[...tree.nodes.values()].filter(n=>n.kind!=='root'&&n.label.toLocaleLowerCase().includes(query)).slice(0,12):[];
-  const detail=!narrow&&view.k>=DETAIL_K;
   const target=node?.targetId?targets.get(node.targetId):undefined;
   const rootNode=tree.nodes.get(tree.rootId)!;
   const perRow=lanesPerRow(columns.length);
@@ -250,8 +198,7 @@ export function RootMap({map,summary,position,title='강의 전체'}:{map:RootMa
       className={`mq-lane-node${head?' is-head':''}${n.current?' is-current':''}${tone(id)}`} {...press(id)}>
       {head&&<span className="mq-lane-num">{String(index+1).padStart(2,'0')}</span>}
       <span className="mq-lane-row"><b>{n.label}</b>{dots(id)}</span>
-      {head?<><small>{n.pages.length?pageText(n.pages)+' · ':''}문항 {sum}개</small><Counts node={n}/></>
-        :detail&&<small className="mq-lane-meta">{n.pages.length?pageText(n.pages)+' · ':''}문항 {sum}개</small>}
+      {head&&<><small>{n.pages.length?pageText(n.pages)+' · ':''}문항 {sum}개</small><Counts node={n}/></>}
     </div>;
   }
   function branch(id:string):ReactNode{
@@ -277,23 +224,12 @@ export function RootMap({map,summary,position,title='강의 전체'}:{map:RootMa
   }
 
   return <section className={`main-quiz-map${large?' is-large':''}`}>
-    <header className="bank-cmap-heading"><h2>개념 지도</h2><span>{position}</span></header>
-    <p className="bank-note">강의 전체가 한 화면에 있어요. 주제를 누르면 문항과 연결이 보이고, 휠·두 손가락으로 확대합니다.</p>
-    <div className="main-quiz-map-search">
-      <label>찾기 <input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="주제·문항"/></label>
-      <span className="bank-note">주제 {topics}개 · 문항 {tree.leaves}개</span>
-      {hits.length>0&&<ul>{hits.map(n=><li key={n.id}><button onClick={()=>{choose(n.id);setSearch('');}}>
-        <span className="bank-note">{n.kind==='concept'?'주제':'문항'}</span> {n.label}</button></li>)}</ul>}
-      {query&&!hits.length&&<span className="bank-note">찾는 항목이 없어요</span>}
-    </div>
-    <p className="main-quiz-map-legend">{STATUSES.map(s=><span key={s} className={s}>{STATUS_LABEL[s]}</span>)}<span className="is-current">현재 문제</span><span className="is-line">다른 주제와의 연결</span></p>
-    <div className="main-quiz-tree-frame">
-      <div ref={stage} className={`main-quiz-tree-stage${narrow?' is-narrow':''}`} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp}
-        onClickCapture={e=>{if(drag.current.moved>4){e.stopPropagation();e.preventDefault();drag.current.moved=0;}}}
-        onClick={e=>{if(!(e.target as Element).closest('[data-node],.main-quiz-tree-tools'))setSelected(null);}}
-        onDoubleClick={e=>{if(!(e.target as Element).closest('[data-node]'))fitAll();}}>
-        <div ref={world} role="group" aria-label="개념 트리" className={`mq-lanes-world${selected?' has-selection':''}${detail?' is-detail':''}`}
-          style={narrow?undefined:{transform:`translate(${view.x}px,${view.y}px) scale(${view.k})`}}>
+    <h2 className="sr-only">개념 지도</h2>
+    <div ref={frame} className="main-quiz-tree-frame" style={large||frameH==null?undefined:{height:frameH}}>
+      <div ref={stage} className={`main-quiz-tree-stage${narrow?' is-narrow':fit.scroll?' is-scroll':''}`}
+        onClick={e=>{if(!(e.target as Element).closest('[data-node],.main-quiz-tree-tools'))setSelected(null);}}>
+        <div ref={world} role="group" aria-label="개념 트리" className={`mq-lanes-world${selected?' has-selection':''}`}
+          style={narrow?undefined:{transform:`translate(${fit.x}px,${fit.y}px) scale(${fit.k})`}}>
           {wires}
           <div data-node={tree.rootId} role="button" tabIndex={0} aria-label={`강의 ${rootNode.label} · 가지 ${columns.length}개 · 주제 ${topics}개 · 문항 ${tree.leaves}개`}
             className="mq-lane-root" {...press(tree.rootId)}>
@@ -308,17 +244,16 @@ export function RootMap({map,summary,position,title='강의 전체'}:{map:RootMa
               </section>;})}
           </div>
         </div>
-        <div className="main-quiz-tree-tools" onPointerDown={e=>e.stopPropagation()}>
-          {!narrow&&<><button onClick={()=>zoomAt(1.25)} aria-label="확대">＋</button>
-          <button onClick={()=>zoomAt(0.8)} aria-label="축소">－</button>
-          <button onClick={()=>fitAll()}>전체</button></>}
-          {tree.currentId&&<button onClick={()=>choose(tree.currentId!)}>현재 문제</button>}
-          <button aria-pressed={allOpen} onClick={()=>{setAllOpen(!allOpen);if(allOpen)setOpen(new Set());}}>{allOpen?'문항 접기':'문항 펼치기'}</button>
-          {!narrow&&<button aria-pressed={showAll} onClick={()=>setShowAll(!showAll)}>연결선 {showAll?'숨기기':'전체'}</button>}
-          <button onClick={()=>setLarge(!large)}>{large?'작게 보기':'크게 보기'}</button>
-        </div>
+        {fit.scroll&&geo&&!narrow&&<div className="mq-lanes-spacer" style={{height:geo.h*fit.k+PAD*2}} aria-hidden="true"/>}
       </div>
-      {node&&node.kind!=='root'&&<aside className="main-quiz-tree-panel" aria-label="선택한 항목">
+      <div className="main-quiz-tree-tools">
+        <span className="mq-map-legend" aria-label="학습 상태 색">{STATUSES.map(s=><span key={s} className={s}>{STATUS_LABEL[s]}</span>)}</span>
+        {tree.currentId&&<button onClick={()=>choose(tree.currentId!)}>현재 문제</button>}
+        <button aria-pressed={allOpen} onClick={()=>{setAllOpen(!allOpen);if(allOpen)setOpen(new Set());}}>{allOpen?'문항 접기':'문항 펼치기'}</button>
+        {!narrow&&<button aria-pressed={showAll} onClick={()=>setShowAll(!showAll)}>연결선 {showAll?'숨기기':'전체'}</button>}
+        <button onClick={()=>setLarge(!large)}>{large?'작게 보기':'크게 보기'}</button>
+      </div>
+      {node&&node.kind!=='root'&&<aside className={`main-quiz-tree-panel is-${side}`} aria-label="선택한 항목">
         <button className="main-quiz-tree-close" onClick={()=>setSelected(null)} aria-label="닫기">×</button>
         <p className="main-quiz-tree-kicker">{node.kind==='concept'?'주제':'문항'}{node.pages.length?' · '+pageText(node.pages):''}
           {node.status&&<span className={`main-quiz-tree-chip ${node.status}`}>{STATUS_LABEL[node.status]}</span>}
@@ -345,14 +280,5 @@ export function RootMap({map,summary,position,title='강의 전체'}:{map:RootMa
         </>}
       </aside>}
     </div>
-    <details className="main-quiz-details"><summary>목록으로 보기</summary>
-      <ol className="main-quiz-tree-outline">{rootNode.children.map(function item(id:string):ReactNode{const n=tree.nodes.get(id)!;
-        return <li key={id}><button className={`main-quiz-tree-link ${n.status??''}`} onClick={()=>choose(id)}>{n.label}</button>
-          <span className="bank-note"> {n.kind==='target'?STATUS_LABEL[n.status!]:`문항 ${total(n)}개`}{n.pages.length?' · '+pageText(n.pages):''}</span>
-          {n.children.length>0&&<ol>{n.children.map(item)}</ol>}</li>;})}</ol>
-    </details>
-    <details className="main-quiz-details"><summary>자료 범위·출제포인트</summary><p>{map.scope.label}</p>{map.scope.limitations.map((text,i)=><p className="bank-note" key={i}>{text}</p>)}
-      {map.points?.map(p=><p key={p.point_id}>{p.text} · {POINT_STATUS[map.coverage?.find(c=>c.point_id===p.point_id)?.status??'unknown']}</p>)}
-    </details>
   </section>;
 }
