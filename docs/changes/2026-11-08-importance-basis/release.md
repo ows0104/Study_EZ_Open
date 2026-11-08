@@ -38,3 +38,23 @@
 - 배포 영수증과 API health SHA를 확인한다. 롤백은 병합 되돌리기다.
 - 감염병리1 재실행은 사용자 「고친 뒤 다시」 요청 범위다(S1·S2를 Codex gpt-6.1-sol로).
 - 운영 등록·학생 공개·기존 98문항 판 교체는 별도 승인이다.
+
+## 2026-11-08 첫 실행(26110803)에서 나온 수정 (claude/importance-placeholder)
+
+- 포인트 단계는 성공했다(포인트 70 → 대조 지적 6 → 보완 75 → 재대조 지적 6, 기록만).
+- 정규화 모델이 입력의 `importanceTable`을 보고 근거를 목표 3축에 옮겨 적었다(126건).
+  - 그중 임상 근거 3건을 시험축에 넣어 `wrong exam basis`가 났다.
+  - 초기 지도 오류로 보완 1/3을 썼다.
+  - generate가 TP032를 고치지 못해 거절됐다.
+- 수정
+  - 정규화 입력에서 `importanceTable`을 뺀다.
+  - 정규화 결과의 목표 3축을 코드가 자리표시(`unreviewed`, 「조립 때 계산」)로 바꾼다. 3축 값은 조립 때 다시 계산한다.
+  - `validate_result`는 포인트 /3 실행의 `initialBrief`가 자리표시인지 확인한다.
+  - extract-v2·author-v2에 「3축은 손대지 않는다」를 넣었다.
+- 검사: 이번 실패를 재현하는 파이프라인 검사 1개. 루트 2,170 통과, 서버 root_ 26 통과.
+- 26110803의 포인트·packet은 그대로 쓰고, 생성만 새 폴더(`generation-2`)에서 다시 돈다. 실패한 `generation/`은 보존한다.
+- 다시 돌린 generation-2도 generate에서 거절됐다(`roots: title required`).
+  - 정규화 모델이 brief `scope.label`에 범위 설명문 전체(612자)를 넣었다. 앞의 두 실행은 강의 제목을 넣었다.
+  - 이후 단계는 scope를 바꿀 수 없어 고칠 길이 없었다.
+  - 수정: 정규화 직후 `scope.label`을 packet의 강의 제목으로 정한다. extract-v2에도 적었다. 실패 재현 검사 1개를 더했다.
+  - 생성은 `generation-3`에서 다시 돈다. 실패한 `generation-2/`는 보존한다.

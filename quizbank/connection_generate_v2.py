@@ -98,6 +98,11 @@ def run(packet,out,model,invoke):
             entry['rawOutputHash']=document_hash(raw_evidence);entry['usageHash']=document_hash(info);g.write(ledger_path,ledger)
             if name=='normalize':
                 c.validate_shape(raw,c.BRIEF,'initial brief2');value=raw
+                # importance-basis/1: target axes are computed at assembly; the model's are replaced by placeholders.
+                if table is not None:value=c.blank_target_importance(raw)
+                # scope.label is the document title (validate_document: 1–300 chars); a model once wrote the whole
+                # scope text there, and later stages may not change scope (261104_02 26110803 generation-2).
+                if value['scope']['label']!=packet['title']:value={**value,'scope':{**value['scope'],'label':packet['title']}}
                 c.require(raw['sources']==sources and raw['lecture_id']==packet['subject']+'/'+packet['runId'],'Different initial source/lecture')
                 if packet.get('inputMode')=='source':c.require(raw['provenance']['independent_points']=='confirmed','Initial independent extraction required')
                 else:c.require(raw['provenance']['independent_points']!='confirmed','Supplied map is not independent extraction')
@@ -142,7 +147,8 @@ def run(packet,out,model,invoke):
             from studyez_contracts.bank.authored_json import to_bank
             base['webBank'], authored_evidence = to_bank(packet['webResponse']['raw'], packet['title'])
             g.write(out / 'authored-evidence.json', authored_evidence)
-    intake={**source_intake(packet,sources),'preserved_scope':base['preserved_scope']}if packet.get('inputMode')=='source'else base
+    # Normalisation never sees the importance table: target axes are computed at assembly.
+    intake={**source_intake(packet,sources),'preserved_scope':base['preserved_scope']}if packet.get('inputMode')=='source'else{k:v for k,v in base.items()if k!='importanceTable'}
     parallel_results=None;parallel_proof=None
     if packet.get('parallelAuthoring'):
         from . import connection_parallel as parallel

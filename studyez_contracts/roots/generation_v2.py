@@ -298,6 +298,16 @@ def importance_table(packet):
     return imp.point_table(value['points'],value['notebook_profile'])
 
 
+IMPORTANCE_PLACEHOLDER={'status':'unreviewed','reason':'importance-basis/1: 조립 때 출제 포인트 근거로 계산한다','evidence':[]}
+
+
+def blank_target_importance(brief):
+    """The brief with every target axis set to the placeholder (point-basis runs compute them at assembly)."""
+    value=copy.deepcopy(brief)
+    for t in value['targets']:t['importance']={ax:dict(IMPORTANCE_PLACEHOLDER)for ax in('structural','exam','clinical')}
+    return value
+
+
 def target_importance(brief,table):
     """Review axes of every brief target from the basis of its points (brief points keep target_ids)."""
     from studyez_contracts.bank import importance as imp
@@ -899,6 +909,7 @@ def validate_result(value,packet):
     # The document may carry a container-concept projection of the reviewed bank (questions identical).
     iproof=meta.get('importanceProjection');table=importance_table(packet)
     require((iproof is None)==(table is None),'result2: importance projection must follow exam-point-extract/3 points')
+    if table is not None:require(meta['initialBrief']==blank_target_importance(meta['initialBrief']),'result2: point-basis runs keep target importance as the assembly placeholder')
     unprojected=restore_importance(bank,iproof)
     if iproof is not None:
         again,check=project_importance(unprojected,b,table)
