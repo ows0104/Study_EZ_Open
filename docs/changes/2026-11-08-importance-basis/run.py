@@ -372,7 +372,8 @@ def packet():
     value = {'subject': SUBJECT, 'runId': RUN_ID, 'title': TITLE, 'scope': scope,
              'conceptMap': map_path.read_text(encoding='utf-8'), 'points': points_path.read_text(encoding='utf-8'),
              'examDate': None, 'revision': 'map-tree-26110803', 'sources': sources,
-             'sourceAssessmentFormat': 'source-assessment/2', 'inputMode': 'provided', 'authoring': 'cli'}
+             'sourceAssessmentFormat': 'source-assessment/2', 'inputMode': 'provided', 'authoring': 'cli',
+             'speedStages': True}  # context check → source ‖ medical, medical review reuse (2026-11-08)
     value['inputHash'] = packet_hash(value)
     write(gen / 'packet.json', value)
     write(OUT / 'packet-manifest.json', {'packetSha256': sha(gen / 'packet.json'), 'map': sha(map_path), 'points': sha(points_path),
