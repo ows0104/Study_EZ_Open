@@ -87,8 +87,9 @@ def publish(revision):
         for s in packet['sources']:
             body = Path(s['localPath']).read_bytes(); key = generation_import.snapshot_key(s)
             prior = storage.get_bytes(key)
-            if prior is None:
-                storage.put_bytes(key, body)
+            if prior is None:  # R2 (put_bytes is local-storage only)
+                import io
+                storage.upload_fileobj(io.BytesIO(body), key, content_type='application/pdf')
             else:
                 assert prior == body, 'Never overwrite a different original snapshot'
             assert storage.get_bytes(key) == body, 'Snapshot readback failed'

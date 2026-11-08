@@ -92,3 +92,8 @@
 - 서버 검사: 새 1개(계약 재검증·낡은 preflight 거절·revision 전환·옛 판과 이벤트 보존·공개 범위 유지) + root_ 27·route_contract·retention 통과.
 - `publication.py`: preflight(읽기만) → 배포 확인(health revision) → 스냅숏(없을 때만, 다른 바이트면 중단) → 등록 → 전후 대조.
   - preflight 실행 결과: 활성 `main-quiz-reviewed-6143c8c89ad64d9c`, 관리자 시범, 판 2·이벤트 42·세션 2.
+- **2026-11-08 20:4x 운영 게시 완료**
+  - API d1ae1c19 배포 확인 뒤 publication.py로 반입했다. generationId e2f43a96…, revision `map-tree-26110803`, 과제 57.
+  - 활성 판: `main-quiz-reviewed-6143c8c89ad64d9c` → `map-tree-26110803`. 공개 범위(관리자 시범 `['runner']`)는 그대로다.
+  - 이전 판 2개, 이벤트 42건, 세션 2개, Quiz Bank, 학습 상태가 그대로인지 스크립트의 전후 대조로 확인했다.
+  - 첫 시도는 S2 스냅숏 업로드에서 멈췄다. `put_bytes`가 로컬 저장소 전용이어서다. DB 쓰기는 없었다. R2 `upload_fileobj`로 고쳐 다시 실행했다.
