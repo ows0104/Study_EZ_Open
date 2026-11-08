@@ -44,7 +44,8 @@ test('actual API: no textbox, preserved drafts/retries/conflicts, four ratings, 
    await page.getByRole('button',{name:'답만 보기',exact:true}).click();await allRatings(page);
    await page.getByRole('button',{name:'개념 지도',exact:true}).click();await page.getByRole('heading',{name:'개념 지도',exact:true}).waitFor();
    // Lane view: every topic is on screen at a readable scale before any click; questions are status dots.
-   const graph=page.getByRole('group',{name:'개념 트리'});assert.equal(await graph.locator('.mq-lane-node').count(),3);
+   // B has no question of its own but is in the hierarchy (A → B/C/D), so it is a topic too (2026-11-09).
+   const graph=page.getByRole('group',{name:'개념 트리'});assert.equal(await graph.locator('.mq-lane-node').count(),4);
    assert.equal(await graph.locator('.mq-lane-dots i').count(),3);
    assert.equal(await page.locator('.main-quiz-tree-stage').evaluate(stage=>{const s=stage.getBoundingClientRect();
      return [...stage.querySelectorAll('[data-node]')].every(n=>{const r=n.getBoundingClientRect();return r.left>=s.left&&r.right<=s.right&&r.top>=s.top&&r.bottom<=s.bottom;});}),true);
@@ -75,8 +76,9 @@ test('map from start, PDF failure and modal do not block four self-ratings',asyn
      map.currentConceptIds=['A'];return route.fulfill({json:map});
    });
    await page.goto(url);await page.getByRole('button',{name:'개념 지도',exact:true}).click();await page.getByRole('heading',{name:'개념 지도',exact:true}).waitFor();
-   // Concepts that anchor no question (answer nodes, extra labels) are not tree nodes: lecture + 3 topics, and the current topic's question row.
-   const graph=page.getByRole('group',{name:'개념 트리'});assert.equal(await graph.getByRole('button').count(),5);
+   // Isolated labels (the 126 synthetic concepts: no parent, child, question or link) are not tree nodes:
+   // lecture + 4 hierarchy topics (A, B, C, D) and the current topic's question row.
+   const graph=page.getByRole('group',{name:'개념 트리'});assert.equal(await graph.getByRole('button').count(),6);
    assert.equal(await graph.getByRole('button',{name:/현재 문제$/}).count(),1);
    await page.getByRole('searchbox').fill('Synthetic target 3');await page.locator('.main-quiz-map-search li button').filter({hasText:'Synthetic target 3'}).click();
    await page.getByRole('complementary',{name:'선택한 항목'}).getByRole('heading',{name:'Synthetic target 3'}).waitFor();

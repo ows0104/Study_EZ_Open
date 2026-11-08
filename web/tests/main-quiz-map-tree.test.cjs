@@ -33,7 +33,7 @@ test('published shape: lecture → merged topics → questions, answer nodes are
   same(root.children.map(id=>tree.nodes.get(id).label),['감염·염증의 구별','Prion과 CJD']);
   const topic=tree.nodes.get(root.children[0]);
   same(topic.conceptIds,['C001','C002']);
-  same(topic.children.map(id=>tree.nodes.get(id).targetId),['N1_T','N2_T','N5_T'],'ordered by page, unpaged last');
+  same(topic.children.map(id=>tree.nodes.get(id).targetId),['N1_T','N2_T','N5_T'],'questions in the 판 target order');
   assert.equal([...tree.nodes.values()].some(n=>/정답/.test(n.label)),false,'answer nodes never become labels');
   assert.equal(tree.leaves,5);
   assert.equal(tree.currentId,'t:N2_T');same(ancestors(tree,'t:N2_T'),[topic.id,tree.rootId]);
@@ -58,6 +58,30 @@ test('explicit parent_ids nest concepts; lanes list every topic top-down with no
   same(questionsOf(tree,'c:C'),['t:T2']);same(questionsOf(tree,'c:B'),[]);
   const listed=new Set(lanes(tree).flatMap(l=>[l.head,...l.rows.map(r=>r.id)]));
   for(const n of tree.nodes.values())if(n.kind==='concept')assert.ok(listed.has(n.id),`${n.id} is shown without expanding`);
+});
+
+test('Map 판 shape: every hierarchy topic is shown, answer nodes are not, questions hang under the answer parent',()=>{
+  // 감염병리1 map-tree-26110803 in miniature: C… topics with parents, one F… answer node per question (child of its topic,
+  // linked from it), a question that also names other topics (T025: 결핵·한센병·AFB), a topic with no question, an isolated label.
+  const map={concepts:[
+      {concept_id:'C029',label:'염색 선택',parent_ids:[]},{concept_id:'C030',label:'항산염색 AFB',parent_ids:['C029']},
+      {concept_id:'C014',label:'감염성 육아종',parent_ids:[]},{concept_id:'C015',label:'결핵',parent_ids:['C014']},{concept_id:'C016',label:'한센병',parent_ids:['C014']},
+      {concept_id:'C028',label:'보완 진단',parent_ids:['C029']},{concept_id:'X',label:'고립 개념',parent_ids:[]},
+      {concept_id:'F024',label:'결핵 문항의 답',parent_ids:['C015']},{concept_id:'F025',label:'AFB 문항의 답',parent_ids:['C030']}],
+    relations:[{relation_id:'R024',from_id:'C015',to_id:'F024',kind:'association',reason:''},{relation_id:'R025',from_id:'C030',to_id:'F025',kind:'association',reason:''},
+      {relation_id:'M7',from_id:'C015',to_id:'C030',kind:'association',reason:'',condition:'결핵균은 항산염색 대상이다.'},
+      {relation_id:'M6',from_id:'C016',to_id:'C030',kind:'association',reason:''}],
+    scope:{label:'',limitations:[]},
+    targets:[{target_id:'T024',title:'결핵 육아종은?',role:'leaf',concept_ids:['C015','F024'],directions:[direction('D24')],importance,evidence:[{source_id:'S1',pages:[14]}]},
+      {target_id:'T025',title:'Mycobacteria 의심 시 염색은?',role:'leaf',concept_ids:['C030','F025','C016','C015'],directions:[direction('D25')],importance,evidence:[{source_id:'S1',pages:[15]}]}]};
+  const tree=buildTree(map,{targets:[]},'감염성 질환의 병리 1');
+  const topics=[...tree.nodes.values()].filter(n=>n.kind==='concept').map(n=>n.conceptIds[0]).sort();
+  same(topics,['C014','C015','C016','C028','C029','C030'],'all hierarchy topics, no answer node, no isolated label');
+  assert.equal(tree.nodes.get('t:T025').parent,'c:C030','the AFB question hangs under AFB (its answer node’s parent), not 결핵');
+  assert.equal(tree.nodes.get('t:T024').parent,'c:C015');
+  same(questionsOf(tree,'c:C016'),[],'한센병 is a topic even with no question of its own');
+  same(tree.nodes.get('c:C029').children,['c:C030','c:C028'],'topics in the 판 concept order');
+  same(tree.nodes.get(tree.rootId).children,['c:C029','c:C014'],'top level in the 판 concept order, not by page');
 });
 
 test('lane rows stay screen-shaped for flat maps',()=>{

@@ -3,10 +3,13 @@ import type { RootMapData, RootSummary } from '../types/rootLearning';
 /*
  * Concept map as a tree: lecture → concepts → questions (targets).
  *
- * Only real data is used. A concept's explicit parent_ids nest concepts; a target hangs
- * under its anchor concept — the one of its concepts shared by the most targets (the
- * topic, e.g. C001), not the answer node made for that single question (N1_A). Same-label
- * siblings are one node (the published 감염병리1 판 has C001/C002 with the same title).
+ * Only real data is used. The tree is the 판's concept hierarchy (first explicit parent_id),
+ * not something rebuilt from the questions: every concept in that hierarchy is a topic, even
+ * one with no question of its own (2026-11-09 — 감염병리1 lost 항산염색 AFB and 12 others
+ * when only question anchors were shown). Answer nodes (one per question: the Map 판's F…,
+ * the older 판's N1_A) are not topics. A question hangs under its answer node's parent; when
+ * the answer node has no parent, under its concept shared by the most questions (e.g. C001).
+ * Same-label siblings are one node (the older 감염병리1 판 has C001/C002 with the same title).
  * No medical hierarchy is guessed from text.
  */
 export type Status = 'is-new'|'is-learning'|'is-recalled'|'is-unready';
@@ -32,6 +35,29 @@ export function buildTree(map:RootMapData,summary:RootSummary,title:string):Tree
   const concepts=new Map(map.concepts.map(c=>[c.concept_id,c]));
   const uses=new Map<string,number>();
   for(const t of map.targets)for(const id of t.concept_ids)uses.set(id,(uses.get(id)??0)+1);
+  const usedBy=new Map<string,RootMapData['targets'][number][]>();
+  for(const t of map.targets)for(const id of t.concept_ids)usedBy.set(id,[...(usedBy.get(id)??[]),t]);
+  const parents=new Set(map.concepts.flatMap(c=>c.parent_ids));
+  const links=new Map<string,Set<string>>(),sources=new Set(map.relations.map(r=>r.from_id));
+  for(const r of map.relations){
+    links.set(r.from_id,(links.get(r.from_id)??new Set()).add(r.to_id));
+    links.set(r.to_id,(links.get(r.to_id)??new Set()).add(r.from_id));
+  }
+  const parentsOf=(id:string)=>(concepts.get(id)?.parent_ids??[]).filter(p=>concepts.has(p)&&p!==id);
+  /** One question's answer node: used by that question only, no children, only ever the `to` end of
+   *  its links, and linked only to its parent (or, without a parent, to that question's other
+   *  concepts). Real topics fail this — they are a link's `from` end or link across questions. */
+  const answerNode=new Map<string,boolean>();
+  function isAnswer(id:string){
+    const known=answerNode.get(id);if(known!==undefined)return known;
+    const ts=usedBy.get(id)??[],linked=links.get(id);
+    let answer=false;
+    if(ts.length===1&&!parents.has(id)&&!sources.has(id)&&linked?.size){
+      const up=parentsOf(id),pool=new Set(up.length?up:ts[0].concept_ids.filter(x=>x!==id));
+      answer=[...linked].every(x=>pool.has(x));
+    }
+    answerNode.set(id,answer);return answer;
+  }
   const ready=new Set(map.readyDirectionIds??map.targets.flatMap(t=>t.directions.map(d=>d.direction_id)));
   const currentSet=new Set(map.currentConceptIds??[]);
   const currentTarget=currentSet.size?map.targets.find(t=>t.concept_ids.length===currentSet.size&&t.concept_ids.every(id=>currentSet.has(id)))
@@ -56,12 +82,20 @@ export function buildTree(map:RootMapData,summary:RootSummary,title:string):Tree
     nodes.get(parent)!.children.push(node.id);conceptNode.set(id,node.id);return node.id;
   }
 
+  // Page numbers shown are the lecture's: the source most questions cite (S1 필기), never mixed with
+  // another source's pages (족보 p.1 is not lecture p.1).
+  const cited=new Map<string,number>();
+  for(const t of map.targets)for(const e of t.evidence??[])cited.set(e.source_id,(cited.get(e.source_id)??0)+1);
+  const lecture=[...cited].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0]?.[0];
+
   let leaves=0,currentId:string|null=null;
   for(const t of map.targets){
-    const anchor=[...t.concept_ids].filter(id=>concepts.has(id)).sort((a,b)=>(uses.get(b)??0)-(uses.get(a)??0))[0];
+    const own=t.concept_ids.filter(id=>concepts.has(id));
+    const answerParent=own.filter(isAnswer).flatMap(parentsOf).find(p=>!isAnswer(p));
+    const anchor=answerParent??own.filter(id=>!isAnswer(id)).sort((a,b)=>(uses.get(b)??0)-(uses.get(a)??0))[0];
     const parent=anchor?placeConcept(anchor):(nodes.get('c:__other')?.id??(()=>{
       const n=add({id:'c:__other',kind:'concept',label:'기타',parent:ROOT_ID,conceptIds:[]});nodes.get(ROOT_ID)!.children.push(n.id);return n.id;})());
-    const pages=[...new Set((t.evidence??[]).flatMap(e=>e.pages??[]).filter(p=>Number.isInteger(p)&&p>0))].sort((a,b)=>a-b);
+    const pages=[...new Set((t.evidence??[]).filter(e=>e.source_id===lecture).flatMap(e=>e.pages??[]).filter(p=>Number.isInteger(p)&&p>0))].sort((a,b)=>a-b);
     const status=targetStatus(t.target_id,t.directions.some(d=>ready.has(d.direction_id)),summary);
     const current=t===currentTarget;
     const leaf=add({id:'t:'+t.target_id,kind:'target',label:plain(t.title),parent,conceptIds:t.concept_ids,targetId:t.target_id,pages,status,current});
@@ -69,18 +103,29 @@ export function buildTree(map:RootMapData,summary:RootSummary,title:string):Tree
     if(current)currentId=leaf.id;
   }
 
-  // Aggregate pages/status upward, then order children by first page (lecture order).
-  const first=(n:TreeNode)=>n.pages[0]??Number.MAX_SAFE_INTEGER;
+  // The rest of the hierarchy: topics without a question of their own still belong to the map.
+  // Isolated labels (no parent, no child, no question, no link) stay out.
+  for(const c of map.concepts){
+    const id=c.concept_id;
+    if(conceptNode.has(id)||isAnswer(id))continue;
+    if(parentsOf(id).length||parents.has(id)||links.get(id)?.size)placeConcept(id);
+  }
+
+  // Aggregate pages/status upward. Order is the 판's own: concepts in the order the Map stage wrote
+  // them while reading the lecture (C001 → …), questions in target order. Pages are not used for
+  // order — one question citing an intro page pulled a whole branch forward (2026-11-09).
+  const conceptAt=new Map(map.concepts.map((c,i)=>[c.concept_id,i]));
+  const targetAt=new Map(map.targets.map((t,i)=>[t.target_id,i]));
+  const rank=(n:TreeNode)=>n.kind==='target'?targetAt.get(n.targetId!)??0
+    :map.targets.length+Math.min(...n.conceptIds.map(id=>conceptAt.get(id)??Number.MAX_SAFE_INTEGER));
   (function walk(id:string){
     const n=nodes.get(id)!;
     for(const c of n.children){walk(c);const child=nodes.get(c)!;
       n.pages=[...new Set([...n.pages,...child.pages])].sort((a,b)=>a-b);
       if(child.kind==='target')n.counts[child.status!]++;else for(const k of Object.keys(n.counts) as Status[])n.counts[k]+=child.counts[k];
       if(child.current)n.current=true;}
-    const order=new Map(n.children.map((c,i)=>[c,i]));
-    n.children.sort((a,b)=>first(nodes.get(a)!)-first(nodes.get(b)!)||order.get(a)!-order.get(b)!);
+    n.children.sort((a,b)=>rank(nodes.get(a)!)-rank(nodes.get(b)!));
   })(ROOT_ID);
-  // Concepts that anchor nothing (answer nodes, unused labels) are not tree nodes.
   return {nodes,rootId:ROOT_ID,currentId,leaves};
 }
 
