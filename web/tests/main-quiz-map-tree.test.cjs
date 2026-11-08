@@ -8,7 +8,7 @@ function load(file){
 }
 // Values come from a vm realm; compare their JSON shape, not prototypes.
 const same=(a,b,m)=>assert.deepEqual(JSON.parse(JSON.stringify(a)),b,m);
-const {buildTree,layout,ancestors,plain}=load(path.join(__dirname,'../src/bank/rootMapTree.ts'));
+const {buildTree,lanes,lanesPerRow,questionsOf,ancestors,plain}=load(path.join(__dirname,'../src/bank/rootMapTree.ts'));
 const direction=id=>({direction_id:id,cue:'cue',answer_scope:'secret',requirement:'required'});
 const importance={structural:{status:'insufficient',reason:''},exam:{status:'insufficient',reason:''},clinical:{status:'insufficient',reason:''}};
 // Shape of the published 감염병리1 판: topic concepts (two share a title) + one answer node per question.
@@ -43,7 +43,7 @@ test('published shape: lecture → merged topics → questions, answer nodes are
   same(topic.pages,[3,4]);assert.equal(topic.current,true);
 });
 
-test('explicit parent_ids nest concepts; layout is left-to-right without overlaps',()=>{
+test('explicit parent_ids nest concepts; lanes list every topic top-down with nothing collapsed',()=>{
   const map={concepts:[{concept_id:'A',label:'A',parent_ids:[]},{concept_id:'B',label:'B',parent_ids:['A']},{concept_id:'C',label:'C',parent_ids:['B','A']},{concept_id:'L',label:'Loop',parent_ids:['L']}],
     relations:[],scope:{label:'',limitations:[]},
     targets:[{target_id:'T1',title:'t1',role:'leaf',concept_ids:['A'],directions:[direction('D1')],importance},
@@ -53,14 +53,15 @@ test('explicit parent_ids nest concepts; layout is left-to-right without overlap
   const tree=buildTree(map,{targets:[]},'강의');
   same(ancestors(tree,'t:T2'),['c:C','c:B','c:A','root']);
   assert.equal(tree.nodes.get('t:T4').parent,'c:__other');assert.equal(tree.nodes.get('t:T3').parent,'c:L');
-  const closed=layout(tree,new Set());
-  same([...closed.placed.keys()].sort(),['c:A','c:L','c:__other','root'].sort());
-  const open=layout(tree,new Set([...tree.nodes.keys()]));
-  assert.equal(open.placed.size,tree.nodes.size);assert.equal(open.edges.length,tree.nodes.size-1);
-  const boxes=[...open.placed.values()];
-  for(const a of boxes)for(const b of boxes)if(a!==b)
-    assert.ok(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y,`${a.id} overlaps ${b.id}`);
-  for(const {from,to} of open.edges)assert.ok(open.placed.get(from).x<open.placed.get(to).x,'children sit right of parents');
+  // One lane per top-level topic; rows are depth-first with depth; questions are not rows.
+  same(lanes(tree),[{head:'c:A',rows:[{id:'c:B',depth:1},{id:'c:C',depth:2}]},{head:'c:L',rows:[]},{head:'c:__other',rows:[]}]);
+  same(questionsOf(tree,'c:C'),['t:T2']);same(questionsOf(tree,'c:B'),[]);
+  const listed=new Set(lanes(tree).flatMap(l=>[l.head,...l.rows.map(r=>r.id)]));
+  for(const n of tree.nodes.values())if(n.kind==='concept')assert.ok(listed.has(n.id),`${n.id} is shown without expanding`);
+});
+
+test('lane rows stay screen-shaped for flat maps',()=>{
+  same([1,7,8,9,16,17,40].map(lanesPerRow),[1,7,8,5,8,6,8]);
 });
 
 test('display text drops authored emphasis markers only',()=>{

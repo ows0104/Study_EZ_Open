@@ -43,11 +43,17 @@ test('actual API: no textbox, preserved drafts/retries/conflicts, four ratings, 
    await page.getByText('Synthetic question 2?',{exact:true}).waitFor();await page.getByText('더 보기',{exact:true}).click();
    await page.getByRole('button',{name:'답만 보기',exact:true}).click();await allRatings(page);
    await page.getByRole('button',{name:'개념 지도',exact:true}).click();await page.getByRole('heading',{name:'개념 지도',exact:true}).waitFor();
-   const graph=page.getByRole('group',{name:'개념 트리'});assert.equal(await graph.locator('g[role="button"]').count(),7);assert.equal(await graph.locator('path.main-quiz-tree-edge').count(),6);
+   // Lane view: every topic is on screen at a readable scale before any click; questions are status dots.
+   const graph=page.getByRole('group',{name:'개념 트리'});assert.equal(await graph.locator('.mq-lane-node').count(),3);
+   assert.equal(await graph.locator('.mq-lane-dots i').count(),3);
+   assert.equal(await page.locator('.main-quiz-tree-stage').evaluate(stage=>{const s=stage.getBoundingClientRect();
+     return [...stage.querySelectorAll('[data-node]')].every(n=>{const r=n.getBoundingClientRect();return r.left>=s.left&&r.right<=s.right&&r.top>=s.top&&r.bottom<=s.bottom;});}),true);
+   assert.ok(await graph.evaluate(w=>new DOMMatrix(getComputedStyle(w).transform).a)>=0.6);
    await graph.getByRole('button',{name:/^주제 A ·/}).click();await page.getByRole('heading',{name:'A',exact:true}).waitFor();
+   assert.equal(await graph.getByRole('button',{name:/^주제 A ·/}).getAttribute('aria-expanded'),'true');
    await graph.getByRole('button',{name:/^주제 C ·/}).click();await graph.getByRole('button',{name:/^주제 C ·/}).click();
-   assert.equal(await graph.getByRole('button',{name:/^주제 C ·/}).getAttribute('aria-expanded'),'false');assert.equal(await graph.locator('g[role="button"]').count(),6);
-   await page.getByRole('button',{name:'모두 펼치기',exact:true}).click();assert.equal(await graph.locator('g[role="button"]').count(),7);
+   assert.equal(await graph.getByRole('button',{name:/^주제 C ·/}).getAttribute('aria-expanded'),'false');
+   await page.getByRole('button',{name:'문항 펼치기',exact:true}).click();assert.equal(await graph.locator('.mq-lane-q').count(),3);
    await screenshot(page,'concept-map-desktop');await page.setViewportSize({width:390,height:844});
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await screenshot(page,'concept-map-mobile');
    await page.getByRole('button',{name:'← 문제로 돌아가기',exact:true}).click();await allRatings(page);
@@ -69,13 +75,13 @@ test('map from start, PDF failure and modal do not block four self-ratings',asyn
      map.currentConceptIds=['A'];return route.fulfill({json:map});
    });
    await page.goto(url);await page.getByRole('button',{name:'개념 지도',exact:true}).click();await page.getByRole('heading',{name:'개념 지도',exact:true}).waitFor();
-   // Concepts that anchor no question (answer nodes, extra labels) are not tree nodes; the tree stays lecture → topic → question.
-   const graph=page.getByRole('group',{name:'개념 트리'});assert.equal(await graph.getByRole('button').count(),7);
+   // Concepts that anchor no question (answer nodes, extra labels) are not tree nodes: lecture + 3 topics, and the current topic's question row.
+   const graph=page.getByRole('group',{name:'개념 트리'});assert.equal(await graph.getByRole('button').count(),5);
    assert.equal(await graph.getByRole('button',{name:/현재 문제$/}).count(),1);
    await page.getByRole('searchbox').fill('Synthetic target 3');await page.locator('.main-quiz-map-search li button').filter({hasText:'Synthetic target 3'}).click();
    await page.getByRole('complementary',{name:'선택한 항목'}).getByRole('heading',{name:'Synthetic target 3'}).waitFor();
-   const before=await graph.locator('g').first().getAttribute('transform');await page.getByRole('button',{name:'확대',exact:true}).click();
-   assert.notEqual(await graph.locator('g').first().getAttribute('transform'),before);
+   const before=await graph.getAttribute('style');await page.getByRole('button',{name:'확대',exact:true}).click();
+   assert.notEqual(await graph.getAttribute('style'),before);
    assert.equal(await page.locator('.main-quiz-tree-frame').evaluate(e=>e.clientHeight<=640),true);
    await page.getByRole('button',{name:'← 문제로 돌아가기'}).click();await enabled(page,'답 보기');await page.getByRole('button',{name:/^답 보기/}).click();await allRatings(page);
    await page.getByRole('img',{name:'two-pages.pdf · PDF 2쪽',exact:true}).waitFor();await page.getByRole('button',{name:'two-pages.pdf · PDF 2쪽 크게 보기'}).click();
