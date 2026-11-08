@@ -1,0 +1,239 @@
+{
+  "id": "2026-11-09-main-quiz-map-all-topics",
+  "title": "Main-Quiz 개념 지도 빠진 주제 복원",
+  "area": "site",
+  "created_at": "2026-11-08T16:48:18.564784+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-08T16:48:52.827360+00:00",
+      "evidence": "2026-11-09 사용자 채팅: 결핵↔AFB 누락 원인 설명 뒤 「고쳐줘」(작업 요청=구현 승인, 개발 루프 2026-11-08)",
+      "scope": "web/src/bank/rootMapTree.ts, web/tests/main-quiz-map-tree·root-learning, 변경 기록; 커밋·PR·master 병합(자동 배포). 서버·DB·학습 기록 미변경",
+      "evidence_version": 2,
+      "source_hash": "c0d58364d0dac3fda2a4e382d380363b2b1de246bf733c4da38b3b62c103bba8",
+      "plan_hash": "29b8ead20519b6d1fa9b898fb964280ef147591408a2eac9d7becea93b6c919b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "d3344e69de9aac7bbc0fc252fe0b9639f22d155dae91f0de4d64891e10aa4821"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-08T16:51:23.073694+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "af30b103b058f492b5fad00b88e2af082b0bc7921328f572782755e1b3e86675",
+      "plan_hash": "29b8ead20519b6d1fa9b898fb964280ef147591408a2eac9d7becea93b6c919b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-map-all-topics/1794156678110526300-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-08T16:51:33.656551+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 2,
+      "evidence_version": 2,
+      "source_hash": "af30b103b058f492b5fad00b88e2af082b0bc7921328f572782755e1b3e86675",
+      "plan_hash": "29b8ead20519b6d1fa9b898fb964280ef147591408a2eac9d7becea93b6c919b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-map-all-topics/1794156683376978400-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-08T16:51:55.698801+00:00",
+      "command": [
+        "C:/Program Files/Git/bin/bash.exe",
+        "C:/Users/ows01/AppData/Local/Temp/claude/2f8c495ebd154c62/0388ffe9-875f-4654-935c-073850089fe6/scratchpad/rootui2.sh",
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.worktrees/main-quiz-map-all-topics",
+        "2026-11-09-main-quiz-map-all-topics"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8f2383671f4cd9fc321440ea47a42f5021047eb3b44181a6e2812a67ea4b0ef4",
+      "plan_hash": "29b8ead20519b6d1fa9b898fb964280ef147591408a2eac9d7becea93b6c919b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-map-all-topics/1794156693987469500-web.log",
+      "web_artifact": "251fc391e3f1da91864e62fb1dee64258351c31484c1c50c87e96e4ae86272ab",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-08T16:52:27.005431+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8f2383671f4cd9fc321440ea47a42f5021047eb3b44181a6e2812a67ea4b0ef4",
+      "plan_hash": "29b8ead20519b6d1fa9b898fb964280ef147591408a2eac9d7becea93b6c919b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-map-all-topics/1794156734990408400-web.log",
+      "web_artifact": "251fc391e3f1da91864e62fb1dee64258351c31484c1c50c87e96e4ae86272ab",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-08T16:52:41.356514+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8f2383671f4cd9fc321440ea47a42f5021047eb3b44181a6e2812a67ea4b0ef4",
+      "plan_hash": "29b8ead20519b6d1fa9b898fb964280ef147591408a2eac9d7becea93b6c919b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-map-all-topics/1794156749252170100-web.log",
+      "web_artifact": "251fc391e3f1da91864e62fb1dee64258351c31484c1c50c87e96e4ae86272ab",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": {
+    "at": "2026-11-08T16:53:39.132160+00:00",
+    "summary": "경계: web 읽기 규칙(rootMapTree buildTree)과 검사만. 계약·서버·DB·학습 상태 미변경. 확인: 답 노드 판정이 실데이터 C75/F75를 오분류 0으로 가르고, 옛 공개판 모양(N*_A·같은 이름 합침·쪽 순서)과 고립 합성 개념 제외가 유지됨. 발견·수정: 첫 규칙이 옛 모양의 C002를 답으로 오판 → '연결의 to 끝으로만' 조건 추가. 남은 위험: 다른 판이 주제→답 방향을 지키지 않으면 답 노드가 주제로 보일 수 있음(현재 운영 Main-Quiz 판은 감염병리1 하나). 첫 화면 배율 0.59(1600×900).",
+    "evidence_version": 2,
+    "source_hash": "8f2383671f4cd9fc321440ea47a42f5021047eb3b44181a6e2812a67ea4b0ef4",
+    "plan_hash": "29b8ead20519b6d1fa9b898fb964280ef147591408a2eac9d7becea93b6c919b",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-08T16:53:39.300784+00:00"
+}
