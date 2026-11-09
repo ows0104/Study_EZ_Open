@@ -1,8 +1,10 @@
 name: Test and deploy
 
 on:
+  # Draft PRs do not run CI (check locally while drafting). Marking the PR ready for review runs it.
   pull_request:
     branches: [master]
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [master]
   workflow_dispatch:
@@ -25,6 +27,7 @@ jobs:
   # counts once while a Windows minute counts twice. Everything that is not Windows-bound runs here.
   checks:
     name: Tests and build
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -80,6 +83,7 @@ jobs:
   # all run on the operator's Windows PC. Only those checks stay on the (2x-billed) Windows runner.
   windows-runner:
     name: Windows runner checks
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
