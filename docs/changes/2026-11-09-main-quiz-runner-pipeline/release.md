@@ -50,8 +50,17 @@
 - 서버 `-m tests root`(worktree 계약, 격리 sqlite): 27개 전부 통과
 - 모델 호출·운영 DB 쓰기: 없음
 
-### 간헐 실패
-<조사 중>
+### 간헐 실패 — master에도 있던 ledger 읽기 경합 (같이 고침)
+- **증상**: `test_root_native_json`의 speed 경로 검사가 가끔 `PermissionError: ... ledger.json`으로 실패한다.
+  - 이 브랜치에서 약 20회 중 2회 실패했다.
+  - master 95482162에서도 8번째 반복에서 `test_speed_path_context_stage_runs_through_native_files_and_stays_verifiable`가 같은 오류로 실패했다.
+- **원인**: 맥락 검사 경로에서는 원본 대조와 정답 검수가 스레드 둘로 동시에 돈다.
+  - 원본 대조 쪽 `NativeJson.require_unblocked`는 ledger.json을 잠금 없이 읽는다.
+  - 같은 순간 정답 검수 쪽이 ledger를 원자적으로 교체하면, Windows가 읽기를 잠깐 거절한다.
+  - 운영 실행에서도 같은 경로로 단계가 실패할 수 있다.
+- **수정**: `runner/root_native_json.read_shared`가 PermissionError일 때 짧게 다시 읽는다(5회). 쓰는 쪽(`connection_generate.write`)이 이미 같은 방식으로 재시도한다.
+  - 검사 1개 추가: 두 번 거절 뒤 읽으면 통과하고, 계속 거절이면 그대로 실패하는지 본다. 수정 전 코드는 첫 거절에서 실패한다.
+- **수정 뒤 반복 결과**: 모듈 10회 반복 모두 39개 통과, 실패 0.
 
 ## 배포 대상 버전·순서·데이터 변경
 - PR A 병합은 API를 자동 배포한다. 서버는 `validate_result`를 계약에서 가져오므로 정책 manifest를 이해하게 된다.

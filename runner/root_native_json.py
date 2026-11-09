@@ -123,10 +123,20 @@ def remember_restriction(out,stage,evidence):
         'packetHash':packet['inputHash'],'runtimeHash':ledger['identity'],'evidenceSha256':sha(seat/'provider-rejection.log')}
     row={'proof':proof,'proofHash':document_hash(proof)};g.write(target,row);return row
 
+def read_shared(path,attempts=5):
+    """Read a file another thread of this run may be replacing. The source ‖ medical stages share the
+    ledger; on Windows opening it during the other thread's atomic replace raises PermissionError
+    (2026-11-09, test_review_stages_get_every_page… 2 of ~20 module runs). The writer retries the same way."""
+    for attempt in range(attempts):
+        try:return read(path)
+        except PermissionError:
+            if attempt==attempts-1:raise
+            time.sleep(0.05*(attempt+1))
+
 def require_unblocked(out):
     out=Path(out)
     if not(out/'ledger.json').exists():return
-    ledger=read(out/'ledger.json')
+    ledger=read_shared(out/'ledger.json')
     for stage,entry in ledger['stages'].items():
         path=out/'.native'/stage/'content-block.json'
         if not path.exists():continue

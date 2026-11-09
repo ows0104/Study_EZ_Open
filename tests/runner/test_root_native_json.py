@@ -412,3 +412,16 @@ def test_review_stages_get_every_page_and_stimulus_image_in_their_first_message(
         assert n.read(out/'.native'/stage/'receipt.json')['proof']['attachedImages']==[{'file':k,'sha256':hashes[k]}for k in names]
     assert sent['normalize'][0]==[]and sent['generate'][0]==[]
     n.validate_all(out,result)
+
+def test_ledger_read_tolerates_the_other_review_thread_replacing_it(tmp_path,monkeypatch):
+    """source ‖ medical: one thread's atomic ledger replace briefly denies the other's read on Windows."""
+    (tmp_path/'ledger.json').write_text(json.dumps({'stages':{}}),encoding='utf-8')
+    real=n.read;denied=[]
+    def flaky(path):
+        if len(denied)<2:denied.append(path);raise PermissionError(13,'Permission denied',str(path))
+        return real(path)
+    monkeypatch.setattr(n,'read',flaky);monkeypatch.setattr(n.time,'sleep',lambda s:None)
+    n.require_unblocked(tmp_path)
+    assert len(denied)==2
+    denied.clear();monkeypatch.setattr(n,'read',lambda path:(_ for _ in()).throw(PermissionError(13,'Permission denied')))
+    with pytest.raises(PermissionError):n.require_unblocked(tmp_path)
