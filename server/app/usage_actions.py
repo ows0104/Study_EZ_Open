@@ -37,6 +37,7 @@ ACTIONS = (
           ('root_attempt', 'Main Quiz 시도 후 답 확인 저장', 'rootAttempts'),
           ('root_rate', 'Main Quiz 자기평가 저장 (취소 별도)', 'rootRatings'),
           ('root_undo', 'Main Quiz 자기평가 취소', 'rootUndos'),
+          ('root_tier', 'Main Quiz 내 중요도 변경 저장', 'rootTiers'),
           ('root_generation', 'Main Quiz 생성 요청 저장', 'rootGenerations'),
           ('root_generated', 'Main Quiz 생성·검수 게시 완료', 'rootGenerated'),
       )),

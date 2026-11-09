@@ -229,6 +229,7 @@ def current() -> list[str]:
 
 def main() -> None:
     check_bank_schema_identity()
+    # 2026-11-09: root-learning questions/{question_id}/tier — 풀이 중 「내 중요도」(root_event kind='tier').
     # 2026-11-08: root-learning questions/{question_id}/personal — 문제 수정·제보(기존 bank_personal_edit·bank_feedback 재사용).
     # 2026-11-08: root-learning sessions/{session_id}/prepare is a read-only look-ahead so answers draw at once.
     # 2026-11-07: root-learning sources/{source_id} streams the reference PDF for PDF.js (R2 has no CORS rule).
@@ -250,7 +251,8 @@ POST /api/root-learning/sessions/{session_id}/events
 GET /api/root-learning/sessions/{session_id}/map
 GET /api/root-learning/lectures/{subject}/{run_id}/sources/{source_id}
 GET /api/root-learning/lectures/{subject}/{run_id}/questions/{question_id}/personal
-PUT /api/root-learning/lectures/{subject}/{run_id}/questions/{question_id}/personal"""
+PUT /api/root-learning/lectures/{subject}/{run_id}/questions/{question_id}/personal
+PUT /api/root-learning/lectures/{subject}/{run_id}/questions/{question_id}/tier"""
     want = sorted(line for line in (ROUTES + '\n' + connection_routes + '\n' + root_routes).strip().split("\n") if line)
     got = current()
     missing = [r for r in want if r not in got]

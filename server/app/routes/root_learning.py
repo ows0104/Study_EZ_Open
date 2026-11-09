@@ -295,16 +295,17 @@ def project_session(db, row, doc, user, when):
     index = row.state['index']
     task = row.tasks[index] if index < len(row.tasks) else None
     expired = row.day != policy.study_day(when, row.policy).isoformat()
+    events = content.events_for(db, row.subject, row.run_id, user.id)
     blocked = '학습일이 바뀌었습니다. 오늘 학습을 다시 계획하세요.' if expired else problems.get(task['task_id']) if task else None
     out = {'sessionId': row.id, 'revision': row.revision, 'version': row.version, 'day': row.day, 'policy': row.policy,
            'position': index, 'count': len(row.tasks), 'finished': task is None, 'blocked': blocked,
            'canUndo': bool(row.state.get('undo')) and not expired, 'mapSeen': row.state['mapSeen'], 'task': None,
-           'summary': state.summary(doc.document, content.events_for(db, row.subject, row.run_id, user.id), available, when, row.policy)}
+           'summary': state.summary(doc.document, events, available, when, row.policy)}
     if task and task['task_id'] in available and not expired:
         q = content.question(doc.document, task)
-        shown = with_personal(q, personal_edits(db, doc, user.id))
+        shown = content.with_tier(with_personal(q, personal_edits(db, doc, user.id)), state.personal_tiers(doc.document, events))
         reveal = row.state['reveals'].get(task['task_id'])
-        out['task'] = {'id': task['task_id'], 'question': content.front(shown),
+        out['task'] = {'id': task['task_id'], 'question': learner_front(doc, shown),
                        'answer': revealed_answer(db, doc, shown) if reveal else None,
                        'response': reveal['response'] if reveal else None,
                        'attempted': reveal['attempted'] if reveal else None,
@@ -331,6 +332,14 @@ _UNSET = object()
 # 기존 Quiz Bank와 같은 표를 쓴다: 개인 수정본은 bank_personal_edit(내 계정에만), 제보는 bank_feedback.
 # 개인 수정은 문제은행 없이 선 판(standalone)에만 적용한다. 문제은행과 연결된 판은 기존 규칙상 개인 수정본이 있으면
 # 그 과제를 연결 미확인으로 막으므로(content.availability) 여기서는 제보만 받는다.
+
+def learner_front(doc, q):
+    """Question front plus the target retention new ratings aim for (Quiz Bank 「목표 N%」)."""
+    plans = {p['concept_id']: p for p in doc.document['bank_snapshot'].get('retrieval_plan', [])}
+    personal = q['tier'] if q.get('personalTier') else None
+    target = policy.target_retention(q, plans.get(q.get('concept_id')), policy.target_parameters(), personal)
+    return {**content.front(q), 'targetMastery': target}
+
 
 def personal_editable(doc):
     return doc.document['bank_source'] == 'standalone'
@@ -425,9 +434,53 @@ def save_personal(subject: str, run_id: str, question_id: str, payload: RootPers
                             question_id=question_id, category=payload.category, comment=note.strip(),
                             highlighted=payload.report, correction=correction))
     db.commit()
-    current = bank_personal.apply_edit(original, edit)
-    return {'question': content.front(current), 'answer': revealed_answer(db, doc, current),
+    current = content.with_tier(bank_personal.apply_edit(original, edit), content.tiers_for(db, doc, user.id))
+    return {'question': learner_front(doc, current), 'answer': revealed_answer(db, doc, current),
             'reported': reported, 'highlighted': reported and payload.report}
+
+
+# ── 내 중요도 (2026-11-09) ──────────────────────────────────────────────────
+# Quiz Bank 풀이의 「내 중요도」와 같은 선택. 내 계정·이 판에만 적용하고 append-only root_event(kind='tier')로
+# 남긴다(표 추가 없음). 그 문항의 목표 기억률을 바꾼다(Quiz Bank target_for): state.replay · policy.target_retention.
+# 목표 기억률 간격은 이 기능과 함께 들어온 새 평가(roots-four-rating/2)에만 적용한다.
+
+class RootTier(Start):
+    tier: Literal['Essential', 'Core', 'Important', 'Optional'] | None
+
+
+@router.put(BASE + '/questions/{question_id}/tier')
+def save_tier(subject: str, run_id: str, question_id: str, payload: RootTier,
+              user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
+    doc = active(db, subject, run_id, user)
+    original = snapshot_question(doc, question_id)
+    request = payload.model_dump()
+    previous = db.get(RootEvent, (user.id, payload.requestId))
+    if previous:
+        if previous.kind != 'tier' or previous.payload.get('_request') != {**request, 'question_id': question_id}:
+            raise HTTPException(409, '같은 요청 ID의 다른 작업입니다.')
+        return previous.result
+    base = content.original_tier(original)
+    chosen = None if payload.tier == (base or 'Core') else payload.tier
+    when = now()
+    events = content.events_for(db, subject, run_id, user.id)
+    data = {'_request': {**request, 'question_id': question_id}, 'question_id': question_id, 'tier': chosen,
+            'originalTier': base, 'tierPolicy': policy.TIER_POLICY, 'seq': 1 + sum(e['kind'] == 'tier' for e in events)}
+    events.append({'id': payload.requestId, 'revision': doc.revision, 'kind': 'tier', 'payload': data, 'at': when})
+    current = content.with_tier(with_personal(original, personal_edits(db, doc, user.id)),
+                                state.personal_tiers(doc.document, events))
+    questions = {t['task_id']: t['question_id'] for t in doc.document['tasks']}
+    # Only target-scheduled ratings move with the tier; earlier ones keep their own schedule.
+    rescheduled = any(e['kind'] == 'rate' and e['revision'] == doc.revision and e['payload'].get('targetParameters')
+                      and questions.get(e['payload'].get('task_id')) == question_id for e in events)
+    result = {'question': learner_front(doc, current), 'rescheduled': rescheduled}
+    db.add(RootEvent(user_id=user.id, request_id=payload.requestId, session_id='', subject=subject, run_id=run_id,
+                     revision=doc.revision, kind='tier', payload=data, result=result, created_at=when))
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, '동시 요청이 있습니다. 다시 시도하세요.')
+    return result
 
 
 def question_issues(issues, question_id):
@@ -492,13 +545,14 @@ def prepare(session_id: str, start: int | None = Query(None, ge=0), count: int =
     available, problems = content.availability(db, doc, user.id)
     generation = active_generation(db, doc)
     edits = personal_edits(db, doc, user.id)
+    tiers = content.tiers_for(db, doc, user.id)
     for position in range(begin, min(begin + count, len(row.tasks))):
         task = row.tasks[position]
         frame = {'position': position, 'taskId': task['task_id'], 'blocked': problems.get(task['task_id']), 'task': None}
         if task['task_id'] in available:
             q = content.question(doc.document, task)
-            shown = with_personal(q, edits)
-            frame['task'] = {'id': task['task_id'], 'question': content.front(shown),
+            shown = content.with_tier(with_personal(q, edits), tiers)
+            frame['task'] = {'id': task['task_id'], 'question': learner_front(doc, shown),
                              'answer': revealed_answer(db, doc, shown, generation),
                              'helped': row.state['mapSeen'] or prior_exposure(doc.document, task, q, row.state)}
         out['frames'].append(frame)
@@ -571,8 +625,9 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
             # Self-assessment stays available; exposure remains a separate fact.
             data.update(grade=grade, helped=(helped or not reveal['attempted']) if payload.selfRating is not None else helped)
             if payload.selfRating is not None:
-                data.update(selfRating=payload.selfRating, ratingPolicy='roots-four-rating/1',
-                            ratingParameters=copy.deepcopy(policy.FOUR_RATING_PARAMETERS))
+                data.update(selfRating=payload.selfRating, ratingPolicy=policy.TARGET_RATING_POLICY,
+                            ratingParameters=copy.deepcopy(policy.FOUR_RATING_PARAMETERS),
+                            targetParameters=policy.target_parameters())
             session_state.update(undo={'requestId': payload.requestId, 'index': session_state['index']}, index=session_state['index'] + 1)
     result = {'sessionId': row.id, 'version': row.version + 1}
     changed = db.execute(update(RootSession).where(RootSession.id == row.id, RootSession.version == row.version)
