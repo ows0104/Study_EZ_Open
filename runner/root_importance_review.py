@@ -121,7 +121,7 @@ def review(packet, out, *, reason, model=None):
     out = Path(out)
     with g.exclusive({'connection-generation': str(out.resolve())}):
         n.require_unblocked(out)
-        ledger = n.read(out / 'ledger.json')
+        ledger = n.read(out / 'ledger.json');from studyez_contracts.roots.generation_v2 import require_legacy_ledger;require_legacy_ledger(ledger)
         initial = n.read(out / 'normalize.json')
         cost = int(bool(c.brief_findings(initial)))
         rounds = ledger['repairRounds'] - cost

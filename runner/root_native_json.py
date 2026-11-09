@@ -461,6 +461,10 @@ def validate_all(out,payload):
         archive=Path(out)/f'.resume-{i}'
         require(read(archive/'ledger-before.json')==row['priorLedger'],'Changed stage resume archive')
         require(all((archive/f).exists()for s in row['superseded']for f in s['files']),'Superseded stage evidence is missing')
+    for row in payload['manifest'].get('reviewRetries',[]):
+        # review-retry/1: the abandoned review stays archived next to the run, never deleted.
+        archive=Path(out)/('.retry-'+row['stage'])
+        require(all((archive/f).exists()for f in row['files']),'Abandoned review evidence is missing for the review retry of '+row['stage'])
     for row in payload['manifest'].get('renderRecoveries',[]):
         proof=row['proof'];archive=Path(out)/'.render-recovery'
         require(read(Path(out)/'render.recovery.json')==row

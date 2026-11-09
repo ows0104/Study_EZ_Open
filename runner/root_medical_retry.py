@@ -29,7 +29,7 @@ def recover(packet, out, *, stage, expected_identity, reason, model=None):
 def _recover(packet, out, *, stage, expected_identity, reason, model=None):
     out = Path(out)
     n.require_unblocked(out)
-    old = n.read(out / 'ledger.json')
+    old = n.read(out / 'ledger.json');from studyez_contracts.roots.generation_v2 import require_legacy_ledger;require_legacy_ledger(old)
     n.require(packet_hash(packet) == packet['inputHash'] and old['identity'] == expected_identity
               and old.get('pipelineVersion') == c.POLICY, 'Different medical retry input/runtime')
     n.require(stage.startswith('medical-') and stage in old['stages'] and old['stages'][stage]['status'] == 'failed'

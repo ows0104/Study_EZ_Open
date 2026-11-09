@@ -139,3 +139,11 @@ def test_fixed_execution_leaves_only_two_content_repairs(failed,monkeypatch):
     result=g.run(packet,out,invoke=n.NativeJson(out,invoke=provider(out,calls,gap)))
     assert result['manifest']['repairRounds']==3 and [s for s in calls if s.startswith('repair-')]==['repair-1','repair-2']
     c.validate_result(result,packet);worker.completed_result(out,packet)
+
+
+@pytest.fixture(autouse=True)
+def legacy_ledgers(monkeypatch):
+    """These recovery paths exist for runs recorded before the new-run policies (2026-11-09,
+    docs/changes/2026-11-09-main-quiz-runner-pipeline): shared initial-correction budget, no review retry.
+    New-policy runs are refused by the tools (test_run_policies)."""
+    monkeypatch.setattr('quizbank.connection_generate_v2.RUN_POLICIES', [])

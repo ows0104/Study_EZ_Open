@@ -63,6 +63,8 @@ def importance_brief(lineage,proof):
 
 
 RESUMABLE_BLOCKERS=(*c.RECOVERY_HISTORY,'runtimeRevalidations','normalizationRecoveries','parallelSchemaRecovery')
+# Recorded on every new ledger (2026-11-09 사용자 설계 결정). Existing ledgers keep their earlier rules.
+RUN_POLICIES=list(c.RUN_POLICIES)
 
 def run(packet,out,model,invoke,resume=None,rerun=()):
     """resume: the operator's reason to continue this folder (stage-resume/1). Completed stages whose
@@ -101,8 +103,10 @@ def run(packet,out,model,invoke,resume=None,rerun=()):
         if any(p.name!='packet.json'for p in out.glob('*.json')):raise ValueError('기존 산출물의 ledger가 없습니다. 자동 재시작하지 않습니다.')
         ledger={'identity':fingerprint,'pipelineVersion':c.POLICY,'repairRounds':0,'stages':{},
             # opt-in speed path: context check first, then source ‖ medical, medical review reuse
-            **({'contextStages':True}if packet.get('speedStages')is True else{})}
+            **({'contextStages':True}if packet.get('speedStages')is True else{}),
+            **({'runPolicies':list(RUN_POLICIES)}if RUN_POLICIES else{})}
     c.require(type(ledger['repairRounds'])is int and 0<=ledger['repairRounds']<=3,'pipeline2: invalid budget')
+    policies=c.run_policies(ledger)
     sources=g.prepare(packet,out/'material');g.write(ledger_path,ledger)
 
     import threading
@@ -207,6 +211,32 @@ def run(packet,out,model,invoke,resume=None,rerun=()):
 
     medical_plans={};finished_reuse={}
 
+    def retried(name):return any(r['stage']==name for r in ledger.get('reviewRetries',[]))
+
+    def abandon(name,kind):
+        """review-retry/1: archive the abandoned review under .retry-<stage>/ (nothing is deleted) so the
+        same input runs once more in a fresh session. Not a repair round; the budget does not change."""
+        with lock:
+            c.require(c.REVIEW_RETRY_POLICY in policies and not retried(name),name+': 검토 자동 재실행은 단계마다 한 번입니다.')
+            archive=out/f'.retry-{name}';archive.mkdir();entry=ledger['stages'].pop(name);moved=[]
+            for suffix in('.json','.raw.json','.input.json','.usage.json'):
+                path=out/(name+suffix)
+                if path.exists():path.replace(archive/path.name);moved.append(path.name)
+            seat=out/'.native'/name
+            if seat.exists():(archive/'.native').mkdir();seat.replace(archive/'.native'/name);moved.append('.native/'+name)
+            ledger.setdefault('reviewRetries',[]).append({'policy':c.REVIEW_RETRY_POLICY,'stage':name,'kind':kind,
+                'afterResumes':len(ledger.get('stageResumes',[])),'abandoned':entry,'files':moved})
+            g.write(ledger_path,ledger)
+        print('── 검토 포기('+kind+'): '+name+' 새 세션으로 한 번 다시 실행',flush=True)
+
+    def review(name,ctx):
+        """A source review that judged nothing (after the adapter's same-session follow-up) runs once more."""
+        try:return stage(name,ctx)
+        except ValueError as error:
+            if str(error)!=c.UNPERFORMED_REVIEW or c.REVIEW_RETRY_POLICY not in policies or retried(name):raise
+        abandon(name,'empty-judgment')
+        return stage(name,ctx)
+
     def unblock(n):
         # Resuming: a medical round the old rule withheld now runs (clinical-context/2).
         if resume_row is not None and ledger['stages'].get(f'medical-{n}',{}).get('status')=='blocked':supersede(f'medical-{n}')
@@ -269,7 +299,9 @@ def run(packet,out,model,invoke,resume=None,rerun=()):
         parallel_results,parallel_proof=parallel.run(packet,out,intake,out/'material',model)
         intake={**intake,'independentMap':parallel_results['map'],'independentPoints':parallel_results['point']}
     initial=stage('normalize',intake)
-    initial_errors=c.brief_findings(initial,sources);initial_cost=int(bool(initial_errors))
+    initial_errors=c.brief_findings(initial,sources)
+    # The errors still go to the first authoring; only the earlier policy charges a repair round for them.
+    initial_cost=0 if c.INITIAL_CORRECTION_POLICY in policies else int(bool(initial_errors))
     if initial_cost:
         ledger['repairRounds']=max(ledger['repairRounds'],initial_cost);g.write(ledger_path,ledger)
     recoveries=ledger.get('authoringRecoveries',[])
@@ -330,7 +362,7 @@ def run(packet,out,model,invoke,resume=None,rerun=()):
                 blocked='독립 검수 입력 확인: '+clinical_context['clinical_context_reason']
                 blocking_fix=clinical_context['clinical_context_status']=='conflict'
             if not blocked:unblock(n)
-            if blocked:audit=stage(f'source-{n}',source_ctx);medical_value=None
+            if blocked:audit=review(f'source-{n}',source_ctx);medical_value=None
             else:
                 from concurrent.futures import ThreadPoolExecutor
                 # Collect this thread's cyclic garbage before the workers start. Otherwise a worker may run the
@@ -338,14 +370,14 @@ def run(packet,out,model,invoke,resume=None,rerun=()):
                 # Windows access violation inside chunked-review workers, 2026-11-09).
                 import gc;gc.collect()
                 with ThreadPoolExecutor(max_workers=2)as pool:
-                    pending=[pool.submit(stage,f'source-{n}',source_ctx),pool.submit(medical_stage,n,med_ctx)];errors=[]
+                    pending=[pool.submit(review,f'source-{n}',source_ctx),pool.submit(medical_stage,n,med_ctx)];errors=[]
                     for future in pending:
                         try:future.result()
                         except BaseException as error:errors.append(error)
                 if errors:raise errors[0]
                 audit,medical_value=pending[0].result(),pending[1].result()
         else:
-            audit=stage(f'source-{n}',source_ctx);medical_value=None;clinical_context=None
+            audit=review(f'source-{n}',source_ctx);medical_value=None;clinical_context=None
             context_check=audit['assessment']['assessment']
             if projection is not None and context_check['clinical_context_status']!='consistent':
                 blocked='독립 검수 입력 확인: '+context_check['clinical_context_reason']
@@ -361,15 +393,26 @@ def run(packet,out,model,invoke,resume=None,rerun=()):
             medical=None
         else:
             medical=medical_value if medical_value is not None else stage(f'medical-{n}',med_ctx)
-        reasons=c.repair_reasons(b,bank,audit,medical,validation)+c.point_id_reasons(bank,table)
-        # concept-map-extract/3: the Map's parent_id tree must survive in the brief (no-op for /2 Maps).
-        hierarchy=concept_tree.hierarchy_findings(b,packet.get('conceptMap'))
-        if hierarchy:g.write(out/f'map-hierarchy-{n}.json',{'findings':hierarchy})
-        reasons+=[{'kind':'map_fix','text':t,'question_ids':[],'direction_ids':[]}for t in hierarchy]
-        if blocked and blocking_fix:reasons.append({'kind':'question_fix','text':blocked,'question_ids':[],'direction_ids':[]})
-        elif clinical_context is not None and c.context_repair_note(clinical_context):
-            reasons.append({'kind':'question_fix','text':'임상 충돌 정리 보완(정답 검수는 진행): '+clinical_context['clinical_context_reason'],
-                'question_ids':[],'direction_ids':[]})
+        def decide(audit):
+            reasons=c.repair_reasons(b,bank,audit,medical,validation)+c.point_id_reasons(bank,table)
+            # concept-map-extract/3: the Map's parent_id tree must survive in the brief (no-op for /2 Maps).
+            hierarchy=concept_tree.hierarchy_findings(b,packet.get('conceptMap'))
+            if hierarchy:g.write(out/f'map-hierarchy-{n}.json',{'findings':hierarchy})
+            reasons+=[{'kind':'map_fix','text':t,'question_ids':[],'direction_ids':[]}for t in hierarchy]
+            if blocked and blocking_fix:reasons.append({'kind':'question_fix','text':blocked,'question_ids':[],'direction_ids':[]})
+            elif clinical_context is not None and c.context_repair_note(clinical_context):
+                reasons.append({'kind':'question_fix','text':'임상 충돌 정리 보완(정답 검수는 진행): '+clinical_context['clinical_context_reason'],
+                    'question_ids':[],'direction_ids':[]})
+            return reasons
+        while True:
+            reasons=decide(audit)
+            # review-retry/1: the result needs the final source review to verify the clinical projection; an
+            # unknown there (26110901 source-2, 14:52) is an abandoned review and runs once more.
+            if(reasons and n+initial_cost<3)or ledger.get('contextStages')is not True or c.REVIEW_RETRY_POLICY not in policies\
+                    or audit['assessment']['assessment']['clinical_context_status']!='unknown':break
+            c.require(not retried(f'source-{n}'),f'source-{n}: 원본 대조가 임상 정리 확인을 두 번 unknown으로 남겼습니다. '
+                '결과를 만들지 않고 보존합니다. 관리자 확인 뒤 --resume <이유>로 이어 갑니다.')
+            abandon(f'source-{n}','final-context-unknown');audit=stage(f'source-{n}',source_ctx)
         g.write(out/f'repair-decision-{n}.json',{'reasons':reasons,'allIssues':audit['assessment']['assessment']['issues'],'repair':bool(reasons)and n+initial_cost<3})
         if reasons and n+initial_cost<3:
             ledger['repairRounds']=max(ledger['repairRounds'],n+initial_cost+1);g.write(ledger_path,ledger)
@@ -405,6 +448,8 @@ def run(packet,out,model,invoke,resume=None,rerun=()):
             **({'contextStages':True,'clinicalContext':clinical_context}if ledger.get('contextStages')is True else{}),
             **({'medicalReuse':ledger['medicalReuse']}if ledger.get('medicalReuse')else{}),
             'initialMapCorrection':{'errors':initial_errors,'consumedRounds':initial_cost},
+            **({'runPolicies':ledger['runPolicies']}if'runPolicies'in ledger else{}),
+            **({'reviewRetries':ledger['reviewRetries']}if ledger.get('reviewRetries')else{}),
             'normalizationRecoveries':ledger.get('normalizationRecoveries',[]),
             **({'authoringRecoveries':recoveries}if recoveries else{}),
             **({'formatRecoveries':format_recoveries}if format_recoveries else{}),

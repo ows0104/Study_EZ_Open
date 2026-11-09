@@ -19,7 +19,7 @@ def recover(packet,out,*,stage,expected_identity,reason,model=None):
 
 
 def _recover(packet,out,*,stage,expected_identity,reason,model=None):
-    out=Path(out);n.require_unblocked(out);old=n.read(out/'ledger.json')
+    out=Path(out);n.require_unblocked(out);old=n.read(out/'ledger.json');from studyez_contracts.roots.generation_v2 import require_legacy_ledger;require_legacy_ledger(old)
     n.require(packet_hash(packet)==packet['inputHash']and packet.get('sourceAssessmentFormat')==c.VERSION
         and old['identity']==expected_identity and old.get('pipelineVersion')==c.POLICY,'Different tier recovery input/runtime')
     n.require(re.fullmatch(r'generate|repair-[1-3]',stage)and stage in old['stages']
@@ -118,7 +118,7 @@ def revalidate_runtime(packet,out,*,expected_identity,reason,model=None):
     """Recheck unchanged completed caches after the deterministic-note fix."""
     out=Path(out)
     with g.exclusive({'connection-generation':str(out.resolve())}):
-        n.require_unblocked(out);old=n.read(out/'ledger.json')
+        n.require_unblocked(out);old=n.read(out/'ledger.json');from studyez_contracts.roots.generation_v2 import require_legacy_ledger;require_legacy_ledger(old)
         n.require(old['identity']==expected_identity and old.get('formatRecoveries')
             and not old.get('runtimeRevalidations')and old['repairRounds']==3
             and not(out/'runtime.revalidation.json').exists()and not(out/'.runtime-revalidation').exists()

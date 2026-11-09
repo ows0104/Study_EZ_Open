@@ -19,7 +19,7 @@ def prepare(origin,out):
     origin=Path(origin).resolve();out=Path(out).resolve();n.require(origin!=out and not out.exists(),'Preserve existing origin/continuation')
     n.require(not any(origin.rglob('content-block.json')),'Provider restriction cannot be continued')
     n.require_unblocked(origin)
-    ledger=n.read(origin/'ledger.json');ctx=n.read(origin/'source-2.input.json');author=n.read(origin/'repair-2.json');packet=n.read(origin/'packet.json')
+    ledger=n.read(origin/'ledger.json');ctx=n.read(origin/'source-2.input.json');author=n.read(origin/'repair-2.json');packet=n.read(origin/'packet.json');from studyez_contracts.roots.generation_v2 import require_legacy_ledger;require_legacy_ledger(ledger)
     failure=n.read(origin/'.native/source-2/failure.json')
     n.require(ledger['repairRounds']==2 and ledger['stages']['source-2']['status']=='failed'
         and failure['classification']['kind']=='model_timeout','Only approved frozen round-2 timeout')

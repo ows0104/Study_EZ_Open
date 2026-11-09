@@ -98,3 +98,11 @@ def test_recovery_rejects_incomplete_ambiguous_or_changed_evidence(tmp_path,monk
         g.write(out/'ledger.json',old)
     with pytest.raises((ValueError,FileNotFoundError)):recover(p,out,expected_identity=old['identity'],reason='Never invoke a model')
     assert not(out/'normalize.recovery.json').exists()
+
+
+@pytest.fixture(autouse=True)
+def legacy_ledgers(monkeypatch):
+    """These recovery paths exist for runs recorded before the new-run policies (2026-11-09,
+    docs/changes/2026-11-09-main-quiz-runner-pipeline): shared initial-correction budget, no review retry.
+    New-policy runs are refused by the tools (test_run_policies)."""
+    monkeypatch.setattr('quizbank.connection_generate_v2.RUN_POLICIES', [])

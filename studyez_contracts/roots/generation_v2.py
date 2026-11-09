@@ -226,6 +226,63 @@ def validate_format_recoveries(meta,stages):
 
 RECOVERY_HISTORY=('formatRecoveries','authoringRecoveries','renderRecoveries','medicalRetries','importanceReview','sourceGapRecoveries')
 
+# New-run policies (2026-11-09 사용자 설계 결정, docs/changes/2026-11-09-main-quiz-runner-pipeline). A ledger
+# records them when it is created; ledgers and results without them keep the earlier rules, also when resumed.
+#  initial-correction-separate/1 (「따로 세기」): fixing the initial map in the first authoring is not a repair
+#    round, so the three repairs are always available for repairs.
+#  review-retry/1 (「새 세션 1회 자동」): a source review that judged nothing, or a final source review that left
+#    the clinical projection unknown, runs once more in a fresh session. Not a repair; the budget is unchanged.
+INITIAL_CORRECTION_POLICY='initial-correction-separate/1'
+REVIEW_RETRY_POLICY='review-retry/1'
+RUN_POLICIES=[INITIAL_CORRECTION_POLICY,REVIEW_RETRY_POLICY]
+REVIEW_RETRY_KINDS=('empty-judgment','final-context-unknown')
+# The manual recovery tools reason about the earlier budget; a new-policy run takes none of their histories.
+POLICY_EXCLUDED_HISTORY=(*RECOVERY_HISTORY,'runtimeRevalidations','normalizationRecoveries','parallelSchemaRecovery',
+    'chunkedReview','planRepair','authoringRecoveryOutput')
+
+def run_policies(meta):
+    """The new-run policies a ledger/manifest declares: [] for earlier runs, else exactly RUN_POLICIES."""
+    if 'runPolicies'not in meta:return []
+    require(meta['runPolicies']==RUN_POLICIES,'result2: unknown run policies')
+    require(not any(meta.get(k)for k in POLICY_EXCLUDED_HISTORY),'result2: a new-policy run takes no manual recovery history')
+    return RUN_POLICIES
+
+def charged_initial_rounds(meta,findings):
+    """Repair rounds the initial map correction consumes: none under initial-correction-separate/1."""
+    return 0 if INITIAL_CORRECTION_POLICY in run_policies(meta)else int(bool(findings))
+
+def require_legacy_ledger(ledger):
+    """Manual recovery tools stop here: they were written for the earlier shared budget and history rules."""
+    require(not ledger.get('runPolicies'),'이 수동 복구 도구는 새 실행 정책('+', '.join(RUN_POLICIES)+
+        ') 이전 기록만 다룹니다. 이 실행은 자동 재실행 1회 뒤 --resume <이유>로 이어 갑니다.')
+
+def validate_review_retries(meta,stages,n):
+    """review-retry/1: at most one fresh-session rerun per source review, the abandoned stage archived."""
+    rows=meta.get('reviewRetries',[])
+    require(type(rows)is list,'result2: invalid review retry history')
+    if rows:require(REVIEW_RETRY_POLICY in run_policies(meta),'result2: review retry without its policy')
+    resumes=meta.get('stageResumes',[]);seen=set()
+    for row in rows:
+        require(type(row)is dict and set(row)=={'policy','stage','kind','afterResumes','abandoned','files'}
+            and row['policy']==REVIEW_RETRY_POLICY,'result2: malformed review retry')
+        name=row['stage'];old=row['abandoned']
+        require(type(name)is str and re.fullmatch(r'source-[0-3]',name)and int(name.split('-')[1])<=n and name not in seen,
+            'result2: one review retry per source review')
+        seen.add(name)
+        require(row['kind']in REVIEW_RETRY_KINDS and type(row['afterResumes'])is int and 0<=row['afterResumes']<=len(resumes),
+            'result2: unknown review retry')
+        require(type(row['files'])is list and all(type(x)is str for x in row['files'])and name+'.raw.json'in row['files'],
+            'result2: abandoned review evidence missing')
+        hexes=('inputHash','rawOutputHash')+(('outputHash',)if row['kind']=='final-context-unknown'else())
+        require(type(old)is dict and old.get('status')==('completed'if row['kind']=='final-context-unknown'else'failed')
+            and all(type(old.get(k))is str and re.fullmatch(r'[a-f0-9]{64}',old[k])for k in hexes),'result2: abandoned review entry')
+        later=any(s['name']==name for r in resumes[row['afterResumes']:]for s in r['superseded'])
+        if not later:  # the rerun reviewed the same input and produced a different answer
+            current=stages.get(name)
+            require(current is not None and current['inputHash']==old['inputHash']and current.get('rawOutputHash')!=old['rawOutputHash'],
+                'result2: review retry did not rerun the same review')
+    return rows
+
 
 def history_runtime(meta):
     """The runtime that recorded recoveries ran under (before a later deterministic revalidation)."""
@@ -285,7 +342,9 @@ def validate_stage_resumes(meta,stages):
                 and old['stages'].get(s['name'])==s['entry'],'result2: a superseded stage must be a prior stage')
             gone[s['name']]=s['entry']
         after=rows[i+1]['priorLedger']['stages']if i+1<len(rows)else{k:{x:y for x,y in v.items()if x!='name'}for k,v in stages.items()}
-        require(all(k in gone or after.get(k)==v for k,v in old['stages'].items()),'result2: a resume changed a kept stage')
+        # review-retry/1 replaced a stage during the run that followed this resume; validate_review_retries checks it.
+        retried={r['stage']for r in meta.get('reviewRetries',[])if r.get('afterResumes')==i+1}
+        require(all(k in gone or k in retried or after.get(k)==v for k,v in old['stages'].items()),'result2: a resume changed a kept stage')
     return rows
 
 
@@ -1082,10 +1141,12 @@ def validate_result(value,packet):
     require(meta['webResponseHash']==packet.get('webResponseHash'),'result2: web response mismatch')
     total=meta['repairRounds'];require(type(total)is int and 0<=total<=3,'result2: repair budget exceeded')
     findings=brief_findings(meta['initialBrief']);initial_cost=int(bool(findings))
+    charged=charged_initial_rounds(meta,findings)
     correction=meta.get('initialMapCorrection',{'errors':[],'consumedRounds':0})
-    require(correction=={'errors':findings,'consumedRounds':initial_cost},'result2: missing initial correction evidence')
-    n=total-initial_cost;require(n>=0,'result2: initial correction not counted')
+    require(correction=={'errors':findings,'consumedRounds':charged},'result2: missing initial correction evidence')
+    n=total-charged;require(n>=0,'result2: initial correction not counted')
     stages=index_by(meta['stages'],'name')
+    validate_review_retries(meta,stages,n)
     if 'chunkedReview'in meta:
         from .chunked import validate_continuation
         validate_continuation(value)

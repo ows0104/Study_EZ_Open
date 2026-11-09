@@ -10,7 +10,37 @@
     "server",
     "web"
   ],
-  "approvals": {},
+  "approvals": {
+    "build": {
+      "at": "2026-11-09T09:15:38.130694+00:00",
+      "evidence": "사용자 2026-11-09 채팅: 「스펙 작성 시작」 → 스펙·계획 제시 뒤 「PR A 시작」",
+      "scope": "PR A: studyez_contracts/roots/generation_v2.py 예산 정책·검토 재실행 검증, quizbank/connection_generate_v2.py 예산·검토 포기 1회 재실행, 수동 복구 도구의 새 정책 거절, 관련 검사. 모델 호출·운영 DB 쓰기 없음",
+      "evidence_version": 2,
+      "source_hash": "64f59d8372b00288dc2ced7ea43f0451cc2fa57fa13f43ca36b481dce8fdb688",
+      "plan_hash": "338074e9a1a621c538c646327bc9d92b2467b1fe7f12c299f3a1146f4c86d03f",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "2b7352b28ac78da63bd3f90998356380afbc04a006eeeaeec65e6b3327a410e3"
+    }
+  },
   "checks": [],
   "review": null,
   "lifecycle": {
@@ -18,5 +48,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-09T09:04:16.309897+00:00"
+  "updated_at": "2026-11-09T09:15:38.259816+00:00"
 }

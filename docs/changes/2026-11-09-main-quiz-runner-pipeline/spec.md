@@ -94,13 +94,14 @@
   - 파생 packet의 필드 하나를 바꾼 결과는 거절된다.
 
 ### R4. 보완 예산 — 초기 지도 교정은 따로 센다 (결정 1)
-- 새 정책 `initial-correction-separate/1`을 둔다. 생성기가 새 ledger를 만들 때 `budgetPolicy`로 적는다.
+- 새 정책 `initial-correction-separate/1`을 둔다. 생성기가 새 ledger를 만들 때 `runPolicies`(R5의 `review-retry/1`과 함께)로 적는다. manifest에도 같은 칸이 실린다.
   - 대상: 새로 시작하는 모든 root-generation/2 실행. map-tree에만 한정하지 않는다.
 - 이 정책에서 달라지는 것
   - 초기 지도 오류는 지금처럼 출제 단계 입력(`initialBriefErrors`)으로 가고 `validate_initial_correction`을 거친다.
   - `repairRounds`에는 더하지 않는다.
   - 회차 루프는 `range(start_round, 4)`다. 보완 단계는 최대 `repair-1..3`이다.
-  - manifest `initialMapCorrection`은 `{errors, consumedRounds:0, budgetPolicy}`다. 오류 목록은 그대로 남긴다.
+  - manifest `initialMapCorrection`은 `{errors, consumedRounds:0}`다. 오류 목록은 그대로 남긴다.
+  - 정책이 있는 실행은 수동 복구 이력을 받지 않는다. 계약(`run_policies`)이 거절하고, 도구는 시작할 때 `require_legacy_ledger`로 거절한다.
 - 정책 표기가 없는 ledger와 결과는 옛 규칙(초기 교정 = 1회)으로 읽는다.
   - 진행 중이던 실행을 이어 해도(`--resume`) 정책이 바뀌지 않는다. 상한을 재실행으로 초기화하지 않는다.
 - 기존 수동 복구 도구는 새 정책 ledger를 거절하고 이유를 출력한다. 대상은 `root_*_recovery`, `connection_authoring_recovery`, `root_medical_retry` 등 `initial_cost`를 가정하는 도구다. 맞춰 고치는 일은 범위 밖이다.

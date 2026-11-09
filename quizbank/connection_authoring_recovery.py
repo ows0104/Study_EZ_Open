@@ -18,7 +18,7 @@ def read(path):return json.loads(Path(path).read_text(encoding='utf-8'))
 def recover(packet,out,*,expected_identity,mode,reason,model=None):
     from runner import root_native_json as native
     out=Path(out);native.require_unblocked(out)
-    old=read(out/'ledger.json');stages=old.get('stages',{})
+    old=read(out/'ledger.json');stages=old.get('stages',{});from studyez_contracts.roots.generation_v2 import require_legacy_ledger;require_legacy_ledger(old)
     c.require(packet_hash(packet)==packet['inputHash']and packet.get('sourceAssessmentFormat')==c.VERSION,
               'Recovery requires the unchanged version-two packet')
     c.require(old.get('identity')==expected_identity and old.get('pipelineVersion')==c.POLICY

@@ -21,7 +21,7 @@ def validate_recovery(out,row):
     n.require(all(n.sha(a/name)==digest for name,digest in p['originalFileHashes'].items()),'Changed original rejection archive')
     for name in ('generate.raw.json','generate.usage.json','generate.input.json','normalize.json'):
         n.require(n.sha(out/name)==p['originalFileHashes'][name],'Recovery changed completed output/input/usage')
-    ledger=n.read(out/'ledger.json')
+    ledger=n.read(out/'ledger.json');from studyez_contracts.roots.generation_v2 import require_legacy_ledger;require_legacy_ledger(ledger)
     validate_schema_recovery({'parallelSchemaRecovery':row,'parallelAuthoring':p['parallelProof'],
         'inputHash':p['packetHash'],'runtimeHash':ledger['identity']},{k:{'name':k,**v}for k,v in ledger['stages'].items()})
     n.require(n.sha(a/'recovery.py')==p['toolSha256'],'Changed recovery tool archive')
@@ -30,7 +30,7 @@ def validate_recovery(out,row):
 def recover(out):
     out=Path(out)
     with g.exclusive({'connection-generation':str(out.resolve())}):
-        n.require_unblocked(out);packet=n.read(out/'packet.json');old=n.read(out/'ledger.json')
+        n.require_unblocked(out);packet=n.read(out/'packet.json');old=n.read(out/'ledger.json');from studyez_contracts.roots.generation_v2 import require_legacy_ledger;require_legacy_ledger(old)
         a=out/'.parallel-schema-recovery';capture=n.read(a/'capture.json')
         n.require(packet.get('parallelAuthoring')is True and packet.get('authoring')=='cli'
             and old==capture['priorLedger']and not(out/'parallel.schema-recovery.json').exists()

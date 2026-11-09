@@ -12,7 +12,7 @@ from studyez_contracts.roots.automation import packet_hash,source_intake
 def read(p):return json.loads(p.read_text(encoding='utf-8'))
 
 def recover(packet,out,*,expected_identity,reason,model=None):
-    out=Path(out);old=read(out/'ledger.json');stage=old.get('stages',{}).get('normalize',{})
+    out=Path(out);old=read(out/'ledger.json');stage=old.get('stages',{}).get('normalize',{});from studyez_contracts.roots.generation_v2 import require_legacy_ledger;require_legacy_ledger(old)
     c.require(packet_hash(packet)==packet['inputHash']and packet.get('inputMode')=='source','Recovery requires the unchanged source-only packet')
     c.require(old.get('identity')==expected_identity and old.get('pipelineVersion')==c.POLICY and old.get('repairRounds')==0
               and set(old.get('stages',{}))=={'normalize'}and stage.get('status')=='failed'
