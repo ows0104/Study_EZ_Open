@@ -358,3 +358,33 @@ def test_codex_children_lose_only_the_uv_launchers_own_pythonhome(monkeypatch):
     env=codex.child_env();assert 'PYTHONHOME'not in env and 'UV_INTERNAL__PYTHONHOME'not in env
     monkeypatch.delenv('UV_INTERNAL__PYTHONHOME');monkeypatch.setenv('PYTHONHOME','C:/chosen')
     assert codex.child_env()['PYTHONHOME']=='C:/chosen'
+
+
+def test_review_stages_get_every_page_and_stimulus_image_in_their_first_message(tmp_path,monkeypatch):
+    """26110801–26110901: the 13 source reviews that completed opened every page image; the 6 that gave up
+    opened 0–8 and declared the review incomplete. The images are attached, so opening them is no choice."""
+    packet=image_packet(tmp_path);packet['speedStages']=True
+    from studyez_contracts.roots.automation import packet_hash
+    packet['inputHash']=packet_hash(packet);out=tmp_path/'out';sent={}
+    monkeypatch.setattr(producer,'call_model',lambda stage,ctx,*args:f.model(stage,ctx,*args))
+    base=provider(out)
+    def run(prompt,**kwargs):
+        work=kwargs['cwd'];stage=work.parent.name
+        sent[stage]=([p.name for p in kwargs.get('images',[])],prompt,{p.name:n.sha(p)for p in kwargs.get('images',[])})
+        if stage.startswith('context-'):
+            path=work/'result.json'
+            path.write_text(json.dumps({'clinical_context_status':'consistent','clinical_context_problem':'none','clinical_context_reason':'synthetic'}),encoding='utf-8')
+            return {'text':json.dumps({'path':'result.json','sha256':n.sha(path)}),'turns':1,'session_id':'synthetic-native',
+                'usage':{'input_tokens':1,'output_tokens':1,'cache_read_input_tokens':0,'cache_creation_input_tokens':0},'models':{kwargs['model']:1},'cost_usd':None,'duration_ms':1}
+        return base(prompt,**kwargs)
+    result=g.run(packet,out,invoke=n.NativeJson(out,invoke=run))
+    pages=sorted(p.name for p in (out/'material').glob('S*-[0-9][0-9][0-9][0-9].png'))
+    stimuli=['stimulus-'+s['sha256']+'.png'for q in result['document']['bank_snapshot']['questions']for s in q.get('stimuli',[])]
+    assert pages and stimuli
+    for stage in('context-0','source-0'):
+        names,prompt,hashes=sent[stage]
+        assert names==pages+stimuli and all(name in prompt for name in names)
+        assert all(hashes[k]==n.sha(out/'material'/k)for k in names)  # the same bytes the files hold
+        assert n.read(out/'.native'/stage/'receipt.json')['proof']['attachedImages']==[{'file':k,'sha256':hashes[k]}for k in names]
+    assert sent['normalize'][0]==[]and sent['generate'][0]==[]
+    n.validate_all(out,result)

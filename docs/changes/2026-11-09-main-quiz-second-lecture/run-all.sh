@@ -2,7 +2,7 @@
 # 사슬알균(261105_01) Main-Quiz 생성 시범 — 2026-11-09 사용자 「사슬알균」·「승인」. 실패하면 그 자리에서 멈춘다 — 자동 재시도 없음.
 # 실행 코드: 이 worktree(= 병합된 master). 실행 폴더: <main>/runs/_e2e/26110901 (git 밖).
 #   bash docs/changes/2026-11-09-main-quiz-second-lecture/run-all.sh [points|generate|resume|importance|assemble|all]
-#   resume: GEN_DIR 폴더의 성공한 단계를 살리고 실패·달라진 단계부터 이어 간다 (REASON 필수).
+#   resume: GEN_DIR 폴더의 성공한 단계를 살리고 실패·달라진 단계부터 이어 간다 (REASON 필수, RERUN="source-2" 처럼 다시 돌릴 완료 단계 지정 가능).
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../../.." && pwd)"
@@ -31,7 +31,8 @@ points() {
 generate() { step "root-generation/2"; "$PY" -m runner.root_native_json --packet "$GEN/packet.json" --out "$GEN"; }
 resume() {
   : "${REASON:?REASON=<재개 이유> 가 필요하다}"
-  step "root-generation/2 resume"; "$PY" -m runner.root_native_json --packet "$GEN/packet.json" --out "$GEN" --resume "$REASON"
+  extra=(); for s in ${RERUN:-}; do extra+=(--rerun "$s"); done
+  step "root-generation/2 resume ${RERUN:-}"; "$PY" -m runner.root_native_json --packet "$GEN/packet.json" --out "$GEN" --resume "$REASON" "${extra[@]}"
 }
 importance() {
   step "importance review"

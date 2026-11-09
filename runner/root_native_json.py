@@ -59,6 +59,27 @@ def sandbox_python(cwd,run=subprocess.run):
         if proc.returncode==0 and CHECK_OK in(proc.stdout or''):found=exe;break
     _sandbox_python=found;return found
 
+def review_images(stage,work,ctx):
+    """Original page PNGs, then the questions' stimulus PNGs, attached to a review's first message.
+
+    Of 19 source reviews (26110801–26110901) the 13 that completed opened every page image (53–76);
+    the 6 that gave up opened 0–8 and wrote 「원본 46쪽을 다 대조하지 못했다」 before looking. Opening the
+    pages was the model's own choice; attaching them removes it. Same bytes as work/material."""
+    if stage.split('-')[0]not in('source','context'):return[]
+    material=Path(work)/'material'
+    pages=sorted(p for p in material.glob('S*-[0-9][0-9][0-9][0-9].png'))
+    stimuli=list(dict.fromkeys(material/('stimulus-'+s['sha256']+'.png')for q in(ctx.get('bank')or{}).get('questions',[])
+        for s in q.get('stimuli',[])))
+    return[*pages,*(p for p in stimuli if p.is_file())]
+
+def first_message(images):
+    text=('Read task.md, input.json and acceptance.schema.json. Complete the original task using unchanged material/. Write the complete JSON '
+        'to result.json with local code, copying unchanged subtrees programmatically. Return only its exact path/SHA256 receipt. Do not echo the full document.')
+    if images:
+        text+=(f' Attached to this message, in this order, are the {len(images)} images you must inspect: '+', '.join(p.name for p in images)
+            +'. They are the same bytes as those files in material/. Review the pages and stimuli from these attachments.')
+    return text
+
 def check_instruction(python):
     if python:
         return ('\nBefore finalizing, run '+python+' with argument check_result.py successfully. Fix serialization/structural '
@@ -309,14 +330,15 @@ class NativeJson:
         proof={'policy':POLICY,'stage':stage,'inputHash':document_hash(ctx),'cleanInputHash':document_hash(clean(ctx)),
             'schemaHash':document_hash(schema),'model':g.codex.model_name(model),'materialHashes':source_inventory,
             'protectedFiles':protected,'adapterSha256':sha(__file__)}
+        images=review_images(stage,work,ctx)
+        if images:proof['attachedImages']=[{'file':p.name,'sha256':sha(p)}for p in images]
         g.write(seat/'journal.json',{'status':'started','proof':proof})
         print('── 연결 파일 실행 '+stage+' · 실제 JSON 파일과 완료 영수증 대기',flush=True)
         result=None
         try:
-            result=(self.invoke or g.codex.run)(
-                'Read task.md, input.json and acceptance.schema.json. Complete the original task using unchanged material/. Write the complete JSON to result.json with local code, copying unchanged subtrees programmatically. Return only its exact path/SHA256 receipt. Do not echo the full document.',
+            result=(self.invoke or g.codex.run)(first_message(images),
                 blind=False,cwd=work,model=g.codex.model_name(model),timeout=self.timeout,
-                label='연결 파일 실행 '+stage,schema=RECEIPT,system=SYSTEM)
+                label='연결 파일 실행 '+stage,schema=RECEIPT,system=SYSTEM,**({'images':images}if images else{}))
             g.write(seat/'provider.json',result)
             require(type(result.get('turns'))is int and result['turns']>0 and result.get('session_id'),'Missing actual native completion')
             require(all(sha(work/name)==digest for name,digest in protected.items()),'Model changed protected input/contract')
@@ -453,11 +475,13 @@ def validate_all(out,payload):
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--packet',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--model')
-    p.add_argument('--resume',metavar='REASON',help='keep revalidated completed stages; rerun only the rest (stage-resume/1)');a=p.parse_args()
+    p.add_argument('--resume',metavar='REASON',help='keep revalidated completed stages; rerun only the rest (stage-resume/1)')
+    p.add_argument('--rerun',metavar='STAGE',action='append',default=[],help='with --resume: also run this completed stage again');a=p.parse_args()
+    if a.rerun and not a.resume:p.error('--rerun needs --resume <reason>')
     try:
         require_unblocked(a.out)
         from studyez_contracts.roots.parallel import is_v2_source
-        packet=read(a.packet);result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)else None,resume=a.resume)
+        packet=read(a.packet);result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)else None,resume=a.resume,rerun=tuple(a.rerun))
         validate_all(a.out,result)
         if packet.get('parallelAuthoring'):
             from runner.parallel_status import refresh
