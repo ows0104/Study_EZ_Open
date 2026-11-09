@@ -1078,6 +1078,15 @@ def medical_final(meta):
     require(value is None or value==MEDICAL_FINAL_POLICY,'result2: unknown medical review policy')
     return value==MEDICAL_FINAL_POLICY
 
+def judgment_fixes(bank,medical):
+    """medical-final/1: source-conflict judgments that differ from the current answer, as answer fixes."""
+    qs={q['question_id']:q for q in bank['questions']}
+    return [{'kind':'question_fix','question_ids':[r['question_id']],'direction_ids':[],
+        'text':'의학 판정: 원본끼리 충돌한 이 문항의 답을 판정에 맞게 고친다(답·answer_units·선지·해설을 함께, 충돌 해설은 학생이 이해하기 쉽게). '
+            +r['note']+' · 판정에 맞는 답: '+r['suggested_answer']}
+        for r in medical['reviews']if r['verdict']=='wrong'and(r.get('suggested_answer')or'').strip()
+        and qs.get(r['question_id'],{}).get('conflict_id')]
+
 MEDICAL_REUSE_POLICY='medical-review-reuse/1'
 
 
@@ -1184,7 +1193,7 @@ def validate_result(value,packet):
     if final_medical:kinds=tuple(k for k in kinds if k!='medical')
     needed={'normalize','generate'}|{f'{k}-{i}'for i in range(start_round,n+1)for k in kinds}|{f'repair-{i}'for i in range(1,n+1)}
     if final_medical:
-        needed|={f'medical-{n}'}
+        needed|={f'medical-{n}'}|{k for k in stages if re.fullmatch(r'medical-[0-3]',k)and int(k[8:])<n}
         require(not meta.get('medicalReuse')and not meta.get('medicalRetries'),'result2: the final medical review reuses nothing')
     require(set(stages)==needed,'result2: incomplete/ambiguous stages')
     for name,s in stages.items():
