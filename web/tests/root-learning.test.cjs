@@ -52,8 +52,11 @@ test('actual API: no textbox, preserved drafts/retries/conflicts, four ratings, 
    assert.ok(await graph.evaluate(w=>new DOMMatrix(getComputedStyle(w).transform).a)>=0.6);
    // Only the map: no title/notes/search/legend row above it, it fills the window, and the page does not scroll.
    assert.deepEqual(await page.locator('.main-quiz-map').evaluate(m=>[...m.children].filter(c=>!c.classList.contains('sr-only')).map(c=>c.className)),['main-quiz-tree-frame']);
-   assert.equal(await page.evaluate(()=>{const f=document.querySelector('.main-quiz-tree-frame').getBoundingClientRect();
-     return f.bottom<=innerHeight&&innerHeight-f.bottom<=16&&document.documentElement.scrollHeight<=innerHeight+1;}),true);
+   // The map is the whole content column: flush with the left menu, the right edge, the top and the bottom (2026-11-09).
+   assert.deepEqual(await page.evaluate(()=>{const f=document.querySelector('.main-quiz-tree-frame').getBoundingClientRect(),side=document.querySelector('.sidebar').getBoundingClientRect();
+     // Above it is only what this test keeps on purpose (the preserved-conflict line); otherwise the window top.
+     const above=document.querySelector('.main-quiz-map').previousElementSibling;
+     return [Math.round(f.left-side.right),Math.round(innerWidth-f.right),Math.round(f.top-(above?above.getBoundingClientRect().bottom:0)),Math.round(innerHeight-f.bottom),document.documentElement.scrollHeight<=innerHeight+1];}),[0,0,0,0,true]);
    // The panel sits beside the map, never over it, and the picked topic stays inside the map area.
    await graph.getByRole('button',{name:/^주제 A ·/}).click();await page.getByRole('heading',{name:'A',exact:true}).waitFor();
    assert.equal(await page.evaluate(()=>{const s=document.querySelector('.main-quiz-tree-stage').getBoundingClientRect(),
@@ -65,7 +68,7 @@ test('actual API: no textbox, preserved drafts/retries/conflicts, four ratings, 
    await page.getByRole('button',{name:'문항 펼치기',exact:true}).click();assert.equal(await graph.locator('.mq-lane-q').count(),3);
    await screenshot(page,'concept-map-desktop');await page.setViewportSize({width:390,height:844});
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await screenshot(page,'concept-map-mobile');
-   await page.getByRole('button',{name:'← 문제로 돌아가기',exact:true}).click();await allRatings(page);
+   await page.getByRole('button',{name:'문제로 돌아가기',exact:true}).click();await allRatings(page);
    await screenshot(page,'restored-answer-mobile');await page.getByRole('heading',{name:'문항 2 / 3'}).focus();await page.keyboard.press('4');
    await page.getByText('Synthetic question 3?',{exact:true}).waitFor();await enabled(page,'답 보기');await page.getByRole('heading',{name:'문항 3 / 3'}).focus();await page.keyboard.press('Space');
    await allRatings(page);await page.keyboard.press('1');await page.getByRole('heading',{name:'오늘 목록을 마쳤어요'}).waitFor();
@@ -83,7 +86,10 @@ test('map from start, PDF failure and modal do not block four self-ratings',asyn
      map.concepts.push(...Array.from({length:126},(_,i)=>({concept_id:'large-'+i,label:'Synthetic concept '+i,parent_ids:[]})));
      map.currentConceptIds=['A'];return route.fulfill({json:map});
    });
-   await page.goto(url);await page.getByRole('button',{name:'개념 지도',exact:true}).click();await page.getByRole('heading',{name:'개념 지도',exact:true}).waitFor();
+   await page.goto(url);await page.getByRole('button',{name:'개념 지도',exact:true}).click();
+   // From the start screen the map opens without drawing the question screen on the way (2026-11-09).
+   const sawQuestion=page.waitForSelector('text=Synthetic question',{timeout:4000}).then(()=>true,()=>false);
+   await page.getByRole('heading',{name:'개념 지도',exact:true}).waitFor();
    // Isolated labels (the 126 synthetic concepts: no parent, child, question or link) are not tree nodes:
    // lecture + 4 hierarchy topics (A, B, C, D) and the current topic's question row.
    const graph=page.getByRole('group',{name:'개념 트리'});assert.equal(await graph.getByRole('button').count(),6);
@@ -95,8 +101,10 @@ test('map from start, PDF failure and modal do not block four self-ratings',asyn
    const zoomed=await graph.getAttribute('style');assert.notEqual(zoomed,before);
    const s=await page.locator('.main-quiz-tree-stage').boundingBox();await page.mouse.move(s.x+s.width/2,s.y+s.height/2);await page.mouse.wheel(0,-300);
    assert.notEqual(await graph.getAttribute('style'),zoomed);
-   assert.equal(await page.locator('.main-quiz-tree-frame').evaluate(e=>e.getBoundingClientRect().bottom<=innerHeight),true);
-   await page.getByRole('button',{name:'← 문제로 돌아가기'}).click();await enabled(page,'답 보기');await page.getByRole('button',{name:/^답 보기/}).click();await allRatings(page);
+   assert.deepEqual(await page.locator('.main-quiz-tree-frame').evaluate(e=>{const f=e.getBoundingClientRect(),side=document.querySelector('.sidebar').getBoundingClientRect();
+     return [Math.round(f.left-side.right),Math.round(innerWidth-f.right),Math.round(f.top),Math.round(innerHeight-f.bottom)];}),[0,0,0,0]);
+   assert.equal(await sawQuestion,false);
+   await page.getByRole('button',{name:'문제로 돌아가기',exact:true}).click();await enabled(page,'답 보기');await page.getByRole('button',{name:/^답 보기/}).click();await allRatings(page);
    await page.getByRole('img',{name:'two-pages.pdf · PDF 2쪽',exact:true}).waitFor();await page.getByRole('button',{name:'two-pages.pdf · PDF 2쪽 크게 보기'}).click();
    await page.getByRole('dialog').waitFor();await page.keyboard.press('3');assert.match(await page.getByRole('heading',{name:/문항/}).innerText(),/1 \/ 3/);
    await page.keyboard.press('Escape');await page.getByRole('heading',{name:'문항 1 / 3'}).focus();await page.keyboard.press('4');await page.getByText('Synthetic question 2?',{exact:true}).waitFor();

@@ -118,19 +118,23 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     catch(e){if(!(e instanceof ApiError))setError((e as Error).message);}
     finally{setAdvancing(false);}
   }
+  // The map tab is chosen at once: from the start screen the session it needs is opened underneath,
+  // and the question screen is never drawn on the way (2026-11-09).
   async function showMap() {
     if(writes.blocked||advancing)return;
+    setTab('map');
     const current=viewRef.current;
-    if(!current){setMapRequested(true);await begin();return;}
+    if(!current){setMapRequested(true);await begin();if(!viewRef.current){setMapRequested(false);setTab('learn');}return;}
     const confirmed=writes.run(`/api/root-learning/sessions/${current.sessionId}/events`,{version:current.version,kind:'map'});
-    if(!confirmed)return;
+    if(!confirmed){setTab('learn');return;}
     setAdvancing(true);
+    let shown=false;
     try{
       const r=await confirmed;
       const [data]=await Promise.all([api<RootMapData>(`/api/root-learning/sessions/${r.sessionId}/map`),loadSession(r.sessionId)]);
-      setMap(data);setTab('map');
+      setMap(data);shown=true;
     }catch(e){if(!(e instanceof ApiError&&e.status===409))setError((e as Error).message);}
-    finally{setAdvancing(false);}
+    finally{setAdvancing(false);if(!shown)setTab('learn');}
   }
   useEffect(()=>{if(mapRequested&&view&&!writes.blocked&&!advancing){setMapRequested(false);void showMap();}},[mapRequested,view,writes.blocked,advancing]);
   useEffect(()=>{document.title='Main-Quiz · Study_EZ';},[]);
@@ -173,7 +177,7 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     {notice&&<p role="status">{notice}</p>}
     {writes.slow&&<p className="bank-note main-quiz-save-status" role="status">저장 확인 중…</p>}
     {view?<>
-      {view.finished&&(writes.blocked||writes.queued>0)?<p role="status">마지막 저장과 미확인 요청을 확인 중입니다. 완료 현황은 확인 뒤 표시합니다.</p>:tab==='map'&&map?<><button className="main-quiz-back" onClick={()=>setTab('learn')}>← 문제로 돌아가기</button><RootMap map={map} summary={view.summary} title={info?.title} position={`문항 ${Math.min(view.position+1,view.count)}/${view.count}`}/></>:
+      {view.finished&&(writes.blocked||writes.queued>0)?<p role="status">마지막 저장과 미확인 요청을 확인 중입니다. 완료 현황은 확인 뒤 표시합니다.</p>:tab==='map'?map?<RootMap map={map} summary={view.summary} title={info?.title} onBack={()=>setTab('learn')}/>:<p className="notice" role="status">개념 지도를 불러오는 중…</p>:
         <RootSolve view={view} title={info?.title} scope={scope} disabled={writes.blocked}
           editPath={qid=>`${base}/questions/${encodeURIComponent(qid)}/personal`}
           onEdited={result=>{forget();const current=viewRef.current;if(!current?.task)return;

@@ -5,7 +5,7 @@
 .main-quiz-question-heading:focus{outline:none}
 .main-quiz-solve .quiz-progress{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:24px}
 .main-quiz-tools{display:flex;align-items:center;gap:6px;letter-spacing:0;font-weight:400}
-.main-quiz-learning .main-quiz-tools button,.main-quiz-menu>summary,.main-quiz-back{border:0;background:transparent;color:var(--ink-2);font:inherit;font-size:.8rem;padding:6px 10px;min-height:36px;cursor:pointer;border-radius:6px}
+.main-quiz-learning .main-quiz-tools button,.main-quiz-menu>summary{border:0;background:transparent;color:var(--ink-2);font:inherit;font-size:.8rem;padding:6px 10px;min-height:36px;cursor:pointer;border-radius:6px}
 .main-quiz-tools button:hover,.main-quiz-menu>summary:hover{background:var(--hover)}
 .main-quiz-menu{position:relative;text-align:left}
 .main-quiz-menu>button{display:block;white-space:nowrap}
@@ -36,8 +36,11 @@
 .main-quiz-tree-bar i{display:block;min-width:2px}
 .main-quiz-tree-bar .is-new{background:#9aa3b3}.main-quiz-tree-bar .is-learning{background:#ca9b46}.main-quiz-tree-bar .is-recalled{background:#4c997b}.main-quiz-tree-bar .is-unready{background:#d6d6d6}
 /* 가지 보기: 강의 → 열(최상위 주제) → 들여쓴 하위 주제. 문항은 상태 점, 펼치면 줄. */
-.main-quiz-learning:has(.main-quiz-map){max-width:none;padding:0 8px}
-.main-quiz-map .main-quiz-tree-frame{border-radius:8px}
+/* 지도는 본문 칸을 끝까지 쓴다: 앱 본문 여백·1100px 폭 제한·틀 테두리 없이 좌측 메뉴 옆 전체(2026-11-09). */
+.main-quiz-learning:has(.main-quiz-map),.app-shell:not(.is-bare) .main-quiz-learning:not(.is-start):has(.main-quiz-map){max-width:none;margin:0;padding:0}
+.app-shell .app-main:has(.main-quiz-map),.app-shell:not(.is-bare) .app-main:has(.main-quiz-map){padding:0;max-width:none}
+.main-quiz-map .main-quiz-tree-frame{border:0;border-radius:0}
+.main-quiz-map.is-large .main-quiz-tree-frame{inset:0;box-shadow:none}
 .mq-map-legend{display:flex;align-items:center;gap:10px;padding:0 8px 0 4px;font-size:.72rem;color:var(--ink-3);white-space:nowrap}
 .mq-map-legend>span::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#9aa3b3;margin-right:4px;vertical-align:0}
 .mq-map-legend>.is-learning::before{background:#ca9b46}.mq-map-legend>.is-recalled::before{background:#4c997b}.mq-map-legend>.is-unready::before{background:#d6d6d6}

@@ -1,0 +1,237 @@
+{
+  "id": "2026-11-09-main-quiz-map-entry",
+  "title": "Main-Quiz 개념 지도 바로 열기·화면 끝까지 쓰기",
+  "area": "site",
+  "created_at": "2026-11-09T02:14:50.068398+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-09T02:14:50.285389+00:00",
+      "evidence": "2026-11-09 사용자 채팅: 「1. 개념지도를 누르면 문제화면을 안 거치고 바로 개념지도로 가게 해줘. 2. 화면 최대한 끝까지 써줘. 지금은 좌우, 위아래에 빈칸이 남아있어.」",
+      "scope": "web/src/bank/RootLearning.tsx·RootMap.tsx·main-quiz.css, web/tests/root-learning.*, 변경 기록; 커밋·PR·master 병합. 서버·DB 미변경",
+      "evidence_version": 2,
+      "source_hash": "6c211c998795ae138d810508cc876d9770ba7741a7da5641b50aef1e63516ec0",
+      "plan_hash": "72de24b64d77800f2ce9adc348da27a57b57a8927fafdd34e3ef29ba2ec36ff7",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "6ecb39676cc6c7a11a14e8d127e02da9ade4de627ecb95ff739bc59973d289d6"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-09T02:15:10.276112+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "6c211c998795ae138d810508cc876d9770ba7741a7da5641b50aef1e63516ec0",
+      "plan_hash": "72de24b64d77800f2ce9adc348da27a57b57a8927fafdd34e3ef29ba2ec36ff7",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-map-entry/1794190502566902000-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-09T02:15:17.906326+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "6c211c998795ae138d810508cc876d9770ba7741a7da5641b50aef1e63516ec0",
+      "plan_hash": "72de24b64d77800f2ce9adc348da27a57b57a8927fafdd34e3ef29ba2ec36ff7",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-map-entry/1794190510586261500-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-09T02:15:34.412127+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 2,
+      "evidence_version": 2,
+      "source_hash": "6c211c998795ae138d810508cc876d9770ba7741a7da5641b50aef1e63516ec0",
+      "plan_hash": "72de24b64d77800f2ce9adc348da27a57b57a8927fafdd34e3ef29ba2ec36ff7",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-map-entry/1794190518213018000-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-09T02:15:48.836728+00:00",
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "web",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "31a461b49ee80bb73b22ef82fedf7524c2a2dff8d0fbc162f4e8eba950aa6872",
+      "plan_hash": "72de24b64d77800f2ce9adc348da27a57b57a8927fafdd34e3ef29ba2ec36ff7",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-map-entry/1794190534747189800-web.log",
+      "web_artifact": "a7afe153e579cbfbc04bcc8616469eb0d4e4995ee161d3ccb69095698f0a5508",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-09T02:16:31.158854+00:00",
+      "command": [
+        "bash",
+        "C:/Users/ows01/AppData/Local/Temp/claude/2f8c495ebd154c62/0388ffe9-875f-4654-935c-073850089fe6/scratchpad/rootui2.sh",
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.worktrees/main-quiz-map-entry",
+        "2026-11-09-main-quiz-map-entry"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "31a461b49ee80bb73b22ef82fedf7524c2a2dff8d0fbc162f4e8eba950aa6872",
+      "plan_hash": "72de24b64d77800f2ce9adc348da27a57b57a8927fafdd34e3ef29ba2ec36ff7",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-map-entry/1794190560685312900-web.log",
+      "web_artifact": "a7afe153e579cbfbc04bcc8616469eb0d4e4995ee161d3ccb69095698f0a5508",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": {
+    "at": "2026-11-09T02:16:56.190846+00:00",
+    "summary": "diff 검토: 지도 탭 선행·실패 시 되돌림(세션 시작 실패·쓰기 거절·409·오류), 시작 화면 경로는 세션 여는 동안 시작 화면 유지, CSS는 :has(.main-quiz-map)로 지도 화면에만 적용되며 앱 틀 규칙(0,4,0)보다 높거나 같고 뒤에 실린다. 서버·DB 변경 없음. 브라우저 단언이 옛 코드에서 실패함을 확인.",
+    "evidence_version": 2,
+    "source_hash": "31a461b49ee80bb73b22ef82fedf7524c2a2dff8d0fbc162f4e8eba950aa6872",
+    "plan_hash": "72de24b64d77800f2ce9adc348da27a57b57a8927fafdd34e3ef29ba2ec36ff7",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-09T02:16:56.371119+00:00"
+}

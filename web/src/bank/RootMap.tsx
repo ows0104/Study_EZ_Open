@@ -15,7 +15,7 @@ import { ancestors, buildTree, lanes, lanesPerRow, questionsOf, STATUS_LABEL, ty
  * 줄은 HTML로 그리고, 가지선·연결선만 SVG 겹침층에 그린다. 좁은 화면은 세로 목록이다.
  */
 const STATUSES:Status[]=['is-new','is-learning','is-recalled','is-unready'];
-const PAD=20,TOOLS=46,FIT_MAX=1.2,MIN_K=0.25,MAX_K=2.6,LANE_W=236,LANE_GAP=16,BOTTOM=12,MIN_FRAME=360;
+const PAD=20,TOOLS=46,FIT_MAX=1.2,MIN_K=0.25,MAX_K=2.6,LANE_W=236,LANE_GAP=16,MIN_FRAME=360;
 const HUES=['#5466cf','#cf4f68','#b07a12','#8a5cc7','#18978a','#2d83c6','#4c9a35','#c0622b'];
 const NARROW='(max-width:760px)';
 type View={x:number;y:number;k:number};
@@ -57,7 +57,7 @@ function crossPath(a:Box,b:Box){
   return `M${x1} ${ay} C${x1+dx} ${ay} ${x2-dx} ${by} ${x2} ${by}`;
 }
 
-export function RootMap({map,summary,title='강의 전체'}:{map:RootMapData;summary:RootSummary;position?:string;title?:string}) {
+export function RootMap({map,summary,title='강의 전체',onBack}:{map:RootMapData;summary:RootSummary;title?:string;onBack?:()=>void}) {
   const tree=useMemo(()=>buildTree(map,summary,title),[map,summary,title]);
   const columns=useMemo(()=>lanes(tree),[tree]);
   const laneOf=useMemo(()=>{const m=new Map<string,number>();columns.forEach((l,i)=>{m.set(l.head,i);
@@ -157,7 +157,7 @@ export function RootMap({map,summary,title='강의 전체'}:{map:RootMapData;sum
   // The frame fills what is left of the window below it; re-fit whenever the frame or the map changes size.
   useLayoutEffect(()=>{
     const place=()=>{const f=frame.current;if(!f)return;
-      setFrameH(Math.max(MIN_FRAME,Math.floor(innerHeight-(f.getBoundingClientRect().top+scrollY)-BOTTOM)));};
+      setFrameH(Math.max(MIN_FRAME,Math.floor(innerHeight-(f.getBoundingClientRect().top+scrollY))));};
     place();addEventListener('resize',place);return()=>removeEventListener('resize',place);
   },[]);
   useEffect(()=>{
@@ -314,6 +314,7 @@ export function RootMap({map,summary,title='강의 전체'}:{map:RootMapData;sum
           </div>
         </div>
         <div className="main-quiz-tree-tools" onPointerDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()}>
+          {onBack&&<button className="mq-map-back" onClick={onBack} aria-label="문제로 돌아가기">← 문제</button>}
           {!narrow&&<><button onClick={()=>zoomStep(1.25)} aria-label="확대">＋</button>
           <button onClick={()=>zoomStep(0.8)} aria-label="축소">－</button>
           <button onClick={()=>fitAll(undefined,true)}>전체</button></>}
