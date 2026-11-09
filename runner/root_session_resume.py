@@ -33,7 +33,7 @@ def source_prompt(context):
 
 def inspect(out, session, expected_identity):
     out=Path(out).resolve();session=Path(session).resolve()
-    packet=read(out/'packet.json');ledger=read(out/'ledger.json')
+    packet=read(out/'packet.json');ledger=read(out/'ledger.json');from studyez_contracts.roots.generation_v2 import require_legacy_ledger;require_legacy_ledger(ledger)
     require(out.name==packet['generationId'] and out.parent.name=='_root-generation','Wrong generation folder')
     require(packet_hash(packet)==packet['inputHash'],'Changed packet')
     require(ledger['identity']==expected_identity==generation.identity(packet,None),'Changed runtime identity')

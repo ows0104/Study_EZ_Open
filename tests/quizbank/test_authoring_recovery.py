@@ -170,3 +170,11 @@ def test_only_review_notes_may_change_and_questions_cannot_change_in_structure_r
     after['bank']['questions'][0]['answer']='Changed answer'
     with pytest.raises(ValueError,match='completed authoring content changed'):
         c.validate_recovered_authoring(rejected,after)
+
+
+@pytest.fixture(autouse=True)
+def legacy_ledgers(monkeypatch):
+    """These recovery paths exist for runs recorded before the new-run policies (2026-11-09,
+    docs/changes/2026-11-09-main-quiz-runner-pipeline): shared initial-correction budget, no review retry.
+    New-policy runs are refused by the tools (test_run_policies)."""
+    monkeypatch.setattr('quizbank.connection_generate_v2.RUN_POLICIES', [])

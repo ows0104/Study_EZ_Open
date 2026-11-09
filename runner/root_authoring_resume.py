@@ -53,7 +53,7 @@ def process_check(meta):
     return {'checkedAt':datetime.now(timezone.utc).isoformat(),'matchingProcesses':matches,'windowSeconds':10}
 
 def inspect(out,session,expected_identity,expected_session,*,check_process=None):
-    out=Path(out).resolve();session=Path(session).resolve();packet=read(out/'packet.json');ledger=read(out/'ledger.json')
+    out=Path(out).resolve();session=Path(session).resolve();packet=read(out/'packet.json');ledger=read(out/'ledger.json');from studyez_contracts.roots.generation_v2 import require_legacy_ledger;require_legacy_ledger(ledger)
     require(out.name==packet['generationId']and out.parent.name=='_root-generation','Wrong generation folder')
     require(packet_hash(packet)==packet['inputHash']and ledger.get('pipelineVersion')==c.POLICY,'Changed packet/policy')
     require(ledger['identity']==expected_identity==g.identity(packet,None),'Changed authoring runtime')

@@ -165,3 +165,11 @@ def test_driver_keeps_terminal_remote_state_and_honors_stops(pending,monkeypatch
     assert len(runs)==int(state=='failed') and all(payload=={}for _,_,payload in requests)
     if state=='occupied':assert building.read_text()=='other worker'
     else:assert not building.exists()
+
+
+@pytest.fixture(autouse=True)
+def legacy_ledgers(monkeypatch):
+    """These recovery paths exist for runs recorded before the new-run policies (2026-11-09,
+    docs/changes/2026-11-09-main-quiz-runner-pipeline): shared initial-correction budget, no review retry.
+    New-policy runs are refused by the tools (test_run_policies)."""
+    monkeypatch.setattr('quizbank.connection_generate_v2.RUN_POLICIES', [])

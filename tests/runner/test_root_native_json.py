@@ -330,10 +330,34 @@ def test_review_that_judged_nothing_is_sent_back_once_and_then_fails_the_round(t
         return result
     native=n.NativeJson(out,invoke=run);native.followups=True
     with pytest.raises(Exception,match='judged nothing'):g.run(packet,out,invoke=native)
-    assert prompts.count(('source-0',None))==1 and sum(1 for s,r in prompts if r)==1
+    # review-retry/1: after the same-session follow-up, one fresh session; the first seat is archived.
+    assert prompts.count(('source-0',None))==2 and sum(1 for s,r in prompts if r)==2
     assert 'judged nothing'in n.read(out/'.native/source-0/check-failure.json')['error']
+    assert 'judged nothing'in n.read(out/'.retry-source-0/.native/source-0/check-failure.json')['error']
     ledger=n.read(out/'ledger.json')
     assert ledger['stages'].get('source-0',{}).get('status')!='completed'and 'medical-0'not in ledger['stages']
+    assert [r['stage']for r in ledger['reviewRetries']]==['source-0']
+
+def test_review_retry_reaches_a_result_through_the_native_adapter(tmp_path,monkeypatch):
+    packet=f.packet(tmp_path/'source.txt');out=tmp_path/'out';prompts=[]
+    monkeypatch.setattr(producer,'call_model',lambda stage,ctx,material,model:f.model(stage,ctx,material,model))
+    base=provider(out)
+    def run(prompt,**kwargs):
+        work=kwargs['cwd'];stage=work.parent.name;prompts.append((stage,kwargs.get('resume')));path=work/'result.json'
+        if kwargs.get('resume'):
+            return {'text':json.dumps({'path':'result.json','sha256':n.sha(path)}),'turns':2,'session_id':kwargs['resume'],
+                    'usage':{'input_tokens':7,'output_tokens':3,'cache_read_input_tokens':0,'cache_creation_input_tokens':0},
+                    'models':{kwargs['model']:3},'cost_usd':None,'duration_ms':2}
+        result=base(prompt,**kwargs)
+        if stage=='source-0'and prompts.count(('source-0',None))==1:
+            judged_nothing(path);result['text']=json.dumps({'path':'result.json','sha256':n.sha(path)})
+        return result
+    native=n.NativeJson(out,invoke=run);native.followups=True
+    result=g.run(packet,out,invoke=native)
+    assert prompts.count(('source-0',None))==2 and result['manifest']['reviewRetries'][0]['kind']=='empty-judgment'
+    n.validate_all(out,result)
+    (out/'.retry-source-0'/'source-0.raw.json').unlink()
+    with pytest.raises(ValueError,match='retry'):n.validate_all(out,result)
 
 def test_checker_python_is_the_first_the_sandbox_can_start_and_is_probed_once(tmp_path,monkeypatch):
     calls=[]
@@ -388,3 +412,16 @@ def test_review_stages_get_every_page_and_stimulus_image_in_their_first_message(
         assert n.read(out/'.native'/stage/'receipt.json')['proof']['attachedImages']==[{'file':k,'sha256':hashes[k]}for k in names]
     assert sent['normalize'][0]==[]and sent['generate'][0]==[]
     n.validate_all(out,result)
+
+def test_ledger_read_tolerates_the_other_review_thread_replacing_it(tmp_path,monkeypatch):
+    """source ‖ medical: one thread's atomic ledger replace briefly denies the other's read on Windows."""
+    (tmp_path/'ledger.json').write_text(json.dumps({'stages':{}}),encoding='utf-8')
+    real=n.read;denied=[]
+    def flaky(path):
+        if len(denied)<2:denied.append(path);raise PermissionError(13,'Permission denied',str(path))
+        return real(path)
+    monkeypatch.setattr(n,'read',flaky);monkeypatch.setattr(n.time,'sleep',lambda s:None)
+    n.require_unblocked(tmp_path)
+    assert len(denied)==2
+    denied.clear();monkeypatch.setattr(n,'read',lambda path:(_ for _ in()).throw(PermissionError(13,'Permission denied')))
+    with pytest.raises(PermissionError):n.require_unblocked(tmp_path)

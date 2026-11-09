@@ -26,7 +26,7 @@ def processes(sid):
     require(not ids,'Retired authoring session still has an active execution');return ids
 
 def inspect(out,session,identity,reason,*,check_process=None):
-    out=Path(out).resolve();packet=read(out/'packet.json');ledger=read(out/'ledger.json');session=Path(session).resolve()
+    out=Path(out).resolve();packet=read(out/'packet.json');ledger=read(out/'ledger.json');session=Path(session).resolve();from studyez_contracts.roots.generation_v2 import require_legacy_ledger;require_legacy_ledger(ledger)
     require(out.name==packet['generationId']and out.parent.name=='_root-generation','Different generation folder')
     require(packet_hash(packet)==packet['inputHash']and packet.get('sourceAssessmentFormat')==c.VERSION,'Changed packet/policy')
     require(ledger['identity']==identity==g.identity(packet,None)and ledger.get('pipelineVersion')==c.POLICY,'Different original producer')
