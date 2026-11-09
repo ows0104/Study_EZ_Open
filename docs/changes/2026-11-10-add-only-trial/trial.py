@@ -225,6 +225,53 @@ def step_recheck():
     print(json.dumps({'reviewed': path.name, 'durationMs': info.get('duration_ms')}))
 
 
+SCOPED = '''
+TRIAL SCOPE — NARROWED RE-CHECK (사용자 「좁힌 재확인 만들기」 2026-11-10, docs/changes/2026-11-10-add-only-trial).
+input.json holds only part of this lecture on purpose: the goals that the earlier review found uncovered, and only
+the questions added for them. Every other goal and question was already reviewed and is absent by design; do not
+report their absence. Judge, for every listed goal, whether one of the listed questions asks the whole goal
+(answer_scope with its components/relations), with the same evidence rules as above.
+'''
+
+
+def scoped_subset(authored, gaps, added):
+    """Brief limited to the uncovered goals (all concepts kept so the tree validates), bank to the new questions."""
+    b = copy.deepcopy(authored['brief'])
+    targets = [x for x in b['targets'] if any(d['direction_id'] in gaps for d in x['directions'])]
+    assert all(d['direction_id'] in gaps for x in targets for d in x['directions']), 'A kept target has a covered goal'
+    tids = {x['target_id'] for x in targets}
+    rids = {r for x in targets for r in x['relation_ids']} | {r for x in targets for d in x['directions'] for r in d['relation_ids']}
+    b['targets'] = targets
+    b['relations'] = [r for r in b['relations'] if r['relation_id'] in rids]
+    b['points'] = [{**p, 'target_ids': [x for x in p['target_ids'] if x in tids]} for p in b['points'] if set(p['target_ids']) & tids]
+    c.validate_brief(b)
+    bank = copy.deepcopy(authored['bank'])
+    bank['questions'] = [q for q in bank['questions'] if q['question_id'] in added]
+    assert len(bank['questions']) == len(added)
+    return {**authored, 'brief': b, 'bank': bank}
+
+
+def step_scoped():
+    check = read(OUT / 'add-only-check.json')
+    assert not check['changedExisting'], 'Add-only stage did not hold'
+    authored = read(OUT / ('repair-1.json' if check['briefUnchanged'] else 'repair-1-adopted.json'))
+    sub = scoped_subset(authored, set(check['gapGoals']), set(check['added']))
+    write(OUT / 'scoped-subset.json', {'goals': sorted(d['direction_id'] for t in sub['brief']['targets'] for d in t['directions']),
+                                        'questions': [q['question_id'] for q in sub['bank']['questions']],
+                                        'relations': len(sub['brief']['relations']), 'points': len(sub['brief']['points'])})
+    original = rnj.task_for
+    rnj.task_for = lambda stage: original(stage) + (SCOPED if stage == 'source-2' else '')
+    try:
+        audit, info = review('source-2', sub)
+    finally:
+        rnj.task_for = original
+    cov = coverage(audit)
+    tally = {}
+    for s in cov.values():
+        tally[s] = tally.get(s, 0) + 1
+    print(json.dumps({'coverage': tally, 'durationMs': info.get('duration_ms')}, ensure_ascii=False))
+
+
 def verdicts(audit):
     return {r['question_id']: r['verdict'] for r in audit['question_reviews']} if 'question_reviews' in audit else \
         {r['question_id']: r['verdict'] for r in audit['assessment']['assessment']['question_reviews']}
@@ -259,4 +306,4 @@ def step_compare():
 
 
 if __name__ == '__main__':
-    {'prepare': prepare, 'coverage': step_coverage, 'add': step_add, 'adopt': step_adopt, 'recheck': step_recheck, 'compare': step_compare}[sys.argv[1]]()
+    {'prepare': prepare, 'coverage': step_coverage, 'add': step_add, 'adopt': step_adopt, 'recheck': step_recheck, 'scoped': step_scoped, 'compare': step_compare}[sys.argv[1]]()
