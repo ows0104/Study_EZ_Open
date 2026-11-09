@@ -247,3 +247,20 @@ def test_schema_rejected_first_output_is_also_sent_back_once_into_the_same_sessi
     assert ('generate','synthetic-native')in prompts and sum(1 for s,r in prompts if r)==1
     assert 'stimuli'in n.read(out/'.native/generate/check-failure.json')['error']
     n.validate_all(out,result)
+
+
+def test_model_file_with_utf8_bom_is_read_and_stays_verifiable(tmp_path,monkeypatch):
+    """26110901 generation-2 repair-2 (the last round) wrote result.json with a UTF-8 BOM; strict utf-8 decoding
+    failed the completed call. The bytes and receipt hash stay as written; only decoding tolerates one leading BOM."""
+    packet=f.packet(tmp_path/'source.txt');out=tmp_path/'out'
+    monkeypatch.setattr(producer,'call_model',lambda stage,ctx,material,model:f.model(stage,ctx,material,model))
+    base=provider(out)
+    def run(prompt,**kwargs):
+        result=base(prompt,**kwargs);work=kwargs['cwd']
+        if work.parent.name=='generate':
+            path=work/'result.json';path.write_bytes(b'\xef\xbb\xbf'+path.read_bytes())
+            result['text']=json.dumps({'path':'result.json','sha256':n.sha(path)})
+        return result
+    result=g.run(packet,out,invoke=n.NativeJson(out,invoke=run))
+    assert (out/'.native/generate/output.json').read_bytes().startswith(b'\xef\xbb\xbf')
+    n.validate_all(out,result)

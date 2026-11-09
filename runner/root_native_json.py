@@ -91,6 +91,10 @@ def pairs(rows):
 
 def loads(text):return json.loads(text,object_pairs_hook=pairs,parse_constant=lambda _:(_ for _ in()).throw(ValueError('Nonfinite JSON number')))
 def read(path):return loads(Path(path).read_text(encoding='utf-8'))
+# A model-written file may start with one UTF-8 BOM (Windows tools; 26110901 repair-2). Bytes and receipt
+# hashes stay exactly as written; only decoding tolerates it.
+def model_text(body):return body.decode('utf-8-sig')
+def read_model(path):return loads(model_text(Path(path).read_bytes()))
 
 def clean(value):
     if isinstance(value,dict):return {k:clean(v)for k,v in value.items()if k!='png_base64'}
@@ -160,7 +164,7 @@ def check_file(stage,work):
     work=Path(work);ctx=read(work/'input.json');schema=read(work/'acceptance.schema.json')
     require(schema==schema_for(stage,ctx),'Different acceptance schema')
     path=work/'result.json';require(not path.is_symlink()and path.is_file()and 0<path.stat().st_size<=LIMIT,'Unsafe/missing result')
-    value,_=decode_for(stage,read(path),schema);jsonschema.validate(value,schema)
+    value,_=decode_for(stage,read_model(path),schema);jsonschema.validate(value,schema)
     if stage=='normalize':
         require(value['sources']==ctx['sources']and value['lecture_id']==ctx['lecture_id'],'Different normalization sources/lecture')
         require((value['provenance']['independent_points']=='confirmed')==(ctx.get('inputMode')=='source'),'Different extraction independence')
@@ -223,7 +227,7 @@ def artifact(work,receipt):
     with path.open('rb')as handle:body=handle.read(LIMIT+1)
     require(len(body)==stat.st_size and len(body)<=LIMIT and hashlib.sha256(body).hexdigest()==receipt['sha256'],'Native file does not match receipt')
     after=path.stat();require((stat.st_ino,stat.st_mtime_ns,stat.st_size)==(after.st_ino,after.st_mtime_ns,after.st_size),'Native file changed during acceptance')
-    return body,loads(body.decode('utf-8'))
+    return body,loads(model_text(body))
 
 class NativeJson:
     def __init__(self,out,*,invoke=None,timeout=2400):self.out=Path(out).resolve();self.invoke=invoke;self.timeout=timeout
@@ -340,7 +344,7 @@ def validate_stage(out,entry,*,model):
         require(loads(response['text'])=={'path':'result.json','sha256':proof['outputSha256']},'Native completion receipt differs')
         merged=response
     require(sha(seat/'output.json')==proof['outputSha256'],'Native output archive differs')
-    raw,projection=decode_for(name,read(seat/'output.json'),schema);jsonschema.validate(raw,schema)
+    raw,projection=decode_for(name,read_model(seat/'output.json'),schema);jsonschema.validate(raw,schema)
     require(proof.get('tierProjection')==projection,'Changed authored tier projection')
     saved=read(out/(name+'.raw.json'));saved=saved['assessment']if name.startswith('source-')else saved
     require(document_hash(raw)==proof['rawHash']==document_hash(saved),'Accepted raw differs from actual native file')

@@ -107,7 +107,7 @@ def validate_recovery(out,row,*,model):
         and n.read(archive/'ledger-before.json')==p['priorLedger'],'Changed original rejection archive')
     journal=n.read(archive/'journal-before.json');n.require(journal['status']=='failed','Original Native rejection missing')
     seat=out/'.native'/stage;ctx=n.read(out/(stage+'.input.json'))
-    raw=g.decode_optional_fields(n.read(seat/'output.json'),n.schema_for(stage,ctx))
+    raw=g.decode_optional_fields(n.read_model(seat/'output.json'),n.schema_for(stage,ctx))
     n.require(raw==p['rawAuthoring'],'Changed original tier spelling')
     decoded,projection=c.tier_projection(raw)
     n.require(projection==p['projection']and n.read(out/(stage+'.raw.json'))==decoded,'Changed projected authoring')
