@@ -1,5 +1,6 @@
 """Opt-in speed path (speedStages): context check first, source ‖ medical, medical review reuse."""
 import copy
+import json
 import sys
 import threading
 from pathlib import Path
@@ -16,14 +17,15 @@ def speed_packet(tmp_path):
     return p
 
 
-def recorder(status='consistent', wrong_once=False, change_q2=False):
+def recorder(status='consistent', wrong_once=False, change_q2=False, problem=None):
     calls, medical_questions, lock = [], {}, threading.Lock()
     def invoke(stage, ctx, *args):
         with lock:
             calls.append(stage)
         if stage.startswith('context-'):
             assert 'brief' not in ctx and 'clinical_conflicts' in ctx and 'bank' in ctx
-            return {'clinical_context_status': status, 'clinical_context_reason': 'synthetic ' + status}, {}
+            kind = problem or ('contamination' if status == 'conflict' else 'none')
+            return {'clinical_context_status': status, 'clinical_context_problem': kind, 'clinical_context_reason': 'synthetic ' + status}, {}
         if stage.startswith('medical-'):
             medical_questions[stage] = [q['question_id'] for q in ctx['bank']['questions']]
         value, info = f.model(stage, ctx, *args)
@@ -67,3 +69,34 @@ def test_unchanged_questions_reuse_the_earlier_medical_review(tmp_path):
     if result['manifest']['repairRounds'] == 1:
         with pytest.raises(ValueError):
             c.validate_result(bad, p)
+
+
+# clinical-context/2 (2026-11-09 사용자 「오염만 막기」)
+def test_an_incomplete_conflict_record_still_gets_the_medical_review_and_goes_to_repair(tmp_path):
+    p = speed_packet(tmp_path); invoke, calls, _ = recorder(status='conflict', problem='incomplete')
+    result = g.run(p, tmp_path / 'out', invoke=invoke)
+    stages = {s['name']: s['status'] for s in result['manifest']['stages']}
+    assert all(stages[f'medical-{n}'] == 'completed' for n in range(4))  # every round was medically reviewed, none withheld
+    decision = json.loads((tmp_path / 'out' / 'repair-decision-0.json').read_text(encoding='utf-8'))
+    assert any(r['text'].startswith('임상 충돌 정리 보완(정답 검수는 진행)') for r in decision['reasons'])
+    assert result['manifest']['repairRounds'] == 3 and result['manifest']['clinicalContext']['clinical_context_problem'] == 'incomplete'
+    c.validate_result(result, p)
+
+
+def test_unknown_context_no_longer_withholds_the_medical_review_and_is_not_a_repair_reason(tmp_path):
+    p = speed_packet(tmp_path); invoke, calls, _ = recorder(status='unknown')
+    result = g.run(p, tmp_path / 'out', invoke=invoke)
+    assert 'medical-0' in calls and result['manifest']['repairRounds'] == 0
+    c.validate_result(result, p)
+
+
+def test_context_status_and_problem_must_agree_and_legacy_records_keep_the_old_rule():
+    ok = {'clinical_context_status': 'conflict', 'clinical_context_problem': 'incomplete', 'clinical_context_reason': 'x'}
+    assert c.validate_context(ok) and not c.context_blocks_medical(ok) and c.context_repair_note(ok)
+    for status, problem in (('conflict', 'none'), ('consistent', 'incomplete'), ('unknown', 'contamination')):
+        with pytest.raises(ValueError):
+            c.validate_context({**ok, 'clinical_context_status': status, 'clinical_context_problem': problem})
+    assert c.context_blocks_medical({**ok, 'clinical_context_problem': 'contamination'})
+    for status, blocks in (('consistent', False), ('unknown', True), ('conflict', True)):  # written before /2
+        legacy = {'clinical_context_status': status, 'clinical_context_reason': 'x'}
+        assert c.validate_context(legacy) and c.context_blocks_medical(legacy) is blocks and not c.context_repair_note(legacy)

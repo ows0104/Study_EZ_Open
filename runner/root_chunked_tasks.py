@@ -1,5 +1,6 @@
 """Durable CLI review batches; failed/interrupted work is never automatically replayed."""
 import copy
+import gc
 import json
 import shutil
 import sys
@@ -122,6 +123,7 @@ def validate_task(seat,row,ctx,model,outputs=None):
 
 def run(home,ctx,material,model,invoke=None):
     tasks=contract.plan(ctx);rows={};outputs={}
+    gc.collect()  # see quizbank.connection_generate_v2: finalise this thread's cyclic garbage here, not in a worker
     with ThreadPoolExecutor(max_workers=3)as pool:
         queue=iter(t for t in tasks if t['kind']!='global')
         pending={pool.submit(run_one,home,ctx,t,material,model,None,invoke)for t in [next(queue),next(queue),next(queue)]}
