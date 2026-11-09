@@ -23,7 +23,6 @@
 
 
 
-| P1 | Main-Quiz 생성: 빈 원본 대조를 완료로 받지 않기 + 샌드박스에서 도는 검사 python | ows0104 / Claude 사슬알균 시범 세션 | claude/review-completeness | runner/root_native_json.py, tests/runner/test_root_native_json.py, docs/changes/2026-11-09-main-quiz-second-lecture | 2026-11-09 | 사슬알균 generation-4: source-2가 「검토 미완료」·129문항 전부 doubt로 완료 처리됨, 검사 명령(.venv uv python)이 Codex 샌드박스에서 permission denied. 프롬프트·DB·운영 미변경 |
 | P1 | Main-Quiz 문제 퀄리티 — 검사기에 측정 추가(구조 단서-정답 상관·정답 회상 부담·형식 쏠림) | ows0104 / Claude 문제 퀄리티 세션 | claude/bank-quality-checks | studyez_contracts/bank/quality.py, tests/quizbank/test_answer_quality.py(새 파일), docs/changes/2026-11-08-bank-quality-checks | 2026-11-08 | 사용자 2026-11-08 진단 뒤 「검사기에 측정 추가」 선택. 근거: 감염과 면역 261104_02 98문항 중 예/아니오 축 6문항 정답이 전부 부정, basic/list 답 60자 초과 21개, cloze·mcq 0개. 기존 품질 검사는 leaked_units(발문 정답 노출) 하나뿐. errors 아님 — warnings만 추가해 문항을 떨어뜨리지 않고 repair 단계·관리자 issues에 보인다. 선은 운영 Quiz Bank 35편 3,103문항의 p97에서 쟀다. 프롬프트·DB·운영 미변경. 구현·검사 완료 eff75a83 PR #22 https://github.com/ows0104/Study_EZ_Open/pull/22 — 측정 16·contracts·quizbank 720 통과, 전체 pytest 2,098 통과(1 실패는 tests/runner/test_desktop_control.py 바로가기 설치기로 pristine origin/master에서 동일 재현·미수정), 서버 bank 33·경로 171 동일·retention 통과, map_numbers 정상. 실물 대조: 새 Main-Quiz 98문항 errors 0·warnings 36(다섯 측정 모두, Q003·Q080 이름으로), 운영 은행 35편 새 경고 62(편당 중앙 2)·errors 증가 0. master 병합은 사용자 승인 대기 |
 
 
@@ -60,6 +59,7 @@
 
 merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 줄은 지워도 된다.
 
+- 2026-11-09 · Main-Quiz 생성: 빈 원본 대조 거절(require_judgment) + 샌드박스에서 뜨는 검사 python(child_env·sandbox_python) · ows0104 / Claude 사슬알균 시범 세션 · PR #55 https://github.com/ows0104/Study_EZ_Open/pull/55 (병합 18ef6a60)
 | 완료일 | 작업 | 작업자 | PR |
 |---|---|---|---|
 | 2026-11-09 | Main-Quiz 개념 지도 바로 열기(문제 화면 미경유)·지도가 좌측 메뉴 옆 본문 칸을 여백 없이 채움(1100px 제한·본문 여백 제거). 병합 a2352b59, health revision·Pages 청크 확인 | ows0104 / Claude 개념 지도 세션 | [#54](https://github.com/ows0104/Study_EZ_Open/pull/54) |
