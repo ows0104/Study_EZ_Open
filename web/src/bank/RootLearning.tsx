@@ -182,6 +182,10 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
           editPath={qid=>`${base}/questions/${encodeURIComponent(qid)}/personal`}
           onEdited={result=>{forget();const current=viewRef.current;if(!current?.task)return;
             const next={...current,task:{...current.task,question:result.question,answer:current.task.answer?result.answer:null}};
+            viewRef.current=next;setView(next);if(!current.finished)ensure(current.position,current.count);}}
+          tierPath={qid=>`${base}/questions/${encodeURIComponent(qid)}/tier`}
+          onTier={question=>{forget();const current=viewRef.current;if(!current?.task||current.task.question.question_id!==question.question_id)return;
+            const next={...current,task:{...current.task,question}};
             viewRef.current=next;setView(next);if(!current.finished)ensure(current.position,current.count);}} advancing={advancing} onAction={act} onError={setError} onMap={()=>void showMap()}
           onToday={()=>{setView(null);setMap(null);setTab('learn');void refresh().catch(e=>setError(e.message));}}/>}
       {view.blocked?.includes('학습일')&&<button disabled={writes.blocked} onClick={()=>{setView(null);void refresh().catch(e=>setError(e.message));}}>오늘 학습 다시 계획</button>}
