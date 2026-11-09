@@ -315,3 +315,14 @@ normalize(초기 지도 오류 1 → 보완 1/3 선소비) → generate(89문항
 - 보관: 14:00 판 결과는 `generation-4/.resume-2/result.json`, 14:52·15:31 source-2는 각각 `.resume-3/`·`.resume-4/`에 있다.
 - 검토 페이지를 갱신했다(Version 2): https://claude.ai/artifact/6iPR4QUkTDES3YEvtdtpJF
 - 운영 반입·학생 공개는 하지 않았다.
+
+## 운영 반입 (2026-11-09 사용자 「반입해줘」)
+
+- `publication.py`는 감염병리1의 반입 스크립트를 이 강의에 맞게 옮긴 것이다. 순서는 preflight(읽기만) → 배포 확인 → 원본 스냅숏 → 등록 → 전후 대조다.
+  - 바꾼 점: 처음 반입하는 강의라 공개 범위가 관리자 시범(`['runner']`)으로 생기는지 확인한다. 다른 강의의 Main-Quiz 판 수·설정이 그대로인지도 대조한다.
+- preflight 결과: 강의는 있고, Main-Quiz 판·설정·이벤트·세션은 0개였다. 다른 강의는 판 3개, 설정 1개였다.
+- 운영 API 2a3ad0b2(PR #57) 배포를 확인한 뒤 반입했다.
+  - generationId `3d80ffb0caaf178968f5e0203507237b`, revision `map-tree-26110901`, 과제 96.
+  - 공개 범위: 관리자 시범 `allowed_users=['runner']`, enabled. **학생 공개는 하지 않았다.**
+  - publication 이벤트 0 → 1건. 다른 강의 Main-Quiz, Quiz Bank, 학습 상태, 세션은 그대로다(스크립트 전후 대조).
+- 기록: `runs/_e2e/26110901/publication/{preflight,published}.json`.
