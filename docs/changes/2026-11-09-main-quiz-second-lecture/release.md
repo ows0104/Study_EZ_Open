@@ -44,3 +44,28 @@ normalize → generate(106문항, 그림 8) → context-0 → source-0 ‖ medic
 - 서버·계약 변경은 없다.
 
 `generation/`은 보존한다. 사용량은 repair-1까지 1/3을 썼다. 2026-11-09 사용자 「generation-2로 다시」에 따라 같은 packet으로 `generation-2/`에서 다시 돈다.
+
+## generation-2 — 실패 2 (같은 packet, c0f5a48a 코드)
+
+normalize(초기 지도 오류 1 → 보완 1/3 선소비) → generate(89문항) → context-0 → source-0 ‖ medical-0
+→ **repair-1 통과**(위 수정 확인) → context-1 → source-1 ‖ medical-1 → **repair-2(3/3, 마지막) 거절**.
+
+- 원인: 모델이 `result.json` 앞에 UTF-8 BOM을 썼다. 영수증 해시는 맞았지만 어댑터가 엄격한 utf-8로 읽다 실패했다.
+  감염병리1 26110803 audit에서도 같은 BOM이 나온 적이 있다(그때는 run.py의 postcheck로 처리).
+- 수정(52e1e751): `root_native_json.read_model`은 모델이 쓴 파일의 맨 앞 BOM 하나를 허용한다. 바이트와 영수증은 그대로다.
+  `artifact`·`check_file`·`validate_stage`·tier 복구·task supplement가 이를 쓴다. 검사 1개를 더했다(수정 전 실패).
+- 이 폴더를 재호출 없이 이어 가려면 계약의 형식 복구(`validate_format_recoveries`, tier 표기 전용)에 새 종류를 더해야 한다.
+  아직 하지 않았다.
+
+### 내용 신호: 중요도 근거 다툼이 마지막 회차에 몰렸다
+
+| 회차 | target_checks | 보완 사유 |
+|---|---|---|
+| source-0 | unknown 118 · conflict 1 | question_fix 34 · map_fix 4 · required_gap 3 |
+| source-1 | consistent 60 · unknown 31 · conflict 28 | question_fix 14 · **map_fix 68** · required_gap 16 |
+
+- source-1의 map_fix는 대부분 「목표 X의 근거를 별도로 판단한다」였다.
+  예: 포인트가 S1 7쪽 Summary를 `learning_objective`로 적었는데 「Summary 본문은 2쪽의 명시적 학습목표가 아니다」.
+- 포인트 /3 단계의 importance_basis 판정을 원본 대조가 두 번째 회차에서야 본격적으로 다투었다.
+  그 결과 98건이 마지막 보완 1회에 실렸다.
+- 감염병리1 26110803에서는 최종 conflict가 7이었다.
