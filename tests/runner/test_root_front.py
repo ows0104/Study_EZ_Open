@@ -16,12 +16,10 @@ from runner import connection_generation as worker
 from runner import root_evidence
 from studyez_contracts.roots import map_tree
 from studyez_contracts.roots.automation import packet_hash, validate_result
+from map_tree_fixture import TITLE, pdf, concept_map, points, fake_codex, generation_model
 
 GOLD = Path(__file__).resolve().parents[1] / 'fixtures' / 'map_tree_26110901'
-TITLE = 'Synthetic lecture'
 GID = 'a' * 32
-BASIS = [{'kind': 'current_exam', 'year': 2023, 'quote': '', 'reason': 'synthetic exam', 'refs': [{'source_id': 'S1', 'pages': [1]}]},
-         {'kind': 'slide_emphasis', 'year': None, 'quote': '', 'reason': 'synthetic box', 'refs': [{'source_id': 'S1', 'pages': [1]}]}]
 
 
 def gold(name):
@@ -45,15 +43,6 @@ def test_templates_reproduce_the_pilot_tasks_byte_for_byte():
 
 # ------------------------------------------------------------------ synthetic request
 
-def pdf(path, pages):
-    import pymupdf
-    doc = pymupdf.open()
-    for i in range(pages):
-        doc.new_page().insert_text((72, 72), f'Synthetic {path.stem} page {i + 1}')
-    doc.save(path); doc.close()
-    return path
-
-
 def server_packet(tmp_path, jokbo=True, scope=''):
     sources = []
     for sid, kind, name, pages in (('S1', 'notes_current', 'notes.pdf', 2), ('S2', 'jokbo', 'jokbo.pdf', 1))[:2 if jokbo else 1]:
@@ -67,54 +56,6 @@ def server_packet(tmp_path, jokbo=True, scope=''):
          'sourceAssessmentFormat': map_tree.FORMAT}
     p['inputHash'] = packet_hash(p)
     return p
-
-
-def concept_map():
-    return {'schema_version': 'concept-map-extract/3', 'title': TITLE, 'overview': 'Synthetic overview', 'relations': [], 'notes': [],
-            'concepts': [{'concept_id': cid, 'parent_id': parent, 'title': 'T' + cid, 'core_facts': ['Synthetic fact'],
-                          'source_refs': [{'source_id': 'S1', 'pages': [1], 'locator': None}]}
-                         for cid, parent in (('C001', None), ('C002', 'C001'), ('C003', 'C002'), ('C004', 'C001'))]}
-
-
-def points(extra=False):
-    rows = [{'point_id': 'P001', 'point': 'Synthetic A/B point', 'source_refs': [{'source_id': 'S1', 'pages': [1], 'locator': None}],
-             'importance_basis': BASIS}]
-    if extra:
-        rows.append({'point_id': 'P002', 'point': 'Synthetic page-two point', 'source_refs': [{'source_id': 'S1', 'pages': [2], 'locator': None}],
-                     'importance_basis': BASIS})
-    return {'schema_version': 'exam-point-extract/3', 'title': TITLE, 'notes': [],
-            'notebook_profile': {'legend': '', 'emphasis_style': 'slide', 'reason': 'synthetic'}, 'points': rows}
-
-
-def audit(n_points, issues=False):
-    found = [{'issue_id': 'I1', 'kind': 'missing', 'point_ids': ['P001'], 'source_refs': [{'source_id': 'S1', 'pages': [2], 'locator': None}],
-              'reason': 'Page 2 states a separate goal', 'suggested_goal': 'Synthetic page-two point'}] if issues else []
-    return {'title': TITLE, 'point_count': n_points, 'verdict': 'needs_revision' if issues else 'ready',
-            'page_review': [{'source_id': 'S1', 'pages': [1, 2], 'status': 'covered', 'reason': 'read'},
-                            {'source_id': 'S2', 'pages': [1], 'status': 'out_of_scope', 'reason': 'not in S1'}],
-            'issues': found, 'suggestions': [], 'summary': 'Synthetic audit'}
-
-
-def fake_codex(calls, *, issues=False, fail=(), tamper=None):
-    fail = list(fail)
-
-    def run(task, *, cwd, label, **kwargs):
-        stage = Path(cwd).name; calls.append((stage, task))
-        if stage in fail:
-            fail.remove(stage); raise RuntimeError('synthetic interrupted call in ' + stage)
-        if stage == 'map': name, value = 'concept-map.json', concept_map()
-        elif stage == 'point': name, value = 'exam-points.json', points()
-        elif stage == 'point-repair': name, value = 'exam-points.json', points(extra=True)
-        else:
-            name = 'audit.json'
-            count = len(json.loads((Path(cwd) / 'exam-points.json').read_text(encoding='utf-8'))['points'])
-            value = audit(count, issues=issues and stage == 'audit')
-        path = Path(cwd) / name
-        path.write_text(json.dumps(value, ensure_ascii=False), encoding='utf-8')
-        if tamper == stage: (Path(cwd) / 'input.json').write_text('{}', encoding='utf-8')
-        return {'text': json.dumps({'path': name, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}),
-                'session_id': 'session-' + stage, 'duration_ms': 3, 'usage': {'input_tokens': 1}}
-    return run
 
 
 def stages(calls):
@@ -221,17 +162,6 @@ class Client:
         return {'status': 'ready'}
 
 
-def generation_model(stage, ctx, *args):
-    import generation_v2_fixture as f2
-    if stage.startswith('context-'):
-        return {'clinical_context_status': 'consistent', 'clinical_context_reason': 'synthetic', 'clinical_context_problem': 'none'}, {}
-    value, info = f2.model(stage, ctx, *args)
-    if stage == 'normalize': value['lecture_id'] = ctx['lecture_id']
-    if stage == 'generate' or stage.startswith('repair-'):
-        for q in value['bank']['questions']: q['point_ids'] = ['P001']
-    return value, info
-
-
 def wire(monkeypatch, client, commands, front_calls):
     monkeypatch.setattr(root_evidence, 'build', lambda *a, **k: None)
     monkeypatch.setattr(worker.urllib.request, 'urlopen', lambda req, **k: io.BytesIO(client.bodies[req.full_url.rsplit('/', 1)[1]]))
@@ -334,3 +264,24 @@ def test_replaying_the_sasl_pilot_answers_reproduces_its_front_outputs(tmp_path)
     pilot_packet = json.loads((PILOT / 'generation/packet.json').read_text(encoding='utf-8'))
     assert json.loads(derived['points']) == json.loads(pilot_packet['points']) and json.loads(derived['conceptMap']) == json.loads(pilot_packet['conceptMap'])
     assert [(a['verdict'], a['issues']) for a in derived['frontStages']['audits']] == [('needs_revision', 10), ('needs_revision', 6)]
+
+
+def test_the_server_stored_reason_is_used_once_for_the_next_run(tmp_path, monkeypatch):
+    """The admin screen stores the reason in the request (operatorResumes, outside its fingerprint)."""
+    p = server_packet(tmp_path); client = Client(p); commands = []; front_calls = []
+    wire(monkeypatch, client, commands, front_calls)
+    original = worker.run_forwarded
+    def first_fails(args, **kwargs):
+        if args[2] == 'runner.root_front' and not any(a[2] == 'runner.root_front' for a in commands):
+            commands.append(args); return SimpleNamespace(returncode=1)
+        return original(args, **kwargs)
+    monkeypatch.setattr(worker, 'run_forwarded', first_fails)
+    assert worker.run_generation(client, p['subject'], p['runId'], tmp_path / 'runs', GID) == 1
+    client.packet['operatorResumes'] = [{'reason': 'admin: runner laptop slept', 'at': '2026-11-09T12:00:00+00:00', 'by': 'admin'}]
+    assert packet_hash(client.packet) == client.packet['inputHash']  # the reason is not part of the request identity
+    assert worker.run_generation(client, p['subject'], p['runId'], tmp_path / 'runs', GID) == 0
+    front_args = [a for a in commands if a[2] == 'runner.root_front']
+    assert '--resume' not in front_args[0] and front_args[1][front_args[1].index('--resume') + 1] == 'admin: runner laptop slept'
+    assert json.loads((tmp_path / 'runs' / '_root-generation' / GID / 'operator-resumes.json').read_text()) == {'used': 1}
+    put = next(c for c in client.calls if c[0] == 'PUT')
+    validate_result(json.loads(json.dumps(put[2])), client.packet)  # the server's stored packet, with the reason

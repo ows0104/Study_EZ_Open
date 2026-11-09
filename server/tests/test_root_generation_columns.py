@@ -58,7 +58,10 @@ def legacy_public_job(db, row):
                 'examDate': row.packet.get('requestedExamDate', row.packet['examDate']),
                 'inputMode': row.packet.get('inputMode', 'provided')}, 'report': report,
             'authoring': row.packet.get('authoring', 'cli'), 'parallelAuthoring': row.packet.get('parallelAuthoring', False), 'awaitingWeb': row.packet.get('authoring') == 'web' and not row.web_response and job.state == 'held' and not job.cancel_requested and job.stage == 'ChatGPT 응답 대기',
-            'dispatched': bool(row.web_dispatch)}
+            'dispatched': bool(row.web_dispatch),
+            # map-tree/1 (2026-11-09): request kind, frozen source names and resume count; packet only, no heavy column.
+            'pipeline': row.packet.get('pipeline'), 'sources': [{k: s[k] for k in ('id', 'kind', 'filename')} for s in row.packet.get('sources', [])],
+            'operatorResumes': len(row.packet.get('operatorResumes', []))}
 # ── 사본 끝 ──
 
 
