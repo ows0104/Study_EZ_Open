@@ -312,6 +312,6 @@ normalize(초기 지도 오류 1 → 보완 1/3 선소비) → generate(89문항
 
 - 남은 막힘 40개의 가장 큰 원인은 목표 전체를 답으로 묻는 문항이 없는 것이다(26).
 - 정답 오류는 Q042·Q097이고, 원본 대조 wrong에 Q089가 더해졌다. 보완 3/3이라 그대로 남는다.
-- 14:00 판은 `generation-4/.resume-2/result.json`에, 15:31 판의 단계는 `.resume-3/`에 보관돼 있다.
+- 보관: 14:00 판 결과는 `generation-4/.resume-2/result.json`, 14:52·15:31 source-2는 각각 `.resume-3/`·`.resume-4/`에 있다.
 - 검토 페이지를 갱신했다(Version 2): https://claude.ai/artifact/6iPR4QUkTDES3YEvtdtpJF
 - 운영 반입·학생 공개는 하지 않았다.
