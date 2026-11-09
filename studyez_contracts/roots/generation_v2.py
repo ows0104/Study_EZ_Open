@@ -963,14 +963,14 @@ def quality_reasons(bank):
     return out
 
 
-def repair_reasons(brief,bank,audit,medical,validation):
+def repair_reasons(brief,bank,audit,medical,validation,medical_final=False):
     if recall.enabled(brief):
         projected,raw,groups=recall.project_assessment(brief,bank,audit['assessment'])
         local=copy.deepcopy(audit);local['assessment']=raw;local.pop('goal_coverage',None)
         local['assessment']['assessment'].pop('design_checks',None)
         # Recompile with the same validated leaf scope; final result retains raw review.
         local=_compile_assessment(projected,bank,local['assessment'])
-        reasons=repair_reasons(projected,bank,local,medical,validation)
+        reasons=repair_reasons(projected,bank,local,medical,validation,medical_final)
         reasons +=[{'kind':'question_fix','text':'문항 설계: '+r['reason'],'question_ids':[r['question_id']],
             'direction_ids':[]}for r in audit['assessment']['assessment']['design_checks']if r['verdict']=='wrong']
         parent={did:g['direction_id']for g in groups for did in g['unit_direction_ids']}
@@ -1009,7 +1009,7 @@ def repair_reasons(brief,bank,audit,medical,validation):
     med_status={r['question_id']:r['verdict']for r in medical['reviews']}if medical else{}
     for pre in a['prerequisite_checks']:
         qid=pre['prerequisite_id'];rows=[r for r in a['direction_evidence']if r['question_id']==qid]
-        if(pre['status']=='supported'and qid not in prepared_questions and qstatus.get(qid)=='ok'and med_status.get(qid)=='ok'
+        if(pre['status']=='supported'and qid not in prepared_questions and qstatus.get(qid)=='ok'and(medical_final or med_status.get(qid)=='ok')
            and all(r['visual_verdict']!='doubt'and all(p['location']!='unknown'for p in r['components'])for r in rows)
            and all(r['status']!='unknown'for r in a['relation_checks'])and a['clinical_context_status']=='consistent'):
             reasons.append({'kind':'map_fix','text':'명시적 선행 문항과 전체 회상 방향의 검토된 연결이 없음','question_ids':[qid],'direction_ids':[]})
@@ -1066,6 +1066,18 @@ def context_blocks_medical(value):
 def context_repair_note(value):
     """An incomplete conflict record is a repair reason; the medical review still runs."""
     return value.get('clinical_context_problem')=='incomplete'
+# medical-final/1 (2026-11-09 사용자 결정, docs/changes/2026-11-10-medical-final): the medical review runs once,
+# after the last repair round, and never sends a question back to repair nor withholds it from students.
+# Questions tied to a source-to-source conflict (lecture↔jokbo, slide body↔handwritten note) get a judgment;
+# every other question keeps the lecture answer and gets a 「현재 의학: …」 note when current medicine differs.
+# Ledgers and results without the field keep the per-round review.
+MEDICAL_FINAL_POLICY='medical-final/1'
+
+def medical_final(meta):
+    value=meta.get('medicalFinal')
+    require(value is None or value==MEDICAL_FINAL_POLICY,'result2: unknown medical review policy')
+    return value==MEDICAL_FINAL_POLICY
+
 MEDICAL_REUSE_POLICY='medical-review-reuse/1'
 
 
@@ -1167,8 +1179,13 @@ def validate_result(value,packet):
     rejected=recoveries[0]['proof']['rawAuthoring']if recoveries and recoveries[0]['proof']['mode']=='brief-repair'else None
     start_round=1 if rejected else 0
     require(n>=start_round,'result2: recovered authoring correction not counted')
+    final_medical=medical_final(meta)
     kinds=('context','source','medical')if meta.get('contextStages')else('source','medical')
+    if final_medical:kinds=tuple(k for k in kinds if k!='medical')
     needed={'normalize','generate'}|{f'{k}-{i}'for i in range(start_round,n+1)for k in kinds}|{f'repair-{i}'for i in range(1,n+1)}
+    if final_medical:
+        needed|={f'medical-{n}'}
+        require(not meta.get('medicalReuse')and not meta.get('medicalRetries'),'result2: the final medical review reuses nothing')
     require(set(stages)==needed,'result2: incomplete/ambiguous stages')
     for name,s in stages.items():
         if name=='generate'and rejected:
@@ -1220,7 +1237,7 @@ def validate_result(value,packet):
     require(importance or stages[f'source-{n}']['rawOutputHash']==document_hash(a['assessment'])
         or accepted_source_raw_hash(meta,f'source-{n}')==document_hash(a['assessment']),'result2: raw source proof mismatch')
     require(meta['medicalInputHash']==stages[f'medical-{n}']['inputHash'],'result2: medical input proof mismatch')
-    require(meta['medicalInputHash']==document_hash({'title':packet['title'],'bank':reviewed,
+    require(meta['medicalInputHash']==document_hash({'title':packet['title'],'bank':reviewed,**({'medicalFinal':True}if final_medical else{}),
         'clinicalInput':medical_input(reviewed,meta['clinicalConflicts']),'_pipeline_version':POLICY}),'result2: actual medical projection mismatch')
     require(stages[f'source-{n}']['clinicalContextHash']==document_hash(meta['clinicalConflicts']),'result2: source reviewed different clinical context')
     if meta.get('contextStages'):
@@ -1239,7 +1256,7 @@ def validate_result(value,packet):
         require(specs[q['question_id']]==[{k:s[k]for k in ('source_id','page','crop')}for s in q.get('stimuli',[])],'result2: rendered image is not the authored crop')
     actual=validate_bank(bank,[s['id']for s in packet['sources']])
     require(all(value['validation'].get(k)==actual[k]for k in ('pass','errors','warnings'))and validate_bank(bank,[s['id']for s in packet['sources']],check_quality=False)['pass'],'result2: invalid bank or validation')
-    expected=make_document(b,reviewed,a,revision=packet['revision'],title=packet['title'],exam_date=packet['examDate'],medical=m,
+    expected=make_document(b,reviewed,a,revision=packet['revision'],title=packet['title'],exam_date=packet['examDate'],medical=None if final_medical else m,
         snapshot=bank if meta.get('bankProjection')or iproof is not None else None,
         importance=target_importance(b,table)if iproof is not None else None)
     if recall.enabled(b):require(meta.get('goalPreparation')==recall.prepared_coverage(a,expected),'result2: altered prepared goal coverage')
