@@ -1104,6 +1104,11 @@ def validate_result(value,packet):
     from .automation import validate_checks
     require(set(value)=={'brief','document','sourceAudit','medical','validation','manifest'},'result2: unknown/missing artifacts')
     b=value['brief'];bank=value['document']['bank_snapshot'];a=value['sourceAudit'];m=value['medical'];meta=value['manifest']
+    # map-tree/1: a derived generation packet travels in the manifest so the server can re-derive it.
+    require(('derivedPacket'in meta)==('derivedFrom'in packet),'result2: derived generation packet evidence mismatch')
+    if 'derivedFrom'in packet:
+        from .map_tree import public
+        require(meta['derivedPacket']==public(packet),'result2: the manifest carries another generation packet')
     # The document may carry a container-concept projection of the reviewed bank (questions identical).
     iproof=meta.get('importanceProjection');table=importance_table(packet)
     require((iproof is None)==(table is None),'result2: importance projection must follow exam-point-extract/3 points')

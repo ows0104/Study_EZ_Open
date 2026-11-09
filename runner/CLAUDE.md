@@ -3,6 +3,15 @@
 명시적인 `parallelAuthoring=true`·CLI·source Main Quiz 요청은 문제은행·개념도·출제포인트를 독립 CLI 작업으로 동시에 처리한 뒤 기존 통합·원본/독립 정답 검수·최대3회 수정·업로드로 연결한다. `parallel_status.py`가 기존 status_batch의 개별 카드에 진행을 등록한다. 일반 bank/자동 쓸기의 웹 응답 대기 정책을 이 경로로 우회하지 않는다. 개별/전체 중지·취소와 원본/실패/사용량/수정 예산은 보존한다. 세부 실행·지정 강의 시범은 `docs/changes/2026-11-06-cli-parallel-main-quiz/`에 있다.
 새 서버 요청은 `source-assessment/2-parallel/1`로 구분한다. 구형 러너의 기존 지원 형식 목록에 없는 값이므로 모델 호출 전에 중단한다. 배포 시 새 러너를 먼저 준비한다. 이미 시작한 /2 병렬 시범의 완료 증거는 기존 형식으로 검증하며 새 형식 요청으로 예산을 초기화하지 않는다.
 
+`pipeline: map-tree/1` 요청(서버 형식 `source-assessment/2-map-tree/1`)은 Main-Quiz 시범 두 번의 앞 단계를 그대로 돈다. 근거는 `docs/changes/2026-11-09-main-quiz-runner-pipeline/`이다.
+- `root_front.py`의 단계: 개념 지도 /3 → 포인트 /3 → 대조 → (지적이 있으면) 보완 1회·재대조 → 파생 packet
+  - 출력 폴더: `runs/_root-generation/<gid>/front/`
+  - 지시문: `content/prompts/learning-links/map-tree/`
+- 생성기는 `<gid>/generation/`에서 파생 packet으로 돈다.
+- 서버는 결과의 `manifest.derivedPacket`을 요청에서 다시 만들어 검증한다(`studyez_contracts.roots.map_tree`).
+- 앞 단계도 자동 재실행하지 않는다. 관리자의 이유가 있을 때만 이어 간다(`--generation-resume <이유>` → `root_front --resume`). 그때 실패 단계와 그 뒤 단계를 `.resume-<k>/`에 보관하고 다시 돈다.
+- 이 변경 전의 러너는 이 요청을 모델 호출 전에 거절한다.
+
 자료를 찾고 생성기를 실행한 뒤 결과를 서버에 올린다.
 명시적 Concept map 자동출제 일감만 `connection_generation.py`로 분기한다. 서명된 원본 사본을 별도 인증 헤더 없이 받아
 지문을 확인하고 생성기 하위 프로세스→결과 검증→조건부 게시를 수행한다. 작업 ID별 폴더와 수정 상한을 재사용한다.

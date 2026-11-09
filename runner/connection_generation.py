@@ -75,7 +75,33 @@ def validate_continuations(out,payload):
     validate_all(out,payload)
 
 
-def run_generation(client, subject, run_id, runs_dir, generation_id, *, model=None):
+def map_tree_front(packet, out, *, model=None, resume=None, run=None):
+    """map-tree/1: run the front stages (runner.root_front) and return the derived generation packet.
+
+    The derived packet is re-derived here from the request and the front evidence, exactly as the server
+    will, before any generation call uses it."""
+    from studyez_contracts.roots import map_tree
+    front, derived_path = out / 'front', out / 'front' / 'derived-packet.json'
+    if not derived_path.exists():
+        args = [sys.executable, '-m', 'runner.root_front', '--packet', str((out / 'packet.json').resolve()), '--out', str(front.resolve())]
+        if model: args += ['--model', model]
+        if resume: args += ['--resume', resume]
+        result = (run or run_forwarded)(args, cwd=Path(__file__).resolve().parents[1])
+        if result.returncode: return None
+    derived = json.loads(derived_path.read_text(encoding='utf-8'))
+    again = map_tree.derive_packet(packet, derived['conceptMap'], derived['points'], derived['frontStages'])
+    if map_tree.public(again) != map_tree.public(derived): raise ValueError('앞 단계 결과로 만든 생성 입력이 요청과 맞지 않습니다.')
+    gen = out / 'generation'; gen.mkdir(exist_ok=True)
+    path = gen / 'packet.json'
+    if path.exists():
+        if json.loads(path.read_text(encoding='utf-8')) != again: raise ValueError('기존 생성 입력이 다릅니다. 이력을 보존합니다.')
+    else:
+        path.write_text(json.dumps(again, ensure_ascii=False, indent=2), encoding='utf-8')
+    return again
+
+
+def run_generation(client, subject, run_id, runs_dir, generation_id, *, model=None, resume=None):
+    """resume: the administrator's reason to continue a failed/held request (stage-resume/1, root_front --resume)."""
     if not re.fullmatch(r'[a-f0-9]{32}', generation_id): raise ValueError('잘못된 생성 작업 ID')
     base = '/api/admin/root-generation/' + generation_id
     got = client.call('GET', base + '/input')
@@ -105,16 +131,23 @@ def run_generation(client, subject, run_id, runs_dir, generation_id, *, model=No
         project=Path(runs_dir).resolve().parent
         # The reader binds this exact -m token AND the observed child PID.
         register(project,out,project/'runner.root_native_json',out/'runner.log')
-    module='runner.root_native_json'if is_v2_source(packet)else'quizbank.connection_generate'
-    args = [sys.executable, '-m', module, '--packet', str(packet_path.resolve()), '--out', str(out.resolve())]
+    # map-tree/1 runs the front stages first; the generator then works in <run>/generation on the derived packet.
+    gen_out, gen_packet, gen_packet_path = out, packet, packet_path
+    if packet.get('pipeline') is not None:
+        gen_packet = map_tree_front(packet, out, model=model, resume=resume)
+        if gen_packet is None: return 1
+        gen_out = out / 'generation'; gen_packet_path = gen_out / 'packet.json'
+    module='runner.root_native_json'if is_v2_source(gen_packet)else'quizbank.connection_generate'
+    args = [sys.executable, '-m', module, '--packet', str(gen_packet_path.resolve()), '--out', str(gen_out.resolve())]
     if model: args += ['--model', model]
-    if (out/'result.json').exists():payload=completed_result(out,packet)
+    if resume and module == 'runner.root_native_json' and (gen_out / 'ledger.json').exists(): args += ['--resume', resume]
+    if (gen_out/'result.json').exists():payload=completed_result(gen_out,gen_packet)
     else:
         result = run_forwarded(args, cwd=Path(__file__).resolve().parents[1])
         if result.returncode: return result.returncode
-        payload = completed_result(out,packet)if is_v2_source(packet)else json.loads((out / 'result.json').read_text(encoding='utf-8'))
-    validate_result(payload, packet)
-    validate_continuations(out,payload)
+        payload = completed_result(gen_out,gen_packet)if is_v2_source(gen_packet)else json.loads((gen_out / 'result.json').read_text(encoding='utf-8'))
+    validate_result(payload, packet)  # map-tree/1: re-derives gen_packet from the request, as the server does
+    validate_continuations(gen_out,payload)
     posted = client.call('PUT', base + '/result', payload)
     if posted.get('status') != 'ready': raise ValueError('게시 완료 응답을 받지 못했습니다.')
     (out / 'published.json').write_text(json.dumps(posted, ensure_ascii=False), encoding='utf-8')
@@ -124,5 +157,5 @@ def run_generation(client, subject, run_id, runs_dir, generation_id, *, model=No
     print(f'Quiz Bank {run_id}: Concept map·포인트 → 뿌리 학습 게시 완료', flush=True)
     # Quiz Bank와 같은 핵심 근거·족보 지면(2026-11-08). 실패해도 게시 결과는 그대로다.
     from .root_evidence import publish as publish_evidence
-    publish_evidence(client, subject, run_id, out, packet, payload, model=model, run=run_forwarded)
+    publish_evidence(client, subject, run_id, gen_out, gen_packet, payload, model=model, run=run_forwarded)
     return 0

@@ -113,6 +113,12 @@ def make_document(brief, bank, audit, *, revision, title, exam_date,medical=None
 def validate_result(result, packet):
     from .parallel import is_v2_source
     """Check the final artifact and complete review sets again at the consumer."""
+    if packet.get('pipeline') is not None:
+        # map-tree/1: the run used a generation packet derived from this request; re-derive it first.
+        from .map_tree import PIPELINE, resolve
+        require(packet['pipeline'] == PIPELINE, 'result: unknown generation pipeline')
+        from .generation_v2 import validate_result as check
+        return check(result, resolve(result, packet))
     if is_v2_source(packet):
         from .generation_v2 import validate_result as check
         return check(result,packet)

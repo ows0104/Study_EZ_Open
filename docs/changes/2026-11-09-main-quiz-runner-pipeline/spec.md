@@ -65,7 +65,8 @@
   | SOURCES | packet `sources`(서버가 고정한 Asset). 받은 사본의 sha·크기를 확인하고, 쪽수는 PDF에서 센다 |
   | SCOPE | 아래 템플릿 + 관리자가 적은 `scope` |
   | 쪽 범위 문구 | 쪽 수에서 만든다(P2 `run.py:242`의 일반화) |
-  | 출력 폴더 | `runs/_root-generation/<gid>/front/`, 생성은 `.../<gid>/` |
+  | 출력 폴더 | `runs/_root-generation/<gid>/front/`, 생성은 `.../<gid>/generation/` |
+  | 쪽 이미지 | PyMuPDF 100 dpi, `S1-0001.png` (시범은 pdftoppm -r 100. 러너·CI에 poppler가 없다) |
 
 - SCOPE 템플릿에는 강의 고유 사실을 넣지 않는다. 시범 SCOPE의 구조만 남긴다.
   - 「올해 필기 S1 전체(N쪽, 「제목」)가 이 강의 범위다.」
