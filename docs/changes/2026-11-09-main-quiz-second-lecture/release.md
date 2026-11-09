@@ -284,3 +284,34 @@ normalize(초기 지도 오류 1 → 보완 1/3 선소비) → generate(89문항
 - 모델이 받는 것은 work/material의 같은 파일이다. 사슬알균은 53장, 13MB다.
 - 정규화·출제·보완 단계는 바꾸지 않았다.
 - 검사: 새 1개(두 검토 단계에 쪽+그림이 순서대로 같은 bytes로 붙고 증명에 남음, 다른 단계는 없음). 루트 2,201 통과.
+
+### source-2 재판정 2차 (15:31, 이미지 첨부): 실제 검토, 그러나 저작용 칸 때문에 거절
+
+- 이미지 53장이 첫 메시지에 실제로 붙었다(세션 기록 확인). 328초 동안 검토했고, 결과는 ok 124 · doubt 8 · wrong 1, 연결 목표 30개 모두 consistent였다.
+- 그러나 임상 정리를 conflict로 판정해 결과 조립에서 거절됐다.
+  - 이유는 Q106·Q036·Q037·Q070 등의 `exam_rationale`에 「EXT: 제공된 의학 검수에 따른 교정」, 「필수 누락 보완」이 남았다는 것이다.
+  - `exam_rationale`은 정답 검수 입력(`medical_input`)에 들어가지 않는다. 웹에서도 관리자 카드 검토 화면에만 나온다.
+- 사용자 결정 「통과시키기」(2026-11-09):
+  - 오염 판정은 정답 검수자가 읽는 칸(문제·정답·정답 단위·선지·선지 해설·해설·clinical_conflicts)만 본다.
+  - 저작용 칸의 이력은 question_fix로 적는다. `source-v2.md`·`context-v2.md`에 반영했다.
+
+### source-2 재판정 3차 (16:00) — 결과
+
+- 440초 동안 검토했다. ok 124 · doubt 7 · wrong 2이고, 임상 정리는 consistent다. exam_rationale 이력은 question_fix로 분리됐다.
+- `result.json` 생성, `validate_result`·`validate_all` 통과.
+
+| | 14:00 판 | 16:06 판 |
+|---|---|---|
+| 학습 과제 | 82 | **96** |
+| 준비된 목표 | 63 / 119 | **79** / 119 (partial 6, blocked 34) |
+| 연결 목표 준비 | 0 / 30 | **23** / 30 |
+| 일반 목표 준비 | 63 / 89 | 56 / 89 |
+| 정답 검수 | ok 120 · doubt 11 · wrong 2 | 같음(재사용) |
+| 원본 대조 | ok 127 · doubt 5 · wrong 1 | ok 124 · doubt 7 · wrong 2 |
+| 고치지 못한 지적 | 62 | 67 (required_gap 26 · question_fix 25 · map_fix 16) |
+
+- 남은 막힘 40개의 가장 큰 원인은 목표 전체를 답으로 묻는 문항이 없는 것이다(26).
+- 정답 오류는 Q042·Q097이고, 원본 대조 wrong에 Q089가 더해졌다. 보완 3/3이라 그대로 남는다.
+- 14:00 판은 `generation-4/.resume-2/result.json`에, 15:31 판의 단계는 `.resume-3/`에 보관돼 있다.
+- 검토 페이지를 갱신했다(Version 2): https://claude.ai/artifact/6iPR4QUkTDES3YEvtdtpJF
+- 운영 반입·학생 공개는 하지 않았다.
