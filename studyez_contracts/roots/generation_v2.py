@@ -675,10 +675,23 @@ def order_plan(doc,selected,available,assessed):
     for t in selected:emit(t['task_id'])
     return result
 
+UNPERFORMED_REVIEW=('assessment2: the review judged nothing (every question doubt, every direction/relation/target '
+    'unknown, no direction evidence). An unperformed review is not a source review and is not accepted as completed: '
+    'compare the actual questions with the original sources and record real verdicts.')
+
+def require_judgment(a):
+    """A source review must judge something. 26110901 source-2 could not run its checker, wrote
+    「Incomplete independent review」 with all 129 questions doubt and every check unknown, and that
+    passed as a completed round (원본 대조를 생략하면 검수 완료로 처리하지 않는다)."""
+    judged=(any(r['verdict']!='doubt'for r in a['question_reviews'])or bool(a['direction_evidence'])
+        or any(r['status']!='unknown'for key in('direction_checks','relation_checks','target_checks')for r in a[key]))
+    require(judged,UNPERFORMED_REVIEW)
+
 def compile_assessment(brief,bank,raw):
     validate_brief(brief)
     require(raw==envelope(brief,bank,raw.get('assessment')),'assessment2: input revision mismatch')
     validate_shape(raw['assessment'],SOURCE,'assessment2')
+    require_judgment(raw['assessment'])
     if not recall.enabled(brief):return _compile_assessment(brief,bank,raw)
     projected,proof,groups=recall.project_assessment(brief,bank,raw)
     audit=_compile_assessment(projected,bank,proof)

@@ -48,6 +48,28 @@ def executable() -> str:
     return exe
 
 
+def child_env() -> dict[str, str]:
+    """This process's environment without the uv launcher's own PYTHONHOME.
+
+    A uv venv launcher sets PYTHONHOME (and UV_INTERNAL__PYTHONHOME) to its base Python under
+    AppData/Roaming/uv. Inherited by Codex, it makes every Python the model starts in the sandbox
+    look there; the sandbox user cannot read it, so even a runnable Python dies with "No module named
+    'encodings'" (26110901). It only describes the launcher itself, so children do not need it."""
+    env = dict(os.environ)
+    home = env.pop("UV_INTERNAL__PYTHONHOME", None)
+    if home is not None and env.get("PYTHONHOME") == home:
+        env.pop("PYTHONHOME")
+    return env
+
+
+def sandbox_command(args: list[str]) -> list[str]:
+    """Run `args` under the same writable sandbox a non-blind `exec` session gets (no model call)."""
+    argv = [executable(), "sandbox", "-c", 'sandbox_mode="workspace-write"']
+    if os.name == "nt":
+        argv += ["-c", 'windows.sandbox="elevated"']
+    return argv + list(args)
+
+
 def command(*, model: str, blind: bool, resume: str | None = None,
             writable: list[Path] | None = None) -> list[str]:
     argv = [executable(), "exec", "--json", "--ignore-user-config", "--ignore-rules",
@@ -163,7 +185,7 @@ def _run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None
         try:
             proc = run_process(argv, input=prompt, cwd=work, timeout=timeout,
                                   capture_output=True, text=True, encoding="utf-8", errors="replace",
-                                  creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                                  creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), env=child_env())
         except subprocess.TimeoutExpired as cause:
             raise SessionError(f"{label or '세션'}: {timeout}초 안에 끝나지 않았다") from cause
         except OSError as cause:

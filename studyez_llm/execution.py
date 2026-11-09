@@ -60,9 +60,9 @@ def terminate_tree(proc):
 
 
 def run_process(argv, *, input, cwd, timeout, capture_output=True, text=True,
-                encoding='utf-8', errors='replace', creationflags=0):
+                encoding='utf-8', errors='replace', creationflags=0, env=None):
     proc = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        cwd=cwd, text=text, encoding=encoding, errors=errors, creationflags=creationflags,
+        cwd=cwd, text=text, encoding=encoding, errors=errors, creationflags=creationflags, env=env,
         start_new_session=os.name != 'nt')
     try:
         stdout, stderr = proc.communicate(input, timeout=timeout)
