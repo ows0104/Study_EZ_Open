@@ -1,0 +1,144 @@
+{
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "point_count": {
+      "type": "integer"
+    },
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "ready",
+        "needs_revision"
+      ]
+    },
+    "page_review": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source_id": {
+            "type": "string"
+          },
+          "pages": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "covered",
+              "no_independent_target",
+              "out_of_scope",
+              "unreadable"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "pages",
+          "status",
+          "reason"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "issue_id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "overmerged",
+              "missing",
+              "duplicate",
+              "scope",
+              "unsupported"
+            ]
+          },
+          "point_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source_refs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source_id": {
+                  "type": "string"
+                },
+                "pages": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  }
+                },
+                "locator": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "source_id",
+                "pages",
+                "locator"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "reason": {
+            "type": "string"
+          },
+          "suggested_goal": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "issue_id",
+          "kind",
+          "point_ids",
+          "source_refs",
+          "reason",
+          "suggested_goal"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "suggestions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "summary": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title",
+    "point_count",
+    "verdict",
+    "page_review",
+    "issues",
+    "suggestions",
+    "summary"
+  ],
+  "additionalProperties": false
+}

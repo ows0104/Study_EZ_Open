@@ -8,6 +8,7 @@ import jsonschema
 from studyez_llm import codex
 from studyez_contracts.roots import document_hash
 from studyez_contracts.roots import generation_v2 as c
+from studyez_contracts.roots import map_tree
 from studyez_contracts.roots.automation import source_intake,validate_checks
 from studyez_contracts.roots.source_assessment import envelope
 from studyez_contracts.bank.schema import schema_errors
@@ -449,6 +450,8 @@ def run(packet,out,model,invoke,resume=None,rerun=()):
             **({'medicalReuse':ledger['medicalReuse']}if ledger.get('medicalReuse')else{}),
             'initialMapCorrection':{'errors':initial_errors,'consumedRounds':initial_cost},
             **({'runPolicies':ledger['runPolicies']}if'runPolicies'in ledger else{}),
+            # map-tree/1: the server re-derives this packet from its request (studyez_contracts.roots.map_tree).
+            **({'derivedPacket':map_tree.public(packet)}if'derivedFrom'in packet else{}),
             **({'reviewRetries':ledger['reviewRetries']}if ledger.get('reviewRetries')else{}),
             'normalizationRecoveries':ledger.get('normalizationRecoveries',[]),
             **({'authoringRecoveries':recoveries}if recoveries else{}),
