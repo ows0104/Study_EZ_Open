@@ -86,3 +86,29 @@ def test_earlier_ledgers_keep_the_per_round_review(tmp_path, monkeypatch):
 def test_the_final_prompt_keeps_the_lecture_answer_and_writes_student_notes():
     text = g2.MEDICAL_FINAL_PROMPT
     assert '강의 자료가 기준' in text and '「판정: 」' in text and '「현재 의학: 」' in text and '학생에게 그대로 보인다' in text
+
+
+def test_only_a_differing_source_conflict_judgment_becomes_an_answer_fix():
+    bank = {'questions': [{'question_id': 'Q1', 'conflict_id': 'CF1'}, {'question_id': 'Q2', 'conflict_id': ''}, {'question_id': 'Q3', 'conflict_id': 'CF2'}]}
+    medical = {'reviews': [
+        {'question_id': 'Q1', 'verdict': 'wrong', 'note': '판정: 본문이 맞다.', 'suggested_answer': '23가 다당백신'},
+        {'question_id': 'Q2', 'verdict': 'wrong', 'note': '현재 의학: 다르다.', 'suggested_answer': 'x'},
+        {'question_id': 'Q3', 'verdict': 'doubt', 'note': '판정: 확정 불가.', 'suggested_answer': 'y'}]}
+    fixes = c.judgment_fixes(bank, medical)
+    assert [f['question_ids'] for f in fixes] == [['Q1']] and '23가 다당백신' in fixes[0]['text']
+
+
+def test_a_judgment_fix_repairs_once_then_reviews_again(tmp_path, monkeypatch):
+    p = packet(tmp_path); invoke, calls, contexts = recorder()
+    real = c.judgment_fixes
+    def once(bank, medical):
+        if medical is contexts.get('_seen'):
+            return []
+        contexts['_seen'] = medical
+        return [{'kind': 'question_fix', 'question_ids': [bank['questions'][0]['question_id']], 'direction_ids': [], 'text': '의학 판정: synthetic'}]
+    monkeypatch.setattr(c, 'judgment_fixes', lambda bank, medical: once(bank, medical) if 'repair-1' not in calls else real(bank, medical))
+    result = g.run(p, tmp_path / 'out', invoke=invoke)
+    assert result['manifest']['repairRounds'] == 1
+    assert [s for s in calls if s.startswith(('medical-', 'repair-', 'source-'))] == ['source-0', 'medical-0', 'repair-1', 'source-1', 'medical-1']
+    assert contexts['repair-1']['repairReasons'][0]['text'] == '의학 판정: synthetic'
+    c.validate_result(result, p)

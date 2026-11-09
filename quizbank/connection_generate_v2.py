@@ -444,9 +444,20 @@ def run(packet,out,model,invoke,resume=None,rerun=()):
                 'sourceAudit':audit,'medical':medical,'validation':{k:v for k,v in validation.items()if k!='checked_at'},'repairReasons':reasons})
             continue
         if final_medical:
-            # The last round: the one medical review. It changes no question and no readiness.
+            # The medical review after the last repair. It withholds nothing; a source-conflict judgment that
+            # differs from the answer is fixed within the remaining repair budget (사용자 「답도 고치기」),
+            # then the source review and this medical review run again.
             if blocked:withhold_medical()
-            else:medical=stage(f'medical-{n}',med_ctx)
+            else:
+                medical=stage(f'medical-{n}',med_ctx)
+                fixes=c.judgment_fixes(bank,medical)
+                if fixes and n+initial_cost<3:
+                    g.write(out/f'repair-decision-{n}.json',{'reasons':fixes,'allIssues':audit['assessment']['assessment']['issues'],'repair':True})
+                    ledger['repairRounds']=max(ledger['repairRounds'],n+initial_cost+1);g.write(ledger_path,ledger)
+                    authored=stage(f'repair-{n+1}',{**base,'brief':b,'bank':visual.authored(bank),
+                        'previousAuthoring':{**authored,'bank':visual.authored(authored['bank'])},
+                        'sourceAudit':audit,'medical':medical,'validation':{k:v for k,v in validation.items()if k!='checked_at'},'repairReasons':fixes})
+                    continue
         if blocked:raise ValueError('독립 정답 검수 입력 분리가 완료되지 않았습니다. 실제 검수를 완료로 표시하지 않고 보존합니다.')
         importance=ledger.get('importanceReview')
         if importance:
