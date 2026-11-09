@@ -18,6 +18,18 @@ FOUR_RATING_PARAMETERS = {
     'growth': {'Hard': 1.1, 'Good': 2, 'Easy': 3},
     'lapseMultiplier': 0.5, 'lapseMaxDays': 1, 'minSpacingDays': 1 / 6,
 }
+# 「내 중요도」(2026-11-09). Quiz Bank tier targets on the same forgetting curve
+# R(t)=1/(1+t/9S): a tier keeps the interval at which recall falls to its target,
+# t(tier)=9(1/R-1)·S. A personal tier scales the scheduled interval by
+# t(personal)/t(original); every tier event stores the factor it was saved with.
+TIER_POLICY = 'roots-personal-tier/1'
+TIERS = ('Essential', 'Core', 'Important', 'Optional')
+TIER_TARGETS = {'Essential': 0.9, 'Core': 0.85, 'Important': 0.78, 'Optional': 0.55}
+
+
+def tier_factor(personal, original):
+    span = lambda tier: 9 * (1 / TIER_TARGETS[tier] - 1)
+    return round(span(personal) / span(original or 'Core'), 6)
 
 
 def validate_policy(policy):
@@ -140,3 +152,15 @@ def effective_due(value, when, policy, exam_date):
     if limit is not None and value.get('lastAt'):
         due = min(due, study_day(instant(value['lastAt']), policy) + timedelta(days=limit))
     return due.isoformat()
+
+
+def personal_due(value, factor, policy, exam_date):
+    """Re-time a four-rating result by a personal tier factor; stability is unchanged."""
+    if 'ratingDays' not in value or not value.get('lastAt'):
+        return value
+    maximum = policy.get('max_days', max(policy.get('intervals', [30])))
+    base = min(maximum, max(1, ceil(value['ratingDays'] * factor)))
+    limit = exam_limit(exam_date, value['lastAt'], policy)
+    interval = min(base, limit) if limit is not None else base
+    return {**value, 'baseDays': base, 'scheduledDays': interval,
+            'due': (value['lastDay'] + timedelta(days=interval)).isoformat()}

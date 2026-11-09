@@ -295,14 +295,15 @@ def project_session(db, row, doc, user, when):
     index = row.state['index']
     task = row.tasks[index] if index < len(row.tasks) else None
     expired = row.day != policy.study_day(when, row.policy).isoformat()
+    events = content.events_for(db, row.subject, row.run_id, user.id)
     blocked = '학습일이 바뀌었습니다. 오늘 학습을 다시 계획하세요.' if expired else problems.get(task['task_id']) if task else None
     out = {'sessionId': row.id, 'revision': row.revision, 'version': row.version, 'day': row.day, 'policy': row.policy,
            'position': index, 'count': len(row.tasks), 'finished': task is None, 'blocked': blocked,
            'canUndo': bool(row.state.get('undo')) and not expired, 'mapSeen': row.state['mapSeen'], 'task': None,
-           'summary': state.summary(doc.document, content.events_for(db, row.subject, row.run_id, user.id), available, when, row.policy)}
+           'summary': state.summary(doc.document, events, available, when, row.policy)}
     if task and task['task_id'] in available and not expired:
         q = content.question(doc.document, task)
-        shown = with_personal(q, personal_edits(db, doc, user.id))
+        shown = content.with_tier(with_personal(q, personal_edits(db, doc, user.id)), state.personal_tiers(doc.document, events))
         reveal = row.state['reveals'].get(task['task_id'])
         out['task'] = {'id': task['task_id'], 'question': content.front(shown),
                        'answer': revealed_answer(db, doc, shown) if reveal else None,
@@ -425,9 +426,52 @@ def save_personal(subject: str, run_id: str, question_id: str, payload: RootPers
                             question_id=question_id, category=payload.category, comment=note.strip(),
                             highlighted=payload.report, correction=correction))
     db.commit()
-    current = bank_personal.apply_edit(original, edit)
+    current = content.with_tier(bank_personal.apply_edit(original, edit), content.tiers_for(db, doc, user.id))
     return {'question': content.front(current), 'answer': revealed_answer(db, doc, current),
             'reported': reported, 'highlighted': reported and payload.report}
+
+
+# ── 내 중요도 (2026-11-09) ──────────────────────────────────────────────────
+# Quiz Bank 풀이의 「내 중요도」와 같은 선택. 내 계정·이 판에만 적용하고 append-only root_event(kind='tier')로
+# 남긴다(표 추가 없음). 바꾼 값은 그 문항 복습 간격에만 반영한다: state.replay · policy.personal_due.
+
+class RootTier(Start):
+    tier: Literal['Essential', 'Core', 'Important', 'Optional'] | None
+
+
+@router.put(BASE + '/questions/{question_id}/tier')
+def save_tier(subject: str, run_id: str, question_id: str, payload: RootTier,
+              user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
+    doc = active(db, subject, run_id, user)
+    original = snapshot_question(doc, question_id)
+    request = payload.model_dump()
+    previous = db.get(RootEvent, (user.id, payload.requestId))
+    if previous:
+        if previous.kind != 'tier' or previous.payload.get('_request') != {**request, 'question_id': question_id}:
+            raise HTTPException(409, '같은 요청 ID의 다른 작업입니다.')
+        return previous.result
+    base = content.original_tier(original)
+    chosen = None if payload.tier == (base or 'Core') else payload.tier
+    data = {'_request': {**request, 'question_id': question_id}, 'question_id': question_id, 'tier': chosen,
+            'originalTier': base, 'factor': policy.tier_factor(chosen, base) if chosen else 1,
+            'tierPolicy': policy.TIER_POLICY}
+    when = now()
+    events = content.events_for(db, subject, run_id, user.id)
+    events.append({'id': payload.requestId, 'revision': doc.revision, 'kind': 'tier', 'payload': data, 'at': when})
+    current = content.with_tier(with_personal(original, personal_edits(db, doc, user.id)),
+                                state.personal_tiers(doc.document, events))
+    questions = {t['task_id']: t['question_id'] for t in doc.document['tasks']}
+    rescheduled = any(e['kind'] == 'rate' and e['revision'] == doc.revision and e['payload'].get('selfRating')
+                      and questions.get(e['payload'].get('task_id')) == question_id for e in events)
+    result = {'question': content.front(current), 'rescheduled': rescheduled}
+    db.add(RootEvent(user_id=user.id, request_id=payload.requestId, session_id='', subject=subject, run_id=run_id,
+                     revision=doc.revision, kind='tier', payload=data, result=result, created_at=when))
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, '동시 요청이 있습니다. 다시 시도하세요.')
+    return result
 
 
 def question_issues(issues, question_id):
@@ -492,12 +536,13 @@ def prepare(session_id: str, start: int | None = Query(None, ge=0), count: int =
     available, problems = content.availability(db, doc, user.id)
     generation = active_generation(db, doc)
     edits = personal_edits(db, doc, user.id)
+    tiers = content.tiers_for(db, doc, user.id)
     for position in range(begin, min(begin + count, len(row.tasks))):
         task = row.tasks[position]
         frame = {'position': position, 'taskId': task['task_id'], 'blocked': problems.get(task['task_id']), 'task': None}
         if task['task_id'] in available:
             q = content.question(doc.document, task)
-            shown = with_personal(q, edits)
+            shown = content.with_tier(with_personal(q, edits), tiers)
             frame['task'] = {'id': task['task_id'], 'question': content.front(shown),
                              'answer': revealed_answer(db, doc, shown, generation),
                              'helped': row.state['mapSeen'] or prior_exposure(doc.document, task, q, row.state)}

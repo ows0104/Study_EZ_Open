@@ -164,3 +164,27 @@ test('answers and next questions draw at once while saving is slow; PDF reads ra
   await context.close();
  }finally{await browser.close();}
 });
+
+test('내 중요도: change it while solving, keep it on reload, then 원래대로 (2026-11-09)',async()=>{
+ const browser=await chromium.launch({headless:true,channel:'chrome'});
+ try{
+  const context=await contextFor(browser,{extraHTTPHeaders:{'X-Root-Test-User':'tier-user'}});const puts=[];
+  context.on('request',r=>{if(r.method()==='PUT'&&r.url().includes('/tier'))puts.push(r.postDataJSON());});
+  const page=await context.newPage();await page.goto(url);await page.getByRole('button',{name:'오늘 학습 시작'}).click();await enabled(page,'답 보기');
+  const select=page.getByRole('combobox',{name:'내 문제 중요도'});
+  assert.equal(await select.inputValue(),'Core');assert.equal(await page.getByRole('button',{name:'원래대로'}).count(),0);
+  await select.selectOption('Optional');await page.getByText('내 중요도를 Optional로 저장했습니다.',{exact:true}).waitFor();
+  assert.equal(puts.length,1);assert.equal(puts[0].tier,'Optional');
+  await page.getByRole('heading',{name:'문항 1 / 3'}).focus();await page.keyboard.press('Space');await enabled(page,'Good');
+  await page.keyboard.press('3');await page.getByText('Synthetic question 2?',{exact:true}).waitFor();
+  assert.equal(await select.inputValue(),'Core','the next question keeps its own tier');
+  await page.keyboard.press('z');await page.getByText('Synthetic question 1?',{exact:true}).waitFor();
+  await page.waitForFunction(()=>!Object.keys(localStorage).some(k=>k.startsWith('studyez:root-write:')));
+  await page.reload();await page.getByText('Synthetic question 1?',{exact:true}).waitFor();
+  assert.equal(await select.inputValue(),'Optional','the tier is the server\'s, not the page\'s');
+  await screenshot(page,'personal-tier-desktop');
+  await page.getByRole('button',{name:'원래대로'}).click();await page.getByText('원래 중요도로 되돌렸습니다.',{exact:false}).waitFor();
+  assert.equal(await select.inputValue(),'Core');assert.equal(puts.at(-1).tier,null);
+  await context.close();
+ }finally{await browser.close();}
+});

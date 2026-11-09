@@ -1,0 +1,145 @@
+{
+  "id": "2026-11-09-main-quiz-tier-edit",
+  "title": "Main-Quiz 풀이 중 내 중요도 변경",
+  "area": "site",
+  "created_at": "2026-11-09T09:36:53.188450+00:00",
+  "required_checks": [
+    "server",
+    "web",
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-09T09:44:23.837632+00:00",
+      "evidence": "사용자 채팅 2026-11-09: 「Main-Quiz 풀면서 중요도 수정할 수 있게 해줘.」 (CLAUDE.md: 작업 요청을 구현·검사·PR·병합·배포 승인으로 본다)",
+      "scope": "Main-Quiz 풀이 화면 내 중요도 선택·원래대로, root_event kind=tier 저장(스키마 변경 없음), 개인 중요도의 복습 간격 반영, 이용현황 root_tier, 관련 검사",
+      "evidence_version": 2,
+      "source_hash": "163933f5f0b478f9ebe3ee18565fc500ee04b3abbb586dffc3b1853c1bc49ec1",
+      "plan_hash": "0924e01793bdb4a9b37622cee24d7eaa18707d1711f82c1c43c574fc5387b8e0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "6438814c261da9ab0b1d9de0b52660f30de8f01a996f72e30579f841e640cc62"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-09T09:46:12.253197+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "scripts/check_root_learning.py",
+        "--check",
+        "root-ui"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "163933f5f0b478f9ebe3ee18565fc500ee04b3abbb586dffc3b1853c1bc49ec1",
+      "plan_hash": "0924e01793bdb4a9b37622cee24d7eaa18707d1711f82c1c43c574fc5387b8e0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794217476263987200-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-09T09:47:11.249300+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "scripts/check_root_learning.py",
+        "--check",
+        "root-ui"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "89eef9d21da24c5b4dfe9ca111f85ccc0faeac916b3fda349c271b4004e7b069",
+      "plan_hash": "0924e01793bdb4a9b37622cee24d7eaa18707d1711f82c1c43c574fc5387b8e0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794217590384453100-regression.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-09T09:47:29.657633+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "89eef9d21da24c5b4dfe9ca111f85ccc0faeac916b3fda349c271b4004e7b069",
+      "plan_hash": "0924e01793bdb4a9b37622cee24d7eaa18707d1711f82c1c43c574fc5387b8e0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794217644158805200-web.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-09T09:47:29.658249+00:00"
+}

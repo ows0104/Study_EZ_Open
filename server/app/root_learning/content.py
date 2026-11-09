@@ -133,6 +133,29 @@ def events_for(db, subject, run_id, user_id):
                 RootEvent.subject == subject, RootEvent.run_id == run_id).order_by(RootEvent.created_at, RootEvent.request_id))]
 
 
+def tiers_for(db, doc, user_id):
+    """This learner's 「내 중요도」 on the active revision (tier events only)."""
+    from .state import personal_tiers
+    rows = db.scalars(select(RootEvent).where(RootEvent.user_id == user_id, RootEvent.subject == doc.subject,
+        RootEvent.run_id == doc.run_id, RootEvent.revision == doc.revision, RootEvent.kind == 'tier'))
+    return personal_tiers(doc.document, [{'id': e.request_id, 'revision': e.revision, 'kind': e.kind,
+                                          'payload': e.payload, 'at': e.created_at} for e in rows])
+
+
+def original_tier(q):
+    """The revision's own tier; the authored `Must-Know` spelling is `Essential`. None when absent."""
+    from .policy import TIERS
+    tier = 'Essential' if q.get('tier') == 'Must-Know' else q.get('tier')
+    return tier if tier in TIERS else None
+
+
+def with_tier(q, tiers):
+    chosen = tiers.get(q['question_id'])
+    if not chosen:
+        return q
+    return {**q, 'tier': chosen['tier'], 'personalTier': True, 'originalTier': chosen['originalTier']}
+
+
 def question(doc, task):
     return next(q for q in doc['bank_snapshot']['questions'] if q['question_id'] == task['question_id'])
 
@@ -140,7 +163,8 @@ def question(doc, task):
 def front(q):
     # Allowlist, never a blacklist of all possible authoring/answer metadata.
     from studyez_contracts.bank.cloze import normalize_cloze
-    result={'question_id': q['question_id'], 'concept_id': '', 'tier': 'Core', 'importance': 0,
+    # 「내 중요도」(2026-11-09): personal tier, else the revision's tier, else Core.
+    result={'question_id': q['question_id'], 'concept_id': '', 'tier': original_tier(q) or 'Core', 'importance': 0,
             'format': q.get('format', 'basic'), 'mcq_mode': q.get('mcq_mode', 'none'), 'retrieval_direction': '', 'question': normalize_cloze(q)['question'],
             'source_refs': [], 'conflict_id': '', 'options': [{'id': o['id'], 'text': o['text']} for o in q.get('options', [])],
             'matching_left': q.get('matching_left', []), 'matching_right': q.get('matching_right', []),
@@ -150,6 +174,8 @@ def front(q):
         result['stimuli']=public_images(q)
     if q.get('personalEdited'):
         result['personalEdited']=True
+    if q.get('personalTier'):
+        result.update(personalTier=True, originalTier=q['originalTier'] or 'Core')
     return result
 
 

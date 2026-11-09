@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import type { RootAction, RootView } from '../types/rootLearning';
-import type { BankRating } from '../types/bank';
+import type { BankQuestion as BankQuestionData, BankRating, BankTier } from '../types/bank';
+import { api } from '../api';
 import { QuestionBody, AnswerBody, AnswerReviewItems, hasAnswerReview } from './BankQuestion';
 import { PersonalQuestionDialog, type PersonalQuestionResult } from './PersonalQuestionDialog';
 import { RootSummaryPanel } from './RootToday';
@@ -21,9 +22,12 @@ function AnswerSlides({answer}:{answer:NonNullable<NonNullable<RootView['task']>
   </Suspense>;
 }
 const RATINGS: BankRating[] = ['Again', 'Hard', 'Good', 'Easy'];
+const TIER_LABEL: Record<BankTier,string> = {Essential:'★ Must-Know', Core:'Core', Important:'Important', Optional:'Optional'};
 
-export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,onError,onMap,editPath,onEdited}:{view:RootView;title?:string;scope:string;disabled:boolean;
+export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,onError,onMap,editPath,onEdited,tierPath,onTier}:{view:RootView;title?:string;scope:string;disabled:boolean;
   editPath?:(questionId:string)=>string;onEdited?:(result:PersonalQuestionResult)=>void;
+  /** 「내 중요도」 저장 경로(2026-11-09). 없으면 선택을 그리지 않는다. */
+  tierPath?:(questionId:string)=>string;onTier?:(question:BankQuestionData)=>void;
   advancing:boolean;onAction:(a:RootAction)=>void;onToday:()=>void;onError:(message:string)=>void;onMap?:()=>void}) {
   const task=view.task;
   const key=`studyez:root-draft:${scope}:${JSON.stringify([view.revision,task?.id])}`;
@@ -32,6 +36,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   const [imageState,setImageState]=useState<{taskId:string;ready:boolean}|null>(null);
   const [editing,setEditing]=useState(false);
   const [editNote,setEditNote]=useState('');
+  const [tierBusy,setTierBusy]=useState(false);
   const heading=useRef<HTMLHeadingElement>(null);
   const menu=useRef<HTMLDetailsElement>(null);
   const locked=disabled||advancing||!!view.blocked;
@@ -67,6 +72,19 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       choicesShown:!!task.question.options.length&&!hiddenChoices,
       ...(attempted&&task.question.stimuli?.length?{stimulusHashes:task.question.stimuli.map(s=>s.sha256)}:{})});
     heading.current?.focus({preventScroll:true});
+  }
+  /** 내 계정·이 판의 이 문항에만 적용. 바꾼 중요도는 그 문항 복습 간격에만 반영된다(서버 state.replay). */
+  async function changeTier(tier:BankTier|null){
+    if(!task||!tierPath||tierBusy)return;
+    setTierBusy(true);setEditNote('');
+    try{
+      const got=await api<{question:BankQuestionData;rescheduled:boolean}>(tierPath(task.question.question_id),
+        {method:'PUT',body:JSON.stringify({requestId:crypto.randomUUID(),tier})});
+      onTier?.(got.question);
+      setEditNote((got.question.personalTier?`내 중요도를 ${TIER_LABEL[got.question.tier]}로 저장했습니다.`:'원래 중요도로 되돌렸습니다.')
+        +(got.rescheduled?' 이 문항의 복습 예정일을 다시 계산했습니다.':''));
+    }catch(cause){onError((cause as Error).message);}
+    finally{setTierBusy(false);}
   }
   function rate(selfRating:BankRating){if(!locked&&task?.answer)onAction({kind:'rate',selfRating});}
   useEffect(()=>{
@@ -105,7 +123,18 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   return <section className="quiz main-quiz-solve is-solving" aria-busy={advancing}>
     {head}
     <div className="quiz-progress bank-progress mq-solve-progress"><h2 className="main-quiz-question-heading" ref={heading} tabIndex={-1}>문항 {view.position+1} / {view.count}</h2>
-      <span className="mq-track" aria-hidden="true"><i style={{width:`${view.count?done/view.count*100:0}%`}}/></span></div>
+      <span className="mq-track" aria-hidden="true"><i style={{width:`${view.count?done/view.count*100:0}%`}}/></span>
+      {task&&tierPath&&<span className="bank-tags mq-tier">
+        <label className={`bank-tier-control${task.question.tier==='Essential'?' is-essential':''}`} title="내 계정의 이 문제에만 적용됩니다. 높이면 더 자주, 낮추면 덜 자주 복습합니다. Must-Know: 교수의 직접·간접적인 필수 지식 강조·출제 예고 / Core: 학습목표·기출 / Important: 강조·임상 중요 / Optional: 기타 세부사항">
+          내 중요도{' '}
+          <select aria-label="내 문제 중요도" value={task.question.tier} disabled={disabled||tierBusy}
+            onChange={event=>void changeTier(event.target.value as BankTier)}>
+            {(Object.keys(TIER_LABEL) as BankTier[]).map(tier=><option key={tier} value={tier}>{TIER_LABEL[tier]}</option>)}
+          </select>
+        </label>
+        {task.question.personalTier&&<button className="is-quiet bank-tier-reset" disabled={disabled||tierBusy}
+          title={`원래 중요도: ${TIER_LABEL[task.question.originalTier??'Core']}`} onClick={()=>void changeTier(null)}>원래대로</button>}
+      </span>}</div>
     {view.blocked&&<p role="alert">{view.blocked}</p>}
     {editNote&&<p className="bank-note mq-edit-note" role="status">{editNote}</p>}
     {task&&task.question.personalEdited&&<p className="mq-edited"><span className="tag">내 수정본</span></p>}

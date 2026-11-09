@@ -1,6 +1,6 @@
 """Replay immutable events; revealing an answer never implies successful recall."""
 from datetime import timedelta
-from .policy import instant, study_day, day_start, transition, effective_due
+from .policy import instant, study_day, day_start, transition, effective_due, personal_due
 
 
 def targets(doc):
@@ -11,8 +11,26 @@ def direction_owners(doc):
     return {d['direction_id']: t['target_id'] for t in targets(doc) for d in t['directions']}
 
 
+def personal_tiers(doc, events, now=None):
+    """This revision's 「내 중요도」: the last tier event per question (tier null = 원래대로).
+
+    Other revisions are never read: a question ID alone does not carry a learner's choice."""
+    chosen = {}
+    rows = [e for e in events if e['kind'] == 'tier' and e['revision'] == doc['revision']
+            and (now is None or instant(e['at']) <= now)]
+    for event in sorted(rows, key=lambda e: (instant(e['at']), e['id'])):
+        p = event['payload']
+        if p.get('tier') is None:
+            chosen.pop(p['question_id'], None)
+        else:
+            chosen[p['question_id']] = {'tier': p['tier'], 'originalTier': p['originalTier'], 'factor': p['factor']}
+    return chosen
+
+
 def replay(doc, events, now, policy):
     owners = direction_owners(doc)
+    tiers = personal_tiers(doc, events, now)
+    task_questions = {t['task_id']: t['question_id'] for t in doc['tasks']}
     aliases = {(e['revision'], e['from_direction']): e['to_direction'] for e in doc['equivalences']}
     events = sorted((e for e in events if instant(e['at']) <= now), key=lambda e: (instant(e['at']), e['id']))
     undone = {e['payload']['undo'] for e in events if e['kind'] == 'undo'}
@@ -31,6 +49,10 @@ def replay(doc, events, now, policy):
         elif event['kind'] == 'rate' and event['id'] not in undone:
             updated = transition(value, p['grade'], p['helped'], when, p['policy'], p.get('exam_date'),
                                  p.get('selfRating'), p.get('ratingParameters'))
+            # The learner's current tier re-times every four-rating result of that question.
+            chosen = tiers.get(task_questions.get(p.get('task_id')))
+            if chosen and p.get('selfRating') is not None:
+                updated = personal_due(updated, chosen['factor'], p['policy'], p.get('exam_date'))
             value.clear(); value.update(updated)
     for value in directions.values():
         value['effectiveDue'] = effective_due(value, now, policy, doc['exam_date'])

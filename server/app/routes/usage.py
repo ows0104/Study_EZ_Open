@@ -92,12 +92,12 @@ from app.models import (
 
 router = APIRouter()
 
-ROOT_FIELDS = ('rootStarts', 'rootAttempts', 'rootRatings', 'rootUndos', 'rootGenerations', 'rootGenerated')
+ROOT_FIELDS = ('rootStarts', 'rootAttempts', 'rootRatings', 'rootUndos', 'rootTiers', 'rootGenerations', 'rootGenerated')
 
 def _root_field(event):
     if event.kind == 'reveal' and event.payload.get('attempted'):
         return 'rootAttempts'
-    return {'start':'rootStarts', 'rate':'rootRatings', 'undo':'rootUndos',
+    return {'start':'rootStarts', 'rate':'rootRatings', 'undo':'rootUndos', 'tier':'rootTiers',
             'generation':'rootGenerations', 'generated':'rootGenerated'}.get(event.kind)
 
 
