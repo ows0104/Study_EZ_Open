@@ -6,6 +6,15 @@ from pathlib import Path
 import fitz
 from studyez_contracts.roots.media import validate_images
 
+def authored(bank):
+    """The bank as an authoring model writes it: `stimuli` is renderer-owned (made from visual_stimuli).
+
+    A repair round that showed the model rendered questions got them copied back verbatim, and the
+    authoring schema rejected the whole repair (26110901 사슬알균 repair-1)."""
+    value=copy.deepcopy(bank)
+    for q in value['questions']:q.pop('stimuli',None)
+    return value
+
 def render(bank,specs,packet,material):
     value=copy.deepcopy(bank);qs={q['question_id']:q for q in value['questions']}
     sources={s['id']:s for s in packet['sources']};seen=set()

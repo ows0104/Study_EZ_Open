@@ -298,7 +298,9 @@ def run(packet,out,model,invoke):
         g.write(out/f'repair-decision-{n}.json',{'reasons':reasons,'allIssues':audit['assessment']['assessment']['issues'],'repair':bool(reasons)and n+initial_cost<3})
         if reasons and n+initial_cost<3:
             ledger['repairRounds']=max(ledger['repairRounds'],n+initial_cost+1);g.write(ledger_path,ledger)
-            authored=stage(f'repair-{n+1}',{**base,'brief':b,'bank':bank,'previousAuthoring':authored,
+            # The model sees the authored form; its image choice travels as previousAuthoring.visual_stimuli.
+            authored=stage(f'repair-{n+1}',{**base,'brief':b,'bank':visual.authored(bank),
+                'previousAuthoring':{**authored,'bank':visual.authored(authored['bank'])},
                 'sourceAudit':audit,'medical':medical,'validation':{k:v for k,v in validation.items()if k!='checked_at'},'repairReasons':reasons})
             continue
         if blocked:raise ValueError('독립 정답 검수 입력 분리가 완료되지 않았습니다. 실제 검수를 완료로 표시하지 않고 보존합니다.')

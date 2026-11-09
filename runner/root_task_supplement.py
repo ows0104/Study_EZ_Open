@@ -225,7 +225,7 @@ def resume_completed(out):
         n.require(state['status']=='completed'and state['protectedHash']==document_hash(protected)
             and state['inputHash']==document_hash(n.read(seat/'work/input.json'))
             and all(n.sha(seat/'work'/k)==v for k,v in protected.items()),'Not an intact completed actual stage')
-        outputs[kind]=n.read(seat/'output.json');execution[kind]=state
+        outputs[kind]=n.read_model(seat/'output.json');execution[kind]=state
     jsonschema.validate(outputs['medical'],REVIEW_REPORT)
     n.require(any(r['verdict']=='ok'and r['note']==''for r in outputs['medical']['reviews']),
         'Not the canonical empty-ok-note compatibility case')
