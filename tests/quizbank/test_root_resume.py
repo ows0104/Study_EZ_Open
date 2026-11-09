@@ -92,6 +92,10 @@ def test_resume_refuses_finished_runs_and_runs_with_other_recoveries(tmp_path):
     g.run(p, out, invoke=model([]))
     with pytest.raises(ValueError, match='완료된 실행'):
         g.run(p, out, invoke=model([]), resume=REASON)
+    calls = []  # a finished run reopens only for a named stage; its result is archived, not deleted
+    again = g.run(p, out, invoke=model(calls), resume=REASON, rerun=('source-0',))
+    assert sorted(calls) == ['source-0'] and (out / '.resume-1' / 'result.json').exists()
+    c.validate_result(again, p)
     other = tmp_path / 'other'
     with pytest.raises(RuntimeError):
         g.run(p, other, invoke=model([], fail={'source-0'}))
@@ -99,3 +103,17 @@ def test_resume_refuses_finished_runs_and_runs_with_other_recoveries(tmp_path):
     (other / 'ledger.json').write_text(json.dumps(value), encoding='utf-8')
     with pytest.raises(ValueError, match='다른 복구 기록'):
         g.run(p, other, invoke=model([]), resume=REASON)
+
+
+def test_a_named_completed_review_is_rerun_and_unchanged_stages_stay(tmp_path):
+    """26110901: the final source review is run again after its instructions changed (연결 목표 중요도)."""
+    p = speed_packet(tmp_path); out = tmp_path / 'out'
+    with pytest.raises(RuntimeError):
+        g.run(p, out, invoke=model([], fail={'medical-0'}))
+    with pytest.raises(ValueError, match='완료된 단계'):
+        g.run(p, out, invoke=model([]), resume=REASON, rerun=('repair-1',))
+    calls = []
+    result = g.run(p, out, invoke=model(calls), resume=REASON, rerun=('source-0',))
+    assert sorted(calls) == ['medical-0', 'source-0']  # nothing else is called again
+    assert {s['name'] for s in result['manifest']['stageResumes'][-1]['superseded']} == {'source-0', 'medical-0'}
+    c.validate_result(result, p)

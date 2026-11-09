@@ -22,4 +22,5 @@ importanceTable과 targetImportance가 있으면 target_checks는 그 목표의 
 - 출제 예고·출제 제외 원문이 실제로 그 쪽에 있고 그 회상 단위를 가리키는가
 - 기출 연도·번호가 그 회상 단위를 묻는가
 - 강조 표시와 출처 판정이 실제 표시와 문장에 맞는가
-맞으면 consistent, 원본과 다르면 conflict로 하고 map_fix에 고칠 근거를 적는다. 확인할 수 없으면 unknown이다. 범례·색상·스탬프는 필기자마다 다르므로 실제 표시와 문장을 우선한다. 같은 쪽·표의 다른 사실로 근거가 옮겨졌으면 conflict다. 문항의 point_ids가 실제 회상 내용과 맞지 않으면 question_fix다.
+맞으면 consistent, 원본과 다르면 conflict로 하고 map_fix에 고칠 근거를 적는다. 확인할 수 없으면 unknown이다.
+연결 목표(role이 branch 또는 root인 목표, 갈래 사이 관계를 묻는다)의 targetImportance는 관리자 규칙(importance-basis/1)이 그 목표에 이어진 포인트들의 근거에서 계산한 값이다(2026-11-09 사용자 결정 「계산값 쓰고 내용만 검토」). 이 계산과 전이 자체는 승인 대상이 아니다. 연결 목표의 target_checks는 이어진 포인트 근거가 위 세 가지 기준으로 원본과 맞는지, 그리고 그 연결 내용이 원본에 실제로 있는지만 판정한다. 둘 다 맞으면 consistent다. 포인트 근거가 연결 전체의 중요도를 직접 지지하는지 확인할 수 없다는 이유만으로 unknown이나 conflict로 하지 않는다. 연결 내용이나 포인트 근거가 원본과 다르면 conflict다. 범례·색상·스탬프는 필기자마다 다르므로 실제 표시와 문장을 우선한다. 같은 쪽·표의 다른 사실로 근거가 옮겨졌으면 conflict다. 문항의 point_ids가 실제 회상 내용과 맞지 않으면 question_fix다.

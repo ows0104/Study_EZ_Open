@@ -206,7 +206,7 @@ def call_model(stage, context, material, model):
         return output, {k: result[k] for k in ('usage', 'cost_usd', 'duration_ms', 'models')}
 
 
-def run(packet, out, *, model=None, invoke=None, resume=None):
+def run(packet, out, *, model=None, invoke=None, resume=None, rerun=()):
     from studyez_contracts.roots.parallel import SOURCE_FORMAT as PARALLEL_FORMAT,is_v2_source
     out = Path(out); out.mkdir(parents=True, exist_ok=True)
     if packet_hash(packet) != packet['inputHash']: raise ValueError('입력 지문이 다릅니다.')
@@ -219,8 +219,8 @@ def run(packet, out, *, model=None, invoke=None, resume=None):
     with exclusive({'connection-generation': str(out.resolve())}):
         if is_v2_source(packet):
             from .connection_generate_v2 import run as run2
-            return run2(packet,out,model,invoke,resume=resume)
-        if resume: raise ValueError('재개(--resume)는 root-generation/2 실행에만 있습니다.')
+            return run2(packet,out,model,invoke,resume=resume,rerun=rerun)
+        if resume or rerun: raise ValueError('재개(--resume)는 root-generation/2 실행에만 있습니다.')
         return _run(packet, out, model, invoke)
 
 
@@ -356,8 +356,10 @@ def main():
     parser.add_argument('--out', required=True, type=Path)
     parser.add_argument('--model')
     parser.add_argument('--resume', metavar='REASON', help='keep revalidated completed stages and rerun only the rest (stage-resume/1)')
+    parser.add_argument('--rerun', metavar='STAGE', action='append', default=[], help='with --resume: also run this completed stage again')
     args = parser.parse_args()
-    try: run(json.loads(args.packet.read_text(encoding='utf-8')), args.out, model=args.model, resume=args.resume)
+    if args.rerun and not args.resume: parser.error('--rerun needs --resume <reason>')
+    try: run(json.loads(args.packet.read_text(encoding='utf-8')), args.out, model=args.model, resume=args.resume, rerun=tuple(args.rerun))
     except Exception as error:
         print('연결 자동출제 보류: ' + str(error), flush=True)
         return 1

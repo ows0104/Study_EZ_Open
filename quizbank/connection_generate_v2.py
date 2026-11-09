@@ -64,10 +64,12 @@ def importance_brief(lineage,proof):
 
 RESUMABLE_BLOCKERS=(*c.RECOVERY_HISTORY,'runtimeRevalidations','normalizationRecoveries','parallelSchemaRecovery')
 
-def run(packet,out,model,invoke,resume=None):
+def run(packet,out,model,invoke,resume=None,rerun=()):
     """resume: the operator's reason to continue this folder (stage-resume/1). Completed stages whose
     input is unchanged and whose output the current acceptance code reproduces are kept; the rest are
-    archived under .resume-<k>/ and rerun. Round indices stay fixed: no round is added, the cap is kept."""
+    archived under .resume-<k>/ and rerun. Round indices stay fixed: no round is added, the cap is kept.
+    rerun: completed stages the operator names to run again with the resume (their reason is the resume
+    reason), e.g. a review whose instructions changed; stages whose input then changes follow."""
     from . import connection_generate as g
     fingerprint=g.identity(packet,model);ledger_path=out/'ledger.json';resume_row=None
     if ledger_path.exists():
@@ -77,18 +79,23 @@ def run(packet,out,model,invoke,resume=None):
             raise ValueError('기존 실행의 입력·모델·코드가 달라졌습니다. 이력과 상한을 보존합니다. 성공한 단계를 살려 이어 가려면 --resume <이유>.')
         if resume:
             c.require(type(resume)is str and resume.strip(),'재개 이유가 필요합니다.')
-            c.require(not(out/'result.json').exists(),'완료된 실행은 재개하지 않습니다.')
+            # A finished run reopens only for named stages (e.g. a review whose instructions changed);
+            # its result moves into the resume archive and is never imported from there.
+            c.require(not(out/'result.json').exists()or rerun,'완료된 실행은 재개하지 않습니다. 다시 돌릴 단계를 --rerun으로 지정합니다.')
             c.require(not any(ledger.get(k)for k in RESUMABLE_BLOCKERS)and not packet.get('parallelAuthoring'),
                 '다른 복구 기록이 있는 실행은 재개하지 않습니다. 해당 복구 도구를 씁니다.')
             stored=out/'packet.json'
             c.require(not stored.exists()or json.loads(stored.read_text(encoding='utf-8')).get('inputHash')==packet['inputHash'],'다른 packet으로는 재개하지 않습니다.')
             rows=ledger.get('stageResumes',[]);c.require(len(rows)<8,'재개는 8번까지입니다.')
+            rerun=tuple(rerun or())
+            c.require(all(ledger['stages'].get(k,{}).get('status')=='completed'for k in rerun),'다시 돌릴 단계는 완료된 단계여야 합니다: '+', '.join(rerun))
             resume_row={'priorLedger':copy.deepcopy(ledger),'priorLedgerHash':document_hash(ledger),'packetHash':packet['inputHash'],
                 'currentRuntimeHash':fingerprint,'reason':resume,'superseded':[]}
             archive=out/f'.resume-{len(rows)+1}';archive.mkdir()
             (archive/'ledger-before.json').write_bytes(ledger_path.read_bytes())
             for derived in(*out.glob('repair-decision-*.json'),*out.glob('map-hierarchy-*.json')):  # rewritten by the resumed rounds
                 shutil.copy2(derived,archive/derived.name)
+            if(out/'result.json').exists():(out/'result.json').replace(archive/'result.json')
             ledger['stageResumes']=rows+[resume_row];ledger['identity']=fingerprint
     else:
         if any(p.name!='packet.json'for p in out.glob('*.json')):raise ValueError('기존 산출물의 ledger가 없습니다. 자동 재시작하지 않습니다.')
@@ -161,6 +168,8 @@ def run(packet,out,model,invoke,resume=None):
             refresh(out,'integrating'if name in ('normalize','generate')else'repairing'if name.startswith('repair')else'reviewing')
         ctx={**ctx,'_pipeline_version':c.POLICY};input_hash=document_hash(ctx)
         path=out/(name+'.json');prior=ledger['stages'].get(name);raw_path=out/(name+'.raw.json')
+        if prior and resume_row is not None and name in rerun and not any(s['name']==name for s in resume_row['superseded']):
+            print('── 재개: '+name+' 지정해서 다시 실행',flush=True);supersede(name);prior=None
         if prior:
           try:
             input_path=out/(name+'.input.json');usage_path=out/(name+'.usage.json')

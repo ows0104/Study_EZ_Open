@@ -453,11 +453,13 @@ def validate_all(out,payload):
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--packet',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--model')
-    p.add_argument('--resume',metavar='REASON',help='keep revalidated completed stages; rerun only the rest (stage-resume/1)');a=p.parse_args()
+    p.add_argument('--resume',metavar='REASON',help='keep revalidated completed stages; rerun only the rest (stage-resume/1)')
+    p.add_argument('--rerun',metavar='STAGE',action='append',default=[],help='with --resume: also run this completed stage again');a=p.parse_args()
+    if a.rerun and not a.resume:p.error('--rerun needs --resume <reason>')
     try:
         require_unblocked(a.out)
         from studyez_contracts.roots.parallel import is_v2_source
-        packet=read(a.packet);result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)else None,resume=a.resume)
+        packet=read(a.packet);result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)else None,resume=a.resume,rerun=tuple(a.rerun))
         validate_all(a.out,result)
         if packet.get('parallelAuthoring'):
             from runner.parallel_status import refresh
