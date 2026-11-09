@@ -25,7 +25,6 @@
 
 | P1 | Main-Quiz 문제 퀄리티 — 검사기에 측정 추가(구조 단서-정답 상관·정답 회상 부담·형식 쏠림) | ows0104 / Claude 문제 퀄리티 세션 | claude/bank-quality-checks | studyez_contracts/bank/quality.py, tests/quizbank/test_answer_quality.py(새 파일), docs/changes/2026-11-08-bank-quality-checks | 2026-11-08 | 사용자 2026-11-08 진단 뒤 「검사기에 측정 추가」 선택. 근거: 감염과 면역 261104_02 98문항 중 예/아니오 축 6문항 정답이 전부 부정, basic/list 답 60자 초과 21개, cloze·mcq 0개. 기존 품질 검사는 leaked_units(발문 정답 노출) 하나뿐. errors 아님 — warnings만 추가해 문항을 떨어뜨리지 않고 repair 단계·관리자 issues에 보인다. 선은 운영 Quiz Bank 35편 3,103문항의 p97에서 쟀다. 프롬프트·DB·운영 미변경. 구현·검사 완료 eff75a83 PR #22 https://github.com/ows0104/Study_EZ_Open/pull/22 — 측정 16·contracts·quizbank 720 통과, 전체 pytest 2,098 통과(1 실패는 tests/runner/test_desktop_control.py 바로가기 설치기로 pristine origin/master에서 동일 재현·미수정), 서버 bank 33·경로 171 동일·retention 통과, map_numbers 정상. 실물 대조: 새 Main-Quiz 98문항 errors 0·warnings 36(다섯 측정 모두, Q003·Q080 이름으로), 운영 은행 35편 새 경고 62(편당 중앙 2)·errors 증가 0. master 병합은 사용자 승인 대기 |
 | P1 | Main-Quiz 새 구조 시험: 사슬알균 첫 출제 102문항을 고정하고 커버 확인 → 빈 목표만 추가 출제 → 새 문항만 재확인(모델 3회) | ows0104 / Claude 사슬알균 시범 세션 | claude/add-only-trial | docs/changes/2026-11-10-add-only-trial(새 폴더만), runs/_e2e/26110901/add-only-trial(git 밖) | 2026-11-10 | 사용자 2026-11-09 「승인, 돌려줘」(필기·족보 OpenAI 재전송 포함). 생성기·프롬프트·계약·서버·운영 미변경. 자동 재시도 없음 |
-| P1 | Main-Quiz 의학 검토 개편: 마지막 한 번만, 원본끼리 충돌(강의↔족보·본문↔손글씨)은 판정, 그 밖은 「현재 의학: …」 해설만 붙이고 강의 답 유지. wrong 문항도 학생에게 보임 | ows0104 / Claude 의학 검토 세션 | claude/medical-final | quizbank/connection_generate_v2.py, quizbank/review.py, studyez_contracts/roots/generation_v2.py, content/prompts/learning-links/automation, tests/quizbank·contracts, docs/changes/2026-11-10-medical-final | 2026-11-10 | 사용자 2026-11-09 결정. 시험(claude/add-only-trial)과 파일 겹침 없음 |
 
 
 
@@ -59,6 +58,7 @@
 
 ## 완료 기록 (최근 것만)
 
+| 2026-11-10 | Main-Quiz 의학 검토 medical-final/1: 새 실행은 마지막 한 번, 원본 충돌은 판정·나머지는 「현재 의학」 해설, 보완·과제 제외 없음. PR #65 병합 |
 merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 줄은 지워도 된다.
 
 | 완료일 | 작업 | 작업자 | PR |
