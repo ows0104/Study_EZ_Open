@@ -264,3 +264,43 @@ def test_model_file_with_utf8_bom_is_read_and_stays_verifiable(tmp_path,monkeypa
     result=g.run(packet,out,invoke=n.NativeJson(out,invoke=run))
     assert (out/'.native/generate/output.json').read_bytes().startswith(b'\xef\xbb\xbf')
     n.validate_all(out,result)
+
+
+def test_internal_ids_in_student_text_are_found_and_medical_notation_is_not():
+    """26110901 사슬알균 repair outputs: explanations such as 「P018의 화농성 질환 분류 범위 보완.」 and
+    「… Q015에서 통합 회상한다.」 told students the authoring history instead of the medicine."""
+    from quizbank.authoring_text import internal_id_mentions
+    brief={'concepts':[{'concept_id':'C001'},{'concept_id':'A'}],'points':[{'point_id':'P018'}],'relations':[],'targets':[]}
+    q=lambda qid,**k:{'question_id':qid,'point_ids':['P018'],'question':'q','answer':'a','explanation':'e',
+        'exam_rationale':'P018: learning_objective','options':[],'option_explanations':[],**k}
+    bank={'questions':[q('Q014',explanation='성홍열 발진의 독소 이름은 Q015에서 통합 회상한다.'),
+        q('Q015',explanation='CYP P450과 C5a peptidase, A군 항원은 의학 표기다.'),
+        q('Q107',explanation='P018의 화농성 질환 분류 범위 보완.'),
+        q('Q108',options=[{'option_id':'1','text':'C001 참조'}])]}
+    found={(m['question_id'],m['field'],m['id'])for m in internal_id_mentions(bank,brief)}
+    assert found=={('Q014','explanation','Q015'),('Q107','explanation','P018'),('Q108','options.text','C001')}
+
+
+def test_internal_id_in_explanation_is_sent_back_once_into_the_same_session(tmp_path,monkeypatch):
+    packet=f.packet(tmp_path/'source.txt');out=tmp_path/'out';prompts=[]
+    monkeypatch.setattr(producer,'call_model',lambda stage,ctx,material,model:f.model(stage,ctx,material,model))
+    base=provider(out)
+    def run(prompt,**kwargs):
+        work=kwargs['cwd'];stage=work.parent.name;prompts.append((stage,kwargs.get('resume')));path=work/'result.json'
+        if kwargs.get('resume'):  # the follow-up writes the medical explanation instead of the authoring note
+            value=n.read(path);value['bank']['questions'][0]['explanation']='Synthetic medical explanation 1'
+            path.write_text(json.dumps(value,ensure_ascii=False),encoding='utf-8')
+            return {'text':json.dumps({'path':'result.json','sha256':n.sha(path)}),'turns':2,'session_id':kwargs['resume'],
+                    'usage':{'input_tokens':7,'output_tokens':3,'cache_read_input_tokens':0,'cache_creation_input_tokens':0},
+                    'models':{kwargs['model']:3},'cost_usd':None,'duration_ms':2}
+        result=base(prompt,**kwargs)
+        if stage=='generate':
+            value=n.read(path);value['bank']['questions'][0]['explanation']='Q2에서 통합 회상한다.'
+            path.write_text(json.dumps(value,ensure_ascii=False),encoding='utf-8')
+            result['text']=json.dumps({'path':'result.json','sha256':n.sha(path)})
+        return result
+    native=n.NativeJson(out,invoke=run);native.followups=True
+    result=g.run(packet,out,invoke=native)
+    assert sum(1 for s,r in prompts if r)==1 and 'Q1.explanation'in n.read(out/'.native/generate/check-failure.json')['error']
+    assert result['document']['bank_snapshot']['questions'][0]['explanation']=='Synthetic medical explanation 1'
+    n.validate_all(out,result)

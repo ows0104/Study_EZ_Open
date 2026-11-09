@@ -104,3 +104,19 @@ normalize(초기 지도 오류 1 → 보완 1/3 선소비) → generate(89문항
 - **원본 대조의 판정 범위 흔들림**: target_checks를 회차마다 전부 판정하거나 전부 미루었다. 그래서 중요도 근거 다툼(generation-2의 map_fix 68)이 어느 회차에 몰릴지 예측할 수 없다.
 
 운영 반입·학생 공개는 하지 않았다. 결과(`result.json`)가 없다.
+
+## 후속: 해설 저작 이력 검사 (2026-11-09 사용자 「해설 저작 이력 검사」)
+
+- `quizbank/authoring_text.internal_id_mentions`가 학생에게 보이는 칸에서 이번 실행의 내부 ID를 찾는다.
+  - 학생 칸: question·answer·answer_units·explanation·options·option_explanations·matching·sequence.
+  - 내부 ID: 문항·포인트·개념·목표·방향·관계. 글자와 숫자를 모두 가진 ID만 센다. 그래서 P450·C5a·「A군」은 세지 않는다.
+- `root_native_json.check_file`(generate·repair)이 이를 검사한다. 걸리면 같은 세션에 한 번 되돌려 의학적 설명으로 고치게 한다.
+  - 계약(`validate_authoring`)과 생성기의 수용 판정은 바꾸지 않았다. 남은 것은 지금처럼 임상 정리 확인이 conflict로 잡는다.
+  - 기존 결과의 재검증에는 영향이 없다.
+  - 문항을 그대로 복사해야 하는 brief-repair 복구와, 원문을 보존하는 웹·독립 은행 generate에는 적용하지 않는다.
+- 기존 결과물 13개 측정:
+  - 감염병리1(공개 판 포함): 0건
+  - 사슬알균 generate: 0건
+  - 사슬알균 보완 출력: 3건(Q107·P018, Q108·P020, Q014·Q015)
+  - 학생 칸 밖의 ID와 의학 표기는 세지 않았다(오탐 0)
+- 검사: 새 2개(찾기 단위 1·같은 세션 되돌려주기 1), 둘 다 수정 전 실패. 루트 2,185 통과, `map_numbers --check` 정상.

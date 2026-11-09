@@ -171,6 +171,14 @@ def check_file(stage,work):
     elif stage=='generate'or stage.startswith('repair-'):
         if ctx.get('rejectedAuthoring'):c.validate_recovered_authoring(ctx['previousAuthoring'],value)
         else:c.validate_authoring(value,ctx.get('previousAuthoring'))
+        # Students read these fields; internal IDs there are authoring notes (26110901 repair-1/2). Not for
+        # recoveries that must copy the bank exactly, nor for web/independent banks whose text is preserved.
+        if not(ctx.get('rejectedAuthoring')or ctx.get('webResponse')or ctx.get('independentBank')):
+            from quizbank.authoring_text import internal_id_mentions
+            leaks=internal_id_mentions(value['bank'],value['brief'])
+            require(not leaks,'Student-facing text contains internal IDs (authoring/repair notes, not medicine): '
+                +'; '.join(f"{m['question_id']}.{m['field']} mentions {m['id']}: {m['text'][:120]}"for m in leaks[:20])
+                +'. Rewrite each as a source-based medical explanation; describe a related question by its content, never by ID.')
         require(value['brief']['sources']==ctx['sources']and value['brief']['lecture_id']==ctx['lecture_id'],'Different authoring source/lecture')
         if stage=='generate':
             if ctx.get('independentBank'):
