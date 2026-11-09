@@ -196,11 +196,33 @@ def step_add():
     assert not changed and check['briefUnchanged'] and kept_conflicts and kept_stimuli, 'Add-only rule broken — kept for inspection, not used'
 
 
+def step_adopt():
+    """repair-1 kept every existing question but changed the Map (recall_units on 8 goals, 2026-11-10).
+    Adopt only its new questions on the frozen Map; the model's Map change stays in repair-1.raw.json."""
+    check = read(OUT / 'add-only-check.json')
+    assert not check['changedExisting'] and check['conflictsKept'] and check['stimuliKept'], 'Existing questions changed'
+    assert not (OUT / 'repair-1-adopted.json').exists(), 'Already adopted'
+    authored, raw = read(OUT / 'baseline-authoring.json'), read(OUT / 'repair-1.raw.json')
+    alt = copy.deepcopy(raw)
+    alt['brief'] = authored['brief']
+    alt['map_change_reason'] = '추가 전용 시험: 모델이 바꾼 지도(recall_units)는 채택하지 않고 고정 지도를 쓴다.'
+    c.validate_authoring(alt, authored)
+    value = copy.deepcopy(alt)
+    value['bank'] = visual.render(value['bank'], alt['visual_stimuli'], packet(), OUT / 'material')
+    changed = [t['target_id'] for t, u in zip(authored['brief']['targets'], raw['brief']['targets']) if t != u]
+    write(OUT / 'repair-1-adopted.json', value)
+    write(OUT / 'adopt.json', {'reason': 'repair-1 changed the frozen Map; only its new questions are adopted',
+                               'mapChangeRejectedTargets': changed, 'modelMapChangeReason': raw['map_change_reason'],
+                               'questions': len(value['bank']['questions'])})
+    print(json.dumps({'rejectedMapTargets': changed, 'questions': len(value['bank']['questions'])}, ensure_ascii=False))
+
+
 def step_recheck():
     check = read(OUT / 'add-only-check.json')
-    assert not check['changedExisting'] and check['briefUnchanged'], 'Add-only stage did not hold'
-    audit, info = review('source-1', read(OUT / 'repair-1.json'))
-    print(json.dumps({'durationMs': info.get('duration_ms')}))
+    assert not check['changedExisting'], 'Add-only stage did not hold'
+    path = OUT / 'repair-1.json' if check['briefUnchanged'] else OUT / 'repair-1-adopted.json'
+    audit, info = review('source-1', read(path))
+    print(json.dumps({'reviewed': path.name, 'durationMs': info.get('duration_ms')}))
 
 
 def verdicts(audit):
@@ -237,4 +259,4 @@ def step_compare():
 
 
 if __name__ == '__main__':
-    {'prepare': prepare, 'coverage': step_coverage, 'add': step_add, 'recheck': step_recheck, 'compare': step_compare}[sys.argv[1]]()
+    {'prepare': prepare, 'coverage': step_coverage, 'add': step_add, 'adopt': step_adopt, 'recheck': step_recheck, 'compare': step_compare}[sys.argv[1]]()
