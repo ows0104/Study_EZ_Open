@@ -18,7 +18,8 @@ def personal_tiers(doc, events, now=None):
     chosen = {}
     rows = [e for e in events if e['kind'] == 'tier' and e['revision'] == doc['revision']
             and (now is None or instant(e['at']) <= now)]
-    for event in sorted(rows, key=lambda e: (instant(e['at']), e['id'])):
+    # `seq` orders choices saved at the same instant (request IDs are random).
+    for event in sorted(rows, key=lambda e: (instant(e['at']), e['payload'].get('seq', 0), e['id'])):
         p = event['payload']
         if p.get('tier') is None:
             chosen.pop(p['question_id'], None)

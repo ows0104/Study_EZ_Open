@@ -452,11 +452,11 @@ def save_tier(subject: str, run_id: str, question_id: str, payload: RootTier,
         return previous.result
     base = content.original_tier(original)
     chosen = None if payload.tier == (base or 'Core') else payload.tier
-    data = {'_request': {**request, 'question_id': question_id}, 'question_id': question_id, 'tier': chosen,
-            'originalTier': base, 'factor': policy.tier_factor(chosen, base) if chosen else 1,
-            'tierPolicy': policy.TIER_POLICY}
     when = now()
     events = content.events_for(db, subject, run_id, user.id)
+    data = {'_request': {**request, 'question_id': question_id}, 'question_id': question_id, 'tier': chosen,
+            'originalTier': base, 'factor': policy.tier_factor(chosen, base) if chosen else 1,
+            'tierPolicy': policy.TIER_POLICY, 'seq': 1 + sum(e['kind'] == 'tier' for e in events)}
     events.append({'id': payload.requestId, 'revision': doc.revision, 'kind': 'tier', 'payload': data, 'at': when})
     current = content.with_tier(with_personal(original, personal_edits(db, doc, user.id)),
                                 state.personal_tiers(doc.document, events))

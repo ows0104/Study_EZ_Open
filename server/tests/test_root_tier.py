@@ -38,6 +38,8 @@ frames = client.get('/api/root-learning/sessions/' + sid + '/prepare').json()['f
 assert [f['task']['question']['tier'] for f in frames if f['task']['question']['question_id'] == qid] == ['Essential']
 assert all(f['task']['question']['tier'] == 'Core' for f in frames if f['task']['question']['question_id'] != qid)
 
+# Every choice here is saved at the same fixed instant with request IDs that sort against
+# the save order (z2 > y3 > x4 > w5), so only the saved sequence decides which one holds.
 # Rate it once with the four buttons; the tier then re-times only this question.
 assert action(client, sid, 'r1', 'reveal', attempted=True).status_code == 200
 assert action(client, sid, 'g1', 'rate', selfRating='Good').status_code == 200
@@ -54,7 +56,7 @@ def due():
 
 
 default = due()
-assert put('t2', 'Optional').json()['rescheduled'] is True
+assert put('z2', 'Optional').json()['rescheduled'] is True
 later = due()
 factor = policy.tier_factor('Optional', 'Core')
 assert round(factor, 2) == 4.64, factor
@@ -64,9 +66,9 @@ expected = min(expected, limit) if limit is not None else expected
 assert later['scheduledDays'] == expected and later['ratingDays'] == default['ratingDays'], (default, later)
 assert later['scheduledDays'] > default['scheduledDays'], (default, later)
 # Choosing the revision's own tier is 원래대로; so is null. The schedule returns to the default.
-r = put('t3', 'Core'); assert r.status_code == 200 and 'personalTier' not in r.json()['question'], r.text
+r = put('y3', 'Core'); assert r.status_code == 200 and 'personalTier' not in r.json()['question'], r.text
 assert due() == default
-assert put('t4', 'Important').status_code == 200 and put('t5', None).json()['question']['tier'] == 'Core'
+assert put('x4', 'Important').status_code == 200 and put('w5', None).json()['question']['tier'] == 'Core'
 assert due() == default
 with SessionLocal() as db:
     kinds = [e.payload['tier'] for e in db.scalars(select(RootEvent).where(RootEvent.kind == 'tier').order_by(RootEvent.created_at))]

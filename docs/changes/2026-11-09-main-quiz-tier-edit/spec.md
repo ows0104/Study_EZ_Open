@@ -12,8 +12,9 @@
 
 ## 책임·입출력 계약·오류 상태
 - 저장: `root_event(kind='tier', session_id='', revision=활성 판)`, payload
-  `{question_id, tier, originalTier, factor, tierPolicy:'roots-personal-tier/1', _request}`.
-  판(revision)마다 문항별 마지막 사건이 유효하다. 다른 판의 사건은 읽지 않는다.
+  `{question_id, tier, originalTier, factor, tierPolicy:'roots-personal-tier/1', seq, _request}`.
+  판(revision)마다 문항별 마지막 사건이 유효하다(시각 → 저장 순번 `seq` → 요청 ID 순). 다른 판의 사건은 읽지 않는다.
+  `seq`는 같은 시각에 찍힌 선택의 순서를 정한다(요청 ID는 무작위라 순서가 아니다).
 - 간격: Quiz Bank와 같은 망각 곡선 R(t)=1/(1+t/9S)과 Quiz Bank tier 목표(Essential .9·Core .85·Important .78·Optional .55)로
   t(tier)=9(1/R−1)을 구하고 `factor = t(내 중요도)/t(원래 중요도)`를 사건에 고정한다(정책이 바뀌어도 옛 사건 재현 불변).
   `state.replay`가 네 단계 자기평가 결과(`ratingDays`)가 있는 방향 중 마지막 평가 문항에 개인 중요도가 있으면

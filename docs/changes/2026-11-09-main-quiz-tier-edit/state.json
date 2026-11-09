@@ -10,12 +10,12 @@
   ],
   "approvals": {
     "build": {
-      "at": "2026-11-09T09:44:23.837632+00:00",
+      "at": "2026-11-09T09:56:13.835847+00:00",
       "evidence": "사용자 채팅 2026-11-09: 「Main-Quiz 풀면서 중요도 수정할 수 있게 해줘.」 (CLAUDE.md: 작업 요청을 구현·검사·PR·병합·배포 승인으로 본다)",
       "scope": "Main-Quiz 풀이 화면 내 중요도 선택·원래대로, root_event kind=tier 저장(스키마 변경 없음), 개인 중요도의 복습 간격 반영, 이용현황 root_tier, 관련 검사",
       "evidence_version": 2,
-      "source_hash": "163933f5f0b478f9ebe3ee18565fc500ee04b3abbb586dffc3b1853c1bc49ec1",
-      "plan_hash": "0924e01793bdb4a9b37622cee24d7eaa18707d1711f82c1c43c574fc5387b8e0",
+      "source_hash": "effec47d0619c6f108b857e3bd6945362b4b1e749d37fa87800ca1eb6ba33d46",
+      "plan_hash": "0663918ee7240984079bf43cc782e9dc0874e008c59ecbff006db1a4df538100",
       "inputs": [
         ".github",
         "bridge",
@@ -33,7 +33,7 @@
         "uv.lock",
         "web"
       ],
-      "release_hash": "6438814c261da9ab0b1d9de0b52660f30de8f01a996f72e30579f841e640cc62"
+      "release_hash": "6d8e1bb489833f15e5a1de4b73c4945115e1c8eb5bedbd72b3afa4bdd26d06a7"
     }
   },
   "checks": [
@@ -195,14 +195,179 @@
         "web"
       ],
       "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794217711693811800-server.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-09T09:54:23.341444+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "41f1c4d6f1ae4f7ebe6b2147f32ba919272974bed2548a3df369e008e903de5a",
+      "plan_hash": "0924e01793bdb4a9b37622cee24d7eaa18707d1711f82c1c43c574fc5387b8e0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794218058728861700-web.log",
+      "web_artifact": "7f93e31da5af94ea6e95c2dfd0becab2c1b48e28178808406ffd3441fa9b415f",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-09T09:55:26.908448+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "scripts/check_root_learning.py",
+        "--check",
+        "root-ui"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "41f1c4d6f1ae4f7ebe6b2147f32ba919272974bed2548a3df369e008e903de5a",
+      "plan_hash": "0924e01793bdb4a9b37622cee24d7eaa18707d1711f82c1c43c574fc5387b8e0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794218066505455300-regression.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-09T10:01:10.006209+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.worktrees/main-quiz-tier-edit/server/.venv/Scripts/python.exe",
+        "-c",
+        "import os,subprocess,sys;os.chdir('server');sys.exit(subprocess.call([sys.executable,'-m','tests']))"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "effec47d0619c6f108b857e3bd6945362b4b1e749d37fa87800ca1eb6ba33d46",
+      "plan_hash": "0663918ee7240984079bf43cc782e9dc0874e008c59ecbff006db1a4df538100",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794218174423835300-server.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-09T10:01:14.801076+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "effec47d0619c6f108b857e3bd6945362b4b1e749d37fa87800ca1eb6ba33d46",
+      "plan_hash": "0663918ee7240984079bf43cc782e9dc0874e008c59ecbff006db1a4df538100",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794218470330965600-web.log",
+      "web_artifact": "7f93e31da5af94ea6e95c2dfd0becab2c1b48e28178808406ffd3441fa9b415f",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-09T10:01:43.239443+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "scripts/check_root_learning.py",
+        "--check",
+        "root-ui"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "effec47d0619c6f108b857e3bd6945362b4b1e749d37fa87800ca1eb6ba33d46",
+      "plan_hash": "0663918ee7240984079bf43cc782e9dc0874e008c59ecbff006db1a4df538100",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794218475217925400-regression.log"
     }
   ],
   "review": {
-    "at": "2026-11-09T09:54:08.586228+00:00",
-    "summary": "자기 검토: 개인 tier는 같은 판 tier 사건만 읽고(ID 승계 없음), 네 단계 평가 결과의 예정일만 다시 계산(안정도·옛 3단계 사건 불변), 시험 상한·max_days 유지, 원래 값 선택=원래대로, 멱등·409. 앞면 tier는 답 정보 없음. 웹은 서버 응답으로 현재 문항 갱신·frames 재요청.",
+    "at": "2026-11-09T10:01:43.379363+00:00",
+    "summary": "자기 검토: 개인 tier는 같은 판 tier 사건만 읽고(ID 승계 없음) 시각→seq→ID 순으로 마지막 선택을 쓴다. 네 단계 평가 결과의 예정일만 다시 계산(안정도·옛 3단계 사건 불변), 시험 상한·max_days 유지, 원래 값 선택=원래대로, 멱등·409. 앞면 tier는 답 정보 없음. 웹은 서버 응답으로 현재 문항 갱신·frames 재요청. root-ui 첫 재실행 실패(같은 시각 사건을 무작위 ID로 정렬)를 seq로 고침.",
     "evidence_version": 2,
-    "source_hash": "41f1c4d6f1ae4f7ebe6b2147f32ba919272974bed2548a3df369e008e903de5a",
-    "plan_hash": "0924e01793bdb4a9b37622cee24d7eaa18707d1711f82c1c43c574fc5387b8e0",
+    "source_hash": "effec47d0619c6f108b857e3bd6945362b4b1e749d37fa87800ca1eb6ba33d46",
+    "plan_hash": "0663918ee7240984079bf43cc782e9dc0874e008c59ecbff006db1a4df538100",
     "inputs": [
       ".github",
       "bridge",
@@ -226,5 +391,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-09T09:54:08.805124+00:00"
+  "updated_at": "2026-11-09T10:01:43.548949+00:00"
 }
