@@ -12,12 +12,12 @@
   ],
   "approvals": {
     "build": {
-      "at": "2026-11-09T09:54:22.014476+00:00",
-      "evidence": "사용자 2026-11-09 채팅: 「스펙 작성 시작」 → 스펙·계획 제시 뒤 「PR A 시작」 (spec의 필드명을 실제 runPolicies로 맞춘 뒤 같은 요청으로 재기록)",
-      "scope": "PR A: studyez_contracts/roots/generation_v2.py 예산 정책·검토 재실행 검증, quizbank/connection_generate_v2.py 예산·검토 포기 1회 재실행, 수동 복구 도구의 새 정책 거절, runner/root_native_json ledger 읽기 경합 수정, 관련 검사. 모델 호출·운영 DB 쓰기 없음",
+      "at": "2026-11-09T11:46:05.120237+00:00",
+      "evidence": "사용자 2026-11-09 채팅: 「PR A 시작」 뒤 「병합하고 PR B」",
+      "scope": "PR B: content/prompts/learning-links/map-tree(시범 지시문 그대로 이동), studyez_contracts/roots/map_tree.py·automation·generation_v2 파생 packet 검증, runner/root_front.py 앞 단계, runner/connection_generation map-tree 분기·이어 하기 이유, runner CLI --generation-resume, 관련 검사. 모델 호출·운영 DB 쓰기 없음",
       "evidence_version": 2,
-      "source_hash": "aa4d5047886b1f7e6142b394189e45e979944a1fd60e3a4556c0889a4f08e126",
-      "plan_hash": "ab64a2e222806cafb8da595802f770ace6a5f8ac466e37c67a53c06265ffaf89",
+      "source_hash": "6dd9ced9e22b1ea08f4cb9279af53c322a9540c437dec3249bd32ec135a3796b",
+      "plan_hash": "b4d9ecc67049204dd65741003228ada8c6cc495f53c4eb4a68b00853fe30bc8e",
       "inputs": [
         ".github",
         "bridge",
@@ -38,7 +38,7 @@
         "tests/runner",
         "uv.lock"
       ],
-      "release_hash": "14cf3e4a5c9fe33724be76811022ace29ce5a893bf08f03bc6c509a0b45aace9"
+      "release_hash": "b8b445e7928845f7c6b1bc88ac01c858d8d33e3559e86d749526975ee2fa4ba8"
     }
   },
   "checks": [
@@ -157,6 +157,122 @@
         "uv.lock"
       ],
       "log": "runs/_development/2026-11-09-main-quiz-runner-pipeline/1794218119750957500-runner.log"
+    },
+    {
+      "name": "contracts",
+      "at": "2026-11-09T11:46:21.373325+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "6dd9ced9e22b1ea08f4cb9279af53c322a9540c437dec3249bd32ec135a3796b",
+      "plan_hash": "b4d9ecc67049204dd65741003228ada8c6cc495f53c4eb4a68b00853fe30bc8e",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-runner-pipeline/1794224766638786500-contracts.log"
+    },
+    {
+      "name": "generation",
+      "at": "2026-11-09T11:49:21.124676+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "-m",
+        "pytest",
+        "tests/quizbank",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "6dd9ced9e22b1ea08f4cb9279af53c322a9540c437dec3249bd32ec135a3796b",
+      "plan_hash": "b4d9ecc67049204dd65741003228ada8c6cc495f53c4eb4a68b00853fe30bc8e",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-runner-pipeline/1794224781780209300-generation.log"
+    },
+    {
+      "name": "runner",
+      "at": "2026-11-09T11:53:50.236790+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "-m",
+        "pytest",
+        "tests/runner",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--deselect",
+        "tests/runner/test_desktop_control.py::test_shortcut_installer_supports_korean_filename_in_windows_powershell"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "6dd9ced9e22b1ea08f4cb9279af53c322a9540c437dec3249bd32ec135a3796b",
+      "plan_hash": "b4d9ecc67049204dd65741003228ada8c6cc495f53c4eb4a68b00853fe30bc8e",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-runner-pipeline/1794224961495533000-runner.log"
     }
   ],
   "review": null,
@@ -165,5 +281,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-09T09:56:25.310009+00:00"
+  "updated_at": "2026-11-09T11:53:50.239195+00:00"
 }
