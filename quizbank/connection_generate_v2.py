@@ -24,12 +24,26 @@ def medical_input(bank,conflicts):
     # deliberately absent; canonical clinical question/answer text stays verbatim.
     return c.medical_input(bank,conflicts)
 
+# medical-final/1 (2026-11-09 사용자 결정). The lecture is the answer key; this review judges source-to-source
+# conflicts and otherwise only tells students where current medicine differs. Its notes are shown to students.
+MEDICAL_FINAL_PROMPT=('의학 검토다. 마지막 한 번이며 문항을 고치게 하지 않는다. 문항의 답은 강의 자료가 기준이다. '
+    '실제 문항·정답·모든 answer_units·선지·해설·임상 충돌(clinical_conflicts)을 자신의 의학 지식으로 대조한다. 그림은 아래 attachment 순서대로 실제 문항의 일부다. '
+    '두 경우로 나눈다.\n'
+    '1) conflict_id가 있고 그 충돌 사실이 원본끼리의 충돌(강의 본문↔필기자 손글씨·첨언, 강의↔족보)인 문항: 어느 쪽이 현재 의학에 맞는지 판정한다. '
+    '현재 답이 판정과 같으면 ok, 다르면 wrong, 확정할 수 없으면 doubt. note는 「판정: 」으로 시작해 무엇이 왜 맞는지 학생이 이해하기 쉬운 한두 문장으로 쓰고, '
+    '판정이 현재 답과 다르면 suggested_answer에 판정에 맞는 답을 적는다.\n'
+    '2) 그 밖의 모든 문항: 강의 답을 그대로 둔다. 현재 의학과 분명히 다르면 wrong, 오해 소지가 있거나 일부만 다르면 doubt, 차이가 없으면 ok와 빈 note. '
+    'wrong·doubt의 note는 「현재 의학: 」으로 시작해 강의 표현과 무엇이 다른지 학생이 이해하기 쉬운 한두 문장으로 쓴다. suggested_answer는 비운다.\n'
+    'note는 학생에게 그대로 보인다. 검수·모델·문항 ID·수정 이력은 쓰지 않는다. 중요도나 과거 판정은 평가하지 않는다. '
+    'reviews에는 입력의 모든 question_id마다 판정을 정확히 한 줄씩 작성한다. pool_checks는 빈 배열이다. JSON만 반환한다.\n')
+
 def call_model(stage,context,material,model,timeout=2400):
     from . import connection_generate as g
     kind=stage.split('-')[0]
     if kind=='medical':
         images,labels=visual.paths(context['bank'],material)
         prompt='독립 의학 정답 검수다. 중요도나 과거 판정은 평가하지 않는다. 실제 문항·정답·모든 answer_units·해설·임상 충돌을 자신의 의학 지식으로 대조한다. 그림은 아래 attachment 순서대로 실제 문항의 일부다. 오류/의심을 그대로 기록한다. reviews에는 입력의 모든 question_id마다 ok·doubt·wrong 판정을 정확히 한 줄씩 작성하며, 오류가 없는 문항도 ok로 적는다. conflicts의 사실과 현재 정답을 구별한다. pool_checks는 빈 배열이다. JSON만 반환한다.\n'
+        if context.get('medicalFinal'):prompt=MEDICAL_FINAL_PROMPT
         prompt+=json.dumps({'input':context['clinicalInput'],'images':labels},ensure_ascii=False)
         result=codex.run(prompt,blind=True,model=model,timeout=900,label='연결 독립 정답 검수',schema=g.output_schema(REVIEW_REPORT),system=SYSTEM,images=images)
         visual.paths(context['bank'],material)
@@ -66,6 +80,8 @@ def importance_brief(lineage,proof):
 RESUMABLE_BLOCKERS=(*c.RECOVERY_HISTORY,'runtimeRevalidations','normalizationRecoveries','parallelSchemaRecovery')
 # Recorded on every new ledger (2026-11-09 사용자 설계 결정). Existing ledgers keep their earlier rules.
 RUN_POLICIES=list(c.RUN_POLICIES)
+# medical-final/1 for new ledgers: one medical review after the last repair round (studyez_contracts generation_v2).
+MEDICAL_FINAL=True
 
 def run(packet,out,model,invoke,resume=None,rerun=()):
     """resume: the operator's reason to continue this folder (stage-resume/1). Completed stages whose
@@ -105,6 +121,7 @@ def run(packet,out,model,invoke,resume=None,rerun=()):
         ledger={'identity':fingerprint,'pipelineVersion':c.POLICY,'repairRounds':0,'stages':{},
             # opt-in speed path: context check first, then source ‖ medical, medical review reuse
             **({'contextStages':True}if packet.get('speedStages')is True else{}),
+            **({'medicalFinal':c.MEDICAL_FINAL_POLICY}if MEDICAL_FINAL else{}),
             **({'runPolicies':list(RUN_POLICIES)}if RUN_POLICIES else{})}
     c.require(type(ledger['repairRounds'])is int and 0<=ledger['repairRounds']<=3,'pipeline2: invalid budget')
     policies=c.run_policies(ledger)
@@ -353,7 +370,8 @@ def run(packet,out,model,invoke,resume=None,rerun=()):
                 for q in bank['questions']for s in q.get('stimuli',[])]})
         try:projection=medical_input(bank,authored['clinical_conflicts']);blocked=None;blocking_fix=False
         except ValueError as error:blocked=str(error);projection=None;blocking_fix=True
-        med_ctx={'title':packet['title'],'bank':bank,'clinicalInput':projection}
+        final_medical=c.medical_final(ledger)
+        med_ctx={'title':packet['title'],'bank':bank,'clinicalInput':projection,**({'medicalFinal':True}if final_medical else{})}
         if ledger.get('contextStages')is True:
             # Context check first: the blind medical model only ever sees a verified projection.
             clinical_context=stage(f'context-{n}',{k:base[k]for k in('title','scope','lecture_id','sources')}|
@@ -363,7 +381,8 @@ def run(packet,out,model,invoke,resume=None,rerun=()):
                 blocked='독립 검수 입력 확인: '+clinical_context['clinical_context_reason']
                 blocking_fix=clinical_context['clinical_context_status']=='conflict'
             if not blocked:unblock(n)
-            if blocked:audit=review(f'source-{n}',source_ctx);medical_value=None
+            # medical-final/1: rounds review the source only; the medical review follows the last round.
+            if blocked or final_medical:audit=review(f'source-{n}',source_ctx);medical_value=None
             else:
                 from concurrent.futures import ThreadPoolExecutor
                 # Collect this thread's cyclic garbage before the workers start. Otherwise a worker may run the
@@ -384,18 +403,20 @@ def run(packet,out,model,invoke,resume=None,rerun=()):
                 blocked='독립 검수 입력 확인: '+context_check['clinical_context_reason']
                 blocking_fix=context_check['clinical_context_status']=='conflict'
             if not blocked:unblock(n)
-        if blocked:
+        def withhold_medical():
             report={'reason':blocked,'bankHash':document_hash(bank),'clinicalContextHash':document_hash(authored['clinical_conflicts'])}
             name=f'medical-{n}';entry={'status':'blocked','blockedReport':report,'blockedHash':document_hash(report)}
             prior=ledger['stages'].get(name)
             if resume_row is not None and prior is not None and prior!=entry:supersede(name);prior=None
             c.require(prior is None or prior==entry,'Interrupted or different medical stage cannot be reset')
             ledger['stages'][name]=entry;g.write(ledger_path,ledger);g.write(out/(name+'.blocked.json'),report);used.add(name)
-            medical=None
+        if final_medical:medical=None
+        elif blocked:
+            withhold_medical();medical=None
         else:
             medical=medical_value if medical_value is not None else stage(f'medical-{n}',med_ctx)
         def decide(audit):
-            reasons=c.repair_reasons(b,bank,audit,medical,validation)+c.point_id_reasons(bank,table)
+            reasons=c.repair_reasons(b,bank,audit,medical,validation,final_medical)+c.point_id_reasons(bank,table)
             # concept-map-extract/3: the Map's parent_id tree must survive in the brief (no-op for /2 Maps).
             hierarchy=concept_tree.hierarchy_findings(b,packet.get('conceptMap'))
             if hierarchy:g.write(out/f'map-hierarchy-{n}.json',{'findings':hierarchy})
@@ -422,6 +443,10 @@ def run(packet,out,model,invoke,resume=None,rerun=()):
                 'previousAuthoring':{**authored,'bank':visual.authored(authored['bank'])},
                 'sourceAudit':audit,'medical':medical,'validation':{k:v for k,v in validation.items()if k!='checked_at'},'repairReasons':reasons})
             continue
+        if final_medical:
+            # The last round: the one medical review. It changes no question and no readiness.
+            if blocked:withhold_medical()
+            else:medical=stage(f'medical-{n}',med_ctx)
         if blocked:raise ValueError('독립 정답 검수 입력 분리가 완료되지 않았습니다. 실제 검수를 완료로 표시하지 않고 보존합니다.')
         importance=ledger.get('importanceReview')
         if importance:
@@ -437,7 +462,7 @@ def run(packet,out,model,invoke,resume=None,rerun=()):
         if table is not None:bank,importance_proof=c.project_importance(bank,b,table)
         if projection or importance_proof:validation=validate_bank(bank,[s['id']for s in packet['sources']])
         doc=c.make_document(b,reviewed_bank,audit,revision=packet['revision'],title=packet['title'],exam_date=packet['examDate'],
-            medical=medical,snapshot=bank if projection or importance_proof else None,
+            medical=None if final_medical else medical,snapshot=bank if projection or importance_proof else None,
             importance=c.target_importance(b,table)if importance_proof else None)
         if resume_row is not None:
             for name in [k for k in ledger['stages']if k not in used]:supersede(name)  # the resumed path no longer reaches them
@@ -448,6 +473,7 @@ def run(packet,out,model,invoke,resume=None,rerun=()):
             'mapChangeReason':authored['map_change_reason'],'sourceAssessment':audit['assessment'],'repairRounds':n+initial_cost,
             **({'contextStages':True,'clinicalContext':clinical_context}if ledger.get('contextStages')is True else{}),
             **({'medicalReuse':ledger['medicalReuse']}if ledger.get('medicalReuse')else{}),
+            **({'medicalFinal':ledger['medicalFinal']}if'medicalFinal'in ledger else{}),
             'initialMapCorrection':{'errors':initial_errors,'consumedRounds':initial_cost},
             **({'runPolicies':ledger['runPolicies']}if'runPolicies'in ledger else{}),
             # map-tree/1: the server re-derives this packet from its request (studyez_contracts.roots.map_tree).

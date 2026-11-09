@@ -502,7 +502,7 @@ def revealed_answer(db, doc, q, generation=_UNSET):
             answer['reviewIssues']=question_issues(summary['issues'],q['question_id'])
         else:
             answer['reviewNotes'] = [
-            {'source': label, **r} for label, checks in [('원본 대조', result['sourceAudit']['question_checks']), ('독립 정답 검수', result['medical'])]
+            {'source': label, **r} for label, checks in [('원본 대조', result['sourceAudit']['question_checks']), ('의학 검토' if result['manifest'].get('medicalFinal') else '독립 정답 검수', result['medical'])]
             for r in checks['reviews'] if r['question_id'] == q['question_id'] and r['verdict'] != 'ok']
             answer['reviewIssues'] = question_issues(
                 result['sourceAudit']['input_issues'] + result['validation']['errors'] + result['validation']['warnings'], q['question_id'])
