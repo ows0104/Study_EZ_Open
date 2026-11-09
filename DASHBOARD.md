@@ -23,7 +23,6 @@
 
 
 
-| P1 | 사슬알균(감염과 면역 261105_01) Main-Quiz 운영 반입 — 관리자 시범 공개 범위, 학생 공개 아님 | ows0104 / Claude 사슬알균 시범 세션 | claude/sasl-import | 운영 DB(RootGeneration·RootContent·RootControl·RootEvent·PrequizJob 1건씩), R2 원본 스냅숏, docs/changes/2026-11-09-main-quiz-second-lecture/publication.py | 2026-11-09 | 사용자 2026-11-09 「반입해줘」. generation-4 16:06 판(과제 96·목표 79/119). 다른 강의·Quiz Bank·학습 기록 불변을 전후 대조 |
 | P1 | Main-Quiz 문제 퀄리티 — 검사기에 측정 추가(구조 단서-정답 상관·정답 회상 부담·형식 쏠림) | ows0104 / Claude 문제 퀄리티 세션 | claude/bank-quality-checks | studyez_contracts/bank/quality.py, tests/quizbank/test_answer_quality.py(새 파일), docs/changes/2026-11-08-bank-quality-checks | 2026-11-08 | 사용자 2026-11-08 진단 뒤 「검사기에 측정 추가」 선택. 근거: 감염과 면역 261104_02 98문항 중 예/아니오 축 6문항 정답이 전부 부정, basic/list 답 60자 초과 21개, cloze·mcq 0개. 기존 품질 검사는 leaked_units(발문 정답 노출) 하나뿐. errors 아님 — warnings만 추가해 문항을 떨어뜨리지 않고 repair 단계·관리자 issues에 보인다. 선은 운영 Quiz Bank 35편 3,103문항의 p97에서 쟀다. 프롬프트·DB·운영 미변경. 구현·검사 완료 eff75a83 PR #22 https://github.com/ows0104/Study_EZ_Open/pull/22 — 측정 16·contracts·quizbank 720 통과, 전체 pytest 2,098 통과(1 실패는 tests/runner/test_desktop_control.py 바로가기 설치기로 pristine origin/master에서 동일 재현·미수정), 서버 bank 33·경로 171 동일·retention 통과, map_numbers 정상. 실물 대조: 새 Main-Quiz 98문항 errors 0·warnings 36(다섯 측정 모두, Q003·Q080 이름으로), 운영 은행 35편 새 경고 62(편당 중앙 2)·errors 증가 0. master 병합은 사용자 승인 대기 |
 
 
@@ -62,6 +61,7 @@ merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 �
 
 | 완료일 | 작업 | 작업자 | PR |
 |---|---|---|---|
+| 2026-11-09 | 사슬알균(감염과 면역 261105_01) Main-Quiz 운영 반입: map-tree-26110901, 과제 96, 관리자 시범(allowed_users [runner]) — 학생 공개 아님. 다른 강의·Quiz Bank·학습 상태 불변 대조 | ows0104 / Claude 사슬알균 시범 세션 | [#58](https://github.com/ows0104/Study_EZ_Open/pull/58) |
 | 2026-11-09 | Main-Quiz 생성: 연결 목표 중요도는 계산값(내용만 판정) · 검토 단계에 원본 쪽·문항 그림 첨부(포기 6/19의 원인) · 오염은 정답 검수자가 읽는 칸만 · --rerun. 사슬알균 16:06 판 result.json(과제 96·목표 79/119, validate 통과). 병합 2a3ad0b2. 운영 반입·학생 공개는 별도 승인 대기 | ows0104 / Claude 사슬알균 시범 세션 | [#57](https://github.com/ows0104/Study_EZ_Open/pull/57) |
 | 2026-11-09 | Main-Quiz 생성: 실패 단계부터 이어 하기(--resume, stage-resume/1) + 맥락 검사는 오염만 정답 검수를 막음(clinical-context/2) + 스레드 풀 전 gc.collect. 사슬알균 generation-4를 이어 돌려 26분 만에 result.json(133문항·과제 82, 계약 검증 통과). 병합 455311e2. 운영 반입·학생 공개는 별도 승인 대기 | ows0104 / Claude 사슬알균 시범 세션 | [#56](https://github.com/ows0104/Study_EZ_Open/pull/56) |
 | 2026-11-09 | Main-Quiz 생성: 빈 원본 대조(전부 doubt·전부 unknown) 거절 + 샌드박스에서 뜨는 검사 python(uv PYTHONHOME 제거·sandbox_python). 사슬알균 generation-4 보류에서 드러남. 병합 18ef6a60. 러너 배포 사본은 별도 갱신 필요 | ows0104 / Claude 사슬알균 시범 세션 | [#55](https://github.com/ows0104/Study_EZ_Open/pull/55) |
