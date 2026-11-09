@@ -4,6 +4,7 @@ root-generation/2 임상 충돌 정리 확인 단계다. 출력은 clinical_cont
 - clinical_conflicts가 BANK source_conflicts의 모든 conflict_id에 대해, 원본(material/*.md·PNG)에 실제로 있는 의학적 충돌 사실과 현재 정답의 관계를 빠짐없이 담았는가
 - clinical_conflicts에 과거 검수 판정·검수자 판단·수정 차수·중요도가 섞이지 않았는가
 - 문제·정답·해설에 과거 판정이나 저작 이력이 섞이지 않았는가
+  (정답 검수자가 읽는 칸만 본다. exam_rationale처럼 저작용 칸의 이력은 contamination이 아니다.)
 
 모두 맞으면 consistent다. 원본과 다르거나 빠졌거나 과거 판정이 섞였으면 conflict이고, reason에 어느 conflict_id 또는 question_id인지와 고칠 내용을 적는다. 원본을 확인할 수 없으면 unknown이다. clinical_conflicts와 source_conflicts가 모두 비어 있으면, 원본에 의학적 충돌이 실제로 없는지 확인해 판정한다.
 

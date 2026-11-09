@@ -12,7 +12,7 @@ recall_policy=recall-units/1이면 design_checks에 모든 문항을 정확히 �
 
 relation_checks는 모든 관계의 원본·임상 지지 여부 supported/conflict/unknown을 정확히 한 번 판정한다. 초기 unreviewed 상태와 별개이며 미확인은 자동 승격하지 않는다. target_checks는 모든 목표의 중요도 근거가 현재 의미에 맞는지 consistent/conflict/unknown을 정확히 한 번 판정한다. 원래 강조를 비동등 재정의에 전이하지 않는다. prerequisite_checks는 BANK의 모든 기존 question_id→prerequisite_id 쌍에 supported/unnecessary/unknown과 실제 이유를 정확히 한 번 기록한다. 내용상 필요한 최소 기초와 과도한 전체 표/목록 잠금을 구별한다.
 
-clinical_context_status는 별도 clinical_conflicts가 원래 모든 source_conflicts의 의학적 충돌 사실을 보존하며 과거 검수 판정·저작 이력을 포함하지 않는지, 문제/답/해설에도 과거 판정이 섞이지 않는지 consistent/conflict/unknown으로 판단한다. 임상 충돌을 삭제해 blind 검수의 정오 판단을 왜곡하지 않는다.
+clinical_context_status는 별도 clinical_conflicts가 원래 모든 source_conflicts의 의학적 충돌 사실을 보존하며 과거 검수 판정·저작 이력을 포함하지 않는지, 문제/답/해설에도 과거 판정이 섞이지 않는지 consistent/conflict/unknown으로 판단한다. 볼 칸은 정답 검수자가 읽는 칸, 곧 문제·정답·정답 단위·선지·선지 해설·해설과 clinical_conflicts다. exam_rationale·source_refs·point_ids처럼 학생과 정답 검수자에게 가지 않는 저작용 칸에 이력이 남았으면 이 판정을 바꾸지 않고 question_fix로 적는다(2026-11-09 사용자 「통과시키기」). 임상 충돌을 삭제해 blind 검수의 정오 판단을 왜곡하지 않는다.
 
 issues는 구조화된 목록이다: question_fix(수정 가능한 문항/필요 선행 오류), map_fix(지도/중요도/정의 오류), required_gap(확인된 필수 직접 회상 누락), optional_extension(선택적 확장/미시험), limitation(자료/근거/의학적 불확실성), confirmation(긍정적 보존·범위 확인). 모든 항목에 고유 issue_id, 실제 text와 관련 question_ids/direction_ids를 작성한다. 불확실성을 필수 누락으로 오인하지 않는다. required_gap의 direction_ids에는 brief에서 requirement=required인 방향만 넣는다. 같은 누락에 optional 방향도 걸리면 그 방향들은 별도 optional_extension 항목으로 적는다. 방향에 대응하지 않는 누락은 map_fix다. 다음 강의·타 교수·참고 범위·비학습 자료의 제외도 원본 전체에서 확인한다. 임상 정답만 정상이어도 목표 회상이 빠졌으면 별도로 지적한다. JSON만 반환한다.
 
