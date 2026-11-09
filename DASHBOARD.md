@@ -23,6 +23,7 @@
 
 
 
+| P1 | Main-Quiz 생성: 연결 목표(branch/root)의 중요도는 계산값을 쓰고 원본 대조는 내용만 판정 + 재개 시 지정 단계 다시 돌리기(--rerun) | ows0104 / Claude 사슬알균 시범 세션 | claude/link-goal-importance | content/prompts/learning-links/automation/source-v2.md, quizbank/connection_generate(.py·_v2.py), runner/root_native_json.py, tests/quizbank/test_root_resume.py, docs/changes/2026-11-09-main-quiz-second-lecture | 2026-11-09 | 사용자 2026-11-09 「계산값 쓰고 내용만 검토」. 사슬알균 연결 목표 30개가 중요도 전이 미승인(unknown)으로 전부 막힘. 마지막 원본 대조만 다시 돌린다. DB·운영 미변경 |
 | P1 | Main-Quiz 문제 퀄리티 — 검사기에 측정 추가(구조 단서-정답 상관·정답 회상 부담·형식 쏠림) | ows0104 / Claude 문제 퀄리티 세션 | claude/bank-quality-checks | studyez_contracts/bank/quality.py, tests/quizbank/test_answer_quality.py(새 파일), docs/changes/2026-11-08-bank-quality-checks | 2026-11-08 | 사용자 2026-11-08 진단 뒤 「검사기에 측정 추가」 선택. 근거: 감염과 면역 261104_02 98문항 중 예/아니오 축 6문항 정답이 전부 부정, basic/list 답 60자 초과 21개, cloze·mcq 0개. 기존 품질 검사는 leaked_units(발문 정답 노출) 하나뿐. errors 아님 — warnings만 추가해 문항을 떨어뜨리지 않고 repair 단계·관리자 issues에 보인다. 선은 운영 Quiz Bank 35편 3,103문항의 p97에서 쟀다. 프롬프트·DB·운영 미변경. 구현·검사 완료 eff75a83 PR #22 https://github.com/ows0104/Study_EZ_Open/pull/22 — 측정 16·contracts·quizbank 720 통과, 전체 pytest 2,098 통과(1 실패는 tests/runner/test_desktop_control.py 바로가기 설치기로 pristine origin/master에서 동일 재현·미수정), 서버 bank 33·경로 171 동일·retention 통과, map_numbers 정상. 실물 대조: 새 Main-Quiz 98문항 errors 0·warnings 36(다섯 측정 모두, Q003·Q080 이름으로), 운영 은행 35편 새 경고 62(편당 중앙 2)·errors 증가 0. master 병합은 사용자 승인 대기 |
 
 
