@@ -133,13 +133,98 @@
         "web"
       ],
       "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794217644158805200-web.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-09T09:48:25.297419+00:00",
+      "command": [
+        "server/.venv/Scripts/python.exe",
+        "-c",
+        "import os,subprocess,sys;os.chdir('server');sys.exit(subprocess.call([os.path.abspath('.venv/Scripts/python.exe'),'-m','tests']))"
+      ],
+      "exit_code": 127,
+      "evidence_version": 2,
+      "source_hash": "41f1c4d6f1ae4f7ebe6b2147f32ba919272974bed2548a3df369e008e903de5a",
+      "plan_hash": "0924e01793bdb4a9b37622cee24d7eaa18707d1711f82c1c43c574fc5387b8e0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794217705050500900-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-09T09:53:58.259734+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.worktrees/main-quiz-tier-edit/server/.venv/Scripts/python.exe",
+        "-c",
+        "import os,subprocess,sys;os.chdir('server');sys.exit(subprocess.call([sys.executable,'-m','tests']))"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "41f1c4d6f1ae4f7ebe6b2147f32ba919272974bed2548a3df369e008e903de5a",
+      "plan_hash": "0924e01793bdb4a9b37622cee24d7eaa18707d1711f82c1c43c574fc5387b8e0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794217711693811800-server.log"
     }
   ],
-  "review": null,
+  "review": {
+    "at": "2026-11-09T09:54:08.586228+00:00",
+    "summary": "자기 검토: 개인 tier는 같은 판 tier 사건만 읽고(ID 승계 없음), 네 단계 평가 결과의 예정일만 다시 계산(안정도·옛 3단계 사건 불변), 시험 상한·max_days 유지, 원래 값 선택=원래대로, 멱등·409. 앞면 tier는 답 정보 없음. 웹은 서버 응답으로 현재 문항 갱신·frames 재요청.",
+    "evidence_version": 2,
+    "source_hash": "41f1c4d6f1ae4f7ebe6b2147f32ba919272974bed2548a3df369e008e903de5a",
+    "plan_hash": "0924e01793bdb4a9b37622cee24d7eaa18707d1711f82c1c43c574fc5387b8e0",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-09T09:47:29.658249+00:00"
+  "updated_at": "2026-11-09T09:54:08.805124+00:00"
 }
