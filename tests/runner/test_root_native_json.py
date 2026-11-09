@@ -175,7 +175,7 @@ def test_speed_path_context_stage_runs_through_native_files_and_stays_verifiable
         work=kwargs['cwd'];stage=work.parent.name
         if stage.startswith('context-'):
             calls.append(stage);path=work/'result.json'
-            path.write_text(json.dumps({'clinical_context_status':'consistent','clinical_context_reason':'synthetic'}),encoding='utf-8')
+            path.write_text(json.dumps({'clinical_context_status':'consistent','clinical_context_problem':'none','clinical_context_reason':'synthetic'}),encoding='utf-8')
             return {'text':json.dumps({'path':'result.json','sha256':n.sha(path)}),'turns':1,'session_id':'synthetic-native',
                     'usage':{'input_tokens':5,'output_tokens':2,'cache_read_input_tokens':0,'cache_creation_input_tokens':0},
                     'models':{kwargs['model']:2},'cost_usd':None,'duration_ms':3}

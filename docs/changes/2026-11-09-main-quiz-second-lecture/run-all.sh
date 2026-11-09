@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # 사슬알균(261105_01) Main-Quiz 생성 시범 — 2026-11-09 사용자 「사슬알균」·「승인」. 실패하면 그 자리에서 멈춘다 — 자동 재시도 없음.
 # 실행 코드: 이 worktree(= 병합된 master). 실행 폴더: <main>/runs/_e2e/26110901 (git 밖).
-#   bash docs/changes/2026-11-09-main-quiz-second-lecture/run-all.sh [points|generate|importance|assemble|all]
+#   bash docs/changes/2026-11-09-main-quiz-second-lecture/run-all.sh [points|generate|resume|importance|assemble|all]
+#   resume: GEN_DIR 폴더의 성공한 단계를 살리고 실패·달라진 단계부터 이어 간다 (REASON 필수).
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../../.." && pwd)"
@@ -28,6 +29,10 @@ points() {
   step packet; run packet
 }
 generate() { step "root-generation/2"; "$PY" -m runner.root_native_json --packet "$GEN/packet.json" --out "$GEN"; }
+resume() {
+  : "${REASON:?REASON=<재개 이유> 가 필요하다}"
+  step "root-generation/2 resume"; "$PY" -m runner.root_native_json --packet "$GEN/packet.json" --out "$GEN" --resume "$REASON"
+}
 importance() {
   step "importance review"
   "$PY" -m runner.root_importance_review --packet "$GEN/packet.json" --out "$GEN" \
@@ -38,6 +43,7 @@ assemble() { step "assemble"; "$PY" -m runner.root_native_json --packet "$GEN/pa
 case "${1:-all}" in
   points) points ;;
   generate) generate ;;
+  resume) resume ;;
   importance) importance ;;
   assemble) assemble ;;
   all) points; generate; step results; run results ;;

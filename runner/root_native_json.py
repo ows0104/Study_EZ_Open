@@ -151,7 +151,7 @@ def inventory(folder):
 def schema_for(stage,ctx):
     if stage=='normalize':return c.BRIEF
     if stage=='generate'or re.fullmatch(r'repair-[1-3]',stage):return c.author_schema(ctx.get('parallelAuthoring',False))
-    if re.fullmatch(r'context-[0-3]',stage):return c.CONTEXT
+    if re.fullmatch(r'context-[0-3]',stage):return c.CONTEXT_OUTPUT
     require(re.fullmatch(r'source-[0-3]',stage),'Unsupported file-output stage')
     return c.source_schema(ctx['brief'],ctx['bank'])
 
@@ -229,7 +229,7 @@ def check_file(stage,work):
             meta=json.loads(re.match(r'<!-- STUDYEZ_BANK_FILE (\{[^\n]+\}) -->',ctx['webResponse']['raw'].removeprefix('\ufeff'))[1])
             require([q['question_id']for q in value['bank']['questions']]==meta['question_ids'],'Original web IDs changed')
     elif stage.startswith('context-'):
-        c.validate_shape(value,c.CONTEXT,'clinical context')
+        c.validate_context(value)
     else:
         for q in ctx['bank']['questions']:
             for stimulus in q.get('stimuli',[]):
@@ -373,6 +373,8 @@ def validate_stage(out,entry,*,model):
     seat=out/'.native'/name;work=seat/'work';require(read(seat/'receipt.json')==row,'Changed native receipt archive')
     require(read(seat/'journal.json')=={'status':'completed','proofHash':row['proofHash']},'Missing completed native receipt journal')
     ctx=read(out/(name+'.input.json'));schema=schema_for(name,ctx)
+    # Context stages recorded before clinical-context/2 were accepted under the two-field schema.
+    if name.startswith('context-')and proof['schemaHash']==document_hash(c.CONTEXT):schema=c.CONTEXT
     require(proof['inputHash']==entry['inputHash']==document_hash(ctx)and proof['schemaHash']==document_hash(schema)
         and proof['cleanInputHash']==document_hash(clean(ctx))and proof['model']==model,'Changed native model/input/acceptance contract')
     require(sha(seat/'adapter.py')==proof['adapterSha256']and all(sha(work/k)==v for k,v in proof['protectedFiles'].items()),'Changed native adapter/input archive')
@@ -433,6 +435,10 @@ def validate_all(out,payload):
         require(read(Path(out)/('runtime.revalidation.json'if i==1 else f'runtime.revalidation-{i}.json'))==row
             and read(archive/'ledger-before.json')==proof['priorLedger']
             and sha(archive/'recovery.py')==proof['toolSha256'],'Changed runtime compatibility archive')
+    for i,row in enumerate(payload['manifest'].get('stageResumes',[]),1):
+        archive=Path(out)/f'.resume-{i}'
+        require(read(archive/'ledger-before.json')==row['priorLedger'],'Changed stage resume archive')
+        require(all((archive/f).exists()for s in row['superseded']for f in s['files']),'Superseded stage evidence is missing')
     for row in payload['manifest'].get('renderRecoveries',[]):
         proof=row['proof'];archive=Path(out)/'.render-recovery'
         require(read(Path(out)/'render.recovery.json')==row
@@ -446,11 +452,12 @@ def validate_all(out,payload):
         validate_gap_archive(out,row)
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--packet',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--model');a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--packet',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--model')
+    p.add_argument('--resume',metavar='REASON',help='keep revalidated completed stages; rerun only the rest (stage-resume/1)');a=p.parse_args()
     try:
         require_unblocked(a.out)
         from studyez_contracts.roots.parallel import is_v2_source
-        packet=read(a.packet);result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)else None)
+        packet=read(a.packet);result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)else None,resume=a.resume)
         validate_all(a.out,result)
         if packet.get('parallelAuthoring'):
             from runner.parallel_status import refresh

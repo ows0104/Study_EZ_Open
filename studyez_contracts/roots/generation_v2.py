@@ -259,6 +259,36 @@ def validate_runtime_revalidations(meta,stages):
     return rows
 
 
+def validate_stage_resumes(meta,stages):
+    """stage-resume/1 (2026-11-09 사용자 「중간 성공한 부분까지는 저장되게 해서 안된 부분부터」).
+
+    A resumed run keeps every completed stage whose input is unchanged and whose recorded output the
+    current acceptance code reproduces, and reruns only the rest. Each superseded stage is a stage of
+    the prior ledger and is archived, not deleted. Round indices stay fixed, so no round is added and
+    the repair cap is not reset. It does not combine with the other recovery histories."""
+    rows=meta.get('stageResumes',[])
+    require(type(rows)is list and len(rows)<=8,'result2: invalid stage resume history')
+    for i,row in enumerate(rows):
+        require(type(row)is dict and set(row)=={'priorLedger','priorLedgerHash','packetHash','currentRuntimeHash','reason','superseded'},
+            'result2: malformed stage resume')
+        old=row['priorLedger']
+        require(type(old)is dict and type(old.get('stages'))is dict and old.get('pipelineVersion')==POLICY
+            and row['priorLedgerHash']==document_hash(old)and old.get('stageResumes',[])==rows[:i],'result2: invalid resumed ledger')
+        require(not any(old.get(k)or meta.get(k)for k in(*RECOVERY_HISTORY,'runtimeRevalidations')),
+            'result2: a stage resume does not combine with other recoveries')
+        following=rows[i+1]['priorLedger']['identity']if i+1<len(rows)else meta['runtimeHash']
+        require(row['packetHash']==meta['inputHash']and row['currentRuntimeHash']==following
+            and type(row['reason'])is str and row['reason'].strip(),'result2: changed stage resume identity')
+        gone={}
+        for s in row['superseded']:
+            require(type(s)is dict and set(s)=={'name','entry','files'}and s['name']not in gone
+                and old['stages'].get(s['name'])==s['entry'],'result2: a superseded stage must be a prior stage')
+            gone[s['name']]=s['entry']
+        after=rows[i+1]['priorLedger']['stages']if i+1<len(rows)else{k:{x:y for x,y in v.items()if x!='name'}for k,v in stages.items()}
+        require(all(k in gone or after.get(k)==v for k,v in old['stages'].items()),'result2: a resume changed a kept stage')
+    return rows
+
+
 CONTAINER_POLICY='container-concepts/1'
 
 
@@ -953,6 +983,30 @@ def validate_normalization_recoveries(meta,stages):
 # source review and the blind medical review run side by side (the medical model never sees an
 # unverified projection). Ledgers that start with `contextStages` use it; older runs are unchanged.
 CONTEXT=obj(clinical_context_status=enum('consistent','conflict','unknown'),clinical_context_reason=TEXT)
+# clinical-context/2 (2026-11-09 사용자 「오염만 막기」): the check names what it found. Only contamination
+# (past verdicts, reviewers, repair rounds, importance or authoring history in what the blind medical
+# reviewer reads) withholds the medical review. A missing or mis-cited conflict fact does not bias a
+# reviewer who judges by medicine; it goes to the next repair. 26110901 generation-3/4 lost every
+# medical round after round 0 to such incompleteness. Records without the field keep the old rule.
+CONTEXT_OUTPUT=obj(clinical_context_status=enum('consistent','conflict','unknown'),
+    clinical_context_problem=enum('none','contamination','incomplete'),clinical_context_reason=TEXT)
+
+def validate_context(value):
+    """Shape plus status/problem agreement; legacy two-field records stay readable."""
+    if type(value)is dict and 'clinical_context_problem'in value:
+        validate_shape(value,CONTEXT_OUTPUT,'clinical context')
+        status,problem=value['clinical_context_status'],value['clinical_context_problem']
+        require((problem=='none')==(status!='conflict'),'clinical context: a conflict names contamination or incomplete; consistent/unknown name none')
+    else:validate_shape(value,CONTEXT,'clinical context')
+    return value
+
+def context_blocks_medical(value):
+    if 'clinical_context_problem'not in value:return value['clinical_context_status']!='consistent'
+    return value['clinical_context_problem']=='contamination'
+
+def context_repair_note(value):
+    """An incomplete conflict record is a repair reason; the medical review still runs."""
+    return value.get('clinical_context_problem')=='incomplete'
 MEDICAL_REUSE_POLICY='medical-review-reuse/1'
 
 
@@ -1038,6 +1092,7 @@ def validate_result(value,packet):
     from .parallel import validate_schema_recovery
     validate_schema_recovery(meta,stages)
     validate_runtime_revalidations(meta,stages)
+    validate_stage_resumes(meta,stages)
     validate_format_recoveries(meta,stages)
     validate_render_recoveries(meta,stages)
     validate_source_gap_recoveries(meta,stages)
@@ -1104,10 +1159,10 @@ def validate_result(value,packet):
     require(stages[f'source-{n}']['clinicalContextHash']==document_hash(meta['clinicalConflicts']),'result2: source reviewed different clinical context')
     if meta.get('contextStages'):
         require(meta.get('contextStages')is True and type(meta.get('clinicalContext'))is dict,'result2: missing clinical context check')
-        validate_shape(meta['clinicalContext'],CONTEXT,'clinical context')
+        validate_context(meta['clinicalContext'])
         require(stages[f'context-{n}']['outputHash']==document_hash(meta['clinicalContext'])
             and stages[f'context-{n}']['clinicalContextHash']==document_hash(meta['clinicalConflicts'])
-            and meta['clinicalContext']['clinical_context_status']=='consistent','result2: final medical review ran without a consistent context check')
+            and not context_blocks_medical(meta['clinicalContext']),'result2: final medical review ran without a consistent context check')
     else:require('clinicalContext'not in meta,'result2: unexpected clinical context check')
     validate_medical_reuse(meta,stages,reviewed,m,n)
     specs={q['question_id']:[]for q in bank['questions']}

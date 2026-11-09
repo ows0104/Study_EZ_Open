@@ -35,7 +35,7 @@ def call_model(stage,context,material,model,timeout=2400):
         raw=json.loads(result['text']);jsonschema.validate(raw,REVIEW_REPORT)
         value=shape(raw,context['bank'])
     else:
-        schema=(c.BRIEF if kind=='normalize'else c.CONTEXT if kind=='context'else c.source_schema(context['brief'],context['bank'])if kind=='source'
+        schema=(c.BRIEF if kind=='normalize'else c.CONTEXT_OUTPUT if kind=='context'else c.source_schema(context['brief'],context['bank'])if kind=='source'
             else c.author_schema(context.get('parallelAuthoring',False)))
         name='extract-v2.md'if kind=='normalize'else'context-v2.md'if kind=='context'else'source-v2.md'if kind=='source'else'author-v2.md'
         prompt=g.PROMPTS.joinpath(name).read_text(encoding='utf-8')+'\n'+g.item_quality_guidance()
@@ -62,12 +62,34 @@ def importance_brief(lineage,proof):
     return apply(lineage,proof['importance'])
 
 
-def run(packet,out,model,invoke):
+RESUMABLE_BLOCKERS=(*c.RECOVERY_HISTORY,'runtimeRevalidations','normalizationRecoveries','parallelSchemaRecovery')
+
+def run(packet,out,model,invoke,resume=None):
+    """resume: the operator's reason to continue this folder (stage-resume/1). Completed stages whose
+    input is unchanged and whose output the current acceptance code reproduces are kept; the rest are
+    archived under .resume-<k>/ and rerun. Round indices stay fixed: no round is added, the cap is kept."""
     from . import connection_generate as g
-    fingerprint=g.identity(packet,model);ledger_path=out/'ledger.json'
+    fingerprint=g.identity(packet,model);ledger_path=out/'ledger.json';resume_row=None
     if ledger_path.exists():
         ledger=json.loads(ledger_path.read_text(encoding='utf-8'))
-        if ledger.get('identity')!=fingerprint or ledger.get('pipelineVersion')!=c.POLICY:raise ValueError('기존 실행의 입력·모델·코드가 달라졌습니다. 이력과 상한을 보존합니다.')
+        if ledger.get('pipelineVersion')!=c.POLICY:raise ValueError('기존 실행의 파이프라인 판이 다릅니다. 이력과 상한을 보존합니다.')
+        if ledger.get('identity')!=fingerprint and not resume:
+            raise ValueError('기존 실행의 입력·모델·코드가 달라졌습니다. 이력과 상한을 보존합니다. 성공한 단계를 살려 이어 가려면 --resume <이유>.')
+        if resume:
+            c.require(type(resume)is str and resume.strip(),'재개 이유가 필요합니다.')
+            c.require(not(out/'result.json').exists(),'완료된 실행은 재개하지 않습니다.')
+            c.require(not any(ledger.get(k)for k in RESUMABLE_BLOCKERS)and not packet.get('parallelAuthoring'),
+                '다른 복구 기록이 있는 실행은 재개하지 않습니다. 해당 복구 도구를 씁니다.')
+            stored=out/'packet.json'
+            c.require(not stored.exists()or json.loads(stored.read_text(encoding='utf-8')).get('inputHash')==packet['inputHash'],'다른 packet으로는 재개하지 않습니다.')
+            rows=ledger.get('stageResumes',[]);c.require(len(rows)<8,'재개는 8번까지입니다.')
+            resume_row={'priorLedger':copy.deepcopy(ledger),'priorLedgerHash':document_hash(ledger),'packetHash':packet['inputHash'],
+                'currentRuntimeHash':fingerprint,'reason':resume,'superseded':[]}
+            archive=out/f'.resume-{len(rows)+1}';archive.mkdir()
+            (archive/'ledger-before.json').write_bytes(ledger_path.read_bytes())
+            for derived in(*out.glob('repair-decision-*.json'),*out.glob('map-hierarchy-*.json')):  # rewritten by the resumed rounds
+                shutil.copy2(derived,archive/derived.name)
+            ledger['stageResumes']=rows+[resume_row];ledger['identity']=fingerprint
     else:
         if any(p.name!='packet.json'for p in out.glob('*.json')):raise ValueError('기존 산출물의 ledger가 없습니다. 자동 재시작하지 않습니다.')
         ledger={'identity':fingerprint,'pipelineVersion':c.POLICY,'repairRounds':0,'stages':{},
@@ -78,6 +100,61 @@ def run(packet,out,model,invoke):
 
     import threading
     lock=threading.RLock()  # source and medical stages may run concurrently and share the ledger
+    used=set()
+
+    def supersede(name):
+        """Archive a prior stage that this resume reruns; nothing is deleted."""
+        with lock:
+            archive=out/f'.resume-{len(ledger["stageResumes"])}';entry=ledger['stages'].pop(name);moved=[]
+            for suffix in('.json','.raw.json','.input.json','.usage.json','.blocked.json'):
+                path=out/(name+suffix)
+                if path.exists():path.replace(archive/path.name);moved.append(path.name)
+            seat=out/'.native'/name
+            if seat.exists():(archive/'.native').mkdir(exist_ok=True);seat.replace(archive/'.native'/name);moved.append('.native/'+name)
+            if ledger.get('medicalReuse'):ledger['medicalReuse']=[r for r in ledger['medicalReuse']if r['stage']!=name]
+            resume_row['superseded'].append({'name':name,'entry':entry,'files':moved});g.write(ledger_path,ledger)
+        print('── 재개: '+name+' 다시 실행',flush=True)
+
+    def accept(name,ctx,raw,raw_evidence,entry):
+        """The stage's deterministic acceptance; also replayed on kept stages when resuming."""
+        if name=='normalize':
+            c.validate_shape(raw,c.BRIEF,'initial brief2');value=raw
+            # importance-basis/1: target axes are computed at assembly; the model's are replaced by placeholders.
+            if table is not None:value=c.blank_target_importance(raw)
+            # scope.label is the document title (validate_document: 1–300 chars); a model once wrote the whole
+            # scope text there, and later stages may not change scope (261104_02 26110803 generation-2).
+            if value['scope']['label']!=packet['title']:value={**value,'scope':{**value['scope'],'label':packet['title']}}
+            c.require(raw['sources']==sources and raw['lecture_id']==packet['subject']+'/'+packet['runId'],'Different initial source/lecture')
+            if packet.get('inputMode')=='source':c.require(raw['provenance']['independent_points']=='confirmed','Initial independent extraction required')
+            else:c.require(raw['provenance']['independent_points']!='confirmed','Supplied map is not independent extraction')
+        elif name=='generate'or name.startswith('repair-'):
+            jsonschema.validate(raw,c.author_schema(ctx.get('parallelAuthoring',False)))
+            if ctx.get('rejectedAuthoring'):
+                c.validate_recovered_authoring(ctx['previousAuthoring'],raw)
+            else:c.validate_authoring(raw,ctx.get('previousAuthoring'))
+            c.require(raw['brief']['sources']==sources and raw['brief']['lecture_id']==packet['subject']+'/'+packet['runId'],'Different source/lecture')
+            value=copy.deepcopy(raw)
+            if name=='generate'and ctx.get('independentBank'):
+                from .connection_parallel import preserved_bank
+                preserved_bank(ctx['independentBank']['bank'],value['bank'])
+            if name == 'generate' and ctx.get('webBank'):
+                from studyez_contracts.bank.authored_json import preserve_authored
+                value['bank'] = preserve_authored(value['bank'], ctx['webResponse']['raw'], packet['title'])
+            value['bank']=visual.render(value['bank'],raw['visual_stimuli'],packet,out/'material')
+            entry['briefHash']=document_hash(value['brief'])
+            if name=='generate':
+                if ctx['initialBriefErrors']:c.validate_initial_correction(ctx['brief'],raw['brief'],raw['map_change_reason'])
+                else:c.require(raw['brief']==ctx['brief'],'Initial authoring must preserve the independent brief')
+        elif name.startswith('source-'):
+            entry['clinicalContextHash']=document_hash(ctx['clinical_conflicts'])
+            jsonschema.validate(raw,c.source_schema(ctx['brief'],ctx['bank']))
+            value=c.compile_assessment(ctx['brief'],ctx['bank'],raw_evidence)
+        elif name.startswith('context-'):
+            entry['clinicalContextHash']=document_hash(ctx['clinical_conflicts'])
+            jsonschema.validate(raw,g.output_schema(c.CONTEXT_OUTPUT));c.validate_context(raw);value=raw
+        else:validate_checks(raw,ctx['bank']);value=raw
+        return value
+
     def stage(name,ctx):
         if packet.get('parallelAuthoring'):
             from .connection_parallel import progress as refresh
@@ -85,13 +162,22 @@ def run(packet,out,model,invoke):
         ctx={**ctx,'_pipeline_version':c.POLICY};input_hash=document_hash(ctx)
         path=out/(name+'.json');prior=ledger['stages'].get(name);raw_path=out/(name+'.raw.json')
         if prior:
+          try:
             input_path=out/(name+'.input.json');usage_path=out/(name+'.usage.json')
             if prior['status']!='completed'or not all(p.exists()for p in (path,raw_path,input_path,usage_path)):raise ValueError(name+': 중단/실패 호출은 자동 재실행하지 않습니다.')
             value=json.loads(path.read_text(encoding='utf-8'));raw=json.loads(raw_path.read_text(encoding='utf-8'))
             c.require(prior['inputHash']==input_hash and prior['outputHash']==document_hash(value)and prior['rawOutputHash']==document_hash(raw),name+': cached evidence changed')
+            usage=json.loads(usage_path.read_text(encoding='utf-8'))
             c.require(document_hash(json.loads(input_path.read_text(encoding='utf-8')))==input_hash and
-                document_hash(json.loads(usage_path.read_text(encoding='utf-8')))==prior['usageHash'],name+': input/usage evidence changed')
-            return value
+                document_hash(usage)==prior['usageHash'],name+': input/usage evidence changed')
+            if resume_row is not None:
+                c.require(set(usage.get('models')or{})<={codex.model_name(model)},name+': another model produced this stage')
+                again={**prior};replay=accept(name,ctx,raw['assessment']if name.startswith('source-')else raw,raw,again)
+                c.require(document_hash(replay)==prior['outputHash']and again==prior,name+': current acceptance does not reproduce it')
+            used.add(name);return value
+          except Exception as error:
+            if resume_row is None:raise
+            print('── 재개: '+name+' 기존 결과를 쓰지 않음 · '+str(error)[:300],flush=True);supersede(name)
         if any((out/(name+s)).exists()for s in ('.json','.raw.json','.usage.json','.input.json')):raise ValueError(name+': ledger 없는 산출물 보존')
         entry={'status':'started','inputHash':input_hash}
         with lock:ledger['stages'][name]=entry;g.write(ledger_path,ledger)
@@ -102,50 +188,19 @@ def run(packet,out,model,invoke):
             raw_evidence=envelope(ctx['brief'],ctx['bank'],raw)if name.startswith('source-')else raw
             g.write(raw_path,raw_evidence);g.write(out/(name+'.usage.json'),info)
             with lock:entry['rawOutputHash']=document_hash(raw_evidence);entry['usageHash']=document_hash(info);g.write(ledger_path,ledger)
-            if name=='normalize':
-                c.validate_shape(raw,c.BRIEF,'initial brief2');value=raw
-                # importance-basis/1: target axes are computed at assembly; the model's are replaced by placeholders.
-                if table is not None:value=c.blank_target_importance(raw)
-                # scope.label is the document title (validate_document: 1–300 chars); a model once wrote the whole
-                # scope text there, and later stages may not change scope (261104_02 26110803 generation-2).
-                if value['scope']['label']!=packet['title']:value={**value,'scope':{**value['scope'],'label':packet['title']}}
-                c.require(raw['sources']==sources and raw['lecture_id']==packet['subject']+'/'+packet['runId'],'Different initial source/lecture')
-                if packet.get('inputMode')=='source':c.require(raw['provenance']['independent_points']=='confirmed','Initial independent extraction required')
-                else:c.require(raw['provenance']['independent_points']!='confirmed','Supplied map is not independent extraction')
-            elif name=='generate'or name.startswith('repair-'):
-                jsonschema.validate(raw,c.author_schema(ctx.get('parallelAuthoring',False)))
-                if ctx.get('rejectedAuthoring'):
-                    c.validate_recovered_authoring(ctx['previousAuthoring'],raw)
-                else:c.validate_authoring(raw,ctx.get('previousAuthoring'))
-                c.require(raw['brief']['sources']==sources and raw['brief']['lecture_id']==packet['subject']+'/'+packet['runId'],'Different source/lecture')
-                value=copy.deepcopy(raw)
-                if name=='generate'and ctx.get('independentBank'):
-                    from .connection_parallel import preserved_bank
-                    preserved_bank(ctx['independentBank']['bank'],value['bank'])
-                if name == 'generate' and ctx.get('webBank'):
-                    from studyez_contracts.bank.authored_json import preserve_authored
-                    value['bank'] = preserve_authored(value['bank'], ctx['webResponse']['raw'], packet['title'])
-                value['bank']=visual.render(value['bank'],raw['visual_stimuli'],packet,out/'material')
-                entry['briefHash']=document_hash(value['brief'])
-                if name=='generate':
-                    if ctx['initialBriefErrors']:c.validate_initial_correction(ctx['brief'],raw['brief'],raw['map_change_reason'])
-                    else:c.require(raw['brief']==ctx['brief'],'Initial authoring must preserve the independent brief')
-            elif name.startswith('source-'):
-                entry['clinicalContextHash']=document_hash(ctx['clinical_conflicts'])
-                jsonschema.validate(raw,c.source_schema(ctx['brief'],ctx['bank']))
-                value=c.compile_assessment(ctx['brief'],ctx['bank'],raw_evidence)
-            elif name.startswith('context-'):
-                entry['clinicalContextHash']=document_hash(ctx['clinical_conflicts'])
-                jsonschema.validate(raw,g.output_schema(c.CONTEXT));c.validate_shape(raw,c.CONTEXT,'clinical context');value=raw
-            else:validate_checks(raw,ctx['bank']);value=raw
+            value=accept(name,ctx,raw,raw_evidence,entry)
             g.write(path,value)
             with lock:entry.update(status='completed',outputHash=document_hash(value));g.write(ledger_path,ledger)
-            return value
+            used.add(name);return value
         except BaseException:
             with lock:entry['status']='failed';g.write(ledger_path,ledger)
             raise
 
     medical_plans={};finished_reuse={}
+
+    def unblock(n):
+        # Resuming: a medical round the old rule withheld now runs (clinical-context/2).
+        if resume_row is not None and ledger['stages'].get(f'medical-{n}',{}).get('status')=='blocked':supersede(f'medical-{n}')
 
     def reuse_invoke(name,ctx,material,model):
         # Only questions whose medical view changed go to the blind reviewer; the rest keep the
@@ -261,12 +316,18 @@ def run(packet,out,model,invoke):
             # Context check first: the blind medical model only ever sees a verified projection.
             clinical_context=stage(f'context-{n}',{k:base[k]for k in('title','scope','lecture_id','sources')}|
                 {'bank':bank,'clinical_conflicts':authored['clinical_conflicts']})
-            if projection is not None and clinical_context['clinical_context_status']!='consistent':
+            # Only contamination withholds the blind medical review (clinical-context/2).
+            if projection is not None and c.context_blocks_medical(clinical_context):
                 blocked='독립 검수 입력 확인: '+clinical_context['clinical_context_reason']
                 blocking_fix=clinical_context['clinical_context_status']=='conflict'
+            if not blocked:unblock(n)
             if blocked:audit=stage(f'source-{n}',source_ctx);medical_value=None
             else:
                 from concurrent.futures import ThreadPoolExecutor
+                # Collect this thread's cyclic garbage before the workers start. Otherwise a worker may run the
+                # collector and finalise C-extension objects made here (the full suite crashed 3/3 with a
+                # Windows access violation inside chunked-review workers, 2026-11-09).
+                import gc;gc.collect()
                 with ThreadPoolExecutor(max_workers=2)as pool:
                     pending=[pool.submit(stage,f'source-{n}',source_ctx),pool.submit(medical_stage,n,med_ctx)];errors=[]
                     for future in pending:
@@ -280,12 +341,14 @@ def run(packet,out,model,invoke):
             if projection is not None and context_check['clinical_context_status']!='consistent':
                 blocked='독립 검수 입력 확인: '+context_check['clinical_context_reason']
                 blocking_fix=context_check['clinical_context_status']=='conflict'
+            if not blocked:unblock(n)
         if blocked:
             report={'reason':blocked,'bankHash':document_hash(bank),'clinicalContextHash':document_hash(authored['clinical_conflicts'])}
             name=f'medical-{n}';entry={'status':'blocked','blockedReport':report,'blockedHash':document_hash(report)}
             prior=ledger['stages'].get(name)
+            if resume_row is not None and prior is not None and prior!=entry:supersede(name);prior=None
             c.require(prior is None or prior==entry,'Interrupted or different medical stage cannot be reset')
-            ledger['stages'][name]=entry;g.write(ledger_path,ledger);g.write(out/(name+'.blocked.json'),report)
+            ledger['stages'][name]=entry;g.write(ledger_path,ledger);g.write(out/(name+'.blocked.json'),report);used.add(name)
             medical=None
         else:
             medical=medical_value if medical_value is not None else stage(f'medical-{n}',med_ctx)
@@ -295,6 +358,9 @@ def run(packet,out,model,invoke):
         if hierarchy:g.write(out/f'map-hierarchy-{n}.json',{'findings':hierarchy})
         reasons+=[{'kind':'map_fix','text':t,'question_ids':[],'direction_ids':[]}for t in hierarchy]
         if blocked and blocking_fix:reasons.append({'kind':'question_fix','text':blocked,'question_ids':[],'direction_ids':[]})
+        elif clinical_context is not None and c.context_repair_note(clinical_context):
+            reasons.append({'kind':'question_fix','text':'임상 충돌 정리 보완(정답 검수는 진행): '+clinical_context['clinical_context_reason'],
+                'question_ids':[],'direction_ids':[]})
         g.write(out/f'repair-decision-{n}.json',{'reasons':reasons,'allIssues':audit['assessment']['assessment']['issues'],'repair':bool(reasons)and n+initial_cost<3})
         if reasons and n+initial_cost<3:
             ledger['repairRounds']=max(ledger['repairRounds'],n+initial_cost+1);g.write(ledger_path,ledger)
@@ -320,6 +386,8 @@ def run(packet,out,model,invoke):
         doc=c.make_document(b,reviewed_bank,audit,revision=packet['revision'],title=packet['title'],exam_date=packet['examDate'],
             medical=medical,snapshot=bank if projection or importance_proof else None,
             importance=c.target_importance(b,table)if importance_proof else None)
+        if resume_row is not None:
+            for name in [k for k in ledger['stages']if k not in used]:supersede(name)  # the resumed path no longer reaches them
         result={'brief':b,'document':doc,'sourceAudit':audit,'medical':medical,'validation':validation,'manifest':{
             'pipelineVersion':c.POLICY,'inputHash':packet['inputHash'],'briefHash':document_hash(b),'bankHash':document_hash(bank),
             'runtimeHash':fingerprint,'model':codex.model_name(model),'webResponseHash':packet.get('webResponseHash'),
@@ -338,6 +406,7 @@ def run(packet,out,model,invoke):
             **({'importanceProjection':importance_proof}if importance_proof else{}),
             **({'importanceReview':importance}if importance else{}),
             **({'runtimeRevalidations':runtime_revalidations}if runtime_revalidations else{}),
+            **({'stageResumes':ledger['stageResumes']}if ledger.get('stageResumes')else{}),
             **({'authoringRecoveryOutput':json.loads((out/'repair-1.raw.json').read_text(encoding='utf-8'))}if rejected else{}),
             'briefRevisions':[{'stage':name,'brief':value['brief'],'reason':value['map_change_reason']}
                 for name in ([]if rejected else['generate'])+[f'repair-{i}'for i in range(1,n+1)]
