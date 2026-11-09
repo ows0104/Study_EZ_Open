@@ -59,10 +59,9 @@
 
 merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 줄은 지워도 된다.
 
-- 2026-11-09 Main-Quiz 개념 지도 바로 열기·화면 끝까지 쓰기 — PR #54 병합 a2352b59, 배포 확인(health revision·Pages 청크)
-
 | 완료일 | 작업 | 작업자 | PR |
 |---|---|---|---|
+| 2026-11-09 | Main-Quiz 개념 지도 바로 열기(문제 화면 미경유)·지도가 좌측 메뉴 옆 본문 칸을 여백 없이 채움(1100px 제한·본문 여백 제거). 병합 a2352b59, health revision·Pages 청크 확인 | ows0104 / Claude 개념 지도 세션 | [#54](https://github.com/ows0104/Study_EZ_Open/pull/54) |
 | 2026-11-09 | Main-Quiz 생성 두 번째 강의 시범(사슬알균 261105_01, 26110901): 앞 단계 18분 통과, 생성 3회 모두 결과 없음 (그림 칸 베끼기 · BOM · 보완 3/3 뒤 해설 저작 이력으로 최종 정답 검수 blocked). 엔진 결함 3건 + 학생 칸 내부 ID 같은 세션 되돌려주기 수정, 새 검사 5, 루트 2,185 통과, PR CI 통과, 병합 84f886f8. 운영 반입·공개 없음. 남은 설계 결정: context unknown 처리 · 초기 지도 교정 예산 선소비 · 원본 대조 판정 범위 | ows0104 / Claude 두 번째 강의 시범 세션 | [#53](https://github.com/ows0104/Study_EZ_Open/pull/53) |
 | 2026-11-09 | Main-Quiz 개념 지도: 배경 점 격자 제거, 끌기·휠·두 손가락·＋/－ 확대 복원(＋/－는 고른 주제 중심), 처음·「전체」는 맞춤이고 움직이기 전엔 영역 변화에 재맞춤, 사이드 패널은 지도 옆 열(겹침 0), 지도 화면 좌우 여백 8px. 병합 c787a61e, Test and deploy 42506840977 성공, health c787a61e, Pages 청크 확대·패널 flex 확인. 참고: verify 첫 build 종료 2는 prepare-prompts가 bank-prompt.json을 LF로 다시 써 지문이 바뀐 탓(빌드 실패 아님) | ows0104 / Claude 개념 지도 세션 | [#52](https://github.com/ows0104/Study_EZ_Open/pull/52) |
 | 2026-11-09 | Main-Quiz 개념 지도 화면 정리: 지도 위아래 요소(제목·위치·안내·찾기·수·범례 줄·목록/범위 접힘) 제거, 범례는 도구 막대 점, 틀이 남은 창 전체(페이지 스크롤 없음), 확대·끌기 없이 항상 맞춤(0.5 미만 폭 맞춤+틀 안 세로 스크롤), 클릭 시 배율·위치 불변, 패널은 반대편 겹침. 감염병리1 1600×900 배율 0.59→0.79. 병합 e032cdb7, Test and deploy 42503952121 성공, health e032cdb7, Pages 청크에 mq-map-legend·확대/찾기 0. 후속: GuidePage 지도 안내 문구(UI 개편 행 범위) | ows0104 / Claude 개념 지도 세션 | [#51](https://github.com/ows0104/Study_EZ_Open/pull/51) |
@@ -100,4 +99,3 @@ merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 �
 | 2026-11-05 | 교수 변경·신규 교수 표시 및 최근 5년 동일 교수 최신 필기 우선, 없으면 작년 대체 운영 반영 (`c86e15fb`). 84개 강의·기록 보존, PDF 72개 실제 검증, 러너 복원 완료 — [배포 기록](https://github.com/ows0104/Study_EZ_Open/blob/a757ce86c548519b1c1c714298f530f1e9eb86c3/docs/changes/2026-11-05-professor-aware-preview/deployment.md) | ows0104 / Codex 교수별 예습 세션 | [#3](https://github.com/ows0104/Study_EZ_Open/pull/3) |
 | 2026-11-05 | master 검사 실패 수정 및 API·웹 배포 완료 (`d5e30590`) — [검사·배포 기록](https://github.com/ows0104/Study_EZ_Open/blob/9f57d3d607335204193441c1358a95fe85b363c7/docs/changes/2026-11-05-ci-regression-fix/deployment.md) | ows0104 / Codex 세션 | [#4](https://github.com/ows0104/Study_EZ_Open/pull/4) |
 | 2026-11-05 | 협업 대시보드와 작업 시작 대원칙 도입 | HungryPotato01 / Claude 세션 | [#2](https://github.com/ows0104/Study_EZ_Open/pull/2) |
-- 2026-11-09 Main-Quiz 개념 지도 바로 열기·화면 끝까지 쓰기 — PR #54 병합·배포(a2352b59)
