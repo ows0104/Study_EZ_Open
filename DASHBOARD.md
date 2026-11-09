@@ -59,9 +59,9 @@
 
 merge가 끝나면 1번에서 지우고 여기에 한 줄 남긴다. 오래된 줄은 지워도 된다.
 
-- 2026-11-09 · Main-Quiz 생성: 빈 원본 대조 거절(require_judgment) + 샌드박스에서 뜨는 검사 python(child_env·sandbox_python) · ows0104 / Claude 사슬알균 시범 세션 · PR #55 https://github.com/ows0104/Study_EZ_Open/pull/55 (병합 18ef6a60)
 | 완료일 | 작업 | 작업자 | PR |
 |---|---|---|---|
+| 2026-11-09 | Main-Quiz 생성: 빈 원본 대조(전부 doubt·전부 unknown) 거절 + 샌드박스에서 뜨는 검사 python(uv PYTHONHOME 제거·sandbox_python). 사슬알균 generation-4 보류에서 드러남. 병합 18ef6a60. 러너 배포 사본은 별도 갱신 필요 | ows0104 / Claude 사슬알균 시범 세션 | [#55](https://github.com/ows0104/Study_EZ_Open/pull/55) |
 | 2026-11-09 | Main-Quiz 개념 지도 바로 열기(문제 화면 미경유)·지도가 좌측 메뉴 옆 본문 칸을 여백 없이 채움(1100px 제한·본문 여백 제거). 병합 a2352b59, health revision·Pages 청크 확인 | ows0104 / Claude 개념 지도 세션 | [#54](https://github.com/ows0104/Study_EZ_Open/pull/54) |
 | 2026-11-09 | Main-Quiz 생성 두 번째 강의 시범(사슬알균 261105_01, 26110901): 앞 단계 18분 통과, 생성 3회 모두 결과 없음 (그림 칸 베끼기 · BOM · 보완 3/3 뒤 해설 저작 이력으로 최종 정답 검수 blocked). 엔진 결함 3건 + 학생 칸 내부 ID 같은 세션 되돌려주기 수정, 새 검사 5, 루트 2,185 통과, PR CI 통과, 병합 84f886f8. 운영 반입·공개 없음. 남은 설계 결정: context unknown 처리 · 초기 지도 교정 예산 선소비 · 원본 대조 판정 범위 | ows0104 / Claude 두 번째 강의 시범 세션 | [#53](https://github.com/ows0104/Study_EZ_Open/pull/53) |
 | 2026-11-09 | Main-Quiz 개념 지도: 배경 점 격자 제거, 끌기·휠·두 손가락·＋/－ 확대 복원(＋/－는 고른 주제 중심), 처음·「전체」는 맞춤이고 움직이기 전엔 영역 변화에 재맞춤, 사이드 패널은 지도 옆 열(겹침 0), 지도 화면 좌우 여백 8px. 병합 c787a61e, Test and deploy 42506840977 성공, health c787a61e, Pages 청크 확대·패널 flex 확인. 참고: verify 첫 build 종료 2는 prepare-prompts가 bank-prompt.json을 LF로 다시 써 지문이 바뀐 탓(빌드 실패 아님) | ows0104 / Claude 개념 지도 세션 | [#52](https://github.com/ows0104/Study_EZ_Open/pull/52) |
