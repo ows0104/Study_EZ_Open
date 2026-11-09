@@ -326,3 +326,10 @@ normalize(초기 지도 오류 1 → 보완 1/3 선소비) → generate(89문항
   - 공개 범위: 관리자 시범 `allowed_users=['runner']`, enabled. **학생 공개는 하지 않았다.**
   - publication 이벤트 0 → 1건. 다른 강의 Main-Quiz, Quiz Bank, 학습 상태, 세션은 그대로다(스크립트 전후 대조).
 - 기록: `runs/_e2e/26110901/publication/{preflight,published}.json`.
+
+## 학생 공개 (2026-11-09 사용자 「학생 공개」)
+
+- `open_to_students.py`가 관리자 publication 경로(`routes/root_learning.publish`)를 그대로 호출했다. 감염병리1 공개 때와 같은 방식이다.
+- 바뀐 것은 `allowed_users`뿐이다(`['runner']` → `[]` 전체). revision `map-tree-26110901`과 enabled는 그대로다.
+- 이 강의의 이벤트는 3 → 4건이다(publication 1건 추가). 다른 강의의 Main-Quiz 설정(1개)은 그대로다.
+- 기록: `runs/_e2e/26110901/publication/open-to-students.json`. 운영 API 2a3ad0b2.
