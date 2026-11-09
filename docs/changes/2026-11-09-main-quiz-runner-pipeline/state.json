@@ -1,0 +1,22 @@
+{
+  "id": "2026-11-09-main-quiz-runner-pipeline",
+  "title": "Main-Quiz 생성 러너 일반화",
+  "area": "integration",
+  "created_at": "2026-11-09T09:04:16.309874+00:00",
+  "required_checks": [
+    "contracts",
+    "generation",
+    "runner",
+    "server",
+    "web"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-09T09:04:16.309897+00:00"
+}
