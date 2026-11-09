@@ -19,7 +19,7 @@ for i,rating in enumerate(('Again','Hard','Good','Easy')):
     with SessionLocal()as db:
         event=db.get(RootEvent,('four-'+str(i),'rate-'+str(i)))
         assert event.payload['selfRating']==rating and event.payload['helped']
-        assert event.payload['ratingPolicy']=='roots-four-rating/1'
+        assert event.payload['ratingPolicy']=='roots-four-rating/2' and event.payload['targetParameters']['maxTarget']==0.9
         assert event.payload['ratingParameters']['growth']['Easy']==3
         saved=deepcopy(event.payload)
     assert action(client,sid,'undo-'+str(i),'undo').status_code==200

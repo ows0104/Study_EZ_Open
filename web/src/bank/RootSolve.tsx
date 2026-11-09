@@ -125,13 +125,15 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
     <div className="quiz-progress bank-progress mq-solve-progress"><h2 className="main-quiz-question-heading" ref={heading} tabIndex={-1}>문항 {view.position+1} / {view.count}</h2>
       <span className="mq-track" aria-hidden="true"><i style={{width:`${view.count?done/view.count*100:0}%`}}/></span>
       {task&&tierPath&&<span className="bank-tags mq-tier">
-        <label className={`bank-tier-control${task.question.tier==='Essential'?' is-essential':''}`} title="내 계정의 이 문제에만 적용됩니다. 높이면 더 자주, 낮추면 덜 자주 복습합니다. Must-Know: 교수의 직접·간접적인 필수 지식 강조·출제 예고 / Core: 학습목표·기출 / Important: 강조·임상 중요 / Optional: 기타 세부사항">
+        <label className={`bank-tier-control${task.question.tier==='Essential'?' is-essential':''}`} title="내 계정의 이 문제에만 적용됩니다. 중요도가 목표 기억률을 정하고, 높이면 더 자주·낮추면 덜 자주 복습합니다. Must-Know: 교수의 직접·간접적인 필수 지식 강조·출제 예고 / Core: 학습목표·기출 / Important: 강조·임상 중요 / Optional: 기타 세부사항">
           내 중요도{' '}
           <select aria-label="내 문제 중요도" value={task.question.tier} disabled={disabled||tierBusy}
             onChange={event=>void changeTier(event.target.value as BankTier)}>
             {(Object.keys(TIER_LABEL) as BankTier[]).map(tier=><option key={tier} value={tier}>{TIER_LABEL[tier]}</option>)}
           </select>
         </label>
+        {task.question.targetMastery!=null&&<span className="bank-target" title="새 평가부터 이 목표 기억률로 복습 간격을 정합니다(Quiz Bank와 같은 방식). 실제 기억률을 잰 값은 아닙니다.">
+          목표 {Math.round(task.question.targetMastery*100)}%</span>}
         {task.question.personalTier&&<button className="is-quiet bank-tier-reset" disabled={disabled||tierBusy}
           title={`원래 중요도: ${TIER_LABEL[task.question.originalTier??'Core']}`} onClick={()=>void changeTier(null)}>원래대로</button>}
       </span>}</div>

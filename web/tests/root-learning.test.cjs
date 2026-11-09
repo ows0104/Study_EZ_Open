@@ -173,8 +173,10 @@ test('내 중요도: change it while solving, keep it on reload, then 원래대�
   const page=await context.newPage();await page.goto(url);await page.getByRole('button',{name:'오늘 학습 시작'}).click();await enabled(page,'답 보기');
   const select=page.getByRole('combobox',{name:'내 문제 중요도'});
   assert.equal(await select.inputValue(),'Core');assert.equal(await page.getByRole('button',{name:'원래대로'}).count(),0);
+  await page.getByText('목표 85%',{exact:true}).waitFor();
   await select.selectOption('Optional');await page.getByText('내 중요도를 Optional로 저장했습니다.',{exact:true}).waitFor();
   assert.equal(puts.length,1);assert.equal(puts[0].tier,'Optional');
+  await page.getByText('목표 55%',{exact:true}).waitFor();
   await page.getByRole('heading',{name:'문항 1 / 3'}).focus();await page.keyboard.press('Space');await enabled(page,'Good');
   await page.keyboard.press('3');await page.getByText('Synthetic question 2?',{exact:true}).waitFor();
   assert.equal(await select.inputValue(),'Core','the next question keeps its own tier');

@@ -143,10 +143,8 @@ def tiers_for(db, doc, user_id):
 
 
 def original_tier(q):
-    """The revision's own tier; the authored `Must-Know` spelling is `Essential`. None when absent."""
-    from .policy import TIERS
-    tier = 'Essential' if q.get('tier') == 'Must-Know' else q.get('tier')
-    return tier if tier in TIERS else None
+    from .policy import canonical_tier
+    return canonical_tier(q)
 
 
 def with_tier(q, tiers):

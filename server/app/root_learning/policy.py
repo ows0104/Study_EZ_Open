@@ -18,18 +18,65 @@ FOUR_RATING_PARAMETERS = {
     'growth': {'Hard': 1.1, 'Good': 2, 'Easy': 3},
     'lapseMultiplier': 0.5, 'lapseMaxDays': 1, 'minSpacingDays': 1 / 6,
 }
-# 「내 중요도」(2026-11-09). Quiz Bank tier targets on the same forgetting curve
-# R(t)=1/(1+t/9S): a tier keeps the interval at which recall falls to its target,
-# t(tier)=9(1/R-1)·S. A personal tier scales the scheduled interval by
-# t(personal)/t(original); every tier event stores the factor it was saved with.
+# Quiz Bank target retention (2026-11-09, 사용자 「새 평가부터 적용」). A four-rating event saved
+# with targetParameters is scheduled like Quiz Bank: mastery M is an EMA of ratings, the target
+# comes from the question's tier (or the learner's 「내 중요도」), and the interval is the time for
+# M/(1+t/9S) to fall to the target, t=9S(M/target-1). Earlier events keep their own schedule.
+TARGET_RATING_POLICY = 'roots-four-rating/2'
 TIER_POLICY = 'roots-personal-tier/1'
 TIERS = ('Essential', 'Core', 'Important', 'Optional')
-TIER_TARGETS = {'Essential': 0.9, 'Core': 0.85, 'Important': 0.78, 'Optional': 0.55}
+GRADE_RATING = {'missed': 'Again', 'partial': 'Hard', 'independent': 'Good'}
+# Mastery history of events saved before targetParameters existed (Quiz Bank values on 2026-11-09).
+LEGACY_MASTERY = {'alpha': 0.35, 'ratings': {'Again': 0, 'Hard': 0.45, 'Good': 0.95, 'Easy': 1}}
 
 
-def tier_factor(personal, original):
-    span = lambda tier: 9 * (1 / TIER_TARGETS[tier] - 1)
-    return round(span(personal) / span(original or 'Core'), 6)
+def target_parameters():
+    """Quiz Bank's current mastery policy, frozen into each new rating event."""
+    from app.study_engine.policy import DEFAULT
+    return deepcopy({k: DEFAULT['mastery'][k] for k in ('alpha', 'ratings', 'maxTarget', 'targets', 'tierTargets')})
+
+
+def canonical_tier(q):
+    """The revision's own tier; the authored `Must-Know` spelling is `Essential`. None when absent."""
+    tier = 'Essential' if q.get('tier') == 'Must-Know' else q.get('tier')
+    return tier if tier in TIERS else None
+
+
+def target_retention(q, plan, params, personal=None):
+    """Quiz Bank target_for: a private tier or Must-Know uses its tier target, else the concept plan,
+    else the importance level; never above maxTarget or the tier's own target."""
+    tier = personal or canonical_tier(q) or 'Core'
+    tiers = params['tierTargets']
+    if personal or tier == 'Essential':
+        requested = tiers[tier]
+    elif plan and 'target_mastery' in plan:
+        requested = plan['target_mastery']
+    else:
+        requested = params['targets'].get(str(q.get('importance')), tiers[tier])
+    return min(requested, params['maxTarget'], tiers[tier])
+
+
+def next_mastery(value, rating, when, params):
+    """Quiz Bank mastery update: decay by the forgetting curve; recall restores the prior level."""
+    previous = value.get('mastery', 0)
+    decayed = previous
+    if value.get('lastAt'):
+        elapsed = max(0, (utc(when) - instant(value['lastAt'])).total_seconds() / 86400)
+        stability = max(0.25, value.get('ratingDays', value.get('baseDays', 1)))
+        decayed = previous / (1 + elapsed / (9 * stability))
+    baseline = previous if rating in ('Good', 'Easy') else decayed
+    return (1 - params['alpha']) * baseline + params['alpha'] * params['ratings'][rating]
+
+
+def target_due(value, mastery, target, policy, exam_date):
+    """Re-time a four-rating result to the target; stability, max_days and exam cap are unchanged."""
+    days = max(0, 9 * value['ratingDays'] * (mastery / target - 1))
+    maximum = policy.get('max_days', max(policy.get('intervals', [30])))
+    base = min(maximum, max(1, ceil(days)))
+    limit = exam_limit(exam_date, value['lastAt'], policy)
+    interval = min(base, limit) if limit is not None else base
+    return {**value, 'target': target, 'baseDays': base, 'scheduledDays': interval,
+            'due': (value['lastDay'] + timedelta(days=interval)).isoformat()}
 
 
 def validate_policy(policy):
@@ -153,14 +200,3 @@ def effective_due(value, when, policy, exam_date):
         due = min(due, study_day(instant(value['lastAt']), policy) + timedelta(days=limit))
     return due.isoformat()
 
-
-def personal_due(value, factor, policy, exam_date):
-    """Re-time a four-rating result by a personal tier factor; stability is unchanged."""
-    if 'ratingDays' not in value or not value.get('lastAt'):
-        return value
-    maximum = policy.get('max_days', max(policy.get('intervals', [30])))
-    base = min(maximum, max(1, ceil(value['ratingDays'] * factor)))
-    limit = exam_limit(exam_date, value['lastAt'], policy)
-    interval = min(base, limit) if limit is not None else base
-    return {**value, 'baseDays': base, 'scheduledDays': interval,
-            'due': (value['lastDay'] + timedelta(days=interval)).isoformat()}

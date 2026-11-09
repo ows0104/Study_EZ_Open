@@ -1,6 +1,7 @@
 """Replay immutable events; revealing an answer never implies successful recall."""
 from datetime import timedelta
-from .policy import instant, study_day, day_start, transition, effective_due, personal_due
+from .policy import (instant, study_day, day_start, transition, effective_due, GRADE_RATING, LEGACY_MASTERY,
+                     next_mastery, target_due, target_retention)
 
 
 def targets(doc):
@@ -24,7 +25,7 @@ def personal_tiers(doc, events, now=None):
         if p.get('tier') is None:
             chosen.pop(p['question_id'], None)
         else:
-            chosen[p['question_id']] = {'tier': p['tier'], 'originalTier': p['originalTier'], 'factor': p['factor']}
+            chosen[p['question_id']] = {'tier': p['tier'], 'originalTier': p['originalTier']}
     return chosen
 
 
@@ -32,6 +33,8 @@ def replay(doc, events, now, policy):
     owners = direction_owners(doc)
     tiers = personal_tiers(doc, events, now)
     task_questions = {t['task_id']: t['question_id'] for t in doc['tasks']}
+    questions = {q['question_id']: q for q in doc['bank_snapshot']['questions']}
+    plans = {p['concept_id']: p for p in doc['bank_snapshot'].get('retrieval_plan', [])}
     aliases = {(e['revision'], e['from_direction']): e['to_direction'] for e in doc['equivalences']}
     events = sorted((e for e in events if instant(e['at']) <= now), key=lambda e: (instant(e['at']), e['id']))
     undone = {e['payload']['undo'] for e in events if e['kind'] == 'undo'}
@@ -48,12 +51,19 @@ def replay(doc, events, now, policy):
             value['learned'] = True
             first.setdefault(tid, when)
         elif event['kind'] == 'rate' and event['id'] not in undone:
+            # Mastery follows every rating (older ones too) so a target-scheduled rating starts from history.
+            params = p.get('targetParameters')
+            mastery = next_mastery(value, p.get('selfRating') or GRADE_RATING[p['grade']], when, params or LEGACY_MASTERY)
             updated = transition(value, p['grade'], p['helped'], when, p['policy'], p.get('exam_date'),
                                  p.get('selfRating'), p.get('ratingParameters'))
-            # The learner's current tier re-times every four-rating result of that question.
-            chosen = tiers.get(task_questions.get(p.get('task_id')))
-            if chosen and p.get('selfRating') is not None:
-                updated = personal_due(updated, chosen['factor'], p['policy'], p.get('exam_date'))
+            updated['mastery'] = mastery
+            if params and p.get('selfRating') is not None:
+                # Target retention: the question's tier, or the learner's current 「내 중요도」 for it.
+                qid = task_questions.get(p.get('task_id'))
+                q = questions.get(qid, {})
+                chosen = tiers.get(qid)
+                target = target_retention(q, plans.get(q.get('concept_id')), params, chosen and chosen['tier'])
+                updated = target_due(updated, mastery, target, p['policy'], p.get('exam_date'))
             value.clear(); value.update(updated)
     for value in directions.values():
         value['effectiveDue'] = effective_due(value, now, policy, doc['exam_date'])

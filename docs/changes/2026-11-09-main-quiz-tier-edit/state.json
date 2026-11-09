@@ -10,12 +10,12 @@
   ],
   "approvals": {
     "build": {
-      "at": "2026-11-09T09:56:13.835847+00:00",
-      "evidence": "사용자 채팅 2026-11-09: 「Main-Quiz 풀면서 중요도 수정할 수 있게 해줘.」 (CLAUDE.md: 작업 요청을 구현·검사·PR·병합·배포 승인으로 본다)",
-      "scope": "Main-Quiz 풀이 화면 내 중요도 선택·원래대로, root_event kind=tier 저장(스키마 변경 없음), 개인 중요도의 복습 간격 반영, 이용현황 root_tier, 관련 검사",
+      "at": "2026-11-09T11:29:47.068669+00:00",
+      "evidence": "사용자 채팅 2026-11-09: 「Main-Quiz 풀면서 중요도 수정할 수 있게 해줘.」 후속 「중요도를 학습 간격에 안 써? … Quiz-Bank의 목표 기억률 방식을 안 챙겨온거야?」 → 선택 「새 평가부터 적용」",
+      "scope": "Main-Quiz 내 중요도 선택·원래대로·목표 N% 표시, root_event kind=tier(스키마 변경 없음), 새 네 단계 평가(roots-four-rating/2)에 Quiz Bank 목표 기억률 간격, 이전 평가 예정일 불변, 이용현황 root_tier, 관련 검사",
       "evidence_version": 2,
-      "source_hash": "effec47d0619c6f108b857e3bd6945362b4b1e749d37fa87800ca1eb6ba33d46",
-      "plan_hash": "0663918ee7240984079bf43cc782e9dc0874e008c59ecbff006db1a4df538100",
+      "source_hash": "eee67796abdc10e7a858f596cf1fe0fe17f00e027a3fc783e210cb4bd9ec5d4b",
+      "plan_hash": "95d2930dd47ab9bc9189123ec6769d0e25922a53d2ad406d373cfb4f27608efd",
       "inputs": [
         ".github",
         "bridge",
@@ -33,7 +33,7 @@
         "uv.lock",
         "web"
       ],
-      "release_hash": "6d8e1bb489833f15e5a1de4b73c4945115e1c8eb5bedbd72b3afa4bdd26d06a7"
+      "release_hash": "9adc274b62fc3f4b5a3162375ccbdf647768fcf1782e11ff17d816817a709e17"
     }
   },
   "checks": [
@@ -360,14 +360,210 @@
         "web"
       ],
       "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794218475217925400-regression.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-09T11:39:25.979462+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.worktrees/main-quiz-tier-edit/server/.venv/Scripts/python.exe",
+        "-c",
+        "import os,subprocess,sys;os.chdir('server');sys.exit(subprocess.call([sys.executable,'-m','tests']))"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "eee67796abdc10e7a858f596cf1fe0fe17f00e027a3fc783e210cb4bd9ec5d4b",
+      "plan_hash": "95d2930dd47ab9bc9189123ec6769d0e25922a53d2ad406d373cfb4f27608efd",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794223816108669200-server.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-09T11:39:40.500323+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "eee67796abdc10e7a858f596cf1fe0fe17f00e027a3fc783e210cb4bd9ec5d4b",
+      "plan_hash": "95d2930dd47ab9bc9189123ec6769d0e25922a53d2ad406d373cfb4f27608efd",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794224366422672700-web.log",
+      "web_artifact": "7f93e31da5af94ea6e95c2dfd0becab2c1b48e28178808406ffd3441fa9b415f",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-09T11:41:32.788242+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "scripts/check_root_learning.py",
+        "--check",
+        "root-ui"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "eee67796abdc10e7a858f596cf1fe0fe17f00e027a3fc783e210cb4bd9ec5d4b",
+      "plan_hash": "95d2930dd47ab9bc9189123ec6769d0e25922a53d2ad406d373cfb4f27608efd",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794224454664426500-regression.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-09T11:41:55.284817+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web/tsconfig.json",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "acdd564f79fb009539b5bc28ab03ff1768aa47b3db043ccebcf0a4e32dcf333c",
+      "plan_hash": "95d2930dd47ab9bc9189123ec6769d0e25922a53d2ad406d373cfb4f27608efd",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794224505263552200-web.log",
+      "web_artifact": "60a3d297f8524419e9618d4c59758a204cf208f121b587ca2ae98cbc0f60f955",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-09T11:42:51.764576+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "scripts/check_root_learning.py",
+        "--check",
+        "root-ui"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "acdd564f79fb009539b5bc28ab03ff1768aa47b3db043ccebcf0a4e32dcf333c",
+      "plan_hash": "95d2930dd47ab9bc9189123ec6769d0e25922a53d2ad406d373cfb4f27608efd",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794224519025436000-regression.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-09T11:53:30.100218+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.worktrees/main-quiz-tier-edit/server/.venv/Scripts/python.exe",
+        "-c",
+        "import os,subprocess,sys;os.chdir('server');sys.exit(subprocess.call([sys.executable,'-m','tests']))"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "acdd564f79fb009539b5bc28ab03ff1768aa47b3db043ccebcf0a4e32dcf333c",
+      "plan_hash": "95d2930dd47ab9bc9189123ec6769d0e25922a53d2ad406d373cfb4f27608efd",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-09-main-quiz-tier-edit/1794224586555699900-server.log"
     }
   ],
   "review": {
-    "at": "2026-11-09T10:01:43.379363+00:00",
-    "summary": "자기 검토: 개인 tier는 같은 판 tier 사건만 읽고(ID 승계 없음) 시각→seq→ID 순으로 마지막 선택을 쓴다. 네 단계 평가 결과의 예정일만 다시 계산(안정도·옛 3단계 사건 불변), 시험 상한·max_days 유지, 원래 값 선택=원래대로, 멱등·409. 앞면 tier는 답 정보 없음. 웹은 서버 응답으로 현재 문항 갱신·frames 재요청. root-ui 첫 재실행 실패(같은 시각 사건을 무작위 ID로 정렬)를 seq로 고침.",
+    "at": "2026-11-09T11:43:01.164520+00:00",
+    "summary": "자기 검토: 사용자 지적(중요도 미사용·목표 기억률 미이식)으로 배율 방식 폐기. 새 네 단계 평가(roots-four-rating/2)만 Quiz Bank 숙련도 EMA·target_for·9S(M/목표-1) 간격, Main-Quiz max_days 30·시험 상한·안정도 계산 유지. targetParameters를 사건에 고정해 재현 불변. 이전 사건 예정일 불변(검사로 확인), 숙련도 이력은 모든 평가로 계산. 목표값·간격을 Quiz Bank 함수와 직접 대조. 개인 tier는 같은 판·시각→seq→ID. 화면 목표 N% 표시.",
     "evidence_version": 2,
-    "source_hash": "effec47d0619c6f108b857e3bd6945362b4b1e749d37fa87800ca1eb6ba33d46",
-    "plan_hash": "0663918ee7240984079bf43cc782e9dc0874e008c59ecbff006db1a4df538100",
+    "source_hash": "acdd564f79fb009539b5bc28ab03ff1768aa47b3db043ccebcf0a4e32dcf333c",
+    "plan_hash": "95d2930dd47ab9bc9189123ec6769d0e25922a53d2ad406d373cfb4f27608efd",
     "inputs": [
       ".github",
       "bridge",
@@ -391,5 +587,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-09T10:01:43.548949+00:00"
+  "updated_at": "2026-11-09T11:53:30.102903+00:00"
 }
