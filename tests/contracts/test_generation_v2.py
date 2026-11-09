@@ -131,3 +131,24 @@ def test_any_presented_picture_needs_explicit_visual_review_even_for_textual_goa
     a['direction_evidence'][0]['visual_verdict']='ok'
     doc=c.make_document(b,bank,compile_value(b,bank,a),revision='visual-test',title='Synthetic',exam_date=None,medical=f.old.checks(bank))
     assert any(t['direction_id']=='D1'for t in doc['tasks'])
+
+def unperformed(b,bank):
+    """26110901 source-2: the reviewer could not run its checker and recorded nothing as reviewed."""
+    a=f.assessment(b,bank)
+    for r in a['question_reviews']:r.update(verdict='doubt',suggested_answer='')
+    for key in('direction_checks','relation_checks','target_checks'):
+        for r in a[key]:r['status']='unknown'
+    a['direction_evidence']=[];a['issues']=[{**a['issues'][0],'kind':'limitation','text':'Incomplete independent review.'}]if a['issues']else[]
+    return a
+
+def test_a_review_that_judged_nothing_is_not_a_completed_source_review():
+    b=f.brief();bank=f.old.bank()
+    with pytest.raises(ValueError,match='judged nothing'):compile_value(b,bank,unperformed(b,bank))
+
+@pytest.mark.parametrize('judged',['verdict','evidence','status'])
+def test_one_real_judgment_is_enough_and_doubts_or_unknowns_stay_allowed(judged):
+    b=f.brief();bank=f.old.bank();a=unperformed(b,bank);full=f.assessment(b,bank)
+    if judged=='verdict':a['question_reviews'][0]['verdict']='ok'
+    elif judged=='evidence':a['direction_evidence']=full['direction_evidence']
+    else:a['relation_checks'][0]['status']=full['relation_checks'][0]['status']
+    compile_value(b,bank,a)

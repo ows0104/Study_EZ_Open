@@ -7,10 +7,12 @@ import argparse
 import base64
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
+import sysconfig
 import time
 from pathlib import Path
 import jsonschema
@@ -27,6 +29,43 @@ FOLLOWUP=('check_result.py failed on your result.json with this error:\n{error}\
 SYSTEM='Preserve source boundaries. Never fabricate coverage or review evidence. Write the full acceptance JSON to result.json; return only its exact SHA256 receipt.'
 
 class ContentRestricted(ValueError):pass
+
+# check_result.py runs inside the model's Codex sandbox. The uv venv launcher and its base Python
+# (AppData/Roaming/uv) are not executable for the sandbox user (CodexSandboxUsers): every model
+# session of 26110901 hit "uv trampoline failed ... permission denied", and source-2 gave up and
+# wrote an empty review. Probe once (no model call) for an interpreter the sandbox can start; this
+# process's own packages go first on its path, so the check runs the same code and library versions.
+CHECK_OK='studyez-check-ok'
+_UNPROBED=object();_sandbox_python=_UNPROBED
+
+def check_candidates():
+    return list(dict.fromkeys(p for p in(os.environ.get('STUDYEZ_CHECK_PYTHON'),sys.executable,
+        getattr(sys,'_base_executable',None),str(Path.home()/'anaconda3'/'python.exe'),shutil.which('python'))
+        if p and Path(p).is_file()))
+
+def check_probe():
+    return ('import sys;sys.path.insert(0,'+repr(sysconfig.get_paths()['purelib'])+');import jsonschema,fitz;'
+        'assert sys.version_info[:2]=='+repr(tuple(sys.version_info[:2]))+';print('+repr(CHECK_OK)+')')
+
+def sandbox_python(cwd,run=subprocess.run):
+    """First interpreter that starts inside the sandbox and imports the checker's packages, or None."""
+    global _sandbox_python
+    if _sandbox_python is not _UNPROBED:return _sandbox_python
+    found=None
+    for exe in check_candidates():
+        try:proc=run(g.codex.sandbox_command([exe,'-c',check_probe()]),cwd=str(cwd),capture_output=True,text=True,
+            encoding='utf-8',errors='replace',timeout=120,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0),env=g.codex.child_env())
+        except(OSError,subprocess.SubprocessError,RuntimeError):continue
+        if proc.returncode==0 and CHECK_OK in(proc.stdout or''):found=exe;break
+    _sandbox_python=found;return found
+
+def check_instruction(python):
+    if python:
+        return ('\nBefore finalizing, run '+python+' with argument check_result.py successfully. Fix serialization/structural '
+            'inconsistencies within this one task; never falsify findings or sources to pass.\n')
+    return ('\nNo Python interpreter can be started inside this sandbox to run check_result.py. Do not search for another '
+        'interpreter, and never stop or shorten the review because of it: finish the real review with the tools that work. '
+        'The host runs the same check_result.py after you return and sends any error back once.\n')
 
 RESTRICTED_MESSAGE='[MODEL_CONTENT_RESTRICTED] OpenAI 콘텐츠 제한으로 요청이 거절되어 보류했습니다. 기존 결과와 검수 기록은 보존했습니다.'
 
@@ -257,12 +296,14 @@ class NativeJson:
         if 'bank'in ctx:visual.paths(ctx['bank'],work/'material')
         g.write(work/'input.json',clean(ctx));g.write(work/'acceptance.schema.json',schema)
         root=Path(__file__).resolve().parents[1]
-        checker='import sys\nfrom pathlib import Path\nsys.path.insert(0,'+repr(str(root))+')\nfrom runner.root_native_json import check_file\ncheck_file('+repr(stage)+',Path(__file__).parent)\nprint("Acceptance checks passed")\n'
+        checker=('import sys\nfrom pathlib import Path\nsys.path.insert(0,'+repr(sysconfig.get_paths()['purelib'])+')\n'
+            'sys.path.insert(0,'+repr(str(root))+')\nfrom runner.root_native_json import check_file\ncheck_file('+repr(stage)+',Path(__file__).parent)\nprint("Acceptance checks passed")\n')
         (work/'check_result.py').write_text(checker,encoding='utf-8')
         task=task_for(stage)
         if ctx.get('rejectedAuthoring'):
             task+='\nThis is the explicitly authorized repair of a completed but structurally rejected brief. Copy previousAuthoring.bank, visual_stimuli and clinical_conflicts EXACTLY using local code. Correct only the brief findings and their complete structural implications, preserve original points/source boundaries, set derived and explain the correction. The rejected brief is not a valid prior accepted map. Do not create or rewrite clinical questions in this recovery step.\n'
-        (work/'task.md').write_text(task+'\nBefore finalizing, run '+str(sys.executable)+' with argument check_result.py successfully. Fix serialization/structural inconsistencies within this one task; never falsify findings or sources to pass.\n',encoding='utf-8')
+        python=sys.executable if self.invoke is not None else sandbox_python(work)
+        (work/'task.md').write_text(task+check_instruction(python),encoding='utf-8')
         protected={name:sha(work/name)for name in('input.json','acceptance.schema.json','task.md','check_result.py')}
         (seat/'adapter.py').write_bytes(Path(__file__).read_bytes())
         proof={'policy':POLICY,'stage':stage,'inputHash':document_hash(ctx),'cleanInputHash':document_hash(clean(ctx)),

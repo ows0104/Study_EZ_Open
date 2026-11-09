@@ -120,3 +120,50 @@ normalize(초기 지도 오류 1 → 보완 1/3 선소비) → generate(89문항
   - 사슬알균 보완 출력: 3건(Q107·P018, Q108·P020, Q014·Q015)
   - 학생 칸 밖의 ID와 의학 표기는 세지 않았다(오탐 0)
 - 검사: 새 2개(찾기 단위 1·같은 세션 되돌려주기 1), 둘 다 수정 전 실패. 루트 2,185 통과, `map_numbers --check` 정상.
+
+## generation-4 (2026-11-09 사용자 「generation-4 돌려줘」, 병합된 #53 코드)
+
+- 앞 실행과 같은 packet으로 11:08–12:12에 64분 돌았다. 결과는 보류이고 `result.json`은 없다.
+- 고친 4건은 모두 통했다. 정규화·출제·repair-1·repair-2가 형식 오류 없이 지났다.
+
+| 회차 | context | medical | source |
+|---|---|---|---|
+| 0 | consistent | 완료 — 102문항 ok 82 · doubt 16 · wrong 4 | 판정 있음(ok 92 · doubt 10, 지적 71) |
+| 1 | **conflict** — CF04 출처 쪽(26–27·29쪽)이 섞임 | **blocked** | 판정 있음(ok 112 · doubt 13 · wrong 4, 지적 78) |
+| 2 | **conflict** — CF04에서 「but not with urine」 누락, Q037 충돌 기록 없음 | **blocked** | **빈 판정** — 129문항 전부 doubt, 점검 전부 unknown, 지적은 limitation 2건 |
+
+- 보완 예산: 초기 지도 교정 1회 + repair-1 + repair-2 = 3/3.
+- context는 회차마다 **다른** 누락을 찾았다. 그래서 정답 검수가 0회차 뒤로 다시 돌지 못했다(설계 결정 대기, 아래).
+
+### 새로 드러난 결함 2건 (같은 날 수정)
+
+1. **빈 원본 대조를 완료로 받았다.**
+   - source-2는 110초 만에 「Incomplete independent review」를 냈다. 이전 회차는 7–28분이었다.
+   - check_file도 생성기도 이것을 정상 완료로 기록했다. 「원본 대조를 생략하면 검수 완료로 처리하지 않는다」와 어긋난다.
+   - 수정: 계약 `generation_v2.require_judgment`.
+     - 문항 판정이 전부 doubt이고, 방향·관계·목표 점검이 전부 unknown이며, direction_evidence가 비면 거절한다.
+     - 판정이 하나라도 있으면 지금처럼 받는다. doubt·unknown 자체는 계속 허용한다.
+   - 같은 세션에 한 번 되돌린다. 그래도 같으면 그 회차는 실패로 남고 정답 검수로 넘어가지 않는다.
+2. **모델이 검사 명령을 실행할 수 없었다.**
+   - task.md의 `.venv\Scripts\python.exe`(uv 실행기)와 그 바탕 python(`AppData\Roaming\uv`)은 샌드박스 사용자(CodexSandboxUsers)에게 실행 권한이 없다.
+   - 또 uv 실행기가 러너 환경에 넣은 `PYTHONHOME`이 Codex와 모델 셸로 그대로 넘어갔다. 그래서 실행 가능한 python도 샌드박스 안에서 `No module named 'encodings'`로 죽었다.
+   - 이날 세션 대부분이 「uv trampoline … permission denied」를 만났다. 대개는 돌아갔지만 source-2는 거기서 검토를 포기했다.
+   - 수정:
+     - `studyez_llm.codex.child_env`: uv 실행기 자신의 `PYTHONHOME`만 빼고 Codex를 띄운다.
+     - `root_native_json.sandbox_python`: 모델 없이 `codex sandbox`로 후보를 한 번 시험하고, 샌드박스에서 실제로 뜨는 것을 task.md에 적는다.
+       - 이 기계에서는 anaconda3이 골라졌고, 시험은 4초 걸렸다.
+       - 검사 파일은 이 프로세스의 패키지 경로를 앞에 둔다.
+       - 뜨는 것이 없으면 「다른 python을 찾지 말고 검토를 줄이지 말라. 호스트가 같은 검사를 돌려 한 번 되돌린다」고 적는다.
+   - 샌드박스 폴더 권한(보안 설정)은 바꾸지 않았다.
+- 실제 확인:
+  - generation-4 source-2의 보관된 검사 파일이 샌드박스 안 anaconda로 1.7초에 돌았다(수정 전 기준으로는 빈 판정이 통과).
+  - 감염병리1 공개 실행(26110803 generation-3)은 새 계약에서도 `validate_result`·`validate_all` 통과, 원본 대조 회차 모두 판정 있음.
+- 검사:
+  - 새 계약 4개, 러너 3개. 빈 판정 거절과 되돌린 뒤 실패는 수정 전 실패.
+  - 루트 2,192 통과(desktop_control 제외, master에서도 실패), 서버 root 27개 통과.
+
+### 아직 정하지 않은 것
+
+- **context 충돌이 매 회차 새로 나온다.** 이전 지적만 다시 확인할지, 지금처럼 매번 전체를 볼지 정해야 한다.
+  지금 방식이면 결함 2건을 고친 뒤에도 같은 이유로 멈출 수 있다.
+- 위의 context `unknown`·초기 교정 예산·판정 범위 결정도 그대로 남아 있다.

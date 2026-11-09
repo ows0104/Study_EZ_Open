@@ -304,3 +304,57 @@ def test_internal_id_in_explanation_is_sent_back_once_into_the_same_session(tmp_
     assert sum(1 for s,r in prompts if r)==1 and 'Q1.explanation'in n.read(out/'.native/generate/check-failure.json')['error']
     assert result['document']['bank_snapshot']['questions'][0]['explanation']=='Synthetic medical explanation 1'
     n.validate_all(out,result)
+
+def judged_nothing(path):
+    """26110901 source-2: 「Incomplete independent review」, every verdict doubt, every check unknown."""
+    value=n.read(path)
+    for r in value['question_reviews']:r.update(verdict='doubt',suggested_answer='')
+    for key in('direction_checks','relation_checks','target_checks'):
+        for r in value[key]:r['status']='unknown'
+    value['direction_evidence']=[]
+    path.write_text(json.dumps(value,ensure_ascii=False),encoding='utf-8')
+
+def test_review_that_judged_nothing_is_sent_back_once_and_then_fails_the_round(tmp_path,monkeypatch):
+    packet=f.packet(tmp_path/'source.txt');out=tmp_path/'out';prompts=[]
+    monkeypatch.setattr(producer,'call_model',lambda stage,ctx,material,model:f.model(stage,ctx,material,model))
+    base=provider(out)
+    def run(prompt,**kwargs):
+        work=kwargs['cwd'];stage=work.parent.name;prompts.append((stage,kwargs.get('resume')));path=work/'result.json'
+        if kwargs.get('resume'):  # the follow-up returns the same empty review
+            return {'text':json.dumps({'path':'result.json','sha256':n.sha(path)}),'turns':2,'session_id':kwargs['resume'],
+                    'usage':{'input_tokens':7,'output_tokens':3,'cache_read_input_tokens':0,'cache_creation_input_tokens':0},
+                    'models':{kwargs['model']:3},'cost_usd':None,'duration_ms':2}
+        result=base(prompt,**kwargs)
+        if stage=='source-0':
+            judged_nothing(path);result['text']=json.dumps({'path':'result.json','sha256':n.sha(path)})
+        return result
+    native=n.NativeJson(out,invoke=run);native.followups=True
+    with pytest.raises(Exception,match='judged nothing'):g.run(packet,out,invoke=native)
+    assert prompts.count(('source-0',None))==1 and sum(1 for s,r in prompts if r)==1
+    assert 'judged nothing'in n.read(out/'.native/source-0/check-failure.json')['error']
+    ledger=n.read(out/'ledger.json')
+    assert ledger['stages'].get('source-0',{}).get('status')!='completed'and 'medical-0'not in ledger['stages']
+
+def test_checker_python_is_the_first_the_sandbox_can_start_and_is_probed_once(tmp_path,monkeypatch):
+    calls=[]
+    monkeypatch.setattr(n,'_sandbox_python',n._UNPROBED)
+    monkeypatch.setattr(n,'check_candidates',lambda:['uv-venv.exe','anaconda.exe','other.exe'])
+    monkeypatch.setattr(n.g.codex,'sandbox_command',lambda args:['codex','sandbox',*args])
+    def run(argv,**kwargs):
+        calls.append(argv[2]);assert 'PYTHONHOME'not in kwargs['env']or kwargs['env']['PYTHONHOME']!='uv-home'
+        ok=argv[2]=='anaconda.exe'
+        return subprocess.CompletedProcess(argv,0 if ok else 1,n.CHECK_OK+'\n'if ok else'','permission denied (os error 5)')
+    monkeypatch.setenv('PYTHONHOME','uv-home');monkeypatch.setenv('UV_INTERNAL__PYTHONHOME','uv-home')
+    assert n.sandbox_python(tmp_path,run=run)=='anaconda.exe'and n.sandbox_python(tmp_path,run=run)=='anaconda.exe'
+    assert calls==['uv-venv.exe','anaconda.exe']
+    assert 'anaconda.exe with argument check_result.py'in n.check_instruction('anaconda.exe')
+    monkeypatch.setattr(n,'_sandbox_python',n._UNPROBED)
+    assert n.sandbox_python(tmp_path,run=lambda argv,**kw:subprocess.CompletedProcess(argv,1,'',''))is None
+    assert 'never stop or shorten the review'in n.check_instruction(None)
+
+def test_codex_children_lose_only_the_uv_launchers_own_pythonhome(monkeypatch):
+    from studyez_llm import codex
+    monkeypatch.setenv('PYTHONHOME','C:/uv/python');monkeypatch.setenv('UV_INTERNAL__PYTHONHOME','C:/uv/python')
+    env=codex.child_env();assert 'PYTHONHOME'not in env and 'UV_INTERNAL__PYTHONHOME'not in env
+    monkeypatch.delenv('UV_INTERNAL__PYTHONHOME');monkeypatch.setenv('PYTHONHOME','C:/chosen')
+    assert codex.child_env()['PYTHONHOME']=='C:/chosen'
