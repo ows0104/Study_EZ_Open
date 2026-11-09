@@ -29,6 +29,7 @@ from app.routes.bank_api.common import bank_sources
 from studyez_contracts.roots import document_hash
 from studyez_contracts.roots.automation import packet_hash, validate_result
 from studyez_contracts.roots.generation_v2 import VERSION as SOURCE_FORMAT
+from studyez_contracts.roots import map_tree
 
 router = APIRouter()
 BASE = '/admin/root-learning/lectures/{subject}/{run_id}/generation'
@@ -47,6 +48,10 @@ class RequestIn(BaseModel):
     resume: bool = False
     authoring: Literal['cli','web'] = 'web'
     parallelAuthoring: bool = False
+    # map-tree/1 (2026-11-09 사용자 결정): the pilots' Map /3 → points /3 → audit/repair front stages in the runner.
+    pipeline: Literal['map-tree/1'] | None = None
+    # The administrator's reason to continue a failed/held request; required for map-tree resumes.
+    resumeReason: str = Field(default='', max_length=500)
 
 
 def control_hash(db, subject, run_id):
@@ -77,7 +82,7 @@ def generation_input(packet):
     """Compare effective frozen inputs, not how an automatic date was selected."""
     return {**{k: packet.get(k) for k in ('subject','runId','title','conceptMap','points','scope','examDate')},
         'inputMode':packet.get('inputMode','provided'),'authoring':packet.get('authoring','cli'),
-        'parallelAuthoring':packet.get('parallelAuthoring',False),
+        'parallelAuthoring':packet.get('parallelAuthoring',False),'pipeline':packet.get('pipeline'),
         'sources':[{k:v for k,v in s.items() if k!='snapshotKey'} for s in packet['sources']]}
 
 
@@ -195,11 +200,13 @@ def public_job(db, row, flags=None):
             'input': {**{k: row.packet[k] for k in ('conceptMap', 'points', 'scope')},
                 'examDate':row.packet.get('requestedExamDate',row.packet['examDate']),
                 'inputMode':row.packet.get('inputMode','provided')}, 'report': report,
-            'authoring':row.packet.get('authoring','cli'), 'parallelAuthoring':row.packet.get('parallelAuthoring',False), 'awaitingWeb':row.packet.get('authoring')=='web' and not flags['web_response'] and job.state=='held' and not job.cancel_requested and job.stage=='ChatGPT 응답 대기',
+            'authoring':row.packet.get('authoring','cli'), 'parallelAuthoring':row.packet.get('parallelAuthoring',False),
+            'pipeline':row.packet.get('pipeline'), 'sources':[{k:s[k] for k in ('id','kind','filename')} for s in row.packet.get('sources',[])],
+            'operatorResumes':len(row.packet.get('operatorResumes',[])), 'awaitingWeb':row.packet.get('authoring')=='web' and not flags['web_response'] and job.state=='held' and not job.cancel_requested and job.stage=='ChatGPT 응답 대기',
             'dispatched':flags['web_dispatch']}
 
 
-def resume_job(db, row):
+def resume_job(db, row, reason='', by=''):
     if row.packet.get('supersededBy'):raise HTTPException(409,'중복 요청은 기존 작업에서 재개하세요.')
     job = db.get(PrequizJob, row.job_id)
     if job.state in ('failed', 'held', 'canceled') and not row.result_digest:
@@ -207,6 +214,12 @@ def resume_job(db, row):
             raise HTTPException(409, '웹 응답이 필요합니다. 전송을 반복하지 않고 완성된 MD 파일을 전달하세요.')
         if open_job_of(db, row.subject, row.run_id, JOB_BANK) not in (None, job):
             raise HTTPException(409, '다른 문제은행 작업이 진행 중입니다.')
+        if row.packet.get('pipeline') and not reason.strip():
+            raise HTTPException(422, '이어 하기 이유를 적으세요. 실패한 단계는 이유가 있을 때만 다시 돕니다.')
+        if reason.strip():
+            # Outside the input fingerprint (packet_hash): the runner passes the latest unused reason as --resume.
+            row.packet = {**row.packet, 'operatorResumes': [*row.packet.get('operatorResumes', []),
+                {'reason': reason.strip(), 'at': datetime.now(UTC).isoformat(), 'by': by}]}
         job.state, job.cancel_requested, job.stage = JOB_QUEUED, False, '같은 입력·수정 상한으로 자동출제 재개'
         job.message=''
         job.finished_at, job.resume_at = None, None
@@ -231,7 +244,9 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
         raise HTTPException(422, 'Concept map과 출제포인트를 입력하세요.')
     if payload.parallelAuthoring and (payload.authoring!='cli' or payload.inputMode!='source'):
         raise HTTPException(422,'병렬 생성은 CLI 원본 모드에서만 사용합니다.')
-    if payload.inputMode=='source' and (payload.conceptMap or payload.points or (payload.authoring!='web' and not payload.parallelAuthoring)):
+    if payload.pipeline and (payload.inputMode!='source' or payload.authoring!='cli' or payload.parallelAuthoring):
+        raise HTTPException(422,'Main-Quiz 앞 단계 방식(map-tree)은 CLI 원본 모드에서만 사용합니다.')
+    if payload.inputMode=='source' and (payload.conceptMap or payload.points or (payload.authoring!='web' and not payload.parallelAuthoring and not payload.pipeline)):
         raise HTTPException(422,'원본 자동 준비는 웹 출제와 빈 지도·포인트 입력을 사용합니다.')
     if payload.examDate:
         from datetime import date
@@ -244,12 +259,13 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
     raw = {'conceptMap': payload.conceptMap, 'points': payload.points, 'scope': payload.scope, 'examDate': payload.examDate,'authoring':payload.authoring}
     if payload.inputMode=='source':raw.update(inputMode='source',requestedExamDate=payload.examDate)
     if payload.parallelAuthoring:raw['parallelAuthoring']=True
+    if payload.pipeline:raw['pipeline']=payload.pipeline
     prior = db.scalars(select(RootGeneration).where(RootGeneration.user_id == user.id, RootGeneration.request_id == payload.requestId)).first()
     if prior:
         compare={k:v for k,v in raw.items() if not (payload.inputMode=='source' and k=='examDate')}
-        if (prior.subject, prior.run_id) != (subject, run_id) or prior.packet.get('inputMode','provided')!=payload.inputMode or prior.packet.get('parallelAuthoring',False)!=payload.parallelAuthoring or any(prior.packet.get(k) != v for k, v in compare.items()) or prior.packet['privatePilot'] != payload.privatePilot:
+        if (prior.subject, prior.run_id) != (subject, run_id) or prior.packet.get('inputMode','provided')!=payload.inputMode or prior.packet.get('parallelAuthoring',False)!=payload.parallelAuthoring or prior.packet.get('pipeline')!=payload.pipeline or any(prior.packet.get(k) != v for k, v in compare.items()) or prior.packet['privatePilot'] != payload.privatePilot:
             raise HTTPException(409, '같은 요청 ID의 입력이 달라졌습니다.')
-        if payload.resume: resume_job(db, prior)
+        if payload.resume: resume_job(db, prior, payload.resumeReason, user.id)
         return {'generation': public_job(db, prior), 'reused': True}
     if payload.inputMode=='source' and not payload.examDate:raw['examDate']=registered_exam_date(db,lecture)
     try:
@@ -268,8 +284,15 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
         existing=canonical_generation(db,existing)
         if existing.packet['privatePilot'] != payload.privatePilot or existing.packet['owner'] != user.id:
             raise HTTPException(409, '같은 입력의 기존 작업이 있습니다. 공개 범위는 등록된 판의 공개 관리에서 바꾸세요.')
-        if payload.resume: resume_job(db, existing)
+        if payload.resume: resume_job(db, existing, payload.resumeReason, user.id)
         return {'generation': public_job(db, existing), 'reused': True}
+    if payload.pipeline:
+        control = db.get(RootControl, (subject, run_id))
+        if control and control.revision:
+            # put_result would switch students to the new revision; how their records follow it is a separate decision.
+            raise HTTPException(409, '이미 공개된 Main-Quiz 판이 있습니다. 판 교체는 학습 기록 승계 문제가 있어 별도 승인이 필요합니다.')
+        if any(PurePath(s['filename']).suffix.lower() != '.pdf' for s in sources):
+            raise HTTPException(422, 'Main-Quiz 앞 단계는 PDF 쪽을 읽습니다. 올해 필기·족보를 PDF로 등록하세요.')
     if open_job_of(db, subject, run_id, JOB_BANK):
         raise HTTPException(409, '기존 문제은행 작업이 끝난 뒤 요청하세요.')
     generation_id = uuid4().hex
@@ -286,10 +309,10 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
     packet = {'generationId': generation_id, 'revision': 'auto-' + generation_id, 'subject': subject, 'runId': run_id,
               'title': lecture.title, 'owner': user.id, 'privatePilot': payload.privatePilot, 'sources': sources, **raw,'inputMode':payload.inputMode}
     from studyez_contracts.roots.parallel import SOURCE_FORMAT as PARALLEL_FORMAT
-    packet['sourceAssessmentFormat']=PARALLEL_FORMAT if payload.parallelAuthoring else SOURCE_FORMAT
+    packet['sourceAssessmentFormat']=map_tree.FORMAT if payload.pipeline else PARALLEL_FORMAT if payload.parallelAuthoring else SOURCE_FORMAT
     packet['inputHash'] = packet_hash(packet)
     job = PrequizJob(subject=subject, run_id=run_id, kind=JOB_BANK, origin=JOB_BUTTON, state='held' if payload.authoring=='web' else JOB_QUEUED,
-                     requested_by=user.email or user.id, stage='ChatGPT 응답 대기' if payload.authoring=='web' else '문제은행·개념도·출제포인트 CLI 병렬 대기' if payload.parallelAuthoring else 'Concept map·포인트 자동출제 대기')
+                     requested_by=user.email or user.id, stage='ChatGPT 응답 대기' if payload.authoring=='web' else 'Main-Quiz 앞 단계(개념 지도·포인트) 대기' if payload.pipeline else '문제은행·개념도·출제포인트 CLI 병렬 대기' if payload.parallelAuthoring else 'Concept map·포인트 자동출제 대기')
     db.add(job); db.flush()
     row = RootGeneration(id=generation_id, job_id=job.id, subject=subject, run_id=run_id, user_id=user.id,
         request_id=payload.requestId, input_digest=digest, packet=packet, baseline=control_hash(db, subject, run_id))

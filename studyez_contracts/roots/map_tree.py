@@ -144,7 +144,7 @@ def derive_packet(server, concept_map, points, front):
     require_server_packet(server)
     require(packet_hash(server) == server['inputHash'], 'map-tree: server packet fingerprint')
     check_front(front, server, concept_map, points)
-    value = {k: copy.deepcopy(v) for k, v in server.items() if k not in ('inputHash', 'pipeline')}
+    value = {k: copy.deepcopy(v) for k, v in server.items() if k not in ('inputHash', 'pipeline', 'operatorResumes')}
     value.update(scope=lecture_scope(server['title'], front['pageCounts'], server.get('scope', '')) + ' ' + SCOPE_SUFFIX,
                  conceptMap=concept_map, points=points, inputMode='provided', sourceAssessmentFormat=GENERATION_FORMAT,
                  speedStages=True, derivedFrom=server['inputHash'], frontStages=copy.deepcopy(front))

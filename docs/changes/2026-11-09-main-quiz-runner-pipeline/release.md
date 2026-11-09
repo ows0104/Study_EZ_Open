@@ -115,20 +115,80 @@
 - 공개된 두 결과(26110803, 26110901)는 바뀐 `validate_result`·`validate_all`을 그대로 통과한다.
 - 모델 호출·운영 DB 쓰기: 없음
 
-### 남은 것 (PR C 이후)
-- 서버가 map-tree 요청을 만드는 일. `RequestIn.pipeline`, 이미 공개된 강의 거절, `privatePilot` 기본값 false, 이어 하기 이유 전달이 여기 든다.
-- 관리자 화면 기본값과 승인 문구.
-- 러너 배포 사본 갱신.
-- 서버 jokbo Asset 바이트가 시범 PDF와 같은지 읽기 전용으로 대조하는 일. PR C 시작 때 한다.
+### PR B 병합 보류
+- PR #62의 CI 두 작업(「Tests and build」, 「Windows runner checks」)이 시작되지 않았다.
+  - GitHub 표시: 「The job was not started because recent account payments have failed or your spending limit needs to be increased」
+  - 코드 실패가 아니다. 로컬 검사는 모두 통과했다.
+- master 병합이 곧 배포인데, 지금은 배포 워크플로도 같은 이유로 돌지 않는다. 그러면 master와 운영 API가 어긋난다. 그래서 병합하지 않았다.
+- PR C는 PR B 브랜치 위(`claude/main-quiz-runner-server`)에서 진행했다.
+
+## PR C — 서버·웹 (R1, R6 서버 쪽, R7)
+
+사용자 2026-11-09 「병합하고 PR C」.
+
+### 바뀐 것
+- **서버 `root_generation.py`**
+  - `RequestIn.pipeline: 'map-tree/1'`
+    - CLI·원본 모드에서만 받는다. 병렬·웹·provided와 함께 오면 422.
+    - 형식은 `source-assessment/2-map-tree/1`, 작업 단계 문구는 「Main-Quiz 앞 단계(개념 지도·포인트) 대기」다.
+  - 이미 공개된 판(`RootControl.revision`)이 있는 강의는 409로 거절한다.
+  - 올해 필기·족보가 PDF가 아니면 422.
+  - 같은 요청 ID로 다시 보낼 때 `pipeline`이 다르면 409. `pipeline`은 같은 입력 판별(`generation_input`)에도 들어간다.
+  - `resumeReason`: map-tree 요청을 이어 할 때 필수다(없으면 422). packet `operatorResumes`에 이유·시각·관리자를 쌓는다.
+  - 관리자 응답에 `pipeline`, `sources`(id·kind·파일명), `operatorResumes` 개수를 더했다.
+- **`prequiz_jobs.claimed_job`**: map-tree 요청에 `rootGenerationId`를 붙인다. 블럭 범위 예외는 기존 병렬 요청과 같다.
+- **계약 `packet_hash`**: `operatorResumes`를 입력 지문에서 뺀다. 옛 packet에는 이 칸이 없어 해시가 그대로다.
+  - `map_tree.derive_packet`도 이 칸을 생성 packet에 옮기지 않는다. 이어 해도 생성 입력이 바뀌지 않는다.
+- **러너 `run_generation`**
+  - packet의 `operatorResumes` 중 이 폴더에서 아직 쓰지 않은 최신 이유를 `--resume`으로 넘긴다.
+  - 쓴 개수는 `operator-resumes.json`에 적는다. 그래서 같은 이유로 두 번 재개하지 않는다.
+- **웹 `RootGenerationPanel`**
+  - 기본은 「개념 지도·출제포인트부터」(map-tree), `privatePilot` 기본값은 false다.
+  - 요청 전에 승인 문구를 보인다: 「이 버튼이 이 강의의 승인입니다」, 보내는 자료(S1·S2 PDF)·보내는 곳(OpenAI Codex CLI), 호출 상한, 예상 1~1.5시간, 「학생에게 바로 공개」, 공개된 강의 거절.
+  - 요청 뒤에는 실제 보낸 파일명을 보인다.
+  - map-tree 작업의 이어 하기는 이유 칸을 채워야 버튼이 열린다.
+  - 옛 방식(병렬, 기존 지도)은 「설정·기존 지도 사용」 아래에 그대로 둔다.
+  - 이어 하기는 원래 요청을 그대로 다시 보낸다. 고치는 중에 발견한 문제다: 예전 방식 작업에 map-tree 표시를 붙이면 서버가 「입력이 달라졌다」며 거절한다.
+- **spec과의 차이**: 요청 전에 쪽수를 보이지 않는다. 서버가 PDF를 열지 않기 때문이고, 쪽수는 러너가 센다. spec R1에 반영했다.
+- **문서**: `docs/development/README.md` 「사람에게 묻는 것」에 map-tree 버튼이 그 강의의 공개·전송 승인이라는 줄, `server/CLAUDE.md` 계약 줄.
+
+### 열린 질문 확인: 서버 족보 파일
+- 2026-11-01 족보 업로드 검증 기록(`docs/changes/2026-11-01-jokbo-professor-priority/upload-verification.json`, 메인 체크아웃)의 261105_01 항목은 다음과 같다.
+  - 파일: `2026-S9-족보-김범준.pdf`
+  - sha256: `25d1cf…2489`
+  - 사슬알균 시범이 쓴 PDF의 sha256과 같다.
+- 그 뒤 교체됐는지는 운영 DB를 읽지 않아 확인하지 않았다.
+- 러너는 실행 때 서버가 고정한 sha와 받은 바이트를 대조하고, 다르면 모델 호출 전에 멈춘다.
+
+### 검사
+- 서버 새 `tests/test_root_map_tree.py`(격리 sqlite·로컬 저장소)
+  - 요청과 거절: 조합 422, 공개 강의 409, MD 원본 422, 학생 403
+  - 같은 입력 재사용, claim 결합
+  - 러너 앞 단계 + 생성을 그 자리에서 실행하고 `PUT result`
+    - 생성 packet 위조·누락은 422
+    - 게시 결과: `allowed_users == []`, 다른 강의 공개 설정·Quiz Bank 불변, 이벤트 +1
+  - 공개 뒤 새 요청 409
+  - 이어 하기: 이유 없으면 422, 있으면 queued·`operatorResumes`·입력 지문 불변
+- 러너 새 검사 1개: 서버에 저장된 이유를 다음 실행에 한 번만 쓰는지, 그 결과를 서버 packet(이유 포함)으로 검증해 통과하는지
+- 웹 `tests/main-quiz-generation-button.test.cjs` 8개
+  - 기본 map-tree, 승인 문구, 이유가 있어야 열리는 이어 하기, 옛 방식 선택, 옛 작업 이어 하기는 원래 요청 그대로
+  - 이 파일은 패널이 이미 쓰던 `./pollChain`을 대체하지 않아 master에서도 깨져 있었다(CI에서는 돌지 않는다). 고쳤다.
+- `web` typecheck·build 통과. `main-quiz-generation-browser.test.cjs`는 playwright가 없어 실행하지 못했다.
+- 로컬 실행 방법: 서버 venv에 PyMuPDF가 없어서 루트 venv의 `pymupdf`·`fitz`만 복사해 PYTHONPATH에 붙여 돌렸다. CI는 한 환경에 루트·서버 의존성을 함께 설치한다.
+- 브라우저 미리보기는 하지 않았다. 패널은 관리자 API가 필요한데, 운영 API(70f1fad5)는 아직 `pipeline`을 받지 않는다.
+- 수치: contracts 279 · quizbank 577 · runner 759(1개 제외, 기존 결함) · web 단위 12 · server 전체 130(직접 실행)
+- 서버 전체를 처음 돌렸을 때 2개가 실패했다(`test_root_generation_columns`, `test_root_generation_poll`). 관리자 응답에 새 필드 3개가 생겨, 고정해 둔 응답 사본과 달라졌기 때문이다. `sources`가 없는 테스트용 packet에서는 KeyError도 났다. 응답 사본에 새 필드를 더하고 `sources`가 없어도 되게 고쳤다.
+- 서버 전체를 `scripts/development.py verify`로 돌리면 110개가 sqlalchemy의 `platform` 버전 해석 오류로 시작하지 못했다(코드와 무관, 두 번 재현). 같은 코드를 `server/`에서 직접 `-m tests`로 돌리면 130개 모두 통과한다. 그래서 server 체크는 state.json에 실패로 남아 있다. 기록 도구의 서버 실행 환경은 따로 고칠 일이다.
 
 ## 배포 대상 버전·순서·데이터 변경
-- PR B 병합은 API를 자동 배포한다.
-  - 서버는 계약의 `validate_result`를 쓰므로 map-tree 결과를 검증할 수 있게 된다.
-  - 그러나 map-tree 요청을 만드는 경로는 PR C 전까지 없다. 기존 요청의 동작은 바뀌지 않는다.
-- DB 스키마 변경과 데이터 변경은 없다.
+- 순서: PR B(#62) 병합 → PR C 병합. 둘 다 API·웹을 자동 배포한다.
+  - GitHub Actions 결제가 풀린 뒤라야 CI와 배포가 돈다.
+- DB 스키마 변경과 데이터 변경은 없다. 새 칸은 기존 JSON 칸(`root_generation.packet`) 안에 들어간다.
 - 러너 배포 사본은 병합으로 바뀌지 않는다.
+  - map-tree 요청을 실제로 돌리려면 러너를 새 코드로 다시 띄워야 한다. 옛 pid를 직접 끈 뒤 `runtime.json`으로 확인한다.
+  - 그 전에 요청이 들어오면 옛 러너는 모델 호출 전에 거절한다.
 
 ## 배포 후 확인·롤백·필요한 사람 승인
-- 확인: 배포된 API revision이 병합 SHA인지 본다.
-- 롤백: git revert. map-tree 요청이 아직 없으므로 되돌릴 데이터가 없다.
-- 사람 승인: 이 PR에는 「사람에게 묻는 것」에 닿는 일이 없다.
+- 확인: 배포된 API revision과 Pages 자산이 병합 SHA인지 본다.
+- 롤백: git revert와 이전 Cloud Run revision·Pages. 그 사이 map-tree로 공개된 판은 publication 경로에서 `enabled=false`로 닫는다. 판과 학습 기록은 지우지 않는다.
+- 사람 승인: 첫 실제 실행은 사용자가 관리자 화면에서 강의를 골라 누를 때 한다. 그 클릭이 그 강의의 자료 전송·학생 공개 승인이다.

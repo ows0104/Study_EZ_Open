@@ -62,6 +62,11 @@
   문항별 판단과 전후 재현 기록은 `work/remaining23-order-20261018/README.md`에 보관한다.
 - 카드 전체 교체 시 관리자의 `card_edit` 판정을 다시 반영한다.
 - 파일 본문은 R2 서명 URL로 직접 전송하며 계약의 kind와 Content-Type을 유지한다.
+- Main-Quiz `pipeline: map-tree/1` 요청(2026-11-09, `docs/changes/2026-11-09-main-quiz-runner-pipeline/`)
+  - CLI 원본 모드에서만 받는다. 형식은 `source-assessment/2-map-tree/1`이고, 올해 필기·족보는 PDF여야 한다.
+  - 이미 공개된 판이 있는 강의는 409로 거절한다.
+  - 결과는 `validate_result`가 요청에서 생성 packet을 다시 만들어 검증한 뒤 `put_result`가 게시한다. `privatePilot=false`면 학생 공개다.
+  - 이어 하기 이유는 packet의 `operatorResumes`에 쌓는다. 입력 지문 밖이고, map-tree 요청에는 필수다.
 
 master push는 GitHub 검사 통과 후 API를 자동 배포한다. 다른 브랜치는 검사만 한다.
 배포 절차는 [협업·자동 배포](../docs/development/collaboration.md)와 [배포 안내](../docs/deployment.md)에 있다.

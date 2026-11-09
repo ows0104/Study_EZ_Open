@@ -16,7 +16,8 @@ AUDIT_SCHEMA = obj(review=REVIEW_SCHEMA, question_checks=REVIEW, input_issues=ar
 
 
 def packet_hash(packet):
-    clean = {k: v for k, v in packet.items() if k not in ('inputHash','webResponse')}
+    # operatorResumes: administrators' reasons to continue a request; not part of its input identity.
+    clean = {k: v for k, v in packet.items() if k not in ('inputHash','webResponse','operatorResumes')}
     clean['sources'] = [{k: v for k, v in s.items() if k not in ('downloadUrl', 'localPath')} for s in packet['sources']]
     return document_hash(clean)
 

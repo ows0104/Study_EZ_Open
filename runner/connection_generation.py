@@ -131,6 +131,18 @@ def run_generation(client, subject, run_id, runs_dir, generation_id, *, model=No
         project=Path(runs_dir).resolve().parent
         # The reader binds this exact -m token AND the observed child PID.
         register(project,out,project/'runner.root_native_json',out/'runner.log')
+    # The administrator's latest resume reason not yet used here (server packet operatorResumes).
+    reasons = [r['reason'] for r in packet.get('operatorResumes', [])]
+    used_path = out / 'operator-resumes.json'
+    used = json.loads(used_path.read_text(encoding='utf-8'))['used'] if used_path.exists() else 0
+    if resume is None and len(reasons) > used: resume = reasons[-1]
+    try:
+        return _generate(client, subject, run_id, base, packet, packet_path, out, model=model, resume=resume)
+    finally:
+        if len(reasons) > used: used_path.write_text(json.dumps({'used': len(reasons)}), encoding='utf-8')
+
+
+def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=None, resume=None):
     # map-tree/1 runs the front stages first; the generator then works in <run>/generation on the derived packet.
     gen_out, gen_packet, gen_packet_path = out, packet, packet_path
     if packet.get('pipeline') is not None:
