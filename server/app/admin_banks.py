@@ -3,13 +3,19 @@
 Overview requests always read current revision stamps and source filenames. Only
 changed banks need their question data and the validation fields used by summary().
 The original responses and complete review reports stay in the database.
+
+The overview is a list of every lecture, so it leaves out the repair history
+(`validation.revision`) that summary() gives the per-lecture admin views. Up to
+2026-11-10 it carried that history for all 40 banks — 19 of the overview's 20 MB,
+10–12 s per load in production — and the admin page renders nothing until the
+overview arrives. The admin screen never read it; the per-lecture bank view still does.
 """
 
 from collections import OrderedDict
 from copy import deepcopy
 from threading import RLock
 
-from sqlalchemy import select, tuple_
+from sqlalchemy import JSON, case, func, null, select, tuple_, type_coerce
 from sqlalchemy.orm import Session
 
 from app.models import Asset, Lecture, QuizBank
@@ -19,9 +25,30 @@ _LIMIT = 256
 _cache: OrderedDict = OrderedDict()
 _lock = RLock()
 
+# Every validation key summary() reads except `revision` (see the module docstring).
+VALIDATION_KEYS = ("pass", "publication", "coverage", "errors", "dropped")
+# (type of a JSON value, aggregate key/value rows into one object) per dialect.
+_JSON_FUNCS = {"postgresql": ("json_typeof", "json_object_agg"), "sqlite": ("json_type", "json_group_object")}
 
-def _summary_rows(keys):
-    # Extract JSON fields in Postgres rather than transferring the full validation
+
+def _validation_subset(dialect: str):
+    """Only the validation keys summary() reads, built from **one** pass over the document.
+
+    `validation` is a `json` (not `jsonb`) column, so every `validation->'key'` makes
+    Postgres decompress and re-parse the whole document. Review histories make one
+    bank's validation 20 MB (2026-11-10). `json_each` walks the top level once; the
+    large review keys are filtered out before anything leaves the database.
+    Non-object documents (JSON null) yield NULL.
+    """
+    typeof, aggregate = _JSON_FUNCS.get(dialect, _JSON_FUNCS["postgresql"])
+    entry = func.json_each(QuizBank.validation).table_valued("key", "value").alias("validation_entry")
+    subset = (select(getattr(func, aggregate)(entry.c.key, entry.c.value))
+              .where(entry.c.key.in_(VALIDATION_KEYS)).scalar_subquery())
+    return type_coerce(case((getattr(func, typeof)(QuizBank.validation) == "object", subset), else_=null()), JSON)
+
+
+def _summary_rows(keys, dialect: str = "postgresql"):
+    # Extract JSON fields in the database rather than transferring the full validation
     # document (including large conflict/evidence review histories) to the API.
     fields = (
         QuizBank.subject, QuizBank.run_id, QuizBank.status, QuizBank.build_id,
@@ -29,10 +56,9 @@ def _summary_rows(keys):
         QuizBank.linked_at, QuizBank.built_at, QuizBank.responded_at,
         QuizBank.prompt_version, QuizBank.message, QuizBank.bank,
     )
-    validation_keys = ("pass", "publication", "coverage", "revision", "errors", "dropped")
     return select(
         *fields,
-        *(QuizBank.validation[key].label(f"validation_{key}") for key in validation_keys),
+        _validation_subset(dialect).label("validation_subset"),
         QuizBank.review["counts"].label("review_counts"),
     ).where(tuple_(QuizBank.subject, QuizBank.run_id).in_(keys))
 
@@ -64,17 +90,18 @@ def summaries(db: Session, lectures: list[Lecture]) -> dict[tuple[str, str], dic
             else:
                 missing[key] = version
         if missing:
-            for values in db.execute(_summary_rows(missing)).mappings():
+            for values in db.execute(_summary_rows(missing, bind.dialect.name)).mappings():
                 values = dict(values)
-                validation = {key.removeprefix("validation_"): values.pop(key)
-                              for key in list(values) if key.startswith("validation_")}
+                validation = values.pop("validation_subset") or {}
                 # Keep absent/null optional JSON fields equivalent to the original
                 # summary reader's defaults, without attaching this object to a session.
-                validation = {key: value for key, value in validation.items() if value is not None}
+                validation = {key: value for key, value in validation.items()
+                              if key in VALIDATION_KEYS and value is not None}
                 review_counts = values.pop("review_counts")
                 row = QuizBank(**values, validation=validation, review={"counts": review_counts})
                 key = (row.subject, row.run_id)
                 data = summary(db, by_key[key], row, is_admin=True)
+                data.pop("revision", None)
                 _cache[(bind, *key)] = (missing[key], deepcopy(data))
                 _cache.move_to_end((bind, *key))
                 result[key] = data

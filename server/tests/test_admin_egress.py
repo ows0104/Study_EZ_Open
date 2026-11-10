@@ -49,6 +49,9 @@ def main():
                     kind="notes_current", filename="notes.pdf", object_key="notes.pdf")])
         db.commit()
         expected = summary(db, lecture, row, is_admin=True)
+        # The overview lists every lecture and leaves out the repair history; the
+        # per-lecture admin summary keeps it.
+        assert expected.pop("revision") == {"round": 2}
 
     captured = []
     def observe(conn, cursor, statement, parameters, context, executemany):
@@ -67,8 +70,11 @@ def main():
     cold_queries = list(captured)
     assert not any("quiz_bank.raw_response" in sql or "quiz_bank.pages" in sql or "quiz_bank.usage" in sql
                    for sql, _ in cold_queries)
-    assert any("JSON_EXTRACT(quiz_bank.validation" in sql for sql, _ in cold_queries)
+    # validation is read in one pass, not once per key (each `->` re-parses a json column).
+    assert any("json_each(quiz_bank.validation)" in sql for sql, _ in cold_queries)
+    assert not any("JSON_EXTRACT(quiz_bank.validation" in sql for sql, _ in cold_queries)
     assert "UNNEEDED" not in json.dumps(first)
+    assert "revision" not in first["bank"]
 
     second = overview()
     assert second == first
@@ -100,13 +106,24 @@ def main():
         row.bank = updated
         db.commit()
     assert overview()["bank"]["questionCount"] == len(bank["questions"]) + 1
+    # A JSON-null validation (SQLAlchemy stores None as JSON null) reads as {} — never an error.
+    with SessionLocal() as db:
+        db.get(QuizBank, KEY).validation = None
+        db.commit()
+        expected_null = summary(db, db.get(Lecture, KEY), db.get(QuizBank, KEY), is_admin=True)
+        expected_null.pop("revision")
+    assert overview()["bank"] == expected_null
     with SessionLocal() as db:
         db.delete(db.get(QuizBank, KEY))
         db.commit()
     assert overview()["bank"] is None
     assert client.get("/api/admin/overview").status_code == 401
     compiled = str(_summary_rows([KEY]).compile(dialect=postgresql.dialect()))
-    assert "quiz_bank.validation ->" in compiled and "quiz_bank.raw_response" not in compiled
+    assert compiled.count("json_each(quiz_bank.validation)") == 1, compiled
+    assert "quiz_bank.validation ->" not in compiled and "quiz_bank.raw_response" not in compiled
+    assert "json_object_agg" in compiled and "json_typeof(quiz_bank.validation)" in compiled
+    assert "'revision'" not in compiled and "revision" not in str(_summary_rows([KEY]).compile(
+        dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))
     event.remove(engine, "before_cursor_execute", observe)
     print("PASS: summary parity, JSON projection, edits, source changes, deletion, authorization, PostgreSQL SQL")
 

@@ -1,0 +1,18 @@
+{
+  "id": "2026-11-10-admin-overview-speed",
+  "title": "관리 탭 로딩 지연 제거",
+  "area": "site",
+  "created_at": "2026-11-10T05:03:56.068167+00:00",
+  "required_checks": [
+    "server"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-10T05:03:56.068187+00:00"
+}
