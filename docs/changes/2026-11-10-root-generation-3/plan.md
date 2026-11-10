@@ -6,7 +6,7 @@
 
 | | 기본값 | 이유 |
 |---|---|---|
-| U1 목표 밖 문항 | 과제로 내지 않는다. 결과 `manifest.offGoalQuestions`에 문항 ID와 이유를 남긴다 | 학생에게 새로 보이는 범위를 늘리지 않는다. 되돌리기 쉽다 |
+| U1 목표 밖 문항 | **정했다**(사용자 2026-11-10): 목표를 추가한다(spec R2a). 범위 밖으로 판정된 문항만 과제에서 빼고 `manifest.offGoalQuestions`에 남긴다 | — |
 | U2 묶음 크기 | 커버 확인: 목표 60개까지 한 호출(입력에 쪽 그림이 없어 가볍다)<br>문항 검토: 40문항 | 시험에서 47문항은 성공했고 149문항은 실패했다 |
 | U3 근거 쪽만 넘기는 위험 | 시범에서 "근거 부족"으로 doubt·unknown이 된 판정을 세어 release에 적는다 | 실측 전에는 판단할 수 없다 |
 | U4 기타 unknown 4개 | /3 커버 판정은 문항 판정과 떨어져 있으니 다시 생기는지만 본다 | — |
@@ -19,10 +19,16 @@ PR 셋으로 나눈다. 각 PR은 혼자서 검사가 통과하고 /2 동작을 
 - **새 파일 `studyez_contracts/roots/generation_v3.py`**
   - 출력 스키마
     - `COVERAGE_OUTPUT`: 목표마다 status, question_ids, components, reason
+    - `GOAL_OUTPUT`: 목표 밖 문항마다 add·out_of_scope·duplicate_of 중 하나
     - `ADD_OUTPUT`: 새 문항, 새 문항의 visual_stimuli, 새 clinical_conflicts
     - `ITEM_REVIEW_OUTPUT`: 문항마다 verdict, checks, note, fix
     - `FIX_OUTPUT`: 대상 ID의 교체본
-  - 입력 만들기(순수 함수): `coverage_input`, `add_input`, `review_input`, `fix_input`
+  - 목표 붙이기 `attach_goals(brief, rows, questions, table)`
+    - 기존 개념인지, 근거 쪽이 S1 범위 안인지 확인한다.
+    - 새 target·direction·point를 `TQ`·`DQ`·`PQ`로 만든다. 등급은 같은 개념 포인트의 최저 등급을 쓰고, 없으면 Optional이다.
+    - 기존 칸 투영 해시가 같은지 확인한다.
+    - 새 목표는 `validate_brief`를 통과해야 한다.
+  - 입력 만들기(순수 함수): `coverage_input`, `goal_input`, `add_input`, `review_input`, `fix_input`
     - spec 「입력 계약」의 칸만 만든다.
     - 쪽 고르기 `cited_pages(items, brief)`: `source_refs`·목표 `evidence`의 물리 쪽을 모은다.
   - 합치기·막기
@@ -41,15 +47,17 @@ PR 셋으로 나눈다. 각 PR은 혼자서 검사가 통과하고 /2 동작을 
 
 ### PR B — 생성기·프롬프트·실행 어댑터
 - **새 프롬프트 `content/prompts/learning-links/v3/`**
-  - `coverage.md`, `add.md`, `item-review.md`, `fix.md`
+  - `coverage.md`, `goal.md`, `add.md`, `item-review.md`, `fix.md`
   - 판정 원칙 문장은 `source-v2.md`·`author-v2.md`의 현행 규칙(정답 단위·회상 범위·문항 품질)에서 해당 부분만 옮긴다.
   - `add.md`·`fix.md`에는 지도 변경 권고를 넣지 않는다.
   - 새 정책 문구를 지어내지 않는다. 옮긴 출처를 `PROVENANCE.md`에 적는다.
 - **새 파일 `quizbank/connection_generate_v3.py`** — 순서 제어
   - 1c 문제은행(+ 웹 응답이면 그대로)
+    - 형식 오류는 같은 세션에 한 번 돌려보낸다. 그래도 깨진 문항은 `rejectedAtIntake`에 남긴다.
   - normalize: /2 단계 재사용
   - 코드 합치기
   - 커버 확인
+  - 목표 밖 문항 → 목표 추가(R2a)
   - 추가 출제 + 좁힌 확인 ≤2
   - 코드 검사
   - 묶음 검토 → 보완 → 고친 문항 재검토(+그 목표 재확인) ≤2/문항
@@ -57,7 +65,7 @@ PR 셋으로 나눈다. 각 PR은 혼자서 검사가 통과하고 /2 동작을 
   - 조립
   - ledger·재개: /2의 stage-resume/1 규칙을 같은 모양으로 둔다. 파이프라인 판 값은 `root-generation/3`이다.
 - **수정 `runner/root_native_json.py`** — 추가만 한다
-  - v3 단계 이름(`v3-coverage-n`, `v3-add-n`, `v3-review-b`, `v3-fix-b-k`)의 스키마·프롬프트·`check_file` 갈래
+  - v3 단계 이름(`v3-coverage-n`, `v3-goal`, `v3-add-n`, `v3-review-b`, `v3-fix-b-k`)의 스키마·프롬프트·`check_file` 갈래
   - `review_images`가 v3 단계에서는 입력에 적힌 쪽 그림만 붙이게 한다.
   - /2 단계 이름의 동작은 바꾸지 않는다.
 - **테스트**
@@ -66,6 +74,9 @@ PR 셋으로 나눈다. 각 PR은 혼자서 검사가 통과하고 /2 동작을 
     - 단계별 입력 칸 이름 검사
     - 추가 출제가 기존 문항·지도를 내면 거절
     - doubt가 커버를 바꾸지 않음
+    - 목표 밖 문항에서 목표가 붙고 기존 목표는 그대로임. 범위 밖 문항은 과제에 없음
+    - 최초 출제 문항 전부가 묶음 검토를 한 번씩 거침
+    - 상한 뒤에도 wrong인 문항만으로 커버되던 목표는 「준비 안 됨(문항 결함)」
     - 같은 해시는 재검토 안 함
     - 악화 시 되돌림
     - 3단계 상한 2와 「준비 안 됨」
