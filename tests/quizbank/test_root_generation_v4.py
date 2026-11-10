@@ -169,3 +169,47 @@ def test_an_unfixed_intake_basis_cannot_be_swapped(tmp_path):
     result['manifest']['questionImportance']['Q2'] = basis('clinical')
     with pytest.raises(ValueError, match='Q2 importance basis differs from the intake bank|projections differ'):
         consume(result, p)
+
+
+class NoRelationModel(Model):
+    """Q2 is reviewed for D1 but its row names no tested relation (261102_02 trial): it goes to the supplement,
+    gets a new point and goal (DQ001) and is placed there."""
+
+    def __call__(self, stage, ctx, material, model):
+        if stage == 'v4-supplement':
+            self.calls.append(stage)
+            return {'rows': [{'question_id': q['question_id'], 'decision': 'point', 'duplicate_of': None, 'reason': 'Missed',
+                              'point': {'point': 'Synthetic missed point',
+                                        'source_refs': [{'source_id': 'S1', 'pages': [], 'locator': 'synthetic paragraph'}]}}
+                             for q in ctx['questions']]}, {}
+        if stage == 'v4-supplement-normalize':
+            self.calls.append(stage)
+            b = f.brief()
+            t = copy.deepcopy(b['targets'][0])
+            t.update(target_id=ctx['allowed']['target_ids'][0], relation_ids=['R2'])
+            t['directions'] = [{**copy.deepcopy(t['directions'][1]), 'direction_id': ctx['allowed']['direction_ids'][0], 'relation_ids': ['R2']}]
+            p = {**copy.deepcopy(b['points'][0]), 'point_id': ctx['points'][0]['point_id'], 'target_ids': [t['target_id']]}
+            return {'targets': [t], 'points': [p]}, {}
+        value, info = super().__call__(stage, ctx, material, model)
+        if stage.startswith('v4-coverage'):
+            for row in value['rows']:
+                for e in row['evidence']:
+                    if row['direction_id'] == 'D1' and e['question_id'] == 'Q2':
+                        e['tested_relation_ids'] = []
+                if row['direction_id'].startswith('DQ'):
+                    ids = {q['question_id'] for q in ctx['questions']}
+                    if 'Q2' in ids and not row['evidence']:
+                        goal = next(g for g in ctx['goals'] if g['direction_id'] == row['direction_id'])
+                        row['evidence'] = [{'question_id': 'Q2', 'tested_relation_ids': ['R2'], 'visual_verdict': 'not_applicable', 'reason': 'x',
+                                            'components': [{'component_id': c_['component_id'], 'location': 'answer', 'answer_unit_indices': [0], 'reason': 'x'}
+                                                           for c_ in goal['components']]}]
+                        row['status'] = 'covered'
+        return value, info
+
+
+def test_a_question_reviewed_without_a_relation_gets_a_supplement_goal(tmp_path):
+    p, model, result = run(tmp_path, NoRelationModel())
+    assert consume(result, p) == result['document']
+    assert 'v4-supplement' in model.calls and [d['decision'] for d in result['manifest']['supplement']] == ['point']
+    placed = {t['question_id']: t['direction_id'] for t in result['document']['tasks']}
+    assert placed['Q2'].startswith('DQ') and result['manifest']['unplacedQuestions'] == []

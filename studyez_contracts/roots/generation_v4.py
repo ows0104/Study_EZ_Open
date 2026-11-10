@@ -290,6 +290,17 @@ def check_coverage(value, goals, questions):
     return value
 
 
+def off_goal(bank, coverage_rows):
+    """Questions no goal can take: no evidence row of a judged goal names a tested relation for them.
+
+    The same rule the assembly places by (`assessment_raw` claims the tested relations of evidence rows), so a
+    question is either placed or sent to the supplement stage for a new point and goal. Before
+    2026-11-11-place-by-evidence the supplement took only questions with no evidence row at all; in the 261102_02
+    /4 trial 10 questions had rows without relations and fell between the two."""
+    placeable = {e['question_id'] for r in coverage_rows if r['status'] != 'unknown' for e in r['evidence'] if e['tested_relation_ids']}
+    return [q['question_id'] for q in bank['questions'] if q['question_id'] not in placeable]
+
+
 def covering(row):
     """Questions that ask some component of the goal as an answer."""
     if row['status'] == 'unknown':

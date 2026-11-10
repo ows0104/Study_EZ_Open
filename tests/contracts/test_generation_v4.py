@@ -440,3 +440,13 @@ def test_duplicates_may_group_questions_reviewed_for_the_goal():
     r = partial_rows()
     r[0]['duplicates'] = [{'question_ids': ['Q1', 'Q3'], 'reason': 'Same recall'}]
     c.check_coverage({'rows': r}, ctx['goals'], ctx['questions'])
+
+
+def test_a_question_with_rows_but_no_tested_relation_goes_to_the_supplement():
+    """261102_02 /4 trial: 10 questions had evidence rows without relations, so neither placed nor supplemented."""
+    b, bank = scenario()
+    assert c.off_goal(bank, rows()) == []
+    assert c.off_goal(bank, partial_rows(rid=None)) == ['Q3']
+    unknown = rows()
+    unknown[1]['status'] = 'unknown'
+    assert c.off_goal(bank, unknown) == ['Q2']
