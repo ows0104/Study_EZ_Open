@@ -350,3 +350,128 @@ def test_a_bad_image_crop_is_found_by_the_stage_check(tmp_path):
     bad['visual_stimuli'][0]['page'] = 9
     with pytest.raises(ValueError, match='물리쪽'):
         g3.check_stage('add', bad, ctx, state, tmp_path / 'scratch')
+
+
+NEW_CF = {'conflict_id': 'CF07', 'description': 'Synthetic lecture/jokbo conflict', 'source_refs': [{'source_id': 'S1', 'locator': 'x'}],
+          'unresolved': False}
+
+
+class Cites(Model):
+    """The first fix makes Q1 cite a new conflict CF07 (record and facts)."""
+    def __call__(self, stage, ctx, material, model):
+        value, info = super().__call__(stage, ctx, material, model)
+        if stage == 'v3-fix-0-0':
+            for q in value['questions']:
+                if q['question_id'] == 'Q1':
+                    q['conflict_id'] = 'CF07'
+            value['source_conflicts'] = [copy.deepcopy(NEW_CF)]
+            value['clinical_conflicts'] = [{'conflict_id': 'CF07', 'facts': 'Synthetic facts'}]
+        return value, info
+
+
+def test_a_revert_takes_back_the_conflicts_its_fix_added(tmp_path):
+    """261102_02 (2026-11-10): Q109's reverted fix left CF-POLIO-28, which no question cited; the context
+    judgment called it incomplete and every goal lost its task."""
+    class Reverted(Cites):
+        def __call__(self, stage, ctx, material, model):
+            value, info = super().__call__(stage, ctx, material, model)
+            if stage == 'v3-review-0-1':
+                for r in value['reviews']:
+                    if r['question_id'] == 'Q1':
+                        r.update(verdict='wrong', note='Synthetic worse')
+            return value, info
+    p, model, result = run(tmp_path, Reverted(design_doubt=('Q1', 'Q2')))
+    meta = result['manifest']
+    first = [(x['question_id'], x['reverted']) for x in meta['fixes'] if x['stage'] == 'v3-fix-0-0']
+    assert first == [('Q1', True), ('Q2', False)]
+    assert 'CF07' not in {c['conflict_id'] for c in meta['clinicalConflicts']}
+    assert 'CF07' not in {c['conflict_id'] for c in result['document']['bank_snapshot'].get('source_conflicts', [])}
+    q2 = next(q for q in result['document']['bank_snapshot']['questions'] if q['question_id'] == 'Q2')
+    assert q2['explanation'] == 'Synthetic clearer explanation'   # the kept fix stays
+    assert 'CF07' not in json.dumps(model.inputs['context-0'])
+    assert consume(result, p) == result['document']
+
+
+def test_a_kept_fix_keeps_its_conflict(tmp_path):
+    p, model, result = run(tmp_path, Cites())
+    assert {c['conflict_id'] for c in result['manifest']['clinicalConflicts']} == {'CF07'}
+    assert consume(result, p) == result['document']
+
+
+class Incomplete(Cites):
+    """context-0 calls CF07's record incomplete; `again` repeats that at context-1."""
+    def __init__(self, again=False, **kw):
+        super().__init__(**kw)
+        self.again = again
+
+    def __call__(self, stage, ctx, material, model):
+        if stage == 'context-0' or (stage == 'context-1' and self.again):
+            self.calls.append(stage)
+            self.inputs[stage] = ctx
+            return {'clinical_context_status': 'conflict', 'clinical_context_problem': 'incomplete',
+                    'clinical_context_reason': 'CF07 does not state the adopted answer'}, {}
+        return super().__call__(stage, ctx, material, model)
+
+
+def test_an_incomplete_context_sends_the_citing_questions_to_one_fix(tmp_path):
+    p, model, result = run(tmp_path, Incomplete())
+    meta = result['manifest']
+    tail = model.calls[model.calls.index('context-0'):]
+    # The re-review of unchanged content is reused from the verdict ledger (P2), so it may not be called.
+    assert tail[:2] == ['context-0', 'v3-fix-context-0'] and tail[-2:] == ['context-1', 'medical-0']
+    assert [q['question_id'] for q in model.inputs['v3-fix-context-0']['questions']] == ['Q1']
+    finding = model.inputs['v3-fix-context-0']['findings'][0]
+    assert any('CF07 does not state the adopted answer' in x for x in finding['code_findings'])
+    assert meta['contextRepairs'] == [{'stage': 'context-0', 'reason': 'CF07 does not state the adopted answer', 'targets': ['Q1']}]
+    assert [x['attempt'] for x in meta['fixes'] if x['question_id'] == 'Q1'] == [1, 2]   # within the per-question budget
+    assert meta['clinicalContext']['clinical_context_status'] == 'consistent'
+    assert consume(result, p) == result['document']
+
+
+def test_a_second_incomplete_context_stops_before_the_medical_review(tmp_path):
+    model = Incomplete(again=True)
+    with pytest.raises(ValueError, match='과제가 0개'):
+        run(tmp_path, model)
+    assert 'medical-0' not in model.calls and model.calls[-1] == 'context-1'
+
+
+def test_an_incomplete_context_without_a_fixable_question_stops(tmp_path):
+    class NoCite(Model):
+        def __call__(self, stage, ctx, material, model):
+            if stage == 'context-0':
+                self.calls.append(stage)
+                return {'clinical_context_status': 'conflict', 'clinical_context_problem': 'incomplete', 'clinical_context_reason': 'x'}, {}
+            return super().__call__(stage, ctx, material, model)
+    model = NoCite()
+    with pytest.raises(ValueError, match='고칠 수 있는 문항'):
+        run(tmp_path, model)
+    assert 'medical-0' not in model.calls
+
+
+def test_an_unknown_context_runs_once_more_in_a_fresh_session(tmp_path):
+    class Unknown(Model):
+        seen = 0
+
+        def __call__(self, stage, ctx, material, model):
+            if stage == 'context-0' and not self.seen:
+                self.seen += 1
+                self.calls.append(stage)
+                return {'clinical_context_status': 'unknown', 'clinical_context_problem': 'none', 'clinical_context_reason': 'x'}, {}
+            return super().__call__(stage, ctx, material, model)
+    p, model, result = run(tmp_path, Unknown())
+    assert model.calls.count('context-0') == 2
+    assert [(r['stage'], r['kind']) for r in result['manifest']['reviewRetries']] == [('context-0', 'final-context-unknown')]
+    assert consume(result, p) == result['document']
+
+
+def test_a_dangling_conflict_or_image_list_is_found_before_the_context():
+    bank = f.old.bank()
+    for q in bank['questions']:
+        q.pop('stimuli', None)
+    v3.check_integrity(bank, [], [])
+    with pytest.raises(ValueError, match='no question cites: CF07'):
+        v3.check_integrity(bank, [{'conflict_id': 'CF07', 'facts': 'x'}], [])
+    v3.check_integrity(bank, [{'conflict_id': 'CF07', 'facts': 'x'}], [], {'CF07'})   # an intake record stays as it came
+    stray = {'question_id': 'Q1', 'source_id': 'S1', 'page': 1, 'crop': [0, 0, 1, 1], 'reason': 'x'}
+    with pytest.raises(ValueError, match='image list differs'):
+        v3.check_integrity(bank, [], [stray])

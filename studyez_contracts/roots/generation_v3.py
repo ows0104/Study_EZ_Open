@@ -423,6 +423,7 @@ def merge_added(bank, clinical_conflicts, output, allowed_ids):
     require(all(s['question_id'] in ids for s in output['visual_stimuli']), 'v3 add: images only for new questions')
     new_ids = {c['conflict_id'] for c in output['source_conflicts']}
     require({c['conflict_id'] for c in output['clinical_conflicts']} <= new_ids, 'v3 add: clinical facts only for its new source conflicts')
+    require(new_ids <= {q.get('conflict_id') for q in output['questions']}, 'v3 add: a new source conflict must be cited by a new question')
     known = {c['concept_id'] for c in bank['concepts']}
     new_concepts = [c['concept_id'] for c in output['concepts']]
     require(len(new_concepts) == len(set(new_concepts)), 'v3 add: duplicate new concepts')
@@ -451,6 +452,7 @@ def merge_fixes(bank, clinical_conflicts, output, targets):
             require(q.get(key) == old.get(key), f'v3 fix: {q["question_id"]} changed {key}')
     require(all(s['question_id'] in ids for s in output['visual_stimuli']), 'v3 fix: images only for fixed questions')
     require(all(c['conflict_id'] in cited for c in output['clinical_conflicts']), 'v3 fix: facts only for the fixed questions')
+    require(all(c['conflict_id'] in cited for c in output['source_conflicts']), 'v3 fix: a new source conflict must be cited by a fixed question')
     replaced = {q['question_id']: copy.deepcopy(q) for q in output['questions']}
     merged = copy.deepcopy(bank)
     merged['source_conflicts'] = _bank_conflicts(bank, output['source_conflicts'])
@@ -497,6 +499,43 @@ def coverage_key(direction_id, question_ids):
 # ---------------------------------------------------------------- unperformed judgments
 UNPERFORMED_COVERAGE = 'v3 coverage: the batch judged nothing (every goal unknown)'
 UNPERFORMED_REVIEW = 'v3 review: the batch judged nothing (every question doubt, no design judgment)'
+UNPERFORMED_CONTEXT = 'v3 context: the clinical context was left unknown'
+
+
+# ---------------------------------------------------------------- reverts and the clinical context
+def fixes_of(output, question_ids):
+    """The part of a fix output that belongs to `question_ids`: their questions and images and the conflicts
+    they cite. A revert merges this part again so nothing of a reverted question stays behind."""
+    keep = set(question_ids)
+    cited = {q['conflict_id'] for q in output['questions'] if q['question_id'] in keep and q.get('conflict_id')}
+    value = copy.deepcopy(output)
+    value['questions'] = [q for q in value['questions'] if q['question_id'] in keep]
+    value['visual_stimuli'] = [s for s in value['visual_stimuli'] if s['question_id'] in keep]
+    value['source_conflicts'] = [c for c in value['source_conflicts'] if c['conflict_id'] in cited]
+    value['clinical_conflicts'] = [c for c in value['clinical_conflicts'] if c['conflict_id'] in cited]
+    return value
+
+
+def context_repair_targets(bank, context, attempts):
+    """Questions an incomplete clinical context sends to one fix round: those citing a conflict the reason names,
+    else every citing question; only questions with fix budget left (FIX_LIMIT, P5)."""
+    citing = [q['question_id'] for q in bank['questions'] if q.get('conflict_id')]
+    named = [q['question_id'] for q in bank['questions']
+             if q.get('conflict_id') and q['conflict_id'] in context['clinical_context_reason']]
+    return [q for q in (named or citing) if attempts.get(q, 0) < FIX_LIMIT]
+
+
+def check_integrity(bank, clinical_conflicts, stimuli, intake_conflict_ids=()):
+    """Before the context judgment: every conflict record a stage added is cited by a question, and the image
+    list is what the bank shows. A record no question cites made the context judgment incomplete and every
+    goal blocked (CF-POLIO-28, 261102_02)."""
+    cited = {q['conflict_id'] for q in bank['questions'] if q.get('conflict_id')}
+    for c in [*bank.get('source_conflicts', []), *clinical_conflicts]:
+        require(c['conflict_id'] in cited or c['conflict_id'] in set(intake_conflict_ids),
+                'v3 assembly: a conflict record no question cites: ' + c['conflict_id'])
+    shown = sorted((q['question_id'], s['source_id'], s['page'], tuple(s['crop'])) for q in bank['questions'] for s in q.get('stimuli', []))
+    listed = sorted((s['question_id'], s['source_id'], s['page'], tuple(s['crop'])) for s in stimuli)
+    require(shown == listed, 'v3 assembly: the image list differs from the images the bank shows')
 
 
 def check_coverage(value, goals, questions):
@@ -857,7 +896,13 @@ def validate_result(value, packet):
     require(all(re.fullmatch(r'[a-f0-9]{64}', s.get(k, '')) for s in stages.values() for k in ('inputHash', 'outputHash')),
             'result3: missing stage fingerprints')
     require(stages['normalize']['outputHash'] == document_hash(meta['initialBrief']), 'result3: initial brief proof mismatch')
-    require(stages['context-0']['outputHash'] == document_hash(meta['clinicalContext']), 'result3: context proof mismatch')
+    # The context is judged once, or twice after one repair round of an incomplete judgment (contextRepairs).
+    last = 'context-1' if 'context-1' in stages else 'context-0'
+    require(not any(re.fullmatch(r'context-(?:[2-9]|\d{2,})', n) for n in stages), 'result3: the context is judged at most twice')
+    require(('context-1' in stages) == bool(meta.get('contextRepairs')) and ('v3-fix-context-0' in stages) <= ('context-1' in stages),
+            'result3: a second context judgment needs its repair record')
+    require(stages[last]['outputHash'] == document_hash(meta['clinicalContext']), 'result3: context proof mismatch')
+    require(meta['clinicalContext']['clinical_context_status'] == 'consistent', 'result3: the clinical context is not consistent')
     v2.validate_context(meta['clinicalContext'])
     require(not v2.context_blocks_medical(meta['clinicalContext']), 'result3: medical review ran without a clean context')
     med_input = {'title': packet['title'], 'bank': reviewed, 'clinicalInput': v2.medical_input(reviewed, meta['clinicalConflicts']),
