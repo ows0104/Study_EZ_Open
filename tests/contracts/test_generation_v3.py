@@ -89,7 +89,7 @@ def test_add_input_has_gap_goals_fronts_and_allowed_ids_only():
     ids = c.next_question_ids(bank, 2)
     assert ids == ['Q003', 'Q004']
     value = c.add_input(b, bank, ['D2'], ids)
-    assert set(value) == {'goals', 'existing', 'allowed_question_ids', 'pages'}
+    assert set(value) == {'goals', 'existing', 'bank_concepts', 'source_conflict_ids', 'allowed_question_ids', 'pages'}
     assert set(value['existing'][0]) == {'question_id', 'question', 'answer'}
     assert value['goals'][0]['point_ids'] == ['P1']
 
@@ -141,7 +141,7 @@ def test_add_stage_appends_and_cannot_touch_existing_questions():
     bank = authored_bank()
     ids = c.next_question_ids(bank, 2)
     new = question(ids[0], bank['questions'][0])
-    out = {'questions': [new], 'source_conflicts': [], 'visual_stimuli': [], 'clinical_conflicts': []}
+    out = {'questions': [new], 'concepts': [], 'retrieval_plan': [], 'source_conflicts': [], 'visual_stimuli': [], 'clinical_conflicts': []}
     merged, facts = c.merge_added(bank, [], out, ids)
     assert merged['questions'][:2] == bank['questions'] and merged['questions'][2]['question_id'] == 'Q003'
     rewrite = copy.deepcopy(out)
@@ -152,6 +152,18 @@ def test_add_stage_appends_and_cannot_touch_existing_questions():
     outside['questions'][0]['question_id'] = 'Q099'
     with pytest.raises(ValueError, match='allowed range'):
         c.merge_added(bank, [], outside, ids)
+    stray = copy.deepcopy(out)
+    stray['questions'][0]['concept_id'] = 'Z'
+    with pytest.raises(ValueError, match='concept is unknown'):
+        c.merge_added(bank, [], stray, ids)
+
+
+def test_coverage_fronts_mask_cloze_answers():
+    bank = authored_bank()
+    q = bank['questions'][0]
+    q.update(format='cloze', question='A is {B} and {C}.', answer='A is B and C.', answer_units=['B', 'C'])
+    front = c.coverage_input(f.brief(), bank)['questions'][0]
+    assert 'B' not in front['question'].replace('{{c1}}', '') and front['answer_units'] == ['B', 'C']
 
 
 def test_fix_stage_replaces_only_listed_questions_and_keeps_their_identity():
@@ -179,7 +191,7 @@ def test_a_worse_re_review_is_reverted():
 def test_item_hash_ignores_other_questions_so_verdicts_survive_additions():
     bank = authored_bank()
     h = c.item_hash(bank['questions'][0], bank, [])
-    grown, _ = c.merge_added(bank, [], {'questions': [question('Q003', bank['questions'][1])], 'source_conflicts': [],
+    grown, _ = c.merge_added(bank, [], {'questions': [question('Q003', bank['questions'][1])], 'concepts': [], 'retrieval_plan': [], 'source_conflicts': [],
                                         'visual_stimuli': [], 'clinical_conflicts': []}, ['Q003'])
     assert c.item_hash(grown['questions'][0], grown, []) == h
     changed = copy.deepcopy(bank['questions'][0])

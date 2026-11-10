@@ -15,6 +15,7 @@ import re
 from studyez_contracts.learning_links.schema import obj, arr, enum, TEXT
 from studyez_contracts.learning_links.validate import require, validate_shape, index_by
 from studyez_contracts.bank import importance as imp
+from studyez_contracts.bank.cloze import normalize_cloze
 from .validate import document_hash
 from . import generation_v2 as v2
 
@@ -30,6 +31,8 @@ _STRING = {'type': 'string'}
 _NULLABLE = {'type': ['string', 'null']}
 QUESTION = copy.deepcopy(v2.AUTHOR_BANK['properties']['questions']['items'])
 SOURCE_CONFLICT = copy.deepcopy(v2.AUTHOR_BANK['properties']['source_conflicts']['items'])
+BANK_CONCEPT = copy.deepcopy(v2.AUTHOR_BANK['properties']['concepts']['items'])
+PLAN = copy.deepcopy(v2.AUTHOR_BANK['properties']['retrieval_plan']['items'])
 
 COVERAGE_EVIDENCE = obj(question_id=TEXT, tested_relation_ids=arr(TEXT), components=arr(v2.PART, 1),
                         visual_verdict=enum('ok', 'doubt', 'wrong', 'not_applicable'), reason=TEXT)
@@ -70,10 +73,14 @@ POINT = {'type': 'object', 'additionalProperties': False, 'required': ['point', 
 SUPPLEMENT_OUTPUT = obj(rows=arr(obj(question_id=TEXT, decision=enum('point', 'out_of_scope', 'duplicate_of'),
                                      point={'anyOf': [POINT, {'type': 'null'}]}, duplicate_of=_NULLABLE, reason=TEXT), 1))
 
-ADD_OUTPUT = obj(questions=arr(QUESTION, 1), source_conflicts=arr(SOURCE_CONFLICT),
-                 visual_stimuli=arr(v2.CROP), clinical_conflicts=arr(v2.CONFLICT))
+ADD_OUTPUT = obj(questions=arr(QUESTION, 1), concepts=arr(BANK_CONCEPT), retrieval_plan=arr(PLAN),
+                 source_conflicts=arr(SOURCE_CONFLICT), visual_stimuli=arr(v2.CROP), clinical_conflicts=arr(v2.CONFLICT))
 FIX_OUTPUT = obj(questions=arr(QUESTION, 1), source_conflicts=arr(SOURCE_CONFLICT),
                  visual_stimuli=arr(v2.CROP), clinical_conflicts=arr(v2.CONFLICT))
+
+SUPPLEMENT_NORMALIZE_OUTPUT = obj(targets=arr(copy.deepcopy(v2.BRIEF['properties']['targets']['items']), 1),
+                                  points=arr(copy.deepcopy(v2.BRIEF['properties']['points']['items']), 1))
+BRIEF_FIX_OUTPUT = obj(brief=copy.deepcopy(v2.BRIEF), map_change_reason=TEXT)
 
 OUTPUTS = {'coverage': COVERAGE_OUTPUT, 'map-check': MAP_CHECK_OUTPUT, 'item-review': ITEM_REVIEW_OUTPUT,
            'supplement': SUPPLEMENT_OUTPUT, 'add': ADD_OUTPUT, 'fix': FIX_OUTPUT}
@@ -142,7 +149,9 @@ def _goal(brief, did):
 
 
 def _front(q):
-    row = {k: copy.deepcopy(q[k]) for k in _FRONT if k in q}
+    """What a learner sees plus the scored answer: cloze answers are masked in the stem (as /2 questionFronts)."""
+    shown = normalize_cloze(q)
+    row = {k: copy.deepcopy(shown[k]) for k in _FRONT if k in shown}
     row['options'] = [{k: o[k] for k in ('id', 'text') if k in o} for o in q.get('options', [])]
     row['stimuli'] = [s['sha256'] for s in q.get('stimuli', [])]
     return row
@@ -183,14 +192,31 @@ def map_check_input(brief, table, target_ids=None):
     return {'targets': rows, 'relations': rels, 'pages': cited_pages(refs)}
 
 
-def supplement_input(bank, question_ids, points_doc):
+def supplement_input(bank, question_ids, points_doc, page_counts):
     """C2a: off-goal question fronts and sources, existing point texts, the notebook profile, cited pages."""
     questions = [q for q in bank['questions'] if q['question_id'] in set(question_ids)]
     require(len(questions) == len(set(question_ids)), 'v3 supplement: unknown question')
     return {'questions': [{**_front(q), 'source_refs': copy.deepcopy(q.get('source_refs', []))} for q in questions],
             'points': [{'point_id': p['point_id'], 'point': p['point']} for p in points_doc['points']],
-            'notebook_profile': copy.deepcopy(points_doc['notebook_profile']),
+            'notebook_profile': copy.deepcopy(points_doc['notebook_profile']), 'page_counts': dict(page_counts),
             'pages': cited_pages([r for q in questions for r in q.get('source_refs', [])])}
+
+
+def supplement_normalize_input(brief, new_points, allowed):
+    """C2a': the new points only, the existing concepts/relations to reference, the IDs the new goals may take."""
+    return {'points': copy.deepcopy(new_points),
+            'concepts': [{'concept_id': c['concept_id'], 'label': c['label'], 'parent_ids': list(c['parent_ids'])} for c in brief['concepts']],
+            'relations': [_relation_text(brief, r['relation_id']) for r in brief['relations']],
+            'allowed': copy.deepcopy(allowed),
+            'pages': cited_pages([r for p in new_points for r in p['source_refs']])}
+
+
+def supplement_ids(brief, count):
+    """New target/direction IDs for supplement goals: TQ001.../DQ001... after any earlier ones."""
+    used = [int(m.group(1)) for t in brief['targets'] for m in [re.fullmatch(r'TQ(\d+)', t['target_id'])] if m]
+    start = max(used, default=0) + 1
+    return {'target_ids': [f'TQ{n:03d}' for n in range(start, start + count)],
+            'direction_ids': [f'DQ{n:03d}' for n in range(start, start + count)]}
 
 
 def next_question_ids(bank, count):
@@ -209,6 +235,8 @@ def add_input(brief, bank, gap_direction_ids, allowed_ids):
         goals.append({**_goal(brief, did), 'concept_ids': list(target['concept_ids']), 'evidence': copy.deepcopy(target['evidence']),
                       'point_ids': [p['point_id'] for p in brief['points'] if target['target_id'] in p['target_ids']]})
     return {'goals': goals, 'existing': [{k: q[k] for k in ('question_id', 'question', 'answer')} for q in bank['questions']],
+            'bank_concepts': [{'concept_id': c['concept_id'], 'title': c['title']} for c in bank['concepts']],
+            'source_conflict_ids': [c['conflict_id'] for c in bank.get('source_conflicts', [])],
             'allowed_question_ids': list(allowed_ids), 'pages': cited_pages([e for g in goals for e in g['evidence']])}
 
 
@@ -237,6 +265,63 @@ def fix_input(bank, reviews, question_ids, clinical_conflicts, covered):
     return value
 
 
+# ---------------------------------------------------------------- stage-local acceptance (adapter)
+def check_added(value, ctx):
+    """An add output against its add_input: allowed new IDs, known or new concepts, the gap goals' points."""
+    validate_shape(value, ADD_OUTPUT, 'v3 add output')
+    ids = [q['question_id'] for q in value['questions']]
+    require(len(ids) == len(set(ids)) and set(ids) <= set(ctx['allowed_question_ids']), 'v3 add: question IDs outside the allowed range')
+    require(not set(ids) & {q['question_id'] for q in ctx['existing']}, 'v3 add: an add stage cannot rewrite an existing question')
+    known = {c['concept_id'] for c in ctx['bank_concepts']}
+    new = [c['concept_id'] for c in value['concepts']]
+    require(not set(new) & known and len(new) == len(set(new)), 'v3 add: concepts may be added, not rewritten')
+    require({p['concept_id'] for p in value['retrieval_plan']} == set(new) and len(value['retrieval_plan']) == len(new),
+            'v3 add: one retrieval plan per new concept')
+    points = {p for g in ctx['goals'] for p in g['point_ids']}
+    for q in value['questions']:
+        require(q['concept_id'] in known | set(new), 'v3 add: question concept is unknown')
+        require(q.get('point_ids') and set(q['point_ids']) <= points, "v3 add: point_ids must be the gap goals' points")
+    require(all(s['question_id'] in ids for s in value['visual_stimuli']), 'v3 add: images only for new questions')
+    require(not {c['conflict_id'] for c in value['source_conflicts']} & set(ctx['source_conflict_ids']), 'v3 add: existing conflicts are kept')
+    return value
+
+
+def check_fixed(value, ctx):
+    validate_shape(value, FIX_OUTPUT, 'v3 fix output')
+    given = {q['question_id']: q for q in ctx['questions']}
+    ids = [q['question_id'] for q in value['questions']]
+    require(len(ids) == len(set(ids)) and set(ids) <= set(given), 'v3 fix: only the listed questions may change')
+    for q in value['questions']:
+        for key in ('concept_id', 'point_ids'):
+            require(q.get(key) == given[q['question_id']].get(key), f'v3 fix: {q["question_id"]} changed {key}')
+    require(all(s['question_id'] in ids for s in value['visual_stimuli']), 'v3 fix: images only for fixed questions')
+    return value
+
+
+def check_supplement(value, ctx):
+    _supplement_rows(value, [q['question_id'] for q in ctx['questions']], {p['point_id'] for p in ctx['points']}, ctx['page_counts'])
+    return value
+
+
+def check_supplement_normalize(value, ctx):
+    validate_shape(value, SUPPLEMENT_NORMALIZE_OUTPUT, 'v3 supplement normalize output')
+    require({t['target_id'] for t in value['targets']} <= set(ctx['allowed']['target_ids']), 'v3 extend: target IDs outside the allowed range')
+    require({d['direction_id'] for t in value['targets'] for d in t['directions']} <= set(ctx['allowed']['direction_ids']),
+            'v3 extend: goal IDs outside the allowed range')
+    require({p['point_id'] for p in value['points']} == {p['point_id'] for p in ctx['points']}, 'v3 extend: exactly the supplement points')
+    concepts = {c['concept_id'] for c in ctx['concepts']}
+    relations = {r['relation_id'] for r in ctx['relations']}
+    for t in value['targets']:
+        require(set(t['concept_ids']) <= concepts and set(t['relation_ids']) <= relations, 'v3 extend: new targets use the existing map')
+    return value
+
+
+def check_brief_fix(value, ctx):
+    validate_shape(value, BRIEF_FIX_OUTPUT, 'v3 brief fix output')
+    v2.validate_initial_correction(ctx['brief'], value['brief'], value['map_change_reason'])
+    return value
+
+
 # ---------------------------------------------------------------- merge guards (P1)
 def _bank_conflicts(bank, new_conflicts):
     known = {c['conflict_id'] for c in bank.get('source_conflicts', [])}
@@ -256,8 +341,16 @@ def merge_added(bank, clinical_conflicts, output, allowed_ids):
     require(all(s['question_id'] in ids for s in output['visual_stimuli']), 'v3 add: images only for new questions')
     facts = {c['conflict_id'] for c in clinical_conflicts}
     require(not {c['conflict_id'] for c in output['clinical_conflicts']} & facts, 'v3 add: existing clinical facts are kept')
+    known = {c['concept_id'] for c in bank['concepts']}
+    new_concepts = [c['concept_id'] for c in output['concepts']]
+    require(not set(new_concepts) & known and len(new_concepts) == len(set(new_concepts)), 'v3 add: concepts may be added, not rewritten')
+    require({p['concept_id'] for p in output['retrieval_plan']} == set(new_concepts) and len(output['retrieval_plan']) == len(new_concepts),
+            'v3 add: one retrieval plan per new concept')
+    require(all(q['concept_id'] in known | set(new_concepts) for q in output['questions']), 'v3 add: question concept is unknown')
     merged = copy.deepcopy(bank)
     merged['source_conflicts'] = _bank_conflicts(bank, output['source_conflicts'])
+    merged['concepts'] = [*merged['concepts'], *copy.deepcopy(output['concepts'])]
+    merged['retrieval_plan'] = [*merged['retrieval_plan'], *copy.deepcopy(output['retrieval_plan'])]
     merged['questions'] = [*merged['questions'], *copy.deepcopy(output['questions'])]
     return merged, [*copy.deepcopy(clinical_conflicts), *copy.deepcopy(output['clinical_conflicts'])]
 
@@ -352,32 +445,49 @@ def covering(row):
 
 
 def check_review(value, question_ids, bank):
+    by_id = {q['question_id']: q for q in bank['questions']}
+    return _check_review(value, {q: by_id[q].get('prerequisites', []) for q in question_ids})
+
+
+def check_review_input(value, ctx):
+    return _check_review(value, {q['question_id']: q.get('prerequisites', []) for q in ctx['questions']})
+
+
+def _check_review(value, prerequisites):
     validate_shape(value, ITEM_REVIEW_OUTPUT, 'v3 review output')
     rows = index_by(value['reviews'], 'question_id')
-    require(set(rows) == set(question_ids), 'v3 review: one review per question in the batch')
-    by_id = {q['question_id']: q for q in bank['questions']}
+    require(set(rows) == set(prerequisites), 'v3 review: one review per question in the batch')
     for qid, r in rows.items():
-        wanted = set(by_id[qid].get('prerequisites', []))
+        wanted = set(prerequisites[qid])
         got = [p['prerequisite_id'] for p in r['prerequisite_checks']]
         require(len(got) == len(set(got)) and set(got) == wanted, 'v3 review: every prerequisite needs one check')
     require(any(r['verdict'] != 'doubt' or r['design'] != 'doubt' for r in value['reviews']), UNPERFORMED_REVIEW)
     return value
 
 
-def check_map(value, brief, target_ids=None):
+def _check_map_ids(value, rids, tids, dids):
     validate_shape(value, MAP_CHECK_OUTPUT, 'v3 map check output')
-    targets = [t for t in brief['targets'] if target_ids is None or t['target_id'] in set(target_ids)]
-    rids = {r for t in targets for r in t['relation_ids']} | {r for t in targets for d in t['directions'] for r in d['relation_ids']}
-    require({r['relation_id'] for r in value['relation_checks']} == rids and len(value['relation_checks']) == len(rids),
+    require({r['relation_id'] for r in value['relation_checks']} == set(rids) and len(value['relation_checks']) == len(set(rids)),
             'v3 map check: one judgment per relation')
-    require({r['target_id'] for r in value['target_checks']} == {t['target_id'] for t in targets}
-            and len(value['target_checks']) == len(targets), 'v3 map check: one judgment per target')
-    dids = {d['direction_id'] for t in targets for d in t['directions']}
-    require({r['direction_id'] for r in value['direction_checks']} == dids and len(value['direction_checks']) == len(dids),
+    require({r['target_id'] for r in value['target_checks']} == set(tids) and len(value['target_checks']) == len(set(tids)),
+            'v3 map check: one judgment per target')
+    require({r['direction_id'] for r in value['direction_checks']} == set(dids) and len(value['direction_checks']) == len(set(dids)),
             'v3 map check: one scope judgment per goal')
     for issue in value['issues']:
-        require(set(issue['direction_ids']) <= dids, 'v3 map check: issue names an unknown goal')
+        require(set(issue['direction_ids']) <= set(dids), 'v3 map check: issue names an unknown goal')
     return value
+
+
+def check_map(value, brief, target_ids=None):
+    targets = [t for t in brief['targets'] if target_ids is None or t['target_id'] in set(target_ids)]
+    rids = {r for t in targets for r in t['relation_ids']} | {r for t in targets for d in t['directions'] for r in d['relation_ids']}
+    return _check_map_ids(value, rids, [t['target_id'] for t in targets], [d['direction_id'] for t in targets for d in t['directions']])
+
+
+def check_map_input(value, ctx):
+    """The same check from a map_check_input (the adapter sees only the stage input)."""
+    return _check_map_ids(value, [r['relation_id'] for r in ctx['relations']], [t['target_id'] for t in ctx['targets']],
+                          [g['direction_id'] for t in ctx['targets'] for g in t['goals']])
 
 
 # ---------------------------------------------------------------- off-goal questions → supplement points (R2a)
@@ -397,23 +507,40 @@ def _check_point(p):
     imp.validate_basis(p['importance_basis'])
 
 
-def attach_points(points_doc, output, off_goal_ids, page_counts):
-    """New exam points (exam-point-extract/3 form) for off-goal questions; tiers by the same point table.
-
-    Returns (points_doc, table, decisions). Existing points and their tiers stay unchanged.
-    SUPPLEMENT_OUTPUT is the model-facing JSON Schema (anyOf); this pure module checks the same shape by hand."""
+def _supplement_rows(output, off_goal_ids, existing, page_counts):
+    """Row shape and decisions of a supplement output (shared by the adapter and attach_points)."""
     require(type(output) is dict and set(output) == {'rows'} and type(output['rows']) is list and output['rows'],
             'v3 supplement output: rows required')
     for r in output['rows']:
         require(type(r) is dict and set(r) == {'question_id', 'decision', 'point', 'duplicate_of', 'reason'}
                 and r['decision'] in ('point', 'out_of_scope', 'duplicate_of') and type(r['reason']) is str and r['reason'].strip(),
                 'v3 supplement output: malformed row')
-        if r['point'] is not None:
-            _check_point(r['point'])
+        if r['decision'] == 'point':
+            require(r['point'] is not None and r['duplicate_of'] is None, 'v3 supplement: a point decision carries one point')
+            p = r['point']
+            _check_point(p)
+            for ref in p['source_refs'] + [x for b in p['importance_basis'] for x in b['refs']]:
+                require(ref['source_id'] in page_counts, 'v3 supplement: unknown source')
+                count = page_counts[ref['source_id']]
+                require(count is None or all(1 <= x <= count for x in ref['pages']), 'v3 supplement: pages outside the source')
+            require(any(ref['source_id'] == SOURCE_LIMIT for ref in p['source_refs']), 'v3 supplement: a new point needs the lecture notes')
+        elif r['decision'] == 'duplicate_of':
+            require(r['point'] is None and r['duplicate_of'] in existing, 'v3 supplement: duplicate_of names an existing point')
+        else:
+            require(r['point'] is None and r['duplicate_of'] is None, 'v3 supplement: out_of_scope carries no point')
     rows = index_by(output['rows'], 'question_id')
     require(set(rows) == set(off_goal_ids), 'v3 supplement: one decision per off-goal question')
-    before = imp.point_table(points_doc['points'], points_doc['notebook_profile'])
+    return rows
+
+
+def attach_points(points_doc, output, off_goal_ids, page_counts):
+    """New exam points (exam-point-extract/3 form) for off-goal questions; tiers by the same point table.
+
+    Returns (points_doc, table, decisions). Existing points and their tiers stay unchanged.
+    SUPPLEMENT_OUTPUT is the model-facing JSON Schema (anyOf); this pure module checks the same shape by hand."""
     existing = {p['point_id'] for p in points_doc['points']}
+    rows = _supplement_rows(output, off_goal_ids, existing, page_counts)
+    before = imp.point_table(points_doc['points'], points_doc['notebook_profile'])
     numbers = [int(m.group(1)) for p in points_doc['points'] for m in [re.fullmatch(r'P(\d+)', p['point_id'])] if m]
     nxt = max(numbers, default=0) + 1
     value = copy.deepcopy(points_doc)
@@ -421,24 +548,14 @@ def attach_points(points_doc, output, off_goal_ids, page_counts):
     for qid in off_goal_ids:
         row = rows[qid]
         if row['decision'] == 'point':
-            require(row['point'] is not None and row['duplicate_of'] is None, 'v3 supplement: a point decision carries one point')
             p = row['point']
-            refs = p['source_refs'] + [r for b in p['importance_basis'] for r in b['refs']]
-            for r in refs:
-                require(r['source_id'] in page_counts, 'v3 supplement: unknown source')
-                count = page_counts[r['source_id']]
-                require(count is None or all(1 <= x <= count for x in r['pages']), 'v3 supplement: pages outside the source')
-            require(any(r['source_id'] == SOURCE_LIMIT for r in p['source_refs']), 'v3 supplement: a new point needs the lecture notes')
-            imp.validate_basis(p['importance_basis'])
             pid = f'P{nxt:03d}'
             nxt += 1
             value['points'].append({'point_id': pid, **copy.deepcopy(p), 'origin': 'question', 'origin_question_id': qid})
             decisions.append({'question_id': qid, 'decision': 'point', 'point_id': pid, 'reason': row['reason']})
         elif row['decision'] == 'duplicate_of':
-            require(row['point'] is None and row['duplicate_of'] in existing, 'v3 supplement: duplicate_of names an existing point')
             decisions.append({'question_id': qid, 'decision': 'duplicate_of', 'point_id': row['duplicate_of'], 'reason': row['reason']})
         else:
-            require(row['point'] is None and row['duplicate_of'] is None, 'v3 supplement: out_of_scope carries no point')
             decisions.append({'question_id': qid, 'decision': 'out_of_scope', 'point_id': None, 'reason': row['reason']})
     table = imp.point_table([{k: p[k] for k in ('point_id', 'point', 'source_refs', 'importance_basis')} for p in value['points']],
                             value['notebook_profile'])
