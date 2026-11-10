@@ -114,6 +114,10 @@ def make_document(brief, bank, audit, *, revision, title, exam_date,medical=None
 def validate_result(result, packet):
     from .parallel import is_v2_source
     """Check the final artifact and complete review sets again at the consumer."""
+    if packet.get('generationPolicy') == 'root-generation/3':
+        # docs/changes/2026-11-10-root-generation-3: the packet names /3; a /2 packet never accepts a /3 result.
+        from .generation_v3 import validate_result as check3
+        return check3(result, packet)
     if packet.get('pipeline') is not None:
         # map-tree/1: the run used a generation packet derived from this request; re-derive it first.
         from .map_tree import PIPELINE, resolve

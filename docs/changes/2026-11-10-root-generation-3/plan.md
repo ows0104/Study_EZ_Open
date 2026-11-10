@@ -40,9 +40,19 @@ PR 셋으로 나눈다. 각 PR은 혼자서 검사가 통과하고 /2 동작을 
     - `worse(before, after)`: 판정 악화 여부. 되돌릴지 정한다.
   - 판정 장부: `question_hash`(기존 `source_assessment.question_hash` 재사용), 커버 키 `(direction_id, question_hash)`, 장부 검증.
   - 판정 포기: 커버 묶음의 목표가 전부 unknown이거나 검토 묶음의 판정이 전부 doubt면 `UNPERFORMED`.
-  - `validate_result_v3(result, packet)`
-    - 문서 형식은 /2의 `validate_document`를 그대로 쓴다.
-    - manifest에서 확인하는 것: 단계 ledger, 장부 해시, 3단계 횟수(≤2), 「준비 안 됨」, `offGoalQuestions`, `medicalFinal`
+  - 조립 어댑터 `assessment_raw` (spec R2m, 구현 중 추가)
+    - /3 판정만 모아 `source-assessment/2`를 만든다. 빠진 판정은 거절한다.
+    - 그 뒤 /2 `compile_assessment`·`make_document`를 그대로 쓴다.
+    - 지도 확인 출력 `MAP_CHECK_OUTPUT`과 검사 `check_map`
+  - `validate_result(result, packet)` — PR A 범위
+    - 산출물 집합, manifest 칸, 장부 해시, 3단계 횟수(≤2), `medicalFinal`
+    - 추가 전용: 처음 문항이 고치기 대상이 아니면 내용이 같다
+    - 범위 밖 문항과 「준비 안 됨」 목표는 과제가 아니다
+    - `sourceAudit`가 모은 판정의 /2 compile과 같다
+    - 단계별 증거 사슬(입력·출력 해시)과 문서 재조립 비교는 단계 이름이 정해지는 PR B에서 더한다.
+  - 공용 계약은 표준 라이브러리만 쓴다(`studyez_contracts/CLAUDE.md`).
+    - 모델용 JSON Schema(anyOf 등)는 상수로만 두고, 검사는 `validate_shape`와 직접 확인으로 한다.
+    - 보충 포인트 형식은 `point-output-v3.schema.json`과 같은지 테스트가 확인한다.
 - **수정 `studyez_contracts/roots/automation.py` `validate_result`**
   - `pipelineVersion`이 `root-generation/3`인 결과를 v3 검증으로 보낸다.
   - /2·map-tree/1 갈래는 그대로 둔다.
@@ -50,7 +60,7 @@ PR 셋으로 나눈다. 각 PR은 혼자서 검사가 통과하고 /2 동작을 
 
 ### PR B — 생성기·프롬프트·실행 어댑터
 - **새 프롬프트 `content/prompts/learning-links/v3/`**
-  - `coverage.md`, `point-supplement.md`, `add.md`, `item-review.md`, `fix.md`
+  - `coverage.md`, `map-check.md`, `point-supplement.md`, `add.md`, `item-review.md`, `fix.md`
   - `point-supplement.md`: 포인트·근거 종류의 정의는 `point-extract-v3.md`에서 그대로 옮긴다. 새로 쓰는 것은 「이 문항이 묻는 내용」으로 범위를 좁히는 문장뿐이다.
   - 새 포인트를 목표로 바꾸는 일은 정리 단계 프롬프트(`extract-v2.md`)를 새 포인트만 넣어 다시 쓴다.
   - 판정 원칙 문장은 `source-v2.md`·`author-v2.md`의 현행 규칙(정답 단위·회상 범위·문항 품질)에서 해당 부분만 옮긴다.
@@ -62,15 +72,17 @@ PR 셋으로 나눈다. 각 PR은 혼자서 검사가 통과하고 /2 동작을 
   - normalize: /2 단계 재사용
   - 코드 합치기
   - 커버 확인
+  - 지도 확인(R2m), 새 목표가 생기면 그 목표만 한 번 더
   - 목표 밖 문항 → 포인트 보충 → 새 포인트만 목표로(R2a)
   - 추가 출제 + 좁힌 확인 ≤2
   - 코드 검사
   - 묶음 검토 → 보완 → 고친 문항 재검토(+그 목표 재확인) ≤2/문항
+  - 임상 정리 확인: /2 `context` 단계를 한 번
   - 의학 검토: /2의 `medical-final/1` 호출 함수 재사용
   - 조립
   - ledger·재개: /2의 stage-resume/1 규칙을 같은 모양으로 둔다. 파이프라인 판 값은 `root-generation/3`이다.
 - **수정 `runner/root_native_json.py`** — 추가만 한다
-  - v3 단계 이름(`v3-coverage-n`, `v3-supplement`, `v3-supplement-normalize`, `v3-add-n`, `v3-review-b`, `v3-fix-b-k`)의 스키마·프롬프트·`check_file` 갈래
+  - v3 단계 이름(`v3-coverage-n`, `v3-map-check`, `v3-supplement`, `v3-supplement-normalize`, `v3-add-n`, `v3-review-b`, `v3-fix-b-k`)의 스키마·프롬프트·`check_file` 갈래
   - `review_images`가 v3 단계에서는 입력에 적힌 쪽 그림만 붙이게 한다.
   - /2 단계 이름의 동작은 바꾸지 않는다.
 - **테스트**
