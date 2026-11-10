@@ -85,7 +85,14 @@ SUPPLEMENT_NORMALIZE_OUTPUT = obj(targets=arr(copy.deepcopy(v2.BRIEF['properties
                                   points=arr(copy.deepcopy(v2.BRIEF['properties']['points']['items']), 1))
 BRIEF_FIX_OUTPUT = obj(brief=copy.deepcopy(v2.BRIEF), map_change_reason=TEXT)
 
-OUTPUTS = {'coverage': COVERAGE_OUTPUT, 'map-check': MAP_CHECK_OUTPUT, 'item-review': ITEM_REVIEW_OUTPUT,
+# Clinical context per item (docs/changes/2026-11-10-gen3-item-scope): one row per conflict record, the questions
+# whose reviewer-facing text carries review history, and source conflicts the bank does not record. A verdict
+# here reaches only the conflict or question it names; it never stops the lecture.
+CONTEXT_STATES = ('consistent', 'contamination', 'incomplete', 'unknown')
+CONTEXT_OUTPUT = obj(conflicts=arr(obj(conflict_id=TEXT, status=enum(*CONTEXT_STATES), reason=TEXT)),
+                     questions=arr(obj(question_id=TEXT, reason=TEXT)), unrecorded=arr(TEXT))
+
+OUTPUTS = {'context': CONTEXT_OUTPUT, 'coverage': COVERAGE_OUTPUT, 'map-check': MAP_CHECK_OUTPUT, 'item-review': ITEM_REVIEW_OUTPUT,
            'supplement': SUPPLEMENT_OUTPUT, 'add': ADD_OUTPUT, 'fix': FIX_OUTPUT}
 
 # ---------------------------------------------------------------- intake projection
@@ -298,6 +305,158 @@ def fix_input(bank, reviews, question_ids, clinical_conflicts, covered):
     return value
 
 
+_READER = ('question_id', 'format', 'question', 'answer', 'answer_units', 'options', 'correct_option_ids', 'matching_left',
+           'matching_right', 'answer_pairs', 'sequence_items', 'correct_order', 'conflict_id', 'option_explanations', 'explanation')
+
+
+def context_input(bank, clinical_conflicts, conflict_ids=None, question_ids=None):
+    """Clinical context: each conflict record with its facts and the questions citing it, the reviewer-facing
+    text of the questions to read, and the pages the citing questions cite.
+
+    The whole judgment (both None) takes every conflict and every question. A re-judgment after the repair takes
+    the named conflicts and questions only."""
+    sources = {c['conflict_id']: c for c in bank.get('source_conflicts', [])}
+    facts = {c['conflict_id']: c['facts'] for c in clinical_conflicts}
+    wanted = sorted(set(sources) | set(facts)) if conflict_ids is None else sorted(conflict_ids)
+    require(set(wanted) <= set(sources) | set(facts), 'v3 context: unknown conflict')
+    citing = {}
+    for q in bank['questions']:
+        if q.get('conflict_id'):
+            citing.setdefault(q['conflict_id'], []).append(q)
+    read = [q for q in bank['questions'] if question_ids is None or q['question_id'] in set(question_ids)
+            or q.get('conflict_id') in set(wanted)]
+    return {'conflicts': [{'conflict_id': cid, 'source_conflict': copy.deepcopy(sources.get(cid)), 'facts': facts.get(cid),
+                           'question_ids': [q['question_id'] for q in citing.get(cid, [])]} for cid in wanted],
+            'questions': [{k: copy.deepcopy(q[k]) for k in _READER if k in q} for q in read],
+            'pages': cited_pages([r for cid in wanted for q in citing.get(cid, []) for r in q.get('source_refs', [])])}
+
+
+def check_context(value, ctx):
+    """One row per conflict of the input, flags only on its questions; every conflict unknown is an unperformed
+    judgment."""
+    validate_shape(value, CONTEXT_OUTPUT, 'v3 context output')
+    rows = index_by(value['conflicts'], 'conflict_id')
+    require(set(rows) == {c['conflict_id'] for c in ctx['conflicts']}, 'v3 context: one row per conflict record')
+    flagged = [r['question_id'] for r in value['questions']]
+    require(len(flagged) == len(set(flagged)) and set(flagged) <= {q['question_id'] for q in ctx['questions']},
+            'v3 context: a flagged question is not in the input')
+    require(not rows or any(r['status'] != 'unknown' for r in rows.values()), UNPERFORMED_CONTEXT)
+    return value
+
+
+def context_merge(first, again, bank, clinical_conflicts, rejudged_questions=()):
+    """The judgments that hold for the final bank: the re-judgment replaces the rows of the conflicts and questions
+    it was given; rows of conflicts or questions no longer in the bank are dropped. Each row names its stage."""
+    present = {c['conflict_id'] for c in [*bank.get('source_conflicts', []), *clinical_conflicts]}
+    qids = {q['question_id'] for q in bank['questions']}
+    conflicts = {r['conflict_id']: {**r, 'stage': 0} for r in first['conflicts']}
+    questions = {r['question_id']: {**r, 'stage': 0} for r in first['questions']}
+    unrecorded = list(first['unrecorded'])
+    if again is not None:
+        for q in rejudged_questions:
+            questions.pop(q, None)
+        conflicts.update({r['conflict_id']: {**r, 'stage': 1} for r in again['conflicts']})
+        questions.update({r['question_id']: {**r, 'stage': 1} for r in again['questions']})
+        unrecorded += [x for x in again['unrecorded'] if x not in unrecorded]
+    require(present <= set(conflicts), 'v3 context: a conflict record of the final bank was never judged')
+    return {'conflicts': [conflicts[c] for c in sorted(present)],
+            'questions': [questions[q] for q in sorted(questions) if q in qids], 'unrecorded': unrecorded}
+
+
+def context_open(judgment):
+    """What a context judgment leaves open: conflicts not judged consistent and flagged questions."""
+    return {'conflicts': [r['conflict_id'] for r in judgment['conflicts'] if r['status'] != 'consistent'],
+            'questions': [r['question_id'] for r in judgment['questions']]}
+
+
+def context_sent(clinical_conflicts, judgment):
+    """The clinical facts the medical review receives: only those of conflicts judged consistent."""
+    ok = {r['conflict_id'] for r in judgment['conflicts'] if r['status'] == 'consistent'}
+    return [copy.deepcopy(c) for c in clinical_conflicts if c['conflict_id'] in ok and not _marked(c)]
+
+
+def _strings(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for v in value.values():
+            yield from _strings(v)
+    elif isinstance(value, list):
+        for v in value:
+            yield from _strings(v)
+
+
+def _marked(value):
+    return any(re.search(v2.HISTORY_MARKERS, s, re.I) for s in _strings(value))
+
+
+def history_marked(bank):
+    """Questions whose reviewer-facing fields carry an explicit review-history marker. /2 medical_input refuses
+    the whole input for one such string; here the question is a fix target, and if it stays it is left out of
+    the medical review and recorded (one question never stops the lecture)."""
+    marked = []
+    for q in bank['questions']:
+        try:
+            v2.medical_input({'questions': [q]}, [])
+        except ValueError:
+            marked.append(q['question_id'])
+    return marked
+
+
+UNREVIEWED_NOTE = '의학 검토 판정 없음(코드 기록): '
+
+
+def medical_parts(bank, sent):
+    """(the medical review's clinical input, questions left out of it)."""
+    out = history_marked(bank)
+    return v2.medical_input({**bank, 'questions': [q for q in bank['questions'] if q['question_id'] not in set(out)]}, sent), out
+
+
+def unreviewed_row(question_id, why):
+    """The row of a question the medical review gave no verdict for. doubt is the review's own 「판단 보류」; the note
+    says that no judgment was made, so it is never read as one."""
+    return {'question_id': question_id, 'verdict': 'doubt', 'note': UNREVIEWED_NOTE + why, 'suggested_answer': ''}
+
+
+def context_summary(judgment):
+    """The /2 assessment's clinical-context slot, derived by code: the facts that reach the medical review are
+    exactly those judged consistent, so the separation it stands for holds for what is sent."""
+    left = context_open(judgment)
+    total = len(judgment['conflicts'])
+    reason = f"root-generation/3 충돌별 임상 정리: 충돌 기록 {total}개 중 일치 {total - len(left['conflicts'])}개."
+    if left['conflicts']:
+        reason += ' 의학 검토에 사실을 보내지 않은 충돌: ' + ', '.join(left['conflicts']) + '.'
+    if left['questions']:
+        reason += ' 글에 저작·검수 이력이 남은 문항: ' + ', '.join(left['questions']) + '.'
+    return {'clinical_context_status': 'consistent', 'clinical_context_problem': 'none', 'clinical_context_reason': reason}
+
+
+def context_repair_targets(bank, judgment, attempts):
+    """Questions one fix round takes after a context judgment: those citing a conflict not judged consistent and
+    those flagged, with fix budget left (FIX_LIMIT, P5)."""
+    left = context_open(judgment)
+    return [q['question_id'] for q in bank['questions']
+            if (q.get('conflict_id') in left['conflicts'] or q['question_id'] in left['questions'])
+            and attempts.get(q['question_id'], 0) < FIX_LIMIT]
+
+
+def context_findings(bank, judgment, question_ids):
+    """The context notes each repaired question receives."""
+    conflicts = {r['conflict_id']: r for r in judgment['conflicts']}
+    flags = {r['question_id']: r for r in judgment['questions']}
+    notes = {}
+    for q in bank['questions']:
+        qid = q['question_id']
+        if qid not in set(question_ids):
+            continue
+        row = conflicts.get(q.get('conflict_id'))
+        if row and row['status'] != 'consistent':
+            notes.setdefault(qid, []).append(f"임상 정리: 충돌 기록 {row['conflict_id']} — {row['status']}: {row['reason']}")
+        if qid in flags:
+            notes.setdefault(qid, []).append('임상 정리: 문항 글에 저작·검수 이력 — ' + flags[qid]['reason'])
+    return notes
+
+
 # ---------------------------------------------------------------- stage-local acceptance (adapter)
 def check_added(value, ctx, state=None):
     """An add output against its add_input; with the orchestrator's state (P6) also the merge itself.
@@ -500,6 +659,7 @@ def coverage_key(direction_id, question_ids):
 UNPERFORMED_COVERAGE = 'v3 coverage: the batch judged nothing (every goal unknown)'
 UNPERFORMED_REVIEW = 'v3 review: the batch judged nothing (every question doubt, no design judgment)'
 UNPERFORMED_CONTEXT = 'v3 context: the clinical context was left unknown'
+UNPERFORMED_MAP = 'v3 map check: the check judged nothing (every relation, target and goal unknown)'
 
 
 # ---------------------------------------------------------------- reverts and the clinical context
@@ -516,13 +676,16 @@ def fixes_of(output, question_ids):
     return value
 
 
-def context_repair_targets(bank, context, attempts):
-    """Questions an incomplete clinical context sends to one fix round: those citing a conflict the reason names,
-    else every citing question; only questions with fix budget left (FIX_LIMIT, P5)."""
-    citing = [q['question_id'] for q in bank['questions'] if q.get('conflict_id')]
-    named = [q['question_id'] for q in bank['questions']
-             if q.get('conflict_id') and q['conflict_id'] in context['clinical_context_reason']]
-    return [q for q in (named or citing) if attempts.get(q, 0) < FIX_LIMIT]
+def drop_orphans(bank, clinical_conflicts, intake_conflict_ids=()):
+    """(bank, clinical_conflicts, dropped ids) without the conflict records no question cites, except those the
+    intake bank brought (they stay as they came)."""
+    keep = {q['conflict_id'] for q in bank['questions'] if q.get('conflict_id')} | set(intake_conflict_ids)
+    gone = sorted({c['conflict_id'] for c in [*bank.get('source_conflicts', []), *clinical_conflicts]} - keep)
+    if not gone:
+        return bank, clinical_conflicts, []
+    value = copy.deepcopy(bank)
+    value['source_conflicts'] = [c for c in value.get('source_conflicts', []) if c['conflict_id'] in keep]
+    return value, [c for c in clinical_conflicts if c['conflict_id'] in keep], gone
 
 
 def check_integrity(bank, clinical_conflicts, stimuli, intake_conflict_ids=()):
@@ -603,6 +766,8 @@ def _check_map_ids(value, rids, tids, dids):
             'v3 map check: one scope judgment per goal')
     for issue in value['issues']:
         require(set(issue['direction_ids']) <= set(dids), 'v3 map check: issue names an unknown goal')
+    judged = [r['status'] for r in value['relation_checks'] + value['target_checks']] + [r['scope_status'] for r in value['direction_checks']]
+    require(not judged or any(s != 'unknown' for s in judged), UNPERFORMED_MAP)
     return value
 
 
@@ -754,6 +919,11 @@ def assessment_raw(brief, bank, coverage_rows, map_check, reviews, context, summ
         for e in row['evidence']:
             require(e['question_id'] in qs, 'v3 assembly: coverage names a missing question')
             evidence.append({k: copy.deepcopy(e[k]) for k in ('question_id', 'components', 'visual_verdict', 'reason')} | {'direction_id': did})
+            # The row's status is the judgment. Evidence that would by itself make a whole-goal task under a row
+            # judged missing is kept as evidence but claims no tested relation (found by the any-verdict test:
+            # such a goal was listed not ready and had a task).
+            if row['status'] != 'covered' and all(p['location'] == 'answer' for p in e['components']):
+                continue
             for rid in e['tested_relation_ids']:
                 claims.setdefault((e['question_id'], rid), set()).add(did)
     question_reviews = []
@@ -812,11 +982,67 @@ def not_ready(brief, coverage_rows, reviews):
     return out
 
 
+def readiness(brief, bank, assessment, doc):
+    """Why each goal is or is not a task, from the same judgments the assembly used (never a new judgment).
+
+    Reasons: no-question (no question answers the whole goal), coverage-unknown, question-not-ok (every covering
+    question is doubt/wrong in the item review), relation, target, scope, visual, prerequisite-check, no-point,
+    dependency (its own judgments pass; a prerequisite question or target is not ready)."""
+    a = assessment
+    ready = {t['direction_id'] for t in doc['tasks']}
+    rels = {r['relation_id']: r['status'] for r in a['relation_checks']}
+    targets = {r['target_id']: r['status'] for r in a['target_checks']}
+    scope = {r['direction_id']: r for r in a['direction_checks']}
+    verdict = {r['question_id']: r['verdict'] for r in a['question_reviews']}
+    pre = {(r['question_id'], r['prerequisite_id']): r['status'] for r in a['prerequisite_checks']}
+    qs = {q['question_id']: q for q in bank['questions']}
+    pointed = {tid for p in brief['points'] for tid in p['target_ids']}
+    rows = []
+    for t in brief['targets']:
+        for d in t['directions']:
+            did = d['direction_id']
+            if did in ready:
+                rows.append({'direction_id': did, 'ready': True, 'reasons': []})
+                continue
+            reasons = []
+            evidence = [e for e in a['direction_evidence'] if e['direction_id'] == did]
+            whole = [e for e in evidence if all(p['location'] == 'answer' for p in e['components'])]
+            if scope[did]['status'] == 'unknown':
+                reasons.append('coverage-unknown')
+            elif not whole:
+                reasons.append('no-question')
+            else:
+                if all(verdict[e['question_id']] != 'ok' for e in whole):
+                    reasons.append('question-not-ok')
+                if all(e['visual_verdict'] not in ('ok', 'not_applicable') for e in whole):
+                    reasons.append('visual')
+                if all(any(pre.get((e['question_id'], p)) != 'supported' for p in qs[e['question_id']].get('prerequisites', [])) for e in whole):
+                    reasons.append('prerequisite-check')
+            if any(rels[r] != 'supported' for r in d['relation_ids']):
+                reasons.append('relation')
+            if targets[t['target_id']] != 'consistent':
+                reasons.append('target')
+            if scope[did]['scope_status'] != 'consistent':
+                reasons.append('scope')
+            if t['target_id'] not in pointed:
+                reasons.append('no-point')
+            rows.append({'direction_id': did, 'ready': False, 'reasons': reasons or ['dependency']})
+    return rows
+
+
+def readiness_counts(rows):
+    counts = {}
+    for r in rows:
+        for reason in r['reasons'] or ['ready']:
+            counts[reason] = counts.get(reason, 0) + 1
+    return counts
+
+
 # ---------------------------------------------------------------- result
 MANIFEST_KEYS = {'pipelineVersion', 'inputHash', 'briefHash', 'bankHash', 'model', 'runtimeHash', 'stages', 'verdictLedger',
                  'verdictLedgerHash', 'addRounds', 'notReady', 'offGoalQuestions', 'rejectedAtIntake', 'supplement',
                  'initialBank', 'initialBrief', 'supplementPoints', 'intakeProjection', 'coverage', 'mapCheck', 'itemReviews', 'clinicalContext',
-                 'clinicalConflicts', 'medicalFinal',
+                 'clinicalConflicts', 'medicalFinal', 'contextJudgments', 'medicalUnreviewed', 'readiness',
                  'sourceAssessment', 'fixes'}
 
 
@@ -853,14 +1079,15 @@ def validate_result(value, packet):
         require(qid in final or qid in off or qid in {r['question_id'] for r in meta['rejectedAtIntake']},
                 'result3: an intake question disappeared')
         if qid in final and qid not in fixed:
-            strip = lambda x: {k: v for k, v in x.items() if k not in ('stimuli', 'tier', 'importance', 'concept_id', 'point_ids')}
+            strip = lambda x: {k: ([p for p in v if p not in off] if k == 'prerequisites' else v) for k, v in x.items()
+                               if k not in ('stimuli', 'tier', 'importance', 'concept_id', 'point_ids')}
             require(strip(final[qid]) == strip(q), f'result3: {qid} changed without a fix')
     tasks = {t['question_id'] for t in doc['tasks']}
     require(not tasks & off, 'result3: an out-of-scope question became a task')
     # The audit is the /2 compile of the gathered /3 judgments on the reviewed bank. Rebuilding the
     # document itself (importance projection, container concepts) is checked with the stage chain (PR B).
     raw = assessment_raw(brief, reviewed, meta['coverage'], meta['mapCheck'], meta['itemReviews'],
-                         meta['clinicalContext'], meta['sourceAssessment']['summary'])
+                         context_summary(meta['clinicalContext']), meta['sourceAssessment']['summary'])
     require(raw == meta['sourceAssessment'], 'result3: assessment is not the gathered judgments')
     require(value['sourceAudit'] == v2.compile_assessment(brief, reviewed, envelope(brief, reviewed, raw)), 'result3: audit is not the compile')
     ready = {t['direction_id'] for t in doc['tasks']}
@@ -890,25 +1117,38 @@ def validate_result(value, packet):
                              exam_date=packet['examDate'], snapshot=snapshot if projection or iproof else None,
                              importance=v2.target_importance(brief, table) if iproof else None)
     require(again == doc, 'result3: the document is not the assembly of the reviewed judgments')
+    require(meta['readiness'] == readiness(brief, reviewed, raw, doc), 'result3: the readiness table is not of these judgments')
     # Stage records: fingerprints of the stages whose output the result carries.
     stages = {s['name']: s for s in meta['stages']}
     require(all(s['status'] == 'completed' for s in stages.values()), 'result3: incomplete stages')
     require(all(re.fullmatch(r'[a-f0-9]{64}', s.get(k, '')) for s in stages.values() for k in ('inputHash', 'outputHash')),
             'result3: missing stage fingerprints')
     require(stages['normalize']['outputHash'] == document_hash(meta['initialBrief']), 'result3: initial brief proof mismatch')
-    # The context is judged once, or twice after one repair round of an incomplete judgment (contextRepairs).
-    last = 'context-1' if 'context-1' in stages else 'context-0'
-    require(not any(re.fullmatch(r'context-(?:[2-9]|\d{2,})', n) for n in stages), 'result3: the context is judged at most twice')
-    require(('context-1' in stages) == bool(meta.get('contextRepairs')) and ('v3-fix-context-0' in stages) <= ('context-1' in stages),
+    # The context is judged per conflict record: once, and once more for what one repair round touched. The
+    # merged judgment covers every conflict record of the final bank; only facts judged consistent reach the
+    # medical review (docs/changes/2026-11-10-gen3-item-scope).
+    require(not any(re.fullmatch(r'(?:v3-)?context-\d+', n) and n not in ('v3-context-0', 'v3-context-1') for n in stages),
+            'result3: the context is judged at most twice, per conflict')
+    judgments = meta['contextJudgments']
+    require(type(judgments) is list and len(judgments) == (2 if 'v3-context-1' in stages else 1) and 'v3-context-0' in stages,
+            'result3: context judgments differ from the context stages')
+    require(all(stages[f'v3-context-{i}']['outputHash'] == document_hash(j) for i, j in enumerate(judgments)), 'result3: context proof mismatch')
+    repairs = meta.get('contextRepairs') or []
+    require(('v3-context-1' in stages) <= bool(repairs) and ('v3-fix-context-0' in stages) <= bool(repairs),
             'result3: a second context judgment needs its repair record')
-    require(stages[last]['outputHash'] == document_hash(meta['clinicalContext']), 'result3: context proof mismatch')
-    require(meta['clinicalContext']['clinical_context_status'] == 'consistent', 'result3: the clinical context is not consistent')
-    v2.validate_context(meta['clinicalContext'])
-    require(not v2.context_blocks_medical(meta['clinicalContext']), 'result3: medical review ran without a clean context')
-    med_input = {'title': packet['title'], 'bank': reviewed, 'clinicalInput': v2.medical_input(reviewed, meta['clinicalConflicts']),
+    merged = context_merge(judgments[0], judgments[1] if len(judgments) == 2 else None, reviewed, meta['clinicalConflicts'],
+                           repairs[0]['targets'] if repairs else ())
+    require(merged == meta['clinicalContext'], 'result3: the clinical context is not the merged judgments')
+    clinical_input, left_out = medical_parts(reviewed, context_sent(meta['clinicalConflicts'], meta['clinicalContext']))
+    med_input = {'title': packet['title'], 'bank': reviewed, 'clinicalInput': clinical_input,
                  'medicalFinal': True, '_pipeline_version': POLICY}
     require(stages['medical-0']['inputHash'] == document_hash(med_input) and stages['medical-0']['outputHash'] == document_hash(value['medical']),
             'result3: the medical review is not of this bank')
+    unreviewed = {r['question_id'] for r in meta['medicalUnreviewed']}
+    require(set(left_out) <= unreviewed, 'result3: a question left out of the medical review is not recorded')
+    rows = {r['question_id']: r for r in value['medical']['reviews']}
+    require(all(q in rows and rows[q]['verdict'] == 'doubt' and rows[q]['note'].startswith(UNREVIEWED_NOTE) for q in unreviewed),
+            'result3: an unreviewed question carries a medical verdict')
     require(not any(re.fullmatch(r'medical-[1-9]\d*', n) for n in stages), 'result3: the medical review runs once')
     require(meta['addRounds'] == len([n for n in stages if re.fullmatch(r'v3-add-\d+', n)]), 'result3: add rounds differ from add stages')
     for f in meta['fixes']:

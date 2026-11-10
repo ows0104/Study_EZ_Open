@@ -74,6 +74,8 @@ SOURCE['properties']['direction_checks']['items']['properties']['scope_status']=
 SOURCE['properties']['direction_checks']['items']['required'].append('scope_status')
 SOURCE['properties']['design_checks']=arr(obj(question_id=TEXT,verdict=enum('ok','doubt','wrong'),reason=TEXT))
 
+HISTORY_MARKERS=r'sourceAudit|medicalVerdicts?|medicalReview|(?:과거|이전)\s*(?:AI|모델)\s*(?:검수|검토|판정)|(?:검수|검토)\s*판정'
+
 def medical_input(bank,conflicts):
     fields=('question_id','concept_id','format','question','answer','answer_units','options','correct_option_ids',
         'matching_left','matching_right','answer_pairs','sequence_items','correct_order','conflict_id',
@@ -88,8 +90,7 @@ def medical_input(bank,conflicts):
             for v in value.values():yield from strings(v)
         elif isinstance(value,list):
             for v in value:yield from strings(v)
-    history=r'sourceAudit|medicalVerdicts?|medicalReview|(?:과거|이전)\s*(?:AI|모델)\s*(?:검수|검토|판정)|(?:검수|검토)\s*판정'
-    require(not any(re.search(history,s,re.I)for s in strings(result)),'medical input: historical review metadata must be separated by the content author')
+    require(not any(re.search(HISTORY_MARKERS,s,re.I)for s in strings(result)),'medical input: historical review metadata must be separated by the content author')
     return result
 
 def legacy_brief(brief):

@@ -1,0 +1,44 @@
+{
+  "id": "2026-11-10-gen3-item-scope",
+  "title": "root-generation/3: 판정 값이 강의를 멈추지 않게",
+  "area": "generation",
+  "created_at": "2026-11-10T12:55:27.315551+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-10T13:00:43.983495+00:00",
+      "evidence": "2026-11-10 사용자 채팅: 「나는 이제 완전히 작동하는 파이프라인을 원해. … 근본적인 구조를 네가 뜯어보고 진단한 후, 일반적인 작동하도록 하는게 너의 목표야. 필요하다면 로컬에서 실험해봐도 돼. … 네 주관대로 해줘.」",
+      "scope": "plan.md: studyez_contracts/roots/generation_v3.py·generation_v2.py(정규식 이름), quizbank/connection_generate_v3.py, runner/root_native_json.py, content/prompts/learning-links/v3/context.md, tests. 운영 DB·공개 판 변경 없음. 실제 기록은 사본으로만 재생",
+      "evidence_version": 2,
+      "source_hash": "91f57c0f135d62930ca1b49b59333c83685b1964b93263159aca11f7bc340ce5",
+      "plan_hash": "4e3cfcdcd4efd5e488a90110feedaf8c40855c9a833574d67a20be48698db8ea",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "e8638e248ab580ef39b3e2872a957b75488146f69a034336808411d9e361ea7a"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-10T13:00:44.965265+00:00"
+}

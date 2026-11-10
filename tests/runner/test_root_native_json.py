@@ -425,3 +425,13 @@ def test_ledger_read_tolerates_the_other_review_thread_replacing_it(tmp_path,mon
     assert len(denied)==2
     denied.clear();monkeypatch.setattr(n,'read',lambda path:(_ for _ in()).throw(PermissionError(13,'Permission denied')))
     with pytest.raises(PermissionError):n.require_unblocked(tmp_path)
+
+
+def test_text_that_lost_its_korean_in_a_shell_pipe_is_sent_back(tmp_path):
+    """261102_02 context-0 (2026-11-10): a PowerShell here-string piped into python replaced every Hangul character
+    with "?"; the judgment's reason was accepted unreadable."""
+    lost='CF01?CF03? source_conflicts? ?? ID? ???? ?? ??? ?? ??? ?????, clinical_conflicts.facts? ???? ?? ????? ??? ??? ?? ??.'
+    assert n.garbled({'rows':[{'reason':'정상'},{'reason':lost}]})==lost
+    assert n.garbled({'a':'�'})=='�'
+    for fine in('왜 그런가? 원본 p3에 있다.','Is it A? Or B? See p3.','','판정: 무엇이 맞는가? 강의 본문이 맞다. 족보는?'):
+        assert n.garbled({'x':[fine]})is None

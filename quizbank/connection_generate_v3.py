@@ -4,7 +4,11 @@ docs/changes/2026-11-10-root-generation-3 (spec.md, plan.md). The /2 producer (c
 not changed; this module reuses its normalize/context/medical stages and its document assembly.
 
 Order: intake bank → normalize (+ brief-fix) → coverage → map check → off-goal points → add ≤2
-→ item review/fix by batch → context → medical (once) → assembly.
+→ item review/fix by batch → context per conflict (+ one repair) → assembly → medical (once) → result.
+
+A judgment value never stops the lecture (docs/changes/2026-11-10-gen3-item-scope): it reaches the goal,
+question or conflict record it names. Only a stage that did not run to an accepted output stops, and that
+is resumable. The assembly runs before the medical review, so what it refuses is found before that spend.
 
 Every model call goes through `invoke(stage, ctx, material, model)` (runner.root_native_json.NativeJson).
 Inputs, raw outputs and usage are written next to the ledger; nothing is retried automatically. A failed or
@@ -15,10 +19,8 @@ import copy
 import hashlib
 import json
 import re
-import shutil
 from pathlib import Path
 
-import jsonschema
 from studyez_llm import codex
 from studyez_contracts.roots import document_hash
 from studyez_contracts.roots import generation_v2 as v2
@@ -77,6 +79,15 @@ class Stages:
     def save(self):
         self.g.write(self.path, self.ledger)
 
+    def retire_legacy(self):
+        """Stage names this code no longer produces (the lecture-wide `context-0`/`context-1` of the first /3
+        version): on an operator resume they move to the resume archive like any superseded stage, so the manifest
+        lists only stages whose output this result carries. A stage reused through the verdict ledger stays."""
+        for name in [n for n in self.ledger['stages'] if re.fullmatch(r'context-\d+', n)]:
+            v3.require(self.resume_row is not None, name + ': 이 실행이 쓰지 않는 이전 단계 기록이 있습니다. 이어 가려면 --resume <이유>.')
+            self._archive(name)
+        self.save()
+
     def judged(self, name, ctx, accept):
         """A coverage or review stage that judged nothing, or a context judgment left unknown, runs once more in a
         fresh session (review-retry/1, as /2: empty-judgment, final-context-unknown).
@@ -86,10 +97,10 @@ class Stages:
         try:
             return self.run(name, ctx, accept)
         except ValueError as error:
-            if str(error) not in (v3.UNPERFORMED_COVERAGE, v3.UNPERFORMED_REVIEW, v3.UNPERFORMED_CONTEXT) or \
+            if str(error) not in (v3.UNPERFORMED_COVERAGE, v3.UNPERFORMED_REVIEW, v3.UNPERFORMED_CONTEXT, v3.UNPERFORMED_MAP) or \
                     any(r['stage'] == name for r in self.ledger.get('reviewRetries', [])):
                 raise
-            kind = 'final-context-unknown' if str(error) == v3.UNPERFORMED_CONTEXT else 'empty-judgment'
+            kind = 'empty-judgment'
         archive = self.out / f'.retry-{name}'
         archive.mkdir()
         moved = []
@@ -178,6 +189,8 @@ def _bank_findings(bank, sources):
         m = _QID.match(text.replace('문항 품질: ', ''))
         if m:
             found.setdefault(m.group(1), []).append(text)
+    for qid in v3.history_marked(bank):
+        found.setdefault(qid, []).append(qid + ': 문항·정답·해설에 검수·판정 이력 표현이 있다. 원본에 근거한 의학 설명으로만 쓴다.')
     return found
 
 
@@ -257,15 +270,30 @@ def _medical_batches(invoke):
             return invoke(stage, ctx, material, model)
         from .review import shape
         bank, conflicts = ctx['bank'], ctx['clinicalInput']['clinical_conflicts']
-        rows, pool, summaries, infos = [], [], [], []
-        for part in chunks(bank['questions'], MEDICAL_BATCH):
+        sent = {q['question_id'] for q in ctx['clinicalInput']['questions']}
+        rows, pool, summaries, infos, unreviewed = [], [], [], [], []
+        unreviewed += [{'question_id': q['question_id'], 'reason': '검수·판정 이력 표현이 남아 의학 검토에 보내지 않았다'}
+                       for q in bank['questions'] if q['question_id'] not in sent]
+
+        def ask(part):
             sub = {**bank, 'questions': part}
             value, info = invoke(stage, {**ctx, 'bank': sub, 'clinicalInput': v2.medical_input(sub, conflicts)}, material, model)
-            validate_checks(value, sub)
-            rows += value['reviews']
-            pool += value.get('pool_checks', [])
+            got = {r['question_id'] for r in value['reviews']}
+            rows.extend(r for r in value['reviews'] if r['question_id'] in {q['question_id'] for q in part})
+            pool.extend(value.get('pool_checks', []))
             summaries.append(value['summary'])
             infos.append(info)
+            return [q for q in part if q['question_id'] not in got]
+        for part in chunks([q for q in bank['questions'] if q['question_id'] in sent], MEDICAL_BATCH):
+            # A verdict the call left out is asked once more, alone; one still missing is recorded, not invented,
+            # and never stops the lecture (the medical review is a note, not a gate: medical-final/1).
+            missing = ask(part)
+            if missing:
+                missing = ask(missing)
+            unreviewed += [{'question_id': q['question_id'], 'reason': '의학 검토가 두 번의 호출에서 이 문항의 판정을 내지 않았다'} for q in missing]
+        rows += [v3.unreviewed_row(r['question_id'], r['reason']) for r in unreviewed]
+        order = {q['question_id']: i for i, q in enumerate(bank['questions'])}
+        rows.sort(key=lambda r: order[r['question_id']])
         merged = shape({'summary': ' / '.join(summaries), 'reviews': rows, 'pool_checks': pool}, bank)
         usage = {}
         for info in infos:
@@ -274,7 +302,8 @@ def _medical_batches(invoke):
         info = {'usage': usage, 'cost_usd': sum(i.get('cost_usd') or 0 for i in infos),
                 'duration_ms': sum(i.get('duration_ms') or 0 for i in infos),
                 'models': list(dict.fromkeys(m for i in infos for m in (i.get('models') or []))),
-                'medicalBatches': [len(p) for p in chunks(bank['questions'], MEDICAL_BATCH)]}
+                'medicalBatches': [len(p) for p in chunks([q for q in bank['questions'] if q['question_id'] in sent], MEDICAL_BATCH)],
+                'medicalCalls': len(infos), 'medicalUnreviewed': unreviewed}
         return merged, info
     return call
 
@@ -331,7 +360,7 @@ def run(packet, out, model, invoke, resume=None):
 
     # 2m: map check ---------------------------------------------------------
     ctx = v3.map_check_input(brief, table)
-    map_checks = [st.run('v3-map-check-0', ctx, lambda raw: v3.check_map_input(raw, ctx))]
+    map_checks = [st.judged('v3-map-check-0', ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx))]
 
     # 2a: off-goal questions → supplement points ----------------------------
     judged = {e['question_id'] for r in rows.values() for e in r['evidence']}
@@ -358,7 +387,7 @@ def run(packet, out, model, invoke, resume=None):
             value = st.judged('v3-coverage-supplement', ctx, lambda raw: v3.check_coverage(raw, ctx['goals'], ctx['questions']))
             rows.update({r['direction_id']: r for r in value['rows']})
             ctx = v3.map_check_input(brief, table, new_tids)
-            map_checks.append(st.run('v3-map-check-1', ctx, lambda raw: v3.check_map_input(raw, ctx)))
+            map_checks.append(st.judged('v3-map-check-1', ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx)))
         if dup:
             owner = {d['direction_id']: t for t in brief['targets'] for d in t['directions']}
             goal_ids = sorted({did for d in dup for did, t in owner.items()
@@ -371,6 +400,9 @@ def run(packet, out, model, invoke, resume=None):
         gone = {d['question_id'] for d in out_of_scope}
         off_questions = [q for q in bank['questions'] if q['question_id'] in gone]
         bank['questions'] = [q for q in bank['questions'] if q['question_id'] not in gone]
+        for q in bank['questions']:
+            if set(q.get('prerequisites', [])) & gone:
+                q['prerequisites'] = [p for p in q['prerequisites'] if p not in gone]
         stimuli = [s for s in stimuli if s['question_id'] not in gone]
     else:
         off_questions = []
@@ -491,46 +523,43 @@ def run(packet, out, model, invoke, resume=None):
             findings = [{**reviews[q], 'code_findings': code.get(q, [])} for q in targets]
             fix_round(f'v3-fix-{b}-{k}', f'v3-review-{b}-{k + 1}', f'v3-coverage-fix-{b}-{k}', targets, findings)
 
-    # context (+ one repair) and medical (once, medical-final/1) -------------
-    def accept_context(raw):
-        jsonschema.validate(raw, g.output_schema(v2.CONTEXT_OUTPUT))
-        v2.validate_context(raw)
-        v3.require(raw['clinical_context_status'] != 'unknown', v3.UNPERFORMED_CONTEXT)
-        return raw
-
-    def context_judgment(name):
+    # context per conflict record (+ one repair) ------------------------------
+    # A verdict reaches the conflict record or question it names: facts not judged consistent are not sent to the
+    # medical review, the questions stay. The lecture-wide context gate stopped 134 questions over the wording of
+    # three records, and the same records were judged 「확인됨」 and 「오염」 on two runs (261102_02, 2026-11-10).
+    def context_judgment(name, conflict_ids=None, question_ids=None):
+        nonlocal bank, conflicts
+        # A fix may stop citing a conflict an earlier stage added. The record then belongs to no question: it is
+        # taken out and recorded instead of stopping the lecture here (P7).
+        bank, conflicts, orphans = v3.drop_orphans(bank, conflicts, intake_conflict_ids)
+        restated.extend({'stage': name, 'kind': 'orphan_conflict', 'id': cid, 'changed': True} for cid in orphans
+                        if not any(r['kind'] == 'orphan_conflict' and r['id'] == cid for r in restated))
         v3.check_integrity(bank, conflicts, stimuli, intake_conflict_ids)
-        ctx = {k: base[k] for k in ('title', 'scope', 'lecture_id', 'sources')} | {'bank': bank, 'clinical_conflicts': conflicts}
-        return st.judged(name, ctx, accept_context)
-    context = context_judgment('context-0')
-    v3.require(not v2.context_blocks_medical(context), '독립 정답 검수 입력 분리가 완료되지 않았습니다. 결과를 만들지 않고 보존합니다.')
-    if v2.context_repair_note(context):
-        # An incomplete conflict record is a repair reason (clinical-context/2, as /2): the questions citing the
-        # named conflicts (all citing questions when none is named) go to one fix round within their own budget,
-        # then the context is judged once more. A conflict judgment blocks every goal in compile_assessment, so a
-        # second incomplete judgment stops here, before the medical review (261102_02 published 0 tasks, 2026-11-10).
-        targets = v3.context_repair_targets(bank, context, attempts)
+        ctx = v3.context_input(bank, conflicts, conflict_ids, question_ids)
+        return st.judged(name, ctx, lambda raw, ctx=ctx: v3.check_context(raw, ctx))
+    context_judgments = [context_judgment('v3-context-0')]
+    targets = v3.context_repair_targets(bank, context_judgments[0], attempts)
+    if targets:
         ledger.setdefault('contextRepairs', [])
-        if not any(r['stage'] == 'context-0' for r in ledger['contextRepairs']):
-            ledger['contextRepairs'].append({'stage': 'context-0', 'reason': context['clinical_context_reason'], 'targets': targets})
-        st.save()
-        v3.require(targets, '임상 정리가 충돌 기록을 불완전으로 판정했지만 고칠 수 있는 문항(그 충돌을 인용하고 고치기 횟수가 남은 문항)이 없습니다: '
-                   + context['clinical_context_reason'])
+        if not ledger['contextRepairs']:
+            ledger['contextRepairs'].append({'stage': 'v3-context-0', 'open': v3.context_open(context_judgments[0]), 'targets': targets})
         for q in targets:
             attempts[q] = attempts.get(q, 0) + 1
             ledger['fixAttempts'][q] = max(ledger['fixAttempts'].get(q, 0), attempts[q])
         st.save()
-        note = '임상 정리(context-0) 불완전: ' + context['clinical_context_reason']
-        findings = [{**reviews[q], 'code_findings': [*_bank_findings(bank, source_ids).get(q, []), note]} for q in targets]
+        notes = v3.context_findings(bank, context_judgments[0], targets)
+        code = _bank_findings(bank, source_ids)
+        findings = [{**reviews[q], 'code_findings': [*code.get(q, []), *notes.get(q, [])]} for q in targets]
         fix_round('v3-fix-context-0', 'v3-review-context-1', 'v3-coverage-fix-context-0', targets, findings)
-        context = context_judgment('context-1')
-        v3.require(context['clinical_context_status'] == 'consistent',
-                   '임상 정리가 한 번 보완한 뒤에도 일치가 아닙니다. 이대로는 모든 목표가 막혀 과제가 0개입니다: ' + context['clinical_context_reason'])
-    med_ctx = {'title': packet['title'], 'bank': bank, 'clinicalInput': v2.medical_input(bank, conflicts), 'medicalFinal': True}
-    st.invoke = _medical_batches(invoke)
-    medical = st.run('medical-0', med_ctx, lambda raw: validate_checks(raw, bank))
+        present = {c['conflict_id'] for c in [*bank.get('source_conflicts', []), *conflicts]}
+        cited = {q['conflict_id'] for q in bank['questions'] if q.get('conflict_id')} | set(intake_conflict_ids)
+        again = sorted(({q['conflict_id'] for q in bank['questions'] if q['question_id'] in set(targets) and q.get('conflict_id')}
+                        | (present - {r['conflict_id'] for r in context_judgments[0]['conflicts']})) & cited)
+        context_judgments.append(context_judgment('v3-context-1', again, targets))
+    context = v3.context_merge(context_judgments[0], context_judgments[1] if len(context_judgments) == 2 else None, bank, conflicts,
+                               ledger['contextRepairs'][0]['targets'] if ledger.get('contextRepairs') else ())
 
-    # assembly ----------------------------------------------------------------
+    # assembly (before the medical review: whatever it refuses is found before that spend) -------------
     coverage_rows = [rows[d['direction_id']] for t in brief['targets'] for d in t['directions']]
     review_rows = [reviews[q['question_id']] for q in bank['questions']]
     map_check = {k: [x for m in map_checks for x in m[k]] for k in ('relation_checks', 'target_checks', 'direction_checks', 'issues')}
@@ -538,9 +567,9 @@ def run(packet, out, model, invoke, resume=None):
     for r in map_check['relation_checks']:
         relation_seen.setdefault(r['relation_id'], r)   # a relation judged again for a new goal keeps its first judgment
     map_check['relation_checks'] = list(relation_seen.values())
-    summary = ('root-generation/3: coverage, map check, item review and context judgments gathered by '
+    summary = ('root-generation/3: coverage, map check, item review and per-conflict context judgments gathered by '
                'studyez_contracts.roots.generation_v3.assessment_raw; no judgment is filled in.')
-    raw = v3.assessment_raw(brief, bank, coverage_rows, map_check, review_rows, context, summary)
+    raw = v3.assessment_raw(brief, bank, coverage_rows, map_check, review_rows, v3.context_summary(context), summary)
     audit = v2.compile_assessment(brief, bank, envelope(brief, bank, raw))
     reviewed_bank = bank
     snapshot, projection = v2.project_container_concepts(bank)
@@ -550,6 +579,23 @@ def run(packet, out, model, invoke, resume=None):
     doc = v2.make_document(brief, reviewed_bank, audit, revision=packet['revision'], title=packet['title'], exam_date=packet['examDate'],
                            snapshot=snapshot if projection or importance_proof else None,
                            importance=v2.target_importance(brief, table) if importance_proof else None)
+    ready_rows = v3.readiness(brief, bank, raw, doc)
+    counts = v3.readiness_counts(ready_rows)
+    print('── 조립 예행: 목표 ' + str(len(ready_rows)) + '개 중 과제 ' + str(counts.get('ready', 0)) + '개 · 안 된 이유 '
+          + json.dumps({k: v for k, v in counts.items() if k != 'ready'}, ensure_ascii=False), flush=True)
+    g.write(out / 'readiness.json', {'counts': counts, 'rows': ready_rows})
+    v3.require(doc['tasks'], '학습 가능한 과제가 0개입니다. 의학 검토 전에 멈춥니다. 목표별 이유는 readiness.json: '
+               + json.dumps({k: v for k, v in counts.items() if k != 'ready'}, ensure_ascii=False))
+
+    # medical (once, medical-final/1) -----------------------------------------
+    clinical_input, _ = v3.medical_parts(bank, v3.context_sent(conflicts, context))
+    med_ctx = {'title': packet['title'], 'bank': bank, 'clinicalInput': clinical_input, 'medicalFinal': True}
+    st.invoke = _medical_batches(invoke)
+    medical = st.run('medical-0', med_ctx, lambda raw: validate_checks(raw, bank))
+    medical_unreviewed = [{'question_id': r['question_id'], 'reason': r['note'][len(v3.UNREVIEWED_NOTE):]}
+                          for r in medical['reviews'] if r['note'].startswith(v3.UNREVIEWED_NOTE)]
+    st.retire_legacy()
+
     not_ready = v3.not_ready(brief, coverage_rows, review_rows)
     result = {'brief': brief, 'document': doc, 'sourceAudit': audit, 'medical': medical,
               'validation': validate_bank(snapshot, source_ids), 'manifest': {
@@ -564,7 +610,8 @@ def run(packet, out, model, invoke, resume=None):
                   'rejectedAtIntake': rejected, 'intakeProjection': intake_changes, 'restatedIgnored': restated,
                   'supplement': supplement, 'supplementPoints': points_doc if supplement else None,
                   'initialBrief': initial_brief, 'initialBank': initial_bank, 'coverage': coverage_rows, 'mapCheck': map_check,
-                  'itemReviews': review_rows, 'clinicalContext': context, 'clinicalConflicts': conflicts,
+                  'itemReviews': review_rows, 'clinicalContext': context, 'contextJudgments': context_judgments,
+                  'medicalUnreviewed': medical_unreviewed, 'readiness': ready_rows, 'clinicalConflicts': conflicts,
                   'visualStimuli': stimuli, 'medicalFinal': True, 'sourceAssessment': raw, 'fixes': fixes,
                   **({'bankProjection': projection} if projection else {}),
                   **({'importanceProjection': importance_proof} if importance_proof else {}),

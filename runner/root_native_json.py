@@ -76,7 +76,8 @@ def review_images(stage,work,ctx):
 # root-generation/3 (docs/changes/2026-11-10-root-generation-3): stage names `v3-<kind>…`; the input names the
 # pages it cites (`pages`: [[source_id, page], …]) and the stimuli of its questions; only those are attached (P3).
 V3_PROMPTS={'coverage':'coverage.md','map':'map-check.md','supplement':'point-supplement.md',
-    'supplement-normalize':'supplement-normalize.md','add':'add.md','review':'item-review.md','fix':'fix.md','brief':'brief-fix.md'}
+    'supplement-normalize':'supplement-normalize.md','add':'add.md','review':'item-review.md','fix':'fix.md','brief':'brief-fix.md',
+    'context':'context.md'}
 
 def v3_kind(stage):
     require(stage.startswith('v3-'),'Not a v3 stage')
@@ -107,6 +108,7 @@ def v3_check(stage,ctx,value,state=None,work=None):
     if state is not None and kind in('add','fix','supplement','supplement-normalize'):
         from quizbank.connection_generate_v3 import check_stage
         return check_stage(kind,value,ctx,state,Path(work)/'.check-render')
+    if kind=='context':return v3.check_context(value,ctx)
     if kind=='coverage':return v3.check_coverage(value,ctx['goals'],ctx['questions'])
     if kind=='map':return v3.check_map_input(value,ctx)
     if kind=='review':return v3.check_review_input(value,ctx)
@@ -210,6 +212,24 @@ def read(path):return loads(Path(path).read_text(encoding='utf-8'))
 def model_text(body):return body.decode('utf-8-sig')
 def read_model(path):return loads(model_text(Path(path).read_bytes()))
 
+GARBLED=('result.json has "?" where non-ASCII text (Korean) should be: the text went through a shell pipe, here-string or '
+    'command line, and Windows replaced it. Save your script as a UTF-8 .py file in this workspace, run that file, and write '
+    'result.json with open(..., "w", encoding="utf-8"). Rewrite the same content; do not change any judgment. First garbled value: ')
+def garbled(value):
+    """The first model-written string that lost its non-ASCII text, or None.
+
+    261102_02 context-0 (2026-11-10): the model piped a PowerShell here-string into `python -`; PowerShell 5.1 encodes
+    a pipe to a native program as ASCII, so every Hangul character arrived as "?" and the judgment's reason was
+    accepted unreadable. A run of three "?" or a string that is one tenth "?" (eight or more) does not occur in real
+    text; U+FFFD is a failed decode."""
+    if isinstance(value,str):
+        marks=value.count('?')
+        return value if '\ufffd'in value or'???'in value or(marks>=8 and marks*10>=len(value))else None
+    for item in(value.values()if isinstance(value,dict)else value if isinstance(value,list)else()):
+        found=garbled(item)
+        if found is not None:return found
+    return None
+
 def clean(value):
     if isinstance(value,dict):return {k:clean(v)for k,v in value.items()if k!='png_base64'}
     if isinstance(value,list):return [clean(v)for v in value]
@@ -245,6 +265,8 @@ Write exactly the complete requested JSON object to result.json in this workspac
 passing judgments without actually judging every listed item. No network, browser, connector, other session,
 or scope expansion. Use material/*.md for the pages named in input.json and the attached PNGs.
 Do not modify input.json, acceptance.schema.json, task.md or material/.
+Write result.json from a script saved as a UTF-8 .py file in this workspace (open(..., "w", encoding="utf-8")).
+Never pass non-ASCII text through a shell pipe, here-string or command line: Windows shells replace it with "?".
 Compute the SHA256 of the final UTF-8 result.json with a local tool. The final native response MUST contain
 only {"path":"result.json","sha256":"<actual lowercase SHA256>"}.
 '''
@@ -297,6 +319,7 @@ def check_file(stage,work):
     require(schema==schema_for(stage,ctx),'Different acceptance schema')
     path=work/'result.json';require(not path.is_symlink()and path.is_file()and 0<path.stat().st_size<=LIMIT,'Unsafe/missing result')
     value,_=decode_for(stage,read_model(path),schema);jsonschema.validate(value,schema)
+    lost=garbled(value);require(lost is None,GARBLED+repr((lost or'')[:160]))
     if stage.startswith('v3-'):
         state=read(work/'host-check.json')if(work/'host-check.json').is_file()else None
         v3_check(stage,ctx,value,state,work);return value
@@ -570,7 +593,13 @@ def main():
     try:
         require_unblocked(a.out)
         from studyez_contracts.roots.parallel import is_v2_source
-        packet=read(a.packet);result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)or packet.get('generationPolicy')=='root-generation/3'else None,resume=a.resume,rerun=tuple(a.rerun))
+        packet=read(a.packet)
+        if packet.get('generationPolicy')=='root-generation/3':
+            # Windows without long paths: the deepest file a stage folder or its resume archive holds must fit in
+            # 259 characters. A copy of 261102_02 in a deeper folder failed in the middle of a late stage.
+            deepest=a.out.resolve()/'.resume-99'/'.native'/'v3-coverage-fix-context-0'/'work'/'material'/('stimulus-'+'0'*64+'.png')
+            require(os.name!='nt'or len(str(deepest))<260,f'실행 폴더 경로가 너무 깁니다({len(str(a.out.resolve()))}자). 단계 폴더의 파일이 Windows 경로 한도 259자를 넘습니다. 모델 호출 전에 멈춥니다.')
+        result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)or packet.get('generationPolicy')=='root-generation/3'else None,resume=a.resume,rerun=tuple(a.rerun))
         validate_all(a.out,result)
         if packet.get('parallelAuthoring'):
             from runner.parallel_status import refresh
