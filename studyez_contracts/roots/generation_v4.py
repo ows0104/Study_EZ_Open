@@ -278,7 +278,9 @@ def check_coverage(value, goals, questions):
         if row['status'] != 'unknown':
             want = 'covered' if full(row, goals[did]) else 'missing'
             require(row['status'] == want, f'v4 coverage: {did} is {want} by its evidence (union of answered components)')
-        asking = {e['question_id'] for e in row['evidence'] if answered(e)}
+        # A duplicate group names questions the judgment reviewed for this goal (its evidence rows), whether or not
+        # they answer a whole component (docs/changes/2026-11-11-place-by-evidence).
+        asking = {e['question_id'] for e in row['evidence']}
         seen = set()
         for g in row['duplicates']:
             require(set(g['question_ids']) <= asking, 'v4 coverage: a duplicate group names a question that does not answer this goal')
@@ -286,6 +288,17 @@ def check_coverage(value, goals, questions):
             seen |= set(g['question_ids'])
     require(any(r['status'] != 'unknown' for r in value['rows']), v3.UNPERFORMED_COVERAGE)
     return value
+
+
+def off_goal(bank, coverage_rows):
+    """Questions no goal can take: no evidence row of a judged goal names a tested relation for them.
+
+    The same rule the assembly places by (`assessment_raw` claims the tested relations of evidence rows), so a
+    question is either placed or sent to the supplement stage for a new point and goal. Before
+    2026-11-11-place-by-evidence the supplement took only questions with no evidence row at all; in the 261102_02
+    /4 trial 10 questions had rows without relations and fell between the two."""
+    placeable = {e['question_id'] for r in coverage_rows if r['status'] != 'unknown' for e in r['evidence'] if e['tested_relation_ids']}
+    return [q['question_id'] for q in bank['questions'] if q['question_id'] not in placeable]
 
 
 def covering(row):
@@ -335,8 +348,10 @@ def not_ready(brief, coverage_rows, reviews):
 
 # ---------------------------------------------------------------- assessment and compile
 def assessment_raw(brief, bank, coverage_rows, map_check, reviews, context, summary):
-    """source-assessment/2 from the /4 judgments. A question claims the goal's tested relations wherever it
-    asks one of its components as an answer (R5); nothing is filled in."""
+    """source-assessment/2 from the /4 judgments. A question claims the tested relations its evidence row names
+    for every goal the coverage judgment reviewed it against, whether or not it answers a whole component: placing a
+    question follows the evidence, completeness (`full`) follows the answered components
+    (docs/changes/2026-11-11-place-by-evidence). Nothing is filled in."""
     dirs = v3._directions(brief)
     rows = index_by(coverage_rows, 'direction_id')
     require(set(rows) == set(dirs), 'v4 assembly: every goal needs a coverage judgment')
@@ -353,9 +368,8 @@ def assessment_raw(brief, bank, coverage_rows, map_check, reviews, context, summ
         for e in row['evidence']:
             require(e['question_id'] in qs, 'v4 assembly: coverage names a missing question')
             evidence.append({k: copy.deepcopy(e[k]) for k in ('question_id', 'components', 'visual_verdict', 'reason')} | {'direction_id': did})
-            if answered(e):
-                for rid in e['tested_relation_ids']:
-                    claims.setdefault((e['question_id'], rid), set()).add(did)
+            for rid in e['tested_relation_ids']:
+                claims.setdefault((e['question_id'], rid), set()).add(did)
     question_reviews = []
     for q in bank['questions']:
         qid = q['question_id']
@@ -446,8 +460,7 @@ def _compile(brief, bank, raw):
             ix = part['answer_unit_indices']
             require(len(ix) == len(set(ix)) and all(i < len(qs[qid]['answer_units']) for i in ix), 'assessment4: nonexistent answer unit')
             require(bool(ix) == (part['location'] == 'answer'), 'assessment4: only actual answer units are recalled evidence')
-        if any(p['location'] == 'answer' for p in parts.values()):
-            asks.add(key)
+        asks.add(key)       # placement follows the evidence row (2026-11-11-place-by-evidence), not the answered parts
         evid[key] = row
     for row in a['issues']:
         require(set(row['question_ids']) <= set(qs) and set(row['direction_ids']) <= set(dirs), 'assessment4: issue references missing objects')

@@ -157,8 +157,7 @@ def run(packet, out, model, invoke, resume=None):
     map_checks = [values[-1]]
 
     # 2a: off-goal questions → supplement points (no basis) ------------------
-    judged = {e['question_id'] for r in rows.values() for e in r['evidence']}
-    off_goal = [q['question_id'] for q in bank['questions'] if q['question_id'] not in judged]
+    off_goal = v4.off_goal(bank, rows.values())
     supplement, out_of_scope = [], []
     if off_goal:
         ctx = v3.supplement_input(bank, off_goal, points_doc, page_counts)

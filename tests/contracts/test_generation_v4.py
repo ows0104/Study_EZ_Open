@@ -404,3 +404,49 @@ def test_the_carry_over_fingerprint_is_the_question_content():
     next(q for q in other['bank_snapshot']['questions'] if q['question_id'] == 'Q1')['answer'] = 'Changed answer'
     changed = task_fingerprints(other)
     assert [t for t in before if before[t] != changed[t]] == [t['task_id'] for t in doc['tasks'] if t['question_id'] == 'Q1']
+
+
+# ---------------------------------------------------------------- placement by evidence (2026-11-11-place-by-evidence)
+def partial_rows(rid='R1'):
+    """D1's only component is too big for Q3 to answer whole: Q3's row says missing, but the judgment reviewed it
+    for D1 (261102_02 /4 trial: Q001 host factors, Q003 environment factors on D001)."""
+    r = rows()
+    r[0]['evidence'][1] = ev('Q3', rid, [part('host', 'missing'), part('env', 'missing')]) if rid else \
+        {**ev('Q3', 'R1', [part('host', 'missing'), part('env', 'missing')]), 'tested_relation_ids': []}
+    r[0]['status'] = 'missing'                      # env is now asked by nobody
+    return r
+
+
+def test_a_question_reviewed_for_a_goal_is_placed_there_even_if_it_answers_no_whole_part():
+    b, bank = scenario()
+    doc, placed = build(b, bank, partial_rows())
+    assert ('Q3', 'D1') in tasks(doc) and placed['unplacedQuestions'] == []
+    # Completeness still follows the answered parts: D1 is not covered and stays an add-stage gap.
+    goal = next(g for g in v3.coverage_input(b, bank)['goals'] if g['direction_id'] == 'D1')
+    assert not c.full(partial_rows()[0], goal) and c.missing_components(partial_rows()[0], goal) == ['env']
+    assert c.not_ready(b, partial_rows(), [review(q['question_id']) for q in bank['questions']]) == [{'direction_id': 'D1', 'reason': 'partial'}]
+
+
+def test_a_reviewed_question_without_any_tested_relation_stays_unplaced():
+    b, bank = scenario()
+    doc, placed = build(b, bank, partial_rows(rid=None))
+    assert ('Q3', 'D1') not in tasks(doc)
+    assert [u['question_id'] for u in placed['unplacedQuestions']] == ['Q3']
+
+
+def test_duplicates_may_group_questions_reviewed_for_the_goal():
+    b, bank = scenario()
+    ctx = v3.coverage_input(b, bank)
+    r = partial_rows()
+    r[0]['duplicates'] = [{'question_ids': ['Q1', 'Q3'], 'reason': 'Same recall'}]
+    c.check_coverage({'rows': r}, ctx['goals'], ctx['questions'])
+
+
+def test_a_question_with_rows_but_no_tested_relation_goes_to_the_supplement():
+    """261102_02 /4 trial: 10 questions had evidence rows without relations, so neither placed nor supplemented."""
+    b, bank = scenario()
+    assert c.off_goal(bank, rows()) == []
+    assert c.off_goal(bank, partial_rows(rid=None)) == ['Q3']
+    unknown = rows()
+    unknown[1]['status'] = 'unknown'
+    assert c.off_goal(bank, unknown) == ['Q2']
