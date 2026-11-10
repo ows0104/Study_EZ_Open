@@ -148,7 +148,7 @@ def _bank_findings(bank, sources):
 def _intake(packet, out):
     """The independently authored bank (1c or a web response). Questions with format errors are left out."""
     intake = copy.deepcopy(packet['intakeBank'])
-    bank = intake['bank']
+    bank, projection = v3.intake_projection(intake['bank'])
     sources = [s['id'] for s in packet['sources']]
     report = validate_bank(bank, sources)
     rejected = []
@@ -163,7 +163,7 @@ def _intake(packet, out):
             q['prerequisites'] = [p for p in q.get('prerequisites', []) if p not in bad]
         intake['visual_stimuli'] = [s for s in intake['visual_stimuli'] if s['question_id'] not in bad]
     rendered = visual.render(bank, intake['visual_stimuli'], packet, out / 'material')
-    return rendered, intake['visual_stimuli'], intake['clinical_conflicts'], rejected
+    return rendered, intake['visual_stimuli'], intake['clinical_conflicts'], rejected, projection
 
 
 def _join_points(bank, brief, rows):
@@ -200,7 +200,7 @@ def run(packet, out, model, invoke, resume=None):
     points_doc = json.loads(packet['points']) if table is not None else None
 
     # 1c: intake bank -------------------------------------------------------
-    bank, stimuli, conflicts, rejected = _intake(packet, out)
+    bank, stimuli, conflicts, rejected, intake_changes = _intake(packet, out)
     initial_bank = copy.deepcopy(bank)
 
     # normalize (+ one structural correction) -------------------------------
@@ -414,7 +414,7 @@ def run(packet, out, model, invoke, resume=None):
                   'offGoalQuestions': [{'question_id': q['question_id'], 'question': q,
                                         'reason': next(d['reason'] for d in out_of_scope if d['question_id'] == q['question_id'])}
                                        for q in off_questions],
-                  'rejectedAtIntake': rejected, 'supplement': supplement, 'supplementPoints': points_doc if supplement else None,
+                  'rejectedAtIntake': rejected, 'intakeProjection': intake_changes, 'supplement': supplement, 'supplementPoints': points_doc if supplement else None,
                   'initialBrief': initial_brief, 'initialBank': initial_bank, 'coverage': coverage_rows, 'mapCheck': map_check,
                   'itemReviews': review_rows, 'clinicalContext': context, 'clinicalConflicts': conflicts,
                   'visualStimuli': stimuli, 'medicalFinal': True, 'sourceAssessment': raw, 'fixes': fixes,

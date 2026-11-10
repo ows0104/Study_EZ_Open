@@ -259,3 +259,17 @@ def test_tampered_v3_runs_are_rejected_by_the_consumer(tmp_path, tamper, message
     tamper(result)
     with pytest.raises(ValueError, match=message):
         consume(result, p)
+
+
+def test_a_bank_in_another_bank_version_is_projected_and_recorded(tmp_path):
+    p = packet(tmp_path)
+    p['intakeBank']['bank']['build_meta']['schema_version'] = 'BANK'
+    p['intakeBank']['bank']['questions'][0].update(tier='Core', importance=5)
+    p['inputHash'] = packet_hash(p)
+    result = g.run(p, tmp_path / 'out', invoke=Model())
+    changes = result['manifest']['intakeProjection']
+    assert {'field': 'build_meta.schema_version', 'from': 'BANK', 'to': '3.3'} in changes and result['manifest']['rejectedAtIntake'] == []
+    assert consume(result, p) == result['document']
+    result['manifest']['intakeProjection'] = []
+    with pytest.raises(ValueError, match='intake projection'):
+        consume(result, p)

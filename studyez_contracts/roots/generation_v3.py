@@ -88,6 +88,30 @@ BRIEF_FIX_OUTPUT = obj(brief=copy.deepcopy(v2.BRIEF), map_change_reason=TEXT)
 OUTPUTS = {'coverage': COVERAGE_OUTPUT, 'map-check': MAP_CHECK_OUTPUT, 'item-review': ITEM_REVIEW_OUTPUT,
            'supplement': SUPPLEMENT_OUTPUT, 'add': ADD_OUTPUT, 'fix': FIX_OUTPUT}
 
+# ---------------------------------------------------------------- intake projection
+def intake_projection(bank):
+    """Fields of an independently authored bank that the assembly recomputes, set to the current bank format.
+
+    An independent bank (1c) is written before the exam points' tiers exist; the assembly sets tier and
+    importance from the point basis (generation_v2.project_importance, bank 3.3). The first real run
+    (261102_02, 2026-11-10) wrote build_meta.schema_version "BANK" with 3.2 importance numbers, and the
+    whole bank was refused before any question was read. Only build_meta.schema_version and the importance
+    of each question and concept (the number of its own tier) change; every change is returned and recorded."""
+    from studyez_contracts.bank.validate import SCHEMA_VERSIONS
+    current = SCHEMA_VERSIONS[-1]
+    value = copy.deepcopy(bank)
+    changes = []
+    if value['build_meta'].get('schema_version') != current:
+        changes.append({'field': 'build_meta.schema_version', 'from': value['build_meta'].get('schema_version'), 'to': current})
+        value['build_meta']['schema_version'] = current
+    for row, key in [*((q, 'question_id') for q in value['questions']), *((c, 'concept_id') for c in value['concepts'])]:
+        want = imp.BANK_IMPORTANCE.get(row.get('tier'))
+        if want is not None and row.get('importance') != want:
+            changes.append({'field': row[key] + '.importance', 'from': row.get('importance'), 'to': want})
+            row['importance'] = want
+    return value, changes
+
+
 # ---------------------------------------------------------------- pages and hashes
 _PAGES = re.compile(r'(\d+)\s*(?:[–~-]\s*(\d+))?')
 
@@ -689,7 +713,7 @@ def not_ready(brief, coverage_rows, reviews):
 # ---------------------------------------------------------------- result
 MANIFEST_KEYS = {'pipelineVersion', 'inputHash', 'briefHash', 'bankHash', 'model', 'runtimeHash', 'stages', 'verdictLedger',
                  'verdictLedgerHash', 'addRounds', 'notReady', 'offGoalQuestions', 'rejectedAtIntake', 'supplement',
-                 'initialBank', 'initialBrief', 'supplementPoints', 'coverage', 'mapCheck', 'itemReviews', 'clinicalContext',
+                 'initialBank', 'initialBrief', 'supplementPoints', 'intakeProjection', 'coverage', 'mapCheck', 'itemReviews', 'clinicalContext',
                  'clinicalConflicts', 'medicalFinal',
                  'sourceAssessment', 'fixes'}
 
@@ -715,6 +739,7 @@ def validate_result(value, packet):
     require(meta['verdictLedgerHash'] == document_hash(meta['verdictLedger']), 'result3: verdict ledger mismatch')
     require(type(meta['addRounds']) is int and 0 <= meta['addRounds'] <= ADD_LIMIT, 'result3: add budget exceeded')
     require(meta['medicalFinal'] is True, 'result3: the medical review runs once at the end (medical-final/1)')
+    require(meta['intakeProjection'] == intake_projection(packet['intakeBank']['bank'])[1], 'result3: intake projection differs')
     # Add-only: every intake question survives with the same content unless it was a listed fix target.
     fixed = {f['question_id'] for f in meta['fixes']}
     require(all(f['attempt'] <= FIX_LIMIT for f in meta['fixes']), 'result3: fix budget exceeded')
