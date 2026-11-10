@@ -45,7 +45,8 @@ def completed_result(out,packet):
     payload=json.loads((out/'result.json').read_text(encoding='utf-8'))
     validate_result(payload,packet)
     ledger=json.loads((out/'ledger.json').read_text(encoding='utf-8'));meta=payload['manifest']
-    if ledger.get('identity')!=meta['runtimeHash']or ledger.get('repairRounds')!=meta['repairRounds']:
+    budget='addRounds'if meta.get('pipelineVersion')=='root-generation/3'else'repairRounds'  # /3 has add rounds, not repair rounds
+    if ledger.get('identity')!=meta['runtimeHash']or ledger.get(budget)!=meta[budget]:
         raise ValueError('완료 결과의 원래 실행 지문/상한이 다릅니다.')
     if meta.get('normalizationRecoveries',[])!=ledger.get('normalizationRecoveries',[]):raise ValueError('초기 지도 재검증 이력이 다릅니다.')
     if ledger.get('normalizationRecoveries'):
@@ -89,7 +90,7 @@ def map_tree_front(packet, out, *, model=None, resume=None, run=None):
         result = (run or run_forwarded)(args, cwd=Path(__file__).resolve().parents[1])
         if result.returncode: return None
     derived = json.loads(derived_path.read_text(encoding='utf-8'))
-    again = map_tree.derive_packet(packet, derived['conceptMap'], derived['points'], derived['frontStages'])
+    again = map_tree.derive_packet(packet, derived['conceptMap'], derived['points'], derived['frontStages'], derived.get('intakeBank'))
     if map_tree.public(again) != map_tree.public(derived): raise ValueError('앞 단계 결과로 만든 생성 입력이 요청과 맞지 않습니다.')
     gen = out / 'generation'; gen.mkdir(exist_ok=True)
     path = gen / 'packet.json'

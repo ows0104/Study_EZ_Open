@@ -12,7 +12,7 @@
 - 앞 단계도 자동 재실행하지 않는다. 관리자의 이유가 있을 때만 이어 간다(`--generation-resume <이유>` → `root_front --resume`). 그때 실패 단계와 그 뒤 단계를 `.resume-<k>/`에 보관하고 다시 돈다.
 - 이 변경 전의 러너는 이 요청을 모델 호출 전에 거절한다.
 
-`root_native_json.py`는 `v3-`로 시작하는 root-generation/3 단계도 실행한다(스키마·프롬프트·단계 검사는 `studyez_contracts.roots.generation_v3`). 그 단계는 입력의 `pages`와 그 문항의 자극 그림만 첨부한다. /2 단계 이름의 동작은 그대로다. 요청 경로(map-tree/2)는 아직 연결하지 않았다(PR C).
+`root_native_json.py`는 `v3-`로 시작하는 root-generation/3 단계도 실행한다(스키마·프롬프트·단계 검사는 `studyez_contracts.roots.generation_v3`). 그 단계는 입력의 `pages`와 그 문항의 자극 그림만 첨부한다. /2 단계 이름의 동작은 그대로다. `pipeline: map-tree/2`(형식 `source-assessment/2-map-tree/2`)는 앞 단계에서 지도·포인트와 함께 독립 문제은행(`bank/`, 지시문 `parallel/bank.md` + `map-tree/bank-task.md`)을 동시에 뽑고, 파생 packet이 root-generation/3으로 돈다. 셋 중 하나만 다시 돌아도 다른 둘은 다시 돌리지 않는다. 마지막 포인트 대조에 남은 지적의 포인트는 `openPoints`로 결과까지 간다.
 
 자료를 찾고 생성기를 실행한 뒤 결과를 서버에 올린다.
 명시적 Concept map 자동출제 일감만 `connection_generation.py`로 분기한다. 서명된 원본 사본을 별도 인증 헤더 없이 받아

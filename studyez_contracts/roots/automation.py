@@ -120,10 +120,14 @@ def validate_result(result, packet):
         return check3(result, packet)
     if packet.get('pipeline') is not None:
         # map-tree/1: the run used a generation packet derived from this request; re-derive it first.
-        from .map_tree import PIPELINE, resolve
-        require(packet['pipeline'] == PIPELINE, 'result: unknown generation pipeline')
+        from .map_tree import FORMATS, resolve
+        require(packet['pipeline'] in FORMATS, 'result: unknown generation pipeline')
+        derived = resolve(result, packet)
+        if derived.get('generationPolicy') == 'root-generation/3':
+            from .generation_v3 import validate_result as check3
+            return check3(result, derived)
         from .generation_v2 import validate_result as check
-        return check(result, resolve(result, packet))
+        return check(result, derived)
     if is_v2_source(packet):
         from .generation_v2 import validate_result as check
         return check(result,packet)

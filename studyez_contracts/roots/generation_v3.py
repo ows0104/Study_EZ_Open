@@ -73,6 +73,9 @@ POINT = {'type': 'object', 'additionalProperties': False, 'required': ['point', 
 SUPPLEMENT_OUTPUT = obj(rows=arr(obj(question_id=TEXT, decision=enum('point', 'out_of_scope', 'duplicate_of'),
                                      point={'anyOf': [POINT, {'type': 'null'}]}, duplicate_of=_NULLABLE, reason=TEXT), 1))
 
+# The independent bank of map-tree/2 (1c): the authored bank, its source crops and clinical facts.
+INTAKE_OUTPUT = obj(bank=copy.deepcopy(v2.AUTHOR_BANK), visual_stimuli=arr(v2.CROP), clinical_conflicts=arr(v2.CONFLICT))
+
 ADD_OUTPUT = obj(questions=arr(QUESTION, 1), concepts=arr(BANK_CONCEPT), retrieval_plan=arr(PLAN),
                  source_conflicts=arr(SOURCE_CONFLICT), visual_stimuli=arr(v2.CROP), clinical_conflicts=arr(v2.CONFLICT))
 FIX_OUTPUT = obj(questions=arr(QUESTION, 1), source_conflicts=arr(SOURCE_CONFLICT),
@@ -702,6 +705,12 @@ def validate_result(value, packet):
     brief, doc = value['brief'], value['document']
     bank = doc['bank_snapshot']
     require(meta['inputHash'] == packet['inputHash'], 'result3: input mismatch')
+    # map-tree/2: the derived generation packet travels in the manifest so the server can re-derive it.
+    require(('derivedPacket' in meta) == ('derivedFrom' in packet), 'result3: derived generation packet evidence mismatch')
+    if 'derivedFrom' in packet:
+        from .map_tree import public
+        require(meta['derivedPacket'] == public(packet), 'result3: the manifest carries another generation packet')
+        require(meta.get('auditOpen') == packet['frontStages']['openPoints'], 'result3: open audit points differ')
     require(meta['briefHash'] == document_hash(brief) and meta['bankHash'] == document_hash(bank), 'result3: stale manifest')
     require(meta['verdictLedgerHash'] == document_hash(meta['verdictLedger']), 'result3: verdict ledger mismatch')
     require(type(meta['addRounds']) is int and 0 <= meta['addRounds'] <= ADD_LIMIT, 'result3: add budget exceeded')

@@ -23,6 +23,7 @@ from studyez_llm import codex
 from studyez_contracts.roots import document_hash
 from studyez_contracts.roots import generation_v2 as v2
 from studyez_contracts.roots import generation_v3 as v3
+from studyez_contracts.roots import map_tree
 from studyez_contracts.roots.automation import validate_checks
 from studyez_contracts.roots.source_assessment import envelope
 from studyez_contracts.bank.validate import validate_bank
@@ -419,7 +420,10 @@ def run(packet, out, model, invoke, resume=None):
                   'visualStimuli': stimuli, 'medicalFinal': True, 'sourceAssessment': raw, 'fixes': fixes,
                   **({'bankProjection': projection} if projection else {}),
                   **({'importanceProjection': importance_proof} if importance_proof else {}),
-                  **({'stageResumes': ledger['stageResumes']} if ledger.get('stageResumes') else {})}}
+                  **({'stageResumes': ledger['stageResumes']} if ledger.get('stageResumes') else {}),
+                  # map-tree/2: the server re-derives this packet from its request (studyez_contracts.roots.map_tree).
+                  **({'derivedPacket': map_tree.public(packet), 'auditOpen': packet['frontStages']['openPoints']}
+                     if 'derivedFrom' in packet else {})}}
     v3.validate_result(result, packet)
     g.write(out / 'result.json', result)
     return result

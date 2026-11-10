@@ -170,4 +170,9 @@ PR 셋으로 나눈다. 각 PR은 혼자서 검사가 통과하고 /2 동작을 
     - 문항 판정 재사용은 고친 문항에도 적용된다. 이미 판정받은 글과 같은 교체본이 오면 다시 묻지 않는다.
     - 목표 밖 문항에서 나온 새 목표도 그 출발 문항만 넣은 좁힌 커버 확인을 한 번 거친다. 증거를 지어 넣지 않기 위해서다(spec R2a의 '커버 확인을 다시 하지 않는다'를 이렇게 바꿈).
   - 검사: 새 테스트 53개 포함, contracts·quizbank·runner 1676 통과. 실패 1개(test_desktop_control)는 master에서도 같다.
-- **PR C(요청 경로)**: 아직이다. 그때까지 /3은 packet에 `generationPolicy`와 `intakeBank`를 직접 넣어야만 돈다.
+- **PR C(요청 경로)**: 브랜치 claude/root-gen3-c
+  - 관리자 버튼의 「새 구조(시범)」 → 서버 `map-tree/2` → 러너 앞 단계(지도·포인트·문제은행 동시) → /3 → 서버 검증·게시
+  - 열린 포인트 지적(`openPoints`)은 결과 manifest의 `auditOpen`까지 간다. 학생·관리자 화면 표시는 아직 하지 않았다.
+  - 검사
+    - 러너 v3 4개, 서버 map-tree 2개, 서버 root 30개·route 1개, 웹 버튼 10개
+    - 웹 타입 검사에서 바꾼 파일은 오류가 없다. 남은 오류는 `RootPdfSlides.tsx`의 pdfjs-dist 누락으로, 메인 체크아웃 node_modules가 오래된 탓이다. 빌드도 같은 이유로 여기서는 못 돌렸다.

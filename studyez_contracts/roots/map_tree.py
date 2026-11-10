@@ -24,6 +24,12 @@ from studyez_contracts.bank import importance as imp
 
 PIPELINE = 'map-tree/1'
 FORMAT = 'source-assessment/2-map-tree/1'      # the server packet; earlier runners stop before any model call
+# map-tree/2 (docs/changes/2026-11-10-root-generation-3, PR C): the same front stages plus an independent
+# question bank (1c) next to the Map and points; the derived packet runs root-generation/3.
+PIPELINE2 = 'map-tree/2'
+FORMAT2 = 'source-assessment/2-map-tree/2'
+FORMATS = {PIPELINE: FORMAT, PIPELINE2: FORMAT2}
+GENERATION_POLICY2 = 'root-generation/3'
 GENERATION_FORMAT = 'source-assessment/2'       # the derived packet the generator runs
 FRONT_POLICY = 'map-tree-front/1'
 SOURCE_KINDS = {'S1': 'notes_current', 'S2': 'jokbo'}
@@ -68,9 +74,14 @@ def lecture_scope(title, pages, extra=''):
     return ' '.join(parts)
 
 
+def format_for(pipeline):
+    require(pipeline in FORMATS, 'map-tree: unknown pipeline')
+    return FORMATS[pipeline]
+
+
 def require_server_packet(packet):
-    require(packet.get('pipeline') == PIPELINE and packet.get('sourceAssessmentFormat') == FORMAT,
-            'map-tree: not a map-tree/1 request')
+    require(packet.get('pipeline') in FORMATS and packet.get('sourceAssessmentFormat') == FORMATS[packet['pipeline']],
+            'map-tree: not a map-tree request')
     require(packet.get('inputMode') == 'source' and packet.get('authoring') == 'cli' and not packet.get('parallelAuthoring')
             and not packet.get('conceptMap') and not packet.get('points'), 'map-tree: the request must be source-only CLI')
     ids = [s['id'] for s in packet['sources']]
@@ -107,17 +118,19 @@ def check_outputs(concept_map, points, title, pages):
 HEX = re.compile(r'[a-f0-9]{64}')
 
 
-def check_front(front, server, concept_map, points):
-    require(type(front) is dict and set(front) == {'policy', 'pageCounts', 'conceptMapSha256', 'pointsSha256', 'pointsFrom',
-                                                   'audits', 'stages', 'prompts', 'resumes'} and front['policy'] == FRONT_POLICY,
-            'map-tree: malformed front-stage proof')
+def check_front(front, server, concept_map, points, bank=None):
+    with_bank = server.get('pipeline') == PIPELINE2
+    keys = {'policy', 'pageCounts', 'conceptMapSha256', 'pointsSha256', 'pointsFrom', 'audits', 'stages', 'prompts', 'resumes'}
+    if with_bank:
+        keys |= {'bankHash', 'openPoints'}
+    require(type(front) is dict and set(front) == keys and front['policy'] == FRONT_POLICY, 'map-tree: malformed front-stage proof')
     pages = front['pageCounts']
     require(type(pages) is dict and list(pages) == [s['id'] for s in server['sources']]
             and all(type(n) is int and n > 0 for n in pages.values()), 'map-tree: page inventory')
     require(front['conceptMapSha256'] == text_sha256(concept_map) and front['pointsSha256'] == text_sha256(points), 'map-tree: front outputs changed')
     stages = front['stages']
     repaired = front['pointsFrom'] == 'point-repair'
-    expected = ['map', 'point', 'audit'] + (['point-repair', 'final-audit'] if repaired else [])
+    expected = ['map', 'point'] + (['bank'] if with_bank else []) + ['audit'] + (['point-repair', 'final-audit'] if repaired else [])
     require(front['pointsFrom'] in ('point', 'point-repair') and type(stages) is dict and list(stages) == expected,
             'map-tree: front stages out of order')
     for name, row in stages.items():
@@ -137,17 +150,31 @@ def check_front(front, server, concept_map, points):
     require(type(front['resumes']) is list and all(type(r) is dict and set(r) == {'reason', 'stages'} and r['reason'].strip()
                                                    and type(r['stages']) is list for r in front['resumes']), 'map-tree: resume history')
     check_outputs(concept_map, points, server['title'], pages)
+    if with_bank:
+        from .validate import document_hash
+        require(type(bank) is dict and set(bank) == {'bank', 'visual_stimuli', 'clinical_conflicts'}, 'map-tree: the independent bank is missing')
+        require(front['bankHash'] == document_hash(bank) and stages['bank']['outputSha256'] == front['bankHash'],
+                'map-tree: the independent bank is not the recorded bank stage output')
+        _refs(bank, pages)
+        pids = {p['point_id'] for p in json.loads(points)['points']}
+        require(type(front['openPoints']) is list and set(front['openPoints']) <= pids
+                and front['openPoints'] == sorted(set(front['openPoints'])), 'map-tree: open audit points')
+    else:
+        require(bank is None, 'map-tree/1 has no independent bank')
 
 
-def derive_packet(server, concept_map, points, front):
-    """The generation packet: the pilots' `provided` packet built from the server-frozen request."""
+def derive_packet(server, concept_map, points, front, bank=None):
+    """The generation packet: the pilots' `provided` packet built from the server-frozen request.
+    map-tree/2 also carries the independent bank and names root-generation/3."""
     require_server_packet(server)
     require(packet_hash(server) == server['inputHash'], 'map-tree: server packet fingerprint')
-    check_front(front, server, concept_map, points)
+    check_front(front, server, concept_map, points, bank)
     value = {k: copy.deepcopy(v) for k, v in server.items() if k not in ('inputHash', 'pipeline', 'operatorResumes')}
     value.update(scope=lecture_scope(server['title'], front['pageCounts'], server.get('scope', '')) + ' ' + SCOPE_SUFFIX,
                  conceptMap=concept_map, points=points, inputMode='provided', sourceAssessmentFormat=GENERATION_FORMAT,
                  speedStages=True, derivedFrom=server['inputHash'], frontStages=copy.deepcopy(front))
+    if server['pipeline'] == PIPELINE2:
+        value.update(generationPolicy=GENERATION_POLICY2, intakeBank=copy.deepcopy(bank))
     value['inputHash'] = packet_hash(value)
     return value
 
@@ -156,6 +183,6 @@ def resolve(result, server):
     """Consumer side: the generation packet this result ran, re-derived from the server request."""
     derived = result.get('manifest', {}).get('derivedPacket') if isinstance(result, dict) else None
     require(type(derived) is dict, 'map-tree: the result does not carry its derived generation packet')
-    again = derive_packet(server, derived.get('conceptMap', ''), derived.get('points', ''), derived.get('frontStages'))
+    again = derive_packet(server, derived.get('conceptMap', ''), derived.get('points', ''), derived.get('frontStages'), derived.get('intakeBank'))
     require(public(again) == public(derived), 'map-tree: the generation packet is not derived from this request')
     return again
