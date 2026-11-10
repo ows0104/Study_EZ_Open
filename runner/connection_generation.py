@@ -171,7 +171,7 @@ def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=
     args = [sys.executable, '-m', module, '--packet', str(gen_packet_path.resolve()), '--out', str(gen_out.resolve())]
     if model: args += ['--model', model]
     if resume and module == 'runner.root_native_json' and (gen_out / 'ledger.json').exists(): args += ['--resume', resume]
-    if (gen_out/'result.json').exists() and resume and gen_packet.get('generationPolicy')=='root-generation/3':
+    if (gen_out/'result.json').exists() and resume and gen_packet.get('generationPolicy')in('root-generation/3','root-generation/4'):
         set_aside_stale_result(gen_out,gen_packet,packet,resume)
     if (gen_out/'result.json').exists():payload=completed_result(gen_out,gen_packet)
     else:

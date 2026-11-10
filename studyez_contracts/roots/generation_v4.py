@@ -43,27 +43,122 @@ _REVIEW['required'].append('importance_note')
 ITEM_REVIEW_OUTPUT = copy.deepcopy(v3.ITEM_REVIEW_OUTPUT)
 ITEM_REVIEW_OUTPUT['properties']['reviews']['items'] = _REVIEW
 
+# R2: authoring outputs name each question's basis beside the questions (bank 3.3 questions take no extra field).
+QUESTION_IMPORTANCE = obj(question_id=TEXT, importance_basis=BASIS)
+
+
+def _with_basis(schema, minimum=1):
+    value = copy.deepcopy(schema)
+    value['properties']['question_importance'] = arr(QUESTION_IMPORTANCE, minimum)
+    value['required'].append('question_importance')
+    return value
+
+
+INTAKE_OUTPUT = _with_basis(v3.INTAKE_OUTPUT)
+ADD_OUTPUT = _with_basis(v3.ADD_OUTPUT)
+FIX_OUTPUT = _with_basis(v3.FIX_OUTPUT)
+SUPPLEMENT_OUTPUT = obj(rows=arr(obj(question_id=TEXT, decision=v3.SUPPLEMENT_OUTPUT['properties']['rows']['items']['properties']['decision'],
+                                     point={'anyOf': [POINT, {'type': 'null'}]}, duplicate_of=v3._NULLABLE, reason=TEXT), 1))
+OUTPUTS = {**v3.OUTPUTS, 'coverage': COVERAGE_OUTPUT, 'item-review': ITEM_REVIEW_OUTPUT, 'supplement': SUPPLEMENT_OUTPUT,
+           'add': ADD_OUTPUT, 'fix': FIX_OUTPUT}
+
 
 # ---------------------------------------------------------------- importance per question (R2)
-def split_basis(questions):
-    """Authoring questions -> (bank questions, basis by question_id).
+def collect_basis(rows, question_ids):
+    """`question_importance` rows of an authoring output -> basis by question_id.
 
-    Every authored question names its basis; an empty list means none was found. A missing field is a
-    format error of that stage (no new retry). Contents are not judged here."""
-    out, basis = [], {}
-    for q in questions:
-        require(type(q) is dict and type(q.get('question_id')) is str, 'v4 authoring: question_id required')
-        require('importance_basis' in q, f"v4 authoring: {q['question_id']} needs importance_basis (an empty list when none)")
-        q = copy.deepcopy(q)
-        b = q.pop('importance_basis')
+    Exactly one row per question the output wrote; an empty list means no basis was found. Contents are
+    not judged here (R3); a malformed row is a format error of that stage (no new retry)."""
+    require(type(rows) is list, 'v4 authoring: question_importance list required')
+    found = {}
+    for row in rows:
+        require(type(row) is dict and set(row) == {'question_id', 'importance_basis'}, 'v4 authoring: malformed question_importance row')
+        qid = row['question_id']
+        require(qid not in found, f'v4 authoring: {qid} has two importance rows')
+        b = row['importance_basis']
+        require(type(b) is list and all(type(x) is dict and set(x) == {'kind', 'refs', 'quote', 'reason', 'year'}
+                                         and (x['year'] is None or type(x['year']) is int)
+                                         and type(x['refs']) is list and all(type(r) is dict and set(r) == {'source_id', 'pages'} for r in x['refs'])
+                                         for x in b), f'v4 authoring: {qid} malformed importance_basis row')
         try:
             imp.validate_basis(b)
         except imp.ImportanceError as e:
-            raise ValueError(f"v4 authoring: {q['question_id']} {e}") from None
-        require(q['question_id'] not in basis, 'v4 authoring: duplicate question_id')
-        basis[q['question_id']] = b
-        out.append(q)
-    return out, basis
+            raise ValueError(f'v4 authoring: {qid} {e}') from None
+        found[qid] = copy.deepcopy(b)
+    missing = [q for q in question_ids if q not in found]
+    require(not missing, 'v4 authoring: importance_basis missing for ' + ', '.join(missing) + ' (an empty list when none)')
+    require(set(found) <= set(question_ids), 'v4 authoring: importance rows for questions this output did not write')
+    return found
+
+
+def without_basis(value):
+    """The /3 shape of a /4 authoring output (for the /3 checks and merges)."""
+    return {k: v for k, v in value.items() if k != 'question_importance'}
+
+
+def check_intake(value):
+    """The independent bank (1c) of map-tree/3: /3 shape plus one basis row per question."""
+    require(type(value) is dict and set(value) == set(INTAKE_OUTPUT['properties']), 'v4 intake bank: fields')
+    validate_shape(without_basis(value), v3.INTAKE_OUTPUT, 'v4 intake bank')
+    return collect_basis(value['question_importance'], [q['question_id'] for q in value['bank']['questions']])
+
+
+def check_added(value, ctx, state=None):
+    require(type(value) is dict and set(value) == set(ADD_OUTPUT['properties']), 'v4 add output: fields')
+    collect_basis(value['question_importance'], [q['question_id'] for q in value['questions']])
+    v3.check_added(without_basis(value), ctx, state)
+    return value
+
+
+def check_fixed(value, ctx, state=None):
+    require(type(value) is dict and set(value) == set(FIX_OUTPUT['properties']), 'v4 fix output: fields')
+    collect_basis(value['question_importance'], [q['question_id'] for q in value['questions']])
+    v3.check_fixed(without_basis(value), ctx, state)
+    return value
+
+
+def check_review_input(value, ctx):
+    validate_shape(value, ITEM_REVIEW_OUTPUT, 'v4 review output')
+    v3.check_review_input({'reviews': [{k: v for k, v in r.items() if k != 'importance_note'} for r in value['reviews']]}, ctx)
+    return value
+
+
+def _as_v3_points(value):
+    """A /4 supplement output or points doc in /3 form (an empty basis on every point) so the /3 checks and
+    attach_points run unchanged; the basis is dropped again afterwards."""
+    value = copy.deepcopy(value)
+    for p in value.get('points', []):
+        require('importance_basis' not in p, 'v4: exam points carry no importance (R1)')
+        p['importance_basis'] = []
+    for r in value.get('rows', []):
+        if type(r) is dict and type(r.get('point')) is dict:
+            require('importance_basis' not in r['point'], 'v4 supplement: a point carries no importance (R1)')
+            r['point']['importance_basis'] = []
+    return value
+
+
+def check_supplement(value, ctx, state=None):
+    v3.check_supplement(_as_v3_points(value), ctx, {'points_doc': _as_v3_points(state['points_doc'])} if state is not None else None)
+    return value
+
+
+def attach_points(points_doc, output, off_goal_ids, page_counts):
+    """v3.attach_points for /4 points (no basis): returns (points_doc, decisions)."""
+    value, _, decisions = v3.attach_points(_as_v3_points(points_doc), _as_v3_points(output), off_goal_ids, page_counts)
+    for p in value['points']:
+        p.pop('importance_basis')
+    return value, decisions
+
+
+def check_points(points_doc):
+    """A /4 exam-point document: schema version, IDs, the notebook profile; no basis on any point."""
+    require(type(points_doc) is dict and points_doc.get('schema_version') == 'exam-point-extract/4', 'v4: points are not exam-point-extract/4')
+    profile = points_doc.get('notebook_profile')
+    require(type(profile) is dict and profile.get('emphasis_style') in imp.STYLES, 'v4: notebook_profile.emphasis_style required')
+    ids = [p.get('point_id') for p in points_doc.get('points', [])]
+    require(ids and len(ids) == len(set(ids)), 'v4: point IDs')
+    require(all('importance_basis' not in p for p in points_doc['points']), 'v4: exam points carry no importance (R1)')
+    return points_doc
 
 
 def question_table(basis, profile, bank):
@@ -129,6 +224,13 @@ def importance_warnings(table):
 def importance_notes(reviews):
     """R3: the item review may doubt a basis; that is a note for the admin, never a verdict."""
     return [{'question_id': r['question_id'], 'note': r['importance_note']} for r in reviews if r.get('importance_note', '').strip()]
+
+
+def with_importance(ctx, basis):
+    """A review/fix input plus the current basis of its questions (the fix copies it unless the content changes;
+    the review may note a basis the source contradicts)."""
+    return {**ctx, 'question_importance': [{'question_id': q['question_id'], 'importance_basis': copy.deepcopy(basis.get(q['question_id'], []))}
+                                           for q in ctx['questions']]}
 
 
 def map_check_input(brief, target_ids=None):
@@ -550,7 +652,7 @@ def _judgments4(value, packet, brief, reviewed, meta, doc):
 
 
 MANIFEST_KEYS = v3.MANIFEST_KEYS | {'questionImportance', 'mergedDuplicates', 'unplacedQuestions', 'importanceNotes'}
-FLAVOR = {'policy': POLICY, 'keys': MANIFEST_KEYS, 'judgments': _judgments4}
+FLAVOR = {'policy': POLICY, 'keys': MANIFEST_KEYS, 'judgments': _judgments4, 'prefix': 'v4-'}
 
 
 def validate_result(value, packet):

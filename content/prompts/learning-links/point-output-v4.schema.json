@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "exam-point-extract/4"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "points": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "point_id": {
+            "type": "string",
+            "pattern": "^P[0-9]{3,}$"
+          },
+          "point": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_refs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "pages": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "uniqueItems": true
+                },
+                "locator": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "source_id",
+                "pages",
+                "locator"
+              ],
+              "additionalProperties": false,
+              "anyOf": [
+                {
+                  "properties": {
+                    "pages": {
+                      "minItems": 1
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "locator": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              ]
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "point_id",
+          "point",
+          "source_refs"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0
+    },
+    "notebook_profile": {
+      "type": "object",
+      "properties": {
+        "legend": {
+          "type": "string"
+        },
+        "emphasis_style": {
+          "enum": [
+            "slide",
+            "verbal"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "legend",
+        "emphasis_style",
+        "reason"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "title",
+    "points",
+    "notes",
+    "notebook_profile"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "points": {
+            "maxItems": 0
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "notes": {
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ]
+}

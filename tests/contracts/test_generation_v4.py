@@ -200,7 +200,7 @@ def test_one_question_is_one_task():
 
 # ---------------------------------------------------------------- R1/R2 importance per question
 def basis(kind='slide_emphasis', **kw):
-    row = {'kind': kind, 'refs': [{'source_id': 'S1', 'pages': [3]}], 'quote': '', 'reason': 'Synthetic'}
+    row = {'kind': kind, 'refs': [{'source_id': 'S1', 'pages': [3]}], 'quote': '', 'reason': 'Synthetic', 'year': None}
     row.update(kw)
     return [row]
 
@@ -213,19 +213,40 @@ def test_points_carry_no_importance_and_the_map_check_sees_none():
 
 
 def test_authored_questions_must_name_their_basis():
-    b, bank = scenario()
-    authored = copy.deepcopy(bank['questions'])
-    for q in authored:
-        q['importance_basis'] = []
-    authored[0]['importance_basis'] = basis('exam_forecast', quote='꼭 나온다')
-    questions, found = c.split_basis(authored)
-    assert questions == bank['questions'] and found['Q1'][0]['kind'] == 'exam_forecast'
-    del authored[1]['importance_basis']
-    with pytest.raises(ValueError, match='Q2 needs importance_basis'):
-        c.split_basis(authored)
-    authored[1]['importance_basis'] = basis('exam_forecast')        # a forecast needs the original wording
+    rows = [{'question_id': 'Q1', 'importance_basis': basis('exam_forecast', quote='꼭 나온다')},
+            {'question_id': 'Q2', 'importance_basis': []}]
+    found = c.collect_basis(rows, ['Q1', 'Q2'])
+    assert found['Q1'][0]['kind'] == 'exam_forecast' and found['Q2'] == []
+    with pytest.raises(ValueError, match='missing for Q3'):
+        c.collect_basis(rows, ['Q1', 'Q2', 'Q3'])
+    with pytest.raises(ValueError, match='did not write'):
+        c.collect_basis(rows, ['Q1'])
+    rows[1]['importance_basis'] = basis('exam_forecast')            # a forecast needs the original wording
     with pytest.raises(ValueError, match='Q2'):
-        c.split_basis(authored)
+        c.collect_basis(rows, ['Q1', 'Q2'])
+
+
+def test_authoring_outputs_carry_basis_beside_the_questions():
+    for schema in (c.INTAKE_OUTPUT, c.ADD_OUTPUT, c.FIX_OUTPUT):
+        assert 'question_importance' in schema['required']
+    q = c.ADD_OUTPUT['properties']['questions']['items']
+    assert 'importance_basis' not in q['properties']                # bank 3.3 questions are unchanged
+    assert 'importance_note' in c.ITEM_REVIEW_OUTPUT['properties']['reviews']['items']['required']
+    assert 'duplicates' in c.COVERAGE_OUTPUT['properties']['rows']['items']['required']
+
+
+def test_supplement_points_have_no_basis():
+    doc = {'schema_version': 'exam-point-extract/4', 'title': 'S', 'notebook_profile': PROFILE,
+           'points': [{'point_id': 'P001', 'point': 'Existing', 'source_refs': [{'source_id': 'S1', 'pages': [1], 'locator': None}]}]}
+    c.check_points(doc)
+    out = {'rows': [{'question_id': 'Q7', 'decision': 'point', 'duplicate_of': None, 'reason': 'Synthetic',
+                     'point': {'point': 'New', 'source_refs': [{'source_id': 'S1', 'pages': [2], 'locator': None}]}}]}
+    value, decisions = c.attach_points(doc, out, ['Q7'], {'S1': 5})
+    assert [p['point_id'] for p in value['points']] == ['P001', 'P002'] and all('importance_basis' not in p for p in value['points'])
+    assert decisions[0]['point_id'] == 'P002'
+    out['rows'][0]['point']['importance_basis'] = []
+    with pytest.raises(ValueError, match='no importance'):
+        c.attach_points(doc, out, ['Q7'], {'S1': 5})
 
 
 def test_tier_is_computed_from_the_question_basis():
@@ -298,7 +319,7 @@ def result(p, b, bank, coverage, basis):
     medical = f.old.checks(bank)
     med_input = {'title': p['title'], 'bank': bank, 'clinicalInput': v2.medical_input(bank, []), 'medicalFinal': True, '_pipeline_version': c.POLICY}
     stage = lambda name, inp, out: {'name': name, 'status': 'completed', 'inputHash': document_hash(inp), 'outputHash': document_hash(out)}
-    stages = [stage('normalize', {}, b), stage('v3-add-0', {}, {}), stage('v3-context-0', {}, JUDGMENT), stage('medical-0', med_input, medical)]
+    stages = [stage('normalize', {}, b), stage('v4-add-0', {}, {}), stage('v4-context-0', {}, JUDGMENT), stage('medical-0', med_input, medical)]
     meta = {'pipelineVersion': c.POLICY, 'inputHash': p['inputHash'], 'briefHash': document_hash(b), 'bankHash': document_hash(doc['bank_snapshot']),
             'model': 'synthetic', 'runtimeHash': '0' * 64, 'stages': stages, 'verdictLedger': ledger, 'verdictLedgerHash': document_hash(ledger),
             'addRounds': 1, 'notReady': c.not_ready(b, coverage, reviews), 'offGoalQuestions': [], 'rejectedAtIntake': [], 'supplement': [],

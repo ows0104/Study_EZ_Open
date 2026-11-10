@@ -28,8 +28,14 @@ FORMAT = 'source-assessment/2-map-tree/1'      # the server packet; earlier runn
 # question bank (1c) next to the Map and points; the derived packet runs root-generation/3.
 PIPELINE2 = 'map-tree/2'
 FORMAT2 = 'source-assessment/2-map-tree/2'
-FORMATS = {PIPELINE: FORMAT, PIPELINE2: FORMAT2}
+# map-tree/3 (docs/changes/2026-11-10-importance-at-authoring): the same front stages; points carry no importance
+# (exam-point-extract/4), the independent bank names each question's basis, and the derived packet runs root-generation/4.
+PIPELINE3 = 'map-tree/3'
+FORMAT3 = 'source-assessment/2-map-tree/3'
+FORMATS = {PIPELINE: FORMAT, PIPELINE2: FORMAT2, PIPELINE3: FORMAT3}
 GENERATION_POLICY2 = 'root-generation/3'
+GENERATION_POLICY3 = 'root-generation/4'
+WITH_BANK = (PIPELINE2, PIPELINE3)
 GENERATION_FORMAT = 'source-assessment/2'       # the derived packet the generator runs
 FRONT_POLICY = 'map-tree-front/1'
 SOURCE_KINDS = {'S1': 'notes_current', 'S2': 'jokbo'}
@@ -100,7 +106,7 @@ def _refs(value, pages):
         for x in value.values(): _refs(x, pages)
 
 
-def check_outputs(concept_map, points, title, pages):
+def check_outputs(concept_map, points, title, pages, pipeline=PIPELINE):
     """What the pilots checked before freezing the packet, minus the prompt-asset schemas (runner side)."""
     m = json.loads(concept_map); p = json.loads(points)
     require(m.get('schema_version') == concept_tree.VERSION and m.get('title') == title, 'map-tree: Map is not concept-map-extract/3 for this lecture')
@@ -108,10 +114,16 @@ def check_outputs(concept_map, points, title, pages):
     require(len(ids) == len(set(ids)) and all({r['from_id'], r['to_id']} <= set(ids) for r in m['relations']), 'map-tree: Map IDs')
     findings = concept_tree.tree_findings(m)
     require(not findings, 'map-tree: Map tree: ' + '; '.join(findings))
-    require(p.get('schema_version') == 'exam-point-extract/3' and p.get('title') == title, 'map-tree: points are not exam-point-extract/3 for this lecture')
-    pids = [x['point_id'] for x in p['points']]
-    require(pids and len(pids) == len(set(pids)), 'map-tree: point IDs')
-    imp.point_table(p['points'], p['notebook_profile'])  # every basis is computable (importance-basis/1)
+    if pipeline == PIPELINE3:
+        # exam points are a coverage checklist: no importance (R1); the notebook profile stays
+        from .generation_v4 import check_points
+        require(p.get('title') == title, 'map-tree: points are not for this lecture')
+        check_points(p)
+    else:
+        require(p.get('schema_version') == 'exam-point-extract/3' and p.get('title') == title, 'map-tree: points are not exam-point-extract/3 for this lecture')
+        pids = [x['point_id'] for x in p['points']]
+        require(pids and len(pids) == len(set(pids)), 'map-tree: point IDs')
+        imp.point_table(p['points'], p['notebook_profile'])  # every basis is computable (importance-basis/1)
     _refs(m, pages); _refs(p, pages)
 
 
@@ -119,7 +131,7 @@ HEX = re.compile(r'[a-f0-9]{64}')
 
 
 def check_front(front, server, concept_map, points, bank=None):
-    with_bank = server.get('pipeline') == PIPELINE2
+    with_bank = server.get('pipeline') in WITH_BANK
     keys = {'policy', 'pageCounts', 'conceptMapSha256', 'pointsSha256', 'pointsFrom', 'audits', 'stages', 'prompts', 'resumes'}
     if with_bank:
         keys |= {'bankHash', 'openPoints'}
@@ -149,10 +161,14 @@ def check_front(front, server, concept_map, points, bank=None):
     require(type(front['prompts']) is dict and front['prompts'] and all(HEX.fullmatch(v) for v in front['prompts'].values()), 'map-tree: prompt hashes')
     require(type(front['resumes']) is list and all(type(r) is dict and set(r) == {'reason', 'stages'} and r['reason'].strip()
                                                    and type(r['stages']) is list for r in front['resumes']), 'map-tree: resume history')
-    check_outputs(concept_map, points, server['title'], pages)
+    check_outputs(concept_map, points, server['title'], pages, server.get('pipeline'))
     if with_bank:
         from .validate import document_hash
-        require(type(bank) is dict and set(bank) == {'bank', 'visual_stimuli', 'clinical_conflicts'}, 'map-tree: the independent bank is missing')
+        parts = {'bank', 'visual_stimuli', 'clinical_conflicts'} | ({'question_importance'} if server.get('pipeline') == PIPELINE3 else set())
+        require(type(bank) is dict and set(bank) == parts, 'map-tree: the independent bank is missing')
+        if server.get('pipeline') == PIPELINE3:
+            from .generation_v4 import check_intake
+            check_intake(bank)
         require(front['bankHash'] == document_hash(bank) and stages['bank']['outputSha256'] == front['bankHash'],
                 'map-tree: the independent bank is not the recorded bank stage output')
         _refs(bank, pages)
@@ -175,6 +191,8 @@ def derive_packet(server, concept_map, points, front, bank=None):
                  speedStages=True, derivedFrom=server['inputHash'], frontStages=copy.deepcopy(front))
     if server['pipeline'] == PIPELINE2:
         value.update(generationPolicy=GENERATION_POLICY2, intakeBank=copy.deepcopy(bank))
+    elif server['pipeline'] == PIPELINE3:
+        value.update(generationPolicy=GENERATION_POLICY3, intakeBank=copy.deepcopy(bank))
     value['inputHash'] = packet_hash(value)
     return value
 
