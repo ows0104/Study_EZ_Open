@@ -201,9 +201,15 @@ def coverage_images(bank, value):
 
 
 def map_check_input(brief, table, target_ids=None):
-    """C2m: goals, relations and the importance basis of their points, with cited pages. No questions."""
+    """C2m: goals, relations and the importance basis of their points, with cited pages. No questions.
+
+    The whole check (target_ids None) takes every relation of the map: the assembly (v2.compile_assessment) needs a
+    judgment for each, and a relation need not belong to a target (261102_02: 21 of 102 did not; found by the local
+    run to the end, 2026-11-10). A supplement check (target_ids given) takes only the new targets' relations."""
     targets = [t for t in brief['targets'] if target_ids is None or t['target_id'] in set(target_ids)]
     rids = sorted({r for t in targets for r in t['relation_ids']} | {r for t in targets for d in t['directions'] for r in d['relation_ids']})
+    if target_ids is None:
+        rids = sorted({r['relation_id'] for r in brief['relations']})
     relations = {r['relation_id']: r for r in brief['relations']}
     basis = {}
     for p in brief['points']:
@@ -293,27 +299,30 @@ def fix_input(bank, reviews, question_ids, clinical_conflicts, covered):
 
 
 # ---------------------------------------------------------------- stage-local acceptance (adapter)
-def check_added(value, ctx):
-    """An add output against its add_input: allowed new IDs, known or new concepts, the gap goals' points."""
+def check_added(value, ctx, state=None):
+    """An add output against its add_input; with the orchestrator's state (P6) also the merge itself.
+
+    `state` = {'bank': authored bank, 'clinical_conflicts': [...]} is what merge_added receives after the stage.
+    Running the same merge here lets the runner send its error back into the model's session (one follow-up)
+    instead of stopping the lecture after the stage. Existing items written again are set aside (restated)."""
     validate_shape(value, ADD_OUTPUT, 'v3 add output')
     ids = [q['question_id'] for q in value['questions']]
     require(len(ids) == len(set(ids)) and set(ids) <= set(ctx['allowed_question_ids']), 'v3 add: question IDs outside the allowed range')
     require(not set(ids) & {q['question_id'] for q in ctx['existing']}, 'v3 add: an add stage cannot rewrite an existing question')
     known = {c['concept_id'] for c in ctx['bank_concepts']}
-    new = [c['concept_id'] for c in value['concepts']]
-    require(not set(new) & known and len(new) == len(set(new)), 'v3 add: concepts may be added, not rewritten')
-    require({p['concept_id'] for p in value['retrieval_plan']} == set(new) and len(value['retrieval_plan']) == len(new),
-            'v3 add: one retrieval plan per new concept')
+    new = [c['concept_id'] for c in value['concepts'] if c['concept_id'] not in known]
     points = {p for g in ctx['goals'] for p in g['point_ids']}
     for q in value['questions']:
         require(q['concept_id'] in known | set(new), 'v3 add: question concept is unknown')
         require(q.get('point_ids') and set(q['point_ids']) <= points, "v3 add: point_ids must be the gap goals' points")
     require(all(s['question_id'] in ids for s in value['visual_stimuli']), 'v3 add: images only for new questions')
-    require(not {c['conflict_id'] for c in value['source_conflicts']} & set(ctx['source_conflict_ids']), 'v3 add: existing conflicts are kept')
+    if state is not None:
+        merge_added(state['bank'], state['clinical_conflicts'], value, ctx['allowed_question_ids'])
     return value
 
 
-def check_fixed(value, ctx):
+def check_fixed(value, ctx, state=None):
+    """A fix output against its fix_input; with the orchestrator's state (P6) also merge_fixes itself."""
     validate_shape(value, FIX_OUTPUT, 'v3 fix output')
     given = {q['question_id']: q for q in ctx['questions']}
     ids = [q['question_id'] for q in value['questions']]
@@ -322,15 +331,20 @@ def check_fixed(value, ctx):
         for key in ('concept_id', 'point_ids'):
             require(q.get(key) == given[q['question_id']].get(key), f'v3 fix: {q["question_id"]} changed {key}')
     require(all(s['question_id'] in ids for s in value['visual_stimuli']), 'v3 fix: images only for fixed questions')
+    if state is not None:
+        merge_fixes(state['bank'], state['clinical_conflicts'], value, list(given))
     return value
 
 
-def check_supplement(value, ctx):
+def check_supplement(value, ctx, state=None):
+    """With the orchestrator's state (P6: {'points_doc': ...}) also attach_points, which scores each new point."""
     _supplement_rows(value, [q['question_id'] for q in ctx['questions']], {p['point_id'] for p in ctx['points']}, ctx['page_counts'])
+    if state is not None:
+        attach_points(state['points_doc'], value, [q['question_id'] for q in ctx['questions']], ctx['page_counts'])
     return value
 
 
-def check_supplement_normalize(value, ctx):
+def check_supplement_normalize(value, ctx, state=None):
     validate_shape(value, SUPPLEMENT_NORMALIZE_OUTPUT, 'v3 supplement normalize output')
     require({t['target_id'] for t in value['targets']} <= set(ctx['allowed']['target_ids']), 'v3 extend: target IDs outside the allowed range')
     require({d['direction_id'] for t in value['targets'] for d in t['directions']} <= set(ctx['allowed']['direction_ids']),
@@ -340,6 +354,8 @@ def check_supplement_normalize(value, ctx):
     relations = {r['relation_id'] for r in ctx['relations']}
     for t in value['targets']:
         require(set(t['concept_ids']) <= concepts and set(t['relation_ids']) <= relations, 'v3 extend: new targets use the existing map')
+    if state is not None:
+        extend_brief(state['brief'], supplement_addition(state['brief'], value, state['blank']), [p['point_id'] for p in ctx['points']])
     return value
 
 
@@ -349,7 +365,7 @@ def check_brief_fix(value, ctx):
     return value
 
 
-# ---------------------------------------------------------------- merge guards (P1)
+# ---------------------------------------------------------------- merge guards (P1, P6)
 def _bank_conflicts(bank, new_conflicts):
     known = {c['conflict_id'] for c in bank.get('source_conflicts', [])}
     for c in new_conflicts:
@@ -358,39 +374,58 @@ def _bank_conflicts(bank, new_conflicts):
     return [*copy.deepcopy(bank.get('source_conflicts', [])), *copy.deepcopy(new_conflicts)]
 
 
-def restated_facts(clinical_conflicts, output):
-    """Clinical facts an add output wrote again for conflicts that already exist. They are not taken: the existing
-    facts stay as they are (P1). The first real run (261102_02, 2026-11-10) rewrote CF01–CF03 in its own words
-    because the /2 rule asks for facts of every conflict ID while the add input lists the IDs only."""
-    known = {c['conflict_id'] for c in clinical_conflicts}
-    return [c for c in output['clinical_conflicts'] if c['conflict_id'] in known]
+def restated(bank, clinical_conflicts, output, cited=()):
+    """Existing items an add or fix output wrote again (P6). They are not taken; the existing ones stay (P1).
+
+    Concepts, their retrieval plans, source conflicts, and clinical facts of existing conflicts (except the facts of
+    `cited`: conflicts a fixed question cites, which a fix may restate). `changed` records whether the copy differed.
+    The first real run (261102_02, 2026-11-10) stopped twice on such copies: an add stage rewrote CF01–CF03's facts and
+    a fix copied CF03 back unchanged, both following the copied /2 rule 「모든 conflict_id마다」."""
+    rows = []
+    concepts = {c['concept_id']: c for c in bank['concepts']}
+    plans = {p['concept_id']: p for p in bank.get('retrieval_plan', [])}
+    sources = {c['conflict_id']: c for c in bank.get('source_conflicts', [])}
+    facts = {c['conflict_id']: c for c in clinical_conflicts}
+    for c in output.get('concepts', []):
+        if c['concept_id'] in concepts:
+            rows.append({'kind': 'concept', 'id': c['concept_id'], 'changed': c != concepts[c['concept_id']]})
+    for p in output.get('retrieval_plan', []):
+        if p['concept_id'] in concepts:
+            rows.append({'kind': 'retrieval_plan', 'id': p['concept_id'], 'changed': p != plans.get(p['concept_id'])})
+    for c in output['source_conflicts']:
+        if c['conflict_id'] in sources:
+            rows.append({'kind': 'source_conflict', 'id': c['conflict_id'], 'changed': c != sources[c['conflict_id']]})
+    for c in output['clinical_conflicts']:
+        if c['conflict_id'] not in set(cited) and (c['conflict_id'] in facts or c['conflict_id'] in sources):
+            rows.append({'kind': 'clinical_fact', 'id': c['conflict_id'], 'changed': c != facts.get(c['conflict_id'])})
+    return rows
 
 
-def restated_conflicts(bank, output):
-    """Source conflicts a fix output wrote again although they already exist in the bank. They are not taken: the
-    existing conflict stays as it is (P1); `changed` says whether the copy differed. The third stop of the first real
-    run (261102_02, 2026-11-10, v3-fix-1-0) was Q046's fix copying its own conflict CF03 back unchanged, because the
-    fix input shows the conflicts its questions cite and the /2 rule asks for every conflict ID."""
-    known = {c['conflict_id']: c for c in bank.get('source_conflicts', [])}
-    return [{'conflict_id': c['conflict_id'], 'changed': c != known[c['conflict_id']]}
-            for c in output['source_conflicts'] if c['conflict_id'] in known]
+def _without(output, rows):
+    """The output without its restated items."""
+    gone = {(r['kind'], r['id']) for r in rows}
+    value = copy.deepcopy(output)
+    for key, kind, field in (('concepts', 'concept', 'concept_id'), ('retrieval_plan', 'retrieval_plan', 'concept_id'),
+                             ('source_conflicts', 'source_conflict', 'conflict_id'), ('clinical_conflicts', 'clinical_fact', 'conflict_id')):
+        if key in value:
+            value[key] = [x for x in value[key] if (kind, x[field]) not in gone]
+    return value
 
 
 def merge_added(bank, clinical_conflicts, output, allowed_ids):
-    """Append an add stage's questions. Existing questions, conflicts and facts stay byte-identical."""
+    """Append an add stage's questions. Existing questions, concepts, conflicts and facts stay byte-identical."""
     validate_shape(output, ADD_OUTPUT, 'v3 add output')
+    output = _without(output, restated(bank, clinical_conflicts, output))
     ids = [q['question_id'] for q in output['questions']]
     require(len(ids) == len(set(ids)), 'v3 add: duplicate question IDs')
     require(set(ids) <= set(allowed_ids), 'v3 add: question IDs outside the allowed range')
     require(not set(ids) & {q['question_id'] for q in bank['questions']}, 'v3 add: an add stage cannot rewrite an existing question')
     require(all(s['question_id'] in ids for s in output['visual_stimuli']), 'v3 add: images only for new questions')
-    facts = {c['conflict_id'] for c in clinical_conflicts}
-    fresh = [c for c in output['clinical_conflicts'] if c['conflict_id'] not in facts]   # restatements stay out (restated_facts)
     new_ids = {c['conflict_id'] for c in output['source_conflicts']}
-    require({c['conflict_id'] for c in fresh} <= new_ids, 'v3 add: clinical facts only for its new source conflicts')
+    require({c['conflict_id'] for c in output['clinical_conflicts']} <= new_ids, 'v3 add: clinical facts only for its new source conflicts')
     known = {c['concept_id'] for c in bank['concepts']}
     new_concepts = [c['concept_id'] for c in output['concepts']]
-    require(not set(new_concepts) & known and len(new_concepts) == len(set(new_concepts)), 'v3 add: concepts may be added, not rewritten')
+    require(len(new_concepts) == len(set(new_concepts)), 'v3 add: duplicate new concepts')
     require({p['concept_id'] for p in output['retrieval_plan']} == set(new_concepts) and len(output['retrieval_plan']) == len(new_concepts),
             'v3 add: one retrieval plan per new concept')
     require(all(q['concept_id'] in known | set(new_concepts) for q in output['questions']), 'v3 add: question concept is unknown')
@@ -399,12 +434,14 @@ def merge_added(bank, clinical_conflicts, output, allowed_ids):
     merged['concepts'] = [*merged['concepts'], *copy.deepcopy(output['concepts'])]
     merged['retrieval_plan'] = [*merged['retrieval_plan'], *copy.deepcopy(output['retrieval_plan'])]
     merged['questions'] = [*merged['questions'], *copy.deepcopy(output['questions'])]
-    return merged, [*copy.deepcopy(clinical_conflicts), *copy.deepcopy(fresh)]
+    return merged, [*copy.deepcopy(clinical_conflicts), *copy.deepcopy(output['clinical_conflicts'])]
 
 
 def merge_fixes(bank, clinical_conflicts, output, targets):
     """Replace only the questions a fix stage was given; identity, concept and points stay."""
     validate_shape(output, FIX_OUTPUT, 'v3 fix output')
+    cited = {q.get('conflict_id') for q in output['questions'] if q.get('conflict_id')}
+    output = _without(output, restated(bank, clinical_conflicts, output, cited))
     ids = [q['question_id'] for q in output['questions']]
     require(len(ids) == len(set(ids)) and set(ids) <= set(targets), 'v3 fix: only the listed questions may change')
     before = {q['question_id']: q for q in bank['questions']}
@@ -413,18 +450,21 @@ def merge_fixes(bank, clinical_conflicts, output, targets):
         for key in ('concept_id', 'point_ids'):
             require(q.get(key) == old.get(key), f'v3 fix: {q["question_id"]} changed {key}')
     require(all(s['question_id'] in ids for s in output['visual_stimuli']), 'v3 fix: images only for fixed questions')
+    require(all(c['conflict_id'] in cited for c in output['clinical_conflicts']), 'v3 fix: facts only for the fixed questions')
     replaced = {q['question_id']: copy.deepcopy(q) for q in output['questions']}
     merged = copy.deepcopy(bank)
-    known = {c['conflict_id'] for c in bank.get('source_conflicts', [])}
-    fresh = [c for c in output['source_conflicts'] if c['conflict_id'] not in known]   # restatements stay out (restated_conflicts)
-    merged['source_conflicts'] = _bank_conflicts(bank, fresh)
+    merged['source_conflicts'] = _bank_conflicts(bank, output['source_conflicts'])
     merged['questions'] = [replaced.get(q['question_id'], q) for q in merged['questions']]
     facts = {c['conflict_id']: c for c in clinical_conflicts}
     for c in output['clinical_conflicts']:
         facts[c['conflict_id']] = copy.deepcopy(c)   # a fixed question may restate the facts of its own conflict
-    cited = {q.get('conflict_id') for q in output['questions']}
-    require(all(c['conflict_id'] in cited for c in output['clinical_conflicts']), 'v3 fix: facts only for the fixed questions')
     return merged, list(facts.values()), sorted(replaced)
+
+
+def supplement_addition(brief, value, blank):
+    """The targets/points a supplement-normalize output adds, as extend_brief receives them."""
+    targets = v2.blank_target_importance({**brief, 'targets': value['targets']})['targets'] if blank else value['targets']
+    return {'targets': targets, 'points': value['points']}
 
 
 def worse(before, after):
@@ -528,8 +568,9 @@ def _check_map_ids(value, rids, tids, dids):
 
 
 def check_map(value, brief, target_ids=None):
+    """The map check against the brief: the same relations, targets and goals map_check_input gives (one rule)."""
     targets = [t for t in brief['targets'] if target_ids is None or t['target_id'] in set(target_ids)]
-    rids = {r for t in targets for r in t['relation_ids']} | {r for t in targets for d in t['directions'] for r in d['relation_ids']}
+    rids = [r['relation_id'] for r in map_check_input(brief, None, target_ids)['relations']]
     return _check_map_ids(value, rids, [t['target_id'] for t in targets], [d['direction_id'] for t in targets for d in t['directions']])
 
 

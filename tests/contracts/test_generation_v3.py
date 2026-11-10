@@ -189,14 +189,14 @@ def test_fix_stage_restating_an_existing_source_conflict_keeps_the_bank_conflict
     fixed = copy.deepcopy(bank['questions'][0])
     fixed['explanation'] = 'Synthetic corrected explanation'
     out = {'questions': [fixed], 'source_conflicts': [copy.deepcopy(cf)], 'visual_stimuli': [], 'clinical_conflicts': []}
-    assert c.restated_conflicts(bank, out) == [{'conflict_id': 'CF01', 'changed': False}]
+    assert c.restated(bank, [], out) == [{'kind': 'source_conflict', 'id': 'CF01', 'changed': False}]
     merged, _, changed = c.merge_fixes(bank, [], out, ['Q1'])
     assert merged['source_conflicts'] == [cf] and changed == ['Q1']
     rewritten = copy.deepcopy(out)
     rewritten['source_conflicts'][0]['description'] = 'Synthetic rewritten'
     added = {**cf, 'conflict_id': 'CF02'}
     rewritten['source_conflicts'].append(added)
-    assert c.restated_conflicts(bank, rewritten) == [{'conflict_id': 'CF01', 'changed': True}]
+    assert c.restated(bank, [], rewritten) == [{'kind': 'source_conflict', 'id': 'CF01', 'changed': True}]
     merged, _, _ = c.merge_fixes(bank, [], rewritten, ['Q1'])
     assert merged['source_conflicts'] == [cf, added]
 
@@ -398,18 +398,83 @@ def test_intake_projection_sets_only_the_recomputed_bank_fields():
     assert c.intake_projection(value)[1] == []
 
 
-def test_restated_facts_of_existing_conflicts_are_left_out_and_existing_facts_kept():
-    """261102_02 (2026-11-10): an add stage rewrote CF01-CF03 that its new questions did not cite."""
+def test_restated_existing_items_of_an_add_are_left_out_and_recorded():
+    """261102_02 (2026-11-10): an add stage rewrote CF01-CF03's facts. Concepts, plans and conflicts are treated alike (P6)."""
     bank = authored_bank()
     bank['source_conflicts'] = [{'conflict_id': 'CF01', 'description': 'Synthetic', 'source_refs': [{'source_id': 'S1', 'locator': 'x'}], 'unresolved': False}]
     facts = [{'conflict_id': 'CF01', 'facts': 'Synthetic original facts'}]
     ids = c.next_question_ids(bank, 1)
-    out = {'questions': [question(ids[0], bank['questions'][0])], 'concepts': [], 'retrieval_plan': [], 'source_conflicts': [],
-           'visual_stimuli': [], 'clinical_conflicts': [{'conflict_id': 'CF01', 'facts': 'Synthetic rewritten facts'}]}
-    assert [r['conflict_id'] for r in c.restated_facts(facts, out)] == ['CF01']
+    concept = copy.deepcopy(bank['concepts'][0])
+    plan = copy.deepcopy(bank['retrieval_plan'][0]) if bank['retrieval_plan'] else None
+    out = {'questions': [question(ids[0], bank['questions'][0])], 'concepts': [concept], 'retrieval_plan': [plan] if plan else [],
+           'source_conflicts': [copy.deepcopy(bank['source_conflicts'][0])], 'visual_stimuli': [],
+           'clinical_conflicts': [{'conflict_id': 'CF01', 'facts': 'Synthetic rewritten facts'}]}
+    kinds = [(r['kind'], r['id'], r['changed']) for r in c.restated(bank, facts, out)]
+    assert ('concept', concept['concept_id'], False) in kinds and ('source_conflict', 'CF01', False) in kinds
+    assert ('clinical_fact', 'CF01', True) in kinds
     merged, kept = c.merge_added(bank, facts, out, ids)
-    assert kept == facts and merged['questions'][-1]['question_id'] == ids[0]
+    assert kept == facts and merged['concepts'] == bank['concepts'] and merged['source_conflicts'] == bank['source_conflicts']
+    assert merged['questions'][-1]['question_id'] == ids[0]
     stray = copy.deepcopy(out)
     stray['clinical_conflicts'] = [{'conflict_id': 'CF09', 'facts': 'No such source conflict'}]
     with pytest.raises(ValueError, match='only for its new source conflicts'):
         c.merge_added(bank, facts, stray, ids)
+
+
+def _add_case(bank):
+    ids = c.next_question_ids(bank, 1)
+    goal = {'direction_id': 'D1', 'point_ids': ['P1']}
+    q = question(ids[0], bank['questions'][0])
+    q['point_ids'] = ['P1']
+    ctx = {'allowed_question_ids': ids, 'existing': [{'question_id': x['question_id'], 'question': '', 'answer': ''} for x in bank['questions']],
+           'bank_concepts': [{'concept_id': x['concept_id'], 'title': ''} for x in bank['concepts']], 'goals': [goal],
+           'source_conflict_ids': [x['conflict_id'] for x in bank.get('source_conflicts', [])]}
+    out = {'questions': [q], 'concepts': [], 'retrieval_plan': [], 'source_conflicts': [], 'visual_stimuli': [], 'clinical_conflicts': []}
+    return ctx, out
+
+
+NEW_CF = {'conflict_id': 'CF07', 'description': 'Synthetic', 'source_refs': [{'source_id': 'S1', 'locator': 'x'}], 'unresolved': False}
+
+
+@pytest.mark.parametrize('spoil,message', [
+    (lambda o: o.update(clinical_conflicts=[{'conflict_id': 'CF09', 'facts': 'x'}]), 'only for its new source conflicts'),
+    (lambda o: o.update(source_conflicts=[NEW_CF, {**NEW_CF, 'description': 'Other'}]), 'not rewrite one'),
+    (lambda o: o.update(concepts=[{**copy.deepcopy(authored_bank()['concepts'][0]), 'concept_id': 'NEW'}]), 'one retrieval plan per new concept'),
+])
+def test_every_add_merge_error_is_found_by_the_stage_check(spoil, message):
+    """P6: what would stop the lecture after an add stage is found inside it, where the model gets a follow-up."""
+    bank = authored_bank()
+    ctx, out = _add_case(bank)
+    spoil(out)
+    with pytest.raises(ValueError, match=message):
+        c.merge_added(bank, [], out, ctx['allowed_question_ids'])
+    with pytest.raises(ValueError, match=message):
+        c.check_added(out, ctx, {'bank': bank, 'clinical_conflicts': []})
+
+
+@pytest.mark.parametrize('spoil,message', [
+    (lambda o: o.update(clinical_conflicts=[{'conflict_id': 'CF09', 'facts': 'x'}]), 'facts only for the fixed questions'),
+    (lambda o: o.update(source_conflicts=[NEW_CF, {**NEW_CF, 'description': 'Other'}]), 'not rewrite one'),
+])
+def test_every_fix_merge_error_is_found_by_the_stage_check(spoil, message):
+    bank = authored_bank()
+    fixed = copy.deepcopy(bank['questions'][0])
+    out = {'questions': [fixed], 'source_conflicts': [], 'visual_stimuli': [], 'clinical_conflicts': []}
+    spoil(out)
+    ctx = {'questions': [copy.deepcopy(bank['questions'][0])]}
+    with pytest.raises(ValueError, match=message):
+        c.merge_fixes(bank, [], out, ['Q1'])
+    with pytest.raises(ValueError, match=message):
+        c.check_fixed(out, ctx, {'bank': bank, 'clinical_conflicts': []})
+
+
+def test_the_whole_map_check_takes_every_relation_even_one_without_a_target():
+    """261102_02 (2026-11-10): 21 of 102 relations belonged to no target; the assembly needs a judgment for each."""
+    b = f.brief()
+    loose = {**copy.deepcopy(b['relations'][0]), 'relation_id': 'R_LOOSE'}
+    b['relations'].append(loose)
+    whole = c.map_check_input(b, None)
+    assert 'R_LOOSE' in {r['relation_id'] for r in whole['relations']}
+    assert {r['relation_id'] for r in whole['relations']} == {r['relation_id'] for r in b['relations']}
+    part = c.map_check_input(b, None, [b['targets'][0]['target_id']])
+    assert 'R_LOOSE' not in {r['relation_id'] for r in part['relations']}

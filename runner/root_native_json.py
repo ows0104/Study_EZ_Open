@@ -99,10 +99,14 @@ def v3_schema(stage):
     if kind=='brief':return v3.BRIEF_FIX_OUTPUT
     return v3.OUTPUTS['map-check'if kind=='map'else'item-review'if kind=='review'else kind]
 
-def v3_check(stage,ctx,value):
-    """The stage's own acceptance (no merge): same checks the generator applies after the receipt."""
+def v3_check(stage,ctx,value,state=None,work=None):
+    """The stage's own acceptance. With the orchestrator's state (host-check.json, P6) it is the generator's
+    check_stage: the same merge and image render that run after the receipt, so their errors reach the model."""
     from studyez_contracts.roots import generation_v3 as v3
     kind=v3_kind(stage)
+    if state is not None and kind in('add','fix','supplement','supplement-normalize'):
+        from quizbank.connection_generate_v3 import check_stage
+        return check_stage(kind,value,ctx,state,Path(work)/'.check-render')
     if kind=='coverage':return v3.check_coverage(value,ctx['goals'],ctx['questions'])
     if kind=='map':return v3.check_map_input(value,ctx)
     if kind=='review':return v3.check_review_input(value,ctx)
@@ -294,7 +298,8 @@ def check_file(stage,work):
     path=work/'result.json';require(not path.is_symlink()and path.is_file()and 0<path.stat().st_size<=LIMIT,'Unsafe/missing result')
     value,_=decode_for(stage,read_model(path),schema);jsonschema.validate(value,schema)
     if stage.startswith('v3-'):
-        v3_check(stage,ctx,value);return value
+        state=read(work/'host-check.json')if(work/'host-check.json').is_file()else None
+        v3_check(stage,ctx,value,state,work);return value
     if stage=='normalize':
         require(value['sources']==ctx['sources']and value['lecture_id']==ctx['lecture_id'],'Different normalization sources/lecture')
         require((value['provenance']['independent_points']=='confirmed')==(ctx.get('inputMode')=='source'),'Different extraction independence')
@@ -372,20 +377,23 @@ class NativeJson:
 
     def __call__(self,stage,ctx,material,model):
         require_unblocked(self.out)
+        state=ctx.get('_check')   # P6: host check state, not stage input
+        if '_check'in ctx:ctx={k:v for k,v in ctx.items()if k!='_check'}
         if stage.startswith('medical-'):
             require(re.fullmatch(r'medical-[0-3]',stage),'Unsupported medical stage')
             try:return producer.call_model(stage,ctx,material,model)
             except BaseException as error:
                 failure(self.out/'.native'/stage,error);raise
-        return self.file(stage,ctx,material,model)
+        return self.file(stage,ctx,material,model,state)
 
-    def file(self,stage,ctx,material,model):
+    def file(self,stage,ctx,material,model,state=None):
         schema=schema_for(stage,ctx);seat=self.out/'.native'/stage
         seat.mkdir(parents=True,exist_ok=False);work=seat/'work';work.mkdir()
         if 'bank'in ctx:visual.paths(ctx['bank'],material)
         source_inventory=inventory(material);shutil.copytree(material,work/'material')
         if 'bank'in ctx:visual.paths(ctx['bank'],work/'material')
         g.write(work/'input.json',clean(ctx));g.write(work/'acceptance.schema.json',schema)
+        if state is not None:g.write(work/'host-check.json',state)
         root=Path(__file__).resolve().parents[1]
         checker=('import sys\nfrom pathlib import Path\nsys.path.insert(0,'+repr(sysconfig.get_paths()['purelib'])+')\n'
             'sys.path.insert(0,'+repr(str(root))+')\nfrom runner.root_native_json import check_file\ncheck_file('+repr(stage)+',Path(__file__).parent)\nprint("Acceptance checks passed")\n')
@@ -395,7 +403,7 @@ class NativeJson:
             task+='\nThis is the explicitly authorized repair of a completed but structurally rejected brief. Copy previousAuthoring.bank, visual_stimuli and clinical_conflicts EXACTLY using local code. Correct only the brief findings and their complete structural implications, preserve original points/source boundaries, set derived and explain the correction. The rejected brief is not a valid prior accepted map. Do not create or rewrite clinical questions in this recovery step.\n'
         python=sys.executable if self.invoke is not None else sandbox_python(work)
         (work/'task.md').write_text(task+check_instruction(python),encoding='utf-8')
-        protected={name:sha(work/name)for name in('input.json','acceptance.schema.json','task.md','check_result.py')}
+        protected={name:sha(work/name)for name in('input.json','acceptance.schema.json','task.md','check_result.py','host-check.json')if(work/name).exists()}
         (seat/'adapter.py').write_bytes(Path(__file__).read_bytes())
         proof={'policy':POLICY,'stage':stage,'inputHash':document_hash(ctx),'cleanInputHash':document_hash(clean(ctx)),
             'schemaHash':document_hash(schema),'model':g.codex.model_name(model),'materialHashes':source_inventory,
