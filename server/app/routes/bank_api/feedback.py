@@ -5,7 +5,7 @@ from typing import Any, Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
 from app.auth import CurrentUser, require_admin, require_approved_user
 from app.bank_validation.priorities import priority_fields
@@ -70,7 +70,8 @@ def bank_feedback(user: CurrentUser = Depends(require_admin), db: Session = Depe
     for f in rows:
         key = (f.subject, f.run_id)
         if key not in banks:
-            banks[key] = db.get(QuizBank, key)
+            # 문면·의학 검토·빌드만 읽는다. validation(검토 이력으로 편당 최대 20MB)·원문 응답은 안 쓴다.
+            banks[key] = db.get(QuizBank, key, options=[load_only(QuizBank.build_id, QuizBank.bank, QuizBank.review)])
             lectures[key] = db.get(Lecture, key)
         bank, lecture = banks[key], lectures[key]
         main_quiz = f.build_id.startswith("root:")
