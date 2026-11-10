@@ -13,6 +13,7 @@ import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "n
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { crc32 } from "node:zlib";
+import { toUserEdition } from "../../bridge/user-edition.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const source = resolve(here, "../../bridge");
@@ -26,7 +27,8 @@ if (advertisedVersion !== manifest.version) {
 }
 
 /** 배포에 들어갈 것만. 스토어 자산과 문서는 뺀다. */
-const SKIP = new Set(["store-assets", "release", "node_modules", ".git"]);
+const SKIP = new Set(["store-assets", "release", "node_modules", ".git", "user-edition.mjs",
+  "CLAUDE.md", "audit-store-package.py", "build-store-package.ps1"]);
 
 function collect(directory, base = directory) {
   const entries = [];
@@ -81,7 +83,11 @@ function centralHeader(entry) {
   return Buffer.concat([head, name]);
 }
 
-const files = collect(source);
+// 사이트에서 누구나 받는 ZIP이므로 스토어와 같은 학생용 사용자판으로 싼다(2026-11-10 관리자 지시).
+// 관리자판은 저장소의 bridge 폴더를 압축 해제 상태로 로드해 쓴다.
+const userFiles = toUserEdition(new Map(collect(source).map((file) => [file.name, file.body])));
+const files = [...userFiles].map(([name, body]) => ({ name, body: Buffer.isBuffer(body) ? body : Buffer.from(body, "utf8") }))
+  .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 if (!files.some((file) => file.name === "manifest.json")) {
   throw new Error(`manifest.json이 없습니다: ${source}`);
 }

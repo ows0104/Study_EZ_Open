@@ -36,5 +36,7 @@ PDF를 AI 대화에 붙이고 예습·복습·문제은행 링크를 회수하�
 파일이 없거나 서버 저장이 실패하면 본문 수집으로 우회하지 않고 파일 전달을 재시도한다.
 
 개발·다운로드 ZIP은 `../web/scripts/pack-extension.mjs`,
-스토어 ZIP은 `build-store-package.ps1`로 만든다.
+스토어 ZIP은 `build-store-package.ps1`로 만든다. 두 ZIP 모두 학생용 사용자판이다(`EDITION: "user"`,
+자동전송·공유·bank 거절, bank 스크립트 제외). 변환은 `user-edition.mjs` 하나다. 관리자판은 이 폴더를 직접 로드한다. 관리자 기능을 고칠 때 사용자판에 새어 나가지 않는지
+`tests/bridge/test_store_edition.cjs`와 `audit-store-package.py`로 확인한다.
 스토어 게시 여부는 소스 버전으로 추정하지 말고 실제 게시 상태를 확인한다.

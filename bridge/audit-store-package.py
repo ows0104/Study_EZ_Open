@@ -67,6 +67,19 @@ with zipfile.ZipFile(io.BytesIO(raw)) as archive:
         "Gemini·Claude 링크 감시 match가 다릅니다.",
     )
     require("localhost" not in manifest_text and "127.0.0.1" not in manifest_text, "manifest에 로컬 주소가 있습니다.")
+    background_text = archive.read("background.js").decode("utf-8")
+    referenced = {manifest["background"]["service_worker"]}
+    for call in re.findall(r"(?m)^importScripts\(([^)]*)\)", background_text):
+        referenced.update(re.findall(r'"([^"]+)"', call))
+    for script in manifest["content_scripts"]:
+        referenced.update(script["js"])
+    require(referenced <= names, f"실행에 필요한 파일이 ZIP에 없습니다: {sorted(referenced - names)}")
+    # 스토어판은 학생용 사용자판이다. 관리자 Quiz Bank 파일 회수 코드와 자동전송·공유·bank 요청을 열지 않는다.
+    require(not any(name.startswith("bank-") for name in referenced | names), "관리자 bank 스크립트가 스토어판에 있습니다.")
+    protocol_text = archive.read("protocol.js").decode("utf-8")
+    require(protocol_text.count('EDITION: "user",') == 1 and 'EDITION: "full"' not in protocol_text, "스토어판 EDITION이 user가 아닙니다.")
+    require('EDITION === "user" && (mode === "shared" || mode === "bank" || payload.autoSend === true)' in background_text,
+            "사용자판의 자동전송·공유·bank 거절 분기가 없습니다.")
 
     scripts = [name for name in names if name.endswith(".js")]
     script_text = "\n".join(archive.read(name).decode("utf-8") for name in scripts)
@@ -94,10 +107,12 @@ with zipfile.ZipFile(io.BytesIO(raw)) as archive:
         "    return false;",
         expected_background,
     )
-    expected_scripts = {
-        name: expected_background.encode() if name == "background.js" else (ROOT / name).read_bytes()
-        for name in scripts
-    }
+    import_line = 'importScripts("protocol.js", "bank-file.js", "bank-download.js");'
+    require(expected_background.startswith(import_line), "소스 background.js 첫 줄이 예상과 다릅니다.")
+    expected_background = 'importScripts("protocol.js");' + expected_background[len(import_line):]
+    expected_protocol = (ROOT / "protocol.js").read_text(encoding="utf-8").replace('EDITION: "full",', 'EDITION: "user",')
+    transformed = {"background.js": expected_background.encode(), "protocol.js": expected_protocol.encode()}
+    expected_scripts = {name: transformed.get(name) or (ROOT / name).read_bytes() for name in scripts}
     require(
         all(hashlib.sha256(expected_scripts[name]).digest() == hashlib.sha256(archive.read(name)).digest() for name in scripts),
         "ZIP의 실행 코드가 검사한 소스 및 스토어 변환 결과와 다릅니다.",
@@ -115,6 +130,7 @@ with zipfile.ZipFile(io.BytesIO(raw)) as archive:
 print(f"OK: {ZIP}")
 print(f"SHA256: {hashlib.sha256(raw).hexdigest()}")
 print(f"entries: {len(EXPECTED)}")
+print("edition: user (manual personal preview/review only; no auto-send, shared links, or Quiz Bank)")
 print("permissions: storage, scripting")
 print("consent: remembered per mode with local revoke")
 print("host permissions: exact R2 origin, ChatGPT, Gemini, Claude, Gemini short links")

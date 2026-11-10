@@ -2,9 +2,11 @@ import manifest from "../../../bridge/manifest.json";
 import { EXTENSION_DOWNLOAD_URL, EXTENSION_STORE_URL, EXTENSION_STORE_VERSION } from "./protocol";
 import { extensionCompatible, extensionInputMinimum, extensionPossible, extensionVersion } from "./previewBridge";
 import { versionAtLeast } from "./version";
+import { useMe } from "../useMe";
 
 /** 스토어 공개판이 필요한 버전에 못 미치면 빌드에 포함된 최신판을 안내한다. */
 export function ExtensionSetup({ minimum = extensionInputMinimum() }: { minimum?: string }) {
+  const admin = Boolean(useMe()?.isAdmin);
   if (!extensionPossible() || extensionCompatible(minimum)) return null;
   const installed = extensionVersion();
   const storeReady = Boolean(EXTENSION_STORE_URL) && versionAtLeast(EXTENSION_STORE_VERSION, minimum);
@@ -28,6 +30,8 @@ export function ExtensionSetup({ minimum = extensionInputMinimum() }: { minimum?
           </ol>
         </>
       )}
+      {/* 스토어판·사이트 ZIP은 학생용 사용자판이다. 관리자 기능은 저장소의 관리자판에서만 열린다. */}
+      {admin ? <p>관리자 기능(공통 대화·Quiz Bank·자동전송)은 관리자판이 필요합니다. 저장소의 <code>bridge</code> 폴더를 압축해제된 확장 프로그램으로 로드하세요.</p> : null}
     </div>
   );
 }

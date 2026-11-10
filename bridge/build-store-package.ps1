@@ -27,8 +27,12 @@ foreach ($Script in $Manifest.content_scripts) {
   )
 }
 
+# 스토어판은 학생용 사용자판이다. 실행 파일을 모두 복사한 뒤, 아래에서 manifest를 쓴 다음
+# user-edition.mjs(사이트 ZIP과 같은 변환)가 EDITION을 user로 바꾸고 관리자 bank 스크립트를 뺀다.
 $RuntimeFiles = @(
   "background.js",
+  "bank-download.js",
+  "bank-file.js",
   "chatgpt-bridge.js",
   "chatgpt-share.js",
   "provider-share.js",
@@ -60,6 +64,11 @@ foreach ($Size in 16, 32, 48, 128) {
 $StoreManifestPath = Join-Path $PackageDirectory "manifest.json"
 $StoreManifestJson = $Manifest | ConvertTo-Json -Depth 20
 [System.IO.File]::WriteAllText($StoreManifestPath, $StoreManifestJson, $Utf8NoBom)
+
+& node (Join-Path $SourceDirectory "user-edition.mjs") $PackageDirectory
+if ($LASTEXITCODE -ne 0) {
+  throw "사용자판 변환에 실패했습니다."
+}
 
 $StoreManifestText = Get-Content -Raw -LiteralPath $StoreManifestPath
 if ($StoreManifestText -match 'localhost|127\.0\.0\.1') {

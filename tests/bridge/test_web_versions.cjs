@@ -79,11 +79,12 @@ test('unsupported preview and review requests never dispatch; supported requests
   }
 });
 
-function setup(installed, storeVersion, minimum, possible = true) {
+function setup(installed, storeVersion, minimum, possible = true, admin = false) {
   const { ExtensionSetup } = load('ExtensionSetup.tsx', {
     'react/jsx-runtime': require(path.join(root, 'web/node_modules/react/jsx-runtime')),
     '../../../bridge/manifest.json': { default: JSON.parse(fs.readFileSync(path.join(root, 'bridge/manifest.json'))) },
     './version': versions, './protocol': { ...protocol, EXTENSION_STORE_VERSION: storeVersion },
+    '../useMe': { useMe: () => ({ isAdmin: admin }) },
     './previewBridge': { extensionPossible: () => possible, extensionVersion: () => installed,
       extensionInputMinimum: () => versions.minimumVersionForInput(installed, 'personal', false),
       extensionCompatible: minimum => versions.versionAtLeast(installed, minimum) },
@@ -166,6 +167,12 @@ test('manual preview uses published 1.2 store release and needs no update for 1.
   assert.match(setup('1.3.0', '1.2.0'), /studyez-extension.zip/);
   assert.equal(setup('1.3.5', '1.2.0'), '');
   assert.equal(setup('', '1.2.0', '1.3.3', false), '');
+});
+
+test('only admins are pointed to the admin bridge folder; the downloadable ZIP is the student edition', () => {
+  assert.doesNotMatch(setup('', '1.2.0', '1.3.3'), /관리자판/);
+  assert.match(setup('', '1.2.0', '1.3.3', true, true), /관리자판이 필요합니다/);
+  assert.equal(setup('1.3.24', '1.2.0', '1.3.3', true, true), '');
 });
 
 

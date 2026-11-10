@@ -13,7 +13,10 @@ globalThis.STUDYEZ_PROTOCOL = {
   READY_ATTRIBUTE: "data-studyez-ai-extension",
   // `<html>`에 그대로 붙는다. 어느 빌드가 실려 있는지 개발자 도구에서 보인다 —
   // 소스를 고쳐도 `chrome://extensions`에서 새로고침하지 않으면 옛것이 돈다.
-  VERSION: "1.3.23",
+  VERSION: "1.3.24",
+  // `full`은 관리자판(이 폴더·사이트 ZIP). 스토어 빌드(`build-store-package.ps1`)가 `user`로 바꾼다.
+  // 사용자판은 학생 기능만 연다: 개인 예습·복습을 수동입력으로. 자동전송·공유 링크·Quiz Bank는 거절한다.
+  EDITION: "full",
 
   MESSAGES: {
     /** 웹앱 → 확장: 이 자료로 예습 대화를 열어 달라. */
