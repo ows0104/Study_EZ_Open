@@ -520,7 +520,20 @@ def prior_exposure(doc, task, q, session_state, choices_shown=None):
     direction = next(d for t in state.targets(doc) for d in t['directions'] if d['direction_id'] == task['direction_id'])
     choice_help = bool(q.get('options')) if choices_shown is None else (
         bool(q.get('options')) and q.get('mcq_mode') != 'comparison' and choices_shown)
+    if state.per_task(doc):
+        # root-generation/4 (spec R8): sibling questions of one direction ask different parts, so only an
+        # earlier exposure of this same task in the session counts, not the direction's relations.
+        return choice_help or task['task_id'] in session_state.get('reveals', {})
     return choice_help or bool(set(direction['relation_ids']) & set(session_state.get('exposedRelations', [])))
+
+
+def task_fingerprint(doc, task):
+    """root-generation/4 events record their question fingerprint so a later revision can carry history
+    per unchanged question (state.replay_tasks). Older documents record nothing new."""
+    if not state.per_task(doc):
+        return {}
+    from studyez_contracts.roots import task_fingerprints
+    return {'question_sha256': task_fingerprints(doc)[task['task_id']]}
 
 
 @router.get('/root-learning/sessions/{session_id}')
@@ -592,13 +605,13 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
         raise HTTPException(409, '이 회차의 마지막 질문입니다.')
     elif payload.kind == 'skip':
         session_state.update(index=session_state['index'] + 1, undo=None)
-        data.update(task_id=task['task_id'], direction_id=task['direction_id'])
+        data.update(task_id=task['task_id'], direction_id=task['direction_id'], **task_fingerprint(doc.document, task))
     else:
         if task['task_id'] not in available:
             raise HTTPException(409, '문항/개인 설정이 바뀌었습니다. 연결을 다시 확인하거나 이 과제를 보류하세요.')
         q = content.question(doc.document, task)
         reveal = session_state['reveals'].get(task['task_id'])
-        data.update(task_id=task['task_id'], direction_id=task['direction_id'])
+        data.update(task_id=task['task_id'], direction_id=task['direction_id'], **task_fingerprint(doc.document, task))
         if payload.kind == 'reveal':
             if reveal:
                 raise HTTPException(409, '이미 답을 확인했습니다.')

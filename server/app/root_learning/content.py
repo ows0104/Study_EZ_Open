@@ -4,7 +4,7 @@ import copy
 import re
 from sqlalchemy import select
 from sqlalchemy.orm import defer
-from studyez_contracts.roots import validate_document, document_hash, direction_hash
+from studyez_contracts.roots import validate_document, document_hash, direction_hash, task_fingerprints
 from app import bank_personal
 from app.models import QuizBank, BankState, BankPersonalEdit
 from app.models.root_learning import RootContent, RootControl, RootEvent
@@ -57,6 +57,9 @@ def validate_registration(db, subject, run_id, payload):
         previous = db.get(RootContent, (subject, run_id, link['revision']))
         if not previous or not previous.reviewed:
             raise ValueError('동일성 연결은 검토된 이전 판이 필요합니다.')
+        if doc.get('generation_policy') == 'root-generation/4':
+            carried_questions(previous.document, doc, link)
+            continue
         try:
             same = direction_hash(previous.document, link['from_direction']) == direction_hash(doc, link['to_direction'])
         except (StopIteration, KeyError):
@@ -64,6 +67,27 @@ def validate_registration(db, subject, run_id, payload):
         if not same:
             raise ValueError('방향/답 범위/과제/출처가 다른 기록을 승계할 수 없습니다.')
     return doc
+
+
+def carried_questions(previous, doc, link):
+    """root-generation/4 carry-over (spec R8): per question content fingerprint, not `direction_hash`.
+
+    The reviewed link names the old and new direction; history then continues only for the new
+    direction's tasks whose question fingerprint is among the old direction's (state.replay_tasks).
+    A changed question starts fresh. Only /4 revisions record the fingerprint on their events, so an
+    older-policy revision cannot be linked (it would silently carry nothing)."""
+    if previous.get('generation_policy') != 'root-generation/4':
+        raise ValueError('문항 단위 판(root-generation/4)은 같은 형식의 이전 판 기록만 승계할 수 있습니다.')
+    try:
+        old = {v for k, v in task_fingerprints(previous).items()
+               if next(t for t in previous['tasks'] if t['task_id'] == k)['direction_id'] == link['from_direction']}
+        new = {k for k, v in task_fingerprints(doc).items()
+               if v in old and next(t for t in doc['tasks'] if t['task_id'] == k)['direction_id'] == link['to_direction']}
+    except (StopIteration, KeyError):
+        new = set()
+    if not new:
+        raise ValueError('같은 내용의 문항이 없어 기록을 승계할 수 없습니다.')
+    return new
 
 
 # (subject, run_id) -> (build_id, updated_at, document_hash(bank)). The bank is the
@@ -116,7 +140,7 @@ def availability(db, content, user_id):
             problems[tid] = '개인 수정본과 연결 목표의 일치 미확인'
         else:
             available.add(tid)
-    if doc.get('generation_policy')=='root-generation/2':
+    if doc.get('generation_policy')in('root-generation/2','root-generation/4'):
         from studyez_contracts.roots.generation_v2 import task_dependencies
         deps=task_dependencies(doc)
         while True:

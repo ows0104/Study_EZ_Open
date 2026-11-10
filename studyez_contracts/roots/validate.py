@@ -24,6 +24,16 @@ def direction_hash(doc, direction_id):
     })
 
 
+def task_fingerprints(doc):
+    """task_id -> content fingerprint of its question (learning_links `question_hash`).
+
+    validate_document requires each task's mapping `question_sha256` to equal question_hash(question, bank),
+    so the mapping value is that fingerprint. root-generation/4 carries learning history between revisions
+    per question by it instead of `direction_hash` (docs/changes/2026-11-10-importance-at-authoring R8)."""
+    mapped = {(m['question_id'], m['direction_id']): m['question_sha256'] for m in doc['review']['mappings']}
+    return {t['task_id']: mapped[(t['question_id'], t['direction_id'])] for t in doc['tasks']}
+
+
 def validate_prerequisites(targets,relations,edges,adopted,*,reviewed=True):
     """Draft graphs need valid references; adopted graphs also need review evidence."""
     require(type(edges)is list,'roots: explicit prerequisites array required')
