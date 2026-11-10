@@ -26,7 +26,6 @@
 
 
 | P1 | Main-Quiz 문제 퀄리티 — 검사기에 측정 추가(구조 단서-정답 상관·정답 회상 부담·형식 쏠림) | ows0104 / Claude 문제 퀄리티 세션 | claude/bank-quality-checks | studyez_contracts/bank/quality.py, tests/quizbank/test_answer_quality.py(새 파일), docs/changes/2026-11-08-bank-quality-checks | 2026-11-08 | 사용자 2026-11-08 진단 뒤 「검사기에 측정 추가」 선택. 근거: 감염과 면역 261104_02 98문항 중 예/아니오 축 6문항 정답이 전부 부정, basic/list 답 60자 초과 21개, cloze·mcq 0개. 기존 품질 검사는 leaked_units(발문 정답 노출) 하나뿐. errors 아님 — warnings만 추가해 문항을 떨어뜨리지 않고 repair 단계·관리자 issues에 보인다. 선은 운영 Quiz Bank 35편 3,103문항의 p97에서 쟀다. 프롬프트·DB·운영 미변경. 구현·검사 완료 eff75a83 PR #22 https://github.com/ows0104/Study_EZ_Open/pull/22 — 측정 16·contracts·quizbank 720 통과, 전체 pytest 2,098 통과(1 실패는 tests/runner/test_desktop_control.py 바로가기 설치기로 pristine origin/master에서 동일 재현·미수정), 서버 bank 33·경로 171 동일·retention 통과, map_numbers 정상. 실물 대조: 새 Main-Quiz 98문항 errors 0·warnings 36(다섯 측정 모두, Q003·Q080 이름으로), 운영 은행 35편 새 경고 62(편당 중앙 2)·errors 증가 0. master 병합은 사용자 승인 대기 |
-| P0 | Main-Quiz /3 되돌리기·임상 정리 막힘: 되돌린 고치기의 충돌 기록·그림이 남아 감염병의 병인론(261102_02)이 0과제로 서버 422. 되돌리기는 남은 문항으로 다시 합치고, 임상 정리 「불완전」은 충돌 문항을 보완으로 한 번 돌려보낸 뒤 다시 판정, 조립 전 불변식 검사 | ows0104 / Claude root-generation/3 세션 | claude/gen3-revert-context | quizbank/connection_generate_v3.py, studyez_contracts/roots/generation_v3.py, tests/(quizbank·contracts)/test_*generation_v3.py, docs/changes/2026-11-10-root-generation-3 | 2026-11-10 | 사용자 「임상 정리 막힘도 같이」. 운영·DB·프롬프트 원문 미변경. c09ad379 PR #77 https://github.com/ows0104/Study_EZ_Open/pull/77 — 1,692·서버 root 30 통과, 실제 기록 사본 이어 하기 과제 49·검증 통과. CI 뒤 병합=배포·러너 재설치 |
 | P1 | Main-Quiz 새 구조 시험: 사슬알균 첫 출제 102문항을 고정하고 커버 확인 → 빈 목표만 추가 출제 → 새 문항만 재확인(모델 3회) | ows0104 / Claude 사슬알균 시범 세션 | claude/add-only-trial | docs/changes/2026-11-10-add-only-trial(새 폴더만), runs/_e2e/26110901/add-only-trial(git 밖) | 2026-11-10 | 사용자 2026-11-09 「승인, 돌려줘」(필기·족보 OpenAI 재전송 포함). 생성기·프롬프트·계약·서버·운영 미변경. 자동 재시도 없음. 모델 4회 완료(좁힌 재확인 포함, 77/119·회귀 0). 기록 PR #67 https://github.com/ows0104/Study_EZ_Open/pull/67 — 병합은 사용자가 「나중에」 |
 
 
@@ -61,6 +60,7 @@
 
 ## 완료 기록 (최근 것만)
 
+| 2026-11-10 | root-generation/3 네 번째 멈춤(261102_02 서버 422 0과제) 수정: 되돌린 고치기가 남긴 충돌 기록 CF-POLIO-28·그림을 함께 되돌림, 새 충돌은 인용 필수, 임상 정리 직전 불변식, 임상 정리 불완전은 인용 문항 보완 한 번 뒤 context-1·미확인은 새 세션 1회·그래도 아니면 의학 검토 전 정지. PR #77 병합(5f8269d7), 러너 main-quiz-5f8269d7a95b |
 | 2026-11-10 | 브리지 학생판 분리: 공개판 1.2.0이 복습도 「예습 자료」로 표시 → 스토어·사이트 ZIP은 학생용 사용자판 1.3.24(수동 예습·복습만, 자동전송·공유·Quiz Bank 거절, bank 스크립트 제외, bridge/user-edition.mjs 공용 변환). 관리자는 저장소 bridge 폴더. PR #76 병합(35fc8f2d). 남음: 사용자가 스토어 업로드·심사 → 공개 확인 뒤 protocol.ts 스토어 버전 기본값 1.3.24 |
 | 2026-11-10 | root-generation/3 P6: 단계 뒤에서 멈출 수 있는 검사(합치기·그림·지도 확장·포인트 보충)를 단계 안으로, 다시 쓴 기존 것은 버리고 기록, 판정 포기 한 번 재실행, 의학 40문항 묶음, 지도 확인 전체 관계(끝까지 돌려 보기로 찾음), 추가·고치기 지시문 충돌 문단 정리. PR #75 병합(0e1421a5), 러너 재설치 |
 | 2026-11-10 | root-generation/3 세 번째 멈춤(261102_02 v3-fix-1-0) 수정: 고치기 단계가 기존 원본 충돌을 다시 쓰면 받지 않고 은행 것 유지·기록. PR #74 병합, 러너 ba694a8c 재설치 |
