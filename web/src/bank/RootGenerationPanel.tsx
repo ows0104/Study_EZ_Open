@@ -10,7 +10,7 @@ type Generation={id:string;requestId?:string;state:string;stage:string;message:s
   authoring?:string;parallelAuthoring?:boolean;pipeline?:string|null;awaitingWeb?:boolean;dispatched?:boolean;
   sources?:{id:string;kind:string;filename:string}[];operatorResumes?:number;
   privatePilot:boolean;featureEnabled:boolean;input:Input;report?:{repairRounds:number;taskCount:number;targetCount:number;
-    pipelineVersion?:string;addRounds?:number;fixCount?:number;notReady?:number;
+    pipelineVersion?:string;addRounds?:number;fixCount?:number;notReady?:number;mergedDuplicates?:number;unplacedQuestions?:number;importanceNotes?:number;
     issues:string[];questionNotes:{source:string;question_id:string;verdict:string;note:string}[];
     coverage:{point_id:string;status:string;reason:string}[]}|null};
 type Props={subject:string;runId:string;onPublished?:()=>void};
@@ -18,11 +18,14 @@ type Props={subject:string;runId:string;onPublished?:()=>void};
 // The click is this lecture's approval to send its sources to Codex CLI and, once validated, to open it to students.
 // map-tree/2 (2026-11-10, docs/changes/2026-11-10-root-generation-3): the same front stages plus an independent bank,
 // then root-generation/3 (coverage check → add only for empty goals → batch review → one medical review).
-type Mode='map-tree'|'map-tree-v3'|'parallel'|'provided';
+// map-tree/3 (2026-11-10, docs/changes/2026-11-10-importance-at-authoring): points are only a coverage checklist,
+// importance per question, every source-ok question a task (root-generation/4).
+type Mode='map-tree'|'map-tree-v3'|'map-tree-v4'|'parallel'|'provided';
 const MAP_TREE='map-tree/1';
 const MAP_TREE_V3='map-tree/2';
-function modeOf(g:Generation):Mode{return g.pipeline===MAP_TREE?'map-tree':g.pipeline===MAP_TREE_V3?'map-tree-v3':g.input.inputMode==='provided'?'provided':g.parallelAuthoring?'parallel':'map-tree';}
-const isMapTree=(m:Mode)=>m==='map-tree'||m==='map-tree-v3';
+const MAP_TREE_V4='map-tree/3';
+function modeOf(g:Generation):Mode{return g.pipeline===MAP_TREE?'map-tree':g.pipeline===MAP_TREE_V3?'map-tree-v3':g.pipeline===MAP_TREE_V4?'map-tree-v4':g.input.inputMode==='provided'?'provided':g.parallelAuthoring?'parallel':'map-tree';}
+const isMapTree=(m:Mode)=>m==='map-tree'||m==='map-tree-v3'||m==='map-tree-v4';
 export function RootGenerationPanel(props:Props) {
   return <GenerationPanel key={props.subject+'/'+props.runId} {...props}/>;
 }
@@ -60,7 +63,7 @@ function GenerationPanel({subject,runId,onPublished}:Props) {
       const original=resume&&job?job:null;
       const data=original?original.input:input;
       const source=original?(original.input.inputMode??'provided')==='source':mode!=='provided';
-      const pipeline=original?original.pipeline:mode==='map-tree'?MAP_TREE:mode==='map-tree-v3'?MAP_TREE_V3:null;
+      const pipeline=original?original.pipeline:mode==='map-tree'?MAP_TREE:mode==='map-tree-v3'?MAP_TREE_V3:mode==='map-tree-v4'?MAP_TREE_V4:null;
       const result=await api<{generation:Generation}>(base,{method:'POST',body:JSON.stringify({
         ...data,conceptMap:source?'':data.conceptMap,points:source?'':data.points,inputMode:source?'source':'provided',
         requestId:original?.requestId??crypto.randomUUID(),privatePilot:original?original.privatePilot:privatePilot,resume,
@@ -77,14 +80,14 @@ function GenerationPanel({subject,runId,onPublished}:Props) {
   }
   const sourceMode=mode!=='provided';
   const resumable=!!job&&!job.published&&!pending&&!job.awaitingWeb;
-  const needsReason=resumable&&(job?.pipeline===MAP_TREE||job?.pipeline===MAP_TREE_V3);
+  const needsReason=resumable&&(job?.pipeline===MAP_TREE||job?.pipeline===MAP_TREE_V3||job?.pipeline===MAP_TREE_V4);
   const label=busy?'요청 중…':pending?'생성·업로드 진행 중':resumable?'Main Quiz 이어서 만들기':'Main Quiz 만들기';
   const showApproval=!resumable&&!pending&&isMapTree(mode);
   return <section className="root-card root-generation" aria-label="Main Quiz 만들기"><h3>Main Quiz 만들기</h3>
     <p>{isMapTree(mode)?'올해 필기·족보에서 개념 지도와 출제포인트를 뽑아 대조·보완한 뒤 문항을 만들고, 검수를 거쳐 자동으로 올립니다.':'올해 필기·족보로 문제은행을 만들고, 개념도·출제포인트와 통합·검수한 뒤 자동으로 업로드합니다.'}</p>
     {showApproval&&<div role="note" aria-label="이 요청이 승인하는 것">
       <p><strong>이 버튼이 이 강의의 승인입니다.</strong> 이 강의에 등록된 올해 필기(S1)와 족보(S2, 있으면) PDF를 OpenAI Codex CLI로 보냅니다.</p>
-      {mode==='map-tree-v3'
+      {mode==='map-tree-v3'||mode==='map-tree-v4'
         ?<p>호출 상한: 개념 지도 1 · 출제포인트 1 · 문제은행 1 · 포인트 대조 최대 2 · 포인트 보완 최대 1 · 커버 확인(목표 60개마다 1, 빈 목표 추가 뒤 다시) · 지도 확인 최대 2 · 목표 밖 문항 포인트 보충 최대 2 · 빈 목표 추가 최대 2 · 문항 검토(40문항마다 1, 고친 문항만 다시) · 문항 고치기 문항마다 최대 2 · 임상 정리 1 · 의학 검토 1. 새 구조 시범이라 예상 시간은 아직 모릅니다.</p>
         :<p>호출 상한: 개념 지도 1 · 출제포인트 1 · 포인트 대조 최대 2 · 포인트 보완 최대 1 · 출제 1 · 문항 보완 최대 3 · 원본 대조 포기 시 단계마다 자동 재실행 1. 예상 1~1.5시간.</p>}
       <p>{privatePilot?'검증을 통과하면 우선 내 계정에만 공개됩니다.':'검증을 통과하면 학생에게 바로 공개됩니다.'} 이미 공개된 판이 있는 강의는 요청이 거절됩니다.</p>
@@ -95,6 +98,7 @@ function GenerationPanel({subject,runId,onPublished}:Props) {
     <details><summary>설정·기존 지도 사용</summary><fieldset disabled={busy||pending||resumable}>
     <label><input type="radio" name="root-generation-mode" checked={mode==='map-tree'} onChange={()=>chooseMode('map-tree')}/>개념 지도·출제포인트부터 (기본)</label>
     <label><input type="radio" name="root-generation-mode" checked={mode==='map-tree-v3'} onChange={()=>chooseMode('map-tree-v3')}/>새 구조 (시범): 문제은행·개념 지도·출제포인트를 따로 뽑고 빈 목표만 추가</label>
+    <label><input type="radio" name="root-generation-mode" checked={mode==='map-tree-v4'} onChange={()=>chooseMode('map-tree-v4')}/>새 구조 2 (시범): 포인트는 누락 점검용 · 중요도는 문항마다 · 검수 통과 문항은 모두 과제</label>
     <label><input type="radio" name="root-generation-mode" checked={mode==='parallel'} onChange={()=>chooseMode('parallel')}/>문제은행·개념도·포인트 병렬 (옛 방식)</label>
     <label><input type="checkbox" checked={!sourceMode} onChange={e=>chooseMode(e.target.checked?'provided':'map-tree')}/>기존 Concept map·출제포인트 사용</label>
     {!sourceMode&&<>
@@ -115,7 +119,9 @@ function GenerationPanel({subject,runId,onPublished}:Props) {
         {!job.featureEnabled&&<p>콘텐츠는 저장되었습니다. 현재 Main Quiz 학습 공개 설정은 꺼져 있습니다.</p>}</>:null}</div>}
     {resumable&&<p>같은 입력과 남은 수정 횟수로 이어서 진행합니다. 기존 실패 기록은 보존합니다.</p>}
     {job?.awaitingWeb&&<details><summary>응답 전달 복구</summary><p>자동 회수가 되지 않을 때만 완성된 응답 파일을 전달하세요.</p><label>완성된 웹 응답 JSON 불러오기 (기존 MD 지원)<input type="file" accept=".json,.md" aria-label="웹 응답 파일" disabled={busy} onChange={async e=>{const file=e.target.files?.[0];if(!file)return;setBusy(true);try{await saveRootWebFile(job.id,file);setError('');}catch(err){setError((err as Error).message);}finally{setBusy(false);}}}/></label></details>}
-    {job?.report&&<details><summary>생성·검수 결과</summary><p>목표 {job.report.targetCount}개 · 준비된 과제 {job.report.taskCount}개 · {job.report.pipelineVersion==='root-generation/3'
+    {job?.report&&<details><summary>생성·검수 결과</summary><p>목표 {job.report.targetCount}개 · 준비된 과제 {job.report.taskCount}개 · {job.report.pipelineVersion==='root-generation/4'
+      ?`빈 부분 추가 ${job.report.addRounds}/2회 · 고친 문항 ${job.report.fixCount}개 · 다 묻지 못한 목표 ${job.report.notReady}개 · 중복으로 합친 문항 ${job.report.mergedDuplicates}개 · 목표에 못 붙은 문항 ${job.report.unplacedQuestions}개`
+      :job.report.pipelineVersion==='root-generation/3'
       ?`빈 목표 추가 ${job.report.addRounds}/2회 · 고친 문항 ${job.report.fixCount}개 · 준비 안 된 목표 ${job.report.notReady}개`:`수정 ${job.report.repairRounds}/3회`}</p>
       <ul>{job.report.issues.map((text,i)=><li key={i}>{text}</li>)}{job.report.questionNotes.map((r,i)=><li key={'q'+i}>{r.source} · {r.question_id} · {r.verdict}: {r.note}</li>)}</ul>
       <ul>{job.report.coverage.map(c=><li key={c.point_id}>{c.point_id} · {c.status} · {c.reason}</li>)}</ul></details>}

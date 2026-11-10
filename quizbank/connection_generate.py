@@ -222,6 +222,11 @@ def run(packet, out, *, model=None, invoke=None, resume=None, rerun=()):
             if rerun: raise ValueError('root-generation/3에는 --rerun이 없습니다. --resume <이유>로 이어 갑니다.')
             from .connection_generate_v3 import run as run3
             return run3(packet, out, model, invoke, resume=resume)
+        if packet.get('generationPolicy') == 'root-generation/4':
+            # docs/changes/2026-11-10-importance-at-authoring: exam points are a coverage checklist.
+            if rerun: raise ValueError('root-generation/4에는 --rerun이 없습니다. --resume <이유>로 이어 갑니다.')
+            from .connection_generate_v4 import run as run4
+            return run4(packet, out, model, invoke, resume=resume)
         if is_v2_source(packet):
             from .connection_generate_v2 import run as run2
             return run2(packet,out,model,invoke,resume=resume,rerun=rerun)

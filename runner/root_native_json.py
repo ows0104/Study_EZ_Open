@@ -65,7 +65,7 @@ def review_images(stage,work,ctx):
     Of 19 source reviews (26110801–26110901) the 13 that completed opened every page image (53–76);
     the 6 that gave up opened 0–8 and wrote 「원본 46쪽을 다 대조하지 못했다」 before looking. Opening the
     pages was the model's own choice; attaching them removes it. Same bytes as work/material."""
-    if stage.startswith('v3-'):return v3_images(work,ctx)
+    if stage.startswith(STAGED):return v3_images(work,ctx)
     if stage.split('-')[0]not in('source','context'):return[]
     material=Path(work)/'material'
     pages=sorted(p for p in material.glob('S*-[0-9][0-9][0-9][0-9].png'))
@@ -79,9 +79,15 @@ V3_PROMPTS={'coverage':'coverage.md','map':'map-check.md','supplement':'point-su
     'supplement-normalize':'supplement-normalize.md','add':'add.md','review':'item-review.md','fix':'fix.md','brief':'brief-fix.md',
     'context':'context.md'}
 
+# root-generation/4 (docs/changes/2026-11-10-importance-at-authoring): the same stages named `v4-<kind>…`, with the /4
+# schemas and checks; a prompt in content/prompts/learning-links/v4 replaces the v3 one of the same name.
+STAGED=('v3-','v4-')
+
+def is_v4(stage):return stage.startswith('v4-')
+
 def v3_kind(stage):
-    require(stage.startswith('v3-'),'Not a v3 stage')
-    if stage.startswith('v3-supplement-normalize'):return 'supplement-normalize'
+    require(stage.startswith(STAGED),'Not a v3/v4 stage')
+    if stage[3:].startswith('supplement-normalize'):return 'supplement-normalize'
     kind=stage.split('-')[1]
     require(kind in V3_PROMPTS,'Unsupported v3 stage')
     return kind
@@ -95,10 +101,11 @@ def v3_images(work,ctx):
 
 def v3_schema(stage):
     from studyez_contracts.roots import generation_v3 as v3
+    from studyez_contracts.roots import generation_v4 as v4
     kind=v3_kind(stage)
     if kind=='supplement-normalize':return v3.SUPPLEMENT_NORMALIZE_OUTPUT
     if kind=='brief':return v3.BRIEF_FIX_OUTPUT
-    return v3.OUTPUTS['map-check'if kind=='map'else'item-review'if kind=='review'else kind]
+    return (v4 if is_v4(stage)else v3).OUTPUTS['map-check'if kind=='map'else'item-review'if kind=='review'else kind]
 
 def v3_check(stage,ctx,value,state=None,work=None):
     """The stage's own acceptance. With the orchestrator's state (host-check.json, P6) it is the generator's
@@ -106,8 +113,16 @@ def v3_check(stage,ctx,value,state=None,work=None):
     from studyez_contracts.roots import generation_v3 as v3
     kind=v3_kind(stage)
     if state is not None and kind in('add','fix','supplement','supplement-normalize'):
-        from quizbank.connection_generate_v3 import check_stage
+        if is_v4(stage):from quizbank.connection_generate_v4 import check_stage
+        else:from quizbank.connection_generate_v3 import check_stage
         return check_stage(kind,value,ctx,state,Path(work)/'.check-render')
+    if is_v4(stage)and kind in('coverage','review','add','fix','supplement'):
+        from studyez_contracts.roots import generation_v4 as v4
+        if kind=='coverage':return v4.check_coverage(value,ctx['goals'],ctx['questions'])
+        if kind=='review':return v4.check_review_input(value,ctx)
+        if kind=='add':return v4.check_added(value,ctx)
+        if kind=='fix':return v4.check_fixed(value,ctx)
+        return v4.check_supplement(value,ctx)
     if kind=='context':return v3.check_context(value,ctx)
     if kind=='coverage':return v3.check_coverage(value,ctx['goals'],ctx['questions'])
     if kind=='map':return v3.check_map_input(value,ctx)
@@ -244,7 +259,7 @@ def inventory(folder):
     require(result,'Missing original material');return result
 
 def schema_for(stage,ctx):
-    if stage.startswith('v3-'):return v3_schema(stage)
+    if stage.startswith(STAGED):return v3_schema(stage)
     if stage=='normalize':return c.BRIEF
     if stage=='generate'or re.fullmatch(r'repair-[1-3]',stage):return c.author_schema(ctx.get('parallelAuthoring',False))
     if re.fullmatch(r'context-[0-3]',stage):return c.CONTEXT_OUTPUT
@@ -253,7 +268,7 @@ def schema_for(stage,ctx):
 
 
 def decode_for(stage,value,schema):
-    if stage.startswith('v3-'):return value,None
+    if stage.startswith(STAGED):return value,None
     value=g.decode_optional_fields(value,schema)
     if stage=='generate'or stage.startswith('repair-'):return c.tier_projection(value)
     return value,None
@@ -272,9 +287,10 @@ only {"path":"result.json","sha256":"<actual lowercase SHA256>"}.
 '''
 
 def task_for(stage):
-    if stage.startswith('v3-'):
+    if stage.startswith(STAGED):
         kind=v3_kind(stage)
-        task=(g.PROMPTS.parent/'v3'/V3_PROMPTS[kind]).read_text(encoding='utf-8')
+        own=g.PROMPTS.parent/'v4'/V3_PROMPTS[kind]
+        task=(own if is_v4(stage)and own.is_file()else g.PROMPTS.parent/'v3'/V3_PROMPTS[kind]).read_text(encoding='utf-8')
         if kind in('add','fix','review'):task+='\n'+g.item_quality_guidance()
         return task+V3_TRANSPORT
     kind=stage.split('-')[0];name='extract-v2.md'if kind=='normalize'else'context-v2.md'if kind=='context'else'source-v2.md'if kind=='source'else'author-v2.md'
@@ -320,7 +336,7 @@ def check_file(stage,work):
     path=work/'result.json';require(not path.is_symlink()and path.is_file()and 0<path.stat().st_size<=LIMIT,'Unsafe/missing result')
     value,_=decode_for(stage,read_model(path),schema);jsonschema.validate(value,schema)
     lost=garbled(value);require(lost is None,GARBLED+repr((lost or'')[:160]))
-    if stage.startswith('v3-'):
+    if stage.startswith(STAGED):
         state=read(work/'host-check.json')if(work/'host-check.json').is_file()else None
         v3_check(stage,ctx,value,state,work);return value
     if stage=='normalize':
@@ -526,8 +542,8 @@ def validate_stage(out,entry,*,model):
 
 def validate_all(out,payload):
     require_unblocked(out)
-    if payload['manifest'].get('pipelineVersion')=='root-generation/3':
-        # /3 keeps its own resume archive (.resume-<k>/ with superseded entries); every completed stage is a receipt.
+    if payload['manifest'].get('pipelineVersion')in('root-generation/3','root-generation/4'):
+        # /3 (and /4) keeps its own resume archive (.resume-<k>/ with superseded entries); every completed stage is a receipt.
         for entry in payload['manifest']['stages']:
             if entry['status']=='completed':
                 if 'usageHash'in entry:validate_stage(out,entry,model=payload['manifest']['model'])
@@ -594,12 +610,12 @@ def main():
         require_unblocked(a.out)
         from studyez_contracts.roots.parallel import is_v2_source
         packet=read(a.packet)
-        if packet.get('generationPolicy')=='root-generation/3':
+        if packet.get('generationPolicy')in('root-generation/3','root-generation/4'):
             # Windows without long paths: the deepest file a stage folder or its resume archive holds must fit in
             # 259 characters. A copy of 261102_02 in a deeper folder failed in the middle of a late stage.
             deepest=a.out.resolve()/'.resume-99'/'.native'/'v3-coverage-fix-context-0'/'work'/'material'/('stimulus-'+'0'*64+'.png')
             require(os.name!='nt'or len(str(deepest))<260,f'실행 폴더 경로가 너무 깁니다({len(str(a.out.resolve()))}자). 단계 폴더의 파일이 Windows 경로 한도 259자를 넘습니다. 모델 호출 전에 멈춥니다.')
-        result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)or packet.get('generationPolicy')=='root-generation/3'else None,resume=a.resume,rerun=tuple(a.rerun))
+        result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)or packet.get('generationPolicy')in('root-generation/3','root-generation/4')else None,resume=a.resume,rerun=tuple(a.rerun))
         validate_all(a.out,result)
         if packet.get('parallelAuthoring'):
             from runner.parallel_status import refresh

@@ -1,0 +1,4 @@
+원본과 포인트를 별도 세션에서 대조한다. input.json의 scope를 지키고 material의 전체 MD와 실제 PNG를 확인한다. exam-points.json이 request.md의 독립 회상·판단 목표 단위와 원본 범위를 충족하는지 검토한다.
+정의·기전·예외·적용이 각각 별도로 인출할 가치가 있는 경우 과도한 묶음을 지적한다. 목록/같은축비교/과정전체가 하나의 의미 있는 목표이면 유지한다. 개수나 문장 길이로 판단하지 않는다. 실제로 빠진 독립 목표·과도한묶음·중복·범위/근거 오류만 issues에 쓰고, 선택 제안은 suggestions에 구별한다. 포인트는 출제 누락 점검표이며 중요도 근거를 갖지 않는다. 강조 표시의 종류(출제 예고·교수 발언·필기자 표시·스탬프)나 중요도는 대조하지 않는다. 임상 사실의 불확실성은 한계로 남긴다. 각 지적은 실제 point_id와 원본 근거, 이유, 수정해야 할 목표를 구체적으로 적는다.
+page_review는 원본 범위 확인 목록이다. $pages의 모든 물리쪽을 covered/no_independent_target/out_of_scope/unreadable 중 하나로 정확히 한 번 기록한다. 여러 쪽을 하나의 같은 판정에 묶어도 된다. S1이 다루지 않는 S2 문항 쪽은 out_of_scope로 이유를 적는다. 읽지 못한 범위를 통과로 세지 않는다.
+issues가 남으면 needs_revision, issues가 없으면 ready다. suggestions와 자료 한계를 실제 오류로 바꾸지 않는다. 원본·포인트·요청문은 수정하지 말고 acceptance.schema.json 형식의 전체 판단을 audit.json에 작성한다. title은 $title. 네트워크/다른세션/추가모델은 사용하지 않는다. 최종 응답에는 {"path":"audit.json","sha256":"실제파일의소문자SHA256"}만 반환한다.

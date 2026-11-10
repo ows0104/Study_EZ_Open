@@ -39,9 +39,11 @@ ADD_PER_GOAL = 2         # new IDs offered per gap goal
 _QID = re.compile(r'^(Q[0-9A-Za-z_-]+)\b')
 
 
-def _prompt_hash():
-    folder = Path(__file__).resolve().parents[1] / 'content/prompts/learning-links/v3'
-    return document_hash({p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(folder.glob('*.md'))})
+def _prompt_hash(folders=('v3',)):
+    """Fingerprint of the stage prompts. /3 hashes v3/ alone (its identity is unchanged); /4 adds v4/."""
+    root = Path(__file__).resolve().parents[1] / 'content/prompts/learning-links'
+    rows = [{p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((root / f).glob('*.md'))} for f in folders]
+    return document_hash(rows[0] if len(rows) == 1 else rows)
 
 
 def chunks(items, size):
@@ -51,14 +53,14 @@ def chunks(items, size):
 class Stages:
     """Ledger of stage calls with archived evidence. Same rules as the /2 producer: no automatic rerun."""
 
-    def __init__(self, packet, out, model, invoke, resume=None):
+    def __init__(self, packet, out, model, invoke, resume=None, policy=POLICY, prompts=('v3',)):
         from . import connection_generate as g
-        self.g, self.out, self.model, self.invoke = g, Path(out), model, invoke
+        self.g, self.out, self.model, self.invoke, self.policy = g, Path(out), model, invoke, policy
         self.path = self.out / 'ledger.json'
-        identity = document_hash({'base': g.identity(packet, model), 'v3': POLICY, 'prompts': _prompt_hash()})
+        identity = document_hash({'base': g.identity(packet, model), 'v3': policy, 'prompts': _prompt_hash(prompts)})
         if self.path.exists():
             self.ledger = json.loads(self.path.read_text(encoding='utf-8'))
-            v3.require(self.ledger.get('pipelineVersion') == POLICY, '기존 실행의 파이프라인 판이 다릅니다. 이력과 상한을 보존합니다.')
+            v3.require(self.ledger.get('pipelineVersion') == policy, '기존 실행의 파이프라인 판이 다릅니다. 이력과 상한을 보존합니다.')
             v3.require(self.ledger.get('inputHash') == packet['inputHash'], '다른 packet으로는 이어 가지 않습니다.')
             if self.ledger.get('identity') != identity or any(s['status'] != 'completed' for s in self.ledger['stages'].values()):
                 v3.require(type(resume) is str and resume.strip(),
@@ -71,7 +73,7 @@ class Stages:
         else:
             v3.require(not any(p.name != 'packet.json' for p in self.out.glob('*.json')), '기존 산출물의 ledger가 없습니다. 자동 재시작하지 않습니다.')
             self.out.mkdir(parents=True, exist_ok=True)
-            self.ledger = {'pipelineVersion': POLICY, 'inputHash': packet['inputHash'], 'identity': identity, 'stages': {},
+            self.ledger = {'pipelineVersion': policy, 'inputHash': packet['inputHash'], 'identity': identity, 'stages': {},
                            'addRounds': 0, 'fixAttempts': {}, 'verdictLedger': []}
             self.resume_row = None
         self.save()
@@ -139,7 +141,7 @@ class Stages:
 
         `state` (P6) is what the merge after this stage receives. It goes to the transport as `_check` so the
         runner's in-session check runs that same merge; it is not part of the stage input or its hash."""
-        ctx = {**ctx, '_pipeline_version': POLICY}
+        ctx = {**ctx, '_pipeline_version': self.policy}
         input_hash = document_hash(ctx)
         prior = self.ledger['stages'].get(name)
         if prior and prior['status'] == 'completed' and prior['inputHash'] == input_hash:
@@ -151,7 +153,7 @@ class Stages:
         self.ledger['stages'][name] = entry
         self.save()
         self.g.write(self.out / (name + '.input.json'), ctx)
-        print('── 연결 자동출제 /3 ' + name, flush=True)
+        print('── 연결 자동출제 ' + self.policy[self.policy.index('/'):] + ' ' + name, flush=True)
         try:
             raw, info = self.invoke(name, {**ctx, '_check': state} if state is not None else ctx, self.out / 'material', self.model)
             self.g.write(self.out / (name + '.raw.json'), raw)

@@ -24,6 +24,25 @@ def direction_hash(doc, direction_id):
     })
 
 
+FINGERPRINT_POLICY = 'question-content/1'
+
+
+def question_fingerprint(question):
+    """The question's own content: everything the learner reads and answers, without the bank context
+    (`question_hash` includes concepts, plans and build metadata, so any change elsewhere would reset every
+    question) and without tier/importance, which are computed from the importance basis, not content."""
+    return document_hash({'policy': FINGERPRINT_POLICY,
+                          'question': {k: v for k, v in question.items() if k not in ('tier', 'importance')}})
+
+
+def task_fingerprints(doc):
+    """task_id -> content fingerprint of its question. root-generation/4 carries learning history between
+    revisions per question by it instead of `direction_hash` (docs/changes/2026-11-10-importance-at-authoring R8):
+    the same content carries over, a changed question starts fresh, an ID alone never carries anything."""
+    questions = index_by(doc['bank_snapshot']['questions'], 'question_id')
+    return {t['task_id']: question_fingerprint(questions[t['question_id']]) for t in doc['tasks']}
+
+
 def validate_prerequisites(targets,relations,edges,adopted,*,reviewed=True):
     """Draft graphs need valid references; adopted graphs also need review evidence."""
     require(type(edges)is list,'roots: explicit prerequisites array required')
@@ -44,7 +63,7 @@ def validate_document(doc):
         'bank_build_id', 'adopted_target_ids', 'tasks', 'exam_date', 'equivalences', 'prerequisites'}, 'roots: missing or unknown fields')
     require(doc['schema_version'] == 'roots/1', 'roots: unsupported schema')
     if 'generation_policy'in doc:
-        require(doc['generation_policy']=='root-generation/2'and doc['review']['schema_version']=='learning-links/2','roots: invalid generation policy')
+        require(doc['generation_policy']in('root-generation/2','root-generation/4')and doc['review']['schema_version']=='learning-links/2','roots: invalid generation policy')
         from .media import validate_images
         validate_images(doc['bank_snapshot'],doc['review']['sources'])
         from .generation_v2 import graph_order
@@ -80,14 +99,23 @@ def validate_document(doc):
         require(type(task_id) is str and re.fullmatch(r'[A-Za-z0-9_-]{1,64}', task_id), 'roots: invalid task ID')
         qid, did = task['question_id'], task['direction_id']
         require(qid in questions and did in directions, 'roots: unknown task reference')
+        if doc.get('generation_policy') == 'root-generation/4':
+            require(sum(1 for t in doc['tasks'] if t['question_id'] == qid) == 1, 'roots: a question is one task')
         q = questions[qid]
         require(q.get('format', 'basic') in ('basic', 'list', 'cloze', 'ox', 'mcq', 'multi_select'),
                 'roots: compound task needs separate direction-level assessment')
         mappings = [m for m in review['mappings'] if m['question_id'] == qid and m['direction_id'] == did]
-        require(len(mappings) == 1 and set(directions[did]['relation_ids']) <= set(mappings[0]['tested_relation_ids']),
-                'roots: task must directly test the entire direction')
+        if doc.get('generation_policy') == 'root-generation/4':
+            # docs/changes/2026-11-10-importance-at-authoring R5/R8: a goal may be asked across several questions;
+            # each task tests some of its relations (answers some of its components).
+            require(len(mappings) == 1 and mappings[0]['tested_relation_ids']
+                    and set(mappings[0]['tested_relation_ids']) <= set(directions[did]['relation_ids']),
+                    'roots: task must directly test part of its direction')
+        else:
+            require(len(mappings) == 1 and set(directions[did]['relation_ids']) <= set(mappings[0]['tested_relation_ids']),
+                    'roots: task must directly test the entire direction')
         require(mappings[0]['question_sha256'] == question_hash(q, bank), 'roots: stale task')
-    if doc.get('generation_policy')=='root-generation/2':
+    if doc.get('generation_policy')in('root-generation/2','root-generation/4'):
         prepared={t['question_id']for t in tasks.values()}
         require(all(set(questions[q].get('prerequisites',[]))<=prepared for q in prepared),'roots: prerequisite has no prepared task')
         from .generation_v2 import order_plan

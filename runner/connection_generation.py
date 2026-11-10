@@ -45,7 +45,7 @@ def completed_result(out,packet):
     payload=json.loads((out/'result.json').read_text(encoding='utf-8'))
     validate_result(payload,packet)
     ledger=json.loads((out/'ledger.json').read_text(encoding='utf-8'));meta=payload['manifest']
-    budget='addRounds'if meta.get('pipelineVersion')=='root-generation/3'else'repairRounds'  # /3 has add rounds, not repair rounds
+    budget='addRounds'if meta.get('pipelineVersion')in('root-generation/3','root-generation/4')else'repairRounds'  # /3 and /4 have add rounds, not repair rounds
     if ledger.get('identity')!=meta['runtimeHash']or ledger.get(budget)!=meta[budget]:
         raise ValueError('완료 결과의 원래 실행 지문/상한이 다릅니다.')
     if meta.get('normalizationRecoveries',[])!=ledger.get('normalizationRecoveries',[]):raise ValueError('초기 지도 재검증 이력이 다릅니다.')
@@ -171,7 +171,7 @@ def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=
     args = [sys.executable, '-m', module, '--packet', str(gen_packet_path.resolve()), '--out', str(gen_out.resolve())]
     if model: args += ['--model', model]
     if resume and module == 'runner.root_native_json' and (gen_out / 'ledger.json').exists(): args += ['--resume', resume]
-    if (gen_out/'result.json').exists() and resume and gen_packet.get('generationPolicy')=='root-generation/3':
+    if (gen_out/'result.json').exists() and resume and gen_packet.get('generationPolicy')in('root-generation/3','root-generation/4'):
         set_aside_stale_result(gen_out,gen_packet,packet,resume)
     if (gen_out/'result.json').exists():payload=completed_result(gen_out,gen_packet)
     else:
