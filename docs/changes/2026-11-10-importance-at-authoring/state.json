@@ -1,0 +1,80 @@
+{
+  "id": "2026-11-10-importance-at-authoring",
+  "title": "Main-Quiz 중요도를 출제 단계로",
+  "area": "generation",
+  "created_at": "2026-11-10T14:15:41.044199+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-10T14:29:34.939426+00:00",
+      "evidence": "2026-11-10 사용자 채팅: 「좋아. 이제 중요도는 출제에 붙이자 … Spec도 써줘」 → 「1, 2 모두 바꿔줘. 그리고 진행해줘」 → (Plan 제시, A/B 질문) → 「B안으로 가자」. 승인 뒤 spec 정정 3건(범위 불변, 기존 규칙에 맞춤): 의학 검토는 과제를 빼지 않음(기존 medical-final/1), 문항 basis는 은행 밖 manifest에 저장(은행 스키마 불변), 미검토 관계 연결 금지는 공용 계약 유지 — 사용자에게 보고함",
+      "scope": "plan.md PR A·B·C 코드·지시문·검사 구현, 로컬 검사, PR 생성. 학습 상태는 R8 권장안 B(과제 단위). PR C는 #28 병합 뒤. master 병합·러너 재설치·실제 모델 시범·261102_02 재생성·운영 반입·공개는 미포함",
+      "evidence_version": 2,
+      "source_hash": "3f2e4775984a7ae0b05e62bd9ddf7b23da45a3fdbd2cd4e6d18a018d56671c0f",
+      "plan_hash": "3ad5fd969e19f61c7775c04fe7d929063999750e3ae50dce4f342fc5316f070f",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "051834e729c4f05d3002f808bf70e71dbaa0389d812a11afdb86e916fe5f94d4"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-10T14:47:26.135767+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "tests/quizbank",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "c774c2d90184fdfb9851167f7e397a8a88dad8ce7503d155adf6ae516bf0b45d",
+      "plan_hash": "3ad5fd969e19f61c7775c04fe7d929063999750e3ae50dce4f342fc5316f070f",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-10-importance-at-authoring/1794321804347713400-regression.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-10T14:47:26.136592+00:00"
+}

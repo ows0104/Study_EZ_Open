@@ -1049,11 +1049,17 @@ MANIFEST_KEYS = {'pipelineVersion', 'inputHash', 'briefHash', 'bankHash', 'model
 def validate_result(value, packet):
     """Artifacts, document and add-only invariants of a /3 result. The stage-proof chain is checked with
     the generator's stage names (PR B)."""
-    from .source_assessment import envelope
+    return check_result(value, packet, FLAVOR)
+
+
+def check_result(value, packet, flavor):
+    """The checks /3 and /4 share (/4: docs/changes/2026-11-10-importance-at-authoring). `flavor` names the
+    policy, its manifest keys and its judgment/assembly part."""
+    POLICY = flavor['policy']
     require(set(value) == {'brief', 'document', 'sourceAudit', 'medical', 'validation', 'manifest'}, 'result3: unknown/missing artifacts')
     meta = value['manifest']
-    require(MANIFEST_KEYS <= set(meta), 'result3: incomplete manifest')
-    require(meta['pipelineVersion'] == POLICY, 'result3: not a root-generation/3 result')
+    require(flavor['keys'] <= set(meta), 'result3: incomplete manifest')
+    require(meta['pipelineVersion'] == POLICY, f'result3: not a {POLICY} result')
     brief, doc = value['brief'], value['document']
     bank = doc['bank_snapshot']
     require(meta['inputHash'] == packet['inputHash'], 'result3: input mismatch')
@@ -1084,8 +1090,15 @@ def validate_result(value, packet):
             require(strip(final[qid]) == strip(q), f'result3: {qid} changed without a fix')
     tasks = {t['question_id'] for t in doc['tasks']}
     require(not tasks & off, 'result3: an out-of-scope question became a task')
-    # The audit is the /2 compile of the gathered /3 judgments on the reviewed bank. Rebuilding the
-    # document itself (importance projection, container concepts) is checked with the stage chain (PR B).
+    # The audit is the compile of the gathered judgments on the reviewed bank; the document is its assembly.
+    flavor['judgments'](value, packet, brief, reviewed, meta, doc)
+    _check_stages(value, packet, reviewed, meta, POLICY)
+    return doc
+
+
+def _judgments3(value, packet, brief, reviewed, meta, doc):
+    """/3: the audit is the /2 compile; not-ready goals have no task; tiers come from the point table."""
+    from .source_assessment import envelope
     raw = assessment_raw(brief, reviewed, meta['coverage'], meta['mapCheck'], meta['itemReviews'],
                          context_summary(meta['clinicalContext']), meta['sourceAssessment']['summary'])
     require(raw == meta['sourceAssessment'], 'result3: assessment is not the gathered judgments')
@@ -1118,6 +1131,12 @@ def validate_result(value, packet):
                              importance=v2.target_importance(brief, table) if iproof else None)
     require(again == doc, 'result3: the document is not the assembly of the reviewed judgments')
     require(meta['readiness'] == readiness(brief, reviewed, raw, doc), 'result3: the readiness table is not of these judgments')
+
+
+FLAVOR = {'policy': POLICY, 'keys': MANIFEST_KEYS, 'judgments': _judgments3}
+
+
+def _check_stages(value, packet, reviewed, meta, POLICY):
     # Stage records: fingerprints of the stages whose output the result carries.
     stages = {s['name']: s for s in meta['stages']}
     require(all(s['status'] == 'completed' for s in stages.values()), 'result3: incomplete stages')
@@ -1153,4 +1172,3 @@ def validate_result(value, packet):
     require(meta['addRounds'] == len([n for n in stages if re.fullmatch(r'v3-add-\d+', n)]), 'result3: add rounds differ from add stages')
     for f in meta['fixes']:
         require(f['stage'] in stages, 'result3: a fix without its stage')
-    return doc

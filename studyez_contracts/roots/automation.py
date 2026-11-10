@@ -118,6 +118,10 @@ def validate_result(result, packet):
         # docs/changes/2026-11-10-root-generation-3: the packet names /3; a /2 packet never accepts a /3 result.
         from .generation_v3 import validate_result as check3
         return check3(result, packet)
+    if packet.get('generationPolicy') == 'root-generation/4':
+        # docs/changes/2026-11-10-importance-at-authoring: exam points are a coverage checklist.
+        from .generation_v4 import validate_result as check4
+        return check4(result, packet)
     if packet.get('pipeline') is not None:
         # map-tree/1: the run used a generation packet derived from this request; re-derive it first.
         from .map_tree import FORMATS, resolve
@@ -126,6 +130,9 @@ def validate_result(result, packet):
         if derived.get('generationPolicy') == 'root-generation/3':
             from .generation_v3 import validate_result as check3
             return check3(result, derived)
+        if derived.get('generationPolicy') == 'root-generation/4':
+            from .generation_v4 import validate_result as check4
+            return check4(result, derived)
         from .generation_v2 import validate_result as check
         return check(result, derived)
     if is_v2_source(packet):

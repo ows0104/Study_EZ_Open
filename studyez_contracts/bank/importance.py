@@ -96,6 +96,21 @@ def point_table(points, profile):
     return {"policy": POLICY, "emphasis_style": profile["emphasis_style"], "points": table}
 
 
+def question_table(basis_by_question, profile):
+    """Per question (root-generation/4): the question's own basis and computed decision.
+
+    From 2026-11-10 the authoring stages write the basis per question and the exam points carry none
+    (docs/changes/2026-11-10-importance-at-authoring R2). Kinds, weights and lines are the point table's."""
+    _require(type(profile) is dict and profile.get("emphasis_style") in STYLES, "notebook_profile.emphasis_style required")
+    _require(type(basis_by_question) is dict, "question basis must map question_id to a basis")
+    rows = {qid: {"basis": basis, **score(basis, profile["emphasis_style"])} for qid, basis in basis_by_question.items()}
+    return {"policy": POLICY, "source": "question", "emphasis_style": profile["emphasis_style"], "questions": rows}
+
+
+def _rows(table):
+    return table["questions"] if table.get("source") == "question" else table["points"]
+
+
 def question_decision(table, point_ids):
     """The highest decision among the points a question implements (bases are not pooled)."""
     _require(type(point_ids) is list and point_ids and all(p in table["points"] for p in point_ids),
@@ -113,21 +128,28 @@ def _ref(r, quote, page_counts):
 
 
 def target_axes(table, point_ids, page_counts=None):
-    """The three review axes of a learning target from its points' bases (no `unreviewed`)."""
+    """The three review axes of a learning target from its points' bases (no `unreviewed`).
+
+    With a question table (`question_table`) the ids are the target's question ids."""
     axes = {}
+    rows = _rows(table)
+    source = "문항" if table.get("source") == "question" else "포인트"
     for axis, kinds in AXES.items():
         evidence = []
         for pid in point_ids:
-            for row in table["points"][pid]["basis"]:
+            for row in rows[pid]["basis"]:
                 if row["kind"] in kinds:
                     evidence.append({"kind": REVIEW_KIND.get(row["kind"], "teaching_emphasis"),
                                      "reason": f"{pid} {row['kind']}: {row['reason']}",
                                      "refs": [_ref(r, row["quote"], page_counts) for r in row["refs"]]})
-        excluded = [pid for pid in point_ids if table["points"][pid]["rule"] == "exclusion"]
-        if axis == "exam" and excluded:
+        excluded = [pid for pid in point_ids if rows[pid]["rule"] == "exclusion"]
+        # Points: one excluded point marks the target. Questions: only when every question is excluded, since
+        # several questions of one target can ask different parts of it.
+        marks = len(excluded) == len(point_ids) if table.get("source") == "question" else bool(excluded)
+        if axis == "exam" and excluded and marks:
             axes[axis] = {"status": "insufficient", "reason": "출제 제외: " + ", ".join(excluded), "evidence": []}
         else:
-            axes[axis] = ({"status": "supported", "reason": f"{POLICY} 포인트 근거에서 계산", "evidence": evidence} if evidence
+            axes[axis] = ({"status": "supported", "reason": f"{POLICY} {source} 근거에서 계산", "evidence": evidence} if evidence
                           else {"status": "insufficient", "reason": f"{POLICY}: 이 축의 근거 없음", "evidence": []})
     return axes
 
