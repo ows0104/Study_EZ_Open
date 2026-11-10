@@ -4,7 +4,10 @@ root-generation/3 단계다(docs/changes/2026-11-10-root-generation-3). input.js
 - 출력 questions에는 지적받은 문항의 교체본만 넣는다. question_id·concept_id·point_ids는 그대로 둔다.
 - covered_goals는 그 문항이 지금 답으로 덮고 있는 목표다. 고친 뒤에도 그 목표 전체를 묻는 상태를 유지한다.
 - 지적과 무관한 칸은 바꾸지 않는다.
-- 출력 source_conflicts에는 이번에 새로 생긴 원본 충돌만 넣는다. 입력 source_conflicts에 있는 기존 충돌은 다시 쓰지 않는다(코드가 받지 않고 기존 것을 그대로 둔다). clinical_conflicts는 고친 문항이 인용하는 충돌의 사실만 쓴다.
+
+## 충돌 (이 단계 범위)
+
+source_conflicts에는 고치면서 새로 드러난 원본 충돌만 쓴다. 입력 source_conflicts의 기존 충돌은 그대로 유지되므로 다시 쓰지 않는다. clinical_conflicts에는 새 conflict_id마다 facts를 쓰고, 고친 문항이 인용하는 기존 충돌의 facts는 고친 내용 때문에 바뀌어야 할 때만 그 충돌 것을 다시 쓴다. facts에는 실제 원본의 충돌 주장과 현재 의학 답의 관계만 명시한다. 과거 sourceAudit/medical verdict, 검수자 판단, 수정 차수, 중요도는 넣지 않는다. 의학적으로 필요한 충돌 사실은 누락하지 않는다. 독립 원본 검수가 이 projection과 정본의 일치·완전성을 확인하고 정답 검수는 이 의학적 내용만 받는다.
 
 ## 옮긴 규칙 (author-v2.md)
 
@@ -25,5 +28,3 @@ importanceTable이 있으면 문항마다 point_ids에 이 문항이 실제로 �
 prerequisites는 실제 필요한 문항만 연결한다. 순환·없는 ID·목록 전체의 불필요한 선행 잠금을 점검하고 기존 강의 흐름을 유지한다.
 
 visual_stimuli는 실제 원본 PDF의 question_id/source_id/물리쪽/page/정규화 crop[left,top,right,bottom]/reason의 완전한 목록이다. 필요한 원본 그림을 직접 열고 선택한다. pagenum·bbox·그림과 답의 위치/방향이 맞는지 확인한다. 이름·정답 표시·불필요한 표 주석을 자르되 필요한 구조/기호는 보존한다. 임의로 그리거나 이미지 경로/바이너리를 작성하지 않는다. 코드가 이 crop을 렌더해 동일 PNG를 원본검수·독립정답검수·학생 화면에 제공한다. 실제 시각 목표에는 실제 이미지를 붙인다. 원본 그림 오류는 사용하지 말고 검증 가능한 원본 대체와 충돌 기록을 남긴다.
-
-clinical_conflicts는 BANK source_conflicts의 모든 conflict_id마다 facts를 가지며 실제 원본의 충돌 주장과 현재 의학 답의 관계만 명시한다. 과거 sourceAudit/medical verdict, 검수자 판단, 수정 차수, 중요도는 넣지 않는다. 의학적으로 필요한 충돌 사실은 누락하지 않는다. 과거 판정·수정 이력은 audit_summary.changes 등 별도 기록에 보존하며 문제/답/해설/clinical_conflicts에 섞지 않는다. 독립 원본 검수가 이 projection과 정본의 일치·완전성을 확인하고 정답 검수는 이 의학적 내용만 받는다.

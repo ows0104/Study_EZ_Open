@@ -240,10 +240,14 @@ def test_v3_prompts_carry_the_v2_paragraphs_verbatim():
     for i in (3, 6, 10):
         assert src[i] in v('map-check.md')
     assert src[5] in v('item-review.md')
-    for i in (4, 5, 6, 7, 8, 9, 10, 12):
+    for i in (4, 5, 6, 7, 8, 9, 12):
         assert aut[i] in v('add.md')
-    for i in (4, 5, 6, 7, 8, 9, 10):
+    for i in (4, 5, 6, 7, 8, 9):
         assert aut[i] in v('fix.md')
+    # [10] asks for facts of every conflict ID (a whole-bank rule); the partial stages carry a scoped rewrite instead
+    for name in ('add.md', 'fix.md'):
+        assert aut[10] not in v(name) and '모든 conflict_id마다' not in v(name) and '## 충돌 (이 단계 범위)' in v(name)
+        assert aut[10].split('명시한다.')[0] not in v(name)
     assert '「중요도 근거」' not in v('point-supplement.md') and '## 중요도 근거' in v('point-supplement.md')
 
 

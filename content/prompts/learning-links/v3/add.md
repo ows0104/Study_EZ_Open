@@ -3,8 +3,11 @@ root-generation/3 단계다(docs/changes/2026-11-10-root-generation-3). input.js
 빈 목표 추가 출제. input.json의 goals는 지금 어떤 문항도 전체를 답으로 묻지 않는 목표다. 목표마다 그 목표 전체(answer_scope, 모든 components와 relations)를 답으로 요구하는 새 문항을 원본(input.pages와 첨부 PNG, material의 글)에서 쓴다.
 - 출력은 새 문항과 그 문항에 필요한 새 개념·회상 계획·충돌·그림뿐이다. 기존 문항(input.existing)과 지도는 출력하지 않으며 바꿀 수 없다. existing은 중복을 피하려고 준 목록이다.
 - question_id는 allowed_question_ids에서 순서대로 쓴다. point_ids에는 그 목표의 point_ids를 쓴다. concept_id는 기존 BANK 개념이거나 이번에 concepts로 추가한 개념이다.
-- clinical_conflicts에는 이번에 source_conflicts로 새로 만든 충돌의 사실만 쓴다. 기존 충돌(input.source_conflict_ids)의 사실은 이미 정리돼 있으니 다시 쓰지 않는다. 아래 옮긴 규칙의 「모든 conflict_id마다」는 이번 단계에서 새 conflict_id만 뜻한다. 코드는 기존 충돌을 다시 쓴 항목을 받지 않는다.
 - 지도·목표의 정의를 고치라는 제안을 하지 않는다. 목표가 원본에 맞지 않아 보이면 그 이유를 새 문항의 exam_rationale에 남기고 원본 범위 안에서 출제한다.
+
+## 충돌 (이 단계 범위)
+
+source_conflicts에는 새 문항을 쓰며 이번에 새로 드러난 원본 충돌만 쓴다. clinical_conflicts에는 그 새 conflict_id마다 facts를 쓴다. 기존 충돌(input.source_conflict_ids)과 그 facts는 이미 정리돼 있고 바뀌지 않으므로 어느 쪽에도 다시 쓰지 않는다. facts에는 실제 원본의 충돌 주장과 현재 의학 답의 관계만 명시한다. 과거 sourceAudit/medical verdict, 검수자 판단, 수정 차수, 중요도는 넣지 않는다. 의학적으로 필요한 충돌 사실은 누락하지 않는다. 독립 원본 검수가 이 projection과 정본의 일치·완전성을 확인하고 정답 검수는 이 의학적 내용만 받는다.
 
 ## 옮긴 규칙 (author-v2.md)
 
@@ -25,7 +28,5 @@ importanceTable이 있으면 문항마다 point_ids에 이 문항이 실제로 �
 prerequisites는 실제 필요한 문항만 연결한다. 순환·없는 ID·목록 전체의 불필요한 선행 잠금을 점검하고 기존 강의 흐름을 유지한다.
 
 visual_stimuli는 실제 원본 PDF의 question_id/source_id/물리쪽/page/정규화 crop[left,top,right,bottom]/reason의 완전한 목록이다. 필요한 원본 그림을 직접 열고 선택한다. pagenum·bbox·그림과 답의 위치/방향이 맞는지 확인한다. 이름·정답 표시·불필요한 표 주석을 자르되 필요한 구조/기호는 보존한다. 임의로 그리거나 이미지 경로/바이너리를 작성하지 않는다. 코드가 이 crop을 렌더해 동일 PNG를 원본검수·독립정답검수·학생 화면에 제공한다. 실제 시각 목표에는 실제 이미지를 붙인다. 원본 그림 오류는 사용하지 말고 검증 가능한 원본 대체와 충돌 기록을 남긴다.
-
-clinical_conflicts는 BANK source_conflicts의 모든 conflict_id마다 facts를 가지며 실제 원본의 충돌 주장과 현재 의학 답의 관계만 명시한다. 과거 sourceAudit/medical verdict, 검수자 판단, 수정 차수, 중요도는 넣지 않는다. 의학적으로 필요한 충돌 사실은 누락하지 않는다. 과거 판정·수정 이력은 audit_summary.changes 등 별도 기록에 보존하며 문제/답/해설/clinical_conflicts에 섞지 않는다. 독립 원본 검수가 이 projection과 정본의 일치·완전성을 확인하고 정답 검수는 이 의학적 내용만 받는다.
 
 BANK concepts·retrieval_plan에는 실제 문항의 concept_id로 쓰인 개념만 넣는다. 문항이 없는 갈래·상위 개념은 brief의 개념 트리와 목표에만 둔다. option_pools는 빈 배열이다. 실제 범위/안전한 조건/외부 근거·불확실성을 보존한다. JSON만 반환한다.
