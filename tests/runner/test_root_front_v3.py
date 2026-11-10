@@ -190,8 +190,7 @@ def test_a_resume_sets_aside_a_stored_result_the_current_checks_refuse(tmp_path,
     gen = runs / '_root-generation' / GID / 'generation'
     stored = json.loads((gen / 'result.json').read_text(encoding='utf-8'))
     stale = copy.deepcopy(stored)
-    stale['manifest']['clinicalContext'] = {'clinical_context_status': 'conflict', 'clinical_context_problem': 'incomplete',
-                                            'clinical_context_reason': 'Synthetic stale'}
+    stale['manifest']['clinicalContext']['unrecorded'] = ['Synthetic stale']
     (gen / 'result.json').write_text(json.dumps(stale, ensure_ascii=False), encoding='utf-8')
     # Without a reason the stored result is still what the runner checks: it stops, nothing is moved.
     with pytest.raises(ValueError):
@@ -204,7 +203,7 @@ def test_a_resume_sets_aside_a_stored_result_the_current_checks_refuse(tmp_path,
     assert kept == stale
     reason = json.loads((gen / '.rejected-result-0' / 'reason.json').read_text(encoding='utf-8'))
     assert reason['resume'] == 'Synthetic fix applied' and reason['error'].startswith('result3:')
-    assert json.loads((gen / 'result.json').read_text(encoding='utf-8'))['manifest']['clinicalContext']['clinical_context_status'] == 'consistent'
+    assert json.loads((gen / 'result.json').read_text(encoding='utf-8'))['manifest']['clinicalContext']['unrecorded'] == []
     # A stored result that passes is reused even with a reason.
     commands.clear()
     assert worker.run_generation(client, p['subject'], p['runId'], runs, GID, resume='Again') == 0

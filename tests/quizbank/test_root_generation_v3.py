@@ -113,8 +113,9 @@ class Model:
                 fixed['explanation'] = 'Synthetic clearer explanation'
                 qs.append(fixed)
             return {'questions': qs, 'source_conflicts': [], 'visual_stimuli': [], 'clinical_conflicts': []}, {}
-        if stage.startswith('context-'):
-            return {'clinical_context_status': 'consistent', 'clinical_context_reason': 'Synthetic', 'clinical_context_problem': 'none'}, {}
+        if stage.startswith('v3-context'):
+            return {'conflicts': [{'conflict_id': c['conflict_id'], 'status': 'consistent', 'reason': 'Synthetic'} for c in ctx['conflicts']],
+                    'questions': [], 'unrecorded': []}, {}
         if stage.startswith('medical-'):
             assert ctx['medicalFinal'] is True
             return f.old.checks(ctx['bank']), {}
@@ -122,6 +123,7 @@ class Model:
 
 
 def run(tmp_path, model=None, resume=None):
+    tmp_path.mkdir(exist_ok=True)
     p = packet(tmp_path)
     model = model or Model()
     result = g.run(p, tmp_path / 'out', invoke=model, resume=resume)
@@ -133,7 +135,7 @@ def test_the_whole_v3_path_adds_and_fixes_without_touching_other_questions(tmp_p
     meta = result['manifest']
     assert consume(result, p) == result['document']
     # Stage order: no blind medical review per round, one medical review at the end.
-    assert model.calls[0] == 'normalize' and model.calls[-2:] == ['context-0', 'medical-0']
+    assert model.calls[0] == 'normalize' and model.calls[-2:] == ['v3-context-0', 'medical-0']
     assert model.calls.count('medical-0') == 1 and not any(re.fullmatch(r'(source|repair|generate)-.*', c) for c in model.calls)
     # Q2 answered no goal → a supplement point P002 → goal DQ001, covered by Q2.
     assert [d['decision'] for d in meta['supplement']] == ['point'] and meta['supplement'][0]['point_id'] == 'P002'
@@ -257,7 +259,8 @@ def test_v3_prompts_carry_the_v2_paragraphs_verbatim():
 @pytest.mark.parametrize('tamper,message', [
     (lambda r: r['document']['tasks'].pop(), 'not the assembly'),
     (lambda r: r['medical']['reviews'][0].update(verdict='wrong'), 'medical review is not of this bank'),
-    (lambda r: r['manifest']['clinicalContext'].update(clinical_context_reason='Synthetic other'), 'context proof|gathered judgments'),
+    (lambda r: r['manifest']['clinicalContext']['unrecorded'].append('Synthetic other'), 'merged judgments'),
+    (lambda r: r['manifest']['readiness'][0].update(ready=not r['manifest']['readiness'][0]['ready']), 'readiness table'),
     (lambda r: r['manifest']['supplementPoints']['points'][0].update(point='Synthetic rewritten'), 'supplement changed'),
     (lambda r: r['manifest'].update(addRounds=2), 'add rounds differ'),
 ])
@@ -364,8 +367,8 @@ class Cites(Model):
             for q in value['questions']:
                 if q['question_id'] == 'Q1':
                     q['conflict_id'] = 'CF07'
-            value['source_conflicts'] = [copy.deepcopy(NEW_CF)]
-            value['clinical_conflicts'] = [{'conflict_id': 'CF07', 'facts': 'Synthetic facts'}]
+                    value['source_conflicts'] = [copy.deepcopy(NEW_CF)]
+                    value['clinical_conflicts'] = [{'conflict_id': 'CF07', 'facts': 'Synthetic facts'}]
         return value, info
 
 
@@ -388,7 +391,7 @@ def test_a_revert_takes_back_the_conflicts_its_fix_added(tmp_path):
     assert 'CF07' not in {c['conflict_id'] for c in result['document']['bank_snapshot'].get('source_conflicts', [])}
     q2 = next(q for q in result['document']['bank_snapshot']['questions'] if q['question_id'] == 'Q2')
     assert q2['explanation'] == 'Synthetic clearer explanation'   # the kept fix stays
-    assert 'CF07' not in json.dumps(model.inputs['context-0'])
+    assert 'CF07' not in json.dumps(model.inputs['v3-context-0'])
     assert consume(result, p) == result['document']
 
 
@@ -398,70 +401,243 @@ def test_a_kept_fix_keeps_its_conflict(tmp_path):
     assert consume(result, p) == result['document']
 
 
-class Incomplete(Cites):
-    """context-0 calls CF07's record incomplete; `again` repeats that at context-1."""
-    def __init__(self, again=False, **kw):
+class Judged(Cites):
+    """v3-context-0 gives CF07 `status`; `again` repeats that at v3-context-1. `flag` names a question whose text
+    carries review history."""
+    def __init__(self, status='incomplete', again=False, flag=None, **kw):
         super().__init__(**kw)
-        self.again = again
+        self.status, self.again, self.flag = status, again, flag
 
     def __call__(self, stage, ctx, material, model):
-        if stage == 'context-0' or (stage == 'context-1' and self.again):
-            self.calls.append(stage)
-            self.inputs[stage] = ctx
-            return {'clinical_context_status': 'conflict', 'clinical_context_problem': 'incomplete',
-                    'clinical_context_reason': 'CF07 does not state the adopted answer'}, {}
-        return super().__call__(stage, ctx, material, model)
+        value, info = super().__call__(stage, ctx, material, model)
+        if stage == 'v3-context-0' or (stage == 'v3-context-1' and self.again):
+            for row in value['conflicts']:
+                row.update(status=self.status, reason='CF07 does not state the adopted answer')
+            if self.flag and any(q['question_id'] == self.flag for q in ctx['questions']):
+                value['questions'] = [{'question_id': self.flag, 'reason': 'Synthetic review history'}]
+        return value, info
 
 
-def test_an_incomplete_context_sends_the_citing_questions_to_one_fix(tmp_path):
-    p, model, result = run(tmp_path, Incomplete())
+def test_a_context_verdict_sends_the_citing_questions_to_one_fix(tmp_path):
+    p, model, result = run(tmp_path, Judged())
     meta = result['manifest']
-    tail = model.calls[model.calls.index('context-0'):]
+    tail = model.calls[model.calls.index('v3-context-0'):]
     # The re-review of unchanged content is reused from the verdict ledger (P2), so it may not be called.
-    assert tail[:2] == ['context-0', 'v3-fix-context-0'] and tail[-2:] == ['context-1', 'medical-0']
+    assert tail[:2] == ['v3-context-0', 'v3-fix-context-0'] and tail[-2:] == ['v3-context-1', 'medical-0']
     assert [q['question_id'] for q in model.inputs['v3-fix-context-0']['questions']] == ['Q1']
     finding = model.inputs['v3-fix-context-0']['findings'][0]
     assert any('CF07 does not state the adopted answer' in x for x in finding['code_findings'])
-    assert meta['contextRepairs'] == [{'stage': 'context-0', 'reason': 'CF07 does not state the adopted answer', 'targets': ['Q1']}]
+    assert meta['contextRepairs'] == [{'stage': 'v3-context-0', 'open': {'conflicts': ['CF07'], 'questions': []}, 'targets': ['Q1']}]
     assert [x['attempt'] for x in meta['fixes'] if x['question_id'] == 'Q1'] == [1, 2]   # within the per-question budget
-    assert meta['clinicalContext']['clinical_context_status'] == 'consistent'
+    assert [c['conflict_id'] for c in model.inputs['v3-context-1']['conflicts']] == ['CF07']   # only what the repair touched
+    assert [(r['conflict_id'], r['status'], r['stage']) for r in meta['clinicalContext']['conflicts']] == [('CF07', 'consistent', 1)]
+    assert [c['conflict_id'] for c in model.inputs['medical-0']['clinicalInput']['clinical_conflicts']] == ['CF07']
     assert consume(result, p) == result['document']
 
 
-def test_a_second_incomplete_context_stops_before_the_medical_review(tmp_path):
-    model = Incomplete(again=True)
-    with pytest.raises(ValueError, match='과제가 0개'):
-        run(tmp_path, model)
-    assert 'medical-0' not in model.calls and model.calls[-1] == 'context-1'
+@pytest.mark.parametrize('status', ['incomplete', 'contamination'])
+def test_a_context_verdict_never_stops_the_lecture(tmp_path, status):
+    """261102_02 (2026-11-10): one lecture-wide context verdict about three records stopped 134 questions, and a
+    completed stage with a blocking value could not be resumed. Now the record's facts are not sent to the medical
+    review; every question and task stays."""
+    _, _, clean = run(tmp_path / 'clean', Cites())
+    p, model, result = run(tmp_path, Judged(status=status, again=True))
+    meta = result['manifest']
+    assert model.calls[-2:] == ['v3-context-1', 'medical-0']
+    assert model.inputs['medical-0']['clinicalInput']['clinical_conflicts'] == []
+    assert [(r['conflict_id'], r['status']) for r in meta['clinicalContext']['conflicts']] == [('CF07', status)]
+    assert 'CF07' in result['sourceAudit']['assessment']['assessment']['clinical_context_reason']
+    assert {c['conflict_id'] for c in meta['clinicalConflicts']} == {'CF07'}   # the record itself is kept
+    assert [t['direction_id'] for t in result['document']['tasks']] == [t['direction_id'] for t in clean['document']['tasks']]
+    assert consume(result, p) == result['document']
 
 
-def test_an_incomplete_context_without_a_fixable_question_stops(tmp_path):
-    class NoCite(Model):
-        def __call__(self, stage, ctx, material, model):
-            if stage == 'context-0':
-                self.calls.append(stage)
-                return {'clinical_context_status': 'conflict', 'clinical_context_problem': 'incomplete', 'clinical_context_reason': 'x'}, {}
-            return super().__call__(stage, ctx, material, model)
-    model = NoCite()
-    with pytest.raises(ValueError, match='고칠 수 있는 문항'):
-        run(tmp_path, model)
-    assert 'medical-0' not in model.calls
+def test_a_question_with_review_history_in_its_text_is_repaired_once(tmp_path):
+    p, model, result = run(tmp_path, Judged(status='consistent', flag='Q2'))
+    assert [q['question_id'] for q in model.inputs['v3-fix-context-0']['questions']] == ['Q2']
+    assert 'Q2' in {q['question_id'] for q in model.inputs['v3-context-1']['questions']}
+    assert result['manifest']['clinicalContext']['questions'] == []
+    assert consume(result, p) == result['document']
 
 
-def test_an_unknown_context_runs_once_more_in_a_fresh_session(tmp_path):
-    class Unknown(Model):
+def test_an_unjudged_context_runs_once_more_in_a_fresh_session(tmp_path):
+    class Unknown(Cites):
         seen = 0
 
         def __call__(self, stage, ctx, material, model):
-            if stage == 'context-0' and not self.seen:
+            value, info = super().__call__(stage, ctx, material, model)
+            if stage == 'v3-context-0' and not self.seen:
                 self.seen += 1
-                self.calls.append(stage)
-                return {'clinical_context_status': 'unknown', 'clinical_context_problem': 'none', 'clinical_context_reason': 'x'}, {}
-            return super().__call__(stage, ctx, material, model)
+                for row in value['conflicts']:
+                    row['status'] = 'unknown'
+            return value, info
     p, model, result = run(tmp_path, Unknown())
-    assert model.calls.count('context-0') == 2
-    assert [(r['stage'], r['kind']) for r in result['manifest']['reviewRetries']] == [('context-0', 'final-context-unknown')]
+    assert model.calls.count('v3-context-0') == 2
+    assert [(r['stage'], r['kind']) for r in result['manifest']['reviewRetries']] == [('v3-context-0', 'empty-judgment')]
     assert consume(result, p) == result['document']
+
+
+def test_a_map_check_that_judged_nothing_runs_once_more(tmp_path):
+    class Lazy(Model):
+        seen = 0
+
+        def __call__(self, stage, ctx, material, model):
+            value, info = super().__call__(stage, ctx, material, model)
+            if stage == 'v3-map-check-0' and not self.seen:
+                self.seen += 1
+                for key, field in (('relation_checks', 'status'), ('target_checks', 'status'), ('direction_checks', 'scope_status')):
+                    for row in value[key]:
+                        row[field] = 'unknown'
+            return value, info
+    p, model, result = run(tmp_path, Lazy())
+    assert model.calls.count('v3-map-check-0') == 2
+    assert consume(result, p) == result['document']
+
+
+def test_no_task_stops_before_the_medical_review_with_the_reasons(tmp_path):
+    class NoTarget(Model):
+        def __call__(self, stage, ctx, material, model):
+            value, info = super().__call__(stage, ctx, material, model)
+            if stage.startswith('v3-map-check'):
+                for row in value['target_checks']:
+                    row['status'] = 'conflict'
+            return value, info
+    model = NoTarget()
+    with pytest.raises(ValueError, match='과제가 0개.*target'):
+        run(tmp_path, model)
+    assert 'medical-0' not in model.calls
+    table = json.loads((tmp_path / 'out' / 'readiness.json').read_text(encoding='utf-8'))
+    assert table['counts'].get('ready', 0) == 0 and table['counts']['target'] == len(table['rows'])
+
+
+def test_a_missing_medical_verdict_is_asked_once_more_then_recorded(tmp_path):
+    class Skips(Model):
+        def __call__(self, stage, ctx, material, model):
+            value, info = super().__call__(stage, ctx, material, model)
+            if stage.startswith('medical-'):
+                value = {**value, 'reviews': [r for r in value['reviews'] if r['question_id'] != 'Q2']}
+            return value, info
+    p, model, result = run(tmp_path, Skips())
+    assert model.calls.count('medical-0') == 2   # the batch, then Q2 alone
+    assert [q['question_id'] for q in model.inputs['medical-0']['bank']['questions']] == ['Q2']
+    row = next(r for r in result['medical']['reviews'] if r['question_id'] == 'Q2')
+    assert row['verdict'] == 'doubt' and row['note'].startswith(v3.UNREVIEWED_NOTE)
+    assert [r['question_id'] for r in result['manifest']['medicalUnreviewed']] == ['Q2']
+    assert consume(result, p) == result['document']
+
+
+def test_review_history_in_a_question_is_a_fix_target_not_a_stop(tmp_path):
+    """/2 medical_input refuses the whole input for one such string; in /3 that stopped the lecture at the last stage."""
+    class Marked(Model):
+        def __call__(self, stage, ctx, material, model):
+            value, info = super().__call__(stage, ctx, material, model)
+            if stage == 'v3-add-0':
+                value['questions'][0]['explanation'] = '이전 검토 판정에 따라 고친 설명'
+            if stage.startswith('v3-fix') and not self.keep:
+                pass
+            if stage.startswith('v3-fix') and self.keep:
+                for q in value['questions']:
+                    if q['question_id'] == self.added:
+                        q['explanation'] = '이전 검토 판정에 따라 고친 설명'
+            if stage == 'v3-add-0':
+                self.added = value['questions'][0]['question_id']
+            return value, info
+    model = Marked()
+    model.keep = False
+    p, model, result = run(tmp_path, model)
+    fix = next(s for s in model.calls if s.startswith('v3-fix') and model.added in {q['question_id'] for q in model.inputs[s]['questions']})
+    assert any('검수·판정 이력' in x for f_ in model.inputs[fix]['findings'] for x in f_['code_findings'])
+    assert result['manifest']['medicalUnreviewed'] == []
+    model = Marked()
+    model.keep = True
+    p, model, result = run(tmp_path / 'kept', model)   # still there after the fix budget: left out of the medical review, recorded
+    assert [r['question_id'] for r in result['manifest']['medicalUnreviewed']] == [model.added]
+    assert model.added not in {q['question_id'] for q in model.inputs['medical-0']['clinicalInput']['questions']}
+    assert consume(result, p) == result['document']
+
+
+def test_a_resume_archives_the_stages_an_earlier_code_version_left(tmp_path):
+    p, model, result = run(tmp_path)
+    out = tmp_path / 'out'
+    ledger = json.loads((out / 'ledger.json').read_text(encoding='utf-8'))
+    ledger['stages']['context-0'] = dict(ledger['stages']['v3-context-0'])
+    (out / 'ledger.json').write_text(json.dumps(ledger), encoding='utf-8')
+    for suffix in ('.input.json', '.raw.json', '.usage.json', '.json'):
+        (out / ('context-0' + suffix)).write_bytes((out / ('v3-context-0' + suffix)).read_bytes())
+    (out / 'result.json').unlink()
+    with pytest.raises(ValueError, match='이전 단계 기록'):
+        run(tmp_path, model)
+    p, model, result = run(tmp_path, model, resume='synthetic: lecture-wide context stage retired')
+    assert 'context-0' not in {s['name'] for s in result['manifest']['stages']}
+    assert result['manifest']['stageResumes'][-1]['superseded'][-1]['name'] == 'context-0'
+    assert consume(result, p) == result['document']
+
+
+# ---------------------------------------------------------------- any judgment value reaches a result
+import random   # noqa: E402
+
+TERMINAL = ('과제가 0개', 'judged nothing', 'left unknown')   # no task at all; a stage that judged nothing twice
+
+
+class AnyVerdict(Cites):
+    """Every judgment value a stage may return, chosen at random: the shapes stay valid (the stage checks own
+    those), the verdicts do not. Models what a fake that only matches formats cannot: a judgment that flips."""
+    def __init__(self, seed):
+        super().__init__(design_doubt=('Q1', 'Q2'))
+        self.r = random.Random(seed)
+
+    def __call__(self, stage, ctx, material, model):
+        value, info = super().__call__(stage, ctx, material, model)
+        r = self.r
+        if stage.startswith('v3-coverage'):
+            for row in value['rows']:
+                if r.random() < 0.3:
+                    row['status'] = r.choice(['missing', 'unknown'])
+                for e in row['evidence']:
+                    e['visual_verdict'] = r.choice(['ok', 'doubt', 'wrong', 'not_applicable', 'not_applicable'])
+                    for part in e['components']:
+                        if r.random() < 0.2:
+                            part.update(location=r.choice(['provided', 'explanation', 'missing', 'unknown']), answer_unit_indices=[])
+                if row['status'] == 'covered' and not any(all(c['location'] == 'answer' for c in e['components']) for e in row['evidence']):
+                    row['status'] = 'missing'
+        elif stage.startswith('v3-map-check'):
+            for row in value['relation_checks']:
+                row['status'] = r.choice(['supported', 'supported', 'supported', 'conflict', 'unknown'])
+            for key, field in (('target_checks', 'status'), ('direction_checks', 'scope_status')):
+                for row in value[key]:
+                    row[field] = r.choice(['consistent', 'consistent', 'consistent', 'conflict', 'unknown'])
+        elif stage.startswith('v3-review'):
+            for row in value['reviews']:
+                row['verdict'], row['design'] = r.choice(v3.VERDICTS + ('ok', 'ok')), r.choice(v3.VERDICTS + ('ok', 'ok'))
+                row['note'] = 'Synthetic finding' if row['verdict'] != 'ok' or row['design'] != 'ok' else ''
+                for check in row['prerequisite_checks']:
+                    check['status'] = r.choice(['supported', 'supported', 'unnecessary', 'unknown'])
+        elif stage.startswith('v3-context'):
+            for row in value['conflicts']:
+                row['status'] = r.choice(v3.CONTEXT_STATES)
+            if ctx['questions'] and r.random() < 0.3:
+                value['questions'] = [{'question_id': r.choice(ctx['questions'])['question_id'], 'reason': 'Synthetic history'}]
+            if r.random() < 0.3:
+                value['unrecorded'] = ['Synthetic unrecorded conflict']
+        elif stage.startswith('medical-'):
+            rows = [dict(row, verdict=r.choice(['ok', 'doubt', 'wrong'])) for row in value['reviews'] if r.random() > 0.15]
+            value = {**value, 'reviews': rows}
+        return value, info
+
+
+@pytest.mark.parametrize('seed', range(300))
+def test_any_judgment_value_reaches_a_result_or_a_named_stop(tmp_path, seed):
+    """The lecture is stopped only by having no task at all or by a stage that judged nothing twice. Every other
+    combination of verdicts ends in a result the consumer accepts (docs/changes/2026-11-10-gen3-item-scope)."""
+    try:
+        p, model, result = run(tmp_path, AnyVerdict(seed))
+    except ValueError as error:
+        assert any(text in str(error) for text in TERMINAL), str(error)
+        return
+    assert consume(result, p) == result['document']
+    ready = {r['direction_id'] for r in result['manifest']['readiness'] if r['ready']}
+    assert ready == {t['direction_id'] for t in result['document']['tasks']}
+    assert all(r['ready'] or r['reasons'] for r in result['manifest']['readiness'])
 
 
 def test_a_dangling_conflict_or_image_list_is_found_before_the_context():
@@ -475,3 +651,19 @@ def test_a_dangling_conflict_or_image_list_is_found_before_the_context():
     stray = {'question_id': 'Q1', 'source_id': 'S1', 'page': 1, 'crop': [0, 0, 1, 1], 'reason': 'x'}
     with pytest.raises(ValueError, match='image list differs'):
         v3.check_integrity(bank, [], [stray])
+
+
+def test_a_conflict_a_fix_stops_citing_is_taken_out_not_a_stop(tmp_path):
+    class Uncites(Judged):
+        def __call__(self, stage, ctx, material, model):
+            value, info = super().__call__(stage, ctx, material, model)
+            if stage == 'v3-fix-context-0':
+                for q in value['questions']:
+                    q['conflict_id'] = ''
+                value['clinical_conflicts'] = []
+            return value, info
+    p, model, result = run(tmp_path, Uncites())
+    meta = result['manifest']
+    assert meta['clinicalConflicts'] == [] and meta['clinicalContext']['conflicts'] == []
+    assert [(r['kind'], r['id']) for r in meta['restatedIgnored'] if r['kind'] == 'orphan_conflict'] == [('orphan_conflict', 'CF07')]
+    assert consume(result, p) == result['document']
