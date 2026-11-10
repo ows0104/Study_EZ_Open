@@ -1,9 +1,10 @@
 # Study EZ 예습 브리지 — Chrome Web Store 등록표
 
-기준 버전: 1.3.8
-작성일: 2026-08-25 · 개정 2026-10-09 (예습 수동·자동 입력, 개인 복습, 링크 복구)
+기준 버전: 1.3.23
+작성일: 2026-08-25 · 개정 2026-10-09 (예습 수동·자동 입력, 개인 복습, 링크 복구) · 2026-11-10 (스토어 ZIP 누락 파일)
 
-웹스토어 공개판은 1.2.0으로 관리한다. 1.3.8 제출·심사만으로 공개판이 갱신된 것으로
+웹스토어 공개판은 1.2.0으로 관리한다(2026-11-10 기준). 1.2.0은 복습 요청도 확인 카드 제목이
+「Study EZ 예습 자료」로 고정돼 있고, 1.3.16부터 「복습 자료」로 구분한다. 1.3.23 제출·심사만으로 공개판이 갱신된 것으로
 취급하지 않는다. 스토어에 새 버전이 실제 공개된 것을 확인한 뒤 Pages 빌드 변수
 `VITE_EXTENSION_STORE_VERSION`을 해당 버전으로 변경하고 웹을 다시 빌드한다.
 웹은 필요한 버전(직접 전송하는 예습·복습·문제은행 1.2.0, 자동전송 1.3.3)을 스토어 공개판이 제공하지
@@ -128,7 +129,11 @@ PowerShell에서:
 .\bridge\build-store-package.ps1
 ```
 
-결과: `bridge/release/studyez-preview-bridge-<manifest version>-web-store.zip` (지금은 1.3.8)
+결과: `bridge/release/studyez-preview-bridge-<manifest version>-web-store.zip` (지금은 1.3.23)
+
+스크립트는 `background.js`의 `importScripts`와 manifest `content_scripts`가 읽는 파일이 모두
+ZIP에 들어갔는지 대조하고, 감사 스크립트도 같은 대조를 따로 한다. 2026-11-10 이전 스크립트는
+1.3.19·1.3.20에 추가된 `bank-file.js`·`bank-download.js`를 빠뜨려, 그 ZIP은 서비스 워커가 시작하지 못한다.
 
 ```powershell
 .\server\.venv\Scripts\python.exe .\bridge\audit-store-package.py

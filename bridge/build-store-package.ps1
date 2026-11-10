@@ -27,8 +27,12 @@ foreach ($Script in $Manifest.content_scripts) {
   )
 }
 
+# background.js의 importScripts와 manifest content_scripts가 읽는 파일을 모두 담는다.
+# 하나라도 빠지면 서비스 워커가 시작하지 못해 확장 전체가 멈춘다. 아래에서 다시 대조한다.
 $RuntimeFiles = @(
   "background.js",
+  "bank-download.js",
+  "bank-file.js",
   "chatgpt-bridge.js",
   "chatgpt-share.js",
   "provider-share.js",
@@ -37,6 +41,17 @@ $RuntimeFiles = @(
 )
 foreach ($RelativePath in $RuntimeFiles) {
   Copy-Item -LiteralPath (Join-Path $SourceDirectory $RelativePath) -Destination $PackageDirectory
+}
+
+$BackgroundSource = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $SourceDirectory "background.js")
+$Referenced = @()
+foreach ($Match in [regex]::Matches($BackgroundSource, '(?m)^importScripts\(([^)]*)\)')) {
+  $Referenced += [regex]::Matches($Match.Groups[1].Value, '"([^"]+)"') | ForEach-Object { $_.Groups[1].Value }
+}
+foreach ($Script in $Manifest.content_scripts) { $Referenced += @($Script.js) }
+$Missing = @($Referenced | Sort-Object -Unique | Where-Object { $RuntimeFiles -notcontains $_ })
+if ($Missing.Count) {
+  throw "스토어 ZIP에 실행 파일이 빠졌습니다: $($Missing -join ', ')"
 }
 
 # 배경 스크립트에도 개발 편의용 localhost 허용 분기가 있다. manifest 권한이 없어

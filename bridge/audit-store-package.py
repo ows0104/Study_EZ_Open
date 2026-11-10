@@ -16,6 +16,8 @@ ZIP = ROOT / "release" / f"studyez-preview-bridge-{SOURCE_MANIFEST['version']}-w
 EXPECTED = {
     "manifest.json",
     "background.js",
+    "bank-download.js",
+    "bank-file.js",
     "protocol.js",
     "studyez-bridge.js",
     "chatgpt-bridge.js",
@@ -67,6 +69,13 @@ with zipfile.ZipFile(io.BytesIO(raw)) as archive:
         "Gemini·Claude 링크 감시 match가 다릅니다.",
     )
     require("localhost" not in manifest_text and "127.0.0.1" not in manifest_text, "manifest에 로컬 주소가 있습니다.")
+    background_text = archive.read("background.js").decode("utf-8")
+    referenced = {manifest["background"]["service_worker"]}
+    for call in re.findall(r"(?m)^importScripts\(([^)]*)\)", background_text):
+        referenced.update(re.findall(r'"([^"]+)"', call))
+    for script in manifest["content_scripts"]:
+        referenced.update(script["js"])
+    require(referenced <= names, f"실행에 필요한 파일이 ZIP에 없습니다: {sorted(referenced - names)}")
 
     scripts = [name for name in names if name.endswith(".js")]
     script_text = "\n".join(archive.read(name).decode("utf-8") for name in scripts)
