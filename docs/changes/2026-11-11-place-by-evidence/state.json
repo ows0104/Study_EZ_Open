@@ -68,6 +68,41 @@
         "uv.lock"
       ],
       "log": "runs/_development/2026-11-11-place-by-evidence/1794334181737553900-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-10T18:43:11.643880+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "tests/quizbank",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "a4ad5004c1037a2f1a891bf2bbec65fcc8bbde4779aac971c32c335b6111a54f",
+      "plan_hash": "f0ea4ad0db1e6f4730575ee9ba9272e45c8b29704c20d8d4d61a4475ee7bcaac",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-11-place-by-evidence/1794336049091780200-regression.log"
     }
   ],
   "review": null,
@@ -76,5 +111,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-10T18:14:14.531373+00:00"
+  "updated_at": "2026-11-10T18:43:11.644396+00:00"
 }
