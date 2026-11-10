@@ -27,12 +27,14 @@ foreach ($Script in $Manifest.content_scripts) {
   )
 }
 
-# background.js의 importScripts와 manifest content_scripts가 읽는 파일을 모두 담는다.
-# 하나라도 빠지면 서비스 워커가 시작하지 못해 확장 전체가 멈춘다. 아래에서 다시 대조한다.
+# 스토어판은 학생용(사용자판)이다. 관리자 Quiz Bank의 파일 회수 스크립트는 넣지 않고,
+# protocol.js의 EDITION을 user로 바꿔 자동전송·공유 링크·bank 요청을 배경에서 거절한다.
+$BankScripts = @("bank-file.js", "bank-download.js")
+foreach ($Script in $Manifest.content_scripts) {
+  $Script.js = @($Script.js | Where-Object { $BankScripts -notcontains $_ })
+}
 $RuntimeFiles = @(
   "background.js",
-  "bank-download.js",
-  "bank-file.js",
   "chatgpt-bridge.js",
   "chatgpt-share.js",
   "provider-share.js",
@@ -43,16 +45,13 @@ foreach ($RelativePath in $RuntimeFiles) {
   Copy-Item -LiteralPath (Join-Path $SourceDirectory $RelativePath) -Destination $PackageDirectory
 }
 
-$BackgroundSource = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $SourceDirectory "background.js")
-$Referenced = @()
-foreach ($Match in [regex]::Matches($BackgroundSource, '(?m)^importScripts\(([^)]*)\)')) {
-  $Referenced += [regex]::Matches($Match.Groups[1].Value, '"([^"]+)"') | ForEach-Object { $_.Groups[1].Value }
+$StoreProtocolPath = Join-Path $PackageDirectory "protocol.js"
+$StoreProtocol = Get-Content -Raw -Encoding UTF8 -LiteralPath $StoreProtocolPath
+if ([regex]::Matches($StoreProtocol, 'EDITION: "full",').Count -ne 1) {
+  throw "protocol.js에서 EDITION 표시를 찾지 못했습니다."
 }
-foreach ($Script in $Manifest.content_scripts) { $Referenced += @($Script.js) }
-$Missing = @($Referenced | Sort-Object -Unique | Where-Object { $RuntimeFiles -notcontains $_ })
-if ($Missing.Count) {
-  throw "스토어 ZIP에 실행 파일이 빠졌습니다: $($Missing -join ', ')"
-}
+$StoreProtocol = $StoreProtocol.Replace('EDITION: "full",', 'EDITION: "user",')
+[System.IO.File]::WriteAllText($StoreProtocolPath, $StoreProtocol, $Utf8NoBom)
 
 # 배경 스크립트에도 개발 편의용 localhost 허용 분기가 있다. manifest 권한이 없어
 # 스토어에서는 실행될 수 없지만 심사본에는 불필요한 코드까지 남기지 않는다.
@@ -63,7 +62,24 @@ $StoreBackground = $StoreBackground -replace '(?m)^    const localOrigins = .*?\
 if ($StoreBackground -match 'localhost|127\.0\.0\.1') {
   throw "스토어 background.js에 로컬 개발 주소가 남았습니다."
 }
+$ImportLine = 'importScripts("protocol.js", "bank-file.js", "bank-download.js");'
+if (-not $StoreBackground.StartsWith($ImportLine)) {
+  throw "background.js 첫 줄의 importScripts가 예상과 다릅니다."
+}
+$StoreBackground = 'importScripts("protocol.js");' + $StoreBackground.Substring($ImportLine.Length)
 [System.IO.File]::WriteAllText($StoreBackgroundPath, $StoreBackground, $Utf8NoBom)
+
+# importScripts와 content_scripts가 읽는 파일이 모두 ZIP에 있어야 한다.
+# 하나라도 빠지면 서비스 워커가 시작하지 못해 확장 전체가 멈춘다.
+$Referenced = @()
+foreach ($Match in [regex]::Matches($StoreBackground, '(?m)^importScripts\(([^)]*)\)')) {
+  $Referenced += [regex]::Matches($Match.Groups[1].Value, '"([^"]+)"') | ForEach-Object { $_.Groups[1].Value }
+}
+foreach ($Script in $Manifest.content_scripts) { $Referenced += @($Script.js) }
+$Missing = @($Referenced | Sort-Object -Unique | Where-Object { $RuntimeFiles -notcontains $_ })
+if ($Missing.Count) {
+  throw "스토어 ZIP에 실행 파일이 빠졌습니다: $($Missing -join ', ')"
+}
 
 $IconDirectory = Join-Path $PackageDirectory "icons"
 New-Item -ItemType Directory -Path $IconDirectory -Force | Out-Null

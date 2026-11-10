@@ -1,6 +1,6 @@
 importScripts("protocol.js", "bank-file.js", "bank-download.js");
 
-const { WEBAPP_SOURCE, MESSAGES, LINK_KINDS } = globalThis.STUDYEZ_PROTOCOL;
+const { WEBAPP_SOURCE, MESSAGES, LINK_KINDS, EDITION } = globalThis.STUDYEZ_PROTOCOL;
 
 const TAB_PAYLOAD = "studyez-tab:";
 const PENDING_LINK = "studyez-pending:";
@@ -299,9 +299,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (providerForSender(sender) !== 'chatgpt' || !sender.tab?.id) return false;
     void chrome.storage.session.get(`${TAB_WATCH}${sender.tab.id}`).then(async stored => {
       const watch = stored[`${TAB_WATCH}${sender.tab.id}`];
+      // 사용자판에는 bank 감시가 생기지 않고 bank 스크립트도 없다. 모드를 먼저 본다.
+      if (watch?.mode !== 'bank') { sendResponse({ok:false}); return; }
       const target = globalThis.StudyEZBankFile.lectureTarget(watch?.lectureId, watch?.promptVersion);
       const conversation = /^\/(?:g\/[^/]+\/)?c\/([A-Za-z0-9_:-]+)/.exec(new URL(sender.tab.url).pathname)?.[1];
-      if (watch?.mode !== 'bank' || !globalThis.StudyEZBankFile.required(target) || !conversation) {
+      if (!globalThis.StudyEZBankFile.required(target) || !conversation) {
         sendResponse({ok:false}); return;
       }
       target.filename = globalThis.StudyEZBankFile.filenameFor(target);
@@ -495,6 +497,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // 안 주면 개인으로 본다. 공유는 명시적으로 시킬 때만 만든다.
   // `bank` 는 Quiz Bank — 답 본문을 읽는 것이 ChatGPT 쪽(`chatgpt-share.js`)에만 있다.
   const mode = ["shared", "bank", "review"].includes(payload.mode) ? payload.mode : "personal";
+  // 스토어 사용자판은 사이트가 학생에게 여는 요청(개인 예습·복습, 수동입력)만 받는다.
+  if (EDITION === "user" && (mode === "shared" || mode === "bank" || payload.autoSend === true)) {
+    sendResponse({ ok: false, error: "이 기능은 관리자용 브리지에서만 쓸 수 있습니다. 스토어판은 개인 예습·복습의 수동입력만 지원합니다." });
+    return false;
+  }
   if (mode === "bank" && payload.provider !== "chatgpt") {
     sendResponse({ ok: false, error: "Quiz Bank는 ChatGPT로만 만듭니다." });
     return false;
