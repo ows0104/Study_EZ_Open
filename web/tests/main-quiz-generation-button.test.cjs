@@ -51,9 +51,21 @@ test('a failed map-tree request resumes only with the administrator reason',asyn
 });
 test('the earlier parallel mode stays selectable',async()=>{
   const f=fixture();f.render();await tick();let tree=f.render();
-  const radio=f.nodes(tree,'input').filter(n=>n.props.type==='radio')[1];radio.props.onChange();
+  const radio=f.nodes(tree,'input').filter(n=>n.props.type==='radio')[2];radio.props.onChange();
   tree=f.render();assert.equal(f.nodes(tree,'div').some(n=>n.props.role==='note'),false);f.button(tree).props.onClick();await tick();
   const payload=JSON.parse(f.calls.find(c=>c.init).init.body);assert.equal(payload.parallelAuthoring,true);assert.equal(payload.pipeline,undefined);
+});
+test('the new structure (map-tree/2) is selectable and states its call limits',async()=>{
+  const f=fixture();f.render();await tick();let tree=f.render();
+  const radio=f.nodes(tree,'input').filter(n=>n.props.type==='radio')[1];radio.props.onChange();
+  tree=f.render();const note=JSON.stringify(f.nodes(tree,'div').find(n=>n.props.role==='note'));
+  assert.match(note,/이 강의의 승인/);assert.match(note,/문제은행 1/);assert.match(note,/빈 목표 추가 최대 2/);assert.match(note,/의학 검토 1/);
+  f.button(tree).props.onClick();await tick();
+  const payload=JSON.parse(f.calls.find(c=>c.init).init.body);assert.equal(payload.pipeline,'map-tree/2');assert.equal(payload.parallelAuthoring,false);assert.equal(payload.authoring,'cli');
+});
+test('a failed map-tree/2 request also needs the administrator reason',async()=>{
+  const f=fixture({id:'old',requestId:'v3',state:'failed',authoring:'cli',pipeline:'map-tree/2',parallelAuthoring:false,privatePilot:true,input:{conceptMap:'',points:'',scope:'',examDate:null,inputMode:'source'}});
+  f.render();await tick();const b=f.button(f.render());assert.equal(b.props.children,'Main Quiz 이어서 만들기');assert.equal(b.props.disabled,true);
 });
 test('CLI source generation does not require a bridge',async()=>{
   const f=fixture(null,{compatible:false});f.render();await tick();f.button(f.render()).props.onClick();await tick();

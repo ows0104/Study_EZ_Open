@@ -1,0 +1,79 @@
+{
+  "id": "2026-11-10-root-generation-3",
+  "title": "Main-Quiz 새 출제 구조 root-generation/3",
+  "area": "generation",
+  "created_at": "2026-11-10T00:30:58.572766+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-10T01:18:11.616088+00:00",
+      "evidence": "2026-11-10 사용자 채팅: 「spec 써줘」 → 「plan 써줘」 → 「목표 밖 문항도 넣자. 목표를 추가하면 될듯?」 → 「이렇게 고쳐줘」 → 「A부터 시작」 (spec R2m 지도 확인은 같은 요청 범위 안에서 구현 중 추가)",
+      "scope": "plan.md PR A: studyez_contracts/roots/generation_v3.py(새), studyez_contracts/roots/automation.py validate_result 갈래, tests/contracts/test_generation_v3.py(새). 모델·DB·서버·운영 변경 없음",
+      "evidence_version": 2,
+      "source_hash": "f9b80f86590f317cf3259cb01416dbe2ca11f30b5357cf541c79ff12da342fc2",
+      "plan_hash": "b90a9cf432e1171cd99cc55fe0d55d152deef3ab83ce97a368723bc0dbcfa68f",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "404aad4be0147f25b93643e017bcea51a014b7135a4e62b400fe7cf4a1669cc6"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-10T01:18:22.048297+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/.venv/Scripts/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "f9b80f86590f317cf3259cb01416dbe2ca11f30b5357cf541c79ff12da342fc2",
+      "plan_hash": "b90a9cf432e1171cd99cc55fe0d55d152deef3ab83ce97a368723bc0dbcfa68f",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-10-root-generation-3/1794273491939639500-regression.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-10T01:18:22.049389+00:00"
+}

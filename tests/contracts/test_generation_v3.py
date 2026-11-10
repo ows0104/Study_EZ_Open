@@ -1,0 +1,357 @@
+"""root-generation/3 contracts (docs/changes/2026-11-10-root-generation-3/spec.md). Pure functions, synthetic data."""
+import copy
+import json
+from pathlib import Path
+
+import pytest
+import generation_v2_fixture as f
+from studyez_contracts.roots import generation_v2 as v2
+from studyez_contracts.roots import generation_v3 as c
+from studyez_contracts.roots.automation import validate_result as consume
+from studyez_contracts.roots.source_assessment import envelope
+from studyez_contracts.roots import document_hash
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def answer(*units):
+    return [{'component_id': 'fact', 'location': 'answer', 'answer_unit_indices': list(units), 'reason': 'Synthetic recall'}]
+
+
+def row(did, status, qid=None, rid=None, location='answer'):
+    evidence = []
+    if qid:
+        parts = answer(0) if location == 'answer' else [{'component_id': 'fact', 'location': location, 'answer_unit_indices': [], 'reason': 'x'}]
+        evidence.append({'question_id': qid, 'tested_relation_ids': [rid] if rid else [], 'components': parts,
+                         'visual_verdict': 'not_applicable', 'reason': 'Synthetic'})
+    return {'direction_id': did, 'status': status, 'evidence': evidence, 'reason': 'Synthetic coverage'}
+
+
+def covered(b):
+    return [row('D1', 'covered', 'Q1', 'R1'), row('D2', 'covered', 'Q2', 'R2')]
+
+
+def map_ok(b):
+    return {'relation_checks': [{'relation_id': r['relation_id'], 'status': 'supported', 'reason': 'Synthetic'} for r in b['relations']],
+            'target_checks': [{'target_id': t['target_id'], 'status': 'consistent', 'reason': 'Synthetic'} for t in b['targets']],
+            'direction_checks': [{'direction_id': d['direction_id'], 'scope_status': 'consistent', 'reason': 'Synthetic'}
+                                 for t in b['targets'] for d in t['directions']], 'issues': []}
+
+
+def review(qid, verdict='ok', design='ok'):
+    return {'question_id': qid, 'verdict': verdict, 'design': design, 'note': '' if verdict == 'ok' else 'Synthetic note',
+            'suggested_answer': '', 'fix': '', 'prerequisite_checks': []}
+
+
+CONTEXT = {'clinical_context_status': 'consistent', 'clinical_context_reason': 'Synthetic', 'clinical_context_problem': 'none'}
+
+
+def authored_bank():
+    bank = f.old.bank()
+    for q in bank['questions']:
+        q.pop('stimuli', None)
+    return bank
+
+
+def question(qid, base):
+    q = copy.deepcopy(base)
+    q.pop('stimuli', None)
+    q['question_id'] = qid
+    q['question'] = 'Synthetic new question ' + qid
+    return q
+
+
+# ---------------------------------------------------------------- schemas and inputs
+def test_supplement_point_has_the_exam_point_extract_form():
+    content = json.loads((ROOT / 'content/prompts/learning-links/point-output-v3.schema.json').read_text(encoding='utf-8'))
+    item = copy.deepcopy(content['properties']['points']['items'])
+    item['properties'].pop('point_id')
+    item['required'].remove('point_id')
+    assert c.POINT == item
+
+
+def test_coverage_input_carries_goals_and_fronts_only():
+    b, bank = f.brief(), f.old.bank()
+    value = c.coverage_input(b, bank)
+    assert set(value) == {'goals', 'questions'}
+    assert [g['direction_id'] for g in value['goals']] == ['D1', 'D2']
+    q = value['questions'][0]
+    assert 'explanation' not in q and 'option_explanations' not in q and 'exam_rationale' not in q and 'source_refs' not in q
+    assert set(value['goals'][0]) == {'direction_id', 'target_id', 'cue', 'answer_scope', 'components', 'requires_visual', 'relations'}
+    narrow = c.coverage_input(b, bank, ['D2'], ['Q2'])
+    assert [g['direction_id'] for g in narrow['goals']] == ['D2'] and [q['question_id'] for q in narrow['questions']] == ['Q2']
+    with pytest.raises(ValueError):
+        c.coverage_input(b, bank, ['D9'])
+
+
+def test_add_input_has_gap_goals_fronts_and_allowed_ids_only():
+    b, bank = f.brief(), f.old.bank()
+    ids = c.next_question_ids(bank, 2)
+    assert ids == ['Q003', 'Q004']
+    value = c.add_input(b, bank, ['D2'], ids)
+    assert set(value) == {'goals', 'existing', 'bank_concepts', 'source_conflict_ids', 'allowed_question_ids', 'pages'}
+    assert set(value['existing'][0]) == {'question_id', 'question', 'answer'}
+    assert value['goals'][0]['point_ids'] == ['P1']
+
+
+def test_review_input_is_the_batch_its_prerequisites_and_cited_facts():
+    b, bank = f.brief(), f.old.bank()
+    bank['questions'][1]['prerequisites'] = ['Q1']
+    value = c.review_input(bank, ['Q2'], [])
+    assert [q['question_id'] for q in value['questions']] == ['Q2']
+    assert [q['question_id'] for q in value['prerequisites']] == ['Q1']
+    assert 'explanation' not in value['prerequisites'][0]
+
+
+def test_locator_pages_and_cited_pages():
+    assert c.locator_pages('물리 PDF 12–13쪽') == [12, 13]
+    assert c.locator_pages('물리 PDF 3,14쪽') == [3, 14]
+    assert c.locator_pages('synthetic paragraph') == []
+    assert c.cited_pages([{'source_id': 'S1', 'pages': [2, 2]}, {'source_id': 'S2', 'locator': '물리 PDF 1쪽'}]) == [('S1', 2), ('S2', 1)]
+
+
+# ---------------------------------------------------------------- coverage judgment (P4)
+def test_covered_needs_one_question_with_the_whole_goal_and_all_unknown_is_unperformed():
+    b, bank = f.brief(), f.old.bank()
+    inp = c.coverage_input(b, bank)
+    c.check_coverage({'rows': covered(b)}, inp['goals'], inp['questions'])
+    partial = {'rows': [row('D1', 'covered', 'Q1', 'R1', location='explanation'), row('D2', 'covered', 'Q2', 'R2')]}
+    with pytest.raises(ValueError, match='whole goal'):
+        c.check_coverage(partial, inp['goals'], inp['questions'])
+    with pytest.raises(ValueError, match='judged nothing'):
+        c.check_coverage({'rows': [row('D1', 'unknown'), row('D2', 'unknown')]}, inp['goals'], inp['questions'])
+    with pytest.raises(ValueError, match='outside the batch'):
+        narrow = c.coverage_input(b, bank, None, ['Q2'])
+        c.check_coverage({'rows': covered(b)}, narrow['goals'], narrow['questions'])
+
+
+def test_a_doubt_question_still_covers_its_goal():
+    """Coverage and item quality are separate judgments; /2 made 15 of 23 trial goals unknown this way."""
+    b = f.brief()
+    rows = covered(b)
+    reviews = [review('Q1', 'doubt'), review('Q2')]
+    assert c.covering(rows[0]) == ['Q1']
+    assert [r['direction_id'] for r in c.not_ready(b, rows, reviews)] == []
+    assert c.not_ready(b, rows, [review('Q1', 'wrong'), review('Q2')]) == [{'direction_id': 'D1', 'reason': 'question-defect'}]
+    assert c.not_ready(b, [rows[0], row('D2', 'missing')], reviews) == [{'direction_id': 'D2', 'reason': 'no-question'}]
+
+
+# ---------------------------------------------------------------- add-only and fixes (P1)
+def test_add_stage_appends_and_cannot_touch_existing_questions():
+    bank = authored_bank()
+    ids = c.next_question_ids(bank, 2)
+    new = question(ids[0], bank['questions'][0])
+    out = {'questions': [new], 'concepts': [], 'retrieval_plan': [], 'source_conflicts': [], 'visual_stimuli': [], 'clinical_conflicts': []}
+    merged, facts = c.merge_added(bank, [], out, ids)
+    assert merged['questions'][:2] == bank['questions'] and merged['questions'][2]['question_id'] == 'Q003'
+    rewrite = copy.deepcopy(out)
+    rewrite['questions'][0]['question_id'] = 'Q1'
+    with pytest.raises(ValueError):
+        c.merge_added(bank, [], rewrite, ids + ['Q1'])
+    outside = copy.deepcopy(out)
+    outside['questions'][0]['question_id'] = 'Q099'
+    with pytest.raises(ValueError, match='allowed range'):
+        c.merge_added(bank, [], outside, ids)
+    stray = copy.deepcopy(out)
+    stray['questions'][0]['concept_id'] = 'Z'
+    with pytest.raises(ValueError, match='concept is unknown'):
+        c.merge_added(bank, [], stray, ids)
+
+
+def test_coverage_fronts_mask_cloze_answers():
+    bank = authored_bank()
+    q = bank['questions'][0]
+    q.update(format='cloze', question='A is {B} and {C}.', answer='A is B and C.', answer_units=['B', 'C'])
+    front = c.coverage_input(f.brief(), bank)['questions'][0]
+    assert 'B' not in front['question'].replace('{{c1}}', '') and front['answer_units'] == ['B', 'C']
+
+
+def test_fix_stage_replaces_only_listed_questions_and_keeps_their_identity():
+    bank = authored_bank()
+    fixed = copy.deepcopy(bank['questions'][0])
+    fixed['explanation'] = 'Synthetic corrected explanation'
+    out = {'questions': [fixed], 'source_conflicts': [], 'visual_stimuli': [], 'clinical_conflicts': []}
+    merged, _, changed = c.merge_fixes(bank, [], out, ['Q1'])
+    assert changed == ['Q1'] and merged['questions'][1] == bank['questions'][1]
+    with pytest.raises(ValueError, match='only the listed'):
+        c.merge_fixes(bank, [], out, ['Q2'])
+    moved = copy.deepcopy(out)
+    moved['questions'][0]['concept_id'] = 'B'
+    with pytest.raises(ValueError, match='concept_id'):
+        c.merge_fixes(bank, [], moved, ['Q1'])
+
+
+def test_a_worse_re_review_is_reverted():
+    assert c.worse(review('Q1'), review('Q1', 'doubt'))
+    assert c.worse(review('Q1', 'doubt'), review('Q1', 'ok', 'wrong'))
+    assert not c.worse(review('Q1', 'wrong'), review('Q1', 'doubt'))
+
+
+# ---------------------------------------------------------------- verdict ledger (P2)
+def test_item_hash_ignores_other_questions_so_verdicts_survive_additions():
+    bank = authored_bank()
+    h = c.item_hash(bank['questions'][0], bank, [])
+    grown, _ = c.merge_added(bank, [], {'questions': [question('Q003', bank['questions'][1])], 'concepts': [], 'retrieval_plan': [], 'source_conflicts': [],
+                                        'visual_stimuli': [], 'clinical_conflicts': []}, ['Q003'])
+    assert c.item_hash(grown['questions'][0], grown, []) == h
+    changed = copy.deepcopy(bank['questions'][0])
+    changed['answer'] = 'Synthetic other'
+    assert c.item_hash(changed, bank, []) != h
+    ledger = [c.ledger_entry('item', 'Q1', h, review('Q1', 'doubt'), 'review-1')]
+    assert c.reusable(ledger, 'item', 'Q1', h)['verdict'] == 'doubt'
+    assert c.reusable(ledger, 'item', 'Q1', c.item_hash(changed, bank, [])) is None
+
+
+# ---------------------------------------------------------------- supplement points (R2a)
+def points_doc():
+    basis = [{'kind': 'learning_objective', 'refs': [{'source_id': 'S1', 'pages': [1]}], 'quote': '', 'reason': 'Objective', 'year': None}]
+    return {'schema_version': 'exam-point-extract/3', 'title': 'Synthetic', 'notes': [],
+            'notebook_profile': {'legend': 'Synthetic', 'emphasis_style': 'slide', 'reason': 'Synthetic'},
+            'points': [{'point_id': 'P001', 'point': 'Existing', 'source_refs': [{'source_id': 'S1', 'pages': [1], 'locator': None}],
+                        'importance_basis': basis}]}
+
+
+def supplement(basis):
+    return {'point': 'Missed point', 'source_refs': [{'source_id': 'S1', 'pages': [2], 'locator': None}], 'importance_basis': basis}
+
+
+@pytest.mark.parametrize('basis,tier', [
+    ([{'kind': 'exam_forecast', 'refs': [{'source_id': 'S1', 'pages': [2]}], 'quote': '시험에 나온다', 'reason': 'Forecast', 'year': None}], 'Essential'),
+    ([{'kind': 'learning_objective', 'refs': [{'source_id': 'S1', 'pages': [2]}], 'quote': '', 'reason': 'Objective', 'year': None}], 'Core'),
+    ([], 'Optional'),
+])
+def test_supplement_points_take_tiers_from_the_same_point_table(basis, tier):
+    rows = {'rows': [{'question_id': 'Q7', 'decision': 'point', 'point': supplement(basis), 'duplicate_of': None, 'reason': 'Missed'},
+                     {'question_id': 'Q8', 'decision': 'out_of_scope', 'point': None, 'duplicate_of': None, 'reason': 'S2 only'},
+                     {'question_id': 'Q9', 'decision': 'duplicate_of', 'point': None, 'duplicate_of': 'P001', 'reason': 'Same'}]}
+    doc, table, decisions = c.attach_points(points_doc(), rows, ['Q7', 'Q8', 'Q9'], {'S1': 10, 'S2': 8})
+    assert [p['point_id'] for p in doc['points']] == ['P001', 'P002']
+    assert doc['points'][1]['origin'] == 'question' and doc['points'][1]['origin_question_id'] == 'Q7'
+    assert table['points']['P002']['tier'] == tier and table['points']['P001']['tier'] == 'Core'
+    assert [d['decision'] for d in decisions] == ['point', 'out_of_scope', 'duplicate_of']
+
+
+def test_supplement_points_need_the_lecture_notes_and_valid_pages():
+    rows = lambda p: {'rows': [{'question_id': 'Q7', 'decision': 'point', 'point': p, 'duplicate_of': None, 'reason': 'x'}]}
+    jokbo = supplement([])
+    jokbo['source_refs'] = [{'source_id': 'S2', 'pages': [1], 'locator': None}]
+    with pytest.raises(ValueError, match='lecture notes'):
+        c.attach_points(points_doc(), rows(jokbo), ['Q7'], {'S1': 10, 'S2': 8})
+    far = supplement([])
+    far['source_refs'][0]['pages'] = [40]
+    with pytest.raises(ValueError, match='outside the source'):
+        c.attach_points(points_doc(), rows(far), ['Q7'], {'S1': 10})
+    with pytest.raises(ValueError, match='one decision'):
+        c.attach_points(points_doc(), rows(supplement([])), ['Q7', 'Q8'], {'S1': 10})
+
+
+def test_extend_brief_adds_goals_without_touching_the_map():
+    b = f.brief()
+    t = copy.deepcopy(b['targets'][0])
+    t['target_id'] = 'T9'
+    t['relation_ids'] = ['R1']
+    t['directions'] = [{**copy.deepcopy(t['directions'][0]), 'direction_id': 'D9', 'relation_ids': ['R1']}]
+    p = {**copy.deepcopy(b['points'][0]), 'point_id': 'P9', 'target_ids': ['T9']}
+    extended, new = c.extend_brief(b, {'targets': [t], 'points': [p]}, ['P9'])
+    assert new == ['T9'] and c.map_projection(extended, ['T9'], ['P9']) == b
+    with pytest.raises(ValueError, match='new targets only'):
+        c.extend_brief(b, {'targets': [b['targets'][0]], 'points': [p]}, ['P9'])
+    with pytest.raises(ValueError, match='only new targets and points'):
+        c.extend_brief(b, {'targets': [t], 'points': [p], 'relations': []}, ['P9'])
+
+
+# ---------------------------------------------------------------- assembly (R2m)
+def gathered(b, bank, reviews=None):
+    return c.assessment_raw(b, bank, covered(b), map_ok(b), reviews or [review('Q1'), review('Q2')], CONTEXT, 'Synthetic /3 judgments')
+
+
+def test_gathered_judgments_compile_into_the_v2_document():
+    b, bank = f.brief(), f.old.bank()
+    raw = gathered(b, bank)
+    audit = v2.compile_assessment(b, bank, envelope(b, bank, raw))
+    doc = v2.make_document(b, bank, audit, revision='test', title='Synthetic', exam_date=None)
+    assert {t['direction_id'] for t in doc['tasks']} == {'D1', 'D2'}
+    doubt = gathered(b, bank, [review('Q1', 'doubt'), review('Q2')])
+    doc = v2.make_document(b, bank, v2.compile_assessment(b, bank, envelope(b, bank, doubt)), revision='test', title='Synthetic', exam_date=None)
+    assert {t['direction_id'] for t in doc['tasks']} == {'D2'}
+
+
+def test_assembly_never_fills_in_a_missing_judgment():
+    b, bank = f.brief(), f.old.bank()
+    with pytest.raises(ValueError, match='item review'):
+        c.assessment_raw(b, bank, covered(b), map_ok(b), [review('Q1')], CONTEXT, 'x')
+    with pytest.raises(ValueError, match='coverage judgment'):
+        c.assessment_raw(b, bank, covered(b)[:1], map_ok(b), [review('Q1'), review('Q2')], CONTEXT, 'x')
+    partial = map_ok(b)
+    partial['relation_checks'] = partial['relation_checks'][:1]
+    with pytest.raises(ValueError, match='one judgment per relation'):
+        c.assessment_raw(b, bank, covered(b), partial, [review('Q1'), review('Q2')], CONTEXT, 'x')
+
+
+def test_unknown_map_judgment_keeps_the_goal_unprepared():
+    b, bank = f.brief(), f.old.bank()
+    m = map_ok(b)
+    m['relation_checks'][0]['status'] = 'unknown'
+    raw = c.assessment_raw(b, bank, covered(b), m, [review('Q1'), review('Q2')], CONTEXT, 'x')
+    doc = v2.make_document(b, bank, v2.compile_assessment(b, bank, envelope(b, bank, raw)), revision='t', title='S', exam_date=None)
+    assert 'D1' not in {t['direction_id'] for t in doc['tasks']}
+
+
+# ---------------------------------------------------------------- result
+def result(p):
+    b, bank = f.brief(), f.old.bank()
+    b['lecture_id'] = p['subject'] + '/' + p['runId']
+    raw = gathered(b, bank)
+    audit = v2.compile_assessment(b, bank, envelope(b, bank, raw))
+    doc = v2.make_document(b, bank, audit, revision=p['revision'], title=p['title'], exam_date=p['examDate'])
+    ledger = [c.ledger_entry('item', q['question_id'], c.item_hash(q, bank, []), review(q['question_id']), 'review-1') for q in bank['questions']]
+    medical = f.old.checks(bank)
+    med_input = {'title': p['title'], 'bank': bank, 'clinicalInput': v2.medical_input(bank, []), 'medicalFinal': True,
+                 '_pipeline_version': c.POLICY}
+    stage = lambda name, inp, out: {'name': name, 'status': 'completed', 'inputHash': document_hash(inp), 'outputHash': document_hash(out)}
+    stages = [stage('normalize', {}, b), stage('v3-add-0', {}, {}), stage('context-0', {}, CONTEXT), stage('medical-0', med_input, medical)]
+    stages[-1]['inputHash'] = document_hash(med_input)
+    meta = {'pipelineVersion': c.POLICY, 'inputHash': p['inputHash'], 'briefHash': document_hash(b), 'bankHash': document_hash(bank),
+            'model': 'synthetic', 'runtimeHash': '0' * 64, 'stages': stages, 'verdictLedger': ledger, 'verdictLedgerHash': document_hash(ledger),
+            'addRounds': 1, 'notReady': [], 'offGoalQuestions': [], 'rejectedAtIntake': [], 'supplement': [],
+            'initialBrief': b, 'supplementPoints': None,
+            'initialBank': copy.deepcopy(bank), 'coverage': covered(b), 'mapCheck': map_ok(b),
+            'itemReviews': [review('Q1'), review('Q2')], 'clinicalContext': CONTEXT, 'clinicalConflicts': [], 'medicalFinal': True,
+            'sourceAssessment': raw, 'fixes': []}
+    return {'brief': b, 'document': doc, 'sourceAudit': audit, 'medical': medical, 'validation': {}, 'manifest': meta}
+
+
+def v3_packet():
+    p = f.packet()
+    p['generationPolicy'] = c.POLICY
+    return p
+
+
+def test_a_v3_result_is_checked_by_the_v3_contract():
+    p = v3_packet()
+    value = result(p)
+    assert consume(value, p) == value['document']
+
+
+@pytest.mark.parametrize('tamper,message', [
+    (lambda v: v['manifest'].update(addRounds=3), 'add budget'),
+    (lambda v: v['manifest'].update(medicalFinal=False), 'medical review runs once'),
+    (lambda v: v['manifest']['initialBank']['questions'][0].update(answer='Synthetic original'), 'changed without a fix'),
+    (lambda v: v['manifest'].update(offGoalQuestions=[{'question_id': 'Q1', 'reason': 'x'}]), 'out-of-scope question became a task'),
+    (lambda v: v['manifest'].update(notReady=[{'direction_id': 'D1', 'reason': 'no-question'}]), 'not-ready goal has a task'),
+    (lambda v: v['manifest']['itemReviews'][0].update(verdict='doubt', note='x'), 'gathered judgments'),
+    (lambda v: v['manifest'].update(verdictLedgerHash='0' * 64), 'verdict ledger'),
+])
+def test_tampered_v3_results_are_rejected(tamper, message):
+    p = v3_packet()
+    value = result(p)
+    tamper(value)
+    with pytest.raises(ValueError, match=message):
+        consume(value, p)
+
+
+def test_a_v2_packet_never_accepts_a_v3_result():
+    p = v3_packet()
+    value = result(p)
+    with pytest.raises(Exception):
+        consume(value, f.packet())

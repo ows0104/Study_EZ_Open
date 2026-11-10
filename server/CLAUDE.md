@@ -67,6 +67,9 @@
   - 이미 공개된 판이 있는 강의는 409로 거절한다.
   - 결과는 `validate_result`가 요청에서 생성 packet을 다시 만들어 검증한 뒤 `put_result`가 게시한다. `privatePilot=false`면 학생 공개다.
   - 이어 하기 이유는 packet의 `operatorResumes`에 쌓는다. 입력 지문 밖이고, map-tree 요청에는 필수다.
+- `pipeline: map-tree/2`(2026-11-10, `docs/changes/2026-11-10-root-generation-3/`)는 같은 조건에 형식 `source-assessment/2-map-tree/2`다.
+  - 러너 앞 단계가 독립 문제은행을 더 뽑고, 생성은 root-generation/3이다. 결과 검증은 같은 `validate_result`가 파생 packet의 `generationPolicy`로 갈래를 고른다.
+  - 관리자 보고(`report`)는 /3이면 수정 회차 대신 빈 목표 추가 회차·고친 문항 수·준비 안 된 목표 수를 준다.
 
 master push는 GitHub 검사 통과 후 API를 자동 배포한다. 다른 브랜치는 검사만 한다.
 배포 절차는 [협업·자동 배포](../docs/development/collaboration.md)와 [배포 안내](../docs/deployment.md)에 있다.
