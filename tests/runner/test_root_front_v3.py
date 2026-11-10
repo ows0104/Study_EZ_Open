@@ -162,3 +162,50 @@ def test_runner_runs_front_then_v3_and_the_server_can_re_derive_and_check(tmp_pa
     bad['manifest']['derivedPacket']['intakeBank']['bank']['questions'][0]['answer'] = 'Synthetic other'
     with pytest.raises(ValueError):
         validate_result(bad, client.packet)
+
+
+def test_a_resume_sets_aside_a_stored_result_the_current_checks_refuse(tmp_path, monkeypatch):
+    """261102_02 (2026-11-10): after a fix, 「이어서 만들기」 re-validated the stored result (refused by the server
+    with 0 tasks) and stopped before the generator could apply the fix."""
+    (tmp_path / 'src').mkdir(); p = server_packet(tmp_path / 'src')
+    client = Client(p); commands = []
+    monkeypatch.setattr(root_evidence, 'build', lambda *a, **k: None)
+    monkeypatch.setattr(worker.urllib.request, 'urlopen', lambda req, **k: io.BytesIO(client.bodies[req.full_url.rsplit('/', 1)[1]]))
+
+    def child(args, **kwargs):
+        commands.append(args)
+        packet = json.loads(Path(args[args.index('--packet') + 1]).read_text(encoding='utf-8'))
+        out = Path(args[args.index('--out') + 1])
+        if args[2] == 'runner.root_front':
+            rf.Front(packet, out, invoke=front_codex([])).run()
+        else:
+            from quizbank import connection_generate as g
+            model = Model()
+            model.points = packet['points']
+            g.run(packet, out, invoke=model, resume=args[args.index('--resume') + 1] if '--resume' in args else None)
+        return SimpleNamespace(returncode=0)
+    monkeypatch.setattr(worker, 'run_forwarded', child)
+    runs = tmp_path / 'runs'
+    assert worker.run_generation(client, p['subject'], p['runId'], runs, GID) == 0
+    gen = runs / '_root-generation' / GID / 'generation'
+    stored = json.loads((gen / 'result.json').read_text(encoding='utf-8'))
+    stale = copy.deepcopy(stored)
+    stale['manifest']['clinicalContext'] = {'clinical_context_status': 'conflict', 'clinical_context_problem': 'incomplete',
+                                            'clinical_context_reason': 'Synthetic stale'}
+    (gen / 'result.json').write_text(json.dumps(stale, ensure_ascii=False), encoding='utf-8')
+    # Without a reason the stored result is still what the runner checks: it stops, nothing is moved.
+    with pytest.raises(ValueError):
+        worker.run_generation(client, p['subject'], p['runId'], runs, GID)
+    assert (gen / 'result.json').exists() and not list(gen.glob('.rejected-result-*'))
+    commands.clear()
+    assert worker.run_generation(client, p['subject'], p['runId'], runs, GID, resume='Synthetic fix applied') == 0
+    assert [c[2] for c in commands] == ['runner.root_native_json']   # the front stays; the generator runs again
+    kept = json.loads((gen / '.rejected-result-0' / 'result.json').read_text(encoding='utf-8'))
+    assert kept == stale
+    reason = json.loads((gen / '.rejected-result-0' / 'reason.json').read_text(encoding='utf-8'))
+    assert reason['resume'] == 'Synthetic fix applied' and reason['error'].startswith('result3:')
+    assert json.loads((gen / 'result.json').read_text(encoding='utf-8'))['manifest']['clinicalContext']['clinical_context_status'] == 'consistent'
+    # A stored result that passes is reused even with a reason.
+    commands.clear()
+    assert worker.run_generation(client, p['subject'], p['runId'], runs, GID, resume='Again') == 0
+    assert commands == [] and len(list(gen.glob('.rejected-result-*'))) == 1

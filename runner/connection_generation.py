@@ -67,6 +67,23 @@ def completed_result(out,packet):
     validate_continuations(out,payload)
     return payload
 
+def set_aside_stale_result(out,gen_packet,packet,resume):
+    """root-generation/3, an operator resume over a stored result the current checks refuse: keep that result
+    under .rejected-result-<k>/ with the reason and the error, and let the generator run again (its ledger reuses
+    every completed stage whose input is unchanged). Without this the runner re-validated the stored result and
+    stopped before the generator could apply the fix (261102_02, 2026-11-10: the result the server had refused
+    with 0 tasks). A result that still passes is reused as before."""
+    try:
+        validate_result(completed_result(out,gen_packet),packet)
+        return False
+    except (ValueError,KeyError,TypeError,OSError) as error:
+        k=len(list(out.glob('.rejected-result-*')))
+        archive=out/f'.rejected-result-{k}';archive.mkdir()
+        (out/'result.json').replace(archive/'result.json')
+        (archive/'reason.json').write_text(json.dumps({'resume':resume,'error':str(error)},ensure_ascii=False),encoding='utf-8')
+        print(f'── 저장된 결과가 현재 검사를 통과하지 않아 {archive.name}/에 보관하고 생성을 이어 갑니다: {error}',flush=True)
+        return True
+
 def validate_continuations(out,payload):
     for entry in payload['manifest']['stages']:
         if 'continuationProofHash'in entry:
@@ -154,6 +171,8 @@ def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=
     args = [sys.executable, '-m', module, '--packet', str(gen_packet_path.resolve()), '--out', str(gen_out.resolve())]
     if model: args += ['--model', model]
     if resume and module == 'runner.root_native_json' and (gen_out / 'ledger.json').exists(): args += ['--resume', resume]
+    if (gen_out/'result.json').exists() and resume and gen_packet.get('generationPolicy')=='root-generation/3':
+        set_aside_stale_result(gen_out,gen_packet,packet,resume)
     if (gen_out/'result.json').exists():payload=completed_result(gen_out,gen_packet)
     else:
         result = run_forwarded(args, cwd=Path(__file__).resolve().parents[1])
