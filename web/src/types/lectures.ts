@@ -91,6 +91,8 @@ export type LectureRef = {
   /** 웹에서 풀 문항이 없으면 없다. "안 풀었다"와 "잴 것이 없다"는 다르다. */
   prequizProgress: PrequizProgress | null;
   grabbed: Grabbed;
+  /** 본인 강의록 회독 수 */
+  noteReads?: number;
 };
 
 export type TimetableEvent = {
@@ -142,6 +144,9 @@ export type LectureDetail = {
   myPreview: { provider: PreviewProvider; conversationUrl: string } | null;
   /** 올해 강의록으로 만든 내 복습 대화. 개인 예습과 별도로 저장한다. */
   myReview?: { provider: PreviewProvider; conversationUrl: string } | null;
+  /** 본인 강의록 회독 수와 강의 메모 */
+  noteReads?: number;
+  myMemo?: string;
   prequiz: QuizProgress | null;
   /**
    * 복습 웹 풀이. **2026-08-31에 생겼고 그 전에 구운 편에는 없다.**

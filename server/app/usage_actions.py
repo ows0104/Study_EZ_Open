@@ -11,6 +11,7 @@ ACTION_GROUPS = [
     {"key": "personal", "label": "개인 링크 만들기·저장"},
     {"key": "links", "label": "링크 열기"},
     {"key": "quizzes", "label": "퀴즈 풀이"},
+    {"key": "records", "label": "회독·메모"},
     {"key": "files", "label": "파일 요청·미상"},
 ]
 
@@ -60,6 +61,12 @@ ACTIONS = (
            ("main", "cards"), ("quizLastAt", "main"), "문항", "문항", grades_path=("main", "grades")),
     Action("bank_quiz_answer", "복습 퀴즈 풀이 (복습 카드)", "quizzes", ("quizzes", "bank"),
            ("bank", "cards"), ("quizLastAt", "bank"), "문항", "문항", grades_path=("bank", "grades")),
+    # note_read 한 줄 = 강의록 1회독. 지우면 줄이 사라지므로 지금 남아 있는 회독만 센다.
+    Action("note_read", "강의록 회독 기록 (지운 것 제외)", "records", ("noteReads",),
+           ("noteReads", "count"), ("noteReads", "lastAt"), "회", "회"),
+    # lecture_memo 는 강의마다 한 줄이고 마지막 저장 시각만 남는다.
+    Action("lecture_memo", "강의 메모 저장 (마지막 저장 기준)", "records", ("memos",),
+           ("memo", "count"), ("memo", "lastAt"), detail_unit="개"),
     *(Action(f"file_{purpose}", label, "files", ("fileRequests", purpose), file_purpose=purpose)
       for purpose, label in (
           ("download", "직접 다운로드 요청"), ("view", "브라우저 열기 요청"),

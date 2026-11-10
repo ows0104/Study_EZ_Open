@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { NOTE_READS_EVENT, type NoteReadsChange } from "./ReadEditor";
 import { api } from "../api";
 import { takeTimetable } from "../firstScreen";
 import type { TimetableEvent } from "../types/lectures";
@@ -48,6 +49,18 @@ export function useCalendarTimetable(start: string, end: string, showLearning: b
       .finally(() => { if (!controller.signal.aborted) setLearningLoading(false); });
     return () => controller.abort();
   }, [start, end, showLearning, baseVersion]);
+
+  // 패널에서 회독을 더하거나 지우면 칸의 회독 줄도 바로 바꾼다.
+  useEffect(() => {
+    const onReads = (event: Event) => {
+      const { subject, runId, count } = (event as CustomEvent<NoteReadsChange>).detail;
+      setEvents(old => old?.map(e => e.lectures.some(l => l.subject === subject && l.runId === runId)
+        ? { ...e, lectures: e.lectures.map(l => l.subject === subject && l.runId === runId ? { ...l, noteReads: count } : l) }
+        : e) ?? null);
+    };
+    window.addEventListener(NOTE_READS_EVENT, onReads);
+    return () => window.removeEventListener(NOTE_READS_EVENT, onReads);
+  }, []);
 
   return { events, error, learningError, learningLoading, reload };
 }

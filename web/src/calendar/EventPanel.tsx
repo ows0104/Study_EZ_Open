@@ -20,6 +20,7 @@ import { cardsHash } from "../lecture/LectureCards";
 import { ActionCard, fileSize, PanelGroup } from "./panelShared";
 import { PreviewAction } from "./PreviewAction";
 import { ReviewAction } from "./ReviewAction";
+import { LectureMemo, ReadEditor } from "./ReadEditor";
 import { PreviewSourceNotice, ProfessorInfo, ProfTag, previewNotesLabel } from "./ProfessorInfo";
 
 /**
@@ -345,7 +346,12 @@ function KeyActions({
         <h3>통계</h3>
         <div className="stat-row">
           <span className="stat-label">회독</span>
-          <span className="readline is-lg">{detail.prequiz ? <i className={`rl-pre${preDone ? " is-on" : ""}`} title={preDone ? "예습 퀴즈 완료" : "예습 퀴즈 미완료"} /> : null}</span>
+          <ReadEditor lecture={lecture} base={base} preOpen={Boolean(detail.prequiz)} preDone={preDone}
+            initial={detail.noteReads ?? 0} onError={setError} />
+        </div>
+        <div className="stat-row is-top">
+          <span className="stat-label">메모</span>
+          <LectureMemo base={base} initial={detail.myMemo ?? ""} onError={setError} />
         </div>
         <div className="stat-row">
           <span className="stat-label">학습률</span>

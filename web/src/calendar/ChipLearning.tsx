@@ -6,7 +6,7 @@ import { prequizDone } from "./entries";
  * 칸 아래 학습 표시(2026-11 개편).
  *
  *   위 = 회독 줄: 학습률 막대와 같은 두께의 점선. 예습 퀴즈를 끝까지 풀었을 때만 첫 토막을 옅은 예습 색으로 채운다
- *        (예습은 1회독까지만 센다). 강의록 회독 토막은 서버 저장과 함께 2단계에서 붙는다.
+ *        (예습은 1회독까지만 센다). 뒤에 강의록 회독 토막(2026-11-10 2단계)이 하나에 하나씩 붙는다.
  *   아래 = 복습 학습률 막대: 0%여도 바탕이 보이고, 덜 채울수록 진하다(덜 공부한 강의가 더 중요하다).
  *          아직 복습이 열리지 않았거나 불러오는 중이면 회색 바탕만.
  * 예습 학습률 막대는 없앴다(사용자 지시).
@@ -35,6 +35,10 @@ function reviewFor(lecture: LectureRef, roots?: RootCatalog): Review {
   return { score, description: `복습 학습률 ${score}% · ${labels[value.status]}` };
 }
 
+function readsFor(lecture: LectureRef) {
+  return lecture.noteReads ? ` · 강의록 ${lecture.noteReads}회독` : "";
+}
+
 function preFor(lecture: LectureRef) {
   if (lecture.studyLoaded === false) return "예습: 불러오는 중";
   const progress = lecture.prequizProgress;
@@ -43,7 +47,7 @@ function preFor(lecture: LectureRef) {
 }
 
 export function learningDescription(lecture: LectureRef, roots?: RootCatalog) {
-  return `${lecture.title}: ${preFor(lecture)} · ${reviewFor(lecture, roots).description}`;
+  return `${lecture.title}: ${preFor(lecture)}${readsFor(lecture)} · ${reviewFor(lecture, roots).description}`;
 }
 
 /** 채울수록 옅어지는 복습 막대. 채움 색 = 메인 색을 (100 − 학습률×62)%만큼 섞는다. */
@@ -65,10 +69,14 @@ export function ChipLearning({ lectures }: { lectures: LectureRef[] }) {
   const preOpen = lectures.some(l => l.marks.prequiz);
   const preDone = lectures.every(l => !l.marks.prequiz || prequizDone(l)) && preOpen;
   const single = lectures.length === 1 ? reviews[0] : null;
+  // 강의록 회독은 앞에서부터 채운다(예습 퀴즈 완료 토막 다음). 둘 다 없을 때만 빈 테두리 칸 하나.
+  const reads = Math.max(0, ...lectures.map(l => l.noteReads ?? 0));
   return (
     <span className="chip-learning-pair" title={description} aria-label={description}>
       <span className="readline" aria-hidden="true">
-        {preOpen ? <i className={`rl-pre${preDone ? " is-on" : ""}`} /> : null}
+        {preDone ? <i className="rl-pre is-on" /> : null}
+        {Array.from({ length: Math.min(reads, 8) }, (_, index) => <i key={index} className="rl-note" />)}
+        {preOpen && !preDone && !reads ? <i className="rl-pre" /> : null}
       </span>
       <span className="chip-learning is-main">
         {/* 화면에는 막대만 보이고, 숫자는 화면 낭독용으로 남긴다. */}
