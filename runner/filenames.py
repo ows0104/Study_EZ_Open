@@ -41,8 +41,10 @@ _BRACKET_RE = re.compile(
     r"(?:\s*[~\-–—]\s*(\d{1,2}))?\s*[\]\})）]")
 
 # 꼬리의 "_최나예v1", "_고명재 v2", "_오서연_v3", "_박지민", "_김정빈v2.",
-# "_이채현v.1" 을 모두 받는다. 필기자 이름은 한글 2~4자이고 판 번호는 없을 수도 있다.
-_AUTHOR_RE = re.compile(r"_\s*([가-힣]{2,4})\s*_?\s*[vV]?\s*\.?\s*(\d+)?\s*\.*\s*$")
+# "_이채현v.1", "_송 현 v1" 을 모두 받는다. 필기자 이름은 한글 2~4자이고(글자 사이
+# 띄어쓰기 허용) 판 번호는 없을 수도 있다. 이름을 못 떼면 제목이 오염되어 주제 별칭이
+# 빗나가고, 다른 강의와 run 키가 겹쳐 둘 다 해시 run이 새로 선다(2026-11-10 렙토스피라).
+_AUTHOR_RE = re.compile(r"_\s*([가-힣](?:\s?[가-힣]){1,3})\s*_?\s*[vV]?\s*\.?\s*(\d+)?\s*\.*\s*$")
 
 # Synology가 같은 파일을 두 기기에서 고쳤을 때 남기는 사본.
 # "_박준원v2_DERIAZ_7-09-222924-2026_Conflict.pdf" 같은 이름이 되어 제목이 오염된다.
@@ -94,6 +96,9 @@ class LectureFile:
     professors: tuple[str, ...]
     author: str
     version: int
+    # 시간표가 맞바뀐 칸인데 주제를 별칭표에서 못 찾아 날짜 키를 그대로 받았다.
+    # 같은 과목에서 그 키를 별칭으로 받은 강의가 있으면 `scan`이 이 파일을 뺀다.
+    unmatched_swap: bool = False
 
     @property
     def year(self) -> int:
@@ -178,6 +183,22 @@ def normalize_stem(text: str) -> str:
     return _JUNK_RE.sub("", canonical(text))
 
 
+def _stable_key(table: dict, topic: str) -> str | None:
+    """별칭표 한 칸에서 이 주제의 고정 키. 못 알아보면 None.
+
+    글자가 똑같으면 그것을 쓴다. 아니면 별칭 이름으로 **시작하는** 주제를 하나만
+    받는다 — 꼬리에 필기자 이름 같은 것이 덜 떨어져 붙어도 강의는 알아본다.
+    둘 이상 걸리면 고르지 않는다.
+    """
+    stable = table.get(topic)
+    if stable is None:
+        hits = {value for name, value in table.items() if name and topic.startswith(name)}
+        stable = hits.pop() if len(hits) == 1 else None
+    if stable is not None and (not isinstance(stable, str) or not re.fullmatch(r"\d{6}_\d{2}", stable)):
+        raise ValueError("Invalid timetable note identity")
+    return stable
+
+
 def parse(path: str | Path) -> LectureFile | None:
     """파일명 하나를 읽는다. 대괄호가 없으면 강의 필기가 아니라고 보고 건너뛴다."""
     path = Path(path)
@@ -202,7 +223,7 @@ def parse(path: str | Path) -> LectureFile | None:
     author, version = "", 1
     tail = _AUTHOR_RE.search(rest)
     if tail:
-        author = tail.group(1)
+        author = re.sub(r"\s", "", tail.group(1))
         version = int(tail.group(2)) if tail.group(2) else 1
         rest = rest[:tail.start()].strip()
 
@@ -217,6 +238,7 @@ def parse(path: str | Path) -> LectureFile | None:
             seq = int(trailing.group(1))
 
     key = f"{yy}{mm}{dd}_{slot:02d}"
+    unmatched_swap = False
     # A revised schedule must not reuse another lecture's existing storage key.
     # Only explicitly reviewed date/slot + full-topic aliases can change a key.
     aliases_path = Path(__file__).resolve().parents[1] / "data/timetable/identities/2026-2-notes.json"
@@ -225,11 +247,16 @@ def parse(path: str | Path) -> LectureFile | None:
         topic = stripped
         for prefix in ("미생물학)", "감염학)"):
             topic = topic.removeprefix(prefix).strip()
-        stable = aliases.get(key, {}).get(_JUNK_RE.sub("", topic))
-        if stable is not None:
-            if not isinstance(stable, str) or not re.fullmatch(r"\d{6}_\d{2}", stable):
-                raise ValueError("Invalid timetable note identity")
-            key = stable
+        table = aliases.get(key)
+        if table:
+            stable = _stable_key(table, _JUNK_RE.sub("", topic))
+            if stable is None:
+                # 시간표가 맞바뀐 칸인데 주제를 못 알아봤다. 다른 과목의 강의일 수 있어
+                # 날짜 키를 주되 표시해 둔다 — 같은 과목에서 이 키를 별칭으로 받은
+                # 강의가 있으면 `scan`이 이 파일을 뺀다.
+                unmatched_swap = True
+            else:
+                key = stable
 
     return LectureFile(
         path=path,
@@ -244,6 +271,7 @@ def parse(path: str | Path) -> LectureFile | None:
         professors=_split_professor_names(professor_groups),
         author=author,
         version=version,
+        unmatched_swap=unmatched_swap,
     )
 
 
@@ -362,7 +390,27 @@ def scan(folder: str | Path, expect_year: str | None = None) -> Scan:
             result.misfiled.append(item)
             continue
         result.files.append(item)
+    _drop_unmatched_swaps(result)
     return result
+
+
+def _drop_unmatched_swaps(result: Scan) -> None:
+    """맞바뀐 칸에서 주제를 못 알아본 파일이 같은 과목의 다른 강의와 키가 겹치면 뺀다.
+
+    그 날짜 키는 별칭으로 **다른 강의가** 쓰는 이름이다. 그대로 두면 `assign_run_ids`가
+    둘 다 해시 run을 새로 세우고, 서버가 그것을 각 칸에 두 번째 강의로 붙여 막대가
+    둘이 된다(2026-11-10 렙토스피라 `_송 현 v1`). 그 파일은 「파일명을 읽지 못함」으로
+    드러낸다 — 고칠 곳은 파일명이나 별칭표다. 겹치는 강의가 없으면(다른 과목이
+    같은 날짜·교시에 있는 경우) 날짜 키 그대로 둔다.
+    """
+    owners = {item.key for item in result.files if not item.unmatched_swap}
+    kept = []
+    for item in result.files:
+        if item.unmatched_swap and item.key in owners:
+            result.unparsed.append(item.path)
+        else:
+            kept.append(item)
+    result.files = kept
 
 
 def assign_run_ids(files: list[LectureFile]) -> dict[str, str]:

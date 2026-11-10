@@ -90,3 +90,41 @@ def test_current_notes_keep_topic_identity(name, expected):
     item = filenames.parse(Path(name))
     assert item.key == expected
     assert item.date == f'20{name[1:3]}-{name[3:5]}-{name[5:7]}'
+
+
+@pytest.mark.parametrize('name,author,version', [
+    ('[261110_01]렙토스피라, 매독균, 보렐리아(김현제)_송 현 v1.pdf', '송현', 1),
+    ('[261105_05]콜레라, 캄필로박터, 수도모나스(방예지)_선하은v1.pdf', '선하은', 1),
+    ('[261102_05] 감염병의 치료원칙(김홍빈)_박세민v2.pdf', '박세민', 2),
+])
+def test_spaced_author_name_does_not_pollute_title(name, author, version):
+    item = filenames.parse(Path(name))
+    assert (item.author, item.version) == (author, version)
+    assert '_' not in item.title
+
+
+def test_spaced_author_note_keeps_its_own_run_id():
+    """띄어쓴 필기자 이름 때문에 별칭이 빗나가면 콜레라와 키가 겹쳐 둘 다 해시 run이 섰다."""
+    files = [filenames.parse(Path(name)) for name in (
+        '[261105_05]콜레라, 캄필로박터, 수도모나스(방예지)_선하은v1.pdf',
+        '[261110_01]렙토스피라, 매독균, 보렐리아(김현제)_송 현 v1.pdf',
+    )]
+    assert sorted(filenames.assign_run_ids(files).values()) == ['261105_05', '261110_01']
+
+
+def test_polluted_topic_in_swapped_slot_still_finds_its_stable_key():
+    """주제 뒤에 무엇이 덜 떨어져 붙어도 별칭 이름으로 시작하면 알아본다."""
+    item = filenames.parse(Path('[261110_01]렙토스피라, 매독균, 보렐리아(김현제)_송 현 v1 최종.pdf'))
+    assert item is not None and item.key == '261105_05'
+
+
+def test_unknown_topic_in_swapped_slot_does_not_take_a_lectures_key(tmp_path):
+    """맞바뀐 칸에서 주제를 못 알아본 파일은 같은 과목의 강의 키를 빼앗지 않는다."""
+    for name in ('[261105_05]콜레라, 캄필로박터, 수도모나스(방예지)_선하은v1.pdf',
+                 '[261110_01]렙토스피라, 매독균, 보렐리아(김현제)_송현v1.pdf',
+                 '[261110_01]전혀 다른 강의(김현제)_송현v1.pdf'):
+        (tmp_path / name).write_bytes(b'%PDF')
+    result = filenames.scan(tmp_path)
+    assert sorted(f.key for f in result.files) == ['261105_05', '261110_01']
+    assert [p.name for p in result.unparsed] == ['[261110_01]전혀 다른 강의(김현제)_송현v1.pdf']
+    assert sorted(filenames.assign_run_ids(result.files).values()) == ['261105_05', '261110_01']

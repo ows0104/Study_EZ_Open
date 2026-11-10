@@ -313,6 +313,8 @@ function KeyActions({
   const bank = detail.bank;
   const preDeck = fileOf("pre_apkg");
   const mainDeck = fileOf("main_apkg");
+  const prevNotes = fileOf("notes_prev");
+  const currentNotes = fileOf("notes_current");
 
   return (
     <div className="event-panel-actions">
@@ -349,16 +351,16 @@ function KeyActions({
           <ReadEditor lecture={lecture} base={base} preOpen={Boolean(detail.prequiz)} preDone={preDone}
             initial={detail.noteReads ?? 0} onError={setError} />
         </div>
-        <div className="stat-row is-top">
-          <span className="stat-label">메모</span>
-          <LectureMemo base={base} initial={detail.myMemo ?? ""} onError={setError} />
-        </div>
         <div className="stat-row">
           <span className="stat-label">학습률</span>
           <span className="stat-rate">
             <b className={`rate-text ${rateBand(rate)}`}>{rate === null ? "0%" : `${rate}%`}</b>
             <ReviewMeter score={rate} />
           </span>
+        </div>
+        <div className="stat-row is-top">
+          <span className="stat-label">메모</span>
+          <LectureMemo base={base} initial={detail.myMemo ?? ""} onError={setError} />
         </div>
         {study?.cardProgress ? (
           <div className="stat-row is-top">
@@ -368,18 +370,31 @@ function KeyActions({
         ) : null}
       </section>
 
+      {/* 예습·복습에 쓰는 강의록(2026-11-10 사용자 지시). 덱과 상관없이, 파일이 있으면 보인다. */}
+      {prevNotes || currentNotes ? (
+        <section className="panel-stats panel-info" aria-label="정보">
+          <h3>정보</h3>
+          {prevNotes ? (
+            <div className="stat-row">
+              <span className="stat-label">예습</span>
+              <NotesName filename={prevNotes.filename} />
+            </div>
+          ) : null}
+          {currentNotes ? (
+            <div className="stat-row">
+              <span className="stat-label">복습</span>
+              <NotesName filename={currentNotes.filename} />
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
       <div className="event-panel-foot">
         {preDeck || mainDeck ? (
           <span className="deck-links">
-            <span className="deck-links-label">덱 다운로드</span>
-            {/* 각 덱이 어느 강의록으로 만든 것인지 파일명을 옆에 둔다(2026-11-10 사용자 지시). */}
-            {([["예습", preDeck, fileOf("notes_prev")], ["복습", mainDeck, fileOf("notes_current")]] as const).map(([label, deck, notes]) =>
-              deck ? (
-                <span className="deck-link" key={label}>
-                  <button type="button" onClick={() => void download(deck)}>{label}</button>
-                  {notes ? <span className="deck-source" title={notes.filename}>{notes.filename}</span> : null}
-                </span>
-              ) : null)}
+            덱 다운로드
+            {preDeck ? <button type="button" onClick={() => void download(preDeck)}>예습</button> : null}
+            {mainDeck ? <button type="button" onClick={() => void download(mainDeck)}>복습</button> : null}
           </span>
         ) : <span />}
         <FeedbackButton launch={{ className: "ghost-button", content: "오류 제보" }} />
@@ -387,6 +402,28 @@ function KeyActions({
 
       {error ? <p className="notice is-error">{error}</p> : null}
     </div>
+  );
+}
+
+/**
+ * 강의록 파일명. 길면 강의명 쪽만 줄이고 끝의 판(v3)은 늘 보인다(2026-11-10 사용자 지시).
+ * 필기 파일명 꼴은 `[260813_03]제목(교수)_필기자v3.pdf`(runner/filenames.py). 앞의 날짜·교시는 떼고 전체 이름은 title에 둔다.
+ */
+export function splitNotesName(filename: string): { head: string; version: string } {
+  const bare = filename.normalize("NFC").replace(/\.[a-z0-9]{1,5}$/i, "")
+    .replace(/^\s*[[(]\s*\d{6}\s*_\s*\d{1,2}(?:\s*~\s*\d{1,2})?\s*[\])}]\s*/, "");
+  const tail = bare.match(/[vV]\s*\.?\s*(\d+)\s*$/);
+  if (!tail) return { head: bare.trim(), version: "" };
+  return { head: bare.slice(0, tail.index).replace(/[\s_]+$/, ""), version: `v${tail[1]}` };
+}
+
+function NotesName({ filename }: { filename: string }) {
+  const { head, version } = splitNotesName(filename);
+  return (
+    <span className="notes-name" title={filename}>
+      <span className="notes-name-head">{head}</span>
+      {version ? <span className="notes-name-version">{version}</span> : null}
+    </span>
   );
 }
 

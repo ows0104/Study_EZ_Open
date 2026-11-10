@@ -43,7 +43,7 @@ function detail(index: number): LectureDetail {
       filename: source?.selected?.filename || "[251101_01] 기존 자료.pdf", contentType: "application/pdf" },
       // ?decks: 덱 다운로드 줄의 강의록 파일명 확인용(2026-11-10)
       ...(new URLSearchParams(location.search).has("decks") ? [
-        { id: `cur-${index}`, kind: "notes_current", label: "올해 강의록", sizeBytes: 10, filename: `[261103_02] ${cases[index].title}_최은화_올해 강의록.pdf`, contentType: "application/pdf" },
+        { id: `cur-${index}`, kind: "notes_current", label: "올해 강의록", sizeBytes: 10, filename: `[261103_02]${cases[index].title} 및 아주 긴 강의 제목(최은화)_김정빈v3.pdf`, contentType: "application/pdf" },
         { id: `pre-${index}`, kind: "pre_apkg", label: "예습 덱", sizeBytes: 10, filename: "pre.apkg", contentType: "application/octet-stream" },
         { id: `main-${index}`, kind: "main_apkg", label: "복습 덱", sizeBytes: 10, filename: "main.apkg", contentType: "application/octet-stream" },
       ] : [])] as LectureDetail["files"],
