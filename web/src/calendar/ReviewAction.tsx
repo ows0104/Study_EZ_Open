@@ -60,11 +60,11 @@ export function ReviewAction({ lecture, detail, base, onError, trailing, open }:
       note={saved ? "오늘 강의록을 다시 읽는 대화" : "개인 링크 만들기"}>
       {/* C안(2026-11-07): 왼쪽은 처음엔 만들기(＋), 그 뒤엔 열기(↗). ▾에 새 대화 만들기·내 프롬프트 수정. */}
       {saved ? (
-        <ChatSplit tone="review"
+        <ChatSplit tone="review" linked
           main={<a className="chat-split-main" href={saved.conversationUrl} target="_blank" rel="noreferrer"><span aria-hidden="true">↗</span>개인 대화</a>}
           onRemake={notes && installed ? () => void start() : undefined}
           remakeDisabled={busy || !compatible || !promptStore.loaded}
-          onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} promptCustom={promptStore.isCustom} />
+          onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} />
       ) : notes && installed ? (
         <ChatSplit tone="review"
           main={
@@ -73,7 +73,7 @@ export function ReviewAction({ lecture, detail, base, onError, trailing, open }:
               <span aria-hidden="true">＋</span>{busy ? "여는 중…" : "개인 대화"}
             </button>
           }
-          onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} promptCustom={promptStore.isCustom} />
+          onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} />
       ) : (
         <ActionCard shape="is-key is-faint is-empty"
           hit={<span className="panel-action-hit"><strong>개인 대화</strong>
