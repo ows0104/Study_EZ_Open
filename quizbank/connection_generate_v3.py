@@ -78,16 +78,18 @@ class Stages:
         self.g.write(self.path, self.ledger)
 
     def judged(self, name, ctx, accept):
-        """A coverage or review stage that judged nothing runs once more in a fresh session (review-retry/1, as /2).
+        """A coverage or review stage that judged nothing, or a context judgment left unknown, runs once more in a
+        fresh session (review-retry/1, as /2: empty-judgment, final-context-unknown).
 
         The runner has already sent the error back once into the same session; the abandoned stage is archived
         under .retry-<stage>/ and recorded in ledger reviewRetries. A second empty judgment stops the lecture."""
         try:
             return self.run(name, ctx, accept)
         except ValueError as error:
-            if str(error) not in (v3.UNPERFORMED_COVERAGE, v3.UNPERFORMED_REVIEW) or \
+            if str(error) not in (v3.UNPERFORMED_COVERAGE, v3.UNPERFORMED_REVIEW, v3.UNPERFORMED_CONTEXT) or \
                     any(r['stage'] == name for r in self.ledger.get('reviewRetries', [])):
                 raise
+            kind = 'final-context-unknown' if str(error) == v3.UNPERFORMED_CONTEXT else 'empty-judgment'
         archive = self.out / f'.retry-{name}'
         archive.mkdir()
         moved = []
@@ -101,10 +103,10 @@ class Stages:
             (archive / '.native').mkdir()
             seat.replace(archive / '.native' / name)
             moved.append('.native/' + name)
-        self.ledger.setdefault('reviewRetries', []).append({'policy': 'review-retry/1', 'stage': name, 'kind': 'empty-judgment',
+        self.ledger.setdefault('reviewRetries', []).append({'policy': 'review-retry/1', 'stage': name, 'kind': kind,
                                                             'abandoned': self.ledger['stages'].pop(name), 'files': moved})
         self.save()
-        print('── 검토 포기(empty-judgment): ' + name + ' 새 세션으로 한 번 다시 실행', flush=True)
+        print('── 검토 포기(' + kind + '): ' + name + ' 새 세션으로 한 번 다시 실행', flush=True)
         return self.run(name, ctx, accept)
 
     def _archive(self, name):
@@ -301,6 +303,7 @@ def run(packet, out, model, invoke, resume=None):
     # 1c: intake bank -------------------------------------------------------
     bank, stimuli, conflicts, rejected, intake_changes = _intake(packet, out)
     initial_bank = copy.deepcopy(bank)
+    intake_conflict_ids = {c['conflict_id'] for c in [*bank.get('source_conflicts', []), *conflicts]}
 
     # normalize (+ one structural correction) -------------------------------
     def accept_brief(raw):
@@ -434,6 +437,44 @@ def run(packet, out, model, invoke, resume=None):
         st.save()
         return got
 
+    def fix_round(name, review_name, coverage_name, targets, findings):
+        """One fix stage, the re-review of what it changed, reverts, and the narrowed coverage re-check.
+
+        A revert takes back everything the reverted question brought: the bank is merged again from the state
+        before the fix with only the kept questions, their images and the conflicts they cite. Restoring only
+        the question left a conflict record no question cited (CF-POLIO-28, 261102_02) and images of a
+        reverted version in the stimuli list (Q134)."""
+        nonlocal bank, conflicts, stimuli
+        ctx = v3.fix_input(bank, findings, targets, conflicts, covered_by())
+        state = _state(bank, conflicts, stimuli, packet)
+        value = st.run(name, ctx, lambda raw, ctx=ctx, state=state: check_stage('fix', raw, ctx, state, out / '.check-render' / name), state)
+        before = (copy.deepcopy(bank), copy.deepcopy(conflicts), copy.deepcopy(stimuli))
+        before_reviews = {q: reviews[q] for q in targets}
+        cited = {q.get('conflict_id') for q in value['questions'] if q.get('conflict_id')}
+        restated.extend({'stage': name, **r} for r in v3.restated(visual.authored(bank), conflicts, value, cited))
+        merged, conflicts, changed = v3.merge_fixes(visual.authored(bank), conflicts, value, targets)
+        stimuli = [s for s in stimuli if s['question_id'] not in set(changed)] + value['visual_stimuli']
+        bank = visual.render(merged, stimuli, packet, out / 'material')
+        again = review_batch(review_name, set(changed))
+        reverted = [q for q in changed if q in again and v3.worse(before_reviews[q], again[q])]
+        kept = [q for q in changed if q not in reverted]
+        if reverted and not kept:
+            bank, conflicts, stimuli = before
+        elif reverted:
+            part = v3.fixes_of(value, kept)
+            merged, conflicts, _ = v3.merge_fixes(visual.authored(before[0]), before[1], part, targets)
+            stimuli = [s for s in before[2] if s['question_id'] not in set(kept)] + part['visual_stimuli']
+            bank = visual.render(merged, stimuli, packet, out / 'material')
+        for q in changed:
+            reviews[q] = before_reviews[q] if q in reverted else again.get(q, reviews[q])
+            fixes.append({'question_id': q, 'attempt': attempts[q], 'stage': name, 'reverted': q in reverted})
+        goals = sorted({did for q in kept for did, r in rows.items() if any(e['question_id'] == q for e in r['evidence'])})
+        if goals:
+            ctx = v3.coverage_input(brief, bank, goals, kept)
+            got = st.judged(coverage_name, ctx, lambda raw, ctx=ctx: v3.check_coverage(raw, ctx['goals'], ctx['questions']))
+            for r in got['rows']:
+                rows[r['direction_id']] = _merge_row(rows[r['direction_id']], r, kept)
+
     order = [q['question_id'] for q in bank['questions']]
     attempts = {}   # replayed from fixed stage names (v3-fix-<batch>-<k>); the ledger keeps the maximum seen
     for b, batch in enumerate(chunks(order, REVIEW_BATCH)):
@@ -448,44 +489,43 @@ def run(packet, out, model, invoke, resume=None):
                 ledger['fixAttempts'][q] = max(ledger['fixAttempts'].get(q, 0), attempts[q])
             st.save()
             findings = [{**reviews[q], 'code_findings': code.get(q, [])} for q in targets]
-            ctx = v3.fix_input(bank, findings, targets, conflicts, covered_by())
-            state = _state(bank, conflicts, stimuli, packet)
-            value = st.run(f'v3-fix-{b}-{k}', ctx, lambda raw, ctx=ctx, state=state, b=b, k=k: check_stage('fix', raw, ctx, state, out / '.check-render' / f'v3-fix-{b}-{k}'), state)
-            before_bank, before_reviews = copy.deepcopy(bank), {q: reviews[q] for q in targets}
-            cited = {q.get('conflict_id') for q in value['questions'] if q.get('conflict_id')}
-            restated.extend({'stage': f'v3-fix-{b}-{k}', **r} for r in v3.restated(visual.authored(bank), conflicts, value, cited))
-            merged, conflicts, changed = v3.merge_fixes(visual.authored(bank), conflicts, value, targets)
-            stimuli = [s for s in stimuli if s['question_id'] not in set(changed)] + value['visual_stimuli']
-            bank = visual.render(merged, stimuli, packet, out / 'material')
-            again = review_batch(f'v3-review-{b}-{k + 1}', set(changed))
-            reverted = []
-            for q in changed:
-                if q in again and v3.worse(before_reviews[q], again[q]):
-                    old = next(x for x in before_bank['questions'] if x['question_id'] == q)
-                    bank['questions'] = [old if x['question_id'] == q else x for x in bank['questions']]
-                    reviews[q] = before_reviews[q]
-                    reverted.append(q)
-                elif q in again:
-                    reviews[q] = again[q]
-            for q in changed:
-                fixes.append({'question_id': q, 'attempt': attempts[q], 'stage': f'v3-fix-{b}-{k}', 'reverted': q in reverted})
-            kept = [q for q in changed if q not in reverted]
-            goals = sorted({did for q in kept for did, r in rows.items() if any(e['question_id'] == q for e in r['evidence'])})
-            if goals:
-                ctx = v3.coverage_input(brief, bank, goals, kept)
-                got = st.judged(f'v3-coverage-fix-{b}-{k}', ctx, lambda raw, ctx=ctx: v3.check_coverage(raw, ctx['goals'], ctx['questions']))
-                for r in got['rows']:
-                    rows[r['direction_id']] = _merge_row(rows[r['direction_id']], r, kept)
+            fix_round(f'v3-fix-{b}-{k}', f'v3-review-{b}-{k + 1}', f'v3-coverage-fix-{b}-{k}', targets, findings)
 
-    # context and medical (once, medical-final/1) ---------------------------
-    ctx = {k: base[k] for k in ('title', 'scope', 'lecture_id', 'sources')} | {'bank': bank, 'clinical_conflicts': conflicts}
-
+    # context (+ one repair) and medical (once, medical-final/1) -------------
     def accept_context(raw):
         jsonschema.validate(raw, g.output_schema(v2.CONTEXT_OUTPUT))
         v2.validate_context(raw)
+        v3.require(raw['clinical_context_status'] != 'unknown', v3.UNPERFORMED_CONTEXT)
         return raw
-    context = st.run('context-0', ctx, accept_context)
+
+    def context_judgment(name):
+        v3.check_integrity(bank, conflicts, stimuli, intake_conflict_ids)
+        ctx = {k: base[k] for k in ('title', 'scope', 'lecture_id', 'sources')} | {'bank': bank, 'clinical_conflicts': conflicts}
+        return st.judged(name, ctx, accept_context)
+    context = context_judgment('context-0')
     v3.require(not v2.context_blocks_medical(context), '독립 정답 검수 입력 분리가 완료되지 않았습니다. 결과를 만들지 않고 보존합니다.')
+    if v2.context_repair_note(context):
+        # An incomplete conflict record is a repair reason (clinical-context/2, as /2): the questions citing the
+        # named conflicts (all citing questions when none is named) go to one fix round within their own budget,
+        # then the context is judged once more. A conflict judgment blocks every goal in compile_assessment, so a
+        # second incomplete judgment stops here, before the medical review (261102_02 published 0 tasks, 2026-11-10).
+        targets = v3.context_repair_targets(bank, context, attempts)
+        ledger.setdefault('contextRepairs', [])
+        if not any(r['stage'] == 'context-0' for r in ledger['contextRepairs']):
+            ledger['contextRepairs'].append({'stage': 'context-0', 'reason': context['clinical_context_reason'], 'targets': targets})
+        st.save()
+        v3.require(targets, '임상 정리가 충돌 기록을 불완전으로 판정했지만 고칠 수 있는 문항(그 충돌을 인용하고 고치기 횟수가 남은 문항)이 없습니다: '
+                   + context['clinical_context_reason'])
+        for q in targets:
+            attempts[q] = attempts.get(q, 0) + 1
+            ledger['fixAttempts'][q] = max(ledger['fixAttempts'].get(q, 0), attempts[q])
+        st.save()
+        note = '임상 정리(context-0) 불완전: ' + context['clinical_context_reason']
+        findings = [{**reviews[q], 'code_findings': [*_bank_findings(bank, source_ids).get(q, []), note]} for q in targets]
+        fix_round('v3-fix-context-0', 'v3-review-context-1', 'v3-coverage-fix-context-0', targets, findings)
+        context = context_judgment('context-1')
+        v3.require(context['clinical_context_status'] == 'consistent',
+                   '임상 정리가 한 번 보완한 뒤에도 일치가 아닙니다. 이대로는 모든 목표가 막혀 과제가 0개입니다: ' + context['clinical_context_reason'])
     med_ctx = {'title': packet['title'], 'bank': bank, 'clinicalInput': v2.medical_input(bank, conflicts), 'medicalFinal': True}
     st.invoke = _medical_batches(invoke)
     medical = st.run('medical-0', med_ctx, lambda raw: validate_checks(raw, bank))
@@ -530,6 +570,7 @@ def run(packet, out, model, invoke, resume=None):
                   **({'importanceProjection': importance_proof} if importance_proof else {}),
                   **({'stageResumes': ledger['stageResumes']} if ledger.get('stageResumes') else {}),
                   **({'reviewRetries': ledger['reviewRetries']} if ledger.get('reviewRetries') else {}),
+                  **({'contextRepairs': ledger['contextRepairs']} if ledger.get('contextRepairs') else {}),
                   # map-tree/2: the server re-derives this packet from its request (studyez_contracts.roots.map_tree).
                   **({'derivedPacket': map_tree.public(packet), 'auditOpen': packet['frontStages']['openPoints']}
                      if 'derivedFrom' in packet else {})}}

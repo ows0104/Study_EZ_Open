@@ -197,6 +197,10 @@ def test_fix_stage_restating_an_existing_source_conflict_keeps_the_bank_conflict
     added = {**cf, 'conflict_id': 'CF02'}
     rewritten['source_conflicts'].append(added)
     assert c.restated(bank, [], rewritten) == [{'kind': 'source_conflict', 'id': 'CF01', 'changed': True}]
+    # A new conflict no fixed question cites is a dangling record (CF-POLIO-28, 261102_02): refused in the stage.
+    with pytest.raises(ValueError, match='must be cited'):
+        c.merge_fixes(bank, [], rewritten, ['Q1'])
+    rewritten['questions'][0]['conflict_id'] = 'CF02'
     merged, _, _ = c.merge_fixes(bank, [], rewritten, ['Q1'])
     assert merged['source_conflicts'] == [cf, added]
 
@@ -438,7 +442,8 @@ NEW_CF = {'conflict_id': 'CF07', 'description': 'Synthetic', 'source_refs': [{'s
 
 @pytest.mark.parametrize('spoil,message', [
     (lambda o: o.update(clinical_conflicts=[{'conflict_id': 'CF09', 'facts': 'x'}]), 'only for its new source conflicts'),
-    (lambda o: o.update(source_conflicts=[NEW_CF, {**NEW_CF, 'description': 'Other'}]), 'not rewrite one'),
+    (lambda o: (o.update(source_conflicts=[NEW_CF, {**NEW_CF, 'description': 'Other'}]), o['questions'][0].update(conflict_id='CF07')), 'not rewrite one'),
+    (lambda o: o.update(source_conflicts=[NEW_CF]), 'must be cited by a new question'),
     (lambda o: o.update(concepts=[{**copy.deepcopy(authored_bank()['concepts'][0]), 'concept_id': 'NEW'}]), 'one retrieval plan per new concept'),
 ])
 def test_every_add_merge_error_is_found_by_the_stage_check(spoil, message):
@@ -454,7 +459,8 @@ def test_every_add_merge_error_is_found_by_the_stage_check(spoil, message):
 
 @pytest.mark.parametrize('spoil,message', [
     (lambda o: o.update(clinical_conflicts=[{'conflict_id': 'CF09', 'facts': 'x'}]), 'facts only for the fixed questions'),
-    (lambda o: o.update(source_conflicts=[NEW_CF, {**NEW_CF, 'description': 'Other'}]), 'not rewrite one'),
+    (lambda o: (o.update(source_conflicts=[NEW_CF, {**NEW_CF, 'description': 'Other'}]), o['questions'][0].update(conflict_id='CF07')), 'not rewrite one'),
+    (lambda o: o.update(source_conflicts=[NEW_CF]), 'must be cited by a fixed question'),
 ])
 def test_every_fix_merge_error_is_found_by_the_stage_check(spoil, message):
     bank = authored_bank()
