@@ -12,8 +12,9 @@
 
 ## 설치
 
-1.3.24부터 판이 둘이다. 이 폴더와 사이트의 ZIP은 **관리자판**(`protocol.js`의 `EDITION: "full"`)이고,
-Chrome 웹스토어에는 `build-store-package.ps1`이 만든 **사용자판**(`EDITION: "user"`)만 올린다.
+1.3.24부터 판이 둘이다. 이 폴더는 **관리자판**(`protocol.js`의 `EDITION: "full"`)이고, 학생에게 나가는
+Chrome 웹스토어 ZIP과 사이트의 `studyez-extension.zip`은 **사용자판**(`EDITION: "user"`)이다.
+두 ZIP 모두 `user-edition.mjs`가 같은 방식으로 바꾼다.
 사용자판은 학생 기능인 개인 예습·복습의 수동입력만 열고 자동전송·공개 공유 링크·Quiz Bank 요청은 거절한다.
 Quiz Bank 파일 회수 스크립트(`bank-file.js`·`bank-download.js`)도 들어가지 않는다. 한 크롬에 두 판을 같이 켜지 않는다.
 

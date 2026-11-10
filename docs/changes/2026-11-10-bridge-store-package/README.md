@@ -22,16 +22,21 @@
 - `protocol.js`에 `EDITION: "full"`, 버전 1.3.24. 관리자판 동작은 그대로다.
 - `background.js`: `EDITION === "user"`이면 `shared`·`bank`·`autoSend: true` 요청을 「관리자용 브리지에서만」 오류로 거절한다.
   bank 다운로드 처리는 감시 모드를 먼저 확인한다(사용자판에는 bank 스크립트가 없다).
-- `build-store-package.ps1`: `EDITION`을 `user`로, `importScripts("protocol.js")`만 남기고 manifest에서 `bank-file.js`를 뺀다.
-  실행에 필요한 파일이 모두 ZIP에 있는지 대조한다.
+- `bridge/user-edition.mjs`(새 파일, 스토어·사이트 ZIP 공용): `EDITION`을 `user`로, `importScripts("protocol.js")`만 남기고
+  manifest에서 `bank-file.js`를 빼고 bank 스크립트를 지운 뒤, 실행에 필요한 파일이 모두 있는지 대조한다.
+  `build-store-package.ps1`은 localhost 제거 뒤 이것을 부른다.
 - `audit-store-package.py`: 사용자판 표시·거절 분기·bank 스크립트 부재·참조 파일 대조·변환 결과 해시를 검사한다.
 - `tests/bridge/test_store_edition.cjs`: 사용자판은 수동 예습·복습만 열고 나머지를 거절, 관리자판은 셋 다 연다.
-- 스토어 등록표 문구에서 자동전송·공유 링크·Quiz Bank를 뺐다. 사이트(web)는 바꾸지 않았다.
+- 스토어 등록표 문구에서 자동전송·공유 링크·Quiz Bank를 뺐다.
+- 사이트 ZIP(`web/scripts/pack-extension.mjs`)도 사용자판으로 싼다. 변환은 `bridge/user-edition.mjs` 하나를
+  스토어 스크립트와 같이 쓴다. 사이트 ZIP에서 개발 문서·스크립트(`CLAUDE.md`, 감사·빌드 스크립트)도 뺐다.
+- 설치 안내(`ExtensionSetup`)는 관리자에게만 「관리자 기능은 저장소 `bridge` 폴더(관리자판)」를 덧붙인다.
 
 ## 검사
 
 - 스토어 ZIP `studyez-preview-bridge-1.3.24-web-store.zip` 11개 항목, 감사 통과, 패키지 JS `node --check` 통과.
-- `node --test tests/bridge/*.cjs` 117개, `pytest tests/bridge` 9개 통과.
+- 사이트 ZIP 13개 파일, bank 스크립트 없음, `EDITION: "user"`.
+- `node --test tests/bridge/*.cjs` 119개, `pytest tests/bridge` 9개 통과.
 
 ## 남은 일 (사용자)
 
@@ -42,6 +47,6 @@
 
 ## 알려진 한계
 
-- 사이트의 `studyez.kr/studyez-extension.zip`(스토어판이 필요한 버전보다 낮을 때 안내하는 ZIP)은 관리자판 그대로다.
+- 관리자가 사이트 ZIP이나 스토어판을 깔면 관리자 기능은 열리지 않는다. 관리자는 저장소 `bridge` 폴더를 로드한다.
 - 스토어판 버전이 관리자 기능의 최소 버전을 넘으므로, 관리자가 스토어판만 깔린 크롬에서 관리자 기능을 누르면
   사이트는 스토어 설치를 안내하지 않고 확장의 「관리자용 브리지에서만」 오류를 보여 준다.
