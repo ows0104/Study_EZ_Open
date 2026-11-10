@@ -2385,7 +2385,11 @@ button.event-panel-note:hover {
 .stage-summary .stage-bar > span { display: block; height: 100%; }
 
 .event-panel-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
-.deck-links { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--ink-3); }
+.deck-links { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; font-size: 12.5px; color: var(--ink-3); }
+.deck-links-label { padding: 2px 0; }
+.deck-link { display: flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; }
+.deck-source { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-3); }
+.event-panel-foot:has(.deck-link) { align-items: flex-end; }
 .deck-links button { min-height: 0; padding: 2px 6px; border: 0; border-radius: 6px; background: none; font-size: 12.5px; color: var(--ink-2); cursor: pointer; }
 .deck-links button:hover { background: var(--hover); }
 .ghost-button { min-height: 0; height: 30px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font-size: 13px; color: var(--ink-2); cursor: pointer; }
@@ -2471,9 +2475,14 @@ button.event-panel-note:hover {
 .chat-split-side {
   position: relative; display: grid; place-items: center; width: 30px; min-height: 0; height: 100%; padding: 0; border: 0;
   border-left: 1px solid color-mix(in srgb, currentColor 25%, var(--surface)); border-radius: 0 8px 8px 0;
-  background: none; color: inherit; font-size: 11px; cursor: pointer;
+  background: none; color: inherit; font-size: 16px; line-height: 1; cursor: pointer;
 }
-.chat-split-side.is-dot::after { content: ""; position: absolute; top: 6px; right: 6px; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+/* 저장된 대화가 있으면 공통 대화처럼 갈래 색 바탕 */
+.chat-split.is-pre.is-linked { background: var(--accent2-soft); }
+.chat-split.is-review.is-linked { background: var(--accent-soft); }
+.chat-split.is-linked .chat-split-main:hover, .chat-split.is-linked .chat-split-side:hover {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
 .chat-split-main:hover:not(:disabled), .chat-split-side:hover { background: var(--hover); }
 .chat-split-main:disabled { opacity: 0.5; cursor: default; }
 .chat-split-menu {

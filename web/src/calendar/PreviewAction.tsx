@@ -194,8 +194,8 @@ export function PreviewAction({
             <Empty name="공통 대화" note="아직 없습니다" />
           )}
           {detail.myPreview?.conversationUrl ? (
-            <ChatSplit tone="pre" main={<PersonalLink url={detail.myPreview.conversationUrl} base={base} />}
-              onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} promptCustom={promptStore.isCustom} />
+            <ChatSplit tone="pre" linked main={<PersonalLink url={detail.myPreview.conversationUrl} base={base} />}
+              onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} />
           ) : (
             <Empty name="개인 대화" note={canInstall ? "확장을 설치하면 만듭니다" : "컴퓨터에서 만듭니다"} />
           )}
@@ -271,9 +271,9 @@ export function PreviewAction({
   /* 개인 대화 — C안(2026-11-07): 왼쪽은 처음엔 만들기(＋), 그 뒤엔 열기(↗). ▾에 새 대화 만들기·내 프롬프트 수정. */
   const makeDisabled = Boolean(busy) || !compatible || !promptStore.loaded;
   const personal = detail.myPreview?.conversationUrl ? (
-    <ChatSplit tone="pre" main={<PersonalLink url={detail.myPreview.conversationUrl} base={base} />}
+    <ChatSplit tone="pre" linked main={<PersonalLink url={detail.myPreview.conversationUrl} base={base} />}
       onRemake={canMake ? () => void start("personal", false) : undefined} remakeDisabled={makeDisabled}
-      onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} promptCustom={promptStore.isCustom} />
+      onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} />
   ) : canMake ? (
     <ChatSplit tone="pre"
       main={
@@ -282,7 +282,7 @@ export function PreviewAction({
           <span aria-hidden="true">＋</span>{busy === "personal" ? "여는 중…" : "개인 대화"}
         </button>
       }
-      onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} promptCustom={promptStore.isCustom} />
+      onPrompt={() => setShowPrompt(open => !open)} promptOpen={showPrompt} />
   ) : (
     <Empty name="개인 대화" note="예습 필기 대기" />
   );
