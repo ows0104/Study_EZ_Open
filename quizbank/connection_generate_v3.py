@@ -334,6 +334,7 @@ def run(packet, out, model, invoke, resume=None):
         return got
 
     order = [q['question_id'] for q in bank['questions']]
+    restated_sources = []   # existing source conflicts a fix stage wrote again; not taken, kept for the record
     attempts = {}   # replayed from fixed stage names (v3-fix-<batch>-<k>); the ledger keeps the maximum seen
     for b, batch in enumerate(chunks(order, REVIEW_BATCH)):
         reviews.update(review_batch(f'v3-review-{b}-0', set(batch)))
@@ -350,6 +351,7 @@ def run(packet, out, model, invoke, resume=None):
             ctx = v3.fix_input(bank, findings, targets, conflicts, covered_by())
             value = st.run(f'v3-fix-{b}-{k}', ctx, lambda raw: v3.check_fixed(raw, ctx))
             before_bank, before_reviews = copy.deepcopy(bank), {q: reviews[q] for q in targets}
+            restated_sources.extend({'stage': f'v3-fix-{b}-{k}', **r} for r in v3.restated_conflicts(bank, value))
             merged, conflicts, changed = v3.merge_fixes(visual.authored(bank), conflicts, value, targets)
             stimuli = [s for s in stimuli if s['question_id'] not in set(changed)] + value['visual_stimuli']
             bank = visual.render(merged, stimuli, packet, out / 'material')
@@ -417,6 +419,7 @@ def run(packet, out, model, invoke, resume=None):
                                         'reason': next(d['reason'] for d in out_of_scope if d['question_id'] == q['question_id'])}
                                        for q in off_questions],
                   'rejectedAtIntake': rejected, 'intakeProjection': intake_changes, 'restatedFactsIgnored': restated,
+                  'restatedConflictsIgnored': restated_sources,
                   'supplement': supplement, 'supplementPoints': points_doc if supplement else None,
                   'initialBrief': initial_brief, 'initialBank': initial_bank, 'coverage': coverage_rows, 'mapCheck': map_check,
                   'itemReviews': review_rows, 'clinicalContext': context, 'clinicalConflicts': conflicts,

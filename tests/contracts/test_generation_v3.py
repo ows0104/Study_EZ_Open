@@ -181,6 +181,26 @@ def test_fix_stage_replaces_only_listed_questions_and_keeps_their_identity():
         c.merge_fixes(bank, [], moved, ['Q1'])
 
 
+def test_fix_stage_restating_an_existing_source_conflict_keeps_the_bank_conflict():
+    """261102_02 (2026-11-10, v3-fix-1-0): Q046's fix copied its own conflict CF03 back."""
+    bank = authored_bank()
+    cf = {'conflict_id': 'CF01', 'description': 'Synthetic', 'source_refs': [{'source_id': 'S1', 'locator': 'x'}], 'unresolved': False}
+    bank['source_conflicts'] = [cf]
+    fixed = copy.deepcopy(bank['questions'][0])
+    fixed['explanation'] = 'Synthetic corrected explanation'
+    out = {'questions': [fixed], 'source_conflicts': [copy.deepcopy(cf)], 'visual_stimuli': [], 'clinical_conflicts': []}
+    assert c.restated_conflicts(bank, out) == [{'conflict_id': 'CF01', 'changed': False}]
+    merged, _, changed = c.merge_fixes(bank, [], out, ['Q1'])
+    assert merged['source_conflicts'] == [cf] and changed == ['Q1']
+    rewritten = copy.deepcopy(out)
+    rewritten['source_conflicts'][0]['description'] = 'Synthetic rewritten'
+    added = {**cf, 'conflict_id': 'CF02'}
+    rewritten['source_conflicts'].append(added)
+    assert c.restated_conflicts(bank, rewritten) == [{'conflict_id': 'CF01', 'changed': True}]
+    merged, _, _ = c.merge_fixes(bank, [], rewritten, ['Q1'])
+    assert merged['source_conflicts'] == [cf, added]
+
+
 def test_a_worse_re_review_is_reverted():
     assert c.worse(review('Q1'), review('Q1', 'doubt'))
     assert c.worse(review('Q1', 'doubt'), review('Q1', 'ok', 'wrong'))

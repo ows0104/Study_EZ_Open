@@ -4,6 +4,7 @@ root-generation/3 단계다(docs/changes/2026-11-10-root-generation-3). input.js
 - 출력 questions에는 지적받은 문항의 교체본만 넣는다. question_id·concept_id·point_ids는 그대로 둔다.
 - covered_goals는 그 문항이 지금 답으로 덮고 있는 목표다. 고친 뒤에도 그 목표 전체를 묻는 상태를 유지한다.
 - 지적과 무관한 칸은 바꾸지 않는다.
+- 출력 source_conflicts에는 이번에 새로 생긴 원본 충돌만 넣는다. 입력 source_conflicts에 있는 기존 충돌은 다시 쓰지 않는다(코드가 받지 않고 기존 것을 그대로 둔다). clinical_conflicts는 고친 문항이 인용하는 충돌의 사실만 쓴다.
 
 ## 옮긴 규칙 (author-v2.md)
 

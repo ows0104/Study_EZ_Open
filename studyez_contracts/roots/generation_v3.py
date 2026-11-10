@@ -366,6 +366,16 @@ def restated_facts(clinical_conflicts, output):
     return [c for c in output['clinical_conflicts'] if c['conflict_id'] in known]
 
 
+def restated_conflicts(bank, output):
+    """Source conflicts a fix output wrote again although they already exist in the bank. They are not taken: the
+    existing conflict stays as it is (P1); `changed` says whether the copy differed. The third stop of the first real
+    run (261102_02, 2026-11-10, v3-fix-1-0) was Q046's fix copying its own conflict CF03 back unchanged, because the
+    fix input shows the conflicts its questions cite and the /2 rule asks for every conflict ID."""
+    known = {c['conflict_id']: c for c in bank.get('source_conflicts', [])}
+    return [{'conflict_id': c['conflict_id'], 'changed': c != known[c['conflict_id']]}
+            for c in output['source_conflicts'] if c['conflict_id'] in known]
+
+
 def merge_added(bank, clinical_conflicts, output, allowed_ids):
     """Append an add stage's questions. Existing questions, conflicts and facts stay byte-identical."""
     validate_shape(output, ADD_OUTPUT, 'v3 add output')
@@ -405,7 +415,9 @@ def merge_fixes(bank, clinical_conflicts, output, targets):
     require(all(s['question_id'] in ids for s in output['visual_stimuli']), 'v3 fix: images only for fixed questions')
     replaced = {q['question_id']: copy.deepcopy(q) for q in output['questions']}
     merged = copy.deepcopy(bank)
-    merged['source_conflicts'] = _bank_conflicts(bank, output['source_conflicts'])
+    known = {c['conflict_id'] for c in bank.get('source_conflicts', [])}
+    fresh = [c for c in output['source_conflicts'] if c['conflict_id'] not in known]   # restatements stay out (restated_conflicts)
+    merged['source_conflicts'] = _bank_conflicts(bank, fresh)
     merged['questions'] = [replaced.get(q['question_id'], q) for q in merged['questions']]
     facts = {c['conflict_id']: c for c in clinical_conflicts}
     for c in output['clinical_conflicts']:
