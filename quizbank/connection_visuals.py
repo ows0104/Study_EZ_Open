@@ -2,9 +2,14 @@
 import base64
 import copy
 import hashlib
+import threading
 from pathlib import Path
 import fitz
 from studyez_contracts.roots.media import validate_images
+
+# Review batches of one lecture run side by side (docs/changes/2026-11-11-root-batch-parallel). PyMuPDF is not
+# thread-safe, and two batches may write the same content-named image copy; one render or copy at a time.
+_LOCK = threading.RLock()
 
 def authored(bank):
     """The bank as an authoring model writes it: `stimuli` is renderer-owned (made from visual_stimuli).
@@ -16,6 +21,9 @@ def authored(bank):
     return value
 
 def render(bank,specs,packet,material):
+    with _LOCK:return _render(bank,specs,packet,material)
+
+def _render(bank,specs,packet,material):
     value=copy.deepcopy(bank);qs={q['question_id']:q for q in value['questions']}
     sources={s['id']:s for s in packet['sources']};seen=set()
     for q in qs.values():q.pop('stimuli',None)
@@ -62,6 +70,9 @@ def page_crop(path,s,scales=SCALES):
             return body,pix.width,pix.height
 
 def paths(bank,material):
+    with _LOCK:return _paths(bank,material)
+
+def _paths(bank,material):
     result=[];labels=[]
     validate_images(bank)
     for q in bank['questions']:

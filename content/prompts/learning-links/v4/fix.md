@@ -10,6 +10,8 @@ root-generation/4 단계다(docs/changes/2026-11-10-root-generation-3, docs/chan
 
 source_conflicts에는 고치면서 새로 드러난 원본 충돌만 쓴다. 입력 source_conflicts의 기존 충돌은 그대로 유지되므로 다시 쓰지 않는다. clinical_conflicts에는 새 conflict_id마다 facts를 쓰고, 고친 문항이 인용하는 기존 충돌의 facts는 고친 내용 때문에 바뀌어야 할 때만 그 충돌 것을 다시 쓴다. facts에는 실제 원본의 충돌 주장과 현재 의학 답의 관계만 명시한다. 과거 sourceAudit/medical verdict, 검수자 판단, 수정 차수, 중요도는 넣지 않는다. 의학적으로 필요한 충돌 사실은 누락하지 않는다. 독립 원본 검수가 이 projection과 정본의 일치·완전성을 확인하고 정답 검수는 이 의학적 내용만 받는다.
 
+입력에 conflict_scope가 있으면 이 문항 묶음은 다른 묶음과 동시에 고쳐진다. 새로 만드는 conflict_id(원본 충돌·임상 사실 모두)는 new_conflict_id_prefix로 시작한다. 기존 충돌의 facts는 own_conflict_ids에 있는 것만 다시 쓸 수 있다. 다른 묶음의 기존 충돌은 인용할 수 있지만 그 facts는 다시 쓰지 않는다.
+
 ## 문항 중요도 근거 (question_importance)
 
 출력의 최상위 question_importance에 출력한 교체본마다 정확히 한 줄 {"question_id": "...", "importance_basis": [...]}를 쓴다. 근거가 없으면 importance_basis는 []다. 문항 객체에는 은행 형식에 이미 있는 칸 외에 중요도 칸을 더하지 않는다. 문항의 tier·importance는 조립 때 이 근거와 notebook_profile로 코드가 다시 계산해 덮으므로 형식에 맞는 값이면 된다.

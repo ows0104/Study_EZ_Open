@@ -21,6 +21,7 @@ from studyez_contracts.roots import generation_v4 as v4
 from studyez_contracts.roots import map_tree
 from studyez_contracts.roots.automation import validate_checks
 from studyez_contracts.bank.validate import validate_bank
+from . import connection_batches as batches
 from . import connection_visuals as visual
 from .connection_generate_v3 import (Stages, chunks, _bank_findings, _join_points, _medical_batches, _state, _QID,
                                      COVERAGE_CHUNK, REVIEW_BATCH, ADD_PER_GOAL)
@@ -139,19 +140,21 @@ def run(packet, out, model, invoke, resume=None):
                        lambda raw: v3.check_brief_fix(raw, {'brief': brief}))
         brief = v2.blank_target_importance(fixed['brief'])
 
-    def judge(name, ctx):
-        return st.judged(name, ctx, lambda raw, ctx=ctx: v4.check_coverage(raw, ctx['goals'], ctx['questions']))
+    def judge(name, ctx, stages=None):
+        return (stages or st).judged(name, ctx, lambda raw, ctx=ctx: v4.check_coverage(raw, ctx['goals'], ctx['questions']))
 
-    # 2: coverage (union rule, duplicates) -------------------------------------
+    # 2: coverage (union rule, duplicates), 2m: map check without importance -------------------------
+    # Independent judgments: side by side in a new run (docs/changes/2026-11-11-root-batch-parallel).
     rows = {}
     dids = [d['direction_id'] for t in brief['targets'] for d in t['directions']]
-    for k, part in enumerate(chunks(dids, COVERAGE_CHUNK)):
-        value = judge(f'{X}coverage-0-{k}', v3.coverage_input(brief, bank, part))
-        rows.update({r['direction_id']: r for r in value['rows']})
-
-    # 2m: map check without importance -------------------------------------------
+    calls = [(f'{X}coverage-0-{k}', ctx, lambda raw, ctx=ctx: v4.check_coverage(raw, ctx['goals'], ctx['questions']))
+             for k, ctx in enumerate(v3.coverage_input(brief, bank, part) for part in chunks(dids, COVERAGE_CHUNK))]
     ctx = v4.map_check_input(brief)
-    map_checks = [st.judged(X + 'map-check-0', ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx))]
+    calls.append((X + 'map-check-0', ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx)))
+    values = batches.judgments(st, calls)
+    for value in values[:-1]:
+        rows.update({r['direction_id']: r for r in value['rows']})
+    map_checks = [values[-1]]
 
     # 2a: off-goal questions → supplement points (no basis) ------------------
     judged = {e['question_id'] for r in rows.values() for e in r['evidence']}
@@ -224,93 +227,118 @@ def run(packet, out, model, invoke, resume=None):
                 rows[r['direction_id']] = _merge_row(rows[r['direction_id']], r, goals[r['direction_id']])
 
     # 4: item review and fixes by batch ---------------------------------------
+    # Batches start from one snapshot and run side by side unless a conflict record or a prerequisite link joins
+    # two of them (connection_batches, docs/changes/2026-11-11-root-batch-parallel); otherwise one after another.
     source_ids = [s['id'] for s in packet['sources']]
-    reviews, fixes = {}, []
 
-    def covered_by():
+    def covered_by(S):
         cov = {}
-        for did, r in rows.items():
+        for did, r in S.rows.items():
             for q in v4.covering(r):
                 cov.setdefault(q, []).append(did)
         return cov
 
-    def review_batch(name, qids):
+    def review_batch(S, stages, name, qids):
         got, todo = {}, []
-        for q in bank['questions']:
+        for q in S.bank['questions']:
             if q['question_id'] not in qids:
                 continue
-            again = v3.reusable(ledger['verdictLedger'], 'item', q['question_id'], v3.item_hash(q, bank, conflicts))
+            again = v3.reusable(S.verdicts, 'item', q['question_id'], v3.item_hash(q, S.bank, S.conflicts))
             if again is not None:
                 got[q['question_id']] = again
             else:
                 todo.append(q['question_id'])
         if not todo:
             return got
-        ctx = v4.with_importance(v3.review_input(bank, todo, conflicts), basis)
-        value = st.judged(name, ctx, lambda raw: v4.check_review_input(raw, ctx))
-        by_id = {q['question_id']: q for q in bank['questions']}
+        ctx = v4.with_importance(v3.review_input(S.bank, todo, S.conflicts), S.basis)
+        value = stages.judged(name, ctx, lambda raw: v4.check_review_input(raw, ctx))
+        by_id = {q['question_id']: q for q in S.bank['questions']}
         for r in value['reviews']:
             got[r['question_id']] = r
-            entry = v3.ledger_entry('item', r['question_id'], v3.item_hash(by_id[r['question_id']], bank, conflicts), r, name)
-            if entry not in ledger['verdictLedger']:
-                ledger['verdictLedger'].append(entry)
+            entry = v3.ledger_entry('item', r['question_id'], v3.item_hash(by_id[r['question_id']], S.bank, S.conflicts), r, name)
+            if entry not in S.verdicts:
+                S.verdicts.append(entry)
         st.save()
         return got
 
-    def fix_round(name, review_name, coverage_name, targets, findings):
-        nonlocal bank, conflicts, stimuli, basis
-        ctx = v4.with_importance(v3.fix_input(bank, findings, targets, conflicts, covered_by()), basis)
-        state = _state(bank, conflicts, stimuli, packet)
-        value = st.run(name, ctx, lambda raw, ctx=ctx, state=state: check_stage('fix', raw, ctx, state, out / '.check-render' / name), state)
+    def fix_round(S, stages, name, review_name, coverage_name, targets, findings):
+        ctx = v4.with_importance(v3.fix_input(S.bank, findings, targets, S.conflicts, covered_by(S)), S.basis)
+        if S.scope:
+            ctx['conflict_scope'] = S.scope
+        state = _state(S.bank, S.conflicts, S.stimuli, packet)
+        value = stages.run(name, ctx, lambda raw, ctx=ctx, state=state: check_stage('fix', raw, ctx, state, out / '.check-render' / name), state)
         plain = v4.without_basis(value)
-        before = (copy.deepcopy(bank), copy.deepcopy(conflicts), copy.deepcopy(stimuli), copy.deepcopy(basis))
-        before_reviews = {q: reviews[q] for q in targets}
+        before = (copy.deepcopy(S.bank), copy.deepcopy(S.conflicts), copy.deepcopy(S.stimuli), copy.deepcopy(S.basis))
+        before_reviews = {q: S.reviews[q] for q in targets}
         cited = {q.get('conflict_id') for q in plain['questions'] if q.get('conflict_id')}
-        restated.extend({'stage': name, **r} for r in v3.restated(visual.authored(bank), conflicts, plain, cited))
-        merged, conflicts, changed = v3.merge_fixes(visual.authored(bank), conflicts, plain, targets)
+        S.restated.extend({'stage': name, **r} for r in v3.restated(visual.authored(S.bank), S.conflicts, plain, cited))
+        merged, S.conflicts, changed = v3.merge_fixes(visual.authored(S.bank), S.conflicts, plain, targets)
         fixed_basis = v4.collect_basis(value['question_importance'], [q['question_id'] for q in value['questions']])
-        basis.update({q: fixed_basis[q] for q in changed})
-        stimuli = [s for s in stimuli if s['question_id'] not in set(changed)] + value['visual_stimuli']
-        bank = visual.render(merged, stimuli, packet, out / 'material')
-        again = review_batch(review_name, set(changed))
+        S.basis.update({q: fixed_basis[q] for q in changed})
+        S.stimuli = [s for s in S.stimuli if s['question_id'] not in set(changed)] + value['visual_stimuli']
+        S.bank = visual.render(merged, S.stimuli, packet, S.material)
+        again = review_batch(S, stages, review_name, set(changed))
         reverted = [q for q in changed if q in again and v3.worse(before_reviews[q], again[q])]
         kept = [q for q in changed if q not in reverted]
         if reverted and not kept:
-            bank, conflicts, stimuli, basis = before
+            S.bank, S.conflicts, S.stimuli, S.basis = before
         elif reverted:
             part = v3.fixes_of(plain, kept)
-            merged, conflicts, _ = v3.merge_fixes(visual.authored(before[0]), before[1], part, targets)
-            stimuli = [s for s in before[2] if s['question_id'] not in set(kept)] + part['visual_stimuli']
-            bank = visual.render(merged, stimuli, packet, out / 'material')
-            basis = {**before[3], **{q: fixed_basis[q] for q in kept}}
+            merged, S.conflicts, _ = v3.merge_fixes(visual.authored(before[0]), before[1], part, targets)
+            S.stimuli = [s for s in before[2] if s['question_id'] not in set(kept)] + part['visual_stimuli']
+            S.bank = visual.render(merged, S.stimuli, packet, S.material)
+            S.basis = {**before[3], **{q: fixed_basis[q] for q in kept}}
         for q in changed:
-            reviews[q] = before_reviews[q] if q in reverted else again.get(q, reviews[q])
-            fixes.append({'question_id': q, 'attempt': attempts[q], 'stage': name, 'reverted': q in reverted})
-        goal_ids = sorted({did for q in kept for did, r in rows.items() if any(e['question_id'] == q for e in r['evidence'])})
+            S.reviews[q] = before_reviews[q] if q in reverted else again.get(q, S.reviews[q])
+            S.fixes.append({'question_id': q, 'attempt': S.attempts[q], 'stage': name, 'reverted': q in reverted})
+        goal_ids = sorted({did for q in kept for did, r in S.rows.items() if any(e['question_id'] == q for e in r['evidence'])})
         if goal_ids:
             # A fixed question is judged again with its duplicate partners, so the group is decided anew, not dropped.
-            partners = {p for did in goal_ids for grp in rows[did].get('duplicates', []) if set(grp['question_ids']) & set(kept)
+            partners = {p for did in goal_ids for grp in S.rows[did].get('duplicates', []) if set(grp['question_ids']) & set(kept)
                         for p in grp['question_ids']}
-            judged_ids = [q['question_id'] for q in bank['questions'] if q['question_id'] in set(kept) | partners]
-            got = judge(coverage_name, v3.coverage_input(brief, bank, goal_ids, judged_ids))
+            judged_ids = [q['question_id'] for q in S.bank['questions'] if q['question_id'] in set(kept) | partners]
+            got = judge(coverage_name, v3.coverage_input(brief, S.bank, goal_ids, judged_ids), stages)
             for r in got['rows']:
-                rows[r['direction_id']] = _merge_row(rows[r['direction_id']], r, _goals(brief)[r['direction_id']], judged_ids)
+                S.rows[r['direction_id']] = _merge_row(S.rows[r['direction_id']], r, _goals(brief)[r['direction_id']], judged_ids)
+            S.coverage.append((got['rows'], judged_ids, goal_ids))
 
-    order = [q['question_id'] for q in bank['questions']]
-    attempts = {}
-    for b, batch in enumerate(chunks(order, REVIEW_BATCH)):
-        reviews.update(review_batch(f'{X}review-{b}-0', set(batch)))
+    def count_attempts(S, targets):
+        with st.lock:
+            for q in targets:
+                S.attempts[q] = S.attempts.get(q, 0) + 1
+                ledger['fixAttempts'][q] = max(ledger['fixAttempts'].get(q, 0), S.attempts[q])
+            st.save()
+
+    def batch_body(b, batch, S, stages):
+        S.reviews.update(review_batch(S, stages, f'{X}review-{b}-0', set(batch)))
         for k in range(v3.FIX_LIMIT):
-            code = _bank_findings(bank, source_ids)
-            targets = [q for q in batch if (v3.needs_fix(reviews[q]) or q in code) and attempts.get(q, 0) < v3.FIX_LIMIT]
+            code = _bank_findings(S.bank, source_ids)
+            targets = [q for q in batch if (v3.needs_fix(S.reviews[q]) or q in code) and S.attempts.get(q, 0) < v3.FIX_LIMIT]
             if not targets:
                 break
-            for q in targets:
-                attempts[q] = attempts.get(q, 0) + 1
-                ledger['fixAttempts'][q] = max(ledger['fixAttempts'].get(q, 0), attempts[q])
-            st.save()
-            findings = [{**reviews[q], 'code_findings': code.get(q, [])} for q in targets]
-            fix_round(f'{X}fix-{b}-{k}', f'{X}review-{b}-{k + 1}', f'{X}coverage-fix-{b}-{k}', targets, findings)
+            count_attempts(S, targets)
+            findings = [{**S.reviews[q], 'code_findings': code.get(q, [])} for q in targets]
+            fix_round(S, stages, f'{X}fix-{b}-{k}', f'{X}review-{b}-{k + 1}', f'{X}coverage-fix-{b}-{k}', targets, findings)
+
+    def apply_coverage(rows_, got_rows, judged_ids):
+        for r in got_rows:
+            rows_[r['direction_id']] = _merge_row(rows_[r['direction_id']], r, _goals(brief)[r['direction_id']], judged_ids)
+
+    order = [q['question_id'] for q in bank['questions']]
+    batch_ids = chunks(order, REVIEW_BATCH)
+    start = batches.Batch(bank=bank, conflicts=conflicts, stimuli=stimuli, basis=basis, rows=rows, reviews={}, fixes=[], attempts={},
+                          restated=restated, verdicts=ledger['verdictLedger'])
+    S = batches.review_phase(st, out, batch_ids, start, batch_body, apply_coverage)
+    if S is not start:
+        # A batch judged a duplicate partner from another batch that the other batch then changed: those goals are
+        # judged once more on the merged bank (spec R6).
+        stale = batches.stale_coverage(S, batch_ids, start)
+        if stale:
+            goal_ids, judged_ids = stale
+            got = judge(X + 'coverage-merge-0', v3.coverage_input(brief, S.bank, goal_ids, judged_ids))
+            apply_coverage(S.rows, got['rows'], judged_ids)
+    bank, conflicts, stimuli, basis, rows = S.bank, S.conflicts, S.stimuli, S.basis, S.rows
+    reviews, fixes, attempts, restated = S.reviews, S.fixes, S.attempts, S.restated
 
     # context per conflict record (+ one repair), as /3 -------------------------
     def context_judgment(name, conflict_ids=None, question_ids=None):
@@ -327,14 +355,13 @@ def run(packet, out, model, invoke, resume=None):
         ledger.setdefault('contextRepairs', [])
         if not ledger['contextRepairs']:
             ledger['contextRepairs'].append({'stage': X + 'context-0', 'open': v3.context_open(context_judgments[0]), 'targets': targets})
-        for q in targets:
-            attempts[q] = attempts.get(q, 0) + 1
-            ledger['fixAttempts'][q] = max(ledger['fixAttempts'].get(q, 0), attempts[q])
-        st.save()
+        count_attempts(S, targets)
         notes = v3.context_findings(bank, context_judgments[0], targets)
         code = _bank_findings(bank, source_ids)
         findings = [{**reviews[q], 'code_findings': [*code.get(q, []), *notes.get(q, [])]} for q in targets]
-        fix_round(X + 'fix-context-0', X + 'review-context-1', X + 'coverage-fix-context-0', targets, findings)
+        S.bank, S.conflicts, S.stimuli, S.basis = bank, conflicts, stimuli, basis
+        fix_round(S, batches.BatchStages(st, S), X + 'fix-context-0', X + 'review-context-1', X + 'coverage-fix-context-0', targets, findings)
+        bank, conflicts, stimuli, basis = S.bank, S.conflicts, S.stimuli, S.basis
         present = {c['conflict_id'] for c in [*bank.get('source_conflicts', []), *conflicts]}
         cited = {q['conflict_id'] for q in bank['questions'] if q.get('conflict_id')} | set(intake_conflict_ids)
         again = sorted(({q['conflict_id'] for q in bank['questions'] if q['question_id'] in set(targets) and q.get('conflict_id')}
@@ -368,7 +395,7 @@ def run(packet, out, model, invoke, resume=None):
     # medical (once, medical-final/1) ----------------------------------------------
     clinical_input, _ = v3.medical_parts(bank, v3.context_sent(conflicts, context))
     med_ctx = {'title': packet['title'], 'bank': bank, 'clinicalInput': clinical_input, 'medicalFinal': True}
-    st.invoke = _medical_batches(invoke)
+    st.invoke = _medical_batches(invoke, workers=batches.BATCH_WORKERS if st.parallel else 1)
     medical = st.run('medical-0', med_ctx, lambda raw: validate_checks(raw, bank))
     medical_unreviewed = [{'question_id': r['question_id'], 'reason': r['note'][len(v3.UNREVIEWED_NOTE):]}
                           for r in medical['reviews'] if r['note'].startswith(v3.UNREVIEWED_NOTE)]
@@ -398,6 +425,7 @@ def run(packet, out, model, invoke, resume=None):
                   **({'stageResumes': ledger['stageResumes']} if ledger.get('stageResumes') else {}),
                   **({'reviewRetries': ledger['reviewRetries']} if ledger.get('reviewRetries') else {}),
                   **({'contextRepairs': ledger['contextRepairs']} if ledger.get('contextRepairs') else {}),
+                  **({'batchPhases': ledger['batchPhases']} if ledger.get('batchPhases') else {}),
                   **({'derivedPacket': map_tree.public(packet), 'auditOpen': packet['frontStages']['openPoints']}
                      if 'derivedFrom' in packet else {})}}
     v4.validate_result(result, packet)
