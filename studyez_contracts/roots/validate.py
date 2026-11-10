@@ -24,14 +24,23 @@ def direction_hash(doc, direction_id):
     })
 
 
-def task_fingerprints(doc):
-    """task_id -> content fingerprint of its question (learning_links `question_hash`).
+FINGERPRINT_POLICY = 'question-content/1'
 
-    validate_document requires each task's mapping `question_sha256` to equal question_hash(question, bank),
-    so the mapping value is that fingerprint. root-generation/4 carries learning history between revisions
-    per question by it instead of `direction_hash` (docs/changes/2026-11-10-importance-at-authoring R8)."""
-    mapped = {(m['question_id'], m['direction_id']): m['question_sha256'] for m in doc['review']['mappings']}
-    return {t['task_id']: mapped[(t['question_id'], t['direction_id'])] for t in doc['tasks']}
+
+def question_fingerprint(question):
+    """The question's own content: everything the learner reads and answers, without the bank context
+    (`question_hash` includes concepts, plans and build metadata, so any change elsewhere would reset every
+    question) and without tier/importance, which are computed from the importance basis, not content."""
+    return document_hash({'policy': FINGERPRINT_POLICY,
+                          'question': {k: v for k, v in question.items() if k not in ('tier', 'importance')}})
+
+
+def task_fingerprints(doc):
+    """task_id -> content fingerprint of its question. root-generation/4 carries learning history between
+    revisions per question by it instead of `direction_hash` (docs/changes/2026-11-10-importance-at-authoring R8):
+    the same content carries over, a changed question starts fresh, an ID alone never carries anything."""
+    questions = index_by(doc['bank_snapshot']['questions'], 'question_id')
+    return {t['task_id']: question_fingerprint(questions[t['question_id']]) for t in doc['tasks']}
 
 
 def validate_prerequisites(targets,relations,edges,adopted,*,reviewed=True):

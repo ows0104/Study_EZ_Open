@@ -45,7 +45,7 @@ def completed_result(out,packet):
     payload=json.loads((out/'result.json').read_text(encoding='utf-8'))
     validate_result(payload,packet)
     ledger=json.loads((out/'ledger.json').read_text(encoding='utf-8'));meta=payload['manifest']
-    budget='addRounds'if meta.get('pipelineVersion')=='root-generation/3'else'repairRounds'  # /3 has add rounds, not repair rounds
+    budget='addRounds'if meta.get('pipelineVersion')in('root-generation/3','root-generation/4')else'repairRounds'  # /3 and /4 have add rounds, not repair rounds
     if ledger.get('identity')!=meta['runtimeHash']or ledger.get(budget)!=meta[budget]:
         raise ValueError('완료 결과의 원래 실행 지문/상한이 다릅니다.')
     if meta.get('normalizationRecoveries',[])!=ledger.get('normalizationRecoveries',[]):raise ValueError('초기 지도 재검증 이력이 다릅니다.')

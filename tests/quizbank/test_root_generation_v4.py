@@ -155,3 +155,17 @@ def test_an_authoring_output_without_basis_stops_that_stage(tmp_path):
     p['inputHash'] = packet_hash(p)
     with pytest.raises(ValueError, match='missing for Q2'):
         g.run(p, tmp_path / 'out', invoke=Model())
+
+
+def test_the_runner_accepts_a_completed_v4_result(tmp_path):
+    """A finished /4 run has add rounds, not repair rounds (review 2026-11-11: every /4 result was refused)."""
+    from runner.connection_generation import completed_result
+    p, model, result = run(tmp_path)
+    assert completed_result(tmp_path / 'out', p) == result
+
+
+def test_an_unfixed_intake_basis_cannot_be_swapped(tmp_path):
+    p, model, result = run(tmp_path)
+    result['manifest']['questionImportance']['Q2'] = basis('clinical')
+    with pytest.raises(ValueError, match='Q2 importance basis differs from the intake bank|projections differ'):
+        consume(result, p)

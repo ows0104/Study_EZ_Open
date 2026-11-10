@@ -376,3 +376,31 @@ def test_v4_exam_points_carry_no_importance():
     p['points'] = json.dumps(points)
     with pytest.raises(ValueError, match='carry no importance'):
         consume(value, p)
+
+
+def test_a_keeper_is_never_merged_away_in_a_later_group():
+    """Review 2026-11-11: Q2~Q1 in one goal, Q1~Q3 in another, Q3 more important → Q1 stays (it keeps Q2's goal)."""
+    b, bank = scenario()
+    weighed = copy.deepcopy(bank)
+    next(q for q in weighed['questions'] if q['question_id'] == 'Q3').update(importance=5)
+    groups = [{'direction_id': 'D1', 'status': 'covered', 'duplicates': [{'question_ids': ['Q1', 'Q2'], 'reason': 'a'}]},
+              {'direction_id': 'D2', 'status': 'covered', 'duplicates': [{'question_ids': ['Q1', 'Q3'], 'reason': 'b'}]}]
+    merged = c.merged_duplicates(groups, weighed, {'Q1': 'ok', 'Q2': 'ok', 'Q3': 'ok'})
+    assert [(m['question_id'], m['kept']) for m in merged] == [('Q2', 'Q1'), ('Q3', 'Q1')]
+    # A question that cannot be placed is never the keeper.
+    merged = c.merged_duplicates(groups[:1], weighed, {'Q1': 'ok', 'Q2': 'ok', 'Q3': 'ok'}, placeable={'Q2', 'Q3'})
+    assert merged == []
+
+
+def test_the_carry_over_fingerprint_is_the_question_content():
+    from studyez_contracts.roots.validate import task_fingerprints
+    b, bank = scenario()
+    doc, _ = build(b, bank, rows())
+    before = task_fingerprints(doc)
+    other = copy.deepcopy(doc)
+    other['bank_snapshot']['concepts'][0]['title'] = 'Renamed concept'          # bank context only
+    next(q for q in other['bank_snapshot']['questions'] if q['question_id'] == 'Q1').update(tier='Core', importance=4)
+    assert task_fingerprints(other) == before
+    next(q for q in other['bank_snapshot']['questions'] if q['question_id'] == 'Q1')['answer'] = 'Changed answer'
+    changed = task_fingerprints(other)
+    assert [t for t in before if before[t] != changed[t]] == [t['task_id'] for t in doc['tasks'] if t['question_id'] == 'Q1']

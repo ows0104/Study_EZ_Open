@@ -503,36 +503,49 @@ def validate_audit(brief, bank, audit):
 
 
 # ---------------------------------------------------------------- tasks (R6, R7)
-def merged_duplicates(coverage_rows, bank, verdict):
-    """One task per true-duplicate group: an ok member of highest importance, then bank order.
-    The others stay in the bank and are recorded (question_id, kept, direction_id, reason)."""
+def merged_duplicates(coverage_rows, bank, verdict, placeable=None):
+    """One task per true-duplicate group. The kept member is an ok, placeable question: one already kept for
+    another group if the group has one (a keeper is never merged away), else the highest importance, then
+    bank order. The others stay in the bank and are recorded (question_id, kept, direction_id, reason)."""
     order = {q['question_id']: i for i, q in enumerate(bank['questions'])}
     importance = {q['question_id']: q['importance'] for q in bank['questions']}
-    merged = {}
+    merged, keepers = {}, set()
     for row in coverage_rows:
         if row['status'] == 'unknown':
             continue
         for g in row.get('duplicates', []):
-            members = [q for q in g['question_ids'] if q in order and q not in merged]
-            ok = [q for q in members if verdict.get(q) == 'ok']
+            ok = [q for q in g['question_ids'] if q in order and q not in merged and verdict.get(q) == 'ok'
+                  and (placeable is None or q in placeable)]
             if len(ok) < 2:
                 continue
-            keep = min(ok, key=lambda q: (-importance[q], order[q]))
+            kept = [q for q in ok if q in keepers]
+            keep = min(kept or ok, key=lambda q: (-importance[q], order[q]))
+            keepers.add(keep)
             for q in ok:
-                if q != keep:
+                if q != keep and q not in keepers:
                     merged[q] = {'question_id': q, 'kept': keep, 'direction_id': row['direction_id'], 'reason': g['reason']}
     return [merged[q] for q in sorted(merged, key=order.get)]
 
 
-def place(brief, review, raw):
-    """The direction of each mapped question: most components answered there, then map order."""
+def unit_parents(brief):
+    """Recall-unit direction id -> its parent direction id (identity without recall units)."""
+    if not recall.enabled(brief):
+        return {d['direction_id']: d['direction_id'] for t in brief['targets'] for d in t['directions']}
+    _, groups = recall.project_brief(brief)
+    return {u: g['direction_id'] for g in groups for u in g['unit_direction_ids']}
+
+
+def place(brief, review, raw, parents=None):
+    """The direction of each mapped question: most components answered there, then map order.
+    `parents`: recall-unit id -> the parent id the raw evidence uses (identity without recall units)."""
     order = {d['direction_id']: i for i, d in enumerate(d for t in brief['targets'] for d in t['directions'])}
     count = {(e['question_id'], e['direction_id']): len(answered(e)) for e in raw['direction_evidence']}
+    parents = parents or {}
     best = {}
     for m in review['mappings']:
         if not m['tested_relation_ids']:
             continue
-        key = (-count.get((m['question_id'], m['direction_id']), 0), order[m['direction_id']])
+        key = (-count.get((m['question_id'], parents.get(m['direction_id'], m['direction_id'])), 0), order[m['direction_id']])
         if m['question_id'] not in best or key < best[m['question_id']][0]:
             best[m['question_id']] = (key, m['direction_id'])
     return {q: did for q, (_, did) in best.items()}
@@ -543,14 +556,15 @@ def make_document(brief, bank, audit, coverage_rows, *, revision, title, exam_da
 
     `snapshot`/`importance` as in /2 (container concepts, question-basis importance)."""
     validate_audit(brief, bank, audit)
+    parents = unit_parents(brief)
     if recall.enabled(brief):
         brief = recall.project_brief(brief)[0]
     review = audit['review']
     verdict = {r['question_id']: r['verdict'] for r in audit['question_checks']['reviews']}
+    where = place(brief, review, audit['assessment']['assessment'], parents)
     weighed = snapshot if snapshot is not None else bank
-    merged = merged_duplicates(coverage_rows, weighed, verdict)
+    merged = merged_duplicates(coverage_rows, weighed, verdict, set(where))
     gone = {m['question_id'] for m in merged}
-    where = place(brief, review, audit['assessment']['assessment'])
     candidates, unplaced = [], []
     for q in bank['questions']:
         qid = q['question_id']
@@ -649,6 +663,12 @@ def _judgments4(value, packet, brief, reviewed, meta, doc):
     require(placed == {k: meta[k] for k in placed}, 'result4: merged duplicates or unplaced questions differ')
     require(meta['readiness'] == readiness(brief, meta['coverage'], doc), 'result4: the readiness table is not of these judgments')
     require(meta['importanceNotes'] == importance_notes(meta['itemReviews']), 'result4: importance notes differ from the item reviews')
+    # The basis of an intake question nobody fixed is the intake bank's (added/fixed ones come from their stages).
+    intake = {r['question_id']: r['importance_basis'] for r in packet['intakeBank'].get('question_importance', [])}
+    fixed = {f['question_id'] for f in meta['fixes'] if not f['reverted']}
+    for qid, b in meta['questionImportance'].items():
+        if qid in intake and qid not in fixed:
+            require(b == intake[qid], f'result4: {qid} importance basis differs from the intake bank')
 
 
 MANIFEST_KEYS = v3.MANIFEST_KEYS | {'questionImportance', 'mergedDuplicates', 'unplacedQuestions', 'importanceNotes'}
@@ -663,9 +683,11 @@ def validate_result(value, packet):
 def readiness(brief, coverage_rows, doc):
     """Per goal: does it have a task, is it fully asked, and why not (a coverage report, never a gate)."""
     rows = index_by(coverage_rows, 'direction_id')
+    parents = unit_parents(brief)
     tasks = {}
     for t in doc['tasks']:
-        tasks[t['direction_id']] = tasks.get(t['direction_id'], 0) + 1
+        did = parents.get(t['direction_id'], t['direction_id'])
+        tasks[did] = tasks.get(did, 0) + 1
     out = []
     for t in brief['targets']:
         for d in t['directions']:
