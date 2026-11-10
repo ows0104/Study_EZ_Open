@@ -1,0 +1,80 @@
+{
+  "id": "2026-11-11-place-by-evidence",
+  "title": "Main-Quiz /4 문항 배치를 커버 판정에서 분리",
+  "area": "generation",
+  "created_at": "2026-11-10T18:06:53.591188+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-10T18:07:19.818354+00:00",
+      "evidence": "2026-11-11 사용자 채팅: (시범 결과 36개 원인 설명, 두 방안 제시) → 「붙이는 기준을 커버 판정과 떼어 놓습니다. 커버 확인이 그 문항을 그 목표의 후보로 검토했으면(근거 행이 있으면), 부분을 다 묻지 않아도 붙입니다 … -> 이걸로 가자.」",
+      "scope": "generation_v4 배치 기준·v4 coverage 지시문·검사·시범 재조립(모델 호출 없음)·PR 생성. 병합·러너 재설치 미포함",
+      "evidence_version": 2,
+      "source_hash": "1172f452970d2b2aee7e468d5def847fe6bb8d566e0d98b5e6cb3b3c9169cb78",
+      "plan_hash": "f0ea4ad0db1e6f4730575ee9ba9272e45c8b29704c20d8d4d61a4475ee7bcaac",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "caac41cf42a4e97e18f30368ec3a76b7dc4a7b4347806f3e50bc674273f853f0"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-10T18:14:14.529891+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "tests/quizbank",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ca43a89e547e384ef7d555d8a3aec76df4f50881ad5a7806c095aa83f4ddb4dd",
+      "plan_hash": "f0ea4ad0db1e6f4730575ee9ba9272e45c8b29704c20d8d4d61a4475ee7bcaac",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-11-place-by-evidence/1794334181737553900-regression.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-10T18:14:14.531373+00:00"
+}
