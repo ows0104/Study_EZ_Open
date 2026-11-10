@@ -69,14 +69,17 @@ export function QuizPage({ kind }: { kind: QuizKind }) {
 
   const quiz = kind === "pre" ? detail?.prequiz : detail?.mainquiz;
 
+  // 2026-11 개편: 예습은 새 Main-Quiz처럼 좌측 메뉴 안에서 푼다(머리줄·진행 막대·카드·아래 독).
+  if (kind === "pre") return (
+    <article className="prequiz-page">
+      {error ? <p className="notice is-error">{error}</p> : null}
+      <PreQuiz key={`${subject}/${runId}`} subject={subject} runId={runId} title={detail?.title} onDone={onDone} />
+    </article>
+  );
+
   return (
-    <article className={`lecture${kind === "pre" ? " prequiz-page" : ""}`}>
-      {/* 강의 정보는 머리글 한 줄로 족하다. 여기는 푸는 창이다. */}
-      {detail && kind === "pre" ? (
-        <header className="prequiz-page-head">
-          <h1><a href={lectureHref({ subject, runId })}>{detail.title}</a></h1>
-        </header>
-      ) : detail ? (
+    <article className="lecture">
+      {detail ? (
         <header className="lecture-head prequiz-narrow">
           <p className="lecture-crumb">
             <span>{detail.course || detail.subject}</span>
@@ -93,14 +96,12 @@ export function QuizPage({ kind }: { kind: QuizKind }) {
 
       {/* 강의 상세를 기다리지 않는다. 카드는 자기 요청으로 따로 온다. */}
       <section className="lecture-section">
-        {kind === "pre"
-          ? <PreQuiz key={`${subject}/${runId}`} subject={subject} runId={runId} onDone={onDone} />
-          : <Quiz key={`${subject}/${runId}`} kind="main" subject={subject} runId={runId} onDone={onDone} />}
+        <Quiz key={`${subject}/${runId}`} kind="main" subject={subject} runId={runId} onDone={onDone} />
       </section>
 
       {/* 다 찍은 뒤에 붙는 것들은 읽는 글이다. 푸는 창이 넓어졌다고 이것까지
           늘리면 한 줄이 길어져서 읽기만 나빠진다. */}
-      {finished && kind === "main" ? (
+      {finished ? (
         <div className="prequiz-narrow">
           <Missed items={quiz?.missed ?? []} />
 

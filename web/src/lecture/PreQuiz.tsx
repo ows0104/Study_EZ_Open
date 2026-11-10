@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import "./prequiz.css";
 import { api } from "../api";
 import { lectureHref } from "../links";
 import { useMe } from "../useMe";
@@ -13,8 +14,8 @@ import { PreQuizDifficult } from "./PreQuizDifficult";
 import { FeedbackButton } from "../feedback/FeedbackButton";
 
 /** 예습은 한 번 이해를 확인하고, 수업에서 들을 질문을 남긴다. */
-export function PreQuiz({ subject, runId, onDone }: {
-  subject: string; runId: string; onDone: (done: boolean) => void;
+export function PreQuiz({ subject, runId, title, onDone }: {
+  subject: string; runId: string; title?: string; onDone: (done: boolean) => void;
 }) {
   const base = `/api/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}/prequiz`;
   const [payload, setPayload] = useState<QuizPayload | null>(null);
@@ -136,41 +137,72 @@ export function PreQuiz({ subject, runId, onDone }: {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [item, revealed, busy, canUndo]);
-  const undoButton = canUndo
-    ? <button className="quiz-undo" disabled={busy} onClick={undo}>이전 선택 되돌리기 <kbd>Z</kbd></button> : null;
-  if (!payload) return <p className={`notice${error ? " is-error" : ""}`}>{error || "예습 문항을 불러오는 중…"}</p>;
-  const progress = <PreQuizProgress title={mode === "difficult" ? "어려웠던 문제 다시 보기" : mode === "reread" ? "다시 훑어보기" : studyTrack === "extra" ? "추가 학습 · 선택" : "예습"}
-    done={round.filter((entry) => completed(entry.itemId)).length} total={round.length} />;
+  if (!payload) return <section className="prequiz-learning">
+    <p className={`notice${error ? " is-error" : ""}`}>{error || "예습 문항을 불러오는 중…"}</p>
+  </section>;
+  const heading = title || payload.title;
+  const trackName = mode === "difficult" ? "어려웠던 문제" : mode === "reread" ? "다시 훑어보기"
+    : studyTrack === "extra" ? "추가 학습" : "예습";
+  const doneCount = round.filter((entry) => completed(entry.itemId)).length;
+  const head = <header className="pq-head">
+    <p className="pq-kicker">
+      <span className="pq-badge">Pre-Quiz</span>
+      <a className="pq-title" href={lectureHref({ subject, runId })}>{heading}</a>
+    </p>
+    {item ? <span className="pq-tools">
+      {studyTrack === "extra" ? <button className="pill-button" disabled={busy} onClick={() => switchTrack("core")}>추가 학습 그만하기</button> : null}
+      <FeedbackButton key={item.itemId} launch={{ className: "pill-button", content: "문제 제보" }}
+        prequiz={{ subject, runId, title: payload.title, itemId: item.itemId, stem: item.stem,
+          ...(revealed?.itemId === item.itemId ? { answer: revealed.answer, explanation: revealed.explanation } : {}) }} />
+      {isAdmin ? <a className="pill-button" href={lectureHref({ subject, runId }) + cardsHash("pre", item.itemId)} target="_blank" rel="noreferrer">이 카드 고치기</a> : null}
+    </span> : null}
+  </header>;
   if (!item) {
     const targets = ordered.filter((entry) => entry.attempt && !entry.attempt.correct);
-    return <div className="quiz-done prequiz-narrow">
-      {progress}
-      <h2>{ordered.length ? mode === "difficult" ? `어려웠던 ${round.length}문항 다시 보기 완료` : `${studyTrack === "extra" ? "추가 학습" : "예습"} ${ordered.length}문항 확인 완료` : "아직 예습 문항이 없습니다"}</h2>
-      {ordered.length > 0 ? <p>{studyTrack === "extra" ? "외워두면 유용한 내용을 더 확인했어요. 필수 예습은 이미 완료됐습니다." : "수업을 들을 준비가 됐어요. 세부 내용은 수업에서 연결하면 됩니다."}</p> : null}
-      {studyTrack === "core" && finished && extraItems.length > 0 ? <div className="quiz-takeaways">
-        <p>외워두면 좋은 핵심 구분과 암기사항을 더 확인해 보세요. 추가 학습은 건너뛰어도 예습 완료가 유지됩니다.</p>
-        <button className="quiz-submit" onClick={() => switchTrack("extra")}>추가 학습 {extraItems.length}문항 {extraItems.every((entry) => entry.attempt) ? "다시 보기" : "풀기"}</button>
-        <p className="quiz-done-note">{extraItems.filter((entry) => entry.attempt).length} / {extraItems.length}문항 확인 · 선택</p>
+    const extraDone = extraItems.filter((entry) => entry.attempt).length;
+    const doneTitle = !ordered.length ? "예습 문항 없음"
+      : mode === "difficult" ? "어려웠던 문제 다시 보기 완료" : `${studyTrack === "extra" ? "추가 학습" : "예습"} 완료`;
+    return <section className="prequiz-learning pq-done">
+      {head}
+      <div className="pq-today">
+        <div className="pq-today-text">
+          <h2>{doneTitle}</h2>
+          {ordered.length ? <p><b>{round.length}</b>문항 확인
+            {targets.length ? <> · 헷갈림 <b className="pq-today-miss">{targets.length}</b></> : null}</p> : null}
+        </div>
+        <div className="pq-actions">
+          <button className="pill-button" disabled={busy || !canUndo} onClick={undo} aria-keyshortcuts="Z">되돌리기 <kbd>Z</kbd></button>
+          {ordered.length ? <button className="pill-button" disabled={busy} onClick={() => start()}>다시 훑어보기</button> : null}
+          {studyTrack === "extra" ? <button className="pill-button" onClick={() => switchTrack("core")}>예습으로</button> : null}
+          <a className="pq-start-button" href="/">예습 마치기</a>
+        </div>
+      </div>
+      {studyTrack === "core" && finished && extraItems.length > 0 ? <div className="pq-extra">
+        <div className="pq-today-text">
+          <h2>추가 학습 · 선택</h2>
+          <p><b>{extraDone}</b> / {extraItems.length}문항</p>
+        </div>
+        <button className="pill-button" onClick={() => switchTrack("extra")}>{extraItems.every((entry) => entry.attempt) ? "다시 보기" : "풀기"}</button>
       </div> : null}
       {targets.length ? <PreQuizDifficult base={base} studyTrack={studyTrack} items={targets} answers={answers}
         reportContext={{ subject, runId, title: payload.title }}
-        onReview={() => start(targets.map((entry) => entry.itemId))} />
-        : ordered.length > 0 ? <p className="quiz-done-note">모든 문항을 이해했어요. 수업에서 어떻게 확장되는지 들어보세요.</p> : null}
-      {ordered.some((entry) => entry.learningScope) ? <details className="quiz-takeaways">
+        onReview={() => start(targets.map((entry) => entry.itemId))} /> : null}
+      {ordered.some((entry) => entry.learningScope) ? <details className="pq-takeaways">
         <summary>오늘 챙긴 핵심</summary>
         <ul>{ordered.filter((entry) => entry.learningScope).map((entry) => <li key={entry.itemId}><PreQuizText text={entry.learningScope!} /></li>)}</ul>
       </details> : null}
-      <a className="resource" href="/"><strong>예습 마치기</strong></a>
-      {studyTrack === "extra" ? <button className="quiz-undo" onClick={() => switchTrack("core")}>예습 완료 화면으로</button> : null}
-      {ordered.length ? <button className="quiz-undo" onClick={() => start()}>전체 다시 훑어보기</button> : null}
-      {undoButton}
       {error ? <p role="alert" className="notice is-error">{error}</p> : null}
-    </div>;
+    </section>;
   }
   const feedback = revealed?.itemId === item.itemId ? revealed : null;
-  return <>
-    <div className="quiz prequiz">
-      <div className="prequiz-status">{progress}<WhyAsked item={item} /></div>
+  return <section className="prequiz-learning quiz">
+    {head}
+    <div className="pq-progress" aria-live="polite">
+      <h2 className="pq-count">{trackName} {doneCount} / {round.length}</h2>
+      <span className="pq-track" aria-hidden="true"><i style={{ width: `${round.length ? doneCount / round.length * 100 : 0}%` }} /></span>
+      <WhyAsked item={item} />
+    </div>
+    <div className="pq-card">
       <p className="quiz-stem"><PreQuizCloze text={item.stem} parts={item.qtype === "cloze" ? feedback?.clozeParts : undefined} /></p>
       {!feedback && item.hint ? <details className="quiz-hint" key={item.itemId}>
         <summary>
@@ -187,33 +219,18 @@ export function PreQuiz({ subject, runId, onDone }: {
         <hr className="quiz-line" />
         <p className="quiz-answer"><PreQuizText text={feedback.answer} /></p>
         {feedback.explanation ? <p className="quiz-explanation"><PreQuizText text={feedback.explanation} /></p> : null}
-        {feedback.whyAsked ? <p className="quiz-why-back"><span className="quiz-why-label">왜 냈나요?</span><PreQuizText text={feedback.whyAsked} /></p> : null}
+        {feedback.whyAsked ? <p className="quiz-support-note"><strong>왜 냈나요?</strong><PreQuizText text={feedback.whyAsked} /></p> : null}
         {feedback.learningScope ? <p className="quiz-support-note"><strong>지금은 여기까지</strong><PreQuizText text={feedback.learningScope} /></p> : null}
-        {feedback.lectureFocus ? <p className="quiz-support-note"><strong>수업에서 들어볼 질문</strong><PreQuizText text={feedback.lectureFocus} /></p> : null}
+        {feedback.lectureFocus ? <p className="quiz-support-note is-focus"><strong>수업에서 들어볼 질문</strong><PreQuizText text={feedback.lectureFocus} /></p> : null}
         {feedback.slideUrl ? <SlideImage preload={slides} src={feedback.slideUrl} alt={`슬라이드 ${feedback.slideNo}`} /> : null}
       </> : null}
       {error ? <p role="alert" className="notice is-error">{error}</p> : null}
-      <div className="prequiz-tools">
-        <FeedbackButton key={item.itemId} prequiz={{ subject, runId, title: payload.title, itemId: item.itemId,
-          stem: item.stem, ...(feedback ? { answer: feedback.answer, explanation: feedback.explanation } : {}) }} />
-        {studyTrack === "extra" ? <button className="quiz-undo" disabled={busy} onClick={() => switchTrack("core")}>추가 학습 그만하기</button> : null}
-        {undoButton}
-        {isAdmin ? <a className="quiz-fix" href={lectureHref({ subject, runId }) + cardsHash("pre", item.itemId)} target="_blank" rel="noreferrer">이 카드 고치기</a> : null}
-      </div>
     </div>
-    <div className="quiz-bar prequiz-bar">
-      {!feedback ? <button className="quiz-submit" disabled={busy} onClick={reveal} aria-keyshortcuts="Space Enter">{busy ? "불러오는 중…" : <>답과 설명 보기 <kbd>Space</kbd></>}</button>
-        : <><button className="quiz-grade prequiz-choice" disabled={busy} onClick={() => check(false)} aria-keyshortcuts="1"><span className="quiz-grade-name">아직 헷갈려요 <kbd>1</kbd></span></button>
-          <button className="quiz-grade prequiz-choice" disabled={busy} onClick={() => check(true)} aria-keyshortcuts="2 Space Enter"><span className="quiz-grade-name">이해했어요 <kbd>2 / Space</kbd></span></button></>}
+    <div className="quiz-bar pq-dock" aria-label="이해 확인">
+      <button className="quiz-undo" disabled={busy || !canUndo} onClick={undo} aria-keyshortcuts="Z">되돌리기 <kbd>Z</kbd></button>
+      {!feedback ? <button className="quiz-submit pq-reveal" disabled={busy} onClick={reveal} aria-keyshortcuts="Space Enter">{busy ? "불러오는 중…" : <>답과 설명 보기 <kbd>Space</kbd></>}</button>
+        : <><button className="quiz-grade pq-choice is-unsure" disabled={busy} onClick={() => check(false)} aria-keyshortcuts="1"><span className="quiz-grade-name">아직 헷갈려요 <kbd>1</kbd></span></button>
+          <button className="quiz-grade pq-choice is-understood" disabled={busy} onClick={() => check(true)} aria-keyshortcuts="2 Space Enter"><span className="quiz-grade-name">이해했어요 <kbd>2 / Space</kbd></span></button></>}
     </div>
-  </>;
-}
-
-function PreQuizProgress({ title, done, total }: {
-  title: string; done: number; total: number;
-}) {
-  if (!total) return null;
-  return <div className="prequiz-progress" aria-live="polite">
-    <p><span>{title}</span><strong>{done} / {total}문항 완료</strong></p>
-  </div>;
+  </section>;
 }

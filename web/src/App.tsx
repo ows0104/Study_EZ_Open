@@ -95,7 +95,6 @@ function Shell() {
   const mainQuiz = isMainQuizPath(location.pathname);
   const bare = (mainQuiz && quizSolving) || (!mainQuiz && (
     location.pathname.startsWith("/lectures/") ||
-    location.pathname.startsWith("/prequiz/") ||
     location.pathname.startsWith("/mainquiz/") ||
     location.pathname.startsWith("/legacy-mainquiz/") ||
     location.pathname.startsWith("/bank/")));
