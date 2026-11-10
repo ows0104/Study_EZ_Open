@@ -41,8 +41,10 @@ _BRACKET_RE = re.compile(
     r"(?:\s*[~\-–—]\s*(\d{1,2}))?\s*[\]\})）]")
 
 # 꼬리의 "_최나예v1", "_고명재 v2", "_오서연_v3", "_박지민", "_김정빈v2.",
-# "_이채현v.1" 을 모두 받는다. 필기자 이름은 한글 2~4자이고 판 번호는 없을 수도 있다.
-_AUTHOR_RE = re.compile(r"_\s*([가-힣]{2,4})\s*_?\s*[vV]?\s*\.?\s*(\d+)?\s*\.*\s*$")
+# "_이채현v.1", "_송 현 v1" 을 모두 받는다. 필기자 이름은 한글 2~4자이고(글자 사이
+# 띄어쓰기 허용) 판 번호는 없을 수도 있다. 이름을 못 떼면 제목이 오염되어 주제 별칭이
+# 빗나가고, 다른 강의와 run 키가 겹쳐 둘 다 해시 run이 새로 선다(2026-11-10 렙토스피라).
+_AUTHOR_RE = re.compile(r"_\s*([가-힣](?:\s?[가-힣]){1,3})\s*_?\s*[vV]?\s*\.?\s*(\d+)?\s*\.*\s*$")
 
 # Synology가 같은 파일을 두 기기에서 고쳤을 때 남기는 사본.
 # "_박준원v2_DERIAZ_7-09-222924-2026_Conflict.pdf" 같은 이름이 되어 제목이 오염된다.
@@ -202,7 +204,7 @@ def parse(path: str | Path) -> LectureFile | None:
     author, version = "", 1
     tail = _AUTHOR_RE.search(rest)
     if tail:
-        author = tail.group(1)
+        author = re.sub(r"\s", "", tail.group(1))
         version = int(tail.group(2)) if tail.group(2) else 1
         rest = rest[:tail.start()].strip()
 
