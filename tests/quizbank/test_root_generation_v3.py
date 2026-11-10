@@ -43,11 +43,14 @@ def authored(q):
 
 class Model:
     def __init__(self, design_doubt=('Q1',), supplement='point'):
-        self.calls, self.inputs = [], {}
+        self.calls, self.inputs, self.states = [], {}, {}
         self.design_doubt, self.supplement = set(design_doubt), supplement
 
     def __call__(self, stage, ctx, material, model):
         self.calls.append(stage)
+        if '_check' in ctx:
+            self.states[stage] = ctx['_check']
+            ctx = {k: v for k, v in ctx.items() if k != '_check'}
         self.inputs[stage] = ctx
         if stage == 'normalize':
             b = f.brief(ctx['sources'])
@@ -277,3 +280,73 @@ def test_a_bank_in_another_bank_version_is_projected_and_recorded(tmp_path):
     result['manifest']['intakeProjection'] = []
     with pytest.raises(ValueError, match='intake projection'):
         consume(result, p)
+
+
+def test_add_and_fix_stages_get_the_merge_state_outside_their_input(tmp_path):
+    """P6: the transport gets what the merge receives (`_check`); the stage input and its hash do not."""
+    p, model, result = run(tmp_path)
+    assert set(model.states) == {'v3-supplement', 'v3-supplement-normalize', 'v3-add-0', 'v3-fix-0-0'}
+    assert {'bank', 'clinical_conflicts', 'stimuli', 'sources'} == set(model.states['v3-add-0'])
+    assert not any('stimuli' in q for q in model.states['v3-add-0']['bank']['questions'])
+    saved = json.loads((tmp_path / 'out' / 'v3-add-0.input.json').read_text(encoding='utf-8'))
+    assert '_check' not in saved
+
+
+def test_an_empty_coverage_runs_once_more_in_a_fresh_session(tmp_path):
+    """review-retry/1 as /2: the abandoned stage is archived; a second empty judgment would stop."""
+    class Empty(Model):
+        def __call__(self, stage, ctx, material, model):
+            if stage == 'v3-coverage-0-0' and self.calls.count(stage) == 0:
+                self.calls.append(stage)
+                return {'rows': [{'direction_id': gl['direction_id'], 'status': 'unknown', 'evidence': [], 'reason': 'Gave up'}
+                                 for gl in ctx['goals']]}, {}
+            return super().__call__(stage, ctx, material, model)
+    _, model, result = run(tmp_path, Empty())
+    assert model.calls.count('v3-coverage-0-0') == 2
+    retry = result['manifest']['reviewRetries']
+    assert [r['stage'] for r in retry] == ['v3-coverage-0-0'] and retry[0]['kind'] == 'empty-judgment'
+    assert (tmp_path / 'out' / '.retry-v3-coverage-0-0' / 'v3-coverage-0-0.raw.json').exists()
+
+
+def test_the_medical_review_runs_in_batches_inside_one_stage(tmp_path, monkeypatch):
+    monkeypatch.setattr(g3, 'MEDICAL_BATCH', 1)
+    seen = []
+
+    class Count(Model):
+        def __call__(self, stage, ctx, material, model):
+            if stage.startswith('medical-'):
+                seen.append([q['question_id'] for q in ctx['bank']['questions']])
+            return super().__call__(stage, ctx, material, model)
+    _, model, result = run(tmp_path, Count())
+    bank = result['document']['bank_snapshot']
+    assert len(seen) == len(bank['questions']) and all(len(x) == 1 for x in seen)
+    assert {r['question_id'] for r in result['medical']['reviews']} == {q['question_id'] for q in bank['questions']}
+    stages = {s['name'] for s in result['manifest']['stages']}
+    assert 'medical-0' in stages and not any(n.startswith('medical-1') for n in stages)
+
+
+def test_a_bad_image_crop_is_found_by_the_stage_check(tmp_path):
+    """P6: the render that runs after an add/fix stage runs in its check, so the model can correct the crop."""
+    import fitz
+    import hashlib
+    pdf = tmp_path / 'notes.pdf'
+    doc = fitz.open()
+    doc.new_page()
+    doc.save(pdf)
+    sources = [{'id': 'S1', 'localPath': str(pdf), 'sha256': hashlib.sha256(pdf.read_bytes()).hexdigest()}]
+    bank = f.old.bank()
+    for q in bank['questions']:
+        q.pop('stimuli', None)
+    ids = v3.next_question_ids(bank, 1)
+    q = authored(bank['questions'][0])
+    q.update(question_id=ids[0], point_ids=['P1'])
+    ctx = {'allowed_question_ids': ids, 'existing': [], 'bank_concepts': [{'concept_id': c['concept_id'], 'title': ''} for c in bank['concepts']],
+           'goals': [{'point_ids': ['P1']}], 'source_conflict_ids': []}
+    state = {'bank': bank, 'clinical_conflicts': [], 'stimuli': [], 'sources': sources}
+    good = {'question_id': ids[0], 'source_id': 'S1', 'page': 1, 'crop': [0, 0, 0.5, 0.5], 'reason': 'Synthetic figure'}
+    out = {'questions': [q], 'concepts': [], 'retrieval_plan': [], 'source_conflicts': [], 'visual_stimuli': [good], 'clinical_conflicts': []}
+    assert g3.check_stage('add', out, ctx, state, tmp_path / 'scratch') == out
+    bad = copy.deepcopy(out)
+    bad['visual_stimuli'][0]['page'] = 9
+    with pytest.raises(ValueError, match='물리쪽'):
+        g3.check_stage('add', bad, ctx, state, tmp_path / 'scratch')

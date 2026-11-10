@@ -32,6 +32,7 @@ from . import connection_visuals as visual
 POLICY = v3.POLICY
 COVERAGE_CHUNK = 60      # goals per coverage call (plan U2)
 REVIEW_BATCH = 40        # questions per item review (plan U2)
+MEDICAL_BATCH = 40   # questions per medical call inside medical-0 (P6)
 ADD_PER_GOAL = 2         # new IDs offered per gap goal
 _QID = re.compile(r'^(Q[0-9A-Za-z_-]+)\b')
 
@@ -76,6 +77,36 @@ class Stages:
     def save(self):
         self.g.write(self.path, self.ledger)
 
+    def judged(self, name, ctx, accept):
+        """A coverage or review stage that judged nothing runs once more in a fresh session (review-retry/1, as /2).
+
+        The runner has already sent the error back once into the same session; the abandoned stage is archived
+        under .retry-<stage>/ and recorded in ledger reviewRetries. A second empty judgment stops the lecture."""
+        try:
+            return self.run(name, ctx, accept)
+        except ValueError as error:
+            if str(error) not in (v3.UNPERFORMED_COVERAGE, v3.UNPERFORMED_REVIEW) or \
+                    any(r['stage'] == name for r in self.ledger.get('reviewRetries', [])):
+                raise
+        archive = self.out / f'.retry-{name}'
+        archive.mkdir()
+        moved = []
+        for suffix in ('.input.json', '.raw.json', '.usage.json', '.json'):
+            path = self.out / (name + suffix)
+            if path.exists():
+                path.replace(archive / path.name)
+                moved.append(path.name)
+        seat = self.out / '.native' / name
+        if seat.exists():
+            (archive / '.native').mkdir()
+            seat.replace(archive / '.native' / name)
+            moved.append('.native/' + name)
+        self.ledger.setdefault('reviewRetries', []).append({'policy': 'review-retry/1', 'stage': name, 'kind': 'empty-judgment',
+                                                            'abandoned': self.ledger['stages'].pop(name), 'files': moved})
+        self.save()
+        print('── 검토 포기(empty-judgment): ' + name + ' 새 세션으로 한 번 다시 실행', flush=True)
+        return self.run(name, ctx, accept)
+
     def _archive(self, name):
         rows = self.ledger.setdefault('stageResumes', [])
         archive = self.out / f'.resume-{len(rows)}'
@@ -90,8 +121,11 @@ class Stages:
             seat.replace(archive / '.native' / name)
         self.resume_row['superseded'].append({'name': name, 'entry': self.ledger['stages'].pop(name)})
 
-    def run(self, name, ctx, accept):
-        """One model stage. A completed stage with the same input is reused; anything else runs once."""
+    def run(self, name, ctx, accept, state=None):
+        """One model stage. A completed stage with the same input is reused; anything else runs once.
+
+        `state` (P6) is what the merge after this stage receives. It goes to the transport as `_check` so the
+        runner's in-session check runs that same merge; it is not part of the stage input or its hash."""
         ctx = {**ctx, '_pipeline_version': POLICY}
         input_hash = document_hash(ctx)
         prior = self.ledger['stages'].get(name)
@@ -106,7 +140,7 @@ class Stages:
         self.g.write(self.out / (name + '.input.json'), ctx)
         print('── 연결 자동출제 /3 ' + name, flush=True)
         try:
-            raw, info = self.invoke(name, ctx, self.out / 'material', self.model)
+            raw, info = self.invoke(name, {**ctx, '_check': state} if state is not None else ctx, self.out / 'material', self.model)
             self.g.write(self.out / (name + '.raw.json'), raw)
             self.g.write(self.out / (name + '.usage.json'), info)
             entry.update(rawOutputHash=document_hash(raw), usageHash=document_hash(info))
@@ -184,6 +218,71 @@ def _join_points(bank, brief, rows):
     return value
 
 
+# ---------------------------------------------------------------- stage checks (P6)
+def check_stage(kind, value, ctx, state, scratch):
+    """Everything that runs after an add/fix/supplement-normalize stage, without changing anything: the contract
+    check, the same merge (generation_v3), and for add/fix the same image render into `scratch`.
+
+    The runner's in-session check (runner/root_native_json.check_file) and this orchestrator's acceptance call
+    this one function, so whatever would stop the lecture after the stage is found while the model can still fix
+    it (one follow-up in the same session). Before P6 the merge and render ran only afterwards (261102_02 stopped
+    twice there)."""
+    if kind == 'supplement-normalize':
+        return v3.check_supplement_normalize(value, ctx, state)
+    if kind == 'supplement':
+        return v3.check_supplement(value, ctx, state)
+    scratch = Path(scratch)
+    scratch.mkdir(parents=True, exist_ok=True)
+    if kind == 'add':
+        v3.check_added(value, ctx, state)
+        merged, _ = v3.merge_added(state['bank'], state['clinical_conflicts'], value, ctx['allowed_question_ids'])
+        stimuli = [*state['stimuli'], *value['visual_stimuli']]
+    else:
+        v3.check_fixed(value, ctx, state)
+        merged, _, changed = v3.merge_fixes(state['bank'], state['clinical_conflicts'], value, [q['question_id'] for q in ctx['questions']])
+        stimuli = [s for s in state['stimuli'] if s['question_id'] not in set(changed)] + value['visual_stimuli']
+    visual.render(merged, stimuli, {'sources': state['sources']}, scratch)
+    return value
+
+
+def _medical_batches(invoke):
+    """medical-0 as one stage of MEDICAL_BATCH-question calls (P6). One blind call over a whole 150-question bank
+    risks omitted verdicts (the /2 recovery runner/root_medical_retry.py exists for that) and the 900 s call limit;
+    each call here is a review-sized batch with only its questions, their facts and images. The stage input,
+    its hash and the merged output are what validate_result proves; the medical review still runs once."""
+    def call(stage, ctx, material, model):
+        if not stage.startswith('medical-'):
+            return invoke(stage, ctx, material, model)
+        from .review import shape
+        bank, conflicts = ctx['bank'], ctx['clinicalInput']['clinical_conflicts']
+        rows, pool, summaries, infos = [], [], [], []
+        for part in chunks(bank['questions'], MEDICAL_BATCH):
+            sub = {**bank, 'questions': part}
+            value, info = invoke(stage, {**ctx, 'bank': sub, 'clinicalInput': v2.medical_input(sub, conflicts)}, material, model)
+            validate_checks(value, sub)
+            rows += value['reviews']
+            pool += value.get('pool_checks', [])
+            summaries.append(value['summary'])
+            infos.append(info)
+        merged = shape({'summary': ' / '.join(summaries), 'reviews': rows, 'pool_checks': pool}, bank)
+        usage = {}
+        for info in infos:
+            for k, v in (info.get('usage') or {}).items():
+                usage[k] = usage.get(k, 0) + v
+        info = {'usage': usage, 'cost_usd': sum(i.get('cost_usd') or 0 for i in infos),
+                'duration_ms': sum(i.get('duration_ms') or 0 for i in infos),
+                'models': list(dict.fromkeys(m for i in infos for m in (i.get('models') or []))),
+                'medicalBatches': [len(p) for p in chunks(bank['questions'], MEDICAL_BATCH)]}
+        return merged, info
+    return call
+
+
+def _state(bank, conflicts, stimuli, packet):
+    """The check state of an add/fix stage: what its merge and render receive."""
+    return {'bank': visual.authored(bank), 'clinical_conflicts': copy.deepcopy(conflicts), 'stimuli': copy.deepcopy(stimuli),
+            'sources': [{k: s[k] for k in ('id', 'localPath', 'sha256')} for s in packet['sources']]}
+
+
 # ---------------------------------------------------------------- run
 def run(packet, out, model, invoke, resume=None):
     from . import connection_generate as g
@@ -224,7 +323,7 @@ def run(packet, out, model, invoke, resume=None):
     dids = [d['direction_id'] for t in brief['targets'] for d in t['directions']]
     for k, part in enumerate(chunks(dids, COVERAGE_CHUNK)):
         ctx = v3.coverage_input(brief, bank, part)
-        value = st.run(f'v3-coverage-0-{k}', ctx, lambda raw, ctx=ctx: v3.check_coverage(raw, ctx['goals'], ctx['questions']))
+        value = st.judged(f'v3-coverage-0-{k}', ctx, lambda raw, ctx=ctx: v3.check_coverage(raw, ctx['goals'], ctx['questions']))
         rows.update({r['direction_id']: r for r in value['rows']})
 
     # 2m: map check ---------------------------------------------------------
@@ -238,7 +337,8 @@ def run(packet, out, model, invoke, resume=None):
     if off_goal:
         v3.require(points_doc is not None, '목표 밖 문항의 포인트 보충에는 exam-point-extract/3 포인트가 필요합니다.')
         ctx = v3.supplement_input(bank, off_goal, points_doc, page_counts)
-        value = st.run('v3-supplement', ctx, lambda raw: v3.check_supplement(raw, ctx))
+        state = {'points_doc': points_doc}
+        value = st.run('v3-supplement', ctx, lambda raw: check_stage('supplement', raw, ctx, state, None), state)
         points_doc, table, supplement = v3.attach_points(points_doc, value, off_goal, page_counts)
         new_points = [p for p in points_doc['points'] if p['point_id'] in {d['point_id'] for d in supplement if d['decision'] == 'point'}]
         dup = [d for d in supplement if d['decision'] == 'duplicate_of']
@@ -246,13 +346,13 @@ def run(packet, out, model, invoke, resume=None):
         if new_points:
             allowed = v3.supplement_ids(brief, len(new_points))
             ctx = v3.supplement_normalize_input(brief, new_points, allowed)
-            addition = st.run('v3-supplement-normalize', ctx, lambda raw: v3.check_supplement_normalize(raw, ctx))
-            added_targets = v2.blank_target_importance({**brief, 'targets': addition['targets']})['targets'] if table is not None else addition['targets']
-            brief, new_tids = v3.extend_brief(brief, {'targets': added_targets, 'points': addition['points']}, [p['point_id'] for p in new_points])
+            state = {'brief': brief, 'blank': table is not None}
+            addition = st.run('v3-supplement-normalize', ctx, lambda raw: check_stage('supplement-normalize', raw, ctx, state, None), state)
+            brief, new_tids = v3.extend_brief(brief, v3.supplement_addition(brief, addition, table is not None), [p['point_id'] for p in new_points])
             new_dids = [d['direction_id'] for t in brief['targets'] if t['target_id'] in new_tids for d in t['directions']]
             origins = [p['origin_question_id'] for p in new_points]
             ctx = v3.coverage_input(brief, bank, new_dids, origins)
-            value = st.run('v3-coverage-supplement', ctx, lambda raw: v3.check_coverage(raw, ctx['goals'], ctx['questions']))
+            value = st.judged('v3-coverage-supplement', ctx, lambda raw: v3.check_coverage(raw, ctx['goals'], ctx['questions']))
             rows.update({r['direction_id']: r for r in value['rows']})
             ctx = v3.map_check_input(brief, table, new_tids)
             map_checks.append(st.run('v3-map-check-1', ctx, lambda raw: v3.check_map_input(raw, ctx)))
@@ -262,7 +362,7 @@ def run(packet, out, model, invoke, resume=None):
                                if any(d['point_id'] in p['point_id'] and t['target_id'] in p['target_ids'] for p in brief['points'])})
             if goal_ids:
                 ctx = v3.coverage_input(brief, bank, goal_ids, [d['question_id'] for d in dup])
-                value = st.run('v3-coverage-duplicate', ctx, lambda raw: v3.check_coverage(raw, ctx['goals'], ctx['questions']))
+                value = st.judged('v3-coverage-duplicate', ctx, lambda raw: v3.check_coverage(raw, ctx['goals'], ctx['questions']))
                 for r in value['rows']:
                     rows[r['direction_id']] = _merge_row(rows.get(r['direction_id']), r)
         gone = {d['question_id'] for d in out_of_scope}
@@ -276,7 +376,7 @@ def run(packet, out, model, invoke, resume=None):
     # 3: add only for gap goals (≤2) ----------------------------------------
     # Round numbers are fixed (v3-add-0, v3-add-1): a resumed run replays completed rounds from their records,
     # so the recorded count only grows and never exceeds ADD_LIMIT.
-    restated = []   # facts an add stage wrote again for existing conflicts; not taken, kept for the record
+    restated = []   # existing items an add/fix stage wrote again (v3.restated); not taken, kept for the record (P6)
     for n in range(v3.ADD_LIMIT):
         gaps = [did for did in [d['direction_id'] for t in brief['targets'] for d in t['directions']] if rows[did]['status'] != 'covered']
         if not gaps:
@@ -286,15 +386,16 @@ def run(packet, out, model, invoke, resume=None):
         if ledger['addRounds'] < n + 1:
             ledger['addRounds'] = n + 1
             st.save()
-        value = st.run(f'v3-add-{n}', ctx, lambda raw: v3.check_added(raw, ctx))
-        restated.extend({'stage': f'v3-add-{n}', **r} for r in v3.restated_facts(conflicts, value))
+        state = _state(bank, conflicts, stimuli, packet)
+        value = st.run(f'v3-add-{n}', ctx, lambda raw, ctx=ctx, state=state, n=n: check_stage('add', raw, ctx, state, out / '.check-render' / f'v3-add-{n}'), state)
+        restated.extend({'stage': f'v3-add-{n}', **r} for r in v3.restated(visual.authored(bank), conflicts, value))
         bank, conflicts = v3.merge_added(visual.authored(bank), conflicts, value, allowed)
         stimuli = [*stimuli, *value['visual_stimuli']]
         bank = visual.render(bank, stimuli, packet, out / 'material')
         added = [q['question_id'] for q in value['questions']]
         for k, part in enumerate(chunks(gaps, COVERAGE_CHUNK)):
             ctx = v3.coverage_input(brief, bank, part, added)
-            got = st.run(f'v3-coverage-{n + 1}-{k}', ctx, lambda raw, ctx=ctx: v3.check_coverage(raw, ctx['goals'], ctx['questions']))
+            got = st.judged(f'v3-coverage-{n + 1}-{k}', ctx, lambda raw, ctx=ctx: v3.check_coverage(raw, ctx['goals'], ctx['questions']))
             for r in got['rows']:
                 rows[r['direction_id']] = _merge_row(rows[r['direction_id']], r)
 
@@ -323,7 +424,7 @@ def run(packet, out, model, invoke, resume=None):
         if not todo:
             return got
         ctx = v3.review_input(bank, todo, conflicts)
-        value = st.run(name, ctx, lambda raw: v3.check_review_input(raw, ctx))
+        value = st.judged(name, ctx, lambda raw: v3.check_review_input(raw, ctx))
         by_id = {q['question_id']: q for q in bank['questions']}
         for r in value['reviews']:
             got[r['question_id']] = r
@@ -334,7 +435,6 @@ def run(packet, out, model, invoke, resume=None):
         return got
 
     order = [q['question_id'] for q in bank['questions']]
-    restated_sources = []   # existing source conflicts a fix stage wrote again; not taken, kept for the record
     attempts = {}   # replayed from fixed stage names (v3-fix-<batch>-<k>); the ledger keeps the maximum seen
     for b, batch in enumerate(chunks(order, REVIEW_BATCH)):
         reviews.update(review_batch(f'v3-review-{b}-0', set(batch)))
@@ -349,9 +449,11 @@ def run(packet, out, model, invoke, resume=None):
             st.save()
             findings = [{**reviews[q], 'code_findings': code.get(q, [])} for q in targets]
             ctx = v3.fix_input(bank, findings, targets, conflicts, covered_by())
-            value = st.run(f'v3-fix-{b}-{k}', ctx, lambda raw: v3.check_fixed(raw, ctx))
+            state = _state(bank, conflicts, stimuli, packet)
+            value = st.run(f'v3-fix-{b}-{k}', ctx, lambda raw, ctx=ctx, state=state, b=b, k=k: check_stage('fix', raw, ctx, state, out / '.check-render' / f'v3-fix-{b}-{k}'), state)
             before_bank, before_reviews = copy.deepcopy(bank), {q: reviews[q] for q in targets}
-            restated_sources.extend({'stage': f'v3-fix-{b}-{k}', **r} for r in v3.restated_conflicts(bank, value))
+            cited = {q.get('conflict_id') for q in value['questions'] if q.get('conflict_id')}
+            restated.extend({'stage': f'v3-fix-{b}-{k}', **r} for r in v3.restated(visual.authored(bank), conflicts, value, cited))
             merged, conflicts, changed = v3.merge_fixes(visual.authored(bank), conflicts, value, targets)
             stimuli = [s for s in stimuli if s['question_id'] not in set(changed)] + value['visual_stimuli']
             bank = visual.render(merged, stimuli, packet, out / 'material')
@@ -371,7 +473,7 @@ def run(packet, out, model, invoke, resume=None):
             goals = sorted({did for q in kept for did, r in rows.items() if any(e['question_id'] == q for e in r['evidence'])})
             if goals:
                 ctx = v3.coverage_input(brief, bank, goals, kept)
-                got = st.run(f'v3-coverage-fix-{b}-{k}', ctx, lambda raw, ctx=ctx: v3.check_coverage(raw, ctx['goals'], ctx['questions']))
+                got = st.judged(f'v3-coverage-fix-{b}-{k}', ctx, lambda raw, ctx=ctx: v3.check_coverage(raw, ctx['goals'], ctx['questions']))
                 for r in got['rows']:
                     rows[r['direction_id']] = _merge_row(rows[r['direction_id']], r, kept)
 
@@ -385,6 +487,7 @@ def run(packet, out, model, invoke, resume=None):
     context = st.run('context-0', ctx, accept_context)
     v3.require(not v2.context_blocks_medical(context), '독립 정답 검수 입력 분리가 완료되지 않았습니다. 결과를 만들지 않고 보존합니다.')
     med_ctx = {'title': packet['title'], 'bank': bank, 'clinicalInput': v2.medical_input(bank, conflicts), 'medicalFinal': True}
+    st.invoke = _medical_batches(invoke)
     medical = st.run('medical-0', med_ctx, lambda raw: validate_checks(raw, bank))
 
     # assembly ----------------------------------------------------------------
@@ -418,8 +521,7 @@ def run(packet, out, model, invoke, resume=None):
                   'offGoalQuestions': [{'question_id': q['question_id'], 'question': q,
                                         'reason': next(d['reason'] for d in out_of_scope if d['question_id'] == q['question_id'])}
                                        for q in off_questions],
-                  'rejectedAtIntake': rejected, 'intakeProjection': intake_changes, 'restatedFactsIgnored': restated,
-                  'restatedConflictsIgnored': restated_sources,
+                  'rejectedAtIntake': rejected, 'intakeProjection': intake_changes, 'restatedIgnored': restated,
                   'supplement': supplement, 'supplementPoints': points_doc if supplement else None,
                   'initialBrief': initial_brief, 'initialBank': initial_bank, 'coverage': coverage_rows, 'mapCheck': map_check,
                   'itemReviews': review_rows, 'clinicalContext': context, 'clinicalConflicts': conflicts,
@@ -427,6 +529,7 @@ def run(packet, out, model, invoke, resume=None):
                   **({'bankProjection': projection} if projection else {}),
                   **({'importanceProjection': importance_proof} if importance_proof else {}),
                   **({'stageResumes': ledger['stageResumes']} if ledger.get('stageResumes') else {}),
+                  **({'reviewRetries': ledger['reviewRetries']} if ledger.get('reviewRetries') else {}),
                   # map-tree/2: the server re-derives this packet from its request (studyez_contracts.roots.map_tree).
                   **({'derivedPacket': map_tree.public(packet), 'auditOpen': packet['frontStages']['openPoints']}
                      if 'derivedFrom' in packet else {})}}
