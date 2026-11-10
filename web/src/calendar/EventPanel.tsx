@@ -371,7 +371,7 @@ function KeyActions({
               deck ? (
                 <span className="deck-link" key={label}>
                   <button type="button" onClick={() => void download(deck)}>{label}</button>
-                  {notes ? <span className="deck-source" title={notes.filename}>{notes.filename}</span> : null}
+                  {notes ? <DeckSource filename={notes.filename} /> : null}
                 </span>
               ) : null)}
           </span>
@@ -381,6 +381,28 @@ function KeyActions({
 
       {error ? <p className="notice is-error">{error}</p> : null}
     </div>
+  );
+}
+
+/**
+ * 덱 옆 강의록 파일명. 길면 강의명 쪽만 줄이고 끝의 판(v3)은 늘 보인다(2026-11-10 사용자 지시).
+ * 필기 파일명 꼴은 `[260813_03]제목(교수)_필기자v3.pdf`(runner/filenames.py). 앞의 날짜·교시는 떼고 전체 이름은 title에 둔다.
+ */
+export function splitNotesName(filename: string): { head: string; version: string } {
+  const bare = filename.normalize("NFC").replace(/\.[a-z0-9]{1,5}$/i, "")
+    .replace(/^\s*[[(]\s*\d{6}\s*_\s*\d{1,2}(?:\s*~\s*\d{1,2})?\s*[\])}]\s*/, "");
+  const tail = bare.match(/[vV]\s*\.?\s*(\d+)\s*$/);
+  if (!tail) return { head: bare.trim(), version: "" };
+  return { head: bare.slice(0, tail.index).replace(/[\s_]+$/, ""), version: `v${tail[1]}` };
+}
+
+function DeckSource({ filename }: { filename: string }) {
+  const { head, version } = splitNotesName(filename);
+  return (
+    <span className="deck-source" title={filename}>
+      <span className="deck-source-head">{head}</span>
+      {version ? <span className="deck-source-version">{version}</span> : null}
+    </span>
   );
 }
 
