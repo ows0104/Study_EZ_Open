@@ -19,6 +19,7 @@ import copy
 import hashlib
 import json
 import re
+import threading
 from pathlib import Path
 
 from studyez_llm import codex
@@ -29,7 +30,9 @@ from studyez_contracts.roots import map_tree
 from studyez_contracts.roots.automation import validate_checks
 from studyez_contracts.roots.source_assessment import envelope
 from studyez_contracts.bank.validate import validate_bank
+from . import connection_batches as batches
 from . import connection_visuals as visual
+from .connection_batches import BATCH_MODE
 
 POLICY = v3.POLICY
 COVERAGE_CHUNK = 60      # goals per coverage call (plan U2)
@@ -57,6 +60,9 @@ class Stages:
         from . import connection_generate as g
         self.g, self.out, self.model, self.invoke, self.policy = g, Path(out), model, invoke, policy
         self.path = self.out / 'ledger.json'
+        # Batches and other independent judgments of one run call stages side by side (connection_batches);
+        # every change to the ledger and its file happens under this lock.
+        self.lock = threading.RLock()
         identity = document_hash({'base': g.identity(packet, model), 'v3': policy, 'prompts': _prompt_hash(prompts)})
         if self.path.exists():
             self.ledger = json.loads(self.path.read_text(encoding='utf-8'))
@@ -74,12 +80,38 @@ class Stages:
             v3.require(not any(p.name != 'packet.json' for p in self.out.glob('*.json')), '기존 산출물의 ledger가 없습니다. 자동 재시작하지 않습니다.')
             self.out.mkdir(parents=True, exist_ok=True)
             self.ledger = {'pipelineVersion': policy, 'inputHash': packet['inputHash'], 'identity': identity, 'stages': {},
-                           'addRounds': 0, 'fixAttempts': {}, 'verdictLedger': []}
+                           'addRounds': 0, 'fixAttempts': {}, 'verdictLedger': [],
+                           # A new run reviews its batches side by side; a ledger without this key keeps the
+                           # one-after-another order it was made with (docs/changes/2026-11-11-root-batch-parallel).
+                           'batchMode': BATCH_MODE}
             self.resume_row = None
         self.save()
 
+    @property
+    def parallel(self):
+        return self.ledger.get('batchMode') == BATCH_MODE
+
     def save(self):
-        self.g.write(self.path, self.ledger)
+        with self.lock:
+            self.g.write(self.path, self.ledger)
+
+    def canonical(self, names):
+        """Put the ledger records of `names` in this order, where the first of them stands, whatever order the
+        calls finished in; review retries follow the stage order. The result then does not depend on timing."""
+        with self.lock:
+            stages = self.ledger['stages']
+            names = [n for n in dict.fromkeys(names) if n in stages]
+            if not names:
+                return
+            items = list(stages.items())
+            at = min(i for i, (k, _) in enumerate(items) if k in set(names))
+            rest = [(k, v) for k, v in items if k not in set(names)]
+            ordered = rest[:at] + [(n, stages[n]) for n in names] + rest[at:]
+            self.ledger['stages'] = dict(ordered)
+            position = {k: i for i, (k, _) in enumerate(ordered)}
+            if self.ledger.get('reviewRetries'):
+                self.ledger['reviewRetries'].sort(key=lambda r: position.get(r['stage'], len(position)))
+            self.save()
 
     def retire_legacy(self):
         """Stage names this code no longer produces (the lecture-wide `context-0`/`context-1` of the first /3
@@ -90,19 +122,25 @@ class Stages:
             self._archive(name)
         self.save()
 
-    def judged(self, name, ctx, accept):
+    def judged(self, name, ctx, accept, material=None):
         """A coverage or review stage that judged nothing, or a context judgment left unknown, runs once more in a
         fresh session (review-retry/1, as /2: empty-judgment, final-context-unknown).
 
         The runner has already sent the error back once into the same session; the abandoned stage is archived
         under .retry-<stage>/ and recorded in ledger reviewRetries. A second empty judgment stops the lecture."""
         try:
-            return self.run(name, ctx, accept)
+            return self.run(name, ctx, accept, material=material)
         except ValueError as error:
             if str(error) not in (v3.UNPERFORMED_COVERAGE, v3.UNPERFORMED_REVIEW, v3.UNPERFORMED_CONTEXT, v3.UNPERFORMED_MAP) or \
                     any(r['stage'] == name for r in self.ledger.get('reviewRetries', [])):
                 raise
             kind = 'empty-judgment'
+        with self.lock:
+            self._retire_for_retry(name, kind)
+        print('── 검토 포기(' + kind + '): ' + name + ' 새 세션으로 한 번 다시 실행', flush=True)
+        return self.run(name, ctx, accept, material=material)
+
+    def _retire_for_retry(self, name, kind):
         archive = self.out / f'.retry-{name}'
         archive.mkdir()
         moved = []
@@ -119,8 +157,6 @@ class Stages:
         self.ledger.setdefault('reviewRetries', []).append({'policy': 'review-retry/1', 'stage': name, 'kind': kind,
                                                             'abandoned': self.ledger['stages'].pop(name), 'files': moved})
         self.save()
-        print('── 검토 포기(' + kind + '): ' + name + ' 새 세션으로 한 번 다시 실행', flush=True)
-        return self.run(name, ctx, accept)
 
     def _archive(self, name):
         rows = self.ledger.setdefault('stageResumes', [])
@@ -136,37 +172,43 @@ class Stages:
             seat.replace(archive / '.native' / name)
         self.resume_row['superseded'].append({'name': name, 'entry': self.ledger['stages'].pop(name)})
 
-    def run(self, name, ctx, accept, state=None):
+    def run(self, name, ctx, accept, state=None, material=None):
         """One model stage. A completed stage with the same input is reused; anything else runs once.
 
         `state` (P6) is what the merge after this stage receives. It goes to the transport as `_check` so the
-        runner's in-session check runs that same merge; it is not part of the stage input or its hash."""
+        runner's in-session check runs that same merge; it is not part of the stage input or its hash.
+        `material` is the folder the stage reads; a review batch running beside others has its own copy."""
         ctx = {**ctx, '_pipeline_version': self.policy}
         input_hash = document_hash(ctx)
-        prior = self.ledger['stages'].get(name)
-        if prior and prior['status'] == 'completed' and prior['inputHash'] == input_hash:
-            return json.loads((self.out / (name + '.json')).read_text(encoding='utf-8'))
-        if prior:
-            v3.require(self.resume_row is not None, name + ': 중단/실패/달라진 호출은 자동 재실행하지 않습니다.')
-            self._archive(name)
-        entry = {'status': 'started', 'inputHash': input_hash}
-        self.ledger['stages'][name] = entry
-        self.save()
+        with self.lock:
+            prior = self.ledger['stages'].get(name)
+            if prior and prior['status'] == 'completed' and prior['inputHash'] == input_hash:
+                return json.loads((self.out / (name + '.json')).read_text(encoding='utf-8'))
+            if prior:
+                v3.require(self.resume_row is not None, name + ': 중단/실패/달라진 호출은 자동 재실행하지 않습니다.')
+                self._archive(name)
+            entry = {'status': 'started', 'inputHash': input_hash}
+            self.ledger['stages'][name] = entry
+            self.save()
         self.g.write(self.out / (name + '.input.json'), ctx)
         print('── 연결 자동출제 ' + self.policy[self.policy.index('/'):] + ' ' + name, flush=True)
         try:
-            raw, info = self.invoke(name, {**ctx, '_check': state} if state is not None else ctx, self.out / 'material', self.model)
+            raw, info = self.invoke(name, {**ctx, '_check': state} if state is not None else ctx,
+                                    Path(material) if material is not None else self.out / 'material', self.model)
             self.g.write(self.out / (name + '.raw.json'), raw)
             self.g.write(self.out / (name + '.usage.json'), info)
-            entry.update(rawOutputHash=document_hash(raw), usageHash=document_hash(info))
+            with self.lock:
+                entry.update(rawOutputHash=document_hash(raw), usageHash=document_hash(info))
             value = accept(raw)
             self.g.write(self.out / (name + '.json'), value)
-            entry.update(status='completed', outputHash=document_hash(value))
-            self.save()
+            with self.lock:
+                entry.update(status='completed', outputHash=document_hash(value))
+                self.save()
             return value
         except BaseException:
-            entry['status'] = 'failed'
-            self.save()
+            with self.lock:
+                entry['status'] = 'failed'
+                self.save()
             raise
 
 
@@ -262,7 +304,7 @@ def check_stage(kind, value, ctx, state, scratch):
     return value
 
 
-def _medical_batches(invoke):
+def _medical_batches(invoke, workers=1):
     """medical-0 as one stage of MEDICAL_BATCH-question calls (P6). One blind call over a whole 150-question bank
     risks omitted verdicts (the /2 recovery runner/root_medical_retry.py exists for that) and the 900 s call limit;
     each call here is a review-sized batch with only its questions, their facts and images. The stage input,
@@ -279,19 +321,30 @@ def _medical_batches(invoke):
 
         def ask(part):
             sub = {**bank, 'questions': part}
-            value, info = invoke(stage, {**ctx, 'bank': sub, 'clinicalInput': v2.medical_input(sub, conflicts)}, material, model)
+            return invoke(stage, {**ctx, 'bank': sub, 'clinicalInput': v2.medical_input(sub, conflicts)}, material, model)
+
+        def take(part, answer):
+            value, info = answer
             got = {r['question_id'] for r in value['reviews']}
             rows.extend(r for r in value['reviews'] if r['question_id'] in {q['question_id'] for q in part})
             pool.extend(value.get('pool_checks', []))
             summaries.append(value['summary'])
             infos.append(info)
             return [q for q in part if q['question_id'] not in got]
-        for part in chunks([q for q in bank['questions'] if q['question_id'] in sent], MEDICAL_BATCH):
+
+        # A new run asks its batches side by side (docs/changes/2026-11-11-root-batch-parallel); the answers are
+        # taken in batch order, each batch's second ask right after its first, as the one-after-another order did.
+        parts = chunks([q for q in bank['questions'] if q['question_id'] in sent], MEDICAL_BATCH)
+        firsts = batches.parallel_calls([lambda part=part: ask(part) for part in parts], workers)
+        left = [[q for q in part if q['question_id'] not in {r['question_id'] for r in answer[0]['reviews']}]
+                for part, answer in zip(parts, firsts)]
+        seconds = iter(batches.parallel_calls([lambda part=part: ask(part) for part in left if part], workers))
+        for part, answer, again in zip(parts, firsts, left):
             # A verdict the call left out is asked once more, alone; one still missing is recorded, not invented,
             # and never stops the lecture (the medical review is a note, not a gate: medical-final/1).
-            missing = ask(part)
+            missing = take(part, answer)
             if missing:
-                missing = ask(missing)
+                missing = take(again, next(seconds))
             unreviewed += [{'question_id': q['question_id'], 'reason': '의학 검토가 두 번의 호출에서 이 문항의 판정을 내지 않았다'} for q in missing]
         rows += [v3.unreviewed_row(r['question_id'], r['reason']) for r in unreviewed]
         order = {q['question_id']: i for i, q in enumerate(bank['questions'])}
@@ -352,17 +405,17 @@ def run(packet, out, model, invoke, resume=None):
                        lambda raw: v3.check_brief_fix(raw, {'brief': brief}))
         brief = v2.blank_target_importance(fixed['brief']) if table is not None else fixed['brief']
 
-    # 2: coverage -----------------------------------------------------------
+    # 2: coverage, 2m: map check (independent judgments; side by side in a new run) ----------------------
     rows = {}
     dids = [d['direction_id'] for t in brief['targets'] for d in t['directions']]
-    for k, part in enumerate(chunks(dids, COVERAGE_CHUNK)):
-        ctx = v3.coverage_input(brief, bank, part)
-        value = st.judged(f'v3-coverage-0-{k}', ctx, lambda raw, ctx=ctx: v3.check_coverage(raw, ctx['goals'], ctx['questions']))
-        rows.update({r['direction_id']: r for r in value['rows']})
-
-    # 2m: map check ---------------------------------------------------------
+    calls = [(f'v3-coverage-0-{k}', ctx, lambda raw, ctx=ctx: v3.check_coverage(raw, ctx['goals'], ctx['questions']))
+             for k, ctx in enumerate(v3.coverage_input(brief, bank, part) for part in chunks(dids, COVERAGE_CHUNK))]
     ctx = v3.map_check_input(brief, table)
-    map_checks = [st.judged('v3-map-check-0', ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx))]
+    calls.append(('v3-map-check-0', ctx, lambda raw, ctx=ctx: v3.check_map_input(raw, ctx)))
+    values = batches.judgments(st, calls)
+    for value in values[:-1]:
+        rows.update({r['direction_id']: r for r in value['rows']})
+    map_checks = [values[-1]]
 
     # 2a: off-goal questions → supplement points ----------------------------
     judged = {e['question_id'] for r in rows.values() for e in r['evidence']}
@@ -437,93 +490,110 @@ def run(packet, out, model, invoke, resume=None):
                 rows[r['direction_id']] = _merge_row(rows[r['direction_id']], r)
 
     # 4: item review and fixes by batch -------------------------------------
+    # Batches start from one snapshot and run side by side unless a conflict record or a prerequisite link joins
+    # two of them (connection_batches, docs/changes/2026-11-11-root-batch-parallel); otherwise one after another.
     source_ids = [s['id'] for s in packet['sources']]
-    reviews, fixes = {}, []
 
-    def covered_by():
+    def covered_by(S):
         cov = {}
-        for did, r in rows.items():
+        for did, r in S.rows.items():
             for q in v3.covering(r):
                 cov.setdefault(q, []).append(did)
         return cov
 
-    def review_batch(name, qids):
+    def review_batch(S, stages, name, qids):
         """Reviews of `qids`: a recorded verdict for the same content is reused (P2); only the rest are asked."""
         got, todo = {}, []
-        for q in bank['questions']:
+        for q in S.bank['questions']:
             if q['question_id'] not in qids:
                 continue
-            again = v3.reusable(ledger['verdictLedger'], 'item', q['question_id'], v3.item_hash(q, bank, conflicts))
+            again = v3.reusable(S.verdicts, 'item', q['question_id'], v3.item_hash(q, S.bank, S.conflicts))
             if again is not None:
                 got[q['question_id']] = again
             else:
                 todo.append(q['question_id'])
         if not todo:
             return got
-        ctx = v3.review_input(bank, todo, conflicts)
-        value = st.judged(name, ctx, lambda raw: v3.check_review_input(raw, ctx))
-        by_id = {q['question_id']: q for q in bank['questions']}
+        ctx = v3.review_input(S.bank, todo, S.conflicts)
+        value = stages.judged(name, ctx, lambda raw: v3.check_review_input(raw, ctx))
+        by_id = {q['question_id']: q for q in S.bank['questions']}
         for r in value['reviews']:
             got[r['question_id']] = r
-            entry = v3.ledger_entry('item', r['question_id'], v3.item_hash(by_id[r['question_id']], bank, conflicts), r, name)
-            if entry not in ledger['verdictLedger']:   # a resumed run replays the same records
-                ledger['verdictLedger'].append(entry)
+            entry = v3.ledger_entry('item', r['question_id'], v3.item_hash(by_id[r['question_id']], S.bank, S.conflicts), r, name)
+            if entry not in S.verdicts:   # a resumed run replays the same records
+                S.verdicts.append(entry)
         st.save()
         return got
 
-    def fix_round(name, review_name, coverage_name, targets, findings):
+    def fix_round(S, stages, name, review_name, coverage_name, targets, findings):
         """One fix stage, the re-review of what it changed, reverts, and the narrowed coverage re-check.
 
         A revert takes back everything the reverted question brought: the bank is merged again from the state
         before the fix with only the kept questions, their images and the conflicts they cite. Restoring only
         the question left a conflict record no question cited (CF-POLIO-28, 261102_02) and images of a
         reverted version in the stimuli list (Q134)."""
-        nonlocal bank, conflicts, stimuli
-        ctx = v3.fix_input(bank, findings, targets, conflicts, covered_by())
-        state = _state(bank, conflicts, stimuli, packet)
-        value = st.run(name, ctx, lambda raw, ctx=ctx, state=state: check_stage('fix', raw, ctx, state, out / '.check-render' / name), state)
-        before = (copy.deepcopy(bank), copy.deepcopy(conflicts), copy.deepcopy(stimuli))
-        before_reviews = {q: reviews[q] for q in targets}
+        ctx = v3.fix_input(S.bank, findings, targets, S.conflicts, covered_by(S))
+        if S.scope:
+            ctx['conflict_scope'] = S.scope
+        state = _state(S.bank, S.conflicts, S.stimuli, packet)
+        value = stages.run(name, ctx, lambda raw, ctx=ctx, state=state: check_stage('fix', raw, ctx, state, out / '.check-render' / name), state)
+        before = (copy.deepcopy(S.bank), copy.deepcopy(S.conflicts), copy.deepcopy(S.stimuli))
+        before_reviews = {q: S.reviews[q] for q in targets}
         cited = {q.get('conflict_id') for q in value['questions'] if q.get('conflict_id')}
-        restated.extend({'stage': name, **r} for r in v3.restated(visual.authored(bank), conflicts, value, cited))
-        merged, conflicts, changed = v3.merge_fixes(visual.authored(bank), conflicts, value, targets)
-        stimuli = [s for s in stimuli if s['question_id'] not in set(changed)] + value['visual_stimuli']
-        bank = visual.render(merged, stimuli, packet, out / 'material')
-        again = review_batch(review_name, set(changed))
+        S.restated.extend({'stage': name, **r} for r in v3.restated(visual.authored(S.bank), S.conflicts, value, cited))
+        merged, S.conflicts, changed = v3.merge_fixes(visual.authored(S.bank), S.conflicts, value, targets)
+        S.stimuli = [s for s in S.stimuli if s['question_id'] not in set(changed)] + value['visual_stimuli']
+        S.bank = visual.render(merged, S.stimuli, packet, S.material)
+        again = review_batch(S, stages, review_name, set(changed))
         reverted = [q for q in changed if q in again and v3.worse(before_reviews[q], again[q])]
         kept = [q for q in changed if q not in reverted]
         if reverted and not kept:
-            bank, conflicts, stimuli = before
+            S.bank, S.conflicts, S.stimuli = before
         elif reverted:
             part = v3.fixes_of(value, kept)
-            merged, conflicts, _ = v3.merge_fixes(visual.authored(before[0]), before[1], part, targets)
-            stimuli = [s for s in before[2] if s['question_id'] not in set(kept)] + part['visual_stimuli']
-            bank = visual.render(merged, stimuli, packet, out / 'material')
+            merged, S.conflicts, _ = v3.merge_fixes(visual.authored(before[0]), before[1], part, targets)
+            S.stimuli = [s for s in before[2] if s['question_id'] not in set(kept)] + part['visual_stimuli']
+            S.bank = visual.render(merged, S.stimuli, packet, S.material)
         for q in changed:
-            reviews[q] = before_reviews[q] if q in reverted else again.get(q, reviews[q])
-            fixes.append({'question_id': q, 'attempt': attempts[q], 'stage': name, 'reverted': q in reverted})
-        goals = sorted({did for q in kept for did, r in rows.items() if any(e['question_id'] == q for e in r['evidence'])})
+            S.reviews[q] = before_reviews[q] if q in reverted else again.get(q, S.reviews[q])
+            S.fixes.append({'question_id': q, 'attempt': S.attempts[q], 'stage': name, 'reverted': q in reverted})
+        goals = sorted({did for q in kept for did, r in S.rows.items() if any(e['question_id'] == q for e in r['evidence'])})
         if goals:
-            ctx = v3.coverage_input(brief, bank, goals, kept)
-            got = st.judged(coverage_name, ctx, lambda raw, ctx=ctx: v3.check_coverage(raw, ctx['goals'], ctx['questions']))
+            ctx = v3.coverage_input(brief, S.bank, goals, kept)
+            got = stages.judged(coverage_name, ctx, lambda raw, ctx=ctx: v3.check_coverage(raw, ctx['goals'], ctx['questions']))
             for r in got['rows']:
-                rows[r['direction_id']] = _merge_row(rows[r['direction_id']], r, kept)
+                S.rows[r['direction_id']] = _merge_row(S.rows[r['direction_id']], r, kept)
+            S.coverage.append((got['rows'], kept, goals))
 
-    order = [q['question_id'] for q in bank['questions']]
-    attempts = {}   # replayed from fixed stage names (v3-fix-<batch>-<k>); the ledger keeps the maximum seen
-    for b, batch in enumerate(chunks(order, REVIEW_BATCH)):
-        reviews.update(review_batch(f'v3-review-{b}-0', set(batch)))
+    def count_attempts(S, targets):
+        with st.lock:
+            for q in targets:
+                S.attempts[q] = S.attempts.get(q, 0) + 1
+                ledger['fixAttempts'][q] = max(ledger['fixAttempts'].get(q, 0), S.attempts[q])
+            st.save()
+
+    def batch_body(b, batch, S, stages):
+        S.reviews.update(review_batch(S, stages, f'v3-review-{b}-0', set(batch)))
         for k in range(v3.FIX_LIMIT):
-            code = _bank_findings(bank, source_ids)
-            targets = [q for q in batch if (v3.needs_fix(reviews[q]) or q in code) and attempts.get(q, 0) < v3.FIX_LIMIT]
+            code = _bank_findings(S.bank, source_ids)
+            targets = [q for q in batch if (v3.needs_fix(S.reviews[q]) or q in code) and S.attempts.get(q, 0) < v3.FIX_LIMIT]
             if not targets:
                 break
-            for q in targets:
-                attempts[q] = attempts.get(q, 0) + 1
-                ledger['fixAttempts'][q] = max(ledger['fixAttempts'].get(q, 0), attempts[q])
-            st.save()
-            findings = [{**reviews[q], 'code_findings': code.get(q, [])} for q in targets]
-            fix_round(f'v3-fix-{b}-{k}', f'v3-review-{b}-{k + 1}', f'v3-coverage-fix-{b}-{k}', targets, findings)
+            count_attempts(S, targets)
+            findings = [{**S.reviews[q], 'code_findings': code.get(q, [])} for q in targets]
+            fix_round(S, stages, f'v3-fix-{b}-{k}', f'v3-review-{b}-{k + 1}', f'v3-coverage-fix-{b}-{k}', targets, findings)
+
+    def apply_coverage(rows_, got_rows, judged_ids):
+        for r in got_rows:
+            rows_[r['direction_id']] = _merge_row(rows_[r['direction_id']], r, judged_ids)
+
+    order = [q['question_id'] for q in bank['questions']]
+    # attempts are replayed from fixed stage names (v3-fix-<batch>-<k>); the ledger keeps the maximum seen
+    S = batches.Batch(bank=bank, conflicts=conflicts, stimuli=stimuli, rows=rows, reviews={}, fixes=[], attempts={},
+                      restated=restated, verdicts=ledger['verdictLedger'])
+    S = batches.review_phase(st, out, chunks(order, REVIEW_BATCH), S, batch_body, apply_coverage)
+    bank, conflicts, stimuli, rows = S.bank, S.conflicts, S.stimuli, S.rows
+    reviews, fixes, attempts, restated = S.reviews, S.fixes, S.attempts, S.restated
 
     # context per conflict record (+ one repair) ------------------------------
     # A verdict reaches the conflict record or question it names: facts not judged consistent are not sent to the
@@ -545,14 +615,13 @@ def run(packet, out, model, invoke, resume=None):
         ledger.setdefault('contextRepairs', [])
         if not ledger['contextRepairs']:
             ledger['contextRepairs'].append({'stage': 'v3-context-0', 'open': v3.context_open(context_judgments[0]), 'targets': targets})
-        for q in targets:
-            attempts[q] = attempts.get(q, 0) + 1
-            ledger['fixAttempts'][q] = max(ledger['fixAttempts'].get(q, 0), attempts[q])
-        st.save()
+        count_attempts(S, targets)
         notes = v3.context_findings(bank, context_judgments[0], targets)
         code = _bank_findings(bank, source_ids)
         findings = [{**reviews[q], 'code_findings': [*code.get(q, []), *notes.get(q, [])]} for q in targets]
-        fix_round('v3-fix-context-0', 'v3-review-context-1', 'v3-coverage-fix-context-0', targets, findings)
+        S.bank, S.conflicts, S.stimuli = bank, conflicts, stimuli
+        fix_round(S, batches.BatchStages(st, S), 'v3-fix-context-0', 'v3-review-context-1', 'v3-coverage-fix-context-0', targets, findings)
+        bank, conflicts, stimuli = S.bank, S.conflicts, S.stimuli
         present = {c['conflict_id'] for c in [*bank.get('source_conflicts', []), *conflicts]}
         cited = {q['conflict_id'] for q in bank['questions'] if q.get('conflict_id')} | set(intake_conflict_ids)
         again = sorted(({q['conflict_id'] for q in bank['questions'] if q['question_id'] in set(targets) and q.get('conflict_id')}
@@ -592,7 +661,7 @@ def run(packet, out, model, invoke, resume=None):
     # medical (once, medical-final/1) -----------------------------------------
     clinical_input, _ = v3.medical_parts(bank, v3.context_sent(conflicts, context))
     med_ctx = {'title': packet['title'], 'bank': bank, 'clinicalInput': clinical_input, 'medicalFinal': True}
-    st.invoke = _medical_batches(invoke)
+    st.invoke = _medical_batches(invoke, workers=batches.BATCH_WORKERS if st.parallel else 1)
     medical = st.run('medical-0', med_ctx, lambda raw: validate_checks(raw, bank))
     medical_unreviewed = [{'question_id': r['question_id'], 'reason': r['note'][len(v3.UNREVIEWED_NOTE):]}
                           for r in medical['reviews'] if r['note'].startswith(v3.UNREVIEWED_NOTE)]
@@ -620,6 +689,7 @@ def run(packet, out, model, invoke, resume=None):
                   **({'stageResumes': ledger['stageResumes']} if ledger.get('stageResumes') else {}),
                   **({'reviewRetries': ledger['reviewRetries']} if ledger.get('reviewRetries') else {}),
                   **({'contextRepairs': ledger['contextRepairs']} if ledger.get('contextRepairs') else {}),
+                  **({'batchPhases': ledger['batchPhases']} if ledger.get('batchPhases') else {}),
                   # map-tree/2: the server re-derives this packet from its request (studyez_contracts.roots.map_tree).
                   **({'derivedPacket': map_tree.public(packet), 'auditOpen': packet['frontStages']['openPoints']}
                      if 'derivedFrom' in packet else {})}}

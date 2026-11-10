@@ -535,9 +535,28 @@ def check_fixed(value, ctx, state=None):
         for key in ('concept_id', 'point_ids'):
             require(q.get(key) == given[q['question_id']].get(key), f'v3 fix: {q["question_id"]} changed {key}')
     require(all(s['question_id'] in ids for s in value['visual_stimuli']), 'v3 fix: images only for fixed questions')
+    if 'conflict_scope' in ctx:
+        check_conflict_scope(value, ctx['conflict_scope'])
     if state is not None:
         merge_fixes(state['bank'], state['clinical_conflicts'], value, list(given))
     return value
+
+
+def check_conflict_scope(value, scope):
+    """A fix in a batch that runs beside others (docs/changes/2026-11-11-root-batch-parallel): a new conflict ID
+    starts with the batch's prefix, and the facts it may write again are its own batch's conflicts. Two batches
+    then never write the same record, and merging them in batch order is what the one-after-another order gives."""
+    prefix, own, known = scope['new_conflict_id_prefix'], set(scope['own_conflict_ids']), set(scope['known_conflict_ids'])
+    for key in ('source_conflicts', 'clinical_conflicts'):
+        for c in value[key]:
+            cid = c['conflict_id']
+            if cid not in known:
+                require(cid.startswith(prefix), f'v3 fix: a new conflict ID in this batch starts with {prefix} (not {cid})')
+    cited = {q.get('conflict_id') for q in value['questions'] if q.get('conflict_id')}
+    for c in value['clinical_conflicts']:
+        cid = c['conflict_id']
+        require(cid not in known or cid not in cited or cid in own,
+                f'v3 fix: {cid} belongs to another batch; cite it without writing its facts again')
 
 
 def check_supplement(value, ctx, state=None):

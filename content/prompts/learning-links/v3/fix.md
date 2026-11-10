@@ -9,6 +9,8 @@ root-generation/3 단계다(docs/changes/2026-11-10-root-generation-3). input.js
 
 source_conflicts에는 고치면서 새로 드러난 원본 충돌만 쓴다. 입력 source_conflicts의 기존 충돌은 그대로 유지되므로 다시 쓰지 않는다. clinical_conflicts에는 새 conflict_id마다 facts를 쓰고, 고친 문항이 인용하는 기존 충돌의 facts는 고친 내용 때문에 바뀌어야 할 때만 그 충돌 것을 다시 쓴다. facts에는 실제 원본의 충돌 주장과 현재 의학 답의 관계만 명시한다. 과거 sourceAudit/medical verdict, 검수자 판단, 수정 차수, 중요도는 넣지 않는다. 의학적으로 필요한 충돌 사실은 누락하지 않는다. 독립 원본 검수가 이 projection과 정본의 일치·완전성을 확인하고 정답 검수는 이 의학적 내용만 받는다.
 
+입력에 conflict_scope가 있으면 이 문항 묶음은 다른 묶음과 동시에 고쳐진다. 새로 만드는 conflict_id(원본 충돌·임상 사실 모두)는 new_conflict_id_prefix로 시작한다. 기존 충돌의 facts는 own_conflict_ids에 있는 것만 다시 쓸 수 있다. 다른 묶음의 기존 충돌은 인용할 수 있지만 그 facts는 다시 쓰지 않는다.
+
 ## 옮긴 규칙 (author-v2.md)
 
 각 문항은 학습자가 한 번에 수행할 명확한 회상 또는 판단을 요구한다. 하나의 넓은 목표는 명시된 recall_units별 여러 문항으로 구현할 수 있다. 각 문항은 자신이 맡은 회상 단위의 필요한 내용을 답하게 한다. 실제 종합 판단 방향은 그 판단을 수행하는 별도 문항으로 확인한다. 목표 누락을 고치려고 독립 요구나 주의 설명을 한 발문에 계속 덧붙이지 않는다.

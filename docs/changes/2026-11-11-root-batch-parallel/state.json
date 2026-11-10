@@ -1,0 +1,179 @@
+{
+  "id": "2026-11-11-root-batch-parallel",
+  "title": "Main-Quiz 생성 검수·수정 묶음 병렬화",
+  "area": "generation",
+  "created_at": "2026-11-10T16:31:55.882733+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-10T16:35:13.482190+00:00",
+      "evidence": "2026-11-11 사용자 채팅: 「현재메인퀴즈만드는시간을 더 단축시킬수는 없을까?」 → 「병렬화 계획 세워줘」 → (계획 제시: 묶음 동시 실행·결합 시 순차·묶음별 새 충돌 ID 접두어 추천) → 「계획대로 진행」",
+      "scope": "plan.md 1~7: v3·v4 생성기 4단계 병렬 묶음, 첫 커버리지·지도 점검·의학 묶음 동시, 충돌 범위 검사·fix 지시문 문단, 새 검사, 로컬 검사, PR. 실제 모델 재생·master 병합·러너 재설치 제외",
+      "evidence_version": 2,
+      "source_hash": "7789369dd175d44c83103a2d7645c371d93f264dc52b80e14f9b9ac8bd8dab90",
+      "plan_hash": "ddaa4245b6d83fb2329e581c8e0e27d9bee9b47bbc42e65bd7481a1b633e53b8",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "1548d0c2b10934208b3dd93f59ecf50643f129433912fa50009301bae6ccb368"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-10T16:54:23.894613+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/quizbank",
+        "tests/contracts",
+        "tests/runner",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 2,
+      "evidence_version": 2,
+      "source_hash": "bb2c8c10157d2c96074a5985ba54b3e2be0a10d36d14e754941b05b9a0f70ef0",
+      "plan_hash": "ddaa4245b6d83fb2329e581c8e0e27d9bee9b47bbc42e65bd7481a1b633e53b8",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-11-root-batch-parallel/1794329448626597100-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-10T16:58:10.395738+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/quizbank",
+        "tests/contracts",
+        "tests/runner",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--deselect",
+        "tests/runner/test_desktop_control.py::test_shortcut_installer_supports_korean_filename_in_windows_powershell"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "4cf7b08db5492ea3b1ff292bfcbbfb9c0f1a32047b7efac2698596feb2937123",
+      "plan_hash": "ddaa4245b6d83fb2329e581c8e0e27d9bee9b47bbc42e65bd7481a1b633e53b8",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-11-root-batch-parallel/1794329676105538700-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-10T17:02:34.465688+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/quizbank",
+        "tests/contracts",
+        "tests/runner",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--deselect",
+        "tests/runner/test_desktop_control.py::test_shortcut_installer_supports_korean_filename_in_windows_powershell"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "4cf7b08db5492ea3b1ff292bfcbbfb9c0f1a32047b7efac2698596feb2937123",
+      "plan_hash": "ddaa4245b6d83fb2329e581c8e0e27d9bee9b47bbc42e65bd7481a1b633e53b8",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-11-root-batch-parallel/1794329908596689100-regression.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-10T17:02:51.989718+00:00",
+    "summary": "자체 검토(독립 리뷰 아님). 경계: 순차 경로는 기존 입력·단계 이름 그대로(기존 v3·v4 검사 통과), 병렬은 batchMode 있는 새 ledger만. 동시성: Stages ledger 변경·저장 잠금, 묶음별 material 복사(러너 NativeJson의 material 불변 검사가 다른 묶음 그림 쓰기로 깨지는 문제 회피), 그림 렌더·사본 쓰기 모듈 잠금(PyMuPDF 비스레드안전). 합치기: 문항·그림·근거는 묶음 문항 것, 새 충돌은 접두어로 유일, 기존 임상 사실은 own 범위만 → 두 묶음이 같은 기록을 못 씀. 남은 위험: 묶음이 다른 묶음의 수정·covered_by 갱신을 못 봄(결합 검사·R6으로 축소), 러너 ETA 통계가 동시 단계 시간을 짧게 잼(표시용), 실제 Codex 3동시 호출은 합성 검사로만 확인 — 실제 모델 재생 미실행.",
+    "evidence_version": 2,
+    "source_hash": "4cf7b08db5492ea3b1ff292bfcbbfb9c0f1a32047b7efac2698596feb2937123",
+    "plan_hash": "ddaa4245b6d83fb2329e581c8e0e27d9bee9b47bbc42e65bd7481a1b633e53b8",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-10T17:02:52.049910+00:00"
+}
