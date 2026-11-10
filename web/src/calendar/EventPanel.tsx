@@ -351,16 +351,16 @@ function KeyActions({
           <ReadEditor lecture={lecture} base={base} preOpen={Boolean(detail.prequiz)} preDone={preDone}
             initial={detail.noteReads ?? 0} onError={setError} />
         </div>
-        <div className="stat-row is-top">
-          <span className="stat-label">메모</span>
-          <LectureMemo base={base} initial={detail.myMemo ?? ""} onError={setError} />
-        </div>
         <div className="stat-row">
           <span className="stat-label">학습률</span>
           <span className="stat-rate">
             <b className={`rate-text ${rateBand(rate)}`}>{rate === null ? "0%" : `${rate}%`}</b>
             <ReviewMeter score={rate} />
           </span>
+        </div>
+        <div className="stat-row is-top">
+          <span className="stat-label">메모</span>
+          <LectureMemo base={base} initial={detail.myMemo ?? ""} onError={setError} />
         </div>
         {study?.cardProgress ? (
           <div className="stat-row is-top">
