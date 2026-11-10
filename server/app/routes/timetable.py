@@ -24,6 +24,7 @@ from app.root_learning import content as root_content
 from app.models import Lecture, TimetableEvent
 from app.preview_sources import public_source
 from app.routes.common import asset_grabs, bank_timelines, grab_tracks, material_marks, prequiz_progress
+from app.routes.lecture_notes import note_read_counts
 
 router = APIRouter()
 
@@ -59,6 +60,7 @@ def read_timetable(
             marks[key]["quiz"] = timeline.pop("ready")
     progress = prequiz_progress(db, user.id, keys) if include_study else {}
     grabs = asset_grabs(db, user.id, keys) if include_study else {}
+    reads = note_read_counts(db, user.id, keys) if include_study else {}
     overviews = lecture_overviews(db, user.id, keys, is_admin=user.is_admin, include_cards=include_cards) if include_study else {}
     for key, overview in overviews.items():
         marks[key]["quiz"] = overview["ready"]
@@ -90,6 +92,8 @@ def read_timetable(
                 # 화면이 아는 것은 "이 자리를 손댔다"까지이고, Anki 안에서
                 # 얼마나 풀었는지는 여기서도 저기서도 볼 수 없다.
                 "grabbed": grab_tracks(grabs.get(key, set())),
+                # 본인 강의록 회독 수(칸의 회독 줄).
+                "noteReads": reads.get(key, 0),
             }
         )
 

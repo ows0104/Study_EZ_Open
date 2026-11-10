@@ -86,6 +86,9 @@ POST /api/me/notes
 GET /api/me/notes/{note_id}
 PUT /api/me/notes/{note_id}
 DELETE /api/me/notes/{note_id}
+POST /api/lectures/{subject}/{run_id}/note-reads
+DELETE /api/lectures/{subject}/{run_id}/note-reads/last
+PUT /api/lectures/{subject}/{run_id}/my-memo
 PUT /api/lectures/{subject}/{run_id}/bank/questions/{question_id}/priority
 PUT /api/lectures/{subject}/{run_id}/bank/questions/{question_id}/suspension
 POST /api/bank/batch/next

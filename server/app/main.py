@@ -16,6 +16,7 @@ from app.routes import (
     cards,
     feedback,
     lectures,
+    lecture_notes,
     local_storage,
     me,
     notes,
@@ -72,6 +73,7 @@ app.include_router(quiz_publication.router, prefix="/api")
 app.include_router(study_plan.router, prefix="/api")
 app.include_router(study_visibility.router, prefix="/api")
 app.include_router(lectures.router, prefix="/api")
+app.include_router(lecture_notes.router, prefix="/api")
 # 여러 편의 덱을 한 파일로. **합치는 것은 브라우저다** — 여기는 목록과 서명만 준다
 # (`routes/bundles.py` 첫머리에 왜인지 적혀 있다).
 app.include_router(bundles.router, prefix="/api")

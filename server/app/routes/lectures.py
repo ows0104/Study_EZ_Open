@@ -38,6 +38,7 @@ from app.models import (
 )
 from app.preview_links import conversation_url as valid_conversation_url
 from app.preview_links import provider as valid_provider
+from app.routes.lecture_notes import my_memo, note_read_counts
 from app.preview_sources import public_source
 from app.routes import bank as quiz_bank
 from app.routes import cards, prequiz
@@ -198,6 +199,9 @@ def read_lecture(
             else None
         ),
         "prequiz": pre_quiz,
+        # 본인 강의록 회독 수와 메모. 남의 것은 안 나간다.
+        "noteReads": note_read_counts(db, user.id, [(lecture.subject, lecture.run_id)]).get((lecture.subject, lecture.run_id), 0),
+        "myMemo": my_memo(db, user.id, lecture.subject, lecture.run_id),
         # **2026-08-31에 생겼고 그 전에 구운 편에는 없다.** 문항이 없으면 `null`이라
         # 화면이 웹 풀이를 아예 안 그린다 — 덱만 있는 편과 같은 자리다.
         "mainquiz": main_quiz,

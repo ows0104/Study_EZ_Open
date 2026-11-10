@@ -2502,3 +2502,33 @@ button.event-panel-note:hover {
 /* 패널을 열어 좁아지면 제목을 지키고 오늘 카드는 오른쪽 아래 줄로 */
 .calendar-page.is-split .calendar-head { flex-wrap: wrap; row-gap: 8px; }
 .calendar-page.is-split .today-board { margin-left: auto; }
+
+/* 강의록 회독(2026-11-10 2단계): 진한 회색 토막. 패널에서는 누르면 지운다(빨강), 끝에 +. */
+.readline i.rl-note { background: color-mix(in srgb, var(--ink-3) 70%, var(--surface)); box-shadow: none; }
+.read-editor { display: inline-flex; align-items: center; gap: 8px; min-height: 26px; }
+.read-editor .readline { height: 14px; overflow: visible; }
+.read-editor .rl-note.is-button {
+  position: relative; display: block; flex: none; width: 22px; height: 14px; min-height: 0; padding: 0; border: 0;
+  background: none; cursor: pointer;
+}
+.read-editor .rl-note.is-button::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 5px; margin-top: -2.5px; border-radius: 2px;
+  background: color-mix(in srgb, var(--ink-3) 70%, var(--surface));
+}
+.read-editor .rl-note.is-button:hover::after { background: var(--exam, #c13f37); }
+.read-count { font-size: 12.5px; color: var(--ink-3); }
+.read-plus {
+  display: grid; place-items: center; width: 24px; height: 24px; min-height: 0; padding: 0; border-radius: 7px;
+  border: 1px dashed var(--line-strong); background: none; color: var(--ink-3); font-size: 16px; line-height: 1; cursor: pointer;
+}
+.read-plus:hover:not(:disabled) { color: var(--ink); border-color: var(--ink-3); background: var(--hover); }
+.read-undo {
+  min-height: 0; padding: 0; border: 0; background: none; color: var(--ink-2); font-size: 12.5px; font-weight: 600;
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.lecture-memo { display: block; flex: 1; min-width: 0; }
+.lecture-memo textarea {
+  box-sizing: border-box; display: block; width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--surface); color: var(--ink); font: inherit; font-size: 13.5px; line-height: 1.5; resize: none;
+}
+.lecture-memo textarea:focus { outline: none; border-color: var(--line-strong); }
