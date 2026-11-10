@@ -314,7 +314,7 @@ def result(p):
     meta = {'pipelineVersion': c.POLICY, 'inputHash': p['inputHash'], 'briefHash': document_hash(b), 'bankHash': document_hash(bank),
             'model': 'synthetic', 'runtimeHash': '0' * 64, 'stages': stages, 'verdictLedger': ledger, 'verdictLedgerHash': document_hash(ledger),
             'addRounds': 1, 'notReady': [], 'offGoalQuestions': [], 'rejectedAtIntake': [], 'supplement': [],
-            'initialBrief': b, 'supplementPoints': None,
+            'initialBrief': b, 'supplementPoints': None, 'intakeProjection': c.intake_projection(bank)[1],
             'initialBank': copy.deepcopy(bank), 'coverage': covered(b), 'mapCheck': map_ok(b),
             'itemReviews': [review('Q1'), review('Q2')], 'clinicalContext': CONTEXT, 'clinicalConflicts': [], 'medicalFinal': True,
             'sourceAssessment': raw, 'fixes': []}
@@ -324,6 +324,7 @@ def result(p):
 def v3_packet():
     p = f.packet()
     p['generationPolicy'] = c.POLICY
+    p['intakeBank'] = {'bank': f.old.bank(), 'visual_stimuli': [], 'clinical_conflicts': []}
     return p
 
 
@@ -355,3 +356,23 @@ def test_a_v2_packet_never_accepts_a_v3_result():
     value = result(p)
     with pytest.raises(Exception):
         consume(value, f.packet())
+
+
+def test_intake_projection_sets_only_the_recomputed_bank_fields():
+    """261102_02 (2026-11-10): schema_version "BANK" with 3.2 importance numbers refused the whole bank."""
+    from studyez_contracts.bank.validate import validate_bank
+    bank = f.old.bank()
+    bank['build_meta']['schema_version'] = 'BANK'
+    bank['questions'][0].update(tier='Core', importance=5)
+    if bank['concepts'] and 'tier' in c.v2.AUTHOR_BANK['properties']['concepts']['items']['properties']:
+        bank['concepts'][0].update(tier='Important', importance=4)
+    value, changes = c.intake_projection(bank)
+    if bank['concepts'] and bank['concepts'][0].get('tier') == 'Important':
+        assert value['concepts'][0]['importance'] == 3
+    assert value['build_meta']['schema_version'] == '3.3' and value['questions'][0]['importance'] == 4
+    assert {'field': 'build_meta.schema_version', 'from': 'BANK', 'to': '3.3'} in changes
+    assert {'field': 'Q1.importance', 'from': 5, 'to': 4} in changes
+    strip = lambda b: [{k: v for k, v in q.items() if k != 'importance'} for q in b['questions']]
+    assert strip(value) == strip(bank)
+    assert not any('schema_version' in e or '중요도 수치' in e for e in validate_bank(value, ['S1'])['errors'])
+    assert c.intake_projection(value)[1] == []
