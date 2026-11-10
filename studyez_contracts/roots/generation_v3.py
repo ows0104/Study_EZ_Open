@@ -96,18 +96,63 @@ OUTPUTS = {'context': CONTEXT_OUTPUT, 'coverage': COVERAGE_OUTPUT, 'map-check': 
            'supplement': SUPPLEMENT_OUTPUT, 'add': ADD_OUTPUT, 'fix': FIX_OUTPUT}
 
 # ---------------------------------------------------------------- intake projection
+def _first_each(items):
+    """The list with each value's first occurrence only (order kept)."""
+    out = []
+    for x in items:
+        if x not in out:
+            out.append(x)
+    return out
+
+
+def _drop_repeats(bank):
+    """Repeated values in lists whose order and count carry no meaning, in place; returns the changes.
+
+    docs/changes/2026-11-11-intake-dedupe: the 261102_02 /4 trial (2026-11-11) stopped before any generation call
+    because concept C06's plan listed `reverse` twice; the same slip inside a question (prerequisites, correct
+    option IDs) dropped the whole question. Only exact repeats go: two different plans for one concept, or two
+    different summaries for one source, still stop the run as before."""
+    changes = []
+
+    def dedupe(container, key, field):
+        got = container.get(key)
+        if type(got) is list:
+            kept = _first_each(got)
+            if kept != got:
+                changes.append({'field': field, 'from': copy.deepcopy(got), 'to': copy.deepcopy(kept)})
+                container[key] = kept
+
+    for key, label in (('retrieval_plan', 'concept_id'), ('source_summary', 'source_id')):
+        rows = bank.get(key)
+        if type(rows) is list and all(type(r) is dict for r in rows):
+            kept = _first_each(rows)
+            if len(kept) != len(rows):
+                gone = [r.get(label) for i, r in enumerate(rows) if r in rows[:i]]
+                changes.append({'field': key, 'from': len(rows), 'to': len(kept), 'repeated': gone})
+                bank[key] = kept
+    for p in bank.get('retrieval_plan') or []:
+        if type(p) is dict:
+            dedupe(p, 'directions', f"{p.get('concept_id')}.directions")
+    for q in bank.get('questions') or []:
+        if type(q) is dict:
+            dedupe(q, 'prerequisites', f"{q.get('question_id')}.prerequisites")
+            dedupe(q, 'correct_option_ids', f"{q.get('question_id')}.correct_option_ids")
+    return changes
+
+
 def intake_projection(bank):
     """Fields of an independently authored bank that the assembly recomputes, set to the current bank format.
 
     An independent bank (1c) is written before the exam points' tiers exist; the assembly sets tier and
     importance from the point basis (generation_v2.project_importance, bank 3.3). The first real run
     (261102_02, 2026-11-10) wrote build_meta.schema_version "BANK" with 3.2 importance numbers, and the
-    whole bank was refused before any question was read. Only build_meta.schema_version and the importance
-    of each question and concept (the number of its own tier) change; every change is returned and recorded."""
+    whole bank was refused before any question was read. Only build_meta.schema_version, the importance
+    of each question and concept (the number of its own tier) and exact repeats in order-free lists
+    (`_drop_repeats`) change; every change is returned and recorded."""
     from studyez_contracts.bank.validate import SCHEMA_VERSIONS
     current = SCHEMA_VERSIONS[-1]
     value = copy.deepcopy(bank)
-    changes = []
+    changes = _drop_repeats(value)
     if value['build_meta'].get('schema_version') != current:
         changes.append({'field': 'build_meta.schema_version', 'from': value['build_meta'].get('schema_version'), 'to': current})
         value['build_meta']['schema_version'] = current
