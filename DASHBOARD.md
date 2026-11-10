@@ -26,7 +26,6 @@
 
 
 | P1 | Main-Quiz 문제 퀄리티 — 검사기에 측정 추가(구조 단서-정답 상관·정답 회상 부담·형식 쏠림) | ows0104 / Claude 문제 퀄리티 세션 | claude/bank-quality-checks | studyez_contracts/bank/quality.py, tests/quizbank/test_answer_quality.py(새 파일), docs/changes/2026-11-08-bank-quality-checks | 2026-11-08 | 사용자 2026-11-08 진단 뒤 「검사기에 측정 추가」 선택. 근거: 감염과 면역 261104_02 98문항 중 예/아니오 축 6문항 정답이 전부 부정, basic/list 답 60자 초과 21개, cloze·mcq 0개. 기존 품질 검사는 leaked_units(발문 정답 노출) 하나뿐. errors 아님 — warnings만 추가해 문항을 떨어뜨리지 않고 repair 단계·관리자 issues에 보인다. 선은 운영 Quiz Bank 35편 3,103문항의 p97에서 쟀다. 프롬프트·DB·운영 미변경. 구현·검사 완료 eff75a83 PR #22 https://github.com/ows0104/Study_EZ_Open/pull/22 — 측정 16·contracts·quizbank 720 통과, 전체 pytest 2,098 통과(1 실패는 tests/runner/test_desktop_control.py 바로가기 설치기로 pristine origin/master에서 동일 재현·미수정), 서버 bank 33·경로 171 동일·retention 통과, map_numbers 정상. 실물 대조: 새 Main-Quiz 98문항 errors 0·warnings 36(다섯 측정 모두, Q003·Q080 이름으로), 운영 은행 35편 새 경고 62(편당 중앙 2)·errors 증가 0. master 병합은 사용자 승인 대기 |
-| P0 | Main-Quiz 새 구조 두 번째 멈춤 수정: 추가 출제가 기존 임상 충돌 사실을 다시 쓰면 받지 않고 기존 것 유지·기록 | ows0104 / Claude 사슬알균 시범 세션 | claude/gen3-add-facts | studyez_contracts/roots/generation_v3.py, quizbank/connection_generate_v3.py, content/prompts/learning-links/v3/add.md, tests | 2026-11-10 | 261102_02 보류. PR #72 CI 대기 → 병합·러너 재설치 → 관리자 이어 하기 |
 | P1 | Main-Quiz 새 구조 시험: 사슬알균 첫 출제 102문항을 고정하고 커버 확인 → 빈 목표만 추가 출제 → 새 문항만 재확인(모델 3회) | ows0104 / Claude 사슬알균 시범 세션 | claude/add-only-trial | docs/changes/2026-11-10-add-only-trial(새 폴더만), runs/_e2e/26110901/add-only-trial(git 밖) | 2026-11-10 | 사용자 2026-11-09 「승인, 돌려줘」(필기·족보 OpenAI 재전송 포함). 생성기·프롬프트·계약·서버·운영 미변경. 자동 재시도 없음. 모델 4회 완료(좁힌 재확인 포함, 77/119·회귀 0). 기록 PR #67 https://github.com/ows0104/Study_EZ_Open/pull/67 — 병합은 사용자가 「나중에」 |
 
 
@@ -61,6 +60,7 @@
 
 ## 완료 기록 (최근 것만)
 
+| 2026-11-10 | root-generation/3 두 번째 멈춤(261102_02) 수정: 추가 출제가 기존 임상 충돌을 다시 쓰면 받지 않고 기존 사실 유지·기록. PR #72 병합, 러너 f5d119f8 재설치 |
 | 2026-11-10 | root-generation/3 첫 실행(261102_02) 보류 수정: 독립 문제은행의 버전 칸·중요도 숫자를 시작 단계에서 3.3으로 맞추고 기록. PR #71 병합, 러너 ec0ae2e3로 재설치 |
 | 2026-11-10 | Main-Quiz 새 출제 구조 root-generation/3(커버 확인 → 빈 목표만 추가 → 묶음 문항 검토 → 의학 검토 한 번)와 요청 경로 map-tree/2(관리자 「새 구조(시범)」, 기본값 그대로). A·B·C를 PR #70 하나로 병합(#68 자동 병합, #69 닫음). 실제 모델 시범·러너 재설치는 아직 |
 | 2026-11-10 | Main-Quiz 의학 판정이 답과 다르면 남은 보완 라운드 안에서 충돌 문항만 답 고치기. PR #66 병합 |
