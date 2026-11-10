@@ -217,6 +217,11 @@ def run(packet, out, *, model=None, invoke=None, resume=None, rerun=()):
         raise ValueError('웹 원문이 없거나 지문이 다릅니다. CLI 최초 출제로 우회하지 않습니다.')
     invoke = invoke or call_model
     with exclusive({'connection-generation': str(out.resolve())}):
+        if packet.get('generationPolicy') == 'root-generation/3':
+            # docs/changes/2026-11-10-root-generation-3; /2 runs below are unchanged.
+            if rerun: raise ValueError('root-generation/3에는 --rerun이 없습니다. --resume <이유>로 이어 갑니다.')
+            from .connection_generate_v3 import run as run3
+            return run3(packet, out, model, invoke, resume=resume)
         if is_v2_source(packet):
             from .connection_generate_v2 import run as run2
             return run2(packet,out,model,invoke,resume=resume,rerun=rerun)

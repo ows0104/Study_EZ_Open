@@ -305,13 +305,20 @@ def result(p):
     audit = v2.compile_assessment(b, bank, envelope(b, bank, raw))
     doc = v2.make_document(b, bank, audit, revision=p['revision'], title=p['title'], exam_date=p['examDate'])
     ledger = [c.ledger_entry('item', q['question_id'], c.item_hash(q, bank, []), review(q['question_id']), 'review-1') for q in bank['questions']]
+    medical = f.old.checks(bank)
+    med_input = {'title': p['title'], 'bank': bank, 'clinicalInput': v2.medical_input(bank, []), 'medicalFinal': True,
+                 '_pipeline_version': c.POLICY}
+    stage = lambda name, inp, out: {'name': name, 'status': 'completed', 'inputHash': document_hash(inp), 'outputHash': document_hash(out)}
+    stages = [stage('normalize', {}, b), stage('v3-add-0', {}, {}), stage('context-0', {}, CONTEXT), stage('medical-0', med_input, medical)]
+    stages[-1]['inputHash'] = document_hash(med_input)
     meta = {'pipelineVersion': c.POLICY, 'inputHash': p['inputHash'], 'briefHash': document_hash(b), 'bankHash': document_hash(bank),
-            'model': 'synthetic', 'runtimeHash': '0' * 64, 'stages': [], 'verdictLedger': ledger, 'verdictLedgerHash': document_hash(ledger),
+            'model': 'synthetic', 'runtimeHash': '0' * 64, 'stages': stages, 'verdictLedger': ledger, 'verdictLedgerHash': document_hash(ledger),
             'addRounds': 1, 'notReady': [], 'offGoalQuestions': [], 'rejectedAtIntake': [], 'supplement': [],
+            'initialBrief': b, 'supplementPoints': None,
             'initialBank': copy.deepcopy(bank), 'coverage': covered(b), 'mapCheck': map_ok(b),
             'itemReviews': [review('Q1'), review('Q2')], 'clinicalContext': CONTEXT, 'clinicalConflicts': [], 'medicalFinal': True,
             'sourceAssessment': raw, 'fixes': []}
-    return {'brief': b, 'document': doc, 'sourceAudit': audit, 'medical': f.old.checks(bank), 'validation': {}, 'manifest': meta}
+    return {'brief': b, 'document': doc, 'sourceAudit': audit, 'medical': medical, 'validation': {}, 'manifest': meta}
 
 
 def v3_packet():

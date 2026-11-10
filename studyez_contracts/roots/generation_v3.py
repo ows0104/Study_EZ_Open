@@ -686,7 +686,8 @@ def not_ready(brief, coverage_rows, reviews):
 # ---------------------------------------------------------------- result
 MANIFEST_KEYS = {'pipelineVersion', 'inputHash', 'briefHash', 'bankHash', 'model', 'runtimeHash', 'stages', 'verdictLedger',
                  'verdictLedgerHash', 'addRounds', 'notReady', 'offGoalQuestions', 'rejectedAtIntake', 'supplement',
-                 'initialBank', 'coverage', 'mapCheck', 'itemReviews', 'clinicalContext', 'clinicalConflicts', 'medicalFinal',
+                 'initialBank', 'initialBrief', 'supplementPoints', 'coverage', 'mapCheck', 'itemReviews', 'clinicalContext',
+                 'clinicalConflicts', 'medicalFinal',
                  'sourceAssessment', 'fixes'}
 
 
@@ -729,4 +730,45 @@ def validate_result(value, packet):
     ready = {t['direction_id'] for t in doc['tasks']}
     for row in meta['notReady']:
         require(row['direction_id'] not in ready, 'result3: a not-ready goal has a task')
+    require(meta['notReady'] == not_ready(brief, meta['coverage'], meta['itemReviews']), 'result3: not-ready goals differ')
+    # Supplement points extend the packet's points; tiers come from the same table (spec R2a).
+    import json
+    table = v2.importance_table(packet)
+    if meta['supplementPoints'] is not None:
+        original = json.loads(packet['points'])
+        extended = meta['supplementPoints']
+        require(extended['points'][:len(original['points'])] == original['points'] and extended['notebook_profile'] == original['notebook_profile'],
+                'result3: supplement changed the exam points')
+        require(all(p.get('origin') == 'question' for p in extended['points'][len(original['points']):]), 'result3: unmarked supplement point')
+        table = v2.importance_table({'points': json.dumps({**extended, 'points': [{k: p[k] for k in ('point_id', 'point', 'source_refs', 'importance_basis')}
+                                                                                  for p in extended['points']]})})
+    else:
+        require(not meta['supplement'], 'result3: supplement decisions without points')
+    # The document is the /2 assembly of this reviewed bank and audit.
+    snapshot, projection = v2.project_container_concepts(reviewed)
+    iproof = None
+    if table is not None:
+        snapshot, iproof = v2.project_importance(snapshot, brief, table)
+    require(projection == meta.get('bankProjection') and iproof == meta.get('importanceProjection'), 'result3: projections differ')
+    again = v2.make_document(brief, reviewed, value['sourceAudit'], revision=packet['revision'], title=packet['title'],
+                             exam_date=packet['examDate'], snapshot=snapshot if projection or iproof else None,
+                             importance=v2.target_importance(brief, table) if iproof else None)
+    require(again == doc, 'result3: the document is not the assembly of the reviewed judgments')
+    # Stage records: fingerprints of the stages whose output the result carries.
+    stages = {s['name']: s for s in meta['stages']}
+    require(all(s['status'] == 'completed' for s in stages.values()), 'result3: incomplete stages')
+    require(all(re.fullmatch(r'[a-f0-9]{64}', s.get(k, '')) for s in stages.values() for k in ('inputHash', 'outputHash')),
+            'result3: missing stage fingerprints')
+    require(stages['normalize']['outputHash'] == document_hash(meta['initialBrief']), 'result3: initial brief proof mismatch')
+    require(stages['context-0']['outputHash'] == document_hash(meta['clinicalContext']), 'result3: context proof mismatch')
+    v2.validate_context(meta['clinicalContext'])
+    require(not v2.context_blocks_medical(meta['clinicalContext']), 'result3: medical review ran without a clean context')
+    med_input = {'title': packet['title'], 'bank': reviewed, 'clinicalInput': v2.medical_input(reviewed, meta['clinicalConflicts']),
+                 'medicalFinal': True, '_pipeline_version': POLICY}
+    require(stages['medical-0']['inputHash'] == document_hash(med_input) and stages['medical-0']['outputHash'] == document_hash(value['medical']),
+            'result3: the medical review is not of this bank')
+    require(not any(re.fullmatch(r'medical-[1-9]\d*', n) for n in stages), 'result3: the medical review runs once')
+    require(meta['addRounds'] == len([n for n in stages if re.fullmatch(r'v3-add-\d+', n)]), 'result3: add rounds differ from add stages')
+    for f in meta['fixes']:
+        require(f['stage'] in stages, 'result3: a fix without its stage')
     return doc

@@ -495,6 +495,13 @@ def validate_stage(out,entry,*,model):
 
 def validate_all(out,payload):
     require_unblocked(out)
+    if payload['manifest'].get('pipelineVersion')=='root-generation/3':
+        # /3 keeps its own resume archive (.resume-<k>/ with superseded entries); every completed stage is a receipt.
+        for entry in payload['manifest']['stages']:
+            if entry['status']=='completed':
+                if 'usageHash'in entry:validate_stage(out,entry,model=payload['manifest']['model'])
+                else:require(not(Path(out)/'.native'/entry['name']).exists(),'Missing native usage binding')
+        return
     if payload['manifest'].get('planRepair'):
         from .root_plan_repair import validate
         validate(out,payload)
@@ -555,7 +562,7 @@ def main():
     try:
         require_unblocked(a.out)
         from studyez_contracts.roots.parallel import is_v2_source
-        packet=read(a.packet);result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)else None,resume=a.resume,rerun=tuple(a.rerun))
+        packet=read(a.packet);result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)or packet.get('generationPolicy')=='root-generation/3'else None,resume=a.resume,rerun=tuple(a.rerun))
         validate_all(a.out,result)
         if packet.get('parallelAuthoring'):
             from runner.parallel_status import refresh

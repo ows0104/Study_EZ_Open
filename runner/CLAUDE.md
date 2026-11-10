@@ -12,6 +12,8 @@
 - 앞 단계도 자동 재실행하지 않는다. 관리자의 이유가 있을 때만 이어 간다(`--generation-resume <이유>` → `root_front --resume`). 그때 실패 단계와 그 뒤 단계를 `.resume-<k>/`에 보관하고 다시 돈다.
 - 이 변경 전의 러너는 이 요청을 모델 호출 전에 거절한다.
 
+`root_native_json.py`는 `v3-`로 시작하는 root-generation/3 단계도 실행한다(스키마·프롬프트·단계 검사는 `studyez_contracts.roots.generation_v3`). 그 단계는 입력의 `pages`와 그 문항의 자극 그림만 첨부한다. /2 단계 이름의 동작은 그대로다. 요청 경로(map-tree/2)는 아직 연결하지 않았다(PR C).
+
 자료를 찾고 생성기를 실행한 뒤 결과를 서버에 올린다.
 명시적 Concept map 자동출제 일감만 `connection_generation.py`로 분기한다. 서명된 원본 사본을 별도 인증 헤더 없이 받아
 지문을 확인하고 생성기 하위 프로세스→결과 검증→조건부 게시를 수행한다. 작업 ID별 폴더와 수정 상한을 재사용한다.
