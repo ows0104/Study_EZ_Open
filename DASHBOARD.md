@@ -14,7 +14,6 @@
 
 | 우선순위 | 작업 | 작업자 / 세션 | 브랜치 | 건드리는 영역·파일 | 시작일 | 상태·메모 |
 |---|---|---|---|---|---|---|
-| P0 | root-generation/3 실제 실행 세 번째 멈춤: 고치기 단계가 기존 원본 충돌 CF03을 그대로 다시 써 병합이 거절됨 → 기존 충돌 재기록은 받지 않고 기록 | ows0104 / Claude 생성 구조 세션 | claude/gen3-fix-conflicts | studyez_contracts/roots/generation_v3.py(merge_fixes·_bank_conflicts·validate_result 키), quizbank/connection_generate_v3.py, content/prompts/learning-links/v3/fix.md, tests/contracts/test_generation_v3.py, docs/changes/2026-11-10-root-generation-3 | 2026-11-10 | 261102_02 v3-fix-1-0. 운영 DB·문항 변경 없음. 병합 뒤 러너 재설치 |
 | P1 | 관리 탭 로딩 지연 제거: overview의 은행 요약이 quiz_bank.validation(json, 최대 20MB)을 키마다 다시 파싱하고, bank-feedback이 validation·원문 응답까지 통째로 읽는 것을 고친다 | ows0104 / Claude 관리 탭 속도 세션 | claude/admin-overview-speed | server/app/admin_banks.py, server/app/routes/bank_api/feedback.py(bank_feedback 읽는 열만), server/tests/test_admin_egress.py, docs/changes/2026-11-10-admin-overview-speed | 2026-11-10 | 운영 DB 읽기 전용 측정: overview 은행 요약 쿼리 2분 statement timeout, bank-feedback SQL 346s(노트북 기준). 진짜 원인: overview 응답 19.3MB 중 19.1MB가 화면이 안 쓰는 bank.revision(운영 10~12s). DB·스키마·데이터 변경 없음. b0252244 PR #73 https://github.com/ows0104/Study_EZ_Open/pull/73 — 서버 130/132(2개는 로컬 venv pymupdf 없음), 운영 데이터로 20.0MB→0.89MB. 병합=배포는 사용자 확인 대기 |
 | P1 | 예습 퀴즈 풀이 화면을 개편된 사이트 디자인으로 통일 | HungryPotato01 / Claude 예습 퀴즈 디자인 세션 | claude/prequiz-redesign | web/src/lecture/(QuizPage·PreQuiz·PreQuizDifficult·새 prequiz.css), web/src/App.tsx(prequiz bare 제외 1줄), web/src/styles/base.css(예전 예습 규칙 삭제), web/tests/prequiz.html, docs/changes/2026-11-10-prequiz-redesign | 2026-11-10 | 화면 모양만. API·문항·기록 변경 없음. 구현·typecheck·build·고정물 확인 완료, 미커밋 — 커밋/PR 승인 대기 |
 | P0 | Main-Quiz 풀이 지연 제거: Space 뒤 답·참고 슬라이드, 평가 뒤 다음 문항이 저장 왕복(POST→세션 GET→개요 GET)을 기다리지 않게 한다. 같은 회차 과제 미리 받기·백그라운드 저장·PDF 문서 유지·슬라이드 미리 그리기 | ows0104 / Claude Main-Quiz 지연 세션 | claude/main-quiz-latency | server/app/routes/root_learning.py, server/app/root_learning/(content·evidence), server/tests/test_root_learning*, web/src/bank/(RootLearning·RootSolve·RootPdfSlides·useRootStudyWrites), web/src/types/rootLearning.ts, docs/changes/2026-11-08-main-quiz-latency | 2026-11-08 | 운영 로그: 세션 GET(답 포함) 0.8–8.9s, PDF 범위 요청 0.7s씩 직렬. DB 스키마·학습 기록 변경 없음. 2675a682 PR #28 https://github.com/ows0104/Study_EZ_Open/pull/28 — 서버 124·root-ui 4/4·build 통과, CI 대기 → 병합=배포 |
@@ -61,6 +60,7 @@
 
 ## 완료 기록 (최근 것만)
 
+| 2026-11-10 | root-generation/3 세 번째 멈춤(261102_02 v3-fix-1-0) 수정: 고치기 단계가 기존 원본 충돌을 다시 쓰면 받지 않고 은행 것 유지·기록. PR #74 병합, 러너 ba694a8c 재설치 |
 | 2026-11-10 | root-generation/3 두 번째 멈춤(261102_02) 수정: 추가 출제가 기존 임상 충돌을 다시 쓰면 받지 않고 기존 사실 유지·기록. PR #72 병합, 러너 f5d119f8 재설치 |
 | 2026-11-10 | root-generation/3 첫 실행(261102_02) 보류 수정: 독립 문제은행의 버전 칸·중요도 숫자를 시작 단계에서 3.3으로 맞추고 기록. PR #71 병합, 러너 ec0ae2e3로 재설치 |
 | 2026-11-10 | Main-Quiz 새 출제 구조 root-generation/3(커버 확인 → 빈 목표만 추가 → 묶음 문항 검토 → 의학 검토 한 번)와 요청 경로 map-tree/2(관리자 「새 구조(시범)」, 기본값 그대로). A·B·C를 PR #70 하나로 병합(#68 자동 병합, #69 닫음). 실제 모델 시범·러너 재설치는 아직 |
