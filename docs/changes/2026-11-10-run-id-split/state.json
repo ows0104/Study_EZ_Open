@@ -1,0 +1,151 @@
+{
+  "id": "2026-11-10-run-id-split",
+  "title": "띄어쓴 필기자 이름으로 생긴 중복 run 수정",
+  "area": "integration",
+  "created_at": "2026-11-10T14:00:21.132278+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-10T14:22:33.459448+00:00",
+      "evidence": "사용자 2026-11-10 채팅: \"지금 렙토스피라 강의의 파일과 복습 퀴즈 바가 두 개가 되었어. ... 문제를 근본적으로 해결해줘. 학습기록은 날라가도 돼.\" 및 이어받기 질문에 「이어받아 진행」",
+      "scope": "runner/filenames.py 별칭·작성자 해석, tests/runner/test_timetable_identity.py, 이 작업 폴더, 러너 설치본 교체, 운영 DB 중복 강의 4행과 같은 run_id 행 삭제",
+      "evidence_version": 2,
+      "source_hash": "4c61c927ac4969edb418f2bbf4c00479613d50fe54e20b8720d6c66a3834cb2c",
+      "plan_hash": "cc9af46812b114dde5eb1e39c2b8744bdbdc997274505830deae292c209f50c8",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "23bc642bfa06635d02ca37ae728207cbc06e89bce2018212542375893949e1c9"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-10T14:00:54.535940+00:00",
+      "command": [
+        "C:\\Users\\erika\\AppData\\Local\\Temp\\claude\\5a9c095ead2906be\\e78df13a-02e9-41e7-a952-29ba18bce0a1\\scratchpad\\venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "tests/runner/test_timetable_identity.py",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "fd3b86b10b3437717191af747fbd3f3a87776ead48ca79b07168eb73b8fa53e5",
+      "plan_hash": "53cfe6ae5e5bf9f12b91f067cce22f82e3762db271da8aa75fd5c0fe57b43e41",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-10-run-id-split/1794319252950598100-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-10T14:22:39.374838+00:00",
+      "command": [
+        "../../.venv/Scripts/python.exe",
+        "-m",
+        "pytest",
+        "tests/runner/test_timetable_identity.py",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "4c61c927ac4969edb418f2bbf4c00479613d50fe54e20b8720d6c66a3834cb2c",
+      "plan_hash": "cc9af46812b114dde5eb1e39c2b8744bdbdc997274505830deae292c209f50c8",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-10-run-id-split/1794320555077367000-regression.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-10T14:22:45.432104+00:00",
+    "summary": "작성자 정규식(띄어쓴 이름)과 맞바뀐 칸 별칭(접두 일치·미인식 파일은 같은 과목 키와 겹치면 scan에서 제외) 검토. 다른 과목이 같은 날짜·교시를 쓰는 경우는 날짜 키 유지(기존 검사 통과). 실제 필기 972편 대조로 변경 2건만 확인. 남은 위험: 운영 중복 행 삭제는 비가역(사용자 승인).",
+    "evidence_version": 2,
+    "source_hash": "4c61c927ac4969edb418f2bbf4c00479613d50fe54e20b8720d6c66a3834cb2c",
+    "plan_hash": "cc9af46812b114dde5eb1e39c2b8744bdbdc997274505830deae292c209f50c8",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "runner",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "tests/runner",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-10T14:22:45.520335+00:00"
+}
