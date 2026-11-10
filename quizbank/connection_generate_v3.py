@@ -276,6 +276,7 @@ def run(packet, out, model, invoke, resume=None):
     # 3: add only for gap goals (≤2) ----------------------------------------
     # Round numbers are fixed (v3-add-0, v3-add-1): a resumed run replays completed rounds from their records,
     # so the recorded count only grows and never exceeds ADD_LIMIT.
+    restated = []   # facts an add stage wrote again for existing conflicts; not taken, kept for the record
     for n in range(v3.ADD_LIMIT):
         gaps = [did for did in [d['direction_id'] for t in brief['targets'] for d in t['directions']] if rows[did]['status'] != 'covered']
         if not gaps:
@@ -286,6 +287,7 @@ def run(packet, out, model, invoke, resume=None):
             ledger['addRounds'] = n + 1
             st.save()
         value = st.run(f'v3-add-{n}', ctx, lambda raw: v3.check_added(raw, ctx))
+        restated.extend({'stage': f'v3-add-{n}', **r} for r in v3.restated_facts(conflicts, value))
         bank, conflicts = v3.merge_added(visual.authored(bank), conflicts, value, allowed)
         stimuli = [*stimuli, *value['visual_stimuli']]
         bank = visual.render(bank, stimuli, packet, out / 'material')
@@ -414,7 +416,8 @@ def run(packet, out, model, invoke, resume=None):
                   'offGoalQuestions': [{'question_id': q['question_id'], 'question': q,
                                         'reason': next(d['reason'] for d in out_of_scope if d['question_id'] == q['question_id'])}
                                        for q in off_questions],
-                  'rejectedAtIntake': rejected, 'intakeProjection': intake_changes, 'supplement': supplement, 'supplementPoints': points_doc if supplement else None,
+                  'rejectedAtIntake': rejected, 'intakeProjection': intake_changes, 'restatedFactsIgnored': restated,
+                  'supplement': supplement, 'supplementPoints': points_doc if supplement else None,
                   'initialBrief': initial_brief, 'initialBank': initial_bank, 'coverage': coverage_rows, 'mapCheck': map_check,
                   'itemReviews': review_rows, 'clinicalContext': context, 'clinicalConflicts': conflicts,
                   'visualStimuli': stimuli, 'medicalFinal': True, 'sourceAssessment': raw, 'fixes': fixes,

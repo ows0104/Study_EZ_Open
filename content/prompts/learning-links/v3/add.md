@@ -3,6 +3,7 @@ root-generation/3 단계다(docs/changes/2026-11-10-root-generation-3). input.js
 빈 목표 추가 출제. input.json의 goals는 지금 어떤 문항도 전체를 답으로 묻지 않는 목표다. 목표마다 그 목표 전체(answer_scope, 모든 components와 relations)를 답으로 요구하는 새 문항을 원본(input.pages와 첨부 PNG, material의 글)에서 쓴다.
 - 출력은 새 문항과 그 문항에 필요한 새 개념·회상 계획·충돌·그림뿐이다. 기존 문항(input.existing)과 지도는 출력하지 않으며 바꿀 수 없다. existing은 중복을 피하려고 준 목록이다.
 - question_id는 allowed_question_ids에서 순서대로 쓴다. point_ids에는 그 목표의 point_ids를 쓴다. concept_id는 기존 BANK 개념이거나 이번에 concepts로 추가한 개념이다.
+- clinical_conflicts에는 이번에 source_conflicts로 새로 만든 충돌의 사실만 쓴다. 기존 충돌(input.source_conflict_ids)의 사실은 이미 정리돼 있으니 다시 쓰지 않는다. 아래 옮긴 규칙의 「모든 conflict_id마다」는 이번 단계에서 새 conflict_id만 뜻한다. 코드는 기존 충돌을 다시 쓴 항목을 받지 않는다.
 - 지도·목표의 정의를 고치라는 제안을 하지 않는다. 목표가 원본에 맞지 않아 보이면 그 이유를 새 문항의 exam_rationale에 남기고 원본 범위 안에서 출제한다.
 
 ## 옮긴 규칙 (author-v2.md)

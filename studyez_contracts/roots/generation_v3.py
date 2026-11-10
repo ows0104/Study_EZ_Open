@@ -358,6 +358,14 @@ def _bank_conflicts(bank, new_conflicts):
     return [*copy.deepcopy(bank.get('source_conflicts', [])), *copy.deepcopy(new_conflicts)]
 
 
+def restated_facts(clinical_conflicts, output):
+    """Clinical facts an add output wrote again for conflicts that already exist. They are not taken: the existing
+    facts stay as they are (P1). The first real run (261102_02, 2026-11-10) rewrote CF01–CF03 in its own words
+    because the /2 rule asks for facts of every conflict ID while the add input lists the IDs only."""
+    known = {c['conflict_id'] for c in clinical_conflicts}
+    return [c for c in output['clinical_conflicts'] if c['conflict_id'] in known]
+
+
 def merge_added(bank, clinical_conflicts, output, allowed_ids):
     """Append an add stage's questions. Existing questions, conflicts and facts stay byte-identical."""
     validate_shape(output, ADD_OUTPUT, 'v3 add output')
@@ -367,7 +375,9 @@ def merge_added(bank, clinical_conflicts, output, allowed_ids):
     require(not set(ids) & {q['question_id'] for q in bank['questions']}, 'v3 add: an add stage cannot rewrite an existing question')
     require(all(s['question_id'] in ids for s in output['visual_stimuli']), 'v3 add: images only for new questions')
     facts = {c['conflict_id'] for c in clinical_conflicts}
-    require(not {c['conflict_id'] for c in output['clinical_conflicts']} & facts, 'v3 add: existing clinical facts are kept')
+    fresh = [c for c in output['clinical_conflicts'] if c['conflict_id'] not in facts]   # restatements stay out (restated_facts)
+    new_ids = {c['conflict_id'] for c in output['source_conflicts']}
+    require({c['conflict_id'] for c in fresh} <= new_ids, 'v3 add: clinical facts only for its new source conflicts')
     known = {c['concept_id'] for c in bank['concepts']}
     new_concepts = [c['concept_id'] for c in output['concepts']]
     require(not set(new_concepts) & known and len(new_concepts) == len(set(new_concepts)), 'v3 add: concepts may be added, not rewritten')
@@ -379,7 +389,7 @@ def merge_added(bank, clinical_conflicts, output, allowed_ids):
     merged['concepts'] = [*merged['concepts'], *copy.deepcopy(output['concepts'])]
     merged['retrieval_plan'] = [*merged['retrieval_plan'], *copy.deepcopy(output['retrieval_plan'])]
     merged['questions'] = [*merged['questions'], *copy.deepcopy(output['questions'])]
-    return merged, [*copy.deepcopy(clinical_conflicts), *copy.deepcopy(output['clinical_conflicts'])]
+    return merged, [*copy.deepcopy(clinical_conflicts), *copy.deepcopy(fresh)]
 
 
 def merge_fixes(bank, clinical_conflicts, output, targets):
