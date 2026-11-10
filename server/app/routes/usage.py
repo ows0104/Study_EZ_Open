@@ -56,6 +56,7 @@ Study_EZ 몫만 센다(땡시는 여기 없다 — 같은 날 범위를 그렇�
 
 from __future__ import annotations
 from app.models.connections import ConnectionEvent
+from app.models.lecture_notes import LectureMemo, NoteRead
 from app.models.root_learning import RootEvent
 
 from datetime import UTC, datetime, time, timedelta
@@ -296,6 +297,9 @@ def usage(
     pre_cards = _count_by_user(db, QuizAttempt, QuizAttempt.answered_at, span)
     connection_saves = _count_by_user(db, ConnectionEvent, ConnectionEvent.created_at, span)
     question_reports = _count_by_user(db, BankFeedback, BankFeedback.created_at, span)
+    # 강의록 회독: 지운 회독은 줄이 없어 세지 않는다. 메모: 창 안에 마지막으로 고친 강의 수.
+    note_reads = _count_by_user(db, NoteRead, NoteRead.created_at, span)
+    memos = _count_by_user(db, LectureMemo, LectureMemo.updated_at, span)
     root_metrics = {}
     for event in db.scalars(select(RootEvent).where(*_within(RootEvent.created_at, span))):
         field = _root_field(event)
@@ -358,6 +362,8 @@ def usage(
         (ConnectionEvent, ConnectionEvent.created_at),
         (RootEvent, RootEvent.created_at),
         (BankFeedback, BankFeedback.created_at),
+        (NoteRead, NoteRead.created_at),
+        (LectureMemo, LectureMemo.updated_at),
     ):
         for uid, last in db.execute(
             select(model.user_id, func.max(stamp)).group_by(model.user_id)
@@ -381,6 +387,8 @@ def usage(
                 "id": uid,
                 "connectionSaves": connection_saves.get(uid, 0),
                 "questionReports": question_reports.get(uid, 0),
+                "noteReads": note_reads.get(uid, 0),
+                "memos": memos.get(uid, 0),
                 **{field: root_metrics.get(uid, {}).get(field, 0) for field in ROOT_FIELDS},
                 "email": profile.email,
                 "isAdmin": profile.is_admin,
@@ -463,6 +471,8 @@ def usage_detail(
             "previewSavedAt": None,
             "connectionSaves": {"count": 0, "lastAt": None},
             "questionReports": {"count": 0, "lastAt": None},
+            "noteReads": {"count": 0, "lastAt": None},
+            "memo": {"count": 0, "lastAt": None},
             **{field: {"count":0,"lastAt":None} for field in ROOT_FIELDS},
             "previewCreates": {"count": 0, "lastAt": None},
             "quizLastAt": {"pre": None, "main": None, "bank": None},
@@ -496,6 +506,18 @@ def usage_detail(
         row = slot(subject, run_id)
         row['connectionSaves'] = {'count': count, 'lastAt': _iso(last)}
         row['lastAt'] = _iso(_latest(last, _parse(row['lastAt'])))
+
+    for subject, run_id, count, last in db.execute(select(
+        NoteRead.subject, NoteRead.run_id, func.count(), func.max(NoteRead.created_at)
+    ).where(NoteRead.user_id == user_id).group_by(NoteRead.subject, NoteRead.run_id)):
+        row = slot(subject, run_id)
+        row['noteReads'] = {'count': count, 'lastAt': _iso(last)}
+        row['lastAt'] = _iso(_latest(last, _parse(row['lastAt'])))
+
+    for memo in db.scalars(select(LectureMemo).where(LectureMemo.user_id == user_id)):
+        row = slot(memo.subject, memo.run_id)
+        row['memo'] = {'count': 1, 'lastAt': _iso(memo.updated_at)}
+        row['lastAt'] = _iso(_latest(memo.updated_at, _parse(row['lastAt'])))
 
     for subject, run_id, count, last in db.execute(select(
         BankFeedback.subject, BankFeedback.run_id, func.count(), func.max(BankFeedback.created_at)

@@ -2385,7 +2385,11 @@ button.event-panel-note:hover {
 .stage-summary .stage-bar > span { display: block; height: 100%; }
 
 .event-panel-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
-.deck-links { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--ink-3); }
+.deck-links { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; font-size: 12.5px; color: var(--ink-3); }
+.deck-links-label { padding: 2px 0; }
+.deck-link { display: flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; }
+.deck-source { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-3); }
+.event-panel-foot:has(.deck-link) { align-items: flex-end; }
 .deck-links button { min-height: 0; padding: 2px 6px; border: 0; border-radius: 6px; background: none; font-size: 12.5px; color: var(--ink-2); cursor: pointer; }
 .deck-links button:hover { background: var(--hover); }
 .ghost-button { min-height: 0; height: 30px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font-size: 13px; color: var(--ink-2); cursor: pointer; }
@@ -2471,9 +2475,14 @@ button.event-panel-note:hover {
 .chat-split-side {
   position: relative; display: grid; place-items: center; width: 30px; min-height: 0; height: 100%; padding: 0; border: 0;
   border-left: 1px solid color-mix(in srgb, currentColor 25%, var(--surface)); border-radius: 0 8px 8px 0;
-  background: none; color: inherit; font-size: 11px; cursor: pointer;
+  background: none; color: inherit; font-size: 16px; line-height: 1; cursor: pointer;
 }
-.chat-split-side.is-dot::after { content: ""; position: absolute; top: 6px; right: 6px; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+/* 저장된 대화가 있으면 공통 대화처럼 갈래 색 바탕 */
+.chat-split.is-pre.is-linked { background: var(--accent2-soft); }
+.chat-split.is-review.is-linked { background: var(--accent-soft); }
+.chat-split.is-linked .chat-split-main:hover, .chat-split.is-linked .chat-split-side:hover {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
 .chat-split-main:hover:not(:disabled), .chat-split-side:hover { background: var(--hover); }
 .chat-split-main:disabled { opacity: 0.5; cursor: default; }
 .chat-split-menu {
@@ -2502,3 +2511,33 @@ button.event-panel-note:hover {
 /* 패널을 열어 좁아지면 제목을 지키고 오늘 카드는 오른쪽 아래 줄로 */
 .calendar-page.is-split .calendar-head { flex-wrap: wrap; row-gap: 8px; }
 .calendar-page.is-split .today-board { margin-left: auto; }
+
+/* 강의록 회독(2026-11-10 2단계): 진한 회색 토막. 패널에서는 누르면 지운다(빨강), 끝에 +. */
+.readline i.rl-note { background: color-mix(in srgb, var(--ink-3) 70%, var(--surface)); box-shadow: none; }
+.read-editor { display: inline-flex; align-items: center; gap: 8px; min-height: 26px; }
+.read-editor .readline { height: 14px; overflow: visible; }
+.read-editor .rl-note.is-button {
+  position: relative; display: block; flex: none; width: 22px; height: 14px; min-height: 0; padding: 0; border: 0;
+  background: none; cursor: pointer;
+}
+.read-editor .rl-note.is-button::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 5px; margin-top: -2.5px; border-radius: 2px;
+  background: color-mix(in srgb, var(--ink-3) 70%, var(--surface));
+}
+.read-editor .rl-note.is-button:hover::after { background: var(--exam, #c13f37); }
+.read-count { font-size: 12.5px; color: var(--ink-3); }
+.read-plus {
+  display: grid; place-items: center; width: 24px; height: 24px; min-height: 0; padding: 0; border-radius: 7px;
+  border: 1px dashed var(--line-strong); background: none; color: var(--ink-3); font-size: 16px; line-height: 1; cursor: pointer;
+}
+.read-plus:hover:not(:disabled) { color: var(--ink); border-color: var(--ink-3); background: var(--hover); }
+.read-undo {
+  min-height: 0; padding: 0; border: 0; background: none; color: var(--ink-2); font-size: 12.5px; font-weight: 600;
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.lecture-memo { display: block; flex: 1; min-width: 0; }
+.lecture-memo textarea {
+  box-sizing: border-box; display: block; width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--surface); color: var(--ink); font: inherit; font-size: 13.5px; line-height: 1.5; resize: none;
+}
+.lecture-memo textarea:focus { outline: none; border-color: var(--line-strong); }

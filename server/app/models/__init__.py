@@ -9,6 +9,7 @@ from app.models.connections import ConnectionContent, ConnectionState, Connectio
 from app.models.site_prompt import SitePrompt
 from app.models.study_visibility import StudyHiddenLecture
 from app.models.notes import UserNote
+from app.models.lecture_notes import LectureMemo, NoteRead
 from app.models.bank_archive import QuizBankArchive
 from app.models.study_archive import BankVersion, BankStateArchive
 from app.models.feedback import SiteFeedback
@@ -112,6 +113,8 @@ from .quiz_publication import QuizPublicationCheck
 
 __all__ = [
     "UserNote",
+    "NoteRead",
+    "LectureMemo",
     "BankVersion", "BankStateArchive",
     "SitePrompt",
     "QuizPublicationCheck",

@@ -20,6 +20,7 @@ import { cardsHash } from "../lecture/LectureCards";
 import { ActionCard, fileSize, PanelGroup } from "./panelShared";
 import { PreviewAction } from "./PreviewAction";
 import { ReviewAction } from "./ReviewAction";
+import { LectureMemo, ReadEditor } from "./ReadEditor";
 import { PreviewSourceNotice, ProfessorInfo, ProfTag, previewNotesLabel } from "./ProfessorInfo";
 
 /**
@@ -345,7 +346,12 @@ function KeyActions({
         <h3>통계</h3>
         <div className="stat-row">
           <span className="stat-label">회독</span>
-          <span className="readline is-lg">{detail.prequiz ? <i className={`rl-pre${preDone ? " is-on" : ""}`} title={preDone ? "예습 퀴즈 완료" : "예습 퀴즈 미완료"} /> : null}</span>
+          <ReadEditor lecture={lecture} base={base} preOpen={Boolean(detail.prequiz)} preDone={preDone}
+            initial={detail.noteReads ?? 0} onError={setError} />
+        </div>
+        <div className="stat-row is-top">
+          <span className="stat-label">메모</span>
+          <LectureMemo base={base} initial={detail.myMemo ?? ""} onError={setError} />
         </div>
         <div className="stat-row">
           <span className="stat-label">학습률</span>
@@ -365,9 +371,15 @@ function KeyActions({
       <div className="event-panel-foot">
         {preDeck || mainDeck ? (
           <span className="deck-links">
-            덱 다운로드
-            {preDeck ? <button type="button" onClick={() => void download(preDeck)}>예습</button> : null}
-            {mainDeck ? <button type="button" onClick={() => void download(mainDeck)}>복습</button> : null}
+            <span className="deck-links-label">덱 다운로드</span>
+            {/* 각 덱이 어느 강의록으로 만든 것인지 파일명을 옆에 둔다(2026-11-10 사용자 지시). */}
+            {([["예습", preDeck, fileOf("notes_prev")], ["복습", mainDeck, fileOf("notes_current")]] as const).map(([label, deck, notes]) =>
+              deck ? (
+                <span className="deck-link" key={label}>
+                  <button type="button" onClick={() => void download(deck)}>{label}</button>
+                  {notes ? <span className="deck-source" title={notes.filename}>{notes.filename}</span> : null}
+                </span>
+              ) : null)}
           </span>
         ) : <span />}
         <FeedbackButton launch={{ className: "ghost-button", content: "오류 제보" }} />

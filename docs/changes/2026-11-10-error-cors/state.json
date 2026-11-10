@@ -1,0 +1,131 @@
+{
+  "id": "2026-11-10-error-cors",
+  "title": "서버 500에도 CORS 헤더",
+  "area": "site",
+  "created_at": "2026-11-10T13:35:55.086594+00:00",
+  "required_checks": [
+    "server"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-10T13:36:19.803101+00:00",
+      "evidence": "2026-11-10 사용자 채팅: 「500에 CORS도 붙여줘」, main.py 겹침 안내 뒤 「진행해」",
+      "scope": "plan.md: server/app/errors.py(새 파일), server/app/main.py 등록, server/tests/test_error_cors.py. DB·웹·운영 변경 없음",
+      "evidence_version": 2,
+      "source_hash": "d650c14f01b7a790ae8a5464b1f471592224efbacebb01d79609a015bd0d00d5",
+      "plan_hash": "ea2216d732015ea86bd18dfce8e52bebc004034c639acecbf679d9f110a55426",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "91680ff51e9dc1879db2f78bcf44774ccfde04451f18a7d8aa98277cf16d8d07"
+    }
+  },
+  "checks": [
+    {
+      "name": "server",
+      "at": "2026-11-10T13:39:33.785441+00:00",
+      "command": [
+        "server/.venv/Scripts/python.exe",
+        "-m",
+        "tests"
+      ],
+      "exit_code": 127,
+      "evidence_version": 2,
+      "source_hash": "8f0e0083b2d4a0248f44fca737fda568d460ff9b1b49fa8eaef690ff50920a0c",
+      "plan_hash": "ea2216d732015ea86bd18dfce8e52bebc004034c639acecbf679d9f110a55426",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-10-error-cors/1794317973529401900-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-10T13:49:04.384203+00:00",
+      "command": [
+        "C:/Users/erika/Study_EZ_Open/.claude/worktrees/error-cors/server/.venv/Scripts/python.exe",
+        "-B",
+        "scripts/check_server_release.py"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "8f0e0083b2d4a0248f44fca737fda568d460ff9b1b49fa8eaef690ff50920a0c",
+      "plan_hash": "ea2216d732015ea86bd18dfce8e52bebc004034c639acecbf679d9f110a55426",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-10-error-cors/1794317998711481900-server.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-10T13:49:25.157739+00:00",
+    "summary": "경계: 미들웨어는 CORSMiddleware 바깥, 응답 시작 전 예외만 500으로 바꾸고 다시 던진다. 허용 목록은 CORSMiddleware와 같은 settings.cors_allowed_origins. 예외 내용은 응답에 싣지 않음. 정상·4xx 헤더 불변을 검사로 확인. 남은 위험: 스트리밍 중 예외는 그대로.",
+    "evidence_version": 2,
+    "source_hash": "8f0e0083b2d4a0248f44fca737fda568d460ff9b1b49fa8eaef690ff50920a0c",
+    "plan_hash": "ea2216d732015ea86bd18dfce8e52bebc004034c639acecbf679d9f110a55426",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-10T13:49:25.509736+00:00"
+}

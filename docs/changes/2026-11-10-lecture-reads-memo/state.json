@@ -1,0 +1,46 @@
+{
+  "id": "2026-11-10-lecture-reads-memo",
+  "title": "강의록 회독 기록과 강의별 짧은 메모",
+  "area": "site",
+  "created_at": "2026-11-10T12:00:58.304911+00:00",
+  "required_checks": [
+    "web",
+    "server"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-10T12:20:03.453403+00:00",
+      "evidence": "2026-11-10 채팅: 「회독 작업 시작해. 그리고 이 페이지에서 회독 아래에 간단하게 각자 그 단원에 대해 적고 싶은 걸 적을 수 있는 아주 간단한, 2~3줄짜리 메모 칸을 추가하고 싶어. 이것도 추가하는 거 작업해줘.」",
+      "scope": "plan.md 1~3의 서버·웹 파일 로컬 구현·격리 sqlite 검사·브랜치 커밋/PR. 운영 DB 표 생성과 master 병합은 제외",
+      "evidence_version": 2,
+      "source_hash": "49344e94940af3dd16ec5a324b950128e8610fc653644ccd311b9db3cf5ce2f5",
+      "plan_hash": "cd2827c9abc1990f5ef9eae048669967a8ce85897b3f5cf2ede58ee88ce33fc6",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "8f477f9e13b12be432e9c90cf9ba85b6988c641a14a4beb1724a59a9104e386e"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-10T12:20:16.819680+00:00"
+}

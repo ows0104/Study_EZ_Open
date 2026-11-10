@@ -34,8 +34,10 @@ export function PreQuizDifficult({ base, items, answers, onReview, reportContext
   }, [base, ids, answers, retry, studyTrack]);
 
   return <section className="prequiz-difficult">
-    <h3>어려웠던 문제 {items.length}개</h3>
-    <p className="prequiz-review-note">‘아직 헷갈려요’를 고른 문제예요. 답과 설명을 한 번 더 살펴보세요.</p>
+    <header className="prequiz-difficult-head">
+      <h3>어려웠던 문제 <b>{items.length}</b></h3>
+      <button className="pill-button prequiz-review-start" onClick={onReview}>어려웠던 문제만 다시 풀기</button>
+    </header>
     <div className="prequiz-review-list">
       {items.map((entry, index) => {
         const answer = answers[entry.itemId] ?? saved[entry.itemId];
@@ -48,12 +50,11 @@ export function PreQuizDifficult({ base, items, answers, onReview, reportContext
             {answer.explanation ? <p className="prequiz-review-explanation"><b>설명</b><PreQuizText text={answer.explanation} /></p> : null}
             {answer.lectureFocus ? <p className="prequiz-review-focus"><b>수업에서 확인할 내용</b><PreQuizText text={answer.lectureFocus} /></p> : null}
           </> : <p className="prequiz-review-note">답과 설명을 불러오는 중…</p>}
-          <FeedbackButton prequiz={{ ...reportContext, itemId: entry.itemId, stem: entry.stem,
+          <FeedbackButton launch={{ className: "pill-button prequiz-review-report", content: "문제 제보" }} prequiz={{ ...reportContext, itemId: entry.itemId, stem: entry.stem,
             ...(answer ? { answer: answer.answer, explanation: answer.explanation } : {}) }} />
         </article>;
       })}
     </div>
     {error ? <p role="alert" className="notice is-error">{error} <button onClick={() => setRetry((old) => old + 1)}>다시 불러오기</button></p> : null}
-    <button className="prequiz-review-start" onClick={onReview}>어려웠던 문제만 다시 풀기</button>
   </section>;
 }
