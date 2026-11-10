@@ -376,3 +376,20 @@ def test_intake_projection_sets_only_the_recomputed_bank_fields():
     assert strip(value) == strip(bank)
     assert not any('schema_version' in e or '중요도 수치' in e for e in validate_bank(value, ['S1'])['errors'])
     assert c.intake_projection(value)[1] == []
+
+
+def test_restated_facts_of_existing_conflicts_are_left_out_and_existing_facts_kept():
+    """261102_02 (2026-11-10): an add stage rewrote CF01-CF03 that its new questions did not cite."""
+    bank = authored_bank()
+    bank['source_conflicts'] = [{'conflict_id': 'CF01', 'description': 'Synthetic', 'source_refs': [{'source_id': 'S1', 'locator': 'x'}], 'unresolved': False}]
+    facts = [{'conflict_id': 'CF01', 'facts': 'Synthetic original facts'}]
+    ids = c.next_question_ids(bank, 1)
+    out = {'questions': [question(ids[0], bank['questions'][0])], 'concepts': [], 'retrieval_plan': [], 'source_conflicts': [],
+           'visual_stimuli': [], 'clinical_conflicts': [{'conflict_id': 'CF01', 'facts': 'Synthetic rewritten facts'}]}
+    assert [r['conflict_id'] for r in c.restated_facts(facts, out)] == ['CF01']
+    merged, kept = c.merge_added(bank, facts, out, ids)
+    assert kept == facts and merged['questions'][-1]['question_id'] == ids[0]
+    stray = copy.deepcopy(out)
+    stray['clinical_conflicts'] = [{'conflict_id': 'CF09', 'facts': 'No such source conflict'}]
+    with pytest.raises(ValueError, match='only for its new source conflicts'):
+        c.merge_added(bank, facts, stray, ids)
