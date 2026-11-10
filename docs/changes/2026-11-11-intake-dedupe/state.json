@@ -1,0 +1,80 @@
+{
+  "id": "2026-11-11-intake-dedupe",
+  "title": "생성기 시작 단계의 반복 값 자동 정리",
+  "area": "generation",
+  "created_at": "2026-11-10T16:36:34.580952+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-10T16:37:10.926994+00:00",
+      "evidence": "2026-11-11 사용자 채팅: 「그동안 저 형식 오류로 멈추는 일을 줄여보자」 → (자동 정리 대상 표·위치(intake_projection)·병렬 세션과의 파일 겹침 제시) → 「자동 정리만 진행」",
+      "scope": "generation_v3.intake_projection의 반복 값 정리 5종, contracts 검사, 로컬 검사, PR 생성. 모델 자기 수정 단계(root_front)는 제외. 병합·러너 재설치 미포함",
+      "evidence_version": 2,
+      "source_hash": "7789369dd175d44c83103a2d7645c371d93f264dc52b80e14f9b9ac8bd8dab90",
+      "plan_hash": "f52f4238fa4941d4bb1b79278b89ed5417571f892761e0ebda1d76d07a468a3a",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "a791b77f224ad80c6e63e3c0ab187245971e2b394efe2d79519581549952dbde"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-10T16:40:27.533332+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "tests/quizbank",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "9622f16f38d597fdca6e95dc209d992e98a66eb805b35af6d90e1d40892bed23",
+      "plan_hash": "f52f4238fa4941d4bb1b79278b89ed5417571f892761e0ebda1d76d07a468a3a",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-11-intake-dedupe/1794328680439206900-regression.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-10T16:40:27.533802+00:00"
+}

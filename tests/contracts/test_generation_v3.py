@@ -489,3 +489,55 @@ def test_the_whole_map_check_takes_every_relation_even_one_without_a_target():
     assert {r['relation_id'] for r in whole['relations']} == {r['relation_id'] for r in b['relations']}
     part = c.map_check_input(b, None, [b['targets'][0]['target_id']])
     assert 'R_LOOSE' not in {r['relation_id'] for r in part['relations']}
+
+
+# ---------------------------------------------------------------- intake: exact repeats (2026-11-11-intake-dedupe)
+def _repeating_bank():
+    """f.old.bank() with one of each repeat the intake now cleans up."""
+    bank = f.old.bank()
+    bank['build_meta']['schema_version'] = c.intake_projection(bank)[0]['build_meta']['schema_version']
+    plan = bank['retrieval_plan'][0]
+    plan['directions'] = plan['directions'] + [plan['directions'][0]]
+    bank['retrieval_plan'].append(copy.deepcopy(bank['retrieval_plan'][0]))
+    bank['source_summary'].append(copy.deepcopy(bank['source_summary'][0]))
+    q1, q2 = bank['questions'][0], bank['questions'][1]
+    q2['prerequisites'] = ['Q1', 'Q1']
+    q1['format'], q1['options'] = 'mcq', [{'id': 'A', 'text': 'Synthetic A'}, {'id': 'B', 'text': 'Synthetic B'}]
+    q1['correct_option_ids'], q1['mcq_mode'] = ['A', 'A'], 'recall_first'
+    return bank
+
+
+def test_intake_drops_exact_repeats_and_records_them():
+    """261102_02 /4 trial: C06 directions listed `reverse` twice and the run stopped before any generation call."""
+    from studyez_contracts.bank.validate import validate_bank
+    bank = _repeating_bank()
+    before = validate_bank(copy.deepcopy(bank), ['S1'])['errors']
+    assert any(e.endswith('directions: ID/값 중복') for e in before) and 'retrieval_plan: ID/값 중복' in before
+    value, changes = c.intake_projection(bank)
+    fields = [x['field'] for x in changes]
+    cid = bank['retrieval_plan'][0]['concept_id']
+    assert 'retrieval_plan' in fields and 'source_summary' in fields and f'{cid}.directions' in fields
+    assert 'Q2.prerequisites' in fields and 'Q1.correct_option_ids' in fields
+    assert value['questions'][1]['prerequisites'] == ['Q1'] and value['questions'][0]['correct_option_ids'] == ['A']
+    assert len(value['retrieval_plan']) == len(f.old.bank()['retrieval_plan'])
+    assert not any('ID/값 중복' in e for e in validate_bank(value, ['S1'])['errors'])
+    assert c.intake_projection(value)[1] == []                       # idempotent
+
+
+def test_intake_leaves_a_bank_without_repeats_alone():
+    bank = f.old.bank()
+    value, changes = c.intake_projection(bank)
+    assert not any(x['field'].endswith(('.directions', '.prerequisites', '.correct_option_ids')) or x['field'] in ('retrieval_plan', 'source_summary')
+                   for x in changes)
+    assert value['questions'] == [dict(q, importance=v['importance']) for q, v in zip(bank['questions'], value['questions'])]
+
+
+def test_two_different_plans_for_one_concept_still_stop():
+    from studyez_contracts.bank.validate import validate_bank
+    bank = f.old.bank()
+    other = copy.deepcopy(bank['retrieval_plan'][0])
+    other['repetition_budget'] = other['repetition_budget'] + 1
+    bank['retrieval_plan'].append(other)
+    value, _ = c.intake_projection(bank)
+    assert len(value['retrieval_plan']) == 2
+    assert any(e.startswith('retrieval_plan: ID/값 중복') for e in validate_bank(value, ['S1'])['errors'])
