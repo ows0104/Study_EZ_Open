@@ -4,10 +4,12 @@ from datetime import date, timedelta
 from math import ceil
 from statistics import median
 from .policy import KST, instant, study_day
-from .state import targets, direction_owners, replay
+from .state import targets, direction_owners, replay, replay_tasks, per_task
 
 
 def plan(doc, events, available, now, policy):
+    if per_task(doc):
+        return plan_tasks(doc, events, available, now, policy)
     rows, states = replay(doc, events, now, policy)
     by_target = {r['id']: r for r in rows}
     owners = direction_owners(doc)
@@ -96,4 +98,107 @@ def plan(doc, events, available, now, policy):
             'deadline': deadline.isoformat() if deadline else None,
             'preparedUnseen': len(unseen), 'unpreparedGoals': sum(
                 not any(owners[d] == t['target_id'] for d in candidates) for t in target_list),
+            'scopeNote': '준비된 학습 범위 기준 · 앞으로 들어올 자료량 추정 없음'}
+
+
+def _habitual(events, today, policy):
+    history = defaultdict(set)
+    for event in events:
+        if event['kind'] == 'reveal' and event['payload'].get('attempted'):
+            when = study_day(instant(event['at']), policy)
+            if when < today:
+                history[when].add((event['revision'], event['payload']['task_id']))
+    return int(median([len(history[d]) for d in sorted(history)[-7:]])) if history else None
+
+
+def plan_tasks(doc, events, available, now, policy):
+    """root-generation/4 (spec R8 option B): every prepared task is a candidate, not one per direction.
+
+    Same rules as plan() with the learner state of each task: new goals by the target quota (unchanged,
+    target-based), due tasks, unassessed tasks of learned goals, history fill and explicit prerequisites.
+    Tasks of one target, and so several tasks of one direction, keep the document's task order, which
+    validate_document holds to the map/prerequisite plan order."""
+    rows, _, states = replay_tasks(doc, events, now, policy)
+    by_target = {r['id']: r for r in rows}
+    owners = direction_owners(doc)
+    target_list = targets(doc)
+    order = {t['target_id']: i for i, t in enumerate(target_list)}
+    authored = {t['target_id']: t for t in target_list}
+    position = {t['task_id']: i for i, t in enumerate(doc['tasks'])}
+    candidates = [t for t in doc['tasks'] if t['task_id'] in available and t['direction_id'] in owners]
+    by_direction = defaultdict(list)
+    for task in candidates:
+        by_direction[task['direction_id']].append(task)
+    owner = lambda task: owners[task['direction_id']]
+    today = study_day(now, policy)
+    day = now.astimezone(KST).date()
+    deadline = date.fromisoformat(doc['exam_date']) - timedelta(days=policy['deadline_offset']) if doc['exam_date'] else None
+    days = (deadline - day).days + 1 if deadline else None
+    prepared = {owner(t) for t in candidates}
+    unseen = [t['target_id'] for t in target_list if not by_target[t['target_id']]['learned'] and t['target_id'] in prepared]
+    quota = min(len(unseen), ceil(len(unseen) / days)) if days is not None and days > 0 else len(unseen)
+    def priority(tid):
+        return (not by_target[tid]['important'], order[tid])
+    unseen.sort(key=priority)
+    selected, chosen = [], set()
+    def add(task, reason):
+        if task['task_id'] not in chosen:
+            chosen.add(task['task_id'])
+            selected.append({**task, 'reason': reason})
+    def add_target(tid, reason):
+        for direction in authored[tid]['directions']:
+            for task in by_direction[direction['direction_id']]:
+                add(task, reason)
+    for tid in unseen[:quota]:
+        add_target(tid, '새 목표')
+    due = [t for t in candidates if states.get(t['task_id'], {}).get('rating') is not None and
+           states[t['task_id']]['effectiveDue'] <= today.isoformat()]
+    # A same-day failure never expands this session, or immediately creates forced repeats.
+    due = [t for t in due if study_day(instant(states[t['task_id']]['lastAt']), policy) != today]
+    due.sort(key=lambda t: (*priority(owner(t)), states[t['task_id']]['effectiveDue'], position[t['task_id']]))
+    for task in due:
+        add(task, '복습 확인')
+    # Incomplete learned goals retain every unassessed task, including optional detail.
+    for task in candidates:
+        value = states.get(task['task_id'], {})
+        if by_target[owner(task)]['learned'] and not value.get('rating') and value.get('lastDay') != today:
+            add(task, '미평가 과제')
+    habitual = _habitual(events, today, policy)
+    for tid in unseen[quota:]:
+        if habitual is None or len(selected) >= habitual:
+            break
+        add_target(tid, '새 범위 보완')
+    # Explicit prerequisite relations reorder already-selected tasks and may bring a prepared
+    # prerequisite forward. Failure on it never locks the following direction.
+    chosen_targets = {owner(t) for t in selected}
+    prereqs = defaultdict(set)
+    for edge in doc['prerequisites']:
+        prereqs[edge['after_target']].add(edge['before_target'])
+    expanded = set()
+    def prerequisites(tid, visiting):
+        if tid in visiting or tid in expanded:
+            return
+        for parent in sorted(prereqs[tid], key=lambda p: order[p]):
+            prerequisites(parent, visiting | {tid})
+            if not by_target[parent]['learned']:
+                add_target(parent, '명시적 선행 연결')
+        expanded.add(tid)
+    for tid in sorted(chosen_targets, key=lambda t: order[t]):
+        prerequisites(tid, set())
+    emitted, result = set(), []
+    def emit(tid):
+        if tid in emitted:
+            return
+        emitted.add(tid)
+        for parent in sorted(prereqs[tid], key=lambda p: order[p]):
+            emit(parent)
+        result.extend(sorted((t for t in selected if owner(t) == tid), key=lambda t: position[t['task_id']]))
+    for task in selected:
+        emit(owner(task))
+    from studyez_contracts.roots.generation_v2 import order_plan
+    assessed = {t['question_id'] for t in doc['tasks'] if states.get(t['task_id'], {}).get('rating') is not None}
+    result = order_plan(doc, result, available, assessed)
+    return {'tasks': result, 'newGoalQuota': quota, 'days': days, 'habitualTasks': habitual,
+            'deadline': deadline.isoformat() if deadline else None,
+            'preparedUnseen': len(unseen), 'unpreparedGoals': sum(t['target_id'] not in prepared for t in target_list),
             'scopeNote': '준비된 학습 범위 기준 · 앞으로 들어올 자료량 추정 없음'}
