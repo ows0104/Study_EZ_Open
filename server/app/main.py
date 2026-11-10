@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 
 from app.config import get_settings
+from app.errors import ErrorCORSMiddleware
 from app.routes import quiz_publication
 from app.routes import connections
 from app.routes import (
@@ -48,6 +49,9 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "Range"],
     expose_headers=["Accept-Ranges", "Content-Range", "Content-Length"],
 )
+# CORS 바깥에 둔다(나중에 넣은 것이 바깥). 처리되지 않은 예외의 500에도 같은 출처 헤더를
+# 붙여, 브라우저가 서버 오류를 「Failed to fetch」로 숨기지 않게 한다 — `app/errors.py`.
+app.add_middleware(ErrorCORSMiddleware, allow_origins=settings.cors_allowed_origins)
 
 
 @app.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
