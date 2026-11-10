@@ -4,7 +4,8 @@
 - 서버 lecture_notes·route_contract·usage 통과, web typecheck·build 통과, 고정물 브라우저 확인(아래 state.json 기록).
 
 ## 배포 대상 버전·순서·데이터 변경
-1. (승인 필요) 운영 DB에 `note_read`, `lecture_memo` 생성 + RLS — `init-db`.
+1. (2026-11-10 승인) 운영 DB에 `note_read`, `lecture_memo` 생성 + RLS — `create_tables.py`(세 표만 create_all).
+   같은 스크립트가 자유 노트의 `user_note`도 없으면 만든다(운영에 없을 가능성, claude/error-cors 조사). 자격 정보는 사용자가 넣고 실행한다.
 2. (승인 필요) master 병합 → API 자동 배포 → 같은 SHA로 Pages.
 
 ## 배포 후 확인·롤백·필요한 사람 승인

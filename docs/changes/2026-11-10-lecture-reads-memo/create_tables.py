@@ -1,6 +1,10 @@
-"""운영 DB에 note_read·lecture_memo 두 표만 만든다(2026-11-10 사용자 승인 「응 만들어줘」).
+"""운영 DB에 note_read·lecture_memo·user_note 세 표만 만든다.
 
-init-db 전체(호환 칼럼·권한 옮기기)를 돌리지 않고 이 두 표만 create_all 한다.
+- note_read·lecture_memo: 회독·메모(PR #79). 2026-11-10 사용자 승인 「응 만들어줘」.
+- user_note: 자유 노트(PR #18, 이미 배포). 운영에 표가 없어 /notes가 500일 가능성(claude/error-cors 조사).
+  2026-11-10 사용자 「user_note와 관련된 것도 정리해서 어떻게 실행하면 되는지 정리해서 알려줘」.
+
+init-db 전체(호환 칼럼·권한 옮기기)를 돌리지 않고 이 세 표만 create_all 한다.
 이미 있으면 건드리지 않는다. 기존 표·데이터는 읽지도 바꾸지도 않는다.
 
     cd server
@@ -21,8 +25,9 @@ from sqlalchemy import inspect, text  # noqa: E402
 
 from app.database import Base, engine  # noqa: E402
 from app.models.lecture_notes import LectureMemo, NoteRead  # noqa: E402
+from app.models.notes import UserNote  # noqa: E402
 
-TABLES = [NoteRead.__table__, LectureMemo.__table__]
+TABLES = [NoteRead.__table__, LectureMemo.__table__, UserNote.__table__]
 
 if engine.dialect.name != "postgresql":
     raise SystemExit(f"postgres가 아닙니다({engine.dialect.name}). 운영 .env인지 확인하세요.")
@@ -34,5 +39,5 @@ after = set(inspect(engine).get_table_names())
 with engine.connect() as conn:
     for table in TABLES:
         rls = conn.execute(text("select relrowsecurity from pg_class where relname = :n"), {"n": table.name}).scalar()
-        state = "새로 만듦" if table.name not in before else "이미 있음"
+        state = "새로 만듦" if table.name not in before else "이미 있음(그대로 둠)"
         print(f"{table.name}: {state if table.name in after else '없음!'} · RLS {'켜짐' if rls else '꺼짐!'}")
