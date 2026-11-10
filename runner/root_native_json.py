@@ -593,7 +593,13 @@ def main():
     try:
         require_unblocked(a.out)
         from studyez_contracts.roots.parallel import is_v2_source
-        packet=read(a.packet);result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)or packet.get('generationPolicy')=='root-generation/3'else None,resume=a.resume,rerun=tuple(a.rerun))
+        packet=read(a.packet)
+        if packet.get('generationPolicy')=='root-generation/3':
+            # Windows without long paths: the deepest file a stage folder or its resume archive holds must fit in
+            # 259 characters. A copy of 261102_02 in a deeper folder failed in the middle of a late stage.
+            deepest=a.out.resolve()/'.resume-99'/'.native'/'v3-coverage-fix-context-0'/'work'/'material'/('stimulus-'+'0'*64+'.png')
+            require(os.name!='nt'or len(str(deepest))<260,f'실행 폴더 경로가 너무 깁니다({len(str(a.out.resolve()))}자). 단계 폴더의 파일이 Windows 경로 한도 259자를 넘습니다. 모델 호출 전에 멈춥니다.')
+        result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)or packet.get('generationPolicy')=='root-generation/3'else None,resume=a.resume,rerun=tuple(a.rerun))
         validate_all(a.out,result)
         if packet.get('parallelAuthoring'):
             from runner.parallel_status import refresh

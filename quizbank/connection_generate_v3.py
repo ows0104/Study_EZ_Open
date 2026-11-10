@@ -18,7 +18,6 @@ add rounds and fix attempts recorded in the ledger are never reset.
 import copy
 import hashlib
 import json
-import os
 import re
 from pathlib import Path
 
@@ -320,11 +319,6 @@ def run(packet, out, model, invoke, resume=None):
     from . import connection_generate as g
     out = Path(out)
     v3.require(packet.get('generationPolicy') == POLICY, 'root-generation/3 packet required')
-    # Windows without long paths: the deepest file a stage folder or its resume archive holds must fit in 259
-    # characters. Found by replaying 261102_02 in a deeper folder: the copy failed in the middle of a late stage.
-    deepest = out.resolve() / '.resume-99' / '.native' / 'v3-coverage-fix-context-0' / 'work' / 'material' / ('stimulus-' + '0' * 64 + '.png')
-    v3.require(os.name != 'nt' or len(str(deepest)) < 260,
-               f'실행 폴더 경로가 너무 깁니다({len(str(out.resolve()))}자). 단계 폴더의 파일이 Windows 경로 한도 259자를 넘습니다. 모델 호출 전에 멈춥니다.')
     st = Stages(packet, out, model, invoke, resume)
     ledger = st.ledger
     sources = g.prepare(packet, out / 'material')

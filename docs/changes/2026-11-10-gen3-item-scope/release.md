@@ -8,7 +8,7 @@
 |---|---|
 | `tests/quizbank/test_root_generation_v3.py` | 통과. 임의 판정 300가지 포함 |
 | `tests/contracts/test_generation_v3.py`, `tests/runner/test_root_front_v3.py`, `tests/runner/test_root_native_json.py` | 통과 |
-| 루트 Python 전체 `python -m pytest tests` | state.json의 regression 기록 |
+| 루트 Python 전체 `python -m pytest tests` | 2,662 통과 · 3 실패 · 3 건너뜀(11분). 실패 2개는 경로 길이 검사가 시험용 임시 폴더를 막은 것으로, 검사를 러너 진입점으로 옮겨 고쳤다(CI도 같은 2개로 실패했다). 나머지 1개 `test_desktop_control`은 이 worktree에 `.venv`가 없어서다(변경과 무관) |
 | 서버 `-m tests root_generation` | 4개 통과 |
 | 서버 `test_root_map_tree`, `test_root_map_tree_v3` | 로컬에서 못 돌렸다. 서버 venv에 PyMuPDF가 없다(기존 환경 문제). CI에서 돈다 |
 
