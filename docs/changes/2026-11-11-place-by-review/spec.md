@@ -51,6 +51,25 @@ root-generation/4 새 실행(ledger 표시 `placement: 'review-relations/1'`)에
   - 다른 목표로 옮긴 과제, 관계 없이 붙인 과제, 관계를 고친 검토 행은 거절된다.
   - 로컬에 결과가 있는 공개 판(26110803 generation-3·1c484a7b·fa71412a)의 재검증 결과가 바뀌지 않는다. 26110901은 로컬에 결과 파일이 없어 확인하지 못했다.
 
+### R5. 회상 단위(recall units)가 있는 목표는 답한 단위에만 붙인다
+- 배경: PR #93 조사 세션이 찾았고, 그 세션을 통해 전달된 사용자 결정 「Fold into spec」으로 이 스펙에 넣는다. 원 메모는 side-session-notes `v4-legacy-placement.md`다.
+- 현상: `brief.recall_policy = recall-units/1`이면 목표가 여러 회상 단위로 나뉜다. PR #90 규칙에서는 세 군데가 모두 단위를 가리지 않는다.
+  - `recall_units.project_assessment`가 부모 목표의 근거 행을 모든 단위로 복사한다.
+  - `_compile`이 그 복사본을 모두 받는다.
+  - `place`가 답한 component를 부모 수준에서 센다.
+- 결과
+  - 모든 단위가 동점이 되어 문항이 지도 순서상 첫 단위에 붙는다.
+    - 합성 예: D1을 D1_host·D1_env로 나눴을 때 env만 답하는 Q3이 D1_host에 붙는다. 옛 규칙에서는 D1_env였다.
+  - `recall.summarize`가 답하지 않은 단위까지 확인됨으로 센다. 리케차 goal_coverage[62]는 U054_1과 U054_2를 모두 확인됨으로 셌지만, 답한 단위 기준으로는 U054_2뿐이다.
+- 요구
+  - R2의 배치 후보는 그 문항이 답으로 묻는 단위로 좁힌다(커버 판정의 단위별 component 답 위치 기준). 답하는 단위가 하나도 없을 때만 그 목표의 모든 단위가 후보다.
+  - 커버 확인(목표별 confirmed, `readiness`의 전부 출제 여부)은 답한 단위만 센다.
+  - 이전 규칙으로 만든 결과의 검증은 그 규칙대로 둔다(#93의 `PLACEMENTS`).
+- **수용**
+  - 합성 D1_host/D1_env에서 Q3은 D1_env에 붙는다.
+  - 답하지 않은 단위는 확인됨으로 세지 않는다.
+  - 두 단위 모두 답하지 않는 문항은 두 단위가 후보이고, R2의 순서로 하나를 고른다.
+
 ## 책임·입출력 계약·오류 상태
 
 | 책임 | 위치 | 바뀌는 것 |
@@ -59,6 +78,7 @@ root-generation/4 새 실행(ledger 표시 `placement: 'review-relations/1'`)에
 | 검토 지시 | `content/prompts/learning-links/v4/item-review.md` | `relations` 줄(일부·반대 방향·추론 포함, 발문 제공 제외) |
 | 배치 | `generation_v4.place`·`make_document`·`assessment_raw` | 정책 표시가 있으면 검토 관계로 배치. 문항 검토의 관계 주장(`question_reviews[].relations`)이 검토 관계에서 온다 |
 | 정책 표시 | `quizbank/connection_generate_v4.py`(`Stages(fresh=…)`) | 새 ledger에 `placement: 'review-relations/1'` |
+| 회상 단위 (R5) | `studyez_contracts/roots/recall_units.py`(`project_assessment`·`summarize`), `generation_v4._compile`·`place` | 답한 단위에만 배치 후보·확인됨 |
 | 커버 지시 | `content/prompts/learning-links/v4/coverage.md` | 「문항은 근거 행이 있는 목표에 배치되므로…」 문장을 지운다. 커버 판정은 누락 점검만 한다고 적는다 |
 
 **오류 상태**
