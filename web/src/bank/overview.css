@@ -50,7 +50,7 @@
 .stage-bar > span { display: block; height: 100%; }
 
 /* 표: 체크 · 번호 · 강의 · 전체 · 미열람 · 인지 · 인출 · 저장 · 복습 · 학습률 · 풀기 */
-.list-table { --cols: 28px 40px minmax(140px, 1fr) repeat(7, minmax(46px, 72px)) 32px; padding-bottom: 8px; font-variant-numeric: tabular-nums; }
+.list-table { --cols: 28px 40px minmax(140px, 1fr) repeat(7, minmax(46px, 72px)) 60px; padding-bottom: 8px; font-variant-numeric: tabular-nums; }
 .list-row { display: grid; grid-template-columns: var(--cols); align-items: center; gap: 0 8px; min-height: 50px; padding: 0 10px; border-radius: 10px; }
 .list-row.is-link { cursor: pointer; }
 .list-row:hover { background: var(--hover); }
@@ -165,11 +165,11 @@
 
 /* 좁은 폭: 네 단계 칸을 빼고 전체·복습·학습률만 남긴다(좌측 메뉴 폭과 상관없이 표 폭 기준). */
 @container (max-width: 640px) {
-  .list-table { --cols: 28px 40px minmax(0, 1fr) repeat(3, minmax(40px, 52px)) 30px; }
+  .list-table { --cols: 28px 40px minmax(0, 1fr) repeat(3, minmax(30px, 40px)) 34px; }
   .list-row > .is-stage, .list-row.is-head > .is-stage { display: none; }
 }
 @media (max-width: 640px) {
-  .list-table { --cols: 28px 40px minmax(0, 1fr) repeat(3, minmax(40px, 52px)) 30px; }
+  .list-table { --cols: 28px 40px minmax(0, 1fr) repeat(3, minmax(30px, 40px)) 34px; }
   .list-row > .is-stage, .list-row.is-head > .is-stage { display: none; }
   .list-row { padding: 0 6px; gap: 0 6px; }
   .list-head h1 { font-size: 24px; }
@@ -191,7 +191,10 @@
 .study-overview .list-view { align-self: flex-start; width: auto; margin-bottom: 6px; }
 
 /* 학습률 오른쪽 복습 바로 풀기 */
-.list-go { display: flex; justify-content: flex-end; }
+.list-go { display: flex; justify-content: center; }
+.list-row.is-head .list-go { white-space: nowrap; }
+@container (max-width: 640px) { .list-row.is-head .list-go { white-space: normal; text-align: center; line-height: 1.2; word-break: keep-all; } }
+@media (max-width: 640px) { .list-row.is-head .list-go { white-space: normal; text-align: center; line-height: 1.2; word-break: keep-all; } }
 .study-overview .list-go button {
   display: grid; place-items: center; width: 28px; height: 28px; min-height: 0; padding: 0; border: 0; border-radius: 999px;
   background: var(--accent-soft); color: var(--accent-ink);

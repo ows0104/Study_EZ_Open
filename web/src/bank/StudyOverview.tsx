@@ -271,7 +271,7 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
         {stages.map(([key, label]) => <span role="columnheader" key={key} className="is-num is-stage"><i className={`stage-dot stage-${key}`} />{label}</span>)}
         <span role="columnheader" className="is-num">복습</span>
         <span role="columnheader" className="is-num">학습률</span>
-        <span role="columnheader"><span className="sr-only">복습 풀기</span></span>
+        <span role="columnheader" className="list-go">복습 퀴즈</span>
       </div>
       {groups.map(group => {
         const list = group.list;
