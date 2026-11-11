@@ -106,6 +106,7 @@ def v3_schema(stage,ctx=None):
     if kind=='supplement-normalize':return v3.SUPPLEMENT_NORMALIZE_OUTPUT
     if kind=='brief':return v3.BRIEF_FIX_OUTPUT
     if is_v4(stage)and kind=='review':return v4.review_schema(ctx or {})
+    if is_v4(stage)and kind=='add':return v4.add_schema(ctx or {})
     return (v4 if is_v4(stage)else v3).OUTPUTS['map-check'if kind=='map'else'item-review'if kind=='review'else kind]
 
 def v3_check(stage,ctx,value,state=None,work=None):

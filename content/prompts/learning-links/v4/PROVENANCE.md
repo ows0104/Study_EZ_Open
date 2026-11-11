@@ -15,3 +15,8 @@ root-generation/4(요청명 map-tree/3)의 단계 프롬프트다. 각 파일은
 context.md·brief-fix.md·supplement-normalize.md는 바뀐 것이 없어 복사하지 않았다. v4 실행도 v3의 그 파일을 그대로 쓴다.
 
 `normalize.md`는 `../automation/extract-v2.md`를 복사해 docs/changes/2026-11-11-v4-normalize-components(R1)가 요구한 곳만 바꿨다: component는 따로 채점할 내용 하나, 해석상 주의는 component 밖, 포인트 방향과 겹치는 지도 관계 방향·이름만 끼운 cue 틀 금지. 단계 이름이 `normalize`라서 러너가 입력의 `_pipeline_version`(root-generation/4)으로 이 파일을 고른다. /2·/3은 extract-v2.md 그대로다.
+
+docs/changes/2026-11-12-goal-dedupe(피코르나 261111_02에서 같은 답의 문항 3개가 과제가 된 것)가 바꾼 곳:
+- coverage.md: component에 섞인 해석상 주의는 판정에 넣지 않음(R1). 중복 묶음은 새 문항과 기존 문항을 함께, 부분만 답한 문항끼리도 비교(R4).
+- add.md: `goals[].asked`(그 목표를 이미 묻는 문항과 빠진 부분의 판정)를 받아 같은 답을 다시 쓰지 않음. 쓸 문항이 없으면 빈 출력(R3).
+- normalize.md: 「…하되, …은 아님을 구별한다」 꼴 포인트는 사실만 component에(R2).

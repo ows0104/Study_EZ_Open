@@ -23,6 +23,12 @@ early-call/1(`Stages.start_early`, 2026-11-11 사용자 「겹치기까지 같�
 - ledger `earlyCalls`에 남고 결과 manifest에는 들지 않는다. 검사: `tests/quizbank/test_pipeline_overlap.py`, `tests/runner/test_front_overlap.py`.
 /4의 새 실행(ledger `reviewEvidence`, review-evidence/1)은 문항 검토가 정답 근거 필기 쪽(`evidence`)을 함께 적는다. 모든 고치기가 끝난 뒤 의학 검토 전에, S1 인용이 그 쪽과 다르면 코드가 인용만 그 쪽으로 바꾸고 `citationAlignments`에 남긴다(모델 호출·고치기 상한 소비 없음). 계약은 기록과 정확히 같은 인용 교체만 허용한다. 게시 뒤 근거 보강은 이 쪽을 다시 고르지 않는다(`docs/changes/2026-11-11-evidence-from-citations/`). 검사: `tests/quizbank/test_review_evidence.py`.
 /4의 새 실행(ledger `placement`, review-relations/1)은 문항 검토가 그 문항이 회상시키는 지도 관계(`relations`, whole/partial)를 함께 적고, 문항은 그 관계를 가진 목표에 배치된다(whole 우선 → 답한 component 수 → 지도 순서). 목표 커버 판정은 누락 점검·빈 목표 추가·`readiness`에만 쓴다. 회상 단위가 있는 목표는 답한 단위에만 붙이고 답한 단위만 확인됨으로 센다. 표시가 없는 결과는 `PLACEMENTS`의 이전 규칙으로 검증한다(`docs/changes/2026-11-11-place-by-review/`). 검사: `tests/contracts/test_review_placement.py`, `tests/quizbank/test_place_by_review.py`.
+/4의 새 실행(ledger `goalDuplicates`, goal-duplicates/1, `docs/changes/2026-11-12-goal-dedupe/`)은 같은 답을 같은 방향으로 묻는 문항을 목표 전체에서 찾는다.
+- 추가 출제 입력의 목표마다 `asked`(그 목표를 이미 묻는 문항과 빠진 component의 판정)를 준다. 같은 답을 다시 쓰지 않고, 쓸 문항이 없으면 빈 출력으로 끝낸다. 빈 출력이면 그 회차의 재확인과 남은 추가 회차를 건너뛴다.
+- 추가 출제 뒤 커버 재확인은 새 문항과 그 목표의 기존 근거 문항을 함께 읽는다. 기존 문항의 근거는 처음 판정 그대로 두고, 새 문항의 근거와 중복 묶음만 받는다.
+- 중복 묶음은 component를 온전히 답하지 못한 문항끼리도 남긴다. 남길 문항은 `merged_duplicates` 그대로다.
+- 커버 지시문은 component에 섞인 해석상 주의(일반화 한계·예외 단서)를 판정에 넣지 않는다. 주의만 빠졌다는 이유로 목표가 계속 missing이면 추가 출제가 같은 문항을 다시 쓴다(261111_02 D077: 같은 문항 3개).
+- 표시가 없는 ledger는 입력과 묶음 규칙이 이전 그대로다. 결과 manifest와 서버 검증은 바뀌지 않았다. 검사: `tests/quizbank/test_goal_duplicates.py`.
 기존 /1 요청·완료 결과·동일 입력의 상한은 재요청/프로토콜 변경으로 초기화하지 않는다. 상세 계약·회귀 검사는 `docs/changes/2026-11-05-root-pipeline-guards/`에 있다.
 초기 원본 지도에 기계적으로 확인된 참조/선행 오류가 있으면 첫 문항 정리에 오류를 함께 전달한다. 초기 원문은 보존하고 질문을 본 교정 지도는 derived다. 검수 전 선행 상태는 허용하되 최종 채택에는 실제 검수 근거를 요구한다.
 새 실행 정책(2026-11-09 사용자 설계 결정, `docs/changes/2026-11-09-main-quiz-runner-pipeline/`)은 새 ledger가 `runPolicies`로 적는다.

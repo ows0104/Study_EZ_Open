@@ -6,6 +6,9 @@ The /3 run (connection_generate_v3) with these differences (spec R1-R7):
 - coverage is the union of answered components; an add stage receives only the components nobody asks;
 - the coverage judgment names true duplicates; every source-ok question becomes a task except merged duplicates;
 - the map check sees no importance, and the item review may leave an importance note that decides nothing.
+goal-duplicates/1 (docs/changes/2026-11-12-goal-dedupe, new ledgers): an add stage sees which questions already ask
+each gap goal and may write nothing; the coverage re-check after it reads those questions beside the new ones, so a
+question written again for a goal is named a duplicate of the one that was there.
 Stage names are `v4-<kind>…` so the runner uses the /4 schemas, checks and prompts (content/prompts/learning-links/v4,
 falling back to v3/ for prompts that did not change). The /3 module is not changed in behaviour.
 """
@@ -37,16 +40,35 @@ def _goals(brief):
     return {d['direction_id']: d for t in brief['targets'] for d in t['directions']}
 
 
-def _merge_row(old, new, goal, replaced=()):
+def _merge_row(old, new, goal, replaced=(), by_evidence=False):
     """Coverage of one goal after a narrower judgment (union rule, R5): evidence and duplicate groups of the
-    replaced/newly judged questions come from `new`; the status follows from the merged evidence."""
+    replaced/newly judged questions come from `new`; the status follows from the merged evidence.
+
+    `by_evidence` (goal-duplicates/1): a duplicate group keeps every member the goal has an evidence row for, as
+    check_coverage accepts it. Without it only members that answer a whole component stay, which dropped the group
+    of three questions that each asked the same part of one component (261111_02 D077)."""
     if old is None:
         return new
     renewed = set(replaced) | {e['question_id'] for e in new['evidence']}
     keep = [e for e in old['evidence'] if e['question_id'] not in renewed]
     row = {'direction_id': new['direction_id'], 'evidence': keep + copy.deepcopy(new['evidence'])}
-    asking = {e['question_id'] for e in row['evidence'] if v4.answered(e)}
-    groups = [g for g in old.get('duplicates', []) if not set(g['question_ids']) & renewed] + copy.deepcopy(new['duplicates'])
+    asking = {e['question_id'] for e in row['evidence'] if by_evidence or v4.answered(e)}
+    if by_evidence:
+        # A new group takes in the old group it meets: the judgment that read a third copy beside the first two
+        # names all three, and the pair recorded before must not shut the third one out. A group of re-judged
+        # questions (`replaced`) is decided anew, as before.
+        groups, apart = copy.deepcopy(new['duplicates']), []
+        for g in old.get('duplicates', []):
+            if set(g['question_ids']) & set(replaced):
+                continue
+            met = next((n for n in groups if set(n['question_ids']) & set(g['question_ids'])), None)
+            if met is None:
+                apart.append(g)
+            else:
+                met['question_ids'] = [*met['question_ids'], *(q for q in g['question_ids'] if q not in met['question_ids'])]
+        groups = groups + apart
+    else:
+        groups = [g for g in old.get('duplicates', []) if not set(g['question_ids']) & renewed] + copy.deepcopy(new['duplicates'])
     seen, kept_groups = set(), []
     for g in groups:
         ids = [q for q in g['question_ids'] if q in asking and q not in seen]
@@ -60,6 +82,13 @@ def _merge_row(old, new, goal, replaced=()):
         row['status'] = 'covered' if v4.full(row, goal) else 'missing'
     row['reason'] = new['reason'] if new['status'] != 'unknown' else old['reason']
     return row
+
+
+def _first_evidence(old, new):
+    """goal-duplicates/1: a re-check that reads questions already judged for the goal keeps their first evidence
+    (the same question is not judged twice); it adds the evidence of the others and its duplicate groups."""
+    had = {e['question_id'] for e in old['evidence']}
+    return {**new, 'evidence': [e for e in new['evidence'] if e['question_id'] not in had]}
 
 
 def _intake(packet, out):
@@ -91,6 +120,8 @@ def check_stage(kind, value, ctx, state, scratch):
     scratch.mkdir(parents=True, exist_ok=True)
     if kind == 'add':
         v4.check_added(value, ctx)
+        if v4.empty_added(value):
+            return value
         merged, _ = v3.merge_added(state['bank'], state['clinical_conflicts'], v4.without_basis(value), ctx['allowed_question_ids'])
         stimuli = [*state['stimuli'], *value['visual_stimuli']]
     else:
@@ -124,13 +155,18 @@ def run(packet, out, model, invoke, resume=None):
     evidence_notes = v4.evidence_source(sources)
     # review-relations/1 (docs/changes/2026-11-11-place-by-review): a new run places each question by the map relations
     # its item review names; the goal coverage judgment only finds what is not asked yet.
-    fresh = {'placement': {'policy': v4.REVIEW_PLACEMENT}}
+    fresh = {'placement': {'policy': v4.REVIEW_PLACEMENT}, 'goalDuplicates': {'policy': v4.GOAL_DUPLICATES}}
     if evidence_notes:
         fresh['reviewEvidence'] = {'policy': v4.REVIEW_EVIDENCE, 'sourceId': evidence_notes['source_id']}
     st = Stages(packet, out, model, invoke, resume, policy=POLICY, prompts=('v3', 'v4'), fresh=fresh)
     ledger = st.ledger
     evidence_on = ledger.get('reviewEvidence', {}).get('policy') == v4.REVIEW_EVIDENCE
     placement = 'review' if ledger.get('placement') == {'policy': v4.REVIEW_PLACEMENT} else 'evidence'
+    # goal-duplicates/1 (docs/changes/2026-11-12-goal-dedupe): a ledger made without it keeps its add and re-check inputs.
+    goal_dups = ledger.get('goalDuplicates') == {'policy': v4.GOAL_DUPLICATES}
+
+    def merge_row(old, new, goal, replaced=()):
+        return _merge_row(old, new, goal, replaced, by_evidence=goal_dups)
     base = normalize_input(packet, sources)
     points_doc = v4.check_points(json.loads(packet['points']))
     profile = points_doc['notebook_profile']
@@ -202,7 +238,7 @@ def run(packet, out, model, invoke, resume=None):
             if goal_ids:
                 value = judge(X + 'coverage-duplicate', v3.coverage_input(brief, bank, goal_ids, [d['question_id'] for d in dup]))
                 for r in value['rows']:
-                    rows[r['direction_id']] = _merge_row(rows.get(r['direction_id']), r, _goals(brief)[r['direction_id']])
+                    rows[r['direction_id']] = merge_row(rows.get(r['direction_id']), r, _goals(brief)[r['direction_id']])
         gone = {d['question_id'] for d in out_of_scope}
         off_questions = [q for q in bank['questions'] if q['question_id'] in gone]
         bank['questions'] = [q for q in bank['questions'] if q['question_id'] not in gone]
@@ -254,12 +290,17 @@ def run(packet, out, model, invoke, resume=None):
         if not gaps:
             break
         allowed = v3.next_question_ids(bank, ADD_PER_GOAL * len(gaps))
-        ctx = v4.add_input(brief, bank, gaps, allowed)
+        ctx = v4.add_input(brief, bank, gaps, allowed, rows if goal_dups else None)
         if ledger['addRounds'] < n + 1:
             ledger['addRounds'] = n + 1
             st.save()
         state = _state(bank, conflicts, stimuli, packet)
         value = st.run(f'{X}add-{n}', ctx, lambda raw, ctx=ctx, state=state, n=n: check_stage('add', raw, ctx, state, out / '.check-render' / f'{X}add-{n}'), state)
+        if v4.empty_added(value):
+            # Nothing left that a question can ask as an answer: there is no new question to judge, and another
+            # round would be handed the same gaps.
+            print(f'── 추가 출제 {n + 1}회차: 새로 쓸 문항 없음 (남은 빈 목표 {len(gaps)}개)', flush=True)
+            break
         plain = v4.without_basis(value)
         restated.extend({'stage': f'{X}add-{n}', **r} for r in v3.restated(visual.authored(bank), conflicts, plain))
         bank, conflicts = v3.merge_added(visual.authored(bank), conflicts, plain, allowed)
@@ -270,11 +311,19 @@ def run(packet, out, model, invoke, resume=None):
         added = [q['question_id'] for q in value['questions']]
         # Each chunk judges its own goals from the same bank: side by side in a new run, merged in chunk order
         # (docs/changes/2026-11-11-pipeline-resilience). The stage names and inputs are the ones they always had.
+        def judged(part):
+            # goal-duplicates/1: the new questions beside the ones already judged for these goals, so the judgment
+            # can name a new question a duplicate of an old one. Before, it read the new questions alone.
+            if not goal_dups:
+                return added
+            wanted = set(added) | {e['question_id'] for did in part for e in rows[did]['evidence']}
+            return [q['question_id'] for q in bank['questions'] if q['question_id'] in wanted]
         calls = [(f'{X}coverage-{n + 1}-{k}', ctx, lambda raw, ctx=ctx: v4.check_coverage(raw, ctx['goals'], ctx['questions']))
-                 for k, ctx in enumerate(v3.coverage_input(brief, bank, part, added) for part in chunks(list(gaps), COVERAGE_CHUNK))]
+                 for k, ctx in enumerate(v3.coverage_input(brief, bank, part, judged(part)) for part in chunks(list(gaps), COVERAGE_CHUNK))]
         for got in batches.judgments(st, calls):
             for r in got['rows']:
-                rows[r['direction_id']] = _merge_row(rows[r['direction_id']], r, goals[r['direction_id']])
+                old = rows[r['direction_id']]
+                rows[r['direction_id']] = merge_row(old, _first_evidence(old, r) if goal_dups else r, goals[r['direction_id']])
 
     # 4: item review and fixes by batch ---------------------------------------
     # Batches start from one snapshot and run side by side unless a conflict record or a prerequisite link joins
@@ -349,7 +398,7 @@ def run(packet, out, model, invoke, resume=None):
             judged_ids = [q['question_id'] for q in S.bank['questions'] if q['question_id'] in set(kept) | partners]
             got = judge(coverage_name, v3.coverage_input(brief, S.bank, goal_ids, judged_ids), stages)
             for r in got['rows']:
-                S.rows[r['direction_id']] = _merge_row(S.rows[r['direction_id']], r, _goals(brief)[r['direction_id']], judged_ids)
+                S.rows[r['direction_id']] = merge_row(S.rows[r['direction_id']], r, _goals(brief)[r['direction_id']], judged_ids)
             S.coverage.append((got['rows'], judged_ids, goal_ids))
 
     def count_attempts(S, targets):
@@ -372,7 +421,7 @@ def run(packet, out, model, invoke, resume=None):
 
     def apply_coverage(rows_, got_rows, judged_ids):
         for r in got_rows:
-            rows_[r['direction_id']] = _merge_row(rows_[r['direction_id']], r, _goals(brief)[r['direction_id']], judged_ids)
+            rows_[r['direction_id']] = merge_row(rows_[r['direction_id']], r, _goals(brief)[r['direction_id']], judged_ids)
 
     order = [q['question_id'] for q in bank['questions']]
     batch_ids = chunks(order, REVIEW_BATCH)
