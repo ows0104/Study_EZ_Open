@@ -11,7 +11,7 @@ PR 하나로 낸다. 단계마다 검사를 먼저 쓰고, 수정 전에 실패�
 ### 1. 검토 출력에 근거 쪽 (R1)
 - `studyez_contracts/roots/generation_v4.py`
   - `ITEM_REVIEW_OUTPUT`의 행에 `evidence {mode, reason, slides[{page, evidence}]}`를 더한다.
-  - 새 정책 `'review-evidence/1'`이 `runPolicies`에 있을 때만 필수다.
+  - 검토 입력에 `evidence_source`가 있을 때만 필수다(`review_schema(ctx)`). 러너는 같은 입력으로 출력 스키마를 고른다(`runner/root_native_json.schema_for`).
   - `check_review_input`이 확인하는 것:
     - 쪽 범위: material의 S1 쪽 수
     - single은 1장, linked는 2장 이상, unresolved는 0장
@@ -22,7 +22,7 @@ PR 하나로 낸다. 단계마다 검사를 먼저 쓰고, 수정 전에 실패�
   - 인용 쪽이 아니어도 S1.md에서 찾은 쪽이면 된다.
   - 슬라이드·요약 쪽을 구별하지 않는다(결정 1).
   - `PROVENANCE.md`에 출처 줄을 더한다.
-- `quizbank/connection_generate_v4.py`: 새 ledger의 `runPolicies`에 `'review-evidence/1'`을 더한다. 옛 ledger 이어 하기는 정책을 바꾸지 않는다.
+- `quizbank/connection_generate_v4.py`: 새 ledger에만 `reviewEvidence: {policy: 'review-evidence/1', sourceId}`를 적는다(`Stages(fresh=…)`, /3·/4는 v2의 `runPolicies` 대신 `batchMode` 같은 ledger 키를 쓴다). 그 키가 없는 옛 ledger 이어 하기는 근거 없이 돈다.
 - 판정 재사용(`v3.reusable`): 재사용된 검토 행에도 `evidence`가 있어야 한다. 새 정책 실행 안에서만 재사용하므로 따로 처리할 것은 없고, 검사로 확인만 한다.
 
 ### 2. 인용 맞추기 (R2)
@@ -30,7 +30,7 @@ PR 하나로 낸다. 단계마다 검사를 먼저 쓰고, 수정 전에 실패�
   - S1 `source_refs`의 쪽 집합이 마지막 검토의 `evidence.slides` 쪽 집합과 다르면 S1 ref를 근거 쪽으로 바꾼다.
   - 형식은 기존 locator 형식을 따른다: `PDF 물리 N쪽`, linked는 쪽마다 한 ref.
   - unresolved는 바꾸지 않는다.
-- `quizbank/connection_generate_v4.py`: 묶음 합치기(`review_phase` 뒤, `stale_coverage` 처리 뒤) 다음, context 앞에서 한 번 호출한다.
+- `quizbank/connection_generate_v4.py`: 모든 고치기(임상 정리 뒤 보완 포함)가 끝난 뒤, 조립·의학 검토 앞에서 한 번 호출한다.
   - ledger에 `citationAlignments`를 쓰고, manifest에 싣는다.
   - 바뀐 문항의 시각 자극·기초 문항 연결은 건드리지 않는다.
 - `studyez_contracts/roots/generation_v4.py`(결과 검증): 최종 bank 문항과 마지막 검토 입력의 문항이 다를 때 허용하는 경우는 하나뿐이다. 차이가 `citationAlignments`에 적힌 S1 locator 교체와 정확히 같아야 한다.

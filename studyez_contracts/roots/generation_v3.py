@@ -1143,6 +1143,11 @@ def check_result(value, packet, flavor):
     require(all(f['attempt'] <= FIX_LIMIT for f in meta['fixes']), 'result3: fix budget exceeded')
     reviewed = v2.restore_container_concepts(v2.restore_importance(bank, meta.get('importanceProjection')), meta.get('bankProjection'))
     final = {q['question_id']: q for q in reviewed['questions']}
+    # /4 review-evidence/1: notes citations aligned to the review evidence are compared in their intake form.
+    unalign = flavor.get('unalign')
+    if unalign is None:
+        require('citationAlignments' not in meta and 'reviewEvidence' not in meta, 'result3: citation alignments are a /4 record')
+    intake_form = unalign(meta, final) if unalign else final
     off = {r['question_id'] for r in meta['offGoalQuestions']}
     for q in meta['initialBank']['questions']:
         qid = q['question_id']
@@ -1151,7 +1156,7 @@ def check_result(value, packet, flavor):
         if qid in final and qid not in fixed:
             strip = lambda x: {k: ([p for p in v if p not in off] if k == 'prerequisites' else v) for k, v in x.items()
                                if k not in ('stimuli', 'tier', 'importance', 'concept_id', 'point_ids')}
-            require(strip(final[qid]) == strip(q), f'result3: {qid} changed without a fix')
+            require(strip(intake_form[qid]) == strip(q), f'result3: {qid} changed without a fix')
     tasks = {t['question_id'] for t in doc['tasks']}
     require(not tasks & off, 'result3: an out-of-scope question became a task')
     # The audit is the compile of the gathered judgments on the reviewed bank; the document is its assembly.

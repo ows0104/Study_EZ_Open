@@ -16,6 +16,7 @@
 연결 목표(role branch/root)의 중요도는 importance-basis/1 계산값을 쓴다. 원본 대조는 이어진 포인트 근거와 연결 내용이 원본에 맞는지만 판정하고, 전이 승인 여부로 unknown·conflict를 내지 않는다(2026-11-09 사용자 「계산값 쓰고 내용만 검토」).
 root-generation/3(`connection_generate_v3.py`, 2026-11-10 사용자 설계, `docs/changes/2026-11-10-root-generation-3/`)은 packet의 `generationPolicy`로만 열리는 별도 판이다. 독립 문제은행을 받아 커버 확인 → 지도 확인 → 목표 밖 문항의 포인트 보충 → 빈 목표만 추가(≤2) → 묶음 문항 검토·지적 문항만 고치기(문항당 ≤2, 나빠지면 그 고치기가 가져온 충돌·그림까지 되돌림) → 임상 정리(충돌 기록마다 판정, 일치가 아니면 인용 문항 보완 한 번 뒤 그 기록만 다시, 그래도 아니면 그 사실만 의학 검토에 안 보냄) → 조립 → 의학 검토 한 번 순으로 돈다. 판정 값은 강의를 멈추지 않고 그 목표·문항·충돌 기록에만 미친다(`docs/changes/2026-11-10-gen3-item-scope/`). 멈추는 것은 단계 실패와 「과제 0개」뿐이고, 목표별 이유는 `readiness.json`에 있다. 단계 입력은 `studyez_contracts.roots.generation_v3`의 입력 함수가 만든 칸만, 프롬프트는 `content/prompts/learning-links/v3/`(판정 규칙은 /2 문단을 그대로 옮김)를 쓴다. 같은 내용 문항의 판정은 다시 묻지 않는다. /2 실행·재개·검증은 바꾸지 않는다. 검사: `tests/quizbank/test_root_generation_v3.py`.
 /3·/4의 새 실행은 묶음 검토·고치기를 같은 시작 사본에서 동시에(최대 3) 돌리고 묶음 순서로 합친다(`connection_batches.py`, `docs/changes/2026-11-11-root-batch-parallel/`). 묶음 사이에 충돌 기록·선행 연결이 걸치면 그 실행은 순차로 돌고 `batchPhases`에 이유를 남긴다. 동시 묶음의 새 충돌 ID는 묶음 접두어(`CF-B<n>-`)로 시작하고 다른 묶음 충돌의 사실은 다시 쓰지 않는다. `batchMode`가 없는 이전 ledger는 순차 그대로다. 검사: `tests/quizbank/test_root_batch_parallel.py`.
+/4의 새 실행(ledger `reviewEvidence`, review-evidence/1)은 문항 검토가 정답 근거 필기 쪽(`evidence`)을 함께 적는다. 모든 고치기가 끝난 뒤 의학 검토 전에, S1 인용이 그 쪽과 다르면 코드가 인용만 그 쪽으로 바꾸고 `citationAlignments`에 남긴다(모델 호출·고치기 상한 소비 없음). 계약은 기록과 정확히 같은 인용 교체만 허용한다. 게시 뒤 근거 보강은 이 쪽을 다시 고르지 않는다(`docs/changes/2026-11-11-evidence-from-citations/`). 검사: `tests/quizbank/test_review_evidence.py`.
 기존 /1 요청·완료 결과·동일 입력의 상한은 재요청/프로토콜 변경으로 초기화하지 않는다. 상세 계약·회귀 검사는 `docs/changes/2026-11-05-root-pipeline-guards/`에 있다.
 초기 원본 지도에 기계적으로 확인된 참조/선행 오류가 있으면 첫 문항 정리에 오류를 함께 전달한다. 초기 원문은 보존하고 질문을 본 교정 지도는 derived다. 검수 전 선행 상태는 허용하되 최종 채택에는 실제 검수 근거를 요구한다.
 새 실행 정책(2026-11-09 사용자 설계 결정, `docs/changes/2026-11-09-main-quiz-runner-pipeline/`)은 새 ledger가 `runPolicies`로 적는다.
@@ -97,8 +98,8 @@ wrong·doubt와 후보별 검수 hash는 그대로 보존하고, 누락·깨진 
 | CLI 수정·보완 | `repair.py` | 검증·원본·정답 지적에 따라 수정하고 재검수 |
 | 사후 학습 구조 | `question_first.py`·`prompts/learning-structure.md` | 최종 내용 보존 후 개념도·회상 계획·선행 연결 |
 | 근거 이미지 | `slides.py` | 인용한 PDF 쪽을 PNG로 생성 |
-| 핵심 근거·족보 지면 | `evidence.py`·`slide_focus.py`·`jokbo_pages.py` | CLI가 최종 문항·정답과 원본을 대조해 기본 한 장을 선택하고 실제 족보 PDF 지면을 연결 |
-| Main-Quiz 판 근거 | `root_evidence.py` | 판의 bank_snapshot·고정 원본에 위 함수를 그대로 적용. 정리본 족보는 쪽 머리 `연도 \| 교수 \| N번`으로 색인(모델 없음). 결과 `root-evidence/1` |
+| 핵심 근거·족보 지면 | `evidence.py`·`slide_focus.py`·`jokbo_pages.py` | CLI가 최종 문항·정답과 원본을 대조해 기본 한 장을 선택하고 실제 족보 PDF 지면을 연결. 다시 고를 대상이 40개를 넘으면 40개씩 최대 3묶음 동시 |
+| Main-Quiz 판 근거 | `root_evidence.py` | 판의 bank_snapshot·고정 원본에 위 함수를 그대로 적용. review-evidence/1 판은 문항 검토의 근거 쪽을 `authored`로 넘겨 그 문항은 다시 고르지 않는다. 정리본 족보는 쪽 머리 `연도 \| 교수 \| N번`으로 색인(모델 없음). 결과 `root-evidence/1` |
 
 실행: `python -m quizbank.run --help`.
 검사: `python -m pytest tests/quizbank`.

@@ -30,8 +30,9 @@ def test_성공하면_판_이름으로_한_파일만_올린다(tmp_path, monkeyp
     packet, payload = _inputs(tmp_path)
     seen = {}
 
-    def build(document, sources, out, run_id, *, model=None, run=None):
+    def build(document, sources, out, run_id, *, model=None, run=None, reviews=None, review_source=None):
         seen["sources"] = sorted(sources)
+        seen["reviews"] = (reviews, review_source)
         out.mkdir(parents=True, exist_ok=True)
         path = out / f"{document['revision']}.json"; path.write_text("{}", encoding="utf-8")
         return path
@@ -43,6 +44,23 @@ def test_성공하면_판_이름으로_한_파일만_올린다(tmp_path, monkeyp
     assert seen["sources"] == ["S1"]  # PDF이고 판이 아는 원본만
     assert seen["put"].kind == "root_evidence" and seen["put"].filename == "rev-1.json"
     assert [c[1].rsplit("/", 1)[-1] for c in client.calls] == ["uploads", "complete"]
+    assert seen["reviews"] == (None, None)  # 검토 근거가 없는 판은 지금처럼 전부 다시 고른다
+
+
+def test_검토_근거가_있는_판은_검토와_원본을_넘긴다(tmp_path, monkeypatch):
+    """review-evidence/1 판(docs/changes/2026-11-11-evidence-from-citations)."""
+    packet, payload = _inputs(tmp_path)
+    reviews = [{"question_id": "Q1", "evidence": {"mode": "single", "reason": "r", "slides": [{"page": 2, "evidence": "e"}]}}]
+    payload["manifest"] = {"itemReviews": reviews, "reviewEvidence": {"policy": "review-evidence/1", "sourceId": "S1"}}
+    seen = {}
+
+    def build(document, sources, out, run_id, *, model=None, run=None, reviews=None, review_source=None):
+        seen["reviews"] = (reviews, review_source)
+        return None
+
+    monkeypatch.setattr(root_evidence, "build", build)
+    root_evidence.publish(Client(), "s", "r", tmp_path, packet, payload)
+    assert seen["reviews"] == (reviews, "S1")
 
 
 def test_실패는_로그만_남기고_게시를_막지_않는다(tmp_path, monkeypatch, capsys):

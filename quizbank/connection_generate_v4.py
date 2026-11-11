@@ -109,10 +109,15 @@ def run(packet, out, model, invoke, resume=None):
     from . import connection_generate as g
     out = Path(out)
     v3.require(packet.get('generationPolicy') == POLICY, 'root-generation/4 packet required')
-    st = Stages(packet, out, model, invoke, resume, policy=POLICY, prompts=('v3', 'v4'))
-    ledger = st.ledger
     sources = g.prepare(packet, out / 'material')
     page_counts = {s['source_id']: s['page_count'] for s in sources}
+    # review-evidence/1 (docs/changes/2026-11-11-evidence-from-citations): a new run's item review names the notes
+    # pages of each answer; an older ledger keeps reviewing without them.
+    evidence_notes = v4.evidence_source(sources)
+    st = Stages(packet, out, model, invoke, resume, policy=POLICY, prompts=('v3', 'v4'),
+                fresh={'reviewEvidence': {'policy': v4.REVIEW_EVIDENCE, 'sourceId': evidence_notes['source_id']}} if evidence_notes else None)
+    ledger = st.ledger
+    evidence_on = ledger.get('reviewEvidence', {}).get('policy') == v4.REVIEW_EVIDENCE
     base = {k: packet[k] for k in ('title', 'scope', 'conceptMap', 'points', 'examDate')}
     base.update(lecture_id=packet['subject'] + '/' + packet['runId'], sources=sources,
                 preserved_scope=g.lecture_scope(packet['title'], packet['sources']))
@@ -250,6 +255,8 @@ def run(packet, out, model, invoke, resume=None):
         if not todo:
             return got
         ctx = v4.with_importance(v3.review_input(S.bank, todo, S.conflicts), S.basis)
+        if evidence_on:
+            ctx['evidence_source'] = evidence_notes
         value = stages.judged(name, ctx, lambda raw: v4.check_review_input(raw, ctx))
         by_id = {q['question_id']: q for q in S.bank['questions']}
         for r in value['reviews']:
@@ -369,6 +376,13 @@ def run(packet, out, model, invoke, resume=None):
     context = v3.context_merge(context_judgments[0], context_judgments[1] if len(context_judgments) == 2 else None, bank, conflicts,
                                ledger['contextRepairs'][0]['targets'] if ledger.get('contextRepairs') else ())
 
+    # notes citations follow the last review's evidence pages, once after every fix (R2, no model call) -------
+    alignments = None
+    if evidence_on:
+        bank, alignments = v4.align_citations(bank, reviews, ledger['reviewEvidence']['sourceId'])
+        if alignments:
+            print(f"── 인용 쪽 맞춤 {len(alignments)}문항 (검토 근거 쪽으로)", flush=True)
+
     # assembly (before the medical review) ----------------------------------------
     coverage_rows = [rows[d['direction_id']] for t in brief['targets'] for d in t['directions']]
     review_rows = [reviews[q['question_id']] for q in bank['questions']]
@@ -425,6 +439,7 @@ def run(packet, out, model, invoke, resume=None):
                   **({'reviewRetries': ledger['reviewRetries']} if ledger.get('reviewRetries') else {}),
                   **({'contextRepairs': ledger['contextRepairs']} if ledger.get('contextRepairs') else {}),
                   **({'batchPhases': ledger['batchPhases']} if ledger.get('batchPhases') else {}),
+                  **({'reviewEvidence': ledger['reviewEvidence'], 'citationAlignments': alignments} if evidence_on else {}),
                   **({'derivedPacket': map_tree.public(packet), 'auditOpen': packet['frontStages']['openPoints']}
                      if 'derivedFrom' in packet else {})}}
     v4.validate_result(result, packet)

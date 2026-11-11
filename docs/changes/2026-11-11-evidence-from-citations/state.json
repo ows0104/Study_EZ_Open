@@ -6,13 +6,130 @@
   "required_checks": [
     "regression"
   ],
-  "approvals": {},
-  "checks": [],
-  "review": null,
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T01:33:12.524890+00:00",
+      "evidence": "사용자 2026-11-11 채팅: 「스펙 써 줘」 → 결정 「1번은 사실 둘 다 있어도 좋아」「굳이 요약과 슬라이드 구별 안해도 될듯」 → 「함께 해」 → plan 제시 후 「구현 시작」 (spec·plan을 구현과 맞춘 뒤 같은 요청으로 다시 기록)",
+      "scope": "plan.md의 PR 하나: generation_v4 검토 근거·인용 맞추기·결과 검증, connection_generate_v4 정책·호출, item-review 지시문, root_evidence 근거 넘기기, slide_focus 재선택 묶음 병렬, 관련 tests·문서. 실제 모델 실행·공개 판 근거 재생성·러너 재설치 제외",
+      "evidence_version": 2,
+      "source_hash": "0a4dff4ab88feaa5695c994a715b991cd85f2e68b3906316b551260064ae6f70",
+      "plan_hash": "fcda7a351d3715223337b3e34208f6345af451119c279ab0d7761f26312b6683",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "c910880740ba88b2c134df7295ee18d854468a6af181877694cea1e95114a18b"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-11T01:32:49.735280+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 2,
+      "evidence_version": 2,
+      "source_hash": "65015ab34fd3c07021ed497fad2df630e92f2867597d33f3aac033f9488c9b4c",
+      "plan_hash": "712d3e7c51882dab3d981471c29a2cacc612198215e3863d1d53113fe5c67033",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-11-evidence-from-citations/1794360404514849800-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-11T01:43:48.269599+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "0a4dff4ab88feaa5695c994a715b991cd85f2e68b3906316b551260064ae6f70",
+      "plan_hash": "fcda7a351d3715223337b3e34208f6345af451119c279ab0d7761f26312b6683",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-11-evidence-from-citations/1794360792819937400-regression.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-11T01:44:11.139603+00:00",
+    "summary": "경계: v4 검토 출력·결과 계약(add-only 예외)·러너 스키마 선택·게시 뒤 근거·재선택 묶음. 독립 하위 에이전트 리뷰에서 심각 1(보완 재검토 시 evidence_source 변수 덮어씀)·중간 1(검토 행이 판정 기록에 묶이지 않음) 발견·수정·검사 추가, spec 시점 불일치 문서 수정. 남은 위험: 묶음별 쪽 이미지 복사, 첫 실제 실행의 정렬 정확도 미확인, master PR #90 이후 리케차 /4 결과 재검증 거절(무관·별도 보고).",
+    "evidence_version": 2,
+    "source_hash": "0a4dff4ab88feaa5695c994a715b991cd85f2e68b3906316b551260064ae6f70",
+    "plan_hash": "fcda7a351d3715223337b3e34208f6345af451119c279ab0d7761f26312b6683",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-11T00:45:53.809934+00:00"
+  "updated_at": "2026-11-11T01:44:11.210318+00:00"
 }
