@@ -54,7 +54,8 @@
 
 | 우선순위 | 작업 | 예정 작업자 | 예상 영역·파일 | 선행 조건·메모 |
 |---|---|---|---|---|
-| | | | | |
+| P1 | **검토 요청: 강의 목록 학습률 계산.** 같은 「학습률」 열이 Quiz Bank는 `1 − RMS(개념별 목표 숙련도까지 부족분)`(server/app/study_engine/mastery.py `lecture_mastery`), Main-Quiz는 `회상 가능 목표 ÷ 전체 목표`(web/src/bank/useRootCatalog.ts `rootRate`)로 정의가 다르다. Main-Quiz 열을 카드 열(전체·미열람·인지·인출·저장·복습)에 맞추면서 학습률도 같은 정의로 맞출지, 맞춘다면 어느 식으로 할지 검토 | 오정빈 (요청: HungryPotato01, 2026-11-11) | server/app/study_engine/mastery.py, server/app/root_learning/(state·policy), web/src/bank/(StudyOverview·useRootCatalog), web/src/calendar/(ChipLearning·EventPanel) | 아래 「강의 목록 Main-Quiz 행 숫자 열로」 구현 전에 결론 필요. 검토 결과를 이 행에 적어 주세요 |
+| P1 | 강의 목록 Main-Quiz 행을 최초 디자인의 숫자 열로: 배지·「첫 학습 n/N · 회상 가능 m」 문장·막대(#31 b10e54b6) 제거, 전체·미열람·인지·인출·저장(목표 기억률 도달 문항)·복습(Main-Quiz 기존 복습 예정 계산)·학습률 숫자만. 상단 요약(오늘 복습·전체 카드·단계 막대)에도 Main-Quiz 포함 | HungryPotato01 / Claude 강의 목록 열 세션 | web/src/bank/(StudyOverview·useRootCatalog·overview.css), server/app/root_learning/state.py(summary에 단계별 수·복습 수), server/app/routes/root_learning.py(목록 요약), web/src/types/rootLearning.ts, docs/changes/2026-11-11-main-quiz-list-columns | 사용자 2026-11-11 지시. 집계 단위(목표 44 vs 문항)·학습률 정의 결정 뒤 계획 승인 받고 시작. **겹침:** P0 Main-Quiz 지연(PR #28)이 routes/root_learning.py·types/rootLearning.ts를 씀 → 시작 전 #28 상태 확인 |
 
 ## 3. 제안된 아이디어 (논의 필요)
 
