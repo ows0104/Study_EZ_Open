@@ -81,7 +81,7 @@ def replay(doc, events, now, policy):
         tid = owners[did]
         when = instant(event['at'])
         value = directions.setdefault(did, {'learned': False, 'rating': None, 'due': None, 'stage': -1, 'lastDay': None})
-        if event['kind'] == 'reveal' and p.get('attempted'):
+        if event['kind'] == 'reveal' and p.get('attempted') and event['id'] not in undone:
             value['learned'] = True
             first.setdefault(tid, when)
         elif event['kind'] == 'rate' and event['id'] not in undone:
@@ -144,7 +144,7 @@ def replay_tasks(doc, events, now, policy):
         tid = owners[current[task_id]['direction_id']]
         when = instant(event['at'])
         value = tasks.setdefault(task_id, {'learned': False, 'rating': None, 'due': None, 'stage': -1, 'lastDay': None})
-        if event['kind'] == 'reveal' and p.get('attempted'):
+        if event['kind'] == 'reveal' and p.get('attempted') and event['id'] not in undone:
             value['learned'] = True
             first.setdefault(tid, when)
         elif event['kind'] == 'rate' and event['id'] not in undone:

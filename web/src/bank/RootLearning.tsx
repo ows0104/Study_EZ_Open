@@ -47,13 +47,13 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
   const [advancing,setAdvancing]=useState(false);
   const [mapRequested,setMapRequested]=useState(false);
   const viewRef=useRef(view);viewRef.current=view;
-  // The view before the last rating, so Z draws at once (the server keeps the reveal).
-  const undoSnapshot=useRef<RootView|null>(null);
+  // Views before each reveal/rating/skip of this session, so every Z draws at once (2026-11-11: unlimited, full undo).
+  const undoSnapshots=useRef<RootView[]>([]);
   // stale: only replace the screen if no newer action was drawn ahead of the server meanwhile.
   const loadSession=async(id:string,stale=false)=>{
     const next=await api<RootView>(`/api/root-learning/sessions/${id}`);
     if(stale&&viewRef.current&&viewRef.current.version!==next.version)return;
-    undoSnapshot.current=null;viewRef.current=next;setView(next);
+    undoSnapshots.current=[];viewRef.current=next;setView(next);
   };
   // Resuming an open session draws the question first; the start screen would only flash in between.
   async function refresh(resume=false) {
@@ -81,12 +81,12 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     if(action.kind==='reveal') {
       const frame=frames.get(current.position);
       if(!current.task||current.task.answer||!frame?.task||frame.taskId!==current.task.id)return null;
-      return {...current,version,canUndo:false,task:{...current.task,answer:frame.task.answer,attempted:!!action.attempted,
+      return {...current,version,canUndo:true,task:{...current.task,answer:frame.task.answer,attempted:!!action.attempted,
         response:action.response??'',helped:current.task.helped||!!action.helped||current.mapSeen}};
     }
     if(action.kind==='rate'||action.kind==='skip') {
       const position=current.position+1;
-      const moved={...current,version,position,canUndo:action.kind==='rate',blocked:null};
+      const moved={...current,version,position,canUndo:true,blocked:null};
       if(position>=current.count)return {...moved,finished:true,task:null};
       const frame=frames.get(position);
       if(!frame)return null;
@@ -94,9 +94,9 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
         attempted:null,helped:current.mapSeen||frame.task.helped}:null};
     }
     if(action.kind==='undo') {
-      const before=undoSnapshot.current;
-      if(!current.canUndo||!before||before.sessionId!==current.sessionId||before.position!==current.position-1)return null;
-      return {...before,version,canUndo:false,mapSeen:current.mapSeen,summary:current.summary};
+      const before=undoSnapshots.current.at(-1);
+      if(!current.canUndo||!before||before.sessionId!==current.sessionId)return null;
+      return {...before,version,mapSeen:current.mapSeen,summary:current.summary};
     }
     return null;
   }
@@ -108,7 +108,8 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     if(!confirmed)return;
     const next=predict(current,action);
     if(next) {
-      undoSnapshot.current=action.kind==='rate'?current:null;
+      if(action.kind==='undo')undoSnapshots.current=undoSnapshots.current.slice(0,-1);
+      else if(action.kind!=='map')undoSnapshots.current=[...undoSnapshots.current,current];
       viewRef.current=next;setView(next);
       // The finished screen shows the server's own summary once every event is stored.
       if(next.finished)void confirmed.then(r=>Promise.all([loadSession(r.sessionId,true),refresh()])).catch(()=>{});

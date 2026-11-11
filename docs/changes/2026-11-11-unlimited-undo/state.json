@@ -1,0 +1,171 @@
+{
+  "id": "2026-11-11-unlimited-undo",
+  "title": "복습 퀴즈 되돌리기 무제한",
+  "area": "site",
+  "created_at": "2026-11-11T07:42:51.516172+00:00",
+  "required_checks": [
+    "web",
+    "server"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T07:54:57.692856+00:00",
+      "evidence": "사용자 2026-11-11 채팅: 첫 계획에 「아예 모든 게 돌아갔으면」 → 고친 계획 질문에 「승인, 구현해줘」",
+      "scope": "routes/root_learning.py, root_learning/content.py·state.py, RootLearning.tsx, server/tests/test_root_undo_stack.py(새), web/tests/root-learning.test.cjs. DB 표 변경 없음. 로컬 구현·검사",
+      "evidence_version": 2,
+      "source_hash": "7e9527baaeb76d8deae8fe0eb2a0204e5cf469498f0b08c8e13aaf8660477aae",
+      "plan_hash": "e9cf6dc3a2a2a884d51ec80721350f6cc8c2b674fc749e3d557873f9724a2848",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "f3dcc5e05d2e0a8df2029c1aa7b1442944f3a638c16f1c67cd74981f8c936367"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-11T08:01:41.859115+00:00",
+      "command": [
+        "C:/Users/erika/Study_EZ_wt_list-columns/server/.venv/Scripts/python.exe",
+        "scripts/check_main_quiz_ui.py",
+        "browser"
+      ],
+      "exit_code": 2,
+      "evidence_version": 2,
+      "source_hash": "8098b300a7a4a9dfcb9ff93b4951d70b4a086e11d867d4b13afa0739d025556b",
+      "plan_hash": "e9cf6dc3a2a2a884d51ec80721350f6cc8c2b674fc749e3d557873f9724a2848",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-11-unlimited-undo/1794384054153141200-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-11T08:02:28.885835+00:00",
+      "command": [
+        "C:/Users/erika/Study_EZ_wt_list-columns/server/.venv/Scripts/python.exe",
+        "scripts/check_main_quiz_ui.py",
+        "browser"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ee0c3d8a3b68cbfb37d880aeae60308bb01501ce516592b3d0c1c7d992f8a015",
+      "plan_hash": "e9cf6dc3a2a2a884d51ec80721350f6cc8c2b674fc749e3d557873f9724a2848",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-11-unlimited-undo/1794384116718023200-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-11T08:02:36.724468+00:00",
+      "command": [
+        "cmd.exe",
+        "C:/",
+        "cd web && npm.cmd run typecheck && node --test tests/main-quiz-map-tree.test.cjs && npm.cmd run build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ee0c3d8a3b68cbfb37d880aeae60308bb01501ce516592b3d0c1c7d992f8a015",
+      "plan_hash": "e9cf6dc3a2a2a884d51ec80721350f6cc8c2b674fc749e3d557873f9724a2848",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-11-unlimited-undo/1794384156524734000-web.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-11T08:02:37.625232+00:00",
+      "command": [
+        "cmd.exe",
+        "C:/",
+        "cd server && C:\\Users\\erika\\Study_EZ_wt_list-columns\\server\\.venv\\Scripts\\python.exe -m tests root_undo && C:\\Users\\erika\\Study_EZ_wt_list-columns\\server\\.venv\\Scripts\\python.exe -m tests root_api && C:\\Users\\erika\\Study_EZ_wt_list-columns\\server\\.venv\\Scripts\\python.exe -m tests root_state && C:\\Users\\erika\\Study_EZ_wt_list-columns\\server\\.venv\\Scripts\\python.exe -m tests root_adaptive && C:\\Users\\erika\\Study_EZ_wt_list-columns\\server\\.venv\\Scripts\\python.exe -m tests root_question_progress && C:\\Users\\erika\\Study_EZ_wt_list-columns\\server\\.venv\\Scripts\\python.exe -m tests root_usage && C:\\Users\\erika\\Study_EZ_wt_list-columns\\server\\.venv\\Scripts\\python.exe -m tests main_quiz && C:\\Users\\erika\\Study_EZ_wt_list-columns\\server\\.venv\\Scripts\\python.exe -m tests route_contract && C:\\Users\\erika\\Study_EZ_wt_list-columns\\server\\.venv\\Scripts\\python.exe -m tests usage && C:\\Users\\erika\\Study_EZ_wt_list-columns\\server\\.venv\\Scripts\\python.exe -m tests lecture_mastery"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "ee0c3d8a3b68cbfb37d880aeae60308bb01501ce516592b3d0c1c7d992f8a015",
+      "plan_hash": "e9cf6dc3a2a2a884d51ec80721350f6cc8c2b674fc749e3d557873f9724a2848",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-11-unlimited-undo/1794384157427637200-server.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T08:02:37.625857+00:00"
+}
