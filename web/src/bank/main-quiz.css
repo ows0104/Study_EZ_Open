@@ -242,3 +242,14 @@
 .mq-help-note{margin:10px 0 0;font-size:12px}
 .mq-edited{margin:0 0 8px;text-align:left}
 .mq-edit-note{margin:0 0 8px;text-align:left}
+/* 문항 타이머(2026-11-11): 오른쪽 위에 남은 초와 켜기/끄기만. 5초 이하·일시정지는 눈에 띄게. */
+.mq-timer{display:inline-flex;align-items:center;gap:8px;margin-right:4px}
+.mq-timer-left{font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-3);min-width:3.2em;text-align:right}
+.mq-timer-left i{font-style:normal;margin-right:3px}
+.mq-timer-left.is-paused{color:var(--ink);font-weight:600}
+.mq-timer-left.is-low{color:#b23a3a;font-weight:700}
+.main-quiz-learning .main-quiz-tools .mq-timer-switch{display:inline-flex;align-items:center;gap:6px;min-height:0;height:28px;padding:0 6px;font-size:12px;color:var(--ink-3)}
+.mq-timer-switch i{position:relative;width:24px;height:14px;border-radius:7px;background:var(--line);transition:background .15s}
+.mq-timer-switch i::after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:var(--surface);transition:transform .15s}
+.mq-timer-switch[aria-checked="true"] i{background:var(--accent)}
+.mq-timer-switch[aria-checked="true"] i::after{transform:translateX(10px)}

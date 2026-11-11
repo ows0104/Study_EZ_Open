@@ -1,0 +1,102 @@
+{
+  "id": "2026-11-11-main-quiz-one-button",
+  "title": "Main-Quiz 관리자 출제를 버튼 하나로",
+  "area": "site",
+  "created_at": "2026-11-11T07:57:45.916225+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T08:00:17.134887+00:00",
+      "evidence": "사용자 채팅 2026-11-11: 「사이트에서 Main-Quiz 출제 버튼도 훨씬 단순화하자. 예습퀴즈처럼 다 빼고 버튼 하나만 남겨줘. 선택지는 지금 가장 최신 파이프라인으로. 기본 학생 공개. 체크하면 학생 비공개.」",
+      "scope": "web/src/bank/RootGenerationPanel.tsx·roots.css, web/src/notices/GuidePage.tsx 관리자 출제 문단, 패널 테스트 3개, 이 작업 폴더",
+      "evidence_version": 2,
+      "source_hash": "e9c138528ec003a67d93e6a3d08fa595c99e5ca55c54b15f8f65e303620e48f0",
+      "plan_hash": "1173fafd4388ee58280b5d8f2a883e8cab09a4d47618c8ad6d408113f07fb027",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "d0a0d64a1f345654c949e00e41723213a2ffe7479e6a3e7fdcb03e5f5af823a1"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-11T08:00:36.529085+00:00",
+      "command": [
+        "node",
+        "--test",
+        "web/tests/main-quiz-generation-button.test.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "e9c138528ec003a67d93e6a3d08fa595c99e5ca55c54b15f8f65e303620e48f0",
+      "plan_hash": "1173fafd4388ee58280b5d8f2a883e8cab09a4d47618c8ad6d408113f07fb027",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-11-main-quiz-one-button/1794384036050601900-web.log",
+      "web_artifact": "de61704edd5b96a23eb0d16124b0aa3035278505bccfc4bd0c1b57fea657e2a2",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": {
+    "at": "2026-11-11T08:00:39.376683+00:00",
+    "summary": "새 요청은 NEW_REQUEST(map-tree/3·source·cli·병렬 아님·빈 입력·examDate null)+체크박스 privatePilot(기본 false)만 보낸다. 구조·지도·범위·시험일 입력 제거. 이어 하기는 원래 요청·공개 범위 그대로(map-tree는 이유 필요). 서버·러너·DB 불변. 패널 9/9, typecheck·build 통과, 로컬 미리보기 데스크톱·390px 확인. Playwright 두 검사는 환경에 없어 미실행(CI 밖). bank-links 5개는 무관한 기존 실패.",
+    "evidence_version": 2,
+    "source_hash": "e9c138528ec003a67d93e6a3d08fa595c99e5ca55c54b15f8f65e303620e48f0",
+    "plan_hash": "1173fafd4388ee58280b5d8f2a883e8cab09a4d47618c8ad6d408113f07fb027",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T08:00:39.514115+00:00"
+}
