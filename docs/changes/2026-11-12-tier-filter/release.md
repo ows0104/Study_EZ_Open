@@ -12,6 +12,8 @@
   브라우저에서 Optional을 끄고 켜고 끄면 배지가 2→3→2로 바뀌었다. 데스크톱과 375px 모두 확인했다.
 - 검증 중 찾은 결함(R8): 같은 시각에 저장한 focus 이벤트 중 「마지막」을 request ID 순으로 골라, 칩을 다시 켜도 반영되지 않을 수 있었다.
   `seq`로 순서를 정하도록 고쳤다. 역순 request ID로 회귀 검사를 추가했다(이전 코드에서는 실패하는 순서).
+- CI 1차 실패: `test_route_contract`(경로 목록 고정 검사)에 새 `PUT …/focus`가 없어 실패(1/142). 목록에 추가해 로컬 통과.
+  로컬 server 검사를 `root` 필터로만 돌려 이 파일을 놓쳤다.
 - 미실행: Playwright 회귀 `web/tests/root-learning.test.cjs`(전용 5193 fixture 구성 필요). CI `Tests and build`가 실행한다.
 - 리뷰: 선지 보기(#118)가 고치는 앞면·답면·prior_exposure·풀이 화면 스타일은 건드리지 않았다. 집계(replay·habitual·usage)는
   kind로 고르므로 focus 이벤트를 무시한다. 모두 선택이면 세션 ID·state가 그대로임을 테스트로 확인했다.
