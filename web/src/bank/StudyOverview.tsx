@@ -308,11 +308,16 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
                 <span role="cell" className="is-num">—</span>
                 {stages.map(([key]) => <span role="cell" key={key} className="is-num is-stage">—</span>)}
                 <span role="cell" className="is-num">—</span><span role="cell" className="is-num rate-text is-closed">—</span>
-              </> : <span role="cell" className="list-none">퀴즈 없음</span>}
-              {l.ready || waiting ? <span role="cell" className="list-go" onClick={e => e.stopPropagation()}>
-                {l.ready && !waiting ? <button type="button" aria-label={`${l.title} 복습 퀴즈`} title="복습 퀴즈"
-                  disabled={managing} onClick={() => study(l)}><Icon.play /></button> : null}
-              </span> : null}
+              </> : <>
+                {/* 퀴즈 없음: 숫자 칸은 비우고 단추만 꺼 둔다. */}
+                <span role="cell" className="is-num" />
+                {stages.map(([key]) => <span role="cell" key={key} className="is-num is-stage" />)}
+                <span role="cell" className="is-num" /><span role="cell" className="is-num" />
+              </>}
+              <span role="cell" className="list-go" onClick={e => e.stopPropagation()}>
+                <button type="button" aria-label={`${l.title} 복습 퀴즈`} title="복습 퀴즈"
+                  disabled={managing || waiting || !l.ready} onClick={() => study(l)}><Icon.play /></button>
+              </span>
             </div>;
           })}
         </div>;

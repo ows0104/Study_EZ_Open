@@ -188,7 +188,9 @@ test('actual overview first render selects the new block and displays classes wi
   assert.match(html, /data-block="감염과 면역"/);
   assert.match(html, /이번 블럭/);
   assert.match(html, /감염과 면역 · 11\.02 – 11\.03/);
-  assert.match(html, /퀴즈 없음/);
+  assert.doesNotMatch(html, /퀴즈 없음/);
+  // 퀴즈 없는 강의: 숫자 없이 꺼진 복습 퀴즈 단추.
+  assert.match(html, /aria-label="감염과 면역 복습 퀴즈" title="복습 퀴즈" disabled=""/);
   assert.doesNotMatch(html, /이전 블록/);
   // Real timetable: infection/immunity is split at its first exam and grouped by display kind.
   const actual = renderToStaticMarkup(React.createElement(MemoryRouter, {},
