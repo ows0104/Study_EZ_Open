@@ -1,0 +1,113 @@
+{
+  "id": "2026-11-11-runner-status-ui",
+  "title": "러너 상태 창 개편",
+  "area": "integration",
+  "created_at": "2026-11-11T12:58:40.312874+00:00",
+  "required_checks": [
+    "runner"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T12:59:05.799230+00:00",
+      "evidence": "사용자 채팅 2026-11-11: 「러너가 좀 구려. 일단 어디까지 했는지 잘 모르겠고, 현재 병렬로 돌아가는 것 중 하나밖에 안 보여. 그리고 예상 시간도 안 보이고, 디자인도 구려. 진행도 바가 시간에 비례하지 않아서 착각을 만들어. 필요없는 정보가 너무 많아.」 개편안 제시 후 「이대로 진행」",
+      "scope": "runner/status_window.py·status_phases.py(신규)·status.py JobStatus.generation·desktop.py 카드 높이, tests/runner 상태 창 검사, runner/CLAUDE.md 상태 창 문단, 이 작업 폴더. 러너 실행·서버·DB 불변",
+      "evidence_version": 2,
+      "source_hash": "b1e70402fb1b0feff90b68aa513573162ab910d693f2cc3c09dcdfc480fdafa6",
+      "plan_hash": "b1b6df95511295cdf17e8c8db26dfa007a98f44f4a10b9351b8cede1ab3b38de",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "ea7a6ed83dd0aca109cb6b28544d6f0ccfd96874fda6e9ecbec1384cd239465b"
+    }
+  },
+  "checks": [
+    {
+      "name": "runner",
+      "at": "2026-11-11T13:13:51.534990+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/runner",
+        "-q",
+        "--deselect",
+        "tests/runner/test_desktop_control.py::test_shortcut_installer_supports_korean_filename_in_windows_powershell"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "760755751bf351c294650487c0942fdc93e02d1e87a03f0f7664fac070d9dfa4",
+      "plan_hash": "b1b6df95511295cdf17e8c8db26dfa007a98f44f4a10b9351b8cede1ab3b38de",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-11-runner-status-ui/1794402698483952900-runner.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-11T13:14:09.185570+00:00",
+    "summary": "표시 전용 변경. 구간 분류·중앙값·앞으로만 가는 구간·이어 하기 옛 파일 무시·예상 없음이면 막대/숫자 없음·초과 시 97% 상한을 단위 검사로, 카드 전부 표시·강의명 보충·게시 뒤 상태를 창 검사로 확인. 실제 runs로 상태 창·데스크톱 창 스크린샷 확인. 러너 실행·서버·DB 불변. 남은 위험: v5 등 새 단계 이름은 구간 없음으로 떨어져 예상 시간이 안 나올 수 있음(숫자를 지어내지 않음).",
+    "evidence_version": 2,
+    "source_hash": "760755751bf351c294650487c0942fdc93e02d1e87a03f0f7664fac070d9dfa4",
+    "plan_hash": "b1b6df95511295cdf17e8c8db26dfa007a98f44f4a10b9351b8cede1ab3b38de",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "runner",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "tests/runner",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T13:14:09.263947+00:00"
+}

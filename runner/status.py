@@ -20,6 +20,7 @@ class JobStatus:
     log_age: int | None
     owner: str = "로컬 러너"
     subject: str = ""
+    generation: str = ""  # root-generation id when this run builds a Main-Quiz
 
 
 @dataclass(frozen=True)
@@ -128,11 +129,13 @@ def collect(runs: Path, processes: list[dict] | None = None, now: float | None =
                 stage, details, log_age = artifact
                 stages += (stage,)
                 recent += details
+            generation = option(command, "--root-generation")
             jobs.append(JobStatus(run_id, title, process["ProcessId"],
                                   "출제 포인트 준비" if "--points-only" in command else "퀴즈 생성 · 검수",
                                   stages[-5:], recent, log_age,
                                   subject=(re.search(r'\bbank\s+("[^"]+"|\S+)', command)[1].strip('"')
-                                           if re.search(r'\bbank\s+("[^"]+"|\S+)', command) else '')))
+                                           if re.search(r'\bbank\s+("[^"]+"|\S+)', command) else ''),
+                                  generation=generation if re.fullmatch(r"[0-9a-f]{32}", generation) else ""))
     # Other sessions opt in by registering their local script and output paths.
     from .status_external import collect_external
     external, external_events = collect_external(runs, processes, now)
