@@ -55,6 +55,7 @@ def test_the_host_check_state_is_written_beside_the_input_and_used_by_check_file
     import generation_v2_fixture as f
     q = f.old.bank()['questions'][0]
     q.pop('stimuli', None)
+    q.pop('tier', None)   # a fix stage writes importance only; code fills the tier
     ctx = {'questions': [q], '_pipeline_version': v3.POLICY}
     (work / 'input.json').write_text(json.dumps(ctx), encoding='utf-8')
     (work / 'acceptance.schema.json').write_text(json.dumps(n.schema_for('v3-fix-0-0', ctx)), encoding='utf-8')

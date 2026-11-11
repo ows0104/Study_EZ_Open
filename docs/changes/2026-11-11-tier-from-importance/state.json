@@ -1,0 +1,105 @@
+{
+  "id": "2026-11-11-tier-from-importance",
+  "title": "Main-Quiz 추가·수정 단계: importance만 묻고 tier는 코드로, 품질 권고는 첫 수정에만",
+  "area": "generation",
+  "created_at": "2026-11-11T07:33:14.510868+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T07:33:39.893409+00:00",
+      "evidence": "2026-11-11 사용자 채팅: 「기계적인 표시값 불일치 문제 해결해줘. 이런데 모델을 쓸 필요는 없을듯? 그리고 왜 Tier하고 Importance를 둘다 모델에게 맡겨?」 → 계획 제시 → 「지금 계획 좋아. 승인할게. 스키마 빼기도 하자. 근데 숫자가 편하니까 importance로 하자. 검토 권고는 지시로 바꾸던가. 한번 안 바뀐건 넘기던가 해야할듯?」",
+      "scope": "plan.md 1~6: 추가·수정 출력 스키마 tier 제거·합칠 때 tier 채움, 품질 권고 첫 수정에만, v3·v4 add/fix 프롬프트, 새 검사, Draft PR. 병합·러너 재설치·실제 재생 제외",
+      "evidence_version": 2,
+      "source_hash": "3fccea6c7752183953a2063100d94191f2ff38578e1392e12d91e34305038f8e",
+      "plan_hash": "feedf77fad7a2fe0514a19c3895f112a81d05bfba74f0a08be2d7b90fd20c2a4",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "9b7b4e4d723cc09766fca3b9d6fe646e0cab6a54fcd170875ecd792986b8826c"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-11T07:46:51.484641+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/quizbank",
+        "tests/contracts",
+        "tests/runner",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--deselect",
+        "tests/runner/test_desktop_control.py::test_shortcut_installer_supports_korean_filename_in_windows_powershell"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "3fccea6c7752183953a2063100d94191f2ff38578e1392e12d91e34305038f8e",
+      "plan_hash": "feedf77fad7a2fe0514a19c3895f112a81d05bfba74f0a08be2d7b90fd20c2a4",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-11-tier-from-importance/1794382845235987500-regression.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-11T07:46:59.855683+00:00",
+    "summary": "자체 검토(독립 리뷰 아님). 경계: 처음 은행(intake)·조립의 중요도 재계산은 그대로, 추가·수정 출력만 importance 하나. 호환: 이전 실행 캐시 출력의 tier는 합칠 때 버림(importance 우선). 러너 acceptance schema는 tier를 거부하므로 모델이 tier를 쓰면 한 번 되묻게 됨. 권고: 수정 횟수 1 이상이면 quality 권고를 붙이지 않음 — 맥락 수정 대상은 count_attempts 뒤라 권고가 안 붙음. 남은 위험: 프롬프트 지문 변경으로 진행 중 /3·/4 ledger는 --resume 필요, 실제 모델 재생 미실행.",
+    "evidence_version": 2,
+    "source_hash": "3fccea6c7752183953a2063100d94191f2ff38578e1392e12d91e34305038f8e",
+    "plan_hash": "feedf77fad7a2fe0514a19c3895f112a81d05bfba74f0a08be2d7b90fd20c2a4",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T07:46:59.926846+00:00"
+}

@@ -325,7 +325,7 @@ def run(packet, out, model, invoke, resume=None):
     def batch_body(b, batch, S, stages):
         S.reviews.update(review_batch(S, stages, f'{X}review-{b}-0', set(batch)))
         for k in range(v3.FIX_LIMIT):
-            code = _bank_findings(S.bank, source_ids)
+            code = _bank_findings(S.bank, source_ids, S.attempts)
             targets = [q for q in batch if (v3.needs_fix(S.reviews[q]) or q in code) and S.attempts.get(q, 0) < v3.FIX_LIMIT]
             if not targets:
                 break
@@ -370,7 +370,7 @@ def run(packet, out, model, invoke, resume=None):
             ledger['contextRepairs'].append({'stage': X + 'context-0', 'open': v3.context_open(context_judgments[0]), 'targets': targets})
         count_attempts(S, targets)
         notes = v3.context_findings(bank, context_judgments[0], targets)
-        code = _bank_findings(bank, source_ids)
+        code = _bank_findings(bank, source_ids, attempts)
         findings = [{**reviews[q], 'code_findings': [*code.get(q, []), *notes.get(q, [])]} for q in targets]
         S.bank, S.conflicts, S.stimuli, S.basis = bank, conflicts, stimuli, basis
         fix_round(S, batches.BatchStages(st, S), X + 'fix-context-0', X + 'review-context-1', X + 'coverage-fix-context-0', targets, findings)

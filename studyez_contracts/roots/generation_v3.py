@@ -76,9 +76,26 @@ SUPPLEMENT_OUTPUT = obj(rows=arr(obj(question_id=TEXT, decision=enum('point', 'o
 # The independent bank of map-tree/2 (1c): the authored bank, its source crops and clinical facts.
 INTAKE_OUTPUT = obj(bank=copy.deepcopy(v2.AUTHOR_BANK), visual_stimuli=arr(v2.CROP), clinical_conflicts=arr(v2.CONFLICT))
 
-ADD_OUTPUT = obj(questions=arr(QUESTION, 1), concepts=arr(BANK_CONCEPT), retrieval_plan=arr(PLAN),
+# Add and fix stages write importance only (docs/changes/2026-11-11-tier-from-importance). The tier is its name in
+# the bank 3.3 table (one tier per number), so code fills it when the stage is merged. Asking for both let the two
+# disagree: the 261113_01 run (2026-11-11) sent 52 questions back to a model fix for that mismatch alone.
+TIER_BY_IMPORTANCE = {v: k for k, v in imp.BANK_IMPORTANCE.items()}
+
+
+def _importance_only(schema):
+    value = copy.deepcopy(schema)
+    value['properties'].pop('tier')
+    value['required'].remove('tier')
+    value['properties']['importance'] = {'type': 'integer', 'enum': sorted(TIER_BY_IMPORTANCE)}
+    return value
+
+
+AUTHORED_QUESTION = _importance_only(QUESTION)
+AUTHORED_CONCEPT = _importance_only(BANK_CONCEPT)
+
+ADD_OUTPUT = obj(questions=arr(AUTHORED_QUESTION, 1), concepts=arr(AUTHORED_CONCEPT), retrieval_plan=arr(PLAN),
                  source_conflicts=arr(SOURCE_CONFLICT), visual_stimuli=arr(v2.CROP), clinical_conflicts=arr(v2.CONFLICT))
-FIX_OUTPUT = obj(questions=arr(QUESTION, 1), source_conflicts=arr(SOURCE_CONFLICT),
+FIX_OUTPUT = obj(questions=arr(AUTHORED_QUESTION, 1), source_conflicts=arr(SOURCE_CONFLICT),
                  visual_stimuli=arr(v2.CROP), clinical_conflicts=arr(v2.CONFLICT))
 
 SUPPLEMENT_NORMALIZE_OUTPUT = obj(targets=arr(copy.deepcopy(v2.BRIEF['properties']['targets']['items']), 1),
@@ -509,7 +526,7 @@ def check_added(value, ctx, state=None):
     `state` = {'bank': authored bank, 'clinical_conflicts': [...]} is what merge_added receives after the stage.
     Running the same merge here lets the runner send its error back into the model's session (one follow-up)
     instead of stopping the lecture after the stage. Existing items written again are set aside (restated)."""
-    validate_shape(value, ADD_OUTPUT, 'v3 add output')
+    validate_shape(_authored(value), ADD_OUTPUT, 'v3 add output')
     ids = [q['question_id'] for q in value['questions']]
     require(len(ids) == len(set(ids)) and set(ids) <= set(ctx['allowed_question_ids']), 'v3 add: question IDs outside the allowed range')
     require(not set(ids) & {q['question_id'] for q in ctx['existing']}, 'v3 add: an add stage cannot rewrite an existing question')
@@ -527,7 +544,7 @@ def check_added(value, ctx, state=None):
 
 def check_fixed(value, ctx, state=None):
     """A fix output against its fix_input; with the orchestrator's state (P6) also merge_fixes itself."""
-    validate_shape(value, FIX_OUTPUT, 'v3 fix output')
+    validate_shape(_authored(value), FIX_OUTPUT, 'v3 fix output')
     given = {q['question_id']: q for q in ctx['questions']}
     ids = [q['question_id'] for q in value['questions']]
     require(len(ids) == len(set(ids)) and set(ids) <= set(given), 'v3 fix: only the listed questions may change')
@@ -635,9 +652,31 @@ def _without(output, rows):
     return value
 
 
+def _authored(output):
+    """An add/fix output in its authored shape: a tier written by an earlier run (its cached stage output) is
+    dropped, the importance alone stands."""
+    value = copy.deepcopy(output)
+    for key in ('questions', 'concepts'):
+        for row in value.get(key, []) if type(value.get(key)) is list else []:
+            if type(row) is dict:
+                row.pop('tier', None)
+    return value
+
+
+def with_tier(output):
+    """Each question and concept takes the tier its importance names (bank 3.3 table)."""
+    value = copy.deepcopy(output)
+    for key in ('questions', 'concepts'):
+        for row in value.get(key, []):
+            row['tier'] = TIER_BY_IMPORTANCE[row['importance']]
+    return value
+
+
 def merge_added(bank, clinical_conflicts, output, allowed_ids):
     """Append an add stage's questions. Existing questions, concepts, conflicts and facts stay byte-identical."""
+    output = _authored(output)
     validate_shape(output, ADD_OUTPUT, 'v3 add output')
+    output = with_tier(output)
     output = _without(output, restated(bank, clinical_conflicts, output))
     ids = [q['question_id'] for q in output['questions']]
     require(len(ids) == len(set(ids)), 'v3 add: duplicate question IDs')
@@ -663,7 +702,9 @@ def merge_added(bank, clinical_conflicts, output, allowed_ids):
 
 def merge_fixes(bank, clinical_conflicts, output, targets):
     """Replace only the questions a fix stage was given; identity, concept and points stay."""
+    output = _authored(output)
     validate_shape(output, FIX_OUTPUT, 'v3 fix output')
+    output = with_tier(output)
     cited = {q.get('conflict_id') for q in output['questions'] if q.get('conflict_id')}
     output = _without(output, restated(bank, clinical_conflicts, output, cited))
     ids = [q['question_id'] for q in output['questions']]
