@@ -6,13 +6,103 @@
   "required_checks": [
     "regression"
   ],
-  "approvals": {},
-  "checks": [],
-  "review": null,
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T14:34:13.302414+00:00",
+      "evidence": "2026-11-11 사용자 채팅: 「좀 더 진단해줄래? 근본적으로 시간을 더 단축할 수 있는방법이 없을까?」 → (진단 보고: 1 입력을 첫 메시지에 넣기, 2 의존 관계대로 더 겹치기, 3 검수 흐름 줄이기는 결정 필요) → 「겹치기까지 같이」",
+      "scope": "plan.md 1~6: 생성·앞 단계 첫 메시지 인라인, early-call/1(normalize·검토 첫 호출·임상 정리), 새 검사, 안내 문서, 로컬 검사, PR. 검수 흐름 변경·실제 모델 재생·러너 재설치 제외",
+      "evidence_version": 2,
+      "source_hash": "7e63f823bfd8013efe2f716e90972b1839f4409b4ea17ca603819d2137917fa9",
+      "plan_hash": "b94e6aabedfce941ab41156ea94d5d6793b23c60e243d2fe5fed0829160b8797",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "2d1514e55f5d4d273fbafe14289a0259f96965986d6c787d82a19650bf9271ac"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-11T14:39:57.285729+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/quizbank",
+        "tests/contracts",
+        "tests/runner",
+        "tests/studyez_llm",
+        "tests/quizgen",
+        "tests/development",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--deselect",
+        "tests/runner/test_desktop_control.py::test_shortcut_installer_supports_korean_filename_in_windows_powershell"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "7e63f823bfd8013efe2f716e90972b1839f4409b4ea17ca603819d2137917fa9",
+      "plan_hash": "b94e6aabedfce941ab41156ea94d5d6793b23c60e243d2fe5fed0829160b8797",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-11-pipeline-overlap/1794407656159901800-regression.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-11T14:40:20.681421+00:00",
+    "summary": "자체 검토(독립 리뷰 아님). 인라인은 프롬프트만 바꾼다(지시문 파일·작업 폴더·영수증·호스트 검사 불변, 시범 재현 검사로 task.md 글자 일치 확인). early-call/1은 입력 지문이 같을 때만 답을 쓰고, 쓰였을 때 ledger 단계 기록·결과가 차례에 부른 것과 같다(검사 + normalize 인계 뒤 validate_all 통과). 미리 부른 호출의 실패는 차례에 같은 오류로 실패하고 스스로 다시 돌지 않는다. 동시성: 미리 부른 검토는 material 자기 사본, ledger 변경은 잠금 안. 실제 자료 확인: 오늘 게시된 두 실행(261111_02, 261104_03)을 기록된 답으로 재생해 단계 입력 지문 전부 일치·결과 문서 동일·검토 첫 호출 3/4, 5/6 묶음 사용. 남은 위험: 인라인이 실제로 읽기 왕복을 없애는지와 실제 단축 시간은 실측 전, 서버 map-tree 검사 3개는 로컬 미실행(CI).",
+    "evidence_version": 2,
+    "source_hash": "7e63f823bfd8013efe2f716e90972b1839f4409b4ea17ca603819d2137917fa9",
+    "plan_hash": "b94e6aabedfce941ab41156ea94d5d6793b23c60e243d2fe5fed0829160b8797",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-11T14:24:38.615424+00:00"
+  "updated_at": "2026-11-11T14:40:20.755871+00:00"
 }

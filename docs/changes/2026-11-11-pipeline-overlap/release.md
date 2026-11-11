@@ -3,7 +3,10 @@
 ## 코드 리뷰·검증 결과
 검사(2026-11-11, anaconda python, worktree `claude/pipeline-overlap`, #115 위):
 - 새 검사 `tests/quizbank/test_pipeline_overlap.py` 10개, `tests/runner/test_front_overlap.py` 12개: 통과.
-- 회귀 `pytest tests/quizbank tests/contracts tests/runner tests/studyez_llm tests/quizgen tests/development`: REGRESSION_RESULT
+- 회귀 `pytest tests/quizbank tests/contracts tests/runner tests/studyez_llm tests/quizgen tests/development`: 2810 passed, 2 skipped, 1 deselected(5분 26초, `state.json`에 기록).
+  제외 1개는 이 기계에서 이전 변경들도 제외해 온 `test_shortcut_installer_supports_korean_filename_in_windows_powershell`.
+- 서버의 map-tree 검사 3개(`server/tests/test_root_map_tree*.py`, `test_root_restart.py`)는 로컬에서 못 돌렸다
+  (서버 venv에 PyMuPDF가 없고 다른 런타임에는 fastapi가 없다). CI가 돌린다.
 - `ruff check --select F821,F841`: 이 변경이 건드린 파일에는 지적 없음(다른 파일의 기존 F841 4건은 그대로).
 - `python scripts/map_numbers.py --check`: 의존 경계 정상.
 
