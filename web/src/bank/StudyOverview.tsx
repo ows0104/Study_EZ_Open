@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { bankCatalogHref, bankHref, lectureHref } from "../links";
 import { useMe } from "../useMe";
@@ -15,8 +15,11 @@ import { QuizPublicationCell } from "./QuizPublicationCell";
 import { currentStudyBlock, studyBlockKey, studyBlockNames, studyCourseOf } from "./studyBlocks";
 import { useStudyCourse } from "./useStudyCourse";
 import "./overview.css";
-import { rootRate, useRootCatalog } from "./useRootCatalog";
-import type { RootOverview } from "../types/rootLearning";
+import { rootRate, useRootCatalog, useRootProgress } from "./useRootCatalog";
+import type { RootQuestionProgress } from "../types/rootLearning";
+
+// 캘린더와 같은 강의 패널. 행을 누를 때만 받는다.
+const EventPanel = lazy(() => import("../calendar/EventPanel").then(m => ({ default: m.EventPanel })));
 
 export type StudyLecture = Pick<LectureRef, "subject" | "runId" | "title" | "bankTimeline" | "mastery" | "cardProgress" | "studyLoaded"> & {
   date: string; course: string; ready: boolean; key: string; eventKey?: string;
@@ -114,19 +117,17 @@ function Check({ checked, label, disabled, onChange }: { checked: boolean; label
 }
 
 /**
- * Main-Quiz만 있는 강의의 칸. 카드 네 단계가 아니라 학습 목표로 센다 — 같은 줄에 섞으면
- * 「미열람」이 목표 수인지 카드 수인지 읽을 수 없다. 학습률 칸은 회상 가능 비율.
+ * Main-Quiz 문항 수를 카드 열 모양으로. 단계 정의는 서버 `question_progress`(Quiz Bank `card_progress`와 같은 규칙).
+ * 학습률은 아직 회상 가능 목표 비율이다(정의 통일은 대시보드 검토 요청 뒤).
  */
-function MainQuizCells({ summary }: { summary?: RootOverview["summary"] }) {
-  const rate = rootRate(summary);
-  return <>
-    <span role="cell" className="list-main-quiz">
-      <b>Main-Quiz</b>
-      {summary ? <span>첫 학습 {number(summary.learned)}/{number(summary.total)} · 회상 가능 {number(summary.recalled)}</span> : null}
-      {summary && summary.total ? <i className="list-main-bar" aria-hidden="true"><i style={{ width: `${summary.learned / summary.total * 100}%` }} /></i> : null}
-    </span>
-    <span role="cell" className={`is-num rate-text ${rate === null ? "is-closed" : rateBand(rate)}`}>{rate === null ? "—" : `${rate}%`}</span>
-  </>;
+function fromRoot(q: RootQuestionProgress | undefined): CardProgress | null {
+  return q ? { ...empty, ...q, seen: q.total - q.unseen } : null;
+}
+
+type ListView = "type" | "order";
+const VIEW_KEY = "studyez-list-view";
+function savedView(): ListView {
+  try { return localStorage.getItem(VIEW_KEY) === "order" ? "order" : "type"; } catch { return "type"; }
 }
 
 /** 강의 목록: 블럭의 모든 강의와 카드 단계, 골라서 모아풀기. */
@@ -140,7 +141,23 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
   const isAdmin = Boolean(useMe()?.isAdmin);
   const navigate = useNavigate();
   const rows = useMemo(() => lectureRows(events), [events]);
-  const roots = useRootCatalog(rows.some(l => l.mainQuiz));
+  const hasMainQuiz = rows.some(l => l.mainQuiz);
+  const roots = useRootCatalog(hasMainQuiz);
+  const rootProgress = useRootProgress(hasMainQuiz);
+  const entries = useMemo(() => toCalendarEntries(events), [events]);
+  const infos = useMemo(() => displayInfo(events), [events]);
+  const [view, setView] = useState<ListView>(savedView);
+  const changeView = (next: ListView) => {
+    setView(next);
+    try { localStorage.setItem(VIEW_KEY, next); } catch { /* 이 탭에서만 유지 */ }
+  };
+  const [opened, setOpened] = useState<string | null>(null);
+  const closePanel = useCallback(() => setOpened(null), []);
+  /** Quiz Bank 카드 단계, 없으면 Main-Quiz 문항 단계. */
+  const progressOf = (l: StudyLecture): CardProgress | null =>
+    l.cardProgress ?? (l.mainQuiz ? fromRoot(rootProgress.get(l.key)) : null);
+  const rateOf = (l: StudyLecture): number | null =>
+    l.cardProgress ? l.mastery?.score ?? null : l.mainQuiz ? rootRate(roots.get(l.key)) : null;
   const [course, setCourse] = useStudyCourse(events);
   // useStudyCourse가 고른 기본 블럭과 같은 규칙. 블럭이 바뀌면 course도 바뀌므로 함께 다시 계산한다.
   const automatic = useMemo(() => currentStudyBlock(events), [events, course]);
@@ -171,13 +188,14 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
   useEffect(() => { onScope?.(scope); }, [scope, onScope]);
   const loading = scoped.some(l => l.studyLoaded === false);
   // 복습이 열린 강의만 센다. 아직 열리지 않은 강의까지 넣으면 미열람이 늘 대부분을 덮는다.
-  const opened = scoped.filter(l => l.ready && l.cardProgress);
-  const totals = opened.reduce((sum, l) => {
-    for (const key of Object.keys(empty) as (keyof CardProgress)[]) sum[key] += l.cardProgress![key];
+  const openedRows = scoped.filter(l => l.ready && progressOf(l));
+  const totals = openedRows.reduce((sum, l) => {
+    const p = progressOf(l)!;
+    for (const key of Object.keys(empty) as (keyof CardProgress)[]) sum[key] += p[key];
     return sum;
   }, { ...empty });
-  const assessed = opened.filter(l => l.mastery);
-  const score = assessed.length ? Math.round(assessed.reduce((sum, l) => sum + l.mastery!.score, 0) / assessed.length) : null;
+  const rates = openedRows.map(rateOf).filter((r): r is number => r !== null);
+  const score = rates.length ? Math.round(rates.reduce((sum, r) => sum + r, 0) / rates.length) : null;
   const display = (value: number) => loading ? "—" : number(value);
 
   const selectable = scoped.filter(l => l.batch);
@@ -206,10 +224,20 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
     toggle(setManaged, keys, false);
     toggle(setSelected, keys, false);
   };
-  const target = (l: StudyLecture) => l.ready ? bankHref(l) : l.runId ? lectureHref(l) : null;
   const changeBlock = (name: string) => { setCourse(name); setSelected(new Set()); setManaged(new Set()); };
+  /** 복습 바로 풀기: Quiz Bank는 그 강의 하나로 모아풀기(시작 화면 없이), Main-Quiz는 오늘 계획으로 바로 회차. */
+  const study = (l: StudyLecture) => l.batch ? onStart([l]) : navigate(`${bankHref(l)}?start=1`);
 
-  return <section className="study-overview">
+  // 행을 누르면 캘린더와 같은 패널. 행 key → 시간표 칸과 그 칸 안의 강의 순서.
+  const openedRow = opened ? rows.find(l => l.key === opened) : undefined;
+  const openedEntry = openedRow ? entries.find(e => `event:${e.id}` === (openedRow.eventKey ?? openedRow.key)) : undefined;
+  const openedLecture = openedEntry && openedRow ? Math.max(0, openedEntry.lectures.findIndex(x => `${x.subject}/${x.runId}` === openedRow.key)) : 0;
+  const groups = view === "order"
+    ? [{ id: "order", label: "", list: scoped }]
+    : SECTIONS.map(section => ({ id: section.id, label: section.label, list: scoped.filter(l => section.match(l.kind)) }));
+
+  return <div className={`study-split${openedEntry ? " is-split" : ""}`}>
+  <section className="study-overview">
     <header className="page-head list-head">
       <div><h1>강의 목록</h1>{block ? <p className="page-sub">{block.name} · {shortDate(block.start)} – {shortDate(block.end)}</p> : null}</div>
       <BlockPicker blocks={blocks} value={course} current={automatic} next={nextBlock} onChange={changeBlock} />
@@ -228,6 +256,11 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
       </div>
     </div>
 
+    <div className="list-view more-tabs" role="group" aria-label="보기">
+      <button type="button" aria-pressed={view === "type"} onClick={() => changeView("type")}>유형별</button>
+      <button type="button" aria-pressed={view === "order"} onClick={() => changeView("order")}>순서대로</button>
+    </div>
+
     <div className="list-table" role="table" aria-label="강의 목록">
       <div className="list-row is-head" role="row">
         <span role="columnheader"><Check checked={allPicked} label="열린 강의 모두 선택" disabled={managing || !selectable.length}
@@ -238,46 +271,48 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
         {stages.map(([key, label]) => <span role="columnheader" key={key} className="is-num is-stage"><i className={`stage-dot stage-${key}`} />{label}</span>)}
         <span role="columnheader" className="is-num">복습</span>
         <span role="columnheader" className="is-num">학습률</span>
+        <span role="columnheader"><span className="sr-only">복습 풀기</span></span>
       </div>
-      {SECTIONS.map(section => {
-        const list = scoped.filter(l => section.match(l.kind));
+      {groups.map(group => {
+        const list = group.list;
         if (!list.length) return null;
-        return <div key={section.id} className="list-section" role="rowgroup" aria-label={section.label}>
-          <div className="list-section-title" role="row"><span role="cell">{section.label}<span>{list.length}</span></span></div>
+        return <div key={group.id} className="list-section" role="rowgroup" aria-label={group.label || "순서대로"}>
+          {group.label ? <div className="list-section-title" role="row"><span role="cell">{group.label}<span>{list.length}</span></span></div> : null}
           {list.map(l => {
-            const p = l.cardProgress;
-            const href = target(l);
+            const p = progressOf(l);
+            const rate = rateOf(l);
             const picked = selected.has(l.key);
             const waiting = l.studyLoaded === false;
             const closed = waiting || !l.ready;
-            return <div key={l.key} role="row" onClick={() => { if (href) navigate(href); }}
-              className={`list-row${picked ? " is-picked" : ""}${closed ? " is-closed" : ""}${href ? " is-link" : ""}`}>
+            const open = () => setOpened(l.key);
+            return <div key={l.key} role="row" tabIndex={0} onClick={open}
+              onKeyDown={e => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); open(); } }}
+              className={`list-row is-link${picked ? " is-picked" : ""}${closed ? " is-closed" : ""}${opened === l.key ? " is-active" : ""}`}>
               <span role="cell" onClick={e => e.stopPropagation()}>
                 {l.batch ? <Check checked={picked} label={`${l.title} 선택`} disabled={managing}
                   onChange={checked => toggle(setSelected, [l.key], checked)} /> : null}
               </span>
               <span role="cell" className="list-code">{l.code}</span>
               <span role="cell" className="list-title">
-                {href ? <Link to={href} onClick={e => e.stopPropagation()}><strong>{l.title}</strong></Link> : <strong>{l.title}</strong>}
+                <strong>{l.title}</strong>
                 {l.professor || l.field ? <small>{l.professor}{l.professor ? <ProfTag values={l.sources ?? []} /> : null}
                   {l.professor && l.field ? " · " : ""}{l.field}</small> : null}
               </span>
-              {waiting ? <>
-                <span role="cell" className="is-num">—</span>
-                {stages.map(([key]) => <span role="cell" key={key} className="is-num is-stage">—</span>)}
-                <span role="cell" className="is-num">—</span><span role="cell" className="is-num rate-text is-closed">—</span>
-              </> : l.mainQuiz && !p ? <MainQuizCells summary={roots.get(l.key)} />
-              : p ? <>
+              {!waiting && p ? <>
                 <span role="cell" className="is-num"><Num value={p.total} /></span>
                 {stages.map(([key]) => <span role="cell" key={key} className={`is-num is-stage stage-text-${key}`}><Num value={p[key]} /></span>)}
                 <span role="cell" className={`is-num list-due${p.reviewDue ? " is-on" : ""}`}><Num value={p.reviewDue} /></span>
-                <span role="cell" className={`is-num rate-text ${!l.ready ? "is-closed" : l.mastery ? rateBand(l.mastery.score) : "is-closed"}`}>
-                  {!l.ready ? "0%" : l.mastery ? `${l.mastery.score}%` : "—"}</span>
-              </> : l.ready ? <>
+                <span role="cell" className={`is-num rate-text ${!l.ready ? "is-closed" : rate !== null ? rateBand(rate) : "is-closed"}`}>
+                  {!l.ready ? "0%" : rate !== null ? `${rate}%` : "—"}</span>
+              </> : waiting || l.ready ? <>
                 <span role="cell" className="is-num">—</span>
                 {stages.map(([key]) => <span role="cell" key={key} className="is-num is-stage">—</span>)}
                 <span role="cell" className="is-num">—</span><span role="cell" className="is-num rate-text is-closed">—</span>
               </> : <span role="cell" className="list-none">퀴즈 없음</span>}
+              {l.ready || waiting ? <span role="cell" className="list-go" onClick={e => e.stopPropagation()}>
+                {l.ready && !waiting ? <button type="button" aria-label={`${l.title} 복습 퀴즈`} title="복습 퀴즈"
+                  disabled={managing} onClick={() => study(l)}><Icon.play /></button> : null}
+              </span> : null}
             </div>;
           })}
         </div>;
@@ -351,5 +386,11 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
         </details>
       </> : null}
     </details>
-  </section>;
+  </section>
+  {openedEntry ? <Suspense fallback={<aside className="event-panel"><p role="status">강의 자료를 불러오는 중…</p>
+    <button onClick={closePanel}>닫기</button></aside>}>
+    <EventPanel key={`${openedEntry.id}/${openedLecture}`} entry={openedEntry} info={infos.get(openedEntry.id)}
+      initialLecture={openedLecture} onClose={closePanel} />
+  </Suspense> : null}
+  </div>;
 }

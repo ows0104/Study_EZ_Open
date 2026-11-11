@@ -7,7 +7,7 @@ const { createRequire } = require('node:module');
 const ts = require('../node_modules/typescript');
 const webRequire = createRequire(path.resolve(__dirname, '../package.json'));
 
-function modules(now, mocks = {}) {
+function modules(now, mocks = {}, globals = {}) {
   const cache = new Map();
   class Clock extends Date {
     constructor(...args) { super(...(args.length ? args : [now])); }
@@ -24,7 +24,7 @@ function modules(now, mocks = {}) {
       compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
     }).outputText;
     vm.runInNewContext(output.replace(/import\.meta\.env/g, '({})'), {
-      exports, Date: Clock, Intl, console,
+      exports, Date: Clock, Intl, console, ...globals,
       require: id => id.endsWith('.css') ? {} : id.startsWith('.') ? load(path.resolve(path.dirname(file), id)) : webRequire(id),
     }, { filename: file });
     return exports;
@@ -177,7 +177,7 @@ test('actual overview first render selects the new block and displays classes wi
     'QuizPublicationCell.tsx': { QuizPublicationCell: () => null },
     'StudyPlanBoard.tsx': { StudyPlanBoard: () => null },
     // Its `?raw` prompt imports need Vite; the static first render only needs the overview itself.
-    'useRootCatalog.ts': { useRootCatalog: () => new Map(), rootRate: s => s && s.total ? Math.round(s.recalled / s.total * 100) : null },
+    'useRootCatalog.ts': { useRootCatalog: () => new Map(), useRootProgress: () => new Map(), rootRate: s => s && s.total ? Math.round(s.recalled / s.total * 100) : null },
   });
   const { StudyOverview } = render(path.join(__dirname, '../src/bank/StudyOverview.tsx'));
   const React = webRequire('react');
@@ -200,27 +200,62 @@ test('actual overview first render selects the new block and displays classes wi
   assert.match(actual, /감염과 면역 1차 · 11.02 – 11.19/);
 });
 
-test('a Main-Quiz-only lecture opens from the list but is not offered to the bank batch', () => {
+function overviewWith({ progress = new Map(), summaries = new Map(), globals = {} } = {}) {
   const render = modules('2026-11-01T10:00:00+09:00', {
     'useMe.ts': { useMe: () => null },
     'api.ts': { api: () => { throw Error('Unexpected API in initial render'); } },
     'useQuizPublication.ts': { useQuizPublication: () => ({ values: [] }) },
     'QuizPublicationCell.tsx': { QuizPublicationCell: () => null },
     'StudyPlanBoard.tsx': { StudyPlanBoard: () => null },
-    'useRootCatalog.ts': { useRootCatalog: () => new Map([['감염과 면역/261104_02', { total: 98, learned: 11, recalled: 0 }]]), rootRate: s => s && s.total ? Math.round(s.recalled / s.total * 100) : null },
-  });
+    'useRootCatalog.ts': { useRootCatalog: () => summaries, useRootProgress: () => progress,
+      rootRate: s => s && s.total ? Math.round(s.recalled / s.total * 100) : null },
+  }, globals);
   const { StudyOverview } = render(path.join(__dirname, '../src/bank/StudyOverview.tsx'));
   const React = webRequire('react');
   const { renderToStaticMarkup } = webRequire('react-dom/server');
   const { MemoryRouter } = webRequire('react-router-dom');
+  return events => renderToStaticMarkup(React.createElement(MemoryRouter, {},
+    React.createElement(StudyOverview, { events, onStart() {} })));
+}
+
+test('a Main-Quiz-only lecture shows per-question numbers in the card columns, with a review button', () => {
+  const key = '감염과 면역/261104_02';
+  const draw = overviewWith({
+    progress: new Map([[key, { total: 57, unseen: 40, recognized: 9, retrieving: 6, retained: 2, reviewDue: 3 }]]),
+    summaries: new Map([[key, { total: 82, learned: 11, recalled: 41 }]]),
+  });
   const events = twoBlocks();
   const marks = { notesPrev: false, preview: false, prequiz: false, notesCurrent: false, quiz: false, mainQuiz: true };
   events[3].lectures = [{ subject: '감염과 면역', runId: '261104_02', title: '감염성 질환의 병리 1', professors: [], marks,
     prequizProgress: null, grabbed: { pre: false, main: false }, studyLoaded: true, cardProgress: null, mastery: null }];
-  const html = renderToStaticMarkup(React.createElement(MemoryRouter, {},
-    React.createElement(StudyOverview, { events, onStart() {} })));
-  assert.match(html, /Main-Quiz/);
-  assert.match(html, /첫 학습 11\/98 · 회상 가능 0/);
-  assert.match(html, /href="\/mainquiz\/%EA%B0%90%EC%97%BC%EA%B3%BC%20%EB%A9%B4%EC%97%AD\/261104_02"/);
+  const html = draw(events);
+  // 최초 디자인: 배지·문장·막대 없이 숫자만.
+  assert.doesNotMatch(html, /Main-Quiz|첫 학습|회상 가능|list-main/);
+  const row = html.slice(html.indexOf('감염성 질환의 병리 1'));
+  const cells = [...row.matchAll(/class="is-num[^"]*"><span[^>]*>([\d,]+)<\/span>/g)].slice(0, 6).map(m => m[1]);
+  assert.deepEqual(cells, ['57', '40', '9', '6', '2', '3']);
+  assert.match(row, /rate-text is-band3">50%/);
+  assert.match(row, /aria-label="감염성 질환의 병리 1 복습 퀴즈"/);
   assert.doesNotMatch(html, /감염성 질환의 병리 1 선택/, 'no batch checkbox for a Main-Quiz-only lecture');
+  // 상단 요약에도 Main-Quiz 문항이 더해진다.
+  assert.match(html, /전체 카드<\/span><b>57/);
+  assert.match(html, /오늘 복습<\/span><b class="is-review">3/);
+  // 행을 누르면 패널을 띄우므로 강의 페이지 링크로 감싸지 않는다.
+  assert.doesNotMatch(row.slice(0, 400), /href="\/(mainquiz|bank)\//);
+});
+
+test('by-type keeps the three sections; in-order lists every class by date with no section headers', () => {
+  const byType = overviewWith()(officialTimetable());
+  for (const section of ['강의', '실습', 'TBL·CBL']) assert.match(byType, new RegExp(`aria-label="${section}"`));
+  assert.match(byType, /aria-pressed="true"[^>]*>유형별/);
+  const storage = { getItem: () => 'order', setItem() {} };
+  const inOrder = overviewWith({ globals: { localStorage: storage } })(officialTimetable());
+  assert.match(inOrder, /aria-pressed="true"[^>]*>순서대로/);
+  for (const section of ['강의', '실습', 'TBL·CBL']) assert.doesNotMatch(inOrder, new RegExp(`aria-label="${section}"`));
+  assert.doesNotMatch(inOrder, /list-section-title/);
+  const codes = [...inOrder.matchAll(/class="list-code">([^<]*)</g)].map(m => m[1]);
+  assert.ok(codes.some(c => /^TBL/.test(c)) && codes.some(c => /^실습/.test(c)), codes.join(','));
+  assert.equal(codes.length, [...byType.matchAll(/class="list-code">/g)].length, 'same rows, one list');
+  // 날짜 순: 첫 TBL은 그보다 뒤 번호의 강의보다 먼저 나올 수 있다(유형별 보기에서는 항상 강의 구역 뒤).
+  assert.ok(codes.indexOf(codes.find(c => /^TBL/.test(c))) < codes.lastIndexOf(codes.filter(c => /^\d+$/.test(c)).pop()));
 });

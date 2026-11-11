@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
 import { useMe } from '../useMe';
@@ -60,12 +60,21 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     const next=await api<RootOverview>(base);
     if(resume&&next.sessionId)await loadSession(next.sessionId);
     setInfo(next);setError('');
+    return next;
   }
   const writes=useRootStudyWrites(scope);
   const frames=useRootFrames(view?.sessionId);
   const {ensure,forget}=frames;
   useEffect(()=>{if(view&&!view.finished)ensure(view.position,view.count);},[view?.sessionId,view?.position,view?.count,view?.finished,ensure]);
-  useEffect(()=>{void refresh(true).catch(e=>setError(e instanceof ApiError&&e.status===404?'아직 공개된 Main Quiz 학습 자료가 없습니다. 기존 문제를 이용하거나 자료 준비를 기다려 주세요.':e.message));},[base]);
+  // 강의 목록의 「▶」(?start=1): 진행 중 회차는 위에서 이어 풀고, 없으면 오늘 계획으로 바로 회차를 연다. 한 번만.
+  const [search,setSearch]=useSearchParams();
+  const autoStart=useRef(search.get('start')==='1');
+  useEffect(()=>{void refresh(true).then(next=>{
+    if(!autoStart.current)return;
+    autoStart.current=false;
+    setSearch(old=>{const kept=new URLSearchParams(old);kept.delete('start');return kept;},{replace:true});
+    if(!viewRef.current&&next.plan?.tasks.length)void begin();
+  }).catch(e=>setError(e instanceof ApiError&&e.status===404?'아직 공개된 Main Quiz 학습 자료가 없습니다. 기존 문제를 이용하거나 자료 준비를 기다려 주세요.':e.message));},[base]);
   /** What the server will show once this event is stored, drawn from prepared frames. null: wait for it. */
   function predict(current:RootView,action:RootAction):RootView|null {
     const version=current.version+1;
