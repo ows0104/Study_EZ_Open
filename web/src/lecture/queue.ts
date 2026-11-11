@@ -211,6 +211,7 @@ export function dayLabel(at: number): string {
 /** 오늘로부터 며칠 뒤인가. 학습일(한국 시간 새벽 4시 경계)만 보고 센다 — 시각까지 세면 하루가 0일이 된다. */
 export function daysFromNow(at: number, now: number): number {
   const day = 24 * 60 * 60 * 1000;
+  // 새벽 4시 = calendar/entries.ts `DAY_START_HOUR`. 이 파일은 단독으로 읽히는 검사가 있어 import하지 않는다.
   const studyDay = (ms: number) => Math.floor((ms + (9 - 4) * 3_600_000) / day);
   return Math.max(0, studyDay(at) - studyDay(now));
 }

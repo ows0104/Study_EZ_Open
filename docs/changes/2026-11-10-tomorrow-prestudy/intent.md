@@ -61,3 +61,18 @@ API·DB·출제 변경 없음.
 - 서버 `-m tests` 135개 중 133 통과. 실패 2(`test_root_map_tree`, `test_root_map_tree_v3`)는 로컬 venv에 PyMuPDF가 없어 import 단계에서 멈춘 것(이 변경과 무관).
   기존 09시·자정 가정이던 `test_study_day`·`test_study_engine`·`test_study_plan`·`test_root_policy_api`를 04시 기준으로 고쳤다.
 - 웹 `typecheck`·`build`·`tests/study-blocks.test.cjs` 통과. `study-management.test.cjs`는 playwright 미설치로 실행 못 함.
+
+## 정책까지 전환 (2026-11-11)
+
+사용자: 「하루의 경계 시간 자체를 새벽 4시로 두고 모든 시간 경계를 새벽 4시로 두기로 했어. 그 과정에서 policy를 바꿔야 하는 게
+있으면 전부 바꾸고, 네가 바꿀 수 없는 게 있으면 나한테 보고해.」
+
+- 위의 보류를 풀었다. Main-Quiz 기본 정책을 `roots-adaptive/2`로 올렸다(`exam_day: "study"` — 시험 임박 상한의 남은 날을 학습일로 셈).
+  `/1`(필드 없음)은 달력 날짜 그대로 검증·재생한다. 예시: `docs/changes/2026-11-02-root-learning-product/policy-examples.md`.
+- 「오늘」을 자정으로 세던 나머지: `server/app/routes/study_plan.py`(오늘 강의 수·미배정 강의), `web/src/admin/LectureTab.tsx`(관리 강의 상태).
+- 바꾸지 않는 것(저장 기록): 이미 저장된 `/1`·09시 간격표 사건은 저장된 정책으로 재생된다. 회차는 하루짜리라 새로 여는 회차부터 `/2`.
+  배포한 날 이미 연 `/1` 회차는 정책이 달라 그날의 「이어 하기」로 잡히지 않고 새 회차가 열린다(기록은 보존).
+- 확인 못 함: 운영 환경변수 `STUDYEZ_ROOT_POLICY`가 지정돼 있으면 그 값이 기본 정책을 덮는다(저장소에 운영 값 없음).
+
+검사: 서버 135개 중 133 통과(실패 2는 PyMuPDF 미설치, 위와 같음). `test_root_adaptive`에 /2·/1 경계 검사 추가.
+웹 typecheck·build·`study-blocks`·`slidePreload` 통과.
