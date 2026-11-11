@@ -1,0 +1,57 @@
+{
+  "id": "2026-11-11-immunity-renumber",
+  "title": "감염과 면역 이동 12강의 run ID를 현재 시간표 번호로",
+  "area": "operations",
+  "created_at": "2026-11-11T06:43:35.241809+00:00",
+  "required_checks": [
+    "timetable",
+    "renumber-roundtrip"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T06:44:38.525209+00:00",
+      "evidence": "사용자 2026-11-11 15:3x KST 채팅: 「261113_01이 틀린거야. 현재 시간표대로 맞춰야해.」 → 11-05 결정·이전 범위 설명 뒤 「12강 다 맞춰줘」",
+      "scope": "scripts/immunity_renumber.py(새), data/timetable/identities 12강의 별칭 제거, runner/filenames.py·runner/ahead.py 빈 별칭 대응, 격리 로컬 DB 검사. 운영 DB·R2 적용은 판정표를 보인 뒤 따로 승인",
+      "evidence_version": 2,
+      "source_hash": "4bb4c6b30c09b8bc6447dec9600baeecf0220b46c6104624da9beb88769dee22",
+      "plan_hash": "1b4b66cd36dbd92083fbed7b52843b7a40cfd8c972769f65e2787eaa42d89244",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "server",
+        "spotter/data",
+        "spotter/scripts",
+        "spotter/web",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "tests/runner",
+        "tests/spotter",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "0ac107a0cf30499d9372c4e76d493bb5c7a646278a9bb0138e2793cd26b68ebe"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T06:44:51.040976+00:00"
+}

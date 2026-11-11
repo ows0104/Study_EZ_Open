@@ -16,7 +16,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 CHANGE = ROOT / "docs/changes/2026-11-05-immunity-timetable"
 SOURCE = ROOT / "data/timetable/2026_본1_2학기_시간표.json"
-IDENTITIES = ROOT / "data/timetable/identities/2026-2.json"
+# The 11-05 stable IDs, kept here after 2026-11-11-immunity-renumber emptied the live alias files.
+IDENTITIES = CHANGE / "identities/2026-2.json"
 FIELDS = {"date": "date", "start_time": "startTime", "end_time": "endTime",
           "title": "title", "details": "details", "professor": "professor", "category": "category"}
 
