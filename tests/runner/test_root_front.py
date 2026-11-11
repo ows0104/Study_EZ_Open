@@ -308,7 +308,11 @@ def test_replaying_the_sasl_pilot_answers_reproduces_its_front_outputs(tmp_path)
     derived = rf.Front(p, tmp_path / 'front', invoke=replay).run()
     assert list(sent) == ['map', 'point', 'audit', 'point-repair', 'final-audit']
     for stage in ('map', 'point', 'audit', 'point-repair', 'final-audit'):
-        assert sent[stage] == gold(stage + '.task.md')  # the same instructions the pilot sent
+        # The same instructions the pilot sent: task.md is byte-identical, and the first message is that text
+        # followed only by the contents of the stage's input files (docs/changes/2026-11-11-pipeline-overlap).
+        assert (tmp_path / 'front' / stage / 'task.md').read_bytes().decode('utf-8') == gold(stage + '.task.md')
+        head, _, tail = sent[stage].partition('\n\n---\nThe complete contents of these input files')
+        assert head == gold(stage + '.task.md') and '===== BEGIN input.json =====' in tail
     assert json.loads(derived['conceptMap']) == json.loads((PILOT / 'map/concept-map.json').read_text(encoding='utf-8-sig'))
     assert json.loads(derived['points']) == json.loads((PILOT / 'point-repair/exam-points.json').read_text(encoding='utf-8-sig'))
     pilot_packet = json.loads((PILOT / 'generation/packet.json').read_text(encoding='utf-8'))

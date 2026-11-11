@@ -179,16 +179,26 @@ def check_front(front, server, concept_map, points, bank=None):
         require(bank is None, 'map-tree/1 has no independent bank')
 
 
+def provisional_packet(server, concept_map, points, page_counts):
+    """What the derived packet says before the bank and the audits exist: the request, the Map and the points.
+    The generator's normalize stage reads only these fields, so it can be called while the bank and the final
+    audit still run (docs/changes/2026-11-11-pipeline-overlap). Not a packet a generator may run on: no
+    fingerprint, no front evidence."""
+    value = {k: copy.deepcopy(v) for k, v in server.items() if k not in ('inputHash', 'pipeline', 'operatorResumes')}
+    value.update(scope=lecture_scope(server['title'], page_counts, server.get('scope', '')) + ' ' + SCOPE_SUFFIX,
+                 conceptMap=concept_map, points=points, inputMode='provided', sourceAssessmentFormat=GENERATION_FORMAT,
+                 speedStages=True, derivedFrom=server['inputHash'])
+    return value
+
+
 def derive_packet(server, concept_map, points, front, bank=None):
     """The generation packet: the pilots' `provided` packet built from the server-frozen request.
     map-tree/2 also carries the independent bank and names root-generation/3."""
     require_server_packet(server)
     require(packet_hash(server) == server['inputHash'], 'map-tree: server packet fingerprint')
     check_front(front, server, concept_map, points, bank)
-    value = {k: copy.deepcopy(v) for k, v in server.items() if k not in ('inputHash', 'pipeline', 'operatorResumes')}
-    value.update(scope=lecture_scope(server['title'], front['pageCounts'], server.get('scope', '')) + ' ' + SCOPE_SUFFIX,
-                 conceptMap=concept_map, points=points, inputMode='provided', sourceAssessmentFormat=GENERATION_FORMAT,
-                 speedStages=True, derivedFrom=server['inputHash'], frontStages=copy.deepcopy(front))
+    value = provisional_packet(server, concept_map, points, front['pageCounts'])
+    value.update(frontStages=copy.deepcopy(front))
     if server['pipeline'] == PIPELINE2:
         value.update(generationPolicy=GENERATION_POLICY2, intakeBank=copy.deepcopy(bank))
     elif server['pipeline'] == PIPELINE3:

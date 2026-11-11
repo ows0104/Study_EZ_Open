@@ -58,6 +58,39 @@ def chunks(items, size):
     return [items[i:i + size] for i in range(0, len(items), size)] or [[]]
 
 
+# early-call/1 (docs/changes/2026-11-11-pipeline-overlap): a stage whose input is already decided is called before
+# its turn, beside the stages still running. Its answer waits in <out>/.early/<stage>.json with the input
+# fingerprint; when the stage's turn comes, Stages.run takes it instead of calling the model if, and only if, the
+# input it then builds has that fingerprint. Stage names, inputs, ledger entries and the result are the ones a
+# call at its turn makes.
+EARLY_POLICY = 'early-call/1'
+
+
+def early_path(out, name):
+    return Path(out) / '.early' / (name + '.json')
+
+
+def write_early(out, name, input_hash, raw=None, info=None, error=None):
+    """Keep an early call's answer, or the failure it ended with, for the stage's turn."""
+    from . import connection_generate as g
+    row = {'policy': EARLY_POLICY, 'stage': name, 'inputHash': input_hash}
+    row.update({'error': str(error)[:4000], 'errorType': type(error).__name__} if error is not None else {'raw': raw, 'info': info})
+    path = early_path(out, name)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    g.write(path, row)
+    return row
+
+
+def set_seat_aside(out, name, suffix):
+    """Move <out>/.native/<stage> out of the stage's way (a call that will not be used) and return its new name."""
+    seat = Path(out) / '.native' / name
+    if not seat.exists():
+        return None
+    target = next(x for x in (seat.with_name(name + suffix + ('' if k == 0 else f'-{k}')) for k in range(1000)) if not x.exists())
+    seat.replace(target)
+    return '.native/' + target.name
+
+
 class Stages:
     """Ledger of stage calls with archived evidence. Same rules as the /2 producer: no automatic rerun.
 
@@ -69,6 +102,7 @@ class Stages:
         self.path = self.out / 'ledger.json'
         # transport-retry/1: how a stage waits for the network before its one retry (tests replace it).
         self.wait_network = codex.wait_for_network
+        self._early, self._early_pool = {}, None   # early-call/1: stage name -> (input fingerprint, future)
         # Batches and other independent judgments of one run call stages side by side (connection_batches);
         # every change to the ledger and its file happens under this lock.
         self.lock = threading.RLock()
@@ -210,6 +244,88 @@ class Stages:
             raise dropped
         return self.invoke(name, payload, material, self.model)
 
+    def start_early(self, name, ctx, state=None, material=None):
+        """Call stage `name` now, in the background, with the input its turn is expected to build (early-call/1).
+
+        Nothing is recorded in the ledger until the stage's turn. Returns False, and calls nothing, when the stage
+        already has a ledger entry, an early answer or a seat: a resumed run never calls a stage twice this way."""
+        ctx = {**ctx, '_pipeline_version': self.policy}
+        input_hash = document_hash(ctx)
+        payload = {**ctx, '_check': state} if state is not None else ctx
+        folder = Path(material) if material is not None else self.out / 'material'
+        with self.lock:
+            if (name in self.ledger['stages'] or name in self._early or early_path(self.out, name).exists()
+                    or (self.out / '.native' / name).exists()):
+                return False
+            if self._early_pool is None:
+                from concurrent.futures import ThreadPoolExecutor
+                self._early_pool = ThreadPoolExecutor(max_workers=batches.BATCH_WORKERS)
+
+            def job():
+                print('── 연결 자동출제 ' + self.policy[self.policy.index('/'):] + ' ' + name + ' (미리 시작)', flush=True)
+                try:
+                    raw, info = self._call(name, payload, folder)
+                except Exception as error:
+                    write_early(self.out, name, input_hash, error=error)
+                    return error
+                write_early(self.out, name, input_hash, raw, info)
+                return None
+            self._early[name] = (input_hash, self._early_pool.submit(job))
+        return True
+
+    def _take_early(self, name, input_hash):
+        """The early answer of `name` for exactly this input: (raw, info), or None when there is none to use.
+
+        An early call that failed fails the stage here, at its turn, as the same call would have (no second try by
+        itself). An early answer for another input is not used: its seat moves to .native/<stage>.early and the
+        stage is called normally."""
+        with self.lock:
+            held = self._early.pop(name, None)
+        error = held[1].result() if held else None   # waits for a call still running
+        path = early_path(self.out, name)
+        if not path.exists():
+            # A seat without a ledger entry or an answer is an early call the process did not live to finish.
+            aside = set_seat_aside(self.out, name, '.early')
+            if aside:
+                self._record_early(name, False, aside)
+            return None
+        row = json.loads(path.read_text(encoding='utf-8'))
+        path.unlink()
+        if row.get('policy') != EARLY_POLICY or row.get('inputHash') != input_hash:
+            self._record_early(name, False, set_seat_aside(self.out, name, '.early'))
+            print('── 미리 시작한 ' + name + ': 입력이 달라져 쓰지 않고 다시 호출', flush=True)
+            return None
+        self._record_early(name, True, None)
+        if 'error' in row:
+            raise error if error is not None else ValueError(row['error'])
+        return row['raw'], row['info']
+
+    def _record_early(self, name, used, kept):
+        with self.lock:
+            rows = self.ledger.setdefault('earlyCalls', [])
+            rows.append({'policy': EARLY_POLICY, 'stage': name, 'used': used, **({'kept': kept} if kept else {})})
+            rows.sort(key=lambda r: r['stage'])   # batches take their answers in whatever order they finish
+            self.save()
+
+    def settle_early(self):
+        """Before the result: wait for early calls nobody took and move them out of the way, so every seat under
+        .native/ belongs to a stage of the ledger."""
+        with self.lock:
+            names = list(self._early)
+        names += [p.stem for p in sorted((self.out / '.early').glob('*.json')) if p.stem not in names] if (self.out / '.early').is_dir() else []
+        for name in names:
+            with self.lock:
+                held = self._early.pop(name, None)
+            if held:
+                held[1].result()
+            early_path(self.out, name).unlink(missing_ok=True)
+            if name not in self.ledger['stages']:
+                self._record_early(name, False, set_seat_aside(self.out, name, '.early'))
+        # The early calls' own copies of material/ (made so that a stage writing new images could not disturb them).
+        import shutil
+        for folder in sorted((self.out / '.early').glob('m[0-9]*')) if (self.out / '.early').is_dir() else []:
+            shutil.rmtree(folder, ignore_errors=True)
+
     def run(self, name, ctx, accept, state=None, material=None):
         """One model stage. A completed stage with the same input is reused; anything else runs once.
 
@@ -231,8 +347,10 @@ class Stages:
         self.g.write(self.out / (name + '.input.json'), ctx)
         print('── 연결 자동출제 ' + self.policy[self.policy.index('/'):] + ' ' + name, flush=True)
         try:
-            raw, info = self._call(name, {**ctx, '_check': state} if state is not None else ctx,
-                                   Path(material) if material is not None else self.out / 'material')
+            early = self._take_early(name, input_hash) if prior is None else None
+            raw, info = early if early is not None else self._call(
+                name, {**ctx, '_check': state} if state is not None else ctx,
+                Path(material) if material is not None else self.out / 'material')
             self.g.write(self.out / (name + '.raw.json'), raw)
             self.g.write(self.out / (name + '.usage.json'), info)
             with self.lock:

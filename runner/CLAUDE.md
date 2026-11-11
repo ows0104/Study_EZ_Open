@@ -16,6 +16,10 @@
   - 네트워크가 끊은 호출(`codex.network_failure`)만 연결을 기다려 한 번 다시 부른다(transport-retry/1). 남긴 파일은 `.net-<단계>/`. 시간 초과·콘텐츠 거절·사용량 한도·검사 실패·둘째 끊김은 지금처럼 멈춘다.
   - map-tree/2 이상은 포인트 → 대조 → 보완 → 재대조 한 줄이 지도·문제은행과 나란히 돈다. 하나가 실패해도 나머지는 끝까지 돌아 재개 때 다시 부르지 않는다.
 - 기계 전체 Codex 동시 실행은 `studyez_llm.execution.slot`이 8로 묶는다(`STUDYEZ_CODEX_SLOTS`). 자리가 없으면 실패하지 않고 기다리며 로그에 `Codex 동시 실행 한도 대기`가 찍힌다.
+- 2026-11-11 호출 시간 단축(`docs/changes/2026-11-11-pipeline-overlap/`, 세션 기록 101개 분해: 호출 시간의 절반이 입력 파일을 셸로 읽는 왕복):
+  - 생성 단계의 첫 메시지에 `task.md`·스키마·`input.json` 내용을 싣는다(`root_native_json.inline_inputs`, 합 240,000바이트까지. 넘으면 지금처럼 파일을 읽는다). 파일·결과 파일·검사는 그대로다.
+  - 앞 단계의 프롬프트는 `task.md`(불변) 뒤에 그 단계 입력 파일 내용을 붙인다(`root_front.inline_inputs`). 문제은행 단계는 여전히 포인트 산출물을 보지 않는다.
+  - map-tree/3 앞 단계는 포인트가 확정되면 생성기의 `normalize`를 미리 부른다(`Front.early_normalize`, `--generation <gid>/generation`). 답은 `generation/.early/normalize.json`에 입력 지문과 함께 두고, 생성기가 차례에 지문이 같을 때만 쓴다(early-call/1, quizbank/CLAUDE.md). 이 호출의 문제는 앞 단계를 실패시키지 않는다.
 - 이 변경 전의 러너는 이 요청을 모델 호출 전에 거절한다.
 
 `root_native_json.py`는 `v3-`로 시작하는 root-generation/3 단계도 실행한다(스키마·프롬프트·단계 검사는 `studyez_contracts.roots.generation_v3`). 그 단계는 입력의 `pages`와 그 문항의 자극 그림만 첨부한다. /2 단계 이름의 동작은 그대로다. `pipeline: map-tree/2`(형식 `source-assessment/2-map-tree/2`)는 앞 단계에서 지도·포인트와 함께 독립 문제은행(`bank/`, 지시문 `parallel/bank.md` + `map-tree/bank-task.md`)을 동시에 뽑고, 파생 packet이 root-generation/3으로 돈다. 셋 중 하나만 다시 돌아도 다른 둘은 다시 돌리지 않는다. 마지막 포인트 대조에 남은 지적의 포인트는 `openPoints`로 결과까지 간다.
