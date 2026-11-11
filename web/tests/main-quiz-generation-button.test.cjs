@@ -24,14 +24,15 @@ function fixture(job=null,{compatible=true,loadFails=false}={}){
   function nodes(tree,type){if(!tree||typeof tree!=='object')return [];if(Array.isArray(tree))return tree.flatMap(x=>nodes(x,type));return [...(tree.type===type?[tree]:[]),...nodes(tree.props?.children,type)];}
   return {render,nodes,calls,sent,published,allowLoad(){loadingFails=false;},button(tree){return nodes(tree,'button')[0];}};
 }
-test('one click requests the map-tree pipeline, opened to students, and says what it approves',async()=>{
+test('one click requests the default 새 구조 2 (map-tree/3), opened to students, and says what it approves',async()=>{
   const f=fixture();assert.equal(f.button(f.render()).props.disabled,true);await tick();
   const tree=f.render();const b=f.button(tree);assert.equal(b.props.children,'Main Quiz 만들기');assert.equal(b.props.disabled,false);
+  const first=f.nodes(tree,'input').filter(n=>n.props.type==='radio')[0];assert.equal(first.props.checked,true);
   const note=JSON.stringify(f.nodes(tree,'div').find(n=>n.props.role==='note'));
-  assert.match(note,/이 강의의 승인/);assert.match(note,/OpenAI Codex CLI/);assert.match(note,/학생에게 바로 공개/);assert.match(note,/문항 보완 최대 3/);
+  assert.match(note,/이 강의의 승인/);assert.match(note,/OpenAI Codex CLI/);assert.match(note,/학생에게 바로 공개/);assert.match(note,/빈 목표 추가 최대 2/);assert.match(note,/의학 검토 1/);
   b.props.onClick();b.props.onClick();await tick();
   const writes=f.calls.filter(c=>c.init);assert.equal(writes.length,1);
-  const payload=JSON.parse(writes[0].init.body);assert.equal(payload.pipeline,'map-tree/1');assert.equal(payload.authoring,'cli');assert.equal(payload.parallelAuthoring,false);assert.equal(payload.inputMode,'source');assert.equal(payload.privatePilot,false);assert.equal(payload.resume,false);
+  const payload=JSON.parse(writes[0].init.body);assert.equal(payload.pipeline,'map-tree/3');assert.equal(payload.authoring,'cli');assert.equal(payload.parallelAuthoring,false);assert.equal(payload.inputMode,'source');assert.equal(payload.privatePilot,false);assert.equal(payload.resume,false);
   assert.equal(payload.conceptMap,'');assert.equal(payload.points,'');assert.deepEqual(f.sent,[]);
   assert.equal(f.button(f.render()).props.disabled,true);
 });
@@ -51,7 +52,7 @@ test('a failed map-tree request resumes only with the administrator reason',asyn
 });
 test('the earlier parallel mode stays selectable',async()=>{
   const f=fixture();f.render();await tick();let tree=f.render();
-  const radio=f.nodes(tree,'input').filter(n=>n.props.type==='radio')[2];radio.props.onChange();
+  const radio=f.nodes(tree,'input').filter(n=>n.props.type==='radio')[3];radio.props.onChange();
   tree=f.render();assert.equal(f.nodes(tree,'div').some(n=>n.props.role==='note'),false);f.button(tree).props.onClick();await tick();
   const payload=JSON.parse(f.calls.find(c=>c.init).init.body);assert.equal(payload.parallelAuthoring,true);assert.equal(payload.pipeline,undefined);
 });
@@ -62,6 +63,20 @@ test('the new structure (map-tree/2) is selectable and states its call limits',a
   assert.match(note,/이 강의의 승인/);assert.match(note,/문제은행 1/);assert.match(note,/빈 목표 추가 최대 2/);assert.match(note,/의학 검토 1/);
   f.button(tree).props.onClick();await tick();
   const payload=JSON.parse(f.calls.find(c=>c.init).init.body);assert.equal(payload.pipeline,'map-tree/2');assert.equal(payload.parallelAuthoring,false);assert.equal(payload.authoring,'cli');
+});
+test('the earlier default (map-tree/1) stays selectable with its own call limits',async()=>{
+  const f=fixture();f.render();await tick();let tree=f.render();
+  const radio=f.nodes(tree,'input').filter(n=>n.props.type==='radio')[2];radio.props.onChange();
+  tree=f.render();const note=JSON.stringify(f.nodes(tree,'div').find(n=>n.props.role==='note'));assert.match(note,/문항 보완 최대 3/);
+  f.button(tree).props.onClick();await tick();
+  const payload=JSON.parse(f.calls.find(c=>c.init).init.body);assert.equal(payload.pipeline,'map-tree/1');assert.equal(payload.authoring,'cli');
+});
+test('leaving the supplied-map option returns to the default 새 구조 2',async()=>{
+  const f=fixture();f.render();await tick();let tree=f.render();
+  const box=()=>f.nodes(f.render(),'input').find(n=>n.props.type==='checkbox');
+  box().props.onChange({target:{checked:true}});box().props.onChange({target:{checked:false}});
+  tree=f.render();f.button(tree).props.onClick();await tick();
+  const payload=JSON.parse(f.calls.find(c=>c.init).init.body);assert.equal(payload.pipeline,'map-tree/3');assert.equal(payload.inputMode,'source');
 });
 test('a failed map-tree/2 request also needs the administrator reason',async()=>{
   const f=fixture({id:'old',requestId:'v3',state:'failed',authoring:'cli',pipeline:'map-tree/2',parallelAuthoring:false,privatePilot:true,input:{conceptMap:'',points:'',scope:'',examDate:null,inputMode:'source'}});

@@ -20,11 +20,14 @@ type Props={subject:string;runId:string;onPublished?:()=>void};
 // then root-generation/3 (coverage check → add only for empty goals → batch review → one medical review).
 // map-tree/3 (2026-11-10, docs/changes/2026-11-10-importance-at-authoring): points are only a coverage checklist,
 // importance per question, every source-ok question a task (root-generation/4).
+// 2026-11-11 사용자 「관리자 출제 기본값을 새 구조 2로 바꾸자.」 (docs/changes/2026-11-11-root-default-v4):
+// map-tree/3 is the default choice for a new request. Earlier structures stay selectable; a resume keeps its own.
 type Mode='map-tree'|'map-tree-v3'|'map-tree-v4'|'parallel'|'provided';
 const MAP_TREE='map-tree/1';
 const MAP_TREE_V3='map-tree/2';
 const MAP_TREE_V4='map-tree/3';
-function modeOf(g:Generation):Mode{return g.pipeline===MAP_TREE?'map-tree':g.pipeline===MAP_TREE_V3?'map-tree-v3':g.pipeline===MAP_TREE_V4?'map-tree-v4':g.input.inputMode==='provided'?'provided':g.parallelAuthoring?'parallel':'map-tree';}
+const DEFAULT_MODE:Mode='map-tree-v4';
+function modeOf(g:Generation):Mode{return g.pipeline===MAP_TREE?'map-tree':g.pipeline===MAP_TREE_V3?'map-tree-v3':g.pipeline===MAP_TREE_V4?'map-tree-v4':g.input.inputMode==='provided'?'provided':g.parallelAuthoring?'parallel':DEFAULT_MODE;}
 const isMapTree=(m:Mode)=>m==='map-tree'||m==='map-tree-v3'||m==='map-tree-v4';
 export function RootGenerationPanel(props:Props) {
   return <GenerationPanel key={props.subject+'/'+props.runId} {...props}/>;
@@ -32,7 +35,7 @@ export function RootGenerationPanel(props:Props) {
 function GenerationPanel({subject,runId,onPublished}:Props) {
   const base=`/api/admin/root-learning/lectures/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}/generation`;
   const [input,setInput]=useState<Input>({conceptMap:'',points:'',scope:'',examDate:null,inputMode:'source'});
-  const [mode,setMode]=useState<Mode>('map-tree');
+  const [mode,setMode]=useState<Mode>(DEFAULT_MODE);
   const [privatePilot,setPrivate]=useState(false);
   const [reason,setReason]=useState('');
   const [job,setJob]=useState<Generation|null>(null);
@@ -96,11 +99,11 @@ function GenerationPanel({subject,runId,onPublished}:Props) {
     <button className="is-primary" disabled={!loaded&&!error||busy||pending||needsReason&&!reason.trim()||!resumable&&!sourceMode&&(!input.conceptMap.trim()||!input.points.trim())} onClick={()=>{if(!loaded){setError('');setLoadVersion(v=>v+1);}else void send(resumable);}}>{loaded?label:error?'기존 작업 다시 확인':'기존 작업 확인 중…'}</button>
     <p>러너를 켜두세요. {isMapTree(mode)?'개념 지도·출제포인트·대조를 CLI에서 차례로 만듭니다.':mode==='parallel'?'문제은행·개념도·출제포인트를 각각 CLI에서 만듭니다.':'입력한 지도·포인트로 CLI에서 출제합니다.'} 통합·검수·업로드까지 자동으로 이어집니다. 기존 문제와 학습 기록은 보존합니다.</p>
     <details><summary>설정·기존 지도 사용</summary><fieldset disabled={busy||pending||resumable}>
-    <label><input type="radio" name="root-generation-mode" checked={mode==='map-tree'} onChange={()=>chooseMode('map-tree')}/>개념 지도·출제포인트부터 (기본)</label>
+    <label><input type="radio" name="root-generation-mode" checked={mode==='map-tree-v4'} onChange={()=>chooseMode('map-tree-v4')}/>새 구조 2 (기본): 포인트는 누락 점검용 · 중요도는 문항마다 · 검수 통과 문항은 모두 과제</label>
     <label><input type="radio" name="root-generation-mode" checked={mode==='map-tree-v3'} onChange={()=>chooseMode('map-tree-v3')}/>새 구조 (시범): 문제은행·개념 지도·출제포인트를 따로 뽑고 빈 목표만 추가</label>
-    <label><input type="radio" name="root-generation-mode" checked={mode==='map-tree-v4'} onChange={()=>chooseMode('map-tree-v4')}/>새 구조 2 (시범): 포인트는 누락 점검용 · 중요도는 문항마다 · 검수 통과 문항은 모두 과제</label>
+    <label><input type="radio" name="root-generation-mode" checked={mode==='map-tree'} onChange={()=>chooseMode('map-tree')}/>개념 지도·출제포인트부터 (이전 기본)</label>
     <label><input type="radio" name="root-generation-mode" checked={mode==='parallel'} onChange={()=>chooseMode('parallel')}/>문제은행·개념도·포인트 병렬 (옛 방식)</label>
-    <label><input type="checkbox" checked={!sourceMode} onChange={e=>chooseMode(e.target.checked?'provided':'map-tree')}/>기존 Concept map·출제포인트 사용</label>
+    <label><input type="checkbox" checked={!sourceMode} onChange={e=>chooseMode(e.target.checked?'provided':DEFAULT_MODE)}/>기존 Concept map·출제포인트 사용</label>
     {!sourceMode&&<>
     <label>Concept map<textarea aria-label="Concept map 입력" value={input.conceptMap} maxLength={500000} onChange={e=>setInput({...input,conceptMap:e.target.value})}/>
       <input aria-label="Concept map 파일" type="file" accept=".md,.txt,.json" onChange={e=>void upload('conceptMap',e.target.files?.[0])}/></label>
