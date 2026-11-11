@@ -1,0 +1,170 @@
+{
+  "id": "2026-11-11-quiz-timer",
+  "title": "복습 퀴즈 문항 타이머",
+  "area": "site",
+  "created_at": "2026-11-11T07:24:31.101366+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T07:36:33.919474+00:00",
+      "evidence": "사용자 2026-11-11 채팅 승인 「승인, 구현하고 완료되면 구현된 화면 보여줘」. 이후 spec 수정은 일시정지 표시 글자(‖→멈춤)만으로 승인 범위 불변",
+      "scope": "web/src/bank/quizTimer.ts(새), RootSolve.tsx, main-quiz.css, GuidePage.tsx 안내, web/tests 화면 검사. 서버·DB 변경 없음. 로컬 구현·검사",
+      "evidence_version": 2,
+      "source_hash": "4ed708342ca1f4d37b5fe2565665b6fd8f717bbb755afff1f414bd0d37e65a37",
+      "plan_hash": "6b1cd475a0a978a8e6b32ab6573179f4d64fc06d64124aa17a68e82c4bcb7df0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "0664f34139406d6b59ffe390fce8ac8efe5657178d352f9c223fde0f99c75786"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-11T07:34:39.289873+00:00",
+      "command": [
+        "C:/Users/erika/Study_EZ_wt_list-columns/server/.venv/Scripts/python.exe",
+        "scripts/check_main_quiz_ui.py",
+        "web"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "b1617ac789449e2f8d9d855c3ea74803622d2cf1cbf3baa0fce08221b096a3c0",
+      "plan_hash": "53f132db09c34dfba4631928bbdd3242f351e2766919ae90855d335ec8da7cd0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-11-quiz-timer/1794382467384635700-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-11T07:34:56.963664+00:00",
+      "command": [
+        "cmd.exe",
+        "C:/",
+        "cd web && npm.cmd run typecheck && node --test tests/main-quiz-map-tree.test.cjs && npm.cmd run build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "b1617ac789449e2f8d9d855c3ea74803622d2cf1cbf3baa0fce08221b096a3c0",
+      "plan_hash": "53f132db09c34dfba4631928bbdd3242f351e2766919ae90855d335ec8da7cd0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-11-quiz-timer/1794382496412224100-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-11T07:37:23.759389+00:00",
+      "command": [
+        "C:/Users/erika/Study_EZ_wt_list-columns/server/.venv/Scripts/python.exe",
+        "scripts/check_main_quiz_ui.py",
+        "browser"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "4ed708342ca1f4d37b5fe2565665b6fd8f717bbb755afff1f414bd0d37e65a37",
+      "plan_hash": "6b1cd475a0a978a8e6b32ab6573179f4d64fc06d64124aa17a68e82c4bcb7df0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-11-quiz-timer/1794382596662782500-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-11T07:37:24.911872+00:00",
+      "command": [
+        "cmd.exe",
+        "C:/",
+        "cd web && npm.cmd run typecheck && node --test tests/main-quiz-map-tree.test.cjs && npm.cmd run build"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "4ed708342ca1f4d37b5fe2565665b6fd8f717bbb755afff1f414bd0d37e65a37",
+      "plan_hash": "6b1cd475a0a978a8e6b32ab6573179f4d64fc06d64124aa17a68e82c4bcb7df0",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-11-quiz-timer/1794382644386268200-web.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T07:37:24.912943+00:00"
+}
