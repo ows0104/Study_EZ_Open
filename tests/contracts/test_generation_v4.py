@@ -309,11 +309,11 @@ def v4_packet(bank):
     return p
 
 
-def result(p, b, bank, coverage, basis):
+def result(p, b, bank, coverage, basis, placement='evidence', compiled=None):
     b['lecture_id'] = p['subject'] + '/' + p['runId']
     reviews = [review(q['question_id']) for q in bank['questions']]
-    raw = c.assessment_raw(b, bank, coverage, map_ok(b), reviews, v3.context_summary(JUDGMENT), 'Synthetic /4 judgments')
-    audit = c.compile_assessment(b, bank, v2.envelope(b, bank, raw))
+    raw = c.assessment_raw(b, bank, coverage, map_ok(b), reviews, v3.context_summary(JUDGMENT), 'Synthetic /4 judgments', placement)
+    audit = c.compile_assessment(b, bank, v2.envelope(b, bank, raw), compiled or placement)
     doc, placed, proofs = c.assemble(b, bank, audit, coverage, basis, PROFILE, revision=p['revision'], title=p['title'], exam_date=p['examDate'])
     ledger = [v3.ledger_entry('item', q['question_id'], v3.item_hash(q, bank, []), review(q['question_id']), 'review-1') for q in bank['questions']]
     medical = f.old.checks(bank)
@@ -450,3 +450,57 @@ def test_a_question_with_rows_but_no_tested_relation_goes_to_the_supplement():
     unknown = rows()
     unknown[1]['status'] = 'unknown'
     assert c.off_goal(bank, unknown) == ['Q2']
+
+
+# ---------------------------------------------------------------- results made before place-by-evidence (2026-11-11-v4-legacy-placement)
+from studyez_contracts.roots import recall_units
+
+
+def recall_scenario():
+    """The Rickettsia 261110_03 shape (published 2026-11-11 03:43 by runner 3b17af44): a goal split into recall units
+    and a question with an evidence row on the goal that answers only one of them. Q1 answers host, Q3 env."""
+    b, bank = scenario()
+    d1 = b['targets'][0]['directions'][0]
+    b['recall_policy'] = recall_units.POLICY
+    d1['recall_units'] = [{'unit_id': 'D1_' + cid, 'cue': 'Synthetic ' + cid, 'answer_scope': 'Synthetic ' + cid,
+                           'relation_ids': d1['relation_ids'], 'component_ids': [cid]} for cid in ('host', 'env')]
+    return b, bank
+
+
+def made_by(placement, compiled=None, scene=recall_scenario, coverage=rows):
+    b, bank = scene()
+    p = v4_packet(bank)
+    return p, result(p, b, bank, coverage(), {'Q1': [], 'Q2': [], 'Q3': []}, placement, compiled)
+
+
+def test_a_result_assembled_before_place_by_evidence_still_validates():
+    """Re-import of a published /4 result: its assessment and audit were gathered by the answered components."""
+    p, value = made_by('answered')
+    assert consume(value, p) == value['document']
+    assert tasks(value['document']) == [('Q1', 'D1_host'), ('Q2', 'D2'), ('Q3', 'D1_env')]
+    # The current rule would have assembled something else from the same judgments.
+    _, now = made_by('evidence')
+    assert now['manifest']['sourceAssessment'] != value['manifest']['sourceAssessment'] or now['sourceAudit'] != value['sourceAudit']
+    assert consume(now, p) == now['document']
+
+
+def test_a_legacy_assessment_without_unanswered_claims_validates_by_the_old_compile():
+    """No claim depends on the rule (every row answers something), yet the recall units are placed differently."""
+    p, value = made_by('answered')
+    assert value['manifest']['sourceAssessment'] == made_by('evidence')[1]['manifest']['sourceAssessment']
+    assert consume(value, p) == value['document']
+
+
+def test_an_assessment_and_an_audit_of_different_rules_are_rejected():
+    p, value = made_by('evidence', 'answered', scene=scenario, coverage=partial_rows)
+    with pytest.raises(ValueError, match='audit is not the compile'):
+        consume(value, p)
+
+
+def test_a_legacy_result_with_a_reviewed_but_unanswered_goal_leaves_the_question_unplaced():
+    """Before the change Q3, reviewed for D1 without answering a whole part, claimed nothing and stayed unplaced."""
+    p, value = made_by('answered', scene=scenario, coverage=partial_rows)
+    assert consume(value, p) == value['document']
+    assert [u['question_id'] for u in value['manifest']['unplacedQuestions']] == ['Q3']
+    with pytest.raises(ValueError, match='unknown placement rule'):
+        c.assessment_raw(*scenario(), rows(), None, [], CONTEXT, 'x', placement='other')

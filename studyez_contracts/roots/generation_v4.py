@@ -347,11 +347,21 @@ def not_ready(brief, coverage_rows, reviews):
 
 
 # ---------------------------------------------------------------- assessment and compile
-def assessment_raw(brief, bank, coverage_rows, map_check, reviews, context, summary):
+# How a question is placed on a goal. 'evidence' is the rule since 2026-11-11-place-by-evidence; 'answered' is the
+# assembly /4 results were made and published with before it (runner 3b17af44 and earlier). Both stay valid so a
+# published result can still be re-imported (docs/changes/2026-11-11-v4-legacy-placement).
+PLACEMENTS = ('evidence', 'answered')
+
+
+def assessment_raw(brief, bank, coverage_rows, map_check, reviews, context, summary, placement='evidence'):
     """source-assessment/2 from the /4 judgments. A question claims the tested relations its evidence row names
     for every goal the coverage judgment reviewed it against, whether or not it answers a whole component: placing a
     question follows the evidence, completeness (`full`) follows the answered components
-    (docs/changes/2026-11-11-place-by-evidence). Nothing is filled in."""
+    (docs/changes/2026-11-11-place-by-evidence). Nothing is filled in.
+
+    placement='answered' rebuilds the older assembly, where a question claimed a goal only where it answered one of
+    its components (R5). Only the checks use it, for results made before the change."""
+    require(placement in PLACEMENTS, 'v4 assembly: unknown placement rule')
     dirs = v3._directions(brief)
     rows = index_by(coverage_rows, 'direction_id')
     require(set(rows) == set(dirs), 'v4 assembly: every goal needs a coverage judgment')
@@ -368,8 +378,9 @@ def assessment_raw(brief, bank, coverage_rows, map_check, reviews, context, summ
         for e in row['evidence']:
             require(e['question_id'] in qs, 'v4 assembly: coverage names a missing question')
             evidence.append({k: copy.deepcopy(e[k]) for k in ('question_id', 'components', 'visual_verdict', 'reason')} | {'direction_id': did})
-            for rid in e['tested_relation_ids']:
-                claims.setdefault((e['question_id'], rid), set()).add(did)
+            if placement == 'evidence' or answered(e):
+                for rid in e['tested_relation_ids']:
+                    claims.setdefault((e['question_id'], rid), set()).add(did)
     question_reviews = []
     for q in bank['questions']:
         qid = q['question_id']
@@ -410,24 +421,28 @@ def assessment_raw(brief, bank, coverage_rows, map_check, reviews, context, summ
     return value
 
 
-def compile_assessment(brief, bank, raw):
+def compile_assessment(brief, bank, raw, placement='evidence'):
     """The /2 compile with the /4 acceptance: a question tests a goal where it answers one of its
     components and its relation is supported. Visual, target, scope, prerequisite and clinical-context
-    judgments stay in the audit notes and do not decide (R7)."""
+    judgments stay in the audit notes and do not decide (R7).
+
+    placement='answered' compiles as before 2026-11-11-place-by-evidence: a question tests a (unit) goal only where it
+    answers one of its components. It belongs with an assessment gathered by the same rule (see PLACEMENTS)."""
+    require(placement in PLACEMENTS, 'assessment4: unknown placement rule')
     v2.validate_brief(brief)
     require(raw == v2.envelope(brief, bank, raw.get('assessment')), 'assessment4: input revision mismatch')
     validate_shape(raw['assessment'], v2.SOURCE, 'assessment4')
     v2.require_judgment(raw['assessment'])
     if not recall.enabled(brief):
-        return _compile(brief, bank, raw)
+        return _compile(brief, bank, raw, placement)
     projected, proof, groups = recall.project_assessment(brief, bank, raw)
-    audit = _compile(projected, bank, proof)
+    audit = _compile(projected, bank, proof, placement)
     audit['assessment'] = copy.deepcopy(raw)
     audit['goal_coverage'] = recall.summarize(groups, audit)
     return audit
 
 
-def _compile(brief, bank, raw):
+def _compile(brief, bank, raw, placement):
     """v2._compile_assessment with the /4 acceptance predicate (kept apart so /2 and /3 stay byte-identical)."""
     from .source_assessment import compile_source_assessment as compile1
     v2.validate_brief(brief)
@@ -460,7 +475,10 @@ def _compile(brief, bank, raw):
             ix = part['answer_unit_indices']
             require(len(ix) == len(set(ix)) and all(i < len(qs[qid]['answer_units']) for i in ix), 'assessment4: nonexistent answer unit')
             require(bool(ix) == (part['location'] == 'answer'), 'assessment4: only actual answer units are recalled evidence')
-        asks.add(key)       # placement follows the evidence row (2026-11-11-place-by-evidence), not the answered parts
+        # Placement follows the evidence row (2026-11-11-place-by-evidence), not the answered parts; the older
+        # rule kept only the rows that answer some component (a unit of a recall goal included).
+        if placement == 'evidence' or any(p['location'] == 'answer' for p in parts.values()):
+            asks.add(key)
         evid[key] = row
     for row in a['issues']:
         require(set(row['question_ids']) <= set(qs) and set(row['direction_ids']) <= set(dirs), 'assessment4: issue references missing objects')
@@ -511,7 +529,10 @@ def _compile(brief, bank, raw):
 
 
 def validate_audit(brief, bank, audit):
-    require(v2.equivalent_audit(audit, compile_assessment(brief, bank, audit['assessment'])), 'audit4: derived result differs from raw judgments')
+    """The audit is the compile of its raw judgments by the current placement rule or the one before it; which
+    rule pairs with which assembly is checked by the result check (_judgments4)."""
+    require(any(v2.equivalent_audit(audit, compile_assessment(brief, bank, audit['assessment'], p)) for p in PLACEMENTS),
+            'audit4: derived result differs from raw judgments')
     return audit
 
 
@@ -661,11 +682,22 @@ def assemble(brief, reviewed, audit, coverage_rows, basis, profile, *, revision,
     return doc, placed, {'bankProjection': projection, 'importanceProjection': proof, 'importanceWarnings': importance_warnings(table)}
 
 
+def _placement4(value, brief, reviewed, meta):
+    """The placement rule the result was made with: its assessment is the gathering of the recorded judgments and
+    its audit the compile of that assessment, both by one rule. A result made before 2026-11-11-place-by-evidence
+    (Rickettsia 261110_03, published that morning) keeps validating by its own rule; each rule is one deterministic
+    assembly of the same judgments, and everything after it is re-derived from it."""
+    args = (brief, reviewed, meta['coverage'], meta['mapCheck'], meta['itemReviews'],
+            v3.context_summary(meta['clinicalContext']), meta['sourceAssessment']['summary'])
+    gathered = [p for p in PLACEMENTS if assessment_raw(*args, placement=p) == meta['sourceAssessment']]
+    require(gathered, 'result4: assessment is not the gathered judgments')
+    envelope = v2.envelope(brief, reviewed, meta['sourceAssessment'])
+    require(any(value['sourceAudit'] == compile_assessment(brief, reviewed, envelope, p) for p in gathered),
+            'result4: audit is not the compile')
+
+
 def _judgments4(value, packet, brief, reviewed, meta, doc):
-    raw = assessment_raw(brief, reviewed, meta['coverage'], meta['mapCheck'], meta['itemReviews'],
-                         v3.context_summary(meta['clinicalContext']), meta['sourceAssessment']['summary'])
-    require(raw == meta['sourceAssessment'], 'result4: assessment is not the gathered judgments')
-    require(value['sourceAudit'] == compile_assessment(brief, reviewed, v2.envelope(brief, reviewed, raw)), 'result4: audit is not the compile')
+    _placement4(value, brief, reviewed, meta)
     require(meta['notReady'] == not_ready(brief, meta['coverage'], meta['itemReviews']), 'result4: not-ready goals differ')
     profile = notebook_profile(packet, meta)
     again, placed, proofs = assemble(brief, reviewed, value['sourceAudit'], meta['coverage'], meta['questionImportance'], profile,
