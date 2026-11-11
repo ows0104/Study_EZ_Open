@@ -13,3 +13,5 @@ root-generation/4(요청명 map-tree/3)의 단계 프롬프트다. 각 파일은
 
 같은 변경으로 `../point-extract-v4.md`·`../point-output-v4.schema.json`(포인트 근거 삭제, `exam-point-extract/4`, notebook_profile 유지)과 `../map-tree/bank-task-v4.md`(question_importance)·`point-audit-v4.md`·`point-repair-v4.md`(중요도 근거 검수·보완 삭제)를 만들었다.
 context.md·brief-fix.md·supplement-normalize.md는 바뀐 것이 없어 복사하지 않았다. v4 실행도 v3의 그 파일을 그대로 쓴다.
+
+`normalize.md`는 `../automation/extract-v2.md`를 복사해 docs/changes/2026-11-11-v4-normalize-components(R1)가 요구한 곳만 바꿨다: component는 따로 채점할 내용 하나, 해석상 주의는 component 밖, 포인트 방향과 겹치는 지도 관계 방향·이름만 끼운 cue 틀 금지. 단계 이름이 `normalize`라서 러너가 입력의 `_pipeline_version`(root-generation/4)으로 이 파일을 고른다. /2·/3은 extract-v2.md 그대로다.
