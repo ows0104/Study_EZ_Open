@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import type { RootMapData, RootSummary } from '../types/rootLearning';
+import { useFlagPreference } from '../preferences';
 import { ancestors, buildTree, lanes, lanesPerRow, questionsOf, STATUS_LABEL, type Status, type TreeNode } from './rootMapTree';
 
 /*
@@ -66,8 +67,9 @@ export function RootMap({map,summary,title='강의 전체',onBack}:{map:RootMapD
   const narrow=useNarrow();
   const [open,setOpen]=useState(()=>{const s=new Set<string>(),c=tree.currentId?tree.nodes.get(tree.currentId):null;
     if(c?.parent&&c.parent!==tree.rootId)s.add(c.parent);return s;});
-  const [allOpen,setAllOpen]=useState(false);
-  const [showAll,setShowAll]=useState(false);
+  // 한 번 누른 값을 이 브라우저에 기억한다(2026-11-11).
+  const [allOpen,setAllOpen]=useFlagPreference('studyez-map-questions');
+  const [showAll,setShowAll]=useFlagPreference('studyez-map-links');
   const [selected,setSelected]=useState<string|null>(null);
   const [large,setLarge]=useState(false);
   const [view,setView]=useState<View>({x:PAD,y:PAD,k:1});

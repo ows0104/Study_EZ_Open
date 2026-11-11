@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useFlagPreference } from "../preferences";
 import { ApkgNote, CardRow } from "../cards/CardRow";
 import type { CardReview } from "../types/admin";
 
@@ -21,7 +21,7 @@ import type { CardReview } from "../types/admin";
  * 하기 때문이다 — 탭을 열어야 보이는 수는 없는 수다.
  */
 export function CardReviewTab({ review, onChanged }: { review: CardReview | null; onChanged: () => void }) {
-  const [showDone, setShowDone] = useState(false);
+  const [showDone, setShowDone] = useFlagPreference("studyez-admin-card-done");
 
   if (!review) return <p className="notice">불러오는 중…</p>;
   const shown = showDone ? review.cards : review.cards.filter((card) => !card.edit);
@@ -43,7 +43,7 @@ export function CardReviewTab({ review, onChanged }: { review: CardReview | null
         {review.done ? (
           <>
             {" "}
-            <button className="is-quiet" onClick={() => setShowDone((v) => !v)}>
+            <button className="is-quiet" onClick={() => setShowDone(!showDone)}>
               {showDone ? "안 본 것만" : "본 것도 보기"}
             </button>
           </>

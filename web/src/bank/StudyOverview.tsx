@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import { Link, useNavigate } from "react-router-dom";
 import { bankHref, lectureHref } from "../links";
 import { useMe } from "../useMe";
+import { usePreference } from "../preferences";
 import type { LectureRef, PreviewSource, TimetableEvent } from "../types/lectures";
 import type { CardProgress } from "../types/mastery";
 import { StudyPlanBoard } from "../calendar/StudyPlanBoard";
@@ -127,9 +128,7 @@ function fromRoot(q: RootQuestionProgress | undefined): CardProgress | null {
 
 type ListView = "type" | "order";
 const VIEW_KEY = "studyez-list-view";
-function savedView(): ListView {
-  try { return localStorage.getItem(VIEW_KEY) === "order" ? "order" : "type"; } catch { return "type"; }
-}
+const VIEWS = ["type", "order"] as const;
 
 /** 강의 목록: 블럭의 모든 강의와 카드 단계, 골라서 모아풀기. */
 export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], onVisibility, managing = false, onDeleteQuiz, onScope }: {
@@ -147,11 +146,7 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
   const rootProgress = useRootProgress(hasMainQuiz);
   const entries = useMemo(() => toCalendarEntries(events), [events]);
   const infos = useMemo(() => displayInfo(events), [events]);
-  const [view, setView] = useState<ListView>(savedView);
-  const changeView = (next: ListView) => {
-    setView(next);
-    try { localStorage.setItem(VIEW_KEY, next); } catch { /* 이 탭에서만 유지 */ }
-  };
+  const [view, changeView] = usePreference<ListView>(VIEW_KEY, "type", VIEWS);
   const [opened, setOpened] = useState<string | null>(null);
   const closePanel = useCallback(() => setOpened(null), []);
   /** Main-Quiz 문항 단계와 학습률. Quiz Bank는 legacy라 세지 않는다. */
