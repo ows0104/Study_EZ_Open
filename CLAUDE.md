@@ -12,6 +12,9 @@
 4. 대시보드 "지금 하고 있는 작업"에 우선순위·작업·작업자/세션·브랜치·영역/파일을 쓰고 push한다.
    push가 거절되면 pull 후 3번부터 다시 한다.
 
+PR은 Draft로 열고 로컬 검사가 끝나면 Ready로 바꾼다. Ready PR에는 커밋을 모아 한 번에 push한다
+(Actions 분 한도, [PR 습관](docs/development/collaboration.md#pr-습관--actions-분을-아낀다)).
+
 끝나면(merge·중단) 대시보드에서 지운다. `dashboard`는 master에 merge하지 않는다.
 명령과 세부 규칙: [협업 대원칙](docs/development/collaboration.md#작업-시작-대원칙-예외-없음).
 
