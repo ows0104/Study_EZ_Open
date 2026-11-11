@@ -12,7 +12,9 @@ root-generation/4 새 실행(ledger 표시 `placement: 'review-relations/1'`)에
   - 이 문항의 답이 실제로 회상시키는 관계다. 관계 사실의 일부만 묻으면 `partial`이다.
   - 방향이 반대(관계의 다른 끝에서 묻기)여도, 그 관계를 써서 판단·추론하게 해도 그 관계다.
   - 발문에 이미 주어진 사실만으로 답이 나오는 관계는 적지 않는다.
-  - 관계가 없으면 `[]`다. 지도 밖 문항이며, 기존 「목표 밖 문항 포인트 보충」 대상이 된다.
+  - 관계가 없으면 `[]`다. 그 문항은 `no-relation`으로 남는다.
+  - 「목표 밖 문항 포인트 보충」은 검토보다 먼저 돈다. 그래서 보충 대상을 「커버 판정이 어느 목표와도 대조하지 않은 문항」으로 좁힌다(독립 리뷰 2026-11-11). 커버 판정이 관계 없이 대조한 문항(묶인 목표의 일부, 반대 방향, 추론형)은 보충에서 새 목표가 되거나 범위 밖으로 빠지지 않고, 검토 관계로 배치된다.
+  - 검토가 관계를 적지 않은 문항을 검토 뒤에 다시 보충하는 일은 이번에 하지 않는다. 그런 문항은 `no-relation`으로 보고된다.
 - PR #92의 `evidence`와 같은 방식으로 새 실행에만 필수다. 입력에 `map_relations`가 있을 때만 스키마에 넣는다.
 - **수용**
   - 새 실행의 모든 검토 행에 `relations`가 있다.
@@ -79,7 +81,8 @@ root-generation/4 새 실행(ledger 표시 `placement: 'review-relations/1'`)에
 | 배치 | `generation_v4.place`·`make_document`·`assessment_raw` | 정책 표시가 있으면 검토 관계로 배치. 문항 검토의 관계 주장(`question_reviews[].relations`)이 검토 관계에서 온다 |
 | 정책 표시 | `quizbank/connection_generate_v4.py`(`Stages(fresh=…)`) | 새 ledger에 `placement: 'review-relations/1'` |
 | 회상 단위 (R5) | `studyez_contracts/roots/recall_units.py`(`project_assessment`·`summarize`), `generation_v4._compile`·`place` | 답한 단위에만 배치 후보·확인됨 |
-| 커버 지시 | `content/prompts/learning-links/v4/coverage.md` | 「문항은 근거 행이 있는 목표에 배치되므로…」 문장을 지운다. 커버 판정은 누락 점검만 한다고 적는다 |
+| 커버 지시 | `content/prompts/learning-links/v4/coverage.md` | 바꾸지 않는다(구현 때 결정). 옛 규칙으로 이어 하는 실행도 같은 지시문을 쓰고, 새 규칙에서는 그 근거 행 관계가 배치에 쓰이지 않는다 |
+| 보충 대상 | `generation_v4.off_goal(…, placement)` | review 규칙이면 커버 근거 행이 하나도 없는 문항만 |
 
 **오류 상태**
 - 검토 출력의 관계가 형식에 맞지 않거나 지도에 없으면 그 검토 단계를 같은 세션에 되돌려준다. 고치기 상한은 쓰지 않는다.

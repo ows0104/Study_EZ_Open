@@ -52,7 +52,7 @@ worktree 루트에서 `PYTHONPATH=.`으로 돌린다.
 
 | 체크 | 명령 | 성공 조건 |
 |---|---|---|
-| 새 검사 | `python -m pytest tests/quizbank/test_place_by_review.py -q` | 수정 전 master에서 실패, 수정 뒤 통과 |
+| 새 검사 | `python -m pytest tests/contracts/test_review_placement.py tests/quizbank/test_place_by_review.py -q` | 수정 전 master에서 실패, 수정 뒤 통과 |
 | 회귀 | `python scripts/development.py verify … -- python -m pytest tests -q` | 기존 결함 `test_desktop_control` 한글 바로가기 하나 말고 통과 |
 | 서버 | `server/`에서 `-m tests root` (`PYTHONPATH=..`) | 이전과 같음(로컬 PyMuPDF 2개 제외) |
 | 실데이터 | 공개 판 재검증 스크립트 | 1c484a7b·fa71412a·26110803 통과 그대로 |

@@ -79,7 +79,9 @@ def project_assessment(brief,bank,raw):
     out['briefHash']=document_hash(projected)
     return projected,out,list(groups.values())
 
-def summarize(groups,audit):
+def summarize(groups,audit,answered=None):
+    """`answered`: (question, unit) pairs that answer a component of the unit (review-relations/1, 2026-11-11-place-by-review):
+    only those confirm a unit. None keeps the rule results were made with before."""
     mappings=audit['review']['mappings']
     directions={d['direction_id']:d for t in audit['review']['targets']for d in t['directions']}
     unknown={did for p in audit['review']['coverage']for did in p['unknown_direction_ids']}
@@ -87,7 +89,8 @@ def summarize(groups,audit):
     rows=[]
     for group in groups:
         confirmed=[did for did in group['unit_direction_ids']if did in approved and any(m['direction_id']==did
-            and set(directions[did]['relation_ids'])<=set(m['tested_relation_ids'])for m in mappings)]
+            and set(directions[did]['relation_ids'])<=set(m['tested_relation_ids'])
+            and(answered is None or(m['question_id'],did)in answered)for m in mappings)]
         state=('confirmed'if len(confirmed)==len(group['unit_direction_ids'])else
                'unknown'if set(group['unit_direction_ids'])&unknown else'partial'if confirmed else'missing')
         rows.append({**group,'status':state,'confirmed_unit_ids':confirmed})

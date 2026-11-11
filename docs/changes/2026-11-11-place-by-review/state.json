@@ -6,13 +6,130 @@
   "required_checks": [
     "regression"
   ],
-  "approvals": {},
-  "checks": [],
-  "review": null,
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T03:11:35.993248+00:00",
+      "evidence": "사용자 2026-11-11 채팅: 「지도 직접 배치도 짜줘」 (리뷰 결함 수정과 spec 보충 범위 정정 뒤 같은 요청으로 다시 기록)",
+      "scope": "plan.md의 PR 하나와 리뷰 결함 수정(보충 대상·회상 단위 좁히기·검토 관계 목록)",
+      "evidence_version": 2,
+      "source_hash": "8fc55575a928569b0eb36b43950f379fe55163e510beb5aebb09b3e96b218da4",
+      "plan_hash": "c90c0c778e844e7f2cf99a5524e4da549efc12073261c6e8f40b7d048e934a46",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "bc68ddf63c0634be6c0784003216b6c89ccb2cae8839ff9f3ee8818eb521cfef"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-11T03:07:26.519368+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "5d264de97e19fe1bcebb847e2152750f430c88ae2f3bdc3fe485bca95a1ef2fd",
+      "plan_hash": "317e5d16dc779987135f9326ea4e51994bf6ed6cc69cf8cab49f102f5f623fd9",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-11-place-by-review/1794366219970932800-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-11T03:15:28.863509+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "8fc55575a928569b0eb36b43950f379fe55163e510beb5aebb09b3e96b218da4",
+      "plan_hash": "c90c0c778e844e7f2cf99a5524e4da549efc12073261c6e8f40b7d048e934a46",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-11-place-by-review/1794366696279256100-regression.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-11T03:15:43.214378+00:00",
+    "summary": "경계: v4 배치 규칙·검토 relations·회상 단위·보충 대상·결과 검증. 독립 리뷰 결함 2(보충이 검토 전 대상을 빼감, 회상 단위 주장별 좁히기) 수정·검사 추가, 목표 없는 관계 입력 제외. 남은 위험: 판정 기록 안 옛 검토 행 바꿔치기(#92와 같음), 첫 실제 실행의 배치 정확도 미확인.",
+    "evidence_version": 2,
+    "source_hash": "8fc55575a928569b0eb36b43950f379fe55163e510beb5aebb09b3e96b218da4",
+    "plan_hash": "c90c0c778e844e7f2cf99a5524e4da549efc12073261c6e8f40b7d048e934a46",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-11T02:17:06.413508+00:00"
+  "updated_at": "2026-11-11T03:15:43.279836+00:00"
 }
