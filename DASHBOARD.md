@@ -16,6 +16,7 @@
 |---|---|---|---|---|---|---|
 | P1 | Main-Quiz 실험 실행: 아데노·폭스바이러스(261110_02) 「새 구조 2」+ 「우선 내 계정에서만 확인」 — 새 러너 76c3e87a의 근거 쪽·인용 맞춤·지도 직접 배치 실측 | ows0104 / Claude 리케차 Main-Quiz 세션 | (master 26befed7, 코드 변경 없음) | 운영 root_generation 요청 1건(261110_02, 개인 시범), runs/_root-generation/<새 gid>(git 밖) | 2026-11-11 | 첫 실행 6e5c581a는 목표 중요도 근거 중복으로 보류(#103으로 수정·배포). 번호 이전(#104)·tier 코드 채움(#106) 병합, 러너 .runtime/main-quiz-26befed71192 재설치(2026-11-11 17:33, agent pid 12784). 남은 것: 261110_02 다시 요청 |
 | P1 | Main-Quiz 앞 단계 'Different title' 보류 수정: 모델이 Map·points JSON의 title을 요청 강의명과 다르게 적으면 단계 전체가 보류되던 것을, 원문 보존 뒤 title만 요청값으로 맞추고 기록(검증 실패도 failure.json에 남김) | ows0104 / Claude 앞 단계 title 세션 | ccr-73ec38c7-pw7z6b | runner/root_front.py, tests/runner/test_root_front.py, docs/changes/2026-11-11-front-title | 2026-11-11 | 러너만. 서버·DB 변경 없음. 200c0d2 PR #112 https://github.com/ows0104/Study_EZ_Open/pull/112 — 로컬 검사 통과, CI 대기 → 병합 뒤 러너 재설치 |
+| P2 | 러너 상태 창 개편: 실행 중 강의 전부 카드로·사람이 읽는 6구간·지난 실행 단계 시각 기반 예상 남은 시간·시간 비례 진행 바·목록 탭은 한 줄 요약+펼치기 | ows0104 / Claude 러너 상태 창 세션 | claude/runner-status-ui | runner/status_window.py, runner/status_phases.py(신규), tests/runner/test_status_*, runner/CLAUDE.md 상태 창 문단, docs/changes/2026-11-11-runner-status-ui | 2026-11-11 | 표시만. 러너 실행·서버·DB 불변. 재설치는 돌고 있는 두 강의 끝난 뒤 별도 확인 |
 
 ## 2. 앞으로 하기로 약속된 일
 
