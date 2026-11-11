@@ -159,7 +159,7 @@ def build_plan(conn, md, abandon=()):
         if rid in MIXED and topic(event['details']) != SHOWN[rid]:
             raise Stop(f'{rid} would link to the {topic(event["details"])} cell')
 
-    moves, drops, judged = [], [], []
+    moves, drops, judged, seen = [], [], [], []
     staying = {}
     J = md.tables['prequiz_job']
     open_jobs = {x[0] for x in conn.execute(select(J.c.id).where(
@@ -179,6 +179,7 @@ def build_plan(conn, md, abandon=()):
         groups = group_topics(t.name, rows) if t.name in GROUPED else {}
         for r in rows:
             src = r['run_id']
+            seen.append([t.name, src, encode(identity(t, r))])
             if src in SWAP:
                 dst = SWAP[src]
             else:
@@ -213,6 +214,12 @@ def build_plan(conn, md, abandon=()):
             raise Stop(f'two different files named {m["filename"]} would meet in {m["to"]}')
         moves.remove(m)
         drops.append(m)
+    # A moved file must not reach a key that already holds a file: R2 would keep the other file there and the row
+    # would point at it (review 2026-11-11).
+    taken = {r['object_key'] for r in staying.get('asset', [])} | {m['object_key'] for m in moves + drops if 'object_key' in m}
+    for m in moves:
+        if m.get('new_key') in taken:
+            raise Stop(f'{m["new_key"]} already holds another file')
     for rid in IDS:
         kinds = [k for (r, k, _) in assets_in if r == rid and k in SINGULAR]
         if len(kinds) != len(set(kinds)):
@@ -231,7 +238,7 @@ def build_plan(conn, md, abandon=()):
             hidden.append({'user_id': r['user_id'], 'from': r['lecture_key'],
                            'to': f'{SUBJECT}/{SWAP[old_keys[r["lecture_key"]]]}'})
     plan = {'moves': moves, 'drops': drops, 'inserts': [], 'hidden': hidden, 'judged': judged,
-            'abandoned_generations': sorted(abandon),
+            'abandoned_generations': sorted(abandon), 'rows': sorted(seen, key=fingerprint),
             'lectures': {rid: encode(row) for rid, row in sorted(final.items())},
             'lectures_before': {rid: encode(row) for rid, row in sorted(lectures.items())}}
     plan['sha256'] = fingerprint({k: v for k, v in plan.items() if k != 'judged'})
@@ -251,14 +258,21 @@ def outside_fingerprint(conn, md):
     return result
 
 
-def apply_plan(conn, md, plan, *, check_r2=None):
-    from sqlalchemy import and_, delete, insert, select, update
+def lock(conn, md):
+    """Short table locks so no site write lands between the plan and its check."""
     if conn.dialect.name == 'postgresql':
         conn.exec_driver_sql("SET LOCAL lock_timeout = '10s'")
         names = ', '.join(sorted({'lecture', 'study_hidden_lecture', *(t.name for t in lecture_tables(md))} & set(md.tables)))
         conn.exec_driver_sql(f'LOCK TABLE {names} IN SHARE ROW EXCLUSIVE MODE')
-    if check_r2:
-        check_r2(plan)
+
+
+def row_keys(md, rows_before):
+    return sorted(([name, r['run_id'], encode(identity(md.tables[name], r))]
+                   for name, rows in rows_before.items() if name != 'lecture' for r in rows), key=fingerprint)
+
+
+def apply_plan(conn, md, plan):
+    from sqlalchemy import and_, delete, insert, select, update
     L = md.tables['lecture']
     outside = outside_fingerprint(conn, md)
     rows_before = {t.name: [dict(r) for r in conn.execute(select(t).where(t.c.subject == SUBJECT, t.c.run_id.in_(IDS))).mappings()]
@@ -267,6 +281,10 @@ def apply_plan(conn, md, plan, *, check_r2=None):
     current = {r['run_id']: r for r in rows_before['lecture']}
     if {rid: encode(r) for rid, r in current.items()} != plan['lectures_before']:
         raise Stop('lecture rows changed since the plan was made')
+    # Every row of the 12 lectures must be one the plan decided on; a row written since would stay on a number
+    # that now belongs to the other lecture (review 2026-11-11).
+    if row_keys(md, rows_before) != plan['rows']:
+        raise Stop('rows of these lectures changed since the plan was made')
 
     def where(t, key, run_id):
         return and_(t.c.subject == SUBJECT, t.c.run_id == run_id, *[t.c[c] == v for c, v in decode(t, key).items()])
@@ -303,11 +321,13 @@ def apply_plan(conn, md, plan, *, check_r2=None):
     if plan['hidden']:
         H = md.tables['study_hidden_lecture']
         for h in plan['hidden']:
-            conn.execute(update(H).where(H.c.user_id == h['user_id'], H.c.lecture_key == h['from'])
-                         .values(lecture_key='~' + h['to']))
+            if conn.execute(update(H).where(H.c.user_id == h['user_id'], H.c.lecture_key == h['from'])
+                            .values(lecture_key='~' + h['to'])).rowcount != 1:
+                raise Stop(f'hidden lecture row not found: {h}')
         for h in plan['hidden']:
-            conn.execute(update(H).where(H.c.user_id == h['user_id'], H.c.lecture_key == '~' + h['to'])
-                         .values(lecture_key=h['to']))
+            if conn.execute(update(H).where(H.c.user_id == h['user_id'], H.c.lecture_key == '~' + h['to'])
+                            .values(lecture_key=h['to'])).rowcount != 1:
+                raise Stop(f'hidden lecture row not found: {h}')
 
     if outside_fingerprint(conn, md) != outside:
         raise Stop('rows outside the 12 lectures changed')
@@ -348,14 +368,43 @@ def simulate(rows_before, plan, md):
     return out
 
 
-def reverse_plan(receipt):
+def reverse_plan(conn, md, receipt):
+    """Undo an applied receipt against the database as it is now (read under the lock): the receipt's moves go
+    back, rows written since on a swapped pair swap with their lecture, and a row written since on the mixed pair
+    stops the reverse (which lecture it meant is a human call)."""
+    from sqlalchemy import select
     plan = receipt['plan']
-    back = {'moves': [{**m, 'from': m['to'], 'to': m['from'],
-                       **({'object_key': m['new_key'], 'new_key': m['object_key']} if 'new_key' in m else {})}
-                      for m in plan['moves']],
-            'drops': [], 'inserts': [{'table': d['table'], 'row': d['row']} for d in receipt['dropped_rows']],
+    moved = {fingerprint([m['table'], m['to'], m['key']]): m for m in plan['moves']}
+    kept = {fingerprint(k) for k in plan['rows']} - {fingerprint([m['table'], m['from'], m['key']]) for m in plan['moves'] + plan['drops']}
+    moves, new_rows = [], []
+    for t in lecture_tables(md):
+        for r in conn.execute(select(t).where(t.c.subject == SUBJECT, t.c.run_id.in_(IDS))).mappings():
+            key, src = encode(identity(t, r)), r['run_id']
+            m = moved.get(fingerprint([t.name, src, key]))
+            if m:
+                moves.append({**m, 'from': m['to'], 'to': m['from'],
+                              **({'object_key': m['new_key'], 'new_key': m['object_key']} if 'new_key' in m else {})})
+            elif fingerprint([t.name, src, key]) in kept:
+                continue
+            elif src in SWAP:
+                back = {'table': t.name, 'key': key, 'from': src, 'to': SWAP[src]}
+                if t.name == 'asset':
+                    parts = r['object_key'].split('/')
+                    back.update(object_key=r['object_key'], new_key='/'.join(['lectures', SUBJECT, SWAP[src], *parts[3:]]),
+                                size=r['size_bytes'], kind=r['kind'], filename=r['filename'])
+                moves.append(back)
+            else:
+                new_rows.append([t.name, src, key])
+    if new_rows:
+        raise Stop('rows written since on the mixed pair; decide them by hand: ' + json.dumps(new_rows, ensure_ascii=False, default=str))
+    L = md.tables['lecture']
+    now = {r['run_id']: encode(dict(r)) for r in conn.execute(
+        select(L).where(L.c.subject == SUBJECT, L.c.run_id.in_(IDS))).mappings()}
+    rows_now = {t.name: [dict(r) for r in conn.execute(select(t).where(t.c.subject == SUBJECT, t.c.run_id.in_(IDS))).mappings()]
+                for t in lecture_tables(md)}
+    back = {'moves': moves, 'drops': [], 'inserts': [{'table': d['table'], 'row': d['row']} for d in receipt['dropped_rows']],
             'hidden': [{**h, 'from': h['to'], 'to': h['from']} for h in plan['hidden']],
-            'judged': [], 'lectures': plan['lectures_before'], 'lectures_before': plan['lectures']}
+            'judged': [], 'lectures': plan['lectures_before'], 'lectures_before': now, 'rows': row_keys(md, rows_now)}
     back['sha256'] = fingerprint({k: v for k, v in back.items() if k != 'judged'})
     return back
 
@@ -376,29 +425,41 @@ def r2_moves(plan):
     return [(m['object_key'], m['new_key'], m['size']) for m in plan['moves'] if 'new_key' in m]
 
 
+def _head(storage, key):
+    from botocore.exceptions import ClientError
+    try:
+        head = storage.client.head_object(Bucket=storage.bucket, Key=key)
+    except ClientError as error:
+        if error.response.get('Error', {}).get('Code') in ('404', 'NoSuchKey', 'NotFound'):
+            return None
+        raise
+    return head['ContentLength'], head['ETag']
+
+
 def copy_r2(plan, storage):
+    """Copy each moved file to its new key; an object already there must be the same file (size and ETag)."""
     copied = 0
     for old, new, size in r2_moves(plan):
-        try:
-            head = storage.client.head_object(Bucket=storage.bucket, Key=new)
-        except Exception:
-            head = None
-        if head is None:
+        source = _head(storage, old)
+        if source is None or (size is not None and source[0] != size):
+            raise Stop(f'R2 source missing or not the recorded file: {old}')
+        if _head(storage, new) is None:
             storage.client.copy_object(Bucket=storage.bucket, Key=new, CopySource={'Bucket': storage.bucket, 'Key': old})
-            head = storage.client.head_object(Bucket=storage.bucket, Key=new)
             copied += 1
-        if size is not None and head['ContentLength'] != size:
-            raise Stop(f'R2 copy size differs: {new}')
+        if not _same(_head(storage, new), source):
+            raise Stop(f'R2 object at the new key is not the same file: {new}')
     return copied
 
 
-def r2_checker(storage):
-    def check(plan):
-        for old, new, size in r2_moves(plan):
-            head = storage.client.head_object(Bucket=storage.bucket, Key=new)
-            if size is not None and head['ContentLength'] != size:
-                raise Stop(f'R2 object at the new key differs: {new}')
-    return check
+def _same(a, b):
+    """Same size and ETag; a multipart source's ETag ('…-N') is not the copy's MD5, so size decides there."""
+    return a is not None and b is not None and a[0] == b[0] and (a[1] == b[1] or '-' in a[1] + b[1])
+
+
+def check_r2(plan, storage):
+    for old, new, size in r2_moves(plan):
+        if not _same(_head(storage, new), _head(storage, old)):
+            raise Stop(f'R2 object at the new key is missing or differs: {new} (run --copy-r2 first)')
 
 
 # ------------------------------------------------------------------ the runner's files
@@ -419,9 +480,16 @@ def local_runs(runs, *, apply=False):
             'pre_targets': [(p.parent.name, rid, LOCAL_SWAP[rid]) for p, rid in targets]}
     if not apply:
         return plan
+    # Check everything before the first rename, so a stop leaves nothing half-moved (review 2026-11-11).
     backup = runs / '_development' / CHANGE.name / 'local-before'
     if backup.exists():
         raise Stop(f'backup already exists: {backup}')
+    staged = [p.with_name('~' + p.name) for p in dirs + logs]
+    if any(p.exists() for p in staged):
+        raise Stop(f'staging names already exist: {[p.name for p in staged if p.exists()]}')
+    for p, rid in targets:
+        if f'"run_id": "{rid}"' not in p.read_text(encoding='utf-8'):
+            raise Stop(f'{p} does not hold run_id {rid} in the expected form')
     backup.mkdir(parents=True)
     for p in [pairs_path, ledger_path, *[t for t, _ in targets], *logs]:
         if p.exists():
@@ -549,32 +617,50 @@ def main():
         print(json.dumps(local_runs(args.local_runs, apply=args.apply), ensure_ascii=False, default=str, indent=1))
         return
     engine, md = connect(args.database)
-    if args.reverse:
-        receipt = json.loads(args.previous_receipt.read_text(encoding='utf-8'))
-        plan = reverse_plan(receipt)
-    else:
-        with engine.connect() as conn:
-            plan = build_plan(conn, md, abandon=tuple(args.abandon_generation))
-    if args.copy_r2:
-        deploy_gate()
-        print(json.dumps({'copied': copy_r2(plan, storage()), 'objects': len(r2_moves(plan))}))
-        return
+    previous = json.loads(args.previous_receipt.read_text(encoding='utf-8')) if args.reverse else None
+
+    def make(conn):
+        return (reverse_plan(conn, md, previous) if args.reverse
+                else build_plan(conn, md, abandon=tuple(args.abandon_generation)))
+
     if not args.apply:
-        print(json.dumps(summary(plan), ensure_ascii=False, default=str, indent=1))
+        with engine.connect() as conn:
+            plan = make(conn)
+        if args.copy_r2:
+            if args.database == 'production':
+                deploy_gate()
+            print(json.dumps({'copied': copy_r2(plan, storage()), 'objects': len(r2_moves(plan))}))
+        else:
+            print(json.dumps(summary(plan), ensure_ascii=False, default=str, indent=1))
         return
     if not args.output or args.output.exists():
         raise SystemExit('--apply needs a new --output receipt path')
-    if not args.reverse and plan['sha256'] != args.expect_plan:
-        raise SystemExit(f'plan changed since review: {plan["sha256"]}')
+    if not args.expect_plan:
+        raise SystemExit('--apply needs --expect-plan: print the plan first (also for --reverse)')
     if args.database == 'production':
         deploy_gate()
-    check = None if args.database == 'local' else r2_checker(storage())
-    with engine.begin() as conn:
-        dropped = dropped_rows(conn, md, plan)
-        result = apply_plan(conn, md, plan, check_r2=check)
-    receipt = {**result, 'plan': plan, 'dropped_rows': dropped, 'reverse': args.reverse,
-               'at': datetime.now(timezone.utc).isoformat()}
+    with engine.connect() as conn:
+        preview = make(conn)
+    if preview['sha256'] != args.expect_plan:
+        raise SystemExit(f'plan changed since review: {preview["sha256"]}')
+    if args.database == 'production':
+        check_r2(preview, storage())  # before the lock: ~150 R2 calls must not hold site writes
     args.output.parent.mkdir(parents=True, exist_ok=True)
+    with engine.begin() as conn:
+        lock(conn, md)
+        plan = make(conn)  # the plan applied is the one read under the lock
+        if plan['sha256'] != args.expect_plan:
+            raise Stop(f'plan changed while taking the lock: {plan["sha256"]}')
+        dropped = dropped_rows(conn, md, plan)
+        result = apply_plan(conn, md, plan)
+        receipt = {**result, 'plan': plan, 'dropped_rows': dropped, 'reverse': args.reverse,
+                   'at': datetime.now(timezone.utc).isoformat(), 'committed': False}
+        # Written before the commit, so a committed change always has its receipt (review 2026-11-11).
+        with open(args.output, 'w', encoding='utf-8') as f:
+            f.write(json.dumps(receipt, ensure_ascii=False, indent=1, default=str) + '\n')
+            f.flush()
+            os.fsync(f.fileno())
+    receipt['committed'] = True
     args.output.write_text(json.dumps(receipt, ensure_ascii=False, indent=1, default=str) + '\n', encoding='utf-8')
     print(json.dumps({k: v for k, v in result.items() if k != 'outside'}, ensure_ascii=False))
 

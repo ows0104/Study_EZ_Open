@@ -1,5 +1,5 @@
 """Isolated swap, mixed-pair sorting, stop conditions and receipt rollback (docs/changes/2026-11-11-immunity-renumber)."""
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -14,8 +14,14 @@ sys.path.insert(0, str(ROOT / 'server'))
 
 from app.database import Base, engine
 import app.models  # noqa: F401  (registers every table)
-from sqlalchemy import Boolean, Date, DateTime, Integer, JSON, MetaData, insert, select, update
+from sqlalchemy import Boolean, Date, DateTime, Integer, JSON, MetaData, event as sa_event, insert, select, update
 import immunity_renumber as r
+
+
+@sa_event.listens_for(engine, 'connect')
+def _foreign_keys(dbapi, _):
+    # Production enforces the lecture FKs (ON DELETE CASCADE); the staging rows must be empty when deleted.
+    dbapi.execute('PRAGMA foreign_keys=ON')
 
 S = r.SUBJECT
 BEFORE = datetime(2026, 11, 4, 12, 0, tzinfo=timezone.utc)
@@ -139,6 +145,19 @@ def main():
         plan = r.build_plan(conn, md)
     assert {(m['from'], m['to']) for m in plan['moves'] if m['table'] == 'lecture'} == set()
     assert sorted(d['filename'] for d in plan['drops']) == ['251106_06_s008.png', '251107_06_s008.png']
+    late = TMP / 'late.db'
+    with engine.begin() as conn:  # a row written after the plan was read stops the apply
+        put(conn, 'user_preview', user_id='late', subject=S, run_id='261113_01', provider='chatgpt', updated_at=AFTER)
+    try:
+        with engine.begin() as conn:
+            r.apply_plan(conn, md, plan)
+        raise RuntimeError('a row the plan never saw was left behind')
+    except r.Stop as exc:
+        assert 'changed since the plan' in str(exc)
+    with engine.begin() as conn:
+        conn.execute(md.tables['user_preview'].delete().where(md.tables['user_preview'].c.user_id == 'late'))
+    assert dump() == original and not late.exists()
+    print('PASS a row written after the plan stops the apply')
     with engine.begin() as conn:
         dropped = r.dropped_rows(conn, md, plan)
         result = r.apply_plan(conn, md, plan)
@@ -181,10 +200,16 @@ def main():
             assert 'already renumbered' in str(exc)
     print('PASS a second run stops instead of swapping back')
 
-    receipt = {'plan': plan, 'dropped_rows': dropped}
-    back = r.reverse_plan(json.loads(json.dumps(receipt, ensure_ascii=False, default=str)))
+    receipt = json.loads(json.dumps({'plan': plan, 'dropped_rows': dropped}, ensure_ascii=False, default=str))
+    UP = md.tables['user_preview']
+    with engine.begin() as conn:  # a student opens 아데노 (now 261110_02) after the renumber
+        put(conn, 'user_preview', user_id='since', subject=S, run_id='261110_02', provider='chatgpt', updated_at=AFTER)
     with engine.begin() as conn:
+        back = r.reverse_plan(conn, md, receipt)
         r.apply_plan(conn, md, back)
+    with engine.begin() as conn:
+        assert [x[0] for x in conn.execute(select(UP.c.run_id).where(UP.c.user_id == 'since'))] == ['261113_01']
+        conn.execute(UP.delete().where(UP.c.user_id == 'since'))
     assert dump() == original
     print('PASS receipt rollback restores every row byte for byte')
 
