@@ -6,11 +6,14 @@ from math import ceil, floor, isfinite
 import os
 
 KST = timezone(timedelta(hours=9))
+# /2 (2026-11-11 사용자 지시: 모든 날짜 경계는 새벽 4시): 시험까지 남은 날도 학습일(day_hour)로 센다.
+# /1은 시험일만 한국 달력(자정)으로 셌다. 이미 저장된 /1 사건·회차는 /1 그대로 재생한다.
 CONFIGURED_POLICY = {
-    'id': 'roots-adaptive/1', 'mode': 'adaptive', 'day_hour': 4, 'deadline_offset': 2,
+    'id': 'roots-adaptive/2', 'mode': 'adaptive', 'day_hour': 4, 'deadline_offset': 2,
     'initial_days': 1, 'success_growth': 2.0, 'partial_factor': 0.5,
-    'max_days': 30, 'exam_fraction': 0.25,
+    'max_days': 30, 'exam_fraction': 0.25, 'exam_day': 'study',
 }
+EXAM_DAY_MODES = ('calendar', 'study')
 # Frozen for new self-assessments; every event stores its own parameters.
 FOUR_RATING_PARAMETERS = {
     'minDays': 0.25, 'maxDays': 365, 'legacyDays': 1,
@@ -88,7 +91,8 @@ def validate_policy(policy):
     if policy.get('mode') == 'adaptive':
         expected = {'id', 'mode', 'day_hour', 'deadline_offset', 'initial_days',
                     'success_growth', 'partial_factor', 'max_days', 'exam_fraction'}
-        if (set(policy) != expected or type(policy.get('initial_days')) is not int or policy['initial_days'] < 1
+        # exam_day가 없는 정책(/1)은 달력 날짜로 센다.
+        if (set(policy) - {'exam_day'} != expected or policy.get('exam_day', 'calendar') not in EXAM_DAY_MODES or type(policy.get('initial_days')) is not int or policy['initial_days'] < 1
                 or type(policy.get('max_days')) is not int or policy['max_days'] < policy['initial_days']
                 or any(type(policy.get(k)) not in (int, float) or not isfinite(policy[k])
                        for k in ('success_growth', 'partial_factor', 'exam_fraction'))
@@ -126,10 +130,11 @@ def day_start(when, policy):
 
 
 def exam_limit(exam_date, when, policy):
-    """Calendar exam dates stay separate from the 04:00 activity boundary."""
+    """시험까지 남은 날. `exam_day: study`(/2)는 학습일, 없으면(/1) 한국 달력 날짜로 센다."""
     if policy.get('mode') != 'adaptive' or not exam_date:
         return None
-    remaining = (date.fromisoformat(exam_date) - utc(when).astimezone(KST).date()).days
+    today = study_day(when, policy) if policy.get('exam_day') == 'study' else utc(when).astimezone(KST).date()
+    remaining = (date.fromisoformat(exam_date) - today).days
     return max(1, floor(remaining * policy['exam_fraction'])) if remaining >= 0 else None
 
 

@@ -39,6 +39,17 @@ for mutate in [lambda p:p.update(day_hour=True),lambda p:p.update(success_growth
     except ValueError:pass
     else:raise AssertionError('Invalid policy accepted')
 assert validate_policy(LEGACY_POLICY)==LEGACY_POLICY
+# 2026-11-11: /2 counts exam days by the 04:00 study day; stored /1 events keep calendar dates.
+from app.root_learning.policy import exam_limit
+v1={k:v for k,v in POLICY.items() if k!='exam_day'};v1['id']='roots-adaptive/1'
+assert validate_policy(v1)==v1 and POLICY['exam_day']=='study' and POLICY['id']=='roots-adaptive/2'
+bad=deepcopy(POLICY);bad['exam_day']='midnight'
+try:validate_policy(bad)
+except ValueError:pass
+else:raise AssertionError('Unknown exam_day accepted')
+before_four=datetime(2026,11,3,18,59,tzinfo=UTC)  # 11/4 03:59 KST = study day 11/3
+assert exam_limit('2026-11-11',before_four,POLICY)==2 and exam_limit('2026-11-11',before_four,v1)==1
+assert exam_limit('2026-11-11',before_four+timedelta(minutes=1),POLICY)==exam_limit('2026-11-11',before_four+timedelta(minutes=1),v1)==1
 edge=datetime(2026,11,3,19,tzinfo=UTC)
 event={'id':'before-4','revision':'v1','kind':'reveal','at':edge-timedelta(seconds=1),
        'payload':{'direction_id':'D1','task_id':'task1','attempted':True,'policy':POLICY}}

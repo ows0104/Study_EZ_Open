@@ -458,14 +458,6 @@
   --cat: var(--cat-exam);
 }
 
-/* ── 할 일이 남은 칸 ── */
-
-/* 띠는 안 건드린다. 제목의 무게만 올린다 — 띠까지 상태로 흔들면 계열색이
- * 칸마다 다른 짙기로 나와서 범주가 안 읽힌다. */
-.calendar-event.state-todo .calendar-event-primary {
-  font-weight: 650;
-}
-
 /* 지금 패널에 떠 있는 칸.
  *
  * "선택됨"은 두른 테가 말한다. 칸 자체의 색은 건드리지 않는다 — `border-color`
@@ -2237,11 +2229,6 @@ button.event-panel-note:hover {
 .calendar-event:hover:not(:disabled) { border-color: #8f8f8f; background: var(--surface); box-shadow: 0 2px 8px rgb(0 0 0 / 5%); }
 .calendar-event.is-open, .calendar-event.is-open:hover:not(:disabled) { border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 1px var(--accent); }
 .calendar-event-primary { font-size: 12.5px; font-weight: 600; color: var(--ink); }
-.calendar-event.state-todo .calendar-event-primary { font-weight: 600; }
-.calendar-event.state-todo .calendar-event-primary::after {
-  content: ""; display: inline-block; width: 6px; height: 6px; margin: 0 0 1px 6px; border-radius: 50%;
-  background: var(--accent2-mid); vertical-align: middle;
-}
 .chip-code { display: inline; margin-right: 5px; font-size: 11px; font-weight: 500; color: #9a9a9a; font-variant-numeric: tabular-nums; }
 
 .calendar-event-meta { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 11px; color: var(--ink-3); }
@@ -2413,7 +2400,7 @@ button.event-panel-note:hover {
 @media (max-width: 640px) { .app-shell:not(.is-bare) .calendar-main { height: calc(100dvh - 97px); } }
 .week-calendar, .month-calendar { --row-min: 40px; }
 
-/* 머리: 「감염과 면역 1차 1주차 D-13」 한 줄 + 오른쪽 끝 오늘 예습·복습 */
+/* 머리: 「감염과 면역 1차 1주차 D-13」 한 줄 + 오른쪽 끝 내일 예습·오늘 복습 */
 .calendar-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: nowrap; }
 .calendar-head h1 { display: flex; align-items: baseline; gap: 12px; min-width: 0; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.03em; }
 .calendar-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

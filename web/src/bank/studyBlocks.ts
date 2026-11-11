@@ -1,5 +1,5 @@
 import type { TimetableEvent } from "../types/lectures";
-import { startOfWeek, toDateKey } from "../calendar/entries";
+import { startOfWeek, studyDayKey, toDateKey } from "../calendar/entries";
 
 const koreanDate = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" });
 const MAX_GAP = 7 * 86_400_000;
@@ -126,7 +126,7 @@ export function currentStudyBlock(events: TimetableEvent[], now: Date = new Date
   // 시험을 마친 주 블록에 겹쳐 있던 소수 강의가 다음 블록 자리를 차지하지 않는다.
   const blocks = completed ? all.filter(block => block !== completed
     && block.start >= koreanDate.format(new Date(completed.end))) : all;
-  const today = koreanDate.format(now);
+  const today = studyDayKey(now);
   const day = new Date(`${today}T12:00:00`);
   const focusDay = day.getDay() === 0 ? toDateKey(startOfWeek(day)) : today;
   const ongoing = dominant(blocks.filter(block => block.start <= today && block.end > now.getTime()));

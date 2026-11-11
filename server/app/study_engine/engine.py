@@ -17,7 +17,7 @@ from .policy import DEFAULT, policy_hash
 from .memory import memory_snapshot, next_stability, stability_days
 from .suspension import active_bank
 from .personal_priority import personal_bank
-from .study_day import day_start
+from .study_day import DAY_START_HOUR, day_start
 from app.bank_validation.priorities import TIER_ORDER, is_advanced, priority_tier
 
 DAY_MS = 86_400_000
@@ -51,8 +51,9 @@ def _korea_midnight_ms(now: int) -> int:
 
 
 def days_until(date: str, now: int) -> int:
+    # 시험까지 남은 날도 학습일(새벽 4시)로 센다. 새벽 4시 전은 전날이다(2026-11-11 사용자 지시).
     exam = int((datetime.fromisoformat(date).replace(tzinfo=UTC) - KST).timestamp() * 1000)
-    return round((exam - _korea_midnight_ms(now)) / DAY_MS)
+    return round((exam - _korea_midnight_ms(now - DAY_START_HOUR * 3_600_000)) / DAY_MS)
 
 
 def _plan(bank: dict, concept_id: str) -> dict | None:

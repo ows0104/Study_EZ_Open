@@ -14,6 +14,7 @@ import {
   calendarRange,
   prequizDone,
   startOfWeek,
+  studyDayKey,
   toDateKey,
   toCalendarEntries,
   weekDayLabels,
@@ -102,11 +103,16 @@ export function CalendarPage() {
   const weekEnd = addDays(weekStart, 4);
   const span = `${weekStart.getMonth() + 1}.${weekStart.getDate()} – ${weekEnd.getMonth() + 1}.${weekEnd.getDate()}`;
 
-  // 「오늘」 줄: 오늘 날짜에 배정된 강의 중 예습 퀴즈를 아직 끝내지 않은 것(사용자 지시: 오늘 배정된 양만).
-  const todayKey = toDateKey(new Date());
-  const todayLectures = entries.filter(e => e.date === todayKey).flatMap(e => e.lectures);
-  const preLoading = todayLectures.some(l => l.studyLoaded === false);
-  const preToday = todayLectures.filter(l => l.marks.prequiz && !prequizDone(l)).length;
+  // 머리 줄의 하루는 한국시간 새벽 4시에 바뀐다(2026-11-10 사용자 지시, 학습일과 같은 기준).
+  // 「내일 예습」: 내일 날짜 강의 중 예습 퀴즈를 아직 끝내지 않은 것. 실습은 시험에 안 나와 세지 않는다(2026-11-11 사용자 지시).
+  const now = new Date();
+  const todayKey = studyDayKey(now);
+  const tomorrowKey = studyDayKey(new Date(now.getTime() + 86_400_000));
+  const tomorrowLectures = entries
+    .filter(e => e.date === tomorrowKey && info.get(e.id)?.kind !== "practice") // CBL·TBL도 category는 practice라 kind로 가른다
+    .flatMap(e => e.lectures);
+  const preLoading = tomorrowLectures.some(l => l.studyLoaded === false);
+  const preTomorrow = tomorrowLectures.filter(l => l.marks.prequiz && !prequizDone(l)).length;
   const exam = nextExam(entries, events ?? [], todayKey);
 
   function step(direction: -1 | 1) {
@@ -126,11 +132,11 @@ export function CalendarPage() {
             <span className="calendar-title">{blockWeek(entries, info, weekStart) || span}</span>
             {exam ? <span className="calendar-dday" title={`${exam.label} · ${exam.dateLabel}`}>{exam.days === 0 ? "D-day" : `D-${exam.days}`}</span> : null}
           </h1>
-          {/* 오늘 배정된 예습·복습. 머리 오른쪽 끝, 좁은 화면에서는 아래 줄(2026-11-07 사용자 지시). */}
+          {/* 내일 강의의 예습·오늘 복습. 머리 오른쪽 끝, 좁은 화면에서는 아래 줄(2026-11-07 사용자 지시). */}
           <div className="today-board" aria-label="오늘 할 일">
             <span className="today-card is-pre">
-              <span className="today-card-label">오늘 예습</span>
-              <b>{preLoading ? "…" : preToday}<small>강의</small></b>
+              <span className="today-card-label">내일 예습</span>
+              <b>{preLoading ? "…" : preTomorrow}<small>강의</small></b>
             </span>
             <span className="today-card is-review">
               <span className="today-card-label">오늘 복습</span>
