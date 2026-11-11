@@ -5,6 +5,7 @@ import { api } from '../api';
 import { QuestionBody, AnswerBody, AnswerReviewItems, hasAnswerReview } from './BankQuestion';
 import { PersonalQuestionDialog, type PersonalQuestionResult } from './PersonalQuestionDialog';
 import { RootSummaryPanel } from './RootToday';
+import { ANSWER_SECONDS, questionSeconds, readTimerOn, saveTimerOn, useQuizTimer } from './quizTimer';
 
 const PdfSlides = lazy(() => import('./RootPdfSlides').then(m => ({default:m.RootPdfSlides})));
 const JokboSlides = lazy(() => import('./RootPdfSlides').then(m => ({default:m.RootJokboSlides})));
@@ -87,11 +88,21 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
     finally{setTierBusy(false);}
   }
   function rate(selfRating:BankRating){if(!locked&&task?.answer)onAction({kind:'rate',selfRating});}
+  // 문항 타이머(2026-11-11): 문제 0초 → 답 보기, 해설 40초 0초 → Again(사용자 선택).
+  const [timerOn,setTimerOn]=useState(readTimerOn);
+  const timer=useQuizTimer({
+    phase:task&&!view.finished?`${task.id}:${task.answer?'answer':'question'}`:null,
+    seconds:task?.answer?ANSWER_SECONDS:questionSeconds(task?.question.format??'basic'),
+    enabled:timerOn,running:!locked&&!editing&&(!!task?.answer||imagesReady),
+    onExpire:()=>{if(task?.answer)rate('Again');else reveal();},
+  });
+  function toggleTimer(){const on=!timerOn;saveTimerOn(on);setTimerOn(on);heading.current?.focus({preventScroll:true});}
   useEffect(()=>{
     const handler=(event:KeyboardEvent)=>{
       const target=event.target as HTMLElement;
       if(event.defaultPrevented||event.repeat||event.isComposing||event.ctrlKey||event.metaKey||event.altKey||locked||!task)return;
       if(document.querySelector('dialog[open], [role="dialog"][aria-modal="true"]')||target.closest('input,textarea,select,[contenteditable="true"]'))return;
+      if(event.key==='Tab'&&!event.shiftKey&&timerOn){event.preventDefault();timer.togglePause();return;}
       const number=/^[1-4]$/.test(event.key);
       if(target.closest('a,summary')||target.closest('button')&&!number)return;
       if((event.code==='Space'||event.key==='Enter')&&!task.answer){event.preventDefault();reveal();}
@@ -99,11 +110,18 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       if(event.key.toLowerCase()==='z'&&view.canUndo){event.preventDefault();onAction({kind:'undo'});}
     };
     window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler);
-  },[locked,task,picked,imagesReady,hiddenChoices,view.mapSeen,view.canUndo]);
+  },[locked,task,picked,imagesReady,hiddenChoices,view.mapSeen,view.canUndo,timerOn,timer.togglePause]);
   const done=Math.min(view.position,view.count);
   const head=<header className="mq-solve-head">
     <p className="mq-kicker"><span className="mq-badge">Main-Quiz</span>{title&&<span className="mq-solve-title">{title}</span>}</p>
-    {!view.finished&&<span className="main-quiz-tools">{onMap&&<button className="pill-button" disabled={disabled||advancing} onClick={onMap}>개념 지도</button>}
+    {!view.finished&&<span className="main-quiz-tools">
+      <span className="mq-timer">
+        {timerOn&&task&&<span role="timer" aria-label={`${timer.paused?'일시정지 · ':''}남은 시간 ${timer.left}초`}
+          className={`mq-timer-left${timer.paused?' is-paused':''}${timer.left<=5?' is-low':''}`}>{timer.paused&&<i aria-hidden="true">멈춤</i>}{timer.left}초</span>}
+        <button type="button" role="switch" aria-checked={timerOn} className="mq-timer-switch"
+          onClick={toggleTimer}>타이머<i aria-hidden="true"/></button>
+      </span>
+      {onMap&&<button className="pill-button" disabled={disabled||advancing} onClick={onMap}>개념 지도</button>}
       <details ref={menu} className="main-quiz-menu"><summary className="pill-button">더 보기</summary>
         <div className="mq-menu-pop" onClick={e=>{if((e.target as HTMLElement).closest('button'))menu.current?.removeAttribute('open');}}>
           {!task?.answer&&<button disabled={locked} onClick={()=>reveal(false)}>답만 보기</button>}
