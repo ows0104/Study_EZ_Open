@@ -1,0 +1,102 @@
+{
+  "id": "2026-11-11-root-default-v4",
+  "title": "Main-Quiz 관리자 출제 기본값을 새 구조 2로",
+  "area": "site",
+  "created_at": "2026-11-11T01:37:25.633613+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T01:40:38.253663+00:00",
+      "evidence": "사용자 채팅 2026-11-11: 「관리자 출제 기본값을 새 구조 2로 바꾸자.」",
+      "scope": "web/src/bank/RootGenerationPanel.tsx 기본 선택·라벨, web/tests/main-quiz-generation-button.test.cjs, 이 작업 폴더",
+      "evidence_version": 2,
+      "source_hash": "cf313433aed2b37df59599e8cd3e77b8c60ced7bdc504ec4dfb6ed842fb43d48",
+      "plan_hash": "09b0f04e4600d0675935ea62969c501beddac1dfcf8b45c92168cde90b223994",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "490f3ebaee1d49c226eefdd9782c8714a8a612c170ee43561782750a3757cbae"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-11T01:41:07.081339+00:00",
+      "command": [
+        "node",
+        "--test",
+        "web/tests/main-quiz-generation-button.test.cjs"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "cf313433aed2b37df59599e8cd3e77b8c60ced7bdc504ec4dfb6ed842fb43d48",
+      "plan_hash": "09b0f04e4600d0675935ea62969c501beddac1dfcf8b45c92168cde90b223994",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-11-root-default-v4/1794361266068292600-web.log",
+      "web_artifact": "ddfd38bb42c4943d332a736047a136b7ba3ad4182c56315329aa7d3f74e72bf2",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": {
+    "at": "2026-11-11T01:41:22.438018+00:00",
+    "summary": "화면 기본 선택만 변경(DEFAULT_MODE=map-tree-v4: 초기값·modeOf 기본 분기·지도 사용 해제). resume은 원래 pipeline 유지 확인(기존 테스트). 서버 계약·DB 불변. 패널 12/12, typecheck·build 통과. main-quiz-render.test.cjs는 import.meta로 기존 실패(무관, CI 밖).",
+    "evidence_version": 2,
+    "source_hash": "cf313433aed2b37df59599e8cd3e77b8c60ced7bdc504ec4dfb6ed842fb43d48",
+    "plan_hash": "09b0f04e4600d0675935ea62969c501beddac1dfcf8b45c92168cde90b223994",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T01:41:22.714896+00:00"
+}
