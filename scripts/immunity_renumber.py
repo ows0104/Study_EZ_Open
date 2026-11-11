@@ -237,6 +237,11 @@ def build_plan(conn, md, abandon=()):
         for r in conn.execute(select(H).where(H.c.lecture_key.in_(old_keys))).mappings():
             hidden.append({'user_id': r['user_id'], 'from': r['lecture_key'],
                            'to': f'{SUBJECT}/{SWAP[old_keys[r["lecture_key"]]]}'})
+    # Sorted: Postgres returns rows in storage order, which a student's write can change (2026-11-11 the reviewed
+    # fingerprint moved with no row added, moved or removed).
+    moves, drops = sorted(moves, key=fingerprint), sorted(drops, key=fingerprint)
+    judged = sorted(judged, key=fingerprint)
+    hidden = sorted(hidden, key=fingerprint)
     plan = {'moves': moves, 'drops': drops, 'inserts': [], 'hidden': hidden, 'judged': judged,
             'abandoned_generations': sorted(abandon), 'rows': sorted(seen, key=fingerprint),
             'lectures': {rid: encode(row) for rid, row in sorted(final.items())},
