@@ -8,7 +8,7 @@ root-generation/4(요청명 map-tree/3)의 단계 프롬프트다. 각 파일은
 | add.md | 빈 목표는 빠진 component만 받음(`missing_component_ids`). 최상위 `question_importance`와 근거 판정 기준(kind 표) 추가. importanceTable 문단을 문항 근거 문단으로 바꿈 |
 | fix.md | `question_importance` 추가(답 내용이 바뀔 때만 근거를 다시 판정). covered_goals를 「묻는 component 유지」로 바꿈. importanceTable 문단을 문항 근거 문단으로 바꿈 |
 | map-check.md | 중요도 근거 입력·판정 지시 전부 삭제. target_checks는 목표 내용·범위만 판정 |
-| item-review.md | 판정이 아닌 기록 `importance_note` 추가 |
+| item-review.md | 판정이 아닌 기록 `importance_note` 추가. 입력에 `evidence_source`가 있으면 정답 근거 필기 쪽 `evidence` 추가(docs/changes/2026-11-11-evidence-from-citations, review-evidence/1) |
 | point-supplement.md | 포인트는 `{point, source_refs}`만. 「중요도 근거」 절과 범례 문단 삭제 |
 
 같은 변경으로 `../point-extract-v4.md`·`../point-output-v4.schema.json`(포인트 근거 삭제, `exam-point-extract/4`, notebook_profile 유지)과 `../map-tree/bank-task-v4.md`(question_importance)·`point-audit-v4.md`·`point-repair-v4.md`(중요도 근거 검수·보완 삭제)를 만들었다.

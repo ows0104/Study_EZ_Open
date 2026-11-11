@@ -43,6 +43,18 @@ _REVIEW['required'].append('importance_note')
 ITEM_REVIEW_OUTPUT = copy.deepcopy(v3.ITEM_REVIEW_OUTPUT)
 ITEM_REVIEW_OUTPUT['properties']['reviews']['items'] = _REVIEW
 
+# review-evidence/1 (docs/changes/2026-11-11-evidence-from-citations): a new run's item review also names the
+# notes pages that prove each answer, so the evidence after publishing needs no second model pass and a citation
+# that points at the wrong page is aligned in code. Only when the review input carries `evidence_source`.
+REVIEW_EVIDENCE = 'review-evidence/1'
+EVIDENCE = obj(mode={'type': 'string', 'enum': ['single', 'linked', 'unresolved']}, reason=TEXT,
+               slides=arr(obj(page={'type': 'integer', 'minimum': 1}, evidence=TEXT)))
+_REVIEW_EVIDENCE = copy.deepcopy(_REVIEW)
+_REVIEW_EVIDENCE['properties']['evidence'] = EVIDENCE
+_REVIEW_EVIDENCE['required'].append('evidence')
+ITEM_REVIEW_EVIDENCE_OUTPUT = copy.deepcopy(ITEM_REVIEW_OUTPUT)
+ITEM_REVIEW_EVIDENCE_OUTPUT['properties']['reviews']['items'] = _REVIEW_EVIDENCE
+
 # R2: authoring outputs name each question's basis beside the questions (bank 3.3 questions take no extra field).
 QUESTION_IMPORTANCE = obj(question_id=TEXT, importance_basis=BASIS)
 
@@ -117,10 +129,101 @@ def check_fixed(value, ctx, state=None):
     return value
 
 
+def review_schema(ctx):
+    """The item-review output schema of this review input: with evidence pages when the input names a notes source."""
+    return ITEM_REVIEW_EVIDENCE_OUTPUT if ctx.get('evidence_source') else ITEM_REVIEW_OUTPUT
+
+
 def check_review_input(value, ctx):
-    validate_shape(value, ITEM_REVIEW_OUTPUT, 'v4 review output')
-    v3.check_review_input({'reviews': [{k: v for k, v in r.items() if k != 'importance_note'} for r in value['reviews']]}, ctx)
+    source = ctx.get('evidence_source')
+    validate_shape(value, review_schema(ctx), 'v4 review output')
+    if source:
+        for r in value['reviews']:
+            check_evidence(r['evidence'], source['page_count'], r['question_id'])
+    v3.check_review_input({'reviews': [{k: v for k, v in r.items() if k not in ('importance_note', 'evidence')}
+                                       for r in value['reviews']]}, ctx)
     return value
+
+
+# ---------------------------------------------------------------- evidence pages and citations (review-evidence/1)
+def evidence_source(sources):
+    """{source_id, page_count} of the notes PDF the reviews name pages of, or None (no notes PDF: nothing to name)."""
+    notes = [s for s in sources if s.get('kind') == 'notes' and s.get('page_count')]
+    return {'source_id': notes[0]['source_id'], 'page_count': notes[0]['page_count']} if notes else None
+
+
+def check_evidence(evidence, page_count, qid):
+    """single: one page, linked: two or more, unresolved: none; real pages of the notes, each with its proof."""
+    pages = [s['page'] for s in evidence['slides']]
+    count = {'single': len(pages) == 1, 'linked': len(pages) >= 2, 'unresolved': not pages}[evidence['mode']]
+    require(count, f'v4 review: {qid} evidence pages do not fit mode {evidence["mode"]}')
+    require(len(set(pages)) == len(pages) and all(type(p) is int and 1 <= p <= page_count for p in pages),
+            f'v4 review: {qid} evidence names a page outside the notes (1-{page_count})')
+
+
+def evidence_pages(review):
+    """The notes pages a review proves its answer with; None when it has none (unresolved, or an older review)."""
+    evidence = (review or {}).get('evidence')
+    if not evidence or evidence['mode'] == 'unresolved':
+        return None
+    return sorted(s['page'] for s in evidence['slides'])
+
+
+def _cited(refs, source_id):
+    return sorted({p for sid, p in v3.cited_pages([r for r in refs if r['source_id'] == source_id])})
+
+
+def aligned_refs(refs, source_id, pages):
+    """`refs` with the `source_id` citations replaced by one per evidence page, where the first of them stood."""
+    at = next((i for i, r in enumerate(refs) if r['source_id'] == source_id), 0)
+    others = [copy.deepcopy(r) for r in refs if r['source_id'] != source_id]
+    before = len([r for r in refs[:at] if r['source_id'] != source_id])
+    return others[:before] + [{'source_id': source_id, 'locator': f'PDF 물리 {p}쪽'} for p in pages] + others[before:]
+
+
+def align_citations(bank, reviews, source_id):
+    """R2: the notes citations of each question follow its review's evidence pages. Nothing else changes: text,
+    answers and other sources' citations stay. Returns the bank and one record per changed question."""
+    bank = copy.deepcopy(bank)
+    reviews = reviews if isinstance(reviews, dict) else index_by(reviews, 'question_id')
+    records = []
+    for q in bank['questions']:
+        pages = evidence_pages(reviews.get(q['question_id']))
+        refs = q.get('source_refs', [])
+        if pages is None or _cited(refs, source_id) == pages:
+            continue
+        after = aligned_refs(refs, source_id, pages)
+        records.append({'question_id': q['question_id'], 'before': copy.deepcopy(refs), 'after': after})
+        q['source_refs'] = copy.deepcopy(after)
+    return bank, records
+
+
+def check_alignments(meta, final):
+    """The consumer side of R2. The alignment runs once after every fix (context repair included), so every final
+    question cites its last review's evidence pages, through an alignment record when it did not already.
+    `final`: question by id. Returns the questions in their pre-alignment form for the add-only check."""
+    records = meta.get('citationAlignments', [])
+    require(type(records) is list and len({r['question_id'] for r in records}) == len(records), 'result4: citation alignments repeat a question')
+    source = meta.get('reviewEvidence', {}).get('sourceId')
+    reviews = index_by(meta['itemReviews'], 'question_id')
+    before = dict(final)
+    for r in records:
+        qid = r['question_id']
+        require(qid in final and qid in reviews, 'result4: a citation alignment names a missing question')
+        pages = evidence_pages(reviews[qid])
+        require(pages is not None and _cited(r['after'], source) == pages and _cited(r['before'], source) != pages,
+                f'result4: {qid} citation alignment is not its review evidence')
+        require(r['after'] == aligned_refs(r['before'], source, pages), f'result4: {qid} alignment changed more than the notes citations')
+        require(final[qid].get('source_refs') == r['after'], f'result4: {qid} citations differ from the alignment')
+        before[qid] = {**final[qid], 'source_refs': copy.deepcopy(r['before'])}
+    aligned = {r['question_id'] for r in records}
+    for qid, q in final.items():
+        if qid in aligned:
+            continue
+        pages = evidence_pages(reviews.get(qid))
+        require(pages is None or _cited(q.get('source_refs', []), source) == pages,
+                f'result4: {qid} cites other notes pages than its review evidence without an alignment')
+    return before
 
 
 def _as_v3_points(value):
@@ -716,8 +819,30 @@ def _judgments4(value, packet, brief, reviewed, meta, doc):
             require(b == intake[qid], f'result4: {qid} importance basis differs from the intake bank')
 
 
+def _unalign4(meta, final):
+    """review-evidence/1 runs: the questions before the citation alignment (R2). Older runs carry neither key."""
+    if 'reviewEvidence' not in meta:
+        require('citationAlignments' not in meta, 'result4: citation alignments without review evidence')
+        return final
+    require(meta['reviewEvidence'].get('policy') == REVIEW_EVIDENCE and type(meta['reviewEvidence'].get('sourceId')) is str,
+            'result4: unknown review evidence policy')
+    judged = {}
+    for e in meta['verdictLedger']:
+        if e['kind'] == 'item':
+            judged.setdefault(e['key'], []).append(e['value'])
+    for r in meta['itemReviews']:
+        require('evidence' in r, f"result4: {r['question_id']} item review has no evidence pages")
+        # The evidence an alignment follows is a recorded review judgment, not a row written beside it.
+        require(r in judged.get(r['question_id'], []), f"result4: {r['question_id']} item review is not a recorded judgment")
+        validate_shape(r['evidence'], EVIDENCE, 'result4 review evidence')
+        pages = [s['page'] for s in r['evidence']['slides']]
+        require({'single': len(pages) == 1, 'linked': len(pages) >= 2, 'unresolved': not pages}[r['evidence']['mode']]
+                and len(set(pages)) == len(pages), f"result4: {r['question_id']} evidence pages do not fit their mode")
+    return check_alignments(meta, final)
+
+
 MANIFEST_KEYS = v3.MANIFEST_KEYS | {'questionImportance', 'mergedDuplicates', 'unplacedQuestions', 'importanceNotes'}
-FLAVOR = {'policy': POLICY, 'keys': MANIFEST_KEYS, 'judgments': _judgments4, 'prefix': 'v4-'}
+FLAVOR = {'policy': POLICY, 'keys': MANIFEST_KEYS, 'judgments': _judgments4, 'prefix': 'v4-', 'unalign': _unalign4}
 
 
 def validate_result(value, packet):

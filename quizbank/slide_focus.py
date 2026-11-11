@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -15,6 +17,11 @@ from .session import SessionError
 from . import evidence_sources
 
 PROMPT = Path(__file__).parent / "prompts/slide-focus.md"
+# 다시 고를 대상이 많으면 이만큼씩 나눠 동시에 부른다(docs/changes/2026-11-11-evidence-from-citations R4).
+# 문항 검토 묶음(REVIEW_BATCH)·동시 실행 수(connection_batches.BATCH_WORKERS)와 같은 값이다.
+BATCH = 40
+WORKERS = 3
+SHARED = ("sources.json", "jokbo.md", "source-pages.json", "source-text.md")
 REPORT = _object({"selections": _array(_object({
     "question_id": STR, "pool_id": STR, "candidate_id": STR,
     "mode": {"type": "string", "enum": ["single", "linked", "unresolved"]},
@@ -143,7 +150,8 @@ def select(bank: dict, pdf: Path, out: Path, *, model: str | None = None,
     (out / "jokbo.md").write_text(jokbo.read_text(encoding="utf-8") if jokbo else "첨부 족보 없음", encoding="utf-8")
     (out / "source-pages.json").write_text(json.dumps(paths), encoding="utf-8")
     (out / "targets.json").write_text(json.dumps(inputs, ensure_ascii=False), encoding="utf-8")
-    raw, usage = _call(PROMPT.read_text(encoding="utf-8"), REPORT, out, model, "문제·정답 핵심 근거 지면 선택")
+    raw, usages = _select_in_batches(inputs, out, model)
+    usage = usages[0] if len(usages) == 1 else usages
     (out / "slide-focus.raw.json").write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
     raw["selections"] = preselected + raw["selections"]
     report = {**shape(raw, bank, count, source_hash, sources=sources), "inputHash": signature,
@@ -151,4 +159,37 @@ def select(bank: dict, pdf: Path, out: Path, *, model: str | None = None,
     (out / "slide-focus.raw.json").write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
     cached.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "usage.json").write_text(json.dumps(usage, ensure_ascii=False), encoding="utf-8")
-    return report, [usage]
+    return report, usages
+
+
+def _select_in_batches(inputs: list[dict], out: Path, model: str | None) -> tuple[dict, list[dict]]:
+    """대상이 BATCH 이하면 지금처럼 한 번, 넘으면 BATCH씩 나눠 최대 WORKERS개를 동시에 부른다.
+
+    묶음마다 `batch-<n>/`에 같은 자료(카탈로그·족보·쪽 목록·본문)와 자기 대상만 둔다. 결과는 대상 순서대로 합치고
+    검사(`shape`)는 합친 뒤 한 번 한다. 한 묶음이라도 실패하면 전체가 실패한다(부분 결과를 쓰지 않는다)."""
+    prompt = PROMPT.read_text(encoding="utf-8")
+    label = "문제·정답 핵심 근거 지면 선택"
+    if len(inputs) <= BATCH:
+        raw, usage = _call(prompt, REPORT, out, model, label)
+        return raw, [usage]
+    parts = [inputs[i:i + BATCH] for i in range(0, len(inputs), BATCH)]
+
+    def one(n: int, part: list[dict]) -> tuple[dict, dict]:
+        work = out / f"batch-{n}"
+        work.mkdir(exist_ok=True)
+        for name in SHARED:
+            if (out / name).is_file():
+                shutil.copyfile(out / name, work / name)
+        if (out / "source-pages").is_dir():
+            shutil.copytree(out / "source-pages", work / "source-pages", dirs_exist_ok=True)
+        (work / "targets.json").write_text(json.dumps(part, ensure_ascii=False), encoding="utf-8")
+        raw, usage = _call(prompt, REPORT, work, model, f"{label} {n + 1}/{len(parts)}")
+        (work / "slide-focus.raw.json").write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
+        mine = {identity(row) for row in part}
+        if any(identity(row) not in mine for row in raw["selections"]):
+            raise SessionError(f"핵심 근거 선택 {n + 1}/{len(parts)}: 다른 묶음의 대상을 골랐습니다.")
+        return raw, usage
+
+    with ThreadPoolExecutor(max_workers=min(WORKERS, len(parts))) as pool:
+        done = list(pool.map(lambda job: one(*job), enumerate(parts)))
+    return {"selections": [row for raw, _ in done for row in raw["selections"]]}, [usage for _, usage in done]

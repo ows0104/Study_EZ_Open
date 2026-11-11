@@ -99,12 +99,13 @@ def v3_images(work,ctx):
     stimuli=list(dict.fromkeys(material/('stimulus-'+s+'.png')for s in shas))
     return[p for p in[*pages,*stimuli]if p.is_file()]
 
-def v3_schema(stage):
+def v3_schema(stage,ctx=None):
     from studyez_contracts.roots import generation_v3 as v3
     from studyez_contracts.roots import generation_v4 as v4
     kind=v3_kind(stage)
     if kind=='supplement-normalize':return v3.SUPPLEMENT_NORMALIZE_OUTPUT
     if kind=='brief':return v3.BRIEF_FIX_OUTPUT
+    if is_v4(stage)and kind=='review':return v4.review_schema(ctx or {})
     return (v4 if is_v4(stage)else v3).OUTPUTS['map-check'if kind=='map'else'item-review'if kind=='review'else kind]
 
 def v3_check(stage,ctx,value,state=None,work=None):
@@ -259,7 +260,7 @@ def inventory(folder):
     require(result,'Missing original material');return result
 
 def schema_for(stage,ctx):
-    if stage.startswith(STAGED):return v3_schema(stage)
+    if stage.startswith(STAGED):return v3_schema(stage,ctx)
     if stage=='normalize':return c.BRIEF
     if stage=='generate'or re.fullmatch(r'repair-[1-3]',stage):return c.author_schema(ctx.get('parallelAuthoring',False))
     if re.fullmatch(r'context-[0-3]',stage):return c.CONTEXT_OUTPUT

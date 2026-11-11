@@ -54,9 +54,11 @@ def chunks(items, size):
 
 
 class Stages:
-    """Ledger of stage calls with archived evidence. Same rules as the /2 producer: no automatic rerun."""
+    """Ledger of stage calls with archived evidence. Same rules as the /2 producer: no automatic rerun.
 
-    def __init__(self, packet, out, model, invoke, resume=None, policy=POLICY, prompts=('v3',)):
+    `fresh`: keys only a new ledger gets (a policy of this code); a ledger made without them keeps running without."""
+
+    def __init__(self, packet, out, model, invoke, resume=None, policy=POLICY, prompts=('v3',), fresh=None):
         from . import connection_generate as g
         self.g, self.out, self.model, self.invoke, self.policy = g, Path(out), model, invoke, policy
         self.path = self.out / 'ledger.json'
@@ -83,7 +85,7 @@ class Stages:
                            'addRounds': 0, 'fixAttempts': {}, 'verdictLedger': [],
                            # A new run reviews its batches side by side; a ledger without this key keeps the
                            # one-after-another order it was made with (docs/changes/2026-11-11-root-batch-parallel).
-                           'batchMode': BATCH_MODE}
+                           'batchMode': BATCH_MODE, **(fresh or {})}
             self.resume_row = None
         self.save()
 

@@ -6,6 +6,11 @@ root-generation/4 단계다(docs/changes/2026-11-10-root-generation-3, docs/chan
 - note: 지적의 근거. fix: 고칠 방향. suggested_answer: 원본에 맞는 정답이 다를 때만, 아니면 빈 문자열.
 - prerequisite_checks: 문항의 prerequisites마다 정확히 한 번. 내용상 필요한 최소 기초와 과도한 전체 표/목록 잠금을 구별한다.
 - importance_note: 보통은 빈 문자열이다. 문항의 중요도 근거(importance_basis)가 입력에 있고 그 근거가 원본과 다르다고 보이면(예: 그 쪽에 스탬프가 없다, 교수 발언이 아니라 필기자 첨언이다) 한 줄로 적는다. 관리자에게 보이는 기록일 뿐 판정이 아니다. verdict·design·note·fix에 반영하지 않고, 이 이유로 문항을 고치라고 하지 않는다.
+- evidence: input.json에 evidence_source가 있을 때만 쓴다(없으면 출력 스키마에도 없다). 정답의 핵심을 직접 증명하는 그 필기(evidence_source.source_id)의 최소 물리쪽이다.
+  - 문항이 인용한 쪽이 아니어도 된다. material의 글(`## <source_id> physical PDF page N`)에서 찾은 쪽이면 그 쪽을 적는다. 이때 인용 쪽은 코드가 이 쪽으로 맞춘다.
+  - 한 쪽으로 증명되면 mode=single(1쪽), 정답의 필수 부분이 여러 쪽에 나뉠 때만 linked(2쪽 이상), 필기에서 찾지 못하면 unresolved(0쪽)다.
+  - 강의 슬라이드 쪽과 필기 요약 쪽을 가리지 않는다. 쪽마다 evidence에 그 쪽의 근거를 한 줄로 쓴다.
+  - verdict·design 판정과는 별개다.
 - 이 단계는 목표 커버·관계·중요도를 판정하지 않는다. questions의 cloze {정답} 표기는 저작 표기이며 발문 제공이 아니다.
 
 ## 옮긴 규칙 (source-v2.md)

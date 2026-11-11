@@ -29,13 +29,19 @@ def upload(client: transport.Client, subject: str, run_id: str, path: Path) -> N
 
 
 def build(document: dict, sources: dict[str, Path], out: Path, run_id: str, *, model: str | None = None,
-          run=run_forwarded) -> Path | None:
-    """하위 프로세스로 근거를 만든다. 성공하면 `<revision>.json` 경로."""
+          run=run_forwarded, reviews: list[dict] | None = None, review_source: str | None = None) -> Path | None:
+    """하위 프로세스로 근거를 만든다. 성공하면 `<revision>.json` 경로.
+
+    `reviews`·`review_source`: review-evidence/1 판의 문항 검토. 검토가 증명한 쪽은 다시 고르지 않는다."""
     out.mkdir(parents=True, exist_ok=True)
     doc_path = out / "document.json"
     doc_path.write_text(json.dumps(document, ensure_ascii=False), encoding="utf-8")
     args = [sys.executable, "-m", "quizbank.root_evidence", "--document", str(doc_path.resolve()),
             "--run-id", run_id, "--out", str(out.resolve())]
+    if reviews and review_source:
+        reviews_path = out / "item-reviews.json"
+        reviews_path.write_text(json.dumps(reviews, ensure_ascii=False), encoding="utf-8")
+        args += ["--reviews", str(reviews_path.resolve()), "--review-source", review_source]
     for sid, path in sources.items():
         args += ["--source", f"{sid}={path.resolve()}"]
     if model:
@@ -56,7 +62,9 @@ def publish(client: transport.Client, subject: str, run_id: str, out: Path, pack
         sources = {s["id"]: Path(s["localPath"]) for s in packet["sources"]
                    if s.get("localPath", "").lower().endswith(".pdf") and s["id"] in known}
         print(f"Quiz Bank {run_id}: 핵심 근거·족보 지면 연결", flush=True)
-        path = build(document, sources, out / "evidence", run_id, model=model, run=run)
+        manifest = payload.get("manifest") or {}
+        path = build(document, sources, out / "evidence", run_id, model=model, run=run,
+                     reviews=manifest.get("itemReviews"), review_source=(manifest.get("reviewEvidence") or {}).get("sourceId"))
         if path is None:
             print(f"Quiz Bank {run_id}: 근거 보강 실패 — 판은 게시됨, 인용 쪽만 표시", flush=True)
             return False

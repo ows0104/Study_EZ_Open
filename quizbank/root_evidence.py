@@ -20,7 +20,7 @@ from pathlib import Path
 import fitz
 
 from studyez_contracts.bank.pages import pages_of
-from studyez_contracts.bank.slide_focus import question_hash
+from studyez_contracts.bank.slide_focus import authored_hash, question_hash
 
 SCHEMA = "root-evidence/1"
 # 쪽 머리 둘째 줄: "2023 | 김지은 | 79번". 교수 칸은 비거나 여러 명일 수 있다.
@@ -85,8 +85,29 @@ def _direct_pages(bank: dict, report: dict, index: dict, exam_pdf: Path, digest:
                 record["unresolved"] = [u for u in record["unresolved"] if u != ref["locator"]]
 
 
-def enrich(document: dict, sources: dict[str, Path], out: Path, run_id: str, *, model: str | None = None) -> dict:
-    """`document`: root_content 문서. `sources`: source_id → 고정 사본. 지문은 문서의 review.sources로 확인한다."""
+def authored_from_reviews(bank: dict, reviews: list[dict], review_source: str, notes_source: str) -> dict | None:
+    """review-evidence/1 판의 문항 검토 근거 쪽 → `slide_focus.select`의 `authored`(Quiz Bank 웹 근거와 같은 형식).
+
+    검토가 증명한 쪽은 다시 고르지 않는다(docs/changes/2026-11-11-evidence-from-citations). 다른 원본을 가리키거나
+    unresolved인 문항은 빠지며, select가 그 문항만 다시 고른다."""
+    if not reviews or review_source != notes_source:
+        return None
+    by_id = {r["question_id"]: r.get("evidence") for r in reviews}
+    authored = {}
+    for question in bank["questions"]:
+        evidence = by_id.get(question["question_id"])
+        if not evidence or evidence["mode"] == "unresolved":
+            continue
+        authored[question["question_id"]] = {"authoredHash": authored_hash(question), "evidence": {
+            "mode": evidence["mode"], "reason": evidence["reason"],
+            "slides": [{"source_id": "self", "page": s["page"], "evidence": s["evidence"]} for s in evidence["slides"]]}}
+    return authored or None
+
+
+def enrich(document: dict, sources: dict[str, Path], out: Path, run_id: str, *, model: str | None = None,
+           reviews: list[dict] | None = None, review_source: str | None = None) -> dict:
+    """`document`: root_content 문서. `sources`: source_id → 고정 사본. 지문은 문서의 review.sources로 확인한다.
+    `reviews`·`review_source`: 판 manifest의 문항 검토와 그 근거 쪽의 원본(review-evidence/1 판만)."""
     from . import exam_focus, jokbo_pages, slide_focus
 
     bank = document["bank_snapshot"]
@@ -105,7 +126,8 @@ def enrich(document: dict, sources: dict[str, Path], out: Path, run_id: str, *, 
     images = out / "slides"
     images.mkdir(parents=True, exist_ok=True)
 
-    focus, usage = slide_focus.select(bank, notes_pdf, out / "slide-focus", model=model)
+    authored = authored_from_reviews(bank, reviews or [], review_source, notes[0])
+    focus, usage = slide_focus.select(bank, notes_pdf, out / "slide-focus", model=model, authored=authored)
     focus["sourceFilename"] = known[notes[0]].get("label", notes_pdf.name)
     references = {"version": 1, "questions": {}}
     indexed = 0
@@ -144,13 +166,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--run-id", required=True)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--model")
+    ap.add_argument("--reviews", type=Path, help="판 manifest의 itemReviews JSON(review-evidence/1 판)")
+    ap.add_argument("--review-source", help="검토 근거 쪽의 원본 source_id")
     args = ap.parse_args(argv)
     sources = {}
     for item in args.source:
         sid, _, path = item.partition("=")
         sources[sid] = Path(path)
     document = json.loads(args.document.read_text(encoding="utf-8"))
-    evidence = enrich(document, sources, args.out, args.run_id, model=args.model)
+    reviews = json.loads(args.reviews.read_text(encoding="utf-8")) if args.reviews else None
+    evidence = enrich(document, sources, args.out, args.run_id, model=args.model, reviews=reviews, review_source=args.review_source)
     print(summary(evidence), flush=True)
     return 0
 

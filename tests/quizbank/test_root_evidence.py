@@ -98,3 +98,51 @@ def test_고정_지문이_다르면_멈춘다(lecture, tmp_path):
     document["review"]["sources"][0]["sha256"] = "0" * 64
     with pytest.raises(ValueError, match="지문"):
         root_evidence.enrich(document, sources, tmp_path / "out", "261104_02")
+
+
+def _reviews():
+    """review-evidence/1 판의 문항 검토: Q1·Q3는 쪽을 증명했고 Q2는 필기에서 못 찾았다."""
+    proof = lambda *pages: {"mode": "single" if len(pages) == 1 else "linked", "reason": "r",
+                            "slides": [{"page": p, "evidence": f"e{p}"} for p in pages]}
+    return [{"question_id": "Q1", "evidence": proof(2)}, {"question_id": "Q2", "evidence": {"mode": "unresolved", "reason": "r", "slides": []}},
+            {"question_id": "Q3", "evidence": proof(1, 3)}]
+
+
+def test_검토_근거_쪽은_다시_고르지_않는다(lecture, tmp_path, monkeypatch):
+    """docs/changes/2026-11-11-evidence-from-citations R3: 검토가 증명한 문항은 모델 재선택 대상이 아니다."""
+    from studyez_contracts.bank.slide_focus import authored_hash
+    document, sources = lecture
+    sent = {}
+
+    def call(prompt, schema, out, model, label):
+        sent["targets"] = [t["question_id"] for t in json.loads((out / "targets.json").read_text(encoding="utf-8"))]
+        return {"selections": [{"question_id": "Q2", "pool_id": "", "candidate_id": "", "mode": "unresolved", "reason": "족보에만",
+                                "slides": [], "unresolved_cause": "exam_only", "searched_sources": ["self"], "exam_pages": []}]}, {"seconds": 1}
+
+    monkeypatch.setattr(slide_focus, "_call", call)
+    monkeypatch.setattr(exam_focus, "select", lambda targets, out, model=None: ({}, []))
+    evidence = root_evidence.enrich(document, sources, tmp_path / "out", "261110_03", reviews=_reviews(), review_source="S1")
+
+    focus = evidence["slideFocus"]
+    assert sent["targets"] == ["Q2"]  # 증명 못 한 문항만
+    assert focus["selectionOrigin"] == "mixed" and focus["authoredCount"] == 2 and focus["reselectedCount"] == 1
+    assert focus["questions"]["Q1"]["base"]["slides"] == [{"source_id": "self", "page": 2, "evidence": "e2"}]
+    assert focus["questions"]["Q3"]["base"]["mode"] == "linked"
+    q1 = document["bank_snapshot"]["questions"][0]
+    assert root_evidence.authored_from_reviews(document["bank_snapshot"], _reviews(), "S1", "S1")["Q1"]["authoredHash"] == authored_hash(q1)
+
+
+def test_모든_문항을_검토가_증명하면_모델을_부르지_않는다(lecture, tmp_path, monkeypatch):
+    document, sources = lecture
+    reviews = [r for r in _reviews() if r["question_id"] != "Q2"]
+    reviews.append({"question_id": "Q2", "evidence": {"mode": "single", "reason": "r", "slides": [{"page": 3, "evidence": "e3"}]}})
+    monkeypatch.setattr(slide_focus, "_call", lambda *a, **k: pytest.fail("모델을 불렀다"))
+    monkeypatch.setattr(exam_focus, "select", lambda targets, out, model=None: ({}, []))
+    evidence = root_evidence.enrich(document, sources, tmp_path / "out", "261110_03", reviews=reviews, review_source="S1")
+    assert evidence["slideFocus"]["selectionOrigin"] == "authored" and evidence["slideFocus"]["reselectedCount"] == 0
+
+
+def test_다른_원본의_검토_근거는_쓰지_않는다(lecture):
+    document, _ = lecture
+    assert root_evidence.authored_from_reviews(document["bank_snapshot"], _reviews(), "S2", "S1") is None
+    assert root_evidence.authored_from_reviews(document["bank_snapshot"], [], "S1", "S1") is None
