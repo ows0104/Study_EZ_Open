@@ -23,7 +23,8 @@ from studyez_contracts.roots.automation import validate_checks
 from studyez_contracts.bank.validate import validate_bank
 from . import connection_batches as batches
 from . import connection_visuals as visual
-from .connection_generate_v3 import (Stages, chunks, _bank_findings, _join_points, _medical_batches, _state, _QID,
+from .connection_generate_v3 import (Stages, chunks, _bank_findings, _join_points, _medical_batches, _state,
+                                     intake_rejections,
                                      COVERAGE_CHUNK, REVIEW_BATCH, ADD_PER_GOAL)
 
 POLICY = v4.POLICY
@@ -67,11 +68,7 @@ def _intake(packet, out):
     bank, projection = v3.intake_projection(intake['bank'])
     sources = [s['id'] for s in packet['sources']]
     report = validate_bank(bank, sources)
-    rejected = []
-    for text in report['errors']:
-        m = _QID.match(text)
-        v3.require(m, '문제은행 형식 오류가 특정 문항에 속하지 않습니다. 결과를 만들지 않고 보존합니다: ' + text)
-        rejected.append({'question_id': m.group(1), 'error': text})
+    rejected = intake_rejections(report['errors'])
     bad = {r['question_id'] for r in rejected}
     if bad:
         bank['questions'] = [q for q in bank['questions'] if q['question_id'] not in bad]
