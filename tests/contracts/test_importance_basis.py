@@ -88,3 +88,13 @@ def test_must_know_share_warns_above_the_live_p90_and_spread_is_reported():
     assert imp.must_know_share([{"tier": "Essential"}] + [{"tier": "Core"}] * 9)[1] == []
     points, _t = table()
     assert imp.forecast_spread(points) == {"이건 시험에 내기 좋겠죠?": ["P002"]}
+
+
+def test_a_page_the_basis_names_twice_is_one_target_reference():
+    """2026-11-11 아데노·폭스 (generation 6e5c581a): the authoring basis listed {S1, [15]} twice and the finished run
+    was refused with `importance.clinical.evidence[2].refs: duplicate entries` after 96 minutes."""
+    twice = {"kind": "clinical", "reason": "synthetic", "quote": "",
+             "refs": [{"source_id": "S1", "pages": [23, 35]}, {"source_id": "S1", "pages": [35]}, {"source_id": "S1", "pages": [35]}]}
+    t = imp.point_table([{"point_id": "P001", "importance_basis": [twice]}], {"emphasis_style": "slide"})
+    refs = [r for a in imp.target_axes(t, ["P001"], {"S1": 40}).values() for e in a["evidence"] for r in e["refs"]]
+    assert [r["pages"] for r in refs] == [[23, 35], [35]]
