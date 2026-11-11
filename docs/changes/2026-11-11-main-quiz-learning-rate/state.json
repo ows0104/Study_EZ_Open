@@ -1,0 +1,19 @@
+{
+  "id": "2026-11-11-main-quiz-learning-rate",
+  "title": "Main-Quiz 학습률 통일과 Quiz Bank legacy화",
+  "area": "site",
+  "created_at": "2026-11-11T06:09:23.726249+00:00",
+  "required_checks": [
+    "web",
+    "regression"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T06:09:23.726271+00:00"
+}
