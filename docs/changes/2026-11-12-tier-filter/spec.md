@@ -1,0 +1,37 @@
+# Main-Quiz 오늘 학습 중요도 필터 — 설계
+
+## 요구사항과 수용 기준
+
+- R1 과제 중요도: 과제의 문항(question_id)에 대해 「내 중요도」(이 판의 마지막 tier 이벤트) → 판의 canonical tier
+  (`Must-Know`=Essential) → `Core` 순으로 정한다. 풀이 화면에 보이는 중요도와 같다.
+- R2 계획: `overview_data`가 `available`(준비된 과제 집합)에서 고르지 않은 중요도의 과제를 뺀 집합으로
+  `planning.plan`을 부른다. 새 목표 할당·복습 확인·미평가 과제·새 범위 보완·선행 연결이 모두 이 집합 안에서만 고른다.
+  준비된 과제가 전부 빠진 목표는 그날 준비 안 된 목표처럼 할당에서 빠진다.
+- R3 그대로 둘 것: `summary`(학습 목표 58, 첫 학습, 회상 가능, 미학습 등)와 `questionProgress`의 분모·집계는 거르지 않은
+  `available`로 계산한다. 학습 기록·복습 일정·「내 중요도」는 바뀌지 않는다. 뺀 중요도의 복습은 다시 켤 때 그대로 나온다.
+- R4 선택 저장: 과목(subject)마다 사용자별 마지막 선택. 처음은 4개 모두. 빈 선택은 받지 않는다.
+- R5 진행 중 회차: 오늘의 끝나지 않은 회차는 시작할 때의 선택이 지금 선택과 같을 때만 「재개」 대상이다.
+  선택을 바꾸면 새 계획으로 「오늘 학습 시작」. 이전 회차와 그 기록은 그대로 남는다(학습일이 바뀌면 원래대로 만료).
+  선택을 4개 모두로 두면 지금과 똑같이 동작한다(기존 회차·세션 ID 계산 불변).
+- R6 화면: 오늘 추천 카드 안에 칩 4개 `Essential 12` 형식(이름과 수만, 설명 문장 없음). 수는 그 중요도의 준비된 과제 수.
+  0개인 칩도 보이되 흐리게. 마지막 남은 칩은 끌 수 없다. 칩을 바꾸면 저장 후 오늘 추천 숫자를 다시 그린다.
+
+## 책임·입출력 계약·오류 상태
+
+- `GET /root-learning/lectures/{subject}/{run_id}`(및 entry·catalog의 overview) 응답에 추가:
+  `focus: {tiers: string[], counts: {Essential:n, Core:n, Important:n, Optional:n}}`. `plan`은 거른 결과.
+- `PUT /root-learning/lectures/{subject}/{run_id}/focus` 본문 `{requestId, tiers}`. tiers는 TIERS의 중복 없는 비어 있지 않은 부분집합.
+  응답은 새 overview. 같은 requestId 재전송은 같은 결과(멱등), 다른 내용이면 409. 공개 범위 밖이면 기존과 같은 404.
+- 저장: append-only `root_event` 한 줄, `kind='focus'`, `session_id=''`, payload `{_request, tiers}`. 읽을 때 같은 사용자·subject의
+  가장 늦은 focus 이벤트(판·강의 무관). DB 스키마 변경 없음(kind는 String(16), 제약 없음).
+- `POST …/sessions`(start)는 그대로 `overview_data`의 거른 계획을 쓴다. 새 회차의 `state.focus`에 선택을 남긴다.
+  모두 선택이면 `state`에 아무것도 더하지 않는다(세션 ID 해시 입력 불변).
+- 거른 결과 과제가 0이면 기존 문구 「지금 추천할 과제가 없습니다.」와 시작 버튼 비활성화가 그대로 적용된다.
+
+## 호환성과 데이터 보존
+
+- 기존 사용자·기존 회차: focus 이벤트가 없으면 4개 모두 → 계획·세션 ID·재개가 지금과 같다.
+- 집계 소비자: `state.replay*`, `planning._habitual`, `usage._root_field`는 kind로 고르므로 focus 이벤트를 무시한다.
+  `events_for`의 undo 처리와도 무관(focus는 undo 대상이 아님).
+- 이전 웹(새 필드를 모르는 화면)은 `focus`를 무시하고, 저장된 선택에 따라 거른 계획을 보여 준다.
+- 학습 기록·문항·ID·「내 중요도」·검수 이력은 건드리지 않는다.

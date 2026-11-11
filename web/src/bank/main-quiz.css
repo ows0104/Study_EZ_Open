@@ -161,6 +161,16 @@
 .mq-start-button:hover:not(:disabled){background:var(--accent-ink)}
 .mq-start-button:disabled{opacity:.45;cursor:default}
 .mq-start-button svg{width:16px;height:16px}
+/* 오늘 학습 중요도 필터(2026-11-12) */
+.mq-focus{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.main-quiz-learning .mq-focus button{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:999px;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink-3);font:inherit;font-size:12.5px;font-weight:500;cursor:pointer}
+.mq-focus button b{font-weight:700;font-variant-numeric:tabular-nums}
+.main-quiz-learning .mq-focus button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
+.mq-focus button[aria-pressed="false"]{text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--ink-3) 60%,transparent)}
+.mq-focus button.is-empty{opacity:.5}
+.mq-focus button:disabled{cursor:default}
+.mq-focus button:hover:not(:disabled){border-color:var(--accent-line)}
 .mq-more{border:1px solid var(--line);border-radius:12px;padding:0 16px;background:var(--surface)}
 .mq-more>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:13.5px;color:var(--ink-2)}
 .mq-more[open]{padding-bottom:12px}

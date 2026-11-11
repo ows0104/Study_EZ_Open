@@ -1,0 +1,143 @@
+{
+  "id": "2026-11-12-tier-filter",
+  "title": "Main-Quiz 오늘 학습 중요도 필터",
+  "area": "site",
+  "created_at": "2026-11-11T17:16:55.402251+00:00",
+  "required_checks": [
+    "web",
+    "server"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T17:33:38.765084+00:00",
+      "evidence": "사용자 2026-11-12 채팅 「승인, 구현 시작」. 승인 뒤 spec·plan의 focus 저장 경로 메서드 표기만 POST→PUT(「내 중요도」와 같은 방식)으로 고침 — 동작·파일·범위 변화 없음, 같은 승인 적용",
+      "scope": "plan.md: server/app/root_learning/content.py, server/app/routes/root_learning.py(overview_data·start·새 focus 경로), web/src/types/rootLearning.ts, web/src/bank/RootToday.tsx·RootLearning.tsx·main-quiz.css, server/tests/test_root_focus.py, PR·master 병합(자동 배포). DB 스키마·운영 데이터·문항 변경 제외",
+      "evidence_version": 2,
+      "source_hash": "e806cabab1b442800c87df9b2c1f89159b525cc36c949caac3215512daa9ff3b",
+      "plan_hash": "7dc1753b98b10e901e8c42d49e18f9c58624af40eba013c1ecf5ee06cf0aaa89",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "63ffcf24050612bc13415dfd5149bc3e4e53d74b8b35ca6a790ad5225b30badc"
+    }
+  },
+  "checks": [
+    {
+      "name": "server",
+      "at": "2026-11-11T17:33:44.219693+00:00",
+      "command": [
+        "server/.venv/Scripts/python.exe",
+        "-m",
+        "tests",
+        "root"
+      ],
+      "exit_code": 127,
+      "evidence_version": 2,
+      "source_hash": "e806cabab1b442800c87df9b2c1f89159b525cc36c949caac3215512daa9ff3b",
+      "plan_hash": "7dc1753b98b10e901e8c42d49e18f9c58624af40eba013c1ecf5ee06cf0aaa89",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-tier-filter/1794418423747359000-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-11T17:37:19.679867+00:00",
+      "command": [
+        "C:/Python314/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); sys.exit(subprocess.run([os.path.join(root,'server','.venv','Scripts','python.exe'),'-m','tests','root','main_quiz'],cwd=os.path.join(root,'server'),env=dict(os.environ,PYTHONPATH=root,PYTHONIOENCODING='utf-8')).returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "e806cabab1b442800c87df9b2c1f89159b525cc36c949caac3215512daa9ff3b",
+      "plan_hash": "7dc1753b98b10e901e8c42d49e18f9c58624af40eba013c1ecf5ee06cf0aaa89",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-tier-filter/1794418444446739000-server.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-11T17:37:49.006668+00:00",
+      "command": [
+        "C:/Python314/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); sys.exit(subprocess.run('npm run build',shell=True,cwd=os.path.join(root,'web')).returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "e806cabab1b442800c87df9b2c1f89159b525cc36c949caac3215512daa9ff3b",
+      "plan_hash": "7dc1753b98b10e901e8c42d49e18f9c58624af40eba013c1ecf5ee06cf0aaa89",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-tier-filter/1794418647957970400-web.log",
+      "web_artifact": "338e45a498b3fea3cb8e84469fffc8b254e9074a60e3c3262edfb3127f83c23d",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T17:37:52.452945+00:00"
+}

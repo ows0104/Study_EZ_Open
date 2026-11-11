@@ -84,11 +84,18 @@ def overview_data(db, row, user, when):
     sessions = db.scalars(select(RootSession).where(RootSession.user_id == user.id,
         RootSession.subject == row.subject, RootSession.run_id == row.run_id, RootSession.revision == row.revision,
         RootSession.day == policy.study_day(when, configured).isoformat()).order_by(RootSession.created_at.desc())).all()
-    pending = next((s for s in sessions if s.policy == configured and s.state['index'] < len(s.tasks)), None)
-    planned = planning.plan(row.document, events, available, when, configured)
+    # 오늘 학습 중요도 필터(2026-11-12): only today's plan is filtered; summary and progress keep every task.
+    chosen = content.focus_for(db, row.subject, user.id)
+    tiers = content.task_tiers(row.document, state.personal_tiers(row.document, events))
+    narrowed = len(chosen) < len(policy.TIERS)
+    pending = next((s for s in sessions if s.policy == configured and s.state['index'] < len(s.tasks)
+                    and s.state.get('focus', list(policy.TIERS)) == chosen), None)
+    focused = {t for t in available if tiers[t] in chosen} if narrowed else available
+    planned = planning.plan(row.document, events, focused, when, configured)
     return {'revision': row.revision, 'title': row.document['title'], 'policyReady': True, 'policy': configured,
             'scope': content.learner_scope(row.document), 'summary': state.summary(row.document, events, available, when, configured),
             'plan': planned,
+            'focus': {'tiers': chosen, 'counts': {name: sum(tiers[t] == name for t in available) for name in policy.TIERS}},
             'questionProgress': state.question_progress(row.document, events, available, when, configured, planned),
             'sessionId': pending.id if pending else None, 'preparationProblems': len(problems)}
 
@@ -272,12 +279,17 @@ def start(subject: str, run_id: str, payload: Start, user: CurrentUser = Depends
         if not tasks:
             raise HTTPException(409, '오늘 추천할 준비된 과제가 없습니다. 남은 범위와 준비 상태를 확인하세요.')
         day = policy.study_day(when, info['policy']).isoformat()
-        identity = document_hash([user.id, subject, run_id, row.revision, day, info['policy'], tasks])
+        fresh = {'index': 0, 'reveals': {}, 'mapSeen': False, 'undo': None, 'exposedRelations': []}
+        key = [user.id, subject, run_id, row.revision, day, info['policy'], tasks]
+        # Every tier chosen: the former state and session ID exactly. A narrowed choice is its own session.
+        if len(info['focus']['tiers']) < len(policy.TIERS):
+            fresh['focus'] = info['focus']['tiers']
+            key.append({'focus': info['focus']['tiers']})
+        identity = document_hash(key)
         session = db.get(RootSession, identity)
         if session is None:
             session = RootSession(id=identity, user_id=user.id, subject=subject, run_id=run_id,
-                revision=row.revision, day=day, policy=info['policy'], tasks=tasks,
-                state={'index': 0, 'reveals': {}, 'mapSeen': False, 'undo': None, 'exposedRelations': []}, version=0)
+                revision=row.revision, day=day, policy=info['policy'], tasks=tasks, state=fresh, version=0)
             db.add(session)
         elif session.state['index'] >= len(session.tasks):
             raise HTTPException(409, '같은 오늘 목록은 이미 끝났습니다. 추가 과제가 생기면 다시 계획합니다.')
@@ -485,6 +497,38 @@ def save_tier(subject: str, run_id: str, question_id: str, payload: RootTier,
         db.rollback()
         raise HTTPException(409, '동시 요청이 있습니다. 다시 시도하세요.')
     return result
+
+
+# ── 오늘 학습 중요도 필터 (2026-11-12) ─────────────────────────────────────────
+# 과목마다 마지막 선택을 append-only root_event(kind='focus')로 남긴다(표 추가 없음).
+# 오늘 계획만 거른다. 학습 목표·진척·기록·복습 일정은 그대로다(docs/changes/2026-11-12-tier-filter).
+
+class RootFocus(Start):
+    tiers: list[Literal['Essential', 'Core', 'Important', 'Optional']] = Field(min_length=1, max_length=4)
+
+
+@router.put(BASE + '/focus')
+def save_focus(subject: str, run_id: str, payload: RootFocus,
+               user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
+    doc = active(db, subject, run_id, user)
+    if len(set(payload.tiers)) != len(payload.tiers):
+        raise HTTPException(422, '같은 중요도가 두 번 있습니다.')
+    request = payload.model_dump()
+    previous = db.get(RootEvent, (user.id, payload.requestId))
+    if previous:
+        if previous.kind != 'focus' or previous.payload.get('_request') != request:
+            raise HTTPException(409, '같은 요청 ID의 다른 작업입니다.')
+        return overview_data(db, doc, user, now())
+    tiers = [t for t in policy.TIERS if t in payload.tiers]
+    db.add(RootEvent(user_id=user.id, request_id=payload.requestId, session_id='', subject=subject, run_id=run_id,
+                     revision=doc.revision, kind='focus', payload={'_request': request, 'tiers': tiers},
+                     result={'tiers': tiers}, created_at=now()))
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, '동시 요청이 있습니다. 다시 시도하세요.')
+    return overview_data(db, doc, user, now())
 
 
 def question_issues(issues, question_id):

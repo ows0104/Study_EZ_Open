@@ -181,6 +181,26 @@ def with_tier(q, tiers):
     return {**q, 'tier': chosen['tier'], 'personalTier': True, 'originalTier': chosen['originalTier']}
 
 
+def task_tiers(doc, tiers):
+    """Each task's tier as the learner sees it: 「내 중요도」, else the revision's tier, else Core."""
+    questions = {q['question_id']: q for q in doc['bank_snapshot']['questions']}
+    out = {}
+    for task in doc['tasks']:
+        qid = task['question_id']
+        chosen = tiers.get(qid)
+        out[task['task_id']] = chosen['tier'] if chosen else (original_tier(questions.get(qid, {})) or 'Core')
+    return out
+
+
+def focus_for(db, subject, user_id):
+    """오늘 학습 중요도 필터(2026-11-12): this learner's last choice for the subject, else every tier."""
+    from .policy import TIERS
+    row = db.scalars(select(RootEvent).where(RootEvent.user_id == user_id, RootEvent.subject == subject,
+        RootEvent.kind == 'focus').order_by(RootEvent.created_at.desc(), RootEvent.request_id.desc()).limit(1)).first()
+    chosen = set(row.payload.get('tiers', [])) if row else set(TIERS)
+    return [t for t in TIERS if t in chosen] or list(TIERS)
+
+
 def question(doc, task):
     return next(q for q in doc['bank_snapshot']['questions'] if q['question_id'] == task['question_id'])
 
