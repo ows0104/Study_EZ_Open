@@ -112,11 +112,19 @@ def bank_hash(row):
 _UNUSED_BANK_COLUMNS = (QuizBank.raw_response, QuizBank.validation, QuizBank.review, QuizBank.usage)
 
 
+def excluded_ids(events, revision):
+    """Main-Quiz 「이 문제 제외」(2026-11-12): 이 판에서 제외한 문항 ID. Z로 되돌린 제외는 events_for가 이미 뺐다.
+    판(revision)별이다 — 새 판의 같은 ID에는 승계하지 않는다."""
+    return {e['payload']['question_id'] for e in events if e['kind'] == 'exclude' and e['revision'] == revision}
+
+
 def availability(db, content, user_id):
     doc = content.document
     tasks = {t['task_id']: t for t in doc['tasks']}
+    excluded = excluded_ids(events_for(db, content.subject, content.run_id, user_id), content.revision)
     if doc['bank_source'] == 'standalone':
-        return set(tasks), {}
+        return ({tid for tid, t in tasks.items() if t['question_id'] not in excluded},
+                {tid: '개인 제외' for tid, t in tasks.items() if t['question_id'] in excluded})
     row = db.get(QuizBank, (content.subject, content.run_id), options=[defer(c) for c in _UNUSED_BANK_COLUMNS])
     if not row or not row.open_to_students or row.status != 'ready':
         return set(), {tid: '원래 문제은행 공개/준비 상태 변경' for tid in tasks}
@@ -134,7 +142,7 @@ def availability(db, content, user_id):
     available, problems = set(), {}
     for tid, task in tasks.items():
         qid = task['question_id']
-        if qid not in questions or qid in suspended or decisions.get(qid) == 'excluded':
+        if qid not in questions or qid in suspended or qid in excluded or decisions.get(qid) == 'excluded':
             problems[tid] = '개인 제외/일시중지 또는 문항 없음'
         elif bank_personal.apply_edit(questions[qid], edits.get(qid)).get('personalEdited'):
             problems[tid] = '개인 수정본과 연결 목표의 일치 미확인'

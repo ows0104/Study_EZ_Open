@@ -37,7 +37,7 @@ class Start(Strict):
 
 class Action(Start):
     version: int = Field(ge=0)
-    kind: Literal['reveal', 'rate', 'skip', 'map', 'undo']
+    kind: Literal['reveal', 'rate', 'skip', 'exclude', 'map', 'undo']
     attempted: bool = False
     response: str = Field(default='', max_length=10000)
     helped: bool = False
@@ -610,6 +610,8 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
     session_state = copy.deepcopy(row.state)
     task = row.tasks[session_state['index']] if session_state['index'] < len(row.tasks) else None
     available, _ = content.availability(db, doc, user.id)
+    excluded = content.excluded_ids(content.events_for(db, row.subject, row.run_id, user.id), row.revision)
+    start_index = session_state['index']
     data = {'_request': request, 'policy': row.policy, 'exam_date': doc.document['exam_date']}
     if payload.kind == 'map':
         session_state['mapSeen'] = True
@@ -629,11 +631,14 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
         set_undo_stack(session_state, stack)
     elif not task:
         raise HTTPException(409, '이 회차의 마지막 질문입니다.')
-    elif payload.kind == 'skip':
+    elif payload.kind in ('skip', 'exclude'):
         set_undo_stack(session_state, undo_stack(session_state) + [
-            {'requestId': payload.requestId, 'kind': 'skip', 'index': session_state['index']}])
+            {'requestId': payload.requestId, 'kind': payload.kind, 'index': session_state['index']}])
         session_state['index'] += 1
         data.update(task_id=task['task_id'], direction_id=task['direction_id'], **task_fingerprint(doc.document, task))
+        if payload.kind == 'exclude':
+            data['question_id'] = task['question_id']
+            excluded.add(task['question_id'])
     else:
         if task['task_id'] not in available:
             raise HTTPException(409, '문항/개인 설정이 바뀌었습니다. 연결을 다시 확인하거나 이 과제를 보류하세요.')
@@ -673,6 +678,10 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
                             targetParameters=policy.target_parameters())
             set_undo_stack(session_state, undo_stack(session_state) + [
                 {'requestId': payload.requestId, 'kind': 'rate', 'index': session_state['index']}])
+            session_state['index'] += 1
+    if payload.kind != 'undo' and session_state['index'] > start_index:
+        # 앞으로 넘어갈 때 Main-Quiz에서 제외한 문항의 과제는 건너뛴다. Z는 저장한 원래 위치로 돌아간다.
+        while session_state['index'] < len(row.tasks) and row.tasks[session_state['index']]['question_id'] in excluded:
             session_state['index'] += 1
     result = {'sessionId': row.id, 'version': row.version + 1}
     changed = db.execute(update(RootSession).where(RootSession.id == row.id, RootSession.version == row.version)

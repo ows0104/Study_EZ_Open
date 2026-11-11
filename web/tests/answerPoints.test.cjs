@@ -24,7 +24,7 @@ function load(file) {
   vm.runInContext(js, context);
   return context.exports;
 }
-const { AnswerBody, QuestionBody, choiceScore } = load(path.join(__dirname, '../src/bank/BankQuestion.tsx'));
+const { AnswerBody, QuestionBody, choiceScore, numberChoiceLabels, optionNumbers } = load(path.join(__dirname, '../src/bank/BankQuestion.tsx'));
 const question = { format: 'basic', question_id: 'q1', question: '', options: [], matching_left: [], matching_right: [] };
 const answer = { answer: '', answerUnits: [], answerPairs: [], correctOrder: [], correctOptionIds: [], medicalReview: null, slides: [] };
 test('source differences are optional readable rows while unresolved issues stay visible', () => {
@@ -103,10 +103,10 @@ test('revealed options distinguish correct picks, missed answers, and incorrect 
   const html = renderToStaticMarkup(React.createElement(QuestionBody, {
     question: choiceQuestion, answer: choiceAnswer, picked: new Set(['A', 'B']), onPick: () => {},
   }));
-  assert.match(html, /class="bank-option is-picked is-correct"[^>]*aria-pressed="true"[^>]*><b>A<\/b>.*?✓ 맞게 고른 정답/);
-  assert.match(html, /class="bank-option is-picked is-wrong"[^>]*><b>B<\/b>.*?✕ 잘못 고른 선지/);
-  assert.match(html, /class="bank-option is-missed"[^>]*aria-pressed="false"[^>]*><b>C<\/b>.*?! 빠뜨린 정답 · 미선택/);
-  assert.match(html, /<b>D<\/b>.*?정답 아님 · 미선택/);
+  assert.match(html, /class="bank-option is-picked is-correct"[^>]*aria-pressed="true"[^>]*><b>1<\/b>.*?✓ 맞게 고른 정답/);
+  assert.match(html, /class="bank-option is-picked is-wrong"[^>]*><b>2<\/b>.*?✕ 잘못 고른 선지/);
+  assert.match(html, /class="bank-option is-missed"[^>]*aria-pressed="false"[^>]*><b>3<\/b>.*?! 빠뜨린 정답 · 미선택/);
+  assert.match(html, /<b>4<\/b>.*?정답 아님 · 미선택/);
   assert.ok(html.includes('맞게 고른 정답 1개 · 빠뜨린 정답 1개 · 잘못 고른 선지 1개'));
   assert.ok(!html.includes('모두 맞았어요'));
 });
@@ -265,7 +265,7 @@ test('choice explanations include every distractor, preserve emphasis, and follo
     const section = html.slice(html.indexOf('<section'));
     assert.ok(section.includes('aria-label="선지별 해설"><h2>선지별 해설</h2>'));
     assert.ok(section.includes('거짓 — <strong>효소</strong>를 억제하며 수용체에는 작용하지 않는다.'));
-    assert.ok(section.indexOf('<b>A</b>') < section.indexOf('<b>B</b>'));
+    assert.ok(section.indexOf('<b>1</b> 표적 A') < section.indexOf('<b>2</b> 표적 B'));
     assert.ok(section.includes('참 — 수용체를 억제한다.'));
     assert.equal(section.split('효소').length - 1, 1);
     assert.ok(!html.includes('bank-units'));
@@ -277,8 +277,8 @@ test('negative choice stems keep truth explanations separate from the answer key
     question: { ...question, format: 'mcq', question: '옳지 않은 것은?', options: [{ id: 'A', text: '명제 A' }, { id: 'AA', text: '명제 AA' }] },
     answer: { ...answer, correctOptionIds: ['AA'], answerUnits: ['**A:** 참 — 조건을 충족한다.', 'AA: 거짓 — 조건을 충족하지 않는다.'] },
   }));
-  assert.ok(html.includes('<b>A</b> 명제 A<span class="bank-note"> · 정답이 아닌 선지</span>'));
-  assert.ok(html.includes('<b>AA</b> 명제 AA<span class="bank-note"> · 정답 선지</span>'));
+  assert.ok(html.includes('<b>1</b> 명제 A<span class="bank-note"> · 정답이 아닌 선지</span>'));
+  assert.ok(html.includes('<b>2</b> 명제 AA<span class="bank-note"> · 정답 선지</span>'));
   assert.ok(html.includes('<p>참 — 조건을 충족한다.</p>'));
   assert.ok(html.includes('<p>거짓 — 조건을 충족하지 않는다.</p>'));
 });
@@ -331,4 +331,23 @@ test('four repeated cloze markers reveal four answers in their original order', 
   }));
   assert.deepEqual([...revealed.matchAll(/class="bank-answer-point">([^<]+)</g)].map(match => match[1]),
     ['감소', '감소', '증가', '증가']);
+});
+
+test('choices show screen-order numbers; answer heads follow, inline letters and saved IDs stay', () => {
+  const numbers = optionNumbers(choiceQuestion);
+  assert.equal(numberChoiceLabels('B', numbers), '2');
+  assert.equal(numberChoiceLabels('A, C', numbers), '1, 3');
+  assert.equal(numberChoiceLabels('B: 거짓 — 효소 작용\n**C**: 참', numbers), '2: 거짓 — 효소 작용\n**3**: 참');
+  assert.equal(numberChoiceLabels('- D) 참', numbers), '- 4) 참');
+  assert.equal(numberChoiceLabels('Bcl-2와 A 경로는 다르다.', numbers), 'Bcl-2와 A 경로는 다르다.');
+  assert.equal(numberChoiceLabels('ABC: 약어', numbers), 'ABC: 약어');
+  const html = renderToStaticMarkup(React.createElement(QuestionBody, {
+    question: choiceQuestion, answer: null, picked: new Set(['C']), onPick: () => {},
+  }));
+  assert.match(html, /aria-pressed="true" aria-keyshortcuts="3"><b>3<\/b> 보기 C/);
+  const revealed = renderToStaticMarkup(React.createElement(AnswerBody, {
+    question: choiceQuestion, answer: { ...choiceAnswer, answer: 'A, C', answerUnits: ['A: 맞는 이유', 'B: 틀린 이유'] },
+  }));
+  assert.ok(revealed.replace(/<[^>]+>/g, '').startsWith('1, 3'), revealed);
+  assert.match(revealed, /<b>2<\/b> 보기 B.*?틀린 이유/s);
 });

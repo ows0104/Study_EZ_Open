@@ -1,0 +1,45 @@
+{
+  "id": "2026-11-12-choice-number-keys",
+  "title": "복습 퀴즈 객관식 선지 번호 표시와 1–4 키 선택",
+  "area": "site",
+  "created_at": "2026-11-11T17:33:40.354253+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T17:58:43.357439+00:00",
+      "evidence": "사용자 2026-11-12 채팅: 「복습 퀴즈를 풀 때, A/B/C/D 객관식 문제를 1/2/3/4로 고쳐서 키보드 1/2/3/4로 단축키처럼 선택할 수 있게 해줘. 그리고 문제 제외 기능을 단축키로 구현해줘.」 → 「5 유지하고 진행」 → 「실제로 누르면 제외할 수 있게 구현해줘」. 계획 갱신(RootLearning.tsx는 제외 표시에 필요, BankSolve.tsx는 같은 번호 머리표의 키 일관성)은 같은 요청 범위로 판단",
+      "scope": "plan.md: server root_learning content.py·routes/root_learning.py(exclude 이벤트), server/tests/test_root_exclude.py, web BankQuestion.tsx·RootSolve.tsx·RootLearning.tsx·BankSolve.tsx·types/rootLearning.ts·GuidePage.tsx, 웹 검사·픽스처, 이 작업 문서. 커밋·PR·master 병합·운영 배포·DB 스키마 변경 제외",
+      "evidence_version": 2,
+      "source_hash": "eefe2d5cc0f894ab9af18561ba80ed7d00d730d5bbfcfe67aaa42cd952761996",
+      "plan_hash": "0333bdebfa9db36855d81afa7d7dd276638d4c090f3315190912c3ae23b1de0a",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "2618ec13f9c087a62a2c7ddb12f86713c9df33ee998a797563e60d9dfc81cec2"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T17:58:43.768457+00:00"
+}

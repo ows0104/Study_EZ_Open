@@ -34,7 +34,7 @@ export type RootAnswer = BankAnswer&{reviewNotes?:{source:string;verdict:string;
 /** Read-only look-ahead of one session position (GET …/prepare). Records nothing; display only until /events confirms. */
 export type RootFrame = {position:number; taskId:string; blocked:string|null;
   task:{id:string; question:BankQuestion; answer:RootAnswer; helped:boolean}|null};
-export type RootAction = {kind:'reveal'|'rate'|'skip'|'map'|'undo'; attempted?:boolean; response?:string; helped?:boolean;stimulusHashes?:string[];
+export type RootAction = {kind:'reveal'|'rate'|'skip'|'exclude'|'map'|'undo'; attempted?:boolean; response?:string; helped?:boolean;stimulusHashes?:string[];
   choicesShown?:boolean;
   grade?:'missed'|'partial'|'independent';selfRating?:BankRating};
 export type RootMapData = {concepts:{concept_id:string;label:string;parent_ids:string[]}[];

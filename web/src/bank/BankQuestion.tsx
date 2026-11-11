@@ -28,6 +28,22 @@ function QuestionStimuli({images,onReady}:{images:NonNullable<BankQuestion['stim
   }}/></figure>)}</div>;
 }
 
+/** 객관식 선지는 저장 ID(A·B…) 대신 화면 순서 번호로 보인다(2026-11-12) — 키 1–4와 같은 번호. 저장·전송 값은 ID 그대로다. */
+const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+export function optionNumbers(q: BankQuestion) {
+  return new Map(q.options.map((option, index) => [option.id, String(index + 1)]));
+}
+/** 정답·해설 줄 앞의 선지 머리표(`B:`·`**B**:`·`B.`·`B)`)와 ID만 나열한 정답(`B`, `A, C`)을 번호로. 본문 속 글자는 원문 그대로. */
+export function numberChoiceLabels(text: string, numbers: Map<string, string>) {
+  if (!numbers.size) return text;
+  const ids = [...numbers.keys()].sort((a, b) => b.length - a.length).map(escape).join("|");
+  const list = new RegExp(String.raw`^\s*(?:${ids})(?:\s*[,·/]\s*(?:${ids}))*\s*$`);
+  if (list.test(text)) return text.replace(new RegExp(`(?<![A-Za-z0-9])(${ids})(?![A-Za-z0-9])`, "g"), id => numbers.get(id)!);
+  const head = new RegExp(String.raw`^(\s*(?:[-*]\s+)?)(\*\*)?(${ids})(\*\*)?(?=\s*[:：.)])`, "gm");
+  return text.replace(head, (_m, lead: string, open: string | undefined, id: string, close: string | undefined) =>
+    `${lead}${open ?? ""}${numbers.get(id)}${close ?? ""}`);
+}
+
 /** ChatGPT 가 항목에 스스로 붙인 꼬리표(`L1:` · `R2:`). 화면의 1·2·A·B 와 겹치므로 보일 때만 뗀다 — 짝은 원문으로 맞춘다. */
 const bare = (item: string) => item.replace(/^[LR]\d+\s*[:.)]\s*/, "");
 
@@ -64,7 +80,7 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
       {q.mcq_mode === "recall_first" && !showOptions ? <p className="bank-note">기억 확인형 · 먼저 답을 떠올린 뒤 선지를 공개하세요.</p> : null}
       {q.options.length && showOptions ? (
         <ul className="bank-options">
-          {q.options.map((option) => {
+          {q.options.map((option, index) => {
             const selected = picked.has(option.id);
             const correct = answer?.correctOptionIds.includes(option.id);
             const result = score ? correct ? selected ? "is-correct" : "is-missed" : selected ? "is-wrong" : "" : "";
@@ -74,8 +90,8 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
             return (
               <li key={option.id}>
                 <button type="button" className={`bank-option${cls}`} disabled={disabled || Boolean(answer)}
-                  aria-pressed={selected} onClick={() => onPick(option.id)}>
-                  <b>{option.id}</b> {option.text}
+                  aria-pressed={selected} aria-keyshortcuts={index < 4 ? String(index + 1) : undefined} onClick={() => onPick(option.id)}>
+                  <b>{index + 1}</b> {option.text}
                   {label ? <span className="bank-option-result">{label}</span> : null}
                 </button>
               </li>
@@ -155,6 +171,8 @@ export function AnswerBody({ question: q, answer, preload, reviewInline = true }
     choiceUnits.set(id, [...(choiceUnits.get(id) ?? []), text]);
     linkedUnits.add(unit);
   }
+  const numbers = choice ? optionNumbers(q) : new Map<string, string>();
+  const label = (text: string) => numberChoiceLabels(text, numbers);
   const extraChoiceUnits = remainingPoints.filter(unit => !linkedUnits.has(unit));
   return (
     <>
@@ -175,7 +193,7 @@ export function AnswerBody({ question: q, answer, preload, reviewInline = true }
       {/* Cloze는 위 발문에 정답을 채워 보여 준다. 짝짓기는 아래 짝이 곧 답이다. */}
       {conciseAnswer || (q.format === "cloze" && !answer.personalAnswer) || (q.format === "matching" && answer.answerPairs.length) ? null : (
         <p className="quiz-answer">
-          <AnswerPoints text={answer.answer} units={q.format === "ox" ? [] : answer.answerUnits} readable list={q.format === "list"} />
+          <AnswerPoints text={label(answer.answer)} units={q.format === "ox" ? [] : answer.answerUnits.map(label)} readable list={q.format === "list"} />
         </p>
       )}
       {answer.explanation?.trim() && !answer.personalAnswer ? (
@@ -199,9 +217,9 @@ export function AnswerBody({ question: q, answer, preload, reviewInline = true }
         <section className="quiz-explanation bank-choice-explanation" aria-label="선지별 해설">
           <h2>선지별 해설</h2>
           <ul>
-            {q.options.map(option => (
+            {q.options.map((option, index) => (
               <li key={option.id}>
-                <p><b>{option.id}</b> <Stem text={option.text} />
+                <p><b>{index + 1}</b> <Stem text={option.text} />
                   <span className="bank-note"> · {answer.correctOptionIds.includes(option.id) ? "정답 선지" : "정답이 아닌 선지"}</span>
                 </p>
                 {choiceUnits.has(option.id) ? choiceUnits.get(option.id)!.map((text, index) => (
@@ -209,7 +227,7 @@ export function AnswerBody({ question: q, answer, preload, reviewInline = true }
                 )) : <p className="bank-note">이 선지에 등록된 해설이 없습니다.</p>}
               </li>
             ))}
-            {extraChoiceUnits.map(unit => <li key={unit}><AnswerPoints text={unit} readable /></li>)}
+            {extraChoiceUnits.map(unit => <li key={unit}><AnswerPoints text={label(unit)} readable /></li>)}
           </ul>
         </section>
       ) : null}
