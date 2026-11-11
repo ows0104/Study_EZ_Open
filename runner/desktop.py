@@ -107,7 +107,6 @@ class DesktopWindow(StatusWindow):
         root.title('Study EZ 러너')
         root.geometry('1080x940')
         root.minsize(900, 780)
-        self.job_canvas.configure(height=130)
         for widget in self.overview_views.values():
             widget.configure(height=5)
         style = ttk.Style(root)
@@ -135,8 +134,7 @@ class DesktopWindow(StatusWindow):
         self.pause_button = tk.Button(toolbar, text='전체 러너 일시정지', command=self.toggle_pause,
                                       bg=PANEL, fg=AMBER, relief='flat', padx=12)
         self.pause_button.pack(side='right')
-        tk.Label(frame, text='강의와 예습·복습을 선택하세요. 중지는 자료를 보존하며, 취소한 작업은 자동으로 시작하지 않습니다.',
-                 bg=PANEL, fg=MUTED, font=(FONT, 9), anchor='w').pack(fill='x', pady=(8, 6))
+        tk.Frame(frame, bg=PANEL, height=8).pack(fill='x')
         table = tk.Frame(frame, bg=PANEL)
         table.pack(fill='x')
         self.table = ttk.Treeview(table, columns=('date', 'title', 'kind', 'state', 'detail'), show='headings', height=7)
@@ -241,10 +239,10 @@ class DesktopWindow(StatusWindow):
                 self.actions.put('작업 요청 실패 · 연결 상태를 확인한 뒤 다시 시도해 주세요.')
         threading.Thread(target=run, daemon=True, name='runner-desktop-action').start()
 
-    def render(self, snapshot):
+    def render(self, snapshot, phase_info=None):
         self.full_snapshot = snapshot
         snapshot, _ = history.split(snapshot)
-        super().render(snapshot)
+        super().render(snapshot, phase_info)
         self.waiting_label.configure(text='이번 블럭 작업')
         self.task_rows = (snapshot.queue or {}).get('tasks', [])
         selected = self.table.selection()
