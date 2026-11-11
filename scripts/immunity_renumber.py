@@ -239,11 +239,14 @@ def build_plan(conn, md, abandon=()):
 
 
 def outside_fingerprint(conn, md):
-    """Every row of the lecture tables that this change must not touch."""
+    """The keys of every row of the lecture tables that this change must not touch. Keys only: the statements here
+    change nothing but `run_id`/`object_key` of matched rows, and full rows (bank JSON up to 20MB) would hold the
+    table locks for minutes."""
     from sqlalchemy import select, or_
     result = {}
     for t in [md.tables['lecture'], *lecture_tables(md)]:
-        rows = conn.execute(select(t).where(or_(t.c.subject != SUBJECT, t.c.run_id.notin_(IDS)))).mappings()
+        cols = list({c.name: c for c in [*t.primary_key.columns, t.c.subject, t.c.run_id]}.values())
+        rows = conn.execute(select(*cols).where(or_(t.c.subject != SUBJECT, t.c.run_id.notin_(IDS)))).mappings()
         result[t.name] = fingerprint(sorted(fingerprint(encode(dict(r))) for r in rows))
     return result
 
@@ -473,6 +476,47 @@ def storage():
     return ObjectStorage()
 
 
+def prepare_candidate():
+    """A data-only candidate (the tool, the emptied aliases, the change record) bound to the deploy approval."""
+    sys.path.insert(0, str(ROOT / 'scripts'))
+    import development as dev
+    import release_evidence as release
+    folder, state = dev.load(CHANGE.name)
+    errors = dev.gate(folder, state, 'release')
+    if errors:
+        raise SystemExit('; '.join(errors))
+    entries = [Path(__file__).resolve(), ROOT / 'data/timetable/identities/2026-2.json',
+               ROOT / 'data/timetable/identities/2026-2-notes.json']
+    candidate = {**dev.evidence(folder, state), 'config': {
+        'target': 'lecture-renumber-data',
+        'destination': 'StudyEZ production DB lecture tables of 12 감염과 면역 lectures, R2 copies, runs/ runner files',
+        'rollback': '--reverse --previous-receipt; R2 originals kept; runs backup under runs/_development'},
+        'files': {p.relative_to(ROOT).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in entries},
+        'environment_files': ['server/.env'], 'environment_hash': release.environment_hash('server'),
+        'release_hash': dev.digest([folder / 'release.md'])}
+    token = release.value_hash(candidate)
+    dest = ROOT / 'runs/_development' / CHANGE.name / 'candidates' / token
+    for p in entries:
+        target = dest / p.relative_to(ROOT)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if not target.exists():
+            shutil.copyfile(p, target)
+        assert target.read_bytes() == p.read_bytes()
+    assert release.manifest(dest) == candidate['files']
+    candidate.update(id=token, artifact=dest.relative_to(ROOT).as_posix())
+    dev.update(folder, lambda st: st.update(candidate=candidate))
+    return {'candidate': token, 'files': len(entries)}
+
+
+def deploy_gate():
+    sys.path.insert(0, str(ROOT / 'scripts'))
+    import development as dev
+    folder, state = dev.load(CHANGE.name)
+    errors = dev.gate(folder, state, 'deploy')
+    if errors:
+        raise SystemExit('; '.join(errors))
+
+
 def summary(plan):
     by = {}
     for m in plan['moves']:
@@ -494,8 +538,14 @@ def main():
     parser.add_argument('--output', type=Path)
     parser.add_argument('--local-runs', type=Path)
     parser.add_argument('--abandon-generation', action='append', default=[])
+    parser.add_argument('--prepare', action='store_true')
     args = parser.parse_args()
+    if args.prepare:
+        print(json.dumps(prepare_candidate()))
+        return
     if args.local_runs:
+        if args.apply:
+            deploy_gate()
         print(json.dumps(local_runs(args.local_runs, apply=args.apply), ensure_ascii=False, default=str, indent=1))
         return
     engine, md = connect(args.database)
@@ -506,6 +556,7 @@ def main():
         with engine.connect() as conn:
             plan = build_plan(conn, md, abandon=tuple(args.abandon_generation))
     if args.copy_r2:
+        deploy_gate()
         print(json.dumps({'copied': copy_r2(plan, storage()), 'objects': len(r2_moves(plan))}))
         return
     if not args.apply:
@@ -515,6 +566,8 @@ def main():
         raise SystemExit('--apply needs a new --output receipt path')
     if not args.reverse and plan['sha256'] != args.expect_plan:
         raise SystemExit(f'plan changed since review: {plan["sha256"]}')
+    if args.database == 'production':
+        deploy_gate()
     check = None if args.database == 'local' else r2_checker(storage())
     with engine.begin() as conn:
         dropped = dropped_rows(conn, md, plan)

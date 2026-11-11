@@ -10,6 +10,7 @@ TMP = Path(tempfile.mkdtemp(prefix='studyez-renumber-'))
 ROOT = Path(__file__).resolve().parents[2]
 os.environ.update(ENVIRONMENT='local-test', DATABASE_URL=f"sqlite:///{(TMP / 'test.db').as_posix()}")
 sys.path.insert(0, str(ROOT / 'scripts'))
+sys.path.insert(0, str(ROOT / 'server'))
 
 from app.database import Base, engine
 import app.models  # noqa: F401  (registers every table)
