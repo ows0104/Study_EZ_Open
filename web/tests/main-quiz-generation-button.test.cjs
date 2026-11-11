@@ -74,6 +74,36 @@ test('a failed map-tree/2 request also needs the administrator reason',async()=>
   const f=fixture({id:'old',requestId:'v3',state:'failed',authoring:'cli',pipeline:'map-tree/2',parallelAuthoring:false,privatePilot:true,input:{conceptMap:'',points:'',scope:'',examDate:null,inputMode:'source'}});
   f.render();await tick();const b=f.button(f.render());assert.equal(b.props.children,'Main Quiz 이어서 만들기');assert.equal(b.props.disabled,true);
 });
+test('a failed map-tree request can start over: newest default, same scope, fresh request, reason required',async()=>{
+  const f=fixture({id:'old',requestId:'mt',state:'failed',authoring:'cli',pipeline:'map-tree/3',parallelAuthoring:false,privatePilot:true,input:{conceptMap:'',points:'',scope:'',examDate:null,inputMode:'source'}});
+  f.render();await tick();let tree=f.render();
+  let restart=f.nodes(tree,'button').find(b=>b.props.children==='새로 출제 (처음부터)');assert.ok(restart);assert.equal(restart.props.disabled,true);
+  assert.equal(f.nodes(tree,'button').length,2);assert.equal(f.nodes(tree,'input').filter(n=>n.props.type==='checkbox').length,0);
+  assert.match(JSON.stringify(tree),/수정·추가 횟수를 처음부터/);assert.match(JSON.stringify(tree),/OpenAI Codex CLI/);
+  f.nodes(tree,'input').find(n=>n.props['aria-label']==='이어 하기 이유').props.onChange({target:{value:'pipeline changed'}});
+  tree=f.render();restart=f.nodes(tree,'button').find(b=>b.props.children==='새로 출제 (처음부터)');assert.equal(restart.props.disabled,false);
+  restart.props.onClick();restart.props.onClick();await tick();
+  const writes=f.calls.filter(c=>c.init);assert.equal(writes.length,1);
+  const payload=JSON.parse(writes[0].init.body);assert.notEqual(payload.requestId,'mt');assert.equal(typeof payload.requestId,'string');
+  assert.deepEqual({...payload,requestId:undefined},{conceptMap:'',points:'',scope:'',examDate:null,inputMode:'source',authoring:'cli',parallelAuthoring:false,pipeline:'map-tree/3',privatePilot:true,resume:false,restart:true,resumeReason:'pipeline changed',requestId:undefined});
+});
+test('a failed request from an older map-tree also offers starting over with the newest pipeline',async()=>{
+  const f=fixture({id:'old',requestId:'v1',state:'failed',authoring:'cli',pipeline:'map-tree/1',parallelAuthoring:false,privatePilot:false,input:{conceptMap:'',points:'',scope:'',examDate:null,inputMode:'source'}});
+  f.render();await tick();let tree=f.render();
+  f.nodes(tree,'input').find(n=>n.props['aria-label']==='이어 하기 이유').props.onChange({target:{value:'x'}});
+  f.nodes(f.render(),'button').find(b=>b.props.children==='새로 출제 (처음부터)').props.onClick();await tick();
+  const payload=JSON.parse(f.calls.find(c=>c.init).init.body);assert.equal(payload.pipeline,'map-tree/3');assert.equal(payload.privatePilot,false);assert.equal(payload.restart,true);
+});
+test('no start-over for web or non-map-tree requests, running ones or published ones',async()=>{
+  for(const job of [
+    {id:'w',requestId:'w',state:'failed',authoring:'web',privatePilot:true,input:{conceptMap:'',points:'',scope:'',examDate:null,inputMode:'source'}},
+    {id:'h',requestId:'h',state:'held',authoring:'cli',pipeline:'map-tree/3',privatePilot:false,input:{conceptMap:'',points:'',scope:'',examDate:null,inputMode:'source'}},
+    {id:'r',requestId:'r',state:'running',authoring:'cli',pipeline:'map-tree/3',privatePilot:false,input:{conceptMap:'',points:'',scope:'',examDate:null,inputMode:'source'}},
+    {id:'p',requestId:'p',state:'done',published:true,authoring:'cli',pipeline:'map-tree/3',privatePilot:false,input:{conceptMap:'',points:'',scope:'',examDate:null,inputMode:'source'}}]){
+    const f=fixture(job);f.render();await tick();
+    assert.equal(f.nodes(f.render(),'button').some(b=>b.props.children==='새로 출제 (처음부터)'),false,job.id);
+  }
+});
 test('CLI source generation does not require a bridge',async()=>{
   const f=fixture(null,{compatible:false});f.render();await tick();f.button(f.render()).props.onClick();await tick();
   assert.equal(f.calls.filter(c=>c.init).length,1);assert.deepEqual(f.sent,[]);
