@@ -1,0 +1,18 @@
+{
+  "id": "2026-11-11-place-by-review",
+  "title": "Main-Quiz 문항을 지도 관계에 바로 배치",
+  "area": "generation",
+  "created_at": "2026-11-11T02:17:06.413484+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T02:17:06.413508+00:00"
+}
