@@ -98,7 +98,7 @@ Main 모아받기는 사용할 수 있는 Quiz Bank 덱을 우선하며, 없으�
 Anki의 복습 일정과 웹 학습 기록은 서로 독립적이다.
 
 Main-Quiz 단답·나열 문항의 「선지 보기」 선지는 `root_choices` kind의 `<revision>.json` 하나다(`root-choices/1`,
-`quizbank/root_choices.py`, 계약 `studyez_contracts/roots/choices.py`). 러너가 근거 보강 뒤에 판 문서의 글만으로 만들어 올린다.
+`quizbank/root_choices.py`, 계약 `studyez_contracts/roots/choices.py`). 출제 파이프라인 밖의 수동 명령 `python -m runner.root_choices`가 게시된 판 문서의 글만으로 만들어 올린다.
 서버는 revision과 문항 지문이 맞는 문항에만 붙이고, 없으면 선지 없이 보여 준다.
 
 Main-Quiz 판의 근거 보강은 `root_evidence` kind의 `<revision>.json` 하나다(`root-evidence/1`,
