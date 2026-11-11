@@ -76,3 +76,14 @@
   - R2: 옛 객체가 그대로 남아 있다
   - 러너: `runs/_development/2026-11-11-immunity-renumber/local-before/`와 git의 이전 별칭 파일로 되돌린다
 - **사람 승인**: 운영 DB 쓰기와 학습 기록 이동이므로 3번의 계획(지문 포함)을 보인 뒤 따로 승인받는다.
+
+## 운영 적용 결과(2026-11-11 16:3x KST)
+- 사용자 「Apply 1b8788e3」.
+- 러너를 끈 뒤 R2 76개를 복사해 확인했다. 계획 `1b8788e3…`을 잠금 안에서 다시 만들어 같음을 확인하고 적용·commit했다.
+  - 영수증: `runs/_development/2026-11-11-immunity-renumber/receipt.json`(`committed: true`, 운영 runs 폴더)
+  - 아데노 생성 `6e5c581a`는 포기 표시로 옮겼다. 다시 요청한다.
+- 독립 읽기 확인
+  - 12강의 모두 run ID가 연결된 시간표 칸 번호와 같다. uid 앞자리도 같고, 자료 키는 자기 번호 폴더다. 단계 행은 0이다.
+  - 섞인 쌍: 261105_06 미코(문항 「C. trachomatis…」), 261106_06 무산소(「…C. difficile…」)
+  - 학습 기록: 렙토 261110_01 풀이 10, 아데노 261110_02 풀이 10
+- 러너 파일: 폴더 6·로그 6·pre_target 6·_pairs·published.json을 맞바꿨다. 백업은 `runs/_development/2026-11-11-immunity-renumber/local-before/`.
