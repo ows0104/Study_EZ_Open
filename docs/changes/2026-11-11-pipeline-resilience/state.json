@@ -6,13 +6,103 @@
   "required_checks": [
     "regression"
   ],
-  "approvals": {},
-  "checks": [],
-  "review": null,
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T13:27:09.366686+00:00",
+      "evidence": "2026-11-11 사용자 채팅: 「현재 파이프라인이 오류가 나서 끊기고, 시간이 너무 오래걸려. 지금 파이프라인을 더 안정적이고, 시간효율적으로 바꾸고 싶어. 완전한 구조 개편도 괜찮아. 한번 진단하고 코딩해줘.」",
+      "scope": "plan.md 1~6: 앞 단계 되돌려주기·접수 검사·동시 대조, transport-retry/1, 동시 실행 6·기계 전체 8, 추가 회차 커버 확인 동시, 새 검사, 안내 문서, 로컬 검사, PR. 실제 모델 재생·러너 재설치 제외",
+      "evidence_version": 2,
+      "source_hash": "23880366e456f2181ae6c9050ac6c463ca4732ece5a4ee5727d189a396d0d259",
+      "plan_hash": "c945cbb8e8c7b2e1899e1cd83f66605b1bec59e738b8c674611fff5abc589dbd",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "52f49dda18c4ab3afd8ac7ec51ae9d25e98185818c514ccd6643cf48300757a0"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-11T13:35:48.792857+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/quizbank",
+        "tests/contracts",
+        "tests/runner",
+        "tests/studyez_llm",
+        "tests/quizgen",
+        "tests/development",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--deselect",
+        "tests/runner/test_desktop_control.py::test_shortcut_installer_supports_korean_filename_in_windows_powershell"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "23880366e456f2181ae6c9050ac6c463ca4732ece5a4ee5727d189a396d0d259",
+      "plan_hash": "c945cbb8e8c7b2e1899e1cd83f66605b1bec59e738b8c674611fff5abc589dbd",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-11-pipeline-resilience/1794403632464362800-regression.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-11T13:36:27.750063+00:00",
+    "summary": "자체 검토(독립 리뷰 아님). 경계: 단계 이름·입력·지시문·결과 형식·서버 계약 불변(파생 packet 단계 행·manifest 키를 검사로 고정). 앞 단계 동시 줄: dirty는 포인트 줄만 읽고 쓰고 지도·문제은행 재사용은 줄 시작 전에 결정(재개 두 경우 검사). 되돌려주기: 1회·같은 세션·같은 검사 재통과·거절 원문 보존. transport-retry: CLI 세션 오류+네트워크 표지일 때만, 시간 초과·거절·한도·검사 실패 제외, 단계당 1회. 동시 실행: 파일 잠금 자리 8, 실패·죽은 프로세스의 자리 반환. 남은 위험: 동시 6의 계정 한도, 실제 Codex에서 앞 단계 후속 호출, 실제 단축 시간 — 합성 검사로만 확인했고 실제 모델 실행은 하지 않음.",
+    "evidence_version": 2,
+    "source_hash": "23880366e456f2181ae6c9050ac6c463ca4732ece5a4ee5727d189a396d0d259",
+    "plan_hash": "c945cbb8e8c7b2e1899e1cd83f66605b1bec59e738b8c674611fff5abc589dbd",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-11T13:11:06.549554+00:00"
+  "updated_at": "2026-11-11T13:36:27.807693+00:00"
 }
