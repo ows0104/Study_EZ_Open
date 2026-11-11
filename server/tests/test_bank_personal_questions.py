@@ -11,7 +11,8 @@ from app.auth import get_current_user
 from app.database import Base, SessionLocal, engine
 from app.main import app
 from app.models import Asset, BankFeedback, BankState, Lecture, QuizBank, SLIDE_KINDS
-from app.lecture_mastery import lecture_overviews
+from app import bank_personal
+from app.study_engine.card_progress import card_progress
 
 NOW = 1791824400000
 BASE = "/api/lectures/private/demo/bank"
@@ -109,8 +110,9 @@ def main():
         restored = request("POST", BASE + "/undo", {"reviewToken": token})
         assert restored["question"]["question_id"] == qid and restored["answer"]["answer"] == "바꾼 답"
         with SessionLocal() as db:
-            overview = lecture_overviews(db, STUDENT.id, [("private", "demo")], is_admin=False)[("private", "demo")]
-            assert overview["cardProgress"]["total"] == 2
+            # 사이트 집계는 Main-Quiz로 옮겼다(2026-11-11). legacy 은행의 개인 추가 문항은 그 은행 사본에 남는다.
+            mine = bank_personal.augment(db, db.get(QuizBank, ("private", "demo")), STUDENT.id)
+            assert card_progress(mine, {"items": {}, "dimensions": {}}, 0)["total"] == 2
             assert db.get(QuizBank, ("private", "demo")).bank == original
             assert not list(db.scalars(select(BankFeedback))), "private additions never become admin feedback"
         app.dependency_overrides[get_current_user] = lambda: replace(STUDENT, id="other-student")
