@@ -43,3 +43,10 @@
 ## 되돌리기
 
 이 PR revert. 데이터·운영 상태 변경 없음.
+
+## 후속 — 병합 실행 42956611608 실패
+
+PR #95 병합(dc8ddf94)의 master 실행에서 `Decide checks`는 의도대로 「같은 트리, 재검사 생략」을 냈다.
+그런데 `Map and document check`가 pytest 없이 돌아 실패했고(`map_numbers --check`는 pytest 수집을 쓴다),
+그래서 배포도 건너뛰었다. 고친 것: `map` 출력을 추가했다. 문서만 바뀐 실행은 Python 의존성을 설치하고
+map 검사를 돌리고, 같은 트리 생략 때는 map도 생략한다(PR에서 이미 통과). 웹 의존성 설치는 `tests` 조건으로 나눴다.
