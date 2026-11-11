@@ -7,6 +7,8 @@ in its own worktree if other sessions are running; (2) `git pull` the dashboard 
 DASHBOARD.md in ../Study_EZ_dashboard); (3) check in-progress and planned work for overlapping files/areas
 and stop to ask a human if any overlap; (4) add your task to "지금 하고 있는 작업" and push the dashboard.
 Never merge the `dashboard` branch into master. Remove your row when the work is merged or abandoned.
+Open PRs as drafts (`gh pr create --draft`), check locally, then `gh pr ready` once. Batch commits
+before pushing to a ready PR: every push reruns CI against a monthly Actions-minute limit.
 For every StudyEZ feature, fix or incident, follow docs/development/README.md:
 intent.md → spec.md → plan.md → human-approved build → tests → reviewed release → important human approval → maintain.
 Use scripts/development.py to create a change record and check revision-bound approval/test/release evidence.

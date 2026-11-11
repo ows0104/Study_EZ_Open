@@ -23,10 +23,36 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Decide what this run needs (scripts/ci_scope.py): docs/runs-only changes skip the full checks,
+  # Windows checks run only when runner/generator/contract/script paths change, and a master merge whose
+  # tree equals the already-passed PR head is not re-tested. Unsure -> run everything.
+  scope:
+    name: Decide checks
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      checks: read
+      pull-requests: read
+    outputs:
+      tests: ${{ steps.scope.outputs.tests }}
+      windows: ${{ steps.scope.outputs.windows }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/ci_scope.py
+          sparse-checkout-cone-mode: false
+      - id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/ci_scope.py
   # Linux: the server runs on Linux (Cloud Run), and on a private repository a Linux minute
   # counts once while a Windows minute counts twice. Everything that is not Windows-bound runs here.
   checks:
     name: Tests and build
+    needs: scope
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -38,34 +64,40 @@ jobs:
         with:
           python-version: '3.13'
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        if: needs.scope.outputs.tests == 'true'
         with:
           node-version: '24'
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: Install test dependencies
+        if: needs.scope.outputs.tests == 'true'
         run: |
           set -e
           python -m pip install -r requirements.txt pytest httpx PyYAML requests
           npm --prefix web ci
       - name: Install server dependencies
+        if: needs.scope.outputs.tests == 'true'
         working-directory: server
         run: python -m pip install -r requirements.txt
       - name: Python regression and contracts
+        if: needs.scope.outputs.tests == 'true'
         # Windows-bound files run in the windows-runner job below.
         run: >-
           python -m pytest tests -q
           --ignore=tests/runner
           --ignore=tests/development/test_server_deploy.py
       - name: Server tests (one process per file, isolated local databases)
+        if: needs.scope.outputs.tests == 'true'
         working-directory: server
         run: python -m tests
       - name: Web typecheck and build
+        if: needs.scope.outputs.tests == 'true'
         run: npm --prefix web run build
       - name: Bridge and deployment gate tests
-        run: |
-          set -e
-          node --test tests/bridge/*.cjs web/tests/wait-for-api.test.mjs
-          python scripts/map_numbers.py --check
+        if: needs.scope.outputs.tests == 'true'
+        run: node --test tests/bridge/*.cjs web/tests/wait-for-api.test.mjs
+      - name: Map and document check
+        run: python scripts/map_numbers.py --check
       - name: Prepare fixed server candidate
         shell: pwsh
         run: |
@@ -83,7 +115,8 @@ jobs:
   # all run on the operator's Windows PC. Only those checks stay on the (2x-billed) Windows runner.
   windows-runner:
     name: Windows runner checks
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    needs: scope
+    if: needs.scope.outputs.windows == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
@@ -119,8 +152,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   deploy:
     name: Deploy production API
-    needs: [checks, windows-runner]
-    if: github.repository == 'ows0104/Study_EZ_Open' && github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    needs: [scope, checks, windows-runner]
+    # A skipped Windows job (no Windows paths changed / same tree already passed) does not block deploy.
+    if: >-
+      always() && needs.scope.result == 'success' && needs.checks.result == 'success'
+      && (needs.windows-runner.result == 'success' || needs.windows-runner.result == 'skipped')
+      && github.repository == 'ows0104/Study_EZ_Open' && github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     concurrency:

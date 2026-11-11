@@ -119,6 +119,26 @@ master 직접 push 금지·필수 검사 `Tests and build`·리뷰 승인을 설
 [기록](../changes/2026-11-08-ci-linux-runner/README.md)). 배포는 둘 다 통과해야 시작한다.
 같은 PR에 새 push가 오면 그 PR의 이전 실행은 취소된다. master만 배포 권한을 얻는다.
 Draft PR에서는 검사가 돌지 않는다(작업 중엔 로컬 검사로 확인). "Ready for review"로 바꾸는 순간 검사가 돈다.
+먼저 `Decide checks`(`scripts/ci_scope.py`)가 이번 실행 범위를 정한다.
+문서·기록(`docs/`·`runs/`·`etc/`·각 폴더 `CLAUDE.md`/`README.md`/`AGENTS.md`)만 바뀌면 전체 검사를 건너뛰고
+`map_numbers --check`와 배포 후보 준비만 한다. 검사가 읽는 문서(`docs/samples/`·`docs/prompt-architecture.md`·
+`docs/development/templates/`)는 코드로 친다. `Windows runner checks`는 사이트 전용 경로(`web/`·`server/app/`·
+`server/tests/`·`spotter*/`) 밖이 바뀔 때만 돈다. master 병합 커밋의 트리가 이미 검사를 통과한 PR 머리와
+같으면 다시 검사하지 않는다(PR 뒤 master가 전진했으면 다시 검사한다). 판단을 못 하면 전부 돈다.
+master에서는 문서만 바뀌어도 배포가 돈다(Pages가 같은 SHA의 health를 기다린다).
+[기록](../changes/2026-11-11-ci-minutes/README.md)
+
+### PR 습관 — Actions 분을 아낀다
+
+비공개 저장소라 Actions 분이 월 한도에서 빠진다(2026-11 한도 3000분의 90%를 11일에 씀).
+PR 하나는 PR 검사와 병합 뒤 master 검사로 두 번 돌고, Ready PR에 push할 때마다 처음부터 다시 돈다.
+
+- **PR은 Draft로 연다**(`gh pr create --draft`). 작업 중엔 로컬 검사로 확인하고, 다 되면
+  `gh pr ready`로 한 번 검사받는다.
+- **Ready PR에는 커밋을 모아 한 번에 push한다.** 리뷰 반영·후속 수정을 한 줄씩 올리지 않는다.
+- **같은 화면·같은 작업의 잇단 작은 수정은 한 PR로 묶는다.** 문서만 고치는 PR은 따로 열지 말고
+  다음 기능 PR에 싣거나 여러 개를 모은다.
+- 이미 Ready인 PR을 더 고칠 거면 `gh pr ready --undo`로 Draft로 돌렸다가 끝나면 다시 Ready로.
 검사 작업에서 고정한 서버 패키지와 해시를 동일 실행의 배포 작업에 전달하고 Git SHA·실행 ID·파일 해시를
 재확인한다. 다른 커밋으로 master가 전진했으면 이전 작업은 배포를 중단한다.
 
