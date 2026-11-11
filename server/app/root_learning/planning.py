@@ -1,6 +1,7 @@
 """Deterministic finite daily plans. No synthetic mastery or inferred prerequisites."""
 from collections import defaultdict
 from datetime import date, timedelta
+from fractions import Fraction
 from math import ceil
 from statistics import median
 from .policy import instant, study_day
@@ -111,13 +112,33 @@ def _habitual(events, today, policy):
     return int(median([len(history[d]) for d in sorted(history)[-7:]])) if history else None
 
 
+def spread_directions(tasks):
+    """Tasks of one direction ask the same concept, from another side or in another form. They are not served
+    back to back: every direction's first task comes in the given order, and its k-th of n tasks sits k/n of the
+    way through what follows. A direction with many tasks is spread over the whole session and not left for the end
+    (taking turns would serve the last tasks of the largest direction one after another).
+
+    Only the order changes. With one task per direction it is the given order
+    (docs/changes/2026-11-12-goal-dedupe: 261111_02 served one fact three times among its first five tasks)."""
+    count = defaultdict(int)
+    for task in tasks:
+        count[task['direction_id']] += 1
+    turn, ranked = defaultdict(int), []
+    for index, task in enumerate(tasks):
+        did = task['direction_id']
+        ranked.append((Fraction(turn[did], count[did]), index, task))
+        turn[did] += 1
+    return [task for _, _, task in sorted(ranked, key=lambda row: row[:2])]
+
+
 def plan_tasks(doc, events, available, now, policy):
     """root-generation/4 (spec R8 option B): every prepared task is a candidate, not one per direction.
 
     Same rules as plan() with the learner state of each task: new goals by the target quota (unchanged,
     target-based), due tasks, unassessed tasks of learned goals, history fill and explicit prerequisites.
-    Tasks of one target, and so several tasks of one direction, keep the document's task order, which
-    validate_document holds to the map/prerequisite plan order."""
+    Tasks of one target keep the document's task order, which validate_document holds to the map/prerequisite
+    plan order. Several tasks of one direction are then spread through the session (spread_directions); explicit
+    prerequisites still come first."""
     rows, _, states = replay_tasks(doc, events, now, policy)
     by_target = {r['id']: r for r in rows}
     owners = direction_owners(doc)
@@ -197,7 +218,7 @@ def plan_tasks(doc, events, available, now, policy):
         emit(owner(task))
     from studyez_contracts.roots.generation_v2 import order_plan
     assessed = {t['question_id'] for t in doc['tasks'] if states.get(t['task_id'], {}).get('rating') is not None}
-    result = order_plan(doc, result, available, assessed)
+    result = order_plan(doc, spread_directions(result), available, assessed)
     return {'tasks': result, 'newGoalQuota': quota, 'days': days, 'habitualTasks': habitual,
             'deadline': deadline.isoformat() if deadline else None,
             'preparedUnseen': len(unseen), 'unpreparedGoals': sum(t['target_id'] not in prepared for t in target_list),

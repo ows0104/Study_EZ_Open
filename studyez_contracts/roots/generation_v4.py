@@ -67,7 +67,11 @@ def _with_basis(schema, minimum=1):
 
 
 INTAKE_OUTPUT = _with_basis(v3.INTAKE_OUTPUT)
-ADD_OUTPUT = _with_basis(v3.ADD_OUTPUT)
+ADD_OUTPUT = _with_basis(v3.ADD_OUTPUT, 0)
+# goal-duplicates/1 (docs/changes/2026-11-12-goal-dedupe): an add stage may write nothing when every gap goal is
+# already asked by a question it was shown and only an interpretive caveat is left. The /3 shape still needs one.
+ADD_OUTPUT['properties']['questions']['minItems'] = 0
+GOAL_DUPLICATES = 'goal-duplicates/1'
 FIX_OUTPUT = _with_basis(v3.FIX_OUTPUT)
 SUPPLEMENT_OUTPUT = obj(rows=arr(obj(question_id=TEXT, decision=v3.SUPPLEMENT_OUTPUT['properties']['rows']['items']['properties']['decision'],
                                      point={'anyOf': [POINT, {'type': 'null'}]}, duplicate_of=v3._NULLABLE, reason=TEXT), 1))
@@ -115,8 +119,16 @@ def check_intake(value):
     return collect_basis(value['question_importance'], [q['question_id'] for q in value['bank']['questions']])
 
 
+def empty_added(value):
+    """An add output that writes no question (and so nothing a question would need)."""
+    return type(value) is dict and value.get('questions') == []
+
+
 def check_added(value, ctx, state=None):
     require(type(value) is dict and set(value) == set(ADD_OUTPUT['properties']), 'v4 add output: fields')
+    if empty_added(value):
+        require(all(value[k] == [] for k in ADD_OUTPUT['properties']), 'v4 add: an output without questions carries nothing else')
+        return value
     collect_basis(value['question_importance'], [q['question_id'] for q in value['questions']])
     v3.check_added(without_basis(value), ctx, state)
     return value
@@ -458,15 +470,25 @@ def missing_components(row, goal):
     return [c['component_id'] for c in goal['components'] if c['component_id'] not in union]
 
 
-def add_input(brief, bank, gaps, allowed_ids):
+def add_input(brief, bank, gaps, allowed_ids, rows=None):
     """C3 for /4: each gap goal carries only its unasked components (gaps: direction_id -> component ids).
-    A visual goal whose components are all asked but not through an image keeps its components."""
+    A visual goal whose components are all asked but not through an image keeps its components.
+
+    `rows` (goal-duplicates/1): the coverage rows by direction. Each goal then also carries `asked`: the questions
+    judged for it so far and what the judgment said of the components still missing, so the author sees that a
+    question already asks this goal and writes only what it leaves out (261111_02: P001, Q002 and Q068 are the same
+    question, written three times for one goal whose only gap was a caveat)."""
     value = v3.add_input(brief, bank, list(gaps), allowed_ids)
     for goal in value['goals']:
         keep = set(gaps[goal['direction_id']])
         if keep:
             goal['components'] = [c for c in goal['components'] if c['component_id'] in keep]
         goal['missing_component_ids'] = sorted(keep)
+        if rows is not None:
+            goal['asked'] = [{'question_id': e['question_id'],
+                              'components': [{k: p[k] for k in ('component_id', 'location', 'reason')}
+                                             for p in e['components'] if p['component_id'] in keep]}
+                             for e in rows[goal['direction_id']]['evidence']]
     return value
 
 

@@ -1,0 +1,45 @@
+{
+  "id": "2026-11-12-goal-dedupe",
+  "title": "Main-Quiz 같은 문항 반복 제거: 목표 전체 중복 판정·채울 수 없는 목표·같은 개념 띄우기",
+  "area": "generation",
+  "created_at": "2026-11-11T15:46:46.648717+00:00",
+  "required_checks": [
+    "regression",
+    "server"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T16:03:14.372021+00:00",
+      "evidence": "사용자 2026-11-12 채팅: 「생성기 중복 합치고, 러너는 지금 도는 거까지만 마무리하고 다시 돌려줄래? 얘네도 고쳐줘. (붙여넣기: 목표가 채워질 수 없게 적혔습니다 / 추가 출제가 같은 문항을 두 번 더 썼습니다 / 중복 판정이 이 셋을 한 번도 같이 보지 못했습니다) 그리고 다른 방향에서 같은 개념을 묻는 문제는 띄워줘.」",
+      "scope": "plan.md: v4 지시문 coverage·normalize·add, studyez_contracts/roots/generation_v4.py, quizbank/connection_generate_v4.py, server/app/root_learning/planning.py, 해당 검사·문서, PR·master 병합, 도는 강의가 끝난 뒤 러너 재설치·재가동. 공개 판 교체·재출제·모델 재생·DB 변경 제외",
+      "evidence_version": 2,
+      "source_hash": "762525fbedb2d4ee2cdfb600487ad6e2e3dd92a05425e1067bc46544ef0cb1a6",
+      "plan_hash": "ff3c3d535de18b3308eb333024ceb0346a2906d9eeeb50a105be07c75ac28b8a",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "2e762f32f210905fb29537e1faa2fac4f76f4e73aabb080b078fc03c9a3ccb1f"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T16:03:14.462742+00:00"
+}

@@ -11,7 +11,7 @@ from tests.root_support import setup, publish, start, view, action, document, PO
 client, user, SessionLocal = setup()
 from app.models.root_learning import RootEvent
 from app.root_learning import content
-from app.root_learning.planning import plan
+from app.root_learning.planning import plan, spread_directions
 from app.root_learning.policy import target_parameters
 from app.root_learning.state import replay, replay_tasks, summary
 from app.routes.root_learning import prior_exposure
@@ -60,11 +60,20 @@ def rated(task_id, direction_id, at, grade='independent', revision='v4a', **extr
 doc = v4_document()
 every = {t['task_id'] for t in doc['tasks']}
 
-# 1. Every prepared task is a candidate: the three D1 tasks each get scheduled, in plan order.
+# 1. Every prepared task is a candidate: the three D1 tasks each get scheduled. Tasks of one direction are not
+#    served back to back (docs/changes/2026-11-12-goal-dedupe): each direction's first task, then the second ones.
+SPREAD = ['task-q1', 'task-q2', 'task-q3', 'task-q4']
 first = plan(doc, [], every, NOW, POLICY)
-assert [t['task_id'] for t in first['tasks']] == [*D1_TASKS, 'task-q2'], first['tasks']
+assert [t['task_id'] for t in first['tasks']] == SPREAD, first['tasks']
+assert sorted(t['task_id'] for t in first['tasks']) == sorted([*D1_TASKS, 'task-q2'])     # the same tasks, another order
 assert first['newGoalQuota'] == 1 and first['unpreparedGoals'] == 0
-assert plan(doc, [], every - {'task-q3'}, NOW, POLICY)['tasks'][1]['task_id'] == 'task-q4'
+assert [t['task_id'] for t in plan(doc, [], every - {'task-q3'}, NOW, POLICY)['tasks']] == ['task-q1', 'task-q2', 'task-q4']
+# Only the order changes, and one task per direction is the given order.
+row = lambda task_id, direction_id: {'task_id': task_id, 'direction_id': direction_id}
+mixed = [row('a1', 'A'), row('a2', 'A'), row('a3', 'A'), row('b1', 'B'), row('c1', 'C'), row('c2', 'C')]
+assert [t['task_id'] for t in spread_directions(mixed)] == ['a1', 'b1', 'c1', 'a2', 'c2', 'a3']
+single = [row('a1', 'A'), row('b1', 'B'), row('c1', 'C')]
+assert spread_directions(single) == single and spread_directions([]) == []
 
 # 2. Rating one task leaves its siblings untouched; the direction is not recalled yet.
 events = rated('task-q1', 'D1', NOW)
@@ -73,7 +82,7 @@ assert set(tasks) == {'task-q1'} and tasks['task-q1']['rating'] == 'independent'
 assert directions['D1']['rating'] == 'independent' and not directions['D1']['recalled'] and directions['D1']['learned']
 assert rows[0]['learned'] and not rows[0]['recalled']
 later = plan(doc, events, every, NOW + timedelta(minutes=1), POLICY)['tasks']
-assert [t['task_id'] for t in later] == ['task-q3', 'task-q4', 'task-q2'], later      # unassessed siblings stay
+assert [t['task_id'] for t in later] == ['task-q3', 'task-q2', 'task-q4'], later      # unassessed siblings stay
 assert {t['reason'] for t in later} == {'미평가 과제'}
 assert summary(doc, events, every, NOW + timedelta(minutes=1), POLICY)['targets'][0]['status'] == '보완 필요'
 # A partial on another task makes the direction's rating the lower one; the first task's state is unchanged.
@@ -93,9 +102,9 @@ assert directions['D1']['due'] == min(tasks[t]['due'] for t in D1_TASKS)
 assert replay(doc, three, NOW + timedelta(minutes=1), POLICY) == (rows, directions)
 assert summary(doc, three, every, NOW + timedelta(minutes=1), POLICY)['recalled'] == 1
 assert plan(doc, three, every, NOW + timedelta(minutes=1), POLICY)['tasks'] == []
-# Next day each task is due on its own; all three D1 tasks come back in plan order.
+# Next day each task is due on its own; all three D1 tasks come back, spread the same way.
 due = plan(doc, three, every, NOW + timedelta(days=1), POLICY)['tasks']
-assert [t['task_id'] for t in due] == [*D1_TASKS, 'task-q2'] and {t['reason'] for t in due} == {'복습 확인'}
+assert [t['task_id'] for t in due] == SPREAD and {t['reason'] for t in due} == {'복습 확인'}
 
 # 4. prior_exposure: /4 counts only the same task; the older path still counts the direction's relations.
 q3 = next(q for q in doc['bank_snapshot']['questions'] if q['question_id'] == 'Q3')
@@ -128,6 +137,10 @@ assert session['count'] == 4 and session['task']['id'] == 'task-q1'
 assert action(client, sid, 'r1', 'reveal', attempted=True).status_code == 200
 assert action(client, sid, 'g1', 'rate', grade='independent').status_code == 200
 nxt = view(client, sid)
+assert nxt['task']['id'] == 'task-q2'                         # the other direction comes between the D1 siblings
+assert action(client, sid, 'r2', 'reveal', attempted=True).status_code == 200
+assert action(client, sid, 'g2', 'rate', grade='independent').status_code == 200
+nxt = view(client, sid)
 assert nxt['task']['id'] == 'task-q3' and nxt['task']['helped'] is False
 assert action(client, sid, 'r3', 'reveal', attempted=True).status_code == 200
 assert action(client, sid, 'g3', 'rate', grade='independent').status_code == 200
@@ -135,6 +148,7 @@ prints = task_fingerprints(doc)
 with SessionLocal() as db:
     assert db.get(RootEvent, ('a', 'g1')).payload['question_sha256'] == prints['task-q1']
 overview = client.get(BASE).json()
+# D1 and D2 belong to one goal: it is learned, and not recalled while task-q4 of D1 is unassessed.
 assert overview['summary']['learned'] == 1 and overview['summary']['recalled'] == 0
 
 # 7. Carry-over between /4 revisions keys on the question fingerprint: Q1 and Q3 unchanged carry,
