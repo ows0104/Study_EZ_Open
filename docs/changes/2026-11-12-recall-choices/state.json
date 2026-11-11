@@ -1,0 +1,19 @@
+{
+  "id": "2026-11-12-recall-choices",
+  "title": "Main-Quiz 단답·나열 선지 보기",
+  "area": "site",
+  "created_at": "2026-11-11T15:53:02.590805+00:00",
+  "required_checks": [
+    "web",
+    "regression"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T15:53:02.590831+00:00"
+}
