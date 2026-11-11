@@ -139,6 +139,15 @@ export function startOfWeek(value: Date) {
   return addDays(value, day === 0 ? 1 : 1 - day);
 }
 
+/** 하루가 바뀌는 시각. 한국 시간 새벽 4시이고 모든 「오늘」이 이것을 따른다(2026-11-11 사용자 지시). */
+export const DAY_START_HOUR = 4;
+
+/** 학습일(한국 시간, 새벽 4시 전은 전날)의 날짜 키 「YYYY-MM-DD」. 브라우저 시간대와 무관하다. */
+export function studyDayKey(now: Date | number = new Date()) {
+  const ms = typeof now === "number" ? now : now.getTime();
+  return new Date(ms + (9 - DAY_START_HOUR) * 3_600_000).toISOString().slice(0, 10);
+}
+
 export function toDateKey(value: Date) {
   const year = value.getFullYear();
   const month = String(value.getMonth() + 1).padStart(2, "0");

@@ -5,6 +5,7 @@ import { previewProviderLabels, previewProviders, type PreviewProvider } from ".
 import { CourseAliases } from "./CourseAliases";
 import { isUnconfirmed, isUnmatched, pending } from "./rows";
 import { lectureHref } from "../links";
+import { studyDayKey } from "../calendar/entries";
 
 /** 관리자가 채우는 다섯 칸. 순서가 곧 하는 순서다 — 앞 셋이 예습, 뒤 둘이 복습. */
 const checklistLabels: Record<ChecklistItem, string> = {
@@ -49,10 +50,9 @@ function phaseOf(first: string, last: string, today: string): Phase {
   return "running";
 }
 
-/** 로컬 자정 기준의 오늘. 서버가 아니라 **보는 사람의 날짜**로 센다. */
+/** 오늘. 한국 시간 새벽 4시에 바뀌는 학습일이다(2026-11-11 사용자 지시). */
 function todayISO(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return studyDayKey();
 }
 
 /** 날짜 사이의 거리를 재려고 일 단위로 편다. `YYYY-MM-DD`만 들어온다. */

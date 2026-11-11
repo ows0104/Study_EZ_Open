@@ -20,7 +20,7 @@ from app.routes import root_learning
 edge=datetime(2026,11,3,19,tzinfo=UTC)
 root_learning.now=lambda:edge-timedelta(seconds=1)
 assert view(client,new)['blocked'] is None
-assert client.get(BASE).json()['plan']['days']==2  # Nov 4 calendar date, Nov 3 activity day.
+assert client.get(BASE).json()['plan']['days']==3  # 03:59 KST Nov 4 is still the Nov 3 study day (2026-11-11: days count by 04:00 study day).
 root_learning.now=lambda:edge
 assert view(client,new)['blocked']
 assert action(client,new,'expired-at-four','skip').status_code==409

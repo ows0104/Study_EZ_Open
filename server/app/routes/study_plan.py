@@ -14,7 +14,7 @@ from app.database import get_db
 from app.models import BankState, Lecture, QuizBank, TimetableEvent
 from app.naming import normalize_stem
 from app.study_engine import empty_state, now_ms
-from app.study_engine.planning import KOREA, daily_plan
+from app.study_engine.planning import KOREA, daily_plan, day_start
 from app.study_engine.daily_queue import lecture_goal
 
 router = APIRouter()
@@ -33,7 +33,8 @@ def read_study_plan(target: int = Query(90, ge=50, le=100),
 
 def build_study_plan(target: int, subject: str | None, run_id: str | None,
                      user: CurrentUser, db: Session, now: int) -> dict:
-    today = datetime.fromtimestamp(now / 1000, KOREA).date()
+    # 「오늘」은 학습일(한국 새벽 4시 경계)이다(2026-11-11 사용자 지시).
+    today = datetime.fromtimestamp(day_start(now) / 1000, KOREA).date()
     events = db.scalars(select(TimetableEvent).order_by(TimetableEvent.date, TimetableEvent.start_time, TimetableEvent.id)).all()
     exams = [e for e in events if e.category == "exam" and "실습" not in e.title]
     upcoming = [e for e in exams if exam_time(e) > now]
