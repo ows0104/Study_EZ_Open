@@ -114,10 +114,15 @@ def run(packet, out, model, invoke, resume=None):
     # review-evidence/1 (docs/changes/2026-11-11-evidence-from-citations): a new run's item review names the notes
     # pages of each answer; an older ledger keeps reviewing without them.
     evidence_notes = v4.evidence_source(sources)
-    st = Stages(packet, out, model, invoke, resume, policy=POLICY, prompts=('v3', 'v4'),
-                fresh={'reviewEvidence': {'policy': v4.REVIEW_EVIDENCE, 'sourceId': evidence_notes['source_id']}} if evidence_notes else None)
+    # review-relations/1 (docs/changes/2026-11-11-place-by-review): a new run places each question by the map relations
+    # its item review names; the goal coverage judgment only finds what is not asked yet.
+    fresh = {'placement': {'policy': v4.REVIEW_PLACEMENT}}
+    if evidence_notes:
+        fresh['reviewEvidence'] = {'policy': v4.REVIEW_EVIDENCE, 'sourceId': evidence_notes['source_id']}
+    st = Stages(packet, out, model, invoke, resume, policy=POLICY, prompts=('v3', 'v4'), fresh=fresh)
     ledger = st.ledger
     evidence_on = ledger.get('reviewEvidence', {}).get('policy') == v4.REVIEW_EVIDENCE
+    placement = 'review' if ledger.get('placement') == {'policy': v4.REVIEW_PLACEMENT} else 'evidence'
     base = {k: packet[k] for k in ('title', 'scope', 'conceptMap', 'points', 'examDate')}
     base.update(lecture_id=packet['subject'] + '/' + packet['runId'], sources=sources,
                 preserved_scope=g.lecture_scope(packet['title'], packet['sources']))
@@ -162,7 +167,7 @@ def run(packet, out, model, invoke, resume=None):
     map_checks = [values[-1]]
 
     # 2a: off-goal questions → supplement points (no basis) ------------------
-    off_goal = v4.off_goal(bank, rows.values())
+    off_goal = v4.off_goal(bank, rows.values(), placement)
     supplement, out_of_scope = [], []
     if off_goal:
         ctx = v3.supplement_input(bank, off_goal, points_doc, page_counts)
@@ -257,6 +262,8 @@ def run(packet, out, model, invoke, resume=None):
         ctx = v4.with_importance(v3.review_input(S.bank, todo, S.conflicts), S.basis)
         if evidence_on:
             ctx['evidence_source'] = evidence_notes
+        if placement == 'review':
+            ctx['map_relations'] = v4.map_relations(brief, map_checks)
         value = stages.judged(name, ctx, lambda raw: v4.check_review_input(raw, ctx))
         by_id = {q['question_id']: q for q in S.bank['questions']}
         for r in value['reviews']:
@@ -393,11 +400,12 @@ def run(packet, out, model, invoke, resume=None):
     map_check['relation_checks'] = list(relation_seen.values())
     summary = ('root-generation/4: coverage (union of answered components), map check without importance, item review and '
                'per-conflict context judgments gathered by studyez_contracts.roots.generation_v4.assessment_raw; no judgment is filled in.')
-    raw = v4.assessment_raw(brief, bank, coverage_rows, map_check, review_rows, v3.context_summary(context), summary)
-    audit = v4.compile_assessment(brief, bank, v2.envelope(brief, bank, raw))
+    raw = v4.assessment_raw(brief, bank, coverage_rows, map_check, review_rows, v3.context_summary(context), summary, placement)
+    audit = v4.compile_assessment(brief, bank, v2.envelope(brief, bank, raw), placement)
     basis = {q['question_id']: basis[q['question_id']] for q in bank['questions']}
     doc, placed, proofs = v4.assemble(brief, bank, audit, coverage_rows, basis, profile,
-                                      revision=packet['revision'], title=packet['title'], exam_date=packet['examDate'])
+                                      revision=packet['revision'], title=packet['title'], exam_date=packet['examDate'],
+                                      placement=placement)
     ready_rows = v4.readiness(brief, coverage_rows, doc)
     covered = sum(1 for r in ready_rows if r['covered'])
     print(f"── 조립 예행: 목표 {len(ready_rows)}개 중 전부 출제됨 {covered}개 · 과제 {len(doc['tasks'])}개 · "
@@ -440,6 +448,7 @@ def run(packet, out, model, invoke, resume=None):
                   **({'contextRepairs': ledger['contextRepairs']} if ledger.get('contextRepairs') else {}),
                   **({'batchPhases': ledger['batchPhases']} if ledger.get('batchPhases') else {}),
                   **({'reviewEvidence': ledger['reviewEvidence'], 'citationAlignments': alignments} if evidence_on else {}),
+                  **({'placement': ledger['placement']} if placement == 'review' else {}),
                   **({'derivedPacket': map_tree.public(packet), 'auditOpen': packet['frontStages']['openPoints']}
                      if 'derivedFrom' in packet else {})}}
     v4.validate_result(result, packet)

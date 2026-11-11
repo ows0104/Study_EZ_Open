@@ -129,9 +129,38 @@ def check_fixed(value, ctx, state=None):
     return value
 
 
+# review-relations/1 (docs/changes/2026-11-11-place-by-review): the item review also names the map relations a question
+# recalls, and the question is placed by them; the goal coverage judgment only finds what is not yet asked.
+REVIEW_PLACEMENT = 'review-relations/1'
+RELATION_CLAIM = obj(relation_id=TEXT, part={'type': 'string', 'enum': ['whole', 'partial']}, reason=TEXT)
+
+
 def review_schema(ctx):
-    """The item-review output schema of this review input: with evidence pages when the input names a notes source."""
-    return ITEM_REVIEW_EVIDENCE_OUTPUT if ctx.get('evidence_source') else ITEM_REVIEW_OUTPUT
+    """The item-review output schema of this review input: with evidence pages when the input names a notes source,
+    with the recalled map relations when it lists the map relations."""
+    evidence, relations = bool(ctx.get('evidence_source')), 'map_relations' in ctx
+    if not relations:
+        return ITEM_REVIEW_EVIDENCE_OUTPUT if evidence else ITEM_REVIEW_OUTPUT
+    schema = copy.deepcopy(ITEM_REVIEW_EVIDENCE_OUTPUT if evidence else ITEM_REVIEW_OUTPUT)
+    item = schema['properties']['reviews']['items']
+    item['properties']['relations'] = arr(RELATION_CLAIM)
+    item['required'].append('relations')
+    return schema
+
+
+def map_relations(brief, map_checks):
+    """The review input's map relations: those the map check supported (an unreviewed relation cannot be tested) and
+    some goal carries (a question is placed on goals by them), each with its two concept labels and the fact it states.
+    The first judgment of a relation stands, as at assembly."""
+    status = {}
+    for m in map_checks:
+        for r in m['relation_checks']:
+            status.setdefault(r['relation_id'], r['status'])
+    labels = {c['concept_id']: c['label'] for c in brief['concepts']}
+    on_goals = {rid for t in brief['targets'] for d in t['directions'] for rid in d['relation_ids']}
+    return [{'relation_id': r['relation_id'], 'from': labels.get(r['from_id'], r['from_id']), 'to': labels.get(r['to_id'], r['to_id']),
+             'kind': r['kind'], 'condition': r.get('condition', '')}
+            for r in brief['relations'] if status.get(r['relation_id']) == 'supported' and r['relation_id'] in on_goals]
 
 
 def check_review_input(value, ctx):
@@ -140,7 +169,13 @@ def check_review_input(value, ctx):
     if source:
         for r in value['reviews']:
             check_evidence(r['evidence'], source['page_count'], r['question_id'])
-    v3.check_review_input({'reviews': [{k: v for k, v in r.items() if k not in ('importance_note', 'evidence')}
+    if 'map_relations' in ctx:
+        known = {r['relation_id'] for r in ctx['map_relations']}
+        for r in value['reviews']:
+            ids = [c['relation_id'] for c in r['relations']]
+            require(len(ids) == len(set(ids)) and set(ids) <= known,
+                    f"v4 review: {r['question_id']} names a relation that is not a supported map relation, or one twice")
+    v3.check_review_input({'reviews': [{k: v for k, v in r.items() if k not in ('importance_note', 'evidence', 'relations')}
                                        for r in value['reviews']]}, ctx)
     return value
 
@@ -393,14 +428,20 @@ def check_coverage(value, goals, questions):
     return value
 
 
-def off_goal(bank, coverage_rows):
+def off_goal(bank, coverage_rows, placement='evidence'):
     """Questions no goal can take: no evidence row of a judged goal names a tested relation for them.
+
+    review-relations/1 (2026-11-11-place-by-review): the item review places by relation after this step, so only a
+    question the coverage judgment never looked at for any goal is off the map here; one it judged without a relation
+    (part of a bundled goal, the reverse direction, an inference) waits for its review instead of being turned into a
+    new goal or dropped as out of scope before anyone reviewed it.
 
     The same rule the assembly places by (`assessment_raw` claims the tested relations of evidence rows), so a
     question is either placed or sent to the supplement stage for a new point and goal. Before
     2026-11-11-place-by-evidence the supplement took only questions with no evidence row at all; in the 261102_02
     /4 trial 10 questions had rows without relations and fell between the two."""
-    placeable = {e['question_id'] for r in coverage_rows if r['status'] != 'unknown' for e in r['evidence'] if e['tested_relation_ids']}
+    placeable = {e['question_id'] for r in coverage_rows if r['status'] != 'unknown' for e in r['evidence']
+                 if e['tested_relation_ids'] or placement == 'review'}
     return [q['question_id'] for q in bank['questions'] if q['question_id'] not in placeable]
 
 
@@ -453,7 +494,8 @@ def not_ready(brief, coverage_rows, reviews):
 # How a question is placed on a goal. 'evidence' is the rule since 2026-11-11-place-by-evidence; 'answered' is the
 # assembly /4 results were made and published with before it (runner 3b17af44 and earlier). Both stay valid so a
 # published result can still be re-imported (docs/changes/2026-11-11-v4-legacy-placement).
-PLACEMENTS = ('evidence', 'answered')
+PLACEMENTS = ('evidence', 'answered', 'review')
+# 'review' (review-relations/1): a question claims the relations its item review names, for every goal that has them.
 
 
 def assessment_raw(brief, bank, coverage_rows, map_check, reviews, context, summary, placement='evidence'):
@@ -466,6 +508,7 @@ def assessment_raw(brief, bank, coverage_rows, map_check, reviews, context, summ
     its components (R5). Only the checks use it, for results made before the change."""
     require(placement in PLACEMENTS, 'v4 assembly: unknown placement rule')
     dirs = v3._directions(brief)
+    parts = {}
     rows = index_by(coverage_rows, 'direction_id')
     require(set(rows) == set(dirs), 'v4 assembly: every goal needs a coverage judgment')
     qs = {q['question_id'] for q in bank['questions']}
@@ -481,14 +524,24 @@ def assessment_raw(brief, bank, coverage_rows, map_check, reviews, context, summ
         for e in row['evidence']:
             require(e['question_id'] in qs, 'v4 assembly: coverage names a missing question')
             evidence.append({k: copy.deepcopy(e[k]) for k in ('question_id', 'components', 'visual_verdict', 'reason')} | {'direction_id': did})
-            if placement == 'evidence' or answered(e):
+            if placement == 'evidence' or placement == 'answered' and answered(e):
                 for rid in e['tested_relation_ids']:
                     claims.setdefault((e['question_id'], rid), set()).add(did)
+    if placement == 'review':
+        # Placement follows the item review's relations, independent of the goal coverage judgment (R2).
+        for qid, r in reviews.items():
+            require('relations' in r, f'v4 assembly: {qid} item review names no map relations')
+            for claim in r['relations']:
+                goals = {did for did, (_, d) in dirs.items() if claim['relation_id'] in d['relation_ids']}
+                if goals:
+                    claims[(qid, claim['relation_id'])] = goals
+                    parts[(qid, claim['relation_id'])] = claim['part']
     question_reviews = []
     for q in bank['questions']:
         qid = q['question_id']
         r = reviews[qid]
-        relations = [{'relation_id': rid, 'role': 'tested', 'direction_ids': sorted(ds), 'reason': 'v4 coverage judgment'}
+        relations = [{'relation_id': rid, 'role': 'tested', 'direction_ids': sorted(ds),
+                      'reason': f'v4 item review ({parts[(cq, rid)]})' if placement == 'review' else 'v4 coverage judgment'}
                      for (cq, rid), ds in sorted(claims.items()) if cq == qid]
         question_reviews.append({'question_id': qid, 'verdict': r['verdict'], 'note': r['note'] or 'v4 문항 검토: 지적 없음',
                                  'suggested_answer': r['suggested_answer'], 'relations': relations})
@@ -539,10 +592,31 @@ def compile_assessment(brief, bank, raw, placement='evidence'):
     if not recall.enabled(brief):
         return _compile(brief, bank, raw, placement)
     projected, proof, groups = recall.project_assessment(brief, bank, raw)
+    answered_units = _answered_units(proof, groups) if placement == 'review' else None
     audit = _compile(projected, bank, proof, placement)
     audit['assessment'] = copy.deepcopy(raw)
-    audit['goal_coverage'] = recall.summarize(groups, audit)
+    audit['goal_coverage'] = recall.summarize(groups, audit, answered_units)
     return audit
+
+
+def _answered_units(proof, groups):
+    """R5 (review rule): a claim on a goal split into recall units keeps the units the question answers a component
+    of; only when it answers none of that goal's units does it keep them all. Returns the answered (question, unit)
+    pairs, which alone count as confirmed. `proof` is the projected assessment and is narrowed in place."""
+    a = proof['assessment']
+    answered_units = {(e['question_id'], e['direction_id']) for e in a['direction_evidence'] if answered(e)}
+    parent = {u: g['direction_id'] for g in groups for u in g['unit_direction_ids']}
+    # The units a question answers, per goal: taken over all its claims, so a unit another relation reaches is still
+    # dropped when the question answers a different unit of that goal (review 2026-11-11).
+    by_goal = {}
+    for qid, unit in answered_units:
+        by_goal.setdefault((qid, parent.get(unit, unit)), set()).add(unit)
+    for row in a['question_reviews']:
+        qid = row['question_id']
+        for claim in row['relations']:
+            claim['direction_ids'] = [d for d in claim['direction_ids']
+                                      if not by_goal.get((qid, parent.get(d, d))) or d in by_goal[(qid, parent.get(d, d))]]
+    return answered_units
 
 
 def _compile(brief, bank, raw, placement):
@@ -580,9 +654,13 @@ def _compile(brief, bank, raw, placement):
             require(bool(ix) == (part['location'] == 'answer'), 'assessment4: only actual answer units are recalled evidence')
         # Placement follows the evidence row (2026-11-11-place-by-evidence), not the answered parts; the older
         # rule kept only the rows that answer some component (a unit of a recall goal included).
-        if placement == 'evidence' or any(p['location'] == 'answer' for p in parts.values()):
+        if placement == 'evidence' or placement == 'answered' and any(p['location'] == 'answer' for p in parts.values()):
             asks.add(key)
         evid[key] = row
+    if placement == 'review':
+        # The review rule places by the claims themselves; coverage evidence rows only report completeness.
+        asks = {(row['question_id'], did) for row in a['question_reviews'] for claim in row['relations']
+                if claim['role'] == 'tested' for did in claim['direction_ids'] if did in dirs}
     for row in a['issues']:
         require(set(row['question_ids']) <= set(qs) and set(row['direction_ids']) <= set(dirs), 'assessment4: issue references missing objects')
         if row['kind'] == 'required_gap':
@@ -672,23 +750,28 @@ def unit_parents(brief):
     return {u: g['direction_id'] for g in groups for u in g['unit_direction_ids']}
 
 
-def place(brief, review, raw, parents=None):
+def place(brief, review, raw, parents=None, placement='evidence'):
     """The direction of each mapped question: most components answered there, then map order.
-    `parents`: recall-unit id -> the parent id the raw evidence uses (identity without recall units)."""
+    `parents`: recall-unit id -> the parent id the raw evidence uses (identity without recall units).
+    Review rule: a goal the question recalls a relation of whole comes before one it recalls only part of."""
     order = {d['direction_id']: i for i, d in enumerate(d for t in brief['targets'] for d in t['directions'])}
     count = {(e['question_id'], e['direction_id']): len(answered(e)) for e in raw['direction_evidence']}
+    whole = {(r['question_id'], c['relation_id']) for r in raw['question_reviews'] for c in r['relations']
+             if placement == 'review' and c['reason'].startswith('v4 item review (whole)')}
     parents = parents or {}
     best = {}
     for m in review['mappings']:
         if not m['tested_relation_ids']:
             continue
-        key = (-count.get((m['question_id'], parents.get(m['direction_id'], m['direction_id'])), 0), order[m['direction_id']])
+        first = 0 if placement != 'review' or any((m['question_id'], rid) in whole for rid in m['tested_relation_ids']) else 1
+        key = (first, -count.get((m['question_id'], parents.get(m['direction_id'], m['direction_id'])), 0), order[m['direction_id']])
         if m['question_id'] not in best or key < best[m['question_id']][0]:
             best[m['question_id']] = (key, m['direction_id'])
     return {q: did for q, (_, did) in best.items()}
 
 
-def make_document(brief, bank, audit, coverage_rows, *, revision, title, exam_date, snapshot=None, importance=None):
+def make_document(brief, bank, audit, coverage_rows, *, revision, title, exam_date, snapshot=None, importance=None,
+                  placement='evidence'):
     """roots/1 document of a /4 run and its placement record {mergedDuplicates, unplacedQuestions}.
 
     `snapshot`/`importance` as in /2 (container concepts, question-basis importance)."""
@@ -698,7 +781,7 @@ def make_document(brief, bank, audit, coverage_rows, *, revision, title, exam_da
         brief = recall.project_brief(brief)[0]
     review = audit['review']
     verdict = {r['question_id']: r['verdict'] for r in audit['question_checks']['reviews']}
-    where = place(brief, review, audit['assessment']['assessment'], parents)
+    where = place(brief, review, audit['assessment']['assessment'], parents, placement)
     weighed = snapshot if snapshot is not None else bank
     merged = merged_duplicates(coverage_rows, weighed, verdict, set(where))
     gone = {m['question_id'] for m in merged}
@@ -708,7 +791,8 @@ def make_document(brief, bank, audit, coverage_rows, *, revision, title, exam_da
         if verdict[qid] != 'ok' or qid in gone:
             continue
         if qid not in where:
-            unplaced.append({'question_id': qid, 'reason': 'no-goal: 어느 목표의 component도 답으로 묻지 않거나 그 관계가 검토되지 않았다'})
+            unplaced.append({'question_id': qid, 'reason': 'no-relation: 문항 검토가 이 문항이 묻는 지도 관계를 적지 않았다'
+                             if placement == 'review' else 'no-goal: 어느 목표의 component도 답으로 묻지 않거나 그 관계가 검토되지 않았다'})
             continue
         candidates.append({'task_id': 'task-' + document_hash([qid, where[qid]])[:24], 'question_id': qid, 'direction_id': where[qid]})
     order = v2.graph_order(bank)
@@ -774,14 +858,15 @@ def notebook_profile(packet, meta):
     return points['notebook_profile']
 
 
-def assemble(brief, reviewed, audit, coverage_rows, basis, profile, *, revision, title, exam_date):
+def assemble(brief, reviewed, audit, coverage_rows, basis, profile, *, revision, title, exam_date, placement='evidence'):
     """Importance from the question basis, container concepts, then the /4 document (one function for the
     generator and the consumer, so both build the same thing)."""
     table = question_table(basis, profile, reviewed)
     snapshot, projection = v2.project_container_concepts(reviewed)
     snapshot, proof = project_importance(snapshot, table)
     doc, placed = make_document(brief, reviewed, audit, coverage_rows, revision=revision, title=title, exam_date=exam_date,
-                                snapshot=snapshot, importance=target_importance(brief, audit['review'], reviewed, table))
+                                snapshot=snapshot, importance=target_importance(brief, audit['review'], reviewed, table),
+                                placement=placement)
     return doc, placed, {'bankProjection': projection, 'importanceProjection': proof, 'importanceWarnings': importance_warnings(table)}
 
 
@@ -792,19 +877,34 @@ def _placement4(value, brief, reviewed, meta):
     assembly of the same judgments, and everything after it is re-derived from it."""
     args = (brief, reviewed, meta['coverage'], meta['mapCheck'], meta['itemReviews'],
             v3.context_summary(meta['clinicalContext']), meta['sourceAssessment']['summary'])
-    gathered = [p for p in PLACEMENTS if assessment_raw(*args, placement=p) == meta['sourceAssessment']]
+    if 'placement' in meta:
+        # review-relations/1: the run names its rule; the relations it placed by are recorded review judgments.
+        require(meta['placement'] == {'policy': REVIEW_PLACEMENT}, 'result4: unknown placement policy')
+        judged = {}
+        for e in meta['verdictLedger']:
+            if e['kind'] == 'item':
+                judged.setdefault(e['key'], []).append(e['value'])
+        for r in meta['itemReviews']:
+            require('relations' in r, f"result4: {r['question_id']} item review names no map relations")
+            require(r in judged.get(r['question_id'], []), f"result4: {r['question_id']} item review is not a recorded judgment")
+        rules = ['review']
+    else:
+        rules = [p for p in PLACEMENTS if p != 'review']
+    gathered = [p for p in rules if assessment_raw(*args, placement=p) == meta['sourceAssessment']]
     require(gathered, 'result4: assessment is not the gathered judgments')
     envelope = v2.envelope(brief, reviewed, meta['sourceAssessment'])
-    require(any(value['sourceAudit'] == compile_assessment(brief, reviewed, envelope, p) for p in gathered),
-            'result4: audit is not the compile')
+    compiled = [p for p in gathered if value['sourceAudit'] == compile_assessment(brief, reviewed, envelope, p)]
+    require(compiled, 'result4: audit is not the compile')
+    return compiled[0]
 
 
 def _judgments4(value, packet, brief, reviewed, meta, doc):
-    _placement4(value, brief, reviewed, meta)
+    placement = _placement4(value, brief, reviewed, meta)
     require(meta['notReady'] == not_ready(brief, meta['coverage'], meta['itemReviews']), 'result4: not-ready goals differ')
     profile = notebook_profile(packet, meta)
     again, placed, proofs = assemble(brief, reviewed, value['sourceAudit'], meta['coverage'], meta['questionImportance'], profile,
-                                     revision=packet['revision'], title=packet['title'], exam_date=packet['examDate'])
+                                     revision=packet['revision'], title=packet['title'], exam_date=packet['examDate'],
+                                     placement=placement)
     require(proofs['bankProjection'] == meta.get('bankProjection') and proofs['importanceProjection'] == meta.get('importanceProjection'),
             'result4: projections differ')
     require(again == doc, 'result4: the document is not the assembly of the reviewed judgments')

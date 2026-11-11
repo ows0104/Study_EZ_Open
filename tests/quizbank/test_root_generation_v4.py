@@ -44,9 +44,10 @@ class Model:
     """D1 is asked by both Q1 and Q2 (one asks it whole, one too); D2 has no question until an add stage writes Q003.
     `duplicate`: the coverage judgment calls Q1 and Q2 the same recall in other words."""
 
-    def __init__(self, duplicate=False, design_doubt=('Q1',)):
+    def __init__(self, duplicate=False, design_doubt=('Q1',), relations=None):
         self.calls, self.inputs = [], {}
         self.duplicate, self.design_doubt = duplicate, set(design_doubt)
+        self.relations = relations  # review-relations/1: question -> [(relation_id, part)] the item review names
 
     def __call__(self, stage, ctx, material, model):
         self.calls.append(stage)
@@ -87,12 +88,18 @@ class Model:
         if stage.startswith('v4-review'):
             first = stage.endswith('-0')
             assert {r['question_id'] for r in ctx['question_importance']} == {q['question_id'] for q in ctx['questions']}
-            return {'reviews': [{'question_id': q['question_id'], 'verdict': 'ok',
-                                 'design': 'doubt' if first and q['question_id'] in self.design_doubt else 'ok',
-                                 'note': '', 'suggested_answer': '', 'fix': '', 'importance_note': '',
-                                 'prerequisite_checks': [{'prerequisite_id': p, 'status': 'supported', 'reason': 'x'}
-                                                         for p in q.get('prerequisites', [])]}
-                                for q in ctx['questions']]}, {}
+            reviews = [{'question_id': q['question_id'], 'verdict': 'ok',
+                        'design': 'doubt' if first and q['question_id'] in self.design_doubt else 'ok',
+                        'note': '', 'suggested_answer': '', 'fix': '', 'importance_note': '',
+                        'prerequisite_checks': [{'prerequisite_id': p, 'status': 'supported', 'reason': 'x'}
+                                                for p in q.get('prerequisites', [])]}
+                       for q in ctx['questions']]
+            if 'map_relations' in ctx:
+                # review-relations/1: the same relations the coverage judgment names (Q1/Q2 recall R1, Q003 R2).
+                recalls = self.relations or {'Q1': [('R1', 'whole')], 'Q2': [('R1', 'whole')], 'Q003': [('R2', 'whole')]}
+                for r in reviews:
+                    r['relations'] = [{'relation_id': rid, 'part': part, 'reason': 'Synthetic'} for rid, part in recalls.get(r['question_id'], [])]
+            return {'reviews': reviews}, {}
         if stage.startswith('v4-fix'):
             qs = []
             for q in ctx['questions']:
@@ -109,10 +116,24 @@ class Model:
         raise AssertionError(stage)
 
 
-def run(tmp_path, model=None):
+def run(tmp_path, model=None, placement='review'):
+    """`placement=None` runs as a ledger made before review-relations/1 (no placement key: the evidence rule)."""
     tmp_path.mkdir(exist_ok=True)
     p = packet(tmp_path)
     model = model or Model()
+    if placement is None:
+        from quizbank import connection_generate_v4 as gen
+        from quizbank.connection_generate_v3 import Stages
+        fresh_stages = gen.Stages
+
+        class Legacy(Stages):
+            def __init__(self, *a, fresh=None, **kw):
+                super().__init__(*a, fresh={k: v for k, v in (fresh or {}).items() if k != 'placement'}, **kw)
+        gen.Stages = Legacy
+        try:
+            return p, model, g.run(p, tmp_path / 'out', invoke=model)
+        finally:
+            gen.Stages = fresh_stages
     return p, model, g.run(p, tmp_path / 'out', invoke=model)
 
 
@@ -208,7 +229,9 @@ class NoRelationModel(Model):
 
 
 def test_a_question_reviewed_without_a_relation_gets_a_supplement_goal(tmp_path):
-    p, model, result = run(tmp_path, NoRelationModel())
+    """The evidence rule (results and ledgers made before review-relations/1): the supplement takes a question judged
+    without a relation. A ledger without the placement key keeps that rule."""
+    p, model, result = run(tmp_path, NoRelationModel(), placement=None)
     assert consume(result, p) == result['document']
     assert 'v4-supplement' in model.calls and [d['decision'] for d in result['manifest']['supplement']] == ['point']
     placed = {t['question_id']: t['direction_id'] for t in result['document']['tasks']}

@@ -11,6 +11,11 @@ root-generation/4 단계다(docs/changes/2026-11-10-root-generation-3, docs/chan
   - 한 쪽으로 증명되면 mode=single(1쪽), 정답의 필수 부분이 여러 쪽에 나뉠 때만 linked(2쪽 이상), 필기에서 찾지 못하면 unresolved(0쪽)다.
   - 강의 슬라이드 쪽과 필기 요약 쪽을 가리지 않는다. 쪽마다 evidence에 그 쪽의 근거를 한 줄로 쓴다.
   - verdict·design 판정과는 별개다.
+- relations: input.json에 map_relations가 있을 때만 쓴다(없으면 출력 스키마에도 없다). 이 문항의 답이 실제로 회상시키는 지도 관계(map_relations의 relation_id)를 모두 적는다. 문항은 이 관계로 지도에 배치된다.
+  - 관계 사실(condition) 전체를 답으로 회상시키면 part=whole, 일부만이면 partial이다.
+  - 관계의 다른 끝에서 거꾸로 묻거나, 그 관계를 써서 판단·추론하게 해도 그 관계다.
+  - 발문에 이미 주어진 사실만으로 답이 나오는 관계, 해설에만 나오는 관계는 적지 않는다.
+  - 어느 관계도 회상시키지 않으면 []다. 목표 커버·완결성은 판정하지 않는다(커버 단계가 따로 본다).
 - 이 단계는 목표 커버·관계·중요도를 판정하지 않는다. questions의 cloze {정답} 표기는 저작 표기이며 발문 제공이 아니다.
 
 ## 옮긴 규칙 (source-v2.md)
