@@ -25,6 +25,8 @@ validation과 repairReasons의 「문항 품질」 항목은 이 기준의 측�
 
 importanceTable이 있으면 문항마다 point_ids에 이 문항이 실제로 회상시키는 출제 포인트 ID(brief points)를 쓴다. 이 경우 tier·importance는 importanceTable에 계산된 그 포인트의 값을 옮긴다. 조립할 때 포인트 근거로 다시 계산되므로 임의로 올리거나 내리지 않는다. 근거 판정은 포인트 추출과 원본 대조의 몫이다. brief targets의 importance(세 축)는 받은 그대로 둔다. 조립 때 포인트 근거로 계산하므로 근거를 옮겨 적지 않는다. 문항 수와 깊이는 포인트의 등급을 참고해 정한다. exam_exclusion(출제 제외) 포인트는 채점 문항으로 만들지 않는다.
 
+이 단계의 출력 문항·개념에는 importance(2~5)만 쓰고 tier 칸은 쓰지 않는다. tier는 코드가 importance로 채운다(5=Essential, 4=Core, 3=Important, 2=Optional). 위 문단의 tier·importance는 importance 하나로 옮긴다.
+
 정답과 answer_units는 발문이 실제 요구한 채점 내용이다. 주의사항·일반화 한계는 필요한 짧은 해설로 설명한다. 한계를 판단할 학습 가치가 있으면 구체적 조건이나 사례로 묻고, 일반적인 '이것만으로 확정할 수 있는가'를 붙여 정오를 암시하지 않는다. 기출은 연결·혼동 지점을 고르는 근거이며 학생에게는 독립적으로 이해되는 의학 질문을 제시한다. 연도/번호/기출 정답 설명은 근거 기록에 둔다.
 
 prerequisites는 실제 필요한 문항만 연결한다. 순환·없는 ID·목록 전체의 불필요한 선행 잠금을 점검하고 기존 강의 흐름을 유지한다.
