@@ -7,6 +7,8 @@ legends, colours and stamps differ by writer, so they are cues for the extractor
 """
 from __future__ import annotations
 
+import json
+
 POLICY = "importance-basis/1"
 BANK_IMPORTANCE = {"Essential": 5, "Core": 4, "Important": 3, "Optional": 2}  # bank 3.3
 LABEL = {"Essential": "Must-Know", "Core": "Core", "Important": "Important", "Optional": "Optional"}
@@ -127,6 +129,18 @@ def _ref(r, quote, page_counts):
     return {"source_id": r["source_id"], "pages": pages, "locator": (quote.strip() + " — " + where) if quote.strip() else where}
 
 
+def _unique(refs):
+    """Each reference once, in first-seen order. An authoring basis can name the same page twice (2026-11-11 아데노·
+    폭스: {S1, [15]} twice), and the review document rejects repeated entries."""
+    seen, out = set(), []
+    for r in refs:
+        key = json.dumps(r, sort_keys=True, ensure_ascii=False)
+        if key not in seen:
+            seen.add(key)
+            out.append(r)
+    return out
+
+
 def target_axes(table, point_ids, page_counts=None):
     """The three review axes of a learning target from its points' bases (no `unreviewed`).
 
@@ -141,7 +155,7 @@ def target_axes(table, point_ids, page_counts=None):
                 if row["kind"] in kinds:
                     evidence.append({"kind": REVIEW_KIND.get(row["kind"], "teaching_emphasis"),
                                      "reason": f"{pid} {row['kind']}: {row['reason']}",
-                                     "refs": [_ref(r, row["quote"], page_counts) for r in row["refs"]]})
+                                     "refs": _unique([_ref(r, row["quote"], page_counts) for r in row["refs"]])})
         excluded = [pid for pid in point_ids if rows[pid]["rule"] == "exclusion"]
         # Points: one excluded point marks the target. Questions: only when every question is excluded, since
         # several questions of one target can ask different parts of it.
