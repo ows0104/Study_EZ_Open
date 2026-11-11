@@ -4,7 +4,9 @@ const fs=require('node:fs');const path=require('node:path');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const url=process.env.ROOT_TEST_URL||'http://127.0.0.1:5193/tests/root-learning.html';
 const ratings=['Again','Hard','Good','Easy'];
-async function contextFor(browser,options){const context=await browser.newContext(options);context.setDefaultTimeout(15000);return context;}
+// 기존 검사는 문항 타이머(기본 켜짐)를 끄고 돈다. 타이머 검사만 {timer:true}로 켠다.
+async function contextFor(browser,{timer,...options}={}){const context=await browser.newContext(options);context.setDefaultTimeout(15000);
+ if(!timer)await context.addInitScript(()=>localStorage.setItem('studyez:quiz-timer','off'));return context;}
 async function enabled(page,name){await page.getByRole('button',{name,exact:false}).waitFor();await page.waitForFunction(name=>[...document.querySelectorAll('button')].some(b=>b.textContent.startsWith(name)&&!b.disabled),name);}
 async function allRatings(page){for(const r of ratings){await enabled(page,r);assert.equal(await page.getByRole('button',{name:new RegExp('^'+r)}).isEnabled(),true);}}
 async function screenshot(page,name){if(process.env.ROOT_TEST_OUTPUT){fs.mkdirSync(process.env.ROOT_TEST_OUTPUT,{recursive:true});await page.screenshot({path:path.join(process.env.ROOT_TEST_OUTPUT,name+'.png'),fullPage:true});}}
@@ -206,6 +208,33 @@ test('clicked toggles stay the default after reload: menu collapse and map quest
    assert.equal(await page.getByRole('button',{name:'연결선 숨기기'}).getAttribute('aria-pressed'),'true');
    await page.getByRole('button',{name:'문항 접기'}).click();await page.reload();await enabled(page,'답 보기');await openMap();
    assert.equal(await page.getByRole('button',{name:'문항 펼치기'}).getAttribute('aria-pressed'),'false');
+   assert.deepEqual(errors,[]);
+ }finally{await browser.close();}
+});
+
+test('quiz timer: on by default, Tab pauses, question 0s reveals, answer 40s rates Again, switch off persists',async()=>{
+ const browser=await chromium.launch({headless:true,channel:'chrome'});const context=await contextFor(browser,{timer:true,extraHTTPHeaders:{'X-Root-Test-User':'timer-user'}});
+ await context.route('**/api/me',r=>r.fulfill({json:{id:'a',email:'a@example.com',isApproved:true,isAdmin:false}}));
+ const page=await context.newPage(),errors=[],events=[];page.on('pageerror',e=>errors.push(e.message));
+ await context.route('**/api/root-learning/sessions/*/events',route=>{events.push(route.request().postDataJSON());return route.continue();});
+ await page.clock.install();
+ try{
+   await page.goto(url);await page.getByRole('button',{name:'오늘 학습 시작',exact:true}).click();await enabled(page,'답 보기');
+   const left=page.getByRole('timer');const sw=page.getByRole('switch',{name:'타이머'});
+   assert.equal(await sw.getAttribute('aria-checked'),'true');
+   const first=Number((await left.textContent()).replace(/\D/g,''));assert.ok([20,30,40].includes(first),'question seconds by format');
+   await page.keyboard.press('Tab');await page.clock.runFor(first*1000+5000);
+   assert.match(await left.getAttribute('aria-label'),/^일시정지/);assert.equal(events.filter(e=>e.kind==='reveal').length,0,'paused timer never reveals');
+   await page.keyboard.press('Tab');await page.clock.runFor(first*1000+500);
+   await allRatings(page);const reveal=events.find(e=>e.kind==='reveal');assert.equal(reveal.attempted,true);
+   assert.match(await left.textContent(),/^40초$/);await screenshot(page,'quiz-timer-answer');
+   await page.clock.runFor(40500);await page.waitForFunction(()=>!document.querySelector('.quiz-grade'));
+   const rate=events.find(e=>e.kind==='rate');assert.equal(rate.selfRating,'Again');
+   await enabled(page,'답 보기');
+   await sw.click();assert.equal(await sw.getAttribute('aria-checked'),'false');assert.equal(await left.count(),0);
+   assert.equal(await page.evaluate(()=>localStorage.getItem('studyez:quiz-timer')),'off');
+   await page.clock.runFor(60000);assert.equal(events.filter(e=>e.kind==='reveal').length,1,'switched-off timer never reveals');
+   await page.reload();assert.equal(await page.getByRole('switch',{name:'타이머'}).getAttribute('aria-checked'),'false');
    assert.deepEqual(errors,[]);
  }finally{await browser.close();}
 });
