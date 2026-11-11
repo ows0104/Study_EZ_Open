@@ -33,12 +33,72 @@
       "release_hash": "d7d96c4c51f88b888708b065d2b5cacc2ec353beb4dd686f69ad66287b92104b"
     }
   },
-  "checks": [],
-  "review": null,
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-11T07:25:35.759861+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests",
+        "studyez_contracts",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--deselect",
+        "tests/runner/test_desktop_control.py::test_shortcut_installer_supports_korean_filename_in_windows_powershell"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "3ff8f14fda4c448cfc0f9d7700952bb80f6ed544fc8c7215153102d1026802dc",
+      "plan_hash": "ee3d9db9d5418affc55a80b74d8d649bfe1c34901a50c20fa794572992dc7b24",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-11-v4-normalize-components/1794381616252905600-regression.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-11T07:25:42.084631+00:00",
+    "summary": "경계: /4 normalize 지시문 선택만(task_for, _pipeline_version). /2·/3·버전 없는 호출은 extract-v2.md 그대로임을 검사로 고정. 스키마·수용 검사·누락 점검 규칙 불변. 재생 1회(261113_01): 방향 140→98, component 1개짜리 140→38, 첫 점검 missing 112→68, 이름만 끼운 관계 cue 37→0. 남은 위험: 표본 1회, 주의 문구 component 13/178 잔존, 추가·검토까지 끝까지 돌리지 않음, /4 identity 변경으로 기존 실패 실행 이어 가기는 --resume 필요.",
+    "evidence_version": 2,
+    "source_hash": "3ff8f14fda4c448cfc0f9d7700952bb80f6ed544fc8c7215153102d1026802dc",
+    "plan_hash": "ee3d9db9d5418affc55a80b74d8d649bfe1c34901a50c20fa794572992dc7b24",
+    "inputs": [
+      ".github",
+      "content",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "uv.lock"
+    ]
+  },
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-11T07:07:45.207358+00:00"
+  "updated_at": "2026-11-11T07:25:42.163127+00:00"
 }
