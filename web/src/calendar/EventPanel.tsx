@@ -41,13 +41,16 @@ export function EventPanel({
   entry,
   info,
   onClose,
+  initialLecture = 0,
 }: {
   entry: CalendarEntry;
   info?: DisplayInfo;
   onClose: () => void;
+  /** 처음 고를 강의(한 칸에 강의가 여럿일 때). 강의 목록이 누른 행의 강의로 연다. */
+  initialLecture?: number;
 }) {
   const panel = useRef<HTMLElement>(null);
-  const [chosen, setChosen] = useState(0);
+  const [chosen, setChosen] = useState(initialLecture);
   const lecture: LectureRef | undefined = entry.lectures[chosen];
   const { detail, error } = useLectureDetail(lecture);
 

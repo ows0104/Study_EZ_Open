@@ -85,9 +85,11 @@ def overview_data(db, row, user, when):
         RootSession.subject == row.subject, RootSession.run_id == row.run_id, RootSession.revision == row.revision,
         RootSession.day == policy.study_day(when, configured).isoformat()).order_by(RootSession.created_at.desc())).all()
     pending = next((s for s in sessions if s.policy == configured and s.state['index'] < len(s.tasks)), None)
+    planned = planning.plan(row.document, events, available, when, configured)
     return {'revision': row.revision, 'title': row.document['title'], 'policyReady': True, 'policy': configured,
             'scope': content.learner_scope(row.document), 'summary': state.summary(row.document, events, available, when, configured),
-            'plan': planning.plan(row.document, events, available, when, configured),
+            'plan': planned,
+            'questionProgress': state.question_progress(row.document, events, available, when, configured, planned),
             'sessionId': pending.id if pending else None, 'preparationProblems': len(problems)}
 
 

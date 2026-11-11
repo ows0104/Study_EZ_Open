@@ -1,7 +1,7 @@
 """Replay immutable events; revealing an answer never implies successful recall."""
 from datetime import timedelta
 from .policy import (instant, study_day, day_start, transition, effective_due, GRADE_RATING, LEGACY_MASTERY,
-                     next_mastery, target_due, target_retention)
+                     next_mastery, target_due, target_retention, utc)
 
 
 def targets(doc):
@@ -53,6 +53,10 @@ def _rate(value, event, p, when, task_questions, questions, plans, tiers):
         chosen = tiers.get(qid)
         target = target_retention(q, plans.get(q.get('concept_id')), params, chosen and chosen['tier'])
         updated = target_due(updated, mastery, target, p['policy'], p.get('exam_date'))
+    if updated['rating'] == 'independent':
+        # Study days with a Good/Easy result: 「저장」 needs two, as Quiz Bank's card_progress does.
+        day = study_day(when, p['policy']).isoformat()
+        updated['goodDays'] = sorted({*updated.get('goodDays', ()), day})
     value.clear(); value.update(updated)
 
 
@@ -201,3 +205,50 @@ def summary(doc, events, available, now, policy):
             'recallLearningChange': sum(r['recalled'] for r in rows) - sum(r['recalled'] for r in carried),
             'recallTimeChange': sum(r['recalled'] for r in carried) - sum(r['recalled'] for r in before),
             'targets': [{k: v for k, v in r.items() if k not in ('firstAt', 'required')} for r in rows]}
+
+
+def _mastery_now(value, now):
+    """Quiz Bank's forgetting curve from the last rating: M / (1 + t / 9S)."""
+    if value.get('mastery') is None or not value.get('lastAt'):
+        return 0
+    elapsed = max(0, (utc(now) - instant(value['lastAt'])).total_seconds() / 86400)
+    stability = max(0.25, value.get('ratingDays', value.get('baseDays', 1)))
+    return value['mastery'] / (1 + elapsed / (9 * stability))
+
+
+def question_progress(doc, events, available, now, policy, planned=None):
+    """Per-question counts in the lecture list's card columns (Quiz Bank `card_progress` rules).
+
+    A unit is a question the learner is actually given: every prepared task for root-generation/4, and
+    for older documents the one prepared task per direction that `planning.plan` serves (the others of
+    that direction are never asked). Older documents keep their per-direction state.
+    - unseen: no attempt and no rating
+    - recognized: seen, last result not Good/Easy (independent), or not rated yet
+    - retained: Good/Easy on two study days or more, and mastery now >= the rating's target retention
+    - retrieving: last result Good/Easy, not retained
+    reviewDue counts today's plan tasks chosen as '복습 확인' (rated, due, not assessed today)."""
+    owners = direction_owners(doc)
+    if per_task(doc):
+        _, _, values = replay_tasks(doc, events, now, policy)
+        units = [values.get(t['task_id'], {}) for t in doc['tasks']
+                 if t['task_id'] in available and t['direction_id'] in owners]
+    else:
+        _, values = replay(doc, events, now, policy)
+        served = {}
+        for task in doc['tasks']:
+            if task['task_id'] in available and task['direction_id'] in owners:
+                served.setdefault(task['direction_id'], task)
+        units = [values.get(did, {}) for did in served]
+    counts = {'unseen': 0, 'recognized': 0, 'retrieving': 0, 'retained': 0}
+    for value in units:
+        if not value.get('learned') and value.get('rating') is None:
+            counts['unseen'] += 1
+        elif value.get('rating') != 'independent':
+            counts['recognized'] += 1
+        elif (len(value.get('goodDays', ())) >= 2 and value.get('target')
+              and _mastery_now(value, now) >= value['target']):
+            counts['retained'] += 1
+        else:
+            counts['retrieving'] += 1
+    due = sum(t.get('reason') == '복습 확인' for t in (planned or {}).get('tasks', []))
+    return {'total': len(units), **counts, 'reviewDue': due}
