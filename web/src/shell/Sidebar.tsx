@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { FeedbackButton } from "../feedback/FeedbackButton";
 import { Icon } from "./icons";
+import { useFlagPreference } from "../preferences";
 
 /**
  * 좌측 메뉴(2026-11 개편). 위에서부터 학습 · 커뮤니티 · 도움 · 프로필.
@@ -36,24 +37,10 @@ export function Sidebar({ email, isAdmin, unseenNotice, onSignOut }: {
   unseenNotice: boolean;
   onSignOut: () => void;
 }) {
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem(KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
+  const [collapsed, setCollapsed] = useFlagPreference(KEY);
   const [menu, setMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(KEY, collapsed ? "1" : "0");
-    } catch {
-      /* 저장이 막혀도 이번 화면은 그대로 */
-    }
-  }, [collapsed]);
 
   // 메뉴 밖을 누르거나 Esc면 프로필 메뉴를 닫는다.
   useEffect(() => {
@@ -87,7 +74,7 @@ export function Sidebar({ email, isAdmin, unseenNotice, onSignOut }: {
         <button
           type="button"
           className="icon-button sidebar-toggle"
-          onClick={() => setCollapsed(v => !v)}
+          onClick={() => setCollapsed(!collapsed)}
           aria-label={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
           title={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
         >

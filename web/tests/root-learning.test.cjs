@@ -193,6 +193,25 @@ test('내 중요도: change it while solving, keep it on reload, then 원래대�
  }finally{await browser.close();}
 });
 
+test('clicked toggles stay the default after reload: menu collapse and map question/link toggles (2026-11-11)',async()=>{
+ const browser=await chromium.launch({headless:true,channel:'chrome'});const context=await contextFor(browser,{extraHTTPHeaders:{'X-Root-Test-User':'prefs-user'}});
+ await context.route('**/api/me',r=>r.fulfill({json:{id:'a',email:'a@example.com',isApproved:true,isAdmin:false}}));
+ const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const openMap=async()=>{await page.getByRole('button',{name:'개념 지도',exact:true}).click();await page.getByRole('heading',{name:'개념 지도',exact:true}).waitFor();};
+ try{
+   await page.goto(url);await page.getByRole('button',{name:'오늘 학습 시작',exact:true}).click();await enabled(page,'답 보기');
+   await page.getByRole('button',{name:'메뉴 접기'}).click();await openMap();
+   await page.getByRole('button',{name:'문항 펼치기'}).click();await page.getByRole('button',{name:'연결선 전체'}).click();
+   await page.reload();await page.getByRole('button',{name:'메뉴 펼치기'}).waitFor();
+   await enabled(page,'답 보기');await openMap();
+   assert.equal(await page.getByRole('button',{name:'문항 접기'}).getAttribute('aria-pressed'),'true');
+   assert.equal(await page.getByRole('button',{name:'연결선 숨기기'}).getAttribute('aria-pressed'),'true');
+   await page.getByRole('button',{name:'문항 접기'}).click();await page.reload();await enabled(page,'답 보기');await openMap();
+   assert.equal(await page.getByRole('button',{name:'문항 펼치기'}).getAttribute('aria-pressed'),'false');
+   assert.deepEqual(errors,[]);
+ }finally{await browser.close();}
+});
+
 test('Z undoes every reveal and rating step by step from any screen, also after reload (2026-11-11)',async()=>{
  const browser=await chromium.launch({headless:true,channel:'chrome'});const context=await contextFor(browser,{extraHTTPHeaders:{'X-Root-Test-User':'undo-user'}});
  await context.route('**/api/me',r=>r.fulfill({json:{id:'a',email:'a@example.com',isApproved:true,isAdmin:false}}));

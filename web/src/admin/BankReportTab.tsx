@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useFlagPreference } from "../preferences";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import { FEEDBACK_LABEL } from "../bank/feedback";
@@ -19,7 +20,7 @@ import type { BankReportBoard, BankReportGroup, BankReportStatus } from "../type
  * 목록은 위(`AdminPage`)에서 읽어 내려온다 — 열린 수가 탭 이름 옆에 서야 해서다.
  */
 export function BankReportTab({ board, onChanged }: { board: BankReportBoard | null; onChanged: () => void }) {
-  const [showDone, setShowDone] = useState(false);
+  const [showDone, setShowDone] = useFlagPreference("studyez-admin-report-done");
 
   if (!board) return <p className="notice">불러오는 중…</p>;
   const isOpen = (g: BankReportGroup) => g.reports.some((r) => r.status === "open");
@@ -40,7 +41,7 @@ export function BankReportTab({ board, onChanged }: { board: BankReportBoard | n
         {board.done ? (
           <>
             {" "}
-            <button className="is-quiet" onClick={() => setShowDone((v) => !v)}>
+            <button className="is-quiet" onClick={() => setShowDone(!showDone)}>
               {showDone ? "안 본 것만" : "본 것도 보기"}
             </button>
           </>
