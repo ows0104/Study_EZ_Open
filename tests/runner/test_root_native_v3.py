@@ -64,3 +64,15 @@ def test_the_host_check_state_is_written_beside_the_input_and_used_by_check_file
     with pytest.raises(ValueError, match='synthetic merge error'):
         n.check_file('v3-fix-0-0', work)
     assert seen == {'kind': 'fix', 'state': {'bank': {'x': 1}}, 'scratch': '.check-render'}
+
+
+def test_only_root_generation_4_normalize_reads_the_v4_prompt():
+    """docs/changes/2026-11-11-v4-normalize-components: /4 keeps the stage name `normalize`; its policy picks the
+    v4 prompt. /2 and /3 keep extract-v2.md."""
+    v2 = n.g.PROMPTS.joinpath('extract-v2.md').read_text(encoding='utf-8')
+    v4 = n.g.PROMPTS.parent.joinpath('v4', 'normalize.md').read_text(encoding='utf-8')
+    assert n.task_for('normalize').startswith(v2)
+    assert n.task_for('normalize', {'_pipeline_version': 'root-generation/3'}).startswith(v2)
+    assert n.task_for('normalize', {'_pipeline_version': 'root-generation/4'}).startswith(v4)
+    assert 'component 하나는 따로 물어 채점할 수 있는 내용 하나다' in v4 and v4 != v2
+    assert n.V4_POLICY == __import__('studyez_contracts.roots.generation_v4', fromlist=['POLICY']).POLICY
