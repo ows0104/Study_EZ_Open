@@ -195,10 +195,16 @@ def task_tiers(doc, tiers):
 def focus_for(db, subject, user_id):
     """오늘 학습 중요도 필터(2026-11-12): this learner's last choice for the subject, else every tier."""
     from .policy import TIERS
-    row = db.scalars(select(RootEvent).where(RootEvent.user_id == user_id, RootEvent.subject == subject,
-        RootEvent.kind == 'focus').order_by(RootEvent.created_at.desc(), RootEvent.request_id.desc()).limit(1)).first()
+    rows = focus_events(db, subject, user_id)
+    # `seq` orders choices saved at the same instant (request IDs are random), as 「내 중요도」 does.
+    row = max(rows, key=lambda e: (e.payload.get('seq', 0), e.created_at), default=None)
     chosen = set(row.payload.get('tiers', [])) if row else set(TIERS)
     return [t for t in TIERS if t in chosen] or list(TIERS)
+
+
+def focus_events(db, subject, user_id):
+    return db.scalars(select(RootEvent).where(RootEvent.user_id == user_id, RootEvent.subject == subject,
+                                              RootEvent.kind == 'focus')).all()
 
 
 def question(doc, task):

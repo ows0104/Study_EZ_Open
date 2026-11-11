@@ -39,13 +39,15 @@ function FocusChips({focus,disabled,onChange}:{focus:RootFocus;disabled:boolean;
       return <button key={tier} type="button" aria-pressed={pressed} disabled={disabled||last}
         className={focus.counts[tier]?undefined:'is-empty'}
         onClick={()=>onChange(ROOT_TIERS.filter(t=>t===tier?!pressed:on.has(t)))}>
-        {tier}<b>{focus.counts[tier]}</b></button>;
+        {pressed&&<Icon.check/>}{tier}<b>{focus.counts[tier]}</b></button>;
     })}
   </div>;
 }
 
-export function RootToday({info,onStart,disabled,starting=false,onMap,onFocus,lectureLink,admin}:{info:RootOverview;onStart:()=>void;disabled:boolean;
-  starting?:boolean;onMap?:()=>void;onFocus?:(tiers:RootTierName[])=>void;lectureLink?:string;admin?:ReactNode}) {
+export function RootToday({info,onStart,disabled,starting=false,onMap,onFocus,focusing=false,lectureLink,admin}:{info:RootOverview;onStart:()=>void;disabled:boolean;
+  starting?:boolean;onMap?:()=>void;onFocus?:(tiers:RootTierName[])=>void;
+  /** 중요도 저장·재계획 응답 대기 중: 카드 수를 흐리게 둔다. */
+  focusing?:boolean;lectureLink?:string;admin?:ReactNode}) {
   const p=info.plan,s=info.summary;
   const learned=s&&s.total?s.learned/s.total*100:0,recalled=s&&s.total?s.recalled/s.total*100:0;
   return <section className="mq-start">
@@ -72,12 +74,14 @@ export function RootToday({info,onStart,disabled,starting=false,onMap,onFocus,le
       {p?<>
         <div className="mq-today-text">
           <h2>오늘 추천</h2>
-          <p>{p.tasks.length?<>과제 <b>{p.tasks.length}</b>개 · 새 목표 최소 <b>{p.newGoalQuota}</b>개</>:'지금 추천할 과제가 없습니다.'}</p>
+          <p>{p.tasks.length?<>새 목표 최소 <b>{p.newGoalQuota}</b>개</>:'지금 추천할 과제가 없습니다.'}</p>
           <small>{p.deadline?`첫 학습 목표일 ${p.deadline}${p.days!==null&&p.days<=0?' · 목표일 지남':''}`:'시험일 미정 · 준비된 새 범위와 필요한 복습을 추천합니다.'}</small>
           {info.focus&&onFocus&&<FocusChips focus={info.focus} disabled={disabled||starting} onChange={onFocus}/>}
         </div>
         <button className="mq-start-button" disabled={disabled||!p.tasks.length&&!info.sessionId} onClick={onStart} aria-busy={starting}>
-          <Icon.play/>{info.sessionId?'오늘 학습 재개':'오늘 학습 시작'}</button>
+          <Icon.play/>{info.sessionId?'오늘 학습 재개':'오늘 학습 시작'}
+          {!info.sessionId&&<span className="mq-card-count" aria-label={`카드 ${p.tasks.length}개`} aria-live="polite"
+            data-busy={focusing||undefined}>{p.tasks.length.toLocaleString('ko-KR')}</span>}</button>
         {starting&&<span className="sr-only" role="status">첫 문항을 여는 중…</span>}
       </>:<p className="mq-today-text">{info.message}</p>}
     </section>

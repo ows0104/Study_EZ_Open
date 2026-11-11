@@ -520,8 +520,9 @@ def save_focus(subject: str, run_id: str, payload: RootFocus,
             raise HTTPException(409, '같은 요청 ID의 다른 작업입니다.')
         return overview_data(db, doc, user, now())
     tiers = [t for t in policy.TIERS if t in payload.tiers]
+    seq = 1 + max((e.payload.get('seq', 0) for e in content.focus_events(db, subject, user.id)), default=0)
     db.add(RootEvent(user_id=user.id, request_id=payload.requestId, session_id='', subject=subject, run_id=run_id,
-                     revision=doc.revision, kind='focus', payload={'_request': request, 'tiers': tiers},
+                     revision=doc.revision, kind='focus', payload={'_request': request, 'tiers': tiers, 'seq': seq},
                      result={'tiers': tiers}, created_at=now()))
     try:
         db.commit()

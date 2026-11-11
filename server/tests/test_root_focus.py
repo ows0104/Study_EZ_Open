@@ -87,6 +87,14 @@ assert overview()['summary']['total'] == base_total
 assert focus('f4', ['Optional']).status_code == 200
 assert plan_questions(overview()) == ['Q3']
 
+# ── Saves at the same instant (the clock is frozen here): the later save wins, whatever its request ID ──
+assert focus('zz-first', ['Core']).status_code == 200
+assert focus('aa-second', ['Essential', 'Optional']).status_code == 200
+assert overview()['focus']['tiers'] == ['Essential', 'Optional']
+assert focus('mm-third', ALL).status_code == 200
+assert overview()['focus']['tiers'] == ALL
+assert focus('f5', ['Optional']).status_code == 200
+
 # ── Per learner and per subject: another account keeps every tier ──
 user('b')
 other = overview()
