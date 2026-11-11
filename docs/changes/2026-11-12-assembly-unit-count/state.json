@@ -1,0 +1,20 @@
+{
+  "id": "2026-11-12-assembly-unit-count",
+  "title": "Main-Quiz 조립 검사: cloze 답 단위 수·접수 탈락 번호 재사용",
+  "area": "contracts",
+  "created_at": "2026-11-11T18:20:56.797308+00:00",
+  "required_checks": [
+    "contracts",
+    "quizbank",
+    "runner"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T18:20:56.797341+00:00"
+}

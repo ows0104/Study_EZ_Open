@@ -683,7 +683,9 @@ def _compile(brief, bank, raw, placement):
         require(set(parts) == {c['component_id'] for c in d['components']}, 'assessment4: each component needs explicit evidence')
         for part in parts.values():
             ix = part['answer_unit_indices']
-            require(len(ix) == len(set(ix)) and all(i < len(qs[qid]['answer_units']) for i in ix), 'assessment4: nonexistent answer unit')
+            # The coverage judge reads the shown front (v3._front): an inline cloze counts one unit per blank there, which can be
+            # more than the stored answer_units (a table row of two blanks stored as one). Count what the judge was shown.
+            require(len(ix) == len(set(ix)) and all(i < len(v3.normalize_cloze(qs[qid])['answer_units']) for i in ix), 'assessment4: nonexistent answer unit')
             require(bool(ix) == (part['location'] == 'answer'), 'assessment4: only actual answer units are recalled evidence')
         # Placement follows the evidence row (2026-11-11-place-by-evidence), not the answered parts; the older
         # rule kept only the rows that answer some component (a unit of a recall goal included).
@@ -945,7 +947,11 @@ def _judgments4(value, packet, brief, reviewed, meta, doc):
     require(meta['readiness'] == readiness(brief, meta['coverage'], doc), 'result4: the readiness table is not of these judgments')
     require(meta['importanceNotes'] == importance_notes(meta['itemReviews']), 'result4: importance notes differ from the item reviews')
     # The basis of an intake question nobody fixed is the intake bank's (added/fixed ones come from their stages).
-    intake = {r['question_id']: r['importance_basis'] for r in packet['intakeBank'].get('question_importance', [])}
+    # A question rejected at intake is not in the bank; an add round may reuse its id for a new question (next ids start
+    # after the surviving bank), so its basis is not this id's basis.
+    gone = {r['question_id'] for r in meta['rejectedAtIntake']}
+    intake = {r['question_id']: r['importance_basis'] for r in packet['intakeBank'].get('question_importance', [])
+              if r['question_id'] not in gone}
     fixed = {f['question_id'] for f in meta['fixes'] if not f['reverted']}
     for qid, b in meta['questionImportance'].items():
         if qid in intake and qid not in fixed:
