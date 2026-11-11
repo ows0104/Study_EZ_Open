@@ -1,0 +1,80 @@
+{
+  "id": "2026-11-11-intake-conflict-warning",
+  "title": "접수 단계의 출처 충돌 인용 누락을 경고로",
+  "area": "generation",
+  "created_at": "2026-11-11T11:34:45.921064+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T11:35:06.528867+00:00",
+      "evidence": "2026-11-11 사용자 채팅: CF02 원인 보고 뒤 선택지(경고로 기록하고 진행 / 그 문항만 제외)에 「Record as warning」",
+      "scope": "C:/Program Files/Git/3·/4 _intake의 출처 충돌 인용 누락 오류를 경고로, 검사 추가, 로컬 검사, PR. 검사기·프롬프트·결과 계약 변경 없음",
+      "evidence_version": 2,
+      "source_hash": "9bd8726a9a00fc76388246c7b83d8bed389aa89e4f32414c41a7d3db9ab7418c",
+      "plan_hash": "a27cfa71636dca480b0d4c8ec42d3a0a69e64711e9b966b865cbcd4fb562d61c",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "release_hash": "321ee3ebdb41ed22337d97cd421a66a48a9392961612c29ce159a10c3bf753b0"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-11T11:38:35.997446+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests/contracts",
+        "tests/quizbank",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "9bd8726a9a00fc76388246c7b83d8bed389aa89e4f32414c41a7d3db9ab7418c",
+      "plan_hash": "a27cfa71636dca480b0d4c8ec42d3a0a69e64711e9b966b865cbcd4fb562d61c",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-11-intake-conflict-warning/1794396920494125400-regression.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T11:38:35.997950+00:00"
+}

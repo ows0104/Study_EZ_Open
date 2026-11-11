@@ -40,6 +40,10 @@ REVIEW_BATCH = 40        # questions per item review (plan U2)
 MEDICAL_BATCH = 40   # questions per medical call inside medical-0 (P6)
 ADD_PER_GOAL = 2         # new IDs offered per gap goal
 _QID = re.compile(r'^(Q[0-9A-Za-z_-]+)\b')
+# A resolved source conflict whose linked questions do not cite one of its sources (validate_bank's citation check).
+# The linked questions can be right; only a citation is missing. On 261111_02 (picornavirus, 2026-11-11) CF02 cited
+# S1 and S2 while its one question cited S1, and the whole run stopped before any stage (user: record as warning).
+_CONFLICT_GAP = re.compile(r'^\S+: \S+ 기준 문항 누락$')
 
 
 def _prompt_hash(folders=('v3',)):
@@ -246,17 +250,30 @@ def _bank_findings(bank, sources, attempts=None):
     return found
 
 
+def intake_rejections(errors):
+    """Questions left out at intake, from validate_bank errors. A bank-level error stops the run, except a resolved
+    conflict's missing source citation: it is printed and carried on, and stays in the final validation errors
+    (shown to the administrator as an issue) unless a later fix adds the citation."""
+    rejected, gaps = [], []
+    for text in errors:
+        if _CONFLICT_GAP.match(text):
+            if text not in gaps:  # validate_bank repeats it once per locator of that source
+                gaps.append(text)
+                print('접수 경고(출처 충돌 인용 누락, 진행): ' + text, flush=True)
+            continue
+        m = _QID.match(text)
+        v3.require(m, '문제은행 형식 오류가 특정 문항에 속하지 않습니다. 결과를 만들지 않고 보존합니다: ' + text)
+        rejected.append({'question_id': m.group(1), 'error': text})
+    return rejected
+
+
 def _intake(packet, out):
     """The independently authored bank (1c or a web response). Questions with format errors are left out."""
     intake = copy.deepcopy(packet['intakeBank'])
     bank, projection = v3.intake_projection(intake['bank'])
     sources = [s['id'] for s in packet['sources']]
     report = validate_bank(bank, sources)
-    rejected = []
-    for text in report['errors']:
-        m = _QID.match(text)
-        v3.require(m, '문제은행 형식 오류가 특정 문항에 속하지 않습니다. 결과를 만들지 않고 보존합니다: ' + text)
-        rejected.append({'question_id': m.group(1), 'error': text})
+    rejected = intake_rejections(report['errors'])
     bad = {r['question_id'] for r in rejected}
     if bad:
         bank['questions'] = [q for q in bank['questions'] if q['question_id'] not in bad]
