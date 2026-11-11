@@ -11,7 +11,7 @@ intent의 D1~D4는 2026-11-12에 정해졌다. 구현은 사용자가 요청한 
 | 3 | 연결 | 새 `runner/root_choices.py`, `runner/connection_generation.py`(근거 보강 다음 한 줄), `tests/runner/` | 하위 프로세스 실행과 asset 업로드. 실패해도 게시 결과 유지 |
 | 4 | 서버 | `server/app/models/lectures.py`(ASSET_KINDS), 새 `server/app/root_learning/choices.py`, `server/app/routes/root_learning.py`(앞면·답면·`prior_exposure`), `server/tests/` | asset 읽기·대조·붙이기, 「선지 봄」 기록 |
 | 5 | 화면 | `web/src/bank/RootSolve.tsx`, `BankQuestion.tsx`, 타입, `main-quiz.css`, `web/src/notices/GuidePage.tsx`, `web/tests/` | 버튼·`V` 키·고르기·결과 표시 |
-| 6 | 문서 | `docs/map.md`, `quizbank/CLAUDE.md`, README 「한 장 그림」 | 게시 뒤 단계가 하나 늘어난 것을 반영 |
+| 6 | 문서 | `docs/map.md`, `quizbank/CLAUDE.md`, `docs/artifact-contract.md` | 게시 뒤 단계가 하나 늘어난 것을 반영. README 「현재 흐름」은 Main-Quiz 게시 뒤 단계를 그리지 않아 고치지 않았다 |
 | 7 | 시범 | 리케치아(261110_03, 126문항) 판 문서의 로컬 사본 | 선지 작성 약 3회 호출. 통과율·건너뜀 비율을 세고 오답 품질을 사람이 읽는다 |
 | 8 | 배포 | master 병합 → API → 웹 자동 배포, 러너 재설치 | 러너 재설치는 야간 일괄 출제가 끝난 뒤 |
 | 9 | 보강(D3) | 이미 공개된 이번 블록 판 | 강의마다 선지 asset만 올린다. 따로 승인받는다 |

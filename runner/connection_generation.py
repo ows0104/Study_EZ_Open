@@ -191,4 +191,7 @@ def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=
     # Quiz Bank와 같은 핵심 근거·족보 지면(2026-11-08). 실패해도 게시 결과는 그대로다.
     from .root_evidence import publish as publish_evidence
     publish_evidence(client, subject, run_id, gen_out, gen_packet, payload, model=model, run=run_forwarded)
+    # 단답·나열 「선지 보기」(2026-11-12). 근거 보강과 같이 실패해도 게시 결과는 그대로다.
+    from .root_choices import publish as publish_choices
+    publish_choices(client, subject, run_id, gen_out, payload, model=model, run=run_forwarded)
     return 0

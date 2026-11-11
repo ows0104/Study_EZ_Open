@@ -89,8 +89,10 @@
 ### 작성 단계 — 새 `quizbank/root_choices.py`, `runner/root_choices.py`
 - 러너가 게시 완료·근거 보강 뒤에 하위 프로세스로 실행한다(`runner/connection_generation.py`의 `publish_evidence` 다음 줄).
 - 모델 호출은 기존 길 그대로 `studyez_llm.codex`(Codex CLI, 빈 세션)다. API를 직접 부르지 않는다.
-- 입력은 판 문서의 글뿐이다: 대상 문항의 질문·정답·정답 단위·해설, 같은 강의의 다른 문항 정답 목록, 개념 지도.
-  강의 PDF·족보는 보내지 않는다.
+- 입력은 판 문서의 글뿐이다: 강의 제목, 대상 문항의 질문·정답·정답 단위·해설, 같은 강의의 다른 문항 정답에서 뽑은 오답 후보.
+  강의 PDF·족보·개념 지도는 보내지 않는다(구현 중 결정: 오답 후보 목록으로 충분하고 입력이 작다).
+- 모델은 오답과 오답 이유만 쓴다. 정답 선지는 코드가 문항의 정답 단위를 그대로 넣으므로 「정답이 선지에 없다」는 생기지 않는다.
+  선지 순서는 문항 ID로 정해지는 고정 순서다.
 - 40문항씩 묶어 호출한다. 실측 4강의 평균 대상 111문항이면 강의당 약 3회다.
 - 지시문은 새 파일 `content/prompts/learning-links/choices/write.md`다. 기존 지시문은 고치지 않는다.
 - 묶음 하나가 실패하면 그 묶음만 빠진 asset을 올린다. 재시도는 묶음당 한 번이다.
@@ -104,6 +106,7 @@
 - 답면: `recall_correct_ids`.
 - `prior_exposure`: `choicesShown`이 참이고 그 문항에 `recall_choices`가 있으면 `helped`로 본다.
 - 오류 상태: asset이 없거나 깨졌거나 판이 다르면 선지 없이 응답한다. 풀이를 막지 않는다.
+- 개인 수정본이 있는 문항은 글이 달라져 지문이 맞지 않으므로 선지가 붙지 않는다.
 
 ### 화면
 - `web/src/bank/RootSolve.tsx`: 버튼·단축키·고르기·보관, `reveal`에 `choicesShown`.

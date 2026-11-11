@@ -43,7 +43,7 @@ export function choiceScore(q: BankQuestion, answer: BankAnswer | null, picked: 
 }
 
 /** 발문. cloze 빈칸은 답을 보면 채운다. */
-export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false, showChoiceScore = true,onStimuliReady }: {
+export function QuestionBody({ question: q, answer, picked, onPick, matching, sequence, showOptions = true, disabled = false, showChoiceScore = true,onStimuliReady, recallChoices }: {
   question: BankQuestion;
   answer: BankAnswer | null;
   picked: Set<string>;
@@ -54,21 +54,26 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
   disabled?: boolean;
   showChoiceScore?: boolean;
   onStimuliReady?:(ready:boolean)=>void;
+  /** 단답·나열에 덧붙인 선지(Main-Quiz 「선지 보기」). 주면 q.options 대신 그리고, 답을 본 뒤 선지마다 결과를 표시한다. */
+  recallChoices?: { id: string; text: string }[];
 }) {
   const score = showChoiceScore ? choiceScore(q, answer, picked) : null;
+  const options = recallChoices ?? q.options;
+  const expected = recallChoices ? answer?.recallCorrectIds : answer?.correctOptionIds;
+  const marked = recallChoices ? Boolean(answer && expected?.length) : Boolean(score);
   return (
     <>
       <BankStem text={q.question} list={q.format === "list"} cloze={q.format === "cloze"} answerUnits={answer?.answerUnits} />
       {!!q.stimuli?.length&&<QuestionStimuli key={q.question_id+q.stimuli.map(s=>s.sha256).join('')} images={q.stimuli} onReady={onStimuliReady}/>}
       {q.format === "ox" && !answer ? <p className="bank-note">O 인가 X 인가, 그리고 왜인가</p> : null}
       {q.mcq_mode === "recall_first" && !showOptions ? <p className="bank-note">기억 확인형 · 먼저 답을 떠올린 뒤 선지를 공개하세요.</p> : null}
-      {q.options.length && showOptions ? (
+      {options.length && showOptions ? (
         <ul className="bank-options">
-          {q.options.map((option) => {
+          {options.map((option) => {
             const selected = picked.has(option.id);
-            const correct = answer?.correctOptionIds.includes(option.id);
-            const result = score ? correct ? selected ? "is-correct" : "is-missed" : selected ? "is-wrong" : "" : "";
-            const label = score ? correct ? selected ? "✓ 맞게 고른 정답" : "! 빠뜨린 정답 · 미선택"
+            const correct = expected?.includes(option.id);
+            const result = marked ? correct ? selected ? "is-correct" : "is-missed" : selected ? "is-wrong" : "" : "";
+            const label = marked ? correct ? selected ? "✓ 맞게 고른 정답" : "! 빠뜨린 정답 · 미선택"
               : selected ? "✕ 잘못 고른 선지" : "정답 아님 · 미선택" : "";
             const cls = `${selected ? " is-picked" : ""}${result ? ` ${result}` : ""}`;
             return (

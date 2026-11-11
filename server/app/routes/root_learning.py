@@ -307,7 +307,7 @@ def project_session(db, row, doc, user, when):
         q = content.question(doc.document, task)
         shown = content.with_tier(with_personal(q, personal_edits(db, doc, user.id)), state.personal_tiers(doc.document, events))
         reveal = row.state['reveals'].get(task['task_id'])
-        out['task'] = {'id': task['task_id'], 'question': learner_front(doc, shown),
+        out['task'] = {'id': task['task_id'], 'question': learner_front(doc, shown, db),
                        'answer': revealed_answer(db, doc, shown) if reveal else None,
                        'response': reveal['response'] if reveal else None,
                        'attempted': reveal['attempted'] if reveal else None,
@@ -335,12 +335,14 @@ _UNSET = object()
 # 개인 수정은 문제은행 없이 선 판(standalone)에만 적용한다. 문제은행과 연결된 판은 기존 규칙상 개인 수정본이 있으면
 # 그 과제를 연결 미확인으로 막으므로(content.availability) 여기서는 제보만 받는다.
 
-def learner_front(doc, q):
+def learner_front(doc, q, db=None):
     """Question front plus the target retention new ratings aim for (Quiz Bank 「목표 N%」)."""
     plans = {p['concept_id']: p for p in doc.document['bank_snapshot'].get('retrieval_plan', [])}
     personal = q['tier'] if q.get('personalTier') else None
     target = policy.target_retention(q, plans.get(q.get('concept_id')), policy.target_parameters(), personal)
-    return {**content.front(q), 'targetMastery': target}
+    from app.root_learning import choices
+    # 단답·나열 「선지 보기」(2026-11-12): 이 판·이 문항 글에 맞는 선지가 있을 때만 붙는다.
+    return choices.attach_front(db, doc, q, {**content.front(q), 'targetMastery': target})
 
 
 def personal_editable(doc):
@@ -437,7 +439,7 @@ def save_personal(subject: str, run_id: str, question_id: str, payload: RootPers
                             highlighted=payload.report, correction=correction))
     db.commit()
     current = content.with_tier(bank_personal.apply_edit(original, edit), content.tiers_for(db, doc, user.id))
-    return {'question': learner_front(doc, current), 'answer': revealed_answer(db, doc, current),
+    return {'question': learner_front(doc, current, db), 'answer': revealed_answer(db, doc, current),
             'reported': reported, 'highlighted': reported and payload.report}
 
 
@@ -474,7 +476,7 @@ def save_tier(subject: str, run_id: str, question_id: str, payload: RootTier,
     # Only target-scheduled ratings move with the tier; earlier ones keep their own schedule.
     rescheduled = any(e['kind'] == 'rate' and e['revision'] == doc.revision and e['payload'].get('targetParameters')
                       and questions.get(e['payload'].get('task_id')) == question_id for e in events)
-    result = {'question': learner_front(doc, current), 'rescheduled': rescheduled}
+    result = {'question': learner_front(doc, current, db), 'rescheduled': rescheduled}
     db.add(RootEvent(user_id=user.id, request_id=payload.requestId, session_id='', subject=subject, run_id=run_id,
                      revision=doc.revision, kind='tier', payload=data, result=result, created_at=when))
     try:
@@ -515,13 +517,22 @@ def revealed_answer(db, doc, q, generation=_UNSET):
     answer['external'] = any(r.get('source_id') == 'EXT' for r in q.get('source_refs', []))
     from app.root_learning.evidence import attach_evidence
     attach_evidence(db, doc, q, generation, answer)
+    from app.root_learning import choices
+    choices.attach_answer(db, doc, q, answer)
     return answer
 
 
-def prior_exposure(doc, task, q, session_state, choices_shown=None):
+def recall_choice_entry(db, doc, q):
+    from app.root_learning import choices
+    return choices.entry(db, doc, q)
+
+
+def prior_exposure(doc, task, q, session_state, choices_shown=None, recall_choices=False):
     direction = next(d for t in state.targets(doc) for d in t['directions'] if d['direction_id'] == task['direction_id'])
     choice_help = bool(q.get('options')) if choices_shown is None else (
         bool(q.get('options')) and q.get('mcq_mode') != 'comparison' and choices_shown)
+    # 단답·나열에 덧붙인 선지를 편 풀이도 도움받은 풀이다. 선지가 실제로 있는 문항일 때만 센다.
+    choice_help = choice_help or bool(choices_shown and recall_choices)
     if state.per_task(doc):
         # root-generation/4 (spec R8): sibling questions of one direction ask different parts, so only an
         # earlier exposure of this same task in the session counts, not the direction's relations.
@@ -567,7 +578,7 @@ def prepare(session_id: str, start: int | None = Query(None, ge=0), count: int =
         if task['task_id'] in available:
             q = content.question(doc.document, task)
             shown = content.with_tier(with_personal(q, edits), tiers)
-            frame['task'] = {'id': task['task_id'], 'question': learner_front(doc, shown),
+            frame['task'] = {'id': task['task_id'], 'question': learner_front(doc, shown, db),
                              'answer': revealed_answer(db, doc, shown, generation),
                              'helped': row.state['mapSeen'] or prior_exposure(doc.document, task, q, row.state)}
         out['frames'].append(frame)
@@ -646,7 +657,9 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
             expected=[s['sha256']for s in q.get('stimuli',[])]
             if payload.attempted and expected and payload.stimulusHashes!=expected:
                 raise HTTPException(409,'문항 그림 확인이 필요합니다. 새로고침 후 그림을 확인하거나 답만 보기를 선택하세요.')
-            helped = payload.helped or session_state['mapSeen'] or prior_exposure(doc.document, task, q, session_state, payload.choicesShown)
+            helped = payload.helped or session_state['mapSeen'] or prior_exposure(
+                doc.document, task, q, session_state, payload.choicesShown,
+                recall_choices=bool(payload.choicesShown) and recall_choice_entry(db, doc, q) is not None)
             data.update(attempted=payload.attempted, response=payload.response, helped=helped)
             session_state['reveals'][task['task_id']] = {k: data[k] for k in ('attempted', 'response', 'helped')}
             before = set(session_state.get('exposedRelations', []))

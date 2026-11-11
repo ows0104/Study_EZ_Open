@@ -7,7 +7,34 @@
     "web",
     "regression"
   ],
-  "approvals": {},
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T16:02:02.671910+00:00",
+      "evidence": "사용자 2026-11-12 채팅: 「C 대신 V로 하자. 그게 손이 편한듯. 그리고 나머지는 추천대로.」 이어서 「구현 시작」",
+      "scope": "plan.md 1~6번 코드·문서와 로컬 검사. 시범 호출·공개 판 보강·학생 공개 시점은 따로 승인",
+      "evidence_version": 2,
+      "source_hash": "86d6ad310eaeeb280e8e1d24f39fee7d7187416e881e321c990d705ec6f60d92",
+      "plan_hash": "0857243735f97a065c5e4d5299ed11839e5cc573945f4737a9fca0bd0a3e4dfe",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "95326ea0793d9c4c549e5aab36ad114791cfc25add182aa1dcfd25536352359f"
+    }
+  },
   "checks": [],
   "review": null,
   "lifecycle": {
@@ -15,5 +42,5 @@
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-11T15:53:02.590831+00:00"
+  "updated_at": "2026-11-11T16:02:11.719857+00:00"
 }
