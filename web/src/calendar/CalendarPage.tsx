@@ -8,7 +8,8 @@ import { CalendarGrid } from "./CalendarGrid";
 import { EventChip } from "./EventChip";
 import { displayInfo } from "./kinds";
 import { useCalendarTimetable } from "./useCalendarTimetable";
-import { useTodayDue } from "./useTodayDue";
+import { useTodayPlan } from "./useTodayPlan";
+import type { ExamPlan } from "../types/studyPlan";
 import {
   addDays,
   calendarRange,
@@ -97,7 +98,7 @@ export function CalendarPage() {
   const entries = useMemo(() => toCalendarEntries(events ?? []), [events]);
   const info = useMemo(() => displayInfo(events ?? []), [events]);
   const opened = entries.find(entry => entry.id === params.get("event")) ?? null;
-  const todayDue = useTodayDue(events);
+  const { plan: todayPlan, loading: planLoading } = useTodayPlan();
 
   const weekStart = startOfWeek(anchorDate);
   const weekEnd = addDays(weekStart, 4);
@@ -112,7 +113,9 @@ export function CalendarPage() {
     .filter(e => e.date === tomorrowKey && info.get(e.id)?.kind !== "practice") // CBL·TBL도 category는 practice라 kind로 가른다
     .flatMap(e => e.lectures);
   const preLoading = tomorrowLectures.some(l => l.studyLoaded === false);
-  const preTomorrow = tomorrowLectures.filter(l => l.marks.prequiz && !prequizDone(l)).length;
+  // 강의 하나 = 막대 한 칸. 예습 퀴즈가 올라온 강의만 센다.
+  const preSlots = tomorrowLectures.filter(l => l.marks.prequiz).map(l => prequizDone(l));
+  const preTomorrow = preSlots.filter(done => !done).length;
   const exam = nextExam(entries, events ?? [], todayKey);
 
   function step(direction: -1 | 1) {
@@ -132,16 +135,11 @@ export function CalendarPage() {
             <span className="calendar-title">{blockWeek(entries, info, weekStart) || span}</span>
             {exam ? <span className="calendar-dday" title={`${exam.label} · ${exam.dateLabel}`}>{exam.days === 0 ? "D-day" : `D-${exam.days}`}</span> : null}
           </h1>
-          {/* 내일 강의의 예습·오늘 복습. 머리 오른쪽 끝, 좁은 화면에서는 아래 줄(2026-11-07 사용자 지시). */}
+          {/* 내일 강의의 예습·오늘 복습. 머리 오른쪽 끝, 좁은 화면에서는 아래 줄(2026-11-07 사용자 지시).
+              C안(2026-11-11): 남은 양을 크게, 한 양은 아래 막대로. 다 하면 칸이 회색으로 가라앉는다. */}
           <div className="today-board" aria-label="오늘 할 일">
-            <span className="today-card is-pre">
-              <span className="today-card-label">내일 예습</span>
-              <b>{preLoading ? "…" : preTomorrow}<small>강의</small></b>
-            </span>
-            <span className="today-card is-review">
-              <span className="today-card-label">오늘 복습</span>
-              <b>{todayDue === null ? "…" : todayDue}<small>문제</small></b>
-            </span>
+            <PreCard loading={preLoading} slots={preSlots} remaining={preTomorrow} />
+            <ReviewCard loading={planLoading} plan={todayPlan} />
           </div>
         </header>
         {learningLoading ? <span className="sr-only" role="status">표시된 기간의 학습률을 불러오는 중…</span> : null}
@@ -223,4 +221,42 @@ function nextExam(entries: CalendarEntry[], events: { id: string; details: strin
     label: order ? `${order[1]}차 시험` : "시험",
     dateLabel: `${date.getMonth() + 1}월 ${date.getDate()}일${day ? ` (${day})` : ""}`,
   };
+}
+
+/** 「내일 예습」: 남은 강의 수, 강의마다 한 칸짜리 막대. */
+function PreCard({ loading, slots, remaining }: { loading: boolean; slots: boolean[]; remaining: number }) {
+  const done = !loading && slots.length > 0 && remaining === 0;
+  return (
+    <span className={`today-card is-pre ${done ? "is-done" : ""}`}>
+      <span className="today-card-row">
+        <span className="today-card-label">내일 예습</span>
+        <b>{loading ? "…" : done ? <>✓ {slots.length}<small>강의</small></> : <>{remaining}<small>강의</small></>}</b>
+      </span>
+      {!loading && slots.length ? (
+        <span className="today-card-bar is-split" role="img" aria-label={`내일 예습 ${slots.length - remaining}/${slots.length}강의`}>
+          {slots.map((filled, index) => <i key={index} className={filled ? "is-filled" : ""} />)}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/** 「오늘 복습」: 시험 대비 오늘 확보 목표(%p) 중 남은 양, 막대는 진행률. */
+function ReviewCard({ loading, plan }: { loading: boolean; plan: ExamPlan | null }) {
+  const done = Boolean(plan?.met);
+  return (
+    <span className={`today-card is-review ${done ? "is-done" : ""}`}>
+      <span className="today-card-row">
+        <span className="today-card-label">오늘 복습</span>
+        <b>{loading && !plan ? "…" : !plan ? "–"
+          : done ? <>✓ {plan.requiredGain.toFixed(1)}<small>%p</small></>
+          : <>{plan.remainingGain.toFixed(1)}<small>%p</small></>}</b>
+      </span>
+      {plan ? (
+        <span className="today-card-bar" role="progressbar" aria-label="오늘 복습 목표" aria-valuemin={0} aria-valuemax={100} aria-valuenow={plan.progressPercent}>
+          <i className="is-filled" style={{ width: `${plan.progressPercent}%` }} />
+        </span>
+      ) : null}
+    </span>
+  );
 }

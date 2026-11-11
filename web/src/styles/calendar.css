@@ -2407,14 +2407,23 @@ button.event-panel-note:hover {
 .calendar-dday { flex: none; font-size: 26px; font-weight: 700; color: #e5534b; font-variant-numeric: tabular-nums; }
 .today-board { flex: none; display: grid; grid-template-columns: repeat(2, minmax(118px, 190px)); gap: 10px; }
 .today-card {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 14px;
+  display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 6px 14px 8px;
   border-radius: 12px; border: 1px solid transparent;
 }
+.today-card-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+/* C안(2026-11-11): 남은 양은 숫자, 한 양은 막대. 예습은 강의마다 한 칸, 복습은 이어진 막대. */
+.today-card-bar { display: flex; gap: 3px; height: 5px; border-radius: 3px; overflow: hidden; background: color-mix(in srgb, currentColor 16%, transparent); }
+.today-card-bar.is-split { background: none; }
+.today-card-bar i { display: block; height: 100%; border-radius: 3px; }
+.today-card-bar.is-split i { flex: 1; background: color-mix(in srgb, currentColor 16%, transparent); }
+.today-card-bar i.is-filled { background: currentColor; }
 .today-card-label { font-size: 14px; font-weight: 600; white-space: nowrap; }
 .today-card b { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .today-card b small { font-size: 13px; font-weight: 600; margin-left: 2px; }
 .today-card.is-pre { background: var(--accent2-soft); border-color: var(--accent2-line); color: var(--accent2-ink); }
 .today-card.is-review { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-ink); }
+/* 다 했으면 가라앉는다 — 남은 일이 있는 칸보다 눈에 덜 띈다. */
+.today-card.is-done { background: var(--surface); border-color: var(--line); color: var(--ink-3); }
 .calendar-page.is-split .calendar-head h1 { font-size: 24px; }
 .calendar-page.is-split .today-card b { font-size: 18px; }
 @media (max-width: 640px) {
