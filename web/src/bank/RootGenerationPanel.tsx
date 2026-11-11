@@ -8,7 +8,7 @@ import { pollAfterSettled } from './pollChain';
 type Input={conceptMap:string;points:string;scope:string;examDate:string|null;inputMode?:'provided'|'source'};
 type Generation={id:string;requestId?:string;state:string;stage:string;message:string;published:boolean;revision:string;
   authoring?:string;parallelAuthoring?:boolean;pipeline?:string|null;awaitingWeb?:boolean;dispatched?:boolean;
-  sources?:{id:string;kind:string;filename:string}[];operatorResumes?:number;
+  sources?:{id:string;kind:string;filename:string}[];operatorResumes?:number;restartOf?:string|null;
   privatePilot:boolean;featureEnabled:boolean;input:Input;report?:{repairRounds:number;taskCount:number;targetCount:number;
     pipelineVersion?:string;addRounds?:number;fixCount?:number;notReady?:number;mergedDuplicates?:number;unplacedQuestions?:number;importanceNotes?:number;
     issues:string[];questionNotes:{source:string;question_id:string;verdict:string;note:string}[];
@@ -50,12 +50,14 @@ function GenerationPanel({subject,runId,onPublished}:Props) {
     }).catch(e=>{if(live)setError(e.message);}),3000);
     return()=>{live=false;stop();};
   },[base,pending,onPublished]);
-  async function send(resume=false){
+  // mode: 'new' (the newest default), 'resume' (the original request, remaining budgets) or 'restart' (「새로 출제」:
+  // the newest default as a new request beside the ended one, fresh budgets; docs/changes/2026-11-11-main-quiz-start-over).
+  async function send(mode:'new'|'resume'|'restart'='new'){
     if(sending.current)return;
     sending.current=true;setBusy(true);setError('');
     try{
       // A resume repeats the original request exactly (the server refuses a changed input under the same ID).
-      const original=resume&&job?job:null;
+      const original=mode==='resume'&&job?job:null;
       let body;
       if(original){
         const source=(original.input.inputMode??'provided')==='source';
@@ -63,19 +65,24 @@ function GenerationPanel({subject,runId,onPublished}:Props) {
           inputMode:source?'source':'provided',requestId:original.requestId??crypto.randomUUID(),privatePilot:original.privatePilot,resume:true,
           authoring:original.authoring??'cli',parallelAuthoring:original.parallelAuthoring??false,
           ...(original.pipeline?{pipeline:original.pipeline}:{}),...(reason.trim()?{resumeReason:reason.trim()}:{})};
-      }else body={...NEW_REQUEST,requestId:crypto.randomUUID(),privatePilot,resume:false};
+      }else if(mode==='restart'&&job)body={...NEW_REQUEST,requestId:crypto.randomUUID(),privatePilot:job.privatePilot,resume:false,
+        restart:true,resumeReason:reason.trim()};
+      else body={...NEW_REQUEST,requestId:crypto.randomUUID(),privatePilot,resume:false};
       const result=await api<{generation:Generation}>(base,{method:'POST',body:JSON.stringify(body)});
       setJob(result.generation);setReason('');if(result.generation.published)onPublished?.();
     }catch(e){setError(e instanceof Error?e.message:'요청을 저장하지 못했습니다.');}finally{sending.current=false;setBusy(false);}
   }
   const resumable=!!job&&!job.published&&!pending&&!job.awaitingWeb;
   const needsReason=resumable&&MAP_TREES.includes(job?.pipeline??'');
+  // The server sets aside only an ended request (failed·canceled); a held one is resumed or stopped first.
+  const restartable=needsReason&&['failed','canceled'].includes(job?.state??'');
   const fresh=!resumable&&!pending;
   const label=busy?'요청 중…':pending?'생성·업로드 진행 중':resumable?'Main Quiz 이어서 만들기':'Main Quiz 만들기';
   return <section className="root-card root-generation" aria-label="Main Quiz 만들기"><h3>Main Quiz 만들기</h3>
-    {needsReason&&<label>이어 하기 이유 (실패한 단계는 이유가 있을 때만 다시 돕니다)<input aria-label="이어 하기 이유" value={reason} maxLength={500} onChange={e=>setReason(e.target.value)}/></label>}
+    {needsReason&&<label>이유 (이어 하기·새로 출제 모두 이유가 있을 때만 다시 돕니다)<input aria-label="이어 하기 이유" value={reason} maxLength={500} onChange={e=>setReason(e.target.value)}/></label>}
     <div className="root-generation-action">
-      <button className="is-primary" disabled={!loaded&&!error||busy||pending||needsReason&&!reason.trim()} onClick={()=>{if(!loaded){setError('');setLoadVersion(v=>v+1);}else void send(resumable);}}>{loaded?label:error?'기존 작업 다시 확인':'기존 작업 확인 중…'}</button>
+      <button className="is-primary" disabled={!loaded&&!error||busy||pending||needsReason&&!reason.trim()} onClick={()=>{if(!loaded){setError('');setLoadVersion(v=>v+1);}else void send(resumable?'resume':'new');}}>{loaded?label:error?'기존 작업 다시 확인':'기존 작업 확인 중…'}</button>
+      {restartable&&<button disabled={busy||!reason.trim()} onClick={()=>void send('restart')}>새로 출제 (처음부터)</button>}
       {fresh&&<label><input type="checkbox" checked={privatePilot} disabled={busy} onChange={e=>setPrivate(e.target.checked)}/>학생 비공개 (내 계정에서만 확인)</label>}
     </div>
     {fresh&&<div role="note" aria-label="이 요청이 승인하는 것">
@@ -83,6 +90,7 @@ function GenerationPanel({subject,runId,onPublished}:Props) {
       <p className="root-generation-fine">러너를 켜두세요. 호출 상한: 개념 지도 1 · 출제포인트 1 · 문제은행 1 · 포인트 대조 최대 2 · 포인트 보완 최대 1 · 커버 확인(목표 60개마다 1, 빈 목표 추가 뒤 다시) · 지도 확인 최대 2 · 목표 밖 문항 포인트 보충 최대 2 · 빈 목표 추가 최대 2 · 문항 검토(40문항마다 1, 고친 문항만 다시) · 문항 고치기 문항마다 최대 2 · 임상 정리 1 · 의학 검토 1. 기존 문제와 학습 기록은 보존하고, 이미 공개된 판이 있는 강의는 요청이 거절됩니다.</p>
     </div>}
     {resumable&&<p>같은 입력·같은 공개 범위({job!.privatePilot?'학생 비공개':'학생 공개'})와 남은 수정 횟수로 이어서 진행합니다. 기존 실패 기록은 보존합니다.</p>}
+    {restartable&&<p className="root-generation-fine">새로 출제: 이 판은 그대로 두고, 같은 공개 범위로 최신 새 구조 2 작업을 새로 등록합니다. 필기(S1)·족보(S2) PDF를 OpenAI Codex CLI로 다시 보내고 수정·추가 횟수를 처음부터 받습니다. 이 버튼이 그 승인입니다.</p>}
     {error&&<p role="alert">{error}</p>}
     {job&&<div role="status"><p>{job.published?'게시 완료':job.awaitingWeb?'웹 응답 대기':job.state==='queued'?'러너 대기':job.state==='running'?'출제·검수 진행 중':'작업 중지·실패'} · {job.stage||job.message}{job.published?job.privatePilot?' · 학생 비공개':' · 학생 공개':''}</p>
       {job.sources?.length?<p>보낸 자료: {job.sources.map(s=>s.id+' '+s.filename).join(' · ')}</p>:null}

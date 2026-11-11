@@ -54,8 +54,11 @@ class RequestIn(BaseModel):
     # map-tree/3 (docs/changes/2026-11-10-importance-at-authoring): exam points are a coverage checklist; importance per
     # question; every source-ok question a task (root-generation/4).
     pipeline: Literal['map-tree/1', 'map-tree/2', 'map-tree/3'] | None = None
-    # The administrator's reason to continue a failed/held request; required for map-tree resumes.
+    # The administrator's reason to continue a failed/held request; required for map-tree resumes and restarts.
     resumeReason: str = Field(default='', max_length=500)
+    # 「새로 출제」(docs/changes/2026-11-11-main-quiz-start-over): a new generation with fresh fix/add budgets instead of
+    # reusing the lecture's latest ended, unpublished request of the same input. That request is kept as it is.
+    restart: bool = False
 
 
 def control_hash(db, subject, run_id):
@@ -87,6 +90,7 @@ def generation_input(packet):
     return {**{k: packet.get(k) for k in ('subject','runId','title','conceptMap','points','scope','examDate')},
         'inputMode':packet.get('inputMode','provided'),'authoring':packet.get('authoring','cli'),
         'parallelAuthoring':packet.get('parallelAuthoring',False),'pipeline':packet.get('pipeline'),
+        'restartOf':packet.get('restartOf'),
         'sources':[{k:v for k,v in s.items() if k!='snapshotKey'} for s in packet['sources']]}
 
 
@@ -219,6 +223,7 @@ def public_job(db, row, flags=None):
                 'inputMode':row.packet.get('inputMode','provided')}, 'report': report,
             'authoring':row.packet.get('authoring','cli'), 'parallelAuthoring':row.packet.get('parallelAuthoring',False),
             'pipeline':row.packet.get('pipeline'), 'sources':[{k:s[k] for k in ('id','kind','filename')} for s in row.packet.get('sources',[])],
+            'restartOf':row.packet.get('restartOf'),
             'operatorResumes':len(row.packet.get('operatorResumes',[])), 'awaitingWeb':row.packet.get('authoring')=='web' and not flags['web_response'] and job.state=='held' and not job.cancel_requested and job.stage=='ChatGPT 응답 대기',
             'dispatched':flags['web_dispatch']}
 
@@ -243,6 +248,23 @@ def resume_job(db, row, reason='', by=''):
         db.commit()
 
 
+RESTARTABLE = ('failed', 'canceled')
+
+
+def restart_target(db, subject, run_id, user):
+    """The lecture's latest request, which 「새로 출제」 sets aside (kept unchanged) for a new one with fresh budgets."""
+    row = db.scalars(select(RootGeneration).options(*LIGHT).where(RootGeneration.subject == subject, RootGeneration.run_id == run_id)
+                     .order_by(RootGeneration.created_at.desc(), RootGeneration.id.desc()).limit(1)).first()
+    if row is None: raise HTTPException(409, '새로 출제할 기존 작업이 없습니다. 「Main Quiz 만들기」로 요청하세요.')
+    row = canonical_generation(db, row)
+    job = db.get(PrequizJob, row.job_id)
+    if row.result_digest is not None: raise HTTPException(409, '이미 게시된 작업입니다. 판 교체는 별도 승인이 필요합니다.')
+    if job.state not in RESTARTABLE:
+        raise HTTPException(409, '진행·대기 중인 작업이 있습니다. 끝나거나 중지된 뒤 새로 출제하세요.')
+    if row.packet['owner'] != user.id: raise HTTPException(409, '다른 관리자의 작업입니다. 그 관리자가 새로 출제하세요.')
+    return row
+
+
 @router.get(BASE)
 def latest(subject: str, run_id: str, user: CurrentUser = Depends(require_admin), db: Session = Depends(get_db)):
     # 3초마다 폴링하는 화면이 쓰는 것은 가장 최근 한 판이다. LIMIT이 없으면 그 강의의 모든 판이
@@ -265,6 +287,8 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
         raise HTTPException(422,'Main-Quiz 앞 단계 방식(map-tree)은 CLI 원본 모드에서만 사용합니다.')
     if payload.inputMode=='source' and (payload.conceptMap or payload.points or (payload.authoring!='web' and not payload.parallelAuthoring and not payload.pipeline)):
         raise HTTPException(422,'원본 자동 준비는 웹 출제와 빈 지도·포인트 입력을 사용합니다.')
+    if payload.restart and (payload.resume or not payload.pipeline or not payload.resumeReason.strip()):
+        raise HTTPException(422, '새로 출제는 이유를 적은 Main-Quiz 앞 단계(map-tree) 새 요청만 받습니다.')
     if payload.examDate:
         from datetime import date
         try: date.fromisoformat(payload.examDate)
@@ -284,6 +308,9 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
             raise HTTPException(409, '같은 요청 ID의 입력이 달라졌습니다.')
         if payload.resume: resume_job(db, prior, payload.resumeReason, user.id)
         return {'generation': public_job(db, prior), 'reused': True}
+    if payload.restart:
+        # Part of the input identity: the new request differs from the one it restarts, so it is not reused.
+        raw.update(restartOf=restart_target(db, subject, run_id, user).id, restartReason=payload.resumeReason.strip())
     if payload.inputMode=='source' and not payload.examDate:raw['examDate']=registered_exam_date(db,lecture)
     try:
         sources = assets_now(db, subject, run_id)
