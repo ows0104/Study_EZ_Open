@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import signal
 import subprocess
+import time
 
 
 class AlreadyRunning(RuntimeError):
@@ -44,6 +45,77 @@ def exclusive(request):
                 msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
             else:
                 fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+# Model CLI sessions on this machine at once, over every process that uses this install
+# (docs/changes/2026-11-11-pipeline-resilience). One Main-Quiz run now asks up to six stages side by side and the
+# runner works on two lectures at a time; without a cap that is twelve sessions where three were the rule before.
+SLOTS_ENV = 'STUDYEZ_CODEX_SLOTS'
+DEFAULT_SLOTS = 8
+
+
+def slot_limit():
+    try:
+        return max(1, int(os.environ.get(SLOTS_ENV) or DEFAULT_SLOTS))
+    except ValueError:
+        return DEFAULT_SLOTS
+
+
+def _try_lock(handle):
+    handle.seek(0, 2)
+    if not handle.tell():
+        handle.write(b'0'); handle.flush()
+    handle.seek(0)
+    try:
+        if os.name == 'nt':
+            import msvcrt
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return False
+    return True
+
+
+def _unlock(handle):
+    handle.seek(0)
+    if os.name == 'nt':
+        import msvcrt
+        msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+    else:
+        import fcntl
+        fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+@contextmanager
+def slot(limit=None, *, poll=2.0, sleep=time.sleep, waiting=None):
+    """Hold one of `limit` session slots while a model CLI call runs; wait (never fail) while all are taken.
+
+    A slot is a locked file under <usage>/slots, so a process that dies gives its slot back with its handle.
+    `waiting()` is called once, when the first pass finds every slot taken."""
+    limit = slot_limit() if limit is None else max(1, int(limit))
+    folder = usage_root() / 'slots'
+    folder.mkdir(parents=True, exist_ok=True)
+    told = False
+    while True:
+        for i in range(limit):
+            handle = (folder / f'{i}.lock').open('a+b')
+            if not _try_lock(handle):
+                handle.close()
+                continue
+            try:
+                yield i
+            finally:
+                try:
+                    _unlock(handle)
+                finally:
+                    handle.close()
+            return
+        if not told and waiting is not None:
+            waiting()
+        told = True
+        sleep(poll)
 
 
 def terminate_tree(proc):

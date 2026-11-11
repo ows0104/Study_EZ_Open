@@ -12,12 +12,27 @@ this change (no `batchMode`) run the batches one after another on one shared sta
 """
 import copy
 import filecmp
+import os
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 BATCH_MODE = 'parallel/1'
-BATCH_WORKERS = 3          # model calls side by side; the runner already runs three Codex sessions at once
+# Model calls of one run side by side. Three was the first, untested ceiling ("the runner already runs three
+# Codex sessions at once"): a lecture of 200+ questions has six review batches, so they ran in two waves and the
+# second wave waited 13-19 minutes for the first (run 6e5c581a, 2026-11-11). Six covers such a lecture in one wave;
+# the machine-wide ceiling for every process is studyez_llm.execution.slot (STUDYEZ_CODEX_SLOTS, 8).
+WORKERS_ENV = 'STUDYEZ_ROOT_WORKERS'
+
+
+def _workers(default=6):
+    try:
+        return min(12, max(1, int(os.environ.get(WORKERS_ENV) or default)))
+    except ValueError:
+        return default
+
+
+BATCH_WORKERS = _workers()
 CONFLICT_PREFIX = 'CF-B{n}-'
 
 

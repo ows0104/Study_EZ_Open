@@ -10,8 +10,13 @@ constants taken from the server-frozen request instead:
   instructions moved verbatim to content/prompts/learning-links/map-tree/ (tests/runner/test_root_front.py
   reproduces the pilots' task.md byte for byte). Same acceptance checks.
 - One Codex CLI call per stage, inputs frozen and proven unchanged, raw outputs and failures kept.
-  Nothing is retried automatically. `--resume <reason>` (the administrator's reason) archives a failed or
-  interrupted stage and every later one under .resume-<k>/ and runs them again; completed stages stay.
+  A failed stage is not run again by itself. `--resume <reason>` (the administrator's reason) archives a failed
+  or interrupted stage and every later one under .resume-<k>/ and runs them again; completed stages stay.
+- docs/changes/2026-11-11-pipeline-resilience (nine of thirteen starts in two days were held, three of them
+  by what this module passes on): a result its host check refuses goes back once into the same session with
+  the exact error, as the generation stages have done since 2026-11-08; a call the network dropped waits for
+  the network and runs once more (transport-retry/1); the bank is checked the way the generator's intake will
+  read it; and under map-tree/2+ the point audit and repair run beside the Map and the bank, not after the bank.
 - `derive` writes derived-packet.json: studyez_contracts.roots.map_tree.derive_packet, which the server
   repeats when the result arrives.
 
@@ -53,6 +58,10 @@ RECEIPT = {'type': 'object', 'properties': {'path': {'type': 'string'}, 'sha256'
            'required': ['path', 'sha256'], 'additionalProperties': False}
 LIMIT = 5_000_000
 DPI = 100
+FOLLOWUP = ('The host check of your $file failed with this error:\n$error\n'
+            'Fix only what this error requires in $file with local code (structure, IDs, duplicates, allowed values, '
+            'page references); keep every finding, verdict and content otherwise unchanged. Never invent a source or a '
+            'verdict to pass. Then return only the path/SHA256 receipt of the corrected $file.')
 
 
 def sha(path):
@@ -116,6 +125,7 @@ class Front:
         self.lock = threading.Lock()   # map, point and bank run side by side under map-tree/2
         self.resume, self.dirty, self.archived = resume, False, []
         self.title = packet['title']
+        self.wait_network = codex.wait_for_network   # transport-retry/1 (tests replace it)
 
     # ------------------------------------------------------------ ledger / stage lifecycle
     def ledger(self):
@@ -148,57 +158,125 @@ class Front:
         print('── 앞 단계 재개: ' + name + ' 다시 실행', flush=True)
         return False
 
+    def _kwargs(self, work, label, **more):
+        return dict(blind=False, cwd=work, timeout=2400, label=label, schema=RECEIPT, system=SYSTEM,
+                    **({'model': self.model} if self.model else {}), **more)
+
+    def _session(self, work, task, label, frozen):
+        """The stage's model call. A call the network dropped (codex.network_failure: no answer came back) waits for
+        the network and runs once more with the same frozen inputs: transport-retry/1. Whatever the dropped call
+        left in the folder moves to .net-<stage>[-k]/, so the second call starts from the inputs alone."""
+        run = self.invoke or codex.run
+        try:
+            return run(task, **self._kwargs(work, label))
+        except Exception as error:
+            if not codex.network_failure(error): raise
+            dropped = error
+        with self.lock:
+            kept = next(x for x in (self.out / ('.net-' + work.name + ('' if k == 0 else f'-{k}')) for k in range(1000)) if not x.exists())
+            kept.mkdir()
+        (kept / 'error.txt').write_text(str(dropped), encoding='utf-8')
+        try:
+            for path in sorted(Path(work).rglob('*')):
+                rel = path.relative_to(work).as_posix()
+                if path.is_file() and rel not in frozen and rel != 'state.json':
+                    (kept / rel).parent.mkdir(parents=True, exist_ok=True)
+                    path.replace(kept / rel)
+        except OSError:
+            raise dropped   # a leftover is still held open: no clean second start, so the drop stands
+        state = read(work / 'state.json')
+        write(work / 'state.json', {**state, 'transportRetries': [{'policy': 'transport-retry/1', 'error': str(dropped)[-600:], 'kept': kept.name}]})
+        print('── 네트워크 끊김: 앞 단계 ' + label + ' 연결을 기다린 뒤 한 번 다시 실행', flush=True)
+        if not self.wait_network(): raise dropped
+        return run(task, **self._kwargs(work, label))
+
+    def _receipt(self, work, info, expected_file, frozen):
+        receipt = json.loads(info['text'])
+        require(receipt['path'] == expected_file, 'Different result file')
+        result = work / expected_file
+        require(result.is_file() and not result.is_symlink() and 0 < result.stat().st_size < LIMIT, 'Missing/invalid result file')
+        require(sha(result) == receipt['sha256'], 'Output receipt mismatch')
+        for rel, expected in frozen.items():
+            require(sha(work / rel) == expected, 'Model modified input ' + rel)
+        return result
+
     def call(self, work, task, label, expected_file):
-        """One Codex CLI call in `work`; frozen inputs are proven unchanged; no automatic retry."""
+        """One Codex CLI call in `work`; frozen inputs are proven unchanged. Only a network drop is run again."""
         frozen = tree_hashes(work)
         write(work / 'state.json', {'status': 'started', 'startedAt': time.time(), 'inputHashes': frozen, 'model': codex.model_name(self.model)})
         print('── 앞 단계 ' + label, flush=True)
         try:
-            run = self.invoke or codex.run
-            info = run(task, blind=False, cwd=work, timeout=2400, label=label, schema=RECEIPT, system=SYSTEM,
-                       **({'model': self.model} if self.model else {}))
+            info = self._session(work, task, label, frozen)
             write(work / 'model-response.json', info)
-            receipt = json.loads(info['text'])
-            require(receipt['path'] == expected_file, 'Different result file')
-            result = work / expected_file
-            require(result.is_file() and not result.is_symlink() and 0 < result.stat().st_size < LIMIT, 'Missing/invalid result file')
-            require(sha(result) == receipt['sha256'], 'Output receipt mismatch')
-            for rel, expected in frozen.items():
-                require(sha(work / rel) == expected, 'Model modified input ' + rel)
-            return info, result
+            return info, self._receipt(work, info, expected_file, frozen)
+        except BaseException as error:
+            self.failed(work, error, frozen)
+            raise
+
+    def checked(self, work, task, label, expected_file, check):
+        """A stage call and its host check `check(result)`. Returns (info, result, what the check returned).
+
+        A result the check refuses goes back once into the same session with the exact error (format and
+        structure only; the findings stay the model's), as runner.root_native_json does for the generation stages.
+        Before this the stage was recorded as failed and the lecture waited for the administrator: 261104_03
+        'Different title' and the bank errors of 261102_02 and 261111_02 that the generator's intake found
+        20 minutes later. A second refusal is recorded as failed, as before. Tests with a fake call opt in
+        with `followups = True`."""
+        info, result = self.call(work, task, label, expected_file)
+        frozen = read(work / 'state.json')['inputHashes']
+        try:
+            try:
+                return info, result, check(result)
+            except Exception as error:
+                if not (self.invoke is None or getattr(self, 'followups', False)): raise
+                refused = error
+            first = sha(result)
+            (work / ('refused-' + expected_file)).write_bytes(result.read_bytes())
+            write(work / 'check-failure.json', {'error': str(refused)[:4000], 'fileSha256': first})
+            print('── 앞 단계 ' + label + ' 형식 확인 후속', flush=True)
+            again = (self.invoke or codex.run)(
+                Template(FOLLOWUP).substitute(file=expected_file, error=str(refused)[:4000]),
+                **self._kwargs(work, label + ' 형식 확인 후속', resume=info['session_id'],
+                               previous_usage=info.get('session_usage') or info.get('usage') or {}))
+            write(work / 'model-response-followup.json', again)
+            require(again.get('session_id') == info['session_id'], 'Follow-up did not continue the same session')
+            result = self._receipt(work, again, expected_file, frozen)
+            value = check(result)
+            usage = {k: (info.get('usage') or {}).get(k, 0) + (again.get('usage') or {}).get(k, 0)
+                     for k in set(info.get('usage') or {}) | set(again.get('usage') or {})}
+            merged = {**info, 'usage': usage, 'duration_ms': info.get('duration_ms', 0) + again.get('duration_ms', 0),
+                      'followup': {'error': str(refused)[:4000], 'refusedSha256': first}}
+            return merged, result, value
         except BaseException as error:
             self.failed(work, error, frozen)
             raise
 
     def failed(self, work, error, frozen):
         write(work / 'failure.json', {'type': type(error).__name__, 'message': str(error), 'at': time.time(), 'automaticRetry': False})
-        (work / 'failure.txt').write_text(traceback.format_exc(), encoding='utf-8')
+        (work / 'failure.txt').write_text(''.join(traceback.format_exception(type(error), error, error.__traceback__)), encoding='utf-8')
         write(work / 'state.json', {'status': 'failed', 'error': str(error), 'automaticRetry': False, 'inputHashes': frozen})
 
     def accept(self, work, result, kind):
-        """Check a Map/points result; a check failure is recorded like a failed call (no automatic retry).
+        """Check a Map/points result (the `check` of `checked`, which records a refusal).
 
         `title` only echoes the request's lecture name. A model has written it differently (agent.261104_03,
         2026-11-11: the whole stage was held as 'Different title'), so the request title is written back and the
         model's bytes are kept beside it as model-<file>."""
-        try:
-            value, extra = read(result), {}
-            if value.get('title') != self.title:
-                (work / ('model-' + result.name)).write_bytes(result.read_bytes())
-                extra['modelTitle'] = value.get('title')
-                value['title'] = self.title
-                write(result, value)
-            self.validate(kind, value)
-            return value, extra
-        except BaseException as error:
-            self.failed(work, error, read(work / 'state.json')['inputHashes'])
-            raise
+        value, extra = read(result), {}
+        if value.get('title') != self.title:
+            (work / ('model-' + result.name)).write_bytes(result.read_bytes())
+            extra['modelTitle'] = value.get('title')
+            value['title'] = self.title
+            write(result, value)
+        self.validate(kind, value)
+        return value, extra
 
     def finish(self, work, info, result, extra):
         state = read(work / 'state.json')
         write(work / 'state.json', {**state, 'status': 'completed', 'file': result.name, 'fileSha256': sha(result),
                                     'textSha256': map_tree.text_sha256(text_of(result)), 'duration_ms': info.get('duration_ms', 0),
-                                    'usage': info.get('usage', {}), 'session_id': info['session_id'], **extra})
+                                    'usage': info.get('usage', {}), 'session_id': info['session_id'],
+                                    **({'followup': info['followup']} if info.get('followup') else {}), **extra})
         print(json.dumps({'stage': work.name, **extra}, ensure_ascii=False), flush=True)
 
     # ------------------------------------------------------------ stages
@@ -265,8 +343,13 @@ class Front:
         (work / 'request.md').write_bytes(asset_text(request).encode('utf-8'))
         task = asset_text(request) + '\n\n' + template('map-tree/extract-task.md', title=self.title, first_id=first, filename=filename)
         (work / 'task.md').write_bytes(task.encode('utf-8'))
-        info, result = self.call(work, task, f'{self.title} {kind} extraction', filename)
-        value, renamed = self.accept(work, result, kind)
+        renamed = {}
+
+        def check(result):
+            value, extra = self.accept(work, result, kind)
+            renamed.update(extra)   # the first pass may have written the request title back
+            return value
+        info, result, value = self.checked(work, task, f'{self.title} {kind} extraction', filename, check)
         if kind == 'map':
             depth = concept_tree.depth_of(value['concepts'])
             extra = {'concepts': len(value['concepts']), 'relations': len(value['relations']),
@@ -288,19 +371,31 @@ class Front:
         write(work / 'acceptance.schema.json', schema)
         task = asset_text('parallel/bank.md') + '\n' + g.item_quality_guidance() + '\n' + template(self.bank_templates[1], title=self.title, filename='bank.json')
         (work / 'task.md').write_bytes(task.encode('utf-8'))
-        info, result = self.call(work, task, f'{self.title} bank authoring', 'bank.json')
-        value = read(result)
-        from jsonschema import Draft202012Validator
-        Draft202012Validator(schema).validate(value)
-        if self.v4:
-            v4.check_intake(value)   # one basis row per question (R2)
-        pages = self.pages()
-        refs_ok(value, pages)
-        for s in value['visual_stimuli']:
-            require(s['source_id'] in pages and 1 <= s['page'] <= pages[s['source_id']], 'bank: image page outside the source')
-        ids = [q['question_id'] for q in value['bank']['questions']]
-        require(ids and len(ids) == len(set(ids)), 'bank: empty or duplicate question IDs')
-        self.finish(work, info, result, {'questions': len(ids), 'bankHash': document_hash(value)})
+        sources = [s['id'] for s in self.packet['sources']]
+
+        def check(result):
+            value = read(result)
+            from jsonschema import Draft202012Validator
+            Draft202012Validator(schema).validate(value)
+            if self.v4:
+                v4.check_intake(value)   # one basis row per question (R2)
+            pages = self.pages()
+            refs_ok(value, pages)
+            for s in value['visual_stimuli']:
+                require(s['source_id'] in pages and 1 <= s['page'] <= pages[s['source_id']], 'bank: image page outside the source')
+            ids = [q['question_id'] for q in value['bank']['questions']]
+            require(ids and len(ids) == len(set(ids)), 'bank: empty or duplicate question IDs')
+            # What the generator's intake will do with this bank, here, while the author can still correct it: an
+            # error that belongs to no question stops the whole lecture there (connection_generate_v3
+            # intake_rejections; 261102_02 schema_version, 261111_02 CF02). Errors of single questions pass, as
+            # they do at intake, where those questions are left out and recorded.
+            from quizbank.connection_generate_v3 import intake_rejections
+            from studyez_contracts.bank.validate import validate_bank
+            projected, _ = v3.intake_projection(value['bank'])
+            intake_rejections(validate_bank(projected, sources)['errors'], quiet=True)
+            return value
+        info, result, value = self.checked(work, task, f'{self.title} bank authoring', 'bank.json', check)
+        self.finish(work, info, result, {'questions': len(value['bank']['questions']), 'bankHash': document_hash(value)})
 
     def check_audit(self, work, points_file):
         from jsonschema import Draft202012Validator
@@ -329,8 +424,9 @@ class Front:
         write(work / 'acceptance.schema.json', audit_schema())
         task = template(self.templates[1], pages=map_tree.pages_phrase(self.pages()), title=self.title).rstrip('\n')
         (work / 'task.md').write_bytes(task.encode('utf-8'))
-        info, result = self.call(work, task, self.title + ' point ' + stage, 'audit.json')
-        self.finish(work, info, result, self.check_audit(work, src / 'exam-points.json'))
+        info, result, summary = self.checked(work, task, self.title + ' point ' + stage, 'audit.json',
+                                             lambda result: self.check_audit(work, src / 'exam-points.json'))
+        self.finish(work, info, result, summary)
         return read(result)
 
     def repair(self):
@@ -342,8 +438,13 @@ class Front:
         shutil.copy2(self.out / 'point/exam-points.json', work / 'previous-exam-points.json')
         task = asset_text(self.asset['point'][1]) + '\n' + template(self.templates[2], title=self.title).rstrip('\n')
         (work / 'task.md').write_bytes(task.encode('utf-8'))
-        info, result = self.call(work, task, self.title + ' point repair', 'exam-points.json')
-        value, renamed = self.accept(work, result, 'point')
+        renamed = {}
+
+        def check(result):
+            value, extra = self.accept(work, result, 'point')
+            renamed.update(extra)
+            return value
+        info, result, value = self.checked(work, task, self.title + ' point repair', 'exam-points.json', check)
         self.finish(work, info, result, {'points': len(value['points']), **renamed})
 
     def derive(self, repaired):
@@ -393,20 +494,34 @@ class Front:
             import gc
             from concurrent.futures import ThreadPoolExecutor
             gc.collect()
+            # The audit, the repair and the final audit read the points alone, so they follow the point stage at
+            # once, beside the Map and the bank (the longest of the three: the audit used to wait 2-6 minutes for
+            # it and the front took 19-23 minutes). The Map and the bank are decided here, while `dirty` is still
+            # False; from then on `dirty` belongs to the point chain, the only place a stage reads an earlier one.
+            todo = [kind for kind in ('map', 'bank') if not self.ready(kind)]
+            done = {}
+
+            def chain():
+                self.extract('point')
+                with self.lock: self.dirty = point_dirty
+                done['repaired'] = self.audits()
             with ThreadPoolExecutor(max_workers=3) as pool:
-                jobs = [pool.submit(self.extract, 'map'), pool.submit(self.extract, 'point'), pool.submit(self.bank)]
-                errors = [j.exception() for j in jobs if j.exception() is not None]
+                jobs = [pool.submit(self.extract, 'map') if 'map' in todo else None, pool.submit(chain),
+                        pool.submit(self.bank) if 'bank' in todo else None]
+                errors = [j.exception() for j in jobs if j is not None and j.exception() is not None]
             if errors: raise errors[0]
-            self.dirty = point_dirty
-        else:
-            self.extract('map')
-            self.extract('point')
+            return self.derive(done['repaired'])
+        self.extract('map')
+        self.extract('point')
+        return self.derive(self.audits())
+
+    def audits(self):
         found = self.audit('audit', 'point')
         repaired = bool(found['issues'])
         if repaired:
             self.repair()
             self.audit('final-audit', 'point-repair')  # remaining issues are recorded, as in the pilots
-        return self.derive(repaired)
+        return repaired
 
 
 def main(argv=None):

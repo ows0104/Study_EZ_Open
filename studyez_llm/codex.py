@@ -5,11 +5,12 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import socket
 import subprocess
 import tempfile
 import time
 from pathlib import Path
-from .execution import AlreadyRunning, exclusive, run_process
+from .execution import AlreadyRunning, exclusive, run_process, slot, slot_limit
 from . import telemetry
 
 DEFAULT_MODEL = "gpt-6.1-sol"
@@ -26,6 +27,54 @@ DISABLED_FEATURES = (
 
 class SessionError(RuntimeError):
     pass
+
+
+# A call that ended because the network dropped: the CLI could not reach the model, so no answer came back.
+# The runner laptop loses DNS several times a day (runs/agent.log 2026-11-10/11: "getaddrinfo failed",
+# "No such host is known. (os error 11001)"); the CLI reconnects five times and then gives the turn up.
+NETWORK_MARKERS = (
+    "stream disconnected", "no such host", "getaddrinfo", "error sending request", "dns error",
+    "failed to lookup address", "name resolution", "network is unreachable", "unreachable network",
+    "unreachable host", "connection reset", "connection refused", "connection closed before",
+    "forcibly closed", "os error 11001", "os error 10051", "os error 10054", "os error 10060", "os error 10065",
+)
+# Never a network drop, whatever else the text says: the provider refused the content or the account's limit.
+NOT_NETWORK = ("limited access to this content for safety reasons", "usage limit", "rate limit", "quota")
+NETWORK_HOSTS = ("chatgpt.com", "api.openai.com")
+
+
+def network_failure(error: BaseException) -> bool:
+    """True when a CLI session (SessionError, anywhere in the cause chain) ended on a network error.
+
+    A time limit is not one: `초 안에 끝나지 않았다` stays a failure the administrator looks at."""
+    parts, seen, cause, session = [], set(), error, False
+    while cause is not None and id(cause) not in seen:
+        seen.add(id(cause))
+        parts.append(str(cause))
+        session = session or isinstance(cause, SessionError)
+        if isinstance(cause, subprocess.TimeoutExpired):
+            return False
+        cause = cause.__cause__ or cause.__context__
+    text = " | ".join(parts).lower()
+    if not session or "초 안에 끝나지 않았다" in text or any(m in text for m in NOT_NETWORK):
+        return False
+    return any(m in text for m in NETWORK_MARKERS)
+
+
+def wait_for_network(*, limit: float = 900, step: float = 15, hosts=NETWORK_HOSTS,
+                     resolve=socket.getaddrinfo, sleep=time.sleep, clock=time.monotonic) -> bool:
+    """Wait until one model host resolves again; False when none did within `limit` seconds."""
+    started = clock()
+    while True:
+        for host in hosts:
+            try:
+                resolve(host, 443)
+                return True
+            except OSError:
+                continue
+        if clock() - started >= limit:
+            return False
+        sleep(step)
 
 
 def model_name(model: str | None = None) -> str:
@@ -220,8 +269,11 @@ def run(prompt: str, *, blind: bool, cwd: Path | None = None, model: str | None 
     request = {'cwd': str(Path(cwd).resolve()) if cwd else '', 'model': selected,
                'prompt': prompt, 'blind': blind, 'resume': resume, 'schema': schema, 'system': system,
                'images': [__import__('hashlib').sha256(Path(p).read_bytes()).hexdigest()for p in images or []]}
+    def waiting():
+        print(f"── Codex 동시 실행 한도({slot_limit()}) 대기: {label or '세션'}", flush=True)
     try:
-        with exclusive(request):
+        # The slot is taken before the time limit starts: waiting for a free slot is not model time.
+        with exclusive(request), slot(waiting=waiting):
             info = _run(prompt, blind=blind, cwd=cwd, model=selected, timeout=timeout, label=label,
                         resume=resume, schema=schema, system=system, previous_usage=previous_usage,images=images,
                         writable=writable)
