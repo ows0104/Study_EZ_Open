@@ -4,6 +4,7 @@
 
 - tests:   Linux 전체 검사(Python 회귀·서버·웹 빌드·bridge). 문서·기록만 바뀌면 false.
 - windows: Windows runner checks. 러너·생성기·계약·스크립트 쪽이 안 바뀌면 false.
+- map:     map_numbers --check(pytest 수집이라 Python 의존성 설치가 필요). 같은 트리 재검사 생략 때만 false.
 
 master push는 PR에서 이미 같은 트리(병합 결과 트리 == PR 머리 트리)를 통과했으면 다시 돌리지 않는다.
 판단할 수 없으면(수동 실행·새 브랜치·파일 300개 이상·API 오류) 전부 돌린다.
@@ -52,10 +53,11 @@ def classify(paths: list[str]) -> dict[str, bool]:
     return {
         "tests": bool(code),
         "windows": any(not any(fnmatchcase(p, n) for n in NOT_WINDOWS) for p in code),
+        "map": True,  # map_numbers --check는 문서도 본다. 같은 트리 재검사 생략 때만 끈다.
     }
 
 
-ALL = {"tests": True, "windows": True}
+ALL = {"tests": True, "windows": True, "map": True}
 
 
 def _gh(*args: str):
@@ -99,6 +101,7 @@ def decide(env: dict[str, str]) -> tuple[dict[str, bool], str]:
             passed = _passed(repo, parents[1]["sha"])
             if TESTS_JOB in passed:
                 scope["tests"] = False
+                scope["map"] = False
                 note += f"; PR 머리 {parents[1]['sha'][:8]}가 같은 트리로 검사 통과"
             if WINDOWS_JOB in passed:
                 scope["windows"] = False

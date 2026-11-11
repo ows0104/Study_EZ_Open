@@ -38,6 +38,7 @@ jobs:
     outputs:
       tests: ${{ steps.scope.outputs.tests }}
       windows: ${{ steps.scope.outputs.windows }}
+      map: ${{ steps.scope.outputs.map }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -69,12 +70,13 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: web/package-lock.json
-      - name: Install test dependencies
+      - name: Install Python test dependencies
+        # map_numbers --check collects pytest, so docs-only runs need these too.
+        if: needs.scope.outputs.tests == 'true' || needs.scope.outputs.map == 'true'
+        run: python -m pip install -r requirements.txt pytest httpx PyYAML requests
+      - name: Install web dependencies
         if: needs.scope.outputs.tests == 'true'
-        run: |
-          set -e
-          python -m pip install -r requirements.txt pytest httpx PyYAML requests
-          npm --prefix web ci
+        run: npm --prefix web ci
       - name: Install server dependencies
         if: needs.scope.outputs.tests == 'true'
         working-directory: server
@@ -97,6 +99,7 @@ jobs:
         if: needs.scope.outputs.tests == 'true'
         run: node --test tests/bridge/*.cjs web/tests/wait-for-api.test.mjs
       - name: Map and document check
+        if: needs.scope.outputs.map == 'true'
         run: python scripts/map_numbers.py --check
       - name: Prepare fixed server candidate
         shell: pwsh
