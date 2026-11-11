@@ -11,9 +11,10 @@ question or conflict record it names. Only a stage that did not run to an accept
 is resumable. The assembly runs before the medical review, so what it refuses is found before that spend.
 
 Every model call goes through `invoke(stage, ctx, material, model)` (runner.root_native_json.NativeJson).
-Inputs, raw outputs and usage are written next to the ledger; nothing is retried automatically. A failed or
-interrupted stage continues only with an operator reason (`resume`); completed stages are kept, and the
-add rounds and fix attempts recorded in the ledger are never reset.
+Inputs, raw outputs and usage are written next to the ledger; nothing is retried automatically, except the two
+named reruns of one call that judged nothing: review-retry/1 (Stages.judged) and transport-retry/1 (Stages._call,
+a call the network dropped). A failed or interrupted stage continues only with an operator reason (`resume`);
+completed stages are kept, and the add rounds and fix attempts recorded in the ledger are never reset.
 """
 import copy
 import hashlib
@@ -66,6 +67,8 @@ class Stages:
         from . import connection_generate as g
         self.g, self.out, self.model, self.invoke, self.policy = g, Path(out), model, invoke, policy
         self.path = self.out / 'ledger.json'
+        # transport-retry/1: how a stage waits for the network before its one retry (tests replace it).
+        self.wait_network = codex.wait_for_network
         # Batches and other independent judgments of one run call stages side by side (connection_batches);
         # every change to the ledger and its file happens under this lock.
         self.lock = threading.RLock()
@@ -178,6 +181,35 @@ class Stages:
             seat.replace(archive / '.native' / name)
         self.resume_row['superseded'].append({'name': name, 'entry': self.ledger['stages'].pop(name)})
 
+    def _call(self, name, payload, material):
+        """The model call of one stage. A call that ended because the network dropped (codex.network_failure: the
+        CLI never brought an answer back) waits for the network and runs once more: transport-retry/1
+        (docs/changes/2026-11-11-pipeline-resilience, user 2026-11-11 「오류가 나서 끊기고」).
+
+        This is not a second opinion. Nothing was judged in the dropped call, the input is the same, and no review
+        or fix count moves. Its diagnostics stay under .native/<stage>.net and the ledger's `transportRetries` names
+        it. A provider refusal, a time limit, a check failure and a second drop of the same stage stop as before."""
+        try:
+            return self.invoke(name, payload, material, self.model)
+        except Exception as error:
+            with self.lock:
+                again = any(r['stage'] == name for r in self.ledger.get('transportRetries', []))
+            if again or not codex.network_failure(error):
+                raise
+            dropped = error
+        with self.lock:
+            seat, kept = self.out / '.native' / name, None
+            if seat.exists():
+                kept = '.native/' + name + '.net'
+                seat.replace(self.out / '.native' / (name + '.net'))
+            self.ledger.setdefault('transportRetries', []).append(
+                {'policy': 'transport-retry/1', 'stage': name, 'error': str(dropped)[-600:], 'kept': kept})
+            self.save()
+        print('── 네트워크 끊김: ' + name + ' 연결을 기다린 뒤 한 번 다시 실행', flush=True)
+        if not self.wait_network():
+            raise dropped
+        return self.invoke(name, payload, material, self.model)
+
     def run(self, name, ctx, accept, state=None, material=None):
         """One model stage. A completed stage with the same input is reused; anything else runs once.
 
@@ -199,8 +231,8 @@ class Stages:
         self.g.write(self.out / (name + '.input.json'), ctx)
         print('── 연결 자동출제 ' + self.policy[self.policy.index('/'):] + ' ' + name, flush=True)
         try:
-            raw, info = self.invoke(name, {**ctx, '_check': state} if state is not None else ctx,
-                                    Path(material) if material is not None else self.out / 'material', self.model)
+            raw, info = self._call(name, {**ctx, '_check': state} if state is not None else ctx,
+                                   Path(material) if material is not None else self.out / 'material')
             self.g.write(self.out / (name + '.raw.json'), raw)
             self.g.write(self.out / (name + '.usage.json'), info)
             with self.lock:
@@ -250,16 +282,20 @@ def _bank_findings(bank, sources, attempts=None):
     return found
 
 
-def intake_rejections(errors):
+def intake_rejections(errors, quiet=False):
     """Questions left out at intake, from validate_bank errors. A bank-level error stops the run, except a resolved
     conflict's missing source citation: it is printed and carried on, and stays in the final validation errors
-    (shown to the administrator as an issue) unless a later fix adds the citation."""
+    (shown to the administrator as an issue) unless a later fix adds the citation.
+
+    The front bank stage runs this same function as its check (runner.root_front.bank, `quiet`), so a bank-level
+    error goes back to the author's session instead of stopping the lecture here."""
     rejected, gaps = [], []
     for text in errors:
         if _CONFLICT_GAP.match(text):
             if text not in gaps:  # validate_bank repeats it once per locator of that source
                 gaps.append(text)
-                print('접수 경고(출처 충돌 인용 누락, 진행): ' + text, flush=True)
+                if not quiet:
+                    print('접수 경고(출처 충돌 인용 누락, 진행): ' + text, flush=True)
             continue
         m = _QID.match(text)
         v3.require(m, '문제은행 형식 오류가 특정 문항에 속하지 않습니다. 결과를 만들지 않고 보존합니다: ' + text)

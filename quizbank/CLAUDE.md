@@ -15,7 +15,7 @@
 `--resume <이유>`(stage-resume/1, 같은 날 「중간 성공한 부분까지는 저장되게 해서 안된 부분부터」)는 사람이 명시한 재개다. 입력이 같고 현재 수용 검사가 같은 결과를 내는 완료 단계는 모델 없이 그대로 쓰고, 나머지만 `.resume-<k>/`에 보관한 뒤 다시 돌린다. 회차 번호가 고정이라 회차를 늘리거나 상한을 초기화하지 않는다. 다른 복구 기록이 있는 실행은 거절한다. 완료된 실행은 `--rerun <단계>`로 다시 돌릴 완료 단계를 지정할 때만 열고, 기존 결과는 `.resume-<k>/`로 옮긴다.
 연결 목표(role branch/root)의 중요도는 importance-basis/1 계산값을 쓴다. 원본 대조는 이어진 포인트 근거와 연결 내용이 원본에 맞는지만 판정하고, 전이 승인 여부로 unknown·conflict를 내지 않는다(2026-11-09 사용자 「계산값 쓰고 내용만 검토」).
 root-generation/3(`connection_generate_v3.py`, 2026-11-10 사용자 설계, `docs/changes/2026-11-10-root-generation-3/`)은 packet의 `generationPolicy`로만 열리는 별도 판이다. 독립 문제은행을 받아 커버 확인 → 지도 확인 → 목표 밖 문항의 포인트 보충 → 빈 목표만 추가(≤2) → 묶음 문항 검토·지적 문항만 고치기(문항당 ≤2, 나빠지면 그 고치기가 가져온 충돌·그림까지 되돌림) → 임상 정리(충돌 기록마다 판정, 일치가 아니면 인용 문항 보완 한 번 뒤 그 기록만 다시, 그래도 아니면 그 사실만 의학 검토에 안 보냄) → 조립 → 의학 검토 한 번 순으로 돈다. 판정 값은 강의를 멈추지 않고 그 목표·문항·충돌 기록에만 미친다(`docs/changes/2026-11-10-gen3-item-scope/`). 멈추는 것은 단계 실패와 「과제 0개」뿐이고, 목표별 이유는 `readiness.json`에 있다. 단계 입력은 `studyez_contracts.roots.generation_v3`의 입력 함수가 만든 칸만, 프롬프트는 `content/prompts/learning-links/v3/`(판정 규칙은 /2 문단을 그대로 옮김)를 쓴다. 같은 내용 문항의 판정은 다시 묻지 않는다. /2 실행·재개·검증은 바꾸지 않는다. 검사: `tests/quizbank/test_root_generation_v3.py`.
-/3·/4의 새 실행은 묶음 검토·고치기를 같은 시작 사본에서 동시에(최대 3) 돌리고 묶음 순서로 합친다(`connection_batches.py`, `docs/changes/2026-11-11-root-batch-parallel/`). 묶음 사이에 충돌 기록·선행 연결이 걸치면 그 실행은 순차로 돌고 `batchPhases`에 이유를 남긴다. 동시 묶음의 새 충돌 ID는 묶음 접두어(`CF-B<n>-`)로 시작하고 다른 묶음 충돌의 사실은 다시 쓰지 않는다. `batchMode`가 없는 이전 ledger는 순차 그대로다. 검사: `tests/quizbank/test_root_batch_parallel.py`.
+/3·/4의 새 실행은 묶음 검토·고치기를 같은 시작 사본에서 동시에(최대 6, `STUDYEZ_ROOT_WORKERS`; 2026-11-11까지 3) 돌리고 묶음 순서로 합친다(`connection_batches.py`, `docs/changes/2026-11-11-root-batch-parallel/`). 묶음 사이에 충돌 기록·선행 연결이 걸치면 그 실행은 순차로 돌고 `batchPhases`에 이유를 남긴다. 동시 묶음의 새 충돌 ID는 묶음 접두어(`CF-B<n>-`)로 시작하고 다른 묶음 충돌의 사실은 다시 쓰지 않는다. `batchMode`가 없는 이전 ledger는 순차 그대로다. 검사: `tests/quizbank/test_root_batch_parallel.py`.
 /4의 새 실행(ledger `reviewEvidence`, review-evidence/1)은 문항 검토가 정답 근거 필기 쪽(`evidence`)을 함께 적는다. 모든 고치기가 끝난 뒤 의학 검토 전에, S1 인용이 그 쪽과 다르면 코드가 인용만 그 쪽으로 바꾸고 `citationAlignments`에 남긴다(모델 호출·고치기 상한 소비 없음). 계약은 기록과 정확히 같은 인용 교체만 허용한다. 게시 뒤 근거 보강은 이 쪽을 다시 고르지 않는다(`docs/changes/2026-11-11-evidence-from-citations/`). 검사: `tests/quizbank/test_review_evidence.py`.
 /4의 새 실행(ledger `placement`, review-relations/1)은 문항 검토가 그 문항이 회상시키는 지도 관계(`relations`, whole/partial)를 함께 적고, 문항은 그 관계를 가진 목표에 배치된다(whole 우선 → 답한 component 수 → 지도 순서). 목표 커버 판정은 누락 점검·빈 목표 추가·`readiness`에만 쓴다. 회상 단위가 있는 목표는 답한 단위에만 붙이고 답한 단위만 확인됨으로 센다. 표시가 없는 결과는 `PLACEMENTS`의 이전 규칙으로 검증한다(`docs/changes/2026-11-11-place-by-review/`). 검사: `tests/contracts/test_review_placement.py`, `tests/quizbank/test_place_by_review.py`.
 기존 /1 요청·완료 결과·동일 입력의 상한은 재요청/프로토콜 변경으로 초기화하지 않는다. 상세 계약·회귀 검사는 `docs/changes/2026-11-05-root-pipeline-guards/`에 있다.
@@ -26,7 +26,10 @@ root-generation/3(`connection_generate_v3.py`, 2026-11-10 사용자 설계, `doc
   - 같은 세션 되돌려주기 뒤에도 아무것도 판정하지 않은 경우
   - 마지막 회차 원본 대조가 임상 정리를 unknown으로 남긴 경우(맥락 검사 경로)
 - 버린 단계는 `.retry-<단계>/`에 보관하고 지우지 않는다. 보완 횟수는 그대로다. 다시 포기하면 멈춘다.
-- 이 재실행은 「중단/실패 호출은 자동 반복하지 않는다」의 유일한 예외다. 의심을 줄이려는 추가 검수가 아니다.
+- 이 재실행은 「중단/실패 호출은 자동 반복하지 않는다」의 예외다. 의심을 줄이려는 추가 검수가 아니다.
+- 둘째 예외 transport-retry/1(2026-11-11 사용자 「오류가 나서 끊기고」, `docs/changes/2026-11-11-pipeline-resilience/`): /3·/4 단계 호출을 네트워크가 끊어 답이 오지 않았으면(`codex.network_failure`) 연결을 기다려 같은 입력으로 한 번 다시 부른다(`Stages._call`).
+  - 단계당 한 번. 시간 초과·콘텐츠 거절·사용량 한도·검사 실패·둘째 끊김은 멈춘다. 추가·수정 회차와 판정 기록은 움직이지 않는다.
+  - 끊긴 호출의 진단은 `.native/<단계>.net/`, ledger `transportRetries`에 남는다. 결과 manifest에는 들지 않는다.
 - 정책이 없는 옛 ledger는 이어 해도 옛 규칙(초기 교정이 3회 중 1회를 먼저 소비)을 따른다.
 - 수동 복구 도구(`runner/root_*_recovery` 등)는 정책이 있는 ledger를 거절한다(`require_legacy_ledger`).
 `connection_recovery_v2`는 모델 호출이 완료됐으나 초기 수용 검사에서 실패한 source-only normalize의 input/raw/usage/원본/실패 ledger를 명시적 승인 범위에서만 재검증한다. 모델·DB를 호출하거나 내용·상한을 바꾸지 않고 이전 실패와 실행 지문을 보존한다. 중단 호출·후속 단계·누락/변조·반복 복구는 거절한다.

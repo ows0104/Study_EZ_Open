@@ -227,8 +227,11 @@ def run(packet, out, model, invoke, resume=None):
         stimuli = [*stimuli, *value['visual_stimuli']]
         bank = visual.render(bank, stimuli, packet, out / 'material')
         added = [q['question_id'] for q in value['questions']]
-        for k, part in enumerate(chunks(list(gaps), COVERAGE_CHUNK)):
-            got = judge(f'{X}coverage-{n + 1}-{k}', v3.coverage_input(brief, bank, part, added))
+        # Each chunk judges its own goals from the same bank: side by side in a new run, merged in chunk order
+        # (docs/changes/2026-11-11-pipeline-resilience). The stage names and inputs are the ones they always had.
+        calls = [(f'{X}coverage-{n + 1}-{k}', ctx, lambda raw, ctx=ctx: v4.check_coverage(raw, ctx['goals'], ctx['questions']))
+                 for k, ctx in enumerate(v3.coverage_input(brief, bank, part, added) for part in chunks(list(gaps), COVERAGE_CHUNK))]
+        for got in batches.judgments(st, calls):
             for r in got['rows']:
                 rows[r['direction_id']] = _merge_row(rows[r['direction_id']], r, goals[r['direction_id']])
 

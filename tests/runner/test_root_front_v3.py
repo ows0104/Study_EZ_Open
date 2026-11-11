@@ -74,7 +74,9 @@ class Model(t3.Model):
 def test_front_runs_map_point_and_bank_and_derives_a_v3_packet(tmp_path):
     p = server_packet(tmp_path); calls = []
     derived = rf.Front(p, tmp_path / 'front', invoke=front_codex(calls)).run()
-    assert sorted(s for s, _ in calls[:3]) == ['bank', 'map', 'point'] and [s for s, _ in calls[3:]] == ['audit']
+    # The audit follows the points at once, beside the Map and the bank (2026-11-11-pipeline-resilience).
+    names = [s for s, _ in calls]
+    assert sorted(names) == ['audit', 'bank', 'map', 'point'] and names.index('point') < names.index('audit')
     assert derived['generationPolicy'] == 'root-generation/3' and derived['intakeBank'] == bank_value()
     front = derived['frontStages']
     assert list(front['stages']) == ['map', 'point', 'bank', 'audit'] and front['bankHash'] == document_hash(bank_value())
