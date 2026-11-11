@@ -34,12 +34,80 @@
       "release_hash": "2e762f32f210905fb29537e1faa2fac4f76f4e73aabb080b078fc03c9a3ccb1f"
     }
   },
-  "checks": [],
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-11T16:08:48.430045+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-m",
+        "pytest",
+        "tests",
+        "studyez_contracts",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--deselect",
+        "tests/runner/test_desktop_control.py::test_shortcut_installer_supports_korean_filename_in_windows_powershell"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "762525fbedb2d4ee2cdfb600487ad6e2e3dd92a05425e1067bc46544ef0cb1a6",
+      "plan_hash": "ff3c3d535de18b3308eb333024ceb0346a2906d9eeeb50a105be07c75ac28b8a",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-12-goal-dedupe/1794412994735607100-regression.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-11T16:31:24.149263+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); sys.exit(subprocess.run([r'C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe','-m','tests','root_learning','root_planning','root_state','root_adaptive','root_recall','root_api','root_question_progress','root_exposure','root_undo','main_quiz'],cwd=os.path.join(root,'server'),env=dict(os.environ,PYTHONPATH=root)).returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "762525fbedb2d4ee2cdfb600487ad6e2e3dd92a05425e1067bc46544ef0cb1a6",
+      "plan_hash": "ff3c3d535de18b3308eb333024ceb0346a2906d9eeeb50a105be07c75ac28b8a",
+      "inputs": [
+        ".github",
+        "content",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-12-goal-dedupe/1794414676142995900-server.log"
+    }
+  ],
   "review": null,
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-11T16:03:14.462742+00:00"
+  "updated_at": "2026-11-11T16:31:24.149722+00:00"
 }

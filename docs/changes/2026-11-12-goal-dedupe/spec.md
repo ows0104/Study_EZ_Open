@@ -43,10 +43,10 @@ R5 풀이 순서(`server/app/root_learning/planning.py` `plan_tasks`): 한 방�
 
 - `quizbank/connection_generate_v4.py`: ledger `goalDuplicates = {'policy': 'goal-duplicates/1'}`(새 실행만, `Stages(fresh=…)`).
   표시가 있을 때만 R3 입력·R4 재확인을 쓴다.
-- `studyez_contracts/roots/generation_v4.py`: `add_input(..., rows=None)`가 asked를 붙인다. `ADD_OUTPUT`의 questions·
+- `studyez_contracts/roots/generation_v4.py`: `add_input(..., rows=None)`가 asked를 붙인다. asked가 있는 입력의 스키마(`add_schema`)만 questions·
   question_importance 최소 개수 0. 결과 검증(`validate_result`)·manifest 키·문서 형식은 바꾸지 않는다.
 - 결과 manifest에는 새 키가 없다. 서버는 지금 배포본 그대로 새 러너의 결과를 받는다.
-- 오류 상태: 새 실패 경로 없음. 빈 추가 출력은 정상 완료다.
+- 오류 상태: 새 실패 경로 없음. 빈 추가 출력은 입력에 asked가 있을 때만 정상 완료다. 추가 단계 스키마는 단계 입력에서 정해져 이전 영수증이 그대로 검증된다.
 
 ## 호환성과 데이터 보존
 

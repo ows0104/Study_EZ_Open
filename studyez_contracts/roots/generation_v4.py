@@ -67,11 +67,21 @@ def _with_basis(schema, minimum=1):
 
 
 INTAKE_OUTPUT = _with_basis(v3.INTAKE_OUTPUT)
-ADD_OUTPUT = _with_basis(v3.ADD_OUTPUT, 0)
-# goal-duplicates/1 (docs/changes/2026-11-12-goal-dedupe): an add stage may write nothing when every gap goal is
-# already asked by a question it was shown and only an interpretive caveat is left. The /3 shape still needs one.
-ADD_OUTPUT['properties']['questions']['minItems'] = 0
+ADD_OUTPUT = _with_basis(v3.ADD_OUTPUT)
+# goal-duplicates/1 (docs/changes/2026-11-12-goal-dedupe): an add stage that was shown which questions already ask
+# its goals (`asked`) may write nothing, when only an interpretive caveat is left to ask. The schema follows from the
+# stage input, so the receipt of an add stage made before (no `asked`, at least one question) still validates.
 GOAL_DUPLICATES = 'goal-duplicates/1'
+ADD_OUTPUT_OPEN = _with_basis(v3.ADD_OUTPUT, 0)
+ADD_OUTPUT_OPEN['properties']['questions']['minItems'] = 0
+
+
+def shows_asked(ctx):
+    return any('asked' in goal for goal in (ctx or {}).get('goals', []))
+
+
+def add_schema(ctx):
+    return ADD_OUTPUT_OPEN if shows_asked(ctx) else ADD_OUTPUT
 FIX_OUTPUT = _with_basis(v3.FIX_OUTPUT)
 SUPPLEMENT_OUTPUT = obj(rows=arr(obj(question_id=TEXT, decision=v3.SUPPLEMENT_OUTPUT['properties']['rows']['items']['properties']['decision'],
                                      point={'anyOf': [POINT, {'type': 'null'}]}, duplicate_of=v3._NULLABLE, reason=TEXT), 1))
@@ -127,6 +137,7 @@ def empty_added(value):
 def check_added(value, ctx, state=None):
     require(type(value) is dict and set(value) == set(ADD_OUTPUT['properties']), 'v4 add output: fields')
     if empty_added(value):
+        require(shows_asked(ctx), 'v4 add: an output without questions needs the goals\' asked questions in its input')
         require(all(value[k] == [] for k in ADD_OUTPUT['properties']), 'v4 add: an output without questions carries nothing else')
         return value
     collect_basis(value['question_importance'], [q['question_id'] for q in value['questions']])

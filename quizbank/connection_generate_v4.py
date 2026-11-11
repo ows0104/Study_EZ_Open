@@ -53,7 +53,22 @@ def _merge_row(old, new, goal, replaced=(), by_evidence=False):
     keep = [e for e in old['evidence'] if e['question_id'] not in renewed]
     row = {'direction_id': new['direction_id'], 'evidence': keep + copy.deepcopy(new['evidence'])}
     asking = {e['question_id'] for e in row['evidence'] if by_evidence or v4.answered(e)}
-    groups = [g for g in old.get('duplicates', []) if not set(g['question_ids']) & renewed] + copy.deepcopy(new['duplicates'])
+    if by_evidence:
+        # A new group takes in the old group it meets: the judgment that read a third copy beside the first two
+        # names all three, and the pair recorded before must not shut the third one out. A group of re-judged
+        # questions (`replaced`) is decided anew, as before.
+        groups, apart = copy.deepcopy(new['duplicates']), []
+        for g in old.get('duplicates', []):
+            if set(g['question_ids']) & set(replaced):
+                continue
+            met = next((n for n in groups if set(n['question_ids']) & set(g['question_ids'])), None)
+            if met is None:
+                apart.append(g)
+            else:
+                met['question_ids'] = [*met['question_ids'], *(q for q in g['question_ids'] if q not in met['question_ids'])]
+        groups = groups + apart
+    else:
+        groups = [g for g in old.get('duplicates', []) if not set(g['question_ids']) & renewed] + copy.deepcopy(new['duplicates'])
     seen, kept_groups = set(), []
     for g in groups:
         ids = [q for q in g['question_ids'] if q in asking and q not in seen]

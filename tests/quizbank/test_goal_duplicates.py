@@ -130,11 +130,38 @@ def test_an_add_stage_that_writes_nothing_ends_the_add_rounds(tmp_path):
     assert {r['direction_id']: r['reason'] for r in result['manifest']['notReady']} == {'D2': 'no-question'}
 
 
-def test_an_empty_add_output_carries_nothing_else():
+def test_an_empty_add_output_needs_the_asked_questions_and_carries_nothing_else():
     empty = {k: [] for k in v4.ADD_OUTPUT['properties']}
-    assert v4.check_added(copy.deepcopy(empty), {}) == empty
+    shown = {'goals': [{'direction_id': 'D2', 'asked': []}]}
+    assert v4.check_added(copy.deepcopy(empty), shown) == empty
     with pytest.raises(ValueError, match='without questions carries nothing else'):
-        v4.check_added({**empty, 'visual_stimuli': [{'question_id': 'Q9'}]}, {})
+        v4.check_added({**empty, 'visual_stimuli': [{'question_id': 'Q9'}]}, shown)
+    with pytest.raises(ValueError, match='asked questions in its input'):
+        v4.check_added(copy.deepcopy(empty), {'goals': [{'direction_id': 'D2'}]})
+
+
+def test_the_add_schema_follows_from_the_stage_input():
+    """The receipt of an add stage made before this change records the schema with at least one question; the
+    runner compares it with the schema it derives from that stage's input (independent review, 2026-11-12)."""
+    from runner.root_native_json import schema_for
+    before, shown = {'goals': [{'direction_id': 'D2'}]}, {'goals': [{'direction_id': 'D2', 'asked': []}]}
+    assert schema_for('v4-add-0', before) == v4.ADD_OUTPUT and v4.ADD_OUTPUT['properties']['questions']['minItems'] == 1
+    assert v4.ADD_OUTPUT['properties']['question_importance']['minItems'] == 1
+    assert schema_for('v4-add-0', shown) == v4.ADD_OUTPUT_OPEN and v4.ADD_OUTPUT_OPEN['properties']['questions']['minItems'] == 0
+
+
+def test_a_third_copy_joins_the_pair_recorded_before():
+    goal = {'components': [{'component_id': 'C1'}], 'requires_visual': False}
+    partial = lambda q: {'question_id': q, 'tested_relation_ids': ['R1'], 'visual_verdict': 'not_applicable', 'reason': 'x',
+                         'components': [{'component_id': 'C1', 'location': 'missing', 'answer_unit_indices': [], 'reason': 'x'}]}
+    row = lambda qs, groups: {'direction_id': 'D', 'status': 'missing', 'evidence': [partial(q) for q in qs],
+                              'duplicates': [{'question_ids': g, 'reason': 'same'} for g in groups], 'reason': 'x'}
+    merge = lambda old, new: [g['question_ids'] for g in gen._merge_row(old, gen._first_evidence(old, new), goal, by_evidence=True)['duplicates']]
+    old = row(['A', 'B'], [['A', 'B']])
+    assert merge(old, row(['A', 'B', 'C'], [['A', 'B', 'C']])) == [['A', 'B', 'C']]
+    assert merge(old, row(['A', 'B', 'C'], [['B', 'C']])) == [['B', 'C', 'A']]          # named only beside one of the pair
+    assert merge(old, row(['A', 'B', 'C'], [])) == [['A', 'B']]                          # the new one is something else
+    assert merge(row(['A', 'B', 'X', 'Y'], [['A', 'B'], ['X', 'Y']]), row(['A', 'B', 'X', 'Y', 'C'], [['A', 'C']])) == [['A', 'C', 'B'], ['X', 'Y']]
 
 
 def test_a_group_of_partial_questions_survives_the_merge_only_under_the_policy():
