@@ -16,6 +16,7 @@
 |---|---|---|---|---|---|---|
 | P1 | Main-Quiz 실험 실행: 아데노·폭스바이러스(261110_02) 「새 구조 2」+ 「우선 내 계정에서만 확인」 — 새 러너 76c3e87a의 근거 쪽·인용 맞춤·지도 직접 배치 실측 | ows0104 / Claude 리케차 Main-Quiz 세션 | (master 26befed7, 코드 변경 없음) | 운영 root_generation 요청 1건(261110_02, 개인 시범), runs/_root-generation/<새 gid>(git 밖) | 2026-11-11 | 첫 실행 6e5c581a는 목표 중요도 근거 중복으로 보류(#103으로 수정·배포). 번호 이전(#104)·tier 코드 채움(#106) 병합, 러너 .runtime/main-quiz-26befed71192 재설치(2026-11-11 17:33, agent pid 12784). 남은 것: 261110_02 다시 요청 |
 | P1 | Main-Quiz 앞 단계 'Different title' 보류 수정: 모델이 Map·points JSON의 title을 요청 강의명과 다르게 적으면 단계 전체가 보류되던 것을, 원문 보존 뒤 title만 요청값으로 맞추고 기록(검증 실패도 failure.json에 남김) | ows0104 / Claude 앞 단계 title 세션 | ccr-73ec38c7-pw7z6b | runner/root_front.py, tests/runner/test_root_front.py, docs/changes/2026-11-11-front-title | 2026-11-11 | 러너만. 서버·DB 변경 없음. 200c0d2 PR #112 https://github.com/ows0104/Study_EZ_Open/pull/112 — 로컬 검사 통과, CI 대기 → 병합 뒤 러너 재설치 |
+| P1 | 복습 퀴즈(Main-Quiz) 야간 일괄 출제: 감염과 면역 미출제 강의를 앞에서부터 새 구조 2(map-tree/3)·학생 공개로 요청 — 261102_03부터 (첫 수업·CBL·TBL·실습 제외, 261110_02는 위 「실험 실행」 행 몫이라 제외). 요청은 사용자 지시(「사이트를 안 통하고 직접」)로 배포본 c45caf11의 요청 함수를 로컬에서 호출 | ows0104 / Claude 야간 일괄 출제 세션 | (master c45caf11, 코드 변경 없음) | 운영 root_generation 요청 약 12건, 러너 agent(일꾼 수를 늘려 재시작), runs/_root-generation/<gid>(git 밖) | 2026-11-12 | 11-12 07:00까지 돈다. 그때까지 러너 재설치·중지 금지. 옛 파이프라인 공개판(261102_02·261104_02·261105_01) 교체는 서버가 거절 — 사용자 결정 대기 |
 
 ## 2. 앞으로 하기로 약속된 일
 
