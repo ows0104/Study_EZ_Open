@@ -31,7 +31,7 @@ from datetime import UTC, date, datetime, timedelta
 # 복습의 하루가 바뀌는 시각. **안키 기본값이 새벽 4시이고 이유가 우리에게도 같다** —
 # 자정을 넘겨 공부하는 사람의 「어제 몫」이 책상에 앉은 채로 사라지면 안 된다.
 #
-# **`prequiz_jobs.QUEUE_DAY_START_HOUR`(새벽 5시)와 일부러 안 묶었다.** 그것은
+# **`jobs.queue.QUEUE_DAY_START_HOUR`와 일부러 안 묶었다**(지금은 둘 다 새벽 4시). 그것은
 # 일감 큐가 "오늘 자동으로 몇 편을 세웠나"를 세는 자다. 한 상수로 묶으면 새벽에
 # 복습하고 싶다는 요구가 러너의 하루 상한을 움직인다.
 DAY_START_HOUR = 4

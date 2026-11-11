@@ -1,9 +1,12 @@
-"""Quiz Bank 학습일은 한국 시간 09시에 시작한다."""
+"""Quiz Bank 학습일은 한국 시간 새벽 4시에 시작한다(2026-11-11 사용자 지시: 모든 날짜 전환은 새벽 4시).
+
+2026-10-19의 09시 경계를 되돌렸다. 기존 풀이 이력은 그대로이고 경계만 다시 계산한다.
+"""
 
 from datetime import datetime, timedelta, timezone
 
 KOREA = timezone(timedelta(hours=9))
-DAY_START_HOUR = 9
+DAY_START_HOUR = 4
 
 
 def day_start(now: int) -> int:

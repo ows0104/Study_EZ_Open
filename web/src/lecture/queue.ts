@@ -208,9 +208,9 @@ export function dayLabel(at: number): string {
   return new Date(at).toLocaleDateString("ko-KR", { month: "long", day: "numeric" });
 }
 
-/** 오늘로부터 며칠 뒤인가. 날짜만 보고 센다 — 시각까지 세면 하루가 0일이 된다. */
+/** 오늘로부터 며칠 뒤인가. 학습일(한국 시간 새벽 4시 경계)만 보고 센다 — 시각까지 세면 하루가 0일이 된다. */
 export function daysFromNow(at: number, now: number): number {
   const day = 24 * 60 * 60 * 1000;
-  const midnight = (ms: number) => Math.floor(new Date(ms).setHours(0, 0, 0, 0) / day);
-  return Math.max(0, midnight(at) - midnight(now));
+  const studyDay = (ms: number) => Math.floor((ms + (9 - 4) * 3_600_000) / day);
+  return Math.max(0, studyDay(at) - studyDay(now));
 }

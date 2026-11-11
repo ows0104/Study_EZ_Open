@@ -4,13 +4,14 @@ import {
   defaultHourSlots,
   entryRowSpan,
   startOfWeek,
+  studyDayKey,
   toDateKey,
   weekDayLabels,
   type CalendarEntry,
   type CalendarMode,
 } from "./entries";
 
-/** 오늘이 며칠인가. 자정을 넘겨도 "오늘" 표시가 어제 칸에 남지 않도록 1분마다 다시 본다. */
+/** 오늘이 며칠인가. 새벽 4시를 넘기면 "오늘" 표시가 어제 칸에 남지 않도록 1분마다 다시 본다. */
 function useNow() {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -59,7 +60,7 @@ export function CalendarGrid({
   onStep?: (direction: -1 | 1) => void;
 }) {
   const now = useNow();
-  const todayKey = toDateKey(now);
+  const todayKey = studyDayKey(now);
 
   if (mode === "week") {
     const weekStart = startOfWeek(anchorDate);

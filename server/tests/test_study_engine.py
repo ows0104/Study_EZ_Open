@@ -124,7 +124,8 @@ bank["questions"][1]["importance"], bank["questions"][1]["tier"] = 1, "Core"
 early = next(r for r in rank_questions(bank, empty_state(), "2026-11-01", NOW) if r["question_id"] == "Q2")
 late = next(r for r in rank_questions(bank, empty_state(), "2026-10-05", NOW) if r["question_id"] == "Q2")
 check("임박하면 안 본 저중요 문항을 누른다", early["score"] > late["score"] * 5, (early["score"], late["score"]))
-check("날짜는 한국 기준", days_until("2026-10-04", ms("2026-10-03T15:01:00+00:00")) == 0)
+check("날짜는 한국 학습일(새벽 4시) 기준", days_until("2026-10-04", ms("2026-10-03T18:59:00+00:00")) == 1
+      and days_until("2026-10-04", ms("2026-10-03T19:00:00+00:00")) == 0)
 
 print("진단")
 ranked = rank_questions(example_bank(), empty_state(), EXAM, NOW)

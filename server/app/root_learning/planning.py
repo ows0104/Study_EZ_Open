@@ -3,7 +3,7 @@ from collections import defaultdict
 from datetime import date, timedelta
 from math import ceil
 from statistics import median
-from .policy import KST, instant, study_day
+from .policy import instant, study_day
 from .state import targets, direction_owners, replay, replay_tasks, per_task
 
 
@@ -22,7 +22,7 @@ def plan(doc, events, available, now, policy):
         if task['task_id'] in available:
             candidates.setdefault(task['direction_id'], task)
     today = study_day(now, policy)
-    day = now.astimezone(KST).date()
+    day = today  # 남은 일수도 학습일(새벽 4시)로 센다(2026-11-11 사용자 지시).
     deadline = date.fromisoformat(doc['exam_date']) - timedelta(days=policy['deadline_offset']) if doc['exam_date'] else None
     days = (deadline - day).days + 1 if deadline else None
     unseen = [t['target_id'] for t in target_list if not by_target[t['target_id']]['learned']
@@ -131,7 +131,7 @@ def plan_tasks(doc, events, available, now, policy):
         by_direction[task['direction_id']].append(task)
     owner = lambda task: owners[task['direction_id']]
     today = study_day(now, policy)
-    day = now.astimezone(KST).date()
+    day = today  # 남은 일수도 학습일(새벽 4시)로 센다(2026-11-11 사용자 지시).
     deadline = date.fromisoformat(doc['exam_date']) - timedelta(days=policy['deadline_offset']) if doc['exam_date'] else None
     days = (deadline - day).days + 1 if deadline else None
     prepared = {owner(t) for t in candidates}

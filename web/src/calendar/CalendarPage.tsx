@@ -14,6 +14,7 @@ import {
   calendarRange,
   prequizDone,
   startOfWeek,
+  studyDayKey,
   toDateKey,
   toCalendarEntries,
   weekDayLabels,
@@ -186,11 +187,6 @@ export function CalendarPage() {
 
     </div>
   );
-}
-
-/** 한국시간 기준 날짜 키. 새벽 4시 전은 전날로 센다. */
-function studyDayKey(now: Date) {
-  return new Date(now.getTime() + (9 - 4) * 3_600_000).toISOString().slice(0, 10);
 }
 
 /** 그 주에 가장 많이 든 블럭과 블럭 안의 주차(「감염과 면역 1차 1주차」). */
