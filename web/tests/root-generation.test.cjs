@@ -28,17 +28,15 @@ test('actual admin UI -> queue -> live worker -> synthetic model child -> atomic
     await page.getByRole('heading',{name:'Main Quiz 만들기'}).waitFor();
     assert.equal(await page.getByRole('button',{name:'Main Quiz 만들기',exact:true}).isEnabled(),true);
     assert.equal(await page.getByLabel('Concept map 파일').count(),0);
-    await page.getByText('설정·기존 지도 사용',{exact:true}).click();
-    await page.getByLabel('기존 Concept map·출제포인트 사용',{exact:true}).check();
-    assert.equal(await page.getByRole('button',{name:'Main Quiz 만들기',exact:true}).isDisabled(),true);
-    await page.getByLabel('기존 Concept map·출제포인트 사용',{exact:true}).uncheck();
-    await page.getByText('설정·기존 지도 사용',{exact:true}).click();
+    // 2026-11-11: one button (always map-tree/3) and one checkbox for a private request.
+    assert.equal(await page.getByText('설정·기존 지도 사용',{exact:true}).count(),0);
+    await page.getByLabel('학생 비공개 (내 계정에서만 확인)',{exact:true}).check();
     const requested=page.waitForResponse(r=>r.url().endsWith('/generation')&&r.request().method()==='POST');
     await page.getByRole('button',{name:'Main Quiz 만들기',exact:true}).click();
     const queued=await requested;assert.equal(queued.status(),200);const generation=(await queued.json()).generation;
     assert.equal(generation.privatePilot,true);assert.equal(generation.input.inputMode,'source');
     assert.equal(generation.input.conceptMap,'');assert.equal(generation.input.points,'');
-    assert.equal(generation.authoring,'cli');assert.equal(generation.parallelAuthoring,true);
+    assert.equal(generation.authoring,'cli');assert.equal(generation.parallelAuthoring,false);assert.equal(generation.pipeline,'map-tree/3');
     await page.getByRole('button',{name:'생성·업로드 진행 중',exact:true}).waitFor();
     assert.equal(await page.evaluate(()=>!!window.__rootDispatch),false);
     const worker=await fetch((process.env.GENERATION_TEST_API||'http://127.0.0.1:8028')+'/__test/process',{method:'POST'});assert.equal(worker.status,200);
