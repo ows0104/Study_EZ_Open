@@ -1,23 +1,40 @@
 """시험별 오늘 학습 목표. 시간표의 같은 과목 첫 시험에 범위를 자동 연결한다."""
 
-from app.bank_validation.publication import usable as bank_usable
-
-
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, tuple_
-from sqlalchemy.orm import Session, load_only
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.auth import CurrentUser, require_approved_user
 from app.database import get_db
-from app.models import BankState, Lecture, QuizBank, TimetableEvent
+from app.lecture_mastery import main_quiz_inputs
+from app.models import Lecture, TimetableEvent
 from app.naming import normalize_stem
-from app.study_engine import empty_state, now_ms
+from app.root_learning.policy import configured_policy, instant
+from app.root_learning.score import lecture_score
+from app.study_engine import now_ms
 from app.study_engine.planning import KOREA, daily_plan, day_start
-from app.study_engine.daily_queue import lecture_goal
 
 router = APIRouter()
+
+
+def _moment(ms: int) -> datetime:
+    return datetime.fromtimestamp(ms / 1000, UTC)
+
+
+def main_quiz_unit(source, policy, day_begin: int, now: int) -> dict:
+    """계획 한 칸. Main-Quiz가 없으면 progress=None(0으로 가정, 미준비로 센다)."""
+    if source is None:
+        return {"progress": None, "reviewsToday": 0}
+    doc, events = source
+
+    def progress(until: int, at: int) -> float:
+        return lecture_score(doc, events, policy, _moment(at), until=_moment(until))["value"] or 0.0
+
+    begin, end = _moment(day_begin), _moment(now)
+    return {"progress": progress,
+            "reviewsToday": sum(e["kind"] == "rate" and begin <= instant(e["at"]) <= end for e in events)}
 
 
 def exam_time(event: TimetableEvent) -> int:
@@ -64,19 +81,12 @@ def build_study_plan(target: int, subject: str | None, run_id: str | None,
     for lecture in lectures:
         by_event.setdefault(lecture.timetable_event_id, []).append(lecture)
     keys = [(l.subject, l.run_id) for l in lectures]
-    banks, states = {}, {}
-    if keys:
-        query = select(QuizBank).options(load_only(QuizBank.subject, QuizBank.run_id, QuizBank.build_id,
-            QuizBank.bank, QuizBank.validation, QuizBank.open_to_students)).where(tuple_(QuizBank.subject, QuizBank.run_id).in_(keys))
-        if not user.is_admin:
-            query = query.where(QuizBank.open_to_students.is_(True))
-        banks = {(b.subject, b.run_id): b for b in db.scalars(query)
-                 if b.bank and b.bank.get("questions") and bank_usable(b.bank, b.validation)}
-        states = {(s.subject, s.run_id): s for s in db.scalars(select(BankState).options(load_only(
-            BankState.subject, BankState.run_id, BankState.user_id, BankState.build_id, BankState.state,
-        )).where(BankState.user_id == user.id, tuple_(BankState.subject, BankState.run_id).in_(keys)))}
+    # 2026-11-11부터 계획의 강의 학습률은 Main-Quiz 하나다. Quiz Bank(legacy)는 세지 않는다.
+    policy = configured_policy()
+    inputs = main_quiz_inputs(db, keys, user) if keys and policy else {}
+    day_begin = day_start(now)
     plans = []
-    focused_goal = None
+    focused_goal = None  # Quiz Bank 강의별 오늘 목표(legacy). Main-Quiz의 오늘 할 일은 RootToday가 보인다.
     for exam in upcoming:
         group = groups[exam.id]
         if not group:
@@ -86,17 +96,12 @@ def build_study_plan(target: int, subject: str | None, run_id: str | None,
             attached = by_event.get(event.id) or [None]
             for lecture in attached:
                 key = (lecture.subject, lecture.run_id) if lecture else None
-                bank, state = banks.get(key), states.get(key)
-                unit = {"date": event.date, "bank": bank.bank if bank else None,
-                        "state": state.state if bank and state and state.build_id == bank.build_id else empty_state()}
-                units.append(unit)
-                if lecture and bank and (lecture.subject, lecture.run_id) == (subject, run_id):
-                    focused_goal = lecture_goal(bank.bank, unit["state"], lecture.title, now)
+                units.append({"date": event.date, **main_quiz_unit(inputs.get(key), policy, day_begin, now)})
         plans.append({"examId": exam.id, "title": exam.title, "examDate": exam.date.isoformat(),
                       "examTime": exam.start_time or "09:00", "lectureCount": len(units),
                       "newToday": sum(u["date"] == today for u in units),
                       "upcomingLectures": sum(u["date"] > today for u in units),
-                      "unassessedLectures": sum(u["bank"] is None for u in units),
+                      "unassessedLectures": sum(u["progress"] is None for u in units),
                       **daily_plan(units, target, now, exam_time(exam))})
     return {"asOf": now, "plans": plans, "lectureGoal": focused_goal,
             "unmatchedExams": [e.title for e in upcoming if not groups[e.id]],

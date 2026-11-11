@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api";
 import { lectureHref } from "../links";
 import type { BankRead, BankSession } from "../types/bank";
@@ -15,8 +15,8 @@ import { useMainQuizEntry } from './useMainQuizEntry';
 import { useSolvingChrome } from '../shell/studyChrome';
 
 /**
- * Main Quiz 공통 진입. 검토·공개·계정 범위를 통과한 새 자료를 우선한다.
- * 기존 은행과 학습 기록은 아래 호환 화면에서 기존 서버 정책 그대로 사용한다.
+ * Main Quiz 공통 진입. 검토·공개·계정 범위를 통과한 Main-Quiz만 연다(2026-11-11부터 Quiz Bank는 legacy).
+ * 옛 Quiz Bank 문제와 기록은 `?legacy=1`로만 연다. 기록은 기존 서버 정책 그대로 보존한다.
  */
 export function BankStudyPage() {
   const { subject = "", runId = "" } = useParams();
@@ -29,7 +29,17 @@ export function BankStudyPage() {
   if(legacy)return <LegacyBankStudyPage key={scope}/>;
   if(error)return <p role="alert" className="notice is-error">{error}</p>;
   if(!entry)return <p className="notice" role="status">Main-Quiz를 불러오는 중…</p>;
-  return entry.mode==='structured'?<RootLearningPage/>:<LegacyBankStudyPage key={scope}/>;
+  return entry.mode==='structured'?<RootLearningPage/>:<NoMainQuiz subject={subject} runId={runId}/>;
+}
+
+function NoMainQuiz({ subject, runId }: { subject: string; runId: string }) {
+  return (
+    <section className="quiz bank-start">
+      <p className="notice">이 강의의 Main-Quiz가 아직 열리지 않았습니다.</p>
+      <p className="bank-note"><Link to={lectureHref({ subject, runId })}>강의로 돌아가기</Link>
+        {" · "}<Link to={`/bank/${encodeURIComponent(subject)}/${encodeURIComponent(runId)}?legacy=1`}>옛 Quiz Bank 기록 보기</Link></p>
+    </section>
+  );
 }
 
 function LegacyBankStudyPage() {
@@ -95,6 +105,7 @@ function LegacyBankStudyPage() {
   }
   return (
     <>
+    <p className="notice">옛 Quiz Bank 기록입니다. 사이트 학습률·시험 계획에는 포함되지 않습니다.</p>
     {undoError ? <p role="alert" className="notice is-error">{undoError}</p> : null}
     <BankStart
       base={base}

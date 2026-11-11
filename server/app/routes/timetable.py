@@ -54,16 +54,14 @@ def read_timetable(
     keys = [(lecture.subject, lecture.run_id) for lecture in lectures]
     marks = (material_marks(db, keys, is_admin=user.is_admin, include_banks=False) if include_study
              else {key: dict.fromkeys(("notesPrev", "preview", "prequiz", "notesCurrent", "quiz"), False) for key in keys})
-    timelines = bank_timelines(db, keys, is_admin=user.is_admin, include_ready=not include_study)
-    if not include_study:
-        for key, timeline in timelines.items():
-            marks[key]["quiz"] = timeline.pop("ready")
+    # `quiz`는 legacy Quiz Bank가 있다는 표시뿐이다. 학습률은 Main-Quiz 하나(lecture_overviews).
+    timelines = bank_timelines(db, keys, is_admin=user.is_admin, include_ready=True)
+    for key, timeline in timelines.items():
+        marks[key]["quiz"] = timeline.pop("ready")
     progress = prequiz_progress(db, user.id, keys) if include_study else {}
     grabs = asset_grabs(db, user.id, keys) if include_study else {}
     reads = note_read_counts(db, user.id, keys) if include_study else {}
-    overviews = lecture_overviews(db, user.id, keys, is_admin=user.is_admin, include_cards=include_cards) if include_study else {}
-    for key, overview in overviews.items():
-        marks[key]["quiz"] = overview["ready"]
+    overviews = lecture_overviews(db, user, keys, include_cards=include_cards) if include_study else {}
     # 검토·공개된 Main-Quiz(뿌리 학습). `quiz`(Quiz Bank)와 따로 둔다 — 모아풀기는 은행만 섞는다.
     published = root_content.published_for(db, keys, user)
     for key in keys:
@@ -134,9 +132,9 @@ def read_study_progress(
     db: Session = Depends(get_db),
 ) -> dict:
     keys = list(dict.fromkeys((l.subject, l.runId) for l in payload.lectures))
-    overviews = lecture_overviews(db, user.id, keys, is_admin=user.is_admin)
+    overviews = lecture_overviews(db, user, keys)
     return {"lectures": [
-        {"subject": subject, "runId": run_id, "ready": overviews.get((subject, run_id), {}).get("ready", False),
+        {"subject": subject, "runId": run_id, "ready": (subject, run_id) in overviews,
          "mastery": overviews.get((subject, run_id), {}).get("mastery"),
          "cardProgress": overviews.get((subject, run_id), {}).get("cardProgress")}
         for subject, run_id in keys

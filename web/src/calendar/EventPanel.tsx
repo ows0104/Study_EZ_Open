@@ -285,6 +285,9 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
  * **필기는 그 셋이 아니다.** 한동안 여기 큰 버튼으로 세워 뒀는데 주요 버튼만큼
  * 눈에 걸렸다. 아래 조용한 줄로 돌려보내되, 누르면 열리는 것은 그대로 둔다.
  */
+const emptyCards: CardProgress = { total: 0, seen: 0, unseen: 0, recognized: 0, retrieving: 0, retained: 0,
+  newRemaining: 0, reviewDue: 0, suspended: 0 };
+
 function KeyActions({
   lecture,
   detail,
@@ -297,12 +300,13 @@ function KeyActions({
   const fileOf = (kind: LectureFile["kind"]) => detail.files.find((file) => file.kind === kind);
   const study = useLectureStudy(lecture);
   const { entry: mainQuizEntry } = useMainQuizEntry(lecture.subject, lecture.runId);
-  // 학습률: 강의 상세의 Quiz Bank 학습도. 없으면 카드 진행에서 받은 값.
+  // 학습률은 Main-Quiz 하나(2026-11-11): 서버가 계산한 값. 강의 목록·캘린더 칸·시험 계획과 같다.
   const mastery = detail.mastery ?? study?.mastery ?? null;
-  // Main-Quiz만 있는 강의는 이미 받은 Main-Quiz 요약의 회상 비율(강의 목록·캘린더 칸과 같은 정의).
-  const rootSummary = mainQuizEntry?.mode === "structured" ? mainQuizEntry.overview.summary : null;
-  const rate = detail.bank?.usable ? Math.max(0, Math.min(100, mastery?.score ?? 0))
-    : lecture.marks?.mainQuiz || rootSummary ? rootRate(rootSummary) ?? 0 : null;
+  const overview = mainQuizEntry?.mode === "structured" ? mainQuizEntry.overview : null;
+  const opened = Boolean(lecture.marks?.mainQuiz || overview);
+  const rate = opened ? Math.max(0, Math.min(100, rootRate(overview?.summary) ?? mastery?.score ?? 0)) : null;
+  const questions = overview?.questionProgress;
+  const cards: CardProgress | null = questions ? { ...emptyCards, ...questions, seen: questions.total - questions.unseen } : null;
 
   async function download(file: LectureFile) {
     try {
@@ -313,7 +317,6 @@ function KeyActions({
   }
 
   const preDone = Boolean(detail.prequiz && detail.prequiz.itemCount > 0 && detail.prequiz.answered >= detail.prequiz.itemCount);
-  const bank = detail.bank;
   const preDeck = fileOf("pre_apkg");
   const mainDeck = fileOf("main_apkg");
   const prevNotes = fileOf("notes_prev");
@@ -338,9 +341,9 @@ function KeyActions({
         base={base}
         onError={setError}
         open
-        trailing={bank?.usable || lecture.marks?.mainQuiz || mainQuizEntry?.mode === "structured" ? (
+        trailing={opened ? (
           <Link className="action-button is-quiz is-review" to={bankHref(lecture)}>
-            ▶ 복습 퀴즈{study?.cardProgress?.reviewDue ? <b>{study.cardProgress.reviewDue}</b> : null}
+            ▶ 복습 퀴즈{questions?.reviewDue ? <b>{questions.reviewDue}</b> : null}
           </Link>
         ) : (
           <span className="action-button is-quiz is-review is-disabled" aria-disabled="true">▶ 복습 퀴즈</span>
@@ -365,10 +368,10 @@ function KeyActions({
           <span className="stat-label">메모</span>
           <LectureMemo base={base} initial={detail.myMemo ?? ""} onError={setError} />
         </div>
-        {study?.cardProgress ? (
+        {cards ? (
           <div className="stat-row is-top">
-            <span className="stat-label">카드</span>
-            <StageSummary cards={study.cardProgress} />
+            <span className="stat-label">문항</span>
+            <StageSummary cards={cards} />
           </div>
         ) : null}
       </section>

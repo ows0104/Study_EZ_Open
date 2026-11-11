@@ -205,7 +205,7 @@ def read_lecture(
         # **2026-08-31에 생겼고 그 전에 구운 편에는 없다.** 문항이 없으면 `null`이라
         # 화면이 웹 풀이를 아예 안 그린다 — 덱만 있는 편과 같은 자리다.
         "mainquiz": main_quiz,
-        "mastery": lecture_masteries(db, user.id, [(subject, run_id)], is_admin=user.is_admin).get((subject, run_id)),
+        "mastery": lecture_masteries(db, user, [(subject, run_id)]).get((subject, run_id)),
         # Quiz Bank 요약(2026-10-04). 학생에게는 관리자가 연 은행만 나간다.
         "bank": quiz_bank.summary(db, lecture, db.get(QuizBank, (lecture.subject, lecture.run_id)),
                                   is_admin=user.is_admin, user_id=user.id),

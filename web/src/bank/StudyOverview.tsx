@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { bankCatalogHref, bankHref, lectureHref } from "../links";
+import { bankHref, lectureHref } from "../links";
 import { useMe } from "../useMe";
 import type { LectureRef, PreviewSource, TimetableEvent } from "../types/lectures";
 import type { CardProgress } from "../types/mastery";
@@ -46,7 +46,8 @@ function lectureRows(events: TimetableEvent[]): StudyLecture[] {
       // 캘린더 칸과 같은 제목: 한 칸에 강의 하나면 시간표 세부에서 분야 머리(「감염학)」)를 뗀 제목을 쓴다.
       const title = event.lectures.length === 1 ? split.title || l.title : l.title;
       if (!rows.has(key)) rows.set(key, { ...l, ...shown, title, sources: [l.previewSource], key, eventKey: `event:${event.id}`,
-        date: event.date, course, ready: l.marks.quiz || Boolean(l.marks.mainQuiz), batch: l.marks.quiz,
+        // 2026-11-11부터 Main-Quiz 하나. Quiz Bank(legacy)는 열림·모아풀기에 세지 않는다.
+        date: event.date, course, ready: Boolean(l.marks.mainQuiz), batch: false,
         mainQuiz: Boolean(l.marks.mainQuiz) });
     }
     if (!event.lectures.length && ["lecture", "practice"].includes(event.category)) {
@@ -118,7 +119,7 @@ function Check({ checked, label, disabled, onChange }: { checked: boolean; label
 
 /**
  * Main-Quiz 문항 수를 카드 열 모양으로. 단계 정의는 서버 `question_progress`(Quiz Bank `card_progress`와 같은 규칙).
- * 학습률은 아직 회상 가능 목표 비율이다(정의 통일은 대시보드 검토 요청 뒤).
+ * 학습률은 서버가 계산한 Main-Quiz 학습률(`summary.score`)이다 — 캘린더·패널·시험 계획과 같은 값.
  */
 function fromRoot(q: RootQuestionProgress | undefined): CardProgress | null {
   return q ? { ...empty, ...q, seen: q.total - q.unseen } : null;
@@ -153,11 +154,11 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
   };
   const [opened, setOpened] = useState<string | null>(null);
   const closePanel = useCallback(() => setOpened(null), []);
-  /** Quiz Bank 카드 단계, 없으면 Main-Quiz 문항 단계. */
+  /** Main-Quiz 문항 단계와 학습률. Quiz Bank는 legacy라 세지 않는다. */
   const progressOf = (l: StudyLecture): CardProgress | null =>
-    l.cardProgress ?? (l.mainQuiz ? fromRoot(rootProgress.get(l.key)) : null);
+    l.mainQuiz ? fromRoot(rootProgress.get(l.key)) : null;
   const rateOf = (l: StudyLecture): number | null =>
-    l.cardProgress ? l.mastery?.score ?? null : l.mainQuiz ? rootRate(roots.get(l.key)) : null;
+    l.mainQuiz ? rootRate(roots.get(l.key)) ?? l.mastery?.score ?? null : null;
   const [course, setCourse] = useStudyCourse(events);
   // useStudyCourse가 고른 기본 블럭과 같은 규칙. 블럭이 바뀌면 course도 바뀌므로 함께 다시 계산한다.
   const automatic = useMemo(() => currentStudyBlock(events), [events, course]);
@@ -225,8 +226,8 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
     toggle(setSelected, keys, false);
   };
   const changeBlock = (name: string) => { setCourse(name); setSelected(new Set()); setManaged(new Set()); };
-  /** 복습 바로 풀기: Quiz Bank는 그 강의 하나로 모아풀기(시작 화면 없이), Main-Quiz는 오늘 계획으로 바로 회차. */
-  const study = (l: StudyLecture) => l.batch ? onStart([l]) : navigate(`${bankHref(l)}?start=1`);
+  /** 복습 바로 풀기: Main-Quiz 오늘 계획으로 바로 회차. */
+  const study = (l: StudyLecture) => navigate(`${bankHref(l)}?start=1`);
 
   // 행을 누르면 캘린더와 같은 패널. 행 key → 시간표 칸과 그 칸 안의 강의 순서.
   const openedRow = opened ? rows.find(l => l.key === opened) : undefined;
@@ -374,7 +375,6 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
                 {showProduction ? <><QuizPublicationCell value={productionById.get(l.runId)} kind="link" applicable={l.subject === "약리학"} />
                   <QuizPublicationCell value={productionById.get(l.runId)} kind="upload" applicable={l.subject === "약리학"} /></> : null}
                 <td><div className="overview-row-actions">
-                  {l.ready ? <Link to={bankCatalogHref(l)}>전체 문제</Link> : null}
                   {onVisibility ? <button className="is-quiet" disabled={managing} aria-label={`${l.title} ${isHidden(l) ? "복원" : "숨기기"}`}
                     onClick={() => changeVisibility([l.key], !isHidden(l))}>{isHidden(l) ? "복원" : "숨기기"}</button> : null}
                   {onDeleteQuiz && l.bankTimeline?.deleteVersion ? <button className="is-quiet overview-delete" disabled={managing}

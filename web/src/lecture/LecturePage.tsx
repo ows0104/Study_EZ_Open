@@ -10,7 +10,7 @@ import { legacyMainHref, quizHref } from "../links";
 import { previewProviderLabels, previewProviders, type LectureDetail, type LectureFile, type PreviewProvider } from "../types/lectures";
 import { LectureCards } from "./LectureCards";
 import { Missed } from "./Missed";
-import { LectureMastery } from "./LectureMastery";
+import { MainQuizMastery } from "./LectureMastery";
 import { useMe } from "../useMe";
 import { ProfessorInfo, previewNotesLabel } from "../calendar/ProfessorInfo";
 
@@ -130,7 +130,7 @@ export function LecturePage() {
       </header>
 
       {detail.runMeta ? <AdminNotice runMeta={detail.runMeta} /> : null}
-      <LectureMastery value={detail.mastery} />
+      <MainQuizMastery value={detail.mastery} />
       <ProfessorInfo value={detail.previewSource} />
 
       <section className="lecture-section">

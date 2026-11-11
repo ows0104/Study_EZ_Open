@@ -1,0 +1,46 @@
+{
+  "id": "2026-11-11-main-quiz-learning-rate",
+  "title": "Main-Quiz 학습률 통일과 Quiz Bank legacy화",
+  "area": "site",
+  "created_at": "2026-11-11T06:09:23.726249+00:00",
+  "required_checks": [
+    "web",
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T06:14:41.048292+00:00",
+      "evidence": "사용자 채팅 2026-11-11: 「계획 승인」 (앞선 요청: 「둘 다 같은 방식으로 통일해줘. 이제 Quiz bank는 쓰지 않을거야.」, 「Quiz bank는 옛날꺼고, 이번 블럭부터는 싹다 Main-Quiz로 갈꺼야. Quiz-bank에서 좋은 건 가져와줘.」, 묶는 단위 「추천대로 가자」)",
+      "scope": "plan.md의 서버·웹·문서 파일과 이 작업 폴더. DB·생성기·러너·프롬프트·평가 저장 형식 불변. 구현은 claude/main-quiz-list-columns·PR #97 병합 뒤",
+      "evidence_version": 2,
+      "source_hash": "6ddda8f79995c37b91d0b856e8cbd7ca24b07851495727dcb71f0317bbdc99c2",
+      "plan_hash": "3f0abb5ddd7cba5a2546ec2dd5a910320138b8e538490b1e8cfe87b303351dd5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "8a372caef530e95e2337ef062b6ac1b11a85cf8d838c4e296fd4c66f8969740c"
+    }
+  },
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T06:14:50.985032+00:00"
+}

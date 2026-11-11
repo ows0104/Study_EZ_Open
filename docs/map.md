@@ -25,11 +25,12 @@ Spotter 검색은 `rg --no-ignore <검색어> spotter/scripts spotter/web`로 �
 | 캘린더·강의 패널 | [web/src/calendar](../web/src/calendar), [web/src/types/lectures.ts](../web/src/types/lectures.ts) |
 | 덱 생성 진행 표시 | [DeckSlot.tsx](../web/src/calendar/DeckSlot.tsx), [jobProgress.ts](../web/src/jobProgress.ts) |
 | 기존 예습·복습 풀이 | [web/src/lecture](../web/src/lecture), [server/app/srs.py](../server/app/srs.py) |
-| Quiz Bank 시작·개념 지도 | [BankStart.tsx](../web/src/bank/BankStart.tsx), [ConceptMap.tsx](../web/src/bank/ConceptMap.tsx) |
+| 사이트 학습률(Main-Quiz 하나)·시험별 하루 목표 | [score.py](../server/app/root_learning/score.py), [lecture_mastery.py](../server/app/lecture_mastery.py), [study_plan.py](../server/app/routes/study_plan.py), [설계](changes/2026-11-11-main-quiz-learning-rate/spec.md) |
+| (legacy) Quiz Bank 시작·개념 지도 | [BankStart.tsx](../web/src/bank/BankStart.tsx), [ConceptMap.tsx](../web/src/bank/ConceptMap.tsx) |
 | 뿌리 학습·목표 집계·오늘 추천 | [RootLearning.tsx](../web/src/bank/RootLearning.tsx), [전용 API](../server/app/routes/root_learning.py), [구현 기록](changes/2026-11-02-root-learning-product/implementation.md) |
 | 강의별 연결 학습·근거·자료 등록 | [ConnectionLearning.tsx](../web/src/bank/ConnectionLearning.tsx), [서버 API](../server/app/routes/connections.py), [제품 구현 기록](changes/2026-11-03-connection-learning-product/implementation.md) |
-| Quiz Bank 풀이·문항 표시 | [BankSolve.tsx](../web/src/bank/BankSolve.tsx), [BankQuestion.tsx](../web/src/bank/BankQuestion.tsx) |
-| Quiz Bank 생성·공개 | [BankPanel.tsx](../web/src/bank/BankPanel.tsx), [publication.py](../server/app/routes/bank_api/publication.py) |
+| (legacy) Quiz Bank 풀이·문항 표시 | [BankSolve.tsx](../web/src/bank/BankSolve.tsx), [BankQuestion.tsx](../web/src/bank/BankQuestion.tsx) |
+| (legacy) Quiz Bank 생성·공개 | [BankPanel.tsx](../web/src/bank/BankPanel.tsx), [publication.py](../server/app/routes/bank_api/publication.py) |
 | Main Quiz CLI 병렬 출제·개념도·포인트·그림 | [병렬 생성기](../quizbank/connection_parallel.py), [원본 그림 목록](../quizbank/connection_figures.py), [러너 개별 진행](../runner/parallel_status.py), [실행·검증 기록](changes/2026-11-06-cli-parallel-main-quiz/intent.md) |
 | Concept map·포인트 자동출제·게시 | [요청 화면](../web/src/bank/RootGenerationPanel.tsx), [전용 API](../server/app/routes/root_generation.py), [생성기](../quizbank/connection_generate.py), [구현·운영 조건](changes/2026-11-03-connection-generation-pipeline/implementation.md) |
 | 뿌리 생성의 큰 JSON·시간 초과·모델 제한 | [공통 파일 실행·실패 구분](../runner/root_native_json.py), [기존 실패의 명시적 재사용](../runner/root_transport_recovery.py), [실행·검증 기록](changes/2026-11-05-root-timeout-fix/live.md). 원래 수용·독립 검수·상한을 유지하며 공급자 콘텐츠 거절은 재호출·게시 보류 |
@@ -39,7 +40,7 @@ Spotter 검색은 `rg --no-ignore <검색어> spotter/scripts spotter/web`로 �
 | Quiz Bank 생성 프롬프트 | [bankPrompt.md](../content/prompts/bank/bankPrompt.md) |
 | Quiz Bank 정리·검증 | [quizbank/CLAUDE.md](../quizbank/CLAUDE.md) |
 | 연결·문항·중요성 근거 로컬 검토 묶음 | [입력 안내](../content/prompts/learning-links/README.md), [connection_plan.py](../quizbank/connection_plan.py), [공용 계약](../studyez_contracts/learning_links/validate.py) |
-| 다음 문항·숙련도 | [server/app/study_engine](../server/app/study_engine) |
+| (legacy) Quiz Bank 다음 문항·숙련도 | [server/app/study_engine](../server/app/study_engine) |
 | 관리 화면·사용 현황 | [web/src/admin](../web/src/admin), [usage.py](../server/app/routes/usage.py) |
 | 오류 제보·사이트 개선 루프 | [운영 안내](feedback-loop.md), [runner/feedback.py](../runner/feedback.py) |
 | 공지·이용방법 | [web/src/notices](../web/src/notices), [notices.py](../server/app/routes/notices.py) |

@@ -1,20 +1,29 @@
-"""사용자별 강의 학습도를 읽기만 한다. 은행 교체 전 상태와 비공개 은행은 제외한다."""
+"""사용자별 강의 학습률을 읽기만 한다.
+
+2026-11-11부터 사이트의 학습률은 Main-Quiz 하나다(`root_learning/score.py`).
+Quiz Bank 학습도(`for_bank`)는 legacy 화면(`?legacy=1`의 은행 카탈로그)만 쓴다.
+"""
+
+import logging
+from datetime import UTC, datetime
+
+from sqlalchemy.orm import Session
 
 from app.bank_validation.publication import usable as bank_usable
-
-
-from sqlalchemy import select, tuple_
-from sqlalchemy.orm import Session, load_only
-
-from app.models import BankState, BankPersonalEdit, QuizBank
-from app import bank_personal
+from app.models import BankState, QuizBank
+from app.models.root_learning import RootContent, RootControl
+from app.root_learning import content as root_content
+from app.root_learning.policy import configured_policy
+from app.root_learning.score import lecture_score
 from app.study_engine import empty_state, now_ms
 from app.study_engine.mastery import lecture_mastery
-from app.study_engine.card_progress import card_progress
+
+log = logging.getLogger(__name__)
 
 
 def for_bank(row: QuizBank | None, state: BankState | None, *, is_admin: bool, now: int | None = None,
              bank: dict | None = None) -> dict | None:
+    """Legacy Quiz Bank 학습도. 사이트 학습률에는 쓰지 않는다."""
     if (not row or (not is_admin and not row.open_to_students)
             or not bank_usable(row.bank, row.validation)):
         return None
@@ -22,38 +31,43 @@ def for_bank(row: QuizBank | None, state: BankState | None, *, is_admin: bool, n
     return lecture_mastery(bank if bank is not None else row.bank, current, now=now_ms() if now is None else now)
 
 
-def lecture_masteries(db: Session, user_id: str, keys: list[tuple[str, str]],
-                      *, is_admin: bool) -> dict[tuple[str, str], dict | None]:
-    return {key: value["mastery"] for key, value in lecture_overviews(
-        db, user_id, keys, is_admin=is_admin, include_cards=False).items()}
+def as_mastery(score: dict) -> dict | None:
+    """화면용 모양. 지도 목표가 없으면 None(잴 것이 없다)."""
+    if score["score"] is None:
+        return None
+    return {"status": score["status"], "score": score["score"], "scope": "main-quiz",
+            "targetCount": score["targetCount"], "fullTargets": score["fullTargets"],
+            "ratedTargets": score["ratedTargets"]}
 
 
-def lecture_overviews(db: Session, user_id: str, keys: list[tuple[str, str]],
-                      *, is_admin: bool, include_cards: bool = True) -> dict[tuple[str, str], dict]:
-    if not keys:
-        return {}
-    query = select(QuizBank).options(load_only(
-        QuizBank.subject, QuizBank.run_id, QuizBank.build_id, QuizBank.bank,
-        QuizBank.validation, QuizBank.open_to_students,
-    )).where(tuple_(QuizBank.subject, QuizBank.run_id).in_(keys))
-    if not is_admin:
-        query = query.where(QuizBank.open_to_students.is_(True))
-    states = {(s.subject, s.run_id): s for s in db.scalars(select(BankState).options(load_only(
-        BankState.subject, BankState.run_id, BankState.user_id, BankState.build_id, BankState.state,
-    )).where(BankState.user_id == user_id, tuple_(BankState.subject, BankState.run_id).in_(keys)))}
-    now = now_ms()
-    edits_by_key: dict[tuple[str, str], list] = {}
-    for edit in db.scalars(select(BankPersonalEdit).where(
-            BankPersonalEdit.user_id == user_id, tuple_(BankPersonalEdit.subject, BankPersonalEdit.run_id).in_(keys))):
-        edits_by_key.setdefault((edit.subject, edit.run_id), []).append(edit)
+def main_quiz_inputs(db: Session, keys: list[tuple[str, str]], user) -> dict[tuple[str, str], tuple[dict, list]]:
+    """이 사용자에게 열린 Main-Quiz의 (현재 판 문서, 이 사용자의 이벤트)."""
     result = {}
-    for row in db.scalars(query):
-        key = (row.subject, row.run_id)
-        state = states.get(key)
-        usable = bank_usable(row.bank, row.validation)
-        current = state.state if state and state.build_id == row.build_id else empty_state()
-        bank = bank_personal.augment(db, row, user_id, edits=edits_by_key.get(key, []))
-        result[key] = {"ready": usable,
-                       "mastery": lecture_mastery(bank, current, now=now) if usable else None,
-                       "cardProgress": card_progress(bank, current, now) if usable and include_cards else None}
+    for key in root_content.published_for(db, keys, user):
+        control = db.get(RootControl, key)
+        row = db.get(RootContent, (*key, control.revision)) if control else None
+        if row and row.reviewed:
+            result[key] = (row.document, root_content.events_for(db, *key, user.id))
     return result
+
+
+def lecture_overviews(db: Session, user, keys: list[tuple[str, str]],
+                      *, include_cards: bool = True, at: datetime | None = None) -> dict[tuple[str, str], dict]:
+    """강의마다 {mastery, cardProgress}. Main-Quiz가 없는 강의는 싣지 않는다(학습률 없음)."""
+    policy = configured_policy()
+    if not keys or policy is None:
+        return {}
+    at = at or datetime.now(UTC)
+    result = {}
+    for key, (doc, events) in main_quiz_inputs(db, keys, user).items():
+        try:
+            mastery = as_mastery(lecture_score(doc, events, policy, at))
+        except Exception:  # 한 강의의 계산 실패가 시간표 전체를 깨지 않게 한다.
+            log.exception("Main-Quiz 학습률 계산 실패 %s/%s", *key)
+            mastery = None
+        result[key] = {"mastery": mastery, "cardProgress": None}
+    return result
+
+
+def lecture_masteries(db: Session, user, keys: list[tuple[str, str]]) -> dict[tuple[str, str], dict | None]:
+    return {key: value["mastery"] for key, value in lecture_overviews(db, user, keys, include_cards=False).items()}

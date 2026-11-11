@@ -39,13 +39,13 @@ def main():
     assert not goal['met'] and goal['reviewedToday'] == 0 and goal['reviewRemaining'] == 1
     assert study_history(bank, state, boundary) == []
     assert state == saved
-    units = [{'bank': bank, 'state': state, 'date': datetime(2026, 10, 18).date()}]
+    units = [{'progress': lambda until, when: .5, 'reviewsToday': 0, 'date': datetime(2026, 10, 18).date()}]
     deadline = at(25, 9)
     plans = [daily_plan(units, 90, now, deadline) for now in (evening, midnight, before)]
-    assert all(plan['dayStart'] == at(18, 4) and plan['reviewedToday'] == 1 for plan in plans)
+    assert all(plan['dayStart'] == at(18, 4) for plan in plans)
     assert len({plan['endTarget'] for plan in plans}) == 1
     tomorrow = daily_plan(units, 90, boundary, deadline)
-    assert tomorrow['dayStart'] == boundary and tomorrow['reviewedToday'] == 0
+    assert tomorrow['dayStart'] == boundary
     # 시험까지 남은 날도 학습일로 센다. 새벽 4시 전은 전날이다.
     assert days_until('2026-10-19', evening) == 1
     assert days_until('2026-10-19', midnight) == 1
