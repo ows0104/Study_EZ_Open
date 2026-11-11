@@ -12,7 +12,8 @@
 | DB 모델 | `app/models/` — 기존 `from app.models import ...` 유지 |
 | 생성 작업 정책 | `app/jobs/`, `app/routes/prequiz_jobs.py` |
 | 기존 퀴즈 복습 간격 | `app/srs.py` |
-| Quiz Bank 다음 문항 | `app/study_engine/` |
+| 사이트 학습률(Main-Quiz) | `app/root_learning/score.py` — 목록·캘린더·패널·시험 계획이 이 함수 하나를 쓴다 |
+| (legacy) Quiz Bank 다음 문항 | `app/study_engine/` |
 | 설정·인증·저장소 | `app/config.py`, `auth.py`, `storage.py` |
 | DB 초기화·호환 칼럼 추가 | `app/cli.py` |
 

@@ -1,5 +1,4 @@
 import { ChipLearning, learningDescription } from "./ChipLearning";
-import { useRootCatalog } from "../bank/useRootCatalog";
 import { type CalendarEntry } from "./entries";
 import { splitSubject, type DisplayInfo } from "./kinds";
 import { ProfTag, professorDescription } from "./ProfessorInfo";
@@ -33,8 +32,7 @@ export function EventChip({
   const sources = entry.lectures.map(lecture => lecture.previewSource);
   const professorInfo = sources.flatMap(source => (source ? [professorDescription(source)] : [])).join("\n");
   const hasLearning = showLearning && entry.lectures.length > 0;
-  const roots = useRootCatalog(Boolean(showLearning) && entry.lectures.some(l => l.marks.mainQuiz && !l.marks.quiz));
-  const learning = showLearning ? entry.lectures.map(l => learningDescription(l, roots)).filter(Boolean).join(" · ") : "";
+  const learning = showLearning ? entry.lectures.map(learningDescription).filter(Boolean).join(" · ") : "";
   // 번호는 시간표에 실제 강의 제목이 있을 때만 붙인다(「임상의학입문 1」처럼 제목뿐인 칸에는 안 붙인다).
   const code = info && entry.detail && info.kind !== "exam" && info.kind !== "other" ? info.code : "";
   const className = [

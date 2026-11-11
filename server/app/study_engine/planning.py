@@ -4,7 +4,6 @@ import math
 from datetime import datetime
 
 from .engine import dimension_key, empty_state
-from .mastery import coverage, mastery_concepts
 from .memory import DAY_MS, next_stability
 from .study_day import KOREA, day_start
 
@@ -74,10 +73,14 @@ def balanced_daily_gain(baseline: float, target: float, retention: float, durati
     return max(0.0, (target - carried) / weight) if weight else 0.0
 
 
+BUFFER_DAYS = 2  # 시험 시작 48시간 전에 목표 도달(2026-11-11 사용자 「3일 전이 아니라 2일 전으로」).
+
+
 def daily_plan(units: list[dict], target: int, now: int, deadline: int) -> dict:
-    """unit: {bank,state,date}. 문제 미준비 강의는 bank=None, 계획상 학습도 0으로 가정한다."""
+    """unit: {date, progress, reviewsToday}. `progress(until, at)`은 `until`(ms)까지의 평가로 본
+    `at`(ms) 시점의 강의 학습률(0~1)이다. 문제 미준비 강의는 progress=None, 계획상 0으로 가정한다."""
     start = day_start(now)
-    study_deadline = deadline - 3 * DAY_MS
+    study_deadline = deadline - BUFFER_DAYS * DAY_MS
     # 목표일이 오늘 중간이면 그 시각까지 확보하고, 이후에는 시험일까지 유지·보충한다.
     buffer_phase = now >= study_deadline
     planning_deadline = deadline if buffer_phase else study_deadline
@@ -85,20 +88,16 @@ def daily_plan(units: list[dict], target: int, now: int, deadline: int) -> dict:
     days = max(1, math.ceil((deadline - start) / DAY_MS))
     morning, morning_end, current, projected, available = [], [], [], [], []
     for unit in units:
-        bank, state = unit["bank"], unit["state"]
-        if not bank:
+        progress = unit["progress"]
+        if progress is None:
             for values in (morning, morning_end, current, projected, available):
                 values.append(0)
             continue
-        past = state_before(bank, state, start)
-
-        def progress(snapshot, at):
-            return coverage(mastery_concepts(bank, snapshot, now=at)[1])
-
-        morning.append(progress(past, start))
-        morning_end.append(progress(past, horizon))
-        current.append(progress(state, now))
-        projected.append(progress(state, horizon))
+        # 학습일 시작 전 평가만으로 본 아침·오늘 끝, 지금까지의 평가로 본 현재·오늘 끝.
+        morning.append(progress(start - 1, start))
+        morning_end.append(progress(start - 1, horizon))
+        current.append(progress(now, now))
+        projected.append(progress(now, horizon))
         available.append(1)
     baseline = total_score(morning)
     baseline_end = total_score(morning_end)
@@ -119,12 +118,11 @@ def daily_plan(units: list[dict], target: int, now: int, deadline: int) -> dict:
     capacity = total_score(available)
     met = remaining < 1e-9
     progress = 100 if met else min(99, max(0, math.floor((gross - remaining) / gross * 100))) if gross > 0 else 0
-    reviewed_today = sum(1 for unit in units if unit["bank"] for review in unit["state"].get("history", [])
-                         if start <= review["timestamp"] <= now)
+    reviewed_today = sum(unit.get("reviewsToday", 0) for unit in units)
     return {
         "daysLeft": days, "dayStart": start, "horizon": horizon,
         "studyDeadline": study_deadline, "learningDaysLeft": learning_days,
-        "bufferDays": 3, "bufferPhase": buffer_phase,
+        "bufferDays": BUFFER_DAYS, "bufferPhase": buffer_phase,
         "assumedDailyRetention": round(retention, 4),
         "lateLectures": sum(u["date"] >= datetime.fromtimestamp(study_deadline / 1000, KOREA).date()
                             for u in units),

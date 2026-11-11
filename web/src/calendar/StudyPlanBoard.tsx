@@ -66,7 +66,7 @@ export function StudyPlanBoard() {
           <p className="mastery-caption">오늘 확보 목표 +{plan.requiredGain.toFixed(1)}%p
             ≈ 시험까지 순증가 +{plan.netGain.toFixed(1)}%p + 망각 보충 {plan.forgettingLoss.toFixed(1)}%p
             · 현재까지 확보 {plan.earnedGain >= 0 ? "+" : ""}{plan.earnedGain.toFixed(1)}%p</p>
-          {plan.unassessedLectures ? <p className="mastery-caption">문제 미준비 {plan.unassessedLectures}강의는 계획상 0%로 가정한 예상치입니다.</p> : null}
+          {plan.unassessedLectures ? <p className="mastery-caption">Main-Quiz 미준비 {plan.unassessedLectures}강의는 계획상 0%로 가정한 예상치입니다.</p> : null}
           {plan.lateLectures > 0 ? <p className="study-plan-limit">목표 도달일 당일 또는 이후에 {plan.lateLectures}강의가 예정되어 있습니다.
             공개 시각에 따라 여유 기간에도 신규 학습이 필요할 수 있습니다.</p> : null}
           {plan.bufferPhase && plan.morningScore < plan.target ? <p className="study-plan-limit">목표일까지 확보하지 못한 분량이 남아 있습니다.
@@ -78,9 +78,9 @@ export function StudyPlanBoard() {
         <details className="study-plan-help"><summary>목표 계산 기준</summary>
           <p>같은 과목의 다음 시험까지를 범위로 자동 추정합니다. 실제 시험 범위가 다르면 목표도 달라집니다.
             예정 강의를 분량에 미리 포함하므로, 신규 강의가 공개되기 전에도 해야 할 학습량에 반영됩니다.</p>
-          <p>시험 3일 전까지 목표에 도달하도록 계획합니다. 현재 기록에서 추정한 하루 학습률 유지 비율을 바탕으로,
+          <p>강의 학습률은 Main-Quiz 기록으로 계산합니다(목록·캘린더와 같은 값). 시험 {data.plans[0]?.bufferDays ?? 2}일 전(시험 시작 48시간 전)까지 목표에 도달하도록 계획합니다. 현재 기록에서 추정한 하루 학습률 유지 비율을 바탕으로,
             망각 보충까지 합친 하루 확보량이 고르게 되도록 초반 순증가 목표를 높입니다. 기록이 없으면 하루 90% 유지를 가정합니다.</p>
-          <p>마지막 3일은 목표 수준 유지와 밀린 분량 보충에 씁니다. 목표는 한국 시간 오전 4시 기록으로 계산하고 현재 기록으로 남은 분량을 갱신합니다.
+          <p>마지막 {data.plans[0]?.bufferDays ?? 2}일은 목표 수준 유지와 밀린 분량 보충에 씁니다. 목표는 한국 시간 오전 4시 기록으로 계산하고 현재 기록으로 남은 분량을 갱신합니다.
             목표 도달 시각부터는 복습 계획으로 전환하며, 시험 당일에는 시험 시작 시각이 마감입니다.</p>
           <p>‘확보’는 오늘 끝 시점에도 남을 것으로 추정되는 학습률 증가분입니다. 목표·자료·시간표가 바뀌면 다시 계산합니다.
             문제 수나 공부 시간의 보장치는 아니며, 앞으로의 복습에 따라 망각량도 달라집니다.</p>

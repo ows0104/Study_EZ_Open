@@ -1,5 +1,8 @@
 # Quiz Bank API 읽기 지도
 
+2026-11-11부터 Quiz Bank는 legacy다. 이 API는 `?legacy=1` 화면·관리자 도구·기록 보존을 위해 남는다.
+사이트 학습률은 Main-Quiz(`app/root_learning/score.py`)다.
+
 부모 server/CLAUDE.md와 docs/development/README.md의 보존·승인 절차를 따른다.
 기존 app.routes.bank는 router 조립과 Python 호출자 호환 진입점이다.
 새 구현·mock은 실제 소유 모듈을 참조한다. 다른 책임 파일 전체를 먼저 읽을 필요는 없다.

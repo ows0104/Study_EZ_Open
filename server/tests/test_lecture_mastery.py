@@ -94,50 +94,30 @@ def main(_bank_clock, _mastery_clock):
         timetable = client.get("/api/timetable")
         assert detail.status_code == timetable.status_code == 200
         lecture = timetable.json()["events"][0]["lectures"][0]
-        p = lecture["cardProgress"]
-        if lecture["mastery"] is None:
-            assert p is None
-        else:
-            assert p["total"] == 3
-            assert sum(p[k] for k in ("unseen", "recognized", "retrieving", "retained")) == 3
-        return detail.json()["mastery"], timetable.json()["events"][0]["lectures"][0]["mastery"]
+        return detail.json()["mastery"], lecture["mastery"], lecture["cardProgress"], lecture["marks"]["quiz"]
 
+    # 2026-11-11부터 사이트 학습률은 Main-Quiz 하나다. Quiz Bank 기록은 legacy 은행 화면에만 나온다.
     login("one")
-    assert summaries() == (mastered, mastered)
+    assert summaries() == (None, None, None, True)  # quiz 표시는 legacy 입구용으로만 남는다.
     assert client.get("/api/lectures/subject/run/bank").json()["mastery"] == mastered
     later = 1019 + 9 * 86_400_000
     expected = lecture_mastery(bank, state, now=later)
     assert expected["score"] < mastered["score"] and expected["status"] == "needs_review"
     with patch("app.lecture_mastery.now_ms", return_value=later), patch("app.routes.bank.engine.now_ms", return_value=later):
-        assert summaries() == (expected, expected)
         response = client.get("/api/lectures/subject/run/bank").json()
         assert response["mastery"] == expected
         assert response["conceptMap"][0]["directions"][0]["mastery"] < state["dimensions"]["C1:direct"]["mastery"]
     with SessionLocal() as db:
         assert db.get(BankState, ("one", "subject", "run")).state == state
     login("two")
-    assert summaries() == (initial, initial)
-    assert client.get("/api/timetable").json()["events"][0]["lectures"][0]["cardProgress"]["seen"] == 0
+    assert client.get("/api/lectures/subject/run/bank").json()["mastery"] == initial
     login("one")
     with SessionLocal() as db:
-        db.get(QuizBank, ("subject", "run")).build_id = "v2"
-        db.commit()
-    assert summaries() == (initial, initial)
-    assert client.get("/api/timetable").json()["events"][0]["lectures"][0]["cardProgress"]["seen"] == 0
-    # GET은 기존 기록을 수정하지 않는다.
-    with SessionLocal() as db:
-        assert db.get(BankState, ("one", "subject", "run")).build_id == "v1"
         db.get(QuizBank, ("subject", "run")).open_to_students = False
         db.commit()
-    assert summaries() == (None, None)
+    assert summaries() == (None, None, None, False)
     assert client.get("/api/lectures/subject/run/bank").status_code == 404
-    with SessionLocal() as db:
-        row = db.get(QuizBank, ("subject", "run"))
-        row.open_to_students = True
-        row.validation = {"pass": False}
-        db.commit()
-    assert summaries() == (None, None)
-    print("PASS: 강의 학습도 계산, 미학습 개념, 사용자 격리, 재생성, 공개 범위, GET 무변경")
+    print("PASS: Quiz Bank 학습도 계산(legacy), 사이트 학습률에서 제외, 은행 화면·공개 범위, GET 무변경")
 
 
 if __name__ == "__main__":

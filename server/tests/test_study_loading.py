@@ -67,15 +67,15 @@ def main():
     response = client.post("/api/timetable/study-progress", json=payload)
     assert response.status_code == 200, response.text
     values = {l["runId"]: l for l in response.json()["lectures"]}
-    assert values["public"]["ready"] and values["public"]["cardProgress"]["seen"] == 0
-    for run in ("private", "invalid", "missing"):
+    # 2026-11-11: study-progress의 학습률은 Main-Quiz 하나다. Quiz Bank만 있는 강의는 학습률이 없다.
+    for run in ("public", "private", "invalid", "missing"):
         assert not values[run]["ready"] and values[run]["mastery"] is None and values[run]["cardProgress"] is None
     assert not any("raw_response" in sql or "quiz_bank.review" in sql or "bank_state.previous" in sql for sql in captured)
     full = {l["runId"]: l for l in client.get("/api/timetable").json()["events"][0]["lectures"]}
     for run in ("public", "private", "invalid"):
-        assert full[run]["marks"]["quiz"] == values[run]["ready"]
+        assert full[run]["marks"]["quiz"] == basic[run]["marks"]["quiz"]  # legacy 입구 표시는 그대로
         assert full[run]["cardProgress"] == values[run]["cardProgress"]
-    with patch("app.lecture_mastery.card_progress", side_effect=AssertionError("calendar must skip card counts")):
+    with patch("app.lecture_mastery.lecture_score", side_effect=AssertionError("no Main-Quiz here")):
         calendar = client.get("/api/timetable?start=2026-10-02&end=2026-10-02&include_cards=false")
         assert calendar.status_code == 200, calendar.text
         public = next(l for l in calendar.json()["events"][0]["lectures"] if l["runId"] == "public")
@@ -90,9 +90,9 @@ def main():
     assert client.post("/api/timetable/study-progress", json={"lectures": payload["lectures"] * 3}).status_code == 422
     assert client.post("/api/timetable/study-progress", json={"lectures": []}).status_code == 422
     login("two")
-    assert client.post("/api/timetable/study-progress", json=payload).json()["lectures"][0]["cardProgress"]["seen"] == 0
+    assert client.post("/api/timetable/study-progress", json=payload).json()["lectures"][0]["cardProgress"] is None
     login("admin", admin=True)
-    assert client.post("/api/timetable/study-progress", json=payload).json()["lectures"][1]["ready"]
+    assert client.post("/api/timetable/study-progress", json=payload).json()["lectures"][1]["mastery"] is None
     login(approved=False)
     assert client.post("/api/timetable/study-progress", json=payload).status_code == 403
     app.dependency_overrides.clear()
