@@ -228,10 +228,16 @@ def _merge_row(old, new, replaced=()):
             'reason': new['reason'] if new['status'] == 'covered' or not kept_cover else old['reason']}
 
 
-def _bank_findings(bank, sources):
-    """Code checks per question (format errors and quality measures); never a model call."""
+def _bank_findings(bank, sources, attempts=None):
+    """Code checks per question (format errors and quality measures); never a model call.
+
+    The quality measures only advise (bank/quality.py warnings). They go to a question's first fix; a question that
+    was fixed once is not sent back for them again (`attempts`): on the 261113_01 run the model left such a question
+    as it was and the same warning spent its second fix (docs/changes/2026-11-11-tier-from-importance)."""
     found = {}
-    for text in validate_bank(bank, sources)['errors'] + [r['text'] for r in v2.quality_reasons(bank)]:
+    done = {q for q, n in (attempts or {}).items() if n >= 1}
+    advice = [r['text'] for r in v2.quality_reasons(bank) if not set(r['question_ids']) & done]
+    for text in validate_bank(bank, sources)['errors'] + advice:
         m = _QID.match(text.replace('문항 품질: ', ''))
         if m:
             found.setdefault(m.group(1), []).append(text)
@@ -577,7 +583,7 @@ def run(packet, out, model, invoke, resume=None):
     def batch_body(b, batch, S, stages):
         S.reviews.update(review_batch(S, stages, f'v3-review-{b}-0', set(batch)))
         for k in range(v3.FIX_LIMIT):
-            code = _bank_findings(S.bank, source_ids)
+            code = _bank_findings(S.bank, source_ids, S.attempts)
             targets = [q for q in batch if (v3.needs_fix(S.reviews[q]) or q in code) and S.attempts.get(q, 0) < v3.FIX_LIMIT]
             if not targets:
                 break
@@ -619,7 +625,7 @@ def run(packet, out, model, invoke, resume=None):
             ledger['contextRepairs'].append({'stage': 'v3-context-0', 'open': v3.context_open(context_judgments[0]), 'targets': targets})
         count_attempts(S, targets)
         notes = v3.context_findings(bank, context_judgments[0], targets)
-        code = _bank_findings(bank, source_ids)
+        code = _bank_findings(bank, source_ids, attempts)
         findings = [{**reviews[q], 'code_findings': [*code.get(q, []), *notes.get(q, [])]} for q in targets]
         S.bank, S.conflicts, S.stimuli = bank, conflicts, stimuli
         fix_round(S, batches.BatchStages(st, S), 'v3-fix-context-0', 'v3-review-context-1', 'v3-coverage-fix-context-0', targets, findings)

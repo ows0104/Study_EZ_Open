@@ -301,7 +301,7 @@ def project_session(db, row, doc, user, when):
     blocked = '학습일이 바뀌었습니다. 오늘 학습을 다시 계획하세요.' if expired else problems.get(task['task_id']) if task else None
     out = {'sessionId': row.id, 'revision': row.revision, 'version': row.version, 'day': row.day, 'policy': row.policy,
            'position': index, 'count': len(row.tasks), 'finished': task is None, 'blocked': blocked,
-           'canUndo': bool(row.state.get('undo')) and not expired, 'mapSeen': row.state['mapSeen'], 'task': None,
+           'canUndo': bool(undo_stack(row.state)) and not expired, 'mapSeen': row.state['mapSeen'], 'task': None,
            'summary': state.summary(doc.document, events, available, when, row.policy)}
     if task and task['task_id'] in available and not expired:
         q = content.question(doc.document, task)
@@ -574,6 +574,22 @@ def prepare(session_id: str, start: int | None = Query(None, ge=0), count: int =
     return out
 
 
+def undo_stack(state):
+    """회차 안에서 Z로 되돌릴 행동들(2026-11-11 사용자 지시: 어느 화면에서든 끝없이, 모든 게 돌아가게).
+    옛 세션의 한 칸 `undo`는 평가 한 항목으로 읽는다."""
+    if 'undoStack' in state:
+        return list(state['undoStack'])
+    old = state.get('undo')
+    return [{'requestId': old['requestId'], 'kind': 'rate', 'index': old['index']}] if old else []
+
+
+def set_undo_stack(state, stack):
+    state['undoStack'] = stack
+    top = stack[-1] if stack else None
+    # 롤백한 옛 코드는 `undo` 한 칸만 읽는다. 맨 위가 평가·보류일 때만 그 칸을 남긴다.
+    state['undo'] = {'requestId': top['requestId'], 'index': top['index']} if top and top['kind'] != 'reveal' else None
+
+
 @router.post('/root-learning/sessions/{session_id}/events')
 def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_approved_user), db: Session = Depends(get_db)):
     row, doc = checked_session(db, session_id, user)
@@ -598,15 +614,25 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
     if payload.kind == 'map':
         session_state['mapSeen'] = True
     elif payload.kind == 'undo':
-        undo = session_state.get('undo')
-        if not undo:
-            raise HTTPException(409, '취소할 직전 평가가 없습니다.')
-        data['undo'] = undo['requestId']
-        session_state.update(index=undo['index'], undo=None)
+        stack = undo_stack(session_state)
+        if not stack:
+            raise HTTPException(409, '되돌릴 행동이 없습니다.')
+        top = stack.pop()
+        data['undo'] = top['requestId']
+        if top['kind'] == 'reveal':
+            # 답 보기도 없던 일로: 다시 문제 화면, 이번에 새로 노출된 관계도 뺀다. 이벤트는 undo로 표시만 한다.
+            session_state['reveals'].pop(top['taskId'], None)
+            added = set(top['added'])
+            session_state['exposedRelations'] = [r for r in session_state.get('exposedRelations', []) if r not in added]
+        else:
+            session_state['index'] = top['index']
+        set_undo_stack(session_state, stack)
     elif not task:
         raise HTTPException(409, '이 회차의 마지막 질문입니다.')
     elif payload.kind == 'skip':
-        session_state.update(index=session_state['index'] + 1, undo=None)
+        set_undo_stack(session_state, undo_stack(session_state) + [
+            {'requestId': payload.requestId, 'kind': 'skip', 'index': session_state['index']}])
+        session_state['index'] += 1
         data.update(task_id=task['task_id'], direction_id=task['direction_id'], **task_fingerprint(doc.document, task))
     else:
         if task['task_id'] not in available:
@@ -623,13 +649,15 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
             helped = payload.helped or session_state['mapSeen'] or prior_exposure(doc.document, task, q, session_state, payload.choicesShown)
             data.update(attempted=payload.attempted, response=payload.response, helped=helped)
             session_state['reveals'][task['task_id']] = {k: data[k] for k in ('attempted', 'response', 'helped')}
-            exposed = set(session_state.get('exposedRelations', []))
+            before = set(session_state.get('exposedRelations', []))
+            exposed = set(before)
             for mapping in doc.document['review']['mappings']:
                 if mapping['question_id'] == task['question_id']:
                     for field in ('tested_relation_ids', 'provided_relation_ids', 'explanation_relation_ids'):
                         exposed.update(mapping[field])
             session_state['exposedRelations'] = sorted(exposed)
-            session_state['undo'] = None
+            set_undo_stack(session_state, undo_stack(session_state) + [
+                {'requestId': payload.requestId, 'kind': 'reveal', 'taskId': task['task_id'], 'added': sorted(exposed - before)}])
         else:
             if not reveal:
                 raise HTTPException(409, '답을 먼저 확인하세요.')
@@ -643,7 +671,9 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
                 data.update(selfRating=payload.selfRating, ratingPolicy=policy.TARGET_RATING_POLICY,
                             ratingParameters=copy.deepcopy(policy.FOUR_RATING_PARAMETERS),
                             targetParameters=policy.target_parameters())
-            session_state.update(undo={'requestId': payload.requestId, 'index': session_state['index']}, index=session_state['index'] + 1)
+            set_undo_stack(session_state, undo_stack(session_state) + [
+                {'requestId': payload.requestId, 'kind': 'rate', 'index': session_state['index']}])
+            session_state['index'] += 1
     result = {'sessionId': row.id, 'version': row.version + 1}
     changed = db.execute(update(RootSession).where(RootSession.id == row.id, RootSession.version == row.version)
                          .values(state=session_state, version=row.version + 1))

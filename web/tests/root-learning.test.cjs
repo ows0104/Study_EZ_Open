@@ -212,6 +212,33 @@ test('clicked toggles stay the default after reload: menu collapse and map quest
  }finally{await browser.close();}
 });
 
+test('Z undoes every reveal and rating step by step from any screen, also after reload (2026-11-11)',async()=>{
+ const browser=await chromium.launch({headless:true,channel:'chrome'});const context=await contextFor(browser,{extraHTTPHeaders:{'X-Root-Test-User':'undo-user'}});
+ await context.route('**/api/me',r=>r.fulfill({json:{id:'a',email:'a@example.com',isApproved:true,isAdmin:false}}));
+ const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const q=n=>page.getByText(`Synthetic question ${n}?`,{exact:true});
+ const answerShown=()=>page.locator('.quiz-grade').count().then(n=>n===4);
+ const undo=page.getByRole('button',{name:/^되돌리기/});
+ const key=async k=>{await page.getByRole('heading',{name:/^문항 /}).focus();await page.keyboard.press(k);};
+ try{
+   await page.goto(url);await page.getByRole('button',{name:'오늘 학습 시작',exact:true}).click();await enabled(page,'답 보기');
+   assert.equal(await undo.isDisabled(),true);
+   await key('Space');await allRatings(page);await key('3');await q(2).waitFor();
+   await key('Space');await allRatings(page);
+   // On an answer screen of a later question Z is available (it used to be cleared by this reveal).
+   await enabled(page,'되돌리기');await key('z');await enabled(page,'답 보기');assert.equal(await answerShown(),false);await q(2).waitFor();
+   await key('z');await q(1).waitFor();await allRatings(page);
+   await key('z');await enabled(page,'답 보기');assert.equal(await answerShown(),false);
+   await page.waitForFunction(()=>[...document.querySelectorAll('button')].find(b=>b.textContent.startsWith('되돌리기'))?.disabled);
+   // Forward again, then the server's own record (reload) still undoes as far back.
+   await key('Space');await allRatings(page);await key('2');await q(2).waitFor();await key('Space');await allRatings(page);
+   await page.waitForLoadState("networkidle");await page.reload();await allRatings(page);await q(2).waitFor();
+   await key('z');await enabled(page,'답 보기');await key('z');await q(1).waitFor();await allRatings(page);
+   await key('z');await enabled(page,'답 보기');
+   assert.deepEqual(errors,[]);
+ }finally{await browser.close();}
+});
+
 test('quiz timer: on by default, Tab pauses, question 0s reveals, answer 40s rates Again, switch off persists',async()=>{
  const browser=await chromium.launch({headless:true,channel:'chrome'});const context=await contextFor(browser,{timer:true,extraHTTPHeaders:{'X-Root-Test-User':'timer-user'}});
  await context.route('**/api/me',r=>r.fulfill({json:{id:'a',email:'a@example.com',isApproved:true,isAdmin:false}}));

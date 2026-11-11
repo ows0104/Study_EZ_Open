@@ -61,7 +61,9 @@ def legacy_public_job(db, row):
             'dispatched': bool(row.web_dispatch),
             # map-tree/1 (2026-11-09): request kind, frozen source names and resume count; packet only, no heavy column.
             'pipeline': row.packet.get('pipeline'), 'sources': [{k: s[k] for k in ('id', 'kind', 'filename')} for s in row.packet.get('sources', [])],
-            'operatorResumes': len(row.packet.get('operatorResumes', []))}
+            'operatorResumes': len(row.packet.get('operatorResumes', [])),
+            # 「새로 출제」 (2026-11-11-main-quiz-start-over): the request this one restarts; packet only.
+            'restartOf': row.packet.get('restartOf')}
 # ── 사본 끝 ──
 
 

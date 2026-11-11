@@ -152,9 +152,12 @@ def availability(db, content, user_id):
 
 
 def events_for(db, subject, run_id, user_id):
-    return [{'id': e.request_id, 'revision': e.revision, 'kind': e.kind, 'payload': e.payload, 'at': e.created_at}
+    """학습 집계의 입력. Z로 되돌린 답 보기·평가·보류는 없던 일로 뺀다(2026-11-11). 원본 이벤트와 undo 기록은 DB에 남는다."""
+    rows = [{'id': e.request_id, 'revision': e.revision, 'kind': e.kind, 'payload': e.payload, 'at': e.created_at}
             for e in db.scalars(select(RootEvent).where(RootEvent.user_id == user_id,
                 RootEvent.subject == subject, RootEvent.run_id == run_id).order_by(RootEvent.created_at, RootEvent.request_id))]
+    undone = {e['payload'].get('undo') for e in rows if e['kind'] == 'undo'}
+    return [e for e in rows if e['kind'] == 'undo' or e['id'] not in undone]
 
 
 def tiers_for(db, doc, user_id):
