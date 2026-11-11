@@ -1,0 +1,18 @@
+{
+  "id": "2026-11-11-evidence-from-citations",
+  "title": "근거 지면을 출제 인용으로 바로 연결",
+  "area": "generation",
+  "created_at": "2026-11-11T00:45:53.809438+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T00:45:53.809934+00:00"
+}

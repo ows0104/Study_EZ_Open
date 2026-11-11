@@ -1,0 +1,73 @@
+# 근거 지면을 출제 인용으로 바로 연결 — 설계
+
+## 요구사항과 수용 기준
+
+### R1. 근거 쪽은 출제 단계에서 확정한다
+- 문항 검토 단계(`v4-review-<b>-<k>`, 지시문 `content/prompts/learning-links/v4/item-review.md`)가 문항마다 근거 쪽을 정한다. 이 단계는 이미 원본 쪽 이미지를 보고 문항을 판정한다.
+- 출력 `reviews[]` 행에 구조화된 근거를 더한다.
+
+  ```json
+  "evidence": {"mode": "single|linked|unresolved", "reason": "…",
+               "slides": [{"page": 22, "evidence": "사진 옆에 (87%)·(9%) 표시"}]}
+  ```
+  - `page`는 필기(S1) 물리쪽이다. `source_refs`의 S1 쪽과 다르면, 그 차이 자체를 고쳐야 할 지적으로 남긴다(R2).
+  - 규칙은 `slide-focus.md`의 single/linked 규칙을 그대로 옮긴다: 한 장으로 되면 single, 정답의 필수 부분이 두 장에 나뉠 때만 linked.
+- 고치기(`v4-fix`) 뒤 재검토한 문항은 마지막 검토의 근거를 쓴다.
+- **수용**: 최종 bank의 문항마다 마지막 검토 행에 `evidence`가 있다. 계약 검사가 그 쪽이 실제 쪽 범위 안에 있는지, single은 1장·linked는 2장 이상인지 확인한다. 실패하면 그 단계를 되돌려준다(기존 형식 오류 처리와 같은 경로).
+
+### R2. 인용 쪽과 근거 쪽이 다르면 인용을 고친다
+- 검토가 고른 S1 근거 쪽이 `source_refs`의 S1 쪽과 다르면, 기존 고치기 경로에서 `source_refs`를 맞춘다.
+  - 대상 예: 리케차 Q108 23→22, Q075 3→2
+  - 문항 본문·정답은 바꾸지 않고 인용만 바꾼다. 고치기 회차와 상한은 지금 규칙을 따른다.
+- **수용**: 게시되는 판에서 문항의 S1 `source_refs`와 근거 쪽이 일치한다. 학생 화면의 「인용 쪽」과 「핵심 근거」가 서로 어긋나지 않는다.
+
+### R3. 게시 뒤 근거 보강은 확정된 근거를 그대로 쓴다
+- `quizbank/root_evidence.enrich`가 R1의 근거를 `slide_focus.select(..., authored=…)`로 넘긴다. Quiz Bank가 이미 쓰는 `authored` 형식과 같다.
+  - 형식: `{question_id: {"authoredHash": authored_hash(q), "evidence": {mode, reason, slides:[{source_id:"self", page, evidence}]}}}`
+- `select`는 지금처럼 `authoredHash`가 맞고 `shape` 검사를 통과한 문항만 그대로 쓴다. 남은 문항(검토 근거가 없거나 `unresolved`)만 모델로 다시 고른다.
+- 남은 문항이 0이면 모델을 부르지 않는다(`selectionOrigin: "authored"`, 기존 동작).
+- **수용**
+  - 리케차급 강의에서 근거 보강의 모델 재선택 대상이 문항의 10% 이하다.
+  - 근거 단계 시간이 실측 39분에서 5분 이하로 준다(재선택 0건이면 1분 이하).
+  - `evidence.json`의 `slideFocus.authoredCount` / `reselectedCount`로 확인한다.
+
+### R4. 재선택이 남으면 나눠서 돈다
+- 재선택 대상이 많으면 문항 검토와 같은 크기(`REVIEW_BATCH`, 40)로 나눈다. `connection_batches`처럼 최대 3묶음을 동시에 돌린다.
+- 묶음 결과는 대상 ID 순서로 합친다. `shape` 검사는 합친 뒤 한 번 한다.
+- **수용**: 재선택 대상이 41개 이상이면 호출이 2회 이상 나뉜다. 합친 보고서가 단일 호출 결과와 같은 계약을 통과한다.
+
+### R5. 이전 판·이전 ledger는 지금처럼 돈다
+- 검토 행에 `evidence`가 없는 판은 `authored` 없이 지금 경로를 그대로 쓴다. 대상은 v3·v4의 기존 ledger, `map-tree/1`·`/2` 판이다(R4의 나눠 돌기만 적용).
+- **수용**: 공개된 판(`map-tree-26110803`, `map-tree-26110901`, `auto-1c484a7b…`, `auto-fa71412a…`)의 결과 재검증(`validate_result`·`validate_all`)이 그대로 통과한다.
+
+## 책임·입출력 계약·오류 상태
+
+| 책임 | 위치 | 바뀌는 것 |
+|---|---|---|
+| 검토 지시·출력 형식 | `content/prompts/learning-links/v4/item-review.md`, 검토 출력 스키마 | `reviews[].evidence` 추가 |
+| 검토 결과 계약 | `studyez_contracts/roots/generation_v3.py`(v4가 공유하는 검토 shape) | `evidence` 형식·쪽 범위 검사, 새 정책 표시가 있는 ledger만 필수 |
+| 인용 정합 지적 | `quizbank/connection_generate_v4.py`(검토 → 고치기 지적 목록) | S1 인용≠근거 쪽이면 고치기 대상 |
+| 근거 넘기기 | `quizbank/root_evidence.py` | 판 문서의 검토 근거를 `authored`로 변환. 문서에 없으면 `None` |
+| 판 문서 | `result.json`의 `sourceAudit`(이미 `question_checks`·`review` 보존) | 마지막 검토 근거를 문항별로 싣는다. 형식은 plan에서 위치 확정 |
+| 재선택 묶음 | `quizbank/slide_focus.py` | 남은 대상 묶음 병렬. `REPORT`·`shape`·출력 버전 불변 |
+
+**오류 상태**
+- 검토 근거가 형식 검사를 못 넘으면 그 문항만 `authored`에서 빠지고 재선택 대상이 된다. 게시는 막지 않는다. 근거 보강은 지금처럼 게시 뒤 실패해도 판에 영향이 없다.
+- 재선택 묶음 하나가 실패하면 근거 보강 전체를 실패로 둔다(지금과 같음: 「근거 보강 실패 — 판은 게시됨, 인용 쪽만 표시」). 일부 묶음 결과만 섞어 올리지 않는다.
+- 재선택이 쪽을 바꾸더라도 판의 `source_refs`는 고치지 않는다. 판은 불변이다. 차이는 `evidence.json`에만 남는다.
+
+## 호환성과 데이터 보존
+
+- 서버·웹·DB 변경 없음. `root-evidence/1`과 `slideFocus` 계약(version 2/3, `selectionOrigin`·`authoredCount`·`reselectedCount`)을 그대로 쓴다.
+- 이미 게시된 판과 업로드된 근거 JSON은 다시 만들지 않는다. 학습 기록·개인 수정·제외 문항에는 손대지 않는다.
+- 새 검토 출력 필드는 새 정책 표시(`runPolicies`에 새 항목)가 있는 새 실행에만 필수다. 옛 ledger 이어 하기는 옛 규칙으로 돈다(PR A의 `runPolicies` 방식과 같다).
+- 모델 호출 수
+  - 검토 단계: 호출 수는 그대로이고, 출력이 문항당 수십 토큰 늘어난다.
+  - 근거 단계: 리케차 기준 1회(37만 토큰) → 0~1회(작은 입력)로 준다.
+- Quiz Bank 근거 경로(`evidence.enrich`)는 바뀌지 않는다. `slide_focus`의 묶음 분할(R4)은 Quiz Bank 재선택에도 적용된다. 출력 계약은 같다.
+
+## 결정할 것 (사용자)
+
+1. **요약 쪽을 근거로 써도 되는가?** 필기 끝의 필기자 요약 쪽(리케차 32·34~36쪽)은 여러 내용을 한 장에 담고 있어, 모델이 자주 고른다(133쪽 중 6쪽). 강의 슬라이드 쪽에 근거가 있으면 그 쪽을 우선하라고 지시문에 적을지 정한다.
+2. **R2(인용 고치기)를 이번에 함께 할지.** 하지 않으면 R1·R3만으로 근거 단계는 빨라진다. 다만 판의 인용 쪽(답 공개 뒤 「출처」)과 핵심 근거 쪽이 어긋나는 문항이 남는다(리케차 약 8문항).
+3. **이미 공개된 리케차 판의 근거를 다시 만들지.** 지금 업로드된 근거에는 Q077(5→34쪽 요약 쪽) 같은 선택이 들어 있다. 다시 만들면 근거 JSON만 교체하고 판·학습 기록은 그대로다. 강의 자료를 모델로 다시 보내는 일이라 따로 승인받는다.
