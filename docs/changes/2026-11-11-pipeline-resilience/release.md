@@ -6,7 +6,9 @@
   `tests/studyez_llm/test_execution.py` 추가 5개: 통과.
 - 회귀 `pytest tests/quizbank tests/contracts tests/runner tests/studyez_llm tests/quizgen tests/development`: 2783 passed, 2 skipped, 1 deselected(5분 30초).
   제외 1개는 이 기계에서 이전 변경들도 제외해 온 `test_shortcut_installer_supports_korean_filename_in_windows_powershell`.
+  master(#114 러너 상태 창)와 합친 뒤 같은 명령: 2788 passed, 2 skipped, 1 deselected(`state.json`에 기록).
 - `ruff check --select F821,F841` (바꾼 파일): 지적 없음.
+- `python scripts/map_numbers.py --check`: 의존 경계 정상.
 
 자체 검토(독립 리뷰 아님):
 - 경계: 단계 이름·입력·지시문·결과 형식 그대로. 서버가 보는 파생 packet 단계 행과 결과 manifest 키는 바뀌지 않음(검사로 확인).
