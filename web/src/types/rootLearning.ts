@@ -10,6 +10,8 @@ export type RootPolicy = {id: string; day_hour: number; deadline_offset: number}
   {intervals: number[]} | {mode:'adaptive'; initial_days:number; success_growth:number; partial_factor:number; max_days:number; exam_fraction:number});
 export type RootSummary = {total: number; learned: number; recalled: number; unseen: number; unready: number;
   importantUnseen: number; newToday: number; recallChange: number; recallLearningChange:number; recallTimeChange:number;
+  /** Main-Quiz 학습률 0~100(서버 root_learning/score.py). 지도 목표가 없으면 null. */
+  score?: number | null;
   targets: {id:string; learned:boolean; recalled:boolean; important:boolean; ready:boolean; status:string}[]};
 export type RootPlan = {tasks:{task_id:string; direction_id:string; question_id:string; reason:string}[];
   newGoalQuota:number; days:number|null; habitualTasks:number|null; deadline:string|null;

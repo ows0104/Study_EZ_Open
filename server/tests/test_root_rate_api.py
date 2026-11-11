@@ -42,8 +42,10 @@ after = rates(NOW + timedelta(minutes=1))
 assert after[0] == after[1] == after[2] and 0 < after[0]['score'] < 100, after
 assert after[0]['status'] == 'needs_review' and after[0]['ratedTargets'] == 1
 
-# TODO(「강의 목록 숫자 열」 병합 뒤): Main-Quiz 요약(rootRate)도 같은 숫자인지 —
-# state.summary()에 score를 더하는 것은 그 작업과 같은 파일이라 병합 뒤에 한다.
+# Main-Quiz 요약(목록·패널이 읽는 rootRate)도 같은 숫자다.
+with patch('app.routes.root_learning.now', return_value=NOW + timedelta(minutes=1)):
+    summary = client.get('/api/root-learning/lectures/test/demo').json()['summary']
+assert summary['score'] == after[0]['score'], (summary.get('score'), after[0])
 
 # 복습 없이 시간이 지나면 내려간다.
 later = rates(NOW + timedelta(days=60))

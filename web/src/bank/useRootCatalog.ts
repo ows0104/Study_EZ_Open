@@ -53,7 +53,8 @@ function useShared<T extends Map<string, unknown>>(read: () => Promise<T>, enabl
   return rows;
 }
 
-/** Main-Quiz 학습률 = 회상 가능 목표 / 전체 목표. 강의 목록·캘린더·패널이 같은 정의를 쓴다. */
+/** Main-Quiz 학습률. 서버 `root_learning/score.py`가 계산한 값을 그대로 쓴다(웹에서 다시 계산하지 않는다).
+ *  강의 목록·캘린더·패널·시험 계획이 같은 값이다. */
 export function rootRate(summary: RootSummary | null | undefined): number | null {
-  return summary && summary.total ? Math.round(summary.recalled / summary.total * 100) : null;
+  return summary?.score ?? null;
 }
