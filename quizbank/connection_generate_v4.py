@@ -11,6 +11,7 @@ falling back to v3/ for prompts that did not change). The /3 module is not chang
 """
 import copy
 import json
+import shutil
 from pathlib import Path
 
 from studyez_llm import codex
@@ -101,6 +102,16 @@ def check_stage(kind, value, ctx, state, scratch):
     return value
 
 
+def normalize_input(packet, sources):
+    """The input of the `normalize` stage. It reads the Map, the points and the sources only, so the front stages
+    can start it as soon as the points are final (runner.root_front.Front.early_normalize) with these same values."""
+    from . import connection_generate as g
+    base = {k: packet[k] for k in ('title', 'scope', 'conceptMap', 'points', 'examDate')}
+    base.update(lecture_id=packet['subject'] + '/' + packet['runId'], sources=sources,
+                preserved_scope=g.lecture_scope(packet['title'], packet['sources']))
+    return base
+
+
 # ---------------------------------------------------------------- run
 def run(packet, out, model, invoke, resume=None):
     from . import connection_generate as g
@@ -120,9 +131,7 @@ def run(packet, out, model, invoke, resume=None):
     ledger = st.ledger
     evidence_on = ledger.get('reviewEvidence', {}).get('policy') == v4.REVIEW_EVIDENCE
     placement = 'review' if ledger.get('placement') == {'policy': v4.REVIEW_PLACEMENT} else 'evidence'
-    base = {k: packet[k] for k in ('title', 'scope', 'conceptMap', 'points', 'examDate')}
-    base.update(lecture_id=packet['subject'] + '/' + packet['runId'], sources=sources,
-                preserved_scope=g.lecture_scope(packet['title'], packet['sources']))
+    base = normalize_input(packet, sources)
     points_doc = v4.check_points(json.loads(packet['points']))
     profile = points_doc['notebook_profile']
 
@@ -206,6 +215,37 @@ def run(packet, out, model, invoke, resume=None):
         off_questions = []
     bank = _join_points(bank, brief, rows)
 
+    def review_ctx(bank_, conflicts_, basis_, qids):
+        """The input of one item review call (review_batch below and the early start here build it the same way)."""
+        ctx = v4.with_importance(v3.review_input(bank_, qids, conflicts_), basis_)
+        if evidence_on:
+            ctx['evidence_source'] = evidence_notes
+        if placement == 'review':
+            ctx['map_relations'] = v4.map_relations(brief, map_checks)
+        return ctx
+
+    # The first review of a batch reads its questions, their conflicts and the map relations. Once a batch is
+    # full all of that is final, because an add round only appends: questions, conflicts and facts already there
+    # stay byte-identical (generation_v3.merge_added). A new run starts those calls as soon as a batch fills,
+    # before the add rounds and after each of them, beside what is still running (early-call/1); each batch
+    # takes its answer when its turn comes, if its input is still the same. On the real runs of 2026-11-11 about
+    # half of the questions came from the add rounds, nearly all from the first: after it every batch but the
+    # last is full.
+    def start_full_batches():
+        if not st.parallel:
+            return
+        for b, part in enumerate(chunks([q['question_id'] for q in bank['questions']], REVIEW_BATCH)):
+            if len(part) < REVIEW_BATCH or any(v3.reusable(ledger['verdictLedger'], 'item', q['question_id'], v3.item_hash(q, bank, conflicts)) is not None
+                                               for q in bank['questions'] if q['question_id'] in set(part)):
+                continue   # an add round may still fill it, or a resumed run already holds some of its verdicts
+            name = f'{X}review-{b}-0'
+            copy_to = out / '.early' / f'm{b}'
+            if name in ledger['stages'] or copy_to.exists() or (out / '.early' / (name + '.json')).exists() or (out / '.native' / name).exists():
+                continue   # started before, here or in an earlier run of this request
+            shutil.copytree(out / 'material', copy_to)   # a later add round writes new images into material/ meanwhile
+            st.start_early(name, review_ctx(bank, conflicts, basis, part), material=copy_to)
+    start_full_batches()
+
     # 3: add only the unasked components (≤2 rounds) -------------------------
     restated = []
     for n in range(v3.ADD_LIMIT):
@@ -226,6 +266,7 @@ def run(packet, out, model, invoke, resume=None):
         basis.update(v4.collect_basis(value['question_importance'], [q['question_id'] for q in value['questions']]))
         stimuli = [*stimuli, *value['visual_stimuli']]
         bank = visual.render(bank, stimuli, packet, out / 'material')
+        start_full_batches()   # the batches this round filled, beside its coverage judgment and the next round
         added = [q['question_id'] for q in value['questions']]
         # Each chunk judges its own goals from the same bank: side by side in a new run, merged in chunk order
         # (docs/changes/2026-11-11-pipeline-resilience). The stage names and inputs are the ones they always had.
@@ -259,11 +300,7 @@ def run(packet, out, model, invoke, resume=None):
                 todo.append(q['question_id'])
         if not todo:
             return got
-        ctx = v4.with_importance(v3.review_input(S.bank, todo, S.conflicts), S.basis)
-        if evidence_on:
-            ctx['evidence_source'] = evidence_notes
-        if placement == 'review':
-            ctx['map_relations'] = v4.map_relations(brief, map_checks)
+        ctx = review_ctx(S.bank, S.conflicts, S.basis, todo)
         value = stages.judged(name, ctx, lambda raw: v4.check_review_input(raw, ctx))
         by_id = {q['question_id']: q for q in S.bank['questions']}
         for r in value['reviews']:
@@ -348,6 +385,10 @@ def run(packet, out, model, invoke, resume=None):
         stale = batches.stale_coverage(S, batch_ids, start)
         if stale:
             goal_ids, judged_ids = stale
+            # The context judgment reads the merged bank and its conflict records, not the coverage rows: it
+            # starts beside this re-check (early-call/1) with the input context_judgment builds below.
+            ahead_bank, ahead_conflicts, _ = v3.drop_orphans(S.bank, S.conflicts, intake_conflict_ids)
+            st.start_early(X + 'context-0', v3.context_input(ahead_bank, ahead_conflicts, None, None))
             got = judge(X + 'coverage-merge-0', v3.coverage_input(brief, S.bank, goal_ids, judged_ids))
             apply_coverage(S.rows, got['rows'], judged_ids)
     bank, conflicts, stimuli, basis, rows = S.bank, S.conflicts, S.stimuli, S.basis, S.rows
@@ -422,6 +463,7 @@ def run(packet, out, model, invoke, resume=None):
                           for r in medical['reviews'] if r['note'].startswith(v3.UNREVIEWED_NOTE)]
     st.retire_legacy()
 
+    st.settle_early()
     snapshot = doc['bank_snapshot']
     result = {'brief': brief, 'document': doc, 'sourceAudit': audit, 'medical': medical,
               'validation': validate_bank(snapshot, source_ids), 'manifest': {

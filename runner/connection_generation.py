@@ -101,7 +101,8 @@ def map_tree_front(packet, out, *, model=None, resume=None, run=None):
     from studyez_contracts.roots import map_tree
     front, derived_path = out / 'front', out / 'front' / 'derived-packet.json'
     if not derived_path.exists():
-        args = [sys.executable, '-m', 'runner.root_front', '--packet', str((out / 'packet.json').resolve()), '--out', str(front.resolve())]
+        args = [sys.executable, '-m', 'runner.root_front', '--packet', str((out / 'packet.json').resolve()), '--out', str(front.resolve()),
+                '--generation', str((out / 'generation').resolve())]
         if model: args += ['--model', model]
         if resume: args += ['--resume', resume]
         result = (run or run_forwarded)(args, cwd=Path(__file__).resolve().parents[1])
