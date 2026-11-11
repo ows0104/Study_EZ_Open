@@ -167,9 +167,31 @@ class Front:
                 require(sha(work / rel) == expected, 'Model modified input ' + rel)
             return info, result
         except BaseException as error:
-            write(work / 'failure.json', {'type': type(error).__name__, 'message': str(error), 'at': time.time(), 'automaticRetry': False})
-            (work / 'failure.txt').write_text(traceback.format_exc(), encoding='utf-8')
-            write(work / 'state.json', {'status': 'failed', 'error': str(error), 'automaticRetry': False, 'inputHashes': frozen})
+            self.failed(work, error, frozen)
+            raise
+
+    def failed(self, work, error, frozen):
+        write(work / 'failure.json', {'type': type(error).__name__, 'message': str(error), 'at': time.time(), 'automaticRetry': False})
+        (work / 'failure.txt').write_text(traceback.format_exc(), encoding='utf-8')
+        write(work / 'state.json', {'status': 'failed', 'error': str(error), 'automaticRetry': False, 'inputHashes': frozen})
+
+    def accept(self, work, result, kind):
+        """Check a Map/points result; a check failure is recorded like a failed call (no automatic retry).
+
+        `title` only echoes the request's lecture name. A model has written it differently (agent.261104_03,
+        2026-11-11: the whole stage was held as 'Different title'), so the request title is written back and the
+        model's bytes are kept beside it as model-<file>."""
+        try:
+            value, extra = read(result), {}
+            if value.get('title') != self.title:
+                (work / ('model-' + result.name)).write_bytes(result.read_bytes())
+                extra['modelTitle'] = value.get('title')
+                value['title'] = self.title
+                write(result, value)
+            self.validate(kind, value)
+            return value, extra
+        except BaseException as error:
+            self.failed(work, error, read(work / 'state.json')['inputHashes'])
             raise
 
     def finish(self, work, info, result, extra):
@@ -231,7 +253,7 @@ class Front:
                 require({r['from_id'], r['to_id']} <= set(ids), 'unknown concept in relation')
             findings = concept_tree.tree_findings(value)
             require(not findings, 'Map tree: ' + '; '.join(findings))
-        require(value['title'] == self.title, 'Different title')
+        require(value['title'] == self.title, f'Different title: {value["title"]!r} (request {self.title!r})')
 
     def extract(self, kind):
         if self.ready(kind): return
@@ -244,14 +266,14 @@ class Front:
         task = asset_text(request) + '\n\n' + template('map-tree/extract-task.md', title=self.title, first_id=first, filename=filename)
         (work / 'task.md').write_bytes(task.encode('utf-8'))
         info, result = self.call(work, task, f'{self.title} {kind} extraction', filename)
-        value = read(result); self.validate(kind, value)
+        value, renamed = self.accept(work, result, kind)
         if kind == 'map':
             depth = concept_tree.depth_of(value['concepts'])
             extra = {'concepts': len(value['concepts']), 'relations': len(value['relations']),
                      'roots': sum(d == 0 for d in depth.values()), 'maxDepth': max(depth.values())}
         else:
             extra = {'points': len(value['points'])}
-        self.finish(work, info, result, extra)
+        self.finish(work, info, result, {**extra, **renamed})
 
     def bank(self):
         """1c: the question bank from the sources alone (no Map, no points), for root-generation/3."""
@@ -321,8 +343,8 @@ class Front:
         task = asset_text(self.asset['point'][1]) + '\n' + template(self.templates[2], title=self.title).rstrip('\n')
         (work / 'task.md').write_bytes(task.encode('utf-8'))
         info, result = self.call(work, task, self.title + ' point repair', 'exam-points.json')
-        value = read(result); self.validate('point', value)
-        self.finish(work, info, result, {'points': len(value['points'])})
+        value, renamed = self.accept(work, result, 'point')
+        self.finish(work, info, result, {'points': len(value['points']), **renamed})
 
     def derive(self, repaired):
         for rel, expected in read(self.out / 'material-hashes.json').items():

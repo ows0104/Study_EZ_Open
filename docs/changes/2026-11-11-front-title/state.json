@@ -1,0 +1,115 @@
+{
+  "id": "2026-11-11-front-title",
+  "title": "Main-Quiz 앞 단계 'Different title' 보류 수정",
+  "area": "integration",
+  "created_at": "2026-11-11T09:18:40.921214+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T09:19:01.319536+00:00",
+      "evidence": "사용자 채팅 2026-11-11: 「작업 중지·실패 · Quiz Bank 를 못 만들었다: Main-Quiz 앞 단계 보류: Different title (로그: ...runs\\agent.261104_03.log)」",
+      "scope": "runner/root_front.py 결과 title 맞춤·실패 기록, tests/runner/test_root_front.py, 이 작업 폴더",
+      "evidence_version": 2,
+      "source_hash": "0107c889985805149715ce6a5801ae8254df841e43245a5ab69254557b4fc093",
+      "plan_hash": "c26137f9bb487efbd9ae16f1402381387e4c2ec8ea717eccc28a2804a40ac08d",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "release_hash": "7a16bcc5503c1767bd06462b3ec59b1d9681891cf59600626ea48ef953007009"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-11T09:19:14.949677+00:00",
+      "command": [
+        "python3",
+        "-m",
+        "pytest",
+        "tests/runner/test_root_front.py",
+        "tests/runner/test_root_front_v3.py",
+        "tests/contracts",
+        "-q",
+        "-p",
+        "no:warnings"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "0107c889985805149715ce6a5801ae8254df841e43245a5ab69254557b4fc093",
+      "plan_hash": "c26137f9bb487efbd9ae16f1402381387e4c2ec8ea717eccc28a2804a40ac08d",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/runner",
+        "uv.lock"
+      ],
+      "log": "runs/_development/2026-11-11-front-title/1794388741415046629-regression.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-11T09:19:20.037069+00:00",
+    "summary": "Front.accept: title 불일치 시 모델 원문 model-<file> 보존·modelTitle 기록 후 요청 title로 교체, 이후 기존 validate. 입력 보존 검사는 교체 전(call 안). 검사 실패를 failure.json·state failed로 기록(이전엔 started로 남음). bank 단계는 title 없음, 무관. 서버 check_outputs 계약 불변. 남은 위험: 모델이 다른 강의를 다뤘을 가능성은 title이 아니라 쪽 참조·스키마·감사로 잡힌다(입력 자료가 이 강의뿐).",
+    "evidence_version": 2,
+    "source_hash": "0107c889985805149715ce6a5801ae8254df841e43245a5ab69254557b4fc093",
+    "plan_hash": "c26137f9bb487efbd9ae16f1402381387e4c2ec8ea717eccc28a2804a40ac08d",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "runner",
+      "scripts",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "tests/runner",
+      "uv.lock"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-11T09:19:20.060176+00:00"
+}

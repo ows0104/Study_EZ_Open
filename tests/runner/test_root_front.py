@@ -137,6 +137,56 @@ def test_a_model_that_changes_its_input_fails_the_stage(tmp_path):
     assert json.loads((tmp_path / 'front' / 'map' / 'state.json').read_text(encoding='utf-8'))['status'] == 'failed'
 
 
+def retitled(calls, rename):
+    """fake_codex whose Map/points outputs carry another title (agent.261104_03: 'Different title')."""
+    run = fake_codex(calls)
+    def call(task, *, cwd, label, **kwargs):
+        info = run(task, cwd=cwd, label=label, **kwargs)
+        stage = Path(cwd).name
+        if stage in rename:
+            name = json.loads(info['text'])['path']; path = Path(cwd) / name
+            value = json.loads(path.read_text(encoding='utf-8')); value['title'] = rename[stage]
+            path.write_text(json.dumps(value, ensure_ascii=False), encoding='utf-8')
+            info['text'] = json.dumps({'path': name, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()})
+        return info
+    return call
+
+
+def test_a_model_written_title_is_replaced_by_the_request_title_and_kept(tmp_path):
+    p = server_packet(tmp_path); calls = []
+    rename = {'map': TITLE + ' (강의록)', 'point': ' ' + TITLE, 'point-repair': '다른 강의'}
+    derived = rf.Front(p, tmp_path / 'front', invoke=retitled(calls, rename)).run()
+    assert stages(calls) == ['map', 'point', 'audit']
+    assert json.loads(derived['conceptMap']) == concept_map() and json.loads(derived['points']) == points()
+    for stage, name in (('map', 'concept-map.json'), ('point', 'exam-points.json')):
+        work = tmp_path / 'front' / stage
+        assert json.loads((work / ('model-' + name)).read_text(encoding='utf-8'))['title'] == rename[stage]
+        assert json.loads((work / 'state.json').read_text(encoding='utf-8'))['modelTitle'] == rename[stage]
+    # The repaired points are retitled the same way.
+    (tmp_path / 'r').mkdir(); p2 = server_packet(tmp_path / 'r'); with_issues = fake_codex([], issues=True)
+    def repaired(task, *, cwd, label, **kwargs):
+        model = with_issues if Path(cwd).name == 'audit' else retitled([], rename)
+        return model(task, cwd=cwd, label=label, **kwargs)
+    derived = rf.Front(p2, tmp_path / 'front2', invoke=repaired).run()
+    assert derived['frontStages']['pointsFrom'] == 'point-repair' and json.loads(derived['points'])['title'] == TITLE
+    assert json.loads((tmp_path / 'front2' / 'point-repair' / 'state.json').read_text(encoding='utf-8'))['modelTitle'] == '다른 강의'
+
+
+def test_a_result_that_fails_its_checks_is_recorded_as_failed(tmp_path):
+    p = server_packet(tmp_path); run = fake_codex([])
+    def duplicated(task, *, cwd, label, **kwargs):
+        info = run(task, cwd=cwd, label=label, **kwargs)
+        if Path(cwd).name == 'map':
+            path = Path(cwd) / 'concept-map.json'; value = json.loads(path.read_text(encoding='utf-8'))
+            value['concepts'].append(value['concepts'][0]); path.write_text(json.dumps(value, ensure_ascii=False), encoding='utf-8')
+            info['text'] = json.dumps({'path': 'concept-map.json', 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()})
+        return info
+    with pytest.raises(ValueError, match='duplicate ID'):
+        rf.Front(p, tmp_path / 'front', invoke=duplicated).run()
+    work = tmp_path / 'front' / 'map'
+    assert json.loads((work / 'state.json').read_text(encoding='utf-8'))['status'] == 'failed' and (work / 'failure.json').exists()
+
+
 def test_changed_source_bytes_stop_before_any_model_call(tmp_path):
     p = server_packet(tmp_path)
     Path(p['sources'][0]['localPath']).write_bytes(b'%PDF-changed')
