@@ -14,7 +14,6 @@
 
 | 우선순위 | 작업 | 작업자 / 세션 | 브랜치 | 건드리는 영역·파일 | 시작일 | 상태·메모 |
 |---|---|---|---|---|---|---|
-| P2 | 화면 토글을 한 번 누른 값으로 기억(이 브라우저): 공용 도우미로 좌측 메뉴 접기·강의 목록 유형별/순서대로(이미 저장, 같은 키 유지)·개념 지도 문항 펼치기/연결선·관리 검토 「본 것도 보기」 | HungryPotato01 / Claude 퀴즈 타이머 세션 | claude/toggle-prefs | 새 web/src/preferences.ts, web/src/shell/Sidebar.tsx(접기 저장만), web/src/bank/StudyOverview.tsx(보기 저장만), web/src/bank/RootMap.tsx(토글 2개), web/src/admin/BankReportTab.tsx·CardReviewTab.tsx(showDone), web/tests, docs/changes/2026-11-11-toggle-prefs | 2026-11-11 | 화면만. 서버·DB 변경 없음. 사용자 2026-11-11 「이 브라우저에만」. 사용자 승인·구현. d48546a2 PR #110 https://github.com/ows0104/Study_EZ_Open/pull/110 — 로컬 검사 통과, CI 대기 → 병합=배포 |
 | P1 | Main-Quiz 실험 실행: 아데노·폭스바이러스(261110_02) 「새 구조 2」+ 「우선 내 계정에서만 확인」 — 새 러너 76c3e87a의 근거 쪽·인용 맞춤·지도 직접 배치 실측 | ows0104 / Claude 리케차 Main-Quiz 세션 | (master 26befed7, 코드 변경 없음) | 운영 root_generation 요청 1건(261110_02, 개인 시범), runs/_root-generation/<새 gid>(git 밖) | 2026-11-11 | 첫 실행 6e5c581a는 목표 중요도 근거 중복으로 보류(#103으로 수정·배포). 번호 이전(#104)·tier 코드 채움(#106) 병합, 러너 .runtime/main-quiz-26befed71192 재설치(2026-11-11 17:33, agent pid 12784). 남은 것: 261110_02 다시 요청 |
 | P1 | Main-Quiz 앞 단계 'Different title' 보류 수정: 모델이 Map·points JSON의 title을 요청 강의명과 다르게 적으면 단계 전체가 보류되던 것을, 원문 보존 뒤 title만 요청값으로 맞추고 기록(검증 실패도 failure.json에 남김) | ows0104 / Claude 앞 단계 title 세션 | ccr-73ec38c7-pw7z6b | runner/root_front.py, tests/runner/test_root_front.py, docs/changes/2026-11-11-front-title | 2026-11-11 | 러너만. 서버·DB 변경 없음. 200c0d2 PR #112 https://github.com/ows0104/Study_EZ_Open/pull/112 — 로컬 검사 통과, CI 대기 → 병합 뒤 러너 재설치 |
 
@@ -36,6 +35,7 @@
 
 ## 완료 기록 (최근 것만)
 
+| 2026-11-11 | 화면 토글을 한 번 누른 값으로 기억(이 브라우저): 좌측 메뉴 접기·강의 목록 유형별/순서대로·개념 지도 문항/연결선·관리 검토 「본 것도 보기」를 공용 web/src/preferences.ts로. 서버·DB 변경 없음. #109와 충돌 해소 후 로컬 화면 8/8·PR CI 통과. PR #110 병합 e05da900(=배포) | HungryPotato01 / Claude 퀴즈 타이머 세션 | [#110](https://github.com/ows0104/Study_EZ_Open/pull/110) |
 | 2026-11-11 | Main-Quiz 접수 단계의 출처 충돌 인용 누락(CF02: S2 기준 문항 누락)을 경고로 기록하고 진행: 피코르나 261111_02가 이 오류로 전체 보류되던 것. 검사기·계약 변경 없음. 로컬 1344 통과·실제 packet 재현 0건 제외. PR #113 병합 28b9ff33, 러너 재설치 .runtime/main-quiz-28b9ff339a94(agent pid 20896). 남은 것: 261111_02 재요청 | ows0104 / Claude 피코르나 CF02 세션 | [#113](https://github.com/ows0104/Study_EZ_Open/pull/113) |
 | 2026-11-11 | 복습 퀴즈(Main-Quiz) 되돌리기 무제한·완전 되돌리기(PR #109, 51212297): 답 보기·평가·보류를 회차 처음까지 Z로, 되돌린 답 보기·평가는 학습 집계에서 제외. 병합(=배포). #108(01c749ee) 배포 작업은 #106이 먼저 master를 앞서 「superseded」로 정상 중단, 코드는 26befed7 배포에 포함 |
 | 2026-11-11 | Main-Quiz 「새로 출제 (처음부터)」 버튼: 실패·취소된 map-tree 판 옆에 새 요청(restartOf·이유 기록, 수정·추가 횟수 처음부터), 옛 판·산출물 보존, 공개·진행 중 거절 유지. 서버 138/140(map_tree 2 로컬 PyMuPDF 없음)·웹 12/12·build. PR #111 병합 547d75bf(PR CI 대기 중 병합 — master 검사가 배포를 막음). DB·러너 변경 없음, 재설치 불필요 | ows0104 / Claude 새로 출제 세션 | [#111](https://github.com/ows0104/Study_EZ_Open/pull/111) |
