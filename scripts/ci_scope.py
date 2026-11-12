@@ -1,4 +1,4 @@
-"""CI가 이번 실행에서 무엇을 돌릴지 정한다(GitHub Actions 분 줄이기).
+"""CI가 이번 실행에서 무엇을 돌릴지 정한다(필요 없는 검사를 건너뛰어 실행 시간 줄이기).
 
     python scripts/ci_scope.py        GITHUB_* 환경에서 tests=/windows= 를 GITHUB_OUTPUT에 쓴다
 

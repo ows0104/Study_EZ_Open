@@ -49,8 +49,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 scripts/ci_scope.py
-  # Linux: the server runs on Linux (Cloud Run), and on a private repository a Linux minute
-  # counts once while a Windows minute counts twice. Everything that is not Windows-bound runs here.
+  # Linux: the server runs on Linux (Cloud Run) and Linux runners are faster than Windows ones
+  # (while the repository was private, a Windows minute also counted twice). Everything that is
+  # not Windows-bound runs here.
   checks:
     name: Tests and build
     needs: scope

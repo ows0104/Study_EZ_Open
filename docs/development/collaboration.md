@@ -106,7 +106,7 @@ gh api repos/ows0104/Study_EZ_Open/branches/master/protection
 ```
 
 branch protection API는 비공개 저장소 + 무료 플랜에서는 403을 반환한다(2026-11-08 확인).
-2026-11-12에 저장소가 공개 상태여서 설정할 수 있었다. 다시 비공개로 바꾸면 이 보호는
+저장소를 공개로 바꾼 뒤(의도된 전환) 2026-11-12에 설정했다. 다시 비공개로 바꾸면 이 보호는
 더는 강제되지 않을 수 있으니 위 명령으로 확인한다.
 
 ### 로컬 훅 (`.githooks/pre-push`)
@@ -139,8 +139,8 @@ branch protection API는 비공개 저장소 + 무료 플랜에서는 403을 반
 `.github/workflows/deploy.yml`은 PR/master push/수동 실행에서 두 검사 작업을 나란히 돌린다.
 `Tests and build`(Linux)는 Python 회귀·계약, 독립 서버 검사, 웹 타입/빌드, bridge 및 배포 실패 경로 검사,
 서버 후보 준비를 맡는다. `Windows runner checks`(Windows)는 운영자 PC에서 도는 러너·데스크톱 창·바로가기와
-수동 `server/deploy.ps1` 검사만 맡는다(비공개 저장소에서 Windows 분은 2배로 차감된다,
-[기록](../changes/2026-11-08-ci-linux-runner/README.md)). 배포는 둘 다 통과해야 시작한다.
+수동 `server/deploy.ps1` 검사만 맡는다. Windows 실행기는 Linux보다 느리고, 저장소가 비공개였던
+때는 분이 2배로 차감됐다([기록](../changes/2026-11-08-ci-linux-runner/README.md)). 배포는 둘 다 통과해야 시작한다.
 같은 PR에 새 push가 오면 그 PR의 이전 실행은 취소된다. master만 배포 권한을 얻는다.
 Draft PR에서는 검사가 돌지 않는다(작업 중엔 로컬 검사로 확인). "Ready for review"로 바꾸는 순간 검사가 돈다.
 먼저 `Decide checks`(`scripts/ci_scope.py`)가 이번 실행 범위를 정한다.
@@ -152,10 +152,15 @@ Draft PR에서는 검사가 돌지 않는다(작업 중엔 로컬 검사로 확�
 master에서는 문서만 바뀌어도 배포가 돈다(Pages가 같은 SHA의 health를 기다린다).
 [기록](../changes/2026-11-11-ci-minutes/README.md)
 
-### PR 습관 — Actions 분을 아낀다
+### PR 습관 — 검사를 한 번에 받는다
 
-비공개 저장소라 Actions 분이 월 한도에서 빠진다(2026-11 한도 3000분의 90%를 11일에 씀).
-PR 하나는 PR 검사와 병합 뒤 master 검사로 두 번 돌고, Ready PR에 push할 때마다 처음부터 다시 돈다.
+저장소가 공개라 GitHub 기본 실행기의 Actions 분은 차감되지 않는다(2026-11-12 사용자 확인: 공개 전환은
+의도된 것). 이 습관은 비공개였던 때 생겼다(2026-11 한도 3000분의 90%를 11일에 씀,
+[기록](../changes/2026-11-11-ci-minutes/README.md)).
+
+분 한도가 없어도 검사 시간은 그대로다. PR 하나는 PR 검사와 병합 뒤 master 검사로 두 번 돌고,
+Ready PR에 push할 때마다 처음부터 다시 돈다. 필수 검사(위 "master 보호")가 끝나기 전에는
+병합할 수 없으므로 push가 잦을수록 병합·배포가 늦어지고, 동시 실행 한도 안에서 다른 PR의 검사도 밀린다.
 
 - **PR은 Draft로 연다**(`gh pr create --draft`). 작업 중엔 로컬 검사로 확인하고, 다 되면
   `gh pr ready`로 한 번 검사받는다.
