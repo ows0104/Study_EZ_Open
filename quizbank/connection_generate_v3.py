@@ -400,7 +400,7 @@ def _bank_findings(bank, sources, attempts=None):
     was fixed once is not sent back for them again (`attempts`): on the 261113_01 run the model left such a question
     as it was and the same warning spent its second fix (docs/changes/2026-11-11-tier-from-importance)."""
     found = {}
-    ids = {q['question_id'] for q in bank['questions']}
+    ids = {q['question_id'] for q in bank.get('questions', [])}
     done = {q for q, n in (attempts or {}).items() if n >= 1}
     advice = [r['text'] for r in v2.quality_reasons(bank) if not set(r['question_ids']) & done]
     for text in validate_bank(bank, sources)['errors'] + advice:
