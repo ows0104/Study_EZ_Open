@@ -169,7 +169,7 @@ export function CalendarPage() {
           <span className="legend-sep" />
           <span><span className="readline"><i className="rl-pre is-on" /></span> 예습 퀴즈 완료</span>
           <span><span className="readline"><i className="rl-pre" /></span> 미완료</span>
-          <span className="legend-meter"><span className="meter"><span style={{ width: "25%", background: "color-mix(in srgb, var(--accent) 90%, var(--surface))" }} /></span> 복습 학습률</span>
+          <span className="legend-meter"><span className="meter"><span style={{ width: "25%" }} /></span> 복습 학습률</span>
         </div>
       </div>
 

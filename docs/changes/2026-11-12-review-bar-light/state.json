@@ -1,0 +1,135 @@
+{
+  "id": "2026-11-12-review-bar-light",
+  "title": "캘린더 복습 막대 색 옅게",
+  "area": "site",
+  "created_at": "2026-11-12T08:51:34.053412+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-12T09:00:29.643697+00:00",
+      "evidence": "사용자 2026-11-12 채팅: '바 색깔이 좀 진하다. 차라리 캘린더 화면 오른쪽 위에 예습 박스, 복습 박스 안의 색 정도로 하자.' → '오케이 그럼 PR하자' → '아니면 차라리 복습이 만들어지면 테두리만 있는 바를 보여주고, 사용자가 설정한 진한 강조색으로 빈칸을 채워가는 식으로 할까?' → '응 그렇게 하자. 예습 토막도 진하게 채워. 진한 색이라는 건 원래 기본 강조색 정도.'",
+      "scope": "web/src/styles/calendar.css(.meter·.readline 예습 토막), web/src/calendar/ChipLearning.tsx, web/src/calendar/CalendarPage.tsx(범례). 웹 표시만, DB·서버 변경 없음.",
+      "evidence_version": 2,
+      "source_hash": "8905b8039923e96a17bbd4918f57cbbf49ef168c177d5b2f147d04b923bc092c",
+      "plan_hash": "c5809cb7cd3df8f94f0e305c6b554353f1f06d1dfc0f4ea22fe28412de8580a1",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "101f0e707c8abf1ed096c0c79242dd7de1c76c4de8dbd0581bd4e0fc0d01de37"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-12T08:52:21.534852+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "9210505578278d64a16067f2f9173daa21134bb2fa006627f0fa16507d618dcc",
+      "plan_hash": "c4b8ae31fe7bb7c1f4b58653c6a955ceab12c8d508ab4cc604146ed51bf9edb5",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-review-bar-light/1794473532801872500-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-12T09:00:53.413857+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "8905b8039923e96a17bbd4918f57cbbf49ef168c177d5b2f147d04b923bc092c",
+      "plan_hash": "c5809cb7cd3df8f94f0e305c6b554353f1f06d1dfc0f4ea22fe28412de8580a1",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-review-bar-light/1794474030237208200-web.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-12T09:00:53.683665+00:00",
+    "summary": "색은 CSS 토큰만: .meter 투명+--accent 테두리, 채움 base.css --accent, 예습 토막 --accent2 테두리/채움. reviewFill·인라인 색 제거로 범례·패널·칸이 같은 규칙. 표시 조건·높이·회독 토막 불변. 남은 위험: 다크 모드는 화면 확인 안 함.",
+    "evidence_version": 2,
+    "source_hash": "8905b8039923e96a17bbd4918f57cbbf49ef168c177d5b2f147d04b923bc092c",
+    "plan_hash": "c5809cb7cd3df8f94f0e305c6b554353f1f06d1dfc0f4ea22fe28412de8580a1",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T09:00:53.994798+00:00"
+}
