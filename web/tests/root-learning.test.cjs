@@ -8,6 +8,8 @@ const ratings=['Again','Hard','Good','Easy'];
 async function contextFor(browser,{timer,...options}={}){const context=await browser.newContext(options);context.setDefaultTimeout(15000);
  if(!timer)await context.addInitScript(()=>localStorage.setItem('studyez:quiz-timer','off'));return context;}
 async function enabled(page,name){await page.getByRole('button',{name,exact:false}).waitFor();await page.waitForFunction(name=>[...document.querySelectorAll('button')].some(b=>b.textContent.startsWith(name)&&!b.disabled),name);}
+// 들어오면 언제나 정리 화면이 먼저다(2026-11-12). 진행 중 회차는 「오늘 학습 재개」로 이어 푼다.
+async function resume(page){await page.getByRole('button',{name:/^오늘 학습 재개/}).click();}
 async function allRatings(page){for(const r of ratings){await enabled(page,r);assert.equal(await page.getByRole('button',{name:new RegExp('^'+r)}).isEnabled(),true);}}
 async function screenshot(page,name){if(process.env.ROOT_TEST_OUTPUT){fs.mkdirSync(process.env.ROOT_TEST_OUTPUT,{recursive:true});await page.screenshot({path:path.join(process.env.ROOT_TEST_OUTPUT,name+'.png'),fullPage:true});}}
 
@@ -25,10 +27,10 @@ test('actual API: no textbox, preserved drafts/retries/conflicts, four ratings, 
  });
  try{
    await page.goto(url);await page.getByText('학습 현황·자료 범위',{exact:true}).click();await page.getByText(/한국시간 04:00/).waitFor();
-   await page.getByRole('button',{name:'오늘 학습 시작',exact:true}).click();await enabled(page,'답 보기');
-   assert.equal(await page.locator('textarea').count(),0);await page.addInitScript(()=>{window.__sawStart=false;new MutationObserver(()=>{if(document.querySelector('.mq-start-button'))window.__sawStart=true;}).observe(document,{subtree:true,childList:true});});await page.reload();await enabled(page,'답 보기');assert.equal(await page.evaluate(()=>window.__sawStart),false,'resuming an open session never draws the start screen first');
+   await page.getByRole('button',{name:'오늘 학습 시작'}).click();await enabled(page,'답 보기');
+   assert.equal(await page.locator('textarea').count(),0);await page.reload();await page.getByRole('button',{name:'오늘 학습 재개 카드 3개'}).waitFor();assert.equal(await page.getByRole('button',{name:'답 보기'}).count(),0,'entering never jumps into the open session');await page.getByRole('button',{name:'뒤로'}).waitFor();await screenshot(page,'resume-start');await resume(page);await enabled(page,'답 보기');
    assert.equal(await page.evaluate(key=>localStorage.getItem(key),draft),'retired draft preserved');
-   const other=await context.newPage();await other.goto(url);await enabled(other,'답 보기');
+   const other=await context.newPage();await other.goto(url);await resume(other);await enabled(other,'답 보기');
    await page.getByRole('heading',{name:'문항 1 / 3'}).focus();await page.keyboard.press('Space');
    await page.getByRole('button',{name:'같은 요청 다시 저장'}).waitFor();
    await other.getByRole('button',{name:/^답 보기/}).click();await other.getByRole('button',{name:'보관 응답 확인 후 서버 기록 불러오기'}).waitFor();
@@ -122,6 +124,22 @@ test('map from start, PDF failure and modal do not block four self-ratings',asyn
  }finally{await browser.close();}
 });
 
+test('stored conflict from an earlier refused start does not keep the map closed (2026-11-12)',async()=>{
+ const browser=await chromium.launch({headless:true,channel:'chrome'});
+ try{
+   const context=await contextFor(browser,{extraHTTPHeaders:{'X-Root-Test-User':'conflict-map'}});
+   const key='studyez:root-write:["","test","demo"]:old-start';
+   await context.addInitScript(key=>{if(!localStorage.getItem(key))localStorage.setItem(key,JSON.stringify({requestId:'old-start',
+     path:'/api/root-learning/lectures/test/demo/sessions',body:{requestId:'old-start'},conflict:true}));},key);
+   let starts=0;
+   await context.route('**/api/root-learning/lectures/test/demo/sessions',route=>{if(route.request().method()==='POST')starts++;return route.continue();});
+   const page=await context.newPage();await page.goto(url);
+   await page.getByRole('button',{name:'보관 응답 확인 후 서버 기록 불러오기'}).waitFor();
+   await page.getByRole('button',{name:'개념 지도',exact:true}).click();await page.getByRole('heading',{name:'개념 지도',exact:true}).waitFor();
+   assert.equal(starts,0);
+ }finally{await browser.close();}
+});
+
 test('blocked storage and malformed requests prevent untracked writes',async()=>{
  const browser=await chromium.launch({headless:true,channel:'chrome'});let posts=0;
  try{
@@ -188,7 +206,7 @@ test('내 중요도: change it while solving, keep it on reload, then 원래대�
   assert.equal(await select.inputValue(),'Core','the next question keeps its own tier');
   await page.keyboard.press('z');await page.getByText('Synthetic question 1?',{exact:true}).waitFor();
   await page.waitForFunction(()=>!Object.keys(localStorage).some(k=>k.startsWith('studyez:root-write:')));
-  await page.reload();await page.getByText('Synthetic question 1?',{exact:true}).waitFor();
+  await page.reload();await resume(page);await page.getByText('Synthetic question 1?',{exact:true}).waitFor();
   assert.equal(await select.inputValue(),'Optional','the tier is the server\'s, not the page\'s');
   await screenshot(page,'personal-tier-desktop');
   await page.getByRole('button',{name:'원래대로'}).click();await page.getByText('원래 중요도로 되돌렸습니다.',{exact:false}).waitFor();
@@ -203,14 +221,14 @@ test('clicked toggles stay the default after reload: menu collapse and map quest
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
  const openMap=async()=>{await page.getByRole('button',{name:'개념 지도',exact:true}).click();await page.getByRole('heading',{name:'개념 지도',exact:true}).waitFor();};
  try{
-   await page.goto(url);await page.getByRole('button',{name:'오늘 학습 시작',exact:true}).click();await enabled(page,'답 보기');
+   await page.goto(url);await page.getByRole('button',{name:'오늘 학습 시작'}).click();await enabled(page,'답 보기');
    await page.getByRole('button',{name:'메뉴 접기'}).click();await openMap();
    await page.getByRole('button',{name:'문항 펼치기'}).click();await page.getByRole('button',{name:'연결선 전체'}).click();
-   await page.reload();await page.getByRole('button',{name:'메뉴 펼치기'}).waitFor();
+   await page.reload();await resume(page);await page.getByRole('button',{name:'메뉴 펼치기'}).waitFor();
    await enabled(page,'답 보기');await openMap();
    assert.equal(await page.getByRole('button',{name:'문항 접기'}).getAttribute('aria-pressed'),'true');
    assert.equal(await page.getByRole('button',{name:'연결선 숨기기'}).getAttribute('aria-pressed'),'true');
-   await page.getByRole('button',{name:'문항 접기'}).click();await page.reload();await enabled(page,'답 보기');await openMap();
+   await page.getByRole('button',{name:'문항 접기'}).click();await page.reload();await resume(page);await enabled(page,'답 보기');await openMap();
    assert.equal(await page.getByRole('button',{name:'문항 펼치기'}).getAttribute('aria-pressed'),'false');
    assert.deepEqual(errors,[]);
  }finally{await browser.close();}
@@ -225,7 +243,7 @@ test('Z undoes every reveal and rating step by step from any screen, also after 
  const undo=page.getByRole('button',{name:/^되돌리기/});
  const key=async k=>{await page.getByRole('heading',{name:/^문항 /}).focus();await page.keyboard.press(k);};
  try{
-   await page.goto(url);await page.getByRole('button',{name:'오늘 학습 시작',exact:true}).click();await enabled(page,'답 보기');
+   await page.goto(url);await page.getByRole('button',{name:'오늘 학습 시작'}).click();await enabled(page,'답 보기');
    assert.equal(await undo.isDisabled(),true);
    await key('Space');await allRatings(page);await key('3');await q(2).waitFor();
    await key('Space');await allRatings(page);
@@ -236,7 +254,7 @@ test('Z undoes every reveal and rating step by step from any screen, also after 
    await page.waitForFunction(()=>[...document.querySelectorAll('button')].find(b=>b.textContent.startsWith('되돌리기'))?.disabled);
    // Forward again, then the server's own record (reload) still undoes as far back.
    await key('Space');await allRatings(page);await key('2');await q(2).waitFor();await key('Space');await allRatings(page);
-   await page.waitForLoadState("networkidle");await page.reload();await allRatings(page);await q(2).waitFor();
+   await page.waitForLoadState("networkidle");await page.reload();await resume(page);await allRatings(page);await q(2).waitFor();
    await key('z');await enabled(page,'답 보기');await key('z');await q(1).waitFor();await allRatings(page);
    await key('z');await enabled(page,'답 보기');
    assert.deepEqual(errors,[]);
@@ -250,7 +268,7 @@ test('quiz timer: on by default, Tab pauses, question 0s reveals, answer 40s rat
  await context.route('**/api/root-learning/sessions/*/events',route=>{events.push(route.request().postDataJSON());return route.continue();});
  await page.clock.install();
  try{
-   await page.goto(url);await page.getByRole('button',{name:'오늘 학습 시작',exact:true}).click();await enabled(page,'답 보기');
+   await page.goto(url);await page.getByRole('button',{name:'오늘 학습 시작'}).click();await enabled(page,'답 보기');
    const left=page.getByRole('timer');const sw=page.getByRole('switch',{name:'타이머'});
    assert.equal(await sw.getAttribute('aria-checked'),'true');
    const first=Number((await left.textContent()).replace(/\D/g,''));assert.ok([20,30,40].includes(first),'question seconds by format');
@@ -265,7 +283,7 @@ test('quiz timer: on by default, Tab pauses, question 0s reveals, answer 40s rat
    await sw.click();assert.equal(await sw.getAttribute('aria-checked'),'false');assert.equal(await left.count(),0);
    assert.equal(await page.evaluate(()=>localStorage.getItem('studyez:quiz-timer')),'off');
    await page.clock.runFor(60000);assert.equal(events.filter(e=>e.kind==='reveal').length,1,'switched-off timer never reveals');
-   await page.reload();assert.equal(await page.getByRole('switch',{name:'타이머'}).getAttribute('aria-checked'),'false');
+   await page.reload();await resume(page);assert.equal(await page.getByRole('switch',{name:'타이머'}).getAttribute('aria-checked'),'false');
    assert.deepEqual(errors,[]);
  }finally{await browser.close();}
 });

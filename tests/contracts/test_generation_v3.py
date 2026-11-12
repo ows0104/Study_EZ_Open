@@ -181,6 +181,34 @@ def test_fix_stage_replaces_only_listed_questions_and_keeps_their_identity():
         c.merge_fixes(bank, [], moved, ['Q1'])
 
 
+def cloze(q, stem, units):
+    return {**q, 'format': 'cloze', 'question': stem, 'answer': '; '.join(units), 'answer_units': list(units)}
+
+
+def test_cloze_answer_units_follow_the_stem_blanks_where_questions_enter():
+    """2026-11-12: a table row merged into one unit (261105_01 Q023) or a repeated blank dropped (261104_03 Q186)
+    put the wrong unit in every later cell. Units become the blanks in order when questions enter the bank."""
+    table = '| 감염 | 연령군 | 위생 |\n|---|---|---|\n| 인두염 | {5–15세} | — |\n| 농피증 | {2–5세} | {불량한 위생} |'
+    bank = authored_bank()
+    bank['questions'][0] = cloze(bank['questions'][0], table, ['인두염: 5–15세', '농피증: 2–5세, 불량한 위생'])
+    plain = cloze(bank['questions'][1], '{{c1}} shown', ['stored'])   # no inline blank: left as stored
+    bank['questions'][1] = plain
+    changes = c.cloze_units(bank)
+    assert changes == [{'question_id': 'Q1', 'from': ['인두염: 5–15세', '농피증: 2–5세, 불량한 위생'], 'to': ['5–15세', '2–5세', '불량한 위생']}]
+    assert bank['questions'][0]['answer_units'] == ['5–15세', '2–5세', '불량한 위생'] and bank['questions'][1] == plain
+    assert c.cloze_units(bank) == []   # idempotent
+
+    base = authored_bank()
+    ids = c.next_question_ids(base, 1)
+    new = cloze(question(ids[0], base['questions'][0]), '|a|b|\n|---|---|\n|x|{혈관}|\n|y|{혈관}, {넓음}|', ['혈관', '넓음'])
+    out = {'questions': [new], 'concepts': [], 'retrieval_plan': [], 'source_conflicts': [], 'visual_stimuli': [], 'clinical_conflicts': []}
+    merged, _ = c.merge_added(base, [], out, ids)
+    assert merged['questions'][-1]['answer_units'] == ['혈관', '혈관', '넓음'] and out['questions'][0]['answer_units'] == ['혈관', '넓음']
+    fixed = cloze(base['questions'][0], 'A {one} and {two}', ['one and two'])
+    merged, _, _ = c.merge_fixes(base, [], {'questions': [fixed], 'source_conflicts': [], 'visual_stimuli': [], 'clinical_conflicts': []}, ['Q1'])
+    assert merged['questions'][0]['answer_units'] == ['one', 'two']
+
+
 def test_fix_stage_restating_an_existing_source_conflict_keeps_the_bank_conflict():
     """261102_02 (2026-11-10, v3-fix-1-0): Q046's fix copied its own conflict CF03 back."""
     bank = authored_bank()

@@ -5,7 +5,10 @@
 ## 변경 범위·대상 파일·순서
 1. `server/app/routes/root_learning.py`: `map_payload` 추출, `POST BASE/map`(`lecture_map`), `start()` fresh state의 `mapSeen` 승계.
 2. `server/tests/test_root_lecture_map.py`: 과제 0개·목록 완료에서 지도 200, 같은 날 반복 열람 행 1개, 열람 뒤 새 회차 `mapSeen=True`, 열람 없으면 False, 정책·공개 오류.
-3. `web/src/bank/RootLearning.tsx`: `showMap()` 분기, `mapRequested` 제거, `RootMap summary` 폴백.
+3. `web/src/bank/RootLearning.tsx`: `showMap()` 분기(열린 회차 우선), `mapRequested` 제거, `RootMap summary` 폴백.
+4. `web/src/bank/RootToday.tsx`: 지도 버튼만 `mapDisabled`로 따로 막음. `web/src/bank/RootMap.tsx`: 「← 오늘」.
+5. `server/tests/test_route_contract.py`: 새 경로 `POST …/map` 등록(의도한 추가).
+6. `web/tests/root-learning.test.cjs`: map from start 갱신, 보관된 충돌이 있어도 지도가 열리는 시나리오 추가.
 
 ## 검사 명령과 성공 조건
 - `server/`: `<venv python> -m tests root_` 전부 통과(새 `root_lecture_map` 포함).

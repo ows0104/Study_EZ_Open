@@ -1,0 +1,93 @@
+{
+  "id": "2026-11-12-cloze-answer-units",
+  "title": "Main-Quiz cloze 정답 단위를 발문 빈칸에 맞춤",
+  "area": "contracts",
+  "created_at": "2026-11-12T11:48:01.618327+00:00",
+  "required_checks": [
+    "contracts",
+    "quizbank",
+    "runner",
+    "server"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-12T11:48:42.419823+00:00",
+      "evidence": "2026-11-12 채팅: '표 cloze가 에러가 많이 나네. 감염병리2와 사슬알균이야' → 진단 후 질문 'Main-Quiz 정답 단위를 발문 빈칸에서 다시 뽑도록 고칠까요?'에 사용자 답 '생성기 쪽도 같이'",
+      "scope": "server/app/root_learning/content.py answer 단위, studyez_contracts/roots/generation_v3.py cloze_units·merge, quizbank/connection_generate_v3·v4 _intake, 검사, 이 작업 폴더",
+      "evidence_version": 2,
+      "source_hash": "787aeafbd1f910a92c0d447492794f54f110b19de37b83496c193abc3444f213",
+      "plan_hash": "11719e1dd295f6d8d301fb529106694dba620a76d45a235b3ffb154eca2da683",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "quizbank",
+        "quizgen",
+        "requirements.txt",
+        "runner",
+        "scripts",
+        "server",
+        "spotter/data",
+        "spotter/scripts",
+        "spotter/web",
+        "studyez_contracts",
+        "studyez_llm",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "tests/quizbank",
+        "tests/quizgen",
+        "tests/runner",
+        "tests/spotter",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "f873dd74b54141b86c2295c26d8b2d7e6e1f1ddcd1d874b7450e3596207c1397"
+    }
+  },
+  "checks": [],
+  "review": {
+    "at": "2026-11-12T11:56:41.055677+00:00",
+    "summary": "경계: 서버 check_result가 intake_projection을 다시 계산해 비교하므로 그것은 그대로 두고 접수 직후(_intake)·merge_added/merge_fixes에서만 맞춤 — 서버/러너 버전이 엇갈려도 서로 거절하지 않음. check_coverage 단위 수는 옛 결과 재검사를 위해 저장값 유지. 운영 23편 읽기 전용 재생: cloze 696 중 92 변경, 빈칸·단위 수 불일치 0. 검사: contracts·quizbank 전부, runner 824 통과(desktop_control 2개는 worktree .venv 부재·스위트 안 타이밍으로 실패, 단독 재실행 통과, 이 변경과 무관), 서버 main_quiz 8/8·root 39/41(map_tree 2개 로컬 PyMuPDF 없음, master 동일). 남은 위험: 새 러너로 옛 실행을 이어 하면 입력 지문이 달라져 --resume 필요",
+    "evidence_version": 2,
+    "source_hash": "787aeafbd1f910a92c0d447492794f54f110b19de37b83496c193abc3444f213",
+    "plan_hash": "11719e1dd295f6d8d301fb529106694dba620a76d45a235b3ffb154eca2da683",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "quizbank",
+      "quizgen",
+      "requirements.txt",
+      "runner",
+      "scripts",
+      "server",
+      "spotter/data",
+      "spotter/scripts",
+      "spotter/web",
+      "studyez_contracts",
+      "studyez_llm",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "tests/quizbank",
+      "tests/quizgen",
+      "tests/runner",
+      "tests/spotter",
+      "uv.lock",
+      "web"
+    ]
+  },
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T11:56:41.282540+00:00"
+}

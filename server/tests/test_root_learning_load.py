@@ -140,7 +140,9 @@ with SessionLocal() as db:
     active = db.get(RootContent, ('test', 'demo', 'v1'))
     statements.clear()
     full = root_learning.active_generation(db, active)
-    assert 'web_response' in selects('root_generation')[0] and full.result == {'large': 'x' * 1000}
+    # 2026-11-12: the default is the slim query too (answers take review notes from review_notes, once per record);
+    # result still loads lazily when something touches it.
+    assert 'web_response' not in selects('root_generation')[0] and full.result == {'large': 'x' * 1000}
 
 print('PASS: one personal-edit query per availability with identical blocking; bank hash reused until build/content changes; '
       'version list and source lookup skip large JSON with identical responses')

@@ -1,9 +1,10 @@
 # 캘린더 복습 막대: 테두리 + 강조색 채움 — 설계
 
 ## 요구사항과 수용 기준
-- `.meter` 바탕 transparent, `box-shadow: inset 0 0 0 1px var(--accent)`; 채움 `.meter > span`은 base.css의 `var(--accent)`.
-- `.meter.is-closed`(불러오는 중)은 회색 테두리 그대로.
-- `.readline i.rl-pre` 테두리 `var(--accent2)`, `.rl-pre.is-on` 바탕 `var(--accent2)`.
+- `--bar-edge: color-mix(in srgb, var(--ink-2) 50%, var(--ink-3))`(밝은 화면 #616161, 다크 모드는 두 토큰을 따라 밝은 회색).
+- `.meter` 바탕 transparent, `box-shadow: inset 0 0 0 1px var(--bar-edge)`; 채움 `.meter > span`은 base.css의 `var(--accent)`.
+- `.meter.is-closed`(불러오는 중)도 `--bar-edge` 테두리 — 불러온 뒤 테두리는 그대로, 채움만 생긴다. 그동안 0% 막대와 같아 보인다(사용자 선택).
+- `.readline i.rl-pre` 테두리 `var(--bar-edge)`, `.rl-pre.is-on` 바탕 `var(--accent2)`.
 
 ## 책임·입출력 계약·오류 상태
 색은 CSS만 고른다. `ReviewMeter`는 너비(학습률)만 정한다 — 인라인 채움 색과 `reviewFill`은 없앴다.

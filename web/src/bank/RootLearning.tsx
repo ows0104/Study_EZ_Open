@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
 import { useMe } from '../useMe';
@@ -54,7 +54,7 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     if(stale&&viewRef.current&&viewRef.current.version!==next.version)return;
     undoSnapshots.current=[];viewRef.current=next;setView(next);
   };
-  // Resuming an open session draws the question first; the start screen would only flash in between.
+  // resume: only after a retried write (the screen was already solving). Entering the page always draws the start screen (2026-11-12).
   async function refresh(resume=false) {
     const next=await api<RootOverview>(base);
     if(resume&&next.sessionId)await loadSession(next.sessionId);
@@ -65,15 +65,8 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
   const frames=useRootFrames(view?.sessionId);
   const {ensure,forget}=frames;
   useEffect(()=>{if(view&&!view.finished)ensure(view.position,view.count);},[view?.sessionId,view?.position,view?.count,view?.finished,ensure]);
-  // 강의 목록의 「▶」(?start=1): 진행 중 회차는 위에서 이어 풀고, 없으면 오늘 계획으로 바로 회차를 연다. 한 번만.
-  const [search,setSearch]=useSearchParams();
-  const autoStart=useRef(search.get('start')==='1');
-  useEffect(()=>{void refresh(true).then(next=>{
-    if(!autoStart.current)return;
-    autoStart.current=false;
-    setSearch(old=>{const kept=new URLSearchParams(old);kept.delete('start');return kept;},{replace:true});
-    if(!viewRef.current&&next.plan?.tasks.length)void begin();
-  }).catch(e=>setError(e instanceof ApiError&&e.status===404?'아직 공개된 Main Quiz 학습 자료가 없습니다. 기존 문제를 이용하거나 자료 준비를 기다려 주세요.':e.message));},[base]);
+  // 어디서 들어와도 정리 화면이 먼저다(2026-11-12). 진행 중 회차도 「오늘 학습 재개」로 이어 푼다.
+  useEffect(()=>{void refresh().catch(e=>setError(e instanceof ApiError&&e.status===404?'아직 공개된 Main Quiz 학습 자료가 없습니다. 기존 문제를 이용하거나 자료 준비를 기다려 주세요.':e.message));},[base]);
   /** What the server will show once this event is stored, drawn from prepared frames. null: wait for it. */
   function predict(current:RootView,action:RootAction):RootView|null {
     const version=current.version+1;
@@ -122,6 +115,20 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     void confirmed.then(r=>loadSession(r.sessionId)).catch(e=>{if(!(e instanceof ApiError))setError((e as Error).message);})
       .finally(()=>setAdvancing(false));
   }
+  // 진행 중 회차의 남은 문항 수: 「오늘 학습 재개」 배지. 정리 화면일 때만 읽는다.
+  const [openLeft,setOpenLeft]=useState<{id:string;left:number}|null>(null);
+  const openId=view?null:info?.sessionId??null;
+  useEffect(()=>{
+    setOpenLeft(null);
+    if(!openId)return;
+    let live=true;
+    api<RootView>(`/api/root-learning/sessions/${openId}`)
+      .then(v=>{if(live)setOpenLeft({id:openId,left:v.finished?0:Math.max(0,v.count-v.position)});}).catch(()=>{});
+    return()=>{live=false;};
+  },[openId]);
+  // 정리 화면의 뒤로: 들어온 화면(강의 목록·캘린더)으로, 바로 열린 창이면 캘린더로.
+  const navigate=useNavigate();
+  const leave=()=>(window.history.state?.idx>0?navigate(-1):navigate('/'));
   async function begin() {
     const started=writes.run(base+'/sessions',{});
     if(!started)return;
@@ -147,10 +154,21 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
   }
   // The map tab is chosen at once (2026-11-09). Without a session the map is read per lecture and no
   // session is opened: with nothing left today that start was refused and blocked every write (2026-11-12).
+  // The lecture map does not use the write queue, so stored conflicts do not keep it closed.
   async function showMap() {
-    if(writes.blocked||advancing)return;
+    if(advancing)return;
+    let current=viewRef.current;
+    // An open session today (start screen after 「뒤로」): the map goes through it so it is marked mapSeen.
+    if(!current&&info?.sessionId){
+      if(writes.blocked)return;
+      setTab('map');setAdvancing(true);
+      try{await loadSession(info.sessionId);}
+      catch(e){setError((e as Error).message);setTab('learn');return;}
+      finally{setAdvancing(false);}
+      current=viewRef.current;
+    }
+    if(current&&writes.blocked){setTab('learn');return;}
     setTab('map');
-    const current=viewRef.current;
     if(!current){
       setAdvancing(true);
       try{setMap(await api<RootMapData>(base+'/map',{method:'POST',body:JSON.stringify({requestId:crypto.randomUUID()})}));}
@@ -222,7 +240,8 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
           onToday={()=>{setView(null);setMap(null);setTab('learn');void refresh().catch(e=>setError(e.message));}}/>}
       {view.blocked?.includes('학습일')&&<button disabled={writes.blocked} onClick={()=>{setView(null);void refresh().catch(e=>setError(e.message));}}>오늘 학습 다시 계획</button>}
     </>:info&&tab==='map'?map&&info.summary?<RootMap map={map} summary={info.summary} title={info.title} backTo="today" onBack={()=>setTab('learn')}/>:<p className="notice" role="status">개념 지도를 불러오는 중…</p>
-    :info?<RootToday info={info} disabled={writes.blocked||advancing} starting={advancing} onStart={()=>{if(!focusing)void begin();}} onMap={()=>void showMap()}
-      onFocus={tiers=>void changeFocus(tiers)} focusing={focusing} lectureLink={lectureHref({subject,runId})} admin={adminTools}/>:!error&&<><p className="notice" role="status">Main-Quiz를 불러오는 중…</p>{adminTools}</>}
+    :info?<RootToday info={info} disabled={writes.blocked||advancing} mapDisabled={advancing||writes.blocked&&!!info.sessionId} starting={advancing} onStart={()=>{if(!focusing)void begin();}} onMap={()=>void showMap()}
+      onFocus={tiers=>void changeFocus(tiers)} focusing={focusing} lectureLink={lectureHref({subject,runId})} admin={adminTools}
+      resumeCount={info.sessionId&&openLeft?.id===info.sessionId?openLeft.left:undefined} onBack={leave}/>:!error&&<><p className="notice" role="status">Main-Quiz를 불러오는 중…</p>{adminTools}</>}
   </main>;
 }

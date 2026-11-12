@@ -78,6 +78,16 @@ def checked_session(db, session_id, user):
     return row, doc
 
 
+def current_exam_date(db, row):
+    """출제 때 문서에 시험일이 없으면 시간표의 현재 시험일로 보충한다. 문서·기록은 바꾸지 않는다."""
+    stored = row.document.get('exam_date')
+    if stored:
+        return stored
+    from app.routes.root_generation import registered_exam_date
+    lecture = db.get(Lecture, (row.subject, row.run_id))
+    return registered_exam_date(db, lecture) if lecture else None
+
+
 def overview_data(db, row, user, when):
     configured = policy.configured_policy()
     if configured is None:
@@ -89,18 +99,19 @@ def overview_data(db, row, user, when):
         RootSession.subject == row.subject, RootSession.run_id == row.run_id, RootSession.revision == row.revision,
         RootSession.day == policy.study_day(when, configured).isoformat()).order_by(RootSession.created_at.desc())).all()
     # 오늘 학습 중요도 필터(2026-11-12): only today's plan is filtered; summary and progress keep every task.
+    document = {**row.document, 'exam_date': current_exam_date(db, row)}
     chosen = content.focus_for(db, row.subject, user.id)
     tiers = content.task_tiers(row.document, state.personal_tiers(row.document, events))
     narrowed = len(chosen) < len(policy.TIERS)
     pending = next((s for s in sessions if s.policy == configured and s.state['index'] < len(s.tasks)
                     and s.state.get('focus', list(policy.TIERS)) == chosen), None)
     focused = {t for t in available if tiers[t] in chosen} if narrowed else None
-    planned = planning.plan(row.document, events, available, when, configured, focus=focused)
+    planned = planning.plan(document, events, available, when, configured, focus=focused)
     return {'revision': row.revision, 'title': row.document['title'], 'policyReady': True, 'policy': configured,
-            'scope': content.learner_scope(row.document), 'summary': state.summary(row.document, events, available, when, configured),
+            'scope': content.learner_scope(row.document), 'summary': state.summary(document, events, available, when, configured),
             'plan': planned,
             'focus': {'tiers': chosen, 'counts': {name: sum(tiers[t] == name for t in available) for name in policy.TIERS}},
-            'questionProgress': state.question_progress(row.document, events, available, when, configured, planned),
+            'questionProgress': state.question_progress(document, events, available, when, configured, planned),
             'sessionId': pending.id if pending else None, 'preparationProblems': len(problems)}
 
 
@@ -341,15 +352,15 @@ def project_session(db, row, doc, user, when):
     return out
 
 
-def active_generation(db, doc, *, light=False):
-    """light: the caller reads only packet/web_dispatch (source snapshots), so the large
-    result/web_response JSON stays in the database unless something touches it."""
+def active_generation(db, doc, *, light=True):
+    """The revision's generation record without its large result/web_response JSON (both deferred).
+    Learner paths read only packet/web_dispatch (source snapshots) and the review notes, which
+    revealed_answer takes from review_notes (extracted once per record). `light` is kept for callers."""
     from app.models.root_generation import RootGeneration
     query = select(RootGeneration).where(RootGeneration.subject == doc.subject,
         RootGeneration.run_id == doc.run_id, RootGeneration.result_digest.is_not(None),
         RootGeneration.packet['revision'].as_string()==doc.revision)
-    if light:
-        query = query.options(defer(RootGeneration.result), defer(RootGeneration.web_response))
+    query = query.options(defer(RootGeneration.result), defer(RootGeneration.web_response))
     return db.scalars(query).first()
 
 
@@ -559,18 +570,11 @@ def revealed_answer(db, doc, q, generation=_UNSET):
     if generation is _UNSET:
         generation = active_generation(db, doc)
     if generation:
-        result = generation.result
-        if result.get('policy')in('verified-main-quiz-replacement/1','verified-main-quiz-curation/1'):
-            from app.root_learning.replacement_import import report as replacement_report
-            summary=replacement_report(result)
-            answer['reviewNotes']=[r for r in summary['questionNotes']if r['question_id']==q['question_id']]
-            answer['reviewIssues']=question_issues(summary['issues'],q['question_id'])
-        else:
-            answer['reviewNotes'] = [
-            {'source': label, **r} for label, checks in [('원본 대조', result['sourceAudit']['question_checks']), ('의학 검토' if (result.get('manifest') or {}).get('medicalFinal') else '독립 정답 검수', result['medical'])]
-            for r in checks['reviews'] if r['question_id'] == q['question_id'] and r['verdict'] != 'ok']
-            answer['reviewIssues'] = question_issues(
-                result['sourceAudit']['input_issues'] + result['validation']['errors'] + result['validation']['warnings'], q['question_id'])
+        # 출제 기록 result(판당 3.6–9.5 MB)를 요청마다 읽지 않는다 — 판마다 한 번 뽑은 메모(review_notes, 2026-11-12).
+        from app.root_learning import review_notes
+        notes = review_notes.for_generation(db, generation)
+        answer['reviewNotes'] = [r for r in notes['notes'] if r['question_id'] == q['question_id']]
+        answer['reviewIssues'] = question_issues(notes['issues'], q['question_id'])
     # Quiz Bank와 같은 자료 충돌·자료 밖(EXT) 표시. 판 문서에 고정된 충돌 기록만 쓴다(2026-11-08).
     conflict = next((c for c in doc.document['bank_snapshot'].get('source_conflicts', [])
                      if q.get('conflict_id') and c.get('conflict_id') == q['conflict_id']), None)
@@ -687,7 +691,7 @@ def act(session_id: str, payload: Action, user: CurrentUser = Depends(require_ap
     available, _ = content.availability(db, doc, user.id)
     excluded = content.excluded_ids(content.events_for(db, row.subject, row.run_id, user.id), row.revision)
     start_index = session_state['index']
-    data = {'_request': request, 'policy': row.policy, 'exam_date': doc.document['exam_date']}
+    data = {'_request': request, 'policy': row.policy, 'exam_date': current_exam_date(db, doc)}
     if payload.kind == 'map':
         session_state['mapSeen'] = True
     elif payload.kind == 'undo':

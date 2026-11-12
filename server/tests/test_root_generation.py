@@ -88,6 +88,33 @@ answer=view(client,sid)['task']['answer']
 assert answer['reviewNotes'][0]['verdict']=='wrong'
 assert 'Preserved unresolved' in answer['reviewNotes'][0]['note']
 assert client.get(answer['sourceLinks'][0]['url']).content==f.BODY
+# 2026-11-12: answers take review notes extracted once per generation record (review_notes); the record's large
+# result is not read per request. The notes equal what revealed_answer computed inline from result before.
+import re as _re
+from sqlalchemy import event as _event
+from app.database import engine as _engine
+from app.root_learning import review_notes as _notes
+from app.routes.root_learning import question_issues as _issues
+_reads=[]
+_grab=lambda conn,cur,stmt,params,ctx,many: _reads.append(stmt) if _re.search(r'root_generation\.result(?!_)',stmt) else None
+_notes.clear()
+_event.listen(_engine,'before_cursor_execute',_grab)
+try:
+    for _ in range(3):
+        assert client.get('/api/root-learning/sessions/'+sid+'/prepare?start=0').status_code==200
+        assert view(client,sid)['task']['answer']['reviewNotes']==answer['reviewNotes']
+finally:
+    _event.remove(_engine,'before_cursor_execute',_grab)
+assert len(_reads)==1,_reads
+with SessionLocal() as db:
+    _gen=db.get(RootGeneration,job['id']);_result=_gen.result
+    _value=_notes.extract(_result)
+    for _qid in [q['question_id'] for q in db.get(RootContent,('test','demo',_result['document']['revision'])).document['bank_snapshot']['questions']]:
+        _medical='의학 검토' if (_result.get('manifest') or {}).get('medicalFinal') else '독립 정답 검수'
+        _old=[{'source':label,**r} for label,checks in [('원본 대조',_result['sourceAudit']['question_checks']),(_medical,_result['medical'])]
+              for r in checks['reviews'] if r['question_id']==_qid and r['verdict']!='ok']
+        _old_issues=_issues(_result['sourceAudit']['input_issues']+_result['validation']['errors']+_result['validation']['warnings'],_qid)
+        assert [r for r in _value['notes'] if r['question_id']==_qid]==_old and _issues(_value['issues'],_qid)==_old_issues
 assert client.get('/api/root-learning/sessions/'+sid+'/map').status_code==409
 assert action(client,sid,'map','map').status_code==200
 mapped=client.get('/api/root-learning/sessions/'+sid+'/map').json()

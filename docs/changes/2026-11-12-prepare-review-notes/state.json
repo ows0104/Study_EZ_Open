@@ -1,0 +1,170 @@
+{
+  "id": "2026-11-12-prepare-review-notes",
+  "title": "Main-Quiz 미리 받기: 검수 메모를 판마다 한 번",
+  "area": "site",
+  "created_at": "2026-11-12T10:56:07.941828+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-12T10:56:08.177115+00:00",
+      "evidence": "사용자 2026-11-12 채팅: (prepare 1.2–4.4 s 조사 제안에) 'Yes, look into it' → (같은 파일 다른 세션 두 개와 병행 여부에) 'Yes, in parallel'",
+      "scope": "plan.md의 server 파일: review_notes.py(새), routes/root_learning.py active_generation·revealed_answer, tests/test_root_generation.py. DB 변경 없음.",
+      "evidence_version": 2,
+      "source_hash": "299ece44ec55de93d452c1a7dea1b7683b3ad617275cab673e34db3ddf37d600",
+      "plan_hash": "b6087f27947c6f009538c13d6467b1c4811cba06c2080f39cfcd3f7d1b4ecc84",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "3212d9d06bebfa567c636aa934ebdce870cb2b79000807d4cefea42150269478"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-12T10:56:31.425692+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "server/tests/__main__.py",
+        "root_generation"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "299ece44ec55de93d452c1a7dea1b7683b3ad617275cab673e34db3ddf37d600",
+      "plan_hash": "b6087f27947c6f009538c13d6467b1c4811cba06c2080f39cfcd3f7d1b4ecc84",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-prepare-review-notes/1794480979846295200-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-12T10:56:34.918879+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "server/tests/__main__.py",
+        "root_quiz_curation"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "299ece44ec55de93d452c1a7dea1b7683b3ad617275cab673e34db3ddf37d600",
+      "plan_hash": "b6087f27947c6f009538c13d6467b1c4811cba06c2080f39cfcd3f7d1b4ecc84",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-prepare-review-notes/1794480991798361400-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-12T10:56:38.459815+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "server/tests/__main__.py",
+        "root_replacement_import"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "299ece44ec55de93d452c1a7dea1b7683b3ad617275cab673e34db3ddf37d600",
+      "plan_hash": "b6087f27947c6f009538c13d6467b1c4811cba06c2080f39cfcd3f7d1b4ecc84",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-prepare-review-notes/1794480995319084100-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-12T10:56:43.110642+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "server/tests/__main__.py",
+        "root_reviewed_import"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "299ece44ec55de93d452c1a7dea1b7683b3ad617275cab673e34db3ddf37d600",
+      "plan_hash": "b6087f27947c6f009538c13d6467b1c4811cba06c2080f39cfcd3f7d1b4ecc84",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-prepare-review-notes/1794480998901761900-regression.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T10:56:43.111565+00:00"
+}
