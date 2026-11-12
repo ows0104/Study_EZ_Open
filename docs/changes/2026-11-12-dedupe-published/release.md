@@ -2,7 +2,7 @@
 
 ## 코드 리뷰·검증 결과
 2026-11-12 로컬(worktree `../Study_EZ_dedupe-published`, origin/master ceff852d 기준):
-- 회귀: `pytest tests/contracts tests/quizbank tests/runner` — 2220 통과·1 건너뜀·1 실패. 실패는 `test_desktop_control.py::test_shortcut_installer_supports_korean_filename_in_windows_powershell`(바로가기 설치기, 기존 결함, 이 변경이 건드리지 않음). 기록 `runs/_development/2026-11-12-dedupe-published/*-regression.log`
+- 회귀: `pytest tests/contracts tests/quizbank tests/runner` — 리뷰 수정 뒤(a4ca5298) 2224 통과·1 건너뜀·1 실패(같은 기존 결함). 수정 전: 2220 통과·1 건너뜀·1 실패. 실패는 `test_desktop_control.py::test_shortcut_installer_supports_korean_filename_in_windows_powershell`(바로가기 설치기, 기존 결함, 이 변경이 건드리지 않음). 기록 `runs/_development/2026-11-12-dedupe-published/*-regression.log`
 - 새 검사: `tests/quizbank/test_dedupe_published.py` 4, `tests/runner/test_dedupe_published_runner.py` 4, 선지 묶음·강의 병렬 3(기존 18에 더해) 통과.
 - 서버: `-m tests root_restart` 통과(duplicatesOnly 422 규칙·packet 표시·공개 판 유지). `-m tests root` 38 중 36 통과 —
   실패 2(`test_root_map_tree`, `test_root_map_tree_v3`)는 로컬 서버 venv에 PyMuPDF가 없어 import에서 실패(이 변경과 무관, CI에서 돈다).
@@ -31,3 +31,27 @@
 - 선지: 강의마다 `choices/<revision>.json` 요약(작성·건너뜀·실패 묶음), 업로드 성공 로그.
 - 롤백: `git revert` PR. 판은 옛 판이 DB에 남아 있어 control을 되돌릴 수 있다(별도 조치). 선지 asset을 지우면 그 강의의 선지가 꺼진다.
 - 승인: 사용자 2026-11-12 요청과 질문 답(intent.md). 위장관·피부연조직 중복 재판정·다른 과목은 범위 밖.
+
+## 운영 결과 (2026-11-12)
+- 병합 acced192, API health revision acced1920d90 확인. 러너 `.runtime/main-quiz-acced1920d90` 설치, 에이전트 pid 38140(14:06, PYTHONPATH 새 설치본).
+- 요청 영수증 `runs/_development/2026-11-12-dedupe-published/receipt.jsonl`(jobs 605~609, 모두 그 강의의 공개 판 = 이 PC의 마지막 게시 실행이었음).
+
+| 강의 | 새 판 | 과제 | 재판정 목표 | 바뀐 묶음 | 근거 |
+|---|---|---|---|---|---|
+| 병인론 261102_02 | auto-00f6cecc | 152 → 145 | 62 | 7 | 이전 판 근거 재사용 |
+| 진단 261102_03 | auto-5cbd6184 | 121 → 112 | 44 | 9 | 〃 |
+| 치료원칙 261102_05 | auto-3e7385a6 | 116 → 114 | 52 | 2 | 〃 |
+| 병리2 261104_03 | auto-f68cb4ce | 210 → 203 | 93 | 7 | 〃 |
+| 피코르나 261111_02 | auto-9cb48bf1 (새로 출제) | 155 → 145 | — | — | 새로 만듦 |
+
+- 강의마다 재판정 호출 1~2회, 판정 2~3분. 합친 묶음 대부분은 같은 답을 다른 발문으로 다시 묻는 것(예: 병인론 D010 Latent period 두 문항,
+  병리2 D044 Langhans giant cell 두 문항). 갈래가 다른 내용을 묶었을 수 있는 것: 진단 D015(Q019 PCR 신속 확인 / Q020 항생제 독소 유리),
+  D018(Q023 PCR 유용성 / Q084 sorbitol 무색 집락 감별), 병리2 DM019(Q086 aspergillosis 형태 표 / Q089 침습형 혈관 침범). 문항은 은행에 남는다.
+- 피코르나: `이전 실행과 강의 입력이 다릅니다`로 모델 호출 전에 멈췄다. 2026-11-12 10:35에 올해 필기가 v2(`…오성연v2.pdf`, sha c30dfd19…)로 바뀌었고
+  공개 판(cf4d5917)은 v1으로 만들어졌다. 서버 job 609는 실패로 남는다.
+  사용자 「새로 출제」(2026-11-12)로 v2 필기에서 「공개된 판 새로 출제」(restart + replacePublished, job 610, 14:45 요청) →
+  앞 단계 19분, 생성 포함 약 1시간 뒤 게시 auto-9cb48bf1(160문항, 과제 145, goal-duplicates/1 ledger, 중복으로 합침 1, 추가 2회,
+  목표 81 중 전부 출제 67·과제 없음 6). 근거 보강 업로드(single 156·linked 4·unresolved 0). 선지 133문항 중 73 작성(실패 묶음 0).
+- 선지: 공개된 감염과 면역 23강의 전부 업로드. 수정 대상 밖 18강의(3강의씩, 13:24~13:50, 27분) 2,119문항 중 1,080 작성, 의학 검토가 뺀 오답 219,
+  실패 묶음 0. 새 판 4강의 + 피코르나 현재 판: 569문항 중 287 작성. 합계 1,367문항. 화면에서 직접 열어 보지는 않았다(서버 업로드 완료 응답까지 확인).
+- 피코르나 옛 판(cf4d5917)에 올린 선지는 판이 바뀌어 더 쓰이지 않는다. 새 판 선지를 따로 올렸다. 선지 합계(현재 공개 판 기준) 1,378문항.
