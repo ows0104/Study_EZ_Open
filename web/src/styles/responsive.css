@@ -1,0 +1,167 @@
+/* 좁은 화면(휴대폰·반으로 줄인 창)에서 글씨를 자르지 말고 줄을 내린다.
+ *
+ * 2026-11-12 사용자 요청: "반으로 줄이거나 휴대폰에서 보면 글씨가 잘려서 거의 안 보인다.
+ * 차라리 줄을 내려서 어느 정도는 보이게."
+ *
+ * **이 파일은 덮어쓰기만 한다.** 같은 날 다른 세션(claude/review-bar-ux)이 calendar.css를
+ * 고치고 있어서, 줄이 겹치지 않게 따로 두기로 했다(사용자 결정). main.tsx에서 맨 마지막에
+ * 부른다. 화면별 css는 그 화면이 열릴 때 뒤늦게 붙어 순서상 이 파일보다 뒤에 올 수 있으므로
+ * 규칙마다 `:root`를 앞에 붙여 한 단계 세게 건다.
+ *
+ * 넓은 화면은 바뀌지 않는다. 아래 `overflow-wrap: anywhere`는 단어가 칸보다 길 때만
+ * 끊고, 나머지는 전부 좁은 폭(칸 폭이나 창 폭) 조건 안에 있다. */
+
+/* -------------------------------------------------------------- 캘린더 머리 */
+
+/* 「감염과 면역 1차 2주차」 옆에 오늘 할 일 카드 둘(최소 246px)이 붙어 있고, 줄바꿈은
+ * 640px 아래에서만 했다. 그래서 700px 창이나 넓은 창에서 패널을 열면 제목이
+ * 「감염과 면역…」으로 잘렸다. 한 줄에 다 안 들어갈 때만 카드를 다음 줄로 내린다.
+ * 다 들어가는 넓은 화면은 그대로다. */
+:root .calendar-head {
+  flex-wrap: wrap;
+  row-gap: 12px;
+}
+
+:root .calendar-title {
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------------ 캘린더 칸 */
+
+/* 강의명은 `word-break: keep-all`이라 "헤모필루스,"처럼 칸보다 긴 낱말을 끊지 못하고
+ * 통째로 밀려나 잘렸다. 375px 화면에서 칸 안쪽이 37px이라 "헤도"·"렙토" 두 글자만
+ * 보였다. 들어갈 자리가 없을 때만 글자 사이에서 끊게 한다. */
+:root .calendar-event-primary {
+  overflow-wrap: anywhere;
+}
+
+/* 휴대폰에서 주간 칸은 62px 안팎이다. 좌우 여백 17px을 9px로, 글씨를 반 포인트
+ * 줄여 한 줄에 서너 글자를 더 싣는다. 아래 여백은 학습 막대 자리라 건드리지 않는다. */
+@container cell (max-width: 80px) {
+  :root .calendar-event {
+    padding-top: 4px;
+    padding-inline: 5px 3px;
+  }
+
+  /* 이 폭에서는 낱말 단위(keep-all)로 접으면 번호 「16」만 한 줄을 차지하고 낱말마다
+     줄 끝이 빈다. 한국어 기본처럼 음절 사이 어디서나 접어 줄을 꽉 채운다. */
+  :root .calendar-event-primary {
+    font-size: 11px;
+    line-height: 1.2;
+    letter-spacing: -0.03em;
+    word-break: normal;
+  }
+
+  :root .chip-code {
+    margin-right: 2px;
+    font-size: 10px;
+  }
+
+  :root .calendar-event-meta {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
+  /* 학습 막대가 없는 칸만. 막대가 있는 칸의 아래 여백은 막대 자리다. */
+  :root .calendar-event:not(.has-learning) {
+    padding-bottom: 3px;
+  }
+
+  :root .calendar-event-footer {
+    left: 5px;
+    right: 3px;
+  }
+}
+
+/* 휴대폰의 한 시간짜리 칸은 안쪽 높이가 63.8px이다(375px 화면에서 잰 값). 제목 세 줄 +
+ * 교수 한 줄이 들어간다: 테두리 2 + 위 4 + 제목 13.2×3 + 줄새 1 + 교수 12 + 아래 3 = 61.6 */
+@container cell (max-width: 80px) and (min-height: 62px) {
+  :root .calendar-event:not(.has-learning):not(.is-compact) .calendar-event-primary {
+    -webkit-line-clamp: 3;
+  }
+}
+
+/* 학습 막대가 있는 칸은 아래 20px을 막대가 쓰고 교수 줄은 이미 빠져 있다(calendar.css).
+ * 2 + 4 + 13.2×3 + 20 = 65.6. 한 시간짜리 칸(63.8)에는 안 들어가 calendar.css대로 두 줄이다. */
+@container cell (max-width: 80px) and (min-height: 66px) {
+  :root .calendar-event.has-learning .calendar-event-primary {
+    -webkit-line-clamp: 3;
+  }
+}
+
+/* ---------------------------------------------------------------- 강의 목록 */
+
+/* 휴대폰 폭에서 표가 체크·번호·숫자 셋·재생 칸을 그대로 지키느라 강의명에 59px만
+ * 남았다("감염질…"). 옆 칸을 좁히고 강의명은 두 줄까지 접는다. */
+@container (max-width: 560px) {
+  :root .list-table {
+    --cols: 20px 24px minmax(0, 1fr) repeat(3, 34px) 30px;
+  }
+}
+
+@media (max-width: 560px) {
+  :root .list-table {
+    --cols: 20px 24px minmax(0, 1fr) repeat(3, 34px) 30px;
+  }
+
+  :root .list-row {
+    gap: 0 5px;
+    padding: 0 4px;
+  }
+
+  :root .list-go {
+    padding-left: 0;
+  }
+
+  /* 머리줄 "복습 퀴즈"·"학습률"이 34px 칸에서 옆 칸으로 넘치지 않게 접는다. */
+  :root .list-row.is-head {
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  :root .list-row.is-head > *,
+  :root .list-row.is-head .list-go {
+    white-space: normal;
+    word-break: keep-all;
+  }
+}
+
+/* 강의명·교수 줄은 표가 좁아지면(휴대폰, 또는 넓은 창에서 패널을 열어 표가 줄었을 때)
+ * 한 줄 말줄임 대신 두 줄까지 접는다. 640px은 overview.css가 단계 칸을 빼는 문턱이다. */
+@container (max-width: 640px) {
+  :root .list-title strong {
+    display: -webkit-box;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    line-height: 1.3;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  :root .list-title small {
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 640px) {
+  :root .list-title strong {
+    display: -webkit-box;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    line-height: 1.3;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  :root .list-title small {
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+}
