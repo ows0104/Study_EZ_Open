@@ -71,6 +71,29 @@ try {
   check(Array.from(document.querySelectorAll(".bank-option b")).map(b => b.textContent).join() === "1,2,3", "recall choices: V opens them numbered 1·2·3");
   press("2"); await tick();
   check(picked().join() === "2", "recall choices: key 2 picks the second");
+  // 2026-11-12: 편 선지는 V 한 번 더, Z·Ctrl+Z로 다시 접는다. 고른 것은 비우고, 본 기록은 남는다. 서버 되돌리기는 부르지 않는다.
+  const key = (init: KeyboardEventInit) => (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init }));
+  const open = () => !!document.querySelector(".bank-option");
+  const toggleButton = () => Array.from(document.querySelectorAll<HTMLButtonElement>(".mq-card > button")).map(b => b.textContent).join();
+  check(toggleButton().startsWith("선지 접기"), "recall choices: open choices offer 선지 접기");
+  const undoCount = actions.length;
+  key({ key: "v", code: "KeyV" }); await tick();
+  check(!open() && !picked().length && toggleButton().startsWith("선지 보기"), "recall choices: V again folds them and clears the pick");
+  key({ key: "ㅍ", code: "KeyV" }); await tick();
+  check(open() && !picked().length, "recall choices: V reopens them (Korean IME too), nothing picked");
+  press("2"); await tick();
+  key({ key: "z", code: "KeyZ", ctrlKey: true }); await tick();
+  check(!open() && !picked().length, "recall choices: Ctrl+Z folds them");
+  key({ key: "v", code: "KeyV" }); await tick();
+  key({ key: "z", code: "KeyZ" }); await tick();
+  check(!open(), "recall choices: Z folds them");
+  check(actions.length === undoCount, "folding records nothing and does not call server undo");
+  press(" "); await tick();
+  check(actions.at(-1)?.kind === "reveal" && actions.at(-1)?.response === "" && actions.at(-1)?.choicesShown === true,
+    "recall choices: folded before reveal still records that choices were seen");
+  render({ ...recallView }, "recall-again"); await tick();
+  key({ key: "v", code: "KeyV" }); await tick();
+  press("2"); await tick();
   press(" "); await tick();
   check(actions.at(-1)?.kind === "reveal" && actions.at(-1)?.response === "선택: B" && actions.at(-1)?.choicesShown === true,
     "recall choices: reveal sends the saved ID and that choices were shown");
