@@ -133,5 +133,47 @@ try:
 finally:
     planning.plan = real_plan
 assert client.get('/api/root-learning').json()['lectures'][0]['runId'] == 'demo'
-print('PASS: light documents drop only image bytes and keep original fingerprints; learner state equal; '
+# 6. Startup warm-up (2026-11-12): the instance builds every enabled lecture's copy before taking requests,
+#    so the first list request reads no original document.
+import threading
+from app import main as app_main
+reads.clear()
+event.listen(engine, 'before_cursor_execute', listener)
+try:
+    light.clear()
+    with SessionLocal() as db:
+        assert light.warm(db)[0] == 1
+    assert len(reads) == 1
+    reads.clear()
+    assert client.get('/api/root-learning').json()['lectures'][0]['runId'] == 'demo' and reads == []
+    light.clear()
+    app_main.warm_main_quiz()                                                          # the lifespan hook itself
+    assert len(reads) == 1 and len(light._cache) == 1
+    # 7. Concurrent cold requests read the original once, not once each (the 512 MiB crashes).
+    light.clear(); reads.clear()
+    gate, got = threading.Barrier(4), []
+    def cold():
+        gate.wait()
+        with SessionLocal() as db:
+            got.append(set(light.current_rows(db, [('test', 'demo')])))
+    workers = [threading.Thread(target=cold) for _ in range(4)]
+    [w.start() for w in workers]; [w.join() for w in workers]
+    assert got == [{('test', 'demo')}] * 4, got                                         # every request answered
+    assert len(reads) == 1, len(reads)
+finally:
+    event.remove(engine, 'before_cursor_execute', listener)
+# A lecture whose copy fails is skipped and logged; the rest are still built.
+real_lighten = light.lighten
+light.lighten = lambda doc: (_ for _ in ()).throw(ValueError('broken document'))
+try:
+    light.clear()
+    with SessionLocal() as db:
+        assert light.warm(db)[0] == 0
+finally:
+    light.lighten = real_lighten
+with SessionLocal() as db:
+    assert light.warm(db)[0] == 1
+
+print('PASS: startup warm-up builds every enabled copy; concurrent cold requests read the original once; '
+      'light documents drop only image bytes and keep original fingerprints; learner state equal; '
       'fingerprints only for earlier-revision events; one document read per revision; a failing lecture is skipped')

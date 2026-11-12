@@ -9,11 +9,18 @@
 RootContent 행은 넣기만 하고 고치지 않는다. 키에 digest가 들어 있으니 판이 바뀌면 새로 만든다.
 
 문항을 화면에 그리는 경로(풀이·지도·관리자)는 이 사본을 쓰지 않는다 — 그림이 없다.
+
+인스턴스가 뜰 때 미리 만든다(`warm`, 2026-11-12). 사본은 인스턴스 메모리에만 있어서 배포(하루 여러 번)·새 인스턴스마다
+첫 목록 요청이 공개 판 전부(23편 104 MB)를 읽었다(운영 6.5–8.8 s). 그 사이 다른 요청도 같은 원본을 동시에 읽어
+512 MiB를 넘겨 인스턴스가 죽었다(운영 로그 2026-11-12 「Memory limit of 512 MiB exceeded」 여러 번) — 숫자 칸이
+끝내 비는 원인. 그래서 원본은 한 번에 하나만 읽는다(`_load_lock`). 동시에 같은 판을 찾던 요청은 기다렸다 그 사본을 쓴다.
 """
 from __future__ import annotations
 
 import copy
+import logging
 import threading
+import time
 from collections import OrderedDict
 from dataclasses import dataclass
 
@@ -22,8 +29,13 @@ from sqlalchemy import select
 from app.models.root_learning import RootContent, RootControl
 from studyez_contracts.roots import task_fingerprints
 
-LIMIT = 32
+# 사본 하나는 파이썬 메모리 약 1.9 MB(운영 23편 43 MB, 2026-11-12 측정). 공개 판이 상한을 넘으면 목록 요청마다
+# 처음부터 다시 읽게 되므로(LRU를 차례로 훑으면 하나도 안 맞는다) 넉넉히 둔다.
+LIMIT = 64
+log = logging.getLogger(__name__)
 _lock = threading.Lock()
+# 원본(6–12 MB JSON)을 읽고 줄이는 일은 인스턴스 전체에서 한 번에 하나. 동시 요청이 각자 원본을 들고 있지 않게 한다.
+_load_lock = threading.Lock()
 _cache: OrderedDict[tuple[str, str, str, str], LightDocument] = OrderedDict()
 
 
@@ -86,15 +98,44 @@ def current_rows(db, keys) -> dict[tuple[str, str], LightRow]:
         if controls.get((subject, run_id)) != revision:
             continue
         cache_key = (subject, run_id, revision, digest or '')
-        light = _get(cache_key)
+        light = _get(cache_key) or _load(db, cache_key)
         if light is None:
-            row = db.get(RootContent, (subject, run_id, revision))
-            if not row or not row.reviewed:
-                continue
-            light = lighten(row.document)
-            _put(cache_key, light)
+            continue
         result[(subject, run_id)] = LightRow(subject, run_id, revision, light)
     return result
+
+
+def _load(db, cache_key):
+    subject, run_id, revision, _ = cache_key
+    with _load_lock:
+        light = _get(cache_key)      # 기다리는 사이 다른 요청이 만들었으면 그것을 쓴다.
+        if light is not None:
+            return light
+        row = db.get(RootContent, (subject, run_id, revision))
+        if not row or not row.reviewed:
+            return None
+        light = lighten(row.document)
+        _put(cache_key, light)
+        # 원본 dict를 세션에서 떼어 바로 놓아 준다(요청이 끝날 때까지 들고 있지 않게).
+        db.expunge(row)
+        return light
+
+
+def warm(db) -> tuple[int, float]:
+    """켜진 공개 판 전부의 사본을 미리 만든다(인스턴스가 요청을 받기 전에, app.main). (만든 수, 걸린 초).
+
+    한 강의가 실패해도 나머지는 만든다. 실패한 강의는 첫 요청 때 원래 경로로 다시 시도된다."""
+    started = time.perf_counter()
+    keys = [(c.subject, c.run_id) for c in db.scalars(select(RootControl).where(
+        RootControl.enabled.is_(True), RootControl.revision.is_not(None)).order_by(RootControl.subject, RootControl.run_id))]
+    built = 0
+    for key in keys[:LIMIT]:
+        try:
+            built += len(current_rows(db, [key]))
+        except Exception:
+            log.exception('Main-Quiz 가벼운 사본 미리 만들기 실패 %s/%s', *key)
+            db.rollback()
+    return built, time.perf_counter() - started
 
 
 def clear():

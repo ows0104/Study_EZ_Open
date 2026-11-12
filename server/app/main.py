@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import logging
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,7 +35,36 @@ from app.routes import (
 )
 
 settings = get_settings()
+log = logging.getLogger("studyez")
+
+
+def warm_main_quiz() -> None:
+    """운영 인스턴스가 요청을 받기 전에 Main-Quiz 가벼운 사본을 만든다(root_learning/light.py 첫머리).
+
+    Cloud Run은 이 함수가 끝나 포트가 열린 뒤에야 새 인스턴스·새 판에 요청을 보낸다. 그래서 배포 직후 첫 강의 목록이
+    공개 판 전부를 읽지 않는다. 실패해도 서버는 뜬다 — 그때는 예전처럼 첫 요청이 만든다."""
+    from app.database import SessionLocal
+    from app.root_learning import content, light
+    if not content.globally_enabled():
+        return
+    try:
+        with SessionLocal() as db:
+            built, seconds = light.warm(db)
+        log.warning("Main-Quiz 가벼운 사본 %d편을 미리 만들었습니다 (%.1f s)", built, seconds)
+    except Exception:
+        log.exception("Main-Quiz 가벼운 사본 미리 만들기 실패 — 첫 요청이 만든다")
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # 운영에서만. 검사·로컬 서버는 각자 DB를 세우기 전에 앱을 띄우므로 여기서 읽지 않는다.
+    if settings.environment == "production" and os.getenv("STUDYEZ_WARM_MAIN_QUIZ", "1") != "0":
+        warm_main_quiz()
+    yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="Study_EZ API",
     version="1.0.0",
     docs_url="/docs" if settings.environment != "production" else None,

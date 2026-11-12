@@ -1,0 +1,204 @@
+{
+  "id": "2026-11-12-root-catalog-warm",
+  "title": "Main-Quiz 요약 빠르게(시작 때 가벼운 사본)",
+  "area": "site",
+  "created_at": "2026-11-12T09:09:56.334204+00:00",
+  "required_checks": [
+    "regression"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-12T09:09:56.673063+00:00",
+      "evidence": "사용자 2026-11-12 채팅(앞 작업의 '남은 것' 문단을 인용한 뒤): '이것도 해결해줘. 다른 것보다 숫자칸이 안채워지는게 문제였어.'",
+      "scope": "plan.md의 server 파일: root_learning/light.py(시작 때 사본·원본 한 번에 하나·LIMIT 64), main.py(운영 lifespan), tests/test_root_light.py. DB 스키마·데이터 변경 없음.",
+      "evidence_version": 2,
+      "source_hash": "184739bb7313b9a80ec4841f7339a21f76a2926bdbcb3a62292d8b8d7630be66",
+      "plan_hash": "64108712cf47000e4067444eaa11726aa26da512e80ec7dd661ac25afdeb2a8b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "e0cd308d2857a993f6b4a81b5437139a82421f96db4131491fad3c34655d3828"
+    }
+  },
+  "checks": [
+    {
+      "name": "regression",
+      "at": "2026-11-12T09:10:03.825546+00:00",
+      "command": [
+        "env",
+        "PYTHONPATH=..",
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "-m",
+        "tests",
+        "root_light"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "184739bb7313b9a80ec4841f7339a21f76a2926bdbcb3a62292d8b8d7630be66",
+      "plan_hash": "64108712cf47000e4067444eaa11726aa26da512e80ec7dd661ac25afdeb2a8b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-root-catalog-warm/1794474603557315400-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-12T09:12:24.859721+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "server/tests/__main__.py",
+        "root"
+      ],
+      "exit_code": 1,
+      "evidence_version": 2,
+      "source_hash": "184739bb7313b9a80ec4841f7339a21f76a2926bdbcb3a62292d8b8d7630be66",
+      "plan_hash": "64108712cf47000e4067444eaa11726aa26da512e80ec7dd661ac25afdeb2a8b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-root-catalog-warm/1794474622990156500-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-12T09:12:34.731897+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "server/tests/__main__.py",
+        "root_light"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "184739bb7313b9a80ec4841f7339a21f76a2926bdbcb3a62292d8b8d7630be66",
+      "plan_hash": "64108712cf47000e4067444eaa11726aa26da512e80ec7dd661ac25afdeb2a8b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-root-catalog-warm/1794474750645653600-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-12T09:12:42.754301+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "server/tests/__main__.py",
+        "timetable"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "184739bb7313b9a80ec4841f7339a21f76a2926bdbcb3a62292d8b8d7630be66",
+      "plan_hash": "64108712cf47000e4067444eaa11726aa26da512e80ec7dd661ac25afdeb2a8b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-root-catalog-warm/1794474755263732300-regression.log"
+    },
+    {
+      "name": "regression",
+      "at": "2026-11-12T09:12:52.090364+00:00",
+      "command": [
+        "C:/Users/ows01/Documents/Python Scripts/Study_EZ_Open/server/.venv/Scripts/python.exe",
+        "server/tests/__main__.py",
+        "root_learning"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "184739bb7313b9a80ec4841f7339a21f76a2926bdbcb3a62292d8b8d7630be66",
+      "plan_hash": "64108712cf47000e4067444eaa11726aa26da512e80ec7dd661ac25afdeb2a8b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-root-catalog-warm/1794474763443583200-regression.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T09:12:52.091973+00:00"
+}
