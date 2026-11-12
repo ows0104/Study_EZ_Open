@@ -10,7 +10,11 @@ let hidden: string[] = JSON.parse(localStorage.getItem("test-hidden") ?? "[]");
 const requests: string[] = [];
 const progressRequests: { subject: string; runId: string }[][] = [];
 const releases: (() => void)[] = [];
-Object.assign(window, { studyTest: { requests, progressRequests, release: () => releases.shift()?.() } });
+// Main-Quiz 요약(/api/root-learning). ?lazy에서는 releaseRoot()까지 붙잡는다 — 운영에서 가장 느린 요청.
+const rootRequests: string[] = [];
+const rootReleases: (() => void)[] = [];
+Object.assign(window, { studyTest: { requests, progressRequests, release: () => releases.shift()?.(),
+  rootRequests, releaseRoot: () => rootReleases.shift()?.() } });
 let publicationReady = false;
 Object.assign(window, { setPublicationReady: () => { publicationReady = true; } });
 const events = (): TimetableEvent[] => ["약력학", "약물대사", "예정 강의"].map((title, i) => ({
@@ -23,10 +27,12 @@ const events = (): TimetableEvent[] => ["약력학", "약물대사", "예정 강
     cardProgress: deleted.has(String(i)) ? null : { total: 100, seen: 80, unseen: 20, recognized: 15, retrieving: 40, retained: 25, newRemaining: 23, reviewDue: 12, suspended: 2 },
   }],
 }));
+// ?lazy: 2026-11-11부터 강의 목록은 Main-Quiz 하나(marks.mainQuiz)로 열린다.
+const mainQuizLecture = () => ({ ...events()[0].lectures[0], marks: { ...events()[0].lectures[0].marks, mainQuiz: true } });
 const lazyEvents = (): TimetableEvent[] => [
-  { ...events()[0], lectures: Array.from({ length: 10 }, (_, i) => ({ ...events()[0].lectures[0], runId: String(i), title: `강의 ${i}` })) },
+  { ...events()[0], lectures: Array.from({ length: 10 }, (_, i) => ({ ...mainQuizLecture(), runId: String(i), title: `강의 ${i}` })) },
   { ...events()[0], id: "other", date: "2026-09-01", course: "다른 블록",
-    lectures: [{ ...events()[0].lectures[0], subject: "다른 과목", runId: "other", title: "다른 강의" }] },
+    lectures: [{ ...mainQuizLecture(), subject: "다른 과목", runId: "other", title: "다른 강의" }] },
 ];
 window.fetch = async (input, init) => {
   const url = new URL(String(input), location.origin);
@@ -49,6 +55,14 @@ window.fetch = async (input, init) => {
     result = { events: url.searchParams.get("include_study") === "false"
       ? rows.map(e => ({ ...e, lectures: e.lectures.map(l => ({ ...l, studyLoaded: false, mastery: null,
         cardProgress: null })) })) : rows };
+  } else if (path === "/api/root-learning") {
+    rootRequests.push(path);
+    if (options.has("lazy")) await new Promise<void>(resolve => rootReleases.push(resolve));
+    if (options.has("rootError")) return new Response(JSON.stringify({ detail: "요약 실패" }), { status: 500 });
+    result = { canManage: false, lectures: lazyEvents().flatMap(e => e.lectures).map(l => ({
+      subject: l.subject, runId: l.runId, revision: "r1", title: l.title, policyReady: true, plan: null, sessionId: null,
+      summary: { score: 50 },
+      questionProgress: { total: 100, unseen: 20, recognized: 15, retrieving: 40, retained: 25, reviewDue: 12 } })) };
   } else if (path === "/api/timetable/study-progress") {
     const lectures = JSON.parse(String(init?.body)).lectures as { subject: string; runId: string }[];
     progressRequests.push(lectures);

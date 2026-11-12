@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { bankHref, lectureHref } from "../links";
 import { useMe } from "../useMe";
@@ -16,7 +16,7 @@ import { QuizPublicationCell } from "./QuizPublicationCell";
 import { currentStudyBlock, studyBlockKey, studyBlockNames, studyCourseOf } from "./studyBlocks";
 import { useStudyCourse } from "./useStudyCourse";
 import "./overview.css";
-import { rootRate, useRootCatalog, useRootProgress } from "./useRootCatalog";
+import { rootRate, useRootSummaries } from "./useRootCatalog";
 import type { RootQuestionProgress } from "../types/rootLearning";
 
 // 캘린더와 같은 강의 패널. 행을 누를 때만 받는다.
@@ -131,19 +131,18 @@ const VIEW_KEY = "studyez-list-view";
 const VIEWS = ["type", "order"] as const;
 
 /** 강의 목록: 블럭의 모든 강의와 카드 단계, 골라서 모아풀기. */
-export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], onVisibility, managing = false, onDeleteQuiz, onScope }: {
+export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], onVisibility, managing = false, onDeleteQuiz }: {
   events: TimetableEvent[]; onStart: (lectures: StudyLecture[]) => void;
   adminActions?: (lectures: StudyLecture[]) => React.ReactNode;
   hiddenKeys?: string[]; onVisibility?: (keys: string[], hidden: boolean, count: number) => void; managing?: boolean;
   onDeleteQuiz?: (lectures: StudyLecture[]) => void;
-  onScope?: (keys: string) => void;
 }) {
   const isAdmin = Boolean(useMe()?.isAdmin);
   const navigate = useNavigate();
   const rows = useMemo(() => lectureRows(events), [events]);
   const hasMainQuiz = rows.some(l => l.mainQuiz);
-  const roots = useRootCatalog(hasMainQuiz);
-  const rootProgress = useRootProgress(hasMainQuiz);
+  // 행·제목·▶는 시간표만으로 바로 그린다. 숫자 칸만 Main-Quiz 요약(느린 요청)을 기다린다(2026-11-12).
+  const { rates: roots, progress: rootProgress, loaded: rootsLoaded } = useRootSummaries(hasMainQuiz);
   const entries = useMemo(() => toCalendarEntries(events), [events]);
   const infos = useMemo(() => displayInfo(events), [events]);
   const [view, changeView] = usePreference<ListView>(VIEW_KEY, "type", VIEWS);
@@ -180,9 +179,7 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
 
   const inCourse = rows.filter(l => !course || l.course === course);
   const scoped = inCourse.filter(l => !isHidden(l));
-  const scope = JSON.stringify(inCourse.filter(l => l.runId).map(l => l.key));
-  useEffect(() => { onScope?.(scope); }, [scope, onScope]);
-  const loading = scoped.some(l => l.studyLoaded === false);
+  const loading = !rootsLoaded && scoped.some(l => l.mainQuiz);
   // 복습이 열린 강의만 센다. 아직 열리지 않은 강의까지 넣으면 미열람이 늘 대부분을 덮는다.
   const openedRows = scoped.filter(l => l.ready && progressOf(l));
   const totals = openedRows.reduce((sum, l) => {
@@ -192,7 +189,7 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
   }, { ...empty });
   const rates = openedRows.map(rateOf).filter((r): r is number => r !== null);
   const score = rates.length ? Math.round(rates.reduce((sum, r) => sum + r, 0) / rates.length) : null;
-  const display = (value: number) => loading ? "—" : number(value);
+  const display = (value: number) => loading ? "…" : number(value);
 
   const selectable = scoped.filter(l => l.batch);
   const chosen = selectable.filter(l => selected.has(l.key));
@@ -239,12 +236,12 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
       <BlockPicker blocks={blocks} value={course} current={automatic} next={nextBlock} onChange={changeBlock} />
     </header>
 
-    <div className="list-stats">
+    <div className="list-stats" aria-busy={loading}>
       <div><span>오늘 복습</span><b className="is-review">{display(totals.reviewDue)}<small>장</small></b></div>
-      <div><span>학습률 평균</span><b>{loading || score === null ? "—" : `${score}%`}</b></div>
+      <div><span>학습률 평균</span><b>{loading ? "…" : score === null ? "—" : `${score}%`}</b></div>
       <div><span>전체 카드</span><b>{display(totals.total)}<small>장</small></b></div>
     </div>
-    <div className="stage-card">
+    <div className="stage-card" aria-busy={loading}>
       <div className="stage-legend">{stages.map(([key, label]) => <span key={key}>
         <i className={`stage-dot stage-${key}`} />{label}<b className={`stage-text-${key}`}>{display(totals[key])}</b></span>)}</div>
       <div className="stage-bar" role="img" aria-label={stages.map(([key, label]) => `${label} ${display(totals[key])}장`).join(" · ")}>
@@ -278,8 +275,8 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
             const p = progressOf(l);
             const rate = rateOf(l);
             const picked = selected.has(l.key);
-            const waiting = l.studyLoaded === false;
-            const closed = waiting || !l.ready;
+            const waiting = Boolean(l.mainQuiz) && !rootsLoaded;
+            const closed = !l.ready;
             const open = () => setOpened(l.key);
             return <div key={l.key} role="row" tabIndex={0} onClick={open}
               onKeyDown={e => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); open(); } }}
@@ -300,7 +297,13 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
                 <span role="cell" className={`is-num list-due${p.reviewDue ? " is-on" : ""}`}><Num value={p.reviewDue} /></span>
                 <span role="cell" className={`is-num rate-text ${!l.ready ? "is-closed" : rate !== null ? rateBand(rate) : "is-closed"}`}>
                   {!l.ready ? "0%" : rate !== null ? `${rate}%` : "—"}</span>
-              </> : waiting || l.ready ? <>
+              </> : waiting ? <>
+                {/* 요약을 기다리는 중: 0이 아니라 아직 모른다. */}
+                <span role="cell" className="is-num is-loading" aria-busy="true">…</span>
+                {stages.map(([key]) => <span role="cell" key={key} className="is-num is-stage is-loading" aria-busy="true">…</span>)}
+                <span role="cell" className="is-num is-loading" aria-busy="true">…</span>
+                <span role="cell" className="is-num rate-text is-loading" aria-busy="true">…</span>
+              </> : l.ready ? <>
                 <span role="cell" className="is-num">—</span>
                 {stages.map(([key]) => <span role="cell" key={key} className="is-num is-stage">—</span>)}
                 <span role="cell" className="is-num">—</span><span role="cell" className="is-num rate-text is-closed">—</span>
@@ -312,7 +315,7 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
               </>}
               <span role="cell" className="list-go" onClick={e => e.stopPropagation()}>
                 <button type="button" aria-label={`${l.title} 복습 퀴즈`} title="복습 퀴즈"
-                  disabled={managing || waiting || !l.ready} onClick={() => study(l)}><Icon.play /></button>
+                  disabled={managing || !l.ready} onClick={() => study(l)}><Icon.play /></button>
               </span>
             </div>;
           })}
