@@ -8,6 +8,7 @@ import { DeleteQuizDialog } from "./DeleteQuizDialog";
 import { BankSolve, type BatchStudy } from "./BankSolve";
 import { useBankUndo } from "./useBankUndo";
 import { useStudyTimetable } from "./useStudyTimetable";
+import { prefetchRootCatalog } from "./useRootCatalog";
 import "./batch.css";
 
 type Lecture = Pick<StudyLecture, "subject" | "runId" | "title" | "date">;
@@ -33,7 +34,9 @@ export function BankBatchPage() {
     } catch { return null; }
   });
   const [done, setDone] = useState(false);
-  const { events, setEvents, onScope, error: loadError } = useStudyTimetable(refreshKey, !queue);
+  const { events, setEvents, error: loadError } = useStudyTimetable(refreshKey, !queue);
+  // Main-Quiz 요약은 느리다(운영 6–9 s). 시간표와 같이 출발시켜 행이 그려진 뒤 숫자 칸이 빨리 찬다.
+  useEffect(() => { if (!queue) prefetchRootCatalog(); }, [queue === null, refreshKey]);
   const [paused, setPaused] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -125,7 +128,6 @@ export function BankBatchPage() {
     }} /> : null}
     {!events ? !loadError && <p className="notice" role="status">강의 목록을 불러오는 중…</p>
       : <StudyOverview events={events} hiddenKeys={hiddenKeys} managing={managing || auditing || deleting !== null}
-        onScope={onScope}
         onVisibility={(keys, hidden, count) => void setVisibility(keys, hidden, count)} onDeleteQuiz={me?.isAdmin ? setDeleting : undefined} onStart={chosen => {
         setPaused(false); setDone(false);
         setQueue({ lectures: chosen.map(({ subject, runId, title, date }) => ({ subject, runId, title, date })) });

@@ -83,6 +83,10 @@
 .rate-text.is-closed { color: #b5b5b5; font-weight: 500; }
 /* 아직 복습이 열리지 않은 강의: 위기 색을 쓰지 않는다 */
 .list-row.is-closed .is-num, .list-row.is-closed .is-num .is-zero { color: #b5b5b5; }
+/* Main-Quiz 요약을 기다리는 숫자 칸(2026-11-12). 0과 구별되게 흐리게 숨 쉰다. */
+.list-row .is-loading, .list-stats[aria-busy="true"] b, .stage-card[aria-busy="true"] .stage-legend b { color: #b5b5b5; font-weight: 500; animation: list-loading 1.2s ease-in-out infinite alternate; }
+@keyframes list-loading { from { opacity: 1; } to { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .list-row .is-loading, .list-stats[aria-busy="true"] b, .stage-card[aria-busy="true"] .stage-legend b { animation: none; } }
 .list-empty { margin: 12px 10px; color: var(--ink-3); font-size: 13px; }
 
 .study-overview button.check {

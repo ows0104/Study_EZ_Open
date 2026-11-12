@@ -1,0 +1,79 @@
+{
+  "id": "2026-11-12-lecture-list-speed",
+  "title": "강의 목록 정보 먼저 보이기",
+  "area": "site",
+  "created_at": "2026-11-12T08:17:15.737750+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-12T08:17:42.357934+00:00",
+      "evidence": "사용자 2026-11-12 채팅: '강의 목록 페이지의 정보가 보이는게 너무 느려. 무거운 걸 미루더라도 (복습 퀴즈 연결 같은거...? 잘모르겠음) 정보를 먼저 보여주면 좋을 것 같아.'",
+      "scope": "plan.md의 web 파일: 강의 목록 로딩 순서(useStudyTimetable·useRootCatalog·StudyOverview·BankBatch·overview.css)와 검사 고정물. 서버·DB 변경 없음.",
+      "evidence_version": 2,
+      "source_hash": "a9f299d2fc64e0087401bef44d7ad2e1e4e00381de9319c5f825976987ffeb9a",
+      "plan_hash": "2072b665bdbb5cdc235d2d68647c65231c6ddcf6e2f468200825adc05b2147da",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "fd71451de22b6ce11947d69e115bf5ac2025f47c77f164ad61b1c6d4cbde8a1d"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-12T08:17:59.268108+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "a9f299d2fc64e0087401bef44d7ad2e1e4e00381de9319c5f825976987ffeb9a",
+      "plan_hash": "2072b665bdbb5cdc235d2d68647c65231c6ddcf6e2f468200825adc05b2147da",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-lecture-list-speed/1794471471554586400-web.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T08:17:59.269018+00:00"
+}
