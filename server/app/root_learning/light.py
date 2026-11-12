@@ -100,7 +100,10 @@ def save_images(connection, images: dict[str, str]) -> int:
             from sqlalchemy.dialects.postgresql import insert
         else:
             from sqlalchemy.dialects.sqlite import insert
-        connection.execute(insert(table).on_conflict_do_nothing(index_elements=['sha256']), rows)
+        statement = insert(table).on_conflict_do_nothing(index_elements=['sha256'])
+        # 한 줄씩(그림 하나 최대 1 MB). 여러 MB를 한 번에 보내다 Supabase pooler 연결이 끊겼다(2026-11-12 채우기).
+        for one in rows:
+            connection.execute(statement, one)
     return len(rows)
 
 
