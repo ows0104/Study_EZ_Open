@@ -6,8 +6,11 @@
   - 고치기 전: 실패(`availability`가 선행 Q2를 제외해도 task-q4를 available로 돌려줌). 같은 설정으로 overview를 부르면
     운영과 같은 `LinkValidationError: Prepared prerequisite became unavailable: task-q2`(제외 경로·중요도 필터 경로 모두).
   - 고친 뒤: 통과.
-- 회귀: `-m tests root`·`main_quiz`·`route_contract` — state.json `server` 기록 참고.
+- 회귀(worktree `server/.venv`, PyMuPDF 포함, `PYTHONPATH=..`): `-m tests root` 39/39, `main_quiz` 7/7, `route_contract` 1/1 통과.
   처음 돌린 메인 체크아웃 venv에서는 `test_root_map_tree`·`_v3` 2개가 `pymupdf` 없음으로 실패(환경 문제, tier-filter 때와 같음).
+- **미기록**: `scripts/development.py verify`는 build 승인 기록이 없어 거절했다(「Current intent/spec/plan needs human build approval」).
+  이 작업은 다른 세션의 과제문으로 시작했고 사용자 발언 원문이 없어 승인을 기록하지 않았다. 사용자가 승인하면
+  `approve --phase build` 뒤 같은 검사를 `verify --check server`로 남긴다.
 - 운영 DB 읽기 전용 확인(2026-11-12, 한 연결에 `SET TRANSACTION READ ONLY`, 쓰기 없음, 스크립트는 저장소 밖 scratchpad):
   사건 수 상위 학습자 5명 × 공개 판 23개 = 115쌍.
   - 옛 입력(standalone 닫힘 없음 + 거른 집합을 available로): 실패 4 — 학습자 A 261110_01·261102_05(Essential·Core·Important),
