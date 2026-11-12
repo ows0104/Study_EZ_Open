@@ -8,9 +8,14 @@ from .policy import instant, study_day
 from .state import targets, direction_owners, replay, replay_tasks, per_task
 
 
-def plan(doc, events, available, now, policy):
+def plan(doc, events, available, now, policy, focus=None):
+    """`available` is closed under prerequisites (content.availability). `focus`, a subset of it, narrows the
+    candidates only (오늘 학습 중요도 필터): an unassessed prerequisite of a focused task that lies outside the
+    focus is still brought forward by order_plan, which checks against `available`. Without a focus every
+    available task is a candidate, as before (docs/changes/2026-11-12-plan-prereq-closure)."""
     if per_task(doc):
-        return plan_tasks(doc, events, available, now, policy)
+        return plan_tasks(doc, events, available, now, policy, focus)
+    pool = available if focus is None else focus
     rows, states = replay(doc, events, now, policy)
     by_target = {r['id']: r for r in rows}
     owners = direction_owners(doc)
@@ -20,7 +25,7 @@ def plan(doc, events, available, now, policy):
     # One prepared task per direction. Optional directions do not replace required ones.
     candidates = {}
     for task in doc['tasks']:
-        if task['task_id'] in available:
+        if task['task_id'] in pool:
             candidates.setdefault(task['direction_id'], task)
     today = study_day(now, policy)
     day = today  # 남은 일수도 학습일(새벽 4시)로 센다(2026-11-11 사용자 지시).
@@ -131,7 +136,7 @@ def spread_directions(tasks):
     return [task for _, _, task in sorted(ranked, key=lambda row: row[:2])]
 
 
-def plan_tasks(doc, events, available, now, policy):
+def plan_tasks(doc, events, available, now, policy, focus=None):
     """root-generation/4 (spec R8 option B): every prepared task is a candidate, not one per direction.
 
     Same rules as plan() with the learner state of each task: new goals by the target quota (unchanged,
@@ -146,7 +151,8 @@ def plan_tasks(doc, events, available, now, policy):
     order = {t['target_id']: i for i, t in enumerate(target_list)}
     authored = {t['target_id']: t for t in target_list}
     position = {t['task_id']: i for i, t in enumerate(doc['tasks'])}
-    candidates = [t for t in doc['tasks'] if t['task_id'] in available and t['direction_id'] in owners]
+    pool = available if focus is None else focus
+    candidates = [t for t in doc['tasks'] if t['task_id'] in pool and t['direction_id'] in owners]
     by_direction = defaultdict(list)
     for task in candidates:
         by_direction[task['direction_id']].append(task)
