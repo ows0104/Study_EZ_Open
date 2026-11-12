@@ -37,7 +37,9 @@ def _pairs(first: str, second: str) -> dict:
                                        "properties": {first: _STR, second: _STR}}}
 
 
-PROPOSALS = _rows("proposals", {"question_id": _STR, "wrong": _pairs("text", "why_wrong"), "skip_reason": _STR})
+WRONG = {"type": "array", "items": {"type": "object", "additionalProperties": False, "required": ["text", "why_wrong", "why_tempting"],
+                                  "properties": {"text": _STR, "why_wrong": _STR, "why_tempting": _STR}}}
+PROPOSALS = _rows("proposals", {"question_id": _STR, "wrong": WRONG, "skip_reason": _STR})
 REVIEWS = _rows("reviews", {"question_id": _STR, "invalid": _pairs("text", "reason")})
 
 
@@ -74,11 +76,13 @@ def drafts_of(batch: list[dict], output: dict) -> tuple[dict, dict]:
         elif not row["wrong"]:
             skipped[qid] = row["skip_reason"].strip() or "모델이 오답을 쓰지 않음"
         else:
-            errors = contract.wrong_errors(q, row["wrong"])
+            # 왜 헷갈리는지 못 쓴 오답은 뺀다(2026-11-12 「너무 의학적이지 않은」 오답).
+            wrong = [w for w in row["wrong"] if (w.get("why_tempting") or "").strip()]
+            errors = contract.wrong_errors(q, wrong)
             if errors:
                 skipped[qid] = "검사 탈락: " + "; ".join(errors)
             else:
-                drafts[qid] = row["wrong"]
+                drafts[qid] = wrong
     return drafts, skipped
 
 

@@ -67,6 +67,7 @@ export function QuestionBody({ question: q, answer, picked, onPick, matching, se
       {!!q.stimuli?.length&&<QuestionStimuli key={q.question_id+q.stimuli.map(s=>s.sha256).join('')} images={q.stimuli} onReady={onStimuliReady}/>}
       {q.format === "ox" && !answer ? <p className="bank-note">O 인가 X 인가, 그리고 왜인가</p> : null}
       {q.mcq_mode === "recall_first" && !showOptions ? <p className="bank-note">기억 확인형 · 먼저 답을 떠올린 뒤 선지를 공개하세요.</p> : null}
+      {recallChoices && showOptions && !answer ? <p className="bank-note">{q.format === "list" ? "해당하는 것을 모두 고르세요." : "하나를 고르세요."}</p> : null}
       {options.length && showOptions ? (
         <ul className="bank-options">
           {options.map((option) => {

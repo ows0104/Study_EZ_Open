@@ -17,7 +17,7 @@ def _document(count=3):
 
 
 def _wrong(qid, n=3):
-    return [{"text": f"{qid} 오답{k}", "why_wrong": "다른 균의 매개체"} for k in range(n)]
+    return [{"text": f"{qid} 오답{k}", "why_wrong": "다른 균의 매개체", "why_tempting": "같은 단원의 매개체라서"} for k in range(n)]
 
 
 def _read(work):
@@ -79,6 +79,23 @@ def test_의학_검토가_지적한_오답은_빼고_모자라면_문항을_비�
     assert asset["skipped"]["Q1"].startswith("의학 검토 뒤 오답 부족") and asset["skipped"]["Q2"] == "의학 검토를 받지 못함"
     assert asset["counts"]["removedByReview"] == 3
     assert asset["medicalReview"]["questions"]["Q0"]["removed"] == [{"text": "Q0 오답1", "reason": "조건에 따라 정답이 될 수 있다"}]
+
+
+def test_왜_헷갈리는지_못_쓴_오답은_빼고_모자라면_문항을_비운다(tmp_path):
+    document = _document(2)
+
+    def write(rows, work):
+        weak = _wrong("Q0", 4)
+        weak[0]["why_tempting"] = ""
+        bad = _wrong("Q1")
+        bad[2]["why_tempting"] = " "
+        return {"proposals": [{"question_id": "Q0", "wrong": weak, "skip_reason": ""},
+                              {"question_id": "Q1", "wrong": bad, "skip_reason": ""}]}
+
+    asset = root_choices.build(document, tmp_path, "r", call=_fake(write))
+    assert list(asset["questions"]) == ["Q0"] and len(asset["questions"]["Q0"]["choices"]) == 4
+    assert "Q0 오답0" not in [c["text"] for c in asset["questions"]["Q0"]["choices"]]
+    assert asset["skipped"]["Q1"].startswith("검사 탈락")
 
 
 def test_의학_검토_호출이_실패하면_그_묶음은_싣지_않는다(tmp_path):
