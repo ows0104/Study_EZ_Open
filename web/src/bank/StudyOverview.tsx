@@ -218,8 +218,8 @@ export function StudyOverview({ events, onStart, adminActions, hiddenKeys = [], 
     toggle(setSelected, keys, false);
   };
   const changeBlock = (name: string) => { setCourse(name); setSelected(new Set()); setManaged(new Set()); };
-  /** 복습 바로 풀기: Main-Quiz 오늘 계획으로 바로 회차. */
-  const study = (l: StudyLecture) => navigate(`${bankHref(l)}?start=1`);
+  /** 복습 풀기: Main-Quiz 정리 화면(오늘 추천)으로. 회차는 거기서 시작한다(2026-11-12). */
+  const study = (l: StudyLecture) => navigate(bankHref(l));
 
   // 행을 누르면 캘린더와 같은 패널. 행 key → 시간표 칸과 그 칸 안의 강의 순서.
   const openedRow = opened ? rows.find(l => l.key === opened) : undefined;

@@ -1,0 +1,112 @@
+{
+  "id": "2026-11-12-quiz-entry-start",
+  "title": "Main-Quiz 정리 화면 먼저·재개 카드 수·뒤로",
+  "area": "site",
+  "created_at": "2026-11-12T12:43:54.666682+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-12T12:44:17.313751+00:00",
+      "evidence": "사용자 2026-11-12 채팅: '특정 상황에서 문제 풀기 버튼을 누르면 문제 개수가 안 나와. 왜 그런지 이유를 찾고 해결해줘. 그리고 강의별 풀기에서 복습 퀴즈 버튼을 누르면 자꾸 이 정리 페이지가 잠깐만 보이고 알아서 퀴즈로 바로 넘어가는데, 그러지 말고 항상 이 페이지에 먼저 오도록 설정해줘.' / 이어서 '이 정리 페이지에서도 뒤로가기 버튼을 만들어서, 강의 목록에서 왔으면 강의 목록으로, 캘린더에서 왔으면 캘린더로 돌아갈 수 있게 만들어줘.'",
+      "scope": "plan.md의 web 파일: RootLearning.tsx, RootToday.tsx, StudyOverview.tsx, main-quiz.css, tests/root-learning.test.cjs. 서버·DB 변경 없음.",
+      "evidence_version": 2,
+      "source_hash": "457abcdbff73a2934efc322396ecb0cdc2d3223c0eb390f51d5c5283639529ff",
+      "plan_hash": "2a29ed4dd7cf572bd2de081cc8bb3550294aa90e02d069555a7df13549c4fe28",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "91da10ffa34b52dd6fd2434e55692fbbfd6c8a7a292b4bd98cad40484858db07"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-12T12:44:28.476163+00:00",
+      "command": [
+        "server/.venv/Scripts/python.exe",
+        "scripts/check_root_learning.py",
+        "--check",
+        "root-ui"
+      ],
+      "exit_code": 127,
+      "evidence_version": 2,
+      "source_hash": "457abcdbff73a2934efc322396ecb0cdc2d3223c0eb390f51d5c5283639529ff",
+      "plan_hash": "2a29ed4dd7cf572bd2de081cc8bb3550294aa90e02d069555a7df13549c4fe28",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-quiz-entry-start/1794487468356283500-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-12T12:45:29.460566+00:00",
+      "command": [
+        "C:\\Users\\erika\\Study_EZ_quiz-entry\\server\\.venv\\Scripts\\python.exe",
+        "scripts/check_root_learning.py",
+        "--check",
+        "root-ui"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "a597b4fd1b97de62674d14062be0ca78ecb77d9b2c22d5e4cfadf49ebe2545d4",
+      "plan_hash": "2a29ed4dd7cf572bd2de081cc8bb3550294aa90e02d069555a7df13549c4fe28",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-quiz-entry-start/1794487489525047000-web.log",
+      "web_artifact": "19e8e6a0a90d1ef5ce71228e1517b9f8ca5b918f199d00d1161cdc4aa1a077c8",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T12:45:32.698176+00:00"
+}
