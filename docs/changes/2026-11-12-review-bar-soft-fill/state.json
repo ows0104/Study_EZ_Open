@@ -1,0 +1,79 @@
+{
+  "id": "2026-11-12-review-bar-soft-fill",
+  "title": "캘린더 복습 막대 채움을 연한 강조색으로",
+  "area": "site",
+  "created_at": "2026-11-12T15:53:12.928593+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-12T15:53:41.000761+00:00",
+      "evidence": "사용자 2026-11-12 채팅: '머지했는데 여전히 바는 그대로 파란색이야. 나는 그냥 회색을 원해.' → '바 안쪽 색을 연한 강조색으로도 해볼까?' → 미리보기 뒤 'Yes, open PR'",
+      "scope": "web/src/styles/calendar.css(.meter > span 채움), web/src/calendar/ChipLearning.tsx 주석, docs/changes/2026-11-12-review-bar-soft-fill. 웹 표시만, DB·서버 변경 없음.",
+      "evidence_version": 2,
+      "source_hash": "4ff321645b4d5e63ffc4eb5355ff6d325793a83417eaebf729d09aabe0f33e20",
+      "plan_hash": "b35f415a0930b64cfbf2a1a6f3faebd94d27d6178b3456804527571c4f94463b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "abbd9853ee705b9098da99d4ae725df4b71274f12c0f7277db558cbf62f8f2ee"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-12T15:55:17.679794+00:00",
+      "command": [
+        "node",
+        "web/node_modules/typescript/bin/tsc",
+        "-b",
+        "web",
+        "--noEmit"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "4ff321645b4d5e63ffc4eb5355ff6d325793a83417eaebf729d09aabe0f33e20",
+      "plan_hash": "b35f415a0930b64cfbf2a1a6f3faebd94d27d6178b3456804527571c4f94463b",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-review-bar-soft-fill/1794498872488910200-web.log"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T15:55:17.681296+00:00"
+}
