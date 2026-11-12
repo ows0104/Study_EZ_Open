@@ -16,11 +16,16 @@ export type RootSummary = {total: number; learned: number; recalled: number; uns
 export type RootPlan = {tasks:{task_id:string; direction_id:string; question_id:string; reason:string}[];
   newGoalQuota:number; days:number|null; habitualTasks:number|null; deadline:string|null;
   preparedUnseen:number; unpreparedGoals:number; scopeNote:string};
+export const ROOT_TIERS=['Essential','Core','Important','Optional'] as const;
+export type RootTierName=typeof ROOT_TIERS[number];
+export type RootFocus={tiers:RootTierName[]; counts:Record<RootTierName,number>};
 /** 강의 목록 카드 열(문항 단위). Quiz Bank `CardProgress`와 같은 단계 이름. */
 export type RootQuestionProgress = {total:number; unseen:number; recognized:number; retrieving:number; retained:number; reviewDue:number};
 export type RootOverview = {revision:string; title:string; policyReady:boolean; message?:string;
   policy?:RootPolicy; summary:RootSummary|null; plan:RootPlan|null; sessionId:string|null; preparationProblems?:number;
   questionProgress?:RootQuestionProgress;
+  /** 오늘 학습 중요도 필터(2026-11-12). plan은 tiers로 거른 결과, counts는 준비된 과제 수(거르기 전). */
+  focus?:RootFocus;
   scope?:{label:string; limitations:string[]; included:string[]; excluded:string[]}};
 export type RootView = {sessionId:string; revision:string; version:number; day:string; policy:RootPolicy;
   position:number; count:number; finished:boolean; blocked:string|null; canUndo:boolean; mapSeen:boolean; summary:RootSummary;

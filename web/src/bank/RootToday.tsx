@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import type { RootOverview, RootSummary, RootPolicy } from '../types/rootLearning';
+import { ROOT_TIERS } from '../types/rootLearning';
+import type { RootFocus, RootOverview, RootSummary, RootPolicy, RootTierName } from '../types/rootLearning';
 import { Icon } from '../shell/icons';
 
 export function RootPolicyNotice({policy}:{policy?:RootPolicy}) {
@@ -29,8 +30,24 @@ function Stat({label,value,total,tone}:{label:string;value:number;total?:number;
  * Main-Quiz 첫 화면(2026-11-08). 홈의 「강의 목록」과 같은 머리·숫자 칸·카드 모양.
  * 해야 할 일(오늘 학습)을 한 장의 카드에 두고, 설명·정책·판 정보는 접어 둔다.
  */
-export function RootToday({info,onStart,disabled,starting=false,onMap,lectureLink,admin}:{info:RootOverview;onStart:()=>void;disabled:boolean;
-  starting?:boolean;onMap?:()=>void;lectureLink?:string;admin?:ReactNode}) {
+/** 오늘 학습 중요도 필터(2026-11-12). 이름과 준비된 과제 수만. 마지막 남은 칩은 끌 수 없다. */
+function FocusChips({focus,disabled,onChange}:{focus:RootFocus;disabled:boolean;onChange:(tiers:RootTierName[])=>void}) {
+  const on=new Set(focus.tiers);
+  return <div className="mq-focus" role="group" aria-label="중요도">
+    {ROOT_TIERS.map(tier=>{
+      const pressed=on.has(tier),last=pressed&&on.size===1;
+      return <button key={tier} type="button" aria-pressed={pressed} disabled={disabled||last}
+        className={focus.counts[tier]?undefined:'is-empty'}
+        onClick={()=>onChange(ROOT_TIERS.filter(t=>t===tier?!pressed:on.has(t)))}>
+        {pressed&&<Icon.check/>}{tier}<b>{focus.counts[tier]}</b></button>;
+    })}
+  </div>;
+}
+
+export function RootToday({info,onStart,disabled,starting=false,onMap,onFocus,focusing=false,lectureLink,admin}:{info:RootOverview;onStart:()=>void;disabled:boolean;
+  starting?:boolean;onMap?:()=>void;onFocus?:(tiers:RootTierName[])=>void;
+  /** 중요도 저장·재계획 응답 대기 중: 카드 수를 흐리게 둔다. */
+  focusing?:boolean;lectureLink?:string;admin?:ReactNode}) {
   const p=info.plan,s=info.summary;
   const learned=s&&s.total?s.learned/s.total*100:0,recalled=s&&s.total?s.recalled/s.total*100:0;
   return <section className="mq-start">
@@ -57,11 +74,14 @@ export function RootToday({info,onStart,disabled,starting=false,onMap,lectureLin
       {p?<>
         <div className="mq-today-text">
           <h2>오늘 추천</h2>
-          <p>{p.tasks.length?<>과제 <b>{p.tasks.length}</b>개 · 새 목표 최소 <b>{p.newGoalQuota}</b>개</>:'지금 추천할 과제가 없습니다.'}</p>
+          <p>{p.tasks.length?<>새 목표 최소 <b>{p.newGoalQuota}</b>개</>:'지금 추천할 과제가 없습니다.'}</p>
           <small>{p.deadline?`첫 학습 목표일 ${p.deadline}${p.days!==null&&p.days<=0?' · 목표일 지남':''}`:'시험일 미정 · 준비된 새 범위와 필요한 복습을 추천합니다.'}</small>
+          {info.focus&&onFocus&&<FocusChips focus={info.focus} disabled={disabled||starting} onChange={onFocus}/>}
         </div>
         <button className="mq-start-button" disabled={disabled||!p.tasks.length&&!info.sessionId} onClick={onStart} aria-busy={starting}>
-          <Icon.play/>{info.sessionId?'오늘 학습 재개':'오늘 학습 시작'}</button>
+          <Icon.play/>{info.sessionId?'오늘 학습 재개':'오늘 학습 시작'}
+          {!info.sessionId&&<span className="mq-card-count" aria-label={`카드 ${p.tasks.length}개`} aria-live="polite"
+            data-busy={focusing||undefined}>{p.tasks.length.toLocaleString('ko-KR')}</span>}</button>
         {starting&&<span className="sr-only" role="status">첫 문항을 여는 중…</span>}
       </>:<p className="mq-today-text">{info.message}</p>}
     </section>

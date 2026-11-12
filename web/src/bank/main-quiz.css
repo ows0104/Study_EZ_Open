@@ -161,6 +161,21 @@
 .mq-start-button:hover:not(:disabled){background:var(--accent-ink)}
 .mq-start-button:disabled{opacity:.45;cursor:default}
 .mq-start-button svg{width:16px;height:16px}
+/* 오늘 학습 중요도 필터(2026-11-12) */
+.mq-focus{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.main-quiz-learning .mq-focus button{display:inline-flex;align-items:center;gap:6px;height:34px;min-height:0;padding:0 14px;border-radius:999px;
+  border:1px solid var(--line-strong,var(--line));background:var(--surface);color:var(--ink-2);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;opacity:1}
+.mq-focus button b{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink-3)}
+.mq-focus button svg{width:14px;height:14px;flex:none;margin-left:-3px}
+.main-quiz-learning .mq-focus button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
+.main-quiz-learning .mq-focus button[aria-pressed="true"] b{color:var(--on-accent)}
+.mq-focus button.is-empty[aria-pressed="false"]{opacity:.6}
+.mq-focus button:disabled{cursor:default}
+.main-quiz-learning .mq-focus button[aria-pressed="false"]:hover:not(:disabled){border-color:var(--accent);color:var(--accent-ink)}
+.mq-card-count{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:24px;padding:0 7px;margin-left:2px;
+  border-radius:7px;background:color-mix(in srgb,var(--on-accent) 22%,transparent);color:var(--on-accent);
+  font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.mq-card-count[data-busy]{opacity:.45}
 .mq-more{border:1px solid var(--line);border-radius:12px;padding:0 16px;background:var(--surface)}
 .mq-more>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:13.5px;color:var(--ink-2)}
 .mq-more[open]{padding-bottom:12px}

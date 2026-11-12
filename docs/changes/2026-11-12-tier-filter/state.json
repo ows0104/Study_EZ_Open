@@ -1,0 +1,271 @@
+{
+  "id": "2026-11-12-tier-filter",
+  "title": "Main-Quiz 오늘 학습 중요도 필터",
+  "area": "site",
+  "created_at": "2026-11-11T17:16:55.402251+00:00",
+  "required_checks": [
+    "web",
+    "server"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-11T18:12:42.926116+00:00",
+      "evidence": "사용자 2026-11-12 채팅: 「고르면 옆에 체크 표시가 보이게 설정해줘 … 오늘 학습 시작 옆에 카드 수를 보여줄 수 있어? … 실시간으로 변경해줘」, 이어서 「시작 오른쪽에 작은 둥글린 네모 같은 걸로 감싼, 버튼 안에 있는 [2] 이런 걸로 추가해줘」 → spec R6·R7. R8은 검증 중 찾은 같은 시각 저장 순서 결함 수정(범위 내 파일)",
+      "scope": "plan.md 범위 그대로(content.py·routes/root_learning.py·RootToday.tsx·RootLearning.tsx·main-quiz.css·types·test_root_focus.py), PR #119·master 병합. DB 스키마·운영 데이터·문항 변경 제외",
+      "evidence_version": 2,
+      "source_hash": "dc936b7e23537943f1821199bb2672bd6542ddc799c4f6e13d8015b84f44b692",
+      "plan_hash": "b5fa0a1ce1a1c68dd4fdc6ee90f2d07a055cac7d06d4288231033be6b7d7ab0c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "5ba53171e047041458e4f2ef90ee9db24a1897abb961975212bb4ffb06ac732d"
+    }
+  },
+  "checks": [
+    {
+      "name": "server",
+      "at": "2026-11-11T17:33:44.219693+00:00",
+      "command": [
+        "server/.venv/Scripts/python.exe",
+        "-m",
+        "tests",
+        "root"
+      ],
+      "exit_code": 127,
+      "evidence_version": 2,
+      "source_hash": "e806cabab1b442800c87df9b2c1f89159b525cc36c949caac3215512daa9ff3b",
+      "plan_hash": "7dc1753b98b10e901e8c42d49e18f9c58624af40eba013c1ecf5ee06cf0aaa89",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-tier-filter/1794418423747359000-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-11T17:37:19.679867+00:00",
+      "command": [
+        "C:/Python314/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); sys.exit(subprocess.run([os.path.join(root,'server','.venv','Scripts','python.exe'),'-m','tests','root','main_quiz'],cwd=os.path.join(root,'server'),env=dict(os.environ,PYTHONPATH=root,PYTHONIOENCODING='utf-8')).returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "e806cabab1b442800c87df9b2c1f89159b525cc36c949caac3215512daa9ff3b",
+      "plan_hash": "7dc1753b98b10e901e8c42d49e18f9c58624af40eba013c1ecf5ee06cf0aaa89",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-tier-filter/1794418444446739000-server.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-11T17:37:49.006668+00:00",
+      "command": [
+        "C:/Python314/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); sys.exit(subprocess.run('npm run build',shell=True,cwd=os.path.join(root,'web')).returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "e806cabab1b442800c87df9b2c1f89159b525cc36c949caac3215512daa9ff3b",
+      "plan_hash": "7dc1753b98b10e901e8c42d49e18f9c58624af40eba013c1ecf5ee06cf0aaa89",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-tier-filter/1794418647957970400-web.log",
+      "web_artifact": "338e45a498b3fea3cb8e84469fffc8b254e9074a60e3c3262edfb3127f83c23d",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-11T18:16:47.970487+00:00",
+      "command": [
+        "C:/Python314/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); sys.exit(subprocess.run([os.path.join(root,'server','.venv','Scripts','python.exe'),'-m','tests','root','main_quiz'],cwd=os.path.join(root,'server'),env=dict(os.environ,PYTHONPATH=root,PYTHONIOENCODING='utf-8')).returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "dc936b7e23537943f1821199bb2672bd6542ddc799c4f6e13d8015b84f44b692",
+      "plan_hash": "b5fa0a1ce1a1c68dd4fdc6ee90f2d07a055cac7d06d4288231033be6b7d7ab0c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-tier-filter/1794420778568626400-server.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-11T18:17:17.182653+00:00",
+      "command": [
+        "C:/Python314/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); sys.exit(subprocess.run('npm run build',shell=True,cwd=os.path.join(root,'web')).returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "dc936b7e23537943f1821199bb2672bd6542ddc799c4f6e13d8015b84f44b692",
+      "plan_hash": "b5fa0a1ce1a1c68dd4fdc6ee90f2d07a055cac7d06d4288231033be6b7d7ab0c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-tier-filter/1794421009108108600-web.log",
+      "web_artifact": "65e4f9b5fa647265d8fa079eb0720c0d8af62c37265741e848b61db22f756df7",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-12T02:13:57.233031+00:00",
+      "command": [
+        "C:/Python314/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); sys.exit(subprocess.run([os.path.join(root,'server','.venv','Scripts','python.exe'),'-m','tests'],cwd=os.path.join(root,'server'),env=dict(os.environ,PYTHONPATH=root,PYTHONIOENCODING='utf-8')).returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "6a29cef447d920df3ad845e9b86df211caaf4870135c0101e47b5811395f2a9a",
+      "plan_hash": "b5fa0a1ce1a1c68dd4fdc6ee90f2d07a055cac7d06d4288231033be6b7d7ab0c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-tier-filter/1794449267687556500-server.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-12T02:14:09.687752+00:00",
+      "command": [
+        "C:/Python314/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); sys.exit(subprocess.run('npm run build',shell=True,cwd=os.path.join(root,'web')).returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "6a29cef447d920df3ad845e9b86df211caaf4870135c0101e47b5811395f2a9a",
+      "plan_hash": "b5fa0a1ce1a1c68dd4fdc6ee90f2d07a055cac7d06d4288231033be6b7d7ab0c",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-tier-filter/1794449637687527200-web.log",
+      "web_artifact": "18e0441f1a35de0a008e8dca02fac09e6ee110596d4f5e58b4072b4b21508e30",
+      "web_environment": "508ac568315d056ba7d1efed62c09fc2b2f8f7056c8f17f54890d4e25084cbb2"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T02:14:12.660813+00:00"
+}

@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
 import { useMe } from '../useMe';
-import type { RootAction, RootMapData, RootOverview, RootView } from '../types/rootLearning';
+import type { RootAction, RootMapData, RootOverview, RootTierName, RootView } from '../types/rootLearning';
 import { useRootStudyWrites } from './useRootStudyWrites';
 import { useRootFrames } from './useRootFrames';
 import { RootToday } from './RootToday';
@@ -131,6 +131,21 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
     catch(e){if(!(e instanceof ApiError))setError((e as Error).message);}
     finally{setAdvancing(false);}
   }
+  // 오늘 학습 중요도 필터(2026-11-12): chips change at once; the server's overview (re-planned) replaces it.
+  const focusSeq=useRef(0);
+  // Start waits for the newest choice: the server plans from what it has stored.
+  const [focusing,setFocusing]=useState(false);
+  async function changeFocus(tiers:RootTierName[]) {
+    const current=info;
+    if(!current?.focus)return;
+    const seq=++focusSeq.current;
+    setInfo({...current,focus:{...current.focus,tiers}});setFocusing(true);
+    try{
+      const next=await api<RootOverview>(base+'/focus',{method:'PUT',body:JSON.stringify({requestId:crypto.randomUUID(),tiers})});
+      if(seq===focusSeq.current)setInfo(next);
+    }catch(e){if(seq===focusSeq.current){setInfo(current);setError((e as Error).message);}}
+    finally{if(seq===focusSeq.current)setFocusing(false);}
+  }
   // The map tab is chosen at once: from the start screen the session it needs is opened underneath,
   // and the question screen is never drawn on the way (2026-11-09).
   async function showMap() {
@@ -202,7 +217,7 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
             viewRef.current=next;setView(next);if(!current.finished)ensure(current.position,current.count);}} advancing={advancing} onAction={act} onError={setError} onMap={()=>void showMap()}
           onToday={()=>{setView(null);setMap(null);setTab('learn');void refresh().catch(e=>setError(e.message));}}/>}
       {view.blocked?.includes('학습일')&&<button disabled={writes.blocked} onClick={()=>{setView(null);void refresh().catch(e=>setError(e.message));}}>오늘 학습 다시 계획</button>}
-    </>:info?<RootToday info={info} disabled={writes.blocked||advancing} starting={advancing} onStart={()=>void begin()} onMap={()=>void showMap()}
-      lectureLink={lectureHref({subject,runId})} admin={adminTools}/>:!error&&<><p className="notice" role="status">Main-Quiz를 불러오는 중…</p>{adminTools}</>}
+    </>:info?<RootToday info={info} disabled={writes.blocked||advancing} starting={advancing} onStart={()=>{if(!focusing)void begin();}} onMap={()=>void showMap()}
+      onFocus={tiers=>void changeFocus(tiers)} focusing={focusing} lectureLink={lectureHref({subject,runId})} admin={adminTools}/>:!error&&<><p className="notice" role="status">Main-Quiz를 불러오는 중…</p>{adminTools}</>}
   </main>;
 }
