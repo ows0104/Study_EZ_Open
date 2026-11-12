@@ -94,6 +94,8 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
     }catch(cause){onError((cause as Error).message);}
     finally{setTierBusy(false);}
   }
+  /** 이 판에서 내 학습에서 뺀다(2026-11-12). Z로 되돌린다. */
+  function exclude(){if(!disabled&&!advancing&&task&&!view.blocked?.includes('학습일'))onAction({kind:'exclude'});}
   function rate(selfRating:BankRating){if(!locked&&task?.answer)onAction({kind:'rate',selfRating});}
   // 문항 타이머(2026-11-11): 문제 0초 → 답 보기, 해설 40초 0초 → Again(사용자 선택).
   const [timerOn,setTimerOn]=useState(readTimerOn);
@@ -111,10 +113,17 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       if(document.querySelector('dialog[open], [role="dialog"][aria-modal="true"]')||target.closest('input,textarea,select,[contenteditable="true"]'))return;
       if(event.key==='Tab'&&!event.shiftKey&&timerOn){event.preventDefault();timer.togglePause();return;}
       const number=/^[1-4]$/.test(event.key);
-      if(target.closest('a,summary')||target.closest('button')&&!number)return;
+      if(target.closest('a,summary')||target.closest('button')&&!number&&event.key!=='5')return;
       if((event.code==='Space'||event.key==='Enter')&&!task.answer){event.preventDefault();reveal();}
       if(event.code==='KeyV'&&recallClosed){event.preventDefault();showChoices();}
       if(task.answer&&number){event.preventDefault();rate(RATINGS[Number(event.key)-1]);}
+      // 답 보기 전 1–4: 화면에 보이는 선지(객관식 선지, 또는 V로 편 단답·나열 선지)에서 그 번호를 고른다.
+      if(!task.answer&&number){
+        const shown=recall?(choices?recall:[]):hiddenChoices?[]:task.question.options;
+        const option=shown[Number(event.key)-1];
+        if(option){event.preventDefault();pick(option.id);}
+      }
+      if(event.key==='5'){event.preventDefault();exclude();}
       if(event.key.toLowerCase()==='z'&&view.canUndo){event.preventDefault();onAction({kind:'undo'});}
     };
     window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler);
@@ -134,6 +143,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
         <div className="mq-menu-pop" onClick={e=>{if((e.target as HTMLElement).closest('button'))menu.current?.removeAttribute('open');}}>
           {!task?.answer&&<button disabled={locked} onClick={()=>reveal(false)}>답만 보기</button>}
           <button disabled={disabled||advancing||!!view.blocked?.includes('학습일')} onClick={()=>onAction({kind:'skip'})}>이 문제 보류</button>
+          <button disabled={disabled||advancing||!task||!!view.blocked?.includes('학습일')} onClick={exclude} aria-keyshortcuts="5">이 문제 제외 <kbd>5</kbd></button>
           {task&&editPath&&<button disabled={disabled||advancing} onClick={()=>setEditing(true)}>문제 수정·제보</button>}
           {/* 기록은 평가마다 저장된다. 이 버튼은 풀이를 멈추고 오늘 현황(시작 화면)으로 간다. */}
           <button disabled={disabled||advancing} onClick={onToday}>오늘 현황 보기</button>

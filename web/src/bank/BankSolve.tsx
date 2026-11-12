@@ -288,6 +288,17 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
     }
   }
 
+  const pickOption = useCallback((id: string) => {
+    const q = current?.question;
+    if (!q || answer || busy || undoBusy || transition) return;
+    setPicked((old) => {
+      const fresh = new Set(q.format === "mcq" ? [] : old);
+      if (old.has(id) && q.format !== "mcq") fresh.delete(id);
+      else fresh.add(id);
+      return fresh;
+    });
+  }, [current, answer, busy, undoBusy, transition]);
+
   // 키보드 — 기존 웹 풀이와 같다. Space·Enter 로 펴고, 1–4 로 찍는다. 지도를 보는 동안은 안 받는다.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -313,6 +324,13 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
           if (event.key !== " " || !complete) return;
         }
       }
+      if (!answer && ["1", "2", "3", "4"].includes(event.key)) {
+        // 답 보기 전 1–4: 그 번호 선지(화면 머리표와 같은 번호). 기억 확인형은 선지를 펼친 뒤에만.
+        const q = current?.question;
+        const option = q && !(q.mcq_mode === "recall_first" && !current.choicesShown) ? q.options[Number(event.key) - 1] : undefined;
+        if (option) { event.preventDefault(); pickOption(option.id); }
+        return;
+      }
       if ((event.key === " " || event.key === "Enter") && !answer) {
         event.preventDefault();
         if (current?.question?.mcq_mode === "recall_first" && !current.choicesShown) void showChoices();
@@ -324,7 +342,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [answer, reveal, rate, peek, current, showChoices, suspend, matches, order, picked, commonEditing]);
+  }, [answer, reveal, rate, peek, current, showChoices, suspend, matches, order, picked, commonEditing, pickOption]);
 
   if (current?.waiting) return <div className="quiz bank-start">
     <h2>지금 풀 수 있는 분량을 마쳤어요!</h2>
@@ -438,15 +456,7 @@ export function BankSolve({ base: initialBase, lecture: initialLecture, onFinish
               const unfilled = left.findIndex(item => !fresh[item]);
               setActiveMatch(following >= 0 ? following : unfilled >= 0 ? unfilled : activeMatch);
             }} /> : undefined}
-          onPick={(id) => {
-          if (answer || busy || undoBusy) return;
-          setPicked((old) => {
-            const fresh = new Set(q.format === "mcq" ? [] : old);
-            if (old.has(id) && q.format !== "mcq") fresh.delete(id);
-            else fresh.add(id);
-            return fresh;
-          });
-        }} />
+          onPick={pickOption} />
 
         <div className="bank-question-actions">
           {q.personalEdited ? <span className="tag">내 수정본</span> : null}

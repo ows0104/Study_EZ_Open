@@ -89,7 +89,8 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
       const moved={...current,version,position,canUndo:true,blocked:null};
       if(position>=current.count)return {...moved,finished:true,task:null};
       const frame=frames.get(position);
-      if(!frame)return null;
+      // 막힌 과제(제외 등)는 서버가 건너뛸 수 있다 — 서버 기록을 받아 그린다.
+      if(!frame||frame.blocked)return null;
       return {...moved,blocked:frame.blocked,task:frame.task?{id:frame.task.id,question:frame.task.question,answer:null,response:null,
         attempted:null,helped:current.mapSeen||frame.task.helped}:null};
     }
@@ -115,6 +116,8 @@ function Learning({subject,runId,account}:{subject:string;runId:string;account:s
       if(next.finished)void confirmed.then(r=>Promise.all([loadSession(r.sessionId,true),refresh()])).catch(()=>{});
       return;
     }
+    // 제외: 미리 받은 뒤 과제의 막힘 여부가 바뀐다. 다시 받고, Z가 이 화면으로 돌아오게 둔다.
+    if(action.kind==='exclude'){forget();undoSnapshots.current=[...undoSnapshots.current,current];}
     // No prepared frame yet: confirm, then read the session (the former path).
     setAdvancing(true);
     void confirmed.then(r=>loadSession(r.sessionId)).catch(e=>{if(!(e instanceof ApiError))setError((e as Error).message);})
