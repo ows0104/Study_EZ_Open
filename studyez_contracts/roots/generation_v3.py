@@ -663,6 +663,25 @@ def _authored(output):
     return value
 
 
+def cloze_units(bank):
+    """Set each inline cloze's answer_units to its {blanks} in order, in place; returns what changed.
+
+    The blanks are what a learner and the coverage judge see (_front: one unit per blank). An author may also
+    write answer_units that merge a table row's blanks into one unit or drop a repeated blank; the site then put
+    the wrong unit in every later cell (2026-11-12: 92 of 696 published cloze, 13 with another count). Applied
+    where a model's questions enter the bank: the generators' intake and merge_added/merge_fixes. The server does
+    not re-derive those, so a runner and a server of either version still accept each other's results."""
+    changes = []
+    for q in bank.get('questions', []):
+        if q.get('format') != 'cloze':
+            continue
+        units = normalize_cloze(q).get('answer_units') or []
+        if units and units != q.get('answer_units'):
+            changes.append({'question_id': q['question_id'], 'from': q.get('answer_units'), 'to': list(units)})
+            q['answer_units'] = list(units)
+    return changes
+
+
 def with_tier(output):
     """Each question and concept takes the tier its importance names (bank 3.3 table)."""
     value = copy.deepcopy(output)
@@ -677,6 +696,7 @@ def merge_added(bank, clinical_conflicts, output, allowed_ids):
     output = _authored(output)
     validate_shape(output, ADD_OUTPUT, 'v3 add output')
     output = with_tier(output)
+    cloze_units(output)
     output = _without(output, restated(bank, clinical_conflicts, output))
     ids = [q['question_id'] for q in output['questions']]
     require(len(ids) == len(set(ids)), 'v3 add: duplicate question IDs')
@@ -705,6 +725,7 @@ def merge_fixes(bank, clinical_conflicts, output, targets):
     output = _authored(output)
     validate_shape(output, FIX_OUTPUT, 'v3 fix output')
     output = with_tier(output)
+    cloze_units(output)
     cited = {q.get('conflict_id') for q in output['questions'] if q.get('conflict_id')}
     output = _without(output, restated(bank, clinical_conflicts, output, cited))
     ids = [q['question_id'] for q in output['questions']]

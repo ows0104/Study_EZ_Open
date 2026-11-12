@@ -248,9 +248,20 @@ def front(q):
     return result
 
 
+def answer_units(q):
+    """Units in blank order. A cloze stem's {blanks} are what front() shows, one unit each; the stored
+    answer_units of a generated revision may merge rows or drop a repeated blank (2026-11-12: 92 of 696
+    cloze), which shifted every later cell. An answer the learner rewrote has no units (bank_personal)."""
+    units = q.get('answer_units', [])
+    if q.get('format') == 'cloze' and units:
+        from studyez_contracts.bank.cloze import normalize_cloze
+        units = normalize_cloze(q).get('answer_units', units)
+    return units
+
+
 def answer(q):
     return {'answer': q['answer'], 'explanation': q.get('explanation', ''),
-            'answerUnits': q.get('answer_units', []), 'correctOptionIds': q.get('correct_option_ids', []),
+            'answerUnits': answer_units(q), 'correctOptionIds': q.get('correct_option_ids', []),
             'answerPairs': q.get('answer_pairs', []), 'correctOrder': q.get('correct_order', []),
             'slides': [], 'optionExplanations': q.get('option_explanations', []),
             'personalAnswer': bool(q.get('personalAnswer'))}
