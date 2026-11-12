@@ -383,6 +383,16 @@ def _merge_row(old, new, replaced=()):
             'reason': new['reason'] if new['status'] == 'covered' or not kept_cover else old['reason']}
 
 
+def _question_of(text, question_ids=None):
+    """The question a validate_bank error line belongs to, or None. The line starts with the question's id; a bank may
+    number its questions any way (261104_01 ST-Q061, 261110_03 R049), so the bank's own ids decide when they are given."""
+    label = text.split(':', 1)[0].strip()
+    if question_ids is not None and label in question_ids:
+        return label
+    m = _QID.match(text)
+    return m.group(1) if m else None
+
+
 def _bank_findings(bank, sources, attempts=None):
     """Code checks per question (format errors and quality measures); never a model call.
 
@@ -390,18 +400,19 @@ def _bank_findings(bank, sources, attempts=None):
     was fixed once is not sent back for them again (`attempts`): on the 261113_01 run the model left such a question
     as it was and the same warning spent its second fix (docs/changes/2026-11-11-tier-from-importance)."""
     found = {}
+    ids = {q['question_id'] for q in bank['questions']}
     done = {q for q, n in (attempts or {}).items() if n >= 1}
     advice = [r['text'] for r in v2.quality_reasons(bank) if not set(r['question_ids']) & done]
     for text in validate_bank(bank, sources)['errors'] + advice:
-        m = _QID.match(text.replace('문항 품질: ', ''))
-        if m:
-            found.setdefault(m.group(1), []).append(text)
+        qid = _question_of(text.replace('문항 품질: ', ''), ids)
+        if qid:
+            found.setdefault(qid, []).append(text)
     for qid in v3.history_marked(bank):
         found.setdefault(qid, []).append(qid + ': 문항·정답·해설에 검수·판정 이력 표현이 있다. 원본에 근거한 의학 설명으로만 쓴다.')
     return found
 
 
-def intake_rejections(errors, quiet=False):
+def intake_rejections(errors, quiet=False, question_ids=None):
     """Questions left out at intake, from validate_bank errors. A bank-level error stops the run, except a resolved
     conflict's missing source citation: it is printed and carried on, and stays in the final validation errors
     (shown to the administrator as an issue) unless a later fix adds the citation.
@@ -416,9 +427,9 @@ def intake_rejections(errors, quiet=False):
                 if not quiet:
                     print('접수 경고(출처 충돌 인용 누락, 진행): ' + text, flush=True)
             continue
-        m = _QID.match(text)
-        v3.require(m, '문제은행 형식 오류가 특정 문항에 속하지 않습니다. 결과를 만들지 않고 보존합니다: ' + text)
-        rejected.append({'question_id': m.group(1), 'error': text})
+        qid = _question_of(text, question_ids)
+        v3.require(qid, '문제은행 형식 오류가 특정 문항에 속하지 않습니다. 결과를 만들지 않고 보존합니다: ' + text)
+        rejected.append({'question_id': qid, 'error': text})
     return rejected
 
 
@@ -428,7 +439,7 @@ def _intake(packet, out):
     bank, projection = v3.intake_projection(intake['bank'])
     sources = [s['id'] for s in packet['sources']]
     report = validate_bank(bank, sources)
-    rejected = intake_rejections(report['errors'])
+    rejected = intake_rejections(report['errors'], question_ids={q['question_id'] for q in bank['questions']})
     bad = {r['question_id'] for r in rejected}
     if bad:
         bank['questions'] = [q for q in bank['questions'] if q['question_id'] not in bad]

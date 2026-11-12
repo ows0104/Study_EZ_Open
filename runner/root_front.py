@@ -422,7 +422,8 @@ class Front:
             from quizbank.connection_generate_v3 import intake_rejections
             from studyez_contracts.bank.validate import validate_bank
             projected, _ = v3.intake_projection(value['bank'])
-            intake_rejections(validate_bank(projected, sources)['errors'], quiet=True)
+            intake_rejections(validate_bank(projected, sources)['errors'], quiet=True,
+                              question_ids={q['question_id'] for q in projected['questions']})
             return value
         info, result, value = self.checked(work, task, f'{self.title} bank authoring', 'bank.json', check)
         self.finish(work, info, result, {'questions': len(value['bank']['questions']), 'bankHash': document_hash(value)})
