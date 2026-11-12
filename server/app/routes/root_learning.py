@@ -339,15 +339,15 @@ def project_session(db, row, doc, user, when):
     return out
 
 
-def active_generation(db, doc, *, light=False):
-    """light: the caller reads only packet/web_dispatch (source snapshots), so the large
-    result/web_response JSON stays in the database unless something touches it."""
+def active_generation(db, doc, *, light=True):
+    """The revision's generation record without its large result/web_response JSON (both deferred).
+    Learner paths read only packet/web_dispatch (source snapshots) and the review notes, which
+    revealed_answer takes from review_notes (extracted once per record). `light` is kept for callers."""
     from app.models.root_generation import RootGeneration
     query = select(RootGeneration).where(RootGeneration.subject == doc.subject,
         RootGeneration.run_id == doc.run_id, RootGeneration.result_digest.is_not(None),
         RootGeneration.packet['revision'].as_string()==doc.revision)
-    if light:
-        query = query.options(defer(RootGeneration.result), defer(RootGeneration.web_response))
+    query = query.options(defer(RootGeneration.result), defer(RootGeneration.web_response))
     return db.scalars(query).first()
 
 
@@ -557,18 +557,11 @@ def revealed_answer(db, doc, q, generation=_UNSET):
     if generation is _UNSET:
         generation = active_generation(db, doc)
     if generation:
-        result = generation.result
-        if result.get('policy')in('verified-main-quiz-replacement/1','verified-main-quiz-curation/1'):
-            from app.root_learning.replacement_import import report as replacement_report
-            summary=replacement_report(result)
-            answer['reviewNotes']=[r for r in summary['questionNotes']if r['question_id']==q['question_id']]
-            answer['reviewIssues']=question_issues(summary['issues'],q['question_id'])
-        else:
-            answer['reviewNotes'] = [
-            {'source': label, **r} for label, checks in [('원본 대조', result['sourceAudit']['question_checks']), ('의학 검토' if (result.get('manifest') or {}).get('medicalFinal') else '독립 정답 검수', result['medical'])]
-            for r in checks['reviews'] if r['question_id'] == q['question_id'] and r['verdict'] != 'ok']
-            answer['reviewIssues'] = question_issues(
-                result['sourceAudit']['input_issues'] + result['validation']['errors'] + result['validation']['warnings'], q['question_id'])
+        # 출제 기록 result(판당 3.6–9.5 MB)를 요청마다 읽지 않는다 — 판마다 한 번 뽑은 메모(review_notes, 2026-11-12).
+        from app.root_learning import review_notes
+        notes = review_notes.for_generation(db, generation)
+        answer['reviewNotes'] = [r for r in notes['notes'] if r['question_id'] == q['question_id']]
+        answer['reviewIssues'] = question_issues(notes['issues'], q['question_id'])
     # Quiz Bank와 같은 자료 충돌·자료 밖(EXT) 표시. 판 문서에 고정된 충돌 기록만 쓴다(2026-11-08).
     conflict = next((c for c in doc.document['bank_snapshot'].get('source_conflicts', [])
                      if q.get('conflict_id') and c.get('conflict_id') == q['conflict_id']), None)
