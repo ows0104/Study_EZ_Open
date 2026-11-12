@@ -636,7 +636,9 @@ def validate_all(out,payload):
 def main():
     p=argparse.ArgumentParser();p.add_argument('--packet',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--model')
     p.add_argument('--resume',metavar='REASON',help='keep revalidated completed stages; rerun only the rest (stage-resume/1)')
-    p.add_argument('--rerun',metavar='STAGE',action='append',default=[],help='with --resume: also run this completed stage again');a=p.parse_args()
+    p.add_argument('--rerun',metavar='STAGE',action='append',default=[],help='with --resume: also run this completed stage again')
+    # duplicates-only/1 (docs/changes/2026-11-12-dedupe-published): the published /4 run this request judges again for duplicates only.
+    p.add_argument('--duplicates-of',type=Path,metavar='GENERATION_DIR');a=p.parse_args()
     if a.rerun and not a.resume:p.error('--rerun needs --resume <reason>')
     try:
         require_unblocked(a.out)
@@ -647,7 +649,7 @@ def main():
             # 259 characters. A copy of 261102_02 in a deeper folder failed in the middle of a late stage.
             deepest=a.out.resolve()/'.resume-99'/'.native'/'v3-coverage-fix-context-0'/'work'/'material'/('stimulus-'+'0'*64+'.png')
             require(os.name!='nt'or len(str(deepest))<260,f'실행 폴더 경로가 너무 깁니다({len(str(a.out.resolve()))}자). 단계 폴더의 파일이 Windows 경로 한도 259자를 넘습니다. 모델 호출 전에 멈춥니다.')
-        result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)or packet.get('generationPolicy')in('root-generation/3','root-generation/4')else None,resume=a.resume,rerun=tuple(a.rerun))
+        result=g.run(packet,a.out,model=a.model,invoke=NativeJson(a.out)if is_v2_source(packet)or packet.get('generationPolicy')in('root-generation/3','root-generation/4')else None,resume=a.resume,rerun=tuple(a.rerun),duplicates_of=a.duplicates_of)
         validate_all(a.out,result)
         if packet.get('parallelAuthoring'):
             from runner.parallel_status import refresh

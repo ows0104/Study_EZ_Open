@@ -220,8 +220,9 @@ def _generate(client, subject, run_id, base, packet, packet_path, out, *, model=
     if model: args += ['--model', model]
     if resume and module == 'runner.root_native_json' and (gen_out / 'ledger.json').exists(): args += ['--resume', resume]
     if previous is not None:
+        # A map-tree packet is a source-assessment/2 packet: the native transport runs it (runner.root_native_json).
+        if module != 'runner.root_native_json': raise ValueError('중복 재판정은 map-tree 생성 packet만 받습니다.')
         args += ['--duplicates-of', str(previous.resolve())]
-        if resume and (gen_out / 'ledger.json').exists(): args += ['--resume', resume]
     if previous is None and (gen_out/'result.json').exists() and resume and gen_packet.get('generationPolicy')in('root-generation/3','root-generation/4'):
         set_aside_stale_result(gen_out,gen_packet,packet,resume)
     if (gen_out/'result.json').exists():payload=completed_result(gen_out,gen_packet)

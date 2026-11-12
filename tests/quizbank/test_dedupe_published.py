@@ -76,3 +76,45 @@ def test_the_same_revision_is_refused(tmp_path):
     with pytest.raises(ValueError, match='판 이름'):
         g.run(packet, tmp_path / 'new', invoke=Caveat(), duplicates_of=previous)
 
+
+
+class OtherGoal(Caveat):
+    """The re-judgment of D1 also names Q003 (evidence only for D2) a duplicate of Q1."""
+
+    def __call__(self, stage, ctx, material, model):
+        value, info = super().__call__(stage, ctx, material, model)
+        if stage.startswith('v4-coverage-dup'):
+            for r in value['rows']:
+                if r['direction_id'] == 'D1':
+                    r['duplicates'] = [{'question_ids': ['Q1', 'Q003'], 'reason': 'Synthetic'}]
+                    r['evidence'].append(self.evidence(next(g for g in ctx['goals'] if g['direction_id'] == 'D1'), 'Q003', 'R1', 'answer', stage))
+        return value, info
+
+
+def test_a_group_keeps_only_questions_the_goal_already_had(tmp_path):
+    previous, _, old, packet = published(tmp_path)
+    result = g.run(packet, tmp_path / 'new', invoke=OtherGoal(), duplicates_of=previous)
+    row = next(r for r in result['manifest']['coverage'] if r['direction_id'] == 'D1')
+    assert row['duplicates'] == [] and 'Q003' not in [e['question_id'] for e in row['evidence']]
+    assert ('Q1', 'D1') in tasks(result) and ('Q003', 'D2') in tasks(result)
+
+
+def test_another_model_is_refused_before_any_call(tmp_path):
+    previous, _, _, packet = published(tmp_path)
+    model = Caveat()
+    with pytest.raises(ValueError, match='모델'):
+        g.run(packet, tmp_path / 'new', model='gpt-other-model', invoke=model, duplicates_of=previous)
+    assert model.calls == [] and not (tmp_path / 'new' / 'ledger.json').exists()
+
+
+def test_an_interrupted_seed_is_linked_again_without_touching_the_previous_run(tmp_path):
+    previous, _, old, packet = published(tmp_path)
+    out = tmp_path / 'new'
+    out.mkdir()
+    (out / '.seeding').write_text(str(previous), encoding='utf-8')
+    stage = next(p for p in previous.glob('v4-*.json'))
+    (out / stage.name).write_text('partial', encoding='utf-8')   # a half-written entry from the crash
+    before = stage.read_bytes()
+    result = g.run(packet, out, invoke=Caveat(), duplicates_of=previous)
+    assert consume(result, packet) == result['document'] and not (out / '.seeding').exists()
+    assert stage.read_bytes() == before and (out / stage.name).read_bytes() == before

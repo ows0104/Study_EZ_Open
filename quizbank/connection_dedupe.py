@@ -24,6 +24,7 @@ import os
 import shutil
 from pathlib import Path
 
+from studyez_llm import codex
 from studyez_contracts.roots import document_hash
 from studyez_contracts.roots import generation_v2 as v2
 from studyez_contracts.roots import generation_v3 as v3
@@ -31,12 +32,13 @@ from studyez_contracts.roots import generation_v4 as v4
 from studyez_contracts.roots import map_tree
 from . import connection_batches as batches
 from .connection_generate_v3 import Stages, chunks, _prompt_hash, COVERAGE_CHUNK
-from .connection_generate_v4 import _first_evidence, _goals, _merge_row
+from .connection_generate_v4 import _goals, _merge_row
 
 POLICY = 'duplicates-only/1'
 X = 'v4-'
+SEEDING = '.seeding'   # present while the receipts are being linked; a rerun after a crash links them again
 # What the previous run's folder holds besides stage receipts: its own result and the work after publication.
-NOT_COPIED = {'result.json', 'readiness.json', 'packet.json', 'ledger.json', 'evidence', 'choices', '.check-render'}
+NOT_COPIED = {'result.json', 'readiness.json', 'packet.json', 'ledger.json', 'evidence', 'choices', '.check-render', SEEDING}
 # Packet fields that name the request, not the lecture input; everything else must be the previous run's.
 REQUEST_KEYS = {'generationId', 'revision', 'inputHash', 'derivedFrom', 'owner', 'privatePilot', 'requestedExamDate',
                 'examDate', 'restartOf', 'restartReason', 'replacePublished', 'duplicatesOnly', 'operatorResumes'}
@@ -56,7 +58,10 @@ def identity(packet, model):
 
 
 def _link(src, dst):
-    """Stage receipts are written once; a hard link shares them without copying gigabytes of `.native` work."""
+    """Stage receipts are written once; a hard link shares them without copying gigabytes of `.native` work.
+    An entry left by an interrupted seed is removed first, never written through (it may be a link to the old run)."""
+    if os.path.lexists(dst):
+        os.unlink(dst)
     try:
         os.link(src, dst)
     except OSError:
@@ -67,13 +72,14 @@ def seed(previous, out, packet, model, old_result):
     """Copy the previous run's receipts and point its ledger at this packet. A folder already seeded is kept."""
     if (out / 'ledger.json').exists():
         return
-    v3.require(not any(out.glob('*.json')) or {p.name for p in out.glob('*.json')} <= {'packet.json'},
+    v3.require((out / SEEDING).exists() or {p.name for p in out.glob('*.json')} <= {'packet.json'},
                '중복 재판정: 기존 산출물의 ledger가 없습니다. 자동 재시작하지 않습니다.')
     ledger = json.loads((previous / 'ledger.json').read_text(encoding='utf-8'))
     v3.require(ledger.get('pipelineVersion') == v4.POLICY, '중복 재판정: root-generation/4 실행만 받습니다.')
     v3.require(all(s['status'] == 'completed' for s in ledger['stages'].values()), '중복 재판정: 이전 실행에 끝나지 않은 단계가 있습니다.')
     v3.require(ledger.get('identity') == old_result['manifest']['runtimeHash'], '중복 재판정: 이전 실행의 ledger가 게시 결과와 다릅니다.')
     out.mkdir(parents=True, exist_ok=True)
+    (out / SEEDING).write_text(str(previous), encoding='utf-8')
     for item in sorted(previous.iterdir()):
         if item.name in NOT_COPIED:
             continue
@@ -86,6 +92,7 @@ def seed(previous, out, packet, model, old_result):
                                 'previousInputHash': ledger['inputHash'], 'previousIdentity': ledger['identity']}
     ledger.update(inputHash=packet['inputHash'], identity=identity(packet, model))
     (out / 'ledger.json').write_text(json.dumps(ledger, ensure_ascii=False, indent=2), encoding='utf-8')
+    (out / SEEDING).unlink()
 
 
 def run(packet, out, model, invoke, previous, resume=None):
@@ -97,6 +104,9 @@ def run(packet, out, model, invoke, previous, resume=None):
     v4.validate_result(old, old_packet)
     v3.require(lecture_input(old_packet) == lecture_input(packet), '중복 재판정: 이전 실행과 강의 입력이 다릅니다.')
     v3.require(old['document']['revision'] != packet['revision'], '중복 재판정: 새 판 이름이 이전 판과 같습니다.')
+    # Every receipt of a result is checked against the one model its manifest names (runner validate_stage).
+    v3.require(codex.model_name(model) == old['manifest']['model'],
+               f"중복 재판정: 이전 실행의 모델({old['manifest']['model']})과 지금 모델({codex.model_name(model)})이 다릅니다.")
     seed(previous, out, packet, model, old)
     st = Stages(packet, out, model, invoke, resume, policy=v4.POLICY, prompts=('v3', 'v4'))
     ledger = st.ledger
@@ -125,8 +135,9 @@ def run(packet, out, model, invoke, previous, resume=None):
         for r in got['rows']:
             did = r['direction_id']
             before = rows[did]
-            # goal-duplicates/1: the questions were judged for this goal before; their first evidence stays.
-            merged = _merge_row(before, _first_evidence(before, r), goals[did], by_evidence=True)
+            # Only the groups are taken: with no new evidence a group keeps just the questions the goal already
+            # had evidence for (a chunk shows other goals' questions too), as goal-duplicates/1 accepts it.
+            merged = _merge_row(before, {**r, 'evidence': []}, goals[did], by_evidence=True)
             if merged['duplicates'] != before.get('duplicates', []):
                 changed.append({'direction_id': did, 'before': before.get('duplicates', []), 'after': merged['duplicates']})
             rows[did] = {**before, 'duplicates': merged['duplicates']}

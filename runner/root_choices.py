@@ -116,7 +116,11 @@ def one(run_id: str, args, client) -> bool:
     document = payload["document"]
     print(f"Main-Quiz {run_id}: 판 {document['revision']} ({folder.name}) 선지 작성", flush=True)
     if client is None:
-        path = build(document, folder / "choices", run_id, model=args.model)
+        try:
+            path = build(document, folder / "choices", run_id, model=args.model)
+        except Exception as error:  # noqa: BLE001 — 한 강의의 실패가 다른 강의를 멈추지 않는다
+            print(f"{run_id} 선지 작성 실패 — {error}", flush=True)
+            return False
         print(f"{run_id} 만들기만 함: {path}" if path else f"{run_id} 선지 작성 실패", flush=True)
         return path is not None
     return publish(client, packet["subject"], run_id, folder, payload, model=args.model)
