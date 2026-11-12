@@ -2453,15 +2453,16 @@ button.event-panel-note:hover {
 /* 빈 막대는 채움 없이 테두리만. 3px에 1px 테두리를 그리면 회색 막대로 보여서 회독 토막·학습률 막대를 5px로 */
 .meter, .readline, .readline i { height: 5px; }
 .meter.is-closed { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); }
-/* 2026-11-12 사용자: 테두리를 더 진하게, Main-Quiz가 있는 막대도 더 진하게.
-   → 같은 날 「바 색깔이 좀 진하다. 캘린더 화면 오른쪽 위 예습 박스, 복습 박스 안의 색 정도로」.
-   빈 막대(Main-Quiz 없음·불러오는 중)는 회색 테두리, 있는 막대는 「오늘 복습」 박스와 같은 바탕·테두리
-   (--accent-soft · --accent-line, 0%여도 보인다). 채움은 ChipLearning.tsx ReviewMeter가 고른다. */
-.meter { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent-line); }
+/* 2026-11-12 사용자: 「복습이 만들어지면 테두리만 있는 바를 보여주고, 사용자가 설정한 진한 강조색으로 빈칸을 채워가는 식」,
+   「진한 색이라는 건 원래 기본 강조색 정도」. Main-Quiz가 있는 막대 = 바탕 없이 메인 색(--accent) 테두리,
+   학습률만큼 같은 메인 색으로 채운다(채움은 base.css `.meter > span`). 불러오는 중은 회색 테두리.
+   옛 규칙 「덜 채울수록 진하다」는 이 지시로 없앴다. */
+.meter { background: transparent; box-shadow: inset 0 0 0 1px var(--accent); }
 .meter.is-closed { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink-3) 75%, var(--surface)); }
 .readline i { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); }
-/* 예습 퀴즈 완료 토막은 「내일 예습」 박스와 같은 바탕·테두리(2026-11-12 옅게). */
-.readline i.rl-pre.is-on { background: var(--accent2-soft); box-shadow: inset 0 0 0 1px var(--accent2-line); }
+/* 예습 토막도 같은 방식(2026-11-12 「예습 토막도 진하게 채워」): 미완료 = 두 번째 색 테두리, 완료 = 두 번째 색으로 채움. */
+.readline i.rl-pre { box-shadow: inset 0 0 0 1px var(--accent2); }
+.readline i.rl-pre.is-on { background: var(--accent2); box-shadow: none; }
 .calendar-event.has-learning { padding-bottom: 24px; }
 .calendar-event-footer { bottom: 6px; }
 .chip-learning-pair { gap: 4px; }

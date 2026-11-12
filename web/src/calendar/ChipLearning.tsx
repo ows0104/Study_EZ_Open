@@ -4,10 +4,10 @@ import { prequizDone } from "./entries";
 /**
  * 칸 아래 학습 표시(2026-11 개편).
  *
- *   위 = 회독 줄: 학습률 막대와 같은 두께의 점선. 예습 퀴즈를 끝까지 풀었을 때만 첫 토막을 옅은 예습 색으로 채운다
- *        (예습은 1회독까지만 센다). 뒤에 강의록 회독 토막(2026-11-10 2단계)이 하나에 하나씩 붙는다.
- *   아래 = 복습 학습률 막대: 0%여도 바탕이 보이고, 덜 채울수록 진하다(덜 공부한 강의가 더 중요하다).
- *          Main-Quiz가 아직 없거나 불러오는 중이면 회색 바탕만.
+ *   위 = 회독 줄: 학습률 막대와 같은 두께의 점선. 예습 퀴즈 토막은 미완료면 예습 색 테두리, 끝까지 풀면 예습 색으로
+ *        채운다(예습은 1회독까지만 센다). 뒤에 강의록 회독 토막(2026-11-10 2단계)이 하나에 하나씩 붙는다.
+ *   아래 = 복습 학습률 막대: 메인 색 테두리만 있는 막대를 학습률만큼 메인 색으로 채운다(2026-11-12 사용자 지시 —
+ *          옛 「덜 채울수록 진하다」는 없앴다). Main-Quiz가 없으면 막대가 없고, 불러오는 중이면 회색 테두리만.
  * 학습률은 Main-Quiz 하나다(2026-11-11). 서버가 시간표에 실어 준 `mastery`를 그대로 쓴다 — Quiz Bank는 legacy.
  * 예습 학습률 막대는 없앴다(사용자 지시).
  */
@@ -43,19 +43,12 @@ export function learningDescription(lecture: LectureRef) {
   return `${lecture.title}: ${preFor(lecture)}${readsFor(lecture)} · ${reviewFor(lecture).description}`;
 }
 
-/**
- * 채울수록 옅어지는 복습 막대. 채움 색 = 메인 색을 (42 − 학습률×14)%만큼 섞는다 — 바탕(「오늘 복습」 박스 안 색, 9%)
- * 보다 한 단계 진하고 박스 테두리(28%)까지. 2026-11-12 사용자 「바 색깔이 좀 진하다」로 100−×40에서 내렸다.
- */
-export function reviewFill(score: number) {
-  return `color-mix(in srgb, var(--accent) ${Math.round(42 - (score / 100) * 14)}%, var(--surface))`;
-}
-
+/** 복습 막대: 메인 색 테두리 + 학습률만큼 메인 색 채움(색은 CSS `.meter`·`.meter > span`). */
 export function ReviewMeter({ score, className = "" }: { score: number | null; className?: string }) {
   if (score === null) return <span className={`meter is-closed ${className}`} />;
   return (
     <span className={`meter ${className}`}>
-      <span style={{ width: `${score}%`, background: reviewFill(score) }} />
+      <span style={{ width: `${score}%` }} />
     </span>
   );
 }
