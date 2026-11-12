@@ -1,0 +1,110 @@
+{
+  "id": "2026-11-12-mobile-wrap",
+  "title": "좁은 화면 글씨 줄바꿈",
+  "area": "site",
+  "created_at": "2026-11-12T06:10:55.495334+00:00",
+  "required_checks": [
+    "web"
+  ],
+  "approvals": {
+    "build": {
+      "at": "2026-11-12T06:11:23.394914+00:00",
+      "evidence": "사용자 2026-11-12 채팅: 「반으로 줄이거나 휴대폰에서 보면 글씨가 잘려서 거의 안보여. 차라리 줄을 내리거나 해서 어느정도는 보이게 해줘」, 겹침 질문에 「Separate file, start now」·범위 「All main student screens」",
+      "scope": "web/src/styles/responsive.css 신규, web/src/main.tsx import 한 줄. 기존 css·서버·데이터 변경 없음",
+      "evidence_version": 2,
+      "source_hash": "8d423ce92a5600efcc59acfd8fb231abe1ffd1e0ba27f89c23dfb016e24cac3f",
+      "plan_hash": "257f8800868b85f235d348933e95882d9740d5e02a10cc18a675e4efb74c2ae4",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "8c4da19459beef0abf39a4d4ba1848cd64f298d6940d50c575940ce75de4221e"
+    }
+  },
+  "checks": [
+    {
+      "name": "web",
+      "at": "2026-11-12T06:12:00.811497+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-c",
+        "import subprocess,sys; sys.exit(subprocess.run('npm run build',shell=True,cwd='web').returncode)"
+      ],
+      "exit_code": 2,
+      "evidence_version": 2,
+      "source_hash": "8d423ce92a5600efcc59acfd8fb231abe1ffd1e0ba27f89c23dfb016e24cac3f",
+      "plan_hash": "257f8800868b85f235d348933e95882d9740d5e02a10cc18a675e4efb74c2ae4",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-mobile-wrap/1794463894546028500-web.log"
+    },
+    {
+      "name": "web",
+      "at": "2026-11-12T06:12:27.488000+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-c",
+        "import subprocess,sys; sys.exit(subprocess.run('npm run build',shell=True,cwd='web').returncode)"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "be53e3dc00f4e5bab537c56139e5b0289f855f702450c74280d4182017beeb12",
+      "plan_hash": "257f8800868b85f235d348933e95882d9740d5e02a10cc18a675e4efb74c2ae4",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-mobile-wrap/1794463928433364200-web.log",
+      "web_artifact": "fc30ce202da14194ca77c7c5af971e28e47cfbf830705e542cbe63db9b0170ef",
+      "web_environment": "7c4d01d91ad0f951e0d402c23ec3be4a58786e77fb7fd4b94215366063202228"
+    }
+  ],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T06:12:31.758848+00:00"
+}
