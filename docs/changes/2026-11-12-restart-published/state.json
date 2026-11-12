@@ -1,0 +1,18 @@
+{
+  "id": "2026-11-12-restart-published",
+  "title": "Main-Quiz 공개된 판 새로 출제(관리자 명시)",
+  "area": "site",
+  "created_at": "2026-11-12T01:59:07.373708+00:00",
+  "required_checks": [
+    "server"
+  ],
+  "approvals": {},
+  "checks": [],
+  "review": null,
+  "lifecycle": {
+    "status": "planning",
+    "events": [],
+    "links": []
+  },
+  "updated_at": "2026-11-12T01:59:07.373732+00:00"
+}

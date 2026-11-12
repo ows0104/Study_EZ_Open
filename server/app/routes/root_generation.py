@@ -59,6 +59,10 @@ class RequestIn(BaseModel):
     # 「새로 출제」(docs/changes/2026-11-11-main-quiz-start-over): a new generation with fresh fix/add budgets instead of
     # reusing the lecture's latest ended, unpublished request of the same input. That request is kept as it is.
     restart: bool = False
+    # 「공개된 판 새로 출제」(docs/changes/2026-11-12-restart-published): with restart, the administrator's explicit decision
+    # that a published revision is replaced when the new one publishes. Learning records do not follow (a changed
+    # question starts fresh); the old revision, its content and its events stay.
+    replacePublished: bool = False
 
 
 def control_hash(db, subject, run_id):
@@ -251,15 +255,16 @@ def resume_job(db, row, reason='', by=''):
 RESTARTABLE = ('failed', 'canceled')
 
 
-def restart_target(db, subject, run_id, user):
+def restart_target(db, subject, run_id, user, replace_published=False):
     """The lecture's latest request, which 「새로 출제」 sets aside (kept unchanged) for a new one with fresh budgets."""
     row = db.scalars(select(RootGeneration).options(*LIGHT).where(RootGeneration.subject == subject, RootGeneration.run_id == run_id)
                      .order_by(RootGeneration.created_at.desc(), RootGeneration.id.desc()).limit(1)).first()
     if row is None: raise HTTPException(409, '새로 출제할 기존 작업이 없습니다. 「Main Quiz 만들기」로 요청하세요.')
     row = canonical_generation(db, row)
     job = db.get(PrequizJob, row.job_id)
-    if row.result_digest is not None: raise HTTPException(409, '이미 게시된 작업입니다. 판 교체는 별도 승인이 필요합니다.')
-    if job.state not in RESTARTABLE:
+    if row.result_digest is not None and not replace_published:
+        raise HTTPException(409, '이미 게시된 작업입니다. 판 교체는 별도 승인이 필요합니다.')
+    if job.state not in RESTARTABLE and not (replace_published and row.result_digest is not None and job.state == 'done'):
         raise HTTPException(409, '진행·대기 중인 작업이 있습니다. 끝나거나 중지된 뒤 새로 출제하세요.')
     if row.packet['owner'] != user.id: raise HTTPException(409, '다른 관리자의 작업입니다. 그 관리자가 새로 출제하세요.')
     return row
@@ -287,6 +292,8 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
         raise HTTPException(422,'Main-Quiz 앞 단계 방식(map-tree)은 CLI 원본 모드에서만 사용합니다.')
     if payload.inputMode=='source' and (payload.conceptMap or payload.points or (payload.authoring!='web' and not payload.parallelAuthoring and not payload.pipeline)):
         raise HTTPException(422,'원본 자동 준비는 웹 출제와 빈 지도·포인트 입력을 사용합니다.')
+    if payload.replacePublished and not payload.restart:
+        raise HTTPException(422, '공개된 판 교체는 이유를 적은 새로 출제 요청에서만 받습니다.')
     if payload.restart and (payload.resume or not payload.pipeline or not payload.resumeReason.strip()):
         raise HTTPException(422, '새로 출제는 이유를 적은 Main-Quiz 앞 단계(map-tree) 새 요청만 받습니다.')
     if payload.examDate:
@@ -310,7 +317,8 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
         return {'generation': public_job(db, prior), 'reused': True}
     if payload.restart:
         # Part of the input identity: the new request differs from the one it restarts, so it is not reused.
-        raw.update(restartOf=restart_target(db, subject, run_id, user).id, restartReason=payload.resumeReason.strip())
+        raw.update(restartOf=restart_target(db, subject, run_id, user, payload.replacePublished).id, restartReason=payload.resumeReason.strip())
+        if payload.replacePublished: raw['replacePublished'] = True
     if payload.inputMode=='source' and not payload.examDate:raw['examDate']=registered_exam_date(db,lecture)
     try:
         sources = assets_now(db, subject, run_id)
@@ -332,7 +340,7 @@ def request(subject: str, run_id: str, payload: RequestIn, user: CurrentUser = D
         return {'generation': public_job(db, existing), 'reused': True}
     if payload.pipeline:
         control = db.get(RootControl, (subject, run_id))
-        if control and control.revision:
+        if control and control.revision and not (payload.restart and payload.replacePublished):
             # put_result would switch students to the new revision; how their records follow it is a separate decision.
             raise HTTPException(409, '이미 공개된 Main-Quiz 판이 있습니다. 판 교체는 학습 기록 승계 문제가 있어 별도 승인이 필요합니다.')
         if any(PurePath(s['filename']).suffix.lower() != '.pdf' for s in sources):
