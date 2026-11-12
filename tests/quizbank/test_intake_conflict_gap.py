@@ -41,3 +41,10 @@ def test_other_bank_level_errors_still_stop():
 def test_question_errors_still_leave_only_that_question_out():
     assert intake_rejections(['CF02: S2 기준 문항 누락', 'Q7: OX 정답은 O 또는 X']) == [
         {'question_id': 'Q7', 'error': 'Q7: OX 정답은 O 또는 X'}]
+
+
+def test_prefixed_question_id_is_a_question_error():
+    assert intake_rejections(['ST-Q061: integration의 기초 문항 필요']) == [
+        {'question_id': 'ST-Q061', 'error': 'ST-Q061: integration의 기초 문항 필요'}]
+    with pytest.raises(Exception):
+        intake_rejections(['retrieval_plan: ID/값 중복'])

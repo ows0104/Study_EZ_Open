@@ -40,7 +40,8 @@ COVERAGE_CHUNK = 60      # goals per coverage call (plan U2)
 REVIEW_BATCH = 40        # questions per item review (plan U2)
 MEDICAL_BATCH = 40   # questions per medical call inside medical-0 (P6)
 ADD_PER_GOAL = 2         # new IDs offered per gap goal
-_QID = re.compile(r'^(Q[0-9A-Za-z_-]+)\b')
+# A bank may prefix its question ids (261104_01 wrote ST-Q061); the error still belongs to that question.
+_QID = re.compile(r'^((?:[A-Za-z][0-9A-Za-z]*-)?Q[0-9A-Za-z_-]+)\b')
 # A resolved source conflict whose linked questions do not cite one of its sources (validate_bank's citation check).
 # The linked questions can be right; only a citation is missing. On 261111_02 (picornavirus, 2026-11-11) CF02 cited
 # S1 and S2 while its one question cited S1, and the whole run stopped before any stage (user: record as warning).
