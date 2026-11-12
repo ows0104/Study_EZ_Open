@@ -1,12 +1,13 @@
 #!/bin/sh
 # master 직접 push와 dashboard 내용 유입을 막는다.
 #
-# 왜 훅인가: 이 저장소는 비공개이고 계정이 무료 플랜이라 GitHub 서버측
-# branch protection과 ruleset이 둘 다 403으로 막힌다(2026-11-08 확인).
-# 그래서 같은 목적을 클라이언트에서 지킨다.
+# 처음 만든 이유: 2026-11-08에는 GitHub 서버측 branch protection이 403으로
+# 막혀 있었다(비공개 + 무료 플랜). 2026-11-12부터는 서버측 보호(필수 검사·
+# 직접 push 금지)가 걸려 있다 — docs/development/collaboration.md "master 보호".
+# DASHBOARD.md 유입 검사는 서버측에 없으므로 이 훅이 유일한 방어선이다.
 #
 # 한계: 이것은 로컬 훅이다. `--no-verify`로 우회되고, 설치하지 않은 클론에서는
-# 아예 돌지 않으며, GitHub 웹 병합은 막지 못한다. 서버 강제 보호가 아니다.
+# 아예 돌지 않는다.
 # 설치: sh .githooks/install.sh   (클론마다 한 번, 훅을 고친 뒤에도 다시)
 #
 # 규칙 근거: CLAUDE.md "작업 시작 대원칙" — master에서 직접 작업하지 않는다,
