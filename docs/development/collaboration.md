@@ -77,38 +77,62 @@ ls "$(git rev-parse --git-common-dir)/hooks/pre-push"
 worktree에서는 통과했다). `.git/hooks` 복사본은 공용 디렉터리에 있어서 체크아웃된
 브랜치와 무관하게 모든 worktree에서 돈다.
 
-### master 보호 (로컬 훅)
+### master 보호 (GitHub 서버측)
 
-`.githooks/pre-push`가 두 가지를 거부한다.
+2026-11-12부터 GitHub branch protection이 master에 걸려 있다. 계기는 같은 날
+`Tests and build`가 실패한 PR #124가 그대로 병합된 일이다(#125가 7분 뒤 고쳤고,
+master 검사 실패로 배포는 되지 않았다).
+
+- **필수 검사:** `Tests and build`, `Windows runner checks`. 둘 다 통과해야 병합된다.
+  범위 판단(`Decide checks`)으로 건너뛴(skipped) 검사는 통과로 친다.
+- **관리자 포함(`enforce_admins`):** 저장소 소유자 계정·토큰도 우회하지 못한다.
+  에이전트 세션이 소유자 토큰으로 병합하므로 이것이 꺼져 있으면 보호가 의미 없다.
+- **최신 master 요구(strict)는 끈다.** 켜면 병합마다 브랜치를 다시 맞추고 CI를 한 번 더
+  돌려야 한다. 병합 뒤 master 실행이 같은 검사를 다시 하므로 거기서 잡는다.
+- **강제 push·삭제 금지.** 필수 검사가 없는 커밋은 master로 직접 push할 수도 없다.
+- 리뷰 승인 필수는 걸지 않았다.
+
+그래서 달라지는 것:
+
+- Ready for review 직후 바로 `gh pr merge`를 하면 검사가 끝날 때까지 거부된다. 기다린다.
+- Draft에서는 검사가 돌지 않으므로 Draft인 채로는 병합할 수 없다(원래 Draft는 병합 불가).
+- 취소된(cancelled) 실행은 실패로 친다. 같은 PR에 새 push가 와서 취소됐으면 새 실행을,
+  아니면 `gh run rerun`으로 다시 돌린다.
+
+설정 확인·변경:
+
+```bash
+gh api repos/ows0104/Study_EZ_Open/branches/master/protection
+```
+
+branch protection API는 비공개 저장소 + 무료 플랜에서는 403을 반환한다(2026-11-08 확인).
+2026-11-12에 저장소가 공개 상태여서 설정할 수 있었다. 다시 비공개로 바꾸면 이 보호는
+더는 강제되지 않을 수 있으니 위 명령으로 확인한다.
+
+### 로컬 훅 (`.githooks/pre-push`)
+
+서버측 보호와 별도로, 로컬 훅이 두 가지를 push 전에 거부한다.
 
 - `refs/heads/master`로의 직접 push와 master 삭제. master는 PR 병합으로만 바뀐다.
 - `dashboard` 외의 브랜치가 `DASHBOARD.md`를 담고 있는 경우.
   dashboard를 기능 브랜치에 merge해 master로 흘려보내는 길을 막는다.
 
-**이것은 서버에서 강제되는 보호가 아니다.** 이 저장소는 비공개이고 계정이 무료
-플랜이라 GitHub의 branch protection과 ruleset이 둘 다 403으로 막힌다(2026-11-08
-확인). 그래서 같은 목적을 클라이언트에서 지킨다. 따라서
-
-- `git push --no-verify`로 우회된다.
-- `.githooks/install.sh`를 돌리지 않은 클론에서는 아예 돌지 않는다.
-- GitHub 웹에서 하는 병합은 막지 못한다.
-
-서버측으로 올리려면 GitHub Pro(유료)로 올리거나 저장소를 공개로 바꿔야 한다.
-공개 전환은 학습 기록·배포 영수증·운영 경로가 함께 공개되므로 택하지 않았다.
+두 번째 규칙은 서버측 보호에 없으므로 훅이 유일한 방어선이다. 훅은
+`git push --no-verify`로 우회되고, `.githooks/install.sh`를 돌리지 않은 클론에서는 돌지 않는다.
 
 ## 작업 방법
 
 1. 위 "작업 시작 대원칙" 네 단계를 마친다. 에이전트 브랜치 접두사는 `codex/`, `claude/`를 쓸 수 있다.
 2. `docs/changes/<id>/`에서 intent → spec → plan과 사용자의 작업 요청 원문(구현 근거)을 보존한다.
 3. 변경을 push하고 master 대상 PR을 만든다. `Tests and build` 결과와 코드 리뷰를 확인한다.
+   필수 검사가 통과하기 전에는 GitHub가 병합을 막는다(위 "master 보호").
 4. master 병합/push 후 검사가 다시 통과하면 API를 먼저 배포한다. 웹은 같은 Git SHA가
    운영 API `/api/health`에 표시된 후 빌드하고 업로드한다.
 5. [Actions](https://github.com/ows0104/Study_EZ_Open/actions/workflows/deploy.yml)와
    Cloudflare Pages에서 최종 성공 여부를 확인한다. Git push 성공은 배포 성공과 다르다.
 
-private 저장소의 현재 GitHub 요금제에서는 브랜치 보호 API가 403을 반환한다.
-필수 PR/검사/승인 강제 보호는 설정되지 않았다. 협업자는 위 절차를 지켜야 하며, 요금제 변경 시
-master 직접 push 금지·필수 검사 `Tests and build`·리뷰 승인을 설정할 수 있다.
+필수 검사와 직접 push 금지는 GitHub가 강제한다(2026-11-12부터). 리뷰 승인은 강제하지 않으므로
+코드 리뷰 확인은 위 절차로 지킨다.
 
 ## 자동으로 실행되는 범위
 
