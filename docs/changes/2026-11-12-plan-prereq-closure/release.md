@@ -8,9 +8,8 @@
   - 고친 뒤: 통과.
 - 회귀(worktree `server/.venv`, PyMuPDF 포함, `PYTHONPATH=..`): `-m tests root` 39/39, `main_quiz` 7/7, `route_contract` 1/1 통과.
   처음 돌린 메인 체크아웃 venv에서는 `test_root_map_tree`·`_v3` 2개가 `pymupdf` 없음으로 실패(환경 문제, tier-filter 때와 같음).
-- **미기록**: `scripts/development.py verify`는 build 승인 기록이 없어 거절했다(「Current intent/spec/plan needs human build approval」).
-  이 작업은 다른 세션의 과제문으로 시작했고 사용자 발언 원문이 없어 승인을 기록하지 않았다. 사용자가 승인하면
-  `approve --phase build` 뒤 같은 검사를 `verify --check server`로 남긴다.
+- 처음에는 build 승인 기록이 없어 `verify`가 거절했다(다른 세션의 과제문으로 시작). 사용자 승인 뒤
+  `approve --phase build`를 기록하고 같은 검사를 `verify --check server`로 남겼다: root 39·main_quiz 7·route_contract 1 통과.
 - 운영 DB 읽기 전용 확인(2026-11-12, 한 연결에 `SET TRANSACTION READ ONLY`, 쓰기 없음, 스크립트는 저장소 밖 scratchpad):
   사건 수 상위 학습자 5명 × 공개 판 23개 = 115쌍.
   - 옛 입력(standalone 닫힘 없음 + 거른 집합을 available로): 실패 4 — 학습자 A 261110_01·261102_05(Essential·Core·Important),
@@ -27,4 +26,4 @@
 
 - 확인: 운영 로그에서 `Prepared prerequisite became unavailable`가 더 나오지 않는지, 위 4쌍 학습자의 강의가 열리는지.
 - 롤백: `git revert`. 남는 데이터 없음.
-- 승인: Draft PR까지는 묻지 않는 범위. master 병합(=배포)은 사용자 확인 뒤. R2(필터 밖 선행을 끌어옴)는 사용자에게 알린다.
+- 승인: 사용자 2026-11-12 「응 끌어오는 걸로 하고 병합해줘.」 — R2(필터 밖 선행을 끌어옴) 결정과 PR #130 master 병합(=배포).

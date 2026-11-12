@@ -6,13 +6,126 @@
   "required_checks": [
     "server"
   ],
-  "approvals": {},
-  "checks": [],
-  "review": null,
+  "approvals": {
+    "build": {
+      "at": "2026-11-12T07:24:23.266239+00:00",
+      "evidence": "사용자 2026-11-12 채팅: 「응 끌어오는 걸로 하고 병합해줘.」 (필터 밖 선행 문항을 끌어오는 결정과 PR #130 병합 요청)",
+      "scope": "plan.md 범위 그대로(content.py availability·close_prerequisites, planning.py focus, routes/root_learning.py overview_data 한 줄, test_root_prereq_closure.py), PR #130·master 병합(자동 배포). DB 스키마·운영 데이터·학습 기록 변경 제외",
+      "evidence_version": 2,
+      "source_hash": "a8f5b6595eeefe209fc3eaf2f9a38e640670ef92cf41d9b8f34b57d87fe391c9",
+      "plan_hash": "c3c7776804e7f4b0b19acd1252fc04fd9849f229f3113cdc2030652993920e85",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "release_hash": "4dc8aeb9c1f073386fa628e41c130d3fa1670125d35486e8e0f7aaeb112528cc"
+    }
+  },
+  "checks": [
+    {
+      "name": "server",
+      "at": "2026-11-12T07:23:59.429894+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); env=dict(os.environ,PYTHONPATH=root,PYTHONIOENCODING='utf-8'); py=os.path.join(root,'server','.venv','Scripts','python.exe'); sys.exit(max(subprocess.run([py,'-m','tests',f],cwd=os.path.join(root,'server'),env=env).returncode for f in ('root','main_quiz','route_contract')))"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "a8f5b6595eeefe209fc3eaf2f9a38e640670ef92cf41d9b8f34b57d87fe391c9",
+      "plan_hash": "445e194d863632636865da22399df3634cc408ac60224ec7325ce6a9602b682e",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-plan-prereq-closure/1794468120845716700-server.log"
+    },
+    {
+      "name": "server",
+      "at": "2026-11-12T07:26:10.821345+00:00",
+      "command": [
+        "C:/Users/ows01/anaconda3/python.exe",
+        "-c",
+        "import os,subprocess,sys; root=os.getcwd(); env=dict(os.environ,PYTHONPATH=root,PYTHONIOENCODING='utf-8'); py=os.path.join(root,'server','.venv','Scripts','python.exe'); sys.exit(max(subprocess.run([py,'-m','tests',f],cwd=os.path.join(root,'server'),env=env).returncode for f in ('root','main_quiz','route_contract')))"
+      ],
+      "exit_code": 0,
+      "evidence_version": 2,
+      "source_hash": "a8f5b6595eeefe209fc3eaf2f9a38e640670ef92cf41d9b8f34b57d87fe391c9",
+      "plan_hash": "c3c7776804e7f4b0b19acd1252fc04fd9849f229f3113cdc2030652993920e85",
+      "inputs": [
+        ".github",
+        "bridge",
+        "content",
+        "data/timetable",
+        "platform",
+        "pyproject.toml",
+        "requirements.txt",
+        "scripts",
+        "server",
+        "studyez_contracts",
+        "tests/bridge",
+        "tests/contracts",
+        "tests/development",
+        "uv.lock",
+        "web"
+      ],
+      "log": "runs/_development/2026-11-12-plan-prereq-closure/1794468263694295400-server.log"
+    }
+  ],
+  "review": {
+    "at": "2026-11-12T07:26:16.845006+00:00",
+    "summary": "경계: availability는 /2·/4에서 standalone·quizbank 모두 선행에 닫힌 집합을 돌려준다. plan은 focus(후보)와 available(order_plan 확인)을 나눠 받는다. overview_data 한 줄만 바뀌고 catalog(#129)·집계(summary·questionProgress·focus.counts)는 그대로. 확인: 새 검사가 고치기 전 실패·뒤 통과, 모두 선택이면 plan 불변, 운영 읽기 전용 115쌍 모두 성공(실패하던 4쌍은 필터 밖 선행 1개씩 추가). 남은 위험: 선행을 개인 제외하면 의존 과제도 준비 안 됨으로 세어진다(quizbank 판과 같은 규칙, Z로 되돌리면 복구).",
+    "evidence_version": 2,
+    "source_hash": "a8f5b6595eeefe209fc3eaf2f9a38e640670ef92cf41d9b8f34b57d87fe391c9",
+    "plan_hash": "c3c7776804e7f4b0b19acd1252fc04fd9849f229f3113cdc2030652993920e85",
+    "inputs": [
+      ".github",
+      "bridge",
+      "content",
+      "data/timetable",
+      "platform",
+      "pyproject.toml",
+      "requirements.txt",
+      "scripts",
+      "server",
+      "studyez_contracts",
+      "tests/bridge",
+      "tests/contracts",
+      "tests/development",
+      "uv.lock",
+      "web"
+    ]
+  },
   "lifecycle": {
     "status": "planning",
     "events": [],
     "links": []
   },
-  "updated_at": "2026-11-12T06:42:59.209476+00:00"
+  "updated_at": "2026-11-12T07:26:16.976124+00:00"
 }
