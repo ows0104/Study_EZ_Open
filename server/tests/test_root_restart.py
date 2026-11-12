@@ -95,6 +95,21 @@ set_state(r.json()['generation']['jobId'], 'failed')
 with SessionLocal() as db:
     db.add(RootControl(subject='test', run_id='pub', revision='published-pub', enabled=True, allowed_users=[])); db.commit()
 assert client.post(PUB, json={**RESTART, 'requestId': 'pub-restart'}).status_code == 409
+# ---------------------------------------------------------------- the administrator's explicit replacement
+assert client.post(PUB, json={**NEW, 'requestId': 'pub-flag-only', 'replacePublished': True}).status_code == 422
+r = client.post(PUB, json={**RESTART, 'requestId': 'pub-replace', 'replacePublished': True}); assert r.status_code == 200, r.text
+replacing = r.json()['generation']; assert replacing['state'] == 'queued' and replacing['restartOf'] is not None
+with SessionLocal() as db:
+    control = db.get(RootControl, ('test', 'pub'))
+    assert control.revision == 'published-pub' and control.enabled  # students keep the old revision until the new one publishes
+    assert db.get(RootGeneration, replacing['id']).packet['replacePublished'] is True
+# A request that itself published (job done) can be replaced the same way once the replacement above has ended.
+set_state(replacing['jobId'], 'done')
+with SessionLocal() as db:
+    db.get(RootGeneration, replacing['id']).result_digest = 'd' * 64; db.commit()
+assert client.post(PUB, json={**RESTART, 'requestId': 'pub-done'}).status_code == 409
+r = client.post(PUB, json={**RESTART, 'requestId': 'pub-done', 'replacePublished': True}); assert r.status_code == 200, r.text
+assert r.json()['generation']['restartOf'] == replacing['id']
 user('student')
 assert client.post(URL, json={**RESTART, 'requestId': 'student'}).status_code == 403
 print('PASS restart: refusals, earlier request kept, fresh request, idempotent, chain, resume unchanged, published refused')
