@@ -139,7 +139,10 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   },[locked,task,picked,imagesReady,hiddenChoices,recallClosed,choices,view.mapSeen,view.canUndo,timerOn,timer.togglePause]);
   const done=Math.min(view.position,view.count);
   const head=<header className="mq-solve-head">
-    <p className="mq-kicker"><span className="mq-badge">Main-Quiz</span>{title&&<span className="mq-solve-title">{title}</span>}</p>
+    <p className="mq-kicker">
+      {/* 기록은 평가마다 저장된다. 풀이를 멈추고 시작 화면(오늘 현황)으로 간다. */}
+      <button type="button" className="quiz-back" disabled={disabled||advancing} onClick={onToday}><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>뒤로</button>
+      <span className="mq-badge">Main-Quiz</span>{title&&<span className="mq-solve-title">{title}</span>}</p>
     {!view.finished&&<span className="main-quiz-tools">
       <span className="mq-timer">
         {timerOn&&task&&<span role="timer" aria-label={`${timer.paused?'일시정지 · ':''}남은 시간 ${timer.left}초`}
