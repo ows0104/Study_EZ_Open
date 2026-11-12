@@ -11,8 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.bank_validation.publication import usable as bank_usable
 from app.models import BankState, QuizBank
-from app.models.root_learning import RootContent, RootControl
 from app.root_learning import content as root_content
+from app.root_learning import light
 from app.root_learning.policy import configured_policy
 from app.root_learning.score import lecture_score
 from app.study_engine import empty_state, now_ms
@@ -42,13 +42,9 @@ def as_mastery(score: dict) -> dict | None:
 
 def main_quiz_inputs(db: Session, keys: list[tuple[str, str]], user) -> dict[tuple[str, str], tuple[dict, list]]:
     """이 사용자에게 열린 Main-Quiz의 (현재 판 문서, 이 사용자의 이벤트)."""
-    result = {}
-    for key in root_content.published_for(db, keys, user):
-        control = db.get(RootControl, key)
-        row = db.get(RootContent, (*key, control.revision)) if control else None
-        if row and row.reviewed:
-            result[key] = (row.document, root_content.events_for(db, *key, user.id))
-    return result
+    # 그림 바이트를 뺀 판별 사본(light.py). 원본 문서를 요청마다 읽던 것이 캘린더 학습률 시간의 거의 전부였다.
+    rows = light.current_rows(db, root_content.published_for(db, keys, user))
+    return {key: (row.document, root_content.events_for(db, *key, user.id)) for key, row in rows.items()}
 
 
 def lecture_overviews(db: Session, user, keys: list[tuple[str, str]],

@@ -4,24 +4,46 @@ import { api } from "../api";
 import { takeTimetable } from "../firstScreen";
 import type { TimetableEvent } from "../types/lectures";
 
-/** 처음에는 목록만 읽는다. 학습률은 켜 둔 경우에만 현재 격자 범위로 읽는다. */
+type Enriched = { events: TimetableEvent[] };
+const inFlight = new Map<string, Promise<Enriched>>();
+
+/**
+ * 같은 범위의 학습률 요청이 진행 중이면 그것을 같이 기다린다. 목록을 기다리지 않고 마운트 즉시 보내므로
+ * 다시 마운트되어도(개발 StrictMode·빠른 화면 전환) 서버 계산을 두 번 시키지 않는다. 끝나면 지워서 「다시 시도」는 새로 묻는다.
+ */
+function learning(url: string): Promise<Enriched> {
+  let pending = inFlight.get(url);
+  if (!pending) {
+    pending = api<Enriched>(url);
+    inFlight.set(url, pending);
+    const clear = () => { if (inFlight.get(url) === pending) inFlight.delete(url); };
+    pending.then(clear, clear);
+  }
+  return pending;
+}
+
+/**
+ * 목록과 학습률(현재 격자 범위)을 **동시에** 읽는다(2026-11-12). 예전에는 목록이 온 뒤에야 학습률을 물어서
+ * 두 요청 시간이 더해졌다. 먼저 온 쪽을 그리고, 늦게 온 쪽이 그 위에 덮는다.
+ */
 export function useCalendarTimetable(start: string, end: string, showLearning: boolean) {
   const [events, setEvents] = useState<TimetableEvent[] | null>(null);
   const [error, setError] = useState("");
   const [learningError, setLearningError] = useState("");
   const [learningLoading, setLearningLoading] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
-  const [baseVersion, setBaseVersion] = useState(0);
   const lastLoaded = useRef(0);
+  // 지금 범위의 학습률 응답(목록보다 먼저 오면 목록이 올 때 덮는다).
+  const enriched = useRef<Map<string, TimetableEvent> | null>(null);
   const reload = useCallback(() => setRefreshVersion(old => old + 1), []);
 
   useEffect(() => {
     let live = true;
     takeTimetable().then(data => {
       if (!live) return;
-      setEvents(data.events); setError("");
+      const ready = enriched.current;
+      setEvents(ready ? data.events.map(e => ready.get(e.id) ?? e) : data.events); setError("");
       lastLoaded.current = Date.now();
-      setBaseVersion(old => old + 1);
     }).catch((cause: Error) => { if (live) setError(cause.message); });
     return () => { live = false; };
   }, [refreshVersion]);
@@ -36,19 +58,21 @@ export function useCalendarTimetable(start: string, end: string, showLearning: b
 
   useEffect(() => {
     setLearningError("");
-    if (!showLearning || !baseVersion) { setLearningLoading(false); return; }
-    const controller = new AbortController();
+    enriched.current = null;
+    if (!showLearning) { setLearningLoading(false); return; }
+    let live = true;
     setLearningLoading(true);
     const query = new URLSearchParams({ start, end, include_cards: "false" });
-    api<{ events: TimetableEvent[] }>(`/api/timetable?${query}`, { signal: controller.signal })
+    learning(`/api/timetable?${query}`)
       .then(data => {
-        if (controller.signal.aborted) return;
-        const enriched = new Map(data.events.map(e => [e.id, e]));
-        setEvents(old => old?.map(e => enriched.get(e.id) ?? e) ?? null);
-      }).catch((cause: Error) => { if (!controller.signal.aborted) setLearningError(cause.message); })
-      .finally(() => { if (!controller.signal.aborted) setLearningLoading(false); });
-    return () => controller.abort();
-  }, [start, end, showLearning, baseVersion]);
+        if (!live) return;
+        const map = new Map(data.events.map(e => [e.id, e]));
+        enriched.current = map;
+        setEvents(old => old?.map(e => map.get(e.id) ?? e) ?? null);
+      }).catch((cause: Error) => { if (live) setLearningError(cause.message); })
+      .finally(() => { if (live) setLearningLoading(false); });
+    return () => { live = false; };
+  }, [start, end, showLearning, refreshVersion]);
 
   // 패널에서 회독을 더하거나 지우면 칸의 회독 줄도 바로 바꾼다.
   useEffect(() => {

@@ -227,6 +227,12 @@
   padding:12px;border:1px solid var(--line);border-radius:16px;background:color-mix(in srgb,var(--surface) 94%,transparent);
   backdrop-filter:blur(8px);box-shadow:0 8px 28px rgba(0,0,0,.08)}
 .main-quiz-solve>.mq-card{margin-bottom:20px}
+/* 아래 바는 언제나 화면 아래 16px(2026-11-12 사용자: 스페이스를 누르면 바가 위아래로 움직였다).
+   sticky가 늘 「붙은」 상태가 되게 한다: 풀이 칸을 화면보다 길게(짧은 문항에서도 바의 제자리가 화면 밖),
+   그리고 풀이 칸 아래 여백을 없앤다(스크롤 끝에서 바가 제자리로 올라오지 않게). */
+.app-shell:not(.is-bare) .main-quiz-learning .main-quiz-solve{min-height:100vh}
+.app-shell:not(.is-bare) .main-quiz-learning:has(>.main-quiz-solve){padding-bottom:0}
+.app-shell:not(.is-bare) .app-main:has(.main-quiz-learning>.main-quiz-solve){padding-bottom:0}
 .app-shell:not(.is-bare) .main-quiz-learning .quiz-bar .quiz-submit{border-radius:12px;font-weight:600}
 .app-shell:not(.is-bare) .main-quiz-learning .quiz-bar .quiz-grade,.app-shell:not(.is-bare) .main-quiz-learning .quiz-bar .quiz-undo{border-radius:12px}
 .mq-done{display:flex;flex-direction:column;gap:14px;text-align:left}

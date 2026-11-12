@@ -43,10 +43,10 @@ export function learningDescription(lecture: LectureRef) {
   return `${lecture.title}: ${preFor(lecture)}${readsFor(lecture)} · ${reviewFor(lecture).description}`;
 }
 
-/** 채울수록 옅어지는 복습 막대. 채움 색 = 메인 색을 (100 − 학습률×62)%만큼 섞는다. */
+/** 채울수록 옅어지는 복습 막대. 채움 색 = 메인 색을 (100 − 학습률×40)%만큼 섞는다(2026-11-12 진하게: ×62 → ×40). */
 export function ReviewMeter({ score, className = "" }: { score: number | null; className?: string }) {
   if (score === null) return <span className={`meter is-closed ${className}`} />;
-  const strength = Math.round(100 - (score / 100) * 62);
+  const strength = Math.round(100 - (score / 100) * 40);
   return (
     <span className={`meter ${className}`}>
       <span style={{ width: `${score}%`, background: `color-mix(in srgb, var(--accent) ${strength}%, var(--surface))` }} />
@@ -54,9 +54,24 @@ export function ReviewMeter({ score, className = "" }: { score: number | null; c
   );
 }
 
+/**
+ * 복습 막대는 Main-Quiz가 있는 강의에만 그린다(2026-11-12 사용자: 「TBL 같이 시험에 안 나오는 경우는 복습바 없도록」,
+ * 「복습퀴즈가 안 나온 경우에는 그냥 바를 보여주지 말자」). `mainQuiz` 표시는 첫 목록 응답에 이미 있어서,
+ * 학습률을 불러오는 동안에는 회색 빈 막대로 자리만 잡는다.
+ */
+export function reviewShown(lecture: LectureRef) {
+  return !!lecture.marks.mainQuiz;
+}
+
+/** 칸 아래 줄에 그릴 것이 있는가: 복습 막대, 예습 퀴즈 토막, 강의록 회독. */
+export function hasLearningMarks(lectures: LectureRef[]) {
+  return lectures.some(l => reviewShown(l) || l.marks.prequiz || (l.noteReads ?? 0) > 0);
+}
+
 export function ChipLearning({ lectures }: { lectures: LectureRef[] }) {
   if (!lectures.length) return null;
-  const reviews = lectures.map(reviewFor);
+  const meters = lectures.filter(reviewShown);
+  const reviews = meters.map(reviewFor);
   const description = lectures.map(learningDescription).join(" · ");
   const preOpen = lectures.some(l => l.marks.prequiz);
   const preDone = lectures.every(l => !l.marks.prequiz || prequizDone(l)) && preOpen;
@@ -75,11 +90,11 @@ export function ChipLearning({ lectures }: { lectures: LectureRef[] }) {
         <span className="chip-learning-value sr-only">
           복습 {single ? (single.score === null ? "—" : `${single.score}%`) : ""}
         </span>
-        <span className="chip-learning-bars" aria-hidden="true">
+        {meters.length ? <span className="chip-learning-bars" aria-hidden="true">
           {reviews.map((review, index) => (
-            <ReviewMeter key={`${lectures[index].subject}/${lectures[index].runId}`} score={review.score} />
+            <ReviewMeter key={`${meters[index].subject}/${meters[index].runId}`} score={review.score} />
           ))}
-        </span>
+        </span> : null}
       </span>
     </span>
   );

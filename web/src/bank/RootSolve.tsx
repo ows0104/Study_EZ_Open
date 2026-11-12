@@ -109,8 +109,18 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
   useEffect(()=>{
     const handler=(event:KeyboardEvent)=>{
       const target=event.target as HTMLElement;
-      if(event.defaultPrevented||event.repeat||event.isComposing||event.ctrlKey||event.metaKey||event.altKey||locked||!task)return;
+      if(event.defaultPrevented||event.isComposing||!task)return;
       if(document.querySelector('dialog[open], [role="dialog"][aria-modal="true"]')||target.closest('input,textarea,select,[contenteditable="true"]'))return;
+      // 스페이스는 이 화면에서 쪽을 내리지 않는다 — 답을 본 뒤·누르고 있을 때·저장 중에도(2026-11-12: 아래 바가 위아래로 움직였다).
+      // 버튼·링크에 포커스가 있으면 브라우저가 그것을 누르게 둔다.
+      if(event.code==='Space'&&!target.closest('button,a,summary'))event.preventDefault();
+      if(event.repeat||event.altKey||locked)return;
+      // 되돌리기: Z, Ctrl+Z, ⌘+Z(2026-11-12). 한글 입력 상태도 키 자리(KeyZ)로 알아보고, 버튼에 포커스가 있어도 된다.
+      if((event.code==='KeyZ'||event.key.toLowerCase()==='z')&&!(event.ctrlKey&&event.metaKey)){
+        if(view.canUndo){event.preventDefault();onAction({kind:'undo'});}
+        return;
+      }
+      if(event.ctrlKey||event.metaKey)return;
       if(event.key==='Tab'&&!event.shiftKey&&timerOn){event.preventDefault();timer.togglePause();return;}
       const number=/^[1-4]$/.test(event.key);
       if(target.closest('a,summary')||target.closest('button')&&!number&&event.key!=='5')return;
@@ -124,7 +134,6 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
         if(option){event.preventDefault();pick(option.id);}
       }
       if(event.key==='5'){event.preventDefault();exclude();}
-      if(event.key.toLowerCase()==='z'&&view.canUndo){event.preventDefault();onAction({kind:'undo'});}
     };
     window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler);
   },[locked,task,picked,imagesReady,hiddenChoices,recallClosed,choices,view.mapSeen,view.canUndo,timerOn,timer.togglePause]);
@@ -193,7 +202,7 @@ export function RootSolve({view,title,scope,disabled,advancing,onAction,onToday,
       </>}
     </div>}
     <div className="quiz-bar bank-solve-bar" aria-label="자기평가">
-      <button className="quiz-undo" disabled={disabled||advancing||!view.canUndo} onClick={()=>onAction({kind:'undo'})} aria-keyshortcuts="Z">되돌리기 <kbd>Z</kbd></button>
+      <button className="quiz-undo" disabled={disabled||advancing||!view.canUndo} onClick={()=>onAction({kind:'undo'})} aria-keyshortcuts="Z Control+Z Meta+Z">되돌리기 <kbd>Z</kbd></button>
       {task?.answer?RATINGS.map((rating,i)=><button key={rating} className={`quiz-grade is-${rating.toLowerCase()}`} disabled={locked}
         onClick={()=>rate(rating)} aria-keyshortcuts={String(i+1)}><span className="quiz-grade-name">{rating}<kbd>{i+1}</kbd></span></button>):
         <button className="quiz-submit" disabled={locked||!task||!imagesReady} onClick={()=>reveal()} aria-keyshortcuts="Space Enter">답 보기 <kbd>Space</kbd></button>}

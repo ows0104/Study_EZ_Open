@@ -1,4 +1,4 @@
-/** Main-Quiz 객관식(2026-11-12): 선지 머리표 1·2·3, 답 보기 전 1–4 선택, 5 제외, 답 뒤 1–4 평가. */
+/** Main-Quiz 객관식(2026-11-12): 선지 머리표 1·2·3, 답 보기 전 1–4 선택, 5 제외, 답 뒤 1–4 평가, 답 뒤 스페이스 무시, Z·Ctrl+Z 되돌리기. */
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter } from "react-router-dom";
@@ -90,6 +90,34 @@ try {
   const count = actions.length;
   press("2"); await tick();
   check(actions.length === count + 1 && actions.at(-1)?.kind === "rate" && actions.at(-1)?.selfRating === "Hard", "after reveal, 2 still rates Hard");
+
+  // 2026-11-12: 답을 본 뒤 스페이스는 쪽을 내리지 않는다(아래 바가 움직였다). 누르고 있어도.
+  const space = (repeat = false) => { const e = new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true, cancelable: true, repeat });
+    (document.activeElement ?? document.body).dispatchEvent(e); return e.defaultPrevented; };
+  const before = actions.length;
+  check(space() && actions.length === before, "after reveal, Space is swallowed and records nothing");
+  check(space(true), "held Space is swallowed too");
+
+  // 되돌리기: Z·Ctrl+Z·⌘+Z, 한글 입력 상태(KeyZ, key ㅋ), 버튼에 포커스가 있어도. Ctrl+Z는 입력칸에서는 브라우저 몫.
+  const undoView = view("mcq", true); undoView.canUndo = true;
+  render(undoView, "undo"); await tick();
+  const undo = (init: KeyboardEventInit, target: Element = document.activeElement ?? document.body) => {
+    const n = actions.length; target.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init }));
+    return actions.length === n + 1 && actions.at(-1)?.kind === "undo";
+  };
+  check(undo({ key: "z", code: "KeyZ" }), "Z undoes");
+  check(undo({ key: "z", code: "KeyZ", ctrlKey: true }), "Ctrl+Z undoes");
+  check(undo({ key: "z", code: "KeyZ", metaKey: true }), "Cmd+Z undoes");
+  check(undo({ key: "ㅋ", code: "KeyZ" }), "Z with the Korean IME on undoes (by key position)");
+  check(undo({ key: "z", code: "KeyZ", ctrlKey: true }, document.querySelector(".quiz-undo")!), "Ctrl+Z undoes while a button has focus");
+  check(!undo({ key: "z", code: "KeyZ", altKey: true }), "Alt+Z does nothing");
+  const input = document.body.appendChild(document.createElement("input"));
+  check(!undo({ key: "z", code: "KeyZ", ctrlKey: true }, input), "Ctrl+Z inside a text field is left to the browser");
+  input.remove();
+  check(!undo({ key: "c", code: "KeyC", ctrlKey: true }), "other Ctrl shortcuts are left alone");
+  const noUndo = view("mcq", true);
+  render(noUndo, "no-undo"); await tick();
+  check(!undo({ key: "z", code: "KeyZ", ctrlKey: true }), "nothing to undo: Ctrl+Z records nothing");
   results.push("ALL PASSED");
   document.getElementById("results")!.textContent = results.join("\n");
 } catch (error) { document.getElementById("results")!.textContent = results.join("\n") + `\nFAIL ${String(error)}`; }

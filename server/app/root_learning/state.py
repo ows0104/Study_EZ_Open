@@ -127,8 +127,17 @@ def replay_tasks(doc, events, now, policy):
     questions = {q['question_id']: q for q in doc['bank_snapshot']['questions']}
     plans = {p['concept_id']: p for p in doc['bank_snapshot'].get('retrieval_plan', [])}
     aliases = {(e['revision'], e['from_direction']): e['to_direction'] for e in doc['equivalences']}
-    prints = task_fingerprints(doc)
-    by_print = {(t['direction_id'], prints[tid]): tid for tid, t in current.items()}
+    by_print = None
+
+    def carried(did, sha):
+        # 지문은 이전 판 이벤트를 이을 때만 계산한다(2026-11-12): 문항마다 JSON+SHA-256이라 목록 요약 CPU의 95%였다.
+        # 가벼운 문서(light.py)는 그림이 든 원본으로 미리 계산한 지문을 들고 온다.
+        nonlocal by_print
+        if by_print is None:
+            prints = getattr(doc, 'task_fingerprints', None) or task_fingerprints(doc)
+            by_print = {(t['direction_id'], prints[tid]): tid for tid, t in current.items()}
+        return by_print.get((did, sha))
+
     events = sorted((e for e in events if instant(e['at']) <= now), key=lambda e: (instant(e['at']), e['id']))
     undone = {e['payload']['undo'] for e in events if e['kind'] == 'undo'}
     tasks, first = {}, {}
@@ -138,7 +147,7 @@ def replay_tasks(doc, events, now, policy):
             task_id = p.get('task_id')
         else:
             did = aliases.get((event['revision'], p.get('direction_id')))
-            task_id = by_print.get((did, p.get('question_sha256'))) if did and p.get('question_sha256') else None
+            task_id = carried(did, p['question_sha256']) if did and p.get('question_sha256') else None
         if task_id not in current:
             continue
         tid = owners[current[task_id]['direction_id']]
