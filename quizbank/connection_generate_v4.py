@@ -106,8 +106,9 @@ def _intake(packet, out):
             q['prerequisites'] = [p for p in q.get('prerequisites', []) if p not in bad]
         intake['visual_stimuli'] = [s for s in intake['visual_stimuli'] if s['question_id'] not in bad]
         basis = {q: b for q, b in basis.items() if q not in bad}
+    cloze = v3.cloze_units(bank)   # answer_units = the stem's blanks (not intake_projection: the server re-derives that)
     rendered = visual.render(bank, intake['visual_stimuli'], packet, out / 'material')
-    return rendered, intake['visual_stimuli'], intake['clinical_conflicts'], rejected, projection, basis
+    return rendered, intake['visual_stimuli'], intake['clinical_conflicts'], rejected, projection, basis, cloze
 
 
 def check_stage(kind, value, ctx, state, scratch):
@@ -172,7 +173,7 @@ def run(packet, out, model, invoke, resume=None):
     profile = points_doc['notebook_profile']
 
     # 1c: intake bank and its basis ------------------------------------------
-    bank, stimuli, conflicts, rejected, intake_changes, basis = _intake(packet, out)
+    bank, stimuli, conflicts, rejected, intake_changes, basis, intake_cloze = _intake(packet, out)
     initial_bank = copy.deepcopy(bank)
     intake_conflict_ids = {c['conflict_id'] for c in [*bank.get('source_conflicts', []), *conflicts]}
 
@@ -525,6 +526,7 @@ def run(packet, out, model, invoke, resume=None):
                                         'reason': next(d['reason'] for d in out_of_scope if d['question_id'] == q['question_id'])}
                                        for q in off_questions],
                   'rejectedAtIntake': rejected, 'intakeProjection': intake_changes, 'restatedIgnored': restated,
+                  **({'intakeClozeUnits': intake_cloze} if intake_cloze else {}),
                   'supplement': supplement, 'supplementPoints': points_doc if supplement else None,
                   'initialBrief': initial_brief, 'initialBank': initial_bank, 'coverage': coverage_rows, 'mapCheck': map_check,
                   'itemReviews': review_rows, 'clinicalContext': context, 'contextJudgments': context_judgments,
