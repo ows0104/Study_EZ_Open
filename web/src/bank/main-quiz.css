@@ -204,6 +204,7 @@
 .quiz-back svg{width:15px;height:15px}
 .quiz-back:hover:not(:disabled){background:var(--hover)}
 .quiz-back:disabled{opacity:.45;cursor:default}
+.mq-kicker .quiz-back{min-height:0;height:28px;font-size:12.5px}
 .mq-solve-title{font-size:15px;font-weight:700;color:var(--ink);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .main-quiz-learning .mq-solve-head .main-quiz-tools{gap:8px}
 .main-quiz-learning .mq-solve-head .pill-button,.main-quiz-learning .mq-solve-head .main-quiz-menu>summary.pill-button{height:32px;min-height:0;padding:0 13px;font-size:13px;color:var(--ink);
